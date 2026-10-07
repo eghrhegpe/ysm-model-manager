@@ -178,28 +178,45 @@ export function mergeLocalAuthorsInto(
   for (const la of localAuthors || []) {
     if (la?.name && existingNames.has(la.name)) {
       const found = creators.find((c) => c.name === la.name);
-      // P4 修复：按分号分段比较 type，避免子串误判（"bilibili" 包含 "bili" 时丢类型）
-      if (found && la.type) {
-        const hasType = (found.type || "").split(";").some((t) => t.trim() === la.type);
-        if (!hasType) {
-          found.type = found.type ? `${found.type};${la.type}` : la.type;
-        }
+      if (found) {
+        mergeExistingLocalAuthor(found, la);
       }
-      if (found) found._fromLocal = true;
     } else if (la?.name) {
-      creators.push({
-        name: la.name,
-        // 锐评 P0-2b：desc 不再落 i18n 语言串（原 t("community.fromLocal")）——
-        // 该字段会经 SaveWorkshopCreatorsBySite 落盘，把展示语言写进数据面；
-        // 「来自本地仓库」提示改由视图层按 _fromLocal 标记现取当前语言（render/events）。
-        desc: la.desc || "",
-        type: la.type || "",
-        _fromLocal: true,
-      });
-      existingNames.add(la.name);
+      appendLocalAuthor(creators, la.name, la, existingNames);
     }
   }
   return creators;
+}
+
+/** 已存在作者：type 分号段精确比较并入（防子串误判），并标记来源本地 */
+function mergeExistingLocalAuthor(found: LocalCreator, la: LocalAuthorLike): void {
+  // P4 修复：按分号分段比较 type，避免子串误判（"bilibili" 包含 "bili" 时丢类型）
+  if (la.type) {
+    const hasType = (found.type || "").split(";").some((t) => t.trim() === la.type);
+    if (!hasType) {
+      found.type = found.type ? `${found.type};${la.type}` : la.type;
+    }
+  }
+  found._fromLocal = true;
+}
+
+/** 本地独有作者：追加条目并登记名字（幂等去重）。name 由调用方保证非空（else-if 分支） */
+function appendLocalAuthor(
+  creators: LocalCreator[],
+  name: string,
+  la: LocalAuthorLike,
+  existingNames: Set<string>,
+): void {
+  creators.push({
+    name,
+    // 锐评 P0-2b：desc 不再落 i18n 语言串（原 t("community.fromLocal")）——
+    // 该字段会经 SaveWorkshopCreatorsBySite 落盘，把展示语言写进数据面；
+    // 「来自本地仓库」提示改由视图层按 _fromLocal 标记现取当前语言（render/events）。
+    desc: la.desc || "",
+    type: la.type || "",
+    _fromLocal: true,
+  });
+  existingNames.add(name);
 }
 
 /** 后台静默拉取社区索引并并入本地（withCached 6h TTL） */

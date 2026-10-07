@@ -169,19 +169,15 @@ async function loadModelViaWasm(
   return { model: null, authors, avatars };
 }
 
-/** Go AnalyzeBedrockModel 兜底：subPath 单角色优先，再回退全量；挂 authors/animClips/texMappingLog */
-async function loadModelViaGo(
+/** Go 解析：subPath 单角色优先（AnalyzeBedrockModelEntry 可用时），未命中/无骨骼回退全量 */
+async function resolveGoModel(
   ctx: YsmDecoder & PreviewDebugger,
+  app: Awaited<ReturnType<typeof getApp>>,
   modelPath: string,
   opts: LoadModelOpts,
   current: BedrockGeometry | null,
-  wasmAuthors: NonNullable<BedrockGeometry["_authors"]>,
-  wasmAvatars: Record<string, string>,
 ): Promise<BedrockGeometry | null> {
-  const app = await getApp();
-  // current 可能是缓存命中但无骨骼的对象：subPath 未命中时不覆盖它（沿用原有无骨骼对象语义）
   let model = current;
-  const cacheKey = opts.subPath ? `${modelPath}#sub:${opts.subPath}` : modelPath;
   // subPath 模式：先试单条目解析（多角色包切角色），再回退全量
   if (opts.subPath && typeof app.AnalyzeBedrockModelEntry === "function") {
     const entryModel = (await app.AnalyzeBedrockModelEntry(modelPath, opts.subPath)) as
@@ -197,54 +193,94 @@ async function loadModelViaGo(
     const { AnalyzeBedrockModel } = app;
     model = (await AnalyzeBedrockModel(modelPath)) as BedrockGeometry | null;
   }
+  return model;
+}
 
-  // WASM 无几何但带 authors → 由 WASM authors 填补（Go 无 authors 字段）
+/** WASM 无几何但带 authors → 由 WASM authors 填补（Go 无 authors 字段） */
+function fillWasmAuthors(
+  model: BedrockGeometry | null,
+  wasmAuthors: NonNullable<BedrockGeometry["_authors"]>,
+  wasmAvatars: Record<string, string>,
+): void {
   if (model && !model._authors && wasmAuthors.length) {
     model._authors = wasmAuthors;
     model._avatars = wasmAvatars;
   }
+}
+
+/** Go 兜底动画：逐条解析 .animation.json → clips（文件夹/zip 模型的 .animation.json 由 Go 收集透传） */
+function collectGoClips(model: BedrockGeometry): unknown[] {
+  const goClips: unknown[] = [];
+  if (model.animations?.length) {
+    for (const jsonStr of model.animations as string[]) {
+      const { clips } = parseBedrockAnimationJSON(jsonStr);
+      if (clips.length > 0) goClips.push(...clips);
+    }
+  }
+  return goClips;
+}
+
+/** Go 兜底元数据挂载：_decodedBy + _texMappingLog（单纹理/多纹理两条目） */
+function attachGoModelMeta(
+  model: BedrockGeometry,
+  goClips: unknown[],
+  opts: LoadModelOpts,
+  modelPath: string,
+): void {
+  // Go 兜底路径同样挂载（文件夹/zip 模型的 .animation.json 由 Go 收集透传）
+  if (goClips.length > 0) model._animClips = goClips as AnimationClip[];
+  model._decodedBy = opts.subPath ? DECODE_SOURCE.goSingle : DECODE_SOURCE.go;
+  const goTexCount = model.textures?.length || 0;
+  model._texMappingLog = [
+    {
+      file: modelPath.split(/[/\\]/).pop() || "",
+      texKey: goTexCount > 0 ? "texture[0]" : "—",
+      texIdx: 0,
+      pngSize: "—",
+      geoSize: model.texWidth ? `${model.texWidth}×${model.texHeight}` : "—",
+      uvSize: "—",
+      finalSize: model.texWidth ? `${model.texWidth}×${model.texHeight}` : "—",
+    },
+  ];
+  if (goTexCount > 1) {
+    model._texMappingLog.push({
+      file: "(+多纹理)",
+      texKey: `+${goTexCount - 1}`,
+      texIdx: 0,
+      pngSize: "—",
+      geoSize: "—",
+      uvSize: "—",
+      finalSize: "—",
+    });
+  }
+}
+
+/** Go AnalyzeBedrockModel 兜底：subPath 单角色优先，再回退全量；挂 authors/animClips/texMappingLog */
+async function loadModelViaGo(
+  ctx: YsmDecoder & PreviewDebugger,
+  modelPath: string,
+  opts: LoadModelOpts,
+  current: BedrockGeometry | null,
+  wasmAuthors: NonNullable<BedrockGeometry["_authors"]>,
+  wasmAvatars: Record<string, string>,
+): Promise<BedrockGeometry | null> {
+  const app = await getApp();
+  // current 可能是缓存命中但无骨骼的对象：subPath 未命中时不覆盖它（沿用原有无骨骼对象语义）
+  const cacheKey = opts.subPath ? `${modelPath}#sub:${opts.subPath}` : modelPath;
+  const model = await resolveGoModel(ctx, app, modelPath, opts, current);
+
+  // WASM 无几何但带 authors → 由 WASM authors 填补（Go 无 authors 字段）
+  fillWasmAuthors(model, wasmAuthors, wasmAvatars);
 
   if (model?.bones?.length) {
-    const goClips: unknown[] = [];
-    if (model.animations?.length) {
-      for (const jsonStr of model.animations as string[]) {
-        const { clips } = parseBedrockAnimationJSON(jsonStr);
-        if (clips.length > 0) goClips.push(...clips);
-      }
-    }
-    // Go 兜底路径同样挂载（文件夹/zip 模型的 .animation.json 由 Go 收集透传）
-    if (goClips.length > 0) model._animClips = goClips as AnimationClip[];
-    model._decodedBy = opts.subPath ? DECODE_SOURCE.goSingle : DECODE_SOURCE.go;
-    const goTexCount = model.textures?.length || 0;
-    model._texMappingLog = [
-      {
-        file: modelPath.split(/[/\\]/).pop() || "",
-        texKey: goTexCount > 0 ? "texture[0]" : "—",
-        texIdx: 0,
-        pngSize: "—",
-        geoSize: model.texWidth ? `${model.texWidth}×${model.texHeight}` : "—",
-        uvSize: "—",
-        finalSize: model.texWidth ? `${model.texWidth}×${model.texHeight}` : "—",
-      },
-    ];
-    if (goTexCount > 1) {
-      model._texMappingLog.push({
-        file: "(+多纹理)",
-        texKey: `+${goTexCount - 1}`,
-        texIdx: 0,
-        pngSize: "—",
-        geoSize: "—",
-        uvSize: "—",
-        finalSize: "—",
-      });
-    }
+    const goClips = collectGoClips(model);
+    attachGoModelMeta(model, goClips, opts, modelPath);
     cacheSet(cacheKey, {
       ...(cacheGet(cacheKey) || {}),
       ...(model.texture !== undefined ? { texture: model.texture } : {}),
       geometry: model,
       ...(goClips.length > 0 ? { animations: goClips } : {}),
     });
-    return model;
   }
 
   return model;

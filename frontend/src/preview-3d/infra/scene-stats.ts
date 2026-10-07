@@ -37,74 +37,80 @@ export interface SceneStats {
   morphCount: number;
 }
 
-/** 一次 traverse 收集统计；roots 接受 Scene 或 Object3D[]（sceneBaseline 差量后的内容层根） */
-export function collectSceneStats(roots: THREE.Object3D | THREE.Object3D[]): SceneStats {
-  const stats: SceneStats = {
-    boneCount: 0,
-    meshCount: 0,
-    triangleCount: 0,
-    materialCount: 0,
-    textureCount: 0,
-    textureBytes: 0,
-    morphCount: 0,
-  };
-  const materials = new Set<THREE.Material>();
-  const textures = new Set<THREE.Texture>();
-  const bones = new Set<THREE.Bone>();
-  let maxMorph = 0;
+/** traverse 访问器共享的累积器（visitSceneNode 每节点原地累积） */
+interface SceneStatsAcc {
+  bones: Set<THREE.Bone>;
+  materials: Set<THREE.Material>;
+  textures: Set<THREE.Texture>;
+  meshCount: number;
+  triangleCount: number;
+  maxMorph: number;
+}
 
-  const list = Array.isArray(roots) ? roots : [roots];
-  for (const root of list) {
-    root.traverse((obj) => {
-      // 骨骼：skeleton.bones（SkinnedMesh 自带）与裸 Bone 对象统一收进 Set 去重
-      // （鸭子类型对齐 three.js 惯例：isBone / isSkinnedMesh / isMesh）
-      if ((obj as THREE.Bone).isBone) {
-        bones.add(obj as THREE.Bone);
-      }
-      const skinned = obj as THREE.SkinnedMesh;
-      if (skinned.isSkinnedMesh && skinned.skeleton) {
-        for (const b of skinned.skeleton.bones) bones.add(b);
-      }
+/** 三角面：index 几何 index.length/3；非 index 几何 position 顶点数/3 */
+function countMeshTriangles(mesh: THREE.Mesh): number {
+  const geo = mesh.geometry as THREE.BufferGeometry;
+  if (!geo) return 0;
+  const idx = geo.getIndex();
+  if (idx && idx.count > 0) return Math.floor(idx.count / 3);
+  const pos = geo.getAttribute("position");
+  return pos ? Math.floor(pos.count / 3) : 0;
+}
 
-      if (!(obj as THREE.Mesh).isMesh) return; // Line/Points 不算网格
-      const mesh = obj as THREE.Mesh;
-      stats.meshCount++;
+/** 材质（数组/单实例统一处理，按实例去重）与贴图收集（口径见 collectMaterialTextures） */
+function collectMeshTextures(mesh: THREE.Mesh, acc: SceneStatsAcc): void {
+  const matList = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+  for (const m of matList) {
+    if (!m) continue;
+    acc.materials.add(m);
+    for (const tex of collectMaterialTextures(m)) acc.textures.add(tex);
+  }
+}
 
-      // 三角面：index 几何 index.length/3；非 index 几何 position 顶点数/3
-      const geo = mesh.geometry as THREE.BufferGeometry;
-      if (geo) {
-        const idx = geo.getIndex();
-        if (idx && idx.count > 0) {
-          stats.triangleCount += Math.floor(idx.count / 3);
-        } else {
-          const pos = geo.getAttribute("position");
-          if (pos) stats.triangleCount += Math.floor(pos.count / 3);
-        }
-      }
-
-      // 材质（数组/单实例统一处理，按实例去重）
-      const matList = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-      for (const m of matList) {
-        if (!m) continue;
-        materials.add(m);
-        // 纹理口径与 mesh.disposeMaterial 的 ALL_TEXTURE_KEYS 一致（map/emissiveMap/
-        // normalMap/roughnessMap/metalnessMap/aoMap/lightMap/alphaMap/envMap）——
-        // 旧实现只计 mm.map，emissive/normal/roughness 等多贴图材质统计偏低（审核 P2）。
-        // 收集器已抽到 texture-bytes|collectMaterialTextures（与字节估算同源，防漂移）。
-        for (const tex of collectMaterialTextures(m)) textures.add(tex);
-      }
-
-      // 表情数：morphTargetInfluences 通道数取最长（VRM 表情通常挂单 mesh）
-      if (mesh.morphTargetInfluences && mesh.morphTargetInfluences.length > maxMorph) {
-        maxMorph = mesh.morphTargetInfluences.length;
-      }
-    });
+/** 单节点访问器：骨骼 → 网格 → 三角面 → 材质/纹理 → 表情（顺序与 ADR-131 口径一致） */
+function visitSceneNode(obj: THREE.Object3D, acc: SceneStatsAcc): void {
+  // 骨骼：skeleton.bones（SkinnedMesh 自带）与裸 Bone 对象统一收进 Set 去重
+  // （鸭子类型对齐 three.js 惯例：isBone / isSkinnedMesh / isMesh）
+  if ((obj as THREE.Bone).isBone) {
+    acc.bones.add(obj as THREE.Bone);
+  }
+  const skinned = obj as THREE.SkinnedMesh;
+  if (skinned.isSkinnedMesh && skinned.skeleton) {
+    for (const b of skinned.skeleton.bones) acc.bones.add(b);
   }
 
-  stats.boneCount = bones.size;
-  stats.materialCount = materials.size;
-  stats.textureCount = textures.size;
-  stats.textureBytes = estimateTextureSetBytes(textures);
-  stats.morphCount = maxMorph;
-  return stats;
+  if (!(obj as THREE.Mesh).isMesh) return; // Line/Points 不算网格
+  const mesh = obj as THREE.Mesh;
+  acc.meshCount++;
+  acc.triangleCount += countMeshTriangles(mesh);
+  collectMeshTextures(mesh, acc);
+
+  // 表情数：morphTargetInfluences 通道数取最长（VRM 表情通常挂单 mesh）
+  if (mesh.morphTargetInfluences && mesh.morphTargetInfluences.length > acc.maxMorph) {
+    acc.maxMorph = mesh.morphTargetInfluences.length;
+  }
+}
+
+/** 一次 traverse 收集统计；roots 接受 Scene 或 Object3D[]（sceneBaseline 差量后的内容层根） */
+export function collectSceneStats(roots: THREE.Object3D | THREE.Object3D[]): SceneStats {
+  const acc: SceneStatsAcc = {
+    bones: new Set(),
+    materials: new Set(),
+    textures: new Set(),
+    meshCount: 0,
+    triangleCount: 0,
+    maxMorph: 0,
+  };
+  const list = Array.isArray(roots) ? roots : [roots];
+  for (const root of list) root.traverse((obj) => visitSceneNode(obj, acc));
+
+  return {
+    boneCount: acc.bones.size,
+    meshCount: acc.meshCount,
+    triangleCount: acc.triangleCount,
+    materialCount: acc.materials.size,
+    textureCount: acc.textures.size,
+    textureBytes: estimateTextureSetBytes(acc.textures),
+    morphCount: acc.maxMorph,
+  };
 }

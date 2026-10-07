@@ -45,6 +45,112 @@ function syncThemeCards(themePicker: ParentNode, activeTheme: string | null): vo
   });
 }
 
+/** 色点回填：shadow 内 var() 只会拿到当前主题，逐主题探针取真实色写 inline（见 probeThemeSwatch） */
+function fillThemeCardSwatches(themePicker: ParentNode): void {
+  themePicker.querySelectorAll(".theme-card").forEach((card) => {
+    const sw = probeThemeSwatch((card as HTMLElement).dataset.theme || "");
+    if (!sw) return;
+    card.querySelectorAll<HTMLElement>("[data-var]").forEach((dot) => {
+      const v = dot.dataset.var;
+      if (v && v in sw) dot.style.background = sw[v as keyof typeof sw];
+    });
+  });
+}
+
+/**
+ * 主题配置落盘（saveCfg 唯一出口：未传字段取重读的最新 Go 配置）。原手抄六位置实参
+ * 吃 getCfg() 快照、linkMode 还用 "copy" 字面量兜底（本页其余点均引 LINK_MODE_DEFAULT）；
+ * themeAuto="off" = 点卡片即手动选主题 → 自动模式关闭（P4 口径）
+ */
+async function persistThemeSelection(themeName: string): Promise<void> {
+  try {
+    await saveCfg({ theme: themeName, themeAuto: "off" });
+  } catch (e) {
+    logWarn("settings", "主题保存到配置失败", e); /* 保存失败不影响 UI 主题，但留痕便于排障 */
+  }
+}
+
+/** 自动主题模式落盘（theme-auto 变更同步 ysm_config.json，P4 口径） */
+async function persistAutoMode(mode: string): Promise<void> {
+  try {
+    // theme 缺省由 saveCfg 自 localStorage 兜底：system/time 分支上面已 safeSet("theme", …)，
+    // off 分支沿用当前定格主题——与原先显式传入 `safeGet("theme") || THEME_DARK` 等价
+    await saveCfg({ themeAuto: mode });
+  } catch (e) {
+    logWarn("settings", "自动主题模式保存到配置失败", e);
+  }
+}
+
+/** 主题卡片：点击切换 = 手动选主题 = 自动模式关闭（P4 口径） */
+function bindThemeCardClicks(root: ShadowRoot, themePicker: ParentNode): void {
+  themePicker.querySelectorAll<HTMLElement>(".theme-card").forEach((card) => {
+    card.addEventListener("click", () => {
+      const themeName = card.dataset.theme || "";
+      syncThemeCards(themePicker, themeName);
+      applyTheme(themeName);
+      safeSet("theme", themeName);
+      // P2 修复：主题切后同步到 ysm_config.json，保持 localStorage ↔ JSON 一致
+      // P3 修复（审核，linkMode 失同步）：读 cfg.linkMode 而非闭包旧值 linkMode——
+      // 原 initSettings 顶部的 const linkMode 是捕获值，用户在链接模式下拉改过后不更新，
+      // 主题切换会用旧值把已改的 linkMode 覆盖回退
+      // P4 修复（theme-auto 落盘）：点击卡片 = 手动选主题 = 自动模式关闭 → themeAuto="off"
+      void persistThemeSelection(themeName);
+      // 关闭自动切换
+      const autoSelect = root.getElementById("theme-auto") as HTMLSelectElement | null;
+      if (autoSelect) autoSelect.value = "off";
+      safeSet("theme-auto", "off");
+    });
+  });
+}
+
+/** 主题卡片段：色点回填 + 选中态同步 + 点击切换绑定 */
+function initThemePicker(root: ShadowRoot, themePicker: ParentNode, savedTheme: string): void {
+  fillThemeCardSwatches(themePicker);
+  syncThemeCards(themePicker, savedTheme);
+  bindThemeCardClicks(root, themePicker);
+}
+
+/** 应用一次自动主题模式（system/time 分支写 theme 键 + 卡片取消选中；off 不动当前主题） */
+function applyAutoThemeMode(mode: string, themePicker: ParentNode | null): void {
+  if (mode === "system") {
+    applyTheme("system");
+    safeSet("theme", "system");
+    // 更新卡片选中态
+    if (themePicker) syncThemeCards(themePicker, null);
+  } else if (mode === "time") {
+    // P2 修复：applyTimeTheme 返回实际主题（warm/cyber）并写入 theme 键——
+    // 原实现写 "time" 非法值，重启后 initTheme 归一化为 system，按时间段模式被静默降级
+    const themeName = applyTimeTheme();
+    safeSet("theme", themeName);
+    if (themePicker) syncThemeCards(themePicker, null);
+  }
+  // "off" 时不改变当前主题，等用户手动点卡片
+}
+
+/** 自动切换下拉框段：初始化值 + change 绑定 + 按 savedAuto 应用初始主题 */
+function initAutoThemeSelect(
+  root: ShadowRoot,
+  themePicker: ParentNode | null,
+  savedTheme: string,
+  savedAuto: string,
+): void {
+  // P2 修复（code_review）：theme-auto 段同样走 safe 包装——原裸 getItem 在隐私模式
+  // 下抛错中断 initSettings（与主题卡片段同源），且 setItem 三处未封口
+  const autoSelect = root.getElementById("theme-auto") as HTMLSelectElement | null;
+  if (!autoSelect) return;
+  autoSelect.value = savedAuto;
+  autoSelect.addEventListener("change", () => {
+    const mode = autoSelect.value;
+    safeSet("theme-auto", mode);
+    applyAutoThemeMode(mode, themePicker);
+    // P4 修复：自动模式变更同步 ysm_config.json（theme-auto 落盘）
+    void persistAutoMode(mode);
+  });
+  // 初始化：如果 savedAuto 是 system/time，应用对应主题
+  applyAutoThemeMode(savedAuto, themePicker);
+  if (savedAuto === "off") applyTheme(savedTheme);
+}
+
 /** 初始化主题段：主题卡片点击切换 + 自动切换下拉框 */
 export function initThemeSection(root: ShadowRoot): void {
   // 主题卡片：直接点击切换
@@ -52,97 +158,13 @@ export function initThemeSection(root: ShadowRoot): void {
   // （init.ts / path-cards.ts 均 `|| THEME_DARK`）同语义两种拼法——改默认主题时漏一处即漂移
   const savedTheme = safeGet("theme") || THEME_DARK;
   const themePicker = root.getElementById("theme-picker");
-  if (themePicker) {
-    // 色点回填：shadow 内 var() 只会拿到当前主题，逐主题探针取真实色写 inline（见 probeThemeSwatch）
-    themePicker.querySelectorAll(".theme-card").forEach((card) => {
-      const sw = probeThemeSwatch((card as HTMLElement).dataset.theme || "");
-      if (!sw) return;
-      card.querySelectorAll<HTMLElement>("[data-var]").forEach((dot) => {
-        const v = dot.dataset.var;
-        if (v && v in sw) dot.style.background = sw[v as keyof typeof sw];
-      });
-    });
-    const cards = [...themePicker.querySelectorAll<HTMLElement>(".theme-card")];
-    syncThemeCards(themePicker, savedTheme);
-    cards.forEach((card) => {
-      card.addEventListener("click", () => {
-        const themeName = card.dataset.theme || "";
-        syncThemeCards(themePicker, themeName);
-        applyTheme(themeName);
-        safeSet("theme", themeName);
-        // P2 修复：主题切后同步到 ysm_config.json，保持 localStorage ↔ JSON 一致
-        // P3 修复（审核，linkMode 失同步）：读 cfg.linkMode 而非闭包旧值 linkMode——
-        // 原 initSettings 顶部的 const linkMode 是捕获值，用户在链接模式下拉改过后不更新，
-        // 主题切换会用旧值把已改的 linkMode 覆盖回退
-        // P4 修复（theme-auto 落盘）：点击卡片 = 手动选主题 = 自动模式关闭 → themeAuto="off"
-        void (async () => {
-          try {
-            // 配置落盘走 saveCfg 唯一出口（未传字段取重读的最新 Go 配置）。原手抄六位置实参
-            // 吃 getCfg() 快照、linkMode 还用 "copy" 字面量兜底（本页其余点均引 LINK_MODE_DEFAULT）；
-            // themeAuto="off" = 点卡片即手动选主题 → 自动模式关闭（P4 口径）
-            await saveCfg({ theme: themeName, themeAuto: "off" });
-          } catch (e) {
-            logWarn(
-              "settings",
-              "主题保存到配置失败",
-              e,
-            ); /* 保存失败不影响 UI 主题，但留痕便于排障 */
-          }
-        })();
-        // 关闭自动切换
-        const autoSelect = root.getElementById("theme-auto") as HTMLSelectElement | null;
-        if (autoSelect) autoSelect.value = "off";
-        safeSet("theme-auto", "off");
-      });
-    });
-  }
+  if (themePicker) initThemePicker(root, themePicker, savedTheme);
 
   // 自动切换下拉框
   // P2 修复（code_review）：theme-auto 段同样走 safe 包装——原裸 getItem 在隐私模式
   // 下抛错中断 initSettings（与主题卡片段同源），且 setItem 三处未封口
   const savedAuto = safeGet("theme-auto") || "off";
   const autoSelect = root.getElementById("theme-auto") as HTMLSelectElement | null;
-  if (autoSelect) {
-    autoSelect.value = savedAuto;
-    autoSelect.addEventListener("change", () => {
-      const mode = autoSelect.value;
-      safeSet("theme-auto", mode);
-      if (mode === "system") {
-        applyTheme("system");
-        safeSet("theme", "system");
-        // 更新卡片选中态
-        if (themePicker) syncThemeCards(themePicker, null);
-      } else if (mode === "time") {
-        // P2 修复：applyTimeTheme 返回实际主题（warm/cyber）并写入 theme 键——
-        // 原实现写 "time" 非法值，重启后 initTheme 归一化为 system，按时间段模式被静默降级
-        const themeName = applyTimeTheme();
-        safeSet("theme", themeName);
-        if (themePicker) syncThemeCards(themePicker, null);
-      }
-      // "off" 时不改变当前主题，等用户手动点卡片
-      // P4 修复：自动模式变更同步 ysm_config.json（theme-auto 落盘）
-      void (async () => {
-        try {
-          // theme 缺省由 saveCfg 自 localStorage 兜底：system/time 分支上面已 safeSet("theme", …)，
-          // off 分支沿用当前定格主题——与原先显式传入 `safeGet("theme") || THEME_DARK` 等价
-          await saveCfg({ themeAuto: mode });
-        } catch (e) {
-          logWarn("settings", "自动主题模式保存到配置失败", e);
-        }
-      })();
-    });
-    // 初始化：如果 savedAuto 是 system/time，应用对应主题
-    if (savedAuto === "system") {
-      applyTheme("system");
-      if (themePicker) syncThemeCards(themePicker, null);
-    } else if (savedAuto === "time") {
-      const themeName = applyTimeTheme();
-      safeSet("theme", themeName);
-      if (themePicker) syncThemeCards(themePicker, null);
-    } else {
-      applyTheme(savedTheme);
-    }
-  } else {
-    applyTheme(savedTheme);
-  }
+  if (autoSelect) initAutoThemeSelect(root, themePicker, savedTheme, savedAuto);
+  else applyTheme(savedTheme);
 }

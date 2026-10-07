@@ -10,7 +10,11 @@ import { swallowError } from "@/utils/base/primitives/async.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { sniffTexSize } from "@/utils/base/pure/tex-size.ts";
 import { decodeYsmFile, decodeYsmFileFromMemory, initYSMParser } from "@/wasm/ysm-parser.ts";
-import { type BedrockGeometry, parseBedrockGeometryFromJSON } from "./geometry.ts";
+import {
+  type BedrockCube,
+  type BedrockGeometry,
+  parseBedrockGeometryFromJSON,
+} from "./geometry.ts";
 import { cacheGet, cacheSet } from "./model-cache.ts";
 import { parseYsmJsonDirect } from "./parse-ysm-json.ts";
 import { buildOrderedTexKeys } from "./texture-order.ts";
@@ -528,6 +532,42 @@ function collectTexturesAndAvatars(files: DecodedFile[]): TexAccum {
   return { textures, texNameMap, texLowerMap, texDimensions, maxTexW, maxTexH, avatars };
 }
 
+const FACE_KEYS = ["east", "west", "up", "down", "south", "north"] as const;
+
+/**
+ * faceUV 路径的 UV 占用端：各面取有符号 uv_size 的 min/max 包围盒（负尺寸 = 反向采样，
+ * 真实占用区取 max(f.uv, f.uv+fw)），跨面按轴取最大值。无命中/解析失败返回 null → 回退 box 公式。
+ */
+function faceUvEnd(c: BedrockCube): { uEnd: number; vEnd: number } | null {
+  if (!c.faceUV) return null;
+  let uEnd = 0;
+  let vEnd = 0;
+  let hit = false;
+  try {
+    const fd = JSON.parse(c.faceUV) as Record<string, { uv?: number[]; uv_size?: number[] }>;
+    for (const fn of FACE_KEYS) {
+      const f = fd[fn];
+      if (!f?.uv) continue;
+      hit = true;
+      const fw = f.uv_size?.[0] ?? 0;
+      const fh = f.uv_size?.[1] ?? 0;
+      uEnd = Math.max(uEnd, Math.max(f.uv[0], f.uv[0] + fw));
+      vEnd = Math.max(vEnd, Math.max(f.uv[1], f.uv[1] + fh));
+    }
+  } catch {
+    return null; // faceUV 非法 → 回退 box（与 parseUV 同口径）
+  }
+  return hit ? { uEnd, vEnd } : null;
+}
+
+/** box 布局公式路径的 UV 占用端（faceUV 缺失/无可识别面时回退，对齐 cube-mesh parseUV） */
+function boxUvEnd(c: BedrockCube): { uEnd: number; vEnd: number } | null {
+  if (!Array.isArray(c.uv) || c.uv.length < 2) return null;
+  const [sx, sy, sz] = c.size;
+  const [u, v] = c.uv;
+  return { uEnd: u + 2 * (Math.abs(sx) + Math.abs(sz)), vEnd: v + Math.abs(sy) + Math.abs(sz) };
+}
+
 /**
  * 估算骨骼集合的 UV 占用包围盒（像素域）。
  * 仅用于诊断 _texWidth/_texHeight 与 texMappingLog 的 uvSize/finalSize；
@@ -547,28 +587,13 @@ function computeBoneTexRange(bones: BedrockGeometry["bones"]): { uvMaxW: number;
   };
   for (const b of bones) {
     for (const c of b.cubes || []) {
-      let faceHit = false;
-      if (c.faceUV) {
-        try {
-          const fd = JSON.parse(c.faceUV) as Record<string, { uv?: number[]; uv_size?: number[] }>;
-          for (const fn of ["east", "west", "up", "down", "south", "north"]) {
-            const f = fd[fn];
-            if (!f?.uv) continue;
-            faceHit = true;
-            const fw = f.uv_size?.[0] ?? 0;
-            const fh = f.uv_size?.[1] ?? 0;
-            acc(Math.max(f.uv[0], f.uv[0] + fw), Math.max(f.uv[1], f.uv[1] + fh));
-          }
-        } catch {
-          faceHit = false; // faceUV 非法 → 回退 box（与 parseUV 同口径）
-        }
+      const faceEnd = faceUvEnd(c);
+      if (faceEnd) {
+        acc(faceEnd.uEnd, faceEnd.vEnd);
+        continue;
       }
-      if (faceHit) continue;
-      if (Array.isArray(c.uv) && c.uv.length >= 2) {
-        const [sx, sy, sz] = c.size;
-        const [u, v] = c.uv;
-        acc(u + 2 * (Math.abs(sx) + Math.abs(sz)), v + Math.abs(sy) + Math.abs(sz));
-      }
+      const boxEnd = boxUvEnd(c);
+      if (boxEnd) acc(boxEnd.uEnd, boxEnd.vEnd);
     }
   }
   return { uvMaxW, uvMaxH };

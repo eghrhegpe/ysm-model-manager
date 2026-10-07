@@ -51,31 +51,64 @@ export async function collectFiles(
     const entry =
       (item as DataTransferItem).webkitGetAsEntry?.() ||
       (isEntryArray ? (item as FileSystemEntry) : null);
-    if (entry?.isDirectory) {
-      const subPath = basePath ? `${basePath}/${entry.name}` : entry.name;
-      const reader = (entry as FileSystemDirectoryEntry).createReader();
-      const batch = await readAllDirEntries(reader, entry.name);
-      if (batch.length && depth < MAX_DEPTH) {
-        const deeper = await collectFiles(batch, true, subPath, depth + 1);
-        result.push(...deeper);
-      }
-    } else if (entry?.isFile) {
-      const relPath = basePath ? `${basePath}/${entry.name}` : entry.name;
-      try {
-        result.push({
-          file: await getFileFromEntry(entry as FileSystemFileEntry),
-          relPath,
-        });
-      } catch (e) {
-        console.warn("[dnd-collector] 单文件读取失败，已跳过:", relPath, e);
-      }
-    } else if ((item as DataTransferItem).getAsFile) {
-      // fallback: 浏览器不支持 webkitGetAsEntry 时用 getAsFile
-      const f = (item as DataTransferItem).getAsFile();
-      if (f) result.push({ file: f, relPath: f.name });
-    }
+    await collectOneItemInto(result, entry, item as DataTransferItem, basePath, depth);
   }
   return result;
+}
+
+/** 单条目三分支派发：目录递归 / 文件读取 / getAsFile 兜底 */
+async function collectOneItemInto(
+  result: CollectedEntry[],
+  entry: FileSystemEntry | null | undefined,
+  item: DataTransferItem,
+  basePath: string,
+  depth: number,
+): Promise<void> {
+  if (entry?.isDirectory) {
+    result.push(...(await collectDirectory(entry as FileSystemDirectoryEntry, basePath, depth)));
+  } else if (entry?.isFile) {
+    const collected = await collectFileItem(entry as FileSystemFileEntry, basePath);
+    if (collected) result.push(collected);
+  } else if (typeof (item as DataTransferItem).getAsFile === "function") {
+    // fallback: 浏览器不支持 webkitGetAsEntry 时用 getAsFile（isEntryArray 路径的
+    // FileSystemEntry 无此方法 → 守卫跳过，防对未知条目调 getAsFile 抛错）
+    const collected = collectFallbackItem(item);
+    if (collected) result.push(collected);
+  }
+}
+
+/** 目录分支：读出全部条目后递归收集子文件（depth 上限防卡顿） */
+async function collectDirectory(
+  entry: FileSystemDirectoryEntry,
+  basePath: string,
+  depth: number,
+): Promise<CollectedEntry[]> {
+  const subPath = basePath ? `${basePath}/${entry.name}` : entry.name;
+  const batch = await readAllDirEntries(entry.createReader(), entry.name);
+  if (batch.length && depth < MAX_DEPTH) {
+    return collectFiles(batch, true, subPath, depth + 1);
+  }
+  return [];
+}
+
+/** 文件分支：读单个文件，失败跳过（console.warn 留痕，不阻断整批） */
+async function collectFileItem(
+  entry: FileSystemFileEntry,
+  basePath: string,
+): Promise<CollectedEntry | null> {
+  const relPath = basePath ? `${basePath}/${entry.name}` : entry.name;
+  try {
+    return { file: await getFileFromEntry(entry), relPath };
+  } catch (e) {
+    console.warn("[dnd-collector] 单文件读取失败，已跳过:", relPath, e);
+    return null;
+  }
+}
+
+/** getAsFile 兜底分支：无 webkitGetAsEntry 的浏览器路径 */
+function collectFallbackItem(item: DataTransferItem): CollectedEntry | null {
+  const f = item.getAsFile();
+  return f ? { file: f, relPath: f.name } : null;
 }
 
 /**

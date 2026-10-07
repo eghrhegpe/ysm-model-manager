@@ -117,44 +117,61 @@ async function githubLoadRepos(ctx: GithubPageCtx): Promise<void> {
   }
 }
 
+/** 错误文案映射：NetworkOffline / NoIndex / RateLimited 专属提示，其余通用失败 */
+function githubErrorMsg(err: Error): string {
+  if (err.message === "NetworkOffline") return t("workshop.networkOffline");
+  if (err.message === "NoIndex") return t("workshop.githubNoIndex");
+  if (err.message === "RateLimited") return t("workshop.rateLimitedGithub");
+  return t("workshop.githubLoadFailed");
+}
+
+/** 本地扫描建 localMap（stripDisableSuffix 剥 .ban/.disabled 后缀）；filesRoot 为空时返回空 Map */
+async function buildLocalModelMap(
+  getRepoRoot: Awaited<ReturnType<typeof backendGetApp>>["GetRepoRoot"],
+  scanEntries: Awaited<ReturnType<typeof backendGetApp>>["ScanModelEntriesWithLabel"],
+): Promise<Map<string, string>> {
+  const localMap = new Map<string, string>();
+  const filesRoot = await getRepoRoot(RESOURCE_TYPES.YSM);
+  if (filesRoot) {
+    const entries = (await scanEntries(filesRoot, RESOURCE_TYPE_LABELS[RESOURCE_TYPES.YSM])) || [];
+    entries.forEach((e) => {
+      const n = stripDisableSuffix(e.Name || "");
+      localMap.set(n, e.Hash || "");
+    });
+  }
+  return localMap;
+}
+
 /**
- * 展示仓库模型列表：本地扫描 + 缓存命中即渲染；未命中走镜像竞速（onProgress 更新加载态、
- * fetchDone 去重）。_currentRepo 竞态守卫在每次异步边界后检查。
+ * 缓存命中即渲染（未命中返回 false 走 fetch 路径）。_currentRepo 竞态守卫：
+ * 缓存命中但已切仓 → 直接消费缓存返回 true（不渲染、不再 fetch）。
  */
-async function githubShowRepo(ctx: GithubPageCtx, repo: string): Promise<void> {
-  ctx.setCurrentRepo(repo);
-  const resultsBody = ctx.resultsBody;
-  const repoModelCache = ctx._githubCache();
-  if (!repoModelCache) return; // 断连清理后迟到调用：静默退出（原 ! 断言此处即 crash）
-  if (resultsBody) {
-    resultsBody.innerHTML = ghPlaceholder(t("downloads.loadingModels"));
-  }
-  // 使用缓存
-  if (repoModelCache.has(repo)) {
-    const cached = repoModelCache.get(repo);
-    if (cached) {
-      const { models, source, localMap } = cached;
-      if (ctx.getCurrentRepo() !== repo) return; // 已切换，丢弃
-      ctx.renderModels(repo, models, source, localMap || new Map());
-      return;
-    }
-  }
+function renderFromCache(
+  ctx: GithubPageCtx,
+  repo: string,
+  repoModelCache: Map<string, RepoCacheEntry>,
+): boolean {
+  const cached = repoModelCache.get(repo);
+  if (!cached) return false;
+  if (ctx.getCurrentRepo() !== repo) return true; // 已切换，丢弃
+  const { models, source, localMap } = cached;
+  ctx.renderModels(repo, models, source, localMap || new Map());
+  return true;
+}
+
+/** 未命中缓存：本地扫描 + 镜像竞速拉取（onProgress 加载态、fetchDone 去重），成功后入库渲染 */
+async function fetchAndRenderRepo(
+  ctx: GithubPageCtx,
+  resultsBody: HTMLElement | null,
+  repoModelCache: Map<string, RepoCacheEntry>,
+  repo: string,
+): Promise<void> {
   let mirror = "";
   try {
     const { LoadAppConfig, ScanModelEntriesWithLabel, GetRepoRoot } = await backendGetApp();
     const cfg = await LoadAppConfig();
     mirror = cfg.mirror || "";
-    const filesRoot = await GetRepoRoot(RESOURCE_TYPES.YSM);
-    const localMap = new Map<string, string>();
-    if (filesRoot) {
-      const entries =
-        (await ScanModelEntriesWithLabel(filesRoot, RESOURCE_TYPE_LABELS[RESOURCE_TYPES.YSM])) ||
-        [];
-      entries.forEach((e) => {
-        const n = stripDisableSuffix(e.Name || "");
-        localMap.set(n, e.Hash || "");
-      });
-    }
+    const localMap = await buildLocalModelMap(GetRepoRoot, ScanModelEntriesWithLabel);
     let fetchDone = false;
     const result = await tryFetchModels(
       repo,
@@ -190,14 +207,7 @@ async function githubShowRepo(ctx: GithubPageCtx, repo: string): Promise<void> {
   } catch (e) {
     const err = e as Error;
     if (ctx.getCurrentRepo() !== repo) return;
-    const msg =
-      err.message === "NetworkOffline"
-        ? t("workshop.networkOffline")
-        : err.message === "NoIndex"
-          ? t("workshop.githubNoIndex")
-          : err.message === "RateLimited"
-            ? t("workshop.rateLimitedGithub")
-            : t("workshop.githubLoadFailed");
+    const msg = githubErrorMsg(err);
     if (resultsBody) {
       resultsBody.innerHTML =
         ghPlaceholder(UI_ICONS.error + " " + escUtil(msg)) +
@@ -208,7 +218,10 @@ async function githubShowRepo(ctx: GithubPageCtx, repo: string): Promise<void> {
         "</button></div>";
     }
   }
-  // 绑定打开 GitHub 按钮
+}
+
+/** 绑定打开 GitHub 按钮（错误/空列表降级态共用） */
+function bindOpenRepoButton(resultsBody: HTMLElement | null, repo: string): void {
   const openBtn = resultsBody?.querySelector("#gh-open-repo, #gh-open-repo-dl");
   if (openBtn)
     openBtn.addEventListener("click", () => {
@@ -216,6 +229,27 @@ async function githubShowRepo(ctx: GithubPageCtx, repo: string): Promise<void> {
         backendGetApp().then(({ OpenInBrowser }) => OpenInBrowser(`https://github.com/${repo}`)),
       );
     });
+}
+
+/**
+ * 展示仓库模型列表：本地扫描 + 缓存命中即渲染；未命中走镜像竞速（onProgress 更新加载态、
+ * fetchDone 去重）。_currentRepo 竞态守卫在每次异步边界后检查。
+ */
+async function githubShowRepo(ctx: GithubPageCtx, repo: string): Promise<void> {
+  ctx.setCurrentRepo(repo);
+  const resultsBody = ctx.resultsBody;
+  const repoModelCache = ctx._githubCache();
+  if (!repoModelCache) return; // 断连清理后迟到调用：静默退出（原 ! 断言此处即 crash）
+  if (resultsBody) {
+    resultsBody.innerHTML = ghPlaceholder(t("downloads.loadingModels"));
+  }
+  // 使用缓存
+  if (repoModelCache.has(repo) && renderFromCache(ctx, repo, repoModelCache)) {
+    return;
+  }
+  await fetchAndRenderRepo(ctx, resultsBody, repoModelCache, repo);
+  // 绑定打开 GitHub 按钮
+  bindOpenRepoButton(resultsBody, repo);
 }
 
 /**

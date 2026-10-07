@@ -29,9 +29,39 @@ function buildRegionInfo(region: Record<string, unknown>): {
   if (!paletteList || paletteList.length <= 1) return { info: null, err: null };
 
   const palette = paletteToColors(paletteList, "#000000");
+  const dims = readRegionDimensions(region);
+  if (dims.kind === "missing-size") return { info: null, err: "region 缺少 Size compound" };
+  if (dims.kind === "empty") return { info: null, err: null };
 
+  const body = readRegionBlockBody(region, dims, palette.length);
+  if (body.kind === "err") return { info: null, err: body.err };
+  if (body.kind === "skip") return { info: null, err: null }; // 单条目 palette（仅空气）无需读 BlockStates
+
+  return {
+    info: {
+      originX: dims.ox,
+      originY: dims.oy,
+      originZ: dims.oz,
+      sizeX: dims.sx,
+      sizeY: dims.sy,
+      sizeZ: dims.sz,
+      palette,
+      longs: body.longs,
+      bpe: body.bpe,
+    },
+    err: null,
+  };
+}
+
+/** region 尺寸/坐标读取 + 负 size 标准化 + 零尺寸判定（对齐 voxel.go:216-227） */
+type RegionDims =
+  | { kind: "ok"; sx: number; sy: number; sz: number; ox: number; oy: number; oz: number }
+  | { kind: "missing-size" }
+  | { kind: "empty" }; // 零尺寸 = 合法空 region，静默跳过
+
+function readRegionDimensions(region: Record<string, unknown>): RegionDims {
   const sizeCompound = getCompound(region, "Size");
-  if (!sizeCompound) return { info: null, err: "region 缺少 Size compound" };
+  if (!sizeCompound) return { kind: "missing-size" };
   let sx = asNumber(sizeCompound.x) ?? 0;
   let sy = asNumber(sizeCompound.y) ?? 0;
   let sz = asNumber(sizeCompound.z) ?? 0;
@@ -59,20 +89,33 @@ function buildRegionInfo(region: Record<string, unknown>): {
     oz += sz + 1;
     sz = -sz;
   }
-  // 零尺寸 = 合法空 region，静默跳过
-  if (sx === 0 || sy === 0 || sz === 0) return { info: null, err: null };
+  if (sx === 0 || sy === 0 || sz === 0) return { kind: "empty" };
+  return { kind: "ok", sx, sy, sz, ox, oy, oz };
+}
 
+/** BlockStates 读取 + bpe + 维度上限 / int16 坐标 / 容量三重守卫（对齐 voxel.go:245-269 顺序） */
+type RegionBody =
+  | { kind: "ok"; longs: bigint[]; bpe: number }
+  | { kind: "err"; err: string }
+  | { kind: "skip" }; // bpe === 0（单条目 palette）→ 静默跳过
+
+function readRegionBlockBody(
+  region: Record<string, unknown>,
+  dims: Extract<RegionDims, { kind: "ok" }>,
+  paletteLength: number,
+): RegionBody {
+  const { sx, sy, sz, ox, oy, oz } = dims;
   const longs = asLongArray(region.BlockStates);
   if (!longs || longs.length === 0) {
-    return { info: null, err: `region 缺少 BlockStates（尺寸 ${sx}×${sy}×${sz} 非空）` };
+    return { kind: "err", err: `region 缺少 BlockStates（尺寸 ${sx}×${sy}×${sz} 非空）` };
   }
 
-  const bpe = bitsPerEntry(palette.length);
-  if (bpe === 0) return { info: null, err: null }; // 单条目 palette（仅空气）无需读 BlockStates
+  const bpe = bitsPerEntry(paletteLength);
+  if (bpe === 0) return { kind: "skip" };
 
   // 对齐 voxel.go:245-269：维度上限 + int16 坐标范围双守卫
   if (sx > MAX_REGION_AXIS || sy > MAX_REGION_AXIS || sz > MAX_REGION_AXIS) {
-    return { info: null, err: `region Size 超出合理范围: ${sx}×${sy}×${sz}` };
+    return { kind: "err", err: `region Size 超出合理范围: ${sx}×${sy}×${sz}` };
   }
   if (
     ox < INT16_MIN ||
@@ -83,7 +126,7 @@ function buildRegionInfo(region: Record<string, unknown>): {
     oz + sz - 1 > INT16_MAX
   ) {
     return {
-      info: null,
+      kind: "err",
       err: `region 坐标超出 int16 表示范围: origin=(${ox},${oy},${oz}) size=${sx}×${sy}×${sz}`,
     };
   }
@@ -91,25 +134,12 @@ function buildRegionInfo(region: Record<string, unknown>): {
   const capacity = Math.floor((longs.length * 64) / bpe);
   if (total > capacity) {
     return {
-      info: null,
+      kind: "err",
       err: `region BlockStates 容量不足: size=${total} 需 ${total} 位，实际 ${longs.length} 位`,
     };
   }
 
-  return {
-    info: {
-      originX: ox,
-      originY: oy,
-      originZ: oz,
-      sizeX: sx,
-      sizeY: sy,
-      sizeZ: sz,
-      palette,
-      longs,
-      bpe,
-    },
-    err: null,
-  };
+  return { kind: "ok", longs, bpe };
 }
 
 /**

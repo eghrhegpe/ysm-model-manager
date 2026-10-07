@@ -120,9 +120,14 @@ test.describe("网页版主链路（ADR-049）", () => {
       if (req.url().includes("/wails/runtime")) wailsReqs.push(req.url());
     });
     // 先 goto（about:blank 是 opaque origin，IndexedDB 被禁会 SecurityError）
-    await page.goto("/", { waitUntil: "networkidle" });
+    // waitUntil 用 domcontentloaded 而非 networkidle（2026-10-08 实证）：vite dev 冷启动 +
+    // HMR websocket 下 networkidle 极难等定，首个用例 20s 测试超时内必挂（web-smoke 主 UI 加载
+    // 在 CI 上 3/4 轮红），而其余 e2e-web spec 全部用 domcontentloaded 稳定通过（web-preview
+    // 同负载下裸 domcontentloaded 也绿）。真正的就绪门槛是下方 waitForAppReady，
+    // networkidle 的额外严格毫无收益、纯增抖动面。
+    await page.goto("/", { waitUntil: "domcontentloaded" });
     await clearIdb(page);
-    await page.reload({ waitUntil: "networkidle" });
+    await page.reload({ waitUntil: "domcontentloaded" });
     // 应用启动链落定（tree-root 就绪）再交棒用例——用例体内第一步就是派发 DnD，
     // 此前无任何启动等待，CI 慢启动下必撞「tree-root 未就绪」
     await waitForAppReady(page);

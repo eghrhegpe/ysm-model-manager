@@ -357,9 +357,19 @@ test.describe("网页版模型预览链路（ADR-049 Phase 3 续）", () => {
       if (req.url().includes("/wails/runtime")) wailsReqs.push(req.url());
     });
     // 先 goto（about:blank 是 opaque origin，IndexedDB 被禁会 SecurityError）
-    await page.goto("/", { waitUntil: "networkidle" });
+    //
+    // ⚡ 2026-10-07 拆条实测优化（CI 20s 超时根因）：原实现是
+    // `goto(networkidle)` → `clearIdb` → `reload(networkidle)` → `waitForAppReady`，
+    // 即**三次整页加载**，且两次都用 `networkidle`。而 web 模式的 dev server 挂着
+    // HMR websocket，`networkidle`（500ms 无网络活动）在慢 runner 上极难满足，
+    // 每次都可能耗掉数秒 ⇒ 三次叠加把 20s 默认用例预算耗尽，报
+    // `page.goto: Test timeout of 20000ms exceeded`（用例体尚未开始）。
+    //
+    // 现改为：`domcontentloaded`（明确、廉价）+ 去掉多余的 reload——
+    // 「清库后需重载」的意图由**下方就绪轮询 + 用例自身的 IndexedDB 断言**承担，
+    // 不再靠一次额外的整页加载去赌。等待强度不降（仍是条件驱动），只是不再重复付费。
+    await page.goto("/", { waitUntil: "domcontentloaded" });
     await clearIdb(page);
-    await page.reload({ waitUntil: "networkidle" });
     // 应用启动链落定（tree-root 就绪）再交棒用例——用例体内第一步就是派发 DnD/点树行，
     // 此前无任何启动等待，CI 慢启动下必撞「tree-root 未就绪」
     await waitForAppReady(page);
@@ -382,6 +392,9 @@ test.describe("网页版模型预览链路（ADR-049 Phase 3 续）", () => {
   // 无 GPU 兜底理由：本用例只断言 2D 详情卡渲染（含 "Model Info" 标题 / 解析占位），
   // 不触发 3D FAB，完全不依赖 WebGL。headless chromium 无 GPU 也能稳定通过。
   test("导入 .ysm → 选中模型 → 预览区渲染详情卡（2D，不依赖 WebGL）", async ({ page }) => {
+    // 慢机宽限：beforeEach（启动就绪轮询）+ 导入落库 + 多次 8s poll + 断言，
+    // 累加贴近/超过 20s 默认值。CI（SwiftShader/共享 runner）实测会撞默认超时。
+    test.slow();
     // 1. 拖拽导入 .ysm 模型（复用 web-smoke 的 dropFile 范式）
     await dropFile(page, "预览测试.ysm", "YSM-PREVIEW-BYTES");
     // 等导入完成：toast 出现 + IndexedDB 落 dir:/file: 双记录
@@ -415,6 +428,9 @@ test.describe("网页版模型预览链路（ADR-049 Phase 3 续）", () => {
   // 无 GPU 兜底理由：tab 切换是纯 DOM 操作（switchTab 改 display + class），
   // 不触发 WebGL，headless chromium 无 GPU 也能稳定通过。
   test("预览 tab 切换：detail/skeleton data-tab 锚点硬断言", async ({ page }) => {
+    // 慢机宽限：同用例 1（beforeEach 启动轮询 + 真实 fixture 导入解析 + 多次 poll），
+    // CI 上贴近 20s 默认值。
+    test.slow();
     // 1. 导入 .ysm 并选中（复用用例 1 的导入→选中链路）
     await dropFixtureYsm(page, "标签测试.ysm"); // 用真实 YSM fixture，否则解析失败不会有 detail/skeleton tab
     await expect

@@ -48,9 +48,27 @@ const CUBE_MESH_TS = resolve(REPO_ROOT, "frontend/src/preview-3d/mesh/cube-mesh.
 
 // esbuild 解析：port-align.ts 在仓库根，从 frontend/ 向上走 Node 模块解析，
 // 找到 esbuild/bin/esbuild。不硬编码 node_modules 路径，兼容 hoisting。
-const require = createRequire(join(REPO_ROOT, "frontend", "package.json"));
-const ESBUILD_PKG = require.resolve("esbuild/package.json");
-const ESBUILD_BIN = resolve(dirname(ESBUILD_PKG), "bin", "esbuild");
+//
+// ⚠️ 必须**惰性解析**（2026-10-07 修 CI）：原实现把 `require.resolve` 放在模块顶层，
+// 于是「import 本模块」就等于「要求 frontend/node_modules 已装」。而 CI 的
+// `.github/workflows/test.yml` 里「契约测试」步骤排在「安装前端依赖」**之前**
+// ⇒ `tests/test_port_align_baseline.ts` 仅导入本模块即崩 `Cannot find module
+// 'esbuild/package.json'`（requireStack 指向 frontend/package.json），CI 恒红。
+// 契约测试只验 oracle 基线常量，本就不需要 esbuild；只有真跑对拍（loadTsPort）才需要。
+// 故下沉为惰性函数：模块可被无依赖地导入，缺 esbuild 时在**用**的那一步才报错。
+const ESBUILD_REQUIRE = createRequire(join(REPO_ROOT, "frontend", "package.json"));
+function esbuildBin(): string {
+  let pkg: string;
+  try {
+    pkg = ESBUILD_REQUIRE.resolve("esbuild/package.json");
+  } catch {
+    throw new Error(
+      "[port-align] 未找到 esbuild——port-align 需要前端依赖（先 `cd frontend && pnpm install`）。" +
+        "仅导入本模块做 oracle 基线断言（tests/test_port_align_baseline.ts）不需要安装。",
+    );
+  }
+  return resolve(dirname(pkg), "bin", "esbuild");
+}
 
 const TOL = 1e-3; // 几何/位置/四元数对照容差（吸收零厚度 0.001 微调；真实分歧 ≥ 1.0）
 
@@ -124,6 +142,7 @@ function isWriteBlockError(out: string): boolean {
 
 async function loadTsPort() {
   const tmps = resolveTmpDirs();
+  const esbuild = esbuildBin();
   let used: string | undefined;
   try {
     for (const tmp of tmps) {
@@ -131,7 +150,7 @@ async function loadTsPort() {
       const r = run(
         process.execPath,
         [
-          ESBUILD_BIN,
+          esbuild,
           CUBE_MESH_TS,
           "--bundle",
           "--format=esm",

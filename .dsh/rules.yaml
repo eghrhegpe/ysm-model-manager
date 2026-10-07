@@ -6,7 +6,29 @@
 #   fork bomb、.ssh/.env/.aws/.pem 等敏感路径。以下为联邦特有补充。
 
 rules:
+  # —— CI 日志主机（2026-10-07 加）：GitHub Actions 的日志 blob 主机名**按数字分片轮换**
+  # （实测 productionresultssa18 → ssa4…），逐台登记永远追不上 ⇒ 改用一级子域通配。
+  # 用途：`gh run view --log` / `--log-failed` 取失败日志（排 CI 红必用）。
+  - match:
+      network:
+        domains:
+          - "*.blob.core.windows.net"
+    action: allow
+    reason: "GitHub Actions 日志 blob 主机按分片轮换（productionresultssaN），通配一级子域；非本仓数据"
+  - match:
+      network:
+        domains:
+          - results-receiver.actions.githubusercontent.com
+    action: allow
+    reason: Allow results-receiver.actions.githubusercontent.com (GitHub 日志接收端)
   # —— 并行会话保护: 禁止静默摧毁兄弟 session 的未提交改动 ——
+  - match:
+      network:
+        domains:
+          - productionresultssa18.blob.core.windows.net
+    action: allow
+    reason: Allow productionresultssa18.blob.core.windows.net (added from the
+      settings page)
   - match:
       network:
         domains:

@@ -10,7 +10,6 @@ source_files:
   - frontend/src/preview-3d/caps/scene-capability.ts
 auto_fields:
   symbols_with_lines:
-    - bindFieldRestorers
     - buildCameraSchema
     - buildCrossCuttingNodes
     - buildLightingSchema
@@ -28,19 +27,14 @@ auto_fields:
     - disposeSceneCapSubscriptions
     - EnvPlacement
     - EnvSectionId
-    - FieldKind
-    - FieldRestorer
     - formatCapSliderValue
     - getStateValue
     - getTypedCap
-    - GROUND_LAYER_OFFSETS
     - isPathAvailable
     - KNOWN_PATHS
-    - oneOf
     - PathInput
     - PathValue
     - persistState
-    - pickPersistFields
     - previewSnapshot
     - PreviewSnapshot
     - PreviewStatePath
@@ -51,7 +45,6 @@ auto_fields:
     - renderCapToggle
     - resetSettingsListeners
     - restoreBySchema
-    - restoreFields
     - restoreState
     - ringLog
     - SceneCapability

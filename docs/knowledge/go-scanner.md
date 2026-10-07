@@ -57,7 +57,7 @@ pitfalls:
   - ScanEntriesWithHit 缓存 30s TTL——频繁扫描会反复重算
   - 作者提取依赖模型文件中的 metadata.authors 字段——缺失则作者为空
   - 单文件 >500MB 跳过哈希计算——同步对空哈希跳过匹配
-  - Go/Rust 双扫描器口径必须一致——parity_test.go 锁三条谓词
+  - Go 单引擎扫描口径须自洽——Rust 后端已删除（2026-10-06），不再有跨引擎对照
 status: active
 ---
 
@@ -73,7 +73,7 @@ status: active
 - **并行遍历引擎（2026-10-06）**：`walkDirParallel`（`go/scanner/walk_parallel.go`）替代 `filepath.WalkDir`——目录工作队列 + NumCPU worker 池并行展开 readdir，回调契约对标 `filepath.WalkDir`（`fs.SkipDir` 跳子树 / `fs.SkipAll` 中止 / ReadDir 失败二次回调）。条目序非确定，扫描后按路径 `sort.SliceStable` 恢复字典序。实测 1.97-3x（walkbench），深窄树（纯目录链无宽度）负收益 0.54x；生产模型库形态均为宽树，正收益。`processScanDirEntry` 回调并行执行，`entries` append 加 `sync.Mutex`、`walkFailed` 用 `atomic.Bool`。**三函数结构是 gocyclo 门槛逼出来的（勿合并回单函数）**：`startParallelWalk`（根目录 Lstat+首次回调）/ `workerLoop`（取队列主循环）/ `handleDirItem`（单目录项 ReadDir+回调+入队）各担分支密集段，`walkDirParallel` 只做编排——单函数塞下全部分支会破 `.golangci.yml` 的 `gocyclo.min-complexity` 20（2026-10-06 实测单函数 25，拆分后 golangci-lint 增量零检出；纯结构拆分，行为契约与 `walk_parallel_test.go` 的 WalkDir 等价断言不变）
 - **MMD 子目录分组（ADR-096 P1）**：扫描 MMD group 根时，`scanner.go` 通过 `filepath.Rel` + `strings.Split` 提取第一段路径，命中 `types.IsMMDSubDir` 时填充 `ModelEntry.SubDir`（如 `SceneModel`/`CustomAnim`）；非 MMD 类型 / 根下文件恒为 `""`（`omitempty` 不序列化）
 - `.json` 白名单：仅 `ysm.json` 作为模型条目（ADR-038 D2，几何/动画/语言 json 不单独扫描）
-- 30s 扫描缓存（**非永久**）+ 路径级失效：`scanCache` 为 `sync.Map`（`string → scanCacheEntry{entries []ModelEntry, expiresAt time.Time}`），记录扫描条目与过期时刻；TTL 默认 30s（可由 `AppConfig.ScanCacheTTLMs` 覆盖，仍是短 TTL），且**纯进程内存——App 重启即全失，不存在「确定仓库永久缓存」**。故「缓存命中时 Rust 不进场、Rust 进场时缓存已过期」两者时间互斥，`scanEntriesWithRust` 内无法复用 Go 缓存作为 manifest（见下方 Rust 回源条）。`keyVersions` 为另一份 `sync.Map`（`string → *atomic.Uint64`），用 `(*atomic.Uint64).Add(1)` 原子递增 per-key 版本戳，防并发 `InvalidatePath` 竞态——P1 修复；单全局 `cacheGen atomic.Uint64` 仅作全量失效的代际短路标记
+- 30s 扫描缓存（**非永久**）+ 路径级失效：`scanCache` 为 `sync.Map`（`string → scanCacheEntry{entries []ModelEntry, expiresAt time.Time}`），记录扫描条目与过期时刻；TTL 默认 30s（可由 `AppConfig.ScanCacheTTLMs` 覆盖，仍是短 TTL），且**纯进程内存——App 重启即全失，不存在「确定仓库永久缓存」**。`keyVersions` 为另一份 `sync.Map`（`string → *atomic.Uint64`），用 `(*atomic.Uint64).Add(1)` 原子递增 per-key 版本戳，防并发 `InvalidatePath` 竞态——P1 修复；单全局 `cacheGen atomic.Uint64` 仅作全量失效的代际短路标记
 - SHA256 哈希（同步系统文件匹配用）
 - 作者提取（`[作者]` 前缀统计）、本地作者扫描、`index.json` 生成
 
@@ -93,14 +93,13 @@ status: active
 - `ScanEntries(dir)` — 单返回值薄壳：内部 `ScanEntriesWithHit(dir)` 丢弃 `bool` 后返回条目
 - `ScanEntriesWithHit(dir)` — 扫描核心（缓存 30s，`.recycle` 跳过），返回 `(entries []ModelEntry, hit bool)`，调用方据此决定是否记录扫描日志，避免 30s 内重复访问同一目录时刷屏操作日志面板
 - **ctx 变体（ADR-197，2026-09-06）**：`ScanEntriesCtx` / `ScanEntriesWithHitCtx` / `ScanEntriesLiteCtx` 带 context 取消——walk 回调内 ctx.Done 即 `fs.SkipAll`；取消产生的部分结果**只返回不写入缓存**（防 30s TTL 污染）。旧签名委托 `context.Background()`。CLI/watcher 后续按需接入
-- **在途合并（single-flight，2026-08-21）**：缓存「扫完才 Store」，同目录并发请求在途重叠时会双双真扫（点击整合包时前端多组件并发要状态 → 操作日志同秒重复条目）。`inFlight`（`sync.Map: dir → *scanFlight`）让首个调用方注册航班走盘，后续调用方 `wg.Wait()` 并入航班取**克隆**结果且返回 `hit=true`（薄壳不重复记日志）；唯一 owner 返回 `hit=false`。`walkCount`/`flightJoins` 为诊断计数。测试 `scanner_singleflight_test.go`（`!rust_backend`，walkStartHook 制造确定性重叠）+ 对等变体 `scanner_singleflight_rust_test.go`（`rust_backend`，setRustScanHook 注入阻塞钩子绕真实 DLL 锁同组不变量——rust 快路径短路 Go walk 后单飞合并在 Windows 生产路径上同样有效，CI rust 作业覆盖）
+- **在途合并（single-flight，2026-08-21）**：缓存「扫完才 Store」，同目录并发请求在途重叠时会双双真扫（点击整合包时前端多组件并发要状态 → 操作日志同秒重复条目）。`inFlight`（`sync.Map: dir → *scanFlight`）让首个调用方注册航班走盘，后续调用方 `wg.Wait()` 并入航班取**克隆**结果且返回 `hit=true`（薄壳不重复记日志）；唯一 owner 返回 `hit=false`。`walkCount`/`flightJoins` 为诊断计数。测试 `scanner_singleflight_test.go`（walkStartHook 制造确定性重叠；文件头仍挂 `//go:build !rust_backend` 是 Rust 后端删除前遗留的死 tag，`rust_backend` 已不再构成构建变体——tag 本身无害但已失语义，留待后续清理）
 - `InvalidateCache()` / `InvalidatePath(dir)` — 缓存失效（导入/启用禁用后调用）
   - **`InvalidatePath` 祖先链覆盖（长治久安核心）**：`go/scanner/scanner.go|InvalidatePath` 不只删 `dir` 自身，还遍历 `keyVersions` / `scanCache` 删所有**互前缀** key——含 `strings.HasPrefix(key, kstr+sep)`（失效 dir 是 kstr 的后代时，递增 kstr 版本并删 kstr 条目）。即「禁用 `globalDir/ModelA` → `InvalidatePath(filepath.Dir(ModelA))` = `InvalidatePath(globalDir)`（文件级）或 `InvalidatePath(base)`（目录级 ModelA 文件夹）→ 仍经祖先链命中并失效 `globalDir` 仓库根缓存」。所以 sync 层消费的 `scanCache[globalDir]` 在 Toggle 后立即失效，**无 30s 陈旧窗口**。`BuildSyncItems` 入口无需额外失效（冗余）。
   - ⚠️ **复核（2026-08-24 审核 P1）**：此前疑「ToggleModelEnable 仅失效模型夹层级、不覆盖仓库根祖先 key、存在 30s 窗口」——经核实为误判。`InvalidatePath` 的 keyVersion 祖先链（`go/scanner/scanner.go|InvalidatePath` 的第二个 `HasPrefix` 条件）已覆盖仓库根；目录级禁用 `path=globalDir/ModelA` 时 `filepath.Dir` = `base`，`InvalidatePath(base)` 仍经 `HasPrefix(key, kstr+sep)` 命中 `globalDir`。实测目录级禁用后 `BuildSyncItems` 结果已从 `.ban` 路径重扫，不残留旧条目。P1 不成立，不引入额外失效代码。
 - `OnCacheInvalidated(fn)` — 注册扫描缓存失效钩子；`InvalidateCache` / `InvalidatePath` 完成清理后同步调用。注册方自行保证幂等：`go/instance` / `go/sync` 各导出 `RegisterInvalidationHook()`（内部 `sync.Once`），由 app 层 ServiceStartup 显式调用（2026-08-26 起不再隐式 `init()` 注册，导入无跨包副作用）。
 - `EffectiveCacheTTL()` — 当前生效的扫描缓存 TTL（`AppConfig.ScanCacheTTLMs` 覆盖否则默认 30s）；**派生缓存刷新周期单一事实源**——instance/sync 写缓存过期时刻时取同一口径（写入时刻求值，勿包级初始化固化默认值）。
-- **Rust 回源 `scanEntriesWithRust(dir)`（ADR-120）**：`ScanEntriesWithHit` 缓存未命中时回源调 Rust（全平台 + `rust_backend` tag；历史四份 `rust_backend_<os>.go` 已合并为单一 `rust_backend.go`，`//go:build rust_backend` 无 OS 约束——非仅 Windows）。该函数**仅**转发 `rustbridge.Scan(dir, registryJSON)`（jwalk 全树发现），不再内读 `scanCache`。
-  - ⚠️ **死代码清除（2026-08-24）**：原实现在 `scanEntriesWithRust` 内先 `scanCache.Load(dir)`、命中未过期则走 `rustbridge.ScanManifest` 隐式快路径——经审核该分支**逻辑不可达**：`ScanEntriesWithHit` 仅在「缓存未命中」时成为 owner 调本函数（`scanner.go`），且未命中进入前已 `scanCache.Delete(dir)`（同文件 Delete 段），故本函数内部再 `Load` 永远拿到过期/缺失条目；而缓存命中时 `ScanEntriesWithHit` 直接 return 不经 Rust。两者时间互斥，「有 Go 缓存但仍需 Rust 结果」在现有架构下不存在。该隐式分支已删除，`scanEntriesWithRust` 收敛为纯 `rustbridge.Scan` 转发。
+- **Rust 扫描后端已删除（2026-10-06，ADR-324）**：原 ADR-120 引入的 `scanEntriesWithRust`（`rustbridge.Scan` 转发）与 `rust_backend` 构建变体已整体移除——Go 并行遍历（`walkDirParallel`）实测追平并反超 Rust 19% 后决策删除，`go/rustbridge/` 目录与 `rust_backend*.go` 文件均已不在。扫描现在只有 Go walk 一个后端；此前的「Rust 快路径 / 缓存互斥 / 死代码清除」讨论全部成为历史注记，不再适用。
 - **引擎归属记账（`scan_engine.go`，2026-10-06 精简）**：原为 Go/Rust 双引擎对照（ADR-262 D3）而设；Rust 扫描后端删除后只剩 Go walk 一个引擎，`ScanEngineStats()` 现只返回 `{GoWalk}`（`walkCount` 复用既有诊断计数），调用方取**前后差**判断「这一次扫描是否真的走了引擎」（区分「扫过」与「30s 缓存命中」——后者不算测量）。不做成返回值：`ScanEntries*` 有十几个调用方，为观测改签名是反向收益；计数器 + 前后差同样精确且零调用方改动。消费方 = `go/cli/scan_bench.go`（`scan-bench` 命令，已改为 Go-only 扫描基准）。
 - `ComputeFileHash(path)` — SHA256
 - `ScanEntriesLite(dir)` — 轻量遍历（2026-08-26，作者提取专用）：与 `ScanEntries` 同过滤口径（recycle/.github/禁用目录跳过、扩展名白名单、ysm.json 判定、`.ban` 恢复），但**不读文件信息（Size/ModTime/Hash 恒零值）、不读不写共享 scanCache**——无哈希条目入缓存会被同步系统当「哈希为空」静默跳过。实现为 `processScanDirEntry(wantMeta=false)`；测试 `scanner_lite_test.go`（过滤同口径 + 双向缓存隔离）。作者路径跳过逐文件 open+hash 后冷扫成本降为纯目录枚举

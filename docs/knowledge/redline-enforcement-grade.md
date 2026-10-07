@@ -17,12 +17,26 @@ tests:
   - frontend/src/utils/resource/schema.test.ts
   - frontend/src/views/app-content/settings/stg-card.test.ts
 invariant_anchors:
-  - scripts/check-redlines.ts|W6
-  - scripts/check-redlines.ts|W9
-  - scripts/check-redlines.ts|R7
-  - scripts/check-redlines.ts|R11
+  - scripts/check-redlines.ts|runChecks
   - frontend/src/preview-3d/menu/schema/menu-node-types.ts|visibleWhen
 affected: false
+use_when:
+  - 唯一入口
+  - 红线
+  - 绕过 redlines
+  - W6 W9 R7 R11
+  - 资源类型魔法串
+  - 菜单 visibleWhen
+  - 审计等级
+  - 单一入口收口
+quick_intents:
+  - 查某条红线属于 A/B/C/D 哪个等级
+  - 判断某功能是否走唯一入口
+  - 了解 check-redlines 规则与绕过风险
+pitfalls:
+  - check-redlines 只在本地 pre-push 跑，CI --static 不跑 redlines——git push --no-verify 可绕过（B 级闸盲区）
+  - W6/W9/R7/R11 规则 id 只是字符串字面量，不是 TS 符号——invariant_anchors 应指向规则执行主体 runChecks
+  - 正文中引用 file|symbol 一律不用行号（ADR-162），行号位移会静默漂移
 ---
 
 # 唯一入口红线执法等级表（37 条审计）

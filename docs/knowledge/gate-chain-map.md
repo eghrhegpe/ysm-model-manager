@@ -102,7 +102,8 @@ CI ────────── test.yml 独立步骤：pre-push-gate --static
 
 - **只减不增型闸（biome 行级 / design-tokens / a11y / css-layer）**：按不变量须**双挂**——pre-commit 拦提交 + gate-config 清单拦推送/CI；只挂其一属单点防线。判定口径统一走真行级 `--added-lines`，不用行号入键。
 - **域级检查（go build/test、前端 build/vitest、契约测试）**：本地由 gate 域块承担；CI 由 test.yml 各步骤独立承担，**不经 gate 编排**。
-- **静态治理工具（27/37 接入门禁）**：清单单一事实源 = `scripts/_lib/gate-config.ts`，分 ALL / DOC / FRONTEND / GO 四张；未接入项走 pre-commit 或 CI 旁路。判定「真阻断」看该清单项 `blockPolicy`，FAIL 非空 ≠ 被拦。
+- **静态治理工具（42 个 `check-*.ts`，30 个为 `gate-config.ts` 精确 `tool:` 条目，其余 12 个走 pre-commit / gate-blocks 旁路，仅 1 个刻意挂起）**：清单单一事实源 = `scripts/_lib/gate-config.ts`，分 ALL / DOC / FRONTEND / GO 四张（**ALL 唯一条目 = 32 项**，其余为域子集，有重叠——旧口径「27/37 接入」「合计 40+ 项」均已过时，2026-10-08 复核实测修正）。统计口径：**只数 `tool: "X.ts"` 条目，注释里提名字不算**（2026-10-08 实测踩坑：子串匹配会把注释里的 `check-*.ts` 计入，虚高）。判定「真阻断」看该清单项 `blockPolicy`，FAIL 非空 ≠ 被拦。
+  - 2026-10-08 门禁清单对账（锐评复核）处置：补挂 `check-comment-history` / `check-twin-siblings` / `check-unread-fields`（ALL，debt）+ `check-go-coverage-threshold`（GO，debt）；`check-diff-coverage` **刻意挂起**——依赖前端 coverage-final.json 与 diff 基线 ref，本地无覆盖率会 rc=2 恒红（假阻断），正确归宿是 CI vitest --coverage 之后。判定「真阻断」看该清单项 `blockPolicy`，FAIL 非空 ≠ 被拦。
 - **审计留痕**：逃生阀命中分两级——`YSM_SKIP_GATE=1` 与 `YSM_SKIP_*` 命中写 `.git/gate-audit.log`（SKIPPED/PUSH 行，可审计）；`git commit --no-verify` / `git push --no-verify` 整钩不跑，零痕迹，只能靠 CI 远端拦截与 `doctor --audit-check` 对账事后回溯。
 
 ## 门禁块写法范式（gate-blocks vs commit-blocks，2026-10-06 摸底）

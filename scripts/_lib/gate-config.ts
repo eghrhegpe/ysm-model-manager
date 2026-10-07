@@ -4,6 +4,10 @@
  * 设计意图：pre-push-gate.ts 职责是「按域调度检查」，但它长期内联了 4 个工具清单
  * （ALL_STATIC_TOOLS / DOC_STATIC_TOOLS / FRONTEND_STATIC_TOOLS / GO_STATIC_TOOLS，
  * 合计 40+ 项）。新增检查时同时改 gate 和清单的两处描述极易漂移（ADR-088 Take巧 #3 实证）。
+ *
+ * 数量口径（2026-10-08 复核实测，勿再沿用旧快照）：ALL_STATIC_TOOLS 唯一条目 = 32 项，
+ * DOC/FRONTEND/GO 是**域子集**（与 ALL 有重叠，非追加）；此前「合计 40+ 项」是把四张
+ * 列表的重复条目相加，属虚高。统计 check-*.ts 接入数以 `node scripts/` 实际清单为准。
  * 本模块把清单数据与 gate 调度逻辑解耦：gate 读配置，清单单一维护点。
  *
  * 结构（每项）：
@@ -106,6 +110,19 @@ export const ALL_STATIC_TOOLS: GateTool[] = [
   // Android 平台黑名单守卫（2026-09-08 纳入）：T1 编译期差集 / T2 运行期 ADR-047 守卫未登记 → 阻断。
   // 依赖 go 工具链；不可用时脚本降级为 T3/T4（_summary.degraded=true），不会因环境缺 go 而红灯。
   { tool: "check-android-unavailable.ts", blockPolicy: "hard" },
+  // ── 2026-10-08 门禁清单对账（锐评复核实测）补挂：原真·未接线的 check-* ──
+  // check-comment-history：ADR-234 D1 注释考古（WARN 观察期，非阻断）；实测 176ms，errors=0。
+  { tool: "check-comment-history.ts", blockPolicy: "debt" },
+  // check-twin-siblings：改动同构同胞探针（纯提醒，走 _summary.warns）；实测 132ms。
+  { tool: "check-twin-siblings.ts", blockPolicy: "debt" },
+  // check-unread-fields：契约字段零读取审计（check-orphan-exports 的字段层互补，各有契约测试）。
+  // ⚠️ 实测 20.4s（全仓文本解析）——是 gate 里最慢的 debt 项之一，接进来即每次 push +20s；
+  // 但本身 errors=0、有契约测试锁，故按 debt 接入（不阻断），成本如实知会。
+  { tool: "check-unread-fields.ts", blockPolicy: "debt" },
+  // check-diff-coverage.ts（前端 diff 覆盖率）**刻意不在此接入**：同时依赖前端
+  // coverage-final.json 与 diff 基线 ref——本地无覆盖率产物会 rc=2 恒红（假阻断，正是
+  // 门禁对账要消灭的假闸）；正确归宿是 CI 的 vitest --coverage 之后且 checkout 须有基线 ref。
+  // 待 CI 接线专项处理，勿盲目加进本地闸（参见 docs/knowledge/gate-chain-map.md 处置记录）。
 ];
 
 /**
@@ -216,6 +233,9 @@ export const FRONTEND_STATIC_TOOLS: GateTool[] = [
 export const GO_STATIC_TOOLS: GateTool[] = [
   { tool: "jscpd-go.ts", blockPolicy: "debt" },
   { tool: "check-go-diff-coverage.ts", blockPolicy: "hard" },
+  // check-go-coverage-threshold：包级最低函数覆盖率（语句加权，2026-09 口径修正后）。
+  // 依赖 .coverage/go-cover.out（push 前 gate 已生成）；实测 144ms、errors=0 → debt 接入。
+  { tool: "check-go-coverage-threshold.ts", blockPolicy: "debt" },
 ];
 
 /**

@@ -107,6 +107,14 @@ const EXPECTED_POLICY: Record<string, BlockPolicy> = {
   // i18n 未使用键（2026-09 接线）：同为基线比对 + 只拦新增；判定含启发式成分
   // （动态查表无法静态判定），故记 debt。
   "check-i18n-unused.ts": "debt",
+  // 2026-10-08 门禁清单对账补挂（锐评复核实测）：三个真旁路 check-* 接入 ALL。
+  //   check-comment-history：ADR-234 D1 注释考古，WARN 观察期非阻断（实测 176ms）；
+  //   check-twin-siblings：改动同构同胞探针，纯提醒走 _summary.warns（实测 132ms）；
+  //   check-unread-fields：契约字段零读取审计（实测 20.4s，errors=0）。
+  // 三者都是「代码质量建议」类 → debt（FAIL 只记不阻断，存量债不误伤推送）。
+  "check-comment-history.ts": "debt",
+  "check-twin-siblings.ts": "debt",
+  "check-unread-fields.ts": "debt",
 
   // —— failClosed（仅 rg 等环境依赖工具；生成物漂移类恢复 hard——
   //    迁移时误降 failClosed 会让过期生成物静默过闸，code_review 03a6005ed 撤销）——

@@ -1,0 +1,59 @@
+name: Release 工具链 spine（四平台共享）
+description: |
+  setup-go + pnpm + setup-node + go-mod/wails3 二进制缓存 + 前端依赖安装。
+  windows/linux/darwin/android 四个 release build job 共用（GHA 不支持 YAML 锚点，
+  composite 是唯一合规 DRY 机制）；OS 专属步骤（Linux apt、Android NDK/签名）留在调用方。
+inputs:
+  node-version:
+    description: Node 大版本（对齐仓库级 vars.NODE_VERSION）
+    required: false
+    default: '22'
+  wails-version:
+    description: wails3 CLI 版本（进缓存 key；须与 go.mod 的 wails/v3 一致，drift 由 test.yml 双源守卫兜底）
+    required: false
+    default: ''
+  go-mod-cache:
+    description: 是否缓存 go 模块。Linux/macOS=true；Windows（含 android-on-windows）实测「冷 go mod download + build」比缓存解压更快（Defender 扫解压小文件是瓶颈），故 =false
+    required: false
+    default: 'true'
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-go@v6
+      with:
+        # Go 工具链单一事实源 = go.mod（与 test.yml 门禁同源）；vars.GO_VERSION 平行双源已退役。
+        go-version-file: go.mod
+        # ⚡ cache: false（勿回退为默认 true）：setup-go 默认把「工具链+GOMODCACHE+GOCACHE」
+        # 打成 ~1.1GB 单包，Windows 解压 ~94s 且与下方 go-mod 缓存内容重叠 ⇒ 空烧 ~3min 纯 I/O。
+        cache: false
+    - uses: pnpm/action-setup@v4
+      with:
+        version: 10
+    - uses: actions/setup-node@v5
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: pnpm
+        cache-dependency-path: frontend/pnpm-lock.yaml
+    - name: 缓存 Go 模块（Linux/macOS；Windows 实测不缓存更快）
+      if: ${{ inputs.go-mod-cache == 'true' }}
+      uses: actions/cache@v5.1.0
+      with:
+        path: ~/go/pkg/mod
+        key: go-mod-${{ runner.os }}-${{ inputs.wails-version }}-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          go-mod-${{ runner.os }}-${{ inputs.wails-version }}-
+          go-mod-${{ runner.os }}-
+    - name: 缓存 wails3 CLI 二进制（命中免编译）
+      id: wails3-bin
+      uses: actions/cache@v5.1.0
+      with:
+        path: ${{ runner.os == 'Windows' && '~\go\bin' || '~/go/bin' }}
+        key: wails3-${{ runner.os }}-${{ inputs.wails-version }}
+    - name: 安装 Wails v3 CLI（缓存未命中时 go install 源码编译）
+      if: steps.wails3-bin.outputs.cache-hit != 'true'
+      shell: bash
+      run: go install github.com/wailsapp/wails/v3/cmd/wails3@${{ inputs.wails-version }}
+    - name: 安装前端依赖
+      working-directory: frontend
+      shell: bash
+      run: pnpm install --frozen-lockfile

@@ -72,47 +72,13 @@ jobs:
         shell: pwsh
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod  # 单点=go.mod（与 test.yml 门禁同源）；vars.GO_VERSION 平行双源已退役
-          # cache: false —— 勿回退为默认 true：setup-go 默认把「工具链 + GOMODCACHE +
-          # GOCACHE」打成单个 ~1.1GB 包，Windows 上解压近 94s，且与下方 go-mod 缓存
-          # 内容重叠（再烧 68s）。实测 ~174s 纯解压浪费（2026-10-07，同 test.yml）。
-          cache: false
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
-      - uses: actions/setup-node@v5
+      # 工具链 spine（setup-go/pnpm/node + go-mod/wails3 缓存 + 前端依赖）抽到共享 composite action，
+      # 与 linux/darwin/android 同一份（原三段逐字重复；GHA 不支持 YAML 锚点，composite 是唯一合规 DRY）。
+      - uses: ./.github/actions/release-toolchain
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-          cache-dependency-path: frontend/pnpm-lock.yaml
-      # ⚡ Windows 上停用（2026-10-07 实测，同 test.yml）：缓存恢复 1m22s vs 冷
-      # `go mod download all` 34.5s + 后续 build 7.5s；Windows Defender 扫解压小文件
-      # 是瓶颈，不缓存更快。Linux/macOS 解压快，保留。
-      - name: 缓存 Go 模块（Linux/macOS；Windows 实测不缓存更快）
-        if: runner.os != 'Windows'
-        uses: actions/cache@v5.1.0
-        with:
-          path: ~/go/pkg/mod
-          key: go-mod-${{ runner.os }}-${{ env.WAILS_VERSION }}-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            go-mod-${{ runner.os }}-${{ env.WAILS_VERSION }}-
-            go-mod-${{ runner.os }}-
-      - name: 缓存 wails3 CLI 二进制（命中免编译）
-        uses: actions/cache@v5.1.0
-        with:
-          path: ${{ runner.os == 'Windows' && '~\go\bin' || '~/go/bin' }}
-          key: wails3-${{ runner.os }}-${{ env.WAILS_VERSION }}
-      - name: 安装 Wails v3 CLI（缓存命中则跳过）
-        shell: bash
-        run: |
-          if ! command -v wails3 >/dev/null 2>&1; then
-            go install github.com/wailsapp/wails/v3/cmd/wails3@${{ env.WAILS_VERSION }}
-          fi
-      - name: 安装前端依赖
-        working-directory: frontend
-        run: pnpm install --frozen-lockfile
+          wails-version: ${{ env.WAILS_VERSION }}
+          go-mod-cache: 'false'  # Windows 实测不缓存 go 模块更快（Defender 扫解压小文件是瓶颈）
       - name: 打包（build-release.ps1 → build/release 裸 exe + SHA256SUMS）
         run: |
           & .\scripts\build-release.ps1 -Version "${{ needs.prepare.outputs.version }}" -SkipUpload
@@ -134,38 +100,13 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod  # 单点=go.mod（与 test.yml 门禁同源）；vars.GO_VERSION 平行双源已退役
-          # cache: false —— 勿回退为默认 true：setup-go 默认把「工具链 + GOMODCACHE +
-          # GOCACHE」打成单个 ~1.1GB 包，Windows 上解压近 94s，且与下方 go-mod 缓存
-          # 内容重叠（再烧 68s）。实测 ~174s 纯解压浪费（2026-10-07，同 test.yml）。
-          cache: false
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
-      - uses: actions/setup-node@v5
+      # 工具链 spine 抽到共享 composite action（与 windows/darwin/android 同一段）。
+      - uses: ./.github/actions/release-toolchain
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-          cache-dependency-path: frontend/pnpm-lock.yaml
-      # ⚡ Windows 上停用（2026-10-07 实测，同 test.yml）：缓存恢复 1m22s vs 冷
-      # `go mod download all` 34.5s + 后续 build 7.5s；Windows Defender 扫解压小文件
-      # 是瓶颈，不缓存更快。Linux/macOS 解压快，保留。
-      - name: 缓存 Go 模块（Linux/macOS；Windows 实测不缓存更快）
-        if: runner.os != 'Windows'
-        uses: actions/cache@v5.1.0
-        with:
-          path: ~/go/pkg/mod
-          key: go-mod-${{ runner.os }}-${{ env.WAILS_VERSION }}-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            go-mod-${{ runner.os }}-${{ env.WAILS_VERSION }}-
-            go-mod-${{ runner.os }}-
-      - name: 缓存 wails3 CLI 二进制（命中免编译）
-        uses: actions/cache@v5.1.0
-        with:
-          path: ${{ runner.os == 'Windows' && '~\go\bin' || '~/go/bin' }}
-          key: wails3-${{ runner.os }}-${{ env.WAILS_VERSION }}
+          wails-version: ${{ env.WAILS_VERSION }}
+          go-mod-cache: 'true'  # Linux 解压快，保留 go 模块缓存
+      # OS 专属：Linux 桌面需 GTK4 + WebKitGTK 6.0 系统库（wails3 build 编译期依赖）。
       - name: 安装 Linux 系统依赖（GTK4 + WebKitGTK 6.0）
         run: |
           sudo apt-get update -qq
@@ -179,15 +120,6 @@ jobs:
             libcairo2-dev \
             libatk1.0-dev \
             libgirepository1.0-dev
-      - name: 安装 Wails v3 CLI（缓存命中则跳过）
-        shell: bash
-        run: |
-          if ! command -v wails3 >/dev/null 2>&1; then
-            go install github.com/wailsapp/wails/v3/cmd/wails3@${{ env.WAILS_VERSION }}
-          fi
-      - name: 安装前端依赖
-        working-directory: frontend
-        run: pnpm install --frozen-lockfile
       - name: 打包（build-linux.sh → dist/ 二进制）
         run: |
           bash ./scripts/build-linux.sh "${{ needs.prepare.outputs.version }}"
@@ -206,47 +138,12 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod  # 单点=go.mod（与 test.yml 门禁同源）；vars.GO_VERSION 平行双源已退役
-          # cache: false —— 勿回退为默认 true：setup-go 默认把「工具链 + GOMODCACHE +
-          # GOCACHE」打成单个 ~1.1GB 包，Windows 上解压近 94s，且与下方 go-mod 缓存
-          # 内容重叠（再烧 68s）。实测 ~174s 纯解压浪费（2026-10-07，同 test.yml）。
-          cache: false
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
-      - uses: actions/setup-node@v5
+      # 工具链 spine 抽到共享 composite action（与 windows/linux/android 同一段）。
+      - uses: ./.github/actions/release-toolchain
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-          cache-dependency-path: frontend/pnpm-lock.yaml
-      # ⚡ Windows 上停用（2026-10-07 实测，同 test.yml）：缓存恢复 1m22s vs 冷
-      # `go mod download all` 34.5s + 后续 build 7.5s；Windows Defender 扫解压小文件
-      # 是瓶颈，不缓存更快。Linux/macOS 解压快，保留。
-      - name: 缓存 Go 模块（Linux/macOS；Windows 实测不缓存更快）
-        if: runner.os != 'Windows'
-        uses: actions/cache@v5.1.0
-        with:
-          path: ~/go/pkg/mod
-          key: go-mod-${{ runner.os }}-${{ env.WAILS_VERSION }}-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            go-mod-${{ runner.os }}-${{ env.WAILS_VERSION }}-
-            go-mod-${{ runner.os }}-
-      - name: 缓存 wails3 CLI 二进制（命中免编译）
-        uses: actions/cache@v5.1.0
-        with:
-          path: ${{ runner.os == 'Windows' && '~\go\bin' || '~/go/bin' }}
-          key: wails3-${{ runner.os }}-${{ env.WAILS_VERSION }}
-      - name: 安装 Wails v3 CLI（缓存命中则跳过）
-        shell: bash
-        run: |
-          if ! command -v wails3 >/dev/null 2>&1; then
-            go install github.com/wailsapp/wails/v3/cmd/wails3@${{ env.WAILS_VERSION }}
-          fi
-      - name: 安装前端依赖
-        working-directory: frontend
-        run: pnpm install --frozen-lockfile
+          wails-version: ${{ env.WAILS_VERSION }}
+          go-mod-cache: 'true'  # macOS 解压快，保留 go 模块缓存
       - name: 打包（build-darwin.sh → dist/ 二进制）
         run: |
           bash ./scripts/build-darwin.sh "${{ needs.prepare.outputs.version }}"
@@ -268,48 +165,17 @@ jobs:
         shell: pwsh
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-go@v6
-        with:
-          go-version-file: go.mod  # 单点=go.mod（与 test.yml 门禁同源）；vars.GO_VERSION 平行双源已退役
-          # cache: false —— 勿回退为默认 true：setup-go 默认把「工具链 + GOMODCACHE +
-          # GOCACHE」打成单个 ~1.1GB 包，Windows 上解压近 94s，且与下方 go-mod 缓存
-          # 内容重叠（再烧 68s）。实测 ~174s 纯解压浪费（2026-10-07，同 test.yml）。
-          cache: false
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
-      - uses: actions/setup-node@v5
+      # 工具链 spine 抽到共享 composite action（与 windows/linux/darwin 同一段；android 亦跑在 windows-latest）。
+      - uses: ./.github/actions/release-toolchain
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-          cache-dependency-path: frontend/pnpm-lock.yaml
-      # ⚡ Windows 上停用（2026-10-07 实测，同 test.yml）：缓存恢复 1m22s vs 冷
-      # `go mod download all` 34.5s + 后续 build 7.5s；Windows Defender 扫解压小文件
-      # 是瓶颈，不缓存更快。Linux/macOS 解压快，保留。
-      - name: 缓存 Go 模块（Linux/macOS；Windows 实测不缓存更快）
-        if: runner.os != 'Windows'
-        uses: actions/cache@v5.1.0
-        with:
-          path: ~/go/pkg/mod
-          key: go-mod-${{ runner.os }}-${{ env.WAILS_VERSION }}-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            go-mod-${{ runner.os }}-${{ env.WAILS_VERSION }}-
-            go-mod-${{ runner.os }}-
-      - name: 缓存 wails3 CLI 二进制（命中免编译）
-        uses: actions/cache@v5.1.0
-        with:
-          path: ${{ runner.os == 'Windows' && '~\go\bin' || '~/go/bin' }}
-          key: wails3-${{ runner.os }}-${{ env.WAILS_VERSION }}
+          wails-version: ${{ env.WAILS_VERSION }}
+          go-mod-cache: 'false'  # android-on-windows 同 Windows：不缓存 go 模块更快
+      # OS 专属：Android NDK 交叉编译工具链。
       - uses: android-actions/setup-android@v4
       - name: 安装 Android SDK 组件（platform + build-tools + NDK）
         run: |
           sdkmanager "platforms;android-34" "build-tools;34.0.0" "ndk;26.3.11579264"
-      - name: 安装 Wails v3 CLI（缓存命中则跳过）
-        shell: bash
-        run: |
-          if ! command -v wails3 >/dev/null 2>&1; then
-            go install github.com/wailsapp/wails/v3/cmd/wails3@${{ env.WAILS_VERSION }}
-          fi
       - name: 解码签名 keystore（可选，无则 debug 构建）
         run: |
           $dir = "${{ github.workspace }}\build\android\keystore"

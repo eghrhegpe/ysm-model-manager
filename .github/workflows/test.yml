@@ -155,7 +155,7 @@ jobs:
       - name: 绑定产物保鲜（重新生成必须零 diff）
         shell: pwsh
         run: |
-          npm --prefix frontend run generate:bindings
+          pnpm -C frontend run generate:bindings
           git diff --exit-code -- frontend/bindings
           if ($LASTEXITCODE -ne 0) {
             Write-Error "Go 签名变更但 frontend/bindings 未重新生成/提交"

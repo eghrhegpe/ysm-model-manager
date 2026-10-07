@@ -3,6 +3,13 @@ name: Deploy GitHub Pages
 on:
   push:
     branches: [main]
+    # 只在真正喂给 Pages 的路径变更时部署：docs 站点 + frontend web 版。
+    # 纯 Go / 纯 scripts push 与站点无关，不应重跑整套契约 + VitePress + web 构建（2026-10 锐评 ①）。
+    # docs/** 与 ci.yml 的 paths-ignore 互补：docs-only 变更只触发本 workflow，不烧 CI 五件套。
+    paths:
+      - 'docs/**'
+      - 'frontend/**'
+      - '.github/workflows/pages-deploy.yml'
   workflow_dispatch:
 
 # Pages 部署权限：只读仓库内容，写入 Pages，签发 OIDC token

@@ -102,10 +102,25 @@ jobs:
         run: node scripts/binding-check.ts
 
 
-      - name: 安装 wails3 CLI（bindings 重生成依赖；此前缺失致本步必挂 → main CI 长期红）
+      # 缓存 wails3 编译产物：与 golangci-lint 同理（10-07 改预编译包前的原痛点是
+      # `go install` 每次从源码冷编译 ~1-2 分钟）。单文件 exe 缓存恢复仅数秒，无「791MB
+      # 模块小文件被 Defender 扫」问题，与 setup-go cache:false 的 2026-10-07 裁决不冲突。
+      # key 内嵌 WAILS_VERSION——升级 wails3 自动 miss 重装，无版本漂移风险。
+      - name: 缓存 wails3 CLI 二进制
+        id: wails3-bin
+        uses: actions/cache@v5.1.0
+        with:
+          path: ~/go/bin/wails3.exe
+          key: wails3-bin-${{ runner.os }}-${{ env.WAILS_VERSION }}
+
+      - name: 安装 wails3 CLI（缓存未命中时从源码编译；此前缺失致本步必挂 → main CI 长期红）
+        if: steps.wails3-bin.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: go install github.com/wailsapp/wails/v3/cmd/wails3@${{ env.WAILS_VERSION }}
+
+      - name: 注册 wails3 到 PATH 并验证（命中与否都执行）
         shell: pwsh
         run: |
-          go install github.com/wailsapp/wails/v3/cmd/wails3@${{ env.WAILS_VERSION }}
           $goBin = "$(go env GOPATH)/bin"
           Add-Content -Path $env:GITHUB_PATH -Value $goBin
           & "$goBin/wails3.exe" version
@@ -258,7 +273,11 @@ jobs:
         shell: pwsh
         run: go build -ldflags "-X ysm-model-manager/go/version.Version=ci" -o go/updater/ysm-updater-helper.exe ./cmd/updater
 
-      - name: Go 检查（build + vet + test）
+      # 本 job 保留**真实桌面测试**（原生 Windows 构建 + race）与依赖「真跑 go test」取数的
+      # 覆盖率两件套：只有 Windows 能原生构建执行桌面目标（Wails/WebView2），且本仓测试代码含
+      # Windows 专有符号。仅 golangci-lint（纯静态、可跨平台类型检查）迁至 ubuntu-latest 的
+      # go-analysis job，与本 job 并行。
+      - name: Go 检查（build + vet + test -race）
         shell: pwsh
         run: |
           # ./... 而非 ./go/...：后者会漏掉根 internal/app（Wails 绑定层，79 文件）与 cmd/updater。
@@ -272,6 +291,9 @@ jobs:
 
       # Go 增量覆盖率门禁（ADR-145/ADR-202）：本地 GO_STATIC_TOOLS hard 项的远端兜底。
       # 只查本次变更 Go 文件的变更行覆盖率，内部跑 go test -coverprofile（须置于 Go 检查后）。
+      # ⚠️ 只能留在 Windows（2026-10-08 实证）：本步与下方覆盖率报告都靠**真跑 `go test`** 取数，
+      # 而 go/executil/executil_test.go:41 引用 Windows 专有 `SysProcAttr.HideWindow`（只用
+      # runtime.GOOS 跳过、非编译期 build tag 排除）⇒ Linux 上该包编译失败，`go test ./...` 直接挂。
       # 基线语义：PR 场景 merge-base(origin/main, HEAD) 有真实 diff；main push 场景
       # origin/main==HEAD → 变更集为空自动 PASS（无害）。
       # ⚠️ 用 `git fetch origin main`（**不带 --depth=1**）：本轮 checkout 是 fetch-depth:0
@@ -286,58 +308,6 @@ jobs:
           node scripts/check-go-diff-coverage.ts --json | Out-String -Width 200
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      # 缓存 golangci-lint 分析结果（ADR-205 §2.3）：不配缓存则每次冷跑，缓存命中 10-30s。
-      - name: 缓存 golangci-lint 分析结果（命中免重分析）
-        uses: actions/cache@v5.1.0
-        with:
-          path: ${{ runner.os == 'Windows' && '~\AppData\Local\golangci-lint' || '~/.cache/golangci-lint' }}
-          key: golangci-lint-${{ runner.os }}-${{ hashFiles('.golangci.yml', '**/go.sum') }}
-          restore-keys: |
-            golangci-lint-${{ runner.os }}-
-
-      # 版本门槛（ADR-205 §2.4）：须 >= v1.64——老版本解析 go1.26 的 go directive 直接失败。
-      # code_review 9403a4dff #8/#10（P3）：钉定 ADR 实测通过的版本（v2.13.2 built with
-      # go1.26.3）——@latest 浮动使门禁随上游发版漂移（新默认/schema 变更无故变红或漏检，
-      # 且无法本地复现）；仓库惯例版本单点（对齐 WAILS_VERSION）
-      #
-      # ⚡ 2026-10-07 改下载官方预编译包（原 `go install …@v2.13.2` 实测 **1m30s**）：
-      # `go install` 从源码编译 golangci-lint 的数百个依赖，是**独立于本仓 go.mod 的
-      # 另一套编译键**（仓外 module 图，GOCACHE 不与之复用）⇒ Windows 上每次冷编译 90s。
-      # 官方 release 的 windows-amd64.zip 是单文件 exe，解压即用（数秒），版本仍钉 v2.13.2。
-      # 「built with go1.26.3」这一约束由上游 release 自身保证（同 tag 产物）；如需复核，
-      # 跑 `golangci-lint --version` 即见其 built-with 版本。
-      - name: 安装 golangci-lint（v2.13.2 预编译包，免源码编译）
-        shell: pwsh
-        run: |
-          $v = "2.13.2"
-          $zip = "$env:RUNNER_TEMP\golangci-lint.zip"
-          $dir = "$env:RUNNER_TEMP\golangci-lint-$v"
-          Invoke-WebRequest -Uri "https://github.com/golangci/golangci-lint/releases/download/v$v/golangci-lint-$v-windows-amd64.zip" -OutFile $zip -UseBasicParsing
-          Expand-Archive -LiteralPath $zip -DestinationPath $dir -Force
-          $exe = Get-ChildItem -Path $dir -Recurse -Filter golangci-lint.exe | Select-Object -First 1
-          Add-Content -Path $env:GITHUB_PATH -Value $exe.Directory.FullName
-          & $exe.FullName --version
-
-      - name: Go 静态分析（golangci-lint，仅增量）
-        shell: pwsh
-        run: |
-          # 增量而非全量：全量会撞 736 条存量债（errcheck 623 占 85%）→ 每次 CI 必红、门禁即废。
-          # 与本地 pre-push 同口径（ADR-205 §2.3）：PR 取 base ref 的 merge-base，push 取 HEAD~1。
-          # fetch-depth: 0 已保证历史可用；首个提交无基线则跳过（不惩罚，同 pre-push 降级口径）。
-          $base = ""
-          if ($env:GITHUB_BASE_REF) {
-            git fetch origin $env:GITHUB_BASE_REF --depth=1 2>$null
-            $base = git merge-base "origin/$env:GITHUB_BASE_REF" HEAD 2>$null
-          }
-          if (-not $base) { $base = git rev-parse HEAD~1 2>$null }
-          if (-not $base) {
-            Write-Host "无基线 rev（首个提交 / 浅历史），跳过 golangci-lint"
-            exit 0
-          }
-          Write-Host "golangci-lint 增量基线: $base"
-          golangci-lint run --new-from-rev=$base ./...
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
       # ⚡ 2026-10-07 条件化（实测优化）：本步自述「非阻断，趋势可见」，却要
       # `go test ./... -coverprofile -p 1` —— cover 插桩是**独立编译键**（与普通/race
       # 构建缓存互不复用），实测每次 1m56s 且 `-p 1` 强制单核串行，**全部计入关键路径**。
@@ -345,6 +315,7 @@ jobs:
       # PR 与分支 push 跳过（趋势数据由 main 累积，足够反映走向）。
       # 若日后要把它升为门禁，删掉 if 即可——但那时应改用方案 A（与 -race 合并成一次编译），
       # 而不是让两条独立编译键各自冷跑一遍。
+      # ⚠️ 同样只能留在 Windows（理由见上一步）：需真跑 `go test`，Linux 上测试代码编不过。
       - name: Go 覆盖率报告（非阻断，趋势可见；仅 main）
         if: github.ref == 'refs/heads/main'
         shell: pwsh
@@ -359,6 +330,105 @@ jobs:
           go test ./... -coverprofile='.coverage/go-cover.out' -count=1 -p 1 | Out-String -Width 200
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           go tool cover -func='.coverage/go-cover.out' | Select-String 'total:'
+
+  # ── Go 静态分析（2026-10-08：golangci-lint 从 Windows go job 迁出，独立并行跑）──────────
+  # 动机：golangci-lint 是**纯静态分析**（只做类型检查、不执行任何东西），原先串在 windows go
+  # job 里，1m30s 全程计入关键路径，还额外背着 Windows Defender 实时扫描的税。迁到
+  # ubuntu-latest：① 无 Defender 税、缓存解压快；② 与 windows go job 的 race 测试并行取 max。
+  # ⚠️ 关键手法：用 `GOOS=windows` 做**跨平台类型检查**，而不是在 Linux 上编译 Linux 目标。
+  # 原因（2026-10-08 实证，本仓是 Windows 桌面应用）：
+  #   ① 默认 GOOS=linux 会选中 wails 的 `linux_cgo.go`，要求 `pkg-config gtk4 webkitgtk-6.0`
+  #      （gtk3 tag 下为 gtk+-3.0/webkit2gtk-4.1），ubuntu-latest 不带这些 dev 库 ⇒ 类型检查失败；
+  #   ② go/executil/executil_test.go:41 用 Windows 专有 `SysProcAttr.HideWindow`（仅 runtime.GOOS
+  #      跳过、非编译期排除）⇒ GOOS=linux 下该包根本编译不过。
+  # 而 GOOS=windows + CGO_ENABLED=0 在 Linux 上类型检查 Windows 目标**不需要任何 GUI 库**
+  # （wails 的 Windows 实现是纯 Go，无 pkg-config 依赖）——实测本机 `GOOS=windows CGO_ENABLED=0
+  # go vet ./...` 全绿。语义与原先在 Windows 上 lint 完全一致（同 GOOS、同 build tag 集合）。
+  # 注意：覆盖率两件套（diff-coverage / 覆盖率报告）**不迁**——它们要真跑 `go test`，Windows
+  # 测试二进制无法在 Linux 上执行（且如上 ② 连编译都过不了），只能留在 Windows go job。
+  go-analysis:
+    name: Go 静态分析（golangci-lint）
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # 跨平台类型检查 Windows 目标：与原先在 Windows 上跑 lint 同 GOOS，语义等价；
+      # CGO_ENABLED=0 避免任何 C 工具链/系统库依赖（wails Windows 侧纯 Go）。
+      GOOS: windows
+      CGO_ENABLED: "0"
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # 增量 lint 需要真实历史 ref（merge-base / HEAD~1）。
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v6
+        with:
+          # workflow_call / fork PR may not expose repository variables;
+          # go.mod is the authoritative toolchain requirement.
+          go-version-file: go.mod
+          # ⚡ cache: false：与 Windows go job 同口径（setup-go 默认打 1133MB 单包，Linux 冷取模块更快）。
+          cache: false
+
+      # main.go 有 `//go:embed all:frontend/dist`，golangci-lint 类型检查 main 包要求产物存在，
+      # 故本 job 也要 pnpm + vite build（成本仅 2.3s）。
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: 安装前端依赖
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: 前端构建（embed 前置：main.go //go:embed all:frontend/dist 依赖此产物）
+        working-directory: frontend
+        run: pnpm exec vite build
+
+      # 同上：被 embed 的更新助手 exe 也须先产出（GOOS=windows 下交叉编译出 .exe）。
+      - name: 构建更新助手 helper（embed 前置）
+        run: go build -ldflags "-X ysm-model-manager/go/version.Version=ci" -o go/updater/ysm-updater-helper.exe ./cmd/updater
+
+      # 缓存 golangci-lint 分析结果（ADR-205 §2.3）：不配缓存则每次冷跑，缓存命中 10-30s。
+      - name: 缓存 golangci-lint 分析结果（命中免重分析）
+        uses: actions/cache@v5.1.0
+        with:
+          path: ~/.cache/golangci-lint
+          key: golangci-lint-Linux-${{ hashFiles('.golangci.yml', '**/go.sum') }}
+          restore-keys: |
+            golangci-lint-Linux-
+
+      # 版本门槛（ADR-205 §2.4）：须 >= v1.64（老版本解析 go1.26 的 go directive 直接失败），
+      # 钉定 ADR 实测通过的 v2.13.2（built with go1.26.3）。官方 linux-amd64 预编译包，免源码编译。
+      - name: 安装 golangci-lint（v2.13.2 预编译包，免源码编译）
+        run: |
+          v="2.13.2"
+          url="https://github.com/golangci/golangci-lint/releases/download/v$v/golangci-lint-$v-linux-amd64.tar.gz"
+          curl -sSL -o /tmp/gl.tar.gz "$url"
+          tar -xzf /tmp/gl.tar.gz -C /tmp
+          echo "/tmp/golangci-lint-$v-linux-amd64" >> "$GITHUB_PATH"
+          golangci-lint --version
+
+      - name: Go 静态分析（golangci-lint，仅增量）
+        run: |
+          # 增量而非全量：全量会撞 736 条存量债（errcheck 623 占 85%）→ 每次 CI 必红、门禁即废。
+          # 与本地 pre-push 同口径（ADR-205 §2.3）：PR 取 base ref 的 merge-base，push 取 HEAD~1。
+          # fetch-depth: 0 已保证历史可用；首个提交无基线则跳过（不惩罚，同 pre-push 降级口径）。
+          base=""
+          if [ -n "$GITHUB_BASE_REF" ]; then
+            git fetch origin "$GITHUB_BASE_REF" --depth=1 2>/dev/null
+            base=$(git merge-base "origin/$GITHUB_BASE_REF" HEAD 2>/dev/null)
+          fi
+          if [ -z "$base" ]; then base=$(git rev-parse HEAD~1 2>/dev/null); fi
+          if [ -z "$base" ]; then
+            echo "无基线 rev（首个提交 / 浅历史），跳过 golangci-lint"
+            exit 0
+          fi
+          echo "golangci-lint 增量基线: $base"
+          golangci-lint run --new-from-rev=$base ./...
 
   # ── E2E（Playwright · vite dev 纯前端 + mock bridge，参照 MikuMikuAR 实证模式）──
   # 参数：全局 7 分钟总限 / 每用例 15s / 累计 2 次失败阻断（maxFailures=2，playwright.config.ts:16）——ADR-037 接入参数。
@@ -378,6 +448,13 @@ jobs:
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
 
+      - name: 安装前端依赖
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      # ⚠️ 缓存步骤必须位于 pnpm install 之后：key 的 hashFiles 指向 node_modules 内的
+      # playwright-core package.json（git 不跟踪），放在 install 之前 hashFiles 恒为空串
+      # ⇒ key 冻结成常量，Playwright 升级后浏览器/apt 缓存永不更新（实证教训，勿移回上方）。
       - name: 缓存 Playwright 浏览器
         uses: actions/cache@v5.1.0
         with:
@@ -387,10 +464,6 @@ jobs:
           key: pw-browsers-${{ runner.os }}-${{ hashFiles('frontend/node_modules/playwright-core/package.json') }}
           restore-keys: |
             pw-browsers-${{ runner.os }}-
-
-      - name: 安装前端依赖
-        working-directory: frontend
-        run: pnpm install --frozen-lockfile
 
       - name: 缓存 apt 下载包（含 --with-deps 的 CJK 字体 / 系统库）
         uses: actions/cache@v5.1.0
@@ -459,6 +532,13 @@ jobs:
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
 
+      - name: 安装前端依赖
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      # ⚠️ 缓存步骤必须位于 pnpm install 之后：key 的 hashFiles 指向 node_modules 内的
+      # playwright-core package.json（git 不跟踪），放在 install 之前 hashFiles 恒为空串
+      # ⇒ key 冻结成常量，Playwright 升级后浏览器/apt 缓存永不更新（实证教训，勿移回上方）。
       - name: 缓存 Playwright 浏览器
         uses: actions/cache@v5.1.0
         with:
@@ -468,10 +548,6 @@ jobs:
           key: pw-browsers-${{ runner.os }}-${{ hashFiles('frontend/node_modules/playwright-core/package.json') }}
           restore-keys: |
             pw-browsers-${{ runner.os }}-
-
-      - name: 安装前端依赖
-        working-directory: frontend
-        run: pnpm install --frozen-lockfile
 
       - name: 缓存 apt 下载包（含 --with-deps 的 CJK 字体 / 系统库）
         uses: actions/cache@v5.1.0

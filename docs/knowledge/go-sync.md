@@ -25,11 +25,8 @@ auto_fields:
     - ConflictType
     - DetectConflicts
     - DiffEntry
-    - DiffFolderContents
-    - DiffFolderContentsScan
     - ErrPartialSync
     - FileConflict
-    - FileDiffEntry
     - FindMinecraftDir
     - GetLinkType
     - HasDotMinecraftSubdirs
@@ -51,12 +48,9 @@ auto_fields:
     - ResolveForceRemote
     - ResolveManual
     - ResourceDiff
-    - ScanEntriesFn
     - ScanFunc
     - SyncCustomToRepo
     - SyncResources
-    - SyncResourcesDirLevel
-    - SyncResourcesDirLevelScan
     - SyncResourcesWithConfig
     - SyncToggleStatus
 quick_groups:

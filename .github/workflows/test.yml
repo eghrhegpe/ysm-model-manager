@@ -26,10 +26,17 @@ env:
   WAILS_VERSION: ${{ vars.WAILS_VERSION }}
 
 jobs:
-  test:
-    name: 契约测试 + Go 检查 + 前端构建
+  # ── 契约/治理 Job（2026-10-07 拆分）──────────────────────────────────────
+  # 拆分动机：原单 Job 串行 14m28s，且「约 6~7 分钟」的主要项（vitest 3m56s、
+  # Go 检查 2m02s）彼此**无依赖**却在排队。拆成 3 个并行 Job 后墙钟 ≈ max(各 Job)。
+  # 本 Job 职责：契约测试 + 绑定保鲜 + 治理闸（纯静态/契约，不跑重型编译）。
+  # ⚠️ 原先「契约测试排在 pnpm install 之前」这一顺序是**有意的**（曾暴露
+  # scripts/port-align.ts 在模块顶层 resolve esbuild 的缺陷）——拆分后本 Job 仍不装前端依赖，
+  # 以保持这道「测试不得依赖前端依赖」的隐性防线。
+  contracts:
+    name: 契约测试 + 治理闸
     runs-on: windows-latest
-    timeout-minutes: 60
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
         with:
@@ -42,13 +49,10 @@ jobs:
           # workflow_call / fork PR may not expose repository variables;
           # go.mod is the authoritative toolchain requirement.
           go-version-file: go.mod
-          # ⚡ cache: false（2026-10-07 实测优化，勿回退为默认 true）：
-          # setup-go 默认把「工具链 + GOMODCACHE + GOCACHE」打成**一个 1133MB** 的包。
-          # Windows runner 上解压 1.1GB 小文件是 I/O 灾难（实测下载仅 7s、**解压 94s**），
-          # 且其 GOMODCACHE 与下方手工 `go-mod` 缓存（791MB / 解压 68s）**内容重叠**
-          # ——两份缓存加起来每次 push 空烧 ~174s（近 3 分钟）纯解压，是全流水线最大单项成本。
-          # 关掉后：工具链走 runner 自带/按需下载（数十秒），模块交下方 go-mod 缓存，不再重复。
-          # 判据与实测数据见知识卡 pre-push-gate / 本次 37651674126 运行日志。
+          # ⚡ cache: false（2026-10-07 实测，勿回退为默认 true）：setup-go 默认把
+          # 「工具链 + GOMODCACHE + GOCACHE」打成单个 1133MB 包，Windows 上解压 94s
+          # （下载仅 7s），且与手工 go-mod 缓存内容重叠 ⇒ 每次空烧近 3 分钟纯 I/O。
+          # 关掉后工具链走 runner 自带的 C:\hostedtoolcache（实测 0s 命中）。
           cache: false
 
       - uses: pnpm/action-setup@v4
@@ -60,27 +64,6 @@ jobs:
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
 
-      # ⚡ 2026-10-07 实测后**在 Windows 上停用**本缓存：action cache 恢复 791MB 包
-      # 全程 1m22s（下载仅 5s / tar 2s，余下 ~75s 是 Windows Defender 扫解压出的小文件）；
-      # 而冷 `go mod download all` 本机实测 **34.5~34.8s**（1896MB 落盘），随后 `go build ./go/...`
-      # 仅 7.5s ⇒ 冷路径 ~42s **快于**缓存路径 ~82s。即在 Windows runner 上，
-      # 「不缓存」比「缓存」每次省约 40s，且省掉缓存配额与写入成本。
-      # Linux/darwin 解压快，故仍保留（`runner.os != 'Windows'` 条件）。
-      # 复测方法：清空 ~/go/pkg/mod 后 `go mod download all` 计时，与 CI 日志的
-      # 「缓存 Go 模块」步耗时对比；若 runner 磁盘/Defender 行为变化需重新裁决。
-      - name: 缓存 Go 模块（Linux/macOS；Windows 实测不缓存更快，见上）
-        if: runner.os != 'Windows'
-        uses: actions/cache@v5.1.0
-        with:
-          path: ~/go/pkg/mod
-          key: go-mod-${{ runner.os }}-${{ env.WAILS_VERSION }}-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            go-mod-${{ runner.os }}-${{ env.WAILS_VERSION }}-
-            go-mod-${{ runner.os }}-
-
-      # winget 安装的 app 链接不会刷新当前 runner 进程 PATH，导致后续步骤找不到 rg；
-      # 第三方 ripgrep-action 在 workflow_call 中静态解析失败（startup_failure）。
-      # 改为直接从 GitHub 官方 release 下载 -gnu 二进制 zip，解压出 rg.exe 并用 GITHUB_PATH 注入 PATH（跨平台生效）。
       - name: 安装 ripgrep（契约测试依赖 rg 二进制）
         if: runner.os == 'Windows'
         shell: pwsh
@@ -96,9 +79,6 @@ jobs:
           Add-Content -Path "$env:GITHUB_PATH" -Value $bin
           & "$bin\rg.exe" --version
 
-      # test_config_defaults.ts（83bcd8d33）：CI 下缺 AppConfig = 零覆盖假绿 ⇒ 显式 FAIL。
-      # 先注入 mock fixture（单一源：tests/fixtures/ysm_config.ci.json），让结构校验真正跑到 mock；
-      # 对齐 configPath() 的 win32 分支：$APPDATA/YSM-Model-Manager/ysm_config.json。
       - name: 注入 mock AppConfig（契约测试结构校验）
         shell: pwsh
         run: |
@@ -120,6 +100,7 @@ jobs:
       - name: 绑定契约对账（binding-check — Go 导出 vs -ts 产物）
         shell: pwsh
         run: node scripts/binding-check.ts
+
 
       - name: 安装 wails3 CLI（bindings 重生成依赖；此前缺失致本步必挂 → main CI 长期红）
         shell: pwsh
@@ -155,6 +136,28 @@ jobs:
           node scripts/check-redlines.ts --json --baseline | Out-String -Width 200
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+  # ── 前端 Job（2026-10-07 拆分）──────────────────────────────────────────
+  # 职责：前端静态治理闸 + 类型检查 + Vitest（原 3m56s，是全流水线最长单项）。
+  frontend:
+    name: 前端（类型检查 + Vitest）
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # 契约测试（test_api_break.ts）用真实历史 ref 对做端到端断言，
+          # 浅克隆（默认 depth=1）拿不到历史提交会报「无效 ref」——拉全量历史
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
       - name: 安装前端依赖
         working-directory: frontend
         shell: pwsh
@@ -182,19 +185,66 @@ jobs:
           node scripts/pre-push-gate.ts --static --json | Out-String -Width 200
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - name: 构建更新助手 helper（embed 前置，修复 CI 缺 ysm-updater-helper.exe）
+      # ⚠️ main.go 有 `//go:embed all:frontend/dist`，本 Job 只做前端自身检查
+      # （tsc / vitest / vite build），不需要 Go 编译，故构建顺序自由。
+      - name: 前端构建
+        working-directory: frontend
         shell: pwsh
-        run: go build -ldflags "-X ysm-model-manager/go/version.Version=ci" -o go/updater/ysm-updater-helper.exe ./cmd/updater
+        run: pnpm exec vite build
+
+      - name: 前端类型检查（ADR-014 门槛）
+        working-directory: frontend
+        shell: pwsh
+        run: pnpm exec tsc --noEmit
+
+      - name: 前端测试（Vitest）
+        working-directory: frontend
+        shell: pwsh
+        run: |
+          pnpm exec vitest run --coverage | Out-String -Width 200
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+  # ── Go Job（2026-10-07 拆分）────────────────────────────────────────────
+  # 职责：Go 编译/测试/覆盖率 + golangci-lint（原 2m02s + 覆盖率 1m21s + lint）。
+  go:
+    name: Go（build + vet + test）
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # 契约测试（test_api_break.ts）用真实历史 ref 对做端到端断言，
+          # 浅克隆（默认 depth=1）拿不到历史提交会报「无效 ref」——拉全量历史
+          fetch-depth: 0
+
+      - uses: actions/setup-go@v6
+        with:
+          # workflow_call / fork PR may not expose repository variables;
+          # go.mod is the authoritative toolchain requirement.
+          go-version-file: go.mod
+          # ⚡ cache: false（2026-10-07 实测，勿回退为默认 true）：setup-go 默认把
+          # 「工具链 + GOMODCACHE + GOCACHE」打成单个 1133MB 包，Windows 上解压 94s
+          # （下载仅 7s），且与手工 go-mod 缓存内容重叠 ⇒ 每次空烧近 3 分钟纯 I/O。
+          # 关掉后工具链走 runner 自带的 C:\hostedtoolcache（实测 0s 命中）。
+          cache: false
+
+      - name: 安装前端依赖
+        working-directory: frontend
+        shell: pwsh
+        run: pnpm install --frozen-lockfile
 
       # ⚠️ 顺序约束：main.go 有 `//go:embed all:frontend/dist`，任何 `go build ./...` /
       # `go vet ./...` / `go test ./...` 都要求 frontend/dist 已存在，否则报
       # 「pattern all:frontend/dist: no matching files found」直接失败。
-      # 故前端构建必须早于「Go 检查」，且早于下方所有 ./... 步骤（覆盖率报告）。
-      # 前端依赖已于上方「安装前端依赖」装好，此处构建零额外前置。
+      # 为何在本 Job **重建**而不下发 artifact：vite build 实测仅 2.3s，而 artifact
+      # 上传 + 下载 11MB/67 文件的成本更高，且会让 go Job 变成 `needs: frontend` 而失去并行。
       - name: 前端构建（embed 前置：main.go //go:embed all:frontend/dist 依赖此产物）
         working-directory: frontend
         shell: pwsh
         run: pnpm exec vite build
+
+      - name: 构建更新助手 helper（embed 前置，修复 CI 缺 ysm-updater-helper.exe）
+        shell: pwsh
+        run: go build -ldflags "-X ysm-model-manager/go/version.Version=ci" -o go/updater/ysm-updater-helper.exe ./cmd/updater
 
       - name: Go 检查（build + vet + test）
         shell: pwsh
@@ -274,18 +324,6 @@ jobs:
           go test ./... -coverprofile='.coverage/go-cover.out' -count=1 -p 1 | Out-String -Width 200
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           go tool cover -func='.coverage/go-cover.out' | Select-String 'total:'
-
-      - name: 前端类型检查（ADR-014 门槛）
-        working-directory: frontend
-        shell: pwsh
-        run: pnpm exec tsc --noEmit
-
-      - name: 前端测试（Vitest）
-        working-directory: frontend
-        shell: pwsh
-        run: |
-          pnpm exec vitest run --coverage | Out-String -Width 200
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
   # ── E2E（Playwright · vite dev 纯前端 + mock bridge，参照 MikuMikuAR 实证模式）──
   # 参数：全局 7 分钟总限 / 每用例 15s / 累计 2 次失败阻断（maxFailures=2，playwright.config.ts:16）——ADR-037 接入参数。

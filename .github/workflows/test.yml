@@ -494,10 +494,22 @@ jobs:
           restore-keys: |
             pw-browsers-${{ runner.os }}-
 
+      # apt 缓存两步必要前置（2026-10-08 实证）：
+      # ① restore 侧：GitHub runner 镜像里 /var/cache/apt/archives 是 root:root 755，
+      #    runner 用户写不进去 ⇒ 不预置权限则 .deb 根本恢复不进目录（缓存白搭）；
+      # ② save 侧：apt 每次以 root 重写 `lock`（0600）与 `partial/`（0700），runner 不可读，
+      #    tar 归档整个目录必报 `Cannot open: Permission denied` → exit 2 → 缓存存不进去
+      #    （实测日志 2026-10-07 18:10:23）。故 cache path 只收 *.deb，绕开这两个 root 专属条目。
+      # apt 自身经 sudo/root 运行，不受 chmod 影响。
+      - name: 预置 apt 缓存目录权限（restore 可写）
+        run: |
+          sudo mkdir -p /var/cache/apt/archives
+          sudo chmod a+rw /var/cache/apt/archives
+
       - name: 缓存 apt 下载包（含 --with-deps 的 CJK 字体 / 系统库）
         uses: actions/cache@v5.1.0
         with:
-          path: /var/cache/apt/archives
+          path: /var/cache/apt/archives/*.deb
           # 钉 playwright-core 版本：--with-deps 依赖集合随其版本变；版本未变即复用
           # 已下载的 .deb，跳过慢镜像（azure.archive 实测 91.5KB/s）重下，只留解包。
           # 保留 --with-deps 不动：CJK 字体（wqy-zenhei 等）是中文 UI 截图渲染必需。
@@ -580,10 +592,22 @@ jobs:
           restore-keys: |
             pw-browsers-${{ runner.os }}-
 
+      # apt 缓存两步必要前置（2026-10-08 实证）：
+      # ① restore 侧：GitHub runner 镜像里 /var/cache/apt/archives 是 root:root 755，
+      #    runner 用户写不进去 ⇒ 不预置权限则 .deb 根本恢复不进目录（缓存白搭）；
+      # ② save 侧：apt 每次以 root 重写 `lock`（0600）与 `partial/`（0700），runner 不可读，
+      #    tar 归档整个目录必报 `Cannot open: Permission denied` → exit 2 → 缓存存不进去
+      #    （实测日志 2026-10-07 18:10:23）。故 cache path 只收 *.deb，绕开这两个 root 专属条目。
+      # apt 自身经 sudo/root 运行，不受 chmod 影响。
+      - name: 预置 apt 缓存目录权限（restore 可写）
+        run: |
+          sudo mkdir -p /var/cache/apt/archives
+          sudo chmod a+rw /var/cache/apt/archives
+
       - name: 缓存 apt 下载包（含 --with-deps 的 CJK 字体 / 系统库）
         uses: actions/cache@v5.1.0
         with:
-          path: /var/cache/apt/archives
+          path: /var/cache/apt/archives/*.deb
           # 钉 playwright-core 版本：--with-deps 依赖集合随其版本变；版本未变即复用
           # 已下载的 .deb，跳过慢镜像（azure.archive 实测 91.5KB/s）重下，只留解包。
           # 保留 --with-deps 不动：CJK 字体（wqy-zenhei 等）是中文 UI 截图渲染必需。

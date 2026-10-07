@@ -7,6 +7,7 @@ source_files:
   - scripts/pre-push-gate.ts
   - .githooks/pre-push
   - .github/workflows/test.yml
+  - .github/actions/release-toolchain/action.yml
   - scripts/_lib/gate-blocks/static-tools.ts
   - scripts/_lib/gate-config.ts
   - scripts/_lib/gate-ctx.ts
@@ -272,7 +273,7 @@ node scripts/pre-push-gate.ts --files "<file1>\n<file2>..." [--dry-run]  # 文�
 - Windows 下 npx 是 npx.cmd，node spawn 需 `shell: true`
 - git 数组参数直走 `procRun`（无 shell 拼接）：ref 允许 `$`/backtick 等元字符，拼字符串经 shell 会构成命令注入（pre-push stdin 的 localRef 可被攻击者控制）
 - **本地 pre-push 默认轻量档（2026-10-07）**：`YSM_FAST_PUSH` 未设/≠`0` 时，前端域的 `vite build` / `tsc --noEmit` / `vitest` 与 Go 域的 `go test`（-race 段）**跳过并记 debt**，只留静态治理层 + `go build`/`go vet`；`YSM_FAST_PUSH=0` 恢复全量（发版前自检用）。动机：这三项 CI 各步已独立承担，本地重复付费只买到「早知道十几分钟」。实测前端域推送 67s → 27s、含 git 全程 push 31s（其中 vitest 单项 61s 是主要被省成本）。**注意别夸大收益**：`vite build`/`tsc` 各仅 ~3s，真正的分钟级成本在 vitest 与 CI 侧（见下条）。
-- **Windows runner 上「缓存 Go 模块」反而更慢——已停用（2026-10-07 双步实测裁决）**：① `actions/setup-go` **默认 `cache: true`**，把「工具链 + GOMODCACHE + GOCACHE」打成单个 **1133MB** 包（Windows 下载 7s、**解压 94s**），且与下方手工 `go-mod` 缓存**内容重叠** ⇒ 已显式 `cache: false`（test.yml 1 处 + release.yml 4 处）；② 剩下的 `go-mod` 缓存（**791MB**）恢复全程 **1m22s**——下载 5s、`tar` 2s，余下 **~75s 是 Windows Defender 扫解压出的海量小文件**（子步骤耗时里看不到，别只看那两行），而冷 `go mod download all` 实测 **34.5s**（1896MB）+ 随后 `go build ./go/...` 7.5s ⇒ **冷路径 ~42s 快于缓存路径 ~82s**，故 Windows 上再停用它：`if: runner.os != 'Windows'`（Linux/macOS 解压快，保留）。**方法论**：加缓存前必须量「恢复耗时 vs 冷取耗时」两侧，别默认「有缓存一定快」。
+- **Windows runner 上「缓存 Go 模块」反而更慢——已停用（2026-10-07 双步实测裁决）**：① `actions/setup-go` **默认 `cache: true`**，把「工具链 + GOMODCACHE + GOCACHE」打成单个 **1133MB** 包（Windows 下载 7s、**解压 94s**），且与下方手工 `go-mod` 缓存**内容重叠** ⇒ 已显式 `cache: false`（test.yml + release 四平台 build job 经共享 composite `.github/actions/release-toolchain/action.yml` 收口，不再四份内联）；② 剩下的 `go-mod` 缓存（**791MB**）恢复全程 **1m22s**——下载 5s、`tar` 2s，余下 **~75s 是 Windows Defender 扫解压出的海量小文件**（子步骤耗时里看不到，别只看那两行），而冷 `go mod download all` 实测 **34.5s**（1896MB）+ 随后 `go build ./go/...` 7.5s ⇒ **冷路径 ~42s 快于缓存路径 ~82s**，故 Windows 上再停用它（Linux/macOS 解压快，保留）：release 侧现由 composite 的 `go-mod-cache` 输入控制（windows/android=`false`、linux/darwin=`true`），test.yml 仍走 `if: runner.os != 'Windows'`。**方法论**：加缓存前必须量「恢复耗时 vs 冷取耗时」两侧，别默认「有缓存一定快」。
 - **`debt` 标签只在本地 gate 生效；CI 把它当独立 shell 步骤跑 → 退出码传染，照红**（2026-09-17 实证）：本地 `check-deadcode-baseline` 声明 `debt`（非阻断，结论 `PASS ✅ 放行推送`），但 `.github/workflows/test.yml` 里它是**单独一步** `node scripts/check-deadcode-baseline.ts --json | Out-String`，**退出码 1 直接令 job 失败**——与本地「存量债不阻断」判读无关。**推论：本地 PASS ≠ CI 绿；凡 CI 单独跑且非零退出的检查项，债务策略都救不了它。**
 - **域级 vitest 的失败可能是负载瞬态，不是本次回归**（2026-10-07 实证）：前端域与 Go 域经 Promise.all 并行，`go test -race` 满载时 vitest 用例会被 CPU 饿死击穿 5s `testTimeout`。判别法 = **单跑该文件**：单跑绿而门禁红即负载瞬态（`pre-push-gate` 知识卡同款现象亦见于 `go/cli` 基准测试）。处置 = 复跑转绿即放行；**若复跑仍红则是真回归**，别用「flaky」搪塞。排查时勿只看门禁 tail：vitest 输出末尾的 happy-dom 性能提示会挤掉真失败名，须抓 `×`/`✗`/`FAIL` 行或直接 `--reporter=json` 看 `numFailedTests`。
 - **基线自动收编必须随提交入库，否则 CI 结构性红**（2026-09-17 根因）：脚本设计「新增 ∩ 责任集为空 → 自动收编进基线 + INFO 留痕」，但**只在非 `--json` 模式写盘**；CI 传 `--json`（无写盘）+ 用**已提交的**基线比对 ⇒ 未提交的收编等于没发生。本次 71 笔一次推送时踩中：本地 `pre-push-gate --all` 把 14 条新增收编进 `scripts/baseline/deadcode-baseline.json`（工作区已改），未提交 → CI 见 14 条「新增」→ 红。**处置：提交该基线文件**（时间戳 + 过期项清理 + 新增项一并入库）。

@@ -38,6 +38,8 @@ quick_groups:
   - 3D 预览与模型追加
 quick_intents:
   - WASI 解码、wazero、node 退役
+  - go/ysmwasi 包、go/ysmwebview 桥、go/wasispike
+  - .ysm 解码宿主在哪、wazero 内存直解入口
 quick_risk_lines:
   - 解析器改动（collectToMemory）在本仓 vendored 副本内，上游同步时需重放
 invariant_anchors:

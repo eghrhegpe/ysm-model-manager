@@ -175,25 +175,63 @@ status: active
 
 ## 核心职责
 
-按文件分组（每个文件即一个领域分片）：
+按文件分组（每个文件即一个领域分片）。
+
+**命名公约**（新增绑定按此归位）：
+
+- `app_<域>.go` = Binding 分组，一个业务域一个文件；域内按需继续拆 `app_<域>_<子域>.go`（如 `app_install_*` 五文件）。
+- `app_install_*` / `app_config_*.go` = 同一域的行数治理拆分或平台 build-tag 分片（`_windows` / `_android` / `_other`）。
+- `*_cache.go` = ADR-134 同构缓存组件（**非 Binding**，App 持有的缓存槽）。
+- `resource_bindings.go` = **跨域资源绑定收容所**（资源类型注册表 + 资源包/光影/蓝图解析 + 查重 + 根目录设置）；**新绑定优先归域文件，勿再往里堆**。
+- 无 `app_` 前缀且不定义 Binding 的 = 支撑文件（`assets.go` / `bundled_data.go` / `cli_bridge.go` / `proxy.go` / `pathmgr.go` 等）。
+
+### Binding 分组（定义导出给前端的方法）
 
 | 文件 | 职责 |
 |------|------|
 | `app.go` | App 结构与服务生命周期（ServiceStartup/Shutdown）、应用实例与主窗口注入、打开外部链接、版本号 |
-| `app_config.go` | 配置读写、下载镜像、自动更新、窗口位置持久化、目录选择对话框、MC 目录探测（跨平台分支见 `app_config_other.go` / `app_config_windows.go`） |
+| `app_config.go` | 配置读写、下载镜像、自动更新、窗口位置持久化、目录选择对话框、MC 目录探测（跨平台分支见 `app_config_other.go` / `app_config_windows.go` / `app_config_android.go`） |
 | `app_scan.go` | 模型扫描与列表、高级搜索、骨骼结构导出、仓库索引生成、打开文件夹 |
 | `app_files.go` | 文件/目录增删改移、预览图提取、启用/禁用切换、封禁名单 |
-| `app_install.go` | 模型安装与导入、回收站、整合包同步（推/拉/重链/清空）、链接模式、导入日志 |
+| `app_install.go` | 模型安装与导入、回收站、整合包同步（推/拉/重链/清空）、链接模式、导入日志（**已拆五文件**：`app_install_import.go` 安装+导入 / `app_install_instance.go` 实例管理 / `app_install_recycle.go` 回收站 / `app_install_log.go` 日志 / `app_install_link.go` 链接模式） |
 | `app_download.go` | 下载队列（入队/取消/状态）、GitHub 直连下载、纹理尺寸扫描 |
 | `app_model.go` | YSM/基岩版模型解析、3D 规格生成、截图与临时文件保存 |
 | `app_tags.go` | 模型标签的读写与反查 |
 | `app_avatar.go` | 创作者头像缓存与批量提取 |
-| `app_workshop.go` | 创作者工坊：站点/创作者/搜索预设的读写与 JSON/CSV 导入导出 |
+| `app_workshop.go` | 创作者工坊：站点/创作者/搜索预设的读写与 JSON/CSV 导入导出（mojibake 净化见 `app_workshop_mojibake.go`） |
+| `app_sync.go` | 同步冲突检测与解决（P1 优先级） |
+| `app_launcher.go` | 启动器实例探测（install 域，App 侧委托） |
 | `plaza_window.go` | 广场窗口（ADR-050）：Go 反向代理 + 预热 WebView2 窗口的导航/缩放/前后进控制 |
 | `resource_bindings.go` | 资源类型注册表读取、资源包/光影/蓝图（nbt/schematic/litematic）解析、查重、资源根目录设置 |
-| `wasm_embed.go` | 向内嵌 WebView2 提供 YSMParser.wasm 字节 |
+| `resourcepack_models.go` | 资源包 block/item 模型读取绑定（ADR-080 PackModelAdapter，**非 `go/packs`**：枚举/读条目/详情） |
+| `container_entries.go` | 容器内条目枚举 + 体素读取绑定（ADR-132 遗留 1：蓝图/litematic zip 多 nbt 预览） |
 
-支撑文件（不定义 Binding）：`assets.go`（持有 main 注入的 embed 资产）、`bundled_data.go`（按 exe 同级→上级→嵌入基线读取随附数据）、`wasm_decoder.go`（WASM 解码胶水）、`cli.go`（`cli` 构建标签下的命令行子命令）。
+### 支撑文件（不定义 Binding）
+
+| 文件 | 职责 |
+|------|------|
+| `assets.go` | 持有根 `main` 在 `init()` 经 `SetEmbedded` 注入的编译期嵌入资产 |
+| `bundled_data.go` | 按 exe 同级→上级→嵌入基线读取随附数据 |
+| `cli_bridge.go` | GUI→CLI 参数桥（ADR-173）：`ExecuteCLI` / `buildCLIArgs` + ParamSpec 注入 |
+| `cli.go` | `cli` 构建标签下的命令行子命令 |
+| `wasm_decoder.go` | WASM 解码胶水（薄封装，调 `avatar.DecodeYSMData`，**禁止复刻**）；`decodeYSMBest` 后端选择器 |
+| `ysm_webview_bridge.go` | Android WebView 桥解码装配（ADR-317） |
+| `proxy.go` | 广场窗口反向代理：SSRF 守卫（含 CGNAT 段判定）+ WS 转发 |
+| `pathmgr.go` | PathManager 平台抽象层（ADR-046 P2）；平台分片 `pathmgr_desktop.go` / `pathmgr_android.go` |
+| `coi_middleware.go` | `CoopCoepMiddleware` 注入 COOP/COEP 响应头（ADR-079 M2，解锁 SharedArrayBuffer） |
+| `texture_order.go` | 纹理序口径（有 ysm.json 声明序 → 声明序 + default_texture 置首）；与前端 `decoder/texture-order.ts` 严格对称 |
+| `screen_windows.go` / `screen_other.go` | 屏幕尺寸查询平台分片 |
+| `mpr_on.go` / `mpr_off.go` | `mpr` 构建标签开关分片（`//go:build mpr` / `!mpr`） |
+
+### ADR-134 同构缓存组件（App 持有的缓存槽，非 Binding）
+
+| 文件 | 职责 |
+|------|------|
+| `app_allowed_roots_cache.go` | 允许根清单缓存（ADR-134 同构） |
+| `app_container_cache.go` | 容器类型指纹缓存（ADR-134） |
+| `app_geo_cache.go` | 几何分析结果缓存（ADR-134 同构） |
+| `app_resolved_root_cache.go` | root 解析缓存（ADR-134 同构） |
+| `app_texture_cache.go` | 纹理缓存接线（桥接 `go/texture_cache`） |
 
 ## 对外 API（全量，按领域分组）
 

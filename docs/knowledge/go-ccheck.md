@@ -21,6 +21,16 @@ use_when:
   - 复杂度扫描
   - check-complexity 对拍
   - go 复杂度
+quick_groups:
+  - 后端桥接与数据存储
+quick_intents:
+  - 认知复杂度、嵌套深度、cognitive complexity
+  - go/ccheck 包、复杂度扫描器在哪
+  - check-complexity 双端对拍、复杂度契约向量
+quick_risk_lines:
+  - Go 与 TS 两侧认知复杂度数字不可横向比较（TS 侧 else 分支永不命中），前端战役只看 TS 侧、Go 战役只看 Go 侧
+pitfalls:
+  - 改复杂度口径等于全量重基线，须先拍板；勿顺手给 TS 补 flat("else") 对齐
 invariant_anchors:
   - go/ccheck/ccheck.go|CognitiveFromSeq
 ---

@@ -364,7 +364,7 @@ type CliCommand struct {
 | 统一 web 产物（编译自 `upstream/YesSteveModel-Parser`，产物暂存 `build-unified/`） | 前端 base64：`frontend/src/wasm/ysm-wasm-data.js` + `ysm-glue-data.js`；Go embed：`frontend/public/wasm/YSMParser.{js,wasm}`（`embed.go` 经 `frontend/dist/wasm/` 内嵌） | `_main`（callMain）/ `ysm_decode_from_memory` / `_malloc` / `ccall` / `cwrap` / `FS` | 桌面 WebView2 / Android WebView / 纯浏览器网页版 内存直解 + Go 端 Node.js 子进程 callMain |
 
 - **重建脚本已归档**：原 `node scripts/build-ysm-wasm.ts`（em++ 一次编译 → 前端 base64 打包 → Go embed 拷贝 → glue 锚点校验）现位于 **`scripts/_attic/build-ysm-wasm.ts`**（`_attic` = 孤儿审计归档区，保留代码供溯源、不参与门禁）。⚠️ 上游 YSMParser 更新时**需先复活该脚本并具备 emsdk 工具链**（本机当前无 emsdk，故「改上游 C++」类方案暂不可执行）。
-- **exe sidecar 已停发**（2026-08-08 架构决策）：`go/ysm/cli.go` 的 `FindCLI()` 已删除，Go 侧解码入口改为 **`go/ysm|SetDecoder` 注入**（`internal/app` init 阶段以 Node.js + WASM 实现注入）。`runYSMParserOnFile` 即 `decodeYSMViaNodeJS`（无 Node 环境返回 nil）。
+- **exe sidecar 已停发**（2026-08-08 架构决策）：原 `FindCLI()` 入口已随其宿主文件 `go/ysm` 下旧 CLI 桥一并删除，Go 侧解码入口改为 **`go/ysm|SetDecoder` 注入**（`internal/app` init 阶段以 Node.js + WASM 实现注入）。`runYSMParserOnFile` 即 `decodeYSMViaNodeJS`（无 Node 环境返回 nil）。
 
 ### 4.2 解码运行时：两条路径，同一份 C++ 能力
 

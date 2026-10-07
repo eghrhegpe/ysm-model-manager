@@ -37,6 +37,17 @@ use_when:
   - 跨包复用测试 helper
   - 创建测试文件
   - 构造内存 ZIP
+  - go/internal/testutil 包在哪
+quick_groups:
+  - 测试与验证
+quick_intents:
+  - 测试辅助函数、go/internal/testutil 包在哪
+  - 创建测试文件、构造内存 ZIP、跨包复用测试 helper
+  - 测试窗口、固定时钟、确定性等待 helper
+quick_risk_lines:
+  - 测试 helper 必须走 go/internal/testutil 跨包复用，禁止各包各自实现同名 helper
+pitfalls:
+  - 各包自行实现同名测试 helper → 重复维护、行为漂移；一律复用本包
 invariant_anchors:
   - go/internal/testutil/testutil.go|CreateTestFile
   - go/internal/testutil/testutil.go|MakeZipBytes

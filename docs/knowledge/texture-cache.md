@@ -38,6 +38,7 @@ quick_intents:
   - 纹理缓存、KTX2 缓存
   - 缓存清理、cache-clear
   - 缓存状态、cache-status / cache-verify
+  - go/texture_cache 包在哪、缓存层代码位置
 quick_risk_lines:
   - 缓存键 = 内容哈希（TextureHash），改哈希口径旧缓存全体失联；TTL 与容量裁剪（Prune）在写入路径触发，改淘汰策略须同步 prune 测试矩阵
 pitfalls:

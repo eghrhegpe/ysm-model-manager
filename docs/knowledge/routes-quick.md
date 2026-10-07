@@ -10,6 +10,7 @@
 
 | 用户意图 | 首选卡 | 红线警告 | 主 ADR(如有) |
 |----------|--------|----------|----------|
+| .ysm 解码宿主在哪、wazero 内存直解入口 | [WASI 解码器（wazero 内存直解，node 桥已退役）](./ysm-wasi.md) | - | - |
 | 「草为什么是圆斑不像纤维」→ 各向异性坐标拉伸（grass.ts 的 ANISO_X） | [程序化地面贴图生成 surface-pixels](./ground-texture-gen.md) | 改生成器算法前确认 surfaceSpecKey 不含像素字段（否则触发无谓重建） | - |
 | 「大理石没有脉络像团块」→ domain warping（marble.ts 的 sin(x + k·fbm)） | [程序化地面贴图生成 surface-pixels](./ground-texture-gen.md) | - | - |
 | 「平铺后每隔约两米出现同一个明星特征」→ 无缝但有规律重复，用 anti-repeat.ts（macro/dual/stochastic 三选一或组合） | [程序化地面贴图生成 surface-pixels](./ground-texture-gen.md) | - | - |
@@ -104,6 +105,8 @@
 | createAll / loadAll / setPreset / saveAll / dispose | [场景能力注册表 scene-capability-registry](./scene-capability-registry.md) | - | ADR-132 |
 | extra_animation、summarize | [YSM 动画分组与配置菜单提取](./format-ysm-anim-config.md) | - | - |
 | foot IK、极向量 / pole、CCD | [CCD IK 求解器 ik-solver / 足部锚地 mmd-foot-ik](./ik-solver.md) | 腿链链根取大腿的「直接父骨」；改成大腿自身 = 只有膝盖能动 | - |
+| go/texture_cache 包在哪、缓存层代码位置 | [纹理缓存 texture_cache](./texture-cache.md) | - | - |
+| go/ysmwasi 包、go/ysmwebview 桥、go/wasispike | [WASI 解码器（wazero 内存直解，node 桥已退役）](./ysm-wasi.md) | - | - |
 | ground 材质菜单节点 | [ground-cap 菜单节点工厂（ADR-195 刀2 cap 直产节点）](./ground-cap-materialgroup-factories.md) | - | - |
 | gui_light 是什么意思 | [gui_light 语义与「死解析立牌」（pack 模型光照元数据）](./pack-gui-light.md) | 别把 gui_light 接进 LightCapability（三理由：ADR-282 / source 优先级 / 跨类型不一致） | - |
 | IK 求解、骨骼 IK、足部锚地 | [CCD IK 求解器 ik-solver / 足部锚地 mmd-foot-ik](./ik-solver.md) | IK 求解必须走 ik-solver 的 CCD 求解器 + mmd-foot-ik 的足部锚地，禁止手写 IK 逻辑 | - |
@@ -381,6 +384,7 @@
 | 检测平台类型 / 网页模式 | [Wails 桥接 app.ts](./wails-bridge.md) | Binding 函数名写错穿透到运行时 undefined（Mock bridge 形态与生成模块不同，类型造假风险） | ADR-049 |
 | 跨平台路径处理、pathmgr | [Android 平台守卫（Go 侧）](./go-android-platform-guard.md) | - | - |
 | 平台分支差异：WASM decoder / 进程重启 / Node.js sidecar 禁用、build-tag 双文件隔离 | [Android 平台守卫（Go 侧）](./go-android-platform-guard.md) | - | - |
+| 认知复杂度、嵌套深度、cognitive complexity | [Go 团队复杂度扫描 ccheck（check-complexity 对拍镜像）](./go-ccheck.md) | Go 与 TS 两侧认知复杂度数字不可横向比较（TS 侧 else 分支永不命中），前端战役只看 TS 侧、Go 战役只看 Go 侧 | - |
 | 日志环持久化、社区/工坊数据 | [浏览器后端 IndexedDB 封装](./backend-idb.md) | zip entry 路径必须经 sanitizeZipEntryPath 清洗（防 .. 穿越） | ADR-177 |
 | 如何给命令登记 ParamSpec | [GUI→CLI 参数桥 ParamSpec 协议(ADR-173) 实施状态](./adr173-gui-cli-paramspec.md) | - | - |
 | 输入序收集 | [通用泛型并发工具 go/conc](./go-conc.md) | - | - |
@@ -396,9 +400,11 @@
 | android:back 返回键、弹窗退出 | [Android 系统事件消费（back/网络/存储授权）](./android-events.md) | Android 系统事件必须经 android-events 的 registerAndroidEvents 单点注册，禁止各组件各自注册 | - |
 | API 总览、Binding 有哪些方法、App 方法签名 | [Wails Binding API 总览 internal/app](./wails-bindings.md) | 前端访问 Wails 后端必须经 getApp()，禁止直接调 window.go | - |
 | browser adapter、跨域隔离 COI | [网页版后端 backend-web](./backend-web.md) | - | - |
+| check-complexity 双端对拍、复杂度契约向量 | [Go 团队复杂度扫描 ccheck（check-complexity 对拍镜像）](./go-ccheck.md) | - | - |
 | closeActiveDialog、registerAndroidEvents | [Android 系统事件消费（back/网络/存储授权）](./android-events.md) | - | - |
 | FSA 授权、本地仓库挂载 | [浏览器后端 IndexedDB 封装](./backend-idb.md) | 内存降级 OOM 保护：隐私模式无界写入会撑爆堆 | ADR-177 |
 | GetAppVersion / ScanModelEntries / SearchModels | [Wails Binding API 总览 internal/app](./wails-bindings.md) | - | - |
+| go/ccheck 包、复杂度扫描器在哪 | [Go 团队复杂度扫描 ccheck（check-complexity 对拍镜像）](./go-ccheck.md) | - | - |
 | GUI 调 CLI 参数为何丢失 | [GUI→CLI 参数桥 ParamSpec 协议(ADR-173) 实施状态](./adr173-gui-cli-paramspec.md) | 新增命令参数必须经 RegisterCommandC 登记 ParamSpec——未登记走 legacy 降级（空串/0/false 丢弃，拿不到声明序与显式空值） | - |
 | IndexedDB / IDB / 浏览器后端 | [网页版后端 backend-web](./backend-web.md) | - | - |
 | IndexedDB 模型库（browser 模式） | [Wails 桥接 app.ts](./wails-bridge.md) | window.go 空对象 {} 会被缓存为 _App（P3 修复前），导致缺失方法静默穿透整个会话 | ADR-049 |
@@ -538,13 +544,17 @@
 | 往测试加 vi.mock 需要注意什么 | [mock 路径守卫 check-mock-paths](./mock-path-guard.md) | 用 // mock-path-ignore: <理由> 或 docs/.mock-path-exempt.json 豁免，禁止直接 --no-verify 绕过 | - |
 | 为什么 Go 侧要引入 golangci-lint | [golangci-lint（Go 静态分析真空面）](./golangci-lint.md) | Go 曾是静态分析真空面（go vet 独苗）：golangci-lint 白名单制补齐——.golangci.yml 为 default: none + 显式 enable，勿开 enable-all | - |
 | 为新的共享模块加一条守护规则 | [_lib 共享层采用率闸门](./scripts-lib-adoption.md) | - | - |
+| 新增 CLI 命令放哪个文件、命令注册在哪 | [go/cli 目录结构（43 文件分组与命名）](./go-cli-layout.md) | 新增命令必须经 RegisterCommandC 登记 ParamSpec，未登记走 legacy 降级（空串/0/false 会被丢弃） | - |
 | 新增门禁块按哪套范式写（gate-blocks 还是 commit-blocks） | [门禁委托链全景图（四入口横向拼图）](./gate-chain-map.md) | - | - |
 | 修复登记漂移（补全缺失的登记） | [README 登记处对账 check-readme-index.ts](./scripts-readme-index.md) | - | - |
 | 验证新增脚本是否已正确登记 | [README 登记处对账 check-readme-index.ts](./scripts-readme-index.md) | README 是唯一事实源，AGENTS.md 工具口令表只是指针 | - |
 | 一眼看清 commit/push/CI 各环谁在哪拦 | [门禁委托链全景图（四入口横向拼图）](./gate-chain-map.md) | - | - |
 | 运行 Go 重复门禁 / 检查是否有新增重复对 | [Go 端 jscpd 重复检测脚本](./scripts-jscpd-go.md) | - | - |
+| bench_ / perf_ / flow_ 前缀文件是什么 | [go/cli 目录结构（43 文件分组与命名）](./go-cli-layout.md) | - | - |
 | check-orphan-exports 三类漏检修复 | [孤儿导出检测器（扫描盲区）](./orphan-export-scanner.md) | - | - |
 | CI/CD 门禁中校验 README 完整性 | [README 登记处对账 check-readme-index.ts](./scripts-readme-index.md) | - | - |
+| go/cli 目录结构、43 个文件怎么分组 | [go/cli 目录结构（43 文件分组与命名）](./go-cli-layout.md) | go/cli 禁止反向 import internal/app（ADR-145 依赖倒置），App 能力一律经 appservice.go 的 AppService 接口；`main.go` 有 `var _ cli.AppService = appStruct` 编译期断言兜底 | - |
+| go/cli 与 internal/app 的依赖方向 | [go/cli 目录结构（43 文件分组与命名）](./go-cli-layout.md) | - | - |
 | lint 报了多少存量债 | [golangci-lint（Go 静态分析真空面）](./golangci-lint.md) | 存量债不惩罚：pre-push-gate 跑 --new-from-rev 只拦本次引入（全量必红），未安装/无基线自动降级跳过 | - |
 | mock 路径守卫怎么豁免 | [mock 路径守卫 check-mock-paths](./mock-path-guard.md) | - | - |
 | push 被 golangci-lint 阻断怎么办 | [golangci-lint（Go 静态分析真空面）](./golangci-lint.md) | push 被阻断先看 FAIL 块定位 linter 与文件；语义误报用 //nolint 注明 linter 名与理由，禁止 git push --no-verify 绕过 | - |
@@ -559,6 +569,9 @@
 | 菜单测试怎么写才长久 | [菜单测试断言三分法](./menu-test-assertion.md) | 门禁只减不增：新增布局断言即红，触碰即收敛 | - |
 | 菜单测试债务门禁 check-menu-test-layout | [菜单测试断言三分法](./menu-test-assertion.md) | - | - |
 | 测试报绿但没验到东西时，查静默吞异常与条件跳过 | [E2E 视觉反馈（截图取证）](./e2e-visual-feedback.md) | - | - |
+| 测试窗口、固定时钟、确定性等待 helper | [测试辅助函数 go/internal/testutil](./go-testutil.md) | - | - |
+| 测试辅助函数、go/internal/testutil 包在哪 | [测试辅助函数 go/internal/testutil](./go-testutil.md) | 测试 helper 必须走 go/internal/testutil 跨包复用，禁止各包各自实现同名 helper | - |
+| 创建测试文件、构造内存 ZIP、跨包复用测试 helper | [测试辅助函数 go/internal/testutil](./go-testutil.md) | - | - |
 | 等待 DOM 内容或 mock 调用出现 / 组件 init 链落定 | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) | 禁止用 waitFor 条件耦合组件内部实现细节 | - |
 | 挂载/卸载自定义元素 | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) | - | - |
 | 派发 click / input / keydown / drag & drop 等模拟事件 | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) | 禁止把负向定时器窗口断言换成短 sleep | - |
@@ -772,6 +785,9 @@
 | 手写头像路径拼接 | - | 越权路径穿越、缓存污染；必须经 isSafeAvatarPath 校验 |
 | zip/7z 容器打开统一走 openModelContainer（avatar_extract_container.go，2026-09-06 收口孪生函数）——批量缓存未命中会打日志（非静默吞错） | - | - |
 | 头像缓存不失效 | - | 换头像后仍显示旧图；手动 `avatar purge` CLI 清空重建（P1-2 落地 2026-09-14），自动失效（ModTime 键）留待后续 |
+| 改复杂度口径等于全量重基线，须先拍板；勿顺手给 TS 补 flat("else") 对齐 | - | - |
+| bench_* 文件是基准测试 harness，不是生产并发代码——生产并发在 go/conc（ADR-197），误改 bench_* 当并发实现会南辕北辙 | - | - |
+| 与生产 AppService 同包仅因共用 CLI 基建（RegisterCommandC / newCmdFlagSet / newParamErrf），依赖纠缠尚未拆包 | - | - |
 | CLI 手写搜索 | - | 与 GUI 搜索结果不一致、参数不统一；必须复用 go/cli 的 SearchModels |
 | runSearch 未传范围参数 | - | 数值筛选失效；必须完整传 6 个范围参数 |
 | 多处读配置 | - | 值不同步、重启后部分组件用旧配置；必须经 LoadAppConfig |
@@ -839,6 +855,7 @@
 | ListByTag 返回路径是排序的——不保证与原始写入顺序一致 | - | - |
 | tags.json 损坏时 Store 会创建 .corrupt 备份并返回空 Store | - | - |
 | AddTag 已存在则跳过——不会报错也不会计数 | - | - |
+| 各包自行实现同名测试 helper | - | 重复维护、行为漂移；一律复用本包 |
 | 前端手写骨骼转换 | - | 与 go/threejs 输出不一致、四元数旋转错乱；必须经 spec.go |
 | spec 字段漏转换 | - | 骨骼变形丢失；必须完整覆盖所有 spec 字段 |
 | "golden 必须双端互锁：Go 测试 + TS 测试读同一份 fixture，只做 web 单侧对拍是死快照，防不住 Go 侧漂移（ADR-154 §2.2 硬性要求）" | - | - |

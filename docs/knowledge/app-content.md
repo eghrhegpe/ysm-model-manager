@@ -80,6 +80,8 @@ auto_fields:
     - repositoryHTML
     - resetAvatarConfigLoaded
     - settingsHTML
+    - SettingsPlatform
+    - SettingsTabId
     - SubscriptionBucket
     - SubTabSpec
     - TabA11yHandle

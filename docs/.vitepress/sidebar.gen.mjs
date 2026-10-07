@@ -1772,6 +1772,10 @@ export const autoSidebar = [
             "link": "/knowledge/go-ccheck"
           },
           {
+            "text": "go/cli 目录结构（43 文件分组与命名）",
+            "link": "/knowledge/go-cli-layout"
+          },
+          {
             "text": "CLI 搜索命令 search",
             "link": "/knowledge/go-cli-search"
           },

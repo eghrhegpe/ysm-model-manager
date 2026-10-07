@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 192 张知识卡
+> 总计: 193 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -136,7 +136,7 @@
 - **sync-manager**（整合包同步管理器 sync-manager）：`app-sync-manager` 是一个 Web Component 视图组件（`<app-sync-manager>`），承担**单个整合包（instance）内「仓库 ↔ 实例」双向同步状态展示与逐文件推送/拉取编排**：
 - **version-updater**（版本更新 version-updater）：`version-updater.ts` 是应用自更新的前端入口：启动时静默检查（受 6 小时频次限制）→ 发现新版本以可点击 toast 通知；设置页按钮手动检查 → 弹出带更新日志的 `modalConfirm` → 调 `DoUpda…
 
-## go（49 张）
+## go（50 张）
 
 *Go 后端包（安装、下载、回收站、YSM 解析等）*
 
@@ -153,6 +153,7 @@
 | 🍃 go-avatar-decode | Go 头像提取：纯函数 vs Node+WASM 解码分界 | leaf | io-bound, single-thread | 改头像提取 / DecodeYSMData / ExtractAvatarURI 逻辑或补 avatar 测试时 |
 | 🏗 go-avatar | 头像 go/avatar | architecture | io-bound | 头像, 作者, 创作者, avatar, 缓存, 头像缩略图 |
 | 🍃 go-ccheck | Go 团队复杂度扫描 ccheck（check-complexity 对拍镜像） | leaf | — | ccheck, 认知复杂度, cognitive, 复杂度扫描, check-complexity 对拍, go 复杂度 |
+| 🍃 go-cli-layout | go/cli 目录结构（43 文件分组与命名） | leaf | — | go/cli 目录太大不知从哪下手, 新增 CLI 命令该放哪个文件, bench_ / perf_ / flow_ 前缀文件是什么, go/cli 文件行数治理拆分 |
 | 🏗 go-cli-search | CLI 搜索命令 search | architecture | — | CLI 搜索, 命令行搜索, search 命令, 关键词搜索, 数值范围搜索, 模型搜索, go run search, runSearch |
 | 🍃 go-conc | 通用泛型并发工具 go/conc | leaf | — | 并发, 并行, worker 池, 批量并发, 输入序收集 |
 | 🍃 go-config | Go 配置单持有点 go/config | leaf | — | 改配置注入/阈值逻辑，或消费包读阈值时 |
@@ -176,7 +177,7 @@
 | 🏗 go-scanner | 扫描核心 go/scanner | architecture | io-bound, concurrent | 扫描, 文件树, 哈希, 缓存, 作者提取, ScanEntries, ScanEntriesCtx 取消扫描, 索引生成 |
 | 🏗 go-sync | 整合包同步 go/sync | architecture | io-bound | 整合包, 同步, 硬链接, 缺失, 多余 |
 | 🏗 go-tags | 标签系统 go/tags | architecture | io-bound | 标签, tag, 分类, tag-editor |
-| 🍃 go-testutil | 测试辅助函数 go/internal/testutil | leaf | — | 跨包复用测试 helper, 创建测试文件, 构造内存 ZIP |
+| 🍃 go-testutil | 测试辅助函数 go/internal/testutil | leaf | — | 跨包复用测试 helper, 创建测试文件, 构造内存 ZIP, go/internal/testutil 包在哪 |
 | 🏗 go-threejs | 3D 骨骼 spec go/threejs | architecture | cpu-bound, concurrent | 3D 预览, 骨骼, three.js, spec, 顶点, UV, 四元数, 模型渲染 |
 | 🏗 go-ts-golden | Go-TS 解析层 golden 对拍（ADR-154 双端互锁） | architecture | — | 网页影子层（TS 平移 Go 的解析函数）与 Go 侧口径是否漂移, 新增/修改 resource_types.json 的 zipEntries 指纹后是否影响 Go-TS 一致性, voxel-colors-data.json 生成物是否过期（Go 表变更未同步前端）, 双端互锁契约 fixture 的更新口径 |
 | 🏗 go-types | 共享类型 go/types | architecture | — | 共享类型, AppConfig, 配置, 注册表, 扩展名, LinkType, BedrockModel |
@@ -204,6 +205,7 @@
 - **go-avatar-decode**（Go 头像提取：纯函数 vs Node+WASM 解码分界）：`go/avatar` 提取作者头像有**两条路**：纯 Go 函数链（零 IO、零 WASM）与 `DecodeYSMData`（Node.js + WASM glue 子进程解码 .ysm）。**包头「不依赖 Wails runtime…
 - **go-avatar**（头像 go/avatar）：`go/avatar/` 包负责创作者头像的提取与缓存：从模型文件（.ysm 二进制 / .zip / 解压目录 .json）的 `metadata.authors[].avatar` 声明中取出头像图片，缓存到**平台配置根 `os.Us…
 - **go-ccheck**（Go 团队复杂度扫描 ccheck（check-complexity 对拍镜像））：`go/ccheck` 提供 Go 源码的**团队复杂度**（认知复杂度 + 嵌套深度）扫描，是前端
+- **go-cli-layout**（go/cli 目录结构（43 文件分组与命名））：`go/cli/` 是全仓**最大的 Go 包**（43 个非测试文件，第二名 `go/litematic` 仅 13），承载 CLI 模式（`--cli` 分支）的全部命令实现。CLI 入口在根 `main.go`，本包负责命令注册、参数…
 - **go-cli-search**（CLI 搜索命令 search）：`go/cli/model.go` 的 `search` 命令是 YSM CLI 模式的模型搜索入口，注册为 `RegisterCommandC("search", CatModel, "搜索模型（支持关键词过滤）", runSearch)…
 - **go-conc**（通用泛型并发工具 go/conc）：`go/conc` 提供唯一泛型并行入口 `Parallel[T,R]`，收敛 `internal/app` 三处手写 worker 池（`app_scan.go:runConcurrentAnalyze` / `app_model.go:…
 - **go-config**（Go 配置单持有点 go/config）：运行阈值配置的共享单持有点（ADR-091 D12 收敛）：fileops/logs/download/scanner 原各持一份 `var configFunc func() types.AppConfig` 全局变量（写读无同步、仅靠启…

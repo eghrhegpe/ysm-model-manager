@@ -316,7 +316,7 @@
 | registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 55 |
 | runDownloadMissing | `frontend/src/features/sync/sync.ts` | 87 |
 | runSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 197 |
-| runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 118 |
+| runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 181 |
 | relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 230 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 93 |
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 311 |
@@ -422,7 +422,7 @@
 | registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 54 |
 | handleSyncDownloadMissing | `frontend/src/features/sync/sync.ts` | 118 |
 | handleSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 223 |
-| runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 119 |
+| runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 182 |
 | applyFsaState | `frontend/src/views/app-content/settings/init.ts` | 389 |
 | onWebRepoAuthClick | `frontend/src/views/app-content/settings/init.ts` | 417 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 289 |

@@ -232,6 +232,91 @@ describe("createDedupSession — exec 多组 DOM 读态（组级 :checked，非 
     expect(moveFn).toHaveBeenCalledWith("/b/2.ysm");
   });
 });
+describe("createDedupSession — exec 失败路径（错误样本封顶 + 条件 bus.emit）", () => {
+  /** 4 组各 2 文件：默认 oldest → 每组删 1，共 4 次 MoveToRecycle（跨组共享同一 errors 数组） */
+  const fourGroups = [1, 2, 3, 4].map((i) => ({
+    files: [
+      { path: `/g${i}/keep.ysm`, name: "keep.ysm", size: 100, modTime: 1000 },
+      { path: `/g${i}/drop.ysm`, name: "drop.ysm", size: 200, modTime: 2000 },
+    ],
+  }));
+
+  it("全失败 → warn 行（非 success）+ 错误明细全局封顶 3 条；del=0 不刷统计/树", async () => {
+    const moveFn = vi.fn(async () => {
+      throw new Error("EACCES: 拒绝访问");
+    });
+    getApp.mockResolvedValue({
+      GetRepoRoot: vi.fn(() => "/repo"),
+      FindDuplicateFiles: vi.fn(() => fourGroups),
+      MoveToRecycle: moveFn,
+    });
+    const dedup = createDedupSession();
+    const list = document.createElement("div");
+    await dedup.start(list, esc, "ysm");
+    await waitFor(() => list.querySelector("#diag-dedup-exec"));
+    (list.querySelector("#diag-dedup-exec") as HTMLElement).click();
+    await waitFor(() => list.textContent!.includes("去重完成"));
+
+    // 失败不中断删除链：4 组各尝试 1 次
+    expect(moveFn).toHaveBeenCalledTimes(4);
+    expect(list.querySelectorAll(".diag-msg-warn").length).toBe(1);
+    // errors 是跨组共享数组，封顶 = 全局 3 条（不是每组 3 条）
+    expect(list.querySelectorAll(".diag-msg-error").length).toBe(3);
+    // del=0 → 不触发统计/树刷新（仅 del>0 才 emit）
+    expect(busEmit).not.toHaveBeenCalledWith("stats:refresh");
+    expect(busEmit).not.toHaveBeenCalledWith("tree:reload");
+  });
+
+  it("部分成功 → del/fail 各自计数，del>0 仍刷统计与树", async () => {
+    let n = 0;
+    const moveFn = vi.fn(async () => {
+      n++;
+      if (n === 2) throw new Error("EBUSY: 占用");
+    });
+    getApp.mockResolvedValue({
+      GetRepoRoot: vi.fn(() => "/repo"),
+      FindDuplicateFiles: vi.fn(() => fourGroups),
+      MoveToRecycle: moveFn,
+    });
+    const dedup = createDedupSession();
+    const list = document.createElement("div");
+    await dedup.start(list, esc, "ysm");
+    await waitFor(() => list.querySelector("#diag-dedup-exec"));
+    (list.querySelector("#diag-dedup-exec") as HTMLElement).click();
+    await waitFor(() => list.textContent!.includes("去重完成"));
+
+    const text = (list.textContent ?? "").replace(/\s+/g, " ");
+    expect(text).toContain("移入回收站 3 个");
+    expect(text).toContain("失败 1 个");
+    expect(list.querySelectorAll(".diag-msg-error").length).toBe(1);
+    expect(busEmit).toHaveBeenCalledWith("stats:refresh");
+    expect(busEmit).toHaveBeenCalledWith("tree:reload");
+  });
+
+  it("execBusy 复位在 finally：失败后再次点击仍会重新执行（不卡死）", async () => {
+    const moveFn = vi.fn(async () => {
+      throw new Error("boom");
+    });
+    getApp.mockResolvedValue({
+      GetRepoRoot: vi.fn(() => "/repo"),
+      FindDuplicateFiles: vi.fn(() => groupJson),
+      MoveToRecycle: moveFn,
+    });
+    const dedup = createDedupSession();
+    const list = document.createElement("div");
+    await dedup.start(list, esc, "ysm");
+    await waitFor(() => list.querySelector("#diag-dedup-exec"));
+    (list.querySelector("#diag-dedup-exec") as HTMLElement).click();
+    await waitFor(() => list.textContent!.includes("去重完成"));
+    expect(moveFn).toHaveBeenCalledTimes(1);
+    // 失败后 execBusy 已复位，可再次执行（同一 innerHTML 已被替换 → 重取按钮；此处直接复扫）
+    await dedup.start(list, esc, "ysm");
+    await waitFor(() => list.querySelector("#diag-dedup-exec"));
+    (list.querySelector("#diag-dedup-exec") as HTMLElement).click();
+    await waitFor(() => moveFn.mock.calls.length === 2);
+  });
+});
+
 describe("createDedupSession — 扫描取消（ADR-314）", () => {
   it("取消按钮 → CancelError → 「已取消」落定，busy 复位可复扫", async () => {
     let rejectFn: (e: unknown) => void = () => {};

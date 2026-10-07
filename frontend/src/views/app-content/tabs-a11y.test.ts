@@ -158,6 +158,194 @@ describe("bindTabA11y — validate 开关", () => {
   });
 });
 
+describe("bindTabA11y — 初始激活回落链（ADR-308 语义位）", () => {
+  // 回落链：initialTabId 命中 > 调用方预置 .active > 首个可见按钮。
+  // 此前只覆盖「无 initialTabId → 首个」与「initialTabId 命中」两端，中间两级零断言。
+  it("无 initialTabId 但有预置 .active → 预置者激活（非首个）", () => {
+    const { root } = makeRoot(`
+      <div class="repo-tabs">
+        <button class="repo-tab" data-tab="a">A</button>
+        <button class="repo-tab active" data-tab="b">B</button>
+        <button class="repo-tab" data-tab="c">C</button>
+      </div>`);
+    bindTabA11y({
+      root,
+      tabSelector: ".repo-tab",
+      panelId: (id) => `x-tab-${id}`,
+      onActivate: () => {},
+    });
+    const tabs = [...root.querySelectorAll<HTMLElement>(".repo-tab")];
+    expect(tabs.map((b) => b.getAttribute("tabindex"))).toEqual(["-1", "0", "-1"]);
+  });
+
+  it("initialTabId 未命中 → 回落预置 .active（不落到首个可见）", () => {
+    const { root } = makeRoot(`
+      <div class="repo-tabs">
+        <button class="repo-tab" data-tab="a">A</button>
+        <button class="repo-tab active" data-tab="b">B</button>
+      </div>`);
+    bindTabA11y({
+      root,
+      tabSelector: ".repo-tab",
+      panelId: (id) => `x-tab-${id}`,
+      onActivate: () => {},
+      initialTabId: "nope",
+    });
+    const tabs = [...root.querySelectorAll<HTMLElement>(".repo-tab")];
+    expect(tabs.map((b) => b.getAttribute("aria-selected"))).toEqual(["false", "true"]);
+  });
+
+  it("首个按钮 display:none → 回落首个可见按钮", () => {
+    const { root } = makeRoot(`
+      <div class="repo-tabs">
+        <button class="repo-tab" data-tab="a" style="display:none">A</button>
+        <button class="repo-tab" data-tab="b">B</button>
+      </div>`);
+    bindTabA11y({
+      root,
+      tabSelector: ".repo-tab",
+      panelId: (id) => `x-tab-${id}`,
+      onActivate: () => {},
+    });
+    const tabs = [...root.querySelectorAll<HTMLElement>(".repo-tab")];
+    expect(tabs.map((b) => b.getAttribute("aria-selected"))).toEqual(["false", "true"]);
+  });
+
+  it("键盘导航集合 = 可见按钮全集：ArrowRight 跳过 display:none 的按钮", () => {
+    const { root } = makeRoot(`
+      <div class="repo-tabs">
+        <button class="repo-tab" data-tab="a">A</button>
+        <button class="repo-tab" data-tab="b" style="display:none">B</button>
+        <button class="repo-tab" data-tab="c">C</button>
+      </div>`);
+    const calls: string[] = [];
+    bindTabA11y({
+      root,
+      tabSelector: ".repo-tab",
+      panelId: (id) => `x-tab-${id}`,
+      onActivate: (_b, id) => calls.push(id),
+    });
+    const a = root.querySelector('.repo-tab[data-tab="a"]') as HTMLElement;
+    a.focus();
+    a.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+    expect(calls).toEqual(["c"]); // 可见集 [a, c]：a 的下一个 = c（隐藏的 b 被跳过）
+  });
+
+  it("无可见按钮（全 display:none）→ 键盘导航不激活任何项、不抛错", () => {
+    const { root } = makeRoot(`
+      <div class="repo-tabs">
+        <button class="repo-tab" data-tab="a" style="display:none">A</button>
+      </div>`);
+    const calls: string[] = [];
+    bindTabA11y({
+      root,
+      tabSelector: ".repo-tab",
+      panelId: (id) => `x-tab-${id}`,
+      onActivate: (_b, id) => calls.push(id),
+    });
+    const a = root.querySelector('.repo-tab[data-tab="a"]') as HTMLElement;
+    a.focus();
+    expect(() =>
+      a.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true })),
+    ).not.toThrow();
+    expect(calls).toEqual([]); // Math.max(0, -1)=0 → vis[0] undefined → 无 next
+  });
+
+  it("Enter / Space → 不移动焦点，仅激活当前按钮", () => {
+    const { root } = makeRoot(SHELL);
+    const calls: string[] = [];
+    bindTabA11y({
+      root,
+      tabSelector: ".repo-tab",
+      panelId: (id) => `x-tab-${id}`,
+      onActivate: (_b, id) => calls.push(id),
+    });
+    const beta = root.querySelector('.repo-tab[data-tab="beta"]') as HTMLElement;
+    beta.focus();
+    beta.dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true }));
+    beta.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    expect(calls).toEqual(["beta", "beta"]);
+    expect(root.activeElement).toBe(beta);
+  });
+
+  it("无控制台按键（如 Tab）→ 不激活、不 preventDefault（不劫持浏览器默认行为）", () => {
+    const { root } = makeRoot(SHELL);
+    const calls: string[] = [];
+    bindTabA11y({
+      root,
+      tabSelector: ".repo-tab",
+      panelId: (id) => `x-tab-${id}`,
+      onActivate: (_b, id) => calls.push(id),
+    });
+    const beta = root.querySelector('.repo-tab[data-tab="beta"]') as HTMLElement;
+    beta.focus();
+    const ev = new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true });
+    beta.dispatchEvent(ev);
+    expect(calls).toEqual([]);
+    expect(ev.defaultPrevented).toBe(false);
+  });
+
+  it("按钮集合为空 → 不抛错、不写 tablist（早退）", () => {
+    const { root } = makeRoot('<div class="repo-tabs"></div>');
+    expect(() =>
+      bindTabA11y({
+        root,
+        tabSelector: ".repo-tab",
+        panelId: (id) => `x-tab-${id}`,
+        onActivate: () => {},
+      }),
+    ).not.toThrow();
+    expect(root.querySelector(".repo-tabs")?.getAttribute("role")).toBeNull();
+  });
+
+  it("全部按钮缺 data-tab → 导航集合空，不写 tablist、不激活", () => {
+    const { root } = makeRoot('<div class="repo-tabs"><button class="repo-tab">X</button></div>');
+    bindTabA11y({
+      root,
+      tabSelector: ".repo-tab",
+      panelId: (id) => `x-tab-${id}`,
+      onActivate: () => {},
+    });
+    expect(root.querySelector(".repo-tabs")?.getAttribute("role")).toBeNull();
+    expect(root.querySelector(".repo-tab")?.getAttribute("role")).toBeNull();
+  });
+
+  it("onBound 回调收到去重后的按钮与 id 集合（面板侧静态语义接线）", () => {
+    const { root } = makeRoot(`
+      <div class="repo-tabs">
+        <button class="repo-tab" data-tab="a">A</button>
+        <button class="repo-tab">无tab</button>
+        <button class="repo-tab" data-tab="a">重复A</button>
+      </div>`);
+    const seen: Array<{ n: number; ids: string[] }> = [];
+    bindTabA11y({
+      root,
+      tabSelector: ".repo-tab",
+      panelId: (id) => `x-tab-${id}`,
+      onActivate: () => {},
+      onBound: (nav, ids) => seen.push({ n: nav.length, ids }),
+    });
+    expect(seen).toEqual([{ n: 1, ids: ["a"] }]);
+  });
+
+  it("容器已有 role=tablist 时不覆写（幂等：refresh 重挂不改属性）", () => {
+    const { root } = makeRoot(
+      '<div class="repo-tabs" role="tablist"><button class="repo-tab" data-tab="a">A</button></div>',
+    );
+    const handle = bindTabA11y({
+      root,
+      tabSelector: ".repo-tab",
+      panelId: (id) => `x-tab-${id}`,
+      onActivate: () => {},
+    });
+    const list = root.querySelector(".repo-tabs") as HTMLElement;
+    list.setAttribute("data-mark", "keep");
+    handle.refresh();
+    expect(list.getAttribute("role")).toBe("tablist");
+    expect(list.getAttribute("data-mark")).toBe("keep");
+  });
+});
+
 describe("bindTabA11y — refresh 重挂不叠加", () => {
   it("重建按钮集合后 refresh，旧监听拆除：点击只触发一次", async () => {
     const { root } = makeRoot(

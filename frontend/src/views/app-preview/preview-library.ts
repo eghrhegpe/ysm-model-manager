@@ -85,6 +85,124 @@ export interface OpenModel3DOptions {
   rtype?: string;
 }
 
+/** 取类型探测器。P2 修复（审核）：backendGetApp() 若后端不可用会 reject——原实现裸 await 在
+ *  函数顶部，依赖所有调用方自行 catch（app-nav FAB / switchExternal 包装有兜底，但 litematic-3d
+ *  L150 裸调用无兜底 → unhandled rejection）。函数内自洽：失败 toast 后返回 null，调用方直接 return。 */
+async function loadDetectResourceType(): Promise<((p: string) => Promise<string>) | null> {
+  try {
+    const { DetectResourceType } = await backendGetApp();
+    return DetectResourceType;
+  } catch (e) {
+    logWarn("preview-3d", "后端不可用，无法打开 3D", e);
+    toast(t("preview.backendUnavailable"), TOAST_MS.normal, "error");
+    return null;
+  }
+}
+
+/** 发射点已分类（switchExternal 等透传 rtype）时优先用，避免歧义扩展名重复探测 */
+async function resolveRouteType(
+  path: string,
+  explicit: string,
+  detect: (p: string) => Promise<string>,
+): Promise<string> {
+  if (explicit) return explicit;
+  try {
+    return (await detect(path)) || "";
+  } catch {
+    /* 类型探测失败：按空串继续路由（后续扩展名/容器兜底仍可命中） */
+    return "";
+  }
+}
+
+/**
+ * cooperate 决策（审核 P3-4，ADR-093 T4-b 收尾）：cooperate=true（同台追加）时比对
+ * 活跃会话 rtype 与新路径路由 rtype，不一致则降级为「关旧开新」+ toast 说明——
+ * 活跃会话适配器只能解析自己的类型，跨类型同台追加会让它 build 错误类型文件。
+ * 判定移到 routeKey 解析之后（原在函数头部）。
+ */
+function shouldCooperate(routeKey: string, options?: OpenModel3DOptions): boolean {
+  if (!(options?.cooperate === true && hasActivePreview())) return false;
+  // 活跃会话 rtype 可能是类型 ID（opts.rtype 透传，如 EntityPlayer）也可能是
+  // adapter.id（如 vrm）——与 routeKey 或其反解 rtype 任一相同即视为同类型
+  const activeRtype = sceneRegistry.get(sceneRegistry.getActiveId() ?? "")?.rtype ?? "";
+  const newRtype = resolvePreviewKeyToRtype(routeKey);
+  // 类型探测失败（routeKey 空）时不降级，保持原 switchPreview 行为不误伤
+  if (!activeRtype || !newRtype) return true;
+  if (activeRtype === newRtype || activeRtype === routeKey) return true;
+  toast(
+    t("preview.cooperateCrossType", { from: activeRtype, to: newRtype }),
+    TOAST_MS.normal,
+    "warn",
+  );
+  return false;
+}
+
+/**
+ * opener 兜底链（歧义扩展名/容器，仅预览路由派生，不参与类型判定）：
+ * 1. 直查：routeKey 已注册即用（`??` 短路语义逐条保留——直查未命中必须继续下探）；
+ * 2. ext 兜底：DetectResourceType 对 .pmx 等多声明扩展名保守返回 "other"，
+ *    而 variants 明确声明了预览适配器（如 .pmx→mmd）→ 按扩展名再查一次；
+ * 3. 容器兜底：.zip 打包模型被路径消歧归为 rtype（如 EntityPlayer）但 variants
+ *    无 .zip → routeKey 回退 rtype 自身查表落空 → 按 rtype 默认预览适配器兜底
+ *    （EntityPlayer→mmd，与快捷 FAB 硬编码 createMmd3D 行为对齐）。
+ */
+function resolveOpenerFor(
+  path: string,
+  routeKey: string,
+  rtype: string,
+): ((path: string, opts?: OpenerOptions) => Promise<void>) | undefined {
+  const direct = _openers[routeKey];
+  if (direct) return direct;
+  if (routeKey === "" || routeKey === "other") {
+    const byExt = _openers[resolvePreviewKeyByExt(path)];
+    if (byExt) return byExt;
+  }
+  if (isContainerExt(extOf(path))) return _openers[resolveDefaultPreviewKey(rtype)];
+  return undefined;
+}
+
+/**
+ * 派发到 opener：siblings 自算兜底 + 旧活跃层清理 + 选项对象组装。
+ *
+ * 方案 A：cooperate=false 且有活跃会话时先清理旧的活跃全屏层（释放旧内容层 +
+ * 复位注册表 + 复原单例），再建新模型——把原注释「cooperate=false 会先清理旧的
+ * 活跃全屏层」从名义变实际；对 ysm/mmd/vrm/litematic 所有类型的「二次点击资源列表」
+ * 统一生效，不影响 cooperate=true 的 keepInScene 追加语义，也不影响会话内 switchTo 切换。
+ * 注意：清理须在 opener 解析成功之后执行（code review P2）——类型探测失败或
+ * routeKey 未注册（非 3D 资源/后端暂不可用）时提前清理会销毁用户当前活跃 3D 会话，
+ * 旧会话本应在此类失败导航下存活，只弹 toast。走到此处 cooperate 必为 false
+ * （true 已在上游 switchPreview 后 return），故 `!cooperate` 判定可省。
+ *
+ * siblings（ADR-253 D1）：调用方未显式传时按 rtype 自算兜底——3D 入口成为 siblings 的
+ * 单一出口（导航栏 FAB 与详情卡 FAB 行为一致）；显式传入仍优先（向后兼容），
+ * 探测失败/无候选 → 保持 undefined，退化为下拉不渲染（不把 [] 当有效候选列表下发）。
+ * ⚠️ 须在 opener 兜底链**之后**执行：歧义扩展名/容器路径的 routeKey 在兜底链里
+ * 才落定，提前扫描会用错误的 rtype（other/容器 rtype）得到空候选 → opener 成功派发
+ * 但下拉缺失（审核 4080b9394 P3-5 实锤）。
+ */
+async function dispatchOpener(
+  opener: (path: string, opts?: OpenerOptions) => Promise<void>,
+  path: string,
+  routeKey: string,
+  rtype: string,
+  siblingsIn: string[] | undefined,
+  options: OpenModel3DOptions | undefined,
+): Promise<void> {
+  let siblings = siblingsIn;
+  if (siblings === undefined) {
+    const computed = await resolveSiblingsForRoute(routeKey, rtype);
+    if (computed.length > 0) siblings = computed;
+  }
+  if (hasActivePreview()) cleanupPreview();
+  // ADR-253 D6：组装 opener 选项对象——显式空数组视作「显式无候选」按原样透传，
+  // 仅在 siblings 为 undefined（调用方未表态）时才省略字段，保持既有契约与测试口径。
+  const openerOpts: OpenerOptions = {};
+  if (siblings !== undefined) openerOpts.siblings = siblings;
+  if (options?.entry !== undefined) openerOpts.entry = options.entry;
+  const hasOpts = Object.keys(openerOpts).length > 0;
+  await opener(path, hasOpts ? openerOpts : undefined);
+}
+
 /**
  * 通用「打开一个模型 3D」路由：探测类型 → 查注册表派发 opener（跨类型换角色）。
  * 未注册类型直接 toast 提示（不回退 YSM opener——YSM opener 无法加载非 YSM 文件，
@@ -98,94 +216,18 @@ export async function openModel3DFullscreen(
   options?: OpenModel3DOptions,
 ): Promise<void> {
   if (!path) return;
-  let siblings = options?.siblings;
-  // P2 修复（审核）：backendGetApp() 若后端不可用会 reject——原实现裸 await 在函数顶部，
-  // 依赖所有调用方自行 catch（app-nav FAB / switchExternal 包装有兜底，但 litematic-3d
-  // L150 裸调用无兜底 → unhandled rejection）。函数内自洽：失败 toast 后 return。
-  let DetectResourceType: ((p: string) => Promise<string>) | null = null;
-  try {
-    ({ DetectResourceType } = await backendGetApp());
-  } catch (e) {
-    logWarn("preview-3d", "后端不可用，无法打开 3D", e);
-    toast(t("preview.backendUnavailable"), TOAST_MS.normal, "error");
-    return;
-  }
-  // 方案 A：cooperate=false 且有活跃会话时，先清理旧的活跃全屏层（释放旧内容层 +
-  // 复位注册表 + 复原单例），再建新模型——把本函数注释「cooperate=false 会先清理旧的
-  // 活跃全屏层」从名义变实际；对 ysm/mmd/vrm/litematic 所有类型的「二次点击资源列表」
-  // 统一生效，不影响 cooperate=true 的 keepInScene 追加语义，也不影响会话内 switchTo 切换。
-  // 注意：清理须在 opener 解析成功之后执行（code review P2）——类型探测失败或
-  // routeKey 未注册（非 3D 资源/后端暂不可用）时提前清理会销毁用户当前活跃 3D 会话，
-  // 旧会话本应在此类失败导航下存活，只弹 toast。
-  // 发射点已分类（switchExternal 等透传 rtype）时优先用，避免歧义扩展名重复探测
-  let rtype = options?.rtype || "";
-  if (!rtype) {
-    try {
-      rtype = (await DetectResourceType?.(path)) || "";
-    } catch {
-      /* 类型探测失败 */
-    }
-  }
+  const detect = await loadDetectResourceType();
+  if (!detect) return;
+  const rtype = await resolveRouteType(path, options?.rtype || "", detect);
   // ADR-111：按 variants 解析预览 key（.pmx→mmd、.vrm→vrm），无变体回退 rtype
   const routeKey = resolvePreviewKey(path, rtype);
-  // cooperate 决策（审核 P3-4，ADR-093 T4-b 收尾）：cooperate 分支从函数头部移到
-  // routeKey 解析之后——活跃会话适配器只能解析自己的类型，跨类型同台追加会让活跃
-  // 适配器 build 错误类型文件。比对活跃会话 rtype（registry entry）与新路径路由
-  // rtype（preview key 反解），不一致时降级为「关旧开新」+ toast 说明。
-  // 类型探测失败（routeKey 空）时不降级，保持原 switchPreview 行为不误伤。
-  let cooperate = options?.cooperate === true && hasActivePreview();
-  if (cooperate) {
-    // 活跃会话 rtype 可能是类型 ID（opts.rtype 透传，如 EntityPlayer）也可能是
-    // adapter.id（如 vrm）——与 routeKey 或其反解 rtype 任一相同即视为同类型
-    const activeRtype = sceneRegistry.get(sceneRegistry.getActiveId() ?? "")?.rtype ?? "";
-    const newRtype = resolvePreviewKeyToRtype(routeKey);
-    if (activeRtype && newRtype && activeRtype !== newRtype && activeRtype !== routeKey) {
-      cooperate = false;
-      toast(
-        t("preview.cooperateCrossType", { from: activeRtype, to: newRtype }),
-        TOAST_MS.normal,
-        "warn",
-      );
-    }
-  }
-  if (cooperate) {
+  if (shouldCooperate(routeKey, options)) {
     await switchPreview(path, { keepInScene: true });
     return;
   }
-  // 兜底链（歧义扩展名/容器，仅预览路由派生，不参与类型判定）：
-  // 1. ext 兜底：DetectResourceType 对 .pmx 等多声明扩展名保守返回 "other"，
-  //    而 variants 明确声明了预览适配器（如 .pmx→mmd）——按扩展名再查一次；
-  // 2. 容器兜底：.zip 打包模型被路径消歧归为 rtype（如 EntityPlayer）但 variants
-  //    无 .zip → routeKey 回退 rtype 自身查表落空——按 rtype 默认预览适配器兜底
-  //    （EntityPlayer→mmd，与快捷 FAB 硬编码 createMmd3D 行为对齐）
-  const opener =
-    _openers[routeKey] ??
-    (routeKey === "" || routeKey === "other"
-      ? _openers[resolvePreviewKeyByExt(path)]
-      : undefined) ??
-    (isContainerExt(extOf(path)) ? _openers[resolveDefaultPreviewKey(rtype)] : undefined);
-  // ADR-253 D1：调用方未显式传 siblings 时按 rtype 自算兜底——
-  // 3D 入口成为 siblings 的单一出口（导航栏 FAB 与详情卡 FAB 行为一致）。
-  // 显式传入仍优先（向后兼容）；探测失败/无候选 → 保持 undefined，
-  // 退化为下拉不渲染（与调用方原行为一致，不把 [] 当有效候选列表下发）。
-  // ⚠️ 须在 opener 兜底链**之后**执行：歧义扩展名/容器路径的 routeKey 在上方
-  // 才被 ext/默认适配器兜底落定，提前扫描会用错误的 rtype（other/容器 rtype）
-  // 得到空候选 → opener 成功派发但下拉缺失（审核 4080b9394 P3-5 实锤）。
+  const opener = resolveOpenerFor(path, routeKey, rtype);
   if (opener) {
-    if (siblings === undefined) {
-      const computed = await resolveSiblingsForRoute(routeKey, rtype);
-      if (computed.length > 0) siblings = computed;
-    }
-    if (!cooperate && hasActivePreview()) {
-      cleanupPreview();
-    }
-    // ADR-253 D6：组装 opener 选项对象——显式空数组视作「显式无候选」按原样透传，
-    // 仅在 siblings 为 undefined（调用方未表态）时才省略字段，保持既有契约与测试口径。
-    const openerOpts: OpenerOptions = {};
-    if (siblings !== undefined) openerOpts.siblings = siblings;
-    if (options?.entry !== undefined) openerOpts.entry = options.entry;
-    const hasOpts = Object.keys(openerOpts).length > 0;
-    await opener(path, hasOpts ? openerOpts : undefined);
+    await dispatchOpener(opener, path, routeKey, rtype, options?.siblings, options);
     return;
   }
   // 失败诊断（2026-08-28 加固）：toast + 环形日志都带探测现场，不再是无因「暂不支持」

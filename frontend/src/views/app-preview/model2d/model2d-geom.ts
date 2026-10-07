@@ -5,7 +5,7 @@
 // 类型经 type-only import 引用主文件（编译期擦除，无运行时循环依赖）。
 
 import type { BoneTransform } from "@/utils/animation/animation.ts";
-import type { BedrockModel } from "./model2d.ts";
+import type { BedrockCube, BedrockModel } from "./model2d.ts";
 
 // P1 修复（审核）：cube 向量归一化——畸形模型缺 origin/size 或数组长度 <3 时
 // 解构 undefined 抛 TypeError，整张 2D 图静默空白（skeleton.ts 兜底）。统一入口
@@ -89,8 +89,66 @@ function projectVertex(
 }
 
 /**
+ * 把单个投影顶点纳入包围盒（比较式，非 Math.min/max）。
+ * ⚠️ 比较式是**刻意**的：畸形模型顶点算出 NaN 时 `NaN < mnX` 为假 → 既有极值不被污染；
+ * Math.min(Infinity, NaN) 会返回 NaN 把整盒变 NaN（与旧内联 if 口径不符）。
+ */
+function expandBounds(b: BoneBounds, px: number, py: number): void {
+  if (px < b.mnX) b.mnX = px;
+  if (px > b.mxX) b.mxX = px;
+  if (py < b.mnY) b.mnY = py;
+  if (py > b.mxY) b.mxY = py;
+}
+
+/** 单 cube 的 8 顶点投影包围盒（顶点投影与旋转口径统一走 projectVertex） */
+function cubeBounds(c: BedrockCube, btx: BoneTransform | undefined, opts: BoundsOpts): BoneBounds {
+  const [x, y, z] = cubeVec(c.origin);
+  const [sx, sy, sz] = cubeVec(c.size);
+  const pivot = c.pivot || [x + sx / 2, y + sy / 2, z + sz / 2];
+  const cubeRot = c.rotation || [0, 0, 0];
+  const cubeHasRot = cubeRot[0] !== 0 || cubeRot[1] !== 0 || cubeRot[2] !== 0;
+  const b: BoneBounds = { mnX: Infinity, mxX: -Infinity, mnY: Infinity, mxY: -Infinity };
+  for (let dx = 0; dx <= 1; dx++) {
+    for (let dy = 0; dy <= 1; dy++) {
+      for (let dz = 0; dz <= 1; dz++) {
+        const pt = projectVertex(
+          x + dx * sx,
+          y + dy * sy,
+          z + dz * sz,
+          pivot,
+          btx,
+          cubeRot,
+          cubeHasRot,
+          opts.applyCubeRot,
+          opts.cosA,
+          opts.sinA,
+          opts.isFront,
+        );
+        expandBounds(b, pt.px, pt.py);
+      }
+    }
+  }
+  return b;
+}
+
+/** 合并两个包围盒（a 为 null = 首个 cube，直接取 b） */
+function mergeBounds(a: BoneBounds | null, b: BoneBounds): BoneBounds {
+  if (!a) return b;
+  return {
+    mnX: Math.min(a.mnX, b.mnX),
+    mxX: Math.max(a.mxX, b.mxX),
+    mnY: Math.min(a.mnY, b.mnY),
+    mxY: Math.max(a.mxY, b.mxY),
+  };
+}
+
+/**
  * 逐骨骼 8 顶点投影包围盒。标签绘制（model2d-draw）与热区拾取（model2d-hit-zones）共用，
  * 单一事实来源，避免「注释声明同口径」的脆弱契约。
+ *
+ * 削平手法：原实现把「8 顶点 + 4 次极值比较」的三重 for 直接嵌在 for(bone)→for(cube) 内，
+ * 比较式被迫按 depth=5 计分（每处 +6）。现按 cube 提取 `cubeBounds`（深度归零），
+ * 骨骼级只做一次 merge——遍历序与每 cube 的 8 顶点投影序完全不变。
  */
 export function collectBoneBounds(model: BedrockModel, opts: BoundsOpts): Map<string, BoneBounds> {
   const out = new Map<string, BoneBounds>();
@@ -98,41 +156,10 @@ export function collectBoneBounds(model: BedrockModel, opts: BoundsOpts): Map<st
     const cs = bone.cubes || [];
     if (!cs.length) continue;
     const btx = opts.boneTransforms?.get(bone.name);
-    let mnX = Infinity;
-    let mxX = -Infinity;
-    let mnY = Infinity;
-    let mxY = -Infinity;
-    for (const c of cs) {
-      const [x, y, z] = cubeVec(c.origin);
-      const [sx, sy, sz] = cubeVec(c.size);
-      const pivot = c.pivot || [x + sx / 2, y + sy / 2, z + sz / 2];
-      const cubeRot = c.rotation || [0, 0, 0];
-      const cubeHasRot = cubeRot[0] !== 0 || cubeRot[1] !== 0 || cubeRot[2] !== 0;
-      for (let dx = 0; dx <= 1; dx++) {
-        for (let dy = 0; dy <= 1; dy++) {
-          for (let dz = 0; dz <= 1; dz++) {
-            const pt = projectVertex(
-              x + dx * sx,
-              y + dy * sy,
-              z + dz * sz,
-              pivot,
-              btx,
-              cubeRot,
-              cubeHasRot,
-              opts.applyCubeRot,
-              opts.cosA,
-              opts.sinA,
-              opts.isFront,
-            );
-            if (pt.px < mnX) mnX = pt.px;
-            if (pt.px > mxX) mxX = pt.px;
-            if (pt.py < mnY) mnY = pt.py;
-            if (pt.py > mxY) mxY = pt.py;
-          }
-        }
-      }
-    }
-    out.set(bone.name, { mnX, mxX, mnY, mxY });
+    let bounds: BoneBounds | null = null;
+    for (const c of cs) bounds = mergeBounds(bounds, cubeBounds(c, btx, opts));
+    // cs.length > 0 保证 bounds 非 null（与旧实现恒写入同判）
+    if (bounds) out.set(bone.name, bounds);
   }
   return out;
 }

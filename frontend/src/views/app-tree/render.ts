@@ -142,6 +142,37 @@ export function setRenderMode(mode: RenderMode): void {
 
 // ——— 自底向上标注文件夹 hasEnabled/hasDisabled（一次遍历，消除 flattenVisible 内 dirEntries 重复递归） ———
 const dirFlags = new WeakMap<TreeNode, { hasEnabled: boolean; hasDisabled: boolean }>();
+
+/** 树节点子键（排除 `_e` 条目位）；后序遍历与 flattenVisible 共用同一口径 */
+function treeChildKeys(node: TreeNode): string[] {
+  return Object.keys(node).filter((k) => k !== "_e");
+}
+
+/** 文件条目对祖先目录的标志贡献：banned → 仅 disabled，否则仅 enabled */
+function entryDirFlags(e: TreeEntry): { hasEnabled: boolean; hasDisabled: boolean } {
+  return e.banned
+    ? { hasEnabled: false, hasDisabled: true }
+    : { hasEnabled: true, hasDisabled: false };
+}
+
+/** 单节点 hasEnabled/hasDisabled：直接文件贡献 ∪ 各子目录（后序已算好）的 flags */
+function dirFlagsOf(node: TreeNode): { hasEnabled: boolean; hasDisabled: boolean } {
+  let hasEnabled = false;
+  let hasDisabled = false;
+  for (const k of Object.keys(node)) {
+    if (k === "_e") continue;
+    const child = node[k];
+    if (!child || typeof child !== "object") continue;
+    const flags = (child as TreeNode)._e
+      ? entryDirFlags((child as TreeNode)._e as TreeEntry)
+      : dirFlags.get(child as TreeNode);
+    if (!flags) continue;
+    if (flags.hasEnabled) hasEnabled = true;
+    if (flags.hasDisabled) hasDisabled = true;
+  }
+  return { hasEnabled, hasDisabled };
+}
+
 // O(n²)→O(n) 重写（审计实证，见 render.test.ts 深链绊线）：
 // 原实现「外层 for 每目录 + 内层 stack 重扫该目录整棵子树」最坏 O(n²)
 // （深链 2000 级 115.9ms、每倍增 3-6×），且递归深度=树深，10000 级深链直接
@@ -155,50 +186,24 @@ function annotateDirNodes(root: TreeNode): void {
   }
   // P2 优化（审核）：子键列表仅在入栈时算一次，避免 while 每轮重建 Object.keys 过滤数组
   // （节点被访问 degree+1 次时原实现每次都全量分配，O(n·d) 临时数组；与 flattenVisible 的 Frame 模式统一）。
-  const stack: Frame[] = [
-    { node: root, childKeys: Object.keys(root).filter((k) => k !== "_e"), childIdx: 0 },
-  ];
+  const stack: Frame[] = [{ node: root, childKeys: treeChildKeys(root), childIdx: 0 }];
   const order: TreeNode[] = [];
   while (stack.length) {
     const top = stack[stack.length - 1];
-    if (top.childIdx < top.childKeys.length) {
-      const childKey = top.childKeys[top.childIdx];
-      top.childIdx++;
-      const child = top.node[childKey] as TreeNode | undefined;
-      if (child && typeof child === "object" && !child._e) {
-        stack.push({
-          node: child,
-          childKeys: Object.keys(child).filter((k) => k !== "_e"),
-          childIdx: 0,
-        });
-      }
-    } else {
+    // 子键已尽 → 后序出栈记账；未尽 → 下探（早退版，与原 if/else 同序同判）
+    if (top.childIdx >= top.childKeys.length) {
       order.push(top.node);
       stack.pop();
+      continue;
+    }
+    const childKey = top.childKeys[top.childIdx];
+    top.childIdx++;
+    const child = top.node[childKey] as TreeNode | undefined;
+    if (child && typeof child === "object" && !child._e) {
+      stack.push({ node: child, childKeys: treeChildKeys(child), childIdx: 0 });
     }
   }
-  for (const node of order) {
-    let hasEnabled = false;
-    let hasDisabled = false;
-    for (const k of Object.keys(node)) {
-      if (k === "_e") continue;
-      const child = node[k];
-      if (child && typeof child === "object") {
-        if ((child as TreeNode)._e) {
-          const e = (child as TreeNode)._e as TreeEntry;
-          if (e.banned) hasDisabled = true;
-          else hasEnabled = true;
-        } else {
-          const flags = dirFlags.get(child as TreeNode);
-          if (flags) {
-            if (flags.hasEnabled) hasEnabled = true;
-            if (flags.hasDisabled) hasDisabled = true;
-          }
-        }
-      }
-    }
-    dirFlags.set(node, { hasEnabled, hasDisabled });
-  }
+  for (const node of order) dirFlags.set(node, dirFlagsOf(node));
 }
 
 // ——— 语义调用包装：树参数 → 行模板渲染参数 ———
@@ -249,6 +254,93 @@ function folderRowFromNode(
 }
 
 // ——— 扁平化可见行（虚拟滚动数据源） ———
+
+/** 待排序子项（键 + 原始节点引用；排序后只取 key） */
+interface TreeChildRef {
+  key: string;
+  node: TreeNode | TreeEntry;
+}
+
+/**
+ * 子项排序：目录恒在前 → 目录间按名称；文件按所选键降序（大→小 / 新→旧），
+ * 同键回退名称稳定序。
+ *
+ * 目录无独立 size/modTime（子树聚合归 Go），故目录间恒按名称。
+ * 提到顶层具名函数的立因：原实现在 flattenVisible 的 while 帧内联 `.sort(cb)`，
+ * 回调体继承外层嵌套深度（复杂度扫描器按 AST 递归计分，回调**不**重置深度），
+ * 一条 `??`/三元在帧内按 depth≥2 计分；顶层化后归零。
+ */
+function compareTreeChildren(a: TreeChildRef, b: TreeChildRef, sort: string): number {
+  const aEntry = a.node && (a.node as TreeNode)._e;
+  const bEntry = b.node && (b.node as TreeNode)._e;
+  // 目录恒在前
+  if (!aEntry !== !bEntry) return aEntry ? 1 : -1;
+  const aName = a.key.toLowerCase();
+  const bName = b.key.toLowerCase();
+  const byName = aName < bName ? -1 : aName > bName ? 1 : 0;
+  if (!aEntry || sort === "name") return byName;
+  const ae = aEntry as TreeEntry;
+  const be = bEntry as TreeEntry;
+  if (sort === "size") return (be.size || 0) - (ae.size || 0) || byName;
+  if (sort === "date") return (be.modTime || 0) - (ae.modTime || 0) || byName;
+  return byName;
+}
+
+/** 帧内子键：排除 `_e` 与非法值后按 sort 排序（首访该帧时算一次） */
+function sortedChildKeys(node: TreeNode, sort: string): string[] {
+  return Object.keys(node)
+    .filter((k) => k !== "_e")
+    .map((k) => ({ key: k, node: node[k] as TreeNode | TreeEntry }))
+    .filter((ref) => ref.node && typeof ref.node === "object")
+    .sort((a, b) => compareTreeChildren(a, b, sort))
+    .map((e) => e.key);
+}
+
+/**
+ * 文件行（搜索未命中 → null，即该行不产出）。
+ * 原语义：`if (isSearch && !entry.path.toLowerCase().includes(searchLower)) continue;`
+ *
+ * key 走 entryKey（磁盘路径），非树内拼接路径——与 DOM data-fullpath /
+ * selectState.keys 同源，否则选中相关的 indexOf 比对全部失配（ADR-222）
+ */
+function visibleFileRow(
+  entry: TreeEntry,
+  depth: number,
+  mode: RenderMode,
+  id: number,
+  isSearch: boolean,
+  searchLower: string,
+): TreeRow | null {
+  if (isSearch && !entry.path.toLowerCase().includes(searchLower)) return null;
+  return {
+    id,
+    type: "file",
+    key: entryKey(entry),
+    depth,
+    html: fileRowFromEntry(entry, depth, mode),
+  };
+}
+
+/** 文件夹行（含展开态；flags 缺记录时由调用方给兜底对象） */
+function folderTreeRow(
+  name: string,
+  fullPath: string,
+  depth: number,
+  isOpen: boolean,
+  flags: { hasEnabled: boolean; hasDisabled: boolean },
+  mode: RenderMode,
+  id: number,
+): TreeRow {
+  return {
+    id,
+    type: "folder",
+    key: fullPath,
+    depth,
+    html: folderRowFromNode(name, fullPath, depth, isOpen, flags, mode),
+    isOpen,
+  };
+}
+
 export function flattenVisible(
   root: TreeNode,
   prefix: string,
@@ -273,67 +365,46 @@ export function flattenVisible(
   const stack: Frame[] = [{ node: root, prefix, depth, childKeys: [], childIdx: 0 }];
   while (stack.length) {
     const top = stack[stack.length - 1];
-    if (top.childIdx === 0) {
-      // 首次进入该帧：计算排序后的子键列表
-      const entries = Object.keys(top.node)
-        .filter((k) => k !== "_e")
-        .map((k) => ({ key: k, node: top.node[k] as TreeNode | TreeEntry }))
-        .filter(({ node }) => node && typeof node === "object");
-      entries.sort((a, b) => {
-        const aEntry = a.node && (a.node as TreeNode)._e;
-        const bEntry = b.node && (b.node as TreeNode)._e;
-        // 目录恒在前
-        if (!aEntry !== !bEntry) return aEntry ? 1 : -1;
-        const aName = a.key.toLowerCase();
-        const bName = b.key.toLowerCase();
-        const byName = aName < bName ? -1 : aName > bName ? 1 : 0;
-        // 目录无独立 size/modTime（子树聚合归 Go），目录间恒按名称；
-        // 文件按所选键降序（大→小 / 新→旧），同键回退名称稳定序
-        if (!aEntry || sort === "name") return byName;
-        const ae = aEntry as TreeEntry;
-        const be = bEntry as TreeEntry;
-        if (sort === "size") return (be.size || 0) - (ae.size || 0) || byName;
-        if (sort === "date") return (be.modTime || 0) - (ae.modTime || 0) || byName;
-        return byName;
-      });
-      top.childKeys = entries.map((e) => e.key);
-    }
-    if (top.childIdx < top.childKeys.length) {
-      const name = top.childKeys[top.childIdx];
-      top.childIdx++;
-      const node = top.node[name] as TreeNode | TreeEntry;
-      const fullPath = top.prefix ? `${top.prefix}/${name}` : name;
-      if (node && (node as TreeNode)._e) {
-        const entry = (node as TreeNode)._e as TreeEntry;
-        if (isSearch && !entry.path.toLowerCase().includes(searchLower)) continue;
-        const html = fileRowFromEntry(entry, top.depth, mode);
-        // key 走 entryKey（磁盘路径），非树内拼接路径——与 DOM data-fullpath /
-        // selectState.keys 同源，否则选中相关的 indexOf 比对全部失配（ADR-222）
-        rows.push({ id: rows.length, type: "file", key: entryKey(entry), depth: top.depth, html });
-      } else if (node) {
-        const isOpen = dirOpen[fullPath] || false;
-        const flags = dirFlags.get(node as TreeNode) ?? { hasEnabled: false, hasDisabled: false };
-        const html = folderRowFromNode(name, fullPath, top.depth, isOpen, flags, mode);
-        rows.push({
-          id: rows.length,
-          type: "folder",
-          key: fullPath,
-          depth: top.depth,
-          html,
-          isOpen,
-        });
-        if (isOpen || isSearch) {
-          stack.push({
-            node: node as TreeNode,
-            prefix: fullPath,
-            depth: top.depth + 1,
-            childKeys: [],
-            childIdx: 0,
-          });
-        }
-      }
-    } else {
+    // 首次进入该帧：计算排序后的子键列表（childIdx===0 哨兵，与原实现同判）
+    if (top.childIdx === 0) top.childKeys = sortedChildKeys(top.node, sort);
+    // 子键已尽 → 出帧（早退版，等价原 if/else）
+    if (top.childIdx >= top.childKeys.length) {
       stack.pop();
+      continue;
+    }
+    const name = top.childKeys[top.childIdx];
+    top.childIdx++;
+    const node = top.node[name] as TreeNode | TreeEntry;
+    const fullPath = top.prefix ? `${top.prefix}/${name}` : name;
+
+    const entry = node && (node as TreeNode)._e;
+    if (entry) {
+      const fileRow = visibleFileRow(
+        entry as TreeEntry,
+        top.depth,
+        mode,
+        rows.length,
+        isSearch,
+        searchLower,
+      );
+      if (fileRow) rows.push(fileRow);
+      continue;
+    }
+    if (!node) continue;
+
+    // 目录行：isOpen 决定是否下探（搜索态恒展开，与原实现一致）
+    const isOpen = dirOpen[fullPath] || false;
+    const flags = dirFlags.get(node as TreeNode) ?? { hasEnabled: false, hasDisabled: false };
+    const row = folderTreeRow(name, fullPath, top.depth, isOpen, flags, mode, rows.length);
+    rows.push(row);
+    if (isOpen || isSearch) {
+      stack.push({
+        node: node as TreeNode,
+        prefix: fullPath,
+        depth: top.depth + 1,
+        childKeys: [],
+        childIdx: 0,
+      });
     }
   }
   return rows;

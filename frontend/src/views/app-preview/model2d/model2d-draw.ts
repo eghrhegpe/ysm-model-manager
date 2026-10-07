@@ -5,7 +5,7 @@
 // 类型经 type-only import 引用主文件（编译期擦除，无运行时循环依赖）。
 
 import type { BoneTransform } from "@/utils/animation/animation.ts";
-import type { BedrockModel } from "./model2d.ts";
+import type { BedrockCube, BedrockModel } from "./model2d.ts";
 import { collectBoneBounds, cubeVec } from "./model2d-geom.ts";
 
 /**
@@ -46,6 +46,24 @@ interface Cube2D {
   sy: number;
   sz: number;
   pivot: number[];
+  /** cube 级旋转（缺省 [0,0,0]；仅非动画路径消费） */
+  rotation: number[];
+}
+
+/** cube → 投影输入（cubeVec 归一化缺 origin/size 的畸形 cube） */
+function cube2DOf(c: BedrockCube): Cube2D {
+  const [x, y, z] = cubeVec(c.origin);
+  const [sx, sy, sz] = cubeVec(c.size);
+  return {
+    x,
+    y,
+    z,
+    sx,
+    sy,
+    sz,
+    pivot: c.pivot || [x + sx / 2, y + sy / 2, z + sz / 2],
+    rotation: c.rotation || [0, 0, 0],
+  };
 }
 
 /**
@@ -245,6 +263,74 @@ function mdDvDrawLabels(
   ctx.restore();
 }
 
+/**
+ * centered 模式绘制（动画变换 / cube 级旋转的投影产物）。
+ * ok=false（投影退化，drawW/drawH < 1）→ 跳过该 cube：与旧内联 `if (!r.ok) continue` 同判。
+ */
+function mdDvDrawCentered(
+  ctx: CanvasRenderingContext2D,
+  isHighlight: boolean,
+  r: CubeProjection,
+): void {
+  if (!r.ok) return;
+  mdDvDrawRect(ctx, isHighlight, r.drawW, r.drawH, {
+    mode: "centered",
+    screenX: r.screenX,
+    screenY: r.screenY,
+    rzRad: r.rzRad,
+  });
+}
+
+/**
+ * 无旋转平面直投（drawView 仅前视图 isFront=true：py=y、ph=sy 为定值，原 isFront 三元死分支已删）。
+ * 亚像素投影（<0.5px）跳过，防 0 宽高描边噪声。
+ */
+function mdDvDrawPlain(
+  ctx: CanvasRenderingContext2D,
+  isHighlight: boolean,
+  cube: Cube2D,
+  view: View2D,
+): void {
+  const { x, y, sx, sy, sz, z } = cube;
+  const px = x * view.cosA - z * view.sinA;
+  const pw = Math.abs(sx * view.cosA) + Math.abs(sz * view.sinA);
+  const drawW = pw * view.scale;
+  const drawH = sy * view.scale;
+  if (drawW < 0.5 || drawH < 0.5) return;
+  mdDvDrawRect(ctx, isHighlight, drawW, drawH, {
+    mode: "plain",
+    drawX: view.ox + px * view.scale,
+    drawY: view.oy - (y + sy) * view.scale,
+    doubleStroke: true,
+  });
+}
+
+/**
+ * 单 cube 绘制：动画变换优先 → cube 级旋转 → 平面直投。
+ * 提到顶层具名函数的立因：原三层 `if/else if/else` 嵌在 for(bone)→for(cube) 内，
+ * 每层守卫与逻辑表达式按 depth≥3 计分（一个 `||` 即 +4）；顶层化后各守卫只 +1。
+ */
+function mdDvDrawCube(
+  ctx: CanvasRenderingContext2D,
+  cube: Cube2D,
+  isHighlight: boolean,
+  view: View2D,
+  btx: BoneTransform | undefined,
+  hasAnim: boolean,
+): void {
+  if (hasAnim) {
+    mdDvDrawCentered(ctx, isHighlight, mdDvApplyBoneAnim(cube, btx, view));
+    return;
+  }
+  const cubeRot = cube.rotation;
+  const hasRotation = cubeRot[0] !== 0 || cubeRot[1] !== 0 || cubeRot[2] !== 0;
+  if (hasRotation) {
+    mdDvDrawCentered(ctx, isHighlight, mdDvApplyCubeRot(cube, cubeRot, view));
+    return;
+  }
+  mdDvDrawPlain(ctx, isHighlight, cube, view);
+}
+
 /** 主视图绘制：逐 bone/cube 投影 + 可选高亮 + 可选标签 */
 function drawView(
   ctx: CanvasRenderingContext2D,
@@ -268,48 +354,7 @@ function drawView(
     const hasAnim = btx?.rotation || btx?.position;
 
     for (const c of bone.cubes || []) {
-      const [x, y, z] = cubeVec(c.origin);
-      const [sx, sy, sz] = cubeVec(c.size);
-      const pivot = c.pivot || [x + sx / 2, y + sy / 2, z + sz / 2];
-
-      if (hasAnim) {
-        const r = mdDvApplyBoneAnim({ x, y, z, sx, sy, sz, pivot }, btx, view);
-        if (!r.ok) continue;
-        mdDvDrawRect(ctx, isHighlight, r.drawW, r.drawH, {
-          mode: "centered",
-          screenX: r.screenX,
-          screenY: r.screenY,
-          rzRad: r.rzRad,
-        });
-      } else {
-        const cubeRot = c.rotation || [0, 0, 0];
-        const hasRotation = cubeRot[0] !== 0 || cubeRot[1] !== 0 || cubeRot[2] !== 0;
-        if (hasRotation) {
-          const r = mdDvApplyCubeRot({ x, y, z, sx, sy, sz, pivot }, cubeRot, view);
-          if (!r.ok) continue;
-          mdDvDrawRect(ctx, isHighlight, r.drawW, r.drawH, {
-            mode: "centered",
-            screenX: r.screenX,
-            screenY: r.screenY,
-            rzRad: r.rzRad,
-          });
-        } else {
-          const px = x * cosA - z * sinA;
-          const pw = Math.abs(sx * cosA) + Math.abs(sz * sinA);
-          const drawX = ox + px * scale;
-          // drawView 仅前视图（isFront=true），py=y、ph=sy 为定值；删原 isFront 三元死分支
-          const drawY = oy - (y + sy) * scale;
-          const drawW = pw * scale;
-          const drawH = sy * scale;
-          if (drawW < 0.5 || drawH < 0.5) continue;
-          mdDvDrawRect(ctx, isHighlight, drawW, drawH, {
-            mode: "plain",
-            drawX,
-            drawY,
-            doubleStroke: true,
-          });
-        }
-      }
+      mdDvDrawCube(ctx, cube2DOf(c), isHighlight, view, btx, !!hasAnim);
     }
   }
 

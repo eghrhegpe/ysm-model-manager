@@ -158,6 +158,53 @@ describe("showMaidPreview 车万女仆详情", () => {
     expect(html).toContain("来自巴特蕾特学院。");
   });
 
+  // code review P2 XSS：contact 走 scheme 白名单（http/https/mailto），其余（javascript: 等）
+  // 不得成链接——只留平台名纯文本。此前无断言（仅覆盖了 https 正例）。
+  it("作者 contact：白名单 scheme 成链接，javascript: 等只留纯文本（XSS 防线）", async () => {
+    analyzeMock.mockResolvedValue(
+      baseModel({
+        metadata: {
+          name: "X",
+          authors: [
+            {
+              name: "作者B",
+              contact: {
+                Evil: "javascript:alert(1)",
+                Data: "data:text/html,<script>alert(1)</script>",
+                Home: "https://ok.example/u",
+                Mail: "mailto:a@b.c",
+              },
+            },
+          ],
+        },
+      }),
+    );
+    const ctx = makeCtx();
+    await showMaidPreview(ctx, "/repo/maid.zip");
+    const html = ctx.root.innerHTML;
+    // 白名单两种 scheme 均成锚
+    expect(html).toContain('href="https://ok.example/u"');
+    expect(html).toContain('href="mailto:a@b.c"');
+    // 非白名单：无 href，平台名以转义纯文本出现（标签仍在，值不落 href）
+    expect(html).not.toContain("javascript:alert(1)");
+    expect(html).not.toContain('href="data:');
+    expect(html).toContain("Evil");
+    expect(html).toContain("Data");
+  });
+
+  it("作者 contact 为空对象 → 无联系方式串（不产出空 ' · ' 尾缀）", async () => {
+    analyzeMock.mockResolvedValue(
+      baseModel({
+        metadata: { name: "X", authors: [{ name: "作者C", contact: {} }] },
+      }),
+    );
+    const ctx = makeCtx();
+    await showMaidPreview(ctx, "/repo/maid.zip");
+    const html = ctx.root.innerHTML;
+    expect(html).toContain("作者C");
+    expect(html).not.toContain("作者C — ");
+  });
+
   it("extraCount = texCount - 组件数（2 组件 2 纹理 → 无额外纹理行）", async () => {
     const ctx = makeCtx();
     await showMaidPreview(ctx, "/repo/maid.zip");

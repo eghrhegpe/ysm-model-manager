@@ -26,6 +26,7 @@ import type {
   FindDuplicateFilesFn,
   GetRepoRootFn,
   MoveToRecycleFn,
+  ScanFile,
   ScanGroupResult,
 } from "./dedup-types.ts";
 import { DEDUP_DEFAULTS } from "./dedup-types.ts";
@@ -43,10 +44,81 @@ export interface DedupSession {
   lastScannedType(): string | null;
 }
 
+/** 组内当前选中项索引（无勾选控件 → 0；-1 = keep-all 由调用方判早退） */
+function dedupSelectedIndex(groupEl: HTMLElement | undefined): number {
+  const selEl = groupEl?.querySelector<HTMLInputElement>('input[type="radio"]:checked');
+  return selEl ? parseInt(selEl.value, 10) : 0;
+}
+
+/**
+ * 单组删除：选中项保留，其余逐个 MoveToRecycle（失败不中断删除链，只计数）。
+ *
+ * errors 为**跨组共享**数组——「失败缘由封顶 3 条」是全局口径（非每组 3 条），
+ * 故由调用方传入而非本函数自建；封顶判定沿用 `errors.length < 3` 原口径。
+ */
+async function dedupDeleteGroup(
+  files: ScanFile[],
+  selected: number,
+  MoveToRecycle: MoveToRecycleFn,
+  errors: string[],
+): Promise<{ del: number; fail: number }> {
+  let del = 0;
+  let fail = 0;
+  if (selected === -1) return { del, fail }; // 该组 keep-all：整组跳过不删
+  for (let fi = 0; fi < files.length; fi++) {
+    if (fi === selected) continue;
+    try {
+      await MoveToRecycle(files[fi].path);
+      del++;
+    } catch (e) {
+      fail++;
+      if (errors.length < 3) errors.push(friendlyError(e));
+    }
+  }
+  return { del, fail };
+}
+
+/**
+ * exec 收尾行：完成统计（fail>0 → warn，否则 success）+ 失败明细行。
+ * 对接锐评⑦：失败不只报数量——保留前 3 条缘由（friendlyError 单源，esc 交渲染单点）。
+ */
+function dedupDoneHTML(del: number, fail: number, errors: string[], esc: EscFn): string {
+  const head = msgRowHTML(
+    fail > 0 ? "warn" : "success",
+    t("diagnostics.dedupDone", { del, fail }),
+    undefined,
+    { icon: UI_ICONS.success },
+  );
+  const tail = errors.length ? errors.map((msg) => msgRowHTML("error", msg, esc)).join("") : "";
+  return head + tail;
+}
+
+/**
+ * 扫描类型元数据（标签/图标）同步派生自 resource_types.json
+ * （ADR-269 D3④：废 loadResourceRegistry RPC 旁路，无异步加载 → 原 try/catch 降级路径随之退役）。
+ * 无 rtype = 全类型口径（标签走 i18n，图标固定 📦）。
+ */
+function deriveDedupTypeMeta(
+  rtype: string | undefined,
+  reg: DedupRegType,
+): { typeLabel: string; typeIcon: string } {
+  const entry = rtype ? reg[rtype] : undefined;
+  const entryName = entry && typeof entry.name === "string" ? entry.name : "";
+  const entryIcon = entry && typeof entry.icon === "string" ? entry.icon : "";
+  return {
+    typeLabel: rtype ? entryName || rtype : t("diagnostics.all"),
+    typeIcon: rtype ? entryIcon || "📦" : "📦",
+  };
+}
+
 /**
  * 去重扫描会话。所有可变状态（busy 重入守卫 / exec 重入守卫 / 配置）收进闭包：
  * - 每会话独立，会话间无共享状态，可直接实例化隔离单测
  * - getConfig() 返回冻结快照防外部篡改；resetConfig() 从默认值展开
+ *
+ * 削平手法（认知复杂度战役第 4b 批）：会话壳内的嵌套函数体**同样计入外壳函数**的
+ * 复杂度（扫描器按 AST 递归，函数声明不重置深度）——故 exec 的删除/收尾/元数据
+ * 三块纯逻辑提到模块顶层具名函数，外壳只留「状态机 + 编排」。
  */
 export function createDedupSession(): DedupSession {
   const state = {
@@ -94,23 +166,14 @@ export function createDedupSession(): DedupSession {
     try {
       for (const rtResult of allResults) {
         for (const group of rtResult.groups) {
-          const files = group.files || [];
-          const selEl = groupEls[gi]?.querySelector<HTMLInputElement>(
-            'input[type="radio"]:checked',
+          const r = await dedupDeleteGroup(
+            group.files || [],
+            dedupSelectedIndex(groupEls[gi]),
+            MoveToRecycle,
+            errors,
           );
-          const selected = selEl ? parseInt(selEl.value, 10) : 0;
-          if (selected !== -1) {
-            for (let fi = 0; fi < files.length; fi++) {
-              if (fi === selected) continue;
-              try {
-                await MoveToRecycle(files[fi].path);
-                del++;
-              } catch (e) {
-                fail++;
-                if (errors.length < 3) errors.push(friendlyError(e));
-              }
-            }
-          }
+          del += r.del;
+          fail += r.fail;
           gi++;
         }
       }
@@ -118,13 +181,7 @@ export function createDedupSession(): DedupSession {
         bus.emit("stats:refresh");
         bus.emit("tree:reload");
       }
-      list.innerHTML =
-        msgRowHTML(
-          fail > 0 ? "warn" : "success",
-          t("diagnostics.dedupDone", { del, fail }),
-          undefined,
-          { icon: UI_ICONS.success },
-        ) + (errors.length ? errors.map((msg) => msgRowHTML("error", msg, esc)).join("") : "");
+      list.innerHTML = dedupDoneHTML(del, fail, errors, esc);
     } catch (err) {
       // 低优先③：与 conflicts/health 同口径——friendlyError 单源（Code→i18n、Go 中文透传、
       // 英文才加前缀），esc 交 msgRowHTML 单点转义
@@ -240,11 +297,7 @@ export function createDedupSession(): DedupSession {
       // ① 类型元数据同步派生自 resource_types.json（ADR-269 D3④：废 loadResourceRegistry RPC 旁路，
       // 无异步加载 → 原 try/catch 降级路径随之退役）
       const reg: DedupRegType = resourceTypesById;
-      const entry = rtype ? reg[rtype] : undefined;
-      const entryName = entry && typeof entry.name === "string" ? entry.name : "";
-      const entryIcon = entry && typeof entry.icon === "string" ? entry.icon : "";
-      const typeLabel = rtype ? entryName || rtype : t("diagnostics.all");
-      const typeIcon = rtype ? entryIcon || "📦" : "📦";
+      const { typeLabel, typeIcon } = deriveDedupTypeMeta(rtype, reg);
       list.innerHTML = statRowHTML(
         "muted",
         t("diagnostics.scanHash", { icon: esc(typeIcon), label: esc(typeLabel) }),

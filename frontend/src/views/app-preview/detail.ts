@@ -29,14 +29,9 @@ import {
 import { summaryCardHTML, type YsmSummary } from "./tpl-summary.ts";
 import { bindPreviewTabs, type DetailGenGuard, type PreviewCtx } from "./utils.ts";
 
-/** 显示模型详情（YSM 模型） */
-export async function showModelDetail(
-  ctx: PreviewCtx & DetailGenGuard,
-  path: string,
-): Promise<void> {
-  const gen = ctx.detailGen.next();
-  const savedTab = safeGet("ysm_previewTab") || "detail";
-  ctx.root.innerHTML = tabbedShellHTML({
+/** 详情壳（tab 键/图标/文案单源）：detail 面板占位 + skeleton 空面板 */
+function modelDetailShellHTML(savedTab: string): string {
+  return tabbedShellHTML({
     tabs: [
       { key: "detail", icon: UI_ICONS.file, label: t("preview.detailTab") },
       { key: "skeleton", icon: UI_ICONS.build, label: t("preview.tab.skeleton") },
@@ -55,6 +50,119 @@ export async function showModelDetail(
       { key: "skeleton", body: "" },
     ],
   });
+}
+
+/** allSettled 取值：拒绝 → null（摘要/头部任一失败都不阻断卡片，另一路照常渲染） */
+function settledValue<T>(r: PromiseSettledResult<T>): T | null {
+  return r.status === "fulfilled" ? r.value : null;
+}
+
+/** 路径基名（去目录，保留扩展名；无基名 → 空串） */
+function basenameOf(path: string): string {
+  return path.split(/[/\\]/).pop() || "";
+}
+
+/**
+ * Go 摘要是否「有实义」：任一统计位/作者/许可非空即算。
+ * 全空 = 加密 .ysm 仅回基本摘要（无动画/配置/作者），需补 WASM 解码缓存。
+ */
+function hasRealYsmSummary(summary: YsmSummary | null): boolean {
+  if (!summary) return false;
+  return (
+    (summary.stats?.textures ?? 0) > 0 ||
+    (summary.stats?.models ?? 0) > 0 ||
+    (summary.stats?.animations ?? 0) > 0 ||
+    (summary.stats?.texWidth ?? 0) > 0 ||
+    (summary.authors?.length ?? 0) > 0 ||
+    !!summary.license
+  );
+}
+
+type YsmDecode = NonNullable<Awaited<ReturnType<typeof loadYsmSummaryMeta>>["dec"]>;
+type YsmHeader = Awaited<ReturnType<AppBindings["ExtractYSMHeader"]>>;
+
+/** 由 WASM 解码产物组装补全摘要（字段缺省口径与 Go 摘要一致：无值即不写该键） */
+function buildEnrichedSummary(
+  dec: YsmDecode,
+  header: YsmHeader | null,
+  summary: YsmSummary | null,
+  basename: string,
+): YsmSummary {
+  return {
+    name: header?.name || summary?.name || basename.replace(/\.[^.]+$/, ""),
+    authors: (dec.authors || []).map((a) => ({
+      name: a.name,
+      ...(a.role != null ? { roles: a.role } : {}),
+    })),
+    animGroups: dec.animGroups || null,
+    configMenus: dec.configMenus || null,
+    ...(header?.tips ? { tips: header.tips } : {}),
+    ...(header?.license ? { license: header.license } : {}),
+    ...(header?.linkHome ? { links: { home: header.linkHome } } : {}),
+  };
+}
+
+/**
+ * 加密 .ysm 摘要补全：Go 仅返回基本摘要（无动画/配置/作者）时，补取自 WASM 解码缓存
+ * （解密产物已含完整 ysm.json，属识别级统计，符合 ADR-026 边界）。
+ * 解码 + 缓存写回归 preview-3d/adapters/ysm-preview-cache.ts（ADR-270-d5）：
+ * 视图只传代际守卫，不再直接触碰 decoder/缓存内部件。
+ *
+ * 仅在 `hasRealYsmSummary(summary) === false` 时调用（保持原实现的 await 时机不变）。
+ * 返回 stale=true 表示 await 期间用户已切走，调用方须直接 return（丢弃在途渲染）。
+ */
+async function enrichFromWasmMeta(
+  ctx: PreviewCtx & DetailGenGuard,
+  path: string,
+  gen: number,
+  summary: YsmSummary | null,
+  header: YsmHeader | null,
+  basename: string,
+): Promise<{ stale: boolean; enriched: YsmSummary | null }> {
+  const { dec, hasInfo: decHasInfo } = await loadYsmSummaryMeta(
+    path,
+    () => !ctx.detailGen.stale(gen),
+  );
+  if (ctx.detailGen.stale(gen)) return { stale: true, enriched: null };
+  if (!decHasInfo || !dec) return { stale: false, enriched: summary };
+  return { stale: false, enriched: buildEnrichedSummary(dec, header, summary, basename) };
+}
+
+/** 挂载详情卡：卡片 HTML + 统计容器 + 触发 2D 解码（失败仅 warn，卡片不受影响） */
+function mountDetailCard(ctx: PreviewCtx, cardHTML: string, path: string): void {
+  // 顶部 ysm-author-avatars 小头像行已移除（2026-08-28）：作者头像/角色由详情卡底部
+  // 统计卡（buildStatsCard）统一承载，顶部重复渲染无意义（原 detail.ts 注入容器）
+  const detailDiv = ctx.root.getElementById("preview-detail");
+  if (detailDiv) detailDiv.innerHTML = cardHTML;
+
+  // 详情卡统计容器（方案 A：统计卡彩色分区 + 头像作者挂详情卡底部，骨骼 tab 只留图）
+  const statsDiv = document.createElement("div");
+  statsDiv.id = "preview-stats";
+  statsDiv.className = "dp-stats"; // 规则在 css.ts previewCSS(shadow adopted)
+  detailDiv?.appendChild(statsDiv);
+
+  // 加载 2D 模型预览（骨架 tab 只留骨骼线条图；统计卡经 statsContainer 挂详情卡）
+  // 进详情本身即触发 loadModel2D 异步解码，统计卡数据（骨骼/立方体/纹理/头像）无需额外请求
+  loadModel2D(ctx, path, ctx.root.getElementById("preview-skeleton"), statsDiv).catch((e) =>
+    logWarn("preview", "loadModel2D 失败", e),
+  );
+}
+
+/** 解析失败占位（代际未过期时才落盘，防旧面板画回新文件） */
+function renderDetailError(ctx: PreviewCtx, err: unknown): void {
+  const detailDiv = ctx.root.getElementById("preview-detail");
+  if (!detailDiv) return;
+  detailDiv.innerHTML = `${t("preview.unknownError")} ${t("preview.parseFailed")}: ${esc(friendlyError(err))}`;
+}
+
+/** 显示模型详情（YSM 模型） */
+export async function showModelDetail(
+  ctx: PreviewCtx & DetailGenGuard,
+  path: string,
+): Promise<void> {
+  const gen = ctx.detailGen.next();
+  const savedTab = safeGet("ysm_previewTab") || "detail";
+  ctx.root.innerHTML = modelDetailShellHTML(savedTab);
   bindPreviewTabs(ctx.root, "ysm_previewTab");
 
   // 预热缩略图缓存（loadModel2D / 列表视图复用）
@@ -65,74 +173,24 @@ export async function showModelDetail(
     const { ExtractYsmSummary, ExtractYSMHeader } = await backendGetApp();
     const results = await Promise.allSettled([ExtractYsmSummary(path), ExtractYSMHeader(path)]);
     if (ctx.detailGen.stale(gen)) return; // 解析期间用户已切换
-    const summary = results[0].status === "fulfilled" ? results[0].value : null;
-    const header = results[1].status === "fulfilled" ? results[1].value : null;
-    const basename = path.split(/[/\\]/).pop() || "";
-    const hasRealSummary =
-      !!summary &&
-      ((summary.stats?.textures ?? 0) > 0 ||
-        (summary.stats?.models ?? 0) > 0 ||
-        (summary.stats?.animations ?? 0) > 0 ||
-        (summary.stats?.texWidth ?? 0) > 0 ||
-        (summary.authors?.length ?? 0) > 0 ||
-        !!summary.license);
+    const summary = settledValue(results[0]);
+    const header = settledValue(results[1]);
+    const basename = basenameOf(path);
+    const hasRealSummary = hasRealYsmSummary(summary);
 
-    // 加密 .ysm：Go 仅返回基本摘要（无动画/配置/作者），补取自 WASM 解码缓存
-    // （解密产物已含完整 ysm.json，属识别级统计，符合 ADR-026 边界）
-    // 解码 + 缓存写回归 preview-3d/adapters/ysm-preview-cache.ts（ADR-270-d5）：
-    // 视图只传代际守卫，不再直接触碰 decoder/缓存内部件。
     let enriched: YsmSummary | null = summary;
     if (!hasRealSummary) {
-      const { dec, hasInfo: decHasInfo } = await loadYsmSummaryMeta(
-        path,
-        () => !ctx.detailGen.stale(gen),
-      );
-      if (ctx.detailGen.stale(gen)) return;
-      if (decHasInfo && dec) {
-        enriched = {
-          name: header?.name || summary?.name || basename.replace(/\.[^.]+$/, ""),
-          authors: (dec.authors || []).map((a) => ({
-            name: a.name,
-            ...(a.role != null ? { roles: a.role } : {}),
-          })),
-          animGroups: dec.animGroups || null,
-          configMenus: dec.configMenus || null,
-          ...(header?.tips ? { tips: header.tips } : {}),
-          ...(header?.license ? { license: header.license } : {}),
-          ...(header?.linkHome ? { links: { home: header.linkHome } } : {}),
-        };
-      }
+      const fromWasm = await enrichFromWasmMeta(ctx, path, gen, summary, header, basename);
+      if (fromWasm.stale) return; // 解码期间用户已切换
+      enriched = fromWasm.enriched;
     }
 
-    let cardHTML = "";
     const showSummary = hasRealSummary ? summary : enriched;
-    if (showSummary || header) {
-      cardHTML = summaryCardHTML(showSummary, header, basename || "");
-    } else {
-      throw new Error(t("preview.cannotParse"));
-    }
-    // 顶部 ysm-author-avatars 小头像行已移除（2026-08-28）：作者头像/角色由详情卡底部
-    // 统计卡（buildStatsCard）统一承载，顶部重复渲染无意义（原 detail.ts 注入容器）
-    const detailDiv = ctx.root.getElementById("preview-detail");
-    if (detailDiv) detailDiv.innerHTML = cardHTML;
-
-    // 详情卡统计容器（方案 A：统计卡彩色分区 + 头像作者挂详情卡底部，骨骼 tab 只留图）
-    const statsDiv = document.createElement("div");
-    statsDiv.id = "preview-stats";
-    statsDiv.className = "dp-stats"; // 规则在 css.ts previewCSS(shadow adopted)
-    detailDiv?.appendChild(statsDiv);
-
-    // 加载 2D 模型预览（骨架 tab 只留骨骼线条图；统计卡经 statsContainer 挂详情卡）
-    // 进详情本身即触发 loadModel2D 异步解码，统计卡数据（骨骼/立方体/纹理/头像）无需额外请求
-    loadModel2D(ctx, path, ctx.root.getElementById("preview-skeleton"), statsDiv).catch((e) =>
-      logWarn("preview", "loadModel2D 失败", e),
-    );
+    if (!showSummary && !header) throw new Error(t("preview.cannotParse"));
+    mountDetailCard(ctx, summaryCardHTML(showSummary, header, basename || ""), path);
   } catch (err) {
     if (ctx.detailGen.stale(gen)) return;
-    const detailDiv = ctx.root.getElementById("preview-detail");
-    if (detailDiv) {
-      detailDiv.innerHTML = `${t("preview.unknownError")} ${t("preview.parseFailed")}: ${esc(friendlyError(err))}`;
-    }
+    renderDetailError(ctx, err);
   }
 }
 

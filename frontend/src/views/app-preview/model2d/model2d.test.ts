@@ -4,6 +4,7 @@
 import { describe, it, expect, vi, type Mock } from "vitest";
 import { calcBoneHitZones, renderModel2D } from "./model2d.ts";
 import { collectBoneBounds } from "./model2d-geom.ts";
+import { drawMiniView, drawView } from "./model2d-draw.ts";
 import type { BedrockModel, BedrockCube } from "./model2d.ts";
 import type { BoneTransform, Vec3 } from "@/utils/animation/animation.ts";
 
@@ -160,6 +161,10 @@ interface MockCtx {
   clearRect: Mock;
   fillRect: Mock;
   fillText: Mock;
+  /** 仅 centered 模式路径调用（分支断言用；Proxy 无常量成员，故此处声明） */
+  translate?: Mock;
+  rotate?: Mock;
+  strokeRect?: Mock;
   /** strokeStyle 赋值历史（取色口径断言用；restore() 是 no-op，故终值 ≈ 最后一次赋值） */
   _strokes: string[];
   /** fillStyle 赋值历史 */
@@ -362,6 +367,119 @@ describe("collectBoneBounds 包围盒计算", () => {
       mnY: 0,
       mxY: 4,
     });
+  });
+
+  // 此前三例全部传 boneTransforms: null —— 动画骨骼（btx）分支零覆盖，而它正是
+  // projectVertex 里标签/热区共用的一条独立路径（position 平移 + 绕 pivot 的 Z/X 旋转）。
+  it("动画骨骼（boneTransforms）参与包围盒：position 平移全部 8 顶点", () => {
+    const model = cubeModel("bone", SIMPLE_CUBE);
+    const bt = new Map<string, BoneTransform>([
+      ["bone", { position: [10, 0, 0] as Vec3 }],
+    ]);
+    expect(collectBoneBounds(model, { ...opts(true), boneTransforms: bt }).get("bone")).toEqual({
+      mnX: 10,
+      mxX: 12,
+      mnY: 0,
+      mxY: 4,
+    });
+  });
+
+  it("动画骨骼 rotation Z=90° → 绕默认 pivot（cube 中心）旋转，宽高互换", () => {
+    const model = cubeModel("bone", SIMPLE_CUBE);
+    const bt = new Map<string, BoneTransform>([
+      ["bone", { rotation: [0, 0, 90] as Vec3 }],
+    ]);
+    const b = collectBoneBounds(model, { ...opts(true), boneTransforms: bt }).get("bone")!;
+    // 绕 (1,2) 旋转 90°：角点 (0,0)/(2,4) → (3,1)/(-1,3)
+    expect(b.mnX).toBeCloseTo(-1, 5);
+    expect(b.mxX).toBeCloseTo(3, 5);
+    expect(b.mnY).toBeCloseTo(1, 5);
+    expect(b.mxY).toBeCloseTo(3, 5);
+  });
+
+  it("无 cubes 的骨骼不进 Map；空模型 → 空 Map", () => {
+    expect(collectBoneBounds({ bones: [{ name: "empty", cubes: [] }] }, opts(true)).size).toBe(0);
+    expect(collectBoneBounds({ bones: [] }, opts(true)).size).toBe(0);
+  });
+});
+
+describe("drawView / drawMiniView 分支直测（认知复杂度战役第 4b 批特征测试前置）", () => {
+  // 此前 drawView 只被 renderModel2D 冒烟间接覆盖（「不抛错 + fillRect 被调」），
+  // 三条互斥绘制路径（plain / cube 级旋转 centered / 动画 centered）与两条「跳过」守卫
+  // （动画投影 <1px / 平面投影 <0.5px）无分支级断言——而这正是本轮削平要动的结构。
+  const plainModel: BedrockModel = {
+    bones: [{ name: "b", cubes: [{ origin: [0, 0, 0], size: [4, 8, 4] }] }],
+  };
+  const rotModel: BedrockModel = {
+    bones: [{ name: "b", cubes: [{ origin: [0, 0, 0], size: [4, 8, 4], rotation: [0, 45, 0] }] }],
+  };
+  const asCtx = (c: ReturnType<typeof makeMockCanvas>) =>
+    c._ctx as unknown as CanvasRenderingContext2D;
+
+  it("无旋转 cube → plain 分支：不 translate/rotate，双描边（cube 填充 1 次）", () => {
+    const c = makeMockCanvas();
+    drawView(asCtx(c), plainModel, 1, 0, 0, null, null, false, 1, 0, null);
+    expect(c._ctx.translate).not.toHaveBeenCalled();
+    expect(c._ctx.rotate).not.toHaveBeenCalled();
+    expect(c._ctx.fillRect).toHaveBeenCalledTimes(1);
+    expect(c._ctx.strokeRect).toHaveBeenCalledTimes(2); // doubleStroke=true
+  });
+
+  it("cube 级 rotation → centered 分支：save/translate/rotate 各 1 次，单描边", () => {
+    const c = makeMockCanvas();
+    drawView(asCtx(c), rotModel, 1, 0, 0, null, null, false, 1, 0, null);
+    expect(c._ctx.translate).toHaveBeenCalledTimes(1);
+    expect(c._ctx.rotate).toHaveBeenCalledTimes(1);
+    expect(c._ctx.fillRect).toHaveBeenCalledTimes(1);
+    expect(c._ctx.strokeRect).toHaveBeenCalledTimes(1);
+  });
+
+  it("动画骨骼（boneTransforms）→ centered 分支（动画优先于 cube 级旋转）", () => {
+    const c = makeMockCanvas();
+    const bt = new Map<string, BoneTransform>([
+      ["b", { position: [0, 1, 0] as Vec3, rotation: [0, 0, 30] as Vec3 }],
+    ]);
+    drawView(asCtx(c), rotModel, 1, 0, 0, null, null, false, 1, 0, bt);
+    expect(c._ctx.translate).toHaveBeenCalledTimes(1);
+    expect(c._ctx.fillRect).toHaveBeenCalledTimes(1);
+  });
+
+  it("动画路径投影过小（ok=false）→ 跳过该 cube，不绘制", () => {
+    const c = makeMockCanvas();
+    const bt = new Map<string, BoneTransform>([["b", { position: [0, 0, 0] as Vec3 }]]);
+    drawView(asCtx(c), plainModel, 0.01, 0, 0, null, null, false, 1, 0, bt);
+    expect(c._ctx.fillRect).not.toHaveBeenCalled();
+  });
+
+  it("平面路径投影 < 0.5px → 跳过不绘制（防亚像素描边噪声）", () => {
+    const c = makeMockCanvas();
+    drawView(asCtx(c), plainModel, 0.05, 0, 0, null, null, false, 1, 0, null);
+    expect(c._ctx.fillRect).not.toHaveBeenCalled();
+  });
+
+  it("showLabels 只在显式 false 时关闭（undefined 视作开启）", () => {
+    const off = makeMockCanvas();
+    drawView(asCtx(off), plainModel, 1, 0, 0, null, null, false, 1, 0, null);
+    expect(off._ctx.fillText).not.toHaveBeenCalled();
+    const on = makeMockCanvas();
+    drawView(asCtx(on), plainModel, 1, 0, 0, null, null, true, 1, 0, null);
+    expect(on._ctx.fillText).toHaveBeenCalled();
+  });
+
+  it("drawMiniView：底衬 1 次 + 每 cube 1 次；空模型只剩底衬", () => {
+    const one = makeMockCanvas();
+    drawMiniView(asCtx(one), plainModel, 1, null, 1, 0);
+    expect(one._ctx.fillRect).toHaveBeenCalledTimes(2);
+    const empty = makeMockCanvas();
+    drawMiniView(asCtx(empty), { bones: [] }, 1, null, 1, 0);
+    expect(empty._ctx.fillRect).toHaveBeenCalledTimes(1);
+  });
+
+  it("drawMiniView：cosA/sinA 为 NaN → 回落 1/0（不产出 NaN 坐标）", () => {
+    const c = makeMockCanvas();
+    drawMiniView(asCtx(c), plainModel, 1, null, Number.NaN, Number.NaN);
+    const args = c._ctx.fillRect.mock.calls[1];
+    args.forEach((a: unknown) => expect(Number.isNaN(a as number)).toBe(false));
   });
 });
 

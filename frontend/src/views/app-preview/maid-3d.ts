@@ -171,11 +171,65 @@ function toStatsCardModel(info: MaidModelInfo, componentCounts: ComponentCount[]
   };
 }
 
+type YsmAuthor = NonNullable<NonNullable<YsmMetadata["authors"]>[number]>;
+type YsmContact = NonNullable<YsmAuthor["contact"]>;
+
+/**
+ * 作者联系方式串（平台名 → 链接），` · ` 连接。
+ * scheme 白名单（http/https/mailto）防 javascript: 等注入（code review P2 XSS）；
+ * 非白名单只留平台名纯文本。空 map → 空串（调用方据此不产出 ' — ' 尾缀）。
+ */
+function dpAuthorContactHTML(contact: YsmContact | null | undefined): string {
+  if (!contact || Object.keys(contact).length === 0) return "";
+  return Object.entries(contact)
+    .map(([p, u]) => {
+      const url = u ?? "";
+      return /^(https?:|mailto:)/i.test(url)
+        ? `<a href="${esc(url)}" target="_blank" rel="noopener">${esc(p ?? "")}</a>`
+        : esc(p ?? "");
+    })
+    .join(" · ");
+}
+
+/** 单作者行：姓名（角色）+ 联系方式 */
+function dpAuthorRowHTML(a: YsmAuthor): string {
+  const contact = dpAuthorContactHTML(a.contact);
+  const role = a.role ? `（${esc(a.role ?? "")}）` : "";
+  const suffix = contact ? ` — ${contact}` : "";
+  return `<div class="dp-hint" style="font-size:var(--fs-sm);color:var(--muted)">${esc(a.name ?? "")}${role}${suffix}</div>`;
+}
+
+/** ysm.json metadata 段（name/license/tips/authors，Modern YSM RawMetadata 对齐） */
+function dpMetadataRowsHTML(md: YsmMetadata): string {
+  const rows: string[] = [];
+  if (md.name)
+    rows.push(`<div class="dp-hint" style="font-weight:600">${UI_ICONS.tag} ${esc(md.name)}</div>`);
+  if (md.license?.type)
+    rows.push(
+      `<div class="dp-hint">${UI_ICONS.script} ${t("preview.license")}: ${esc(md.license.type)}</div>`,
+    );
+  if (md.tips)
+    rows.push(
+      `<div class="dp-hint" style="white-space:pre-line;font-size:var(--fs-sm)">${UI_ICONS.comment} ${esc(md.tips ?? "")}</div>`,
+    );
+  if (md.authors && md.authors.length > 0) {
+    rows.push(
+      `<div class="dp-hint" style="font-weight:600;margin-top:6px">${UI_ICONS.author} ${t("preview.authors")} (${md.authors.length})</div>`,
+    );
+    for (const a of md.authors) rows.push(dpAuthorRowHTML(a));
+  }
+  return rows.join("");
+}
+
 /**
  * 渲染补充详情（纯字符串拼接）：彩色分区（statsCardHTML）之外的补充信息——
  * format 版本、ysm.json metadata（name/license/tips/authors）。
  * 骨骼/立方体/纹理数/尺寸已由 statsCardHTML 彩色分区承载，此处不重复；
  * 逐角色行由蓝卡 componentCounts 静态渲染（ADR-160），不再有「选中角色」概念。
+ *
+ * HTML 字面量留在 views 层（本仓铁律：HTML 模板归 views）；片段按段落提取为
+ * dpMetadataRowsHTML / dpAuthorRowHTML / dpAuthorContactHTML 三个具名片段函数——
+ * 原实现把它们全塞在一个函数里，逐层嵌套的 `?:`/`&&` 被迫按外层深度计分。
  */
 function dpRenderDetail(modelInfo: MaidModelInfo): string {
   const rows: string[] = [];
@@ -183,44 +237,8 @@ function dpRenderDetail(modelInfo: MaidModelInfo): string {
     rows.push(
       `<div class="dp-hint">${UI_ICONS.geometry} ${t("preview.formatVersion")}: ${esc(modelInfo.format)}</div>`,
     );
-  // ysm.json metadata 段（name/license/tips/authors，Modern YSM RawMetadata 对齐）
   const md = modelInfo?.metadata;
-  if (md) {
-    if (md.name)
-      rows.push(
-        `<div class="dp-hint" style="font-weight:600">${UI_ICONS.tag} ${esc(md.name)}</div>`,
-      );
-    if (md.license?.type)
-      rows.push(
-        `<div class="dp-hint">${UI_ICONS.script} ${t("preview.license")}: ${esc(md.license.type)}</div>`,
-      );
-    if (md.tips)
-      rows.push(
-        `<div class="dp-hint" style="white-space:pre-line;font-size:var(--fs-sm)">${UI_ICONS.comment} ${esc(md.tips ?? "")}</div>`,
-      );
-    if (md.authors && md.authors.length > 0) {
-      rows.push(
-        `<div class="dp-hint" style="font-weight:600;margin-top:6px">${UI_ICONS.author} ${t("preview.authors")} (${md.authors.length})</div>`,
-      );
-      for (const a of md.authors) {
-        const contact =
-          a.contact && Object.keys(a.contact).length > 0
-            ? Object.entries(a.contact)
-                .map(([p, u]) => {
-                  const url = u ?? "";
-                  // scheme 白名单（http/https/mailto）防 javascript: 等注入（code review P2 XSS）
-                  return /^(https?:|mailto:)/i.test(url)
-                    ? `<a href="${esc(url)}" target="_blank" rel="noopener">${esc(p ?? "")}</a>`
-                    : esc(p ?? "");
-                })
-                .join(" · ")
-            : "";
-        rows.push(
-          `<div class="dp-hint" style="font-size:var(--fs-sm);color:var(--muted)">${esc(a.name ?? "")}${a.role ? `（${esc(a.role ?? "")}）` : ""}${contact ? ` — ${contact}` : ""}</div>`,
-        );
-      }
-    }
-  }
+  if (md) rows.push(dpMetadataRowsHTML(md));
   return rows.join("");
 }
 

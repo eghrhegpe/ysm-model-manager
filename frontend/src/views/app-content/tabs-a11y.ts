@@ -40,6 +40,103 @@ export interface TabA11yHandle {
   refresh(): void;
 }
 
+/** 文本 id 读取（data-tab 缺省 → 空串，与旧 `?? ""` 同口径） */
+function tabIdOf(btn: HTMLElement): string {
+  return btn.dataset.tab ?? "";
+}
+
+/**
+ * 导航集合收集：真值源 = 按钮自身的 data-tab。
+ * validate 时剔掉缺 data-tab / 重复 data-tab 者并告警（点了没反应的哑按钮、
+ * 双控同一面板的违例都不静默）；去重本身**无条件**执行，validate 只决定告警与否。
+ */
+function collectTabNav(
+  tabs: HTMLElement[],
+  validate: boolean | undefined,
+): { nav: HTMLElement[]; ids: string[] } {
+  const seenIds = new Set<string>();
+  const nav: HTMLElement[] = [];
+  const ids: string[] = [];
+  for (const btn of tabs) {
+    const id = tabIdOf(btn);
+    if (!id) {
+      if (validate) logWarn("tabs", `tab 按钮缺 data-tab，已跳过（该按钮不可切换）`, btn);
+      continue;
+    }
+    if (seenIds.has(id)) {
+      if (validate) {
+        logWarn(
+          "tabs",
+          `重复 data-tab="${id}"（两个按钮控制同一面板，违反 ARIA Tabs，已去重）`,
+          btn,
+        );
+      }
+      continue;
+    }
+    seenIds.add(id);
+    nav.push(btn);
+    ids.push(id);
+  }
+  return { nav, ids };
+}
+
+/**
+ * 初始激活回落链：initialTabId 命中 > 调用方预置 `.active` 的按钮
+ * （renderTabs 首个 / 动态重挂的目标）> 首个可见按钮。
+ */
+function pickInitialTab(
+  nav: HTMLElement[],
+  initialTabId: string | undefined,
+  preSeeded: HTMLElement | undefined,
+  firstVisible: HTMLElement,
+): HTMLElement {
+  if (!initialTabId) return preSeeded ?? firstVisible;
+  return nav.find((b) => b.dataset.tab === initialTabId) ?? preSeeded ?? firstVisible;
+}
+
+/** 单个 tab 按钮的静态可访问性位（role / aria-controls / active 类 / aria-selected / roving） */
+function applyTabA11y(
+  btn: HTMLElement,
+  id: string,
+  isActive: boolean,
+  panelId: (tabId: string) => string,
+): void {
+  btn.setAttribute("role", "tab");
+  btn.setAttribute("aria-controls", panelId(id));
+  // 初始视觉态与 roving：active 类 / aria-selected / 整组仅一个 tabindex=0
+  btn.classList.toggle("active", isActive);
+  btn.setAttribute("aria-selected", String(isActive));
+  btn.setAttribute("tabindex", isActive ? "0" : "-1");
+}
+
+/** 激活态迁移：active 类 + aria-selected + roving tabindex 全组互斥（原语统一持有） */
+function applyTabActiveStates(nav: HTMLElement[], btn: HTMLElement): void {
+  for (const b of nav) {
+    const on = b === btn;
+    b.classList.toggle("active", on);
+    b.setAttribute("aria-selected", String(on));
+    b.setAttribute("tabindex", on ? "0" : "-1");
+  }
+}
+
+/** 键盘导航指令：activate = 激活当前项；focus = 移到指定下标；null = 本键不属 tab 栏 */
+type TabNavCommand = { kind: "activate" } | { kind: "focus"; index: number } | null;
+
+/**
+ * WAI-ARIA Tabs 键盘映射（早返回版，替代原 5 段 else-if 链）。
+ * ⚠️ 链式 if/else-if 是隐藏放大器：TS AST 无独立 ElseClause 收口，else 分支按递加深
+ * 计分（第 5 段一口 +5）；拆成平铺早返回后每段只 +1。
+ * len=0（按钮全隐藏）时环状取模得 NaN → vis[NaN] 为 undefined → 调用方 `if (!next)` 不动作。
+ */
+function resolveTabNavKey(key: string, vIdx: number, len: number): TabNavCommand {
+  if (key === "ArrowRight") return { kind: "focus", index: (vIdx + 1) % len };
+  if (key === "ArrowLeft") return { kind: "focus", index: (vIdx - 1 + len) % len };
+  if (key === "Home") return { kind: "focus", index: 0 };
+  if (key === "End") return { kind: "focus", index: len - 1 };
+  if (key === "Enter" || key === " ") return { kind: "activate" };
+  return null;
+}
+
 /**
  * 给一页的 tab 栏挂上 WAI-ARIA Tabs 可访问性：tablist 语义 + roving tabindex + 键盘导航 + 点击分派。
  * 不触碰面板 display / 懒初始化——那些是各页调用方在 onActivate 里自己的事。
@@ -56,31 +153,7 @@ export function bindTabA11y(spec: BindTabA11ySpec): TabA11yHandle {
     const tabs = Array.from(root.querySelectorAll<HTMLElement>(tabSelector));
     if (!tabs.length) return;
 
-    // 真值源 = 按钮自身的 data-tab。validate 时剔掉缺 data-tab / 重复 data-tab 者并告警
-    // （点了没反应的哑按钮、双控同一面板的违例都不静默）。
-    const seenIds = new Set<string>();
-    const nav: HTMLElement[] = [];
-    const ids: string[] = [];
-    for (const btn of tabs) {
-      const id = btn.dataset.tab ?? "";
-      if (!id) {
-        if (validate) logWarn("tabs", `tab 按钮缺 data-tab，已跳过（该按钮不可切换）`, btn);
-        continue;
-      }
-      if (seenIds.has(id)) {
-        if (validate) {
-          logWarn(
-            "tabs",
-            `重复 data-tab="${id}"（两个按钮控制同一面板，违反 ARIA Tabs，已去重）`,
-            btn,
-          );
-        }
-        continue;
-      }
-      seenIds.add(id);
-      nav.push(btn);
-      ids.push(id);
-    }
+    const { nav, ids } = collectTabNav(tabs, validate);
     if (!nav.length) return;
 
     const listEl = tabs[0].parentElement;
@@ -88,38 +161,21 @@ export function bindTabA11y(spec: BindTabA11ySpec): TabA11yHandle {
       listEl.setAttribute("role", "tablist");
     }
 
-    // 初始激活：优先 initialTabId；其次调用方已预置 `.active` 的按钮（renderTabs 首个 / 动态重挂的目标）；
-    // 都无则回退首个可见按钮。
     const firstVisible = nav.find((b) => b.style.display !== "none") ?? nav[0];
     const preSeeded = nav.find((b) => b.classList.contains("active"));
-    const initialBtn = initialTabId
-      ? (nav.find((b) => b.dataset.tab === initialTabId) ?? preSeeded ?? firstVisible)
-      : (preSeeded ?? firstVisible);
+    const initialBtn = pickInitialTab(nav, initialTabId, preSeeded, firstVisible);
 
     onBound?.(nav, ids);
 
     nav.forEach((btn) => {
-      const id = btn.dataset.tab ?? "";
-      const isActive = btn === initialBtn;
-      btn.setAttribute("role", "tab");
-      btn.setAttribute("aria-controls", panelId(id));
-      // 初始视觉态与 roving：active 类 / aria-selected / 整组仅一个 tabindex=0
-      btn.classList.toggle("active", isActive);
-      btn.setAttribute("aria-selected", String(isActive));
-      btn.setAttribute("tabindex", isActive ? "0" : "-1");
+      applyTabA11y(btn, tabIdOf(btn), btn === initialBtn, panelId);
     });
 
     // 激活 = 可访问性态迁移（active 类 + aria-selected + roving tabindex，全组互斥）交原语统一持有；
     // 内容切换 / 面板 display / 懒初始化 / 重渲染属调用方，落在 onActivate 里。
     const activate = (btn: HTMLElement): void => {
-      const id = btn.dataset.tab ?? "";
-      nav.forEach((b) => {
-        const on = b === btn;
-        b.classList.toggle("active", on);
-        b.setAttribute("aria-selected", String(on));
-        b.setAttribute("tabindex", on ? "0" : "-1");
-      });
-      onActivate(btn, id);
+      applyTabActiveStates(nav, btn);
+      onActivate(btn, tabIdOf(btn));
     };
 
     nav.forEach((btn) => {
@@ -130,30 +186,18 @@ export function bindTabA11y(spec: BindTabA11ySpec): TabA11yHandle {
       const onKey = (e: KeyboardEvent): void => {
         // 键盘导航集合 = 当前可见按钮全集（与 roving tabindex 同口径）
         const vis = nav.filter((t) => t.style.display !== "none");
-        const vIdx = Math.max(0, vis.indexOf(btn));
-        let next: HTMLElement | undefined;
-        if (e.key === "ArrowRight") {
-          e.preventDefault();
-          next = vis[(vIdx + 1) % vis.length];
-        } else if (e.key === "ArrowLeft") {
-          e.preventDefault();
-          next = vis[(vIdx - 1 + vis.length) % vis.length];
-        } else if (e.key === "Home") {
-          e.preventDefault();
-          next = vis[0];
-        } else if (e.key === "End") {
-          e.preventDefault();
-          next = vis[vis.length - 1];
-        } else if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
+        const cmd = resolveTabNavKey(e.key, Math.max(0, vis.indexOf(btn)), vis.length);
+        if (!cmd) return; // 非 tab 栏按键：不 preventDefault，不劫持浏览器默认行为
+        e.preventDefault();
+        if (cmd.kind === "activate") {
           activate(btn);
           return;
         }
-        if (next) {
-          next.focus();
-          // automatic activation：切 tab 即切换内容
-          activate(next);
-        }
+        const next = vis[cmd.index];
+        if (!next) return;
+        next.focus();
+        // automatic activation：切 tab 即切换内容
+        activate(next);
       };
       btn.addEventListener("click", onClick);
       btn.addEventListener("keydown", onKey);

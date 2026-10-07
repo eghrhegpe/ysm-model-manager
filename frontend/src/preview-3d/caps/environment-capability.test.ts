@@ -1625,6 +1625,44 @@ describe("EnvironmentCapability — 能力级开关单门收口（shadow/reflect
     expect(scene.environment).not.toBeNull();
   });
 
+  it("[顺序敏感] 构造窗不触发挂载副作用——setEnvState 先于 registerEnvCallback，场景由 apply 落地", () => {
+    // 锚点：environment-capability.ts 构造器注释「⚠️ 顺序敏感：此处 setEnvState 发生在
+    // registerEnvCallback **之前**，订阅者尚未就位，挂载/卸载副作用不会自动触发——
+    // 场景对象由组合根随后的 apply() 落地」。该顺序契约此前只有注释声明、无用例：
+    // 若把订阅前移，或在构造器里补挂载副作用，「状态先写、场景后落地」的两段式即断
+    //（重复重建 / 半成品状态落地），而不会有任何测试转红。
+    //
+    // 关态样本：构造窗内不得触达场景
+    const sceneOff = new THREE.Scene();
+    const capOff = new EnvironmentCapability({
+      scene: sceneOff,
+      renderer: makeFakeRenderer(),
+      enabled: false,
+    });
+    expect(envState.envEnabled, "构造期显式传值须写状态层").toBe(false);
+    expect(sceneOff.environment, "构造窗不得触发挂载副作用").toBeNull();
+    expect(sceneOff.background).toBeNull();
+    capOff.apply(); // 组合根落地入口：关态走 !envEnabled 显式还原分支（不构贴图）
+    expect(sceneOff.environment, "关态 apply 不构贴图").toBeNull();
+
+    // 开态样本（**关键判据**）：构造期已把 envEnabled 写成 true，订阅者仍未就位 → 场景必须仍空。
+    // 若构造器补了挂载副作用（或订阅前移到写状态之前），此处即拿到已构贴图 → 本断言转红
+    //（变异实证：构造器插入 this.buildEnvironment() 时本条红、旧版（仅关态）不红）。
+    const sceneOn = new THREE.Scene();
+    const capOn = new EnvironmentCapability({
+      scene: sceneOn,
+      renderer: makeFakeRenderer(),
+      enabled: true,
+    });
+    expect(envState.envEnabled).toBe(true);
+    expect(
+      sceneOn.environment,
+      "开态构造窗同样不得落地场景（副作用唯一落地口 = 组合根 apply）",
+    ).toBeNull();
+    capOn.apply();
+    expect(sceneOn.environment, "apply 才是落地口").not.toBeNull();
+  });
+
   it("[F-1] 开关单键翻转的重建轮数（行为快照，非防回潮断言——见注）", () => {
     // ⚠️ 命名诚实说明（2026-10-05 独立复核 + 主模型变异实证）：本条**不是**防回潮断言。
     // 复核（变异3）发现「删掉开关分支末尾的 `return` 不会让任何测试转红」；主模型随即补写
@@ -1652,5 +1690,92 @@ describe("EnvironmentCapability — 能力级开关单门收口（shadow/reflect
     expect(bake.mock.calls.length, "关态还原不该再取图（走显式还原分支）").toBe(afterApply);
     cap.setEnabled(true); // 开态：恰好一轮重建
     expect(bake.mock.calls.length, "开态单键翻转恰重建一轮，不得叠加").toBe(afterApply + 1);
+  });
+});
+
+// ===== ⑤ dispose 顺序收敛（死后槽位不赌 dispose 序）=====
+// 锚点：environment-capability.ts|dispose 注释自承「直装态（D-3）下槽位挂的是 sky 的烘焙纹理，
+// 本 cap 不拥有它：不主动清则本 cap 死后槽位悬空指向 sky 的 renderTarget 纹理，全靠 registry
+// 反序 dispose 里 sky 恰好随后收拾」，末句补「所有权收口的意义就是路径自洽，不赌 dispose 顺序」。
+// 收敛依据 = envOwnsSceneEnvironment（环境侧把 sky 直装纹理纳入还原权集合）+ sky 侧对称守卫；
+// 但此前只写在注释里，无用例。本 describe 用两条顺序把它钉成机器判据：
+//   A 序（registry 反序：env 先死）= env 自行还原槽位，sky 纹理归 sky 释放（env 不越权）；
+//   B 序（sky 先死）           = sky 自行还原并释放，env 随后离场不得二次还原/二次释放。
+describe("EnvironmentCapability — dispose 顺序收敛（死后槽位不赌 dispose 序）", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    resetEnvState();
+  });
+  afterEach(() => {
+    localStorage.clear();
+  });
+
+  /** 假 sky + 生命周期：挂载/离场语义与真实 sky-capability.dispose 的守卫契约对称
+   *  （槽位归自己 → 还原 prev + 释放自身纹理；否则不碰槽位）。 */
+  function makeSkyLifecycle() {
+    const baked = new THREE.Texture();
+    const disposeSpy = vi.spyOn(baked, "dispose");
+    return {
+      baked,
+      disposeSpy,
+      /** env 侧查询器视图：只暴露 env 消费的那一个方法 */
+      capView: { bakeEnvironmentTexture: () => baked },
+      /** sky 挂载：IBL 落到共享槽位（真实由 sky.apply 写） */
+      mountOn(scene: THREE.Scene): void {
+        scene.environment = baked;
+      },
+      /** sky 离场：守卫契约 = 槽位归自己才还原 + 释放自身纹理 */
+      disposeSky(scene: THREE.Scene): void {
+        if (scene.environment === baked) scene.environment = null;
+        baked.dispose();
+      },
+    };
+  }
+
+  function makeCapWithSky(scene: THREE.Scene, sky: ReturnType<typeof makeSkyLifecycle>) {
+    return new EnvironmentCapability({
+      scene,
+      renderer: makeFakeRenderer(),
+      caps: { getById: (id: string) => (id === "sky" ? sky.capView : undefined) },
+    } as unknown as ConstructorParameters<typeof EnvironmentCapability>[0]);
+  }
+
+  it("A 序（env 先离场）：槽位由 env 守卫还原，sky 纹理归 sky 释放，env 不越权 dispose", () => {
+    const scene = new THREE.Scene();
+    const sky = makeSkyLifecycle();
+    const cap = makeCapWithSky(scene, sky);
+    setEnvState({ envSource: "sky", envEnabled: true }, { source: "manual", force: true });
+    sky.mountOn(scene); // 生产序：sky 先挂（registry 注册序 sky → environment）
+    cap.apply(); // D-3 直装：槽位 = sky 烘焙纹理，env 侧 skySourcedTex 同引用
+    expect(scene.environment).toBe(sky.baked);
+
+    cap.dispose(); // A 序：env 先离场（registry 反序 dispose）
+    expect(
+      scene.environment,
+      "直装纹理在 env 还原权集合内 → env 自行把槽位还原为 prev（不悬空指向 sky 纹理）",
+    ).toBeNull();
+    expect(sky.disposeSpy, "sky 纹理生命周期归 sky，env 不得释放").not.toHaveBeenCalled();
+
+    sky.disposeSky(scene); // 随后 sky 收拾：槽位已非自己所有 → 不碰槽位，只释放自身
+    expect(scene.environment).toBeNull();
+    expect(sky.disposeSpy, "sky 纹理恰释放一次").toHaveBeenCalledTimes(1);
+  });
+
+  it("B 序（sky 先离场）：sky 自行还原并释放，env 随后离场不得二次还原/二次释放", () => {
+    const scene = new THREE.Scene();
+    const sky = makeSkyLifecycle();
+    const cap = makeCapWithSky(scene, sky);
+    setEnvState({ envSource: "sky", envEnabled: true }, { source: "manual", force: true });
+    sky.mountOn(scene);
+    cap.apply();
+    expect(scene.environment).toBe(sky.baked);
+
+    sky.disposeSky(scene); // B 序：sky 先离场（槽位归自己 → 还原 + 释放）
+    expect(scene.environment).toBeNull();
+    expect(sky.disposeSpy).toHaveBeenCalledTimes(1);
+
+    cap.dispose();
+    expect(scene.environment, "槽位已被 sky 还原，env 离场不得二次还原成悬空引用").toBeNull();
+    expect(sky.disposeSpy, "env 不得二次释放 sky 的纹理").toHaveBeenCalledTimes(1);
   });
 });

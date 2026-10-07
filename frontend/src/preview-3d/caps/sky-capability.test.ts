@@ -18,6 +18,7 @@ import { MODEL_DEFAULTS } from "@/preview-3d/state/model-defaults.ts";
 import { ENV_STATE_SCHEMA, getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { clearEnvCallbacks } from "@/preview-3d/state/env-dispatcher.ts";
+import { ATMOSPHERE_PRESETS } from "@/preview-3d/state/atmosphere-presets.ts";
 import { restoreState } from "./scene-capability.ts";
 import { findNodeById, childIds, nodeIds } from "@/preview-3d/menu/menu-test-helpers.ts";
 import type { SceneCapability } from "./scene-capability.ts";
@@ -1519,6 +1520,27 @@ describe("SkyCapability — 能力级开关单门收口（fog/water/shadow 先�
     expect(envState.skyEnabled).toBe(true);
     expect(cap.isEnabled()).toBe(true);
     expect((cap as unknown as { sky: Sky }).sky.parent, "单门可逆：翻回即复现").toBe(scene);
+  });
+
+  it("[顺序敏感] 氛围预设五档均不携 skyEnabled/skyGodRaysEnabled——构造期 manual 足迹无害的前置守卫", () => {
+    // 锚点：sky-capability.ts 构造器注释「⚠️ 来源纪律」——构造期显式传 opts.enabled 时走
+    // `setEnvState(..., { source: "manual" })`，该键此后带手改足迹，auto-atmosphere 再写会被
+    // shouldOverwrite 拒绝。今日无害的**唯一依据** = ATMOSPHERE_PRESETS 五档都不携这两个键
+    //（原文是口头声明「已逐档核实」，无机器守卫）。
+    // 本用例把该前提钉成判据：日后给氛围预设加天空能力开关 → 此处转红，逼出「按来源传参
+    // 或让预设走 force/skipMiddleware」的配套处置（原注释已写明「勿只加预设项」）。
+    const presetIds = Object.keys(ATMOSPHERE_PRESETS);
+    expect(presetIds.length, "五档氛围预设须存在（防遍历空转恒绿）").toBe(5);
+    for (const [id, snapshot] of Object.entries(ATMOSPHERE_PRESETS)) {
+      expect(
+        snapshot,
+        `氛围预设 "${id}" 不得携 skyEnabled（构造期 manual 足迹会让它静默失效）`,
+      ).not.toHaveProperty("skyEnabled");
+      expect(
+        snapshot,
+        `氛围预设 "${id}" 不得携 skyGodRaysEnabled（同上）`,
+      ).not.toHaveProperty("skyGodRaysEnabled");
+    }
   });
 
   it("[F-1] saveState 不再持久化能力级 enabled 幽灵键（skyEnabled 随 schema 键落盘）", () => {

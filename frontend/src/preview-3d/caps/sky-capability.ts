@@ -247,8 +247,9 @@ export class SkyCapability implements SceneCapability {
     // ⚠️ 来源纪律：构造期走 `manual`（与 light/pp 同惯例）——该键一经显式传入即被打上
     // 手改足迹，此后 `auto-atmosphere`/`auto-model` 写它会被 shouldOverwrite 拒绝。
     // 今日无害（MODEL_DEFAULTS 无天空键、ATMOSPHERE_PRESETS 五档均不携 skyEnabled/
-    // skyGodRaysEnabled，已逐档核实）；但**日后给氛围预设加天空能力开关时会静默失效**——
+    // skyGodRaysEnabled）；但**日后给氛围预设加天空能力开关时会静默失效**——
     // 届时须改为按来源传参（或让预设走 force/skipMiddleware），勿只加预设项。
+    // 守卫 = sky-capability.test.ts「顺序敏感」（遍历五档断言不携这两键，加预设项即转红）。
     if (opts.enabled !== undefined) {
       setEnvState({ skyEnabled: opts.enabled }, { source: "manual" });
     }

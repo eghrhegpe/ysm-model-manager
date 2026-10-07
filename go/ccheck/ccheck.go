@@ -86,7 +86,8 @@ func nest(kindName string, seq *[]Event, guard int) bool {
 // 分派按事件语义切三族，各由独立路由函数承担（见下），本函数只做守卫 + 三路分流。
 // 如此既保住「发射顺序即契约」的可读性，又把认知复杂度摊平到各路由内：
 //   - 嵌套型（进 nest / 出 nestClose）：emitNested；
-//   - 即时型（flat，不增层）：emitFlat；
+//   - 即时型（flat）：emitFlat——不增加嵌套层，但**仍按当前深度计分**（CognitiveFromSeq 里
+//     同为 +1+depth）；「不增层」≠「与深度无关」，对拍向量「if 条件内双 &&（flat logic 在 d1 计分）」钉此语义。
 //   - 容器型（纯透传，不产事件）：emitContainer。
 //
 // ⚠️ 事件发射顺序即跨语言契约（与 TS 侧逐字对齐），重构时不得改变调用次序。

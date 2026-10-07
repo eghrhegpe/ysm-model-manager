@@ -15,12 +15,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import {
   EnvironmentCapability,
-  ENV_PRESETS,
-  drawEnvEquirect,
   type EnvPreset,
   type EnvPresetId,
   type SelectableEnvPresetId,
 } from "./environment-capability.ts";
+import { ENV_PRESETS } from "./environment-state.ts";
+import { drawEnvEquirect } from "./env-pixels.ts";
 import { MODEL_DEFAULTS, toModelType } from "@/preview-3d/state/model-defaults.ts";
 // ADR-196：统一状态层
 import { ENV_STATE_SCHEMA, getParamRange } from "@/preview-3d/state/env-state-schema.ts";
@@ -1434,8 +1434,8 @@ describe("EnvironmentCapability — ADR-292 批次三 来源选择控件", () =>
 //      legacy 回填写法 `if (!("xxxEnabled" in s) && typeof s.enabled === "boolean")`），
 //      判据①才能在升级用户身上继续成立——否则旧用户重启后画面突变。
 //
-// 安全性前置（已核）：env 不在 MODEL_DEFAULTS 的总开关键上（各模型只携
-// envPreset/envIntensity/envResolution/envUseAsBackground，见 model-defaults.ts）
+// 安全性前置（已核）：env 不在 MODEL_DEFAULTS 的总开关键上（各模型只携 envPreset/envIntensity；
+// envResolution/envUseAsBackground 是死请求键，[锐评 2026-10-07] 已从 applyModelPreset 请求清单删除）
 // → 无双轨写对手，故不需 isStateLoaded 守卫。
 describe("EnvironmentCapability — 能力级开关单门收口（shadow/reflector/sky 先例同法）", () => {
   beforeEach(() => {

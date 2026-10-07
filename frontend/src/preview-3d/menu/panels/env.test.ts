@@ -145,6 +145,14 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
     expect(schema.every((n) => n.renderCustom === undefined)).toBe(true);
   });
 
+  it("[seam 锐评 2026-10-07] 面板经 ctx.getAllCaps 注入渲染，不触碰 registry 单例", () => {
+    const sky = makeCap("sky", "preview.sky", []);
+    const getAllSpy = vi.spyOn(sceneCapabilityRegistry, "getAll");
+    const schema = buildEnvSchema(makeCtx({ getAllCaps: () => [sky] }));
+    expect(getAllSpy).not.toHaveBeenCalled(); // ctx seam 供源 → 单例读口零调用（防退回兜底路径）
+    expect(capRows(schema).map((n) => n.id)).toContain("env-cap-sky");
+  });
+
   it("产出 预设 select + 按 cap 自报 order/section 归段排序的 cap row，全部声明式", () => {
     const sky = makeCap("sky", "preview.sky", [
       {

@@ -9,7 +9,10 @@
 
 import type { LocaleKey } from "@/core/i18n/t.ts";
 import { tOf } from "@/core/i18n/t.ts";
-import type { SelectableEnvPresetId } from "@/preview-3d/caps/environment-capability.ts";
+import type {
+  EnvironmentCapability,
+  SelectableEnvPresetId,
+} from "@/preview-3d/caps/environment-capability.ts";
 import type {
   EnvPlacement,
   EnvSectionId,
@@ -87,14 +90,16 @@ const PRESET_ORDER = [
   { id: "sky", icon: "\uD83C\uDF24\uFE0F", labelKey: "preview.presetQuickSky" },
 ];
 /**
- * 遍历注册表收集环境面板成员（ADR-268 插件式发现）：凡实现 `getEnvPlacement()` 的 cap
+ * 遍历能力源收集环境面板成员（ADR-268 插件式发现）：凡实现 `getEnvPlacement()` 的 cap
  * 即入选，无需在此登记 id。非环境 cap（light/shadow/postproc/renderMode 等）不实现该方法
- * → 天然被排除。成员唯一来源即各 env cap 的自报，无兜底合成路径；空注册表返回 []，
+ * → 天然被排除。成员唯一来源即各 env cap 的自报，无兜底合成路径；空能力源返回 []，
  * buildEnvSchema 据此落「无环境」空态。
+ * [锐评 2026-10-07 面板 seam] 经 ctx.getAllCaps 取能力源（mount 注入 registry.getAll；
+ * 缺省回退 registry 单例——no-ctx 调用方兼容），面板不再自行直引单例遍历。
  */
-function collectEnvEntries(): EnvEntry[] {
+function collectEnvEntries(ctx: PreviewMenuCtx): EnvEntry[] {
   const entries: EnvEntry[] = [];
-  for (const cap of sceneCapabilityRegistry.getAll()) {
+  for (const cap of ctx.getAllCaps?.() ?? sceneCapabilityRegistry.getAll()) {
     const placement = cap.getEnvPlacement?.();
     if (placement) entries.push({ cap, placement });
   }
@@ -275,7 +280,7 @@ function buildEnvCards(entries: EnvEntry[]): PreviewMenuNode[] {
  * 面板重渲染 → 本函数重跑 → 行/headerToggle 实时）。
  */
 export function buildEnvSchema(ctx: PreviewMenuCtx, menu?: SlideMenuHandle): PreviewMenuNode[] {
-  const entries = collectEnvEntries();
+  const entries = collectEnvEntries(ctx);
   if (menu)
     rebuildEnvSubs(
       entries.map((e) => e.cap),
@@ -307,7 +312,11 @@ export function buildEnvSchema(ctx: PreviewMenuCtx, menu?: SlideMenuHandle): Pre
         // 是单一真值源）——无该 cap 时回退本 menu 的 per-mount 快预设缓存
         // （custom 不在快预设 options 内时也回退到最近快预设）
         get: () => {
-          const envCap = sceneCapabilityRegistry.getById("environment");
+          // ctx.getCap 返回通用 SceneCapability；本面板的「environment」行确为 EnvironmentCapability
+          // （registry.getById 按 id 特化重载隐含同一假设），单点收窄即可，`:?` 兜底缺席。
+          const envCap = (ctx.getCapByPanelId ?? ctx.getCap)(
+            "environment",
+          ) as EnvironmentCapability | null;
           const cur = envCap?.getPresetId?.();
           return cur && cur !== "custom" ? cur : getLastEnvPreset(menu);
         },

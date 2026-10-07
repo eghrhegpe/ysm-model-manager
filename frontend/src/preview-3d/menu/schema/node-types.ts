@@ -39,6 +39,11 @@ export interface PreviewMenuCtx {
   /** [暗线 C1 收口 2026-10] 面板渲染侧 id → cap 解析（默认 = id，命名分裂面板经 cap.panelId）。
    *  取代 core.ts 手写 SCENE_CAP_FOR_PANEL 平行映射表；测试 mock 可省略（回退 getCap）。 */
   getCapByPanelId?: (panelId: string) => SceneCapability | null;
+  /** [锐评 2026-10-07 面板 seam 收口] 枚举能力解析点：面板遍历全部 cap（env 面板按
+   *  getEnvPlacement 自报、设置面板按 settingsOrder 聚合）**不再直引 registry 单例**。
+   *  mount 层透传 sceneCapabilityRegistry.getAll；测试注入 fake caps；
+   *  缺省回退 registry.getAll（no-ctx 调用方兼容，如 preview-state.test 的导出助手）。 */
+  getAllCaps?: () => SceneCapability[];
   getCamBridge: () => CameraControlBridge;
   getSiblings: () => string[];
   getCurrentPath: () => string;

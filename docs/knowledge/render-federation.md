@@ -25,8 +25,6 @@ auto_fields:
     - CapabilityMap
     - cleanupPreview
     - DEFAULT_POSTPROC_PARAMS
-    - drawEnvEquirect
-    - ENV_PRESETS
     - EnvironmentCapability
     - EnvPreset
     - EnvPresetId

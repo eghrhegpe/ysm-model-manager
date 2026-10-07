@@ -39,7 +39,10 @@ import { normalizeEnvLegacyState } from "./environment-migrations.ts";
 // 与 env-pixels.ts 同范式——令 ADR-292 所有权契约集中在可单测一处，替代原 4 处手抄排除集。
 import { envOwnsSceneEnvironment, isEnvDisposableSource } from "./environment-ownership.ts";
 import type { EnvPreset, EnvPresetId, SelectableEnvPresetId } from "./environment-state.ts";
-// ENV_PRESETS / ENV_PRESET_BY_MODEL / ENV_PRESET_LINKAGE 仍被 cap/菜单/测试消费，保留透传导出。
+// ENV_PRESETS（程序化天空数据表）：本文件内部消费（buildPresetEquirectTex / getPresetThumbnail）。
+// [锐评 2026-10-07 死再导出清收] 曾透传导出给 cap-configs.test / environment-capability.test，
+// 生产消费方为零，两处测试已改直引 environment-state.ts；ENV_PRESET_BY_MODEL / ENV_PRESET_LINKAGE
+// 更是无定义的死符号（ADR-284 / atmosphere-presets 取代）——透传一并删除。
 import { ENV_PRESETS } from "./environment-state.ts";
 import {
   type EnvPlacement,
@@ -51,11 +54,7 @@ import {
   type SceneCapabilityLookup,
 } from "./scene-capability.ts";
 
-// P2 抽取：drawEnvEquirect 已下沉 env-pixels.ts，保留透传导出（测试/调用方仍从 cap 文件导入）。
-export { drawEnvEquirect } from "./env-pixels.ts";
 export type { EnvPreset, EnvPresetId, SelectableEnvPresetId };
-// ENV_PRESETS（程序化天空数据表）仍被 cap/菜单/测试消费，保留透传导出。
-export { ENV_PRESETS };
 
 /** 遍历 roots 设置所有 mesh 的 material.envMapIntensity（仅 Standard/Physical/Toon 支持） */
 function applyEnvIntensity(roots: THREE.Object3D[], intensity: number): void {
@@ -680,12 +679,9 @@ export class EnvironmentCapability implements SceneCapability {
    */
   applyModelPreset(modelType: ModelType): void {
     if (this.isStateLoaded) return;
-    const picked = pickModelDefaultFields(modelType, [
-      "envPreset",
-      "envIntensity",
-      "envResolution",
-      "envUseAsBackground",
-    ]);
+    // [锐评 2026-10-07 死键清收] envResolution / envUseAsBackground 曾是请求键，但 MODEL_DEFAULTS
+    // 从不写这两键（分辨率/背景归属用户偏好，非模型类别离散值）——死键，删除请求。
+    const picked = pickModelDefaultFields(modelType, ["envPreset", "envIntensity"]);
     if (Object.keys(picked).length > 0) setEnvState(picked, { source: "auto-model" });
   }
 

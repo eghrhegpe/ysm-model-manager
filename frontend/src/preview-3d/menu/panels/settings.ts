@@ -103,9 +103,10 @@ export function buildLightingSchema(
   ctx: PreviewMenuCtx,
   menu?: SlideMenuHandle,
 ): PreviewMenuNode[] {
-  const fromCtx = ctx.getCap("light");
-  const lightCap: SceneCapability | undefined =
-    sceneCapabilityRegistry.getById("light") ?? (fromCtx?.getMenuNodes ? fromCtx : undefined);
+  // [锐评 2026-10-07 面板 seam] ctx.getCap 优先、registry 兜底——原 registry 优先使 ctx
+  // 形同虚设（settings 面板 seam 事实死亡）。语义不变：mount 注入的 ctx.getCap 即
+  // registry.getById，兜底仅服务 no-ctx 调用方（如 preview-state.test 的空 ctx 用例）。
+  const lightCap = ctx.getCap("light") ?? sceneCapabilityRegistry.getById("light");
   if (!lightCap) {
     return [
       {
@@ -155,10 +156,10 @@ export function disposeSceneCapSubscriptions(menu: SlideMenuHandle): void {
   }
 }
 
-/** 阴影面板 schema：从 shadow cap 直产节点渲染 */
-export function buildShadowSchema(_ctx: PreviewMenuCtx): PreviewMenuNode[] {
-  const fromReg = sceneCapabilityRegistry.getById("shadow");
-  if (!fromReg) {
+/** 阴影面板 schema：从 shadow cap 直产节点渲染（ctx-first + registry 兜底，见 buildLightingSchema） */
+export function buildShadowSchema(ctx: PreviewMenuCtx): PreviewMenuNode[] {
+  const shadowCap = ctx.getCap("shadow") ?? sceneCapabilityRegistry.getById("shadow");
+  if (!shadowCap) {
     return [
       {
         id: "shadow-empty",
@@ -167,13 +168,14 @@ export function buildShadowSchema(_ctx: PreviewMenuCtx): PreviewMenuNode[] {
       },
     ];
   }
-  return capPanelNodes(fromReg);
+  return capPanelNodes(shadowCap);
 }
 
-/** 后处理面板 schema：从 postprocessing cap 直产节点渲染 */
-export function buildPostprocessingSchema(_ctx: PreviewMenuCtx): PreviewMenuNode[] {
-  const fromReg = sceneCapabilityRegistry.getById("postprocessing");
-  if (!fromReg) {
+/** 后处理面板 schema：从 postprocessing cap 直产节点渲染（ctx-first + registry 兜底） */
+export function buildPostprocessingSchema(ctx: PreviewMenuCtx): PreviewMenuNode[] {
+  const postprocCap =
+    ctx.getCap("postprocessing") ?? sceneCapabilityRegistry.getById("postprocessing");
+  if (!postprocCap) {
     return [
       {
         id: "postproc-empty",
@@ -182,14 +184,14 @@ export function buildPostprocessingSchema(_ctx: PreviewMenuCtx): PreviewMenuNode
       },
     ];
   }
-  return capPanelNodes(fromReg);
+  return capPanelNodes(postprocCap);
 }
 
 /** 设置面板 schema：性能（档位 + 横切数据节点）+ 画质（cap 归属小节自动聚合）+ 脚注。
  *  每次面板渲染重构建（core.ts schemaBuilder），collectSettingsCapSections 内部实时遍历
  *  registry——「cap 后创建可见」由 schema 重建语义保证（对齐 ADR-125 P3）。 */
 export function buildSettingsSchema(
-  _ctx: PreviewMenuCtx,
+  ctx: PreviewMenuCtx,
   menu?: SlideMenuHandle,
 ): PreviewMenuNode[] {
   return [
@@ -201,9 +203,9 @@ export function buildSettingsSchema(
     bsBuildSectionTitle("settings-quality-header", "preview.settingsQuality"),
     // [2026-10 菜单收口] cap 归属小节：每个有 settingsOrder 控件的 cap = 小节标题 +
     // 该 cap 控件——原扁平聚合剥掉 folder 壳后控件失去 cap 归属语境，用户/面板侧
-    // 都说不清「画质组里有什么、哪个开关属于哪个能力」；分小节由 registry 遍历派生，
+    // 都说不清「画质组里有什么、哪个开关属于哪个能力」；分小节由能力源遍历派生，
     // 零接线性质保留（新 cap 仍只加 settingsOrder，小节自动出现）
-    ...collectSettingsCapSections(),
+    ...collectSettingsCapSections(ctx),
     bsBuildNote(),
   ];
 }
@@ -299,10 +301,13 @@ function collectCapSettingsControls(cap: SceneCapability): PreviewMenuNode[] {
 /**
  * 画质段 cap 归属小节：每个有 settingsOrder 控件的 cap = 一小节
  * （`settings-cap-<capid>` section 标题，labelKey = cap 自报名 + 该 cap 控件升序）。
- * registry 实例化顺序 = 小节顺序（与 createAll 实例序同源，非全局 settingsOrder 交错）。
+ * 能力源实例化顺序 = 小节顺序（与 createAll 实例序同源，非全局 settingsOrder 交错）。
+ *
+ * [锐评 2026-10-07 面板 seam] 经 ctx.getAllCaps 取能力源（mount 注入 registry.getAll；
+ * ctx 缺省回退 registry 单例——preview-state.test 的无 ctx 调用保持兼容）。
  *
  * 2026-10 菜单收口根治点：原扁平聚合（folder 壳被剥、控件裸摊）丢失 cap 归属语境——
- * 用户/面板侧说不清「画质组里有什么、哪个开关属于哪个能力」。小节仍由 registry 遍历
+ * 用户/面板侧说不清「画质组里有什么、哪个开关属于哪个能力」。小节仍由能力源遍历
  * **自动派生**，零接线性质保留（新 cap 想进设置面板只加 `settingsOrder`，小节自动
  * 出现，本文件与 cap 侧皆零改动）；未声明 settingsOrder 控件的 cap 不出小节
  * （否则 pp 的 20 个高级控件会淹没它）。
@@ -311,9 +316,9 @@ function collectCapSettingsControls(cap: SceneCapability): PreviewMenuNode[] {
  *  - **每次调用重取**：不在模块加载期缓存 cap 实例，规避 ADR-125 P3「声明期求值」
  *  - [ADR-195 刀 2.5 全节点化] 返回 PreviewMenuNode[]，渲染侧 renderMenu 直渲染
  */
-export function collectSettingsCapSections(): PreviewMenuNode[] {
+export function collectSettingsCapSections(ctx?: PreviewMenuCtx): PreviewMenuNode[] {
   const out: PreviewMenuNode[] = [];
-  for (const cap of sceneCapabilityRegistry.getAll()) {
+  for (const cap of ctx?.getAllCaps?.() ?? sceneCapabilityRegistry.getAll()) {
     const capControls = collectCapSettingsControls(cap);
     if (capControls.length === 0) continue;
     out.push(bsBuildSectionTitle(`settings-cap-${cap.id}`, cap.labelKey));

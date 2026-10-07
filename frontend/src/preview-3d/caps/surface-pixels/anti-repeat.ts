@@ -190,7 +190,8 @@ function macroOverlay(
   return px;
 }
 
-/** stochastic：每子块随机朝向/翻转，边界羽化回 base 保无缝 */
+/** stochastic：每子块随机朝向/翻转，边界羽化回 base 保无缝。
+ *  三段各自具名：平铺底图 / 随机朝向块图 / 边界羽化——主函数零控制流，纯编排。 */
 function stochasticTiles(
   tile: Uint8Array,
   S: number,
@@ -199,58 +200,96 @@ function stochasticTiles(
 ): Uint8Array {
   const seed = opts.seed ?? 1;
   const blend = Math.max(0, opts.blend ?? 4);
-  // base：原始平铺（无缝），羽化目标
-  const base = new Uint8Array(out * out * 4);
-  for (let y = 0; y < out; y++) {
-    for (let x = 0; x < out; x++) {
-      const si = ((y % S) * S + (x % S)) * 4;
-      const di = (y * out + x) * 4;
-      for (let c = 0; c < 4; c++) base[di + c] = tile[si + c];
-    }
-  }
-  // decor：每子块随机变换源 tile（仍在 mod-S 无缝域内）
-  const decor = new Uint8Array(out * out * 4);
-  for (let tj = 0; tj < out / S; tj++) {
-    for (let ti = 0; ti < out / S; ti++) {
-      let h = hashTile(ti, tj, seed);
-      const rnd = () => {
-        h = (Math.imul(h, 1664525) + 1013904223) >>> 0;
-        return h / 4294967295;
-      };
-      const rot = Math.floor(rnd() * 4); // 0/1/2/3
-      const flipX = rnd() < 0.5;
-      const flipY = rnd() < 0.5;
-      for (let ly = 0; ly < S; ly++) {
-        for (let lx = 0; lx < S; lx++) {
-          let sx = lx;
-          let sy = ly;
-          if (rot === 1) {
-            sx = ly;
-            sy = S - 1 - lx;
-          } else if (rot === 2) {
-            sx = S - 1 - lx;
-            sy = S - 1 - ly;
-          } else if (rot === 3) {
-            sx = S - 1 - ly;
-            sy = lx;
-          }
-          if (flipX) sx = S - 1 - sx;
-          if (flipY) sy = S - 1 - sy;
-          const si = (sy * S + sx) * 4;
-          const di = ((tj * S + ly) * out + (ti * S + lx)) * 4;
-          for (let c = 0; c < 4; c++) decor[di + c] = tile[si + c];
-        }
-      }
-    }
-  }
-  // 羽化：瓦片边界 blend px 内线性收敛回 base（保无缝），内部保留 decor（去相关）
+  const base = tileIntoOutput(tile, S, out); // 原始平铺（无缝），羽化目标
+  const decor = buildDecorrelatedTiles(tile, S, out, seed); // 每子块随机变换源 tile
+  return featherDecorrTowardBase(decor, base, S, out, blend); // 边界羽化回 base
+}
+
+/** 把源 tile 平铺成 out×out 大图（mod-S 采样；输出周期 = out，天然无缝）。 */
+function tileIntoOutput(source: Uint8Array, sourceSize: number, out: number): Uint8Array {
   const px = new Uint8Array(out * out * 4);
   for (let y = 0; y < out; y++) {
     for (let x = 0; x < out; x++) {
-      const lx = x % S;
-      const ly = y % S;
-      const edge = Math.min(lx, S - 1 - lx, ly, S - 1 - ly);
-      const amt = blend === 0 || edge >= blend ? 0 : 1 - edge / blend; // 边界处=1→base
+      const si = ((y % sourceSize) * sourceSize + (x % sourceSize)) * 4;
+      const di = (y * out + x) * 4;
+      for (let c = 0; c < 4; c++) px[di + c] = source[si + c];
+    }
+  }
+  return px;
+}
+
+/** 四种朝向（0/90/180/270°）的源坐标映射：`(lx,ly,S) → [sx,sy]`。
+ *  表化取代旧 `if/else if` 链——链每级在子块循环内按当前 depth 计分（3 链 = 4+5+6 分），
+ *  查表后朝向本身零分支（映射语义逐字保序：rot 1/2/3 与旧链同式）。 */
+const TILE_ORIENTATIONS: ReadonlyArray<(lx: number, ly: number, S: number) => [number, number]> = [
+  (lx, ly) => [lx, ly],
+  (lx, ly, S) => [ly, S - 1 - lx],
+  (lx, ly, S) => [S - 1 - lx, S - 1 - ly],
+  (lx, ly, S) => [S - 1 - ly, lx],
+];
+
+/** decor：每子块随机变换源 tile（仍在 mod-S 无缝域内）。 */
+function buildDecorrelatedTiles(
+  tile: Uint8Array,
+  S: number,
+  out: number,
+  seed: number,
+): Uint8Array {
+  const decor = new Uint8Array(out * out * 4);
+  const tiles = out / S;
+  for (let tj = 0; tj < tiles; tj++) {
+    for (let ti = 0; ti < tiles; ti++) {
+      fillDecorTile(tile, decor, S, out, ti, tj, seed);
+    }
+  }
+  return decor;
+}
+
+/** 单个子块的随机朝向 + 翻转拷贝。
+ *  ⚠️ 随机数消费顺序（rot → flipX → flipY，逐子块、tj 外 ti 内）是复现性契约：
+ *  同 seed 必须产出同一大图（anti-repeat.test.ts「同种子可复现」钉死），改动即破。 */
+function fillDecorTile(
+  tile: Uint8Array,
+  decor: Uint8Array,
+  S: number,
+  out: number,
+  ti: number,
+  tj: number,
+  seed: number,
+): void {
+  let h = hashTile(ti, tj, seed);
+  const rnd = () => {
+    h = (Math.imul(h, 1664525) + 1013904223) >>> 0;
+    return h / 4294967295;
+  };
+  const rot = Math.floor(rnd() * 4); // 0/1/2/3
+  const flipX = rnd() < 0.5;
+  const flipY = rnd() < 0.5;
+  const orient = TILE_ORIENTATIONS[rot];
+  for (let ly = 0; ly < S; ly++) {
+    for (let lx = 0; lx < S; lx++) {
+      const [ox, oy] = orient(lx, ly, S);
+      const sx = flipX ? S - 1 - ox : ox;
+      const sy = flipY ? S - 1 - oy : oy;
+      const si = (sy * S + sx) * 4;
+      const di = ((tj * S + ly) * out + (ti * S + lx)) * 4;
+      for (let c = 0; c < 4; c++) decor[di + c] = tile[si + c];
+    }
+  }
+}
+
+/** 羽化：瓦片边界 blend px 内线性收敛回 base（保无缝），内部保留 decor（去相关）。 */
+function featherDecorrTowardBase(
+  decor: Uint8Array,
+  base: Uint8Array,
+  S: number,
+  out: number,
+  blend: number,
+): Uint8Array {
+  const px = new Uint8Array(out * out * 4);
+  for (let y = 0; y < out; y++) {
+    for (let x = 0; x < out; x++) {
+      const amt = edgeFeatherAmount(x % S, y % S, S, blend); // 边界处=1→base
       const di = (y * out + x) * 4;
       for (let c = 0; c < 3; c++) {
         px[di + c] = clamp255(decor[di + c] * (1 - amt) + base[di + c] * amt);
@@ -259,6 +298,14 @@ function stochasticTiles(
     }
   }
   return px;
+}
+
+/** 子块内某点到最近瓦片边界的羽化量：blend=0 或离边界 ≥ blend → 0（纯 decor）；
+ *  边界上 → 1（纯 base）。线性。 */
+function edgeFeatherAmount(lx: number, ly: number, S: number, blend: number): number {
+  if (blend === 0) return 0;
+  const edge = Math.min(lx, S - 1 - lx, ly, S - 1 - ly);
+  return edge >= blend ? 0 : 1 - edge / blend;
 }
 
 function hashTile(ti: number, tj: number, seed: number): number {
@@ -318,21 +365,14 @@ export function textureRepeatForDerepeat(baseRepeat: number, tilesPerAxis: numbe
 }
 
 // 仅用于单测：把单 tile 平铺成 N×N 大图（基线「完全重复」参照）
+// 与 stochasticTiles 的 base 底图同源（tileIntoOutput）——测试基线与生产羽化目标
+// 必须逐像素同口径，否则「评分大于基线」的判据会建立在两份实现漂移之上。
 export function tilePlain(
   source: Uint8Array,
   sourceSize: number,
   tilesPerAxis: number,
 ): Uint8Array {
-  const out = tilesPerAxis * sourceSize;
-  const px = new Uint8Array(out * out * 4);
-  for (let y = 0; y < out; y++) {
-    for (let x = 0; x < out; x++) {
-      const si = ((y % sourceSize) * sourceSize + (x % sourceSize)) * 4;
-      const di = (y * out + x) * 4;
-      for (let c = 0; c < 4; c++) px[di + c] = source[si + c];
-    }
-  }
-  return px;
+  return tileIntoOutput(source, sourceSize, tilesPerAxis * sourceSize);
 }
 
 // 仅用于单测：内部瓦片边界的最大不连续（验证未引入新接缝；base 为 0，羽化后近似 0）

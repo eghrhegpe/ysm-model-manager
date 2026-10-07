@@ -212,6 +212,33 @@ function chunkKey(p: number[], sizeInfo: SizeInfo): number {
   return cx + cy * sizeInfo.xChunks + cz * sizeInfo.xChunks * sizeInfo.yChunks;
 }
 
+/** 切片层窗口（一次 applyLayerFilter 调用内定型一次）：
+ *  `exact` = single 模式的命中层；`[lo, hi)` = range 模式的半开区间（hi 取两滑块较大者）。 */
+interface LayerWindow {
+  axis: number;
+  exact: number;
+  lo: number;
+  hi: number;
+}
+
+/** 切片过滤上下文：层窗口 + 模式 + 分块几何（逐体素谓词的全部输入）。 */
+interface SliceFilter {
+  window: LayerWindow;
+  mode: string;
+  sizeInfo: SizeInfo;
+}
+
+/** 由 shell 会话态定型层窗口（层号 1-based → 体素坐标 0-based）。 */
+function layerWindowOf(shell: LayerShell): LayerWindow {
+  const lo = shell.layerVal - 1;
+  return {
+    axis: shell.layerAxis,
+    exact: shell.layerVal - 1,
+    lo,
+    hi: shell.layerVal2 > shell.layerVal ? shell.layerVal2 : shell.layerVal,
+  };
+}
+
 function applyLayerFilter(
   shell: LayerShell,
   sizeInfo: SizeInfo,
@@ -219,36 +246,50 @@ function applyLayerFilter(
   groupMeshes: LitematicMeshSet["groupMeshes"],
   mode: string,
 ): void {
+  const filter: SliceFilter = { window: layerWindowOf(shell), mode, sizeInfo };
   const dummy = new THREE.Object3D();
-  const target = shell.layerVal - 1;
-  const lo = shell.layerVal - 1;
-  const hi = shell.layerVal2 > shell.layerVal ? shell.layerVal2 : shell.layerVal;
   for (let g = 0; g < (rawGroups ?? []).length; g++) {
     const positions = rawGroups?.[g]?.positions;
     const meshes = groupMeshes[g] ?? [];
     if (!positions) continue; // 无顶点数据（rawGroups null / 索引越界）→ 无体素可写
     for (const { mesh, ck } of meshes) {
-      let count = 0;
-      for (let i = 0; i < positions.length; i++) {
-        const p = positions[i];
-        if (!isValidPos(p)) continue;
-        if (chunkKey(p, sizeInfo) !== ck) continue;
-        if (mode === "single" && p[shell.layerAxis] !== target) continue;
-        if (
-          mode !== "all" &&
-          mode !== "single" &&
-          !(p[shell.layerAxis] >= lo && p[shell.layerAxis] < hi)
-        )
-          continue;
-        dummy.position.set(p[0], p[1], p[2]);
-        dummy.updateMatrix();
-        mesh.setMatrixAt(count, dummy.matrix);
-        count++;
-      }
-      mesh.count = count;
-      mesh.instanceMatrix.needsUpdate = true;
+      rewriteChunkInstances(mesh, ck, positions, filter, dummy);
     }
   }
+}
+
+/** 重写单块 InstancedMesh：把该 chunk 内「落在当前切片层」的体素紧排到前 count 位
+ *  （尾部落选实例靠 `mesh.count` 截断，不重建 mesh、不重排 GPU 缓冲）。 */
+function rewriteChunkInstances(
+  mesh: THREE.InstancedMesh,
+  ck: number,
+  positions: number[][],
+  filter: SliceFilter,
+  dummy: THREE.Object3D,
+): void {
+  let count = 0;
+  for (let i = 0; i < positions.length; i++) {
+    const p = positions[i];
+    if (!voxelInLayer(p, ck, filter)) continue;
+    dummy.position.set(p[0], p[1], p[2]);
+    dummy.updateMatrix();
+    mesh.setMatrixAt(count, dummy.matrix);
+    count++;
+  }
+  mesh.count = count;
+  mesh.instanceMatrix.needsUpdate = true;
+}
+
+/** 逐体素层判据（**短路顺序即契约**：非法坐标 → 异 chunk → 模式）。
+ *  single 只认 `exact`；all 全收；其余（range 及未知模式）落在 `[lo, hi)` 内才收——
+ *  旧实现的 `mode !== "all" && mode !== "single" && !(...)` 正是此语义（未知模式按 range 处理）。 */
+function voxelInLayer(p: number[], ck: number, filter: SliceFilter): boolean {
+  if (!isValidPos(p)) return false;
+  if (chunkKey(p, filter.sizeInfo) !== ck) return false;
+  const v = p[filter.window.axis];
+  if (filter.mode === "single") return v === filter.window.exact;
+  if (filter.mode === "all") return true;
+  return v >= filter.window.lo && v < filter.window.hi;
 }
 
 // ===== 分层切片面板（schema builder 声明式，ADR-126 P5 收口：renderCustom 逃生舱退役）=====

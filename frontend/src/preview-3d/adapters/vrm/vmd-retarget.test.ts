@@ -493,6 +493,43 @@ describe("rewriteVmdTracks", () => {
     expect(droppedTracks).toBe(1);
   });
 
+  it("非骨骼非表情轨道（相机/灯光等）→ 计入丢弃，不落进任何出口", () => {
+    // 此前从未执行的一支：既有用例的被丢轨道全是骨骼/morph 名，第三类（既不匹配
+    // BONE_TRACK_NAME 也不匹配 MORPH_TRACK_NAME）从未出现——本管线只管骨骼与
+    // 表情，相机/灯光轨道必须原样丢弃且不污染 posTracks / ikTracks。
+    const cam = new THREE.VectorKeyframeTrack(".cameras[0].position", [0], [0, 0, 0]);
+    const light = new THREE.NumberKeyframeTrack(".lights[2].intensity", [0], [1]);
+    const { tracks, droppedTracks, ikTracks, posTracks } = rewriteVmdTracks(
+      new THREE.AnimationClip("", -1, [cam, light]),
+      makePlan(),
+      1,
+    );
+
+    expect(tracks).toEqual([]);
+    expect(posTracks).toEqual([]);
+    expect(ikTracks).toEqual({ left: null, right: null });
+    expect(droppedTracks).toBe(2);
+  });
+
+  it("右足 IK 目标轨道同样被摘出（左右对称，不是只认左）", () => {
+    // 既有「摘出」用例只喂左足 ⇒ 右支判据（mmd === plan.footIK.right）从未执行；
+    // 漏掉右支的回归表现是「右足永远不锚地」（静默，不报错）。
+    const ikTrack = new THREE.VectorKeyframeTrack(".bones[右足ＩＫ].position", [0], [0, 20, 5]);
+    const { tracks, droppedTracks, ikTracks, posTracks } = rewriteVmdTracks(
+      new THREE.AnimationClip("", -1, [ikTrack]),
+      makePlan({ footIK: { left: null, right: "右足ＩＫ" } }),
+      0.5,
+    );
+
+    expect(tracks).toEqual([]); // 不进 clip
+    expect(ikTracks.left).toBeNull();
+    expect(ikTracks.right).toBe(ikTrack); // 同一对象（贝塞尔覆写存活）
+    expect(droppedTracks).toBe(0); // 摘出 ≠ 丢弃
+    expect(posTracks).toHaveLength(1); // 位移重缩放句柄
+    expect(posTracks[0]?.base).toEqual(new THREE.Vector3(0, 0, 0)); // 幽灵 IK 骨零基准
+    expectValues(ikTrack.values, [0, 10, 2.5]);
+  });
+
   // ── 表情轨道改道（ADR-306 §2.2）──
 
   /** 表情轨道改道面（窄接口，鸭子类型 VRMExpressionManager.getExpressionTrackName） */

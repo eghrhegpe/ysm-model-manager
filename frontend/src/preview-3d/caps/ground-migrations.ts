@@ -61,6 +61,9 @@ const LEGACY_KEY_MAP: Record<string, string> = {
  * 把任意世代的 ground 存档归一为当前键形（restoreFields 可直接消费）。
  * 幂等：输入已是新键形时返回**同一引用**（零拷贝快路）；否则返回新对象，
  * 绝不 mutate 入参。非 ground 无关键（如 cap 私有的 enabled）原样透传。
+ *
+ * 三代各自具名（见下方 helper）：代数一/二 → migrateLegacyGroundState、代数三 →
+ * liftLegacyCanvasPattern。主函数只做「读旧线色/格数 → 分支 → 进代数三」，零嵌套。
  */
 export function normalizeGroundLegacyState(
   state: Record<string, unknown>,
@@ -70,57 +73,103 @@ export function normalizeGroundLegacyState(
   const legacyLineColor = numOr(state, "matLineColor") ?? numOr(state, "groundMatLineColor");
   const legacyGridSize = numOr(state, "matGridSize") ?? numOr(state, "groundMatGridSize");
 
-  let out = state;
-
   // ── 代数一 + 二：存在任一旧无前缀键 → 前缀化搬运 + matSource 拆三轴 ──
-  if (LEGACY_GROUND_KEYS.some((k) => k in state)) {
-    const migrated: Record<string, unknown> = {};
-    for (const k of LEGACY_GROUND_KEYS) {
-      const target = LEGACY_KEY_MAP[k];
-      if (k in state && target) migrated[target] = state[k];
-    }
-    // 保底透传：混合存档（部分字段已升级）若整对象替换会把已前缀化的字段静默
-    // 丢弃（审核回归实测：{visible, groundCanvasStyle} 混合 → canvasStyle 丢失）。
-    // 判据逐字保持原实现 = 「ground 前缀且未被旧键映射占用」；旧键均不带 ground
-    // 前缀故无冲突，matSource 不满足判据、由下方三轴拆分单独消费。
-    for (const [k, v] of Object.entries(state)) {
-      if (k.startsWith("ground") && !(k in migrated)) migrated[k] = v;
-    }
-    // ADR-249 §2.1 + ADR-252：旧单枚举 matSource 拆为来源轴 + 材质轴 + 叠加层
-    if ("matSource" in state) {
-      const m = migrateGroundMatSource(String(state.matSource) as LegacyGroundMatSource);
-      migrated.groundSourceKind = m.sourceKind;
-      if (m.canvasStyle) migrated.groundCanvasStyle = m.canvasStyle;
-      if (m.overlayStyle) {
-        // 旧图案值 → 叠加层，并把线色/格数一并搬过去（视觉等价）
-        migrated.groundOverlay = m.overlayStyle;
-        if (legacyLineColor !== undefined) migrated.groundOverlayColor = legacyLineColor;
-        if (legacyGridSize !== undefined) migrated.groundOverlaySize = legacyGridSize;
-      }
-    }
-    out = migrated;
-  }
+  const migrated = hasLegacyUnprefixedKey(state)
+    ? migrateLegacyGroundState(state, legacyLineColor, legacyGridSize)
+    : state;
 
   // ── 代数三：ADR-249 时代存档的图案型 groundCanvasStyle 进位叠加层 ──
-  const rawStyle = out.groundCanvasStyle;
-  if (
-    typeof rawStyle === "string" &&
-    (LEGACY_CANVAS_PATTERNS as readonly string[]).includes(rawStyle)
-  ) {
-    out = { ...out };
-    out.groundCanvasStyle = "plain";
-    if (out.groundOverlay === undefined || out.groundOverlay === "none") {
-      out.groundOverlay = rawStyle;
-    }
-    if (legacyLineColor !== undefined && out.groundOverlayColor === undefined) {
-      out.groundOverlayColor = legacyLineColor;
-    }
-    if (legacyGridSize !== undefined && out.groundOverlaySize === undefined) {
-      out.groundOverlaySize = legacyGridSize;
-    }
-  }
+  return liftLegacyCanvasPattern(migrated, legacyLineColor, legacyGridSize);
+}
 
-  return out;
+/** 代数一/二触发判据：存在任一旧无前缀键。
+ *  （锐评 P4：旧判据「缺 groundSize」恒真已废，混合存档照常进分支。） */
+function hasLegacyUnprefixedKey(state: Record<string, unknown>): boolean {
+  return LEGACY_GROUND_KEYS.some((k) => k in state);
+}
+
+/** 代数一 + 二：前缀化搬运（含已前缀键保底透传）+ matSource 拆三轴。返回新对象。 */
+function migrateLegacyGroundState(
+  state: Record<string, unknown>,
+  legacyLineColor: number | undefined,
+  legacyGridSize: number | undefined,
+): Record<string, unknown> {
+  const migrated: Record<string, unknown> = {};
+  for (const k of LEGACY_GROUND_KEYS) copyLegacyKey(state, migrated, k);
+  carryOverPrefixedKeys(state, migrated);
+  // ADR-249 §2.1 + ADR-252：旧单枚举 matSource 拆为来源轴 + 材质轴 + 叠加层
+  if ("matSource" in state) applyLegacyMatSource(state, migrated, legacyLineColor, legacyGridSize);
+  return migrated;
+}
+
+/** 旧无前缀键 → 新前缀键直搬（matSource 系三轴拆分入口，不在表内直搬）。
+ *  判据 `key in state && target` 逐字保持：`target` 缺省仅对 matSource 成立。 */
+function copyLegacyKey(
+  state: Record<string, unknown>,
+  migrated: Record<string, unknown>,
+  key: string,
+): void {
+  const target = LEGACY_KEY_MAP[key];
+  if (!(key in state) || !target) return;
+  migrated[target] = state[key];
+}
+
+/** 保底透传：混合存档（部分字段已升级）若整对象替换会把已前缀化的字段静默
+ *  丢弃（审核回归实测：{visible, groundCanvasStyle} 混合 → canvasStyle 丢失）。
+ *  判据逐字保持原实现 = 「ground 前缀且未被旧键映射占用」；旧键均不带 ground
+ *  前缀故无冲突，matSource 不满足判据、由三轴拆分单独消费。 */
+function carryOverPrefixedKeys(
+  state: Record<string, unknown>,
+  migrated: Record<string, unknown>,
+): void {
+  for (const [k, v] of Object.entries(state)) {
+    if (k.startsWith("ground") && !(k in migrated)) migrated[k] = v;
+  }
+}
+
+/** 代数二：旧单枚举 matSource → 来源轴 + 材质轴 + 叠加层。
+ *  旧图案值 → 叠加层，并把线色/格数一并搬过去（视觉等价）。 */
+function applyLegacyMatSource(
+  state: Record<string, unknown>,
+  migrated: Record<string, unknown>,
+  legacyLineColor: number | undefined,
+  legacyGridSize: number | undefined,
+): void {
+  const m = migrateGroundMatSource(String(state.matSource) as LegacyGroundMatSource);
+  migrated.groundSourceKind = m.sourceKind;
+  if (m.canvasStyle) migrated.groundCanvasStyle = m.canvasStyle;
+  if (!m.overlayStyle) return;
+  migrated.groundOverlay = m.overlayStyle;
+  if (legacyLineColor !== undefined) migrated.groundOverlayColor = legacyLineColor;
+  if (legacyGridSize !== undefined) migrated.groundOverlaySize = legacyGridSize;
+}
+
+/** 代数三触发条件：ADR-249 时代的图案型 groundCanvasStyle（白名单闭集）。 */
+function isLegacyPatternStyle(v: unknown): v is string {
+  return typeof v === "string" && (LEGACY_CANVAS_PATTERNS as readonly string[]).includes(v);
+}
+
+/** 代数三：ADR-249 时代存档的图案型 groundCanvasStyle 进位叠加层（底座归 plain），
+ *  线色/格数仅在该轴尚无值（undefined 门）时搬运。无匹配 → **原引用**返回
+ *  （幂等零拷贝快路：已是新键形的存档不得被复制）。 */
+function liftLegacyCanvasPattern(
+  out: Record<string, unknown>,
+  legacyLineColor: number | undefined,
+  legacyGridSize: number | undefined,
+): Record<string, unknown> {
+  const rawStyle = out.groundCanvasStyle;
+  if (!isLegacyPatternStyle(rawStyle)) return out;
+  const lifted: Record<string, unknown> = { ...out, groundCanvasStyle: "plain" };
+  if (lifted.groundOverlay === undefined || lifted.groundOverlay === "none") {
+    lifted.groundOverlay = rawStyle;
+  }
+  if (legacyLineColor !== undefined && lifted.groundOverlayColor === undefined) {
+    lifted.groundOverlayColor = legacyLineColor;
+  }
+  if (legacyGridSize !== undefined && lifted.groundOverlaySize === undefined) {
+    lifted.groundOverlaySize = legacyGridSize;
+  }
+  return lifted;
 }
 
 /** 数值安全读（仅当 own property 且为 number 时返回，否则 undefined） */

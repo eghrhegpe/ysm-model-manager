@@ -196,6 +196,28 @@ describe("litematic 分层切片（schema builder 声明式契约）", () => {
     expect(meshes.every((m) => m.count === 2)).toBe(true);
   });
 
+  it("all 模式恢复全量实例（过滤是可逆的：single 截断后切回 all 必须复原）", async () => {
+    // 此前从未执行的一支：既有用例只经 single/range 调 applyLayer（all 是面板默认态，
+    // 却只在 `set!` 里写过、没走过 onChange）——「切回 all 后 instance count 不复原」
+    // 会表现为「切遍切片模式后模型永久残缺」，静默且不可逆。本用例先截断再恢复。
+    const { ctx, nodes } = await buildScene();
+    const meshes = instancedMeshesOf(ctx);
+    expect(meshes.every((m) => m.count === 3)).toBe(true); // 初始 = build 时全量（3 个方块同 chunk）
+
+    setMode(nodes, "single");
+    const layer = nodeById(nodes, "slice-layer");
+    layer.control!.set!(1);
+    layer.control!.onChange!(1);
+    expect(meshes.every((m) => m.count === 1)).toBe(true); // 层 1 只余 [0,0,0]
+    const versions = meshes.map((m) => m.instanceMatrix.version);
+
+    setMode(nodes, "all"); // 切回全量
+    expect(meshes.every((m) => m.count === 3)).toBe(true);
+    // 恢复不只改 count：矩阵缓冲也确实被标脏（version 递增 → WebGL 重传 instanceMatrix）。
+    // 注意 needsUpdate 在 three 里是**只写**访问器（读了恒 undefined），故认 version。
+    expect(meshes.map((m) => m.instanceMatrix.version)).toEqual(versions.map((v) => v + 1));
+  });
+
   it("visibleWhen 谓词：all 隐藏全部 slider / single 1 个 / range 2 个", async () => {
     const { nodes } = await buildScene();
     const visible = (s: ReturnType<typeof previewSnapshot>): PreviewMenuNode[] =>
@@ -312,5 +334,76 @@ describe("litematic 分层切片（schema builder 声明式契约）", () => {
     ]) {
       expect(key in zhCN).toBe(true);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 分块/合法性守卫（此前 0 命中的分支：异 chunk 跳过、非法坐标整条丢弃、空组不建 mesh）
+// ---------------------------------------------------------------------------
+
+describe("litematic 切片过滤的分块与合法性守卫", () => {
+  /** CHUNK_SIZE=32：size 100 ⇒ xChunks=4；[0,0,0] 与 [1,1,1] 落在 ck=0，[40,0,0] 落在 ck=1 */
+  const sparseVoxelCall = vi.fn(() =>
+    Promise.resolve({
+      groups: [
+        { positions: [], color: "#00ff00" }, // 空组：不建 mesh（`!group.positions?.length` 分支）
+        {
+          positions: [
+            [0, 0, 0],
+            [1, 1, 1],
+            [40, 0, 0], // 异 chunk：不得写进 ck=0 的 InstancedMesh
+            [Number.NaN, 0, 0], // 非法坐标：整条丢弃（常值哨兵陷阱 #17 的反面）
+          ],
+          color: "#0000ff",
+        },
+      ],
+      size: [100, 100, 100],
+      truncated: false,
+      maxBlocks: 100,
+    }),
+  );
+
+  async function buildSparse(): Promise<{
+    ctx: PreviewBuildCtx;
+    nodes: PreviewMenuNode[];
+  }> {
+    const ctx = makeMockCtx();
+    const content = await buildLitematicScene(ctx, "/sparse.litematic", sparseVoxelCall);
+    const panel = findNodeById(content.menuItems ?? [], "slice");
+    const nodes = getSchema(panel.schemaId!)!(previewSnapshot());
+    return { ctx, nodes };
+  }
+
+  it("空组不建 mesh；非法坐标在构建期即不占实例位", async () => {
+    const { ctx } = await buildSparse();
+    const meshes = instancedMeshesOf(ctx);
+    expect(meshes).toHaveLength(2); // 空组零 mesh；两个 chunk 各一个
+    // instanceMatrix.count = 分配容量：ck=0 → 2（[0,0,0]+[1,1,1]），ck=1 → 1（[40,0,0]）；
+    // NaN 条目在 build 期被 isValidPos 丢弃 ⇒ 总容量 3（而非原始 positions 的 4）。
+    const alloc = meshes.map((m) => m.instanceMatrix.count).sort((a, b) => a - b);
+    expect(alloc).toEqual([1, 2]);
+    expect(alloc.reduce((a, b) => a + b, 0)).toBe(3);
+  });
+
+  it("applyLayer all：异 chunk 体素不写进本 chunk（count 与本 chunk 合法体素数一致）", async () => {
+    const { ctx, nodes } = await buildSparse();
+    setMode(nodes, "all"); // 触发一次真实 applyLayer 过滤
+    const counts = instancedMeshesOf(ctx)
+      .map((m) => m.count)
+      .sort((a, b) => a - b);
+    // ck=0 → 2（[0,0,0] + [1,1,1]；[40,0,0] 属 ck=1，NaN 非法）；ck=1 → 1
+    expect(counts).toEqual([1, 2]);
+  });
+
+  it("applyLayer single：非法坐标与异 chunk 均不参与层过滤", async () => {
+    const { ctx, nodes } = await buildSparse();
+    setMode(nodes, "single");
+    const layer = nodeById(nodes, "slice-layer");
+    layer.control!.set!(2); // Y=1 → 仅 [1,1,1]（ck=1 的 [40,0,0] Y=0 不命中 → 该 mesh count 0）
+    layer.control!.onChange!(2);
+    const counts = instancedMeshesOf(ctx)
+      .map((m) => m.count)
+      .sort((a, b) => a - b);
+    expect(counts).toEqual([0, 1]);
   });
 });

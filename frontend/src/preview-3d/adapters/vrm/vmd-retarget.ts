@@ -528,6 +528,14 @@ function scaleTranslationTrack(
   }
 }
 
+/** 轨道重写的三个出口（一次 rewriteVmdTracks 内累积）：
+ *  进 clip（tracks）/ 位移重缩放句柄（posTracks）/ 摘出的足 IK 目标轨（ikTracks）。 */
+interface VmdTrackSink {
+  tracks: THREE.KeyframeTrack[];
+  posTracks: VmdPositionTrackHandle[];
+  ikTracks: { left: THREE.KeyframeTrack | null; right: THREE.KeyframeTrack | null };
+}
+
 /**
  * 把 `buildAnimation` 的轨道换绑到 VRM 归一化节点。
  *
@@ -541,6 +549,9 @@ function scaleTranslationTrack(
  *
  * `posTracks`（锐评 P5）：烘焙前快照每条位移轨的 values（k=1 原值）作为 `raw`，
  * 供 {@link rescaleVmdPositionTracks} 任意重缩放（不改 times、不换轨、不重建 clip）。
+ *
+ * 实现分层：主循环只做「逐轨道 → 归类改写 → 计丢弃」，归类本身在
+ * {@link rewriteVmdTrack}（表情 / 骨骼分流）与三个通道 handler 里各自具名。
  */
 export function rewriteVmdTracks(
   source: THREE.AnimationClip,
@@ -556,91 +567,144 @@ export function rewriteVmdTracks(
   /** 位移轨道重缩放句柄（hips 轨 + 双侧 IK 轨；raw = 烘焙前 k=1 快照） */
   posTracks: VmdPositionTrackHandle[];
 } {
-  const tracks: THREE.KeyframeTrack[] = [];
-  const ikTracks: { left: THREE.KeyframeTrack | null; right: THREE.KeyframeTrack | null } = {
-    left: null,
-    right: null,
+  const sink: VmdTrackSink = {
+    tracks: [],
+    posTracks: [],
+    ikTracks: { left: null, right: null },
   };
-  const posTracks: VmdPositionTrackHandle[] = [];
+  const em = expressionManager ?? null;
   let droppedTracks = 0;
 
   for (const track of source.tracks) {
-    // 表情轨道（ADR-306 §2.2）：`.morphTargetInfluences[N]` → `VRMExpression_<preset>.weight`
-    // 原地改名进 clip，由 AnimationMixer 统一驱动（官方 .vrma 同路）。索引不在改道表
-    // （不可映射名 / 无 expressionManager）→ 常规丢弃，与 ADR-243 v1 行为一致。
-    const morphMatched = MORPH_TRACK_NAME.exec(track.name);
-    if (morphMatched) {
-      const mmd = plan.morphNameByIndex.get(Number(morphMatched[1]));
-      // 解析序：preset 优先（表语义），MMD 原名为自定义表情兜底（模型恰好同名的自定义
-      // expression）。两者都解析不出轨道名（模型缺该表情 / 无 expressionManager）→ 丢弃。
-      const preset = mmd ? plan.morphPresetByMmd.get(mmd) : undefined;
-      const em = expressionManager ?? null;
-      const trackName =
-        mmd && em
-          ? ((preset ? em.getExpressionTrackName(preset) : null) ?? em.getExpressionTrackName(mmd))
-          : null;
-      if (trackName) {
-        // 原地改名（与骨骼轨道同一条纪律）；morph 轨道是裸 NumberKeyframeTrack（无贝塞尔
-        // 覆写），改名零损失
-        track.name = trackName;
-        tracks.push(track);
-      } else {
-        droppedTracks++;
-      }
-      continue;
-    }
-    const matched = BONE_TRACK_NAME.exec(track.name);
-    if (!matched) {
-      droppedTracks++; // 非骨骼非表情轨道（相机/灯光等，本管线不管）
-      continue;
-    }
-    const mmd = matched[1];
-    const channel = matched[2];
-
-    if (channel === "quaternion") {
-      // つま先ＩＫ 改道（P1b）：quaternion 是合法 FK 源，落点改为 toes 归一化骨
-      const toesNode = plan.toeNodesByMmd.get(mmd);
-      if (toesNode) {
-        track.name = `${toesNode.uuid}.quaternion`;
-        tracks.push(track);
-        continue;
-      }
-      const node = plan.nodesByMmd.get(mmd);
-      if (!node) {
-        droppedTracks++;
-        continue;
-      }
-      track.name = `${node.uuid}.quaternion`;
-      tracks.push(track);
-      continue;
-    }
-
-    // position ①：足 IK 目标骨 → **摘出来**交给 VRM 侧 CCD 求解（ADR-243 §2.8 方案 A）。
-    // 不进 clip（clip 的接收方是 AnimationMixer，IK 骨在 VRM 里不存在对应节点），
-    // 也**不计入 droppedTracks**——它另有去处，不是被丢弃。
-    const side = mmd === plan.footIK.left ? "left" : mmd === plan.footIK.right ? "right" : null;
-    if (side) {
-      // 幽灵 IK 骨静止位置为零 ⇒ 轨道值即「相对 bind 的偏移」，直接整体按 k 缩放
-      posTracks.push({ track, base: _zeroOrigin, raw: track.values.slice(0) });
-      scaleTranslationTrack(track, _zeroOrigin, positionScale);
-      ikTracks[side] = track;
-      continue;
-    }
-
-    // position ②：VRMHumanoidRig.update 只读 hips 的位置，其余骨的位移通道一律丢弃
-    // （保留只会得到每帧写回自身静止值的空转轨道）
-    const { translationSource, translationTarget, translationBase } = plan;
-    if (mmd !== translationSource || !translationTarget || !translationBase) {
-      droppedTracks++;
-      continue;
-    }
-    posTracks.push({ track, base: translationBase, raw: track.values.slice(0) });
-    scaleTranslationTrack(track, translationBase, positionScale);
-    track.name = `${translationTarget.uuid}.position`;
-    tracks.push(track);
+    if (rewriteVmdTrack(track, plan, positionScale, em, sink) === "dropped") droppedTracks++;
   }
 
-  return { tracks, droppedTracks, ikTracks, posTracks };
+  return { tracks: sink.tracks, droppedTracks, ikTracks: sink.ikTracks, posTracks: sink.posTracks };
+}
+
+/** 单条轨道的归类与改写。返回 "dropped" 才计入丢弃（足 IK 摘出属「另有去处」，
+ *  既非丢弃也不进 clip——见 extractFootIKTrack）。 */
+function rewriteVmdTrack(
+  track: THREE.KeyframeTrack,
+  plan: VmdBindingPlan,
+  positionScale: number,
+  expressionManager: VmdExpressionManagerLike | null,
+  sink: VmdTrackSink,
+): "kept" | "dropped" {
+  // 表情轨道（ADR-306 §2.2）：`.morphTargetInfluences[N]` → `VRMExpression_<preset>.weight`
+  // 原地改名进 clip，由 AnimationMixer 统一驱动（官方 .vrma 同路）。索引不在改道表
+  // （不可映射名 / 无 expressionManager）→ 常规丢弃，与 ADR-243 v1 行为一致。
+  const morphMatched = MORPH_TRACK_NAME.exec(track.name);
+  if (morphMatched) {
+    return rewriteMorphTrack(track, morphMatched, plan, expressionManager, sink.tracks);
+  }
+  const matched = BONE_TRACK_NAME.exec(track.name);
+  if (!matched) return "dropped"; // 非骨骼非表情轨道（相机/灯光等，本管线不管）
+  return rewriteBoneTrack(track, matched[1], matched[2], plan, positionScale, sink);
+}
+
+/** 表情轨道改道：索引 → MMD 名 → preset → `VRMExpression_<preset>.weight`。 */
+function rewriteMorphTrack(
+  track: THREE.KeyframeTrack,
+  matched: RegExpExecArray,
+  plan: VmdBindingPlan,
+  expressionManager: VmdExpressionManagerLike | null,
+  tracks: THREE.KeyframeTrack[],
+): "kept" | "dropped" {
+  const mmd = plan.morphNameByIndex.get(Number(matched[1]));
+  // 解析序：preset 优先（表语义），MMD 原名为自定义表情兜底（模型恰好同名的自定义
+  // expression）。两者都解析不出轨道名（模型缺该表情 / 无 expressionManager）→ 丢弃。
+  const preset = mmd ? plan.morphPresetByMmd.get(mmd) : undefined;
+  const trackName =
+    mmd && expressionManager
+      ? ((preset ? expressionManager.getExpressionTrackName(preset) : null) ??
+        expressionManager.getExpressionTrackName(mmd))
+      : null;
+  if (!trackName) return "dropped";
+  // 原地改名（与骨骼轨道同一条纪律）；morph 轨道是裸 NumberKeyframeTrack（无贝塞尔
+  // 覆写），改名零损失
+  track.name = trackName;
+  tracks.push(track);
+  return "kept";
+}
+
+/** 骨骼轨道按通道分流：quaternion → 归一化骨；position → 足 IK（摘出）/ hips（缩放）/
+ *  其余丢弃。 */
+function rewriteBoneTrack(
+  track: THREE.KeyframeTrack,
+  mmd: string,
+  channel: string,
+  plan: VmdBindingPlan,
+  positionScale: number,
+  sink: VmdTrackSink,
+): "kept" | "dropped" {
+  if (channel === "quaternion") return rewriteQuaternionTrack(track, mmd, plan, sink.tracks);
+  const side = footIKSideOf(mmd, plan);
+  if (side) return extractFootIKTrack(track, side, positionScale, sink);
+  return rewriteHipsPositionTrack(track, mmd, plan, positionScale, sink);
+}
+
+/** 该 MMD 骨是否为足 IK 目标载体（position 通道；左右同名时左侧优先，与旧三元逐字同序）。 */
+function footIKSideOf(mmd: string, plan: VmdBindingPlan): "left" | "right" | null {
+  if (mmd === plan.footIK.left) return "left";
+  if (mmd === plan.footIK.right) return "right";
+  return null;
+}
+
+/** つま先ＩＫ 改道（P1b）：quaternion 是合法 FK 源，落点改为 toes 归一化骨；
+ *  未改道则绑常规归一化骨，两者都无 → 丢弃。 */
+function rewriteQuaternionTrack(
+  track: THREE.KeyframeTrack,
+  mmd: string,
+  plan: VmdBindingPlan,
+  tracks: THREE.KeyframeTrack[],
+): "kept" | "dropped" {
+  const toesNode = plan.toeNodesByMmd.get(mmd);
+  if (toesNode) {
+    track.name = `${toesNode.uuid}.quaternion`;
+    tracks.push(track);
+    return "kept";
+  }
+  const node = plan.nodesByMmd.get(mmd);
+  if (!node) return "dropped";
+  track.name = `${node.uuid}.quaternion`;
+  tracks.push(track);
+  return "kept";
+}
+
+/** position ①：足 IK 目标骨 → **摘出来**交给 VRM 侧 CCD 求解（ADR-243 §2.8 方案 A）。
+ *  不进 clip（clip 的接收方是 AnimationMixer，IK 骨在 VRM 里不存在对应节点），
+ *  也**不计入 droppedTracks**——它另有去处，不是被丢弃。 */
+function extractFootIKTrack(
+  track: THREE.KeyframeTrack,
+  side: "left" | "right",
+  positionScale: number,
+  sink: VmdTrackSink,
+): "kept" {
+  // 幽灵 IK 骨静止位置为零 ⇒ 轨道值即「相对 bind 的偏移」，直接整体按 k 缩放
+  sink.posTracks.push({ track, base: _zeroOrigin, raw: track.values.slice(0) });
+  scaleTranslationTrack(track, _zeroOrigin, positionScale);
+  sink.ikTracks[side] = track;
+  return "kept";
+}
+
+/** position ②：VRMHumanoidRig.update 只读 hips 的位置，其余骨的位移通道一律丢弃
+ *  （保留只会得到每帧写回自身静止值的空转轨道）。hips 轨原地改名为归一化骨 uuid，
+ *  并按「相对静止位置的偏移」缩放。 */
+function rewriteHipsPositionTrack(
+  track: THREE.KeyframeTrack,
+  mmd: string,
+  plan: VmdBindingPlan,
+  positionScale: number,
+  sink: VmdTrackSink,
+): "kept" | "dropped" {
+  const { translationSource, translationTarget, translationBase } = plan;
+  if (mmd !== translationSource || !translationTarget || !translationBase) return "dropped";
+  sink.posTracks.push({ track, base: translationBase, raw: track.values.slice(0) });
+  scaleTranslationTrack(track, translationBase, positionScale);
+  track.name = `${translationTarget.uuid}.position`;
+  sink.tracks.push(track);
+  return "kept";
 }
 
 // ---------------------------------------------------------------------------

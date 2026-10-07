@@ -8,7 +8,7 @@
  */
 import * as THREE from "three";
 import { safeDispose } from "@/preview-3d/infra/safe-dispose.ts";
-import type { Spec3D } from "./model3d.ts"; // 仅类型 import（编译后擦除，无运行时循环依赖）
+import type { Spec3D, SpecBone3D } from "./model3d.ts"; // 仅类型 import（编译后擦除，无运行时循环依赖）
 import { applyRotationIfNonIdentity } from "./quaternion.ts";
 
 /** 模型显示缩放（基岩标准 16px = 1m，严格对齐 YSMViewer ExportScale，索引 2.14 收敛） */
@@ -51,7 +51,12 @@ export function disposeMaterial(
   safeDispose(m);
 }
 
-/** 构建 3D 场景网格（组件分组 + 骨骼树），返回供渲染/交互使用的组结构。 */
+/** 组件 spec 元素（SpecModelGroup3D 未导出，经索引取型以免第二套 spec 类型名——ADR-161 §2.1） */
+type SpecModelGroup = NonNullable<Spec3D["models"]>[number];
+
+/** 构建 3D 场景网格（组件分组 + 骨骼树），返回供渲染/交互使用的组结构。
+ *  两遍构建各自具名：第一遍建组登记（createBoneGroups），第二遍挂父子（attachBonesToParents）
+ *  ——「先全建后连边」是环边兜底的前提（父组必须已存在才谈得上环检测）。 */
 export function buildSceneMesh(spec: Spec3D): {
   boneGroupMap: Map<string, THREE.Group>;
   rootGroup: THREE.Group;
@@ -65,54 +70,91 @@ export function buildSceneMesh(spec: Spec3D): {
   rootGroup.scale.set(modelScale, modelScale, modelScale);
   // 组件级 modelGroup（YSMViewer 式多组件同屏）：每个 spec.model 一个组，
   // bone 树挂各自 modelGroup，可见性由 defaultVisible 控制（arm 等组件独立渲染）。
-  const modelGroups = (spec.models || []).map((mg) => {
-    const g = new THREE.Group();
-    g.name = mg.id || "comp";
-    g.visible = mg.defaultVisible !== false;
-    return g;
-  });
+  const modelGroups = (spec.models || []).map(makeComponentGroup);
   for (const g of modelGroups) rootGroup.add(g);
+  const boneGroupMap = createBoneGroups(spec);
+  attachBonesToParents(spec, modelGroups, boneGroupMap);
+  return { boneGroupMap, rootGroup, modelScale, modelGroups };
+}
+
+/** 组件级 Group（name 缺省 "comp"；可见性 = defaultVisible !== false，缺省可见）。 */
+function makeComponentGroup(mg: SpecModelGroup): THREE.Group {
+  const g = new THREE.Group();
+  g.name = mg.id || "comp";
+  g.visible = mg.defaultVisible !== false;
+  return g;
+}
+
+/** 第一遍：为每个 (组件下标, 骨骼) 建 Group，登记组件 key 与全局 key（后者先到先得）。 */
+function createBoneGroups(spec: Spec3D): Map<string, THREE.Group> {
   const boneGroupMap = new Map<string, THREE.Group>();
-  for (const [mi, mg] of (spec.models || []).entries())
-    for (const bd of mg.bones || []) {
-      const g = new THREE.Group();
-      g.name = bd.name;
-      const pos = bd.localPosition || [0, 0, 0];
-      g.position.set(pos[0] ?? 0, pos[1] ?? 0, pos[2] ?? 0);
-      applyRotationIfNonIdentity(g, bd.localRotation);
-      boneGroupMap.set(compKey(mi, bd.id), g);
-      // 全局 key：main 组件优先（先到先得），供 hover/UI/动画（v1 单组件语义）
-      if (!boneGroupMap.has(bd.id)) boneGroupMap.set(bd.id, g);
-    }
-  for (const [mi, mg] of (spec.models || []).entries())
+  for (const [mi, mg] of (spec.models || []).entries()) {
+    for (const bd of mg.bones || []) createBoneGroup(boneGroupMap, mi, bd);
+  }
+  return boneGroupMap;
+}
+
+/** 单个骨骼的 Group：名字/局部位置/非单位旋转 + 双 key 登记
+ *  （组件 key 恒写；全局 key 先到先得，供 hover/UI/动画的 v1 单组件语义）。 */
+function createBoneGroup(boneGroupMap: Map<string, THREE.Group>, mi: number, bd: SpecBone3D): void {
+  const g = new THREE.Group();
+  g.name = bd.name;
+  const pos = bd.localPosition || [0, 0, 0];
+  g.position.set(pos[0] ?? 0, pos[1] ?? 0, pos[2] ?? 0);
+  applyRotationIfNonIdentity(g, bd.localRotation);
+  boneGroupMap.set(compKey(mi, bd.id), g);
+  if (!boneGroupMap.has(bd.id)) boneGroupMap.set(bd.id, g);
+}
+
+/** 第二遍：把每个骨骼组按 parentId 挂到父组，无父（或父不在此组件内）挂组件组。 */
+function attachBonesToParents(
+  spec: Spec3D,
+  modelGroups: THREE.Group[],
+  boneGroupMap: Map<string, THREE.Group>,
+): void {
+  for (const [mi, mg] of (spec.models || []).entries()) {
     for (const bd of mg.bones || []) {
       const g = boneGroupMap.get(compKey(mi, bd.id));
       if (!g) continue;
-      // self 父/环边在 Three.js 中构成场景图环——
-      // updateMatrixWorld 首次遍历即无限递归 RangeError（Three.js 只拦截 object===this
-      // 的 self 环，不拦截 A↔B 互指）。Go spec.go 的 ParentID 直透不校验环，此处兜底：
-      // self 边拒绝；A↔B 互指通过「已挂父的节点不再重复挂」的 visited 语义跳过环边。
-      if (bd.parentId && bd.parentId !== bd.id && boneGroupMap.has(compKey(mi, bd.parentId))) {
-        // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-        const parent = boneGroupMap.get(compKey(mi, bd.parentId))!;
-        // 若 parent 已是 g 的后代（环），跳过此边（g 保持挂在 modelGroups 或更早父上）
-        let cursor: THREE.Object3D | null = parent;
-        let isCycle = false;
-        while (cursor) {
-          if (cursor === g) {
-            isCycle = true;
-            break;
-          }
-          cursor = cursor.parent;
-        }
-        if (isCycle) {
-          console.warn(`[mesh] 跳过骨骼父链环: ${bd.id} ↔ ${bd.parentId}`);
-        } else {
-          parent.add(g);
-        }
-      } else {
-        modelGroups[mi].add(g);
-      }
+      attachBoneToParent(bd, g, mi, modelGroups, boneGroupMap);
     }
-  return { boneGroupMap, rootGroup, modelScale, modelGroups };
+  }
+}
+
+/** 单个骨骼的挂载决策：无父/自环/父不在此组件 → 挂组件组；成环 → 跳过该边并告警；
+ *  否则挂父。环检测必要性见下方注释（Three.js 只拦 object===this 的 self 环）。 */
+function attachBoneToParent(
+  bd: SpecBone3D,
+  g: THREE.Group,
+  mi: number,
+  modelGroups: THREE.Group[],
+  boneGroupMap: Map<string, THREE.Group>,
+): void {
+  const parentId = bd.parentId;
+  // self 父/环边在 Three.js 中构成场景图环——
+  // updateMatrixWorld 首次遍历即无限递归 RangeError（Three.js 只拦截 object===this
+  // 的 self 环，不拦截 A↔B 互指）。Go spec.go 的 ParentID 直透不校验环，此处兜底：
+  // self 边拒绝；A↔B 互指通过「已挂父的节点不再重复挂」的 visited 语义跳过环边。
+  if (!parentId || parentId === bd.id || !boneGroupMap.has(compKey(mi, parentId))) {
+    modelGroups[mi].add(g);
+    return;
+  }
+  // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
+  const parent = boneGroupMap.get(compKey(mi, parentId))!;
+  // 若 parent 已是 g 的后代（环），跳过此边（g 保持挂在 modelGroups 或更早父上）
+  if (ancestorChainContains(parent, g)) {
+    console.warn(`[mesh] 跳过骨骼父链环: ${bd.id} ↔ ${bd.parentId}`);
+    return;
+  }
+  parent.add(g);
+}
+
+/** `start` 自身或其任一祖先 === `node` → 把 start 挂到 node 下会构成场景图环。 */
+function ancestorChainContains(start: THREE.Object3D, node: THREE.Object3D): boolean {
+  let cursor: THREE.Object3D | null = start;
+  while (cursor) {
+    if (cursor === node) return true;
+    cursor = cursor.parent;
+  }
+  return false;
 }

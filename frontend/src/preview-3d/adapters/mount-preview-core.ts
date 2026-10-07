@@ -903,6 +903,50 @@ async function runBuild(
 
   const i = infra; // self 模式 infra=null，跳过 sceneBaseline；shared 模式恒非空
   if (i) session.sceneBaseline = new Set(i.scene.children);
+  const buildCtx = makeBuildCtx(ctx, shell, i);
+  session.status = "mounting"; // ADR-233：build 进行中
+  session.content = await ctx.adapter.build(buildCtx, session.currentPath);
+  if (session.aborted.v || ctx.myGen !== ctx.getGen()) {
+    // 加载期间被 ESC / invalidate 打断：完整拆除（含 rAF 循环与 WebGL renderer），
+    // 避免外壳资源泄漏；内容层 GPU 资源经 fullCleanup 一并释放。
+    // 注意：会话登记进 allContent 发生在下方（build 成功之后），此处必须补登记，
+    // 否则刚 build 完的内容层不在 dispose 列表里 → GPU 资源泄漏。
+    registerContentForDisposal(session);
+    runFullCleanup(ctx);
+    return null;
+  }
+  // [P1 修复] 登记提前到「build 成功后的第一时刻」，使「content 已在 allContent 中」这一
+  // 不变量在任何后续步骤之前成立。recoverMountFailure 正是据此前提**刻意不调**
+  // session.content?.dispose()（注释自述「content 已在 allContent 中」）；原实现把 push 放在
+  // 末尾，若下方 syncLightTargetFromContent / applyMeshCasts / syncMeshIntensity / setPerFrame
+  // 任一步抛错，已 build 成功的 content 就落在 dispose 列表之外 → GPU 资源泄漏（窗口窄但真实）。
+  registerContentForDisposal(session);
+  // 注意：loadingEl 的移除交由适配器在成功路径自行处理（旧 vrm/litematic 即在
+  // build 内 loadingEl.remove()）；空数据/错误等场景适配器会把提示写在 loadingEl
+  // 并保留它，核心不在此强制移除。
+
+  // 同步通用相机状态到适配器已设定的取景（包围盒/尺寸定相机）——仅 shared 模式
+  if (i) syncSharedCameraState(i, session);
+  switchCtx.setPerFrame(session.content.update ?? null);
+  // ===== §4c 生命周期管理（cooperate/switchTo/代际守卫）=====
+  // 初始模型的 allContent 登记已上移到 build 成功后的第一时刻（见上方 [P1 修复]）——
+  // 此处不再重复 push（allContent 无去重，重复登记会让 fullCleanup 对同一 content dispose 两次）。
+  registerContentAndInjectMenu(ctx, shell, infra);
+
+  // ADR-076 v2 Phase 3：适配器控件全部经声明式根菜单注入（ctx.menu.setAdapterItems / content.menuItems）
+  // 不再有 topBar 或 sidePanel 额外挂载
+
+  // fullCleanup 已提为 mount-session.ts 的 runFullCleanup(ctx)（MountCtx 上下文模式）
+
+  return { content: session.content };
+}
+
+/** 构造适配器 build ctx：必填字段＋「仅真实存在时赋值」的可选字段。 */
+function makeBuildCtx(
+  ctx: MountCtx,
+  shell: AssembledShell,
+  infra: SharedInfra | null,
+): PreviewBuildCtx {
   const buildCtx: PreviewBuildCtx = {
     viewContainer: shell.viewContainer,
     loadingEl: shell.loadingEl,
@@ -921,86 +965,66 @@ async function runBuild(
   };
   // scene/camera/controls/renderer/cameraControls/sessionId 为可选项——
   // exactOptional 收紧后仅真实存在时赋值（shared 模式有值，self 模式缺省）
-  if (i?.scene !== undefined) buildCtx.scene = i.scene;
-  if (i?.camera !== undefined) buildCtx.camera = i.camera;
-  if (i?.controls !== undefined) buildCtx.controls = i.controls;
-  if (i?.renderer !== undefined) buildCtx.renderer = i.renderer;
+  if (infra?.scene !== undefined) buildCtx.scene = infra.scene;
+  if (infra?.camera !== undefined) buildCtx.camera = infra.camera;
+  if (infra?.controls !== undefined) buildCtx.controls = infra.controls;
+  if (infra?.renderer !== undefined) buildCtx.renderer = infra.renderer;
   if (!ctx.selfMode && shell.camBridge) buildCtx.cameraControls = shell.camBridge;
   if (ctx.sessionId !== undefined) buildCtx.sessionId = ctx.sessionId;
-  session.status = "mounting"; // ADR-233：build 进行中
-  session.content = await ctx.adapter.build(buildCtx, session.currentPath);
-  if (session.aborted.v || ctx.myGen !== ctx.getGen()) {
-    // 加载期间被 ESC / invalidate 打断：完整拆除（含 rAF 循环与 WebGL renderer），
-    // 避免外壳资源泄漏；内容层 GPU 资源经 fullCleanup 一并释放。
-    // 注意：会话登记进 allContent 发生在下方（build 成功之后），此处必须补登记，
-    // 否则刚 build 完的内容层不在 dispose 列表里 → GPU 资源泄漏。
-    if (session.content && !session.allContent.includes(session.content)) {
-      session.allContent.push(session.content);
-    }
-    runFullCleanup(ctx);
-    return null;
-  }
-  // [P1 修复] 登记提前到「build 成功后的第一时刻」，使「content 已在 allContent 中」这一
-  // 不变量在任何后续步骤之前成立。recoverMountFailure 正是据此前提**刻意不调**
-  // session.content?.dispose()（注释自述「content 已在 allContent 中」）；原实现把 push 放在
-  // 末尾，若下方 syncLightTargetFromContent / applyMeshCasts / syncMeshIntensity / setPerFrame
-  // 任一步抛错，已 build 成功的 content 就落在 dispose 列表之外 → GPU 资源泄漏（窗口窄但真实）。
-  if (session.content && !session.allContent.includes(session.content)) {
-    session.allContent.push(session.content);
-  }
-  // 注意：loadingEl 的移除交由适配器在成功路径自行处理（旧 vrm/litematic 即在
-  // build 内 loadingEl.remove()）；空数据/错误等场景适配器会把提示写在 loadingEl
-  // 并保留它，核心不在此强制移除。
+  return buildCtx;
+}
 
-  // 同步通用相机状态到适配器已设定的取景（包围盒/尺寸定相机）——仅 shared 模式
-  if (i) {
-    i.orbitTarget.copy(i.controls.target);
-    session.euler.setFromQuaternion(i.camera.quaternion);
-    // ADR-081 L1：内容层包围盒 -> 聚光灯/体积光锥瞄准对象上方
-    syncLightTargetFromContent(i.scene, session.sceneBaseline, i.lightCap ?? null);
-    // 首模型 mesh castShadow / receiveShadow（内容层根节点 = 刚注册的 added）
-    if (i.shadowCap && session.content) {
-      const roots = session.sceneBaseline
-        ? // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-          i.scene.children.filter((c) => !session.sceneBaseline!.has(c))
-        : [];
-      i.shadowCap.applyMeshCasts(roots);
-    }
-    // 首模型 mesh envMapIntensity 同步
-    if (i.environmentCap && session.content) {
-      const roots = session.sceneBaseline
-        ? // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-          i.scene.children.filter((c) => !session.sceneBaseline!.has(c))
-        : [];
-      i.environmentCap.syncMeshIntensity(roots);
-    }
+/** 把内容层登记进 dispose 清单（allContent 无去重，故登记幂等——重复 push 会让
+ *  fullCleanup 对同一 content dispose 两次）。 */
+function registerContentForDisposal(session: MpSessionState): void {
+  const content = session.content;
+  if (content && !session.allContent.includes(content)) session.allContent.push(content);
+}
+
+/** build 后新增的内容层根节点（sceneBaseline 差集）；无基线（self 模式）→ 空集合。 */
+function addedSceneRoots(infra: SharedInfra, session: MpSessionState): THREE.Object3D[] {
+  const baseline = session.sceneBaseline;
+  if (!baseline) return [];
+  return infra.scene.children.filter((c) => !baseline.has(c));
+}
+
+/** 同步通用相机状态到适配器已设定的取景，并把首模型 mesh 的阴影/环境强度派发给两个 cap
+ *  （每步各自守卫：对应 cap 或 content 缺失即跳过，不互相牵连）。 */
+function syncSharedCameraState(infra: SharedInfra, session: MpSessionState): void {
+  infra.orbitTarget.copy(infra.controls.target);
+  session.euler.setFromQuaternion(infra.camera.quaternion);
+  // ADR-081 L1：内容层包围盒 -> 聚光灯/体积光锥瞄准对象上方
+  syncLightTargetFromContent(infra.scene, session.sceneBaseline, infra.lightCap ?? null);
+  // 首模型 mesh castShadow / receiveShadow（内容层根节点 = 刚注册的 added）
+  if (infra.shadowCap && session.content) {
+    infra.shadowCap.applyMeshCasts(addedSceneRoots(infra, session));
   }
-  switchCtx.setPerFrame(session.content.update ?? null);
-  // ===== §4c 生命周期管理（cooperate/switchTo/代际守卫）=====
-  // 初始模型的 allContent 登记已上移到 build 成功后的第一时刻（见上方 [P1 修复]）——
-  // 此处不再重复 push（allContent 无去重，重复登记会让 fullCleanup 对同一 content dispose 两次）。
-  // ADR-093 T2：首模型注册进场景注册表（差量捕获→统计合并→注册，与 switchTo 共用
-  if (session.content) {
-    const menuItems = registerBuiltScene({
-      path: session.currentPath,
-      rtype: ctx.opts.rtype ?? ctx.adapter.id,
-      content: session.content,
-      scene: infra?.scene,
-      diffSet: session.sceneBaseline,
-      displayName: ctx.opts.displayName,
-      components: ctx.opts.components,
-    });
-    // ADR-076 v2 Phase 3：注册后立刻注入菜单项，否则 dock-menu 无适配器专属控件
-    // （ADR-131 §2.3：统计面板已并入 menuItems，一次注入不覆盖）
-    if (menuItems.length > 0) shell.menuHandle.setAdapterItems(menuItems);
+  // 首模型 mesh envMapIntensity 同步
+  if (infra.environmentCap && session.content) {
+    infra.environmentCap.syncMeshIntensity(addedSceneRoots(infra, session));
   }
+}
 
-  // ADR-076 v2 Phase 3：适配器控件全部经声明式根菜单注入（ctx.menu.setAdapterItems / content.menuItems）
-  // 不再有 topBar 或 sidePanel 额外挂载
-
-  // fullCleanup 已提为 mount-session.ts 的 runFullCleanup(ctx)（MountCtx 上下文模式）
-
-  return { content: session.content };
+/** ADR-093 T2 + ADR-076 v2 Phase 3：首模型注册进场景注册表（差量捕获→统计合并→注册，
+ *  与 switchTo 共用），注册后立刻注入菜单项，否则 dock-menu 无适配器专属控件
+ *  （ADR-131 §2.3：统计面板已并入 menuItems，一次注入不覆盖）。 */
+function registerContentAndInjectMenu(
+  ctx: MountCtx,
+  shell: AssembledShell,
+  infra: SharedInfra | null,
+): void {
+  const content = ctx.session.content;
+  if (!content) return;
+  const menuItems = registerBuiltScene({
+    path: ctx.session.currentPath,
+    rtype: ctx.opts.rtype ?? ctx.adapter.id,
+    content,
+    scene: infra?.scene,
+    diffSet: ctx.session.sceneBaseline,
+    displayName: ctx.opts.displayName,
+    components: ctx.opts.components,
+  });
+  if (menuItems.length > 0) shell.menuHandle.setAdapterItems(menuItems);
 }
 
 // ===== mount3D 收尾（escH 替换 + sessionHandle 构造 + 句柄入列，纯搬家原 L830–L850）=====

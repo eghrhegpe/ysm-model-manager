@@ -415,6 +415,17 @@ describe("extractIKChainFromTree", () => {
     expect(extractIKChainFromTree(tree, "hips", "footL")).toBeNull();
   });
 
+  it("父链指向不存在的骨 id（断链）→ 上溯到缺失节点即返回 null", () => {
+    // 覆盖此前从未执行的一支：上溯途中 tree.byId.get(current) 落空（parentId 指向
+    // 未登记骨）。既有用例的父链都完整，只有「断链」才走到这里——不校验的话
+    // path 会把幽灵 id 当成链头，path[0] !== rootId 的兜底虽在，但语义应为「链无效」。
+    const tree = makeTree([
+      { id: "hips", parentId: null, object: new THREE.Object3D() },
+      { id: "footL", parentId: "ghost", object: new THREE.Object3D() }, // 父骨未登记
+    ]);
+    expect(extractIKChainFromTree(tree, "hips", "footL")).toBeNull();
+  });
+
   it("rootId === endId → 单元素链（现状语义，消费方按链长<2 跳过）", () => {
     const hips = new THREE.Object3D();
     const tree = makeTree([{ id: "hips", parentId: null, object: hips }]);

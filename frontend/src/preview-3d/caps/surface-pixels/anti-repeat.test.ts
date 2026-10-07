@@ -117,6 +117,36 @@ describe("stochastic（随机瓦片）", () => {
     const b = derandomize(grassTile(1.5), S, { strategy: "stochastic", tilesPerAxis: N, seed: 11 });
     expect(Array.from(a)).toEqual(Array.from(b));
   });
+
+  it("blend=0 → 关闭边界羽化：去相关更强，代价是边界缝回升（实测先量后钉）", () => {
+    // 此前无测试覆盖 blend=0（旧实现里它是 `blend === 0 || edge >= blend` 的一个子条件，
+    // 构造不出「整支跳过」的判据）。本用例钉死三件事：
+    // ① A 恒 255 与 blend 无关；② 羽化确实在压边界缝（blended == 输入固有缝）；
+    // ③ blend=0 把边界缝交还给随机朝向块（实测 S=64 seed=11：24 vs 羽化 20，输入固有 20）。
+    const tile = grassTile(1.5);
+    const noBlend = derandomize(tile, S, {
+      strategy: "stochastic",
+      tilesPerAxis: N,
+      seed: 11,
+      blend: 0,
+    });
+    const blended = derandomize(tile, S, {
+      strategy: "stochastic",
+      tilesPerAxis: N,
+      seed: 11,
+      blend: 4,
+    });
+    const repNo = repetitionScore(noBlend, N * S, N);
+    const repBlended = repetitionScore(blended, N * S, N);
+    const seamNo = maxSeamDiscontinuity(noBlend, N * S, S);
+    const seamBlended = maxSeamDiscontinuity(blended, N * S, S);
+
+    expect(allAlpha255(noBlend)).toBe(true);
+    expect(seamNo).toBeGreaterThan(0); // 与 blended 确实不同（否则本用例没测到 blend 分支）
+    expect(repNo).toBeGreaterThan(repBlended); // 羽化把边界拉回 base ⇒ 去相关被削弱
+    expect(seamBlended).toBeLessThanOrEqual(INPUT_SEAM); // 羽化 = 不引入新缝
+    expect(seamNo).toBeGreaterThanOrEqual(seamBlended); // blend=0 的代价：边界缝不低于羽化版
+  });
 });
 
 describe("dual（双变体混合）", () => {

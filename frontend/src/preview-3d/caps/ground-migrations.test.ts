@@ -91,6 +91,16 @@ describe("normalizeGroundLegacyState — 代数二：旧单枚举 matSource 拆�
     expect("groundOverlay" in out).toBe(false);
   });
 
+  it("图案值但无线色/格数 → 只搬叠加层本身，overlayColor/Size 不凭空造（undefined 门）", () => {
+    // 既有用例的图案存档都同时带 matLineColor/matGridSize ⇒ 两处 `!== undefined` 门
+    // 的「无值」一侧从未执行。旧图案存档若缺这两个键，搬运必须留空（由下游默认值接管），
+    // 不得写入 undefined 造出「有键无值」的假象。
+    const out = normalizeGroundLegacyState({ matSource: "grid" });
+    expect(out.groundOverlay).toBe("grid");
+    expect("groundOverlayColor" in out).toBe(false);
+    expect("groundOverlaySize" in out).toBe(false);
+  });
+
   it("脏 matSource 回退 none（migrateGroundMatSource 兜底，不抛错）", () => {
     const out = normalizeGroundLegacyState({ matSource: "hack" });
     expect(out.groundSourceKind).toBe("none");

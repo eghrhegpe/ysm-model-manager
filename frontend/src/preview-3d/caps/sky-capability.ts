@@ -21,8 +21,7 @@ import { assertRevisionRange, reportPatchIssue } from "@/preview-3d/shader-patch
 // 锐评 F-1 收口：loadState 恢复期间挂起派发（fog/water/env/light 同法），末尾统一 apply。
 import {
   registerEnvCallback,
-  resumeEnvCallbacks,
-  suspendEnvCallbacks,
+  withEnvCallbacksSuspended,
 } from "@/preview-3d/state/env-dispatcher.ts";
 // ADR-196：统一状态层
 import {
@@ -959,8 +958,7 @@ export class SkyCapability implements SceneCapability {
     if (!("skyGodRaysEnabled" in s) && typeof s.godRaysEnabled === "boolean") {
       state = { ...state, skyGodRaysEnabled: s.godRaysEnabled };
     }
-    suspendEnvCallbacks();
-    try {
+    withEnvCallbacksSuspended(() => {
       restoreFields(state, {
         skyEnabled: {
           boolean: (v) => {
@@ -1005,9 +1003,7 @@ export class SkyCapability implements SceneCapability {
           },
         },
       });
-    } finally {
-      resumeEnvCallbacks();
-    }
+    });
   }
 
   private detach(): void {

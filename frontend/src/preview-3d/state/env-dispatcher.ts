@@ -126,6 +126,22 @@ export function clearEnvCallbacks(): void {
  *  GroundCapability / FogCapability / EnvironmentCapability 的 loadState 亦已入列——
  *  各自「挂起 → 只写 envState → 末尾统一应用一次」重入治理，同构闭合，跨 cap 仍无重叠窗，
  *  上述「非跨 cap 事务边界」警告依然成立。 */
+/**
+ * [锐评 2026-10-07] 挂起的事务化封装：suspend → fn → resume 三明治，finally 保证计数
+ * 不逃逸（逃逸 = 全仓 envState 派发静默假死——envState 有值、Three 不更新、无报错）。
+ * 替换 6 个 cap loadState 里裸露的 suspend/try/finally/resume 形态（environment/fog/
+ * light/ground/water/sky）。语义与裸露形态完全一致：计数器可嵌套（with 套 with），
+ * resume 只在计数归零时恢复派发。
+ */
+export function withEnvCallbacksSuspended<T>(fn: () => T): T {
+  suspendEnvCallbacks();
+  try {
+    return fn();
+  } finally {
+    resumeEnvCallbacks();
+  }
+}
+
 export function suspendEnvCallbacks(): void {
   _suspended++;
 }

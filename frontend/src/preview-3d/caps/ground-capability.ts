@@ -9,8 +9,7 @@ import { safeDispose } from "@/preview-3d/infra/safe-dispose.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import {
   registerEnvCallback,
-  resumeEnvCallbacks,
-  suspendEnvCallbacks,
+  withEnvCallbacksSuspended,
 } from "@/preview-3d/state/env-dispatcher.ts";
 import type { WriteSource } from "@/preview-3d/state/env-state.ts";
 // ADR-196：统一状态层
@@ -799,8 +798,7 @@ export class GroundCapability implements SceneCapability {
     // 重入治理（对齐 light 侧 ADR-281 口径）：restoreFields 内部逐字段 setEnvState 会
     // **同步**触发 ground 回调 → 每字段一次 refresh/syncGeometry（含 GridHelper 重建）。
     // 挂起后恢复只写 envState，末尾统一应用一次——二十余字段 = 一次落地。
-    suspendEnvCallbacks();
-    try {
+    withEnvCallbacksSuspended(() => {
       restoreFields(state, {
         // cap 私有 `enabled` 刻意不还原（对照 saveState 注释，2026-10-04 小修批）：
         // 无 schema 键、构造默认 true、生产 UI 无写口；旧存档里的 enabled 幽灵键被
@@ -874,9 +872,7 @@ export class GroundCapability implements SceneCapability {
         groundOverlaySize: { number: (v) => this.setOverlaySize(v, RESTORE_SOURCE) },
         groundOverlayOpacity: { number: (v) => this.setOverlayOpacity(v, RESTORE_SOURCE) },
       });
-    } finally {
-      resumeEnvCallbacks();
-    }
+    });
     // 统一落地一次（与 ground 回调体同序）：几何同步吃满四键（loadState 后
     // 无从知晓哪些真变了，重建一次 GridHelper 的代价可忽略）。
     this.syncGeometry(

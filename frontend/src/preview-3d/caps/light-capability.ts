@@ -26,8 +26,7 @@ import * as THREE from "three";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import {
   registerEnvCallback,
-  resumeEnvCallbacks,
-  suspendEnvCallbacks,
+  withEnvCallbacksSuspended,
 } from "@/preview-3d/state/env-dispatcher.ts";
 // ADR-196：统一状态层
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
@@ -855,12 +854,9 @@ export class LightCapability implements SceneCapability {
     //    onEnvChanged；挂起回调后恢复路径只写 envState，本调用末尾统一应用一次——
     //    消除「callback 先拿旧类型灯重建一次、回到③又跑一遍」的双跑窗口；新增字段时
     //    ③即唯一同步入口，不再有隐性双入口。
-    suspendEnvCallbacks();
-    try {
+    withEnvCallbacksSuspended(() => {
       restoreLightParams(state);
-    } finally {
-      resumeEnvCallbacks();
-    }
+    });
     // ③ 类型可能因恢复而变化（旧存档迁移：key 灯 → spot）→ 逐盏重建 Three 对象
     for (const which of LIGHT_SLOTS) {
       this.syncLight(which, envState);

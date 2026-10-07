@@ -10,6 +10,7 @@ import {
   suspendEnvCallbacks,
   resumeEnvCallbacks,
   isEnvCallbacksSuspended,
+  withEnvCallbacksSuspended,
 } from "./env-dispatcher.ts";
 
 describe("env-dispatcher — 挂起/恢复（loadState 重入治理）", () => {
@@ -71,6 +72,33 @@ describe("env-dispatcher — 挂起/恢复（loadState 重入治理）", () => {
     registerEnvCallback("capB", cb2);
     dispatchEnvChange(new Set<EnvStateKey>(["fogEnabled"]), fakeState);
     expect(cb2).toHaveBeenCalledOnce();
+  });
+
+  // [锐评 2026-10-07] 事务化封装：替换 6 个 cap loadState 里裸露的 suspend/try/finally/resume。
+  it("withEnvCallbacksSuspended：包裹期间不派发，退出后恢复派发", () => {
+    const cb = vi.fn();
+    registerEnvCallback("capA", cb);
+    withEnvCallbacksSuspended(() => {
+      dispatchEnvChange(new Set<EnvStateKey>(["fogEnabled"]), fakeState);
+      expect(cb).not.toHaveBeenCalled();
+    });
+    expect(isEnvCallbacksSuspended()).toBe(false);
+    dispatchEnvChange(new Set<EnvStateKey>(["fogEnabled"]), fakeState);
+    expect(cb).toHaveBeenCalledOnce();
+  });
+
+  it("withEnvCallbacksSuspended：fn 抛错时 finally 保证计数复位（防静默假死逃逸）", () => {
+    const cb = vi.fn();
+    registerEnvCallback("capA", cb);
+    expect(() =>
+      withEnvCallbacksSuspended(() => {
+        dispatchEnvChange(new Set<EnvStateKey>(["fogEnabled"]), fakeState);
+        throw new Error("restore boom");
+      }),
+    ).toThrow("restore boom");
+    expect(isEnvCallbacksSuspended()).toBe(false); // 逃逸不存活跨测试
+    dispatchEnvChange(new Set<EnvStateKey>(["fogEnabled"]), fakeState);
+    expect(cb).toHaveBeenCalledOnce();
   });
 });
 

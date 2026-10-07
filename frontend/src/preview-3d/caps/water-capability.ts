@@ -16,8 +16,7 @@ import type * as THREE from "three";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import {
   registerEnvCallback,
-  resumeEnvCallbacks,
-  suspendEnvCallbacks,
+  withEnvCallbacksSuspended,
 } from "@/preview-3d/state/env-dispatcher.ts";
 // ADR-196：统一状态层
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
@@ -565,8 +564,7 @@ export class WaterCapability implements SceneCapability {
       }
     }
     if (!state) return;
-    suspendEnvCallbacks();
-    try {
+    withEnvCallbacksSuspended(() => {
       restoreFields(state, {
         // legacy `size` 键（ADR-272 前旧名）——值一律交回唯一写入口 `setWaterSize`，
         // 不在此处自备钳制（ADR-283 收口：值域单一事实源 = schema `range`）。
@@ -628,9 +626,7 @@ export class WaterCapability implements SceneCapability {
       if (!hadLevelKey && envState.waterMode === "pool") {
         this.setLevel(envState.waterPoolHeight * 0.5);
       }
-    } finally {
-      resumeEnvCallbacks();
-    }
+    });
     // 统一应用一次（fog applyFog / ground 同法）：容器重建即从 envState 全量重导——
     // 材质（buildMaterial 读 envState）、结构 transform（applyTransformLinks）、水位与
     // 可见性（rebuildWaterContainer 内 syncWaterVisibility）一条路径闭环，不依赖逐键派发。

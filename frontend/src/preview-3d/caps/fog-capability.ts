@@ -7,8 +7,7 @@ import * as THREE from "three";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import {
   registerEnvCallback,
-  resumeEnvCallbacks,
-  suspendEnvCallbacks,
+  withEnvCallbacksSuspended,
 } from "@/preview-3d/state/env-dispatcher.ts";
 // ADR-196：统一状态层
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
@@ -294,8 +293,7 @@ export class FogCapability implements SceneCapability {
     //     6 次 applyFog（其中含 mode 变更的中途 new 对象），末尾统一 applyFog 一次。
     //     resume 放 finally：任一 restoreFields 抛出也不让挂起计数逃逸
     //     （逃逸会让全仓 envState 派发静默假死——envState 有值、Three 不更新、无报错）。
-    suspendEnvCallbacks();
-    try {
+    withEnvCallbacksSuspended(() => {
       restoreFields(state, {
         fogEnabled: { boolean: (v) => setEnvState({ fogEnabled: v }, { source: "auto-model" }) },
         fogMode: oneOf(FOG_MODES, (v) => setEnvState({ fogMode: v }, { source: "auto-model" })),
@@ -304,9 +302,7 @@ export class FogCapability implements SceneCapability {
         fogFar: { number: (v) => setEnvState({ fogFar: v }, { source: "auto-model" }) },
         fogDensity: { number: (v) => setEnvState({ fogDensity: v }, { source: "auto-model" }) },
       });
-    } finally {
-      resumeEnvCallbacks();
-    }
+    });
     this.isStateLoaded = true; // [R-1] 有存档 = 模型默认值让位（对齐 shadow/reflector）
     this.applyFog();
   }

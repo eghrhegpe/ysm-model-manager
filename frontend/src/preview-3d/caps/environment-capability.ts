@@ -19,8 +19,7 @@ import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import {
   registerEnvCallback,
-  resumeEnvCallbacks,
-  suspendEnvCallbacks,
+  withEnvCallbacksSuspended,
 } from "@/preview-3d/state/env-dispatcher.ts";
 // ADR-196：统一状态层
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
@@ -867,12 +866,9 @@ export class EnvironmentCapability implements SceneCapability {
       // 此后 auto-atmosphere 氛围预设写 envPreset/envIntensity 一律被 shouldOverwrite 拒绝
       // （用户选 sunset 氛围，环境贴图却不跟着换）。同时挂起派发，恢复期间只写 envState，
       // 末尾 buildEnvironment 统一落地一次（避免逐键 dispatch × 逐键 rebuild 的重入抖动）。
-      suspendEnvCallbacks();
-      try {
+      withEnvCallbacksSuspended(() => {
         setEnvState(partial, { source: "auto-model" });
-      } finally {
-        resumeEnvCallbacks();
-      }
+      });
     }
 
     // [R-1] 有存档 = 模型默认值让位（对齐 shadow/reflector/fog）——置位须在恢复写之后、

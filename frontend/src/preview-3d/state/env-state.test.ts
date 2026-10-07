@@ -9,6 +9,8 @@ import {
   setStateValue,
   resetEnvState,
   isSsrRenderActive,
+  registerEnvStateMiddleware,
+  clearEnvStateMiddlewares,
 } from "./env-state.ts";
 import {
   registerEnvCallback,
@@ -260,5 +262,40 @@ describe("isSsrRenderActive — SSR 活跃判定单源（锐评 F-1）", () => {
   it("ppEnabled=false → false（R-1 血案语义：pass 已旁路，SSR 没在渲染）", () => {
     setEnvState({ ppEnabled: false, ppReflectionMode: "ssr-only" }, { source: "manual" });
     expect(isSsrRenderActive()).toBe(false);
+  });
+});
+
+// [锐评 2026-10-07] 写入中间件 unregister：此前只有 register/clear 两极——cap dispose 后
+// 重 createAll 会重复注册（同一中间件每次 setEnvState 跑两遍）。退订函数与
+// registerEnvCallback 同形态，这里是行为锁定。
+describe("写入中间件 unregister（锐评 2026-10-07）", () => {
+  beforeEach(() => {
+    clearEnvCallbacks();
+    resetEnvState();
+    clearEnvStateMiddlewares();
+  });
+  afterEach(() => {
+    clearEnvCallbacks();
+    resetEnvState();
+    clearEnvStateMiddlewares();
+  });
+
+  it("unregister 后中间件不再参与后续写入", () => {
+    const seen: Array<Partial<typeof envState>> = [];
+    const off = registerEnvStateMiddleware((patch) => {
+      seen.push(patch);
+      return undefined;
+    });
+    setEnvState({ fogEnabled: true }, { source: "manual" });
+    expect(seen).toHaveLength(1);
+    off();
+    setEnvState({ fogEnabled: false }, { source: "manual" });
+    expect(seen).toHaveLength(1); // 退订后不再调用
+  });
+
+  it("重复 unregister 幂等（已退订中间件再退订不抛）", () => {
+    const off = registerEnvStateMiddleware(() => undefined);
+    off();
+    expect(() => off()).not.toThrow();
   });
 });

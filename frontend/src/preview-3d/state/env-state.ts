@@ -36,9 +36,18 @@ export type EnvStateMiddleware = (
 
 const _writeMiddlewares: EnvStateMiddleware[] = [];
 
-/** 注册写入中间件（顺序执行）。测试间需 `clearEnvStateMiddlewares()` 防泄漏。 */
-export function registerEnvStateMiddleware(mw: EnvStateMiddleware): void {
+/**
+ * 注册写入中间件（顺序执行）；返回退订函数（与 registerEnvCallback 同形态）。
+ * [锐评 2026-10-07] 此前只有 register/clear 两极：cap dispose 后重 createAll 会重复
+ * 注册（同一中间件每次 setEnvState 跑两遍）。unregister = 生产侧定向退订；
+ * clearEnvStateMiddlewares = 全清语义（测试隔离），二者互补。
+ */
+export function registerEnvStateMiddleware(mw: EnvStateMiddleware): () => void {
   _writeMiddlewares.push(mw);
+  return () => {
+    const idx = _writeMiddlewares.indexOf(mw);
+    if (idx >= 0) _writeMiddlewares.splice(idx, 1);
+  };
 }
 
 /** 清空中间件（测试用）。 */

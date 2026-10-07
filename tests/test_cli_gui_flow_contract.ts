@@ -64,6 +64,11 @@ function stripComments(src) {
 const allowlist = readOrDie("frontend/src/backend/cli-allowlist.ts");
 const flowGo = readOrDie("go/cli/flow.go");
 const concurrentGo = readOrDie("go/cli/bench_concurrent.go");
+// 2026-10 拆分：原 bench_concurrent.go 按职责拆为 bench_concurrent.go（并发基准）/
+// bench_single.go（单模型基准与目标集载荷）/ bench_stage_utils.go（stage 汇总与分级）。
+// 契约锚点随之分流：并发部分仍看 concurrentGo，单模型/目标集/stageStatus 看 singleGo/stageUtilsGo。
+const singleGo = readOrDie("go/cli/bench_single.go");
+const stageUtilsGo = readOrDie("go/cli/bench_stage_utils.go");
 const identityGo = readOrDie("go/cli/perf_identity.go");
 // perf-gui-flow.ts 已随 gui-flow 面板下线（a1e26419d，ADR-278：UI 层拆除、Go 命令保留）；
 // 前端消费契约退役，Go 侧载荷字段（GUI_FIELDS 上方）继续钉住 CLI 形状。
@@ -107,7 +112,7 @@ for (const field of GUI_FIELDS) {
 }
 
 // ── 3) single-bench 结构化载荷契约（含身份块）─────────────────────
-// 前 9 个字段在 singleBenchJSON（bench_concurrent.go）；identity 块在 perf_identity.go。
+// 前 9 个字段在 singleBenchJSON（bench_single.go）；identity 块在 perf_identity.go。
 const SB_FIELDS = [
   '"model"',
   '"iterations"',
@@ -121,16 +126,16 @@ const SB_FIELDS = [
 ];
 for (const field of SB_FIELDS) {
   must(
-    hasJSONTag(concurrentGo, field.replaceAll('"', "")),
-    `single-bench 结构化载荷缺少字段 json:${field}（go/cli/bench_concurrent.go）`,
+    hasJSONTag(singleGo, field.replaceAll('"', "")),
+    `single-bench 结构化载荷缺少字段 json:${field}（go/cli/bench_single.go）`,
   );
 }
 // 阶段子结构 benchStageJSON（ADR-262 D2）：运行归属 + 样本统计（n/median_ms/p95_ms 在 benchStageStats）。
 const SB_STAGE_FIELDS = ['"runtime"', '"stats"', '"n"', '"median_ms"', '"p95_ms"'];
 for (const field of SB_STAGE_FIELDS) {
   must(
-    hasJSONTag(concurrentGo, field.replaceAll('"', "")),
-    `single-bench 阶段结构缺少字段 json:${field}（go/cli/bench_concurrent.go）`,
+    hasJSONTag(singleGo, field.replaceAll('"', "")),
+    `single-bench 阶段结构缺少字段 json:${field}（go/cli/bench_single.go）`,
   );
 }
 for (const field of ["runtime", "stats", "median_ms", "p95_ms"]) {
@@ -138,10 +143,10 @@ for (const field of ["runtime", "stats", "median_ms", "p95_ms"]) {
 }
 // 基准判决（ADR-262 D8）：判决入载荷后 GUI 才能说「哪个阶段退化、退了多少」
 // （此前只在 stdout 文言与 error 字符串里 —— 背景缺陷「永远没有好还是坏的判定」）。
-// 顶层 baseline 键在 bench_concurrent.go，判决结构在 bench_baseline.go。
+// 顶层 baseline 键在 bench_single.go，判决结构在 bench_baseline.go。
 must(
-  hasJSONTag(concurrentGo, "baseline"),
-  "single-bench 载荷缺少顶层 json:baseline（go/cli/bench_concurrent.go）",
+  hasJSONTag(singleGo, "baseline"),
+  "single-bench 载荷缺少顶层 json:baseline（go/cli/bench_single.go）",
 );
 const baselineGo = readOrDie("go/cli/bench_baseline.go");
 const BL_FIELDS = [
@@ -353,8 +358,8 @@ for (const [constName, value] of Object.entries(TARGET_ORDER_CONSTS)) {
 }
 for (const field of ["target", "order", "size_source", "max_models"]) {
   must(
-    hasJSONTag(concurrentGo, field),
-    `目标集载荷缺少 spec 字段 json:${field}（go/cli/bench_concurrent.go 的 perfMatrixSpec）`,
+    hasJSONTag(singleGo, field),
+    `目标集载荷缺少 spec 字段 json:${field}（go/cli/bench_single.go 的 perfMatrixSpec）`,
   );
 }
 for (const field of ["target", "order", "size_source"]) {
@@ -364,7 +369,7 @@ for (const field of ["target", "order", "size_source"]) {
   );
 }
 must(
-  hasJSONTag(concurrentGo, "footprint_bytes"),
+  hasJSONTag(singleGo, "footprint_bytes"),
   "载荷缺少 models[].footprint_bytes（目录式模型 size_bytes 恒 0，无它则 order=size 的排名依据不可见）",
 );
 must(
@@ -378,7 +383,7 @@ must(
 // 旧契约残留即回归：两个字段已删、两个 flag 不得再出现在组装点、改义函数必须消失
 for (const dead of ["all_types", "top_largest"]) {
   must(
-    !hasJSONTag(concurrentGo, dead),
+    !hasJSONTag(singleGo, dead),
     `载荷仍带已废弃字段 json:${dead}（旧目标集契约残留即回归，ADR-262 D3 修订）`,
   );
   must(!matrixCode.includes(dead), `前端仍声明已废弃字段 ${dead}（perf-matrix-render.ts）`);
@@ -492,7 +497,7 @@ must(
 // `cli_analyzable ? expected_stages : "—"` 用一个字段解释另一个字段的零值——口径分叉时
 // 「—」会静默变成 0，「未采集」被渲染成「测了，是 0 段」（ADR-278 §2.6 诚实语义）。
 must(
-  /StagesDeclared\s+bool\s+`json:"stages_declared"`/.test(concurrentGo),
+  /StagesDeclared\s+bool\s+`json:"stages_declared"`/.test(singleGo),
   "perfTypeSummary 缺 stages_declared 字段（前端无法区分「未声明」与「0 段」）",
 );
 must(
@@ -517,11 +522,11 @@ must(
 must(
   // 必须查**接线**而非常量/字段名的存在：变异检查证明过，只查 `unsupportedReasonNoCLIParser`
   // 会被常量声明满足（删掉回填仍绿），只查 json tag 会被结构体声明满足。
-  concurrentGo.includes("UnsupportedReason: unsupportedReasonNoCLIParser,"),
+  singleGo.includes("UnsupportedReason: unsupportedReasonNoCLIParser,"),
   "identityOnlyPayload 未回填 unsupported_reason（明细区拿不到逐条原因）",
 );
 must(
-  concurrentGo.includes('json:"unsupported_reason,omitempty"'),
+  singleGo.includes('json:"unsupported_reason,omitempty"'),
   "singleBenchJSON 缺 unsupported_reason token（明细区无法逐条说明未采集原因）",
 );
 must(
@@ -776,22 +781,22 @@ const D_MAX = "5";
 const D_CONC_MAX = "20";
 const D_TH = "50";
 const D_WORKERS = "4";
-// Go 侧默认值原文（全在 bench_concurrent.go：iterations / 两次 registerPerfTargetFlags / threshold / workers）
+// Go 侧默认值原文（iterations/max-models/threshold 在 bench_single.go；workers/concurrent max-models 在 bench_concurrent.go）
 must(
-  new RegExp(`fs\\.Int\\("iterations",\\s*${D_ITER}\\b`).test(concurrentGo),
-  `Go --iterations 默认值应为 ${D_ITER}（bench_concurrent.go）`,
+  new RegExp(`fs\\.Int\\("iterations",\\s*${D_ITER}\\b`).test(singleGo),
+  `Go --iterations 默认值应为 ${D_ITER}（bench_single.go）`,
 );
 must(
-  new RegExp(`registerPerfTargetFlags\\(fs,\\s*perfTargetModel,\\s*${D_MAX}\\b`).test(concurrentGo),
-  `Go single-bench --max-models 默认值应为 ${D_MAX}（bench_concurrent.go）`,
+  new RegExp(`registerPerfTargetFlags\\(fs,\\s*perfTargetModel,\\s*${D_MAX}\\b`).test(singleGo),
+  `Go single-bench --max-models 默认值应为 ${D_MAX}（bench_single.go）`,
 );
 must(
   new RegExp(`registerPerfTargetFlags\\(fs,\\s*perfTargetRepo,\\s*${D_CONC_MAX}\\b`).test(concurrentGo),
   `Go concurrent-bench --max-models 默认值应为 ${D_CONC_MAX}（bench_concurrent.go）`,
 );
 must(
-  new RegExp(`fs\\.Float64\\("threshold",\\s*${D_TH}\\b`).test(concurrentGo),
-  `Go --threshold 默认值应为 ${D_TH}（bench_concurrent.go）`,
+  new RegExp(`fs\\.Float64\\("threshold",\\s*${D_TH}\\b`).test(singleGo),
+  `Go --threshold 默认值应为 ${D_TH}（bench_single.go）`,
 );
 must(
   new RegExp(`fs\\.Int\\("workers",\\s*${D_WORKERS}\\b`).test(concurrentGo),
@@ -856,7 +861,7 @@ for (const v of VERDICT_TOKENS) {
 // stage status：Go stageStatus() 是裸 switch 无常量集（提常量=动骨架，本轮刻意不做）。
 // 轻量锁：从函数体抽 return "x" 字面量 → 每个都须被前端 STAGE_STATUS_META 映射；
 // 外加 failed（stagesToJSON 的失败旁路，不在 stageStatus 但同属载荷 status 域）。
-const stageFn = concurrentGo.match(/func stageStatus\(ms float64\) string \{[\s\S]*?\n\}/);
+const stageFn = stageUtilsGo.match(/func stageStatus\(ms float64\) string \{[\s\S]*?\n\}/);
 must(!!stageFn, "Go stageStatus 函数体没找到（改了签名/位置会假绿）");
 const STATUS_TOKENS = new Set(
   (stageFn ? stageFn[0] : "")

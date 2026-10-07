@@ -108,9 +108,19 @@ export class RendererHost {
   private _lastTime = 0;
   private _nextFrameTime = 0;
   private _adaptiveBudget = createAdaptiveRenderBudget(
-    previewPixelRatio(window.devicePixelRatio),
+    previewPixelRatio(RendererHost.readDevicePixelRatio()),
     performance.now(),
   );
+  /** 设备像素比读取守卫：本类是**模块级单例**（`export const rendererHost = new RendererHost()`），
+   *  字段初始化器直读 `window.devicePixelRatio` 会让任何静态 import（截图链经
+   *  screenshot-lights → shared-infra → 本模块）在 node 环境崩 `window is not defined`——
+   *  截图链因此永远无法被 node 环境单测。node 回退 1（预算仅在 start() 里按真实 DPR 重建，
+   *  浏览器行为不变）；浏览器读真实值。回归守卫：screenshot-lights.node-load.test.ts。 */
+  private static readDevicePixelRatio(): number {
+    return typeof window !== "undefined" && typeof window.devicePixelRatio === "number"
+      ? window.devicePixelRatio
+      : 1;
+  }
   // rAF 每帧复用 Vector3 实例，避免 5 次 GC 分配（R1-P1-1）
   private readonly _camDir = new THREE.Vector3();
   private readonly _forward = new THREE.Vector3();
@@ -229,7 +239,7 @@ export class RendererHost {
     this._lastTime = performance.now();
     this._nextFrameTime = performance.now();
     this._adaptiveBudget = createAdaptiveRenderBudget(
-      previewPixelRatio(window.devicePixelRatio),
+      previewPixelRatio(RendererHost.readDevicePixelRatio()),
       performance.now(),
     );
     this.animate();

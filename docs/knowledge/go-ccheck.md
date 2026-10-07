@@ -55,6 +55,15 @@ invariant_anchors:
 
 - 前端镜像：`scripts/check-complexity.ts`（`cognitiveFromSeq` 语义逐字一致）。
 - 对拍契约：`tests/parity/go-ts-complexity.json`（双端互锁，改一侧必须改契约另一侧）。
+  ⚠️ **契约锁的是规约器（事件序列 → 复杂度），不锁发射器**——它不喂源码给发射器，
+  故「同一语法在两侧产出不同事件」结构上不可见。
+- **实测分叉：`else` 两侧不同口径**（2026-10-07 判别实验）：Go `emitIf` 显式发
+  `flat("else")`（`+1+d`），而 TS 侧那条 `ElseClause` 分支在 TS AST 上**永不命中**
+  （ElseClause 是 Roslyn 概念，非 TS），故 TS **从不给 `else` 计分**。判别法：`if(a){..}`
+  与 `if(a){..}else{..}` 在 TS 侧同为 1 分；同为 3 链 else-if 时 **TS 6 分 / Go 15 分**
+  （深度递增在两侧一致，差的只是每链那个 `flat`）。
+  ⇒ **两侧认知复杂度数字不可横向比较**（前端战役只看 TS 侧、Go 战役只看 Go 侧，各自纵向比）。
+  改口径（给 TS 补 `flat("else")`）等于全量重基线，须先拍板，勿顺手做。
 
 ## 不变量
 

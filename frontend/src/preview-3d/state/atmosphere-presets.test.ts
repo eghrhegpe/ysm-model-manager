@@ -3,6 +3,7 @@
 // ATMOSPHERE_PRESETS 是「氛围 → EnvState 快照」的单一事实源（ADR-196 刀4）。
 // 锁三件事：预设覆盖、语义边界（无关字段不出现，用户偏好不被覆盖）、各氛围的光/雾/曝光倾向。
 import { describe, it, expect } from "vitest";
+import { ENV_PRESET_DEFAULT_INTENSITY } from "./env-preset-types.ts";
 import { ATMOSPHERE_PRESETS } from "./atmosphere-presets.ts";
 
 const PRESET_IDS = Object.keys(ATMOSPHERE_PRESETS) as (keyof typeof ATMOSPHERE_PRESETS)[];
@@ -42,6 +43,18 @@ describe("ATMOSPHERE_PRESETS — 预设集合自洽", () => {
   it("每条预设 skyForceEnv=true（离散动作触发 PMREM 重建）", () => {
     for (const id of PRESET_IDS) {
       expect(ATMOSPHERE_PRESETS[id].skyForceEnv, `${id}.skyForceEnv`).toBe(true);
+    }
+  });
+
+  it("[P0-②] envIntensity 恒等于 ENV_PRESET_DEFAULT_INTENSITY（单一事实源，非手抄）", () => {
+    // [锐评 P0-② 收口 2026-10-07] 本表 envIntensity 与 caps/environment-state.ts 的
+    // ENV_PRESETS[].defaultIntensity 曾各自手抄同一组数值，零派生零对账。现两表同源于
+    // env-preset-types.ts 的强度表——本条钉 state 侧，environment-state.test.ts 同款断言
+    // 钉 caps 侧，两条合起来即「两表恒等、无法再分叉」。
+    for (const id of PRESET_IDS) {
+      expect(ATMOSPHERE_PRESETS[id].envIntensity, `${id}.envIntensity`).toBe(
+        ENV_PRESET_DEFAULT_INTENSITY[id],
+      );
     }
   });
 });

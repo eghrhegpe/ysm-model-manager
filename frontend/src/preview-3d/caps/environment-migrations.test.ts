@@ -1,7 +1,9 @@
 // @vitest-environment node
 // environment 存档迁移纯函数测试（ADR-292 §3.3 迁移语义）
-// 零 THREE / 零 envState —— 纯函数层，node 环境直测（与 ground-migrations.test.ts 同口径）
+// 零 THREE / 零运行时 envState（仅引 schema 值域做单一事实源对账）——纯函数层，node 环境直测
+// （与 ground-migrations.test.ts 同口径）
 import { describe, expect, it } from "vitest";
+import { ENV_STATE_SCHEMA } from "@/preview-3d/state/env-state-schema.ts";
 import {
   type EnvMigrationInput,
   type EnvSource,
@@ -84,23 +86,40 @@ describe("migrateEnvSource — ADR-292 §3.3 三判据", () => {
     });
   });
 
-  describe("返回值域", () => {
-    it("恒为三个合法值之一（穷尽性）", () => {
-      const cases: EnvMigrationInput[] = [
-        {},
-        { preset: "sky" },
-        { preset: "custom" },
-        { skyEnvironment: true },
-        { skyEnvironment: false, envEnabled: false },
-        { preset: "custom", skyEnvironment: true, envEnabled: false },
-        { preset: "custom", skyEnvironment: true, envEnabled: true },
-      ];
-      const valid: EnvSource[] = ["preset", "sky", "custom"];
+  describe("返回值域（单一事实源 = schema envSource.values）", () => {
+    const cases: EnvMigrationInput[] = [
+      {},
+      { preset: "sky" },
+      { preset: "custom" },
+      { skyEnvironment: true },
+      { skyEnvironment: false, envEnabled: false },
+      { preset: "custom", skyEnvironment: true, envEnabled: false },
+      { preset: "custom", skyEnvironment: true, envEnabled: true },
+    ];
+
+    it("恒落在 ENV_STATE_SCHEMA.envSource.values 内（不再手抄字面量）", () => {
+      // [锐评 P0-① 收口 2026-10-07] 原断言用本地手写 ["preset","sky","custom"]——与 schema 双写
+      // 同一组字面量：schema 加第 4 个来源时此处**不转红**（正是双源漂移）。改读 schema 值域。
+      const domain = ENV_STATE_SCHEMA.envSource.values as readonly string[];
       for (const c of cases) {
-        expect(valid, `输入 ${JSON.stringify(c)} 的返回值应在值域内`).toContain(
+        expect(domain, `输入 ${JSON.stringify(c)} 的返回值应在 schema 值域内`).toContain(
           migrateEnvSource(c),
         );
       }
+    });
+
+    it("schema 值域恰为约定三值；EnvSource 仍是字面量联合而非 string（编译期双守卫）", () => {
+      // ① 值域锚：schema 侧漏改（少值/多值）即转红。
+      const domain: EnvSource[] = [...ENV_STATE_SCHEMA.envSource.values];
+      expect([...domain].sort()).toEqual(["custom", "preset", "sky"]);
+      // ② 编译期锚（本文件唯一 vitest 看不见的守卫）：若 env-state-schema.ts 的
+      //    `values: [...] as const` 丢了 `as const`（退化成 string[]），`EnvState["envSource"]`
+      //    会**静默退化**为 string，①②③ 全部断言仍绿（与 string 兼容）——只有编译期能拦。
+      //    下面 @ts-expect-error 在退化后成为「未使用指令」⇒ `npm run typecheck` 报 TS2578 转红
+      //    （vitest 不做类型检查，故该守卫依赖 typecheck 闸；见 reviewer 2026-10-07 T4）。
+      // @ts-expect-error "nope" 不属于 EnvSource 字面量联合
+      const rejected: EnvSource = "nope";
+      expect(rejected).toBe("nope");
     });
   });
 });

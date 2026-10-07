@@ -1,7 +1,8 @@
 // ===== environment 存档迁移纯函数（ADR-292 D5/D7 迁移语义）=====
 // 「环境贴图来源」收口（scene.environment 所有权归 EnvironmentCapability 独占）后，
 // 旧存档里的 sky IBL 开关（sky 槽的 `environment` 布尔）需要归一为新键 `envSource`。
-// 本模块是「存档 → 当前键形」适配器——零 THREE / 零 DOM / 零 envState 依赖，node 可测
+// 本模块是「存档 → 当前键形」适配器——零 THREE / 零 DOM / 零**运行时** envState 依赖
+// （schema 值域仅 `import type` 派生，编译期擦除），node 可测
 // （与 ground-migrations.ts 同口径的可测性契约）。
 //
 // 迁移语义（ADR-292 §3.3，2026-09-21 用户拍板）：
@@ -25,8 +26,19 @@
 //
 // 幂等：输入已含 envSource 键 → 返回**同一引用**（零拷贝快路），绝不 mutate 入参。
 
-/** 环境贴图数据源（ADR-292 D3/D5）。单一事实源——渲染分支与 UI radio 均由此派生。 */
-export type EnvSource = "preset" | "sky" | "custom";
+import type { EnvState } from "@/preview-3d/state/env-state-schema.ts";
+
+/**
+ * 环境贴图数据源（ADR-292 D3/D5）。渲染分支与 UI radio 均由此派生。
+ *
+ * **派生自 schema 值域**（`env-state-schema.ts|envSource.values`）——ADR-283 定 schema 为值域
+ * 唯一事实源。[锐评 P0-① 收口 2026-10-07] 原为手写字面量 union，与 schema 侧各自声明同一组值：
+ * 加第 4 个来源只改一处即静默分叉。改派生后 `EnvState["envSource"]` 与 schema 恒同步，
+ * 加值只动 `env-state-schema.ts` 一处（`environment-migrations.test.ts` 有值域对账测试兜底）。
+ *
+ * ⚠️ 本模块仍是**零运行时依赖**：上方是 `import type`（编译期擦除），node 直测契约不变。
+ */
+export type EnvSource = EnvState["envSource"];
 
 /** 迁移所需的两个存档片段（分属两个 cap 的 localStorage 槽，由调用方读齐后传入） */
 export interface EnvMigrationInput {

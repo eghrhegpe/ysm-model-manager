@@ -257,6 +257,7 @@ auto_fields:
     - ensureOverlayShell
     - ensureReflector
     - ensureViewContainer
+    - ENV_PRESET_DEFAULT_INTENSITY
     - ENV_PRESETS
     - ENV_STATE_SCHEMA
     - EnvBorrowedTextures
@@ -797,6 +798,7 @@ auto_fields:
     - ScreenshotOpts
     - ScreenshotScene
     - ScreenshotVolumetric
+    - SelectableEnvPresetId
     - SEMANTIC_BONE_IDS
     - SEMANTIC_MORPH_IDS
     - SemanticBoneEntry

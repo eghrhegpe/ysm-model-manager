@@ -7,12 +7,16 @@
 
 // [锐评 2026-10-07] EnvPresetId 下沉至 state/env-preset-types.ts（切 state→caps 类型倒置，
 // ADR-168 preview-paths 同法）；此处 import 引入作用域 + re-export 保公共面，既有消费方零改动。
-import type { EnvPresetId } from "@/preview-3d/state/env-preset-types.ts";
+import {
+  ENV_PRESET_DEFAULT_INTENSITY,
+  type EnvPresetId,
+  type SelectableEnvPresetId,
+} from "@/preview-3d/state/env-preset-types.ts";
 
 export type { EnvPresetId };
 
 export interface EnvPreset {
-  id: Exclude<EnvPresetId, "custom">;
+  id: SelectableEnvPresetId;
   label: string;
   /** 顶部天空色（y=+1 方向） */
   zenith: number;
@@ -28,11 +32,12 @@ export interface EnvPreset {
   sunRadius: number;
   /** 云/光斑层数（0~3） */
   hazeLayers: number;
-  /** 默认 envMapIntensity（0~3） */
+  /** 默认 envMapIntensity（0~3）——取自 `state/env-preset-types.ts` 的
+   *  `ENV_PRESET_DEFAULT_INTENSITY` 单一事实源（P0-② 收口，勿再手写字面量） */
   defaultIntensity: number;
 }
 
-export const ENV_PRESETS: Record<Exclude<EnvPresetId, "custom">, EnvPreset> = {
+export const ENV_PRESETS: Record<SelectableEnvPresetId, EnvPreset> = {
   sky: {
     id: "sky",
     label: "天空（跟随 SkyCapability）",
@@ -43,7 +48,7 @@ export const ENV_PRESETS: Record<Exclude<EnvPresetId, "custom">, EnvPreset> = {
     sunPos: { x: 0.25, y: 0.75 },
     sunRadius: 0.05,
     hazeLayers: 1,
-    defaultIntensity: 1.0,
+    defaultIntensity: ENV_PRESET_DEFAULT_INTENSITY.sky,
   },
   studio: {
     id: "studio",
@@ -55,7 +60,7 @@ export const ENV_PRESETS: Record<Exclude<EnvPresetId, "custom">, EnvPreset> = {
     sunPos: { x: 0.3, y: 0.7 },
     sunRadius: 0.1,
     hazeLayers: 3,
-    defaultIntensity: 1.6,
+    defaultIntensity: ENV_PRESET_DEFAULT_INTENSITY.studio,
   },
   sunset: {
     id: "sunset",
@@ -67,7 +72,7 @@ export const ENV_PRESETS: Record<Exclude<EnvPresetId, "custom">, EnvPreset> = {
     sunPos: { x: 0.5, y: 0.2 },
     sunRadius: 0.12,
     hazeLayers: 2,
-    defaultIntensity: 1.4,
+    defaultIntensity: ENV_PRESET_DEFAULT_INTENSITY.sunset,
   },
   night: {
     id: "night",
@@ -79,7 +84,7 @@ export const ENV_PRESETS: Record<Exclude<EnvPresetId, "custom">, EnvPreset> = {
     sunPos: { x: 0.7, y: 0.82 },
     sunRadius: 0.04,
     hazeLayers: 0,
-    defaultIntensity: 0.7,
+    defaultIntensity: ENV_PRESET_DEFAULT_INTENSITY.night,
   },
   forest: {
     id: "forest",
@@ -91,7 +96,7 @@ export const ENV_PRESETS: Record<Exclude<EnvPresetId, "custom">, EnvPreset> = {
     sunPos: { x: 0.2, y: 0.55 },
     sunRadius: 0.06,
     hazeLayers: 2,
-    defaultIntensity: 1.1,
+    defaultIntensity: ENV_PRESET_DEFAULT_INTENSITY.forest,
   },
 };
 

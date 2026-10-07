@@ -3,15 +3,13 @@
 // ENV_PRESETS 是 equirect 程序化环境贴图 + 各 cap 联动的唯一事实源（零 THREE 依赖）。
 // 本测试锁：预设覆盖完整性、归一化域不越界、颜色字段合法、氛围语义单调。
 import { describe, it, expect } from "vitest";
-import { ENV_PRESETS, type EnvPresetId } from "./environment-state.ts";
+import {
+  ENV_PRESET_DEFAULT_INTENSITY,
+  type SelectableEnvPresetId,
+} from "@/preview-3d/state/env-preset-types.ts";
+import { ENV_PRESETS } from "./environment-state.ts";
 
-const PRESET_IDS: Exclude<EnvPresetId, "custom">[] = [
-  "sky",
-  "studio",
-  "sunset",
-  "night",
-  "forest",
-];
+const PRESET_IDS: SelectableEnvPresetId[] = ["sky", "studio", "sunset", "night", "forest"];
 
 const isInt24 = (v: number): boolean =>
   Number.isInteger(v) && v >= 0 && v <= 0xffffff;
@@ -28,6 +26,18 @@ describe("ENV_PRESETS — 预设集合自洽", () => {
     const labels = PRESET_IDS.map((id) => ENV_PRESETS[id].label);
     for (const l of labels) expect(l.length).toBeGreaterThan(0);
     expect(new Set(labels).size).toBe(labels.length);
+  });
+
+  it("[P0-②] defaultIntensity 恒等于 ENV_PRESET_DEFAULT_INTENSITY（单一事实源，非手抄）", () => {
+    // [锐评 P0-② 收口 2026-10-07] 本表 defaultIntensity 与 state/atmosphere-presets.ts 的
+    // envIntensity 曾各自手抄同一组数值（sky1.0/studio1.6/sunset1.4/night0.7/forest1.1），
+    // 零派生、零对账。现两表同源于 env-preset-types.ts 的强度表——本条钉 caps 侧，
+    // atmosphere-presets.test.ts 同款断言钉 state 侧，两条合起来即「两表恒等、无法再分叉」。
+    for (const id of PRESET_IDS) {
+      expect(ENV_PRESETS[id].defaultIntensity, `${id}.defaultIntensity`).toBe(
+        ENV_PRESET_DEFAULT_INTENSITY[id],
+      );
+    }
   });
 });
 

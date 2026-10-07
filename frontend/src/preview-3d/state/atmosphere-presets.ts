@@ -11,11 +11,15 @@
 //      ground 材质（场景内容）——这些保持用户当前值。
 //
 // 守卫：lastWriteSource auto-atmosphere < manual——用户手动调过的字段不被氛围覆盖。
+//
+// [锐评 P0-② 收口 2026-10-07] envIntensity 改由 ENV_PRESET_DEFAULT_INTENSITY 派生，与
+// caps/environment-state.ts 的 ENV_PRESETS[].defaultIntensity **同源**——此前两表各自手抄
+// 同一组数值（sky1.0/studio1.6/sunset1.4/night0.7/forest1.1），零派生零对账。
 
-import type { EnvPresetId } from "./env-preset-types.ts";
+import { ENV_PRESET_DEFAULT_INTENSITY, type SelectableEnvPresetId } from "./env-preset-types.ts";
 import type { EnvState } from "./env-state-schema.ts";
 
-export type AtmospherePresetId = Exclude<EnvPresetId, "custom">;
+export type AtmospherePresetId = SelectableEnvPresetId;
 
 /**
  * 氛围 → 场景状态快照（Partial<EnvState> 完整快照）。
@@ -25,7 +29,7 @@ export type AtmospherePresetId = Exclude<EnvPresetId, "custom">;
 export const ATMOSPHERE_PRESETS: Record<AtmospherePresetId, Partial<EnvState>> = {
   sky: {
     envPreset: "sky",
-    envIntensity: 1.0,
+    envIntensity: ENV_PRESET_DEFAULT_INTENSITY.sky,
     skyTimeOfDay: 9,
     skyCloudCoverage: 0.1,
     skyForceEnv: true,
@@ -39,7 +43,7 @@ export const ATMOSPHERE_PRESETS: Record<AtmospherePresetId, Partial<EnvState>> =
   },
   studio: {
     envPreset: "studio",
-    envIntensity: 1.6,
+    envIntensity: ENV_PRESET_DEFAULT_INTENSITY.studio,
     skyTimeOfDay: 12,
     skyCloudCoverage: 0,
     skyForceEnv: true,
@@ -53,7 +57,7 @@ export const ATMOSPHERE_PRESETS: Record<AtmospherePresetId, Partial<EnvState>> =
   },
   sunset: {
     envPreset: "sunset",
-    envIntensity: 1.4,
+    envIntensity: ENV_PRESET_DEFAULT_INTENSITY.sunset,
     skyTimeOfDay: 18,
     skyCloudCoverage: 0.6,
     skyForceEnv: true,
@@ -75,7 +79,7 @@ export const ATMOSPHERE_PRESETS: Record<AtmospherePresetId, Partial<EnvState>> =
   },
   night: {
     envPreset: "night",
-    envIntensity: 0.7,
+    envIntensity: ENV_PRESET_DEFAULT_INTENSITY.night,
     skyTimeOfDay: 22,
     skyCloudCoverage: 0,
     skyForceEnv: true,
@@ -95,7 +99,7 @@ export const ATMOSPHERE_PRESETS: Record<AtmospherePresetId, Partial<EnvState>> =
   },
   forest: {
     envPreset: "forest",
-    envIntensity: 1.1,
+    envIntensity: ENV_PRESET_DEFAULT_INTENSITY.forest,
     skyTimeOfDay: 10,
     skyCloudCoverage: 0.4,
     skyForceEnv: true,

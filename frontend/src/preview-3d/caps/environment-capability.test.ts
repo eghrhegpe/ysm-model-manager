@@ -213,7 +213,10 @@ describe("EnvironmentCapability — 预设切换", () => {
     cap.applyModelPreset("vrm");
     // vrm → studio
     expect(cap.getPresetId()).toBe("studio");
-    expect(cap.getIntensity()).toBe(ENV_PRESETS.studio.defaultIntensity);
+    // 强度读的是 MODEL_DEFAULTS.vrm.envIntensity —— 本 cap 的真实喂入源（pickModelDefaultFields）。
+    // [锐评 P0-② 收口 2026-10-07] 原断言写 ENV_PRESETS.studio.defaultIntensity 属**跨表巧合**：
+    // vrm 选 studio 且两表值恰同为 1.6，任一侧单独变更都会以「与本测试无关」的理由转红。
+    expect(cap.getIntensity()).toBe(MODEL_DEFAULTS.vrm.envIntensity);
     cap.applyModelPreset("litematic");
     // litematic → forest
     expect(cap.getPresetId()).toBe("forest");

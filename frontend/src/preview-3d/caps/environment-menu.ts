@@ -25,7 +25,7 @@ import type {
   PreviewControlDef,
   PreviewMenuNode,
 } from "@/preview-3d/menu/schema/menu-node-types.ts";
-import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
+import { ENV_STATE_SCHEMA, getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import type { EnvironmentCapability } from "./environment-capability.ts";
 import type { EnvSource } from "./environment-migrations.ts";
 import type { EnvPresetId } from "./environment-state.ts";
@@ -34,6 +34,19 @@ import { ENV_PRESETS } from "./environment-state.ts";
 const ENV_GROUP_PRESET: LocaleKey = "preview.envGroupPreset";
 const ENV_GROUP_BACKGROUND: LocaleKey = "preview.envGroupBackground";
 const ENV_GROUP_CUSTOM_HDR: LocaleKey = "preview.envGroupCustomHdr";
+
+/**
+ * envSource 值 → i18n 键。
+ *
+ * `Record<EnvSource, …>` 是**穷尽守卫**：schema 的 `envSource.values` 加第 4 个来源时，
+ * `EnvSource` 随之扩展，本表漏填即编译期报错——与下方便选项派生**双保险**，
+ * 防「类型放行 / UI 静默缺项 / 运行时 switch 落 default」的静默分叉。
+ */
+const ENV_SOURCE_LABEL_KEY: Record<EnvSource, LocaleKey> = {
+  preset: "preview.envSourcePreset",
+  sky: "preview.envSourceSky",
+  custom: "preview.envSourceCustom",
+};
 
 /**
  * [ADR-292 D3/D7] 环境贴图「来源」选择——scene.environment 唯一槽位的供图者。
@@ -51,11 +64,12 @@ function envSourceNode(cap: EnvironmentCapability): NodeFor<"select"> {
     labelKey: "preview.envSource",
     hintKey: "preview.envSourceHint",
     control: {
-      options: [
-        { value: "preset", labelKey: "preview.envSourcePreset" },
-        { value: "sky", labelKey: "preview.envSourceSky" },
-        { value: "custom", labelKey: "preview.envSourceCustom" },
-      ],
+      // [锐评 P0-① 收口 2026-10-07] 选项**从 schema 值域派生**，不再手抄三值清单——
+      // 原手抄是本文件第三份值域副本（同文件 :90 的预设 options 已是派生范式，双标）。
+      options: (ENV_STATE_SCHEMA.envSource.values as readonly EnvSource[]).map((v) => ({
+        value: v,
+        labelKey: ENV_SOURCE_LABEL_KEY[v],
+      })),
       get: () => cap.getSource(),
       set: (v) => cap.setSource(v as EnvSource),
     },

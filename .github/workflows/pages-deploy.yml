@@ -20,6 +20,9 @@ jobs:
   build:
     name: 构建站点（VitePress · docs/）
     runs-on: ubuntu-latest
+    # 补装 Job 级超时（2026-10-08 锐评）：缺省 ceiling 是 360min，契约测试 / 断链 / 构建任一环节
+    # 卡死（apt 慢镜像、npm 卡 registry）会静默干烧到天花板。
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
         with:
@@ -64,9 +67,12 @@ jobs:
           version: 10
 
       - name: 安装依赖 + VitePress 构建（srcDir = docs/）
+        # npm ci 而非 npm install（2026-10-08 锐评）：docs/ 自带 package-lock.json 且实证同步
+        #（2026-10-08 npm install --dry-run = up to date），裸 install 在 lockfile 与 package.json
+        # 失同步时会静默重解析 ⇒ 站点产物不可复现。
         run: |
           cd docs
-          npm install
+          npm ci
           npm run build
 
       - name: Web 版构建（ADR-049：网页版主 UI，base=/ysm-model-manager/app/）

@@ -3,11 +3,21 @@ name: Release
 on:
   push:
     tags: ['v*']
-  workflow_dispatch:
+# workflow_dispatch 已移除（2026-10-08 锐评 P0）：prepare/release 仅在 tag ref 生效，
+# dispatch（branch ref）下 prepare 被 skip → 全部 build* 连带 skip，实际只跑 test 却整体报「success」，
+# 面板看着绿、发布啥也没做（2026-08-09 两轮 dispatch run 实测 5 个 job 全 skipped）。手动只跑测试
+# 已由 ci.yml 的 dispatch 覆盖，移除此触发不损失能力。
 
 permissions:
   contents: write
   actions: read
+
+# 并发取消（2026-10-08 锐评 P0，与 ci.yml 同款）：发版通道此前无并发控制（裸奔）。
+# 同 ref 重推/重触发只保留最新一轮——旧 run 的产物已被新 run 作废，排队干烧四平台构建分钟纯浪费；
+# 不同 ref（tag）独立分组（release-<ref>），发版流水线仍并行不互相取消。
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   # GO_VERSION 退役：Go 工具链单一事实源 = go.mod（各 build job 用 go-version-file，与 test.yml 门禁同版）。

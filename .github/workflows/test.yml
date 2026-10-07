@@ -47,6 +47,22 @@ jobs:
           # 浅克隆（默认 depth=1）拿不到历史提交会报「无效 ref」——拉全量历史
           fetch-depth: 0
 
+      # WAILS 版本双源守卫（2026-10-08 锐评 P0）：
+      # env.WAILS_VERSION（仓库级 Variables + YAML 兜底）与 go.mod 的 wails/v3 版本是平行双源——
+      # go.mod 升级而 Variables 不同步时，wails3 CLI 与库版本静默错配，发版与 CI 都发现不了。
+      # 纯文件读取、不装依赖，紧跟 checkout 做 fail-fast（先于 setup-go 及一切 wails3 步骤）。
+      - name: WAILS 版本双源守卫（go.mod ↔ WAILS_VERSION）
+        shell: pwsh
+        run: |
+          $m = Select-String -Path 'go.mod' -Pattern 'github\.com/wailsapp/wails/v3\s+(v\S+)' | Select-Object -First 1
+          if (-not $m) { Write-Error 'go.mod 未找到 wails/v3 版本'; exit 1 }
+          $wailsInGoMod = $m.Matches[0].Groups[1].Value
+          if ($wailsInGoMod -ne $env:WAILS_VERSION) {
+            Write-Error "WAILS_VERSION 双源漂移：go.mod=$wailsInGoMod / env=${env:WAILS_VERSION}——请同步仓库级 Variables（WAILS_VERSION）与 go.mod 的 wails/v3 版本"
+            exit 1
+          }
+          Write-Host "WAILS 版本守卫通过：go.mod=$wailsInGoMod == WAILS_VERSION=${env:WAILS_VERSION}"
+
       - uses: actions/setup-go@v6
         with:
           # Go 工具链单一事实源 = go.mod（go 1.26.0 / toolchain go1.26.8），与本地开发、发版构建同版。

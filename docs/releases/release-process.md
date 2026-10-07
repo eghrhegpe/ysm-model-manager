@@ -56,8 +56,8 @@
 ## 1. 前置条件
 
 ### 1.1 依赖与版本
-- Go `1.25`（CI 固定；`wails/v3` 版本从 `go.mod` 动态读取，禁写死 `@latest`）。
-- Node `22`、`npm ci` 基于 `frontend/package-lock.json`。
+- Go 工具链：CI 以 `go-version-file: go.mod` 钉版（单一事实源 = go.mod；已退役的 `vars.GO_VERSION` 勿回炉；禁写死 `@latest`）。
+- Node `22`；前端依赖一律 `pnpm install --frozen-lockfile` 基于 `frontend/pnpm-lock.yaml`。
 - Wails v3 CLI：CI 与本地均需 `go install github.com/wailsapp/wails/v3/cmd/wails3@<go.mod 中版本>`（build-release.ps1 的 `generate:bindings` 依赖）。构建链路为 `build-release.ps1`，不再依赖 Task / NSIS。
 - `gh` CLI：上传 GitHub Release 用（`build-release.ps1` 优先走 gh，退回 GH_TOKEN 环境变量）。
 
@@ -72,7 +72,7 @@
 
 ### 1.3 版本单点
 
-`GO_VERSION` / `NODE_VERSION` / `WAILS_VERSION` 存于**仓库级 Variables**（Settings → Secrets and variables → Actions → Variables），三个 workflow（`ci.yml` / `release.yml` / `test.yml`）一律 `$&#123;&#123; vars.* &#125;&#125;` 引用。升级版本只改一处。
+`NODE_VERSION` / `WAILS_VERSION` 存于**仓库级 Variables**（Settings → Secrets and variables → Actions → Variables），各 workflow 一律 `vars.*` 引用（YAML 侧带硬兜底）。`GO_VERSION` 已退役——Go 工具链单一事实源 = `go.mod`（workflow 一律 `go-version-file: go.mod`）。`WAILS_VERSION` 必须与 `go.mod` 的 `github.com/wailsapp/wails/v3` 版本一致：`test.yml` 的 `contracts` job 有「WAILS 版本双源守卫」step 执法（漂移即红，2026-10-08 锐评补装）。升级版本 = 改 Variables 一处 + 改 go.mod 一处，守卫兜底防漏。
 
 ---
 

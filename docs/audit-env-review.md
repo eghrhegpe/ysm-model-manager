@@ -194,5 +194,43 @@
 | 2026-09-22/23 | shadow → reflector → sky 三度收口 | §21~§23 |
 | 2026-10-04 | 地面重审 | §18~§19（G-6/G-8/G-9 已修，G-7 挂账） |
 | **2026-10-05** | **env 第四度收口 + master 契约校准** | 提交 `88926c810`、`099f1b0b3`；概念骨架审见 §5 |
+| **2026-10-06** | **耦合度审计（3 子代理 + 主代理仲裁）** | W1 已修（`498940966`）；W2 降级（已有迁移单测护栏）；W3/W4/W5 挂账；明细见 `artifacts/audit-env-coupling/` |
 
 **未覆盖/待办**：概念骨架层的 `F-4`（shadow/light 是否属「环境」）属产品决策，见本文件 **§5 的 F-4 行**。
+
+---
+
+## §7 耦合度审计（2026-10-06）
+
+> 三轮子代理锐评（状态层 / 菜单层 / 外部边界）+ 主代理仲裁总评，落盘于
+> `artifacts/audit-env-coupling/`（`00-synthesis.md` 总评；`01/02/03` 分报告）。
+> 本章只登记**与台账既有活项的关系**与**修复进度**，明细见该目录。
+
+**总评**：环境系统耦合度 ~4.8/10（状态层 6 / 菜单层 4.5 / 外部边界 4）。骨架健康，
+伤口集中在两接缝——① 跨会话单例污染（已修，W1）② 跨槽裸键契约（已有迁移单测护栏，见下）。
+
+### 已修
+
+| 项 | 描述 | 落点 |
+|---|---|---|
+| **W1** | `renderMode.dispose` 写 envState `source:"manual"` 污染跨会话 `_writeSource` 仲裁戳，使下会话 `loadState` 的 auto-model 恢复被静默拒（用户开过的线框/混合模式关预览再开不复现）。全仓仅此一处 dispose 写 envState | ✅ 已修（commit `498940966`）：dispose 改 `auto-model + force`；补跨会话回归测试（旧代码下该测试红） |
+
+### 重新定级（原报告 🔴 偏高）
+
+| 项 | 原评 | 复核结论 |
+|---|---|---|
+| **W2** 跨槽裸键（env 读 sky `environment` / water 读 ground 子域） | 🔴 | 🟡 实为 **ADR-292 D7 有意 legacy 迁移契约**：`normalizeEnvLegacyState` + `migrateEnvSource` 已带单测（`environment-migrations.test.ts`）；env 跨槽读 sky 的生产消费点已被 `environment-capability.test.ts:831` 端到端钉死；sky 改键只让老存档优雅退化为 preset（画面回落，非崩）。water 读 ground 为水独立前的 legacy 兼容路径，非新用户契约。**已有护栏，不补冗余断言** |
+
+### 待修（仍在账）
+
+| 项 | 描述 | 优先级 |
+|---|---|---|
+| **W3** 重建成本半收口 | env PMREM 全重建 + 逐帧 needsUpdate（E-1/E-2）；reflector `size`/`resolution` 结构键无 `onCommit`（S11-1/S11-2 挂账）；ground 回调四连（G-7 活挂账） | 🟡 |
+| **W4** 测试守护分裂 | 手写列表 vs 结构推导双轨并存。`env.test.ts` 的 master id 列表已升级为「cap 真值派生 ⇔ 期望集」双向集合锁（仿 postprocessing B 类范式），过期 `ground-water-enabled` 已修正为 `water-enabled` | 🟡 → 部分已收口 |
+| **W5** 预设 id 散 5 源 | `EnvPresetId` 联合 + `ENV_PRESETS` + `ATMOSPHERE_PRESETS` + `PRESET_ORDER` + `ENV_PRESET_LABEL_KEY: Record<string>`（无编译锁） | 🟡 |
+
+### 系统级耦合结论（补 §6）
+
+1. **状态层单源守卫**：`envState` + `setEnvState` 中央写 + schema 钳制 + 组前置过滤是全系统最松处；W1 证明「守卫来源纪律」仍是唯一仍会漏的缝（程序化写入误用 manual 级）。
+2. **Go 侧边界零耦合**：grep `go/`+`internal/app`+`resource_types.json` 环境词汇零真命中 → 纯前端 3D 子系统，未触任何回归红线。
+3. **跨子系统读协议单源化**：`isSsrRenderActive` / `attenuateAmbientForSky ×0.5` / `isSkyEnvironmentOn` 全收敛纯函数，比手抄公式进化。

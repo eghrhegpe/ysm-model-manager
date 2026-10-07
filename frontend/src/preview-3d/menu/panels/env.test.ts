@@ -553,20 +553,35 @@ describe("守护：环境面板 6 cap 必须声明 getMasterNodeId + getEnvPlace
     expect(new Set(atmo.map((C) => orders.get(C.name))).size).toBe(atmo.length);
   });
 
-  it("6 个环境 cap 的 master id 集合完整且无重复（新 cap 加入环境面板须在此登记）", () => {
-    const EXPECTED = [
+  it("6 个环境 cap 的 master id 集合完整且无重复（漏 cap / 过时 id 即红）", () => {
+    // master id 由 cap 真值派生（getMasterNodeId 为静态字面量，脱实例 .call({}) 求值，
+    // 与上方 getEnvPlacement 同法），与手写期望集做**双向集合锁**——任一方向不空即红：
+    //  - cap 改名/新增未在 EXPECTED 登记 → actual 比 expected 多 → missing 红
+    //  - EXPECTED 写过时 id（如 water 独立前的 ground-water-enabled）→ actual 比 expected 少 → extra 红
+    // 把原「手写列表 + 仅计数断言」的假绿灯（计数对、内容错也能过）改为结构推导双向锁。
+    const readMaster = (Cap: (typeof ENV_CAP_CLASSES)[number]) =>
+      (
+        Cap as unknown as {
+          prototype: { getMasterNodeId(this: unknown): string };
+        }
+      ).prototype.getMasterNodeId.call({});
+    // 产品决策：每个 cap 的 master 含义（layout-assert: basic=天/地/水，atmosphere=环境/雾/反射）
+    const EXPECTED_IDS = new Set<string>([
       "sky-enabled",
       "ground-visible",
-      "ground-water-enabled",
+      "water-enabled",
       "env-enabled",
       "fog-enabled",
       "reflector-enabled",
-    ];
-    expect(EXPECTED).toHaveLength(ENV_CAP_CLASSES.length);
-    expect(new Set(EXPECTED).size).toBe(EXPECTED.length); // 无重复
-    // 每个 id 均为字符串、非空——防 master id 空串/缺失
-    for (const id of EXPECTED) {
-      expect(id.trim().length, `master id「${id}」不应为空`).toBeGreaterThan(0);
-    }
+    ]);
+    const actualIds = ENV_CAP_CLASSES.map(readMaster);
+    expect(new Set(actualIds).size, "master id 应跨 cap 唯一（无重复）").toBe(actualIds.length);
+    const actual = new Set(actualIds);
+    const missing = [...EXPECTED_IDS].filter((id) => !actual.has(id));
+    const extra = [...actual].filter((id) => !EXPECTED_IDS.has(id));
+    expect(missing, `cap 真值缺期望 master id（漏登记/改名）: ${JSON.stringify(missing)}`).toEqual([]);
+    expect(extra, `cap 真值多出未登记 master id（EXPECTED 写过时 id）: ${JSON.stringify(extra)}`).toEqual(
+      [],
+    );
   });
 });

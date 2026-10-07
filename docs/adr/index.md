@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **332** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **333** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > ADR 三区存放：根目录 = 存量（分级前）/ `architecture/` = 架构决策 / `decisions/` = 执行决策日志（ADR-320）。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -19,7 +19,7 @@ permalink: /adr/
 | [📝 提议中](#提议中) | 6 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 15 |
-| [✅ 已采纳](#已采纳) | 300 |
+| [✅ 已采纳](#已采纳) | 301 |
 | [❌ 已取代](#已取代) | 8 |
 | [🧊 已废弃](#已废弃) | 3 |
 | [❓ 未归类](#未归类) | 0 |
@@ -57,7 +57,7 @@ permalink: /adr/
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 | [ADR-050](./ADR-050-plaza-browser-window.md) | 模型广场 · 浏览器窗口（Wails 第二窗口） | 🔄 部分采纳 |
 
-### ✅ 已采纳（300）
+### ✅ 已采纳（301）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
@@ -91,6 +91,7 @@ permalink: /adr/
 | [ADR-294](./ADR-294-spacing-five-tier-tokens.md) | 间距五档令牌体系 --sp-*：为 UI-Design.md §5 间距系统补 CSS 变量（承接刀㉝ 架构断层） | ✅ 已采纳 |
 | [ADR-293](./ADR-293-schema-helper.md) | 灯光能力总开关 schema 化、helper 可见性控件化与面板响应 | ✅ 已采纳 |
 | [ADR-293-d1](./decisions/ADR-293-d1-light-first-run-defaults.md) | 灯光首启默认分治：辅助线框关、浏览最小光照、环境光降档 | ✅ 已采纳 |
+| [ADR-292-d1](./decisions/ADR-292-d1-envsource-criterion1-single-source.md) | envSource 迁移判据① 供血线单源化（不再跨槽读 sky 存档键形） | ✅ 已采纳 |
 | [ADR-291](./ADR-291-preview-snapshot-probe-threshold.md) | B 轨快照探针入册门槛（双轨状态镜像的治理边界） | ✅ 已采纳 |
 | [ADR-290](./ADR-290-volumetric-cone-driver.md) | 体积光锥驱动源 schema 化（lightVolumetricDriver） | ✅ 已采纳 |
 | [ADR-289](./ADR-289-runtime-log-structuring.md) | 运行时日志结构化：tag 提取与级别推断 | ✅ 已采纳 |
@@ -716,6 +717,7 @@ permalink: /adr/
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
 | ADR-293-d1 | 灯光首启默认分治：辅助线框关、浏览最小光照、环境光降档 | ✅ 已采纳 | 2026-10-04 |
+| ADR-292-d1 | envSource 迁移判据① 供血线单源化（不再跨槽读 sky 存档键形） | ✅ 已采纳 | 2026-10-07 |
 | ADR-270-d1 | preview-3d 内部分层方向闸 R9（state/infra/decoder/shader-patches 禁运行时引 adapters/caps/menu，基线防回退） | ✅ 已采纳 | 2026-10-04 |
 | ADR-270-d2 | views→preview-3d 入口面白名单闸（R10）：斩 DECODE_SOURCE/keymap 绕行边，存量债入基线 | ✅ 已采纳 | 2026-10-05 |
 | ADR-270-d3 | bus 合法发射者登记表闸（刀 B）：发射端从自由裸 emit 收敛为在册登记 | ✅ 已采纳 | 2026-10-05 |

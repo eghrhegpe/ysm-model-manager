@@ -207,6 +207,12 @@ env cap callback (envSource / envPreset / envResolution / envUseAsBackground 变
 
 **两个数据源的存档位置**（分属两个 localStorage 槽，迁移需读齐）：
 
+> **[2026-10-07 后续]** 「迁移需读齐两个槽」的前提**已被取代**：env 侧判据①的供血线改读
+> `envState.skyEnvironment` 单一事实源（不再跨槽读 sky 槽），sky 存档键形从此与 env 解耦。
+> 等价性地基 = `registry.loadAll` 按注册序串行且 sky 先于 environment（现由 registry 测试
+> 「顺序契约」一条守卫）。决策见 `decisions/` 下 ADR-292 派生的 cross-slot 决策条。
+> 下文键形段落保留为**当时事实记录**。
+
 ```jsonc
 // localStorage["preview3d.sky"]          ← sky cap 读写
 { "environment": true, ... }             // sky IBL 开关（saveState:725 ↔ loadState:754）
@@ -307,7 +313,7 @@ env cap callback (envSource / envPreset / envResolution / envUseAsBackground 变
 | `environment-capability.ts:143-159` callback | env 结构性键集（envPreset/envResolution/envUseAsBackground） |
 | `environment-capability.ts:341` `pmremToSceneEnv` | env 的唯一正常写槽点 |
 | `env-state-schema.ts:92` `skyEnvironment` | 待退役键（默认 `true` —— 开箱即两个写者都活着，竞争在默认路径上） |
-| `sky-capability.ts:725` `saveState` / `:754` `loadState` | `skyEnvironment` 落盘键名为 **`environment`**（sky 槽）⇒ 迁移必要性依据 |
+| `sky-capability.ts:725` `saveState` / `:754` `loadState` | `skyEnvironment` 落盘键名为 **`environment`**（sky 槽）⇒ 迁移必要性依据。**[2026-10-07]** env 侧已不跨槽读该键（改读 `envState.skyEnvironment`，由 sky.loadState 恢复）——键形现仅由 sky 自身 round-trip 守卫（sky 测试「判据①供血线」）保障 |
 | `env-state-schema.ts:308` `envPreset` 默认值 | **`"sky"`**（非 `"studio"`）——§1.2b 发现的依据 |
 | `environment-state.ts:31-33` `ENV_PRESETS.sky` | label「天空（跟随 SkyCapability）」但仅静态三色渐变 ⇒ 未兑现承诺 |
 | `environment-capability.ts:293-308` `buildPresetEquirectTex` | sky 预设走 `drawEnvEquirect` 静态路径（待改真调用） |

@@ -73,12 +73,13 @@ export function migrateEnvSource(input: EnvMigrationInput): EnvSource {
  * 判据：**存档里没有 `envSource` 键** ⇒ 旧存档，按 {@link migrateEnvSource} 补写。
  * 已含该键 ⇒ 直接返回**同一引用**（幂等快路，零拷贝）。
  *
- * 原 `skyEnvironment` 的承载键（sky 槽的 `environment`）不在此消费——它属 sky 槽，
- * 由 sky 侧 loadState 决定是否忽略；本函数只产出 env 侧的新键。
+ * `skyEnvironment` 的承载键（sky 槽的 `environment`）**由 sky 侧独占消费**——sky.loadState
+ * 把它恢复进 `envState.skyEnvironment`，env 侧经该单一事实源取值（2026-10-07 cross-slot 解耦后
+ * env 不再跨槽读 sky 槽）；本函数只产出 env 侧的新键。
  * 传入的 `skyEnvironment` / `envEnabled` 是**读值依据**，不写入结果对象。
  *
  * @param state 任一存档对象（不 mutate）
- * @param input 跨槽读值（sky IBL 开关 + env 总开关）
+ * @param input 迁移读值（sky IBL 开关「经 envState.skyEnvironment」+ env 总开关）
  */
 export function normalizeEnvLegacyState(
   state: Record<string, unknown>,

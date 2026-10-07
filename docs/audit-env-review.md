@@ -219,7 +219,7 @@
 
 | 项 | 原评 | 复核结论 |
 |---|---|---|
-| **W2** 跨槽裸键（env 读 sky `environment` / water 读 ground 子域） | 🔴 | 🟡 实为 **ADR-292 D7 有意 legacy 迁移契约**：`normalizeEnvLegacyState` + `migrateEnvSource` 已带单测（`environment-migrations.test.ts`）；env 跨槽读 sky 的生产消费点已被 `environment-capability.test.ts:831` 端到端钉死；sky 改键只让老存档优雅退化为 preset（画面回落，非崩）。water 读 ground 为水独立前的 legacy 兼容路径，非新用户契约。**已有护栏，不补冗余断言** |
+| **W2** 跨槽裸键（env 读 sky `environment` / water 读 ground 子域） | 🔴 | 🟡 实为 **ADR-292 D7 有意 legacy 迁移契约**：`normalizeEnvLegacyState` + `migrateEnvSource` 已带单测（`environment-migrations.test.ts`）；env 跨槽读 sky 的生产消费点已被 `environment-capability.test.ts:831` 端到端钉死；sky 改键只让老存档优雅退化为 preset（画面回落，非崩）。water 读 ground 为水独立前的 legacy 兼容路径，非新用户契约。**已有护栏，不补冗余断言**<br>**[2026-10-07 更正]** 本行的「env 跨槽读 sky」依据**已失效**——该跨槽读已被解耦（判据①供血线改读 `envState.skyEnvironment` 单一事实源），原引用的行号 `:831` 亦已漂移；现守卫 = env 测试「cross-slot 解耦」两例 + sky 测试「判据①供血线」round-trip + registry「顺序契约」一条。water 读 ground 仍为未动的同族遗留（见下「待修」） |
 
 ### 待修（仍在账）
 

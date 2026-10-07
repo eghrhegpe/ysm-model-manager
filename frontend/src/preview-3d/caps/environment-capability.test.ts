@@ -1711,8 +1711,8 @@ describe("EnvironmentCapability — dispose 顺序收敛（死后槽位不赌 di
   });
 
   /** 假 sky + 生命周期：挂载/离场语义与真实 sky-capability.dispose 的守卫契约对称
-   *  （槽位归自己 → 还原 prev + 释放自身纹理；否则不碰槽位）。 */
-  function makeSkyLifecycle() {
+   *  （槽位归自己 → 还原自身 prev + 释放自身纹理；否则不碰槽位）。 */
+  function makeSkyLifecycle(skyPrev: THREE.Texture | null) {
     const baked = new THREE.Texture();
     const disposeSpy = vi.spyOn(baked, "dispose");
     return {
@@ -1724,9 +1724,9 @@ describe("EnvironmentCapability — dispose 顺序收敛（死后槽位不赌 di
       mountOn(scene: THREE.Scene): void {
         scene.environment = baked;
       },
-      /** sky 离场：守卫契约 = 槽位归自己才还原 + 释放自身纹理 */
+      /** sky 离场：守卫契约 = 槽位归自己才还原自身 prev + 释放自身纹理 */
       disposeSky(scene: THREE.Scene): void {
-        if (scene.environment === baked) scene.environment = null;
+        if (scene.environment === baked) scene.environment = skyPrev;
         baked.dispose();
       },
     };
@@ -1740,10 +1740,20 @@ describe("EnvironmentCapability — dispose 顺序收敛（死后槽位不赌 di
     } as unknown as ConstructorParameters<typeof EnvironmentCapability>[0]);
   }
 
-  it("A 序（env 先离场）：槽位由 env 守卫还原，sky 纹理归 sky 释放，env 不越权 dispose", () => {
+  /** 造「挂载前槽位已有他人贴图」的现场：env 的 prevEnvironment = sentinel（非 null）。
+   *  ⚠️ sentinel 非 null 是**可分辨性的前提**——若 prev 为 null，则「守卫跳过还原」与
+   *  「守卫还原为 prev」终态同形（都是 null），断言恒绿成空转（本用例首版即踩此坑）。 */
+  function makeSceneWithSentinel() {
     const scene = new THREE.Scene();
-    const sky = makeSkyLifecycle();
-    const cap = makeCapWithSky(scene, sky);
+    const sentinel = new THREE.Texture(); // 挂载前槽位内容（前一个会话/外部写入者留下）
+    scene.environment = sentinel;
+    return { scene, sentinel };
+  }
+
+  it("A 序（env 先离场）：env 守卫把槽位还原为**自己的 prev**（非 null），且不越权释放 sky 纹理", () => {
+    const { scene, sentinel } = makeSceneWithSentinel();
+    const sky = makeSkyLifecycle(null); // sky 自己的 prev = null
+    const cap = makeCapWithSky(scene, sky); // 构造期捕获 prevEnvironment = sentinel
     setEnvState({ envSource: "sky", envEnabled: true }, { source: "manual", force: true });
     sky.mountOn(scene); // 生产序：sky 先挂（registry 注册序 sky → environment）
     cap.apply(); // D-3 直装：槽位 = sky 烘焙纹理，env 侧 skySourcedTex 同引用
@@ -1752,30 +1762,36 @@ describe("EnvironmentCapability — dispose 顺序收敛（死后槽位不赌 di
     cap.dispose(); // A 序：env 先离场（registry 反序 dispose）
     expect(
       scene.environment,
-      "直装纹理在 env 还原权集合内 → env 自行把槽位还原为 prev（不悬空指向 sky 纹理）",
-    ).toBeNull();
+      "直装纹理在 env 还原权集合内 → env 自行把槽位还原为 sentinel（既不悬空指向 sky 纹理，也不误清为 null）",
+    ).toBe(sentinel);
     expect(sky.disposeSpy, "sky 纹理生命周期归 sky，env 不得释放").not.toHaveBeenCalled();
 
     sky.disposeSky(scene); // 随后 sky 收拾：槽位已非自己所有 → 不碰槽位，只释放自身
-    expect(scene.environment).toBeNull();
+    expect(scene.environment, "sky 不越权覆盖 env 还原的槽位").toBe(sentinel);
     expect(sky.disposeSpy, "sky 纹理恰释放一次").toHaveBeenCalledTimes(1);
   });
 
-  it("B 序（sky 先离场）：sky 自行还原并释放，env 随后离场不得二次还原/二次释放", () => {
-    const scene = new THREE.Scene();
-    const sky = makeSkyLifecycle();
+  it("B 序（sky 先离场）：env 随后离场须还原为**自己的 prev**，不得留 null 也不得复活已释放的 sky 纹理", () => {
+    const { scene, sentinel } = makeSceneWithSentinel();
+    const sky = makeSkyLifecycle(null);
     const cap = makeCapWithSky(scene, sky);
     setEnvState({ envSource: "sky", envEnabled: true }, { source: "manual", force: true });
     sky.mountOn(scene);
     cap.apply();
     expect(scene.environment).toBe(sky.baked);
 
-    sky.disposeSky(scene); // B 序：sky 先离场（槽位归自己 → 还原 + 释放）
+    sky.disposeSky(scene); // B 序：sky 先离场（槽位归自己 → 还原自身 prev=null + 释放纹理）
     expect(scene.environment).toBeNull();
     expect(sky.disposeSpy).toHaveBeenCalledTimes(1);
 
     cap.dispose();
-    expect(scene.environment, "槽位已被 sky 还原，env 离场不得二次还原成悬空引用").toBeNull();
+    // 可分辨判据：null 槽位按 `envOwnsSceneEnvironment` 恒可还原 → env 应落回**自己的 prev**（sentinel）。
+    // 守卫若被跳过（或误判空槽不可还原）→ 槽位停在 null（红）；
+    // 若 env 误还原成悬空引用（prev 被写成 sky 纹理那条路）→ 槽位 = 已释放的 sky 纹理（红）。
+    expect(
+      scene.environment,
+      "env 离场须还原为自有 prev（sentinel）——既不留在 null，也不复活已释放的 sky 纹理",
+    ).toBe(sentinel);
     expect(sky.disposeSpy, "env 不得二次释放 sky 的纹理").toHaveBeenCalledTimes(1);
   });
 });

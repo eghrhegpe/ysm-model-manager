@@ -1577,6 +1577,10 @@ export const autoSidebar = [
         "link": "/adr/decisions/ADR-293-d1-light-first-run-defaults"
       },
       {
+        "text": "ADR-292-d1：envSource 迁移判据① 供血线单源化（不再跨槽读 sky 存档键形）",
+        "link": "/adr/decisions/ADR-292-d1-envsource-criterion1-single-source"
+      },
+      {
         "text": "ADR-270-d6：R10 收尾：截图多角度编排与菜单候选派生归属纠正（适配器域知识回迁 preview-3d/adapters）",
         "link": "/adr/decisions/ADR-270-d6-r10-screenshot-menu-adapter-domain-knowledge"
       },

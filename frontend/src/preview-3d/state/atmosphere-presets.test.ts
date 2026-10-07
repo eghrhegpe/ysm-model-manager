@@ -16,6 +16,13 @@ const FORBIDDEN_KEYS = [
   "shadowType",
   "groundMatSource",
   "reflectorSize",
+  // [2026-10-07 补] sky 能力级两开关亦禁入：除「不覆盖用户偏好」外，还有一层**来源纪律**——
+  // sky 构造期显式 opts.enabled 走 setEnvState(source:'manual') 打手改足迹，此后
+  // auto-atmosphere 写同键被 shouldOverwrite 拒绝（sky-capability.ts 构造器「⚠️ 来源纪律」）。
+  // 若日后确要让氛围切换天空能力开关，须同步改按来源传参（或让预设走 force/skipMiddleware），
+  // 勿只加预设项——本列表即该前提的机器守卫（原为逐档人工核实）。
+  "skyEnabled",
+  "skyGodRaysEnabled",
 ];
 
 describe("ATMOSPHERE_PRESETS — 预设集合自洽", () => {

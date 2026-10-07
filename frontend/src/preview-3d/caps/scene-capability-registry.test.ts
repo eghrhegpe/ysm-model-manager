@@ -2,6 +2,7 @@
 // 验证注册表在极端场景下的健壮性：重复注册、dispose 后操作、并发创建等
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import * as THREE from "three";
 import { SceneCapabilityRegistry, sceneCapabilityRegistry, isSkyEnvironmentOn } from "./scene-capability-registry.ts";
 import { SkyCapability } from "./sky-capability.ts";
 import { GroundCapability } from "./ground-capability.ts";
@@ -132,6 +133,40 @@ describe("SceneCapabilityRegistry 险恶测试", () => {
     registry.loadAll();
     expect(cap1.loadState).toHaveBeenCalledTimes(1);
     expect(cap2.loadState).toHaveBeenCalledTimes(1);
+  });
+
+  it("[顺序契约] 内置注册序：sky 必须先于 environment（env 跨槽解耦的等价性地基）", () => {
+    // 地基声明：environment-capability.loadState 的 ADR-292 判据① 已改读 envState.skyEnvironment
+    // （不再跨槽读 sky 槽），其**等价性完全建立在**「registry.loadAll 按注册序串行 ∧ sky 先于
+    // environment」——sky.loadState 先把存档 environment 恢复进 envState，env 后读才拿到同值。
+    // 该前提此前零机器保护（仅注册表底部 :183-196 的文字注释）：任何人重排注册序 / 把 env 提前 /
+    // 未来分批注册，都会让解耦静默失效且无测试转红。本用例把它钉成判据。
+    const scene = new THREE.Scene();
+    const renderer = new THREE.WebGLRenderer();
+    // ⚠️ 必须补 shadowMap：test-setup 的全局 Fake WebGLRenderer 无该字段，而 ShadowCapability
+    // 构造期读 `renderer.shadowMap.enabled` → 不补则该 cap 构造抛错被 createAll 的 try/catch
+    // 静默吞掉（同 cap-menu-trees.test.ts 的做法）。
+    (
+      renderer as unknown as {
+        shadowMap: { enabled: boolean; type: number; needsUpdate: boolean };
+      }
+    ).shadowMap = { enabled: false, type: 0, needsUpdate: false };
+    try {
+      const caps = sceneCapabilityRegistry.createAll({
+        scene,
+        renderer,
+        camera: new THREE.PerspectiveCamera(),
+      });
+      const ids = caps.map((c) => c.id);
+      expect(ids, "sky 须实例化成功（否则顺序断言退化为 -1 比较）").toContain("sky");
+      expect(ids, "environment 须实例化成功").toContain("environment");
+      expect(
+        ids.indexOf("sky"),
+        "sky 须先于 environment 注册/实例化（loadAll 顺序串行 = env 判据①读得到 sky 已恢复的值）",
+      ).toBeLessThan(ids.indexOf("environment"));
+    } finally {
+      sceneCapabilityRegistry.dispose(); // 全局单例：用完即清，防跨测试泄漏
+    }
   });
 
   it("dispose 按序调用每个 cap 的 dispose", () => {

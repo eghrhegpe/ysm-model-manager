@@ -56,6 +56,12 @@ describe("buildSceneMesh 环边兜底", () => {
     expect(b?.children).toContain(a);
     expect(warn).toHaveBeenCalledWith(expect.stringContaining("跳过骨骼父链环"));
 
+    // 定义（2026-10-07 拍板）：环边命中时被跳过的骨**降级挂到组件根**（不丢子树）——
+    // 旧行为是孤儿（g 未挂任何父 → 连同其子树整体脱离场景图，与 mesh.ts 原注释
+    // 「保持挂在 modelGroups」的意图不符）。本断言钉住新定义：b 不再悬空。
+    // （ancestorChainIsAcyclic 在孤儿下也恒真——parent=null 立即终止——故它不是判别器。）
+    expect(b?.parent).not.toBeNull();
+
     // 真正的不变量：整棵树无环——有环时这一行就是 RangeError: Maximum call stack size exceeded
     expect(() => rootGroup.updateMatrixWorld(true)).not.toThrow();
     if (a) expect(ancestorChainIsAcyclic(a)).toBe(true);

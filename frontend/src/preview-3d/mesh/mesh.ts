@@ -141,15 +141,15 @@ function attachBoneToParent(
   }
   // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
   const parent = boneGroupMap.get(compKey(mi, parentId))!;
-  // 若 parent 已是 g 的后代（环），跳过此边并告警。
-  // ⚠️ 实测（2026-10-07）：此处 return 时 g **尚未被挂到任何父**（挂 modelGroups 只发生在上面
-  // 那条分支），故环上的骨连同其子树会整体脱离场景图（A(parent=B)/B(parent=A) 时：先 B.add(A)、
-  // 再处理 B 命中环 → B 悬空且 A 在 B 内 → 两者皆不可见）。原注释写「g 保持挂在 modelGroups
-  // 或更早父上」，描述的是**意图而非现状**——特此更正，避免后人据此误判降级行为。
-  // 是否改为「先 modelGroups[mi].add(g) 再告警」（把环骨降级挂到组件根、保住子树可见），
-  // 属「畸形模型降级策略」的产品口径决策，未擅自改（仅影响 ParentID 成对互指的畸形 spec）。
+  // 若 parent 已是 g 的后代（环），跳过此边并把 g **降级挂到组件根**（定义 2026-10-07 拍板）。
+  // 为什么降级挂载而非弃为孤儿：孤儿会让 g 连同其子树整体脱离场景图（A(parent=B)/B(parent=A)
+  // 时：先 B.add(A)、再处理 B 命中环 → B 悬空且 A 在 B 内 → 两者皆不可见），比「错位显示」
+  // 更糟；且此刻 g 必未挂任何父（唯一挂载点是上面分支与本分支），add 到组件根不构成新环，
+  // 降级后 g 的子树（可能已含其他环成员）整体随 g 可见。守卫不变量（无环 + updateMatrixWorld
+  // 不炸栈）由 mesh-cycle-guard.test.ts 钉住。
   if (ancestorChainContains(parent, g)) {
-    console.warn(`[mesh] 跳过骨骼父链环: ${bd.id} ↔ ${bd.parentId}`);
+    console.warn(`[mesh] 跳过骨骼父链环: ${bd.id} ↔ ${bd.parentId}（降级挂到组件根）`);
+    modelGroups[mi].add(g);
     return;
   }
   parent.add(g);

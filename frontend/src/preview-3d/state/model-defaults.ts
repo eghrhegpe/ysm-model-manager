@@ -161,6 +161,8 @@ export const MODEL_DEFAULTS: Record<ModelType, Partial<EnvState>> = {
     fogFar: 1500,
     fogDensity: 0.003,
     // environment (ENV_PRESET_BY_MODEL.mmd-scene = sky)
+    // ⚠️ envIntensity 1.1 ≠ sky 预设默认 1.0：大场景刻意提亮——模型轴独立离散值（ADR-284），
+    //    勿当成与 ENV_PRESET_DEFAULT_INTENSITY 的「双源」而按预设强度纠偏。
     envPreset: "sky",
     envIntensity: 1.1,
     // light：[ADR-282] 已解耦（原 LIGHT_PRESETS.mmd-scene：key 1.2 / fill 0.55 / rim 0.4 + vol 0.35/1.0）

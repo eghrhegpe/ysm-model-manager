@@ -12,9 +12,9 @@
 //
 // 守卫：lastWriteSource auto-atmosphere < manual——用户手动调过的字段不被氛围覆盖。
 //
-// [锐评 P0-② 收口 2026-10-07] envIntensity 改由 ENV_PRESET_DEFAULT_INTENSITY 派生，与
-// caps/environment-state.ts 的 ENV_PRESETS[].defaultIntensity **同源**——此前两表各自手抄
-// 同一组数值（sky1.0/studio1.6/sunset1.4/night0.7/forest1.1），零派生零对账。
+// [锐评 P0-② 收口 2026-10-07] envIntensity 改由 ENV_PRESET_DEFAULT_INTENSITY 派生（单一
+// 事实源）——此前与 caps 侧 ENV_PRESETS[].defaultIntensity 各自手抄同一组数值，零派生零对账。
+// 二轮收口：caps 侧该死字段已删除（生产零消费者），本表为唯一活消费方。
 
 import { ENV_PRESET_DEFAULT_INTENSITY, type SelectableEnvPresetId } from "./env-preset-types.ts";
 import type { EnvState } from "./env-state-schema.ts";

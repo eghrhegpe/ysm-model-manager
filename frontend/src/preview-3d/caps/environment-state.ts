@@ -1,17 +1,13 @@
 // ===== 环境能力状态/序列化层（拆轴自 environment-capability.ts）=====
 // 收口「巨型 cap 混装状态与 Three 装配」的锐评结论：本文件收敛纯数据 + 纯类型轴
-// （EnvPreset / ENV_PRESETS / EnvironmentParams / 默认值；EnvPresetId 已下沉 state/env-preset-types.ts），
-// 零 THREE 依赖、无顶层副作用；
+// （EnvPreset / ENV_PRESETS / EnvironmentParams；EnvPresetId 与每预设默认强度已下沉
+//  state/env-preset-types.ts），零 THREE 依赖、无顶层副作用；
 // environment-capability.ts 保留 envMap 管线 / PMREM / canvas equirect 绘制 / HDR 加载等渲染轴。
 // 注意：sky-capability.ts 亦跨文件消费 ENV_PRESETS（sunPos 口径对齐），下沉后 import 路径更短。
 
 // [锐评 2026-10-07] EnvPresetId 下沉至 state/env-preset-types.ts（切 state→caps 类型倒置，
 // ADR-168 preview-paths 同法）；此处 import 引入作用域 + re-export 保公共面，既有消费方零改动。
-import {
-  ENV_PRESET_DEFAULT_INTENSITY,
-  type EnvPresetId,
-  type SelectableEnvPresetId,
-} from "@/preview-3d/state/env-preset-types.ts";
+import type { EnvPresetId, SelectableEnvPresetId } from "@/preview-3d/state/env-preset-types.ts";
 
 export type { EnvPresetId };
 
@@ -32,9 +28,6 @@ export interface EnvPreset {
   sunRadius: number;
   /** 云/光斑层数（0~3） */
   hazeLayers: number;
-  /** 默认 envMapIntensity（0~3）——取自 `state/env-preset-types.ts` 的
-   *  `ENV_PRESET_DEFAULT_INTENSITY` 单一事实源（P0-② 收口，勿再手写字面量） */
-  defaultIntensity: number;
 }
 
 export const ENV_PRESETS: Record<SelectableEnvPresetId, EnvPreset> = {
@@ -48,7 +41,6 @@ export const ENV_PRESETS: Record<SelectableEnvPresetId, EnvPreset> = {
     sunPos: { x: 0.25, y: 0.75 },
     sunRadius: 0.05,
     hazeLayers: 1,
-    defaultIntensity: ENV_PRESET_DEFAULT_INTENSITY.sky,
   },
   studio: {
     id: "studio",
@@ -60,7 +52,6 @@ export const ENV_PRESETS: Record<SelectableEnvPresetId, EnvPreset> = {
     sunPos: { x: 0.3, y: 0.7 },
     sunRadius: 0.1,
     hazeLayers: 3,
-    defaultIntensity: ENV_PRESET_DEFAULT_INTENSITY.studio,
   },
   sunset: {
     id: "sunset",
@@ -72,7 +63,6 @@ export const ENV_PRESETS: Record<SelectableEnvPresetId, EnvPreset> = {
     sunPos: { x: 0.5, y: 0.2 },
     sunRadius: 0.12,
     hazeLayers: 2,
-    defaultIntensity: ENV_PRESET_DEFAULT_INTENSITY.sunset,
   },
   night: {
     id: "night",
@@ -84,7 +74,6 @@ export const ENV_PRESETS: Record<SelectableEnvPresetId, EnvPreset> = {
     sunPos: { x: 0.7, y: 0.82 },
     sunRadius: 0.04,
     hazeLayers: 0,
-    defaultIntensity: ENV_PRESET_DEFAULT_INTENSITY.night,
   },
   forest: {
     id: "forest",
@@ -96,7 +85,6 @@ export const ENV_PRESETS: Record<SelectableEnvPresetId, EnvPreset> = {
     sunPos: { x: 0.2, y: 0.55 },
     sunRadius: 0.06,
     hazeLayers: 2,
-    defaultIntensity: ENV_PRESET_DEFAULT_INTENSITY.forest,
   },
 };
 

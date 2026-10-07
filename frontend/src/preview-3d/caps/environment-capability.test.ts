@@ -941,11 +941,9 @@ describe("EnvironmentCapability — 预设数据完整性", () => {
       expect(typeof p.sunPos.y).toBe("number");
       expect(typeof p.sunRadius).toBe("number");
       expect(typeof p.hazeLayers).toBe("number");
-      expect(typeof p.defaultIntensity).toBe("number");
       expect(p.sunPos.y).toBeGreaterThanOrEqual(0);
       expect(p.sunPos.y).toBeLessThanOrEqual(1);
       expect(p.sunRadius).toBeGreaterThanOrEqual(0);
-      expect(p.defaultIntensity).toBeGreaterThanOrEqual(0);
     }
   });
 

@@ -29,7 +29,7 @@ const SOURCE = ["pack_format", "description", "supported_formats", "min_format",
 const VIEW = [...SOURCE, "thumbnail"];
 
 const LAYERS = [
-  { id: "go.PackMeta", file: "go/types/registry/resource.go", anchor: "type PackMeta struct", against: "SOURCE", rel: "exact", envelope: true },
+  { id: "go.PackMeta", file: "go/types/registry/resource_lookup.go", anchor: "type PackMeta struct", against: "SOURCE", rel: "exact", envelope: true },
   { id: "go.PackMetaView", file: "go/types/config.go", anchor: "type PackMetaView struct", against: "VIEW", rel: "exact", envelope: false },
   { id: "ts.PackMeta", file: "frontend/src/utils/format/pack-format.ts", anchor: "export interface PackMeta", against: "VIEW", rel: "subset", envelope: false },
 ] as const;

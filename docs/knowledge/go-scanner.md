@@ -39,8 +39,8 @@ perf:
   - io-bound
   - concurrent
 invariant_anchors:
-  - go/scanner/scanner.go|fsutil.IsRecycleDir
-  - go/scanner/scanner.go|IsYsmEntryJSON
+  - go/scanner/scanner_scan.go|fsutil.IsRecycleDir
+  - go/scanner/scanner_scan.go|IsYsmEntryJSON
 quick_groups:
   - 模型扫描与仓库管理
 quick_intents:

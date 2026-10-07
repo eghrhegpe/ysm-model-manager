@@ -42,7 +42,7 @@ perf:
   - io-bound
 invariant_anchors:
   - go/updater/updater.go|fetchExpectedHash
-  - go/updater/updater.go|downloadOnce
+  - go/updater/updater_download.go|downloadOnce
 status: active
 ---
 

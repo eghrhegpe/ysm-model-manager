@@ -49,7 +49,7 @@ perf:
   - io-bound
 invariant_anchors:
   - go/installer/installer.go|ContainsMinecraftMarker
-  - go/installer/installer.go|ERROR_NOT_SAME_DEVICE
+  - go/installer/installer_file.go|ERROR_NOT_SAME_DEVICE
 status: active
 ---
 

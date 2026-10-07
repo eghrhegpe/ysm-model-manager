@@ -36,7 +36,7 @@ perf:
   - memory-heavy
 invariant_anchors:
   - go/repoaudit/repoaudit.go|func Audit
-  - go/repoaudit/repoaudit.go|func Classify
+  - go/repoaudit/repoaudit_health.go|func Classify
   - go/repoaudit/repoaudit.go|extClassifierCache
 pitfalls:
   - "CLI 与 GUI 共用同一 Audit 实现——改一处必须同步考虑两端行为"

@@ -58,7 +58,10 @@ jobs:
       - name: 安装 Node
         uses: actions/setup-node@v5
         with:
-          node-version: ${{ vars.NODE_VERSION }}
+          node-version: ${{ vars.NODE_VERSION || '22' }}
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
 
       - name: 安装依赖 + VitePress 构建（srcDir = docs/）
         run: |
@@ -67,10 +70,14 @@ jobs:
           npm run build
 
       - name: Web 版构建（ADR-049：网页版主 UI，base=/ysm-model-manager/app/）
+        # frontend 是 pnpm 工程（frontend/pnpm-lock.yaml）：此前 npm install 无视 lockfile
+        # 全量重新解析依赖 ⇒ 站点产物与 CI/E2E 可能用不同版本的传递依赖，发布不可复现
+        #（2026-10-08 锐评）。docs/ 是独立 npm 工程（有自己的 package-lock.json），
+        # 上方 VitePress 构建步骤保持 npm 不动。
         run: |
           cd frontend
-          npm install
-          WEB_BASE=/ysm-model-manager/app/ npm run build:web
+          pnpm install --frozen-lockfile
+          WEB_BASE=/ysm-model-manager/app/ pnpm run build:web
 
       - name: 合并网页版产物到站点 /app/ 子目录
         # 先清后拷：VitePress 曾渲染 docs/app/ 占位页到同路径 dist/app，

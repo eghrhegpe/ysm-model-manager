@@ -6,8 +6,16 @@ name: CI
 on:
   push:
     branches: [main]
+    # 只改文档不烧 CI 五件套（docs/** 与 *.md 对 frontend/Go 无可执行验证面；
+    # docs 站点部署自有 pages-deploy.yml、发版走 tag 触发 release.yml，均不受影响）。
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
   pull_request:
     branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
   workflow_dispatch:
 
 permissions:
@@ -15,6 +23,13 @@ permissions:
   # test.yml（可复用 workflow）需要 actions:read 读取/缓存；workflow_call 权限继承调用方，
   # 必须在此显式授予，否则解析失败（startup_failure）。
   actions: read
+
+# 并发取消（2026-10-08 锐评补装；pages-deploy.yml 同款，CI 本体此前裸奔）：
+# 同一 PR 连推只保留最新一轮——旧 run 的结论已被新 push 作废，排队干烧 Windows Job 分钟纯浪费；
+# main 直推取最新全量，被取消的半程 run 无对账价值（门禁语义：最新 run 通过即绿）。
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:

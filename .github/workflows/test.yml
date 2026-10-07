@@ -2,7 +2,7 @@ name: Test Gate
 
 # 可复用测试门禁（方案②）：ci.yml（main/PR）与 release.yml（tag 发版）共享，
 # 避免 main push 与 tag push 各跑一遍完整测试。
-# 版本单点：GO_VERSION / NODE_VERSION / WAILS_VERSION 均读仓库级 Variables。
+# 版本单点：Go 工具链走 go-version-file: go.mod；NODE_VERSION / WAILS_VERSION 读仓库级 Variables（带硬兜底）。
 
 on:
   workflow_call:
@@ -22,8 +22,11 @@ permissions:
   actions: read
 
 env:
-  NODE_VERSION: ${{ vars.NODE_VERSION }}
-  WAILS_VERSION: ${{ vars.WAILS_VERSION }}
+  # 兜底值 = 当前仓库 Variables 实值（2026-10-08 gh variable list 核定）。平时不生效——
+  # 只在 Variables 被误删/清空时接住，否则整条流水线拿空版本号连红五个 Job。
+  # WAILS_VERSION 必须与 go.mod 的 github.com/wailsapp/wails/v3 一致（CLI 与库同源）。
+  NODE_VERSION: ${{ vars.NODE_VERSION || '22' }}
+  WAILS_VERSION: ${{ vars.WAILS_VERSION || 'v3.0.0-beta.26' }}
 
 jobs:
   # ── 契约/治理 Job（2026-10-07 拆分）──────────────────────────────────────
@@ -46,8 +49,8 @@ jobs:
 
       - uses: actions/setup-go@v6
         with:
-          # workflow_call / fork PR may not expose repository variables;
-          # go.mod is the authoritative toolchain requirement.
+          # Go 工具链单一事实源 = go.mod（go 1.26.0 / toolchain go1.26.8），与本地开发、发版构建同版。
+          # 不用 vars.GO_VERSION：它与 go.mod 是平行双源，go.mod 升级时没有任何守卫会跟着同步。
           go-version-file: go.mod
           # ⚡ cache: false（2026-10-07 实测，勿回退为默认 true）：setup-go 默认把
           # 「工具链 + GOMODCACHE + GOCACHE」打成单个 1133MB 包，Windows 上解压 94s
@@ -61,17 +64,24 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: pnpm
-          cache-dependency-path: frontend/pnpm-lock.yaml
+          # 无 cache: pnpm（2026-10-08 锐评修复）：本 Job 全程不跑 pnpm install（上方
+          # 「测试不得依赖前端依赖」的隐性防线），配置缓存只会空恢复/空保存 store 包，
+          # 白交 Windows Defender 的 I/O 税。日后若本 Job 要装前端依赖，再补 cache 配置。
 
       - name: 安装 ripgrep（契约测试依赖 rg 二进制）
-        if: runner.os == 'Windows'
         shell: pwsh
         run: |
           $v = "14.1.0"
           $zip = "$env:RUNNER_TEMP\rg.zip"
           $dir = "$env:RUNNER_TEMP\rg-$v"
-          Invoke-WebRequest -Uri "https://github.com/BurntSushi/ripgrep/releases/download/$v/ripgrep-$v-x86_64-pc-windows-gnu.zip" -OutFile $zip -UseBasicParsing
+          $url = "https://github.com/BurntSushi/ripgrep/releases/download/$v/ripgrep-$v-x86_64-pc-windows-gnu.zip"
+          Invoke-WebRequest -Uri $url -OutFile $zip -UseBasicParsing
+          # 供应链校验：ripgrep 官方 release 不附 windows zip 的 .sha256 sidecar（2026-10-08
+          # gh api 实证），故哈希内联钉死——下面这串是同日从官方源下载实测所得（10,421,979 字节）。
+          # 升级 $v 须同步换哈希；不匹配即失败，防镜像污染/传输截断静默进 CI。
+          $want = "4f2dc22621a7b75031a28d34582ba01af1fe5eeacebfa089a495250d9186917c"
+          $got = (Get-FileHash -Algorithm SHA256 -LiteralPath $zip).Hash.ToLowerInvariant()
+          if ($got -ne $want) { Write-Error "ripgrep zip SHA256 不匹配：want=$want got=$got"; exit 1 }
           Expand-Archive -LiteralPath $zip -DestinationPath $dir -Force
           $rg = Get-ChildItem -Path $dir -Recurse -Filter rg.exe | Select-Object -First 1
           $bin = $rg.Directory.FullName
@@ -106,6 +116,7 @@ jobs:
       # `go install` 每次从源码冷编译 ~1-2 分钟）。单文件 exe 缓存恢复仅数秒，无「791MB
       # 模块小文件被 Defender 扫」问题，与 setup-go cache:false 的 2026-10-07 裁决不冲突。
       # key 内嵌 WAILS_VERSION——升级 wails3 自动 miss 重装，无版本漂移风险。
+      # 病灶史（自步骤名迁入注释，2026-10-08）：本步曾长期因缺 wails3 致 main CI 恒红。
       - name: 缓存 wails3 CLI 二进制
         id: wails3-bin
         uses: actions/cache@v5.1.0
@@ -113,7 +124,7 @@ jobs:
           path: ~/go/bin/wails3.exe
           key: wails3-bin-${{ runner.os }}-${{ env.WAILS_VERSION }}
 
-      - name: 安装 wails3 CLI（缓存未命中时从源码编译；此前缺失致本步必挂 → main CI 长期红）
+      - name: 安装 wails3 CLI（缓存未命中时 go install 源码编译）
         if: steps.wails3-bin.outputs.cache-hit != 'true'
         shell: pwsh
         run: go install github.com/wailsapp/wails/v3/cmd/wails3@${{ env.WAILS_VERSION }}
@@ -160,8 +171,8 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          # 契约测试（test_api_break.ts）用真实历史 ref 对做端到端断言，
-          # 浅克隆（默认 depth=1）拿不到历史提交会报「无效 ref」——拉全量历史
+          # 死代码基线门禁需要 inputs.changed-base（推送前的 SHA）在历史中可解析——
+          # 浅克隆（默认 depth=1）拿不到基线提交 ⇒ 责任集无法归属、恒退严格模式全阻断。
           fetch-depth: 0
 
       - uses: pnpm/action-setup@v4
@@ -227,14 +238,15 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          # 契约测试（test_api_break.ts）用真实历史 ref 对做端到端断言，
-          # 浅克隆（默认 depth=1）拿不到历史提交会报「无效 ref」——拉全量历史
+          # 覆盖率两件套要真实基线：merge-base(origin/main, HEAD)，直推兜底 HEAD~1——
+          # 浅克隆（默认 depth=1）连 HEAD~1 都不可解析 ⇒ 门禁硬阻断（2026-09-15 实证）。
+          # 配套纪律：本 Job 的 git fetch 一律不带 --depth（见「Go 增量覆盖率门禁」上方注脚）。
           fetch-depth: 0
 
       - uses: actions/setup-go@v6
         with:
-          # workflow_call / fork PR may not expose repository variables;
-          # go.mod is the authoritative toolchain requirement.
+          # Go 工具链单一事实源 = go.mod（go 1.26.0 / toolchain go1.26.8），与本地开发、发版构建同版。
+          # 不用 vars.GO_VERSION：它与 go.mod 是平行双源，go.mod 升级时没有任何守卫会跟着同步。
           go-version-file: go.mod
           # ⚡ cache: false（2026-10-07 实测，勿回退为默认 true）：setup-go 默认把
           # 「工具链 + GOMODCACHE + GOCACHE」打成单个 1133MB 包，Windows 上解压 94s
@@ -332,8 +344,10 @@ jobs:
           # 「.coverage/go-cover.out」解析成成员访问（值为 null），profile 落盘为 0 字节，
           # 后续 go tool cover -func= 收到空参数报 too many arguments。
           # 同上用 ./...：原 ./go/... 使 internal/app 的 33 个测试文件完全不计入覆盖率。
+          # -timeout：仓内铁律「Go 测试一律带超时硬阀」，与上方 Go 检查（-race 步骤）同口径——
+          # coverprofile 是最慢的一跑，裸跑挂死时没有它会一直烧到 Job 级 40min 天花板才见红。
           New-Item -ItemType Directory -Force '.coverage' | Out-Null
-          go test ./... -coverprofile='.coverage/go-cover.out' -count=1 -p 1 | Out-String -Width 200
+          go test ./... -coverprofile='.coverage/go-cover.out' -count=1 -p 1 -timeout 10m | Out-String -Width 200
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           go tool cover -func='.coverage/go-cover.out' | Select-String 'total:'
 
@@ -369,8 +383,8 @@ jobs:
 
       - uses: actions/setup-go@v6
         with:
-          # workflow_call / fork PR may not expose repository variables;
-          # go.mod is the authoritative toolchain requirement.
+          # Go 工具链单一事实源 = go.mod（go 1.26.0 / toolchain go1.26.8），与本地开发、发版构建同版。
+          # 不用 vars.GO_VERSION：它与 go.mod 是平行双源，go.mod 升级时没有任何守卫会跟着同步。
           go-version-file: go.mod
           # ⚡ cache: false：与 Windows go job 同口径（setup-go 默认打 1133MB 单包，Linux 冷取模块更快）。
           cache: false
@@ -428,7 +442,10 @@ jobs:
           # fetch-depth: 0 已保证历史可用；首个提交无基线则跳过（不惩罚，同 pre-push 降级口径）。
           base=""
           if [ -n "$GITHUB_BASE_REF" ]; then
-            git fetch origin "$GITHUB_BASE_REF" --depth=1 2>/dev/null
+            # fetch-depth: 0 已克隆全量，origin/<base> 本地就有，无需再 fetch。
+            # ⚠️ 勿恢复 `git fetch ... --depth=1`：浅 fetch 生成 .git/shallow、整仓退化为浅克隆
+            # ⇒ 本步 merge-base 与 HEAD~1 兜底同时失明——即 2026-09-15 main 恒红事故的复刻
+            #（教训全文见 go job「Go 增量覆盖率门禁」步骤上方注脚）。
             base=$(git merge-base "origin/$GITHUB_BASE_REF" HEAD 2>/dev/null)
           fi
           if [ -z "$base" ]; then base=$(git rev-parse HEAD~1 2>/dev/null); fi
@@ -445,6 +462,9 @@ jobs:
   e2e:
     name: E2E（Playwright）
     runs-on: ubuntu-latest
+    # 补装超时告警（2026-10-08 锐评：此前全文件唯二裸奔的 Job）。Playwright 的 7min 总限
+    # 只管测试段，webServer/浏览器下载/apt 卡死不受其管——缺省 ceiling 是 360min 静默干烧。
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
 
@@ -529,6 +549,8 @@ jobs:
   e2e-web:
     name: E2E-Web（真 WebGL）
     runs-on: ubuntu-latest
+    # 同上补告警；SwiftShader 无 GPU 软渲染显著慢于 e2e 的 headless Chromium，预算放宽一档。
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v5
 

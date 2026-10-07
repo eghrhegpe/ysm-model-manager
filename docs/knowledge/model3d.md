@@ -83,6 +83,7 @@ auto_fields:
     - BoneSelectInfo
     - BonesPanelItemOpts
     - BoneTree
+    - boxUvEnd
     - buildBoneHierarchy
     - buildBoneTree
     - buildCameraSchema
@@ -181,6 +182,7 @@ auto_fields:
     - componentsCss
     - componentsStyleSheet
     - computeBoneLocalPos
+    - computeBoneTexRange
     - concurrentMap
     - ConsoleLogger
     - CORE_MENU_ITEMS
@@ -257,6 +259,7 @@ auto_fields:
     - ensureOverlayShell
     - ensureReflector
     - ensureViewContainer
+    - entryPathOf
     - ENV_PRESET_DEFAULT_INTENSITY
     - ENV_PRESETS
     - ENV_STATE_SCHEMA
@@ -286,6 +289,8 @@ auto_fields:
     - evaluateGpuLoad
     - extractIKChainFromTree
     - extractLegChains
+    - FACE_KEYS
+    - faceUvEnd
     - fbm2
     - FBX_TARGET_MAX_DIM
     - FbxAdapterDeps
@@ -311,6 +316,7 @@ auto_fields:
     - filterAnimFiles
     - findAncestorBoneId
     - findNodeById
+    - findZipEntryByRel
     - fitCameraToRoots
     - fitCameraToScene
     - flagsForAlpha
@@ -331,6 +337,7 @@ auto_fields:
     - generatePlainPixels
     - generateSandPixels
     - getActiveInputSession
+    - getBaseDir
     - getBoneDetail
     - getBoneList
     - getBonePath
@@ -345,6 +352,7 @@ auto_fields:
     - getMaxPixelRatio
     - getMeshBoneId
     - getMmdMaterialDetail
+    - getModelName
     - getModelRootCount
     - getParamRange
     - getPerfPreset
@@ -424,6 +432,7 @@ auto_fields:
     - isIdentityQuat
     - isLikelyTga
     - isPathAvailable
+    - isPlainZipMagic
     - isPreviewFolderNode
     - isPreviewOverlayActive
     - isRenderableModel
@@ -508,6 +517,7 @@ auto_fields:
     - markCullMatricesDirty
     - matchSemanticBone
     - matchSemanticMorph
+    - matchTexKey
     - MaterialBridgeLike
     - MaterialControlBridge
     - materialList

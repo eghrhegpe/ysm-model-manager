@@ -10,15 +10,20 @@ import { swallowError } from "@/utils/base/primitives/async.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { sniffTexSize } from "@/utils/base/pure/tex-size.ts";
 import { decodeYsmFile, decodeYsmFileFromMemory, initYSMParser } from "@/wasm/ysm-parser.ts";
-import {
-  type BedrockCube,
-  type BedrockGeometry,
-  parseBedrockGeometryFromJSON,
-} from "./geometry.ts";
+import { type BedrockGeometry, parseBedrockGeometryFromJSON } from "./geometry.ts";
 import { cacheGet, cacheSet } from "./model-cache.ts";
 import { parseYsmJsonDirect } from "./parse-ysm-json.ts";
 import { buildOrderedTexKeys } from "./texture-order.ts";
 import { DECODE_SOURCE, type DecodedYsm, devLog, stripYsgpTextHeader } from "./utils.ts";
+import {
+  computeBoneTexRange,
+  entryPathOf,
+  findZipEntryByRel,
+  getBaseDir,
+  getModelName,
+  isPlainZipMagic,
+  matchTexKey,
+} from "./wasm-geometry.ts";
 import { type DecodedFile, parseYsmMetaFromFiles, type YsmMeta } from "./ysm-meta-parser.ts";
 
 /** 并发去重：同一路径在途解码共享（Android 兜底与纹理并行触发时只解一次）。
@@ -85,11 +90,6 @@ interface ProcessModelCtx {
   firstGeometryRawRef: { current: string | null };
 }
 
-function getBaseDir(modelPath: string): string {
-  const dir = modelPath.replace(/\\/g, "/");
-  return dir.includes("/") ? dir.substring(0, dir.lastIndexOf("/")) : ".";
-}
-
 // ===== 阶段① 同步分派辅助：缺文件 / 直接 JSON / YSM spec JSON =====
 
 function handleEmptyBytes(modelPath: string): null {
@@ -132,16 +132,6 @@ interface CollectedTextures {
   texDimensions: Record<string, TexDim>;
   maxTexW: number;
   maxTexH: number;
-}
-
-/**
- * 声明条目 → 路径字符串：字符串形态原样返回；对象形态取指定键
- * （modelFiles 取 `path` / texFiles 取 `uv`，对齐 parsers/ysm-json.ts normalizePlayerFiles 的三形态）；
- * 取不到 → ""（调用方跳过该条）。
- */
-function entryPathOf(entry: unknown, key: "path" | "uv"): string {
-  if (typeof entry === "string") return entry;
-  return (entry as Record<string, string> | null | undefined)?.[key] || "";
 }
 
 /**
@@ -297,29 +287,6 @@ async function handleYsmJsonSpec(
   return result;
 }
 
-/** ZIP 本地文件头魔数（PK\x03\x04），与 YSGP "YSGP" 区分明文包 */
-function isPlainZipMagic(bytes: Uint8Array): boolean {
-  return (
-    bytes.length >= 4 &&
-    bytes[0] === 0x50 &&
-    bytes[1] === 0x4b &&
-    bytes[2] === 0x03 &&
-    bytes[3] === 0x04
-  );
-}
-
-/** 按相对路径在 zip entries 中查字节（大小写/反斜杠折叠，对齐 web-fs-bedrock findEntryByRel） */
-function findZipEntryByRel(entries: Record<string, Uint8Array>, rel: string): Uint8Array | null {
-  const norm = rel
-    .replace(/\\/g, "/")
-    .replace(/^\.?\//, "")
-    .toLowerCase();
-  for (const key of Object.keys(entries)) {
-    if (key.replace(/\\/g, "/").toLowerCase() === norm) return entries[key];
-  }
-  return null;
-}
-
 /**
  * 明文 ZIP（开源 wine_fox 解压目录被 zip 回 .ysm/.zip）→ 解出 ysm.json 后走 JSON 分派。
  * 复用 tryJsonDispatch 的合并逻辑，只把 ctx.ReadBytes 换成「读 zip entries」：
@@ -464,17 +431,6 @@ async function initAndDecodeWasm(modelPath: string, bytes: Uint8Array): Promise<
 
 // ===== 阶段④ 元数据/纹理/模型/动画 流水线 =====
 
-function matchTexKey(
-  tn: string,
-  textures: Record<string, string>,
-  texLowerMap: Record<string, string>,
-): string | null {
-  if (!tn) return null;
-  if (textures[tn]) return tn;
-  const lower = tn.toLowerCase();
-  return texLowerMap[lower] || null;
-}
-
 function collectTexturesAndAvatars(files: DecodedFile[]): TexAccum {
   const textures: Record<string, string> = {};
   const texNameMap: Record<string, string> = {};
@@ -530,73 +486,6 @@ function collectTexturesAndAvatars(files: DecodedFile[]): TexAccum {
   }
 
   return { textures, texNameMap, texLowerMap, texDimensions, maxTexW, maxTexH, avatars };
-}
-
-const FACE_KEYS = ["east", "west", "up", "down", "south", "north"] as const;
-
-/**
- * faceUV 路径的 UV 占用端：各面取有符号 uv_size 的 min/max 包围盒（负尺寸 = 反向采样，
- * 真实占用区取 max(f.uv, f.uv+fw)），跨面按轴取最大值。无命中/解析失败返回 null → 回退 box 公式。
- */
-function faceUvEnd(c: BedrockCube): { uEnd: number; vEnd: number } | null {
-  if (!c.faceUV) return null;
-  let uEnd = 0;
-  let vEnd = 0;
-  let hit = false;
-  try {
-    const fd = JSON.parse(c.faceUV) as Record<string, { uv?: number[]; uv_size?: number[] }>;
-    for (const fn of FACE_KEYS) {
-      const f = fd[fn];
-      if (!f?.uv) continue;
-      hit = true;
-      const fw = f.uv_size?.[0] ?? 0;
-      const fh = f.uv_size?.[1] ?? 0;
-      uEnd = Math.max(uEnd, Math.max(f.uv[0], f.uv[0] + fw));
-      vEnd = Math.max(vEnd, Math.max(f.uv[1], f.uv[1] + fh));
-    }
-  } catch {
-    return null; // faceUV 非法 → 回退 box（与 parseUV 同口径）
-  }
-  return hit ? { uEnd, vEnd } : null;
-}
-
-/** box 布局公式路径的 UV 占用端（faceUV 缺失/无可识别面时回退，对齐 cube-mesh parseUV） */
-function boxUvEnd(c: BedrockCube): { uEnd: number; vEnd: number } | null {
-  if (!Array.isArray(c.uv) || c.uv.length < 2) return null;
-  const [sx, sy, sz] = c.size;
-  const [u, v] = c.uv;
-  return { uEnd: u + 2 * (Math.abs(sx) + Math.abs(sz)), vEnd: v + Math.abs(sy) + Math.abs(sz) };
-}
-
-/**
- * 估算骨骼集合的 UV 占用包围盒（像素域）。
- * 仅用于诊断 _texWidth/_texHeight 与 texMappingLog 的 uvSize/finalSize；
- * 渲染 UV 归一化仍以 geometry 声明的 texture_width/height 为准。
- *
- * 口径对齐 cube-mesh parseUV：faceUV 非空走 per-face（uv_size 有符号——负尺寸
- * 表示该轴反向采样，真实占用区取 min/max 包围盒，foxcar down 面 544/551 负高；
- * 旧实现 Math.abs(fv+|fh|) 把范围反向高估，且 faceUV cube 的占位 box uv 还会让
- * 2*(sx+sz) 布局公式串扰）；faceUV 缺失/解析失败/无可识别面才回退 box 布局公式。
- */
-function computeBoneTexRange(bones: BedrockGeometry["bones"]): { uvMaxW: number; uvMaxH: number } {
-  let uvMaxW = 2,
-    uvMaxH = 2;
-  const acc = (uEnd: number, vEnd: number): void => {
-    if (uEnd > uvMaxW) uvMaxW = uEnd;
-    if (vEnd > uvMaxH) uvMaxH = vEnd;
-  };
-  for (const b of bones) {
-    for (const c of b.cubes || []) {
-      const faceEnd = faceUvEnd(c);
-      if (faceEnd) {
-        acc(faceEnd.uEnd, faceEnd.vEnd);
-        continue;
-      }
-      const boxEnd = boxUvEnd(c);
-      if (boxEnd) acc(boxEnd.uEnd, boxEnd.vEnd);
-    }
-  }
-  return { uvMaxW, uvMaxH };
 }
 
 function processModelFile(f: DecodedFile, ctx: ProcessModelCtx, forcedTexIdx?: number): void {
@@ -656,17 +545,6 @@ function processModelFile(f: DecodedFile, ctx: ProcessModelCtx, forcedTexIdx?: n
   } catch (e) {
     devLog(`[YSM] ❌ ${f.path}: ${safeErrorMessage(e)}`);
   }
-}
-
-function getModelName(mp: unknown): string {
-  return (
-    (typeof mp === "string"
-      ? mp
-      : (mp as { path?: string; name?: string })?.path || (mp as { name?: string })?.name || ""
-    )
-      .split(/[/\\]/)
-      .pop() || ""
-  );
 }
 
 function matchModelFilesByOrder(

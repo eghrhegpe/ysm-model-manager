@@ -227,6 +227,18 @@ jobs:
           # 关掉后工具链走 runner 自带的 C:\hostedtoolcache（实测 0s 命中）。
           cache: false
 
+      # ⚠️ 本 Job 要用 pnpm install + pnpm exec vite build（go:embed 前置），故必须同时有
+      # pnpm/action-setup 与 setup-node —— 2026-10-07 拆分时这里漏了二者，CI 报
+      # 「The term 'pnpm' is not recognized」直接红。三个 Windows Job 的 setup 段必须一致。
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
       - name: 安装前端依赖
         working-directory: frontend
         shell: pwsh
@@ -347,7 +359,11 @@ jobs:
         uses: actions/cache@v5.1.0
         with:
           path: ~/.cache/ms-playwright
-          key: pw-browsers-${{ runner.os }}-${{ hashFiles('frontend/pnpm-lock.yaml') }}
+          # 钉到 playwright-core 版本而非整个 pnpm-lock：浏览器二进制只随 Playwright 版本变，
+          # 前端其他依赖变动不应让浏览器缓存全 miss。restore-keys 提供前缀回退，版本未变即复用。
+          key: pw-browsers-${{ runner.os }}-${{ hashFiles('frontend/node_modules/playwright-core/package.json') }}
+          restore-keys: |
+            pw-browsers-${{ runner.os }}-
 
       - name: 安装前端依赖
         working-directory: frontend
@@ -413,7 +429,11 @@ jobs:
         uses: actions/cache@v5.1.0
         with:
           path: ~/.cache/ms-playwright
-          key: pw-browsers-${{ runner.os }}-${{ hashFiles('frontend/pnpm-lock.yaml') }}
+          # 钉到 playwright-core 版本而非整个 pnpm-lock：浏览器二进制只随 Playwright 版本变，
+          # 前端其他依赖变动不应让浏览器缓存全 miss。restore-keys 提供前缀回退，版本未变即复用。
+          key: pw-browsers-${{ runner.os }}-${{ hashFiles('frontend/node_modules/playwright-core/package.json') }}
+          restore-keys: |
+            pw-browsers-${{ runner.os }}-
 
       - name: 安装前端依赖
         working-directory: frontend

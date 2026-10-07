@@ -7,7 +7,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import type { SwitchContext } from "./switch-preview.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
-import { switchToSession, syncLightTargetFromContent } from "./switch-preview.ts";
+import { switchToSession, syncLightTargetFromContent, syncNewModelRoots } from "./switch-preview.ts";
 import type { PreviewBuildCtx, PreviewScene, PreviewHandle } from "./mount-preview-core.ts";
 import { collectSceneStats } from "@/preview-3d/infra/scene-stats.ts";
 import { setStatsMenuMerger } from "@/preview-3d/infra/register-built-scene.ts";
@@ -218,6 +218,46 @@ describe("syncLightTargetFromContent 陈旧字段修复", () => {
     syncLightTargetFromContent(scene, baseline, mockLightCap);
     expect(setTargetSpy).toHaveBeenCalledTimes(1);
     expect(setTargetHeightSpy).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("syncNewModelRoots（锐评 2026-10-07 #4 收口：差量同步集中函数）", () => {
+  it("基线差集 = 新模型根节点；shadow/environment 两 cap 各收一次派发", () => {
+    const applyMeshCasts = vi.fn();
+    const syncMeshIntensity = vi.fn();
+    const shadowCap = { applyMeshCasts } as any;
+    const envCap = { syncMeshIntensity } as any;
+    const scene = new THREE.Scene();
+    const oldChild = new THREE.Object3D();
+    const freshChild = new THREE.Mesh();
+    scene.add(oldChild, freshChild);
+    syncNewModelRoots(scene, new Set([oldChild]), { shadowCap, environmentCap: envCap });
+    expect(applyMeshCasts).toHaveBeenCalledWith([freshChild]);
+    expect(syncMeshIntensity).toHaveBeenCalledWith([freshChild]);
+  });
+
+  it("无基线 / 无场景 → 早退不调；差集有效（即使为空）→ 仍派发；双 cap 缺席 → 不调", () => {
+    const applyMeshCasts = vi.fn();
+    const syncMeshIntensity = vi.fn();
+    const shadowCap = { applyMeshCasts } as any;
+    const envCap = { syncMeshIntensity } as any;
+    const scene = new THREE.Scene();
+    const only = new THREE.Object3D();
+    scene.add(only);
+    // 无基线 / 无场景 → 早退，不触碰任何 cap（对齐旧 switch 的 beforeBuild 守卫）
+    syncNewModelRoots(scene, null, { shadowCap, environmentCap: envCap });
+    syncNewModelRoots(undefined, new Set(), { shadowCap, environmentCap: envCap });
+    expect(applyMeshCasts).not.toHaveBeenCalled();
+    expect(syncMeshIntensity).not.toHaveBeenCalled();
+    // 基线有效但差集为空 → 仍派发（传空数组）——对齐旧 mount 的「无条件调」与
+    // mount-preview-core 集成测试「被消费一次」语义
+    syncNewModelRoots(scene, new Set([only]), { shadowCap, environmentCap: envCap });
+    expect(applyMeshCasts).toHaveBeenCalledWith([]);
+    expect(syncMeshIntensity).toHaveBeenCalledWith([]);
+    // 双 cap 缺席 → 无可调
+    syncNewModelRoots(scene, new Set(), {});
+    expect(applyMeshCasts).toHaveBeenCalledTimes(1);
+    expect(syncMeshIntensity).toHaveBeenCalledTimes(1);
   });
 });
 

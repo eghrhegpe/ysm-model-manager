@@ -83,7 +83,11 @@ import {
   sceneInfraHost,
 } from "./shared-infra.ts";
 import type { SwitchContext } from "./switch-preview.ts";
-import { switchToSession, syncLightTargetFromContent } from "./switch-preview.ts";
+import {
+  switchToSession,
+  syncLightTargetFromContent,
+  syncNewModelRoots,
+} from "./switch-preview.ts";
 
 // [ADR-270-d1] 注册 menu 域统计面板合并器进 infra 管线（组合根）：本模块 runBuild §4c 是首个
 //  registerBuiltScene 调用点——模块装载即注册，保证先于任何场景注册就位。生产图中
@@ -982,27 +986,19 @@ function registerContentForDisposal(session: MpSessionState): void {
   if (content && !session.allContent.includes(content)) session.allContent.push(content);
 }
 
-/** build 后新增的内容层根节点（sceneBaseline 差集）；无基线（self 模式）→ 空集合。 */
-function addedSceneRoots(infra: SharedInfra, session: MpSessionState): THREE.Object3D[] {
-  const baseline = session.sceneBaseline;
-  if (!baseline) return [];
-  return infra.scene.children.filter((c) => !baseline.has(c));
-}
-
 /** 同步通用相机状态到适配器已设定的取景，并把首模型 mesh 的阴影/环境强度派发给两个 cap
- *  （每步各自守卫：对应 cap 或 content 缺失即跳过，不互相牵连）。 */
+ *  （集中函数 syncNewModelRoots 单点派发，缺 cap / content 守卫在函数内与调用点）。 */
 function syncSharedCameraState(infra: SharedInfra, session: MpSessionState): void {
   infra.orbitTarget.copy(infra.controls.target);
   session.euler.setFromQuaternion(infra.camera.quaternion);
   // ADR-081 L1：内容层包围盒 -> 聚光灯/体积光锥瞄准对象上方
   syncLightTargetFromContent(infra.scene, session.sceneBaseline, infra.lightCap ?? null);
-  // 首模型 mesh castShadow / receiveShadow（内容层根节点 = 刚注册的 added）
-  if (infra.shadowCap && session.content) {
-    infra.shadowCap.applyMeshCasts(addedSceneRoots(infra, session));
-  }
-  // 首模型 mesh envMapIntensity 同步
-  if (infra.environmentCap && session.content) {
-    infra.environmentCap.syncMeshIntensity(addedSceneRoots(infra, session));
+  // 首模型新根节点差量同步（shadow cast + envMapIntensity；集中函数，锐评 2026-10-07 #4 收口）
+  if (session.content) {
+    syncNewModelRoots(infra.scene, session.sceneBaseline, {
+      shadowCap: infra.shadowCap,
+      environmentCap: infra.environmentCap,
+    });
   }
 }
 

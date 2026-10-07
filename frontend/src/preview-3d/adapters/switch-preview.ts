@@ -402,16 +402,11 @@ function syncSwitchView(
   }
   ctx.setPerFrame(next.update ?? null);
   syncLightTargetFromContent(ctx.scene, ctx.getSceneBaseline(), ctx.lightCap);
-  // 切换模型后 shadow mesh casts 同步（本次 beforeBuild 差量 = 新模型根节点）
-  if (ctx.shadowCap && beforeBuild) {
-    const added = ctx.scene ? ctx.scene.children.filter((c) => !beforeBuild.has(c)) : [];
-    ctx.shadowCap.applyMeshCasts(added);
-  }
-  // 切换模型后 envMapIntensity 同步
-  if (ctx.environmentCap && beforeBuild) {
-    const added = ctx.scene ? ctx.scene.children.filter((c) => !beforeBuild.has(c)) : [];
-    ctx.environmentCap.syncMeshIntensity(added);
-  }
+  // 切换模型后新根节点差量同步（shadow cast + envMapIntensity；集中函数，锐评 2026-10-07 #4 收口）
+  syncNewModelRoots(ctx.scene, beforeBuild, {
+    shadowCap: ctx.shadowCap,
+    environmentCap: ctx.environmentCap,
+  });
   // ADR-093 T3：同台追加后按可见注册模型根节点重算并集取景（多模型同框正确框全场景）
   if (keep && ctx.scene && ctx.camera && ctx.controls) {
     // 多模型同框网格排列（避免重叠，Y 保持原值）
@@ -508,4 +503,29 @@ export function syncLightTargetFromContent(
   const maxDim = Math.max(size.x, size.y, size.z) || 1;
   lightCap.setTarget(center);
   lightCap.setTargetHeight(Math.max(maxDim * 0.8, 6));
+}
+
+/**
+ * 新模型根节点差量同步：把「sceneBaseline 差集（本批新内容根节点）」的阴影投射与
+ * envMapIntensity 一次派发给 shadow / environment 两个 cap（各自缺席即跳过）。
+ *
+ * [锐评 2026-10-07 #4 收口] 原 mount（syncSharedCameraState）与 switch（switchToSession 末尾）
+ * 各自写一遍「差集 → applyMeshCasts + syncMeshIntensity」两份拷贝——未来任一 cap 新增
+ * 「新模型回调」需同时改两处；集中后单点，新增回调只加本函数。
+ */
+export function syncNewModelRoots(
+  scene: THREE.Scene | undefined,
+  sceneBaseline: Set<THREE.Object3D> | null,
+  deps: {
+    shadowCap?: ShadowCapability | null;
+    environmentCap?: EnvironmentCapability | null;
+  },
+): void {
+  // 刻意不因差集为空而早退：原 mount/switch 两处均「无条件调 cap（传可能为空的数组）」，
+  // 保持调用基数一致（测试与调用方按「被消费一次」断言）；无基线（self 模式/首 build 前）
+  // 才跳过——与旧 switch 的 beforeBuild 守卫同语义。
+  if (!scene || !sceneBaseline) return;
+  const added = scene.children.filter((c) => !sceneBaseline.has(c));
+  deps.shadowCap?.applyMeshCasts(added);
+  deps.environmentCap?.syncMeshIntensity(added);
 }

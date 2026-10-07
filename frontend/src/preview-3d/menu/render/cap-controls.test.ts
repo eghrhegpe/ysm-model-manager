@@ -112,20 +112,20 @@ function probe(id: string, extra: Partial<PreviewControlDef> = {}): PreviewContr
 
 describe("renderCapControls — visibleWhen B 轨谓词", () => {
   const snap = (mode: "film" | "pool"): PreviewSnapshot =>
-    ({ "env.waterMode": mode } as unknown as PreviewSnapshot);
+    ({ "cap.waterMode": mode } as unknown as PreviewSnapshot);
 
   it("传 snapshot 时按 visibleWhen 隐藏/显示", () => {
     const list = document.createElement("div");
     renderCapControls(list, [
-      probe("film-only", { visibleWhen: (s) => s["env.waterMode"] === "film" }),
-      probe("pool-only", { visibleWhen: (s) => s["env.waterMode"] === "pool" }),
+      probe("film-only", { visibleWhen: (s) => s["cap.waterMode"] === "film" }),
+      probe("pool-only", { visibleWhen: (s) => s["cap.waterMode"] === "pool" }),
     ], snap("film"));
     expect(list.querySelector('[data-testid="cap-film-only"]')).not.toBeNull();
     expect(list.querySelector('[data-testid="cap-pool-only"]')).toBeNull();
     const list2 = document.createElement("div");
     renderCapControls(list2, [
-      probe("film-only", { visibleWhen: (s) => s["env.waterMode"] === "film" }),
-      probe("pool-only", { visibleWhen: (s) => s["env.waterMode"] === "pool" }),
+      probe("film-only", { visibleWhen: (s) => s["cap.waterMode"] === "film" }),
+      probe("pool-only", { visibleWhen: (s) => s["cap.waterMode"] === "pool" }),
     ], snap("pool"));
     expect(list2.querySelector('[data-testid="cap-film-only"]')).toBeNull();
     expect(list2.querySelector('[data-testid="cap-pool-only"]')).not.toBeNull();
@@ -142,7 +142,7 @@ describe("renderCapControls — visibleWhen B 轨谓词", () => {
     // film 快照下 pool-only 隐藏（与「传 snapshot 时按 visibleWhen 隐藏/显示」同构，锁定 B 轨唯一入口）
     const list = document.createElement("div");
     renderCapControls(list, [
-      probe("pool-only", { visibleWhen: (s) => s["env.waterMode"] === "pool" }),
+      probe("pool-only", { visibleWhen: (s) => s["cap.waterMode"] === "pool" }),
     ], snap("film"));
     expect(list.querySelector('[data-testid="cap-pool-only"]')).toBeNull();
   });

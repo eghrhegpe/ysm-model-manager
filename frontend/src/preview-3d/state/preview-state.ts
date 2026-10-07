@@ -143,7 +143,7 @@ function envToggleCap(id: string): EnvToggleCap | undefined {
   return lazyCap<EnvToggleCap>(id, "isEnvironmentEnabled", "setEnvironmentEnabled");
 }
 
-/** [doc:adr-126-p5-c] 水面能力（读/写 mode）——供 env.waterMode 惰性绑定。
+/** [doc:adr-126-p5-c] 水面能力（读/写 mode）——供 cap.waterMode 惰性绑定。
  *  cap 侧签名保持宽（string），探针层经 probeEnum 归一收束为精确联合。 */
 interface WaterModeCap {
   getWaterMode(): string;
@@ -186,7 +186,7 @@ function wireframeModeCap(): WireframeModeCap | undefined {
   return lazyCap<WireframeModeCap>("renderMode", "getWireframe", "setWireframe");
 }
 
-/** [doc:adr-126-p5-c] 雾模式（读/写 mode）——供 env.fogMode 惰性绑定，
+/** [doc:adr-126-p5-c] 雾模式（读/写 mode）——供 cap.fogMode 惰性绑定，
  *  服务雾控件 near/far × density 按 mode 互斥显隐（visibleWhen B 轨消费）。 */
 interface FogModeCap {
   getMode(): string;
@@ -196,7 +196,7 @@ function fogModeCap(): FogModeCap | undefined {
   return lazyCap<FogModeCap>("fog", "getMode", "setMode");
 }
 
-/** [doc:adr-297] 水面倒影开关（读/写 waterReflectionEnabled）——供 env.waterReflectionEnabled
+/** [doc:adr-297] 水面倒影开关（读/写 waterReflectionEnabled）——供 cap.waterReflectionEnabled
  *  惰性绑定，服务 reflect 组三从控按主开互斥显隐（visibleWhen B 轨消费）。 */
 interface WaterReflectionCap {
   getWaterReflectionEnabled(): boolean;
@@ -271,7 +271,7 @@ const bindings: PathBindingMap = {
     set: (v) => wireframeModeCap()?.setWireframe(v ? true : null),
     available: () => wireframeModeCap() !== undefined,
   },
-  "env.pmrem": {
+  "cap.pmrem": {
     get: () => envToggleCap("sky")?.isEnvironmentEnabled() ?? false,
     set: (v) => envToggleCap("sky")?.setEnvironmentEnabled(Boolean(v)),
     available: () => envToggleCap("sky") !== undefined,
@@ -281,37 +281,37 @@ const bindings: PathBindingMap = {
   // [锐评 F-3 家族收口] 五枚举探针两侧一律经 probeEnum 归一——get/set 永拿精确联合，
   // 谓词 `=== "拼错"` 编译即红；原 ground 三键的 `String(v)` 直漏与 fog 的 bespoke
   // `v === "exp2"` 同归单守卫（非白名单 → schema 默认值同侧保守）。
-  "env.waterMode": {
-    get: () => probeEnum("env.waterMode", waterCap()?.getWaterMode()),
-    set: (v) => waterCap()?.setWaterMode(probeEnum("env.waterMode", v)),
+  "cap.waterMode": {
+    get: () => probeEnum("cap.waterMode", waterCap()?.getWaterMode()),
+    set: (v) => waterCap()?.setWaterMode(probeEnum("cap.waterMode", v)),
     available: () => waterCap() !== undefined,
   },
-  "env.groundSourceKind": {
-    get: () => probeEnum("env.groundSourceKind", groundMatCap()?.getSourceKind()),
-    set: (v) => groundMatCap()?.setSourceKind(probeEnum("env.groundSourceKind", v)),
+  "cap.groundSourceKind": {
+    get: () => probeEnum("cap.groundSourceKind", groundMatCap()?.getSourceKind()),
+    set: (v) => groundMatCap()?.setSourceKind(probeEnum("cap.groundSourceKind", v)),
     available: () => groundMatCap() !== undefined,
   },
-  "env.groundCanvasStyle": {
-    get: () => probeEnum("env.groundCanvasStyle", groundMatCap()?.getCanvasStyle()),
-    set: (v) => groundMatCap()?.setCanvasStyle(probeEnum("env.groundCanvasStyle", v)),
+  "cap.groundCanvasStyle": {
+    get: () => probeEnum("cap.groundCanvasStyle", groundMatCap()?.getCanvasStyle()),
+    set: (v) => groundMatCap()?.setCanvasStyle(probeEnum("cap.groundCanvasStyle", v)),
     available: () => groundMatCap() !== undefined,
   },
   // ADR-249 §2.3 叠加层：独立透明格线层状态上浮（菜单叠加层控件 visibleWhen 消费）
-  "env.groundOverlay": {
-    get: () => probeEnum("env.groundOverlay", groundMatCap()?.getOverlayStyle()),
-    set: (v) => groundMatCap()?.setOverlayStyle(probeEnum("env.groundOverlay", v)),
+  "cap.groundOverlay": {
+    get: () => probeEnum("cap.groundOverlay", groundMatCap()?.getOverlayStyle()),
+    set: (v) => groundMatCap()?.setOverlayStyle(probeEnum("cap.groundOverlay", v)),
     available: () => groundMatCap() !== undefined,
   },
   // 雾模式上浮——fog 控件 near/far（linear 专属）与 density（exp2 专属）按 mode 互斥显隐，
   // 谓词只吃快照不摸 cap 实例。
-  "env.fogMode": {
-    get: () => probeEnum("env.fogMode", fogModeCap()?.getMode()),
-    set: (v) => fogModeCap()?.setMode(probeEnum("env.fogMode", v)),
+  "cap.fogMode": {
+    get: () => probeEnum("cap.fogMode", fogModeCap()?.getMode()),
+    set: (v) => fogModeCap()?.setMode(probeEnum("cap.fogMode", v)),
     available: () => fogModeCap() !== undefined,
   },
   // [doc:adr-297] 探针：水面倒影开关上浮——reflect 组三从控（强度/分辨率/SSR 抑制）
   // 按主开显隐。归一守卫 `v === true`：非 boolean 真值一律落 false（与默认关同侧保守）。
-  "env.waterReflectionEnabled": {
+  "cap.waterReflectionEnabled": {
     get: () => waterReflectionCap()?.getWaterReflectionEnabled() ?? false,
     set: (v) => waterReflectionCap()?.setWaterReflectionEnabled(v === true),
     available: () => waterReflectionCap() !== undefined,
@@ -327,7 +327,7 @@ const bindings: PathBindingMap = {
   },
   // [doc:adr-126-p4-d] 环境能力可用性：sky/ground cap 任一挂载（requiresEnvironment 语义）。
   // 惰性经 ADR-168 lookup 注入点——与 ctx.getCap 同源，caps 后创建由 shared-infra refreshDock 补回
-  "env.skyGroundCap": {
+  "cap.skyGroundCap": {
     get: () => !!(capById("sky") || capById("ground")),
     set: () => {},
     available: () => !!(capById("sky") || capById("ground")),
@@ -406,7 +406,7 @@ export function isPathAvailable(path: (typeof KNOWN_PATHS)[number]): boolean {
 /**
  * 全量快照：供 `visibleWhen: (s) => boolean` 等纯函数谓词消费。
  * 返回 PreviewSnapshot（每键值类型经 PathValue 精确映射）——谓词写
- * `s["env.waterMode"] === "film"` 走 string 比较，类型守卫天然正确。
+ * `s["cap.waterMode"] === "film"` 走 string 比较，类型守卫天然正确。
  */
 export function previewSnapshot(): PreviewSnapshot {
   // 逐键写入经宽松中间形态（循环变量 p 为联合类型，无法逐键精确赋值），

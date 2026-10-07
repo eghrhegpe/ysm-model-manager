@@ -16,7 +16,7 @@ import { setSceneCapabilityLookup } from "@/preview-3d/state/preview-state.ts";
 export function makeMenuCtx(overrides: Partial<PreviewMenuCtx> = {}): PreviewMenuCtx {
   const getCap = overrides.getCap ?? (() => null);
   // [doc:adr-126-p4-d] getCap 同步进状态层 lookup（ADR-168 注入点）：dock 级 visibleWhen
-  // 谓词（env.skyGroundCap）与 ctx.getCap 同源——测试注入 fake cap 一次，两端都读到
+  // 谓词（cap.skyGroundCap）与 ctx.getCap 同源——测试注入 fake cap 一次，两端都读到
   setSceneCapabilityLookup({
     getById: (id: string) => (getCap(id) as SceneCapability | null) ?? undefined,
   });

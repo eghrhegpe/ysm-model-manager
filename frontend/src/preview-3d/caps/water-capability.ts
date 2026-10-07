@@ -145,7 +145,7 @@ export class WaterCapability implements SceneCapability {
           this.syncWaterVisibility();
         }
         // [ADR-297] 倒影主开关参与 reflect 组三从控显隐（visibleWhen 吃
-        // env.waterReflectionEnabled 快照）——须 notify 触发 dock 重渲染，fog setMode 先例同法。
+        // cap.waterReflectionEnabled 快照）——须 notify 触发 dock 重渲染，fog setMode 先例同法。
         if (changed.has("waterReflectionEnabled")) this.notify();
       },
       "water",

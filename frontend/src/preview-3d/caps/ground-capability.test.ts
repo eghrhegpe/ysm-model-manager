@@ -605,7 +605,7 @@ describe("GroundCapability — 菜单控件联动", () => {
     const folder = cap.getMenuNodes().find((n) => n.id === "cap-group-ground-material")!;
     const pick = folder.children!.find((c) => c.id === "ground-mat-texture")!;
     const clear = folder.children!.find((c) => c.id === "ground-mat-clear")!;
-    const snap = (src: string) => ({ "env.groundSourceKind": src } as Partial<PreviewSnapshot>);
+    const snap = (src: string) => ({ "cap.groundSourceKind": src } as Partial<PreviewSnapshot>);
     expect(pick.kind).toBe("button");
     expect(pick.control!.variant).toBe("primary");
     expect(clear.control!.variant).toBe("ghost");
@@ -734,8 +734,8 @@ describe("GroundCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）",
     const clear = findNodeById(folder.children!, "ground-mat-clear");
     expect(pick.kind).toBe("button");
     expect(clear.kind).toBe("button");
-    expect(pick.visibleWhen?.({ "env.groundSourceKind": "texture" })).toBe(true);
-    expect(pick.visibleWhen?.({ "env.groundSourceKind": "none" })).toBe(false);
+    expect(pick.visibleWhen?.({ "cap.groundSourceKind": "texture" })).toBe(true);
+    expect(pick.visibleWhen?.({ "cap.groundSourceKind": "none" })).toBe(false);
   });
 
   it("原生 color/slider 节点读写闭包直连 cap", () => {
@@ -757,8 +757,8 @@ describe("GroundCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）",
     const folder = findNodeById(cap.getMenuNodes(), "cap-group-ground-material");
     const color = findNodeById(folder.children!, "ground-mat-color");
     // ADR-252：由两轴派生模式，canvas/marble 下可见
-    expect(color.visibleWhen?.({ "env.groundSourceKind": "canvas", "env.groundCanvasStyle": "marble" })).toBe(true);
-    expect(color.visibleWhen?.({ "env.groundSourceKind": "none" })).toBe(false);
+    expect(color.visibleWhen?.({ "cap.groundSourceKind": "canvas", "cap.groundCanvasStyle": "marble" })).toBe(true);
+    expect(color.visibleWhen?.({ "cap.groundSourceKind": "none" })).toBe(false);
   });
 });
 
@@ -902,8 +902,8 @@ describe("GroundCapability — 叠加层（ADR-249 §2.3 独立格线层）", ()
     const cap = new GroundCapability({ scene });
     const folder = cap.getMenuNodes().find((n) => n.id === "cap-group-ground-overlay")!;
     const color = folder.children!.find((c) => c.id === "ground-overlay-color")!;
-    expect(color.visibleWhen?.({ "env.groundOverlay": "none" })).toBe(false);
-    expect(color.visibleWhen?.({ "env.groundOverlay": "grid" })).toBe(true);
+    expect(color.visibleWhen?.({ "cap.groundOverlay": "none" })).toBe(false);
+    expect(color.visibleWhen?.({ "cap.groundOverlay": "grid" })).toBe(true);
   });
 
   it("叠加层 select 读写闭包直连 cap", () => {

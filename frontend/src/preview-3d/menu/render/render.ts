@@ -181,7 +181,7 @@ function rmAppendFolder(container: HTMLElement, node: PreviewMenuNode, deps: Ren
   if (children.length === 0 && !isCustomBody) return;
   // 渲染 header 前预筛 visibleWhen（与 renderMenu 顶层
   // 循环同口径）——全隐组不再渲染空 folder 头。回归场景：water 水池组四控件全门控
-  // `env.waterMode === "pool"`，film 模式下旧 renderCapControls 全隐组不建节头，
+  // `cap.waterMode === "pool"`，film 模式下旧 renderCapControls 全隐组不建节头，
   // 桥接后 folder 无条件建 → 空「水池」folder 行误导用户。
   const snapshot = previewSnapshot();
   // [B 收敛] custom body（panel+renderCustom 折叠卡）无 children 可预筛——跳过

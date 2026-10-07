@@ -151,7 +151,7 @@ describe("WaterCapability", () => {
     const pool = findNodeById(nodes, "cap-group-water-pool");
     const wetness = findNodeById(look.children!, "water-wetness");
     const poolHeight = findNodeById(pool.children!, "water-pool-height");
-    const snap = (mode: string) => ({ "env.waterMode": mode } as Partial<PreviewSnapshot>);
+    const snap = (mode: string) => ({ "cap.waterMode": mode } as Partial<PreviewSnapshot>);
     const opacity = findNodeById(look.children!, "water-opacity");
     expect(wetness.visibleWhen?.(snap("film"))).toBe(true);
     expect(poolHeight.visibleWhen?.(snap("film"))).toBe(false);
@@ -1278,12 +1278,12 @@ describe("WaterCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", 
     const nodes = cap.getMenuNodes();
     const look = findNodeById(nodes, "cap-group-water-look");
     const wetness = findNodeById(look.children!, "water-wetness");
-    expect(wetness.visibleWhen?.({ "env.waterMode": "film" })).toBe(true);
-    expect(wetness.visibleWhen?.({ "env.waterMode": "pool" })).toBe(false);
+    expect(wetness.visibleWhen?.({ "cap.waterMode": "film" })).toBe(true);
+    expect(wetness.visibleWhen?.({ "cap.waterMode": "pool" })).toBe(false);
     const pool = findNodeById(nodes, "cap-group-water-pool");
     const height = findNodeById(pool.children!, "water-pool-height");
-    expect(height.visibleWhen?.({ "env.waterMode": "pool" })).toBe(true);
-    expect(height.visibleWhen?.({ "env.waterMode": "film" })).toBe(false);
+    expect(height.visibleWhen?.({ "cap.waterMode": "pool" })).toBe(true);
+    expect(height.visibleWhen?.({ "cap.waterMode": "film" })).toBe(false);
   });
 
   it("clarity 滑块仅 pool 模式可见（film 下 inert，ADR-257 审核 Item 7 消歧义）", () => {
@@ -1292,8 +1292,8 @@ describe("WaterCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", 
     const look = findNodeById(nodes, "cap-group-water-look");
     const clarity = findNodeById(look.children!, "water-clarity");
     expect(clarity.visibleWhen).toBeDefined();
-    expect(clarity.visibleWhen?.({ "env.waterMode": "pool" })).toBe(true);
-    expect(clarity.visibleWhen?.({ "env.waterMode": "film" })).toBe(false);
+    expect(clarity.visibleWhen?.({ "cap.waterMode": "pool" })).toBe(true);
+    expect(clarity.visibleWhen?.({ "cap.waterMode": "film" })).toBe(false);
   });
 
   it("color/slider 节点读写闭包直连 cap", () => {
@@ -2200,7 +2200,7 @@ describe("WaterCapability — 水面模型倒影（ADR-297）", () => {
     );
     const main = findNodeById(reflect.children!, "water-reflection");
     expect(main.visibleWhen, "主开无谓词（组头常驻）").toBeUndefined();
-    const snap = (on: boolean) => ({ "env.waterReflectionEnabled": on }) as Partial<PreviewSnapshot>;
+    const snap = (on: boolean) => ({ "cap.waterReflectionEnabled": on }) as Partial<PreviewSnapshot>;
     for (const sub of reflect.children!.slice(1)) {
       expect(sub.id).not.toBe(main.id);
       expect(sub.visibleWhen?.(snap(true)), `${sub.id} 主开亮时出场`).toBe(true);

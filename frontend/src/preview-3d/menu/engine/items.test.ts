@@ -124,7 +124,7 @@ function fakeVrmOpts(): VrmMenuItemsOpts {
   };
 }
 
-/** 环境能力假 cap（environment 面板 env.skyGroundCap 谓词放行 + 渲染用）
+/** 环境能力假 cap（environment 面板 cap.skyGroundCap 谓词放行 + 渲染用）
  *  [ADR-195 刀3] 接口已删 getMenuControls——fake 走 getMenuNodes 节点形态。
  *  内部 core 对象先定义（闭包引用 core 保有方法类型），末尾 cast 为 SceneCapability。 */
 const fakeCapCore = {
@@ -392,7 +392,7 @@ describe("真实菜单表结构（遍历 ysm/mmd/vrm 真实注入项）", () => 
     const envId = CORE_MENU_ITEMS.find((d) => d.id === "environment")!.id;
     expect(overlay.querySelector(`[data-testid="preview-${camId}"]`)).not.toBeNull();
     expect(overlay.querySelector(`[data-testid="preview-${envId}"]`)).toBeNull();
-    // 环境组独立 root 按钮存在（有 fakeCap → env.skyGroundCap 谓词放行）
+    // 环境组独立 root 按钮存在（有 fakeCap → cap.skyGroundCap 谓词放行）
     const envGroupId = PREVIEW_MENU_GROUPS.find((g) => g.id === "env")!.id;
     const envBtn = overlay.querySelector<HTMLElement>(`[data-testid="dock-${envGroupId}"]`);
     expect(envBtn).not.toBeNull();
@@ -410,7 +410,7 @@ describe("真实菜单表结构（遍历 ysm/mmd/vrm 真实注入项）", () => 
     expect(noSib.overlay.querySelector(`[data-testid="dock-${modelGroupId}"]`)).not.toBeNull();
     noSib.handle.dispose();
     // selfMode 不再过滤 lighting/shadow/postproc（已去 sharedOnly）→ 🎛️ 场景组显；
-    // 无 cap → environment(env.skyGroundCap 谓词 false) 过滤 → 🌍 环境组空
+    // 无 cap → environment(cap.skyGroundCap 谓词 false) 过滤 → 🌍 环境组空
     const noScene = mountWith([], { selfMode: true, getCap: () => null });
     const sceneGroupId = PREVIEW_MENU_GROUPS.find((g) => g.id === "scene")!.id;
     const envGroupId = PREVIEW_MENU_GROUPS.find((g) => g.id === "env")!.id;

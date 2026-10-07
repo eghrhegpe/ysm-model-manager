@@ -49,7 +49,7 @@ export interface PreviewControlDef {
   /** 条件显隐（B 轨纯函数谓词）：吃状态层快照 PreviewSnapshot（2026-09 放宽为 Partial——谓词只读自己关心的键，
    *  键存在性仍编译期守卫，未落地键报错），返回 false 时隐藏。
    *  与节点级 visibleWhen 同构，用于把 cap 控件条件显隐从「闭包依赖运行时 params」升级为「状态层快照驱动」，
-   *  配合 preview-state 的 env.waterMode / env.groundSourceKind / env.groundCanvasStyle 等 cap 状态上浮路径，消除快照冻结类 bug 根源。
+   *  配合 preview-state 的 cap.waterMode / cap.groundSourceKind / cap.groundCanvasStyle 等 cap 状态上浮路径，消除快照冻结类 bug 根源。
    *  [铁律收口] 3d菜单只允许 visibleWhen——A 轨 visible 闭包已整体删除（2026-09，ground/water 换皮完成），
    *  谓词只吃快照不摸 cap 实例，全仓唯一条件显隐入口。 */
   visibleWhen?: (s: Partial<PreviewSnapshot>) => boolean;
@@ -231,7 +231,7 @@ export interface PreviewMenuNode {
   // requiresEnvironment 三个专有布尔已删除——dock 组过滤（menu/core.ts dockGroupItemsFor）
   // 与内容级渲染（render.ts）共用同一求值器，谓词吃状态层快照
   //   - self 模式隐藏 → (s) => s["ui.mode"] !== "self"
-  //   - 环境能力门禁 → (s) => !!s["env.skyGroundCap"]
+  //   - 环境能力门禁 → (s) => !!s["cap.skyGroundCap"]
 
   /** row 类型：行首焦点钮（radio 语义，ADR-193 第四刀 roles 角色行首用）——
    *  active 渲染 radioOn（外环+圆心）/ radioOff（空环）SVG 图标，onClick 供焦点切换

@@ -389,12 +389,12 @@ describe("FogCapability — getMenuNodes（ADR-195 刀2 cap 直产节点）", ()
     ].sort());
   });
 
-  it("near/far 仅 linear 可见、density 仅 exp2 可见（visibleWhen 吃 env.fogMode 快照）", () => {
+  it("near/far 仅 linear 可见、density 仅 exp2 可见（visibleWhen 吃 cap.fogMode 快照）", () => {
     const cap = newCap();
     const nodes = cap.getMenuNodes();
     // 快照已收窄为精确联合（锐评 F-3），夹具参数随之收紧——旧 `string` 下拼错 mode 恒漏过
     const vis = (id: string, mode: "exp2" | "linear") =>
-      findNodeById(nodes, id).visibleWhen!({ "env.fogMode": mode });
+      findNodeById(nodes, id).visibleWhen!({ "cap.fogMode": mode });
     // exp2：density 可见，near/far 隐藏
     expect(vis("fog-density", "exp2")).toBe(true);
     expect(vis("fog-near", "exp2")).toBe(false);
@@ -526,7 +526,7 @@ describe("FogCapability — 生命周期", () => {
 describe("FogCapability — 菜单刷新订阅（subscribe）", () => {
   beforeEach(() => { resetEnvState(); });
 
-  it("setMode 触发 notify（visibleWhen 吃 env.fogMode，需重渲染才刷新显隐）", () => {
+  it("setMode 触发 notify（visibleWhen 吃 cap.fogMode，需重渲染才刷新显隐）", () => {
     const cap = newCap();
     let n = 0;
     const off = cap.subscribe(() => {

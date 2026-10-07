@@ -74,7 +74,7 @@ describe("collectMenuGraph（ADR-128 双通道并集枚举）", () => {
         kind: "panel",
         dockGroup: "model",
         children: [
-          { id: "stat-tex", kind: "field", value: "x", visibleWhen: (s) => s["env.waterMode"] === "pool" },
+          { id: "stat-tex", kind: "field", value: "x", visibleWhen: (s) => s["cap.waterMode"] === "pool" },
         ],
       },
     ]);
@@ -84,7 +84,7 @@ describe("collectMenuGraph（ADR-128 双通道并集枚举）", () => {
     // registry builder 返回 [model(panel), ...]，stat-tex 嵌在 model 子节点下（ysm-adapter 真实形态）
     const modelNode = ysm.children.find((c) => c.id === "model")!;
     const stat = modelNode.children.find((c) => c.id === "stat-tex")!;
-    // 默认快照未置 env.waterMode → 不可达
+    // 默认快照未置 cap.waterMode → 不可达
     expect(stat.reachable).toBe(false);
     expect(stat.reachableBy).toEqual([]);
     // 父 panel 无守卫 → 可达
@@ -96,7 +96,7 @@ describe("collectMenuGraph（ADR-128 双通道并集枚举）", () => {
       {
         id: "a",
         kind: "panel",
-        children: [{ id: "b", kind: "field", visibleWhen: (s) => !!s["env.pmrem"] }],
+        children: [{ id: "b", kind: "field", visibleWhen: (s) => !!s["cap.pmrem"] }],
       },
     ];
     const preds = collectNodePredicates(nodes);
@@ -104,7 +104,7 @@ describe("collectMenuGraph（ADR-128 双通道并集枚举）", () => {
     expect(preds[0].nodeId).toBe("b");
     // 是节点级谓词（吃 PreviewSnapshot），非 cap 级无参 c.visible
     expect(preds[0].predicate(DEFAULT_SNAP)).toBe(false);
-    expect(preds[0].predicate({ "env.pmrem": true })).toBe(true);
+    expect(preds[0].predicate({ "cap.pmrem": true })).toBe(true);
   });
 
   it("renderCustom 节点标记 escapeHatch:true（骨骼/litematic 复杂逃生舱，图不强行走通）", () => {
@@ -168,8 +168,8 @@ describe("collectMenuGraph（ADR-128 双通道并集枚举）", () => {
         kind: "panel",
         dockGroup: "model",
         children: [
-          { id: "sky-node", kind: "field", visibleWhen: (s) => !!s["env.pmrem"] },
-          { id: "mode-node", kind: "field", visibleWhen: (s) => s["env.waterMode"] === "pool" },
+          { id: "sky-node", kind: "field", visibleWhen: (s) => !!s["cap.pmrem"] },
+          { id: "mode-node", kind: "field", visibleWhen: (s) => s["cap.waterMode"] === "pool" },
           { id: "always", kind: "field" },
         ],
       },
@@ -177,8 +177,8 @@ describe("collectMenuGraph（ADR-128 双通道并集枚举）", () => {
     const { routers, menu } = buildGraphRouters();
     const snaps: RepresentativeSnapshot[] = [
       { name: "default", snapshot: {} },
-      { name: "envOn", snapshot: { "env.pmrem": true } },
-      { name: "modeOn", snapshot: { "env.waterMode": "pool" } },
+      { name: "envOn", snapshot: { "cap.pmrem": true } },
+      { name: "modeOn", snapshot: { "cap.waterMode": "pool" } },
     ];
     const graph = collect(routers, menu, snaps);
     const ysm = graph.docks.find((d) => d.group === "model")!.panels.find((p) => p.id === "ysm-model")!;

@@ -106,8 +106,8 @@ export const CORE_MENU_ITEMS: PreviewMenuNode[] = [
     kind: "panel",
     dockGroup: "env",
     // 环境能力门禁（requiresEnvironment 谓词化）：sky/ground cap 任一挂载才显示；
-    // 经状态层 env.skyGroundCap 惰性解析，caps 后创建由 shared-infra refreshDock 补回
-    visibleWhen: (s) => !!s["env.skyGroundCap"],
+    // 经状态层 cap.skyGroundCap 惰性解析，caps 后创建由 shared-infra refreshDock 补回
+    visibleWhen: (s) => !!s["cap.skyGroundCap"],
   },
   {
     id: "camera",

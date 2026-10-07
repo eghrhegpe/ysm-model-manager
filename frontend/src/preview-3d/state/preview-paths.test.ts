@@ -28,7 +28,7 @@ describe("preview-paths 不变量", () => {
       "render.maxFps",
       "render.maxPixelRatio",
       "render.wireframe",
-      "env.pmrem",
+      "cap.pmrem",
     ];
     for (const c of core) {
       expect(KNOWN_PATHS, `缺核心横切键 ${c}`).toContain(c);

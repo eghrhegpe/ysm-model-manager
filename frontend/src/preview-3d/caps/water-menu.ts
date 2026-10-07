@@ -19,11 +19,11 @@ const WATER_GROUP_REFLECT: LocaleKey = "preview.waterGroupReflect"; // 倒影（
 /* ============ ADR-195 刀2：直产 PreviewMenuNode[] ============ */
 
 /** 水面为 film 模式谓词 */
-const waterFilmOn = (s: Partial<PreviewSnapshot>) => s["env.waterMode"] === "film";
+const waterFilmOn = (s: Partial<PreviewSnapshot>) => s["cap.waterMode"] === "film";
 /** 水面为 pool 模式谓词 */
-const waterPoolOn = (s: Partial<PreviewSnapshot>) => s["env.waterMode"] === "pool";
+const waterPoolOn = (s: Partial<PreviewSnapshot>) => s["cap.waterMode"] === "pool";
 /** 模型倒影开启谓词（ADR-297：强度/分辨率/SSR 抑制三从控仅在此时出场） */
-const waterReflectOn = (s: Partial<PreviewSnapshot>) => s["env.waterReflectionEnabled"] === true;
+const waterReflectOn = (s: Partial<PreviewSnapshot>) => s["cap.waterReflectionEnabled"] === true;
 
 /** slider 原生节点（wSlider 的节点版） */
 function wSliderNode(
@@ -255,7 +255,7 @@ export function buildWaterNodes(cap: WaterCapability): PreviewMenuNode[] {
     },
     // ADR-297：模型倒影——隐藏 Reflector 借官方 RT + 水 shader 投影采样。
     // 总开关默认关（每帧多一次整场重渲不是白拿的，与地面 reflectorEnabled 同纪律）；
-    // 从控仅在主开可见时出场（visibleWhen 走 env.waterReflectionEnabled 探针路径）。
+    // 从控仅在主开可见时出场（visibleWhen 走 cap.waterReflectionEnabled 探针路径）。
     {
       id: "cap-group-water-reflect",
       kind: "folder",

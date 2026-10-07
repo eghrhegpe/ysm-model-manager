@@ -28,36 +28,36 @@ export const KNOWN_PATHS = [
   // [ADR-250] `render.bloom` 已退表：后处理是视觉项（与 wireframe/pmrem 同类），不进性能档位。
   // 后处理开关唯一入口 = postprocessing cap 自报的 `pp-enabled` 控件（写 envState.ppEnabled）。
   "render.wireframe",
-  "env.pmrem",
+  "cap.pmrem",
   // [doc:adr-126-p5-c] 探针：cap 内部状态上浮至状态层快照，供 cap 控件
   // visibleWhen(s) 谓词消费（替代 cap 内 visible? 闭包），打通 B 轨。
-  "env.waterMode",
+  "cap.waterMode",
   // [doc:adr-126-p5-c] 探针：cap 内部状态上浮至状态层快照，供 cap 控件
   // visibleWhen(s) 谓词消费（替代 cap 内 visible? 闭包），打通 B 轨。
   // ADR-249 §2.1 拆轴：原单枚举 env.groundMatSource 拆为来源/样式两键。
-  "env.groundSourceKind",
-  "env.groundCanvasStyle",
+  "cap.groundSourceKind",
+  "cap.groundCanvasStyle",
   // ADR-249 §2.3 叠加层：独立透明格线层状态上浮
-  "env.groundOverlay",
+  "cap.groundOverlay",
   // ui.activeComponent 已由 per-scene 闭包取代，本键保留仅作类型兼容，不再写入。
   // [doc:adr-126-p4-d] 预览会话模式（shared/self）：mountPreviewRootMenu 入口同步一次，
   // dock 级 visibleWhen 谓词消费（旧 hideInSelfMode/sharedOnly 语义收口到谓词）。
   "ui.mode",
   // [doc:adr-126-p4-d] 环境能力可用性（旧 requiresEnvironment 语义）：sky/ground cap 任一
   // 挂载即 true，经 ADR-168 lookup 注入点惰性解析——caps 后创建由 refreshDock 补回。
-  "env.skyGroundCap",
+  "cap.skyGroundCap",
   // 探针：雾模式上浮（fog 的 near/far × density 按 mode 互斥显隐，visibleWhen B 轨消费）。
-  "env.fogMode",
+  "cap.fogMode",
   // 探针 [ADR-297]：水面模型倒影开关上浮（reflect 组强度/分辨率/SSR 抑制三从控
   // 仅在主开可见时出场，visibleWhen B 轨消费；water cap 态直读，envState 单真值源）。
-  "env.waterReflectionEnabled",
+  "cap.waterReflectionEnabled",
 ] as const;
 
 /**
  * 状态路径：已落地路径的联合（类型契约 = 运行时实现）。
  * 写未落地键（如 `ui.mode` / `env.sky`）编译报错——把「谓词读黑洞键静默假死」
  * 挡在编译期。新路径两步走：扩 KNOWN_PATHS + 填 bindings。
- * cap 派生探针（env.waterMode / env.ground* / env.fogMode / env.skyGroundCap 类）
+ * cap 派生探针（cap.waterMode / env.ground* / cap.fogMode / cap.skyGroundCap 类）
  * 入册另有三条门槛（判定输入须是 cap 态上浮值 / 三处登记一步不缺 + 活体消费者守卫 /
  * 控件基元归一在 binding 内），见 [ADR-291]。
  */
@@ -75,11 +75,11 @@ export type PreviewStatePath = (typeof KNOWN_PATHS)[number];
  * 与 schema 默认值同侧保守，不凭空造第三个状态。
  */
 export const PROBE_ENUM_VALUES = {
-  "env.waterMode": ["film", "pool"],
-  "env.groundSourceKind": ["solid", "none", "canvas", "texture"],
-  "env.groundCanvasStyle": ["plain", "marble", "sand", "grass"],
-  "env.groundOverlay": ["none", "grid", "checker", "stripes", "diamond"],
-  "env.fogMode": ["linear", "exp2"],
+  "cap.waterMode": ["film", "pool"],
+  "cap.groundSourceKind": ["solid", "none", "canvas", "texture"],
+  "cap.groundCanvasStyle": ["plain", "marble", "sand", "grass"],
+  "cap.groundOverlay": ["none", "grid", "checker", "stripes", "diamond"],
+  "cap.fogMode": ["linear", "exp2"],
 } as const;
 
 /** 探针联合派生读口：PROBE_ENUM_VALUES[P] 的成员字面量联合。 */
@@ -102,19 +102,19 @@ export type PathValue = {
   "render.maxFps": number;
   "render.maxPixelRatio": number;
   "render.wireframe": boolean;
-  "env.pmrem": boolean;
+  "cap.pmrem": boolean;
   // [锐评 F-3 家族收口 2026-09-23] 五个 cap 态枚举探针统一从 PROBE_ENUM_VALUES 派生精确联合
   // （原 string 让谓词 `=== "filmx"` 拼错编译不红、静默恒假，binding 侧 String(v) 直漏脏值）。
   // 值域表在文件头，与 schema enum 的同步由 preview-paths.test.ts 对账闸钉死。
-  "env.waterMode": ProbeEnumValue<"env.waterMode">;
-  "env.groundSourceKind": ProbeEnumValue<"env.groundSourceKind">;
-  "env.groundCanvasStyle": ProbeEnumValue<"env.groundCanvasStyle">;
+  "cap.waterMode": ProbeEnumValue<"cap.waterMode">;
+  "cap.groundSourceKind": ProbeEnumValue<"cap.groundSourceKind">;
+  "cap.groundCanvasStyle": ProbeEnumValue<"cap.groundCanvasStyle">;
   // ADR-249 §2.3 叠加层：独立透明格线层状态上浮
-  "env.groundOverlay": ProbeEnumValue<"env.groundOverlay">;
+  "cap.groundOverlay": ProbeEnumValue<"cap.groundOverlay">;
   "ui.mode": "shared" | "self";
-  "env.skyGroundCap": boolean;
-  "env.fogMode": ProbeEnumValue<"env.fogMode">;
-  "env.waterReflectionEnabled": boolean;
+  "cap.skyGroundCap": boolean;
+  "cap.fogMode": ProbeEnumValue<"cap.fogMode">;
+  "cap.waterReflectionEnabled": boolean;
 };
 
 /** 写入侧输入域：精确类型 ∪ 控件基元（binding 归一后落精确类型） */

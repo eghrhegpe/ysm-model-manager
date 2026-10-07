@@ -40,8 +40,8 @@ function paramVisible(param: GroundMatParam) {
     // [锐评 F-3 家族收口] 探针已收窄为精确联合（PROBE_ENUM_VALUES ⇄ schema enum 同集），
     // 快照类型与 GroundSourceKind / GroundCanvasStyle 逐字相同——原两处 `as … | undefined`
     // 化石 cast 退役，类型漂移由编译器代管。
-    const sourceKind = s["env.groundSourceKind"];
-    const canvasStyle = s["env.groundCanvasStyle"];
+    const sourceKind = s["cap.groundSourceKind"];
+    const canvasStyle = s["cap.groundCanvasStyle"];
     if (!sourceKind) return false;
     const mode = groundMatSourceFromAxes(sourceKind, canvasStyle);
     return paramIsEffective(mode, param);
@@ -94,7 +94,7 @@ function sliderNode(
  *  rmAppendButton 补齐 control 按钮臂后，不再绕道 controls 通道塞空桩 getValue/setValue）。 */
 function textureButtonsNode(cap: GroundCapability): PreviewMenuNode[] {
   const sourceIsTexture = (s: Partial<PreviewSnapshot>): boolean =>
-    s["env.groundSourceKind"] === "texture";
+    s["cap.groundSourceKind"] === "texture";
   return [
     {
       id: "ground-mat-texture",
@@ -197,7 +197,7 @@ function groundBuildMatFolder(cap: GroundCapability): NodeFor<"folder"> {
       kind: "select",
       labelKey: "preview.groundCanvasStyle",
       // ADR-249 §2.1：样式轴仅当来源轴 === canvas 时显示
-      visibleWhen: (s) => s["env.groundSourceKind"] === "canvas",
+      visibleWhen: (s) => s["cap.groundSourceKind"] === "canvas",
       control: {
         options: [
           // ADR-252：本轴只装**噪声材质**；几何图案已归叠加层 folder。
@@ -297,7 +297,7 @@ function groundBuildMatFolder(cap: GroundCapability): NodeFor<"folder"> {
 /** ADR-249 §2.3 叠加层 folder：独立透明格线层（正交于来源/样式两轴）。
  *  style 为 none 时子控件全隐（与材质组同一 paramVisible 思路：可见 ⇔ 生效）。 */
 function groundBuildOverlayFolder(cap: GroundCapability): NodeFor<"folder"> {
-  const overlayOn = (s: Partial<PreviewSnapshot>): boolean => s["env.groundOverlay"] !== "none";
+  const overlayOn = (s: Partial<PreviewSnapshot>): boolean => s["cap.groundOverlay"] !== "none";
   const children: PreviewMenuNode[] = [
     {
       id: "ground-overlay",

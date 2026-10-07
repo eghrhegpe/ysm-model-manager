@@ -78,7 +78,7 @@ export class FogCapability implements SceneCapability {
         // 任何 fog 组字段变更都触发 applyFog（dispatcher 已过滤，无需再判断 changed）
         this.applyFog();
         // 仅模式切换是影响菜单可见性的离散操作（near/far × density 互斥显隐经
-        // visibleWhen 消费 env.fogMode）；高频滑块不得 notify（subscribe 契约）。
+        // visibleWhen 消费 cap.fogMode）；高频滑块不得 notify（subscribe 契约）。
         if (changed.has("fogMode")) this.notify();
       },
       "fog",

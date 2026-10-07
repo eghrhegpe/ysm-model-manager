@@ -549,7 +549,7 @@ function makeRootView(
  * → rootView（renderMenu 组根视图，scene）→ 兜底 makeGroupViewFn。无任何 `g.id === ...` 字面量。
  *
  * ⚠️ directToPanel 查**经 visibleWhen 过滤**的 groupItems（与 dock 按钮渲染同源）而非 allItems：
- * 声明目标带 visibleWhen 门（如 environment ← env.skyGroundCap）时，门未开则目标被滤出
+ * 声明目标带 visibleWhen 门（如 environment ← cap.skyGroundCap）时，门未开则目标被滤出
  * groupItems → 本组按钮不渲染；即便按钮渲染（他组注入项使组非空），目标也须当前可见
  * 才导航——防 776598b7d 引入的「绕过 visibleWhen 门导航到隐藏面板」回归。
  */

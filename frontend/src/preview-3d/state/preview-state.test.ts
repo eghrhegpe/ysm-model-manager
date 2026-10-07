@@ -168,17 +168,17 @@ describe("P1 状态层 — 横切路径读写闭环", () => {
     setPreviewUiMode("shared");
   });
 
-  it("[doc:adr-126-p4-d] env.skyGroundCap：sky/ground cap 任一挂载即 true（requiresEnvironment 谓词数据源）", () => {
-    expect(isPathAvailable("env.skyGroundCap")).toBe(false);
+  it("[doc:adr-126-p4-d] cap.skyGroundCap：sky/ground cap 任一挂载即 true（requiresEnvironment 谓词数据源）", () => {
+    expect(isPathAvailable("cap.skyGroundCap")).toBe(false);
     mountCaps(makeFakeCap("sky"), makeFakeCap("ground"));
-    expect(getStateValue("env.skyGroundCap")).toBe(true);
-    expect(previewSnapshot()["env.skyGroundCap"]).toBe(true);
+    expect(getStateValue("cap.skyGroundCap")).toBe(true);
+    expect(previewSnapshot()["cap.skyGroundCap"]).toBe(true);
     // 仅 ground 也放行（OR 语义与旧 ctx.getCap("sky")||getCap("ground") 对齐）
     mountCaps(makeFakeCap("ground"));
-    expect(getStateValue("env.skyGroundCap")).toBe(true);
+    expect(getStateValue("cap.skyGroundCap")).toBe(true);
     // 全缺席 → false（caps 后创建由 refreshDock 补回，见 shared-infra）
     mountCaps();
-    expect(getStateValue("env.skyGroundCap")).toBe(false);
+    expect(getStateValue("cap.skyGroundCap")).toBe(false);
   });
 
   it("render.frustumCull 读写闭环且落 localStorage", () => {
@@ -216,7 +216,7 @@ describe("P1 状态层 — 横切路径读写闭环", () => {
 
 describe("P1 状态层 — cap 派生路径的持久化边界", () => {
   it("cap 缺席时：读安全缺省、available=false、写入静默不抛", () => {
-    for (const p of ["render.wireframe", "env.pmrem"] as (typeof KNOWN_PATHS)[number][]) {
+    for (const p of ["render.wireframe", "cap.pmrem"] as (typeof KNOWN_PATHS)[number][]) {
       expect(isPathAvailable(p)).toBe(false);
       expect(getStateValue(p)).toBe(false);
       expect(() => setStateValue(p, true)).not.toThrow();
@@ -227,7 +227,7 @@ describe("P1 状态层 — cap 派生路径的持久化边界", () => {
     //  真实 cap 存储前缀见 scene-capability.ts STORAGE_PREFIX = "ysm-scene-cap-"）。
     const keysBefore = Object.keys(localStorage);
     setStateValue("render.wireframe", true);
-    setStateValue("env.pmrem", true);
+    setStateValue("cap.pmrem", true);
     expect(Object.keys(localStorage)).toEqual(keysBefore);
   });
 
@@ -249,9 +249,9 @@ describe("P1 状态层 — cap 派生路径的持久化边界", () => {
     setStateValue("render.wireframe", false);
     expect(rm.getWireframe()).toBeNull();
 
-    setStateValue("env.pmrem", true);
+    setStateValue("cap.pmrem", true);
     expect(sky.isEnvironmentEnabled()).toBe(true);
-    expect(getStateValue("env.pmrem")).toBe(true);
+    expect(getStateValue("cap.pmrem")).toBe(true);
 
     // 防双写（cap 就位态）：状态层写入透传 cap，但绝不自行创建 cap 域存储键
     // （cap 域键只由 cap.saveState 写，会话退出时统一落盘——真实前缀 ysm-scene-cap-）。
@@ -290,10 +290,10 @@ describe("P1 状态层 — cap 派生路径的持久化边界", () => {
     expect(() => setStateValue("render.wireframe", true)).not.toThrow();
   });
 
-  it("结构性探测：sky cap 缺环境语义时 env.pmrem 不可用", () => {
+  it("结构性探测：sky cap 缺环境语义时 cap.pmrem 不可用", () => {
     const noEnvSky = makeFakeCap("sky", { envMethods: false }); // 有 isEnabled/setEnabled，无环境方法
     mountCaps(noEnvSky);
-    expect(isPathAvailable("env.pmrem")).toBe(false);
+    expect(isPathAvailable("cap.pmrem")).toBe(false);
   });
 });
 
@@ -664,7 +664,7 @@ describe("契约守卫", () => {
   });
 });
 
-describe("P1 状态层 — env.waterMode / env.groundMatSource 上浮（探针 P5-c）", () => {
+describe("P1 状态层 — cap.waterMode / env.groundMatSource 上浮（探针 P5-c）", () => {
   function baseCap(id: string) {
     return {
       id,
@@ -682,48 +682,48 @@ describe("P1 状态层 — env.waterMode / env.groundMatSource 上浮（探针 P
   }
 
   it("cap 缺席：available=false、get 安全缺省 film/none、写入不抛", () => {
-    expect(isPathAvailable("env.waterMode")).toBe(false);
-    expect(getStateValue("env.waterMode")).toBe("film");
-    expect(isPathAvailable("env.groundSourceKind")).toBe(false);
-    expect(getStateValue("env.groundSourceKind")).toBe("solid");
-    expect(isPathAvailable("env.groundCanvasStyle")).toBe(false);
-    expect(getStateValue("env.groundCanvasStyle")).toBe("plain");
-    expect(isPathAvailable("env.groundOverlay")).toBe(false);
-    expect(getStateValue("env.groundOverlay")).toBe("none");
-    expect(() => setStateValue("env.waterMode", "pool")).not.toThrow();
+    expect(isPathAvailable("cap.waterMode")).toBe(false);
+    expect(getStateValue("cap.waterMode")).toBe("film");
+    expect(isPathAvailable("cap.groundSourceKind")).toBe(false);
+    expect(getStateValue("cap.groundSourceKind")).toBe("solid");
+    expect(isPathAvailable("cap.groundCanvasStyle")).toBe(false);
+    expect(getStateValue("cap.groundCanvasStyle")).toBe("plain");
+    expect(isPathAvailable("cap.groundOverlay")).toBe(false);
+    expect(getStateValue("cap.groundOverlay")).toBe("none");
+    expect(() => setStateValue("cap.waterMode", "pool")).not.toThrow();
   });
 
   it("cap 就位：get 透传 cap 内部状态、available=true、set 透传", () => {
     const water = { ...baseCap("water"), getWaterMode: () => "pool", setWaterMode: vi.fn() };
     const ground = { ...baseCap("ground"), getSourceKind: () => "texture", setSourceKind: vi.fn(), getCanvasStyle: () => "plain", setCanvasStyle: vi.fn(), getOverlayStyle: () => "none", setOverlayStyle: vi.fn() };
     mountCaps(water as unknown as SceneCapability, ground as unknown as SceneCapability);
-    expect(isPathAvailable("env.waterMode")).toBe(true);
-    expect(getStateValue("env.waterMode")).toBe("pool");
-    expect(getStateValue("env.groundSourceKind")).toBe("texture");
-    setStateValue("env.waterMode", "film");
+    expect(isPathAvailable("cap.waterMode")).toBe(true);
+    expect(getStateValue("cap.waterMode")).toBe("pool");
+    expect(getStateValue("cap.groundSourceKind")).toBe("texture");
+    setStateValue("cap.waterMode", "film");
     expect(water.setWaterMode).toHaveBeenCalledWith("film");
   });
 
-  it("[锐评 F-3] env.waterMode 探针写入归一：非 pool 值一律落 film（fogMode 先例同构）", () => {
+  it("[锐评 F-3] cap.waterMode 探针写入归一：非 pool 值一律落 film（fogMode 先例同构）", () => {
     const water = { ...baseCap("water"), getWaterMode: () => "film", setWaterMode: vi.fn() };
     mountCaps(water as unknown as SceneCapability);
-    setStateValue("env.waterMode", "banana");
+    setStateValue("cap.waterMode", "banana");
     // 归一守卫：binding 层先把任意基元收成 "pool" | "film"，脏值不外溢进 cap
     expect(water.setWaterMode).toHaveBeenCalledWith("film");
-    setStateValue("env.waterMode", "pool");
+    setStateValue("cap.waterMode", "pool");
     expect(water.setWaterMode).toHaveBeenLastCalledWith("pool");
   });
 
   it("previewSnapshot 含这两个键且 cap 缺席时为安全缺省", () => {
     mountCaps();
     const snap = previewSnapshot();
-    expect("env.waterMode" in snap).toBe(true);
-    expect("env.groundSourceKind" in snap).toBe(true);
-    expect("env.groundCanvasStyle" in snap).toBe(true);
-    expect(snap["env.waterMode"]).toBe("film");
-    expect(snap["env.groundSourceKind"]).toBe("solid");
-    expect(snap["env.groundCanvasStyle"]).toBe("plain");
-    expect("env.groundOverlay" in snap).toBe(true);
-    expect(snap["env.groundOverlay"]).toBe("none");
+    expect("cap.waterMode" in snap).toBe(true);
+    expect("cap.groundSourceKind" in snap).toBe(true);
+    expect("cap.groundCanvasStyle" in snap).toBe(true);
+    expect(snap["cap.waterMode"]).toBe("film");
+    expect(snap["cap.groundSourceKind"]).toBe("solid");
+    expect(snap["cap.groundCanvasStyle"]).toBe("plain");
+    expect("cap.groundOverlay" in snap).toBe(true);
+    expect(snap["cap.groundOverlay"]).toBe("none");
   });
 });

@@ -5,7 +5,7 @@
 // 结构（对齐旧控件分组）：
 //   - fog-enabled：toggle（能力总开关；env 一级行 headerToggle 语义由消费者抽 master）
 //   - 参数组 folder（preview.fogGroupParams）：color/mode/density/near/far
-//     density 仅 exp2、near/far 仅 linear 可见（visibleWhen 吃 env.fogMode 快照，B 轨）
+//     density 仅 exp2、near/far 仅 linear 可见（visibleWhen 吃 cap.fogMode 快照，B 轨）
 
 import type { LocaleKey } from "@/core/i18n/t.ts";
 import type { NodeFor, PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
@@ -57,7 +57,7 @@ function fcBuildParamsFolder(cap: FogCapability): NodeFor<"folder"> {
       kind: "slider",
       labelKey: "preview.fogDensity",
       // 密度仅指数雾（FogExp2）读——线性雾下隐藏，避免拖了没反应的死控件
-      visibleWhen: (s) => s["env.fogMode"] === "exp2",
+      visibleWhen: (s) => s["cap.fogMode"] === "exp2",
       control: {
         ...getParamRange("fogDensity"),
         get: () => cap.getDensity(),
@@ -69,7 +69,7 @@ function fcBuildParamsFolder(cap: FogCapability): NodeFor<"folder"> {
       kind: "slider",
       labelKey: "preview.fogNear",
       // 近距仅线性雾（THREE.Fog）读——指数雾下隐藏
-      visibleWhen: (s) => s["env.fogMode"] === "linear",
+      visibleWhen: (s) => s["cap.fogMode"] === "linear",
       control: {
         ...getParamRange("fogNear"),
         get: () => cap.getNear(),
@@ -81,7 +81,7 @@ function fcBuildParamsFolder(cap: FogCapability): NodeFor<"folder"> {
       kind: "slider",
       labelKey: "preview.fogFar",
       // 远距仅线性雾读——指数雾下隐藏
-      visibleWhen: (s) => s["env.fogMode"] === "linear",
+      visibleWhen: (s) => s["cap.fogMode"] === "linear",
       control: {
         ...getParamRange("fogFar"),
         get: () => cap.getFar(),

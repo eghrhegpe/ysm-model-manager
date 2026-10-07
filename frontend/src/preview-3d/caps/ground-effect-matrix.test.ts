@@ -236,12 +236,12 @@ describe("Suite 4 — 菜单可见集与矩阵生效集同源", () => {
       expect(typeof node!.visibleWhen, `${nodeId} 必须声明 visibleWhen`).toBe("function");
 
       for (const mode of GROUND_SURFACE_MODES) {
-        // 菜单读的是拆轴后的两字段（env.groundSourceKind / env.groundCanvasStyle），
+        // 菜单读的是拆轴后的两字段（cap.groundSourceKind / cap.groundCanvasStyle），
         // 单枚举 mode 经 migrateGroundMatSource 映射为两轴再喂快照（ADR-249 §2.5 阶段 2）
         const m = migrateGroundMatSource(mode);
         const snapshot = {
-          "env.groundSourceKind": m.sourceKind,
-          "env.groundCanvasStyle": m.canvasStyle,
+          "cap.groundSourceKind": m.sourceKind,
+          "cap.groundCanvasStyle": m.canvasStyle,
         } as Partial<PreviewSnapshot>;
         const menuVisible = node!.visibleWhen!(snapshot) === true;
         const matrixEffective = paramIsEffective(mode, param);
@@ -254,7 +254,7 @@ describe("Suite 4 — 菜单可见集与矩阵生效集同源", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
     const folder = cap.getMenuNodes().find((n) => n.id === "cap-group-ground-material")!;
-    const snapshot = { "env.groundSourceKind": "solid" } as Partial<PreviewSnapshot>;
+    const snapshot = { "cap.groundSourceKind": "solid" } as Partial<PreviewSnapshot>;
 
     for (const id of ["ground-mat-color2", "ground-mat-grid-size"]) {
       const node = folder.children!.find((c) => c.id === id)!;
@@ -269,7 +269,7 @@ describe("Suite 4 — 菜单可见集与矩阵生效集同源", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });
     const folder = cap.getMenuNodes().find((n) => n.id === "cap-group-ground-material")!;
-    const snapshot = { "env.groundSourceKind": "none" } as Partial<PreviewSnapshot>;
+    const snapshot = { "cap.groundSourceKind": "none" } as Partial<PreviewSnapshot>;
 
     for (const node of folder.children!) {
       if (typeof node.visibleWhen === "function") {

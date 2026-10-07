@@ -20,6 +20,7 @@
 import { createWriteStream } from "node:fs";
 import { expect, type Page, test } from "@playwright/test";
 import { pinnedChromiumOrThrow } from "../e2e/browser-path.ts";
+import { waitForAppReady } from "./web-ready.ts";
 
 /** 本机探测到的 chromium（preferFull：WebGL 语义，见上）；探测不到即启动失败（有意，防全绿假死）。 */
 const CHROME = pinnedChromiumOrThrow({ preferFull: true });
@@ -37,18 +38,18 @@ test.use({
  * dev server 的实际 URL：three 走预打包 deps，addons 走 `/@id/`（pnpm 符号链接布局下
  * `node_modules/three` 非真实目录，直取会被 fs 白名单挡掉）。
  *
- * 等待 2s 是必要的：应用启动链会触发一次同 URL 导航，过早 evaluate 会撞
- * "Execution context was destroyed"（已实测）。
+ * 等待语义（2026-10 收口）：原先靠「networkidle + 固定 2s」——两者都不是「app 已挂载」的
+ * 判据（前者只说明网络静了，后者是墙钟猜测），冷启动慢的 CI 上会撞 "Execution context was
+ * destroyed"（应用启动链触发一次同 URL 导航）+ 模块未注册。现改为轮询应用启动链落定。
  */
 async function bootstrap(page: Page): Promise<void> {
   try {
     await page.goto("/");
   } catch {
     // 应用启动链的同 URL 再导航（本 spec 头注实测记载的竞态）会中断首个 goto——
-    // 页面实际已落到目标 URL，吞掉 abort 继续；若未落定，下方 networkidle 等待会超时暴露
+    // 页面实际已落到目标 URL，吞掉 abort 继续；若未落定，下方就绪轮询会超时暴露
   }
-  await page.waitForLoadState("networkidle");
-  await page.waitForTimeout(2000);
+  await waitForAppReady(page);
 }
 
 test.describe("后处理真实 WebGL 链路（锐评 P1-1 / P2-2）", () => {
@@ -290,16 +291,28 @@ test.describe("后处理真实 WebGL 链路（锐评 P1-1 / P2-2）", () => {
     };
 
     let r: Awaited<ReturnType<typeof runner>> | null = null;
-    for (let attempt = 0; attempt < 2 && !r; attempt++) {
+    for (let attempt = 0; attempt < 4 && !r; attempt++) {
       try {
         r = await page.evaluate(runner);
-      } catch {
-        // 第一次若被 vite dep-optimize 的整页 reload 掐死 → bootstrap 重建上下文再跑；
-        // optimize 每轮 dev server 只发生一次，第二次 evaluate 全走缓存。
-        if (attempt === 0) await bootstrap(page);
+      } catch (err) {
+        // 第一次若被 vite dep-optimize 的整页 reload 掐死 → 重建上下文再跑。
+        //
+        // ⚠️ 实测：reload 不只发生一次（本用例首引 UnrealBloomPass/OutputPass 触发
+        // 「发现新依赖 → 整页 reload」，dev server 冷启动时同批依赖会分多次 optimize）。
+        // 原实现「2 次尝试 + 无退避」在热点依赖首次 optimize 时会**两次都撞导航**，
+        // 于是抛「两次均失败（非断言失败）」——这不是断言红，是重试预算太小。
+        // 现在：重试到 4 次、每次先走 bootstrap（轮询就绪，天然给 optimize 留时间），
+        // 且出错信息带上最后一次的原始错误（避免「非断言失败」黑箱，定位靠猜）。
+        if (attempt === 3) {
+          throw new Error(
+            `bloom 域修复 e2e：page.evaluate 重试 4 次均失败（非断言失败）；最后一次错误：${String(err)}`,
+          );
+        }
+        await bootstrap(page);
       }
     }
-    if (!r) throw new Error("bloom 域修复 e2e：page.evaluate 两次均失败（非断言失败）");
+    // 重试耗尽仍无结果：上方已抛带原始错误的异常；此处是类型收窄锚点
+    if (!r) throw new Error("bloom 域修复 e2e：page.evaluate 未取得结果（非断言失败）");
 
     // ① 生产函数在浏览器里的换算值 = 0.6 ÷ 0.5 = 1.2（与被测实现同源，非测试手抄）
     expect(r.converted, "bloomThresholdToLinear(0.6, 0.5) = 1.2").toBeCloseTo(1.2, 6);

@@ -18,6 +18,7 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import { expect, type Page, test } from "@playwright/test";
 import { pinnedChromiumOrThrow } from "../e2e/browser-path.ts";
+import { waitForAppReady, waitForOverlayReady, waitForRenderFrames } from "./web-ready.ts";
 
 // 本机探测不到即启动失败（有意，防全绿假死；旧 ${LOCALAPPDATA} 硬编码兜底已收口进 helper）
 const CHROME = pinnedChromiumOrThrow();
@@ -45,7 +46,15 @@ async function start3D(page: Page): Promise<void> {
   });
   expect(err, "openEmpty3DFullscreen 应成功").toBeNull();
   await expect(page.locator(".mpc-overlay"), "3D overlay 应挂载").toBeVisible({ timeout: 15000 });
-  await page.waitForTimeout(2500);
+  // 等 overlay 真渲染出 canvas/dock + rAF 循环稳定出帧——取代固定 2500ms sleep
+  await waitForOverlayReady(page);
+  await waitForRenderFrames(page);
+}
+
+/** 用例启动序：goto → 应用启动链落定（取代 networkidle + 固定 2s 的「猜时长」等待）。 */
+async function gotoApp(page: Page): Promise<void> {
+  await page.goto("/");
+  await waitForAppReady(page);
 }
 
 /** 打开 env 面板的水面组（dock-env → preview-env-cap-water → 开水 → chevron 展开） */
@@ -100,9 +109,7 @@ test.describe("水面波场回归取证（ADR-319 落地后）", () => {
     // 是环境性超时非断言回归）。150s 上限，CI 单机自然时长 ~50s 不受影响。
     test.setTimeout(150_000);
     fs.mkdirSync(SHOTS, { recursive: true });
-    await page.goto("/");
-    await page.waitForLoadState("networkidle");
-    await page.waitForTimeout(2000);
+    await gotoApp(page);
     await start3D(page);
     await openWaterPanel(page);
 
@@ -185,9 +192,7 @@ test.describe("水面波场回归取证（ADR-319 落地后）", () => {
   test("S7 静水态端点：浪高=0 应为平面水（修复前是 NaN 消失）", async ({ page }) => {
     test.slow();
     fs.mkdirSync(SHOTS, { recursive: true });
-    await page.goto("/");
-    await page.waitForLoadState("networkidle");
-    await page.waitForTimeout(2000);
+    await gotoApp(page);
     await start3D(page);
     await openWaterPanel(page);
     await setBarTo(page, "cap-water-wave-speed", "min");

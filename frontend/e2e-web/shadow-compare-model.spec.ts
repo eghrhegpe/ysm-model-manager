@@ -17,6 +17,7 @@ import { fileURLToPath } from "node:url";
 import { expect, type Page, test } from "@playwright/test";
 import { zipSync } from "fflate";
 import { pinnedChromiumOrThrow } from "../e2e/browser-path.ts";
+import { clearIdbBestEffort, waitForAppReady } from "./web-ready.ts";
 
 const CHROME = pinnedChromiumOrThrow();
 
@@ -51,24 +52,13 @@ function fixtureYsmBase64(): string {
   return Buffer.from(zipSync(files)).toString("base64");
 }
 
-/** 清空 IndexedDB（用例间隔离）；onblocked 挂起 + evaluate 上下文销毁见 web-ysm-3d.spec 注 */
+/** 清空 IndexedDB（用例间隔离）；撞应用启动导航时静默放行，见 web-ready 注释 */
 async function clearIdb(page: Page): Promise<void> {
-  await page.evaluate(async () => {
-    await new Promise<void>((res) => {
-      try {
-        const r = indexedDB.deleteDatabase("ysm-model-manager-web");
-        r.onsuccess = () => res();
-        r.onerror = () => res();
-        r.onblocked = () => res();
-        setTimeout(() => res(), 1500);
-      } catch {
-        res();
-      }
-    });
-  });
+  await clearIdbBestEffort(page);
 }
 
-/** 组件级 DnD 派发 fixture .ysm 字节到 tree-root */
+/** 组件级 DnD 派发 fixture .ysm 字节到 tree-root。
+ *  前置就绪由 `waitForAppReady` 轮询承担，本函数只负责派发本身（同一波 CI 恒红的同源病灶）。 */
 async function dropFixtureYsm(page: Page, fileName: string): Promise<void> {
   const bodyB64 = fixtureYsmBase64();
   await page.evaluate(
@@ -182,7 +172,8 @@ test("真实模型 hard/soft 阴影视觉对比：默认 soft → 切 hard → �
 
   await page.goto("/", { waitUntil: "domcontentloaded", timeout: 60000 });
   await clearIdb(page);
-  await page.waitForTimeout(2500);
+  // 启动就绪等待（取代固定 2500ms sleep——CI 慢启动下 DnD 会撞「tree-root 未就绪」）
+  await waitForAppReady(page);
 
   // 1. 导入真实 fixture .ysm 并选中
   await dropFixtureYsm(page, "01_taisho_maid.ysm");

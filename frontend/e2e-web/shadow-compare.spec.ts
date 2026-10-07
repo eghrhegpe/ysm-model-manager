@@ -11,6 +11,7 @@
 
 import { expect, type Page, test } from "@playwright/test";
 import { pinnedChromiumOrThrow } from "../e2e/browser-path.ts";
+import { waitForAppReady, waitForOverlayReady } from "./web-ready.ts";
 
 const CHROME = pinnedChromiumOrThrow();
 
@@ -36,7 +37,8 @@ async function startEmpty3D(page: Page): Promise<void> {
   });
   expect(err, "openEmpty3DFullscreen 应成功").toBeNull();
   await expect(page.locator(".mpc-overlay"), "3D overlay 应挂载").toBeVisible({ timeout: 20000 });
-  await page.waitForTimeout(2500);
+  // 等 overlay 真渲染出 canvas/dock——取代固定 2500ms sleep（caps 注册在场景 build 之后）
+  await waitForOverlayReady(page);
 }
 
 /** Scene 组根视图里找 shadow 面板入口行并点击；返回是否命中。 */
@@ -88,8 +90,7 @@ async function clickSoftToggle(page: Page): Promise<boolean> {
 test("默认软阴影生效：shadow-soft toggle 默认开 + 菜单面板截图", async ({ page }) => {
   test.slow(); // 真 3D 会话（swiftshader）+ 菜单下钻，逐段放宽 20s 默认上限
   await page.goto("/");
-  await page.waitForLoadState("networkidle");
-  await page.waitForTimeout(2000);
+  await waitForAppReady(page);
 
   await startEmpty3D(page);
   await page.screenshot({ path: "e2e-web/_shots/shadow-scene-empty.png" });

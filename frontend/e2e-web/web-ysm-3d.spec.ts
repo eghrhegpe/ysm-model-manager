@@ -17,6 +17,7 @@ import { expect, type Page, test } from "@playwright/test";
 import { zipSync } from "fflate";
 import { pinnedChromiumOrThrow } from "../e2e/browser-path.ts";
 import { decodePng } from "./png-color-count.ts";
+import { clearIdbBestEffort, waitForAppReady } from "./web-ready.ts";
 
 const CHROME = pinnedChromiumOrThrow();
 
@@ -55,26 +56,16 @@ function fixtureYsmBase64(): string {
  * 清空 IndexedDB（用例间隔离）。
  * ⚠️ deleteDatabase 在 app 已持有连接时会触发 onversionchange → 应用自动重开同版本
  * 数据库，导致 deleteDatabase 被 onblocked 挂起、Playwright evaluate 上下文被后续
- * 页面导航销毁（真实 flake 源）。Playwright 每个测试使用全新 browser context（IDB
- * 天然隔离），此处降级为「尽力清 + 不阻塞」，清库失败不阻断测试。
+ * 页面导航销毁（真实 flake 源——实测失败于 `clearIdb` 自身的 evaluate，见 web-ready 注释）。
+ * Playwright 每个测试使用全新 browser context（IDB 天然隔离），故本步是「尽力清」：
+ * 撞导航不阻断测试（库真没清成由用例自身的 IDB 断言兜底）。
  */
 async function clearIdb(page: Page): Promise<void> {
-  await page.evaluate(async () => {
-    await new Promise<void>((res) => {
-      try {
-        const r = indexedDB.deleteDatabase("ysm-model-manager-web");
-        r.onsuccess = () => res();
-        r.onerror = () => res();
-        r.onblocked = () => res();
-        setTimeout(() => res(), 1500); // 兜底：onblocked 永不 settle 时不卡死
-      } catch {
-        res();
-      }
-    });
-  });
+  await clearIdbBestEffort(page);
 }
 
-/** 像 dropFile 一样派发真实 fixture .ysm 字节（tree-root 组件级 DnD，双层 shadow 穿透） */
+/** 像 dropFile 一样派发真实 fixture .ysm 字节（tree-root 组件级 DnD，双层 shadow 穿透）。
+ *  前置就绪由 `waitForAppReady` 轮询承担，本函数只负责派发本身。 */
 async function dropFixtureYsm(page: Page, fileName: string): Promise<void> {
   const bodyB64 = fixtureYsmBase64();
   await page.evaluate(
@@ -173,7 +164,8 @@ test("web 模式：真实 fixture 模型进入 3D 并渲染（治本视觉验证
 
   await page.goto("/", { waitUntil: "domcontentloaded", timeout: 60000 });
   await clearIdb(page);
-  await page.waitForTimeout(2500);
+  // 启动就绪等待（取代固定 2500ms sleep——CI 慢启动下 DnD 会撞「tree-root 未就绪」）
+  await waitForAppReady(page);
 
   // 1. 导入真实 fixture .ysm（明文 ZIP 形态）
   await dropFixtureYsm(page, "01_taisho_maid.ysm");

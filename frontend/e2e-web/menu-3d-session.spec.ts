@@ -15,6 +15,7 @@
 //   npx playwright test --config playwright.web.config.ts menu-3d-session
 import { expect, type Page, test } from "@playwright/test";
 import { pinnedChromiumOrThrow } from "../e2e/browser-path.ts";
+import { waitForAppReady, waitForOverlayReady, waitForRenderFrames } from "./web-ready.ts";
 
 // 本机探测不到即启动失败（有意，防全绿假死；旧 ${LOCALAPPDATA} 硬编码兜底已收口进 helper）
 const CHROME = pinnedChromiumOrThrow();
@@ -48,8 +49,38 @@ async function start3D(page: Page): Promise<void> {
   });
   expect(err, "openEmpty3DFullscreen 应成功").toBeNull();
   await expect(overlay(page), "3D overlay 应挂载").toBeVisible({ timeout: 15000 });
-  // 等 rAF 循环跑起来（caps 注册在 build 之后，需等若干帧才有 skyGroundCap）
-  await page.waitForTimeout(2500);
+  // 等 overlay 真渲染出 canvas/dock，再等 rAF 循环稳定出帧——取代原先的
+  // `waitForTimeout(2500)`（固定 sleep 等正向结果，CI 软渲染下不够；caps 注册在 build 之后）
+  await waitForOverlayReady(page);
+  await waitForRenderFrames(page);
+}
+
+/** 用例启动序：goto → 应用启动链落定。取代 `waitForLoadState("networkidle")` +
+ *  `waitForTimeout(2000)` 这对「猜时长」等待——networkidle 只说明网络静了，
+ *  不说明 app 挂载完了（CI 慢启动下 app 尚未起来就动手 = 本 spec 的 CI 恒红点）。 */
+async function gotoApp(page: Page): Promise<void> {
+  await page.goto("/");
+  await waitForAppReady(page);
+}
+
+/** 置 `_devtools=1` 并**回读确认**（写入撞上启动链自发导航时会静默丢失，见用例内注释）。 */
+async function setDevtoolsFlag(page: Page): Promise<void> {
+  await expect
+    .poll(
+      async () => {
+        try {
+          return await page.evaluate(() => {
+            localStorage.setItem("_devtools", "1");
+            return localStorage.getItem("_devtools");
+          });
+        } catch {
+          // 撞导航销毁上下文 → 视为未写入，下一轮重试
+          return null;
+        }
+      },
+      { timeout: 10_000, message: "_devtools 标志未能写入（localStorage 持续被导航打断）" },
+    )
+    .toBe("1");
 }
 
 /** 读 shadowRoot 内的 dock 按钮 id 列表。 */
@@ -65,9 +96,8 @@ async function dockButtons(page: Page): Promise<string[]> {
 
 test.describe("真实 3D 会话内的菜单", () => {
   test("空场景会话可起（canvas + 四分组 dock）", async ({ page }) => {
-    await page.goto("/");
-    await page.waitForLoadState("networkidle");
-    await page.waitForTimeout(2000);
+    test.slow(); // 真 3D 会话启动 + caps 注册（swiftshader 软渲染）贴近 20s 默认上限，与同 spec 邻座统一放宽
+    await gotoApp(page);
     await start3D(page);
 
     // canvas 在真 WebGL2 上建起来了
@@ -91,9 +121,7 @@ test.describe("真实 3D 会话内的菜单", () => {
 
   test("会话内 Scene→Post-processing 面板不再空态（有真 cap 控件）", async ({ page }) => {
     test.slow(); // 同 spec 邻座：会话启动 + 面板下钻贴近 20s 默认上限，统一放宽（2026-10-04）
-    await page.goto("/");
-    await page.waitForLoadState("networkidle");
-    await page.waitForTimeout(2000);
+    await gotoApp(page);
     await start3D(page);
 
     // 进 Scene 组
@@ -137,11 +165,17 @@ test.describe("真实 3D 会话内的菜单", () => {
   }) => {
     test.slow(); // 会话启动 + 菜单下钻 + 两次截图，超 20s 默认上限（同 spec 前两用例贴近上限）
     // 开 devtools 让 app-modules 挂载 window.ysmGroundProbe 调试钩子（对齐 debugGetSpec 范式）。
+    //
+    // ⚠️ 写入必须**在应用启动链停稳之后**（2026-10 实测 flake）：应用启动时会自发导航一次，
+    // 若 localStorage 写入撞上它，`page.evaluate` 抛 "Execution context was destroyed"，
+    // 或写进了即将被替换掉的上下文 → `_devtools` 没设上 → 下面 `ysmGroundProbe` 恒 undefined，
+    // 报「探针应挂载且返回非空」——**失败点与真实病灶（写入时机）毫不相干**，正是本目录
+    // 最费时的那类假红。故：先等启动链停稳，再写、再 reload，并**回读确认写入生效**。
     await page.goto("/");
-    await page.evaluate(() => localStorage.setItem("_devtools", "1"));
+    await waitForAppReady(page);
+    await setDevtoolsFlag(page);
     await page.reload();
-    await page.waitForLoadState("networkidle");
-    await page.waitForTimeout(1500);
+    await waitForAppReady(page);
     await start3D(page);
 
     // 探针只读返回地面真相：sourceKind + surface/grid 可见性。

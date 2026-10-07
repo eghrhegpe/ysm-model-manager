@@ -21,6 +21,7 @@ import { fileURLToPath } from "node:url";
 import { expect, type Page, test } from "@playwright/test";
 import { zipSync } from "fflate";
 import { pinnedChromiumOrThrow } from "../e2e/browser-path.ts";
+import { clearIdbBestEffort, waitForAppReady } from "./web-ready.ts";
 
 // 本机探测不到即启动失败（有意，防全绿假死；旧 ${LOCALAPPDATA} 硬编码兜底已收口进 helper）
 const CHROME = pinnedChromiumOrThrow();
@@ -60,24 +61,15 @@ function fixtureYsmBase64(): string {
   return Buffer.from(zipSync(files)).toString("base64");
 }
 
-/** 清空 IndexedDB（用例间隔离） */
+/** 清空 IndexedDB（用例间隔离）；撞应用启动导航时静默放行，见 web-ready 注释 */
 async function clearIdb(page: Page): Promise<void> {
-  await page.evaluate(async () => {
-    await new Promise<void>((res) => {
-      try {
-        const r = indexedDB.deleteDatabase("ysm-model-manager-web");
-        r.onsuccess = () => res();
-        r.onerror = () => res();
-        r.onblocked = () => res();
-        setTimeout(() => res(), 1500);
-      } catch {
-        res();
-      }
-    });
-  });
+  await clearIdbBestEffort(page);
 }
 
-/** 组件级 DnD 派发 fixture .ysm 字节到 tree-root */
+/** 组件级 DnD 派发 fixture .ysm 字节到 tree-root。
+ *  前置就绪由 `waitForAppReady` 承担（轮询到 tree-root 存在），本函数只负责派发本身——
+ *  原先内联的 `if (!tree) throw` 是「不做等待就动手」的病征：CI 慢启动下一次就抛
+ *  「app-tree tree-root 未就绪」（本 spec 的 CI 恒红点），本机快则从不触发。 */
 async function dropFixtureYsm(page: Page, fileName: string): Promise<void> {
   const bodyB64 = fixtureYsmBase64();
   await page.evaluate(
@@ -177,7 +169,8 @@ test("雾单变量对照：同机位同模型 fogEnabled 关/开两张图（判�
   fs.mkdirSync(SHOTS, { recursive: true });
   await page.goto("/", { waitUntil: "domcontentloaded", timeout: 60000 });
   await clearIdb(page);
-  await page.waitForTimeout(2500);
+  // 启动就绪等待（取代固定 2500ms sleep——CI 慢启动下 DnD 会撞「tree-root 未就绪」）
+  await waitForAppReady(page);
 
   // 1. 导入真实 fixture 并选中（彩色棋盘格纹理：模型区域判据有饱和色可锚）
   await dropFixtureYsm(page, "01_taisho_maid.ysm");

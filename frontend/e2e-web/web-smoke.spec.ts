@@ -9,8 +9,10 @@
 // Chromium 陷阱（同 dnd.spec.ts）：new DragEvent({dataTransfer}) 构造器忽略
 // dataTransfer（只读）→ 必须 Object.defineProperty 强制注入。
 import { expect, type Page, test } from "@playwright/test";
+import { clearIdbBestEffort, waitForAppReady } from "./web-ready.ts";
 
-/** 页面内构造 DataTransfer + File 并注入 drop 事件（defineProperty 强制注入） */
+/** 页面内构造 DataTransfer + File 并注入 drop 事件（defineProperty 强制注入）。
+ *  前置就绪由 beforeEach 的 `waitForAppReady` 轮询承担，本函数只负责派发本身。 */
 async function dropFile(page: Page, fileName: string, content: string): Promise<void> {
   await page.evaluate(
     async ({ name, body }) => {
@@ -73,16 +75,9 @@ async function idbKeys(page: Page): Promise<Record<string, string[]>> {
   });
 }
 
-/** 清空 IndexedDB（用例间隔离：每个用例独立模型库） */
+/** 清空 IndexedDB（用例间隔离：每个用例独立模型库）；撞应用启动导航时静默放行 */
 async function clearIdb(page: Page): Promise<void> {
-  await page.evaluate(async () => {
-    await new Promise<void>((res) => {
-      const r = indexedDB.deleteDatabase("ysm-model-manager-web");
-      r.onsuccess = () => res();
-      r.onerror = () => res(); // 库不存在等错误照常继续
-      r.onblocked = () => res();
-    });
-  });
+  await clearIdbBestEffort(page);
 }
 
 /** 读指定 file: 记录的内容（验证幂等覆盖写：body 应变 v2） */
@@ -128,6 +123,9 @@ test.describe("网页版主链路（ADR-049）", () => {
     await page.goto("/", { waitUntil: "networkidle" });
     await clearIdb(page);
     await page.reload({ waitUntil: "networkidle" });
+    // 应用启动链落定（tree-root 就绪）再交棒用例——用例体内第一步就是派发 DnD，
+    // 此前无任何启动等待，CI 慢启动下必撞「tree-root 未就绪」
+    await waitForAppReady(page);
   });
 
   test.afterEach(async ({ page }) => {

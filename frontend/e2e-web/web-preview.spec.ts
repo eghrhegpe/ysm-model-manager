@@ -33,6 +33,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect, type Page, test } from "@playwright/test";
 import { zipSync } from "fflate";
+import { clearIdbBestEffort, waitForAppReady } from "./web-ready.ts";
 
 /** 读取仓库已跟踪的 YSM fixture 目录，现场 zip 成 .ysm 文件字节 base64（CI 可复现）。 */
 function fixtureYsmBase64(): string {
@@ -58,7 +59,8 @@ function fixtureYsmBase64(): string {
   return Buffer.from(zipSync(files)).toString("base64");
 }
 
-/** 像 dropFile 一样派发，但文件体是合法 YSM（fixture zip），用于依赖解析成功的预览断言。 */
+/** 像 dropFile 一样派发，但文件体是合法 YSM（fixture zip），用于依赖解析成功的预览断言。
+ *  前置就绪由 beforeEach 的 `waitForAppReady` 轮询承担，本函数只负责派发本身。 */
 async function dropFixtureYsm(page: Page, fileName: string): Promise<void> {
   const bodyB64 = fixtureYsmBase64();
   await page.evaluate(
@@ -141,16 +143,9 @@ async function idbKeys(page: Page): Promise<Record<string, string[]>> {
   });
 }
 
-/** 清空 IndexedDB（用例间隔离：每个用例独立模型库） */
+/** 清空 IndexedDB（用例间隔离：每个用例独立模型库）；撞应用启动导航时静默放行 */
 async function clearIdb(page: Page): Promise<void> {
-  await page.evaluate(async () => {
-    await new Promise<void>((res) => {
-      const r = indexedDB.deleteDatabase("ysm-model-manager-web");
-      r.onsuccess = () => res();
-      r.onerror = () => res();
-      r.onblocked = () => res();
-    });
-  });
+  await clearIdbBestEffort(page);
 }
 
 /**
@@ -365,6 +360,9 @@ test.describe("网页版模型预览链路（ADR-049 Phase 3 续）", () => {
     await page.goto("/", { waitUntil: "networkidle" });
     await clearIdb(page);
     await page.reload({ waitUntil: "networkidle" });
+    // 应用启动链落定（tree-root 就绪）再交棒用例——用例体内第一步就是派发 DnD/点树行，
+    // 此前无任何启动等待，CI 慢启动下必撞「tree-root 未就绪」
+    await waitForAppReady(page);
   });
 
   test.afterEach(async ({ page }) => {

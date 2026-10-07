@@ -67,7 +67,11 @@ export interface AntiRepeatOptions {
   macroStrength?: number;
   /** macro：宏观场在整张输出内的周期数（默认 1.5，越大斑越大越平缓） */
   macroFreq?: number;
-  /** stochastic：瓦片边界羽化宽度（px，默认 4），越大越平滑、装饰性略降 */
+  /** stochastic：瓦片边界羽化宽度（px，默认 4），越大越平滑、装饰性略降。
+   *  ⚠️ 定义（2026-10-07）：**0 是合法值，但刻意关掉本模块「不引入新缝」的默认契约**——
+   *  0 = 纯 decor（边界不羽化回 base），子块旋转在瓦片边界错位，缝会**高于输入固有水平**
+   *  （实测 blend:0 缝 24 vs 输入固有 20，见 anti-repeat.test.ts「blend:0」用例；默认 4 时
+   *  缝 ≈ 输入固有值）。只在明确要强去相关、可接受边界缝时用 0；**勿顺手 clamp 到 ≥1**。 */
   blend?: number;
 }
 

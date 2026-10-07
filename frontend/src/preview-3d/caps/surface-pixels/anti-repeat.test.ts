@@ -143,6 +143,10 @@ describe("stochastic（随机瓦片）", () => {
 
     expect(allAlpha255(noBlend)).toBe(true);
     expect(seamNo).toBeGreaterThan(0); // 与 blended 确实不同（否则本用例没测到 blend 分支）
+    // 定义（2026-10-07，见 anti-repeat.ts `blend` 选项 doc）：blend:0 刻意**突破**
+    // 「不引入新缝」契约——缝会高于输入固有水平（非仅「有缝」）。此断言把「24 vs 固有 20」
+    // 从注释升格为机器守卫；seed/S 固定故确定性成立。
+    expect(seamNo).toBeGreaterThan(INPUT_SEAM);
     expect(repNo).toBeGreaterThan(repBlended); // 羽化把边界拉回 base ⇒ 去相关被削弱
     expect(seamBlended).toBeLessThanOrEqual(INPUT_SEAM); // 羽化 = 不引入新缝
     expect(seamNo).toBeGreaterThanOrEqual(seamBlended); // blend=0 的代价：边界缝不低于羽化版

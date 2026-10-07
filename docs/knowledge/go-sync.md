@@ -28,7 +28,6 @@ auto_fields:
     - ErrPartialSync
     - FileConflict
     - FindMinecraftDir
-    - GetLinkType
     - HasDotMinecraftSubdirs
     - InvalidateSyncScanCaches
     - IsHardLink
@@ -50,8 +49,6 @@ auto_fields:
     - ResourceDiff
     - ScanFunc
     - SyncCustomToRepo
-    - SyncResources
-    - SyncResourcesWithConfig
     - SyncToggleStatus
 quick_groups:
   - 模型扫描与仓库管理

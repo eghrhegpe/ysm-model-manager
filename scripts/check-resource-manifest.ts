@@ -95,8 +95,11 @@ try {
 
 // ── 2) 行为级：Go/TS 归一化实现与 schema 声明必须同构 ────────────────
 // 防「改了 Go 解析器 / TS 镜像却忘了 schema」——锁的是行为镜像契约，不止形状。
+// 注：Go FormatRange.UnmarshalJSON / descString 位于 resource_lookup.go
+// （2026-10 拆分 commit a162a78a0 从 resource.go 迁出；此处须与上方 LAYERS
+// 的 go.PackMeta 同文件，否则拆分后误报漂移）。
 try {
-  const goRes = read("go/types/registry/resource.go");
+  const goRes = read("go/types/registry/resource_lookup.go");
   const tsMeta = read("frontend/src/parsers/pack-meta.ts");
   const schema = JSON.parse(read("docs/schema/resource-manifest.schema.json"));
   const frOneOf = JSON.stringify(schema.$defs.FormatRange.oneOf);

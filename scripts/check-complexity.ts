@@ -14,6 +14,9 @@
  *      但仍按当前深度计分 `+1+depth`**——「不增层」≠「与深度无关」。实测教训：同一串
  *      `a && b && c` 写在双层循环体内按 d=2 各计 3 分，提到顶层具名函数后各计 1 分）。
  *   2. 嵌套深度：整个函数最大控制流嵌套层数。
+ *   3. **第三方 vendored 目录整体排除**（`VENDORED_DIRS`，精确路径）：非本仓代码不计债。
+ *      排除项须逐目录精确列出（含通配符即 fail-closed）、不存在即 fail-closed（防路径漂移后
+ *      排除静默空转），实际排除项在 `_summary.vendoredExcluded` 显式回报——排除不得静默。
  *
  * 实现：核心规约器 `cognitiveFromSeq` 是零依赖纯函数（输入 = 结构事件序列，输出
  * { cognitive, maxNesting }），契约测试直接喂事件序列锁死算法；ts-morph 薄层
@@ -51,6 +54,24 @@ import { parseArgs } from "./_lib/parse-args.ts";
 import { getRoot, relPosix } from "./_lib/scan-files.ts";
 
 const ROOT = getRoot();
+
+/**
+ * 第三方 vendored 目录（**精确路径，禁通配**）——非本仓代码，不计入认知复杂度债。
+ *
+ * 立因（与 `.golangci.yml` 排除 `upstream/` 逐字同款理由）：`utils/animation/molang-lib/`
+ * 是 Blockbench 作者 JannisX11 的 Molang 实现（MIT，文件头署名），实测认知复杂度 876
+ * ——是次名（139）的六倍以上，长期霸榜并掩盖真实信号，而我们对 vendored 代码没有重构权。
+ *
+ * 纪律（两组守卫都由本文件自身 fail-closed 执行，勿绕过）：
+ *   ① **只许逐目录精确列出**——含 `*?{}[]` 通配符即 fail-closed（防「排除一个大目录」式偷懒）；
+ *   ② **条目不存在即 fail-closed**——路径漂移若让排除静默空转，报表会假干净；
+ *   ③ 实际排除项在 `_summary.vendoredExcluded` 显式回报——**排除不得静默**，否则
+ *      「报表变干净」与「真的还债了」无法区分。
+ */
+const VENDORED_DIRS: readonly string[] = ["frontend/src/utils/animation/molang-lib"];
+
+/** 本次 walk 实际跳过的 vendored 目录（相对 ROOT 的 posix 路径），供 _summary 披露。 */
+const vendoredSkipped = new Set<string>();
 
 // ─── 参数解析（必须在 main() 内，见下方红线注释）──────────
 // ⚠️ 本模块被 check-params.ts import（collectNamedFunctions）。参数解析与 unknown 拦截
@@ -245,6 +266,12 @@ function walkSource(dir: string): string[] {
         entry.name === "vendor"
       )
         continue;
+      // vendored 精确排除（相对 ROOT 的 posix 路径全等；目录级判定，天然无法通配）
+      const rel = relPosix(full);
+      if (VENDORED_DIRS.includes(rel)) {
+        vendoredSkipped.add(rel);
+        continue;
+      }
       out.push(...walkSource(full));
     } else if (entry.isFile()) {
       if (/\.(ts|js)$/.test(entry.name) && !/\.(test|spec)\.[jt]s$/.test(entry.name))
@@ -258,6 +285,15 @@ function walkSource(dir: string): string[] {
 async function main() {
   const args = resolveArgs();
   const yellow = args.threshold;
+
+  // vendored 排除项自守卫（fail-closed）：通配符 = 排除口径被放宽；路径不存在 = 排除已空转。
+  // 两条都属「闸门悄悄失效」类事故，宁可拒绝运行也不出一份假干净的报表。
+  for (const d of VENDORED_DIRS) {
+    if (/[*?{}[\]]/.test(d)) failClosed(`vendored 排除项含通配符（只许逐目录精确列出）：${d}`, args.json);
+    if (!fs.existsSync(path.join(ROOT, d))) {
+      failClosed(`vendored 排除项不存在（路径漂移，排除已空转）：${d}`, args.json);
+    }
+  }
 
   // 变更域解析（--files 优先 → --changed 自解析 → 全库）：放在最前，避免因 --files 为空 /
   // --changed 不可解析时白跑一次 ts-morph 装载。
@@ -395,6 +431,7 @@ async function main() {
             thresholds: { yellow, orange: yellow * 2, red: yellow * 3 },
             counts,
             scopeFilter,
+            vendoredExcluded: [...vendoredSkipped].sort(),
           },
           items,
           parseFailures: parseFailures.slice(0, 10),

@@ -630,7 +630,7 @@ jobs:
         working-directory: frontend
         run: pnpm exec playwright install --with-deps chromium
 
-      - name: E2E-Web 测试（20s 每项 / 5min 总限 / SwiftShader 软渲染）
+      - name: E2E-Web 测试（20s 每项 / 7min 总限 / SwiftShader 软渲染）
         working-directory: frontend
         run: pnpm exec playwright test --config playwright.web.config.ts --reporter=line
 

@@ -6,6 +6,7 @@ category: utils
 source_files:
   - scripts/pre-push-gate.ts
   - .githooks/pre-push
+  - .github/workflows/test.yml
   - scripts/_lib/gate-blocks/static-tools.ts
   - scripts/_lib/gate-config.ts
   - scripts/_lib/gate-ctx.ts
@@ -268,6 +269,8 @@ node scripts/pre-push-gate.ts --files "<file1>\n<file2>..." [--dry-run]  # 文�
 - **变更集解析失败必须阻断**，不静默空跑放行（fail-closed）
 - Windows 下 npx 是 npx.cmd，node spawn 需 `shell: true`
 - git 数组参数直走 `procRun`（无 shell 拼接）：ref 允许 `$`/backtick 等元字符，拼字符串经 shell 会构成命令注入（pre-push stdin 的 localRef 可被攻击者控制）
+- **本地 pre-push 默认轻量档（2026-10-07）**：`YSM_FAST_PUSH` 未设/≠`0` 时，前端域的 `vite build` / `tsc --noEmit` / `vitest` 与 Go 域的 `go test`（-race 段）**跳过并记 debt**，只留静态治理层 + `go build`/`go vet`；`YSM_FAST_PUSH=0` 恢复全量（发版前自检用）。动机：这三项 CI 各步已独立承担，本地重复付费只买到「早知道十几分钟」。实测前端域推送 67s → 27s、含 git 全程 push 31s（其中 vitest 单项 61s 是主要被省成本）。**注意别夸大收益**：`vite build`/`tsc` 各仅 ~3s，真正的分钟级成本在 vitest 与 CI 侧（见下条）。
+- **CI 的 Go 缓存曾双重付费 ~174s（2026-10-07 实测，已修）**：`actions/setup-go` **默认 `cache: true`**，把「工具链 + GOMODCACHE + GOCACHE」打成单个 **1133MB** 包——Windows runner 下载仅 7s 而**解压 94s**；同时仓内另有一条手工 `go-mod` 缓存（**791MB**，解压 68s），两者内容**重叠**。即每次 push 空烧近 3 分钟纯 I/O 解压，是 14m28s 流水线的最大单项。处置：`setup-go` 显式 `cache: false`（test.yml 1 处 + release.yml 4 处），模块只留 `go-mod` 一条。教训：**加缓存前先量「下载 vs 解压」**——Windows 上大缓存可能比不缓存更慢。
 - **`debt` 标签只在本地 gate 生效；CI 把它当独立 shell 步骤跑 → 退出码传染，照红**（2026-09-17 实证）：本地 `check-deadcode-baseline` 声明 `debt`（非阻断，结论 `PASS ✅ 放行推送`），但 `.github/workflows/test.yml` 里它是**单独一步** `node scripts/check-deadcode-baseline.ts --json | Out-String`，**退出码 1 直接令 job 失败**——与本地「存量债不阻断」判读无关。**推论：本地 PASS ≠ CI 绿；凡 CI 单独跑且非零退出的检查项，债务策略都救不了它。**
 - **域级 vitest 的失败可能是负载瞬态，不是本次回归**（2026-10-07 实证）：前端域与 Go 域经 Promise.all 并行，`go test -race` 满载时 vitest 用例会被 CPU 饿死击穿 5s `testTimeout`。判别法 = **单跑该文件**：单跑绿而门禁红即负载瞬态（`pre-push-gate` 知识卡同款现象亦见于 `go/cli` 基准测试）。处置 = 复跑转绿即放行；**若复跑仍红则是真回归**，别用「flaky」搪塞。排查时勿只看门禁 tail：vitest 输出末尾的 happy-dom 性能提示会挤掉真失败名，须抓 `×`/`✗`/`FAIL` 行或直接 `--reporter=json` 看 `numFailedTests`。
 - **基线自动收编必须随提交入库，否则 CI 结构性红**（2026-09-17 根因）：脚本设计「新增 ∩ 责任集为空 → 自动收编进基线 + INFO 留痕」，但**只在非 `--json` 模式写盘**；CI 传 `--json`（无写盘）+ 用**已提交的**基线比对 ⇒ 未提交的收编等于没发生。本次 71 笔一次推送时踩中：本地 `pre-push-gate --all` 把 14 条新增收编进 `scripts/baseline/deadcode-baseline.json`（工作区已改），未提交 → CI 见 14 条「新增」→ 红。**处置：提交该基线文件**（时间戳 + 过期项清理 + 新增项一并入库）。

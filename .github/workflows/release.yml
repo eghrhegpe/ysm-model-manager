@@ -64,6 +64,10 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
+          # cache: false —— 勿回退为默认 true：setup-go 默认把「工具链 + GOMODCACHE +
+          # GOCACHE」打成单个 ~1.1GB 包，Windows 上解压近 94s，且与下方 go-mod 缓存
+          # 内容重叠（再烧 68s）。实测 ~174s 纯解压浪费（2026-10-07，同 test.yml）。
+          cache: false
       - uses: pnpm/action-setup@v4
         with:
           version: 10
@@ -118,6 +122,10 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
+          # cache: false —— 勿回退为默认 true：setup-go 默认把「工具链 + GOMODCACHE +
+          # GOCACHE」打成单个 ~1.1GB 包，Windows 上解压近 94s，且与下方 go-mod 缓存
+          # 内容重叠（再烧 68s）。实测 ~174s 纯解压浪费（2026-10-07，同 test.yml）。
+          cache: false
       - uses: pnpm/action-setup@v4
         with:
           version: 10
@@ -182,6 +190,10 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
+          # cache: false —— 勿回退为默认 true：setup-go 默认把「工具链 + GOMODCACHE +
+          # GOCACHE」打成单个 ~1.1GB 包，Windows 上解压近 94s，且与下方 go-mod 缓存
+          # 内容重叠（再烧 68s）。实测 ~174s 纯解压浪费（2026-10-07，同 test.yml）。
+          cache: false
       - uses: pnpm/action-setup@v4
         with:
           version: 10
@@ -236,6 +248,10 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version: ${{ env.GO_VERSION }}
+          # cache: false —— 勿回退为默认 true：setup-go 默认把「工具链 + GOMODCACHE +
+          # GOCACHE」打成单个 ~1.1GB 包，Windows 上解压近 94s，且与下方 go-mod 缓存
+          # 内容重叠（再烧 68s）。实测 ~174s 纯解压浪费（2026-10-07，同 test.yml）。
+          cache: false
       - uses: pnpm/action-setup@v4
         with:
           version: 10

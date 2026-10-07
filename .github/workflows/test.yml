@@ -42,6 +42,14 @@ jobs:
           # workflow_call / fork PR may not expose repository variables;
           # go.mod is the authoritative toolchain requirement.
           go-version-file: go.mod
+          # ⚡ cache: false（2026-10-07 实测优化，勿回退为默认 true）：
+          # setup-go 默认把「工具链 + GOMODCACHE + GOCACHE」打成**一个 1133MB** 的包。
+          # Windows runner 上解压 1.1GB 小文件是 I/O 灾难（实测下载仅 7s、**解压 94s**），
+          # 且其 GOMODCACHE 与下方手工 `go-mod` 缓存（791MB / 解压 68s）**内容重叠**
+          # ——两份缓存加起来每次 push 空烧 ~174s（近 3 分钟）纯解压，是全流水线最大单项成本。
+          # 关掉后：工具链走 runner 自带/按需下载（数十秒），模块交下方 go-mod 缓存，不再重复。
+          # 判据与实测数据见知识卡 pre-push-gate / 本次 37651674126 运行日志。
+          cache: false
 
       - uses: pnpm/action-setup@v4
         with:

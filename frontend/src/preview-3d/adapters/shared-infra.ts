@@ -315,6 +315,12 @@ export function buildSharedInfra(
   //  与状态层 lookup 同时机——registry 单例长命，createAll 只换 instances）
   setSceneCapRegistry(sceneCapabilityRegistry);
   setProbeCapRegistry(sceneCapabilityRegistry);
+  // [锐评 2026-10-07 #5 时序暗线收口] ADR-085 S3：菜单在 caps 创建**之前**已渲染（mount 链），
+  // dock 的 cap.skyGroundCap 谓词当时为 false → 环境面板被滤出。此处 lookup 注入完成、谓词
+  // 重求值为 true，立即补渲染 dock。⚠️ 时序契约：refreshDock **必须紧跟 lookup 注入**（上方
+  // setSceneCapabilityLookup 之后），不得移到他处——「谓词 → 注入 → 补渲染」的因果链就锁在
+  // 这几行，挪走即环境面板静默消失（原调用点在 buildSharedInfra 末尾，靠调用顺序碰巧成立）。
+  menuHandle.refreshDock();
   sceneInfraHost.caps = caps;
   const skyCap = sceneCapabilityRegistry.getById("sky") ?? null;
   const lightCap = sceneCapabilityRegistry.getById("light") ?? null;
@@ -353,10 +359,6 @@ export function buildSharedInfra(
   // 性能档位（薄壳版，perf-presets.ts 数据表驱动）：用户显式档位最后套用，覆盖模型预设的性能项
   // （fps / 分辨率 / Bloom）；cap 缺席的派生路径 setStateValue 静默跳过，无副作用
   applyPerfPreset(getPerfPreset());
-  // ADR-085 S3：caps 创建后触发 refreshDock()，修复 litematic/pack 的 environment 项时序缺失
-  // （菜单先于 caps 挂载，挂载时 cap.skyGroundCap 谓词为 false 被过滤；此处 lookup 已注入、
-  // 谓词重求值为 true，重渲染补回——requiresEnvironment 谓词化后同一机制原样生效）
-  menuHandle.refreshDock();
   // 复用单例 controls（多模型共用同一套相机控制）
   if (!sceneInfraHost.controls) {
     sceneInfraHost.controls = new OrbitControls(camera, renderer.domElement);

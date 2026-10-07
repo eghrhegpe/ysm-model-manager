@@ -299,9 +299,24 @@ jobs:
       # code_review 9403a4dff #8/#10（P3）：钉定 ADR 实测通过的版本（v2.13.2 built with
       # go1.26.3）——@latest 浮动使门禁随上游发版漂移（新默认/schema 变更无故变红或漏检，
       # 且无法本地复现）；仓库惯例版本单点（对齐 WAILS_VERSION）
-      - name: 安装 golangci-lint（v2.13.2，built with go1.26.3）
+      #
+      # ⚡ 2026-10-07 改下载官方预编译包（原 `go install …@v2.13.2` 实测 **1m30s**）：
+      # `go install` 从源码编译 golangci-lint 的数百个依赖，是**独立于本仓 go.mod 的
+      # 另一套编译键**（仓外 module 图，GOCACHE 不与之复用）⇒ Windows 上每次冷编译 90s。
+      # 官方 release 的 windows-amd64.zip 是单文件 exe，解压即用（数秒），版本仍钉 v2.13.2。
+      # 「built with go1.26.3」这一约束由上游 release 自身保证（同 tag 产物）；如需复核，
+      # 跑 `golangci-lint --version` 即见其 built-with 版本。
+      - name: 安装 golangci-lint（v2.13.2 预编译包，免源码编译）
         shell: pwsh
-        run: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.2
+        run: |
+          $v = "2.13.2"
+          $zip = "$env:RUNNER_TEMP\golangci-lint.zip"
+          $dir = "$env:RUNNER_TEMP\golangci-lint-$v"
+          Invoke-WebRequest -Uri "https://github.com/golangci/golangci-lint/releases/download/v$v/golangci-lint-$v-windows-amd64.zip" -OutFile $zip -UseBasicParsing
+          Expand-Archive -LiteralPath $zip -DestinationPath $dir -Force
+          $exe = Get-ChildItem -Path $dir -Recurse -Filter golangci-lint.exe | Select-Object -First 1
+          Add-Content -Path $env:GITHUB_PATH -Value $exe.Directory.FullName
+          & $exe.FullName --version
 
       - name: Go 静态分析（golangci-lint，仅增量）
         shell: pwsh
@@ -323,7 +338,15 @@ jobs:
           golangci-lint run --new-from-rev=$base ./...
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - name: Go 覆盖率报告（非阻断，趋势可见）
+      # ⚡ 2026-10-07 条件化（实测优化）：本步自述「非阻断，趋势可见」，却要
+      # `go test ./... -coverprofile -p 1` —— cover 插桩是**独立编译键**（与普通/race
+      # 构建缓存互不复用），实测每次 1m56s 且 `-p 1` 强制单核串行，**全部计入关键路径**。
+      # 一个不构成门禁的趋势展示，不该让每次 push 都付这 2 分钟 ⇒ 仅在 main 分支跑；
+      # PR 与分支 push 跳过（趋势数据由 main 累积，足够反映走向）。
+      # 若日后要把它升为门禁，删掉 if 即可——但那时应改用方案 A（与 -race 合并成一次编译），
+      # 而不是让两条独立编译键各自冷跑一遍。
+      - name: Go 覆盖率报告（非阻断，趋势可见；仅 main）
+        if: github.ref == 'refs/heads/main'
         shell: pwsh
         run: |
           # -p 1 串行：多包并行跑 coverprofile 时 go/scanner 测试存在隔离冲突（flaky），
@@ -368,6 +391,17 @@ jobs:
       - name: 安装前端依赖
         working-directory: frontend
         run: pnpm install --frozen-lockfile
+
+      - name: 缓存 apt 下载包（含 --with-deps 的 CJK 字体 / 系统库）
+        uses: actions/cache@v5.1.0
+        with:
+          path: /var/cache/apt/archives
+          # 钉 playwright-core 版本：--with-deps 依赖集合随其版本变；版本未变即复用
+          # 已下载的 .deb，跳过慢镜像（azure.archive 实测 91.5KB/s）重下，只留解包。
+          # 保留 --with-deps 不动：CJK 字体（wqy-zenhei 等）是中文 UI 截图渲染必需。
+          key: pw-apt-${{ runner.os }}-${{ hashFiles('frontend/node_modules/playwright-core/package.json') }}
+          restore-keys: |
+            pw-apt-${{ runner.os }}-
 
       - name: 安装 Playwright Chromium
         working-directory: frontend
@@ -438,6 +472,17 @@ jobs:
       - name: 安装前端依赖
         working-directory: frontend
         run: pnpm install --frozen-lockfile
+
+      - name: 缓存 apt 下载包（含 --with-deps 的 CJK 字体 / 系统库）
+        uses: actions/cache@v5.1.0
+        with:
+          path: /var/cache/apt/archives
+          # 钉 playwright-core 版本：--with-deps 依赖集合随其版本变；版本未变即复用
+          # 已下载的 .deb，跳过慢镜像（azure.archive 实测 91.5KB/s）重下，只留解包。
+          # 保留 --with-deps 不动：CJK 字体（wqy-zenhei 等）是中文 UI 截图渲染必需。
+          key: pw-apt-${{ runner.os }}-${{ hashFiles('frontend/node_modules/playwright-core/package.json') }}
+          restore-keys: |
+            pw-apt-${{ runner.os }}-
 
       - name: 安装 Playwright Chromium
         working-directory: frontend

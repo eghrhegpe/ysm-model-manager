@@ -141,7 +141,13 @@ function attachBoneToParent(
   }
   // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
   const parent = boneGroupMap.get(compKey(mi, parentId))!;
-  // 若 parent 已是 g 的后代（环），跳过此边（g 保持挂在 modelGroups 或更早父上）
+  // 若 parent 已是 g 的后代（环），跳过此边并告警。
+  // ⚠️ 实测（2026-10-07）：此处 return 时 g **尚未被挂到任何父**（挂 modelGroups 只发生在上面
+  // 那条分支），故环上的骨连同其子树会整体脱离场景图（A(parent=B)/B(parent=A) 时：先 B.add(A)、
+  // 再处理 B 命中环 → B 悬空且 A 在 B 内 → 两者皆不可见）。原注释写「g 保持挂在 modelGroups
+  // 或更早父上」，描述的是**意图而非现状**——特此更正，避免后人据此误判降级行为。
+  // 是否改为「先 modelGroups[mi].add(g) 再告警」（把环骨降级挂到组件根、保住子树可见），
+  // 属「畸形模型降级策略」的产品口径决策，未擅自改（仅影响 ParentID 成对互指的畸形 spec）。
   if (ancestorChainContains(parent, g)) {
     console.warn(`[mesh] 跳过骨骼父链环: ${bd.id} ↔ ${bd.parentId}`);
     return;

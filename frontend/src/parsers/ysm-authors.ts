@@ -7,8 +7,9 @@
 // 本文件收口为唯一实现，两条通道共用，杜绝双写漂移。
 // 零应用层依赖（不 import backend/features/views/preview-3d 其他模块）：纯数据归一化。
 //
-// 归属：本文件位于 parsers/，因是格式解析范畴；decoder/ysm-authors.ts 保留 re-export 壳
-// 供既有消费者零改动（ADR-217 后续边界清洁，2026-09-10）。
+// 归属：本文件位于 parsers/，因是格式解析范畴。曾经的兼容壳
+// preview-3d/decoder/ysm-authors.ts 已于 2026-10-07 删除（唯一消费者
+// ysm-meta-parser 改直引本文件）；新消费者一律直接引 parsers/ysm-authors.ts。
 
 /** ysm.json metadata.authors 的原始条目（未校验，字段全可选） */
 export interface RawYsmAuthor {

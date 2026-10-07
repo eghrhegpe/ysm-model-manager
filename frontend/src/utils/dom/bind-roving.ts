@@ -25,8 +25,11 @@ export interface RovingSpec {
   root: ShadowRoot | Document;
   /** 容器：字符串 = root 内选择器；元素 = 直接挂监听 */
   container: string | Element;
-  /** 可聚焦 item 选择器（每次按键实时查询，重渲染换血不脱钩） */
-  itemSelector: string;
+  /** 可聚焦 item 选择器（每次按键实时查询，重渲染换血不脱钩）。
+   *  仅在 `itemsOf` 缺省时使用——与 `itemsOf` **二选一（至少其一）**；两者皆缺会在
+   *  首次取 items 时 fail-loud 抛 TypeError（此前 itemSelector 必填，「传 itemsOf 仍要塞
+   *  占位选择器」是 API 反模式，2026-10 战评审气味修复） */
+  itemSelector?: string;
   /** radio：移动即激活 + aria-checked；tab：移动只聚焦，Enter/Space 激活 + aria-selected；
    *  list：移动即激活 + aria-selected（默认） */
   preset?: RovingPreset;
@@ -206,8 +209,15 @@ export function bindRoving(spec: RovingSpec): RovingHandle {
   const stateAttr = spec.stateAttr === undefined ? stateAttrOf(preset) : spec.stateAttr;
   const itemsProvider =
     spec.itemsOf ??
-    ((c: Element): HTMLElement[] =>
-      Array.from(c.querySelectorAll(spec.itemSelector)) as HTMLElement[]);
+    ((c: Element): HTMLElement[] => {
+      if (!spec.itemSelector) {
+        // fail-loud：itemsOf 与 itemSelector 必须至少提供一个（未来调用传了 itemsOf
+        // 而漏 itemSelector 属类型违约的反面——可选化后两者皆缺是静默失效，
+        // 空匹配只会让键盘原语无声不响应，比报错更难查）。
+        throw new TypeError("bindRoving: itemsOf 与 itemSelector 必须至少提供一个");
+      }
+      return Array.from(c.querySelectorAll(spec.itemSelector)) as HTMLElement[];
+    });
   const container =
     typeof spec.container === "string"
       ? (spec.root.querySelector(spec.container) as Element | null)

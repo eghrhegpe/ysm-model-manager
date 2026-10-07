@@ -44,7 +44,7 @@ export function applyWasdCameraMotion(
     cam.position.add(reuse.move);
     if (orbitMode) ot.add(reuse.move);
   }
-  if (orbitMode && ot) {
+  if (orbitMode) {
     ctr.target.copy(ot);
     ctr.update();
     ot.copy(ctr.target);

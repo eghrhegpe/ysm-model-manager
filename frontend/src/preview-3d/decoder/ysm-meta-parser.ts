@@ -13,10 +13,10 @@
 //   - parseYsmMetaFromFiles：原 ParseYsmMetaFromFiles（去前缀，同 P1
 //     godRaysIntensity 风格），纯函数，正文与注释逐字保留
 
+import { parseYsmAuthors, type YsmAuthor } from "@/parsers/ysm-authors.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { extractAnimGroupsAndConfigs } from "@/utils/format/ysm-anim-config.ts";
 import { type DecodedYsm, devLog } from "./utils.ts";
-import { parseYsmAuthors, type YsmAuthor } from "./ysm-authors.ts";
 
 /** WASM 解码输出文件 */
 export interface DecodedFile {

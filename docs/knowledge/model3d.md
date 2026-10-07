@@ -610,7 +610,6 @@ auto_fields:
     - parsePmdStage
     - ParsePmxCtx
     - parsePmxStage
-    - parseYsmAuthors
     - parseYsmJsonDirect
     - parseYsmMetaFromFiles
     - PathInput
@@ -690,7 +689,6 @@ auto_fields:
     - ProbeEnumValue
     - ProbeInfraSource
     - RangedKey
-    - RawYsmAuthor
     - rcMasterToggleNode
     - ReadFileBytes
     - readLightParams
@@ -1025,8 +1023,6 @@ auto_fields:
     - YSM_MODEL_SCHEMA_ID
     - YsmAdapterOptions
     - YsmAnimPlayer
-    - YsmAuthor
-    - YsmAuthorMetadata
     - YsmComponentSelectCtx
     - ysmComponentSelectNode
     - YsmContentHandle

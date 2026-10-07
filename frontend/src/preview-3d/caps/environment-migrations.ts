@@ -36,8 +36,10 @@ export interface EnvMigrationInput {
    */
   preset?: unknown;
   /**
-   * **sky 槽**的 `environment` 布尔（sky IBL 开关）。
-   * ⚠️ 与 cap 自身的 `enabled` 不同源——调用方须从 sky 槽读取。
+   * sky IBL 开关（`environment` 布尔）。
+   * ⚠️ 与 cap 自身的 `enabled` 不同源。[cross-slot 解耦 2026-10-07] 调用方改读
+   * envState.skyEnvironment 单一事实源（生产 loadAll 里 sky.loadState 先恢复，
+   * 与旧跨槽读 sky 存档等价）——本纯函数本身保持槽无关（node 可测不变）。
    */
   skyEnvironment?: unknown;
   /** environment 槽的 `enabled`（env 功能总开关）。false = 用户关掉了整个环境贴图功能。 */

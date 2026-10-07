@@ -791,16 +791,25 @@ export class EnvironmentCapability implements SceneCapability {
       withLegacy = { ...raw, envEnabled: raw.enabled };
     }
 
-    // [ADR-292 D7] 旧存档（无 envSource 键）归一：跨槽读 sky 的 environment 开关 + 本槽总开关，
-    // 按 migrateEnvSource 三条判据补写 envSource。已含 envSource 则幂等返回同引用（零拷贝）。
+    // [ADR-292 D7] 旧存档（无 envSource 键）归一：按 migrateEnvSource 三条判据补写 envSource。
+    // 已含 envSource 则幂等返回同引用（零拷贝）。
     // 与 ground-capability.loadState 同口径——否则 ADR-292 的 legacy 迁移纯函数（已带测试）
     // 永不被生产代码调用，旧存档落到「envSource 缺省 = preset」的伪默认。
     // 读值优先取回填后的 `envEnabled`（新键存在时即新键），旧档才回落到无前缀 `enabled`——
     // 混合形态存档认新键，防「迁移一次又回退一次」把用户手改静默吞掉。
-    const skyState = restoreState("sky");
+    // [cross-slot 解耦 2026-10-07] 判据①供血线（sky IBL 开关）改读 envState.skyEnvironment
+    // 单一事实源，不再跨槽读 sky 的 localStorage 槽：生产时序 registry.loadAll 按注册序
+    // 串行（sky 先于 environment，scene-capability-registry.ts:187-190），sky.loadState
+    // 已把 sky 存档的 environment 恢复进 envState.skyEnvironment（sky-capability.ts:714/928
+    // 持久化同源）——读值与旧跨槽读等价，且 env 不再耦合 sky 的存档键形（sky 将来改
+    // saveState 键名/键形，env 的判据①不再静默断链）。
+    // ⚠️ 语义边界（独立 loadState，非 loadAll 编排）：sky 未先行 load 时
+    // envState.skyEnvironment 为 schema 默认（true，env-state-schema.ts:100）而非 sky 存档
+    // 原值——「sky 未 load」不被认作「sky IBL 关」。生产路径 loadAll 顺序串行无此窗口；
+    // 单测直接调 env.loadState 时须以 setEnvState({ skyEnvironment }) 显式模拟 sky 已 load。
     const state = normalizeEnvLegacyState(withLegacy, {
       preset: withLegacy.preset,
-      skyEnvironment: skyState ? skyState.environment : undefined,
+      skyEnvironment: envState.skyEnvironment,
       envEnabled: withLegacy.envEnabled ?? withLegacy.enabled,
     });
 

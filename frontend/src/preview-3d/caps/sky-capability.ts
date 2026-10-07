@@ -918,9 +918,10 @@ export class SkyCapability implements SceneCapability {
   /** 保存状态到 localStorage。
    *  [锐评 F-1 收口] 两枚能力级开关改落 **schema 键形**（`skyEnabled` / `skyGodRaysEnabled`），
    *  不再落无前缀 `enabled` / `godRaysEnabled` 幽灵键（私有门已退役，键与门不再各说各话）。
-   *  兄弟键保持原无前缀方言零迁移——`environment` 键另有跨槽读者
-   *  （environment-capability.loadState 读 skyState.environment 做 ADR-292 旧档归一），
-   *  改名即断链。同族先例：reflector 亦仅前缀总开关、兄弟键不动。 */
+   *  兄弟键保持原无前缀方言零迁移——`environment` 键已无跨槽读者（[cross-slot 解耦 2026-10-07]
+   *  environment-capability.loadState 的 ADR-292 旧档归一判据①改读 `envState.skyEnvironment`
+   *  单一事实源，不再耦合本槽键形；本键现由 sky 自身 loadState 恢复独占消费）。
+   *  同族先例：reflector 亦仅前缀总开关、兄弟键不动。 */
   saveState(): void {
     persistState(this.id, {
       timeOfDay: envState.skyTimeOfDay,

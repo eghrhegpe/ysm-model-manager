@@ -833,11 +833,9 @@ describe("EnvironmentCapability — 持久化", () => {
       "ysm-scene-cap-environment",
       JSON.stringify({ preset: "sky", enabled: false, intensity: 1.0, resolution: 1024, useAsBackground: false }),
     );
-    // 旧 world 里 sky 槽的 environment 开关独立存储
-    localStorage.setItem(
-      "ysm-scene-cap-sky",
-      JSON.stringify({ environment: true, enabled: true }),
-    );
+    // 旧 world 里 sky 槽的 environment 开关独立存储；cross-slot 解耦后改读
+    // envState.skyEnvironment 单一事实源（生产 loadAll 里 sky.loadState 先恢复）
+    setEnvState({ skyEnvironment: true }, { source: "manual", force: true });
     const cap = newCap();
     cap.loadState();
     expect(envState.envSource).toBe("sky");
@@ -1391,7 +1389,8 @@ describe("EnvironmentCapability — ADR-292 批次三 来源选择控件", () =>
 
     it("旧存档 env 关掉 + sky IBL 开 → 迁移为 envSource=sky（保画面不变）", () => {
       localStorage.setItem("ysm-scene-cap-environment", JSON.stringify({ enabled: false }));
-      localStorage.setItem("ysm-scene-cap-sky", JSON.stringify({ environment: true }));
+      // cross-slot 解耦后 sky IBL 开关经 envState.skyEnvironment 单一事实源供血
+      setEnvState({ skyEnvironment: true }, { source: "manual", force: true });
       const cap = newCap();
       cap.loadState();
       expect(envState.envSource).toBe("sky");
@@ -1553,11 +1552,50 @@ describe("EnvironmentCapability — 能力级开关单门收口（shadow/reflect
       "ysm-scene-cap-environment",
       JSON.stringify({ enabled: false, preset: "sky", intensity: 1.0 }),
     );
-    localStorage.setItem("ysm-scene-cap-sky", JSON.stringify({ environment: true }));
+    // cross-slot 解耦后 sky IBL 开关经 envState.skyEnvironment 供血（不再读 sky 槽）
+    setEnvState({ skyEnvironment: true }, { source: "manual", force: true });
     const cap = newCap();
     cap.loadState();
     expect(envState.envEnabled, "回填须先于迁移判据读取").toBe(false);
     expect(envState.envSource, "判据①（env 关 + sky IBL 开）仍须成立").toBe("sky");
+  });
+
+  it("[cross-slot 解耦] 不写 sky 槽、仅 envState.skyEnvironment 为真 → envSource 仍迁 sky（判据①供血线改读单一事实源）", () => {
+    // 生产时序：registry.loadAll 按注册序串行（registry:187-190，sky 注册先于
+    // environment），sky.loadState 已把 sky 存档的 environment 恢复进
+    // envState.skyEnvironment（sky-capability.ts:714/928 持久化同源）。
+    // 故判据①供血线读单一事实源而非跨槽 localStorage——本用例**不写 sky 槽**，
+    // 仅置单一事实源，模拟「sky 已 load、env 后 load」的生产路径。
+    localStorage.setItem(
+      "ysm-scene-cap-environment",
+      JSON.stringify({ enabled: false, preset: "sky", intensity: 1.0 }),
+    );
+    setEnvState({ skyEnvironment: true }, { source: "manual", force: true });
+    const cap = newCap();
+    cap.loadState();
+    expect(envState.envEnabled, "回填须先于迁移判据读取").toBe(false);
+    expect(envState.envSource, "判据①（env 关 + sky IBL 开）仍须成立，且不再依赖跨槽读").toBe("sky");
+  });
+
+  it("[cross-slot 解耦] loadState 全程不再读 ysm-scene-cap-sky 槽（sky 存档键形变化不再静默断链）", () => {
+    // 旧实现 loadState 跨槽 restoreState("sky") 读 sky 的存档开关；改读
+    // envState.skyEnvironment 后，全程不得出现 sky 槽的存储读——sky 将来改
+    // saveState 键名/键形，env 的判据①不再耦合它。
+    // 注：spy 目标取全局 localStorage 自身（happy-dom 下 Storage.prototype 上的方法
+    // 不经过原型解析，spy 原型层会静默空转成假绿——与行为断言同判据的「读取记录」
+    // 才可信）。env 槽写入是迁移路径的驱动（loadState 读 env 自身槽为空即早退，
+    // 旧实现的 sky 槽读根本到不了——不设 env 槽则本断言空转）。
+    localStorage.setItem("ysm-scene-cap-sky", JSON.stringify({ environment: true }));
+    localStorage.setItem(
+      "ysm-scene-cap-environment",
+      JSON.stringify({ enabled: false, preset: "sky" }),
+    );
+    setEnvState({ skyEnvironment: true }, { source: "manual", force: true });
+    const getItemSpy = vi.spyOn(localStorage, "getItem");
+    const cap = newCap();
+    cap.loadState();
+    const readKeys = getItemSpy.mock.calls.map((c) => c[0]);
+    expect(readKeys, "loadState 的存储读只应是 env 自身槽").not.toContain("ysm-scene-cap-sky");
   });
 
   it("[迁移回归] 无前缀 enabled=true + sky IBL 开 → 不误迁 sky（判据①不得被回填放大）", () => {
@@ -1567,7 +1605,8 @@ describe("EnvironmentCapability — 能力级开关单门收口（shadow/reflect
       "ysm-scene-cap-environment",
       JSON.stringify({ enabled: true, preset: "sky" }),
     );
-    localStorage.setItem("ysm-scene-cap-sky", JSON.stringify({ environment: true }));
+    // cross-slot 解耦后 sky IBL 开关经 envState.skyEnvironment 供血（不再读 sky 槽）
+    setEnvState({ skyEnvironment: true }, { source: "manual", force: true });
     const cap = newCap();
     cap.loadState();
     expect(envState.envEnabled).toBe(true);

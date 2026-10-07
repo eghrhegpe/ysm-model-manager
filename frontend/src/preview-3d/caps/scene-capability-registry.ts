@@ -35,6 +35,21 @@ export type SceneCapabilityFactory = (ctx: {
   caps?: SceneCapabilityLookup;
 }) => SceneCapability;
 
+/**
+ * loadState 顺序依赖声明（[锐评 2026-10-07 #2 顺序契约收口]）：loadAll 按此拓扑序调用
+ * loadState，**不再靠注册顺序的位置巧合**。
+ *
+ * `environment → ["sky"]`：ADR-292 cross-slot 解耦——env.loadState 的迁移判据① 读
+ * `envState.skyEnvironment`（sky.loadState 先把存档 `environment` 恢复进该键），sky 必须先
+ * load。其余 cap 的 loadState 只写自家键、互不依赖。
+ *
+ * ⚠️ 新增跨 cap 的 loadState 依赖必须登记在此——拓扑序保证「依赖恒先于依赖方」
+ * （注册序颠倒也成立，见 scene-capability-registry.test.ts「#2 拓扑序」用例）。
+ */
+const LOAD_DEPS: Partial<Record<CapabilityId, readonly CapabilityId[]>> = {
+  environment: ["sky"],
+};
+
 /** 注册表：管理所有场景能力的工厂和实例 */
 export class SceneCapabilityRegistry {
   private factories: SceneCapabilityFactory[] = [];
@@ -142,9 +157,9 @@ export class SceneCapabilityRegistry {
     }
   }
 
-  /** 从 localStorage 恢复所有能力状态 */
+  /** 从 localStorage 恢复所有能力状态（按 LOAD_DEPS 拓扑序，依赖恒先于依赖方） */
   loadAll(): void {
-    for (const cap of this.instances) {
+    for (const cap of this.topoLoadOrder()) {
       try {
         cap.loadState();
       } catch (e) {
@@ -153,6 +168,40 @@ export class SceneCapabilityRegistry {
         );
       }
     }
+  }
+
+  /**
+   * [锐评 2026-10-07 #2] loadState 拓扑序：LOAD_DEPS 声明的依赖在拓扑中恒先于依赖方。
+   * 稳定推进——无依赖 / 依赖已满足的 cap 按实例（注册）序出列，与旧「按注册序串行」
+   * **完全一致**（当前注册序 sky 本就在 environment 前）；仅当注册序颠倒或未来新增
+   * 依赖时，才会把依赖方推迟到依赖之后，不再靠位置巧合。
+   */
+  private topoLoadOrder(): SceneCapability[] {
+    const remaining = new Set(this.instances.map((cap) => cap.id));
+    const out: SceneCapability[] = [];
+    let progressed = true;
+    while (remaining.size > 0 && progressed) {
+      progressed = false;
+      for (const cap of this.instances) {
+        if (!remaining.has(cap.id)) continue;
+        const deps = LOAD_DEPS[cap.id as CapabilityId] ?? [];
+        if (deps.every((d) => !remaining.has(d))) {
+          out.push(cap);
+          remaining.delete(cap.id);
+          progressed = true;
+        }
+      }
+    }
+    if (remaining.size > 0) {
+      // 依赖环 / 依赖 id 未注册：兜底按原序补入，不因拓扑故障静默丢恢复
+      ringLog("scene-cap", `loadAll 拓扑有环或依赖缺失: ${[...remaining].join(",")}`, "warn", () =>
+        console.warn(`[scene-cap] loadAll 拓扑有环或依赖缺失: ${[...remaining].join(",")}`),
+      );
+      for (const cap of this.instances) {
+        if (remaining.has(cap.id)) out.push(cap);
+      }
+    }
+    return out;
   }
 
   /** 释放所有能力 */
@@ -184,6 +233,8 @@ export const sceneCapabilityRegistry = new SceneCapabilityRegistry();
 //   - 环境面板成员由各自 getEnvPlacement().order 排序（env.ts buildEnvCards）
 //   - 场景组面板由 PREVIEW_MENU_GROUPS + CORE_MENU_ITEMS 顺序决定（menu/engine/defs.ts）
 // 故下方顺序变更仅影响实例化/释放序，不影响 UI 展示序。
+// （锐评 2026-10-07 #2：loadState 序由 LOAD_DEPS 拓扑决定、不依赖本注册序——sky 机缘上先于
+// environment 注册，但契约由拓扑声明而非位置，见 loadAll/topoLoadOrder。）
 sceneCapabilityRegistry.add("sky", (ctx) => new SkyCapability(ctx));
 sceneCapabilityRegistry.add("ground", (ctx) => new GroundCapability(ctx));
 sceneCapabilityRegistry.add("water", (ctx) => new WaterCapability(ctx));

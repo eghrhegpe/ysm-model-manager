@@ -135,6 +135,24 @@ describe("SceneCapabilityRegistry 险恶测试", () => {
     expect(cap2.loadState).toHaveBeenCalledTimes(1);
   });
 
+  it("[#2 拓扑序 2026-10-07] loadAll 按 LOAD_DEPS 拓扑：environment 依赖 sky，注册序颠倒也先 load sky", () => {
+    const skyLoad = vi.fn();
+    const envLoad = vi.fn();
+    const sky = makeFakeCap("sky", { loadState: skyLoad });
+    const env = makeFakeCap("environment", { loadState: envLoad });
+    // 故意逆注册：environment 先于 sky——旧「按注册序串行」会先 load env（位置契约被破坏的形态），
+    // 拓扑序应把 sky 提到 env 之前（LOAD_DEPS: environment → ["sky"]）。
+    registry.add(() => env);
+    registry.add(() => sky);
+    registry.createAll({} as unknown as CreateAllCtx);
+    registry.loadAll();
+    expect(skyLoad).toHaveBeenCalledTimes(1);
+    expect(envLoad).toHaveBeenCalledTimes(1);
+    expect(skyLoad.mock.invocationCallOrder[0] as number).toBeLessThan(
+      envLoad.mock.invocationCallOrder[0] as number,
+    );
+  });
+
   it("[顺序契约] 内置注册序：sky 必须先于 environment（env 跨槽解耦的等价性地基）", () => {
     // 地基声明：environment-capability.loadState 的 ADR-292 判据① 已改读 envState.skyEnvironment
     // （不再跨槽读 sky 槽），其**等价性完全建立在**「registry.loadAll 按注册序串行 ∧ sky 先于

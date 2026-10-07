@@ -226,7 +226,7 @@ invariant_anchors:
   `setWaterReflectionClipBias` / `setWaterReflectDisableWhenSSR`（getter 同名 get* 族）。构造 opts 含可选 `renderer`/`camera`（registry 传
   全量 ctx；缺省 = 倒影自动失效，单测可裸 scene 构造）。五键均 schema `group: "water"`——持久化写侧自动、
   读侧已登记还原表（D3 契约锁兜底）；reflect 组五控件在 `water-menu.ts`（主开 + 强度/分辨率/裁剪偏置/SSR 抑制四从控），从控按主开 visibleWhen
-  出场（探针路径 `env.waterReflectionEnabled`，ADR-291 三步登记）。**clipBias**（锐评 F-2）原为 ensureReflector 裸字面量 3，现下沉 schema 键（默认 3，range 0–10），
+  出场（探针路径 `cap.waterReflectionEnabled`，ADR-291 三步登记）。**clipBias**（锐评 F-2）原为 ensureReflector 裸字面量 3，现下沉 schema 键（默认 3，range 0–10），
   补 `water-reflection-clip-bias` 滑杆出口（避免复刻 R-1「持久化活、菜单缺席」）
 - 持久化：`saveState` / `loadState`（新旧键双轨；旧档无 `waterLevel` 时 pool 取 `waterPoolHeight` 兜底）。
   `loadState` 恢复段挂起派发（`suspendEnvCallbacks`，fog/ground/light 同法），末尾 `rebuildWaterContainer`

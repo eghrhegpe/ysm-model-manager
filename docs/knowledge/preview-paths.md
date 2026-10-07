@@ -62,10 +62,10 @@ status: active
 
 ## 核心职责
 
-- **`KNOWN_PATHS`** — 已落地路径集合（清单以源码该常量为准，勿在卡内维护计数）。类型契约即运行时实现：`PreviewStatePath = (typeof KNOWN_PATHS)[number]`。（原含 `render.bloom` 与 `ui.activeComponent`，均已退场——前者的后处理开关归 `envState.ppEnabled`，[ADR-250]；原单键 `env.groundMatSource` 经 [ADR-249] §2.1 拆为来源/样式/叠加层三键；`env.fogMode` 为 2026-09 雾气锐评收口新增，供 fog 控件 `near/far` × `density` 互斥显隐。探针入册门槛见不变量段，[ADR-291]。）
+- **`KNOWN_PATHS`** — 已落地路径集合（清单以源码该常量为准，勿在卡内维护计数）。类型契约即运行时实现：`PreviewStatePath = (typeof KNOWN_PATHS)[number]`。（原含 `render.bloom` 与 `ui.activeComponent`，均已退场——前者的后处理开关归 `envState.ppEnabled`，[ADR-250]；原单键 `env.groundMatSource` 经 [ADR-249] §2.1 拆为来源/样式/叠加层三键；`cap.fogMode` 为 2026-09 雾气锐评收口新增，供 fog 控件 `near/far` × `density` 互斥显隐。探针入册门槛见不变量段，[ADR-291]。）
 - **`PreviewStatePath`** — 状态路径类型：已落地路径的联合。写未落地键编译报错——把「谓词读黑洞键静默假死」挡在编译期。
 - **`PreviewSnapshot`** — 状态层快照类型：`{ [K in PreviewStatePath]: PathValue[K] }`（2026 锐评 P1：按路径精确值类型经 `PathValue` 映射声明，`unknown` 类型擦除已消灭），`visibleWhen` 谓词吃的快照形状。键位 = KNOWN_PATHS（全部有真实来源，无黑洞键）。
-- **`PROBE_ENUM_VALUES`（影子值域表，锐评 F-3 家族收口 2026-09-23）** — cap 态枚举探针（`env.waterMode` / `env.groundSourceKind` / `env.groundCanvasStyle` / `env.groundOverlay` / `env.fogMode`）的合法值域，在此以 `as const` 字面量声明。**`PathValue` 的这五个键从本表派生精确联合**（`ProbeEnumValue<P>` = 成员字面量联合），不再手写 `string`——原 `string` 让谓词 `=== "拼错"` 编译不红、静默恒假。值域事实源是 `env-state-schema.ts` 的 enum `values`；本叶子零 import（断环纪律）抄一份影子表，同步由 `preview-paths.test.ts`「PROBE_ENUM_VALUES ⇄ ENV_STATE_SCHEMA 值域同步」对账闸钉死（成员集合相等 + **首成员 = schema default**）。消费侧归一出口 = `preview-state.ts|probeEnum(path, v)`：非白名单值回落 `tuple[0]`（= schema 默认，同侧保守），binding 的 get/set 两侧一律过它。
+- **`PROBE_ENUM_VALUES`（影子值域表，锐评 F-3 家族收口 2026-09-23）** — cap 态枚举探针（`cap.waterMode` / `cap.groundSourceKind` / `cap.groundCanvasStyle` / `cap.groundOverlay` / `cap.fogMode`）的合法值域，在此以 `as const` 字面量声明。**`PathValue` 的这五个键从本表派生精确联合**（`ProbeEnumValue<P>` = 成员字面量联合），不再手写 `string`——原 `string` 让谓词 `=== "拼错"` 编译不红、静默恒假。值域事实源是 `env-state-schema.ts` 的 enum `values`；本叶子零 import（断环纪律）抄一份影子表，同步由 `preview-paths.test.ts`「PROBE_ENUM_VALUES ⇄ ENV_STATE_SCHEMA 值域同步」对账闸钉死（成员集合相等 + **首成员 = schema default**）。消费侧归一出口 = `preview-state.ts|probeEnum(path, v)`：非白名单值回落 `tuple[0]`（= schema 默认，同侧保守），binding 的 get/set 两侧一律过它。
 
 ## 对外 API / 入口
 

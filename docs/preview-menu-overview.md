@@ -317,7 +317,7 @@ export const CORE_MENU_ITEMS: PreviewMenuNode[] = [
       step: 1,
     },
     dockGroup: "settings", // 归属底栏分组
-    visibleWhen: (s) => s["env.skyGroundCap"], // 条件守卫
+    visibleWhen: (s) => s["cap.skyGroundCap"], // 条件守卫
   },
 ];
 ```

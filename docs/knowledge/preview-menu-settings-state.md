@@ -107,7 +107,7 @@ ADR-085（菜单单一事实来源）采纳的 S1 注册表、S3 refreshDock 已
 | `render.maxFps` | `MAX_FPS_KEY` | 本层管，写入后**必须** `invalidateMaxFpsCache()`（rAF 热路径有模块级缓存） |
 | `render.maxPixelRatio` | `MAX_PIXEL_RATIO_KEY`（派生自 `infra/settings-schema.ts::TD_PIXEL_RATIO.key`） | 本层管 |
 | `render.wireframe` | RenderModeCapability `rm-wireframe`（幽灵船 `wireframe-toggle` 已收口） | 不落盘 |
-| `env.pmrem` | sky cap `sky-env` | 不落盘 |
+| `cap.pmrem` | sky cap `sky-env` | 不落盘 |
 
 > **[ADR-250] `render.bloom` 已退场**（原「postprocessing cap `pp-enabled`」，不落盘）。它经 `setMasterEnabled` 写 cap 私有总闸，与 per-type 门禁二元相与构成「一枚字段三重语义」，且档位切换会覆盖用户手动开关。后处理是视觉项（与 wireframe/pmrem 同类），开关唯一入口 = cap 自报的 `pp-enabled` 控件写 `envState.ppEnabled`。
 

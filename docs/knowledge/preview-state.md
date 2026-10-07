@@ -79,7 +79,7 @@ ADR-125 P1 把 ADR-085 S2「状态单向流」在**设置面板**落地（原 `s
 
 ## 核心职责
 
-1. **给已落地的横切设置项一个 `path` 读写口**（`getStateValue/setStateValue`）——`render.frustumCull` / `render.maxFps` / `render.maxPixelRatio` / `render.wireframe` / `env.pmrem`。（原含 `render.bloom`，已随 [ADR-250] 退表——后处理是视觉项，开关唯一入口 = cap 自报的 `pp-enabled` 控件写 `envState.ppEnabled`。）
+1. **给已落地的横切设置项一个 `path` 读写口**（`getStateValue/setStateValue`）——`render.frustumCull` / `render.maxFps` / `render.maxPixelRatio` / `render.wireframe` / `cap.pmrem`。（原含 `render.bloom`，已随 [ADR-250] 退表——后处理是视觉项，开关唯一入口 = cap 自报的 `pp-enabled` 控件写 `envState.ppEnabled`。）
 2. **cap 派生路径惰性解析**：cap 缺席时 `available()=false`，不在构建期冻结（ADR-125 P3 明令禁止的 `if (cap)` 声明期求值反例的根治点）。
 3. **订阅通知**（`subscribeSettings`）：供后续把 `05fe24b7` 的手工 refresh 链路降级为「状态变更自动重算」。
 
@@ -115,7 +115,7 @@ toStatePath(path)                         // 恒等函数（编译期守卫 Prev
 - **ADR-126 P4-A→D→C**：本层是 P4 系列地基——P4-B 面板 schema 化、P4-D 可见性谓词化、P4-C dockGroup 解耦都消费本层的状态通道。
 - **sceneRegistry（ADR-093）**：角色/动作的**业务状态**（活跃角色、角色列表、menuItems）由其管，本层**不重复造轮**——避免双源。
 - **SlideMenuHandle**：面板导航栈由其自管，本层不接管。
-- **`PreviewMenuNode` 字段层**：可见性**统一走 `visibleWhen` 谓词**（[2026-09-03 S1] dock 级与内容级同一求值器）——`sharedOnly` / `hideInSelfMode` / `requiresEnvironment` 三个专有布尔已删除；self 模式隐藏写 `(s) => s["ui.mode"] !== "self"`，环境门禁写 `(s) => !!s["env.skyGroundCap"]`，谓词吃本层快照（dock 过滤链 `menu/core.ts dockGroupItemsFor` 与 `render.ts renderMenu` 同源）。
+- **`PreviewMenuNode` 字段层**：可见性**统一走 `visibleWhen` 谓词**（[2026-09-03 S1] dock 级与内容级同一求值器）——`sharedOnly` / `hideInSelfMode` / `requiresEnvironment` 三个专有布尔已删除；self 模式隐藏写 `(s) => s["ui.mode"] !== "self"`，环境门禁写 `(s) => !!s["cap.skyGroundCap"]`，谓词吃本层快照（dock 过滤链 `menu/core.ts dockGroupItemsFor` 与 `render.ts renderMenu` 同源）。
 - **`renderCapControls`**：唯一控件渲染器，本层状态通过 `buildCrossCuttingNodes()`（`preview-menu/settings.ts`）直产横切节点喂给它（节点经 `nodeControlToView` 投影进 cap 栈）。
 
 ## 不变量
@@ -130,6 +130,6 @@ toStatePath(path)                         // 恒等函数（编译期守卫 Prev
 ## 相关
 
 - ADR-126（本决策 P4-A）、ADR-125（P1 血统）、ADR-085（S2 补全对象）、ADR-093（sceneRegistry 归属）、ADR-291（探针入册门槛）
-- 契约测试：`frontend/src/preview-3d/state/preview-state.test.ts`（30 例，含 [2026-09-03 S1] ui.mode / env.skyGroundCap 两键单测）+ `menu/node-render.test.ts` 编译期契约（@ts-expect-error 锁未落地键 `ui.activePanel` 报错）
-- 消费者：`preview-menu/settings.ts`（`buildCrossCuttingNodes` 三项横切节点读写走本层）、`menu/core.ts dockGroupItemsFor`（dock 级谓词经 `previewSnapshot()` 读 `ui.mode` / `env.skyGroundCap`）
-- 后续：P4-B 面板 schema 化（**已落地 P4-B-1/2**）、P4-D 可见性谓词化（**已落地**：node 级 `visibleWhen`（renderMenu 统一消费 `previewSnapshot()`）+ **[2026-09-03 S1] dock 级 dockGroupItemsFor 同求值器**——三专有布尔删除、状态层扩 `ui.mode`/`env.skyGroundCap` 供 dock 谓词读）、P4-C dockGroup 解耦（按需加 `ui.activePanel`）
+- 契约测试：`frontend/src/preview-3d/state/preview-state.test.ts`（30 例，含 [2026-09-03 S1] ui.mode / cap.skyGroundCap 两键单测）+ `menu/node-render.test.ts` 编译期契约（@ts-expect-error 锁未落地键 `ui.activePanel` 报错）
+- 消费者：`preview-menu/settings.ts`（`buildCrossCuttingNodes` 三项横切节点读写走本层）、`menu/core.ts dockGroupItemsFor`（dock 级谓词经 `previewSnapshot()` 读 `ui.mode` / `cap.skyGroundCap`）
+- 后续：P4-B 面板 schema 化（**已落地 P4-B-1/2**）、P4-D 可见性谓词化（**已落地**：node 级 `visibleWhen`（renderMenu 统一消费 `previewSnapshot()`）+ **[2026-09-03 S1] dock 级 dockGroupItemsFor 同求值器**——三专有布尔删除、状态层扩 `ui.mode`/`cap.skyGroundCap` 供 dock 谓词读）、P4-C dockGroup 解耦（按需加 `ui.activePanel`）

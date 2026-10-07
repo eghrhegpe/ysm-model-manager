@@ -94,7 +94,7 @@ ADR-249 三轮审核的 13 条真缺陷**全部**属「新引入的正交层与�
 | 新层 | 与 surface 层的口径漂移 |
 |------|------------------------|
 | texture 来源（阶段 1） | `matScale`/`matRotationDeg` 对 `mat.map = customTex` 同样生效，却被 `mode === "texture"` 早退一并判死 |
-| 拆轴字段（阶段 2） | 菜单改读 `env.groundSourceKind`/`env.groundCanvasStyle`，测试快照/订阅语义没跟上 |
+| 拆轴字段（阶段 2） | 菜单改读 `cap.groundSourceKind`/`cap.groundCanvasStyle`，测试快照/订阅语义没跟上 |
 | 叠加层 mesh（阶段 3） | `tex.repeat` 缺失（surface 有 `textureRepeat`）、`setVisible` 漏跟、`setEnabled` 未重算 visible、none 分支稳态重传 |
 
 审查器抓这类问题的机理是**交叉对账**：读既有层实现（`applyGroundSurfaceAppearance`/`updateSurfaceVisible`）对照新层缺口，而非读单点代码。

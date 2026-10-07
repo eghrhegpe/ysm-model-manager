@@ -248,6 +248,69 @@ function parseAuthorTag(tag: string, value: string, h: YsmHeaderShape): void {
   }
 }
 
+/** 段头行 --- [Section] 判定（对齐 header.go:57） */
+function isSectionStartLine(line: string): boolean {
+  return line.startsWith("---") && line.includes("[");
+}
+
+/** 段结束分隔符行：--- 且长度 ≥10（调用点已先排除含 [ 的段头行） */
+function isSectionEndLine(line: string): boolean {
+  return line.startsWith("---") && line.length >= 10;
+}
+
+/** 段结束后的空行跳过，返回首个非空行下标（对齐 header.go:74-77） */
+function skipBlankLines(lines: string[], from: number): number {
+  let i = from;
+  while (i < lines.length && lines[i].trim() === "") i++;
+  return i;
+}
+
+/** Tips 段非空行 → tipsLines */
+function collectTipLine(tipsLines: string[], currentSection: string, trimmed: string): void {
+  if (currentSection !== "tips" || trimmed === "") return;
+  tipsLines.push(trimmed);
+}
+
+/** 段外非空行 → 前导注释（备选 tips） */
+function collectPreambleLine(preambleLines: string[], currentSection: string, line: string): void {
+  if (currentSection !== "" || line.trim() === "") return;
+  preambleLines.push(line);
+}
+
+/** 段内标签行 <tag>value（metadata/codec）解析；返回 true 表示该行已被段吸收、调用方应 continue
+ *  （对齐 header.go:69-131：只有 metadata/codec 段解析标签，其余段整行跳过） */
+function consumeSectionTag(line: string, currentSection: string, h: YsmHeaderShape): boolean {
+  if (!line.startsWith("<")) return false;
+  const idx = line.indexOf(">");
+  if (idx > 0) {
+    const tag = line.slice(1, idx).trim();
+    const value = stripClosingTag(line.slice(idx + 1).trim());
+    if (currentSection === "metadata") parseMetadataTag(tag, value, h);
+    else if (currentSection === "codec") parseCodecTag(tag, value, h);
+    // export / source / tips 段无标签解析
+  }
+  return currentSection !== "";
+}
+
+/** 段外作者信息行 <tag>value（对齐 header.go:132-150）；非「<...>」行直接放过 */
+function parseAuthorLine(trimmed: string, h: YsmHeaderShape): void {
+  if (!trimmed.startsWith("<") || !trimmed.includes(">")) return;
+  const idx = trimmed.indexOf(">");
+  if (idx <= 0) return;
+  const tag = trimmed.slice(1, idx).toLowerCase();
+  const value = stripClosingTag(trimmed.slice(idx + 1).trim());
+  parseAuthorTag(tag, value, h);
+}
+
+/** 前导注释行清理：剥一层 // # ; 前缀后 trim（对齐 header.go 前导行 → tips） */
+function cleanPreambleLine(line: string): string {
+  let c = line.trim();
+  if (c.startsWith("//")) c = c.slice(2);
+  else if (c.startsWith("#")) c = c.slice(1);
+  else if (c.startsWith(";")) c = c.slice(1);
+  return c.trim();
+}
+
 /** scanHeader：逐行扫描文本头部（1:1 平移 header.go:46-169，含注释前缀清理 → tips） */
 function scanHeaderFromText(text: string): YsmHeaderShape {
   const h = emptyYsmHeader();
@@ -260,67 +323,36 @@ function scanHeaderFromText(text: string): YsmHeaderShape {
   while (i < lines.length && limit < MAX_HEADER_LINES) {
     limit++;
     const line = lines[i++].replace(/^\uFEFF+/, ""); // 对齐 strings.TrimLeft(line, "\uFEFF")
+    const trimmed = line.trim();
 
     if (line === YSGP_MAGIC) {
       h.isYsm = true;
       continue;
     }
     // 段头：--- [Section]
-    if (line.startsWith("---") && line.includes("[")) {
+    if (isSectionStartLine(line)) {
       currentSection = parseSectionHeader(line);
       continue;
     }
     if (line.startsWith("===")) break;
     // 连续的 ---（无 [，len>=10）是段结束分隔符，之后是二进制数据
-    if (line.startsWith("---") && !line.includes("[") && line.length >= 10) {
-      while (i < lines.length && lines[i].trim() === "") i++;
+    if (isSectionEndLine(line)) {
+      i = skipBlankLines(lines, i);
       break;
     }
-    // 标签行：<tag>value
-    if (line.startsWith("<")) {
-      const idx = line.indexOf(">");
-      if (idx > 0) {
-        const tag = line.slice(1, idx).trim();
-        const value = stripClosingTag(line.slice(idx + 1).trim());
-        if (currentSection === "metadata") parseMetadataTag(tag, value, h);
-        else if (currentSection === "codec") parseCodecTag(tag, value, h);
-        // export / source / tips 段无标签解析
-      }
-      if (currentSection !== "") continue;
-    }
-    // Tips 段：收集非空行
-    if (currentSection === "tips" && line.trim() !== "") {
-      tipsLines.push(line.trim());
-    }
-    // 段外的作者信息（<name>/<role>/<contact-*>）
-    if (line.trim().startsWith("<") && line.includes(">")) {
-      const trimmed = line.trim();
-      const idx = trimmed.indexOf(">");
-      if (idx > 0) {
-        const tag = trimmed.slice(1, idx).toLowerCase();
-        const value = stripClosingTag(trimmed.slice(idx + 1).trim());
-        parseAuthorTag(tag, value, h);
-      }
-    }
-    // 段外的非空行 → 前导注释（备选 tips）
-    if (currentSection === "" && line.trim() !== "") {
-      preambleLines.push(line);
-    }
+    // 标签行：<tag>value（段内解析完即整行结束）
+    if (consumeSectionTag(line, currentSection, h)) continue;
+    // 其余三类吸收：Tips 段非空行 / 段外作者标签 / 段外非空行 → 前导注释
+    collectTipLine(tipsLines, currentSection, trimmed);
+    parseAuthorLine(trimmed, h);
+    collectPreambleLine(preambleLines, currentSection, line);
   }
 
   // 组装 tips：优先 Tips 段内容，否则用前导注释行（清理 // # ; 前缀）
   if (tipsLines.length > 0) {
     h.tips = tipsLines.join("\n");
   } else if (preambleLines.length > 0) {
-    h.tips = preambleLines
-      .map((l) => {
-        let c = l.trim();
-        if (c.startsWith("//")) c = c.slice(2);
-        else if (c.startsWith("#")) c = c.slice(1);
-        else if (c.startsWith(";")) c = c.slice(1);
-        return c.trim();
-      })
-      .join("\n");
+    h.tips = preambleLines.map(cleanPreambleLine).join("\n");
   }
   return h;
 }
@@ -505,6 +537,43 @@ function parseYsmJsonRoot(data: Uint8Array): Record<string, unknown> {
   return parsed as Record<string, unknown>;
 }
 
+/** metadata.authors → 作者列表；非数组或全无效 → null（不改写既有 out.authors） */
+function collectAuthors(
+  raw: unknown,
+): Array<{ name: string; roles?: string; bilibili?: string }> | null {
+  if (!Array.isArray(raw)) return null;
+  const list: Array<{ name: string; roles?: string; bilibili?: string }> = [];
+  for (const a of raw) {
+    if (typeof a !== "object" || a === null) continue;
+    list.push(buildAuthor(a as Record<string, unknown>));
+  }
+  return list.length > 0 ? list : null;
+}
+
+/** 单个作者条目（name 非 string → ""；空 role / 空 bilibili 省略） */
+function buildAuthor(aa: Record<string, unknown>): {
+  name: string;
+  roles?: string;
+  bilibili?: string;
+} {
+  const author: { name: string; roles?: string; bilibili?: string } = {
+    name: typeof aa.name === "string" ? aa.name : "",
+  };
+  if (typeof aa.role === "string" && aa.role !== "") author.roles = aa.role;
+  const contact = asRecord(aa.contact);
+  const bilibili = contact?.bilibili;
+  if (typeof bilibili === "string" && bilibili !== "") author.bilibili = bilibili;
+  return author;
+}
+
+/** metadata.link → links（空串省略；空对象也照写——对齐 Go struct 恒输出 links） */
+function collectLinks(link: Record<string, unknown>): { home?: string; donate?: string } {
+  const links: { home?: string; donate?: string } = {};
+  if (typeof link.home === "string" && link.home !== "") links.home = link.home;
+  if (typeof link.donate === "string" && link.donate !== "") links.donate = link.donate;
+  return links;
+}
+
 /** metadata/properties 提取（zip 与裸 json 分支共用；truncateTips 对齐 zip 分支 200 截断） */
 function fillSummaryFromRoot(
   root: Record<string, unknown>,
@@ -519,31 +588,10 @@ function fillSummaryFromRoot(
   }
   const license = asRecord(metadata.license);
   if (license && typeof license.type === "string") out.license = license.type;
-  const authors = metadata.authors;
-  if (Array.isArray(authors)) {
-    const list: Array<{ name: string; roles?: string; bilibili?: string }> = [];
-    for (const a of authors) {
-      if (typeof a !== "object" || a === null) continue;
-      const aa = a as Record<string, unknown>;
-      const author: { name: string; roles?: string; bilibili?: string } = {
-        name: typeof aa.name === "string" ? aa.name : "",
-      };
-      if (typeof aa.role === "string" && aa.role !== "") author.roles = aa.role;
-      const contact = asRecord(aa.contact);
-      if (contact && typeof contact.bilibili === "string" && contact.bilibili !== "") {
-        author.bilibili = contact.bilibili;
-      }
-      list.push(author);
-    }
-    if (list.length > 0) out.authors = list;
-  }
+  const authors = collectAuthors(metadata.authors);
+  if (authors) out.authors = authors;
   const link = asRecord(metadata.link);
-  if (link) {
-    const links: { home?: string; donate?: string } = {};
-    if (typeof link.home === "string" && link.home !== "") links.home = link.home;
-    if (typeof link.donate === "string" && link.donate !== "") links.donate = link.donate;
-    out.links = links;
-  }
+  if (link) out.links = collectLinks(link);
 }
 
 /** properties → preview（对齐 summary.go:330-337） */
@@ -559,6 +607,31 @@ function fillPreviewFromProperties(
   out.preview = preview;
 }
 
+/** model 四种形态 → {模型数, 几何路径}（数组→长度、对象→键数、非空字符串→1、其余→0） */
+function collectModelPaths(model: unknown): { count: number; geoFiles: string[] } {
+  if (Array.isArray(model)) return { count: model.length, geoFiles: modelGeoPaths(model) };
+  if (typeof model === "object" && model !== null) {
+    return { count: Object.keys(model as object).length, geoFiles: [] };
+  }
+  if (typeof model === "string" && model !== "") return { count: 1, geoFiles: [model] };
+  return { count: 0, geoFiles: [] };
+}
+
+/** 数组形态 model → 几何路径：首元素为对象则逐项取 .path，首元素为字符串则整数组按字符串透传 */
+function modelGeoPaths(model: unknown[]): string[] {
+  const first = model[0];
+  if (typeof first === "object" && first !== null) {
+    const paths: string[] = [];
+    for (const m of model) {
+      const mp = (m as { path?: unknown }).path;
+      if (typeof mp === "string" && mp !== "") paths.push(mp);
+    }
+    return paths;
+  }
+  if (typeof first === "string") return model.filter((s) => s !== "") as string[];
+  return [];
+}
+
 /** files.player 统计 + 几何体路径收集（TS 平移 summary.go:473-548 extractFileStats） */
 function extractFileStats(filesRaw: unknown): {
   stats: YsmSummaryShape["stats"];
@@ -572,9 +645,8 @@ function extractFileStats(filesRaw: unknown): {
     texHeight: 0,
   };
   const geoFiles: string[] = [];
-  const files = asRecord(filesRaw);
-  if (!files) return { stats, geoFiles };
-  const player = asRecord(files.player);
+  // files / files.player 缺失或非 compound → 全零（两步 asRecord 合并为一次卫语句）
+  const player = asRecord(asRecord(filesRaw)?.player);
   if (!player) return { stats, geoFiles };
 
   // textures
@@ -588,23 +660,9 @@ function extractFileStats(filesRaw: unknown): {
     stats.animations = Object.keys(anim as object).length;
 
   // model — 同时收集路径（{path} 数组 / 对象 / 字符串数组 / 单字符串，对齐 Go 四种形态）
-  const model = player.model;
-  if (Array.isArray(model)) {
-    stats.models = model.length;
-    if (model.length > 0 && typeof model[0] === "object" && model[0] !== null) {
-      for (const m of model) {
-        const mp = (m as { path?: unknown }).path;
-        if (typeof mp === "string" && mp !== "") geoFiles.push(mp);
-      }
-    } else if (model.length > 0 && typeof model[0] === "string") {
-      for (const s of model) if (s !== "") geoFiles.push(s);
-    }
-  } else if (typeof model === "object" && model !== null) {
-    stats.models = Object.keys(model as object).length;
-  } else if (typeof model === "string" && model !== "") {
-    stats.models = 1;
-    geoFiles.push(model);
-  }
+  const model = collectModelPaths(player.model);
+  stats.models = model.count;
+  geoFiles.push(...model.geoFiles);
 
   return { stats, geoFiles };
 }
@@ -668,75 +726,94 @@ function clampTexDim(v: number): number {
   return Math.trunc(v);
 }
 
+/** classify 单项 → 动画分组；非对象 / 无显示项（全是 # 内部引用）→ null */
+function buildAnimGroup(g: unknown): { id: string; name: string; items: string[] } | null {
+  if (typeof g !== "object" || g === null) return null;
+  const gg = g as Record<string, unknown>;
+  const extraAnim = gg.extra_animation;
+  // 用 extra_animation 的 value（中文名）替换 raw id（对齐 summary.go:396-399）
+  const items = extractDisplayValues(extraAnim);
+  if (items.length === 0) return null; // 全是内部引用（#开头）时跳过整组
+  let name = typeof gg.name === "string" ? gg.name : "";
+  // name 为空时从 properties.extra_animation 按 #id 查找（对齐 summary.go:385-394）
+  if (!name && extraAnim !== undefined) {
+    const v = asRecord(extraAnim)?.[`#${typeof gg.id === "string" ? gg.id : ""}`];
+    if (typeof v === "string") name = v;
+  }
+  return { id: typeof gg.id === "string" ? gg.id : "", name, items };
+}
+
+/** extra_animation 中未被任何分类组占用的直接动画（对齐 summary.go:411-441）。
+ *  # 开头的键是组名引用、# 开头的值是内部引用，两者都不算直接动画。 */
+function collectLooseAnims(eaMap: Record<string, unknown>, classify: unknown): string[] {
+  const classifiedItems = new Set<string>();
+  if (Array.isArray(classify)) {
+    for (const g of classify) {
+      const ge = asRecord(asRecord(g)?.extra_animation);
+      if (!ge) continue;
+      for (const k of Object.keys(ge)) classifiedItems.add(k);
+    }
+  }
+  const looseAnims: string[] = [];
+  for (const [k, v] of Object.entries(eaMap)) {
+    if (typeof v !== "string" || v === "" || v.startsWith("#")) continue;
+    if (k.startsWith("#")) continue; // 组名跳过
+    if (classifiedItems.has(k)) continue;
+    looseAnims.push(v);
+  }
+  return looseAnims;
+}
+
+/** extra_animation_buttons → 配置菜单（非数组 → 空；非对象按钮元素跳过） */
+function collectConfigMenus(
+  buttons: unknown,
+): Array<{ id: string; name: string; controls: string[] }> {
+  if (!Array.isArray(buttons)) return [];
+  const menus: Array<{ id: string; name: string; controls: string[] }> = [];
+  for (const b of buttons) {
+    if (typeof b !== "object" || b === null) continue;
+    const bb = b as Record<string, unknown>;
+    menus.push({
+      id: typeof bb.id === "string" ? bb.id : "",
+      name: typeof bb.name === "string" ? bb.name : "",
+      controls: extractControlTypes(bb.config_forms),
+    });
+  }
+  return menus;
+}
+
 /** 动画分组 + 配置菜单（TS 平移 summary.go:376-452 appendAnimGroupsAndConfigs） */
 function appendAnimGroupsAndConfigs(
   properties: Record<string, unknown>,
   out: YsmSummaryShape,
 ): void {
   const classify = properties.extra_animation_classify;
+  const groups: Array<{ id: string; name: string; items: string[] }> = [];
   if (Array.isArray(classify)) {
     for (const g of classify) {
-      if (typeof g !== "object" || g === null) continue;
-      const gg = g as Record<string, unknown>;
-      let name = typeof gg.name === "string" ? gg.name : "";
-      const extraAnim = gg.extra_animation;
-      // name 为空时从 properties.extra_animation 按 #id 查找（对齐 summary.go:385-394）
-      if (!name && extraAnim !== undefined) {
-        const eaMap = asRecord(extraAnim);
-        const v = eaMap?.[`#${typeof gg.id === "string" ? gg.id : ""}`];
-        if (typeof v === "string") name = v;
-      }
-      // 用 extra_animation 的 value（中文名）替换 raw id（对齐 summary.go:396-399）
-      const displayItems = extractDisplayValues(extraAnim);
-      if (displayItems.length === 0) continue; // 全是内部引用（#开头）时跳过整组
-      out.animGroups = out.animGroups || [];
-      out.animGroups.push({
-        id: typeof gg.id === "string" ? gg.id : "",
-        name,
-        items: displayItems,
-      });
+      const group = buildAnimGroup(g);
+      if (group) groups.push(group);
     }
   }
 
   // 兜底：extra_animation 中未被分类的直接动画（对齐 summary.go:411-441）
-  const extraAnim = properties.extra_animation;
-  if (extraAnim !== undefined) {
-    const eaMap = asRecord(extraAnim);
-    if (eaMap) {
-      const classifiedItems = new Set<string>();
-      if (Array.isArray(classify)) {
-        for (const g of classify) {
-          const ge = asRecord(asRecord(g)?.extra_animation);
-          if (ge) for (const k of Object.keys(ge)) classifiedItems.add(k);
-        }
-      }
-      const looseAnims: string[] = [];
-      for (const [k, v] of Object.entries(eaMap)) {
-        if (typeof v === "string" && v !== "" && !v.startsWith("#")) {
-          if (k.startsWith("#")) continue; // 组名跳过
-          if (!classifiedItems.has(k)) looseAnims.push(v);
-        }
-      }
-      if (looseAnims.length > 0) {
-        out.animGroups = out.animGroups || [];
-        out.animGroups.push({ id: "_loose", name: "其他动画", items: looseAnims });
-      }
+  const eaMap = asRecord(properties.extra_animation);
+  if (eaMap) {
+    const looseAnims = collectLooseAnims(eaMap, classify);
+    if (looseAnims.length > 0) {
+      groups.push({ id: "_loose", name: "其他动画", items: looseAnims });
     }
+  }
+  if (groups.length > 0) {
+    out.animGroups = out.animGroups || [];
+    out.animGroups.push(...groups);
   }
 
   // 配置菜单（extra_animation_buttons → 模型配置/自定义表情，对齐 summary.go:443-451）
-  const buttons = properties.extra_animation_buttons;
-  if (Array.isArray(buttons)) {
-    for (const b of buttons) {
-      if (typeof b !== "object" || b === null) continue;
-      const bb = b as Record<string, unknown>;
-      out.configMenus = out.configMenus || [];
-      out.configMenus.push({
-        id: typeof bb.id === "string" ? bb.id : "",
-        name: typeof bb.name === "string" ? bb.name : "",
-        controls: extractControlTypes(bb.config_forms),
-      });
-    }
+  const menus = collectConfigMenus(properties.extra_animation_buttons);
+  if (menus.length > 0) {
+    out.configMenus = out.configMenus || [];
+    out.configMenus.push(...menus);
   }
 }
 

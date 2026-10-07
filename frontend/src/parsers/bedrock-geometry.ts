@@ -92,6 +92,51 @@ interface BedrockRawGeometry {
   }>;
 }
 
+/** 统一对象→数组格式（某些导出工具输出 {x,y,z} 对象而非数组）；标量/falsy → [0,0,0] */
+function toVec3(v: unknown): number[] {
+  if (!v) return [0, 0, 0];
+  if (Array.isArray(v)) return v as number[];
+  if (typeof v === "object")
+    return [(v as Vec3Obj).x || 0, (v as Vec3Obj).y || 0, (v as Vec3Obj).z || 0];
+  return [0, 0, 0];
+}
+
+/** cube.uv 三形态归一（数组 / "{" 前缀字符串 / 对象）→ { uv, faceUV } */
+function normalizeCubeUv(raw: unknown): { uv: number[] | string; faceUV: string } {
+  if (Array.isArray(raw)) return { uv: raw, faceUV: "" };
+  if (typeof raw === "string") return { uv: [0, 0], faceUV: raw.startsWith("{") ? raw : "" };
+  if (typeof raw === "object" && raw !== null) {
+    // 某些模型 UV 是对象格式（如 {uv:[0,0], uv_size:[16,16]}）
+    // 优先取内层 uv 数组作为 expandBoxUV
+    const inner = (raw as { uv?: unknown }).uv;
+    return { uv: Array.isArray(inner) ? inner : [0, 0], faceUV: JSON.stringify(raw) };
+  }
+  return { uv: [0, 0], faceUV: "" };
+}
+
+/** 单个 cube → BedrockCube（texSlot = 纹理槽索引，YSMViewer 据此区分主纹理与发光/覆盖层） */
+function parseCube(c: BedrockRawCube): BedrockCube {
+  const { uv, faceUV } = normalizeCubeUv(c.uv);
+  return {
+    origin: toVec3(c.origin),
+    size: toVec3(c.size),
+    pivot: toVec3(c.pivot),
+    rotation: toVec3(c.rotation),
+    uv,
+    faceUV,
+    texSlot: typeof c.texture === "number" ? c.texture : 0,
+  };
+}
+
+/** bone.pivot 归一为数组格式（对象 → [x,y,z]）；falsy → [0,0,0]，数组与其他标量原样透传 */
+function normalizePivot(pivot: unknown): number[] {
+  if (pivot && !Array.isArray(pivot) && typeof pivot === "object") {
+    const p = pivot as Vec3Obj;
+    return [p.x || 0, p.y || 0, p.z || 0];
+  }
+  return (pivot as number[]) || [0, 0, 0];
+}
+
 /** 从 JSON 字符串解析 Bedrock geometry */
 export function parseBedrockGeometryFromJSON(jsonStr: string): BedrockGeometry | null {
   // 畸形输入 JSON.parse 会抛 SyntaxError——解析函数自身兜底返回 null，避免调用链未捕获
@@ -103,55 +148,15 @@ export function parseBedrockGeometryFromJSON(jsonStr: string): BedrockGeometry |
   }
   const geo = raw?.["minecraft:geometry"]?.[0];
   if (!geo?.bones?.length) return null;
+
   const bones: BedrockBone[] = [];
   let cubeCount = 0;
   for (const b of geo.bones) {
-    const cubes: BedrockCube[] = [];
-    for (const c of b.cubes || []) {
-      let uv: number[] | string = [0, 0];
-      let faceUV = "";
-      if (Array.isArray(c.uv)) {
-        uv = c.uv;
-      } else if (typeof c.uv === "string" && c.uv.startsWith("{")) {
-        faceUV = c.uv;
-      } else if (typeof c.uv === "object" && c.uv !== null) {
-        // 某些模型 UV 是对象格式（如 {uv:[0,0], uv_size:[16,16]}）
-        // 优先取内层 uv 数组作为 expandBoxUV
-        const uvObj = c.uv as { uv?: unknown };
-        if (Array.isArray(uvObj.uv)) {
-          uv = uvObj.uv;
-        }
-        faceUV = JSON.stringify(c.uv);
-      }
-      // 每个方块可指定纹理槽索引（YSMViewer 据此区分主纹理与发光/覆盖层）
-      const texSlot = typeof c.texture === "number" ? c.texture : 0;
-      // 统一对象→数组格式（某些导出工具输出 {x,y,z} 对象而非数组）
-      const toArr = (v: unknown): number[] => {
-        if (!v) return [0, 0, 0];
-        if (Array.isArray(v)) return v as number[];
-        if (typeof v === "object")
-          return [(v as Vec3Obj).x || 0, (v as Vec3Obj).y || 0, (v as Vec3Obj).z || 0];
-        return [0, 0, 0];
-      };
-      cubes.push({
-        origin: toArr(c.origin),
-        size: toArr(c.size),
-        pivot: toArr(c.pivot),
-        rotation: toArr(c.rotation),
-        uv,
-        faceUV,
-        texSlot,
-      });
-    }
-    // pivot 统一为数组格式（某些导出工具输出 {x,y,z} 对象）
-    let pivot = b.pivot;
-    if (pivot && !Array.isArray(pivot) && typeof pivot === "object") {
-      pivot = [pivot.x || 0, pivot.y || 0, pivot.z || 0];
-    }
+    const cubes = (b.cubes || []).map(parseCube);
     bones.push({
       name: b.name,
       parent: b.parent || null,
-      pivot: pivot || [0, 0, 0],
+      pivot: normalizePivot(b.pivot),
       rotation: b.rotation || [0, 0, 0],
       cubes,
     });
@@ -188,3 +193,6 @@ interface BedrockRawBone {
     texture?: unknown;
   }>;
 }
+
+/** 原始 JSON 方块（BedrockRawBone.cubes 元素） */
+type BedrockRawCube = NonNullable<BedrockRawBone["cubes"]>[number];

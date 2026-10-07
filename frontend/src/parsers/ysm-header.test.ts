@@ -351,3 +351,248 @@ describe("emptyYsmSummary — 最小空结构", () => {
     expect(s.stats).toEqual({ textures: 0, models: 0, animations: 0, texWidth: 0, texHeight: 0 });
   });
 });
+
+// ===== 分支特征基线（认知复杂度战役 第 1 批）=====
+// 上述用例覆盖 appendAnimGroupsAndConfigs / fillSummaryFromRoot / extractFileStats / scanHeaderFromText
+// 的 happy path；以下逐条锁定「执行到了却从没断言过」的分支，作削平重构的行为等价基线。
+
+/** zip 内 ysm.json 摘要（只关心 metadata.name 有值时的其余分支） */
+function summaryFromZipRoot(root: Record<string, unknown>, source = "x.ysm") {
+  return extractYsmSummaryFromBytes(
+    zipSync({ "ysm.json": strToU8(JSON.stringify(root)) }),
+    source,
+  );
+}
+
+describe("appendAnimGroupsAndConfigs — 分支特征基线", () => {
+  const summarize = (properties: Record<string, unknown>) =>
+    summaryFromZipRoot({ metadata: { name: "n" }, properties });
+
+  it("组名缺省 → 从本组 extra_animation 的 #id 查表取名", () => {
+    const s = summarize({
+      extra_animation_classify: [{ id: "g2", extra_animation: { "#g2": "组2中文名", x: "X" } }],
+    });
+    // items 取的是「值」而非「键」——键为 #g2 但值不是 # 前缀 → 仍计入（按键排序，中文名在前）
+    expect(s.animGroups).toEqual([{ id: "g2", name: "组2中文名", items: ["组2中文名", "X"] }]);
+    expect(s.configMenus).toBeUndefined();
+  });
+
+  it("值全为内部引用（# 开头）→ 整组跳过；无其他组时 animGroups 保持 undefined", () => {
+    const s = summarize({
+      extra_animation_classify: [{ id: "g3", name: "空组", extra_animation: { a: "#引用" } }],
+    });
+    expect(s.animGroups).toBeUndefined();
+  });
+
+  it("classify 非对象元素跳过；items 按键排序；未分类直接动画落 _loose 组（# 键作组名跳过）", () => {
+    const s = summarize({
+      extra_animation_classify: [null, 5, { id: "g1", name: "组1", extra_animation: { z: "Z", a: "A" } }],
+      extra_animation: { a: "A", z: "Z", b: "乙", "#g1": "组1别名", c: "" },
+    });
+    expect(s.animGroups).toEqual([
+      { id: "g1", name: "组1", items: ["A", "Z"] },
+      { id: "_loose", name: "其他动画", items: ["乙"] },
+    ]);
+  });
+
+  it("extra_animation_classify 非数组 → 无分组；extra_animation 非对象 → 不抛错、无 _loose", () => {
+    expect(summarize({ extra_animation_classify: "nope" }).animGroups).toBeUndefined();
+    expect(summarize({ extra_animation: "not-an-object" }).animGroups).toBeUndefined();
+  });
+
+  it("config_forms 控件类型：非 string/空串 → unknown；非对象按钮元素跳过", () => {
+    const s = summarize({
+      extra_animation_buttons: [
+        null,
+        { id: "b1", name: "菜单", config_forms: [{ type: "" }, { type: "toggle" }, {}] },
+      ],
+    });
+    expect(s.configMenus).toEqual([{ id: "b1", name: "菜单", controls: ["unknown", "toggle", "unknown"] }]);
+  });
+
+  it("按钮缺 id/name → 空串；config_forms 缺省 → 空控件表；buttons 非数组 → configMenus undefined", () => {
+    expect(summarize({ extra_animation_buttons: [{}] }).configMenus).toEqual([
+      { id: "", name: "", controls: [] },
+    ]);
+    expect(summarize({ extra_animation_buttons: "nope" }).configMenus).toBeUndefined();
+  });
+});
+
+describe("fillSummaryFromRoot — 分支特征基线", () => {
+  it("无 metadata → 不改任何元数据（name 回退去扩展名文件名）", () => {
+    const s = summaryFromZipRoot({ spec: 1 }, "角色.ysm");
+    expect(s.spec).toBe(1);
+    expect(s.name).toBe("角色");
+    expect(s.tips).toBeUndefined();
+    expect(s.authors).toBeUndefined();
+    expect(s.links).toEqual({});
+  });
+
+  it("name/tips 非 string → 不改（tips 保持缺省）", () => {
+    const s = summaryFromZipRoot({ metadata: { name: 42, tips: 7 } }, "角色.ysm");
+    expect(s.tips).toBeUndefined();
+    expect(s.name).toBe("角色");
+  });
+
+  it("裸 ysm.json 分支 tips 不截断（truncateTips=false）", () => {
+    const long = "字".repeat(250);
+    const s = extractYsmSummaryFromBytes(
+      enc.encode(JSON.stringify({ metadata: { name: "n", tips: long } })),
+      "ysm.json",
+    );
+    expect(s.tips).toHaveLength(250);
+  });
+
+  it("authors：非对象元素跳过、name 非 string 归空串、空 role/bilibili 省略", () => {
+    const s = summaryFromZipRoot({
+      metadata: {
+        name: "n",
+        authors: [
+          null,
+          5,
+          { name: 42, role: "", contact: { bilibili: "" } },
+          { name: "乙", role: "模型师", contact: { bilibili: "https://b23.tv/y" } },
+        ],
+      },
+    });
+    expect(s.authors).toEqual([
+      { name: "" },
+      { name: "乙", roles: "模型师", bilibili: "https://b23.tv/y" },
+    ]);
+  });
+
+  it("authors 为空数组/非数组 → out.authors 保持 undefined", () => {
+    expect(summaryFromZipRoot({ metadata: { authors: [] } }).authors).toBeUndefined();
+    expect(summaryFromZipRoot({ metadata: { authors: "x" } }).authors).toBeUndefined();
+  });
+
+  it("license：非 compound / type 非 string → 不写入", () => {
+    expect(summaryFromZipRoot({ metadata: { license: "MIT" } }).license).toBeUndefined();
+    expect(summaryFromZipRoot({ metadata: { license: { type: 42 } } }).license).toBeUndefined();
+  });
+
+  it("link：空 home 省略、仅 donate 时 links 只含 donate", () => {
+    expect(summaryFromZipRoot({ metadata: { link: { home: "", donate: "https://d" } } }).links).toEqual({
+      donate: "https://d",
+    });
+    expect(summaryFromZipRoot({ metadata: { link: {} } }).links).toEqual({});
+  });
+});
+
+describe("extractFileStats — 分支特征基线", () => {
+  const statsOf = (files: unknown) =>
+    summaryFromZipRoot({ metadata: { name: "n" }, files }).stats;
+
+  it("texture 非数组 → 0；animation 数组 → 长度；model 对象 → 键数", () => {
+    expect(
+      statsOf({ player: { texture: "a.png", animation: [1, 2, 3], model: { a: {}, b: {} } } }),
+    ).toEqual({ textures: 0, models: 2, animations: 3, texWidth: 0, texHeight: 0 });
+  });
+
+  it("model 字符串数组 → 元素个数；model 单字符串 → 1；model 标量/null → 0", () => {
+    expect(statsOf({ player: { model: ["m/a.json", "m/b.json"] } }).models).toBe(2);
+    expect(statsOf({ player: { model: "m/a.json" } }).models).toBe(1);
+    expect(statsOf({ player: { model: 5 } }).models).toBe(0);
+    expect(statsOf({ player: { model: null } }).models).toBe(0);
+  });
+
+  it("model 为对象数组时按 path 收集；非 string/空 path 不计入", () => {
+    expect(statsOf({ player: { model: [{ path: "" }, { path: 5 }, {}] } }).models).toBe(3);
+  });
+
+  it("files/player 缺失或非对象 → 全零", () => {
+    const zero = { textures: 0, models: 0, animations: 0, texWidth: 0, texHeight: 0 };
+    expect(statsOf(undefined)).toEqual(zero);
+    expect(statsOf({})).toEqual(zero);
+    expect(statsOf("x")).toEqual(zero);
+  });
+
+  it("geoFiles 从四种 model 形态收集（字符串数组 / 单字符串路径 → 几何体纹理尺寸回填）", () => {
+    const geom = strToU8(
+      JSON.stringify({ "minecraft:geometry": [{ description: { texture_width: 32, texture_height: 16 } }] }),
+    );
+    const fromStrings = extractYsmSummaryFromBytes(
+      zipSync({
+        "ysm.json": strToU8(
+          JSON.stringify({
+            metadata: { name: "n" },
+            properties: {},
+            files: { player: { model: ["models/main.json"] } },
+          }),
+        ),
+        "models/main.json": geom,
+      }),
+      "x.ysm",
+    );
+    expect(fromStrings.stats.texWidth).toBe(32);
+    expect(fromStrings.stats.texHeight).toBe(16);
+
+    const fromSingle = extractYsmSummaryFromBytes(
+      zipSync({
+        "ysm.json": strToU8(
+          JSON.stringify({
+            metadata: { name: "n" },
+            properties: {},
+            files: { player: { model: "models/main.json" } },
+          }),
+        ),
+        "models/main.json": geom,
+      }),
+      "x.ysm",
+    );
+    expect(fromSingle.stats.texWidth).toBe(32);
+  });
+});
+
+describe("scanHeaderFromText — 分支特征基线", () => {
+  const headerOf = (text: string) => parseYsmHeaderFromBytes(enc.encode(text));
+
+  it("未知段名（--- [Unknown]）→ 段内标签按段外作者标签解析，行落前导注释", () => {
+    const h = headerOf("--- [Unknown]\n<name>X</name>\n");
+    expect(h.authorName).toBe("X");
+    expect(h.tips).toBe("<name>X</name>");
+  });
+
+  it("前导注释 ; 前缀清理（与 // # 同口径）", () => {
+    const h = headerOf("; 分号注释\n===");
+    expect(h.tips).toBe("分号注释");
+  });
+
+  it("无闭合 > 的 <行 → 不作标签解析，落前导注释", () => {
+    const h = headerOf("<unclosed\n");
+    expect(h.tips).toBe("<unclosed");
+    expect(h.authorName).toBeUndefined();
+  });
+
+  it("行数上限 200：第 200 行后不再扫描", () => {
+    const lines = Array.from({ length: 250 }, (_, i) => `L${i}`);
+    const h = headerOf(lines.join("\n"));
+    const got = h.tips!.split("\n");
+    expect(got).toHaveLength(200);
+    expect(got[0]).toBe("L0");
+    expect(got[199]).toBe("L199");
+  });
+
+  it("作者标签变体 contact_bilibili / contactbilibili 均命中；首位作者优先", () => {
+    const h = headerOf(
+      "--- [Authors]\n<name>甲</name>\n<name>乙</name>\n<contact_bilibili>https://b1</contact_bilibili>\n",
+    );
+    expect(h.authorName).toBe("甲");
+    expect(h.authorBilibili).toBe("https://b1");
+    const h2 = headerOf("<contactbilibili>https://b2</contactbilibili>\n");
+    expect(h2.authorBilibili).toBe("https://b2");
+  });
+
+  it("license 空值跳过（不写入空串）", () => {
+    const h = headerOf("--- [Metadata]\n<license></license>\n<name>N</name>\n");
+    expect(h.license).toBeUndefined();
+    expect(h.name).toBe("N");
+  });
+
+  it("codec 段整数解析：负号/+号接受，浮点与非数字归 0", () => {
+    expect(headerOf("--- [Codec]\n<format>-5</format>\n").format).toBe(-5);
+    expect(headerOf("--- [Codec]\n<format>+7</format>\n").format).toBe(7);
+    expect(headerOf("--- [Codec]\n<format>3.14</format>\n").format).toBe(0);
+    expect(headerOf("--- [Codec]\n<crypto>abc</crypto>\n").crypto).toBe(0);
+  });
+});

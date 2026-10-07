@@ -50,6 +50,7 @@ auto_fields:
     - findZipEntry
     - groupVoxelStream
     - indexToCoord
+    - inInt16Range
     - INT16_MAX
     - INT16_MIN
     - litematicMetaView

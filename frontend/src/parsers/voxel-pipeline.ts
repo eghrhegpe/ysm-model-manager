@@ -38,6 +38,11 @@ export const MAX_REGION_AXIS = 1 << 21;
 export const INT16_MAX = 32767;
 export const INT16_MIN = -32768;
 
+/** 单轴 int16 表示范围守卫（三处视图的坐标丢弃判据；单一户口，勿内联展开成六子句链） */
+export function inInt16Range(v: number): boolean {
+  return v >= INT16_MIN && v <= INT16_MAX;
+}
+
 // --- 共享管线 ---
 
 /**
@@ -159,16 +164,7 @@ export function indexToCoord(
   out.x = (i - 1) % width;
   out.y = Math.floor((i - 1) / (width * length));
   out.z = Math.floor((i - 1) / width) % length;
-  if (
-    out.x < INT16_MIN ||
-    out.x > INT16_MAX ||
-    out.y < INT16_MIN ||
-    out.y > INT16_MAX ||
-    out.z < INT16_MIN ||
-    out.z > INT16_MAX
-  ) {
-    return null;
-  }
+  if (!inInt16Range(out.x) || !inInt16Range(out.y) || !inInt16Range(out.z)) return null;
   return out;
 }
 

@@ -388,9 +388,88 @@ function paletteEntryStats(paletteList: unknown[]): Array<{ name: string; count:
     const name = asString(elem.Name);
     if (name) counts[name] = (counts[name] ?? 0) + 1;
   }
+  return paletteStatsFromCounts(counts);
+}
+
+/** counts 映射 → 统计数组（数量降序；同数保留插入序，对齐 Go 稳定排序口径） */
+function paletteStatsFromCounts(
+  counts: Record<string, number>,
+): Array<{ name: string; count: number }> {
   return Object.entries(counts)
     .map(([name, count]) => ({ name, count }))
     .sort((a, b) => b.count - a.count);
+}
+
+/** 基岩版 sub_levels 聚合累加器（对齐 parseBedrockStructure:329-424 的局部状态） */
+interface BedrockSubLevelAcc {
+  bounds: Record<string, number>;
+  hasBounds: boolean;
+  blockCount: number;
+  entityCount: number;
+  tileEntityCount: number;
+  counts: Record<string, number>;
+}
+
+/** local_bounds 分量方向表：true = 取更大值（max_*），false = 取更小值（min_*） */
+const BEDROCK_BOUNDS_IS_MAX: Record<string, boolean> = {
+  min_x: false,
+  min_y: false,
+  min_z: false,
+  max_x: true,
+  max_y: true,
+  max_z: true,
+};
+
+/** local_bounds 聚合（首帧直接取，其后按 min/max 更值）；对齐 parseBedrockStructure:348-365 */
+function mergeLocalBounds(acc: BedrockSubLevelAcc, lb: Record<string, unknown> | undefined): void {
+  if (!lb) return;
+  for (const key of Object.keys(acc.bounds)) {
+    const v = asNumber(lb[key]);
+    if (v === undefined) continue;
+    const takeMax = BEDROCK_BOUNDS_IS_MAX[key];
+    if (!acc.hasBounds || (takeMax ? v > acc.bounds[key] : v < acc.bounds[key])) {
+      acc.bounds[key] = v;
+    }
+  }
+  acc.hasBounds = true;
+}
+
+/** block_palette → 下标→Name（非 compound 元素 / 缺 Name → 空串）；对齐 parseBedrockStructure:371-379 */
+function readBedrockPaletteNames(raw: unknown): string[] {
+  const names: string[] = [];
+  for (const elem of asArray(raw) ?? []) {
+    names.push(isObj(elem) ? (asString(elem.Name) ?? "") : "");
+  }
+  return names;
+}
+
+/** blocks.palette_id 引用计数（仅计落在 palette 内且名称非空者）；对齐 parseBedrockStructure:380-390 */
+function countBedrockPaletteRefs(
+  counts: Record<string, number>,
+  blocks: unknown[] | undefined,
+  paletteNames: string[],
+): void {
+  for (const b of blocks ?? []) {
+    if (!isObj(b)) continue;
+    const pid = asNumber(b.palette_id);
+    if (pid === undefined || pid < 0 || pid >= paletteNames.length) continue;
+    const name = paletteNames[pid];
+    if (!name) continue;
+    counts[name] = (counts[name] ?? 0) + 1;
+  }
+}
+
+/** 单个 sub_level 累加（包围盒 / blocks 与实体计数 / palette 引用）；非 compound 直接跳过 */
+function accumulateBedrockSubLevel(acc: BedrockSubLevelAcc, sl: unknown): void {
+  if (!isObj(sl)) return;
+  mergeLocalBounds(acc, getCompound(sl, "local_bounds"));
+  const blocks = asArray(sl.blocks);
+  if (blocks) acc.blockCount += blocks.length;
+  countBedrockPaletteRefs(acc.counts, blocks, readBedrockPaletteNames(sl.block_palette));
+  const ents = asArray(sl.entities);
+  if (ents) acc.entityCount += ents.length;
+  const bes = asArray(sl.block_entities);
+  if (bes) acc.tileEntityCount += bes.length;
 }
 
 /**
@@ -406,79 +485,28 @@ function bedrockStructureView(
   const dv = asNumber(root.DataVersion);
   if (dv !== undefined) out.dataVersion = dv;
 
-  const bounds: Record<string, number> = {
-    min_x: 0,
-    min_y: 0,
-    min_z: 0,
-    max_x: 0,
-    max_y: 0,
-    max_z: 0,
+  const acc: BedrockSubLevelAcc = {
+    bounds: { min_x: 0, min_y: 0, min_z: 0, max_x: 0, max_y: 0, max_z: 0 },
+    hasBounds: false,
+    blockCount: 0,
+    entityCount: 0,
+    tileEntityCount: 0,
+    counts: {},
   };
-  const isMax: Record<string, boolean> = {
-    min_x: false,
-    min_y: false,
-    min_z: false,
-    max_x: true,
-    max_y: true,
-    max_z: true,
-  };
-  let hasBounds = false;
-  let blockCount = 0;
-  let entityCount = 0;
-  let tileEntityCount = 0;
-  const counts: Record<string, number> = {};
-
-  for (const sl of subLevels) {
-    if (!isObj(sl)) continue;
-    const sub = sl;
-    // 对齐 parseBedrockStructure:348-365：local_bounds 聚合（首帧直接取，其后按 min/max 更值）
-    const lb = getCompound(sub, "local_bounds");
-    if (lb) {
-      for (const key of Object.keys(bounds)) {
-        const v = asNumber(lb[key]);
-        if (v === undefined) continue;
-        if (!hasBounds || (isMax[key] && v > bounds[key]) || (!isMax[key] && v < bounds[key])) {
-          bounds[key] = v;
-        }
-      }
-      hasBounds = true;
-    }
-    const blocks = asArray(sub.blocks);
-    if (blocks) blockCount += blocks.length;
-    // block_palette：下标 → Name（对齐 parseBedrockStructure:371-379）
-    const paletteNames: string[] = [];
-    for (const elem of asArray(sub.block_palette) ?? []) {
-      paletteNames.push(isObj(elem) ? (asString(elem.Name) ?? "") : "");
-    }
-    // blocks.palette_id 引用计数（对齐 parseBedrockStructure:380-390）
-    for (const b of blocks ?? []) {
-      if (!isObj(b)) continue;
-      const pid = asNumber(b.palette_id);
-      if (pid !== undefined && pid >= 0 && pid < paletteNames.length) {
-        const name = paletteNames[pid];
-        if (name) counts[name] = (counts[name] ?? 0) + 1;
-      }
-    }
-    const ents = asArray(sub.entities);
-    if (ents) entityCount += ents.length;
-    const bes = asArray(sub.block_entities);
-    if (bes) tileEntityCount += bes.length;
-  }
+  for (const sl of subLevels) accumulateBedrockSubLevel(acc, sl);
 
   // 对齐 parseBedrockStructure:399-418：仅在非零/存在时写入
-  if (hasBounds) {
+  if (acc.hasBounds) {
     out.size = [
-      bounds.max_x - bounds.min_x + 1,
-      bounds.max_y - bounds.min_y + 1,
-      bounds.max_z - bounds.min_z + 1,
+      acc.bounds.max_x - acc.bounds.min_x + 1,
+      acc.bounds.max_y - acc.bounds.min_y + 1,
+      acc.bounds.max_z - acc.bounds.min_z + 1,
     ];
   }
-  if (blockCount > 0) out.blockCount = blockCount;
-  if (entityCount > 0) out.entityCount = entityCount;
-  if (tileEntityCount > 0) out.tileEntityCount = tileEntityCount;
-  const stats = Object.entries(counts)
-    .map(([name, count]) => ({ name, count }))
-    .sort((a, b) => b.count - a.count);
+  if (acc.blockCount > 0) out.blockCount = acc.blockCount;
+  if (acc.entityCount > 0) out.entityCount = acc.entityCount;
+  if (acc.tileEntityCount > 0) out.tileEntityCount = acc.tileEntityCount;
+  const stats = paletteStatsFromCounts(acc.counts);
   if (stats.length > 0) out.paletteStats = stats;
 
   // 有效判定（对齐 parseBedrockStructure:422-424）：size 单独即有效，否则仅 DataVersion → 无效

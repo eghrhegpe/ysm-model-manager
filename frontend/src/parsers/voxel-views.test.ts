@@ -631,3 +631,266 @@ describe("decodeVoxelNbt — base64 → NBT root（纯函数）", () => {
     expect(decodeVoxelNbt("")).toBeNull();
   });
 });
+
+// ===== 分支特征基线：三个 voxelView 的守卫（认知复杂度战役 第 1 批）=====
+// 上文覆盖 happy path（state/pos 合法、包围盒有效、palette 齐全）。以下锁定
+// 「执行到了却从没断言过」的守卫分支——它们正是削平重构最容易改坏的地方。
+
+function floatBody(v: number): number[] {
+  const b = new Uint8Array(4);
+  new DataView(b.buffer).setFloat32(0, v, false);
+  return [...b];
+}
+function nbtFloat(name: string, v: number): number[] {
+  return nbtTag(0x05, name, floatBody(v));
+}
+function nbtDouble(name: string, v: number): number[] {
+  const b = new Uint8Array(8);
+  new DataView(b.buffer).setFloat64(0, v, false);
+  return nbtTag(0x06, name, [...b]);
+}
+function nbtIntArrayVoxel(name: string, vals: number[]): number[] {
+  const body: number[] = [];
+  for (const v of vals) body.push((v >>> 24) & 0xff, (v >>> 16) & 0xff, (v >>> 8) & 0xff, v & 0xff);
+  return nbtTag(0x0b, name, [
+    (vals.length >>> 24) & 0xff,
+    (vals.length >>> 16) & 0xff,
+    (vals.length >>> 8) & 0xff,
+    vals.length & 0xff,
+    ...body,
+  ]);
+}
+/** (1,1,1) size + 两项 palette（air/stone），blocks 由调用方给 */
+function structureRoot(blocks: number[]): Record<string, unknown> {
+  return parse(
+    nbtRoot(
+      nbtList("size", 0x03, intBody(1), intBody(1), intBody(1)),
+      nbtList(
+        "palette",
+        0x0a,
+        nbtCompoundBody(nbtString("Name", "minecraft:air")),
+        nbtCompoundBody(nbtString("Name", "minecraft:stone")),
+      ),
+      blocks,
+    ),
+  );
+}
+
+describe("nbtVoxelView — 守卫分支特征基线", () => {
+  it("blocks 元素非 compound（Int list）→ 全跳过：空组而非 null", () => {
+    const data = nbtVoxelView(structureRoot(nbtList("blocks", 0x03, intBody(1))), 100);
+    expect(data).not.toBeNull();
+    expect(data!.size).toEqual([1, 1, 1]);
+    expect(data!.groups).toHaveLength(0);
+  });
+
+  it("pos 长度非 3 / 缺 pos / 缺 state → 跳过", () => {
+    const data = nbtVoxelView(
+      structureRoot(
+        nbtList(
+          "blocks",
+          0x0a,
+          nbtCompoundBody(nbtList("pos", 0x03, intBody(0), intBody(0)), nbtInt("state", 1)),
+          nbtCompoundBody(nbtInt("state", 1)),
+          nbtCompoundBody(nbtList("pos", 0x03, intBody(0), intBody(0), intBody(0))),
+        ),
+      ),
+      100,
+    );
+    expect(data!.groups).toHaveLength(0);
+  });
+
+  it("state 非整型（Float 1.5）→ 跳过（Number.isInteger 守卫）", () => {
+    const data = nbtVoxelView(
+      structureRoot(
+        nbtList(
+          "blocks",
+          0x0a,
+          nbtCompoundBody(
+            nbtList("pos", 0x03, intBody(0), intBody(0), intBody(0)),
+            nbtFloat("state", 1.5),
+          ),
+        ),
+      ),
+      100,
+    );
+    expect(data!.groups).toHaveLength(0);
+  });
+
+  it("pos 元素非 number（String）/ 非整型（Float）→ 跳过", () => {
+    const asStrings = nbtVoxelView(
+      structureRoot(
+        nbtList(
+          "blocks",
+          0x0a,
+          nbtCompoundBody(
+            nbtList("pos", 0x08, [0x00, 0x01, 0x61], [0x00, 0x01, 0x62], [0x00, 0x01, 0x63]),
+            nbtInt("state", 1),
+          ),
+        ),
+      ),
+      100,
+    );
+    expect(asStrings!.groups).toHaveLength(0);
+
+    const asFloats = nbtVoxelView(
+      structureRoot(
+        nbtList(
+          "blocks",
+          0x0a,
+          nbtCompoundBody(
+            nbtList("pos", 0x05, floatBody(1.5), floatBody(0), floatBody(0)),
+            nbtInt("state", 1),
+          ),
+        ),
+      ),
+      100,
+    );
+    expect(asFloats!.groups).toHaveLength(0);
+  });
+
+  it("pos 负向越界 int16（-40000）→ 跳过", () => {
+    const data = nbtVoxelView(structureRoot(makeStructureBlocks([-40000, 0, 0])), 100);
+    expect(data!.groups).toHaveLength(0);
+  });
+
+  it("基岩版：palette_id 负值 / 缺 local_pos → 跳过；local_bounds 缺分量按 0 兜底", () => {
+    const data = nbtVoxelView(parse(nbtRoot(nbtList("sub_levels", 0x0a, nbtCompoundBody(
+      nbtCompound("local_bounds", nbtInt("max_x", 1)),
+      nbtList("block_palette", 0x0a,
+        nbtCompoundBody(nbtString("Name", "minecraft:air")),
+        nbtCompoundBody(nbtString("Name", "minecraft:stone")),
+      ),
+      nbtList("blocks", 0x0a,
+        nbtCompoundBody(nbtInt("palette_id", -1)),                 // 负值 → 跳过
+        nbtCompoundBody(nbtInt("palette_id", 1)),                  // 缺 local_pos → 跳过
+        nbtCompoundBody(nbtCompound("local_pos", nbtInt("x", 0), nbtInt("y", 0), nbtInt("z", 0)), nbtInt("palette_id", 1)),
+      ),
+    )))), 100);
+    // min 全缺 → 0；max_x = 1 → size [2,1,1]
+    expect(data!.size).toEqual([2, 1, 1]);
+    expect(data!.groups).toHaveLength(1);
+    expect(data!.groups![0].positions).toEqual([[0, 0, 0]]);
+  });
+
+  it("基岩版：平移后越界 int16（local_pos.x=40000）→ 跳过", () => {
+    const data = nbtVoxelView(parse(nbtRoot(nbtList("sub_levels", 0x0a, nbtCompoundBody(
+      nbtCompound("local_bounds",
+        nbtInt("min_x", 0), nbtInt("min_y", 0), nbtInt("min_z", 0),
+        nbtInt("max_x", 0), nbtInt("max_y", 0), nbtInt("max_z", 0)),
+      nbtList("block_palette", 0x0a,
+        nbtCompoundBody(nbtString("Name", "minecraft:air")),
+        nbtCompoundBody(nbtString("Name", "minecraft:stone")),
+      ),
+      nbtList("blocks", 0x0a, nbtCompoundBody(
+        nbtCompound("local_pos", nbtInt("x", 40000), nbtInt("y", 0), nbtInt("z", 0)),
+        nbtInt("palette_id", 1),
+      )),
+    )))), 100);
+    expect(data!.groups).toHaveLength(0);
+  });
+
+  it("基岩版：size 非正（min_x > max_x）→ null", () => {
+    expect(nbtVoxelView(parse(nbtRoot(nbtList("sub_levels", 0x0a, nbtCompoundBody(
+      nbtCompound("local_bounds",
+        nbtInt("min_x", 1), nbtInt("min_y", 0), nbtInt("min_z", 0),
+        nbtInt("max_x", 0), nbtInt("max_y", 0), nbtInt("max_z", 0)),
+    )))), 100)).toBeNull();
+  });
+
+  it("基岩版：包围盒超 MAX_REGION_AXIS（1<<21）→ null", () => {
+    expect(nbtVoxelView(parse(nbtRoot(nbtList("sub_levels", 0x0a, nbtCompoundBody(
+      nbtCompound("local_bounds",
+        nbtInt("min_x", 0), nbtInt("min_y", 0), nbtInt("min_z", 0),
+        nbtInt("max_x", 1 << 21), nbtInt("max_y", 0), nbtInt("max_z", 0)),
+    )))), 100)).toBeNull();
+  });
+
+  it("基岩版：sub_levels 元素非 compound（Int list）→ 无有效包围盒 → null", () => {
+    expect(nbtVoxelView(parse(nbtRoot(nbtList("sub_levels", 0x03, intBody(1)))), 100)).toBeNull();
+  });
+});
+
+/** 单方块 structure blocks（state=1 取 palette[1]=stone），pos 可指定 */
+function makeStructureBlocks(pos: [number, number, number]): number[] {
+  return nbtList(
+    "blocks",
+    0x0a,
+    nbtCompoundBody(
+      nbtList("pos", 0x03, intBody(pos[0]), intBody(pos[1]), intBody(pos[2])),
+      nbtInt("state", 1),
+    ),
+  );
+}
+
+describe("schematicVoxelView — 守卫分支特征基线", () => {
+  const schRoot = (...children: number[][]) => parse(nbtRoot(...children));
+
+  it("维度非正 / 非整型 → null", () => {
+    expect(schematicVoxelView(schRoot(
+      nbtInt("Width", 0), nbtInt("Height", 1), nbtInt("Length", 1),
+      nbtByteArray("Blocks", [1]),
+    ), 100)).toBeNull();
+    expect(schematicVoxelView(schRoot(
+      nbtDouble("Width", 1.5), nbtInt("Height", 1), nbtInt("Length", 1),
+      nbtByteArray("Blocks", [1]),
+    ), 100)).toBeNull();
+  });
+
+  it("总量超 MAX_SCHEMATIC_BLOCKS（512M）→ null（801×800×800）", () => {
+    expect(schematicVoxelView(schRoot(
+      nbtInt("Width", 801), nbtInt("Height", 800), nbtInt("Length", 800),
+    ), 100)).toBeNull();
+  });
+
+  it("v2 BlockData 在但 Palette 缺 → 走 v1 空流：非 null、空组", () => {
+    const data = schematicVoxelView(schRoot(
+      nbtInt("Width", 1), nbtInt("Height", 1), nbtInt("Length", 1),
+      nbtByteArray("BlockData", [0x01]),
+    ), 100);
+    expect(data).not.toBeNull();
+    expect(data!.size).toEqual([1, 1, 1]);
+    expect(data!.groups).toHaveLength(0);
+  });
+
+  it("Palette 值非整型 → 不入表（paletteMap 空但非 null）→ 方块用默认灰", () => {
+    const data = schematicVoxelView(schRoot(
+      nbtInt("Width", 1), nbtInt("Height", 1), nbtInt("Length", 1),
+      nbtByteArray("Blocks", [1]),
+      nbtCompound("Palette", nbtDouble("minecraft:stone", 1.5)),
+    ), 100);
+    expect(data!.groups).toHaveLength(1);
+    expect(data!.groups![0].color).toBe("#7F7F7F");
+    expect(data!.groups![0].positions).toEqual([[0, 0, 0]]);
+  });
+
+  it("v1 无 Palette 且缺 Data → 数字 ID 解析按 data=0 兜底", () => {
+    const data = schematicVoxelView(schRoot(
+      nbtInt("Width", 1), nbtInt("Height", 1), nbtInt("Length", 1),
+      nbtByteArray("Blocks", [1]),
+    ), 100);
+    expect(data!.groups).toHaveLength(1);
+    expect(data!.groups![0].color).toBe(STONE_COLOR);
+  });
+
+  it("indexToCoord int16 越界（1×40000×1）→ y>32767 的方块被剔除", () => {
+    const blocks = new Array(40000).fill(1);
+    const data = schematicVoxelView(schRoot(
+      nbtInt("Width", 1), nbtInt("Height", 40000), nbtInt("Length", 1),
+      nbtByteArray("Blocks", blocks),
+    ), 1_000_000);
+    expect(data!.groups).toHaveLength(1);
+    expect(data!.groups![0].positions).toHaveLength(32768);
+    expect(data!.groups![0].positions[32767]).toEqual([0, 32767, 0]);
+  });
+
+  it("block_palette 为 IntArray 形态（基岩版视图的 palette 兜底）不适用于 schematic —— 保留 v1 数字 ID 语义", () => {
+    // schematic 的 Palette 是 compound（名字→ID）；IntArray 不入 paletteMap → 默认灰
+    const data = schematicVoxelView(schRoot(
+      nbtInt("Width", 1), nbtInt("Height", 1), nbtInt("Length", 1),
+      nbtByteArray("Blocks", [1]),
+      nbtIntArrayVoxel("Palette", [1, 2]),
+    ), 100);
+    expect(data!.groups![0].color).toBe("#7F7F7F");
+  });
+});

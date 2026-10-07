@@ -8,7 +8,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { getIdbMock } from "@/test-utils/idb-mock.ts";
 import { gzipSync } from "fflate";
 import { browserAdapter, importWebFiles } from "@/backend/browser-adapter.ts";
-import { parseNbtRoot } from "./nbt-parse.ts";
+import { nbtStructureView, parseNbtRoot } from "./nbt-parse.ts";
 
 // idb 层内存实现：复用 test-setup 全局共享 store（isolate:false 穿透修复，
 // 与 browser-adapter 系一致——per-file vi.mock 在共享模块图下会捕获错位绑定）
@@ -370,5 +370,149 @@ describe("三个 binding — 失败路径 → null", () => {
     fakeData[15] = 0;
 
     expect(() => parseNbtRoot(fakeData)).toThrow("ISIZE");
+  });
+});
+
+// ===== 分支特征基线：bedrockStructureView（认知复杂度战役 第 1 批）=====
+// 上文只有一条 sub_levels happy path（两条子结构、包围盒正常、palette 名齐全）。
+// 以下锁定「执行到了却从没断言过」的守卫：无效判定、首帧缺分量、palette 形态异常、block_entities。
+
+/** 构造 sub_levels 容器 root 并直接过视图（不经 browserAdapter，聚焦纯函数分支） */
+function bedrockView(...children: number[][]): Record<string, unknown> | null {
+  return nbtStructureView(parseNbtRoot(Uint8Array.from(nbtRoot(...children))));
+}
+/** local_bounds compound（键值对逐个传入，缺省即「分量缺失」） */
+function bounds(pairs: Record<string, number>): number[] {
+  return nbtCompound("local_bounds", ...Object.entries(pairs).map(([k, v]) => nbtInt(k, v)));
+}
+const SUB_LEVELS = (subs: number[][]) => nbtList("sub_levels", 0x0a, ...subs);
+
+describe("nbtStructureView — 基岩版 sub_levels 守卫特征基线", () => {
+  it("sub_levels 全无有效内容：仅 dataVersion → null（单字段不足判有效）", () => {
+    expect(
+      bedrockView(nbtInt("DataVersion", 2566), SUB_LEVELS([nbtCompoundBody(nbtInt("id", 0))])),
+    ).toBeNull();
+    // 连 dataVersion 都没有 → out 为空对象，同样 null
+    expect(bedrockView(SUB_LEVELS([nbtCompoundBody(nbtInt("id", 0))]))).toBeNull();
+  });
+
+  it("有 blocks 但无 local_bounds → blockCount 单独不足 → null", () => {
+    expect(
+      bedrockView(
+        SUB_LEVELS([
+          nbtCompoundBody(nbtList("blocks", 0x0a, nbtCompoundBody(nbtInt("palette_id", 0)))),
+        ]),
+      ),
+    ).toBeNull();
+  });
+
+  it("首帧 local_bounds 的分量直接取（可低于初值 0）；仅 max 缺 min 时 min 保持初值 0", () => {
+    // 首帧 max_x=-5/min_x=-5：size = (-5) - (-5) + 1 = 1（若与初值 0 取 max 会得 6）
+    expect(bedrockView(SUB_LEVELS([nbtCompoundBody(bounds({ min_x: -5, max_x: -5 }))]))).toEqual({
+      size: [1, 1, 1],
+    });
+    // 首帧仅 max_x=1：min_x 缺席保持初值 0 → size_x = 2
+    expect(bedrockView(SUB_LEVELS([nbtCompoundBody(bounds({ max_x: 1 }))]))).toEqual({
+      size: [2, 1, 1],
+    });
+  });
+
+  it("多子结构：min 取更小、max 取更大（缺分量不参与更值）", () => {
+    const view = bedrockView(
+      SUB_LEVELS([
+        nbtCompoundBody(bounds({ max_x: 1 })),
+        nbtCompoundBody(bounds({ min_x: -3, max_x: -3 })),
+      ]),
+    );
+    expect(view).toEqual({ size: [5, 1, 1] });
+  });
+
+  it("block_palette 名称缺失/非 string → 空名，引用不计入；palette_id 负值/越界/缺省跳过", () => {
+    const view = bedrockView(
+      SUB_LEVELS([
+        nbtCompoundBody(
+          bounds({ min_x: 0, min_y: 0, min_z: 0, max_x: 0, max_y: 0, max_z: 0 }),
+          nbtList(
+            "block_palette",
+            0x0a,
+            nbtCompoundBody(nbtString("Name", "minecraft:stone")),
+            nbtCompoundBody(),
+            nbtCompoundBody(nbtInt("Name", 5)),
+          ),
+          nbtList(
+            "blocks",
+            0x0a,
+            nbtCompoundBody(nbtInt("palette_id", 0)), // stone ×1
+            nbtCompoundBody(nbtInt("palette_id", 1)), // 缺 Name → 跳过
+            nbtCompoundBody(nbtInt("palette_id", 2)), // Name 非 string → 跳过
+            nbtCompoundBody(nbtInt("palette_id", -1)), // 负值 → 跳过
+            nbtCompoundBody(nbtInt("palette_id", 9)), // 越界 → 跳过
+            nbtCompoundBody(), // 缺 palette_id → 跳过
+          ),
+        ),
+      ]),
+    );
+    expect(view).toEqual({
+      size: [1, 1, 1],
+      blockCount: 6,
+      paletteStats: [{ name: "minecraft:stone", count: 1 }],
+    });
+  });
+
+  it("block_palette 为 IntArray（非 compound 元素）→ 名称全空、引用不计入", () => {
+    const view = bedrockView(
+      SUB_LEVELS([
+        nbtCompoundBody(
+          bounds({ min_x: 0, min_y: 0, min_z: 0, max_x: 0, max_y: 0, max_z: 0 }),
+          nbtIntArray("block_palette", [1, 2]),
+          nbtList(
+            "blocks",
+            0x0a,
+            nbtCompoundBody(nbtInt("palette_id", 0)),
+            nbtCompoundBody(nbtInt("palette_id", 1)),
+          ),
+        ),
+      ]),
+    );
+    expect(view).toEqual({ size: [1, 1, 1], blockCount: 2 });
+  });
+
+  it("block_entities / entities 计数分别入 tileEntityCount / entityCount", () => {
+    const view = bedrockView(
+      nbtInt("DataVersion", 1),
+      SUB_LEVELS([
+        nbtCompoundBody(
+          bounds({ min_x: 0, min_y: 0, min_z: 0, max_x: 1, max_y: 1, max_z: 1 }),
+          nbtList("entities", 0x0a, nbtCompoundBody(nbtString("id", "minecraft:pig"))),
+          nbtList(
+            "block_entities",
+            0x0a,
+            nbtCompoundBody(nbtString("id", "minecraft:chest")),
+            nbtCompoundBody(nbtString("id", "minecraft:furnace")),
+          ),
+        ),
+      ]),
+    );
+    expect(view).toEqual({
+      dataVersion: 1,
+      size: [2, 2, 2],
+      entityCount: 1,
+      tileEntityCount: 2,
+    });
+  });
+
+  it("sub_levels 元素非 compound → 跳过；entities/blocks 非数组 → 不计数", () => {
+    expect(
+      bedrockView(
+        nbtInt("DataVersion", 1),
+        SUB_LEVELS([
+          nbtCompoundBody(
+            bounds({ min_x: 0, min_y: 0, min_z: 0, max_x: 0, max_y: 0, max_z: 0 }),
+            nbtInt("blocks", 5), // 非数组
+            nbtString("entities", "x"), // 非数组
+          ),
+        ]),
+      ),
+    ).toEqual({ dataVersion: 1, size: [1, 1, 1] });
   });
 });

@@ -66,8 +66,12 @@ const flowGo = readOrDie("go/cli/flow.go");
 const concurrentGo = readOrDie("go/cli/bench_concurrent.go");
 // 2026-10 拆分：原 bench_concurrent.go 按职责拆为 bench_concurrent.go（并发基准）/
 // bench_single.go（单模型基准与目标集载荷）/ bench_stage_utils.go（stage 汇总与分级）。
-// 契约锚点随之分流：并发部分仍看 concurrentGo，单模型/目标集/stageStatus 看 singleGo/stageUtilsGo。
+// 二次拆分（本轮）：目标集矩阵载荷（perfMatrixSpec/perfTypeSummary）移入 bench_matrix.go，
+// 单模型载荷（singleBenchJSON/benchStageJSON/identityOnlyPayload）留在 bench_single.go。
+// 契约锚点随之分流：并发部分仍看 concurrentGo，单模型看 singleGo，目标集/矩阵看 matrixGo，
+// stageStatus 看 stageUtilsGo。
 const singleGo = readOrDie("go/cli/bench_single.go");
+const matrixGo = readOrDie("go/cli/bench_matrix.go");
 const stageUtilsGo = readOrDie("go/cli/bench_stage_utils.go");
 const identityGo = readOrDie("go/cli/perf_identity.go");
 // perf-gui-flow.ts 已随 gui-flow 面板下线（a1e26419d，ADR-278：UI 层拆除、Go 命令保留）；
@@ -358,8 +362,8 @@ for (const [constName, value] of Object.entries(TARGET_ORDER_CONSTS)) {
 }
 for (const field of ["target", "order", "size_source", "max_models"]) {
   must(
-    hasJSONTag(singleGo, field),
-    `目标集载荷缺少 spec 字段 json:${field}（go/cli/bench_single.go 的 perfMatrixSpec）`,
+    hasJSONTag(matrixGo, field),
+    `目标集载荷缺少 spec 字段 json:${field}（go/cli/bench_matrix.go 的 perfMatrixSpec）`,
   );
 }
 for (const field of ["target", "order", "size_source"]) {
@@ -383,7 +387,7 @@ must(
 // 旧契约残留即回归：两个字段已删、两个 flag 不得再出现在组装点、改义函数必须消失
 for (const dead of ["all_types", "top_largest"]) {
   must(
-    !hasJSONTag(singleGo, dead),
+    !hasJSONTag(matrixGo, dead),
     `载荷仍带已废弃字段 json:${dead}（旧目标集契约残留即回归，ADR-262 D3 修订）`,
   );
   must(!matrixCode.includes(dead), `前端仍声明已废弃字段 ${dead}（perf-matrix-render.ts）`);
@@ -497,7 +501,7 @@ must(
 // `cli_analyzable ? expected_stages : "—"` 用一个字段解释另一个字段的零值——口径分叉时
 // 「—」会静默变成 0，「未采集」被渲染成「测了，是 0 段」（ADR-278 §2.6 诚实语义）。
 must(
-  /StagesDeclared\s+bool\s+`json:"stages_declared"`/.test(singleGo),
+  /StagesDeclared\s+bool\s+`json:"stages_declared"`/.test(matrixGo),
   "perfTypeSummary 缺 stages_declared 字段（前端无法区分「未声明」与「0 段」）",
 );
 must(

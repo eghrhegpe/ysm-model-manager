@@ -432,3 +432,165 @@ describe("buildSpecFromGeometryJSON 契约（对齐 Go TestBuild3DSpecFromGeomet
     expect(spec.models[0].meshGroups.length).toBe(2);
   });
 });
+
+// ===== 特征基线（认知复杂度战役 第 3 批）=====
+// 补测前实测（istanbul 分支）：cube rotation 解析（L211-213）零命中、
+// 纹理尺寸越界归零（L171-172）零命中、畸形输入守卫（L153/L189/L195）语句零命中、
+// clampToInt 非有限数守卫（L264）零命中——即「执行到了却从没断言过这些数据」。
+// 本组只钉现有行为（数值/结构），不改任何期望。
+import { describe as d3, it as it3, expect as expect3, vi } from "vitest";
+
+/** mesh 断言用的窄化视图 */
+interface MeshView {
+  positions: number[];
+  indices: number[];
+  uvs: number[];
+  localRotation: number[];
+  localPosition: number[];
+}
+
+/** 取 spec.models[0].meshGroups[0]（多用例复用的窄化读取） */
+function firstMesh(geometryJSON: string): MeshView {
+  const spec = JSON.parse(buildSpecFromGeometryJSON(geometryJSON)) as {
+    models: { meshGroups: MeshView[] }[];
+  };
+  return spec.models[0].meshGroups[0];
+}
+
+d3("parseBedrockGeometry 特征基线 — cube rotation（补测前零命中分支）", () => {
+  it3("cube rotation=[90,0,0] → localRotation 绕 X 轴 -90°（qx≈-0.7071 qw≈0.7071），顶点不动", () => {
+    const rot = firstMesh(
+      geo(
+        "geometry.cuberot",
+        '{ "name": "b", "pivot": [0,0,0], "cubes": [{ "origin": [0,0,0], "size": [4,2,6], "uv": [0,0], "rotation": [90,0,0] }] }',
+      ),
+    );
+    // 契约：cube rotation 落成 mesh 节点四元数（eulerToQuaternion(-rx,-ry,rz)），不进顶点
+    expect3(Math.abs(rot.localRotation[0] - -0.70710678)).toBeLessThan(1e-4);
+    expect3(Math.abs(rot.localRotation[3] - 0.70710678)).toBeLessThan(1e-4);
+    const plain = firstMesh(
+      geo(
+        "geometry.cuberot0",
+        '{ "name": "b", "pivot": [0,0,0], "cubes": [{ "origin": [0,0,0], "size": [4,2,6], "uv": [0,0] }] }',
+      ),
+    );
+    // 顶点/索引/UV 与无旋转同源（旋转只改节点矩阵）
+    expect3(rot.positions).toEqual(plain.positions);
+    expect3(rot.uvs).toEqual(plain.uvs);
+    expect3(rot.localRotation).not.toEqual(plain.localRotation);
+  });
+
+  it3("cube rotation=[10,0,0] → 缺省分量补 0（qx=-sin5° qw=cos5°）", () => {
+    const m = firstMesh(
+      geo(
+        "geometry.cuberot10",
+        '{ "name": "b", "pivot": [0,0,0], "cubes": [{ "origin": [0,0,0], "size": [2,2,2], "uv": [0,0], "rotation": [10] }] }',
+      ),
+    );
+    expect3(m.localRotation[0]).toBeCloseTo(-0.0871557, 6);
+    expect3(m.localRotation[1]).toBe(0);
+    expect3(m.localRotation[2]).toBe(0);
+    expect3(m.localRotation[3]).toBeCloseTo(0.9961947, 6);
+  });
+
+  it3("cube rotation 非数组（字符串）→ 视为无旋转（[0,0,0,1]）", () => {
+    const m = firstMesh(
+      geo(
+        "geometry.cuberotbad",
+        '{ "name": "b", "pivot": [0,0,0], "cubes": [{ "origin": [0,0,0], "size": [2,2,2], "uv": [0,0], "rotation": "x" }] }',
+      ),
+    );
+    expect3(m.localRotation).toEqual([0, 0, 0, 1]);
+  });
+});
+
+d3("parseBedrockGeometry 特征基线 — 纹理尺寸钳制（补测前零命中分支）", () => {
+  const uvGeo = (w: string) => `{
+    "format_version": "1.12.0",
+    "minecraft:geometry": [{
+      "description": { "identifier": "geometry.tex", "texture_width": ${w}, "texture_height": 64 },
+      "bones": [{ "name": "b", "pivot": [0,0,0], "cubes": [{ "origin": [0,0,0], "size": [2,2,2], "uv": [0,0] }] }]
+    }]
+  }`;
+
+  it3("texture_width=70000（>65536 上限）→ 归 0 哨兵 → 回退默认 64（UV 分母 64）", () => {
+    const m = firstMesh(uvGeo("70000"));
+    // box UV：cube uv=[0,0] size 2 → east 面 u1 = 2/64 = 0.03125
+    expect3(m.uvs[2]).toBeCloseTo(2 / 64, 6);
+  });
+
+  it3("texture_width=-5（负）→ 归 0 哨兵 → 回退默认 64", () => {
+    const m = firstMesh(uvGeo("-5"));
+    expect3(m.uvs[2]).toBeCloseTo(2 / 64, 6);
+  });
+
+  it3("texture_width=1e999（JSON 合法超界 → Infinity）→ clampToInt 归 0 → 默认 64", () => {
+    const m = firstMesh(uvGeo("1e999"));
+    expect3(m.uvs[2]).toBeCloseTo(2 / 64, 6);
+  });
+
+  it3("texture_width=128（界内）→ 保留 128（UV 分母 128，与越界归零区分）", () => {
+    const m = firstMesh(uvGeo("128"));
+    expect3(m.uvs[2]).toBeCloseTo(2 / 128, 6);
+  });
+});
+
+d3("parseBedrockGeometry 特征基线 — 畸形输入守卫（补测前零命中语句）", () => {
+  it3("骨骼数组含 null 项 → 整条几何拒绝 {}", () => {
+    expect3(
+      buildSpecFromGeometryJSON(
+        geo("geometry.nullbone", 'null, { "name": "b", "pivot": [0,0,0] }'),
+      ),
+    ).toBe("{}");
+  });
+
+  it3("cube 缺 size 数组 → 整条几何拒绝 {}（守住 origin/size 双数组契约）", () => {
+    expect3(
+      buildSpecFromGeometryJSON(
+        geo(
+          "geometry.nosize",
+          '{ "name": "b", "pivot": [0,0,0], "cubes": [{ "origin": [0,0,0], "uv": [0,0] }] }',
+        ),
+      ),
+    ).toBe("{}");
+  });
+
+  it3("cube uv 为非字符串非数组（数字）→ 视为 uv 缺省 [0,0]（box UV 原点展开，不抛错）", () => {
+    const bad = firstMesh(
+      geo(
+        "geometry.uvnum",
+        '{ "name": "b", "pivot": [0,0,0], "cubes": [{ "origin": [0,0,0], "size": [2,2,2], "uv": 5 }] }',
+      ),
+    );
+    const zero = firstMesh(
+      geo(
+        "geometry.uvnum0",
+        '{ "name": "b", "pivot": [0,0,0], "cubes": [{ "origin": [0,0,0], "size": [2,2,2], "uv": [0,0] }] }',
+      ),
+    );
+    // uv=[0,0] 是合法 box UV 原点（非「全零 UV」）：east 面 u1 = z/texW = 2/64
+    expect3(bad.uvs).toEqual(zero.uvs);
+    expect3(bad.uvs[2]).toBeCloseTo(2 / 64, 6);
+  });
+
+  it3("骨骼 rotation 非数组（字符串）→ boneRot [0,0,0] → localRotation 单位四元数", () => {
+    const spec = JSON.parse(
+      buildSpecFromGeometryJSON(
+        geo(
+          "geometry.bonerotbad",
+          '{ "name": "b", "pivot": [0,0,0], "rotation": "x", "cubes": [{ "origin": [0,0,0], "size": [2,2,2], "uv": [0,0] }] }',
+        ),
+      ),
+    ) as { models: { bones: { localRotation: number[] }[] }[] };
+    expect3(spec.models[0].bones[0].localRotation).toEqual([0, 0, 0, 1]);
+  });
+
+  it3("输入超 100MB 上限 → 拒绝 {} 且 warn 一次（含字节数）", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    // 100 << 20 = 104857600，取 +1 越过上限
+    expect3(buildSpecFromGeometryJSON("a".repeat(104857601))).toBe("{}");
+    expect3(warn).toHaveBeenCalledTimes(1);
+    expect3(String(warn.mock.calls[0][0])).toContain("104857601");
+    warn.mockRestore();
+  });
+});

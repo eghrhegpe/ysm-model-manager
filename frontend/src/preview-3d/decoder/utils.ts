@@ -42,6 +42,34 @@ export interface DecodedYsm {
 }
 
 /**
+ * 找文本头部结束位置（即二进制加密数据起点）。实际 YSGP 文本变体是「行式文本头 + 二进制加密数据」
+ * （与 Go 端 header.go scanHeader 同口径）：
+ *   - `===` 行终止当前节（header.go:73-74）
+ *   - 连续 `---`（无 `[`，≥10 字符）分隔行后即二进制数据（header.go:76-85）
+ * 原 regex 用 `(?:<\/ysm>|...|>)\s*$` 在解码文本上找闭合标签，
+ * 要求标签后至 EOF 仅剩空白——但变体是文本头后紧跟二进制数据，`\s*$` 永不命中，
+ * dataStart 落回 3（BOM 后），V2 重建时把整个文本头拼进加密载荷（payload 污染，
+ * 解密产物错位）。用 Latin1 视图做字节级正则（1 字节=1 码位），索引直接映射回字节偏移。
+ *
+ * @param ascii bytes 前 4096B 的 Latin1 视图（调用方构造，避免重复切片）
+ * @returns 数据起点字节偏移；哨兵 3（BOM 之后无进展）= 纯文本文件，非文本变体，调用方拒绝重建
+ */
+function findTextHeaderEnd(bytes: Uint8Array, ascii: string): number {
+  const eqM = ascii.match(/\n===[^\n]*\n/);
+  const eqEnd = eqM && typeof eqM.index === "number" ? eqM.index + eqM[0].length : -1;
+  const dashM = ascii.match(/\n-{10,}[^[\n]*\n/);
+  const dashEnd = dashM && typeof dashM.index === "number" ? dashM.index + dashM[0].length : -1;
+  // 两个终止标记同时存在时取先出现者（短路顺序即契约，勿对调）
+  if (eqEnd !== -1 && (dashEnd === -1 || eqEnd <= dashEnd)) return eqEnd;
+  if (dashEnd !== -1) return dashEnd;
+  // 无终止标记：尝试找二进制数据起始（非文本、非空白字符）
+  for (let i = 3; i < bytes.length; i++) {
+    if (bytes[i] < 0x20 && bytes[i] !== 0x09 && bytes[i] !== 0x0a && bytes[i] !== 0x0d) return i;
+  }
+  return 3; // skip BOM：全程无控制字节 → 纯文本，未找到数据起点
+}
+
+/**
  * 将带 UTF-8 BOM + 文本头部的 YSGP 变体重建为标准 YSGP 二进制格式
  * V2: 加密数据前有 16B 独立 hash 区
  * V3: 纯加密数据，无独立 hash 区
@@ -55,35 +83,10 @@ function buildStdYsgpFromTextVariant(bytes: Uint8Array, forceVer?: number): Uint
   if (!hashMatch) return null;
   const fileHash = hashMatch[1];
 
-  // 找到文本头部结束位置。实际 YSGP 文本变体是「行式文本头 + 二进制加密数据」
-  // （与 Go 端 header.go scanHeader 同口径）：
-  //   - `===` 行终止当前节（header.go:73-74）
-  //   - 连续 `---`（无 `[`，≥10 字符）分隔行后即二进制数据（header.go:76-85）
-  // 原 regex 用 `(?:<\/ysm>|...|>)\s*$` 在解码文本上找闭合标签，
-  // 要求标签后至 EOF 仅剩空白——但变体是文本头后紧跟二进制数据，`\s*$` 永不命中，
-  // dataStart 落回 3（BOM 后），V2 重建时把整个文本头拼进加密载荷（payload 污染，
-  // 解密产物错位）。用 Latin1 视图做字节级正则（1 字节=1 码位），索引直接映射回字节偏移。
+  // 文本头结束位置 → 二进制起点（判定顺序/短路语义见 findTextHeaderEnd）
   const ascii = String.fromCharCode(...bytes.slice(0, 4096));
-  const eqM = ascii.match(/\n===[^\n]*\n/);
-  const eqEnd = eqM && typeof eqM.index === "number" ? eqM.index + eqM[0].length : -1;
-  const dashM = ascii.match(/\n-{10,}[^[\n]*\n/);
-  const dashEnd = dashM && typeof dashM.index === "number" ? dashM.index + dashM[0].length : -1;
-  let dataStart = 3; // skip BOM
-  if (eqEnd !== -1 && (dashEnd === -1 || eqEnd <= dashEnd)) {
-    dataStart = eqEnd;
-  } else if (dashEnd !== -1) {
-    dataStart = dashEnd;
-  } else {
-    // 无终止标记：尝试找二进制数据起始（非文本、非空白字符）
-    for (let i = 3; i < bytes.length; i++) {
-      if (bytes[i] < 0x20 && bytes[i] !== 0x09 && bytes[i] !== 0x0a && bytes[i] !== 0x0d) {
-        dataStart = i;
-        break;
-      }
-    }
-    // 全程无控制字节 → 纯文本文件（非文本变体），不重建
-    if (dataStart === 3) return null;
-  }
+  const dataStart = findTextHeaderEnd(bytes, ascii);
+  if (dataStart === 3) return null;
 
   // guard 放宽——原 `bytes.length - 20` 会把「V2 16B hash 区 + 少量加密数据」
   // 的短变体误判为无载荷而原样返回（dataStart == length-20 恰好等于阈值）。

@@ -464,3 +464,163 @@ describe("decodeYsmViaWasm 未覆盖分支补测", () => {
     expect((result?.animations?.[0] as { name?: string } | undefined)?.name).toBe("walk");
   });
 });
+
+// ===== 特征基线（认知复杂度战役 第 3 批）=====
+// wasm-decode.ts 在 vitest 配置里被整体排除出覆盖率（IO 胶水），故按源码分支逐条补测。
+// handleYsmJsonSpec 补测前零覆盖的分支：非字符串 modelFiles 项（{path}）/空串项、
+// 重复项去重（processed）、补前缀与原始路径双失败 continue、解析无骨骼（parsed 假值）、
+// texFiles 空项与缺字节、非图片字节（sniff 失败）、allBones 为空不合并（占位几何 + blob 回收）、
+// 成功路径不回收（URL 已交给 geometry）。本组钉「合并结果数值 + blob 归属」不变量。
+describe("handleYsmJsonSpec 特征基线 — modelFiles/texFiles 声明形态与 blob 归属", () => {
+  /** ysm.json spec 格式（model/texture 可为数组/对象映射/字符串三形态） */
+  function specB64For(
+    model: unknown,
+    texture: unknown,
+    properties: Record<string, unknown> = {},
+  ): string {
+    const ysmJson = {
+      spec: { version: "1.0.0" },
+      files: { player: { model, texture } },
+      metadata: { authors: [] },
+      properties,
+      minecraft: { geometry: [] },
+    };
+    return btoa(new TextDecoder().decode(encoder.encode(JSON.stringify(ysmJson))));
+  }
+
+  /** 安装 ReadFileBytes 替身（键 = 精确路径） */
+  function installReader(calls: Record<string, string>): void {
+    readFileBytesMock.mockImplementation(async (path: string) => calls[path] ?? null);
+  }
+
+  /** 捕获 createObjectURL 产出并记录 revoke 调用（blob 归属断言用） */
+  function spyBlobUrls(): { created: string[]; revoked: string[] } {
+    const created: string[] = [];
+    const revoked: string[] = [];
+    vi.spyOn(URL, "createObjectURL").mockImplementation(() => {
+      const u = `blob:test-${created.length}`;
+      created.push(u);
+      return u;
+    });
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation((u: string) => {
+      revoked.push(u);
+    });
+    return { created, revoked };
+  }
+
+  it("modelFiles 项为对象（{path}）→ 取 path；项内无 path（{uv}）→ 跳过", async () => {
+    installReader({
+      "/repo/obj.json": specB64For([{ path: "main.json" }, { uv: "ignored" }], null),
+      "/repo/models/main.json": geoB64("root", 2),
+    });
+    const result = await decodeYsmViaWasm("/repo/obj.json");
+    expect(result).not.toBeNull();
+    expect(result?.geometry?.bones?.length).toBe(1);
+    expect(result?.geometry?.cubeCount).toBe(2); // 只有 {path} 项贡献 cube
+    expect(result?.geometry?.boneCount).toBe(1);
+  });
+
+  it("modelFiles 重复声明 → 按 processed 去重（骨骼/cube 不翻倍）", async () => {
+    installReader({
+      "/repo/dup.json": specB64For(["main.json", "main.json"], null),
+      "/repo/models/main.json": geoB64("root", 2),
+    });
+    const result = await decodeYsmViaWasm("/repo/dup.json");
+    expect(result?.geometry?.cubeCount).toBe(2); // 去重后仍是 2（未去重会 4）
+    expect(result?.geometry?.boneCount).toBe(1);
+    expect(result?.geometry?.bones?.length).toBe(1);
+  });
+
+  it("modelFiles 首个缺失（补前缀与原始路径双失败）→ 跳过该项，续读后续项", async () => {
+    installReader({
+      "/repo/skip.json": specB64For(["missing.json", "main.json"], null),
+      "/repo/models/main.json": geoB64("root", 2),
+    });
+    const result = await decodeYsmViaWasm("/repo/skip.json");
+    expect(result?.geometry?.boneCount).toBe(1);
+    expect(result?.geometry?.bones?.[0]?.name).toBe("root");
+  });
+
+  it("texFiles 项为对象（{uv}）→ 取 uv；空串项与缺字节项跳过；textureNames 只留命中键", async () => {
+    const { created } = spyBlobUrls();
+    installReader({
+      "/repo/tex.json": specB64For(["main.json"], [{ uv: "body.png" }, { uv: "" }, "missing.png"]),
+      "/repo/models/main.json": geoB64("root", 1),
+      "/repo/textures/body.png": pngB64(),
+    });
+    const result = await decodeYsmViaWasm("/repo/tex.json");
+    expect(result?.geometry?.textureNames).toEqual(["body"]);
+    expect(result?.geometry?.textures).toEqual([created[0]]); // URL 按声明序落到 geometry
+    expect(result?.geometry?.texture).toBe(created[0]);
+  });
+
+  it("PNG 嗅探尺寸进入 bone 纹理范围（properties 声明 1×1 时以嗅探 8×8 为准）", async () => {
+    installReader({
+      "/repo/sniff.json": specB64For(["main.json"], ["body.png"], {
+        texture_width: 1,
+        texture_height: 1,
+      }),
+      "/repo/models/main.json": geoB64("root", 1),
+      "/repo/textures/body.png": pngB64(),
+    });
+    const result = await decodeYsmViaWasm("/repo/sniff.json");
+    // pngB64 = 8×8 → max(嗅探 8, 声明 1, uv 包围盒 4/2) = 8
+    expect(result?.geometry?.bones?.[0]?._texWidth).toBe(8);
+    expect(result?.geometry?.bones?.[0]?._texHeight).toBe(8);
+  });
+
+  it("纹理字节非 PNG/JPEG（嗅探失败）→ 不撑大范围，取 uv 包围盒/声明尺寸", async () => {
+    installReader({
+      "/repo/nosniff.json": specB64For(["main.json"], ["body.png"], {
+        texture_width: 1,
+        texture_height: 1,
+      }),
+      "/repo/models/main.json": geoB64("root", 1),
+      // 非图片字节：无 PNG 签名也无 JPEG SOF → sniffTexSize 返回 null
+      "/repo/textures/body.png": btoa("not-an-image"),
+    });
+    const result = await decodeYsmViaWasm("/repo/nosniff.json");
+    // uv 包围盒：size [1,1,1] → uEnd = 2*(1+1)=4，vEnd = 1+1=2
+    expect(result?.geometry?.bones?.[0]?._texWidth).toBe(4);
+    expect(result?.geometry?.bones?.[0]?._texHeight).toBe(2);
+  });
+
+  it("modelFiles 全部无骨骼 → 不进入合并块：占位几何原样返回 + blob 全部回收", async () => {
+    const { created, revoked } = spyBlobUrls();
+    installReader({
+      "/repo/nogeo2.json": specB64For(["empty.json"], ["body.png"]),
+      "/repo/models/empty.json": btoa(
+        new TextDecoder().decode(
+          encoder.encode(
+            JSON.stringify({
+              format_version: "1.16.0",
+              "minecraft:geometry": [{ description: { identifier: "geometry.e" }, bones: [] }],
+            }),
+          ),
+        ),
+      ),
+      "/repo/textures/body.png": pngB64(),
+    });
+    const result = await decodeYsmViaWasm("/repo/nogeo2.json");
+    expect(result).not.toBeNull();
+    // 占位几何未被替换（bones 仍空、textureNames 未接线）
+    expect(result?.geometry?.bones).toEqual([]);
+    expect(result?.geometry?.textureNames).toBeUndefined();
+    expect(result?.geometryRaw).toBeUndefined();
+    // 失败路径必须回收未交给 geometry 的 blob URL（防泄漏）
+    expect(created.length).toBe(1);
+    expect(revoked).toEqual(created);
+  });
+
+  it("合并成功 → 不回收（URL 已由 geometry 持有），供纹理加载消费", async () => {
+    const { created, revoked } = spyBlobUrls();
+    installReader({
+      "/repo/keep.json": specB64For(["main.json"], ["body.png"]),
+      "/repo/models/main.json": geoB64("root", 1),
+      "/repo/textures/body.png": pngB64(),
+    });
+    const result = await decodeYsmViaWasm("/repo/keep.json");
+    expect(result?.geometry?.textures).toEqual(created);
+    expect(revoked).toEqual([]);
+  });
+});

@@ -113,6 +113,154 @@ async function loadAvatarsForJson(ctx: InflightCtx, result: DecodedYsm): Promise
   }
 }
 
+/** handleYsmJsonSpec 的几何合并累加器（modelFiles 阶段产出） */
+interface MergedGeometry {
+  allBones: BedrockGeometry["bones"];
+  boneCount: number;
+  cubeCount: number;
+  firstGeoRaw: string | null;
+}
+
+/** handleYsmJsonSpec 的纹理收集累加器（texFiles 阶段产出；blob URL 由调用方 pendingBlobUrls 管） */
+interface CollectedTextures {
+  textures: Record<string, string>;
+  texKeys: string[];
+  texDimensions: Record<string, TexDim>;
+  maxTexW: number;
+  maxTexH: number;
+}
+
+/**
+ * 声明条目 → 路径字符串：字符串形态原样返回；对象形态取指定键
+ * （modelFiles 取 `path` / texFiles 取 `uv`，对齐 parsers/ysm-json.ts normalizePlayerFiles 的三形态）；
+ * 取不到 → ""（调用方跳过该条）。
+ */
+function entryPathOf(entry: unknown, key: "path" | "uv"): string {
+  if (typeof entry === "string") return entry;
+  return (entry as Record<string, string> | null | undefined)?.[key] || "";
+}
+
+/**
+ * modelFiles 逐条读取 + 几何合并（ysm.json spec 的 models 声明）。
+ * 缺 `models/` 前缀 → 补前缀读，失败再回退原始相对路径；两条都读不到 → 跳过该条（不阻断其余）。
+ * processed 去重：同一声明重复出现只解一次，骨骼/cube 计数不翻倍。
+ * 解析结果无骨骼 → 不计入合并（与 Go 端「无骨骼组件丢弃」同口径）。
+ */
+async function mergeModelFilesGeometry(
+  ctx: InflightCtx,
+  modelFiles: unknown[],
+): Promise<MergedGeometry> {
+  const merged: MergedGeometry = { allBones: [], boneCount: 0, cubeCount: 0, firstGeoRaw: null };
+  const processed = new Set<string>();
+  for (const mf of modelFiles) {
+    const mfStr = entryPathOf(mf, "path");
+    if (!mfStr || processed.has(mfStr)) continue;
+    processed.add(mfStr);
+
+    let modelRel = mfStr;
+    if (!modelRel.startsWith("models/") && !modelRel.startsWith("models\\")) {
+      modelRel = `models/${mfStr}`;
+    }
+    let modelBytes = await ctx.ReadBytes(`${ctx.baseDir}/${modelRel}`);
+    if (!modelBytes) {
+      modelBytes = await ctx.ReadBytes(`${ctx.baseDir}/${mfStr}`);
+      if (!modelBytes) continue;
+    }
+    const jsonStr = new TextDecoder().decode(modelBytes);
+    const parsed = parseBedrockGeometryFromJSON(jsonStr);
+    if (parsed?.bones?.length) {
+      if (!merged.firstGeoRaw) merged.firstGeoRaw = jsonStr;
+      merged.allBones.push(...parsed.bones);
+      merged.boneCount += parsed.boneCount;
+      merged.cubeCount += parsed.cubeCount;
+    }
+  }
+  return merged;
+}
+
+/**
+ * texFiles 逐条读取 + blob URL 登记（ysm.json spec 的 textures 声明）。
+ * 路径为空/读不到 → 跳过。键 = 文件名去扩展名（后段纹理槽序与 default_texture 置首口径依赖它）。
+ * 产出的 URL 全部进 pendingBlobUrls：成功路径由调用方 clear（移交 geometry），失败路径统一回收。
+ */
+async function collectJsonSpecTextures(
+  ctx: InflightCtx,
+  texFiles: unknown[],
+  pendingBlobUrls: Set<string>,
+): Promise<CollectedTextures> {
+  const acc: CollectedTextures = {
+    textures: {},
+    texKeys: [],
+    texDimensions: {},
+    maxTexW: 0,
+    maxTexH: 0,
+  };
+  for (const tf of texFiles) {
+    const tfStr = entryPathOf(tf, "uv");
+    if (!tfStr) continue;
+    const texRel =
+      tfStr.startsWith("textures/") || tfStr.startsWith("textures\\") ? tfStr : `textures/${tfStr}`;
+    const texBytes = await ctx.ReadBytes(`${ctx.baseDir}/${texRel}`);
+    if (!texBytes) continue;
+
+    const lower = tfStr.toLowerCase();
+    const blob = new Blob([texBytes.buffer as ArrayBuffer], {
+      type: lower.endsWith(".jpg") || lower.endsWith(".jpeg") ? "image/jpeg" : "image/png",
+    });
+    const key =
+      tfStr
+        .split(/[/\\]/)
+        .pop()
+        ?.replace(/\.\w+$/, "") || "";
+    const url = URL.createObjectURL(blob);
+    acc.textures[key] = url;
+    pendingBlobUrls.add(url);
+    acc.texKeys.push(key);
+
+    const sniffed = sniffTexSize(texBytes);
+    if (sniffed) {
+      acc.texDimensions[key] = sniffed;
+      if (sniffed.w > acc.maxTexW) acc.maxTexW = sniffed.w;
+      if (sniffed.h > acc.maxTexH) acc.maxTexH = sniffed.h;
+    }
+  }
+  return acc;
+}
+
+/**
+ * 合并结果落到 result.geometry：骨骼 + 计数 + 纹理槽序 + 纹理范围（uv 包围盒参与，防越界采样）。
+ * 调用方保证 geo 非空且 allBones 非空。
+ */
+function applyMergedGeometry(
+  result: DecodedYsm,
+  geo: BedrockGeometry,
+  merged: MergedGeometry,
+  tex: CollectedTextures,
+): void {
+  const { uvMaxW, uvMaxH } = computeBoneTexRange(merged.allBones);
+  const boneTexW = Math.max(tex.maxTexW, geo.texWidth, uvMaxW) || 64;
+  const boneTexH = Math.max(tex.maxTexH, geo.texHeight, uvMaxH) || 64;
+  for (const b of merged.allBones) {
+    b._texWidth = boneTexW;
+    b._texHeight = boneTexH;
+  }
+
+  result.geometry = {
+    ...geo,
+    bones: merged.allBones,
+    boneCount: merged.boneCount,
+    cubeCount: merged.cubeCount,
+    texWidth: Math.max(boneTexW, geo.texWidth),
+    texHeight: Math.max(boneTexH, geo.texHeight),
+    textures: tex.texKeys.map((k) => tex.textures[k]).filter(Boolean),
+    texture: tex.texKeys.length > 0 ? tex.textures[tex.texKeys[0]] : null,
+    textureNames: tex.texKeys,
+  };
+  if (merged.firstGeoRaw) {
+    result.geometryRaw = merged.firstGeoRaw;
+  }
+}
+
 async function handleYsmJsonSpec(
   ctx: InflightCtx,
   result: DecodedYsm,
@@ -128,102 +276,14 @@ async function handleYsmJsonSpec(
   // 未入 result.geometry 的 blob URL 跟踪集（成功路径 clear；函数出口统一 revoke 残留）
   const pendingBlobUrls = new Set<string>();
   try {
-    const allBones: BedrockGeometry["bones"] = [];
-    let boneCount = 0,
-      cubeCount = 0;
-    let firstGeoRaw: string | null = null;
-    const processed = new Set<string>();
+    const merged = await mergeModelFilesGeometry(ctx, meta.modelFiles);
+    const tex = await collectJsonSpecTextures(ctx, meta.texFiles || [], pendingBlobUrls);
 
-    for (const mf of meta.modelFiles) {
-      const mfStr = typeof mf === "string" ? mf : (mf as { path?: string })?.path || "";
-      if (!mfStr || processed.has(mfStr)) continue;
-      processed.add(mfStr);
-
-      let modelRel = mfStr;
-      if (!modelRel.startsWith("models/") && !modelRel.startsWith("models\\")) {
-        modelRel = `models/${mfStr}`;
-      }
-      let modelBytes = await ctx.ReadBytes(`${ctx.baseDir}/${modelRel}`);
-      if (!modelBytes) {
-        modelBytes = await ctx.ReadBytes(`${ctx.baseDir}/${mfStr}`);
-        if (!modelBytes) continue;
-      }
-      const jsonStr = new TextDecoder().decode(modelBytes);
-      const parsed = parseBedrockGeometryFromJSON(jsonStr);
-      if (parsed?.bones?.length) {
-        if (!firstGeoRaw) firstGeoRaw = jsonStr;
-        allBones.push(...parsed.bones);
-        boneCount += parsed.boneCount;
-        cubeCount += parsed.cubeCount;
-      }
-    }
-
-    const textures: Record<string, string> = {};
-    const texDimensions: Record<string, { w: number; h: number }> = {};
-    const texKeys: string[] = [];
-    let maxTexW = 0,
-      maxTexH = 0;
-
-    for (const tf of meta.texFiles || []) {
-      const tfStr = typeof tf === "string" ? tf : (tf as { uv?: string })?.uv || "";
-      if (!tfStr) continue;
-      const texRel =
-        tfStr.startsWith("textures/") || tfStr.startsWith("textures\\")
-          ? tfStr
-          : `textures/${tfStr}`;
-      const texBytes = await ctx.ReadBytes(`${ctx.baseDir}/${texRel}`);
-      if (!texBytes) continue;
-
-      const blob = new Blob([texBytes.buffer as ArrayBuffer], {
-        type:
-          tfStr.toLowerCase().endsWith(".jpg") || tfStr.toLowerCase().endsWith(".jpeg")
-            ? "image/jpeg"
-            : "image/png",
-      });
-      const key =
-        tfStr
-          .split(/[/\\]/)
-          .pop()
-          ?.replace(/\.\w+$/, "") || "";
-      const url = URL.createObjectURL(blob);
-      textures[key] = url;
-      pendingBlobUrls.add(url);
-      texKeys.push(key);
-
-      const sniffed = sniffTexSize(texBytes);
-      if (sniffed) {
-        texDimensions[key] = sniffed;
-        if (sniffed.w > maxTexW) maxTexW = sniffed.w;
-        if (sniffed.h > maxTexH) maxTexH = sniffed.h;
-      }
-    }
-
-    if (allBones.length > 0 && result.geometry) {
+    const geo = result.geometry;
+    if (merged.allBones.length > 0 && geo) {
       // 成功路径：URL 已赋给 result.geometry.textures，清空 pending 防误释放
       pendingBlobUrls.clear();
-      const geo = result.geometry;
-      const { uvMaxW, uvMaxH } = computeBoneTexRange(allBones);
-      const boneTexW = Math.max(maxTexW, geo.texWidth, uvMaxW) || 64;
-      const boneTexH = Math.max(maxTexH, geo.texHeight, uvMaxH) || 64;
-      for (const b of allBones) {
-        b._texWidth = boneTexW;
-        b._texHeight = boneTexH;
-      }
-
-      result.geometry = {
-        ...geo,
-        bones: allBones,
-        boneCount,
-        cubeCount,
-        texWidth: Math.max(boneTexW, geo.texWidth),
-        texHeight: Math.max(boneTexH, geo.texHeight),
-        textures: texKeys.map((k) => textures[k]).filter(Boolean),
-        texture: texKeys.length > 0 ? textures[texKeys[0]] : null,
-        textureNames: texKeys,
-      };
-      if (firstGeoRaw) {
-        result.geometryRaw = firstGeoRaw;
-      }
+      applyMergedGeometry(result, geo, merged, tex);
     }
   } catch (e) {
     devLog(`[YSM] JSON 合并几何失败: ${safeErrorMessage(e)}`);

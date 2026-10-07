@@ -142,3 +142,96 @@ describe("buildModelGroup — cube 参与网格构建", () => {
     expect(g.bones[0]._cubeCount).toBe(1);
   });
 });
+
+// ===== 特征基线（认知复杂度战役 第 3 批）=====
+// 补测前实测（istanbul 分支）：fixOrphanBoneChain 的父链游走体（L70-73）零命中
+// （`b.name === ancestor` 从未成立 → found 恒 false），Arm 挂接的「无 Arm 骨」分支
+// （L300）零命中，幽灵父骨骼的补全结构（ensureAllBonesPresent）无断言。
+// 本组钉「父子链判定顺序 + 局部坐标数值」——拆错不崩、只会安静画错的部分。
+describe("buildModelGroup — 断链修复的判定顺序与坐标（补测前零命中分支）", () => {
+  const bone = (
+    name: string,
+    parent: string,
+    pivot: [number, number, number],
+  ): BedrockModel["bones"][number] => ({
+    name,
+    parent,
+    pivot,
+    rotation: [0, 0, 0],
+    cubes: [],
+    groupId: "",
+  });
+
+  it("具名父链原样保留：第一个「在列表中且有 pivot」的祖先即停，不跳过、不重挂 root", () => {
+    const g = buildModelGroup(
+      makeModel([
+        bone("root", "", [0, 0, 0]),
+        bone("mid", "root", [0, 4, 0]),
+        bone("leaf", "mid", [2, 6, 0]),
+      ]),
+      "comp-chain",
+      0,
+    );
+    const byName = Object.fromEntries(g.bones.map((b) => [b.name, b]));
+    expect(byName.mid.parentId).toBe("root");
+    expect(byName.mid.localPosition).toEqual([0, 4, 0]);
+    expect(byName.leaf.parentId).toBe("mid");
+    // 子相对直接父：x = p.x - b.x，y = b.y - p.y，z 同
+    expect(byName.leaf.localPosition).toEqual([-2, 2, 0]);
+  });
+
+  it("幽灵父（仅被 parent 引用、未声明、无 pivot）→ 子骨骼挂 root，坐标按自身 pivot 取反", () => {
+    const g = buildModelGroup(
+      makeModel([bone("x", "G", [3, 4, 5])]),
+      "comp-ghost",
+      0,
+    );
+    const x = g.bones.find((b) => b.name === "x")!;
+    expect(x.parentId).toBeNull();
+    expect(x.localPosition).toEqual([-3, 4, 5]);
+    // 幽灵父被补成真骨骼（挂 root、单位旋转、无 cube）——否则 Three 场景图查不到父链
+    const ghost = g.bones.find((b) => b.name === "G")!;
+    expect(ghost).toBeDefined();
+    expect(ghost.parentId).toBeNull();
+    expect(ghost.localPosition).toEqual([0, 0, 0]);
+    expect(ghost.localRotation).toEqual([0, 0, 0, 1]);
+    expect(ghost._cubeCount).toBe(0);
+  });
+
+  it("幽灵父的孙子：只修复断裂那一环，中间具名父不连坐", () => {
+    const g = buildModelGroup(
+      makeModel([bone("x", "G", [1, 4, 0]), bone("y", "x", [1, 8, 0])]),
+      "comp-ghost-chain",
+      0,
+    );
+    const byName = Object.fromEntries(g.bones.map((b) => [b.name, b]));
+    expect(byName.x.parentId).toBeNull();
+    expect(byName.x.localPosition).toEqual([-1, 4, 0]);
+    expect(byName.y.parentId).toBe("x");
+    expect(byName.y.localPosition).toEqual([0, 4, 0]);
+  });
+
+  it("自环父（parent === name）→ 沿用自身 pivot（不落 root、不递归）", () => {
+    const g = buildModelGroup(makeModel([bone("x", "x", [3, 3, 3])]), "comp-self", 0);
+    const x = g.bones.find((b) => b.name === "x")!;
+    expect(x.parentId).toBe("x");
+    expect(x.localPosition).toEqual([0, 0, 0]);
+  });
+
+  it("游离 LeftArm/RightArm 但无已定父的 Arm → 保持 root（不误挂）", () => {
+    const g = buildModelGroup(
+      makeModel([
+        bone("Arm", "", [1, 10, 0]), // Arm 自身无父 → 不构成可挂载的父
+        bone("RightArm", "", [1, 12, 0]),
+        bone("LeftArm", "", [1, 13, 0]),
+      ]),
+      "comp-noarm",
+      0,
+    );
+    const byName = Object.fromEntries(g.bones.map((b) => [b.name, b]));
+    expect(byName.RightArm.parentId).toBeNull();
+    expect(byName.RightArm.localPosition).toEqual([-1, 12, 0]);
+    expect(byName.LeftArm.parentId).toBeNull();
+    expect(byName.LeftArm.localPosition).toEqual([-1, 13, 0]);
+  });
+});

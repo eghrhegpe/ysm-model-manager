@@ -86,3 +86,83 @@ describe("stripYsgpTextHeader", () => {
     expect(stripYsgpTextHeader(bytes)).toBe(bytes);
   });
 });
+
+// ===== 特征基线（认知复杂度战役 第 3 批）=====
+// 补测前实测（istanbul 分支）：≥20B 但无 BOM 的守卫（L51）零命中、
+// BOM 有但无 <hash>（L55）零命中（旧用例实际只命中「<20B」长度守卫）、
+// 无终止标记时的控制字节扫描命中路径（L79-81）零命中、
+// 载荷过短守卫（L91，历史 bug 修复点）零命中、
+// 「=== 与 --- 同时存在」的优先级短路（L72 第三操作数）从未求值。
+// 本组钉「终止标记优先级 + 载荷切分字节」——切错不崩，只是解密产物错位。
+describe("stripYsgpTextHeader 特征基线 — 文本头切分判定（补测前零命中分支）", () => {
+  const BOM = [0xef, 0xbb, 0xbf];
+  const HASH = "a".repeat(32);
+  const ENC = Array.from({ length: 20 }, (_, i) => i + 1);
+
+  /** BOM + [前缀] + 16B hash 区(0xaa) + 加密数据(1..20) */
+  function variant(prefix: string): Uint8Array {
+    const head = new TextEncoder().encode(prefix);
+    const bytes = new Uint8Array(3 + head.length + 16 + ENC.length);
+    bytes.set(BOM, 0);
+    bytes.set(head, 3);
+    bytes.fill(0xaa, 3 + head.length, 3 + head.length + 16);
+    bytes.set(ENC, 3 + head.length + 16);
+    return bytes;
+  }
+
+  it("≥20B 但无 BOM → 原样返回（BOM 守卫，不被长度守卫抢跑）", () => {
+    const bytes = new Uint8Array(30).fill(0x41);
+    expect(stripYsgpTextHeader(bytes)).toBe(bytes);
+  });
+
+  it("BOM + 无 <hash> 标签（≥20B）→ 原样返回", () => {
+    const text = "YSGP\n--- [Metadata]\nno hash tag here, just text padding\n";
+    const bytes = new Uint8Array(3 + text.length);
+    bytes.set(BOM, 0);
+    bytes.set(new TextEncoder().encode(text), 3);
+    expect(bytes.length).toBeGreaterThan(20);
+    expect(stripYsgpTextHeader(bytes)).toBe(bytes);
+  });
+
+  it("`===` 早于 `---` → 取 `===`（第一个终止标记胜出），其后 16B 当 hash 区跳过", () => {
+    const bytes = variant(`YSGP\n--- [Meta]\n<hash>${HASH}</hash>\n===\n--- [Next]\n------------\n`);
+    const out = stripYsgpTextHeader(bytes);
+    expect(Array.from(out.slice(0, 4))).toEqual([0x59, 0x53, 0x47, 0x50]);
+    const payload = Array.from(out.slice(24));
+    // 切点在 `===` 行末：其后的 "--- [Next]\n"（11B）+ 5 个连字符共 16B 被当 hash 区跳过，
+    // 故载荷前段残留头部尾文本 → 若错取 `---` 行末，载荷首字节应是 0xaa（hash 区）
+    expect(payload.slice(0, 7)).toEqual(new Array(7).fill(0x2d));
+    expect(payload[7]).toBe(0x0a);
+    expect(payload.slice(8, 24)).toEqual(new Array(16).fill(0xaa));
+    expect(payload.slice(24)).toEqual(ENC);
+  });
+
+  it("`---` 早于 `===` → 取 `---`（先出现者终止文本头）", () => {
+    const bytes = variant(`YSGP\n<hash>${HASH}</hash>\n--- [Meta]\n------------\n===\n`);
+    const out = stripYsgpTextHeader(bytes);
+    // 切点在 `---` 行末：其后 "===\n"（4B）先被 hash 区窗口吞掉，故载荷前 4B 落在 hash 区
+    expect(Array.from(out.slice(24))).toEqual([...new Array(4).fill(0xaa), ...ENC]);
+  });
+
+  it("无终止标记但存在二进制控制字节 → 以该字节为载荷起点（含该字节后的 16B hash 区）", () => {
+    const head = new TextEncoder().encode(`YSGP\n<hash>${HASH}</hash>\nno terminator\n`);
+    const bytes = new Uint8Array(3 + head.length + 1 + 16 + ENC.length);
+    bytes.set(BOM, 0);
+    bytes.set(head, 3);
+    bytes[3 + head.length] = 0x01; // 控制字节 → dataStart 命中
+    bytes.fill(0xaa, 3 + head.length + 1, 3 + head.length + 17);
+    bytes.set(ENC, 3 + head.length + 17);
+    const out = stripYsgpTextHeader(bytes);
+    // dataStart = 控制字节所在偏移；V2 跳过其后 16B（15B hash 区 + 末 1B）
+    expect(Array.from(out.slice(24))).toEqual([0xaa, ...ENC]);
+  });
+
+  it("载荷不足 16B（hash 区都不够）→ 守卫拒绝重建，原样返回（历史 bug 修复点）", () => {
+    const head = new TextEncoder().encode(`YSGP\n--- [Meta]\n<hash>${HASH}</hash>\n===\n`);
+    const bytes = new Uint8Array(3 + head.length + 10);
+    bytes.set(BOM, 0);
+    bytes.set(head, 3);
+    bytes.set(ENC.slice(0, 10), 3 + head.length);
+    expect(stripYsgpTextHeader(bytes)).toBe(bytes);
+  });
+});

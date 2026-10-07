@@ -11,10 +11,14 @@
 import { base64ToBytes } from "@/utils/base/primitives/base64.ts";
 
 // ===== 面 → 4 顶点（[x?, y?, z?, u角, v角]，u/v 为 MC 语义 0/1 角）=====
-const ELEM_FACES: Record<
-  string,
-  { dir: [number, number, number]; corners: [number, number, number, number, number][] }
-> = {
+
+/** 面定义：法向 + 4 角（角 = [x?, y?, z?, u角, v角]） */
+interface FaceSpec {
+  dir: [number, number, number];
+  corners: [number, number, number, number, number][];
+}
+
+const ELEM_FACES: Record<string, FaceSpec> = {
   up: {
     dir: [0, 1, 0],
     corners: [
@@ -269,6 +273,106 @@ interface ElementLike {
   rotation?: { axis?: string; angle?: number; origin?: number[] };
 }
 
+/** 元素包围盒（from/to 展开成六轴，避免顶点派生处反复读数组下标） */
+interface ElemBox {
+  minx: number;
+  miny: number;
+  minz: number;
+  maxx: number;
+  maxy: number;
+  maxz: number;
+}
+
+/** 元素级旋转：矩阵 + origin 补偿位移（二者同生同灭） */
+interface ElemRotation {
+  mat: number[][];
+  shift: number[];
+}
+
+/**
+ * 元素几何旋转（rotate + origin 补偿，prismarine 同款）。
+ * origin 缺省 [8,8,8]（方块中心）；无 axis 或 angle 非数 → null（不旋转）。
+ */
+function buildElementRotation(rotation: ElementLike["rotation"]): ElemRotation | null {
+  if (!rotation?.axis || typeof rotation.angle !== "number") return null;
+  const mat = buildRotationMatrix(rotation.axis, rotation.angle);
+  const o = rotation.origin ?? [8, 8, 8];
+  const ro = matmul(mat, o);
+  return { mat, shift: [o[0] - ro[0], o[1] - ro[1], o[2] - ro[2]] };
+}
+
+/** 4 顶点（像素坐标，应用元素旋转）；corners 的 xyz 位为 0/1 → 取 min/max 角 */
+function buildFaceVerts(
+  corners: FaceSpec["corners"],
+  box: ElemBox,
+  rot: ElemRotation | null,
+): number[] {
+  const verts: number[] = [];
+  for (const c of corners) {
+    let v = [c[0] ? box.maxx : box.minx, c[1] ? box.maxy : box.miny, c[2] ? box.maxz : box.minz];
+    if (rot) {
+      v = matmul(rot.mat, v);
+      v = [v[0] + rot.shift[0], v[1] + rot.shift[1], v[2] + rot.shift[2]];
+    }
+    verts.push(...v);
+  }
+  return verts;
+}
+
+/**
+ * 4 顶点 UV：像素矩形 → 4 角 → face rotation → 归一化 + v 翻转。
+ * 归一化分母恒 16（MC 模型 uv 的 16 = 一整张纹理，与 PNG 实际尺寸无关——
+ * 高清资源包只换 png 不改 uv；按 PNG 尺寸做分母会只取左上 1/N）。
+ * 注意归一化须整式 /16：u = (u1 + 角*(u2-u1)) / 16——局部矩形 [4,4,12,12] → [0.25,0.75]，
+ * 拆成 u1 + 角*(u2-u1)/16 会在全铺 UV (0..16) 时碰巧输出 0..1，但局部 UV 越界（行业口径：uv 恒 /16）。
+ */
+function buildFaceUv(
+  corners: FaceSpec["corners"],
+  uvPx: number[] | undefined,
+  rotDeg: number,
+): number[] {
+  const [u1, v1, u2, v2] = uvPx ?? [0, 0, 16, 16];
+  const cos = Math.cos((rotDeg * Math.PI) / 180);
+  const sn = -Math.sin((rotDeg * Math.PI) / 180); // prismarine 同款（MC 域内视觉顺时针）
+
+  const uv: number[] = [];
+  for (const c of corners) {
+    let u = (u1 + c[3] * (u2 - u1)) / 16;
+    let v = (v1 + c[4] * (v2 - v1)) / 16;
+    if (rotDeg !== 0) {
+      const bu = (u - 0.5) * cos - (v - 0.5) * sn + 0.5;
+      const bv = (u - 0.5) * sn + (v - 0.5) * cos + 0.5;
+      u = bu;
+      v = bv;
+    }
+    uv.push(u, 1 - v); // MC 域 → Three 域（flipY=true）：v 翻转
+  }
+  return uv;
+}
+
+/** 单面产物装配：纹理引用解析（变量链/纯色/缺失）+ tintindex/cullface 透传（`?? null` 不吃 0） */
+function buildFaceRecord(
+  face: string,
+  spec: FaceSpec,
+  verts: number[],
+  uv: number[],
+  fd: Record<string, unknown>,
+  textures: Record<string, string>,
+): JavaModelFace {
+  const texRef =
+    typeof fd.texture === "string" ? resolveTextureRef(fd.texture, textures, new Set()) : null;
+  return {
+    face,
+    dir: spec.dir,
+    verts,
+    uv,
+    texEntry: texRef?.kind === "texture" ? texRef.entry : null,
+    texColor: texRef?.kind === "color" ? texRef.color : null,
+    tintindex: (fd.tintindex as number | null | undefined) ?? null,
+    cullface: (fd.cullface as string | null | undefined) ?? null,
+  };
+}
+
 /** 构建元素面数据（UV 归一化 + v 翻转 + face rotation） */
 async function buildElementFaces(
   el: ElementLike,
@@ -276,71 +380,25 @@ async function buildElementFaces(
 ): Promise<JavaModelFace[]> {
   const [minx, miny, minz] = el.from;
   const [maxx, maxy, maxz] = el.to;
-
-  // 元素几何旋转（rotate + origin 补偿，prismarine 同款）
-  let rotMat: number[][] | null = null;
-  let rotShift: number[] | null = null;
-  if (el.rotation?.axis && typeof el.rotation.angle === "number") {
-    rotMat = buildRotationMatrix(el.rotation.axis, el.rotation.angle);
-    const o = el.rotation.origin ?? [8, 8, 8];
-    const ro = matmul(rotMat, o);
-    rotShift = [o[0] - ro[0], o[1] - ro[1], o[2] - ro[2]];
-  }
+  const box: ElemBox = { minx, miny, minz, maxx, maxy, maxz };
+  const rot = buildElementRotation(el.rotation);
 
   const out: JavaModelFace[] = [];
   for (const [face, fdRaw] of Object.entries(el.faces ?? {})) {
     const spec = ELEM_FACES[face];
     if (!spec) continue;
     const fd = (fdRaw ?? {}) as Record<string, unknown>;
-
-    // 4 顶点（像素坐标，应用元素旋转）
-    const verts: number[] = [];
-    for (const c of spec.corners) {
-      let v = [c[0] ? maxx : minx, c[1] ? maxy : miny, c[2] ? maxz : minz];
-      if (rotMat && rotShift) {
-        v = matmul(rotMat, v);
-        v = [v[0] + rotShift[0], v[1] + rotShift[1], v[2] + rotShift[2]];
-      }
-      verts.push(...v);
-    }
-
-    // UV：像素矩形 → 4 角 → face rotation → 归一化 + v 翻转
-    // 归一化分母恒 16（MC 模型 uv 的 16 = 一整张纹理，与 PNG 实际尺寸无关——
-    // 高清资源包只换 png 不改 uv；按 PNG 尺寸做分母会只取左上 1/N）。
-    // 注意归一化须整式 /16：u = (u1 + 角*(u2-u1)) / 16——局部矩形 [4,4,12,12] → [0.25,0.75]，
-    // 拆成 u1 + 角*(u2-u1)/16 会在全铺 UV (0..16) 时碰巧输出 0..1，但局部 UV 越界（行业口径：uv 恒 /16）。
-    const uvPx = (fd.uv as number[] | undefined) ?? [0, 0, 16, 16];
-    const [u1, v1, u2, v2] = uvPx;
     const rotDeg = (fd.rotation as number | undefined) ?? 0;
-    const cos = Math.cos((rotDeg * Math.PI) / 180);
-    const sn = -Math.sin((rotDeg * Math.PI) / 180); // prismarine 同款（MC 域内视觉顺时针）
-
-    const texRef =
-      typeof fd.texture === "string" ? resolveTextureRef(fd.texture, textures, new Set()) : null;
-
-    const uv: number[] = [];
-    for (const c of spec.corners) {
-      let u = (u1 + c[3] * (u2 - u1)) / 16;
-      let v = (v1 + c[4] * (v2 - v1)) / 16;
-      if (rotDeg !== 0) {
-        const bu = (u - 0.5) * cos - (v - 0.5) * sn + 0.5;
-        const bv = (u - 0.5) * sn + (v - 0.5) * cos + 0.5;
-        u = bu;
-        v = bv;
-      }
-      uv.push(u, 1 - v); // MC 域 → Three 域（flipY=true）：v 翻转
-    }
-
-    out.push({
-      face,
-      dir: spec.dir,
-      verts,
-      uv,
-      texEntry: texRef?.kind === "texture" ? texRef.entry : null,
-      texColor: texRef?.kind === "color" ? texRef.color : null,
-      tintindex: (fd.tintindex as number | null | undefined) ?? null,
-      cullface: (fd.cullface as string | null | undefined) ?? null,
-    });
+    out.push(
+      buildFaceRecord(
+        face,
+        spec,
+        buildFaceVerts(spec.corners, box, rot),
+        buildFaceUv(spec.corners, fd.uv as number[] | undefined, rotDeg),
+        fd,
+        textures,
+      ),
+    );
   }
   return out;
 }

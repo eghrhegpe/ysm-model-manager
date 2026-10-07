@@ -46,6 +46,58 @@ const ShouldOverwrite = (
   (existingHasParent && newHasParent && !existingHasRot && newHasRot);
 
 /**
+ * 沿父链向上找第一个「已在 bones 列表且有 pivot」的祖先（fixOrphanBoneChain 的内层游走）。
+ * 判定顺序即解析器短路语义，不可对调：先验当前候选是否命中（命中即停，不越级），
+ * 再沿 model.bones 的 parent 继续上行；visited 防环（种子 = 起点骨骼名）。
+ * @returns 祖先名；链断 / 幽灵父引用 → ""（由调用方挂 root）
+ */
+function findAncestorWithPivot(
+  start: string,
+  selfName: string,
+  boneNameSet: Set<string>,
+  modelBones: BedrockModel["bones"],
+  pivots: Map<string, Vec3>,
+): string {
+  let ancestor = start;
+  const visited = new Set<string>([selfName]);
+  while (true) {
+    if (boneNameSet.has(ancestor) && pivots.has(ancestor)) return ancestor;
+    let found = false;
+    for (const b of modelBones) {
+      if (b.name === ancestor && b.parent !== "" && !visited.has(b.parent)) {
+        ancestor = b.parent;
+        visited.add(ancestor);
+        found = true;
+        break;
+      }
+    }
+    if (!found) return "";
+  }
+}
+
+/** 断链骨骼重挂：有祖先 → 以祖先 pivot 重算局部坐标；无祖先（""）→ 挂 root 用自身 pivot */
+function reparentOrphanBone(
+  bone: BoneData,
+  ancestor: string,
+  bp: Vec3 | undefined,
+  pivots: Map<string, Vec3>,
+): void {
+  if (ancestor === "") {
+    bone.parentId = null;
+    bone.localPosition = bp ? computeBoneLocalPos(bp, null) : [0, 0, 0];
+    return;
+  }
+  const ancPivot = pivots.get(ancestor) ?? null;
+  bone.parentId = ancestor;
+  bone.localPosition =
+    ancPivot && bp
+      ? computeBoneLocalPos(bp, ancPivot)
+      : bp
+        ? computeBoneLocalPos(bp, null)
+        : [0, 0, 0];
+}
+
+/**
  * 修复断裂的父子链：沿父链向上找第一个有 pivot 且在 bones 列表中的祖先，
  * 若链断则挂到 root。
  */
@@ -56,43 +108,11 @@ function fixOrphanBoneChain(
 ): void {
   const boneNameSet = new Set<string>();
   for (const b of bones) boneNameSet.add(b.name);
-  for (let i = 0; i < bones.length; i++) {
-    if (bones[i].parentId === null) continue;
-    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-    let ancestor = bones[i].parentId!;
-    const visited = new Set<string>([bones[i].name]);
-    while (true) {
-      const ancHasPivot = pivots.has(ancestor);
-      if (boneNameSet.has(ancestor) && ancHasPivot) break;
-      let found = false;
-      for (const b of modelBones) {
-        if (b.name === ancestor && b.parent !== "" && !visited.has(b.parent)) {
-          ancestor = b.parent;
-          visited.add(ancestor);
-          found = true;
-          break;
-        }
-      }
-      if (!found) {
-        ancestor = "";
-        break;
-      }
-    }
-
-    const bp = pivots.get(bones[i].name);
-    const ancPivot = ancestor !== "" ? (pivots.get(ancestor) ?? null) : null;
-    if (ancestor !== "") {
-      bones[i].parentId = ancestor;
-      bones[i].localPosition =
-        ancPivot && bp
-          ? computeBoneLocalPos(bp, ancPivot)
-          : bp
-            ? computeBoneLocalPos(bp, null)
-            : [0, 0, 0];
-    } else {
-      bones[i].parentId = null;
-      bones[i].localPosition = bp ? computeBoneLocalPos(bp, null) : [0, 0, 0];
-    }
+  for (const bone of bones) {
+    const start = bone.parentId;
+    if (start === null) continue;
+    const ancestor = findAncestorWithPivot(start, bone.name, boneNameSet, modelBones, pivots);
+    reparentOrphanBone(bone, ancestor, pivots.get(bone.name), pivots);
   }
 }
 

@@ -227,3 +227,139 @@ describe("健壮性", () => {
     expect(await parseJavaModel("assets/minecraft/models/block/a.json", r.read)).toBeNull();
   });
 });
+
+// ===== 特征基线（认知复杂度战役 第 3 批）=====
+// 补测前实测（istanbul 分支）：element rotation 缺省 origin [8,8,8]（L285）零命中、
+// 未知 face 名跳过（L293）零命中、face 值为 null（L294）/无 texture 字段（L319）
+// 零命中、纹理变量自环抛错（L226）零命中、cullface/tintindex 透传从未断言数值。
+// 本组只钉现有几何数值与结构，不改任何期望。
+describe("element rotation 缺省 origin（补测前零命中分支）", () => {
+  /** 顶点取整到 1e-6（绕轴旋转的浮点残差如 9.8e-16 归零） */
+  const round = (a: number[]): number[] => a.map((v) => Math.round(v * 1e6) / 1e6);
+
+  const rotModel = (rotation: Record<string, unknown>) => ({
+    textures: { side: "block/stone" },
+    elements: [
+      {
+        from: [0, 0, 0],
+        to: [16, 16, 16],
+        rotation,
+        faces: { north: { uv: [0, 0, 16, 16], texture: "#side" } },
+      },
+    ],
+  });
+
+  it("rotation 缺省 origin → 等价于显式 origin [8,8,8]，且顶点按 90° 绕 y 落位", async () => {
+    const implicit = makeReader({
+      "assets/minecraft/models/block/rotimp.json": rotModel({ axis: "y", angle: 90 }),
+    });
+    const explicit = makeReader({
+      "assets/minecraft/models/block/rotexp.json": rotModel({ axis: "y", angle: 90, origin: [8, 8, 8] }),
+    });
+    const a = await parseJavaModel("assets/minecraft/models/block/rotimp.json", implicit.read);
+    const b = await parseJavaModel("assets/minecraft/models/block/rotexp.json", explicit.read);
+    expect(a).not.toBeNull();
+    // 缺省 origin ≡ [8,8,8]（绕原点旋转会得到完全不同的顶点）
+    expect(round(a!.faces[0].verts)).toEqual(round(b!.faces[0].verts));
+    // 数值锚点：north 面 4 顶点绕 (8,8,8) 转 90° 后全部落在 x=0 平面
+    expect(round(a!.faces[0].verts)).toEqual([0, 0, 0, 0, 0, 16, 0, 16, 0, 0, 16, 16]);
+  });
+
+  it("未知 axis → i0 回退 1（等价 y 轴）", async () => {
+    const r = makeReader({
+      "assets/minecraft/models/block/rotbad.json": rotModel({ axis: "w", angle: 90 }),
+    });
+    const m = await parseJavaModel("assets/minecraft/models/block/rotbad.json", r.read);
+    expect(round(m!.faces[0].verts)).toEqual([0, 0, 0, 0, 0, 16, 0, 16, 0, 0, 16, 16]);
+  });
+});
+
+describe("面数据边界（补测前零命中分支）", () => {
+  it("未知 face 名被跳过；face 值为 null → 视作 {} 走缺省 uv + 空纹理", async () => {
+    const r = makeReader({
+      "assets/minecraft/models/block/edge.json": {
+        textures: { side: "block/stone" },
+        elements: [
+          {
+            from: [0, 0, 0],
+            to: [16, 16, 16],
+            faces: {
+              up: { uv: [0, 0, 16, 16], texture: "#side", cullface: "up", tintindex: 0 },
+              bogus: { texture: "#side" }, // 非 MC 面名 → 丢弃
+              down: null, // 缺省 face 数据
+            },
+          },
+        ],
+      },
+    });
+    const m = await parseJavaModel("assets/minecraft/models/block/edge.json", r.read);
+    expect(m).not.toBeNull();
+    const names = m!.faces.map((f) => f.face).sort();
+    expect(names).toEqual(["down", "up"]);
+    const up = m!.faces.find((f) => f.face === "up")!;
+    expect(up.dir).toEqual([0, 1, 0]);
+    expect(up.texEntry).toBe("assets/minecraft/textures/block/stone.png");
+    // cullface/tintindex 透传：tintindex=0 不得被 ?? null 吃掉
+    expect(up.cullface).toBe("up");
+    expect(up.tintindex).toBe(0);
+    const down = m!.faces.find((f) => f.face === "down")!;
+    // null face → 缺省 uv [0,0,16,16] 全铺 + 无纹理 + 缺省兜底字段
+    expect(down.uv).toEqual([0, 0, 1, 0, 0, 1, 1, 1]);
+    expect(down.texEntry).toBeNull();
+    expect(down.texColor).toBeNull();
+    expect(down.tintindex).toBeNull();
+    expect(down.cullface).toBeNull();
+  });
+
+  it("face 无 texture 字段 → texEntry/texColor 双 null（模板判定依据）；element 无 faces → 零面", async () => {
+    const empty = makeReader({
+      "assets/minecraft/models/block/notex.json": {
+        textures: {},
+        elements: [{ from: [0, 0, 0], to: [16, 16, 16], faces: { up: { uv: [0, 0, 16, 16] } } }],
+      },
+      "assets/minecraft/models/block/nofaces.json": {
+        textures: {},
+        elements: [{ from: [0, 0, 0], to: [16, 16, 16] }],
+      },
+    });
+    const m = await parseJavaModel("assets/minecraft/models/block/notex.json", empty.read);
+    expect(m!.faces).toHaveLength(1);
+    expect(m!.faces[0].texEntry).toBeNull();
+    expect(m!.faces[0].texColor).toBeNull();
+    expect(isRenderableModel(m)).toBe(false);
+
+    const n = await parseJavaModel("assets/minecraft/models/block/nofaces.json", empty.read);
+    expect(n!.faces).toEqual([]);
+    expect(n!.elementCount).toBe(1);
+  });
+
+  it("纹理变量自环（#a→#b→#a）→ 抛错被入口吞掉，整体返回 null", async () => {
+    const r = makeReader({
+      "assets/minecraft/models/block/cycle.json": {
+        textures: { a: "#b", b: "#a" },
+        elements: [{ from: [0, 0, 0], to: [16, 16, 16], faces: { up: { texture: "#a" } } }],
+      },
+    });
+    expect(await parseJavaModel("assets/minecraft/models/block/cycle.json", r.read)).toBeNull();
+  });
+
+  it("builtin/ 父模型不读条目（父链在此终止）", async () => {
+    const reads: string[] = [];
+    const map = new Map<string, string>();
+    map.set(
+      "assets/minecraft/models/block/builtin.json",
+      btoa(unescape(encodeURIComponent(JSON.stringify({
+        parent: "builtin/generated",
+        textures: { side: "block/stone" },
+        elements: [{ from: [0, 0, 0], to: [16, 16, 16], faces: { up: { texture: "#side" } } }],
+      })))),
+    );
+    const read: PackEntryReader = async (e) => {
+      reads.push(e);
+      return map.get(e) ?? null;
+    };
+    const m = await parseJavaModel("assets/minecraft/models/block/builtin.json", read);
+    expect(m!.faces).toHaveLength(1);
+    expect(reads).toEqual(["assets/minecraft/models/block/builtin.json"]);
+  });
+});

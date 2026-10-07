@@ -166,10 +166,8 @@ function parseBedrockGeometry(data: string): BedrockModel | null {
   const g = raw["minecraft:geometry"][0];
   const desc = g.description;
   // texture_width/height 钳到 [0, MAX_TEX_DIM]（越界置 0）
-  let texW = clampToInt(desc.texture_width);
-  let texH = clampToInt(desc.texture_height);
-  if (texW < 0 || texW > MAX_TEX_DIM) texW = 0;
-  if (texH < 0 || texH > MAX_TEX_DIM) texH = 0;
+  const texW = clampTexSize(desc.texture_width);
+  const texH = clampTexSize(desc.texture_height);
 
   const model: BedrockModel = {
     boneCount: 0,
@@ -189,59 +187,13 @@ function parseBedrockGeometry(data: string): BedrockModel | null {
     if (!b) return null;
     const boneCubes = b.cubes ?? [];
     if (!Array.isArray(boneCubes)) return null;
-    const cubes: Cube2D[] = [];
-    for (const c of boneCubes) {
-      // P2-6 修复：cube 缺 origin/size 数组时返回 null（契约外输入不抛 TypeError）
-      if (!Array.isArray(c.origin) || !Array.isArray(c.size)) return null;
-      let uv: [number, number] = [0, 0];
-      let faceUV = "";
-      let rot: [number, number, number] = [0, 0, 0];
-      if (c.uv !== undefined && c.uv !== null) {
-        // raw 判断：'{' 开头 → FaceUV 字符串，否则 [2]float64
-        if (typeof c.uv === "string") {
-          if (c.uv.length > 0 && c.uv[0] === "{") {
-            faceUV = c.uv;
-          }
-          // 空字符串或非 '{' 开头：uv 保持 [0,0]
-        } else if (Array.isArray(c.uv)) {
-          // [2]float64
-          uv = [c.uv[0] ?? 0, c.uv[1] ?? 0];
-        }
-      }
-      if (c.rotation !== undefined && c.rotation !== null) {
-        if (Array.isArray(c.rotation)) {
-          rot = [c.rotation[0] ?? 0, c.rotation[1] ?? 0, c.rotation[2] ?? 0];
-        }
-      }
-      cubes.push({
-        origin: [c.origin[0], c.origin[1], c.origin[2]],
-        size: [c.size[0], c.size[1], c.size[2]],
-        pivot: pivotOf(c.pivot),
-        pivotSet: c.pivot !== undefined && c.pivot !== null,
-        uv,
-        faceUV,
-        rotation: rot,
-        texSlot: c.texture ?? 0, // 对齐 Go `Texture int` 缺省 0（未声明 texture 不丢 texIdx 键）
-        inflate: c.inflate ?? 0,
-        mirror: c.mirror ?? false,
-        // 对齐 Go 端：per-cube 记住来源 geometry 的纹理尺寸——多组件不同
-        // texture_width（如 main=256 / arrow=64 / foxcar=512）时 UV 归一化
-        // 各用各的基准，恒 0 会全部退回第一个 geometry 的尺寸导致缩放错
-        cubeTexW: texW,
-        cubeTexH: texH,
-      });
-    }
-    let boneRot: [number, number, number] = [0, 0, 0];
-    if (b.rotation !== undefined && b.rotation !== null) {
-      if (Array.isArray(b.rotation)) {
-        boneRot = [b.rotation[0] ?? 0, b.rotation[1] ?? 0, b.rotation[2] ?? 0];
-      }
-    }
+    const cubes = parseCubes(boneCubes, texW, texH);
+    if (cubes === null) return null;
     model.bones.push({
       name: b.name,
       parent: b.parent || "",
       pivot: b.pivot || [0, 0, 0],
-      rotation: boneRot,
+      rotation: parseRotationTriple(b.rotation),
       cubes,
       groupId: "",
     });
@@ -250,6 +202,67 @@ function parseBedrockGeometry(data: string): BedrockModel | null {
   model.boneCount = g.bones.length;
   model.cubeCount = cubeTotal;
   return model;
+}
+
+/**
+ * 单骨骼的 cube 数组解析（Go parse.go 的 cube 循环）。
+ * 畸形输入（缺 origin/size 数组）→ null，由调用方整条几何拒绝。
+ */
+function parseCubes(boneCubes: RawCube[], texW: number, texH: number): Cube2D[] | null {
+  const cubes: Cube2D[] = [];
+  for (const c of boneCubes) {
+    // P2-6 修复：cube 缺 origin/size 数组时返回 null（契约外输入不抛 TypeError）
+    if (!Array.isArray(c.origin) || !Array.isArray(c.size)) return null;
+    const uvFields = parseCubeUv(c.uv);
+    cubes.push({
+      origin: [c.origin[0], c.origin[1], c.origin[2]],
+      size: [c.size[0], c.size[1], c.size[2]],
+      pivot: pivotOf(c.pivot),
+      pivotSet: c.pivot !== undefined && c.pivot !== null,
+      uv: uvFields.uv,
+      faceUV: uvFields.faceUV,
+      rotation: parseRotationTriple(c.rotation),
+      texSlot: c.texture ?? 0, // 对齐 Go `Texture int` 缺省 0（未声明 texture 不丢 texIdx 键）
+      inflate: c.inflate ?? 0,
+      mirror: c.mirror ?? false,
+      // 对齐 Go 端：per-cube 记住来源 geometry 的纹理尺寸——多组件不同
+      // texture_width（如 main=256 / arrow=64 / foxcar=512）时 UV 归一化
+      // 各用各的基准，恒 0 会全部退回第一个 geometry 的尺寸导致缩放错
+      cubeTexW: texW,
+      cubeTexH: texH,
+    });
+  }
+  return cubes;
+}
+
+/**
+ * cube.uv 双形态解析（对齐 Go parse.go 的 raw 判定）：
+ * `'{'` 开头字符串 → FaceUV 字符串；数组 → [2]float64（缺位补 0）；
+ * 其余（缺席/空串/非 `'{'` 开头/非法类型）→ 零值 [0,0]（不抛错）。
+ */
+function parseCubeUv(uv: [number, number] | string | null | undefined): {
+  uv: [number, number];
+  faceUV: string;
+} {
+  if (uv === undefined || uv === null) return { uv: [0, 0], faceUV: "" };
+  // raw 判断：'{' 开头 → FaceUV 字符串，否则 [2]float64
+  if (typeof uv === "string") {
+    // 空字符串或非 '{' 开头：uv 保持 [0,0]
+    return { uv: [0, 0], faceUV: uv.length > 0 && uv[0] === "{" ? uv : "" };
+  }
+  // [2]float64
+  if (Array.isArray(uv)) return { uv: [uv[0] ?? 0, uv[1] ?? 0], faceUV: "" };
+  return { uv: [0, 0], faceUV: "" };
+}
+
+/**
+ * rotation 三元组解析（bone / cube 两处同口径）：
+ * 缺席（undefined/null）或非数组 → [0,0,0]；数组 → 前三位，缺位补 0。
+ */
+function parseRotationTriple(r: unknown): [number, number, number] {
+  if (!Array.isArray(r)) return [0, 0, 0];
+  const at = (i: number): number => (r[i] as number | undefined) ?? 0;
+  return [at(0), at(1), at(2)];
 }
 
 /** pivotOf — 解引用 cube 的 pivot；JSON 缺席（undefined）→ 零值 [0,0,0] */
@@ -263,6 +276,14 @@ function clampToInt(v: number | undefined): number {
   if (v === undefined || v === null) return 0;
   if (Number.isNaN(v) || !Number.isFinite(v)) return 0;
   return Math.trunc(v);
+}
+
+/** clampTexSize — texture 尺寸钳制（对齐 Go geometry/parse.go clampTexSize）：
+ *  clampToInt 截断后验范围 [0, MAX_TEX_DIM]，越界归 0 哨兵（调用方再落默认 64）。 */
+function clampTexSize(v: number | undefined): number {
+  const n = clampToInt(v);
+  if (n < 0 || n > MAX_TEX_DIM) return 0;
+  return n;
 }
 
 // ===== buildMulti — Go threejs/spec.go BuildMulti =====
@@ -299,32 +320,39 @@ function buildMulti(models: BedrockModel[], texIdxBase: number[] | null): string
 
 interface RawGeometryJSON {
   format_version?: string;
-  "minecraft:geometry"?: {
-    description: {
-      /** @non-ui Bedrock 几何标识符（第三方规格字段，MC 格式里为可选）。
-       * 本仓用不到它（骨骼/纹理尺寸才是所需），但类型要忠于规范，
-       * 否则 `description` 的可选性会与真实 JSON 不符。 */
-      identifier?: string;
-      texture_width?: number;
-      texture_height?: number;
-    };
-    bones: {
-      name: string;
-      parent?: string;
-      pivot?: [number, number, number];
-      rotation?: [number, number, number] | null;
-      cubes?:
-        | {
-            origin: [number, number, number];
-            size: [number, number, number];
-            pivot?: [number, number, number];
-            uv?: [number, number] | string | null;
-            rotation?: [number, number, number] | null;
-            texture?: number;
-            inflate?: number;
-            mirror?: boolean;
-          }[]
-        | null;
-    }[];
-  }[];
+  "minecraft:geometry"?: RawGeometry[];
+}
+
+/** minecraft:geometry 数组元素（对齐 Bedrock geometry 规范） */
+interface RawGeometry {
+  description: {
+    /** @non-ui Bedrock 几何标识符（第三方规格字段，MC 格式里为可选）。
+     * 本仓用不到它（骨骼/纹理尺寸才是所需），但类型要忠于规范，
+     * 否则 `description` 的可选性会与真实 JSON 不符。 */
+    identifier?: string;
+    texture_width?: number;
+    texture_height?: number;
+  };
+  bones: RawBone[];
+}
+
+/** 骨骼声明（cubes 缺席/null 视为空数组，非数组才是畸形输入） */
+interface RawBone {
+  name: string;
+  parent?: string;
+  pivot?: [number, number, number];
+  rotation?: [number, number, number] | null;
+  cubes?: RawCube[] | null;
+}
+
+/** cube 声明（origin/size 必填；uv 双形态：box [2]float64 或 FaceUV JSON 字符串） */
+interface RawCube {
+  origin: [number, number, number];
+  size: [number, number, number];
+  pivot?: [number, number, number];
+  uv?: [number, number] | string | null;
+  rotation?: [number, number, number] | null;
+  texture?: number;
+  inflate?: number;
+  mirror?: boolean;
 }

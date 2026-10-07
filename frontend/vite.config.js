@@ -75,6 +75,34 @@ export default defineConfig({
       { find: "#root", replacement: REPO_ROOT },
     ],
   },
+  // 显式声明 **e2e-web 经 `/@id/` 反射引用**的 three addons（2026-10-07 冷缓存 CI 修复）。
+  //
+  // 为什么必须显式列：`frontend/e2e-web/postprocessing.spec.ts` 在页面内直接
+  // `import("/@id/three/examples/jsm/postprocessing/SSRPass.js")`。`/@id/` 经 vite 解析出的
+  // **模块 id 是 `three/examples/jsm/...`**，而本仓源码（preview-3d）引的是
+  // `three/addons/...`——**两条不同的 id**。vite 的启动扫描只看得见静态 import 图，
+  // 因此 `/@id/` 这条 id 不在预打包集合内：首次请求时 optimizer 才现补并**整页 reload**，
+  // 把正在跑的 `page.evaluate` 连同 in-flight 模块请求一起掐死（CI 缓存每次冷 → 恒红）。
+  // 列进 include 后启动即预打包，既无运行时发现、也无 reload、更无 `/@id/` 短暂 502 窗口。
+  //
+  // 同模块双形态（addons + examples）都保留，各自独立 id 互不影响，勿「去重」合并——
+  // 合并会让其中一条重新掉回运行时发现路径，本行注释即为此而写。
+  optimizeDeps: {
+    include: [
+      "three/addons/postprocessing/EffectComposer.js",
+      "three/addons/postprocessing/OutputPass.js",
+      "three/addons/postprocessing/RenderPass.js",
+      "three/addons/postprocessing/SSAOPass.js",
+      "three/addons/postprocessing/SSRPass.js",
+      "three/addons/postprocessing/UnrealBloomPass.js",
+      // e2e-web `/@id/` 反射引用的等价 id（与上面是**不同模块 id**，见注释）
+      "three/examples/jsm/postprocessing/EffectComposer.js",
+      "three/examples/jsm/postprocessing/OutputPass.js",
+      "three/examples/jsm/postprocessing/RenderPass.js",
+      "three/examples/jsm/postprocessing/SSRPass.js",
+      "three/examples/jsm/postprocessing/UnrealBloomPass.js",
+    ],
+  },
   worker: {
     // ADR-153：worker 内动态 import()（mt WASM 按需加载）需要 ESM 格式——
     // 默认 iife 不支持 code-splitting，构建报 "IIFE output formats are not

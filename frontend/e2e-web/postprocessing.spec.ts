@@ -40,7 +40,17 @@ test.use({
  *
  * 等待语义（2026-10 收口）：原先靠「networkidle + 固定 2s」——两者都不是「app 已挂载」的
  * 判据（前者只说明网络静了，后者是墙钟猜测），冷启动慢的 CI 上会撞 "Execution context was
- * destroyed"（应用启动链触发一次同 URL 导航）+ 模块未注册。现改为轮询应用启动链落定。
+ * destroyed"。现改为轮询应用启动链落定。
+ *
+ * ⚠️ 冷缓存 CI 史（2026-10-07，勿回退）：本 spec 用 `/@id/three/examples/jsm/postprocessing/*.js`
+ * 形态引用 addons，而 vite 解析出的模块 id 是 `three/examples/...`——与源码里 `three/addons/...`
+ * 是**两个不同 id**，启动扫描看不见后者，于是首次请求时 optimizer 现补并**整页 reload**，
+ * 把正在测量的 `evaluate` 连同 in-flight 请求一起掐死（CI 缓存恒冷 → 两个 P1-1 用例恒红）。
+ * **修法不在本文件**：`frontend/vite.config.js|optimizeDeps.include` 已把那批 id 显式声明，
+ * 启动即预打包，运行时不再发现、不再 reload、也没有 `/@id/` 的短暂 502 窗口。
+ * 曾试过在本文件「预热 import 吸收 reload」，实测**无效**（每次 import 都必然被它自己触发的
+ * reload 掐死，重试无解；连续扰动还会让 dev server 在 re-optimize 期间对 `/@id/` 返 502）——
+ * 故已删除，勿再引入此类「测试侧硬扛」的写法。
  */
 async function bootstrap(page: Page): Promise<void> {
   try {
@@ -295,17 +305,20 @@ test.describe("后处理真实 WebGL 链路（锐评 P1-1 / P2-2）", () => {
       try {
         r = await page.evaluate(runner);
       } catch (err) {
-        // 第一次若被 vite dep-optimize 的整页 reload 掐死 → 重建上下文再跑。
-        //
-        // ⚠️ 实测：reload 不只发生一次（本用例首引 UnrealBloomPass/OutputPass 触发
-        // 「发现新依赖 → 整页 reload」，dev server 冷启动时同批依赖会分多次 optimize）。
-        // 原实现「2 次尝试 + 无退避」在热点依赖首次 optimize 时会**两次都撞导航**，
-        // 于是抛「两次均失败（非断言失败）」——这不是断言红，是重试预算太小。
-        // 现在：重试到 4 次、每次先走 bootstrap（轮询就绪，天然给 optimize 留时间），
-        // 且出错信息带上最后一次的原始错误（避免「非断言失败」黑箱，定位靠猜）。
+        // 第二层保险：`optimizeDeps.include`（见 vite.config.js）已让本用例用到的
+        // postprocessing 模块启动即预打包，正常情况下这里不该再撞导航（实测冷缓存 4/4 绿）。
+        // 保留重试是防「偶然的 dev server 重启 / 中途 re-optimize」这一残余窗口——
+        // 它是回归保护，不是常规路径。
+        // 注意容错范围：只对导航签名重试；其余错误（死链 / 语法错）立即抛出，
+        // 不让「非断言失败」被重试掩盖成真红。
+        if (
+          !/Execution context was destroyed|most likely because of a navigation/i.test(String(err))
+        ) {
+          throw err;
+        }
         if (attempt === 3) {
           throw new Error(
-            `bloom 域修复 e2e：page.evaluate 重试 4 次均失败（非断言失败）；最后一次错误：${String(err)}`,
+            `bloom 域修复 e2e：page.evaluate 重试 4 次均被导航掐死（非断言失败）；最后一次错误：${String(err)}`,
           );
         }
         await bootstrap(page);

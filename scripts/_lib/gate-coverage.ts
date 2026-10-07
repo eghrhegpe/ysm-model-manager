@@ -87,9 +87,9 @@ export function gateCoverage(): GateCoverage {
 
 /**
  * 刻意旁路清单（ADR-234）：有自动化入口但**设计上不走 gate** 的 check-*——
- * check-biome-lines 是 pre-commit 行级硬阻断（gate 无行级语义）、diff-coverage 与
- * go-coverage-threshold 走 CI/pre-commit。与「漏接」分开点名，防 AI 读尾行把
- * 设计旁路当漏接去补接。新增旁路项时在此登记（无自动对账——分母动态枚举兜底漂移）。
+ * check-biome-lines 是 pre-commit 行级硬阻断（gate 无行级语义）、diff-coverage 走 CI/pre-commit。
+ * 与「漏接」分开点名，防 AI 读尾行把设计旁路当漏接去补接。新增旁路项时在此登记（无自动对账——
+ * 分母动态枚举兜底漂移）。
  * 注意（六锐评 P3 撤销留痕）：check-complexity/params/type-safety 三档扫描器**不属于**
  * 旁路——它们经 FRONTEND_STATIC_TOOLS 计入 covered（覆盖口径 = 「是否接入门禁」，
  * 与 --all 是否全量跑无关，push 模式 --files 裁剪运行已是合法接线形态）。
@@ -97,10 +97,10 @@ export function gateCoverage(): GateCoverage {
 export const BYPASS_CHECKS = [
   "check-biome-lines.ts",
   "check-diff-coverage.ts",
-  "check-go-coverage-threshold.ts",
-  // 孪生同胞提醒探针（P2② 补网）：走 commit-check.ts 第 4 步（commit-with-check 轻量清单），
-  // 变更域语义（git diff 新增行 × 未变更区检索）天然不适合 pre-push 全量门禁，刻意旁路
-  "check-twin-siblings.ts",
+  // 2026-10-08 移除 check-go-coverage-threshold / check-twin-siblings：commit e9335003b
+  // 「门禁清单对账补挂 3 个 ALL debt 检查」把二者接入 gate-config（GO/ALL，blockPolicy: debt）
+  // → coveredSet 命中 → 旁路条目成幻影，test_gate_coverage 四锐评 #5 硬拦。check-twin-siblings
+  // 原「刻意旁路（仅 commit-check 第 4 步）」注释随之过时：现一并走 pre-push 全量门禁。
 ] as const;
 
 /** 固定尾行文本（PASS/FAIL 两路共用，保证每次输出形态一致） */

@@ -285,10 +285,10 @@ jobs:
         shell: pwsh
         run: go build -ldflags "-X ysm-model-manager/go/version.Version=ci" -o go/updater/ysm-updater-helper.exe ./cmd/updater
 
-      # 本 job 保留**真实桌面测试**（原生 Windows 构建 + race）与依赖「真跑 go test」取数的
-      # 覆盖率两件套：只有 Windows 能原生构建执行桌面目标（Wails/WebView2），且本仓测试代码含
-      # Windows 专有符号。仅 golangci-lint（纯静态、可跨平台类型检查）迁至 ubuntu-latest 的
-      # go-analysis job，与本 job 并行。
+      # 本 job 保留**真实桌面测试**（原生 Windows 构建 + race）与 Go 覆盖率（diff-coverage 门禁 +
+      # main 上并入 race 编译的趋势，方案 A）：只有 Windows 能原生构建执行桌面目标（Wails/WebView2），
+      # 且本仓测试代码含 Windows 专有符号。仅 golangci-lint（纯静态、可跨平台类型检查）迁至
+      # ubuntu-latest 的 go-analysis job，与本 job 并行。
       - name: Go 检查（build + vet + test -race）
         shell: pwsh
         run: |
@@ -298,8 +298,19 @@ jobs:
           go vet ./...
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           # ./... 而非 ./go/... ./internal/app/：后者是双路径补丁写法，新增顶层包会静默漏检。
-          go test -race ./... -count=1 -timeout 10m | Out-String -Width 400
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          # ⚡ 方案 A（2026-10-08 落地）：main 上把覆盖率并进 race 测试——**一次编译**（race+cover
+          # 同一编译键，取代「race 编译 + 独立 cover 编译」两条键各冷跑一遍，cover 键实测 ~2min）。
+          # -p 1 串行：多包并行 coverprofile 时 go/scanner 有隔离冲突（flaky，串行可复现通过）。
+          # PR 维持并行 race、不插桩，零额外成本；趋势仅 main 累积（与原「仅 main」口径一致）。
+          if ($env:GITHUB_REF -eq "refs/heads/main") {
+            New-Item -ItemType Directory -Force '.coverage' | Out-Null
+            go test -race -coverprofile='.coverage/go-cover.out' -covermode=atomic -count=1 -timeout 10m -p 1 ./... | Out-String -Width 400
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+            go tool cover -func='.coverage/go-cover.out' | Select-String 'total:'
+          } else {
+            go test -race ./... -count=1 -timeout 10m | Out-String -Width 400
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
 
       # Go 增量覆盖率门禁（ADR-145/ADR-202）：本地 GO_STATIC_TOOLS hard 项的远端兜底。
       # 只查本次变更 Go 文件的变更行覆盖率，内部跑 go test -coverprofile（须置于 Go 检查后）。
@@ -320,36 +331,11 @@ jobs:
           node scripts/check-go-diff-coverage.ts --json | Out-String -Width 200
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      # ⚡ 2026-10-07 条件化（实测优化）：本步自述「非阻断，趋势可见」，却要
-      # `go test ./... -coverprofile -p 1` —— cover 插桩是**独立编译键**（与普通/race
-      # 构建缓存互不复用），实测每次 1m56s 且 `-p 1` 强制单核串行，**全部计入关键路径**。
-      # 一个不构成门禁的趋势展示，不该让每次 push 都付这 2 分钟 ⇒ 仅在 main 分支跑；
-      # PR 与分支 push 跳过（趋势数据由 main 累积，足够反映走向）。
-      # 若日后要把它升为门禁，删掉 if 即可——但那时应改用方案 A（与 -race 合并成一次编译），
-      # 而不是让两条独立编译键各自冷跑一遍。
-      # ⚠️ 同样只能留在 Windows（理由见上一步）：需真跑 `go test`，Linux 上测试代码编不过。
-      # ⚠️ continue-on-error（2026-10-08 实证补上）：本步自称「非阻断」，却一直是**裸 step**——
-      # coverprofile 插桩下 internal/app 有已知 flaky（本轮 main CI 即因
-      # `TestScanModelEntriesFiltered_BannedFieldFilled` 挂掉，而上一轮同代码全绿；
-      # check-go-diff-coverage 内部正为同一类抖动留了「失败重试一次」，本步却没有）。
-      # 一个趋势展示不该让 main 因抖动变红 ⇒ 显式 continue-on-error，兑现「非阻断」契约。
-      - name: Go 覆盖率报告（非阻断，趋势可见；仅 main）
-        if: github.ref == 'refs/heads/main'
-        continue-on-error: true
-        shell: pwsh
-        run: |
-          # -p 1 串行：多包并行跑 coverprofile 时 go/scanner 测试存在隔离冲突（flaky），
-          # 串行可复现通过（本地已验证）。本步骤仅作覆盖率趋势展示，不构成测试门禁。
-          # 注意：-coverprofile=.coverage/go-cover.out 必须加引号——PowerShell 会把
-          # 「.coverage/go-cover.out」解析成成员访问（值为 null），profile 落盘为 0 字节，
-          # 后续 go tool cover -func= 收到空参数报 too many arguments。
-          # 同上用 ./...：原 ./go/... 使 internal/app 的 33 个测试文件完全不计入覆盖率。
-          # -timeout：仓内铁律「Go 测试一律带超时硬阀」，与上方 Go 检查（-race 步骤）同口径——
-          # coverprofile 是最慢的一跑，裸跑挂死时没有它会一直烧到 Job 级 40min 天花板才见红。
-          New-Item -ItemType Directory -Force '.coverage' | Out-Null
-          go test ./... -coverprofile='.coverage/go-cover.out' -count=1 -p 1 -timeout 10m | Out-String -Width 200
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          go tool cover -func='.coverage/go-cover.out' | Select-String 'total:'
+      # ⚡ 方案 A（2026-10-08 落地）：原独立「Go 覆盖率报告（仅 main）」step 已删除——其职责
+      # 并入上方 Go 检查（main 分支 race+cover 一次编译），趋势数据由 main 的 race 跑自带。
+      # 历史留痕：该 step 曾是独立编译键（cover 插桩与 race 缓存不复用，实测 ~2min）、
+      # 2026-10-07 改仅 main 跑、2026-10-08 补 continue-on-error（coverprofile 下 internal/app
+      # flaky 曾误红 main）；现随合并一并消亡，main 上不再有第二条独立编译键。
 
   # ── Go 静态分析（2026-10-08：golangci-lint 从 Windows go job 迁出，独立并行跑）──────────
   # 动机：golangci-lint 是**纯静态分析**（只做类型检查、不执行任何东西），原先串在 windows go

@@ -16,6 +16,8 @@ source_files:
   - frontend/src/preview-3d/adapters/shared-infra.ts
   - frontend/src/preview-3d/caps/water-persist.ts
   - frontend/src/preview-3d/caps/env-persist.ts
+  - frontend/src/preview-3d/caps/env-hdr-cache.ts
+  - frontend/src/preview-3d/caps/env-ibl.ts
 tests:
   - frontend/src/preview-3d/adapters/shared-infra.test.ts
   - frontend/src/preview-3d/caps/scene-capability-persist.test.ts
@@ -37,6 +39,9 @@ auto_fields:
     - ENV_KEYS
     - ENV_STATE_SCHEMA
     - EnvCallback
+    - EnvHdrCache
+    - EnvIbl
+    - EnvIblHost
     - envState
     - EnvState
     - EnvStateKey
@@ -184,6 +189,12 @@ invariant_anchors:
     - **守卫升级**：`environment-capability.test.ts`「[P1-5]」**不再手抄存档键映射表**——存档键名由 `getArchiveKey` 派生，`ARCHIVE_ALIAS` 漏声明即转红（原 DEVIATION 表的 `archiveKey` 字段删除，只剩偏离值）。派生对称性由 `env-persist.test.ts` 锁死（`ENV_KEYS` 与 `getPresetKeys("environment")` 恒等 + round-trip + 脏存档类型不匹配 + `RESTORE_SOURCE` 来源纪律）。
     - **为何不推广到 ground 读侧**：ground 写侧已派生，读侧虽仍手写 `restoreFields` spec 但有 `[G-8]` 守卫，且 schema 键名=存档键名无别名需求，改造收益小风险不小——留作后续（ADR-326 后果条已声明）。
     - **遗留**：`preset`/`intensity`/`resolution`/`useAsBackground` 旧键名继续由 `environment-migrations.ts` 承载（不改名），`ARCHIVE_ALIAS` 是「存档键名」的单一事实源，改名须同步别名表 + P1-5 断言。）
+  **（[ADR-091-d1 实施进度 2026-10-08] `EnvironmentCapability` 拆分——从「环境资产管线」退回「状态→Three 适配器」薄壳。已完成两个子提交：**
+    - **`caps/env-hdr-cache.ts`（子提交 A）**：`EnvHdrCache` 类封装 custom HDR 四态（tex/name/loading/warnedMissing）+ `RGBELoader` 解码管线 + 缩略图。**纯生命周期容器**：不触碰 `scene.environment`/`scene.background`，也不写 `envState`——通路键权威仍在 cap 侧 `onPickCustomHdr`/`onClearCustomHdr`。cap 只保留 `getCustomHdrThumbnail` 对外 API 委托（`environment-menu.ts` 跨文件消费，稳定菜单层契约）。
+    - **`caps/env-ibl.ts`（子提交 B）**：`EnvIbl` 类承载 PMREM 预滤波、三通路取图（preset/sky/custom）、背景槽管理、`dispose` 顺序收敛（`envOwnsSceneEnvironment` 占有权判定收敛在管线内部）。`build(skyForce)` 即原 `buildEnvironment`（含 D-5 同引用短路、D-3 sky 直装、`isBuilding` 防递归）；`dispose()` 还原两槽位 + 释放 PMREM 管线，dispose 顺序两例守卫仍由 `environment-capability.test.ts` 背书。cap 保留 `getLuminanceHistogram` 对外 API 委托。
+    - **cap 剩余职责**：状态字段 + 构造器/回调接线 + 持久化（ADR-326 派生）+ setter 群 + `getMenuNodes` + `apply`/`dispose` 委托——退化为真正的适配器编排壳。
+    - **测试注入点迁移**：custom HDR 态经 `hdrOf(cap)`，IBL 状态（`backgroundSrcTex`/`skySourcedTex`）经 `iblOf(cap)`（TS `private` 运行时即普通属性，白盒等价）。
+    - **遗留**：cap 仍含约 40 个 setter 方法 + 菜单节点构建，尚未再拆（子提交 C 候选）；截图 IBL 对齐（锐评第 3 刀）明确推迟。**）**
 - **loadState**（读）：`restoreState` → **旧键迁移**（ADR-196 前无前缀旧键 `{mode,color,...}` 转新键，保升级用户配置，如 fog 的 legacyKeys 分支）→ `restoreFields`（类型安全批量恢复器，按存档值实际类型分派回填）→ `setEnvState(..., {source:"auto-model"})` 写回 envState → cap apply 落地 Three。**（ADR-283：恢复路径同样经唯一入口的值域钳制——存档里的越界值不会漏进 envState。）**
   **（来源纪律 2026-09-22 立法：恢复一律 `auto-model`，禁 manual。存档值是上一次会话的偏好延续，不是本次手改——打成 manual 会永久拒绝同轨 auto-model / auto-atmosphere 覆盖（切 sunset 氛围雾/环境/灯光不跟改，模型默认值也写不进）。**
   **「同口径」是按**声明**而非按**实施**成立的判词——2026-09-22 复核发现立法时 ground/reflector/shadow/renderMode 四路**实际仍是 manual**（fog/environment/pp/light/sky 才是真 auto-model），属「文档先于代码」的漂移；当日随锐评 F-2 一并收口，现同轨（**water 路径 2026-10-08 锐评 P1-0 补齐**——原「八路」漏扫水面：批量路径已 helper 化进共享工具箱且签名无 source 形参、setter 委托站点无 RESTORE_SOURCE、迁移/兜底 setLevel 站点无参，三条全打 manual，现全收口，见「不变量」P1-0 条）。ground 的坑在于恢复站点分**两条路径**：`loadState` 内直连 `setEnvState` 的站点，与委托公开 setter（`setMatOpacity`/`setMatScale`/`setOverlaySize`…，这些 setter 服务用户手改、必须保持 manual）的站点——只改前者会留暗门，故 `ground-capability.ts|RESTORE_SOURCE` 把恢复来源收敛成单一常量，由 `writeOpts` 组装 opts。**

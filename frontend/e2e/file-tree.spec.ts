@@ -46,12 +46,12 @@ test.describe("文件树交互", () => {
 
   test("文件树目录展开/折叠", async ({ page }) => {
     // P3 修复（审核）：原 `countInTree` 一次性读——树未渲染完即得 0 → test.skip
-    // 假绿（正是冒烟测试要防的 skip 掩盖路径）；改 waitForTreeCount 轮询
+    // 假绿（正是冒烟测试要防的 skip 掩盖路径）；改 waitForTreeCount 轮询。
+    // T3′ 修复（2026-10-08 技术债清偿）：删除 `dirCount===0` 的 test.skip 分支——
+    // mock 恒含 subdir/subdir-model.ysm（tree-dir 必渲染），dirCount===0 即加载链回归，
+    // 须硬红而非 skip 掩盖。此处直接硬断言目录已渲染，回归即 fail（三重门纪律）。
     const dirCount = await waitForTreeCount(page, "tree-dir");
-    if (dirCount === 0) {
-      test.skip(true, "文件树目录元素未在 Shadow DOM 中渲染");
-      return;
-    }
+    expect(dirCount).toBeGreaterThan(0);
     // 记录展开前 tree-file 计数（mock 含 subdir/subdir-model.ysm，展开后应增加）
     const before = await countInTree(page, "tree-file");
     // 通过 evaluate 找到 tree-dir 的坐标，点击展开

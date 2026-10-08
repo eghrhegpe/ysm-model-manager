@@ -2,7 +2,7 @@
 kind: tech-debt-ledger
 name: 技术债台账（探查快照 2026-10-08）
 tier: leaf
-category: go
+category: core
 status: snapshot
 affected: false
 source_files:
@@ -88,7 +88,7 @@ quick_risk_lines:
 - **K1 · 知识卡认领冗余**：`check-knowledge-drift` errors 0 / warns 10。0 独占 `source_files` 的 6 卡共 25 条重复登记（`dnd-shared`4/`doctor-gate-overlap`3/`features-dialogs`6/`model-stats`4/`ui-slide-menu`3/`ysm-anim-pipeline`5）；`model3d.md` **1042**、`wails-bindings.md` **118** 派生符号（目录级认领）；auto_fields 全仓零信息消费者；`go-repoaudit.md` 机制锚疑似指向引用处。
 - **K2 · 本卡 `category: go` 错位**：内容横跨 Go/前端/ADR/测试四域，误导按 category 路由。
 - **S1 · `gen-knowledge-*` 六个生成器仍并存**未收口；`gate-inventory.json` 未建（部分缓解：`gate-config.ts` 已是单一工具清单 + `gate-coverage` 动态枚举分母）。
-- **H1′ · `docs/` 根 6 份历史审计 critique（~130KB）可迁 `docs/archive/`**：`audit-env-review`/`audit-ground-review`/`audit-knowledge-accuracy`/`audit-knowledge-reliability`/`audit-postprocessing-critique`/`audit-water-critique`。**⚠️ `audit-src-map.md` 是 `gen-project-map.ts` 生成物，不可归档。**
+- **H1′ · `docs/` 根 6 份历史审计 critique（~130KB）可迁 `docs/archive/`**：`audit-env-review`/`audit-ground-review`/`audit-knowledge-accuracy`/`audit-knowledge-reliability`/`audit-postprocessing-critique`/`audit-water-critique`。**⚠️ `audit-src-map.md` 是 `gen-project-map.ts` 生成物，不可归档。** **暂缓（2026-10-08 晚间复评）**：经 grep 全仓入链，这 6 份**有活消费者**而非纯死文档——`audit-env-review.md` 被 `ADR-292`/`ADR-305`/`drafts/ground-design-exploration.md` 引用（上游缺陷锚点）；`audit-water-critique.md` 被 `water.md`/`ADR-322`/`fog-capability.ts`/`layer-offsets.ts` **源码注释**硬引用；`audit-postprocessing-critique.md` 被 `preview-env-state.md` 引用（且 `preview-env-state.md` 当前正被并行会话锐评重构在途改动）。机械 `git mv` 会断 4+ 处 `.ts` 注释路径（不被 `check-doc-drift` 捕获）+ 多个 ADR/草稿入链。按「迁出前三查」纪律，须先改代码侧入链再迁；**待 preview-3d 锐评收口后单独做断链迁移**，本轮不动。
 - **已修确认**：errcheck 生产 **0** 条（10-06 为 114）、ysmwasi **61.3%**（原 33.3%）、复杂度 RED **0**（原 52；Molang 876 → MIT 第三方 vendored 排除有 fail-closed 守卫，属噪声移出统计面而非债清零；另 4 个 RED 真重构）、契约测试域登记 **104/104 零漏**、binding 176/176、i18n 死键 **13**（原 17）、ADR-311 快照 **0**、`scripts/` 194→**178** 文件（↓5711 行）、未接入 check-\* **0**、知识卡 kind snake_case 仅剩 1 个、无卡引用源码文件 52→**14**、全套 vitest **473 文件 7719/7719 全绿**、SafeWalk 无真吞错、并发安全、`app.go` 435 行纯门面（非 god object）、`_attic` 20 脚本零活引用（真死）。
 
 ## 2026-10-08 晚间复测（HEAD = 28c2c7de8 之后 14 提交）
@@ -114,7 +114,12 @@ quick_risk_lines:
 ### 本次（2026-10-08 晚间）动手清偿
 - **P1-a 半根治**（见上「高」段）：缺产物优雅降级 + 新鲜度断言 + gate-config 注释对齐 + 契约测试钉死。
 - **P2 全修**（见上「中」段）：六处文档「pre-push 全量门禁」失真统一改轻量档表述；`AGENTS.md` 契约测试计数 95→122。
-- 待还债剩余项见上方 🟠/🟢 段（A1/T3′/T5/T6/K1/K2/S1/H1′），均未涉及代码回归，属维护性与文案收敛。
+- **T3′ 已修**：`frontend/e2e/file-tree.spec.ts` 删除 `dirCount===0` 的 `test.skip` 分支，改为 `expect(dirCount).toBeGreaterThan(0)` 硬断言——mock 恒含 `subdir/subdir-model.ysm`（tree-dir 必渲染），回归即硬红，不再被 skip 掩蔽（三重门纪律对齐）。
+- **T6 已修**：`frontend/e2e/perf-fixtures.ts` 4 处 `absPath` 硬编码本机路径（`C:\\Users\\...`）改为相对路径 `tests/fixtures/ysm/...`（`perf-common.ts:100` 注释明确测试/断言用 `relPath` 不用 `absPath`，无消费者破坏）。
+- **K2 已修**：本卡 `category: go` → `core`（内容横跨四域，`affected:false` 已退出路由，但仍消除误导性）。
+- **H1′ 暂缓**：经 grep 发现 6 份 audit critique 有活入链（`audit-water-critique.md` 被 `fog-capability.ts`/`layer-offsets.ts` 源码注释硬引用、`audit-env-review.md` 被 `ADR-292`/`ADR-305` 引用等），机械归档会断链；待 preview-3d 锐评收口后单独断链迁移，本轮不动。
+- **K1 维持**：6 张卡 `source_files` 全被其他卡认领（warn 级），多为有意跨切面聚合卡（dnd-shared/features-dialogs 等），非误报，不盲目收窄。
+- 待还债剩余项见上方 🟠/🟢 段（A1/T5/S1），均未涉及代码回归；A1（`check-adr-health` 化石正则）与 T5（caps 红线）需独立探查、改动较大，后续择机。
 
 ## 总体判断
 

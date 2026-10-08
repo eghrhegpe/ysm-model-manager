@@ -41,7 +41,7 @@
 - **scripts-lib-adoption**（_lib 共享层采用率闸门）：`scripts/check-lib-adoption.ts` 把 `check-proc-adoption` 的成功经验（非直调占比 100% 全收敛）推广为**规则驱动的通用闸门**：RULES 表声明「某 `_lib` 模块 → 手搓…
 - **scripts-readme-index**（README 登记处对账 check-readme-index.ts）：`scripts/README.md` 自称「所有 Node 工具脚本的索引」「治理检查（check-* 系列；唯一登记处）」，但历史上没有任何机器对账——新增/改名脚本后忘记登记 README 不会被任何门禁拦下。2026-08-31 审…
 
-## core（23 张）
+## core（24 张）
 
 *核心基础设施（事件总线、页面状态、Wails 桥接）*
 
@@ -67,6 +67,7 @@
 | 🏗 page-store | 页面状态管理 page-store.ts | architecture | — | 页面, 当前页, 状态管理, page store, currentPage |
 | 🏗 pointer-events | Pointer Events 统一交互（触屏 + 桌面） | architecture | — | pointerdown, pointermove, pointerup, 触屏, 拖拽, 旋转 |
 | 🏗 redline-enforcement-grade | 唯一入口红线执法等级表（37 条审计） | architecture | — | 唯一入口, 红线, 绕过 redlines, W6 W9 R7 R11, 资源类型魔法串, 菜单 visibleWhen, 审计等级, 单一入口收口 |
+| 🍃 tech-debt-ledger | 技术债台账（探查快照 2026-10-08） | leaf | — | 技术债, tech debt |
 | 🍃 theme | 主题系统 theme | leaf | — | 主题, 换肤, 深色, 浅色, 跟随系统, 动画开关, 字号, 界面偏好 |
 | 🏗 wails-bridge | Wails 桥接 app.ts | architecture | — | Wails, 桥接, getApp, Go 调用, Binding, window.go.main.App, 网页版, browser adapter |
 | 🏗 ysm-baked | YSM 烘焙与几何反推 | architecture | — | 烘焙, 几何反推, pivot, 骨骼错位, 模型错位, UV 对不上, 贴图错位, RawYsmModel |
@@ -136,7 +137,7 @@
 - **sync-manager**（整合包同步管理器 sync-manager）：`app-sync-manager` 是一个 Web Component 视图组件（`<app-sync-manager>`），承担**单个整合包（instance）内「仓库 ↔ 实例」双向同步状态展示与逐文件推送/拉取编排**：
 - **version-updater**（版本更新 version-updater）：`version-updater.ts` 是应用自更新的前端入口：启动时静默检查（受 6 小时频次限制）→ 发现新版本以可点击 toast 通知；设置页按钮手动检查 → 弹出带更新日志的 `modalConfirm` → 调 `DoUpda…
 
-## go（51 张）
+## go（50 张）
 
 *Go 后端包（安装、下载、回收站、YSM 解析等）*
 
@@ -188,7 +189,6 @@
 | 🏗 golangci-lint | golangci-lint（Go 静态分析真空面） | architecture | — | golangci-lint, Go 静态分析, errcheck, 未检查错误, lint 基线, new-from-rev, 增量 lint |
 | 🏗 install-domain-split | install 域切分经验：切纯域不硬切复合域（耦合度门槛判断） | architecture | — | internal/app 再切分或迁移 App god-object 字段/方法时, 评估某子域「迁出 internal/app 包」的收益与成本, 复述 ADR-179 实际收敛边界 |
 | 🏗 reference | win-filename-rules | architecture | — | 用户输入的文件/文件夹名落盘前校验（重命名、新建目录、移动/复制目标段）, 判断某字符串是否为 Windows 非法文件名（非法字符 / 保留设备名 / 尾随点空格） |
-| 🍃 tech-debt-ledger | 技术债台账（探查快照 2026-10-08） | leaf | — | 技术债, tech debt |
 | 🍃 texture-cache | 纹理缓存 texture_cache | leaf | — | 纹理缓存 / KTX2 缓存, 缓存清理 / 缓存状态 / 缓存校验, 缓存占用异常 / 磁盘膨胀 |
 | 🏗 wails-bindings | Wails Binding API 总览 internal/app | architecture | — | API, Binding, 调用后端, getApp, 方法签名, app.ts 绑定 |
 | 🍃 workspace-exe-write-denied | 仓内二进制写用户目录被静默拒绝（代理沙箱按镜像位置拦截） | leaf | — | 应用日志/配置出现「创建临时文件失败 ... Access is denied」，但浏览、读取全部正常, wails3 dev / 仓内 bin 下 exe 写失败；同一 exe 复制到仓外跑恢复正常 |

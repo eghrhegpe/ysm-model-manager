@@ -1714,6 +1714,10 @@ export const autoSidebar = [
             "link": "/knowledge/redline-enforcement-grade"
           },
           {
+            "text": "技术债台账（探查快照 2026-10-08）",
+            "link": "/knowledge/tech-debt-ledger"
+          },
+          {
             "text": "主题系统 theme",
             "link": "/knowledge/theme"
           },
@@ -1914,10 +1918,6 @@ export const autoSidebar = [
           {
             "text": "win-filename-rules",
             "link": "/knowledge/reference"
-          },
-          {
-            "text": "技术债台账（探查快照 2026-10-08）",
-            "link": "/knowledge/tech-debt-ledger"
           },
           {
             "text": "纹理缓存 texture_cache",

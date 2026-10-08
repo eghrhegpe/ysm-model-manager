@@ -456,8 +456,7 @@ export const TARGET_REPO_SIZE_REAL = {
         form: "dir",
         filesRoot: "tests/fixtures/ysm",
         relPath: "博丽灵梦Hakurei_Reimu/ysm.json",
-        absPath:
-          "C:\\Users\\zhujieling11\\ysm-model-manager\\tests\\fixtures\\ysm\\博丽灵梦Hakurei_Reimu\\ysm.json",
+        absPath: "tests/fixtures/ysm/博丽灵梦Hakurei_Reimu/ysm.json",
       },
     },
     {
@@ -574,8 +573,7 @@ export const TARGET_REPO_SIZE_REAL = {
         form: "dir",
         filesRoot: "tests/fixtures/ysm",
         relPath: "01_taisho_maid/ysm.json",
-        absPath:
-          "C:\\Users\\zhujieling11\\ysm-model-manager\\tests\\fixtures\\ysm\\01_taisho_maid\\ysm.json",
+        absPath: "tests/fixtures/ysm/01_taisho_maid/ysm.json",
       },
     },
   ],
@@ -720,8 +718,7 @@ export const TARGET_ALL_SIZE_REAL = {
         form: "dir",
         filesRoot: "tests/fixtures/ysm",
         relPath: "博丽灵梦Hakurei_Reimu/ysm.json",
-        absPath:
-          "C:\\Users\\zhujieling11\\ysm-model-manager\\tests\\fixtures\\ysm\\博丽灵梦Hakurei_Reimu\\ysm.json",
+        absPath: "tests/fixtures/ysm/博丽灵梦Hakurei_Reimu/ysm.json",
       },
     },
     {
@@ -838,8 +835,7 @@ export const TARGET_ALL_SIZE_REAL = {
         form: "dir",
         filesRoot: "tests/fixtures/ysm",
         relPath: "01_taisho_maid/ysm.json",
-        absPath:
-          "C:\\Users\\zhujieling11\\ysm-model-manager\\tests\\fixtures\\ysm\\01_taisho_maid\\ysm.json",
+        absPath: "tests/fixtures/ysm/01_taisho_maid/ysm.json",
       },
     },
   ],

@@ -34,6 +34,7 @@ const hoisted = vi.hoisted(() => {
     applyTexturesMock: vi.fn(),
     scheduleBackgroundEncodingMock: vi.fn(),
     cancelPendingEncodingsMock: vi.fn(),
+    disposeKtx2WorkerPoolMock: vi.fn(),
     screenshotMock: vi.fn(),
     recordTraceMock: vi.fn(),
     mainThreadWatchCb: null as ((info: unknown) => void) | null,
@@ -116,6 +117,7 @@ vi.mock("./mmd-pmx-parser.ts", async (importOriginal) => {
 vi.mock("@/preview-3d/decoder/mmd-ktx2-encoder.ts", () => ({
   scheduleBackgroundEncoding: hoisted.scheduleBackgroundEncodingMock,
   cancelPendingEncodings: hoisted.cancelPendingEncodingsMock,
+  disposeKtx2WorkerPool: hoisted.disposeKtx2WorkerPoolMock,
 }));
 vi.mock("@/utils/base/primitives/main-thread-watch.ts", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/utils/base/primitives/main-thread-watch.ts")>();

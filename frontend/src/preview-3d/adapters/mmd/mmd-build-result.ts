@@ -6,7 +6,10 @@ import type {
   SemanticScene,
   UpdateableScene,
 } from "@/preview-3d/adapters/mount-preview-core.ts";
-import { cancelPendingEncodings } from "@/preview-3d/decoder/mmd-ktx2-encoder.ts";
+import {
+  cancelPendingEncodings,
+  disposeKtx2WorkerPool,
+} from "@/preview-3d/decoder/mmd-ktx2-encoder.ts";
 import { unregisterModelRoot } from "@/preview-3d/infra/frustum-cull.ts";
 import { recordLoadTrace, TRACE_FORMAT_OTHER } from "@/preview-3d/infra/load-trace.ts";
 import { screenshotFromRenderer } from "@/preview-3d/screenshot/screenshot.ts";
@@ -194,6 +197,11 @@ function Stage6Dispose(c: Stage6Ctx, s5: ReturnType<typeof Stage5Menu>): void {
     dbg("mmd", { op: "dispose-aux-fail", err: safeErrorMessage(e) });
   } finally {
     cancelPendingEncodings();
+    // [锐评 P1-0] 会话级回收编码 worker 池——调度侧（cancelPendingEncodings）一直有生命周期
+    // 接线，池本身的生死此前无人管（模块级缓存唯一清空路径是 worker 崩溃）。dispose 幂等，
+    // 懒建逻辑（getKtx2WorkerPool）负责下次打开 MMD 时重建。挂 MMD 会话 dispose 而非
+    // cleanupPreview：编码池是 MMD 专用资源，跟 MMD 会话走（cooperate 多会话互不误伤）。
+    disposeKtx2WorkerPool();
     c.stopLongTaskWatch();
     for (const url of c.blobUrls) URL.revokeObjectURL(url);
   }

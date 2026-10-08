@@ -96,6 +96,38 @@ export function resetEncoderState(): void {
   ktx2Bridge?.clearPending();
 }
 
+/**
+ * 回收 KTX2 编码 worker 池（锐评 P1-0：会话级生命周期接线）。
+ *
+ * **病症**：池由模块级缓存 `ktx2Workers`/`ktx2Bridge` 持有，此前**生产侧无任何回收点**——
+ * 桥虽提供 `dispose()`（→ `terminatePool` 逐个 `w.terminate()`），但生产代码零调用；
+ * 模块级缓存的唯一清空路径是 worker 崩溃（`onPoolTerminated`）。而编码是
+ * 「每个纹理一生一次」的事件（落盘后 `completedHashes` 标记，幂等跳过），
+ * 池却按进程级常驻活着 —— 服务一次性事件的资源不该活到进程结束。
+ *
+ * **为何判定为漏网而非有意取舍**：同文件已有为池量身定做、且**已接线到会话生命周期**的
+ * 取消入口 `cancelPendingEncodings`（由 `mmd-build-result.ts` 会话 dispose 调用）——
+ * 调度侧接了生命周期，池本身的生死无人管；若为有意取舍，仓内应有注释/ADR 论证（实测零论证）。
+ *
+ * **挂 `cleanupPreview` 而非终局拆除**：终局拆除依赖 `beforeunload`，
+ * 而 Wails v3 桌面端确认**不派发**该事件（见 docs/audit-host-env-coupling-review.md §三），
+ * 挂上去等于死代码；`cleanupPreview` 是会话级确定路径。
+ *
+ * **重建代价可接受**：`getKtx2WorkerPool` 的 `if (ktx2Workers) return` 懒建逻辑天然支持重建，
+ * 下次打开 MMD 模型时自动重建（几百毫秒建池 + WASM init）——而该场景本来就要等编码落盘，
+ * 代价基本被场景本身淹没。
+ *
+ * 幂等：冷态（无池）或重复调用均安全，供 `cleanupPreview` 重入。
+ */
+export function disposeKtx2WorkerPool(): void {
+  // terminatePool 内部：逐个 terminate + 结算在途（settleError）+ 触发 onPoolTerminated
+  // （后者已把 ktx2Workers/ktx2Bridge 置 null，与崩溃路径同款清缓存，语义统一）
+  ktx2Bridge?.dispose();
+  // 防御：桥缺失（如构造失败路径只清了 workers 或 onPoolTerminated 未跑）时直接归零
+  ktx2Bridge = null;
+  ktx2Workers = null;
+}
+
 /** 从 blob URL 解码图像数据为 { data, width, height } */
 async function blobUrlToImageData(blobUrl: string): Promise<{
   data: Uint8Array;

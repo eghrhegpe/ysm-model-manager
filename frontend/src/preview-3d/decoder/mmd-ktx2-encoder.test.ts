@@ -807,3 +807,139 @@ describe("encodeToKTX2 主线程入口（默认 encodeImpl：Worker 池 / 同步
     expect(hoisted.saveTextureMock).not.toHaveBeenCalled();
   });
 });
+
+// ---- disposeKtx2WorkerPool：会话级回收 worker 池（锐评 P1-0）----
+// 病症：worker 池由模块级缓存（ktx2Workers/ktx2Bridge）持有，生产侧从无回收点——
+// 桥虽提供 dispose()（→ terminatePool 逐个 terminate），但生产零调用；唯一清缓存路径是
+// worker 崩溃（onPoolTerminated）。编码是「每个纹理一生一次」的事件，池却按进程级常驻活着。
+// 修法：disposeKtx2WorkerPool 挂 cleanupPreview（会话级确定路径），懒建逻辑负责下次重建。
+describe("disposeKtx2WorkerPool（锐评 P1-0：会话级回收 worker 池）", () => {
+  type EncoderModule = typeof import("./mmd-ktx2-encoder.ts");
+  type Ktx2Echo = { ok: boolean; buffer?: ArrayBuffer; error?: string };
+
+  let fresh: EncoderModule;
+  let respond: (msg: { id: number }) => Ktx2Echo | "crash";
+  let createdWorkers: FakeKtx2Worker[];
+
+  class FakeKtx2Worker {
+    onmessage: ((e: { data: unknown }) => void) | null = null;
+    onerror: (() => void) | null = null;
+    terminated = false;
+    constructor() {
+      createdWorkers.push(this);
+    }
+    postMessage(msg: { id: number }, _transfer?: Transferable[]): void {
+      setTimeout(() => {
+        const r = respond(msg);
+        if (r === "crash") this.onerror?.();
+        else this.onmessage?.({ data: { id: msg.id, ...r } });
+      }, 0);
+    }
+    terminate(): void {
+      this.terminated = true;
+    }
+  }
+
+  /** 独立端口（同 describe 内局部副本：makeLocalPort 定义在别的 describe 作用域，不可跨用） */
+  function makeLocalPort(): MmdDataPort {
+    return {
+      readFileBytes: vi.fn(),
+      readFileBytesBatch: vi.fn(),
+      listAllFilePaths: vi.fn(),
+      addOpLog: vi.fn(),
+      getCachedTexture: vi.fn(),
+      saveCachedTexture: hoisted.saveTextureMock,
+    };
+  }
+
+  beforeAll(async () => {
+    vi.resetModules();
+    fresh = await import("./mmd-ktx2-encoder.ts");
+  });
+
+  beforeEach(() => {
+    fresh.resetEncoderState();
+    createdWorkers = [];
+    respond = () => ({ ok: true, buffer: new Uint8Array([9]).buffer });
+    vi.stubGlobal("Worker", FakeKtx2Worker);
+    installDomMocks();
+    vi.clearAllMocks();
+    hoisted.saveTextureMock.mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    // ⚠️ 关键：每个用例结束后必须拆池——resetEncoderState 不拆池（模块级缓存残留），
+    // 否则下一用例 getKtx2WorkerPool 直接返回旧池（旧 FakeKtx2Worker 实例），
+    // 用例 4 的 NeverSettleWorker 永远不被 new（posted 恒 false）。原 describe 靠
+    // 触发 onerror 崩溃清池，此处用被测对象自身 dispose 清池（顺带验证幂等路径）。
+    fresh.disposeKtx2WorkerPool();
+    vi.unstubAllGlobals();
+  });
+
+  // 行为不变量①：dispose 后全部 worker 被 terminate（真终止，非仅清引用）
+  it("dispose → 池内全部 worker 被 terminate（不等崩溃）", async () => {
+    const port = makeLocalPort();
+    const ok = await fresh.encodeAndCacheTexture("hash_p1_0_a", "blob:pool", port);
+    expect(ok).toBe(true);
+    expect(createdWorkers.length).toBeGreaterThan(0);
+
+    fresh.disposeKtx2WorkerPool();
+
+    expect(createdWorkers.every((w) => w.terminated)).toBe(true);
+  });
+
+  // 行为不变量②：dispose 幂等 + 冷态安全（无池时调用不抛）——cleanupPreview 可能重入
+  it("dispose 幂等：重复调用不抛错；冷态（从未建池）调用亦不抛", async () => {
+    fresh.disposeKtx2WorkerPool();
+    expect(() => fresh.disposeKtx2WorkerPool()).not.toThrow();
+
+    const port = makeLocalPort();
+    await fresh.encodeAndCacheTexture("hash_p1_0_b", "blob:pool", port);
+    fresh.disposeKtx2WorkerPool();
+    expect(() => fresh.disposeKtx2WorkerPool()).not.toThrow();
+  });
+
+  // 行为不变量③：dispose 后池可惰性重建（否则「关预览→再开 MMD」直接退化为同步编码）
+  it("dispose 后再请求 → 懒建重建池（新 worker 非旧实例，回包走通落盘）", async () => {
+    const port = makeLocalPort();
+    await fresh.encodeAndCacheTexture("hash_p1_0_c1", "blob:pool", port);
+    const firstBatch = [...createdWorkers];
+    fresh.disposeKtx2WorkerPool();
+
+    createdWorkers = [];
+    const ok = await fresh.encodeAndCacheTexture("hash_p1_0_c2", "blob:pool", port);
+
+    expect(ok).toBe(true);
+    expect(createdWorkers.length).toBeGreaterThan(0);
+    // 新实例 ≠ 旧实例（真重建，不是复用已 terminate 的死 worker）
+    expect(createdWorkers.some((w) => !firstBatch.includes(w))).toBe(true);
+    expect(hoisted.saveTextureMock).toHaveBeenCalledWith("hash_p1_0_c2", "CQ==");
+  });
+
+  // 行为不变量④：dispose 结算在途请求，不留悬挂 promise（否则调用方永久 await）
+  it("dispose 时在途请求被结算为失败（非悬挂）", async () => {
+    // 永不响应的 worker：请求 postMessage 出去后永久挂在桥的 pending 里，
+    // 只能靠 dispose（或桥的 120s 超时）结算。此处锁的是 dispose 真的结算了它。
+    let posted = false;
+    class NeverSettleWorker extends FakeKtx2Worker {
+      override postMessage(): void {
+        posted = true;
+        /* 永不响应 */
+      }
+    }
+    vi.stubGlobal("Worker", NeverSettleWorker);
+
+    const port = makeLocalPort();
+    const pending = fresh.encodeAndCacheTexture("hash_p1_0_d", "blob:pool", port);
+
+    // 真实 timers（Image 桩 setTimeout(0) 触发 onload → 全链走到 postMessage）。
+    // 与同文件其他 describe 一致，避免 fake 劫持的时序坑。
+    await new Promise((r) => setTimeout(r, 30));
+    expect({ posted, workers: createdWorkers.length }).toEqual({ posted: true, workers: 3 });
+
+    fresh.disposeKtx2WorkerPool();
+
+    // 结算为 false（静默降级），而非永久挂起（桥的 120s 超时不参与）
+    await expect(pending).resolves.toBe(false);
+  });
+});

@@ -269,6 +269,7 @@ auto_fields:
     - ENV_STATE_SCHEMA
     - EnvBorrowedTextures
     - EnvCallback
+    - EnvHdrCache
     - EnvironmentCapability
     - EnvironmentParams
     - EnvMigrationInput

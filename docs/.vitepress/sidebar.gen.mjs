@@ -1631,6 +1631,10 @@ export const autoSidebar = [
       {
         "text": "ADR-151-d1：gen-stage 未知新建文件默认排除（并发卷带硬化）",
         "link": "/adr/decisions/ADR-151-d1-gen-stage-unknown-newfile"
+      },
+      {
+        "text": "ADR-091-d1：环境能力 cap 拆分：hdr-cache/background 先行，ibl 所有权段单独一刀",
+        "link": "/adr/decisions/ADR-091-d1-cap-hdr-cache-background-ibl"
       }
     ]
   },

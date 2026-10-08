@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **334** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **335** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > ADR 三区存放：根目录 = 存量（分级前）/ `architecture/` = 架构决策 / `decisions/` = 执行决策日志（ADR-320）。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -19,7 +19,7 @@ permalink: /adr/
 | [📝 提议中](#提议中) | 6 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 15 |
-| [✅ 已采纳](#已采纳) | 305 |
+| [✅ 已采纳](#已采纳) | 306 |
 | [❌ 已取代](#已取代) | 8 |
 | [🧊 已废弃](#已废弃) | 0 |
 | [❓ 未归类](#未归类) | 0 |
@@ -57,7 +57,7 @@ permalink: /adr/
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 | [ADR-050](./ADR-050-plaza-browser-window.md) | 模型广场 · 浏览器窗口（Wails 第二窗口） | 🔄 部分采纳 |
 
-### ✅ 已采纳（305）
+### ✅ 已采纳（306）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
@@ -281,6 +281,7 @@ permalink: /adr/
 | [ADR-093](./ADR-093-multi-model-scene-core.md) | 多模型同框引擎核心（注册表/dispatch/相机累加/路由接缝/上限） | ✅ 已采纳 |
 | [ADR-092](./ADR-092-resource-type-group-routing.md) | 资源类型分组（Group）分层路由：Minecraft / Minecraft-Mod / MMD 总目录归并 | ✅ 已采纳 |
 | [ADR-091](./ADR-091-v2-2026-08-17.md) | 架构债务总览 v2（2026-08-17 并发审计） | ✅ 已采纳 |
+| [ADR-091-d1](./decisions/ADR-091-d1-cap-hdr-cache-background-ibl.md) | 环境能力 cap 拆分：hdr-cache/background 先行，ibl 所有权段单独一刀 | ✅ 已采纳 |
 | [ADR-090](./ADR-090-vitest-env-optimization.md) | vitest 环境切换与 npm 三件套并行优化 | ✅ 已采纳 |
 | [ADR-089](./ADR-089-test-env-split-continued.md) | 测试环境切分持续推进：慢测试定位与 node 环境甄别 | ✅ 已采纳 |
 | [ADR-088](./ADR-088-parallel-dispatch.md) | 检查体系并行调度——pre-push-gate 域间并行 + 静态工具分组 + pre-commit gen 并行 | ✅ 已采纳 |
@@ -723,6 +724,7 @@ permalink: /adr/
 | ADR-270-d6 | R10 收尾：截图多角度编排与菜单候选派生归属纠正（适配器域知识回迁 preview-3d/adapters） | ✅ 已采纳 | 2026-10-07 |
 | ADR-266-d1 | 体积光锥进截图：离屏/预览输出设置同构（toneMapping + 曝光镜像） | ✅ 已采纳 | 2026-10-04 |
 | ADR-151-d1 | gen-stage 未知新建文件默认排除（并发卷带硬化） | 📝 提议中 | 2026-10-06 |
+| ADR-091-d1 | 环境能力 cap 拆分：hdr-cache/background 先行，ibl 所有权段单独一刀 | ✅ 已采纳 | 2026-10-08 |
 
 ## 使用规则（硬约束）
 

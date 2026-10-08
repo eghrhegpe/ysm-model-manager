@@ -2410,10 +2410,6 @@ export const autoSidebar = [
           {
             "text": "WASM 解析器 ysm-parser",
             "link": "/knowledge/ysm-wasm"
-          },
-          {
-            "text": "frontmatter 分隔符测试临时卡",
-            "link": "/knowledge/zzz-fm-delimiter-tmp"
           }
         ]
       },

@@ -9,10 +9,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import { Sky } from "three/addons/objects/Sky.js";
-import {
-  SkyCapability,
-  injectSkySunScalePatch,
-} from "./sky-capability.ts";
+import { SkyCapability } from "./sky-capability.ts";
+import { injectSkySunScalePatch } from "@/preview-3d/shader-patches/sky-patch.ts";
 import type { SunBeams } from "./sun-beams.ts";
 import { MODEL_DEFAULTS } from "@/preview-3d/state/model-defaults.ts";
 import { ENV_STATE_SCHEMA, getParamRange } from "@/preview-3d/state/env-state-schema.ts";

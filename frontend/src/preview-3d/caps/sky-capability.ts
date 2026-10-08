@@ -17,7 +17,9 @@
 import * as THREE from "three";
 import { Sky } from "three/addons/objects/Sky.js";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
-import { assertRevisionRange, reportPatchIssue } from "@/preview-3d/shader-patches/patch-guard.ts";
+// shader patch 归位（2026-10-08 拆出）：injectSkySunScalePatch 移入 shader-patches/sky-patch.ts，
+// 与 SkyCapability 类解耦，sky-capability.ts 专注能力核心（scene 接入 + uniform 管线）。
+import { injectSkySunScalePatch } from "@/preview-3d/shader-patches/sky-patch.ts";
 // 锐评 F-1 收口：loadState 恢复期间挂起派发（fog/water/env/light 同法），末尾统一 apply。
 import {
   registerEnvCallback,
@@ -62,135 +64,6 @@ import { godRaysIntensity, SunBeams } from "./sun-beams.ts";
  *——[死代码清偿 2026-09-22] knip 点名后摘除 export，模块私有常量身份归位）。
  */
 const SKY_SCALE = 12000;
-
-/**
- * §4 解耦：给官方 Preetham Sky.js 的 ShaderMaterial 最小化注入两个 uniform，
- * 把「天空底色 × 太阳强度」和「太阳盘白光强度」从硬编码改为可配置尺度。
- * ——不替换 shader 主体（仍为 Preetham 物理模型），仅追加 uniforms 声明 + 两处乘法。
- * 🔗 ADR-073：仍为 Preetham，未自写三色渐变，合规。
- *
- * 🔎 需要 patch 的两处硬编码（来自 three/examples/jsm/objects/Sky.js SkyShader.fragmentShader）：
- *   ① L261:  `pow( vSunE * ((betaRTheta...) * (1.0-Fex) ), vec3(1.5))` → 把 vSunE 前乘 sunIntensityScale
- *        →  `pow( (vSunE * sunIntensityScale) * ((betaRTheta...) * (1.0-Fex) ), vec3(1.5))`
- *   ② r186 L273:  `vec3 sundiscColor = ( 760.0 * sundisc ) * min( vSunE * Fex, 80.0 );`
- *        →  `vec3 sundiscColor = ( sunDiscScale * 760.0 * sundisc ) * min( vSunE * Fex, 80.0 );`
- *      （r185 原式 `(vSunE * 19000.0 * Fex) * sundisc` 已被 three r186 重构——2026-09-26 升级审计适配锚点）
- *
- * ⚡ 幂等：重复调用不会重复注入。未注入过时才做 shader 替换并置 needsUpdate=true。
- *
- * @param defaults 默认值通常是 envState.skySunIntensityScale / envState.skySunDiscScale，
- *                 之后通过 uniforms.value 再同步运行时参数。
- */
-export function injectSkySunScalePatch(
-  mat: THREE.ShaderMaterial,
-  defaults: { sunIntensityScale: number; sunDiscScale: number } = {
-    sunIntensityScale: envState.skySunIntensityScale,
-    sunDiscScale: envState.skySunDiscScale,
-  },
-): void {
-  // [shader-patch 守卫] three 升级到未审计 REVISION 时显式抛错（锚点失配静默降级 → 显式化）
-  assertRevisionRange({ module: "sky-patch", allowed: ["186"] });
-  // 分字段幂等守卫（审计①：原「双字段整体短路」有半残缺口——uniform 已注册但乘法
-  // 缺失时误判已注入 → 永不补全，静默半残）。现按字段各自校验：字段视为已注入
-  // 仅当「uniform 存在 且 shader 已含对应乘法」。半残状态（uniform 在、乘法缺）下次
-  // 调用自动补全乘法层；锚点彻底失配时 ringLog 留痕（消除静默失效缝隙）。
-  const hasSunScaleUniform = mat.uniforms.sunIntensityScale !== undefined;
-  const hasDiscScaleUniform = mat.uniforms.sunDiscScale !== undefined;
-  const hasSunScaleUse = /vSunE\s*\*\s*sunIntensityScale/.test(mat.fragmentShader);
-  const hasDiscScaleUse = /sunDiscScale\s*\*\s*760\.0/.test(mat.fragmentShader);
-  if (hasSunScaleUniform && hasDiscScaleUniform && hasSunScaleUse && hasDiscScaleUse) {
-    // 完全注入 → 只确保默认值同步到 uniforms（不改 shader，避免重编译）
-    mat.uniforms.sunIntensityScale.value = defaults.sunIntensityScale;
-    mat.uniforms.sunDiscScale.value = defaults.sunDiscScale;
-    return;
-  }
-
-  // ① 追加 uniforms（对象层先注册，即使后续 shader 替换失败也不 crash 运行时）
-  if (!hasSunScaleUniform) mat.uniforms.sunIntensityScale = { value: defaults.sunIntensityScale };
-  if (!hasDiscScaleUniform) mat.uniforms.sunDiscScale = { value: defaults.sunDiscScale };
-
-  // ② patch fragmentShader：按"声明必须先于使用"的 GLSL 顺序三层独立幂等替换。
-  //    每一层都做 contains 判断，避免重复替换。如果声明层未匹配，就跳过使用层（防未声明编译报错）
-  let patched = false;
-
-  // 2a) uniform 声明：在 "uniform float showSunDisc;\nuniform float time;" 之后追加成两行新声明
-  const hasDecl = /uniform\s+float\s+sunIntensityScale\s*;/.test(mat.fragmentShader);
-  if (!hasDecl) {
-    const before = mat.fragmentShader;
-    const uniformDeclInjection =
-      "\nuniform float sunIntensityScale;\nuniform float sunDiscScale;\n";
-    mat.fragmentShader = mat.fragmentShader.replace(
-      /(uniform\s+float\s+showSunDisc\s*;\s*\n\s*uniform\s+float\s+time\s*;)/,
-      `$1${uniformDeclInjection}`,
-    );
-    if (mat.fragmentShader !== before) patched = true;
-    else {
-      // regex 未匹配（Three 未来版本可能调整 uniforms 顺序），做全局兜底：在最后一个 uniform 声明后加
-      // 取 uniforms 块后第一个函数（r185 hash / r186 gradient）之前插入
-      const fallbackIdx = mat.fragmentShader.indexOf("vec2 gradient( vec2 i )");
-      if (fallbackIdx > 0) {
-        mat.fragmentShader =
-          mat.fragmentShader.slice(0, fallbackIdx) +
-          "uniform float sunIntensityScale;\nuniform float sunDiscScale;\n" +
-          mat.fragmentShader.slice(fallbackIdx);
-        patched = true;
-      } else {
-        reportPatchIssue(
-          "sky",
-          "injectSkySunScalePatch 无法注入声明，跳过 shader patch。请检查 Three.js Sky.js fragmentShader 结构是否已变更。",
-          "error",
-        );
-        // 声明失败 → 不再继续使用层的替换，防 GLSL 编译错
-        return;
-      }
-    }
-  }
-
-  // 2b) 解耦点 ①：pow( vSunE * (  →  pow( (vSunE * sunIntensityScale) * (
-  // [锐评 P2-2] 锚定唯一上下文——`pow( vSunE * (` 在 Sky.js r186 出现两次（L262 base 项 /
-  // L263 fresnel 项），原 String.replace 只替首个，靠「首个即正确项」的隐式约定活着；
-  // three 重排两行即静默错挂。现连同 base 项独有的 `( 1.0 - Fex )` 尾部锚定。
-  if (!hasSunScaleUse) {
-    const before = mat.fragmentShader;
-    const baseAnchor =
-      "pow( vSunE * ( ( betaRTheta + betaMTheta ) / ( vBetaR + vBetaM ) ) * ( 1.0 - Fex )";
-    mat.fragmentShader = mat.fragmentShader.replace(
-      baseAnchor,
-      "pow( (vSunE * sunIntensityScale) * ( ( betaRTheta + betaMTheta ) / ( vBetaR + vBetaM ) ) * ( 1.0 - Fex )",
-    );
-    if (mat.fragmentShader !== before) patched = true;
-    else {
-      // 本层需补但锚点失配（无论 uniform 已注册与否——半残修复同样可能被外部破坏
-      // 挡住）→ 留痕 + console 兜底，消除「静默半残」失效缝隙
-      reportPatchIssue(
-        "sky",
-        "injectSkySunScalePatch 解耦点①（vSunE 缩放）替换失败：锚点失配。请检查 Three.js Sky.js fragmentShader 结构是否已变更。",
-        "error",
-      );
-    }
-  }
-
-  // 2c) 解耦点 ②：r186 `sundiscColor = ( 760.0 * sundisc ) * …` → sundisc 前乘 sunDiscScale
-  //    （r185 老锚点 `19000.0 * Fex` 已随 three r186 重构失配，2026-09-26 升级审计适配）
-  if (!hasDiscScaleUse) {
-    const before = mat.fragmentShader;
-    mat.fragmentShader = mat.fragmentShader.replace(
-      "vec3 sundiscColor = ( 760.0 * sundisc )",
-      "vec3 sundiscColor = ( sunDiscScale * 760.0 * sundisc )",
-    );
-    if (mat.fragmentShader !== before) patched = true;
-    else {
-      reportPatchIssue(
-        "sky",
-        "injectSkySunScalePatch 解耦点②（太阳盘缩放）替换失败：锚点失配。请检查 Three.js Sky.js fragmentShader 结构是否已变更。",
-        "error",
-      );
-    }
-  }
-
-  // ③ 有改动才触发重编译
-  if (patched) mat.needsUpdate = true;
-}
 
 export class SkyCapability implements SceneCapability {
   readonly id = "sky";

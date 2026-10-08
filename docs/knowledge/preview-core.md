@@ -27,7 +27,6 @@ auto_fields:
     - GroupedScene
     - guardSessionAlive
     - hasActivePreview
-    - injectSkySunScalePatch
     - InstalledPreviewInfra
     - invalidatePreview
     - LiveSessionEntry

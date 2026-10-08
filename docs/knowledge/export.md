@@ -53,7 +53,7 @@ auto_fields:
     - YsmPreloadedModel
   tests:
     - frontend/src/preview-3d/screenshot-render.test.ts
-    - frontend/src/preview-3d/decoder/cache.test.ts
+    - frontend/src/preview-3d/decoder/model-cache.test.ts
     - frontend/src/preview-3d/texture-loader.test.ts
     - frontend/src/views/app-preview/skeleton-render.test.ts
     - frontend/src/views/app-preview/mmd-controls.test.ts

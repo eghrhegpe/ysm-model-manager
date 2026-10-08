@@ -92,6 +92,11 @@ invariant_anchors:
   # 装配链唯一命名入口。2026-10-06 补锚：此前正文声称「两个命名入口」含 applyPostProcDefaults，
   # 该符号已被 ADR-250 删除而正文未同步（无锚故静默漂移 3 周）——升格为锚后入口失名即 ERROR 阻断。
   - frontend/src/preview-3d/adapters/shared-infra.ts|applyModelDefaults
+  # ADR-292 核心契约的机器锚（锐评 2026-10-08 补）。此前这些契约只散在正文散文、无锚 ——
+  # 「让权判据手抄 4 处 + 截图读退役开关」这类漂移因而对机器不可见，整整存活到人工锐评才发现。
+  - frontend/src/preview-3d/caps/environment-ownership.ts|envOwnsSceneEnvironment
+  - frontend/src/preview-3d/caps/scene-capability-registry.ts|isIblActive
+  - frontend/src/preview-3d/caps/scene-capability-registry.ts|LOAD_DEPS
 ---
 
 # 3D 预览统一状态层 envState（ADR-196）
@@ -168,6 +173,15 @@ invariant_anchors:
 
 ## 不变量
 
+- **[锐评 2026-10-08 新立] 判据（predicate）与算式（formula）必须分别收口——只收算式是半截治理。**
+  本域多轮治理把共享**算式**下沉为纯函数（`attenuateAmbientForSky` / `ENV_PRESET_DEFAULT_INTENSITY` / `effectiveToneMappingExposure`），但决定「要不要走这条算式」的**判据**留在每个消费点手抄。结果每次换判据，算式单源守住了、判据单源漏掉：
+  - **已修P0**：`screenshot-lights.ts` 的 ambient 让位判据读 sky 的 `skyEnvironment`（**已自宣退役**，只门控自持兜底路），而预览侧 X-3(`56300e506`) 已换成「env 在场启用」⇒ 默认路径（`envSource=preset` + `skyEnvironment=false`）下**截图比预览亮一档**。收口：`scene-capability-registry.ts|isIblActive` 为判据单一事实源（问 `environment.isEnabled()`），退役的 `isSkyEnvironmentOn` 删除；`attenuateAmbientForSky` 形参 `skyEnvOn`→`iblOn`（名实相符）。
+    **该病灶之所以能长期存活，根因在测试**：原桩把 `isSkyEnvironmentOn` **整个 mock 掉**（`vi.mock` 返回自造函数），于是「判据读的是谁」结构性不可见——把判据换成恒 false 全测试仍绿。**教训：mock 被测判据 = 把病灶藏进测试**；应只桩**被查对象**（`registry.getById`），让判据函数本身真跑。现该测试即此形态，守卫 = `screenshot-lights.test.ts`「[P0]」两条**判别样本**（新旧判据取值相反的组合；变异「判据改问 sky」即 3 例转红）。
+  - **待收（同病未治）**：D10 让权判据 `getTypedCap(caps,"environment")?.isEnabled?.()` 仍手抄**4 处**（`sky-capability.ts|requestEnvironmentRefresh` / 同文件 `skyEnvironment` 分支 / 同文件 `clearEnvironment`，注释自称「与路由器同源」实为复制；+`light-capability.ts|refreshAmbientFromSky`）。与所有权域已有纯函数单一事实源（`environment-ownership.ts`）形成反差：**所有权收了口，让权没收口**。另 `EnvironmentCapability.isSkySourced()` 生产零消费者，语义（`envEnabled ∧ envSource==="sky"`）**已不等于** D10 让权判据，日后复用会复现 `ce0ec8090` 修掉的原病灶。
+    **为何至今无人发现**：ADR-292 核心契约（写者唯一 / env 在场即让权 / dispose 两序）此前**只散在正文散文、无 `invariant_anchors`**，`check-knowledge-drift` 无从提示 → 已补三条锚（`envOwnsSceneEnvironment` / `isIblActive` / `LOAD_DEPS`）。
+- **[锐评 2026-10-08 新立] 会话级字段必须在 `dispose()` 复位——`createAll` 的复用短路不 dispose。**
+  `scene-capability-registry.ts|createAll` 有「同宿主 scene/renderer/camera 三引用全等 ⇒ 复用实例」短路，**复用路径不 dispose**，实例连同会话级标记原样留存。凡「有存档则让位」类的 `isStateLoaded` 守卫若不在 dispose 复位，则跨会话恒真 ⇒ 模型类别默认**永久失效且无任何报错**。
+  同族病**半治**：`postprocessing-capability.ts|dispose` 早已复位并留测试，**`environment-capability.ts|dispose` 漏复位**（本轮已补 + 守卫）。**排查同族时按符号 grep 全部持 `isStateLoaded` 的 cap，勿只修被报的那个。**
 - 只经 `setEnvState` 写 envState，不直接改对象字段（否则不派发）。
 - 能力级 enabled 原则上不入 schema（是否挂载是装配态）；**例外**：fog（首例）、water（2026-09-22 跟进）、shadow（2026-09-22 锐评 F-1 并入）、reflector（同日 F-1 二度收口并入）、**sky（同日 F-1 三度收口并入，`skyEnabled`）**、**environment（2026-10-05 设计层锐评 F-1 **四度收口**并入，`envEnabled`）** 已把「能力启停」并入 schema 单门——`setEnabled/isEnabled` 收敛为 `envState.{fog,water,shadow,reflector,sky,env}Enabled` 别名，`SceneCapability` 接口不变。运行时态（customHdrTex/currentPreset/manualPreset）仍留 cap 私有。
   （**该「原则上不入 schema」的红线已被 ADR-250（已采纳）判定为误判并推翻**——见下方 sky 收口条的「收口依据」。判「该不该并入」用下方的**并入判据**，不要援引本红线。）

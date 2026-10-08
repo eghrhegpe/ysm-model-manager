@@ -36,7 +36,7 @@ auto_fields:
     - hasActivePreview
     - InstalledPreviewInfra
     - invalidatePreview
-    - isSkyEnvironmentOn
+    - isIblActive
     - LightCapability
     - LightKey
     - mount3D

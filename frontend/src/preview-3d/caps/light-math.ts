@@ -40,14 +40,19 @@ export function spotDistanceAttenuation(
   return base * cutoffF;
 }
 
-/** PMREM 环境光开启时 ambient 让位系数（双间接光叠加防过亮/互相稀释——
- *  [doc:adr-126-p5] 光系统统一性 #3）。预览（refreshAmbientFromSky）与截图
+/** IBL（scene.environment 环境贴图）真在供图时 ambient 的让位系数——双间接光叠加防过亮/
+ *  互相稀释（[doc:adr-126-p5] 光系统统一性 #3）。预览（refreshAmbientFromSky）与截图
  *  （preview-3d/screenshot-lights.ts toScreenshotLights，ADR-136 归位）共用——
  *  ×0.5 单一事实源，改一处两处同步。
+ *
+ *  ⚠️ [锐评 2026-10-08 P0] `iblOn` 的**判据**（IBL 是否真供图）由 `scene-capability-registry.ts|
+ *  isIblActive` 单派发，勿在本文件或调用点重算。本函数只负责**系数与算式**——
+ * 历史上正是「算式收了口、判据留在每个消费点手抄」导致截图与预览分叉（X-3 漏扫 screenshot/）。
  *  模块常量不导出：外部唯一入口是 attenuateAmbientForSky()（knip 零未引用导出） */
-const SKY_ENV_AMBIENT_ATTENUATION = 0.5;
+const IBL_AMBIENT_ATTENUATION = 0.5;
 
-/** ambient 强度按 sky 环境开关套让位系数（镜像 AmbientParams 应用，公式单源） */
-export function attenuateAmbientForSky(intensity: number, skyEnvOn: boolean): number {
-  return intensity * (skyEnvOn ? SKY_ENV_AMBIENT_ATTENUATION : 1);
+/** ambient 强度按 IBL 在场与否套让位系数（镜像 AmbientParams 应用，公式单源）。
+ *  参数名 `iblOn`（原名 `skyEnvOn`）名实相符：判据自 X-3 起已是「env 在场启用」而非 sky 开关。 */
+export function attenuateAmbientForSky(intensity: number, iblOn: boolean): number {
+  return intensity * (iblOn ? IBL_AMBIENT_ATTENUATION : 1);
 }

@@ -815,6 +815,42 @@ describe("EnvironmentCapability — 持久化", () => {
     expect(cap.getPresetId(), "首启无存档 → 模型值照写").toBe("studio");
   });
 
+  // [锐评 2026-10-08 P1-1] 会话级字段复位：同宿主复用实例时模型默认不得被永久挡下。
+  // `sceneCapabilityRegistry.createAll` 的「三引用全等 ⇒ 复用」短路**不 dispose**，
+  // 故 dispose 不复位 isStateLoaded 时，跨会话残留会让 `applyModelPreset` 的
+  // 「有存档则让位」守卫恒真（换 YSM/VRM/MMD 都不再改环境预设，且无任何报错）。
+  // 同族先例：postprocessing 早已修复并留测试（postprocessing-capability.test.ts
+  // 「dispose 后 isStateLoaded 复位」），本 cap 同病未治。
+  // 判据用**行为**而非私有字段探针：dispose 后再套模型默认，必须真落到模型值。
+  it("[P1-1] dispose 后 isStateLoaded 复位：存档让位守卫不跨会话残留", () => {
+    const cap = newCap({ enabled: false }); // 避开 canvas/PMREM，只验仲裁
+    localStorage.setItem(
+      "ysm-scene-cap-environment",
+      JSON.stringify({ preset: "night", intensity: 2.2, resolution: 1024, useAsBackground: false }),
+    );
+    cap.loadState();
+    expect(cap.getPresetId()).toBe("night"); // 有存档 → isStateLoaded 置位
+    cap.dispose();
+    // 复用同一实例（等价于 createAll 的复用短路）：无存档的新会话应能重新套模型默认
+    localStorage.removeItem("ysm-scene-cap-environment");
+    cap.applyModelPreset("mmd");
+    expect(
+      cap.getPresetId(),
+      "dispose 后 isStateLoaded 应复位：残留会让守卫恒真，模型类别默认永不生效",
+    ).toBe("studio");
+  });
+
+  it("[P1-1 对照] 同实例不 dispose 直接复用 → 守卫仍应挡下（复位不得误伤让位语义）", () => {
+    const cap = newCap({ enabled: false });
+    localStorage.setItem(
+      "ysm-scene-cap-environment",
+      JSON.stringify({ preset: "night", intensity: 2.2, resolution: 1024, useAsBackground: false }),
+    );
+    cap.loadState();
+    cap.applyModelPreset("mmd");
+    expect(cap.getPresetId(), "有存档时模型默认仍须让位（复位只发生在 dispose）").toBe("night");
+  });
+
   // [ADR-292 D7 / D2] envSource 持久化 roundtrip：用户选 sky 取图通路重启后保留。
   it("saveState / loadState 保真 envSource（sky 取图通路不丢）", () => {
     setEnvState({ envSource: "sky" }, { source: "manual", force: true });

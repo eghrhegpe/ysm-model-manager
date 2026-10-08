@@ -915,5 +915,12 @@ export class EnvironmentCapability implements SceneCapability {
     }
     this.disposeEnvironment();
     this.disposeCustomCache();
+    // [锐评 2026-10-08 P1-1] 会话级字段必须复位——与 PostprocessingCapability.dispose 同款。
+    // `sceneCapabilityRegistry.createAll` 有「同宿主 scene/renderer/camera 三引用全等
+    // ⇒ 复用实例」短路（scene-capability-registry.ts|createAll），复用**不 dispose**，
+    // 实例连同 `isStateLoaded=true` 原样留存 ⇒ `applyModelPreset` 的「有存档则让位」守卫
+    // 永久挡下本会话的模型类别默认（换 YSM/VRM/MMD 都不再改变环境预设），且**无任何报错**。
+    // 历史病灶：postprocessing 早已修复并留测试，本 cap 同族同病未治（同病半治）。
+    this.isStateLoaded = false;
   }
 }

@@ -3,7 +3,7 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as THREE from "three";
-import { SceneCapabilityRegistry, sceneCapabilityRegistry, isSkyEnvironmentOn } from "./scene-capability-registry.ts";
+import { SceneCapabilityRegistry, sceneCapabilityRegistry, isIblActive } from "./scene-capability-registry.ts";
 import { SkyCapability } from "./sky-capability.ts";
 import { GroundCapability } from "./ground-capability.ts";
 import { WaterCapability } from "./water-capability.ts";
@@ -110,18 +110,23 @@ describe("SceneCapabilityRegistry 险恶测试", () => {
     expect(lookup?.getById("missing")).toBeUndefined();
   });
 
-  it("isSkyEnvironmentOn：读全局 sky 的环境开关；sky 缺席 → false", () => {
-    expect(isSkyEnvironmentOn()).toBe(false);
+  it("isIblActive：IBL 供图判据读 environment cap 的 isEnabled（非 sky 的退役开关）；cap 缺席 → false", () => {
+    expect(isIblActive()).toBe(false);
+    const envCap = makeFakeCap("environment");
+    (envCap as { isEnabled?: () => boolean }).isEnabled = () => true;
+    // ⚠️ 同时挂一个 sky：sky 在场且 isEnvironmentEnabled=true 也不该影响判据
+    //（历史病灶 X-3：预览问 env、截图问 sky ⇒ 同场景两侧亮度分叉）。
     const sky = makeFakeCap("sky");
-    (sky as { isEnvironmentEnabled?: () => boolean }).isEnvironmentEnabled = () => true;
+    (sky as { isEnvironmentEnabled?: () => boolean }).isEnvironmentEnabled = () => false;
+    sceneCapabilityRegistry.add(() => envCap);
     sceneCapabilityRegistry.add(() => sky);
     sceneCapabilityRegistry.createAll({} as unknown as CreateAllCtx);
     try {
-      expect(isSkyEnvironmentOn()).toBe(true);
+      expect(isIblActive()).toBe(true);
     } finally {
       sceneCapabilityRegistry.dispose();
     }
-    expect(isSkyEnvironmentOn()).toBe(false);
+    expect(isIblActive()).toBe(false);
   });
 
   it("loadAll 按序调用每个 cap 的 loadState", () => {

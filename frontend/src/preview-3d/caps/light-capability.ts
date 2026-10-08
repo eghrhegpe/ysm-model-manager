@@ -875,18 +875,20 @@ export class LightCapability implements SceneCapability {
   }
 
   /** ambient 应用单一出口（预览/截图同构）：ambient 强度/颜色属 light 组 envState 字段，
-   *  环境开关让位系数（×0.5）由 sky 私有态经构造注入的查询器读取——二者在此汇合。
-   *  触发方有二：①sky.setEnvironmentEnabled 会主动调本方法（sky-capability.ts:483），
-   *  确保翻转环境开关时立即重算；②light 组任意键变动的 onEnvChanged 也调用——因
-   *  lightAmbientIntensity/Color 是 light 组字段，回调里刷它本就正当。两路幂等、语义一致，
-   *  无「漏刷」窗口（旧注释称「灯组回调是补刷唯一时机」，sky 主动通知落地后已不成立）。 */
+   *  IBL 在场判据与让位系数（×0.5）在此汇合。
+   *  触发方有三：①sky.setEnvironmentEnabled 主动调本方法；②light 组任意键变动的
+   *  onEnvChanged（lightAmbientIntensity/Color 是 light 组字段，回调里刷它正当）；
+   *  ③env.setEnabled（判据换源后必需）。三路幂等、语义一致，无「漏刷」窗口。 */
   refreshAmbientFromSky(state: EnvState = envState): void {
     // [锐评 X-3 2026-10-04] 让位判据换成**真供图者**：`scene.environment` 的唯一写者是 env cap
     //（ADR-292 D1），而 sky 的 `skyEnvironment` 已自宣退役（只门控天空自持兜底路，见其注释）。
     // 读旧开关会在 `envSource=preset` + `skyEnvironment=false` 时「IBL 已供图却不让位」⇒ 双间接光过亮，
     // 反向组合则误压 ambient。判据与 D10 路由器同源：**env cap 在场且启用 ⇒ IBL 真在场**。
-    // 唤起方随之扩为三处：env.setEnabled（新增，判据换源后必需）、sky.setEnvironmentEnabled（保留，
-    // 幂等）、light 组自身回调（总是刷）。
+    // [锐评 2026-10-08 P0] 本行的判据语义与截图侧共用「IBL 是否真供图」这一口径。
+    // ⚠️ 但**取数路径刻意不同**：预览走构造注入的 `this.caps`（ctx seam），截图走组合根
+    // `scene-capability-registry.ts|isIblActive`（全局单例）。改本行为直引 registry 会重建
+    // registry↔light 模块环（历史上正是为断此环把 isSkyEnvironmentOn 上移到 registry）。
+    // 二者问的是同一个问题（`environment.isEnabled()`），不是两份判据——**改语义时两侧同改**。
     const iblOn = getTypedCap(this.caps, "environment")?.isEnabled() ?? false;
     this.ambientLight.color.setHex(state.lightAmbientColor);
     this.ambientLight.intensity = attenuateAmbientForSky(state.lightAmbientIntensity, iblOn);

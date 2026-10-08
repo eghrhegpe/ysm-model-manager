@@ -431,13 +431,13 @@ auto_fields:
     - isEnvDisposableSource
     - isFrustumCullEnabled
     - isIdentityQuat
+    - isIblActive
     - isLikelyTga
     - isPathAvailable
     - isPlainZipMagic
     - isPreviewFolderNode
     - isPreviewOverlayActive
     - isRenderableModel
-    - isSkyEnvironmentOn
     - isSsrRenderActive
     - JavaModelFace
     - JavaModelResult

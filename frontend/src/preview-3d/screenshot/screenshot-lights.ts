@@ -9,7 +9,7 @@ import { sceneInfraHost } from "@/preview-3d/adapters/shared-infra.ts";
 import { attenuateAmbientForSky } from "@/preview-3d/caps/light-math.ts";
 import type { LightInstanceParams, VolumetricParams } from "@/preview-3d/caps/light-params.ts";
 import {
-  isSkyEnvironmentOn,
+  isIblActive,
   sceneCapabilityRegistry,
 } from "@/preview-3d/caps/scene-capability-registry.ts";
 
@@ -73,10 +73,14 @@ export function toScreenshotLights(): ScreenshotLights | undefined {
   const renderer = sceneInfraHost.renderer;
   return {
     // 镜像预览的 PMREM 环境光衰减——截图与预览 ambient 同构：
-    // 开关读组合根 isSkyEnvironmentOn，系数/公式走 light-capability 的 attenuateAmbientForSky 单源
+    // 判据读组合根 isIblActive（IBL 真供图者 = env cap 在场且启用），系数/公式走
+    // light-math 的 attenuateAmbientForSky 单源。
+    // [锐评 2026-10-08 P0] 判据原读 isSkyEnvironmentOn（sky 的 skyEnvironment，已自宣退役），
+    // 与预览侧 X-3 换过的判据分叉 ⇒ 默认路径（envSource=preset + skyEnvironment=false）
+    // 截图比预览亮一档。本判据与预览共用同一个纯函数，换判据只此一处。
     ambient: {
       color: p.ambient.color,
-      intensity: on ? attenuateAmbientForSky(p.ambient.intensity, isSkyEnvironmentOn()) : 0,
+      intensity: on ? attenuateAmbientForSky(p.ambient.intensity, isIblActive()) : 0,
     },
     radius: cap.getTargetHeight(),
     key: { ...p.key, enabled: p.key.enabled && on },

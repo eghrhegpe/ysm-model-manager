@@ -15,7 +15,7 @@ auto_fields:
     - CapabilityId
     - CapabilityMap
     - disposeEnvSubscriptions
-    - isSkyEnvironmentOn
+    - isIblActive
     - MAX_MODELS
     - ModelEntry
     - SceneCapabilityFactory

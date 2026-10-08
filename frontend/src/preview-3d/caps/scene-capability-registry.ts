@@ -246,8 +246,22 @@ sceneCapabilityRegistry.add("postprocessing", (ctx) => new PostprocessingCapabil
 sceneCapabilityRegistry.add("light", (ctx) => new LightCapability(ctx));
 sceneCapabilityRegistry.add("renderMode", (ctx) => new RenderModeCapability({ scene: ctx.scene }));
 
-/** sky 环境开关（跨组件查询属组合根职责；light ambient ×0.5 协调与截图镜像
- *  （skeleton-render）共用——原 light-capability 模块函数，上移断 registry↔light 环） */
-export function isSkyEnvironmentOn(): boolean {
-  return sceneCapabilityRegistry.getById("sky")?.isEnvironmentEnabled() ?? false;
+/**
+ * **IBL（scene.environment 环境贴图）是否真在供图** —— ambient 让位系数的**单一判据事实源**
+ * （[锐评 2026-10-08 P0] 原 `isSkyEnvironmentOn()` 退役删除）。
+ *
+ * [ADR-292 D1] `scene.environment` 的唯一写者是 env cap；sky 的 `skyEnvironment` 开关
+ * **已自宣退役**，只门控「env 缺席时 sky 自持兜底装载」那条路。因此判 IBL 在不在场，
+ * 必须问 env cap 在不在、启不启用，**不能问 skyEnvironment**。
+ *
+ * 两个消费方共用本函数（改判据只此一处）：
+ *   - 预览：`LightCapability.refreshAmbientFromSky`（light-capability.ts|iblOn）
+ *   - 截图：`toScreenshotLights`（screenshot-lights.ts，WYSIWYG 必须与预览同判据）
+ *
+ * ⚠️ 判据的**手抄副本**若出现即本函数失效：历史病灶 = X-3(`56300e506`) 换了预览判据却漏扫
+ * `screenshot/` 域，致「截图比预览亮一档」。改本判据时**必须 grep `isIblActive` 与
+ * `attenuateAmbientForSky` 的全部调用点逐个复核**，勿只扫手边目录。
+ */
+export function isIblActive(): boolean {
+  return sceneCapabilityRegistry.getById("environment")?.isEnabled() ?? false;
 }

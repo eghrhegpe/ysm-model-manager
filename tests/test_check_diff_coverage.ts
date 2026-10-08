@@ -12,8 +12,9 @@
  */
 import assert from "node:assert";
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { ROOT } from "../scripts/_lib/scan-files.ts";
 import {
   addLinesFromDiff,
@@ -195,7 +196,24 @@ check("hasNoCoverableStatements：读不到文件时 fail-loud（返回 false）
 // 旧行为输出「本次无改动源码需要检查。通过。」exit 0——**与真通过不可区分**。
 // 契约：门禁模式（默认/--json）必须 exit 2；--suggest 提示模式保持非阻断 exit 0。
 // 直接 spawn 脚本进程断言退出码（纯函数测不到 exit 语义）。
+//
+// ⚠️ 环境无关（2026-10-08 CI 实证教训）：脚本在**读 coverage 之前**就会因缺文件 exit 2，
+// 若依赖 `frontend/coverage/coverage-final.json` 存在，则局部（跑过 vitest）绿、CI 红——
+// `contracts` job 刻意不跑 vitest，故该文件**恒不存在**。修法：自造最小 Istanbul 夹具到
+// 临时目录，一律 `--coverage <tmp>`，测试不依赖任何本地产物。
 {
+  const tmpDir = mkdtempSync(join(tmpdir(), "ysm-diffcov-test-"));
+  const covPath = join(tmpDir, "coverage-final.json");
+  // 最小合法 Istanbul 形态：一条已覆盖的语句（判定链要能走到底，不因空对象提前返回）
+  writeFileSync(
+    covPath,
+    JSON.stringify({
+      [join(ROOT, "frontend/src/views/app-tree/loader.ts")]: {
+        s: { "0": 1 },
+        statementMap: { "0": { start: { line: 1, column: 0 }, end: { line: 1, column: 10 } } },
+      },
+    }),
+  );
   const runScript = (argv: string[]) =>
     spawnSync(process.execPath, ["scripts/check-diff-coverage.ts", ...argv], {
       cwd: ROOT,
@@ -207,23 +225,41 @@ check("hasNoCoverableStatements：读不到文件时 fail-loud（返回 false）
     console.log("⚠ 跳过基线守卫用例：本环境无 git HEAD");
   } else {
     check("基线 == HEAD 时门禁 fail-loud（exit 2，不假绿）", () => {
-      const r = runScript(["--base", "HEAD"]);
+      const r = runScript(["--base", "HEAD", "--coverage", covPath]);
       assert.equal(r.status, 2, `应 exit 2，实为 ${r.status}；stderr=${r.stderr}`);
       assert.match(r.stderr, /基线无意义/);
     });
     check("基线 == HEAD 时报错文案指向真实成因（同一提交/变更集必为空）", () => {
-      const r = runScript(["--base", "HEAD"]);
+      const r = runScript(["--base", "HEAD", "--coverage", covPath]);
       assert.match(r.stderr, /与 HEAD 是同一提交/);
       assert.match(r.stderr, /变更集必为空/);
     });
     check("--suggest 模式遇无意义基线仍非阻断（exit 0，提示模式不得阻断）", () => {
-      const r = runScript(["--base", "HEAD", "--suggest"]);
+      const r = runScript(["--base", "HEAD", "--suggest", "--coverage", covPath]);
       assert.equal(r.status, 0, `建议模式应 exit 0，实为 ${r.status}`);
     });
     check("守卫不误伤 --files 模式（无 git 上下文，本身合法）", () => {
-      const r = runScript(["--files", "frontend/src/views/app-tree/loader.ts"]);
-      assert.equal(r.status, 0, `--files 模式应 exit 0，实为 ${r.status}；stderr=${r.stderr}`);
+      const r = runScript([
+        "--files",
+        "frontend/src/views/app-tree/loader.ts",
+        "--coverage",
+        covPath,
+      ]);
+      // 断言的是**守卫的契约**：--files 模式不该被「基线无意义」拦下。
+      // ⚠️ 不能断言 exit 0——--files 模式视所有行为变更行，覆盖率是否达标取决于夹具与
+      // 源文件规模（实测夹具只覆盖 1 行时 loader.ts 判 1<60 ⇒ exit 1，那是**覆盖率判定**
+      // 生效，不是守卫误伤）。故只锚「未因基线原因失败」：非 exit 2，且 stderr 无基线文案。
+      assert.notEqual(r.status, 2, `--files 模式不应因基线问题 exit 2；stderr=${r.stderr}`);
+      assert.doesNotMatch(r.stderr, /基线无意义/, `--files 模式无 git 上下文，不应报基线无意义`);
+      assert.doesNotMatch(r.stderr, /基准分支不可达/, `--files 模式不查基线可达性`);
     });
+    // 反向锚：正常基线（HEAD~1）不得被守卫误伤——否则守卫会把「有变更」也拦下
+    if (spawnSync("git", ["rev-parse", "-q", "--verify", "HEAD~1"], { cwd: ROOT }).status === 0) {
+      check("守卫不误伤正常基线（--base HEAD~1 不报『基线无意义』）", () => {
+        const r = runScript(["--base", "HEAD~1", "--coverage", covPath]);
+        assert.doesNotMatch(r.stderr, /基线无意义/, `HEAD~1 是合法基线，不应报无意义；stderr=${r.stderr}`);
+      });
+    }
   }
   // 反向锚：Go 版必须有同款守卫（两门禁同病，只修一处 = 假绿回流）
   check("Go 版 check-go-diff-coverage 有同款基线守卫（防只修一处）", () => {

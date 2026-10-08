@@ -297,6 +297,13 @@ go job 要用 `pnpm install` + `vite build`（`//go:embed all:frontend/dist` 前
 - **教训**：门禁的「通过」必须能与「没跑」区分。凡归属依赖 `base...HEAD` 的检查，都要断言
   **基线确实指向 HEAD 之前**，否则绿灯可能只是空转。这与 `changes` job 自测发现的
   「空变更集 ⇒ 假绿通道」（`test.yml` 内注释）是同一族问题的两个面。
+- **⚠️ 护栏自身的环境陷阱**（2026-10-08 CI 实证，本地绿 CI 红）：为断言退出码语义而 spawn
+  脚本的测试，**不可依赖本地产物**。首版护栏用默认 coverage 路径 ⇒ 脚本在**读 coverage 之前**
+  就因缺文件 exit 2 ⇒ 局部（跑过 vitest）绿、CI（`contracts` job **刻意不跑 vitest**）红。
+  修法：自造最小 Istanbul 夹具到 `mkdtempSync` 临时目录，一律 `--coverage <tmp>`。
+  同族陷阱：断言「守卫不误伤某模式」时**别断言 exit 0**——`--files` 模式视所有行为变更行，
+  是否达标取决于夹具与源文件规模；应锚**守卫契约**（非 exit 2 且 stderr 无基线文案），
+  否则测的是覆盖率而非守卫。
 
 ### 9. 契约 job 不装前端依赖（隐性防线）
 原「契约测试排在 pnpm install 之前」这一顺序是**有意的**（曾暴露 `scripts/port-align.ts` 在模块顶层

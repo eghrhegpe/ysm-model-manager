@@ -16,16 +16,25 @@
  *      （秒级版本校验失败时重型测试根本不启动，不白烧分钟）。
  *   R5 阶段门控：test.yml 的 e2e/e2e-web 必须 needs: contracts
  *      （契约失败大概率前端契约崩，最贵的一档不空跑；frontend/go 保持并行取 max）。
+ *   R6 needs 引用图：每个 job 的 needs 引用的 job 必须存在、且依赖图无环
+ *      （GitHub 要 push 后才报 startup_failure；本地用 vendored yaml 结构化解析提前拦——
+ *      2026-10-08 评估：history 有 workflow_call 权限解析失败前科，且 R4/R5 正在改 needs）。
  *
- * 判定：文本层扫描（同 test_workflow_contract_runner.ts），按 job 块切分，
- * 块内按行号比较先后。规则未命中交集（job 内二者不同时存在）→ 跳过不判，
- * 只在二者共存的 job 内强制顺序。
+ * 判定：两层模式——R1-R5 文本层扫描（同 test_workflow_contract_runner.ts），按 job 块切分，
+ * 块内按行号比较先后；规则未命中交集（job 内二者不同时存在）→ 跳过不判。
+ * R6 用 vendored `yaml` 2.9.1（scripts/_lib/vendor/yaml，与 test_knowledge_frontmatter_yaml.ts
+ * 同源解析器）完整解析 workflow，遍历 needs 引用做存在性 + 无环校验。
  *
  * 运行：node tests/test_workflow_contract_order.ts
  */
 import fs from "node:fs";
 import path from "node:path";
+import { createRequire } from "node:module";
 import { ROOT } from "../scripts/_lib/scan-files.ts";
+
+const require = createRequire(import.meta.url);
+// vendored yaml（CJS）：R6 needs 引用图的结构化解析层
+const YAML = require(path.join(ROOT, "scripts", "_lib", "vendor", "yaml", "dist", "index.js"));
 
 const WF_DIR = path.join(ROOT, ".github", "workflows");
 
@@ -146,6 +155,7 @@ const NEEDS_RULES: { id: string; why: string; file: RegExp; jobs: string[]; need
 ];
 
 let pairChecked = 0;
+let needsChecked = 0;
 for (const f of wfFiles) {
   const raw = fs.readFileSync(path.join(WF_DIR, f), "utf8");
   const lines = raw.split("\n");
@@ -172,12 +182,50 @@ for (const f of wfFiles) {
       }
     }
   }
+
+  // ─── R6：needs 引用图（存在性 + 无环，结构化解析）────────────────
+  // 用 vendored yaml 解析（与 GitHub 的 startup_failure 校验同口径，但本地/CI 提前拦）。
+  const doc = YAML.parseDocument(raw);
+  if (doc.errors.length > 0) continue; // YAML 语法错误已由 test_knowledge_frontmatter_yaml.ts 拦
+  const jobsMap = doc.toJS()?.jobs;
+  if (!jobsMap || typeof jobsMap !== "object") continue;
+  const jobNames = new Set(Object.keys(jobsMap));
+  const edges: Record<string, string[]> = {};
+  for (const [jn, jv] of Object.entries(jobsMap as Record<string, { needs?: unknown }>)) {
+    let needs = jv?.needs;
+    if (typeof needs === "string") needs = [needs];
+    if (!Array.isArray(needs)) needs = [];
+    edges[jn] = [];
+    for (const n of needs as string[]) {
+      needsChecked++;
+      if (!jobNames.has(n)) {
+        fail(`R6 违规：${f} 的 job「${jn}」needs 引用了不存在的 job「${n}」`);
+        continue;
+      }
+      edges[jn]!.push(n);
+    }
+  }
+  // 依赖图无环（DFS 三色标记）
+  const mark: Record<string, number> = {};
+  const dfs = (n: string): void => {
+    if (mark[n] === 1) {
+      fail(`R6 违规：${f} 的 needs 依赖图存在环（途经 job「${n}」）`);
+      return;
+    }
+    if (mark[n] === 2) return;
+    mark[n] = 1;
+    for (const m of edges[n] ?? []) dfs(m);
+    mark[n] = 2;
+  };
+  for (const n of jobNames) dfs(n);
 }
 
-console.log(`  扫描 ${wfFiles.length} 个 workflow，先后序交集 ${pairChecked} 处`);
+console.log(
+  `  扫描 ${wfFiles.length} 个 workflow，先后序交集 ${pairChecked} 处、needs 引用 ${needsChecked} 条`,
+);
 
 if (failed > 0) {
   console.error(`\n❌ 契约测试失败：${failed} 项`);
   process.exit(1);
 }
-console.log("✅ CI 工作流顺序不变量（R1-R5）通过");
+console.log("✅ CI 工作流顺序不变量 + needs 引用图（R1-R6）通过");

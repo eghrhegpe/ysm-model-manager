@@ -270,6 +270,29 @@ go job 要用 `pnpm install` + `vite build`（`//go:embed all:frontend/dist` 前
 - **方法论**：接一个既有门禁前，先用**真实范围实跑**（本例 `--base v1.15.0`）看它到底判什么。
   「工具已存在」不等于「接上就正确」——口径（排除域/阈值/基线）才是成败点。
 
+### 8e. ⚠️ 两个 diff-coverage 门禁在 main 直推下**恒空跑**（2026-10-08 实测发现，未修）
+
+- **现象**：CI 上两门禁的结论都是「本次无改动源码需要检查（阈值 60%）。通过。」
+  （实测 run 37806261054：`check-go-diff-coverage` 报「本次无改动 **Go** 源码」，
+  `check-diff-coverage` 报「本次无改动源码」）。
+- **根因**：两者默认 `base = origin/main`，而 CI 跑在 **push 之后**——`checkout` 的 HEAD 与
+  fetch 到的 `origin/main` 指向**同一提交** ⇒ `git diff origin/main...HEAD` 为空 ⇒
+  `srcFiles = []` ⇒ 落入「无改动源码」分支 exit 0。**是形态级空转，不是偶发。**
+- **为何 `fetch-depth: 0` 救不了**：深度只影响历史可达性；这里 base 与 HEAD 相等，取多少历史都为空。
+  （`fetch-depth: 0` 仍是**必要**前提——否则 ref 不可达会 fail-closed exit 2，那是另一种红。）
+- **影响面**：`ci.yml`（push main）与 `release.yml`（tag）两条路径**都**空跑。本地 pre-push 不受
+  影响（`gate-config.ts|GO_STATIC_TOOLS` 经 gate-blocks 调用时是工作区/暂存态上下文）。
+- **为何一直没人发现**：空跑输出是**绿灯**（exit 0 + 「通过」），与真通过不可区分。且
+  `ci.yml` 已把 `changed-base: event.before` 传进 workflow，但**脚本不消费该输入**（只认
+  `--base`/`YSM_DEADCODE_BASE` 一类的 env，diff-coverage 两者都没有）——传了没用上。
+- **候选修法**（未实施，需拍板）：
+  ① CI 侧显式传基线：`node scripts/check-diff-coverage.ts --base ${{ github.event.before }}`
+     （push 事件）／tag 场景用上一个发版 tag；
+  ② 或脚本内识别「base == HEAD」并**显式告警**（当前是静默「通过」，至少应把空转与真通过区分开）；
+  ③ 理想的 fail-loud 语义：base 与 HEAD 相等时报「基线无意义」而非「通过」。
+- **教训**：门禁的「通过」必须能与「没跑」区分。凡归属依赖 `base...HEAD` 的检查，都要断言
+  **基线确实指向 HEAD 之前**，否则绿灯可能只是空转。
+
 ### 9. 契约 job 不装前端依赖（隐性防线）
 原「契约测试排在 pnpm install 之前」这一顺序是**有意的**（曾暴露 `scripts/port-align.ts` 在模块顶层
 resolve esbuild 的缺陷）——拆分后本 job 仍不装前端依赖，保持「测试不得依赖前端依赖」这道防线。故其

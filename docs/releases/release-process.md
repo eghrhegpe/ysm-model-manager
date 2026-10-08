@@ -182,6 +182,8 @@
 | `ysm-updater-helper.exe` 缺失 | `go vet`/`go build` 报 embed 找不到文件 | 该文件由 `cmd/updater/main.go` 编译生成，被 `.gitignore(*.exe)` 忽略，CI checkout 不含 | CI 已在 test job 前构建（`release.yml:37-38`）；本地跑 `go build -o "go/updater/ysm-updater-helper.exe" "./cmd/updater"` |
 | ldflags 注入失败 | 应用内显示 `dev` | `-ldflags "-X ysm-model-manager/go/version.Version=$VerTag"` 路径写错 | 确认包路径 `ysm-model-manager/go/version.Version` 与 `go.mod` module 名一致 |
 | 契约测试修改测试文件 | CI 挂 | `tests/*.ts` 禁止修改（`release.yml:26-30`） | 只改实现，不改测试 |
+| 构建脚本残留已删组件 | Windows 打包挂：`error: manifest path \`rust-wails-bridge/Cargo.toml\` does not exist` | 组件退役时只删了目录与 CI 作业，`build-release.ps1` 仍留 `cargo build` 段与 `-tags "rust_backend"`（v1.16.0 首轮实证） | 退役组件时全仓 grep 组件名（含 `scripts/*.ps1`、`.github/**`）；本地先跑 `.\scripts\build-release.ps1 vX.Y.Z -SkipUpload` |
+| Linux 系统依赖装晚了 | `release-toolchain` 挂：`Package 'gtk4'…not found`，且后续 apt 步骤被 skipped | `go install wails3` 是源码编译、需 `gtk4.pc`；apt 排在 toolchain **之后**，wails3 缓存一 miss（版本升级必 miss）即暴露 | Linux job 内 apt 步骤必须在 `./.github/actions/release-toolchain` **之前**（v1.16.0 首轮实证） |
 
 ---
 

@@ -46,9 +46,9 @@ quick_risk_lines:
 ## 待还债（按优先级，含查证修正）
 
 ### 高 / 中（建议近期）
-- **H1 · 文档死链阻断 push（子代理误报）**：`docs/architecture.md:773` 的 `bundled_data.go cli.go` 是 ASCII 目录树美术字，非 markdown 链接；`check-doc-drift errors=0`、`pre-push-gate --static` 全绿。仓库本可推，**跳过**。
-- **H4 · 悬空 ADR（高）**：ADR-122/139/186/251 仅 🔄部分采纳但零知识卡进度跟踪，决策已定无实施态记录。建议补 `source_files`/进度卡或状态行写明「暂缓/不实施」。
-- **A2 · 92 篇 ADR 陈旧路径（中）**：ADR「相关」行引用已删除的 `frontend/src/utils/3d`（已迁 `preview-3d`），建议批量路径清洗。
+- **H1 · 文档死链阻断 push（子代理误报·已核实跳过）**：`docs/architecture.md:773` 的 `bundled_data.go cli.go` 是 ASCII 目录树美术字，非 markdown 链接；`check-doc-drift errors=0`、`pre-push-gate --static` 全绿。仓库本可推，**跳过**。
+- **H4 · 悬空 ADR（子代理误报·2026-10-08 核实已完备）**：子代理称 ADR-122/139/186/251「零知识卡进度跟踪」，实测四篇均已在 ADR 头部自标 🔄部分采纳的**精确范围**——ADR-122（tier3 Builder 化否决）、ADR-139（L3 跨 OS 不在批准范围）、ADR-186（含「被取代」字段指向 ADR-210）、ADR-251（顶部 blockquote 声明 §2.2 被 ADR-252 取代、其余有效）。状态字段已足够，符合 ADR 体系「状态记生命周期、不记实施进度」约定；ADR-186/251 更优地把取代链内嵌进 ADR 自身。**无需补卡，移除本项**。
+- **A2 · ADR 陈旧路径（中·部分真实）**：子代理称「92 篇 utils/3d 陈旧路径」被夸大——`frontend/src/utils/3d/` 已整体升格 `frontend/src/preview-3d/`（ADR-129/138/235），143 处 `utils/3d` 引用多为 ADR **历史叙述**（迁移旧名），不可机械替换；`check-adr-drift` 不查散文路径故门禁不报错。真实可修的是**事实锚点型**引用（「相关」/「新建」/「落点」行指向当前代码）。进展：① 已据 `audit-20260922.md` 实锤修正 ADR-127（2 处路径→preview-3d）、ADR-122「相关」行（旧路径+失效命名 BuildCtx）、同步 audit 自身（提交 7c268fe69）；② 长尾（其余 40+ 篇「相关」行锚点）由子代理分域判定「事实锚点 vs 历史叙述」后批量修正，目标文件均经 glob 验证存在于 preview-3d 下。
 - **A4 · R7 rtype 魔法串（中·WARN 级）**：`check-redlines` R7 仅 3 处（`const DEFAULT_NS = "ysm"` 等），其中至少 1 处是合法命名空间常量定义点；其余 250+ 处 `"ysm"` 是测试数据/文件名/合法 rtype 参数，**不可盲改**。逐处人工判定后再动。
 - **A1 · 129/333 ADR 缺 emoji 状态标记 + 取代链错配（ADR-125/136/137/138）**：治理口径自相矛盾，建议归一状态行 + 补取代导航。
 - **G1 · Rust 组件层空目录（中）**：`rust-core/`、`rust-wails-bridge/` 是空目录（仅 `rust-test-utils` 有 62 行测试工具），需在架构文档定性为「未实现/已弃用/已迁 Go」。
@@ -66,7 +66,7 @@ quick_risk_lines:
 ## 总体判断
 
 治理体系成熟度**高于**同类项目（红线脚本 `type-consistency`/`binding-check`/`check-redlines` 全绿、前端 `typecheck`/`vite build` 通过、零循环依赖、零生产 `any`/`@ts-ignore`、i18n 三语 parity 完美）。
-真实高危债集中在两条已还的 ADR 红线（H2/H3）；其余多为「已知/可收敛/被门禁冻结」的维护性债，且子代理探查对 H1/H3/G3 存在**规模夸大**，动手前务必亲自核实。
+真实高危债集中在两条已还的 ADR 红线（H2/H3）；其余多为「已知/可收敛/被门禁冻结」的维护性债，且子代理探查对 **H1（死链误报）、H3（30+ 吞错夸大，实为 2 处）、H4（悬空 ADR 误报，四篇状态已完备）、G3（重复函数多为有意保留入口）、A2（92 篇夸大，实为历史叙述+审计已盘 3 处）** 存在系统性夸大，动手前务必亲自核实。
 
 ## 相关
 

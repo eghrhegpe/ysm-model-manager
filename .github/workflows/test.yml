@@ -135,11 +135,12 @@ jobs:
             exit 1
           }
 
-      - name: ADR 登记一致性（adr-check — G-2 治理门槛）
-        shell: pwsh
-        run: |
-          node scripts/adr-check.ts | Out-String -Width 200
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      # ADR 登记一致性（adr-check）已于 2026-10-08 迁往文档域 CI（pages-deploy.yml）。
+      # 理由：它校验 docs/adr/ 文件 ↔ adr/index.md 登记表，消费方是 VitePress 侧边栏
+      # （sidebar.gen.mjs 从 index.md 生成 ADR 导航），属**文档站自洽**问题，与
+      # 「应用能否构建/运行」正交。放本 workflow 会让纯 Go/前端改动也付文档检查的代价，
+      # 且发版路径被文档问题卡死（v1.16.0 实证）。pages-deploy 的 `paths: docs/**`
+      # 保证 ADR 改动必然触发，覆盖不漏。详见 ci-tuning。
 
       # 红线零新增门禁：CI 侧远端防线（本地 pre-push 可被逃生阀绕过）。本 job 不装前端依赖，
       # check-redlines 为纯文本治理扫描。详见 ci-tuning。

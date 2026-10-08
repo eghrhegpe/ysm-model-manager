@@ -62,6 +62,16 @@ jobs:
         shell: bash
         run: node scripts/link-checker.ts --strict
 
+      # ADR 登记一致性（2026-10-08 自 test.yml 迁入）：校验 docs/adr/ 文件 ↔ adr/index.md 登记表。
+      # 与上方 link-checker 同域（都吃 docs/adr/），故同 job 收口——link-checker 管「登记了但文件不存在」
+      # 这一类（实测能抓 [BROKEN] 幽灵登记），adr-check 补它抓不到的：撞号 / 漏登 / 跳号 /
+      # 状态行格式 / 文件名编号 vs 标题编号一致。
+      # 迁出 test.yml 的理由：消费方是 VitePress 侧边栏（sidebar.gen.mjs 从 index.md 生成 ADR 导航），
+      # 属文档站自洽问题，不该让纯 Go/前端 push 付费，更不该卡死发版（v1.16.0 实证）。详见 ci-tuning。
+      - name: ADR 登记一致性（adr-check）
+        shell: bash
+        run: node scripts/adr-check.ts
+
       - name: 配置 Pages
         uses: actions/configure-pages@v5
 

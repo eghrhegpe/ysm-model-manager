@@ -96,6 +96,13 @@ function unspyCanvas(): void {
   canvasSpy = null;
 }
 
+/** [ADR-091-d1] custom HDR 四态已下沉 `EnvHdrCache`（cap 的 `hdr` 实例），
+ *  测试注入点随之迁移——`hdrOf(cap)` 直操作缓存私有字段（原 `cap.customHdrTex` 注入路径退役）。
+ *  TS `private` 运行时即普通属性，访问是等价的测试白盒。 */
+function hdrOf(cap: EnvironmentCapability): Record<string, unknown> {
+  return (cap as unknown as { hdr: Record<string, unknown> }).hdr;
+}
+
 // ---- 假渲染器（PMREM 已 mock，仅需构造不报错）----
 function makeFakeRenderer() {
   return {
@@ -203,8 +210,8 @@ describe("EnvironmentCapability — 预设切换", () => {
     setEnvState({ envUseAsBackground: true }, { source: "manual" });
     const cap = newCap();
     const hdr = makeFakeHdrTexture();
-    (cap as unknown as Record<string, unknown>).customHdrTex = hdr;
-    (cap as unknown as Record<string, unknown>).customHdrName = "my.hdr";
+    hdrOf(cap).customHdrTex = hdr;
+    hdrOf(cap).customHdrName = "my.hdr";
     cap.setPresetId("custom");
     expect(cap.getPresetId()).toBe("custom");
     expect(cap.hasCustomHdr()).toBe(true);
@@ -365,8 +372,8 @@ describe("EnvironmentCapability — buildEnvironment 管线（真实分支）", 
     scene.background = color;
     const cap = new EnvironmentCapability({ scene, renderer: makeFakeRenderer() });
     const hdr = makeFakeHdrTexture();
-    (cap as unknown as Record<string, unknown>).customHdrTex = hdr;
-    (cap as unknown as Record<string, unknown>).customHdrName = "a.hdr";
+    hdrOf(cap).customHdrTex = hdr;
+    hdrOf(cap).customHdrName = "a.hdr";
     cap.setUseAsBackground(true);
     cap.apply();
     expect(scene.environment).not.toBeNull();
@@ -534,10 +541,10 @@ describe("EnvironmentCapability — custom HDR 交互入口", () => {
     const cap = newCap();
     spyFilePicker(makeHdrFile());
     // 真实 loadCustomHdrFromFile 成功时会写入 customHdrTex 缓存，mock 保持同语义
-    vi.spyOn(cap as unknown as { loadCustomHdrFromFile: (f: File) => Promise<boolean> }, "loadCustomHdrFromFile")
+    vi.spyOn((cap as unknown as { hdr: { loadFromFile: (f: File) => Promise<boolean> } }).hdr, "loadFromFile")
       .mockImplementation(async () => {
-        (cap as unknown as Record<string, unknown>).customHdrTex = makeFakeHdrTexture();
-        (cap as unknown as Record<string, unknown>).customHdrName = "test.hdr";
+        hdrOf(cap).customHdrTex = makeFakeHdrTexture();
+        hdrOf(cap).customHdrName = "test.hdr";
         return true;
       });
     await cap.onPickCustomHdr();
@@ -551,7 +558,7 @@ describe("EnvironmentCapability — custom HDR 交互入口", () => {
   it("[D-2] 解码失败 → 不动任何键（D12 回落不改键，画面维持旧内容即正确语义）", async () => {
     const cap = newCap();
     spyFilePicker(makeHdrFile());
-    vi.spyOn(cap as unknown as { loadCustomHdrFromFile: (f: File) => Promise<boolean> }, "loadCustomHdrFromFile")
+    vi.spyOn((cap as unknown as { hdr: { loadFromFile: (f: File) => Promise<boolean> } }).hdr, "loadFromFile")
       .mockResolvedValue(false);
     setEnvState({ envSource: "preset", envPreset: "night" }, { source: "manual", force: true });
     await cap.onPickCustomHdr();
@@ -562,8 +569,8 @@ describe("EnvironmentCapability — custom HDR 交互入口", () => {
   it("onClearCustomHdr 清缓存：custom 回 studio，非 custom 保持", () => {
     const cap = newCap();
     const hdr = makeFakeHdrTexture();
-    (cap as unknown as Record<string, unknown>).customHdrTex = hdr;
-    (cap as unknown as Record<string, unknown>).customHdrName = "x.hdr";
+    hdrOf(cap).customHdrTex = hdr;
+    hdrOf(cap).customHdrName = "x.hdr";
     cap.setPresetId("custom");
     cap.onClearCustomHdr();
     expect(cap.hasCustomHdr()).toBe(false);
@@ -573,7 +580,7 @@ describe("EnvironmentCapability — custom HDR 交互入口", () => {
 
   it("[D-2 对称] onClearCustomHdr：envSource=custom 撤回通路意图，落回 preset", () => {
     const cap = newCap();
-    (cap as unknown as Record<string, unknown>).customHdrTex = makeFakeHdrTexture();
+    hdrOf(cap).customHdrTex = makeFakeHdrTexture();
     cap.setSource("custom");
     cap.setPresetId("forest"); // 用户此前的预设选择应完好保留
     cap.onClearCustomHdr();
@@ -585,7 +592,7 @@ describe("EnvironmentCapability — custom HDR 交互入口", () => {
     setEnvState({ envPreset: "night" }, { source: "manual" });
     const cap = newCap();
     const hdr = makeFakeHdrTexture();
-    (cap as unknown as Record<string, unknown>).customHdrTex = hdr;
+    hdrOf(cap).customHdrTex = hdr;
     cap.onClearCustomHdr();
     expect(cap.getPresetId()).toBe("night");
     expect(cap.hasCustomHdr()).toBe(false);
@@ -595,7 +602,7 @@ describe("EnvironmentCapability — custom HDR 交互入口", () => {
     localStorage.setItem("ysm-scene-cap-environment", JSON.stringify({ preset: "custom" }));
     const cap = newCap();
     // 先注入缓存（模拟用户已加载 HDR 后再 loadState 的罕见时序）
-    (cap as unknown as Record<string, unknown>).customHdrTex = makeFakeHdrTexture(1, 1);
+    hdrOf(cap).customHdrTex = makeFakeHdrTexture(1, 1);
     cap.loadState();
     expect(cap.getPresetId()).toBe("custom");
   });
@@ -609,7 +616,7 @@ describe("EnvironmentCapability — 缩略图与直方图", () => {
 
   it("getCustomHdrThumbnail 有缓存时降采样输出 dataURL", () => {
     const cap = newCap();
-    (cap as unknown as Record<string, unknown>).customHdrTex = makeFakeHdrTexture(4, 2, 0.5);
+    hdrOf(cap).customHdrTex = makeFakeHdrTexture(4, 2, 0.5);
     const url = cap.getCustomHdrThumbnail(8, 4);
     expect(url).toBe("data:image/png;base64,mock");
   });
@@ -617,11 +624,11 @@ describe("EnvironmentCapability — 缩略图与直方图", () => {
   it("getCustomHdrThumbnail image 缺字段 / ctx 缺失时返回 null", () => {
     const cap = newCap();
     // image 为 undefined（DataTexture 空构造）
-    (cap as unknown as Record<string, unknown>).customHdrTex = new THREE.DataTexture();
+    hdrOf(cap).customHdrTex = new THREE.DataTexture();
     expect(cap.getCustomHdrThumbnail()).toBeNull();
     // ctx 为 null（getContext 返回 null 的 mock canvas）
     spyCanvas({ ctx: null });
-    (cap as unknown as Record<string, unknown>).customHdrTex = makeFakeHdrTexture();
+    hdrOf(cap).customHdrTex = makeFakeHdrTexture();
     expect(cap.getCustomHdrThumbnail()).toBeNull();
   });
 
@@ -643,7 +650,7 @@ describe("EnvironmentCapability — 缩略图与直方图", () => {
 
   it("getLuminanceHistogram customHdrTex 分支：half-float 逐像素入 bin", () => {
     const cap = newCap();
-    (cap as unknown as Record<string, unknown>).customHdrTex = makeFakeHdrTexture(4, 2, 0.5); // 8 像素
+    hdrOf(cap).customHdrTex = makeFakeHdrTexture(4, 2, 0.5); // 8 像素
     const hist = cap.getLuminanceHistogram();
     // lum=0.5 → mapped=1/3 → bin=5
     expect(hist.reduce((a, b) => a + b, 0)).toBe(8);
@@ -1195,7 +1202,7 @@ describe("EnvironmentCapability — getMenuNodes（ADR-195 刀2 cap 直产节点
     expect(clearBtn.control!.variant).toBe("ghost");
     expect(clearBtn.control!.disabled!()).toBe(true); // 无 custom HDR → 禁用
     // 注入缓存后 clear 不再禁用
-    (cap as unknown as Record<string, unknown>).customHdrTex = makeFakeHdrTexture(1, 1);
+    hdrOf(cap).customHdrTex = makeFakeHdrTexture(1, 1);
     expect(clearBtn.control!.disabled!()).toBe(false);
   });
 

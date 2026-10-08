@@ -15,7 +15,6 @@
 // setter 内不再直接 buildEnvironment（防双写/双重建）。
 
 import * as THREE from "three";
-import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import {
   registerEnvCallback,
@@ -28,11 +27,13 @@ import type { ModelType } from "@/preview-3d/state/model-defaults.ts";
 import { pickModelDefaultFields } from "@/preview-3d/state/model-defaults.ts";
 // ADR-216：监听器集合工厂提级共享原语（fog/light/ground/water 同源；菜单局部刷新 notify 用）
 import { createListenerSet } from "@/utils/base/primitives/listener-set.ts";
+// ADR-091-d1：custom HDR 缓存状态 + 解码管线下沉（纯生命周期容器，不触碰 scene.environment/background）
+import { EnvHdrCache } from "./env-hdr-cache.ts";
 // ADR-326：环境持久化数据面下沉（schema 单一事实源派生键轨，取代 saveState 手摘键 + loadState 手写还原表）
 import { RESTORE_SOURCE, restoreEnvPartial, saveEnvState } from "./env-persist.ts";
 // P2 抽取：纯像素工具（drawEnvEquirect / 缩略图 / 直方图）已下沉 env-pixels.ts，
 // 对齐 P1 sun-beams.ts 范式（状态完全内聚、不反向依赖宿主）。
-import { customHdrThumbnail, drawEnvEquirect, luminanceHistogram } from "./env-pixels.ts";
+import { drawEnvEquirect, luminanceHistogram } from "./env-pixels.ts";
 import { buildEnvironmentNodes } from "./environment-menu.ts";
 import type { EnvSource } from "./environment-migrations.ts";
 // ADR-292 D7：旧存档 envSource 迁移（与 ground-capability 同口径的可测纯函数，零 THREE/DOM 依赖）
@@ -127,15 +128,10 @@ export class EnvironmentCapability implements SceneCapability {
   /** 当前用作 scene.background 的源纹理（非 PMREM 版），useAsBackground=true 时赋值，下次 buildEnvironment 先 dispose */
   private backgroundSrcTex: THREE.Texture | null = null;
 
-  /* ===== custom HDR 缓存（经验 637368：DataTexture 存单例，preset 切换不重复解码）===== */
-  /** RGBELoader 解码结果（DataTexture，HalfFloatType），dispose 时才释放 */
-  private customHdrTex: THREE.DataTexture | null = null;
-  /** 用户选的原始文件名（仅展示用，不持久化） */
-  private customHdrName = "";
-  /** 当前 HDR 是否正在异步加载（按钮禁用、失败会清空） */
-  private customHdrLoading = false;
-  /** 用户选 preset=custom 但没有缓存 DataTexture 时，是否已经向环形日志面板告警过（避免重复刷屏） */
-  private customHdrWarnedMissing = false;
+  /* ===== custom HDR 缓存（ADR-091-d1 下沉 EnvHdrCache）=====
+   * 四态（tex/name/loading/warnedMissing）+ 解码管线 + 缩略图归 EnvHdrCache 承载；
+   * cap 经 getter 只读 tex，写入只经 hdr.loadFromFile/hdr.dispose（通路键权威仍在 cap 侧）。 */
+  private readonly hdr = new EnvHdrCache();
   /**
    * [ADR-292 D7] 最近一次经 envSource="sky" 从 SkyCapability 取回的烘焙纹理。
    * 仅用于 pmremToSceneEnv 的**所有权守卫**（不得 dispose 别人的纹理）；
@@ -239,67 +235,15 @@ export class EnvironmentCapability implements SceneCapability {
     );
   }
 
-  /* -------- 内部：自定义 HDR 管线 -------- */
-
-  /** 释放 custom HDR 纹理缓存（不会动当前已挂 envRT/envTexture，释放整个 PMREM 管线由 disposeEnvironment 负责） */
-  private disposeCustomCache(): void {
-    if (this.customHdrTex) {
-      this.customHdrTex.dispose();
-      this.customHdrTex = null;
-    }
-    this.customHdrName = "";
-  }
-
-  /** 用 RGBELoader 从 File 解码 HDR 并写入 customHdrTex，成功返回 true，失败告警并返回 false */
-  private async loadCustomHdrFromFile(file: File): Promise<boolean> {
-    this.customHdrLoading = true;
-    let blobURL = "";
-    try {
-      // 经验：HDRLoader/RGBELoader.parse(buffer) 返回 TexData（{data,width,height}），
-      // 要获得 DataTexture 要走基类 DataTextureLoader.load 的包装链路（负责 new DataTexture 并填 format/type/magFilter...）。
-      // 所以把 File 转成 blob URL 再 loader.load()。
-      blobURL = URL.createObjectURL(file);
-      const loader = new RGBELoader();
-      loader.setDataType(THREE.HalfFloatType);
-      const tex = await new Promise<THREE.DataTexture>((resolve, reject) => {
-        loader.load(
-          blobURL,
-          (t) => resolve(t),
-          undefined,
-          (err) => reject(err),
-        );
-      });
-      tex.mapping = THREE.EquirectangularReflectionMapping; // 教训 433477：mapping 必设
-      // HDR(RGBE) 解析出来是 Linear 空间，PMREMGenerator 对 Linear 输入需要显式标记
-      tex.colorSpace = THREE.LinearSRGBColorSpace;
-      tex.needsUpdate = true;
-      // 替换旧缓存（先写新再放旧，避免引用悬空）
-      const old = this.customHdrTex;
-      this.customHdrTex = tex;
-      this.customHdrName = file.name;
-      if (old) old.dispose();
-      this.customHdrWarnedMissing = false;
-      return true;
-    } catch (err) {
-      ringLog(
-        "env",
-        `自定义 HDR 解码失败，保持当前渲染不动（通路键未拨回，画面维持旧内容）: ${err instanceof Error ? err.message : String(err)}`,
-        "warn",
-      );
-      // 失败不保留中间缓存
-      this.disposeCustomCache();
-      return false;
-    } finally {
-      if (blobURL) URL.revokeObjectURL(blobURL);
-      this.customHdrLoading = false;
-    }
-  }
+  /* -------- 内部：自定义 HDR 管线 --------
+   * 解码/缓存/缩略图已下沉 EnvHdrCache（ADR-091-d1）——`loadFromFile`/`dispose`/`thumbnail`；
+   * cap 只留交互入口（onPickCustomHdr/onClearCustomHdr），通路键权威仍在此。 */
 
   /** 用户交互入口：按钮点击 → pick file → decode → setEnvState → callback build */
   async onPickCustomHdr(): Promise<void> {
     const f = await pickHdrFile();
     if (!f) return;
-    const ok = await this.loadCustomHdrFromFile(f);
+    const ok = await this.hdr.loadFromFile(f);
     if (ok) {
       // [ADR-292 D5 补全 2026-09-21] 通路权威 = envSource（buildCustomHdrTex 只认它）。
       // 旧代码只写 envPreset，选完 HDR 通路仍停 "preset" → 新图永不上屏（按钮整体失效）。
@@ -317,7 +261,7 @@ export class EnvironmentCapability implements SceneCapability {
    *  来源单选与画面再度分裂）。envPreset 仅在残留旧语义值 custom（新语义的非法选图值）
    *  时修回 studio（同 loadState 的 preset 修复口），否则保留用户预设原样回屏。 */
   onClearCustomHdr(): void {
-    this.disposeCustomCache();
+    this.hdr.dispose();
     const patch: Partial<EnvState> = {};
     if (envState.envSource === "custom") patch.envSource = "preset";
     if (envState.envPreset === "custom") patch.envPreset = "studio";
@@ -326,23 +270,20 @@ export class EnvironmentCapability implements SceneCapability {
 
   /** 当前是否已有 custom HDR 缓存（用于按钮 hint / preset=custom 不告警） */
   hasCustomHdr(): boolean {
-    return this.customHdrTex !== null;
+    return this.hdr.tex !== null;
   }
   getCustomHdrName(): string {
-    return this.customHdrName;
+    return this.hdr.name;
   }
   isCustomHdrLoading(): boolean {
-    return this.customHdrLoading;
+    return this.hdr.loading;
   }
 
-  /**
-   * 把 customHdrTex（HalfFloatType DataTexture）降采样为缩略图 dataURL。
-   * 流程：读半浮点 RGB → 块平均到 thumbW×thumbH → Reinhard tonemap → sRGB 8-bit → canvas.toDataURL。
-   * 没有自定义 HDR 时返回 null。
-   * P2 抽取：像素运算下沉 env-pixels.ts#customHdrThumbnail，本方法仅注入实例状态。
-   */
+  /** custom HDR 缩略图 dataURL（ADR-091-d1：像素运算与缓存均下沉，本方法仅**对外 API 委托**
+   *  `EnvHdrCache.thumbnail`——`environment-menu.ts` 跨文件消费，保留公开方法稳定菜单层契约）。
+   *  无缓存返回 null；像素运算见 env-pixels.ts#customHdrThumbnail。 */
   getCustomHdrThumbnail(thumbW = 128, thumbH = 64): string | null {
-    return customHdrThumbnail(this.customHdrTex, thumbW, thumbH);
+    return this.hdr.thumbnail(thumbW, thumbH);
   }
 
   /** 从程序化预设生成缩略图 dataURL（thumbW×thumbH/2，2:1 比例）。custom 预设返回 null。 */
@@ -367,7 +308,7 @@ export class EnvironmentCapability implements SceneCapability {
     if (
       this.backgroundSrcTex &&
       isEnvDisposableSource(this.backgroundSrcTex, {
-        customHdrTex: this.customHdrTex,
+        customHdrTex: this.hdr.tex,
         skySourcedTex: this.skySourcedTex,
       })
     ) {
@@ -414,9 +355,9 @@ export class EnvironmentCapability implements SceneCapability {
     // 通路判定只看 envSource。兼容旧存档：只有 envPreset==="custom" 而无 envSource 键时
     // 由 normalizeEnvLegacyState 迁移补写 envSource，故此处无需再兼容 preset 信号。
     if (envState.envSource !== "custom") return null;
-    if (this.customHdrTex) return this.customHdrTex;
-    if (!this.customHdrWarnedMissing) {
-      this.customHdrWarnedMissing = true;
+    if (this.hdr.tex) return this.hdr.tex;
+    if (!this.hdr.warnedMissing) {
+      this.hdr.warnedMissing = true;
       ringLog(
         "env",
         "来源为「自定义 HDR」但尚未加载文件，暂以预设渲染。请点击「选择 HDR 文件」加载 .hdr。",
@@ -446,7 +387,7 @@ export class EnvironmentCapability implements SceneCapability {
       //      导致天空 IBL 与后续烘焙出现「纹理已释放」类故障。
       if (
         isEnvDisposableSource(srcTex, {
-          customHdrTex: this.customHdrTex,
+          customHdrTex: this.hdr.tex,
           skySourcedTex: this.skySourcedTex,
         }) &&
         this.backgroundSrcTex !== srcTex
@@ -564,7 +505,7 @@ export class EnvironmentCapability implements SceneCapability {
    * P2 抽取：像素运算下沉 env-pixels.ts#luminanceHistogram，本方法仅注入实例状态。
    */
   getLuminanceHistogram(): number[] {
-    return luminanceHistogram(this.customHdrTex, this.backgroundSrcTex);
+    return luminanceHistogram(this.hdr.tex, this.backgroundSrcTex);
   }
 
   /**
@@ -589,7 +530,7 @@ export class EnvironmentCapability implements SceneCapability {
     if (
       this.backgroundSrcTex &&
       isEnvDisposableSource(this.backgroundSrcTex, {
-        customHdrTex: this.customHdrTex,
+        customHdrTex: this.hdr.tex,
         skySourcedTex: this.skySourcedTex,
         extraExclude,
       })
@@ -699,7 +640,7 @@ export class EnvironmentCapability implements SceneCapability {
   }
 
   setPresetId(id: EnvPresetId): void {
-    if (id === "custom" && !this.customHdrTex) {
+    if (id === "custom" && !this.hdr.tex) {
       // preset=custom 但没缓存 → 不 setEnvState（没内容），提示用户点"选择 HDR"按钮，保持现有预设
       ringLog("env", "「自定义 HDR」需要先选择 .hdr 文件，请点击下方按钮选择 HDR 文件。", "warn");
       return;
@@ -764,7 +705,7 @@ export class EnvironmentCapability implements SceneCapability {
     // 保存 preset 时：若当前是 custom + 有缓存 → 存 preset=custom；
     // 若当前是 custom + 无缓存（告警回退到 studio 时还没 buildEnvironment 成功）→ 存 studio
     const savePreset: EnvPresetId =
-      envState.envPreset === "custom" && !this.customHdrTex ? "studio" : envState.envPreset;
+      envState.envPreset === "custom" && !this.hdr.tex ? "studio" : envState.envPreset;
     // [ADR-326] 键轨派生自 schema（ENV_KEYS + getArchiveKey 别名映射），取代手摘 6 键——
     // 加 schema 键自动带出持久化，漏登记结构性不可能。
     // override 只承载运行时裁决（custom 无缓存回落 studio 的 preset）；
@@ -826,9 +767,9 @@ export class EnvironmentCapability implements SceneCapability {
     // 而 normalizeEnvLegacyState 会按 preset==="custom" 迁移出 envSource==="custom"，
     // 若不在此处压掉，就会出现「来源显示自定义 HDR、实际渲染 studio」的两键分裂。
     // 放在读回之后 = 让「无缓存」这一运行时事实成为最终裁决者。
-    if (partial.envPreset === "custom" && !this.customHdrTex) {
-      if (!this.customHdrWarnedMissing) {
-        this.customHdrWarnedMissing = true;
+    if (partial.envPreset === "custom" && !this.hdr.tex) {
+      if (!this.hdr.warnedMissing) {
+        this.hdr.warnedMissing = true;
         ringLog(
           "env",
           "上次设置为自定义 HDR，但 HDR 文件未持久化保存，已自动回退到「工作室」预设。请重新选择 HDR 文件。",
@@ -901,7 +842,7 @@ export class EnvironmentCapability implements SceneCapability {
       this.scene.background = this.prevBackground;
     }
     this.disposeEnvironment();
-    this.disposeCustomCache();
+    this.hdr.dispose();
     // [锐评 2026-10-08 P1-1] 会话级字段必须复位——与 PostprocessingCapability.dispose 同款。
     // `sceneCapabilityRegistry.createAll` 有「同宿主 scene/renderer/camera 三引用全等
     // ⇒ 复用实例」短路（scene-capability-registry.ts|createAll），复用**不 dispose**，

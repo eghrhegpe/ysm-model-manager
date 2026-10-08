@@ -26,13 +26,6 @@ pitfalls:
   - "**火绒（HipsDaemon 在跑）是被冤枉的红鲱鱼**：其防护记录无任何 YSM 条目（仅无关 ssh.exe）；「有安全软件在跑」不等于「是它干的」，先看它的防护记录有无条目再定罪"
   - ACL 里的 CodexSandboxUsers:(RX) 继承项（Codex CLI 沙箱产物）同样是无害红鲱鱼；AI 代理 shell 令牌经 whoami /groups 核实无沙箱组，前后台任务写探测均成功
   - 变量剥离要彻底：第一次换名实验同时改变了「名字+位置」两个变量，差点把「按名字拦截」的错误结论写进卡里——**一次只动一个变量**
-处置：
-  - 立即恢复：把构建产物复制到仓外再跑（cp bin/xxx.exe %TEMP%/ 后运行即可全功能）
-  - 正式发布/安装的 exe 在仓外，终端用户不受影响；仅影响「从仓内直接运行构建产物」的开发/调试场景
-  - 长治：在 ZCode/Codex 应用设置中查找「工作区保护/沙箱」开关放行；或固化「仓外跑 dev 产物」工作流
-  - 代码侧无需也不应改动：WriteFileAtomic/CreateTemp 无问题，失败已按 ADR-044 sentinel 留痕
-  - ⚠️ 勿把配置目录迁去 LocalAppData 来"绕开"：Temp 被拦才是硬伤（os.CreateTemp/wails/更新器都依赖系统 Temp，绕不开），且白名单随策略版本可能变化——治本在沙箱设置不在应用代码
-  - 区分两类现象：仓内 exe 写被拒（本卡）≠ 未签名 exe 复制后运行弹 SmartScreen「无法验证发布者」（Mark of the Web 常规警告，见签名话题）
 quick_groups:
   - 文件操作与标签
 quick_intents:
@@ -69,3 +62,12 @@ invariant_anchors:
 ## 相关
 
 - [ysm-wasi](./ysm-wasi.md) — 同日 ADR-317 桥解码联调中首次暴露此症状，一度干扰排障方向
+
+## 处置
+
+- 立即恢复：把构建产物复制到仓外再跑（cp bin/xxx.exe %TEMP%/ 后运行即可全功能）
+- 正式发布/安装的 exe 在仓外，终端用户不受影响；仅影响「从仓内直接运行构建产物」的开发/调试场景
+- 长治：在 ZCode/Codex 应用设置中查找「工作区保护/沙箱」开关放行；或固化「仓外跑 dev 产物」工作流
+- 代码侧无需也不应改动：WriteFileAtomic/CreateTemp 无问题，失败已按 ADR-044 sentinel 留痕
+- ⚠️ 勿把配置目录迁去 LocalAppData 来"绕开"：Temp 被拦才是硬伤（os.CreateTemp/wails/更新器都依赖系统 Temp，绕不开），且白名单随策略版本可能变化——治本在沙箱设置不在应用代码
+- 区分两类现象：仓内 exe 写被拒（本卡）≠ 未签名 exe 复制后运行弹 SmartScreen「无法验证发布者」（Mark of the Web 常规警告，见签名话题）

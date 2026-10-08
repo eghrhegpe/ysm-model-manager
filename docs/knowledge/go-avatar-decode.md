@@ -7,7 +7,6 @@ source_files:
   - go/avatar/avatar_extract_ysm.go
 auto_fields:
   symbols_with_lines: []
-> ⚠️ Node+WASM 解码桥 avatar_decode.go 已按 ADR-316 退役（2026-09-27）：.ysm 解码改消费 ysm.DecodeYSM 注入点（go/ysmwasi wazero 内存直解，知识卡 ysm-wasi.md）；本卡只余头像纯函数与扩展名分界部分。
 
 quick_groups:
   - 3D 预览与模型追加
@@ -34,6 +33,8 @@ status: active
 # Go 头像提取：纯函数 vs Node+WASM 解码分界
 
 ## 概览
+
+> ⚠️ Node+WASM 解码桥 avatar_decode.go 已按 ADR-316 退役（2026-09-27）：.ysm 解码改消费 ysm.DecodeYSM 注入点（go/ysmwasi wazero 内存直解，见知识卡 [ysm-wasi](./ysm-wasi.md)）；本卡只余头像纯函数与扩展名分界部分。
 
 `go/avatar` 提取作者头像有**两条路**：纯 Go 函数链（零 IO、零 WASM）与 `DecodeYSMData`（Node.js + WASM glue 子进程解码 .ysm）。**包头「不依赖 Wails runtime」≠ 无外部运行时依赖**——它只排除 Wails runtime，Node 子进程不受约束。曾因此误判为「纯 Go 解 zip」，实为 `exec.CommandContext` 调 Node 跑 WASM glue（2026-08-27 人工修正）。
 

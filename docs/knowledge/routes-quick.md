@@ -606,7 +606,7 @@
 | internal/app 不得 import go/cli（ADR-145 架构：两侧互不依赖，main 装配）——规格经 main.go cliSpecsToDTO 字段级转换注入，go/cli 侧字段改名/删除会在此编译失败（有意为之的漂移防线） | - | - |
 | 新增命令参数若不登记 ParamSpec，桥接层走 legacy 降级（空串/0/false 丢弃）——与 ADR-173 前行为等价，但拿不到声明序输出与显式空值能力；无 flag 命令（cache-status/perf-log）无需登记 | - | - |
 | scripts/_lib/cli-registry.ts 的 CMD_RE 只解析到 runFn 不强制收尾 ——RegisterCommandC 尾随变参 ParamSpec 拆行注册合法（2026-09-03 教训：曾要求完整 `)` 闭合致 5 命令从注册表解析消失、completions/文档 parity 双双拉红） | `)` | - |
-| **flag 注册必须留在命令 run 函数体内**（2026-10-08 复核教训）：`scripts/_lib/cli-registry.ts` 的 `extractFlags` 只对 runFn 函数体正则提取 `fs.String/Bool/Int(…)`——把注册抽到共享 helper（如 `scan_flags.go`）会让 `docs/cli-commands.md` 丢掉选项表、`completions/_ysm.ps1`/`ysm.bash` 丢掉 flag tab 补全，且 doctor 自洽不红。**重构只抽，注册行不迁**；`go/cli/scan_flags.go` 头注已固化此约束 | `解析 + 校验` | - |
+| "**flag 注册必须留在命令 run 函数体内**（2026-10-08 复核教训）：`scripts/_lib/cli-registry.ts` 的 `extractFlags` 只对 runFn 函数体正则提取 `fs.String/Bool/Int(…)`——把注册抽到共享 helper（如 `scan_flags.go`）会让 `docs/cli-commands.md` 丢掉选项表、`completions/_ysm.ps1`/`ysm.bash` 丢掉 flag tab 补全，且 doctor 自洽不红。**重构只抽，注册行不迁**；`go/cli/scan_flags.go` 头注已固化此约束" | `解析 + 校验` | - |
 | 直接请求 MANAGE_EXTERNAL_STORAGE | - | 新版 Android 拒绝、Google Play 下架；必须走 SAF |
 | 目录选择未回传 URI | - | 后续访问失败；必须经 android-bridge 持久化 URI |
 | 各组件各自注册 | - | 重复监听、返回键冲突；必须经 registerAndroidEvents |

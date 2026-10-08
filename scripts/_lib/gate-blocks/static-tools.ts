@@ -205,7 +205,7 @@ export function runTools(ctx: GateCtx, tools: readonly GateTool[]): void {
         time: phaseMs,
         note: transient
           ? `本段实测 ${(phaseMs / 1000).toFixed(1)}s，超预算 ${over}s；但最慢项复跑仅 ` +
-            `${(rerunMs / 1000).toFixed(1)}s（首次 ${(worst.ms / 1000).toFixed(1)}s）⇒ 判为环境瞬态` +
+            `${(rerunMs / 1000).toFixed(1)}s（首次 ${worst ? (worst.ms / 1000).toFixed(1) : "?"}s）⇒ 判为环境瞬态` +
             `（冷缓存/并行负载），不阻断。最慢项：${top}。` +
             `若此类瞬态频繁出现，说明机器负载或缓存策略需调整——偶发慢仍是症状。`
           : `本段实测 ${(phaseMs / 1000).toFixed(1)}s，超预算 ${over}s，且最慢项复跑 ` +

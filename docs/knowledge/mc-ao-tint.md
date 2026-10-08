@@ -19,8 +19,6 @@ auto_fields:
     - packTextureLabel
   reference_files:
     - PrismarineJS/prismarine-viewer viewer/lib/models.js (getSectionGeometry)  # 仅只读参考，不引入其渲染器
-reference_files:
-  - PrismarineJS/prismarine-viewer viewer/lib/models.js (getSectionGeometry)  # 仅只读参考，不引入其渲染器
 use_when:
   - MC 方块模型 AO / 平滑光照
   - biome tint / 草叶水配色 / 4 类 tint

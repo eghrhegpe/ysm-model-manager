@@ -275,8 +275,8 @@ auto_fields:
     - EnvPreset
     - EnvPresetId
     - EnvSectionId
-    - EnvSource
     - envShouldYieldSlot
+    - EnvSource
     - envState
     - EnvState
     - EnvStateKey
@@ -432,8 +432,8 @@ auto_fields:
     - isEnvCallbacksSuspended
     - isEnvDisposableSource
     - isFrustumCullEnabled
-    - isIdentityQuat
     - isIblActive
+    - isIdentityQuat
     - isLikelyTga
     - isPathAvailable
     - isPlainZipMagic
@@ -765,11 +765,12 @@ auto_fields:
     - resolveSemanticBones
     - resolveSemanticMorphs
     - resolveVmdBindings
-    - restoreBySchema
+    - RESTORE_SOURCE
     - restoreFields
     - restoreLightParams
     - restoreModelGroupsVisible
     - restoreState
+    - restoreWaterSchemaKeys
     - resumeEnvCallbacks
     - rewriteVmdTracks
     - ringLog
@@ -1033,6 +1034,8 @@ auto_fields:
     - WorkerBridge
     - WorkerErrorStrategy
     - workerMmdUpdateWithMixer
+    - writeOpts
+    - WriteOpts
     - WriteSource
     - writeVmdPositionScale
     - YSM_MODEL_SCHEMA_ID

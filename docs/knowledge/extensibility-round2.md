@@ -37,7 +37,6 @@ status: snapshot
 # 而 gen 会据 source_files 派生 tests 与 auto_fields.symbols_with_lines，
 # 曾把本卡 frontmatter 撑到近三百行、两百多个符号名，无人读也无人消费。
 affected: false
-supersedes: extensibility-index
 last_verified: 2026-10-06
 invariant_anchors:
   - go/types/registry/extensions.go|ShouldHashExt

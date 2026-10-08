@@ -40,10 +40,6 @@ auto_fields:
     - frontend/src/utils/animation/animation-controller.test.ts
     - frontend/src/utils/animation/animation.test.ts
     - frontend/src/utils/animation/molang.test.ts
-  related_adrs:
-    - ADR-061-3d (含勘误记录)
-    - ADR-100 (YSM 骨骼动画)
-    - ADR-113 (Molang 表达式支持)
 use_when:
   - YSM 动画
   - 基岩动画
@@ -60,13 +56,6 @@ quick_risk_lines:
 pitfalls:
   - 手写动画解析 → 与基岩版 animation.json 语义不一致；必须经 ysm-animation-player
   - Molang 求值未缓存 → 每帧重复求值、性能差；必须缓存 Molang 表达式
-created: 2026-08-xx
-updated: 2026-08-xx
-description: YSM (Bedrock) 模型在 3D 预览中的动画解析、求值与渲染注入管线
-related_adrs:
-  - ADR-061-3d (含勘误记录)
-  - ADR-100 (YSM 骨骼动画)
-  - ADR-113 (Molang 表达式支持)
 perf:
   - cpu-bound
 status: active
@@ -138,3 +127,9 @@ rAF 循环 → Player.apply(dt) → Three.js 画面随时间轴动起来
 1. **不要在 `model3d.ts` 里找动画代码**：那里只有纯渲染逻辑。
 2. **性能关注点**：`applyPose` 遍历骨骼数组是 CPU 密集操作。低端 Android WebView 需监测 rAF 掉帧，必要时引入跳帧策略。
 3. **坐标系口径**：Bedrock (Y-up) 与 Three.js (Y-up) 一致，但旋转通道的正负号在历史提交 `86c6a178` 中经历过校正（弧度/角度混合问题）。
+
+## 相关 ADR
+
+- [ADR-061-3d.md](../adr/ADR-061-3d.md)（含勘误记录）
+- [ADR-100](../adr/ADR-100-ysm-bone-animation.md)（YSM 骨骼动画）
+- [ADR-113](../adr/ADR-113-ysm-molang.md)（Molang 表达式支持）

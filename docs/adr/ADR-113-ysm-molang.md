@@ -5,7 +5,6 @@ status: ✅ 已采纳
 date: 2026-08-22
 author: AI proxy
 related: ADR-100（YSM 骨骼动画播放 L1-L3）、ADR-042 §2.1（欧拉序裁决）
-supersedes: ADR-101（Molang 求值器撞号废弃）
 ---
 
 # ADR-113：YSM 骨骼动画 Molang 求值器与欧拉序修复（L4）

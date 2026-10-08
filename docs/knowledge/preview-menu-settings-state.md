@@ -44,7 +44,6 @@ auto_fields:
     - renderCapSlider
     - renderCapToggle
     - resetSettingsListeners
-    - restoreBySchema
     - restoreState
     - ringLog
     - SceneCapability

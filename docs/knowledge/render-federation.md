@@ -90,13 +90,6 @@ quick_risk_lines:
 pitfalls:
   - 各自创建 renderer → 多 rAF 循环、GPU 资源浪费；必须经 render-federation 共享
   - rAF 未统一节流 → 帧率不统一；必须经 federation 的 rAF 调度
-created: 2026-08-xx
-updated: 2026-08-xx
-description: ADR-073 确立的联邦渲染能力架构：caps/ 下的 SceneCapability 通过 sceneCapabilityRegistry 统一注册、自动挂载与菜单暴露
-related_adrs:
-  - ADR-073-federal-render-caps
-  - ADR-084-personal-lighting
-  - ADR-097-scene-capability-registry
 perf:
   - gpu-bound
 invariant_anchors:
@@ -108,6 +101,8 @@ status: active
 # 联邦渲染能力 (Render Federation)
 > **架构事实已迁移至 **[architecture.md#73-场景能力注册表adr-073](../architecture.md#73-场景能力注册表adr-073)。
 > 本卡仅保留 frontmatter 机器字段（symbols/tests/quick_risk_lines），架构描述以 architecture.md 为准。
+
+相关 ADR：[ADR-073-federal-render-caps](../adr/ADR-073-federal-render-caps.md)、[ADR-084-personal-lighting](../adr/ADR-084-personal-lighting.md)、[ADR-097-scene-capability-registry](../adr/ADR-097-scene-capability-registry.md)
 
 ---
 

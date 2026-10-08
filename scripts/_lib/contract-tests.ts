@@ -52,6 +52,7 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "check-knowledge-card-references.ts": ["docs", "tests"], // 5.11 卡间引用断链 WARN
   "check-knowledge-anchor-def-kind.ts": ["docs", "tests"],
   "check-knowledge-card-status.ts": ["docs", "tests"],
+  "check-knowledge-topkeys.ts": ["docs", "tests"], // P1 顶层键白名单（fail-closed）：schema 外键 ERROR
   "check-knowledge-rename-migration.ts": ["docs", "tests"],
   "check-gen-autogen-stale-cleanup.ts": ["docs", "tests"], // gen-knowledge-autogen：source_files 消失时回收 tests/auto_fields 派生块
   "check-knowledge-derived-symbol-count.ts": ["docs", "tests"], // 5.14 派生元数据体量护栏（≥100 符号 WARN）
@@ -428,6 +429,11 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
     "docs/knowledge/AGENTS.md",
   ],
   "check-knowledge-card-status.ts": [
+    "scripts/check-knowledge-drift.ts",
+    "scripts/_lib/knowledge-cards.ts",
+    "docs/knowledge/AGENTS.md",
+  ],
+  "check-knowledge-topkeys.ts": [
     "scripts/check-knowledge-drift.ts",
     "scripts/_lib/knowledge-cards.ts",
     "docs/knowledge/AGENTS.md",

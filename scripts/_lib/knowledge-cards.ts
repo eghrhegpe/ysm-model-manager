@@ -110,3 +110,35 @@ export const QUICK_GROUPS = [
 
 /** 知识卡目录（供各 gen-* 脚本复用，避免各自 path.join 漂移）。 */
 export const KNOW_DIR = path.join(ROOT, "docs", "knowledge");
+
+/**
+ * CARD_TOP_KEYS — 知识卡 frontmatter 顶层键白名单（2026-10-08 P1 落地，fail-closed）。
+ *
+ * 背景：2026-10 存量审计发现 11 卡使用 schema 外野字段（last_verified/created/updated/
+ * related_adrs/reference_files/supersedes/description），零消费者零校验——写进去没人管。
+ * 处置（混合方案）：created/updated/related_adrs/reference_files/supersedes/description
+ * 清理归零（占位符毒/复制/机制冲突），last_verified 收编进白名单（真实日期、活字段、
+ * 填补「最后实证验证时间」空白——git 只能给改动时间，给不了「被验证过」的语义）。
+ * 此后任何 schema 外顶层键 → check-knowledge-drift ERROR。
+ * 新增合法字段只改本常量（checker/gen 自动跟上），勿在卡里发明键名。
+ */
+export const CARD_TOP_KEYS: Record<string, string> = {
+  adr: "相关 ADR 引用",
+  affected: "源码变更影响匹配开关（仅 affected: false 合法）",
+  auto_fields: "机器推导字段域（symbols_with_lines/tests/reference_files 等）",
+  category: "分类（core/go/ui/feature/rendering/utils/config）",
+  invariant_anchors: "机制锚点（文件|符号）",
+  kind: "卡标识（kebab-case，= 文件名）",
+  last_verified: "最后实证验证时间（2026-10-08 收编）",
+  name: "卡名（= H1 标题）",
+  perf: "性能画像词表（PERF_TAGS）",
+  pitfalls: "陷阱清单",
+  quick_groups: "路由分组（受控词表 QUICK_GROUPS）",
+  quick_intents: "路由意图关键词",
+  quick_risk_lines: "风险红线（人读）",
+  source_files: "真实源码路径",
+  status: "生命周期（受控词表 CARD_STATUS）",
+  tests: "关联测试文件",
+  tier: "architecture|leaf",
+  use_when: "适用场景关键词",
+};

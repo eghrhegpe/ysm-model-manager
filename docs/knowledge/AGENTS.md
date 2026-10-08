@@ -23,6 +23,9 @@ frontmatter 必填字段：`kind`（kebab-case，=文件名）/ `name`（=H1 标
 | `affected: false` | 仅此值合法：快照/报告型卡退出 `--affected` 匹配 | 手写 | — |
 | `status` | 卡生命周期（受控词表 `scripts/_lib/knowledge-cards.ts` CARD_STATUS）：`active`（默认，随源码演进）/ `draft`（起草中，`new-knowledge-card.ts` 模板默认，定稿后改 active）/ `snapshot`（一次性快照/报告，**应配 `affected: false`**）/ `archived`（已归档）/ `superseded`（被取代，应在正文标注取代关系）。区别于 ADR 采纳状态（`adr-status-categories.ts`） | 手写 | 词表外 ERROR；snapshot 缺 `affected: false` WARN |
 | `perf` | 受控词表（`scripts/_lib/knowledge-cards.ts` PERF_TAGS）：cpu-bound\|io-bound\|gpu-bound\|concurrent\|single-thread\|memory-heavy | 手写 | 词表外 ERROR |
+| `last_verified` | 卡的最后实证验证时间（`YYYY-MM-DD`，2026-10-08 收编）：记录「被验证过」的时间，git 只给改动时间给不了验证语义；验证后卡被改动应顺手更新 | 手写 | — |
+
+**顶层键白名单（P1，2026-10-08 落地，fail-closed）**：frontmatter 顶层键全集 = `scripts/_lib/knowledge-cards.ts` CARD_TOP_KEYS（含上表全部字段 + `last_verified`）。schema 外顶层键（历史野字段 `created`/`updated`/`description`/`related_adrs`/`reference_files`/`supersedes` 已清理归零）→ check-knowledge-drift ERROR 阻断。**新增字段只能收编进 CARD_TOP_KEYS，禁止在卡里发明键名**；`auto_fields` 内的子键不受白名单约束（检查只枚举行首无缩进的键）。
 
 ## 常用命令
 

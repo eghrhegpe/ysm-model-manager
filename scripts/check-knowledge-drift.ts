@@ -41,6 +41,7 @@ import {
 import { gitMaybe } from "./_lib/git-ref.ts";
 import {
   CARD_STATUS,
+  CARD_TOP_KEYS,
   KNOWLEDGE_NON_CARDS,
   KNOWLEDGE_ORDER,
   PERF_TAGS,
@@ -238,6 +239,20 @@ function checkKnowledgeMeta(cards: any[]) {
       warns.push(
         `知识卡 ${cf} 的 status: snapshot 未配 affected: false（快照/报告型卡应退出 --affected 匹配，见 AGENTS.md affected 字段语义）`,
       );
+    }
+
+    // P1（2026-10-08）：顶层键白名单——schema 外键零容忍（fail-closed）。
+    // 背景：存量 11 卡曾用 last_verified/created/updated/related_adrs/reference_files/supersedes/
+    // description 等野字段，零消费者零校验。处置：created/updated/related_adrs/reference_files/
+    // supersedes/description 清理归零，last_verified 收编进 CARD_TOP_KEYS。
+    // 新字段只能收编进 _lib/knowledge-cards.ts CARD_TOP_KEYS，禁止在卡里发明键名。
+    // getAllScalars 只匹配行首 `key:`（无缩进），天然只枚举顶层键，auto_fields 子键不误伤。
+    for (const k of Object.keys(getAllScalars(fm))) {
+      if (!(k in CARD_TOP_KEYS)) {
+        errors.push(
+          `知识卡 ${cf} 使用 schema 外顶层键「${k}」（白名单: ${Object.keys(CARD_TOP_KEYS).sort().join("|")}；新增字段须收编进 _lib/knowledge-cards.ts CARD_TOP_KEYS）`,
+        );
+      }
     }
     // 5.12 演进态 status + affected:false + 无 source_files → 无漂移安全网（WARN，不阻断）
     // 演进态 = active / draft（随源码演进维护）；冻结态 snapshot / archived / superseded 退出匹配合理。

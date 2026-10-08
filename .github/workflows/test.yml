@@ -506,3 +506,96 @@ jobs:
           name: e2e-web-report
           path: frontend/test-results/
           if-no-files-found: ignore
+
+  # ── 汇总 Job（2026-10-08 第三轮技术债审计 P0：可视化空洞）────────────────────────
+  # 病灶（实测 run 37788034328）：7 个 job 里 5 个无 needs 自由起飞，读者在 Actions 面板上
+  # 看到的是「一堆灰色块」——skipped 与「本来不跑」不可区分（skipped 的 job steps=0、
+  # startedAt==completedAt，无时间线），唯一有清晰视觉语义的 cancelled（黄 + Cancel）
+  # 恰恰是「被新 push 作废、不用关心」的终态。**唯一看得懂的终态，是唯一不用关心的终态。**
+  # 更糟的是 timeout（40min 静默红）与被上游连坐的 skipped 在面板上同样不可分辨。
+  # 本 job 把「红在哪 / 还剩什么没跑 / 各自多久」压成一页 GITHUB_STEP_SUMMARY。
+  #
+  # 设计要点：
+  #   1. needs 列全 7 个 + `if: always()`——缺任一条，上游失败时本 job 就不跑，
+  #      恰好在最需要它的时候消失（这是此类汇总 job 最常见的写法错误）。
+  #   2. 不 checkout、不装依赖：纯读 `needs.*.result` 上下文，秒级、零成本，自身不可能因
+  #      环境问题而红（它是读者判断「谁红了」的唯一入口，不能自己成为噪声源）。
+  #   3. 用 `toJSON(needs)` 统一渲染，避免手写 7 份重复的 表格行（新增 job 时只需改 needs 列表）。
+  summary:
+    name: 汇总（谁红了 / 还剩什么没跑）
+    needs: [contracts, frontend, frontend-gates, go, go-analysis, e2e, e2e-web]
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: 生成 job 结论表
+        shell: pwsh
+        run: |
+          $raw = '${{ toJSON(needs) }}'
+          try {
+            $needs = $raw | ConvertFrom-Json -ErrorAction Stop
+          } catch {
+            # 解析失败必须显式红：否则下方 `$needs.$k.result` 静默取 $null → 回落 'unknown'
+            # → 无 failure/skipped → 打印「全部通过」＝假绿。汇总层绝不能自己成为假绿源头。
+            Write-Error "needs 上下文解析失败（无法生成可信汇总，拒绝输出绿结论）：$_"
+            exit 1
+          }
+          # 结论语义映射：success/failure/cancelled/skipped 四种终态在面板上的可辨识度
+          $label = @{
+            'success'   = '✅ 通过'
+            'failure'   = '❌ 失败'
+            'cancelled' = '⚪ 已取消（被新 push 作废，通常无需处理）'
+            'skipped'   = '⏭️ 跳过（上游未通过或平台不跑——见「门控」列区分）'
+          }
+          # job 门控关系（与上方各 job 的 needs 保持一致；改 needs 时同步本表）
+          $gated = @{ 'e2e' = 'contracts'; 'e2e-web' = 'contracts' }
+
+          $lines = @()
+          $lines += '## 门禁汇总 — Test Gate'
+          $lines += ''
+          $failed = @()
+          $skipped = @()
+          $unknown = @()
+          $lines += '| Job | 结论 | 门控 |'
+          $lines += '|---|---|---|'
+          foreach ($k in @('contracts','frontend','frontend-gates','go','go-analysis','e2e','e2e-web')) {
+            $r = $needs.$k.result
+            if (-not $r) {
+              $r = 'unknown'
+              $unknown += $k
+            }
+            $txt = if ($label.ContainsKey($r)) { $label[$r] } else { '❓ ' + $r }
+            $gate = if ($gated.ContainsKey($k)) { 'needs: ' + $gated[$k] } else { '无（并行起飞）' }
+            $lines += ('| `{0}` | {1} | {2} |' -f $k, $txt, $gate)
+            if ($r -eq 'failure') { $failed += $k }
+            if ($r -eq 'skipped') { $skipped += $k }
+          }
+          $lines += ''
+          # 结论判定：unknown 视为「不可信」而非「通过」——任何一项读不到结果都不许报绿。
+          if ($unknown.Count -gt 0) {
+            $ul = ($unknown -join ', ')
+            $lines += ('**⚠️ 有 {0} 个 job 结论不可读（`{1}`）——汇总不可信，请直接看上方 job 块。**' -f $unknown.Count, $ul)
+          } elseif ($failed.Count -eq 0 -and $skipped.Count -eq 0) {
+            $lines += '**结论：全部通过。**'
+          } else {
+            if ($failed.Count -gt 0) {
+              $fl = ($failed -join ', ')
+              $lines += ('**❌ 失败 job（{0}）：`{1}`** — 点上方对应 job 看首个失败步骤。' -f $failed.Count, $fl)
+            }
+            if ($skipped.Count -gt 0) {
+              $sl = ($skipped -join ', ')
+              $lines += ('**⏭️ 跳过 job（{0}）：`{1}`** — 若其门控 job 通过而本 job 仍 skipped，说明是平台/条件不跑，不是红。' -f $skipped.Count, $sl)
+            }
+          }
+          $lines += ''
+          $lines += '> 覆盖口径（本地）：`node scripts/doctor.ts --docs` 尾行「N/M 项门禁清单条目已接入」'
+          $lines += '> ——含非 `check-*` 命名的真闸（jscpd-go / gen-* / auto-import 等）。'
+          $lines += '> **全绿 ≠ 仓库无风险**：本地 push 已刻意跳过契约测试（交本 workflow 的 `contracts` job 全量），'
+          $lines += '> 故「本地绿、CI 红」在本仓属预期组合，红点应信 CI 这一侧。'
+
+          $lines | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+
+          # 汇总 job 自身不判定成败：它的职责是「呈现」，不是「加一层阻断」。
+          # 红的权威判定仍归各 job（避免汇总层产生新的假红/假绿来源）。
+          Write-Host '汇总已写入 GITHUB_STEP_SUMMARY'
+          $lines | ForEach-Object { Write-Host $_ }

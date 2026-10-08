@@ -28,6 +28,8 @@ import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-sta
 import { clearEnvCallbacks } from "@/preview-3d/state/env-dispatcher.ts";
 import { findNodeById, childIds, nodeIds } from "@/preview-3d/menu/menu-test-helpers.ts";
 import { restoreState } from "./scene-capability.ts";
+// [锐评 2026-10-08 处置拍板] 让权判据：用于「通路自省 ≠ 让权判据」判别样本
+import { envShouldYieldSlot } from "./environment-ownership.ts";
 
 // PMREMGenerator 扩展 mock：全局 setup 的 Fake 只有 fromScene，本文件需 fromEquirectangular
 vi.mock("three", async (importOriginal) => {
@@ -1385,25 +1387,47 @@ describe("EnvironmentCapability — ADR-292 envSource 取图通道（批次一�
   });
 
   // ===== 批次二：D1 所有权交接（sky 不再自持装载，改由 env 装载）=====
-  describe("批次二 — isSkySourced / refreshFromSkySource 交接语义", () => {
-    it("envSource=sky 且 enabled → isSkySourced() 为真（env 接管装载）", () => {
+  describe("批次二 — loadsFromSkySource / refreshFromSkySource 交接语义", () => {
+    it("envSource=sky 且 enabled → loadsFromSkySource() 为真（env 接管装载）", () => {
       const cap = newCap();
       setEnvState({ envSource: "sky" }, { source: "manual", force: true });
-      expect(cap.isSkySourced()).toBe(true);
+      expect(cap.loadsFromSkySource()).toBe(true);
     });
 
-    it("envSource≠sky → isSkySourced() 为假（sky 自持装载，既有行为）", () => {
+    it("envSource≠sky → loadsFromSkySource() 为假（sky 自持装载，既有行为）", () => {
       const cap = newCap();
       setEnvState({ envSource: "preset" }, { source: "manual", force: true });
-      expect(cap.isSkySourced()).toBe(false);
+      expect(cap.loadsFromSkySource()).toBe(false);
       setEnvState({ envSource: "custom" }, { source: "manual", force: true });
-      expect(cap.isSkySourced()).toBe(false);
+      expect(cap.loadsFromSkySource()).toBe(false);
     });
 
-    it("能力关掉时 isSkySourced() 为假（关掉即不接管，槽位还原 prev）", () => {
+    it("能力关掉时 loadsFromSkySource() 为假（关掉即不接管，槽位还原 prev）", () => {
       const cap = newCap({ enabled: false });
       setEnvState({ envSource: "sky" }, { source: "manual", force: true });
-      expect(cap.isSkySourced()).toBe(false);
+      expect(cap.loadsFromSkySource()).toBe(false);
+    });
+
+    // [锐评 2026-10-08 处置拍板] 改名 isSkySourced → loadsFromSkySource 的**判别样本**：
+    // 旧名诱导拿它回答「槽位该不该让给 env」，而真判据是 envShouldYieldSlot（只问在场启用）。
+    // 二者**不等价**——本条钉死「env 在场启用 + 预设通路」这个反例组合：让权为真、自省为假。
+    // 拿自省谓词回答让权问题（旧病灶 ce0ec8090）正是在此组合下让 sky 顶掉 env 预设图。
+    it("[处置拍板] 通路自省 ≠ 让权判据：预设通路下让权为真而自省为假（不得混用）", () => {
+      const cap = newCap();
+      setEnvState({ envSource: "preset" }, { source: "manual", force: true });
+      // 让权判据（env 在场启用）→ 真：槽位归 env，sky 必须转交
+      expect(envShouldYieldSlot(cap)).toBe(true);
+      // 通路自省（是否经天空通路装载）→ 假：本条通路此刻不走天空
+      expect(cap.loadsFromSkySource()).toBe(false);
+      // 两问两答，取值相反——混用即复现原病灶
+      expect(envShouldYieldSlot(cap)).not.toBe(cap.loadsFromSkySource());
+    });
+
+    it("[处置拍板 对照] 天空通路下两问皆真（此组合不构成判别样本，但锁住自省语义）", () => {
+      const cap = newCap();
+      setEnvState({ envSource: "sky" }, { source: "manual", force: true });
+      expect(envShouldYieldSlot(cap)).toBe(true);
+      expect(cap.loadsFromSkySource()).toBe(true);
     });
 
     it("refreshFromSkySource：接管时重新取图（sky 参数变化 → env 装载新图）", () => {

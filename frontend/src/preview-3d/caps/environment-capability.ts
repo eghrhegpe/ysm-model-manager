@@ -634,10 +634,21 @@ export class EnvironmentCapability implements SceneCapability {
   }
 
   /**
-   * [ADR-292 D1] 本 cap 当前是否为 `scene.environment` 的「跟随天空」装载者。
-   * sky 用它决定「自己装载」还是「转交 env」——避免两个 cap 争抢槽位。
+   * [ADR-292 D1] **通路自省**：本 cap 此刻是否正走「跟随天空」通路装载槽位。
+   *
+   * ⚠️ **旧名 `isSkySourced` 是陷阱，2026-10-08 处置拍板改名**：旧名读作「是不是天空来源」，
+   * 诱导人拿它回答**让权问题**——而它答不了。「槽位该不该让给 env」的判据是
+   * `environment-ownership.ts|envShouldYieldSlot`（**只问 env 在场启用，不问来源**），
+   * 二者**不等价**：
+   * 拿本谓词当让权判据，会在默认 `envSource="preset"` 下答「否」而让 sky 顶掉 env 的预设图
+   * ——正是 `ce0ec8090` 修掉的原病灶（「写者唯一」形同虚设）。
+   *
+   * 改名即守卫：新名 `loadsFromSkySource` 自陈回答的是「**我这条通路此刻活没活**」，
+   * 与让权问题在措辞层面就分家。合法调用形态**唯一** = {@link refreshFromSkySource} 的早退门
+   * （入场自省）；sky 侧若问「该不该让权」，一律问 `envShouldYieldSlot`，不调本谓词。
+   * 判别样本 = environment-capability.test.ts「通路自省 ≠ 让权判据」两条（含变异转红锁）。
    */
-  isSkySourced(): boolean {
+  loadsFromSkySource(): boolean {
     return envState.envEnabled && envState.envSource === "sky";
   }
 
@@ -650,7 +661,7 @@ export class EnvironmentCapability implements SceneCapability {
    *   昼夜循环等连续动画 false——天空未 dirty 时同引用短路，整轮免重建。
    */
   refreshFromSkySource(force = true): void {
-    if (!this.isSkySourced()) return;
+    if (!this.loadsFromSkySource()) return;
     this.buildEnvironment(force);
   }
 

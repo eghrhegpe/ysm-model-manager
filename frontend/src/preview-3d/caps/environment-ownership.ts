@@ -1,4 +1,13 @@
 // ===== environment-ownership — scene.environment 槽位所有权纯判定（暗线 B 收口）=====
+//
+// **本文件收纳「槽位判定」，不收纳「通路自省」**（[锐评 2026-10-08 处置拍板]）：
+//   - 槽位判定（本文件三函数，纯叶、零 cap 依赖）：槽位此刻归谁 / 该不该让 → `envShouldYieldSlot`、
+//     `envOwnsSceneEnvironment`、`isEnvDisposableSource`。
+//   - 通路自省（**不在此文件**）：`environment-capability.ts|loadsFromSkySource`——问的是
+//     「本 cap 此刻是否经天空通路装载」，**非**让权判据。它读 `envState`，故是实例方法而非纯函数。
+//   ⚠️ 二者**不等价**，混用即复现 `ce0ec8090`（默认 `envSource="preset"` 下 sky 顶掉 env 装载）。
+//   历史陷阱：该实例方法旧名 `isSkySourced` 诱导被当作通用「来源判断」用于让权问题，已改名分家。
+//
 // 抽取自 environment-capability.ts：原「谁拥有 scene.environment / 谁可被 env 安全 dispose」
 // 的判定散在 4 个方法里（applyBackground / pmremToSceneEnv / disposeEnvironment / dispose），
 // 每个都是 `tex !== customHdrTex && tex !== skySourcedTex && …` 的手抄排除集——ADR-292 D1/D3/D7
@@ -76,7 +85,8 @@ export interface EnvPresenceProbe {
  *
  * [ADR-292 D1 + D10] `scene.environment` 的唯一写者是 env cap；sky 只是数据源提供者。
  * 判「env 该不该让权」的正确问题是**「env cap 在场且启用吗」**——而非「env 是不是 sky 源」
- * （那是 `EnvironmentCapability.isSkySourced` 的问题，语义**不等价**，见其注释）。
+ * （那是 `EnvironmentCapability.loadsFromSkySource` 的**通路自省**，语义**不等价**，见其注释
+ * 与上方文件头「槽位判定 vs 通路自省」分界；旧名 `isSkySourced` 正是诱导混用的陷阱名）。
  *
  * [锐评 2026-10-08 P1-2] 收口前该判据手抄**4 处**：
  *   - `sky-capability.ts|requestEnvironmentRefresh`（D10 路由器，原型）

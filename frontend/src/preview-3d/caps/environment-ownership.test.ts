@@ -80,6 +80,11 @@ describe("envOwnsSceneEnvironment（离场还原守卫）", () => {
 // 守卫重点 = **三种否定形态**（这正是原手抄 `env?.isEnabled?.()` 的全部语义）：
 // nullish / isEnabled 缺省 / 显式 false，三者都必须「不让权」——
 // 因为只有让权 false 才轮到 sky 走自持兜底装载，那条路才受 skyEnvironment 旧开关门控。
+//
+// ⚠️ **本判据域 = 「槽位判定」，不收纳「通路自省」**（[2026-10-08 处置拍板]）：
+// `environment-capability.ts|loadsFromSkySource`（旧名 `isSkySourced`）问的是「本 cap 此刻
+// 是否经天空通路装载」，**不是**让权判据，故**刻意不在此文件**（它读 envState，非纯叶）。
+// 二者不等价的判别样本在 environment-capability.test.ts「通路自省 ≠ 让权判据」两条。
 describe("envShouldYieldSlot（D10 让权判据：槽位去留是否归 env）", () => {
   it("env 在场且启用 → 让权（env 是 scene.environment 唯一写者）", () => {
     expect(envShouldYieldSlot({ isEnabled: () => true })).toBe(true);
@@ -100,7 +105,8 @@ describe("envShouldYieldSlot（D10 让权判据：槽位去留是否归 env）",
 
   // 语义边界守卫：本判据问的是「env 在场吗」，**不是**「env 是不是 sky 源」。
   // 混淆二者正是 ce0ec8090 修掉的原病灶（默认 envSource="preset" 下 sky 顶掉 env 装载，
-  // 「写者唯一」形同虚设）。纯函数层无从得知 envSource——本例锁死「不引入该语义」。
+  // 「写者唯一」形同虚设）。纯函数层无从得知 envSource——本例锁死「不引入该语义」，
+  // 与另行存在的实例方法 loadsFromSkySource（通路自省）在**文件层面**就分家。
   it("判据只问在场与否：预设通路（env 开但非 sky 源）同样让权", () => {
     expect(envShouldYieldSlot({ isEnabled: () => true })).toBe(true);
   });

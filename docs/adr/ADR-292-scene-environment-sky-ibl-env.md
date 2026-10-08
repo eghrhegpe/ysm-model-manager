@@ -268,6 +268,13 @@ env cap callback (envSource / envPreset / envResolution / envUseAsBackground 变
 > cubeUV 产物，env **直装、严禁再入 `fromEquirectangular`**，force=false 同引用短路整轮
 > 免重建（D9 门控跨 cap 传导恢复）。回归锁：`sky-capability.test.ts`「[D-1 红线]/[A]」
 > 用例 + `environment-capability.test.ts`「[D-2/D-3/D-4/D-5]」系列。
+>
+> **[2026-10-08 后续]** 上条修订后的让权判据已于同日下沉为单一事实源
+> `environment-ownership.ts|envShouldYieldSlot`（手抄 4 处归零，commit `44b9bd4d7`）。
+> 又：D10 原文（本文档上方）所引 `isSkySourced()` 已**改名 `loadsFromSkySource()`**——
+> 其语义是**通路自省**（「本 cap 此刻是否经天空通路装载」），**从来不是**让权判据；
+> 旧名读作「是不是天空来源」，正是诱导二者混用的陷阱名。让权问题**只问**
+> `envShouldYieldSlot`（env 在场启用与否，不问来源），勿再引本谓词作答。
 
 **批次三定案：UI 出口（2026-09-21）**
 

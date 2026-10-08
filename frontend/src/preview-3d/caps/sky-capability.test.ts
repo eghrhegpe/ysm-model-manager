@@ -994,7 +994,10 @@ describe("SkyCapability — apply 管线（真实分支）", () => {
           id === "environment"
             ? {
                 isEnabled: () => true,
-                isSkySourced: () => true,
+                // [锐评 2026-10-08 处置拍板] 桩内**刻意不提供** isSkySourced/loadsFromSkySource：
+                // 让权判据只问 isEnabled（envShouldYieldSlot），sky 侧不消费通路自省谓词。
+                // 此前桩里那枚 `isSkySourced: () => true` 是对死字段的仿写——它让「sky 是否
+                // 查过该谓词」结构性不可见（改了生产码测试仍绿），正是 mock 遮蔽病灶的老形态。
                 refreshFromSkySource: vi.fn(),
               }
             : undefined,
@@ -1012,7 +1015,7 @@ describe("SkyCapability — apply 管线（真实分支）", () => {
       expect(scene.environment).toBe(slotBefore);
     });
 
-    it("[D-1 红线] env 在场启用但走预设通路（isSkySourced=false）→ sky 仍不自持装载", () => {
+    it("[D-1 红线] env 在场启用但走预设通路（envSource≠sky）→ sky 仍不自持装载", () => {
       // 旧判据把「env 未 sky 源接管」误同「sky 可自持」，默认 envSource=preset 下
       // 拖时间轴即让 sky 顶掉 env 的预设图——写者唯一形同虚设。现 env 在场即让权。
       const scene = new THREE.Scene();
@@ -1020,7 +1023,7 @@ describe("SkyCapability — apply 管线（真实分支）", () => {
       const caps = {
         getById: (id: string) =>
           id === "environment"
-            ? { isEnabled: () => true, isSkySourced: () => false, refreshFromSkySource: refresh }
+            ? { isEnabled: () => true, refreshFromSkySource: refresh }
             : undefined,
       };
       const cap = new SkyCapability({ scene, renderer: makeFakeRenderer(), caps: caps as never });
@@ -1056,8 +1059,7 @@ describe("SkyCapability — apply 管线（真实分支）", () => {
         getById: (id: string) =>
           id === "environment"
             ? {
-                isEnabled: () => true, // [D-1 新判据] 在场+启用即让权（isSkySourced 决定转交后是否装载）
-                isSkySourced: () => true,
+                isEnabled: () => true, // [D-1 新判据] 在场+启用即让权（转交后由 env 自判走哪条通路装载）
                 refreshFromSkySource,
               }
             : undefined,

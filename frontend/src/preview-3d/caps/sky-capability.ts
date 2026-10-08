@@ -313,6 +313,8 @@ export class SkyCapability implements SceneCapability {
   private requestEnvironmentRefresh(force = false): void {
     const env = getTypedCap(this.caps, "environment");
     // [锐评 2026-10-08 P1-2] D10 让权判据 = envShouldYieldSlot 纯函数（单一事实源）。
+    // ⚠️ 不得换用 `env.loadsFromSkySource()`（通路自省）——两者语义不等价，换即复现 ce0ec8090。
+    // 变异实证（2026-10-08）：改问自省谓词 → 本文件 4 例转红。
     if (envShouldYieldSlot(env)) {
       // env 是 scene.environment 唯一写者——天空侧只转交刷新，绝不直写槽位。
       // refreshFromSkySource 内部自判 envSource：="sky" 时重新向本 cap 取图装载；

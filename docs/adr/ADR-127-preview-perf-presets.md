@@ -4,7 +4,7 @@
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-08-29
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/src/utils/3d/state/perf-presets.ts, ADR-125, ADR-126, docs/knowledge/preview-menu-settings-state.md`
+- **相关**：`frontend/src/preview-3d/state/perf-presets.ts, ADR-125, ADR-126, docs/knowledge/preview-menu-settings-state.md`
 
 ---
 
@@ -20,7 +20,7 @@
 
 **薄壳版**：性能档位 = 纯数据表 + 通用套用器，刻意规避 MikuMikuAR 的命令式方案。
 
-- `PERF_PRESETS`（`frontend/src/utils/3d/state/perf-presets.ts`）：低/中/高三档 → `StatePath → 值`，路径类型 `typeof KNOWN_PATHS[number]` 编译期守卫——**新增档位/参数只改表，零代码接线**。
+- `PERF_PRESETS`（`frontend/src/preview-3d/state/perf-presets.ts`）：低/中/高三档 → `StatePath → 值`，路径类型 `typeof KNOWN_PATHS[number]` 编译期守卫——**新增档位/参数只改表，零代码接线**。
 - `applyPerfPreset(level)`：遍历表走 `setStateValue`（状态层统一写口，广播 notify）；cap 缺席的派生路径静默跳过；**custom 不套用**（保持用户手调，零副作用）。
 - 档位：低/中/高 + 自定义；持久化键 `ysm_3d_perfPreset`（无存档回 `medium`）。
 - **一期范围**：只控有状态层路径的性能项（`render.maxFps` / `render.maxPixelRatio` / `render.bloom`）。wireframe/pmrem 是视觉项不进表；frustumCull 是纯优化（无画质损失）恒开不进表。

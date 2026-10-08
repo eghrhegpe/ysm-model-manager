@@ -114,10 +114,10 @@ describe("SceneCapabilityRegistry 险恶测试", () => {
     expect(isIblActive()).toBe(false);
     const envCap = makeFakeCap("environment");
     (envCap as { isEnabled?: () => boolean }).isEnabled = () => true;
-    // ⚠️ 同时挂一个 sky：sky 在场且 isEnvironmentEnabled=true 也不该影响判据
+    // ⚠️ 同时挂一个 sky：sky 在场且 isSkyIblSelfHoldEnabled=true 也不该影响判据
     //（历史病灶 X-3：预览问 env、截图问 sky ⇒ 同场景两侧亮度分叉）。
     const sky = makeFakeCap("sky");
-    (sky as { isEnvironmentEnabled?: () => boolean }).isEnvironmentEnabled = () => false;
+    (sky as { isSkyIblSelfHoldEnabled?: () => boolean }).isSkyIblSelfHoldEnabled = () => false;
     sceneCapabilityRegistry.add(() => envCap);
     sceneCapabilityRegistry.add(() => sky);
     sceneCapabilityRegistry.createAll({} as unknown as CreateAllCtx);

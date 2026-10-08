@@ -10,7 +10,9 @@
 // - 天空依赖 tone mapping 才正确显色；本能力在 apply() 内为本次会话 renderer
 //   设置 ACESFilmic + exposure，dispose() 时还原，作用域不泄漏到其它预览。
 // - IBL 环境联动（scene.environment）默认开启（2026-08-16 目视验证通过，模型反射/环境光更真实）；
-//   如需关闭调用 setEnvironmentEnabled(false)。
+//   scene.environment 的唯一写者已收口为 env cap（ADR-292 D1），本 cap 只在 env 缺席/关闭时
+//   走「天空自持兜底装载」——开关见 setSkyIblSelfHoldEnabled（旧名 setEnvironmentEnabled，
+//   退役语义只门控兜底路，勿当「环境贴图总开关」用）。
 // - 实现 SceneCapability 统一接口，支持注册表自动发现 + 菜单控件 + 持久化。
 // - God Rays（体积光束，ADR-107）：日出日落时从太阳方向向下投射的半透明光束。
 
@@ -524,7 +526,18 @@ export class SkyCapability implements SceneCapability {
     this.listenerSet.notify();
   }
 
-  setEnvironmentEnabled(v: boolean): void {
+  /**
+   * [锐评 2026-10-08 同族第二例改名，旧名 `setEnvironmentEnabled`] 天空 IBL **自持兜底开关**。
+   *
+   * ⚠️ 旧名读作「环境贴图开关」，但 ADR-292 D4/D5 之后「环境贴图」一词已立法**唯一指代 env cap**；
+   * 本键（`skyEnvironment`）的真实语义只剩「**env 缺席/关闭时，sky 走不走自持兜底装载**」。
+   * **它不是** IBL 总开关——让位/让权判据问 `envShouldYieldSlot` / `isIblActive`（问 env cap），
+   * 拿本谓词作答会复现 X-3 病灶（`envSource=preset` + `skyEnvironment=false` 时「IBL 已供图却不让位」）。
+   * 改名 `setSkyIblSelfHoldEnabled` 把「只门控兜底路」写进名字，与让权问题在措辞层面分家
+   * （同 `isSkySourced → loadsFromSkySource` 处置）。键名 `skyEnvironment` 不动——它是
+   * 判据①迁移的供血线 + 兜底路门控（真功能非死键，改键有跨代存档债）。
+   */
+  setSkyIblSelfHoldEnabled(v: boolean): void {
     // ADR-196 收口：纯写 envState；regenerate/clear 由 callback 的 skyEnvironment 分支落地。
     setEnvState({ skyEnvironment: v }, { source: "manual" });
     // [doc:adr-126-p5] 双间接光协调：环境光开关变化同步 light 的 ambient 衰减（防 ×0.5 过期）——
@@ -724,8 +737,16 @@ export class SkyCapability implements SceneCapability {
     return envState.skyTimeOfDay;
   }
 
-  /** 当前是否联动 IBL 环境贴图（下拉开关初始化用） */
-  isEnvironmentEnabled(): boolean {
+  /**
+   * 当前是否启用天空 IBL **自持兜底**装载（下拉开关初始化用）。
+   *
+   * [锐评 2026-10-08 同族第二例改名，旧名 `isEnvironmentEnabled`] 与 setter 同病：旧名读作
+   * 「环境启用了吗」，诱导拿它回答**让位/让权判据**——那是 `envShouldYieldSlot` /
+   * `isIblActive`（问 env cap）的职责。本谓词只回答「env 缺席/关闭这条兜底路开不开」，
+   * 在 env 在场的常态下恒不代表「IBL 没供图」。改名把兜底语义写进名字，与让权问题分家。
+   * （误用本谓词当判据的两次事故 = X-3 预览 ambient + P0 截图分叉，见 preview-env-state 不变量。）
+   */
+  isSkyIblSelfHoldEnabled(): boolean {
     return envState.skyEnvironment;
   }
 

@@ -132,8 +132,8 @@ const fakeCapCore = {
   setTime: vi.fn(),
   getCloudCoverage: () => 0,
   setCloudCoverage: vi.fn(),
-  isEnvironmentEnabled: () => true,
-  setEnvironmentEnabled: vi.fn(),
+  isSkyIblSelfHoldEnabled: () => true,
+  setSkyIblSelfHoldEnabled: vi.fn(),
   getVisible: () => true,
   setVisible: vi.fn(),
 };
@@ -155,7 +155,7 @@ const fakeCapNodes: PreviewMenuNode[] = [
     id: "sky-env",
     kind: "toggle" as const,
     labelKey: "preview.environment",
-    control: { get: () => fakeCapCore.isEnvironmentEnabled(), set: (v: unknown) => fakeCapCore.setEnvironmentEnabled(v) },
+    control: { get: () => fakeCapCore.isSkyIblSelfHoldEnabled(), set: (v: unknown) => fakeCapCore.setSkyIblSelfHoldEnabled(v) },
   },
   {
     id: "ground-visible",

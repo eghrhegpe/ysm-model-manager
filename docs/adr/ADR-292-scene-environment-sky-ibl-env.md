@@ -5,7 +5,7 @@
 - **日期**：2026-09-21
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：
-  - `frontend/src/preview-3d/caps/sky-capability.ts`（`regenerateEnvironment` / `clearEnvironment` / `setEnvironmentEnabled`）
+  - `frontend/src/preview-3d/caps/sky-capability.ts`（`regenerateEnvironment` / `clearEnvironment` / `setSkyIblSelfHoldEnabled`，旧名 `setEnvironmentEnabled`，2026-10-08 同族第二例改名见知识卡 `preview-env-state.md`）
   - `frontend/src/preview-3d/caps/environment-capability.ts`（`buildEnvironment` / `pmremToSceneEnv`）
   - `frontend/src/preview-3d/state/env-state-schema.ts`（`skyEnvironment` 键）
   - `frontend/src/preview-3d/caps/sky-menu.ts` / `environment-menu.ts`

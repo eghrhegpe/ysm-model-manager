@@ -133,14 +133,17 @@ function lazyCap<T extends object>(id: string, ...methods: Array<keyof T>): T | 
 // [ADR-250] 原 `toggleCap`（isEnabled/setEnabled 开关型 cap 解析）已删除——
 // 其唯一消费方 `render.bloom` 已退表（后处理开关归 envState.ppEnabled）。
 
-/** 环境贴图开关型 cap（SkyCapability 的 PMREM 语义） */
+/** 天空 IBL 自持兜底开关型 cap（SkyCapability 的 PMREM 兜底路语义）。
+ *  [锐评 2026-10-08 同族第二例改名] 方法旧名 isEnvironmentEnabled/setEnvironmentEnabled 读作
+ *  「环境贴图开关」，与 ADR-292 D4「环境贴图唯一指代 env cap」冲突（诱导拿它答让权判据，
+ *  已发生 X-3/P0 两次误用事故）；现名自陈「只门控兜底路」。 */
 interface EnvToggleCap {
-  isEnvironmentEnabled(): boolean;
-  setEnvironmentEnabled(v: boolean): void;
+  isSkyIblSelfHoldEnabled(): boolean;
+  setSkyIblSelfHoldEnabled(v: boolean): void;
 }
 
 function envToggleCap(id: string): EnvToggleCap | undefined {
-  return lazyCap<EnvToggleCap>(id, "isEnvironmentEnabled", "setEnvironmentEnabled");
+  return lazyCap<EnvToggleCap>(id, "isSkyIblSelfHoldEnabled", "setSkyIblSelfHoldEnabled");
 }
 
 /** [doc:adr-126-p5-c] 水面能力（读/写 mode）——供 cap.waterMode 惰性绑定。
@@ -272,8 +275,8 @@ const bindings: PathBindingMap = {
     available: () => wireframeModeCap() !== undefined,
   },
   "cap.pmrem": {
-    get: () => envToggleCap("sky")?.isEnvironmentEnabled() ?? false,
-    set: (v) => envToggleCap("sky")?.setEnvironmentEnabled(Boolean(v)),
+    get: () => envToggleCap("sky")?.isSkyIblSelfHoldEnabled() ?? false,
+    set: (v) => envToggleCap("sky")?.setSkyIblSelfHoldEnabled(Boolean(v)),
     available: () => envToggleCap("sky") !== undefined,
   },
   // [doc:adr-126-p5-c] 探针：cap 内部状态上浮——water.mode / ground.matSource / fog.mode。

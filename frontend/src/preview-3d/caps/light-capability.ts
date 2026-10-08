@@ -877,7 +877,7 @@ export class LightCapability implements SceneCapability {
 
   /** ambient 应用单一出口（预览/截图同构）：ambient 强度/颜色属 light 组 envState 字段，
    *  IBL 在场判据与让位系数（×0.5）在此汇合。
-   *  触发方有三：①sky.setEnvironmentEnabled 主动调本方法；②light 组任意键变动的
+   *  触发方有三：①sky.setSkyIblSelfHoldEnabled 主动调本方法；②light 组任意键变动的
    *  onEnvChanged（lightAmbientIntensity/Color 是 light 组字段，回调里刷它正当）；
    *  ③env.setEnabled（判据换源后必需）。三路幂等、语义一致，无「漏刷」窗口。 */
   refreshAmbientFromSky(state: EnvState = envState): void {

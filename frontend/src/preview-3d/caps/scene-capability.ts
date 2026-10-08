@@ -84,7 +84,7 @@ export type CapabilityId = keyof CapabilityMap;
 /**
  * 宽查询器（SceneCapabilityLookup.getById 返回宽 SceneCapability）按 id 收窄为
  * 具体能力类型的唯一收口（锐评 §二：替代各 cap 散落的结构化 cast
- * `as { isEnvironmentEnabled?: () => boolean }`）。运行时正确性由 registry.add
+ * `as { isSkyIblSelfHoldEnabled?: () => boolean }`）。运行时正确性由 registry.add
  * 的 id 校验兜底；cast 集中在此一处并注释依据。
  */
 export function getTypedCap<K extends CapabilityId>(

@@ -105,7 +105,7 @@ describe("SkyCapability — 构造与默认值", () => {
     expect(cap.isEnabled()).toBe(true);
     expect(cap.getTimeOfDay()).toBe(9);
     expect(cap.getCloudCoverage()).toBe(0);
-    expect(cap.isEnvironmentEnabled()).toBe(true);
+    expect(cap.isSkyIblSelfHoldEnabled()).toBe(true);
   });
 
   it("enabled:false 初始禁用", () => {
@@ -118,7 +118,7 @@ describe("SkyCapability — 构造与默认值", () => {
     const cap = newCap();
     expect(cap.getTimeOfDay()).toBe(15);
     expect(cap.getCloudCoverage()).toBe(0.5);
-    expect(cap.isEnvironmentEnabled()).toBe(false);
+    expect(cap.isSkyIblSelfHoldEnabled()).toBe(false);
   });
 });
 
@@ -178,16 +178,16 @@ describe("SkyCapability — 云量控制", () => {
 describe("SkyCapability — 环境 IBL 开关", () => {
   beforeEach(() => { resetEnvState(); });
 
-  it("setEnvironmentEnabled 切换", () => {
+  it("setSkyIblSelfHoldEnabled 切换", () => {
     const cap = newCap();
-    expect(cap.isEnvironmentEnabled()).toBe(true);
-    cap.setEnvironmentEnabled(false);
-    expect(cap.isEnvironmentEnabled()).toBe(false);
-    cap.setEnvironmentEnabled(true);
-    expect(cap.isEnvironmentEnabled()).toBe(true);
+    expect(cap.isSkyIblSelfHoldEnabled()).toBe(true);
+    cap.setSkyIblSelfHoldEnabled(false);
+    expect(cap.isSkyIblSelfHoldEnabled()).toBe(false);
+    cap.setSkyIblSelfHoldEnabled(true);
+    expect(cap.isSkyIblSelfHoldEnabled()).toBe(true);
   });
 
-  it("setEnvironmentEnabled 经注入的 caps 查询器通知 light 刷新 ambient（双间接光协调）", () => {
+  it("setSkyIblSelfHoldEnabled 经注入的 caps 查询器通知 light 刷新 ambient（双间接光协调）", () => {
     const scene = new THREE.Scene();
     const refreshAmbientFromSky = vi.fn();
     const cap = new SkyCapability({
@@ -198,9 +198,9 @@ describe("SkyCapability — 环境 IBL 开关", () => {
           id === "light" ? ({ refreshAmbientFromSky } as unknown as SceneCapability) : undefined,
       },
     });
-    cap.setEnvironmentEnabled(false);
+    cap.setSkyIblSelfHoldEnabled(false);
     expect(refreshAmbientFromSky).toHaveBeenCalledTimes(1);
-    cap.setEnvironmentEnabled(true);
+    cap.setSkyIblSelfHoldEnabled(true);
     expect(refreshAmbientFromSky).toHaveBeenCalledTimes(2);
   });
 });
@@ -243,7 +243,7 @@ describe("SkyCapability — 持久化", () => {
     cap2.loadState();
     expect(cap2.getTimeOfDay()).toBe(15);
     expect(cap2.getCloudCoverage()).toBe(0.3);
-    expect(cap2.isEnvironmentEnabled()).toBe(false);
+    expect(cap2.isSkyIblSelfHoldEnabled()).toBe(false);
     expect(cap2.isEnabled()).toBe(true);
   });
 
@@ -270,7 +270,7 @@ describe("SkyCapability — 持久化", () => {
     cap2.loadState();
     expect(cap2.getTimeOfDay()).toBe(16);
     expect(cap2.getCloudCoverage()).toBeCloseTo(0.4, 4);
-    expect(cap2.isEnvironmentEnabled()).toBe(false);
+    expect(cap2.isSkyIblSelfHoldEnabled()).toBe(false);
     expect(cap2.isEnabled()).toBe(false);
     expect(cap2.isGodRaysEnabled()).toBe(true);
     expect(cap2.getParams().sunIntensityScale).toBeCloseTo(0.7, 4);
@@ -923,7 +923,7 @@ describe("SkyCapability — apply 管线（真实分支）", () => {
     setEnvState({ skyEnvironment: false }, { source: 'manual' });
     const cap = new SkyCapability({ scene, renderer: makeFakeRenderer() });
     cap.apply();
-    cap.setEnvironmentEnabled(false);
+    cap.setSkyIblSelfHoldEnabled(false);
     // renderTarget 未生成（environment=false 从未 build）→ 不等于 rt.texture → 外部值保留
     expect(scene.environment).toBe(external);
   });
@@ -1174,7 +1174,7 @@ describe("SkyCapability — apply 管线（真实分支）", () => {
       .mockImplementation(() => {
         throw new Error("gl oom");
       });
-    expect(() => cap.setEnvironmentEnabled(true)).not.toThrow();
+    expect(() => cap.setSkyIblSelfHoldEnabled(true)).not.toThrow();
     log.expectLogged("sky", "环境贴图生成失败");
     // finally 恢复太阳盘
     expect((cap as unknown as { envSky: Sky }).envSky.material.uniforms["showSunDisc"].value).toBe(1);
@@ -1409,7 +1409,7 @@ describe("SkyCapability — God Rays 挂载分支", () => {
     cap.loadState();
     expect(cap.getTimeOfDay()).toBe(envState.skyTimeOfDay);
     expect(cap.getCloudCoverage()).toBe(envState.skyCloudCoverage);
-    expect(cap.isEnvironmentEnabled()).toBe(envState.skyEnvironment);
+    expect(cap.isSkyIblSelfHoldEnabled()).toBe(envState.skyEnvironment);
     expect(cap.getSunIntensityScale()).toBe(envState.skySunIntensityScale);
   });
 });

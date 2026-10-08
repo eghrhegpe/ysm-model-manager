@@ -20,7 +20,7 @@ const { host, stub } = vi.hoisted(() => ({
      *  于是「判据读的是谁」这个真正的病灶**结构性不可见**：把判据换成恒false 全测试仍绿，
      *  而生产里正因此让截图比预览亮一档。现改为只桩**被查对象**，判据函数本身参与执行。 */
     iblOn: false,
-    /** 同时桩一个 sky cap：它的 isEnvironmentEnabled 应被忽略（IBL 判据不问 sky）。 */
+    /** 同时桩一个 sky cap：它的 isSkyIblSelfHoldEnabled 应被忽略（IBL 判据不问 sky）。 */
     skyEnvOn: false,
   },
 }));
@@ -39,7 +39,7 @@ vi.mock("@/preview-3d/caps/scene-capability-registry.ts", async (importOriginal)
   realRegistry.getById = (id: string) => {
     if (id === "light") return stub.cap;
     if (id === "environment") return { isEnabled: () => stub.iblOn } as unknown;
-    if (id === "sky") return { isEnvironmentEnabled: () => stub.skyEnvOn } as unknown;
+    if (id === "sky") return { isSkyIblSelfHoldEnabled: () => stub.skyEnvOn } as unknown;
     return undefined;
   };
   return actual;

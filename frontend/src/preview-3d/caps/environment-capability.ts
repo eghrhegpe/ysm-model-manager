@@ -203,7 +203,7 @@ export class EnvironmentCapability implements SceneCapability {
             this.applyBackground(null);
           }
           // [锐评 X-3 2026-10-04] IBL 是否在场直接决定 light 的 ambient 让位系数（×0.5）——
-          // env 开关翻转必须通知 light 重算（与 `sky.setEnvironmentEnabled` 的跨 cap 通知
+          // env 开关翻转必须通知 light 重算（与 `sky.setSkyIblSelfHoldEnabled` 的跨 cap 通知
           // 先例同法）。判据「env 在场启用」现已唯一归本键。
           getTypedCap(this.caps, "light")?.refreshAmbientFromSky?.();
           this.notify();

@@ -66,8 +66,8 @@ function makeFakeCap(
 ): SceneCapability & {
   enabled: boolean;
   envOn: boolean;
-  isEnvironmentEnabled(): boolean;
-  setEnvironmentEnabled(v: boolean): void;
+  isSkyIblSelfHoldEnabled(): boolean;
+  setSkyIblSelfHoldEnabled(v: boolean): void;
   wfOn: boolean | null;
   getWireframe(): boolean | null;
   setWireframe(v: boolean | null): void;
@@ -86,10 +86,10 @@ function makeFakeCap(
       cap.enabled = v;
     },
     isEnabled: () => cap.enabled,
-    setEnvironmentEnabled(v: boolean) {
+    setSkyIblSelfHoldEnabled(v: boolean) {
       cap.envOn = v;
     },
-    isEnvironmentEnabled: () => cap.envOn,
+    isSkyIblSelfHoldEnabled: () => cap.envOn,
     // [ADR-195 刀1] fake cap 直产 getMenuNodes 节点树（bridge 退役），
     // 对齐 collectSettingsCapControls 只收 getMenuNodes 分支的现状。
     getMenuNodes: () => cap.nodes,
@@ -98,8 +98,8 @@ function makeFakeCap(
   };
   // 模拟「有 id 但无环境语义」的 cap，验证状态层的结构性探测不会误判
   if (opts.envMethods === false) {
-    delete (cap as unknown as Record<string, unknown>).setEnvironmentEnabled;
-    delete (cap as unknown as Record<string, unknown>).isEnvironmentEnabled;
+    delete (cap as unknown as Record<string, unknown>).setSkyIblSelfHoldEnabled;
+    delete (cap as unknown as Record<string, unknown>).isSkyIblSelfHoldEnabled;
   }
   // wireframeMode：render.wireframe binding 走 renderMode 单项语义（同 rm-wireframe 控件真值源）
   if (opts.wireframeMode === true) {
@@ -113,8 +113,8 @@ function makeFakeCap(
   return cap as unknown as SceneCapability & {
     enabled: boolean;
     envOn: boolean;
-    isEnvironmentEnabled(): boolean;
-    setEnvironmentEnabled(v: boolean): void;
+    isSkyIblSelfHoldEnabled(): boolean;
+    setSkyIblSelfHoldEnabled(v: boolean): void;
     wfOn: boolean | null;
     getWireframe(): boolean | null;
     setWireframe(v: boolean | null): void;
@@ -250,7 +250,7 @@ describe("P1 状态层 — cap 派生路径的持久化边界", () => {
     expect(rm.getWireframe()).toBeNull();
 
     setStateValue("cap.pmrem", true);
-    expect(sky.isEnvironmentEnabled()).toBe(true);
+    expect(sky.isSkyIblSelfHoldEnabled()).toBe(true);
     expect(getStateValue("cap.pmrem")).toBe(true);
 
     // 防双写（cap 就位态）：状态层写入透传 cap，但绝不自行创建 cap 域存储键

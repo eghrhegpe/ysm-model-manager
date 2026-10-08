@@ -5,6 +5,8 @@ frontend/dist-verify/
 # check-layering 运行时引用快照（BASELINE_FILE 产物，非源码）
 .pv-ref/
 frontend/coverage/
+# Vitest --reporter json 等临时报告产物（手动 dump 全量测试树，非源码、不入库）
+frontend/.vitest/
 
 # Playwright E2E 运行产物（.last-run.json / 失败截图 / HTML 报告 / G-4 覆盖采集）
 frontend/test-results/

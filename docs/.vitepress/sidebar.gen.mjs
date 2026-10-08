@@ -235,6 +235,10 @@ export const autoSidebar = [
         "link": "/audit-ground-review"
       },
       {
+        "text": "3D 预览·宿主环境耦合锐评（2026-10-08）",
+        "link": "/audit-host-env-coupling-review"
+      },
+      {
         "text": "知识库内容准确性抽样核验报告",
         "link": "/audit-knowledge-accuracy"
       },
@@ -2404,6 +2408,10 @@ export const autoSidebar = [
           {
             "text": "三档阈值扫描器（复杂度/参数/类型安全）",
             "link": "/knowledge/check-threshold-scanners"
+          },
+          {
+            "text": "CI 调优与缓存决策",
+            "link": "/knowledge/ci-tuning"
           },
           {
             "text": "技术债账本刷新与盘点方法论",

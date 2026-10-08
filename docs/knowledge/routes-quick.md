@@ -536,6 +536,7 @@
 | 检查哪些脚本未登记在 README | [README 登记处对账 check-readme-index.ts](./scripts-readme-index.md) | 新增/改名/删除 scripts/ 下的脚本必须同步更新 scripts/README.md | - |
 | 门禁检查项有哪些 | [推送前门禁 pre-push-gate](./pre-push-gate.md) | 推送门禁失败先看 FAIL 块，禁止无脑 git push --no-verify 绕过 | - |
 | 模块级 let 是缺陷还是刻意 | [3D 预览模块级单例卫生](./singleton-hygiene.md) | - | - |
+| 某步为什么只能在 Windows | [CI 调优与缓存决策](./ci-tuning.md) | 事故复盘写进本卡，别往 YAML 堆日期注脚 | - |
 | 排查「闸红了为什么还能提交」 | [门禁委托链全景图（四入口横向拼图）](./gate-chain-map.md) | - | - |
 | 盘点当前技术债并刷新 7 本账本 | [技术债账本刷新与盘点方法论](./debt_ledger_refresh.md) | 未提交改动在多 AI 并行期会被 worktree reset 冲掉——改账本 / 文档后必须立即 --files 提交锁定 | - |
 | 判定「新增重复对」是真实新增还是文件搬迁/拆分 | [Go 端 jscpd 重复检测脚本](./scripts-jscpd-go.md) | - | - |
@@ -546,6 +547,7 @@
 | 推送被门禁阻断怎么办 | [推送前门禁 pre-push-gate](./pre-push-gate.md) | 门禁并行 async IIFE 必须带调用括号，漏 () 会静默跳过整域检查 | - |
 | 往测试加 vi.mock 需要注意什么 | [mock 路径守卫 check-mock-paths](./mock-path-guard.md) | 用 // mock-path-ignore: <理由> 或 docs/.mock-path-exempt.json 豁免，禁止直接 --no-verify 绕过 | - |
 | 为什么 Go 侧要引入 golangci-lint | [golangci-lint（Go 静态分析真空面）](./golangci-lint.md) | Go 曾是静态分析真空面（go vet 独苗）：golangci-lint 白名单制补齐——.golangci.yml 为 default: none + 显式 enable，勿开 enable-all | - |
+| 为什么把 lint/测试拆成并行 job | [CI 调优与缓存决策](./ci-tuning.md) | - | - |
 | 为新的共享模块加一条守护规则 | [_lib 共享层采用率闸门](./scripts-lib-adoption.md) | - | - |
 | 新增 CLI 命令放哪个文件、命令注册在哪 | [go/cli 目录结构（43 文件分组与命名）](./go-cli-layout.md) | 新增命令必须经 RegisterCommandC 登记 ParamSpec，未登记走 legacy 降级（空串/0/false 会被丢弃） | - |
 | 新增门禁块按哪套范式写（gate-blocks 还是 commit-blocks） | [门禁委托链全景图（四入口横向拼图）](./gate-chain-map.md) | - | - |
@@ -555,7 +557,9 @@
 | 运行 Go 重复门禁 / 检查是否有新增重复对 | [Go 端 jscpd 重复检测脚本](./scripts-jscpd-go.md) | - | - |
 | bench_ / perf_ / flow_ 前缀文件是什么 | [go/cli 目录结构（43 文件分组与命名）](./go-cli-layout.md) | - | - |
 | check-orphan-exports 三类漏检修复 | [孤儿导出检测器（扫描盲区）](./orphan-export-scanner.md) | - | - |
+| CI 缓存为什么没生效 | [CI 调优与缓存决策](./ci-tuning.md) | 改 workflow YAML 须用 commit-with-check --files .github/workflows/<文件>，勿裸 git commit | - |
 | CI/CD 门禁中校验 README 完整性 | [README 登记处对账 check-readme-index.ts](./scripts-readme-index.md) | - | - |
+| e2e 为什么慢或超时 | [CI 调优与缓存决策](./ci-tuning.md) | - | - |
 | go/cli 目录结构、43 个文件怎么分组 | [go/cli 目录结构（43 文件分组与命名）](./go-cli-layout.md) | go/cli 禁止反向 import internal/app（ADR-145 依赖倒置），App 能力一律经 appservice.go 的 AppService 接口；`main.go` 有 `var _ cli.AppService = appStruct` 编译期断言兜底 | - |
 | go/cli 与 internal/app 的依赖方向 | [go/cli 目录结构（43 文件分组与命名）](./go-cli-layout.md) | - | - |
 | lint 报了多少存量债 | [golangci-lint（Go 静态分析真空面）](./golangci-lint.md) | 存量债不惩罚：pre-push-gate 跑 --new-from-rev 只拦本次引入（全量必红），未安装/无基线自动降级跳过 | - |
@@ -671,6 +675,12 @@
 | "--files 用空格拼接传参 | - | 被当成单个路径，scopeFilter.requested=1、扫 0 文件静默假绿" |
 | "把 debt 档 FAIL 当成推送被拦 | - | gate 只在 hard 档阻断，debt 只记录" |
 | "为把 p6 压到 p5 硬塞语义无关形参进 options 对象 | - | 为过闸而扭曲 API" |
+| 日期事故注脚写进 YAML ⇒ 文件变考古层，改一处要滚几百行找上下文（复盘一律写本卡） | - | - |
+| setup-go 默认 cache:true 在 Windows 是负优化（1133MB 单包解压 94s） | - | - |
+| apt archives 整目录缓存：lock/partial 是 root 专属，tar 归档必挂 | - | - |
+| hashFiles 指向 node_modules 内文件时，缓存步必须在 pnpm install 之后，否则 key 冻结成常量 | - | - |
+| 覆盖率/diff-coverage 无法迁 Linux（测试代码含 Windows 专有符号） | - | - |
+| fetch-depth:0 全量克隆后再 git fetch --depth=1 会把整仓退化成浅克隆，HEAD~1 失明 | - | - |
 | 前端手写分类 | - | 与 Go classify 判定不一致、last-wins 裁决丢失；必须交 Go 分类 |
 | 新增资源类型未更新 priority | - | 冲突时优先级错乱；必须经 classify.go 的 priority 表 |
 | 各组件各自发下载请求 | - | 并发冲突、进度丢失；必须经 download-queue 排队 |

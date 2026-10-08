@@ -2,11 +2,11 @@
 
 # 知识卡索引
 
-> 总计: 195 张知识卡
+> 总计: 196 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
-## config（14 张）
+## config（15 张）
 
 *配置与注册表（resource_types、AppConfig）*
 
@@ -14,6 +14,7 @@
 |------|------|------|------|--------|
 | 🏗 auto-import-split | auto-import 拆分与缺失 import 检测 | architecture | — | 缺失 import, auto-import, 导出符号, tokenize, 词法, 缺失导入, goimports, 大脚本拆分 |
 | 🍃 check-threshold-scanners | 三档阈值扫描器（复杂度/参数/类型安全） | leaf | — | check-complexity, check-params, 认知复杂度, 参数陷阱, 阈值扫描器, gate debt 档, --files 传参 |
+| 🏗 ci-tuning | CI 调优与缓存决策 | architecture | — | 改 GitHub Actions workflow 前, 缓存不生效 / CI 时长反常, 某步为何钉在 Windows 或 Linux, lint 或覆盖率迁移评估 |
 | 🍃 debt_ledger_refresh | 技术债账本刷新与盘点方法论 | leaf | — | 想知道仓里现在还能发现多少技术债, 刷新 / 收紧 7 本债务账本（redlines / deadcode / design-tokens / i18n-unused / doc-drift / jscpd-go / layering）到今日实数, 多 AI 并行会话期改动被 worktree reset 冲掉 |
 | 🍃 experience | 发版冒烟组——CI 同口径预演（ADR-318） | leaf | — | 发版前预演 CI（tag 推送前）, lockfile 与 package.json 是否同步存疑, Go 文件 import OS 专属包要确认 build 标签, 发版 CI 连红要本地快速定位口径差 |
 | 🏗 extensibility-index | 可拓展点发掘索引（extensibility inventory） | architecture | — | 可拓展点, 扩展入口, 硬编码, 重复实现, 插件化 |
@@ -31,6 +32,7 @@
 
 - **auto-import-split**（auto-import 拆分与缺失 import 检测）：`scripts/auto-import.ts` 检测 TS/JS 缺失 import（goimports 轻量版，正则级非 AST 级，ADR-014 伴生）。原为 802 行单文件，2026-08-31 按 **ADR-141 大脚本拆…
 - **check-threshold-scanners**（三档阈值扫描器（复杂度/参数/类型安全））：`check-complexity`（认知复杂度 + 最大嵌套）、`check-params`（长参数列表 / 布尔陷阱）、
+- **ci-tuning**（CI 调优与缓存决策）：`ci.yml`（main/PR）与 `release.yml`（tag）共享可复用 workflow `test.yml`（测试门禁），避免 main push
 - **debt_ledger_refresh**（技术债账本刷新与盘点方法论）：技术债在本仓是**受控存量**：baseline 账本只减不增、门禁不阻断存量债、新增零容忍。因此「还能发现多少债」分三层答——**已记账存量**（7 本 baseline）、**裸露代码标记**（TODO/FIXME）、**账本外盲区**…
 - **experience**（发版冒烟组——CI 同口径预演（ADR-318））：v1.15.0 发版跑了五轮 CI 才成功，复盘结论：**不是测试太严，是本地验证口径与 CI 冻结口径不同构**。本卡记录冒烟组（`node scripts/release-smoke.ts`，≤3 分钟）的检查项与各自预演的 CI 步骤…
 - **gate-chain-map**（门禁委托链全景图（四入口横向拼图））：单环细读是清楚的（[pre-commit-hook](./pre-commit-hook.md) / [pre-push-gate](./pre-push-gate.md) 各讲一环纵深），**环与环之间没有一张拼图**才是「从 git 钩…

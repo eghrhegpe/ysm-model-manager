@@ -270,7 +270,7 @@ go job 要用 `pnpm install` + `vite build`（`//go:embed all:frontend/dist` 前
 - **方法论**：接一个既有门禁前，先用**真实范围实跑**（本例 `--base v1.15.0`）看它到底判什么。
   「工具已存在」不等于「接上就正确」——口径（排除域/阈值/基线）才是成败点。
 
-### 8e. ⚠️ 两个 diff-coverage 门禁在 main 直推下**恒空跑**（2026-10-08 实测发现，未修）
+### 8e. ⚠️ 两个 diff-coverage 门禁在 main 直推下曾恒空跑（2026-10-08 发现并已修）
 
 - **现象**：CI 上两门禁的结论都是「本次无改动源码需要检查（阈值 60%）。通过。」
   （实测 run 37806261054：`check-go-diff-coverage` 报「本次无改动 **Go** 源码」，
@@ -279,19 +279,24 @@ go job 要用 `pnpm install` + `vite build`（`//go:embed all:frontend/dist` 前
   fetch 到的 `origin/main` 指向**同一提交** ⇒ `git diff origin/main...HEAD` 为空 ⇒
   `srcFiles = []` ⇒ 落入「无改动源码」分支 exit 0。**是形态级空转，不是偶发。**
 - **为何 `fetch-depth: 0` 救不了**：深度只影响历史可达性；这里 base 与 HEAD 相等，取多少历史都为空。
-  （`fetch-depth: 0` 仍是**必要**前提——否则 ref 不可达会 fail-closed exit 2，那是另一种红。）
-- **影响面**：`ci.yml`（push main）与 `release.yml`（tag）两条路径**都**空跑。本地 pre-push 不受
-  影响（`gate-config.ts|GO_STATIC_TOOLS` 经 gate-blocks 调用时是工作区/暂存态上下文）。
+- **影响面**：`ci.yml`（push main）与 `release.yml`（tag）两条路径**都**空跑。本地不受影响
+  （`gate-config.ts` 已注明该门禁刻意未接本地闸）。
 - **为何一直没人发现**：空跑输出是**绿灯**（exit 0 + 「通过」），与真通过不可区分。且
-  `ci.yml` 已把 `changed-base: event.before` 传进 workflow，但**脚本不消费该输入**（只认
-  `--base`/`YSM_DEADCODE_BASE` 一类的 env，diff-coverage 两者都没有）——传了没用上。
-- **候选修法**（未实施，需拍板）：
-  ① CI 侧显式传基线：`node scripts/check-diff-coverage.ts --base ${{ github.event.before }}`
-     （push 事件）／tag 场景用上一个发版 tag；
-  ② 或脚本内识别「base == HEAD」并**显式告警**（当前是静默「通过」，至少应把空转与真通过区分开）；
-  ③ 理想的 fail-loud 语义：base 与 HEAD 相等时报「基线无意义」而非「通过」。
+  `ci.yml` 虽把 `changed-base: event.before` 传进 workflow，但**脚本不消费该输入**——传了没用上。
+- **修法（三层，缺一不可）**：
+  ① **基线单点解析**：`test.yml|changes` job 本就解析真实基线（全零 SHA / 不可达 → `HEAD~1` 兜底），
+     现新增 `base` output 把它导出；`frontend` / `go` 两 job 均已 `needs: [changes]`，直接
+     `--base "${{ needs.changes.outputs.base }}"` 消费。**基线解析只此一处，勿在门禁步里再算。**
+  ② **脚本 fail-loud**：两个脚本均加「基线 == HEAD ⇒ exit 2」守卫（用 **commit oid 比对**，
+     不用字符串——`origin/main` 与 `HEAD` 字面不同却可能同 oid）。报错点明「同一提交 ⇒ 变更集必为空」
+     并指向修法。`--uncommitted`/`--staged`/`--files` 三条合法路径不受影响（本就走别的取数通道）；
+     `--suggest` 保持非阻断 exit 0。
+  ③ **护栏**（`tests/test_check_diff_coverage.ts`）：直接 spawn 脚本断言**退出码语义**
+     （纯函数测不到 exit）——基线==HEAD 须 exit 2 且文案含「同一提交」；`--suggest` 须 exit 0；
+     `--files` 不得误伤；并加**反向锚**断言 Go 版有同款守卫（两门禁同病，只修一处 = 假绿回流）。
 - **教训**：门禁的「通过」必须能与「没跑」区分。凡归属依赖 `base...HEAD` 的检查，都要断言
-  **基线确实指向 HEAD 之前**，否则绿灯可能只是空转。
+  **基线确实指向 HEAD 之前**，否则绿灯可能只是空转。这与 `changes` job 自测发现的
+  「空变更集 ⇒ 假绿通道」（`test.yml` 内注释）是同一族问题的两个面。
 
 ### 9. 契约 job 不装前端依赖（隐性防线）
 原「契约测试排在 pnpm install 之前」这一顺序是**有意的**（曾暴露 `scripts/port-align.ts` 在模块顶层

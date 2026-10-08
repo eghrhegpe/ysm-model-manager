@@ -44,6 +44,13 @@ jobs:
       go: ${{ steps.detect.outputs.go }}
       contracts: ${{ steps.detect.outputs.contracts }}
       all: ${{ steps.detect.outputs.all }}
+      # 解析后的**真实基线 ref**（供 diff-coverage 类门禁消费，见 §8e）。
+      # ⚠️ 必须由本 job 产出而非让各门禁自己默认 origin/main：CI 跑在 push 之后，
+      # checkout 的 HEAD 与 fetch 到的 origin/main 指向**同一提交** ⇒ `git diff
+      # origin/main...HEAD` 为空 ⇒ 门禁落「无改动源码 ⇒ 通过」分支**恒空跑**（假绿，
+      # 实测 run 37806261054 两个 diff-coverage 门禁均如此）。本输出即那个「HEAD 之前
+      # 的真实基线」。
+      base: ${{ steps.detect.outputs.base }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -61,16 +68,20 @@ jobs:
           if [ "$EVENT" = "workflow_dispatch" ]; then
             echo "手动触发 ⇒ 全量跑"; echo "all=true" >> "$GITHUB_OUTPUT"
             echo "frontend=true" >> "$GITHUB_OUTPUT"; echo "go=true" >> "$GITHUB_OUTPUT"
-            echo "contracts=true" >> "$GITHUB_OUTPUT"; exit 0
+            echo "contracts=true" >> "$GITHUB_OUTPUT"; echo "base=" >> "$GITHUB_OUTPUT"; exit 0
           fi
           if [ -n "${BASE:-}" ] && ! echo "$BASE" | grep -qE '^0+$' && git cat-file -e "$BASE^{commit}" 2>/dev/null; then
             RANGE="$BASE..HEAD"
+            # 消费方拿的是 BASE 本身（diff-coverage 传 --base），不是 RANGE。
+            echo "base=$BASE" >> "$GITHUB_OUTPUT"
           elif git rev-parse -q --verify HEAD~1 >/dev/null 2>&1; then
             RANGE="HEAD~1..HEAD"
+            echo "base=HEAD~1" >> "$GITHUB_OUTPUT"
           else
             echo "无可用基线（浅历史/首个提交）⇒ 全量跑"
             echo "all=true" >> "$GITHUB_OUTPUT"; echo "frontend=true" >> "$GITHUB_OUTPUT"
-            echo "go=true" >> "$GITHUB_OUTPUT"; echo "contracts=true" >> "$GITHUB_OUTPUT"; exit 0
+            echo "go=true" >> "$GITHUB_OUTPUT"; echo "contracts=true" >> "$GITHUB_OUTPUT"
+            echo "base=" >> "$GITHUB_OUTPUT"; exit 0
           fi
           FILES=$(git diff --name-only "$RANGE" || true)
           echo "变更范围: $RANGE"; echo "$FILES" | sed 's/^/  /'
@@ -80,7 +91,10 @@ jobs:
           if [ -z "$(echo "$FILES" | tr -d '[:space:]')" ]; then
             echo "变更集为空（无文件可比对）⇒ 保守全量跑"
             echo "all=true" >> "$GITHUB_OUTPUT"; echo "frontend=true" >> "$GITHUB_OUTPUT"
-            echo "go=true" >> "$GITHUB_OUTPUT"; echo "contracts=true" >> "$GITHUB_OUTPUT"; exit 0
+            echo "go=true" >> "$GITHUB_OUTPUT"; echo "contracts=true" >> "$GITHUB_OUTPUT"
+            # 空集时 base 已写过（BASE 或 HEAD~1），保留不动——消费方拿到它仍能定位范围；
+            # 若确实无可用基线，上面的分支已写 base= 空且此处不再覆盖。
+            exit 0
           fi
           fe=false; go=false; ct=false; all=false
           while IFS= read -r f; do
@@ -311,9 +325,17 @@ jobs:
         run: |
           # git fetch 不带 --depth（浅 fetch 退化全仓 ⇒ 基线失明，见 pre-push-gate 卡同族教训）。
           git fetch origin main 2>$null
-          # 人读文本模式（2026-10-08 统一输出策略，同 check-redlines / go-diff-coverage）：
-          # CI 日志消费方是人眼 + Actions 面板，--json 会被固定列宽硬折行淹没。
-          node scripts/check-diff-coverage.ts
+          # ⚠️ 基线必须显式传：脚本默认 base=origin/main，而 CI 跑在 push 之后——checkout 的
+          # HEAD 与 fetch 到的 origin/main 指向**同一提交** ⇒ diff 为空 ⇒ 本门禁落「无改动源码
+          # ⇒ 通过」分支**恒空跑**（假绿，实测 run 37806261054 前后端两门禁均如此）。
+          # `changes` job 已把 BASE 解析成「HEAD 之前的真实基线」（含全零 SHA → HEAD~1 兜底）。
+          # 该输出为空（无可用基线的极端场景）时不传 --base，退回脚本默认（此时域判定已保守
+          # 全量，判定语义另议）。
+          if ("${{ needs.changes.outputs.base }}" -ne "") {
+            node scripts/check-diff-coverage.ts --base "${{ needs.changes.outputs.base }}"
+          } else {
+            node scripts/check-diff-coverage.ts
+          }
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
   # ── 前端静态治理 Job：死代码基线 + 静态治理闸（改动纪律，与功能正确性正交）──────
@@ -504,10 +526,13 @@ jobs:
         shell: pwsh
         run: |
           git fetch origin main 2>$null
-          # 人读文本模式（2026-10-08 统一输出策略）：同 check-redlines 步的理由——
-          # CI 日志给人看，--json 会被硬折行淹没。退出码语义两模式一致（脚本 635 行
-          # `if (json)` 仅切换输出形态，判定链在 440 行之前已定型）。
-          node scripts/check-go-diff-coverage.ts
+          # ⚠️ 同前端门禁：默认 base=origin/main 在 CI（push 之后）与 HEAD 同提交 ⇒ 恒空跑假绿
+          # （实测 run 37806261054）。显式传 `changes` 解析出的真实基线。详见 ci-tuning §8e。
+          if ("${{ needs.changes.outputs.base }}" -ne "") {
+            node scripts/check-go-diff-coverage.ts --base "${{ needs.changes.outputs.base }}"
+          } else {
+            node scripts/check-go-diff-coverage.ts
+          }
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
   # ── Go 静态分析（golangci-lint 迁 Linux 独立并行；钉 ubuntu-24.04）──────────

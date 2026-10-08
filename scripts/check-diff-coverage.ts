@@ -240,6 +240,22 @@ function main() {
     if (!staged && !git(["rev-parse", "--verify", base])) {
       failOrWarn(`基准分支不可达：${base}（请先 \`git fetch\` 或改用 --base 指向本地分支）`);
     }
+    // ⚠️ 「基线 == HEAD」必须显式报错，**不可**任其落入下方「本次无改动源码 ⇒ 通过」分支。
+    // 实测病灶（2026-10-08，run 37806261054）：CI 在 push **之后**跑，checkout 的 HEAD 与
+    // fetch 到的 origin/main 指向同一提交 ⇒ `git diff origin/main...HEAD` 为空 ⇒ 门禁输出
+    // 「本次无改动源码需要检查。通过。」exit 0——**与「真通过」不可区分的假绿**，前后端两个
+    // diff-coverage 门禁同时如此。调用方应传「HEAD 之前的真实基线」（CI 由 `changes` job 解析）。
+    // 判据用 commit oid 比对而非字符串比对：`origin/main` 与 `HEAD` 字面不同却可能同 oid。
+    if (!staged && !uncommitted) {
+      const headOid = git(["rev-parse", "HEAD"])?.trim();
+      const baseOid = git(["rev-parse", "--verify", `${base}^{commit}`])?.trim();
+      if (headOid && baseOid && headOid === baseOid) {
+        failOrWarn(
+          `基线无意义：--base ${base} 与 HEAD 是同一提交（${headOid.slice(0, 12)}）⇒ 变更集必为空。` +
+            `请传 HEAD 之前的基线（CI 用 \`changes\` job 解析出的 base；本地用 --uncommitted/--staged）。`,
+        );
+      }
+    }
   }
 
   const changed = args.files

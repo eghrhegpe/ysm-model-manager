@@ -11,6 +11,7 @@
  * 零依赖（仅 node:assert）。运行：node tests/test_check_diff_coverage.mjs
  */
 import assert from "node:assert";
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { ROOT } from "../scripts/_lib/scan-files.ts";
@@ -188,6 +189,49 @@ check("hasNoCoverableStatements：有真实逻辑的文件为 false（防豁免�
 check("hasNoCoverableStatements：读不到文件时 fail-loud（返回 false）", () => {
   assert.equal(hasNoCoverableStatements("frontend/src/__nonexistent__.ts"), false);
 });
+
+// ── 6. 假绿防线：基线 == HEAD 必须 fail-loud（2026-10-08 实测驱动，见 ci-tuning §8e）──
+// 病灶：CI 在 push 之后跑，checkout 的 HEAD 与 fetch 到的 origin/main 同提交 ⇒ diff 为空 ⇒
+// 旧行为输出「本次无改动源码需要检查。通过。」exit 0——**与真通过不可区分**。
+// 契约：门禁模式（默认/--json）必须 exit 2；--suggest 提示模式保持非阻断 exit 0。
+// 直接 spawn 脚本进程断言退出码（纯函数测不到 exit 语义）。
+{
+  const runScript = (argv: string[]) =>
+    spawnSync(process.execPath, ["scripts/check-diff-coverage.ts", ...argv], {
+      cwd: ROOT,
+      encoding: "utf8",
+    });
+  // 前置：HEAD 必须可解析（否则测的是另一条错误路径，假绿）
+  const headOk = spawnSync("git", ["rev-parse", "HEAD"], { cwd: ROOT, encoding: "utf8" });
+  if (headOk.status !== 0) {
+    console.log("⚠ 跳过基线守卫用例：本环境无 git HEAD");
+  } else {
+    check("基线 == HEAD 时门禁 fail-loud（exit 2，不假绿）", () => {
+      const r = runScript(["--base", "HEAD"]);
+      assert.equal(r.status, 2, `应 exit 2，实为 ${r.status}；stderr=${r.stderr}`);
+      assert.match(r.stderr, /基线无意义/);
+    });
+    check("基线 == HEAD 时报错文案指向真实成因（同一提交/变更集必为空）", () => {
+      const r = runScript(["--base", "HEAD"]);
+      assert.match(r.stderr, /与 HEAD 是同一提交/);
+      assert.match(r.stderr, /变更集必为空/);
+    });
+    check("--suggest 模式遇无意义基线仍非阻断（exit 0，提示模式不得阻断）", () => {
+      const r = runScript(["--base", "HEAD", "--suggest"]);
+      assert.equal(r.status, 0, `建议模式应 exit 0，实为 ${r.status}`);
+    });
+    check("守卫不误伤 --files 模式（无 git 上下文，本身合法）", () => {
+      const r = runScript(["--files", "frontend/src/views/app-tree/loader.ts"]);
+      assert.equal(r.status, 0, `--files 模式应 exit 0，实为 ${r.status}；stderr=${r.stderr}`);
+    });
+  }
+  // 反向锚：Go 版必须有同款守卫（两门禁同病，只修一处 = 假绿回流）
+  check("Go 版 check-go-diff-coverage 有同款基线守卫（防只修一处）", () => {
+    const goSrc = readFileSync(resolve(ROOT, "scripts/check-go-diff-coverage.ts"), "utf8");
+    assert.match(goSrc, /基线无意义/);
+    assert.match(goSrc, /与 HEAD 是同一提交/);
+  });
+}
 
 if (fails.length) {
   console.error(`\n❌ ${fails.length} 个用例失败：`);

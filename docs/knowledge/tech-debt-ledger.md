@@ -51,7 +51,7 @@ quick_risk_lines:
 - **A2 · ADR 陈旧路径（中·部分真实）**：子代理称「92 篇 utils/3d 陈旧路径」被夸大——`frontend/src/utils/3d/` 已整体升格 `frontend/src/preview-3d/`（ADR-129/138/235），143 处 `utils/3d` 引用多为 ADR **历史叙述**（迁移旧名），不可机械替换；`check-adr-drift` 不查散文路径故门禁不报错。真实可修的是**事实锚点型**引用（「相关」/「新建」/「落点」行指向当前代码）。进展：① 已据 `audit-20260922.md` 实锤修正 ADR-127（2 处路径→preview-3d）、ADR-122「相关」行（旧路径+失效命名 BuildCtx）、同步 audit 自身（提交 7c268fe69）；② 长尾（其余 40+ 篇「相关」行锚点）由子代理分域判定「事实锚点 vs 历史叙述」后批量修正，目标文件均经 glob 验证存在于 preview-3d 下。
 - **A4 · R7 rtype 魔法串（中·WARN 级）**：`check-redlines` R7 仅 3 处（`const DEFAULT_NS = "ysm"` 等），其中至少 1 处是合法命名空间常量定义点；其余 250+ 处 `"ysm"` 是测试数据/文件名/合法 rtype 参数，**不可盲改**。逐处人工判定后再动。
 - **A1 · 129/333 ADR 缺 emoji 状态标记 + 取代链错配（ADR-125/136/137/138）**：治理口径自相矛盾，建议归一状态行 + 补取代导航。
-- **G1 · Rust 组件层空目录（中）**：`rust-core/`、`rust-wails-bridge/` 是空目录（仅 `rust-test-utils` 有 62 行测试工具），需在架构文档定性为「未实现/已弃用/已迁 Go」。
+- **G1 · Rust 组件层空目录（子代理误判为"未实现"·2026-10-08 实锤为"已退役"并已清理）**：子代理称 `rust-core/`、`rust-wails-bridge/` 是空目录需定性为"未实现/已弃用/已迁 Go"——实测 `git log --diff-filter=D -- docs/knowledge/rustbridge.md` 命中 `3bf77cd63`「refactor: 删除 Rust 扫描基础设施（Go 并行遍历取代）」，**Rust 桥已明确退役**，非未实现。两目录为空壳（0 条目、未 git 跟踪、无构建脚本依赖），`go/rustbridge` 亦不存在。**已删除两个空壳目录**（净化退役残留）。唯一幸存 crate 为 `rust-test-utils`（`TempRoot` 61 行，git 跟踪）。**遗留可清理项**：`.gitignore:146-150` 的 4 条死规则（`rust-core/target/`、`rust-wails-bridge/target/`、`go/rustbridge/static-lib/`、`go/rustbridge/android-lib/`）指向不存在的路径，无害但为退役残留，团队可择机清除（本轮保留以防 Rust 回归）。
 
 ### 维护性（低·已知且被门禁冻结）
 - **F1 · 死代码基线**：`check-deadcode-baseline` knip 183 + jscpd 118，ERROR 0、无新增（门禁只减不增）；优先回收 `preview-3d/caps`、`adapters`、`parsers`。

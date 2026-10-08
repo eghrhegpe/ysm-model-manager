@@ -270,6 +270,8 @@ auto_fields:
     - EnvBorrowedTextures
     - EnvCallback
     - EnvHdrCache
+    - EnvIbl
+    - EnvIblHost
     - EnvironmentCapability
     - EnvironmentParams
     - EnvMigrationInput

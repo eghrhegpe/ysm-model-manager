@@ -103,6 +103,12 @@ function hdrOf(cap: EnvironmentCapability): Record<string, unknown> {
   return (cap as unknown as { hdr: Record<string, unknown> }).hdr;
 }
 
+/** [ADR-091-d1] IBL 资产管线（PMREM 预滤波/三通路取图/背景槽/dispose 顺序收敛）已下沉 `EnvIbl`
+ *  （cap 的 `ibl` 实例）——测试注入 backgroundSrcTex / skySourcedTex 经此迁移（同 `hdrOf` 白盒口径）。 */
+function iblOf(cap: EnvironmentCapability): Record<string, unknown> {
+  return (cap as unknown as { ibl: Record<string, unknown> }).ibl;
+}
+
 // ---- 假渲染器（PMREM 已 mock，仅需构造不报错）----
 function makeFakeRenderer() {
   return {
@@ -322,7 +328,7 @@ describe("EnvironmentCapability — buildEnvironment 管线（真实分支）", 
     setEnvState({ envUseAsBackground: true }, { source: "manual" });
     const cap = newCap();
     cap.apply();
-    const bgSrc = (cap as unknown as { backgroundSrcTex: THREE.Texture }).backgroundSrcTex;
+    const bgSrc = iblOf(cap).backgroundSrcTex as THREE.Texture;
     const disposeSpy = vi.spyOn(bgSrc, "dispose");
     cap.setUseAsBackground(false); // 重建 → 旧程序化 CanvasTexture dispose
     expect(disposeSpy).toHaveBeenCalled();
@@ -676,14 +682,14 @@ describe("EnvironmentCapability — 缩略图与直方图", () => {
     (throwing as unknown as { getContext: () => never }).getContext = () => {
       throw new Error("tainted");
     };
-    (cap as unknown as { backgroundSrcTex: THREE.Texture }).backgroundSrcTex = { image: throwing } as unknown as THREE.Texture;
+    iblOf(cap).backgroundSrcTex = { image: throwing } as unknown as THREE.Texture;
     const hist = cap.getLuminanceHistogram();
     expect(hist.every((v) => v === 0)).toBe(true);
   });
 
   it("getLuminanceHistogram backgroundSrcTex 无 canvas image 时全 0", () => {
     const cap = newCap();
-    (cap as unknown as { backgroundSrcTex: THREE.Texture }).backgroundSrcTex = { image: {} } as unknown as THREE.Texture;
+    iblOf(cap).backgroundSrcTex = { image: {} } as unknown as THREE.Texture;
     expect(cap.getLuminanceHistogram().every((v) => v === 0)).toBe(true);
   });
 });
@@ -1365,8 +1371,8 @@ describe("EnvironmentCapability — ADR-292 envSource 取图通道（批次一�
     setEnvState({ envSource: "sky", envUseAsBackground: true }, { source: "manual", force: true });
     cap.apply();
     // 手工复现旧缺陷态：背景槽挂着 sky 纹理（新代码 sky 分支不再挂背景，守卫防未来回潮）
-    const priv = cap as unknown as Record<string, unknown>;
-    priv.backgroundSrcTex = skyTex;
+    const priv = cap as unknown as { ibl: Record<string, unknown> };
+    priv.ibl.backgroundSrcTex = skyTex;
     const disposeSpy = vi.spyOn(skyTex, "dispose");
     cap.setSource("preset"); // 结构性变更 → buildEnvironment → disposeEnvironment
     expect(disposeSpy, "sky 纹理归 sky 所有，env 两条 dispose 守卫都不得放行").not.toHaveBeenCalled();

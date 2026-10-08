@@ -14,7 +14,7 @@
 // 别名；setter 收口 setEnvState(source:'manual')，渲染由 registerEnvCallback 回调落地，
 // setter 内不再直接 buildEnvironment（防双写/双重建）。
 
-import * as THREE from "three";
+import type * as THREE from "three";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import {
   registerEnvCallback,
@@ -29,18 +29,18 @@ import { pickModelDefaultFields } from "@/preview-3d/state/model-defaults.ts";
 import { createListenerSet } from "@/utils/base/primitives/listener-set.ts";
 // ADR-091-d1：custom HDR 缓存状态 + 解码管线下沉（纯生命周期容器，不触碰 scene.environment/background）
 import { EnvHdrCache } from "./env-hdr-cache.ts";
+// [ADR-091-d1] 槽位所有权判定 + IBL 资产管线一并下沉 env-ibl.ts（dispose 顺序收敛在管线内）；
+// cap 不再直接消费 ownership 纯函数。
+import { EnvIbl } from "./env-ibl.ts";
 // ADR-326：环境持久化数据面下沉（schema 单一事实源派生键轨，取代 saveState 手摘键 + loadState 手写还原表）
 import { RESTORE_SOURCE, restoreEnvPartial, saveEnvState } from "./env-persist.ts";
 // P2 抽取：纯像素工具（drawEnvEquirect / 缩略图 / 直方图）已下沉 env-pixels.ts，
 // 对齐 P1 sun-beams.ts 范式（状态完全内聚、不反向依赖宿主）。
-import { drawEnvEquirect, luminanceHistogram } from "./env-pixels.ts";
+import { drawEnvEquirect } from "./env-pixels.ts";
 import { buildEnvironmentNodes } from "./environment-menu.ts";
 import type { EnvSource } from "./environment-migrations.ts";
 // ADR-292 D7：旧存档 envSource 迁移（与 ground-capability 同口径的可测纯函数，零 THREE/DOM 依赖）
 import { normalizeEnvLegacyState } from "./environment-migrations.ts";
-// 暗线 B 收口：scene.environment 槽位所有权纯判定（dispose 安全边界）下沉本文件，
-// 与 env-pixels.ts 同范式——令 ADR-292 所有权契约集中在可单测一处，替代原 4 处手抄排除集。
-import { envOwnsSceneEnvironment, isEnvDisposableSource } from "./environment-ownership.ts";
 import type { EnvPreset, EnvPresetId, SelectableEnvPresetId } from "./environment-state.ts";
 // ENV_PRESETS（程序化天空数据表）：本文件内部消费（buildPresetEquirectTex / getPresetThumbnail）。
 // [锐评 2026-10-07 死再导出清收] 曾透传导出给 cap-configs.test / environment-capability.test，
@@ -115,30 +115,12 @@ export class EnvironmentCapability implements SceneCapability {
   private scene: THREE.Scene;
   private renderer: THREE.WebGLRenderer;
 
-  private pmrem: THREE.PMREMGenerator | null = null;
-  /** 当前挂载到 scene.environment 的预滤波贴图 */
-  private envTexture: THREE.Texture | null = null;
-  /** PMREMGenerator 生产 WebGLRenderTarget，需 dispose */
-  private envRT: THREE.WebGLRenderTarget | null = null;
-
-  /** 构造前的 scene.environment（dispose 时还原） */
-  private prevEnvironment: THREE.Texture | null = null;
-  /** 构造前的 scene.background（dispose 时还原） */
-  private prevBackground: THREE.Texture | THREE.Color | null = null;
-  /** 当前用作 scene.background 的源纹理（非 PMREM 版），useAsBackground=true 时赋值，下次 buildEnvironment 先 dispose */
-  private backgroundSrcTex: THREE.Texture | null = null;
-
   /* ===== custom HDR 缓存（ADR-091-d1 下沉 EnvHdrCache）=====
    * 四态（tex/name/loading/warnedMissing）+ 解码管线 + 缩略图归 EnvHdrCache 承载；
    * cap 经 getter 只读 tex，写入只经 hdr.loadFromFile/hdr.dispose（通路键权威仍在 cap 侧）。 */
   private readonly hdr = new EnvHdrCache();
-  /**
-   * [ADR-292 D7] 最近一次经 envSource="sky" 从 SkyCapability 取回的烘焙纹理。
-   * 仅用于 pmremToSceneEnv 的**所有权守卫**（不得 dispose 别人的纹理）；
-   * 本 cap 不持有其生命周期，dispose 路径一律不碰它。
-   */
-  private skySourcedTex: THREE.Texture | null = null;
-
+  /** [ADR-091-d1] IBL 资产管线（PMREM 预滤波/三通路取图/背景槽/dispose 顺序收敛全封装） */
+  private readonly ibl: EnvIbl;
   /** ADR-196：取消订阅函数 */
   private unsubscribeEnv: () => void;
   /** [ADR-293 收口 2026-10] 参数变更订阅（菜单局部刷新）：仅离散键变更 notify——
@@ -148,8 +130,6 @@ export class EnvironmentCapability implements SceneCapability {
   private readonly listenerSet = createListenerSet();
   /** [R-1] 有存档恢复过 = 模型默认值让位（对齐 shadow/reflector/fog 同款守卫） */
   private isStateLoaded = false;
-  /** 防递归标记：buildEnvironment 内部 setEnvState 触发回调时跳过 */
-  private isBuilding = false;
   /**
    * [ADR-292 D7] cap 间协调查询器（组合根 createAll 注入）。
    * 用途：`envSource === "sky"` 时向 SkyCapability 取烘焙纹理。
@@ -177,14 +157,17 @@ export class EnvironmentCapability implements SceneCapability {
       setEnvState({ envEnabled: opts.enabled }, { source: "manual" });
     }
     if (opts.caps !== undefined) this.caps = opts.caps;
-    this.prevEnvironment = this.scene.environment;
-    this.prevBackground = (this.scene.background as THREE.Texture | THREE.Color | null) ?? null;
+    this.ibl = new EnvIbl({
+      scene: this.scene,
+      renderer: this.renderer,
+      hdr: this.hdr,
+      caps: this.caps,
+    });
 
     // ADR-196：订阅 envState 变更，渲染由回调落地（只接收 environment 组的键）
     this.unsubscribeEnv = registerEnvCallback(
       this,
       (changed, _state) => {
-        if (this.isBuilding) return;
         // [锐评 F-1 收口] 能力总开关 = envState.envEnabled（原私有 this.enabled 已退役）——
         // schema 键本就在 "environment" 组内，toggle 派发天然到本回调；不接管则该键改了
         // 不落地（原实现靠私有门短路挂在最前面，键永无消费者 = 幽灵键）。
@@ -194,12 +177,7 @@ export class EnvironmentCapability implements SceneCapability {
         // ⚠️ 先处理开关分支并 return：buildEnvironment 内部 isBuilding 置位期间若有
         // 同步派发（取图路径），再入本回调会被首行 isBuilding 短路，不会递归。
         if (changed.has("envEnabled")) {
-          if (envState.envEnabled) this.buildEnvironment();
-          else {
-            this.disposeEnvironment();
-            this.scene.environment = this.prevEnvironment;
-            this.applyBackground(null);
-          }
+          this.ibl.build(); // [ADR-091-d1] enabled=false 分支由 EnvIbl.build 内部统一还原两槽位
           // [锐评 X-3 2026-10-04] IBL 是否在场直接决定 light 的 ambient 让位系数（×0.5）——
           // env 开关翻转必须通知 light 重算（与 `sky.setSkyIblSelfHoldEnabled` 的跨 cap 通知
           // 先例同法）。判据「env 在场启用」现已唯一归本键。
@@ -214,7 +192,7 @@ export class EnvironmentCapability implements SceneCapability {
           // [ADR-292 D7] 来源切换是结构性变更（换整条取图通路），必须重建
           changed.has("envSource");
         if (structural && envState.envEnabled) {
-          this.buildEnvironment();
+          this.ibl.build();
         }
         if (changed.has("envIntensity")) {
           applyEnvIntensity([this.scene], envState.envIntensity);
@@ -261,6 +239,7 @@ export class EnvironmentCapability implements SceneCapability {
    *  来源单选与画面再度分裂）。envPreset 仅在残留旧语义值 custom（新语义的非法选图值）
    *  时修回 studio（同 loadState 的 preset 修复口），否则保留用户预设原样回屏。 */
   onClearCustomHdr(): void {
+    // [ADR-091-d1] 仅清 custom HDR 缓存——清缓存 ≠ 关环境贴图，**绝不动** IBL/背景槽
     this.hdr.dispose();
     const patch: Partial<EnvState> = {};
     if (envState.envSource === "custom") patch.envSource = "preset";
@@ -300,244 +279,9 @@ export class EnvironmentCapability implements SceneCapability {
 
   /* -------- 内部：重建环境贴图 -------- */
 
-  /** 把 backgroundSrcTex 或 程序化 CanvasTexture 挂到 scene.background（useAsBackground=true 时）；
-   *  useAsBackground=false 或 enabled=false：还原 prevBackground（若 prevBackground 是 Color 对象保留实例，Texture 保留引用，不 dispose prev） */
-  private applyBackground(srcTex: THREE.Texture | null): void {
-    // 先清旧的 backgroundSrcTex：是否可 dispose 由 ownership 纯判定收口
-    // （customHdrTex/skySourcedTex 各有专属释放路径或归他人所有，暗线 B）
-    if (
-      this.backgroundSrcTex &&
-      isEnvDisposableSource(this.backgroundSrcTex, {
-        customHdrTex: this.hdr.tex,
-        skySourcedTex: this.skySourcedTex,
-      })
-    ) {
-      this.backgroundSrcTex.dispose();
-    }
-    this.backgroundSrcTex = null;
-    if (!envState.envEnabled || !envState.envUseAsBackground || !srcTex) {
-      // 不使用：还原构造时的 prevBackground（不是 null 的话保留实例——也可能是 Color）
-      this.scene.background = this.prevBackground;
-      return;
-    }
-    this.backgroundSrcTex = srcTex;
-    this.scene.background = this.backgroundSrcTex;
-  }
-
-  private buildPresetEquirectTex(): THREE.Texture | null {
-    const preset = ENV_PRESETS[envState.envPreset as SelectableEnvPresetId] ?? ENV_PRESETS.sky;
-    const W = envState.envResolution;
-    const H = Math.floor(W / 2);
-    const canvas = document.createElement("canvas");
-    canvas.width = W;
-    canvas.height = H;
-    drawEnvEquirect(canvas, preset);
-
-    const tex = new THREE.CanvasTexture(canvas);
-    tex.mapping = THREE.EquirectangularReflectionMapping;
-    tex.colorSpace = THREE.SRGBColorSpace;
-    tex.needsUpdate = true;
-    return tex;
-  }
-
-  /**
-   * 自定义 HDR 通路取图。
-   *
-   * [ADR-292 D5 定案] **本方法不写 `envPreset`**——`envSource` 是通路唯一权威，
-   * `envPreset` 只承载「预设通路选哪张图」。原实现在无 HDR 缓存时把 envPreset 改写成
-   * `"studio"`，导致：来源显示「自定义 HDR」而 envPreset 是 studio（两键分裂，
-   * e2e 无从断言）；且用户手选的预设被静默吞掉。
-   *
-   * 现语义：无文件 → 记一次告警 + 返回 null（由 buildEnvironment 回落预设渲染），
-   * **键值一个都不动**。用户意图（envSource==="custom"）完整保留，加载文件后自动生效。
-   */
-  private buildCustomHdrTex(): THREE.Texture | null {
-    // 通路判定只看 envSource。兼容旧存档：只有 envPreset==="custom" 而无 envSource 键时
-    // 由 normalizeEnvLegacyState 迁移补写 envSource，故此处无需再兼容 preset 信号。
-    if (envState.envSource !== "custom") return null;
-    if (this.hdr.tex) return this.hdr.tex;
-    if (!this.hdr.warnedMissing) {
-      this.hdr.warnedMissing = true;
-      ringLog(
-        "env",
-        "来源为「自定义 HDR」但尚未加载文件，暂以预设渲染。请点击「选择 HDR 文件」加载 .hdr。",
-        "warn",
-        () =>
-          console.warn("[EnvironmentCapability] envSource=custom 但无 HDR 缓存，暂回落预设渲染"),
-      );
-    }
-    return null;
-  }
-
-  private pmremToSceneEnv(srcTex: THREE.Texture | null): void {
-    if (!srcTex) return;
-    try {
-      this.pmrem = new THREE.PMREMGenerator(this.renderer);
-      this.pmrem.compileEquirectangularShader();
-      const rt = this.pmrem.fromEquirectangular(srcTex);
-      this.envRT = rt;
-      this.envTexture = rt.texture;
-      this.scene.environment = this.envTexture;
-      this.applyBackground(srcTex);
-      // [ADR-292 D7] 所有权守卫：只 dispose **本 cap 自建**的源纹理。
-      // 排除两类外来者（暗线 B 收口为 isEnvDisposableSource 单一事实源）——
-      //   ① customHdrTex：本 cap 的长期缓存（由 disposeCustomCache 释放，此处不得动）
-      //   ② envSource="sky" 时来自 SkyCapability 的烘焙纹理：归 sky 所有（其 renderTarget
-      //      持有），本 cap 若在此 dispose 会把 sky 的 renderTarget 纹理释放掉，
-      //      导致天空 IBL 与后续烘焙出现「纹理已释放」类故障。
-      if (
-        isEnvDisposableSource(srcTex, {
-          customHdrTex: this.hdr.tex,
-          skySourcedTex: this.skySourcedTex,
-        }) &&
-        this.backgroundSrcTex !== srcTex
-      ) {
-        srcTex.dispose();
-      }
-    } catch (e) {
-      ringLog("env", `PMREM 生成失败: ${e}`, "error");
-      this.disposeEnvironment();
-      this.scene.environment = this.prevEnvironment;
-      // 失败回滚必须与禁用分支/dispose 同构：buildEnvironment 先 disposeEnvironment()，
-      // 已把旧 backgroundSrcTex dispose 掉——成功路径靠 applyBackground 重挂新背景，
-      // 失败路径必须显式还原 prevBackground，否则 scene.background 悬空指向已释放纹理
-      this.applyBackground(null);
-    }
-  }
-
-  /**
-   * [ADR-292 D7 + 锐评补全 2026-09-21] 向 SkyCapability 取一张烘焙好的天空 IBL 纹理。
-   *
-   * 所有权契约（D1/D2）：env 是 `scene.environment` 唯一写者；sky 只「烤」不「装」。
-   * 失败/缺查询器的**每条路径都返回 null**，由调用方安全降级到预设路径——
-   * 独立预览（无组合根注入 caps）不得因缺 sky 而崩。
-   *
-   * ⚠️ 返回的是 **PMREM 预滤波产物**（cubeUV 图集，`renderTarget.texture`），
-   * 归 sky 所有（其 renderTarget 持有），本 cap **不得 dispose、更不得二次滤波**
-   * ——把它喂给 `fromEquirectangular` 会把 cubeUV 图集按等距柱状采样重烤一遍，
-   * 光照静默错乱（D-3 修复：sky 分支改为直装，见 buildEnvironment 前置分派）。
-   *
-   * @param force 透传给 sky 的阈值门控：离散结构性变更 true；昼夜循环等连续动画
-   *   false——sky 未 dirty 时原样交回**同一纹理引用**，供 buildEnvironment 短路整轮重建（D-5）。
-   */
-  private buildSkyEnvTex(force = true): THREE.Texture | null {
-    try {
-      const sky = getTypedCap(this.caps, "sky");
-      if (!sky?.bakeEnvironmentTexture) {
-        this.skySourcedTex = null;
-        return null;
-      }
-      const tex = sky.bakeEnvironmentTexture({ force }) ?? null;
-      this.skySourcedTex = tex;
-      return tex;
-    } catch (e) {
-      ringLog("env", `envSource=sky 取天空烘焙纹理失败，回退预设: ${e}`, "warn");
-      this.skySourcedTex = null;
-      return null;
-    }
-  }
-
-  /**
-   * @param skyForce 仅作用于「跟随天空」通路向 sky 取图时的阈值门控透传（D-5）：
-   *   结构性变更（来源/预设/分辨率/装载开关/存档恢复）默认 true 拿当前帧的图；
-   *   连续动画（昼夜循环经 refreshFromSkySource(false)）传 false，
-   *   sky 未 dirty 交回同一纹理引用时本轮**整轮重建短路**，env 侧不再每帧全量重建。
-   */
-  private buildEnvironment(skyForce = true): void {
-    if (this.isBuilding) return;
-    this.isBuilding = true; // 取图即置位：buildSkyEnvTex 内部触发的同步派发须同样被 isBuilding 短路（对齐旧序）
-    try {
-      // [D-5] 同引用短路须**先捕获旧纹理引用**：buildSkyEnvTex 会把 this.skySourcedTex
-      // 覆盖为新返回值，拿覆盖后的字段比「变没变」是循环自证，必须用覆盖前的引用对比。
-      const prevSkyTex = this.skySourcedTex;
-      // [D-3/D-5] 「跟随天空」前置分派：sky 产物已滤波，直装槽位；同引用未换 → 免整轮重建。
-      if (envState.envEnabled && envState.envSource === "sky") {
-        const skyTex = this.buildSkyEnvTex(skyForce);
-        if (skyTex) {
-          if (skyTex === prevSkyTex && this.scene.environment === skyTex) return;
-          // [复审 D] 传覆盖前旧引用：skySourcedTex 此刻已被覆盖为新图，
-          // 旧图若还挂在背景槽须并入排除集
-          this.disposeEnvironment(prevSkyTex);
-          this.skySourcedTex = skyTex;
-          this.scene.environment = skyTex; // env 仍是槽位唯一写者（D1 红线）
-          // cubeUV 图集不是合法的 background 源（天空视觉由 sky 的穹顶 mesh 本身承担）；
-          // applyBackground(null) 同时清理旧背景纹理引用。
-          this.applyBackground(null);
-          return;
-        }
-        // 取不到（无 sky cap / 烘焙失败）→ 落到下方预设路径（不黑场景）。
-      }
-      // [复审 D] sky 取图失败（skySourcedTex 已被 buildSkyEnvTex 置 null）时，
-      // 旧 sky 纹理同样须并入排除集——统一传覆盖前引用，两分支一个口径。
-      this.disposeEnvironment(prevSkyTex);
-      if (!envState.envEnabled) {
-        this.scene.environment = this.prevEnvironment;
-        this.applyBackground(null);
-        return;
-      }
-      let srcTex: THREE.Texture | null = null;
-      // [ADR-292 D7] 按 envSource 分派取图通路：preset / sky / custom（三者互斥）
-      switch (envState.envSource) {
-        case "sky":
-          // 本分支仅在上方前置取图失败（返回 null）时到达 → 直接落预设兜底。
-          break;
-        case "custom":
-          srcTex = this.buildCustomHdrTex();
-          break;
-        default:
-          break; // "preset" → 下方 buildPresetEquirectTex
-      }
-      // 回落预设：custom/sky 通路取不到图（无文件/无查询器/烘焙失败）时一律回落，
-      // 保证 scene.environment 始终有一张可用贴图（不出现「来源选了却没光」的黑场景）。
-      if (!srcTex) {
-        srcTex = this.buildPresetEquirectTex();
-      }
-      this.pmremToSceneEnv(srcTex);
-    } finally {
-      this.isBuilding = false;
-    }
-  }
-
-  /**
-   * 计算当前环境贴图的 16-bin 亮度直方图。
-   * 数据源：customHdrTex（custom HDR 分支）或 backgroundSrcTex 的 canvas（程序化预设）。
-   * 返回 number[16]，每个 bin 是该亮度区间的像素数；无数据源时返回全 0 数组。
-   * P2 抽取：像素运算下沉 env-pixels.ts#luminanceHistogram，本方法仅注入实例状态。
-   */
+  /** [ADR-091-d1] 环境贴图 16-bin 亮度直方图（对外 API 委托 EnvIbl） */
   getLuminanceHistogram(): number[] {
-    return luminanceHistogram(this.hdr.tex, this.backgroundSrcTex);
-  }
-
-  /**
-   * @param extraExclude 复审 D 收口：sky 直装分支里 buildSkyEnvTex 已把 this.skySourcedTex
-   *   覆盖为**新**图，此刻若背景槽还挂着**旧** sky 图（今日不可达——sky 分支恒不挂背景；
-   *   守卫防未来回潮），单比对现值会放行误 dispose。调用方把覆盖前捕获的旧引用传进来并入排除集。
-   */
-  private disposeEnvironment(extraExclude?: THREE.Texture | null): void {
-    if (this.envRT) {
-      this.envRT.dispose();
-      this.envRT = null;
-    }
-    this.envTexture = null;
-    if (this.pmrem) {
-      this.pmrem.dispose();
-      this.pmrem = null;
-    }
-    // backgroundSrcTex 清理：ownership 纯判定收口（暗线 B）。
-    // 不等于 customHdrTex / skySourcedTex / extraExclude 才 dispose
-    //（sky 纹理归 sky 所有，D-4 守卫：旧代码只排除 customHdrTex，
-    // envSource=sky + useAsBackground 时代背景挂过 sky 图，切通路即误释 sky 的 GPU 资源）
-    if (
-      this.backgroundSrcTex &&
-      isEnvDisposableSource(this.backgroundSrcTex, {
-        customHdrTex: this.hdr.tex,
-        skySourcedTex: this.skySourcedTex,
-        extraExclude,
-      })
-    ) {
-      this.backgroundSrcTex.dispose();
-    }
-    this.backgroundSrcTex = null;
+    return this.ibl.getLuminanceHistogram();
   }
 
   /** 对外：切换模型后同步所有 mesh 的 envMapIntensity
@@ -605,7 +349,7 @@ export class EnvironmentCapability implements SceneCapability {
    */
   refreshFromSkySource(force = true): void {
     if (!this.loadsFromSkySource()) return;
-    this.buildEnvironment(force);
+    this.ibl.build(force);
   }
 
   /** [ADR-292 D3] 当前供图来源（来源选择控件读值） */
@@ -800,13 +544,13 @@ export class EnvironmentCapability implements SceneCapability {
     this.isStateLoaded = true;
 
     // 恢复后显式 build（callback 可能因值未变而跳过，确保初始状态正确）
-    this.buildEnvironment();
+    this.ibl.build();
   }
 
   /* -------- SceneCapability 接口 -------- */
 
   apply(): void {
-    this.buildEnvironment();
+    this.ibl.build();
   }
 
   dispose(): void {
@@ -823,25 +567,9 @@ export class EnvironmentCapability implements SceneCapability {
     // sky 侧 dispose 守卫见 slot ≠ owned 即不动，两序皆收敛到 prevEnvironment。
     // 守卫 = environment-capability.test.ts「dispose 顺序收敛」两例（A 序 env 先离场自行还原 /
     // B 序 sky 先离场后 env 不得二次还原与二次释放；两例均经变异实证）。
-    // [暗线 B 收口] 占有权判定下沉 envOwnsSceneEnvironment 纯函数（与 3 处 isEnvDisposableSource 同文件）；
-    // env 享还原权的纹理：本 cap 自建 PMREM 产物 + sky 直装交回纹理（D-3 直装独占，env 离场即还原）。
-    if (envOwnsSceneEnvironment(this.scene.environment, [this.envTexture, this.skySourcedTex])) {
-      this.scene.environment = this.prevEnvironment;
-    }
-    // background 同理（同槽位无他人竞写，但保持与 environment 同构，防未来多 cap 接入）
-    // [锐评 2026-10-08 P1-4] 并入 envOwnsSceneEnvironment 纯函数——`14dd280b1`（标题正是
-    // 「收口所有权判定的第二处散落」）只把 environment 那一行改成纯函数调用，**紧邻的背景槽
-    // 三行原样留着**，commit diff 即证据。现两槽位同一判据，改所有权规则只此一处。
-    // 语义等价性：原判定 `slot === null || slot === ownedBg`，与纯函数的
-    // 「null 恒可还原 + owned 集合含槽位则可还原」逐字等价（ownedBg 为 null 时退化为仅 null 可还原）。
-    if (
-      envOwnsSceneEnvironment(this.scene.background as THREE.Texture | null, [
-        this.backgroundSrcTex,
-      ])
-    ) {
-      this.scene.background = this.prevBackground;
-    }
-    this.disposeEnvironment();
+    // [ADR-091-d1] 两槽位还原 + PMREM 管线释放下沉 `EnvIbl.dispose`（`envOwnsSceneEnvironment`
+    // 占有权收敛在管线内部，dispose 顺序两例守卫由 environment-capability.test.ts「dispose 顺序收敛」背书）
+    this.ibl.dispose();
     this.hdr.dispose();
     // [锐评 2026-10-08 P1-1] 会话级字段必须复位——与 PostprocessingCapability.dispose 同款。
     // `sceneCapabilityRegistry.createAll` 有「同宿主 scene/renderer/camera 三引用全等

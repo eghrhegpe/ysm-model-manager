@@ -144,6 +144,8 @@ review_diff.txt
 review_diff_tmp.txt
 scan-i18n-keys.mjs
 frontend/src/wasm/ysm-wasm-data*.js
+# 审计/探针输出目录（race 检测日志、门禁覆盖探针等一次性现场，不入库；探针源码仍跟踪）
+artifacts/audit/
 
 # Rust 构建产物（rust-core / rust-wails-bridge 编译输出，不入库）
 rust-core/target/

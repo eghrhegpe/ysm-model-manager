@@ -1102,6 +1102,8 @@ pitfalls:
   - perComponent 纹理索引分类与绑定索引必须同一空间：组件分支恒用局部槽 0（arr === compTexArr ? 0），非组件回退全局 texIdx/resolvedTexIdx
   - 大文件解码 peak 内存可达 ~3-4× 文件大小（base64 → Uint8Array → WASM HEAP → MEMFS → readFile → JSON.parse 六层拷贝并存）
   - 「`mmd-ktx2-encoder.ts|disposeKtx2WorkerPool`」KTX2 编码 worker 池曾长期无回收点：池由模块级缓存持有，生产侧零调用桥的 `dispose()`，唯一清空路径是 worker 崩溃；而编码是「每个纹理一生一次」的事件（落盘后 `completedHashes` 幂等跳过），3 个 worker + 各自 WASM BasisEncoder 却按进程级常驻。修法 = 挂 MMD 会话 `Stage6Dispose` 的 finally（`cancelPendingEncodings` 旁，同粒度同语义），懒建逻辑负责下次重建。**勿挂终局拆除**——其 `beforeunload` 钩子在 Wails v3 桌面端确认不触发（上游源码取证，见 `audit-host-env-coupling-review.md`），挂上去等于死代码。判别式：为资源补 dispose 前先问「它服务的事件频率 vs 它的生命周期」，一次性事件的资源不该活到进程结束
+  - 「`render-host.ts|animate` 是**先无条件续期、后判断**」——早退（局部态缺失/未就绪）**不停环**，停环唯一手段是 `stopIfIdle`（判 `_perFrames.length === 0`）或 `reset()`。**勿按「早退即停环」的直觉写断言**（契约测试首版即因此写反）。回归守卫 `render-host.raf-contract.test.ts`（用受控 rAF + 「反复 flush 看队列是否仍增长」判「帧真停」——不用 fake timers 只数调用次数、不断言 cancelAnimationFrame 被调，两者都骗得过）
+  - 「`render-host.ts|reset` **不是停环手段**」——它只清状态字段（`_animId = 0` 等），**不 cancel 已在飞的那一帧**；残余帧执行后会再次 `requestAnimationFrame` 把 `_animId` 复活，导致下次 `start()` 被幂等判定（`if (_animId !== 0) return`）**误拦**，循环拉不起来（实测第二轮帧数 0）。生产 close 正确顺序 = **摘 perFrame → `stopIfIdle()` 真停环 → `reset()` 清状态**。回归守卫 `render-host.session-restart.test.ts`（全行为可观察判据——不读内部字段，避开「断言 reset 后为空而 reset 根本没清」的自证式假绿）
 perf:
   - memory-heavy
   - gpu-bound

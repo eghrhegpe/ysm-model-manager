@@ -220,19 +220,39 @@ PNG 纹理 → ①查 Go 缓存目录（GetCachedTexture）→ 命中即用，�
 - **唯一遗留未兑现**：两个拟议 meta 闸 `caps/persist-roundtrip-contract.test.ts` 与 `cap-dispose-reset-contract.test.ts` **至今 ❌ 不存在**——
   这正是本轮 §五 论断的交叉验证：**同一条「立法无机器闸」的根因，跨两轮、跨两层（caps ↔ 宿主）重复出现。**
 
-## 五、拟议 meta 闸（③ 设计 + 主模型复核；**只出设计，未写测试**）
+## 五、拟议 meta 闸（③ 设计 + 主模型复核；**G1/G2/G4 已于 2026-10-08 落地**）
 
-| # | 治什么病 | 落点 | 假绿风险（最关键） | 优先级 |
-|---|---|---|---|---|
-| **G1** rAF 生命周期 | `stopIfIdle`/`animate`/`start` 零测试；判据面窄于不变量面 | `infra/render-loop.raf-contract.test.ts` | ① 用 `vi.useFakeTimers()` 而非 rAF stub ⇒ 只验「调用次数」不验「帧真停」；② 断言 `cancelAnimationFrame` 被调 ≠ 断言回调不再执行（可先 cancel 再 microtask 补一次 rAF 骗过）；③ 只测单实例测不到两会话交错 | **P1**（零新脚本） |
-| **G2** Worker 工厂 | 新增 Worker 工厂可绕 `createWorkerBridge`，dispose 漏 terminate 无闸 | `scripts/check-worker-lifecycle.ts` + 计数基线（仿 `check-singleton-hygiene`） | ① **假绿主路径**：加 `void terminate;` 注释骗过文本闸；② 别名绕过（`const W = Worker; new W(...)`）；③ **必须照抄空域 fail-loud（exit 2）**，否则「零命中」会被当「零债」而非「闸未启用」 | P1 |
-| **G4** close→reopen 等价 | 实例字段 + 模块级 `const Map/Set` 跨会话复位无断言 | `adapters/session-restart-equivalence.test.ts`（复用现有夹具） | ① 自证式假绿（断言「reset 后为空」而 reset 根本没清）；② **只测 full 档漏 early/failed**——early 恰是历史上漏解绑那档；③ 两 mount 复用同一 `session` 对象绕过真实 new 路径 | P2（成本最低） |
-| **G3** 宿主全局读取边界 | caps/state 直读 `document`/`window` 隐形（现状 6 处） | `scripts/check-dom-boundary.ts` R11 + 基线 | **⚠️ 前置阻塞**：6 处直接登记 = 把病合法化 = 教人绕过。须先定「迁 DI vs 显式豁免+理由」 | P2（口径未定，**勿先落**） |
-| **G5** renderer/context 真值 | 真实 GL 释放被自认不可测 | `frontend/e2e-web/` swiftshader spec + `renderer.info.memory` 断言 | ① swiftshader ≠ WebView2 真 GL；② **e2e 属重档，CI 走轻档会跳过 ⇒「CI 全绿」是假绿**，需 `--fast` 排除策略显式登记；③ 单次释放 ≠ N 轮不泄漏，应做 3 轮循环 | P3（重档） |
+| # | 治什么病 | 落点 | 假绿风险（最关键） | 优先级 | 状态 |
+|---|---|---|---|---|---|
+| **G1** rAF 生命周期 | `stopIfIdle`/`animate`/`start` 零测试；判据面窄于不变量面 | `infra/render-host.raf-contract.test.ts` | ① 用 `vi.useFakeTimers()` 而非 rAF stub ⇒ 只验「调用次数」不验「帧真停」；② 断言 `cancelAnimationFrame` 被调 ≠ 断言回调不再执行（可先 cancel 再 microtask 补一次 rAF 骗过）；③ 只测单实例测不到两会话交错 | **P1**（零新脚本） | ✅ **已落地**（8 例） |
+| **G2** Worker 工厂 | 新增 Worker 工厂可绕 `createWorkerBridge`，dispose 漏 terminate 无闸 | `scripts/check-worker-lifecycle.ts` + 计数基线（仿 `check-singleton-hygiene`） | ① **假绿主路径**：加 `void terminate;` 注释骗过文本闸；② 别名绕过（`const W = Worker; new W(...)`）；③ **必须照抄空域 fail-loud（exit 2）**，否则「零命中」会被当「零债」而非「闸未启用」 | P1 | ✅ **已落地**（19 例契约测试） |
+| **G4** close→reopen 等价 | 实例字段 + 模块级 `const Map/Set` 跨会话复位无断言 | `infra/render-host.session-restart.test.ts`（复用现有夹具） | ① 自证式假绿（断言「reset 后为空」而 reset 根本没清）；② **只测 full 档漏 early/failed**——early 恰是历史上漏解绑那档；③ 两 mount 复用同一 `session` 对象绕过真实 new 路径 | P2（成本最低） | ✅ **已落地**（5 例） |
+| **G3** 宿主全局读取边界 | caps/state 直读 `document`/`window` 隐形（现状 6 处） | `scripts/check-dom-boundary.ts` R11 + 基线 | **⚠️ 前置阻塞**：6 处直接登记 = 把病合法化 = 教人绕过。须先定「迁 DI vs 显式豁免+理由」 | P2（口径未定，**勿先落**） | 📝 待拍板（§七 #3） |
+| **G5** renderer/context 真值 | 真实 GL 释放被自认不可测 | `frontend/e2e-web/` swiftshader spec + `renderer.info.memory` 断言 | ① swiftshader ≠ WebView2 真 GL；② **e2e 属重档，CI 走轻档会跳过 ⇒「CI 全绿」是假绿**，需 `--fast` 排除策略显式登记；③ 单次释放 ≠ N 轮不泄漏，应做 3 轮循环 | P3（重档） | 📝 未启动 |
+
+### G1/G2/G4 落地实证（2026-10-08，提交 `764e013e6`）
+
+- **G1 钉死一条易误解的语义**：`animate` 是「**先无条件续期、后判断**」——早退（局部态缺失）
+  **不停环**；停环唯一手段是 `stopIfIdle` / `reset`。这正是「判据面窄于不变量面」的具体形态；
+  契约把它钉住（将来若有人把续期挪到早退之后，测试会红，提示重新评估停环语义）。
+- **G4 实测发现一条新知识**：`reset()` **只清状态字段、不 cancel 在飞帧**——残余帧执行后会再次
+  `requestAnimationFrame` 把 `_animId` 复活，导致下次 `start()` 被幂等判定
+  （`if (_animId !== 0) return`）**误拦**，循环拉不起来（实测第二轮帧数 0）。
+  与 G1 是**同一条语义**的两个观测面。
+- **G2 三条防线均实证有效**：① 空域 fail-loud（`SCAN_AREA` 改坏 → exit 2）；
+  ② 零站点 fail-loud（本仓 4 处 `new Worker(`，归零只可能解析器失效）；
+  ③ 判别力（注入违规探针 → exit 1 且指名文件）。
+- **G2 实测现状**：237 文件 / **4 处 `new Worker(`** / **0 处未受管**——2 处在 `worker-bridge.ts`
+  工厂（自带 `dispose()`）、2 处裸建（KTX2 编码池本轮补了出口、`mmd-texture-decoder.ts` 本有
+  `disposeTextureDecoder`）。**即闸上线时债已清零**，其价值在**防将来新增**（而非清存量）——
+  这正是「闸」而非「修复」的定位，勿因「零命中」误判该闸无用。
+- **G1/G4 的落点与原设计有偏差**：原拟 `infra/render-loop.raf-contract.test.ts`，
+  实测 `render-loop.ts` 是**薄门面**（56 行，全部委托 `RendererHost`），真逻辑在
+  `render-host.ts`；故契约落在 `render-host.*.test.ts`，避免测「门面转发」这种零判别力目标。
 
 > **落地上的一条硬要求**（③ 提出、主模型认同）：G2/G3 必须带**空域 fail-loud**。
 > 本仓既有先例——若闸在「零命中」时静默通过，团队会把「闸未启用」误读为「零债务」，
-> 这是比「没有闸」更危险的状态（它提供虚假安全感）。
+> 这是比「没有闸」更危险的状态（它提供虚假安全感）。**G2 已按此落地并实证。**
 
 ## 六、方法论台账（并入卡 pitfalls）
 
@@ -254,6 +274,18 @@ PNG 纹理 → ①查 Go 缓存目录（GetCachedTexture）→ 命中即用，�
    别在自家代码里找证据——**自家没有调用方 ≠ 宿主不会调**。
    ✅ 同族正面先例：上一轮 env 域对 three r186 的取证也是同法（`docs/knowledge/water.md:114`
    「给『已释放』写断言前，先查上游源码到底释放了什么」）。**「读上游取证」应升为宿主域审计的标准动作。**
+6. **🆕 写契约测试时，先读实现的真实顺序——别按「直觉语义」写断言**（G1/G4 的教训）：
+   我最初两条断言都写反了，且**都是被测试自己纠正的**：
+   - G1 假设「早退即停环」→ 实测 `animate` 是**先续期后判断**，早退不停环；
+   - G4 假设「reset 即复位」→ 实测 `reset()` **不 cancel 在飞帧**，残余帧会把 `_animId` 复活、
+     让下次 `start()` 被幂等判定误拦（第二轮帧数 0）。
+   **判别式**：断言红了先问「是我理解错，还是实现有缺陷」——读源码定位，**不要为了变绿而改断言**
+   （那是把契约降格成「描述现状」）；反之若实现确有意为之，就把**真实语义**钉进测试并写明
+   「将来若改变此序，此例会红」。
+7. **🆕 闸上线时「零命中」必须区分两件事**（G2 的实证）：**债已清零**（真信号，闸转防御）
+   vs **闸没扫到东西**（假绿，比没闸更危险）。G2 用三重证据区分：`workerSites: 4 > 0`
+   （解析器活着）、空域 fail-loud（域改坏 exit 2）、判别力探针（注入违规 exit 1）。
+   **只报「0 违规」而不报「扫了什么」的闸，都应存疑。**
 
 ## 七、待拍板清单（需人决策，非技术可独断）
 
@@ -263,5 +295,8 @@ PNG 纹理 → ①查 Go 缓存目录（GetCachedTexture）→ 命中即用，�
 | 2 | **P1-1 死代码处置**（已确认桌面端不触发） | ① 文档化「桌面进程退出即回收，`teardown` 仅服务 web 形态与测试」+ 写知识卡；② 经 Wails `OnShutdown`（`application.go:903`，Go 侧已证存在）下发真信号驱动 teardown | ① 成本最低、消除误读；② 彻底但**为进程退出回收做钩子属过度工程**。**建议 ①**；无论选哪个，测试的自证式假绿须一并订正 |
 | 3 | G3 宿主全局边界口径（P1-2 六处现状） | ① 迁 DI；② 显式豁免 + 写理由入基线 | 闸落地前**必须**先定，否则等于把病合法化 |
 | 4 | `render-host.ts:348` 模块级单例是否拆（P0-d 复发载体） | ① 本轮拆（涉 ADR-227 后续战役）；② 挂账观察 | 不拆则 DPR 类第四次复发仍无结构防线 |
-| 5 | G1/G2/G4 三闸是否本轮落地 | — | G1 零新脚本、G4 复用夹具，**成本最低、收益最直接** |
+| 5 | G1/G2/G4 三闸是否本轮落地 | — | G1 零新脚本、G4 复用夹具，**成本最低、收益最直接** | ✅ **已落地**（`764e013e6`）：G1 8 例 / G4 5 例 / G2 闸 + 19 例契约 |
+| 6 | **🆕 是否把「宿主假设须读上游源码」写成卡级纪律** | ① 写进 `docs/knowledge/pitfalls` 或宿主域知识卡；② 仅留本报告 | 建议 ①——P1-1 与上一轮 three r186 取证是同一类教训，**两次都是读上游才定性**；本轮已写入 `preview-core.md` pitfalls |
+| 7 | **🆕 G5 是否启动**（重档：swiftshader e2e + `renderer.info.memory` 3 轮循环） | ① 启动；② 挂账 | ⚠️ 若启动须**显式登记「CI 轻档会跳过」**，否则「CI 全绿」是假绿（G5 假绿风险 ②） |
+| 8 | **🆕 闸的「零命中」处置口径**（G2 上线即零债） | ① 闸保留为防新增；② 认为无债可撤 | 建议 ①——G2 的价值在**防将来新增**，闸≠修复；撤掉等于把刚立的法变回口头法 |
 | 6 | **🆕 是否把「宿主假设须读上游源码」写成卡级纪律** | ① 写进 `docs/knowledge/pitfalls` 或宿主域知识卡；② 仅留本报告 | 建议 ①——P1-1 与上一轮 three r186 取证是同一类教训，**两次都是读上游才定性** |

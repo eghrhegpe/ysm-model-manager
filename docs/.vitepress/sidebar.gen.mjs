@@ -261,6 +261,10 @@ export const autoSidebar = [
       {
         "text": "YSM 模型管理器 — 技术债探索报告（2026-10-06）",
         "link": "/tech-debt-audit-2026-10-06"
+      },
+      {
+        "text": "YSM 模型管理器 技术债审计 · 第二轮（2026-10-08）",
+        "link": "/tech-debt-audit-2026-10-08"
       }
     ]
   },

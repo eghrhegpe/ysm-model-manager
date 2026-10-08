@@ -684,6 +684,7 @@
 | 归属基线类 env（YSM_DEADCODE_BASE）挂 step 级 ⇒ 同 job 内 --static 第二次执行拿不到，退严格模式假红 | - | - |
 | 同一 job 内同一工具跑两遍时第二遍上下文更差（CI 跑在 push 之后，暂存区空 ⇒ 无归属可解析） | - | - |
 | 措辞不等于仓库真有强制拦截：本仓 main 无 branch protection / ruleset（须 gh api 核） | `远端防线` | - |
+| 治理闸与功能测试同 job 且顺序在前 ⇒ 治理失败 skipped 掉 tsc/vitest，功能正确性在 CI 上永不被回答 | - | - |
 | 前端手写分类 | - | 与 Go classify 判定不一致、last-wins 裁决丢失；必须交 Go 分类 |
 | 新增资源类型未更新 priority | - | 冲突时优先级错乱；必须经 classify.go 的 priority 表 |
 | 各组件各自发下载请求 | - | 并发冲突、进度丢失；必须经 download-queue 排队 |

@@ -9,6 +9,7 @@ invariant_anchors:
   - .github/workflows/test.yml|GOOS: windows
   - .github/workflows/test.yml|needs: [contracts]
   - .github/workflows/test.yml|YSM_DEADCODE_BASE
+  - .github/workflows/test.yml|frontend-gates
   - .github/workflows/test.yml|./.github/actions/playwright-spine
   - .github/actions/playwright-spine/action.yml|/var/cache/apt/archives/*.deb
   - .github/actions/playwright-spine/action.yml|playwright install --with-deps chromium
@@ -44,6 +45,7 @@ pitfalls:
   - 归属基线类 env（YSM_DEADCODE_BASE）挂 step 级 ⇒ 同 job 内 --static 第二次执行拿不到，退严格模式假红
   - 同一 job 内同一工具跑两遍时第二遍上下文更差（CI 跑在 push 之后，暂存区空 ⇒ 无归属可解析）
   - 「远端防线」措辞不等于仓库真有强制拦截：本仓 main 无 branch protection / ruleset（须 gh api 核）
+  - 治理闸与功能测试同 job 且顺序在前 ⇒ 治理失败 skipped 掉 tsc/vitest，功能正确性在 CI 上永不被回答
 quick_groups:
   - 门禁与脚本
 quick_intents:
@@ -163,8 +165,27 @@ go job 要用 `pnpm install` + `vite build`（`//go:embed all:frontend/dist` 前
   （`frontend/src/workers/coi-sw.ts|reload` 为解锁跨源隔离），手动 reload 与之相撞 ⇒ 竞态。就绪判据
   交 `web-ready.ts|waitForAppReady`（自带导航静默窗口），与 `web-preview.spec.ts` 一致。
 
-### 9. 契约 job 不装前端依赖（隐性防线）
+### 8b. 治理闸与功能测试必须分 job（2026-10-08 门禁锐评 R5）
 
+- **病灶（实测，非推测）**：`test.yml|frontend` 原把治理闸排在功能检查**之前**——死代码基线 6s +
+  `pre-push-gate --static` 1m25s，其后的 `vite build` / `tsc` / `vitest`（3m49s，全 CI 最重的功能验证）。
+  治理闸任一失败 ⇒ 后续步骤全部 `skipped`。v1.16.0 首轮 CI 实证：一个**5 秒**的治理检查把
+  **3m49s** 的核心测试与 4s 的类型检查全部饿死，CI 上「功能是否正常」这个问题**根本没被回答**。
+  本地手动跑 tsc/vitest 感知不到这一层——这是 CI 独有的失明模式。
+- **根因是顺序而非检查本身**：治理闸（改动纪律）与功能测试（正确性）关注点正交，却因同 job 串行
+  获得了**对后者的一票否决权**。
+- **修法**：治理闸拆入独立 job `frontend-gates`，与 `frontend` **并行**。
+  ① 功能检查前置且不被治理闸阻断；② 两步各自报红，归因清晰（功能坏了 vs 纪律破了）；
+  ③ 关键路径 frontend 5m27s → 3m56s（-1m31s）。
+- **⚠️ 拆分时必须保持的前提**：`YSM_DEADCODE_BASE` 仍挂**新 job 的 job 级 `env:`**——
+  死代码扫描在本 job 内有两处执行点（独立步骤 + `--static` 内部清单），挂 step 级会让第二处
+  拿不到归属基线而退严格模式假红（§11 同款病灶）。护栏 `tests/test_gate_schedule.ts` 断言
+  `check-deadcode-baseline.ts` 在 `test.yml` 中仍有独立步骤调用——**拆分只能在本文件内的 job 之间
+  进行**，迁到别的 workflow 文件会让该护栏失败（它是「换个地方查」的声明，不是「CI 不查」）。
+- **下游依赖无需改**：`release.yml|build-*` 的 `needs: [prepare, test]` 覆盖 `test.yml` 全部 job，
+  治理闸仍是发版前置，只是从「串行饿死功能测试」变为「并行各自报红」。
+
+### 9. 契约 job 不装前端依赖（隐性防线）
 原「契约测试排在 pnpm install 之前」这一顺序是**有意的**（曾暴露 `scripts/port-align.ts` 在模块顶层
 resolve esbuild 的缺陷）——拆分后本 job 仍不装前端依赖，保持「测试不得依赖前端依赖」这道防线。故其
 setup-node **不配 `cache: pnpm`**（全程不跑 pnpm install，配缓存只会空恢复/空保存 store 包，白交

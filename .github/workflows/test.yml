@@ -149,9 +149,61 @@ jobs:
           node scripts/check-redlines.ts --json --baseline | Out-String -Width 200
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-  # ── 前端 Job：前端静态治理闸 + 类型检查 + Vitest ──────────────────────────
+  # ── 前端 Job：类型检查 + Vitest（功能正确性）──────────────────────────────
+  # ⚠️ 本 job 只放「功能正确性」检查，治理闸已拆到 frontend-gates（2026-10-08 门禁锐评 R5）。
+  # 病灶（实测）：治理闸原先排在本 job 最前（死代码 6s + --static 1m25s），任一失败即
+  # `skipped` 掉其后的 vite build / tsc / vitest——一个 5s 的治理检查饿死 3m49s 的核心测试，
+  # 且 CI 上「功能是否正常」这个问题根本没有机会被回答（本地手动跑 tsc/vitest 感知不到）。
+  # 修法：治理与功能拆 job ⇒ 并行 + 各自独立报红；功能检查前置且不被治理闸阻断。
+  # 详见 ci-tuning。
   frontend:
     name: 前端（类型检查 + Vitest）
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: 安装前端依赖
+        working-directory: frontend
+        shell: pwsh
+        run: pnpm install --frozen-lockfile
+
+      # 本 job 只做前端自身检查（tsc / vitest / vite build），不需要 Go 编译。
+      - name: 前端构建
+        working-directory: frontend
+        shell: pwsh
+        run: pnpm exec vite build
+
+      - name: 前端类型检查（ADR-014 门槛）
+        working-directory: frontend
+        shell: pwsh
+        run: pnpm exec tsc --noEmit
+
+      - name: 前端测试（Vitest）
+        working-directory: frontend
+        shell: pwsh
+        run: |
+          pnpm exec vitest run --coverage | Out-String -Width 200
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+  # ── 前端静态治理 Job：死代码基线 + 静态治理闸（改动纪律，与功能正确性正交）──────
+  # 与 frontend job 并行。拆分的理由（2026-10-08 门禁锐评 R5）：
+  #   ① 关注点正交——「代码能不能跑」（tsc/vitest）与「有没有引入新债」（死代码/32 项治理）
+  #      是两个问题，混在一个 job 里会让后者对前者拥有一票否决权（顺序在前即饿死后者）；
+  #   ② 归因清晰——两步各自报红，一眼看出是功能坏了还是纪律破了；
+  #   ③ 关键路径缩短约 1m31s（原 frontend job 串行 5m27s → 功能 job 3m56s + 本 job 并行）。
+  # 详见 ci-tuning。
+  frontend-gates:
+    name: 前端静态治理（死代码 + 治理闸）
     runs-on: windows-latest
     timeout-minutes: 40
     # ⚠️ 责任范围（ADR-244）必须挂在 **job 级**：死代码扫描在本 job 内有两处执行点
@@ -199,24 +251,6 @@ jobs:
         # 退出码语义两模式完全一致（见 pre-push-gate.ts finishJson 注释）。
         run: |
           node scripts/pre-push-gate.ts --static
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-      # 本 job 只做前端自身检查（tsc / vitest / vite build），不需要 Go 编译。
-      - name: 前端构建
-        working-directory: frontend
-        shell: pwsh
-        run: pnpm exec vite build
-
-      - name: 前端类型检查（ADR-014 门槛）
-        working-directory: frontend
-        shell: pwsh
-        run: pnpm exec tsc --noEmit
-
-      - name: 前端测试（Vitest）
-        working-directory: frontend
-        shell: pwsh
-        run: |
-          pnpm exec vitest run --coverage | Out-String -Width 200
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
   # ── Go Job：Go 编译/测试/覆盖率 ────────────────────────────────────────────
   go:

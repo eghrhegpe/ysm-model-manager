@@ -28,6 +28,8 @@ import type { ModelType } from "@/preview-3d/state/model-defaults.ts";
 import { pickModelDefaultFields } from "@/preview-3d/state/model-defaults.ts";
 // ADR-216：监听器集合工厂提级共享原语（fog/light/ground/water 同源；菜单局部刷新 notify 用）
 import { createListenerSet } from "@/utils/base/primitives/listener-set.ts";
+// ADR-326：环境持久化数据面下沉（schema 单一事实源派生键轨，取代 saveState 手摘键 + loadState 手写还原表）
+import { RESTORE_SOURCE, restoreEnvPartial, saveEnvState } from "./env-persist.ts";
 // P2 抽取：纯像素工具（drawEnvEquirect / 缩略图 / 直方图）已下沉 env-pixels.ts，
 // 对齐 P1 sun-beams.ts 范式（状态完全内聚、不反向依赖宿主）。
 import { customHdrThumbnail, drawEnvEquirect, luminanceHistogram } from "./env-pixels.ts";
@@ -763,22 +765,16 @@ export class EnvironmentCapability implements SceneCapability {
     // 若当前是 custom + 无缓存（告警回退到 studio 时还没 buildEnvironment 成功）→ 存 studio
     const savePreset: EnvPresetId =
       envState.envPreset === "custom" && !this.customHdrTex ? "studio" : envState.envPreset;
-    persistState(this.id, {
-      // [锐评 F-1 收口] 能力总开关改落 **schema 键形** `envEnabled`，不再落无前缀
-      // `enabled` 幽灵键（私有门已退役，键与门不再各说各话）。兄弟键保持原无前缀方言
-      // 零迁移——`preset`/`intensity`/`useAsBackground` 另有跨代读者（迁移模块与本文件
-      // loadState 的旧档分支），改名即断链。同族先例：reflector 亦仅前缀总开关、兄弟键不动。
-      envEnabled: envState.envEnabled,
-      preset: savePreset,
-      // [ADR-292 D7] envSource 是「谁供 scene.environment」的单一事实源（preset/sky/custom），
-      // 必须落盘——否则用户选 sky/custom 取图通路重启即丢，回退默认 preset 画面突变。
-      // 键名与迁移模块 normalizeEnvLegacyState 产出的 envSource 同形（旧存档迁移后也归此键），
-      // 保证 idempotent 快路（"envSource" in state）命中、不重复迁移。
-      envSource: envState.envSource,
-      intensity: envState.envIntensity,
-      resolution: envState.envResolution,
-      useAsBackground: envState.envUseAsBackground,
-    });
+    // [ADR-326] 键轨派生自 schema（ENV_KEYS + getArchiveKey 别名映射），取代手摘 6 键——
+    // 加 schema 键自动带出持久化，漏登记结构性不可能。
+    // override 只承载运行时裁决（custom 无缓存回落 studio 的 preset）；
+    // 其余键（含 ADR-292 D7 的 envSource）一律派生。兄弟键仍沿用无前缀方言零迁移——
+    // `preset`/`intensity`/`useAsBackground` 有跨代读者（迁移模块与本文件 loadState 旧档分支），
+    // 改名即断链，故只经 ARCHIVE_ALIAS 登记别名（同族先例：reflector 亦仅前缀总开关、兄弟键不动）。
+    persistState(
+      this.id,
+      saveEnvState(savePreset !== envState.envPreset ? { preset: savePreset } : undefined),
+    );
   }
 
   loadState(): void {
@@ -820,57 +816,29 @@ export class EnvironmentCapability implements SceneCapability {
     });
 
     // 收集 envState 恢复值
-    const partial: Partial<EnvState> = {};
-    /** custom 通路读回但无 HDR 缓存 → 需在最后统一回落到 preset（含 envSource） */
-    let customWithoutCache = false;
-
-    // [锐评 F-1 收口] 能力总开关恢复：原为「不入 envState，直接写私有门」，现经 partial
-    // 随其余 env 组键一次性 setEnvState（auto-model 源，与下方恢复块同口径）。
-    if (typeof state.envEnabled === "boolean") partial.envEnabled = state.envEnabled;
-
-    if (typeof state.preset === "string") {
-      const p = state.preset as EnvPresetId;
-      if (p === "custom") {
-        if (!this.customHdrTex) {
-          // 持久化读回 custom 但没缓存 → 告警一次，实际回落留到下方统一裁决（见 customWithoutCache）
-          if (!this.customHdrWarnedMissing) {
-            this.customHdrWarnedMissing = true;
-            ringLog(
-              "env",
-              "上次设置为自定义 HDR，但 HDR 文件未持久化保存，已自动回退到「工作室」预设。请重新选择 HDR 文件。",
-              "warn",
-              () =>
-                console.warn(
-                  "[EnvironmentCapability] loadState 读回 preset=custom，但 custom HDR 无法跨会话持久化，回退 studio",
-                ),
-            );
-          }
-          customWithoutCache = true;
-        } else {
-          partial.envPreset = "custom";
-          partial.envSource = "custom";
-        }
-      } else if (ENV_PRESETS[p as SelectableEnvPresetId]) {
-        partial.envPreset = p;
-      }
-    }
-
-    if (typeof state.intensity === "number") partial.envIntensity = state.intensity;
-    if (typeof state.resolution === "number") partial.envResolution = state.resolution;
-    if (typeof state.useAsBackground === "boolean")
-      partial.envUseAsBackground = state.useAsBackground;
-
-    // [ADR-292 D7] D2：envSource 持久化读回（preset/sky/custom）。缺省（极旧存档未走迁移）
-    // → 跳过，交由下方 buildEnvironment 按默认 "preset" 路径走。
-    if (typeof state.envSource === "string")
-      partial.envSource = state.envSource as EnvState["envSource"];
+    // [ADR-326] 标量键批量派生恢复（取代手写双轨还原表）——键轨与 saveState 对称派生
+    // （ENV_KEYS + getArchiveKey 别名映射），类型不匹配（脏存档 / 旧方言缺省）跳过保持
+    // schema 默认；含 enum 白名单（ADR-283 枚举收敛，防脏枚举直漏 cap setter）。
+    const partial: Partial<EnvState> = restoreEnvPartial(state);
 
     // [ADR-292 D5 收尾] custom 回退必须**最后**裁决，优先级高于上面的读回与迁移结果。
     // 原因：HDR 文件内容不入 localStorage，所以任何存档里的 custom 通路跨会话都无图可用；
     // 而 normalizeEnvLegacyState 会按 preset==="custom" 迁移出 envSource==="custom"，
     // 若不在此处压掉，就会出现「来源显示自定义 HDR、实际渲染 studio」的两键分裂。
     // 放在读回之后 = 让「无缓存」这一运行时事实成为最终裁决者。
-    if (customWithoutCache) {
+    if (partial.envPreset === "custom" && !this.customHdrTex) {
+      if (!this.customHdrWarnedMissing) {
+        this.customHdrWarnedMissing = true;
+        ringLog(
+          "env",
+          "上次设置为自定义 HDR，但 HDR 文件未持久化保存，已自动回退到「工作室」预设。请重新选择 HDR 文件。",
+          "warn",
+          () =>
+            console.warn(
+              "[EnvironmentCapability] loadState 读回 preset=custom，但 custom HDR 无法跨会话持久化，回退 studio",
+            ),
+        );
+      }
       partial.envPreset = "studio";
       partial.envSource = "preset";
     }
@@ -882,7 +850,7 @@ export class EnvironmentCapability implements SceneCapability {
       // （用户选 sunset 氛围，环境贴图却不跟着换）。同时挂起派发，恢复期间只写 envState，
       // 末尾 buildEnvironment 统一落地一次（避免逐键 dispatch × 逐键 rebuild 的重入抖动）。
       withEnvCallbacksSuspended(() => {
-        setEnvState(partial, { source: "auto-model" });
+        setEnvState(partial, RESTORE_SOURCE);
       });
     }
 

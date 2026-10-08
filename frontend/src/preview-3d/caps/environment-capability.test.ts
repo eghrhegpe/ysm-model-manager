@@ -23,7 +23,7 @@ import { ENV_PRESETS } from "./environment-state.ts";
 import { drawEnvEquirect } from "./env-pixels.ts";
 import { MODEL_DEFAULTS, toModelType } from "@/preview-3d/state/model-defaults.ts";
 // ADR-196：统一状态层
-import { ENV_STATE_SCHEMA, getParamRange, getPresetKeys } from "@/preview-3d/state/env-state-schema.ts";
+import { ENV_STATE_SCHEMA, getArchiveKey, getParamRange, getPresetKeys } from "@/preview-3d/state/env-state-schema.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { clearEnvCallbacks } from "@/preview-3d/state/env-dispatcher.ts";
 import { findNodeById, childIds, nodeIds } from "@/preview-3d/menu/menu-test-helpers.ts";
@@ -906,43 +906,41 @@ describe("EnvironmentCapability — 持久化", () => {
     expect(envState.envSource).toBe("sky");
   });
 
-  // [锐评 2026-10-08 P1-5] 存档键轨契约锁：schema environment 键集全部可 save/load round-trip。
+  // [锐评 2026-10-08 P1-5 → ADR-326 升级] 存档键轨契约锁：schema environment 键集全部可
+  // save/load round-trip。ADR-326 后存档键名由 `getArchiveKey`（ARCHIVE_ALIAS）派生，本测试
+  // **不再手抄映射表**——`ARCHIVE_ALIAS` 漏声明即转红（"派生即登记"，取代原"逼回登记流程"）。
   //
-  // 病根：env 的 saveState **手摘 6 键**（非 `getPresetKeys("environment")` 派生），
-  // loadState 还原表也是**手写双轨清单**。schema 加键而两处任一漏登记 ⇒
-  // **自动持久化、静默不还原**（用户改了下次启动就没了，且零报错）。
-  // 同族先例：water 有 `water-persist.ts|restoreWaterSchemaKeys(w, getPresetKeys("water"))`（原
-  // scene-capability.ts|restoreBySchema 下沉水面叶，锐评 P1-0/P3-1；来源纪律随下沉收口 RESTORE_SOURCE）+ 双向集合锁，
-  // ground 有 `[G-8]` round-trip锁。env 此前一个都没有——而 env 恰是唯一
-  // **存档键名 ≠ schema 键名**的cap（`preset` vs `envPreset`），最需要机器守卫。
+  // 病根（P1-5 原文）：env 的 saveState **手摘 6 键**、loadState 还原表**手写双轨清单**。
+  // schema 加键而两处任一漏登记 ⇒ **自动持久化、静默不还原**（用户改了下次启动就没了，且零报错）。
+  // 同族先例：water 有 `water-persist.ts|restoreWaterSchemaKeys`，ground 有 `[G-8]` round-trip锁。
+  // env 曾是全仓唯一**存档键名 ≠ schema 键名**的cap（`preset` vs `envPreset`），最需要机器守卫。
   //
   // 为何不立刻改名统一键形：改名有跨代迁移债（`preset`/`intensity`/`resolution`/
-  // `useAsBackground` 另有旧档读者——迁移模块与 loadState 旧档分支），收益低于风险。
-  // **先把守卫立起来**，让「加键」这个动作被逼回登记流程；改名是独立的一刀。
-  it("[P1-5] schema environment 键集全部可 save/load round-trip（还原表不得漏登记）", () => {
+  // `useAsBackground` 另有旧档读者——迁移模块与 loadState 旧档分支），收益低于风险；
+  // ADR-326 选择**登记别名**（ARCHIVE_ALIAS）而非改名。
+  it("[P1-5] schema environment 键集全部可 save/load round-trip（ADR-326 派生对称）", () => {
     const scene = new THREE.Scene();
     const cap = new EnvironmentCapability({ scene, renderer: makeFakeRenderer() });
-    // schema 键 → 存档键的映射（env 的兄弟键沿用无前缀方言，故非同形）
-    // + 每键一个「≠ schema 默认」的合法域内偏离值——新键未列入即被点名要求登记。
-    const DEVIATION: Record<string, { archiveKey: string; value: unknown }> = {
-      envEnabled: { archiveKey: "envEnabled", value: false },
-      envPreset: { archiveKey: "preset", value: "night" },
-      envIntensity: { archiveKey: "intensity", value: 2.4 },
-      envResolution: { archiveKey: "resolution", value: 512 },
-      envUseAsBackground: { archiveKey: "useAsBackground", value: true },
-      envSource: { archiveKey: "envSource", value: "sky" },
+    // 每键一个「≠ schema 默认」的合法域内偏离值——新键未列入即被点名要求登记
+    // （偏离值须确实偏离当前值，否则「存活」断言恒真、锁形同虚设，下方逐键校验）。
+    const DEVIATION: Record<string, unknown> = {
+      envEnabled: false,
+      envPreset: "night",
+      envIntensity: 2.4,
+      envResolution: 512,
+      envUseAsBackground: true,
+      envSource: "sky",
     };
     const schemaKeys = getPresetKeys("environment");
     const missing = schemaKeys.filter((k) => !(k in DEVIATION));
     expect(
       missing,
-      `schema 新增了 environment 键但本测试未登记偏离值（请同步 saveState 摘键 + loadState 还原表）: ${JSON.stringify(missing)}`,
+      `schema 新增了 environment 键但本测试未登记偏离值（请同步 saveState 派生键 + ARCHIVE_ALIAS 别名声明）: ${JSON.stringify(missing)}`,
     ).toEqual([]);
 
     const patch: Record<string, unknown> = {};
     for (const k of schemaKeys) {
-      const { value } = DEVIATION[k];
-      // 偏离值必须确实偏离当前值，否则「存活」断言恒真、锁形同虚设
+      const value = DEVIATION[k];
       expect(
         envState[k as keyof typeof envState],
         `environment 键 ${k} 的偏离值与当前值同值（测试自失能）`,
@@ -952,19 +950,21 @@ describe("EnvironmentCapability — 持久化", () => {
     setEnvState(patch as never, { source: "manual", force: true });
     cap.saveState();
     const saved = restoreState("environment") as Record<string, unknown>;
-    // 写侧核对：每个 schema 键确实以「登记的存档键名」落盘（防止改名时忘记同步本表）
+    // 写侧核对：每个 schema 键确实以「getArchiveKey 派生的存档键名」落盘
+    // （防止 ARCHIVE_ALIAS 漏声明或改名时忘记同步——漏了本断言即红）
     for (const k of schemaKeys) {
+      const archiveKey = getArchiveKey(k);
       expect(
-        saved[DEVIATION[k].archiveKey],
-        `schema 键 ${k} 未以存档键 ${DEVIATION[k].archiveKey} 落盘`,
-      ).toBe(DEVIATION[k].value);
+        saved[archiveKey],
+        `schema 键 ${k} 未以存档键 ${archiveKey} 落盘（ARCHIVE_ALIAS 漏声明?）`,
+      ).toBe(DEVIATION[k]);
     }
     resetEnvState();
     const cap2 = new EnvironmentCapability({ scene, renderer: makeFakeRenderer() });
     cap2.loadState();
     for (const k of schemaKeys) {
       expect(envState[k as keyof typeof envState], `environment 键 ${k} 未被 loadState 还原`).toBe(
-        DEVIATION[k].value,
+        DEVIATION[k],
       );
     }
   });

@@ -886,6 +886,29 @@ export function getPresetKeys(group: string): EnvStateKey[] {
   return keys;
 }
 
+// ======== 存档键别名派生（ADR-326）========
+
+/**
+ * schema 键 → 存档键名映射（仅声明「存档键名 ≠ schema 键名」的键）。
+ *
+ * 单一事实源：派生自 schema，取代 `saveState` 手摘键 + `loadState` 手写还原表的
+ * 双轨手抄（漏登记即「自动持久化、静默不还原」）。
+ * 当前唯一消费者 = `environment` 组（preset/intensity/resolution/useAsBackground
+ * 沿用无前缀历史方言，有跨代读者——迁移模块与 loadState 旧档分支，故不改名，
+ * 只在此显式登记别名，ADR-326）。
+ */
+export const ARCHIVE_ALIAS: Readonly<Partial<Record<EnvStateKey, string>>> = {
+  envPreset: "preset",
+  envIntensity: "intensity",
+  envResolution: "resolution",
+  envUseAsBackground: "useAsBackground",
+} as const satisfies Partial<Record<EnvStateKey, string>>;
+
+/** schema 键 → 存档键名：未声明别名的键同名（绝大多数 cap 如此，water/ground 均在列） */
+export function getArchiveKey(key: EnvStateKey): string {
+  return ARCHIVE_ALIAS[key] ?? key;
+}
+
 // ======== 值域读口（ADR-283）========
 
 /** 声明了 `range` 的键域：菜单取值域的**类型入口**——未声明值域的键在编译期就传不进来。 */

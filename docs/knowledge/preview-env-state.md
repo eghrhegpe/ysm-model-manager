@@ -15,6 +15,7 @@ source_files:
   - frontend/src/preview-3d/state/atmosphere-presets.ts
   - frontend/src/preview-3d/adapters/shared-infra.ts
   - frontend/src/preview-3d/caps/water-persist.ts
+  - frontend/src/preview-3d/caps/env-persist.ts
 tests:
   - frontend/src/preview-3d/adapters/shared-infra.test.ts
   - frontend/src/preview-3d/caps/scene-capability-persist.test.ts
@@ -33,6 +34,7 @@ auto_fields:
     - deriveDefaultEnvState
     - dispatchEnvChange
     - effectiveToneMappingExposure
+    - ENV_KEYS
     - ENV_STATE_SCHEMA
     - EnvCallback
     - envState
@@ -59,8 +61,10 @@ auto_fields:
     - resetSceneInfra
     - resolveWaterRestoreState
     - RESTORE_SOURCE
+    - restoreEnvPartial
     - restoreWaterSchemaKeys
     - resumeEnvCallbacks
+    - saveEnvState
     - sceneInfraHost
     - SceneInfraHost
     - setEnvState
@@ -107,6 +111,12 @@ invariant_anchors:
   - frontend/src/preview-3d/caps/environment-ownership.ts|envShouldYieldSlot
   - frontend/src/preview-3d/caps/scene-capability-registry.ts|isIblActive
   - frontend/src/preview-3d/caps/scene-capability-registry.ts|LOAD_DEPS
+  # ADR-326 派生锚（2026-10-08 补）：环境持久化键轨的单一事实源——存档键名派生自 schema，
+  # 手抄摘键/还原表已消灭；别名表漏声明 / 派生函数失名即 ERROR 阻断。
+  - frontend/src/preview-3d/state/env-state-schema.ts|getArchiveKey
+  - frontend/src/preview-3d/state/env-state-schema.ts|ARCHIVE_ALIAS
+  - frontend/src/preview-3d/caps/env-persist.ts|saveEnvState
+  - frontend/src/preview-3d/caps/env-persist.ts|restoreEnvPartial
 ---
 
 # 3D 预览统一状态层 envState（ADR-196）
@@ -167,6 +177,13 @@ invariant_anchors:
   （2026-09：摘键可**派生化**——water 已改为逆历 `getPresetKeys("water")`，新增参数只进 schema；历史键名由 loadState 双轨吸收）
   （**能力级开关收口后的键形**：fog/water/shadow/reflector 已删私有 `enabled`，`saveState` **只写 schema 键**（含 `{fog,water,shadow,reflector}Enabled`），不再落无前缀 `enabled` 幽灵键；旧存档的 `enabled` 由 `loadState` 回填进对应 schema 键。**sky 亦已收口**（仅两枚开关键前缀化，兄弟键保持无前缀方言零迁移）。仍留旧键形的：ground/environment（见「不变量」末条）。）
   （**[锐评 2026-10-08 P1-5] environment 键轨契约锁已补**：`saveState` **手摘 6 键**（非 `getPresetKeys("environment")` 派生）+ `loadState` **手写还原表** = 双轨手抄清单，schema 加键而任一处漏登记 ⇒ **自动持久化、静默不还原**（零报错）。env 恰是全仓唯一**存档键名 ≠ schema 键名**的cap（`preset`/`intensity`/`resolution`/`useAsBackground` 无前缀方言 vs `envPreset`/`envIntensity`…），最需要机器守卫，而此前 water 有 `water-persist.ts|restoreWaterSchemaKeys(w, getPresetKeys("water"))`（原 `scene-capability.ts|restoreBySchema` 下沉水面叶，锐评 P3-1；来源纪律随下沉收口为 RESTORE_SOURCE，P1-0）+ 双向集合锁、ground 有 `[G-8]` round-trip 锁，**env 一个都没有**。现补 `environment-capability.test.ts`「[P1-5] schema environment 键集全部可 save/load round-trip」：逐键偏离值 → save → reset → load → 全存活，且**写侧核对存档键名**（防改名时忘同步），缺登记即点名要求「同步 saveState 摘键 + loadState 还原表」。变异实证：往 schema 加一个未登记键 → 测试红并点名该键。**刻意不同时改名统一键形**——改名有跨代迁移债（旧档读者在迁移模块与 loadState 旧档分支），先把守卫立起来逼回登记流程，改名是独立的一刀。）
+  （**[ADR-326 收口 2026-10-08] 守卫升级为「派生即登记」，手抄摘键/还原表消灭。** P1-5 只把坑标出来未填坑——`saveState` 仍手摘 6 键、`loadState` 仍手写双轨还原清单，漏登记依旧静默不还原。ADR-326 落地三件套：
+    - `env-state-schema.ts|ARCHIVE_ALIAS` + `getArchiveKey(key)`：独立别名表（**不动** `_FieldDef` 核心类型，避免污染值域/派发类型面），environment 6 键里 4 个方言键登记别名（`envPreset→preset`/`envIntensity→intensity`/`envResolution→resolution`/`envUseAsBackground→useAsBackground`；`envEnabled`/`envSource` 本就同名不声明）。`getArchiveKey` = `ARCHIVE_ALIAS[key] ?? key`。
+    - `caps/env-persist.ts`（environment 专属叶，仿 `water-persist.ts`/`light-persist.ts`）：`saveEnvState(override?)` 从 `getPresetKeys("environment")` 派生摘键、经 `getArchiveKey` 映射存档键名，`override` 只承载运行时裁决（custom 无缓存回落 studio 的 `preset`）；`restoreEnvPartial(state)` 反向派生 `Partial<EnvState>`，按 `ENV_STATE_SCHEMA[key].type` 分派 number/boolean/enum（enum 走白名单），类型不匹配跳过保持 schema 默认。**只产数据不写 envState**，来源纪律由 cap 侧 `setEnvState(partial, RESTORE_SOURCE)` 承担。
+    - `environment-capability.ts|saveState`/`loadState` 改走派生：`saveState` 用 `saveEnvState(savePreset !== envState.envPreset ? {preset:savePreset} : undefined)`（保留 `ADR-292 D7` envSource 落盘）；`loadState` 保留 `normalizeEnvLegacyState` 迁移 + custom HDR 无缓存裁决（**运行时事实不可派生**），仅把标量键批量恢复交给 `restoreEnvPartial(state)`，`customWithoutCache` 标志退役（改由 `partial.envPreset==="custom" && !this.customHdrTex` 直接判定）。
+    - **守卫升级**：`environment-capability.test.ts`「[P1-5]」**不再手抄存档键映射表**——存档键名由 `getArchiveKey` 派生，`ARCHIVE_ALIAS` 漏声明即转红（原 DEVIATION 表的 `archiveKey` 字段删除，只剩偏离值）。派生对称性由 `env-persist.test.ts` 锁死（`ENV_KEYS` 与 `getPresetKeys("environment")` 恒等 + round-trip + 脏存档类型不匹配 + `RESTORE_SOURCE` 来源纪律）。
+    - **为何不推广到 ground 读侧**：ground 写侧已派生，读侧虽仍手写 `restoreFields` spec 但有 `[G-8]` 守卫，且 schema 键名=存档键名无别名需求，改造收益小风险不小——留作后续（ADR-326 后果条已声明）。
+    - **遗留**：`preset`/`intensity`/`resolution`/`useAsBackground` 旧键名继续由 `environment-migrations.ts` 承载（不改名），`ARCHIVE_ALIAS` 是「存档键名」的单一事实源，改名须同步别名表 + P1-5 断言。）
 - **loadState**（读）：`restoreState` → **旧键迁移**（ADR-196 前无前缀旧键 `{mode,color,...}` 转新键，保升级用户配置，如 fog 的 legacyKeys 分支）→ `restoreFields`（类型安全批量恢复器，按存档值实际类型分派回填）→ `setEnvState(..., {source:"auto-model"})` 写回 envState → cap apply 落地 Three。**（ADR-283：恢复路径同样经唯一入口的值域钳制——存档里的越界值不会漏进 envState。）**
   **（来源纪律 2026-09-22 立法：恢复一律 `auto-model`，禁 manual。存档值是上一次会话的偏好延续，不是本次手改——打成 manual 会永久拒绝同轨 auto-model / auto-atmosphere 覆盖（切 sunset 氛围雾/环境/灯光不跟改，模型默认值也写不进）。**
   **「同口径」是按**声明**而非按**实施**成立的判词——2026-09-22 复核发现立法时 ground/reflector/shadow/renderMode 四路**实际仍是 manual**（fog/environment/pp/light/sky 才是真 auto-model），属「文档先于代码」的漂移；当日随锐评 F-2 一并收口，现同轨（**water 路径 2026-10-08 锐评 P1-0 补齐**——原「八路」漏扫水面：批量路径已 helper 化进共享工具箱且签名无 source 形参、setter 委托站点无 RESTORE_SOURCE、迁移/兜底 setLevel 站点无参，三条全打 manual，现全收口，见「不变量」P1-0 条）。ground 的坑在于恢复站点分**两条路径**：`loadState` 内直连 `setEnvState` 的站点，与委托公开 setter（`setMatOpacity`/`setMatScale`/`setOverlaySize`…，这些 setter 服务用户手改、必须保持 manual）的站点——只改前者会留暗门，故 `ground-capability.ts|RESTORE_SOURCE` 把恢复来源收敛成单一常量，由 `writeOpts` 组装 opts。**

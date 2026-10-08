@@ -25,6 +25,7 @@ import {
   coverageTailLine,
   gateCoverage,
   listAllCheckScripts,
+  listAllGateScripts,
   listCoveredCheckScripts,
 } from "../scripts/_lib/gate-coverage.ts";
 import { ROOT } from "../scripts/_lib/scan-files.ts";
@@ -39,21 +40,50 @@ assert.deepStrictEqual(listAllCheckScripts(), expected);
 assert.ok(expected.length > 0, "scripts/check-*.ts 全集不应为空");
 
 // 2. 覆盖数与互斥/完备性
+// 2026-10-08 口径修正（第三轮审计 P0）：全集不再是「check-* 文件名枚举」，而是
+// 「门禁清单条目 ∪ check-* 全集」（清单里真实在跑的非 check-* 命名条目，如 jscpd-go /
+// auto-import / gen-*，经 pre-push-gate --static 在 CI 真跑，此前被结构性漏计）。
 const c = gateCoverage();
-assert.strictEqual(c.total, expected.length);
+const allGate = listAllGateScripts();
+assert.deepStrictEqual(allGate, [...new Set(allGate)].sort(), "全集应去重且有序");
+for (const f of expected) {
+  assert.ok(allGate.includes(f), `check-* 全集项 ${f} 必须仍在门禁全集内（分母不得缩水）`);
+}
+assert.strictEqual(c.total, allGate.length);
 assert.ok(c.covered > 0 && c.covered <= c.total);
 const coveredSet = listCoveredCheckScripts();
 for (const u of c.uncovered) {
   assert.ok(!coveredSet.has(u), `uncovered 项 ${u} 不应同时出现在 covered 集`);
 }
 // 并集完备：covered ∪ uncovered = 全集
-const union = new Set([...expected.filter((f) => coveredSet.has(f)), ...c.uncovered]);
-assert.strictEqual(union.size, expected.length);
+const union = new Set([...allGate.filter((f) => coveredSet.has(f)), ...c.uncovered]);
+assert.strictEqual(union.size, allGate.length);
 
 // 3. 域直连项必须计为已覆盖（它们是「门禁真的会跑」的检查，漏算会虚减覆盖数）
 for (const domain of ["check-layering.ts", "check-redlines.ts", "check-path-hygiene.ts"]) {
   assert.ok(coveredSet.has(domain), `域直连项 ${domain} 必须计为已覆盖`);
 }
+
+// 3b. 非 check-* 命名的真闸必须计入分子与分母（2026-10-08 第三轮审计 P0 回归网）。
+// 事故：分母/分子两侧都用 `/^check-/` 过滤，导致清单里真实在跑（经 pre-push-gate --static
+// 在 CI 执行）的 12 条非 check- 条目全部隐身，尾行报「41/44」属结构性低估。
+// 本断言钉死：清单条目无论命名一律在册——改名/新增不前缀项都不会再让它消失。
+const NON_CHECK_NAMED = [
+  "jscpd-go.ts",
+  "auto-import.ts",
+  "event-graph.ts",
+  "gen-knowledge-autogen.ts",
+  "i18n-check.ts",
+  "css-layer-check.ts",
+];
+for (const t of NON_CHECK_NAMED) {
+  assert.ok(coveredSet.has(t), `非 check-* 命名的真闸 ${t} 必须计为已覆盖（不得按文件名过滤掉）`);
+  assert.ok(allGate.includes(t), `非 check-* 命名的真闸 ${t} 必须进入分母`);
+}
+assert.ok(
+  c.total > expected.length,
+  `分母必须大于 check-* 枚举数（${c.total} > ${expected.length}）——否则说明又按文件名收窄了口径`,
+);
 
 // 4. 尾行消费契约：含 N/M 形状 + 警示语
 const line = coverageTailLine();

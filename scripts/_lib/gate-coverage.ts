@@ -47,6 +47,38 @@ export const DOMAIN_BLOCK_CHECKS = [
   "check-knowledge-content.ts",
 ] as const;
 
+/**
+ * 全集：真实门禁清单条目 ∪ scripts/check-*.ts 动态枚举。
+ *
+ * 2026-10-08 口径修正（第三轮审计 P0）：原实现只 readdirSync 枚举 `check-*.ts`，
+ * 于是清单里**真实在跑的非 check- 命名条目**（jscpd-go / auto-import / gen-* / i18n-check /
+ * css-layer-check 等 12 条，经 `pre-push-gate --static` 在 CI 真跑）既不在分子也不在分母，
+ * 尾行报「41/44 已接入」属**结构性低估**。分母改为「清单条目 + check-* 全集」：
+ *   - 清单条目 → 只要接线就在册（不论命名）；
+ *   - readdirSync 兜底 → 抓「写了脚本但从没接线」的漏网项（保留原设计意图：
+ *     分母漂移本身是要被看见的信号）。
+ */
+export function listAllGateScripts(): string[] {
+  const listed = new Set<string>();
+  for (const tool of [
+    ...ALL_STATIC_TOOLS,
+    ...DOC_STATIC_TOOLS,
+    ...DOC_EXTRA_SCRIPTS,
+    ...FRONTEND_STATIC_TOOLS,
+    ...GO_STATIC_TOOLS,
+  ]) {
+    listed.add(tool.tool);
+  }
+  for (const c of DOMAIN_BLOCK_CHECKS) listed.add(c);
+  // 存在性守卫：清单里登记但文件已删（摘除后漏清注释/清单）的条目会让分母虚高，
+  // 且「接了线却跑不起来」本该是 FAIL 而非覆盖数——此处只统计真实存在的脚本。
+  const present = new Set(
+    fs.readdirSync(path.join(ROOT, "scripts")).filter((f) => f.endsWith(".ts")),
+  );
+  for (const f of listAllCheckScripts()) listed.add(f);
+  return [...listed].filter((f) => present.has(f)).sort();
+}
+
 /** 全集：scripts/check-*.ts 动态枚举（文件名含 .ts 后缀） */
 export function listAllCheckScripts(): string[] {
   return fs
@@ -65,7 +97,15 @@ export function listCoveredCheckScripts(): Set<string> {
     ...FRONTEND_STATIC_TOOLS,
     ...GO_STATIC_TOOLS,
   ]) {
-    if (tool.tool.startsWith("check-")) covered.add(tool.tool);
+    // 2026-10-08 口径修正（第三轮审计 P0）：此处原为 `if (tool.tool.startsWith("check-"))`，
+    // 把清单里**真实在跑**的非 check-* 条目全部排除在分子之外（12 条：jscpd-go / auto-import /
+    // event-graph / build-novel-index / gen-routes×2 / gen-cli-×2 / gen-knowledge-autogen /
+    // i18n-check / i18n-ui-check / css-layer-check）。它们经 `pre-push-gate --static`（test.yml:253）
+    // 真在 CI 跑，却因命名不进分子也不进分母 ⇒ 尾行的「N/M 已接入门禁」既低估覆盖面
+    // （漏 12 项真闸）又高估剩余风险。
+    // 本模块注释第 96-97 行早已把口径定义为「是否接入门禁」（与是否 check-* 命名无关），
+    // 代码此前与自身声明的口径不一致；此处按声明修正。
+    covered.add(tool.tool);
   }
   for (const c of DOMAIN_BLOCK_CHECKS) covered.add(c);
   return covered;
@@ -78,7 +118,7 @@ export interface GateCoverage {
 }
 
 export function gateCoverage(): GateCoverage {
-  const all = listAllCheckScripts();
+  const all = listAllGateScripts();
   const covered = listCoveredCheckScripts();
   return {
     total: all.length,
@@ -117,5 +157,5 @@ export function coverageTailLine(): string {
     trulyUncovered.length ? `未接入: ${trulyUncovered.join(", ")}` : "",
   ].filter(Boolean);
   const detail = parts.length ? parts.join("；") : "全集全接入";
-  return `覆盖口径: ${c.covered}/${c.total} 项 check-* 已接入门禁（${detail}）—— 全绿 ≠ 仓库无风险`;
+  return `覆盖口径: ${c.covered}/${c.total} 项门禁清单条目已接入（含非 check-* 命名，如 jscpd-go/gen-*/auto-import；${detail}）—— 全绿 ≠ 仓库无风险`;
 }

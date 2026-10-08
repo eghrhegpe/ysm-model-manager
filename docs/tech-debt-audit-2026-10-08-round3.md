@@ -238,5 +238,67 @@ Go「不做」清单（零 `t.Parallel()`、`InstallLock` 粒度、`SearchModels
 - `ALL_STATIC_TOOLS` 31 项由 `schedule.ts` 无条件并入 push（域无关的通用项），可再按域筛一层。
 - 分支保护（建议放最后：job 粒度粗时先开会得到「红了不知红在哪」）。
 - `check-diff-coverage.ts` 有实现、有契约测试，但 **CI 与本地均无独立执行入口**（本地缺覆盖率产物恒 rc=2）——「暂未接线」而非「设计豁免」。
-- 工作区遗留：`scripts/baseline/deadcode-baseline.json` 有未提交改动（一次无 `--json` 的验证运行触发了脚本的**自动收编**，把并行会话漏收编的 2 项写入账本）。该改动**不属于本次修复范围，未提交**，留待归属方处置。
+- 工作区遗留：`scripts/baseline/deadcode-baseline.json` 有未提交改动（一次无 `--json` 的验证运行触发了脚本的**自动收编**，把并行会话漏收编的 2 项写入账本）。该改动**不属于本次修复范围，未提交**，留待归属方处置。**（实测补充见 §10.3：差异已精确到 3 项，且它是 CI 绿的必要条件。）**
+
+---
+
+## 10. 可复现台账（2026-10-08 23:5x 实测）
+
+> **本节的写法受 `docs/knowledge/verify-before-conclude.md`「可复现结论纪律」约束**：每条断言必须能贴出一条可复跑命令，并给出**当次原始输出**。给不出命令的结论只能标「未验证」。
+> 复跑方式：在仓库根逐条执行「命令」列；数值为 2026-10-08 深夜本机（Windows + go/node 齐备）实测。
+
+### 10.1 门禁现状（每条附复跑命令）
+
+| 断言 | 复跑命令 | 当次实测输出 |
+|---|---|---|
+| 契约测试全绿 | `node scripts/contract-tests.ts` | `[contract-tests] 127/127 通过（32.5s）` |
+| 覆盖口径 | `node scripts/doctor.ts --docs` | `覆盖口径: 53/56 项门禁清单条目已接入`（含非 `check-*` 命名；未接入：`check-unread-fields.ts`） |
+| 文档门禁全绿 | `node scripts/doctor.ts --docs` | `结论: PASS ✅ （DRY-RUN） 23/23 项通过` |
+| 红线候选 62 条 | `node scripts/check-redlines.ts --json` | `"_summary":{"rules":20,"violations":62…}` |
+| deadcode 债 | `node scripts/check-deadcode-baseline.ts --json` | `_summary: {"errors":0,"knip":185,"jscpd":120}` |
+| `drift-scan` 已绿且**未挂载** | `node scripts/drift-scan.ts` → 应 exit 0；`git grep -n 'drift-scan' -- .githooks scripts/_lib/gate-coverage.ts` → 应无命中 | `📊 总计: 0 处漂移`；零挂载命中 |
+| 脚本类型检查 | `npx tsc --noEmit -p scripts/tsconfig.json` | `exit=0`（无输出即通过） |
+| 本地 push 时长 | 见 §10.2 的 stdin 构造 | 4.9s（域裁剪命中窄域时）～28.4s（宽域） |
+
+### 10.2 本地 push 复现（含 stdin 构造，否则 exit 2）
+
+`pre-push-gate` 是 stdin 驱动且**必须传 remote 位置参数**（`pre-push-gate.ts` 的 `if (!remoteName) return 2`）：
+
+```powershell
+$local  = git rev-parse HEAD
+$remote = git rev-parse '@{u}'
+$url    = git remote get-url origin
+$stdin  = "refs/heads/main $local refs/heads/main $remote`n"
+$stdin | node scripts/pre-push-gate.ts origin $url
+```
+
+- 缺 `<remote-name> <remote-url>` ⇒ **exit 2 + 0.1s**（我本轮踩过，误判为「工具坏了」）。
+- 想看域裁剪命中情况：输出首行的 `变更域:` 行。
+
+### 10.3 `deadcode-baseline.json` 未提交改动（归属与必要性）
+
+**差异已精确到 3 项**（复跑：比对工作区与 `git show HEAD:…`）：
+
+| 类型 | 项 | 来源 |
+|---|---|---|
+| jscpd +1 | `preview-3d/infra/render-host.raf-contract.test.ts#…session-restart.test.ts` | `764e013e6`（G1/G4 测试） |
+| knip +1 | `src/preview-3d/state/env-state-schema.ts\|exports\|ARCHIVE_ALIAS` | `de3ce7cf7`（ADR-326） |
+| knip −1 | `src/preview-3d/infra/render-host.ts\|exports\|RendererHost`（已清） | 同上 |
+
+净变化：knip 185（+1−1 抵消）、jscpd **119 → 120**。
+
+- **成因**：一次**无 `--json`** 的验证运行触发了脚本的自动收编（`check-deadcode-baseline.ts` 的 `!JSON_OUT` 分支会写盘）。这是脚本的设计行为，非异常。
+- **性质**：它补的是**并行会话漏收的账**（两个 commit 新增了死键/重复对却没同步账本）。
+- ⚠️ **未验证项（如实标注）**：知识卡记载「基线自动收编必须随提交入库，否则 CI 结构性红」。本轮**未能直接实证**该步——干净 worktree 里缺 `frontend/node_modules`，knip/jscpd 未安装，跑出来是 `[工具缺失]`（`knip=0 jscpd=0`），**属假信号**。故此处只引用既有机理 + 上述差异证据，**不宣称已实测**。
+- **处置建议**：由**归属方**（并行会话）提交该账本，或在其确认后由主模型提交。
+
+### 10.4 本轮新增的机器防线（供后人复用）
+
+| 防线 | 位置 | 拦什么 |
+|---|---|---|
+| `invariant_anchors` 锚校验 | `check-knowledge-drift` | 改工作流依赖图却不同步知识卡（**本轮实测抓到 2 次**：`needs: [contracts]` 失效、`checkAdrHealth` 凭空捏造） |
+| 静态工具段耗时预算 | `gate-blocks/static-tools.ts` | 无预算地把慢项塞进全队 push（含**瞬态复跑校验**，防冷缓存假红） |
+| 覆盖口径按清单条目计 | `_lib/gate-coverage.ts` | 按文件名过滤导致真闸隐身（`41/44 → 53/56`） |
+| 域裁剪 + 空集保守全量 | `test.yml` 的 `changes` job | 「四域全 false ⇒ 全 job 跳过 ⇒ CI 假绿」 |
+| summary 的 `unknown` 判红 | `test.yml` 的 `summary` job | `needs` 解析失败静默回落「全部通过」 |
 

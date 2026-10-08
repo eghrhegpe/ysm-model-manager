@@ -191,7 +191,7 @@ status: active
 - `siblings.ts` — `resolveSiblingsByType` 统一底座 + 各格式 `resolve*` 薄封装 + **`resolveSiblingsForRoute`（ADR-253 D1 路由层单一出口）**：`openModel3DFullscreen` 在调用方未传 `siblings` 时按 routeKey 自算，空结果归一为 `undefined`。
 - `skeleton.ts` — `loadModel2D`：**纯 2D 骨骼渲染编排**（ADR-253 D7 起 `_toggle3D`/`_prefer3D` 整块已随 FAB 删除退役），委托 `views/app-preview/model2d/model2d.ts` 与 `preview-3d/mesh/model3d.ts`；截图走 `SaveScreenshotFile`。**3D 入口统一为左下角 nav-fab**（`app-nav` 的 `.nav-viewer-fab` → `openModel3DFullscreen`），详情卡内已无 3D 按钮。
 - `*-adapter.ts` / `*-3d.ts` — 各资源类型（YSM/MMD/VRM/Litematic/FBX/maid）的 3D 适配器，均通过 `PreviewAdapter.build` 契约挂内容层，shared 模式复用核心 renderer/rAF/controls。
-- `wasm-decode.ts`（`preview-3d/decoder/`）— `decodeYsmViaWasm`：前端 WASM 解码 .ysm（经 Go `ReadFileBytes` 取字节，走 `decoder/cache.ts` 缓存）；同目录 `.animation.json` 扫描驱动 `createYsmAnimPlayer`。
+- `wasm-decode.ts`（`preview-3d/decoder/`）— `decodeYsmViaWasm`：前端 WASM 解码 .ysm（经 Go `ReadFileBytes` 取字节，走 `decoder/model-cache.ts` 缓存）；同目录 `.animation.json` 扫描驱动 `createYsmAnimPlayer`。
 - `litematic-3d.ts` — `createLitematic3D` / `cleanupVoxel3D`：通用外壳归 `mount-preview-core.ts` 的 `mount3D(adapter, path)`，体素内容层归 `litematic-adapter.ts` 的 `buildLitematicScene`。
 - `litematic-meta.ts` — `showLitematic`（Go `ReadLitematicMeta` / `ReadNbtStructure` / `ReadSchematic`）。
 - `maid-3d.ts` — 车万女仆详情 + 3D 预览（Bedrock generic 模式），详情卡复用 YSM `statsCardHTML` 彩色分区。**GetModel3DSpec 单视图（ADR-160）**：详情数据 = `AnalyzeBedrockModel`（聚合纹理/尺寸/metadata/格式）+ `GetModel3DSpec`（逐组件统计唯一源）；蓝卡逐组件行 = `componentCountsFromSpec(spec)` 投影（与 YSM 详情、3D「组件」下拉同构），纯静态无选中态；大字 = 组件合计，spec 失败回落聚合口径；FAB = 整包 3D（不再传 `subModelIdx`/`subPath`，角色切换收敛在 3D 组件下拉）。交互式 L0 清单（dp-submodels/chip）与 `AnalyzeBedrockModelEntry` 逐角色预取已退役。
@@ -200,7 +200,7 @@ status: active
 - `tpl.ts` — `modelDetailHTML`（详情面板）/ `statsCardHTML`（统计卡：彩色分区 + 逐组件行 componentCounts + 纹理分类）。「文件信息」橙卡 = 格式后缀（`extOf` 派生）+ 解码器来源徽标 `ysm-badge`：值取 `model._decodedBy`（`DECODE_SOURCE` 来源码），`decodeBadgeHTML()` 映射 SVG 图标（`parser`/`package`）+ i18n 文案（`preview.decodedBy.*`），未识别的码不渲染（2026-09-18，徽标从 `summaryCardHTML` 的 `h3` 标题行迁入）。
 - `decoder/texture-order.ts`（`preview-3d/decoder/`）— `buildOrderedTexKeys`：纹理有序列表计算，与 Go `internal/app/texture_order.go` 口径严格对称。
 - `decoder/parse-ysm-json.ts`（`preview-3d/decoder/`）— `parseYsmJsonDirect(json)`：解压后 YSM 的 `ysm.json` 直接解析，双格式分支（YSM 专属 / 标准 Bedrock）。
-- `decoder/cache.ts`（`preview-3d/decoder/`）— 模块级预览缓存（FIFO 上限 50，与 `export.md` 口径一致）。
+- `decoder/model-cache.ts`（`preview-3d/decoder/`）— 模块级预览缓存（FIFO 上限 50，与 `export.md` 口径一致）。
 
 ### maid 详情数据源与子实体词汇（ADR-160）
 
@@ -241,7 +241,7 @@ status: active
 - `model:select` 派发方为 `app-tree` 节点点击与诊断页去重定位
 - 2D/3D 骨骼计算委托 `model2d.ts` / `preview-3d/mesh/model3d.ts`，动画解析走 `utils/animation/animation.ts`
 - Litematic/schematic 解析对应 Go 端 `go/litematic`（见知识卡 `go_litematic`）
-- WASM 解析口径与 Go 端 `go/ysm` 一致；缓存层为 `preview-3d/decoder/cache.ts`
+- WASM 解析口径与 Go 端 `go/ysm` 一致；缓存层为 `preview-3d/decoder/model-cache.ts`
 - 组件实例实现 `PreviewCtx` 最小接口，子模块只依赖该接口，不反向引用组件全貌
 
 ## 不变量
@@ -269,7 +269,7 @@ status: active
 ## 相关
 
 - `frontend/src/views/app-preview/model2d/model2d.ts` / `preview-3d/mesh/model3d.ts` — 2D/3D 骨骼渲染与计算
-- `frontend/src/preview-3d/decoder/cache.ts` — 模块级预览缓存
+- `frontend/src/preview-3d/decoder/model-cache.ts` — 模块级预览缓存
 - `frontend/src/wasm/` — WASM 生成数据（base64 豁免文件）
 - 知识卡：`app_content`、`app_tree`、`go_ysm_parser`、`go_litematic`、`event_bus`、`pointer-events`
 - ADR-057（3D 预览悬浮触发按钮与双端响应式控制层）；`utils/dom/fab.ts` — FloatingActionButton

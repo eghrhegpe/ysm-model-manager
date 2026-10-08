@@ -1,5 +1,7 @@
 // ===== WASM 解码层 =====
-// 从 index.ts 拆分：.ysm 文件的前端 WASM 解码逻辑
+// .ysm 文件的前端 WASM 解码：唯一出口 decodeYsmViaWasm——取字节（backend）→ extractZip
+// → WASM 解析（wasm/ysm-parser）→ 纹理/几何/动画归类，结果经 ./model-cache 缓存。
+// 依赖面：backend（取字节）+ parsers/extract + wasm + 同层 decoder 件 + infra/large-model（大文件警示）。
 
 import { getApp } from "@/backend/app.ts";
 import { readModelBytes } from "@/backend/read-model-bytes.ts";

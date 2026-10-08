@@ -139,7 +139,7 @@ shotButton action → saveScreenshot(key="front/45/side/back45/all")
 | `screenshot-cone.ts` | `applyVolumetricCone()`：离屏复用预览 `VolumetricCone` 建锥（几何/shader 单源，非第二套「截图专用光柱」）；锥顶 = 模型中心 + 方位角/仰角 × radius、朝向 = 靶点 − 锥顶（与预览同式）；调用方 `finally` 释放 |
 | `texture-loader.ts` | `loadTextures(urls)` 并行从 `textureCache` acquire，polling 等图片 complete（P2 修复 2026-09：轮询加 15s 超时兜底，悬挂 URL 不再永久 pending；超时视同失败 invalidate），失败 invalidate 缓存 |
 | `texture-cache.ts` | 纹理缓存池：引用计数 + LRU 淘汰零引用条目（上限 200），`disposeAll` 由 `mount-preview-core fullCleanup` 统一释放 |
-| `decoder/cache.ts` | 模型预览数据持久缓存：模块级 Map，FIFO 上限 50，覆盖/淘汰走 `onEvict` 回调释放 blob URL（覆盖时新旧 blob URL 差集判定，防误 revoke） |
+| `decoder/model-cache.ts` | 模型预览数据持久缓存：模块级 Map，FIFO 上限 50，覆盖/淘汰走 `onEvict` 回调释放 blob URL（覆盖时新旧 blob URL 差集判定，防误 revoke） |
 | `skeleton-render.ts` | 截图保存入口：`saveScreenshot` 六角度分支 + 活跃渲染器 vs 离屏重建两条路径 |
 | `adapters/ysm-shot-frame.ts` | 离屏截图编排 `renderModelShotFrame(model, key)`：取截图灯光 → `buildYsmShotRenderArgs` 组装实参 → `renderMultiAngle` → 按视角 key 匹配 name 取帧（[doc:adr-270-d6] 自 `skeleton-render.ts` 的 `renderFrame` 回迁适配器层） |
 | `shot-panel-shared.ts` | 截图面板共享层：`shotButtonNodes` 6 角度按钮 + `makeShotAction` 防连点副作用 |
@@ -188,7 +188,7 @@ shotButton action → saveScreenshot(key="front/45/side/back45/all")
 - **输出设置同构（ADR-266-d1 D2）**：离屏 renderer 的 `toneMapping` / `toneMappingExposure` / `outputColorSpace` 一律镜像活跃预览 renderer 的**现值**（`ScreenshotLights.output`）；读现值而非重推 sky/pp 属主链（推导即手抄）。这与上方「后期效果不参与截图」是两回事——镜像的是 renderer 级输出设置，不含 Bloom/SSAO/SSR pass。
 
 ### Blob URL 释放
-- `decoder/cache.ts`：覆盖同 key 时新旧 blob URL 差集判定，仅差集 URL 才 revoke（P1 修复，防同对象 re-set 误 revoke）
+- `decoder/model-cache.ts`：覆盖同 key 时新旧 blob URL 差集判定，仅差集 URL 才 revoke（P1 修复，防同对象 re-set 误 revoke）
 - `collectBlobUrls` 收集：`geometry.textures[]` / `geometry.texture` / `v.texture` / `authors[].avatarUrl` / `avatars[]` 所有 `startsWith("blob:")` 值
 - 离屏渲染器 `finally` 块：`ysmObject.removeFromScene` → `renderer.dispose()` → `forceContextLoss?.()`（强制释放 GL 上下文，防延迟到 GC）
 

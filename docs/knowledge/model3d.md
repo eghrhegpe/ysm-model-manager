@@ -1138,7 +1138,7 @@ perf:
 - **Go 绑定**：`GetModel3DSpec`（spec 数据源，单一事实）、`GetVoxelData*`（体素/存档）、`DetectResourceType`（类型探测）、`SaveCachedTexture`（KTX2 缓存）
 - **WASM 解码**（`decoder/wasm-decode.ts`）：Go 不可用时的 BedrockGeometry 兜底
 - **skeleton 2D 层**（`views/app-preview/skeleton.ts`）：先走 2D 骨骼线框图，用户点 3D 按钮升级→`createYsm3D` 走本层
-- **预览缓存**（`preview-3d/decoder/cache.ts`）：FIFO 50 条 spec 缓存（与 `export.md` 口径一致）；`texture-cache.ts` 纹理引用计数池；KTX2 缓存走 Go 端落盘
+- **预览缓存**（`preview-3d/decoder/model-cache.ts`）：FIFO 50 条 spec 缓存（与 `export.md` 口径一致）；`texture-cache.ts` 纹理引用计数池；KTX2 缓存走 Go 端落盘
 
 ## 不变量
 

@@ -170,22 +170,52 @@ export function runTools(ctx: GateCtx, tools: readonly GateTool[]): void {
       blockPolicy: entry.blockPolicy,
     });
   }
-  // 预算护栏：超时即红灯点名，防「悄悄变慢 → 全队每天白付」重演（见常量注释）
+  // 预算护栏：超时即点名，防「悄悄变慢 → 全队每天白付」重演（见常量注释）。
+  //
+  // ⚠️ 瞬态校验（2026-10-08 实测补强）：绝对耗时预算会被**环境瞬态**误伤——
+  // 本护栏上线当日即误报一次：`check-android-unavailable.ts` 实测 33.5s（其 `GOOS=android
+  // go list` 撞冷缓存/并行会话负载），而紧接着连跑两次仅 1.0–1.2s。若直接把瞬态判红，
+  // 得到的是「待归因」的假 FAIL + 全队被 blame——比不加护栏更糟（假红会训练人忽略红灯）。
+  // 故超预算时对**最慢项复跑一次**做归一：复跑回到正常量级 ⇒ 判环境瞬态（WARN 不阻断，
+  // 但必须明文留痕，因为「偶发慢」本身仍是症状）；复跑仍慢 ⇒ 判结构性慢（FAIL）。
   if (phaseMs > STATIC_TOOLS_BUDGET_MS) {
-    const top = slowest
-      .sort((a, b) => b.ms - a.ms)
+    const ranked = slowest.slice().sort((a, b) => b.ms - a.ms);
+    const top = ranked
       .slice(0, 5)
       .map((s) => `${s.tool} ${(s.ms / 1000).toFixed(1)}s`)
       .join(" / ");
-    ctx.record(`静态工具段耗时预算（≤${(STATIC_TOOLS_BUDGET_MS / 1000).toFixed(0)}s）`, false, {
-      time: phaseMs,
-      note:
-        `本段实测 ${(phaseMs / 1000).toFixed(1)}s，超预算 ${((phaseMs - STATIC_TOOLS_BUDGET_MS) / 1000).toFixed(1)}s。` +
-        `最慢项：${top}。处置：摘除/优化慢项，或如实调高 YSM_GATE_BUDGET_MS 并在提交说明写理由` +
-        `（慢不是不能接受，未经知会的慢不可接受）。`,
-      tail: "",
-      blockPolicy: "hard",
-    });
+    const worst = ranked[0];
+    let transient = false;
+    let rerunMs = 0;
+    if (worst) {
+      const rt = Date.now();
+      // 数组式 procRun（shell:false）而非 ctx.sh：`${worst.tool}` 是插值，
+      // 走 shell 拼接会触发 sh-invariants 闸的 DYNAMIC_ALLOWLIST 要求（shell 注入面）。
+      // 用数组直传既满足闸，也与上方 scopedFiles 分支同款（Windows CreateProcess 直传）。
+      procRun("node", [`scripts/${worst.tool}`, "--json"], { cwd: ROOT, timeout: GATE_TIMEOUT_MS });
+      rerunMs = Date.now() - rt;
+      // 复跑低于首次 1/3 且回到预算的 1/4 以内 ⇒ 判瞬态
+      transient = rerunMs * 3 < worst.ms && rerunMs < STATIC_TOOLS_BUDGET_MS / 4;
+    }
+    const over = ((phaseMs - STATIC_TOOLS_BUDGET_MS) / 1000).toFixed(1);
+    ctx.record(
+      `静态工具段耗时预算（≤${(STATIC_TOOLS_BUDGET_MS / 1000).toFixed(0)}s${transient ? "，判为环境瞬态" : ""}）`,
+      transient,
+      {
+        time: phaseMs,
+        note: transient
+          ? `本段实测 ${(phaseMs / 1000).toFixed(1)}s，超预算 ${over}s；但最慢项复跑仅 ` +
+            `${(rerunMs / 1000).toFixed(1)}s（首次 ${(worst.ms / 1000).toFixed(1)}s）⇒ 判为环境瞬态` +
+            `（冷缓存/并行负载），不阻断。最慢项：${top}。` +
+            `若此类瞬态频繁出现，说明机器负载或缓存策略需调整——偶发慢仍是症状。`
+          : `本段实测 ${(phaseMs / 1000).toFixed(1)}s，超预算 ${over}s，且最慢项复跑 ` +
+            `${(rerunMs / 1000).toFixed(1)}s 未回落（首次 ${worst ? (worst.ms / 1000).toFixed(1) : "?"}s）` +
+            `⇒ 判为结构性慢。最慢项：${top}。处置：摘除/优化慢项，或如实调高 YSM_GATE_BUDGET_MS ` +
+            `并在提交说明写理由（慢不是不能接受，未经知会的慢不可接受）。`,
+        tail: "",
+        blockPolicy: "hard",
+      },
+    );
   }
 }
 

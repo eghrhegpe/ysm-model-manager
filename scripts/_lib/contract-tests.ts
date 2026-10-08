@@ -253,6 +253,15 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
     "scripts/adr-check.ts",
   ],
   "test_codemod_guards.ts": ["scripts/codemod.ts"],
+  // G2 Worker 生命周期闸的契约测试（2026-10-08 补登记）：验证 scripts/check-worker-lifecycle.ts
+  // 的扫描域 fail-loud（空域 exit 2）、`new Worker(` 站点终止出口判定、基线只减不增与豁免语法。
+  // 为何必须登记（test_contract_tables_consistency 断言）：其 DOMAINS 标了 `tests`
+  // （它自身也验证工具行为，改 tests/ 即须触发），按该测试的规则「含 tests 域者必须显式登记
+  // TARGETS」——否则精确裁剪模式下「改了该脚本却不跑这条契约测试」会静默漏检。
+  "test_check_worker_lifecycle.ts": [
+    "scripts/check-worker-lifecycle.ts",
+    "tests/test_check_worker_lifecycle.ts",
+  ],
   // 扫描 frontend/src 下全部 *.setup.ts（防 vi.hoisted 与 --coverage 插桩冲突）；
   // 锚点断言 context-menus.setup.ts 的 mocks 形态——两者任一改动都须触发本测试。
   "test_vitest_coverage_setup.ts": [

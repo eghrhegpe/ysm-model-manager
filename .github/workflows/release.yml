@@ -30,6 +30,9 @@ jobs:
   # ── 测试门禁（可复用 workflow test.yml，main/PR 由 ci.yml 调用）───
   test:
     uses: ./.github/workflows/test.yml
+    # 串行止损（2026-10-08 门禁锐评 R4）：needs: prepare —— 秒级版本校验失败时
+    # 重型测试根本不启动，不白烧分钟；四平台 build 原本就 needs [prepare, test]。
+    needs: [prepare]
     # 变更范围（ADR-244 + 2026-09 审查 P1）：不能直接传 event.before——
     # 新 tag 的 event.before 是全零 SHA（非提交对象），脚本会识别为全零基线退回本地解析；
     # CI 本地三源全空 ⇒ 责任集 null ⇒ 严格模式全阻断（与旧行为同病）。

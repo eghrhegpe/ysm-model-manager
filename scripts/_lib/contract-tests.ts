@@ -164,6 +164,9 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   // 哨兵为死键；兜底 = workflow 变更触发 pages workflow 全量跑契约测试（含本守卫）。
   // 勿挂 other：selectContractTests(["other"]) 零触发是既有契约（test_contract_domain_select）。
   "test_workflow_contract_runner.ts": ["tests"],
+  // CI 工作流关键顺序不变量（R1-R5，2026-10-08 门禁锐评落地）——文本层静态扫描，
+  // 域/触发口径与 test_workflow_contract_runner.ts 完全一致（workflow 变更 → CI pages 全量兜底）。
+  "test_workflow_contract_order.ts": ["tests"],
   // 构建/工具配置（vite.*.config.* / knip.json）声明的入口文件必须存在
   "test_build_entry_refs.ts": ["frontend", "tests"],
   "test_check_boolean_smart.ts": ["tests", "frontend"],
@@ -369,6 +372,11 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
     ".github/workflows/",
     "scripts/contract-tests.ts",
     "tests/test_workflow_contract_runner.ts",
+  ],
+  // 扫描 .github/workflows/*.yml 的顺序不变量（R1-R5）；锚点 = workflow 目录 + 本测试自身。
+  "test_workflow_contract_order.ts": [
+    ".github/workflows/",
+    "tests/test_workflow_contract_order.ts",
   ],
   // 扫描 frontend/ 下构建/工具配置的入口声明（vite.*.config.* 的 rollupOptions.input +
   // knip.json 的 entry）；改任一配置或本测试都须触发。

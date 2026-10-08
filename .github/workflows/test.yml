@@ -170,8 +170,10 @@ jobs:
 
       # P1 修复（2026-08-17，门禁锐评 P1-5）：CI 此前零治理检查，远端无防线——
       # redlines 新增红线在 CI 即红，不再只靠本地 pre-push（可被逃生阀绕过）。
-      # 注：check-deadcode-baseline 依赖 frontend/node_modules/.bin/knip + jscpd，
-      # 必须放在下方「安装前端依赖」（pnpm install --frozen-lockfile）之后执行（code_review P1）。
+      # 孤魂注释归位（2026-10-08 门禁锐评）：此处原注「依赖 knip/jscpd、必须放在
+      # 安装前端依赖之后」是旧单 Job 结构的遗骸——本 job 不装前端依赖，check-redlines
+      # 为纯文本治理扫描；依赖 node_modules 的 check-deadcode-baseline 在 frontend job
+      #（那边有 pnpm install 前置，见其步骤上方注脚）。
       - name: 红线零新增门禁（check-redlines — R1-R10/W1-W6）
         shell: pwsh
         run: |
@@ -472,6 +474,9 @@ jobs:
   # webServer 自动管理 vite dev 生命周期（playwright.config.ts）。
   e2e:
     name: E2E（Playwright）
+    # 阶段门控（2026-10-08 门禁锐评 R5）：契约失败大概率前端契约崩，最贵的一档不空跑；
+    # frontend/go/go-analysis 保持并行取 max，不拖墙钟（契约 job 本身秒级~分钟级）。
+    needs: [contracts]
     runs-on: ubuntu-24.04
     # 补装超时告警（2026-10-08 锐评：此前全文件唯二裸奔的 Job）。Playwright 的 7min 总限
     # 只管测试段，webServer/浏览器下载/apt 卡死不受其管——缺省 ceiling 是 360min 静默干烧。
@@ -571,6 +576,8 @@ jobs:
   # 类型检查复用 e2e job 的 tsconfig.e2e.json（双套件同域，不重复跑）。
   e2e-web:
     name: E2E-Web（真 WebGL）
+    # 阶段门控（2026-10-08 门禁锐评 R5）：同 e2e job——契约失败不空跑最贵档。
+    needs: [contracts]
     runs-on: ubuntu-24.04
     # 同上补告警；SwiftShader 无 GPU 软渲染显著慢于 e2e 的 headless Chromium，预算放宽一档。
     timeout-minutes: 40

@@ -58,11 +58,12 @@ quick_risk_lines:
 
 ### 维护性（低·已知且被门禁冻结）
 - **F1 · 死代码基线**：`check-deadcode-baseline` knip 183 + jscpd 118，ERROR 0、无新增（门禁只减不增）；优先回收 `preview-3d/caps`、`adapters`、`parsers`。
-- **F2 · 32 个 >500 行巨型前端文件**：集中在 `preview-3d/caps/*`、`adapters/*`，按子域切分。
+- **F2 · 巨型前端文件（子代理夸大·2026-10-08 核实 >500 行多为测试/locale）**：子代理报「32 个 >500 行巨型前端文件」，实测 >500 行清单里**绝大多数是测试文件**（`water-capability.test.ts` 2460、`mmd-adapter.test.ts` 1868、`postprocessing-capability.test.ts` 1771 等，属 T3 fixture 拆分范畴）和 **locale 数据**（`ja/en/zh-CN.ts` 各 ~1700 行——i18n 语言包是数据文件，**拆分即反模式**）。**真生产文件** >300 行仅约 15 个：`caps/{sky,postprocessing,ground,environment,light}-capability.ts`（各 846-995 行）、`state/env-state-schema.ts`(897)、`adapters/{vmd-retarget,mount-preview-core,ysm-adapter,vrm-adapter}`(728-827)、`parsers/ysm-header.ts`(807)、`menu/engine/core.ts`(786)。**但 AGENTS 明确"新组件一个文件放一个可独立工作的功能，不按行数机械切割"**——拆分依据是**职责过载**而非行数，需逐文件判断职责边界，非机械切。若真要拆，优先看 `sky-capability.ts`(995)/`env-state-schema.ts`(897) 是否混了多个子职责。
+- **T2 · 薄弱测试（子代理误报·2026-10-08 核实 `utils/base` 覆盖极好）**：子代理称「`utils/base`(纯函数核)、`utils/storage`(隐私安全层) 无单测」——**完全错误**。`frontend/src/utils/base/` 下**每个模块均有对应测试**（共 19 个 `.test.ts`：`storage/async/debounce/base64/lock/listener-set/disposable/log/main-thread-watch/apperror-text/array/clamp/guards/label/recycle-path/safe-error-msg/tex-size/web-path`）；`utils/storage` 实为 `utils/base/primitives/storage.ts`，其 `storage.test.ts`(127 行) 覆盖**极其完善**——正常透传、存储抛错降级（`safeGet→null`、`safeSet/safeRemove` 静默不抛）、**隐私模式降级**（mock localStorage 抛错 → `isStorageAccessible=false`）、损坏 JSON→fallback、key 互不污染、`logWarn` 日志验证。**真实小缺口**：`internal/app/app.go`(400 行主编排) 无直接 `app_test.go`——但 `internal/app/` 包内按职责拆分 20+ 个 `app_*_test.go`（`app_config/app_files/app_install_import_coverage/...`），整体覆盖好，主编排靠集成/间接覆盖属常规取舍，补直接单测价值低。
 - **F3 · features 越 seam 软接触 backend 非绑定 helper**：`context-menu/version-updater/dnd/community/import/platform` 直引 `capabilities/platform/runtime/browser-adapter`，收口受许模块或经 seam 暴露（非硬违规，ADR-190/208 精神）。
 - **G3 · 重复辅助函数（子代理部分夸大）**：`copyDirRecursive`/`copyFile` 等多数已在注释中声明「已收敛至 fsutil，保留双入口避免改名 churn（测试直接引用）」——是有意兼容入口，非真债；新代码务必走 `fsutil.*`，存量双入口按需收敛。
 - **T1 · 依赖审计信息缺口**：本环境 `goproxy.cn` `Forbidden`、`npm outdated` 超时，无法实测 `go list -u -m all`/`npm audit`；已知风险 `@wailsio/runtime ^3.0.0-beta.26`（beta）、`typescript ^7`、`vite ^8` 大版本。需联网环境 `govulncheck` + `npm audit` 补全。
-- **T2 · 薄弱测试**：`frontend/src/utils/base`(纯函数核)、`utils/storage`(隐私安全层) 无单测；Go `internal/app/app.go` 主编排仅间接覆盖。
+- **T2 · 薄弱测试**：已核实误报，见上方 F2 条目的"T2 误报"段落——`utils/base` 19 个测试文件全覆盖、`storage.test.ts` 覆盖隐私降级。**移除本项**（原报「无单测」不成立）。
 - **T3 · 巨型 fixture 测试**：`water-capability.test.ts` 125KB 等，拆分降维护成本。
 - **T4 · `vi.mock(".js")` 旧写法** 19 处（M3 过时），统一改 `.ts`。
 

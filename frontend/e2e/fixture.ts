@@ -13,6 +13,13 @@ import { generateMockBridgeScript } from "./mock-data.ts";
 
 /** 转发页面 console/pageerror 到 stdout（仅 level error/warning，避免刷屏） */
 function forwardPageLogs(page: Page): void {
+  // 收集本页生命周期内发生的 404 URL，供下方 console 处理判定「预期性 404」——
+  // 仅当真正观察到 /wails/runtime 404 时才抑制其衍生的通用 console 噪声，
+  // 避免一刀切把真实资源缺失回归也静音。
+  const notFoundUrls = new Set<string>();
+  page.on("response", (resp) => {
+    if (resp.status() === 404) notFoundUrls.add(resp.url());
+  });
   page.on("console", (msg) => {
     const level = msg.type();
     if (level !== "error" && level !== "warning") return;
@@ -25,6 +32,17 @@ function forwardPageLogs(page: Page): void {
     const text = msg.text();
     if (text.includes("Browser Environment Detected") && text.includes("Only UI previews")) {
       return;
+    }
+    // 预期性 404 噪声抑制：@wailsio/runtime 在浏览器加载时自举会去 fetch
+    // `/wails/runtime`（该脚本仅真实 Wails 桌面壳注入，dev/e2e mock 环境不存在 → 404）。
+    // 这条 404 在 e2e 每用例必现一次、且无害（runtime.ts 已用 webEvents/webWindow
+    // 桩兜底），但其衍生的通用 console error（"Failed to load resource... 404"）不带
+    // URL，无法在 console 处理器内直接定位；故用上方 response 监听的 404 集做交叉验证：
+    // 仅当本页确实出现过 /wails/runtime 404 才抑制该通用消息，真实资源 404 仍会照常打印。
+    if (text === "Failed to load resource: the server responded with a status of 404 (Not Found)") {
+      for (const u of notFoundUrls) {
+        if (u.includes("/wails/runtime")) return;
+      }
     }
     console.log(`[page:${level}] ${text}`);
   });

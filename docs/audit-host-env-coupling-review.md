@@ -15,7 +15,7 @@
 | 条目 | 状态 | 说明 / 现源码锚点 |
 |---|---|---|
 | **P1-0** KTX2 编码 worker 池生产侧永不终止 | ✅ 已坐实，**待拍板** | `mmd-ktx2-encoder.ts:145-185` 建池；桥提供 `dispose()`（`worker-bridge.ts:179-181`）但**生产零调用**；`resetEncoderState()`（:89，注释自陈「测试用」）只 `clearPending()` 不 terminate；唯一清缓存路径是 worker 崩溃（`onPoolTerminated` :168-171）。测试自认（`mmd-ktx2-encoder.test.ts:707-710`）「resetEncoderState 不拆池」并**手动 `w.onerror?.()` 触发崩溃**来清 |
-| **P1-1** 终局拆除可达性 = 未验证的宿主假设，且回归锁自证 | ✅ 已坐实 | `shared-infra.ts:200 beforeunload → teardown()`（:173-194，唯一释放 renderer + `forceContextLoss` 的路径）；Go 侧 `app.go:331 ServiceShutdown()` **前端零引用**（`grep ServiceShutdown frontend/src` 无命中）。`shared-infra.test.ts:45-68` 锁的是「**手动 dispatchEvent(beforeunload) 会触发拆除**」——与「桌面壳关窗时宿主会派发 beforeunload」是两个命题，恒绿、零判别力 |
+| **P1-1** 终局拆除钩子挂在 `beforeunload`，**Wails v3 下确认不触发** | ✅ **已坐实（2026-10-08 21:2x 上游源码取证）** | `shared-infra.ts:200 beforeunload → teardown()`（:173-194，唯一释放 renderer + `forceContextLoss` 的路径）。**实测结论见§三**——Wails v3.0.0-beta.26 全仓（含内部 webview2 层）**零处 `beforeunload` 引用**；`WM_CLOSE` 链路仅 `ShuttingDown()`（只置 Go 标志位）→ `DefWindowProc` 销毁 HWND，**不向前端派发任何 JS 事件** ⇒ 该钩子为**死代码**。Go 侧 `app.go:331 ServiceShutdown()` 前端零引用。**影响面重估见§三结论段** |
 | P1-2 能力分支绕过 DI 直读 DOM | 📝 记录，非待修 | `caps/environment-capability.ts:79,351,388 document.createElement` + `:101 window.addEventListener('focus')`、`caps/ground-capability.ts:550`、`caps/env-pixels.ts:123` —— 领域层直取宿主对象，**零机器闸**（`check-layering` R0 只管 `core/**`→`utils/dom` import 方向，不解析 DOM 全局标识符）。现状无可见缺陷；拍板口径见 §四 G3 |
 | P2-1 `stopIfIdle` 判据面窄于不变量面 | ⚠️ 已验伪为 P0，**降级 P3** | `render-host.ts:204-209` 判据只看 `_perFrames.length`、不看 `_activeInputSession`；`setActiveInputSession`（`mount-preview-core.ts:799`）与 `setPerFrame`（:691）是两条独立注册路径。**但当前生产路径不可达**：六格式适配器全部提供 `content.update`；`setPerFrame` 前只有 `registerContentForDisposal`（:684→:740-743，纯 `push`，无可抛错）；`teardown` 三档全调 `stopIfIdle`。属**结构脆弱 + 零测试覆盖**，非现症 |
 | P2-2 rAF 生命周期零契约测试 | 📝 拟议 G1，**待落** | `stopIfIdle` / `animate` / `start` 全仓零测试引用（`grep stopIfIdle **/*.test.ts` 无命中；`render-loop.test.ts` 只测会话表）。`animate` 自续期在前（:249）早于 infra 早退（:255）——现由「cleanup 主动调停」兜住，非失控，但无锁 |
@@ -43,8 +43,34 @@
   最近一次距今 1 天，而载体 `render-host.ts:348 export const rendererHost = new RendererHost()`（模块级单例）**至今未拆**——
   10-07 只给它加了 window 守卫。`shared-infra.ts` 注释自陈「未来 PreviewSession 组合时只需持有 host 引用」，
   该收敛至今**未兑现**（ADR-227 的 P1 战役只做了字段化，未做实例化）。
+- **P1-1 的实证改变了全局判断的一角**：终局拆除的 `beforeunload` 钩子经上游源码坐实为**桌面端死代码**（§三）——
+  这不改变「验收质量弱于设计质量」的总判，但把一条 P1 降为 P2，
+  并**印证了本轮的核心方法论**：这类耦合只有读上游源码才能定性，静态扫本仓永远只能得到「未验证的假设」。
 
 ## 二、本轮 P1-0：KTX2 Worker 池「无回收点」（唯一零误报的坐实缺陷）
+
+### 2.0 机制澄清（主模型亲读源码，修正本节初版判词）
+
+**三段式，worker 只服务中间那段**：
+
+```
+PNG 纹理 → ①查 Go 缓存目录（GetCachedTexture）→ 命中即用，零成本   ← 不碰 worker
+          → ②编码：worker 池跑 WASM basis_encoder                  ← 唯一用 worker 的段
+          → ③落盘 saveCachedTexture → Go 缓存目录（下次命中）        ← 不碰 worker
+```
+
+- worker 存在的**唯一理由**：避免 WASM 同步编码阻塞 UI（`mmd-ktx2-encoder.ts:188` 注释原话）。
+- **规模是3**：`KTX2_WORKER_COUNT = MAX_CONCURRENT = 3`（`:131`/`:24`）——**不是 N，是 3**。
+  真实占用大头不是线程，而是每个 worker 内的 WASM `BasisEncoder` 实例（线程栈 + WASM heap）。
+- **编码是「每个纹理一生一次」的事件**：`encodeAndCacheTexture` 落盘后 `completedHashes.add(hash)`（`:259`），
+  `scheduleBackgroundEncoding` 幂等跳过（`:300`）⇒ **同一纹理永不再编**。
+  编码通常几百毫秒完成，worker 之后**约 99.9% 时间空转**。
+- **缓存读取路径不经 worker**：`decoder/` 全目录 `new Worker` **仅 1 处**（`:151`，即编码池）；
+  KTX2 加载走 `mmd-ktx2-loader` / `mmd-ktx2-cache-loader` 直接读缓存。
+- **⚠️ 关键佐证（坐实「漏网」而非「取舍」）**：同文件已存在**为池量身定做且已接线**的取消入口——
+  `cancelPendingEncodings()`（`:77`）在 `mmd-build-result.ts:196` 被调用（会话拆解时取消未开始的编码）。
+  **同一处代码里，调度侧接了会话生命周期，池本身的生死没人管** ⇒ 遗漏，不是「有意常驻」
+  （若为有意取舍，仓内应有注释或 ADR 论证过，实测零论证）。
 
 - **症状**：MMD 纹理 KTX2 编码的 worker 池活到页面/进程结束，会话关闭、预览卸载、模型切换均不回收。
 - **取证链**：
@@ -57,30 +83,101 @@
   4. 模块级缓存的**唯一清空路径是 worker 崩溃**：`onPoolTerminated`（:168-171）由 `handleWorkerError` 触发 ⇒「不崩就一直占着」。
   5. **测试自己承认了**：`mmd-ktx2-encoder.test.ts:707-710` 注释写明「`resetEncoderState` 不拆池」，
      并**靠手动 `for (const w of createdWorkers) w.onerror?.()` 触发崩溃**让每用例从「无池」开始。
-- **影响量化**：「切 MMD 模型 N 次」**不**新增池（模块级缓存复用，首次建的 N 个常驻）；
-  真实成本是「先看一次 MMD 再长期不用」→ `KTX2_WORKER_COUNT` 个 idle worker 常驻 + 其占用的解码内存，
-  直到关窗（且关窗释放还依赖 P1-1 那条未验证的 `beforeunload`）。
-- **与 S-1 的区别**（决定定级依据）：P1-1 是「触发可靠性**未知**、需实机取证」；本条是「**根本没有触发点**」——纯静态可判。
-- **⚠️ 需拍板**：这是**有意的进程级常驻取舍**（编码池小、复用优先、线程创建贵），还是**漏网**？
-  两种处置完全不同：
-  - 若判定为有意 ⇒ 补文档 + 补一条「池为进程级常驻」的事实锁，**不做代码改动**；
-  - 若判定为漏网 ⇒ 加 `disposeKtx2WorkerPool()` 门面，挂 `cleanupPreview`/`teardownSharedInfra` 对称位。
-  ⚠️ 注意：直接挂到 `cleanupPreview` 可能与「切模型保留池复用」的现有意图冲突（每次开关预览都拆池=失去复用收益），**拍板时勿默认「对称补齐就是正解」**。
+- **影响量化（修正版）**：只有 **3 个** worker，非报告初版的「N 个」。
+  「切 MMD 模型 N 次」**不**新增池（模块级缓存复用）⇒ 真实成本 = 「本会话看过至少 1 个 MMD 模型」后，
+  3 个 worker + 3 份 WASM BasisEncoder 实例常驻到进程结束。
+  ⚠️ 而它们的释放**依赖 P1-1 那条已坐实的死代码**（`beforeunload` 桌面端不触发）——
+  **不过**：进程退出时 OS 回收全部 WebView2 子进程内存，故**无跨进程泄漏**，
+  实际影响限于「进程存活期间的常驻内存」。这使 P1-0 的紧迫度**低于初版判断**，但**并非无害**（见下）。
+- **与 P1-1 的区别**（决定定级依据）：P1-1 是「触发可靠性未知、需实机取证」；本条是「**根本没有触发点**」——纯静态可判。
+- **✅ 处置建议（用户质疑后重判：漏网，建议方案 B）**：
 
-## 三、P1-1：终局拆除的可达性 + 回归锁自证（同族病：口头法）
+  ```ts
+  // mmd-ktx2-encoder.ts 新增，与 cancelPendingEncodings 同族对称
+  export function disposeKtx2WorkerPool(): void {
+    ktx2Bridge?.dispose();   // → terminatePool()：逐个 w.terminate()（worker-bridge.ts:127-131）
+    ktx2Bridge = null;
+    ktx2Workers = null;      // 与 onPoolTerminated（:168-171）同款清缓存，语义统一
+  }
+  ```
 
-- **事实**：`shared-infra.ts:200` 是**唯一**释放 renderer + `forceContextLoss?.()` + `domElement.remove()` 的入口（teardown :173-194）。
-- **事实**：Go 侧有正规退出钩子 `app.go:331 ServiceShutdown()`（watcher.Stop / appCancel / 停代理 / 关 httpServers），
-  但**前端零引用** —— 前后端两侧各有一个「退出信号」，彼此未接线。
-- **⚠️ 回归锁是自证式的**（本仓自己立的警戒线，见 `docs/knowledge/water.md:114`「测试自己伪造字段再断言被释放」）：
-  `shared-infra.test.ts:45-68` 断言的是「注册了 beforeunload 监听」+「**手动 `window.dispatchEvent(new Event("beforeunload"))` 会触发拆除**」。
-  这与「**桌面壳关窗时宿主会派发 beforeunload**」是两个不同命题——测试自己造事件、自己派发、自己断言，**恒绿、零判别力**。
+  挂点三选一（**推荐 B**，理由见下）：
+
+  | 方案 | 收益 | 代价 |
+  |---|---|---|
+  | A. 只挂 `teardownSharedInfra()` | 消除应用终局残留 | ❌ **已失效**：该入口依赖 `beforeunload`，桌面端确认不触发（§三）⇒ **挂上去等于没挂** |
+  | **B. 挂 `cleanupPreview()`** | 真能触发（会话级确定路径，源码 `mount-preview-core.ts:256`） | 每次开关预览拆池；**但 `getKtx2WorkerPool` 的 `if (ktx2Workers) return ktx2Workers`（:146）已天然支持惰性重建**，下次自动重建 |
+  | C. 空闲超时自动拆 | 兼顾两者 | 引入定时器与新状态，最复杂 |
+
+  **推荐 B 的成本核验**：重建代价 = 3 个 worker + WASM `BasisEncoder` 初始化（一次动态 import + init），
+  发生在「用户再次打开 MMD 模型」时；而该场景**本来就要等编码落盘**（首次）或直接命中缓存（之后），
+  **几百毫秒的建池成本基本被场景本身淹没**。相较之下 A 是净无效（死代码），C 的复杂度不划算。
+  ⚠️ 落地时须注意：`cleanupPreview` 是「全部关闭」语义，挂这里意味着**单会话关闭也会拆池**——
+  若后续要「关一个会话保留池」，应挂到 `mount-session.ts` 的 `teardown()` full档而非 `cleanupPreview`，
+  **须与多会话（cooperate）语义一并拍板**。
+
+## 三、P1-1：终局拆除钩子在 Wails v3 下**确认是死代码**（上游源码取证，2026-10-08 补）
+
+> 本节由主模型直接读Go module cache 中的上游源码取证，非推测。版本对齐 `go.mod:13` = `v3.0.0-beta.26`。
+
+### 3.1 取证链（四步，每步可复现）
+
+1. **Wails v3 主仓零引用**：`grep 'beforeunload|BeforeUnload'` 递归扫
+   `go/pkg/mod/github.com/wailsapp/wails/v3@v3.0.0-beta.26/**` → **0 命中**。
+   即 Wails 框架自身从不在关窗时向前端派发 `beforeunload`，其 webview2 层（`internal/webview2/pkg/edge/`）亦无。
+2. **关窗链路逐行确认**（`pkg/application/webview_window_windows.go:1715-1735`，`WM_CLOSE` 分支）：
+
+   ```go
+   // We were called by `Close()` or pressing the close button on the window
+   w.parent.emit(events.Windows.WindowClosing)   // → Go 内部事件总线（仅 Go 侧）
+   ...
+   w.requestCancellation.close()
+   w.chromium.ShuttingDown()// ← 仅 e.shuttingDown = true（edge/chromium.go:146-148）
+   return w32.DefWindowProc(w.hwnd, w32.WM_CLOSE, 0, 0)  // 直接销毁 HWND
+   ```
+
+   `ShuttingDown()` 实现在 `internal/webview2/pkg/edge/chromium.go:146-148`，**全部内容就是 `e.shuttingDown = true`**——
+   一个 Go 侧防重入标志位，**不 Eval JS、不 Navigate、不派发事件**。
+   ⇒ 从 Go 到 JS **没有任何一条通路**能让页面收到「要关了」的信号。
+3. **`WindowClosing` 是纯 Go 事件**：`application.go:881-899 handleWindowEvent` → `window.HandleWindowEvent(eventID)`，
+   消费方全在 Go 侧（`webview_window.go:366` / `:1253`）。它**不经 Wails 事件桥下发到前端**。
+4. **唯一可能的前端信号也不存在**：框架无 `beforeunload` 相关实现，前端自然收不到。
+
+### 3.2 结论
+
+**`shared-infra.ts:200` 的 `window.addEventListener("beforeunload", …)` 在 Wails v3 桌面端永不触发 ⇒ `teardown()` 的唯一调用者是测试。**
+连带坐实两件事：
+
+- **回归锁是自证式的**（本仓自己立的警戒线，见 `docs/knowledge/water.md:114`「测试自己伪造字段再断言被释放」）：
+  `shared-infra.test.ts:45-68` 锁的是「注册了 beforeunload 监听」+「**手动 `window.dispatchEvent(new Event("beforeunload"))` 会触发拆除**」。
+  与「宿主会派发 beforeunload」是两个不同命题——测试自己造事件、自己派发、自己断言，**恒绿、零判别力**。
+  **判别式**：去掉宿主这一步（真实环境根本不派发），测试依然全绿 ⇒ 假绿坐实。
 - **对照（正面，说明本可以做对）**：同款释放纪律在截图离屏链写在 `finally` 里且**有真锁**——
-  `screenshot-render.ts:242-247`（`cone?.dispose()` → `renderer.dispose()` → `forceContextLoss?.()`）+ `screenshot-render.test.ts:423-426` 断言。
-  **同一条释放纪律，一边有真锁，一边只是「挂着一个钩子并锁住钩子自己」。**
-- **定级保留**：影响面为「关窗后残留 GL context」。进程退出时 OS 回收该进程显存，故**非跨进程泄漏**；
-  真实风险窗口在「同进程内窗口重开 / 多窗 / Windows 低内存回收路径」。**需实机或 e2e 取证才能从「假设」升级为「缺陷」**——
-  本报告不越界把它写成已确认缺陷。
+  `screenshot-render.ts:242-247`（`cone?.dispose()` → `renderer.dispose()` → `forceContextLoss?.()`）+ `screenshot-render.test.ts:423-426`。
+  **同一条释放纪律，一边有真锁，一边挂在从不触发的事件上并锁住「钩子自己」。**
+
+### 3.3 影响面重估：从「未知」降为「确定无实际危害」——但**不是无害**
+
+必须区分两件事：
+
+- **实际危害 ≈ 0**：窗口关闭 → `WM_CLOSE` → HWND 销毁 → **整个进程随之退出**（Wails 单窗口桌面应用，
+  最后一个窗口关闭即应用生命周期终点）⇒ 进程退出由 OS 回收全部 WebView2 子进程内存、GL context、worker 线程。
+  **「残留 GL context」在桌面单窗口形态下不存在跨进程泄漏。**
+- **但代码本身仍需处置**，三条理由：
+  1. **它伪装成有防护**：`teardown()` 是全仓唯一释放 renderer + `forceContextLoss` 的路径，
+     其存在会让后来者误以为「进程退出有兜底拆除」，而实际上没人调它。
+  2. **web 形态直接反证**：`cd frontend && npm run dev:web` / GitHub Pages（ADR-049）下**页面确实会卸载**，
+     `beforeunload` **会真实触发**——即同一段代码在 web 下有效、桌面下失效，
+     是**跨形态行为分叉**（正是本轮审计§一主张要防的那类宿主耦合）。
+  3. **它是 G5 真值闸的落点**：若将来支持「关窗不退出进程」（托盘常驻 / 多窗），
+     这条死代码会**静默失效且零信号**，届时才是真泄漏。
+- **定级**：由「P1 待实机取证」调整为 **P2·确认死代码 + 跨形态分叉**。
+  **处置建议**（低成本、消除分叉）：
+  ① `teardownSharedInfra()` 的 Go 侧入口应由**真信号**驱动——查 Wails 是否提供 `OnShutdown`（Go 侧已证存在，
+  `application.go:903 OnShutdown(f func())`），经事件桥下发到前端调用 teardown；或
+  ② 明确文档化「桌面端进程退出即回收，`teardown` 仅服务 web 形态与测试」，并把该认知写进知识卡，
+  避免下轮再当活代码审计。
+  ⚠️ **不建议**为此改桌面端生命周期设计（进程退出回收是 OS 保证的既定行为，为它加钩子属过度工程）。
 
 ## 四、②考古：宿主层病历谱系与复发节律（本次审计的核心洞察）
 
@@ -149,13 +246,22 @@
    而风险在「宿主会不会调这个钩子」。前者永远绿，后者才是要命的。**判别式：问「去掉宿主这一步，测试还绿吗」。**
 4. **跨层重复出现的根因，比单层深挖更值钱**：env 域（今日 19:53）与宿主域（本轮）各自独立收敛出
    「立法无机器闸」这一同构结论 —— 该结论应升级为**跨层治理原则**，而非两域各自的脚注。
+5. **🆕 宿主环境假设必须读上游源码，静态扫本仓只能得到「未验证」**（P1-1 的教训）：
+   「Wails 关窗会不会派发 `beforeunload`」——静态扫本仓无论怎么扫都只能得到「查不到调用方」的**假设**；
+   真相在 `go/pkg/mod/.../wails/v3@v3.0.0-beta.26/`：**全仓零引用**，`WM_CLOSE` → `ShuttingDown()`（仅置 Go 标志）
+   → `DefWindowProc` 销毁 HWND，**Go→JS 零通路**。
+   **判别式（可复用）**：凡结论依赖「宿主框架会不会做X」，一律去 `go/pkg/mod` 读那个框架，
+   别在自家代码里找证据——**自家没有调用方 ≠ 宿主不会调**。
+   ✅ 同族正面先例：上一轮 env 域对 three r186 的取证也是同法（`docs/knowledge/water.md:114`
+   「给『已释放』写断言前，先查上游源码到底释放了什么」）。**「读上游取证」应升为宿主域审计的标准动作。**
 
 ## 七、待拍板清单（需人决策，非技术可独断）
 
 | # | 事项 | 选项 | 影响 |
 |---|---|---|---|
-| 1 | **KTX2 worker 池常驻**（P1-0）是取舍还是漏网 | ① 判定有意 → 补文档+事实锁，不改码；② 判定漏网 → 加 `disposeKtx2WorkerPool()` 挂对称位 | ② 若挂 `cleanupPreview` 会**破坏现有「切模型保留池复用」意图**（每次开关预览拆池即失去复用收益）——**勿默认「对称补齐 = 正解」** |
-| 2 | `beforeunload` 可达性（P1-1）是否立项实机/e2e 取证 | ① 立即取证定缺陷；② 接受「进程退出由 OS 回收」判为非缺陷，只补文档 | ② 前提是明确「同进程窗口重开」不是产品场景——**须确认产品是否有多窗/重开语义** |
+| 1 | **KTX2 worker 池常驻**（P1-0）——已重判为**漏网**（同文件 `cancelPendingEncodings` 已接线，池生死无人管，零取舍论证） | **推荐 B**：`disposeKtx2WorkerPool()` 挂 `cleanupPreview`（惰性重建已具备） | A 方案已失效（依赖死代码）；B 的代价「几百毫秒建池」被MMD 场景本身淹没。⚠️ 若要多会话保留池，须改挂 `teardown()` full档 |
+| 2 | **P1-1 死代码处置**（已确认桌面端不触发） | ① 文档化「桌面进程退出即回收，`teardown` 仅服务 web 形态与测试」+ 写知识卡；② 经 Wails `OnShutdown`（`application.go:903`，Go 侧已证存在）下发真信号驱动 teardown | ① 成本最低、消除误读；② 彻底但**为进程退出回收做钩子属过度工程**。**建议 ①**；无论选哪个，测试的自证式假绿须一并订正 |
 | 3 | G3 宿主全局边界口径（P1-2 六处现状） | ① 迁 DI；② 显式豁免 + 写理由入基线 | 闸落地前**必须**先定，否则等于把病合法化 |
 | 4 | `render-host.ts:348` 模块级单例是否拆（P0-d 复发载体） | ① 本轮拆（涉 ADR-227 后续战役）；② 挂账观察 | 不拆则 DPR 类第四次复发仍无结构防线 |
 | 5 | G1/G2/G4 三闸是否本轮落地 | — | G1 零新脚本、G4 复用夹具，**成本最低、收益最直接** |
+| 6 | **🆕 是否把「宿主假设须读上游源码」写成卡级纪律** | ① 写进 `docs/knowledge/pitfalls` 或宿主域知识卡；② 仅留本报告 | 建议 ①——P1-1 与上一轮 three r186 取证是同一类教训，**两次都是读上游才定性** |

@@ -1016,6 +1016,8 @@
 | 跨类型追加走错适配器 | `frontend/src/preview-3d/menu/engine/core.ts` | 必须经 switchExternal → openModel3DFullscreen(cooperate) |
 | 异步回调写入已卸载 DOM | `skeleton.ts` | 每个 await 后检查 container.isConnected |
 | 手动调用导致 T-pose 回归 | `vrm.humanoid.update()` | 只用 vrm.update(dt) |
+| ——已实测坐实（2026-10-08，锐评 `docs/audit-host-env-coupling-review.md` §三）：Wails v3.0.0-beta.26 全仓**零处 `beforeunload` 引用**，`WM_CLOSE` 链路仅 `ShuttingDown()`（只置 Go 标志位）→ `DefWindowProc` 销毁 HWND，**Go→JS 无派发通路**。故 `teardownSharedInfra` 的真实调用者只有测试。**桌面单窗口形态无实际危害**（进程退出由 OS 回收），**但该段代码服务的是 web 形态**（ADR-049 / `npm run dev:web`，此时 `beforeunload` 真实触发）⇒ **跨形态行为分叉**，勿当「桌面端的进程退出兜底」误信。配套：`shared-infra.test.ts`「beforeunload 钩子」一例是**自证式假绿**（手动 `dispatchEvent` 自造事件，恒绿），订正它需真信号或改断言口径 | `shared-infra.ts\|installUnloadTeardown 的 beforeunload 钩子在 Wails v3 桌面端永不触发` | - |
+| 类结论**必须读上游源码**（`go/pkg/mod/github.com/wailsapp/wails/v3@v3.0.0-beta.26/`），静态扫本仓只能得到「未验证的假设」——**自家没有调用方 ≠ 宿主不会调**。同族正面先例：three r186 释放行为取证（`water.md`） | `宿主框架会不会做X` | - |
 | 直接改 envState 对象字段（不经 setEnvState）→ 不派发回调，cap 渲染不更新；必须走 setEnvState | - | - |
 | cap 忘记 registerEnvCallback / dispose 不退订 | - | 状态变更不落地或泄漏回调 |
 | 测试不 beforeEach resetEnvState | - | envState 单例跨用例串扰 |

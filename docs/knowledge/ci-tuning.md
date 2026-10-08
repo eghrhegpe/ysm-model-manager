@@ -185,6 +185,25 @@ go job 要用 `pnpm install` + `vite build`（`//go:embed all:frontend/dist` 前
 - **下游依赖无需改**：`release.yml|build-*` 的 `needs: [prepare, test]` 覆盖 `test.yml` 全部 job，
   治理闸仍是发版前置，只是从「串行饿死功能测试」变为「并行各自报红」。
 
+### 8c. 文档域检查归位 pages-deploy（2026-10-08 门禁锐评 R5 续）
+
+- **归位**：`adr-check`（ADR 文件 ↔ `adr/index.md` 登记表一致性）自 `test.yml|contracts` 迁入
+  `pages-deploy.yml`，与 `link-checker --strict` 同 job 收口。
+- **判据是「消费方是谁」**：`adr/index.md` 的唯一消费者是 VitePress 侧边栏
+  （`docs/.vitepress/sidebar.gen.mjs` 据此生成 ADR 导航），故这是**文档站自洽**问题，与
+  「应用能否构建/运行」正交。放应用 CI 的代价：纯 Go/前端 push 白付文档检查，且**发版被文档问题
+  卡死**（v1.16.0 实证：ADR-326 登记表有、文件缺 ⇒ 前端 job 红 ⇒ 四平台 build 全 skipped）。
+- **两检查的分工边界**（实测确立）：`link-checker` 能抓「登记了但文件不存在」这一类
+  （注入幽灵登记 ADR-999 实测报 `[BROKEN] docs/adr/index.md: 链接 ADR-999 -> …`）；`adr-check`
+  补它抓不到的其余五类——撞号 / 漏登 / 跳号 / 状态行格式 / 文件名编号 vs 标题编号一致。
+  **不是二选一，是互补**，故同 job 并存。
+- **覆盖不因迁出而丢**（三处互补，均为 `docs/**` 或 ADR 域触发）：
+  ① 本地 pre-push 的 ADR 域（`_lib/gate-blocks/data-docs-domain.ts|runAdrDomain`，`plan.adr` 时触发）；
+  ② 文档域 CI `pages-deploy.yml`（`paths: docs/**` ⇒ ADR 改动必然触发）；
+  ③ 迁移只从**应用 CI** 移除。
+- **迁移纪律**：迁走一个检查时必须回答「它现在谁在跑」。本例的答案是上面三处——尤其 ②
+  的 `paths` 必须覆盖该检查的输入域（`docs/**` 覆盖 `docs/adr/**`），否则等于静默失守。
+
 ### 9. 契约 job 不装前端依赖（隐性防线）
 原「契约测试排在 pnpm install 之前」这一顺序是**有意的**（曾暴露 `scripts/port-align.ts` 在模块顶层
 resolve esbuild 的缺陷）——拆分后本 job 仍不装前端依赖，保持「测试不得依赖前端依赖」这道防线。故其

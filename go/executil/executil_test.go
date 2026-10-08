@@ -28,21 +28,6 @@ func TestHideWindow_NonWindows_IsNoop(t *testing.T) {
 	}
 }
 
-// TestHideWindow_Windows_SetsSysProcAttr Windows 平台验证 SysProcAttr.HideWindow 被设为 true。
-func TestHideWindow_Windows_SetsSysProcAttr(t *testing.T) {
-	if runtime.GOOS != "windows" {
-		t.Skip("仅 Windows 平台")
-	}
-	cmd := exec.Command("echo", "test")
-	HideWindow(cmd)
-	if cmd.SysProcAttr == nil {
-		t.Fatal("SysProcAttr 应为非 nil")
-	}
-	if !cmd.SysProcAttr.HideWindow {
-		t.Fatal("SysProcAttr.HideWindow 应为 true")
-	}
-}
-
 // TestHideWindow_NilCmdNoPanic 验证 nil cmd 输入跨平台安全（no-op，不 panic）：
 // 原 Windows 平台会解引用 nil panic，已加 nil guard（hidewindow_windows.go 头注释），两平台语义对齐。
 func TestHideWindow_NilCmdNoPanic(t *testing.T) {

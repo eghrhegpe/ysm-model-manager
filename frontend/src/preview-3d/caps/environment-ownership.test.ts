@@ -6,6 +6,7 @@ import { describe, it, expect } from "vitest";
 import type * as THREE from "three";
 import {
   envOwnsSceneEnvironment,
+  envShouldYieldSlot,
   isEnvDisposableSource,
   type EnvBorrowedTextures,
 } from "./environment-ownership.ts";
@@ -70,5 +71,37 @@ describe("envOwnsSceneEnvironment（离场还原守卫）", () => {
     // sky-capability.dispose 复用同一谓词，传单一 renderTarget.texture 集合
     expect(envOwnsSceneEnvironment(owned, owned)).toBe(true);
     expect(envOwnsSceneEnvironment(prev, owned)).toBe(false);
+  });
+});
+
+// [锐评 2026-10-08 P1-2] D10 让权判据单一事实源。
+// 收口前该判据手抄 4 处（sky×3 + light×1），其中 sky|clearEnvironment 的注释自称
+// 「与 requestEnvironmentRefresh 同源」实为复制——注释断言的「同源」当时并未成立。
+// 守卫重点 = **三种否定形态**（这正是原手抄 `env?.isEnabled?.()` 的全部语义）：
+// nullish / isEnabled 缺省 / 显式 false，三者都必须「不让权」——
+// 因为只有让权 false 才轮到 sky 走自持兜底装载，那条路才受 skyEnvironment 旧开关门控。
+describe("envShouldYieldSlot（D10 让权判据：槽位去留是否归 env）", () => {
+  it("env 在场且启用 → 让权（env 是 scene.environment 唯一写者）", () => {
+    expect(envShouldYieldSlot({ isEnabled: () => true })).toBe(true);
+  });
+
+  it("env 在场但关闭 → 不让权（sky 才走自持兜底路）", () => {
+    expect(envShouldYieldSlot({ isEnabled: () => false })).toBe(false);
+  });
+
+  it("env 缺席（undefined / null）→ 不让权", () => {
+    expect(envShouldYieldSlot(undefined)).toBe(false);
+    expect(envShouldYieldSlot(null)).toBe(false);
+  });
+
+  it("isEnabled 缺省（宽 cap / 测试桩形态）→ 不让权，与旧手抄逐字等价且不抛错", () => {
+    expect(envShouldYieldSlot({})).toBe(false);
+  });
+
+  // 语义边界守卫：本判据问的是「env 在场吗」，**不是**「env 是不是 sky 源」。
+  // 混淆二者正是 ce0ec8090 修掉的原病灶（默认 envSource="preset" 下 sky 顶掉 env 装载，
+  // 「写者唯一」形同虚设）。纯函数层无从得知 envSource——本例锁死「不引入该语义」。
+  it("判据只问在场与否：预设通路（env 开但非 sky 源）同样让权", () => {
+    expect(envShouldYieldSlot({ isEnabled: () => true })).toBe(true);
   });
 });

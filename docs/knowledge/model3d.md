@@ -271,10 +271,12 @@ auto_fields:
     - EnvMigrationInput
     - envOwnsSceneEnvironment
     - EnvPlacement
+    - EnvPresenceProbe
     - EnvPreset
     - EnvPresetId
     - EnvSectionId
     - EnvSource
+    - envShouldYieldSlot
     - envState
     - EnvState
     - EnvStateKey

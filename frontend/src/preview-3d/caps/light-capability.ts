@@ -32,6 +32,7 @@ import {
 import { envState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import type { EnvState, EnvStateKey } from "@/preview-3d/state/env-state-schema.ts";
 import { createListenerSet } from "@/utils/base/primitives/listener-set.ts";
+import { envShouldYieldSlot } from "./environment-ownership.ts";
 import { VolumetricCone } from "./light-cone.ts";
 import { buildLightNodes, LIGHT_MASTER_NODE_ID } from "./light-controls.ts";
 import {
@@ -888,8 +889,9 @@ export class LightCapability implements SceneCapability {
     // ⚠️ 但**取数路径刻意不同**：预览走构造注入的 `this.caps`（ctx seam），截图走组合根
     // `scene-capability-registry.ts|isIblActive`（全局单例）。改本行为直引 registry 会重建
     // registry↔light 模块环（历史上正是为断此环把 isSkyEnvironmentOn 上移到 registry）。
-    // 二者问的是同一个问题（`environment.isEnabled()`），不是两份判据——**改语义时两侧同改**。
-    const iblOn = getTypedCap(this.caps, "environment")?.isEnabled() ?? false;
+    // [锐评 2026-10-08 P1-2] 判据本身下沉 `environment-ownership.ts|envShouldYieldSlot`
+    // （D10 让权判据单一事实源，与 sky 三处同源）——两条取数路径共用**同一个问法**。
+    const iblOn = envShouldYieldSlot(getTypedCap(this.caps, "environment"));
     this.ambientLight.color.setHex(state.lightAmbientColor);
     this.ambientLight.intensity = attenuateAmbientForSky(state.lightAmbientIntensity, iblOn);
   }

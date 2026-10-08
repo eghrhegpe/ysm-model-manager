@@ -36,7 +36,7 @@ import type { ModelType } from "@/preview-3d/state/model-defaults.ts";
 // ADR-216：监听器集合工厂提级共享原语（fog/light/ground/water/environment 同源；菜单局部刷新 notify 用）
 import { createListenerSet } from "@/utils/base/primitives/listener-set.ts";
 // 暗线 B 收口：scene.environment 槽位所有权纯判定（与 environment-capability.dispose 共用单事实源）
-import { envOwnsSceneEnvironment } from "./environment-ownership.ts";
+import { envOwnsSceneEnvironment, envShouldYieldSlot } from "./environment-ownership.ts";
 import { restoreFields } from "./persist-utils.ts";
 import {
   type EnvPlacement,
@@ -215,8 +215,9 @@ export class SkyCapability implements SceneCapability {
           // [D-6] 退役开关不再驱动槽位：env 在场启用时，scene.environment 的去留由
           // envSource 裁决（本 cap 只转交刷新请求，refreshFromSkySource 自判是否 sky 源）；
           // 仅自持兜底路（env 缺席/关闭）保留旧语义——开=装载、关=清自己烘的图。
+          // [锐评 2026-10-08 P1-2] 让权判据下沉 envShouldYieldSlot 纯函数（与本文件另两处同源）。
           const env = getTypedCap(this.caps, "environment");
-          if (env?.isEnabled?.()) {
+          if (envShouldYieldSlot(env)) {
             if (state.skyEnvironment) env.refreshFromSkySource?.(true);
           } else if (state.skyEnvironment) this.regenerateEnvironment(true);
           else this.clearEnvironment();
@@ -311,7 +312,8 @@ export class SkyCapability implements SceneCapability {
    */
   private requestEnvironmentRefresh(force = false): void {
     const env = getTypedCap(this.caps, "environment");
-    if (env?.isEnabled?.()) {
+    // [锐评 2026-10-08 P1-2] D10 让权判据 = envShouldYieldSlot 纯函数（单一事实源）。
+    if (envShouldYieldSlot(env)) {
       // env 是 scene.environment 唯一写者——天空侧只转交刷新，绝不直写槽位。
       // refreshFromSkySource 内部自判 envSource：="sky" 时重新向本 cap 取图装载；
       // ≠"sky" 时**早退不动作**（预设通路自己的图不随天空事件重烤——槽位属 env，
@@ -481,7 +483,10 @@ export class SkyCapability implements SceneCapability {
     // D-3 直装后 scene.environment 恰等于 sky 的烘焙产物（env 直装 sky 交回的 renderTarget.texture），
     // 旧守卫「槽位==自家纹理→清」分不清「env 装的」与「sky 自持的」，天空总开关关闭/detach
     // 会越过 D1 红线把 env 的照明清空（skyEnvironment=false 存档下再无装载者 → 永久黑）。
-    if (getTypedCap(this.caps, "environment")?.isEnabled?.()) return;
+    // [锐评 2026-10-08 P1-2] 此前此处是**手抄** `env?.isEnabled?.()` 却在注释里自称「与路由器同源」——
+    // 注释断言的「同源」并未成立（无共享定义，只有一致的巧合）。现判据真下沉为envShouldYieldSlot，
+    // 注释与代码首次名副其实。
+    if (envShouldYieldSlot(getTypedCap(this.caps, "environment"))) return;
     if (this.scene.environment === this.renderTarget?.texture) {
       this.scene.environment = null;
     }

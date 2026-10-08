@@ -95,6 +95,7 @@ invariant_anchors:
   # ADR-292 核心契约的机器锚（锐评 2026-10-08 补）。此前这些契约只散在正文散文、无锚 ——
   # 「让权判据手抄 4 处 + 截图读退役开关」这类漂移因而对机器不可见，整整存活到人工锐评才发现。
   - frontend/src/preview-3d/caps/environment-ownership.ts|envOwnsSceneEnvironment
+  - frontend/src/preview-3d/caps/environment-ownership.ts|envShouldYieldSlot
   - frontend/src/preview-3d/caps/scene-capability-registry.ts|isIblActive
   - frontend/src/preview-3d/caps/scene-capability-registry.ts|LOAD_DEPS
 ---
@@ -177,7 +178,10 @@ invariant_anchors:
   本域多轮治理把共享**算式**下沉为纯函数（`attenuateAmbientForSky` / `ENV_PRESET_DEFAULT_INTENSITY` / `effectiveToneMappingExposure`），但决定「要不要走这条算式」的**判据**留在每个消费点手抄。结果每次换判据，算式单源守住了、判据单源漏掉：
   - **已修P0**：`screenshot-lights.ts` 的 ambient 让位判据读 sky 的 `skyEnvironment`（**已自宣退役**，只门控自持兜底路），而预览侧 X-3(`56300e506`) 已换成「env 在场启用」⇒ 默认路径（`envSource=preset` + `skyEnvironment=false`）下**截图比预览亮一档**。收口：`scene-capability-registry.ts|isIblActive` 为判据单一事实源（问 `environment.isEnabled()`），退役的 `isSkyEnvironmentOn` 删除；`attenuateAmbientForSky` 形参 `skyEnvOn`→`iblOn`（名实相符）。
     **该病灶之所以能长期存活，根因在测试**：原桩把 `isSkyEnvironmentOn` **整个 mock 掉**（`vi.mock` 返回自造函数），于是「判据读的是谁」结构性不可见——把判据换成恒 false 全测试仍绿。**教训：mock 被测判据 = 把病灶藏进测试**；应只桩**被查对象**（`registry.getById`），让判据函数本身真跑。现该测试即此形态，守卫 = `screenshot-lights.test.ts`「[P0]」两条**判别样本**（新旧判据取值相反的组合；变异「判据改问 sky」即 3 例转红）。
-  - **待收（同病未治）**：D10 让权判据 `getTypedCap(caps,"environment")?.isEnabled?.()` 仍手抄**4 处**（`sky-capability.ts|requestEnvironmentRefresh` / 同文件 `skyEnvironment` 分支 / 同文件 `clearEnvironment`，注释自称「与路由器同源」实为复制；+`light-capability.ts|refreshAmbientFromSky`）。与所有权域已有纯函数单一事实源（`environment-ownership.ts`）形成反差：**所有权收了口，让权没收口**。另 `EnvironmentCapability.isSkySourced()` 生产零消费者，语义（`envEnabled ∧ envSource==="sky"`）**已不等于** D10 让权判据，日后复用会复现 `ce0ec8090` 修掉的原病灶。
+  - **P1-2 已收（同日）**：D10 让权判据下沉 `environment-ownership.ts|envShouldYieldSlot` 纯函数，手抄 4 处（`sky-capability.ts|requestEnvironmentRefresh` /同文件 `skyEnvironment` 分支 / 同文件 `clearEnvironment`——后者注释曾自称「与路由器同源」实为复制；+ `light-capability.ts|refreshAmbientFromSky`）全部改走它。守卫 = `environment-ownership.test.ts`「envShouldYieldSlot」5 例，重点钉**三种否定形态**（nullish / isEnabled 缺省 / 显式 false 都必须「不让权」——只有让权 false 才轮到 sky 走自持兜底装载）；变异「`?? false` 改 `?? true`」→ 2 例转红。
+    两条设计要点：① **签名收窄**——返回类型标 `envCap is EnvPresenceProbe`（类型谓词），使「让权为 true ⇒ env 必然非空」这条蕴含对 tsc 可见，sky 侧无需 `!` 断言；把「判据语义」与「判据后必然成立的事实」绑在同一处定义，避免调用点各自补 cast（那又是分家）。② **刻意零依赖**——参数用鸭子类型 `EnvPresenceProbe`（`isEnabled?: () => boolean`）而**不** import `getTypedCap`/`EnvironmentCapability`，保持本文件「零依赖纯叶」性质（同 `env-pixels.ts`/`persist-utils.ts` 范式），不把 caps 类型链拖进依赖图。
+    另 `scene-capability-registry.ts|isIblActive`（截图域取数口）内部原也手抄 `?.isEnabled() ?? false`——**「判据的单一事实源自己又手抄一份」**，属本病自伤，现一并改走纯函数，全域判据归一。`check-circular` 复核 0 环。
+  - **仍待收（同病其余面）**：`EnvironmentCapability.isSkySourced()` 生产零消费者，语义（`envEnabled ∧ envSource==="sky"`）**已不等于** D10 让权判据，日后复用会复现 `ce0ec8090` 修掉的原病灶——**处置未决**（删掉 or 改名收进 ownership 域作专用谓词），改前须确认无生产消费方。
     **为何至今无人发现**：ADR-292 核心契约（写者唯一 / env 在场即让权 / dispose 两序）此前**只散在正文散文、无 `invariant_anchors`**，`check-knowledge-drift` 无从提示 → 已补三条锚（`envOwnsSceneEnvironment` / `isIblActive` / `LOAD_DEPS`）。
 - **[锐评 2026-10-08 新立] 会话级字段必须在 `dispose()` 复位——`createAll` 的复用短路不 dispose。**
   `scene-capability-registry.ts|createAll` 有「同宿主 scene/renderer/camera 三引用全等 ⇒ 复用实例」短路，**复用路径不 dispose**，实例连同会话级标记原样留存。凡「有存档则让位」类的 `isStateLoaded` 守卫若不在 dispose 复位，则跨会话恒真 ⇒ 模型类别默认**永久失效且无任何报错**。

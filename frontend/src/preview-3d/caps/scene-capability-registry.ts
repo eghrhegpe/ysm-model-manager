@@ -8,6 +8,7 @@
 import type * as THREE from "three";
 import { ringLog } from "@/preview-3d/ring-log.ts";
 import { EnvironmentCapability } from "./environment-capability.ts";
+import { envShouldYieldSlot } from "./environment-ownership.ts";
 import { FogCapability } from "./fog-capability.ts";
 import { GroundCapability } from "./ground-capability.ts";
 import { LightCapability } from "./light-capability.ts";
@@ -254,14 +255,15 @@ sceneCapabilityRegistry.add("renderMode", (ctx) => new RenderModeCapability({ sc
  * **已自宣退役**，只门控「env 缺席时 sky 自持兜底装载」那条路。因此判 IBL 在不在场，
  * 必须问 env cap 在不在、启不启用，**不能问 skyEnvironment**。
  *
- * 两个消费方共用本函数（改判据只此一处）：
- *   - 预览：`LightCapability.refreshAmbientFromSky`（light-capability.ts|iblOn）
- *   - 截图：`toScreenshotLights`（screenshot-lights.ts，WYSIWYG 必须与预览同判据）
+ * [锐评 2026-10-08 P1-2] 本函数是**组合根取数口**（截图域在registry 侧查实例），判据本体
+ * 是 `environment-ownership.ts|envShouldYieldSlot`——与 sky 三处、light 一处**同一个纯函数**。
+ * 此前本函数内部手抄了 `?.isEnabled() ?? false`，等于「判据的单一事实源自己又手抄一份」，
+ * 正是本轮治理要消灭的病（判据分家）。现两层分工：纯函数定判据，本函数只负责从全局单例取实例。
  *
- * ⚠️ 判据的**手抄副本**若出现即本函数失效：历史病灶 = X-3(`56300e506`) 换了预览判据却漏扫
- * `screenshot/` 域，致「截图比预览亮一档」。改本判据时**必须 grep `isIblActive` 与
- * `attenuateAmbientForSky` 的全部调用点逐个复核**，勿只扫手边目录。
+ * ⚠️ 判据的**手抄副本**若出现即本链路失效：历史病灶 = X-3(`56300e506`) 换了预览判据却漏扫
+ * `screenshot/` 域，致「截图比预览亮一档」。改判据时**必须 grep `isIblActive` /
+ * `envShouldYieldSlot` / `attenuateAmbientForSky` 的全部调用点逐个复核**，勿只扫手边目录。
  */
 export function isIblActive(): boolean {
-  return sceneCapabilityRegistry.getById("environment")?.isEnabled() ?? false;
+  return envShouldYieldSlot(sceneCapabilityRegistry.getById("environment"));
 }

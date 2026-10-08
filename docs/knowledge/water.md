@@ -231,6 +231,12 @@ invariant_anchors:
 - 持久化：`saveState` / `loadState`（新旧键双轨；旧档无 `waterLevel` 时 pool 取 `waterPoolHeight` 兜底）。
   `loadState` 恢复段挂起派发（`suspendEnvCallbacks`，fog/ground/light 同法），末尾 `rebuildWaterContainer`
   从 envState 一次性全量落地——不再逐键 dispatch×重建；顶层 `enabled` 幽灵键不再消费（单门收口）
+  - **存档源 + legacy ground 双轨解析已下沉 `water-persist.ts|resolveWaterRestoreState`（2026-10-08
+    行数红线收口）**：`loadState` 只留恢复编排（解析 → 挂起段双轨还原 → 重建一次），不再内联
+    「读 water 档 → 缺则解包 ground 嵌套/四键平铺」的首段；`fromNestedLegacy` 标志必须回传——
+    legacy.water 解包后 state 自身无 `water` 键，下游 nested 判定会把嵌套方言误判 flat，
+    enabled 子域开关不还原（「用户关水」升级丢失）。守卫 = `water-persist.test.ts|resolveWaterRestoreState`
+    组（自有档优先 / 嵌套解包 / 四键平铺 / 双档皆无）+ `water-capability.test.ts` legacy 迁移组（集成）。
   - **值钳制唯一执法点 = `setEnvState` 的 `clampFieldValue`（ADR-283）**：`loadState` 的 legacy `size` 键
     曾自钳 `Number.isFinite(v) ? Math.max(1, v) : 1`——与写入口重复、且只盖下界（与 schema `range [1,300]`
     口径不齐）。已于 2026-09-20 删除自钳、改为委派 `setWaterSize`（保存兼容性不变，legacy `size` 仍生效）。

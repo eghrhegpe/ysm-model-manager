@@ -9,6 +9,8 @@ import {
   type EnvState,
   type EnvStateKey,
 } from "@/preview-3d/state/env-state-schema.ts";
+// 同目录持久化工具（restoreState 的对象形态闸见 scene-capability 唯一入口注释）
+import { restoreState } from "./scene-capability.ts";
 
 /**
  * [锐评 P1-0] 存档恢复来源纪律（ground F-2 / light L-1 同口径，2026-09-22 立法「恢复一律
@@ -32,6 +34,50 @@ export function writeOpts(opts?: WriteOpts): { source: WriteSource; skipMiddlewa
   };
   if (opts?.skipMiddleware === true) base.skipMiddleware = true;
   return base;
+}
+
+/**
+ * 存档源解析（原 water-capability.ts|loadState 首段下沉，行数红线 ADR-315 同族拆缝）：
+ * 读 `water` 自有存档，缺失才回看 legacy `ground` 存档的两个方言——嵌套 `water` 对象
+ * （V2 前旧格式）或顶层四键平铺（wetness / waterColor / waterOpacity / normalStrength，
+ * 任一为 number 才认）。对象形态闸由 restoreState 唯一入口兜住（非对象一律 null）。
+ *
+ * `fromNestedLegacy` 是必须回传的语义位：legacy.water 解包后 state 自身不再含 `water`
+ * 键，调用方若照常做 `state.water` 的 nested 判定，会把嵌套方言误判成 flat——子域开关
+ * `enabled` 不写 setWaterEnabled，「用户关水」偏好升级后丢失、重开能力水面重现。
+ *
+ * @returns `null` = 无可恢复存档（调用方直接 return，不进恢复段）。
+ */
+export function resolveWaterRestoreState(): {
+  state: Record<string, unknown>;
+  fromNestedLegacy: boolean;
+} | null {
+  let state = restoreState("water");
+  let fromNestedLegacy = false;
+  if (!state) {
+    const legacy = restoreState("ground");
+    if (legacy) {
+      const lw = legacy.water;
+      if (lw && typeof lw === "object") {
+        state = lw as Record<string, unknown>;
+        fromNestedLegacy = true;
+      } else if (
+        typeof legacy.wetness === "number" ||
+        typeof legacy.waterColor === "number" ||
+        typeof legacy.waterOpacity === "number" ||
+        typeof legacy.normalStrength === "number"
+      ) {
+        state = {
+          wetness: legacy.wetness,
+          waterColor: legacy.waterColor,
+          waterOpacity: legacy.waterOpacity,
+          normalStrength: legacy.normalStrength,
+        };
+      }
+    }
+  }
+  if (!state) return null;
+  return { state, fromNestedLegacy };
 }
 
 /**

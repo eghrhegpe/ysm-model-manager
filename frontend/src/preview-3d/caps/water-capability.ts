@@ -24,12 +24,7 @@ import { type EnvStateKey, getPresetKeys } from "@/preview-3d/state/env-state-sc
 // ADR-216：监听器集合工厂提级共享原语（原 scene-capability 本地定义）
 import { createListenerSet } from "@/utils/base/primitives/listener-set.ts";
 import { oneOf, restoreFields } from "./persist-utils.ts";
-import {
-  type EnvPlacement,
-  persistState,
-  restoreState,
-  type SceneCapability,
-} from "./scene-capability.ts";
+import { type EnvPlacement, persistState, type SceneCapability } from "./scene-capability.ts";
 // ADR-257：形态「如何组装渲染体 / 如何解释尺寸与水位」已下沉到可注册的策略表，
 // cap 只持有 WaterBody 并按语义 role 取用部件，不再出现 `mode ===` 判别联合。
 import {
@@ -55,6 +50,7 @@ import {
 // 自 scene-capability.ts|restoreBySchema 下沉（通用工具箱藏 water 后门类，来源纪律暗门）
 import {
   RESTORE_SOURCE,
+  resolveWaterRestoreState,
   restoreWaterSchemaKeys,
   type WriteOpts,
   writeOpts,
@@ -544,34 +540,11 @@ export class WaterCapability implements SceneCapability {
    *  ⚠️ 顶层 `enabled` 键（2026-09-22 私有门退役前的能力级幽灵键）不再消费：单门收口后
    *  水面开关唯一真值源 = waterEnabled（嵌套 dialect 的 enabled 子域开关由下方双轨表吸收）。 */
   loadState(): void {
-    let state = restoreState(this.id) as Record<string, unknown> | null;
-    // legacy.water 解包后 state.water 不存在 → 下方
-    // nested 判定误判 flat → 子域开关 enabled 不写 setWaterEnabled（envState.
-    // waterEnabled 保持默认 true）——「用户关水」偏好升级后丢失，重开能力水面重现
-    let fromNestedLegacy = false;
-    if (!state) {
-      const legacy = restoreState("ground") as Record<string, unknown> | null;
-      if (legacy) {
-        const lw = legacy.water;
-        if (lw && typeof lw === "object") {
-          state = lw as Record<string, unknown>;
-          fromNestedLegacy = true;
-        } else if (
-          typeof legacy.wetness === "number" ||
-          typeof legacy.waterColor === "number" ||
-          typeof legacy.waterOpacity === "number" ||
-          typeof legacy.normalStrength === "number"
-        ) {
-          state = {
-            wetness: legacy.wetness,
-            waterColor: legacy.waterColor,
-            waterOpacity: legacy.waterOpacity,
-            normalStrength: legacy.normalStrength,
-          };
-        }
-      }
-    }
-    if (!state) return;
+    // [行数红线 ADR-315] 存档源 + legacy ground 双轨解析已下沉 water-persist.ts|
+    // resolveWaterRestoreState（fromNestedLegacy 语义见该函数头注）；本方法只留恢复编排。
+    const resolved = resolveWaterRestoreState();
+    if (!resolved) return;
+    const { state, fromNestedLegacy } = resolved;
     withEnvCallbacksSuspended(() => {
       restoreFields(state, {
         // legacy `size` 键（ADR-272 前旧名）——值一律交回唯一写入口 `setWaterSize`，

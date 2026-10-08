@@ -124,6 +124,21 @@ quick_risk_lines:
 - **K1 维持**：6 张卡 `source_files` 全被认领（warn 级），多为有意跨切面聚合卡，不盲目收窄。
 - **审计台账全卡已账实相符**：P1-a/P2/T3′/T6/K2/A1 已修或落地，T5/S1 已澄清（非真债/drift/优化），H1′ 暂缓（活入链），K1 维持（有意跨切面）。剩余真正未动手项仅 A1 的"升 hard 检查"（待团队拍板 emoji 强制与否）与 H1′ 的断链迁移（待 preview-3d 锐评收口）。
 
+## 2026-10-08 20:42 探索抓现行 + 清偿（第三轮，主模型单人）
+
+> 缘起：用户「探索项目技术债及效果」——逐门禁实跑对账时**当场抓到 2 条溜进 main 的新债**，随即动手清偿。
+
+### 🚨 抓现行
+
+- **R1 · `water-capability.ts` 超硬红线（真债·已修）**：元凶 `9e742a6da`（19:53 锐评两刀收口）把文件 **644 → 660 行**，跨过 `check-file-lines` 的 655 硬红线（ADR-315 D1/D3），且**已推上 `origin/main`**——本地 `pre-push-gate --static` exit 1、CI run `37777054773` 的「静态治理门禁（本地 hard 项的远端兜底）」job **failure**，双层防线：本地层当时被逃生阀绕过、远端兜底抓住（ADR-244 设计意图的活证据）。
+  - **清偿（真缝下沉，非注水）**：`loadState` 首段「存档源 + legacy ground 双轨解析」下沉 `water-persist.ts|resolveWaterRestoreState`（同族先例 = restoreBySchema / light-persist 数据面下沉），`loadState` 只留恢复编排；**660 → 637 行**。TDD：先写 5 例单测（红）→ 实现绿，`water-capability.test.ts` legacy 迁移组 144 例守行为等价；build/typecheck/biome/layering(0 回归)/circular(0) 全绿，全量 vitest **474 文件 7750/7750**。
+- **R2 · jscpd 118 → 119（同构薄封装 clone·确认保留）**：`ground-capability#water-capability` 新增克隆（`setEnvState`+`subscribe`+`notify` 同段，51 tokens）——根因是 water 的 `setWaterMode` 改走 `writeOpts(opts)` 后与 ground 同形，克隆跨过 min-lines/min-tokens 阈值。**处置 = 确认保留 + `--update-baseline` 吸收**：该 4 行委托是 9 个 cap 的统一范式（共享原语已提级 `createListenerSet`，ADR-216），基线已有 `environment#fog` / `environment#sky` / `postprocessing#shadow` 三对同族先例；为消一条 jscpd 行去改 9 个 cap 的类结构 = 风险 > 收益。**已知代价**：基线键是文件对粒度，该对后续新增克隆会一并放行。复检 ERROR 0。
+- **晚间复测表修正**：「文件行数红线 18 个超阈值（软告警）一致」在 19:53 提交后失真——晚间复测时点实为 18 advisory + **1 hard violation**（即 R1）。台账快照会随并行提交过期，复测结论只对当时 HEAD 有效。
+
+### 效果面（本轮实测）
+
+`doctor --docs` 23/23 · `go build` 0 · 覆盖率门禁 79.0% 全包达标 · binding 176/176 · 复杂度 RED 0/ORANGE 47/YELLOW 222 · redlines baseline exit 0 · i18n 死键 13 · knowledge-drift errors 0 · adr-health --suggest（21 化石观察中）· 死代码 ERROR 0（吸收后）。
+
 ## 总体判断
 
 治理体系成熟度**高于**同类项目（红线脚本 `type-consistency`/`binding-check`/`check-redlines` 全绿、前端 `typecheck`/`vite build` 通过、零循环依赖、零生产 `any`/`@ts-ignore`、i18n 三语 parity 完美）。

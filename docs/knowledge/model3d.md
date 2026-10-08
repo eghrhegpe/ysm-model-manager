@@ -765,6 +765,7 @@ auto_fields:
     - resolveSemanticBones
     - resolveSemanticMorphs
     - resolveVmdBindings
+    - resolveWaterRestoreState
     - RESTORE_SOURCE
     - restoreFields
     - restoreLightParams

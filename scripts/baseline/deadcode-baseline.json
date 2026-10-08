@@ -1,5 +1,5 @@
 {
-  "generated": "2026-10-08T04:16:54.643Z",
+  "generated": "2026-10-08T12:53:49.321Z",
   "knip": [
     "e2e-web/fog-horizon-evidence.spec.ts|unresolved|/src/preview-3d/adapters/shared-infra.ts",
     "e2e-web/fog-horizon-evidence.spec.ts|unresolved|/src/preview-3d/state/env-state.ts",
@@ -232,6 +232,7 @@
     "preview-3d/caps/environment-capability.ts#preview-3d/caps/fog-capability.ts",
     "preview-3d/caps/environment-capability.ts#preview-3d/caps/sky-capability.ts",
     "preview-3d/caps/fog-capability.test.ts#preview-3d/caps/reflector-capability.test.ts",
+    "preview-3d/caps/ground-capability.ts#preview-3d/caps/water-capability.ts",
     "preview-3d/caps/light-capability.ts#preview-3d/caps/light-capability.ts",
     "preview-3d/caps/postprocessing-capability.test.ts#preview-3d/caps/postprocessing-capability.test.ts",
     "preview-3d/caps/postprocessing-capability.test.ts#preview-3d/caps/shadow-capability.test.ts",

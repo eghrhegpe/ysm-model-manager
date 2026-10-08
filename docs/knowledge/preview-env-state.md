@@ -55,6 +55,7 @@ auto_fields:
     - registerEnvStateMiddleware
     - resetEnvState
     - resetSceneInfra
+    - resolveWaterRestoreState
     - RESTORE_SOURCE
     - restoreWaterSchemaKeys
     - resumeEnvCallbacks

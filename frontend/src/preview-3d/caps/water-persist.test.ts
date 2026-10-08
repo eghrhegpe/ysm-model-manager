@@ -3,14 +3,20 @@
 // 原 scene-capability.ts|restoreBySchema 下沉水面叶）=====
 // 覆盖：批量恢复的来源纪律（auto-model 戳 + 同轨放行）/ 值短路 / 组外键静默跳过 /
 // writeOpts 三件组装语义（省略=manual、RESTORE_SOURCE=auto-model、skipMiddleware 精确写入）。
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import {
   RESTORE_SOURCE,
+  resolveWaterRestoreState,
   restoreWaterSchemaKeys,
   writeOpts,
 } from "./water-persist.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { getPresetKeys } from "@/preview-3d/state/env-state-schema.ts";
+
+// resolveWaterRestoreState 的存储源（restoreState）在此 mock：本组测「存档源解析与
+// legacy 双轨方言」的分支逻辑，localStorage 形态闸已由 scene-capability 单测覆盖。
+vi.mock("./scene-capability.ts", () => ({ restoreState: vi.fn() }));
+import { restoreState } from "./scene-capability.ts";
 
 describe("restoreWaterSchemaKeys", () => {
   beforeEach(() => resetEnvState());
@@ -64,5 +70,54 @@ describe("RESTORE_SOURCE / writeOpts（三件组装，ground-capability 同款�
     expect("skipMiddleware" in plain, "省略项不得写键（防 {skipMiddleware:undefined} 顶掉默认）").toBe(false);
     const withSkip = writeOpts({ ...RESTORE_SOURCE, skipMiddleware: true });
     expect(withSkip).toEqual({ source: "auto-model", skipMiddleware: true });
+  });
+});
+
+describe("resolveWaterRestoreState（loadState 首段下沉：存档源 + legacy ground 双轨）", () => {
+  const mockRestore = vi.mocked(restoreState);
+  beforeEach(() => mockRestore.mockReset());
+
+  it("water 自有存档优先：原样返回且 fromNestedLegacy=false（不回看 ground）", () => {
+    mockRestore.mockReturnValueOnce({ waterEnabled: false });
+    expect(resolveWaterRestoreState()).toEqual({
+      state: { waterEnabled: false },
+      fromNestedLegacy: false,
+    });
+    expect(mockRestore, "自有档在手不再查 ground").toHaveBeenCalledTimes(1);
+    expect(mockRestore).toHaveBeenCalledWith("water");
+  });
+
+  it("无 water 档 → 解包 legacy ground 嵌套 water 对象，fromNestedLegacy=true（防下游 nested 判定误判 flat）", () => {
+    mockRestore
+      .mockReturnValueOnce(null)
+      .mockReturnValueOnce({ enabled: true, water: { enabled: false, wetness: 0.4 } });
+    expect(resolveWaterRestoreState()).toEqual({
+      state: { enabled: false, wetness: 0.4 },
+      fromNestedLegacy: true,
+    });
+    expect(mockRestore).toHaveBeenNthCalledWith(2, "ground");
+  });
+
+  it("ground 无嵌套 water 对象 → 顶层四键平铺方言（任一为 number 即认）", () => {
+    mockRestore
+      .mockReturnValueOnce(null)
+      .mockReturnValueOnce({ wetness: 0.6, waterColor: 0x4488aa, matSource: "checker" });
+    expect(resolveWaterRestoreState()).toEqual({
+      state: { wetness: 0.6, waterColor: 0x4488aa },
+      fromNestedLegacy: false,
+    });
+  });
+
+  it("ground 嵌套 water 非对象（数字）→ 落回四键判定；四键全非 number → null", () => {
+    mockRestore
+      .mockReturnValueOnce(null)
+      .mockReturnValueOnce({ water: 7, matSource: "checker" });
+    expect(resolveWaterRestoreState()).toBeNull();
+  });
+
+  it("两档皆无 → null（water 一次 + ground 一次，不多查）", () => {
+    mockRestore.mockReturnValue(null);
+    expect(resolveWaterRestoreState()).toBeNull();
+    expect(mockRestore).toHaveBeenCalledTimes(2);
   });
 });

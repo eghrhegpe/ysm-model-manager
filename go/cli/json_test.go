@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"ysm-model-manager/go/types"
 )
 
 // json_test.go — ToJson 兜底分支的 JSON 合法性契约。
@@ -127,5 +129,45 @@ func TestToJson_SuccessPathUnchanged(t *testing.T) {
 	}
 	if out["status"] != "success" {
 		t.Errorf("status 应为 success, got %v", out["status"])
+	}
+}
+
+// TestNewJsonError_PassthroughAppErrorCode：ADR-051 单一事实来源——
+// 命令内部返回的 types.AppError（带 ErrorCode）必须原样透传 Code 到
+// JsonError.Code，前端 friendlyError 方能按 Code 做 i18n，而非降级 unknown_error。
+func TestNewJsonError_PassthroughAppErrorCode(t *testing.T) {
+	appErr := types.AppError{
+		Code:       types.ErrInvalidPath,
+		Operation:  "导入",
+		SourcePath: "/bad/path",
+		Reason:     "路径包含非法遍历组件",
+		Suggestion: "请检查路径",
+	}
+	resp := NewJsonError("import", appErr, 5)
+	if resp.Error == nil {
+		t.Fatal("应产出 JsonError")
+	}
+	if resp.Error.Code != string(types.ErrInvalidPath) {
+		t.Errorf("AppError.Code 应原样透传, 期望 %q, 得到 %q", string(types.ErrInvalidPath), resp.Error.Code)
+	}
+	if resp.Error.Details != appErr.Suggestion {
+		t.Errorf("结构化 Suggestion 应落入 details, 得到 %q", resp.Error.Details)
+	}
+}
+
+// TestNewJsonError_LegacyErrParamUnchanged：CLI 命令层自建的 ErrParam 仍映射为
+// param_error（前端 cli-bridge 既有的断言契约不受影响），不因新增 AppError 分支而退化。
+func TestNewJsonError_LegacyErrParamUnchanged(t *testing.T) {
+	resp := NewJsonError("scan", newParamErrf("缺少 --dir 参数"), 3)
+	if resp.Error == nil || resp.Error.Code != "param_error" {
+		t.Fatalf("ErrParam 应保持 param_error, 得到 %+v", resp.Error)
+	}
+}
+
+// TestNewJsonError_LegacyErrRuntimeUnchanged：ErrRuntime → runtime_error 保持不变。
+func TestNewJsonError_LegacyErrRuntimeUnchanged(t *testing.T) {
+	resp := NewJsonError("model", newRuntimeErrf("模型解析失败"), 7)
+	if resp.Error == nil || resp.Error.Code != "runtime_error" {
+		t.Fatalf("ErrRuntime 应保持 runtime_error, 得到 %+v", resp.Error)
 	}
 }

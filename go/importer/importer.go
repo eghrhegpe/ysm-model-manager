@@ -7,7 +7,6 @@
 package importer
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -16,6 +15,7 @@ import (
 
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/paths"
+	"ysm-model-manager/go/types"
 )
 
 // Handler 资源导入策略接口
@@ -65,26 +65,52 @@ func sanitizePath(path, label string) (string, error) {
 }
 
 // sanitizeImportPaths 校验并清理导入操作的源/目标路径。
-// 返回 (清理后源路径, 清理后目标路径, 错误文案)；错误文案非空时调用方应原样返回给用户。
-// 两类 Import 实现（SimpleCopy / DirectoryCopy）的前置校验逐字相同，抽此为单一事实源。
-func sanitizeImportPaths(srcPath, dstDir string) (string, string, string) {
+// 返回 (清理后源路径, 清理后目标路径, error)；error 非 nil 时调用方应原样返回给上层。
+// 返回的是结构化 types.AppError（带 Code，如 INVALID_PARAM/INVALID_PATH），
+// 使前端 friendlyError 能按 Code 做 i18n 映射（ADR-051 单一事实来源），
+// 而非丢失分类的裸字符串。两类 Import 实现的前置校验逐字相同，抽此为单一事实源。
+func sanitizeImportPaths(srcPath, dstDir string) (string, string, error) {
 	if srcPath == "" {
-		return "", "", "源文件路径为空"
+		return "", "", types.AppError{
+			Code:       types.ErrInvalidParam,
+			Operation:  "导入",
+			SourcePath: srcPath,
+			Reason:     "源文件路径为空",
+			Suggestion: "请提供有效的源文件路径",
+		}
 	}
 	if dstDir == "" {
-		return "", "", "目标目录为空"
+		return "", "", types.AppError{
+			Code:       types.ErrInvalidParam,
+			Operation:  "导入",
+			TargetPath: dstDir,
+			Reason:     "目标目录为空",
+			Suggestion: "请提供有效的目标目录",
+		}
 	}
 
 	// 路径清理与遍历防护
 	cleanSrc, err := sanitizePath(srcPath, "源路径")
 	if err != nil {
-		return "", "", err.Error()
+		return "", "", types.AppError{
+			Code:       types.ErrInvalidPath,
+			Operation:  "导入",
+			SourcePath: srcPath,
+			Reason:     err.Error(),
+			Suggestion: "请检查源路径是否合法（不含 '..' 遍历或 NUL 字节）",
+		}
 	}
-	cleanDst, err := sanitizePath(dstDir, "目标路径")
+	cleanDst, err := sanitizePath(dstDir, "目标目录")
 	if err != nil {
-		return "", "", err.Error()
+		return "", "", types.AppError{
+			Code:       types.ErrInvalidPath,
+			Operation:  "导入",
+			TargetPath: dstDir,
+			Reason:     err.Error(),
+			Suggestion: "请检查目标路径是否合法（不含 '..' 遍历或 NUL 字节）",
+		}
 	}
-	return cleanSrc, cleanDst, ""
+	return cleanSrc, cleanDst, nil
 }
 
 // ===== SimpleCopyImporter =====
@@ -102,9 +128,9 @@ func NewSimpleCopy(rtype string) *SimpleCopyImporter {
 func (s *SimpleCopyImporter) Type() string { return s.rtype }
 
 func (s *SimpleCopyImporter) Import(srcPath, dstDir string) error {
-	srcPath, dstDir, errMsg := sanitizeImportPaths(srcPath, dstDir)
-	if errMsg != "" {
-		return errors.New(errMsg)
+	srcPath, dstDir, err := sanitizeImportPaths(srcPath, dstDir)
+	if err != nil {
+		return err
 	}
 
 	if err := os.MkdirAll(dstDir, fsutil.DirPerms); err != nil {
@@ -123,7 +149,13 @@ func (s *SimpleCopyImporter) Import(srcPath, dstDir string) error {
 		if baseName == "" || baseName == "." ||
 			baseName == string(filepath.Separator) ||
 			baseName == string(filepath.VolumeName(srcPath)) {
-			return errors.New("源路径无效：无法确定要导入的模型文件夹（源为磁盘根目录）")
+			return types.AppError{
+				Code:       types.ErrInvalidPath,
+				Operation:  "导入",
+				SourcePath: srcPath,
+				Reason:     "源路径无效：无法确定要导入的模型文件夹（源为磁盘根目录）",
+				Suggestion: "请提供具体的模型文件夹路径，而非磁盘根目录",
+			}
 		}
 		targetDir := filepath.Join(dstDir, baseName)
 		if err := copyDirRecursive(srcPath, targetDir); err != nil {
@@ -170,9 +202,9 @@ func (d *DirectoryCopyImporter) Type() string { return d.rtype }
 // srcPath 可以是文件夹内任意文件路径，也可以是文件夹本身
 // 若 srcPath 是文件则取父目录，若是目录则直接使用
 func (d *DirectoryCopyImporter) Import(srcPath, dstDir string) error {
-	srcPath, dstDir, errMsg := sanitizeImportPaths(srcPath, dstDir)
-	if errMsg != "" {
-		return errors.New(errMsg)
+	srcPath, dstDir, err := sanitizeImportPaths(srcPath, dstDir)
+	if err != nil {
+		return err
 	}
 
 	// 判断 srcPath 是文件还是目录
@@ -190,7 +222,13 @@ func (d *DirectoryCopyImporter) Import(srcPath, dstDir string) error {
 	if folderName == "" || folderName == "." ||
 		folderName == string(filepath.Separator) ||
 		folderName == string(filepath.VolumeName(srcDir)) {
-		return errors.New("源路径无效：无法确定要导入的模型文件夹（源为磁盘根目录）")
+		return types.AppError{
+			Code:       types.ErrInvalidPath,
+			Operation:  "导入",
+			SourcePath: srcDir,
+			Reason:     "源路径无效：无法确定要导入的模型文件夹（源为磁盘根目录）",
+			Suggestion: "请提供具体的模型文件夹路径，而非磁盘根目录",
+		}
 	}
 	dstPath := filepath.Join(dstDir, folderName)
 

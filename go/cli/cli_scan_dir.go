@@ -183,7 +183,7 @@ func printScanDirReport(st *dirWalkStats, dirPath string) {
 func printScanDirDetail(dirPath string, totalFiles int) {
 	fmt.Printf("\n📝 文件详情 (前 20 个):\n")
 	count := 0
-	_ = filepath.WalkDir(dirPath, func(path string, d iofs.DirEntry, err error) error {
+	_ = fsutil.SafeWalk(dirPath, func(path string, d iofs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || count >= 20 {
 			return nil
 		}

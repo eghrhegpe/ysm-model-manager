@@ -256,7 +256,7 @@ type texFile struct {
 func collectTextureFiles(texDir string) []texFile {
 	var files []texFile
 	if d, err := os.Stat(texDir); err == nil && d.IsDir() {
-		_ = filepath.WalkDir(texDir, func(path string, d os.DirEntry, err error) error {
+		_ = fsutil.SafeWalk(texDir, func(path string, d os.DirEntry, err error) error {
 			if err != nil {
 				return nil
 			}

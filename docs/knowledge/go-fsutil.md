@@ -32,6 +32,7 @@ auto_fields:
     - IsResourcePackFolder
     - ReadLimitedEntry
     - RecoverAtomicRename
+    - SafeWalk
     - SHA256File
     - StepChmod
     - StepClose

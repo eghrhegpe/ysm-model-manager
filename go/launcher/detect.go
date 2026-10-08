@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strings"
 
+	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -113,7 +114,7 @@ func collectGameRoots(launcherRoot string) []string {
 		add(path)
 	}
 
-	_ = filepath.WalkDir(launcherRoot, func(path string, entry fs.DirEntry, walkErr error) error {
+	_ = fsutil.SafeWalk(launcherRoot, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil || !entry.IsDir() {
 			return nil
 		}

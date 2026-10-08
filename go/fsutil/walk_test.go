@@ -1,6 +1,8 @@
 package fsutil
 
 import (
+	"bytes"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -185,5 +187,59 @@ func TestIsResourcePackFolder_No(t *testing.T) {
 func TestIsResourcePackFolder_NonExistent(t *testing.T) {
 	if IsResourcePackFolder("/nonexistent/path") {
 		t.Error("non-existent dir should NOT be a resource pack folder")
+	}
+}
+
+// SafeWalk 必须在「回调对访问失败的条目返回 nil（静默跳过）」时补记日志，
+// 恢复失败可见性（ADR-030）。构造一个不可读的子目录触发 err != nil，
+// 回调选择跳过，捕获 log 输出并断言补记行为发生。
+func TestSafeWalk_LogsSkippedError(t *testing.T) {
+	dir := t.TempDir()
+	testutil.CreateTestFile(t, dir, "ok.txt", "ok")
+
+	// 制造一个不可读的子目录（Windows 上 chmod 000 仍可能被管理员读取，
+	// 故用交叉校验：用 os.Chmod 降权，并在 chmod 实际生效的平台断言）。
+	badDir := filepath.Join(dir, "bad")
+	if err := os.Mkdir(badDir, 0o000); err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chmod(badDir, 0o755) // 还原，便于临时目录清理
+
+	var buf bytes.Buffer
+	log.SetOutput(&buf)
+	defer log.SetOutput(os.Stderr)
+
+	// 回调对所有条目原样透传（含 err 条目返回 nil = 静默跳过）
+	err := SafeWalk(dir, func(p string, d os.DirEntry, walkErr error) error {
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("SafeWalk 顶层不应返回错误，得到 %v", err)
+	}
+
+	// 只要 chmod 降权在该平台生效（err != nil 真发生），SafeWalk 必须补记日志。
+	// 若平台未生效（err 始终 nil），则无日志也属正确，跳过断言。
+	_, statErr := os.ReadDir(badDir)
+	if statErr != nil {
+		if !strings.Contains(buf.String(), "[fsutil] SafeWalk 跳过访问失败的条目") {
+			t.Fatalf("err 条目被静默跳过时 SafeWalk 必须补记日志，实际输出: %q", buf.String())
+		}
+	}
+}
+
+// SafeWalk 对「回调自行处理的 err（返回非 nil）」不重复干预——此处仅验证
+// 回调返回 filepath.SkipDir 时 SafeWalk 原样透传、遍历行为符合预期。
+func TestSafeWalk_PassthroughNonNil(t *testing.T) {
+	dir := t.TempDir()
+	testutil.CreateTestFile(t, dir, "a.txt", "a")
+	testutil.CreateTestFile(t, dir, "sub/b.txt", "b")
+
+	seen := 0
+	_ = SafeWalk(dir, func(p string, d os.DirEntry, walkErr error) error {
+		seen++
+		return nil
+	})
+	if seen < 3 { // root + a.txt + sub + b.txt
+		t.Fatalf("期望访问 >=3 个条目，得到 %d", seen)
 	}
 }

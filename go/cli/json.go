@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"runtime"
 	"sort"
+
+	"ysm-model-manager/go/types"
 )
 
 // JsonResponse 统一 JSON 输出协议
@@ -47,6 +49,12 @@ func NewJsonSuccess(command string, data interface{}, durationMs float64) *JsonR
 }
 
 // NewJsonError 创建错误响应
+//
+// ADR-051 单一事实来源：优先识别 types.AppError（结构化错误码），将其 Code
+// 原样透传为 JsonError.Code，使前端 friendlyError 能按 Code 做 i18n 映射，
+// 而非降级成 unknown_error 丢失结构化信息。仅当错误非 AppError 时，才回落到
+// CLI 命令层自建的 ErrParam/ErrRuntime 分类（param_error/runtime_error），
+// 其余未分类错误保持 unknown_error。
 func NewJsonError(command string, err error, durationMs float64) *JsonResponse {
 	resp := &JsonResponse{
 		Status:  "error",
@@ -55,9 +63,18 @@ func NewJsonError(command string, err error, durationMs float64) *JsonResponse {
 		Meta:    &MetaInfo{Platform: runtime.GOOS},
 	}
 
+	var appErr types.AppError
 	var errParam *ErrParam
 	var errRuntime *ErrRuntime
 	switch {
+	case errors.As(err, &appErr):
+		// 结构化错误码优先：直接透传 types.ErrorCode（如 INVALID_PATH），
+		// 细节带 Reason/Suggestion 供前端友好化与排错。
+		resp.Error = &JsonError{
+			Code:    string(appErr.Code),
+			Message: appErr.Error(),
+			Details: appErr.Suggestion,
+		}
 	case errors.As(err, &errParam):
 		resp.Error = &JsonError{
 			Code:    "param_error",

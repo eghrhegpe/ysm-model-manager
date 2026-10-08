@@ -11,6 +11,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"ysm-model-manager/go/fsutil"
 )
 
 // perfTargetParamSpecs 是 registerPerfTargetFlags 所对应五参的 ParamSpec 声明
@@ -328,7 +330,7 @@ const benchFileLimit = 30
 func collectTestFiles(root string, maxSizeMB int64) []string {
 	var files []string
 
-	_ = filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+	_ = fsutil.SafeWalk(root, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return nil // 测试数据收集尽力而为，坏路径跳过
 		}

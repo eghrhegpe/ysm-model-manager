@@ -167,6 +167,9 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   // CI 工作流关键顺序不变量（R1-R5，2026-10-08 门禁锐评落地）——文本层静态扫描，
   // 域/触发口径与 test_workflow_contract_runner.ts 完全一致（workflow 变更 → CI pages 全量兜底）。
   "test_workflow_contract_order.ts": ["tests"],
+  // docs frontmatter / workflow YAML 完整语法+结构校验（2026-10-08 P0 落地，vendored yaml）——
+  // 扫 docs 全部 frontmatter + .github/workflows|actions；docs 或 workflow 任一改动即触发
+  "test_knowledge_frontmatter_yaml.ts": ["docs", "tests"],
   // 构建/工具配置（vite.*.config.* / knip.json）声明的入口文件必须存在
   "test_build_entry_refs.ts": ["frontend", "tests"],
   "test_check_boolean_smart.ts": ["tests", "frontend"],
@@ -377,6 +380,14 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   "test_workflow_contract_order.ts": [
     ".github/workflows/",
     "tests/test_workflow_contract_order.ts",
+  ],
+  // 完整 YAML 校验（vendored yaml）：锚点 = vendor 目录 + docs（frontmatter 面）+ workflow 目录
+  "test_knowledge_frontmatter_yaml.ts": [
+    "scripts/_lib/vendor/yaml/",
+    ".github/workflows/",
+    ".github/actions/",
+    "docs/",
+    "tests/test_knowledge_frontmatter_yaml.ts",
   ],
   // 扫描 frontend/ 下构建/工具配置的入口声明（vite.*.config.* 的 rollupOptions.input +
   // knip.json 的 entry）；改任一配置或本测试都须触发。

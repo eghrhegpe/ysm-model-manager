@@ -146,7 +146,11 @@ jobs:
       - name: 红线零新增门禁（check-redlines — R1-R10/W1-W6）
         shell: pwsh
         run: |
-          node scripts/check-redlines.ts --json --baseline | Out-String -Width 200
+          # 人读文本模式（2026-10-08 统一输出策略，照抄下方「静态治理门禁」的既有决策）：
+          # CI 日志消费方是人眼 + Actions 面板；--json 会被 Actions 按列宽硬折行、
+          # 不识别 \n 转义，失败详情碎片化淹没。文本模式逐条列 [债务规则 WARN]/[已清理]，
+          # 带 文件:规则:行号，可直接定位。退出码语义两模式一致（已实测 exit 均为同一判定）。
+          node scripts/check-redlines.ts --baseline
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
   # ── 前端 Job：类型检查 + Vitest（功能正确性）──────────────────────────────
@@ -204,6 +208,14 @@ jobs:
   # 详见 ci-tuning。
   frontend-gates:
     name: 前端静态治理（死代码 + 治理闸）
+    # 阶段门控（2026-10-08 第三轮技术债审计 P1-3）：本 job 两步的主成本
+    # （check-deadcode-baseline + pre-push-gate --static）跑的都是 scripts/ 里的治理工具，
+    # 而 `contracts` job 正是「验证这些工具自身」的契约测试（127 项）。
+    # 契约红 ⇒ 工具自身有问题 ⇒ 本 job 的结论不可信（会报一堆误导性红），先等它。
+    # 净影响实测（run 37788034328 口径）：`frontend-gates` **不在关键路径**上
+    # （关键路径 = contracts 152s → e2e/e2e-web 各约 330s ≈ 8min，E2E 本就在等 contracts），
+    # 本 job 自身约 1–2min，152s + 120s ≈ 272s < 477s ⇒ **不拉长总时长**，只消除白跑与误导。
+    needs: [contracts]
     runs-on: windows-latest
     timeout-minutes: 40
     # ⚠️ 责任范围（ADR-244）必须挂在 **job 级**：死代码扫描在本 job 内有两处执行点
@@ -236,6 +248,13 @@ jobs:
       - name: 死代码基线门禁（check-deadcode-baseline，依赖 knip/jscpd → pnpm install 后跑）
         shell: pwsh
         # YSM_DEADCODE_BASE 见上方 job 级 env（两处执行点共用同一归属基线）。
+        # ⚠️ 本步**必须保留 `--json`**，与上面「统一人读模式」的改动刻意相反：
+        # 脚本 L322 `if (blocking.length === 0 && absorbable.length > 0 && !JSON_OUT)`
+        # 用 JSON_OUT 作为「CI 不写盘」的开关——CI 侧写基线无意义（跑在 push 之后、
+        # 且写盘不随提交入库 ⇒ 下次比对仍见同一批「新增」），故注释明写
+        # 「CI（--json）只报告不写盘」。去掉 --json 会让 CI 在 absorbable>0 时写 runner 工作区，
+        # 重演知识卡 pre-push-gate.md「基线自动收编必须随提交入库」记的那次事故形态。
+        # 可读性代价由 `| Out-String -Width 200` 承担（--json 下这是唯一人读手段）。
         run: |
           node scripts/check-deadcode-baseline.ts --json | Out-String -Width 200
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -320,7 +339,10 @@ jobs:
         shell: pwsh
         run: |
           git fetch origin main 2>$null
-          node scripts/check-go-diff-coverage.ts --json | Out-String -Width 200
+          # 人读文本模式（2026-10-08 统一输出策略）：同 check-redlines 步的理由——
+          # CI 日志给人看，--json 会被硬折行淹没。退出码语义两模式一致（脚本 635 行
+          # `if (json)` 仅切换输出形态，判定链在 440 行之前已定型）。
+          node scripts/check-go-diff-coverage.ts
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       # Go 覆盖率趋势：仅 main 跑 + continue-on-error（独立编译键、coverprofile 有已知 flaky，
@@ -548,7 +570,7 @@ jobs:
             'skipped'   = '⏭️ 跳过（上游未通过或平台不跑——见「门控」列区分）'
           }
           # job 门控关系（与上方各 job 的 needs 保持一致；改 needs 时同步本表）
-          $gated = @{ 'e2e' = 'contracts'; 'e2e-web' = 'contracts' }
+          $gated = @{ 'e2e' = 'contracts'; 'e2e-web' = 'contracts'; 'frontend-gates' = 'contracts' }
 
           $lines = @()
           $lines += '## 门禁汇总 — Test Gate'

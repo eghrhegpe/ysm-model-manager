@@ -25,7 +25,8 @@
  * 设计意图：go test -coverprofile 后拦截「改动把某包覆盖率拖低」的静默回归（doctor / pre-push 接线）。
  */
 
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 
 import { parseArgs } from "./_lib/parse-args.ts";
@@ -174,6 +175,41 @@ function loadPackageStats(file: string): Map<string, PkgStatements> {
   return aggregateByPackage(parseCoverProfileText(readFileSync(file, "utf-8")));
 }
 
+/**
+ * 覆盖率产物新鲜度断言（2026-10-08 技术债审计 P1-a 根治项）。
+ *
+ * 背景：本门禁不自动生成 `.coverage/go-cover.out`——全链路（pre-push 薄壳 /
+ * gate-blocks / CI 非门禁步）均不写此文件，全靠人工或 CI 单独跑 `go test -coverprofile`
+ * 喂料。若读到的产物 mtime 早于最近一次 commit 时间，说明它是一份陈旧快照，门禁
+ * 据此报出的 PASS/FAIL 与当前代码脱钩（旧快照恒绿、或旧快照误红）。
+ *
+ * 返回 null 表示产物不存在（调用方决定降级为 WARN），否则返回可读性提示字符串。
+ */
+function stalenessWarning(file: string): string | null {
+  if (!existsSync(file)) {
+    return null; // 不存在交给 loadPackageStats 抛 ENOENT，由调用方降级
+  }
+  let latestCommitCt: number;
+  try {
+    latestCommitCt = parseInt(
+      execFileSync("git", ["log", "-1", "--format=%ct"], { encoding: "utf-8" }).trim(),
+      10,
+    );
+  } catch {
+    return null; // 非 git 环境或取不到提交时间，跳过新鲜度断言（不误伤）
+  }
+  if (!Number.isFinite(latestCommitCt)) return null;
+
+  const mtime = statSync(file).mtimeMs / 1000;
+  const ageSec = latestCommitCt - mtime;
+  if (ageSec <= 0) return null; // 产物比最新 commit 新，新鲜
+
+  const hours = Math.round(ageSec / 3600);
+  const human = hours >= 24 ? `${Math.round(hours / 24)} 天` : `${hours} 小时`;
+  return `覆盖率产物 ${file} 比最新 commit 旧约 ${human}（mtime 早于 HEAD）——门禁结论可能基于陈旧快照，请先 ` +
+    `go test ./... -cover -coverprofile="${file}" 重新生成（PowerShell 须引号包裹 -coverprofile）。`;
+}
+
 function main() {
   const args = parseArgs(process.argv.slice(2), {
     bools: ["json"],
@@ -203,6 +239,23 @@ function main() {
   }
 
   try {
+    // P1-a 根治：产物缺失优雅降级——明确 WARN 而非裸 stack 崩溃。
+    // 缺产物属环境预备问题（需先跑 go test -coverprofile），不应以 crash 噪声污染门禁输出，
+    // 但仍以 exit 1 失败退出（与契约测试「缺文件 → 1」一致），由调用方（debt 级）决定是否阻断。
+    if (!existsSync(coverFile)) {
+      console.error(
+        `⚠️ 未找到覆盖率产物 ${coverFile}（门禁只读不写）。请先运行 ` +
+          `go test ./... -cover -coverprofile="${coverFile}" 生成（PowerShell 须引号包裹 -coverprofile）。`,
+      );
+      process.exitCode = 1;
+      return;
+    }
+
+    const stale = stalenessWarning(coverFile);
+    if (stale) {
+      console.warn(`⚠️ ${stale}`);
+    }
+
     const pkgStats = loadPackageStats(coverFile);
 
     const results: PkgResult[] = [];
@@ -251,7 +304,7 @@ function main() {
     console.log("\n✅ 所有包覆盖率达标");
     process.exitCode = 0;
   } catch (e) {
-    console.error("读取覆盖率文件失败:", e);
+    console.error("读取覆盖率文件失败（非缺失类异常，请排查）:", e);
     process.exitCode = 1;
   }
 }

@@ -98,7 +98,7 @@ git reset --soft HEAD~1             # 撤销最近提交，改动留在暂存区
 ## 钩子自动化（自动执行，你只需手动三件事）
 
 - **pre-commit**（非阻断，结果走 stderr）：跑 `GEN_CMDS` 循环同步生成物（**清单以 `.githooks/pre-commit` 为准**）→ `check-knowledge-drift --affected` → 智能 stage 同名测试文件 → gofmt → 输出本次 commit `diff --stat`。
-- **pre-push**：全量门禁，失败阻断；**prepare-commit-msg**：提示受影响知识卡 + 覆盖率。
+- **pre-push**：默认**轻量档**门禁（静态治理层 + `go build`/`go vet`），失败阻断；重型构建与测试交 CI（`YSM_FAST_PUSH=0` 恢复本地全量）。**prepare-commit-msg**：提示受影响知识卡 + 覆盖率。
 - 逃生阀：`git commit --no-verify` 只跳 commit 钩子；`YSM_SKIP_GATE=1 git push` 或 `git push --no-verify` 连 pre-push 一起跳（慎用，绕过不留审计）。doctor 输出 `[WARN]...skip` 时手动 `cd frontend && npm run typecheck` 补验。
 
 ## 场景路由（快速对号入座）
@@ -170,7 +170,7 @@ git reset --soft HEAD~1             # 撤销最近提交，改动留在暂存区
 cd frontend && npx vite build && npm run typecheck   # 前端（同 cwd=frontend）
 node scripts/check-biome.ts --files <改动文件...>      # biome 增量闸门（须显式点名——--changed 在 main 直提下恒空转；--write 自动修复）
 go build ./...                                  # Go（覆盖 go/ + 根 internal/app + 根 main.go CLI 入口）
-node scripts/contract-tests.ts            # 契约测试（95 个 tests/*.ts；⚠️ 勿手写 `for f in tests/*.ts` 裸跑循环——缺 @/ 别名运行时注入，本地绿 CI 红；护栏 tests/test_workflow_contract_runner.ts）
+node scripts/contract-tests.ts            # 契约测试（122 个 tests/*.ts；⚠️ 勿手写 `for f in tests/*.ts` 裸跑循环——缺 @/ 别名运行时注入，本地绿 CI 红；护栏 tests/test_workflow_contract_runner.ts）
 node scripts/doctor.ts --docs               # 只改文档时（秒级）
 node scripts/doctor.ts                      # 发版前全量
 node scripts/android-build.ts / android-install.ts   # 安卓打包 / 安装

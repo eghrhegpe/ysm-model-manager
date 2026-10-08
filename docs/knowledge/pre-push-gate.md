@@ -288,6 +288,6 @@ node scripts/pre-push-gate.ts --files "<file1>\n<file2>..." [--dry-run]  # 文�
 - ADR-088 — 静态工具并行回退（spawn 开销吃掉收益）
 - ADR-145 — cli 解耦 app（check-go-diff-coverage --staged 实证）
 - ADR-149 / ADR-150 — pre-commit 兜底收窄（对照）
-- [pre-commit-hook](./pre-commit-hook.md) — 提交前钩子（互补：pre-commit 快同步，pre-push 全量阻断）
+- [pre-commit-hook](./pre-commit-hook.md) — 提交前钩子（互补：pre-commit 快同步，pre-push 默认轻量档阻断、全量交 CI）
 - [auto-import-split](./auto-import-split.md) — auto-import 挂载于 ALL_STATIC_TOOLS
 - `docs/cli-commands.md` — doctor 命令（gate/--all/--docs 入口）

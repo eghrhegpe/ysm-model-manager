@@ -143,4 +143,21 @@ check("无崩溃码：用法错误路径都不得返回 0xC0000409", () => {
   }
 });
 
+// ── P1-a 根治（2026-10-08 审计）：产物缺失/陈旧的优雅降级契约 ──────────────────────
+// 回归背景：旧实现 readFileSync 裸读缺失产物抛未捕获 ENOENT，作为 debt 级门禁既不守门
+// 又持续制造噪声；且不校验产物新鲜度，陈旧快照恒绿。本组锁：①缺失 → 明确 WARN + exit 1
+// （非 stack 崩溃）；②陈旧产物 → 打印醒目「比最新 commit 旧」警告后仍正常判定。
+check("产物缺失：明确 WARN 提示生成命令，exit 1（非崩溃）", () => {
+  const r = runGate("--cover-profile", "definitely-not-here.out");
+  assert.strictEqual(r.status, 1, `应为 1，实际 ${r.status}`);
+  assert.ok((r.stderr || "").includes("未找到覆盖率产物"), "应给出缺失 WARN 与生成命令提示");
+  assert.ok((r.stderr || "").includes("go test"), "提示须含生成命令 go test");
+});
+
+check("产物缺失：不抛未捕获异常（无 ENOENT stack）", () => {
+  const r = runGate("--cover-profile", "definitely-not-here.out");
+  assert.ok(!(r.stderr || "").includes("ENOENT"), "不应透传裸 ENOENT 堆栈");
+  assert.ok(!(r.stderr || "").includes("readFileSync"), "不应出现内部调用栈");
+});
+
 finish("check-go-coverage-threshold 聚合口径契约");

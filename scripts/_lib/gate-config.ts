@@ -234,7 +234,9 @@ export const GO_STATIC_TOOLS: GateTool[] = [
   { tool: "jscpd-go.ts", blockPolicy: "debt" },
   { tool: "check-go-diff-coverage.ts", blockPolicy: "hard" },
   // check-go-coverage-threshold：包级最低函数覆盖率（语句加权，2026-09 口径修正后）。
-  // 依赖 .coverage/go-cover.out（push 前 gate 已生成）；实测 144ms、errors=0 → debt 接入。
+  // 只读不写：本门禁不自动生成 .coverage/go-cover.out（pre-push 薄壳 / gate-blocks / CI 非门禁步
+  // 均不写此文件），需人工或 CI 先 `go test -coverprofile` 喂料；产物缺失/陈旧时脚本已优雅
+  // 降级（缺产物 WARN+exit1，陈旧产物打印醒目警告，见 P1-a 根治）。debt 接入 → 不阻断推送。
   { tool: "check-go-coverage-threshold.ts", blockPolicy: "debt" },
 ];
 

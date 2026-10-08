@@ -71,7 +71,7 @@
 ### 提交前门禁
 
 - `pre-commit` 钩子：gofmt + 生成物同步 + 知识卡漂移检测
-- `pre-push` 钩子：全量门禁（Go 测试 + 前端 vitest + 契约测试 + typecheck）
+- `pre-push` 钩子：默认轻量档（静态治理 + `go build`/`go vet`），失败阻断；重型测试与构建交 CI（`YSM_FAST_PUSH=0` 恢复 Go 测试 + 前端 vitest + 契约测试 + typecheck 全量）
 - `commit-with-check` 一体化：按 staged 文件裁剪门禁，验证 + 提交一步到位
 
 ### 审核流水线

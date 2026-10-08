@@ -158,7 +158,7 @@ node scripts/contract-tests.ts
 | 钩子 | 触发 | 行为 |
 |------|------|------|
 | `pre-commit` | `git commit` | 跑生成物同步 + 知识卡漂移检测 + gofmt |
-| `pre-push` | `git push` | 全量门禁（测试 + 类型 + 契约），失败阻断 |
+| `pre-push` | `git push` | 轻量档门禁（静态治理 + `go build`/`go vet`），失败阻断；重型构建与测试交 CI（`YSM_FAST_PUSH=0` 恢复本地全量） |
 | `prepare-commit-msg` | `git commit` | 提示受影响知识卡 + 覆盖率 |
 
 ### 逃生阀

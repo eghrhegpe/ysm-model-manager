@@ -137,7 +137,7 @@ CI ────────── test.yml 独立步骤：pre-push-gate --static
 ## 不变量
 
 - **判断某环现状只认实况**（读 `.githooks/` 钩子 + `.github/workflows/*.yml` + 当前清单），不认注释里的历史快照——注释是决策时化石，会与后续落地脱节（2026-10-06 实证：「CI 尚未同跑 gate」在钩子与知识卡并存三处，实为 09-14 已接线）。
-- **pre-push 是唯一全量阻断的本地闸**：commit 期间前端域红灯照落（pre-commit 不跑域级检查），真正拦截在 push / commit-with-check / doctor。
+- **pre-push 是唯一阻断的本地闸，但默认轻量档**：`YSM_FAST_PUSH` 未设/≠`0` 时跳过 vite build / tsc / vitest / go test（-race），只留静态治理层 + `go build`/`go vet`；`YSM_FAST_PUSH=0` 恢复全量（重型测试与构建交 CI）。commit 期间前端域红灯照落（pre-commit 不跑域级检查），真正拦截在 push / commit-with-check / doctor。
 - **清单单一事实源 = `gate-config.ts`**，新增检查项只改清单不 gate 调度；块内按 ALL/DOC/FRONTEND/GO 分挂。
 
 ## 相关

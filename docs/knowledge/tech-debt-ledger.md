@@ -74,11 +74,11 @@ quick_risk_lines:
 详见 `docs/tech-debt-audit-2026-10-08.md`。代码债（Go 侧 + 复杂度 RED）已清偿，**新债全在治理与文档一侧**。
 
 ### 🔴 高
-- **P1-a · 覆盖率门禁与代码脱钩**：`scripts/_lib/gate-config.ts:237` 注释称「依赖 `.coverage/go-cover.out`（push 前 gate 已生成）」——**实测全链路无人生成**。`.githooks/pre-push` grep `coverage` = 0；`gate-blocks/go-domain.ts` 跑 `go test` 不带 `-coverprofile`；`gate-blocks/static-tools.ts` 只跑 `node scripts/<tool> --json`；唯一写文件的 CI 步 `test.yml:361` 是 `main`-only + `continue-on-error`（非门禁），且 `.gitignore:132` 让产物无法交回本地。知识卡 `go-coverage-gate.md:94` 早已记录「**无代码自动生成（脚本只读不写）**」——**与 `gate-config.ts:237` 直接矛盾**。另：脚本 `check-go-coverage-threshold.ts:174` 用 `readFileSync` 裸读、产物缺失**抛未捕获 ENOENT crash**（exit 1），`blockPolicy: debt` 使其不阻断 → 既不能守门又持续制造噪声。建议加**产物新鲜度断言**（mtime 早于 `git log -1 --format=%ct` 即 exit 2）+ 缺产物优雅降级 + 修注释。
+- **P1-a · 覆盖率门禁与代码脱钩**：`scripts/_lib/gate-config.ts:237` 注释称「依赖 `.coverage/go-cover.out`（push 前 gate 已生成）」——**实测全链路无人生成**。`.githooks/pre-push` grep `coverage` = 0；`gate-blocks/go-domain.ts` 跑 `go test` 不带 `-coverprofile`；`gate-blocks/static-tools.ts` 只跑 `node scripts/<tool> --json`；唯一写文件的 CI 步 `test.yml:361` 是 `main`-only + `continue-on-error`（非门禁），且 `.gitignore:132` 让产物无法交回本地。知识卡 `go-coverage-gate.md:94` 早已记录「**无代码自动生成（脚本只读不写）**」——**与 `gate-config.ts:237` 直接矛盾**。另：脚本 `check-go-coverage-threshold.ts:174` 用 `readFileSync` 裸读、产物缺失**抛未捕获 ENOENT crash**（exit 1），`blockPolicy: debt` 使其不阻断 → 既不能守门又持续制造噪声。**✅ 已修（2026-10-08 晚间）**：① 产物缺失 → 明确 WARN（含生成命令）+ exit 1，不再抛裸 ENOENT stack；② 新增 `stalenessWarning` 新鲜度断言——产物 mtime 早于 `git log -1 --format=%ct` 即打印醒目「比最新 commit 旧约 N 小时/天」警告（仍正常判定，debt 级不阻断）；③ `gate-config.ts` 注释与 `go-coverage-gate.md` 对齐，声明「只读不写、需先喂料」。契约测试 `test_check_go_coverage_threshold.ts` 钉死缺失降级路径。注：自动化生成产物仍未接（需接 pre-push 或 CI 写 `-coverprofile`），当前为「读前显式校验陈旧」的半根治——下次若谁接了自动生成，新鲜度断言会自动放行。
 - **P1-b · `cmd/ccheck` 漏登记 `SKIP_PACKAGES`**：`go list ./cmd/...` 输出 `cmd/ccheck` + `cmd/updater` 两个真实 `main()` 入口包，后者已登记（`:161`，注释写明「进程入口测试内不可达」），前者（2026-09-11 `23bfeb9ac` 引入）漏登记。**决定性实证**：换成新鲜覆盖率产物后门禁立刻转红 `❌ ysm-model-manager/cmd/ccheck: 0.0% (阈值 20%)` exit 1——它在 10-06 旧快照里不存在，所以旧快照恒绿。根因：`SKIP_PACKAGES` 是静态表，新增进程入口包**必然漏登记**。建议补一行 + 改启发式判定。**✅ 已修（2026-10-08）**：不走豁免——把 `main()` 里的参数解析/扫描/输出逻辑收敛到可测的 `run(args, stdout, stderr) int`（`cmd/ccheck/main.go`），新增 `cmd/ccheck/main_test.go` 直测核心路径（文本/JSON 输出、`--threshold` 过滤、`--top` 负值夹取、目录不存在、非法 flag、`--tests` 开关），包覆盖率 **0% → 83.9%** 稳过 20% 门槛。
 
 ### 🟠 中
-- **P2 · 六处常驻文档称「pre-push 全量门禁」**：`AGENTS.md:101`、`CONTRIBUTING.md:161`、**`SECURITY.md:74`**（安全文档失真最误导）、`gate-chain-map.md:140`、`pre-commit-hook.md:78`+`:105`、`pre-push-gate.md:291`（与同卡 `:275` **自相矛盾**）。`YSM_FAST_PUSH` 默认轻量档实测跳过 4 处（`frontend-domain.ts:164`→168/173/239、`go-domain.ts:100`→104）。另 `AGENTS.md:173`「95 个 tests/\*.ts」→ 实测 **122**。ADR 内同类表述是历史快照，不算债。
+- **P2 · 六处常驻文档称「pre-push 全量门禁」**：`AGENTS.md:101`、`CONTRIBUTING.md:161`、**`SECURITY.md:74`**（安全文档失真最误导）、`gate-chain-map.md:140`、`pre-commit-hook.md:78`+`:105`、`pre-push-gate.md:291`（与同卡 `:275` **自相矛盾**）。`YSM_FAST_PUSH` 默认轻量档实测跳过 4 处（`frontend-domain.ts:164`→168/173/239、`go-domain.ts:100`→104）。另 `AGENTS.md:173`「95 个 tests/\*.ts」→ 实测 **122**。**✅ 已修（2026-10-08 晚间）**：六处统一改为「默认轻量档（静态治理 + `go build`/`go vet`，`YSM_FAST_PUSH=0` 恢复全量），重型测试与构建交 CI」；`AGENTS.md:173` 计数 95→122。纯文案，零风险。
 - **A1 · `check-adr-health` 无进度化石正则、无 emoji 前缀检查**：grep `化石|进度|排期` = 0 命中。213/333 ADR 含化石字样、**126/304 已采纳缺 emoji 前缀**全靠人肉巡检；6 个 📝 提议中 ADR（284/292/301/321/325/151-d1）滞留 2 周+，10-06 为 3 个 → **恶化**。建议先 `--suggest`/debt 观察一轮（需先定化石白名单防误伤历史叙述）。
 - **T3′ · `file-tree.spec.ts:51-53` 残留条件 skip**：`if (dirCount === 0) { test.skip(true, ...); return; }`，而同文件 `:55` 断言 mock 恒含 `subdir/subdir-model.ysm` → `dirCount===0` 意味着加载链回归，应硬红。全 27 个 e2e spec 仅此 1 处活 skip（其余 3 处命中是「已移除 skip」的说明性注释）。
 - **T5 · caps 族未纳入 `check-file-lines` 硬红线**（10-06 P1 遗留）：`sky-capability.ts` 1068 行已超 `mount-preview-core.ts` 的红线值 1045，仍只软告警。
@@ -90,6 +90,31 @@ quick_risk_lines:
 - **S1 · `gen-knowledge-*` 六个生成器仍并存**未收口；`gate-inventory.json` 未建（部分缓解：`gate-config.ts` 已是单一工具清单 + `gate-coverage` 动态枚举分母）。
 - **H1′ · `docs/` 根 6 份历史审计 critique（~130KB）可迁 `docs/archive/`**：`audit-env-review`/`audit-ground-review`/`audit-knowledge-accuracy`/`audit-knowledge-reliability`/`audit-postprocessing-critique`/`audit-water-critique`。**⚠️ `audit-src-map.md` 是 `gen-project-map.ts` 生成物，不可归档。**
 - **已修确认**：errcheck 生产 **0** 条（10-06 为 114）、ysmwasi **61.3%**（原 33.3%）、复杂度 RED **0**（原 52；Molang 876 → MIT 第三方 vendored 排除有 fail-closed 守卫，属噪声移出统计面而非债清零；另 4 个 RED 真重构）、契约测试域登记 **104/104 零漏**、binding 176/176、i18n 死键 **13**（原 17）、ADR-311 快照 **0**、`scripts/` 194→**178** 文件（↓5711 行）、未接入 check-\* **0**、知识卡 kind snake_case 仅剩 1 个、无卡引用源码文件 52→**14**、全套 vitest **473 文件 7719/7719 全绿**、SafeWalk 无真吞错、并发安全、`app.go` 435 行纯门面（非 god object）、`_attic` 20 脚本零活引用（真死）。
+
+## 2026-10-08 晚间复测（HEAD = 28c2c7de8 之后 14 提交）
+
+> 主模型对审计「已清偿」项逐项目前 HEAD 重新实测，全部复现；审计后新提交未把债带回。
+
+| 维度 | 审计记录 | 晚间复测 | 判定 |
+|---|---|---|---|
+| Go errcheck 生产违规 | 0 | **0**（golangci 全量） | ✅ 守住 |
+| `go/ysmwasi` / `internal/app` / `install` 覆盖率 | 61.3% / 58.8% / 92.8% | **61.3% / 58.8% / 92.8%** | ✅ |
+| 前端复杂度 RED / ORANGE / YELLOW | 0 / 47 / 223 | **0 / 47 / 222** | ✅ 守住 |
+| binding 双侧契约 | 176/176 · 0 | **176/176 · 0** | ✅ |
+| 契约测试域登记 | 104/104 | **125/125** | 🟢 改善 |
+| i18n 死键 | 13 | **13** | ✅ |
+| 知识卡漂移 | errors 0 / warns 10 | **errors 0 / warns 10** | ✅ 一致 |
+| vitest 全量 | 473 文件 7719 全绿 | **473 文件 7733 全绿**（增 14 用例） | 🟢 改善 |
+| 死代码基线 | knip 183 / jscpd 118 · ERROR 0 | **knip 185 / jscpd 118 · ERROR 0**（基线内放行） | ✅ |
+| 覆盖率门禁（P1-b） | ccheck 0%→83.9% 已修 | **全包达标、总体 79.0% 全绿**（新鲜产物） | ✅ 修复生效 |
+| 文件行数红线 | 18 个超阈值（软告警） | **18 个一致** | ✅ |
+
+附带：`go build ./...` 0、`golangci-lint` 全量 0 errcheck、`binding-check` 0 issues、`check-knowledge-drift` errors 0、`check-complexity` 最新认知复杂度 41（警告列表全 37–41）均守住。唯一一次 vitest 失败经双跑确认为 **flaky**（download-queue 定时器用例），非真回归。
+
+### 本次（2026-10-08 晚间）动手清偿
+- **P1-a 半根治**（见上「高」段）：缺产物优雅降级 + 新鲜度断言 + gate-config 注释对齐 + 契约测试钉死。
+- **P2 全修**（见上「中」段）：六处文档「pre-push 全量门禁」失真统一改轻量档表述；`AGENTS.md` 契约测试计数 95→122。
+- 待还债剩余项见上方 🟠/🟢 段（A1/T3′/T5/T6/K1/K2/S1/H1′），均未涉及代码回归，属维护性与文案收敛。
 
 ## 总体判断
 

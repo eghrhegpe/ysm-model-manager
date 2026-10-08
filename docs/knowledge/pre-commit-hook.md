@@ -75,7 +75,7 @@ status: active
 
 ## 概览
 
-`.githooks/pre-commit` 在 commit 前跑秒级 gen 脚本同步文档/索引/知识卡机器生成区，并**仅 stage 本次 gen 实际 touch 的文件**（gen 前后快照 diff 对比，2026-08-17 P2-2 修复并发隔离）。gen 与格式化段**非阻断**；但钩子另含**三段硬阻断（exit 1）**：`check-biome-lines`（行级新增违规）、`check-android-unavailable`（平台黑名单）、`check-design-tokens --staged --added-lines`（行级判定：判决域 = 本次提交的**新增行**；ADR-256）——它们刻意挂 pre-commit 而非仅 pre-push，目的是防 `--no-verify` 单点绕过；全量门禁仍留给 pre-push。
+`.githooks/pre-commit` 在 commit 前跑秒级 gen 脚本同步文档/索引/知识卡机器生成区，并**仅 stage 本次 gen 实际 touch 的文件**（gen 前后快照 diff 对比，2026-08-17 P2-2 修复并发隔离）。gen 与格式化段**非阻断**；但钩子另含**三段硬阻断（exit 1）**：`check-biome-lines`（行级新增违规）、`check-android-unavailable`（平台黑名单）、`check-design-tokens --staged --added-lines`（行级判定：判决域 = 本次提交的**新增行**；ADR-256）——它们刻意挂 pre-commit 而非仅 pre-push，目的是防 `--no-verify` 单点绕过；pre-push 默认轻量档（静态治理 + `go build`/`go vet`，`YSM_FAST_PUSH=0` 恢复全量），重型测试与构建交 CI。
 
 ## 核心职责
 
@@ -102,7 +102,7 @@ status: active
 ## 与其他子系统关系
 
 - 与 `post-commit` 互补：post-commit 按 `HEAD~1`（父 oid）读 `.git/ysm_gen_staged_<oid>` 清单清生成物残留，判定锚点 `HEAD~1..HEAD`（commit 不可变对象，根治「HEAD 此刻」误判，ADR-232 D1）；清完 `gen-staged-pair.ts delete` 删本清单 + `sweep` 回收 48h 孤儿
-- 与 `pre-push` 互补：pre-commit 快同步+stage（另含三段硬阻断闸防 `--no-verify` 绕过），pre-push 全量门禁阻断
+- 与 `pre-push` 互补：pre-commit 快同步+stage（另含三段硬阻断闸防 `--no-verify` 绕过），pre-push 默认轻量档（静态治理 + `go build`/`go vet`，`YSM_FAST_PUSH=0` 恢复全量），重型测试与构建交 CI
 - 「只减不增」型闸须**双挂**：pre-commit（拦提交）+ `_lib/gate-config.ts` 的静态工具清单（拦推送/CI）——只挂 pre-commit 属单点防线。`check-design-tokens` 2026-09 补齐第二重后与 `css-layer-check` 同等防护
 - 版本防御三查（意外文件 / 跨层夹带，非阻断；88daf2a2 `$tmp` 教训）已下沉 `scripts/_lib/commit-blocks/version-defense.ts`（ADR-323 阶段 1）：判定与渲染分离（`detectVersionDefense` 纯函数 + 注入式首行读取器 + `renderVersionDefense`），由 `tests/test_commit_version_defense.ts` 守护；钩子段只保留「自取 staged + 渲染」调用。原内联 shell 无法单测，边界（`$` 在路径中段、`mode:` 缩进行、`.d.ts` 后缀截断）只能靠注释提醒
 - 钩子「薄壳 + blocks」范式（ADR-323）：与 pre-push 同构（薄壳 → 调度 → `_lib/gate-blocks/`）；pre-commit 侧下沉目录为 `_lib/commit-blocks/`，thickness 判据 = ①真判定/推导逻辑（非单纯调用既有脚本）②输入可显式化 ③有边界值得断言。逃生阀/环境探测/`PARENT_OID`/`trap` 等 shell 语义必需项**不强行下沉**

@@ -303,7 +303,7 @@ jobs:
 
       # 本 job 保留**真实桌面测试**（原生 Windows 构建 + race）与依赖「真跑 go test」取数的
       # 覆盖率两件套：只有 Windows 能原生构建执行桌面目标（Wails/WebView2），且本仓测试代码含
-      # Windows 专有符号。仅 golangci-lint（纯静态、可跨平台类型检查）迁至 ubuntu-latest 的
+      # Windows 专有符号。仅 golangci-lint（纯静态、可跨平台类型检查）迁至 ubuntu-24.04 的
       # go-analysis job，与本 job 并行。
       - name: Go 检查（build + vet + test -race）
         shell: pwsh
@@ -365,11 +365,11 @@ jobs:
   # ── Go 静态分析（2026-10-08：golangci-lint 从 Windows go job 迁出，独立并行跑）──────────
   # 动机：golangci-lint 是**纯静态分析**（只做类型检查、不执行任何东西），原先串在 windows go
   # job 里，1m30s 全程计入关键路径，还额外背着 Windows Defender 实时扫描的税。迁到
-  # ubuntu-latest：① 无 Defender 税、缓存解压快；② 与 windows go job 的 race 测试并行取 max。
+  # ubuntu-24.04（钉版本：防 2026-10-19 ubuntu-latest 迁移 Ubuntu 26 静默换血）：① 无 Defender 税、缓存解压快；② 与 windows go job 的 race 测试并行取 max。
   # ⚠️ 关键手法：用 `GOOS=windows` 做**跨平台类型检查**，而不是在 Linux 上编译 Linux 目标。
   # 原因（2026-10-08 实证，本仓是 Windows 桌面应用）：
   #   ① 默认 GOOS=linux 会选中 wails 的 `linux_cgo.go`，要求 `pkg-config gtk4 webkitgtk-6.0`
-  #      （gtk3 tag 下为 gtk+-3.0/webkit2gtk-4.1），ubuntu-latest 不带这些 dev 库 ⇒ 类型检查失败；
+  #      （gtk3 tag 下为 gtk+-3.0/webkit2gtk-4.1），ubuntu-24.04 不带这些 dev 库 ⇒ 类型检查失败；
   #   ② go/executil/executil_test.go:41 用 Windows 专有 `SysProcAttr.HideWindow`（仅 runtime.GOOS
   #      跳过、非编译期排除）⇒ GOOS=linux 下该包根本编译不过。
   # 而 GOOS=windows + CGO_ENABLED=0 在 Linux 上类型检查 Windows 目标**不需要任何 GUI 库**
@@ -379,7 +379,7 @@ jobs:
   # 测试二进制无法在 Linux 上执行（且如上 ② 连编译都过不了），只能留在 Windows go job。
   go-analysis:
     name: Go 静态分析（golangci-lint）
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
       # 跨平台类型检查 Windows 目标：与原先在 Windows 上跑 lint 同 GOOS，语义等价；
@@ -472,7 +472,7 @@ jobs:
   # webServer 自动管理 vite dev 生命周期（playwright.config.ts）。
   e2e:
     name: E2E（Playwright）
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # 补装超时告警（2026-10-08 锐评：此前全文件唯二裸奔的 Job）。Playwright 的 7min 总限
     # 只管测试段，webServer/浏览器下载/apt 卡死不受其管——缺省 ceiling 是 360min 静默干烧。
     timeout-minutes: 30
@@ -571,7 +571,7 @@ jobs:
   # 类型检查复用 e2e job 的 tsconfig.e2e.json（双套件同域，不重复跑）。
   e2e-web:
     name: E2E-Web（真 WebGL）
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # 同上补告警；SwiftShader 无 GPU 软渲染显著慢于 e2e 的 headless Chromium，预算放宽一档。
     timeout-minutes: 40
     steps:

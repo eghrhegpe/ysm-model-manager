@@ -26,7 +26,7 @@ concurrency:
 jobs:
   build:
     name: 构建站点（VitePress · docs/）
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # 补装 Job 级超时（2026-10-08 锐评）：缺省 ceiling 是 360min，契约测试 / 断链 / 构建任一环节
     # 卡死（apt 慢镜像、npm 卡 registry）会静默干烧到天花板。
     timeout-minutes: 30
@@ -35,7 +35,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 安装 ripgrep（契约测试依赖 rg 二进制；ubuntu-latest 默认未预装）
+      - name: 安装 ripgrep（契约测试依赖 rg 二进制；ubuntu-24.04 默认未预装）
         run: sudo apt-get update -y && sudo apt-get install -y ripgrep
 
       # test_config_defaults.ts（83bcd8d33）：CI 下缺 AppConfig = 零覆盖假绿 ⇒ 显式 FAIL。
@@ -108,7 +108,7 @@ jobs:
   deploy:
     name: 发布
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

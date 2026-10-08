@@ -7,8 +7,15 @@ status: active
 source_files:
   - scripts/check-doc-drift.ts
   - scripts/check-deadcode-baseline.ts
+  - scripts/_lib/deadcode-keys.ts
+  - frontend/knip.json
   - scripts/baseline/doc-drift-baseline.json
   - docs/architecture.md
+auto_fields:
+  symbols_with_lines:
+    - jscpdCloneKeys
+    - KNIP_TYPES
+    - knipIssueKeys
 use_when:
   - 想知道仓里现在还能发现多少技术债
   - 刷新 / 收紧 7 本债务账本（redlines / deadcode / design-tokens / i18n-unused / doc-drift / jscpd-go / layering）到今日实数
@@ -19,6 +26,8 @@ pitfalls:
   - check-doc-drift 的 ARCH_DOCS 若指向已删文档 → archText 空 → unregistered 虚报全部模块
   - 架构树引用的构建产物（dist/*.wasm、*.exe）在干净检出里不存在——未豁免 git 忽略项即 CI 恒红
   - 有未治新债时误用 --update-baseline 会把债冻结进账本
+  - deadcode 账本里大量条目不是债是噪声：knip 的 `unresolved`（Playwright 页面内运行时 URL import，工具结构上解析不了）与工具链 bin（wails3/jscpd 经 spawnSync 调用）是误报，jscpd 测试↔测试克隆多为有意（拆一个测试文件即"生成债"）——出口过滤在 `frontend/knip.json`（ignoreIssues/Binaries/Dependencies）+ 主脚本 jscpd `--ignore`；任何过滤 glob 改动**必实测非 no-op**（对齐"绝对 glob + tmpdir cwd 扫 0 文件静默失效"前科，见主脚本注释）
+  - knip v5+ `duplicates` 是嵌套数组对 `[[{name},{name}]]`，解析器取标量 `.name` 会产空名残渣键（不可读/不可归属/永无法销账）；键派生唯一真身 `scripts/_lib/deadcode-keys.ts`，契约 `tests/test_deadcode_keys.ts` 钉死空名回归
 quick_groups:
   - 门禁与脚本
 quick_intents:
@@ -33,7 +42,9 @@ invariant_anchors:
   - scripts/check-doc-drift.ts|checkArchCoverage
   - scripts/check-doc-drift.ts|checkAgentsTree
   - scripts/_lib/contract-tests.ts|collectContractTests
-last_verified: 2026-10-08
+  - scripts/_lib/deadcode-keys.ts|knipIssueKeys
+  - scripts/_lib/deadcode-keys.ts|jscpdCloneKeys
+last_verified: 2026-10-09
 ---
 
 # 技术债账本刷新与盘点方法论
@@ -49,7 +60,7 @@ last_verified: 2026-10-08
 | 账本（scripts/baseline/） | 刷新实数（只读） | 收紧 / 冻结 | 备注 |
 |---|---|---|---|
 | redlines-baseline.json | `check-redlines --json` | `--update-baseline` | 全 19 规则候选 ≠ 账本「债务型 6 规则」，口径别混 |
-| deadcode-baseline.json | `check-deadcode-baseline --json` | `--update-baseline` | **默认模式会「自动收编」写基线，只读必须 `--json`** |
+| deadcode-baseline.json | `check-deadcode-baseline --json` | `--update-baseline` | **默认模式会「自动收编」写基线，只读必须 `--json`**；键派生单源 `scripts/_lib/deadcode-keys.ts`，噪声过滤 `frontend/knip.json` + jscpd `--ignore`（见 pitfalls） |
 | design-tokens-baseline.json | `check-design-tokens` | `--update-baseline` | ADR-256 后仅 doctor 报告 / 收债排期，不参与门禁判定 |
 | i18n-unused-baseline.json | `check-i18n-unused --json` | `--update-baseline` | dead + testOnly 合计 = 账本 count |
 | doc-drift-baseline.json | `check-doc-drift` | `--fix` | 架构树「未登记模块」；假象坑见不变量 |

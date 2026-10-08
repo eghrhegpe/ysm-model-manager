@@ -179,6 +179,9 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "test_build_entry_refs.ts": ["frontend", "tests"],
   "test_check_boolean_smart.ts": ["tests", "frontend"],
   "test_deadcode_attrib.ts": ["tests"],
+  // 基线键派生单源（2026-10-08 技术债审计）：knip duplicates 嵌套数组对 / jscpd toPosix 归一，
+  // 空名残渣键回归锁。消费方 = check-deadcode-baseline + _lib/deadcode-keys + knip.json。
+  "test_deadcode_keys.ts": ["tests"],
   "test_domain_classify.ts": ["tests"],
   "test_gen_stage.ts": ["tests"],
   "test_machine_diff.ts": ["tests"],
@@ -294,7 +297,10 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   "test_gen_routes_quick_pitfall.ts": ["scripts/gen-routes-quick.ts"],
   "check-gen-routes-status.ts": ["scripts/gen-routes.ts", "scripts/_lib/knowledge-cards.ts"],
   "check-knowledge-frontmatter-line-refs.ts": ["scripts/check-knowledge-drift.ts"],
-  "check-knowledge-card-references.ts": ["scripts/check-knowledge-drift.ts", "scripts/_lib/knowledge-cards.ts"],
+  "check-knowledge-card-references.ts": [
+    "scripts/check-knowledge-drift.ts",
+    "scripts/_lib/knowledge-cards.ts",
+  ],
   "test_gen_routes_quick_groups.ts": [
     "scripts/gen-routes-quick.ts",
     "scripts/_lib/knowledge-cards.ts",
@@ -413,6 +419,14 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
     "tests/test_build_entry_refs.ts",
   ],
   "test_deadcode_attrib.ts": ["scripts/_lib/deadcode-attrib.ts"],
+  // 基线键派生单源 + 其生产消费方 + 过滤配置（三者任一改动都重验键形态）：
+  // deadcode-keys 是键派生真身；check-deadcode-baseline 接线 jscpd --ignore 与调用；
+  // knip.json 的 ignoreIssues/Binaries/Dependencies 决定 knip 发现集（键来源面）。
+  "test_deadcode_keys.ts": [
+    "scripts/_lib/deadcode-keys.ts",
+    "scripts/check-deadcode-baseline.ts",
+    "frontend/knip.json",
+  ],
   "test_domain_classify.ts": ["scripts/_lib/domain-classify.ts"],
   "test_gen_stage.ts": ["scripts/_lib/gen-stage.ts"],
   // ADR-232 三方向可注入纯逻辑（gen-staged-pair / hook-audit / audit-degraded）

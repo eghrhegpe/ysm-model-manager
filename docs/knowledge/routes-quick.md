@@ -719,6 +719,8 @@
 | check-doc-drift 的 ARCH_DOCS 若指向已删文档 | - | archText 空 → unregistered 虚报全部模块 |
 | 架构树引用的构建产物（dist/*.wasm、*.exe）在干净检出里不存在——未豁免 git 忽略项即 CI 恒红 | - | - |
 | 有未治新债时误用 --update-baseline 会把债冻结进账本 | - | - |
+| deadcode 账本里大量条目不是债是噪声：knip 的 （Playwright 页面内运行时 URL import，工具结构上解析不了）与工具链 bin（wails3/jscpd 经 spawnSync 调用）是误报，jscpd 测试↔测试克隆多为有意（拆一个测试文件即"生成债"）——出口过滤在 `frontend/knip.json`（ignoreIssues/Binaries/Dependencies）+ 主脚本 jscpd `--ignore`；任何过滤 glob 改动**必实测非 no-op**（对齐"绝对 glob + tmpdir cwd 扫 0 文件静默失效"前科，见主脚本注释） | `unresolved` | - |
+| knip v5+  是嵌套数组对 `[[{name},{name}]]`，解析器取标量 `.name` 会产空名残渣键（不可读/不可归属/永无法销账）；键派生唯一真身 `scripts/_lib/deadcode-keys.ts`，契约 `tests/test_deadcode_keys.ts` 钉死空名回归 | `duplicates` | - |
 | 手写 adv-filter 弹窗 DOM | - | 与全局弹窗样式 / 焦点陷阱不一致；必须复用 modal.ts 的 registerDlg |
 | adv-filter 输入不校验就提交 | - | min > max 传后端报错；必须在 validate() 拦截并在 |
 | 重复打开 batch-rename 不 close | - | 上一个 Promise 悬挂、调用方 await 卡死；必须先 close 结算 |

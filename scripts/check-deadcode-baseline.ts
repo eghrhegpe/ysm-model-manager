@@ -39,6 +39,7 @@ import {
   resolveResponsibleFiles,
   splitNewFindings,
 } from "./_lib/deadcode-attrib.ts";
+import { jscpdCloneKeys, knipIssueKeys } from "./_lib/deadcode-keys.ts";
 import { ROOT, toPosix } from "./_lib/scan-files.ts";
 import { checkStale } from "./_lib/stale-baseline.ts";
 import { resolveToolBin } from "./_lib/tool-bin.ts";
@@ -95,53 +96,17 @@ function run(name: string, args: string[], opts: { allowExit1?: boolean; cwd?: s
   return r.stdout;
 }
 
-// ── knip 输出解析（兼容 v3/v4/v5 格式）─────────────────
-// v5 实际格式：issues: [{ file, exports: [{name,line,col}], files: [{name}],
-//                        types: [...], unlisted: [...], ... }]
-// 每项按类型挂数组；files 数组 = 整个文件未使用；其余数组 = 该类型未使用项。
+// ── knip / jscpd 输出解析（2026-10-08 下沉 `_lib/deadcode-keys.ts` 单一事实源）──
+// knip v5+ 的 `duplicates` 是嵌套数组对 [[{name},{name}]]，旧内联 `.name || ""` 取标量
+// → 基线存出 `file|duplicates|` 空名残渣：不可读、不可归属、永远无法销账。
+// jscpd 的 Windows 反斜杠归一化（toPosix）与文件对去行号同在此模块，键形态唯一决定于它。
+// 本文件只保留「JSON 反序列化 + 解析失败 flag」两层，键派生交 _lib。
 
-const KNIP_TYPES = [
-  "exports",
-  "types",
-  "enumMembers",
-  "unlisted",
-  "dependencies",
-  "devDependencies",
-  "binaries",
-  "namespaceMembers",
-  "duplicates",
-  "catalog",
-  "catalogReferences",
-  "optionalPeerDependencies",
-  "unresolved",
-];
-
-function parseKnip(stdout: string) {
+/** knip --reporter json 输出 → 基线键列表。解析失败置 knipParseFailed（假零发现，禁写盘）。 */
+function parseKnip(stdout: string): string[] {
   try {
     const data = JSON.parse(stdout);
-    const out: string[] = [];
-    if (Array.isArray(data.issues)) {
-      for (const it of data.issues) {
-        const file = it.file || "?";
-        for (const type of KNIP_TYPES) {
-          for (const item of it[type] || []) {
-            const name = typeof item === "string" ? item : item.name || "";
-            out.push(`${file}|${type}|${name}`);
-          }
-        }
-        for (const f of it.files || []) {
-          out.push(`${file}|file|${typeof f === "string" ? f : f.name || ""}`);
-        }
-      }
-    } else if (data.files && typeof data.files === "object") {
-      // v3/v4：files: { "path": [issues...] }
-      for (const [file, issues] of Object.entries(data.files as Record<string, any>)) {
-        for (const it of issues) {
-          out.push(`${file}|${typeof it === "string" ? it : it.issueType || JSON.stringify(it)}`);
-        }
-      }
-    }
-    return out;
+    return knipIssueKeys(data.issues ?? data.files);
   } catch {
     knipParseFailed = true;
     errors.push("[解析失败] knip 输出非 JSON（可能被插件/告警污染），请手工运行 npx knip 排查");
@@ -149,34 +114,22 @@ function parseKnip(stdout: string) {
   }
 }
 
-// ── jscpd 输出解析 ────────────────────────────────────
-// jscpd 将 JSON 报告写入 cwd 下 report/jscpd-report.json（--output 对 json
-// reporter 不生效），克隆数据在 duplicates 数组。
-
 // 竞态修复（2026-09-13，门禁锐评 P0）：jscpd 报告固定写「cwd 下 report/」，此前
 // cwd=frontend → 并行会话同跑门禁时两进程读/删同一个 frontend/report/jscpd-report.json，
-// 表现为「同提交第一次红、第二次绿」的瞬态 FAIL——与「判定可复现」直接冲突。
-// 现改为每进程独立临时工作目录（mkdtemp，路径含随机后缀天然互斥）：报告落在
-// 私有目录内，读完后整目录清理；扫描 pattern 用绝对路径指回 frontend/src，语义不变。
+// 表现为「同提交第一次红、第二次绿」的瞬态 FAIL。现改为每进程独立临时工作目录
+// （mkdtemp，随机后缀天然互斥），报告落私有目录内，读完整目录清理。
 let jscpdWork: string | null = null;
 
-function jscpdReportPath() {
+function jscpdReportPath(): string {
   if (!jscpdWork) throw new Error("jscpd 工作目录未初始化");
   return path.join(jscpdWork, "report", "jscpd-report.json");
 }
 
-function parseJscpd() {
+/** jscpd 私有目录报告 → 基线键列表（文件对去行号，见 _lib/deadcode-keys）。 */
+function parseJscpd(): string[] {
   try {
     const data = JSON.parse(fs.readFileSync(jscpdReportPath(), "utf-8"));
-    const clones = data.duplicates || [];
-    return clones.map((c: any) => {
-      // jscpd 在 Windows 输出反斜杠路径（如 views\a.ts），基线为正斜杠——
-      // 统一 toPosix 归一化，否则跨平台比对全部误判「新增」（code_review P3）
-      const f1 = toPosix(c.firstFile?.name || "?");
-      const f2 = toPosix(c.secondFile?.name || "?");
-      // key 用文件对级（去行号）：克隆位置随代码微移漂移时，不产生新 key 误报新增
-      return `${f1}#${f2}`;
-    });
+    return jscpdCloneKeys(data.duplicates);
   } catch {
     jscpdParseFailed = true;
     errors.push("[解析失败] jscpd 报告读取异常（私有临时目录 report/jscpd-report.json）");
@@ -216,6 +169,13 @@ function main() {
   // 形态下 jscpd 扫 0 文件（globby 相对 cwd 解析，跨目录绝对 glob 不生效）→ jscpd 静默
   // no-op、重复代码检查恒零发现。修正：用位置参数传绝对扫描根（jscpd 官方入口，支持
   // 绝对路径），--pattern 只管扩展名过滤；报告落 tmpdir/report/，仍与并发进程隔离。
+  //
+  // --ignore "**/*.test.ts"（2026-10-08 技术债审计）：测试重复不计入生产债账。
+  // 实证依据：jscpd 120 条里仅 21 条触及生产代码，其余 99 条是测试参与（57 测试自克隆 +
+  // 40 测试↔测试 + 2 混合）——测试克隆多为有意（fixture 直白优于抽象），且「拆分一个
+  // 测试文件」即生成一条"债"（实证 render-host.raf-contract#session-restart）。排除后
+  // 实测 570 文件仍全扫、21 对与基线生产对 100% 吻合，非 no-op（对齐上方 glob 陷阱，用
+  // 单 glob 而非 brace `{test,spec}`——后者经实测在本 cwd 形态下不生效）。
   try {
     jscpdWork = fs.mkdtempSync(path.join(os.tmpdir(), "jscpd-gate-"));
     jscpdOut = run(
@@ -224,6 +184,8 @@ function main() {
         toPosix(path.join(FRONTEND, "src")),
         "--pattern",
         "**/*.{js,ts}",
+        "--ignore",
+        "**/*.test.ts",
         "--min-lines",
         "10",
         "--min-tokens",

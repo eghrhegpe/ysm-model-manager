@@ -1,5 +1,11 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "entry": ["index.html"],
-  "project": ["src/**/*.{js,ts}"]
+  "project": ["src/**/*.{js,ts}"],
+  "ignoreIssues": {
+    "e2e/**": ["unresolved"],
+    "e2e-web/**": ["unresolved"]
+  },
+  "ignoreBinaries": ["wails3"],
+  "ignoreDependencies": ["@biomejs/biome", "ts-morph", "jscpd"]
 }

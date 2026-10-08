@@ -329,7 +329,11 @@ export function htmlLiteralHits(text: string): Array<{ line: number; snippet: st
 /* ---------- R9 内核（模块级导出，供契约测试直测「非空转」，ADR-270-d1）----------
  * preview-3d 内部分层方向闸：底层子目录（infra/state 基建与解码基座）禁止运行时
  * 伸手读「装配层」（adapters 组合根装配产物宿主 / caps 能力装配层 / menu 声明层）。
- * 射程刻意收窄：不拦 mesh↔model / screenshot→caps 等邻层既成双向债（扩围另立 R9.x）。
+ * 射程刻意收窄：只认 lower/upper 白名单内的归属，邻层同级对（mesh→model、screenshot→caps）
+ * 不在射程（扩围另立 R9.x）。
+ * 2026-10-08 实证订正：原注记写作「mesh↔model / screenshot→caps 既成双向债」，与源码树不符——
+ *   caps→screenshot 运行时 0 边、mesh→model 仅 `import type`（编译期擦除，属 type-only 边），
+ *   二者都不是双向运行时债。注记为决策时快照，判现状以源码树为准（AGENTS.md 元规则）。
  * 纯函数导出 + 当前仓库 0 回归断言双保险——rank 表被误清空时非空转用例即红。 */
 const P3D_PREFIX = "preview-3d/";
 export const P3D_LOWER_SUBS = new Set(["state", "infra", "decoder", "shader-patches"]);

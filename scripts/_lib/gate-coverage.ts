@@ -39,6 +39,7 @@ export const DOMAIN_BLOCK_CHECKS = [
   "check-mock-paths.ts",
   "check-menu-health.ts",
   "check-menu-test-layout.ts",
+  "check-singleton-hygiene.ts",
   "check-ctx-menu-i18n.ts",
   "check-binding-usage.ts",
   "check-redlines.ts",

@@ -523,8 +523,10 @@
 | "为什么某包报 0% 覆盖率" | [覆盖率门禁语句加权口径](./go-coverage-gate.md) | - | - |
 | "知道 check-complexity 报错会不会阻断推送" | [三档阈值扫描器（复杂度/参数/类型安全）](./check-threshold-scanners.md) | "认知复杂度的度量单位是**具名函数**，不是语法上的函数字面量" | - |
 | "Go 覆盖率门禁怎么算包覆盖率" | [覆盖率门禁语句加权口径](./go-coverage-gate.md) | 包覆盖率口径 = aggregateByPackage 语句加权（covered 语句/总语句）——「文件内函数百分比最小值」口径会让单个 0% 函数拖垮整包 | - |
+| 测试串味怀疑常驻态累积 | [3D 预览模块级单例卫生](./singleton-hygiene.md) | - | - |
 | 查看 _lib 模块被多少脚本引用 | [_lib 共享层采用率闸门](./scripts-lib-adoption.md) | - | - |
 | 查看重复对的详细位置（行号 + 片段） | [Go 端 jscpd 重复检测脚本](./scripts-jscpd-go.md) | - | - |
+| 单例卫生门禁红了怎么修 | [3D 预览模块级单例卫生](./singleton-hygiene.md) | 复位出口 = __reset* / reset* / clear* / 可传 null 的 set*；豁免 = 行内 singleton-allow 注（非空理由） | - |
 | 冻结当前 Go 重复债务到 baseline（治理后收紧） | [Go 端 jscpd 重复检测脚本](./scripts-jscpd-go.md) | - | - |
 | 发版冒烟、CI 预演、lockfile 同步、跨平台标签 | [发版冒烟组——CI 同口径预演（ADR-318）](./experience.md) | contract-tagsensitive 清单为人工维护——新加 tag 敏感契约测试须手动入组（ADR-318 已知遗留） | - |
 | 防吞并发会话未提交漂移 | [提交前钩子 pre-commit](./pre-commit-hook.md) | - | - |
@@ -533,6 +535,7 @@
 | 检查某 _lib 模块是否被绕开手搓 | [_lib 共享层采用率闸门](./scripts-lib-adoption.md) | [] | - |
 | 检查哪些脚本未登记在 README | [README 登记处对账 check-readme-index.ts](./scripts-readme-index.md) | 新增/改名/删除 scripts/ 下的脚本必须同步更新 scripts/README.md | - |
 | 门禁检查项有哪些 | [推送前门禁 pre-push-gate](./pre-push-gate.md) | 推送门禁失败先看 FAIL 块，禁止无脑 git push --no-verify 绕过 | - |
+| 模块级 let 是缺陷还是刻意 | [3D 预览模块级单例卫生](./singleton-hygiene.md) | - | - |
 | 排查「闸红了为什么还能提交」 | [门禁委托链全景图（四入口横向拼图）](./gate-chain-map.md) | - | - |
 | 盘点当前技术债并刷新 7 本账本 | [技术债账本刷新与盘点方法论](./debt_ledger_refresh.md) | 未提交改动在多 AI 并行期会被 worktree reset 冲掉——改账本 / 文档后必须立即 --files 提交锁定 | - |
 | 判定「新增重复对」是真实新增还是文件搬迁/拆分 | [Go 端 jscpd 重复检测脚本](./scripts-jscpd-go.md) | - | - |
@@ -557,6 +560,7 @@
 | go/cli 与 internal/app 的依赖方向 | [go/cli 目录结构（43 文件分组与命名）](./go-cli-layout.md) | - | - |
 | lint 报了多少存量债 | [golangci-lint（Go 静态分析真空面）](./golangci-lint.md) | 存量债不惩罚：pre-push-gate 跑 --new-from-rev 只拦本次引入（全量必红），未安装/无基线自动降级跳过 | - |
 | mock 路径守卫怎么豁免 | [mock 路径守卫 check-mock-paths](./mock-path-guard.md) | - | - |
+| preview-3d 模块级单例要不要配复位出口 | [3D 预览模块级单例卫生](./singleton-hygiene.md) | 新增顶层 let 无复位出口即红；基线只减不增 | - |
 | push 被 golangci-lint 阻断怎么办 | [golangci-lint（Go 静态分析真空面）](./golangci-lint.md) | push 被阻断先看 FAIL 块定位 linter 与文件；语义误报用 //nolint 注明 linter 名与理由，禁止 git push --no-verify 绕过 | - |
 | vi.mock 改了路径结果静默不起作用 | [mock 路径守卫 check-mock-paths](./mock-path-guard.md) | vi.mock("<内部spec>") 指向不存在的模块路径时 vitest 静默不命中——mock 路径写错就悄悄失效，测试照常通过 | - |
 
@@ -1058,6 +1062,12 @@
 | adv-filter 条件未走三路交集（关键词 + 数值 + 标签）→ 结果不精确；必须经 advFilterIntersectPaths | - | - |
 | 手写按钮 CSS | - | 与 btn-base 不一致、主题切换失效；必须经 btnBaseCSS |
 | 颜色 / 间距 / 字号不消费 CSS 变量 | - | 主题切换后样式残留；必须用 var(--*) 变量 |
+| 见模块级 let 即判——先查复位出口与紧邻注释：litematic-adapter 的 SliceInstance 是 ADR-132 单调唯一 key 生成器，**刻意不该复位**（复位会让并存实例编号撞车），已带 singleton-allow 注 | `单例缺陷` | - |
+| 以为本闸覆盖  这类容器——不测；本闸只测可重绑定态（顶层 let），有界缓存（FIFO/上限淘汰）是另一套语义，另议 | `const _cache = new Map()` | - |
+| 给 setter 塞个 boolean 形参就以为算复位出口——判据是（含经本地 `type X = … \| null` 别名间接含 null）；`setEnabled(enabled: boolean)` 不算 | `可传 null` | - |
+| 新增顶层 let 后拿  硬扩基线——只减不增是契约；确属刻意不设出口的，行内写 `// singleton-allow: <理由>`（空理由不豁免） | `--update --force` | - |
+| 把豁免注写远——识别窗口 = 声明行 + 前 3 行，再远不生效 | - | - |
+| 拿本闸当的替代——它只管模块态卫生，不管 import 方向（那归 check-layering R7/R9/R10） | `无 Wails 可测` | - |
 | 零散 grep 每枚 emoji/每个 UI_ICONS 模式各发一次 | - | token 浪费（实测上一会话 28 分钟 / 5.6M tok 都在翻 emoji）：改用一次性脚本 |
 | "`check-design-tokens --kind emoji-icon` 只认，扫不到运行时 toast 载荷 / locale 值前缀 emoji；要全量需用 survey 脚本或 findToastEmojiPrefixViolations / findLocaleEmojiPrefixViolations" | `HTML 标签图标位 + 字面量 emoji` | - |
 | emoji 字符集必须含 U+2190-21FF / U+2300-23FF（含 ⏳/← 等），否则单字形槽整类逃逸 —— survey 脚本已**复用 design-tokens.ts 导出的 GRAPHIC_EMOJI**，不自抄副本（单一事实源，门禁改字符集 survey 自动跟随） | - | - |

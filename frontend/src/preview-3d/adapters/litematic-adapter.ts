@@ -300,6 +300,7 @@ function voxelInLayer(p: number[], ck: number, filter: SliceFilter): boolean {
 export const LITEMATIC_SLICE_SCHEMA_ID = "litematic-slice";
 // 无 sessionId（测试/旧调用直挂 buildLitematicScene）时的退化计数；
 // 生产路径（mount3D）恒带 sessionId → per-scene 稳定 key（对齐 ysm-model-{sid} 范式）
+// singleton-allow: 单调唯一 key 生成器——复位会让并存实例编号撞车（ADR-132 多模型并存防覆盖），刻意不设复位出口
 let SliceInstance = 0;
 
 /** 轴下标 → 轴名（下标即 voxel 数据维度）；显示顺序保持旧 UI（Y 默认在前） */

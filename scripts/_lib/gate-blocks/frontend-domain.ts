@@ -1,6 +1,7 @@
 /**
  * 前端域执行块（ADR-206 阶段 6）：check-layering → check-path-hygiene →
- * check-mock-paths → check-menu-health → check-ctx-menu-i18n → check-binding-usage →
+ * check-mock-paths → check-menu-health → check-menu-test-layout → check-singleton-hygiene →
+ * check-ctx-menu-i18n → check-binding-usage → css-token-check →
  * npm 三件套（vite build ∥ tsc --noEmit 并行，vitest 串行在后）。
  *
  * 自守卫：plan.frontend 为 false 时 no-op。调度侧经 Promise.all 与 Go 域并行（ADR-088）。
@@ -104,6 +105,27 @@ export async function runFrontendDomain(ctx: GateCtx): Promise<void> {
           ? `菜单布局债 ${mlz.total} 处在基线内（${mlz.files} 文件）`
           : `新增布局快照断言 ${mlz.regressions} 处超基线（ADR-311 三分法：归属用集合断言、定位用 findNodeById）`,
     tail: mlOk ? "" : ml.out.trim().split("\n").slice(-8).join("\n"),
+    blockPolicy: "debt",
+  });
+
+  // 2026-10-08（3D 预览环境耦合度锐评 P2-b）：preview-3d 模块级可变单例「复位出口」闸。
+  // 新增顶层 let 必须给复位出口（__reset* / reset* / clear* / 可传 null 的 set* 注入 setter）
+  // 或行内 `// singleton-allow: <理由>`，否则入基线（只减不增）。存量 7 处在基线内。
+  // 债务型（同 check-menu-test-layout）：超线只 WARN 不 blocked——渐进执法，随触碰收敛；
+  // 闸自身 exit 1，供人/AI 显式看到回归信号。
+  const tSg = Date.now();
+  const sg = await ctx.shAsync("node scripts/check-singleton-hygiene.ts --json");
+  const { ok: sgOk, summary: sgz } = requireSummaryOk(sg.out, sg.rc);
+  ctx.record("node scripts/check-singleton-hygiene.ts --json", sgOk, {
+    time: Date.now() - tSg,
+    raw: sg.out,
+    note:
+      sgz === null
+        ? "输出解析失败（scripts/check-singleton-hygiene.ts 缺失？）"
+        : sgOk
+          ? `单例卫生合规（存量 ${sgz.total} 处在基线内 / 扫 ${sgz.scannedFiles} 文件）`
+          : `新增未受管模块级 let ${sgz.regressions} 处（需复位出口或行内 singleton-allow 注）`,
+    tail: sgOk ? "" : sg.out.trim().split("\n").slice(-8).join("\n"),
     blockPolicy: "debt",
   });
 

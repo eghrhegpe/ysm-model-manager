@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 194 张知识卡
+> 总计: 195 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -246,7 +246,7 @@
 - **workspace-exe-write-denied**（仓内二进制写用户目录被静默拒绝（代理沙箱按镜像位置拦截））：2026-09-27 排查「wails3 dev 下所有临时文件创建失败（Access is denied），但浏览功能全部正常」：实锤为 **AI 代理沙箱按 exe 镜像位置拦截**——可执行文件位于代理工作区（C:\Users\...…
 - **ysm-wasi**（WASI 解码器（wazero 内存直解，node 桥已退役））：2026-09-27 最小验证完成：**把 YSMParser 重编成 emscripten standalone（非真 WASI 目标）+ wazero 纯 Go 运行时内存直解，node 子进程桥可整条退役**。12 个真实 .ysm（…
 
-## rendering（20 张）
+## rendering（21 张）
 
 *3D 渲染与预览核心（preview-core、model2d/3d、perception、render-federation）*
 
@@ -269,6 +269,7 @@
 | 🏗 preview-paths | 预览状态路径契约 preview-paths | architecture | — | 预览状态路径, KNOWN_PATHS 扩展, PreviewStatePath 类型, 状态层快照契约 |
 | 🏗 render-federation | 联邦渲染能力 (Render Federation) | architecture | gpu-bound | 联邦渲染, shared renderer, rAF 复用, 多 3D 场景 |
 | 🏗 scene-capability-registry | 场景能力注册表 scene-capability-registry | architecture | gpu-bound | 场景能力 / cap / registry / SceneCapability, 3D 菜单控件声明式渲染（getMenuControls）, 新增 3D 能力（雾/阴影/反射/环境/灯光/后处理）, 3D 会话生命周期（createAll / loadAll / applyModelPreset / saveAll / dispose）, 「光」指代消歧（light 是光源，fog/shadow/reflector 不是） |
+| 🍃 singleton-hygiene | 3D 预览模块级单例卫生 | leaf | — | 给 preview-3d 模块加模块级缓存/旗标/单例（顶层 let）前，想知道要不要配复位出口, check-singleton-hygiene 门禁红了——新顶层 let 未受复位出口管理, 测试串味/flaky 排查：怀疑某模块常驻态跨用例累积, 审核看到模块级 let 想判「单例缺陷」——先按本卡判是否刻意为之, 想给某模块加豁免注 `// singleton-allow:` 但不确定理由怎么写 |
 | 🍃 vmd-vrm-retarget | VMD→VRM 动作重定向 vmd-retarget | leaf | — | 要把 MMD 的 .vmd 动作播到 VRM 模型上（或改对应的发现/加载逻辑）, 要增删骨骼/表情映射（MMD 骨名/morph 名 → VRM humanoid 骨 / expression preset）, 排查「VMD 动作在 VRM 上腿部不动 / 轨道为空 / 动作卡点顿挫」, 排查「VMD 带表情帧但 VRM 脸不动（表情通道）」 |
 | 🏗 volumetric-cone | 体积光锥 VolumetricCone（真锥体网格 + Fresnel） | architecture | — | 体积光, 光锥, 聚光灯可见光柱, volumetric / cone, 边缘辉光 / fresnel, 截图光柱缺失或与预览不一致 |
 | 🍃 water | 水面能力 WaterCapability（Gerstner 波浪 + GPU 微细节法线） | leaf | — | 改水面波浪 / 颜色 / 透明度 / 水位 / 尺寸 / 池体参数, 找不到水面的 normalMap, 拖水面尺寸滑块卡顿 / 水面几何重建, 改滑杆范围 / 参数值域（range / uiRange）, 新增水体形态（海洋 / 喷泉 / 大水面）, 改水面模型倒影 / 镜像 RT / fresnel 混合, 复核波高 / 泡沫 / 频谱是否成立（数值探针 probe-water-wave） |
@@ -288,6 +289,7 @@
 - **preview-env-state**（3D 预览统一状态层 envState（ADR-196））：全局可变单例 `envState` 收口全部 10 个 SceneCapability 的场景参数（sky/ground/water/environment/fog/shadow/reflector/renderMode/postproce…
 - **preview-menu**（3D 预览声明式菜单 preview-menu）：3D 预览底部根菜单的声明式菜单系统（ADR-076 v3）。对齐 MikuMikuAR 范式：底部根按钮 → `createSlideMenu` 多层导航。菜单即数据——`PreviewMenuNode` 树 + `visibleWhen…
 - **preview-paths**（预览状态路径契约 preview-paths）：预览状态层的路径契约叶子（ADR-168 二期下沉产物）。零依赖叶子：`KNOWN_PATHS`（值）+ `PreviewStatePath` + `PreviewSnapshot`（类型）。自 `preview-state.ts` 下沉—…
+- **singleton-hygiene**（3D 预览模块级单例卫生）：`scripts/check-singleton-hygiene.ts` 是 **preview-3d 模块级可变单例的「复位出口」卫生闸**
 - **vmd-vrm-retarget**（VMD→VRM 动作重定向 vmd-retarget）：VRM 生态长期缺动作：MMD 圈产 `.vmd`、动捕产 FBX，几乎无人专门产 `.vrma`。本卡对应的模块把 **VMD 身体 FK 重定向到 VRM humanoid 归一化骨骼**，让 VRM 预览直接吃 MMD 动作（ADR-…
 - **volumetric-cone**（体积光锥 VolumetricCone（真锥体网格 + Fresnel））：聚光灯可见光柱的实现单文件（ADR-177 从 `LightCapability` 拆出的自包含单元：shader + 几何 + 材质 + 挂载状态机）。ADR-266（2026-09-18）把它从「两片交叉 `PlaneGeometry`…
 - **water**（水面能力 WaterCapability（Gerstner 波浪 + GPU 微细节法线））：水面是 env 面板一等公民（与 sky / ground 平级，ADR-196 → ADR-268 归属基础卡末位），分轴布局：

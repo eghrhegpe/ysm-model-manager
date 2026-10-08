@@ -140,6 +140,7 @@ multiModelSelectNode(opts: {
 - 状态真源 = 调用方闭包（per-scene），不落全局状态层、不落盘
 - 切换语义 = switchTo 重建（复用外壳），不是同台追加（同台是 ADR-093 范围）
 - **切换闭包跨重建存活（审核修复回归）**：select 的 `onSelect` → `ctx.switchTo`（延迟闭包经会话 handle 解析），switch 重建后依然可切——`switch-preview.test.ts` 覆盖「连续两次切换」；原语 `get`/`set` 用预计算 id Set 判存在（O(1)，不做全量线性扫）
+- **`SliceInstance` 是刻意不复位的单调 key 生成器**（`litematic-adapter.ts`；无 sessionId 的测试/旧调用退化实例号——复位会让并存实例编号撞车，见 ADR-132 多模型防覆盖）——已带 `// singleton-allow:` 行内注，`check-singleton-hygiene` 闸放行；卡见 `singleton-hygiene.md`
 
 ## 相关
 

@@ -1,0 +1,25 @@
+{
+  "_comment": "preview-3d 模块级可变单例（顶层 let）未受复位出口管理的债务基线（key=文件，值=规则→命中数）。仅允许减少，不允许增加。更新: node scripts/check-singleton-hygiene.ts --update（新增需 --force）",
+  "note": "（--force 覆盖写入）",
+  "generatedAt": "2026-10-08",
+  "counts": {
+    "frontend/src/preview-3d/adapters/mmd/mmd-texture-decoder.ts": {
+      "unmanaged-let": 1
+    },
+    "frontend/src/preview-3d/decoder/mmd-ktx2-basis.ts": {
+      "unmanaged-let": 1
+    },
+    "frontend/src/preview-3d/decoder/model-cache.ts": {
+      "unmanaged-let": 1
+    },
+    "frontend/src/preview-3d/infra/render-budget.ts": {
+      "unmanaged-let": 1
+    },
+    "frontend/src/preview-3d/materials/mc-tints.ts": {
+      "unmanaged-let": 2
+    },
+    "frontend/src/preview-3d/menu/shell/fab.ts": {
+      "unmanaged-let": 1
+    }
+  }
+}

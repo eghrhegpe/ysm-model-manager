@@ -87,6 +87,9 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   // ADR-311 菜单测试布局快照闸（check-menu-test-layout）——扫描域为菜单区测试文件，
   // 结论建在前端菜单测试上（frontend 域）；扫描核在 scripts 工具自身（tests 域）
   "test_check_menu_test_layout.ts": ["frontend", "tests"],
+  // 2026-10-08 模块级单例卫生闸（check-singleton-hygiene）——扫描域为 frontend/src/preview-3d
+  // 生产文件的顶层 let，结论建在前端 3D 域（frontend）；扫描核在 scripts 工具自身（tests 域）
+  "test_check_singleton_hygiene.ts": ["frontend", "tests"],
   "test_e2e_location_contract.ts": ["frontend"],
   // e2e 浏览器探测（frontend/e2e/browser-path.ts）纯函数核——探测逻辑变更即触发
   "test_e2e_browser_path.ts": ["frontend"],
@@ -336,6 +339,12 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
     "scripts/check-menu-test-layout.ts",
     "docs/.menu-test-layout-baseline.json",
     "tests/test_check_menu_test_layout.ts",
+  ],
+  // preview-3d 模块级单例卫生闸：扫生产文件顶层 let + 基线对账（只减不增）
+  "test_check_singleton_hygiene.ts": [
+    "scripts/check-singleton-hygiene.ts",
+    "docs/.singleton-hygiene-baseline.json",
+    "tests/test_check_singleton_hygiene.ts",
   ],
   // 裸标签规则锁死：判定口径来自 VitePress 真实 markdown-it 逐例实测，改脚本即须复验
   "test_check_doc_markup.ts": ["scripts/check-doc-markup.ts"],

@@ -2242,6 +2242,10 @@ export const autoSidebar = [
             "link": "/knowledge/scene-capability-registry"
           },
           {
+            "text": "3D 预览模块级单例卫生",
+            "link": "/knowledge/singleton-hygiene"
+          },
+          {
             "text": "VMD→VRM 动作重定向 vmd-retarget",
             "link": "/knowledge/vmd-vrm-retarget"
           },

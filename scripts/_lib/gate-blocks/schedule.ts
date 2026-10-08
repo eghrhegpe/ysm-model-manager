@@ -19,6 +19,22 @@ import type { GateCtx } from "../gate-ctx.ts";
 import { resolveToolBin } from "../tool-bin.ts";
 import { runScopedDocDrift, runTools } from "./static-tools.ts";
 
+/**
+ * CI（test.yml）内已有**独立步骤**承担的静态工具——`--static` 清单须剔除这些项。
+ *
+ * 存在理由（2026-10-08 锐评）：同一 job 内同一工具跑两遍 = 双倍机时 + 两套判定上下文。
+ * 实测 `check-deadcode-baseline` 被跑两遍时，第二遍因拿不到归属 base（CI 跑在 push
+ * 之后、暂存区干净）退严格模式，把一切新增按阻断，与同 job 刚判过的独立步骤矛盾（假红）。
+ *
+ * 口径纪律：
+ *   - **只剔 CI 档**（`--static`）。`--all` / `--docs` / push 模式清单不变——本地没有
+ *     test.yml 的独立步骤，剔了就是真覆盖损失（红线突破时由它兜底，见 tech-debt-ledger R1）。
+ *   - 剔除项**不是**「CI 不查」，而是「CI 换个地方查，且那一处才带归属基线」。
+ *   - 新增本表条目须确认：test.yml 中确有该工具的独立步骤（否则是覆盖损失）。
+ *     护栏 tests/test_gate_static_tools.ts 断言本表 ⊆ test.yml 实际独立步骤。
+ */
+export const CI_INDEPENDENT_TOOLS: readonly string[] = ["check-deadcode-baseline.ts"];
+
 /** 契约测试（按域裁剪 #2：变更域 → 只跑相关契约测试）。
  * 规则（与 doctor 共用 _lib/contract-tests.ts 的 selectContractTests）：
  *   --all 全量模式 → 全量（发版前体检，不可裁剪）
@@ -78,9 +94,18 @@ export function runStaticToolsDispatch(
     // （其 args 更严：event-graph --strict 覆盖 --check、check-biome --strict 等）。
     // 三档扫描器（complexity / params / type-safety）与 --all 同口径排除：它们需
     // --files 上下文，全库跑 = 301 条 debt 刷屏 + check-params 59.4s 墙钟。
+    //
+    // ⚠️ CI 已独立承担项的例外（2026-10-08 锐评去重）：deadcode 在 test.yml 的
+    // frontend job 内有独立步骤，而本清单同款工具会再跑一遍——① 白烧一次
+    // knip+jscpd 全扫（实测本地 3.4s），② 第二遍拿不到 step/job 级 env 之外的
+    // 归属上下文（CI 跑在 push 之后、暂存区干净）⇒ 退严格模式把一切新增按阻断，
+    // 与刚判过的独立步骤自相矛盾（假红）。故 CI 档剔除此项，唯一执行点归
+    // test.yml 的独立步骤（它按 ADR-244 显式带 changed-base）。
+    // ⚠️ 只剔 CI 档：`--all` 与 push 模式仍照跑（本地无 CI 独立步骤，覆盖不损）。
     const merged = new Map<string, GateTool>();
     for (const t of [...ALL_STATIC_TOOLS, ...DOC_EXTRA_SCRIPTS]) merged.set(t.tool, t);
     for (const t of FRONTEND_STATIC_TOOLS) if (!t.scopedFiles) merged.set(t.tool, t);
+    for (const dup of CI_INDEPENDENT_TOOLS) merged.delete(dup);
     runTools(ctx, [...merged.values()]);
   }
   if (!opts.allMode && !opts.docsMode && !opts.staticMode) {

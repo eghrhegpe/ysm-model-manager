@@ -14,7 +14,7 @@
 |------|------|------|------|--------|
 | 🏗 auto-import-split | auto-import 拆分与缺失 import 检测 | architecture | — | 缺失 import, auto-import, 导出符号, tokenize, 词法, 缺失导入, goimports, 大脚本拆分 |
 | 🍃 check-threshold-scanners | 三档阈值扫描器（复杂度/参数/类型安全） | leaf | — | check-complexity, check-params, 认知复杂度, 参数陷阱, 阈值扫描器, gate debt 档, --files 传参 |
-| 🏗 ci-tuning | CI 调优与缓存决策 | architecture | — | 改 GitHub Actions workflow 前, 缓存不生效 / CI 时长反常, 某步为何钉在 Windows 或 Linux, lint 或覆盖率迁移评估 |
+| 🏗 ci-tuning | CI 调优与缓存决策 | architecture | — | 改 GitHub Actions workflow 前, 缓存不生效 / CI 时长反常, 某步为何钉在 Windows 或 Linux, lint 或覆盖率迁移评估, 判断某门禁该删还是该留（去重 vs 覆盖损失）, 想知道 CI 是门禁还是报告（本仓现状：无强制拦截） |
 | 🍃 debt_ledger_refresh | 技术债账本刷新与盘点方法论 | leaf | — | 想知道仓里现在还能发现多少技术债, 刷新 / 收紧 7 本债务账本（redlines / deadcode / design-tokens / i18n-unused / doc-drift / jscpd-go / layering）到今日实数, 多 AI 并行会话期改动被 worktree reset 冲掉 |
 | 🍃 experience | 发版冒烟组——CI 同口径预演（ADR-318） | leaf | — | 发版前预演 CI（tag 推送前）, lockfile 与 package.json 是否同步存疑, Go 文件 import OS 专属包要确认 build 标签, 发版 CI 连红要本地快速定位口径差 |
 | 🏗 extensibility-index | 可拓展点发掘索引（extensibility inventory） | architecture | — | 可拓展点, 扩展入口, 硬编码, 重复实现, 插件化 |

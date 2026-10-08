@@ -7,13 +7,17 @@
  * 运行：node tests/test_gate_schedule.ts
  */
 import assert from "node:assert";
+import fs from "node:fs";
+import path from "node:path";
 import type { Plan } from "../scripts/_lib/domain-classify.ts";
 import {
+  CI_INDEPENDENT_TOOLS,
   runContractTestsBlock,
   runScriptsTypecheck,
   runStaticToolsDispatch,
 } from "../scripts/_lib/gate-blocks/schedule.ts";
 import { createGateCtx, type GateCtx } from "../scripts/_lib/gate-ctx.ts";
+import { ROOT } from "../scripts/_lib/scan-files.ts";
 
 const NO_PLAN: Plan = {
   go: false,
@@ -158,6 +162,55 @@ const STUB_TSC = () => "/stub/node_modules/.bin/tsc";
   );
 }
 
+// ── 8. --static 去重：CI 已独立承担的工具不得出现在清单里（2026-10-08 锐评）──
+// 病根：check-deadcode-baseline 在 test.yml frontend job 有独立步骤，--static 清单又跑一遍，
+// 第二遍拿不到归属 base → 退严格模式把一切新增按阻断，与同 job 刚判过的独立步骤矛盾（假红）。
+// 此处用内存桩断言「剔除真的生效」（而非只断言常量存在）。
+{
+  const ctx = makeCtx({});
+  const calls: string[] = [];
+  ctx.sh = (cmd: string) => {
+    calls.push(cmd);
+    return { rc: 0, out: '{"_summary":{"ok":true,"errors":0}}' };
+  };
+  runStaticToolsDispatch(ctx, { allMode: false, docsMode: false, staticMode: true });
+  const all = calls.join("\n");
+  for (const dup of CI_INDEPENDENT_TOOLS) {
+    assert.ok(!all.includes(dup), `--static 不应再跑 ${dup}（CI 有独立步骤，重复执行 = 假红 + 空烧机时）`);
+  }
+  console.log(`  ✓ --static 去重：${CI_INDEPENDENT_TOOLS.length} 项 CI 独立工具已剔除`);
+}
+
+// ── 9. 去重清单的真实性：每个条目必须在 test.yml 里真有独立步骤（防「剔了就没人查」）──
+// 反向护栏：CI_INDEPENDENT_TOOLS 是「换个地方查」的声明，不是「CI 不查」——
+// 若 test.yml 的独立步骤被删/改名而本表未同步，就是纯覆盖损失（静默失守）。
+{
+  const wf = fs.readFileSync(path.join(ROOT, ".github", "workflows", "test.yml"), "utf8");
+  for (const tool of CI_INDEPENDENT_TOOLS) {
+    assert.ok(
+      wf.includes(`scripts/${tool}`),
+      `CI_INDEPENDENT_TOOLS 登记了 ${tool}，但 test.yml 中找不到其独立步骤调用——` +
+        `要么补回独立步骤，要么把它放回 --static 清单（否则 CI 完全不查这项）`,
+    );
+  }
+  // 去重项必须真的来自静态工具清单（否则登记了一个根本不会被跑的项 = 幻影）
+  const all = makeCtx({});
+  const calls: string[] = [];
+  all.sh = (cmd: string) => {
+    calls.push(cmd);
+    return { rc: 0, out: '{"_summary":{"ok":true,"errors":0}}' };
+  };
+  runStaticToolsDispatch(all, { allMode: true, docsMode: false });
+  const allModeCalls = calls.join("\n");
+  for (const tool of CI_INDEPENDENT_TOOLS) {
+    assert.ok(
+      allModeCalls.includes(tool),
+      `${tool} 应仍在 --all/push 清单里（本地没有 CI 独立步骤，剔了就是真覆盖损失）`,
+    );
+  }
+  console.log("  ✓ 去重口径：CI 档剔除 / --all 与 push 档保留，且每项在 test.yml 有独立步骤");
+}
+
 console.log(
-  "\nOK: gate-blocks/schedule 契约（自守卫 / tsc 三态 rc + 缺失阻断 / 契约测试空域 no-op / --static 清单）",
+  "\nOK: gate-blocks/schedule 契约（自守卫 / tsc 三态 rc + 缺失阻断 / 契约测试空域 no-op / --static 清单 / CI 去重口径）",
 );

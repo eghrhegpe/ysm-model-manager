@@ -7,8 +7,11 @@ status: active
 last_verified: 2026-10-08
 invariant_anchors:
   - .github/workflows/test.yml|GOOS: windows
-  - .github/workflows/test.yml|/var/cache/apt/archives/*.deb
   - .github/workflows/test.yml|needs: [contracts]
+  - .github/workflows/test.yml|YSM_DEADCODE_BASE
+  - .github/workflows/test.yml|./.github/actions/playwright-spine
+  - .github/actions/playwright-spine/action.yml|/var/cache/apt/archives/*.deb
+  - .github/actions/playwright-spine/action.yml|playwright install --with-deps chromium
   - go/executil/executil_test.go|HideWindow
   - frontend/src/workers/coi-sw.ts|location.reload
   - .github/workflows/release.yml|cancel-in-progress: true
@@ -16,11 +19,21 @@ source_files:
   - .github/workflows/test.yml
   - .github/workflows/release.yml
   - .github/workflows/ci.yml
+  - .github/actions/playwright-spine/action.yml
+  - scripts/_lib/gate-blocks/schedule.ts
+auto_fields:
+  symbols_with_lines:
+    - CI_INDEPENDENT_TOOLS
+    - runContractTestsBlock
+    - runScriptsTypecheck
+    - runStaticToolsDispatch
 use_when:
   - 改 GitHub Actions workflow 前
   - 缓存不生效 / CI 时长反常
   - 某步为何钉在 Windows 或 Linux
   - lint 或覆盖率迁移评估
+  - 判断某门禁该删还是该留（去重 vs 覆盖损失）
+  - 想知道 CI 是门禁还是报告（本仓现状：无强制拦截）
 pitfalls:
   - 日期事故注脚写进 YAML ⇒ 文件变考古层，改一处要滚几百行找上下文（复盘一律写本卡）
   - setup-go 默认 cache:true 在 Windows 是负优化（1133MB 单包解压 94s）
@@ -28,6 +41,9 @@ pitfalls:
   - hashFiles 指向 node_modules 内文件时，缓存步必须在 pnpm install 之后，否则 key 冻结成常量
   - 覆盖率/diff-coverage 无法迁 Linux（测试代码含 Windows 专有符号）
   - fetch-depth:0 全量克隆后再 git fetch --depth=1 会把整仓退化成浅克隆，HEAD~1 失明
+  - 归属基线类 env（YSM_DEADCODE_BASE）挂 step 级 ⇒ 同 job 内 --static 第二次执行拿不到，退严格模式假红
+  - 同一 job 内同一工具跑两遍时第二遍上下文更差（CI 跑在 push 之后，暂存区空 ⇒ 无归属可解析）
+  - 「远端防线」措辞不等于仓库真有强制拦截：本仓 main 无 branch protection / ruleset（须 gh api 核）
 quick_groups:
   - 门禁与脚本
 quick_intents:
@@ -174,6 +190,46 @@ Windows Defender 的 I/O 税）。
   （`scripts/_lib/deadcode-attrib.ts`）遇全零 base 时试 `git describe` 找上一可达 tag 作归属基线，取不到
   仍退回本地解析兜底。
 
+### 11. 单一执行点：同一 job 内同一工具不得跑两遍（2026-10-08 锐评）
+
+- **病灶**：`check-deadcode-baseline` 在 `test.yml|frontend` 有独立步骤，而同 job 的
+  `pre-push-gate --static` 清单又含同款工具 ⇒ 一次 CI 跑两遍 knip+jscpd 全扫。真正致命的是
+  **第二遍的判定上下文更差**：`YSM_DEADCODE_BASE` 只挂在那一个 step 的 `env:`，
+  `pre-push-gate` 内部经 `gate-blocks/static-tools.ts` 通用调用再起一次进程，**拿不到它**；
+  而 CI 跑在 push 之后、暂存区干净 ⇒ `resolveResponsibleFiles` 返回 null ⇒ 严格模式 ⇒
+  **一切新增发现项无条件阻断**。实测同一 run 内「死代码基线门禁 success + 静态治理门禁 failure」，
+  两步对同一个发现项给出相反结论（假红）。
+- **修法（双保险，缺一不可）**：
+  ① `YSM_DEADCODE_BASE` 提到 **job 级 `env:`**（step 级挂载只覆盖该 step）；
+  ② `--static` 清单**剔除** `CI_INDEPENDENT_TOOLS`（`gate-blocks/schedule.ts`）声明的 CI 已独立承担项。
+- **口径纪律**：剔除**只针对 CI 档（`--static`）**。`--all` / push 模式仍照跑——本地没有
+  `test.yml` 的独立步骤，剔了就是真覆盖损失（`tech-debt-ledger` R1 实证：CI 静态层曾真抓到过
+  `check-file-lines` 红线突破）。
+- **剔除 ≠ 不查**，是「换个地方查，且那一处才带归属基线」。故护栏
+  `tests/test_gate_schedule.ts` 双向锁定：每项必须在 `test.yml` 中真有独立步骤调用，
+  且必须仍在 `--all`/push 清单中。
+
+### 12. CI 是报告而非门禁（2026-10-08 决策）
+
+- 实证：`branches/main/protection` 返回 **404 not protected**、`rulesets` 为空数组 ⇒ 仓库无任何强制
+  拦截。`git push --no-verify` / `YSM_SKIP_GATE=1` 可零痕迹直推 main。
+- **决策：承认 CI 在本仓是「报告」而非「门禁」**（单人直提 main 是有意工作流）。故优化方向定为
+  **削减重复执行 + 把预算花在真正有价值的档位**，而非加固一道无牙的幻影门禁。
+- 推论（改 workflow 时必须记住）：`test.yml` 里任何标注「远端防线」「唯一防线」的措辞都是**对
+  git 行为的描述，不是对仓库状态的断言**——没有分支保护时它们不成立。新写此类注释前先核
+  `gh api repos/:owner/:repo/branches/main/protection`。
+- 该决策**不豁免**本卡的其余不变量：门禁仍必须自身可信（假红 = 噪声，噪声会让人忽略真红）。
+
+### 13. Playwright 工具链 spine 抽 composite action
+
+- `e2e` 与 `e2e-web` 的 setup 段（pnpm/node/install/浏览器缓存/apt 缓存/chromium 安装）原**逐字重复
+  47 行**，含两段各 5 行的缓存坑注释。现抽 `.github/actions/playwright-spine/action.yml`
+  （与 `release.yml` 的 `release-toolchain` 同范式：GHA 不支持 YAML 锚点，composite 是唯一合规 DRY）。
+- **动机不只是行数**：缓存 key 是**单点**——原先改一次要改两处，改漏一处**不报错**，
+  只让其中一个 job 静默全 miss（§7 那条「key 必须钉 playwright-core 版本」的经验正悬在这个风险上）。
+- 两 job 的差异只剩 `playwright config`（`--config playwright.web.config.ts`）与各自报告上传；
+  类型检查仍只在 `e2e` 跑（双套件同域，不重复）。
+
 ## 不变量（YAML 只留这一层，复盘见上）
 
 1. `setup-go` 一律 `cache: false`（Linux/Windows 皆然）。
@@ -184,6 +240,10 @@ Windows Defender 的 I/O 税）。
 6. 契约 job 不装前端依赖（无 cache:pnpm）。
 7. 每 job 显式 `timeout-minutes`；e2e / e2e-web `needs: contracts`。
 8. 事故复盘写本卡；YAML 注脚只留一行不变量 + 「详见 ci-tuning」。
+9. **同一 job 内同一工具只有一个执行点**：CI 已独立承担的项从 `--static` 清单剔除
+   （`CI_INDEPENDENT_TOOLS`），其归属基线（`YSM_DEADCODE_BASE` 等）挂 **job 级 `env:`**。
+10. CI 的 Playwright 工具链走 `./.github/actions/playwright-spine`（e2e / e2e-web 共用，
+    缓存 key 单点）。
 
 ## 与其他子系统关系
 

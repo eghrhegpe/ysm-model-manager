@@ -1,0 +1,64 @@
+name: Playwright 工具链 spine（e2e / e2e-web 共享）
+description: |
+  pnpm + setup-node + 前端依赖安装 + 浏览器/apt 缓存 + Chromium 安装。
+  test.yml 的 e2e 与 e2e-web 两 job 共用（GHA 不支持 YAML 锚点，composite 是唯一
+  合规 DRY 机制，与 release.yml 的 release-toolchain 同范式）；两 job 的差异只在
+  playwright config（--config playwright.web.config.ts）与各自的报告上传。
+
+  ⚠️ 两处缓存步骤必须位于 pnpm install 之后：key 的 hashFiles 指向 git 不跟踪的
+  node_modules 内 playwright-core/package.json，放 install 之前 hashFiles 恒为空串
+  ⇒ key 冻结、Playwright 升级后缓存永不更新。详见 ci-tuning。
+inputs:
+  node-version:
+    description: Node 大版本（对齐仓库级 vars.NODE_VERSION）
+    required: false
+    default: '22'
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@v4
+      with:
+        version: 10
+    - uses: actions/setup-node@v5
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: pnpm
+        cache-dependency-path: frontend/pnpm-lock.yaml
+
+    - name: 安装前端依赖
+      working-directory: frontend
+      shell: bash
+      run: pnpm install --frozen-lockfile
+
+    # ⚠️ 勿把下面两个缓存步移到 install 之前（key 恒空 ⇒ 缓存冻结成常量）。
+    - name: 缓存 Playwright 浏览器
+      uses: actions/cache@v5.1.0
+      with:
+        path: ~/.cache/ms-playwright
+        # 钉到 playwright-core 版本而非整个 pnpm-lock：浏览器二进制只随 Playwright 版本变，
+        # 前端其他依赖变动不应让浏览器缓存全 miss。restore-keys 提供前缀回退。
+        key: pw-browsers-${{ runner.os }}-${{ hashFiles('frontend/node_modules/playwright-core/package.json') }}
+        restore-keys: |
+          pw-browsers-${{ runner.os }}-
+
+    # apt 缓存两步前置：① 目录 root:root 755 需预置 chmod 才 restore 得进；② lock/partial 是
+    # root 专属，故 path 只收 *.deb 绕开（否则 tar exit 2 存不进去）。详见 ci-tuning。
+    - name: 预置 apt 缓存目录权限（restore 可写）
+      shell: bash
+      run: |
+        sudo mkdir -p /var/cache/apt/archives
+        sudo chmod a+rw /var/cache/apt/archives
+
+    # 保留 --with-deps：CJK 字体是中文 UI 截图渲染必需（命中缓存只留解包）。
+    - name: 缓存 apt 下载包（含 --with-deps 的 CJK 字体 / 系统库）
+      uses: actions/cache@v5.1.0
+      with:
+        path: /var/cache/apt/archives/*.deb
+        key: pw-apt-${{ runner.os }}-${{ hashFiles('frontend/node_modules/playwright-core/package.json') }}
+        restore-keys: |
+          pw-apt-${{ runner.os }}-
+
+    - name: 安装 Playwright Chromium
+      working-directory: frontend
+      shell: bash
+      run: pnpm exec playwright install --with-deps chromium

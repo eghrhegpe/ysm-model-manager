@@ -909,8 +909,16 @@ export class EnvironmentCapability implements SceneCapability {
       this.scene.environment = this.prevEnvironment;
     }
     // background 同理（同槽位无他人竞写，但保持与 environment 同构，防未来多 cap 接入）
-    const ownedBg = this.backgroundSrcTex;
-    if (this.scene.background === null || this.scene.background === ownedBg) {
+    // [锐评 2026-10-08 P1-4] 并入 envOwnsSceneEnvironment 纯函数——`14dd280b1`（标题正是
+    // 「收口所有权判定的第二处散落」）只把 environment 那一行改成纯函数调用，**紧邻的背景槽
+    // 三行原样留着**，commit diff 即证据。现两槽位同一判据，改所有权规则只此一处。
+    // 语义等价性：原判定 `slot === null || slot === ownedBg`，与纯函数的
+    // 「null 恒可还原 + owned 集合含槽位则可还原」逐字等价（ownedBg 为 null 时退化为仅 null 可还原）。
+    if (
+      envOwnsSceneEnvironment(this.scene.background as THREE.Texture | null, [
+        this.backgroundSrcTex,
+      ])
+    ) {
       this.scene.background = this.prevBackground;
     }
     this.disposeEnvironment();

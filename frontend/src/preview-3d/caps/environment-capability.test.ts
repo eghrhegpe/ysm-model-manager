@@ -23,7 +23,7 @@ import { ENV_PRESETS } from "./environment-state.ts";
 import { drawEnvEquirect } from "./env-pixels.ts";
 import { MODEL_DEFAULTS, toModelType } from "@/preview-3d/state/model-defaults.ts";
 // ADR-196：统一状态层
-import { ENV_STATE_SCHEMA, getParamRange } from "@/preview-3d/state/env-state-schema.ts";
+import { ENV_STATE_SCHEMA, getParamRange, getPresetKeys } from "@/preview-3d/state/env-state-schema.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { clearEnvCallbacks } from "@/preview-3d/state/env-dispatcher.ts";
 import { findNodeById, childIds, nodeIds } from "@/preview-3d/menu/menu-test-helpers.ts";
@@ -390,6 +390,44 @@ describe("EnvironmentCapability — buildEnvironment 管线（真实分支）", 
     cap.dispose();
     // 槽位不归本 cap 所有 → 不还原，sky 的贴图保持
     expect(scene.environment).toBe(skyEnv);
+  });
+
+  // [锐评 2026-10-08 P1-4] background 槽的 ownership 守卫——与上面 environment 槽同款，
+  // 但此前**零用例**：背景槽判定是手抄的（`14dd280b1` 只收了 environment 那一行），
+  // 于是「背景槽被他人后写时是否盲还原」从未被验证过。
+  // 本例为那条缺失的判别样本：背景槽归他人 ⇒ 不还原（否则冲掉他人贴图/纯色）。
+  it("[P1-4] dispose ownership 守卫（background 槽）：他人后写的背景不被本 cap 冲掉", () => {
+    const scene = new THREE.Scene();
+    const color = new THREE.Color(0x123456);
+    scene.background = color;
+    const cap = new EnvironmentCapability({ scene, renderer: makeFakeRenderer() });
+    cap.setUseAsBackground(true);
+    cap.apply();
+    const ownedBg = scene.background;
+    expect(ownedBg, "开态背景应挂本 cap 源纹理").not.toBe(color);
+
+    // 模拟「后续其它 cap/用户」在本 cap 之后写入背景槽
+    const foreignBg = new THREE.Texture();
+    scene.background = foreignBg;
+
+    cap.dispose();
+    expect(
+      scene.background,
+      "背景槽已归他人，本 cap 越权还原会冲掉对方内容（与 environment 槽同纪律）",
+    ).toBe(foreignBg);
+  });
+
+  it("[P1-4 对照] background 槽仍归本 cap 时照常还原 prevBackground", () => {
+    const scene = new THREE.Scene();
+    const color = new THREE.Color(0x123456);
+    scene.background = color;
+    const cap = new EnvironmentCapability({ scene, renderer: makeFakeRenderer() });
+    cap.setUseAsBackground(true);
+    cap.apply();
+    expect(scene.background).not.toBe(color);
+
+    cap.dispose();
+    expect(scene.background, "槽位归本 cap → 还原构造前状态").toBe(color);
   });
 
   it("dispose ownership 守卫：槽位仍归本 cap 时正常还原 prevEnvironment", () => {
@@ -864,6 +902,68 @@ describe("EnvironmentCapability — 持久化", () => {
     const cap2 = newCap();
     cap2.loadState();
     expect(envState.envSource).toBe("sky");
+  });
+
+  // [锐评 2026-10-08 P1-5] 存档键轨契约锁：schema environment 键集全部可 save/load round-trip。
+  //
+  // 病根：env 的 saveState **手摘 6 键**（非 `getPresetKeys("environment")` 派生），
+  // loadState 还原表也是**手写双轨清单**。schema 加键而两处任一漏登记 ⇒
+  // **自动持久化、静默不还原**（用户改了下次启动就没了，且零报错）。
+  // 同族先例：water 有 `restoreBySchema(w, getPresetKeys("water"))` + 双向集合锁，
+  // ground 有 `[G-8]` round-trip锁。env 此前一个都没有——而 env 恰是唯一
+  // **存档键名 ≠ schema 键名**的cap（`preset` vs `envPreset`），最需要机器守卫。
+  //
+  // 为何不立刻改名统一键形：改名有跨代迁移债（`preset`/`intensity`/`resolution`/
+  // `useAsBackground` 另有旧档读者——迁移模块与 loadState 旧档分支），收益低于风险。
+  // **先把守卫立起来**，让「加键」这个动作被逼回登记流程；改名是独立的一刀。
+  it("[P1-5] schema environment 键集全部可 save/load round-trip（还原表不得漏登记）", () => {
+    const scene = new THREE.Scene();
+    const cap = new EnvironmentCapability({ scene, renderer: makeFakeRenderer() });
+    // schema 键 → 存档键的映射（env 的兄弟键沿用无前缀方言，故非同形）
+    // + 每键一个「≠ schema 默认」的合法域内偏离值——新键未列入即被点名要求登记。
+    const DEVIATION: Record<string, { archiveKey: string; value: unknown }> = {
+      envEnabled: { archiveKey: "envEnabled", value: false },
+      envPreset: { archiveKey: "preset", value: "night" },
+      envIntensity: { archiveKey: "intensity", value: 2.4 },
+      envResolution: { archiveKey: "resolution", value: 512 },
+      envUseAsBackground: { archiveKey: "useAsBackground", value: true },
+      envSource: { archiveKey: "envSource", value: "sky" },
+    };
+    const schemaKeys = getPresetKeys("environment");
+    const missing = schemaKeys.filter((k) => !(k in DEVIATION));
+    expect(
+      missing,
+      `schema 新增了 environment 键但本测试未登记偏离值（请同步 saveState 摘键 + loadState 还原表）: ${JSON.stringify(missing)}`,
+    ).toEqual([]);
+
+    const patch: Record<string, unknown> = {};
+    for (const k of schemaKeys) {
+      const { value } = DEVIATION[k];
+      // 偏离值必须确实偏离当前值，否则「存活」断言恒真、锁形同虚设
+      expect(
+        envState[k as keyof typeof envState],
+        `environment 键 ${k} 的偏离值与当前值同值（测试自失能）`,
+      ).not.toBe(value);
+      patch[k] = value;
+    }
+    setEnvState(patch as never, { source: "manual", force: true });
+    cap.saveState();
+    const saved = restoreState("environment") as Record<string, unknown>;
+    // 写侧核对：每个 schema 键确实以「登记的存档键名」落盘（防止改名时忘记同步本表）
+    for (const k of schemaKeys) {
+      expect(
+        saved[DEVIATION[k].archiveKey],
+        `schema 键 ${k} 未以存档键 ${DEVIATION[k].archiveKey} 落盘`,
+      ).toBe(DEVIATION[k].value);
+    }
+    resetEnvState();
+    const cap2 = new EnvironmentCapability({ scene, renderer: makeFakeRenderer() });
+    cap2.loadState();
+    for (const k of schemaKeys) {
+      expect(envState[k as keyof typeof envState], `environment 键 ${k} 未被 loadState 还原`).toBe(
+        DEVIATION[k].value,
+      );
+    }
   });
 
   // [ADR-292 D7 / D3] 旧存档（无 envSource 键 + sky IBL 开关）经 normalizeEnvLegacyState 迁移：

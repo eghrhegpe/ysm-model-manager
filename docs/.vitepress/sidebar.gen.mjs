@@ -198,6 +198,10 @@ export const autoSidebar = [
       {
         "text": "v1.15.0 — 解码引擎重构（wazero + Android）+ 依赖大升级 + 无障碍收口",
         "link": "/releases/v1.15.0"
+      },
+      {
+        "text": "v1.16.0 — 修复批次（扫描提速 + 崩溃与乱码根治）+ 扫描引擎换代",
+        "link": "/releases/v1.16.0"
       }
     ]
   },

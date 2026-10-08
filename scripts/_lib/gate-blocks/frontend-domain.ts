@@ -129,6 +129,30 @@ export async function runFrontendDomain(ctx: GateCtx): Promise<void> {
     blockPolicy: "debt",
   });
 
+  // 2026-10-08（3D 预览环境耦合度锐评 G2）：Worker 生命周期闸。
+  // preview-3d 生产文件内出现 `new Worker(` 必须有终止出口（export dispose*/terminate*/
+  // reset*/clear*，或经 createWorkerBridge 工厂，或行内 `// worker-allow: <理由>`），
+  // 否则入基线（只减不增）。实证动因：KTX2 编码池曾裸建且生产侧零回收点（桥有 dispose()
+  // 但无人调，唯一清空路径是 worker 崩溃），而编码是「每个纹理一生一次」的事件。
+  // 闸自带两条假绿防线：扫描域 0 文件 → exit 2；`new Worker(` 总命中 0 → exit 2
+  //（射程窄，目录改名时「零命中」会被误读成「零债」）。
+  // 债务型（同单例卫生闸）：超线只 WARN 不 blocked——渐进执法，闸自身 exit 1 显式可见。
+  const tWl = Date.now();
+  const wl = await ctx.shAsync("node scripts/check-worker-lifecycle.ts --json");
+  const { ok: wlOk, summary: wlz } = requireSummaryOk(wl.out, wl.rc);
+  ctx.record("node scripts/check-worker-lifecycle.ts --json", wlOk, {
+    time: Date.now() - tWl,
+    raw: wl.out,
+    note:
+      wlz === null
+        ? "输出解析失败（scripts/check-worker-lifecycle.ts 缺失？）"
+        : wlOk
+          ? `Worker 生命周期合规（${wlz.workerSites} 处 new Worker / 存量 ${wlz.total} 处在基线内 / 扫 ${wlz.scannedFiles} 文件）`
+          : `新增未受管 Worker ${wlz.regressions} 处（需终止出口 / 工厂 / 行内 worker-allow 注）`,
+    tail: wlOk ? "" : wl.out.trim().split("\n").slice(-8).join("\n"),
+    blockPolicy: "debt",
+  });
+
   // 右键菜单 i18n key 门禁（2026-09-01 新增）：menu-defs.ts / context-menu*-handlers.ts
   // 里所有字面量 t("key")（原文 tr("key")）必须存在于 zh-CN 基准包，否则运行时静默回退。
   // 与 check-menu-health 同口径——漏 i18n 破坏菜单文案契约，硬阻断。

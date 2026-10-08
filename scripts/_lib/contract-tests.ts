@@ -91,6 +91,10 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   // 2026-10-08 模块级单例卫生闸（check-singleton-hygiene）——扫描域为 frontend/src/preview-3d
   // 生产文件的顶层 let，结论建在前端 3D 域（frontend）；扫描核在 scripts 工具自身（tests 域）
   "test_check_singleton_hygiene.ts": ["frontend", "tests"],
+  // 2026-10-08 Worker 生命周期闸（check-worker-lifecycle，锐评 G2）——扫描域为
+  // frontend/src/preview-3d 生产文件的 `new Worker(` 站点，结论建在前端 3D 域（frontend）；
+  // 扫描核与基线语义在 scripts/tests 工具侧（tests 域）
+  "test_check_worker_lifecycle.ts": ["frontend", "tests"],
   "test_e2e_location_contract.ts": ["frontend"],
   // e2e 浏览器探测（frontend/e2e/browser-path.ts）纯函数核——探测逻辑变更即触发
   "test_e2e_browser_path.ts": ["frontend"],

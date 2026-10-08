@@ -1,0 +1,6 @@
+{
+  "_comment": "Worker 生命周期闸基线（docs/.worker-lifecycle-baseline.json）：file→rule→count 计数制。只许减少；新增需 --force。",
+  "generatedAt": "2026-10-08",
+  "note": "（--update 收紧）",
+  "entries": {}
+}

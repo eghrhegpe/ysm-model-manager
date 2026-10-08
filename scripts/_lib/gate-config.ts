@@ -69,13 +69,14 @@ export const ALL_STATIC_TOOLS: GateTool[] = [
   { tool: "check-orphan-exports.ts", blockPolicy: "debt" },
   { tool: "check-deadcode-baseline.ts", blockPolicy: "debt" },
   { tool: "jscpd-go.ts", blockPolicy: "debt" },
-  // 双轨漂移扫描（2026-10-08 第三轮技术债审计接线）：此前全仓零挂载却常年 exit 1
-  // （1 真违规 + 1 误报），呈「不执行 + 永久红」双重静默。误报与定点豁免修毕后转绿再挂，
-  // 先入 debt 档——其信号面与 check-deadcode-baseline/jscpd-go/check-circular 部分重叠，
-  // 用非阻断档把「0 处漂移」变成可观测基线，而非拿它卡全队推送。
-  // 注意：脚本名为 drift-scan.ts（非 check-*），须同步登记 gate-coverage.ts 的手工常量，
-  // 否则结构性地落在「覆盖 x/M」分母之外——这正是它此前隐形的原因。
-  { tool: "drift-scan.ts", blockPolicy: "debt" },
+  // 双轨漂移扫描**刻意不挂 push 路径**（2026-10-08 回退，撤销当日 76651c051 的挂载）：
+  // ① 该清单在 push 模式被 schedule.ts 无条件全跑（36 项串行实测 45.4s），任何新条目都是
+  //    全队每次推送的固定成本；② drift-scan 的信号质量尚未验证——6 条规则在本轮实测只出
+  //    2 处命中，其中 1 处是跨文件会话范式的启发式误报，「0 处漂移」并不等于「无此类债」；
+  // ③ 其扫描面（内联剥后缀/硬编码权限/读取上限/定时器泄漏）与 check-deadcode-baseline·
+  //    jscpd-go·check-circular 部分重叠，边际价值低于固定成本。
+  // 保留「非挂载但可手动执行」：node scripts/drift-scan.ts（误报与定点豁免已于同日修复，
+  // 现 exit 0）。若要接入，先补信号质量实证（真命中/误报比）与耗时预算，再单独拍板。
   { tool: "check-tpl-refs.ts", blockPolicy: "hard" },
   { tool: "check-dynamic-import.ts", blockPolicy: "hard" },
   { tool: "auto-import.ts", args: ["--strict"], blockPolicy: "hard" },

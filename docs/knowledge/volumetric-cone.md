@@ -42,6 +42,7 @@ pitfalls:
   - 平面剪影回归：任何「两片交叉 Plane + discard 抠锥」的写法都会在侧视角双 edge-on 变薄消失、相机穿入时中轴亮缝
   - ACES 旁路回归：自定义 ShaderMaterial 不会自动注入 tonemapping/色彩空间转换，片元必须显式 include 两个 three chunk（tonemapping_fragment + colorspace_fragment），否则加色硬裁并异常喂 bloom
   - 离屏输出设置分叉（ADR-266-d1）：截图侧不镜像预览 renderer 的 toneMapping / toneMappingExposure 时，光柱与模型亮度在两画面之间静默分叉（ACES 曲线差异比几何差异更刺眼；历史只抄了 outputColorSpace，两侧恰好同为 SRGB 才没露馅）
+  - IBL 反射不参与截图（锐评 2026-10-08 P1-1 已知差异）：离屏 Scene **刻意不镜像** `scene.environment`（PMREM 纹理跨 WebGL context 不可共享），PBR 反射 lobe 离屏缺失（ambient 仅经 `screenshot-lights.ts|attenuateAmbientForSky` 近似补偿）——截图比预览略暗属**已声明**的 WYSIWYG 缝，非缺陷；声明 = `export.md` 已知差异条 + `screenshot-render.ts` 离屏 Scene 构造处注释（互为镜像），双向锁 = `screenshot-render.test.ts`「IBL 边界」两例。若「IBL 进截图」立项，须离屏侧按预览现值重建 PMREM（`isIblActive` 门控）并另立 ADR，届时翻转双向锁
   - edgeFade 语义已改：0=均匀壳，1=边缘辉光主导（旧版是「压暗边缘」），中间段观感整体约暗 20%，用 opacity 补偿
   - 重建成本：只有 type/enabled/angle/penumbra 影响几何（`CONE_GEO_CHANGES`）；方位角/仰角走 syncPosition，color/intensity/distance/decay 走 updateUniforms——误加回「任意灯字段变更即 rebuild」会恢复拖滑块抖动
 quick_groups:

@@ -1103,6 +1103,60 @@ describe("WaterCapability — loadState 多分支", () => {
   });
 });
 
+// [锐评 P1-0 2026-10-08] water 恢复来源纪律——第 8 个 cap 锁（fog F-2 / light L-1 /
+// ground F-2 同口径，2026-09-22 立法「恢复一律 auto-model，禁 manual」；water 漏网系
+// helper 化后 restoreBySchema 暗门 + setter 委托路径未随 13c0a13df 横切收口重扫）。
+// 恢复是**程序化动作**：原实现两条路径（① flat 键批量 restoreBySchema ② spec 委托公开 setter）
+// 全打 manual → water 组键 lastWriteSource 冻死，此后同轨 auto-model 写入（模型默认 / 氛围预设）
+// 被 shouldOverwrite 静默拒绝（「切氛围水面不跟改」——13c0a13df L-1 同症状）。
+// 「同轨 auto-model→auto-model 放行、manual→auto-model 拒绝」是唯一可观测判据
+// （_writeSource 模块私有、无导出读口）——本锁用**行为**断言，不探内部表。
+describe("WaterCapability — 恢复路径来源纪律（锐评 P1-0）", () => {
+  beforeEach(() => {
+    resetEnvState();
+    localStorage.removeItem("ysm-scene-cap-water");
+  });
+  afterEach(() => localStorage.removeItem("ysm-scene-cap-water"));
+
+  it("[P1-0] loadState 后 auto-model 仍能写 waterLevel（flat 键批量路径不得冻成 manual）", () => {
+    localStorage.setItem("ysm-scene-cap-water", JSON.stringify({ waterLevel: 0.3 }));
+    const cap = new WaterCapability({ scene: new THREE.Scene() });
+    cap.loadState();
+    expect(envState.waterLevel, "存档值先落地").toBeCloseTo(0.3);
+    setEnvState({ waterLevel: 0.1 }, { source: "auto-model" });
+    expect(envState.waterLevel, "恢复后模型默认值仍须能落地").toBeCloseTo(0.1);
+  });
+
+  it("[P1-0] loadState 后 auto-model 仍能写 waterMode（spec 委托 setter 站点同口径）", () => {
+    // waterMode 是枚举键，批量路径不接（number/boolean 才接），经 spec → this.setWaterMode
+    // 委托落地——与批量路径是两条路，P1-0 必须两条都收口，只改批量留暗门（ground F-2 同款教训）。
+    localStorage.setItem("ysm-scene-cap-water", JSON.stringify({ waterMode: "pool" }));
+    const cap = new WaterCapability({ scene: new THREE.Scene() });
+    cap.loadState();
+    expect(envState.waterMode, "存档值先落地").toBe("pool");
+    setEnvState({ waterMode: "film" }, { source: "auto-model" });
+    expect(envState.waterMode, "恢复后氛围/模型默认仍须能切形态").toBe("film");
+  });
+
+  it("[P1-0] 无版本戳老档水位迁移落地后，auto-model 仍能写 waterLevel（迁移站点同口径）", () => {
+    // 老档 waterLevel=旧默认 0.01 → ADR-319 D1 追溯迁移到现默认（migrateLegacyWaterLevel）——
+    // 迁移同为程序化动作，不得打 manual 冻键。
+    localStorage.setItem("ysm-scene-cap-water", JSON.stringify({ waterLevel: 0.01 }));
+    const cap = new WaterCapability({ scene: new THREE.Scene() });
+    cap.loadState();
+    expect(envState.waterLevel, "迁移落地现默认").toBeCloseTo(0.15);
+    setEnvState({ waterLevel: 0.1 }, { source: "auto-model" });
+    expect(envState.waterLevel, "迁移后模型默认仍须能落地").toBeCloseTo(0.1);
+  });
+
+  it("[P1-0 对照] setter 无参默认仍为 manual：用户手改冻键语义不变（重构未过冲）", () => {
+    const cap = new WaterCapability({ scene: new THREE.Scene() });
+    cap.setLevel(0.2); // 菜单控件路径（无参 = 用户手改）
+    setEnvState({ waterLevel: 0.1 }, { source: "auto-model" });
+    expect(envState.waterLevel, "manual > auto-model：用户值不被预设顶掉").toBeCloseTo(0.2);
+  });
+});
+
 describe("WaterCapability — dispose", () => {
   beforeEach(() => { resetEnvState(); });
 

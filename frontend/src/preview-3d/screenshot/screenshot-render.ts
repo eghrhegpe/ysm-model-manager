@@ -170,6 +170,12 @@ export async function renderMultiAngle(
     }
 
     scene = new THREE.Scene();
+    // [锐评 2026-10-08 P1-1 已知差异声明] 离屏 Scene **刻意不镜像** 预览的 `scene.environment`
+    // （IBL/环境贴图 PMREM 纹理）：环境贴图跨 WebGL context 不可共享，离屏侧无法直接复用预览
+    // 的 PMREM 纹理；PBR 反射 lobe 与 IBL 环境光在截图里缺失，模型会比预览略暗。
+    // ambient 已由 screenshot-lights.ts|attenuateAmbientForSky 近似补偿（见 export.md「IBL 反射
+    // 不参与截图」已知差异条）。若「IBL 进截图」成为产品需求，须在此处按 preview renderer 现值
+    // 重建 PMREM（isIblActive 门控）并移除本声明——本注释与 export.md 条互为镜像，改动需同步。
 
     ysmObject = buildYsmObject(spec, texArr, componentTexMap, 0);
     const { rootGroup } = ysmObject;

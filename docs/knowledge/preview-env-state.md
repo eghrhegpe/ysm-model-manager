@@ -14,9 +14,11 @@ source_files:
   - frontend/src/preview-3d/state/model-defaults.ts
   - frontend/src/preview-3d/state/atmosphere-presets.ts
   - frontend/src/preview-3d/adapters/shared-infra.ts
+  - frontend/src/preview-3d/caps/water-persist.ts
 tests:
   - frontend/src/preview-3d/adapters/shared-infra.test.ts
   - frontend/src/preview-3d/caps/scene-capability-persist.test.ts
+  - frontend/src/preview-3d/caps/water-persist.test.ts
 auto_fields:
   symbols_with_lines:
     - applyModelDefaults
@@ -53,6 +55,8 @@ auto_fields:
     - registerEnvStateMiddleware
     - resetEnvState
     - resetSceneInfra
+    - RESTORE_SOURCE
+    - restoreWaterSchemaKeys
     - resumeEnvCallbacks
     - sceneInfraHost
     - SceneInfraHost
@@ -63,6 +67,8 @@ auto_fields:
     - teardownSharedInfra
     - toModelType
     - withEnvCallbacksSuspended
+    - writeOpts
+    - WriteOpts
     - WriteSource
 perf: gpu-bound
 use_when:
@@ -157,11 +163,11 @@ invariant_anchors:
 - **saveState**（写）：`persistState(capId, { this.enabled(能力级私有) + envState 参数字段 })` —— 从 envState **摘键**，不存全量。
   （2026-09：摘键可**派生化**——water 已改为逆历 `getPresetKeys("water")`，新增参数只进 schema；历史键名由 loadState 双轨吸收）
   （**能力级开关收口后的键形**：fog/water/shadow/reflector 已删私有 `enabled`，`saveState` **只写 schema 键**（含 `{fog,water,shadow,reflector}Enabled`），不再落无前缀 `enabled` 幽灵键；旧存档的 `enabled` 由 `loadState` 回填进对应 schema 键。**sky 亦已收口**（仅两枚开关键前缀化，兄弟键保持无前缀方言零迁移）。仍留旧键形的：ground/environment（见「不变量」末条）。）
-  （**[锐评 2026-10-08 P1-5] environment 键轨契约锁已补**：`saveState` **手摘 6 键**（非 `getPresetKeys("environment")` 派生）+ `loadState` **手写还原表** = 双轨手抄清单，schema 加键而任一处漏登记 ⇒ **自动持久化、静默不还原**（零报错）。env 恰是全仓唯一**存档键名 ≠ schema 键名**的cap（`preset`/`intensity`/`resolution`/`useAsBackground` 无前缀方言 vs `envPreset`/`envIntensity`…），最需要机器守卫，而此前 water 有 `restoreBySchema(w, getPresetKeys("water"))` + 双向集合锁、ground 有 `[G-8]` round-trip 锁，**env 一个都没有**。现补 `environment-capability.test.ts`「[P1-5] schema environment 键集全部可 save/load round-trip」：逐键偏离值 → save → reset → load → 全存活，且**写侧核对存档键名**（防改名时忘同步），缺登记即点名要求「同步 saveState 摘键 + loadState 还原表」。变异实证：往 schema 加一个未登记键 → 测试红并点名该键。**刻意不同时改名统一键形**——改名有跨代迁移债（旧档读者在迁移模块与 loadState 旧档分支），先把守卫立起来逼回登记流程，改名是独立的一刀。）
+  （**[锐评 2026-10-08 P1-5] environment 键轨契约锁已补**：`saveState` **手摘 6 键**（非 `getPresetKeys("environment")` 派生）+ `loadState` **手写还原表** = 双轨手抄清单，schema 加键而任一处漏登记 ⇒ **自动持久化、静默不还原**（零报错）。env 恰是全仓唯一**存档键名 ≠ schema 键名**的cap（`preset`/`intensity`/`resolution`/`useAsBackground` 无前缀方言 vs `envPreset`/`envIntensity`…），最需要机器守卫，而此前 water 有 `water-persist.ts|restoreWaterSchemaKeys(w, getPresetKeys("water"))`（原 `scene-capability.ts|restoreBySchema` 下沉水面叶，锐评 P3-1；来源纪律随下沉收口为 RESTORE_SOURCE，P1-0）+ 双向集合锁、ground 有 `[G-8]` round-trip 锁，**env 一个都没有**。现补 `environment-capability.test.ts`「[P1-5] schema environment 键集全部可 save/load round-trip」：逐键偏离值 → save → reset → load → 全存活，且**写侧核对存档键名**（防改名时忘同步），缺登记即点名要求「同步 saveState 摘键 + loadState 还原表」。变异实证：往 schema 加一个未登记键 → 测试红并点名该键。**刻意不同时改名统一键形**——改名有跨代迁移债（旧档读者在迁移模块与 loadState 旧档分支），先把守卫立起来逼回登记流程，改名是独立的一刀。）
 - **loadState**（读）：`restoreState` → **旧键迁移**（ADR-196 前无前缀旧键 `{mode,color,...}` 转新键，保升级用户配置，如 fog 的 legacyKeys 分支）→ `restoreFields`（类型安全批量恢复器，按存档值实际类型分派回填）→ `setEnvState(..., {source:"auto-model"})` 写回 envState → cap apply 落地 Three。**（ADR-283：恢复路径同样经唯一入口的值域钳制——存档里的越界值不会漏进 envState。）**
   **（来源纪律 2026-09-22 立法：恢复一律 `auto-model`，禁 manual。存档值是上一次会话的偏好延续，不是本次手改——打成 manual 会永久拒绝同轨 auto-model / auto-atmosphere 覆盖（切 sunset 氛围雾/环境/灯光不跟改，模型默认值也写不进）。**
-  **「同口径」是按**声明**而非按**实施**成立的判词——2026-09-22 复核发现立法时 ground/reflector/shadow/renderMode 四路**实际仍是 manual**（fog/environment/pp/light/sky 才是真 auto-model），属「文档先于代码」的漂移；当日随锐评 F-2 一并收口，现八路同轨。ground 的坑在于恢复站点分**两条路径**：`loadState` 内直连 `setEnvState` 的站点，与委托公开 setter（`setMatOpacity`/`setMatScale`/`setOverlaySize`…，这些 setter 服务用户手改、必须保持 manual）的站点——只改前者会留暗门，故 `ground-capability.ts|RESTORE_SOURCE` 把恢复来源收敛成单一常量，由 `writeOpts` 组装 opts。**
-  **回归锁（一律用**行为**断言，不探内部表——`_writeSource` 是 `env-state.ts` 模块私有、无导出读口）：`fog-capability.test.ts`「F-2」、`environment-capability.test.ts`「E-2/D1」、`light-capability.test.ts`「L-1」、`ground-capability.test.ts`「恢复路径来源纪律」、`reflector-capability.test.ts` 同名块、`shadow-capability.test.ts`「F-2」、`render-mode-capability.test.ts` 同名块。判据恒为「恢复后同轨 auto-model 写入仍能落地」。）**
+  **「同口径」是按**声明**而非按**实施**成立的判词——2026-09-22 复核发现立法时 ground/reflector/shadow/renderMode 四路**实际仍是 manual**（fog/environment/pp/light/sky 才是真 auto-model），属「文档先于代码」的漂移；当日随锐评 F-2 一并收口，现同轨（**water 路径 2026-10-08 锐评 P1-0 补齐**——原「八路」漏扫水面：批量路径已 helper 化进共享工具箱且签名无 source 形参、setter 委托站点无 RESTORE_SOURCE、迁移/兜底 setLevel 站点无参，三条全打 manual，现全收口，见「不变量」P1-0 条）。ground 的坑在于恢复站点分**两条路径**：`loadState` 内直连 `setEnvState` 的站点，与委托公开 setter（`setMatOpacity`/`setMatScale`/`setOverlaySize`…，这些 setter 服务用户手改、必须保持 manual）的站点——只改前者会留暗门，故 `ground-capability.ts|RESTORE_SOURCE` 把恢复来源收敛成单一常量，由 `writeOpts` 组装 opts。**
+  **回归锁（一律用**行为**断言，不探内部表——`_writeSource` 是 `env-state.ts` 模块私有、无导出读口）：`fog-capability.test.ts`「F-2」、`environment-capability.test.ts`「E-2/D1」、`light-capability.test.ts`「L-1」、`ground-capability.test.ts`「恢复路径来源纪律」、`reflector-capability.test.ts` 同名块、`shadow-capability.test.ts`「F-2」、`render-mode-capability.test.ts` 同名块、`water-capability.test.ts`「恢复路径来源纪律（锐评 P1-0）」（批量路径 / setter 委托 / 迁移站点三处行为锁 + 对照例）。判据恒为「恢复后同轨 auto-model 写入仍能落地」。）**
 - **触发时机**：进入 3D → `sceneCapabilityRegistry.loadAll()`（`shared-infra.ts|buildSharedInfra`）；离开 3D → `sceneCapabilityRegistry.saveAll()`（`mount-session.ts|teardown` full 档）。
 
 **与预设的共存（守卫链）**：装配序 `loadAll()`（恢复写 auto-model）→ `applyModelDefaults()`（模型值 auto-model）。`shouldOverwrite` 对 **auto-model→auto-model 放行**——同轨互踩是实锤（探针实证：vrm 模型值顶掉存档雾色、mmd 顶掉存档 envPreset），故**凡 MODEL_DEFAULTS 携带本 cap 键的（fog/environment/ppEnabled/shadow/reflector），恢复路径必须配 `isStateLoaded` 守卫「有存档 = 模型默认让位」**（shadow/reflector 原生自带；fog/environment 2026-09-22 锐评 R-1 补齐）。无存档首启 → `loadState` 早退不置位，模型默认照常套用。氛围快照 `auto-atmosphere` > auto-model，用户点氛围恒能盖过存档值（E-2/F-2/L-1 恢复走 auto-model 要保的通道）。回归锁：fog「R-1」+ environment「R-1」+ 首启不误伤例。**light 注脚**：ADR-282 已令灯光与模型类别解耦，MODEL_DEFAULTS 现零 light 键，light 组 auto-model 恢复无同轨对手（L-1）；若未来再往表里加 light 键，须同步补 light 的 isStateLoaded 守卫。
@@ -200,6 +206,12 @@ invariant_anchors:
 - **[锐评 2026-10-08 新立] 会话级字段必须在 `dispose()` 复位——`createAll` 的复用短路不 dispose。**
   `scene-capability-registry.ts|createAll` 有「同宿主 scene/renderer/camera 三引用全等 ⇒ 复用实例」短路，**复用路径不 dispose**，实例连同会话级标记原样留存。凡「有存档则让位」类的 `isStateLoaded` 守卫若不在 dispose 复位，则跨会话恒真 ⇒ 模型类别默认**永久失效且无任何报错**。
   同族病**半治**：`postprocessing-capability.ts|dispose` 早已复位并留测试，**`environment-capability.ts|dispose` 漏复位**（本轮已补 + 守卫）。**排查同族时按符号 grep 全部持 `isStateLoaded` 的 cap，勿只修被报的那个。**
+- **[锐评 2026-10-08 P1-0] water 恢复来源纪律补齐——helper 化的批量路径会让立法漏扫（第八个 cap 锁）。**
+  09-22 立法「恢复一律 auto-model」的回归锁是**逐 cap 的**，water 在立法时已把批量恢复 helper 化进共享工具箱（原 `scene-capability.ts|restoreBySchema`，签名**无 source 形参**、体内硬编码 `manual`），锁扫描「看各 cap 的 restoreFields」看的是 cap 内的恢复字段，**没看 helper 的 source 形参形态** ⇒ 漏网 47 天（今日无症状的前提 = `MODEL_DEFAULTS` / `ATMOSPHERE_PRESETS` 现零 water 键；触发条件 = 任一表首次携 water 键，症状 = 「切氛围水面不跟改」，`13c0a13df` L-1 同症状）。三条漏网点：① 批量路径（`restoreBySchema` 硬编码 manual）② setter 委托站点（restoreFields spec → 公开 setter，体内 `{source:"manual"}` 无 opts 形参）③ 迁移/兜底站点（`migrateLegacyWaterLevel` 落地 + ADR-257 中池位兜底的 `setLevel` 无参调用）。
+  **收口**（全走既有范式，零新造轮子）：批量恢复器下沉 `water-persist.ts|restoreWaterSchemaKeys`（**P3-1 同刀**——原「通用工具箱藏 `startsWith("water")` 后门类」的共享工具暗特化除名，scene-capability.ts 回归接口 + localStorage IO 本分，先例 = light-persist.ts 数据面下沉）；12 个 water setter 接 `WriteOpts` 形参（ground `writeOpts` 同款组装，省略 = 用户手改语义不变）；三条恢复站点全传 `RESTORE_SOURCE`。守卫 = `water-capability.test.ts`「恢复路径来源纪律（锐评 P1-0）」4 例（批量 / 委托 / 迁移三行为锁 + 「setter 无参仍 manual」对照例）+ `water-persist.test.ts` 4 例。
+  **可复用判据**：对任一来源纪律立法，审计面 = 调用点 ∪ **调用点委托到的 helper 的 source 形参形态**——helper 无 source 形参 = 立法无法抵达该路径，须补形参（本条病型泛化）。
+- **[锐评 2026-10-08 P1-1] 截图 IBL 缝 = 已声明的已知差异（非缺陷，不修只锁）。**
+  离屏 Scene（`screenshot-render.ts` 自建 `new THREE.Scene()`）**刻意不镜像** `scene.environment`：PMREM 环境贴图跨 WebGL context 不可共享，PBR 反射 lobe 离屏缺失（ambient 仅经 `screenshot-lights.ts|attenuateAmbientForSky` 近似补偿）——这是继「后期不入截图」「环境贴图作背景不入截图」之后第三条正交缝（背景层 / pass 层 / 环境贴图光照层），原**零声明**。现声明 = `export.md` 已知差异条（「IBL 反射不参与截图」）+ `screenshot-render.ts` 离屏 Scene 构造处注释，双向锁 = `screenshot-render.test.ts`「IBL 边界」两例（行为侧：离屏 Scene 无 environment 写入；声明侧：export.md 条目在场，删其一即红）。「IBL 进截图」属产品需求，立项须离屏侧按预览现值重建 PMREM（`isIblActive` 门控）并另立 ADR，届时翻转双向锁。
 - 只经 `setEnvState` 写 envState，不直接改对象字段（否则不派发）。
 - 能力级 enabled 原则上不入 schema（是否挂载是装配态）；**例外**：fog（首例）、water（2026-09-22 跟进）、shadow（2026-09-22 锐评 F-1 并入）、reflector（同日 F-1 二度收口并入）、**sky（同日 F-1 三度收口并入，`skyEnabled`）**、**environment（2026-10-05 设计层锐评 F-1 **四度收口**并入，`envEnabled`）** 已把「能力启停」并入 schema 单门——`setEnabled/isEnabled` 收敛为 `envState.{fog,water,shadow,reflector,sky,env}Enabled` 别名，`SceneCapability` 接口不变。运行时态（customHdrTex/currentPreset/manualPreset）仍留 cap 私有。
   （**该「原则上不入 schema」的红线已被 ADR-250（已采纳）判定为误判并推翻**——见下方 sky 收口条的「收口依据」。判「该不该并入」用下方的**并入判据**，不要援引本红线。）

@@ -187,6 +187,11 @@ shotButton action → saveScreenshot(key="front/45/side/back45/all")
 - **体积光锥入镜（ADR-266-d1）**：`ScreenshotLights.volumetric` 非空 ⟺ 预览此刻确有光柱（能力总闸开 ∧ 体积光开 ∧ 存在启用的驱动 spot）；离屏经 `screenshot-cone.ts|applyVolumetricCone` 复用**同一** `VolumetricCone` 建锥——锥高 = `radius`、锥顶 = 模型中心 + 方向 × radius、朝向 = 靶点 − 锥顶，与预览 `LightCapability|rebuildConeIfNeeded` 同源公式（不写第二套实现）。
 - **输出设置同构（ADR-266-d1 D2）**：离屏 renderer 的 `toneMapping` / `toneMappingExposure` / `outputColorSpace` 一律镜像活跃预览 renderer 的**现值**（`ScreenshotLights.output`）；读现值而非重推 sky/pp 属主链（推导即手抄）。这与上方「后期效果不参与截图」是两回事——镜像的是 renderer 级输出设置，不含 Bloom/SSAO/SSR pass。
 
+### ⚠️ IBL 反射不参与截图（已知差异，2026-10-08 锐评 P1-1 记录）
+- **现象**：预览里 IBL（`scene.environment` 环境贴图，env cap 装载的 PMREM）参与 PBR 材质反射 lobe 与环境光；**截图 / 多角度导出的图没有**——PBR 模型在截图里比预览略暗、反射细节缺失。
+- **成因**：离屏走**独立 WebGL context**（`screenshot-render.ts` 自建 `new THREE.WebGLRenderer`），预览侧的 PMREM 纹理（`scene.environment`）**跨 context 不可共享**；`toScreenshotLights` 只镜像 renderer 级输出三字段（ADR-266-d1 D2），`scene.environment` 无镜像通道。ambient 环境光经 `screenshot-lights.ts|attenuateAmbientForSky` 的 PMREM 衰减系数做了**近似补偿**（环境光维度同构），但**反射 lobe（高光 / 各向异性镜面响应）离屏不复现**——这是与「后期效果不参与截图」「环境贴图作背景不入截图」两条已知差异**正交**的第三处缝（背景层 / pass 层 / 环境贴图光照层）。
+- **决策（2026-10-08 锐评）**：**记录已知差异 + 锁边界**（`screenshot-render.ts` 离屏 `new THREE.Scene()` 处注释与本条互为镜像，双向锁）——不擅自实现 IBL 进截图（那是产品需求，涉及离屏侧 PMREM 重建 + `isIblActive` 门控，须另立 ADR 拍板）。本条只保证**差异被声明、边界被机器锁**，不静默。
+
 ### Blob URL 释放
 - `decoder/model-cache.ts`：覆盖同 key 时新旧 blob URL 差集判定，仅差集 URL 才 revoke（P1 修复，防同对象 re-set 误 revoke）
 - `collectBlobUrls` 收集：`geometry.textures[]` / `geometry.texture` / `v.texture` / `authors[].avatarUrl` / `avatars[]` 所有 `startsWith("blob:")` 值

@@ -911,7 +911,8 @@ describe("EnvironmentCapability — 持久化", () => {
   // 病根：env 的 saveState **手摘 6 键**（非 `getPresetKeys("environment")` 派生），
   // loadState 还原表也是**手写双轨清单**。schema 加键而两处任一漏登记 ⇒
   // **自动持久化、静默不还原**（用户改了下次启动就没了，且零报错）。
-  // 同族先例：water 有 `restoreBySchema(w, getPresetKeys("water"))` + 双向集合锁，
+  // 同族先例：water 有 `water-persist.ts|restoreWaterSchemaKeys(w, getPresetKeys("water"))`（原
+  // scene-capability.ts|restoreBySchema 下沉水面叶，锐评 P1-0/P3-1；来源纪律随下沉收口 RESTORE_SOURCE）+ 双向集合锁，
   // ground 有 `[G-8]` round-trip锁。env 此前一个都没有——而 env 恰是唯一
   // **存档键名 ≠ schema 键名**的cap（`preset` vs `envPreset`），最需要机器守卫。
   //

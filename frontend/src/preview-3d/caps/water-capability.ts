@@ -27,7 +27,6 @@ import { oneOf, restoreFields } from "./persist-utils.ts";
 import {
   type EnvPlacement,
   persistState,
-  restoreBySchema,
   restoreState,
   type SceneCapability,
 } from "./scene-capability.ts";
@@ -52,6 +51,14 @@ import {
   type WaterParamKey,
   type WaterUniformName,
 } from "./water-params.ts";
+// [锐评 P1-0/P3-1 2026-10-08] 水面持久化数据面（RESTORE_SOURCE 三件 + 批量恢复器），
+// 自 scene-capability.ts|restoreBySchema 下沉（通用工具箱藏 water 后门类，来源纪律暗门）
+import {
+  RESTORE_SOURCE,
+  restoreWaterSchemaKeys,
+  type WriteOpts,
+  writeOpts,
+} from "./water-persist.ts";
 // ADR-315 D1②：水面模型倒影子系统（ADR-297 载体 + 逐帧驱动）拆出真缝
 import {
   createWaterReflectState,
@@ -283,16 +290,18 @@ export class WaterCapability implements SceneCapability {
 
   // ── 水面：独立开关 / 形态切换 ──
   // ADR-196 收口：setter 只写 envState；渲染应用（可见性/重建/材质）统一走 registerEnvCallback。
-  setWaterEnabled(v: boolean): void {
-    setEnvState({ waterEnabled: v }, { source: "manual" });
+  // [锐评 P1-0] setter 可选 WriteOpts（ground 同款范式）：菜单控件无参 = 用户手改（manual）；
+  // 存档恢复委托站点显式传 RESTORE_SOURCE（auto-model）——省略即手改语义，勿过冲。
+  setWaterEnabled(v: boolean, opts?: WriteOpts): void {
+    setEnvState({ waterEnabled: v }, writeOpts(opts));
   }
   getWaterEnabled(): boolean {
     return envState.waterEnabled;
   }
 
-  setWaterMode(m: WaterMode): void {
+  setWaterMode(m: WaterMode, opts?: WriteOpts): void {
     if (envState.waterMode === m) return;
-    setEnvState({ waterMode: m }, { source: "manual" });
+    setEnvState({ waterMode: m }, writeOpts(opts));
   }
 
   /** 订阅参数变更（模式切换触发）；返回取消订阅函数 */
@@ -344,8 +353,8 @@ export class WaterCapability implements SceneCapability {
     if (u) u.value = value;
   }
 
-  setWetness(v: number): void {
-    setEnvState({ waterWetness: v }, { source: "manual" });
+  setWetness(v: number, opts?: WriteOpts): void {
+    setEnvState({ waterWetness: v }, writeOpts(opts));
   }
   getWetness(): number {
     return envState.waterWetness;
@@ -366,51 +375,51 @@ export class WaterCapability implements SceneCapability {
   }
 
   // ── 微细节法线强度（顶层水面；GPU 程序化，无贴图槽，ADR-271）──
-  setNormalStrength(v: number): void {
-    setEnvState({ waterNormalStrength: v }, { source: "manual" });
+  setNormalStrength(v: number, opts?: WriteOpts): void {
+    setEnvState({ waterNormalStrength: v }, writeOpts(opts));
   }
   getNormalStrength(): number {
     return envState.waterNormalStrength;
   }
 
   // ── 水池专属参数（pool 模式）──
-  setPoolHeight(v: number): void {
-    setEnvState({ waterPoolHeight: v }, { source: "manual" });
+  setPoolHeight(v: number, opts?: WriteOpts): void {
+    setEnvState({ waterPoolHeight: v }, writeOpts(opts));
   }
   getPoolHeight(): number {
     return envState.waterPoolHeight;
   }
 
-  setPoolWallThickness(v: number): void {
-    setEnvState({ waterPoolWallThickness: v }, { source: "manual" });
+  setPoolWallThickness(v: number, opts?: WriteOpts): void {
+    setEnvState({ waterPoolWallThickness: v }, writeOpts(opts));
   }
   getPoolWallThickness(): number {
     return envState.waterPoolWallThickness;
   }
 
-  setPoolWallColor(hex: number): void {
-    setEnvState({ waterPoolWallColor: hex }, { source: "manual" });
+  setPoolWallColor(hex: number, opts?: WriteOpts): void {
+    setEnvState({ waterPoolWallColor: hex }, writeOpts(opts));
   }
   getPoolWallColor(): number {
     return envState.waterPoolWallColor;
   }
 
-  setPoolRoundness(v: number): void {
-    setEnvState({ waterPoolRoundness: v }, { source: "manual" });
+  setPoolRoundness(v: number, opts?: WriteOpts): void {
+    setEnvState({ waterPoolRoundness: v }, writeOpts(opts));
   }
   getPoolRoundness(): number {
     return envState.waterPoolRoundness;
   }
 
-  setWaveSpeed(v: number): void {
-    setEnvState({ waterWaveSpeed: v }, { source: "manual" });
+  setWaveSpeed(v: number, opts?: WriteOpts): void {
+    setEnvState({ waterWaveSpeed: v }, writeOpts(opts));
   }
   getWaveSpeed(): number {
     return envState.waterWaveSpeed;
   }
 
-  setChoppiness(v: number): void {
-    setEnvState({ waterChoppiness: v }, { source: "manual" });
+  setChoppiness(v: number, opts?: WriteOpts): void {
+    setEnvState({ waterChoppiness: v }, writeOpts(opts));
   }
   getChoppiness(): number {
     return envState.waterChoppiness;
@@ -432,8 +441,8 @@ export class WaterCapability implements SceneCapability {
   }
 
   // ── 水面高度（ADR-257：跨形态通用，与容器彻底解耦）──
-  setLevel(v: number): void {
-    setEnvState({ waterLevel: v }, { source: "manual" });
+  setLevel(v: number, opts?: WriteOpts): void {
+    setEnvState({ waterLevel: v }, writeOpts(opts));
   }
   getLevel(): number {
     return envState.waterLevel;
@@ -448,8 +457,8 @@ export class WaterCapability implements SceneCapability {
     return envState.waterSize;
   }
 
-  setClarity(v: number): void {
-    setEnvState({ waterClarity: v }, { source: "manual" });
+  setClarity(v: number, opts?: WriteOpts): void {
+    setEnvState({ waterClarity: v }, writeOpts(opts));
   }
   getClarity(): number {
     return envState.waterClarity;
@@ -584,28 +593,32 @@ export class WaterCapability implements SceneCapability {
       const w = (nested ?? state) as Record<string, unknown>;
       // [锐评 P0 收口 2026-09] canonical `water*` 标量键读侧派生化：直接读 schema 键集恢复，
       // 与 saveState（getPresetKeys("water")）同源派生——新增 water 标量键无需再回本处登记。
-      // restoreBySchema 只接 number/boolean 两类 canonical 键；枚举 / 子域开关 / legacy 旧方言
+      // [锐评 P1-0 2026-10-08] 批量恢复器已下沉 water-persist（原 scene-capability.ts|restoreBySchema
+      // 硬编码 manual 的暗门随下沉收口：现走 RESTORE_SOURCE=auto-model，与下方委托站点同口径）。
+      // restoreWaterSchemaKeys 只接 number/boolean 两类 canonical 键；枚举 / 子域开关 / legacy 旧方言
       // 仍由下方手写还原器承接（存档兼容层，不自动）。
-      restoreBySchema(w, getPresetKeys("water"));
+      restoreWaterSchemaKeys(w, getPresetKeys("water"));
+      // [锐评 P1-0] 委托站点必须显式传 RESTORE_SOURCE——setter 服务用户手改（无参=manual），
+      // 恢复路径若不带 opts 即把手改戳打进 water 组键（ground F-2 同款暗门，L848 注释同病）。
       restoreFields(w, {
         // 子域开关：仅当取到嵌套对象时 w.enabled 才是子域开关（顶层 enabled=已退役的
         // 能力级幽灵键，不再消费——见本方法头注）。flat 格式的 waterEnabled 已由上方
-        // restoreBySchema 经 schema 键集恢复，此处仅留嵌套 legacy 的 enabled 别名。
-        ...(nested ? { enabled: { boolean: (v) => this.setWaterEnabled(v) } } : {}),
+        // restoreWaterSchemaKeys 经 schema 键集恢复，此处仅留嵌套 legacy 的 enabled 别名。
+        ...(nested ? { enabled: { boolean: (v) => this.setWaterEnabled(v, RESTORE_SOURCE) } } : {}),
         // 新旧键双轨（restoreFields 对缺失键安全跳过；实际存档只含一种方言）
-        mode: oneOf(WATER_MODES, (v) => this.setWaterMode(v)),
-        waterMode: oneOf(WATER_MODES, (v) => this.setWaterMode(v)),
+        mode: oneOf(WATER_MODES, (v) => this.setWaterMode(v, RESTORE_SOURCE)),
+        waterMode: oneOf(WATER_MODES, (v) => this.setWaterMode(v, RESTORE_SOURCE)),
         // legacy 旧方言别名（ADR-272/257 前的旧名；写侧已规范为 water*）——仅兼容旧存档，不自动
-        wetness: { number: (v) => this.setWetness(v) },
-        normalStrength: { number: (v) => this.setNormalStrength(v) },
-        waveSpeed: { number: (v) => this.setWaveSpeed(v) },
-        choppiness: { number: (v) => this.setChoppiness(v) },
-        level: { number: (v) => this.setLevel(v) },
-        clarity: { number: (v) => this.setClarity(v) },
-        poolHeight: { number: (v) => this.setPoolHeight(v) },
-        poolWallThickness: { number: (v) => this.setPoolWallThickness(v) },
-        poolWallColor: { number: (v) => this.setPoolWallColor(v) },
-        poolRoundness: { number: (v) => this.setPoolRoundness(v) },
+        wetness: { number: (v) => this.setWetness(v, RESTORE_SOURCE) },
+        normalStrength: { number: (v) => this.setNormalStrength(v, RESTORE_SOURCE) },
+        waveSpeed: { number: (v) => this.setWaveSpeed(v, RESTORE_SOURCE) },
+        choppiness: { number: (v) => this.setChoppiness(v, RESTORE_SOURCE) },
+        level: { number: (v) => this.setLevel(v, RESTORE_SOURCE) },
+        clarity: { number: (v) => this.setClarity(v, RESTORE_SOURCE) },
+        poolHeight: { number: (v) => this.setPoolHeight(v, RESTORE_SOURCE) },
+        poolWallThickness: { number: (v) => this.setPoolWallThickness(v, RESTORE_SOURCE) },
+        poolWallColor: { number: (v) => this.setPoolWallColor(v, RESTORE_SOURCE) },
+        poolRoundness: { number: (v) => this.setPoolRoundness(v, RESTORE_SOURCE) },
       });
       // [锐评 P1-4] ADR-319 D1 默认值抬升对存量存档的追溯：老档（无版本戳）里若记录的是旧默认
       // 0.01，会把波高预算 `effectiveWaveHeight` 钳到 1 cm（浪死平）——迁到现默认；带版本戳的
@@ -614,7 +627,9 @@ export class WaterCapability implements SceneCapability {
         w.waterLevel,
         (state as Record<string, unknown>)[WATER_SCHEMA_VERSION_KEY],
       );
-      if (migratedLevel !== undefined) this.setLevel(migratedLevel);
+      // [锐评 P1-0] 迁移/兜底同为程序化动作（非用户手改），RESTORE_SOURCE 收口——
+      // 否则迁移把 waterLevel 打成 manual，同轨 auto-model 写入静默被拒。
+      if (migratedLevel !== undefined) this.setLevel(migratedLevel, RESTORE_SOURCE);
       // ADR-257 迁移：旧存档没有 waterLevel 键（旧语义里「水面 y == 池深 h」，即水填到池顶）。
       // pool 用户兜底取**中池位** `poolHeight × 0.5`——这是预算 `min(level, poolHeight−level)` 的
       // 最大值点（= poolHeight/2），也是新默认 `waterLevel=0.15 / waterPoolHeight=0.3` 的比例。
@@ -623,7 +638,8 @@ export class WaterCapability implements SceneCapability {
       // 注：mode/waterMode 在上方 restoreFields 中已先行还原，故此处读到的 waterMode 即存档形态。
       const hadLevelKey = w.level !== undefined || w.waterLevel !== undefined;
       if (!hadLevelKey && envState.waterMode === "pool") {
-        this.setLevel(envState.waterPoolHeight * 0.5);
+        // [锐评 P1-0] 兜底同为程序化动作（非用户手改），RESTORE_SOURCE 收口（同上方迁移站点）。
+        this.setLevel(envState.waterPoolHeight * 0.5, RESTORE_SOURCE);
       }
     });
     // 统一应用一次（fog applyFog / ground 同法）：容器重建即从 envState 全量重导——

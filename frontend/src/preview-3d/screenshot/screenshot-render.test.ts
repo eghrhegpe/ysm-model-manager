@@ -45,6 +45,8 @@ const { getAppMock, specMock, loadTexturesMock, releaseTextureUrlsMock, buildSce
       }
     }
     class FakeScene {
+      // [锐评 P1-1 2026-10-08] 记录离屏 Scene 实例（IBL 边界锁：断言离屏 Scene 不设 environment）
+      static instances: FakeScene[] = [];
       children: unknown[] = [];
       add(...objs: unknown[]) {
         this.children.push(...objs);
@@ -58,6 +60,9 @@ const { getAppMock, specMock, loadTexturesMock, releaseTextureUrlsMock, buildSce
         for (const c of this.children) visit(c);
       }
       updateMatrixWorld() {}
+      constructor() {
+        FakeScene.instances.push(this);
+      }
     }
     class FakeMesh {
       isMesh = true;
@@ -289,6 +294,7 @@ beforeEach(() => {
   // 缺省无锥（= 无灯光 / 无光柱路径）；需要锥的用例自行 stubConeReturn()
   coneMock.mockReturnValue(null);
   threeStub.WebGLRenderer.instances.length = 0; // 防跨测试累积
+  threeStub.Scene.instances.length = 0; // [锐评 P1-1] 离屏 Scene 实例记录逐用例清零（防跨测试累积）
   threeStub.DirectionalLight.instances.length = 0; // [S1] 灯光桩实例记录逐用例清零（Ambient/Directional 同 FakeLight 类，共享静态数组）
   threeStub.SpotLight.instances.length = 0;
   threeStub.PointLight.instances.length = 0;
@@ -581,5 +587,27 @@ describe("renderMultiAngle — 灯光对象落地（S1 照度守恒）", () => {
     expect(dir!.position.z).toBeCloseTo(expected.z, 5);
     expect(dir!.intensity).toBe(key.intensity); // directional 无 candela 补偿
     expect(dir!.color).toBe(key.color);
+  });
+});
+
+// ===== [锐评 P1-1 2026-10-08] IBL 边界锁：离屏 Scene 刻意不镜像预览的 scene.environment
+// （PMREM 纹理跨 WebGL context 不可共享）。双向样本：
+//   ① 行为侧——离屏 Scene 实例上 environment 未被写入（未来若实现 IBL 进截图，本例须翻转断言方向）；
+//   ② 声明侧——export.md「IBL 反射不参与截图」已知差异条在场（声明被删而行为未变 → 红）。
+describe("renderMultiAngle — IBL 边界（锐评 P1-1 已知差异）", () => {
+  it("离屏 Scene 不写 scene.environment（PBR 反射 lobe 离屏缺失 = 已声明的 WYSIWYG 缝）", async () => {
+    const before = threeStub.Scene.instances.length; // stubSceneGraph 的 rootGroup（非离屏 Scene）
+    const shots = await renderMultiAngle("/m/a.ysm", []);
+    expect(shots, "成功路径（Scene 已构建）").not.toBeNull();
+    const offscreen = threeStub.Scene.instances[before];
+    expect(offscreen, "renderMultiAngle 自建离屏 Scene").toBeDefined();
+    expect((offscreen as unknown as { environment?: unknown }).environment, "离屏不镜像 IBL 纹理").toBeUndefined();
+  });
+
+  it("export.md 已声明「IBL 反射不参与截图」已知差异（声明与行为互为镜像，删其一即红）", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { fileURLToPath } = await import("node:url");
+    const doc = readFileSync(fileURLToPath(new URL("../../../../docs/knowledge/export.md", import.meta.url)), "utf8");
+    expect(doc, "已知差异声明条在场").toContain("IBL 反射不参与截图");
   });
 });

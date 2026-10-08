@@ -3,8 +3,10 @@
 // （FieldKind / FieldRestorer / oneOf / restoreFields / bindFieldRestorers /
 // pickPersistFields）——**零依赖纯 TS 叶**（仿 env-pixels.ts / environment-ownership.ts 的
 // 零依赖叶范式）；scene-capability.ts 只保留能力接口 + localStorage IO（persistState /
-// restoreState / restoreBySchema）。消费方（各 cap 的 saveState/loadState）直引本叶，
+// restoreState）。消费方（各 cap 的 saveState/loadState）直引本叶，
 // scene-capability.ts 不再承载工具箱，fan-in 回归接口本分。
+// （原第 5 个工具 restoreBySchema 已随锐评 2026-10-08 P1-0/P3-1 下沉 water-persist.ts
+// ——它是 water-only 消费方的暗特化，本零依赖叶不接 envState 运行时依赖。）
 
 /** 持久化字段种别：普通字段按 typeof 分发；枚举字段走 oneOf 白名单 */
 export type FieldKind = "number" | "boolean" | { oneOf: readonly string[] };

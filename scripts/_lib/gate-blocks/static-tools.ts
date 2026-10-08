@@ -36,6 +36,29 @@ import { run as procRun } from "../proc.ts";
 import { ROOT } from "../scan-files.ts";
 
 /**
+ * 静态工具段的时间预算（2026-10-08 加护栏，起因见下）。
+ *
+ * 事故：`check-unread-fields.ts` 单条 18.3s（全仓文本解析），同时挂在 push 的
+ * ALL_STATIC_TOOLS 与 commit 路径上 → 每次提交/推送白付 ~18s，而它 rc 恒 0 从不拦人。
+ * 该条已摘除（见 gate-config 注释），但**机制上没有任何东西阻止下一条重演**：
+ * 清单 36 项串行累加，`GATE_TIMEOUT_MS` 又是 300s/项（挂死也要等 5 分钟）。
+ *
+ * 护栏语义：静态工具段**总耗时**超本预算 → 记一条 FAIL，点名最慢的几项，
+ * 把「悄悄变慢」变成「显式红灯」——慢不是不能接受，**未经知会的慢**不可接受。
+ * 预算口径：摘除 18.3s 大户后，34 项串行实测 **24.4s**（主要 8 项 16.5s，两轮复测稳定无抖动）
+ * → 预算 30s（余量约 20%）。正常应低于此；超标即说明又有人往清单里加了重物。
+ * 逃生阀 `YSM_GATE_BUDGET_MS=<ms>`（慢机器/CI 上放宽，或临时排查）。
+ *
+ * 摘除判据（勿滥用逃生阀；摘前先核这两条）：
+ *   ① **有无判定力**：`check-unread-fields` rc 恒 0、--strict 才 rc=1，挂门禁里从不拦人 → 可摘；
+ *      `auto-import` 是 hard 档且**CI 无独立步骤**（本地是唯一防线）→ 7.2s 也必须留。
+ *   ② **CI 有无兜底**：CI 独立 shell 步骤跑着的项，本地重复付费只买「早知道」，可考虑摘；
+ *      CI 不跑的项，本地摘 = 直接关闸。
+ * 换取的收益是真实的：本次摘除让 commit 与 push 各立省 ~18s。
+ */
+const STATIC_TOOLS_BUDGET_MS = Number(process.env.YSM_GATE_BUDGET_MS ?? "") || 30_000;
+
+/**
  * 按清单串行执行静态工具，逐条 record。
  *
  * 刻意不并行（ADR-088 实证回退）：并行版 2m15s vs 串行基线 75s——spawn 开销吃掉
@@ -43,6 +66,8 @@ import { ROOT } from "../scan-files.ts";
  * 静态工具段一律串行。
  */
 export function runTools(ctx: GateCtx, tools: readonly GateTool[]): void {
+  const slowest: { tool: string; ms: number }[] = [];
+  let phaseMs = 0;
   for (const entry of tools) {
     const tool = entry.tool;
     const extraArgs = entry.args || [];
@@ -133,13 +158,33 @@ export function runTools(ctx: GateCtx, tools: readonly GateTool[]): void {
     // scoped 时 label 沿用全扫命令（--files 是门禁内部裁剪机制，AI 手动复查直接全扫
     // 即可看到完整命中方向——同 runScopedDocDrift 口径）；范围信息落在上方 note。
     const cmdLabel = `node scripts/${tool} --json${stagedArg ? ` ${stagedArg}` : ""}${extraArgs.length ? ` ${extraArgs.join(" ")}` : ""}`;
+    const elapsed = Date.now() - t0;
+    phaseMs += elapsed;
+    slowest.push({ tool, ms: elapsed });
     ctx.record(cmdLabel, ok, {
-      time: Date.now() - t0,
+      time: elapsed,
       note,
       raw: r.out,
       // warns_list 摘要优先（FAIL 可读性）；否则回退原始输出尾部
       tail: !ok ? tail || r.out.trim().split("\n").slice(-12).join("\n") : "",
       blockPolicy: entry.blockPolicy,
+    });
+  }
+  // 预算护栏：超时即红灯点名，防「悄悄变慢 → 全队每天白付」重演（见常量注释）
+  if (phaseMs > STATIC_TOOLS_BUDGET_MS) {
+    const top = slowest
+      .sort((a, b) => b.ms - a.ms)
+      .slice(0, 5)
+      .map((s) => `${s.tool} ${(s.ms / 1000).toFixed(1)}s`)
+      .join(" / ");
+    ctx.record(`静态工具段耗时预算（≤${(STATIC_TOOLS_BUDGET_MS / 1000).toFixed(0)}s）`, false, {
+      time: phaseMs,
+      note:
+        `本段实测 ${(phaseMs / 1000).toFixed(1)}s，超预算 ${((phaseMs - STATIC_TOOLS_BUDGET_MS) / 1000).toFixed(1)}s。` +
+        `最慢项：${top}。处置：摘除/优化慢项，或如实调高 YSM_GATE_BUDGET_MS 并在提交说明写理由` +
+        `（慢不是不能接受，未经知会的慢不可接受）。`,
+      tail: "",
+      blockPolicy: "hard",
     });
   }
 }

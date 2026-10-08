@@ -123,10 +123,16 @@ export const ALL_STATIC_TOOLS: GateTool[] = [
   { tool: "check-comment-history.ts", blockPolicy: "debt" },
   // check-twin-siblings：改动同构同胞探针（纯提醒，走 _summary.warns）；实测 132ms。
   { tool: "check-twin-siblings.ts", blockPolicy: "debt" },
-  // check-unread-fields：契约字段零读取审计（check-orphan-exports 的字段层互补，各有契约测试）。
-  // ⚠️ 实测 20.4s（全仓文本解析）——是 gate 里最慢的 debt 项之一，接进来即每次 push +20s；
-  // 但本身 errors=0、有契约测试锁，故按 debt 接入（不阻断），成本如实知会。
-  { tool: "check-unread-fields.ts", blockPolicy: "debt" },
+  // check-unread-fields：契约字段零读取审计——**刻意不接本地门禁**（2026-10-08 摘除）。
+  // 摘除理由（三条均为其自述）：
+  //   ① 成本：实测 18.3s 全仓文本解析，单条即吃掉 commit / push 两条路径的全部预算
+  //      （原注释已承认「接进来即每次 push +20s」——知会了没解决）；
+  //   ② 无判定力：默认 rc=0 纯审计（自述「审计模式，rc=0，供 doctor 调用」），--strict 才 rc=1，
+  //      挂在门禁里却从不拦人 → 付了 18s 买到零阻断；
+  //   ③ 判定归属存疑 72%：README 自述「契约类 219 个已读中 158 个归属存疑」，
+  //      同名跨 interface 互相洗白 → 信号可信度不支持作为门禁项。
+  // 归宿：留作按需审计 `node scripts/check-unread-fields.ts`（或 doctor --all 手工跑），
+  // 不进 commit / push 热路径。若要重新接入，须先降耗时（增量扫描/缓存）并给出误报率实证。
   // check-diff-coverage.ts（前端 diff 覆盖率）**刻意不在此接入**：同时依赖前端
   // coverage-final.json 与 diff 基线 ref——本地无覆盖率产物会 rc=2 恒红（假阻断，正是
   // 门禁对账要消灭的假闸）；正确归宿是 CI 的 vitest --coverage 之后且 checkout 须有基线 ref。

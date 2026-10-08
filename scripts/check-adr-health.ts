@@ -104,6 +104,15 @@ function checkStatus() {
       );
 
     extractDebt(id, title, raw);
+    // A1（2026-10-08 清偿）：决策态（proposed/partial/deprecated/superseded）状态字段须带
+    // 行首 emoji 前缀以区分生命周期，缺前缀是与「已采纳」混淆的真实格式不一致 → WARN
+    // （不阻断，debt 级）。已采纳不强制（「已采纳」三字已明确，emoji 为装饰）。
+    const expectedEmoji = EMOJI_FOR_STATE[key];
+    if (expectedEmoji && !raw.trim().startsWith(expectedEmoji)) {
+      warns.push(
+        `[状态机] ${ref.relPath} 状态「${raw}」缺 ${expectedEmoji} 前缀（决策态须带 emoji 区分，避免与已采纳混淆）`,
+      );
+    }
     out.push({ file: ref.relPath, id, num, sub, title, raw, key, absPath: ref.absPath });
   }
   return out;

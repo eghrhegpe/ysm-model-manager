@@ -37,7 +37,11 @@ export function normalizeState(raw: string): { key: string; raw: string } {
   if (/^📝/.test(s)) return { key: "proposed", raw: s };
   if (_RE_PROPOSED.test(s)) return { key: "proposed", raw: s };
   if (_RE_PARTIAL.test(s)) return { key: "partial", raw: s };
-  if (_RE_DEPRECATED.test(s)) return { key: "deprecated", raw: s };
+  // 否定语境豁免：ADR-181/182/183 状态写「✅ 已采纳（…非废弃…）」，其中「非废弃」含
+  // 「废弃」子串会被 _RE_DEPRECATED 误抢为 deprecated（ADR-050 同族回归：决策描述里的
+  // 「废弃」非状态标识）。明确否定词前缀（非/不/未/并非 + 废弃）不触发 deprecated。
+  if (_RE_DEPRECATED.test(s) && !/非废弃|不废弃|未废弃|并非废弃|不视为废弃/.test(s))
+    return { key: "deprecated", raw: s };
   if (_RE_SUPERSEDED.test(s) && !_RE_ACCEPTED.test(s)) return { key: "superseded", raw: s };
   if (_RE_ACCEPTED.test(s)) return { key: "accepted", raw: s };
   return { key: "unknown", raw: s };

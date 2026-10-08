@@ -19,9 +19,9 @@ permalink: /adr/
 | [📝 提议中](#提议中) | 6 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 15 |
-| [✅ 已采纳](#已采纳) | 301 |
+| [✅ 已采纳](#已采纳) | 304 |
 | [❌ 已取代](#已取代) | 8 |
-| [🧊 已废弃](#已废弃) | 3 |
+| [🧊 已废弃](#已废弃) | 0 |
 | [❓ 未归类](#未归类) | 0 |
 
 ## 按状态分组导航
@@ -57,7 +57,7 @@ permalink: /adr/
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 | [ADR-050](./ADR-050-plaza-browser-window.md) | 模型广场 · 浏览器窗口（Wails 第二窗口） | 🔄 部分采纳 |
 
-### ✅ 已采纳（301）
+### ✅ 已采纳（304）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
@@ -195,6 +195,9 @@ permalink: /adr/
 | [ADR-187](./ADR-187-features-modal-ts.md) | features/ 目录归位与 modal.ts 拆分收敛 | ✅ 已采纳 |
 | [ADR-185](./ADR-185-core-features-core-features.md) | core 分层治理——特性文件整体迁移至 features，消除 core⇄features 包级环 | ✅ 已采纳 |
 | [ADR-184](./ADR-184-diff-gen-stage-stage.md) | 滞留机器区 diff 自动收编：gen-stage 按行内容判定追回 stage，人工策展区保持并发隔离 | ✅ 已采纳 |
+| [ADR-183](./ADR-183-searchmodels-8.md) | SearchModels 8 参数封装 | ✅ 已采纳 |
+| [ADR-182](./ADR-182-togglemodelenable-toggleenable.md) | ToggleModelEnable 合并到 ToggleEnable | ✅ 已采纳 |
+| [ADR-181](./ADR-181-processforepoch.md) | processForEpoch 枚举化——竞态测试先行 | ✅ 已采纳 |
 | [ADR-180](./ADR-180-preview-materials-shared.md) | preview-3d 材质工具层通用化收编（mmd/vrm materials 骨架合并） | ✅ 已采纳 |
 | [ADR-179](./ADR-179-internal-app-app-god-object.md) | internal/app 垂直切分子包（拆解扁平巨型包与 App god-object） | ✅ 已采纳 |
 | [ADR-178](./ADR-178-previewscene-capability-interfaces.md) | PreviewScene 能力分层接口 | ✅ 已采纳 |
@@ -376,14 +379,6 @@ permalink: /adr/
 | [ADR-081](./ADR-081-semantic-bone-layer.md) | 语义骨骼层——跨格式语义骨骼统一抽象 | ❌ 已取代 |
 | [ADR-077](./ADR-077-bottom-nav-shell-convergence.md) | 底部导航通用外壳收敛（D1+D3 落地） | ❌ 已取代 ⚠️ 被 [ADR-076] |
 
-### 🧊 已废弃（3）
-
-| ADR | 标题 | 状态 |
-|-----|------|------|
-| [ADR-183](./ADR-183-searchmodels-8.md) | SearchModels 8 参数封装 | 🧊 已废弃 |
-| [ADR-182](./ADR-182-togglemodelenable-toggleenable.md) | ToggleModelEnable 合并到 ToggleEnable | 🧊 已废弃 |
-| [ADR-181](./ADR-181-processforepoch.md) | processForEpoch 枚举化——竞态测试先行 | 🧊 已废弃 |
-
 ## 登记表（新→旧）
 
 | 编号 | 标题 | 状态 | 日期 |
@@ -530,9 +525,9 @@ permalink: /adr/
 | ADR-186 | i18n 治理：tr 单轨收敛 + 影子包卡口 + locale 数据外移 core | 🔄 部分采纳 ⚠️ 被 [ADR-210] | 2026-09-05 |
 | ADR-185 | core 分层治理——特性文件整体迁移至 features，消除 core⇄features 包级环 | ✅ 已采纳 | 2026-09-05 |
 | ADR-184 | 滞留机器区 diff 自动收编：gen-stage 按行内容判定追回 stage，人工策展区保持并发隔离 | ✅ 已采纳 | 2026-09-05 |
-| ADR-183 | SearchModels 8 参数封装 | 🧊 已废弃 | 2026-09-05 |
-| ADR-182 | ToggleModelEnable 合并到 ToggleEnable | 🧊 已废弃 | 2026-09-05 |
-| ADR-181 | processForEpoch 枚举化——竞态测试先行 | 🧊 已废弃 | 2026-09-05 |
+| ADR-183 | SearchModels 8 参数封装 | ✅ 已采纳 | 2026-09-05 |
+| ADR-182 | ToggleModelEnable 合并到 ToggleEnable | ✅ 已采纳 | 2026-09-05 |
+| ADR-181 | processForEpoch 枚举化——竞态测试先行 | ✅ 已采纳 | 2026-09-05 |
 | ADR-180 | preview-3d 材质工具层通用化收编（mmd/vrm materials 骨架合并） | ✅ 已采纳 | 2026-09-05 |
 | ADR-179 | internal/app 垂直切分子包（拆解扁平巨型包与 App god-object） | ✅ 已采纳 | 2026-09-04 |
 | ADR-178 | PreviewScene 能力分层接口 | ✅ 已采纳 | 2026-09-04 |

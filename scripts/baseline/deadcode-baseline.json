@@ -1,5 +1,5 @@
 {
-  "generated": "2026-10-07T11:56:51.362Z",
+  "generated": "2026-10-08T04:16:54.643Z",
   "knip": [
     "e2e-web/fog-horizon-evidence.spec.ts|unresolved|/src/preview-3d/adapters/shared-infra.ts",
     "e2e-web/fog-horizon-evidence.spec.ts|unresolved|/src/preview-3d/state/env-state.ts",
@@ -44,7 +44,6 @@
     "src/preview-3d/adapters/fbx/fbx-parser.worker.ts|types|FbxParseRequest",
     "src/preview-3d/adapters/mmd/mmd-pmx-parser.worker.ts|types|PmxFaceData",
     "src/preview-3d/adapters/mmd/mmd-pmx-parser.worker.ts|types|PmxParseRequest",
-    "src/preview-3d/adapters/mount-preview-core.ts|types|AssembledShell",
     "src/preview-3d/adapters/mount-preview-core.ts|types|BaseScene",
     "src/preview-3d/adapters/mount-preview-core.ts|types|InstalledPreviewInfra",
     "src/preview-3d/adapters/mount-preview-core.ts|types|PoseScene",
@@ -89,6 +88,9 @@
     "src/preview-3d/decoder/geometry.ts|types|BedrockBone",
     "src/preview-3d/decoder/geometry.ts|types|BedrockSubModel",
     "src/preview-3d/decoder/utils.ts|types|DecodeSource",
+    "src/preview-3d/decoder/wasm-geometry.ts|exports|FACE_KEYS",
+    "src/preview-3d/decoder/wasm-geometry.ts|exports|boxUvEnd",
+    "src/preview-3d/decoder/wasm-geometry.ts|exports|faceUvEnd",
     "src/preview-3d/infra/load-trace.ts|exports|TRACE_FORMAT_ADAPTERS",
     "src/preview-3d/infra/load-trace.ts|types|LoadTraceAssets",
     "src/preview-3d/infra/load-trace.ts|types|LoadTraceStage",

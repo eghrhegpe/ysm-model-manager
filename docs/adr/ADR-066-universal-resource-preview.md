@@ -3,7 +3,7 @@
 - **状态**：✅ 已采纳
 - **日期**：2026-08-16
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/src/views/app-preview/loader.ts`、`frontend/src/views/app-preview/index.ts`、`frontend/src/views/app-preview/litematic-meta.ts`、`frontend/src/utils/resource/types.ts`、`resource_types.json`、`frontend/src/utils/3d/model3d.ts`、`frontend/src/views/app-preview/litematic-3d.ts`、`ADR-061`、`ADR-064`、`ADR-065`、`ADR-067`（zip 化资源识别，P0.x 硬前置）、`ADR-072`（物理归置补完：适配器下沉 utils/3d/adapters + 派发注册表化，✅ 已落地）
+- **相关**：`frontend/src/views/app-preview/loader.ts`、`frontend/src/views/app-preview/index.ts`、`frontend/src/views/app-preview/litematic-meta.ts`、`frontend/src/utils/resource/types.ts`、`resource_types.json`、`frontend/src/preview-3d/mesh/model3d.ts`、`frontend/src/views/app-preview/litematic-3d.ts`、`ADR-061`、`ADR-064`、`ADR-065`、`ADR-067`（zip 化资源识别，P0.x 硬前置）、`ADR-072`（物理归置补完：适配器下沉 utils/3d/adapters + 派发注册表化，✅ 已落地）
 
 ---
 

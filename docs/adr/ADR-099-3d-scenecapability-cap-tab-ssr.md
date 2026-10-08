@@ -181,7 +181,7 @@ postProcCap.setReflectorCap(reflectorCap);  // registry.getById("reflector") as 
   - SceneCapability 契约：`frontend/src/preview-3d/caps/scene-capability.ts`
   - Registry：`frontend/src/preview-3d/caps/scene-capability-registry.ts`
   - Capability 实现：`frontend/src/preview-3d/caps/*-capability.ts`（9 个）
-  - PostprocessingLike 公共接口：`frontend/src/utils/3d/adapters/postprocessing.ts`
+  - PostprocessingLike 公共接口：`frontend/src/preview-3d/infra/postprocessing.ts`
   - 顶层 tab 定义：`frontend/src/utils/3d/adapters/preview-menu-defs.ts`（CORE_MENU_ITEMS 5 tab）
   - 菜单 filler：`frontend/src/utils/3d/adapters/preview-menu.ts`（fillEnvironment / fillPostprocessing 均 registry 驱动）
   - mount wiring：`frontend/src/preview-3d/adapters/mount-preview-core.ts`（setPreset / setReflectorCap wiring）

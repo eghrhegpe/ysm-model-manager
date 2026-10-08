@@ -35,7 +35,7 @@ ADR-093 §3「后续微任务：dock 模型列表 UI（消费 sceneRegistry）�
 
 ### D1 · 新增 `multiModelSelectNode(opts)` 声明式 select 工厂
 
-`frontend/src/utils/3d/adapters/preview-menu/multi-model.ts`：
+`frontend/src/preview-3d/menu/panels/multi-model.ts`：
 
 ```ts
 export interface MultiModelSelectOpts {

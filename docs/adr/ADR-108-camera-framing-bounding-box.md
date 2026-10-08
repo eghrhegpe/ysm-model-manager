@@ -3,7 +3,7 @@
 - **状态**：✅ 已采纳
 - **日期**：2026-08-20
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/src/utils/3d/camera-setup.ts` / `ysm-adapter.ts` / `vrm-adapter.ts` / `mmd-adapter.ts` / ADR-041（scale 对齐）
+- **相关**：`frontend/src/preview-3d/infra/camera-setup.ts` / `ysm-adapter.ts` / `vrm-adapter.ts` / `mmd-adapter.ts` / ADR-041（scale 对齐）
 - **问题**：YSM 模型相机镜头拉得很远（约 18000 单位），与 MMD/VRM 模型显示比例不一致
 
 ---

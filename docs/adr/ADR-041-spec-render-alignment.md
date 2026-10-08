@@ -3,7 +3,7 @@
 - **状态**：✅ 已采纳
 - **日期**：2026-08-08
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`go/threejs/spec.go` / `frontend/src/utils/3d/model3d.ts` / `tests/port-verification/`（黄金对比工具） / upstream `YSMViewer/Rendering/ThreeJs/ThreeJsPayloadBuilder.cs`
+- **相关**：`go/threejs/spec.go` / `frontend/src/preview-3d/mesh/model3d.ts` / `tests/port-verification/`（黄金对比工具） / upstream `YSMViewer/Rendering/ThreeJs/ThreeJsPayloadBuilder.cs`
 - **取代**：ADR-004 §2.2（坐标系：X 轴不取反）、ADR-004 §2.3（骨骼旋转三轴取反）
 
 ---

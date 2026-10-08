@@ -5,7 +5,7 @@
 - **日期**：2026-08-29
 - **修订**：2026-08-29 复审重浇地基（三条源码实证裂缝已修正，见 §5；决策方向不变）
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/src/utils/3d/adapters/schema-registry.ts, preview-menu.ts, preview-menu-cap-controls.ts:448(collectVisiblePredicates), preview-menu-node-types.ts:102(visibleWhen), preview-menu-node-types.ts:14-21(PreviewStatePath), state/preview-state.ts, ADR-125, ADR-126, ADR-085`
+- **相关**：`frontend/src/preview-3d/infra/schema-registry.ts, preview-menu.ts, preview-menu-cap-controls.ts:448(collectVisiblePredicates), preview-menu-node-types.ts:102(visibleWhen), preview-menu-node-types.ts:14-21(PreviewStatePath), state/preview-state.ts, ADR-125, ADR-126, ADR-085`
 
 ---
 

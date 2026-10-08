@@ -37,7 +37,7 @@ MC Java 版资源包（.zip）本质是 `assets/` 下的文件树，其中 `mode
 - `ReadPackEntry(path, entry) string`：读容器内条目内容（base64），上限 64MB；entry 须 `assets/` 前缀 + 无 `..`/反斜杠/绝对路径（防穿越守卫）；
 - 归置新文件 `internal/app/resourcepack_models.go`，不污染既有 `resource_bindings.go`。
 
-### D2 · 前端 TS 解析器：`frontend/src/utils/3d/parse-java-model.ts`
+### D2 · 前端 TS 解析器：`frontend/src/preview-3d/model/parse-java-model.ts`
 
 POC `parse-java-model.mjs` 纯 TS 移植（零依赖），加载抽象为 `read(entry) → base64` 回调（JSON 经 atob 解码、PNG 直接 dataURL 给 TextureLoader）；模型/纹理尺寸缓存；`parseJavaModel(entry, read)` 输出面数据（positions 像素÷16 转米 + Three 域 UV + texEntry/texColor/tintindex）。
 

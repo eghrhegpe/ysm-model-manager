@@ -117,7 +117,7 @@ MikuMikuAR 是独立 Babylon App，不在同一个 `ctx.scene`。其天空（若
 - **代码审计（file:line）**：
   - `frontend/src/preview-3d/adapters/mount-preview-core.ts:344-346` — `scene = new THREE.Scene()` + `scene.background = new THREE.Color("#1a1b2e")`：天空唯一落点，所有适配器共用同一 `scene`；
   - `frontend/src/utils/3d/renderer-setup.ts:44` — 旧 `RenderSession` 设同款纯色背景（须同步）；
-  - `frontend/src/utils/3d/adapters/{ysm,vrm,mmd,litematic}-adapter.ts` — 均经 `build(ctx)` 注入 `ctx.scene`（统一核心契约，ADR-066 P3 `be237aa0` 落地）。
+  - `frontend/src/preview-3d/adapters/{ysm,vrm,mmd,litematic}-adapter.ts` — 均经 `build(ctx)` 注入 `ctx.scene`（统一核心契约，ADR-066 P3 `be237aa0` 落地）。
 - **联邦引擎格局校准**：`~/.workbuddy/USER.md` 技术栈基线已补「双引擎并存 + 域描述」；`docs/knowledge/preview-core.md` 新建卡记录 sky 落点 `:346` 为不变量。
 - **关联 ADR**：ADR-066（统一预览契约 + 单一渲染核心，本 ADR 的物理前提）、ADR-072（3D 代码归置，适配器已下沉 `utils/3d/adapters/`）、ADR-004（3D 渲染管线与坐标系）。
 - **实现最小改动面（L1 已落地，commit `4413fb2a`，当前 HEAD 祖先）**：

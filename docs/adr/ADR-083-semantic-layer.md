@@ -3,7 +3,7 @@
 - **状态**：✅ 已采纳
 - **日期**：2026-08-17
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/src/utils/3d/semantic-bones.ts`、`frontend/src/utils/3d/semantic-morphs.ts`、`frontend/src/utils/3d/perception/`、`frontend/src/utils/3d/adapters/mmd-adapter.ts`、`vrm-adapter.ts`、`docs/adr/ADR-081-semantic-bone-layer.md`、借鉴 [MikuMikuAR](https://github.com/eghrhegpe/MikuMikuAR) `motion-algos/`、`scene/perception/`
+- **相关**：`frontend/src/preview-3d/bone/semantic-bones.ts`、`frontend/src/preview-3d/infra/semantic-morphs.ts`、`frontend/src/utils/3d/perception/`、`frontend/src/preview-3d/adapters/mmd/mmd-adapter.ts`、`vrm-adapter.ts`、`docs/adr/ADR-081-semantic-bone-layer.md`、借鉴 [MikuMikuAR](https://github.com/eghrhegpe/MikuMikuAR) `motion-algos/`、`scene/perception/`
 
 ---
 

@@ -174,9 +174,9 @@ spec 渲染层无需改动（已正确），仅播放器路径滞后；修复后
 - `evaluateClip`：同上 `animation.ts:350-474`，支持层级传播 + loop 取模
 - `MmdPlayBridge`：`frontend/src/views/app-preview/mmd-controls.ts:85-91`
 - `fillMmdPlayPanel`：`frontend/src/views/app-preview/mmd-controls.ts:94-124`
-- VRM VRMA 模式参照：`frontend/src/utils/3d/adapters/vrm-adapter.ts:197-232`（动画扫描 + mixer 驱动）
-- SpecBone3D 旋转格式：`frontend/src/utils/3d/model3d.ts:11-17`，`localRotation: number[]`（弧度，XYZ 欧拉）
-- boneGroupMap 结构：`frontend/src/utils/3d/mesh.ts:68-83`，值为 `THREE.Group`（非 Bone），层级为 modelGroup → parentGroup → childGroup
+- VRM VRMA 模式参照：`frontend/src/preview-3d/adapters/vrm/vrm-adapter.ts:197-232`（动画扫描 + mixer 驱动）
+- SpecBone3D 旋转格式：`frontend/src/preview-3d/mesh/model3d.ts:11-17`，`localRotation: number[]`（弧度，XYZ 欧拉）
+- boneGroupMap 结构：`frontend/src/preview-3d/mesh/mesh.ts:68-83`，值为 `THREE.Group`（非 Bone），层级为 modelGroup → parentGroup → childGroup
 - 播放器接口变更（L2）：`createYsmAnimPlayer(boneByName: Map<string, Object3D>, ...)` 第 2 参数从单 clip 改为 clips 数组
 - P1 bug 修复：`frontend/src/preview-3d/adapters/ysm-adapter.ts:207-214`（6312b358）
 

@@ -4,7 +4,7 @@
 - **实施状态**：查知识卡 [go-threejs](../knowledge/go-threejs.md) / [animation-system](../knowledge/animation-system.md)（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-08-09
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`upstream/ModernYSM-1.20.1-forge` / `go/threejs/spec.go` / `frontend/src/utils/3d/model3d.ts` / `frontend/src/utils/animation/` / `docs/knowledge/ysm_baked.md` / `docs/knowledge/animation-system.md` / `tests/port-verification/`
+- **相关**：`upstream/ModernYSM-1.20.1-forge` / `go/threejs/spec.go` / `frontend/src/preview-3d/mesh/model3d.ts` / `frontend/src/utils/animation/` / `docs/knowledge/ysm_baked.md` / `docs/knowledge/animation-system.md` / `tests/port-verification/`
 
 ---
 

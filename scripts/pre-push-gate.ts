@@ -326,7 +326,7 @@ async function main() {
   /* --- 契约测试 / 静态工具补挂 / scripts typecheck（调度已迁出）--- */
   // runContractTestsBlock / runStaticToolsDispatch / runScriptsTypecheck 位于
   // _lib/gate-blocks/schedule.ts（ADR-206 阶段 5）。各函数自守卫，无条件按序调用。
-  await runContractTestsBlock(ctx, { allMode, domains: Object.keys(byDomain) });
+  await runContractTestsBlock(ctx, { allMode, staticMode, domains: Object.keys(byDomain) });
   runStaticToolsDispatch(ctx, { allMode, docsMode, staticMode });
   // scripts typecheck 在 --static 下同样执行（CI 需要保证 scripts/ 自身类型正确，
   // 且成本仅秒级）；契约测试由 CI 独立跑 scripts/contract-tests.ts，此处不重复。

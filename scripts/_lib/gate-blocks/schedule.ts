@@ -43,10 +43,37 @@ export const CI_INDEPENDENT_TOOLS: readonly string[] = ["check-deadcode-baseline
  *   --docs 轻量模式 → 跳过（byDomain 为空 → 子集空） */
 export async function runContractTestsBlock(
   ctx: GateCtx,
-  opts: { allMode: boolean; domains: string[] },
+  opts: { allMode: boolean; docsMode?: boolean; staticMode?: boolean; domains: string[] },
 ): Promise<void> {
+  // 2026-10-08（第三轮审计 P0-①）：本地 push **不再重复跑契约测试**。
+  // 证据链：
+  //   ① CI 已全量跑同一脚本——test.yml:98-100 job `contracts` 的
+  //      `node scripts/contract-tests.ts`（不传 --domain ⇒ contract-tests.ts:81 走 all 分支
+  //      = 127 个测试全量），且 test.yml:95 注释明写「与本地 pre-push-gate **同源**」；
+  //   ② 本地 push 侧实测 32.6s（push 总 63s 的**一半**），而命中 `tests` 域时
+  //      selectContractTests 规则本就回退全量（contract-tests.ts:40-41「工具改动即命中
+  //      'tests' → 全量」）⇒ 裁剪后 ≈ 全量 36.3s，等于把 CI 那个 job 原样再干一遍；
+  //   ③ 这 32.6s 买不到任何 CI 不买的东西：契约测试是「代码正确性」而非「本次提交形态」，
+  //      本地早失败省下的等待，远小于它每次都强收的固定税（且改 scripts/tests 必触发）。
+  // 保留的例外（两类，都必须保留）：
+  //   - `--all`（doctor 发版体检）：全量体检语义，不可裁；
+  //   - `--static`（CI 的 pre-push-gate --static 步）：CI 侧无独立契约 job 契约覆盖，
+  //     剔掉会让远端少一层（该步由 test.yml:245-253 调用）。
+  // 逃生阀：`YSM_LOCAL_CONTRACT_TESTS=1` 恢复本地跑（排查「本地绿 CI 红」时用）。
+  const localContractEnabled = process.env.YSM_LOCAL_CONTRACT_TESTS === "1";
+  // 先算「本来会跑哪些」——只在**确实有匹配测试**时才记跳过说明。
+  // 空域（无匹配）保持 no-op：与既有契约 `test_gate_schedule.ts` 「空域 + 非 all 模式不 record」
+  // 一致（避免域裁剪为空的域给门禁输出凭空添噪声条目）。
   const contractFiles = opts.allMode ? undefined : selectContractTests(opts.domains);
-  if (!opts.allMode && !(contractFiles && contractFiles.length > 0)) return;
+  const wouldRun = opts.allMode || (contractFiles && contractFiles.length > 0);
+  if (!wouldRun) return;
+  if (!opts.allMode && !opts.staticMode && !localContractEnabled) {
+    ctx.record("contract tests（本地跳过，交 CI contracts job 全量）", true, {
+      time: 0,
+      note: `本地 push 不重复跑 ${contractFiles!.length} 项：CI test.yml:98 已全量跑同一脚本（127 项）。设 YSM_LOCAL_CONTRACT_TESTS=1 可本地强制跑。`,
+    });
+    return;
+  }
   const t0 = Date.now();
   const tests = await runContractTestsParallel(contractFiles);
   const ok = tests.length === 0 || tests.every((t) => t.ok);

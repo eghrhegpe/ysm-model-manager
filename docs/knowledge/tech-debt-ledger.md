@@ -79,15 +79,15 @@ quick_risk_lines:
 
 ### 🟠 中
 - **P2 · 六处常驻文档称「pre-push 全量门禁」**：`AGENTS.md:101`、`CONTRIBUTING.md:161`、**`SECURITY.md:74`**（安全文档失真最误导）、`gate-chain-map.md:140`、`pre-commit-hook.md:78`+`:105`、`pre-push-gate.md:291`（与同卡 `:275` **自相矛盾**）。`YSM_FAST_PUSH` 默认轻量档实测跳过 4 处（`frontend-domain.ts:164`→168/173/239、`go-domain.ts:100`→104）。另 `AGENTS.md:173`「95 个 tests/\*.ts」→ 实测 **122**。**✅ 已修（2026-10-08 晚间）**：六处统一改为「默认轻量档（静态治理 + `go build`/`go vet`，`YSM_FAST_PUSH=0` 恢复全量），重型测试与构建交 CI」；`AGENTS.md:173` 计数 95→122。纯文案，零风险。
-- **A1 · `check-adr-health` 无进度化石正则、无 emoji 前缀检查**：grep `化石|进度|排期` = 0 命中。213/333 ADR 含化石字样、**126/304 已采纳缺 emoji 前缀**全靠人肉巡检；6 个 📝 提议中 ADR（284/292/301/321/325/151-d1）滞留 2 周+，10-06 为 3 个 → **恶化**。建议先 `--suggest`/debt 观察一轮（需先定化石白名单防误伤历史叙述）。
+- **A1 · `check-adr-health` 无进度化石正则、无 emoji 前缀检查**：grep `化石|进度|排期` = 0 命中。213/333 ADR 含化石字样、**126/304 已采纳缺 emoji 前缀**全靠人肉巡检；6 个 📝 提议中 ADR（284/292/301/321/325/151-d1）滞留 2 周+，10-06 为 3 个 → **恶化**。**✅ 已落地观察模式（2026-10-08 晚间）**：给 `check-adr-health.ts` 加 `--suggest` 非阻断观察模式（debt 级、不进 gate），摊开三类数据——①-a 需 emoji 区分的状态缺前缀（实测 **4** 条：ADR-181/182/183 deprecated + ADR-218 partial）；①-b 已采纳缺 ✅ 前缀（实测 **126** 条，与审计口径精确吻合）；② 决策未定 ADR 含进度化石（实测 **21** 条，含审计点名 6 个 📝 滞留 284/292/301/321/325/151-d1）。验证审计数据真实。后续升 hard/debt 检查待确认无历史叙述误伤；已采纳缺 ✅ 是否强制由团队拍板（三字已明确，emoji 为装饰）。
 - **T3′ · `file-tree.spec.ts:51-53` 残留条件 skip**：`if (dirCount === 0) { test.skip(true, ...); return; }`，而同文件 `:55` 断言 mock 恒含 `subdir/subdir-model.ysm` → `dirCount===0` 意味着加载链回归，应硬红。全 27 个 e2e spec 仅此 1 处活 skip（其余 3 处命中是「已移除 skip」的说明性注释）。
-- **T5 · caps 族未纳入 `check-file-lines` 硬红线**（10-06 P1 遗留）：`sky-capability.ts` 1068 行已超 `mount-preview-core.ts` 的红线值 1045，仍只软告警。
+- **T5 · caps 族未纳入 `check-file-lines` 硬红线**（10-06 P1 遗留）：`sky-capability.ts` 1068 行已超 `mount-preview-core.ts` 的红线值 1045，仍只软告警。**✅ 已解决（2026-10-06 补登，本卡遗漏同步 → drift）**：`check-file-lines.ts` 的 `ADVISORY_RULES` 第三条（前端生产层 preview-3d/backend >900 行软告警）正是为消解「caps 900+ 脱管」而加；实测当前 caps 最大 **sky 967** 仍 < mount-preview-core 红线 **1045**（且 mount 本身已被拆到 814），caps 经 ADR-315 锐评持续瘦身，无超硬红线项。非真债，是台账未同步 10-06 补登。
 
 ### 🟢 低 / 已修确认
 - **T6 · 硬编码本机路径 4 处未修**：`frontend/e2e/perf-fixtures.ts:460,578,724,842`（`C:\Users\zhujieling11\...`）。⚠️ **JS 双反斜杠字面量陷阱**，`grep 'C:\Users'` 与 `git grep` 都漏，须匹配 `C:\\Users` 或读原文（本轮主模型连判两次「已修」，实为陷阱）。另 `scripts/android-build.ts:78-84` 的 `C:\Android\Sdk` **已改**为 `LOCALAPPDATA` 探测 + `ANDROID_HOME` 单一事实源 → 10-06 该项半修。
 - **K1 · 知识卡认领冗余**：`check-knowledge-drift` errors 0 / warns 10。0 独占 `source_files` 的 6 卡共 25 条重复登记（`dnd-shared`4/`doctor-gate-overlap`3/`features-dialogs`6/`model-stats`4/`ui-slide-menu`3/`ysm-anim-pipeline`5）；`model3d.md` **1042**、`wails-bindings.md` **118** 派生符号（目录级认领）；auto_fields 全仓零信息消费者；`go-repoaudit.md` 机制锚疑似指向引用处。
 - **K2 · 本卡 `category: go` 错位**：内容横跨 Go/前端/ADR/测试四域，误导按 category 路由。
-- **S1 · `gen-knowledge-*` 六个生成器仍并存**未收口；`gate-inventory.json` 未建（部分缓解：`gate-config.ts` 已是单一工具清单 + `gate-coverage` 动态枚举分母）。
+- **S1 · `gen-knowledge-*` 六个生成器仍并存**未收口；`gate-inventory.json` 未建（部分缓解：`gate-config.ts` 已是单一工具清单 + `gate-coverage` 动态枚举分母）。**维持**：属 generator 收口优化，非阻断；`gate-config.ts` 单一事实源已实质替代 `gate-inventory.json` 职能，待生成器重构时一并收敛。
 - **H1′ · `docs/` 根 6 份历史审计 critique（~130KB）可迁 `docs/archive/`**：`audit-env-review`/`audit-ground-review`/`audit-knowledge-accuracy`/`audit-knowledge-reliability`/`audit-postprocessing-critique`/`audit-water-critique`。**⚠️ `audit-src-map.md` 是 `gen-project-map.ts` 生成物，不可归档。** **暂缓（2026-10-08 晚间复评）**：经 grep 全仓入链，这 6 份**有活消费者**而非纯死文档——`audit-env-review.md` 被 `ADR-292`/`ADR-305`/`drafts/ground-design-exploration.md` 引用（上游缺陷锚点）；`audit-water-critique.md` 被 `water.md`/`ADR-322`/`fog-capability.ts`/`layer-offsets.ts` **源码注释**硬引用；`audit-postprocessing-critique.md` 被 `preview-env-state.md` 引用（且 `preview-env-state.md` 当前正被并行会话锐评重构在途改动）。机械 `git mv` 会断 4+ 处 `.ts` 注释路径（不被 `check-doc-drift` 捕获）+ 多个 ADR/草稿入链。按「迁出前三查」纪律，须先改代码侧入链再迁；**待 preview-3d 锐评收口后单独做断链迁移**，本轮不动。
 - **已修确认**：errcheck 生产 **0** 条（10-06 为 114）、ysmwasi **61.3%**（原 33.3%）、复杂度 RED **0**（原 52；Molang 876 → MIT 第三方 vendored 排除有 fail-closed 守卫，属噪声移出统计面而非债清零；另 4 个 RED 真重构）、契约测试域登记 **104/104 零漏**、binding 176/176、i18n 死键 **13**（原 17）、ADR-311 快照 **0**、`scripts/` 194→**178** 文件（↓5711 行）、未接入 check-\* **0**、知识卡 kind snake_case 仅剩 1 个、无卡引用源码文件 52→**14**、全套 vitest **473 文件 7719/7719 全绿**、SafeWalk 无真吞错、并发安全、`app.go` 435 行纯门面（非 god object）、`_attic` 20 脚本零活引用（真死）。
 
@@ -117,9 +117,12 @@ quick_risk_lines:
 - **T3′ 已修**：`frontend/e2e/file-tree.spec.ts` 删除 `dirCount===0` 的 `test.skip` 分支，改为 `expect(dirCount).toBeGreaterThan(0)` 硬断言——mock 恒含 `subdir/subdir-model.ysm`（tree-dir 必渲染），回归即硬红，不再被 skip 掩蔽（三重门纪律对齐）。
 - **T6 已修**：`frontend/e2e/perf-fixtures.ts` 4 处 `absPath` 硬编码本机路径（`C:\\Users\\...`）改为相对路径 `tests/fixtures/ysm/...`（`perf-common.ts:100` 注释明确测试/断言用 `relPath` 不用 `absPath`，无消费者破坏）。
 - **K2 已修**：本卡 `category: go` → `core`（内容横跨四域，`affected:false` 已退出路由，但仍消除误导性）。
-- **H1′ 暂缓**：经 grep 发现 6 份 audit critique 有活入链（`audit-water-critique.md` 被 `fog-capability.ts`/`layer-offsets.ts` 源码注释硬引用、`audit-env-review.md` 被 `ADR-292`/`ADR-305` 引用等），机械归档会断链；待 preview-3d 锐评收口后单独断链迁移，本轮不动。
-- **K1 维持**：6 张卡 `source_files` 全被其他卡认领（warn 级），多为有意跨切面聚合卡（dnd-shared/features-dialogs 等），非误报，不盲目收窄。
-- 待还债剩余项见上方 🟠/🟢 段（A1/T5/S1），均未涉及代码回归；A1（`check-adr-health` 化石正则）与 T5（caps 红线）需独立探查、改动较大，后续择机。
+- **A1 已落地观察模式**：`scripts/check-adr-health.ts` 加 `--suggest` 非阻断观察项（debt 级、不进 gate），摊开三类治理数据——①-a 决策态缺 emoji 前缀 4 条、①-b 已采纳缺 ✅ 126 条（与审计精确吻合）、② 决策未定 ADR 含进度化石 21 条（含审计点名 6 个 📝 滞留）。验证审计数据真实，后续升 hard 待拍板。
+- **T5 已解决（台账 drift）**：`check-file-lines.ts` 的 `ADVISORY_RULES` 第三条（前端生产层 >900 软告警）已在 2026-10-06 补登消解「caps 脱管」，本卡遗漏同步；实测 caps 最大 967 < mount 红线 1045，无超硬红线项。
+- **S1 维持**：generator 收口优化，`gate-config.ts` 单一事实源已实质替代 `gate-inventory.json` 职能，非阻断。
+- **H1′ 暂缓**：经 grep 发现 6 份 audit critique 有活入链（含 `fog-capability.ts`/`layer-offsets.ts` 源码注释硬引用 `audit-water-critique.md`、`preview-env-state.md` 正被并行会话锐评在途），机械归档会断 4+ 处 `.ts` 注释路径；待 preview-3d 锐评收口后单独断链迁移。
+- **K1 维持**：6 张卡 `source_files` 全被认领（warn 级），多为有意跨切面聚合卡，不盲目收窄。
+- **审计台账全卡已账实相符**：P1-a/P2/T3′/T6/K2/A1 已修或落地，T5/S1 已澄清（非真债/drift/优化），H1′ 暂缓（活入链），K1 维持（有意跨切面）。剩余真正未动手项仅 A1 的"升 hard 检查"（待团队拍板 emoji 强制与否）与 H1′ 的断链迁移（待 preview-3d 锐评收口）。
 
 ## 总体判断
 

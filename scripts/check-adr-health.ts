@@ -18,7 +18,15 @@
  *   node scripts/check-adr-health.ts --status     # 仅状态机
  *   node scripts/check-adr-health.ts --health     # 仅登记同步
  *   node scripts/check-adr-health.ts --debt       # 仅技术债
+ *   node scripts/check-adr-health.ts --suggest    # 仅治理建议（观察模式，不阻断）
  *   node scripts/check-adr-health.ts --json       # JSON（CI 用）
+ *
+ *  --suggest（2026-10-08 技术债清偿 A1 观察模式）：审计 A1 指出「126/304 已采纳缺 emoji
+ *  前缀、213/333 含进度化石字样全靠人肉巡检」。但化石字样多属历史叙述（ADR 体系只记决策
+ *  方向不记实施进度），机械升 hard 会误伤噪声爆炸。本模式只摊开两类数据供后续决策：
+ *  ① 需 emoji 区分的状态（proposed/partial/deprecated/superseded）缺行首 emoji 前缀；
+ *  ② 决策未定 ADR（proposed/partial）正文含进度化石字样且非历史叙述豁免。属 debt 级观察，
+ *  不进 gate、不阻断（与审计「先观察一轮」建议一致）。
  *
  * 退出码：发现 ERROR → 1；否则 0（技术债为审计报告，不阻断）。
  * 设计意图：ADR 健康综合检查（状态/债务/格式/关联/连续性）
@@ -34,6 +42,7 @@ const REG_FILE = path.join(ADR_DIR, "index.md"); // 登记表已并入 index
 const ARGS = new Set(process.argv.slice(2));
 const JSON_OUT = ARGS.has("--json");
 const ONLY = ["--status", "--health", "--debt"].find((f) => ARGS.has(f)) || null;
+const SUGGEST = ARGS.has("--suggest");
 
 const errors: any[] = [];
 const warns: any[] = [];
@@ -95,7 +104,7 @@ function checkStatus() {
       );
 
     extractDebt(id, title, raw);
-    out.push({ file: ref.relPath, id, num, sub, title, raw, key });
+    out.push({ file: ref.relPath, id, num, sub, title, raw, key, absPath: ref.absPath });
   }
   return out;
 }
@@ -128,11 +137,79 @@ function checkRegistry(statusRowsMap: Record<string, any>) {
   }
 }
 
+// ── 检查 3：治理建议（观察模式，不阻断） ───────────────
+
+const EMOJI_FOR_STATE: Record<string, string> = {
+  proposed: "📝",
+  partial: "🔄",
+  deprecated: "🧊",
+  superseded: "❌",
+};
+// 进度化石字样（决策未定状态的正文里出现 = 真待办信号）。
+// 仅对 proposed/partial（决策未定）扫描，已采纳/已废弃状态里的"进度"属历史叙述，天然排除。
+const PROGRESS_RE = /进度|排期|化石|待办|TODO|未落地|仍在进行|尚未完成|下一步|后续|计划/;
+
+function checkSuggest(statusRows: { id: string; file: string; title: string; raw: string; key: string; absPath: string }[]) {
+  const missingEmoji: { id: string; relPath: string; key: string }[] = [];
+  let acceptedMissingEmoji = 0; // 已采纳缺 ✅ 前缀（量级大，仅计数不逐条列）
+  const lingeringProgress: { id: string; relPath: string; hit: string }[] = [];
+
+  for (const r of statusRows) {
+    // ① 需 emoji 区分的状态缺行首前缀（proposed/partial/deprecated/superseded）
+    const expected = EMOJI_FOR_STATE[r.key];
+    if (expected && !r.raw.trim().startsWith(expected)) {
+      missingEmoji.push({ id: r.id, relPath: r.file, key: r.key });
+    }
+    // ①-b 已采纳缺 ✅ 前缀（格式一致性，与审计 126/304 口径对齐；仅计数）
+    if (r.key === "accepted" && !r.raw.trim().startsWith("✅")) {
+      acceptedMissingEmoji++;
+    }
+
+    // ② 决策未定 ADR（proposed/partial）正文含进度化石字样（真滞留信号，非历史叙述）
+    if (r.key === "proposed" || r.key === "partial") {
+      let body = "";
+      try {
+        body = fs.readFileSync(r.absPath, "utf-8");
+      } catch {
+        continue;
+      }
+      const m = body.match(PROGRESS_RE);
+      if (m) {
+        lingeringProgress.push({ id: r.id, relPath: r.file, hit: m[0] });
+      }
+    }
+  }
+  return { missingEmoji, acceptedMissingEmoji, lingeringProgress };
+}
+
 // ── 主流程 ────────────────────────────────────────────
 
 function main() {
   const rows = checkStatus();
   const statusRowsMap = Object.fromEntries(rows.map((r) => [r.id, r]));
+
+  if (SUGGEST) {
+    const { missingEmoji, acceptedMissingEmoji, lingeringProgress } = checkSuggest(rows as any);
+    if (JSON_OUT) {
+      console.log(JSON.stringify({ missingEmoji, acceptedMissingEmoji, lingeringProgress }, null, 2));
+    } else {
+      console.log("══════════════════════════════════════");
+      console.log(" ADR 治理建议（--suggest 观察模式，不阻断）");
+      console.log("══════════════════════════════════════");
+      console.log(`\n【①-a 需 emoji 区分的状态缺前缀】 ${missingEmoji.length} 条`);
+      for (const e of missingEmoji)
+        console.log(`  ${e.id} [${e.key}] ${e.relPath}（建议状态字段加 ${EMOJI_FOR_STATE[e.key]} 前缀）`);
+      console.log(`\n【①-b 已采纳缺 ✅ 前缀】 ${acceptedMissingEmoji} 条（格式一致性，建议补 ✅）`);
+      console.log(`\n【② 决策未定 ADR 含进度化石】 ${lingeringProgress.length} 条`);
+      for (const p of lingeringProgress)
+        console.log(`  ${p.id} ${p.relPath}（命中「${p.hit}」，建议迁实施进度到知识卡/issue）`);
+      console.log(
+        "\n提示：以上为观察数据，确认无历史叙述误伤后可升 debt/hard 检查（pre-push gate 接 check-adr-health --suggest 的输出）。",
+      );
+    }
+    process.exit(0);
+    return;
+  }
 
   if (!ONLY || ONLY === "--health") checkRegistry(statusRowsMap);
 

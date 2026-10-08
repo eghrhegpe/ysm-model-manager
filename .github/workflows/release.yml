@@ -105,13 +105,10 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
-      # 工具链 spine 抽到共享 composite action（与 windows/darwin/android 同一段）。
-      - uses: ./.github/actions/release-toolchain
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          wails-version: ${{ env.WAILS_VERSION }}
-          go-mod-cache: 'true'  # Linux 解压快，保留 go 模块缓存
-      # OS 专属：Linux 桌面需 GTK4 + WebKitGTK 6.0 系统库（wails3 build 编译期依赖）。
+      # ⚠️ 顺序敏感：GTK4/WebKitGTK 系统库必须在 release-toolchain **之前**安装。
+      # release-toolchain 内的 `go install wails3` 是源码编译，编译期需要 gtk4/webkitgtk-6.0
+      # 的 pkg-config 文件；wails3 缓存未命中时（key 含 WAILS_VERSION，版本一升必 miss）
+      # 会直接在 toolchain 步骤硬失败——apt 排在后面救不回来（v1.16.0 首轮 CI 实证）。
       - name: 安装 Linux 系统依赖（GTK4 + WebKitGTK 6.0）
         run: |
           sudo apt-get update -qq
@@ -125,6 +122,12 @@ jobs:
             libcairo2-dev \
             libatk1.0-dev \
             libgirepository1.0-dev
+      # 工具链 spine 抽到共享 composite action（与 windows/darwin/android 同一段）。
+      - uses: ./.github/actions/release-toolchain
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          wails-version: ${{ env.WAILS_VERSION }}
+          go-mod-cache: 'true'  # Linux 解压快，保留 go 模块缓存
       - name: 打包（build-linux.sh → dist/ 二进制）
         run: |
           bash ./scripts/build-linux.sh "${{ needs.prepare.outputs.version }}"

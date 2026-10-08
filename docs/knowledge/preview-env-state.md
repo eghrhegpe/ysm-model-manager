@@ -22,6 +22,7 @@ tests:
 auto_fields:
   symbols_with_lines:
     - applyModelDefaults
+    - ARCHIVE_ALIAS
     - ATMOSPHERE_PRESETS
     - AtmospherePresetId
     - buildSharedInfra
@@ -39,6 +40,7 @@ auto_fields:
     - EnvStateKey
     - EnvStateMiddleware
     - EnvStateSchema
+    - getArchiveKey
     - getEnvCallbackCount
     - getParamRange
     - getPresetKeys

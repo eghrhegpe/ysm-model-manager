@@ -47,6 +47,7 @@ auto_fields:
     - applyVPDToMesh
     - applyWasdCameraMotion
     - applyWorkerDecodedTextures
+    - ARCHIVE_ALIAS
     - ARIA_ATTR
     - ArmStats
     - assembleBoneSelectInfo
@@ -240,6 +241,7 @@ auto_fields:
     - disposeCustomCleanups
     - disposeDebugGroup
     - disposeEnvSubscriptions
+    - disposeKtx2WorkerPool
     - disposeMaterial
     - disposeMmdMesh
     - disposeObject3D
@@ -261,6 +263,7 @@ auto_fields:
     - ensureReflector
     - ensureViewContainer
     - entryPathOf
+    - ENV_KEYS
     - ENV_PRESET_DEFAULT_INTENSITY
     - ENV_PRESETS
     - ENV_STATE_SCHEMA
@@ -340,6 +343,7 @@ auto_fields:
     - generatePlainPixels
     - generateSandPixels
     - getActiveInputSession
+    - getArchiveKey
     - getBaseDir
     - getBoneDetail
     - getBoneList
@@ -767,6 +771,7 @@ auto_fields:
     - resolveVmdBindings
     - resolveWaterRestoreState
     - RESTORE_SOURCE
+    - restoreEnvPartial
     - restoreFields
     - restoreLightParams
     - restoreModelGroupsVisible
@@ -796,6 +801,7 @@ auto_fields:
     - sampleGpuLoad
     - SANCTIONED_PROCEDURAL_PANELS
     - SanctionedProceduralPanel
+    - saveEnvState
     - scaleForHeight
     - SceneCapability
     - SceneCapabilityFactory

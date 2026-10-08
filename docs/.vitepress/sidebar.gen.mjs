@@ -286,6 +286,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-326：环境能力持久化键派生化：消灭手抄摘键/还原表",
+        "link": "/adr/architecture/ADR-326-env-persist-schema-derived"
+      },
+      {
         "text": "ADR-325：App 瘦身走域下沉：拒绝 Wails 多 Service 外壳",
         "link": "/adr/architecture/ADR-325-app-domain-sinking-over-multi-service"
       },

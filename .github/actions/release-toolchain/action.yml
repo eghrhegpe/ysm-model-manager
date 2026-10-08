@@ -3,6 +3,11 @@ description: |
   setup-go + pnpm + setup-node + go-mod/wails3 二进制缓存 + 前端依赖安装。
   windows/linux/darwin/android 四个 release build job 共用（GHA 不支持 YAML 锚点，
   composite 是唯一合规 DRY 机制）；OS 专属步骤（Linux apt、Android NDK/签名）留在调用方。
+
+  ⚠️ 调用方顺序契约：Linux 必须**先**装 GTK4/WebKitGTK 系统库再调用本 action——
+  本 action 内的 `go install wails3` 是源码编译，编译期依赖 gtk4.pc / webkitgtk-6.0.pc
+  的 pkg-config 文件；缓存 miss（key 含 WAILS_VERSION，版本一升必 miss）时会在此硬失败，
+  后续步骤的 apt 救不回来（v1.16.0 首轮 CI 实证：release-toolchain 失败 + apt 被 skipped）。
 inputs:
   node-version:
     description: Node 大版本（对齐仓库级 vars.NODE_VERSION）

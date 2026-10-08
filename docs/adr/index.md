@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **333** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **334** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > ADR 三区存放：根目录 = 存量（分级前）/ `architecture/` = 架构决策 / `decisions/` = 执行决策日志（ADR-320）。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -19,7 +19,7 @@ permalink: /adr/
 | [📝 提议中](#提议中) | 6 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 15 |
-| [✅ 已采纳](#已采纳) | 304 |
+| [✅ 已采纳](#已采纳) | 305 |
 | [❌ 已取代](#已取代) | 8 |
 | [🧊 已废弃](#已废弃) | 0 |
 | [❓ 未归类](#未归类) | 0 |
@@ -57,10 +57,11 @@ permalink: /adr/
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 | [ADR-050](./ADR-050-plaza-browser-window.md) | 模型广场 · 浏览器窗口（Wails 第二窗口） | 🔄 部分采纳 |
 
-### ✅ 已采纳（304）
+### ✅ 已采纳（305）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-326](./architecture/ADR-326-env-persist-schema-derived.md) | 环境能力持久化键派生化：消灭手抄摘键/还原表 | ✅ 已采纳 |
 | [ADR-324](./architecture/ADR-324-parallel-walkdir.md) | 并行目录遍历替代 filepath.WalkDir | ✅ 已采纳 |
 | [ADR-322](./architecture/ADR-322-meta-failure-log-channel-health.md) | 元失败层：日志通道健康锁存 + 第二落盘通道 + 不可驱逐保留位 | ✅ 已采纳 |
 | [ADR-320](./architecture/ADR-320-adr-tiering.md) | ADR 体系分级：架构决策与执行决策日志分治 | ✅ 已采纳 |
@@ -383,6 +384,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
+| ADR-326 | 环境能力持久化键派生化：消灭手抄摘键/还原表 | ✅ 已采纳 | 2026-10-08 |
 | ADR-325 | App 瘦身走域下沉：拒绝 Wails 多 Service 外壳 | 📝 提议中 | 2026-10-06 |
 | ADR-324 | 并行目录遍历替代 filepath.WalkDir | ✅ 已采纳 | 2026-10-06 |
 | ADR-323 | pre-commit 钩子逻辑下沉 commit-blocks 与薄壳化 | 🔄 部分采纳 | 2026-10-06 |

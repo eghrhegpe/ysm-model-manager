@@ -205,3 +205,38 @@ Go「不做」清单（零 `t.Parallel()`、`InstallLock` 粒度、`SearchModels
 - 三份 caps advisory（1960 / 1932 / 1807 行测试）未逐行判「是否含实质断言」，只按体量计入。
 - 未测量：Windows 本地 `golangci-lint` 全量（316 条口径取自 CI 增量决策，非本地复现）。
 - 本报告写于 HEAD `011400f03`；实测确认 `392ec5f48..011400f03` 区间**零账本改动**，故 §2 / §4 的基线数字在两 HEAD 上等价；此后新提交可能使个别数字漂移（台账卡自述「台账快照会随并行提交过期」）。
+
+---
+
+## 9. 修复轮追加（2026-10-08 深夜，本报告写成后立即执行）
+
+本报告 §7 的建议在写完后**当场执行了一轮**，此处如实记录哪些已落地、哪些被实测推翻。
+
+| 项 | 结果 | 提交 |
+|---|---|---|
+| 覆盖口径分母漏 12 条真闸 | ✅ **已修**：口径改为「清单条目 ∪ check-*」，`41/44 → 53/56`；加回归网钉死（非 `check-*` 命名项必须同时进分子分母） | `1e58f6ed4` |
+| 本地 push 重复跑契约测试 | ✅ **已修**：CI `contracts` job 已全量跑同一脚本（`test.yml:98`，注释自明「与本地同源」），本地不再重复；**push 63.0s → 28.4s** | `6c858f0e9` |
+| CI 可视化空洞 | ✅ **已修**：加 `summary` job（8 个 job 结论/门控压成一页 `GITHUB_STEP_SUMMARY`），`needs` 列全 + `if: always()`；needs 解析失败显式红（拒绝假绿） | `ec9b61439` |
+| `frontend-gates` 单点无门控 | ✅ **已修**：加 `needs: [contracts]`（契约红则治理结论不可信），实测不拉长关键路径 | `a5e6c354b` |
+| 输出策略分裂（4 处 `--json`） | ✅ **改 2 留 2**：`check-redlines` / `check-go-diff-coverage` 改人读；`check-deadcode-baseline` **必须留 `--json`**（它是 CI「不写盘」开关，见下）；`e2e-coverage-report` 留（产物采集） | `a5e6c354b` |
+| 静态工具段无时限 | ✅ **已加**：耗时预算护栏（默认 30s），超时点名最慢项；含**瞬态复跑校验**（防冷缓存假红——上线当日即误报一次 `go list` 33.5s vs 复跑 1.0s） | `78a78ebae` / `4a749b3c0` |
+| 契约测试双表不一致（CI 红） | ✅ **已修**：`test_check_worker_lifecycle.ts` 补登记进 `CONTRACT_TEST_TARGETS`；契约测试 125/127 → **126/127** | `4a749b3c0` |
+| `check-unread-fields` 18.3s 独占 | ✅ **已摘**：rc 恒 0 从不拦人 + 判定 72% 归属存疑 + 18.3s，移出手动跑 | `78a78ebae` |
+| `drift-scan` 挂 push | ⚠️ **加了又撤**：我误挂（未量集成耗时、信号未验证），同日撤销，保持手动可用 | `76651c051` → `945f1cbbe` |
+
+### 9.1 本节纠正的自身误判（写进正文以免后人重蹈）
+
+1. **「push 走 `allMode` 分支无条件全量」——错**。`allMode = args.all`（`pre-push-gate.ts:138`），而 push 不传 `--all`（`.githooks/pre-push:44` 只透传 git refs）⇒ push 落 `schedule.ts` 的**域裁剪分支**。域分组**是生效的**（实测输出显示 frontend/docs/go 三组分别执行）。
+2. **「静态段 24.4s 是 push 成本」——误导**。24.4s 是我手测清单条目之和；真实 push 是 **63.0s**，其中**契约测试 32.6s 占一半**，静态段只约 25s。
+3. **「`drift-scan` 那条 INLINE_BAN_STRIP 是误报」——错**。该行位于 heredoc 内且随后有 `go run genindex.go`（L169），**是真被执行的 Go 代码**，即真违规；真正的缺陷是「同一段 heredoc 里权限规则开了定点豁免、这条 error 级规则没开」→ 扫描永久红且无人挂载，两个沉默互相遮蔽。
+4. **「redlines 账粗于实（63 vs ≈22），应收账到 22」——错**。实测 live 是 **66**，账本 63 反而**低于**实测；且 `count` 字段不参与比较（棘轮键集是 `violations`），`--baseline` 判决为 `newViolations: 0 / ok: true`。真正的活儿是修误报规则（R2 漏豁免单行 JSDoc `/**`、W1 只排了一种字符类顺序），修后 66 → 62。
+5. **门禁时间的账要从「运行时实测」取，不能从清单条目手测累加**——第 2 条就是栽在这上面。
+
+### 9.2 仍未做（留待后续）
+
+- `_summary.errors[]` → `::error file=,line=::` annotation 化（每脚本 2–3 行）。
+- `ALL_STATIC_TOOLS` 31 项由 `schedule.ts` 无条件并入 push（域无关的通用项），可再按域筛一层。
+- 分支保护（建议放最后：job 粒度粗时先开会得到「红了不知红在哪」）。
+- `check-diff-coverage.ts` 有实现、有契约测试，但 **CI 与本地均无独立执行入口**（本地缺覆盖率产物恒 rc=2）——「暂未接线」而非「设计豁免」。
+- 工作区遗留：`scripts/baseline/deadcode-baseline.json` 有未提交改动（一次无 `--json` 的验证运行触发了脚本的**自动收编**，把并行会话漏收编的 2 项写入账本）。该改动**不属于本次修复范围，未提交**，留待归属方处置。
+

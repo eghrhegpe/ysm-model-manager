@@ -129,9 +129,19 @@ export function gateCoverage(): GateCoverage {
 
 /**
  * 刻意旁路清单（ADR-234）：有自动化入口但**设计上不走 gate** 的 check-*——
- * check-biome-lines 是 pre-commit 行级硬阻断（gate 无行级语义）、diff-coverage 走 CI/pre-commit。
+ * check-biome-lines 是 pre-commit 行级硬阻断（gate 无行级语义）。
  * 与「漏接」分开点名，防 AI 读尾行把设计旁路当漏接去补接。新增旁路项时在此登记（无自动对账——
  * 分母动态枚举兜底漂移）。
+ *
+ * ⚠️ 2026-10-08 实测订正（第三轮审计 P2-5）：本注释原写「diff-coverage 走 CI/pre-commit」，
+ * 系不准确的声称。实测：`check-diff-coverage.ts`（前端 Istanbul 口径）本地无
+ * `frontend/coverage/coverage-final.json` 时**恒 exit 2**（「请先运行 vitest run --coverage」），
+ * 且 `git grep` 确认它在 `.github/workflows/` 与 `.githooks/` 里**均无独立调用点**——
+ * 即「有实现、有契约测试（test_check_diff_coverage.ts），但无任何自动执行入口」。
+ * 真正的归宿是 CI 的「vitest --coverage 之后」且 checkout 须带基线 ref（test.yml:366 注记
+ * 已说明覆盖率两件套不随 job 迁移的原因）；接线由 CI 覆盖率专项处理，勿在本地补接
+ * （本地无产物会 rc=2 恒红 ⇒ 假阻断）。**旁路不等于假闸：这里的「旁路」是「暂未接线」，
+ * 不是「设计上不需要」**——两者的处置完全不同（前者待接线，后者永久豁免）。
  * 注意（六锐评 P3 撤销留痕）：check-complexity/params/type-safety 三档扫描器**不属于**
  * 旁路——它们经 FRONTEND_STATIC_TOOLS 计入 covered（覆盖口径 = 「是否接入门禁」，
  * 与 --all 是否全量跑无关，push 模式 --files 裁剪运行已是合法接线形态）。

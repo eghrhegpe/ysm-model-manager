@@ -61,11 +61,11 @@ _ysm_complete() {
     recycle) COMPREPLY=( $(compgen -W "--help" -- "$cur") ); return ;;
     rename) COMPREPLY=( $(compgen -W "--help --path --name" -- "$cur") ); return ;;
     repo-audit) COMPREPLY=( $(compgen -W "--help --dir --output" -- "$cur") ); return ;;
-    resource-scan) COMPREPLY=( $(compgen -W "--help" -- "$cur") ); return ;;
+    resource-scan) COMPREPLY=( $(compgen -W "--help --dir --output" -- "$cur") ); return ;;
     resource-types) COMPREPLY=( $(compgen -W "--help --type --format" -- "$cur") ); return ;;
     scan) COMPREPLY=( $(compgen -W "--help" -- "$cur") ); return ;;
     scan-bench) COMPREPLY=( $(compgen -W "--help --iterations --format" -- "$cur") ); return ;;
-    scan-dir) COMPREPLY=( $(compgen -W "--help" -- "$cur") ); return ;;
+    scan-dir) COMPREPLY=( $(compgen -W "--help --dir --detail --output" -- "$cur") ); return ;;
     search) COMPREPLY=( $(compgen -W "--help --keyword --min-bones --max-bones --min-cubes --max-cubes --min-tex --max-tex --format" -- "$cur") ); return ;;
     single-bench) COMPREPLY=( $(compgen -W "--help --iterations --baseline --save-baseline --threshold --format" -- "$cur") ); return ;;
     tags) COMPREPLY=( $(compgen -W "--help" -- "$cur") ); return ;;

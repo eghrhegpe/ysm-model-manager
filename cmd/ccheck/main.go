@@ -12,6 +12,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -38,6 +39,10 @@ func run(args []string, stdout, stderr io.Writer) int {
 	asJSON := fs.Bool("json", false, "JSON 输出（供 doctor/CI 消费）")
 	includeTests := fs.Bool("tests", false, "是否包含 *_test.go")
 	if err := fs.Parse(args); err != nil {
+		// `--help`/`-h` 走 ErrHelp → 帮助已打印到 stdout/stderr，按惯例 exit 0
+		if errors.Is(err, flag.ErrHelp) {
+			return exitOK
+		}
 		return exitFail
 	}
 

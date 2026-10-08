@@ -487,6 +487,11 @@ app --cli --files-root <路径> resource-scan [选项...]
 ```
 
 
+| 选项 | 类型 | 说明 |
+|------|------|------|
+| `--dir` | string — 目录路径（默认使用 --files-root） |
+| `--output` | string — 输出文件路径（JSON 格式） |
+
 
 ### `resource-types`
 输出资源类型注册表（验证 resource_types.json 读取能力）
@@ -526,6 +531,12 @@ app --cli --files-root <路径> scan [选项...]
 app --cli --files-root <路径> scan-dir [选项...]
 ```
 
+
+| 选项 | 类型 | 说明 |
+|------|------|------|
+| `--dir` | string — 目录路径 |
+| `--detail` | bool — 显示详细文件列表 |
+| `--output` | string — 输出文件路径（JSON 格式） |
 
 
 ### `workshop`

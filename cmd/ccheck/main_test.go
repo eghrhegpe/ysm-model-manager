@@ -142,6 +142,17 @@ func TestRunInvalidFlag(t *testing.T) {
 	}
 }
 
+func TestRunHelpFlag(t *testing.T) {
+	// `--help` 按惯例 exit 0（flag.ErrHelp 单独放行，2026-10-08 复核补）。
+	// usage 文本实际由 flag 包写到 fs.Output()（未设时落 os.Stderr，不落在注入 buffer），
+	// 故此处只硬断言退出码语义，不断言输出内容流。
+	var out, errBuf bytes.Buffer
+	code := run([]string{"--help"}, &out, &errBuf)
+	if code != exitOK {
+		t.Fatalf("exit = %d, want %d", code, exitOK)
+	}
+}
+
 func TestRunIncludeTestsFlag(t *testing.T) {
 	dir := writeFixture(t)
 	// 额外放一个 _test.go：默认应跳过；--tests 时应扫到

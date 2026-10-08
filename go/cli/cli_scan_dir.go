@@ -204,11 +204,14 @@ func printScanDirDetail(dirPath string, totalFiles int) {
 // runScanDir 扫描目录结构（支持 JSON 输出）
 func runScanDir(ctx *CmdContext) error {
 	fs := newCmdFlagSet("scan-dir")
-	flags, _, err := newScanDirFlags(fs, "目录路径", "", true, ctx.Args)
-	if err != nil {
+	// flag 注册必须 inline 在此（scripts/_lib/cli-registry.ts 的 extractFlags 只扫 runFn
+	// 函数体内的 fs.String/Bool 调用；抽到 helper 会让 CLI 文档与 shell 补全丢 flag）
+	dirPath := fs.String("dir", "", "目录路径")
+	detail := fs.Bool("detail", false, "显示详细文件列表")
+	output := fs.String("output", "", "输出文件路径（JSON 格式）")
+	if _, err := parseScanDirArgs(fs, dirPath, ctx.Args); err != nil {
 		return err
 	}
-	dirPath, detail, output := flags.dirPath, flags.detail, flags.output
 
 	fmt.Printf("📁 扫描目录: %s\n\n", *dirPath)
 

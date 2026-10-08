@@ -72,11 +72,14 @@ func addClassified(path, ext string, stats *resourceStats, reg *registry.Resourc
 // runResourceScan 扫描模型仓库资源
 func runResourceScan(ctx *CmdContext) error {
 	fs := newCmdFlagSet("resource-scan")
-	flags, _, err := newScanDirFlags(fs, "目录路径（默认使用 --files-root）", ctx.FilesRoot, false, ctx.Args)
+	// flag 注册必须 inline 在此（scripts/_lib/cli-registry.ts 的 extractFlags 只扫 runFn
+	// 函数体内的 fs.String/Bool 调用；抽到 helper 会让 CLI 文档与 shell 补全丢 flag）
+	dirPath := fs.String("dir", ctx.FilesRoot, "目录路径（默认使用 --files-root）")
+	output := fs.String("output", "", "输出文件路径（JSON 格式）")
+	_, err := parseScanDirArgs(fs, dirPath, ctx.Args)
 	if err != nil {
 		return err
 	}
-	dirPath, output := flags.dirPath, flags.output
 
 	fmt.Printf("📁 扫描资源目录: %s\n\n", *dirPath)
 

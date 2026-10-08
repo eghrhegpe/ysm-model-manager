@@ -135,12 +135,14 @@ function injectDiscScaleUse(mat: THREE.ShaderMaterial): boolean {
  */
 function applySunScaleShaderPatch(mat: THREE.ShaderMaterial, marks: SunScaleMarks): boolean {
   // 声明必须先于使用（GLSL 顺序）；声明层未匹配则跳过使用层防编译错
+  let patchedDecl = false;
   if (!marks.hasSunScaleDecl) {
-    if (!ensureSunScaleDecl(mat)) return false;
+    patchedDecl = ensureSunScaleDecl(mat);
+    if (!patchedDecl) return false;
   }
   const patchedUse = injectSunScaleUse(mat);
   const patchedDisc = injectDiscScaleUse(mat);
-  return patchedUse || patchedDisc;
+  return patchedDecl || patchedUse || patchedDisc;
 }
 
 /**

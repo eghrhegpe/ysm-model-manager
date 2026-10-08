@@ -119,11 +119,11 @@ SkyCapability 加 `startAutoRotate/stopAutoRotate/isAutoRotating` 接口：`requ
 | 来源 | 结果 |
 |------|------|
 | `frontend/src/utils/3d/adapters/preview-menu.ts` — `fillEnvironment` 两级菜单 + `renderCapControls` 分组折叠 + 4 种新控件渲染分支 | 两级下钻 + 分组折叠 + image/color/timeline/histogram 渲染闭环 |
-| `frontend/src/utils/3d/caps/scene-capability.ts` — `MenuControlDef` 加 `group?`、`MenuControlKind` 加 4 种新类型、`getValue` 返回类型扩展 | 声明式控件类型扩展闭环 |
-| `frontend/src/utils/3d/caps/environment-capability.ts` — `ENV_PRESET_LINKAGE` 映射表 + `getCustomHdrThumbnail()` + `getLuminanceHistogram()` + `getMenuControls` 分组 | 预设联动 + HDR 缩略图 + 亮度直方图 |
-| `frontend/src/utils/3d/caps/sky-capability.ts` — `startAutoRotate/stopAutoRotate/isAutoRotating` + `getSunPosition()` | 昼夜循环动画 + 时间轴太阳位置 |
-| `frontend/src/utils/3d/caps/fog-capability.ts` — `getColor()` getter + `getMenuControls` 追加 `fog-color` color 控件 | 雾效颜色拾取 |
-| `frontend/src/utils/3d/caps/ground-capability.ts` — `GroundParams` 加水面字段 + 半透明水面 Mesh + `onBeforeCompile` 波纹动画 + `update(dt)` | 水面湿润表面模式 + 波纹动画 |
+| `frontend/src/preview-3d/caps/scene-capability.ts` — `MenuControlDef` 加 `group?`、`MenuControlKind` 加 4 种新类型、`getValue` 返回类型扩展 | 声明式控件类型扩展闭环 |
+| `frontend/src/preview-3d/caps/environment-capability.ts` — `ENV_PRESET_LINKAGE` 映射表 + `getCustomHdrThumbnail()` + `getLuminanceHistogram()` + `getMenuControls` 分组 | 预设联动 + HDR 缩略图 + 亮度直方图 |
+| `frontend/src/preview-3d/caps/sky-capability.ts` — `startAutoRotate/stopAutoRotate/isAutoRotating` + `getSunPosition()` | 昼夜循环动画 + 时间轴太阳位置 |
+| `frontend/src/preview-3d/caps/fog-capability.ts` — `getColor()` getter + `getMenuControls` 追加 `fog-color` color 控件 | 雾效颜色拾取 |
+| `frontend/src/preview-3d/caps/ground-capability.ts` — `GroundParams` 加水面字段 + 半透明水面 Mesh + `onBeforeCompile` 波纹动画 + `update(dt)` | 水面湿润表面模式 + 波纹动画 |
 | `frontend/src/core/i18n/locales/{zh-CN,en,ja}.ts` — 三语入库 group 标题键 + 6 个新控件标签 | i18n 三语闭环 |
 | 提交 `9f96cd33`/`032faf07`/`262f9c72`/`b7f709cd`/`ee63aba0`/`1f9a6024`/`a1b023d6`/`d5a462e1`/`d328b072`/`e0f590b9`/`8fe4f594` | 本轮 11 次提交完整时间线 |
 

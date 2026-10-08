@@ -3,7 +3,7 @@
 - **状态**：已采纳（Accepted）
 - **日期**：2026-08-16
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/src/utils/3d/caps/light-capability.ts`、`frontend/src/utils/3d/adapters/mount-preview-core.ts`、`ADR-073` 联邦渲染能力、`ADR-076` 预览底部导航、`ADR-066` 通用资源预览
+- **相关**：`frontend/src/preview-3d/caps/light-capability.ts`、`frontend/src/preview-3d/adapters/mount-preview-core.ts`、`ADR-073` 联邦渲染能力、`ADR-076` 预览底部导航、`ADR-066` 通用资源预览
 
 ---
 
@@ -29,7 +29,7 @@
 
 ### 2.1 架构：LightCapability 作为联邦能力（ADR-073 范式）
 
-与 `SkyCapability` / `GroundCapability` 同构，封装为 `frontend/src/utils/3d/caps/light-capability.ts`，在 `mount-preview-core.ts` shared 模式初始化阶段统一注入：
+与 `SkyCapability` / `GroundCapability` 同构，封装为 `frontend/src/preview-3d/caps/light-capability.ts`，在 `mount-preview-core.ts` shared 模式初始化阶段统一注入：
 
 ```
 core 初始化

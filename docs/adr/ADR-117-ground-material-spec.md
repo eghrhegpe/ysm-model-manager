@@ -3,7 +3,7 @@
 - **状态**：✅ 已采纳
 - **日期**：2026-08-23
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/src/utils/3d/caps/ground-surface-spec.ts` / `ground-capability.ts`；参考 MikuMikuAR ADR-089/226/231（地面模式拆分、GroundMaterialSpec 单一事实源、程序化图案走 canvas 管线）；ADR-073/097（caps/ 能力模式与注册表）
+- **相关**：`frontend/src/preview-3d/caps/ground-surface-spec.ts` / `ground-capability.ts`；参考 MikuMikuAR ADR-089/226/231（地面模式拆分、GroundMaterialSpec 单一事实源、程序化图案走 canvas 管线）；ADR-073/097（caps/ 能力模式与注册表）
 
 ---
 

@@ -24,7 +24,7 @@
 
 ### 2.1 SceneCapability 统一契约 + registry 驱动（ADR-073 caps/ 能力模式升级）
 
-所有 3D 预览能力必须实现 `SceneCapability` 接口（`frontend/src/utils/3d/caps/scene-capability.ts` §接口）：
+所有 3D 预览能力必须实现 `SceneCapability` 接口（`frontend/src/preview-3d/caps/scene-capability.ts` §接口）：
 
 ```
 SceneCapability = {
@@ -178,11 +178,11 @@ postProcCap.setReflectorCap(reflectorCap);  // registry.getById("reflector") as 
 - 经验 433477：CanvasTexture 做反射要走 `EquirectangularReflectionMapping` + `PMREMGenerator.fromEquirectangular` 全链路，否则反射全黑。
 - 经验 1270285：Bloom 在玻璃/金属反射视觉叠加顺序应在 SSR 前（发光物反射也带辉光）。
 - 代码落地位置：
-  - SceneCapability 契约：`frontend/src/utils/3d/caps/scene-capability.ts`
-  - Registry：`frontend/src/utils/3d/caps/scene-capability-registry.ts`
-  - Capability 实现：`frontend/src/utils/3d/caps/*-capability.ts`（9 个）
+  - SceneCapability 契约：`frontend/src/preview-3d/caps/scene-capability.ts`
+  - Registry：`frontend/src/preview-3d/caps/scene-capability-registry.ts`
+  - Capability 实现：`frontend/src/preview-3d/caps/*-capability.ts`（9 个）
   - PostprocessingLike 公共接口：`frontend/src/utils/3d/adapters/postprocessing.ts`
   - 顶层 tab 定义：`frontend/src/utils/3d/adapters/preview-menu-defs.ts`（CORE_MENU_ITEMS 5 tab）
   - 菜单 filler：`frontend/src/utils/3d/adapters/preview-menu.ts`（fillEnvironment / fillPostprocessing 均 registry 驱动）
-  - mount wiring：`frontend/src/utils/3d/adapters/mount-preview-core.ts`（setPreset / setReflectorCap wiring）
+  - mount wiring：`frontend/src/preview-3d/adapters/mount-preview-core.ts`（setPreset / setReflectorCap wiring）
   - 三语 i18n：`frontend/src/core/i18n/locales/{zh-CN,en,ja}.ts`（preview.* 键）

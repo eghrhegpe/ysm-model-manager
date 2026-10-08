@@ -49,7 +49,7 @@
 
 - **ADR-125 / ADR-126**：状态层六路径 + 单渲染器 + cap 自动聚合——本 ADR 的档位套用器挂在这两个写口上。
 - **docs/knowledge/preview-menu-settings-state.md**：「性能档位（P4 延续：薄壳版）」章节（实施进度落知识卡，本 ADR 不记）。
-- **实现落点**：`frontend/src/utils/3d/state/perf-presets.ts`（数据表 + 套用器）、`preview-menu-settings.ts`（档位 select）、`mount-preview-core.ts`（进入预览套用）。
+- **实现落点**：`frontend/src/preview-3d/state/perf-presets.ts`（数据表 + 套用器）、`preview-menu-settings.ts`（档位 select）、`mount-preview-core.ts`（进入预览套用）。
 - **被否决参照**：MikuMikuAR `settings-graphics.ts` 的 `buildPresetSchema`（命令式预设：Wails 绑定 + 手写参数块 + custom 档 reRender）。
 
 <!-- 文件名: preview-perf-presets.md → 实际文件 ADR-127-preview-perf-presets.md -->

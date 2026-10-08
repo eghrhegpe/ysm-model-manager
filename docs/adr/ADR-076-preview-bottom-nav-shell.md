@@ -5,7 +5,7 @@
 - **被补充**：[ADR-106](./ADR-106-preview-env-menu-drill-visual.md) 在本 ADR 的声明式根菜单外壳之上，扩展两级下钻、分组折叠、跨 cap 预设联动、4 种可视化控件类型（image/color/timeline/histogram）
 - **日期**：2026-08-16
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/src/utils/3d/adapters/mount-preview-core.ts`、`frontend/src/utils/3d/adapters/preview-menu-defs.ts`、`frontend/src/utils/3d/adapters/preview-menu.ts`、`frontend/src/views/app-preview/ysm-controls.ts`、`frontend/src/views/app-preview/mmd-controls.ts`、`ADR-075`、`ADR-073`、`ADR-072`、`ADR-077`、`ADR-066`、`ADR-021`
+- **相关**：`frontend/src/preview-3d/adapters/mount-preview-core.ts`、`frontend/src/utils/3d/adapters/preview-menu-defs.ts`、`frontend/src/utils/3d/adapters/preview-menu.ts`、`frontend/src/views/app-preview/ysm-controls.ts`、`frontend/src/views/app-preview/mmd-controls.ts`、`ADR-075`、`ADR-073`、`ADR-072`、`ADR-077`、`ADR-066`、`ADR-021`
 
 > **v2 重定向（2026-08-16 用户二次拍板）**：原 v1 方案为「底部悬浮导航 + 分类弹窗外壳」。
 > 用户明确：**「顶层都可以不要了，关闭相当于退出 3D，可以新增设置根菜单放那里，这样全局都走声明式菜单，e2e 不容易载跟头」**。
@@ -122,6 +122,6 @@ ADR-075 已落地的「🌍 环境菜单」（地面/时间/云量/IBL）作为�
 - **审计证据（file:line）**（Phase 1 基线，Phase 2 已删除/迁移，留档）：
   - `frontend/src/views/app-preview/ysm-controls.ts:62/147/156/192` — `mkNavBtn`/`closePopup`/`togglePopup`/`buildCameraControls`（脚手架，Phase 2 已删）；
   - `frontend/src/views/app-preview/mmd-controls.ts:68/82/221/255` — 同构脚手架（`createSlideMenu` 版，Phase 2 已删）；
-  - `frontend/src/utils/3d/adapters/mount-preview-core.ts` — core 顶栏的 `buildCameraControls`（已迁根菜单 camera 项）。
+  - `frontend/src/preview-3d/adapters/mount-preview-core.ts` — core 顶栏的 `buildCameraControls`（已迁根菜单 camera 项）。
 - **关联 ADR**：ADR-075（环境菜单已收敛，本 ADR 的环境项复用其落地）、ADR-073（能力层 caps 共享）、ADR-072（3D 归置）、ADR-077（骨骼面板统一，Phase 2 并行落地经仲裁收编为 bones 菜单项）、ADR-066（统一预览契约 + 单一渲染核心）、ADR-021（声明式菜单范式 `menu-defs.ts`，本 ADR 根菜单镜像其表驱动 + 测试遍历机制）。
 - **决策**：v1 通用底部导航 + 弹窗脚手架收敛契约已定；v2 用户重定向为声明式根菜单（Phase 1 落地）；v3 Phase 2 将 ysm/mmd 适配器专属控件经 `PreviewBuildCtx.menu.setAdapterItems` 收编进根菜单，删除两份底部导航脚手架。vrm/litematic `extraControls` 单按钮保留至 Phase 3。

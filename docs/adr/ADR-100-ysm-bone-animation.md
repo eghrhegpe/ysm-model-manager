@@ -178,6 +178,6 @@ spec 渲染层无需改动（已正确），仅播放器路径滞后；修复后
 - SpecBone3D 旋转格式：`frontend/src/utils/3d/model3d.ts:11-17`，`localRotation: number[]`（弧度，XYZ 欧拉）
 - boneGroupMap 结构：`frontend/src/utils/3d/mesh.ts:68-83`，值为 `THREE.Group`（非 Bone），层级为 modelGroup → parentGroup → childGroup
 - 播放器接口变更（L2）：`createYsmAnimPlayer(boneByName: Map<string, Object3D>, ...)` 第 2 参数从单 clip 改为 clips 数组
-- P1 bug 修复：`frontend/src/utils/3d/adapters/ysm-adapter.ts:207-214`（6312b358）
+- P1 bug 修复：`frontend/src/preview-3d/adapters/ysm-adapter.ts:207-214`（6312b358）
 
 <!-- 文件名: ysm-bone-animation.md → 实际文件 ADR-100-ysm-bone-animation.md -->

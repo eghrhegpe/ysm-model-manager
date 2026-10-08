@@ -3,7 +3,7 @@
 - **状态**：已采纳（Accepted）
 - **日期**：2026-08-18
 - **决策人**：Jieling（人类首席架构师）、AI 代理（Riku）
-- **相关**：`frontend/src/utils/3d/adapters/mount-preview-core.ts`、`switch-preview.ts`、`camera-setup.ts`、`preview-library.ts`、`cleanup-3d.ts`、`bone-raycast.ts`；`Mount3DOptions.cooperate`、`switchPreview({keepInScene})`、`allContent`
+- **相关**：`frontend/src/preview-3d/adapters/mount-preview-core.ts`、`switch-preview.ts`、`camera-setup.ts`、`preview-library.ts`、`cleanup-3d.ts`、`bone-raycast.ts`；`Mount3DOptions.cooperate`、`switchPreview({keepInScene})`、`allContent`
 
 ---
 

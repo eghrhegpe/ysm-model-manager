@@ -39,7 +39,7 @@ Sky/Light/Ground 的用户设置（时间/云量/灯光角度等）不调 `safeG
 
 ### 2.1 SceneCapability 统一接口
 
-新建 `frontend/src/utils/3d/caps/scene-capability.ts`：
+新建 `frontend/src/preview-3d/caps/scene-capability.ts`：
 
 ```typescript
 interface SceneCapability {
@@ -73,7 +73,7 @@ type MenuControlDef =
 
 ### 2.2 注册表驱动
 
-新建 `frontend/src/utils/3d/caps/scene-capability-registry.ts`：
+新建 `frontend/src/preview-3d/caps/scene-capability-registry.ts`：
 
 ```typescript
 class SceneCapabilityRegistry {

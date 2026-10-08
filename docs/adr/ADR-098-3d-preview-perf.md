@@ -113,8 +113,8 @@ update: (dt: number): void => {
 | `frontend/src/utils/3d/model3d-loader.ts` | 改造：loadTextures 用 textureCache |
 | `frontend/src/utils/3d/pack-model-adapter.ts` | 改造：textureFor 用 textureCache |
 | `frontend/src/utils/3d/adapters/cleanup-3d.ts` | 改造：textureCache.disposeAll + clearModelRoots |
-| `frontend/src/utils/3d/adapters/mount-preview-core.ts` | 改造：cullModelGroups(cam) |
-| `frontend/src/utils/3d/adapters/ysm-adapter.ts` | 改造：registerModelRoot |
+| `frontend/src/preview-3d/adapters/mount-preview-core.ts` | 改造：cullModelGroups(cam) |
+| `frontend/src/preview-3d/adapters/ysm-adapter.ts` | 改造：registerModelRoot |
 | `frontend/src/utils/3d/adapters/mmd-adapter.ts` | 改造：registerModelRoot + skip invisible |
 | `frontend/src/utils/3d/adapters/vrm-adapter.ts` | 改造：registerModelRoot + skip invisible |
-| `frontend/src/utils/3d/adapters/litematic-adapter.ts` | 改造：modelGroup + registerModelRoot |
+| `frontend/src/preview-3d/adapters/litematic-adapter.ts` | 改造：modelGroup + registerModelRoot |

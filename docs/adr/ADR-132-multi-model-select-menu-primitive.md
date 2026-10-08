@@ -4,7 +4,7 @@
 - **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-08-29
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`ADR-093`（多模型同框引擎核心）、`ADR-080`（资源包模型适配器）、`ADR-126`（声明式菜单 Schema 终态）、`frontend/src/utils/3d/adapters/preview-menu/`、`frontend/src/views/app-preview/mmd-controls.ts`、`frontend/src/utils/3d/adapters/pack-model-adapter.ts`
+- **相关**：`ADR-093`（多模型同框引擎核心）、`ADR-080`（资源包模型适配器）、`ADR-126`（声明式菜单 Schema 终态）、`frontend/src/utils/3d/adapters/preview-menu/`、`frontend/src/views/app-preview/mmd-controls.ts`、`frontend/src/preview-3d/adapters/pack-model-adapter.ts`
 
 ---
 

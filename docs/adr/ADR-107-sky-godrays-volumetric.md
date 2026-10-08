@@ -124,9 +124,9 @@ void main() {
 
 | 来源 | 结果 |
 |------|------|
-| `frontend/src/utils/3d/caps/sky-capability.ts` — `createGodRays()` + `getGodRaysColor()` + `updateGodRays()` + `getGodRaysIntensity()` + `isGodRaysEnabled()` + `setGodRaysEnabled()` + `getMenuControls` 追加 `sky-godrays` + `saveState`/`loadState` 持久化 + `dispose` 清理 | God Rays 核心逻辑闭环 |
-| `frontend/src/utils/3d/caps/sky-capability.ts` — `createSunsetTintMesh()` + `getSunsetTintIntensity()` + `updateSunsetTint()` 追加 sunset tint overlay | Sunset Tint 闭环 |
-| `frontend/src/utils/3d/caps/sky-capability.test.ts` — 新增 10 个测试用例（初始值、toggle 切换、intensity 公式、setTime 联动、getMenuControls 结构、持久化） | 测试覆盖闭环 |
+| `frontend/src/preview-3d/caps/sky-capability.ts` — `createGodRays()` + `getGodRaysColor()` + `updateGodRays()` + `getGodRaysIntensity()` + `isGodRaysEnabled()` + `setGodRaysEnabled()` + `getMenuControls` 追加 `sky-godrays` + `saveState`/`loadState` 持久化 + `dispose` 清理 | God Rays 核心逻辑闭环 |
+| `frontend/src/preview-3d/caps/sky-capability.ts` — `createSunsetTintMesh()` + `getSunsetTintIntensity()` + `updateSunsetTint()` 追加 sunset tint overlay | Sunset Tint 闭环 |
+| `frontend/src/preview-3d/caps/sky-capability.test.ts` — 新增 10 个测试用例（初始值、toggle 切换、intensity 公式、setTime 联动、getMenuControls 结构、持久化） | 测试覆盖闭环 |
 | `frontend/src/core/i18n/locales/{zh-CN,en,ja}.ts` — 三语入库 `preview.skyGodRays` / `preview.skyGodRaysHint` | i18n 三语闭环 |
 | `docs/adr/ADR-106-preview-env-menu-drill-visual.md` — §3.3 已知遗留改为删除线 + "已落地 ADR-107" | ADR 文档闭环 |
 | 提交 `e11621d5` | ADR-107 落地 |

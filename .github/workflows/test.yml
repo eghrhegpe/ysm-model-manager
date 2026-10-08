@@ -319,9 +319,28 @@ jobs:
         shell: pwsh
         run: go build -ldflags "-X ysm-model-manager/go/version.Version=ci" -o go/updater/ysm-updater-helper.exe ./cmd/updater
 
-      # 本 job 保留真跑 go test 的桌面测试（race）与覆盖率两件套（只有 Windows 能原生构建执行桌面
-      # 目标 + 本仓测试代码含 Windows 专有符号）；golangci-lint 已迁 go-analysis 并行。详见 ci-tuning。
-      - name: Go 检查（build + vet + test -race）
+      # 本 job 保留真跑 go test 的桌面测试（race + 覆盖率）与覆盖率两件套（只有 Windows 能原生
+      # 构建执行桌面目标 + 本仓测试代码含 Windows 专有符号）；golangci-lint 已迁 go-analysis
+      # 并行。详见 ci-tuning。
+      #
+      # ⚠️ 2026-10-08 合并（第三轮技术债审计）：原「-race 一遍 + -coverprofile -p 1 一遍」跑两遍
+      # 同一批测试（本地实测 121.6s + 58.7s = 180.3s）。现合并为 **一次编译同时出 race 与覆盖率**。
+      #
+      # 与 ci-tuning §5「方案 A 试错（已回退）」的区别（**勿混为一谈**）：被打回的是
+      # `race+cover 同键 + -p 1`——知识卡记「Go job 从约 6min 涨到约 8min」。变慢的主因是
+      # **`-p 1` 把所有包串行化**（race 下极贵），不是「合并」本身。本次方案**不带 `-p 1`**。
+      #
+      # 实测（本机 Windows，go 与 CI 同平台；各口径独立计时）：
+      #   -race 单独                 121.6s
+      #   -coverprofile -p 1 单独     58.7s
+      #   现状两遍合计               180.3s
+      #   合并（-race -coverprofile，无 -p 1）  100.1s   ← 省 80.2s（-44%）
+      #   且合并后连跑 4 次全绿、无 FAIL（原 -p 1 是为规避 coverprofile 下
+      #   `internal/app|go/scanner` 的已知 flaky；不带 -p 1 的 4/4 通过是本轮证据，
+      #   但样本仍小——若 CI 出现该 flaky，回退手段见下）。
+      # 回退方式（保命开关）：恢复两个独立步骤（本注释上方 git 历史即有原文），
+      # 或给合并步临时加 `-p 1`（慢但对 flaky 更稳）。
+      - name: Go 检查（build + vet + test -race + 覆盖率）
         shell: pwsh
         run: |
           # ./... 而非 ./go/...：后者会漏掉根 internal/app（Wails 绑定层，79 文件）与 cmd/updater。
@@ -330,8 +349,26 @@ jobs:
           go vet ./...
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           # ./... 而非 ./go/... ./internal/app/：后者是双路径补丁写法，新增顶层包会静默漏检。
-          go test -race ./... -count=1 -timeout 10m | Out-String -Width 400
+          # 一次编译同时产出 race 判定（退出码）与覆盖率趋势（coverprofile 产物）。
+          # -coverprofile 路径必须加引号（PS 成员访问坑，见 ci-tuning §5）；-timeout 硬阀防烧满 job。
+          New-Item -ItemType Directory -Force '.coverage' | Out-Null
+          go test -race ./... -coverprofile='.coverage/go-cover.out' -count=1 -timeout 15m | Out-String -Width 400
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      # Go 覆盖率趋势（非阻断，仅 main）：与上方同一次编译的产物，仅做汇总展示，
+      # **不再重复跑测试**。continue-on-error 沿用原语义（趋势可见、不阻断）。
+      - name: Go 覆盖率报告（非阻断，趋势可见；仅 main）
+        if: github.ref == 'refs/heads/main'
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          # 产物由上方「Go 检查」步产出（同一次编译）。缺产物说明上一步未跑到，
+          # 此处显式提示而非静默给 0（假绿防线）。
+          if (-not (Test-Path '.coverage/go-cover.out')) {
+            Write-Error '未找到 .coverage/go-cover.out——上方「Go 检查」步未产出覆盖率产物'
+            exit 1
+          }
+          go tool cover -func='.coverage/go-cover.out' | Select-String 'total:'
 
       # Go 增量覆盖率门禁（ADR-145/ADR-202）：只查本次变更 Go 文件的变更行覆盖率（须置于 Go 检查后）。
       # ⚠️ 只能留 Windows（需真跑 go test）；git fetch 不带 --depth（浅 fetch 会退化全仓）。
@@ -345,20 +382,6 @@ jobs:
           # `if (json)` 仅切换输出形态，判定链在 440 行之前已定型）。
           node scripts/check-go-diff-coverage.ts
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-      # Go 覆盖率趋势：仅 main 跑 + continue-on-error（独立编译键、coverprofile 有已知 flaky，
-      # 曾试并进 race 一次编译——实测反而变慢，已回退）。只能留 Windows（需真跑 go test）。详见 ci-tuning §5。
-      - name: Go 覆盖率报告（非阻断，趋势可见；仅 main）
-        if: github.ref == 'refs/heads/main'
-        continue-on-error: true
-        shell: pwsh
-        run: |
-          # -p 1 串行规避 go/scanner 隔离冲突；-coverprofile 路径必须加引号（PS 成员访问坑）；
-          # 用 ./... 覆盖 internal/app；-timeout 硬阀防烧满 job。详见 ci-tuning §5。
-          New-Item -ItemType Directory -Force '.coverage' | Out-Null
-          go test ./... -coverprofile='.coverage/go-cover.out' -count=1 -p 1 -timeout 10m | Out-String -Width 200
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          go tool cover -func='.coverage/go-cover.out' | Select-String 'total:'
 
   # ── Go 静态分析（golangci-lint 迁 Linux 独立并行；钉 ubuntu-24.04）──────────
   # ⚠️ 关键手法：GOOS=windows 跨平台类型检查（非在 Linux 编译 Linux 目标）——默认 GOOS=linux 会

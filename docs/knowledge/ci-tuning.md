@@ -118,9 +118,21 @@ go job 要用 `pnpm install` + `vite build`（`//go:embed all:frontend/dist` 前
 - **覆盖率报告 = 仅 main + continue-on-error**：cover 插桩是独立编译键（与 race 缓存不复用），趋势
   数据由 main 累积即可，PR 零成本。该步 coverprofile 下 `internal/app|go/scanner` 有已知 flaky，显式
   `continue-on-error` 兑现「非阻断」（否则一个趋势展示能让 main 因抖动误红）。
-- **方案 A 试错（已回退）**：曾试 main 上把覆盖率并进 race 一次编译（race+cover 同键 + `-p 1`）——
-  实测 Go job 从约 6 分钟涨到约 8 分钟，`-p 1` 串行化 race 的成本超过省下的编译键。故维持「并行 race +
-  独立仅 main cover」。教训：**两条慢路径的并行/串行取舍 ≠「少一个编译键就更快」**，别凭直觉合并。
+- **方案 A 试错（已回退）→ 方案 C 上任（2026-10-08，第三轮技术债审计）**：
+  - **方案 A（仍不采纳）**：把覆盖率并进 race 一次编译，**带 `-p 1`**（race+cover 同键 + `-p 1`）——
+    实测 Go job 从约 6 分钟涨到约 8 分钟。**变慢主因是 `-p 1` 把所有包串行化**（race 下极贵），
+    不是「合并」本身。
+  - ⚠️ **原卡把结论记成「合并会变慢」，属过度归纳**，会拦住后人走对的路。故 2026-10-08 复测并区分：
+    不带 `-p 1` 的合并与带 `-p 1` 的合并是**两个不同方案**。
+  - **方案 C（已上任，`-race -coverprofile`，不带 `-p 1`）**：本机 Windows（go 与 CI 同平台）
+    各口径独立计时——`-race` 单独 121.6s、`-coverprofile -p 1` 单独 58.7s、现状两遍合计 180.3s、
+    **合并 100.1s（省 80.2s / -44%）**；合并后连跑 4 次全绿无 FAIL。
+  - **`-p 1` 为何存在于旧方案**：coverprofile 下 `internal/app|go/scanner` 有已知 flaky，串行规避。
+    不带 `-p 1` 的 4/4 通过是本轮证据但样本仍小——**若 CI 出现该 flaky，回退手段**：恢复两个独立
+    步骤，或给合并步临时加 `-p 1`（慢但更稳）。
+  - **教训（修正后）**：**两条慢路径的并行/串行取舍 ≠「少一个编译键就更快」**——但也**别把
+    「某方案（带特定 flag）变慢」记成「该方向不可行」**。记录错题时必须连**参数**一起记，
+    否则后人复测时对不上（本次即因此走了回头路）。
 - PowerShell 坑：`-coverprofile=.coverage/go-cover.out` **必须加引号**——否则 PS 把 `.coverage/...`
   解析成成员访问（值为 null），profile 落盘 0 字节，`go tool cover -func=` 收到空参数报 too many
   arguments。

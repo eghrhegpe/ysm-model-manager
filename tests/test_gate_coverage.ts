@@ -141,7 +141,27 @@ check("--json 契约真实现（四锐评 #1）：声明必须与消费共存", 
   );
   assert.ok(
     /setLogPushMuted\(true\)/.test(src),
-    "--json 模式应静默人读文本流（logPush muted），防 stdout JSON 被污染",
+    "--json 模式应静默逐条 OK 明细（logPush muted），防 stderr 被 32 行 OK 灌满",
+  );
+});
+
+check("--json 双通道终态（2026-10-08 CI 碎片流复盘）：终态行走 logPushVerdict 直通 stderr", () => {
+  const src = fs.readFileSync(path.join(ROOT, "scripts", "pre-push-gate.ts"), "utf-8");
+  // 静音保留（OK 明细）+ 终态直通（FAIL 块/结论/SKIP/coverageTail）双向锁定：
+  // 只静音不直通 → CI 人读结论被淹没（本次修的病）；只直通不静音 → stderr 灌满 32 行 OK。
+  assert.ok(
+    /logPushVerdict\(/.test(src),
+    "pre-push-gate 终态行应走 logPushVerdict（无视 muted 写 stderr），否则 --json 下人读结论全被静音淹没",
+  );
+  // 结论 PASS/FAIL 两行必须经 logPushVerdict（人读终态的核心，非逐条 OK）
+  assert.ok(
+    /logPushVerdict\(\s*`结论: PASS/.test(src) && /logPushVerdict\(\s*`结论: FAIL/.test(src),
+    "PASS/FAIL 结论行应走 logPushVerdict 直通（消费方是人眼，尤其 CI Actions 面板）",
+  );
+  // 逐条 OK 明细仍走静音 logPush（防回归到「全直通灌满 stderr」）
+  assert.ok(
+    /for \(const r of okResults\)\s*\{\s*logPush\(/.test(src),
+    "逐条 OK 明细应保持静音 logPush（否则 32 行 OK 灌满 stderr、失去策展尾部意义）",
   );
 });
 

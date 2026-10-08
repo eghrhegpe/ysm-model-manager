@@ -192,8 +192,13 @@ jobs:
       # 用 --static 不用 --all（后者重跑 vite/vitest/go，与下方步骤重复）。详见 ci-tuning。
       - name: 静态治理门禁（pre-push-gate --static：本地 hard 项的远端兜底）
         shell: pwsh
+        # 人读文本模式（不加 --json）：CI 日志的消费方是人眼 + Actions 面板，
+        # 而 --json 会把 32 项检查的 raw（工具原始输出全量内嵌）塞进一坨 JSON——
+        # Actions 按固定列宽硬折行、不识别 \n 转义，失败详情全被碎片化淹没。
+        # 文本模式输出策展过的 OK 列表 + FAIL 摘要块（归属→前 ≤4 条错误→复现）+ 结论尾行，
+        # 退出码语义两模式完全一致（见 pre-push-gate.ts finishJson 注释）。
         run: |
-          node scripts/pre-push-gate.ts --static --json | Out-String -Width 200
+          node scripts/pre-push-gate.ts --static
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       # 本 job 只做前端自身检查（tsc / vitest / vite build），不需要 Go 编译。

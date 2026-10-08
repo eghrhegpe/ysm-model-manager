@@ -37,12 +37,38 @@ export function logPush(line: string) {
   // 1. stderr 写终端（stdout 可能被 git pre-push 钩子吞掉）；--json 模式静默
   if (!muted) process.stderr.write(`${line}\n`);
   // 2. 追加到 .git/push-log（持久化，不被 git 跟踪）
+  appendPushLog(line);
+}
+
+/** 追加到 .git/push-log（logPush 与 logPushVerdict 共用；失败不阻断门禁）。 */
+function appendPushLog(line: string) {
   try {
     const timestamp = new Date().toISOString();
     fs.appendFileSync(LOG_FILE, `[${timestamp}] ${line}\n`);
   } catch {
     /* 日志写入失败不阻断门禁 */
   }
+}
+
+/**
+ * 终态结论通道：无视 muted，始终写 stderr + push-log。
+ *
+ * 为什么需要它（2026-10-08 静态治理门禁 CI 碎片流复盘）：--json 模式把人读文本流
+ * 整体静音（logPush 只落 push-log），是为「stdout 纯 JSON 供机器消费」设计的。但
+ * CI 的 Actions 日志面板消费方是**人眼**——静音后 FAIL 明细块（归属→前 ≤4 条错误→
+ * 复现）与结论行一个字都看不到，只剩一坨含 raw 的 JSON 碎片流。
+ *
+ * 两通道本就分离（JSON 走 stdout、文本走 stderr），静音的真实理由只是防 `2>&1`
+ * 合并后污染 JSON.parse——而经核实的消费者（doctor --json 透传 stdio 分离、
+ * CI `| Out-String` 只捕 stdout）都不合并。故让「终态结论行」走此直通通道：
+ * 机器从 stdout 拿结构化 JSON，人从 stderr 拿策展结论，各取所需、互不污染。
+ *
+ * 用途边界：只给 FAIL 明细块 / 结论行 / SKIP / 修复指引等**终态**行——逐条 OK 明细
+ * 仍走 logPush（静音），否则 32 行 OK 会把 stderr 重新灌满、失去策展意义。
+ */
+export function logPushVerdict(line: string) {
+  process.stderr.write(`${line}\n`);
+  appendPushLog(line);
 }
 
 /** 清空日志文件（供手动重置或发版前清理）。 */

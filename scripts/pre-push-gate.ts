@@ -67,7 +67,7 @@ import { coverageTailLine } from "./_lib/gate-coverage.ts";
 import { createGateCtx } from "./_lib/gate-ctx.ts";
 import { formatFailSummary, writeGateReport } from "./_lib/gate-report.ts";
 import { resolveChanges } from "./_lib/gate-resolve.ts";
-import { logPush, setLogPushMuted } from "./_lib/log-push.ts";
+import { logPush, logPushVerdict, setLogPushMuted } from "./_lib/log-push.ts";
 import { parseArgs } from "./_lib/parse-args.ts";
 import { ROOT } from "./_lib/scan-files.ts";
 
@@ -333,7 +333,12 @@ async function main() {
   await runScriptsTypecheck(ctx, { allMode: allMode || staticMode, docsMode });
 
   /* --- 聚合摘要 --- */
-  logPush("------------------- 结果 -------------------");
+  // 终态行走 logPushVerdict（无视 --json 静音、始终写 stderr）：--json 的静音设计
+  // 服务「stdout 纯 JSON 供机器消费」，但 FAIL 明细块与结论行的消费方是人眼（尤其 CI
+  // Actions 面板）——静音后人读结论全被淹没在 JSON 碎片流里。stdout/stderr 分离本就
+  // 安全（无消费者合并两流再 JSON.parse，2026-10-08 核实）。逐条 OK 明细仍走静音的
+  // logPush：否则 32 行 OK 会把 stderr 重新灌满、失去策展尾部的意义。
+  logPushVerdict("------------------- 结果 -------------------");
   // FAIL 后置（2026-09-08 锐评「AI 只读末尾 ~25 行」）：OK 明细在前供人扫读，
   // FAIL 明细块（归属→前 ≤4 条错误→复现）贴着结论放——保证落在尾部阅读窗口内。
   // 旧「FAIL 前置」(2026-08-29) 服务整页自上而下阅读，现由落盘报告 + 明细块取代。
@@ -385,16 +390,16 @@ async function main() {
   }
   if (failResults.length) {
     const display = reportPath ? path.relative(ROOT, reportPath) : "（报告写入失败）";
-    logPush(`------ FAIL 明细（归属 → 前 ≤4 条错误 → 复现）｜ 完整报告: ${display} ------`);
+    logPushVerdict(`------ FAIL 明细（归属 → 前 ≤4 条错误 → 复现）｜ 完整报告: ${display} ------`);
     for (const r of failResults) {
       // hard 失败的归属：push/files 模式（files 非空）可归因本次变更；全扫（--all/--docs）待归因
-      logPush(formatFailSummary(r, okResults.length, ctx.results.length, files.length > 0));
+      logPushVerdict(formatFailSummary(r, okResults.length, ctx.results.length, files.length > 0));
     }
   }
-  logPush("");
+  logPushVerdict("");
   // 覆盖固定尾行（2026-09-13 锐评 P2）：「全绿 ≠ 仓库无风险」从知识卡被动警示
   // 升格为每次输出的主动提醒——PASS/FAIL 两路都打，数据源 _lib/gate-coverage.ts。
-  logPush(coverageTailLine());
+  logPushVerdict(coverageTailLine());
   // 审计留痕（2026-09-13 锐评 P1）：真实 push 模式的每次运行都留一行审计（oid+判定+N/M），
   // 与钩子侧 YSM_SKIP_GATE 的 SKIPPED 行共同构成连续审计流——「这次推送没有 gate 记录」
   // 事后可回溯（--no-verify 本身仍无法客户端检测，边界见 gate-audit.ts 头注释）。
@@ -412,23 +417,25 @@ async function main() {
     }
   }
   if (!ctx.results.length) {
-    // 先留痕再 finishJson——finishJson 内 setLogPushMuted(false) 会重开 stderr，
-    // logPush 若在 finishJson 之后发会把 [SKIP] 行泄漏到 stderr，破坏 --json 契约
-    //（ADR-234：post-main 段只许 console.error，不得有 console.log / logPush）
-    logPush(`${B.SKIP} 无相关域变更（${domainSummary}），无需检查`);
+    // SKIP 是终态行 → logPushVerdict（无视静音写 stderr，人读结论不该被 --json 淹没）。
+    // 仍在 finishJson 之前发：finishJson 内 setLogPushMuted(false) 复位后 stderr 归人读流，
+    // 顺序不变以免与 JSON 发射交错（stdout/stderr 各走各的，但留痕时间戳顺序保持）。
+    logPushVerdict(`${B.SKIP} 无相关域变更（${domainSummary}），无需检查`);
     finishJson();
     return 0;
   }
   if (!ctx.blocked) {
     const passCount = ctx.results.filter((r) => r.ok).length;
-    logPush(
+    logPushVerdict(
       `结论: PASS ✅ ${dryRun ? "（DRY-RUN）" : "放行推送"} ${passCount}/${ctx.results.length} 项通过`,
     );
-    if (reportPath) logPush(`完整报告: ${path.relative(ROOT, reportPath)}`);
+    if (reportPath) logPushVerdict(`完整报告: ${path.relative(ROOT, reportPath)}`);
     // P0 修复（子代理锐评）：横幅移到 dry-run 分支——AI 验证完（dry-run）时看到「可直接 push」，
     // 真实 push 时（!dryRun）已在执行，复读机提示无意义。
     // Q1 修复（子代理再洗礼）：--no-banner 抑制横幅，由调用方（commit-with-check）在 commit 成功后自己打印
     // （commit-with-check 恒走 dry-run，横幅在自动 commit 前出现会诱导 AI push 旧 HEAD）
+    // 横幅保持静音（logPush）：它是 dry-run 便利提示而非终态结论，--json 消费方（doctor
+    // --all --dry-run --json）不需要它灌 stderr——结论行走 logPushVerdict 已足够。
     if (dryRun && !noBanner) {
       logPush("");
       logPush("════════════════════════════════════════");
@@ -439,13 +446,13 @@ async function main() {
     finishJson();
     return 0;
   }
-  logPush(
+  logPushVerdict(
     `结论: FAIL ❌ ${ctx.results.filter((r) => r.ok).length}/${ctx.results.length} 项通过，推送已${dryRun ? "将被" : ""}阻断`,
   );
   // 失败项清单（2026-08-29 可观测性）：一行点名全部失败指令，无需在结果表里逐行找
   const fails = ctx.results.filter((r) => !r.ok);
-  logPush(`失败项 (${fails.length}): ${fails.map((r) => r.label).join(" / ")}`);
-  logPush("明细见上方 FAIL 块（归属/首错/复现；完整报告见明细区头路径）");
+  logPushVerdict(`失败项 (${fails.length}): ${fails.map((r) => r.label).join(" / ")}`);
+  logPushVerdict("明细见上方 FAIL 块（归属/首错/复现；完整报告见明细区头路径）");
   // 修复指引：gofmt 检出未格式化（疑似 --no-verify 绕过 pre-commit）→ 手动修复后重推
   // ADR-234：匹配基于稳定前缀而非 "-w" 子串（-w 仅因
   // 原虚构标签 "gofmt -w ." 而来，标签如实化后子串匹配会静默失效；gofmt 标签唯一）
@@ -461,10 +468,10 @@ async function main() {
     hygieneHint =
       "script-hygiene：新脚本缺文件头字段——补「文件名+描述/依赖/用法/退出码/设计意图」后重推。";
   }
-  logPush(
+  logPushVerdict(
     `修复指引: 按上方 [FAIL] 项处理；${gofmtHint}${hygieneHint}紧急绕过: git push --no-verify`,
   );
-  logPush(pullHint(pushRemoteName));
+  logPushVerdict(pullHint(pushRemoteName));
   finishJson();
   return 1;
 }

@@ -216,7 +216,7 @@ describe("P1 状态层 — 横切路径读写闭环", () => {
 
 describe("P1 状态层 — cap 派生路径的持久化边界", () => {
   it("cap 缺席时：读安全缺省、available=false、写入静默不抛", () => {
-    for (const p of ["render.wireframe", "cap.pmrem"] as (typeof KNOWN_PATHS)[number][]) {
+    for (const p of ["render.wireframe", "cap.skyIblSelfHoldEnabled"] as (typeof KNOWN_PATHS)[number][]) {
       expect(isPathAvailable(p)).toBe(false);
       expect(getStateValue(p)).toBe(false);
       expect(() => setStateValue(p, true)).not.toThrow();
@@ -227,7 +227,7 @@ describe("P1 状态层 — cap 派生路径的持久化边界", () => {
     //  真实 cap 存储前缀见 scene-capability.ts STORAGE_PREFIX = "ysm-scene-cap-"）。
     const keysBefore = Object.keys(localStorage);
     setStateValue("render.wireframe", true);
-    setStateValue("cap.pmrem", true);
+    setStateValue("cap.skyIblSelfHoldEnabled", true);
     expect(Object.keys(localStorage)).toEqual(keysBefore);
   });
 
@@ -238,7 +238,7 @@ describe("P1 状态层 — cap 派生路径的持久化边界", () => {
     mountCaps(pp, rm, sky);
 
     // [ADR-250] render.bloom 已退表——后处理开关唯一入口 = pp-enabled 控件（写 envState.ppEnabled），
-    // 故此处不再经状态层路径断言后处理；wireframe/pmrem 仍为 cap 派生项。
+    // 故此处不再经状态层路径断言后处理；wireframe/skyIblSelfHold 仍为 cap 派生项。
     expect(isPathAvailable("render.wireframe")).toBe(true);
 
     // render.wireframe 走 renderMode 单项语义（rm-wireframe 真值源）：写 true → setWireframe(true)
@@ -249,9 +249,9 @@ describe("P1 状态层 — cap 派生路径的持久化边界", () => {
     setStateValue("render.wireframe", false);
     expect(rm.getWireframe()).toBeNull();
 
-    setStateValue("cap.pmrem", true);
+    setStateValue("cap.skyIblSelfHoldEnabled", true);
     expect(sky.isSkyIblSelfHoldEnabled()).toBe(true);
-    expect(getStateValue("cap.pmrem")).toBe(true);
+    expect(getStateValue("cap.skyIblSelfHoldEnabled")).toBe(true);
 
     // 防双写（cap 就位态）：状态层写入透传 cap，但绝不自行创建 cap 域存储键
     // （cap 域键只由 cap.saveState 写，会话退出时统一落盘——真实前缀 ysm-scene-cap-）。
@@ -290,10 +290,10 @@ describe("P1 状态层 — cap 派生路径的持久化边界", () => {
     expect(() => setStateValue("render.wireframe", true)).not.toThrow();
   });
 
-  it("结构性探测：sky cap 缺环境语义时 cap.pmrem 不可用", () => {
+  it("结构性探测：sky cap 缺环境语义时 cap.skyIblSelfHoldEnabled 不可用", () => {
     const noEnvSky = makeFakeCap("sky", { envMethods: false }); // 有 isEnabled/setEnabled，无环境方法
     mountCaps(noEnvSky);
-    expect(isPathAvailable("cap.pmrem")).toBe(false);
+    expect(isPathAvailable("cap.skyIblSelfHoldEnabled")).toBe(false);
   });
 });
 

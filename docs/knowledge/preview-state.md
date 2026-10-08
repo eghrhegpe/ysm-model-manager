@@ -74,13 +74,13 @@ ADR-125 P1 把 ADR-085 S2「状态单向流」在**设置面板**落地（原 `s
 
 ## 核心职责
 
-1. **给已落地的横切设置项一个 `path` 读写口**（`getStateValue/setStateValue`）——`render.frustumCull` / `render.maxFps` / `render.maxPixelRatio` / `render.wireframe` / `cap.pmrem`。（原含 `render.bloom`，已随 [ADR-250] 退表——后处理是视觉项，开关唯一入口 = cap 自报的 `pp-enabled` 控件写 `envState.ppEnabled`。）
+1. **给已落地的横切设置项一个 `path` 读写口**（`getStateValue/setStateValue`）——`render.frustumCull` / `render.maxFps` / `render.maxPixelRatio` / `render.wireframe` / `cap.skyIblSelfHoldEnabled`。（原含 `render.bloom`，已随 [ADR-250] 退表——后处理是视觉项，开关唯一入口 = cap 自报的 `pp-enabled` 控件写 `envState.ppEnabled`。）
 2. **cap 派生路径惰性解析**：cap 缺席时 `available()=false`，不在构建期冻结（ADR-125 P3 明令禁止的 `if (cap)` 声明期求值反例的根治点）。
 3. **订阅通知**（`subscribeSettings`）：供后续把 `05fe24b7` 的手工 refresh 链路降级为「状态变更自动重算」。
 
 **持久化边界（ADR-125 P1 继承，防双写）**：
 - 三项无 cap 归属的横切项（frustumCull/maxFps/maxPixelRatio）由本层读写 localStorage，键名与迁移前完全一致（`maxPixelRatio` 的键/值域/默认规格声明在 `preview-3d/infra/settings-schema.ts`，ADR-303）。
-- pmrem/wireframe 走 cap 的 get/set 派生映射，**本层不落盘**（cap 存自己的域）。（`render.bloom` 原属此类，已退表。）
+- skyIblSelfHold/wireframe 走 cap 的 get/set 派生映射，**本层不落盘**（cap 存自己的域）。（`render.bloom` 原属此类，已退表。）
 
 ## 对外 API / 入口
 

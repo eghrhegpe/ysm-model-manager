@@ -96,7 +96,7 @@ describe("collectMenuGraph（ADR-128 双通道并集枚举）", () => {
       {
         id: "a",
         kind: "panel",
-        children: [{ id: "b", kind: "field", visibleWhen: (s) => !!s["cap.pmrem"] }],
+        children: [{ id: "b", kind: "field", visibleWhen: (s) => !!s["cap.skyIblSelfHoldEnabled"] }],
       },
     ];
     const preds = collectNodePredicates(nodes);
@@ -104,7 +104,7 @@ describe("collectMenuGraph（ADR-128 双通道并集枚举）", () => {
     expect(preds[0].nodeId).toBe("b");
     // 是节点级谓词（吃 PreviewSnapshot），非 cap 级无参 c.visible
     expect(preds[0].predicate(DEFAULT_SNAP)).toBe(false);
-    expect(preds[0].predicate({ "cap.pmrem": true })).toBe(true);
+    expect(preds[0].predicate({ "cap.skyIblSelfHoldEnabled": true })).toBe(true);
   });
 
   it("renderCustom 节点标记 escapeHatch:true（骨骼/litematic 复杂逃生舱，图不强行走通）", () => {
@@ -168,7 +168,7 @@ describe("collectMenuGraph（ADR-128 双通道并集枚举）", () => {
         kind: "panel",
         dockGroup: "model",
         children: [
-          { id: "sky-node", kind: "field", visibleWhen: (s) => !!s["cap.pmrem"] },
+          { id: "sky-node", kind: "field", visibleWhen: (s) => !!s["cap.skyIblSelfHoldEnabled"] },
           { id: "mode-node", kind: "field", visibleWhen: (s) => s["cap.waterMode"] === "pool" },
           { id: "always", kind: "field" },
         ],
@@ -177,7 +177,7 @@ describe("collectMenuGraph（ADR-128 双通道并集枚举）", () => {
     const { routers, menu } = buildGraphRouters();
     const snaps: RepresentativeSnapshot[] = [
       { name: "default", snapshot: {} },
-      { name: "envOn", snapshot: { "cap.pmrem": true } },
+      { name: "envOn", snapshot: { "cap.skyIblSelfHoldEnabled": true } },
       { name: "modeOn", snapshot: { "cap.waterMode": "pool" } },
     ];
     const graph = collect(routers, menu, snaps);

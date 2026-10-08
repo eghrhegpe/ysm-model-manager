@@ -23,7 +23,7 @@
 //
 // 持久化边界（ADR-125 P1，防双写，本文件继承）：
 //   - 三项真正无 cap 归属的横切项由本层读写 localStorage，键名与迁移前完全一致
-//   - bloom / pmrem / wireframe 走 cap 的 get/set 派生映射，本层不落盘；
+//   - bloom / skyIblSelfHold / wireframe 走 cap 的 get/set 派生映射，本层不落盘；
 //     cap 存自己的域（cap.saveState），本层不重复存
 
 // [doc:adr-129-第一刀] 状态层核心类型本位（修依赖倒置：原住 adapters 平铺的 preview-menu-node-types.ts，
@@ -262,7 +262,7 @@ const bindings: PathBindingMap = {
   },
   // ── cap 派生项：走 get/set 映射，本层不落盘（cap 存自己的域）──
   //   与 cap 自报控件同源（sky-env 随 [ADR-292 D4] 退场，PMREM 供图归 env 面板来源单选）
-  // [ADR-250] `render.bloom` 已退场——后处理是视觉项，与 wireframe/pmrem 同类不进性能档位表。
+  // [ADR-250] `render.bloom` 已退场——后处理是视觉项，与 wireframe/skyIblSelfHold 同类不进性能档位表。
   // 历史：该路径经 setMasterEnabled 写 cap 私有总闸字段，与 per-type 门禁二元相与，
   // 构成「一枚字段三重语义」，且档位切换会覆盖用户手动开关。现后处理开关唯一入口 = `pp-enabled`。
   // [幽灵船收口 2026-09] render.wireframe 原绑定指向 WireframeCapability——该 cap 从未注册
@@ -274,7 +274,7 @@ const bindings: PathBindingMap = {
     set: (v) => wireframeModeCap()?.setWireframe(v ? true : null),
     available: () => wireframeModeCap() !== undefined,
   },
-  "cap.pmrem": {
+  "cap.skyIblSelfHoldEnabled": {
     get: () => envToggleCap("sky")?.isSkyIblSelfHoldEnabled() ?? false,
     set: (v) => envToggleCap("sky")?.setSkyIblSelfHoldEnabled(Boolean(v)),
     available: () => envToggleCap("sky") !== undefined,

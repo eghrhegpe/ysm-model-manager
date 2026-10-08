@@ -100,9 +100,9 @@ ADR-085（菜单单一事实来源）采纳的 S1 注册表、S3 refreshDock 已
 | `render.maxFps` | `MAX_FPS_KEY` | 本层管，写入后**必须** `invalidateMaxFpsCache()`（rAF 热路径有模块级缓存） |
 | `render.maxPixelRatio` | `MAX_PIXEL_RATIO_KEY`（派生自 `infra/settings-schema.ts::TD_PIXEL_RATIO.key`） | 本层管 |
 | `render.wireframe` | RenderModeCapability `rm-wireframe`（幽灵船 `wireframe-toggle` 已收口） | 不落盘 |
-| `cap.pmrem` | sky cap `sky-env` | 不落盘 |
+| `cap.skyIblSelfHoldEnabled` | sky cap `sky-env` | 不落盘 |
 
-> **[ADR-250] `render.bloom` 已退场**（原「postprocessing cap `pp-enabled`」，不落盘）。它经 `setMasterEnabled` 写 cap 私有总闸，与 per-type 门禁二元相与构成「一枚字段三重语义」，且档位切换会覆盖用户手动开关。后处理是视觉项（与 wireframe/pmrem 同类），开关唯一入口 = cap 自报的 `pp-enabled` 控件写 `envState.ppEnabled`。
+> **[ADR-250] `render.bloom` 已退场**（原「postprocessing cap `pp-enabled`」，不落盘）。它经 `setMasterEnabled` 写 cap 私有总闸，与 per-type 门禁二元相与构成「一枚字段三重语义」，且档位切换会覆盖用户手动开关。后处理是视觉项（与 wireframe/skyIblSelfHold 同类），开关唯一入口 = cap 自报的 `pp-enabled` 控件写 `envState.ppEnabled`。
 
 - 路径类型复用已有 `PreviewStatePath`（`state/preview-state.ts`，ADR-129 第一刀自 `preview-menu/node-types.ts` 归位）；`toStatePath()` 是编译期契约守卫，前缀写错即编译失败。
 - cap 派生路径**惰性解析**：每次 `get/set` 都现查 `sceneCapabilityRegistry.getById()`，不在构建期捕获实例。这是 ADR-125 P3 明令禁止的「声明期求值 → cap 后创建则永不可见」（即 `05fe24b7` 所修「水池分组不出现」同类病）的根治点。

@@ -21,14 +21,14 @@ describe("preview-paths 不变量", () => {
   });
 
   it("保留 ADR-125 横切路径（防整体误删）", () => {
-    // [ADR-250] 原六项中的 `render.bloom` 已退场——后处理是视觉项（与 wireframe/pmrem 同类
+    // [ADR-250] 原六项中的 `render.bloom` 已退场——后处理是视觉项（与 wireframe/skyIblSelfHold 同类
     // 中的 bloom 例外曾被误列），其开关唯一入口 = cap 自报的 pp-enabled 控件（写 envState.ppEnabled）。
     const core = [
       "render.frustumCull",
       "render.maxFps",
       "render.maxPixelRatio",
       "render.wireframe",
-      "cap.pmrem",
+      "cap.skyIblSelfHoldEnabled",
     ];
     for (const c of core) {
       expect(KNOWN_PATHS, `缺核心横切键 ${c}`).toContain(c);

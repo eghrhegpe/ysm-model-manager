@@ -5,7 +5,7 @@
 // + custom 档需手动 reRender 面板）。
 //
 // 范围（薄壳版一期）：只控「有状态层路径」的性能项——帧率 / 分辨率。
-//  - wireframe / pmrem / **bloom** 是视觉项不进档位表；frustumCull 是纯优化（无画质损失）恒开不进表
+//  - wireframe / skyIblSelfHold / **bloom** 是视觉项不进档位表；frustumCull 是纯优化（无画质损失）恒开不进表
 //    [ADR-250] bloom 原在表中（low=false / medium=high=true），经 setMasterEnabled 写 cap 私有总闸，
 //    与 per-type 门禁二元相与造成「一枚字段三重语义」+ 档位覆盖用户手动开关，现已退表。
 //  - custom = 不套用（保持用户手调）

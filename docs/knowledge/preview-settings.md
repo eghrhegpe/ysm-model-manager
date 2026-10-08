@@ -137,7 +137,7 @@ status: active
 - `preview-3d/state/preview-state.ts`（ADR-126 P4-A 升格；ADR-129 第一刀归位）
 - 10 条已落地横切设置路径（`KNOWN_PATHS`，见 `preview-paths.ts`；ADR-125 P1 六条 → ADR-126 P4-A 升格 → 后扩至 11 → [ADR-250] 退 1 至 10）：
   - 直管 localStorage（3 条）：`render.maxFps`（60）、`render.maxPixelRatio`（1.5）、`render.frustumCull`
-  - cap 派生（不落盘，4 条）：`render.wireframe` / `cap.pmrem` / `cap.waterMode` / `env.groundMatSource`
+  - cap 派生（不落盘，4 条）：`render.wireframe` / `cap.skyIblSelfHoldEnabled` / `cap.waterMode` / `env.groundMatSource`
     （**`render.bloom` 已随 [ADR-250] 退场**——后处理开关唯一入口 = cap 自报的 `pp-enabled` 控件写 `envState.ppEnabled`；它兼具性能总闸与模型门禁语义，属「一枚字段三重语义」，且档位切换会覆盖用户手动开关。）
   - per-scene 会话态（不落盘，1 条）：`ui.activeComponent`（`-1 = All`）
   - 探针路径（2 条，cap 内部状态上浮供 `visibleWhen` 谓词消费）：`ui.mode`（预览会话模式 shared/self）、`cap.skyGroundCap`（环境能力可用性）
@@ -162,7 +162,7 @@ status: active
 > **[ADR-303] 3D 持久化偏好规格单一源**：`td-cam-speed` / `td-rot-mode` / `ysm_3d_maxPixelRatio` 的**键 + 值域 + 步进 + 默认 + 枚举**唯一声明处 = `preview-3d/infra/settings-schema.ts`。消费面——主设置页（`views/app-content/settings/tpl-settings.ts` 的 range/select）、3D ⚙ 面板（`menu/panels/settings.ts` 的 `buildCameraSchema` / `buildCrossCuttingNodes`）、读取层（`infra/keymap.ts` / `infra/render-budget.ts`）——**只消费不复制**；改值域/默认只动 schema（曾多处各写一份裸字面量：改一处漏一处即滑块可拖到区间外、读取层 clamp 回退默认，表现为「拖了没反应且无报错」）。两面文案键域仍各自独立（schema 有意不带 `labelKey`）。
 > ⚠️ 自适应降采样的地板 `MIN_PIXEL_RATIO`（`render-budget.ts`）**不在 schema**——它是运行时自动降级的地板，与「用户可设上限」是两个旋钮（ADR-303 §2 明确不合并）。
 
-> `render.wireframe` / `cap.pmrem` / `cap.waterMode` / `env.groundMatSource` 由对应 `SceneCapability` 自行 `saveState`，状态层**不落盘**（ADR-125 P1 防双写红线）；`ui.activeComponent` 是 per-scene 会话态，`resetActiveComponent()` 在预览 dispose 时复位。
+> `render.wireframe` / `cap.skyIblSelfHoldEnabled` / `cap.waterMode` / `env.groundMatSource` 由对应 `SceneCapability` 自行 `saveState`，状态层**不落盘**（ADR-125 P1 防双写红线）；`ui.activeComponent` 是 per-scene 会话态，`resetActiveComponent()` 在预览 dispose 时复位。
 
 ## 设置项清单
 
@@ -177,7 +177,7 @@ status: active
 | 视锥剔除 | `render.frustumCull`（状态层直管） | 待确认 | `preview-state.ts` |
 | 后处理开关 | `pp-enabled`（postprocessing cap 自报 → 写 `envState.ppEnabled`） | `false` | `postprocessing-menu.ts` |
 | 线框模式 | `render.wireframe`（wireframe cap） | `false` | `preview-state.ts` |
-| PMREM 环境 | `cap.pmrem`（sky cap） | `false` | `preview-state.ts` |
+| 天空 IBL 自持兜底 | `cap.skyIblSelfHoldEnabled`（sky cap，[命名扫描 P2] 原 `cap.pmrem`，名实不符已收口） | `false` | `preview-state.ts` |
 | 水面模式 | `cap.waterMode` | `"film"` | `preview-state.ts` |
 | 地面材质源 | `env.groundMatSource` | `"none"` | `preview-state.ts` |
 | 组件选择 | `ui.activeComponent`（per-scene 会话态） | `-1` | `preview-state.ts` / `ysm-controls.ts` |

@@ -5,12 +5,16 @@
 //	go run ./cmd/ccheck [--dir ./go] [--threshold 15] [--top 20] [--json]
 //
 // 默认跳过 *_test.go 与生成文件；输出按认知复杂度降序。情报型，退出码 0。
+//
+// 可测性（2026-10-08）：逻辑收敛到 run(args, stdout, stderr) int——os.Exit 只发生在
+// main() 里（run 返回退出码），cmd/ccheck/main_test.go 可直测不 spawn 子进程。
 package main
 
 import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -18,23 +22,40 @@ import (
 	"ysm-model-manager/go/ccheck"
 )
 
-func main() {
-	dir := flag.String("dir", ".", "扫描目录")
-	threshold := flag.Int("threshold", 15, "🟨≥threshold（橙=2x 红=3x）")
-	top := flag.Int("top", 20, "文本报告列出前 N 条")
-	asJSON := flag.Bool("json", false, "JSON 输出（供 doctor/CI 消费）")
-	includeTests := flag.Bool("tests", false, "是否包含 *_test.go")
-	flag.Parse()
+// exitFail / exitOK 常量：run 返回码与 main 的 os.Exit 语义一致，便于测试断言。
+const (
+	exitFail = 1
+	exitOK   = 0
+)
+
+// run 解析 argv、执行扫描并输出结果。返回进程退出码（0 正常，1 参数/扫描失败）。
+// stdout 用于结果输出，stderr 用于错误；测试可注入 bytes.Buffer。
+func run(args []string, stdout, stderr io.Writer) int {
+	fs := flag.NewFlagSet("ccheck", flag.ContinueOnError)
+	dir := fs.String("dir", ".", "扫描目录")
+	threshold := fs.Int("threshold", 15, "🟨≥threshold（橙=2x 红=3x）")
+	top := fs.Int("top", 20, "文本报告列出前 N 条")
+	asJSON := fs.Bool("json", false, "JSON 输出（供 doctor/CI 消费）")
+	includeTests := fs.Bool("tests", false, "是否包含 *_test.go")
+	if err := fs.Parse(args); err != nil {
+		return exitFail
+	}
 
 	absDir, err := filepath.Abs(*dir)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[ccheck] 绝对路径解析失败: %v\n", err)
-		os.Exit(1)
+		_, _ = fmt.Fprintf(stderr, "[ccheck] 绝对路径解析失败: %v\n", err)
+		return exitFail
+	}
+	// 目录前置校验：ScanDir 对不存在的根目录会静默返回空（WalkDir 顶层 err 被吞），
+	// 显式 Stat 让「--dir 打错」立即失败而非输出一份空报告（假绿灯）。
+	if info, serr := os.Stat(absDir); serr != nil || !info.IsDir() {
+		_, _ = fmt.Fprintf(stderr, "[ccheck] 目录不存在或不是目录: %s\n", absDir)
+		return exitFail
 	}
 	funcs, err := ccheck.ScanDir(absDir, *dir, !*includeTests)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[ccheck] 扫描失败: %v\n", err)
-		os.Exit(1)
+		_, _ = fmt.Fprintf(stderr, "[ccheck] 扫描失败: %v\n", err)
+		return exitFail
 	}
 
 	var active []ccheck.FuncResult
@@ -67,13 +88,13 @@ func main() {
 			n = len(active)
 		}
 		out.Top = active[:n]
-		enc := json.NewEncoder(os.Stdout)
+		enc := json.NewEncoder(stdout)
 		enc.SetIndent("", "  ")
 		_ = enc.Encode(out)
-		return
+		return exitOK
 	}
 
-	fmt.Printf("=== 认知复杂度扫描（%s，🟨≥%d，共 %d 个函数）===\n", *dir, *threshold, len(funcs))
+	_, _ = fmt.Fprintf(stdout, "=== 认知复杂度扫描（%s，🟨≥%d，共 %d 个函数）===\n", *dir, *threshold, len(funcs))
 	n := 0
 	for _, f := range active {
 		if n >= *top {
@@ -85,12 +106,17 @@ func main() {
 		} else if f.Cognitive >= *threshold*2 {
 			mark = "🟧"
 		}
-		fmt.Printf("%s c%d/n%d  %s:%d  %s\n", mark, f.Cognitive, f.MaxNesting, f.File, f.Line, f.Name)
+		_, _ = fmt.Fprintf(stdout, "%s c%d/n%d  %s:%d  %s\n", mark, f.Cognitive, f.MaxNesting, f.File, f.Line, f.Name)
 		n++
 	}
 	if len(active) == 0 {
-		fmt.Println("✅ 无函数达到阈值，Go 侧复杂度在上限侧是稳的。")
+		_, _ = fmt.Fprintln(stdout, "✅ 无函数达到阈值，Go 侧复杂度在上限侧是稳的。")
 	} else {
-		fmt.Printf("⚠️  %d 个函数落入 🟨+（maxNesting 前 N 对应高迷宫）\n", len(active))
+		_, _ = fmt.Fprintf(stdout, "⚠️  %d 个函数落入 🟨+（maxNesting 前 N 对应高迷宫）\n", len(active))
 	}
+	return exitOK
+}
+
+func main() {
+	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
 }

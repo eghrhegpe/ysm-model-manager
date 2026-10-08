@@ -161,6 +161,32 @@ func (c *mergedCollector) appendMergedTexture(e container.Entry) {
 	}
 }
 
+// geoOrderCompare 按 orderMap 比较两个名称的声明序；present 表示至少一方在 map 中。
+// sortByModelOrder（未命中稳定落尾）与 sortGeoFilesMainFirst（未命中回退字典序）原各写一份
+// 「取 key + 双命中比较」闭包，jscpd 记为新增重复对；收口到此处消除。
+// 仅当 present=false（双未命中）时调用方才回退自身兜底排序，与两处原闭包语义严格一致。
+// 查询键口径与 orderMap 键一致（小写 + 反斜杠归一化，见 sortByModelOrder 注释）。
+func geoOrderCompare(orderMap map[string]int, aName, bName string) (c int, present bool) {
+	ai, oki := orderMap[strings.ToLower(filepath.ToSlash(aName))]
+	aj, okj := orderMap[strings.ToLower(filepath.ToSlash(bName))]
+	if !oki && !okj {
+		return 0, false
+	}
+	switch {
+	case oki && okj:
+		switch {
+		case ai < aj:
+			return -1, true
+		case ai > aj:
+			return 1, true
+		}
+		return 0, true
+	case oki:
+		return -1, true
+	}
+	return 1, true
+}
+
 // sortByModelOrder 将 geoFiles 按声明序排序：main/player 模型先、投射物后，未声明项稳定落尾。
 // 查询键与 orderMap 键同口径（"\\"→"/" 归一化 + 小写化）：Windows 工具产出的条目名可能
 // 含反斜杠/混合大小写，未归一化会让声明序排序失效。
@@ -175,12 +201,8 @@ func sortByModelOrder(geoFiles []geoEntry, modelOrder []string) {
 		orderMap[strings.ToLower(filepath.ToSlash(p))] = i
 	}
 	sort.SliceStable(geoFiles, func(i, j int) bool {
-		ai, oki := orderMap[strings.ToLower(filepath.ToSlash(geoFiles[i].name))]
-		aj, okj := orderMap[strings.ToLower(filepath.ToSlash(geoFiles[j].name))]
-		if oki && okj {
-			return ai < aj
-		}
-		return oki
+		c, present := geoOrderCompare(orderMap, geoFiles[i].name, geoFiles[j].name)
+		return present && c < 0
 	})
 }
 

@@ -18,6 +18,19 @@ import (
 
 type ScanEntriesFn func(dir string) ([]types.ModelEntry, bool)
 
+// dirLevelCacheKey 构建文件夹级同步的缓存键（kind 恒为 dirlevel）。
+// syncResourcesDirLevel 的 collectEntries 闭包与 collectEntriesWalkCached 原本各写一份
+// 「构造 cacheKey + loadSyncScanCache」块，jscpd 记为新增重复对；收口到此处消除。
+func dirLevelCacheKey(rootDir, rtype string) syncDirectoryScanKey {
+	return syncDirectoryScanKey{kind: "dirlevel", root: rootDir, rtype: rtype}
+}
+
+// loadDirLevelScanCache 读文件夹级同步缓存（syncDirLevelScanCache）；命中返回 true。
+// 返回的 map 是缓存共享对象，消费方必须只读（见 sync_cache.go 契约）。
+func loadDirLevelScanCache(rootDir, rtype string) (map[string]string, bool) {
+	return loadSyncScanCache[map[string]string](&syncDirLevelScanCache, dirLevelCacheKey(rootDir, rtype))
+}
+
 // SyncResourcesDirLevel 文件夹级同步（默认 filepath.Walk，行为不变，供测试/旧调用方使用）。
 func SyncResourcesDirLevel(globalDir, instanceDir, rtype string) types.ResourceSyncResult {
 	return syncResourcesDirLevel(globalDir, instanceDir, rtype, nil)
@@ -40,8 +53,7 @@ func syncResourcesDirLevel(globalDir, instanceDir, rtype string, scanFn ScanEntr
 	// 否则退回 filepath.Walk 原行为（结果叠 30s sync 目录扫描缓存，
 	// 使 maid-model 等嵌套类型的回退 Walk 在 TTL 内也只真正走一次）。
 	collectEntries := func(rootDir string) map[string]string {
-		cacheKey := syncDirectoryScanKey{kind: "dirlevel", root: rootDir, rtype: rtype}
-		if cached, ok := loadSyncScanCache[map[string]string](&syncDirLevelScanCache, cacheKey); ok {
+		if cached, ok := loadDirLevelScanCache(rootDir, rtype); ok {
 			return cached
 		}
 		if scanFn != nil {
@@ -53,7 +65,7 @@ func syncResourcesDirLevel(globalDir, instanceDir, rtype string, scanFn ScanEntr
 					// 直接返回，与 Walk 回退路径（collectEntriesWalkCached）对称复用缓存。
 					// 仅当 m != nil（无嵌套模式可反推）才存——nil 回退 Walk 不缓存，
 					// 否则会把「须走 Walk」误判为命中而永久跳过 Walk。
-					storeSyncScanCache(&syncDirLevelScanCache, cacheKey, m)
+					storeSyncScanCache(&syncDirLevelScanCache, dirLevelCacheKey(rootDir, rtype), m)
 					return m
 				}
 			}
@@ -151,8 +163,7 @@ func collectEntriesWalk(rootDir string, rtype string) (map[string]string, bool) 
 // sync 目录扫描缓存；用于嵌套类型（maid-model）等无法从 scanner 扁平列表
 // 精确反推、必须回退 Walk 的路径。
 func collectEntriesWalkCached(rootDir, rtype string) map[string]string {
-	cacheKey := syncDirectoryScanKey{kind: "dirlevel", root: rootDir, rtype: rtype}
-	if cached, ok := loadSyncScanCache[map[string]string](&syncDirLevelScanCache, cacheKey); ok {
+	if cached, ok := loadDirLevelScanCache(rootDir, rtype); ok {
 		return cached
 	}
 	entries, partialFail := collectEntriesWalk(rootDir, rtype)
@@ -160,7 +171,7 @@ func collectEntriesWalkCached(rootDir, rtype string) map[string]string {
 	// 根目录存在 ≠ 子树扫完整——原 os.Stat 守卫与完整性无关，子目录读失败时
 	// 残缺 entries 仍会被缓存 30s 当权威。partialFail 已覆盖 root 不存在（首回调即 err）。
 	if !partialFail {
-		storeSyncScanCache(&syncDirLevelScanCache, cacheKey, entries)
+		storeSyncScanCache(&syncDirLevelScanCache, dirLevelCacheKey(rootDir, rtype), entries)
 	}
 	return entries
 }

@@ -121,13 +121,10 @@ func sortGeoFilesMainFirst(geoFiles []geoEntry, orderMap map[string]int, modelOr
 			return mi
 		}
 		if len(modelOrder) > 0 {
-			ai, oki := orderMap[strings.ToLower(filepath.ToSlash(geoFiles[i].name))]
-			aj, okj := orderMap[strings.ToLower(filepath.ToSlash(geoFiles[j].name))]
-			if oki && okj {
-				return ai < aj
-			}
-			if oki != okj {
-				return oki
+			// 声明序比较（geoOrderCompare 收口 archive_collect 的同款闭包）；
+			// 双命中（含相等视为不重排）与单命中均以其结果为准，仅双未命中回退下方字典序。
+			if c, present := geoOrderCompare(orderMap, geoFiles[i].name, geoFiles[j].name); present {
+				return c < 0
 			}
 		}
 		return geoFiles[i].name < geoFiles[j].name

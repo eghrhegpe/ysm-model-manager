@@ -95,6 +95,11 @@ node scripts/check-go-coverage-threshold.ts --json                   # CI / 子�
   - 生成命令用**绝对路径** `-coverprofile="<abs>/.coverage/go-cover.out"` 更稳：相对路径在 PowerShell 多包模式下受包目录影响（实证：`go test ... -coverprofile=.coverage/go-cover.out` 成功 exit 0 但文件未落地）。
 - 同族门禁：`check-go-diff-coverage.ts`（增量行覆盖）、`scripts/hooks/go-coverage-hint.ts`
   （commit 时按包提示，非阻断）。
+  - **`envMismatch` 编译集 oracle 必须无条件查询**（2026-10-08 修 Linux CI 恒红）：旧实现在
+    `go test -coverprofile` 执行失败时 `compiled=null`，使「平台/标签专属文件不编译」被误判为
+    「真 0 覆盖」→ 契约测试 `test_check_go_diff_coverage_skip.ts` 在 Linux 恒报
+    「期望 1 个非当前平台文件被豁免，实际 0」。`goListGoFiles` 只回答「当前 GOOS 下该包编哪些文件」，
+    与测试是否成功执行无关，应无条件调用。
 - **本门禁刻意旁路** pre-commit/CI（见 doctor 覆盖口径输出），需手动或 CI 显式调用。
 
 ## 不变量

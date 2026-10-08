@@ -537,8 +537,13 @@ function main() {
     for (const [pat, files] of pkgFiles) {
       const profileText = runCoverProfile(pat, tmp);
       const blocksByFile = profileText ? parseGoCover(profileText) : new Map();
-      // 编译集 oracle：仅当测试编译成功时才查询；编译失败则不豁免（保守沿用旧行为）。
-      const compiled = profileText ? goListGoFiles(pat) : null;
+      // 编译集 oracle：**无条件查询**（2026-10-08 修 Linux CI 恒红——原实现仅当
+      // profileText 存在时才查，若 `go test -coverprofile` 执行失败（如 GOOS 交叉、测试
+      // 二进制无法执行）则 compiled=null → 平台专属文件 envMismatch=false 被误拦，契约
+      // test_check_go_diff_coverage_skip 在 Linux 恒报「期望 1 个非当前平台文件被豁免，
+      // 实际 0」）。`go list -f {{.GoFiles}}` 是纯编译集查询、与测试是否成功执行无关，
+      // 无论 profile 是否存在都可信——它只回答「当前 GOOS 下该包编哪些文件」。
+      const compiled = goListGoFiles(pat);
       for (const f of files) {
         const fname = path.posix.basename(f);
         let pct: number;

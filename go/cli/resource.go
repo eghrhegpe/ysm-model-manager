@@ -72,16 +72,11 @@ func addClassified(path, ext string, stats *resourceStats, reg *registry.Resourc
 // runResourceScan 扫描模型仓库资源
 func runResourceScan(ctx *CmdContext) error {
 	fs := newCmdFlagSet("resource-scan")
-	dirPath := fs.String("dir", ctx.FilesRoot, "目录路径（默认使用 --files-root）")
-	output := fs.String("output", "", "输出文件路径（JSON 格式）")
-	_, err := parseFlags(fs, ctx.Args)
+	flags, _, err := newScanDirFlags(fs, "目录路径（默认使用 --files-root）", ctx.FilesRoot, false, ctx.Args)
 	if err != nil {
 		return err
 	}
-
-	if *dirPath == "" {
-		return newParamErrf("--dir 参数不能为空")
-	}
+	dirPath, output := flags.dirPath, flags.output
 
 	fmt.Printf("📁 扫描资源目录: %s\n\n", *dirPath)
 

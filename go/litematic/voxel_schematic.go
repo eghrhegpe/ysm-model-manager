@@ -84,6 +84,17 @@ func schematicCoord(i int, dims schematicDims) (x, y, z int16, ok bool) {
 	return int16(px), int16(py), int16(pz), true
 }
 
+// blockAtSchematicCursor 由游标当前位置与颜色构造方块；坐标越界（int16 回绕守卫）返回 ok=false。
+// nextSchematicV2Block / nextSchematicV1Block 末尾原本复制同款「取坐标 + 越界跳过 + 构造 voxelBlock」
+// 块，jscpd 记为新增重复对；收口到此处消除。
+func blockAtSchematicCursor(c *schematicCursor, dims schematicDims, color string) (voxelBlock, bool) {
+	x, y, z, ok := schematicCoord(c.i, dims)
+	if !ok {
+		return voxelBlock{}, false
+	}
+	return voxelBlock{Color: color, X: x, Y: y, Z: z}, true
+}
+
 // nextSchematicV2Block v2 路径：varint BlockData，推进游标扫描首个非空气方块。
 // blockID 缺 Palette 条目时兜底灰 #7F7F7F（与 v1 一致）。
 func nextSchematicV2Block(c *schematicCursor, blockDataBA []byte, paletteMap map[int]string, dims schematicDims) (voxelBlock, bool) {
@@ -98,11 +109,9 @@ func nextSchematicV2Block(c *schematicCursor, blockDataBA []byte, paletteMap map
 		if col, ok := paletteMap[blockID]; ok {
 			color = col
 		}
-		x, y, z, ok := schematicCoord(c.i, dims)
-		if !ok {
-			continue
+		if b, ok := blockAtSchematicCursor(c, dims, color); ok {
+			return b, true
 		}
-		return voxelBlock{Color: color, X: x, Y: y, Z: z}, true
 	}
 	return voxelBlock{}, false
 }
@@ -130,11 +139,9 @@ func nextSchematicV1Block(c *schematicCursor, blocksBA, dataBA []byte, paletteMa
 				color = MapColor(name)
 			}
 		}
-		x, y, z, ok := schematicCoord(c.i, dims)
-		if !ok {
-			continue
+		if b, ok := blockAtSchematicCursor(c, dims, color); ok {
+			return b, true
 		}
-		return voxelBlock{Color: color, X: x, Y: y, Z: z}, true
 	}
 	return voxelBlock{}, false
 }

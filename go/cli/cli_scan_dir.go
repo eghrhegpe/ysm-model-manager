@@ -204,17 +204,11 @@ func printScanDirDetail(dirPath string, totalFiles int) {
 // runScanDir 扫描目录结构（支持 JSON 输出）
 func runScanDir(ctx *CmdContext) error {
 	fs := newCmdFlagSet("scan-dir")
-	dirPath := fs.String("dir", "", "目录路径")
-	detail := fs.Bool("detail", false, "显示详细文件列表")
-	output := fs.String("output", "", "输出文件路径（JSON 格式）")
-	_, err := parseFlags(fs, ctx.Args)
+	flags, _, err := newScanDirFlags(fs, "目录路径", "", true, ctx.Args)
 	if err != nil {
 		return err
 	}
-
-	if *dirPath == "" {
-		return newParamErrf("--dir 参数不能为空")
-	}
+	dirPath, detail, output := flags.dirPath, flags.detail, flags.output
 
 	fmt.Printf("📁 扫描目录: %s\n\n", *dirPath)
 

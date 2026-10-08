@@ -98,6 +98,16 @@ func mapStepToAppError(step, src, dst string, err error) types.AppError {
 	return base
 }
 
+// replaceTmpErr 处理「tmp 原子替换到 dst」失败的统一收口：清掉残留 tmp 并返回
+// 逐字一致的「替换目标文件失败」AppError。
+// LinkOrCopyLocked 与 SymlinkOrCopyLocked 末尾原本复制同款 os.Rename 错误块，
+// jscpd 记为新增重复对；收口到此处消除。Windows 下目标被占用会 ERROR_SHARING_VIOLATION
+// （见 go/AGENTS.md 坑点），故先 _ = os.Remove(tmp) 再报错，避免残留临时文件。
+func replaceTmpErr(tmp, dst, src string, err error) error {
+	_ = os.Remove(tmp)
+	return types.AppError{Code: types.ErrIO, Operation: "安装模型", SourcePath: src, TargetPath: dst, Reason: "替换目标文件失败", Suggestion: "请检查目标文件是否被占用或为只读"}
+}
+
 // CopyFile 复制文件到目标目录（带互斥锁）
 func CopyFile(src, dstDir string) (string, error) {
 	InstallLocker.Lock()
@@ -126,8 +136,7 @@ func LinkOrCopyLocked(src, dstDir string) error {
 		return linkErr(src, dst, err)
 	}
 	if err := os.Rename(tmp, dst); err != nil {
-		_ = os.Remove(tmp)
-		return types.AppError{Code: types.ErrIO, Operation: "安装模型", SourcePath: src, TargetPath: dst, Reason: "替换目标文件失败", Suggestion: "请检查目标文件是否被占用或为只读"}
+		return replaceTmpErr(tmp, dst, src, err)
 	}
 	return nil
 }
@@ -164,8 +173,7 @@ func SymlinkOrCopyLocked(src, dstDir string) error {
 		return symlinkErr(src, dst, err)
 	}
 	if err := os.Rename(tmp, dst); err != nil {
-		_ = os.Remove(tmp)
-		return types.AppError{Code: types.ErrIO, Operation: "安装模型", SourcePath: src, TargetPath: dst, Reason: "替换目标文件失败", Suggestion: "请检查目标文件是否被占用或为只读"}
+		return replaceTmpErr(tmp, dst, src, err)
 	}
 	return nil
 }

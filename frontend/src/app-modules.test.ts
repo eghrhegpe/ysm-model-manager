@@ -16,6 +16,10 @@ import {
 import { applyUIPrefs } from "@/views/app-content/settings/ui-prefs.ts";
 import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
 
+// 隐私模式用例触发 storage.ts 内部 logWarn（命名导入，spyOn 拦不到）→ 整模块静音
+const { logWarnMock } = vi.hoisted(() => ({ logWarnMock: vi.fn() }));
+vi.mock("@/utils/base/primitives/log.ts", () => ({ logWarn: logWarnMock }));
+
 /** 隐私模式模拟：让 localStorage 读写抛错（node 环境 test-setup 注入的全局 localStorage，必须 vi.spyOn） */
 function breakLocalStorage() {
   const getSpy = vi.spyOn(localStorage, "getItem").mockImplementation(() => {

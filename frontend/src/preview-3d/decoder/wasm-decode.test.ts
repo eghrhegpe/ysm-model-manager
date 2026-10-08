@@ -20,7 +20,12 @@ vi.mock("@/wasm/ysm-parser.ts", () => ({
 }));
 
 vi.mock("@/backend/app.ts", () => ({
-  getApp: vi.fn().mockResolvedValue({ ReadFileBytes: readFileBytesMock }),
+  getApp: vi.fn().mockResolvedValue({
+    ReadFileBytes: readFileBytesMock,
+    // wasm-decode.ts 在 swallowError 内盲调 CacheModelAvatars；mock 缺省会解构成
+    // undefined → TypeError 经 logWarn 泄漏噪声（生产 fail-open，属测试 mock 不全）
+    CacheModelAvatars: vi.fn().mockResolvedValue(undefined),
+  }),
 }));
 
 // 有效 base64（空文件解码也会被内部字节长度守卫拦截；此处用最小非空）

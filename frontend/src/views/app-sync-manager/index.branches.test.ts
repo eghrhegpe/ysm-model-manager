@@ -10,6 +10,7 @@ import { waitFor, sleep } from "@/test-utils/wait.ts";
 import { unmountElement } from "@/test-utils/render.ts";
 import { bus } from "@/bus";
 import type { LoadGuard } from "@/utils/async/load-guard.ts";
+import { stubConsoleError } from "@/test-utils/mock-log.ts";
 import "./index.ts"; // 触发 customElements.define("app-sync-manager")
 
 const { mocks, renderMock } = vi.hoisted(() => ({
@@ -137,6 +138,7 @@ describe("app-sync-manager — 失败分支（loadRepoRoots 兜底 / render 抛�
   });
 
   it("render 同步抛错 → _init catch：错误块 + error toast（145-151）", async () => {
+    stubConsoleError(); // 静音生产 logError("sync-manager",context)（_showError 经 logError 落盘）
     renderMock.mockImplementation(() => {
       throw new Error("sync render boom");
     });

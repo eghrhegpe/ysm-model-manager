@@ -9,6 +9,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { formatBytes } from "@/utils/format/format.ts";
 import { esc } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
+// 静音「降级路径告警」的预期噪声（init 失败 / 缺面板兜底 用例故意触发）
+import { stubConsoleWarn, stubConsoleError } from "@/test-utils/mock-log.ts";
 
 // 去重会话工厂 mock 走hoisted：init-pages 在模块内部创建会话，测试需捕获其方法做断言
 const { dedupStartMock, dedupInitConfigMock, dedupLastScannedMock } = vi.hoisted(() => ({
@@ -30,6 +32,9 @@ vi.mock("@/backend/app.ts", () => ({
     LoadGitHubRepos: vi.fn().mockResolvedValue([]),
     OpenInBrowser: vi.fn().mockResolvedValue(undefined),
     BatchExtractCreatorAvatars: vi.fn().mockResolvedValue({}),
+    // settings 初始化会调用 CurrentVersion；缺省会解构成 undefined →
+    // "CurrentVersion is not a function" 经 logWarn 泄漏噪声（生产 fail-open，属 mock 不全）
+    CurrentVersion: vi.fn().mockResolvedValue(""),
   }),
 }));
 
@@ -44,6 +49,8 @@ vi.mock("../../../bindings/ysm-model-manager/internal/app/app.js", () => ({
 // 已删，改为分别 mock core/page-store 与 features/sync）
 vi.mock("@/core/page-store.ts", () => ({
   resolveInitialPage: () => "repository",
+  // nav:changed handler 调 isValidPage 守卫；漏导出会 "not a function" 经 logWarn 泄漏
+  isValidPage: () => true,
 }));
 vi.mock("@/features/sync/sync.ts", () => ({
   registerSync: vi.fn(),
@@ -181,6 +188,7 @@ describe("_render — 页面分支", () => {
   });
 
   it("init 抛错 → toast:show 而非中断（bus 收到错误事件）", async () => {
+    stubConsoleError(); // 屏蔽 [app-content] 页面初始化失败 预期噪声（logError → console.error）
     const el = mountContent();
     await flushAsyncTurns();
     el.state.current = "settings";
@@ -642,6 +650,7 @@ import type { Mock } from "vitest";
 
 describe("init-pages — 直接导出函数（初始化防御分支）", () => {
   it("initDiagnosticsPage → initDiagnostics 接管 root（22）", async () => {
+    stubConsoleWarn(); // 屏蔽 [tabs] 缺面板 预期噪声（测试 fixture 未挂面板 DOM）
     const el = mountContent();
     const diag = await import("@/views/app-content/diagnostics/init.ts");
     initDiagnosticsPage(el as unknown as AppContentHost);
@@ -649,6 +658,7 @@ describe("init-pages — 直接导出函数（初始化防御分支）", () => {
   });
 
   it("initInstancesPage 幂等（33）：二次调用不再注册监听；package:selected 空 rtype 早退（42）", async () => {
+    stubConsoleWarn(); // 屏蔽 [tabs] 缺面板 预期噪声（测试 fixture 未挂面板 DOM）
     const el = mountContent();
     initInstancesPage(el as unknown as AppContentHost); // 首次 → 注册 package:selected
     const before = el.subs.pageUnsubs.length;

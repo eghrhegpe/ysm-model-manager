@@ -12,6 +12,12 @@ import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import type { DecodedTexture } from "./mmd-texture-decoder.ts";
 import { stubBlobUrls } from "@/test-utils/blob-urls.ts";
 
+const { dbgMock } = vi.hoisted(() => ({ dbgMock: vi.fn() }));
+
+// dbg 走 console.log（debug.ts:64），且多用例故意触发降级路径（dispose-mesh-fail /
+// parse-vpd-fail）→ 整模块静音，防 [DBG:mmd] 污染 stderr/stdout
+vi.mock("@/utils/debug/debug.ts", () => ({ dbg: dbgMock }));
+
 const hoisted = vi.hoisted(() => {
   const managerInstances: Array<{ resolveURL: (url: string) => string }> = [];
   return {

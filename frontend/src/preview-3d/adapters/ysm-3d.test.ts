@@ -1,13 +1,16 @@
 // ===== ysm-3d shared 集成测试（ADR-066 §5.7 + ADR-076 v2 Phase 2 菜单收编）=====
 // buildYsmScene：loader(path) → preloadModel → buildYsmObject 挂 ctx.scene →
 // ctx.menu.setAdapterItems 注入 model/截图/骨骼 三项 → dispose 清理。装配级测试。
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import { buildYsmScene, makeYsmAdapter, ysmMenuItems } from "./ysm-adapter.ts";
 import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
 import type { PreviewMenuHandle } from "@/preview-3d/menu/engine/core.ts";
 import type { BoneTree } from "@/preview-3d/bone/bone-tools.ts";
 import type { YsmModel, YsmContentHandle } from "@/preview-3d/infra/content-bridges.ts";
+// console 层静音：logWarn 命名导入的降级路径预期告警（动画解析失败跳过 /
+// preload 未提供 releaseTextures）都落在 console.warn；afterEach 兜底还原。
+import { stubConsoleWarn } from "@/test-utils/mock-log.ts";
 import type { Spec3D } from "@/preview-3d/mesh/model3d.ts";
 import type { PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
 import type { OrbitControls } from "three/addons/controls/OrbitControls.js";
@@ -62,6 +65,7 @@ const fakePanels = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  stubConsoleWarn(); // 降级路径预期告警静音（restore 由 afterEach restoreAllMocks 兜底）
   mocks.buildYsmObject.mockReturnValue({
     rootGroup,
     boneGroupMap,
@@ -82,6 +86,10 @@ beforeEach(() => {
     releaseTextures: vi.fn(),
   });
   document.body.innerHTML = "";
+});
+
+afterEach(() => {
+  vi.restoreAllMocks(); // 还原 beforeEach 的 console spy，防跨用例泄漏
 });
 
 function makeCtx() {

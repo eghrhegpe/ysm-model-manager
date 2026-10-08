@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 // ===== focus-restore.ts 焦点记忆 / 恢复 / 跨 Shadow 焦点陷阱 测试 =====
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { stubLogWarn } from "@/test-utils/mock-log.ts";
 import {
   rememberTrigger,
@@ -8,6 +8,18 @@ import {
   clearTrigger,
   __getTriggerForTest,
 } from "./focus-restore.ts";
+
+// 静音统一告警通道（logWarn 命名导入 spyOn 拦截不到，须整模块 mock）。
+// 整模块 mock 后，stubLogWarn() 的 spy 仍能挂到 logWarnMock 上、断言有效，
+// 同时真实 console.warn 不会被触达（断言用例「写日志（logWarn）」保持断言、不再泄漏 stderr）。
+const { logWarnMock, logErrorMock } = vi.hoisted(() => ({
+  logWarnMock: vi.fn(),
+  logErrorMock: vi.fn(),
+}));
+vi.mock("@/utils/base/primitives/log.ts", () => ({
+  logWarn: logWarnMock,
+  logError: logErrorMock,
+}));
 import {
   pushInputBlock,
   popInputBlock,

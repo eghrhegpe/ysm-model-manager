@@ -4,6 +4,7 @@
 // Build3DSpecFromGeometryJSON。任一侧口径漂移都会使其中一套测试失败，双边锁定。
 import { describe, it, expect } from "vitest";
 import { buildSpecFromGeometryJSON } from "./spec-builder.ts";
+import { stubConsoleWarn } from "@/test-utils/mock-log.ts";
 
 /** Go app_model_test.go 同款 geometry fixture */
 const GEO = `{
@@ -341,6 +342,7 @@ describe("buildSpecFromGeometryJSON 契约（对齐 Go TestBuild3DSpecFromGeomet
 
   // 镜像 Go TestBuildModelGroup_PureParentReference（spec_build_extra_test.go:93）
   it("纯 parent 引用（ghost parent）→ 补 ghost 骨骼挂 root，子骨骼也挂 root", () => {
+    stubConsoleWarn(); // 屏蔽 [spec-builder] 骨骼 ghost 无 pivot 预期噪声
     const spec = JSON.parse(buildSpecFromGeometryJSON(geo("geometry.ghost",
       '{ "name": "b1", "parent": "ghost", "pivot": [5,2,-3], "cubes": [{ "origin": [0,0,0], "size": [2,2,2], "uv": [0,0] }] }'))) as {
       models: { bones: { name: string; parentId: string | null; localPosition: number[] }[] }[];

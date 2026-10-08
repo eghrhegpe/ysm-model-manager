@@ -4,6 +4,7 @@
 // 历史：原 PageStore 状态机（写-only 孤儿）经 ADR-209 移除。
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { isValidPage, resolveInitialPage } from "./page-store.ts";
+import { stubConsoleWarn } from "@/test-utils/mock-log.ts";
 
 /** 隐私模式模拟：localStorage 读抛错 */
 function breakLocalStorageRead(): () => void {
@@ -65,6 +66,7 @@ describe("resolveInitialPage（localStorage 恢复）", () => {
   });
 
   it("隐私模式 localStorage 读抛错 → 回退仓库页（P3 修复：读路径 try/catch 防组件起不来）", () => {
+    stubConsoleWarn(); // 屏蔽 [storage] safeGet(ui-default-page) 失败 预期噪声
     const restore = breakLocalStorageRead();
     try {
       expect(resolveInitialPage()).toBe("repository");

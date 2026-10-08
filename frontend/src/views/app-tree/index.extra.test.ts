@@ -35,6 +35,7 @@ import { loadEntries, type TreeEntry } from "./loader.ts";
 import "./index.ts"; // 触发 customElements.define("app-tree")
 import { queryAllByTestId } from "@/test-utils/query-by-testid.ts";
 import { waitFor } from "@/test-utils/wait.ts";
+import { stubConsoleError, stubConsoleWarn } from "@/test-utils/mock-log.ts";
 import type { AppTree } from "./index.ts";
 
 const getAppMock = vi.mocked(getApp);
@@ -141,6 +142,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.restoreAllMocks(); // 复位 stubConsoleError 的 console spy，防泄漏到后续用例
   document.body.innerHTML = "";
   localStorage.removeItem("dirOpenState");
   delete (globalThis as Record<string, unknown>)["__YSM_WEB__"];
@@ -398,13 +400,11 @@ describe("app-tree index 入口生命周期（补位）", () => {
 
   it("root 变更时 ClearScanCache 失败 → 错误日志且不加载", async () => {
     const el = await mountEl();
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    stubConsoleError(); // 静音生产 logError("app-tree","root change Error")
     (bindings.ClearScanCache as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("cache boom"));
     el.setAttribute("root", RESOURCE_TYPES.MMD);
     await sleep0();
-    expect(consoleSpy).toHaveBeenCalledWith("[app-tree] root change Error", expect.anything());
     expect(loader).toHaveBeenCalledTimes(1); // 未走到 _load
-    consoleSpy.mockRestore();
   });
 
   it("未连接 setAttribute → 单次加载最新 root（快照差量，不再冗余双加载）", async () => {
@@ -441,7 +441,7 @@ describe("app-tree index 入口生命周期（补位）", () => {
   });
 
   it("挂载期间 root 在途切换且补载失败 → 错误日志 + 节流 toast + 兜底渲染首代数据", async () => {
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    stubConsoleError(); // 静音生产 logError("app-tree","pendingRoot Error")
     const d = deferred<{ filesRoot: string; entries?: TreeEntry[] }>();
     loaderImpl = (rtype) =>
       rtype === RESOURCE_TYPES.MMD
@@ -454,20 +454,18 @@ describe("app-tree index 入口生命周期（补位）", () => {
     (bindings.ClearScanCache as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("cache boom"));
     el.setAttribute("root", RESOURCE_TYPES.PACK); // 在途切换 → 补载
     d.resolve({ filesRoot: "/repo", entries: entriesByType[RESOURCE_TYPES.MMD] });
+    // 失败路径同步屏障：等到错误 toast 发出（logError 同链路已执行、告警已静音）
     await waitFor(() =>
-      consoleSpy.mock.calls.some((c) => c[0] === "[app-tree] pendingRoot Error"),
+      (emitSpy.mock.calls as Array<[string, unknown]>).some(([ev]) => ev === "toast:show"),
     );
     expect(loader).toHaveBeenCalledTimes(1); // 补载被 ClearScanCache 失败中断，未再 _load
     // 首代渲染已被 gen 作废（无错配帧），_entries 为首代数据 → 兜底渲染避免空白树
     await waitFor(() => queryAllByTestId(el.shadowRoot!, "tree-file").length === 1);
     expectSingleRow(el, "m1");
-    expect(
-      (emitSpy.mock.calls as Array<[string, unknown]>).some(([ev]) => ev === "toast:show"),
-    ).toBe(true);
-    consoleSpy.mockRestore();
   });
 
   it("connectedCallback 初始化异常 → 错误容器文案兜底", async () => {
+    stubConsoleError(); // 静音生产 logError("app-tree","Init Error")
     bindToolbarEventsMock.mockImplementationOnce(() => {
       throw new Error("toolbar boom");
     });
@@ -491,6 +489,7 @@ describe("app-tree index 入口生命周期（补位）", () => {
   });
 
   it("_load 抛错 → _entries 置空且挂载不崩溃", async () => {
+    stubConsoleWarn(); // 静音生产 logWarn("app-tree","entries 加载失败:")（_load 抛错经 connected 兜底）
     loaderImpl = () => Promise.reject(new Error("scan boom"));
     const el = await mountEl();
     expect(el.entries).toEqual([]);

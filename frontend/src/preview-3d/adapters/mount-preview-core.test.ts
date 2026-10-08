@@ -19,6 +19,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import type { PreviewAdapter, PreviewBuildCtx, PreviewScene } from "./mount-preview-core.ts";
+// console 层静音：logWarn/logError 命名导入的降级路径预期告警（removePerFrame 未命中 /
+// 切换失败 / 加载失败）都落在 console.warn/error；afterEach 的 restoreAllMocks 兜底还原。
+import { stubConsoleWarn, stubConsoleError } from "@/test-utils/mock-log.ts";
 
 const h = vi.hoisted(() => ({
   bindInput: vi.fn(),
@@ -180,6 +183,8 @@ function lastBuildCtx(build: ReturnType<typeof vi.fn>): PreviewBuildCtx {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  stubConsoleWarn(); // 降级路径预期告警静音（restore 由 afterEach restoreAllMocks 兜底）
+  stubConsoleError();
   _resetSingletons();
   sceneRegistry.reset();
   h.bindInput.mockImplementation(() => ({

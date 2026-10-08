@@ -12,6 +12,7 @@ import type { AppTree } from "./index.ts";
 import type { TreeEntry } from "./loader.ts";
 import { bindTreeEvents, updateSelectCount } from "./events.ts";
 import { createTreeRenderCtx, setVsRows } from "./render.ts";
+import { stubConsoleWarn } from "@/test-utils/mock-log.ts";
 
 const {
   getAppMock,
@@ -198,6 +199,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.restoreAllMocks(); // 复位 stubConsoleWarn 的 console spy，防泄漏到后续用例
   emitSpy.mockRestore();
 });
 
@@ -432,6 +434,7 @@ describe("click 复选框（单文件 ToggleEnable）", () => {
   });
 
   it("ToggleEnable 失败 → error toast「切换失败: 文件名」，busy 复位", async () => {
+    stubConsoleWarn(); // 静音生产 logWarn("tree","ToggleEnable 失败:")
     const h = makeHarness();
     ToggleEnableMock.mockRejectedValue(new Error("io"));
     h.container.appendChild(fileRow("/repo/dirA/a.ysm", "a.ysm"));
@@ -484,6 +487,7 @@ describe("click 复选框（文件夹批量 toggleFolderBatch）", () => {
   });
 
   it("部分失败 → toast warn 含失败计数；仅成功项翻转，失败项保持原状（回归：不再乐观全量翻转）", async () => {
+    stubConsoleWarn(); // 静音生产 logWarn("tree","toggleFolderBatch 失败:")
     const h = makeHarness();
     ToggleEnableMock
       .mockRejectedValueOnce(new Error("lock"))
@@ -501,6 +505,7 @@ describe("click 复选框（文件夹批量 toggleFolderBatch）", () => {
   });
 
   it("全部失败 → toast warn 含失败计数；不翻转 banned、不 renderTree、不发 sync（ok=0 短路）", async () => {
+    stubConsoleWarn(); // 静音生产 logWarn("tree","toggleFolderBatch 失败:")
     const h = makeHarness();
     ToggleEnableMock.mockRejectedValue(new Error("lock"));
     h.vm.entriesState = [

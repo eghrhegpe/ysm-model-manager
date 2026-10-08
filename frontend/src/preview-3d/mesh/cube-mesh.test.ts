@@ -4,6 +4,7 @@
 import { describe, it, expect } from "vitest";
 import { buildCubeMeshData, mergeCubes, computeBoneLocalPos } from "./cube-mesh.ts";
 import type { Cube2D, Vec3 } from "@/preview-3d/model/spec-builder.ts";
+import { stubConsoleWarn } from "@/test-utils/mock-log.ts";
 
 /** 构造一份最小合法 Cube2D（1×1×1 立方体，无 inflate/mirror/rotation） */
 function buildCube(overrides: Partial<Cube2D> = {}): Cube2D {
@@ -49,11 +50,13 @@ describe("buildCubeMeshData", () => {
   });
 
   it("NaN origin → 返回 null（有限性守卫）", () => {
+    stubConsoleWarn(); // 屏蔽 [spec-builder] 跳过非法 cube 预期噪声
     const cube = buildCube({ origin: [NaN, 0, 0] });
     expect(buildCubeMeshData(cube, bonePivot, 16, 16, "root", 0)).toBeNull();
   });
 
   it("Infinity size → 返回 null", () => {
+    stubConsoleWarn(); // 屏蔽 [spec-builder] 跳过非法 cube 预期噪声
     const cube = buildCube({ size: [1, Infinity, 1] });
     expect(buildCubeMeshData(cube, bonePivot, 16, 16, "root", 0)).toBeNull();
   });

@@ -2,6 +2,7 @@
 // ===== 浏览器后端适配器测试（ADR-049 Phase 1 骨架 + Phase 2 IndexedDB 模型库）=====
 // 共享 idb mock：setup 层 globalThis.__YSM_TEST_IDB__ 注入（isolate:false 穿透修复，2026-08-17）
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { stubConsoleWarn } from "@/test-utils/mock-log.ts";
 import { getIdbMock } from "@/test-utils/idb-mock.ts";
 const idbMock = getIdbMock();
 import { zipSync, strToU8 } from "fflate";
@@ -263,6 +264,7 @@ describe("importWebFiles — Phase 2 数据层", () => {
   });
 
   it("M1：.zip 入库；.7z 网页版跳过并提示（暂不支持解压，不入库）", async () => {
+    stubConsoleWarn(); // 屏蔽 [web-fs] .7z 跳过 预期告警
     const r = await importWebFiles(
       [new File([enc.encode("z")], "模型.zip"), new File([enc.encode("z")], "模型.7z")],
       "ysm",
@@ -339,6 +341,7 @@ describe("importWebFiles — Phase 2 数据层", () => {
   });
 
    it("R2 导入增强：扁平 .zip 无顶层目录 → zipStem 防碎片化（Blockbench 导出形态）", async () => {
+    stubConsoleWarn(); // 屏蔽 [web] ZIP 含非 UTF-8 文件名 预期告警
     // 扁平 zip：ysm.json 在根目录，无公共顶层目录
     // 无此修复：ysm.json → group "ysm"，models/main.json → group "models"，
     //           textures/skin.png → group "textures" → 三组碎片化，坏模型 + 假失败
@@ -358,6 +361,7 @@ describe("importWebFiles — Phase 2 数据层", () => {
   });
 
   it("资源包 zip（解压后无主文件）→ 保留原 zip 当主文件（ADR-066 审计缺口 #3）", async () => {
+    stubConsoleWarn(); // 屏蔽 [web] ZIP 含非 UTF-8 文件名 预期告警
     // pack.mcmeta + data/ 均非主文件扩展名——原实现解包后无主文件整组 failed imported=0
     const zipBytes = zipSync({
       "pack.mcmeta": strToU8("{}"),
@@ -688,6 +692,7 @@ describe("browserAdapter — ADR-049 桥接增强 Batch 1（纯前端可复现�
   });
 
   it("ListPackModels / ReadPackEntry：资源包 zip 枚举与条目读取", async () => {
+    stubConsoleWarn(); // 屏蔽 [web] ZIP 含非 UTF-8 文件名 预期告警
     const zipBytes = zipSync({
       "pack.mcmeta": strToU8("{}"),
       "assets/minecraft/models/block/cube.json": strToU8("{\"textures\":{\"all\":\"block/stone\"}}"),
@@ -704,6 +709,7 @@ describe("browserAdapter — ADR-049 桥接增强 Batch 1（纯前端可复现�
   });
 
   it("ListPackModelsDetail：镜像 Go 契约——models 带 cubes + total（封顶 200）", async () => {
+    stubConsoleWarn(); // 屏蔽 [web] ZIP 含非 UTF-8 文件名 预期告警
     const zipBytes = zipSync({
       "pack.mcmeta": strToU8("{}"),
       "assets/minecraft/models/block/stone.json": strToU8("{\"parent\":\"minecraft:block/cube_all\",\"textures\":{\"all\":\"minecraft:block/stone\"}}"),
@@ -741,6 +747,7 @@ describe("browserAdapter — ADR-049 桥接增强 Batch 1（纯前端可复现�
   });
 
   it("ExtractPreviewTexture：zip 内首张 PNG 转 data URI", async () => {
+    stubConsoleWarn(); // 屏蔽 [web] ZIP 含非 UTF-8 文件名 预期告警
     const zipBytes = zipSync({
       "pack.mcmeta": strToU8("{}"),
       "textures/skin.png": strToU8("PNG"),
@@ -752,6 +759,7 @@ describe("browserAdapter — ADR-049 桥接增强 Batch 1（纯前端可复现�
   });
 
   it("AnalyzeBedrockModel：zip 内 Bedrock geometry JSON 解析出模型 + 纹理", async () => {
+    stubConsoleWarn(); // 屏蔽 [web] ZIP 含非 UTF-8 文件名 预期告警
     const geo = {
       "minecraft:geometry": [{
         description: { texture_width: 64, texture_height: 64 },
@@ -856,6 +864,7 @@ describe("browserAdapter — ADR-049 桥接增强 Batch 1（纯前端可复现�
     });
 
     it("AnalyzeBedrockModelEntry：按 subPath 解析 zip 内单角色 geometry", async () => {
+      stubConsoleWarn(); // 屏蔽 [web] ZIP 含非 UTF-8 文件名 预期告警
     const geoA = {
       "minecraft:geometry": [{
         description: {},
@@ -963,6 +972,7 @@ describe("browserAdapter — 社区/工坊桥接（ADR-049 Batch 2：bundled 默
   });
 
   it("覆盖数据损坏（非 JSON）时回退 bundled，不抛错", async () => {
+    stubConsoleWarn(); // 屏蔽 [web-community] 覆盖数据损坏 回退默认 预期告警
     localStorage.setItem("web:workshop-creators", "{broken");
     const c = (await browserAdapter.LoadWorkshopCreators()) as Array<unknown>;
     expect(c.length).toBeGreaterThan(0);

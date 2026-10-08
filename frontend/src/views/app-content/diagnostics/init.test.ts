@@ -35,6 +35,7 @@ vi.mock("@/backend/platform.ts", async (importOriginal) => {
 });
 
 import { escUnknown as esc } from "@/utils/html/html.ts";
+import { stubConsoleError, stubConsoleWarn } from "@/test-utils/mock-log.ts";
 
 function makeRoot(): { root: ShadowRoot; el: HTMLDivElement } {
   const el = document.createElement("div");
@@ -145,6 +146,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.restoreAllMocks(); // 复位 stubConsoleWarn/Error 的 console spy，防泄漏到后续用例
   vi.unstubAllGlobals();
 });
 
@@ -413,6 +415,7 @@ describe("initDiagnostics — 日志面板", () => {
   });
 
   it("GetImportLogs 抛错 → 加载日志失败占位", async () => {
+    stubConsoleError(); // 静音生产 logError("diagnostics","加载操作日志失败")
     mockApp({ GetImportLogs: vi.fn(() => Promise.reject(new Error("boom"))) });
     const { root } = makeRoot();
     initDiagnostics(root, esc);
@@ -774,6 +777,7 @@ describe("initDiagnostics — 复制面板与行内复制", () => {
   });
 
   it("diag-copy：clipboard 拒绝 → execCommand textarea 降级 + toast 已复制", async () => {
+    stubConsoleWarn(); // 静音 [clipboard] 降级 logWarn
     stubClipboard(vi.fn(() => Promise.reject(new Error("denied"))));
     mockApp({
       GetImportLogs: vi.fn(() => [
@@ -822,6 +826,7 @@ describe("initDiagnostics — 复制面板与行内复制", () => {
   });
 
   it(".log-copy 行点击：写入失败 → execCommand 降级 + toast 已复制", async () => {
+    stubConsoleWarn(); // 静音 [clipboard] 降级 logWarn
     stubClipboard(vi.fn(() => Promise.reject(new Error("denied"))));
     const execSpy = vi.fn(() => true);
     const restore = overrideExecCommand(execSpy);
@@ -849,6 +854,7 @@ describe("initDiagnostics — 复制面板与行内复制", () => {
   // 盖不住「入口有没有去消费它的结果」）。任何退回「不看 copyText 返回值」的写法都会立刻红。
 
   it("diag-copy：写入与降级全失败 → ❌ 复制失败，绝不弹「已复制」", async () => {
+    stubConsoleWarn(); // 静音 [clipboard] 降级 logWarn
     stubClipboard(vi.fn(() => Promise.reject(new Error("denied"))));
     const restore = overrideExecCommand(vi.fn(() => false)); // 降级也失败
     mockApp({
@@ -880,6 +886,7 @@ describe("initDiagnostics — 复制面板与行内复制", () => {
   });
 
   it(".log-copy 行点击：写入与降级全失败 → ❌ 复制失败，绝不弹「已复制」", async () => {
+    stubConsoleWarn(); // 静音 [clipboard] 降级 logWarn
     stubClipboard(vi.fn(() => Promise.reject(new Error("denied"))));
     const restore = overrideExecCommand(vi.fn(() => false));
     mockApp({

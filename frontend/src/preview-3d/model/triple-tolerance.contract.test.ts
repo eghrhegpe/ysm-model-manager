@@ -32,6 +32,7 @@ import { describe, it, expect } from "vitest";
 import { buildSpecFromGeometryJSON } from "./spec-builder.ts";
 import { parseBedrockGeometryFromJSON } from "@/parsers/bedrock-geometry.ts";
 import { parseYsmJsonDirect } from "@/parsers/ysm-json.ts";
+import { stubConsoleWarn } from "@/test-utils/mock-log.ts";
 
 /** 构造标准 Bedrock geometry JSON（spec-builder / bedrock-geometry 输入形态） */
 function geo(bones: unknown): string {
@@ -124,6 +125,7 @@ describe("三元组容错：Go 实测契约锚点（本次固化，防未来静�
   });
 
   it("origin 过短 [1,2]：ysm-json 回退零值（偏离 Go 补零）；spec-builder 丢弃该 cube", () => {
+    stubConsoleWarn(); // 屏蔽 [spec-builder] 跳过非法 cube 预期噪声
     const cube = { origin: [1, 2], size: [4, 5, 6] };
     // ⚠️ 差异：Go 补零为 [1,2,0]；ysm-json 长度非 3 → 整体回退 [0,0,0]
     expect(ysmCubeOrigin(b(cube))).toEqual([0, 0, 0]);
@@ -143,6 +145,7 @@ describe("三元组容错：Go 实测契约锚点（本次固化，防未来静�
   });
 
   it("origin 含非数值 [1,'a',3]：spec-builder 跳过该 cube（骨骼保留、mesh 空）", () => {
+    stubConsoleWarn(); // 屏蔽 [spec-builder] 跳过非法 cube 预期噪声
     const cube = { origin: [1, "a", 3], size: [4, 5, 6] };
     // 实测：spec-builder 打印「跳过非法 cube（非有限数值）」→ 丢 mesh 但保留骨骼，
     // 非整体拒绝（与「origin 缺席」的整模型拒绝语义不同，易误判）

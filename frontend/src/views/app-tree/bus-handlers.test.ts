@@ -7,6 +7,7 @@ import { bus } from "@/bus";
 import { createLoadGuard } from "@/utils/async/load-guard.ts";
 import type { LoadGuard } from "@/utils/async/load-guard.ts";
 import type { TreeEntry } from "./loader.ts";
+import { stubConsoleWarn } from "@/test-utils/mock-log.ts";
 
 const {
   SelectDirectoryMock,
@@ -201,6 +202,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.restoreAllMocks(); // 复位 stubConsoleWarn 的 console spy，防泄漏到后续用例
   offs.forEach((fn) => fn());
   offs.length = 0;
   unsubs?.forEach((fn) => fn());
@@ -248,6 +250,7 @@ describe("batchToggleAll — 批量启用/禁用（ADR-298 D2：直调，不再�
   });
 
   it("ToggleEnable 部分失败 → toast 报告成功/失败数", async () => {
+    stubConsoleWarn(); // 静音生产 logWarn("bus","全部启用 失败: ${batch[j]}")
     const vm = makeVM([
       makeEntry({ name: "a.ysm", fullPath: "/repo/a.ysm", banned: true }),
       makeEntry({ name: "b.ysm", fullPath: "/repo/b.ysm", banned: true }),

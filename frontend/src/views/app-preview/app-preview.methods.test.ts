@@ -47,6 +47,18 @@ const litematicSpies = vi.hoisted(() => ({
 }));
 vi.mock("./litematic-meta.ts", () => litematicSpies);
 
+// 静音统一告警通道（logWarn 命名导入 spyOn 拦截不到，须整模块 mock）。
+// 仅本文件触发的预期告警（如 [preview] DetectResourceType 失败）会落 stderr，
+// 整模块 mock 后静默 + 仍保留断言能力（logWarnMock）。
+const { logWarnMock, logErrorMock } = vi.hoisted(() => ({
+  logWarnMock: vi.fn(),
+  logErrorMock: vi.fn(),
+}));
+vi.mock("@/utils/base/primitives/log.ts", () => ({
+  logWarn: logWarnMock,
+  logError: logErrorMock,
+}));
+
 import { cacheSet, cacheGet } from "@/preview-3d/decoder/model-cache.ts";
 import "./index.ts"; // 触发 customElements.define + evict handler 注册
 import { sleep, mountCustomElement, unmountElement } from "@/test-utils/index.ts";

@@ -6,6 +6,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { stubLogWarn } from "@/test-utils/mock-log.ts";
 import { copyText } from "./clipboard.ts";
 
+// clipboard.ts 命名导入 logWarn（spyOn 拦不到）：整模块 mock 后 stubLogWarn() 的 spy
+// 仍能断言（落在 mock 上），降级/写日志用例都不再泄漏 stderr
+const { logWarnMock } = vi.hoisted(() => ({ logWarnMock: vi.fn() }));
+vi.mock("@/utils/base/primitives/log.ts", () => ({ logWarn: logWarnMock }));
+
 function stubClipboard(value: unknown): void {
   Object.defineProperty(navigator, "clipboard", {
     value,

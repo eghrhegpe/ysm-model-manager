@@ -3,6 +3,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { getByTestId, getAllByTestId, queryByTestId } from "@/test-utils/query-by-testid.ts";
 import { waitFor, sleep } from "@/test-utils/wait.ts";
+import { stubConsoleError } from "@/test-utils/mock-log.ts";
 import { bus } from "@/bus";
 import "./index.ts"; // 触发 customElements.define("app-toast")
 
@@ -22,6 +23,7 @@ describe("app-toast（testid 钩子 + 生命周期）", () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks(); // 复位 stubConsoleError 的 console spy，防泄漏到后续用例
     document.body.innerHTML = "";
   });
 
@@ -78,6 +80,7 @@ describe("app-toast（testid 钩子 + 生命周期）", () => {
   });
 
   it("P2 修复：click 回调抛错 → error toast 反馈且不静默", async () => {
+    stubConsoleError(); // 静音生产 logError("toast","点击回调失败:")——降级告警噪声
     const el = mountToast();
     bus.emit("toast:show", {
       msg: "会失败的点击",
@@ -131,6 +134,7 @@ describe("app-toast（testid 钩子 + 生命周期）", () => {
   });
 
   it("P2 修复：undo 回调抛错 → 显示❌撤销失败且原 toast 移除", async () => {
+    stubConsoleError(); // 静音生产 logError("toast","撤销回调失败:")——降级告警噪声
     const el = mountToast();
     bus.emit("toast:show", {
       msg: "会失败的撤销",

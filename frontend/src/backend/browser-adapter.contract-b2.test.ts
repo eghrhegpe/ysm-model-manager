@@ -19,6 +19,7 @@ import { getIdbMock } from "@/test-utils/idb-mock.ts";
 const idbMock = getIdbMock();
 import { browserAdapter } from "./browser-adapter.ts";
 import type { WorkshopSite } from "../../bindings/ysm-model-manager/go/types/models.ts";
+import { stubConsoleWarn } from "@/test-utils/mock-log.ts";
 
 // 复刻 harness：idb 层内存实现 + vi.mock；localStorage 由 test-setup §3 的 node 兜底注入
 // （本文件标 @vitest-environment node，不依赖 happy-dom；happy-dom 环境自带故 setup 层跳过）。
@@ -52,6 +53,7 @@ describe("B2 契约：LoadWorkshopCreators — 覆盖层优先级", () => {
   });
 
   it("覆盖层 JSON 损坏 → 回退 bundled 不抛错（对齐 Go 读取失败回退 bundled）", async () => {
+    stubConsoleWarn(); // 屏蔽 [web-community] 覆盖数据损坏 预期噪声（损坏→回退 bundled）
     localStorage.setItem(WEB_CREATORS_KEY, "{broken json");
     const c = (await browserAdapter.LoadWorkshopCreators()) as Array<unknown>;
     expect(c.length).toBeGreaterThan(0);

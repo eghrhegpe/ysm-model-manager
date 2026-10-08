@@ -112,6 +112,7 @@ describe("loadLocale（host 通道，ADR-210 D1）", () => {
   });
 
   it("在途拒绝 → 在途表清空，后续调用可重新加载", async () => {
+    stubConsoleWarn(); // 屏蔽 [i18n] 加载 ja 失败 预期噪声（在途拒绝→重试）
     let rejectLoad: (e: unknown) => void = () => {};
     fake.setLoadBundle(
       () =>
@@ -246,6 +247,7 @@ describe("setLang", () => {
   });
 
   it("隐私模式 localStorage 写抛错 → setLang 仍完成切换（safeSet 静默降级）", async () => {
+    stubConsoleWarn(); // 屏蔽 [storage] safeSet(uiLang) 失败 预期噪声（safeSet 静默降级）
     const setSpy = vi.spyOn(localStorage, "setItem").mockImplementation(() => {
       throw new Error("denied");
     });

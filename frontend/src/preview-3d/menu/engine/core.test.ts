@@ -8,6 +8,7 @@ import { mountPreviewRootMenu } from "./core.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import { switchTabHighlightBg } from "@/preview-3d/menu/shell/switch.ts";
 import { sceneRegistry } from "@/preview-3d/infra/scene-registry.ts";
+import { stubConsoleWarn } from "@/test-utils/mock-log.ts";
 import {
   __resetInputBlockStackForTest,
   getStackDepth,
@@ -271,6 +272,7 @@ describe("mountPreviewRootMenu", () => {
   });
 
   it("组根视图：panel 行带下钻箭头（row-chevron），action 行不带（scene 组）", () => {
+    stubConsoleWarn(); // 屏蔽 [preview-menu] adapter 项携带不支持字段 预期噪声（action 带 run）
     const handle = mountPreviewRootMenu(overlay, makeCtx({ getSiblings: () => ["/m/b.ysm"] }));
     const actItem = {
       id: "act",

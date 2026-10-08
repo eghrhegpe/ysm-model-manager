@@ -28,6 +28,7 @@ import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-sta
 import { clearEnvCallbacks } from "@/preview-3d/state/env-dispatcher.ts";
 import { findNodeById, childIds, nodeIds } from "@/preview-3d/menu/menu-test-helpers.ts";
 import { restoreState } from "./scene-capability.ts";
+import { stubConsoleWarn } from "@/test-utils/mock-log.ts";
 // [锐评 2026-10-08 处置拍板] 让权判据：用于「通路自省 ≠ 让权判据」判别样本
 import { envShouldYieldSlot } from "./environment-ownership.ts";
 
@@ -462,6 +463,7 @@ describe("EnvironmentCapability — buildEnvironment 管线（真实分支）", 
   // auto-atmosphere 预设写 envPreset）。[ADR-292 D5 定案] 现实现干脆**不写 envPreset**，
   // 从根上杜绝污染——本测试改为直接守「auto-atmosphere 预设仍能写 envPreset」这一不变量。
   it("custom 通路无缓存时不留 manual 足迹：auto-atmosphere 预设仍可写 envPreset", () => {
+    stubConsoleWarn(); // envSource=custom 无 HDR 缓存 → 预期 console.warn 回落预设渲染
     const cap = newCap();
     cap.apply();
 
@@ -793,6 +795,7 @@ describe("EnvironmentCapability — 持久化", () => {
   });
 
   it("loadState 读回 preset=custom 但无缓存 → 回退 studio", () => {
+    stubConsoleWarn(); // custom 无 HDR 缓存 → 预期 console.warn 回落告警
     localStorage.setItem("ysm-scene-cap-environment", JSON.stringify({ preset: "custom", enabled: true, intensity: 1.0, resolution: 1024, useAsBackground: false }));
     const cap = newCap();
     cap.loadState();
@@ -1409,6 +1412,7 @@ describe("EnvironmentCapability — ADR-292 envSource 取图通道（批次一�
     });
 
     it("envSource≠sky → loadsFromSkySource() 为假（sky 自持装载，既有行为）", () => {
+      stubConsoleWarn(); // envSource=custom 无 HDR 缓存 → 预期 console.warn 回落告警
       const cap = newCap();
       setEnvState({ envSource: "preset" }, { source: "manual", force: true });
       expect(cap.loadsFromSkySource()).toBe(false);
@@ -1492,6 +1496,7 @@ describe("EnvironmentCapability — ADR-292 批次三 来源选择控件", () =>
   });
 
   it("env-source 读写闭包直连 envState.envSource", () => {
+    stubConsoleWarn(); // 切到 custom 无 HDR 缓存 → 预期 console.warn 回落告警
     const cap = newCap();
     const node = cap.getMenuNodes().find((n) => n.id === "env-source")!;
     expect(node.control!.get!(undefined)).toBe("preset"); // schema 默认
@@ -1503,6 +1508,7 @@ describe("EnvironmentCapability — ADR-292 批次三 来源选择控件", () =>
   });
 
   it("切到 custom **只**写 envSource（不与 envPreset 分裂，e2e 可断言单一真值）", () => {
+    stubConsoleWarn(); // 切到 custom 无 HDR 缓存 → 预期 console.warn 回落告警
     const cap = newCap();
     const node = cap.getMenuNodes().find((n) => n.id === "env-source")!;
     const presetBefore = envState.envPreset;
@@ -1551,6 +1557,7 @@ describe("EnvironmentCapability — ADR-292 批次三 来源选择控件", () =>
     });
 
     it("旧存档 preset=custom 且无 HDR 缓存 → envSource 也回落 preset（不留两键分裂）", () => {
+      stubConsoleWarn(); // custom 无 HDR 缓存 → 预期 console.warn 回落告警
       // HDR 文件内容不入 localStorage，故跨会话必然无缓存
       localStorage.setItem(
         "ysm-scene-cap-environment",

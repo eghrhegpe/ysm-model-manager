@@ -1,7 +1,7 @@
 // @vitest-environment node
 // ===== 输入阻断栈测试（input-block-stack.ts）=====
 // 覆盖：push/pop 基本行为 · isInputBlocked 状态 · 引用计数 · 栈深度上限 · 未知 id pop
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import {
   pushInputBlock,
   popInputBlock,
@@ -9,6 +9,18 @@ import {
   getStackDepth,
   __resetInputBlockStackForTest,
 } from "./input-block-stack.ts";
+
+// 静音统一告警通道（logWarn 命名导入 spyOn 拦截不到，须整模块 mock）。
+// 整模块 mock 后，断言用例的 stubLogWarn() 仍能挂到 logWarnMock 上、断言有效，
+// 同时真实 console.warn 不会被触达（不再泄漏 stderr）。
+const { logWarnMock, logErrorMock } = vi.hoisted(() => ({
+  logWarnMock: vi.fn(),
+  logErrorMock: vi.fn(),
+}));
+vi.mock("@/utils/base/primitives/log.ts", () => ({
+  logWarn: logWarnMock,
+  logError: logErrorMock,
+}));
 
 beforeEach(() => {
   __resetInputBlockStackForTest();

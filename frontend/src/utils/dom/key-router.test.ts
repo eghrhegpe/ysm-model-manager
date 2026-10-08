@@ -11,6 +11,7 @@ import {
   registerShortcut,
   type ShortcutSpec,
 } from "./key-router.ts";
+import { stubConsoleWarn } from "@/test-utils/mock-log.ts";
 
 function keydown(key: string, init: Omit<KeyboardEventInit, "key"> = {}): KeyboardEvent {
   return new KeyboardEvent("keydown", { key, ...init });
@@ -116,6 +117,7 @@ describe("registerShortcut 分发", () => {
   });
 
   it("按注册顺序触发；不同组合互不干扰", () => {
+    stubConsoleWarn(); // 屏蔽 [key-router] 快捷键注册碰撞 预期噪声（本例验证顺序，碰撞是副产品）
     const order: string[] = [];
     registerShortcut({ id: "first", combo: "F12", handler: () => order.push("first") });
     registerShortcut({ id: "second", combo: "F12", handler: () => order.push("second") });

@@ -250,6 +250,18 @@ vi.mock("three/addons/controls/OrbitControls.js", () => ({
 }));
 
 vi.mock("@/backend/app.ts", () => ({ getApp: vi.fn() }));
+
+// 静音统一告警通道（logWarn/logError 命名导入 spyOn 拦截不到，须整模块 mock）。
+// 仅本文件触发的预期告警（[preview 3D] 加载失败 等降级路径）会落 stderr，
+// 整模块 mock 后静默；保留断言能力见下方 hoisted mock。
+const { logWarnMock, logErrorMock } = vi.hoisted(() => ({
+  logWarnMock: vi.fn(),
+  logErrorMock: vi.fn(),
+}));
+vi.mock("@/utils/base/primitives/log.ts", () => ({
+  logWarn: logWarnMock,
+  logError: logErrorMock,
+}));
 // 注：不再 mock 掉 CORE_MENU_ITEMS 的 roles 项。旧「dock-model 单 panel 直达」捷径已随
 // 2026-08-22 收口删除（恒进 roles 列表 → 点角色名 → roleDetailView）。切片控件断言不走
 // 菜单 DOM 导航——5329a347 schema 化后经 sliceNodes()（schema-registry 前缀查找）直驱，

@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type * as THREE from "three";
 import type { GpuLoadSample } from "./gpu-load.ts";
 import { DEFAULT_GPU_LOAD_LIMITS } from "./gpu-load.ts";
+import { stubConsoleWarn } from "@/test-utils/mock-log.ts";
 import {
   CALIBRATION_SAFETY_FACTOR,
   GPU_BUDGET_CALIBRATION_KEY,
@@ -111,6 +112,7 @@ describe("resolveGpuLoadLimits", () => {
   });
 
   it("损坏 JSON → 回落默认（fail-open，不拦死加载）", () => {
+    stubConsoleWarn(); // 屏蔽 [storage] safeGetJSON 解析失败 预期噪声（logWarn 经 console.warn）
     localStorage.setItem(GPU_BUDGET_CALIBRATION_KEY, "{ not json");
     expect(resolveGpuLoadLimits()).toEqual(DEFAULT_GPU_LOAD_LIMITS);
   });

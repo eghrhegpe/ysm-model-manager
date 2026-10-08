@@ -22,6 +22,7 @@ import {
   showMenu,
   payloadCtx,
 } from "./context-menus.setup.ts";
+import { stubConsoleWarn } from "@/test-utils/mock-log.ts";
 
 const {
   modalPromptMock,
@@ -48,6 +49,7 @@ beforeAll(() => {
 });
 
 afterAll(() => {
+  vi.restoreAllMocks(); // 复位 stubConsoleWarn 的 console spy，防泄漏到后续用例
   menuUnsubs.forEach((fn) => fn());
   vi.unstubAllGlobals();
 });
@@ -252,6 +254,7 @@ describe("异步 handler（batch / file 动态 import 分支）", () => {
   });
 
   it("batch.copy-paths 剪贴板被拒 → 兜底失败 toast（不抛）", async () => {
+    stubConsoleWarn(); // 静音 [clipboard] 降级 logWarn
     stubClipboard(() => Promise.reject(new Error("denied")));
     await clickAsync("batch", "batch.copy-paths", { paths: ["/a.ysm"] });
     expect(toasts().some((t) => t.type === "error" && t.msg.includes("复制失败"))).toBe(true);
@@ -465,6 +468,7 @@ describe("异步 handler（batch / file 动态 import 分支）", () => {
   });
 
   it("file.copy-path 剪贴板被拒 → 兜底失败 toast（不抛）", async () => {
+    stubConsoleWarn(); // 静音 [clipboard] 降级 logWarn
     stubClipboard(() => Promise.reject(new Error("denied")));
     await clickAsync("file", "file.copy-path", { path: "/a.ysm" });
     expect(toasts().some((t) => t.type === "error" && t.msg.includes("复制失败"))).toBe(true);

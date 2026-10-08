@@ -12,6 +12,10 @@ import {
 import { parseBedrockAnimationJSON } from "./animation.ts";
 import type { Keyframe, AnimationClip, TimelineEvent } from "./animation.ts";
 
+// animation.ts 命名导入 logWarn（spyOn 拦不到），整模块 mock 静音 + 保留断言 spy
+const { logWarnMock } = vi.hoisted(() => ({ logWarnMock: vi.fn() }));
+vi.mock("@/utils/base/primitives/log.ts", () => ({ logWarn: logWarnMock }));
+
 // 可控 compileMolang mock：默认透传真实实现，测试中可置失败标记
 // ADR-213：模块级 compileMolang 已移除，mock 仅覆盖 createMolangParser 工厂
 let _failExpr: string | null = null;

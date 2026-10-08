@@ -1,7 +1,7 @@
 // @vitest-environment node
 // ===== 全局导入执行器测试（import-executor.ts）=====
 // 覆盖：单文件直导、文件夹整组、执行入口分组、去重、ysm.json 引导
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { getApp, type AppBindings } from "@/backend/app.ts";
@@ -12,6 +12,8 @@ import {
   importWebFilesWithToast,
   createImportSession,
 } from "./executor.ts";
+// 降级路径预期告警静音：ImportModelFolderTo 缺失降级 / dnd 跳过读取失败 / importWebFiles 失败
+import { stubConsoleWarn, stubConsoleError } from "@/test-utils/mock-log.ts";
 
 const mocks = vi.hoisted(() => ({
   ImportModelFile: vi.fn().mockResolvedValue(undefined),
@@ -55,6 +57,11 @@ class MockFileReader {
 vi.stubGlobal("FileReader", MockFileReader);
 
 const mkFile = (name: string): File => new File(["x"], name);
+
+// 还原降级用例里的 console spy，防跨用例泄漏（vitest 默认不自动还原）
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe("executeCollected — 静默导入入口", () => {
   beforeEach(() => {
@@ -135,6 +142,7 @@ describe("executeCollected — 静默导入入口", () => {
   });
 
   it("有上下文但 ImportModelFolderTo 缺失（旧桥/Android 时序）→ 降级内容推断 + warn toast", async () => {
+    stubConsoleWarn(); // 屏蔽 [import] ImportModelFolderTo 不可用 降级告警
     // executeCollected 内部两次 log()（各调一次 getApp）+ importFolder 一次，共三次——
     // 需按调用序 mock：前两次给 log（AddOpLog 消费），第三次模拟缺失 ImportModelFolderTo 的旧桥
     vi.mocked(getApp)
@@ -236,6 +244,7 @@ describe("importFolder — 组内读失败跳过 / 空组 / busy / FILE_EXISTS",
   });
 
   it("组内某文件读取失败 → 跳过该文件，不拖垮整组", async () => {
+    stubConsoleWarn(); // 屏蔽 [dnd-shared] 跳过读取失败文件 预期噪声
     failingReads.add("坏.ysm");
     const toasts: Array<{ msg: unknown; type?: unknown }> = [];
     const off = bus.on("toast:show", (p) => toasts.push(p));
@@ -252,6 +261,7 @@ describe("importFolder — 组内读失败跳过 / 空组 / busy / FILE_EXISTS",
   });
 
   it("组内全部读取失败 → emptyFolder toast，不调后端", async () => {
+    stubConsoleWarn(); // 屏蔽 [dnd-shared] 跳过读取失败文件 预期噪声（两文件两条）
     failingReads.add("a.ysm");
     failingReads.add("b.ysm");
     const toasts: Array<{ msg: unknown; type?: unknown }> = [];
@@ -300,6 +310,7 @@ describe("importFolder — 组内读失败跳过 / 空组 / busy / FILE_EXISTS",
   });
 
   it("rtype 非空但旧桥缺 ImportModelFolderTo（typeof 守卫）→ 回退 ImportModelFolder 内容推断旧路", async () => {
+    stubConsoleWarn(); // 屏蔽 [import] ImportModelFolderTo 不可用 降级告警
     mocks.ImportModelFolderTo.mockClear();
     vi.mocked(getApp).mockResolvedValueOnce({
       ImportModelFile: mocks.ImportModelFile,
@@ -345,6 +356,7 @@ describe("importWebFilesWithToast — 网页版导入反馈（补零测试盲区
   });
 
   it("importWebFiles 灾难性抛错 → 错误 toast + 返回 failed=files.length（上限兜底，非堆内部分计数）", async () => {
+    stubConsoleError(); // 屏蔽 [import-web] importWebFiles 失败 预期噪声
     importWebFilesMock.mockRejectedValue(new Error("QUOTA"));
     const toasts: Array<{ msg: unknown; type?: unknown }> = [];
     const off = bus.on("toast:show", (p) => toasts.push(p));

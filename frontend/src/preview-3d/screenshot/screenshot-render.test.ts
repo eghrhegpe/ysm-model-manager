@@ -6,6 +6,7 @@
 //  - 成功路径：4 角度渲染 + base64 收集 + 资源清理（dispose/forceContextLoss）
 //  - P3 修复：空 base64（GPU 异常）不入结果集
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { stubConsoleWarn } from "@/test-utils/mock-log.ts";
 
 const { getAppMock, specMock, loadTexturesMock, releaseTextureUrlsMock, buildSceneMeshMock, buildYsmObjectMock, buildSpecMock, coneMock, threeStub } =
   vi.hoisted(() => {
@@ -308,6 +309,7 @@ beforeEach(() => {
 
 describe("renderMultiAngle — 防御路径", () => {
   it("GetModel3DSpec 抛错 → 返回 null 而非 reject", async () => {
+    stubConsoleWarn(); // 屏蔽 [screenshot] spec 获取失败 预期噪声
     specMock.mockRejectedValue(new Error("wails 断开"));
     expect(await renderMultiAngle("/m/a.ysm", [])).toBeNull();
   });
@@ -359,6 +361,7 @@ describe("renderMultiAngle — 防御路径", () => {
   });
 
   it("buildYsmObject 抛错 → 返回 null（场景构建段防御）", async () => {
+    stubConsoleWarn(); // 屏蔽 [screenshot] 渲染失败 预期噪声
     buildYsmObjectMock.mockImplementation(() => {
       throw new Error("mesh boom");
     });

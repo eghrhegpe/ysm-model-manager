@@ -7,6 +7,7 @@
 // 穿透修复，供 browser-adapter 系共享），此处显式 unmock 恢复真实实现（否则 22 用例全被 mock 吞）。
 vi.unmock("./idb.ts");
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { stubConsoleWarn } from "@/test-utils/mock-log.ts";
 import { __resetDBForTest, idbDel, idbGet, idbGetAll, idbGetAllMetadata, idbKeys, idbSet, idbTx, openDB } from "./idb.ts";
 
 // MEMORY_MAX_KEYS=200 / MEMORY_MAX_BYTES=64MB（与 idb.ts 常量保持一致——此处验证驱逐行为）
@@ -81,10 +82,13 @@ function makeFakeIDB(opts: { failOpen?: boolean; blocked?: boolean } = {}): {
 describe("idb 故障路径", () => {
   beforeEach(() => {
     __resetDBForTest();
+    // 静音 idb.ts 降级内存模式时的预期 console.warn（隐私模式/open 失败/非浏览器）
+    stubConsoleWarn();
   });
   afterEach(() => {
     vi.unstubAllGlobals();
     __resetDBForTest();
+    vi.restoreAllMocks();
   });
 
   it("open 失败（隐私模式）→ 降级内存模式，读写仍可用", async () => {
@@ -231,10 +235,13 @@ function makeFakeIDBWithTx(opts: { writeError?: Error } = {}): {
 describe("idb IDB 事务路径", () => {
   beforeEach(() => {
     __resetDBForTest();
+    // 静音 idb.ts 降级内存模式时的预期 console.warn（隐私模式/open 失败/非浏览器）
+    stubConsoleWarn();
   });
   afterEach(() => {
     vi.unstubAllGlobals();
     __resetDBForTest();
+    vi.restoreAllMocks();
   });
 
   it("idbSet → idbGet 经真实 transaction 读写（非内存降级）", async () => {
@@ -450,10 +457,13 @@ describe("idb IDB 事务路径", () => {
 describe("idb 内存降级补充", () => {
   beforeEach(() => {
     __resetDBForTest();
+    // 静音 idb.ts 降级内存模式时的预期 console.warn（隐私模式/open 失败/非浏览器）
+    stubConsoleWarn();
   });
   afterEach(() => {
     vi.unstubAllGlobals();
     __resetDBForTest();
+    vi.restoreAllMocks();
   });
 
   it("字节上限驱逐：totalBytes 超 64MB 时按 FIFO 淘汰最旧（保留单条超大值不驱逐）", async () => {
@@ -622,10 +632,13 @@ function makeFakeIDBFull(opts: {
 describe("idb 异常/边界路径收口（P1）", () => {
   beforeEach(() => {
     __resetDBForTest();
+    // 静音 idb.ts 降级内存模式时的预期 console.warn（隐私模式/open 失败/非浏览器）
+    stubConsoleWarn();
   });
   afterEach(() => {
     vi.unstubAllGlobals();
     __resetDBForTest();
+    vi.restoreAllMocks();
   });
 
   it("openDB：非浏览器环境（indexedDB 未定义）直接 reject，不永久挂起", async () => {

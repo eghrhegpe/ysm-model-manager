@@ -2,6 +2,7 @@
 // ===== debug.safeStr 纯函数测试（ADR-023 L3）=====
 import { describe, it, expect, vi } from "vitest";
 import { safeStr } from "./debug.ts";
+import { stubConsoleWarn } from "@/test-utils/mock-log.ts";
 
 describe("safeStr", () => {
   it("null/undefined 原样转字符串", () => {
@@ -83,6 +84,7 @@ describe("safeStr", () => {
   });
 
   it("循环引用对象兜底为 String(v)", () => {
+    stubConsoleWarn(); // 屏蔽 [debug] safeStr 序列化失败 预期噪声（循环引用→String 兜底）
     const c: Record<string, unknown> = {};
     c.self = c;
     expect(safeStr(c)).toBe("[object Object]");

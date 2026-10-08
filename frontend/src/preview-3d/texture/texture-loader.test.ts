@@ -5,6 +5,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as THREE from "three";
 
 import { FakeImage } from "@/test-utils/fake-image.ts";
+// 静默「纹理加载失败」的预期告警噪声（失败/悬挂用例故意触发降级路径）
+import { stubConsoleWarn } from "@/test-utils/mock-log.ts";
 
 const { fakeTextureCache } = vi.hoisted(() => ({
   fakeTextureCache: {
@@ -63,6 +65,7 @@ describe("loadTextures", () => {
   });
 
   it("失败纹理 → invalidate 触发（缓存池清理失败项）", async () => {
+    stubConsoleWarn(); // 屏蔽 [3D] 纹理加载失败 预期噪声
     class FailImage extends FakeImage {
       override _failUrls = ["bad.png"];
     }
@@ -87,6 +90,7 @@ describe("loadTextures", () => {
     }
     vi.useFakeTimers();
     vi.stubGlobal("Image", HangingImage);
+    stubConsoleWarn(); // 屏蔽 [3D] 纹理加载失败 预期噪声
     try {
       let settled = false;
       const p = loadTextures(["hang.png"]).then((arr) => {

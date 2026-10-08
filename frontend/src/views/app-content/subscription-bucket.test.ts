@@ -6,8 +6,14 @@
 //   ② 世代重置（cleanupPage / cleanupAll）后 → **可再次注册**。
 // ② 是旧模式的真正难点：旧标志的复位时机必须与面板世代同步，散落在页与协调器两处；
 // 一旦漏复位，页面会在语言热切换后永久失去监听（僵尸页的孪生缺陷：DOM 在、事件不在）。
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { SubscriptionBucket } from "./subscription-bucket.ts";
+import { stubConsoleWarn } from "@/test-utils/mock-log.ts";
+
+// 还原降级用例里的 console spy，防跨用例泄漏
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe("SubscriptionBucket — addPageOnce / addGlobalOnce 幂等契约", () => {
   it("addPageOnce：同 key 二次注册 → 只挂一次", () => {
@@ -84,6 +90,7 @@ describe("SubscriptionBucket — addPageOnce / addGlobalOnce 幂等契约", () =
   });
 
   it("单项失败不中断拆除：同步抛错 + 异步 reject 都不逸出，后续项照常执行", async () => {
+    stubConsoleWarn(); // 屏蔽 [async] swallowError 预期噪声（swallowError 吞掉未处理异常）
     const subs = new SubscriptionBucket();
     const later = vi.fn();
     subs.addPage(

@@ -6,6 +6,7 @@
 import { describe, it, expect } from "vitest";
 import { buildModelGroup } from "./model-group-builder.ts";
 import type { BedrockModel, Cube2D } from "./spec-builder.ts";
+import { stubConsoleWarn } from "@/test-utils/mock-log.ts";
 
 const cube = (origin: [number, number, number] = [0, 0, 0]): Cube2D => ({
   origin,
@@ -181,6 +182,7 @@ describe("buildModelGroup — 断链修复的判定顺序与坐标（补测前�
   });
 
   it("幽灵父（仅被 parent 引用、未声明、无 pivot）→ 子骨骼挂 root，坐标按自身 pivot 取反", () => {
+    stubConsoleWarn(); // 屏蔽 [spec-builder] 骨骼 G 无 pivot 预期噪声
     const g = buildModelGroup(
       makeModel([bone("x", "G", [3, 4, 5])]),
       "comp-ghost",
@@ -199,6 +201,7 @@ describe("buildModelGroup — 断链修复的判定顺序与坐标（补测前�
   });
 
   it("幽灵父的孙子：只修复断裂那一环，中间具名父不连坐", () => {
+    stubConsoleWarn(); // 屏蔽 [spec-builder] 骨骼 G 无 pivot 预期噪声
     const g = buildModelGroup(
       makeModel([bone("x", "G", [1, 4, 0]), bone("y", "x", [1, 8, 0])]),
       "comp-ghost-chain",

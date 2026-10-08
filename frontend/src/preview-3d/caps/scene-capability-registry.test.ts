@@ -13,6 +13,7 @@ import { ReflectorCapability } from "./reflector-capability.ts";
 import type { SceneCapability } from "./scene-capability.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import type { LocaleKey } from "@/core/i18n/t.ts";
+import { stubConsoleWarn } from "@/test-utils/mock-log.ts";
 
 /** createAll 的 ctx 参数类型（测试传空对象桩时精确断言，替代 as never） */
 type CreateAllCtx = Parameters<SceneCapabilityRegistry["createAll"]>[0];
@@ -120,6 +121,7 @@ describe("SceneCapabilityRegistry 险恶测试", () => {
     (sky as { isSkyIblSelfHoldEnabled?: () => boolean }).isSkyIblSelfHoldEnabled = () => false;
     sceneCapabilityRegistry.add(() => envCap);
     sceneCapabilityRegistry.add(() => sky);
+    stubConsoleWarn(); // [scene-cap] 能力创建失败 预期告警（cap 缺席 → 回退 false）
     sceneCapabilityRegistry.createAll({} as unknown as CreateAllCtx);
     try {
       expect(isIblActive()).toBe(true);
@@ -208,6 +210,7 @@ describe("SceneCapabilityRegistry 险恶测试", () => {
     const goodCap = makeFakeCap("ground");
     registry.add(badFactory);
     registry.add(() => goodCap);
+    stubConsoleWarn(); // [scene-cap] 能力创建失败 预期告警（跳过该 cap）
     const caps = registry.createAll({} as unknown as CreateAllCtx);
     expect(caps).toHaveLength(1);
     expect(caps[0]).toBe(goodCap);

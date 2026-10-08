@@ -4,6 +4,7 @@
 // loadTextures 单测已随 ADR-136 第四刀迁至 preview-3d/texture-loader.test.ts
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as THREE from "three";
+import { stubConsoleWarn } from "@/test-utils/mock-log.ts";
 
 const { getAppMock, specMock, buildSpecMock, isViewerModeMock, isWebPlatformMock, decodeWasmMock, tsSpecBuilderMock, fakeTextureCache } = vi.hoisted(() => ({
   getAppMock: vi.fn(),
@@ -220,6 +221,7 @@ describe("preloadModel / fetchSpec", () => {
   });
 
   it("Android spec 空 → WASM 兜底成功（fetchSpecViaWasmFallback 构建 spec）", async () => {
+    stubConsoleWarn(); // 屏蔽 [model3d] GetModel3DSpec 无数据 预期噪声（WASM 兜底路径）
     isViewerModeMock.mockReturnValue(true);
     specMock.mockResolvedValue({ models: [] }); // Go 恒空（无 Node 通道）
     buildSpecMock.mockResolvedValue(

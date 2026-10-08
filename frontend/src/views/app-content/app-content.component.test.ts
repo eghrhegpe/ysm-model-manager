@@ -24,6 +24,9 @@ vi.mock("@/backend/app.ts", () => ({
     GetMinecraftPaths: vi.fn().mockResolvedValue([]),
     GetResourceInstanceStatus: vi.fn().mockResolvedValue([]),
     ListVersionInstances: vi.fn().mockResolvedValue([]),
+    // settings 初始化会调用 CurrentVersion；缺省会解构成 undefined →
+    // "CurrentVersion is not a function" 经 logWarn 泄漏噪声（生产 fail-open，属 mock 不全）
+    CurrentVersion: vi.fn().mockResolvedValue(""),
   }),
 }));
 

@@ -6,11 +6,18 @@
 //  - 链接模式切换 → 确认框（取消静默回退）+ SetLinkMode + 自动 relink（逐实例进度）；
 //    relink 无 mcRoot warn / 有实例成功
 //  - 高级面板展开、主题卡片点击、镜像源切换、发布页跳转
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { waitFor } from "@/test-utils/index.ts";
 import { initSettings } from "./init.ts";
 import { saveCfg } from "./path-cards.ts";
 import { t } from "@/core/i18n/t.ts";
+// 降级路径预期告警静音：CurrentVersion 失败 / relink 失败 / 语言包加载跳过
+import { stubConsoleWarn } from "@/test-utils/mock-log.ts";
+
+// 还原降级用例里的 console spy，防跨用例泄漏
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 const {
   busEmit,
@@ -773,6 +780,7 @@ describe("initSettings — 3D 键位（keymap.ts）", () => {
 
 describe("initSettings — 错误路径与降级", () => {
   it("CurrentVersion 失败 → 版本号显示 —（无无限加载态）", async () => {
+    stubConsoleWarn(); // 屏蔽 [settings] CurrentVersion 获取失败 预期噪声
     mockApp({ CurrentVersion: vi.fn(() => Promise.reject(new Error("ver boom"))) });
     const { root } = makeRoot();
     await initSettings(root);
@@ -823,6 +831,7 @@ describe("initSettings — 错误路径与降级", () => {
   });
 
   it("relink 实例部分失败 → 失败数提示", async () => {
+    stubConsoleWarn(); // 屏蔽 [community] 重新链接失败 预期噪声（每失败实例一条）
     mockApp({
       LoadAppConfig: vi.fn(() => ({
         filesRoot: "/repo",
@@ -1084,6 +1093,7 @@ describe("initSettings — relink 收尾分支（busy / 全跳过 / 外层失败
 
 describe("initSettings — 发布页失败 / 语言切换 / filesRoot 卡片 / 面板收起", () => {
   it("语言切换 change → setLang 落盘 + lang:changed 广播", async () => {
+    stubConsoleWarn(); // 屏蔽 [i18n] en 语言包加载跳过 预期噪声（LocaleHost 未注入）
     const { root } = makeRoot();
     await initSettings(root);
     const sel = root.getElementById("set-lang") as HTMLSelectElement;

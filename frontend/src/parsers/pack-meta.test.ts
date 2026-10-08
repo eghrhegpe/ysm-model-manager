@@ -3,6 +3,7 @@
 // TS 平移 go/packs/mcmeta.go：用 fflate zipSync 构造 zip → importWebFiles 落 IDB →
 // browserAdapter.ReadPackMeta / ReadShaderpackLang 验证字段（成功路径 + 失败路径 "{}"）。
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { stubConsoleWarn } from "@/test-utils/mock-log.ts";
 import { getIdbMock } from "@/test-utils/idb-mock.ts";
 import { zipSync, strToU8 } from "fflate";
 import { browserAdapter, importWebFiles } from "@/backend/browser-adapter.ts";
@@ -38,6 +39,7 @@ const packMeta = JSON.stringify({
 
 describe("browserAdapter.ReadPackMeta — 资源包详情（TS 平移 go/packs/mcmeta.go）", () => {
   it("pack.mcmeta + pack.png → pack_format / description / thumbnail(base64 data URL)", async () => {
+    stubConsoleWarn(); // 屏蔽 [web] ZIP 含非 UTF-8 文件名 预期告警
     const pngBytes = enc.encode("fake-png-data");
     const path = await importZip(
       "材质包.zip",
@@ -52,6 +54,7 @@ describe("browserAdapter.ReadPackMeta — 资源包详情（TS 平移 go/packs/m
   });
 
   it("description 支持文本组件数组（[{\"text\":...}] 含 extra 拼接）与对象形态（对齐 go Desc）", async () => {
+    stubConsoleWarn(); // 屏蔽 [web] ZIP 含非 UTF-8 文件名 预期告警
     const arrPath = await importZip("数组.zip", {
       "pack.mcmeta": JSON.stringify({
         pack: {
@@ -71,6 +74,7 @@ describe("browserAdapter.ReadPackMeta — 资源包详情（TS 平移 go/packs/m
   });
 
   it("supported_formats / min_format / max_format 三种形态归一为 [min, max]（int / [int,int] / 对象）", async () => {
+    stubConsoleWarn(); // 屏蔽 [web] ZIP 含非 UTF-8 文件名 预期告警
     const path = await importZip("格式.zip", {
       "pack.mcmeta": JSON.stringify({
         pack: {
@@ -90,6 +94,7 @@ describe("browserAdapter.ReadPackMeta — 资源包详情（TS 平移 go/packs/m
   });
 
   it("zip 内路径大小写不敏感（PACK.MCMETA 命中）+ BOM 剥离（对齐 go StripBOM）", async () => {
+    stubConsoleWarn(); // 屏蔽 [web] ZIP 含非 UTF-8 文件名 预期告警
     const path = await importZip("大写.zip", {
       "PACK.MCMETA": "\uFEFF{\"pack\":{\"pack_format\":9,\"description\":\"bom\"}}",
     }, "resourcepack");
@@ -100,11 +105,13 @@ describe("browserAdapter.ReadPackMeta — 资源包详情（TS 平移 go/packs/m
   });
 
   it("无 pack.mcmeta 的 zip → null（对齐 Go ErrPackMetaNotFound → error 通道）", async () => {
+    stubConsoleWarn(); // 屏蔽 [web] ZIP 含非 UTF-8 文件名 预期告警
     const path = await importZip("无meta.zip", { "readme.txt": "hello" }, "resourcepack");
     expect(await browserAdapter.ReadPackMeta(path)).toBeNull();
   });
 
   it("坏 zip（非 zip 内容）→ null（对齐 Go 打开失败 → error 通道）", async () => {
+    stubConsoleWarn(); // 屏蔽 [web] ZIP 含非 UTF-8 文件名 预期告警
     const path = await importZip("坏包.zip", { "pack.mcmeta": "x" }, "resourcepack");
     // 覆盖 IDB 中内容为非 zip 字节：extractZip 抛错 → null
     idbMock.idbSet("files", "file:resourcepack/坏包/坏包.zip", {
@@ -121,6 +128,7 @@ describe("browserAdapter.ReadPackMeta — 资源包详情（TS 平移 go/packs/m
 
 describe("browserAdapter.ReadShaderpackLang — 光影包详情（TS 平移 go/packs/mcmeta.go）", () => {
   it("lang/en_US.lang → name（pack.name 优先）+ entries 全量 key=value", async () => {
+    stubConsoleWarn(); // 屏蔽 [web] ZIP 含非 UTF-8 文件名 预期告警
     const path = await importZip("光影包.zip", {
       "lang/en_US.lang": "pack.name=光影测试包\ntitle=My Shader\nsome.key=任意值",
     }, "shaderpack");
@@ -134,6 +142,7 @@ describe("browserAdapter.ReadShaderpackLang — 光影包详情（TS 平移 go/p
   });
 
   it("小写 lang/en_us.lang 也命中（对齐 go zip 分支大小写双匹配）", async () => {
+    stubConsoleWarn(); // 屏蔽 [web] ZIP 含非 UTF-8 文件名 预期告警
     const path = await importZip("小写光影.zip", {
       "lang/en_us.lang": "shaderpack.name=小写路径光影",
     }, "shaderpack");
@@ -142,6 +151,7 @@ describe("browserAdapter.ReadShaderpackLang — 光影包详情（TS 平移 go/p
   });
 
   it("# 注释 / 空行 / 无 = 行被跳过；a=b=c 值保留 = 后全部（对齐 go TrimSpace + Index 切分）", async () => {
+    stubConsoleWarn(); // 屏蔽 [web] ZIP 含非 UTF-8 文件名 预期告警
     const path = await importZip("注释.zip", {
       "lang/en_US.lang": "# 注释行\n\npack.name= 带空格标题 \nno-eq-line\na=b=c\n",
     }, "shaderpack");
@@ -152,6 +162,7 @@ describe("browserAdapter.ReadShaderpackLang — 光影包详情（TS 平移 go/p
   });
 
   it("无 lang/en_US.lang（仅有 zh_CN.lang）→ {name:\"\",entries:{}}（对齐 go 空结果）", async () => {
+    stubConsoleWarn(); // 屏蔽 [web] ZIP 含非 UTF-8 文件名 预期告警
     const path = await importZip("中文光影.zip", {
       "lang/zh_cn.lang": "pack.name=中文",
     }, "shaderpack");

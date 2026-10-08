@@ -15,6 +15,8 @@ import { modalAdvFilter } from "./adv-filter.ts";
 // ADR-208 D2：HTML 模板外移 views 后经 AdvFilterTpl 注入——测试直接复用生产模板，零桩漂移
 import { advFilterTpl } from "@/views/app-tree/tpl-adv-filter.ts";
 import { __resetModalStateForTest, closeActiveDialog } from "@/utils/dom/modal-core.ts";
+// 静默「标签提示加载失败」的预期告警噪声（boom 用例故意触发降级路径）
+import { stubConsoleWarn } from "@/test-utils/mock-log.ts";
 
 async function open(opts: { value?: Record<string, unknown> } = {}) {
   const pending = modalAdvFilter({
@@ -78,9 +80,16 @@ describe("modalAdvFilter — 渲染与初始值", () => {
   });
 
   it("AllTags 抛错 → 静默（无标签提示、不抛）", async () => {
+    const warn = stubConsoleWarn(); // 屏蔽 [adv-filter] 标签提示加载失败 预期噪声
     AllTagsMock.mockRejectedValue(new Error("boom"));
     const { tagHint } = await open();
     expect(tagHint.textContent).toBe("");
+    // 降级路径确实被走到（留痕，而非静默丢弃）
+    expect(warn).toHaveBeenCalledWith(
+      "[adv-filter] 标签提示加载失败:",
+      expect.any(Error),
+    );
+    warn.mockRestore();
   });
 
   it("label for 关联对应 input（WCAG A 级）", async () => {

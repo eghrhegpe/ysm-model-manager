@@ -2,8 +2,8 @@
 // ===== loadCommunityData 集成测试 =====
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-const { mocks } = vi.hoisted(() => {
-  const mocks = {
+const { mocks, logWarnMock } = vi.hoisted(() => ({
+  mocks: {
     DefaultWorkshopSites: vi.fn(),
     LoadWorkshopCreators: vi.fn(),
     ListModelAuthors: vi.fn(),
@@ -12,9 +12,10 @@ const { mocks } = vi.hoisted(() => {
     // ADR-172：写回下沉后自动合并直传 Go binding，SaveWorkshopCreators 前端零调用
     MergeCommunityCreatorsFromJSON: vi.fn().mockResolvedValue([0, 0]),
     isWebPlatform: vi.fn().mockReturnValue(false),
-  };
-  return { mocks };
-});
+  },
+  // 静默「社区数据加载失败」的预期告警噪声（Go 绑定失败用例故意触发降级路径）
+  logWarnMock: vi.fn(),
+}));
 
 vi.mock("@/backend/app.ts", () => ({
   getApp: vi.fn().mockResolvedValue({
@@ -34,6 +35,9 @@ vi.mock("@/backend/platform-web.ts", () => ({
 vi.mock("@/utils/debug/debug.ts", () => ({
   dbg: vi.fn(),
 }));
+
+// logWarn 经命名导入绑定，spyOn 无法拦截，须整模块 mock 才能静默 + 断言
+vi.mock("@/utils/base/primitives/log.ts", () => ({ logWarn: logWarnMock }));
 
 import {
   loadCommunityData,
@@ -119,6 +123,8 @@ describe("loadCommunityData", () => {
     const data = await loadCommunityData();
     expect(data.sites).toEqual([]);
     expect(data.creators).toEqual([]);
+    // 降级路径确实被走到（留痕，而非静默丢弃）
+    expect(logWarnMock).toHaveBeenCalledWith("community", "社区数据加载失败", expect.anything());
   });
 
   it("自动合并：社区索引 JSON 直传 Go binding，前端不再整存", async () => {

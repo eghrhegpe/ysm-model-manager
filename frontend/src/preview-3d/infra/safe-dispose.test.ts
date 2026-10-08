@@ -5,6 +5,7 @@
 import * as THREE from "three";
 import { describe, it, expect, vi } from "vitest";
 import { disposeObject3D, safeDispose } from "./safe-dispose.ts";
+import { stubConsoleWarn } from "@/test-utils/mock-log.ts";
 
 describe("safeDispose", () => {
   it("null / undefined 不抛错", () => {
@@ -19,6 +20,7 @@ describe("safeDispose", () => {
   });
 
   it("dispose 抛错 → 被吞（不向调用方传播）", () => {
+    stubConsoleWarn(); // 屏蔽 [safeDispose] 预期噪声（dispose 抛错被吞是设计行为）
     const dispose = vi.fn(() => {
       throw new Error("boom");
     });

@@ -8,6 +8,7 @@
 //      守住"加新路径 = 扩 KNOWN_PATHS + 填 binding"
 
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { stubConsoleWarn } from "@/test-utils/mock-log.ts";
 import {
   KNOWN_PATHS,
   getStateValue,
@@ -312,6 +313,7 @@ describe("P1 状态层 — 订阅通知", () => {
   });
 
   it("订阅回调抛错不污染其他订阅者", () => {
+    stubConsoleWarn(); // 屏蔽 [preview-state] 订阅回调异常 预期噪声
     const ok = vi.fn();
     subscribeSettings(() => {
       throw new Error("boom");

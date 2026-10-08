@@ -1,7 +1,7 @@
 // @vitest-environment node
 // ===== Animation Controller 状态机测试（animation-controller.ts）=====
 // 解析 .animation_controllers.json + 运行时状态转换评估。
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { stubLogWarn } from "@/test-utils/mock-log.ts";
 import {
   parseAnimationControllerJSON,
@@ -10,6 +10,11 @@ import {
   buildControllerAnimationIndex,
   type AnimationController,
 } from "./animation-controller.ts";
+
+// animation-controller.ts 命名导入 logWarn（spyOn 拦不到）：整模块 mock 后
+// stubLogWarn() 的 spy 仍能断言（落在 mock 上），写日志用例不再泄漏 stderr
+const { logWarnMock } = vi.hoisted(() => ({ logWarnMock: vi.fn() }));
+vi.mock("@/utils/base/primitives/log.ts", () => ({ logWarn: logWarnMock }));
 import { createMolangParser } from "./molang.ts";
 
 // ── 解析 ────────────────────────────────────────

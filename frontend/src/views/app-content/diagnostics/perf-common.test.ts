@@ -2,6 +2,7 @@
 // ===== perf-common.ts 共享工具层测试 =====
 // 覆盖：sectionHeader 纯函数 + 守卫/错误辅助的输入输出契约。
 import { describe, it, expect, vi } from "vitest";
+import { stubConsoleError } from "@/test-utils/mock-log.ts";
 
 // 先 mock bus（bindPerfCopyHandlers 用得到）
 vi.mock("@/bus", () => ({
@@ -93,6 +94,7 @@ describe("setErrorResp / setErrorCatch", () => {
   });
 
   it("setErrorCatch 取 safeErrorMessage", () => {
+    stubConsoleError(); // 屏蔽 [diagnostics] perf-cli 失败 预期噪声（setErrorCatch 内部 logError）
     const el = { innerHTML: "" } as HTMLElement;
     setErrorCatch(el, new Error("x"), (s: unknown) => s as string);
     expect(el.innerHTML).toContain("x");

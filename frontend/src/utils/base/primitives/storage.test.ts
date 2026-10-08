@@ -6,6 +6,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { stubLogWarn } from "@/test-utils/mock-log.ts";
 import { safeGet, safeSet, safeRemove, safeGetJSON, isStorageAccessible } from "./storage.ts";
 
+// storage.ts 命名导入 logWarn（spyOn 拦不到）：整模块 mock 后 stubLogWarn() 的 spy
+// 仍能断言（落在 mock 上），且「写日志（logWarn）」断言用例与降级用例都不再泄漏 stderr
+const { logWarnMock } = vi.hoisted(() => ({ logWarnMock: vi.fn() }));
+vi.mock("@/utils/base/primitives/log.ts", () => ({ logWarn: logWarnMock }));
+
 // node 环境无 localStorage——内存实现（对齐 happy-dom 语义；makeStorageThrow 覆盖抛错版）
 const memStorage = (() => {
   const store = new Map<string, string>();

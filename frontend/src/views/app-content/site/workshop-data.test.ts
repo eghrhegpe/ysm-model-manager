@@ -2,6 +2,7 @@
 // ===== 创意工坊数据/工具测试 =====
 // 覆盖：getCreatorIdentity 全部分支、getTagFromRole、parseDescTags、收藏 CRUD
 import { describe, it, expect, beforeEach } from "vitest";
+import { stubConsoleWarn } from "@/test-utils/mock-log.ts";
 import {
   getCreatorIdentity,
   getTagDisplayLabel,
@@ -173,6 +174,7 @@ describe("收藏工具", () => {
   });
 
   it("loadFavs 空存储返回 []，损坏 JSON 返回 []", () => {
+    stubConsoleWarn(); // 屏蔽 [storage] safeGetJSON 解析失败 预期噪声（损坏 JSON 回落）
     expect(loadFavs()).toEqual([]);
     localStorage.setItem("ysm-fav-creators", "{bad json");
     expect(loadFavs()).toEqual([]);

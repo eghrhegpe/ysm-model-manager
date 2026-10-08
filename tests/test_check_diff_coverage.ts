@@ -11,9 +11,14 @@
  * 零依赖（仅 node:assert）。运行：node tests/test_check_diff_coverage.mjs
  */
 import assert from "node:assert";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { ROOT } from "../scripts/_lib/scan-files.ts";
 import {
   addLinesFromDiff,
   buildSuggestBlock,
+  hasNoCoverableStatements,
+  isVitestExcluded,
   parseRenameStatus,
   statementPctForChangedLines,
 } from "../scripts/check-diff-coverage.ts";
@@ -135,6 +140,53 @@ check("buildSuggestBlock 输出可追加进 commit message 的 Markdown 区块",
 check("buildSuggestBlock 单文件亦生成合法区块", () => {
   const block = buildSuggestBlock([{ file: "frontend/src/preview-3d/mesh/model3d.ts", pct: 0 }], 60);
   assert.match(block, /`frontend\/src\/preview-3d\/mesh\/model3d.ts` — 0\.0%/);
+});
+
+// ── 5. 消假红：无 Istanbul 条目 ≠ 0% 未覆盖（2026-10-08 实测驱动）──────────────
+// 病根：vitest coverage.exclude 排除的文件（3D 装配入口/vendor/test-utils）与
+// 「编译后无语句」的纯类型/再导出文件，在 coverage-final.json 里都没有条目，
+// 而旧逻辑一律 pct=0 ⇒ 结构性假红（实测 v1.15.0..HEAD 219 文件里 9 个假红）。
+check("isVitestExcluded：3D 装配入口在排除域", () => {
+  assert.equal(isVitestExcluded("frontend/src/views/app-preview/ysm-3d.ts"), true);
+  assert.equal(isVitestExcluded("frontend/src/views/app-preview/maid-3d.ts"), true);
+});
+check("isVitestExcluded：wasm-decode / test-utils / vendor 在排除域", () => {
+  assert.equal(isVitestExcluded("frontend/src/preview-3d/decoder/wasm-decode.ts"), true);
+  assert.equal(isVitestExcluded("frontend/src/test-utils/fetch.ts"), true);
+  assert.equal(isVitestExcluded("frontend/src/preview-3d/adapters/vendor/babylon-mmd/x.ts"), true);
+});
+check("isVitestExcluded：普通生产文件不在排除域（防豁免域扩张）", () => {
+  assert.equal(isVitestExcluded("frontend/src/preview-3d/caps/env-hdr-cache.ts"), false);
+  assert.equal(isVitestExcluded("frontend/src/views/app-tree/loader.ts"), false);
+  // 前缀匹配不得误伤同名前缀的兄弟文件
+  assert.equal(isVitestExcluded("frontend/src/views/app-preview/ysm-3d-extra.ts"), false);
+});
+// 反向锚：豁免域必须与 vitest.config.ts 的 coverage.exclude 真对齐（防「这边加了那边没加」）。
+// 用真实文件断言，不用硬编码字符串——vitest 侧删了排除项而此处未跟 ⇒ 本测试仍绿但 CI 假红，
+// 故同时钉「本表每个 3D 入口在 vitest.config.ts 里确有对应行」。
+check("isVitestExcluded：豁免项在 vitest.config.ts 有对应排除声明", () => {
+  const cfg = readFileSync(resolve(ROOT, "frontend/vitest.config.ts"), "utf8");
+  for (const f of [
+    "src/views/app-preview/ysm-3d.ts",
+    "src/views/app-preview/maid-3d.ts",
+    "src/preview-3d/decoder/wasm-decode.ts",
+    "src/test-utils/**",
+  ]) {
+    assert.ok(cfg.includes(f), `vitest.config.ts 应含 coverage.exclude 项 ${f}（两处口径须同步）`);
+  }
+});
+check("hasNoCoverableStatements：纯类型文件（surface-pixels/types.ts）", () => {
+  assert.equal(hasNoCoverableStatements("frontend/src/preview-3d/caps/surface-pixels/types.ts"), true);
+});
+check("hasNoCoverableStatements：纯再导出垫层（parse-ysm-json.ts）", () => {
+  assert.equal(hasNoCoverableStatements("frontend/src/preview-3d/decoder/parse-ysm-json.ts"), true);
+});
+check("hasNoCoverableStatements：有真实逻辑的文件为 false（防豁免域扩张）", () => {
+  assert.equal(hasNoCoverableStatements("frontend/src/views/app-tree/loader.ts"), false);
+  assert.equal(hasNoCoverableStatements("frontend/src/preview-3d/caps/env-hdr-cache.ts"), false);
+});
+check("hasNoCoverableStatements：读不到文件时 fail-loud（返回 false）", () => {
+  assert.equal(hasNoCoverableStatements("frontend/src/__nonexistent__.ts"), false);
 });
 
 if (fails.length) {

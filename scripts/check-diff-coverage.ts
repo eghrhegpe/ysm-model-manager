@@ -67,6 +67,71 @@ function isSourceFile(f: string) {
   );
 }
 
+/** vitest coverage **明文排除**的域（单一事实源 = `frontend/vitest.config.ts|coverage.exclude`）。
+ *
+ * 为什么必须在这里排除：这些文件被 vitest 有意排除 ⇒ Istanbul 产物里**没有它们的条目**，
+ * 而下方 `!key → pct = 0` 会把「无条目」一律读成「0% 未覆盖」⇒ 结构性假红。
+ * 逐条对应 vitest.config.ts 的原注释理由：
+ *   - 3D 装配入口：happy-dom 无 WebGL/rAF，其覆盖改由 **e2e-web**（SwiftShader 真 WebGL）承担
+ *     ——不是「没人测」，是「换了个地方测」；
+ *   - vendor / molang-lib：第三方代码，不承担测试归属；
+ *   - test-utils：测试辅助，非生产代码。
+ * ⚠️ 与 vitest.config.ts 保持同步：那边加排除，这边必须跟（反之亦然），否则假红回流。
+ * 2026-10-08 实测：不排除时 `v1.15.0..HEAD` 219 文件里 9 个假红，其中 4 个来自本表。 */
+const VITEST_COVERAGE_EXCLUDE_PREFIXES = [
+  "frontend/src/views/app-preview/maid-3d.ts",
+  "frontend/src/views/app-preview/ysm-3d.ts",
+  "frontend/src/views/app-preview/scene-3d.ts",
+  "frontend/src/views/app-preview/mmd-3d.ts",
+  "frontend/src/views/app-preview/vrm-3d.ts",
+  "frontend/src/views/app-preview/fbx-3d.ts",
+  "frontend/src/views/app-preview/empty-3d.ts",
+  "frontend/src/views/app-preview/pack-3d.ts",
+  "frontend/src/preview-3d/decoder/wasm-decode.ts",
+  "frontend/src/preview-3d/adapters/vendor/",
+  "frontend/src/utils/animation/molang-lib/",
+  "frontend/src/test-utils/",
+];
+
+/** 该文件是否落在 vitest 明文排除域内（无 Istanbul 条目属预期，不该判 0%）。 */
+export function isVitestExcluded(rel: string) {
+  const p = rel.split("\\").join("/");
+  return VITEST_COVERAGE_EXCLUDE_PREFIXES.some((x) => p === x || p.startsWith(x));
+}
+
+/** 剥掉注释与类型声明后，文件是否还剩**可覆盖的运行时语句**。
+ *
+ * 用途：`types.ts`（纯 interface/type 声明）与「纯再导出」（`export { x } from "y"`，ADR-217
+ * 那种兼容垫层）编译后**不产生语句**，Istanbul 自然不收录 ⇒ 若按「无条目 = 0%」判，必假红。
+ * 这与「有语句却零覆盖」是两回事，故必须区分（2026-10-08 实测：parse-ysm-json.ts 4 行纯再导出、
+ * surface-pixels/types.ts 22 行纯类型，均属此类）。
+ *
+ * 判据保守：只认「剥注释/类型后无剩余代码」或「剩余代码仅由 import/export-from 组成」。
+ * 读不到文件（路径漂移等）返回 false ⇒ 退回原判定（fail-loud，不静默放过）。 */
+export function hasNoCoverableStatements(rel: string) {
+  let src: string;
+  try {
+    src = readFileSync(resolve(ROOT, rel), "utf8");
+  } catch {
+    return false; // 读不到不豁免，保持 fail-loud
+  }
+  const stripped = src
+    .replace(/\/\*[\s\S]*?\*\//g, "") // 块注释
+    .replace(/(^|[^:])\/\/.*$/gm, "$1") // 行注释（避让 URL 里的 //）
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean)
+    // 纯类型声明：interface / type X = ...（单行或多行起始）
+    .filter((l) => !/^(export\s+)?(declare\s+)?(interface|type)\s/.test(l))
+    // 纯再导出与导入：不产生可覆盖语句
+    .filter((l) => !/^import\s/.test(l))
+    .filter((l) => !/^export\s+(\{[^}]*\}|\*)\s+from\s/.test(l))
+    .filter((l) => !/^export\s+type\s/.test(l))
+    // interface/type 体的续行（字段声明、闭合括号）
+    .filter((l) => !/^[}\])]?;?$/.test(l) && !/^[A-Za-z_$][\w$]*\??\s*:/.test(l));
+  return stripped.length === 0;
+}
+
 /** 把 repo 相对路径映射到 coverage-final.json 的绝对路径 key。 */
 function matchCoverageKey(rel: string, covKeys: string[]) {
   const norm = rel.split("/").join("/");
@@ -202,12 +267,22 @@ function main() {
 
   const rows: any[] = [];
   const failures: any[] = [];
+  const skipped: any[] = [];
   const useFilesMode = Boolean(args.files); // --files 模式无 git 上下文，回退到全文件检查
   for (const f of srcFiles ?? []) {
     const key = matchCoverageKey(f, covKeys);
     let pct: number;
     if (!key) {
-      pct = 0; // 无覆盖率条目 → 视为 0% 未覆盖
+      // 无覆盖率条目有两种截然不同的成因，必须分开处置（2026-10-08 实测消假红）：
+      //   ① 文件落在 vitest 明文排除域（3D 入口/vendor/test-utils）——覆盖由 e2e-web 等
+      //      别处承担，此处**跳过不算失败**，但要显式登记进 skipped 保持可见性；
+      //   ② 文件有可覆盖语句却没条目——那是真「没被任何测试跑到」，仍判 0% 失败。
+      // 判据 ② 用「文件是否含可覆盖语句」推导（读源码），而非按文件名硬编码。
+      if (isVitestExcluded(f) || hasNoCoverableStatements(f)) {
+        skipped.push({ file: f, reason: isVitestExcluded(f) ? "vitest 排除域" : "无可覆盖语句" });
+        continue;
+      }
+      pct = 0; // 无覆盖率条目且非豁免 → 视为 0% 未覆盖
     } else if (useFilesMode) {
       pct = statementPctForChangedLines(
         cov[key],
@@ -244,9 +319,10 @@ function main() {
     console.log(
       JSON.stringify(
         {
-          _summary: { threshold, files: rows.length, failed: failures.length },
+          _summary: { threshold, files: rows.length, failed: failures.length, skipped: skipped.length },
           rows,
           failures,
+          skipped,
         },
         null,
         2,
@@ -264,6 +340,15 @@ function main() {
     const flag = r.pct < threshold ? "X" : "OK";
     const tag = r.renamed ? "R" : " ";
     console.log(`  [${flag}] [${tag}] ${r.file.padEnd(62)} ${r.pct.toFixed(1)}`);
+  }
+
+  // 跳过项显式列出（可见性 > 静默）：它们不参与判定，但「为什么不算」必须可查，
+  // 否则豁免域会变成黑洞（后人无法分辨「豁免生效」与「扫描漏了」）。
+  if (skipped.length > 0) {
+    console.log(`\n[diff-coverage] 跳过 ${skipped.length} 个（不参与判定，附理由）：`);
+    for (const s of skipped) {
+      console.log(`  [--] ${s.file.padEnd(62)} ${s.reason}`);
+    }
   }
 
   if (failures.length > 0) {

@@ -256,6 +256,12 @@ jobs:
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v5
+        with:
+          # ⚠️ diff-coverage 门禁（本 job 末步）要 `origin/main` 可解析做变更行归属——
+          # 浅克隆下该 ref 与 merge-base 均不可达 ⇒ 脚本 fail-closed exit 2（非静默放行）。
+          # 与 go job 同口径。配套纪律：本 job 的 git fetch 一律不带 --depth（浅 fetch 会把
+          # 整仓退化为浅克隆，HEAD~1/merge-base 失明）。详见 ci-tuning。
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v4
         with:
@@ -287,6 +293,27 @@ jobs:
         shell: pwsh
         run: |
           pnpm exec vitest run --coverage | Out-String -Width 200
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      # 前端 diff-coverage 门禁：消费上方 vitest --coverage 产出的 coverage-final.json，
+      # 只查**本次变更源码的变更行**覆盖率（阈值 60%）。与全局 thresholds 的分工：
+      # thresholds 防整体回退，本步防「新代码裸奔」。
+      # 接线前史（2026-10-08）：直接接会引入 9 个假红（实测 v1.15.0..HEAD 219 文件），
+      # 根因是脚本与 vitest 的 exclude 口径不对齐——① vitest 明文排除的 3D 装配入口
+      # （happy-dom 无 WebGL，覆盖改由 **e2e-web** 承担）/ vendor / test-utils；② 纯类型与纯
+      # 再导出文件（编译后无语句）。已在 check-diff-coverage.ts 加 `isVitestExcluded` +
+      # `hasNoCoverableStatements` 两个判据消解（跳过项显式列出，非静默），9→3 且余 3 个为真低覆盖。
+      # ⚠️ 前置：① checkout 须 fetch-depth: 0 且 base ref 可解析（否则 fail-closed exit 2，
+      #   故意不空跑放行）；② 必须排在 vitest 之后；③ 根目录运行（脚本按 ROOT 解析
+      #   frontend/coverage/，非 frontend cwd）。详见 ci-tuning。
+      - name: 前端增量覆盖率门禁（check-diff-coverage）
+        shell: pwsh
+        run: |
+          # git fetch 不带 --depth（浅 fetch 退化全仓 ⇒ 基线失明，见 pre-push-gate 卡同族教训）。
+          git fetch origin main 2>$null
+          # 人读文本模式（2026-10-08 统一输出策略，同 check-redlines / go-diff-coverage）：
+          # CI 日志消费方是人眼 + Actions 面板，--json 会被固定列宽硬折行淹没。
+          node scripts/check-diff-coverage.ts
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
   # ── 前端静态治理 Job：死代码基线 + 静态治理闸（改动纪律，与功能正确性正交）──────

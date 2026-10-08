@@ -237,6 +237,39 @@ go job 要用 `pnpm install` + `vite build`（`//go:embed all:frontend/dist` 前
 - **迁移纪律**：迁走一个检查时必须回答「它现在谁在跑」。本例的答案是上面三处——尤其 ②
   的 `paths` 必须覆盖该检查的输入域（`docs/**` 覆盖 `docs/adr/**`），否则等于静默失守。
 
+### 8d. 前端 diff-coverage 接线：先对齐 exclude 口径，再挂门禁（2026-10-08）
+
+- **接线的真实障碍不是「没接线」，是「口径不对齐」**。`gate-config.ts` 早写明
+  `check-diff-coverage` 的归宿是「CI 的 `vitest --coverage` 之后」，但直接接会引入**结构性假红**：
+  实测 `v1.15.0..HEAD` 219 个变更源码里 **9 个失败，无一是真「新代码裸奔」**。三类成因：
+  1. **vitest 明文排除域**（`frontend/vitest.config.ts|coverage.exclude`）：3D 装配入口
+     （`ysm-3d.ts`/`maid-3d.ts`/`scene-3d.ts`… 8 个）、`wasm-decode.ts`、`adapters/vendor/**`、
+     `utils/animation/molang-lib/**`、`test-utils/**`。这些**不是没人测，是换了个地方测**——
+     3D 管线由 **`e2e-web`**（SwiftShader 真 WebGL，`playwright.web.config.ts|launchOptions.args`）
+     承担；Istanbul 产物里没有它们 ⇒ 旧逻辑 `!key → pct = 0` 一律读成「0% 未覆盖」。
+  2. **纯类型 / 纯再导出文件**：`surface-pixels/types.ts`（22 行全 `interface`/`type`）、
+     `parse-ysm-json.ts`（4 行纯 `export { x } from`）——编译后**不产生语句**，自然无条目。
+  3. `test-utils/**` 与 2 归一类（上表已含）。
+- **修法（`scripts/check-diff-coverage.ts`）**：新增两个判据，区分「无条目但属豁免域」与
+  「有语句却零覆盖」：
+  - `isVitestExcluded(rel)`：对照 vitest 排除域（前缀匹配，含 `-extra.ts` 不误伤的兄弟文件锚）；
+  - `hasNoCoverableStatements(rel)`：**读源码推导**——剥注释/类型声明/`import`/`export … from`
+    后是否还剩可覆盖语句（不按文件名硬编码）；读不到文件返回 `false`（fail-loud，不静默放过）。
+  命中即 `continue` 并登记进 `skipped`（**输出里显式列出理由**，非静默豁免——豁免域不能变黑洞）。
+  实测 **9 → 3**，余 3 个（`env-hdr-cache.ts` 34.1% / `postproc-cost-probe.ts` 40% /
+  `menu/render/rows.ts` 50%）为**真低覆盖**，其中前两者本就被 `thresholds` 计入。
+- **护栏**（`tests/test_check_diff_coverage.ts`，17 例）：除正向判据外，**必须有反向锚**防豁免域
+  扩张——① 普通生产文件不在排除域；② `hasNoCoverableStatements` 对含真实逻辑的文件返回 `false`；
+  ③ **豁免项须在 `frontend/vitest.config.ts` 里真有对应排除声明**（两条口径同步，防「这边加了
+  那边没加」的单边漂移）。
+- **⚠️ 接线三前置**：① `frontend` job 的 checkout 必须 `fetch-depth: 0`（浅克隆下 `origin/main`
+  与 merge-base 均不可达 ⇒ 脚本 fail-closed exit 2，**故意不空跑放行**；本 job 原先没设，本次补上）；
+  ② 必须排在 `vitest --coverage` 之后（产 `coverage-final.json`）；③ **根目录运行**（脚本按 `ROOT`
+  解析 `frontend/coverage/`，不是 frontend cwd）。`git fetch origin main` 一律不带 `--depth`（§见
+  pre-push-gate 卡「浅 fetch 自毁历史」同族教训）。
+- **方法论**：接一个既有门禁前，先用**真实范围实跑**（本例 `--base v1.15.0`）看它到底判什么。
+  「工具已存在」不等于「接上就正确」——口径（排除域/阈值/基线）才是成败点。
+
 ### 9. 契约 job 不装前端依赖（隐性防线）
 原「契约测试排在 pnpm install 之前」这一顺序是**有意的**（曾暴露 `scripts/port-align.ts` 在模块顶层
 resolve esbuild 的缺陷）——拆分后本 job 仍不装前端依赖，保持「测试不得依赖前端依赖」这道防线。故其

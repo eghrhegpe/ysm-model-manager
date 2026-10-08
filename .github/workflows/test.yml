@@ -7,10 +7,8 @@ name: Test Gate
 on:
   workflow_call:
     inputs:
-      # 本次变更范围的基线 ref（ADR-244）：push=github.event.before、PR=base.sha。
-      # 本工作流跑在 push **之后**，本地三源（staged/未提交/未跟踪）必然全空 ⇒ 死代码门禁
-      # 的责任集恒无从归属 ⇒ 结构性地全阻断。由调用方给出范围，归属才落到本次真改过的文件。
-      # 空值（workflow_dispatch / 无法解析）→ 脚本退回本地解析（行为与旧版一致）。
+      # 本次变更范围的基线 ref（ADR-244，供变更上下文类门禁做归属裁剪）。空值 → 脚本退回本地解析。
+      # 详见 ci-tuning。
       changed-base:
         description: 本次变更范围的基线 ref（供变更上下文类门禁做归属裁剪）
         type: string
@@ -22,20 +20,13 @@ permissions:
   actions: read
 
 env:
-  # 兜底值 = 当前仓库 Variables 实值（2026-10-08 gh variable list 核定）。平时不生效——
-  # 只在 Variables 被误删/清空时接住，否则整条流水线拿空版本号连红五个 Job。
-  # WAILS_VERSION 必须与 go.mod 的 github.com/wailsapp/wails/v3 一致（CLI 与库同源）。
+  # 兜底值仅在仓库 Variables 被误删/清空时接住。WAILS_VERSION 必须与 go.mod 的 wails/v3 一致。详见 ci-tuning。
   NODE_VERSION: ${{ vars.NODE_VERSION || '22' }}
   WAILS_VERSION: ${{ vars.WAILS_VERSION || 'v3.0.0-beta.26' }}
 
 jobs:
-  # ── 契约/治理 Job（2026-10-07 拆分）──────────────────────────────────────
-  # 拆分动机：原单 Job 串行 14m28s，且「约 6~7 分钟」的主要项（vitest 3m56s、
-  # Go 检查 2m02s）彼此**无依赖**却在排队。拆成 3 个并行 Job 后墙钟 ≈ max(各 Job)。
-  # 本 Job 职责：契约测试 + 绑定保鲜 + 治理闸（纯静态/契约，不跑重型编译）。
-  # ⚠️ 原先「契约测试排在 pnpm install 之前」这一顺序是**有意的**（曾暴露
-  # scripts/port-align.ts 在模块顶层 resolve esbuild 的缺陷）——拆分后本 Job 仍不装前端依赖，
-  # 以保持这道「测试不得依赖前端依赖」的隐性防线。
+  # ── 契约/治理 Job：契约测试 + 绑定保鲜 + 治理闸（纯静态/契约，不跑重型编译）──────────
+  # ⚠️ 本 job 全程不装前端依赖——「契约测试不依赖前端依赖」是隐性防线。详见 ci-tuning。
   contracts:
     name: 契约测试 + 治理闸
     runs-on: windows-latest
@@ -43,14 +34,10 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          # 契约测试（test_api_break.ts）用真实历史 ref 对做端到端断言，
-          # 浅克隆（默认 depth=1）拿不到历史提交会报「无效 ref」——拉全量历史
+          # 契约测试用真实历史 ref 对做端到端断言，需全量历史。详见 ci-tuning。
           fetch-depth: 0
 
-      # WAILS 版本双源守卫（2026-10-08 锐评 P0）：
-      # env.WAILS_VERSION（仓库级 Variables + YAML 兜底）与 go.mod 的 wails/v3 版本是平行双源——
-      # go.mod 升级而 Variables 不同步时，wails3 CLI 与库版本静默错配，发版与 CI 都发现不了。
-      # 纯文件读取、不装依赖，紧跟 checkout 做 fail-fast（先于 setup-go 及一切 wails3 步骤）。
+      # WAILS 版本双源守卫：go.mod ↔ WAILS_VERSION 漂移即红。纯文件读取、fail-fast。详见 ci-tuning。
       - name: WAILS 版本双源守卫（go.mod ↔ WAILS_VERSION）
         shell: pwsh
         run: |
@@ -63,15 +50,11 @@ jobs:
           }
           Write-Host "WAILS 版本守卫通过：go.mod=$wailsInGoMod == WAILS_VERSION=${env:WAILS_VERSION}"
 
+      # Go 工具链单一事实源 = go.mod；setup-go cache 必须 false（默认在 Windows 是负优化）。详见 ci-tuning。
       - uses: actions/setup-go@v6
         with:
-          # Go 工具链单一事实源 = go.mod（go 1.26.0 / toolchain go1.26.8），与本地开发、发版构建同版。
-          # 不用 vars.GO_VERSION：它与 go.mod 是平行双源，go.mod 升级时没有任何守卫会跟着同步。
           go-version-file: go.mod
-          # ⚡ cache: false（2026-10-07 实测，勿回退为默认 true）：setup-go 默认把
-          # 「工具链 + GOMODCACHE + GOCACHE」打成单个 1133MB 包，Windows 上解压 94s
-          # （下载仅 7s），且与手工 go-mod 缓存内容重叠 ⇒ 每次空烧近 3 分钟纯 I/O。
-          # 关掉后工具链走 runner 自带的 C:\hostedtoolcache（实测 0s 命中）。
+          # ⚡ 勿回退为默认 true。详见 ci-tuning。
           cache: false
 
       - uses: pnpm/action-setup@v4
@@ -80,9 +63,7 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: ${{ env.NODE_VERSION }}
-          # 无 cache: pnpm（2026-10-08 锐评修复）：本 Job 全程不跑 pnpm install（上方
-          # 「测试不得依赖前端依赖」的隐性防线），配置缓存只会空恢复/空保存 store 包，
-          # 白交 Windows Defender 的 I/O 税。日后若本 Job 要装前端依赖，再补 cache 配置。
+          # 本 job 刻意不配 cache: pnpm——全程不跑 pnpm install，缓存只会空转。详见 ci-tuning。
 
       - name: 安装 ripgrep（契约测试依赖 rg 二进制）
         shell: pwsh
@@ -92,9 +73,8 @@ jobs:
           $dir = "$env:RUNNER_TEMP\rg-$v"
           $url = "https://github.com/BurntSushi/ripgrep/releases/download/$v/ripgrep-$v-x86_64-pc-windows-gnu.zip"
           Invoke-WebRequest -Uri $url -OutFile $zip -UseBasicParsing
-          # 供应链校验：ripgrep 官方 release 不附 windows zip 的 .sha256 sidecar（2026-10-08
-          # gh api 实证），故哈希内联钉死——下面这串是同日从官方源下载实测所得（10,421,979 字节）。
-          # 升级 $v 须同步换哈希；不匹配即失败，防镜像污染/传输截断静默进 CI。
+          # 供应链校验：官方不附 windows zip 的 sha256 sidecar，故哈希内联钉死。
+          # ⚠️ 升级 $v 须同步换 $want，不匹配即失败。详见 ci-tuning。
           $want = "4f2dc22621a7b75031a28d34582ba01af1fe5eeacebfa089a495250d9186917c"
           $got = (Get-FileHash -Algorithm SHA256 -LiteralPath $zip).Hash.ToLowerInvariant()
           if ($got -ne $want) { Write-Error "ripgrep zip SHA256 不匹配：want=$want got=$got"; exit 1 }
@@ -112,13 +92,9 @@ jobs:
           New-Item -ItemType Directory -Force $dir | Out-Null
           Copy-Item tests/fixtures/ysm_config.ci.json (Join-Path $dir "ysm_config.json") -Force
 
-      # 统一走 scripts/contract-tests.ts（与本地 pre-push-gate 同源：收集 / 域裁剪 /
-      # @/ 别名运行时注入 / 并发 / 失败复跑全复用 _lib/contract-tests.ts）。
-      # ⚠️ 勿退回手写 `Get-ChildItem tests/*.ts | node $f` 裸跑循环——裸跑缺
-      # ts-alias-register 的 @/ 别名注入，任何 import 链进入 frontend @/ 别名的契约测试
-      # 都会 ERR_MODULE_NOT_FOUND（本地绿、CI 红）。护栏：tests/test_contract_alias_runtime.ts。
-      # 静态扫 workflow 防此类裸跑回退：tests/test_workflow_contract_runner.ts（pages-deploy
-      # 曾长期踩此坑——它只挂 Pages 不挂 CI，故无人察觉）。
+      # 统一走 scripts/contract-tests.ts（与本地 pre-push-gate 同源：域裁剪 + @/ 别名运行时注入）。
+      # ⚠️ 勿退回手写 `for f in tests/*.ts | node $f` 裸跑循环（缺 @/ 注入 ⇒ 本地绿、CI 红）。
+      # 护栏：tests/test_workflow_contract_runner.ts。详见 ci-tuning。
       - name: 契约测试（tests/，Node .ts，禁止修改测试文件）
         shell: pwsh
         run: node scripts/contract-tests.ts
@@ -128,11 +104,8 @@ jobs:
         run: node scripts/binding-check.ts
 
 
-      # 缓存 wails3 编译产物：与 golangci-lint 同理（10-07 改预编译包前的原痛点是
-      # `go install` 每次从源码冷编译 ~1-2 分钟）。单文件 exe 缓存恢复仅数秒，无「791MB
-      # 模块小文件被 Defender 扫」问题，与 setup-go cache:false 的 2026-10-07 裁决不冲突。
-      # key 内嵌 WAILS_VERSION——升级 wails3 自动 miss 重装，无版本漂移风险。
-      # 病灶史（自步骤名迁入注释，2026-10-08）：本步曾长期因缺 wails3 致 main CI 恒红。
+      # 缓存 wails3 单文件 exe（免每次 go install 源码冷编译）。key 内嵌 WAILS_VERSION ⇒ 升级自动 miss。
+      # 详见 ci-tuning。
       - name: 缓存 wails3 CLI 二进制
         id: wails3-bin
         uses: actions/cache@v5.1.0
@@ -168,20 +141,15 @@ jobs:
           node scripts/adr-check.ts | Out-String -Width 200
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      # P1 修复（2026-08-17，门禁锐评 P1-5）：CI 此前零治理检查，远端无防线——
-      # redlines 新增红线在 CI 即红，不再只靠本地 pre-push（可被逃生阀绕过）。
-      # 孤魂注释归位（2026-10-08 门禁锐评）：此处原注「依赖 knip/jscpd、必须放在
-      # 安装前端依赖之后」是旧单 Job 结构的遗骸——本 job 不装前端依赖，check-redlines
-      # 为纯文本治理扫描；依赖 node_modules 的 check-deadcode-baseline 在 frontend job
-      #（那边有 pnpm install 前置，见其步骤上方注脚）。
+      # 红线零新增门禁：CI 侧远端防线（本地 pre-push 可被逃生阀绕过）。本 job 不装前端依赖，
+      # check-redlines 为纯文本治理扫描。详见 ci-tuning。
       - name: 红线零新增门禁（check-redlines — R1-R10/W1-W6）
         shell: pwsh
         run: |
           node scripts/check-redlines.ts --json --baseline | Out-String -Width 200
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-  # ── 前端 Job（2026-10-07 拆分）──────────────────────────────────────────
-  # 职责：前端静态治理闸 + 类型检查 + Vitest（原 3m56s，是全流水线最长单项）。
+  # ── 前端 Job：前端静态治理闸 + 类型检查 + Vitest ──────────────────────────
   frontend:
     name: 前端（类型检查 + Vitest）
     runs-on: windows-latest
@@ -189,8 +157,8 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          # 死代码基线门禁需要 inputs.changed-base（推送前的 SHA）在历史中可解析——
-          # 浅克隆（默认 depth=1）拿不到基线提交 ⇒ 责任集无法归属、恒退严格模式全阻断。
+          # 死代码基线门禁需要 inputs.changed-base 在历史中可解析（浅克隆拿不到 ⇒ 恒退严格模式全阻断）。
+          # 详见 ci-tuning。
           fetch-depth: 0
 
       - uses: pnpm/action-setup@v4
@@ -210,27 +178,21 @@ jobs:
       - name: 死代码基线门禁（check-deadcode-baseline，依赖 knip/jscpd → pnpm install 后跑）
         shell: pwsh
         env:
-          # 责任范围（ADR-244）：CI 在 push 之后跑，本地上下文必然全空——不给范围就恒退严格模式
-          # 全阻断（结构性恒红，且 --json 关掉自动收编 ⇒ 无法自愈）。空值 → 脚本退回本地解析。
+          # 责任范围（ADR-244）：不给范围就恒退严格模式全阻断。详见 ci-tuning。
           YSM_DEADCODE_BASE: ${{ inputs.changed-base }}
         run: |
           node scripts/check-deadcode-baseline.ts --json | Out-String -Width 200
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      # P0（2026-09-14 锐评实测）：本地 pre-push-gate 的 ALL_STATIC_TOOLS 27 项（19 hard）
-      # 此前在 CI 覆盖为 0 —— 本地门禁是客户端钩子，`git push --no-verify` 零痕迹即可把
-      # i18n 缺键 / css 跨 shadow 越界 / 文件头缺失等违规直推 main。
-      # 用 --static 而非 --all：后者会重跑 vite build / vitest / go build+test，而这三件
-      # CI 已各自独立承担（见下方「前端构建」「前端测试」「Go 检查」），接入即时长翻倍。
-      # --static 只跑静态治理工具层（实测 32 项 / 全绿约 18s），与既有步骤互补不重叠。
+      # 本地 gate 的静态 hard 项在 CI 的远端兜底（否则逃生阀可零痕迹直推 main）。
+      # 用 --static 不用 --all（后者重跑 vite/vitest/go，与下方步骤重复）。详见 ci-tuning。
       - name: 静态治理门禁（pre-push-gate --static：本地 hard 项的远端兜底）
         shell: pwsh
         run: |
           node scripts/pre-push-gate.ts --static --json | Out-String -Width 200
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      # ⚠️ main.go 有 `//go:embed all:frontend/dist`，本 Job 只做前端自身检查
-      # （tsc / vitest / vite build），不需要 Go 编译，故构建顺序自由。
+      # 本 job 只做前端自身检查（tsc / vitest / vite build），不需要 Go 编译。
       - name: 前端构建
         working-directory: frontend
         shell: pwsh
@@ -247,8 +209,7 @@ jobs:
         run: |
           pnpm exec vitest run --coverage | Out-String -Width 200
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-  # ── Go Job（2026-10-07 拆分）────────────────────────────────────────────
-  # 职责：Go 编译/测试/覆盖率 + golangci-lint（原 2m02s + 覆盖率 1m21s + lint）。
+  # ── Go Job：Go 编译/测试/覆盖率 ────────────────────────────────────────────
   go:
     name: Go（build + vet + test）
     runs-on: windows-latest
@@ -256,25 +217,19 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          # 覆盖率两件套要真实基线：merge-base(origin/main, HEAD)，直推兜底 HEAD~1——
-          # 浅克隆（默认 depth=1）连 HEAD~1 都不可解析 ⇒ 门禁硬阻断（2026-09-15 实证）。
-          # 配套纪律：本 Job 的 git fetch 一律不带 --depth（见「Go 增量覆盖率门禁」上方注脚）。
+          # 覆盖率两件套要真实基线（merge-base / HEAD~1），浅克隆不可解析 ⇒ 门禁硬阻断。
+          # 配套纪律：本 job 的 git fetch 一律不带 --depth。详见 ci-tuning。
           fetch-depth: 0
 
+      # Go 工具链单一事实源 = go.mod；setup-go cache 必须 false（默认在 Windows 是负优化）。详见 ci-tuning。
       - uses: actions/setup-go@v6
         with:
-          # Go 工具链单一事实源 = go.mod（go 1.26.0 / toolchain go1.26.8），与本地开发、发版构建同版。
-          # 不用 vars.GO_VERSION：它与 go.mod 是平行双源，go.mod 升级时没有任何守卫会跟着同步。
           go-version-file: go.mod
-          # ⚡ cache: false（2026-10-07 实测，勿回退为默认 true）：setup-go 默认把
-          # 「工具链 + GOMODCACHE + GOCACHE」打成单个 1133MB 包，Windows 上解压 94s
-          # （下载仅 7s），且与手工 go-mod 缓存内容重叠 ⇒ 每次空烧近 3 分钟纯 I/O。
-          # 关掉后工具链走 runner 自带的 C:\hostedtoolcache（实测 0s 命中）。
+          # ⚡ 勿回退为默认 true。详见 ci-tuning。
           cache: false
 
-      # ⚠️ 本 Job 要用 pnpm install + pnpm exec vite build（go:embed 前置），故必须同时有
-      # pnpm/action-setup 与 setup-node —— 2026-10-07 拆分时这里漏了二者，CI 报
-      # 「The term 'pnpm' is not recognized」直接红。三个 Windows Job 的 setup 段必须一致。
+      # ⚠️ 本 job 用 pnpm install + vite build（go:embed 前置），须有 pnpm/action-setup + setup-node；
+      # 三个 Windows job 的 setup 段必须一致。详见 ci-tuning。
       - uses: pnpm/action-setup@v4
         with:
           version: 10
@@ -289,11 +244,9 @@ jobs:
         shell: pwsh
         run: pnpm install --frozen-lockfile
 
-      # ⚠️ 顺序约束：main.go 有 `//go:embed all:frontend/dist`，任何 `go build ./...` /
-      # `go vet ./...` / `go test ./...` 都要求 frontend/dist 已存在，否则报
-      # 「pattern all:frontend/dist: no matching files found」直接失败。
-      # 为何在本 Job **重建**而不下发 artifact：vite build 实测仅 2.3s，而 artifact
-      # 上传 + 下载 11MB/67 文件的成本更高，且会让 go Job 变成 `needs: frontend` 而失去并行。
+      # ⚠️ 顺序约束：go build/vet/test ./... 都要求 frontend/dist 已存在（main.go //go:embed）。
+      # 本 job 重建而不下发 artifact：vite build 仅 2.3s，比 artifact 上传下载 + 失去并行更划算。
+      # 详见 ci-tuning。
       - name: 前端构建（embed 前置：main.go //go:embed all:frontend/dist 依赖此产物）
         working-directory: frontend
         shell: pwsh
@@ -303,10 +256,8 @@ jobs:
         shell: pwsh
         run: go build -ldflags "-X ysm-model-manager/go/version.Version=ci" -o go/updater/ysm-updater-helper.exe ./cmd/updater
 
-      # 本 job 保留**真实桌面测试**（原生 Windows 构建 + race）与依赖「真跑 go test」取数的
-      # 覆盖率两件套：只有 Windows 能原生构建执行桌面目标（Wails/WebView2），且本仓测试代码含
-      # Windows 专有符号。仅 golangci-lint（纯静态、可跨平台类型检查）迁至 ubuntu-24.04 的
-      # go-analysis job，与本 job 并行。
+      # 本 job 保留真跑 go test 的桌面测试（race）与覆盖率两件套（只有 Windows 能原生构建执行桌面
+      # 目标 + 本仓测试代码含 Windows 专有符号）；golangci-lint 已迁 go-analysis 并行。详见 ci-tuning。
       - name: Go 检查（build + vet + test -race）
         shell: pwsh
         run: |
@@ -319,18 +270,9 @@ jobs:
           go test -race ./... -count=1 -timeout 10m | Out-String -Width 400
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      # Go 增量覆盖率门禁（ADR-145/ADR-202）：本地 GO_STATIC_TOOLS hard 项的远端兜底。
-      # 只查本次变更 Go 文件的变更行覆盖率，内部跑 go test -coverprofile（须置于 Go 检查后）。
-      # ⚠️ 只能留在 Windows（2026-10-08 实证）：本步与下方覆盖率报告都靠**真跑 `go test`** 取数，
-      # 而 go/executil/executil_test.go:41 引用 Windows 专有 `SysProcAttr.HideWindow`（只用
-      # runtime.GOOS 跳过、非编译期 build tag 排除）⇒ Linux 上该包编译失败，`go test ./...` 直接挂。
-      # 基线语义：PR 场景 merge-base(origin/main, HEAD) 有真实 diff；main push 场景
-      # origin/main==HEAD → 变更集为空自动 PASS（无害）。
-      # ⚠️ 用 `git fetch origin main`（**不带 --depth=1**）：本轮 checkout 是 fetch-depth:0
-      # 全量克隆，`--depth=1` 会把仓库**退化为浅克隆**（生成 .git/shallow），`HEAD~1`
-      # 随即不可解析 ⇒ `check-go-diff-coverage` 的直推兜底 `HEAD~1...HEAD` 抛
-      # `fatal: ambiguous argument` ⇒ 门禁硬阻断（2026-09-15 实证：main 恒红且与改动无关）。
-      # 不带 depth 的 fetch 保持历史完整，PR 场景基线 ref 照样补全（契约不变，仅不再截断）。
+      # Go 增量覆盖率门禁（ADR-145/ADR-202）：只查本次变更 Go 文件的变更行覆盖率（须置于 Go 检查后）。
+      # ⚠️ 只能留 Windows（需真跑 go test）；git fetch 不带 --depth（浅 fetch 会退化全仓）。
+      # 详见 ci-tuning §5/§6。
       - name: Go 增量覆盖率门禁（check-go-diff-coverage）
         shell: pwsh
         run: |
@@ -338,47 +280,25 @@ jobs:
           node scripts/check-go-diff-coverage.ts --json | Out-String -Width 200
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      # ⚡ 2026-10-07 条件化（实测优化）+ 2026-10-08 方案 A 试错回退：本步曾是「非阻断趋势展示」
-      # 却要 `go test ./... -coverprofile -p 1` —— cover 插桩是**独立编译键**（与普通/race
-      # 构建缓存互不复用），实测每次 ~2min。2026-10-08 曾试「与 -race 合并成一次编译」（方案 A，
-      # main 分支 race+cover 同键）——实测 Go job 6m08s → 7m54s，`-p 1` 串行化 race 的成本超过
-      # 省下的编译键，故回退。维持「仅 main 跑 + continue-on-error」：趋势数据由 main 累积，
-      # PR 与分支 push 零成本，且该步失败不误红（check-go-diff-coverage 内部本就有同类 flaky
-      # 的「失败重试一次」）。
-      # ⚠️ 只能留在 Windows：需真跑 `go test`，Linux 上测试代码编不过（见 diff-coverage 步注释）。
+      # Go 覆盖率趋势：仅 main 跑 + continue-on-error（独立编译键、coverprofile 有已知 flaky，
+      # 曾试并进 race 一次编译——实测反而变慢，已回退）。只能留 Windows（需真跑 go test）。详见 ci-tuning §5。
       - name: Go 覆盖率报告（非阻断，趋势可见；仅 main）
         if: github.ref == 'refs/heads/main'
         continue-on-error: true
         shell: pwsh
         run: |
-          # -p 1 串行：多包并行跑 coverprofile 时 go/scanner 测试存在隔离冲突（flaky），
-          # 串行可复现通过（本地已验证）。本步骤仅作覆盖率趋势展示，不构成测试门禁。
-          # 注意：-coverprofile=.coverage/go-cover.out 必须加引号——PowerShell 会把
-          # 「.coverage/go-cover.out」解析成成员访问（值为 null），profile 落盘为 0 字节，
-          # 后续 go tool cover -func= 收到空参数报 too many arguments。
-          # 同上用 ./...：原 ./go/... 使 internal/app 的 33 个测试文件完全不计入覆盖率。
-          # -timeout：仓内铁律「Go 测试一律带超时硬阀」——coverprofile 是最慢的一跑，裸跑
-          # 挂死时没有它会一直烧到 Job 级 40min 天花板才见红。
+          # -p 1 串行规避 go/scanner 隔离冲突；-coverprofile 路径必须加引号（PS 成员访问坑）；
+          # 用 ./... 覆盖 internal/app；-timeout 硬阀防烧满 job。详见 ci-tuning §5。
           New-Item -ItemType Directory -Force '.coverage' | Out-Null
           go test ./... -coverprofile='.coverage/go-cover.out' -count=1 -p 1 -timeout 10m | Out-String -Width 200
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           go tool cover -func='.coverage/go-cover.out' | Select-String 'total:'
 
-  # ── Go 静态分析（2026-10-08：golangci-lint 从 Windows go job 迁出，独立并行跑）──────────
-  # 动机：golangci-lint 是**纯静态分析**（只做类型检查、不执行任何东西），原先串在 windows go
-  # job 里，1m30s 全程计入关键路径，还额外背着 Windows Defender 实时扫描的税。迁到
-  # ubuntu-24.04（钉版本：防 2026-10-19 ubuntu-latest 迁移 Ubuntu 26 静默换血）：① 无 Defender 税、缓存解压快；② 与 windows go job 的 race 测试并行取 max。
-  # ⚠️ 关键手法：用 `GOOS=windows` 做**跨平台类型检查**，而不是在 Linux 上编译 Linux 目标。
-  # 原因（2026-10-08 实证，本仓是 Windows 桌面应用）：
-  #   ① 默认 GOOS=linux 会选中 wails 的 `linux_cgo.go`，要求 `pkg-config gtk4 webkitgtk-6.0`
-  #      （gtk3 tag 下为 gtk+-3.0/webkit2gtk-4.1），ubuntu-24.04 不带这些 dev 库 ⇒ 类型检查失败；
-  #   ② go/executil/executil_test.go:41 用 Windows 专有 `SysProcAttr.HideWindow`（仅 runtime.GOOS
-  #      跳过、非编译期排除）⇒ GOOS=linux 下该包根本编译不过。
-  # 而 GOOS=windows + CGO_ENABLED=0 在 Linux 上类型检查 Windows 目标**不需要任何 GUI 库**
-  # （wails 的 Windows 实现是纯 Go，无 pkg-config 依赖）——实测本机 `GOOS=windows CGO_ENABLED=0
-  # go vet ./...` 全绿。语义与原先在 Windows 上 lint 完全一致（同 GOOS、同 build tag 集合）。
-  # 注意：覆盖率两件套（diff-coverage / 覆盖率报告）**不迁**——它们要真跑 `go test`，Windows
-  # 测试二进制无法在 Linux 上执行（且如上 ② 连编译都过不了），只能留在 Windows go job。
+  # ── Go 静态分析（golangci-lint 迁 Linux 独立并行；钉 ubuntu-24.04）──────────
+  # ⚠️ 关键手法：GOOS=windows 跨平台类型检查（非在 Linux 编译 Linux 目标）——默认 GOOS=linux 会
+  # 选中 wails linux_cgo（需 GUI dev 库）且 executil_test 用 Windows 专有符号，二者皆编不过；
+  # GOOS=windows + CGO_ENABLED=0 纯 Go 无 GUI 依赖，语义等价于原 Windows 上 lint。详见 ci-tuning §4。
+  # 覆盖率两件套（diff-coverage / 报告）不迁——要真跑 go test，Windows 二进制无法在 Linux 执行（§5）。
   go-analysis:
     name: Go 静态分析（golangci-lint）
     runs-on: ubuntu-24.04
@@ -394,12 +314,11 @@ jobs:
           # 增量 lint 需要真实历史 ref（merge-base / HEAD~1）。
           fetch-depth: 0
 
+      # Go 工具链单一事实源 = go.mod；setup-go cache 必须 false（与 go job 同口径）。详见 ci-tuning。
       - uses: actions/setup-go@v6
         with:
-          # Go 工具链单一事实源 = go.mod（go 1.26.0 / toolchain go1.26.8），与本地开发、发版构建同版。
-          # 不用 vars.GO_VERSION：它与 go.mod 是平行双源，go.mod 升级时没有任何守卫会跟着同步。
           go-version-file: go.mod
-          # ⚡ cache: false：与 Windows go job 同口径（setup-go 默认打 1133MB 单包，Linux 冷取模块更快）。
+          # ⚡ 勿回退为默认 true。详见 ci-tuning。
           cache: false
 
       # main.go 有 `//go:embed all:frontend/dist`，golangci-lint 类型检查 main 包要求产物存在，
@@ -425,7 +344,7 @@ jobs:
       - name: 构建更新助手 helper（embed 前置）
         run: go build -ldflags "-X ysm-model-manager/go/version.Version=ci" -o go/updater/ysm-updater-helper.exe ./cmd/updater
 
-      # 缓存 golangci-lint 分析结果（ADR-205 §2.3）：不配缓存则每次冷跑，缓存命中 10-30s。
+      # 缓存 golangci-lint 分析结果（ADR-205 §2.3）：不配则每次冷跑。
       - name: 缓存 golangci-lint 分析结果（命中免重分析）
         uses: actions/cache@v5.1.0
         with:
@@ -442,8 +361,7 @@ jobs:
           url="https://github.com/golangci/golangci-lint/releases/download/v$v/golangci-lint-$v-linux-amd64.tar.gz"
           curl -sSL -o /tmp/gl.tar.gz "$url"
           tar -xzf /tmp/gl.tar.gz -C /tmp
-          # ⚠️ 2026-10-08 实证的坑：`$GITHUB_PATH` 只对**后续 step** 生效，同一 step 内不能靠
-          # 裸命令名调用（否则 exit 127 command not found，首轮实验即栽在这）。故此处用绝对路径验证。
+          # ⚠️ $GITHUB_PATH 只对后续 step 生效，同 step 内须用绝对路径验证（否则 exit 127）。详见 ci-tuning §4。
           bin="/tmp/golangci-lint-$v-linux-amd64/golangci-lint"
           echo "$(dirname "$bin")" >> "$GITHUB_PATH"
           "$bin" --version
@@ -455,10 +373,8 @@ jobs:
           # fetch-depth: 0 已保证历史可用；首个提交无基线则跳过（不惩罚，同 pre-push 降级口径）。
           base=""
           if [ -n "$GITHUB_BASE_REF" ]; then
-            # fetch-depth: 0 已克隆全量，origin/<base> 本地就有，无需再 fetch。
-            # ⚠️ 勿恢复 `git fetch ... --depth=1`：浅 fetch 生成 .git/shallow、整仓退化为浅克隆
-            # ⇒ 本步 merge-base 与 HEAD~1 兜底同时失明——即 2026-09-15 main 恒红事故的复刻
-            #（教训全文见 go job「Go 增量覆盖率门禁」步骤上方注脚）。
+            # ⚠️ 勿恢复 `git fetch ... --depth=1`：浅 fetch 退化全仓 ⇒ merge-base 与 HEAD~1 失明
+            # （2026-09-15 main 恒红事故复刻）。fetch-depth:0 已克隆全量，base ref 本地就有。详见 ci-tuning §6。
             base=$(git merge-base "origin/$GITHUB_BASE_REF" HEAD 2>/dev/null)
           fi
           if [ -z "$base" ]; then base=$(git rev-parse HEAD~1 2>/dev/null); fi
@@ -469,17 +385,14 @@ jobs:
           echo "golangci-lint 增量基线: $base"
           golangci-lint run --new-from-rev=$base ./...
 
-  # ── E2E（Playwright · vite dev 纯前端 + mock bridge，参照 MikuMikuAR 实证模式）──
-  # 参数：全局 7 分钟总限 / 每用例 15s / 累计 2 次失败阻断（maxFailures=2，playwright.config.ts:16）——ADR-037 接入参数。
-  # webServer 自动管理 vite dev 生命周期（playwright.config.ts）。
+  # ── E2E（Playwright · vite dev 纯前端 + mock bridge）──────────────────────
+  # 参数见 playwright.config.ts（7min 总限 / 15s 每项 / maxFailures=2，ADR-037）；webServer 自动管理。
   e2e:
     name: E2E（Playwright）
-    # 阶段门控（2026-10-08 门禁锐评 R5）：契约失败大概率前端契约崩，最贵的一档不空跑；
-    # frontend/go/go-analysis 保持并行取 max，不拖墙钟（契约 job 本身秒级~分钟级）。
+    # 阶段门控：契约失败大概率前端契约崩，最贵的一档不空跑。详见 ci-tuning §8。
     needs: [contracts]
     runs-on: ubuntu-24.04
-    # 补装超时告警（2026-10-08 锐评：此前全文件唯二裸奔的 Job）。Playwright 的 7min 总限
-    # 只管测试段，webServer/浏览器下载/apt 卡死不受其管——缺省 ceiling 是 360min 静默干烧。
+    # 显式超时：Playwright 总限只管测试段，webServer/下载/apt 卡死不受管（缺省 360min 静默干烧）。
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -497,9 +410,8 @@ jobs:
         working-directory: frontend
         run: pnpm install --frozen-lockfile
 
-      # ⚠️ 缓存步骤必须位于 pnpm install 之后：key 的 hashFiles 指向 node_modules 内的
-      # playwright-core package.json（git 不跟踪），放在 install 之前 hashFiles 恒为空串
-      # ⇒ key 冻结成常量，Playwright 升级后浏览器/apt 缓存永不更新（实证教训，勿移回上方）。
+      # ⚠️ 缓存步骤必须在 pnpm install 之后：key 的 hashFiles 指向 git 不跟踪的 node_modules 内
+      # playwright-core package.json，放 install 前 hashFiles 恒空 ⇒ key 冻结、升级永不更新。详见 ci-tuning §7。
       - name: 缓存 Playwright 浏览器
         uses: actions/cache@v5.1.0
         with:
@@ -510,13 +422,8 @@ jobs:
           restore-keys: |
             pw-browsers-${{ runner.os }}-
 
-      # apt 缓存两步必要前置（2026-10-08 实证）：
-      # ① restore 侧：GitHub runner 镜像里 /var/cache/apt/archives 是 root:root 755，
-      #    runner 用户写不进去 ⇒ 不预置权限则 .deb 根本恢复不进目录（缓存白搭）；
-      # ② save 侧：apt 每次以 root 重写 `lock`（0600）与 `partial/`（0700），runner 不可读，
-      #    tar 归档整个目录必报 `Cannot open: Permission denied` → exit 2 → 缓存存不进去
-      #    （实测日志 2026-10-07 18:10:23）。故 cache path 只收 *.deb，绕开这两个 root 专属条目。
-      # apt 自身经 sudo/root 运行，不受 chmod 影响。
+      # apt 缓存两步前置：① 目录 root:root 755 需预置 chmod 才 restore 得进；② lock/partial 是 root
+      # 专属，故 path 只收 *.deb 绕开（否则 tar exit 2 存不进去）。详见 ci-tuning §7。
       - name: 预置 apt 缓存目录权限（restore 可写）
         run: |
           sudo mkdir -p /var/cache/apt/archives
@@ -526,9 +433,8 @@ jobs:
         uses: actions/cache@v5.1.0
         with:
           path: /var/cache/apt/archives/*.deb
-          # 钉 playwright-core 版本：--with-deps 依赖集合随其版本变；版本未变即复用
-          # 已下载的 .deb，跳过慢镜像（azure.archive 实测 91.5KB/s）重下，只留解包。
-          # 保留 --with-deps 不动：CJK 字体（wqy-zenhei 等）是中文 UI 截图渲染必需。
+          # 钉 playwright-core 版本（依赖集合随其变）；保留 --with-deps：CJK 字体是中文 UI 截图必需。
+          # 详见 ci-tuning §7。
           key: pw-apt-${{ runner.os }}-${{ hashFiles('frontend/node_modules/playwright-core/package.json') }}
           restore-keys: |
             pw-apt-${{ runner.os }}-
@@ -553,9 +459,7 @@ jobs:
           path: frontend/test-results/
           if-no-files-found: ignore
 
-      # 「可选非门禁」意图与行为对齐（2026-10）：默认 bash -e 下多行 run 里 coverage 步失败
-      # 会连坐整个 step（名义非门禁、实际门禁）——continue-on-error 让「非门禁」名副其实。
-      # 广度报告仍是产物上传，只是不再阻断 pipeline。
+      # 「可选非门禁」名副其实：continue-on-error 防 bash -e 连坐整个 step；广度报告仍是产物上传。
       - name: E2E 覆盖广度采集（ADR-035 G-4，可选非门禁）
         continue-on-error: true
         working-directory: frontend
@@ -570,16 +474,14 @@ jobs:
           if-no-files-found: ignore
 
   # ── E2E-Web（Playwright · 真 WebGL 管线 + SwiftShader 软渲染，ADR-049 web 版）──
-  # 2026-10 接入：此前 e2e-web 套件（真 3D 会话 / 像素读回 / 菜单巡检 14 例）在 CI 零执行，
-  # 是「纯本地仪式」（锐评 🔴-3）。SwiftShader 参数已下沉 playwright.web.config.ts
-  # project 级统一钉住，ubuntu runner 无 GPU 亦可确定性软渲染。
-  # 类型检查复用 e2e job 的 tsconfig.e2e.json（双套件同域，不重复跑）。
+  # SwiftShader 参数已下沉 playwright.web.config.ts project 级统一钉住；类型检查复用 e2e 的
+  # tsconfig.e2e.json（双套件同域，不重复跑）。详见 ci-tuning §8。
   e2e-web:
     name: E2E-Web（真 WebGL）
-    # 阶段门控（2026-10-08 门禁锐评 R5）：同 e2e job——契约失败不空跑最贵档。
+    # 阶段门控：同 e2e——契约失败不空跑最贵档。详见 ci-tuning §8。
     needs: [contracts]
     runs-on: ubuntu-24.04
-    # 同上补告警；SwiftShader 无 GPU 软渲染显著慢于 e2e 的 headless Chromium，预算放宽一档。
+    # SwiftShader 无 GPU 软渲染显著慢于 headless Chromium，预算放宽一档。
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v5
@@ -597,9 +499,8 @@ jobs:
         working-directory: frontend
         run: pnpm install --frozen-lockfile
 
-      # ⚠️ 缓存步骤必须位于 pnpm install 之后：key 的 hashFiles 指向 node_modules 内的
-      # playwright-core package.json（git 不跟踪），放在 install 之前 hashFiles 恒为空串
-      # ⇒ key 冻结成常量，Playwright 升级后浏览器/apt 缓存永不更新（实证教训，勿移回上方）。
+      # ⚠️ 缓存步骤必须在 pnpm install 之后：key 的 hashFiles 指向 git 不跟踪的 node_modules 内
+      # playwright-core package.json，放 install 前 hashFiles 恒空 ⇒ key 冻结、升级永不更新。详见 ci-tuning §7。
       - name: 缓存 Playwright 浏览器
         uses: actions/cache@v5.1.0
         with:
@@ -610,13 +511,8 @@ jobs:
           restore-keys: |
             pw-browsers-${{ runner.os }}-
 
-      # apt 缓存两步必要前置（2026-10-08 实证）：
-      # ① restore 侧：GitHub runner 镜像里 /var/cache/apt/archives 是 root:root 755，
-      #    runner 用户写不进去 ⇒ 不预置权限则 .deb 根本恢复不进目录（缓存白搭）；
-      # ② save 侧：apt 每次以 root 重写 `lock`（0600）与 `partial/`（0700），runner 不可读，
-      #    tar 归档整个目录必报 `Cannot open: Permission denied` → exit 2 → 缓存存不进去
-      #    （实测日志 2026-10-07 18:10:23）。故 cache path 只收 *.deb，绕开这两个 root 专属条目。
-      # apt 自身经 sudo/root 运行，不受 chmod 影响。
+      # apt 缓存两步前置：① 目录 root:root 755 需预置 chmod 才 restore 得进；② lock/partial 是 root
+      # 专属，故 path 只收 *.deb 绕开（否则 tar exit 2 存不进去）。详见 ci-tuning §7。
       - name: 预置 apt 缓存目录权限（restore 可写）
         run: |
           sudo mkdir -p /var/cache/apt/archives
@@ -626,9 +522,8 @@ jobs:
         uses: actions/cache@v5.1.0
         with:
           path: /var/cache/apt/archives/*.deb
-          # 钉 playwright-core 版本：--with-deps 依赖集合随其版本变；版本未变即复用
-          # 已下载的 .deb，跳过慢镜像（azure.archive 实测 91.5KB/s）重下，只留解包。
-          # 保留 --with-deps 不动：CJK 字体（wqy-zenhei 等）是中文 UI 截图渲染必需。
+          # 钉 playwright-core 版本（依赖集合随其变）；保留 --with-deps：CJK 字体是中文 UI 截图必需。
+          # 详见 ci-tuning §7。
           key: pw-apt-${{ runner.os }}-${{ hashFiles('frontend/node_modules/playwright-core/package.json') }}
           restore-keys: |
             pw-apt-${{ runner.os }}-

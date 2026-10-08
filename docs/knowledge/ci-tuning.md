@@ -7,7 +7,12 @@ status: active
 last_verified: 2026-10-08
 invariant_anchors:
   - .github/workflows/test.yml|GOOS: windows
-  - .github/workflows/test.yml|needs: [contracts]
+  # 2026-10-08 域裁剪后：原锚 `needs: [contracts]` 已不存在（所有 job 统一改为
+  # `needs: [changes, …]`，由 changes job 先判变更域）。锚必须描述**当前机制**，
+  # 故更新为实际存在的形态 + 新增域裁剪入口。旧锚曾如实报红（机制描述漂移），
+  # 这正是 invariant_anchors 的价值：改 test.yml 的依赖图而不同步本卡即被拦。
+  - .github/workflows/test.yml|needs: [changes, contracts]
+  - .github/workflows/test.yml|id: detect
   - .github/workflows/test.yml|YSM_DEADCODE_BASE
   - .github/workflows/test.yml|frontend-gates
   - .github/workflows/test.yml|./.github/actions/playwright-spine
@@ -165,8 +170,24 @@ go job 要用 `pnpm install` + `vite build`（`//go:embed all:frontend/dist` 前
 
 ### 8. 阶段门控与超时预算
 
-- **e2e / e2e-web `needs: [contracts]`**：契约失败大概率前端契约崩，最贵的一档（真浏览器/WebGL）不空跑；
-  其余 job 保持并行取 max，不拖墙钟。
+- **变更域自动裁剪（2026-10-08 第三轮技术债审计）**：`test.yml` 顶部新增 `changes` job，
+  用 `git diff --name-only` 判定本轮变更域（`frontend` / `go` / `contracts`），其余 7 个 job
+  经 `needs: [changes, …]` + `if: needs.changes.outputs.<域> == 'true'` 按域触发。
+  **动机**：此前所有 job 无条件跑（`ci.yml` 的 `paths-ignore` 只有 `docs/**` 与 `**.md`，粒度太粗）
+  ⇒ 只改 Go 也白跑前端 4 个 job、只改前端也白跑 Go 2 个 job。
+  - **为何要独立 job 而非给现有 job 加 if**：GHA 的 **job 级 `if` 拿不到变更文件列表**
+    （paths 不在 job 上下文里）⇒ 必须由一个 job 先算、其余经 `outputs` 消费。
+  - 刻意用 `git diff` 原生实现，**不引入 `dorny/paths-filter`**（本仓零第三方 action 倾向，
+    且已有 `changed-base` 基线语义可复用）。
+  - ⚠️ **保守优先（漏跑比多跑危险得多）**：无法归类的路径（`.github/**`、顶层 `*.json`/`*.md`、
+    未知顶层文件）一律置 `all=true` ⇒ 退回全量；`workflow_dispatch` 与**空变更集**同样全量。
+    空集那条是判定表自测时发现的**假绿通道**：四域全 false ⇒ 所有 job 跳过 ⇒ 「CI 绿」但什么都没跑。
+  - ⚠️ **`always() &&` 覆盖 needs 的默认传播**：`frontend-gates` / `e2e` / `e2e-web` 既依赖
+    `contracts` 又按域裁剪，而 `contracts` 在非契约域时会被跳过——GHA 语义下**上游 skipped
+    会连带下游**，故其 `if` 必须写成 `always() && <域条件> && (contracts.result == 'success'
+    || 'skipped')`，否则「只改 frontend/**」时这几个 job 被契约的 skipped 拖掉（静默失明）。
+- **e2e / e2e-web `needs: [changes, contracts]`**：契约失败大概率前端契约崩，最贵的一档
+  （真浏览器/WebGL）不空跑；其余 job 保持并行取 max，不拖墙钟。
 - 每个 job 都显式 `timeout-minutes`——Playwright 的总限只管测试段，webServer/浏览器下载/apt 卡死不受
   其管，缺省 ceiling 是 360min 静默干烧。SwiftShader 软渲染显著慢于 headless Chromium，e2e-web 预算
   放宽一档。

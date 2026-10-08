@@ -25,10 +25,96 @@ env:
   WAILS_VERSION: ${{ vars.WAILS_VERSION || 'v3.0.0-beta.26' }}
 
 jobs:
+  # ── 变更域判定 Job（2026-10-08 第三轮审计：按 paths 自动裁）────────────────────
+  # 动机：此前 7 个 job 全部无条件跑（`ci.yml` 的 `paths-ignore` 只有 docs/** 与 **.md，
+  # 粒度太粗）——只改 Go 也要白跑前端 4 个 job、只改前端也要白跑 Go 2 个 job。
+  # ⚠️ 为何需要独立 job：**GHA 的 job 级 `if` 拿不到变更文件列表**（paths 不在 job 上下文），
+  # 所以必须由一个 job 先算、其余 job 经 `needs` + `outputs` 消费。刻意用 `git diff` 原生实现
+  # 而非引入 dorny/paths-filter（本仓零第三方 action 倾向 + 已有 changed-base 基线语义）。
+  #
+  # **保守优先原则（漏跑比多跑危险得多）**：任何**无法归类**的路径（含 .github/**、
+  # 顶层 *.json、go.mod、package.json 等）一律置全部域为 true ⇒ 退回全量跑。
+  # 宁可多跑，绝不在「不确定影响面」时静默跳过。
+  changes:
+    name: 变更域判定
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      frontend: ${{ steps.detect.outputs.frontend }}
+      go: ${{ steps.detect.outputs.go }}
+      contracts: ${{ steps.detect.outputs.contracts }}
+      all: ${{ steps.detect.outputs.all }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - id: detect
+        shell: bash
+        env:
+          BASE: ${{ inputs.changed-base }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          # 基线解析（与 ADR-244 同口径）：显式 changed-base 优先；否则退回 HEAD~1。
+          # 全零 SHA（新 tag / 首次推送）与非提交对象 ⇒ 退回 HEAD~1（或全量，见下）。
+          # workflow_dispatch（手动触发）无变更上下文 ⇒ 直接全量（人手动跑通常是想看全貌）。
+          if [ "$EVENT" = "workflow_dispatch" ]; then
+            echo "手动触发 ⇒ 全量跑"; echo "all=true" >> "$GITHUB_OUTPUT"
+            echo "frontend=true" >> "$GITHUB_OUTPUT"; echo "go=true" >> "$GITHUB_OUTPUT"
+            echo "contracts=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          if [ -n "${BASE:-}" ] && ! echo "$BASE" | grep -qE '^0+$' && git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            RANGE="$BASE..HEAD"
+          elif git rev-parse -q --verify HEAD~1 >/dev/null 2>&1; then
+            RANGE="HEAD~1..HEAD"
+          else
+            echo "无可用基线（浅历史/首个提交）⇒ 全量跑"
+            echo "all=true" >> "$GITHUB_OUTPUT"; echo "frontend=true" >> "$GITHUB_OUTPUT"
+            echo "go=true" >> "$GITHUB_OUTPUT"; echo "contracts=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          FILES=$(git diff --name-only "$RANGE" || true)
+          echo "变更范围: $RANGE"; echo "$FILES" | sed 's/^/  /'
+          # ⚠️ 空变更集必须保守全量（2026-10-08 判定表自测发现）：否则四域全 false ⇒
+          # 所有 job 跳过 ⇒ 「CI 绿」但什么都没跑（**假绿通道**，比多跑危险得多）。
+          # 空集可能来自：BASE==HEAD、range 解析异常、或 git diff 输出被吞。
+          if [ -z "$(echo "$FILES" | tr -d '[:space:]')" ]; then
+            echo "变更集为空（无文件可比对）⇒ 保守全量跑"
+            echo "all=true" >> "$GITHUB_OUTPUT"; echo "frontend=true" >> "$GITHUB_OUTPUT"
+            echo "go=true" >> "$GITHUB_OUTPUT"; echo "contracts=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          fe=false; go=false; ct=false; all=false
+          while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            case "$f" in
+              frontend/*|e2e/*|e2e-web/*)
+                fe=true
+                # 依赖清单与工具链配置影响面跨域（lock 变更可能改变任意 job 的解析结果），
+                # 故单独提级为全量——不落「只跑前端」的窄口径（2026-10-08 判定表自测发现）。
+                case "$f" in
+                  frontend/pnpm-lock.yaml|frontend/package.json|frontend/tsconfig*.json|frontend/vite.config.*|frontend/biome.json|frontend/playwright*.ts)
+                    all=true; go=true; ct=true ;;
+                esac
+                ;;
+              go/*|internal/*|cmd/*|*.go|go.mod|go.sum) go=true ;;
+              scripts/*|tests/*|docs/*) ct=true ;;
+              # 跨域或无法归类 ⇒ 全量（保守）
+              .github/*|*.json|*.md|package.json|pnpm-lock.yaml|frontend/pnpm-lock.yaml)
+                all=true; fe=true; go=true; ct=true ;;
+              *) all=true; fe=true; go=true; ct=true ;;
+            esac
+          done <<< "$FILES"
+          echo "域判定: frontend=$fe go=$go contracts=$ct all=$all"
+          echo "frontend=$fe" >> "$GITHUB_OUTPUT"
+          echo "go=$go" >> "$GITHUB_OUTPUT"
+          echo "contracts=$ct" >> "$GITHUB_OUTPUT"
+          echo "all=$all" >> "$GITHUB_OUTPUT"
+
   # ── 契约/治理 Job：契约测试 + 绑定保鲜 + 治理闸（纯静态/契约，不跑重型编译）──────────
   # ⚠️ 本 job 全程不装前端依赖——「契约测试不依赖前端依赖」是隐性防线。详见 ci-tuning。
   contracts:
     name: 契约测试 + 治理闸
+    needs: [changes]
+    if: needs.changes.outputs.contracts == 'true' || needs.changes.outputs.all == 'true'
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
@@ -163,6 +249,9 @@ jobs:
   # 详见 ci-tuning。
   frontend:
     name: 前端（类型检查 + Vitest）
+    # 变更域裁剪（见顶部 changes job）：仅前端域变更时跑；否则跳过（省 Windows 分钟）。
+    needs: [changes]
+    if: needs.changes.outputs.frontend == 'true' || needs.changes.outputs.all == 'true'
     runs-on: windows-latest
     timeout-minutes: 40
     steps:
@@ -216,7 +305,15 @@ jobs:
     # 净影响实测（run 37788034328 口径）：`frontend-gates` **不在关键路径**上
     # （关键路径 = contracts 152s → e2e/e2e-web 各约 330s ≈ 8min，E2E 本就在等 contracts），
     # 本 job 自身约 1–2min，152s + 120s ≈ 272s < 477s ⇒ **不拉长总时长**，只消除白跑与误导。
-    needs: [contracts]
+    # ⚠️ 与域裁剪的组合（2026-10-08）：本 job 既依赖 contracts（上面的理由），又要按域裁剪。
+    # GHA 语义坑：needs 的上游若被 skipped，本 job 默认也 skipped（即使自身 if 为真）——
+    # 而 `contracts` 在「非 contracts 域」时正是被跳过的。故 if 里必须显式用
+    # `always() && <域条件>` 覆盖该默认传播，否则「只改 frontend/**」时本 job 会被
+    # contracts 的 skipped 连带拖掉（前端治理闸静默消失——正是要避免的失明模式）。
+    needs: [changes, contracts]
+    if: |
+      always() && (needs.changes.outputs.frontend == 'true' || needs.changes.outputs.all == 'true')
+      && (needs.contracts.result == 'success' || needs.contracts.result == 'skipped')
     runs-on: windows-latest
     timeout-minutes: 40
     # ⚠️ 责任范围（ADR-244）必须挂在 **job 级**：死代码扫描在本 job 内有两处执行点
@@ -275,6 +372,9 @@ jobs:
   # ── Go Job：Go 编译/测试/覆盖率 ────────────────────────────────────────────
   go:
     name: Go（build + vet + test）
+    # 变更域裁剪（见顶部 changes job）：仅 Go 域变更时跑。
+    needs: [changes]
+    if: needs.changes.outputs.go == 'true' || needs.changes.outputs.all == 'true'
     runs-on: windows-latest
     timeout-minutes: 40
     steps:
@@ -390,6 +490,9 @@ jobs:
   # 覆盖率两件套（diff-coverage / 报告）不迁——要真跑 go test，Windows 二进制无法在 Linux 执行（§5）。
   go-analysis:
     name: Go 静态分析（golangci-lint）
+    # 变更域裁剪（见顶部 changes job）：仅 Go 域变更时跑。
+    needs: [changes]
+    if: needs.changes.outputs.go == 'true' || needs.changes.outputs.all == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
@@ -479,7 +582,13 @@ jobs:
   e2e:
     name: E2E（Playwright）
     # 阶段门控：契约失败大概率前端契约崩，最贵的一档不空跑。详见 ci-tuning §8。
-    needs: [contracts]
+    # 变更域裁剪（2026-10-08）：E2E 验的是前端产物 ⇒ 仅前端域变更时跑。
+    # 与 contracts 的组合见 frontend-gates 处的说明：上游 skipped 会连带本 job，
+    # 故必须 `always() &&` 覆盖默认传播（否则「只改 frontend/**」时最贵档静默消失）。
+    needs: [changes, contracts]
+    if: |
+      always() && (needs.changes.outputs.frontend == 'true' || needs.changes.outputs.all == 'true')
+      && (needs.contracts.result == 'success' || needs.contracts.result == 'skipped')
     runs-on: ubuntu-24.04
     # 显式超时：Playwright 总限只管测试段，webServer/下载/apt 卡死不受管（缺省 360min 静默干烧）。
     timeout-minutes: 30
@@ -529,7 +638,11 @@ jobs:
   e2e-web:
     name: E2E-Web（真 WebGL）
     # 阶段门控：同 e2e——契约失败不空跑最贵档。详见 ci-tuning §8。
-    needs: [contracts]
+    # 变更域裁剪与 always() 覆盖：同 e2e（上游 skipped 不得连带本 job）。
+    needs: [changes, contracts]
+    if: |
+      always() && (needs.changes.outputs.frontend == 'true' || needs.changes.outputs.all == 'true')
+      && (needs.contracts.result == 'success' || needs.contracts.result == 'skipped')
     runs-on: ubuntu-24.04
     # SwiftShader 无 GPU 软渲染显著慢于 headless Chromium，预算放宽一档。
     timeout-minutes: 40
@@ -569,7 +682,7 @@ jobs:
   #   3. 用 `toJSON(needs)` 统一渲染，避免手写 7 份重复的 表格行（新增 job 时只需改 needs 列表）。
   summary:
     name: 汇总（谁红了 / 还剩什么没跑）
-    needs: [contracts, frontend, frontend-gates, go, go-analysis, e2e, e2e-web]
+    needs: [changes, contracts, frontend, frontend-gates, go, go-analysis, e2e, e2e-web]
     if: always()
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -591,18 +704,32 @@ jobs:
             'success'   = '✅ 通过'
             'failure'   = '❌ 失败'
             'cancelled' = '⚪ 已取消（被新 push 作废，通常无需处理）'
-            'skipped'   = '⏭️ 跳过（上游未通过或平台不跑——见「门控」列区分）'
+            'skipped'   = '⏭️ 跳过（变更域未命中 / 上游未通过——见「门控」列区分）'
           }
           # job 门控关系（与上方各 job 的 needs 保持一致；改 needs 时同步本表）
-          $gated = @{ 'e2e' = 'contracts'; 'e2e-web' = 'contracts'; 'frontend-gates' = 'contracts' }
+          # 2026-10-08 加域裁剪后：各 job 统一 `needs: [changes, …]`，域未命中即 skipped，
+          # 那属**预期行为**（省分钟）而非红——故单列「域」列说明该 job 由哪个域触发。
+          $gated = @{
+            'contracts'      = 'changes(contracts 域)'
+            'frontend'       = 'changes(frontend 域)'
+            'frontend-gates' = 'changes(frontend 域) + contracts'
+            'go'             = 'changes(go 域)'
+            'go-analysis'    = 'changes(go 域)'
+            'e2e'            = 'changes(frontend 域) + contracts'
+            'e2e-web'        = 'changes(frontend 域) + contracts'
+          }
+          # 变更域实况（changes job 产出）：让读者一眼看出「本轮跳过的 job 是因为没改那部分」
+          $dom = '${{ needs.changes.outputs }}'
 
           $lines = @()
           $lines += '## 门禁汇总 — Test Gate'
           $lines += ''
+          $lines += ('**本轮变更域**：`{0}`' -f $dom)
+          $lines += ''
           $failed = @()
           $skipped = @()
           $unknown = @()
-          $lines += '| Job | 结论 | 门控 |'
+          $lines += '| Job | 结论 | 触发条件 |'
           $lines += '|---|---|---|'
           foreach ($k in @('contracts','frontend','frontend-gates','go','go-analysis','e2e','e2e-web')) {
             $r = $needs.$k.result
@@ -611,7 +738,7 @@ jobs:
               $unknown += $k
             }
             $txt = if ($label.ContainsKey($r)) { $label[$r] } else { '❓ ' + $r }
-            $gate = if ($gated.ContainsKey($k)) { 'needs: ' + $gated[$k] } else { '无（并行起飞）' }
+            $gate = if ($gated.ContainsKey($k)) { $gated[$k] } else { '无（并行起飞）' }
             $lines += ('| `{0}` | {1} | {2} |' -f $k, $txt, $gate)
             if ($r -eq 'failure') { $failed += $k }
             if ($r -eq 'skipped') { $skipped += $k }
@@ -630,7 +757,9 @@ jobs:
             }
             if ($skipped.Count -gt 0) {
               $sl = ($skipped -join ', ')
-              $lines += ('**⏭️ 跳过 job（{0}）：`{1}`** — 若其门控 job 通过而本 job 仍 skipped，说明是平台/条件不跑，不是红。' -f $skipped.Count, $sl)
+              $lines += ('**⏭️ 跳过 job（{0}）：`{1}`** — 两种成因，看「触发条件」列区分：' -f $skipped.Count, $sl)
+              $lines += '① **变更域未命中**（预期行为，省分钟，**不是红**）；'
+              $lines += '② 上游 `contracts` 未通过（那本身会在上面以 ❌ 出现）。'
             }
           }
           $lines += ''

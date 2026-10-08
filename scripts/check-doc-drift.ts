@@ -13,7 +13,7 @@
  *                 指向磁盘不存在的文件（ERROR 阻断）
  *                 实际源码树（frontend/src/ + go/ + internal/）中未在
  *                 architecture.md 登记的子模块（INFO 基线管理，--fix 刷新）
- *                 AGENTS.md §4.2 前端目录树 vs 磁盘实况（缺失 → WARN）
+ *                 AGENTS.md 前端目录树块 vs 磁盘实况（段缺失 → WARN；认块不认章节号）
  *
  * 用法：
  *   node scripts/check-doc-drift.ts            # 文本报告
@@ -253,25 +253,38 @@ function checkArchRefs() {
   }
 }
 
-/** AGENTS.md §4.2 前端目录树 vs 磁盘实况（缺失 → WARN，可能是规划中目录）。 */
+/** AGENTS.md 前端目录树块 vs 磁盘实况（段缺失 → WARN，可能是规划中目录）。
+ *  认块不认章节号：AGENTS.md 持续瘦身重排，锚定「§4.2」这类标题正是空转成因
+ *  （2026-10 该章节已随瘦身消失，旧匹配恒 miss、闸门静默失效无人察觉）。
+ *  识别口径 = 正文任一围栏代码块含 frontend/src/ 即视为目录树逐段验真；
+ *  无此类块 = 瘦身后健康态（手写树另由 check-knowledge-drift 检查4 拦截），仅记 INFO。 */
 function checkAgentsTree() {
   const text = readText("AGENTS.md");
   if (text === null) return;
-  const blockM = text.match(/### 4\.2 前端[\s\S]*?```\s*\n([\s\S]*?)```/);
-  if (!blockM) {
-    infos.push("[架构树] AGENTS.md 未找到 §4.2 前端树代码块，跳过");
+  let block: string | null = null;
+  for (const m of text.matchAll(/```[^\n]*\n([\s\S]*?)```/g)) {
+    if (m[1]!.includes("frontend/src/")) {
+      block = m[1]!;
+      break;
+    }
+  }
+  if (block === null) {
+    infos.push("[架构树] AGENTS.md 无前端目录树代码块（瘦身后健康态；手写树由 check-knowledge-drift 检查4 拦截）");
     return;
   }
-  const lines = blockM[1]!.split(/\r?\n/);
+  const lines = block.split(/\r?\n/);
   const rootIdx = lines.findIndex((l) => l.includes("frontend/src/"));
   if (rootIdx < 0) return;
   for (const line of lines.slice(rootIdx + 1)) {
-    const segM = line.match(/^\s{2}([^\s—]+)/);
+    const segM = line.match(/^\s{2}(?![│├└─])([^\s—]+)/);
     if (!segM) continue;
-    const seg = segM[1]!;
+    let seg = segM[1]!;
+    if (seg.startsWith("frontend/src/")) seg = seg.slice("frontend/src/".length);
+    seg = seg.split("/")[0]!;
+    if (!seg) continue;
     if (!fs.existsSync(path.join(ROOT, "frontend/src", seg))) {
       warns.push(
-        `[架构树] AGENTS.md §4.2 描述 frontend/src/${seg} 但磁盘不存在（疑似规划中目录或已删除）`,
+        `[架构树] AGENTS.md 目录树描述 frontend/src/${seg} 但磁盘不存在（疑似规划中目录或已删除）`,
       );
     }
   }

@@ -31,6 +31,9 @@ invariant_anchors:
   - scripts/check-doc-drift.ts|isGitIgnored
   - scripts/check-doc-drift.ts|collectSourceModules
   - scripts/check-doc-drift.ts|checkArchCoverage
+  - scripts/check-doc-drift.ts|checkAgentsTree
+  - scripts/_lib/contract-tests.ts|collectContractTests
+last_verified: 2026-10-08
 ---
 
 # 技术债账本刷新与盘点方法论
@@ -76,6 +79,7 @@ invariant_anchors:
 
 - **数文件数 ≠ 债，要读内容**：ADR-091 曾把 `*-3d.ts`「5→10 个文件」「download-queue 3→4」判为失控膨胀。读码实证：`*-3d.ts` 已是 `PREVIEW_HANDLERS` 注册表驱动的 thin entry（新增资源类型本就该长），download-queue 拆分遵守 ADR-040 400 行红线 + 契约 re-export、`-web` 是桌面/Web 双路径——**均为健康扩展而非失控**。判债必读内容，勿数文件个数。
 - **多 AI 并行期 worktree 会被 reset 冲掉未提交改动**：实证本会话连续 3 次把 §3.6 / 账本改动做完、`doctor` 已绿，`git diff HEAD` 却突然全空（被并行会话 / 钩子 reset 回 HEAD）。**改账本 / 文档后须立即 `commit-with-check --files` 锁定**，勿攒批。「`git diff HEAD` 全空但行为刚变过」= 被冲信号。
+- **AGENTS.md 目录树闸「认块不认章节号」**（2026-10-08 根治，`checkAgentsTree`）：旧实现锚定「§4.2 前端」标题——AGENTS.md 瘦身重排后该章节消失，匹配恒 miss 只发 INFO「跳过」，闸门**静默空转却一眼绿**（与 `check-biome --changed` 空转同形态：文档结构一动，锚死结构的闸即失焦）。新口径 = 正文任一围栏代码块含 `frontend/src/` 即视为目录树、逐行验真（行首为树字形 `├└│─` 者跳过，不误判段名）；无树块 = 瘦身后健康态仅记 INFO（手写树由 check-knowledge-drift 检查4 拦截，不会回潮）。验闸通电用幽灵探针：临时塞一段含不存在目录的树块，确认 WARN 只点幽灵段。**推论：散文里勿硬编码计数**——AGENTS.md 口令表曾硬写契约测试条数，tests 增删后数字与实况脱节数日无人发现（本会话对账实证）；现改「全量枚举 tests/*.ts」无数口径，发现者 `collectContractTests` 本为 readdir 全量枚举，无数字措辞可恒真、有数字措辞必腐。
 - **check-doc-drift 假象**：`ARCH_DOCS` 若指向已删除文档（曾指三份归档），`archText` 为空 → `checkArchCoverage` 把 `collectSourceModules()` 全判 unregistered（虚报全部顶层模块）。比对对象必须是活文档 `docs/architecture.md`。
 - **`CODE_PATH_RE` 只匹配「反引号 + `frontend/`/`go/`/`internal/`/`scripts/` 前缀」的路径**：文档里裸文件名（`web.html`）/ 树行无反引号**不触发** `checkArchRefs`；写「已删除的旧路径」时勿用全路径反引号（会报引用漂移），改说「旧 X 已废，现 root `resource_types.json` 单源」。
 - **架构树引用「构建产物」必须豁免 git 忽略项，否则 CI 结构性恒红**（2026-10-07 根因修，`checkArchRefs`）：`docs/architecture.md` 合法登记产物路径（`frontend/dist/wasm/YSMParser.wasm`、`go/updater/ysm-updater-helper.exe`、`frontend/src/wasm/ysm-wasm-data*.js`），它们被 `.gitignore` 排除、**从不入 git** ⇒ 干净检出（CI 全新 clone）里必然不存在 ⇒ 原实现一律 `fs.existsSync` 报 ERROR。**形态是「本地绿 CI 红」且与改动无关**：开发机跑过 build 故文件在、恒绿；CI 全新 clone 恒红。实证 2026-10-04 `2ee0d7fd8` 起连红多轮（含两轮先于本次推送）——本地 `contract-tests` 122/122 绿、CI 却挂 `tests/test_gate_static_tools.ts` 第 8 组（`runScopedDocDrift` 传不存在文件要求 `matched=0` 合法 PASS）。修法：交 git 裁决（`git check-ignore -q -- <ref>`，命中即视为「产物未构建」记 INFO 而非 ERROR），勿手抄 glob（忽略规则散在 `.gitignore` 多行，必漂移）。**复现手法**：`git worktree add --detach <dir> HEAD` 建干净检出再跑 `node scripts/contract-tests.ts`——本机工作树因残留产物而掩盖此病。

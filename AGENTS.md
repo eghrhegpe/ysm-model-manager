@@ -32,7 +32,7 @@
 
 **元规则**：ADR 与源码注释里的「病」是决策时的历史快照，**≠ 当前状态**——判断现状只认当前源码树；改完代码必须同步知识卡（`check-knowledge-drift` 钩子兜底）。
 
-**本文件的瘦身纪律**：AGENTS.md 是每会话常驻的系统提示——事故化石（长注脚链、历史对账、实施进度）一律迁知识卡，此处只留一行不变量 + 路由指针。新增内容先问：值得每个会话都付费吗？
+**本文件的瘦身纪律**：AGENTS.md 是每会话常驻的系统提示——事故化石（长注脚链、历史对账、实施进度、硬编码计数——数字随代码演化必腐，删数改口径才是长治）一律迁知识卡或改不变量口径，此处只留一行不变量 + 路由指针。新增内容先问：值得每个会话都付费吗？
 
 ## 工作准则（长效）
 
@@ -170,7 +170,7 @@ git reset --soft HEAD~1             # 撤销最近提交，改动留在暂存区
 cd frontend && npx vite build && npm run typecheck   # 前端（同 cwd=frontend）
 node scripts/check-biome.ts --files <改动文件...>      # biome 增量闸门（须显式点名——--changed 在 main 直提下恒空转；--write 自动修复）
 go build ./...                                  # Go（覆盖 go/ + 根 internal/app + 根 main.go CLI 入口）
-node scripts/contract-tests.ts            # 契约测试（122 个 tests/*.ts；⚠️ 勿手写 `for f in tests/*.ts` 裸跑循环——缺 @/ 别名运行时注入，本地绿 CI 红；护栏 tests/test_workflow_contract_runner.ts）
+node scripts/contract-tests.ts            # 契约测试（全量枚举 tests/*.ts；⚠️ 勿手写 `for f in tests/*.ts` 裸跑循环——缺 @/ 别名运行时注入，本地绿 CI 红；护栏 tests/test_workflow_contract_runner.ts）
 node scripts/doctor.ts --docs               # 只改文档时（秒级）
 node scripts/doctor.ts                      # 发版前全量
 node scripts/android-build.ts / android-install.ts   # 安卓打包 / 安装

@@ -1746,6 +1746,10 @@ export const autoSidebar = [
             "link": "/knowledge/theme"
           },
           {
+            "text": "可复现结论纪律（结论必附验证证据）",
+            "link": "/knowledge/verify-before-conclude"
+          },
+          {
             "text": "Wails 桥接 app.ts",
             "link": "/knowledge/wails-bridge"
           },

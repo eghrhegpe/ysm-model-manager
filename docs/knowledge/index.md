@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 196 张知识卡
+> 总计: 197 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -43,7 +43,7 @@
 - **scripts-lib-adoption**（_lib 共享层采用率闸门）：`scripts/check-lib-adoption.ts` 把 `check-proc-adoption` 的成功经验（非直调占比 100% 全收敛）推广为**规则驱动的通用闸门**：RULES 表声明「某 `_lib` 模块 → 手搓…
 - **scripts-readme-index**（README 登记处对账 check-readme-index.ts）：`scripts/README.md` 自称「所有 Node 工具脚本的索引」「治理检查（check-* 系列；唯一登记处）」，但历史上没有任何机器对账——新增/改名脚本后忘记登记 README 不会被任何门禁拦下。2026-08-31 审…
 
-## core（24 张）
+## core（25 张）
 
 *核心基础设施（事件总线、页面状态、Wails 桥接）*
 
@@ -71,6 +71,7 @@
 | 🏗 redline-enforcement-grade | 唯一入口红线执法等级表（37 条审计） | architecture | — | 唯一入口, 红线, 绕过 redlines, W6 W9 R7 R11, 资源类型魔法串, 菜单 visibleWhen, 审计等级, 单一入口收口 |
 | 🍃 tech-debt-ledger | 技术债台账（探查快照 2026-10-08） | leaf | — | 技术债, tech debt |
 | 🍃 theme | 主题系统 theme | leaf | — | 主题, 换肤, 深色, 浅色, 跟随系统, 动画开关, 字号, 界面偏好 |
+| 🍃 verify-before-conclude | 可复现结论纪律（结论必附验证证据） | leaf | — | 要下结论说某个债已清/未清、某个门禁慢了、某处是误报时, 写审计报告、知识卡、ADR 或提交说明里的「实测」数字时, 读到注释或知识卡里的既有结论，准备把它当事实继续推理时, 派子代理探查后，要不要采信它报的计数 |
 | 🏗 wails-bridge | Wails 桥接 app.ts | architecture | — | Wails, 桥接, getApp, Go 调用, Binding, window.go.main.App, 网页版, browser adapter |
 | 🏗 ysm-baked | YSM 烘焙与几何反推 | architecture | — | 烘焙, 几何反推, pivot, 骨骼错位, 模型错位, UV 对不上, 贴图错位, RawYsmModel |
 
@@ -93,6 +94,7 @@
 - **model-stats**（Web Worker 模型统计层 model-stats）：`frontend/src/workers/` + `frontend/src/backend/web-stats.ts` 是 ADR-071 审计增强 #7 新增的**Web Worker 批量模型统计层**，为网页版 `SearchMo…
 - **pointer-events**（Pointer Events 统一交互（触屏 + 桌面））：ADR-047 核心立项 A：全前端拖拽/缩放/旋转/hover 交互从 mouse 事件统一迁移 **Pointer Events**（`pointerdown/move/up` + `setPointerCapture` + CSS `…
 - **theme**（主题系统 theme）：主题系统的纯逻辑实现在 `frontend/src/theme-core.ts`（2026-08-17 神桶拆分自 `app-modules.ts`；`app-modules.ts` 仅 re-export `applyTheme/init…
+- **verify-before-conclude**（可复现结论纪律（结论必附验证证据））：本卡约束**怎么下结论**——不针对某个子系统，而是针对「判断本身」的纪律。适用于审计报告、知识卡正文、ADR、提交说明，也适用于对话中给用户的答复。
 - **ysm-baked**（YSM 烘焙与几何反推）：YSM 作者导出模型时，**cube 的语义参数（origin/size/uv/rotation）在导出时被烘焙为纯顶点面**，`RawYsmModel.RawCube.faces` 只保留「每面 4 顶点 + 法线 + 4 组 u/v」。…
 
 ## feature（17 张）

@@ -599,6 +599,14 @@
 | VIEWER_PURE_ACTIONS 纯前端动作 | [能力门控 capabilities](./capabilities.md) | - | - |
 | VIEWER_WEB_ACTION_BINDINGS web 可达 action | [能力门控 capabilities](./capabilities.md) | - | - |
 
+## 🎯 未归类
+
+| 用户意图 | 首选卡 | 红线警告 | 主 ADR(如有) |
+|----------|--------|----------|----------|
+| 我想下结论但还没验证 | [可复现结论纪律（结论必附验证证据）](./verify-before-conclude.md) | 结论一律附「命令 + 原始输出 + 日期」；注释与知识卡里的旧结论不构成证据，须复跑；静态结构不等于运行时路径；改了脚本要跑 scripts tsc，不只是 biome。 | - |
+| 这条注释说的还算数吗 | [可复现结论纪律（结论必附验证证据）](./verify-before-conclude.md) | - | - |
+| 子代理报的数字能信吗 | [可复现结论纪律（结论必附验证证据）](./verify-before-conclude.md) | - | - |
+
 ## 🚨 高频陷阱速查
 
 | 陷阱 | 位置 | 正确做法 |
@@ -1136,6 +1144,11 @@
 | 新增资源类型未注册 | - | 前端无法识别；必须在 resource_types.json 中注册 |
 | 手写详情卡片 | - | 与 summaryCardHTML 样式不一致、作者信息重复；必须经 summaryCardHTML |
 | 加密模型未走安全提取路径 | - | 加密内容泄露；必须经 summaryCardHTML 渲染 |
+| 把当「知道运行时事实」——最贵的错法，静态结构与执行路径常不一致 | `读代码结构` | - |
+| 把注释/知识卡里的旧结论当定理继续推理（结论被过度归纳，丢失了适用参数） | - | - |
+| 手测清单条目之和冒充运行时成本（漏 spaw/load/环境瞬态） | - | - |
+| 凭印象报数（如实际 66），不下命令复核 | `≈22` | - |
+| 只跑 biome/运行时冒烟就宣称改完——漏 scripts tsc 会放过 TS 类型漏洞 | - | - |
 | 高频轮询 GitHub API | - | 触发限流、浪费带宽；必须经 canCheck 节流 |
 | check 未 markChecked | - | 重启后重复检查；必须在检查完成后 markChecked 记录时间戳 |
 | DOM 测试切 node 环境 | - | window/document 报错；必须保持 happy-dom 或治理源码副作用 |

@@ -115,6 +115,11 @@ const EXPECTED_POLICY: Record<string, BlockPolicy> = {
   "check-comment-history.ts": "debt",
   "check-twin-siblings.ts": "debt",
   "check-unread-fields.ts": "debt",
+  // 双轨漂移扫描（2026-10-08 第三轮技术债审计接线）：修毕误报后自 exit 1 转绿再挂。
+  // 记 debt 而非 hard——扫描面（内联剥后缀/硬编码权限/读取上限/定时器泄漏/非法字符集）
+  // 与 check-deadcode-baseline·jscpd-go·check-circular 部分重叠，且判定基于正则启发式
+  // （本轮实测 2 处命中里 1 处为跨文件会话范式误报），不适宜卡全队推送。
+  "drift-scan.ts": "debt",
 
   // —— failClosed（仅 rg 等环境依赖工具；生成物漂移类恢复 hard——
   //    迁移时误降 failClosed 会让过期生成物静默过闸，code_review 03a6005ed 撤销）——

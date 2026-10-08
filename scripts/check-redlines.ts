@@ -230,6 +230,11 @@ function runChecks() {
           return !f.includes("bindings/");
         })
         .filter((l) => !/:\d+:\s*\/\//.test(l))
+        // 单行/首行 JSDoc（`/** ... */`）：正文以 `/` 开头，上面「`*` 开头」的续行豁免匹配不到，
+        // 于是「注释里提到 repoRoot」被当成违规（2026-10-08 第三轮审计：scripts/port-align.ts:99
+        // 的 `/** 断言 …（纯函数，repoRoot 可注入，供契约测试）。 */` 误报）。内容以 `/**` 起始者
+        // 必为注释（可执行代码不可能以 `/**` 开头），豁免不宽于意图。
+        .filter((l) => !/:\d+:\s*\/\*\*/.test(l))
         .filter((l) => !/:\d+:\s*\*/.test(l))
         .filter((l) => !/:\d+:\s*@param/.test(l))
         // JSON tag 中的 repoRoot（JSON 反序列化旧版字段，如 `json:"repoRoot"`）
@@ -545,6 +550,11 @@ function runChecks() {
           !l.includes("bus.ts") &&
           !l.includes("font-display") &&
           !/\[?\/\\\\|\\[ntr]|\\[.wWdDsSb]/.test(l) &&
+          // 字符类内的反斜杠/斜杠（如 split(/[\\/]+/)、replace(/[\\/]/g)）是正则，不是路径。
+          // 上面那条只排了「斜杠在前」的写法（`[/\\`），漏了「反斜杠在前」的 `[\\/` 顺序
+          // （2026-10-08 第三轮审计：format.ts:40 与 fbx-parser.worker.ts:39 两处 `split(/[\\/]+/)`
+          // 误报）。含 `[\` / `[/` 者必为正则字符类——硬编码路径字面量不含 `[`。
+          !/\[(?:\\\\|\/)/.test(l) &&
           !l.includes("locales/") &&
           /\/[^/]*\\\\[^/]*\/[^/]*\//.test(l) &&
           !/INVALID_NAME_CHARS|ILLEGAL_CHARS/.test(l), // filename validation regex
@@ -689,7 +699,7 @@ function runChecks() {
   add(
     "W10",
     "button base style single source (btnBaseCSS)",
-    rgTracked('\\.btn-base\\s*[{]', "frontend/src", ["*.ts"])
+    rgTracked("\\.btn-base\\s*[{]", "frontend/src", ["*.ts"])
       .filter((l) => {
         const [f] = parseRgLine(l);
         return !f.replace(/\\/g, "/").endsWith("utils/dom/css.ts");

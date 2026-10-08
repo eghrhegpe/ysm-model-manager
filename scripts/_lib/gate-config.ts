@@ -69,6 +69,13 @@ export const ALL_STATIC_TOOLS: GateTool[] = [
   { tool: "check-orphan-exports.ts", blockPolicy: "debt" },
   { tool: "check-deadcode-baseline.ts", blockPolicy: "debt" },
   { tool: "jscpd-go.ts", blockPolicy: "debt" },
+  // 双轨漂移扫描（2026-10-08 第三轮技术债审计接线）：此前全仓零挂载却常年 exit 1
+  // （1 真违规 + 1 误报），呈「不执行 + 永久红」双重静默。误报与定点豁免修毕后转绿再挂，
+  // 先入 debt 档——其信号面与 check-deadcode-baseline/jscpd-go/check-circular 部分重叠，
+  // 用非阻断档把「0 处漂移」变成可观测基线，而非拿它卡全队推送。
+  // 注意：脚本名为 drift-scan.ts（非 check-*），须同步登记 gate-coverage.ts 的手工常量，
+  // 否则结构性地落在「覆盖 x/M」分母之外——这正是它此前隐形的原因。
+  { tool: "drift-scan.ts", blockPolicy: "debt" },
   { tool: "check-tpl-refs.ts", blockPolicy: "hard" },
   { tool: "check-dynamic-import.ts", blockPolicy: "hard" },
   { tool: "auto-import.ts", args: ["--strict"], blockPolicy: "hard" },

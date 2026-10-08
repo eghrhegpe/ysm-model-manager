@@ -124,7 +124,18 @@ const RULES = [
     exclude: [/types\/extensions\.go/, /test/],
     // 排除注释行和函数定义本身
     filter: (line: string) =>
-      !line.startsWith("//") && !line.startsWith("return name[:len(name)-4]"),
+      !line.startsWith("//") &&
+      !line.startsWith("return name[:len(name)-4]") &&
+      // scanner_repo_index.go 里内嵌的 index.json 生成器（heredoc `cat > genindex.go << 'GOEOF'`
+      // … `GOEOF` + `go run genindex.go`，见该文件 L123-169）会真被执行，但它是**刻意 stdlib-only
+      // 的单文件程序**（`go run genindex.go` 只编译该文件，不引模块），因此无法复用
+      // types.StripBanSuffix——这里内联剥 .ban 不是疏忽而是约束下的必然。
+      // 与本文件既有做法一致：同段 heredoc 的 `os.WriteFile("index.json", …, 0644)` 亦由
+      // HARDCODED_PERMS_FILE 定点豁免（上方规则）。
+      // 真修方向（未决）：让生成器 import "ysm-model-manager/go/types/registry" 复用单一事实源，
+      // 或把该生成器移出 workflow 模板成为仓内 Go 工具——两者都改动已发布工作流，需单独拍板。
+      // 在此之前显式记账，避免「永久红 + 无人执行」的静默（2026-10-08 第三轮技术债审计）。
+      !line.includes('restored = p[:len(p)-len(".disabled")]'),
   },
   {
     id: "INLINE_ILLEGAL_CHARS",
@@ -268,13 +279,45 @@ const RULES = [
           `|forEach\\s*\\(\\s*clear(?:Timeout|Interval)\\s*\\)` +
           `|forEach\\s*\\([^)]*=>\\s*clear(?:Timeout|Interval)\\s*\\([^)]*\\b${varName}\\b`,
       );
-      return !clearRegex.test(content);
+      // 同文件有清理调用 → 不是泄漏
+      if (clearRegex.test(content)) return false;
+      // 属性型赋值（session.x / this.x = setTimeout(...)）：清理点按范式位于该对象的
+      // 生命周期持有者文件（如 mount-session.ts 的 cleanup），做到跨文件判定再定论
+      // （2026-10-08 第三轮审计：mount-preview-core.ts:580 与 mount-session.ts:311 即此范式）。
+      const isPropAssign = /\w+\.\w+\s*=\s*(?:window\.)?(?:setInterval|setTimeout)\(/.test(trimmed);
+      if (isPropAssign) return !clearFieldsAcrossTree().has(varName);
+      return true;
     },
   },
 ];
 
-// ===== 主逻辑 =====
+/**
+ * 全树清理字段索引：`clearTimeout(x.y)` / `clearInterval(x.y)` 里的字段名 y。
+ *
+ * 为何需要（2026-10-08 第三轮技术债审计）：TIMER_LEAK 原本只在**同文件**里找对应的
+ * clear 调用，而本仓的 session 生命周期是**跨文件**的——定时器在
+ * `adapters/mount-preview-core.ts` 里存进 `session.tipTimeoutId`，真正的
+ * `clearTimeout(session.tipTimeoutId)` 在 `adapters/mount-session.ts` 的 cleanup 段。
+ * 于是「存进会话对象、由会话持有者统一回收」这一**本仓标准范式**必然误报。
+ * 修法用跨文件索引而非豁免：保住「只赋值不清理」的真泄漏检出能力。
+ */
+let clearFieldsCache: Set<string> | null = null;
 
+function clearFieldsAcrossTree(): Set<string> {
+  if (clearFieldsCache) return clearFieldsCache;
+  const fields = new Set<string>();
+  for (const f of walkFiles(FE_DIR, ".ts")) {
+    const c = readSrc(f);
+    if (!c) continue;
+    for (const m of c.matchAll(/clear(?:Timeout|Interval)\s*\(\s*[^)]*?\.(\w+)\s*\)/g)) {
+      if (m[1]) fields.add(m[1]);
+    }
+  }
+  clearFieldsCache = fields;
+  return fields;
+}
+
+// ===== 主逻辑 =====
 function scan() {
   const findings: any[] = [];
 

@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 193 张知识卡
+> 总计: 194 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -136,7 +136,7 @@
 - **sync-manager**（整合包同步管理器 sync-manager）：`app-sync-manager` 是一个 Web Component 视图组件（`<app-sync-manager>`），承担**单个整合包（instance）内「仓库 ↔ 实例」双向同步状态展示与逐文件推送/拉取编排**：
 - **version-updater**（版本更新 version-updater）：`version-updater.ts` 是应用自更新的前端入口：启动时静默检查（受 6 小时频次限制）→ 发现新版本以可点击 toast 通知；设置页按钮手动检查 → 弹出带更新日志的 `modalConfirm` → 调 `DoUpda…
 
-## go（50 张）
+## go（51 张）
 
 *Go 后端包（安装、下载、回收站、YSM 解析等）*
 
@@ -188,6 +188,7 @@
 | 🏗 golangci-lint | golangci-lint（Go 静态分析真空面） | architecture | — | golangci-lint, Go 静态分析, errcheck, 未检查错误, lint 基线, new-from-rev, 增量 lint |
 | 🏗 install-domain-split | install 域切分经验：切纯域不硬切复合域（耦合度门槛判断） | architecture | — | internal/app 再切分或迁移 App god-object 字段/方法时, 评估某子域「迁出 internal/app 包」的收益与成本, 复述 ADR-179 实际收敛边界 |
 | 🏗 reference | win-filename-rules | architecture | — | 用户输入的文件/文件夹名落盘前校验（重命名、新建目录、移动/复制目标段）, 判断某字符串是否为 Windows 非法文件名（非法字符 / 保留设备名 / 尾随点空格） |
+| 🍃 tech-debt-ledger | 技术债台账（探查快照 2026-10-08） | leaf | — | 技术债, tech debt |
 | 🍃 texture-cache | 纹理缓存 texture_cache | leaf | — | 纹理缓存 / KTX2 缓存, 缓存清理 / 缓存状态 / 缓存校验, 缓存占用异常 / 磁盘膨胀 |
 | 🏗 wails-bindings | Wails Binding API 总览 internal/app | architecture | — | API, Binding, 调用后端, getApp, 方法签名, app.ts 绑定 |
 | 🍃 workspace-exe-write-denied | 仓内二进制写用户目录被静默拒绝（代理沙箱按镜像位置拦截） | leaf | — | 应用日志/配置出现「创建临时文件失败 ... Access is denied」，但浏览、读取全部正常, wails3 dev / 仓内 bin 下 exe 写失败；同一 exe 复制到仓外跑恢复正常 |

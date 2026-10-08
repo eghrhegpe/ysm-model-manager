@@ -108,6 +108,7 @@ status: active
 - `RecoverAtomicRename(dir) (int, error)` — 启动自愈：扫描 `.bak-*` 备份目录，恢复未完成的 AtomicRename（返回恢复数量）
 - `DirPerms` / `FilePerms` / `UTF8BOM` / `StripBOM(data)` — 权限/BOM 单点
 - `IsHardLink(path) bool` / `IsCrossDeviceErr(err) bool` — 硬链接/跨设备判定
+- `SafeWalk(root, fn fs.WalkDirFunc) error` — `filepath.WalkDir` 的失败可见包装（ADR-030）：回调对访问失败的条目返回 nil（静默跳过）时补记一条 `[fsutil] SafeWalk 跳过访问失败的条目` 日志，恢复失败可见性；回调返回非 nil 时原样透传。仅服务此前纯吞 err 的站点（ysm 纹理查找、launcher 实例探测），已被调用方自行 log 的站点（watcher/recycle/sync）不要改走它以免重复记录
 
 ## 与其他子系统关系
 

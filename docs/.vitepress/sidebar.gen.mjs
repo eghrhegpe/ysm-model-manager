@@ -1912,6 +1912,10 @@ export const autoSidebar = [
             "link": "/knowledge/reference"
           },
           {
+            "text": "技术债台账（探查快照 2026-10-08）",
+            "link": "/knowledge/tech-debt-ledger"
+          },
+          {
             "text": "纹理缓存 texture_cache",
             "link": "/knowledge/texture-cache"
           },

@@ -1100,6 +1100,7 @@ pitfalls:
   - 纹理绑定不得静默兜底：槽位越界/缺图应报错「纹理槽位缺失」+ 灰色占位，严禁「找第一张可用」贴错图
   - perComponent 纹理索引分类与绑定索引必须同一空间：组件分支恒用局部槽 0（arr === compTexArr ? 0），非组件回退全局 texIdx/resolvedTexIdx
   - 大文件解码 peak 内存可达 ~3-4× 文件大小（base64 → Uint8Array → WASM HEAP → MEMFS → readFile → JSON.parse 六层拷贝并存）
+  - 「`mmd-ktx2-encoder.ts|disposeKtx2WorkerPool`」KTX2 编码 worker 池曾长期无回收点：池由模块级缓存持有，生产侧零调用桥的 `dispose()`，唯一清空路径是 worker 崩溃；而编码是「每个纹理一生一次」的事件（落盘后 `completedHashes` 幂等跳过），3 个 worker + 各自 WASM BasisEncoder 却按进程级常驻。修法 = 挂 MMD 会话 `Stage6Dispose` 的 finally（`cancelPendingEncodings` 旁，同粒度同语义），懒建逻辑负责下次重建。**勿挂终局拆除**——其 `beforeunload` 钩子在 Wails v3 桌面端确认不触发（上游源码取证，见 `audit-host-env-coupling-review.md`），挂上去等于死代码。判别式：为资源补 dispose 前先问「它服务的事件频率 vs 它的生命周期」，一次性事件的资源不该活到进程结束
 perf:
   - memory-heavy
   - gpu-bound

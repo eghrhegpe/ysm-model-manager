@@ -184,6 +184,32 @@ describe("ReflectorCapability — 持久化", () => {
     // [ADR-284] opacity 噪声解耦，vrm 仅剩场景尺度 size=60；resolution 1024==默认已删。
     expect(cap.getParams().size).toBe(60);
   });
+
+  // [锐评 N-1 2026-10-09] 会话级字段复位（fog/shadow 先例同法）：createAll「三引用全等 ⇒ 复用」
+  // 短路不 dispose，故 dispose 不复位 isStateLoaded 时跨会话残留让守卫恒真
+  //（模型尺度默认永不生效，且无任何报错）。判据用行为而非私有字段探针。
+  // ⚠️ 种子走 localStorage 直种（上一会话 saveState 的真实形态），不经 setEnvState manual 写：
+  // manual 先章会让 loadState 的 auto-model 落章被仲裁拒绝（值相等、章不翻），判别失真。
+  it("[N-1] dispose 后 isStateLoaded 复位：复用实例时模型默认仍能生效", () => {
+    localStorage.setItem("ysm-scene-cap-reflector", JSON.stringify({ reflectorEnabled: true, size: 300 }));
+    const cap = newCap();
+    cap.loadState(); // 恢复走 auto-model 落章（isStateLoaded 置位）
+    expect(cap.getParams().size, "存档值先落地").toBe(300);
+    cap.dispose();
+    cap.applyModelPreset("vrm"); // vrm 场景尺度 size=60（ADR-284 opacity 已解耦不携）
+    expect(
+      cap.getParams().size,
+      "dispose 后 isStateLoaded 应复位：残留会让守卫恒真，模型尺度默认永不生效",
+    ).toBe(60);
+  });
+
+  it("[N-1 对照] 同实例不 dispose 直接复用 → 守卫仍应挡下（复位不得误伤让位语义）", () => {
+    localStorage.setItem("ysm-scene-cap-reflector", JSON.stringify({ size: 300 }));
+    const cap = newCap();
+    cap.loadState();
+    cap.applyModelPreset("vrm");
+    expect(cap.getParams().size, "有存档时模型默认仍须让位（复位只发生在 dispose）").toBe(300);
+  });
 });
 
 describe("ReflectorCapability — getMenuNodes 结构（节点化后 group 由 folder 表达）", () => {

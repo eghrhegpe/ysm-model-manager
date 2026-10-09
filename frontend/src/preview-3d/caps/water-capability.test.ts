@@ -1149,6 +1149,18 @@ describe("WaterCapability — 恢复路径来源纪律（锐评 P1-0）", () => 
     expect(envState.waterLevel, "迁移后模型默认仍须能落地").toBeCloseTo(0.1);
   });
 
+  it("[P1-0] legacy size 键恢复后 auto-model 仍能写 waterSize（setter 委托站点第四网眼）", () => {
+    // [锐评 N-2 2026-10-09] legacy `size` 键经 `setWaterSize` 委托——原实现是 12 setter 中
+    // 唯一不接 WriteOpts 者，体内硬编码 manual ⇒ waterSize 键 stamp manual 永久冻结，
+    // 模型默认命中即静默拒写。既有纪律 4 例全用规范键，此站点零判别样本。
+    localStorage.setItem("ysm-scene-cap-water", JSON.stringify({ size: 64 }));
+    const cap = new WaterCapability({ scene: new THREE.Scene() });
+    cap.loadState();
+    expect(cap.getWaterSize(), "存档值先落地").toBe(64);
+    setEnvState({ waterSize: 100 }, { source: "auto-model" });
+    expect(envState.waterSize, "恢复后模型默认仍须能落地").toBe(100);
+  });
+
   it("[P1-0 对照] setter 无参默认仍为 manual：用户手改冻键语义不变（重构未过冲）", () => {
     const cap = new WaterCapability({ scene: new THREE.Scene() });
     cap.setLevel(0.2); // 菜单控件路径（无参 = 用户手改）

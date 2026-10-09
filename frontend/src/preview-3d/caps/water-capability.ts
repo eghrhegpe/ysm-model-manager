@@ -446,8 +446,11 @@ export class WaterCapability implements SceneCapability {
 
   // ── 水面尺寸（ADR-272：两形态均零重建，故与 waterLevel 同列 form 组）──
   // ADR-283：下界 ≥1 / 上界 300 / NaN → 1 由 schema `range` 在唯一写入口统一钳制，setter 不再自备。
-  setWaterSize(v: number): void {
-    setEnvState({ waterSize: v }, { source: "manual" });
+  setWaterSize(v: number, opts?: WriteOpts): void {
+    // [锐评 N-2 2026-10-09] 第四网眼收口：原实现是 12 setter 中唯一不接 WriteOpts 者
+    //（体内硬编码 manual）——legacy `size` 键委托站点经它恢复即 stamp manual 永久冻键，
+    // 模型默认命中被 shouldOverwrite 静默拒写。无参 = 用户手改语义不变（writeOpts 默认 manual）。
+    setEnvState({ waterSize: v }, writeOpts(opts));
   }
   getWaterSize(): number {
     return envState.waterSize;
@@ -554,7 +557,9 @@ export class WaterCapability implements SceneCapability {
         //   ② 且只覆盖下界，与 schema `range [1,300]` 口径不齐（自钳只算半个执法者）；
         //   ③ `Number.isFinite` 分支不可达：存档过 JSON 边界后 NaN/Infinity 已变 null。
         // 现存唯一例外是 shader 侧 `max(uSize, 0.001)`（防除零，语义不同，保留）。
-        size: { number: (v) => this.setWaterSize(v) },
+        // [锐评 N-2] 委托站点显式传 RESTORE_SOURCE（恢复 = 程序化动作，禁 manual 冻键，
+        // P1-0 来源纪律同法）——setter 无参默认 manual 只服务用户手改（水菜单入口）。
+        size: { number: (v) => this.setWaterSize(v, RESTORE_SOURCE) },
       });
       // 归一化：V2/旧格式水面参数在 state.water 嵌套对象；新 flat 存档直接平铺在顶层。
       // 子域开关键随格式不同：V2 嵌套用 enabled；flat 用顶层 waterEnabled。

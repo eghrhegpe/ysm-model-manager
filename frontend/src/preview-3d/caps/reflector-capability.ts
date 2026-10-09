@@ -327,5 +327,9 @@ export class ReflectorCapability implements SceneCapability {
   dispose(): void {
     this.unsubscribeEnv();
     this.disposeReflector();
+    // [锐评 N-1 2026-10-09] 会话级字段复位（env :580 / pp :948 先例同法）：
+    // createAll「三引用全等 ⇒ 复用」短路不 dispose，不复位会让上个会话残留
+    // 使 applyModelPreset「有存档则让位」守卫恒真——模型尺度默认静默永久失效。
+    this.isStateLoaded = false;
   }
 }

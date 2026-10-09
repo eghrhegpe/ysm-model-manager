@@ -13,12 +13,12 @@
 
 | 条目 | 状态 | 说明 / 现源码锚点 |
 |---|---|---|
-| P1-0 water 恢复来源纪律漏网 | ✅ 已修（[2026-10-09 复评]残留一个网眼，见 §五 N-2） | `water-persist.ts\|restoreWaterSchemaKeys` + `RESTORE_SOURCE`/`writeOpts`（ground 范式）；12 setter 接 `WriteOpts`；water.loadState 批量/委托/迁移三站点全传 RESTORE_SOURCE。回归锁 = `water-capability.test.ts`「恢复路径来源纪律（锐评 P1-0）」4 例 + `water-persist.test.ts` 4 例；**变异实证**：批量路径 source 回 manual → 4 例转红（含 P1-4 既有迁移例连带转红——迁移站点的来源纪律被既有测试偶然锁死，判别力超预期） |
+| P1-0 water 恢复来源纪律漏网 | ✅ 已修（[2026-10-09 复评]残留网眼 N-2 亦已收口：setWaterSize 接 WriteOpts + 委托站点传 RESTORE_SOURCE，见 §五 N-2/刀二） | `water-persist.ts\|restoreWaterSchemaKeys` + `RESTORE_SOURCE`/`writeOpts`（ground 范式）；12 setter 接 `WriteOpts`；water.loadState 批量/委托/迁移三站点全传 RESTORE_SOURCE。回归锁 = `water-capability.test.ts`「恢复路径来源纪律（锐评 P1-0）」4 例 + `water-persist.test.ts` 4 例；**变异实证**：批量路径 source 回 manual → 4 例转红（含 P1-4 既有迁移例连带转红——迁移站点的来源纪律被既有测试偶然锁死，判别力超预期） |
 | P3-1 restoreBySchema 共享工具暗特化 | ✅ 已修（与 P1-0 同刀） | 下沉 `water-persist.ts`（先例 = light-persist.ts 数据面下沉）；`scene-capability.ts` 回归「接口 + localStorage IO」本分；`persist-utils.ts` 头注同步 |
 | P1-1 截图 IBL 贴图不镜像（未声明 WYSIWYG 缝） | ✅ 已声明 + 锁边界 | 声明 = 本文件「IBL 反射不参与截图」已知差异条 + `screenshot-render.ts` 离屏 Scene 构造处注释（互为镜像）；双向锁 = `screenshot-render.test.ts`「IBL 边界」两例（行为侧离屏 Scene 无 environment 写入 + 声明侧 export.md 条目在场）。「IBL 进截图」= 产品需求，立项须离屏 PMREM 重建 + 另立 ADR，届时翻转双向锁 |
 | P2-1 tone 释放路径非对称 | 📝 记录，非待修 | `sky-capability.ts\|releaseTone` 盲还原 prev（静态引用计数只护 sky 自贡献）vs `postprocessing-capability.ts\|restoreOutputSettings` 逐字段归属判定——纪律单边。今日 pp 受 skyOwns 门控（`postprocessing-capability.ts\|587`）无第三写者、无现症；修法（releaseTone 复用 pp 逐字段判据）排期 |
-| P2-2 新 cap 存档契约锁缺跨 cap 机器闸 | 📝 记录，非待修 | P1-5 键轨锁仅 env/water/ground（[2026-10-09 复评]pp 亦有键形恒等锁 postprocessing-capability.test.ts:344，基线漏计；「双轨键形无锁」真义 = 缺键集恒等闸而非零往返例，见 §五 N-3）；sky/reflector 双轨键形无锁；新 cap 可无锁出厂 =「自动持久化、静默不还原」零报错洞。拟 `caps/persist-roundtrip-contract.test.ts` meta 闸（枚举 registry cap id × round-trip case 存在性，基线只减不增）挂 commit-with-check/CI vitest 步（**勿挂 pre-push 轻量档**） |
-| P2-3 会话字段 dispose 复位缺跨 cap 机器闸 | 📝 记录，非待修 | 不变量（卡「会话级字段必须在 dispose() 复位」）[2026-10-09 复评]「5 持有者全闭」自始失真——实测 2/5（仅 env:580 / pp:948 复位；fog/reflector/shadow 自诞生即无复位行，git 考古 -S 含 rename 前 blob 零命中），见 §五 N-1；原复位面靠人工 grep；`createAll` 三引用全等复用短路不 dispose ⇒ 新 cap 漏复位 = 模型默认永久失效且零报错。拟 `cap-dispose-reset-contract.test.ts` 同 P2-2 体例 |
+| P2-2 新 cap 存档契约锁缺跨 cap 机器闸 | 📝 记录，非待修 | P1-5 键轨锁仅 env/water/ground（[2026-10-09 复评]pp 亦有键形恒等锁 postprocessing-capability.test.ts:344，基线漏计；「双轨键形无锁」真义 = 缺键集恒等闸而非零往返例，见 §五 N-3；[2026-10-09 实施]顺手已落：fog 完整周期例补 fogColor 断言（活靶首批收口），键集恒等闸仍待拍板）；sky/reflector 双轨键形无锁；新 cap 可无锁出厂 =「自动持久化、静默不还原」零报错洞。拟 `caps/persist-roundtrip-contract.test.ts` meta 闸（枚举 registry cap id × round-trip case 存在性，基线只减不增）挂 commit-with-check/CI vitest 步（**勿挂 pre-push 轻量档**） |
+| P2-3 会话字段 dispose 复位缺跨 cap 机器闸 | 📝 记录，非待修 | 不变量（卡「会话级字段必须在 dispose() 复位」）[2026-10-09 复评]「5 持有者全闭」自始失真——实测 2/5（仅 env:580 / pp:948 复位；fog/reflector/shadow 自诞生即无复位行，git 考古 -S 含 rename 前 blob 零命中），见 §五 N-1；原复位面靠人工 grep；[2026-10-09 实施]N-1 已修——三 cap dispose 复位行已落（持有者 5/5 实闭），跨 cap 机器闸仍待拍板；`createAll` 三引用全等复用短路不 dispose ⇒ 新 cap 漏复位 = 模型默认永久失效且零报错。拟 `cap-dispose-reset-contract.test.ts` 同 P2-2 体例 |
 | P2-6 归还判定 sky 停用期错归 | ⚠️ 活挂账 | 需 sky 停用 + 残留写入真实时序，`audit-postprocessing-critique.md` L28 原样保留 |
 | ground 僵尸私有门 | 📝 惰性挂账 | `ground-capability.ts\|this.enabled`（默认 true、registry 不传）参与 6 处合取但零 UI 写口——无可见缺陷，「暂不动」；若 `groundVisible` 默认翻转须同步收口 |
 | P3-2 StatePath 双模块同名符号陷阱 | 📝 记录 | 生产消费 `preview-state.ts` 版 `getStateValue/setStateValue`（settings/perf-presets），`env-state.ts` 版死导出仅测试消费——误 import 静默换通道；拟删 env-state 版或头注标 test-only |
@@ -98,12 +98,12 @@ ADR-292 批次 `19d42b235→10f0db9f9→b71aa0979→ce0ec8090→e84c04b36`；
 3. ③ B4「pickHdrFile focus 监听泄漏」——不立案：:104 `{once:true}` + cleanup :88 removeEventListener，双保险。
 4. ①「A3 新变体（回归嫌疑）」——按 ② 考古修正为「自始失真」（N-1），非治愈后复发；病型判法随之不同（前者问罪排期，后者问罪审计自身的取证纪律）。
 
-### 待拍板动作（本复评不动代码，只立案）
+### 待拍板动作（[2026-10-09 实施]刀一/刀二/顺手 已落地；刀三 维持待拍板）
 
-- **刀一（N-1）**：fog/reflector/shadow 三处 dispose 各补一行 `this.isStateLoaded = false;` + 三条行为例（模板 = environment-capability.test.ts:874-881）。三行三例，先例即隔壁文件。
-- **刀二（N-2）**：`setWaterSize` 接 `WriteOpts`（照 setClarity 形态）+ :557 传 RESTORE_SOURCE + 判别例（legacy size 命中后 auto-model 仍可写）。
+- **刀一（N-1）**：fog/reflector/shadow 三处 dispose 各补一行 `this.isStateLoaded = false;` + 三条行为例（模板 = environment-capability.test.ts:874-881）。三行三例，先例即隔壁文件。✅ **[2026-10-09 实施]**：三处复位行已落（`fog-capability.ts|dispose` / `reflector-capability.ts|dispose` / `shadow-capability.ts|dispose`，注释锚 env :580 / pp :948 先例同法）+ 三主例三对照（「[N-1] dispose 后 isStateLoaded 复位」×3，判据 = 行为非私有探针）；**变异实证** = 临时摘除 reflector 复位行 → 主例转红。⚠️ 测试构造教训（reflector 主例初版）：种子先经 setEnvState manual 写、再 saveState/loadState 同值重载**翻不了章**（manual > auto-model，值相等章不翻）——判别种子必须走 localStorage 直种（上一会话真实存档形态），已在例内注释锁定。
+- **刀二（N-2）**：`setWaterSize` 接 `WriteOpts`（照 setClarity 形态）+ :557 传 RESTORE_SOURCE + 判别例（legacy size 命中后 auto-model 仍可写）。✅ **[2026-10-09 实施]**：`water-capability.ts|setWaterSize` 改 `(v, opts?) → writeOpts(opts)`（无参 = manual 语义不变，水菜单入口行为零变化）+ legacy `size` 委托站点显式传 `RESTORE_SOURCE`（注释锚 N-2）+ 判别例「[P1-0] legacy size 键恢复后 auto-model 仍能写 waterSize（setter 委托站点第四网眼）」锁定；P1-0 既有「对照」例（setter 无参默认 manual）同批通过，证实未过冲。
 - **刀三（账三）**：两个 meta 闸二选一——落地（枚举 registry cap id × 契约存在性，基线只减不增；fogColor 漏键即首批活靶）或显式书面豁免；维持「拟议中」漂浮是第三种成本。
-- **顺手**：fog 完整周期例补 `fogColor` 一行断言（刀三的前菜）。
+- **顺手**：fog 完整周期例补 `fogColor` 一行断言（刀三的前菜）。✅ **[2026-10-09 实施]**：`fog-capability.test.ts`「saveState / loadState 完整周期」例补 fogColor 0x123456 断言（存档侧与恢复侧双验，漏键即红）。
 
 ### 方法论补录（并入 §三台账）
 

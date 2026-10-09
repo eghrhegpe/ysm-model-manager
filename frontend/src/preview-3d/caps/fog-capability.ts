@@ -313,5 +313,9 @@ export class FogCapability implements SceneCapability {
     this.currentFog = null;
     // 还原构造前 scene.fog（可能为 null）
     this.scene.fog = this.prevFog;
+    // [锐评 N-1 2026-10-09] 会话级字段复位（env :580 / pp :948 先例同法）：
+    // createAll「三引用全等 ⇒ 复用」短路不 dispose，不复位会让上个会话残留
+    // 使 applyModelPreset「有存档则让位」守卫恒真——模型雾默认静默永久失效。
+    this.isStateLoaded = false;
   }
 }

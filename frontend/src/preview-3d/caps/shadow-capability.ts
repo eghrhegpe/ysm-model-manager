@@ -409,6 +409,10 @@ export class ShadowCapability implements SceneCapability {
   dispose(): void {
     this.unsubscribeEnv();
     this.disableShadows();
+    // [锐评 N-1 2026-10-09] 会话级字段复位（env :580 / pp :948 先例同法）：
+    // createAll「三引用全等 ⇒ 复用」短路不 dispose，不复位会让上个会话残留
+    // 使 applyModelPreset「有存档则让位」守卫恒真——模型阴影默认静默永久失效。
+    this.isStateLoaded = false;
   }
 
   /** 能力总开关（菜单 toggle / env 一级行 headerToggle / postproc 联动共用）。

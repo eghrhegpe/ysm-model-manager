@@ -152,7 +152,7 @@ describe("FogCapability — 持久化", () => {
   afterEach(() => { localStorage.clear(); });
 
   it("saveState / loadState 完整周期", () => {
-    setEnvState({ fogEnabled: true, fogMode: "exp2", fogDensity: 0.025, fogNear: 30, fogFar: 500 }, { source: 'manual' });
+    setEnvState({ fogEnabled: true, fogMode: "exp2", fogDensity: 0.025, fogNear: 30, fogFar: 500, fogColor: 0x123456 }, { source: 'manual' });
     const cap = newCap();
     cap.saveState();
     resetEnvState();
@@ -163,6 +163,10 @@ describe("FogCapability — 持久化", () => {
     expect(cap2.getParams().density).toBe(0.025);
     expect(cap2.getParams().near).toBe(30);
     expect(cap2.getParams().far).toBe(500);
+    expect(
+      envState.fogColor,
+      "[锐评 N-3] fogColor 是 saveState/restoreFields 的读写键：完整周期例不得漏（手写枚举漏键活证据收口）",
+    ).toBe(0x123456);
   });
 
   it("loadState 空存储时保持默认值", () => {
@@ -239,6 +243,37 @@ describe("FogCapability — 持久化", () => {
     cap.loadState(); // 无 localStorage → 早退，isStateLoaded 不置位
     cap.applyModelPreset("vrm");
     expect(envState.fogColor, "首启无存档 → 模型值照写").toBe(0xc5d4e8);
+  });
+
+  // [锐评 N-1 2026-10-09] 会话级字段复位（「5 持有者全闭」自始失真，实测 2/5）：
+  // `scene-capability-registry.createAll` 的「三引用全等 ⇒ 复用」短路**不 dispose**，
+  // 故 dispose 不复位 isStateLoaded 时，跨会话残留会让 `applyModelPreset` 的
+  // 「有存档则让位」守卫恒真（换模型不再套雾默认，且无任何报错）。
+  // 判据用**行为**而非私有字段探针（env「[P1-1] dispose 后 isStateLoaded 复位」先例同法）。
+  it("[N-1] dispose 后 isStateLoaded 复位：存档让位守卫不跨会话残留", () => {
+    localStorage.setItem(
+      "ysm-scene-cap-fog",
+      JSON.stringify({ fogEnabled: true, fogMode: "exp2", fogColor: 0x112233, fogDensity: 0.03 }),
+    );
+    const cap = newCap();
+    cap.loadState();
+    expect(envState.fogColor, "有存档 → isStateLoaded 置位").toBe(0x112233);
+    cap.dispose();
+    // 复用同一实例（等价于 createAll 的复用短路）：无存档的新会话应能重新套模型默认
+    localStorage.removeItem("ysm-scene-cap-fog");
+    cap.applyModelPreset("vrm");
+    expect(
+      envState.fogColor,
+      "dispose 后 isStateLoaded 应复位：残留会让守卫恒真，模型类别默认永不生效",
+    ).toBe(0xc5d4e8);
+  });
+
+  it("[N-1 对照] 同实例不 dispose 直接复用 → 守卫仍应挡下（复位不得误伤让位语义）", () => {
+    localStorage.setItem("ysm-scene-cap-fog", JSON.stringify({ fogColor: 0x112233 }));
+    const cap = newCap();
+    cap.loadState();
+    cap.applyModelPreset("vrm");
+    expect(envState.fogColor, "有存档时模型默认仍须让位（复位只发生在 dispose）").toBe(0x112233);
   });
 
   // [锐评 F-2] 挂起收口：恢复期间派发应被挂起，末尾统一 applyFog 一次——

@@ -455,6 +455,36 @@ describe("ShadowCapability — applyModelPreset", () => {
     expect(cap.isSoft()).toBe(false);
     expect(cap.getMapSize()).toBe(4096);
   });
+
+  // [锐评 N-1 2026-10-09] 会话级字段复位（fog/reflector 先例同法）：createAll「三引用全等 ⇒ 复用」
+  // 短路不 dispose，故 dispose 不复位 isStateLoaded 时跨会话残留让守卫恒真
+  //（换模型不再套阴影默认，且无任何报错）。判据用行为而非私有字段探针。
+  it("[N-1] dispose 后 isStateLoaded 复位：复用实例时模型默认仍能生效", () => {
+    localStorage.setItem(
+      "ysm-scene-cap-shadow",
+      JSON.stringify({ shadowEnabled: true, shadowType: "hard", shadowMapSize: 4096 }),
+    );
+    const cap = new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });
+    cap.loadState();
+    expect(cap.isSoft(), "有存档（hard）→ isStateLoaded 置位").toBe(false);
+    cap.dispose();
+    // 复用同一实例（等价于 createAll 的复用短路）：mmd 预设只携 shadowType（soft），
+    // 不携 mapSize——断言只锁守卫放行后类型翻转，mapSize 存档值合法存活（不误伤）。
+    cap.applyModelPreset("mmd");
+    expect(
+      cap.isSoft(),
+      "dispose 后 isStateLoaded 应复位：残留会让守卫恒真，模型默认永不生效",
+    ).toBe(true);
+  });
+
+  it("[N-1 对照] 同实例不 dispose 直接复用 → 守卫仍应挡下（复位不得误伤让位语义）", () => {
+    localStorage.setItem("ysm-scene-cap-shadow", JSON.stringify({ shadowType: "hard", shadowMapSize: 4096 }));
+    const cap = new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });
+    cap.loadState();
+    cap.applyModelPreset("mmd");
+    expect(cap.isSoft(), "有存档时模型默认仍须让位（复位只发生在 dispose）").toBe(false);
+    expect(cap.getMapSize()).toBe(4096);
+  });
 });
 
 describe("ShadowCapability — 跨能力注入（查询器机制）", () => {

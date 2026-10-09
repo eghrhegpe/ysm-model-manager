@@ -23,6 +23,7 @@ import {
   overlaySpecKey,
   overlayNeedsRebuild,
   generateOverlayPixels,
+  surfaceTextureToken,
   type GroundMaterialParams,
   type GroundSurfaceMode,
 } from "./ground-surface-spec.ts";
@@ -585,4 +586,36 @@ describe("Suite 9 — 4D 环面无缝噪声（治平铺接缝）", () => {
       expect(Array.from(a)).toEqual(Array.from(b));
     });
   }
+});
+
+/* ============ Suite 10 — 纹理身份 token（capability 手抄双源治理）============ */
+
+describe("Suite 10 — surfaceTextureToken 纹理身份 token", () => {
+  const img = (w?: number, h?: number) => ({ width: w, height: h }) as { width?: number; height?: number };
+
+  it("含 name + 尺寸：纹理身份 token 携带 name 与宽高（改名/改分辨率必换 key）", () => {
+    expect(surfaceTextureToken("wood.png", img(512, 512))).toBe("wood.png:512x512");
+    expect(surfaceTextureToken("marble.jpg", img(256, 256))).toBe("marble.jpg:256x256");
+  });
+
+  it("无尺寸图像：宽高视为 0（token 仍含 name，可区分不同文件）", () => {
+    expect(surfaceTextureToken("a.png", undefined)).toBe("a.png:0x0");
+    expect(surfaceTextureToken("a.png", img(0, 0))).toBe("a.png:0x0");
+    expect(surfaceTextureToken("a.png", img())).toBe("a.png:0x0");
+  });
+
+  it("尺寸不同 → token 不同（分辨率参与纹理身份，锁死 key 复用）", () => {
+    expect(surfaceTextureToken("t.png", img(512, 512))).not.toBe(
+      surfaceTextureToken("t.png", img(1024, 1024)),
+    );
+    expect(surfaceTextureToken("t.png", img(512, 512))).not.toBe(
+      surfaceTextureToken("t.png", img(512, 256)),
+    );
+  });
+
+  it("名称不同 → token 不同（同名不同源不得共享纹理身份）", () => {
+    expect(surfaceTextureToken("a.png", img(512, 512))).not.toBe(
+      surfaceTextureToken("b.png", img(512, 512)),
+    );
+  });
 });

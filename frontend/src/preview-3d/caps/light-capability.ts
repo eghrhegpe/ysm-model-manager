@@ -38,6 +38,7 @@ import { buildLightNodes, LIGHT_MASTER_NODE_ID } from "./light-controls.ts";
 import {
   attenuateAmbientForSky,
   lightDirToPosition,
+  lightTypeOf,
   spotDistanceAttenuation,
   volumetricTipFromRatio,
   volumetricTipRatioFor,
@@ -457,9 +458,8 @@ export class LightCapability implements SceneCapability {
   }
 
   private getLightType(light: THREE.Light): LightInstanceParams["type"] {
-    if (light instanceof THREE.SpotLight) return "spot";
-    if (light instanceof THREE.PointLight) return "point";
-    return "directional";
+    // [下沉 light-math.ts#lightTypeOf] 纯类型判别叶层直测（instanceof 三分支）
+    return lightTypeOf(light);
   }
 
   /* ----- 灯光工厂（[light-type-switch] 按 type 建对应 Three 对象） ----- */

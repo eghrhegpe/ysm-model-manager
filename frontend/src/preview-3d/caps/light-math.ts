@@ -69,3 +69,11 @@ export function volumetricTipRatioFor(baseStrength: number, tipStrength: number)
 export function volumetricTipFromRatio(baseStrength: number, ratio: number): number {
   return baseStrength * Math.min(1, Math.max(0, ratio));
 }
+
+/** Three 灯对象 → 灯位类型（instanceof 三分支，ADR-280 三灯切换的映射锚）。
+ *  接受对象为入参的**纯类型判别**：spot/point 各互斥，其余落 directional 兜底。 */
+export function lightTypeOf(light: THREE.Light): LightInstanceParams["type"] {
+  if (light instanceof THREE.SpotLight) return "spot";
+  if (light instanceof THREE.PointLight) return "point";
+  return "directional";
+}

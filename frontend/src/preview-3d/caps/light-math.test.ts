@@ -3,7 +3,12 @@
 // 互为逆映射且各带独立守卫（base≤0 除零、双向 [0,1] clamp），但无叶测。下沉 `light-math.ts`
 // 后此处用**正反双侧**钉死两重边界：除零守卫 + clamp 上下界。
 import { describe, it, expect } from "vitest";
-import { volumetricTipFromRatio, volumetricTipRatioFor } from "./light-math.ts";
+import * as THREE from "three";
+import {
+  lightTypeOf,
+  volumetricTipFromRatio,
+  volumetricTipRatioFor,
+} from "./light-math.ts";
 
 describe("volumetricTipRatioFor（tip/base 比值 · 除零 + clamp）", () => {
   it("常规比值原样返回（判真侧）", () => {
@@ -39,5 +44,25 @@ describe("volumetricTipFromRatio（base × ratio · clamp 后派生 tip）", () 
 
   it("base = 0：tip 恒 0", () => {
     expect(volumetricTipFromRatio(0, 0.5)).toBe(0);
+  });
+});
+
+describe("lightTypeOf（Three 灯对象 → 灯位类型 · instanceof 三分支互斥）", () => {
+  it("SpotLight → spot（判真侧）", () => {
+    expect(lightTypeOf(new THREE.SpotLight())).toBe("spot");
+  });
+
+  it("PointLight → point（判真侧）", () => {
+    expect(lightTypeOf(new THREE.PointLight())).toBe("point");
+  });
+
+  it("DirectionalLight → directional（判真侧 + 兜底）", () => {
+    expect(lightTypeOf(new THREE.DirectionalLight())).toBe("directional");
+  });
+
+  it("三灯类型互斥（spot 不落 point/directional）", () => {
+    const t = lightTypeOf(new THREE.SpotLight());
+    expect(t).not.toBe("point");
+    expect(t).not.toBe("directional");
   });
 });

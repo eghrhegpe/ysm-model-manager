@@ -631,3 +631,13 @@ export function applyGroundSurfaceAppearance(
     mat.map.repeat.set(rep, rep);
   }
 }
+
+/** 当前贴图身份 token（自定义贴图用「文件名:WxH」）。
+ *  `refreshSurface`→`rebuildSurface` 靠它判是否需重建；image 缺位回落 0x0（token 形状稳定）。
+ *  调用方负责「无 customTex」早退（trivial，此处只管格式化）。 */
+export function surfaceTextureToken(
+  name: string,
+  image: { width?: number; height?: number } | undefined,
+): string {
+  return `${name}:${image?.width ?? 0}x${image?.height ?? 0}`;
+}

@@ -47,6 +47,7 @@ import {
   groundSurfaceNeedsRebuild,
   OVERLAY_TEX_SIZE,
   overlayNeedsRebuild,
+  surfaceTextureToken,
   textureRepeat,
 } from "./ground-surface-spec.ts";
 // [横向铺叶层直测] 显隐谓词下沉 `ground-visible.ts`——消 updateSurfaceVisible / isSurfaceVisible 手抄双源
@@ -424,9 +425,12 @@ export class GroundCapability implements SceneCapability {
 
   /** 当前贴图身份 token（自定义贴图用「文件名:尺寸」，程序化为 ""） */
   private currentTextureToken(): string {
+    // 早退 trivial（无 customTex）；格式化下沉 ground-surface-spec.ts#surfaceTextureToken（叶层直测）
     if (!this.customTex) return "";
-    const img = this.customTex.image as { width?: number; height?: number } | undefined;
-    return `${this.customTexName}:${img?.width ?? 0}x${img?.height ?? 0}`;
+    return surfaceTextureToken(
+      this.customTexName,
+      this.customTex.image as { width?: number; height?: number } | undefined,
+    );
   }
 
   /** 重建路径：按 spec 建全新材质与纹理（旧的自建纹理释放，customTex 缓存不动） */

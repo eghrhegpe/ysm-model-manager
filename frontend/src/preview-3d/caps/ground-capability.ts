@@ -4,7 +4,6 @@
 // apply() 挂入场景，dispose() 移除并释放，作用域不泄漏到其它预览。
 
 import * as THREE from "three";
-import { t } from "@/core/i18n/t.ts";
 import { safeDispose } from "@/preview-3d/infra/safe-dispose.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import {
@@ -18,9 +17,6 @@ import type { EnvState, EnvStateKey } from "@/preview-3d/state/env-state-schema.
 import { clampFieldValue, getPresetKeys } from "@/preview-3d/state/env-state-schema.ts";
 // ADR-216：监听器集合工厂提级共享原语（原 scene-capability 本地定义）
 import { createListenerSet } from "@/utils/base/primitives/listener-set.ts";
-import { dbg } from "@/utils/debug/debug.ts";
-import { toast } from "@/utils/dom/toast.ts";
-import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { buildGroundNodes } from "./ground-menu.ts";
 import { normalizeGroundLegacyState } from "./ground-migrations.ts";
 import {
@@ -557,29 +553,6 @@ export class GroundCapability implements SceneCapability {
     // customTex（wasAttached=false），无悬空引用，无需显式 refresh。
     if (envState.groundSourceKind === "texture")
       setEnvState({ groundSourceKind: "solid", groundCanvasStyle: "plain" }, { source: "manual" });
-  }
-
-  /** 文件选择器（对齐 environment-capability customHdr 口径：不持久化二进制） */
-  openTexturePicker(): void {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "image/*";
-    input.onchange = (): void => {
-      const file = input.files?.[0];
-      if (!file) return;
-      const url = URL.createObjectURL(file);
-      new THREE.TextureLoader()
-        .loadAsync(url)
-        .then((tex) => this.acceptLoadedTexture(tex, file.name))
-        .catch(() => {
-          // 失败对用户可见（锐评修复 2026-09-20：旧行为静默 dbg，选图失败零反馈）；
-          // 口径对齐 infra/preview-loading showLoadFailure：bus 发 toast，cap 不直接碰 DOM。
-          dbg("ground-tex-load-fail", { name: file.name });
-          toast(t("preview.groundMatLoadFailed", { name: file.name }), TOAST_MS.normal, "error");
-        })
-        .finally(() => URL.revokeObjectURL(url));
-    };
-    input.click();
   }
 
   // ── 材质预设（ADR-254）：选材质 = 套用「形状 + 配色」完整预设 ──

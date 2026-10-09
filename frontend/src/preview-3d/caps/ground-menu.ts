@@ -23,6 +23,9 @@ import {
   groundMatSourceFromAxes,
   paramIsEffective,
 } from "./ground-surface-spec.ts";
+// [锐评 2026-10-09] 贴图选择器已从 cap 移出到本模块：cap 不碰 DOM（原 GroundCapability.openTexturePicker
+// 与 :576 注释「cap 不直接碰 DOM」矛盾）。menu 仍只构造节点，action 调 pickGroundTexture(cap)。
+import { pickGroundTexture } from "./ground-texture-picker.ts";
 
 const MAT_GROUP: LocaleKey = "preview.groundGroupMaterial";
 const OVERLAY_GROUP: LocaleKey = "preview.groundGroupOverlay";
@@ -104,7 +107,7 @@ function textureButtonsNode(cap: GroundCapability): PreviewMenuNode[] {
       control: {
         variant: "primary",
         getHint: () => cap.getCustomTexName() || "",
-        action: () => cap.openTexturePicker(),
+        action: () => pickGroundTexture(cap),
       },
     },
     {

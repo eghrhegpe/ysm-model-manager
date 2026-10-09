@@ -418,6 +418,7 @@ auto_fields:
     - GroundSurfaceSpec
     - GroundSurfaceStructuralSpec
     - groundSurfaceVisibleFor
+    - GroundTextureSink
     - GroupedScene
     - guardGpuBudget
     - guardSessionAlive
@@ -656,6 +657,7 @@ auto_fields:
     - PerfLevel
     - persistState
     - pickBone
+    - pickGroundTexture
     - pickMmdBone
     - pickModelDefaultFields
     - pickPerceptionCaps

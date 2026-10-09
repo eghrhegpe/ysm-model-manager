@@ -214,8 +214,22 @@ fog 键必漏**（fogColor 已实证漏过）。**meta 闸在此完全无判别�
 并点名**。已变异实证（临时注入未登记 fog 键 → missing 点名）。
 
 - ✅ **已落地**：`[G-fog]` 派生锁（`fog-capability.test.ts`），48 例全绿，变异实证通过。
-- ⏳ **待补**：reflector / shadow / light / render-mode 仍只有**手写枚举**完整周期例（各自 test 的
-  "saveState / loadState 完整周期"），**加键会漏**——同法补派生锁即可，改动小、低风险。
+- ✅ **已落地**：`[G-reflector]` / `[G-shadow]` / `[G-renderMode]` / `[G-light]` 同法补全
+  （commit `cbf122b4f` / `d10d8d929`），合计 118 + 138 例全绿。
+
+**补锁时扫出的现存漏网（非未来风险，是当下就漏）**：
+
+| Cap | 漏网实证 |
+|---|---|
+| **shadow** | 完整周期例 :686 手写枚举漏 `shadowEnabled`，:689 `isEnabled()===true` 是**恒真绕圈**（默认 true，未写偏离值则 loadState 后仍默认 true，断言测不到往返）；且 :686 的 `shadowType:"soft"` / `shadowMapSize:2048` **等于默认值**，对这两键也是无效偏离值。本锁用真偏离值（shadowEnabled=false / type=hard / mapSize=4096）。 |
+| **light** | 完整周期例 :979 只覆盖 **4/41 键**（key.enabled / ambient.intensity / key.type / volumetric.enabled），**37 键无任何往返验证**。`light-params.ts\|lightEnvKeys(slot)` 覆盖度只含**每槽位 10 键 × 3 = 30 键**，漏 lightEnabled / lightHelperVisible / lightAmbientColor / lightVolumetric* 等 **11 个非槽位键**。 |
+| **renderMode** | `saveState:265` 手写摘 5 键、`loadState:275` 手写还原（nullable-* 特殊类型），加键必漏。 |
+| **reflector** | 完整周期例 :146 手写枚举 6 键，加键必漏。 |
+
+**方法增强（本次新增）**：`[G-light]` 首用 `deriveDefaultEnvState()` **自动校验偏离值 ≠ schema 默认**
+（`expect(DEVIATION[k]).not.toEqual(defaults[k])`）——防手写偏离值碰巧等于默认 → 恒真绕圈无判别力。
+既有 [G-8]/[D3]/[G-fog] 靠注释声明"偏离值 ≠ 默认"，本锁把这条从**人工自觉**升级为**机器断言**。
+建议后续新锁统一采用。
 - ❌ **`cap-dispose-reset` meta 闸**：价值更低——dispose 复位已 5/5 实闭 + 各家有锁，仅防"未来新
   cap 漏复位"，收益低、判别力同受"存在性"局限。
 

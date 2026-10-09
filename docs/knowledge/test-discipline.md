@@ -16,16 +16,25 @@ source_files:
   - frontend/src/preview-3d/caps/ground-visible.ts
   - frontend/src/preview-3d/caps/ground-visible.test.ts
   - frontend/src/preview-3d/caps/fog-capability.ts
+  - frontend/src/preview-3d/caps/light-visible.ts
+  - frontend/src/preview-3d/caps/light-visible.test.ts
+  - frontend/src/preview-3d/caps/light-math.ts
+  - frontend/src/preview-3d/caps/light-math.test.ts
+  - frontend/src/preview-3d/caps/shadow-capability.ts
   - docs/adr/decisions/ADR-311-d1-mock.md
 tests:
   - frontend/src/preview-3d/caps/env-hdr-cache.test.ts
   - frontend/src/preview-3d/caps/sky-sun.test.ts
   - frontend/src/preview-3d/caps/sky-asset.test.ts
   - frontend/src/preview-3d/caps/ground-visible.test.ts
+  - frontend/src/preview-3d/caps/light-visible.test.ts
+  - frontend/src/preview-3d/caps/light-math.test.ts
+  - frontend/src/preview-3d/caps/shadow-capability.test.ts
 auto_fields:
   symbols_with_lines:
     - applyScaledUniformToPair
     - applyUniformToPair
+    - attenuateAmbientForSky
     - computeHourToSun
     - computeSunPosition
     - createSky
@@ -34,8 +43,16 @@ auto_fields:
     - FogMode
     - groundGridVisibleFor
     - groundSurfaceVisibleFor
+    - lightDirToPosition
+    - lightHelperVisibleFor
     - normalizeFogRange
+    - normalizeShadowMapSize
+    - ShadowCapability
+    - ShadowType
+    - spotDistanceAttenuation
     - sunVectorFromSpherical
+    - volumetricTipFromRatio
+    - volumetricTipRatioFor
 use_when:
   - 写或审 preview-3d 的 vi.mock 用例，判断是否自证
   - 给核心纯函数 / 关键守卫补测试，需正反双侧
@@ -61,6 +78,9 @@ invariant_anchors:
   - frontend/src/preview-3d/caps/sky-sun.test.ts|负数 wrap 反例
   - frontend/src/preview-3d/caps/sky-asset.test.ts|undefined 守卫
   - frontend/src/preview-3d/caps/ground-visible.test.ts|断能力开关
+  - frontend/src/preview-3d/caps/light-visible.test.ts|关能力总闸
+  - frontend/src/preview-3d/caps/light-math.test.ts|除零守卫
+  - frontend/src/preview-3d/caps/shadow-capability.test.ts|脏档值回退
   - docs/adr/decisions/ADR-311-d1-mock.md|决策
 last_verified: 2026-10-09
 ---
@@ -113,7 +133,12 @@ last_verified: 2026-10-09
   非对称 patch 两用例转红——守卫语义被精确守卫（第 2 刀子提交 B 实证）；
   `ground-visible.test.ts`「断能力开关」经变异（去掉 `enabled &&`）→ 该用例精确转红、其余 7 用例仍绿——
   三支合取门被逐支守卫（横向铺叶层直测实证，同时消 ground `isSurfaceVisible`/`updateSurfaceVisible`
-  手抄双源——单一谓词 `groundSurfaceVisibleFor` 两处共用）。
+  手抄双源——单一谓词 `groundSurfaceVisibleFor` 两处共用）；
+  `light-visible.test.ts`「关能力总闸」经变异（去掉 `masterOn &&`）→ 该用例精确转红（防旧
+  createHelper/syncHelper 缺能力总闸三分歧复活）；
+  `light-math.test.ts`「base=0 除零守卫」经变异（去掉守卫）→ 该用例转红；
+  `shadow-capability.test.ts`「脏档回退」经变异（白名单去 4096 档）→ 3 个 4096 用例转红（cap 既有断言
+  与叶层新断言双重钉住「守卫只装一侧」母题）。
 - **变异盲区诚实命名**：`env-ibl.test.ts`「PMREM 生成失败回滚」变异（移 catch 还原行）**仍绿**——
   因 `fromEquirectangular` 抛错发生在 `envTexture` 赋值前，`scene.environment` 本未改写，catch 那行
   还原是**防御性冗余**（与禁用分支 / dispose 同构）。测试注释须诚实标注，不夸大为防回潮断言。

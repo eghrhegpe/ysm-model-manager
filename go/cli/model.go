@@ -316,6 +316,9 @@ func runBenchmark(ctx *CmdContext) error {
 	scanTimes := make([]time.Duration, *iterations)
 	var sampleEntry types.ModelEntry // 末次扫描的首条目：作为 Benchmark 3 的真实关键词来源
 	for i := 0; i < *iterations; i++ {
+		// 每迭代清缓存测冷启动：原实现不暴露 ClearScanCache，迭代 2 起命中 ScanModelEntries 30s
+		// 缓存 + geoCache，扫描/搜索基准计时失真。锐评 2026-10-09 补齐；代价=每次真实扫盘，正是基准要测的。
+		ctx.App.ClearScanCache()
 		start := time.Now()
 		entries := ctx.App.ScanModelEntries(ctx.FilesRoot)
 		scanTimes[i] = time.Since(start)
@@ -329,6 +332,7 @@ func runBenchmark(ctx *CmdContext) error {
 	fmt.Println("\n📊 Benchmark 2: 模型搜索 (全量)")
 	searchTimes := make([]time.Duration, *iterations)
 	for i := 0; i < *iterations; i++ {
+		ctx.App.ClearScanCache() // 测冷启动，见 Benchmark 1 说明
 		start := time.Now()
 		results := ctx.App.SearchModels(ctx.FilesRoot, "", 0, 0, 0, 0, 0, 0)
 		searchTimes[i] = time.Since(start)
@@ -350,6 +354,7 @@ func runBenchmark(ctx *CmdContext) error {
 		fmt.Printf("   关键词: %q\n", keyword)
 		keywordTimes := make([]time.Duration, *iterations)
 		for i := 0; i < *iterations; i++ {
+			ctx.App.ClearScanCache() // 测冷启动，见 Benchmark 1 说明
 			start := time.Now()
 			results := ctx.App.SearchModels(ctx.FilesRoot, keyword, 0, 0, 0, 0, 0, 0)
 			keywordTimes[i] = time.Since(start)

@@ -78,4 +78,9 @@ type AppService interface {
 	ValidateWorkshopSites() (int, error)
 	ExportWorkshopCreatorsJSONFile() (string, error)
 	BackupWorkshopCreators() (string, error)
+
+	// ClearScanCache 清空扫描 + 几何分析缓存（internal/app.App 已实现；file-bench 每迭代
+	// 调用以保证测的是冷启动性能——原实现不暴露此方法，迭代 2 起命中 ScanModelEntries 30s
+	// 缓存 + geoCache，搜索/扫描基准计时失真。锐评 2026-10-09）。
+	ClearScanCache()
 }

@@ -695,6 +695,40 @@ func TestBenchmark_RejectsInvalidIterations(t *testing.T) {
 	}
 }
 
+// benchCountingApp benchmark 计数桩：嵌入 nil AppService，只覆盖被测路径用到的 4 方法。
+// 锐评 2026-10-09：验证 benchmark 每迭代清缓存测冷启动（原实现不暴露 ClearScanCache，
+// 迭代 2 起命中 ScanModelEntries 30s 缓存 + geoCache，基准计时失真）。
+type benchCountingApp struct {
+	AppService
+	clears int
+}
+
+func (f *benchCountingApp) ClearScanCache() { f.clears++ }
+func (f *benchCountingApp) ScanModelEntries(string) []types.ModelEntry {
+	return nil // 空仓库：B3（关键词搜索）依赖 sampleEntry 跳过，B4 因 len==0 跳过
+}
+func (f *benchCountingApp) SearchModels(string, string, int, int, int, int, int, int) []types.SearchResult {
+	return nil
+}
+func (f *benchCountingApp) AnalyzeBedrockModel(string) types.BedrockModel {
+	return types.BedrockModel{}
+}
+
+func TestBenchmark_InvalidatesCacheEachIter(t *testing.T) {
+	for _, n := range []int{1, 3} {
+		app := &benchCountingApp{}
+		it := fmt.Sprintf("%d", n)
+		if err := runBenchmark(&CmdContext{App: app, Args: []string{"--iterations", it}}); err != nil {
+			t.Fatalf("benchmark --iterations %s 应成功, got: %v", it, err)
+		}
+		// 空 entries → B3（关键词搜索）/B4（单模型）跳过；B1 扫描 + B2 全量搜索每迭代各清一次
+		want := n * 2
+		if app.clears != want {
+			t.Errorf("--iterations %s 应清缓存 %d 次（每迭代冷启动），实际 %d", it, want, app.clears)
+		}
+	}
+}
+
 // ========== flow 命令测试 ==========
 
 func TestGUIFlow_NoModels(t *testing.T) {

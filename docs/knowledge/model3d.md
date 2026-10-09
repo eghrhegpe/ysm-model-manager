@@ -408,6 +408,7 @@ auto_fields:
     - GroundMaterialPresetDef
     - GroundMatParam
     - groundMatSourceFromAxes
+    - GroundOverlay
     - GroundOverlayParams
     - GroundOverlaySpec
     - GroundOverlayStyle

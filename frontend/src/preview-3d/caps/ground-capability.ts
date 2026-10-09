@@ -19,11 +19,10 @@ import { clampFieldValue, getPresetKeys } from "@/preview-3d/state/env-state-sch
 import { createListenerSet } from "@/utils/base/primitives/listener-set.ts";
 import { buildGroundNodes } from "./ground-menu.ts";
 import { normalizeGroundLegacyState } from "./ground-migrations.ts";
+import { GroundOverlay } from "./ground-overlay.ts";
 import {
   applyGroundSurfaceAppearance,
   applyGroundSurfaceStructural,
-  applyOverlayMaterial,
-  buildGroundOverlaySpec,
   buildGroundSurfaceSpec,
   GROUND_CANVAS_STYLES,
   GROUND_MATERIAL_PRESET_IDS,
@@ -32,19 +31,14 @@ import {
   GROUND_SOURCE_KINDS,
   type GroundCanvasStyle,
   type GroundMaterialPreset,
-  type GroundOverlaySpec,
   type GroundOverlayStyle,
   type GroundSourceKind,
   type GroundSurfaceSpec,
   type GroundSurfaceStructuralSpec,
-  generateOverlayPixels,
   generateSurfacePixels,
   groundMatSourceFromAxes,
   groundSurfaceNeedsRebuild,
-  OVERLAY_TEX_SIZE,
-  overlayNeedsRebuild,
   surfaceTextureToken,
-  textureRepeat,
 } from "./ground-surface-spec.ts";
 // [横向铺叶层直测] 显隐谓词下沉 `ground-visible.ts`——消 updateSurfaceVisible / isSurfaceVisible 手抄双源
 import { groundGridVisibleFor, groundSurfaceVisibleFor } from "./ground-visible.ts";
@@ -140,11 +134,9 @@ export class GroundCapability implements SceneCapability {
   private surfaceSpec: GroundSurfaceSpec | null = null;
   private customTex: THREE.Texture | null = null;
   private customTexName = "";
-  // ADR-249 §2.3 叠加层：独立透明格线 mesh
-  private overlay: THREE.Mesh;
-  private overlayMat: THREE.MeshStandardMaterial | null = null;
-  private overlayTex: THREE.Texture | null = null;
-  private overlaySpec: GroundOverlaySpec | null = null;
+  /** 叠加层（锐评 2026-10-09 拆出：原 refreshOverlay/rebuildOverlay/makeOverlayTexture 及
+   *  overlayMat/overlayTex/overlaySpec 私有态已下沉 ground-overlay.ts，本字段仅托管实例）。 */
+  private readonly gs: GroundOverlay;
   private enabled: boolean;
   /** 订阅参数变更（menu 局部刷新用）；仅**离散操作** notify——菜单结构只随来源/样式/
    *  叠加层模式等 select/toggle 变化，滑杆与取色器拖动不触发重建。 */
@@ -159,7 +151,7 @@ export class GroundCapability implements SceneCapability {
     this.scene = opts.scene;
     this.enabled = opts.enabled ?? true;
     this.grid = this.createGridHelper();
-    this.overlay = this.createOverlayMesh();
+    this.gs = new GroundOverlay(() => this.enabled);
     this.surface = this.createSurfaceMesh();
     // 参考网格显隐的首次落地（构造期读 envState：enabled × 总开关 × 网格开关）
     this.updateGridVisible();
@@ -176,7 +168,7 @@ export class GroundCapability implements SceneCapability {
         // 历史同形缺陷：loadState 只写 envState，grid.visible 停在构造默认。
         this.syncGeometry(changed);
         this.refreshSurface();
-        this.refreshOverlay();
+        this.gs.refresh();
         this.updateGridVisible();
       },
       "ground",
@@ -190,7 +182,7 @@ export class GroundCapability implements SceneCapability {
    *  由同一回调尾部的 updateGridVisible 收敛，不依赖构造态。 */
   private syncGeometry(changed: Set<EnvStateKey>): void {
     if (changed.has("groundSize")) {
-      for (const mesh of [this.surface, this.overlay]) {
+      for (const mesh of [this.surface, this.gs.mesh]) {
         mesh.geometry.dispose();
         mesh.geometry = new THREE.PlaneGeometry(envState.groundSize, envState.groundSize);
       }
@@ -239,95 +231,11 @@ export class GroundCapability implements SceneCapability {
     return surface;
   }
 
-  private createOverlayMesh(): THREE.Mesh {
-    const overlayGeo = new THREE.PlaneGeometry(envState.groundSize, envState.groundSize);
-    const overlay = new THREE.Mesh(overlayGeo);
-    overlay.rotation.x = -Math.PI / 2;
-    overlay.position.y = GROUND_LAYER_OFFSETS.groundOverlay;
-    overlay.name = "ysm-ground-overlay";
-    overlay.visible = false;
-    this.overlay = overlay;
-    this.refreshOverlay();
-    return overlay;
-  }
-
-  /** 叠加层唯一变更入口：判别重建/原地并落地（与 refreshSurface 同构） */
-  private refreshOverlay(): void {
-    const next = buildGroundOverlaySpec({
-      overlayStyle: envState.groundOverlay,
-      overlayColor: envState.groundOverlayColor,
-      overlaySize: envState.groundOverlaySize,
-      overlayOpacity: envState.groundOverlayOpacity,
-    });
-
-    if (next.style === "none") {
-      // 叠加层关闭：释放纹理，隐藏 mesh。
-      // 仅在「曾激活 → none」的过渡分支做销毁：稳态 none 时每次 ground 组变更都会重入
-      // 本回调，无谓置 needsUpdate 会强制材质重传（review 268cc3c21 P3-4）
-      if (this.overlaySpec && this.overlaySpec.style !== "none") {
-        if (this.overlayTex) {
-          safeDispose(this.overlayTex);
-          this.overlayTex = null;
-        }
-        if (this.overlayMat) {
-          this.overlayMat.map = null;
-          this.overlayMat.needsUpdate = true;
-        }
-      }
-      this.overlay.visible = false;
-      this.overlaySpec = next;
-      return;
-    }
-
-    if (!this.overlaySpec || overlayNeedsRebuild(this.overlaySpec, next)) {
-      this.rebuildOverlay(next);
-    } else if (this.overlayMat) {
-      this.overlayMat.opacity = next.opacity;
-      // groundSize 变更（几何已由 syncGeometry 换装）且样式不变时走此原地分支：
-      // 世界格重复密度必须跟着重算，否则「格线尺寸」与新地面脱锚。
-      if (this.overlayTex) {
-        const rep = textureRepeat(envState.groundSize, Math.max(1, next.size));
-        this.overlayTex.repeat.set(rep, rep);
-      }
-      this.overlayMat.needsUpdate = true;
-    }
-    this.overlay.visible = this.enabled && envState.groundVisible;
-    this.overlaySpec = next;
-  }
-
-  private rebuildOverlay(spec: GroundOverlaySpec): void {
-    if (this.overlayTex) {
-      safeDispose(this.overlayTex);
-      this.overlayTex = null;
-    }
-    this.overlayTex = this.makeOverlayTexture(spec);
-    if (!this.overlayMat) {
-      this.overlayMat = new THREE.MeshStandardMaterial();
-    }
-    applyOverlayMaterial(this.overlayMat, spec, this.overlayTex);
-    this.overlay.material = this.overlayMat;
-  }
-
-  /** 叠加层纹理边长 / 世界格重复：与 surface 同口径（textureRepeat = meshSize/TILE/scale），
-   * 让「叠加格数」滑杆与世界密度一致，而非只改贴图像素（review 268cc3c21 P2-3） */
-  private makeOverlayTexture(spec: GroundOverlaySpec): THREE.DataTexture | null {
-    const px = generateOverlayPixels(spec.style, OVERLAY_TEX_SIZE, spec.color, spec.size);
-    if (px.length === 0) return null;
-    const tex = new THREE.DataTexture(px, OVERLAY_TEX_SIZE, OVERLAY_TEX_SIZE, THREE.RGBAFormat);
-    tex.wrapS = THREE.RepeatWrapping;
-    tex.wrapT = THREE.RepeatWrapping;
-    tex.colorSpace = THREE.SRGBColorSpace;
-    const rep = textureRepeat(envState.groundSize, Math.max(1, spec.size));
-    tex.repeat.set(rep, rep);
-    tex.needsUpdate = true;
-    return tex;
-  }
-
   apply(): void {
     if (!this.enabled) return;
     if (!this.grid.parent) this.scene.add(this.grid);
     if (!this.surface.parent) this.scene.add(this.surface);
-    if (!this.overlay.parent) this.scene.add(this.overlay);
+    if (!this.gs.mesh.parent) this.scene.add(this.gs.mesh);
   }
 
   /** 地面总显隐开关（参考网格/表面层/叠加层均跟随；水面由 water.enabled 独立控制） */
@@ -398,14 +306,14 @@ export class GroundCapability implements SceneCapability {
     else {
       if (this.grid.parent) this.grid.parent.remove(this.grid);
       if (this.surface.parent) this.surface.parent.remove(this.surface);
-      if (this.overlay.parent) this.overlay.parent.remove(this.overlay);
+      if (this.gs.mesh.parent) this.gs.mesh.parent.remove(this.gs.mesh);
     }
     this.updateGridVisible();
     this.updateSurfaceVisible();
     // 重挂/摘取后 overlay.visible 需重算（保留旧值会 stale：setEnabled(true) 后
     // 若 groundVisible 此前为 false，overlay 会被 apply 重挂却仍 visible=false；
     // review 268cc3c21 P3-5）
-    this.refreshOverlay();
+    this.gs.refresh();
   }
 
   /** 程序化像素 → DataTexture（SRGB：albedo 语义；RepeatWrapping 平铺） */
@@ -871,7 +779,7 @@ export class GroundCapability implements SceneCapability {
       ]),
     );
     this.refreshSurface();
-    this.refreshOverlay();
+    this.gs.refresh();
     this.updateGridVisible();
   }
 
@@ -880,7 +788,6 @@ export class GroundCapability implements SceneCapability {
     this.unsubscribeEnv();
     if (this.grid.parent) this.grid.parent.remove(this.grid);
     if (this.surface.parent) this.surface.parent.remove(this.surface);
-    if (this.overlay.parent) this.overlay.parent.remove(this.overlay);
     this.grid.geometry.dispose();
     const mat = this.grid.material;
     if (Array.isArray(mat))
@@ -900,16 +807,7 @@ export class GroundCapability implements SceneCapability {
       safeDispose(this.customTex);
       this.customTex = null;
     }
-    // ADR-249 §2.3：叠加层资源释放（owner = GroundCapability，非 customTex）
-    if (this.overlayTex) {
-      safeDispose(this.overlayTex);
-      this.overlayTex = null;
-    }
-    if (this.overlayMat) {
-      this.overlayMat.dispose();
-      this.overlayMat = null;
-    }
-    this.overlay.geometry.dispose();
-    this.overlaySpec = null;
+    // [锐评 2026-10-09] 叠加层摘除 + 资源释放已下沉 ground-overlay.ts（owner = GroundOverlay）
+    this.gs.dispose();
   }
 }

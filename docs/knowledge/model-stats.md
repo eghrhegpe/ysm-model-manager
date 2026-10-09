@@ -6,6 +6,7 @@ adr:
   - ADR-218
   - ADR-219
 category: core
+broad_claim: true
 source_files:
   - frontend/src/workers/stats-core.ts
   - frontend/src/workers/stats-protocol.ts

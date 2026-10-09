@@ -3,6 +3,7 @@ kind: dnd-shared
 name: 拖拽平台适配 dnd-shared
 tier: leaf
 category: feature
+broad_claim: true
 source_files:
   - frontend/src/features/import/shared.ts
   - frontend/src/features/import/collector.ts

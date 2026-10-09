@@ -3,6 +3,7 @@ kind: ysm-anim-pipeline
 name: YSM (Bedrock) 动画管线
 category: utils
 tier: architecture
+broad_claim: true
 source_files:
   - frontend/src/preview-3d/model/ysm-animation-player.ts
   - frontend/src/preview-3d/adapters/ysm-adapter.ts

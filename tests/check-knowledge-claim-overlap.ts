@@ -23,15 +23,18 @@ const P = [
   "internal/app/app.go",
   "internal/app/app_config.go",
   "go/types/types.go",
+  "frontend/src/utils/base/pure/clamp.ts",
+  "frontend/src/utils/base/pure/label.ts",
 ];
 
-function writeCard(kind: string, sources: string[]) {
+function writeCard(kind: string, sources: string[], broadClaim = false) {
   const fm = [
     "---",
     `kind: ${kind}`,
     `name: 认领重复契约临时卡 ${kind}`,
     "tier: leaf",
     "category: utils",
+    ...(broadClaim ? ["broad_claim: true"] : []),
     "source_files:",
     ...sources.map((s) => `  - ${s}`),
     "use_when:",
@@ -91,6 +94,31 @@ try {
     out.warns.some((w) => w.includes("zzz-ov-a") && w.includes("收窄到独有路径") && w.includes("跨切面视图")),
     `warns=${out.warns.filter((w) => w.includes("zzz-ov-a")).join().slice(0, 300)}`,
   );
+
+  // 8. broad_claim 机器豁免出口（2026-10-09，台账 K1「有意跨切面，不盲目收窄」的机器表达）：
+  //    G：3 条全重叠 + 旗标 → 5.15 豁免（条件成立 = 旗标新鲜）
+  //    H：3 条全独有 + 旗标 → stale WARN（条件不成立，旗标该删——棘轮自清理，防豁免变永久逃生阀）
+  //    I：2 条低于阈值 + 旗标 → 同样 stale WARN
+  writeCard("zzz-ov-g", [P[0], P[1], P[2]], true);
+  writeCard("zzz-ov-h", [P[7], P[8], P[9]], true);
+  writeCard("zzz-ov-i", [P[0], P[1]], true);
+  ({ status, out } = runCheck());
+  ok(
+    "3 条全重叠 + broad_claim → 5.15 豁免",
+    !overlapWarned(out, "zzz-ov-g") && !out.warns.some((w) => w.includes("zzz-ov-g") && w.includes("broad_claim")),
+    `warns=${out.warns.filter((w) => w.includes("zzz-ov-g")).join().slice(0, 300)}`,
+  );
+  ok(
+    "全独有 + broad_claim → stale WARN（旗标失需）",
+    out.warns.some((w) => w.includes("zzz-ov-h") && w.includes("broad_claim") && w.includes("不再需要")),
+    `warns=${out.warns.filter((w) => w.includes("zzz-ov-h")).join().slice(0, 300)}`,
+  );
+  ok(
+    "低于阈值 + broad_claim → stale WARN",
+    out.warns.some((w) => w.includes("zzz-ov-i") && w.includes("不再需要")),
+    `warns=${out.warns.filter((w) => w.includes("zzz-ov-i")).join().slice(0, 300)}`,
+  );
+  ok("豁免不改变 WARN 不阻断 → 退出码 0", status === 0, `status=${status}`);
 } finally {
   if (fs.existsSync(TMP_DIR)) fs.rmSync(TMP_DIR, { recursive: true, force: true });
 }

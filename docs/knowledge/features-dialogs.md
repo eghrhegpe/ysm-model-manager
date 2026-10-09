@@ -3,6 +3,7 @@ kind: features-dialogs
 name: 业务对话框 features/dialogs(批量重命名/标签编辑/高级筛选)
 tier: architecture
 category: ui
+broad_claim: true
 source_files:
   - frontend/src/features/dialogs/rename.ts
   - frontend/src/features/dialogs/tag-editor.ts

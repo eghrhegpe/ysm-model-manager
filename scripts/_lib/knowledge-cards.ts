@@ -126,6 +126,7 @@ export const CARD_TOP_KEYS: Record<string, string> = {
   adr: "相关 ADR 引用",
   affected: "源码变更影响匹配开关（仅 affected: false 合法）",
   auto_fields: "机器推导字段域（symbols_with_lines/tests/reference_files 等）",
+  broad_claim: "有意宽认领旗标：跨切面聚合视图，豁免本卡 5.14 派生符号体量 / 5.15 全重复认领 WARN；条件失配时 5.17 stale 自清理（2026-10-09，台账 K1 的机器表达）",
   category: "分类（core/go/ui/feature/rendering/utils/config）",
   invariant_anchors: "机制锚点（文件|符号）",
   kind: "卡标识（kebab-case，= 文件名）",

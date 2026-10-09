@@ -121,7 +121,7 @@ quick_risk_lines:
 - **T5 已解决（台账 drift）**：`check-file-lines.ts` 的 `ADVISORY_RULES` 第三条（前端生产层 >900 软告警）已在 2026-10-06 补登消解「caps 脱管」，本卡遗漏同步；实测 caps 最大 967 < mount 红线 1045，无超硬红线项。
 - **S1 维持**：generator 收口优化，`gate-config.ts` 单一事实源已实质替代 `gate-inventory.json` 职能，非阻断。
 - **H1′ 暂缓**：经 grep 发现 6 份 audit critique 有活入链（含 `fog-capability.ts`/`layer-offsets.ts` 源码注释硬引用 `audit-water-critique.md`、`preview-env-state.md` 正被并行会话锐评在途），机械归档会断 4+ 处 `.ts` 注释路径；待 preview-3d 锐评收口后单独断链迁移。
-- **K1 维持**：6 张卡 `source_files` 全被认领（warn 级），多为有意跨切面聚合卡，不盲目收窄。
+- **K1 维持**：6 张卡 `source_files` 全被认领（warn 级），多为有意跨切面聚合卡，不盲目收窄。→ **2026-10-09 后续**：「有意跨切面」决策已机器表达——`broad_claim: true` 旗标收编进 `CARD_TOP_KEYS` + `check-knowledge-drift` 5.14/5.15 豁免 + **5.17 stale 自清理**（卡收窄后旗标失需 → WARN 提示移除，防豁免退化成永久逃生阀），契约测试 `check-knowledge-claim-overlap` / `check-knowledge-derived-symbol-count` 各补豁免 + stale 用例；8 张卡（6 全重复认领 + model3d / wails-bindings 符号体量）登记旗标。drift warns 由 21 收敛至 **1**（余 14 个代码→卡覆盖盲区，非阻断）。
 - **审计台账全卡已账实相符**：P1-a/P2/T3′/T6/K2/A1 已修或落地，T5/S1 已澄清（非真债/drift/优化），H1′ 暂缓（活入链），K1 维持（有意跨切面）。剩余真正未动手项仅 A1 的"升 hard 检查"（待团队拍板 emoji 强制与否）与 H1′ 的断链迁移（待 preview-3d 锐评收口）。
 
 ## 2026-10-08 20:42 探索抓现行 + 清偿（第三轮，主模型单人）

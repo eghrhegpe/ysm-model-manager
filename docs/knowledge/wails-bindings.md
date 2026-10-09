@@ -3,6 +3,7 @@ kind: wails-bindings
 name: Wails Binding API 总览 internal/app
 tier: architecture
 category: go
+broad_claim: true
 source_files:
   - internal/app/app.go
   - internal/app/app_avatar.go

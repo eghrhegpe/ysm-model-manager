@@ -16,7 +16,7 @@ const TMP_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "ysm-symcount-"));
 const CARD = "zzz-symcount-tmp.md";
 
 /** 生成带 n 个派生符号的临时卡。 */
-function writeCard(n: number) {
+function writeCard(n: number, broadClaim = false) {
   const sym = Array.from({ length: n }, (_, i) => `    - Symbol${i}`);
   const fm = [
     "---",
@@ -24,6 +24,7 @@ function writeCard(n: number) {
     "name: 派生体量契约临时卡",
     "tier: leaf",
     "category: utils",
+    ...(broadClaim ? ["broad_claim: true"] : []),
     "source_files:",
     "  - frontend/src/utils/base/pure/array.ts",
     "use_when:",
@@ -136,6 +137,23 @@ try {
       (w) => w.includes(CARD) && w.includes("目录级 source_files") && w.includes("收窄到实际涉及的具体文件"),
     ),
     `warns=${out.warns.filter((w) => w.includes(CARD)).join(" / ").slice(0, 300)}`,
+  );
+
+  // 6. broad_claim 机器豁免出口（2026-10-09）：120 符号 + 旗标 → 5.14 豁免；
+  //    99 符号 + 旗标 → stale WARN（条件不成立，旗标失需该删）
+  writeCard(120, true);
+  ({ status, out } = runCheck());
+  ok(
+    "120 个派生符号 + broad_claim → 5.14 豁免",
+    !out.warns.some((w) => w.includes(CARD) && w.includes("派生符号")),
+    `warns=${out.warns.filter((w) => w.includes(CARD)).join(" / ").slice(0, 200)}`,
+  );
+  writeCard(99, true);
+  ({ status, out } = runCheck());
+  ok(
+    "99 个派生符号 + broad_claim → stale WARN（旗标失需）",
+    out.warns.some((w) => w.includes(CARD) && w.includes("broad_claim") && w.includes("不再需要")),
+    `warns=${out.warns.filter((w) => w.includes(CARD)).join(" / ").slice(0, 200)}`,
   );
 } finally {
   if (fs.existsSync(TMP_DIR)) fs.rmSync(TMP_DIR, { recursive: true, force: true });

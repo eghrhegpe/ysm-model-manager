@@ -3,6 +3,7 @@ kind: ui-slide-menu
 name: ADR 去桶化 slide-menu 外壳组件
 tier: leaf
 category: ui
+broad_claim: true
 source_files:
   - frontend/src/preview-3d/menu/shell/slide-menu.ts
   - frontend/src/preview-3d/menu/style/slide-menu-styles.ts

@@ -879,7 +879,8 @@ function checkDerivedSymbolCount(cards: any[]) {
   for (const { cf, fm } of cards) {
     if (!fm) continue;
     const n = countDerivedSymbols(fm);
-    if (n >= SYM_COUNT_WARN) {
+    // broad_claim: true = 有意宽认领的机器豁免（台账 K1「跨切面聚合卡」决策的机器表达；失需由 5.17 stale 自清理）
+    if (n >= SYM_COUNT_WARN && getScalar(fm, "broad_claim") !== "true") {
       const dirs = dirSourceEntries(fm);
       warns.push(
         dirs.length > 0
@@ -915,11 +916,37 @@ function checkClaimOverlap(cards: any[]) {
     const srcs = parseSourceFiles(fm);
     if (srcs.length < CLAIM_OVERLAP_MIN) continue;
     const unique = srcs.filter((p) => (claim[p] || []).length === 1);
-    if (unique.length === 0) {
+    if (unique.length === 0 && getScalar(fm, "broad_claim") !== "true") {
       warns.push(
         `知识卡 ${cf} 的 source_files ${srcs.length} 条全部被其他卡认领（0 条独占）——source_files 是覆盖登记，无独占覆盖等于登记重复劳动；请收窄到独有路径，或确认本卡为跨切面视图、有意为之`,
       );
     }
+  }
+}
+
+// ── 检查 5.17：broad_claim 旗标 stale 自清理（WARN）──
+// broad_claim: true 是 5.14/5.15「有意宽认领 / 跨切面聚合视图」的机器豁免出口
+// （2026-10-09，台账 K1「有意跨切面，不盲目收窄」的机器表达）。豁免只在条件成立时有效：
+// 卡日后收窄、5.14/5.15 条件皆不满足时旗标即失需噪声 → WARN 提示移除
+// （棘轮精神：防豁免出口退化为永久逃生阀）。
+function checkBroadClaimStale(cards: any[]) {
+  const flagged = cards.filter(({ fm }) => fm && getScalar(fm, "broad_claim") === "true");
+  if (flagged.length === 0) return;
+  // 与 5.15 同口径的 claim 表（精确路径字符串比对）
+  const claim: Record<string, string[]> = {};
+  for (const { cf, fm } of cards) {
+    if (!fm) continue;
+    for (const p of parseSourceFiles(fm)) (claim[p] = claim[p] || []).push(cf);
+  }
+  for (const { cf, fm } of flagged) {
+    const symBloat = countDerivedSymbols(fm) >= SYM_COUNT_WARN;
+    const srcs = parseSourceFiles(fm);
+    const overlapHit =
+      srcs.length >= CLAIM_OVERLAP_MIN && srcs.every((p) => (claim[p] || []).length > 1);
+    if (symBloat || overlapHit) continue; // 条件仍成立 = 旗标新鲜
+    warns.push(
+      `知识卡 ${cf} 的 broad_claim: true 不再需要（5.14 派生符号体量 ≥${SYM_COUNT_WARN} 与 5.15 全重复认领（≥${CLAIM_OVERLAP_MIN} 条且 0 独占）条件皆不满足）——请移除旗标`,
+    );
   }
 }
 
@@ -1154,6 +1181,7 @@ function main() {
   checkNoCuratedInAutoFields(cards); // 解法 B：auto_fields 禁人工策展子字段（ERROR）
   checkDerivedSymbolCount(cards); // 解法 B：派生元数据体量护栏（WARN）
   checkClaimOverlap(cards); // 解法 B：跨卡认领重复（WARN）
+  checkBroadClaimStale(cards); // 5.17 broad_claim 旗标 stale 自清理（WARN）
   checkSourceFilesContainment(cards); // 解法 B：卡内 source_files 包含冗余（WARN）
   checkBodyLineRefs(cards); // P1：正文散文禁硬编码行号/行数/计数（WARN）
   checkFrontmatterLineRefs(cards); // 5.10：frontmatter 人工策展字段行号引用（WARN）

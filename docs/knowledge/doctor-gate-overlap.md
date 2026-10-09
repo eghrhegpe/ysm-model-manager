@@ -3,6 +3,7 @@ kind: doctor-gate-overlap
 name: 质量闸门双调度器重叠审计
 tier: leaf
 category: go
+broad_claim: true
 source_files:
   - scripts/doctor.ts
   - scripts/pre-push-gate.ts

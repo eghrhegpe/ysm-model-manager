@@ -5,6 +5,7 @@ tier: architecture
 adr:
   - ADR-129
 category: rendering
+broad_claim: true
 source_files:
   - frontend/src/preview-3d/
 tests:

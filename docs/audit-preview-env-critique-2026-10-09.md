@@ -279,7 +279,17 @@ fog 键必漏**（fogColor 已实证漏过）。**meta 闸在此完全无判别�
 且 ground cap 820 行在**既有范式内**（`water-capability.ts` 2720 行远更重，各 cap 一文件是仓库惯例）。
 **结论：已清掉 DOM 违规 + 拆出最独立层，剩余保留。** 若未来行数/职责继续膨胀，再评估。
 
-**⏳ 仍待拍板**：sky 5 死参数处置（暴露 UI 出口 vs 显式标记"死参数"）。
+**✅ 已闭：sky 死参数处置（commit `af392f7c5`，选「显式标记」非暴露 UI）**——锐评是审计非功能开发，
+暴露 UI 是产品决策，故只做契约标记：
+- `env-state-schema` 显式标记 `skyTurbidity`/`skyRayleigh`/`skyMieCoefficient`/`skyMieDirectionalG`
+  四键为**死参数**（无 UI 出口 + 无写入方 + 无持久化；唯一作用作 three Sky shader 默认 uniform，
+  `sky-capability.ts:407-410`；若未来加 UI 须补 saveState 持久化 + 从 [G-sky] EXEMPT 移除）。
+- ⚠️ **更正**：`skyExposure` **不是死参数**——它是 sky 侧基础曝光（属主 = `applyExposure`），用户经
+  postprocessing 的 `ppExposure`（乘法系数）调有效曝光，程序化/测试会写它。原把它归入 5 键半死参数
+  是**误判**，已改注为"活跃但无 UI 出口"（仍 EXEMPT，因 saveState 不存、用户不直调）。
+
+**🎉 锐评落地至此全部收敛**——P1 补钳制 + 10 cap 逐键派生锁 + 3 项架构级整改 + sky 死参数标记。
+**所有"看起来该改"的建议都已落地或改判**，无遗留待拍板项。
 
 ### 📌 执行教训
 

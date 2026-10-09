@@ -171,6 +171,11 @@ export const ALL_STATIC_TOOLS: GateTool[] = [
   // 当前 ground-capability 为唯一已知僵尸私有门（知识卡已声明为「暂不动」），
   // 若有新 cap 新增私有 enabled 但不补 schema 对应键，此闸报告债务。
   { tool: "check-cap-enabled-duality.ts", blockPolicy: "debt", debt: debt("ground-capability 僵尸私有门（已声明暂不动）；若有新 cap 补对应 schema 键后 debt 归零可升 hard") },
+  // check-env-schema-consumers：ENV_STATE_SCHEMA 键消费审计（幽灵键守卫，锐评 2026-10-09 探索）。
+  // 与 check-cap-enabled-duality 互补（那个查「cap 字段必须有 schema 键」，这个查「schema 键
+  // 必须有生产消费」）。实测全仓 ~300ms，当前 0 命中（收口后健康）——纯防御，未来加键忘接
+  // 消费方即报告。debt 档：当前零违规不阻断，防复发为主。
+  { tool: "check-env-schema-consumers.ts", blockPolicy: "debt", debt: debt("幽灵键守卫：当前 0 命中（纯防御），未来新增 schema 键忘接消费方即报告") },
 ];
 
 /**

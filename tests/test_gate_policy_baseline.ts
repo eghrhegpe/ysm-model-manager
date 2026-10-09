@@ -120,6 +120,10 @@ const EXPECTED_POLICY: Record<string, BlockPolicy> = {
   // （知识卡已声明「暂不动」）——hard 会让每次全量 doctor 恒红。记 debt：报告违规不阻断，
   // 待 ground 收口后 debt 归零可升 hard（见 gate-config 注释）。
   "check-cap-enabled-duality.ts": "debt",
+  // check-env-schema-consumers（2026-10-09 锐评探索）：schema 键消费审计（幽灵键守卫）。
+  // 与 cap-enabled-duality 互补（那个查「cap 字段必须有 schema 键」，这个查「schema 键必须有
+  // 生产消费」）。当前 0 命中（收口后健康）——纯防御防复发，记 debt 不阻断。
+  "check-env-schema-consumers.ts": "debt",
 
   // —— failClosed（仅 rg 等环境依赖工具；生成物漂移类恢复 hard——
   //    迁移时误降 failClosed 会让过期生成物静默过闸，code_review 03a6005ed 撤销）——

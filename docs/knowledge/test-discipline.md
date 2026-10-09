@@ -13,11 +13,15 @@ source_files:
   - frontend/src/preview-3d/caps/sky-sun.test.ts
   - frontend/src/preview-3d/caps/sky-asset.ts
   - frontend/src/preview-3d/caps/sky-asset.test.ts
+  - frontend/src/preview-3d/caps/ground-visible.ts
+  - frontend/src/preview-3d/caps/ground-visible.test.ts
+  - frontend/src/preview-3d/caps/fog-capability.ts
   - docs/adr/decisions/ADR-311-d1-mock.md
 tests:
   - frontend/src/preview-3d/caps/env-hdr-cache.test.ts
   - frontend/src/preview-3d/caps/sky-sun.test.ts
   - frontend/src/preview-3d/caps/sky-asset.test.ts
+  - frontend/src/preview-3d/caps/ground-visible.test.ts
 auto_fields:
   symbols_with_lines:
     - applyScaledUniformToPair
@@ -26,6 +30,11 @@ auto_fields:
     - computeSunPosition
     - createSky
     - EnvHdrCache
+    - FogCapability
+    - FogMode
+    - groundGridVisibleFor
+    - groundSurfaceVisibleFor
+    - normalizeFogRange
     - sunVectorFromSpherical
 use_when:
   - 写或审 preview-3d 的 vi.mock 用例，判断是否自证
@@ -38,6 +47,8 @@ pitfalls:
   - 纯函数下沉时须**参数化**（不读全局单例如 envState），否则不可叶层直测（ADR-235-d1 教训）
   - `??=` 只在 undefined 时赋值——对已有默认值的目标会**吞掉传入值**（`createSky` 教训：Sky 默认 `cloudCoverage=0.4`）
   - biome 禁 `!` 非空断言（`noNonNullAssertion`），类型收窄须用非 undefined 类型断言或显式守卫
+  - 三布尔合取门最易「漏一支」静默分叉（手抄双源血案：ground `isSurfaceVisible`/`updateSurfaceVisible`），
+    判别样本模板 = **三支各断一支**（漏能力总闸 / 漏总开关 / 漏子开关各一条，专杀「少一支」实现）
 quick_groups:
   - 门禁与脚本
 quick_intents:
@@ -49,6 +60,7 @@ invariant_anchors:
   - frontend/src/preview-3d/caps/env-hdr-cache.test.ts|loadFromFile 三分支
   - frontend/src/preview-3d/caps/sky-sun.test.ts|负数 wrap 反例
   - frontend/src/preview-3d/caps/sky-asset.test.ts|undefined 守卫
+  - frontend/src/preview-3d/caps/ground-visible.test.ts|断能力开关
   - docs/adr/decisions/ADR-311-d1-mock.md|决策
 last_verified: 2026-10-09
 ---
@@ -98,7 +110,10 @@ last_verified: 2026-10-09
   `sky-sun.test.ts`「负数 wrap 反例」经变异（`((hour%24)+24)%24` → `hour%24`）→ 该用例转红、正 wrap
   用例仍绿——负/正两分支各自被精确守卫（第 2 刀 ADR-235-d1 子提交 A 实证）；
   `sky-asset.test.ts`「undefined 守卫」经变异（去掉 `if (su !== undefined)` 守卫）→ ghost uniform 与
-  非对称 patch 两用例转红——守卫语义被精确守卫（第 2 刀子提交 B 实证）。
+  非对称 patch 两用例转红——守卫语义被精确守卫（第 2 刀子提交 B 实证）；
+  `ground-visible.test.ts`「断能力开关」经变异（去掉 `enabled &&`）→ 该用例精确转红、其余 7 用例仍绿——
+  三支合取门被逐支守卫（横向铺叶层直测实证，同时消 ground `isSurfaceVisible`/`updateSurfaceVisible`
+  手抄双源——单一谓词 `groundSurfaceVisibleFor` 两处共用）。
 - **变异盲区诚实命名**：`env-ibl.test.ts`「PMREM 生成失败回滚」变异（移 catch 还原行）**仍绿**——
   因 `fromEquirectangular` 抛错发生在 `envTexture` 赋值前，`scene.environment` 本未改写，catch 那行
   还原是**防御性冗余**（与禁用分支 / dispose 同构）。测试注释须诚实标注，不夸大为防回潮断言。

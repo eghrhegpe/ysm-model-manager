@@ -1115,6 +1115,7 @@
 | 纯函数下沉时须**参数化**（不读全局单例如 envState），否则不可叶层直测（ADR-235-d1 教训） | - | - |
 | 只在 undefined 时赋值——对已有默认值的目标会**吞掉传入值**（`createSky` 教训：Sky 默认 `cloudCoverage=0.4`） | `??=` | - |
 | biome 禁  非空断言（`noNonNullAssertion`），类型收窄须用非 undefined 类型断言或显式守卫 | `!` | - |
+| 三布尔合取门最易静默分叉（手抄双源血案：ground `isSurfaceVisible`/`updateSurfaceVisible`）， | `漏一支` | - |
 | getAllByTestId 前缀查询不会返回的兄弟 testid（如 tree-dir 不会命中 tree-dir-toggle）；误用精确查询会抛错，应先查前缀再 JS 过滤 | `后缀非数字` | - |
 | waitFor 超时/异常携带原始错误（P2 修复后）；旧实现静默吞错掩盖真实根因，迁移旧卡时注意不要写 | `捕获后重新 throw 通用消息` | - |
 | " 参数不存在于 waitFor 签名，旧知识卡/口语中可能出现误导" | `interval?` | - |

@@ -249,10 +249,25 @@ fog 键必漏**（fogColor 已实证漏过）。**meta 闸在此完全无判别�
 - ❌ **`cap-dispose-reset` meta 闸**：价值更低——dispose 复位已 5/5 实闭 + 各家有锁，仅防"未来新
   cap 漏复位"，收益低、判别力同受"存在性"局限。
 
-### ⏳ 仍待拍板（架构级，不在本批动）
+### ⏳ 架构级项（已推进一轮，commit `0ca845e3e` / `688b9a92e`）
 
-ground 主 cap 拆分（>900 行 + DOM `openTexturePicker`）、`applyModelPreset` 契约补齐（light 已退役、
-ground/water 缺注释论证）、`registerEnvStateMiddleware` 退订句柄接线。
+**✅ 已闭：`applyModelPreset` 契约补齐**——查证后 ground/water 的缺席**不是漏实现**：`MODEL_DEFAULTS`
+无两者键（`model-defaults.ts:9-10` 只承载"场景尺度 / 离散语义"两类耦合），`SceneCapability` 接口**不含**
+`applyModelPreset`（它是 cap 可选扩展，仅 fog/reflector/env/shadow/sky/pp 六 cap 实现）。已补单一事实源
+注释 + 两 cap 测试各加 `prototype 无 applyModelPreset` 契约锁（对齐 `light-capability.test.ts:334`
+退役锁，防后人误加实现）。
+
+**✅ 已闭：ground 碰 DOM（`openTexturePicker`）**——原 `GroundCapability.openTexturePicker` 在 cap 内直接
+`document.createElement("input")`，与 :576 注释"cap 不直接碰 DOM"**矛盾**。已移出到新建
+`ground-texture-picker.ts`（用 `GroundTextureSink` 最小接口 structural typing，避免 menu→picker→cap
+循环依赖）；menu 纯声明层保持（只调 `pickGroundTexture(cap)`），cap 删 20 行 + 4 个 now-unused import。
+
+**❌ 不接线：`registerEnvStateMiddleware` 退订句柄**——ground 是**模块顶层**注册（模块缓存只执行一次），
+中间件是永久全局拦截器（组合根必建 cap，且跨模型切换 cap dispose/重建时中间件本就应持续注册），
+`unregister` 无实际用途、丢弃无害。**保持现状**。
+
+**⏳ 仍待拍板**：ground 主 cap 拆分（已减 20 行，942→922 行；DOM 交互已清，剩余是状态/渲染层
+合并——是否继续拆待定）、sky 5 死参数处置（暴露 UI 出口 vs 显式标记"死参数"）。
 
 ### 📌 执行教训
 

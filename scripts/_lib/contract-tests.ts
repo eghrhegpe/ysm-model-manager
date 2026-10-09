@@ -191,6 +191,8 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "test_gate_parse_output.ts": ["tests"],
   "test_gate_coverage.ts": ["tests"],
   "test_gate_debt.ts": ["tests"],
+  // 基线守卫单一实现（锐评第二刀）：假绿第一大类的判据共源 + wiring 反向锚
+  "test_baseline_guard.ts": ["tests"],
   "test_gate_audit.ts": ["tests"],
   // ADR-232 并发竞态/审计留痕/退化降级三方向的可注入纯逻辑
   "test_hooks_concurrency.ts": ["tests"],
@@ -502,6 +504,13 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   // 审计留痕（锐评 P1）：锁 gate-audit 追加语义/行格式/fail-open；含 pre-push-gate.ts
   // （审计接线点）——绕过审计若静默失效，此测试先红。
   "test_gate_audit.ts": ["scripts/_lib/gate-audit.ts", "scripts/pre-push-gate.ts"],
+  // 基线守卫单一实现（2026-10-09 锐评第二刀）：判据本体 + 两个消费门禁的 wiring 反向锚。
+  // 任一消费方重新内联一份判据（第二份实现）即红——这正是 2026-10-08 那对假绿守卫的成因。
+  "test_baseline_guard.ts": [
+    "scripts/_lib/baseline-guard.ts",
+    "scripts/check-diff-coverage.ts",
+    "scripts/check-go-diff-coverage.ts",
+  ],
   // ADR-206 阶段 2：静态工具执行器搬入 gate-blocks/static-tools.ts。该测试同时锁
   // pre-push-gate 的调度调用点（runTools(ctx, ...) 形参顺序）与 gate-ctx 的 record 语义。
   "test_gate_static_tools.ts": [

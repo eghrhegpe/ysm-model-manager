@@ -372,6 +372,7 @@ auto_fields:
     - getSemanticBone
     - getSemanticMorph
     - getStateValue
+    - getSunPosition
     - getTextureAlphaInfo
     - getTextureAlphaMode
     - getTextureDecoder
@@ -420,6 +421,7 @@ auto_fields:
     - hasSchema
     - HeaderToggleConfig
     - HeaderToggleElement
+    - hourToSun
     - IconButtonOpts
     - IKChain
     - IKConfig
@@ -904,6 +906,7 @@ auto_fields:
     - suggestGpuLimits
     - summarizeArm
     - SunBeams
+    - sunVectorFromSpherical
     - SURFACE_PIXEL_GENERATORS
     - SurfaceCanvasStyle
     - SurfacePixelGenerator

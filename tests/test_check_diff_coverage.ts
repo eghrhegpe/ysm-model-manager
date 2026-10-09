@@ -261,11 +261,18 @@ check("hasNoCoverableStatements：读不到文件时 fail-loud（返回 false）
       });
     }
   }
-  // 反向锚：Go 版必须有同款守卫（两门禁同病，只修一处 = 假绿回流）
-  check("Go 版 check-go-diff-coverage 有同款基线守卫（防只修一处）", () => {
+  // 反向锚：Go 版必须走**同一份**守卫（两门禁同病，只修一处 = 假绿回流）。
+  // 2026-10-09 锐评第二刀起判据收口 _lib/baseline-guard.ts：本锚从「源码里有同款文案」
+  // 升级为「必须 import 并调用共享守卫」——内联文案恰是第二份实现的形态，见下条否证。
+  check("Go 版 check-go-diff-coverage 走共享基线守卫（防只修一处/防第二份实现）", () => {
     const goSrc = readFileSync(resolve(ROOT, "scripts/check-go-diff-coverage.ts"), "utf8");
-    assert.match(goSrc, /基线无意义/);
-    assert.match(goSrc, /与 HEAD 是同一提交/);
+    assert.match(goSrc, /from "\.\/_lib\/baseline-guard\.ts"/);
+    assert.match(goSrc, /checkBaselineMeaningful\(/);
+    assert.doesNotMatch(goSrc, /基线无意义：--base/, "内联判据文案 = 第二份实现，必须拒绝");
+    // 判据唯一住在共享模块里（本锚同时锁住「文案不会被搬走后丢失」）
+    const guardSrc = readFileSync(resolve(ROOT, "scripts/_lib/baseline-guard.ts"), "utf8");
+    assert.match(guardSrc, /基线无意义：--base/);
+    assert.match(guardSrc, /与 HEAD 是同一提交/);
   });
 }
 

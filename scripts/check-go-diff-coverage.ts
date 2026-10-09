@@ -53,6 +53,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { CHANGED_NULL_REASON, checkBaselineMeaningful } from "./_lib/baseline-guard.ts";
 import {
   addLinesFromDiff,
   buildSuggestBlock as buildSuggestBlockCore,
@@ -458,25 +459,18 @@ function main() {
     process.exit(USAGE_ERROR);
   };
   if (!args.files) {
-    if (!git(["rev-parse", "HEAD"])) failOrWarn("无法解析 HEAD（git 环境异常）");
-    if (!staged && !git(["rev-parse", "--verify", base])) {
-      failOrWarn(`基准分支不可达：${base}（请先 git fetch 或 --base 指向本地分支）`);
-    }
-    // ⚠️ 「基线 == HEAD」必须显式报错，**不可**任其落入「本次无改动 Go 源码 ⇒ 通过」分支。
-    // 实测病灶（2026-10-08，run 37806261054）：CI 在 push **之后**跑，checkout 的 HEAD 与
-    // fetch 到的 origin/main 指向同一提交 ⇒ diff 为空 ⇒ 输出「本次无改动 Go 源码需要检查。
-    // 通过。」exit 0——**与真通过不可区分的假绿**。调用方须传「HEAD 之前的真实基线」
-    // （CI 由 test.yml 的 `changes` job 解析）。用 commit oid 比对，不用字符串比对。
-    if (!staged && !uncommitted) {
-      const headOid = git(["rev-parse", "HEAD"])?.trim();
-      const baseOid = git(["rev-parse", "--verify", `${base}^{commit}`])?.trim();
-      if (headOid && baseOid && headOid === baseOid) {
-        failOrWarn(
-          `基线无意义：--base ${base} 与 HEAD 是同一提交（${headOid.slice(0, 12)}）⇒ 变更集必为空。` +
-            `请传 HEAD 之前的基线（CI 用 \`changes\` job 解析出的 base；本地用 --uncommitted/--staged）。`,
-        );
-      }
-    }
+    // 基线判据单一实现 = _lib/baseline-guard.ts（2026-10-09 锐评第二刀）：
+    // 前端版与本版原先各持一份逐字相同的 27 行守卫；现在只解析 oid，判据与文案共源。
+    // 反向锚（tests/test_check_diff_coverage.ts）：两版都必须 import 本守卫——只修一处
+    // 等于假绿回流。
+    const verdict = checkBaselineMeaningful({
+      headOid: git(["rev-parse", "HEAD"])?.trim() || null,
+      baseOid: staged ? null : git(["rev-parse", "--verify", `${base}^{commit}`])?.trim() || null,
+      base,
+      staged,
+      uncommitted,
+    });
+    if (!verdict.ok) failOrWarn(verdict.reason);
   }
 
   const changed = args.files
@@ -487,7 +481,7 @@ function main() {
         .filter(isGoSource)
     : getChangedGoFiles(base, head, uncommitted, staged);
 
-  if (changed === null) failOrWarn("git diff 执行失败，拒绝空跑放行");
+  if (changed === null) failOrWarn(CHANGED_NULL_REASON);
 
   const renameMap = detectRenames(base, head, staged);
 

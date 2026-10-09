@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **337** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **338** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > ADR 三区存放：根目录 = 存量（分级前）/ `architecture/` = 架构决策 / `decisions/` = 执行决策日志（ADR-320）。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -19,7 +19,7 @@ permalink: /adr/
 | [📝 提议中](#提议中) | 7 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 15 |
-| [✅ 已采纳](#已采纳) | 307 |
+| [✅ 已采纳](#已采纳) | 308 |
 | [❌ 已取代](#已取代) | 8 |
 | [🧊 已废弃](#已废弃) | 0 |
 | [❓ 未归类](#未归类) | 0 |
@@ -58,7 +58,7 @@ permalink: /adr/
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 | [ADR-050](./ADR-050-plaza-browser-window.md) | 模型广场 · 浏览器窗口（Wails 第二窗口） | 🔄 部分采纳 |
 
-### ✅ 已采纳（307）
+### ✅ 已采纳（308）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
@@ -153,6 +153,7 @@ permalink: /adr/
 | [ADR-237](./ADR-237-worker-epoch-worker-channel.md) | 下载队列并发模型：启停 worker + epoch 代际 → 常驻 worker + channel | ✅ 已采纳 |
 | [ADR-236](./ADR-236-go-sync-alias-and-comment-policy-status-quo.md) | 命名 stutter（go/sync alias）与注释篇幅：维持现状决策 | ✅ 已采纳 |
 | [ADR-235](./ADR-235-preview-3d-dir-semantics-realignment.md) | preview-3d 目录语义归位：adapters 拆分与 menu 前缀升格 | ✅ 已采纳 |
+| [ADR-235-d1](./decisions/ADR-235-d1-sky-cap-cap.md) | sky cap 资产管线下沉（太阳位置计算 + 天空资产）——cap 变薄编排壳 | ✅ 已采纳 |
 | [ADR-234](./ADR-234-scripts-gen.md) | scripts 治理三项软门禁：注释考古 / gen 并行 / 肥膘告警 | ✅ 已采纳 |
 | [ADR-233](./ADR-233-preview3d-session-state-machine.md) | preview-3d 会话生命周期状态机收敛（SessionStatus + teardown 单出口） | ✅ 已采纳 |
 | [ADR-232](./ADR-232-scripts-hooks.md) | scripts 与 hooks 并发竞态/审计留痕/退化降级修复 | ✅ 已采纳 |
@@ -727,6 +728,7 @@ permalink: /adr/
 | ADR-270-d6 | R10 收尾：截图多角度编排与菜单候选派生归属纠正（适配器域知识回迁 preview-3d/adapters） | ✅ 已采纳 | 2026-10-07 |
 | ADR-266-d1 | 体积光锥进截图：离屏/预览输出设置同构（toneMapping + 曝光镜像） | ✅ 已采纳 | 2026-10-04 |
 | ADR-256-d1 | 存量债到期制：debt 条目必须带 reason 与 reviewBy，到期由 doctor --all 硬处置 | 📝 提议中 | 2026-10-09 |
+| ADR-235-d1 | sky cap 资产管线下沉（太阳位置计算 + 天空资产）——cap 变薄编排壳 | ✅ 已采纳 | 2026-10-09 |
 | ADR-151-d1 | gen-stage 未知新建文件默认排除（并发卷带硬化） | 📝 提议中 | 2026-10-06 |
 | ADR-091-d1 | 环境能力 cap 拆分：hdr-cache/background 先行，ibl 所有权段单独一刀 | ✅ 已采纳 | 2026-10-08 |
 

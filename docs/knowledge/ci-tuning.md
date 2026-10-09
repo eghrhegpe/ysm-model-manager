@@ -27,12 +27,42 @@ source_files:
   - .github/workflows/ci.yml
   - .github/actions/playwright-spine/action.yml
   - scripts/_lib/gate-blocks/schedule.ts
+  - scripts/_lib/baseline-guard.ts
+  - scripts/check-diff-coverage.ts
+  - scripts/check-go-diff-coverage.ts
 auto_fields:
   symbols_with_lines:
+    - addedLinesFromDiffText
+    - BaselineCheck
+    - BaselineGuardInput
+    - buildBareAssertBlock
+    - buildSuggestBlock
+    - CHANGED_NULL_REASON
+    - checkBaselineMeaningful
     - CI_INDEPENDENT_TOOLS
+    - findBareFatalAddedLines
+    - getChangedGoFiles
+    - getChangedGoTestFiles
+    - goListGoFiles
+    - hasNoCoverableStatements
+    - isBareFatalAssertLine
+    - isExemptAssert
+    - isExemptEntry
+    - isExemptLifecycle
+    - isGoSource
+    - isGoTestSource
+    - isRewriteLine
+    - isRewriteOnlyDiff
+    - isVitestExcluded
+    - packagePatternFor
+    - parseGoCover
     - runContractTestsBlock
+    - runCoverProfile
     - runScriptsTypecheck
     - runStaticToolsDispatch
+    - statementPctForChangedLines
+    - stmtPctForChangedLines
+    - stripModulePrefix
 use_when:
   - 改 GitHub Actions workflow 前
   - 缓存不生效 / CI 时长反常
@@ -304,6 +334,15 @@ go job 要用 `pnpm install` + `vite build`（`//go:embed all:frontend/dist` 前
   同族陷阱：断言「守卫不误伤某模式」时**别断言 exit 0**——`--files` 模式视所有行为变更行，
   是否达标取决于夹具与源文件规模；应锚**守卫契约**（非 exit 2 且 stderr 无基线文案），
   否则测的是覆盖率而非守卫。
+- **2026-10-09 收口（审核体系锐评第二刀）**：②里那段 27 行守卫当时被**逐字复制成两份**
+  （前端版 / Go 版各一份）——第三份 diff 型门禁随时可以再漏一次，这正是本仓「改一处漏三处」
+  的典型形态。现判据收口到 `scripts/_lib/baseline-guard.ts|checkBaselineMeaningful`
+  （零依赖纯函数，不碰 git：oid 由各脚本自己的助手解析后喂入），文案单一起源；
+  `git diff` 失败文案同收作 `CHANGED_NULL_REASON`。护栏**升级为 wiring 反向锚**：
+  从「Go 版源码里有同款文案」改为「两版都必须 import 并调用共享守卫，且源码里不得再出现
+  内联判据文案」——内联即第二份实现，`tests/test_baseline_guard.ts` 先红。
+  **保留的既有语义**：`--uncommitted` 仍查基线可达性（`detectRenames(base, head, staged)`
+  要消费 base，不可达则 rename 配对失真），只有 `--staged` 是「完全不需要基线」的形态。
 
 ### 9. 契约 job 不装前端依赖（隐性防线）
 原「契约测试排在 pnpm install 之前」这一顺序是**有意的**（曾暴露 `scripts/port-align.ts` 在模块顶层

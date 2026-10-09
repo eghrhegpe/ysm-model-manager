@@ -1641,6 +1641,10 @@ export const autoSidebar = [
         "link": "/adr/decisions/ADR-256-d1-gate-debt-expiry"
       },
       {
+        "text": "ADR-235-d1：sky cap 资产管线下沉（太阳位置计算 + 天空资产）——cap 变薄编排壳",
+        "link": "/adr/decisions/ADR-235-d1-sky-cap-cap"
+      },
+      {
         "text": "ADR-151-d1：gen-stage 未知新建文件默认排除（并发卷带硬化）",
         "link": "/adr/decisions/ADR-151-d1-gen-stage-unknown-newfile"
       },

@@ -40,6 +40,7 @@ auto_fields:
     - overlaySpecKey
     - paramIsEffective
     - surfaceSpecKey
+    - surfaceTextureToken
     - textureRepeat
     - TILE_WORLD_SIZE
 use_when:

@@ -45,6 +45,7 @@ auto_fields:
     - overlaySpecKey
     - paramIsEffective
     - surfaceSpecKey
+    - surfaceTextureToken
     - textureRepeat
     - TILE_WORLD_SIZE
 quick_groups:

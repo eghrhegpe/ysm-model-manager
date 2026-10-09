@@ -13,12 +13,12 @@
 
 | 条目 | 状态 | 说明 / 现源码锚点 |
 |---|---|---|
-| P1-0 water 恢复来源纪律漏网 | ✅ 已修 | `water-persist.ts\|restoreWaterSchemaKeys` + `RESTORE_SOURCE`/`writeOpts`（ground 范式）；12 setter 接 `WriteOpts`；water.loadState 批量/委托/迁移三站点全传 RESTORE_SOURCE。回归锁 = `water-capability.test.ts`「恢复路径来源纪律（锐评 P1-0）」4 例 + `water-persist.test.ts` 4 例；**变异实证**：批量路径 source 回 manual → 4 例转红（含 P1-4 既有迁移例连带转红——迁移站点的来源纪律被既有测试偶然锁死，判别力超预期） |
+| P1-0 water 恢复来源纪律漏网 | ✅ 已修（[2026-10-09 复评]残留一个网眼，见 §五 N-2） | `water-persist.ts\|restoreWaterSchemaKeys` + `RESTORE_SOURCE`/`writeOpts`（ground 范式）；12 setter 接 `WriteOpts`；water.loadState 批量/委托/迁移三站点全传 RESTORE_SOURCE。回归锁 = `water-capability.test.ts`「恢复路径来源纪律（锐评 P1-0）」4 例 + `water-persist.test.ts` 4 例；**变异实证**：批量路径 source 回 manual → 4 例转红（含 P1-4 既有迁移例连带转红——迁移站点的来源纪律被既有测试偶然锁死，判别力超预期） |
 | P3-1 restoreBySchema 共享工具暗特化 | ✅ 已修（与 P1-0 同刀） | 下沉 `water-persist.ts`（先例 = light-persist.ts 数据面下沉）；`scene-capability.ts` 回归「接口 + localStorage IO」本分；`persist-utils.ts` 头注同步 |
 | P1-1 截图 IBL 贴图不镜像（未声明 WYSIWYG 缝） | ✅ 已声明 + 锁边界 | 声明 = 本文件「IBL 反射不参与截图」已知差异条 + `screenshot-render.ts` 离屏 Scene 构造处注释（互为镜像）；双向锁 = `screenshot-render.test.ts`「IBL 边界」两例（行为侧离屏 Scene 无 environment 写入 + 声明侧 export.md 条目在场）。「IBL 进截图」= 产品需求，立项须离屏 PMREM 重建 + 另立 ADR，届时翻转双向锁 |
 | P2-1 tone 释放路径非对称 | 📝 记录，非待修 | `sky-capability.ts\|releaseTone` 盲还原 prev（静态引用计数只护 sky 自贡献）vs `postprocessing-capability.ts\|restoreOutputSettings` 逐字段归属判定——纪律单边。今日 pp 受 skyOwns 门控（`postprocessing-capability.ts\|587`）无第三写者、无现症；修法（releaseTone 复用 pp 逐字段判据）排期 |
-| P2-2 新 cap 存档契约锁缺跨 cap 机器闸 | 📝 记录，非待修 | P1-5 键轨锁仅 env/water/ground；sky/reflector 双轨键形无锁；新 cap 可无锁出厂 =「自动持久化、静默不还原」零报错洞。拟 `caps/persist-roundtrip-contract.test.ts` meta 闸（枚举 registry cap id × round-trip case 存在性，基线只减不增）挂 commit-with-check/CI vitest 步（**勿挂 pre-push 轻量档**） |
-| P2-3 会话字段 dispose 复位缺跨 cap 机器闸 | 📝 记录，非待修 | 不变量（卡「会话级字段必须在 dispose() 复位」）5 持有者全闭，靠人工 grep；`createAll` 三引用全等复用短路不 dispose ⇒ 新 cap 漏复位 = 模型默认永久失效且零报错。拟 `cap-dispose-reset-contract.test.ts` 同 P2-2 体例 |
+| P2-2 新 cap 存档契约锁缺跨 cap 机器闸 | 📝 记录，非待修 | P1-5 键轨锁仅 env/water/ground（[2026-10-09 复评]pp 亦有键形恒等锁 postprocessing-capability.test.ts:344，基线漏计；「双轨键形无锁」真义 = 缺键集恒等闸而非零往返例，见 §五 N-3）；sky/reflector 双轨键形无锁；新 cap 可无锁出厂 =「自动持久化、静默不还原」零报错洞。拟 `caps/persist-roundtrip-contract.test.ts` meta 闸（枚举 registry cap id × round-trip case 存在性，基线只减不增）挂 commit-with-check/CI vitest 步（**勿挂 pre-push 轻量档**） |
+| P2-3 会话字段 dispose 复位缺跨 cap 机器闸 | 📝 记录，非待修 | 不变量（卡「会话级字段必须在 dispose() 复位」）[2026-10-09 复评]「5 持有者全闭」自始失真——实测 2/5（仅 env:580 / pp:948 复位；fog/reflector/shadow 自诞生即无复位行，git 考古 -S 含 rename 前 blob 零命中），见 §五 N-1；原复位面靠人工 grep；`createAll` 三引用全等复用短路不 dispose ⇒ 新 cap 漏复位 = 模型默认永久失效且零报错。拟 `cap-dispose-reset-contract.test.ts` 同 P2-2 体例 |
 | P2-6 归还判定 sky 停用期错归 | ⚠️ 活挂账 | 需 sky 停用 + 残留写入真实时序，`audit-postprocessing-critique.md` L28 原样保留 |
 | ground 僵尸私有门 | 📝 惰性挂账 | `ground-capability.ts\|this.enabled`（默认 true、registry 不传）参与 6 处合取但零 UI 写口——无可见缺陷，「暂不动」；若 `groundVisible` 默认翻转须同步收口 |
 | P3-2 StatePath 双模块同名符号陷阱 | 📝 记录 | 生产消费 `preview-state.ts` 版 `getStateValue/setStateValue`（settings/perf-presets），`env-state.ts` 版死导出仅测试消费——误 import 静默换通道；拟删 env-state 版或头注标 test-only |
@@ -71,3 +71,41 @@ ADR-292 批次 `19d42b235→10f0db9f9→b71aa0979→ce0ec8090→e84c04b36`；
 `8609680f6`/`5377c34ec`（常量双源→单源）；`88926c810`（F-1 四度）+ `adf6311c4`（上帝文件拆轴）+ `76406dc80`（中间件 unregister/挂起事务化）；
 `56300e506`（X-3）→ `daed7ed0d`（P0）→ `44b9bd4d7`（D10 纯函数）→ `b0c5f4268`（P1-4）→ `e71cfc013`（陷阱名改名）。
 时间线：09-07 单日 13+ 提交成型 ADR-196、09-22 单日 5 提交 F-1 四 cap、10-04 单日 10+ 提交——治理带宽充足，瓶颈在判据盲区而非速度。
+
+## 五、复评（2026-10-09，三子代理串行 + 主模型直读仲裁）
+
+> 锚定 HEAD `ca6160d82`；行号为当次实测（并行会话持续落盘，复评期间 HEAD 三漂——个别锚以现源码为准）。
+> 方法照旧：① 现状耦合面复核 → ② git 考古三账 → ③ 文档对账 + 测试盲区，主模型逐条直读源码仲裁；子代理共 4 条判定被直读推翻或细化（见「勘误的勘误」）。
+
+**总判不变**：本轮零新回归、零新恶意耦合；复评价值集中在**基线文档自身失真订正（×3）**与**元闸零落地的一再确认**——「治得狠、扫不全」判词依然成立，且本轮扫漏的不是代码，是锐评自己。
+
+### 复评三账
+
+**账一（无回归）**：基线以来 env 域 9 提交全部朝单一事实源收敛——de3ce7cf7（ADR-326 env-persist 派生键）、aadb393bd/33b148559（env-ibl/env-hdr-cache 拆分）、e875b4e8c/baaa6c614（sky-sun/sky-asset）、2a4c4ffb8（ground-visible 下沉，消手抄双源）、a3371cf81（water resolveWaterRestoreState）；`isIblActive` 判据消费者扩到四域（预览/截图/菜单/持久化）但全部走出口、零旁路内联（主模型亲验）。vitest caps+state 53 文件 / 1420 例全绿（③执行时点）。
+
+**账二（基线侧失真 ×3，处置表已原位标注）**：
+
+- **N-1｜P2-3「5 持有者全闭」自始失真（P2·新案）**：`isStateLoaded` 会话守卫复位实际 2/5——`environment-capability.ts:580`、`postprocessing-capability.ts:948` dispose 复位；`fog-capability.ts:311`、`reflector-capability.ts:327`、`shadow-capability.ts:409` dispose 无复位行。git 考古（`-S "isStateLoaded = false"` 含 rename 前 blob 逐 blob 检索）证明三 cap **自诞生即无此行**（出生提交：shadow 5c4cb1bf3 08-31、reflector 1172eb2b0 09-06、fog 13c0a13df 09-22）——基线断言写就即失真，非治愈后复发。病症与 env 已修案同型：createAll 三引用全等复用短路（scene-capability-registry:58-61，不 dispose、不重跑 loadState）+ applyModelPreset「有存档即让位」守卫 ⇒ fog/reflection/shadow 模型默认静默永久失效、零报错。env/pp 已修且锁行为（environment-capability.test.ts:874-881），三姊妹 cap 缺同一行、缺同一锁。定级 P2：触发需 dispose 后复用的特定时序，但不变量卡明文「会话级字段必须在 dispose() 复位」——违令即病，与可见性无关。
+- **N-2｜P1-0「三站点全传」漏计第四站点（P2·残留）**：legacy `size` 键的 restoreFields 委托（water-capability.ts:557）走 `setWaterSize`（:449-451）——12 setter 中**唯一未接 `WriteOpts`** 者，体内硬编码 `{source:"manual"}`（对照紧邻 `setClarity(v, opts?)` :456 的正确形态；:550-556 注释自陈「交回唯一写入口」的设计意图，形参却把通道丢了）。触发 = 旧档含 `size` 键且预设表持 waterSize 键 ⇒ 命中即 stamp manual 永久冻结，auto-model 静默拒写——L-1 同型病，legacy 存档面。既有「恢复路径来源纪律（锐评 P1-0）」4 例全用规范键，此站点零判别样本。
+- **N-3｜P2-2「双轨键形无锁」口径细化**：直读推翻「零往返例」的关键词扫描断言——sky（test:256 七字段）、fog（test:154）、reflector（test:145 六键）、shadow（test:655）皆有「saveState / loadState 完整周期」行为往返例（用例名不含「往返/roundtrip」，两路关键词 grep 双双漏计）。真实缺口 = **派生键集=存档键集恒等锁**仅 env/water/ground/pp 四家持有；手写枚举已实证漂移——fog 完整周期例缺 `fogColor` 键（saveState:251 写、restoreFields:299 读、测试不验）：「手写清单会漏键」从理论风险升级为活证据。元闸立论随之精准：不是「补零」，是「防漏」。
+
+**账三（无进展账，防误记已闭）**：P2-1 tone 不对称 9e742a6da..HEAD 净差零，仍活；P2-2/P2-3 两 meta 闸全仓零实施零排期（git log --all 无 persist-roundtrip-contract / cap-dispose-reset-contract 命中）——⚠️ 35b5b168a「第0刀」是叶层行为直测（ADR-311-d1），**不是**这两个元闸，勿记成已闭；P2-6 活挂账照旧。
+
+### 勘误的勘误（主模型直读推翻子代理 ×4）
+
+1. ①「reflector 域内零往返例」+ ③「真空锁的只有 reflector、fog」——皆关键词漏扫假阴（fog:154 / reflector:145 / shadow:655 例在场），细化为 N-3。
+2. ③「shadow 往返未验」——亲验 shadow:655 完整周期例在场，①③ 唯一互斥悬案闭合。
+3. ③ B4「pickHdrFile focus 监听泄漏」——不立案：:104 `{once:true}` + cleanup :88 removeEventListener，双保险。
+4. ①「A3 新变体（回归嫌疑）」——按 ② 考古修正为「自始失真」（N-1），非治愈后复发；病型判法随之不同（前者问罪排期，后者问罪审计自身的取证纪律）。
+
+### 待拍板动作（本复评不动代码，只立案）
+
+- **刀一（N-1）**：fog/reflector/shadow 三处 dispose 各补一行 `this.isStateLoaded = false;` + 三条行为例（模板 = environment-capability.test.ts:874-881）。三行三例，先例即隔壁文件。
+- **刀二（N-2）**：`setWaterSize` 接 `WriteOpts`（照 setClarity 形态）+ :557 传 RESTORE_SOURCE + 判别例（legacy size 命中后 auto-model 仍可写）。
+- **刀三（账三）**：两个 meta 闸二选一——落地（枚举 registry cap id × 契约存在性，基线只减不增；fogColor 漏键即首批活靶）或显式书面豁免；维持「拟议中」漂浮是第三种成本。
+- **顺手**：fog 完整周期例补 `fogColor` 一行断言（刀三的前菜）。
+
+### 方法论补录（并入 §三台账）
+
+5. **关键词 grep 扫测试覆盖 = 「扫不全」的新变体**：「零例」断言必须以 enumerate describe/it 名单做排除法而非加法法——本轮两子代理各扫「往返/roundtrip」即集体漏掉「完整周期」三例；fogColor 教训同构：手写清单是病，关键词是它的工具层投影。
+6. **锐评文档的全称量词断言也要考古复核**：「全闭」「三站点全传」类口径写就当天就该逐条给锚——本轮 P2-3 失真自始存活，从未被任何门禁问过。

@@ -485,6 +485,7 @@ auto_fields:
     - LightSlot
     - lightSlotLabelKey
     - LightType
+    - lightTypeOf
     - LipSyncCallback
     - LipSyncOptions
     - ListAllFilePaths
@@ -920,6 +921,7 @@ auto_fields:
     - SurfacePixelGenerator
     - SurfacePixelInput
     - surfaceSpecKey
+    - surfaceTextureToken
     - suspendEnvCallbacks
     - SwitchContext
     - switchNormPath

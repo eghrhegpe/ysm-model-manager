@@ -170,7 +170,7 @@ per-frame 代码中频繁 `new` 对象（如 `Vector3`）会产生 GC 压力，�
 4. **perFrame 快照迭代**（`RendererHost` 实例私有字段 `_perFrames`）：遍历渲染回调注册表时用快照副本，回调内 `registerPerFrame` / `removePerFrame` 增删注册表不影响本次帧迭代（增删下一帧生效），防回调内删除导致 for-of 跳元素或漏执行。
 
 ### 示例
-- `adapters/render-host.ts`（`RendererHost` 实例字段）：`private readonly _camDir = new THREE.Vector3(); private readonly _forward = ...`
+- `infra/render-host.ts`（`RendererHost` 实例字段）：`private readonly _camDir = new THREE.Vector3(); private readonly _forward = ...`
 - 渲染循环内：`camera.getWorldDirection(this._camDir)` 替代 `new Vector3()`
 - `applyWasdCameraMotion(keys, cam, ctr, session.camSpeed, dt, ..., { camDir: this._camDir, forward: this._forward, ... })`
 - 模块级缓存：`const UpVec = new THREE.Vector3(0, 1, 0)`

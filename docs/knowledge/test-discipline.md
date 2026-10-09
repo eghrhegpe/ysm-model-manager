@@ -45,6 +45,7 @@ auto_fields:
     - groundSurfaceVisibleFor
     - lightDirToPosition
     - lightHelperVisibleFor
+    - lightTypeOf
     - normalizeFogRange
     - normalizeShadowMapSize
     - ShadowCapability

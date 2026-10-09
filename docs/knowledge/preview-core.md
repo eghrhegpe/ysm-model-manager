@@ -102,6 +102,9 @@ pitfalls:
   - 「vrm.humanoid.update()」手动调用导致 T-pose 回归 → 只用 vrm.update(dt)
   - 「`shared-infra.ts|installUnloadTeardown` 的 `beforeunload` 钩子在 Wails v3 桌面端永不触发」——已实测坐实（2026-10-08，锐评 `docs/audit-host-env-coupling-review.md` §三）：Wails v3.0.0-beta.26 全仓**零处 `beforeunload` 引用**，`WM_CLOSE` 链路仅 `ShuttingDown()`（只置 Go 标志位）→ `DefWindowProc` 销毁 HWND，**Go→JS 无派发通路**。故 `teardownSharedInfra` 的真实调用者只有测试。**桌面单窗口形态无实际危害**（进程退出由 OS 回收），**但该段代码服务的是 web 形态**（ADR-049 / `npm run dev:web`，此时 `beforeunload` 真实触发）⇒ **跨形态行为分叉**，勿当「桌面端的进程退出兜底」误信。配套：`shared-infra.test.ts`「beforeunload 钩子」一例是**自证式假绿**（手动 `dispatchEvent` 自造事件，恒绿），订正它需真信号或改断言口径
   - 「宿主框架会不会做X」类结论**必须读上游源码**（`go/pkg/mod/github.com/wailsapp/wails/v3@v3.0.0-beta.26/`），静态扫本仓只能得到「未验证的假设」——**自家没有调用方 ≠ 宿主不会调**。同族正面先例：three r186 释放行为取证（`water.md`）
+  - 「`capability` 类读宿主全局（`window`/`document`）= **正当用法，非宿主边界债务**」——`environment-capability.ts` 的 `document.createElement("input")` + `window.addEventListener("focus")`、`postprocessing-capability.ts` 的 `window.devicePixelRatio` 都是**能力探测**（caps 层本职：测宿主能力，happy-dom 下已可测）；`env-ibl.ts` / `env-pixels.ts` / `ground-capability.ts` 的 `createElement("canvas"/"input")` 是**临时离屏缓冲**。**勿为这些落 `check-dom-boundary` 式闸**——会把正当用法打成假债（2026-10-09 锐评 G3 评估结论：不落 G3 闸，理由见 `audit-host-env-coupling-review.md` §七 #3）
+  - 「`render-host.ts|rendererHost` 模块级单例**不拆**」——它是 **WebGL context 数量硬约束的正确映射**（renderer 必须唯一），不是「图省事用全局态」；并发安全已由 `RendererHost` **实例内部字段**（activeInputSession / perFrame Map）保证，单例身份只是组合根便利。无「多 host」真实需求（WebGL 唯一约束），拆了反而要解释「为何只传同一实例」。**评估结论（2026-10-09 锐评 §七 #4）：维持现状，降级为「已评估」而非待拍板**
+  - 「真 GL 资源释放**不靠轻量单元探针**」——`renderer.info` 在 happy-dom 下不可观测，单元层钉不住 WebGL context 真释放；真证据在 `frontend/e2e-web/postprocessing.spec.ts`（swiftshader 真实 WebGL2 + `renderer.dispose()` + `readPixels`）。但 e2e 属**重档**，pre-push 轻量档默认跳过 ⇒ **勿把它们当「门禁绿」**（那是假绿）。评估结论（2026-10-09 锐评 §七 #7）：维持 e2e 为手动/重档、显式不在轻档覆盖内，不新增常驻门禁
 ---
 
 # 统一 3D 预览核心 preview-core

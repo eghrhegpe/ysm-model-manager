@@ -293,10 +293,10 @@ PNG 纹理 → ①查 Go 缓存目录（GetCachedTexture）→ 命中即用，�
 |---|---|---|---|
 | 1 | **KTX2 worker 池常驻**（P1-0）——已重判为**漏网**（同文件 `cancelPendingEncodings` 已接线，池生死无人管，零取舍论证） | **推荐 B**：`disposeKtx2WorkerPool()` 挂 `cleanupPreview`（惰性重建已具备） | A 方案已失效（依赖死代码）；B 的代价「几百毫秒建池」被MMD 场景本身淹没。⚠️ 若要多会话保留池，须改挂 `teardown()` full档 |
 | 2 | **P1-1 死代码处置**（已确认桌面端不触发） | ① 文档化「桌面进程退出即回收，`teardown` 仅服务 web 形态与测试」+ 写知识卡；② 经 Wails `OnShutdown`（`application.go:903`，Go 侧已证存在）下发真信号驱动 teardown | ① 成本最低、消除误读；② 彻底但**为进程退出回收做钩子属过度工程**。**建议 ①**；无论选哪个，测试的自证式假绿须一并订正 |
-| 3 | G3 宿主全局边界口径（P1-2 六处现状） | ① 迁 DI；② 显式豁免 + 写理由入基线 | 闸落地前**必须**先定，否则等于把病合法化 |
-| 4 | `render-host.ts:348` 模块级单例是否拆（P0-d 复发载体） | ① 本轮拆（涉 ADR-227 后续战役）；② 挂账观察 | 不拆则 DPR 类第四次复发仍无结构防线 |
+| 3 | G3 宿主全局边界口径（P1-2 六处现状） | ① 迁 DI；② 显式豁免 + 写理由入基线 | 闸落地前**必须**先定，否则等于把病合法化 | ✅ **已评估·维持现状（2026-10-09）**：当前树的 6 处 DOM 直读里，3 处（env-ibl / env-pixels / ground-capability 的 `createElement("canvas"/"input")`）是**临时离屏缓冲**（正当用法，非隐式全局态），2 处（environment-capability 的 focus/window、postprocessing-capability 的 `devicePixelRatio`）是 **capability 探测读宿主能力**（caps 层本职，happy-dom 下已可测），仅 1 处是注释提及。**落闸会把正当用法打成假债**；正确动作 = 不落 G3 闸，把「capability 探测读宿主全局 = 正当用法」写进知识卡（见 preview-core.md pitfalls）。若未来真出现「非探测的隐式全局依赖」，再窄口径落闸只管那一类 |
+| 4 | `render-host.ts:348` 模块级单例是否拆（P0-d 复发载体） | ① 本轮拆（涉 ADR-227 后续战役）；② 挂账观察 | 不拆则 DPR 类第四次复发仍无结构防线 | ✅ **已评估·维持现状（2026-10-09）**：单例是 **WebGL context 数量硬约束的正确映射**（renderer 必须唯一），不是「图省事用全局态」；并发安全已由 `RendererHost` **实例内部字段**（activeInputSession / perFrame Map）保证，单例身份只是组合根便利。无「多 host」真实需求（WebGL 唯一约束），拆了反而要解释「为何只传同一实例」。降级为「已评估·维持现状」，改为知识卡记录理由 |
 | 5 | G1/G2/G4 三闸是否本轮落地 | — | G1 零新脚本、G4 复用夹具，**成本最低、收益最直接** | ✅ **已落地**（`764e013e6`）：G1 8 例 / G4 5 例 / G2 闸 + 19 例契约 |
-| 6 | **🆕 是否把「宿主假设须读上游源码」写成卡级纪律** | ① 写进 `docs/knowledge/pitfalls` 或宿主域知识卡；② 仅留本报告 | 建议 ①——P1-1 与上一轮 three r186 取证是同一类教训，**两次都是读上游才定性**；本轮已写入 `preview-core.md` pitfalls |
-| 7 | **🆕 G5 是否启动**（重档：swiftshader e2e + `renderer.info.memory` 3 轮循环） | ① 启动；② 挂账 | ⚠️ 若启动须**显式登记「CI 轻档会跳过」**，否则「CI 全绿」是假绿（G5 假绿风险 ②） |
+| 7 | **🆕 G5 是否启动**（重档：swiftshader e2e + `renderer.info.memory` 3 轮循环） | ① 启动；② 挂账 | ⚠️ 若启动须**显式登记「CI 轻档会跳过」**，否则「CI 全绿」是假绿（G5 假绿风险 ②） | ✅ **已评估·维持现状（2026-10-09）**：`frontend/e2e-web/` 已有真 WebGL spec（`postprocessing.spec.ts` 用 swiftshader `renderer.dispose()` + `readPixels`），但 pre-push 轻量档默认跳过重档 ⇒ 若把它们当「门禁绿」是假绿。正确动作 = **维持 e2e 为手动/重档、显式不在轻档覆盖内**（现状已如此），**不新增轻量单元探针**（`renderer.info` 在 happy-dom 下不可观测，是死路）。G5 的价值（真 GL 释放）由现有 e2e 在本地/CI 重档提供，无需常驻门禁化 |
+| 6 | **🆕 是否把「宿主假设须读上游源码」写成卡级纪律** | ① 写进 `docs/knowledge/pitfalls` 或宿主域知识卡；② 仅留本报告 | ✅ **已落地**：本轮写入 `preview-core.md` pitfalls（「宿主框架会不会做X」类结论必须读上游源码） |
+| 7 | **🆕 G5 是否启动**（重档：swiftshader e2e + `renderer.info.memory` 3 轮循环） | ① 启动；② 挂账 | ✅ **已评估·维持现状（2026-10-09）**：见上 #7 行结论 |
 | 8 | **🆕 闸的「零命中」处置口径**（G2 上线即零债） | ① 闸保留为防新增；② 认为无债可撤 | 建议 ①——G2 的价值在**防将来新增**，闸≠修复；撤掉等于把刚立的法变回口头法 |
-| 6 | **🆕 是否把「宿主假设须读上游源码」写成卡级纪律** | ① 写进 `docs/knowledge/pitfalls` 或宿主域知识卡；② 仅留本报告 | 建议 ①——P1-1 与上一轮 three r186 取证是同一类教训，**两次都是读上游才定性** |

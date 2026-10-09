@@ -158,8 +158,8 @@ status: active
 
 | 错误源 | 行为 | 用户可见 |
 |--------|------|---------|
-| tag 查询失败 | 取消该路，其余两路继续 | 无 |
-| `SearchModels` 抛错 | 清空过滤（防假绿） | 无 |
+| tag 查询失败 | 取消该路，其余两路继续 | toast `toolbar-search.ts\|advFilterFetchTagPaths`（`tree.tagQueryFail`，verbose 级） |
+| `SearchModels` 抛错 | 清空过滤（防假绿） | toast `toolbar-search.ts\|advFilterSearchModelPaths`（`tree.advFilterFail`，long 级） |
 | Worker 系统级降级（不可用 / WASM init 重试耗尽 / 取消，ADR-219 D3） | toast + ⚠️ 角标 3s | 是 |
 | 单模型挂死（ccall 挂起，ADR-219 细粒度） | 该模型 `hasError` 排除，其余模型真统计，整批正常返回 | 无（模型静默被数值条件排除） |
 

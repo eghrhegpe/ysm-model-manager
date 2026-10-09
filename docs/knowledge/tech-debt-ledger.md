@@ -25,7 +25,7 @@ quick_risk_lines:
 
 > 快照卡：`status: snapshot` + `affected: false`，不进日常 AI 路由、不干扰 `use_when` 命中。
 > 本卡是 2026-10-08 **第一轮**（4 子代理）+ **第二轮**（3 子代理）的结构化结论 + 主模型对探查报告的**查证修正**。
-> 第二轮完整报告：`docs/tech-debt-audit-2026-10-08.md`（含 9 项误判纠正与全部命令原始输出）。前一轮审计：`docs/tech-debt-audit-2026-10-06.md`。
+> 三轮报告（时点快照，2026-10-09 归档 `docs/archive/`，文首有活指针头）：`docs/archive/tech-debt-audit-2026-10-06.md`（第一轮）· `docs/archive/tech-debt-audit-2026-10-08.md`（第二轮，含 9 项误判纠正与全部命令原始输出）· `docs/archive/tech-debt-audit-2026-10-08-round3.md`（第三轮）。账实以本卡为准。
 > 后续还债进展请更新本卡或迁 `docs/archive/`。
 
 ## 探查方法
@@ -71,7 +71,7 @@ quick_risk_lines:
 
 ## 第二轮新增（2026-10-08，3 子代理：前端运行时 / Go 后端 / 测试契约治理）
 
-详见 `docs/tech-debt-audit-2026-10-08.md`。代码债（Go 侧 + 复杂度 RED）已清偿，**新债全在治理与文档一侧**。
+详见 `docs/archive/tech-debt-audit-2026-10-08.md`（2026-10-09 归档，文首活指针头）。代码债（Go 侧 + 复杂度 RED）已清偿，**新债全在治理与文档一侧**。
 
 ### 🔴 高
 - **P1-a · 覆盖率门禁与代码脱钩**：`scripts/_lib/gate-config.ts:237` 注释称「依赖 `.coverage/go-cover.out`（push 前 gate 已生成）」——**实测全链路无人生成**。`.githooks/pre-push` grep `coverage` = 0；`gate-blocks/go-domain.ts` 跑 `go test` 不带 `-coverprofile`；`gate-blocks/static-tools.ts` 只跑 `node scripts/<tool> --json`；唯一写文件的 CI 步 `test.yml:361` 是 `main`-only + `continue-on-error`（非门禁），且 `.gitignore:132` 让产物无法交回本地。知识卡 `go-coverage-gate.md:94` 早已记录「**无代码自动生成（脚本只读不写）**」——**与 `gate-config.ts:237` 直接矛盾**。另：脚本 `check-go-coverage-threshold.ts:174` 用 `readFileSync` 裸读、产物缺失**抛未捕获 ENOENT crash**（exit 1），`blockPolicy: debt` 使其不阻断 → 既不能守门又持续制造噪声。**✅ 已修（2026-10-08 晚间）**：① 产物缺失 → 明确 WARN（含生成命令）+ exit 1，不再抛裸 ENOENT stack；② 新增 `stalenessWarning` 新鲜度断言——产物 mtime 早于 `git log -1 --format=%ct` 即打印醒目「比最新 commit 旧约 N 小时/天」警告（仍正常判定，debt 级不阻断）；③ `gate-config.ts` 注释与 `go-coverage-gate.md` 对齐，声明「只读不写、需先喂料」。契约测试 `test_check_go_coverage_threshold.ts` 钉死缺失降级路径。注：自动化生成产物仍未接（需接 pre-push 或 CI 写 `-coverprofile`），当前为「读前显式校验陈旧」的半根治——下次若谁接了自动生成，新鲜度断言会自动放行。

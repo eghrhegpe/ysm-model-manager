@@ -273,18 +273,6 @@ export const autoSidebar = [
       {
         "text": "3D 预览菜单系统全景图",
         "link": "/preview-menu-overview"
-      },
-      {
-        "text": "YSM 模型管理器 — 技术债探索报告（2026-10-06）",
-        "link": "/tech-debt-audit-2026-10-06"
-      },
-      {
-        "text": "YSM 模型管理器 技术债审计 · 第三轮（2026-10-08 复测）",
-        "link": "/tech-debt-audit-2026-10-08-round3"
-      },
-      {
-        "text": "YSM 模型管理器 技术债审计 · 第二轮（2026-10-08）",
-        "link": "/tech-debt-audit-2026-10-08"
       }
     ]
   },

@@ -115,6 +115,11 @@ const EXPECTED_POLICY: Record<string, BlockPolicy> = {
   // 三者都是「代码质量建议」类 → debt（FAIL 只记不阻断，存量债不误伤推送）。
   "check-comment-history.ts": "debt",
   "check-twin-siblings.ts": "debt",
+  // check-cap-enabled-duality（2026-10-09 锐评 P1）：cap 私有 enabled 与 schema 对齐守卫。
+  // 确定性规则（正则 + 键比对）本可 hard，但当前 ground-capability 为唯一已知僵尸私有门
+  // （知识卡已声明「暂不动」）——hard 会让每次全量 doctor 恒红。记 debt：报告违规不阻断，
+  // 待 ground 收口后 debt 归零可升 hard（见 gate-config 注释）。
+  "check-cap-enabled-duality.ts": "debt",
 
   // —— failClosed（仅 rg 等环境依赖工具；生成物漂移类恢复 hard——
   //    迁移时误降 failClosed 会让过期生成物静默过闸，code_review 03a6005ed 撤销）——

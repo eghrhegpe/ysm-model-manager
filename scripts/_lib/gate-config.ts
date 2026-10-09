@@ -166,6 +166,11 @@ export const ALL_STATIC_TOOLS: GateTool[] = [
   // coverage-final.json 与 diff 基线 ref——本地无覆盖率产物会 rc=2 恒红（假阻断，正是
   // 门禁对账要消灭的假闸）；正确归宿是 CI 的 vitest --coverage 之后且 checkout 须有基线 ref。
   // 待 CI 接线专项处理，勿盲目加进本地闸（参见 docs/knowledge/gate-chain-map.md 处置记录）。
+  // check-cap-enabled-duality：cap 私有 enabled 字段是否与 schema 对齐（锐评 2026-10-09 P1）。
+  // 确定性规则：正则扫描 + schema 键比对，零存量债。实测全仓 <100ms。
+  // 当前 ground-capability 为唯一已知僵尸私有门（知识卡已声明为「暂不动」），
+  // 若有新 cap 新增私有 enabled 但不补 schema 对应键，此闸报告债务。
+  { tool: "check-cap-enabled-duality.ts", blockPolicy: "debt", debt: debt("ground-capability 僵尸私有门（已声明暂不动）；若有新 cap 补对应 schema 键后 debt 归零可升 hard") },
 ];
 
 /**

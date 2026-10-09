@@ -97,14 +97,14 @@ last_verified: 2026-10-06
 
 ## 当前残留问题（2026-10-06 复核后实况）
 
-1. **mount3D 本体仍超 100 行红线**（约 1.3 倍）：薄壳装配器——但最重生命周期已外置（mount-session.ts），非巨函数状态
+1. **mount3D 本体约百行（定性为合法装配器厚度，2026-10-09 锐评改口径）**：薄壳装配器——最重生命周期已外置（mount-session.ts），非巨函数状态。历史口径「仍超 100 行红线」对不可变事实反复批评、不产生行为变化，已改判为**装配器职责下的合法厚度**，不再计入红线违规；判据见下方「建议动作」。
 2. **内嵌闭包仅剩 `escH`**：`escH` 可变引用（与 `switchTo` 旧 handler 替换语义耦合）仍内嵌；`animate`/perFrame 调度由 `render-loop.ts` 持有
 3. **`animate` 调度已外置**：rAF loop + 自适应像素比 + perFrame 迭代 + 视锥裁剪 + 后处理由 `render-host.ts` 的 `RendererHost` 承载（`render-loop.ts` 现为薄门面，ADR-227）
 4. ~~**`fullCleanup` 内嵌**~~：已外置为 `mount-session.ts` 的 `runFullCleanup(ctx)`（MountCtx 上下文模式，10 步清理链语义保留）
 
 ## 建议动作
 
-- **再拆 vs 维持**：维持（闭包接线器无 stage 缝，ctx 化 ROI 低）；继续往里加新逻辑需评审
+- **再拆 vs 维持**：维持（闭包接线器无 stage 缝，ctx 化 ROI 低）；继续往里加新逻辑需评审。**红线口径（2026-10-09 锐评改判）**：装配-接线-生命周期三职责的编排器天然需要 ~100 行，这不是「函数能写 100 行」的健康证明，而是「装配器红线应放宽到 150 行」——二选一应改红线而非每年复查时写一句「仍然超红线」。本卡从「违规」改判为「合法装配器厚度」。若未来继续膨胀到 >150 行，再拆为装配/生命周期两阶段。
 - **并发守卫**：✅ 已闭环（代际守卫 + 三处 `ctx.myGen !== ctx.getGen()` 守卫）
 - **`animate` 外拆**：✅ 已落地——`render-host.ts` 的 `RendererHost`（`render-loop.ts` 现为薄门面，ADR-227）
 - **`fullCleanup` 外拆**：✅ 已落地为 `mount-session.ts` 的 `runFullCleanup(ctx)`

@@ -1,5 +1,7 @@
 # 后处理系统锐评（2026-10-04）
 
+> **⚠️ 活指针（时点快照，非现行状态，2026-10-09 归档）**：后处理系统一次性锐评（10-04）；P0/P1/P2 项落地现状以 `docs/knowledge/preview-env-state.md` 与源码为准。
+
 > **审计对象**：3D 预览「后处理（postprocessing）」能力簇——`frontend/src/preview-3d/caps/postprocessing-{capability,menu,state}.ts`
 > ＋ `state/env-state-schema.ts` 的 pp 组 ＋ 量具 `postproc-cost-probe.test.ts` ＋ 知识卡 `docs/knowledge/preview-env-state.md`。
 > **方法**：主模型亲自通读源码 + three 0.186.1 上游源码取证（`EffectComposer.js` / `SSRPass.js` / `UnrealBloomPass.js` / `Pass.js`）；

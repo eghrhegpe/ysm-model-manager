@@ -1,5 +1,7 @@
 # 水面系统锐评（2026-10-04）
 
+> **⚠️ 活指针（时点快照，非现行状态，2026-10-09 归档）**：水面系统一次性锐评（10-04）。正文 §/账编号是硬引用锚（ADR-322「九章第⑤条」、`layer-offsets.ts` 注释登记），归档后勿改；项落地现状以 `docs/knowledge/water.md` 与源码为准。
+
 > **审计对象**：3D 预览「水面（water）」能力簇——`frontend/src/preview-3d/caps/water-{capability,params,reflect,body-strategies,menu,state,shader,migrations}.ts`
 > ＋ `state/env-state-schema.ts` 的 water 组 ＋ 量具 `scripts/probe-water-wave.ts` ＋ 知识卡 `docs/knowledge/water.md`。
 > **方法**：主模型亲自通读全部源文件；另派**两路子代理独立只读审计**，主模型对最强断言逐条实地抽查

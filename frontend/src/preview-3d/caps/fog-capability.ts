@@ -38,7 +38,7 @@ const FOG_MIN_DEPTH = 1;
  *  而 three 线性雾的 GLSL 插值 `smoothstep(fogNear, fogFar, d)` 在 `edge0 ≥ edge1` 时进入未定义域。
  *  规则：**far 至少比 near 大 `FOG_MIN_DEPTH`**；near 原样透传。
  *  ⚠️ 这是**消费点**规范化：envState 仍存用户原值（面板显示原值）。「显示值 ≠ 生效值」的出口
- *  （far 滑杆挂 `getHint`）登记在 `docs/audit-water-critique.md` §七 X-2，未接。 */
+ *  （far 滑杆挂 `getHint`）登记在 `docs/archive/audit-water-critique.md` §七 X-2，未接。 */
 export function normalizeFogRange(near: number, far: number): { near: number; far: number } {
   return { near, far: Math.max(far, near + FOG_MIN_DEPTH) };
 }

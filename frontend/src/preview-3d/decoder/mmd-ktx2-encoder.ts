@@ -110,7 +110,7 @@ export function resetEncoderState(): void {
  * 调度侧接了生命周期，池本身的生死无人管；若为有意取舍，仓内应有注释/ADR 论证（实测零论证）。
  *
  * **挂 `cleanupPreview` 而非终局拆除**：终局拆除依赖 `beforeunload`，
- * 而 Wails v3 桌面端确认**不派发**该事件（见 docs/audit-host-env-coupling-review.md §三），
+ * 而 Wails v3 桌面端确认**不派发**该事件（见 docs/archive/audit-host-env-coupling-review.md §三），
  * 挂上去等于死代码；`cleanupPreview` 是会话级确定路径。
  *
  * **重建代价可接受**：`getKtx2WorkerPool` 的 `if (ktx2Workers) return` 懒建逻辑天然支持重建，

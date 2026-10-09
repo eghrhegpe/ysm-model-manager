@@ -97,7 +97,7 @@ const ADVISORY_RULES: { glob: (rel: string) => boolean; maxLines: number; label:
     label: "scripts 顶层",
   },
   {
-    // 2026-10-06 补登（技术债审计 tech-debt-audit-2026-10-06.md §4.2）：
+    // 2026-10-06 补登（技术债审计 docs/archive/tech-debt-audit-2026-10-06.md §4.2）：
     // ADR-034 拆掉 site-view.ts 后，债务迁至 preview-3d/caps/ 与 backend —— 而旧 RULES 只
     // 登记 3 个文件，caps 族 900+ 行完全脱管（sky-capability 1068 已超 mount-preview-core 的
     // 红线值 1045 却无人拦截，属「拆 A 长 B」打地鼠）。此规则把前端生产层纳入软告警，

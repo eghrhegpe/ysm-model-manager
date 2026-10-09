@@ -1,5 +1,7 @@
 # 3D 预览·宿主环境耦合锐评（2026-10-08）
 
+> **⚠️ 活指针（时点快照，非现行状态，2026-10-09 归档）**：宿主环境耦合一次性锐评（10-08）；§三/§七结论已登记 `docs/knowledge/preview-core.md` / `model3d.md` 与代码注释，现状以源码为准。
+
 > **审计对象**：`frontend/src/preview-3d/infra/`（渲染宿主 `render-host.ts`、Worker 桥 `worker-bridge.ts`、外壳/注册表/释放原语）
 > ＋ `adapters/`（`shared-infra.ts` / `mount-session.ts` / `mount-preview-core.ts` / `switch-preview.ts`）
 > ＋ `decoder/mmd-ktx2-encoder.ts` 的 Worker 池 —— 与**宿主运行环境**（canvas / WebGL context / DOM 测量 / rAF / Worker / WASM / 挂载卸载）的耦合面。

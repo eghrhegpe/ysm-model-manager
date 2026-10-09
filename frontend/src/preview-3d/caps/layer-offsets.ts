@@ -11,7 +11,7 @@
  * `envState.waterLevel` 驱动（schema 默认 0.15；ADR-319 D1 从 0.01 抬升——水位同时是波高预算的
  * 下钳上限，0.01 会把浪高钳死成平面），是唯一事实源，不再是本分层的常量成员。
  * ⚠️ 与本层 `groundSurface`（0.005）的跨层耦合：`waterLevel` 低于它时水膜被承接面吞掉——
- * 逐字段 schema `range` 管不到这条，登记见 `docs/audit-water-critique.md` P2-1④。
+ * 逐字段 schema `range` 管不到这条，登记见 `docs/archive/audit-water-critique.md` P2-1④。
  */
 export const GROUND_LAYER_OFFSETS = {
   /** ground 承接面（SurfaceMesh）相对 y=0 的微抬 */

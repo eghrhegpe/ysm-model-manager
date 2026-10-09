@@ -34,7 +34,7 @@ toast / logError / window error → logUiMsg → DiarySink → AddOpLog → op l
 5. **环形上限专挤最值钱证据**：op 环默认 500（`logMaxEntries()`，可经 `LogMaxEntries` 调）、runtime 环 200（`go/logs/runtime.go` `DefaultRuntimeCap`）、debug 环 200（`frontend/src/utils/debug/debug.ts` `RING_MAX`）三者**都丢最旧**。崩溃循环时最有诊断价值的「第一次出错」最早被挤掉；且日记以 `op="ui"` 与 import op 挤同一个 500 环，元失败风暴会挤掉真正的 import 诊断证据。
 6. **诊断页自证循环**：`frontend/src/views/app-content/diagnostics/logs.ts:329/349` 的「加载操作日志失败」「加载运行时日志失败」都走 `logError`，而 `logError` 即经 `setLogSink` → `logUiMsg` → `AddOpLog` 这同一条通道。通道整体不可用时，「日志页打不开」与「写日志失败」互为成因，而失败证据又被第 1/2 条吞掉。此处零注释、零 ADR、零测试。
 
-**病根不是疏忽，是词汇表缺失**：全仓 grep「元失败 / meta-fail / 失败形状」零匹配——该概念从未在本仓 ADR 体系与知识卡出现，因此它在设计评审时根本不是一个待裁决项。讽刺对照：`error-diary.ts:124` 注释「日记写入失败不影响调用方」本身是正确的取舍，但「正确取舍」的**隐式后果**（于是终点永久丢失）从未被写成显式决策；本仓对「REVISION 断言 throw vs 六锚点 warn」这类不对称都专门写注释论证（`docs/audit-water-critique.md` 九章第⑤条），同样严谨没有延伸到 sink 失败。**失败可以是已知的，报告失败的能力却是未知的。**
+**病根不是疏忽，是词汇表缺失**：全仓 grep「元失败 / meta-fail / 失败形状」零匹配——该概念从未在本仓 ADR 体系与知识卡出现，因此它在设计评审时根本不是一个待裁决项。讽刺对照：`error-diary.ts:124` 注释「日记写入失败不影响调用方」本身是正确的取舍，但「正确取舍」的**隐式后果**（于是终点永久丢失）从未被写成显式决策；本仓对「REVISION 断言 throw vs 六锚点 warn」这类不对称都专门写注释论证（`docs/archive/audit-water-critique.md` 九章第⑤条），同样严谨没有延伸到 sink 失败。**失败可以是已知的，报告失败的能力却是未知的。**
 
 ## 2. 决策（Decision）
 

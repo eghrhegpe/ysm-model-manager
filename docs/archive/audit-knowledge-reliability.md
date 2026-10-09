@@ -1,5 +1,7 @@
 # 知识库闸门可靠性锐评（元层面）
 
+> **⚠️ 活指针（时点快照，非现行状态，2026-10-09 归档）**：知识库闸门可靠性锐评（10-06）；闸门可靠性现状以 doctor / pre-push 实跑结果为准。
+
 - 评审日期：2026-10-06
 - 评审对象：`docs/knowledge/` 195 张卡 + 守护它的检查器（`check-knowledge-drift.ts` / `check-knowledge-content.ts`）
 - 视角：不评"卡写得好不好"（那见 `audit-knowledge-accuracy.md`），只评**闸门本身可不可信**——因为全绿≠无风险

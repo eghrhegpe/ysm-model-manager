@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -318,14 +319,11 @@ func TestRunBenchIterations_InvalidatesCacheEachIter(t *testing.T) {
 	t.Parallel()
 	root := t.TempDir()
 	modelPath := filepath.Join(root, "m.ysm")
-	if err := os.WriteFile(modelPath, []byte("fake-model-bytes"), 0o644); err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, os.WriteFile(modelPath, []byte("fake-model-bytes"), 0o644))
 	app := &benchFakeApp{}
 	res := runBenchIterations(&CmdContext{App: app, FilesRoot: root}, modelPath, 3, "json", int64(len("fake-model-bytes")))
-	if res == nil || res.Iterations != 3 {
-		t.Fatalf("应返回 3 次迭代汇总")
-	}
+	testutil.NotNil(t, res, "应返回 3 次迭代汇总")
+	testutil.Equal(t, res.Iterations, 3, "应返回 3 次迭代汇总")
 	if got := app.clearCalls.Load(); got != 3 {
 		t.Errorf("每迭代应清缓存 1 次，共 3，实际 %d", got)
 	}

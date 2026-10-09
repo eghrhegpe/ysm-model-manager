@@ -111,13 +111,15 @@ func TestGeoCache_EmptyResultNotCached(t *testing.T) {
 	c := newGeoCache()
 	p := filepath.Join(t.TempDir(), "bad.ysm")
 	if err := os.WriteFile(p, []byte("geo"), 0o644); err != nil {
-		t.Fatal(err)
+		t.Error(err)
+		return
 	}
 	calls := 0
 	c.Get(p, func() types.BedrockModel { calls++; return fakeModel(0) })
 	c.Get(p, func() types.BedrockModel { calls++; return fakeModel(0) })
 	if calls != 2 {
-		t.Fatalf("空结果每次都应重试 compute，实际 calls=%d", calls)
+		t.Errorf("空结果每次都应重试 compute，实际 calls=%d", calls)
+		return
 	}
 	if _, ok := c.Load(p); ok {
 		t.Errorf("空结果不应写入缓存")

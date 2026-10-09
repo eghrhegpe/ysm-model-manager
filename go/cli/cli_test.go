@@ -718,9 +718,7 @@ func TestBenchmark_InvalidatesCacheEachIter(t *testing.T) {
 	for _, n := range []int{1, 3} {
 		app := &benchCountingApp{}
 		it := fmt.Sprintf("%d", n)
-		if err := runBenchmark(&CmdContext{App: app, Args: []string{"--iterations", it}}); err != nil {
-			t.Fatalf("benchmark --iterations %s 应成功, got: %v", it, err)
-		}
+		testutil.NoError(t, runBenchmark(&CmdContext{App: app, Args: []string{"--iterations", it}}), "benchmark --iterations %s 应成功", it)
 		// 空 entries → B3（关键词搜索）/B4（单模型）跳过；B1 扫描 + B2 全量搜索每迭代各清一次
 		want := n * 2
 		if app.clears != want {

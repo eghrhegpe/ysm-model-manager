@@ -175,4 +175,41 @@
    grep 计数合并即误判——**判别式 = 看 import 来源，不看函数名**。
 3. **"已修"也要亲验**：既有锐评自己承认过"自始失真"（P2-3），故本轮对 dispose 复位逐行亲验，
    确认 5/5 实闭后才采信。
-4. **既有锐评未点名的面仍值得扫**：11 个无 range 键既有锐评从未提及，说明"治得狠"不等于"扫得全"。
+4. **既有锐评未点名的面仍值得扫**：无 range 数值键既有锐评从未提及（本轮实测 10 个真缺陷 + 1 个
+    `shadowMapSize` 豁免），说明"治得狠"不等于"扫得全"。
+
+## 九、落地与改判（2026-10-09 收敛，落地前置）
+
+> **本节是执行真相**。§三的判定是审计快照，本节记录落地时逐条直读源码+知识卡后的最终结论——
+> **多条"应改"在落地前置被源码/知识卡否决**，这是审计的价值（避免把设计当缺陷改掉）。
+
+### ✅ 已落地（1 条，commit `ba5cbdc5c`）
+
+| 条目 | 证据 / 处置 |
+|---|---|
+| P1 补钳制 | 10 个原无 range 数值键补 `range`（`skyTimeOfDay`/`skyTurbidity`/`skyRayleigh`/`skyMieCoefficient`/`skyMieDirectionalG`/`skyExposure`/`envResolution`/`reflectorClipBias`/`lightVolumetricBaseStrength`/`lightVolumetricTipStrength`），域取 three 官方物理语义 + 容纳本项目生产写入值；`shadowMapSize` 豁免理由显式登记；新增专项锁 6 例。**门禁全绿，零行为漂移**（各默认值均在域内）。 |
+
+### 🔄 改判（撤销"应改"，落地前置发现为有意设计）
+
+| 原判 | 改判理由（源码+知识卡实证） |
+|---|---|
+| P2 删 `setEnabledFog`/`setEnabledReflector` 死 API | ❌ **撤销**。`preview-env-state.md:257` 明写"`setEnabledReflector` 保留，与 fog `setEnabledFog` 双件同法"——**知识卡登记的有意保留**（F-1 收口时保留的命名对称）。删会违背已采纳设计 + 触发 drift。源码侧缺本地注释是轻度文档-代码不对称，非删的理由。 |
+| P2 `RESTORE_SOURCE` 四处手抄下沉 `persist-utils.ts` | ❌ **撤销**。知识卡 `:200` 明写"`ground-capability.ts|RESTORE_SOURCE` 把恢复来源收敛成**单一常量**"——是各 persist 叶**自持范式**。且 `persist-utils.ts` 曾被"暗特化"污染除名（P3-1：`startsWith("water")` 后门类），下沉会重蹈覆辙。 |
+| P2 `WAVE_STEEP_SIZE_REF=80` 改派生 | ❌ **撤销**。`water.md:111/:287` 详细论证它是**水波水平摆动反归一的有意基准**（基准必须固定为 schema 默认 80，不能随用户 waterSize 变），`:111` 还警告"别为让两端完全相等去突破自交上界"。`routes-quick.md:1222` 同述。改派生违背设计意图。 |
+| P2 ground 读侧手写 27 键 | ⏸️ 知识卡 `preview-env-state.md:190` 已**显式登记"留作后续"**（"改造收益小风险不小"）——是有意挂账，非漏判。 |
+| `envResolution` 枚举化 | ⏸️ 本批只补区间防超域；**完整枚举收编另议**（不改 schema 类型，避免污染 `_FieldDef`）。 |
+
+### ⏳ 待拍板（架构级，不在本批动）
+
+两个 meta 闸（`persist-roundtrip-contract.test.ts` / `cap-dispose-reset-contract.test.ts`）、
+ground 主 cap 拆分（>900 行 + DOM `openTexturePicker`）、`applyModelPreset` 契约补齐（light 已退役、
+ground/water 缺注释论证）、`registerEnvStateMiddleware` 退订句柄接线。
+
+### 📌 执行教训
+
+1. **"看起来该改" ≠ "真的该改"**——本轮 4 条 P2 建议在落地前置全部被源码+知识卡否决。
+   若直接改，会**违背已采纳设计 + 触发 `check-knowledge-drift` 红**，把审计从"治病"变成"引入病"。
+2. **锐评的价值是"改对了多少"不是"改了多少"**——只落地 P1（有 hgPhase NaN 硬依据、知识卡未登记豁免）
+   是比"改 5 条"更负责任的执行。
+3. **知识卡是"有意设计"的登记簿**——凡知识卡写明"保留/自持/留作后续"的，落地前置必须核对，
+   不能只凭"字面重复"就判为缺陷。本报告 §三 的多条 P2 即因此误判，已在 §九 订正。

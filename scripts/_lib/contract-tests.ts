@@ -190,6 +190,7 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "test_gate_iife_correctness.ts": ["tests"],
   "test_gate_parse_output.ts": ["tests"],
   "test_gate_coverage.ts": ["tests"],
+  "test_gate_debt.ts": ["tests"],
   "test_gate_audit.ts": ["tests"],
   // ADR-232 并发竞态/审计留痕/退化降级三方向的可注入纯逻辑
   "test_hooks_concurrency.ts": ["tests"],
@@ -480,6 +481,13 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   // —— 混合域（docs+tests）及补全的纯 tests 域测试 ——
   "test_gate_iife_correctness.ts": ["scripts/pre-push-gate.ts"],
   "test_gate_config.ts": ["scripts/_lib/gate-config.ts"],
+  // 存量债到期制（ADR-256-d1）：判据内核在 gate-debt，元数据在 gate-config（类型强制
+  // reason/reviewBy），可见性出口在 gate-coverage（尾行阻断构成）——三者任一处回退即红。
+  "test_gate_debt.ts": [
+    "scripts/_lib/gate-debt.ts",
+    "scripts/_lib/gate-config.ts",
+    "scripts/_lib/gate-coverage.ts",
+  ],
   // gate-ctx 是 record()/blocked/exec 助手的唯一实现；其归属标签断言同时消费
   // gate-report.formatFailSummary（record → results → 标签的端到端链路），故两者都列。
   "test_gate_ctx.ts": [

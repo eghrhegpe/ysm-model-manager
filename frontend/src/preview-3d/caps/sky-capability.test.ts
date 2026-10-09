@@ -13,7 +13,7 @@ import { SkyCapability } from "./sky-capability.ts";
 import { injectSkySunScalePatch } from "@/preview-3d/shader-patches/sky-patch.ts";
 import type { SunBeams } from "./sun-beams.ts";
 import { MODEL_DEFAULTS } from "@/preview-3d/state/model-defaults.ts";
-import { ENV_STATE_SCHEMA, getParamRange } from "@/preview-3d/state/env-state-schema.ts";
+import { ENV_STATE_SCHEMA, deriveDefaultEnvState, getParamRange, getPresetKeys } from "@/preview-3d/state/env-state-schema.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { clearEnvCallbacks } from "@/preview-3d/state/env-dispatcher.ts";
 import { restoreState } from "./scene-capability.ts";
@@ -245,6 +245,64 @@ describe("SkyCapability — 持久化", () => {
     expect(cap2.getCloudCoverage()).toBe(0.3);
     expect(cap2.isSkyIblSelfHoldEnabled()).toBe(false);
     expect(cap2.isEnabled()).toBe(true);
+  });
+
+  // [G-sky] 逐键 schema round-trip 锁（对齐 [G-8]/[D3]/[G-fog]/[G-shadow]/[G-reflector]/
+  // [G-renderMode]/[G-light]）。病灶（**现存漏网面大**）：:237 完整周期例只覆盖 **3/14 键**
+  //（skyTimeOfDay / skyCloudCoverage / skyEnvironment），:247 `isEnabled()===true` 是恒真绕圈
+  //（skyEnabled 默认 true）；:256「7 字段」例仍只 7 键。14 键里 **11 键无任何往返验证**。
+  // 本锁用 `getPresetKeys("sky")` 派生 + `deriveDefaultEnvState` 自动校验偏离值 ≠ 默认。
+  it("[G-sky] schema sky 键集全部可 save/load round-trip（还原表不得漏登记）", () => {
+    // 两类键**有意不持久化**，round-trip 断言跳过（对齐 light 组 lightVolumetricBaseStrength 的
+    // EXEMPT 先例）。豁免显式登记，防后人误判为漏登记 bug：
+    //   ① skyForceEnv 是**脉冲键**（sky-capability.ts:708）：写入触发 IBL 重建，loadState 后强制
+    //      重置 false（:665）。
+    //   ② skyTurbidity/skyRayleigh/skyMieCoefficient/skyMieDirectionalG/skyExposure **无 UI 出口**
+    //      （sky-menu.ts 仅 sunIntensityScale/sunDiscScale 有滑杆），用户调不到；applyModelPreset
+    //      也不写（本文件 :610 断言 preset.skyTurbidity === undefined）——saveState:811 只摘 8 个
+    //      "用户能调"的键，注释 :820 明写"持久化用户调整的太阳耦合尺度"。
+    // ⚠️ 这 5 键仍在 schema + 有 range（本轮补钳制），且 sky-capability.ts:407-410 读默认值喂
+    //    three Sky shader uniform——是**有渲染作用但无写入方的半死参数**，删会破坏 shader 初始化。
+    const EXEMPT = new Set([
+      "skyForceEnv",
+      "skyTurbidity",
+      "skyRayleigh",
+      "skyMieCoefficient",
+      "skyMieDirectionalG",
+      "skyExposure",
+    ]);
+    const DEVIATION: Record<string, unknown> = {
+      skyEnabled: false,
+      skyTimeOfDay: 16,
+      skyCloudCoverage: 0.7,
+      skySunIntensityScale: 1.2,
+      skySunDiscScale: 1.5,
+      skyEnvironment: false,
+      skyGodRaysEnabled: true,
+      skyAutoRotate: true,
+    };
+    const schemaKeys = getPresetKeys("sky");
+    const activeKeys = schemaKeys.filter((k) => !EXEMPT.has(k));
+    const defaults = deriveDefaultEnvState();
+    for (const k of activeKeys) {
+      expect(DEVIATION[k], `sky 键 ${k} 未登记偏离值`).toBeDefined();
+      expect(
+        DEVIATION[k],
+        `sky 键 ${k} 偏离值 = schema 默认（恒真绕圈无判别力）: ${JSON.stringify(defaults[k])}`,
+      ).not.toEqual(defaults[k]);
+    }
+
+    const patch: Record<string, unknown> = {};
+    for (const k of activeKeys) patch[k] = DEVIATION[k];
+    setEnvState(patch, { source: "manual" });
+    const cap = newCap();
+    cap.saveState();
+    resetEnvState();
+    const cap2 = newCap();
+    cap2.loadState();
+    for (const k of activeKeys) {
+      expect(envState[k], `sky 键 ${k} 未 round-trip 还原`).toEqual(DEVIATION[k]);
+    }
   });
 
   it("loadState 空存储时保持默认值", () => {

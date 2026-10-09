@@ -11,14 +11,20 @@ source_files:
   - frontend/src/preview-3d/caps/environment-capability.test.ts
   - frontend/src/preview-3d/caps/sky-sun.ts
   - frontend/src/preview-3d/caps/sky-sun.test.ts
+  - frontend/src/preview-3d/caps/sky-asset.ts
+  - frontend/src/preview-3d/caps/sky-asset.test.ts
   - docs/adr/decisions/ADR-311-d1-mock.md
 tests:
   - frontend/src/preview-3d/caps/env-hdr-cache.test.ts
   - frontend/src/preview-3d/caps/sky-sun.test.ts
+  - frontend/src/preview-3d/caps/sky-asset.test.ts
 auto_fields:
   symbols_with_lines:
+    - applyScaledUniformToPair
+    - applyUniformToPair
     - computeHourToSun
     - computeSunPosition
+    - createSky
     - EnvHdrCache
     - sunVectorFromSpherical
 use_when:
@@ -30,6 +36,8 @@ pitfalls:
   - mock 不保真（null 输入 / 抛错输入 / 产物属性）：判别样本退化为假阳
   - three r186 的 needsUpdate 只有 setter（getter 恒 undefined），须以 version 递增断言
   - 纯函数下沉时须**参数化**（不读全局单例如 envState），否则不可叶层直测（ADR-235-d1 教训）
+  - `??=` 只在 undefined 时赋值——对已有默认值的目标会**吞掉传入值**（`createSky` 教训：Sky 默认 `cloudCoverage=0.4`）
+  - biome 禁 `!` 非空断言（`noNonNullAssertion`），类型收窄须用非 undefined 类型断言或显式守卫
 quick_groups:
   - 门禁与脚本
 quick_intents:
@@ -40,6 +48,7 @@ invariant_anchors:
   - frontend/src/preview-3d/caps/env-ibl.test.ts|PMREM 生成失败回滚
   - frontend/src/preview-3d/caps/env-hdr-cache.test.ts|loadFromFile 三分支
   - frontend/src/preview-3d/caps/sky-sun.test.ts|负数 wrap 反例
+  - frontend/src/preview-3d/caps/sky-asset.test.ts|undefined 守卫
   - docs/adr/decisions/ADR-311-d1-mock.md|决策
 last_verified: 2026-10-09
 ---
@@ -87,7 +96,9 @@ last_verified: 2026-10-09
 - **变异实证锚点**：`env-ibl.test.ts`「dispose 还原 environment」经变异（移还原行 → 转红）实证；
   `environment-capability.test.ts`「dispose 顺序收敛 A/B 两序」有变异实证记录；
   `sky-sun.test.ts`「负数 wrap 反例」经变异（`((hour%24)+24)%24` → `hour%24`）→ 该用例转红、正 wrap
-  用例仍绿——负/正两分支各自被精确守卫（第 2 刀 ADR-235-d1 子提交 A 实证）。
+  用例仍绿——负/正两分支各自被精确守卫（第 2 刀 ADR-235-d1 子提交 A 实证）；
+  `sky-asset.test.ts`「undefined 守卫」经变异（去掉 `if (su !== undefined)` 守卫）→ ghost uniform 与
+  非对称 patch 两用例转红——守卫语义被精确守卫（第 2 刀子提交 B 实证）。
 - **变异盲区诚实命名**：`env-ibl.test.ts`「PMREM 生成失败回滚」变异（移 catch 还原行）**仍绿**——
   因 `fromEquirectangular` 抛错发生在 `envTexture` 赋值前，`scene.environment` 本未改写，catch 那行
   还原是**防御性冗余**（与禁用分支 / dispose 同构）。测试注释须诚实标注，不夸大为防回潮断言。

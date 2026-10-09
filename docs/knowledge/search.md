@@ -194,6 +194,8 @@ status: active
 
 **边界取舍（下次会话勿误判为 bug）**：缓存键按"剥离后缀后的 path"计算，因此同一文件在 `.ban` ↔ 正常之间切换会产生**两条独立键**各自命中（而非共享）。属可接受代价——`.ban`/`.disabled` 切换本就改变 scannable 归属语义，且 `ClearScanCache` 在导入/下载后统一清掉，不会长期分裂。
 
+**`benchmark` 命令每迭代清缓存测冷启动**（锐评 2026-10-09）：`go/cli/model.go|runBenchmark` 的 B1 扫描 / B2 全量搜索 / B3 关键词搜索**每迭代首行调 `ClearScanCache`**——原实现 `AppService` 未声明 `ClearScanCache`（`go/cli/appservice.go`），迭代 2 起命中 `ScanModelEntries` 30s 缓存 + `geoCache`，扫描/搜索基准**计时失真**（测的是缓存命中后的热性能，非冷启动）。代价是每次迭代真实扫盘，正是基准要测的。`single-bench`（`perf_snapshot.go|runBenchIterations`）是单模型 N 轮基准，与本命令无关。
+
 **与前端 `SearchResult.Type` 字段的关系（查证根因，非「补一行即可」的死路待办）**：`types.go` 的 `SearchResult.Type` 标了 `omitempty`，`SearchModels` 从不填；而 `ModelEntry.Type` **只在 `ScanModelEntriesFiltered`（带 rtype 过滤）路径填**（`app_scan.go` 的 `e.Type = rtype`，`go/types/types.go|ModelEntry` 的 `Type` 字段注释也写明"未指定 rtype 时为 ''"）。`SearchModels` 走的是全量 `ScanModelEntries`（`app_scan.go`），该路径只填 `HasTags`、不填 `Type`。
 
 → **关键结论**：在 `SearchModels` 里填 `entry.Type` 会恒取空值、零收益——这是架构路径决定的死字段，不是"漏填一行"。要让搜索结果带类型，必须**先让全量 `ScanModelEntries` 给 entry 推导 `Type`**（依赖 `resource_types.json` 单一事实源 + registry 推导，属回归红线范畴，不可顺手做）。当前阶段 `SearchResult.Type` 应视为预留位（跨类型搜索语义未接上），不要误判为"补一行 `entry.Type` 即可"，也暂不应删除（待 ADR-183 收口时再决定）。

@@ -1,0 +1,86 @@
+---
+kind: test-discipline
+name: 测试纪律：禁 mock 断言谓词 / 判别样本 / 变异探针
+tier: architecture
+category: core
+status: active
+source_files:
+  - frontend/src/preview-3d/caps/env-ibl.test.ts
+  - frontend/src/preview-3d/caps/env-hdr-cache.test.ts
+  - frontend/src/preview-3d/caps/env-hdr-cache.ts
+  - frontend/src/preview-3d/caps/environment-capability.test.ts
+  - docs/adr/decisions/ADR-311-d1-mock.md
+auto_fields:
+  symbols_with_lines:
+    - EnvHdrCache
+use_when:
+  - 写或审 preview-3d 的 vi.mock 用例，判断是否自证
+  - 给核心纯函数 / 关键守卫补测试，需正反双侧
+  - 改关键守卫（所有权 / dispose 顺序 / 让权 / 通路裁决）后做变异实证
+pitfalls:
+  - mock 掉被断言行为的谓词 = 自证：断言的是替身不是真实现，测试无效
+  - mock 不保真（null 输入 / 抛错输入 / 产物属性）：判别样本退化为假阳
+  - three r186 的 needsUpdate 只有 setter（getter 恒 undefined），须以 version 递增断言
+quick_groups:
+  - 门禁与脚本
+quick_intents:
+  - vi.mock 怎么用不算自证？判别样本和变异探针是啥？
+quick_risk_lines:
+  - vi.mock 只许落在外部依赖 / 协作模块注入点，禁 mock 被测主体自身导出
+invariant_anchors:
+  - frontend/src/preview-3d/caps/env-ibl.test.ts|PMREM 生成失败回滚
+  - frontend/src/preview-3d/caps/env-hdr-cache.test.ts|loadFromFile 三分支
+  - docs/adr/decisions/ADR-311-d1-mock.md|决策
+---
+
+# 测试纪律：禁 mock 断言谓词 / 判别样本 / 变异探针
+
+## 概览
+
+[ADR-311-d1] 收口的测试可信度三机制（锐评 2026-10-08，落地 2026-10-09）：
+
+1. **禁自证**：测试不得 `vi.mock` 掉被断言行为的谓词 / 主体模块。`vi.mock` 只许落在外部依赖
+   （`three` / `three/addons/**` / `@backend/**` / Loader / `@/wasm/**` / `@moeru/three-mmd*` /
+   `@pixiv/three-vrm*` / `storage` / `document`/canvas/WebGL）与协作模块注入点（被测主体依赖的隔离替身）。
+   判据：断言目标必须是**被测主体自身的真实导出**，而非被 mock 模块的导出。
+2. **判别样本**：核心纯函数 / 关键守卫的测试必须正反双侧齐全（判真 + 判非真），单侧即欠债。
+3. **变异探针**：关键守卫须经**变异实证**——手动改错实现，测试须转红；实证结论写进测试注释。
+
+## 核心职责
+
+- 拦截"mock 替身冒充真实现"的自证模式（`preview-3d` 116 处 `vi.mock` 全部已核：无自证，落在依赖边界）。
+- 为新拆 / 新增模块补**叶层独立测试**（而非只经 cap 层白盒探针间接覆盖）——`EnvIbl` / `EnvHdrCache`
+  即因拆分产生叶层直测缺口而补。
+- 用变异探针暴露测试盲区与实现冗余（见"不变量"的实证案例）。
+
+## 对外 API / 入口
+
+- 测试写法范本：`frontend/src/preview-3d/caps/env-ibl.test.ts`（three mock + 像素运算 mock +
+  `EnvHdrCache` 真用 + 三条分支双侧）、`frontend/src/preview-3d/caps/env-hdr-cache.test.ts`
+  （`loadFromFile` 成功 / 失败 / 替换旧缓存三分支 + `thumbnail` 双态 + `dispose`）。
+- 测试注入点白盒口径：TS `private` 运行时即普通属性，测试经 `hdrOf(cap)` / `iblOf(cap)` 直操作
+  （`environment-capability.test.ts` 同款）。
+
+## 与其他子系统关系
+
+- 承接第 1 刀（ADR-091-d1 环境 cap 拆分）的**测试配套**：拆分出新模块必须有叶层判别样本，
+  否则未来叶层重构时 cap 层断言静默空转或全红。
+- `three` r185/r186 的 `Material`/`Texture.needsUpdate` 只有 setter（getter 恒 undefined），
+  副作用认 `version` 递增（同 `sky-capability.test.ts` / `water-capability.test.ts` 口径）。
+
+## 不变量
+
+- **mock 不越被测主体**：`vi.mock` 的目标模块 ≠ 断言目标模块。
+- **判别样本双侧**：正例 + 反例齐全，缺一侧记欠债。
+- **变异实证锚点**：`env-ibl.test.ts`「dispose 还原 environment」经变异（移还原行 → 转红）实证；
+  `environment-capability.test.ts`「dispose 顺序收敛 A/B 两序」有变异实证记录。
+- **变异盲区诚实命名**：`env-ibl.test.ts`「PMREM 生成失败回滚」变异（移 catch 还原行）**仍绿**——
+  因 `fromEquirectangular` 抛错发生在 `envTexture` 赋值前，`scene.environment` 本未改写，catch 那行
+  还原是**防御性冗余**（与禁用分支 / dispose 同构）。测试注释须诚实标注，不夸大为防回潮断言。
+
+## 相关
+
+- [ADR-311-d1] 测试纪律：禁 mock 断言谓词 / 判别样本 / 变异探针
+- [ADR-091-d1] 环境能力 cap 拆分
+- [ADR-311] 菜单测试断言三分法
+- `frontend/src/preview-3d/caps/environment-capability.test.ts`「命名诚实说明」先例（line 1850 附近）

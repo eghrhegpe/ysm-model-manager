@@ -567,6 +567,7 @@
 | preview-3d 模块级单例要不要配复位出口 | [3D 预览模块级单例卫生](./singleton-hygiene.md) | 新增顶层 let 无复位出口即红；基线只减不增 | - |
 | push 被 golangci-lint 阻断怎么办 | [golangci-lint（Go 静态分析真空面）](./golangci-lint.md) | push 被阻断先看 FAIL 块定位 linter 与文件；语义误报用 //nolint 注明 linter 名与理由，禁止 git push --no-verify 绕过 | - |
 | vi.mock 改了路径结果静默不起作用 | [mock 路径守卫 check-mock-paths](./mock-path-guard.md) | vi.mock("<内部spec>") 指向不存在的模块路径时 vitest 静默不命中——mock 路径写错就悄悄失效，测试照常通过 | - |
+| vi.mock 怎么用不算自证？判别样本和变异探针是啥？ | [测试纪律：禁 mock 断言谓词 / 判别样本 / 变异探针](./test-discipline.md) | vi.mock 只许落在外部依赖 / 协作模块注入点，禁 mock 被测主体自身导出 | - |
 
 ## 🎯 测试与验证
 
@@ -799,7 +800,7 @@
 | voxel-colors.ts resolveBlockName 映射表来自 voxel-colors-data.json(63K),新增方块名须更新 JSON 而非硬编码 | - | - |
 | ADR-170 二段部分收口(2026-09):base64 原语已归位 utils/base/primitives/base64.ts, parsers 对 backend/web-common 依赖已消除;web-* 族其余归位未动 | - | - |
 | 本卡是横向拼图，单环纵深细节读 pre-commit-hook / pre-push-gate 两卡；勿用本卡替代细读 | - | - |
-| 判定必须看它所在清单的 blockPolicy（hard/debt/failClosed），FAIL 非空 ≠ 被拦 | `某检查项是否真阻断` | - |
+| 判定必须看它所在清单的 blockPolicy（hard/debt/failClosed），FAIL 非空 ≠ 被拦；debt 还带 `reviewBy`（到期制）——到期后由 `doctor --all` 硬处置，别再把它当永久豁免 | `某检查项是否真阻断` | - |
 | 注释与知识卡的曾三处口径不一（钩子写尚未、同卡两行一写已接线一写尚未）；判断现状只认 .github/workflows/test.yml 实况 | `CI 是否同跑 gate` | - |
 | 各页面各自注册全局事件 | - | 重复绑定、冲突处理；必须经 global-handlers 单点 |
 | 拖拽导入未进 import-dnd | - | 与全局拖拽状态冲突；必须经 features/import-dnd.ts |
@@ -1022,7 +1023,8 @@
 | 2026-09-13（重锐评 | `判定口径 A/B/C 收口` | - |
 | 2026-09-13（重锐评 | `goTestCmd 数组化` | - |
 | 2026-09-13（重锐评 | `autoFix 写盘语义` | - |
-| "2026-09-13（锐评 P2）起门禁输出固定尾行 `覆盖口径: x/M 项 check-* 已接入门禁（未接入: …）—— 全绿 ≠ 仓库无风险`（数据源 `_lib/gate-coverage.ts`，动态枚举 scripts/check-*.ts 防分母写死过期）。**2026-10-08 更新：`check-*.ts` 共 42 个，gate-config 精确 `tool:` 条目 30 个**；未接入清单的走 pre-commit / gate-blocks 旁路，仅 1 个刻意挂起 `check-diff-coverage`（依赖前端 coverage-final.json + diff 基线 ref，本地会 rc=2 恒红，正确归宿 CI vitest --coverage 之后）。此前快照「33/37」「未接入仅 check-comment-history」均已过时——2026-10-08 对账已把 `check-comment-history` / `check-twin-siblings` / `check-unread-fields` 接入 ALL（debt）、`check-go-coverage-threshold` 接入 GO（debt）" | `覆盖尾行` | - |
+| "2026-09-13（锐评 P2）起门禁输出固定尾行 `覆盖口径: x/M 项 check-* 已接入门禁（未接入: …）—— 全绿 ≠ 仓库无风险`（数据源 `_lib/gate-coverage.ts`，动态枚举 scripts/check-*.ts 防分母写死过期）。**2026-10-08 更新：`check-*.ts` 共 42 个，gate-config 精确 `tool:` 条目 30 个**；未接入清单的走 pre-commit / gate-blocks 旁路，仅 1 个刻意挂起 `check-diff-coverage`（依赖前端 coverage-final.json + diff 基线 ref，本地会 rc=2 恒红，正确归宿 CI vitest --coverage 之后）。此前快照「33/37」「未接入仅 check-comment-history」均已过时——2026-10-08 对账已把 `check-comment-history` / `check-twin-siblings` / `check-unread-fields` 接入 ALL（debt）、`check-go-coverage-threshold` 接入 GO（debt）。**2026-10-09 再更新（ADR-256-d1）：尾行追加「阻断构成(N 项清单条目): hard X / debt Y（debt FAIL 只记不拦；最近复审（工具名 + 到期日 + 剩余天数））」——覆盖数 ≠ 拦截数，逾期时改报「debt 已逾期 N 项：doctor --all 红灯」**" | `覆盖尾行` | - |
+| 2026-10-09（ADR-256-d1）：`blockPolicy: "debt"` 不是第三种状态，而是**带到期日的债**——类型强制 `debt: { reason, reviewBy }`（`tsc -p scripts/tsconfig.json` 编译期拦，禁无理由/无期限债务），reviewBy 视界 ≤180 天（契约测试拒 9999 续期）。三个出口：① 固定尾行报 hard/debt 构成（见上条）；② debt 项 FAIL 时 note 追加「已逾期 N 天，须处置或续期」（`static-tools.ts` 唯一插点）；③ **`doctor --all` 遇逾期债记 hard FAIL**（判据 `_lib/gate-debt.ts\|recordDebtInventory`，`tests/test_gate_debt.ts` 直测三条出口含「无债不写噪音行」）。**刻意不进 push 热路径**：存量债与本次变更无关，拿它挡无关推送者正是本仓反复吃亏的「假红训练人忽略红灯」；blast radius 收敛到刻意的全量闸。给 debt 续期 = 改 reviewBy + 写进提交说明，别用删除元数据当豁免。" | `存量债到期制` | - |
 | ~~已修复~~（2026-09-13 P0）：jscpd 报告原写**固定路径** `frontend/report/jscpd-report.json` 且读完即删、无 pid 无锁，并行会话同跑门禁互相删读（同提交第一次红第二次绿）。现改为每进程独立 `mkdtemp` 临时目录（`os.tmpdir()/jscpd-gate-*`）承载报告，扫描 pattern 用绝对路径指回 `frontend/src`，`finally` 整目录清理——报告生命周期完全私有化，与 jscpd-go.ts 的 tmpdir 先例对齐。教训留存：**工具产物落盘共享路径 = 隐性进程间耦合**，任何检查项新增落盘产物时必须私有化路径或加锁 | `check-deadcode-baseline 的瞬态 FAIL` | - |
 | 新加相机按钮 | - | 直接注入 mmd-controls → 切类型时按钮消失；必须走 setAdapterItems 注入核心根菜单 |
 | YSM schema 未走 registerYsmModelSchema 注册 | - | schema 变更不同步到菜单；必须经 schema-registry |
@@ -1033,6 +1035,9 @@
 | 手动调用导致 T-pose 回归 | `vrm.humanoid.update()` | 只用 vrm.update(dt) |
 | ——已实测坐实（2026-10-08，锐评 `docs/audit-host-env-coupling-review.md` §三）：Wails v3.0.0-beta.26 全仓**零处 `beforeunload` 引用**，`WM_CLOSE` 链路仅 `ShuttingDown()`（只置 Go 标志位）→ `DefWindowProc` 销毁 HWND，**Go→JS 无派发通路**。故 `teardownSharedInfra` 的真实调用者只有测试。**桌面单窗口形态无实际危害**（进程退出由 OS 回收），**但该段代码服务的是 web 形态**（ADR-049 / `npm run dev:web`，此时 `beforeunload` 真实触发）⇒ **跨形态行为分叉**，勿当「桌面端的进程退出兜底」误信。配套：`shared-infra.test.ts`「beforeunload 钩子」一例是**自证式假绿**（手动 `dispatchEvent` 自造事件，恒绿），订正它需真信号或改断言口径 | `shared-infra.ts\|installUnloadTeardown 的 beforeunload 钩子在 Wails v3 桌面端永不触发` | - |
 | 类结论**必须读上游源码**（`go/pkg/mod/github.com/wailsapp/wails/v3@v3.0.0-beta.26/`），静态扫本仓只能得到「未验证的假设」——**自家没有调用方 ≠ 宿主不会调**。同族正面先例：three r186 释放行为取证（`water.md`） | `宿主框架会不会做X` | - |
+| ——`environment-capability.ts` 的 `document.createElement("input")` + `window.addEventListener("focus")`、`postprocessing-capability.ts` 的 `window.devicePixelRatio` 都是**能力探测**（caps 层本职：测宿主能力，happy-dom 下已可测）；`env-ibl.ts` / `env-pixels.ts` / `ground-capability.ts` 的 `createElement("canvas"/"input")` 是**临时离屏缓冲**。**勿为这些落 `check-dom-boundary` 式闸**——会把正当用法打成假债（2026-10-09 锐评 G3 评估结论：不落 G3 闸，理由见 `audit-host-env-coupling-review.md` §七 | `capability 类读宿主全局（window/document）= **正当用法，非宿主边界债务**` | - |
+| ——它是 **WebGL context 数量硬约束的正确映射**（renderer 必须唯一），不是「图省事用全局态」；并发安全已由 `RendererHost` **实例内部字段**（activeInputSession / perFrame Map）保证，单例身份只是组合根便利。无「多 host」真实需求（WebGL 唯一约束），拆了反而要解释「为何只传同一实例」。**评估结论（2026-10-09 锐评 §七 | `render-host.ts\|rendererHost 模块级单例**不拆**` | - |
+| ——`renderer.info` 在 happy-dom 下不可观测，单元层钉不住 WebGL context 真释放；真证据在 `frontend/e2e-web/postprocessing.spec.ts`（swiftshader 真实 WebGL2 + `renderer.dispose()` + `readPixels`）。但 e2e 属**重档**，pre-push 轻量档默认跳过 ⇒ **勿把它们当「门禁绿」**（那是假绿）。评估结论（2026-10-09 锐评 §七 | `真 GL 资源释放**不靠轻量单元探针**` | - |
 | 直接改 envState 对象字段（不经 setEnvState）→ 不派发回调，cap 渲染不更新；必须走 setEnvState | - | - |
 | cap 忘记 registerEnvCallback / dispose 不退订 | - | 状态变更不落地或泄漏回调 |
 | 测试不 beforeEach resetEnvState | - | envState 单例跨用例串扰 |
@@ -1104,6 +1109,9 @@
 | emoji 字符集必须含 U+2190-21FF / U+2300-23FF（含 ⏳/← 等），否则单字形槽整类逃逸 —— survey 脚本已**复用 design-tokens.ts 导出的 GRAPHIC_EMOJI**，不自抄副本（单一事实源，门禁改字符集 survey 自动跟随） | - | - |
 | app-sidebar 直接发 push/pull 请求 | - | 并发冲突 / 状态错乱；必须经 sync-manager 排队 |
 | PullSingleResource 未完成前刷新侧边栏 | - | 半同步状态显示；必须等 store 状态收敛 |
+| mock 掉被断言行为的谓词 = 自证：断言的是替身不是真实现，测试无效 | - | - |
+| mock 不保真（null 输入 / 抛错输入 / 产物属性）：判别样本退化为假阳 | - | - |
+| three r186 的 needsUpdate 只有 setter（getter 恒 undefined），须以 version 递增断言 | - | - |
 | getAllByTestId 前缀查询不会返回的兄弟 testid（如 tree-dir 不会命中 tree-dir-toggle）；误用精确查询会抛错，应先查前缀再 JS 过滤 | `后缀非数字` | - |
 | waitFor 超时/异常携带原始错误（P2 修复后）；旧实现静默吞错掩盖真实根因，迁移旧卡时注意不要写 | `捕获后重新 throw 通用消息` | - |
 | " 参数不存在于 waitFor 签名，旧知识卡/口语中可能出现误导" | `interval?` | - |

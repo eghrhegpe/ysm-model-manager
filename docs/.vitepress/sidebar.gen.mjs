@@ -1637,6 +1637,10 @@ export const autoSidebar = [
         "link": "/adr/decisions/ADR-266-d1-volumetric-cone-in-screenshot"
       },
       {
+        "text": "ADR-256-d1：存量债到期制：debt 条目必须带 reason 与 reviewBy，到期由 doctor --all 硬处置",
+        "link": "/adr/decisions/ADR-256-d1-gate-debt-expiry"
+      },
+      {
         "text": "ADR-151-d1：gen-stage 未知新建文件默认排除（并发卷带硬化）",
         "link": "/adr/decisions/ADR-151-d1-gen-stage-unknown-newfile"
       },
@@ -1744,6 +1748,10 @@ export const autoSidebar = [
           {
             "text": "技术债台账（探查快照 2026-10-08）",
             "link": "/knowledge/tech-debt-ledger"
+          },
+          {
+            "text": "测试纪律：禁 mock 断言谓词 / 判别样本 / 变异探针",
+            "link": "/knowledge/test-discipline"
           },
           {
             "text": "主题系统 theme",

@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **336** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **337** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > ADR 三区存放：根目录 = 存量（分级前）/ `architecture/` = 架构决策 / `decisions/` = 执行决策日志（ADR-320）。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -16,7 +16,7 @@ permalink: /adr/
 
 | 状态 | 数量 |
 |------|------|
-| [📝 提议中](#提议中) | 6 |
+| [📝 提议中](#提议中) | 7 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 15 |
 | [✅ 已采纳](#已采纳) | 307 |
@@ -26,7 +26,7 @@ permalink: /adr/
 
 ## 按状态分组导航
 
-### 📝 提议中（6）
+### 📝 提议中（7）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
@@ -35,6 +35,7 @@ permalink: /adr/
 | [ADR-301](./ADR-301-workshop-community-naming-convergence.md) | 创作者频道与创意工坊命名轴收敛 | 📝 提议中 |
 | [ADR-292](./ADR-292-scene-environment-sky-ibl-env.md) | 环境贴图单一归属：scene.environment 所有权收口，sky IBL 降为 env 的数据源 | 📝 提议中 |
 | [ADR-284](./ADR-284-sky-reflector-shadow-decoupling-cleanup.md) | sky 散射参数与模型类别解耦 + reflector/shadow 清除 no-op 与噪声值 | 📝 提议中 |
+| [ADR-256-d1](./decisions/ADR-256-d1-gate-debt-expiry.md) | 存量债到期制：debt 条目必须带 reason 与 reviewBy，到期由 doctor --all 硬处置 | 📝 提议中 |
 | [ADR-151-d1](./decisions/ADR-151-d1-gen-stage-unknown-newfile.md) | gen-stage 未知新建文件默认排除（并发卷带硬化） | 📝 提议中 |
 
 ### 🔄 部分采纳（15）
@@ -725,6 +726,7 @@ permalink: /adr/
 | ADR-270-d5 | R10 穿透债归属纠正：YSM 预览数据装配流水线自 views 迁入 preview-3d/adapters（否决再导出面） | ✅ 已采纳 | 2026-10-06 |
 | ADR-270-d6 | R10 收尾：截图多角度编排与菜单候选派生归属纠正（适配器域知识回迁 preview-3d/adapters） | ✅ 已采纳 | 2026-10-07 |
 | ADR-266-d1 | 体积光锥进截图：离屏/预览输出设置同构（toneMapping + 曝光镜像） | ✅ 已采纳 | 2026-10-04 |
+| ADR-256-d1 | 存量债到期制：debt 条目必须带 reason 与 reviewBy，到期由 doctor --all 硬处置 | 📝 提议中 | 2026-10-09 |
 | ADR-151-d1 | gen-stage 未知新建文件默认排除（并发卷带硬化） | 📝 提议中 | 2026-10-06 |
 | ADR-091-d1 | 环境能力 cap 拆分：hdr-cache/background 先行，ibl 所有权段单独一刀 | ✅ 已采纳 | 2026-10-08 |
 

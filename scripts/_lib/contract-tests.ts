@@ -197,6 +197,8 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "test_gen_ref_integrity.ts": ["tests"],
   // 存量债到期报告（ADR-256-d1 收口刀）：呈现层三形态 + CI 接线反向锚
   "test_debt_report.ts": ["tests"],
+  // 审计时效判定（锐评第四刀）：审查器降噪内核 + fail-closed 边界
+  "test_audit_freshness.ts": ["tests"],
   "test_gate_audit.ts": ["tests"],
   // ADR-232 并发竞态/审计留痕/退化降级三方向的可注入纯逻辑
   "test_hooks_concurrency.ts": ["tests"],
@@ -446,6 +448,8 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
     "scripts/_lib/gate-config.ts",
     "scripts/_lib/gate-debt.ts",
   ],
+  // 审计时效判定（2026-10-09 锐评第四刀）：内核三分类 + CLI fail-closed 退出码语义
+  "test_audit_freshness.ts": ["scripts/audit-freshness.ts"],
   // ADR-232 三方向可注入纯逻辑（gen-staged-pair / hook-audit / audit-degraded）
   "test_hooks_concurrency.ts": [
     "scripts/_lib/gen-staged-pair.ts",

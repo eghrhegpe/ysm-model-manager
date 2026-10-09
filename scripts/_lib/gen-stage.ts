@@ -34,6 +34,7 @@ import { execFileSync } from "node:child_process";
  */
 import fs from "node:fs";
 import path from "node:path";
+import { filterUnindexedGenStaged } from "./gen-ref-integrity.ts";
 import { isGenWholeOutput, strandedStageList } from "./machine-diff.ts";
 import { toPosix } from "./to-posix.ts";
 
@@ -247,6 +248,38 @@ export function resolvePorcelain(porcelainFile: string): string | null {
 
 // 直接运行时走 CLI（sh 侧）
 const isCli = toPosix(process.argv[1]).endsWith("_lib/gen-stage.ts");
+
+/**
+ * 索引内路径集合 = `git ls-files` − 本次暂存删除（引用完整性的「已入库」判据）。
+ *
+ * 为什么减删除集：`git ls-files` 反映索引，被 `git rm` 暂存删除的文件仍在索引里，
+ * 但提交后不存在——生成物引用它同样是悬空引用。
+ *
+ * 失败返回 null（调用方据此**跳过**引用检查并告警，而非按空集判定——空集会让所有含
+ * 相对链接的生成物被判违规、集体滞留，属「误判方向」的伤害；本模块红线只允许
+ * 「漏收编」，不允许「误判导致合法提交丢产物」）。
+ */
+export function loadIndexedPaths(): Set<string> | null {
+  const gitZ = (args: string[]): string[] | null => {
+    try {
+      const out = execFileSync("git", ["-c", "core.quotepath=false", ...args], {
+        cwd: process.cwd(),
+        encoding: "utf8",
+        maxBuffer: 64 * 1024 * 1024,
+      }) as string;
+      return out.split("\0").filter(Boolean);
+    } catch {
+      return null;
+    }
+  };
+  const files = gitZ(["ls-files", "-z"]);
+  if (files === null) return null;
+  const set = new Set(files.map(normPath));
+  const deleted = gitZ(["diff", "--cached", "--name-only", "--diff-filter=D", "-z"]);
+  if (deleted) for (const p of deleted) set.delete(normPath(p));
+  return set;
+}
+
 if (isCli) {
   const snapBeforeFile = process.argv[2] ?? "";
   // 第三参 = gen 前 porcelain 文件（pre-commit 与 snap 同刻采集；无则 fallback 现采）
@@ -288,5 +321,22 @@ if (isCli) {
       console.error(`[gen-stage] 滞留机器区收编: ${p}`);
     }
   }
-  for (const p of stageSet) console.log(p);
+  // 引用完整性闸（2026-10-09 锐评第三刀）：聚合型生成物会把**他人尚未入库**的新文件写进
+  // 自己的正文（实证：未提交的 ADR-235-d1 被重新生成的 docs/adr/index.md 登记，随本次提交
+  // 一起走 → 远端悬空引用）。与 ADR-151-d1 同向红线：漏收编无害（下次 commit 自然带走）／
+  // 误收编有害（提交里留下指向不存在文件的引用）。判据与保守边界见 gen-ref-integrity.ts。
+  const indexed = loadIndexedPaths();
+  let toStage = [...stageSet];
+  if (indexed) {
+    const { keep, dropped } = filterUnindexedGenStaged(toStage, indexed);
+    for (const d of dropped) {
+      console.error(
+        `[gen-stage] ⏭ 跳过收编（引用未入库文件，防悬空引用）: ${d.file} → ${d.missing.join(", ")}`,
+      );
+    }
+    toStage = keep;
+  } else {
+    console.error("[gen-stage] ⚠ 无法读取索引（git ls-files 失败），引用完整性检查已跳过");
+  }
+  for (const p of toStage) console.log(p);
 }

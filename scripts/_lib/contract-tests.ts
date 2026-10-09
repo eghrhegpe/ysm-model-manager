@@ -193,6 +193,8 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "test_gate_debt.ts": ["tests"],
   // 基线守卫单一实现（锐评第二刀）：假绿第一大类的判据共源 + wiring 反向锚
   "test_baseline_guard.ts": ["tests"],
+  // 生成物引用完整性（锐评第三刀）：聚合生成物引用未入库文件 ⇒ 拒收编（并行会话卷带第二道门）
+  "test_gen_ref_integrity.ts": ["tests"],
   "test_gate_audit.ts": ["tests"],
   // ADR-232 并发竞态/审计留痕/退化降级三方向的可注入纯逻辑
   "test_hooks_concurrency.ts": ["tests"],
@@ -432,6 +434,9 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   ],
   "test_domain_classify.ts": ["scripts/_lib/domain-classify.ts"],
   "test_gen_stage.ts": ["scripts/_lib/gen-stage.ts"],
+  // 生成物引用完整性（2026-10-09 锐评第三刀）：判据本体 + gen-stage CLI 的接线反向锚。
+  // 目的是让「聚合生成物引用未入库文件」这类并行会话卷带无法悄悄回流。
+  "test_gen_ref_integrity.ts": ["scripts/_lib/gen-ref-integrity.ts", "scripts/_lib/gen-stage.ts"],
   // ADR-232 三方向可注入纯逻辑（gen-staged-pair / hook-audit / audit-degraded）
   "test_hooks_concurrency.ts": [
     "scripts/_lib/gen-staged-pair.ts",

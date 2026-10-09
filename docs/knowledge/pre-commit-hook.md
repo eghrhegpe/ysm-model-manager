@@ -6,6 +6,8 @@ category: utils
 source_files:
   - .githooks/pre-commit
   - .githooks/post-commit
+  - scripts/_lib/gen-stage.ts
+  - scripts/_lib/gen-ref-integrity.ts
   - scripts/_lib/gen-staged-pair.ts
   - scripts/_lib/hook-audit.ts
   - scripts/_lib/commit-blocks/version-defense.ts
@@ -14,9 +16,14 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - appendHookAudit
+    - computeStageList
     - deletePairList
     - deriveTestTargets
     - detectVersionDefense
+    - extractRepoRefs
+    - FilterResult
+    - filterUnindexedGenStaged
+    - findUnindexedRefs
     - FirstLineReader
     - GEN_STAGED_PREFIX
     - hasFindings
@@ -26,15 +33,22 @@ auto_fields:
     - isDollarLeadingPath
     - isGoCoverageProfileFirstLine
     - isTestOrSpecFile
+    - loadIndexedPaths
+    - normPath
     - ORPHAN_TTL_MS
     - pairListPath
+    - parsePorcelain
     - partitionByIndexCleanliness
+    - PorcelainEntry
     - readPairList
     - readStagedFiles
     - readStagedSourceFiles
+    - RefViolation
     - renderDirtySkips
     - renderVersionDefense
+    - resolvePorcelain
     - stageFiles
+    - StageInput
     - stripSourceSuffix
     - sweepOrphanPairs
     - VersionDefenseFindings
@@ -81,6 +95,7 @@ status: active
 
 - `snap_docs()`：gen 前/后遍历 `docs/`、`frontend/public/locales/`、`completions/` 记录 `(mtime,size,path)` 快照；**node 优先**生成（跨平台稳），`find -printf` 仅 GNU 快路径
 - 精确 stage：diff 快照取 `>` 侧（新增/变化文件）逐一 `git add`，无 diff 无副作用；**并发下失效修复**（2026-09-01）：stage 判定下沉 `_lib/gen-stage.ts`（stage = 快照变化 ∩ 非并行 dirty，`??` 按 gen 前后存在性区分），契约测试 `tests/test_gen_stage.ts` 守护
+- **引用完整性闸（2026-10-09，锐评第三刀）**：ADR-151-d1 关掉的是「误收编他人**身份**」的门，没关「**引用**」这门——聚合生成物（`docs/adr/index.md` / `routes*.md` / `index.md`…）内容是全体输入的纯函数，会把**他人尚未入库**的新文件写进自己正文，被正常收编 ⇒ 提交里留下悬空引用（实证：未提交的 `ADR-235-d1-sky-cap-cap.md` 被重新生成的 `docs/adr/index.md` 登记，随本次提交一起走，本地全绿、**远端必红**）。现收编前过一道 `_lib/gen-ref-integrity.ts`：生成物若引用**不在索引**的仓库文件（`git ls-files` − 本次暂存删除），则**退出本次收编**并 stderr 点名缺失目标——与 ADR-151-d1 同向红线（漏收编无害／误收编有害）。保守边界：只认 `.md` 里的 markdown **相对链接**、跳过 scheme/绝对路径/纯锚点/代码围栏；判据不可得（`git ls-files` 失败）时**跳过检查并告警**而非按空集判定（空集会把所有含链接的产物集体滞留＝误判方向的伤害）。契约测试 `tests/test_gen_ref_integrity.ts`（含**真实临时 git 仓**端到端：幽灵 ADR → 拒收编 + 点名；目标入库 → 正常收编不误伤）
 - 兜底收窄（ADR-150）：`GEN_SNAP` 缺失时**不** `git add -u docs/`，仅置 `GEN_SKIPPED=1` 跳过并告警——防止吞并行会话未提交漂移（实证 `ebb921a5` 误吞 96 张知识卡）
 - drift `--affected` 秒级接入（ADR-087）：取本次 stage 文件查知识卡漂移，不自动 stage
 - 智能 stage：改源码自动 stage 同名 `.test.ts`（防误 stage）；推导逻辑已下沉 `scripts/_lib/commit-blocks/smart-stage.ts`（ADR-323 阶段 2）——`stripSourceSuffix` 纯函数复刻旧 shell 最短后缀匹配、`deriveTestTargets` 注入式存在性判定，由 `tests/test_commit_smart_stage.ts` 守护。**已知缺陷刻意保留**：`foo.d.ts` → base `foo.d`（应为 `foo`），旧 shell `base="${f%.ts}"` 即如此，仓内有真实 `*.d.ts`（`three-glsl.d.ts` 等）故边界是活的；测试以「缺陷等价性锚点」锁死该行为，修复须是一次显式测试变更（ADR-323 §4：搬迁不夹带行为修复）

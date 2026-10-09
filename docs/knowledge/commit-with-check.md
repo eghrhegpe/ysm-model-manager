@@ -28,6 +28,7 @@ auto_fields:
     - IsDirFn
     - isDirOnDisk
     - isHookArtifact
+    - loadIndexedPaths
     - normPath
     - parsePorcelain
     - PorcelainEntry

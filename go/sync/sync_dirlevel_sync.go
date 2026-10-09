@@ -255,5 +255,3 @@ func collectEntriesFromScan(entries []types.ModelEntry, rootDir, rtype string) m
 	}
 	return out
 }
-
-// FileDiffEntry 文件级差异条目（用于文件夹内容级 diff）

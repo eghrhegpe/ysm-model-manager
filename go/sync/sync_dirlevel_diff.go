@@ -16,6 +16,7 @@ import (
 	"ysm-model-manager/go/types/registry"
 )
 
+// FileDiffEntry 文件级差异条目（用于文件夹内容级 diff）
 type FileDiffEntry struct {
 	RelPath string           `json:"relPath"` // 相对于文件夹根的路径
 	AbsPath string           `json:"absPath"` // 绝对路径

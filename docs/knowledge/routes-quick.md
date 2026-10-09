@@ -144,6 +144,7 @@
 
 | 用户意图 | 首选卡 | 红线警告 | 主 ADR(如有) |
 |----------|--------|----------|----------|
+| 3D 预览 tab：相机速度 / 旋转模式 / 键位三卡 + 解析 workers 折叠区 | [设置页 tab 模板分片（tpl-settings-*）](./settings-tpl-shards.md) | - | - |
 | 按标签筛选、条件过滤 | [高级筛选 adv-filter](./dialog-adv-filter.md) | - | - |
 | 菜单行为执行、ctx:show | [右键菜单系统](./context-menu.md) | 禁止 view 层手写菜单项 | - |
 | 残留扫描 | [emoji/UI_ICONS 摸排方法论](./survey-emoji-icons.md) | - | - |
@@ -155,6 +156,7 @@
 | 富列表选择（picker，支持自定义 footer 表单） | [弹窗基座 modal（6 文件家族）](./dialog-modal.md) | - | - |
 | 高级筛选、骨骼数 / 立方体 / 纹理尺寸数值范围 | [高级筛选 adv-filter](./dialog-adv-filter.md) | adv-filter 弹窗必须复用 modal.ts 的 Promise API，禁止手写弹窗 DOM | - |
 | 滑块控制器、幻灯片菜单外壳、头部开关 | [UI 组件簇（原 ui 收容所，已归位）](./ui-components.md) | - | - |
+| 环境 tab：路径三卡（mc-path / links / mirror）/ 存储卡 / FSA 卡 | [设置页 tab 模板分片（tpl-settings-*）](./settings-tpl-shards.md) | - | - |
 | 进度弹窗（closable=false 防误关） | [弹窗基座 modal（6 文件家族）](./dialog-modal.md) | - | - |
 | 两级菜单、轻量导航栈、createSlideMenu | [ADR 去桶化 slide-menu 外壳组件](./ui-slide-menu.md) | - | - |
 | 摸排 | [emoji/UI_ICONS 摸排方法论](./survey-emoji-icons.md) | - | - |
@@ -168,6 +170,7 @@
 | 通用红线 | [业务对话框 features/dialogs(批量重命名/标签编辑/高级筛选)](./features-dialogs.md) | adv-filter.ts 后端约束:Go SearchModels 仅支持 6 范围 +1 关键字,前端不呈现其他控件(代码注释已注明) | - |
 | 统一作者 / 作品、5 个内置预设 | [批量重命名 batch-rename](./dialog-batch-rename.md) | - | - |
 | 图标迁移 | [emoji/UI_ICONS 摸排方法论](./survey-emoji-icons.md) | - | - |
+| 外观 tab：语言 / 主题色点卡 / 字体三卡 / 动画 / 启动默认页 | [设置页 tab 模板分片（tpl-settings-*）](./settings-tpl-shards.md) | 模板分片出卡一律 stgCard()/stgCards() 构造器 + schema 枚举派生 option，禁手写裸 div 卡片与裸 option 列 | - |
 | 消息弹窗图标 | [toast-emoji-svg](./adr.md) | - | - |
 | 右键菜单、添加菜单项 | [右键菜单系统](./context-menu.md) | 菜单结构声明在 menu-defs.ts（唯一事实来源），行为在 features/context-menu/context-menu-handlers.ts（HANDLERS 表） | - |
 | 执行破坏性操作前的二次确认（danger 模式） | [弹窗基座 modal（6 文件家族）](./dialog-modal.md) | 破坏性操作（删除/清空/覆盖）必须用 modalConfirm，danger=true 标红按钮 | - |
@@ -181,6 +184,7 @@
 | rename-format、showRenameDialog | [重命名弹窗 rename](./dialog-rename.md) | - | - |
 | showBatchRenameDialog | [批量重命名 batch-rename](./dialog-batch-rename.md) | - | - |
 | slide-menu、slide 菜单、去桶化 | [ADR 去桶化 slide-menu 外壳组件](./ui-slide-menu.md) | slide-menu 外壳必须复用 slide-menu 的轻量导航栈，禁止手写导航栈 | - |
+| stgCard / stgCards 卡片正典与 stgUnits 入场编排 | [设置页 tab 模板分片（tpl-settings-*）](./settings-tpl-shards.md) | - | - |
 | title 气泡、3D 按钮 | [悬浮提示 tooltip](./dom-tooltip.md) | - | - |
 | Toast 通知、提示、反馈、报错提示 | [Toast 通知 app-toast](./app-toast.md) | Toast 必须复用 utils/dom/toast-ms.ts 的毫秒级反馈，禁止手写浮层 | - |
 | toast emoji | [toast-emoji-svg](./adr.md) | toast 图标位只喂 resolveIcon 的语义 SVG，msg 载荷禁拼裸 emoji 前缀（esc 文本槽塞 SVG 会字面显示，ADR-267 盲区） | - |
@@ -308,18 +312,28 @@
 | 资源类型识别、rtype 判定 | [扫描核心 go/scanner](./go-scanner.md) | resource_types.json 是唯一事实来源 | - |
 | advFilterIntersectPaths | [搜索筛选编排 search](./search.md) | - | - |
 | AnalyzeYSMModel、HasModInDir | [YSM 解析 go/ysm](./go-ysm-parser.md) | - | - |
+| buildComponents 多组件 / perComponent 独立纹理 | [Geometry 存档解析流水线（archive 分片）](./go-geometry-archive-pipeline.md) | - | - |
 | CLI 搜索、命令行搜索、search 命令 | [CLI 搜索命令 search](./go-cli-search.md) | CLI 搜索必须复用 go/cli 的 SearchModels 后端，禁止 CLI 层手写搜索逻辑 | - |
+| collectMaidManifest / resolveL0 流水线 | [女仆包 L0 清单收集与解析（maid_l0 分片）](./go-geometry-maid-l0.md) | - | - |
+| collectMergedFiles 合并收集 / 物化封顶 | [Geometry 存档解析流水线（archive 分片）](./go-geometry-archive-pipeline.md) | - | - |
+| DiffFolderContents / DiffFolderContentsScan 夹级内容判定 | [资源/文件夹级同步 diff（go/sync 拆分）](./go-sync-resource-diff.md) | - | - |
 | filepath.WalkDir 路径安全 | [去重 go/dedup](./go-dedup.md) | - | - |
 | Geometry 存档、基岩版 bedrock | [Geometry 存档 go/geometry](./go-geometry.md) | Geometry 存档解析必须走 go/geometry 的 parse/archive 封装，禁止在业务代码里直接 unzip | ADR-068 |
 | initDiagnostics、createDedupSession | [诊断页 diagnostics](./app-content-diagnostics.md) | - | - |
 | IsRecycleDir 守卫 | [去重 go/dedup](./go-dedup.md) | - | - |
 | last-wins / priority 裁决 | [分类路由与回归护栏](./classify-routing.md) | - | ADR-093 |
+| maid-model 包 L0 清单与命名空间选择 | [女仆包 L0 清单收集与解析（maid_l0 分片）](./go-geometry-maid-l0.md) | 「最长清单即主包」启发式与 L0 未命中回退全量枚举兜底是互相锁定的口径，勿松动命中判定 | - |
+| mergeGeoFiles 骨骼合并 / texIdxMap 槽位绑定 | [Geometry 存档解析流水线（archive 分片）](./go-geometry-archive-pipeline.md) | - | - |
+| model_id 推断 / 候选路径字典 | [女仆包 L0 清单收集与解析（maid_l0 分片）](./go-geometry-maid-l0.md) | - | - |
 | oldest 资历排行 | [诊断页 diagnostics](./app-content-diagnostics.md) | - | - |
 | parse.go / archive.go | [Geometry 存档 go/geometry](./go-geometry.md) | - | ADR-068 |
+| ParseFromZip / ParseFrom7z / ParseFrom*Entry 存档流水线 | [Geometry 存档解析流水线（archive 分片）](./go-geometry-archive-pipeline.md) | zip/7z 六入口必须走 openArchiveBytes + parseModelFromArchive / parseFromArchiveEntry / parseComponentsFromArchive 共享实现，勿退回双份路径 | - |
 | runSearch | [CLI 搜索命令 search](./go-cli-search.md) | - | - |
 | SearchModels 数值筛选 | [Web Worker 模型统计层 model-stats](./model-stats.md) | - | ADR-218, ADR-219 |
 | SearchModels、adv-filter、网页版降级 | [搜索筛选编排 search](./search.md) | - | - |
 | sync_diff / sync_hash / sync_push / sync_relink | [整合包同步 go/sync](./go-sync.md) | - | ADR-064 |
+| SyncResources / SyncResourcesWithConfig 资源级 diff | [资源/文件夹级同步 diff（go/sync 拆分）](./go-sync-resource-diff.md) | 同步判定必须经 go/sync 的 diff+hash 双阶段，app 层禁手写同步逻辑 | - |
+| SyncResourcesDirLevel / DirLevelScan 文件夹级同步 | [资源/文件夹级同步 diff（go/sync 拆分）](./go-sync-resource-diff.md) | - | - |
 | watcher、Events / errs / done | [文件监听 go/watcher](./go-watcher.md) | - | - |
 | Web Worker、批量统计 | [Web Worker 模型统计层 model-stats](./model-stats.md) | - | ADR-218, ADR-219 |
 | YSM 解析、摘要 ExtractYsmSummary | [YSM 解析 go/ysm](./go-ysm-parser.md) | YSM 解析必须走 go/ysm 的 AnalyzeYSMModel，前端禁止手写 YSM 解析逻辑 | - |
@@ -411,8 +425,12 @@
 | IndexedDB、网页版存储、idbGet/idbSet/idbDel CRUD | [浏览器后端 IndexedDB 封装](./backend-idb.md) | 事务必须接线 complete/error/abort 三事件 | ADR-177 |
 | MANAGE_EXTERNAL_STORAGE、SAF、权限 | [Android 桥接层：存储授权 + 目录选择器](./android-bridge.md) | - | - |
 | NBT 解析 / 体素 / 网页版文件系统 | [网页版后端 backend-web](./backend-web.md) | - | - |
+| rekeyWebModelGroup 两阶段事务与回滚 | [网页版文件系统变更与扫描（web-fs 拆分）](./web-fs-mutate-scan.md) | - | - |
+| renameWebDir / renameWebFile / deleteWebModel / moveOrCopyWebModel | [网页版文件系统变更与扫描（web-fs 拆分）](./web-fs-mutate-scan.md) | 网页版变更一律「写 IndexedDB + 按 store 单事务」，重命名/移动/复制禁逐步 idbSet/idbDel（中途崩溃留新旧 key 并存） | - |
 | SAF 废弃、MANAGE_EXTERNAL_STORAGE 权限模型、前端黑名单同步（ANDROID_UNAVAILABLE） | [Android 平台守卫（Go 侧）](./go-android-platform-guard.md) | - | - |
+| scanWebModels / scanAllWebModels 主文件收敛 | [网页版文件系统变更与扫描（web-fs 拆分）](./web-fs-mutate-scan.md) | - | - |
 | ScreenLocked、NetworkChanged、permissionGranted | [Android 系统事件消费（back/网络/存储授权）](./android-events.md) | - | - |
+| searchWebModels 数值范围 / Worker 批量统计 / 降级 | [网页版文件系统变更与扫描（web-fs 拆分）](./web-fs-mutate-scan.md) | - | - |
 | Wails Events 事件抽象 | [Wails runtime 抽象 backend-runtime](./backend-runtime.md) | - | - |
 | Wails Window 窗口抽象 | [Wails runtime 抽象 backend-runtime](./backend-runtime.md) | - | - |
 | watcher 监听跳过、fsnotify 平台限制 | [Android 平台守卫（Go 侧）](./go-android-platform-guard.md) | - | - |
@@ -847,6 +865,11 @@
 | 移动/复制大文件夹时需进度回调——同步操作可能长时间阻塞 | - | - |
 | 业务代码直调 os.WriteFile | - | 并发写破坏文件、缺 BOM 处理；必须经 fsutil.AtomicWrite |
 | filepath.Walk 跟符号链接 | - | 目录遍历循环 / 越权；必须用 fsutil.walk 的 IsRecycleDir 守卫 |
+| sortByTexOrder 与 buildSubModels 有隐式时序（纹理排序在前，L0 TexSlot 按排序后槽位换算），调换顺序会静默改行为 | - | - |
+| buildSubModels 的 L0 覆盖判定不对称（只看清单非空、不看 resolveL0.hit）是现状红线，勿 | `顺手统一` | - |
+| 合并路径 IsArmModelName 判定在 Open+Read 之后（保持原序），勿成先判再读 | `顺手优化` | - |
+| resolveL0 命中判定以为准（零命中 = 清单与 zip 内容脱节，回退全量枚举兜底），勿按清单非空判 hit | `清单至少命中 1 个模型` | - |
+| resolveL0Model / resolveL0Texture 返回值必须是小写 zip 内绝对路径（entryByPath 键全小写），返回 e.Name() 原始大小写会让主循环重查 miss、大写条目纹理静默丢弃 | - | - |
 | 直接 unzip | - | 7z 未支持、纹理提取缺路径安全；必须经 go/geometry |
 | 未走 ysm_parser.go | - | .ysm 解析不一致；必须经 go/ysm 兜底 |
 | 直写目标文件 | - | 中断留下半文件；必须经 WriteFileAtomic 的 tmp+rename |
@@ -879,6 +902,9 @@
 | 作者提取依赖模型文件中的 metadata.authors 字段——缺失则作者为空 | - | - |
 | 单文件 >500MB 跳过哈希计算——同步对空哈希跳过匹配 | - | - |
 | Go 单引擎扫描口径须自洽——Rust 后端已删除（2026-10-06），不再有跨引擎对照 | - | - |
+| pack 目录折叠指纹（D2′-b）累积须在 IsResourceAllowed 过滤之前——被过滤的纹理/mcmeta 子文件也要计入所属 pack 目录 | - | - |
+| 缓存只收完整 Walk 结果：rootFailed/partialFail 的残缺 entries 不入 30s 扫描缓存，否则残缺结果在 TTL 内当权威 | - | - |
+| resources kind 缓存键的 hashed 维度隔离与「Size-only collect」，nil 版先 populate 会污染带 scanFn 版的内容级判定 | `带哈希 collect` | - |
 | app 层手写同步 | - | 与 go/sync 判定不一致、冲突未处理；必须经 go/sync |
 | 同步不做 hash 校验 | - | 文件变更未检测；必须经 sync_hash 校验 |
 | 标签以文件绝对路径为 key——移动文件后旧 key 的标签丢失 | - | - |
@@ -1097,6 +1123,9 @@
 | 已删脚本名仍在区块之外被引用 | `已删除` | ghostReferences 报幽灵引用（event-audit 曾残留于检查类定义与一致性校验表） |
 | 前端本地重算筛选逻辑 | - | 与后端 SearchModels 能力脱节、结果不一致；必须交后端执行 |
 | adv-filter 条件未走三路交集（关键词 + 数值 + 标签）→ 结果不精确；必须经 advFilterIntersectPaths | - | - |
+| 主题图标/文案表必须保持 Record<ThemeCard, …> 形态——theme-core 加主题漏键即编译期报错，勿回退 Record<string, …> + 运行时 ?? 兜底 | - | - |
+| 入场步长一律由 stgUnits 注入（startMs/cardStep 参数），分片内硬编码 step 会造成双源 | `单元表声明 + 内部步长` | - |
+| 平台能力矩阵 PATH_CARD_PLATFORMS 是的单一事实源，渲染函数与测试只消费它，勿各搓 flag | `哪张卡在哪些平台真能用` | - |
 | 手写按钮 CSS | - | 与 btn-base 不一致、主题切换失效；必须经 btnBaseCSS |
 | 颜色 / 间距 / 字号不消费 CSS 变量 | - | 主题切换后样式残留；必须用 var(--*) 变量 |
 | 见模块级 let 即判——先查复位出口与紧邻注释：litematic-adapter 的 SliceInstance 是 ADR-132 单调唯一 key 生成器，**刻意不该复位**（复位会让并存实例编号撞车），已带 singleton-allow 注 | `单例缺陷` | - |
@@ -1226,6 +1255,9 @@
 | '**滑杆值 ≠ 生效值：必须给出口（2026-10-04 修复，锐评 P1-2）**：浪高滑杆值受水位 / 池深预算钳制（`water-params.ts\|effectiveWaveHeight`），默认档 0.15→1.0 整段拖动**毫无反应**（85% 死区）却无任何解释。修复 = slider 臂补 **hint 槽位**（动态 `getHint` 优先、静态 `hintKey` 回退；`getHint` 由 button 专属提升为通用通道，渲染于 label 右侧小字），浪高显示。⚠️ **刷新顺序是坑**：`onChange` 内 `updateDisplay(n)` **先于** `v.setValue(n)`，而 hint 读 cap 状态 ⇒ 只在 `updateDisplay` 刷会**滞后一步**（显示上一拍的值）；须在 `setValue` 之后补刷（numeric 输入路径同）。新增任何「值 ≠ 生效值」的参数时，先问：用户从哪里知道实际生效多少' | `实际生效 X m` | - |
 | '**可见性单门 + 一形态一旋钮（2026-10-04 修复，锐评 P2-1）**：① 水面可见性曾与 film 的 `wetness > 0` 相与——把拖到 0，一级行 master 开关仍显示 ON 而场景无水（对开关撒谎，与 fog/reflector 已治的同族病）；现收归**单门** `envState.waterEnabled`。② film 的 alpha 曾 = `opacity × wetness`（两个旋钮一个自由度，用户不知该转哪根）；现 **film 下隐藏 `waterOpacity`**，浓度由 wetness 独占 ⇒ 一形态一旋钮。③ 旗标 `wetnessGated` | `水膜浓度` | `wetnessScalesOpacity`（它已不再管可见性，名字必须跟着语义走）。**判「两参数是否重叠」的方法** = 问「能不能构造两组不同取值而画面完全一致」（`(0.5,0.5)` vs `(0.25,1.0)` 即实锤）。另：旧用例「film wetness=0 → 不可见」在 `waterEnabled` 默认 false 下**恒真**（从未开水）——**改默认值会让老断言变成恒真**，改默认时须回扫本 cap 全部断言' |
 | '**倒影 RT 的 MSAA 是隐形成本（2026-10-04 修复，锐评 P2-3）**：three 上游  默认 `multisample = 4`（构造参数缺省），叠加 half-float ⇒ 2048 档约 **134 MB**（本仓 schema 原先只按分辨率档计价，读者易以为 33 MB）。现 `water-reflect.ts\|ensureReflector` 显式传 `multisample: 0`：实付 ≈ 边长²×8B（512 档 ≈ 2 MB / 2048 档 ≈ 33 MB）。倒影经水 shader 斜率扰动采样 + fresnel 混合，边缘抗锯齿的边际收益不抵这笔显存/带宽。行为断言 = `getRenderTarget().samples === 0`（**别只断言源码里写了 multisample**）' | `Reflector` | - |
+| rekeyWebModelGroup 两阶段「写全新 key | - | 删旧 key」，中途失败只回滚本次新建（rollbackWritten 按 store 分桶）——config store 的 ban/tags key 错删到 files store（no-op）即孤儿标记 |
+| ysm.json 单文件重命名禁改（游戏按目录名识别模型，主文件 rank 降级会让模型从列表消失）——对齐桌面 fileops ADR-038 D3 的守卫 | - | - |
+| 搜索降级契约：Worker 不可用 / 批量统计失败 | - | 返回「数值 0 + hasError:false」关键词匹配（toolbar-search 经 consumeWebSearchDegraded 提示），外 catch 是边界防御、不让数值过滤搜索 throw |
 | "**拦截键是 exe 镜像路径在 AI 代理工作区内，与文件名/哈希无关**（2026-09-27 四组对照实验实锤）：仓内 bin 的 exe 必失败，复制到 %TEMP% 原名跑零失败；从未被标记的探针复制进 bin 立即失败" | - | - |
 | 症状极具迷惑性：读全正常 + 目录 ACL/属主全正常 + 代码就是裸 os.CreateTemp（`go/fsutil/write.go\|createTempFile` = os.CreateTemp 无花样），会把排查引向死胡同 | `代码 bug / ACL / 目录锁 / 沙箱令牌` | - |
 | "**火绒（HipsDaemon 在跑）是被冤枉的红鲱鱼**：其防护记录无任何 YSM 条目（仅无关 ssh.exe）；不等于「是它干的」，先看它的防护记录有无条目再定罪" | `有安全软件在跑` | - |

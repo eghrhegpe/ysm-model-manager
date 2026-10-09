@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 198 张知识卡
+> 总计: 203 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -43,7 +43,7 @@
 - **scripts-lib-adoption**（_lib 共享层采用率闸门）：`scripts/check-lib-adoption.ts` 把 `check-proc-adoption` 的成功经验（非直调占比 100% 全收敛）推广为**规则驱动的通用闸门**：RULES 表声明「某 `_lib` 模块 → 手搓…
 - **scripts-readme-index**（README 登记处对账 check-readme-index.ts）：`scripts/README.md` 自称「所有 Node 工具脚本的索引」「治理检查（check-* 系列；唯一登记处）」，但历史上没有任何机器对账——新增/改名脚本后忘记登记 README 不会被任何门禁拦下。2026-08-31 审…
 
-## core（26 张）
+## core（27 张）
 
 *核心基础设施（事件总线、页面状态、Wails 桥接）*
 
@@ -74,6 +74,7 @@
 | 🍃 theme | 主题系统 theme | leaf | — | 主题, 换肤, 深色, 浅色, 跟随系统, 动画开关, 字号, 界面偏好 |
 | 🍃 verify-before-conclude | 可复现结论纪律（结论必附验证证据） | leaf | — | 要下结论说某个债已清/未清、某个门禁慢了、某处是误报时, 写审计报告、知识卡、ADR 或提交说明里的「实测」数字时, 读到注释或知识卡里的既有结论，准备把它当事实继续推理时, 派子代理探查后，要不要采信它报的计数 |
 | 🏗 wails-bridge | Wails 桥接 app.ts | architecture | — | Wails, 桥接, getApp, Go 调用, Binding, window.go.main.App, 网页版, browser adapter |
+| 🍃 web-fs-mutate-scan | 网页版文件系统变更与扫描（web-fs 拆分） | leaf | — | 网页版重命名, 网页版删除 / 移动 / 复制, scanWebModels, searchWebModels 数值过滤, IDB rekey |
 | 🏗 ysm-baked | YSM 烘焙与几何反推 | architecture | — | 烘焙, 几何反推, pivot, 骨骼错位, 模型错位, UV 对不上, 贴图错位, RawYsmModel |
 
 ### 摘要
@@ -97,6 +98,7 @@
 - **test-discipline**（测试纪律：禁 mock 断言谓词 / 判别样本 / 变异探针）：[ADR-311-d1] 收口的测试可信度三机制（锐评 2026-10-08，落地 2026-10-09）：
 - **theme**（主题系统 theme）：主题系统的纯逻辑实现在 `frontend/src/theme-core.ts`（2026-08-17 神桶拆分自 `app-modules.ts`；`app-modules.ts` 仅 re-export `applyTheme/init…
 - **verify-before-conclude**（可复现结论纪律（结论必附验证证据））：本卡约束**怎么下结论**——不针对某个子系统，而是针对「判断本身」的纪律。适用于审计报告、知识卡正文、ADR、提交说明，也适用于对话中给用户的答复。
+- **web-fs-mutate-scan**（网页版文件系统变更与扫描（web-fs 拆分））：网页版（浏览器后端）文件系统的两个职责分片，系 ADR-040 职责切分延续自 `web-fs.ts` 拆出（只搬移不改行为；公共 API 由 `web-fs.ts` 门面 re-export，消费方 import 路径不变）：`web-f…
 - **ysm-baked**（YSM 烘焙与几何反推）：YSM 作者导出模型时，**cube 的语义参数（origin/size/uv/rotation）在导出时被烘焙为纯顶点面**，`RawYsmModel.RawCube.faces` 只保留「每面 4 顶点 + 法线 + 4 组 u/v」。…
 
 ## feature（17 张）
@@ -143,7 +145,7 @@
 - **sync-manager**（整合包同步管理器 sync-manager）：`app-sync-manager` 是一个 Web Component 视图组件（`<app-sync-manager>`），承担**单个整合包（instance）内「仓库 ↔ 实例」双向同步状态展示与逐文件推送/拉取编排**：
 - **version-updater**（版本更新 version-updater）：`version-updater.ts` 是应用自更新的前端入口：启动时静默检查（受 6 小时频次限制）→ 发现新版本以可点击 toast 通知；设置页按钮手动检查 → 弹出带更新日志的 `modalConfirm` → 调 `DoUpda…
 
-## go（50 张）
+## go（53 张）
 
 *Go 后端包（安装、下载、回收站、YSM 解析等）*
 
@@ -170,6 +172,8 @@
 | 🏗 go-executil | 进程隐藏窗口 go/executil | architecture | — | 子进程隐藏控制台窗口, 跨平台 HideWindow, 外部进程启动 |
 | 🏗 go-fileops | 文件操作 go/fileops | architecture | io-bound | 移动, 复制, 重命名, 删除, fileops, 启用禁用, .ban, ysm.json 整组操作 |
 | 🍃 go-fsutil | 文件基础设施 go/fsutil | leaf | io-bound | 遍历, walk, 原子写, 复制, 硬链接, 跨设备 |
+| 🍃 go-geometry-archive-pipeline | Geometry 存档解析流水线（archive 分片） | leaf | — | 存档解析流水线, ParseFromZip / ParseFrom7z, ParseFromZipEntry / ParseFrom7zEntry, 多组件解析 buildComponents, 纹理槽位绑定 texIdxMap, SubModels 清单 |
+| 🍃 go-geometry-maid-l0 | 女仆包 L0 清单收集与解析（maid_l0 分片） | leaf | — | maid-model, maid_model.json, L0 清单, model_id, 多命名空间 |
 | 🏗 go-geometry | Geometry 存档 go/geometry | architecture | io-bound, memory-heavy | geometry, 基岩版, bedrock, 模型解析, zip, 7z, 纹理, 动画 |
 | 🏗 go-importer | 导入策略 go/importer | architecture | io-bound | 导入, 策略, 导入队列, importer |
 | 🏗 go-installer | 模型安装 go/installer | architecture | io-bound | 安装, installer, 模型导入, 下载模型 |
@@ -182,6 +186,7 @@
 | 🏗 go-recycle | 回收站 go/recycle | architecture | io-bound | 回收站, 删除, 恢复, recycle, 软删除 |
 | 🏗 go-repoaudit | 仓库审计 go/repoaudit | architecture | io-bound, memory-heavy | 仓库审计, 健康分数, 完整性检查, 缓存命中率, repoaudit, health-report, 去重 |
 | 🏗 go-scanner | 扫描核心 go/scanner | architecture | io-bound, concurrent | 扫描, 文件树, 哈希, 缓存, 作者提取, ScanEntries, ScanEntriesCtx 取消扫描, 索引生成 |
+| 🍃 go-sync-resource-diff | 资源/文件夹级同步 diff（go/sync 拆分） | leaf | — | SyncResources, SyncResourcesWithConfig, SyncResourcesDirLevel, DiffFolderContents, 折叠指纹 FoldDigest, 资源包文件夹 |
 | 🏗 go-sync | 整合包同步 go/sync | architecture | io-bound | 整合包, 同步, 硬链接, 缺失, 多余 |
 | 🏗 go-tags | 标签系统 go/tags | architecture | io-bound | 标签, tag, 分类, tag-editor |
 | 🍃 go-testutil | 测试辅助函数 go/internal/testutil | leaf | — | 跨包复用测试 helper, 创建测试文件, 构造内存 ZIP, go/internal/testutil 包在哪 |
@@ -222,6 +227,8 @@
 - **go-executil**（进程隐藏窗口 go/executil）：`go/executil/` 包提供跨平台的外部进程执行工具，当前唯一功能是 **HideWindow**：在 Windows 上隐藏子进程控制台窗口，其他平台为 no-op。
 - **go-fileops**（文件操作 go/fileops）：`go/fileops/` 包实现文件 CRUD + 移动/复制/删除 + 文件夹整组导入 + 预览提取 + 启用禁用（ADR-003 P3 下沉，薄壳 `internal/app/app_files.go` 仅转发）。
 - **go-fsutil**（文件基础设施 go/fsutil）：`go/fsutil/` 是 Go 侧文件系统基础设施包，按 ADR-044 策略 A 收敛自多包重复实现。覆盖 7 大职能：文件/目录遍历、原子写入、原子复制、权限常量、硬链接判定、跨设备错误判定、UTF-8 BOM 剥离、zip/7z …
+- **go-geometry-archive-pipeline**（Geometry 存档解析流水线（archive 分片））：`go/geometry` 存档解析流水线的四个分片实现文件，系 2026-10 文件行数治理自 archive.go 拆出：`archive_parse.go` 主入口与 zip/7z 双份路径收敛，`archive_collect.go…
+- **go-geometry-maid-l0**（女仆包 L0 清单收集与解析（maid_l0 分片））：`go/geometry` 女仆包（TLM maid-model）L0 清单子域的两个分片文件，系 2026-10 文件行数治理自 maid_l0.go 拆出：`maid_l0_manifest.go` 负责「清单收集与候选选择」（命名空间…
 - **go-geometry**（Geometry 存档 go/geometry）：`go/geometry/` 包解析 Bedrock（基岩版）`minecraft:geometry` 模型：既支持单个 geometry JSON，也支持从 ZIP/7z 存档中按 `ysm.json` 清单合并多个模型文件、提取纹理与动…
 - **go-importer**（导入策略 go/importer）：`go/importer/` 包分两块：`importer.go` 的**按资源类型注册的复制策略表**（`Handler` 接口，供本地路径导入/安装复用），以及 `importer_file.go` 的 **base64 单文件导入核心…
 - **go-installer**（模型安装 go/installer）：`go/installer/`（`installer.go` + `lock_tracker.go`，非单文件）负责把仓库中的模型/资源文件**落地**到 Minecraft 整合包实例目录：按 `LinkMode`（`copy` / `h…
@@ -234,6 +241,7 @@
 - **go-recycle**（回收站 go/recycle）：`go/recycle/` 包实现模型的软删除机制，通过硬链接/符号链接判定 + `.recycle` 目录实现可恢复删除。核心是 `TrashManager` 结构体（`New(root)` → `root/.recycle`）。
 - **go-repoaudit**（仓库审计 go/repoaudit）：`go/repoaudit/` 包提供仓库健康审计核心逻辑——资源扫描、完整性校验、缓存状态、健康分数、警告生成、去重汇总。从 `go/cli`（原 `resource.go` 的 `collectRepoHealth`）提取为独立包，CL…
 - **go-scanner**（扫描核心 go/scanner）：`go/scanner/` 包实现仓库文件扫描、哈希计算、缓存失效、作者提取、索引生成（ADR-003 P2 下沉，薄壳 `internal/app/app_scan.go` 仅保留依赖 App 的方法）。
+- **go-sync-resource-diff**（资源/文件夹级同步 diff（go/sync 拆分））：`go/sync` 资源级/文件夹级同步 diff 主流程的三个分片文件，系 2026-10 文件行数治理拆出：`sync_resource.go`（原 sync.go）持资源级 diff + 冲突处理 + 链接类型判定入口；`sync_d…
 - **go-sync**（整合包同步 go/sync）：`go/sync/` 包负责模型库（全局仓库）与 Minecraft 整合包实例之间的同步：发现实例（原版 / PrismLauncher 布局）、按 SHA256 哈希对比出缺失/多余/禁用文件、按文件名或文件夹对比资源包差异、检测目标文…
 - **go-tags**（标签系统 go/tags）：`go/tags/` 包提供模型标签的线程安全持久化存储，是前端 tag-editor 弹窗的后端。标签存放在配置目录的 `tags.json`，以文件绝对路径为 key、标签列表为 value，与模型文件本身解耦（移动/链接模型不污染文件…
 - **go-testutil**（测试辅助函数 go/internal/testutil）：`go/internal/testutil/` 包提供跨包复用的 Go 单元测试辅助函数，解决原先各包各自实现同名 helper 导致的重复维护问题。
@@ -300,7 +308,7 @@
 - **volumetric-cone**（体积光锥 VolumetricCone（真锥体网格 + Fresnel））：聚光灯可见光柱的实现单文件（ADR-177 从 `LightCapability` 拆出的自包含单元：shader + 几何 + 材质 + 挂载状态机）。ADR-266（2026-09-18）把它从「两片交叉 `PlaneGeometry`…
 - **water**（水面能力 WaterCapability（Gerstner 波浪 + GPU 微细节法线））：水面是 env 面板一等公民（与 sky / ground 平级，ADR-196 → ADR-268 归属基础卡末位），分轴布局：
 
-## ui（38 张）
+## ui（39 张）
 
 *前端 UI 组件（tree、sidebar、preview、content）*
 
@@ -337,6 +345,7 @@
 | 🍃 preview-menu-settings-state | 3D 预览设置面板统一状态层与自动 cap 聚合（ADR-125） | leaf | — | 新增 3D 预览设置项, 新增 cap 想让某个开关出现在设置面板, 排查设置项改了不生效 / 重开面板值不对, 排查条件显隐控件不出现, ADR-125 三块落地状态核对 |
 | 🍃 preview-panel-declarative | 3D 预览面板内容声明式化通道（ADR-126 P4-B） | leaf | gpu-bound | 新增 3D 预览面板内容（统计 / 纹理 / 按钮组 / 信息卡）, 评估"面板内容该走 renderCustom 还是 children 声明式", 排查面板内容不出现 / 渲染通道冲突, P4-B 子步（1→2→3）状态通道复用参考 |
 | 🍃 preview-state | 3D 预览全域状态层（ADR-126 P4-A） | leaf | — | 新增 3D 预览面板跨 cap 设置项, 排查预览面板状态改了不生效 / 重开面板值不对, 排查条件显隐控件不出现, P4 子步（A→B→D→C）状态通道复用参考, 评估"某状态是否应进 previewState vs 留在 sceneRegistry/SlideMenu/节点字段" |
+| 🍃 settings-tpl-shards | 设置页 tab 模板分片（tpl-settings-*） | leaf | — | 设置页外观 tab, 设置页环境 tab, 设置页 3D 预览 tab, 主题卡 / 字体三卡, 链接模式 / 镜像源, 相机速度 / 旋转模式 / 键位 |
 | 🍃 shared-styles | 共享样式 shared-styles | leaf | — | 共享样式, 按钮样式, btn-base, focus-visible, tree 样式, Shadow DOM 样式, CSS 变量 |
 | 🍃 survey-emoji-icons | emoji/UI_ICONS 摸排方法论 | leaf | — | emoji 残留摸排, UI_ICONS 消费分布, 孤儿图标盘点, 图标迁移审计 |
 | 🏗 test-utils | 测试工具 test-utils（G-1 抗脆弱测试基础设施） | architecture | — | 测试工具, testid, getByTestId, waitFor, sleep, flaky, 异步等待, 组件测试 |
@@ -376,6 +385,7 @@
 - **preview-menu-settings-state**（3D 预览设置面板统一状态层与自动 cap 聚合（ADR-125））：ADR-085（菜单单一事实来源）采纳的 S1 注册表、S3 refreshDock 已落地，**S2「状态单向流」只落了 bind 回写，未落统一状态源**——横切设置项各自有独立读写通道，声明式 Schema 的 `control.bi…
 - **preview-panel-declarative**（3D 预览面板内容声明式化通道（ADR-126 P4-B））：ADR-125 把**设置面板**的控件统一到 `PreviewControlDef[]`（B 层单渲染器）。ADR-126 P4-B 把同一方向的**面板内容**（统计/纹理/按钮组/信息卡——非控件的内容展示）也声明式化：panel 节…
 - **preview-state**（3D 预览全域状态层（ADR-126 P4-A））：ADR-125 P1 把 ADR-085 S2「状态单向流」在**设置面板**落地（原 `settings-state.ts` / 六项横切）。ADR-126 P4-A 把该模式**升格到 3D 预览全域**——本文件是升格后的形态，是 P…
+- **settings-tpl-shards**（设置页 tab 模板分片（tpl-settings-*））：设置页三个 tab 的正文模板分片，系 2026-10-07 ADR-040 P1 分片收口自 `tpl-settings.ts` 拆出（只搬移不改行为：所有 render* 函数与常量表逐字保留，仍返回 string——本分片是模板文件，…
 - **shared-styles**（共享样式 shared-styles）：两个样式模块为 Shadow DOM 组件提供可复用的 CSS 字符串：`utils/dom/css.ts` 导出全应用统一的按钮体系 `.btn-base`、通用 focus-visible 规则、`.ws-icon` 图标规则与 `.n…
 - **survey-emoji-icons**（emoji/UI_ICONS 摸排方法论）：ADR-238 把 emoji 当 UI 图标迁移成 SVG（`UI_ICONS` + `.ws-icon`）。摸排「还有哪些 emoji 残留 / 哪些图标没被用」时，**不要**几十次零散 grep——仓库已有现成工具，一次运行出全貌。
 - **test-utils**（测试工具 test-utils（G-1 抗脆弱测试基础设施））：`frontend/src/test-utils/` 是组件测试统一工具层（ADR-035 G-1 / UI-Design.md §19.1）。查询走 `data-testid` 稳定钩子（不绑定 CSS 类/文案），等待走轮询（替代固定 …

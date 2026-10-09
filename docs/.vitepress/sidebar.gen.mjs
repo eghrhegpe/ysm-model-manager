@@ -1730,6 +1730,10 @@ export const autoSidebar = [
             "link": "/knowledge/wails-bridge"
           },
           {
+            "text": "网页版文件系统变更与扫描（web-fs 拆分）",
+            "link": "/knowledge/web-fs-mutate-scan"
+          },
+          {
             "text": "YSM 烘焙与几何反推",
             "link": "/knowledge/ysm-baked"
           }
@@ -1824,6 +1828,14 @@ export const autoSidebar = [
             "link": "/knowledge/go-fsutil"
           },
           {
+            "text": "Geometry 存档解析流水线（archive 分片）",
+            "link": "/knowledge/go-geometry-archive-pipeline"
+          },
+          {
+            "text": "女仆包 L0 清单收集与解析（maid_l0 分片）",
+            "link": "/knowledge/go-geometry-maid-l0"
+          },
+          {
             "text": "Geometry 存档 go/geometry",
             "link": "/knowledge/go-geometry"
           },
@@ -1870,6 +1882,10 @@ export const autoSidebar = [
           {
             "text": "扫描核心 go/scanner",
             "link": "/knowledge/go-scanner"
+          },
+          {
+            "text": "资源/文件夹级同步 diff（go/sync 拆分）",
+            "link": "/knowledge/go-sync-resource-diff"
           },
           {
             "text": "整合包同步 go/sync",
@@ -2068,6 +2084,10 @@ export const autoSidebar = [
           {
             "text": "3D 预览全域状态层（ADR-126 P4-A）",
             "link": "/knowledge/preview-state"
+          },
+          {
+            "text": "设置页 tab 模板分片（tpl-settings-*）",
+            "link": "/knowledge/settings-tpl-shards"
           },
           {
             "text": "共享样式 shared-styles",

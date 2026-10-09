@@ -61,6 +61,12 @@ Android 端模型仓库 = **公共目录固定路径**（`internal/app/pathmgr_a
 > 装到设备：`node scripts/android-install.ts`（adb installDebug + 拉起；⚠️ 它不重编 Go，
 > 装前先跑 android-build）。
 >
+> **SDK/NDK/adb 定位单一事实源 = `scripts/_lib/android-sdk.ts`**（2026-10-10 锐评收编）：
+> 三级探测链「进程级 env → User 级 registry（新开终端不继承）→ `%LOCALAPPDATA%\Android\Sdk`」，
+> NDK 多版本按**语义序**取最新（`compareNdkVersion`）。此前两脚本各有一份且已分叉——
+> install 只看进程级 env，Android Studio 默认只写 User 级 → 新开 PowerShell 报「设备未检测到」误导排障。
+> 新脚本要定位 SDK **一律复用本模块**，禁止再抄一份。
+>
 > ⚠️ `build/android/Taskfile.yml` 的 `compile:go:shared` 只支持 Darwin/Linux 宿主
 > （Windows 报 `Unsupported host OS`），Windows 手动链路（android-build.ts 内部等价）如下
 > （2026-08 实测通过）：
@@ -78,7 +84,7 @@ cd build/android && ./gradlew.bat assembleDebug   # → app/build/outputs/apk/de
 
 前置：`ANDROID_HOME`（本机 `C:\Android\Sdk`）+ NDK 26.3 + platform android-34 + Java 17+。
 
-> ⚠️ `$SDK/ndk` 下装多版本时按**语义序**取最新（`scripts/android-build.ts` `compareNdkVersion`），
+> ⚠️ `$SDK/ndk` 下装多版本时按**语义序**取最新（`scripts/_lib/android-sdk.ts|compareNdkVersion`），
 > 不是字符串序——NDK minor 达两位数（r26.10+）时字符串序 `"26.3"` > `"26.10"` 会选中旧 NDK
 > （锐评 2026-10-09）。NDK 工具链 prebuilt 目录名随版本走，**已修**：`hostTag(ndk)` 按 NDK 实际安装
 > 探测候选（`hostTagCandidates`，ARM Mac 给 `darwin-arm64`→`darwin-x86_64` 序）取首个存在者，

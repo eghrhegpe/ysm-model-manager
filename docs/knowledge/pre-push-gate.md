@@ -64,9 +64,13 @@ auto_fields:
     - reportPathFor
     - requireSummaryField
     - requireSummaryOk
+    - resolveStaticBudget
     - runScopedDocDrift
     - runTools
     - SCRIPTS_TYPECHECK
+    - STATIC_TOOLS_BUDGET_FULL_MS
+    - STATIC_TOOLS_BUDGET_MS
+    - StaticBudgetTier
     - summarizeDebt
     - tryParseJson
     - tryParseSummary
@@ -328,4 +332,11 @@ node scripts/pre-push-gate.ts --files "<file1>\n<file2>..." [--dry-run]  # 文�
   **判断「CI 有无兜底」别只看有没有以它命名的独立步骤**——`--static` 会把 ALL 表整表带进 CI
   （本卡 2026-10-08 版曾据此误判 auto-import「本地是唯一防线，必须留」）。
   反向锚：`tests/test_gate_config.ts` 同时钉死「ALL 在册(--strict)」+「CI --static 步存在且传播退出码」。
+- **静态段预算按表分级**（2026-10-09，同日第二刀）：单预算同时套「33 项域表」与「40 项全量表」
+  是口径错配——同一 30s 在域表（前端域 push 路径实测 ~25s）够用，在全量表（`--all` /
+  `--static` 合并表实测 30.6–34.0s，随负载浮动）却压线假红。现分两档：`domain 30s`
+  （FRONTEND / GO / DOC 子集）与 `full 35s`（`--all` 的 ALL_STATIC_TOOLS、`--static` 合并表，
+  两处调用点显式 `{ tier: "full" }`）；`YSM_GATE_BUDGET_MS` 仍是覆盖所有档位的逃生阀，
+  非法值回落常量（防 `=abc` 让护栏变 NaN 恒不触发）。反向锚 =
+  `tests/test_gate_static_tools.ts` 第 9 组（解析优先级 + 两处接线 + 域表不得误挂 full）。
 - `docs/cli-commands.md` — doctor 命令（gate/--all/--docs 入口）

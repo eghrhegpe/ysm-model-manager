@@ -108,7 +108,9 @@ export function runStaticToolsDispatch(
     // 裁剪」模式（scopedFiles），--all 无 --files 上下文，全量跑 = 301 条 debt 刷屏 +
     // check-params 59.4s 墙钟（见 gate-config.ts 三档位注释）——「防淹没 + 控成本」两动机
     // 在全量模式同样成立。baseline 比对落地后三档才有资格进 --all；覆盖尾行已如实点名。
-    runTools(ctx, ALL_STATIC_TOOLS);
+    // 预算档位 full（2026-10-09 按表分级）：本表 35 项、实测 30.6–34.0s，套域表的 30s
+    // 会压线假红（同一段落早些时候 <30s 通过 ⇒ 负载敏感）。档位跟着表的规模走。
+    runTools(ctx, ALL_STATIC_TOOLS, { tier: "full" });
     runTools(ctx, DOC_EXTRA_SCRIPTS);
   }
   if (opts.docsMode) {
@@ -133,7 +135,8 @@ export function runStaticToolsDispatch(
     for (const t of [...ALL_STATIC_TOOLS, ...DOC_EXTRA_SCRIPTS]) merged.set(t.tool, t);
     for (const t of FRONTEND_STATIC_TOOLS) if (!t.scopedFiles) merged.set(t.tool, t);
     for (const dup of CI_INDEPENDENT_TOOLS) merged.delete(dup);
-    runTools(ctx, [...merged.values()]);
+    // 预算档位 full：合并表 ~40 项（ALL + DOC_EXTRA + FRONTEND 非 scoped），与 --all 同量级。
+    runTools(ctx, [...merged.values()], { tier: "full" });
   }
   if (!opts.allMode && !opts.docsMode && !opts.staticMode) {
     if (ctx.plan.frontend) runTools(ctx, FRONTEND_STATIC_TOOLS);

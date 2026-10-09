@@ -65,10 +65,14 @@ auto_fields:
     - RecordOpts
     - requireSummaryField
     - requireSummaryOk
+    - resolveStaticBudget
     - runScopedDocDrift
     - runTools
     - SCRIPTS_TYPECHECK
     - stageFiles
+    - STATIC_TOOLS_BUDGET_FULL_MS
+    - STATIC_TOOLS_BUDGET_MS
+    - StaticBudgetTier
     - stripSourceSuffix
     - summarizeDebt
     - tryParseJson

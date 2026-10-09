@@ -25,8 +25,17 @@
  * 退出码：0 全绿；非 0 断言失败（node:assert 抛错）。
  */
 import assert from "node:assert";
-import { runScopedDocDrift, runTools } from "../scripts/_lib/gate-blocks/static-tools.ts";
+import fs from "node:fs";
+import path from "node:path";
+import {
+  resolveStaticBudget,
+  runScopedDocDrift,
+  runTools,
+  STATIC_TOOLS_BUDGET_FULL_MS,
+  STATIC_TOOLS_BUDGET_MS,
+} from "../scripts/_lib/gate-blocks/static-tools.ts";
 import { createGateCtx, type GateCtx } from "../scripts/_lib/gate-ctx.ts";
+import { ROOT } from "../scripts/_lib/scan-files.ts";
 
 /** 构造最小 ctx（plan 全 false：本测试只验执行器语义，不触发任何域检查）。 */
 function mkCtx(files: string[] = []): GateCtx {
@@ -244,7 +253,55 @@ const FAIL_OUT = '{"_summary":{"ok":false,"errors":2,"warns_list":["a.ts:1","b.t
   );
 }
 
+// ── 9. 预算档位（2026-10-09 按表分级）：解析优先级 + 调用方接线反向锚 ──
+// 事故形态：单预算同时套「33 项域表」与「40 项全量表」⇒ 全量表压线假红
+// （实测 30.6s vs 30s，同段落早些时候 <30s 通过 = 负载敏感）。修法 = 档位跟着表走。
+{
+  assert.equal(resolveStaticBudget("domain", undefined), STATIC_TOOLS_BUDGET_MS);
+  assert.equal(resolveStaticBudget("full", undefined), STATIC_TOOLS_BUDGET_FULL_MS);
+  assert.ok(
+    STATIC_TOOLS_BUDGET_FULL_MS > STATIC_TOOLS_BUDGET_MS,
+    "全量表预算必须高于域表——否则分级失去意义",
+  );
+  // 环境逃生阀对所有档位生效（慢机器/CI/临时排查）
+  assert.equal(resolveStaticBudget("domain", "60000"), 60_000);
+  assert.equal(resolveStaticBudget("full", "60000"), 60_000);
+  // 非法值一律忽略（防 `YSM_GATE_BUDGET_MS=abc` 让护栏变 NaN 恒不触发 = 静默失效）
+  for (const bad of ["abc", "0", "-5", ""]) {
+    assert.equal(
+      resolveStaticBudget("full", bad),
+      STATIC_TOOLS_BUDGET_FULL_MS,
+      `非法环境值 ${JSON.stringify(bad)} 应回落到档位常量`,
+    );
+  }
+  // 反向锚：全量表的两处调用点必须显式声明 full（否则 40 项表套 30s 档，退回假红）
+  const scheduleSrc = fs.readFileSync(
+    path.join(ROOT, "scripts/_lib/gate-blocks/schedule.ts"),
+    "utf8",
+  );
+  const fullCallSites = scheduleSrc.match(/\{ tier: "full" \}/g) ?? [];
+  assert.ok(
+    fullCallSites.length >= 2,
+    `--all 与 --static 两处全量表调用都必须声明 tier: "full"（实际 ${fullCallSites.length} 处）`,
+  );
+  assert.match(
+    scheduleSrc,
+    /runTools\(ctx, ALL_STATIC_TOOLS, \{ tier: "full" \}\)/,
+    "--all 的 ALL_STATIC_TOOLS 调用必须显式 full 档",
+  );
+  // 域表调用点不得误挂 full（否则域表护栏形同虚设）
+  assert.doesNotMatch(
+    scheduleSrc,
+    /runTools\(ctx, FRONTEND_STATIC_TOOLS[^)]*tier: "full"/,
+    "域表调用点不应挂 full 档",
+  );
+  console.log(
+    `  ✓ 预算档位：domain ${STATIC_TOOLS_BUDGET_MS / 1000}s / full ${STATIC_TOOLS_BUDGET_FULL_MS / 1000}s，` +
+      `env 覆盖生效、非法值回落，全量表 ${fullCallSites.length} 处接线`,
+  );
+}
+
 console.log(
-  "OK: static-tools runTools/runScopedDocDrift 契约（8 组断言：label/note 形状、\n" +
-    "    blockPolicy→blocked 矩阵与落库、--staged、scoped 退化与送达判别、autoFix 三态、早退）",
+  "OK: static-tools runTools/runScopedDocDrift 契约（9 组断言：label/note 形状、\n" +
+    "    blockPolicy→blocked 矩阵与落库、--staged、scoped 退化与送达判别、autoFix 三态、早退、预算档位）",
 );

@@ -1113,7 +1113,7 @@
 | mock 不保真（null 输入 / 抛错输入 / 产物属性）：判别样本退化为假阳 | - | - |
 | three r186 的 needsUpdate 只有 setter（getter 恒 undefined），须以 version 递增断言 | - | - |
 | 纯函数下沉时须**参数化**（不读全局单例如 envState），否则不可叶层直测（ADR-235-d1 教训） | - | - |
-| 只在 undefined 时赋值——对已有默认值的目标会**吞掉传入值**（`createSky` 教训：Sky 默认 `cloudCoverage=0.4`） | `??=` | - |
+| " 只在 undefined 时赋值——对已有默认值的目标会**吞掉传入值**（`createSky` 教训：Sky 默认 `cloudCoverage=0.4`）" | `??=` | - |
 | biome 禁  非空断言（`noNonNullAssertion`），类型收窄须用非 undefined 类型断言或显式守卫 | `!` | - |
 | 三布尔合取门最易静默分叉（手抄双源血案：ground `isSurfaceVisible`/`updateSurfaceVisible`）， | `漏一支` | - |
 | getAllByTestId 前缀查询不会返回的兄弟 testid（如 tree-dir 不会命中 tree-dir-toggle）；误用精确查询会抛错，应先查前缀再 JS 过滤 | `后缀非数字` | - |

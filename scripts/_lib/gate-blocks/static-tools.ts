@@ -46,9 +46,14 @@ import { ROOT } from "../scan-files.ts";
  *
  * 护栏语义：静态工具段**总耗时**超本预算 → 记一条 FAIL，点名最慢的几项，
  * 把「悄悄变慢」变成「显式红灯」——慢不是不能接受，**未经知会的慢**不可接受。
- * 预算口径：摘除 18.3s 大户后，34 项串行实测 **24.4s**（主要 8 项 16.5s，两轮复测稳定无抖动）
- * → 预算 30s（余量约 20%）。正常应低于此；超标即说明又有人往清单里加了重物。
- * 逃生阀 `YSM_GATE_BUDGET_MS=<ms>`（慢机器/CI 上放宽，或临时排查）。
+ * 预算口径（2026-10-09 改**按表分级**）：单预算同时套「33 项域表」与「40 项全量表」是口径错配
+ * ——同一 30s 在域表（前端域 push 路径实测 ~25s）绰绰有余，在全量表（ALL / `--static` 合并表
+ * 实测 30.6–34.0s，随机器负载与并行会话在途改动浮动）却压线假红。故分两档：
+ *   · `STATIC_TOOLS_BUDGET_MS = 30s`：域表（FRONTEND / GO / DOC 子集）
+ *   · `STATIC_TOOLS_BUDGET_FULL_MS = 35s`：全量表（`--all` 的 ALL_STATIC_TOOLS、`--static` 合并表）
+ * 档位由调用方按表选（`runTools(ctx, tools, { tier })`），`--all`/`--static` 两处显式 full。
+ * 正常应低于本档；超标即说明又有人往清单里加了重物。
+ * 逃生阀 `YSM_GATE_BUDGET_MS=<ms>`：**一次覆盖所有档**（慢机器/CI 上放宽，或临时排查）。
  *
  * 摘除判据（勿滥用逃生阀；摘前先核这两条）：
  *   ① **有无判定力**：`check-unread-fields` rc 恒 0、--strict 才 rc=1，挂门禁里从不拦人 → 可摘。
@@ -64,7 +69,31 @@ import { ROOT } from "../scan-files.ts";
  *   「本地是唯一防线，必须留」（该结论已作废，见 gate-config 的摘除注释）。
  * 换取的收益是真实的：本次摘除让 commit 与 push 各立省 ~18s。
  */
-const STATIC_TOOLS_BUDGET_MS = Number(process.env.YSM_GATE_BUDGET_MS ?? "") || 30_000;
+/**
+ * 静态工具段的时间预算档位。
+ *   domain —— 域表（FRONTEND / GO / DOC 子集）：前端域 push 路径实测 ~25s。
+ *   full   —— 全量表（--all 的 ALL_STATIC_TOOLS / --static 合并表）：实测 30.6–34.0s。
+ */
+export type StaticBudgetTier = "domain" | "full";
+
+/** 域表预算（ms）。 */
+export const STATIC_TOOLS_BUDGET_MS = 30_000;
+/** 全量表预算（ms）——比域表高一档：表更大且含 auto-import 等固定全树成本项。 */
+export const STATIC_TOOLS_BUDGET_FULL_MS = 35_000;
+
+/**
+ * 解析实际预算（纯函数，可测）。
+ * 优先级：`YSM_GATE_BUDGET_MS` 显式覆盖（对所有档位生效）> 档位常量。
+ * 非法/非正数环境值一律忽略（防 `YSM_GATE_BUDGET_MS=abc` 把护栏变成 NaN 恒不触发）。
+ */
+export function resolveStaticBudget(
+  tier: StaticBudgetTier = "domain",
+  env: string | undefined = process.env.YSM_GATE_BUDGET_MS,
+): number {
+  const override = Number(env ?? "");
+  if (Number.isFinite(override) && override > 0) return override;
+  return tier === "full" ? STATIC_TOOLS_BUDGET_FULL_MS : STATIC_TOOLS_BUDGET_MS;
+}
 
 /**
  * 按清单串行执行静态工具，逐条 record。
@@ -72,8 +101,17 @@ const STATIC_TOOLS_BUDGET_MS = Number(process.env.YSM_GATE_BUDGET_MS ?? "") || 3
  * 刻意不并行（ADR-088 实证回退）：并行版 2m15s vs 串行基线 75s——spawn 开销吃掉
  * sub-second 工具的并行收益。域间并行（Go ∥ 前端）保留在 pre-push-gate 调度层，
  * 静态工具段一律串行。
+ *
+ * @param opts.tier 预算档位（默认 "domain"）。全量表（`--all` / `--static` 合并表）
+ *        由调用方显式传 `"full"`——档位跟着**这次跑的表的规模**走，而不是写死一个数
+ *        同时套大小两种表（那是 2026-10-09 修掉的压线假红成因）。
  */
-export function runTools(ctx: GateCtx, tools: readonly GateTool[]): void {
+export function runTools(
+  ctx: GateCtx,
+  tools: readonly GateTool[],
+  opts: { tier?: StaticBudgetTier } = {},
+): void {
+  const budgetMs = resolveStaticBudget(opts.tier ?? "domain");
   const slowest: { tool: string; ms: number }[] = [];
   let phaseMs = 0;
   for (const entry of tools) {
@@ -191,7 +229,7 @@ export function runTools(ctx: GateCtx, tools: readonly GateTool[]): void {
   // 得到的是「待归因」的假 FAIL + 全队被 blame——比不加护栏更糟（假红会训练人忽略红灯）。
   // 故超预算时对**最慢项复跑一次**做归一：复跑回到正常量级 ⇒ 判环境瞬态（WARN 不阻断，
   // 但必须明文留痕，因为「偶发慢」本身仍是症状）；复跑仍慢 ⇒ 判结构性慢（FAIL）。
-  if (phaseMs > STATIC_TOOLS_BUDGET_MS) {
+  if (phaseMs > budgetMs) {
     const ranked = slowest.slice().sort((a, b) => b.ms - a.ms);
     const top = ranked
       .slice(0, 5)
@@ -208,11 +246,13 @@ export function runTools(ctx: GateCtx, tools: readonly GateTool[]): void {
       procRun("node", [`scripts/${worst.tool}`, "--json"], { cwd: ROOT, timeout: GATE_TIMEOUT_MS });
       rerunMs = Date.now() - rt;
       // 复跑低于首次 1/3 且回到预算的 1/4 以内 ⇒ 判瞬态
-      transient = rerunMs * 3 < worst.ms && rerunMs < STATIC_TOOLS_BUDGET_MS / 4;
+      transient = rerunMs * 3 < worst.ms && rerunMs < budgetMs / 4;
     }
-    const over = ((phaseMs - STATIC_TOOLS_BUDGET_MS) / 1000).toFixed(1);
+    const over = ((phaseMs - budgetMs) / 1000).toFixed(1);
     ctx.record(
-      `静态工具段耗时预算（≤${(STATIC_TOOLS_BUDGET_MS / 1000).toFixed(0)}s${transient ? "，判为环境瞬态" : ""}）`,
+      `静态工具段耗时预算（${opts.tier ?? "domain"} 档 ≤${(budgetMs / 1000).toFixed(0)}s${
+        transient ? "，判为环境瞬态" : ""
+      }）`,
       transient,
       {
         time: phaseMs,

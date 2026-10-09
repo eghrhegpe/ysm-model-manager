@@ -187,6 +187,10 @@ status: active
 - **键**：剥离禁用后缀（`.ban`/`.disabled`）后的 path + 文件指纹（`modtime`+`size`）。文件变动即命中失效、重新计算真实几何。
 - **失效**：挂在 `ClearScanCache`（下载/导入后随扫描缓存一起失效），避免模型几何变化后读到旧缓存。
 - **不缓存不可 stat 路径**：越权 / 剥离后缀后指向不存在文件 → 直接 `compute`，不写垃圾键。
+- **不缓存解析失败（空结果）**（锐评 2026-10-09 补齐）：`analyzeBedrockModelUncached` 失败返回空
+  `BedrockModel{}`（`.ysm` WASM 解码挂起 / 越权等）；原实现**无条件缓存空结果**，会把**临时失败固化**——
+  模型在后续搜索里「永久消失」直到 `ClearScanCache`（假绿）。现 `geoCache.Get` 对 `BoneCount==0` 不写缓存、
+  下次重试（失败模型数量有限，代价可接受）；对齐 contract-b1「`BoneCount==0` = 无内容」语义。
 
 **边界取舍（下次会话勿误判为 bug）**：缓存键按"剥离后缀后的 path"计算，因此同一文件在 `.ban` ↔ 正常之间切换会产生**两条独立键**各自命中（而非共享）。属可接受代价——`.ban`/`.disabled` 切换本就改变 scannable 归属语义，且 `ClearScanCache` 在导入/下载后统一清掉，不会长期分裂。
 

@@ -55,6 +55,13 @@ func (c *geoCache) Get(path string, compute func() types.BedrockModel) types.Bed
 	c.mu.Unlock()
 
 	m := compute()
+	if m.BoneCount == 0 {
+		// 解析失败（空结果）不缓存：.ysm WASM 解码临时挂起 / 文件越权等失败若被固化，
+		// 模型会在后续搜索里「永久消失」直到 ClearScanCache（假绿）。代价是失败模型下次
+		// 重试——数量有限（通常是坏档），可接受；对齐 contract-b1「BoneCount==0 = 无内容」。
+		// 锐评 2026-10-09 补齐：原实现无条件缓存空结果。
+		return m
+	}
 	c.mu.Lock()
 	c.items[path] = geoCacheEntry{modTime: info.ModTime(), size: info.Size(), model: m}
 	c.mu.Unlock()

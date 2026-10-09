@@ -104,6 +104,33 @@ func TestGeoCache_UnstatableNotCached(t *testing.T) {
 	}
 }
 
+// TestGeoCache_EmptyResultNotCached: 解析失败（空结果，BoneCount==0）不缓存、每次重试。
+// 锐评 2026-10-09：原实现无条件缓存空结果——.ysm WASM 解码临时挂起被固化，模型会在后续
+// 搜索里「永久消失」直到 ClearScanCache（假绿）。改为空结果不缓存，成功结果仍正常缓存。
+func TestGeoCache_EmptyResultNotCached(t *testing.T) {
+	c := newGeoCache()
+	p := filepath.Join(t.TempDir(), "bad.ysm")
+	if err := os.WriteFile(p, []byte("geo"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	calls := 0
+	c.Get(p, func() types.BedrockModel { calls++; return fakeModel(0) })
+	c.Get(p, func() types.BedrockModel { calls++; return fakeModel(0) })
+	if calls != 2 {
+		t.Fatalf("空结果每次都应重试 compute，实际 calls=%d", calls)
+	}
+	if _, ok := c.Load(p); ok {
+		t.Errorf("空结果不应写入缓存")
+	}
+	// 恢复成功结果后应正常缓存并复用（不影响 Hit 语义）
+	if got := c.Get(p, func() types.BedrockModel { calls++; return fakeModel(7) }); got.BoneCount != 7 {
+		t.Errorf("首次成功应返回新结果")
+	}
+	if got := c.Get(p, func() types.BedrockModel { calls++; return fakeModel(9) }); got.BoneCount != 7 {
+		t.Errorf("成功结果应命中缓存并复用旧值，got=%d", got.BoneCount)
+	}
+}
+
 // TestGeoCache_ClearInvalidatesAll: Clear 后所有键失效
 func TestGeoCache_ClearInvalidatesAll(t *testing.T) {
 	c := newGeoCache()

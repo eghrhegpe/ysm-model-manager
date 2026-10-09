@@ -49,6 +49,8 @@ import {
   overlayNeedsRebuild,
   textureRepeat,
 } from "./ground-surface-spec.ts";
+// [横向铺叶层直测] 显隐谓词下沉 `ground-visible.ts`——消 updateSurfaceVisible / isSurfaceVisible 手抄双源
+import { groundGridVisibleFor, groundSurfaceVisibleFor } from "./ground-visible.ts";
 import { GROUND_LAYER_OFFSETS } from "./layer-offsets.ts";
 import { oneOf, restoreFields } from "./persist-utils.ts";
 import {
@@ -494,13 +496,21 @@ export class GroundCapability implements SceneCapability {
    *  ADR-249 遗留的旧网格层原只跟随总开关、无独立出口 → 用户选了表面材质也关不掉
    *  底下那张 y=0 参考网格；拆出 groundGridVisible 单轴后落点全在本方法。 */
   private updateGridVisible(): void {
-    this.grid.visible = this.enabled && envState.groundVisible && envState.groundGridVisible;
+    // [下沉 ground-visible.ts] 判据单一事实源（能力开关 × 总开关 × 网格开关）
+    this.grid.visible = groundGridVisibleFor(
+      this.enabled,
+      envState.groundVisible,
+      envState.groundGridVisible,
+    );
   }
 
   /** 表面层显隐门控：能力开关 × 总开关 × 来源非 none（水面层独立于表面层） */
   private updateSurfaceVisible(): void {
-    this.surface.visible =
-      this.enabled && envState.groundVisible && envState.groundSourceKind !== "none";
+    this.surface.visible = groundSurfaceVisibleFor(
+      this.enabled,
+      envState.groundVisible,
+      envState.groundSourceKind,
+    );
   }
 
   /** 自定义贴图加载完成入口 */
@@ -605,7 +615,8 @@ export class GroundCapability implements SceneCapability {
    *  参考网格此时亦默认不亮，见 env-state-schema.ts groundGridVisible 翻转注释）的自证出口
    *  （e2e 见 web-preview ground 用例 / ysmGroundProbe 探针）。 */
   isSurfaceVisible(): boolean {
-    return this.enabled && envState.groundVisible && envState.groundSourceKind !== "none";
+    // 与 updateSurfaceVisible 同口径——统一走 ground-visible.ts 单一谓词（不再手抄第二份）
+    return groundSurfaceVisibleFor(this.enabled, envState.groundVisible, envState.groundSourceKind);
   }
   setSourceKind(kind: GroundSourceKind): void {
     if (envState.groundSourceKind === kind) return;

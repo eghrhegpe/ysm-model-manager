@@ -2,7 +2,7 @@
 // ===== FogCapability 测试（ADR-196 迁移至 envState）=====
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import * as THREE from "three";
-import { FogCapability } from "./fog-capability.ts";
+import { FogCapability, normalizeFogRange } from "./fog-capability.ts";
 import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { clearEnvCallbacks, isEnvCallbacksSuspended } from "@/preview-3d/state/env-dispatcher.ts";
@@ -552,5 +552,28 @@ describe("FogCapability — 菜单刷新订阅（subscribe）", () => {
     cap.setLinearRange(5, 500);
     cap.setDensity(0.05);
     expect(n).toBe(0);
+  });
+});
+
+describe("normalizeFogRange（ADR-311-d1 判别样本：near≥far 未定义域防御）", () => {
+  it("正常范围原样透传（far 明显大于 near，不改）", () => {
+    expect(normalizeFogRange(10, 100)).toEqual({ near: 10, far: 100 });
+  });
+
+  it("near ≥ far：far 抬到 near + FOG_MIN_DEPTH（防 smoothstep edge0≥edge1 未定义域）", () => {
+    expect(normalizeFogRange(50, 20)).toEqual({ near: 50, far: 51 });
+    expect(normalizeFogRange(5, 5)).toEqual({ near: 5, far: 6 });
+  });
+
+  it("near 原样透传（只规范化 far，不动 near——面板显示值保持原值）", () => {
+    expect(normalizeFogRange(50, 20).near).toBe(50);
+  });
+
+  it("负数范围同样守卫（near=-5, far=-20 → far=-4）", () => {
+    expect(normalizeFogRange(-5, -20)).toEqual({ near: -5, far: -4 });
+  });
+
+  it("far 恰等于 near+1 时保持不额外抬（边界合法）", () => {
+    expect(normalizeFogRange(10, 11)).toEqual({ near: 10, far: 11 });
   });
 });

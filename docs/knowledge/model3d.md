@@ -402,6 +402,7 @@ auto_fields:
     - GroundAxisMapping
     - GroundCanvasStyle
     - GroundCapability
+    - groundGridVisibleFor
     - GroundMaterialParams
     - GroundMaterialPreset
     - GroundMaterialPresetDef
@@ -416,6 +417,7 @@ auto_fields:
     - groundSurfaceNeedsRebuild
     - GroundSurfaceSpec
     - GroundSurfaceStructuralSpec
+    - groundSurfaceVisibleFor
     - GroupedScene
     - guardGpuBudget
     - guardSessionAlive
@@ -611,6 +613,7 @@ auto_fields:
     - NodeViolation
     - normalizeEnvLegacyState
     - normalizeFbxScale
+    - normalizeFogRange
     - normalizeGroundLegacyState
     - NumericRange
     - oneOf

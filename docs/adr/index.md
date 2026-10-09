@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **335** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **336** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > ADR 三区存放：根目录 = 存量（分级前）/ `architecture/` = 架构决策 / `decisions/` = 执行决策日志（ADR-320）。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -19,7 +19,7 @@ permalink: /adr/
 | [📝 提议中](#提议中) | 6 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 15 |
-| [✅ 已采纳](#已采纳) | 306 |
+| [✅ 已采纳](#已采纳) | 307 |
 | [❌ 已取代](#已取代) | 8 |
 | [🧊 已废弃](#已废弃) | 0 |
 | [❓ 未归类](#未归类) | 0 |
@@ -57,7 +57,7 @@ permalink: /adr/
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 | [ADR-050](./ADR-050-plaza-browser-window.md) | 模型广场 · 浏览器窗口（Wails 第二窗口） | 🔄 部分采纳 |
 
-### ✅ 已采纳（306）
+### ✅ 已采纳（307）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
@@ -74,6 +74,7 @@ permalink: /adr/
 | [ADR-313](./ADR-313-saveappconfig-views-config-write-ts.md) | 应用配置写唯一实参点：SaveAppConfig 六位置实参统一上移 views/config-write.ts | ✅ 已采纳 |
 | [ADR-312](./ADR-312-dead-css-reverse-gate.md) | 死 CSS 反向闸——定义侧零消费者类纳入 css-layer-check 检查 7 | ✅ 已采纳 |
 | [ADR-311](./ADR-311-menu-test-assertion-trichotomy.md) | 菜单测试断言三分法契约（渐进执法） | ✅ 已采纳 |
+| [ADR-311-d1](./decisions/ADR-311-d1-mock.md) | 测试纪律：禁 mock 被断言谓词（自证）+ 判别样本 + 变异探针 | ✅ 已采纳 |
 | [ADR-310](./ADR-310-instance-sync-count-single-source.md) | 整合包同步计数口径统一 | ✅ 已采纳 |
 | [ADR-309](./ADR-309-vrm-vmd-p1-p7.md) | VRM 播 VMD 播放语义收口（锐评 P1-P7 七处修法落定） | ✅ 已采纳 |
 | [ADR-308](./ADR-308-keyboard-primitive-convergence.md) | 键盘原语收敛与全局快捷键注册表 | ✅ 已采纳 |
@@ -714,6 +715,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
+| ADR-311-d1 | 测试纪律：禁 mock 被断言谓词（自证）+ 判别样本 + 变异探针 | ✅ 已采纳 | 2026-10-09 |
 | ADR-293-d1 | 灯光首启默认分治：辅助线框关、浏览最小光照、环境光降档 | ✅ 已采纳 | 2026-10-04 |
 | ADR-292-d1 | envSource 迁移判据① 供血线单源化（不再跨槽读 sky 存档键形） | ✅ 已采纳 | 2026-10-07 |
 | ADR-270-d1 | preview-3d 内部分层方向闸 R9（state/infra/decoder/shader-patches 禁运行时引 adapters/caps/menu，基线防回退） | ✅ 已采纳 | 2026-10-04 |

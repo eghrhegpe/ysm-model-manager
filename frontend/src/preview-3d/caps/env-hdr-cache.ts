@@ -54,6 +54,9 @@ export class EnvHdrCache {
    *  canvas.toDataURL。无自定义 HDR 时返回 null。
    *  像素运算已下沉 env-pixels.ts#customHdrThumbnail，本方法仅注入缓存状态。 */
   thumbnail(thumbW = 128, thumbH = 64): string | null {
+    // [ADR-311-d1 判别样本 2026-10-09] 无缓存**短路返回 null**（不触像素运算）——
+    // 原实现无条件调 `customHdrThumbnail(null, …)`，语义虽等价（env-pixels 处理 null）但徒增无谓运算
+    if (!this.customHdrTex) return null;
     return customHdrThumbnail(this.customHdrTex, thumbW, thumbH);
   }
 

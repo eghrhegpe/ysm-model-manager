@@ -1597,6 +1597,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-311-d1：测试纪律：禁 mock 被断言谓词（自证）+ 判别样本 + 变异探针",
+        "link": "/adr/decisions/ADR-311-d1-mock"
+      },
+      {
         "text": "ADR-293-d1：灯光首启默认分治：辅助线框关、浏览最小光照、环境光降档",
         "link": "/adr/decisions/ADR-293-d1-light-first-run-defaults"
       },

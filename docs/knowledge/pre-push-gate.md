@@ -16,6 +16,7 @@ source_files:
   - scripts/gate-audit-reconcile.ts
 auto_fields:
   symbols_with_lines:
+    - ALL_GATE_TOOL_LISTS
     - ALL_STATIC_TOOLS
     - buildScanVerdict
     - createGateCtx
@@ -23,6 +24,7 @@ auto_fields:
     - DOC_STATIC_TOOLS
     - ExecResult
     - firstErrors
+    - flattenGateTools
     - formatFailSummary
     - FRONTEND_STATIC_TOOLS
     - GATE_TIMEOUT_MS
@@ -30,6 +32,7 @@ auto_fields:
     - GateResult
     - GateResultItem
     - GateTool
+    - GateToolBase
     - GO_STATIC_TOOLS
     - ParsedToolOutput
     - parseToolOutput

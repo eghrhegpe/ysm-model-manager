@@ -16,6 +16,7 @@
 ## §1 仍挂账的活项
 
 > 这些是**仍未修**的项。修掉一项删一行；新增挂账须同时在此登记。
+> **2026-10-09 时效核验**（锐评收敛 `799ac4aa8` 基准，逐条对源码复核）：S5-2 维持挂账（`waterWetness` min 仍 0、无 hint，与 L-4「维持」决策一致）；S9-1 消费端钳制已落地、行已改述；G-2/G-7 已被否决、迁 §2 #21。其余各行未经锐评系列触及，未逐条复核。
 
 ### UX（低优先级）
 
@@ -31,7 +32,7 @@
 | S7-1 | `env.ts` vs `environment-menu.ts` | 一级 select（氛围包）vs 子视图 thumb（纯贴图）预设语义分裂：**两条 set 路径分叉** | 文案分界或统一走 `applyPreset` |
 | S7-2 | `environment-menu.ts` | histogram 无语境说明 | 加 hint |
 | S7-3 | `environment-capability.ts` `getCustomHdrThumbnail` | 每次渲染重算缩略图（CPU 降采样 + toDataURL，**无缓存字段**） | cap 实例缓存 dataURL，贴图变更失效 |
-| S9-1 | `env-state-schema.ts` `fogNear`/`fogFar` | 两轴**独立无交叉约束**，near>far 可达 | clamp 或 hint |
+| S9-1 | `env-state-schema.ts` `fogNear`/`fogFar` | schema 层两轴仍独立（无交叉约束），但**消费端钳制已落地**（`fog-capability.ts\|normalizeFogRange`，X-2：far 至少 near+`FOG_MIN_DEPTH`，GLSL 未定义域已防） | 余出口 = far 滑杆 hint（`getHint` 未接，登记在 `docs/archive/audit-water-critique.md` §七） |
 | S11-1/S11-2 | `reflector-menu.ts` | `resolution`/`size` 是**结构键**，滑杆逐帧 set = 逐帧全量重建 RT（**无 `onCommit`**） | 改 onCommit 提交 |
 
 ### 接线 / 性能
@@ -45,7 +46,6 @@
 | E-1 | `environment-capability.ts` `applyEnvIntensity` | 滑杆逐帧 → `mat.needsUpdate = true`；`syncMeshIntensity` 已存在但**回调仍传 `[this.scene]`**，「复用 roots」未落地 |
 | E-2 | `buildEnvironment` | 同 spec 重写也全量 PMREM 重建（仅 sky 通路有同引用短路） |
 | E-5 | — | 观察项，维持 |
-| **G-2 / G-7** | `ground-capability.ts` 回调 | 回调仍对**任意 ground 键四连**（含 `refreshSurface` 无条件构造完整 spec）。**§18 处置「保留单出口、不改架构」既未落地也未否决——唯一活挂账** |
 | G-3 | `env-state-schema.ts` | `groundSize` default 80 与 `waterSize` default 80 的对齐**靠命名巧合，无机制断言** |
 | R-1 | `reflector-capability.ts` `setClipBias` | schema 键 + 持久化齐全，但 `reflector-menu.ts` **无 UI 出口** |
 | L-2 / L-4 / L-5 | §20 登记 | 水面三项：一名三拍改名成本 > 收益 / L-4（= S5-2、S5-3）维持 / L-5 观察项 |
@@ -78,6 +78,7 @@
 | 18 | **§13 整表的多条状态标注** | §18~§23 + `88926c810` | **8 处以上状态过期、4 类活动级缺陷整类缺失**（shadow/reflector/sky 幽灵键 + env 私有门）⇒ **§13 已删** |
 | 19 | 知识卡旧版「fog F-2 / env E-2 / ground / light L-1 四路**同口径**」 | §21 F-2 | 「文档先于代码」漂移——ground 当时实为 manual。已改述为「按**声明**而非按**实施**成立」 |
 | 20 | ⚠️ **§18** clearCustomTexture 的修法描述（「先 setEnvState 再 refreshSurface 双刷」） | 后续收口 | 现实现为「先摘私有态，仅 texture 态才写 envState」；目标值 `"canvas"` → `"solid"` |
+| 21 | **G-2/G-7**「ground 回调任意键四连是病灶，须收敛」（§18 处置「保留单出口、不改架构」2026-10-05 起悬置为活挂账） | 10-09 锐评 + 锐评落地收敛（`0f7439d6e`/`799ac4aa8`） | 读侧手写 27 键在 `preview-env-state.md:190` 显式登记「留作后续」（有意挂账，改造收益小风险不小）；叠加层已拆 `ground-overlay.ts`、surface/几何层判本质耦合不再拆 |
 
 ### 元教训（贯穿全部 20 条）
 

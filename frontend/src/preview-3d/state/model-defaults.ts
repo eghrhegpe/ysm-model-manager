@@ -8,6 +8,13 @@
 // 注意：
 //   - [ADR-284] 本表只承载「场景尺度 / 离散语义」两类合法耦合（fog 距离、
 //     reflectorSize、envPreset、ppEnabled）；灯光（ADR-282）与 sky 大气散射已解耦移除。
+//   - **ground / water 亦无 applyModelPreset**：两者无「场景尺度 / 离散语义」类键进本表
+//     （地面/水面尺寸自适应相机视野、不随模型类别分档；水面波场尺度已按 ADR-319 归一化）。
+//     故 `SceneCapability` 接口**不含** applyModelPreset（它是 cap 可选扩展方法，各 cap 按需实现）；
+//     仅 fog/reflector/env/shadow/sky/pp 六 cap 实现，ground/water/light 不实现是**合法的不实现**，
+//     非漏实现。契约锁 = 断言 prototype 无 applyModelPreset（对齐 light-capability.test.ts:334
+//     `expect(cap.applyModelPreset).toBeUndefined()`）；若未来把 ground/water 纳入本表，须同步
+//     补实现 + 撤锁。
 //   - 参数字段走 auto-model source，用户手动调参（manual source）后不被覆盖
 
 import type { EnvState } from "./env-state-schema.ts";

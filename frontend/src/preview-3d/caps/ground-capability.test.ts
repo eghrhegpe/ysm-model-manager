@@ -35,6 +35,14 @@ function setMode(cap: GroundCapability, mode: GroundSurfaceMode): void {
 describe("GroundCapability", () => {
   beforeEach(() => { resetEnvState(); });
 
+  // [ADR-284 契约] ground 无「场景尺度 / 离散语义」类键进 MODEL_DEFAULTS（model-defaults.ts:9-12），
+  // 故不实现 applyModelPreset 是**合法的不实现**——SceneCapability 接口不含该方法，它是 cap 可选
+  // 扩展方法（仅 fog/reflector/env/shadow/sky/pp 六 cap 实现）。契约锁 = 断言 prototype 无该方法
+  // （对齐 light-capability.test.ts:334 退役锁），防后人误加实现。
+  it("[ADR-284] GroundCapability.prototype 无 applyModelPreset（ground 与模型类别解耦）", () => {
+    expect(GroundCapability.prototype).not.toHaveProperty("applyModelPreset");
+  });
+
   it("apply 挂入场景（GridHelper + 名称 ysm-ground），默认不亮（2026-10-04 默认翻转）", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });

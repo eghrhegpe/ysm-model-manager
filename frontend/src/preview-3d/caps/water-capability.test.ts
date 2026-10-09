@@ -60,6 +60,15 @@ function fakeShader() {
 describe("WaterCapability", () => {
   beforeEach(() => { resetEnvState(); });
 
+  // [ADR-284 契约] water 无「场景尺度 / 离散语义」类键进 MODEL_DEFAULTS（model-defaults.ts:9-12）：
+  // 水面尺寸自适应相机视野、波场尺度已按 ADR-319 归一化，均不随模型类别分档。故不实现
+  // applyModelPreset 是**合法的不实现**——SceneCapability 接口不含该方法，它是 cap 可选扩展方法
+  //（仅 fog/reflector/env/shadow/sky/pp 六 cap 实现）。契约锁 = 断言 prototype 无该方法
+  // （对齐 light-capability.test.ts:334 退役锁），防后人误加实现。
+  it("[ADR-284] WaterCapability.prototype 无 applyModelPreset（water 与模型类别解耦）", () => {
+    expect(WaterCapability.prototype).not.toHaveProperty("applyModelPreset");
+  });
+
   it("apply 挂入场景（ysm-ground-water），film 模式 + 水面开启时可见", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene });

@@ -117,6 +117,25 @@ describe("buildTree 过滤", () => {
     expect(treeKeys(root)).toEqual(["b.ysm"]);
   });
 
+  it("filterPaths 匹配 fullPath 空时回落 path（对齐 tag-editor 写入的 modelPath）", () => {
+    // 锐评 2026-10-09：tag-editor 的 modelPath = ctx:show path = `fullPath || path`（ADR-222），
+    // 白名单可能含相对 path。原 `filterPaths.has(e.fullPath)` 对 fullPath 空条目永不命中
+    // → 标签筛选静默失效。现统一 entryKey(e) = fullPath || path。entry() helper :30 已把
+    // fullPath 空回落 path，故此处绕过它直构，才能造出 fullPath 真空的条目。
+    const bare: TreeEntry = {
+      name: "a.ysm",
+      path: "sub/a.ysm",
+      fullPath: "",
+      size: 0,
+      modTime: 0,
+      banned: false,
+      type: "",
+    };
+    const root = buildTree([bare], "name", new Set(["sub/a.ysm"]));
+    // 命中 → 构建出 sub 节点；旧实现（has("")）→ 空树
+    expect(treeKeys(root)).toEqual(["sub"]);
+  });
+
   it("Windows 分隔符路径归一为嵌套目录", () => {
     const root = buildTree([entry("a.ysm", "folder\\sub\\a.ysm")], "name", null);
     const folder = root["folder"];

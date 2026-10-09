@@ -417,7 +417,10 @@ export function buildTree(
   filterPaths: Set<string> | null,
 ): TreeNode {
   const root: TreeNode = {};
-  const filtered = filterPaths ? entries.filter((e) => filterPaths.has(e.fullPath)) : entries;
+  // 白名单匹配与行键同源（ADR-222）：entryKey = fullPath || path——与 tag-editor 写入的
+  // modelPath（ctx:show path = fullPath || path）对齐；原 e.fullPath 在 fullPath 空时对
+  // 「标签筛选」静默失配（filterPaths 里的 path 永不命中）。锐评 2026-10-09 补齐 ④ 同源。
+  const filtered = filterPaths ? entries.filter((e) => filterPaths.has(entryKey(e))) : entries;
   for (const entry of filtered) {
     const parts = entry.path.replace(/\\/g, "/").split("/").filter(Boolean);
     let current = root;

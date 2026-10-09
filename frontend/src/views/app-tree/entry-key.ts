@@ -1,9 +1,13 @@
 // ===== 树行键空间契约的单一事实源（ADR-222）=====
 //
-// 文件行的权威键 = 磁盘完整路径，缺失时回落相对路径。三处必须同源：
+// 文件行的权威键 = 磁盘完整路径，缺失时回落相对路径。四处必须同源：
 //   ① `TreeRow.key`（render.flattenVisible 产出的行身份）
 //   ② DOM `data-fullpath`（row-common 的 fp）
 //   ③ `selectState.keys` / `lastKey`（选中态）
+//   ④ `buildTree` 的 filterPaths 白名单匹配（`filterPaths.has(entryKey(e))`）
+//      原实现写 `filterPaths.has(e.fullPath)` 不回落 path——而 tag-editor 写入的
+//      modelPath 经 ctx:show path = `fullPath || path`，fullPath 空时白名单里的 path
+//      永不命中 → 标签筛选静默失效。锐评 2026-10-09 补齐 ④，统一走本函数。
 // 任一处漂移，`indexOf`/`has` 比对会静默失配——Shift 范围选择、右键批量、
 // 全选、键盘 ↑↓ 导航、双击重命名定位全体失效且不报错。
 //

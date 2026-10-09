@@ -134,7 +134,10 @@ status: active
 搜索过滤在 `render.ts` 的 `buildTree` 函数中实现，两条过滤路径为 **AND 关系**：
 
 1. **`_search`（关键词匹配）**：`trim().toLowerCase()` 后按 `relPath.includes(query)` 匹配模型路径（非仅文件名），匹配结果目录自动展开
-2. **`_filterPaths`（精确路径交集）**：按 `fullPath` 精确匹配 Set，来自高级筛选弹窗的标签 ∩ 搜索条件交集
+2. **`_filterPaths`（精确路径交集）**：`buildTree` 用 `entry-key.ts|entryKey`（= `fullPath || path`）匹配 Set，
+   来自高级筛选弹窗的标签 ∩ 搜索条件交集；与 tag-editor 写入的 `modelPath`（ctx:show path = `fullPath || path`）
+   **同源**——原 `render.ts|buildTree` 写 `filterPaths.has(e.fullPath)` 不回落 path，fullPath 空条目对
+   白名单里的相对 path 永不命中（标签筛选静默失效），锐评 2026-10-09 已统一走 `entryKey`（ADR-222 第④处同源）。
 
 渲染时，搜索态走 `hl(e.name, search)`（utils/dom/html.ts）高亮命中文字，非搜索态走 `renderDisplayName()`（治理红线 4.3）。
 - **MMD 子目录分组展示（ADR-094/096 演进，2026-09-03 修正）**：当前为**扁平化架构**——各 MMD 类型（SceneModel/CustomAnim 等）是独立顶级类型，`resource_types.json` 的 `GROUP_TYPE_OPTIONS` 全部 `subdir: ""`，`app-nav` 双下拉永不写非空 subdir（`repo_subdir` 恒落空值，`loader.ts` 的 `targetType = subdir || rtype` 是防御性写法）。`subdir` 属性通道 + `repo:subdir-changed` 事件是 ADR-094「子目录选择」的半迁移残留——知识卡不再宣称 subdir 参与路径拼接；`loader.ts` 的 `loadEntries(rtype, subdir)` 在 subdir 非空时以 subdir 覆盖 rtype 查表（GetRepoRoot("SceneModel") 而非 "mmd" 拼接），组名分组效果由 Go 扫描根即子目录根达成。**修改提醒**：任何文件夹操作（bus-handlers dir:rename/mkdir/recycle/batch-rename、events 右键、index 键盘删除）统一用 `vm._rootAttr || RESOURCE_TYPES.YSM` 即当前视图真实类型（root 就是完整 rtype），不要自行拼接 subdir 路径。

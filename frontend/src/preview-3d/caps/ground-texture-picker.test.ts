@@ -27,7 +27,7 @@ function makeInput(): PickerInputStub {
 
 describe("pickGroundTexture", () => {
   let input: PickerInputStub;
-  let sinkSpy: ReturnType<typeof vi.fn>;
+  let sinkSpy: (tex: THREE.Texture, name: string) => void;
   let toastSpy: ReturnType<typeof vi.fn>;
   const createURLOrig = URL.createObjectURL;
   const revokeURLOrig = URL.revokeObjectURL;
@@ -43,7 +43,7 @@ describe("pickGroundTexture", () => {
     vi.spyOn(THREE.TextureLoader.prototype, "loadAsync");
     vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:fake");
     vi.spyOn(URL, "revokeObjectURL");
-    sinkSpy = vi.fn();
+    sinkSpy = vi.fn((_tex: THREE.Texture, _name: string) => {});
     const sink: GroundTextureSink = { acceptLoadedTexture: sinkSpy };
     toastSpy = vi.mocked(toast) as unknown as ReturnType<typeof vi.fn>;
     pickGroundTexture(sink);

@@ -402,8 +402,7 @@ Windows Defender 的 I/O 税）。
 
 ### 13. Playwright 工具链 spine 抽 composite action
 
-- `e2e` 与 `e2e-web` 的 setup 段（pnpm/node/install/浏览器缓存/apt 缓存/chromium 安装）原**逐字重复
-  47 行**，含两段各 5 行的缓存坑注释。现抽 `.github/actions/playwright-spine/action.yml`
+- `e2e` 与 `e2e-web` 的 setup 段（pnpm/node/install/浏览器缓存/apt 缓存/chromium 安装）原**逐字重复**（含两段同形缓存坑注释）。现抽 `.github/actions/playwright-spine/action.yml`
   （与 `release.yml` 的 `release-toolchain` 同范式：GHA 不支持 YAML 锚点，composite 是唯一合规 DRY）。
 - **动机不只是行数**：缓存 key 是**单点**——原先改一次要改两处，改漏一处**不报错**，
   只让其中一个 job 静默全 miss（§7 那条「key 必须钉 playwright-core 版本」的经验正悬在这个风险上）。

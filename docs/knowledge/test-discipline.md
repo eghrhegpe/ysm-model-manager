@@ -5,25 +5,19 @@ tier: architecture
 category: core
 status: active
 source_files:
-  - frontend/src/preview-3d/caps/env-ibl.test.ts
-  - frontend/src/preview-3d/caps/env-hdr-cache.test.ts
   - frontend/src/preview-3d/caps/env-hdr-cache.ts
-  - frontend/src/preview-3d/caps/environment-capability.test.ts
   - frontend/src/preview-3d/caps/sky-sun.ts
-  - frontend/src/preview-3d/caps/sky-sun.test.ts
   - frontend/src/preview-3d/caps/sky-asset.ts
-  - frontend/src/preview-3d/caps/sky-asset.test.ts
   - frontend/src/preview-3d/caps/ground-visible.ts
-  - frontend/src/preview-3d/caps/ground-visible.test.ts
   - frontend/src/preview-3d/caps/fog-capability.ts
   - frontend/src/preview-3d/caps/light-visible.ts
-  - frontend/src/preview-3d/caps/light-visible.test.ts
   - frontend/src/preview-3d/caps/light-math.ts
-  - frontend/src/preview-3d/caps/light-math.test.ts
   - frontend/src/preview-3d/caps/shadow-capability.ts
   - docs/adr/decisions/ADR-311-d1-mock.md
 tests:
+  - frontend/src/preview-3d/caps/env-ibl.test.ts
   - frontend/src/preview-3d/caps/env-hdr-cache.test.ts
+  - frontend/src/preview-3d/caps/environment-capability.test.ts
   - frontend/src/preview-3d/caps/sky-sun.test.ts
   - frontend/src/preview-3d/caps/sky-asset.test.ts
   - frontend/src/preview-3d/caps/ground-visible.test.ts

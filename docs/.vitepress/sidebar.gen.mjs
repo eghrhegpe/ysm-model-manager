@@ -227,40 +227,8 @@ export const autoSidebar = [
         "link": "/audit-src-map"
       },
       {
-        "text": "3D 预览环境域耦合锐评（2026-10-08）",
-        "link": "/audit-env-coupling-review"
-      },
-      {
         "text": "环境系统审查台账（活文档）",
         "link": "/audit-env-review"
-      },
-      {
-        "text": "地面系统锐评 + 决策批执行报告（2026-10-04）",
-        "link": "/audit-ground-review"
-      },
-      {
-        "text": "3D 预览·宿主环境耦合锐评（2026-10-08）",
-        "link": "/audit-host-env-coupling-review"
-      },
-      {
-        "text": "知识库内容准确性抽样核验报告",
-        "link": "/audit-knowledge-accuracy"
-      },
-      {
-        "text": "知识库闸门可靠性锐评（元层面）",
-        "link": "/audit-knowledge-reliability"
-      },
-      {
-        "text": "后处理系统锐评（2026-10-04）",
-        "link": "/audit-postprocessing-critique"
-      },
-      {
-        "text": "3D 预览环境系统锐评（2026-10-09）",
-        "link": "/audit-preview-env-critique-2026-10-09"
-      },
-      {
-        "text": "水面系统锐评（2026-10-04）",
-        "link": "/audit-water-critique"
       },
       {
         "text": "CLI 命令参考",

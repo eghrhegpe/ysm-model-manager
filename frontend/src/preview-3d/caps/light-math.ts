@@ -56,3 +56,16 @@ const IBL_AMBIENT_ATTENUATION = 0.5;
 export function attenuateAmbientForSky(intensity: number, iblOn: boolean): number {
   return intensity * (iblOn ? IBL_AMBIENT_ATTENUATION : 1);
 }
+
+/** 上下亮度比（tip/base），[0,1] clamp；base≤0 时比值无意义返 0（除零守卫）。
+ *  [ADR-246 D2] tip>base 的存量数据 clamp 到 1，避免滑块 thumb 被压到 100% 而显示值 ≠ 生效值。 */
+export function volumetricTipRatioFor(baseStrength: number, tipStrength: number): number {
+  if (baseStrength <= 0) return 0;
+  return Math.min(1, Math.max(0, tipStrength / baseStrength));
+}
+
+/** 按 base 派生 tip（比值写入路径）：tip = base × clamp(ratio, 0, 1)，
+ *  与 getter 值域对等——越界程序化调用不写脏数据。 */
+export function volumetricTipFromRatio(baseStrength: number, ratio: number): number {
+  return baseStrength * Math.min(1, Math.max(0, ratio));
+}

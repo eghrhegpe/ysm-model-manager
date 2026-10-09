@@ -39,6 +39,8 @@ import {
   attenuateAmbientForSky,
   lightDirToPosition,
   spotDistanceAttenuation,
+  volumetricTipFromRatio,
+  volumetricTipRatioFor,
 } from "./light-math.ts";
 import {
   type DeepPartial,
@@ -54,6 +56,8 @@ import {
   type VolumetricParams,
 } from "./light-params.ts";
 import { buildLightPersistPayload, restoreLightParams } from "./light-persist.ts";
+// [横向铺叶层直测] helper 可见性谓词下沉 `light-visible.ts`（三支合取单一事实源 + 三支各断一支判别样本）
+import { lightHelperVisibleFor } from "./light-visible.ts";
 import {
   getTypedCap,
   persistState,
@@ -540,7 +544,12 @@ export class LightCapability implements SceneCapability {
    *  syncHelper 仅「本灯 ∧ 线框闸」、同样缺能力总闸——总闸关时这两处会漏放线框；
    *  mountHelper 三项齐全。单源后三处语义一致，杜绝再手抄第三份。 */
   private helperVisibleFor(which: LightSlot, masterOn: boolean): boolean {
-    return masterOn && readLightParams(which).enabled && envState.lightHelperVisible;
+    // [下沉 light-visible.ts] 谓词单一事实源（能力总闸 × 本灯 enabled × 线框闸）
+    return lightHelperVisibleFor(
+      masterOn,
+      readLightParams(which).enabled,
+      envState.lightHelperVisible,
+    );
   }
 
   /** 类型相关 helper 工厂 */
@@ -782,17 +791,17 @@ export class LightCapability implements SceneCapability {
    *  值域闭合 [0,1]：base 为 0 时比值无意义返回 0（除零守卫）；tip>base 的存量数据 clamp 到 1
    *  ——否则滑块 thumb 被 clampPct 压到 100% 而显示值与真实值不符，用户首拖即被静默改写 tip。 */
   getVolumetricTipRatio(): number {
+    // [下沉 light-math.ts] 纯算术 + 除零/clamp 守卫已在叶层直测
     const { baseStrength, tipStrength } = readVolParams();
-    if (baseStrength <= 0) return 0;
-    return Math.min(1, Math.max(0, tipStrength / baseStrength));
+    return volumetricTipRatioFor(baseStrength, tipStrength);
   }
 
   /** [ADR-246 D2] 按 base 派生 tip（比值写入路径）——base 不变，tip = base × ratio。
    *  入参 clamp 到 [0,1] 与 getter 值域对等（程序化调用传越界值不写脏数据）。 */
   setVolumetricTipRatio(ratio: number): void {
+    // [下沉 light-math.ts] clamp 派生 tip（叶层直测）
     const { baseStrength } = readVolParams();
-    const clamped = Math.min(1, Math.max(0, ratio));
-    this.setVolumetric({ tipStrength: baseStrength * clamped });
+    this.setVolumetric({ tipStrength: volumetricTipFromRatio(baseStrength, ratio) });
   }
 
   /** 合并式参数更新（只覆盖给定字段，经 envState） */

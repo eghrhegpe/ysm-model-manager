@@ -477,6 +477,7 @@ auto_fields:
     - LightCapability
     - lightDirToPosition
     - lightEnvKeys
+    - lightHelperVisibleFor
     - LightInstanceParams
     - LightKey
     - LightParams
@@ -615,6 +616,7 @@ auto_fields:
     - normalizeFbxScale
     - normalizeFogRange
     - normalizeGroundLegacyState
+    - normalizeShadowMapSize
     - NumericRange
     - oneOf
     - onOverlayStyleTargetReset
@@ -999,6 +1001,8 @@ auto_fields:
     - VolumetricCone
     - VolumetricDriver
     - VolumetricParams
+    - volumetricTipFromRatio
+    - volumetricTipRatioFor
     - VrmAdapterDeps
     - VrmBonePanelCtx
     - VrmDataPort

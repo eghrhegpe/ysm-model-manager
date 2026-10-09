@@ -32,7 +32,7 @@ const SHADOW_TYPES = ["soft", "hard"] as const;
  *  ⇒ 值脱离 UI 可达域。值域语义是**离散档位而非区间**，故 schema 不声明 `range`（见其注释）。
  *  两个入口（setter 与恢复）都必须过本函数——「守卫只装一侧」是本轮横向外推的母题之一。 */
 const SHADOW_MAP_SIZE_OPTIONS: readonly number[] = [512, 1024, 2048, 4096];
-function normalizeShadowMapSize(v: number, fallback: number): number {
+export function normalizeShadowMapSize(v: number, fallback: number): number {
   return SHADOW_MAP_SIZE_OPTIONS.includes(v) ? v : fallback;
 }
 export type ShadowType = (typeof SHADOW_TYPES)[number];

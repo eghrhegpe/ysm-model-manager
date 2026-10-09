@@ -42,6 +42,7 @@ auto_fields:
     - mount3D
     - Mount3DOptions
     - normalizeFogRange
+    - normalizeShadowMapSize
     - PoseScene
     - PostprocessingCapability
     - PostprocessingParams

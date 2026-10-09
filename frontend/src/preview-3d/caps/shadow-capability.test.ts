@@ -2,7 +2,7 @@
 // ===== ShadowCapability 测试（ADR-196 迁移至 envState）=====
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import * as THREE from "three";
-import { ShadowCapability } from "./shadow-capability.ts";
+import { normalizeShadowMapSize, ShadowCapability } from "./shadow-capability.ts";
 import { toModelType } from "@/preview-3d/state/model-defaults.ts";
 import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
@@ -990,5 +990,25 @@ describe("ShadowCapability — 能力级开关单门收口（fog/water 先例同
     cap.loadState();
     setEnvState({ shadowType: "soft" }, { source: "auto-model" });
     expect(envState.shadowType, "存档恢复后模型默认值仍须能落地").toBe("soft");
+  });
+});
+
+describe("normalizeShadowMapSize（ADR-311-d1 判别样本：四档白名单唯一守卫）", () => {
+  it("合法档位原样返回（判真侧）", () => {
+    expect(normalizeShadowMapSize(2048, 1024)).toBe(2048);
+    expect(normalizeShadowMapSize(512, 1024)).toBe(512);
+  });
+
+  it("脏档值回退 fallback（判非真侧：守卫只装一侧则旧档值静默进 mapSize）", () => {
+    expect(normalizeShadowMapSize(999, 1024)).toBe(1024);
+  });
+
+  it("0 与负值回退 fallback（判非真侧）", () => {
+    expect(normalizeShadowMapSize(0, 2048)).toBe(2048);
+    expect(normalizeShadowMapSize(-1, 2048)).toBe(2048);
+  });
+
+  it("非整数（浮点）回退 fallback（值域是离散档位而非区间）", () => {
+    expect(normalizeShadowMapSize(1024.5, 4096)).toBe(4096);
   });
 });

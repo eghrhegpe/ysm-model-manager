@@ -21,7 +21,11 @@ import (
 type benchFakeApp struct {
 	AppService
 	analyzeCalls atomic.Int64
+	clearCalls   atomic.Int64
 }
+
+// ClearScanCache no-op：benchFakeApp 不承载真实缓存；计数供断言「被测路径每轮清缓存」
+func (f *benchFakeApp) ClearScanCache() { f.clearCalls.Add(1) }
 
 // AnalyzeBedrockModel 返回一个「真有几何」的模型：**Bones 必须物化**，不能只给汇总计数。
 // 立因（2026-09-19）：`hasGeometry`（perf_targets.go）与 ④⑤⑥ 门控都判 `len(Bones)>0`——
@@ -304,6 +308,29 @@ func TestRunPerfSnapshot_EndToEnd(t *testing.T) {
 	// 空 root 无模型 → 报错
 	if err := runPerfSnapshot(&CmdContext{App: &benchFakeApp{}, FilesRoot: t.TempDir()}); err == nil {
 		t.Error("无模型时应报错")
+	}
+}
+
+// TestRunBenchIterations_InvalidatesCacheEachIter: 每迭代清 geoCache 测冷解析。
+// 锐评 2026-10-09：原实现 N 轮跑同一模型全命中 geoCache，「② 解析」avg 严重低估
+// （测的是缓存 lookup 而非 WASM 解码）；对齐 scan-bench「缓存命中不算测量」范式。
+func TestRunBenchIterations_InvalidatesCacheEachIter(t *testing.T) {
+	t.Parallel()
+	root := t.TempDir()
+	modelPath := filepath.Join(root, "m.ysm")
+	if err := os.WriteFile(modelPath, []byte("fake-model-bytes"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	app := &benchFakeApp{}
+	res := runBenchIterations(&CmdContext{App: app, FilesRoot: root}, modelPath, 3, "json", int64(len("fake-model-bytes")))
+	if res == nil || res.Iterations != 3 {
+		t.Fatalf("应返回 3 次迭代汇总")
+	}
+	if got := app.clearCalls.Load(); got != 3 {
+		t.Errorf("每迭代应清缓存 1 次，共 3，实际 %d", got)
+	}
+	if got := app.analyzeCalls.Load(); got != 3 {
+		t.Errorf("每迭代应真实解析 1 次（冷启动），共 3，实际 %d", got)
 	}
 }
 

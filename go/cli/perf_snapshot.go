@@ -133,6 +133,11 @@ func runBenchIterations(ctx *CmdContext, targetModel string, iterations int, for
 	var allStages [][]singleBenchStage
 	totalStart := time.Now()
 	for iter := 0; iter < iterations; iter++ {
+		// 每迭代清 geoCache 测冷解析：runSingleModelBench 的「② 解析」走 AnalyzeBedrockModel，
+		// 其内部 geoCache 键 = 剥离后缀 path + modtime/size——模型文件不变则 N 轮全命中缓存，
+		// 解析阶段 avg 严重低估（测的是缓存 lookup 而非 WASM 解码）。对齐 scan-bench
+		// 「缓存命中不算测量」范式（锐评 2026-10-09）。代价=每轮真实解析，正是基准要测的。
+		ctx.App.ClearScanCache()
 		stages := runSingleModelBench(ctx.App, targetModel, ctx.FilesRoot)
 		allStages = append(allStages, stages)
 	}

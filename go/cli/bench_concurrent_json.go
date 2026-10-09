@@ -202,6 +202,10 @@ func collectConcurrentBenchJSON(app AppService, models []string, spec perfTarget
 		out.Models = append(out.Models, buildPerfIdentity(p, filesRoot, nil))
 	}
 
+	// 每轮清 geoCache 测冷启动：AnalyzeBedrockModel 内部 geoCache 键 = 剥离后缀 path + modtime/size，
+	// 不清的话 benchSerialAnalyze 填充缓存后 benchParallelAnalyze 全命中——并行耗时与加速比严重失真
+	// （误导「并发优化」结论）。对齐 scan-bench「缓存命中不算测量」范式（锐评 2026-10-09）。
+	app.ClearScanCache()
 	serial := benchSerialAnalyze(app, models)
 	out.Serial = concurrentPhaseJSON{TotalMs: durationMs(serial.Duration)}
 	if len(models) > 0 {
@@ -211,6 +215,7 @@ func collectConcurrentBenchJSON(app AppService, models []string, spec perfTarget
 	out.Parallel = make([]concurrentWorkerJSON, 0, 3)
 	samples := make([]concurrentSpeedSample, 0, 3)
 	for _, wc := range concurrentWorkerCounts(workers) {
+		app.ClearScanCache() // 各组独立冷启动，见上；否则上一组并行填充后本组全命中
 		r := benchParallelAnalyze(app, models, wc)
 		item := concurrentWorkerJSON{Workers: wc, TotalMs: durationMs(r.Duration)}
 		if r.Duration > 0 {

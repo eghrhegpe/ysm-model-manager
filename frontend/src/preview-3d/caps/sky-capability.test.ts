@@ -257,12 +257,16 @@ describe("SkyCapability — 持久化", () => {
     // EXEMPT 先例）。豁免显式登记，防后人误判为漏登记 bug：
     //   ① skyForceEnv 是**脉冲键**（sky-capability.ts:708）：写入触发 IBL 重建，loadState 后强制
     //      重置 false（:665）。
-    //   ② skyTurbidity/skyRayleigh/skyMieCoefficient/skyMieDirectionalG/skyExposure **无 UI 出口**
-    //      （sky-menu.ts 仅 sunIntensityScale/sunDiscScale 有滑杆），用户调不到；applyModelPreset
+    //   ② skyTurbidity/skyRayleigh/skyMieCoefficient/skyMieDirectionalG 是**死参数**：**无 UI 出口**
+    //      （sky-menu.ts 仅 sunIntensityScale/sunDiscScale 有滑杆）、无写入方、无持久化；applyModelPreset
     //      也不写（本文件 :610 断言 preset.skyTurbidity === undefined）——saveState:811 只摘 8 个
     //      "用户能调"的键，注释 :820 明写"持久化用户调整的太阳耦合尺度"。
-    // ⚠️ 这 5 键仍在 schema + 有 range（本轮补钳制），且 sky-capability.ts:407-410 读默认值喂
-    //    three Sky shader uniform——是**有渲染作用但无写入方的半死参数**，删会破坏 shader 初始化。
+    //   ③ skyExposure **不是死参数**，是"活跃但无 UI 出口"：它是 sky 侧基础曝光（属主 =
+    //      SkyCapability.applyExposure），用户经 postprocessing 的 ppExposure 调有效曝光，程序化/测试
+    //      会写它（postprocessing-capability.test.ts 大量 setEnvState({skyExposure})）。仍 EXEMPT 是
+    //      因为 saveState 不存它（用户不直调），**勿归入"死参数"类**。
+    // ⚠️ 这 4 键仍在 schema + 有 range（本轮补钳制），且 sky-capability.ts:407-410 读默认值喂
+    //    three Sky shader uniform——是**有渲染作用但无写入方的死参数**，删会破坏 shader 初始化。
     const EXEMPT = new Set([
       "skyForceEnv",
       "skyTurbidity",

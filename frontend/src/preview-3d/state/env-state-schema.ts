@@ -88,9 +88,13 @@ export const ENV_STATE_SCHEMA = {
   // 唯一写者 `setSun()` 在生产零消费者（只有测试调用），而 `apply()` 首行 `syncSunFromTime()`
   // 每次都会用 timeOfDay 重算覆盖 —— 典型幽灵键 + 死 API + 死分支三连。
   skyForceEnv: { type: "boolean", default: true, group: "sky" },
-  // 下四键（turbidity/rayleigh/mieCoefficient/mieDirectionalG）**无 UI 出口**（氛围预设已按
-  // ADR-284 与大气解耦，sky-capability.test.ts「preset.skyTurbidity === undefined」），用户调不到；
-  // 补 range 纯防御——防脏档 NaN / 物理超界直接进 shader uniform。
+  // ⚠️ **死参数**（锐评 2026-10-09 显式标记）：下四键（turbidity/rayleigh/mieCoefficient/
+  // mieDirectionalG）**无 UI 出口**（sky-menu.ts 仅 sunIntensityScale/sunDiscScale 有滑杆）、
+  // **无持久化**（saveState:811 只摘 8 个"用户能调的"键）、**无写入方**（氛围预设已按 ADR-284 与
+  // 大气解耦，applyModelPreset 不写，sky-capability.test.ts「preset.skyTurbidity === undefined」）。
+  // **唯一作用 = 作 three Sky shader 的默认 uniform**（sky-capability.ts:407-410 读默认值）。
+  // 故 schema 保留键、补 range 纯防御——防脏档 NaN / 物理超界直接进 shader uniform。
+  // **若未来加 UI 出口，须同步补 saveState 持久化 + 从 [G-sky] 锁 EXEMPT 移除**。
   skyTurbidity: {
     type: "number",
     default: 7.5,
@@ -143,6 +147,10 @@ export const ENV_STATE_SCHEMA = {
     group: "sky",
     // 曝光乘数（唯一属主 = SkyCapability.applyExposure，经 effectiveToneMappingExposure 单源）。
     // 域 [0,3] 覆盖 three 典型曝光行程；NaN/负值/超大值钳回，防脏档黑屏或白爆。
+    // ⚠️ **活跃但无 UI 出口**（锐评 2026-10-09 更正，勿归入"死参数"类）：skyExposure 是 sky 侧
+    // 基础曝光，用户经 postprocessing 的 `ppExposure`（乘法系数）调有效曝光，本键保持 per-type
+    // 默认；程序化/测试会写（postprocessing-capability.test.ts 大量 setEnvState({skyExposure})）。
+    // 故 [G-sky] 锁仍 EXEMPT 它（saveState 不存、用户不直调）。
     range: { min: 0, max: 3, step: 0.01 },
   },
   skyEnvironment: { type: "boolean", default: true, group: "sky" },

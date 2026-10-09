@@ -139,7 +139,11 @@ last_verified: 2026-10-09
   createHelper/syncHelper 缺能力总闸三分歧复活）；
   `light-math.test.ts`「base=0 除零守卫」经变异（去掉守卫）→ 该用例转红；
   `shadow-capability.test.ts`「脏档回退」经变异（白名单去 4096 档）→ 3 个 4096 用例转红（cap 既有断言
-  与叶层新断言双重钉住「守卫只装一侧」母题）。
+  与叶层新断言双重钉住「守卫只装一侧」母题）；
+  `ground-surface-spec.test.ts`「surfaceTextureToken 纹理身份」经变异（去掉 `image?.width/height` 尺寸
+  拼接）→ 名称+尺寸、缺位 0x0、尺寸不同 3 用例转红，而「名称不同」用例仍绿——尺寸参与身份的逻辑
+  被精确守卫，且判别样本粒度未误伤 name 语义（横向铺叶层直测实证，消 ground-capability
+  `currentTextureToken` 手抄双源）。
 - **变异盲区诚实命名**：`env-ibl.test.ts`「PMREM 生成失败回滚」变异（移 catch 还原行）**仍绿**——
   因 `fromEquirectangular` 抛错发生在 `envTexture` 赋值前，`scene.environment` 本未改写，catch 那行
   还原是**防御性冗余**（与禁用分支 / dispose 同构）。测试注释须诚实标注，不夸大为防回潮断言。

@@ -9,10 +9,18 @@ source_files:
   - frontend/src/preview-3d/caps/env-hdr-cache.test.ts
   - frontend/src/preview-3d/caps/env-hdr-cache.ts
   - frontend/src/preview-3d/caps/environment-capability.test.ts
+  - frontend/src/preview-3d/caps/sky-sun.ts
+  - frontend/src/preview-3d/caps/sky-sun.test.ts
   - docs/adr/decisions/ADR-311-d1-mock.md
+tests:
+  - frontend/src/preview-3d/caps/env-hdr-cache.test.ts
+  - frontend/src/preview-3d/caps/sky-sun.test.ts
 auto_fields:
   symbols_with_lines:
+    - computeHourToSun
+    - computeSunPosition
     - EnvHdrCache
+    - sunVectorFromSpherical
 use_when:
   - 写或审 preview-3d 的 vi.mock 用例，判断是否自证
   - 给核心纯函数 / 关键守卫补测试，需正反双侧
@@ -21,6 +29,7 @@ pitfalls:
   - mock 掉被断言行为的谓词 = 自证：断言的是替身不是真实现，测试无效
   - mock 不保真（null 输入 / 抛错输入 / 产物属性）：判别样本退化为假阳
   - three r186 的 needsUpdate 只有 setter（getter 恒 undefined），须以 version 递增断言
+  - 纯函数下沉时须**参数化**（不读全局单例如 envState），否则不可叶层直测（ADR-235-d1 教训）
 quick_groups:
   - 门禁与脚本
 quick_intents:
@@ -30,7 +39,9 @@ quick_risk_lines:
 invariant_anchors:
   - frontend/src/preview-3d/caps/env-ibl.test.ts|PMREM 生成失败回滚
   - frontend/src/preview-3d/caps/env-hdr-cache.test.ts|loadFromFile 三分支
+  - frontend/src/preview-3d/caps/sky-sun.test.ts|负数 wrap 反例
   - docs/adr/decisions/ADR-311-d1-mock.md|决策
+last_verified: 2026-10-09
 ---
 
 # 测试纪律：禁 mock 断言谓词 / 判别样本 / 变异探针
@@ -63,8 +74,9 @@ invariant_anchors:
 
 ## 与其他子系统关系
 
-- 承接第 1 刀（ADR-091-d1 环境 cap 拆分）的**测试配套**：拆分出新模块必须有叶层判别样本，
-  否则未来叶层重构时 cap 层断言静默空转或全红。
+- 承接第 1 刀（ADR-091-d1 环境 cap 拆分）与第 2 刀（ADR-235-d1 sky cap 拆分）的**测试配套**：
+  拆分出新模块必须有叶层判别样本，否则未来叶层重构时 cap 层断言静默空转或全红。
+  纯计算下沉（`sky-sun.ts`）须**参数化**（不读 `envState`），否则叶层不可直测。
 - `three` r185/r186 的 `Material`/`Texture.needsUpdate` 只有 setter（getter 恒 undefined），
   副作用认 `version` 递增（同 `sky-capability.test.ts` / `water-capability.test.ts` 口径）。
 
@@ -73,7 +85,9 @@ invariant_anchors:
 - **mock 不越被测主体**：`vi.mock` 的目标模块 ≠ 断言目标模块。
 - **判别样本双侧**：正例 + 反例齐全，缺一侧记欠债。
 - **变异实证锚点**：`env-ibl.test.ts`「dispose 还原 environment」经变异（移还原行 → 转红）实证；
-  `environment-capability.test.ts`「dispose 顺序收敛 A/B 两序」有变异实证记录。
+  `environment-capability.test.ts`「dispose 顺序收敛 A/B 两序」有变异实证记录；
+  `sky-sun.test.ts`「负数 wrap 反例」经变异（`((hour%24)+24)%24` → `hour%24`）→ 该用例转红、正 wrap
+  用例仍绿——负/正两分支各自被精确守卫（第 2 刀 ADR-235-d1 子提交 A 实证）。
 - **变异盲区诚实命名**：`env-ibl.test.ts`「PMREM 生成失败回滚」变异（移 catch 还原行）**仍绿**——
   因 `fromEquirectangular` 抛错发生在 `envTexture` 赋值前，`scene.environment` 本未改写，catch 那行
   还原是**防御性冗余**（与禁用分支 / dispose 同构）。测试注释须诚实标注，不夸大为防回潮断言。

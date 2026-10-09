@@ -1112,6 +1112,7 @@
 | mock 掉被断言行为的谓词 = 自证：断言的是替身不是真实现，测试无效 | - | - |
 | mock 不保真（null 输入 / 抛错输入 / 产物属性）：判别样本退化为假阳 | - | - |
 | three r186 的 needsUpdate 只有 setter（getter 恒 undefined），须以 version 递增断言 | - | - |
+| 纯函数下沉时须**参数化**（不读全局单例如 envState），否则不可叶层直测（ADR-235-d1 教训） | - | - |
 | getAllByTestId 前缀查询不会返回的兄弟 testid（如 tree-dir 不会命中 tree-dir-toggle）；误用精确查询会抛错，应先查前缀再 JS 过滤 | `后缀非数字` | - |
 | waitFor 超时/异常携带原始错误（P2 修复后）；旧实现静默吞错掩盖真实根因，迁移旧卡时注意不要写 | `捕获后重新 throw 通用消息` | - |
 | " 参数不存在于 waitFor 签名，旧知识卡/口语中可能出现误导" | `interval?` | - |

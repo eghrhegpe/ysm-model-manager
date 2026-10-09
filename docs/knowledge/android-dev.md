@@ -78,6 +78,11 @@ cd build/android && ./gradlew.bat assembleDebug   # → app/build/outputs/apk/de
 
 前置：`ANDROID_HOME`（本机 `C:\Android\Sdk`）+ NDK 26.3 + platform android-34 + Java 17+。
 
+> ⚠️ `$SDK/ndk` 下装多版本时按**语义序**取最新（`scripts/android-build.ts` `compareNdkVersion`），
+> 不是字符串序——NDK minor 达两位数（r26.10+）时字符串序 `"26.3"` > `"26.10"` 会选中旧 NDK
+> （锐评 2026-10-09）。NDK 工具链 prebuilt 目录名随版本走，`hostTag()` 仅按 `os.platform/arch` 猜
+> `darwin-arm64`/`darwin-x86_64`，ARM Mac 遇旧 NDK（仅 darwin-x86_64）会因路径缺失报错。
+
 ## 为什么没有目录选择器
 
 Wails v3 官方 `dialogs_android.go` **明确拒绝 Android 目录选择**（SAF 返回 `content://` URI 而非文件

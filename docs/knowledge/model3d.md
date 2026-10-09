@@ -185,6 +185,8 @@ auto_fields:
     - componentsStyleSheet
     - computeBoneLocalPos
     - computeBoneTexRange
+    - computeHourToSun
+    - computeSunPosition
     - concurrentMap
     - ConsoleLogger
     - CORE_MENU_ITEMS
@@ -372,7 +374,6 @@ auto_fields:
     - getSemanticBone
     - getSemanticMorph
     - getStateValue
-    - getSunPosition
     - getTextureAlphaInfo
     - getTextureAlphaMode
     - getTextureDecoder
@@ -421,7 +422,6 @@ auto_fields:
     - hasSchema
     - HeaderToggleConfig
     - HeaderToggleElement
-    - hourToSun
     - IconButtonOpts
     - IKChain
     - IKConfig

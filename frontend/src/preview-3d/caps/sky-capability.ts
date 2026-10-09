@@ -50,6 +50,9 @@ import {
   type SceneCapabilityLookup,
 } from "./scene-capability.ts";
 import { buildSkyNodes } from "./sky-menu.ts";
+// [ADR-235-d1 子提交 A] 太阳位置纯计算下沉 `sky-sun.ts`（零 three 依赖、参数化），
+// cap 只调结果；hourToSun / getSunPosition / sunVector 三个符号原先内联在本类。
+import { computeHourToSun, computeSunPosition, sunVectorFromSpherical } from "./sky-sun.ts";
 import { godRaysIntensity, SunBeams } from "./sun-beams.ts";
 
 /**
@@ -413,10 +416,10 @@ export class SkyCapability implements SceneCapability {
     u.mieCoefficient.value = envState.skyMieCoefficient;
     u.mieDirectionalG.value = envState.skyMieDirectionalG;
     u.cloudCoverage.value = envState.skyCloudCoverage;
-    const phi = THREE.MathUtils.degToRad(90 - this.elevation);
-    const theta = THREE.MathUtils.degToRad(this.azimuth);
-    const sun = new THREE.Vector3().setFromSphericalCoords(1, phi, theta);
-    u.sunPosition.value.copy(sun);
+    // [ADR-235-d1 子提交 A] 球坐标→笛卡尔换算下沉 `sky-sun.ts#sunVectorFromSpherical`
+    // （等价 three `Vector3.setFromSphericalCoords(1, φ, θ)`；判别样本见 `sky-sun.test.ts`）
+    const sun = sunVectorFromSpherical(this.elevation, this.azimuth);
+    u.sunPosition.value.set(sun.x, sun.y, sun.z);
     if (u.sunIntensityScale !== undefined) {
       u.sunIntensityScale.value = envState.skySunIntensityScale;
     }
@@ -674,30 +677,18 @@ export class SkyCapability implements SceneCapability {
 
   /** 由 timeOfDay 推导太阳 elevation/azimuth（单一事实来源，避免与 setSun 双写冲突） */
   private syncSunFromTime(): void {
-    const { elevation, azimuth } = this.hourToSun(envState.skyTimeOfDay);
+    const { elevation, azimuth } = computeHourToSun(envState.skyTimeOfDay);
     this.elevation = elevation;
     this.azimuth = azimuth;
-  }
-
-  /** 按一天中的小时（0-24）映射太阳位置：6=日出(东)、12=正午(南)、18=日落(西)，夜间在地平线下 → 天空转暗 */
-  private hourToSun(hour: number): { elevation: number; azimuth: number } {
-    const h = ((hour % 24) + 24) % 24;
-    const dayAngle = ((h - 6) / 12) * Math.PI; // 6→0, 12→π/2, 18→π
-    const elevation = Math.sin(dayAngle) * 70; // 峰值 70°，夜间为负 → 天空转暗
-    const azimuth = 90 + ((h - 6) / 12) * 180; // 90(东)→180(南)→270(西)
-    return { elevation, azimuth };
   }
 
   /**
    * 当前 timeOfDay 对应的太阳归一化坐标 (x: 0-1 经度, y: 0-1 纬度，0=底 1=顶)。
    * 供时间轴标记太阳位置；与 ENV_PRESETS.sunPos 同一口径。
+   * [ADR-235-d1 子提交 A] 纯计算下沉 `sky-sun.ts`（判别样本见 `sky-sun.test.ts`），本方法仅委托，公开 API 稳定。
    */
   getSunPosition(): { x: number; y: number } {
-    const { elevation, azimuth } = this.hourToSun(envState.skyTimeOfDay);
-    // azimuth 90~270 → x 0~1；elevation -70~70 → y 0~1（70=顶 1.0，-70=底 0.0）
-    const x = (azimuth - 90) / 180;
-    const y = (elevation + 70) / 140;
-    return { x: Math.max(0, Math.min(1, x)), y: Math.max(0, Math.min(1, y)) };
+    return computeSunPosition(envState.skyTimeOfDay);
   }
 
   /**

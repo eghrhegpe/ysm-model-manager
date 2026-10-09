@@ -216,6 +216,7 @@ fog 键必漏**（fogColor 已实证漏过）。**meta 闸在此完全无判别�
 - ✅ **已落地**：`[G-fog]` 派生锁（`fog-capability.test.ts`），48 例全绿，变异实证通过。
 - ✅ **已落地**：`[G-reflector]` / `[G-shadow]` / `[G-renderMode]` / `[G-light]` 同法补全
   （commit `cbf122b4f` / `d10d8d929`），合计 118 + 138 例全绿。
+- ✅ **已落地**：`[G-sky]`（commit `4f0611145`），110 例全绿——**至此 10 cap 全部有逐键派生锁**。
 
 **补锁时扫出的现存漏网（非未来风险，是当下就漏）**：
 
@@ -225,11 +226,26 @@ fog 键必漏**（fogColor 已实证漏过）。**meta 闸在此完全无判别�
 | **light** | 完整周期例 :979 只覆盖 **4/41 键**（key.enabled / ambient.intensity / key.type / volumetric.enabled），**37 键无任何往返验证**。`light-params.ts\|lightEnvKeys(slot)` 覆盖度只含**每槽位 10 键 × 3 = 30 键**，漏 lightEnabled / lightHelperVisible / lightAmbientColor / lightVolumetric* 等 **11 个非槽位键**。 |
 | **renderMode** | `saveState:265` 手写摘 5 键、`loadState:275` 手写还原（nullable-* 特殊类型），加键必漏。 |
 | **reflector** | 完整周期例 :146 手写枚举 6 键，加键必漏。 |
+| **sky** | 完整周期例 :237 只覆盖 **3/14 键**，:247 `isEnabled()===true` 恒真绕圈；:256「7 字段」仍只 7 键。`saveState:811` 手写只摘 8 键（注释 :820 明写"持久化用户调整的太阳耦合尺度"）。 |
 
 **方法增强（本次新增）**：`[G-light]` 首用 `deriveDefaultEnvState()` **自动校验偏离值 ≠ schema 默认**
 （`expect(DEVIATION[k]).not.toEqual(defaults[k])`）——防手写偏离值碰巧等于默认 → 恒真绕圈无判别力。
 既有 [G-8]/[D3]/[G-fog] 靠注释声明"偏离值 ≠ 默认"，本锁把这条从**人工自觉**升级为**机器断言**。
 建议后续新锁统一采用。
+
+**[G-sky] 扫出的"有意不持久化键"面（须显式登记豁免，非漏登记 bug）**：锁首跑抓 `skyForceEnv` 与
+`skyTurbidity`/`skyRayleigh`/`skyMieCoefficient`/`skyMieDirectionalG`/`skyExposure` 均未 round-trip 还原。
+查证后**不是 bug**，是两类有意设计：① `skyForceEnv` 脉冲键（`sky-capability.ts:708`，loadState 后
+强制重置 false :665）；② 其余 5 键**无 UI 出口**（`sky-menu.ts` 仅 `sunIntensityScale`/`sunDiscScale`
+有滑杆），用户调不到、`applyModelPreset` 也不写（`sky-capability.test.ts:610` 断言
+`preset.skyTurbidity === undefined`）。本锁用 `EXEMPT` 集合显式登记豁免（对齐 light 组
+`lightVolumetricBaseStrength` 先例），防后人误判为漏登记 bug。
+
+⚠️ **副产品发现（待拍板）**：sky 这 5 键是**有 schema + 有 range 但无写入方的半死参数**——在 schema、
+本轮还补了 range，且 `sky-capability.ts:407-410` 读默认值喂 three Sky shader uniform（有渲染作用），
+但**无 UI 出口、无持久化、无程序化写入**。删会破坏 shader 初始化故保留；是否暴露 UI 出口或显式标记
+"死参数"待拍板。**本轮补的 range 对它们仍是正确防御**（防未来写入 NaN）。
+
 - ❌ **`cap-dispose-reset` meta 闸**：价值更低——dispose 复位已 5/5 实闭 + 各家有锁，仅防"未来新
   cap 漏复位"，收益低、判别力同受"存在性"局限。
 

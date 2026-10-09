@@ -43,6 +43,8 @@ auto_fields:
     - applyPerfPreset
     - applyReflectionUniforms
     - applyRotationIfNonIdentity
+    - applyScaledUniformToPair
+    - applyUniformToPair
     - applyVolumetricCone
     - applyVPDToMesh
     - applyWasdCameraMotion
@@ -208,6 +210,7 @@ auto_fields:
     - createPerceptionPauseRef
     - createPmxParser
     - createResolveModeBridge
+    - createSky
     - createSlideMenu
     - createTextureDecoder
     - createVrmFootIKController

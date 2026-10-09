@@ -17,7 +17,7 @@
 // - God Rays（体积光束，ADR-107）：日出日落时从太阳方向向下投射的半透明光束。
 
 import * as THREE from "three";
-import { Sky } from "three/addons/objects/Sky.js";
+import type { Sky } from "three/addons/objects/Sky.js";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 // shader patch 归位（2026-10-08 拆出）：injectSkySunScalePatch 移入 shader-patches/sky-patch.ts，
 // 与 SkyCapability 类解耦，sky-capability.ts 专注能力核心（scene 接入 + uniform 管线）。
@@ -49,6 +49,9 @@ import {
   type SceneCapability,
   type SceneCapabilityLookup,
 } from "./scene-capability.ts";
+// [ADR-235-d1 子提交 B] 天空资产下沉 `sky-asset.ts`（Sky mesh 创建 + sky/envSky 双写 uniform 机制），
+// cap 只做 changed 门控编排，不再手写双写样板。
+import { applyScaledUniformToPair, applyUniformToPair, createSky } from "./sky-asset.ts";
 import { buildSkyNodes } from "./sky-menu.ts";
 // [ADR-235-d1 子提交 A] 太阳位置纯计算下沉 `sky-sun.ts`（零 three 依赖、参数化），
 // cap 只调结果；hourToSun / getSunPosition / sunVector 三个符号原先内联在本类。
@@ -135,8 +138,9 @@ export class SkyCapability implements SceneCapability {
     this.prevExposure = this.renderer.toneMappingExposure;
     this.prevEnvironment = this.scene.environment;
     // Sky 是 Mesh + ShaderMaterial，纯数据对象，构造函数不依赖 WebGL
-    this.sky = this.createSky();
-    this.envSky = this.createSky();
+    // [ADR-235-d1 子提交 B] 创建下沉 `sky-asset.ts#createSky`（含 cloudCoverage 初值）
+    this.sky = createSky(envState.skyCloudCoverage, SKY_SCALE);
+    this.envSky = createSky(envState.skyCloudCoverage, SKY_SCALE);
     // §4 解耦：只给主天空 this.sky 注入 sun scale 补丁，envSky（用于 IBL）保持原生 Preetham —
     // 这样 IBL 环境贴图的色调基准与物体反射保持物理正确，而主天空不再被 1000² 的太阳强度炸白。
     injectSkySunScalePatch(this.sky.material as THREE.ShaderMaterial, {
@@ -250,7 +254,8 @@ export class SkyCapability implements SceneCapability {
     );
   }
 
-  /** 双写 uniform（sky + envSky），仅当 changed 含该字段时 */
+  /** 双写 uniform（sky + envSky），仅当 changed 含该字段时。
+   *  [ADR-235-d1 子提交 B] 双写机制下沉 `sky-asset.ts#applyUniformToPair`，本方法只留 changed 门控壳。 */
   private applyUniform(
     changed: Set<EnvStateKey>,
     field: EnvStateKey,
@@ -258,11 +263,11 @@ export class SkyCapability implements SceneCapability {
     value: number,
   ): void {
     if (!changed.has(field)) return;
-    (this.sky.material.uniforms as Record<string, { value: number }>)[uniform].value = value;
-    (this.envSky.material.uniforms as Record<string, { value: number }>)[uniform].value = value;
+    applyUniformToPair(this.sky, this.envSky, uniform, value);
   }
 
-  /** 双写 uniform（带 undefined 守卫——patch 幂等注入后 uniform 必存在，但防御性保留） */
+  /** 双写 uniform（带 undefined 守卫——patch 幂等注入后 uniform 必存在，但防御性保留）。
+   *  门控壳同 applyUniform；undefined 守卫机制下沉 `sky-asset.ts#applyScaledUniformToPair`。 */
   private applyScaledUniform(
     changed: Set<EnvStateKey>,
     field: EnvStateKey,
@@ -270,12 +275,7 @@ export class SkyCapability implements SceneCapability {
     value: number,
   ): void {
     if (!changed.has(field)) return;
-    const u = this.sky.material.uniforms as Record<string, { value: number } | undefined>;
-    const eu = this.envSky.material.uniforms as Record<string, { value: number } | undefined>;
-    const su = u[uniform];
-    const esu = eu[uniform];
-    if (su !== undefined) su.value = value;
-    if (esu !== undefined) esu.value = value;
+    applyScaledUniformToPair(this.sky, this.envSky, uniform, value);
   }
 
   /**
@@ -345,13 +345,6 @@ export class SkyCapability implements SceneCapability {
       this.pmrem = new THREE.PMREMGenerator(this.renderer);
     }
     return this.pmrem;
-  }
-
-  private createSky(): Sky {
-    const sky = new Sky();
-    sky.scale.setScalar(SKY_SCALE);
-    sky.material.uniforms.cloudCoverage.value = envState.skyCloudCoverage;
-    return sky;
   }
 
   /** 应用天空到场景（背景 + 可选 IBL + tone mapping + god rays） */

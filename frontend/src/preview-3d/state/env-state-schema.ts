@@ -64,7 +64,19 @@ export const ENV_STATE_SCHEMA = {
   // 的偏好无 envState 落点，且与「天空是否已挂载」混为一谈（ADR-250 §2.1 判定的误判）。
   // 默认 true 与被退役私有门的有效默认一致，收口零行为漂移。
   skyEnabled: { type: "boolean", default: true, group: "sky" },
-  skyTimeOfDay: { type: "number", default: 9, group: "sky" },
+  // [锐评 2026-10-09 补 range] 原三无钳制键直接喂 three Sky shader（sky-capability.ts|applyUniform
+  //  直写 uniforms），`clampFieldValue` 原样透传 ⇒ 脏存档/程序化写入可打进 NaN/物理超界值，
+  //  零报错。three 官方 Sky（0.186.1）对 turbidity/rayleigh/mieCoefficient/mieDirectionalG
+  //  均**无 range**，靠 shader 自吞——而 hgPhase 对 |g|>1 会算出负光强（NaN 天空）。
+  //  域取 three 官方语义 + 容纳本项目生产写入值（各默认值均已在域内，零行为漂移）。
+  skyTimeOfDay: {
+    type: "number",
+    default: 9,
+    group: "sky",
+    // 一天 24 时。昼夜循环（sky-capability.ts|AUTO_ROTATE_HOURS_PER_SEC）已自 `% 24` 恒在 [0,24)，
+    // force 写入亦过 clamp（force 只跳 shouldOverwrite），故本域零漂移；钳制只兜 NaN/负值/超 24。
+    range: { min: 0, max: 24, step: 0.5, unit: "时" },
+  },
   skyCloudCoverage: {
     type: "number",
     default: 0,
@@ -76,10 +88,39 @@ export const ENV_STATE_SCHEMA = {
   // 唯一写者 `setSun()` 在生产零消费者（只有测试调用），而 `apply()` 首行 `syncSunFromTime()`
   // 每次都会用 timeOfDay 重算覆盖 —— 典型幽灵键 + 死 API + 死分支三连。
   skyForceEnv: { type: "boolean", default: true, group: "sky" },
-  skyTurbidity: { type: "number", default: 7.5, group: "sky" },
-  skyRayleigh: { type: "number", default: 2.5, group: "sky" },
-  skyMieCoefficient: { type: "number", default: 0.005, group: "sky" },
-  skyMieDirectionalG: { type: "number", default: 0.8, group: "sky" },
+  // 下四键（turbidity/rayleigh/mieCoefficient/mieDirectionalG）**无 UI 出口**（氛围预设已按
+  // ADR-284 与大气解耦，sky-capability.test.ts「preset.skyTurbidity === undefined」），用户调不到；
+  // 补 range 纯防御——防脏档 NaN / 物理超界直接进 shader uniform。
+  skyTurbidity: {
+    type: "number",
+    default: 7.5,
+    group: "sky",
+    // Preetham 浑浊度；>30 时散射项 exp 溢出（官方 Sky 无 range，自吞）。
+    range: { min: 1, max: 30, step: 0.1 },
+  },
+  skyRayleigh: {
+    type: "number",
+    default: 2.5,
+    group: "sky",
+    // 瑞利散射系数（three 官方默认 1，本项目 2.5）；>6 天空趋白失去分层。
+    range: { min: 1, max: 6, step: 0.1 },
+  },
+  skyMieCoefficient: {
+    type: "number",
+    default: 0.005,
+    group: "sky",
+    // 米氏散射系数，物理域 [0,1]。
+    range: { min: 0, max: 1, step: 0.001 },
+  },
+  skyMieDirectionalG: {
+    type: "number",
+    default: 0.8,
+    group: "sky",
+    // Henyey-Greenstein 相函数参数 g：**|g|>1 时 hgPhase 内 `1-g²` 变负 → 天空出负光强/NaN**
+    //（three 官方 hgPhase = ONE_OVER_FOURPI * (1-g²) * 1/pow(1-2g·cosθ+g², 1.5)，无 clamp）。
+    // 这是本批补钳制的**硬依据**：不钳即 shader 爆炸，不是纯理论。
+    range: { min: -1, max: 1, step: 0.01 },
+  },
   skySunIntensityScale: {
     type: "number",
     default: 0.75,
@@ -96,7 +137,14 @@ export const ENV_STATE_SCHEMA = {
     range: { min: 0, max: 1.5, step: 0.05 },
     uiRange: { min: 0, max: 1.2, step: 0.05 },
   },
-  skyExposure: { type: "number", default: 0.5, group: "sky" },
+  skyExposure: {
+    type: "number",
+    default: 0.5,
+    group: "sky",
+    // 曝光乘数（唯一属主 = SkyCapability.applyExposure，经 effectiveToneMappingExposure 单源）。
+    // 域 [0,3] 覆盖 three 典型曝光行程；NaN/负值/超大值钳回，防脏档黑屏或白爆。
+    range: { min: 0, max: 3, step: 0.01 },
+  },
   skyEnvironment: { type: "boolean", default: true, group: "sky" },
   skyGodRaysEnabled: { type: "boolean", default: false, group: "sky" },
   skyAutoRotate: { type: "boolean", default: false, group: "sky" },
@@ -408,7 +456,15 @@ export const ENV_STATE_SCHEMA = {
     uiRange: { min: 0, max: 3, step: 0.05 },
   },
   envUseAsBackground: { type: "boolean", default: false, group: "environment" },
-  envResolution: { type: "number", default: 1024, group: "environment" },
+  // [锐评 2026-10-09] envResolution 无 UI 直写出口（唯一消费者 env-ibl.ts 作 PMREM RT 宽度）。
+  //  原无 range ⇒ 脏档 999999 直进 PMREM RT 尺寸。语义为 **2 的幂档位**，完整枚举收编另议
+  //  （本批先补区间防超域/NaN，档位化不改 schema 类型）。域含默认 1024 与既有合法写入。
+  envResolution: {
+    type: "number",
+    default: 1024,
+    group: "environment",
+    range: { min: 256, max: 4096, step: 256 },
+  },
   // [ADR-292 D5] 环境贴图数据源——scene.environment 唯一槽位的「谁在供图」单一事实源。
   // 三者互斥：preset（程序化 Canvas 预设）/ sky（跟随天空，向 SkyCapability 取烘焙图）/
   // custom（用户加载的 HDR 文件）。旧存档迁移见 caps/environment-migrations.ts。
@@ -460,6 +516,10 @@ export const ENV_STATE_SCHEMA = {
     default: "soft",
     group: "shadow",
   },
+  // ⚠️ shadowMapSize **有意豁免 range**（不是漏）：值域语义是**离散档位而非区间**
+  //  （512/1024/2048/4096），区间钳制会放过 999 这类非档位值。
+  //  守卫在 `shadow-capability.ts|normalizeShadowMapSize`（setter :442 与恢复侧 :557 双侧同装，
+  //  防「守卫只装一侧」）。豁免理由登记于此，避免后人误补区间。见 shadow-capability.ts:32 注释。
   shadowMapSize: { type: "number", default: 2048, group: "shadow" },
   shadowBias: {
     type: "number",
@@ -501,7 +561,14 @@ export const ENV_STATE_SCHEMA = {
     range: { min: 20, max: 500, step: 10 },
   },
   reflectorColor: { type: "number", default: 0xffffff, group: "reflector" },
-  reflectorClipBias: { type: "number", default: 0.003, group: "reflector" },
+  // [锐评 2026-10-09 补 range] 原无钳制：脏档可打进 NaN/超大偏移，直进 reflector RT 相机
+  //  near/far 裁剪。域取 three Reflector 官方默认 clipBias=0.003 的邻近物理行程，默认 0.003 在域内。
+  reflectorClipBias: {
+    type: "number",
+    default: 0.003,
+    group: "reflector",
+    range: { min: -0.1, max: 1, step: 0.001 },
+  },
 
   // --- Render Mode ---
   renderModeWireframe: { type: "nullable-boolean", default: null, group: "renderMode" },
@@ -816,8 +883,21 @@ export const ENV_STATE_SCHEMA = {
     group: "light",
     range: { min: 0, max: 1, step: 0.05 },
   },
-  lightVolumetricBaseStrength: { type: "number", default: 0.9, group: "light" },
-  lightVolumetricTipStrength: { type: "number", default: 0.25, group: "light" },
+  // [锐评 2026-10-09 补 range] base/tip 两键**无 UI 直写出口**（菜单走派生 tipRatio，
+  //  测试显式 EXEMPT lightVolumetricBaseStrength，light-capability.test.ts）。原无钳制 ⇒ 脏档
+  //  NaN/负值直进 VolumetricCone 强度。域取锥体强度物理行程，默认 0.9/0.25 均在域内。
+  lightVolumetricBaseStrength: {
+    type: "number",
+    default: 0.9,
+    group: "light",
+    range: { min: 0, max: 2, step: 0.05 },
+  },
+  lightVolumetricTipStrength: {
+    type: "number",
+    default: 0.25,
+    group: "light",
+    range: { min: 0, max: 2, step: 0.05 },
+  },
 } as const satisfies Record<string, _AnyFieldDef>;
 
 export type EnvStateSchema = typeof ENV_STATE_SCHEMA;

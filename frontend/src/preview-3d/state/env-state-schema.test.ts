@@ -97,3 +97,60 @@ describe("值域描述符（ADR-283：range / uiRange）", () => {
     expect(clampFieldValue("waterColor", 0xffffff)).toBe(0xffffff);
   });
 });
+
+// ===== 锐评 2026-10-09 补钳制批 =====
+// 病史：skyTurbidity/skyMieDirectionalG/skyExposure/envResolution/reflectorClipBias/
+// lightVolumetric{Base,Tip}Strength 原无 range，clampFieldValue 原样透传 ⇒ 脏档 NaN/
+// 物理超界值直进 three shader/RT/锥体，零报错。shadowMapSize **有意豁免**（离散档位，
+// 守卫在 shadow-capability.ts|normalizeShadowMapSize），本块锁「补了不回归 + 豁免不被误补」。
+describe("值域补钳制（锐评 2026-10-09）", () => {
+  const clampedKeys = [
+    "skyTimeOfDay",
+    "skyTurbidity",
+    "skyRayleigh",
+    "skyMieCoefficient",
+    "skyMieDirectionalG",
+    "skyExposure",
+    "envResolution",
+    "reflectorClipBias",
+    "lightVolumetricBaseStrength",
+    "lightVolumetricTipStrength",
+  ] as const;
+
+  it("本轮 10 个原无钳制键均已声明 range（防误删）", () => {
+    for (const k of clampedKeys) {
+      const def = ENV_STATE_SCHEMA[k] as { range?: unknown };
+      expect(def.range, `${k} 缺 range（锐评 2026-10-09 已补）`).toBeDefined();
+    }
+  });
+
+  it("skyMieDirectionalG 钳到 hgPhase 硬边界（|g|>1 出负光强，非纯理论）", () => {
+    expect(clampFieldValue("skyMieDirectionalG", 1.5)).toBe(1);
+    expect(clampFieldValue("skyMieDirectionalG", -1.5)).toBe(-1);
+    expect(clampFieldValue("skyMieDirectionalG", 0.8)).toBe(0.8); // 默认值不被钳
+  });
+
+  it("脏档 NaN 落 min、超域钳到边界（零报错洞闭合）", () => {
+    expect(clampFieldValue("skyTurbidity", Number.NaN)).toBe(1);
+    expect(clampFieldValue("skyExposure", Number.NaN)).toBe(0);
+    expect(clampFieldValue("envResolution", 999999)).toBe(4096);
+    expect(clampFieldValue("reflectorClipBias", Number.NaN)).toBe(-0.1);
+    expect(clampFieldValue("lightVolumetricTipStrength", 99)).toBe(2);
+  });
+
+  it("skyTimeOfDay 域 [0,24]：昼夜循环 mod 24 恒在域内，clamp 零漂移", () => {
+    expect(clampFieldValue("skyTimeOfDay", 9)).toBe(9); // 默认
+    expect(clampFieldValue("skyTimeOfDay", 23.5)).toBe(23.5);
+    expect(clampFieldValue("skyTimeOfDay", -5)).toBe(0); // 脏档负值兜底
+    expect(clampFieldValue("skyTimeOfDay", 48)).toBe(24); // 超一昼夜兜底
+  });
+
+  it("shadowMapSize 豁免锁定：仍无 range（离散档位，白名单守卫在外）", () => {
+    expect((ENV_STATE_SCHEMA.shadowMapSize as { range?: unknown }).range).toBeUndefined();
+  });
+
+  it("颜色键豁免不受影响：仍无 range（无值域语义，schema 设计声明）", () => {
+    expect((ENV_STATE_SCHEMA.waterColor as { range?: unknown }).range).toBeUndefined();
+    expect(clampFieldValue("waterColor", 0x123456)).toBe(0x123456);
+  });
+});

@@ -255,6 +255,10 @@ export const autoSidebar = [
         "link": "/audit-postprocessing-critique"
       },
       {
+        "text": "3D 预览环境系统锐评（2026-10-09）",
+        "link": "/audit-preview-env-critique-2026-10-09"
+      },
+      {
         "text": "水面系统锐评（2026-10-04）",
         "link": "/audit-water-critique"
       },

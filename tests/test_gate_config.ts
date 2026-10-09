@@ -166,6 +166,50 @@ for (const tool of THRESHOLD_SCANNERS) {
 }
 console.log(`  ✓ 阈值扫描器策略：${THRESHOLD_SCANNERS.length} 项均为 debt + scopedFiles`);
 
+// ── 7. CI 兜底项不得在本地热路径重复付费（2026-10-09 静态工具段耗时债处置）──────
+// auto-import 的成本是**固定全树成本**（实测全量 7.8s ≈ 单文件 8.1s：先扫全树建导出表，
+// `--files` 裁剪救不了），而 CI 的 `pre-push-gate --static` 已把 ALL_STATIC_TOOLS 整表带进去
+// 跑同一条阻断命令。故它必须**留在 ALL、不在 FRONTEND**——缺一不可：
+//   · 从 ALL 摘掉 → 远端覆盖丢失（真关闸）；
+//   · 回到 FRONTEND → 本地每次 push / commit-with-check 白付 ~9s（本条要防的回归）。
+// 并且必须校验「CI 兜底真实存在」——否则整条推理链的前提是假的（这正是 2026-10-08 版注释
+// 据「无独立步骤」误判「本地是唯一防线」的成因：没核 CI 到底跑没跑 --static）。
+{
+  const CI_ONLY_LOCAL_SKIP = ["auto-import.ts"];
+  for (const tool of CI_ONLY_LOCAL_SKIP) {
+    assert.ok(
+      allNames.has(tool),
+      `[gate-config] ${tool} 必须在 ALL_STATIC_TOOLS（doctor --all + CI --static 的唯一兜底）`,
+    );
+    assert.ok(
+      !FRONTEND_STATIC_TOOLS.some((e) => toolName(e) === tool),
+      `[gate-config] ${tool} 不得回到 FRONTEND_STATIC_TOOLS——本地热路径重复付费（CI --static 已同跑同源命令）`,
+    );
+    const inAll = ALL_STATIC_TOOLS.find((e) => toolName(e) === tool) as
+      | { args?: string[] }
+      | undefined;
+    assert.deepStrictEqual(
+      inAll?.args,
+      ["--strict"],
+      `[gate-config] ${tool} 在 ALL 里必须保持 --strict（CI 跑的就是这条命令，掉了就变提示级=不阻断）`,
+    );
+  }
+  const ciYml = fs.readFileSync(path.join(ROOT, ".github", "workflows", "test.yml"), "utf8");
+  assert.match(
+    ciYml,
+    /pre-push-gate\.ts --static/,
+    "CI 必须真跑 --static（这是本地跳过该热路径的前提，也是本断言的核心）",
+  );
+  assert.match(
+    ciYml,
+    /if \(\$LASTEXITCODE -ne 0\) \{ exit \$LASTEXITCODE \}/,
+    "CI 静态治理步必须传播退出码——否则「远端兜底」是假兜底",
+  );
+  console.log(
+    `  ✓ CI 兜底项：${CI_ONLY_LOCAL_SKIP.join(", ")} 在 ALL（--strict）不在 FRONTEND，且 CI --static 步存在并传播退出码`,
+  );
+}
+
 console.log(
-  "OK: gate-config 静态工具清单自洽（引用存在 / 无重复 / 子集关系 / rc2 容忍 / scopedFiles 一致 / 阈值扫描器 debt）",
+  "OK: gate-config 静态工具清单自洽（引用存在 / 无重复 / 子集关系 / rc2 容忍 / scopedFiles 一致 / 阈值扫描器 debt / CI 兜底项）",
 );

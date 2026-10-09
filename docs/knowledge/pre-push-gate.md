@@ -320,4 +320,12 @@ node scripts/pre-push-gate.ts --files "<file1>\n<file2>..." [--dry-run]  # 文�
 - ADR-149 / ADR-150 — pre-commit 兜底收窄（对照）
 - [pre-commit-hook](./pre-commit-hook.md) — 提交前钩子（互补：pre-commit 快同步，pre-push 默认轻量档阻断、全量交 CI）
 - [auto-import-split](./auto-import-split.md) — auto-import 挂载于 ALL_STATIC_TOOLS
+- **静态工具段耗时债**（2026-10-09）：段预算 30s 一度被 `auto-import`（固定 ~9s 全树扫，
+  实测全量 7.8s ≈ 单文件 8.1s——成本在「先建全树导出表」，`--files` 裁剪**救不了**）
+  顶到 34s 判结构性慢。处置 = 按摘除判据②从 `FRONTEND_STATIC_TOOLS` 摘除、保留在
+  `ALL_STATIC_TOOLS`：本地 push / commit-with-check 不再付这 9s（前端域该路径实测 25.2s/33 项），
+  而 `doctor --all` 与 CI 的 `pre-push-gate --static` 照跑同一条阻断命令。
+  **判断「CI 有无兜底」别只看有没有以它命名的独立步骤**——`--static` 会把 ALL 表整表带进 CI
+  （本卡 2026-10-08 版曾据此误判 auto-import「本地是唯一防线，必须留」）。
+  反向锚：`tests/test_gate_config.ts` 同时钉死「ALL 在册(--strict)」+「CI --static 步存在且传播退出码」。
 - `docs/cli-commands.md` — doctor 命令（gate/--all/--docs 入口）

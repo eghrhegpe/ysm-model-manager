@@ -211,7 +211,19 @@ export const FRONTEND_STATIC_TOOLS: GateTool[] = [
   { tool: "check-deadcode-baseline.ts", blockPolicy: "debt", debt: debt("knip/jscpd 棘轮账本；噪声已分离，回收需分「删关键字」与「真删码」") },
   { tool: "check-tpl-refs.ts", blockPolicy: "hard" },
   { tool: "check-dynamic-import.ts", blockPolicy: "hard" },
-  { tool: "auto-import.ts", args: ["--strict"], blockPolicy: "hard" },
+  // auto-import 刻意**不在**本清单（2026-10-09 静态工具段耗时债处置）——它留在
+  // ALL_STATIC_TOOLS，即：`doctor --all`（发版前全量）与 CI 的 `pre-push-gate --static`
+  // （test.yml「静态治理门禁」步，exit 码传播=阻断）都照跑同一条命令，**远端覆盖零损失**；
+  // 只是本地 push / commit-with-check 热路径不再重复付费。
+  // 判据（对齐 static-tools.ts 的摘除判据 ②「CI 有无兜底」）：
+  //   ① 成本固定且不可裁剪：实测全量 7.8s、单文件 8.1s——它是「先扫全树建导出表、再查目标文件」
+  //      的形态，`--files` 增量裁剪**救不了**（不是按目标文件付费）；
+  //   ② CI 已同跑同源命令（test.yml:411 `pre-push-gate --static` → 合并 ALL_STATIC_TOOLS），
+  //      本地那次只买「早知道」；
+  //   ③ 判定力与 tsc 高度重叠（「用了没导入」在严格 TS 下即 TS2304，本地 typecheck 与 CI
+  //      frontend job 都跑），本脚本自述为「正则级试水版、有已知误报面」。
+  // 反向锚：tests/test_gate_config.ts 同时钉死「ALL 必须在册」+「CI --static 步必须存在」，
+  // 防止有人摘掉本行后再顺手删了远端兜底（那就成了真关闸）。
   { tool: "i18n-check.ts", args: ["--strict"], blockPolicy: "hard" },
   { tool: "i18n-ui-check.ts", blockPolicy: "hard" },
   // i18n 未使用键（2026-09 接线）：补四个既有 i18n 闸的公共盲区——它们查「该有的有没有」

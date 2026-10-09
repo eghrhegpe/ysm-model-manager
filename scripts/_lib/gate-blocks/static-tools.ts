@@ -51,10 +51,17 @@ import { ROOT } from "../scan-files.ts";
  * 逃生阀 `YSM_GATE_BUDGET_MS=<ms>`（慢机器/CI 上放宽，或临时排查）。
  *
  * 摘除判据（勿滥用逃生阀；摘前先核这两条）：
- *   ① **有无判定力**：`check-unread-fields` rc 恒 0、--strict 才 rc=1，挂门禁里从不拦人 → 可摘；
- *      `auto-import` 是 hard 档且**CI 无独立步骤**（本地是唯一防线）→ 7.2s 也必须留。
+ *   ① **有无判定力**：`check-unread-fields` rc 恒 0、--strict 才 rc=1，挂门禁里从不拦人 → 可摘。
  *   ② **CI 有无兜底**：CI 独立 shell 步骤跑着的项，本地重复付费只买「早知道」，可考虑摘；
  *      CI 不跑的项，本地摘 = 直接关闸。
+ * 判据 ② 的执行面（2026-10-09 追加）：`auto-import`（固定 ~9s 全树扫，`--files` 裁剪救不了：
+ *   实测全量 7.8s ≈ 单文件 8.1s，成本在「先建全树导出表」而非目标文件）从 FRONTEND_STATIC_TOOLS
+ *   摘除、**保留在 ALL_STATIC_TOOLS**——`doctor --all` 与 CI 的 `pre-push-gate --static`
+ *   （test.yml「静态治理门禁」步，exit 传播=阻断）照跑同一条命令，远端零损失，本地
+ *   push / commit-with-check 热路径不再重复付费。
+ *   ⚠️ 判断「CI 有无兜底」不能只看有没有以该脚本命名的**独立步骤**——`--static` 模式把
+ *   ALL_STATIC_TOOLS 整表带进 CI。本注释 2026-10-08 版曾据「无独立步骤」误判 auto-import
+ *   「本地是唯一防线，必须留」（该结论已作废，见 gate-config 的摘除注释）。
  * 换取的收益是真实的：本次摘除让 commit 与 push 各立省 ~18s。
  */
 const STATIC_TOOLS_BUDGET_MS = Number(process.env.YSM_GATE_BUDGET_MS ?? "") || 30_000;

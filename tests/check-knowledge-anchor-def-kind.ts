@@ -123,6 +123,17 @@ try {
     `Go 定义不应 WARN: ${out.warns.join("; ").slice(0, 400)}`,
   );
 
+  // 5b. Go 类型化 var 定义（var X atomic.Value，无赋值形态）→ 无 WARN
+  //     （go/repoaudit/repoaudit.go|extClassifierCache 假阳性修复：类型化 var 是定义，非引用）
+  writeSrc("gofile5b.go", "package anchor\n\nvar AnchorGoTypedVar atomic.Value // *anchor\n");
+  writeCard("tmp/anchor-def-contract/gofile5b.go|AnchorGoTypedVar");
+  ({ status, out } = runDrift());
+  ok(
+    "Go 类型化 var 定义形态 → 无 WARN",
+    !hasAnchorWarn(out),
+    `Go 类型化 var 定义不应 WARN: ${out.warns.join("; ").slice(0, 400)}`,
+  );
+
   // 6. 非纯标识符锚（含空格描述）→ 不触发本增强（机制出现语义合法）
   writeSrc("note.ts", "// 说明：这里提到 buildFancySchema 相关机制\n");
   writeCard("tmp/anchor-def-contract/note.ts|buildFancySchema 相关");

@@ -373,13 +373,13 @@ const ANCHOR_DEF_RE =
   // TS/JS：export function/class/const/let/var/type/interface/enum、裸 function/class、模块级 const/let/var
   /(?:^|[\s\n;{}])(?:export\s+)?(?:async\s+)?(?:function\s+(\w+)\s*\(|class\s+(\w+)\b|(?:const|let|var)\s+(\w+)\s*[:=]|type\s+(\w+)\s*[={]|interface\s+(\w+)\b|enum\s+(\w+)\b)/g;
 const ANCHOR_DEF_RE_GO =
-  // Go：func/type/const/var + receiver 方法
-  /(?:^|[\s\n;{}])(?:func\s+\([^)]*\)\s+(\w+)\s*\(|func\s+(\w+)\s*\(|type\s+(\w+)\s*(?:struct|interface|\{)|const\s+(\w+)\s*=|var\s+(\w+)\s*=)/g;
+  // Go：func/type/const/var + receiver 方法；var 不要求赋值（类型化形态 `var X atomic.Value` 亦为定义形态）
+  /(?:^|[\s\n;{}])(?:func\s+\([^)]*\)\s+(\w+)\s*\(|func\s+(\w+)\s*\(|type\s+(\w+)\s*(?:struct|interface|\{)|const\s+(\w+)\s*=|var\s+(\w+))/g;
 
 /**
  * 判断纯标识符锚在目标文件里是「定义处」还是「仅有引用」。
  * 返回 'defined' | 'consumed' | 'ref-only' | 'absent'：
- *   - defined：文件存在该符号的定义形态（function/class/const/type 声明或 Go func/type/const）
+ *   - defined：文件存在该符号的定义形态（function/class/const/type 声明或 Go func/type/const/var，var 含无赋值的类型化形态）
  *   - consumed：无定义形态，但有真实消费（调用 `X(` / 属性 `X.` / 类型标注 `: X` 等）
  *   - ref-only：无定义形态、无真实消费，仅 import/export 列表/注释/字符串提及（锚疑似指引用处）
  *   - absent：连子串都不含（本函数不负责，外层 includes 已判 ERROR）

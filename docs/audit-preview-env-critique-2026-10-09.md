@@ -199,9 +199,28 @@
 | P2 ground 读侧手写 27 键 | ⏸️ 知识卡 `preview-env-state.md:190` 已**显式登记"留作后续"**（"改造收益小风险不小"）——是有意挂账，非漏判。 |
 | `envResolution` 枚举化 | ⏸️ 本批只补区间防超域；**完整枚举收编另议**（不改 schema 类型，避免污染 `_FieldDef`）。 |
 
-### ⏳ 待拍板（架构级，不在本批动）
+### 🔍 需要评估结论（2026-10-09 二轮：落地前置判断"是否需要"）
 
-两个 meta 闸（`persist-roundtrip-contract.test.ts` / `cap-dispose-reset-contract.test.ts`）、
+**两个 meta 闸：不需要**——这是既有锐评两轮的建议，但经落地前置直读源码后否决。
+
+**反证（决定性）**：`fog-capability.test.ts:154` 已有"saveState / loadState 完整周期"例，
+meta 闸（枚举 registry cap id × 断言"有无 round-trip 例"）会判定 fog"有契约"而**放行**。
+但该例是**手写枚举** 6 键（:155），注释 :168 自陈"手写枚举漏键活证据收口"——**schema 加新
+fog 键必漏**（fogColor 已实证漏过）。**meta 闸在此完全无判别力**（假绿），只会让后人误以为
+"有闸罩着"而松懈。
+
+**真防线是逐键 schema 派生锁**（对齐 ground [G-8] :1265 / water [D3] / env [P1-5]）：
+用 `getPresetKeys("fog")` 派生键集 + `missing = schemaKeys.filter(未登记偏离值)`——**加键即红
+并点名**。已变异实证（临时注入未登记 fog 键 → missing 点名）。
+
+- ✅ **已落地**：`[G-fog]` 派生锁（`fog-capability.test.ts`），48 例全绿，变异实证通过。
+- ⏳ **待补**：reflector / shadow / light / render-mode 仍只有**手写枚举**完整周期例（各自 test 的
+  "saveState / loadState 完整周期"），**加键会漏**——同法补派生锁即可，改动小、低风险。
+- ❌ **`cap-dispose-reset` meta 闸**：价值更低——dispose 复位已 5/5 实闭 + 各家有锁，仅防"未来新
+  cap 漏复位"，收益低、判别力同受"存在性"局限。
+
+### ⏳ 仍待拍板（架构级，不在本批动）
+
 ground 主 cap 拆分（>900 行 + DOM `openTexturePicker`）、`applyModelPreset` 契约补齐（light 已退役、
 ground/water 缺注释论证）、`registerEnvStateMiddleware` 退订句柄接线。
 

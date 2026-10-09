@@ -3,7 +3,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import * as THREE from "three";
 import { FogCapability, normalizeFogRange } from "./fog-capability.ts";
-import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
+import { getParamRange, getPresetKeys } from "@/preview-3d/state/env-state-schema.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { clearEnvCallbacks, isEnvCallbacksSuspended } from "@/preview-3d/state/env-dispatcher.ts";
 // ADR-311 三分法 D2：布局断言 helper——归属用 childIds/nodeIds 配集合判据，
@@ -173,6 +173,40 @@ describe("FogCapability — 持久化", () => {
     const cap = newCap();
     cap.loadState();
     expect(cap.getMode()).toBe("linear");
+  });
+
+  // [G-fog] 逐键 schema round-trip 锁（对齐 ground [G-8] / water [D3] / env [P1-5]）。
+  // 病灶：上一例「完整周期」是**手写枚举** 6 键，schema 加新 fog 键必漏——fogColor 已实证漏过
+  // （[锐评 N-3] 收口补写）。本锁用 `getPresetKeys("fog")` **派生** schema 键集，未登记偏离值即红。
+  // 注：meta 闸（persist-roundtrip-contract）在此**无判别力**——它只查「cap 有无 round-trip 例」，
+  // fog 上例存在即被判定「有」，但上例是手写枚举，加键仍漏。真防线是派生锁，不是存在性检查。
+  it("[G-fog] schema fog 键集全部可 save/load round-trip（还原表不得漏登记）", () => {
+    const DEVIATION: Record<string, unknown> = {
+      fogEnabled: true,
+      fogMode: "exp2",
+      fogColor: 0x123456,
+      fogDensity: 0.025,
+      fogNear: 30,
+      fogFar: 500,
+    };
+    const schemaKeys = getPresetKeys("fog");
+    const missing = schemaKeys.filter((k) => !(k in DEVIATION));
+    expect(
+      missing,
+      `schema 新增了 fog 键但本测试未登记偏离值: ${JSON.stringify(missing)}`,
+    ).toEqual([]);
+
+    const patch: Record<string, unknown> = {};
+    for (const k of schemaKeys) patch[k] = DEVIATION[k];
+    setEnvState(patch, { source: "manual" });
+    const cap = newCap();
+    cap.saveState();
+    resetEnvState();
+    const cap2 = newCap();
+    cap2.loadState();
+    for (const k of schemaKeys) {
+      expect(envState[k], `fog 键 ${k} 未 round-trip 还原`).toEqual(DEVIATION[k]);
+    }
   });
 
   it("loadState 读回 ADR-196 前 legacy 无前缀键（code_review df84baefb #13 迁移契约，防再次被删）", () => {

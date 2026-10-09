@@ -38,11 +38,29 @@ const ARCHES: Record<string, { goarch: string; ndkTarget: string; abi: string }>
 };
 
 /** 宿主 → NDK llvm prebuilt 目录名 */
-function hostTag() {
+/** 候选宿主 → NDK llvm prebuilt 目录名（目录名随 NDK 版本走：r26 起才出 darwin-arm64，
+ *  旧 NDK 仅 darwin-x86_64——硬编码按 os.arch 猜会让 ARM Mac + 旧 NDK 报路径缺失） */
+function hostTagCandidates(): string[] {
   const p = os.platform();
-  if (p === "win32") return "windows-x86_64";
-  if (p === "darwin") return os.arch() === "arm64" ? "darwin-arm64" : "darwin-x86_64";
-  return "linux-x86_64";
+  if (p === "win32") return ["windows-x86_64"];
+  if (p === "darwin") {
+    return os.arch() === "arm64" ? ["darwin-arm64", "darwin-x86_64"] : ["darwin-x86_64"];
+  }
+  return ["linux-x86_64", "linux-aarch64"];
+}
+
+/** NDK llvm prebuilt 宿主目录：按 NDK 实际安装探测候选、取首个存在者；无则返回候选首项（让路径检查报错） */
+function hostTag(ndkRoot: string) {
+  const cands = hostTagCandidates();
+  const prebuilt = path.join(ndkRoot, "toolchains", "llvm", "prebuilt");
+  try {
+    const have = new Set(fs.readdirSync(prebuilt));
+    for (const c of cands) if (have.has(c)) return c;
+  } catch {
+    /* prebuilt 目录缺失：交由 toolchain 路径存在性检查报错 */
+  }
+  // hostTagCandidates 恒非空（win32/darwin/linux 三支都返回数组）；兜底仅消解非空断言告警
+  return cands[0] ?? "linux-x86_64";
 }
 
 /** Windows 读 User 级环境变量（新开终端不继承，显式读 registry；非 Windows 直接返回空） */
@@ -186,7 +204,7 @@ if (!skipFrontend) {
 }
 
 // ---- 2. Go 交叉编译 libwails.so（per ABI）----
-const toolchain = path.join(ndk, "toolchains", "llvm", "prebuilt", hostTag());
+const toolchain = path.join(ndk, "toolchains", "llvm", "prebuilt", hostTag(ndk));
 if (!fs.existsSync(toolchain)) fail(`NDK 工具链缺失: ${toolchain}`);
 const version = resolveVersion();
 const ldflag = `-X ysm-model-manager/go/version.Version=${version}`;

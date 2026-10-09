@@ -4,7 +4,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import * as THREE from "three";
 import { normalizeShadowMapSize, ShadowCapability } from "./shadow-capability.ts";
 import { toModelType } from "@/preview-3d/state/model-defaults.ts";
-import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
+import { getParamRange, getPresetKeys } from "@/preview-3d/state/env-state-schema.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { LightCapability } from "./light-capability.ts";
 import { restoreState } from "./scene-capability.ts";
@@ -695,6 +695,42 @@ describe("ShadowCapability — 持久化", () => {
     expect(cap2.getBias()).toBe(-0.001);
     expect(cap2.getNormalBias()).toBe(0.05);
     expect(cap2.getCameraSize()).toBe(20);
+  });
+
+  // [G-shadow] 逐键 schema round-trip 锁（对齐 ground [G-8] / water [D3] / fog [G-fog]）。
+  // 病灶（**现存漏网，非未来风险**）：上一例「完整周期」:686 手写枚举只写 5 键，**漏了
+  // `shadowEnabled`**——`:689 isEnabled()===true` 是**恒真绕圈**（shadowEnabled 默认 true，
+  // 未写偏离值则 loadState 后仍是默认 true，断言测不到往返）。且 :686 的 `shadowType:"soft"`/
+  // `shadowMapSize:2048` **等于默认值**，对这两个键也是无效偏离值（恒真绕圈）。
+  // 本锁用 `getPresetKeys("shadow")` 派生 + 真偏离值，未登记/偏离值等于默认即抓不住（见 DEVIATION）。
+  it("[G-shadow] schema shadow 键集全部可 save/load round-trip（还原表不得漏登记）", () => {
+    // ⚠️ 每个偏离值必须 ≠ schema 默认（否则断言恒真无判别力）。
+    const DEVIATION: Record<string, unknown> = {
+      shadowEnabled: false, // default true —— 上例漏写的键
+      shadowType: "hard", // default "soft"
+      shadowMapSize: 4096, // default 2048；合法档位白名单 {512,1024,2048,4096}
+      shadowBias: -0.001, // default -0.0005
+      shadowNormalBias: 0.05, // default 0.02
+      shadowCameraSize: 20, // default 15
+    };
+    const schemaKeys = getPresetKeys("shadow");
+    const missing = schemaKeys.filter((k) => !(k in DEVIATION));
+    expect(
+      missing,
+      `schema 新增了 shadow 键但本测试未登记偏离值: ${JSON.stringify(missing)}`,
+    ).toEqual([]);
+
+    const patch: Record<string, unknown> = {};
+    for (const k of schemaKeys) patch[k] = DEVIATION[k];
+    setEnvState(patch, { source: "manual" });
+    const cap = new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });
+    cap.saveState();
+    resetEnvState();
+    const cap2 = new ShadowCapability({ scene: new THREE.Scene(), renderer: makeFakeRenderer() });
+    cap2.loadState();
+    for (const k of schemaKeys) {
+      expect(envState[k], `shadow 键 ${k} 未 round-trip 还原`).toEqual(DEVIATION[k]);
+    }
   });
 
   it("loadState 空存储时保持默认值", () => {

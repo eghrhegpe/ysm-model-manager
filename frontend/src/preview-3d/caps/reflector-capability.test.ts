@@ -3,7 +3,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import { ReflectorCapability } from "./reflector-capability.ts";
-import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
+import { getParamRange, getPresetKeys } from "@/preview-3d/state/env-state-schema.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { clearEnvCallbacks } from "@/preview-3d/state/env-dispatcher.ts";
 import { GROUND_LAYER_OFFSETS } from "./layer-offsets.ts";
@@ -156,6 +156,40 @@ describe("ReflectorCapability — 持久化", () => {
     expect(p.resolution).toBe(2048);
     expect(p.color).toBe(0xffeedd);
     expect(p.clipBias).toBe(0.005);
+  });
+
+  // [G-reflector] 逐键 schema round-trip 锁（对齐 ground [G-8] / water [D3] / fog [G-fog]）。
+  // 病灶：上一例「完整周期」是**手写枚举** 6 键，schema 加新 reflector 键必漏。本锁用
+  // `getPresetKeys("reflector")` **派生** schema 键集，未登记偏离值即红并点名。
+  // 注：meta 闸（persist-roundtrip-contract）在此**无判别力**——上例存在即被判定「有」，
+  // 但上例是手写枚举，加键仍漏。真防线是派生锁。
+  it("[G-reflector] schema reflector 键集全部可 save/load round-trip（还原表不得漏登记）", () => {
+    const DEVIATION: Record<string, unknown> = {
+      reflectorEnabled: true,
+      reflectorOpacity: 0.8,
+      reflectorResolution: 2048,
+      reflectorSize: 200,
+      reflectorColor: 0xffeedd,
+      reflectorClipBias: 0.005,
+    };
+    const schemaKeys = getPresetKeys("reflector");
+    const missing = schemaKeys.filter((k) => !(k in DEVIATION));
+    expect(
+      missing,
+      `schema 新增了 reflector 键但本测试未登记偏离值: ${JSON.stringify(missing)}`,
+    ).toEqual([]);
+
+    const patch: Record<string, unknown> = {};
+    for (const k of schemaKeys) patch[k] = DEVIATION[k];
+    setEnvState(patch, { source: "manual" });
+    const cap = newCap();
+    cap.saveState();
+    resetEnvState();
+    const cap2 = newCap();
+    cap2.loadState();
+    for (const k of schemaKeys) {
+      expect(envState[k], `reflector 键 ${k} 未 round-trip 还原`).toEqual(DEVIATION[k]);
+    }
   });
 
   it("loadState 空存储时保持默认值", () => {

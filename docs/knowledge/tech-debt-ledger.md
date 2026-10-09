@@ -122,7 +122,7 @@ quick_risk_lines:
 - **S1 维持**：generator 收口优化，`gate-config.ts` 单一事实源已实质替代 `gate-inventory.json` 职能，非阻断。
 - **H1′ 暂缓**：经 grep 发现 6 份 audit critique 有活入链（含 `fog-capability.ts`/`layer-offsets.ts` 源码注释硬引用 `audit-water-critique.md`、`preview-env-state.md` 正被并行会话锐评在途），机械归档会断 4+ 处 `.ts` 注释路径；待 preview-3d 锐评收口后单独断链迁移。
 - **K1 维持**：6 张卡 `source_files` 全被认领（warn 级），多为有意跨切面聚合卡，不盲目收窄。→ **2026-10-09 后续**：「有意跨切面」决策已机器表达——`broad_claim: true` 旗标收编进 `CARD_TOP_KEYS` + `check-knowledge-drift` 5.14/5.15 豁免 + **5.17 stale 自清理**（卡收窄后旗标失需 → WARN 提示移除，防豁免退化成永久逃生阀），契约测试 `check-knowledge-claim-overlap` / `check-knowledge-derived-symbol-count` 各补豁免 + stale 用例；8 张卡（6 全重复认领 + model3d / wails-bindings 符号体量）登记旗标。drift warns 由 21 收敛至 **1**（余 14 个代码→卡覆盖盲区，非阻断）。
-- **审计台账全卡已账实相符**：P1-a/P2/T3′/T6/K2/A1 已修或落地，T5/S1 已澄清（非真债/drift/优化），H1′ 暂缓（活入链），K1 维持（有意跨切面）。剩余真正未动手项仅 A1 的"升 hard 检查"（待团队拍板 emoji 强制与否）与 H1′ 的断链迁移（待 preview-3d 锐评收口）。
+- **审计台账全卡已账实相符**：P1-a/P2/T3′/T6/K2/A1 已修或落地，T5/S1 已澄清（非真债/drift/优化），H1′ 暂缓（活入链），K1 维持（有意跨切面）。**2026-10-09 更新**：H1′ 断链迁移已落地（`aec5020a7`：8 份 critique 快照迁 `docs/archive/` + 活指针头 + 代码/ADR/卡体入链改指；`audit-env-review` 判活台账留 docs 根），K1 决策已机器表达（`broad_claim` 旗标 `be2fc7ae5` + 5.17 stale 自清理，8 卡登记）。剩余真正未动手项 = A1「升 hard」→ 见下方「待拍板项」。
 
 ## 2026-10-08 20:42 探索抓现行 + 清偿（第三轮，主模型单人）
 
@@ -143,6 +143,12 @@ quick_risk_lines:
 
 治理体系成熟度**高于**同类项目（红线脚本 `type-consistency`/`binding-check`/`check-redlines` 全绿、前端 `typecheck`/`vite build` 通过、零循环依赖、零生产 `any`/`@ts-ignore`、i18n 三语 parity 完美）。
 真实高危债集中在两条已还的 ADR 红线（H2/H3）；其余多为「已知/可收敛/被门禁冻结」的维护性债，且子代理探查对 **H1（死链误报）、H3（30+ 吞错夸大，实为 2 处）、H4（悬空 ADR 误报，四篇状态已完备）、G3（重复函数多为有意保留入口）、A2（92 篇夸大，实为历史叙述+审计已盘 3 处）** 存在系统性夸大，动手前务必亲自核实。
+
+## 待拍板项（2026-10-09 收拢：机器已做到位、剩下是人决策）
+
+1. **A1/P1#16「ADR emoji + 进度化石升 hard」**——`check-adr-health` 已就位（①-a 缺 emoji 已升默认 WARN 守护，①-b/② 走 `--suggest` 观察）。当前实测：①-a 1 条（ADR-218）/ ①-b **126 条**已采纳缺 ✅ / ② **21 条**决策未定 ADR 含进度化石。拍板选项：A) 全量升 hard（机械清 126 + 人工迁 21）；B) 仅 ② 升 hard（未定项化石 = 真滞留信号，量可控）；C) 维持观察。拍板后 `check-adr-health` 加对应阻断档即可。
+2. **env 活台账 §1 UX 挂账**（`docs/audit-env-review.md`，10-09 已时效核验）：S5-2（`waterWetness` min 域抬升或 hint「0=无水面」）/ S1-2（sky 总开关关后子控件置灰）/ S3-1~S3-3（地面菜单三项）/ S7-1~S7-3 / S9-1 余 hint 出口 / S11-1·S11-2（reflector 结构键改 onCommit 提交）。批拍板「修 / 弃 / 标不修」，落地者按台账规则删行。
+3. **i18n 13 死键**——已拍板完毕（`i18n.md` 卡 2026-09-24 批次：11 留置「文档举例存续期不删、勿逐键再议」+ 2 预留「ADR-300 S2 重构热区」），**无需再决策**，列此仅防后人重议。
 
 ## 相关
 

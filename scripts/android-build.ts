@@ -63,6 +63,26 @@ function readUserEnv(name: string) {
   }
 }
 
+/** NDK 目录名版本比较（语义序，非字符串序）："26.3.11579264" vs "26.10.x" 须 26.10 更晚。
+ *  原实现 `.sort()` 字符串序，minor 达两位数（NDK r26.10+）时 `"26.3"` > `"26.10"` 判反，
+ *  会选中旧 NDK。每段只取数字前缀（patch 段 `11579264` 是构建哈希，不参与语义，按数值兜底）。 */
+function ndkVersionSortKey(name: string): number[] {
+  return name.split(".").map((seg) => {
+    const m = /^\d+/.exec(seg.trim());
+    return m ? Number.parseInt(m[0], 10) : 0;
+  });
+}
+
+function compareNdkVersion(a: string, b: string): number {
+  const ka = ndkVersionSortKey(a);
+  const kb = ndkVersionSortKey(b);
+  for (let i = 0; i < Math.max(ka.length, kb.length); i++) {
+    const d = (ka[i] ?? 0) - (kb[i] ?? 0);
+    if (d !== 0) return d;
+  }
+  return 0;
+}
+
 /** 定位 NDK 根：$ANDROID_NDK_HOME，或 $SDK/ndk/<最新版本>（进程级→User 级→非 Windows 兜底） */
 function findNdk() {
   const home = process.env.ANDROID_NDK_HOME || readUserEnv("ANDROID_NDK_HOME");
@@ -88,7 +108,7 @@ function findNdk() {
       const versions = fs
         .readdirSync(ndkDir)
         .filter((d) => fs.statSync(path.join(ndkDir, d)).isDirectory())
-        .sort();
+        .sort(compareNdkVersion);
       if (versions.length > 0) return path.join(ndkDir, versions[versions.length - 1]!);
     }
   }

@@ -64,7 +64,9 @@ import {
   runStaticToolsDispatch,
 } from "./_lib/gate-blocks/schedule.ts";
 import { coverageTailLine } from "./_lib/gate-coverage.ts";
+import { flattenGateTools } from "./_lib/gate-config.ts";
 import { createGateCtx } from "./_lib/gate-ctx.ts";
+import { recordDebtInventory } from "./_lib/gate-debt.ts";
 import { formatFailSummary, writeGateReport } from "./_lib/gate-report.ts";
 import { resolveChanges } from "./_lib/gate-resolve.ts";
 import { logPush, logPushVerdict, setLogPushMuted } from "./_lib/log-push.ts";
@@ -331,6 +333,14 @@ async function main() {
   // scripts typecheck 在 --static 下同样执行（CI 需要保证 scripts/ 自身类型正确，
   // 且成本仅秒级）；契约测试由 CI 独立跑 scripts/contract-tests.ts，此处不重复。
   await runScriptsTypecheck(ctx, { allMode: allMode || staticMode, docsMode });
+
+  /* --- 存量债到期盘点（仅 --all，2026-10-09 到期制 / ADR-256-d1）--- */
+  // 判据（逾期 ⇒ hard FAIL / 未逾期 ⇒ 如实报最近复审 / 无债 ⇒ 静默）全在 _lib/gate-debt.ts
+  // 的 recordDebtInventory 里，由 tests/test_gate_debt.ts 直测——本行只负责「何时跑」。
+  // 为什么只在 --all：debt 条目 FAIL 的成因是**存量**债，与本次变更无关。放进 push 热路径
+  // 会让「日期到了」挡住无关推送者的提交（本仓反复吃亏的「假红训练人忽略红灯」）；
+  // --all 是刻意的全量闸（doctor 发版前 / 人工全量），到期在这里变成硬处置。
+  if (allMode) recordDebtInventory((label, ok, opts) => ctx.record(label, ok, opts), flattenGateTools());
 
   /* --- 聚合摘要 --- */
   // 终态行走 logPushVerdict（无视 --json 静音、始终写 stderr）：--json 的静音设计

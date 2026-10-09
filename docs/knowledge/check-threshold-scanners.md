@@ -88,6 +88,11 @@ node scripts/check-complexity.ts --strict --json                   # 有命中 e
 **因此三档扫描器 FAIL 不会阻断 push**——它只在门禁摘要里留一条存量债记录。
 真正阻断推送的只有 `hard` 档（如 golangci-lint 的圈复杂度）。
 
+> 2026-10-09（ADR-256-d1）起 `debt` 是**带到期日的债**：条目必须写 `debt: { reason, reviewBy }`
+> （类型强制），reviewBy 就是「那轮观察」的截止日——到期后 `doctor --all` 会记一条 hard FAIL
+> 逼一次显式决策（修 / 升 hard / 带理由续期）。所以「等 baseline 落地再升 hard」这句意图
+> 不再是一句没有日期的手写备忘，而是一个会响的定时器。
+
 ## `--files` 传参契约（踩过）
 
 `--files` 收的是**换行分隔的相对路径**，且必须是**单个 argv 元素**：

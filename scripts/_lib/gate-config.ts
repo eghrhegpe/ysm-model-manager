@@ -18,8 +18,25 @@
  *   import { ALL_STATIC_TOOLS, DOC_STATIC_TOOLS, FRONTEND_STATIC_TOOLS, GO_STATIC_TOOLS }
  *     from './_lib/gate-config.ts';
  *
- * 依赖：零依赖（纯数据结构）
+ * 依赖：./gate-debt.ts（存量债元数据类型；零依赖纯函数模块）
  */
+import type { GateDebt } from "./gate-debt.ts";
+
+/**
+ * 存量债复审默认截止日（2026-10-09 到期制落地）。
+ * `blockPolicy: "debt"` 的条目必须带 `debt: { reason, reviewBy }`；此处两档是排期默认值：
+ *   - LEDGER：棘轮账本型（knip/jscpd/复杂度/令牌/死键）——量大、需排期回收；
+ *   - OBSERVE：信号未验证的观察型（注释考古/孪生探针/时长口径）——一轮内应出结论。
+ * 到期未处置 = `doctor --all` 红灯，逼一次显式决策（改硬 / 修 / 带理由续期），详见 gate-debt.ts。
+ */
+const REVIEW_BY_LEDGER = "2026-11-08";
+const REVIEW_BY_OBSERVE = "2026-11-15";
+
+/** 声明一条存量债：reason 必填（禁无理由债务），reviewBy 缺省走账本档排期。 */
+const debt = (reason: string, reviewBy: string = REVIEW_BY_LEDGER): GateDebt => ({
+  reason,
+  reviewBy,
+});
 
 /**
  * 阻断策略：控制 record() 是否因 FAIL 置 blocked=true。
@@ -35,13 +52,14 @@ type BlockPolicy = "hard" | "debt" | "failClosed";
  * 2026-09-08（脚本体系锐评 R3）：此前允许 string 条目 + blockPolicy 可省略，导致
  * 隐式「string 永远 hard」的语义靠人记住（类型系统不保护）。现改为 full object +
  * 必填 blockPolicy：新增条目未声明阻断策略即编译报错，消灭隐式 hard 的歧义。
+ * 2026-10-09（审核体系锐评 · 到期制）：`debt` 分支同样由类型强制附带债元数据
+ * （reason + reviewBy）——「没拦也没撤、只记一笔」不再是一种可以无限沉默的状态。
  */
-export interface GateTool {
+export interface GateToolBase {
   tool: string;
   args?: string[];
   autoFix?: boolean;
   allowRc2?: boolean;
-  blockPolicy: BlockPolicy;
   /**
    * 声明本工具支持 `--files <换行分隔文件列表>` 增量裁剪（2026-09-13）。
    *
@@ -57,6 +75,17 @@ export interface GateTool {
 }
 
 /**
+ * 清单条目 = 判别联合（2026-10-09 到期制）：
+ *   - hard / failClosed：FAIL 即阻断，无需债元数据；
+ *   - debt：**必须**携带 `debt: { reason, reviewBy }`——类型系统强制每笔债写下
+ *     「为什么是债」与「何时重新决策」，从源头消灭「无理由、无期限」的沉默债务。
+ * 违反即 `tsc -p scripts/tsconfig.json` 编译报错（脚本域 typecheck 是门禁项）。
+ */
+export type GateTool =
+  | (GateToolBase & { blockPolicy: Exclude<BlockPolicy, "debt"> })
+  | (GateToolBase & { blockPolicy: "debt"; debt: GateDebt });
+
+/**
  * 全量模式静态工具清单（doctor --all / pre-push-gate --all）。
  * 覆盖 Go + 前端 + 文档 + 脚本治理全栈；与域检查重叠的项（check-layering / binding-check）已剔除。
  */
@@ -64,11 +93,11 @@ export const ALL_STATIC_TOOLS: GateTool[] = [
   { tool: "check-doc-drift.ts", blockPolicy: "hard" },
   { tool: "check-adr-health.ts", blockPolicy: "hard" },
   { tool: "check-resource-manifest.ts", blockPolicy: "hard" },
-  { tool: "check-boolean-naming.ts", blockPolicy: "debt" },
-  { tool: "check-circular.ts", blockPolicy: "debt" },
-  { tool: "check-orphan-exports.ts", blockPolicy: "debt" },
-  { tool: "check-deadcode-baseline.ts", blockPolicy: "debt" },
-  { tool: "jscpd-go.ts", blockPolicy: "debt" },
+  { tool: "check-boolean-naming.ts", blockPolicy: "debt", debt: debt("命名启发式命中：值语义需人工判断，规则本身非确定性") },
+  { tool: "check-circular.ts", blockPolicy: "debt", debt: debt("全库循环依赖存量；--files 裁剪后只对本次变更面判定") },
+  { tool: "check-orphan-exports.ts", blockPolicy: "debt", debt: debt("导出面宽于消费面（多为缺 export 关键字/re-export），需分档回收") },
+  { tool: "check-deadcode-baseline.ts", blockPolicy: "debt", debt: debt("knip/jscpd 棘轮账本；噪声已分离，回收需分「删关键字」与「真删码」") },
+  { tool: "jscpd-go.ts", blockPolicy: "debt", debt: debt("Go 侧克隆基线；含有意保留的兼容入口，需逐对判断") },
   // 双轨漂移扫描**刻意不挂 push 路径**（2026-10-08 回退，撤销当日 76651c051 的挂载）：
   // ① 该清单在 push 模式被 schedule.ts 无条件全跑（36 项串行实测 45.4s），任何新条目都是
   //    全队每次推送的固定成本；② drift-scan 的信号质量尚未验证——6 条规则在本轮实测只出
@@ -88,8 +117,8 @@ export const ALL_STATIC_TOOLS: GateTool[] = [
   { tool: "gen-cli-completion.ts", args: ["--check"], autoFix: true, blockPolicy: "hard" },
   { tool: "gen-knowledge-autogen.ts", args: ["--check"], autoFix: true, blockPolicy: "hard" },
   { tool: "check-script-hygiene.ts", args: ["--strict"], blockPolicy: "hard" },
-  { tool: "check-proc-adoption.ts", blockPolicy: "debt" },
-  { tool: "check-lib-adoption.ts", blockPolicy: "debt" },
+  { tool: "check-proc-adoption.ts", blockPolicy: "debt", debt: debt("进程调用收口未完成的存量站点") },
+  { tool: "check-lib-adoption.ts", blockPolicy: "debt", debt: debt("共享能力未走 _lib 的存量站点") },
   { tool: "check-workflow-refs.ts", blockPolicy: "hard" },
   { tool: "check-readme-index.ts", blockPolicy: "hard" },
   // docs markdown 裸标签（2026-09-19 接线）：VitePress 用 Vue 编译器解析 md，
@@ -107,22 +136,22 @@ export const ALL_STATIC_TOOLS: GateTool[] = [
   // （只减不增，key-router.ts 唯一合法出口豁免）。hard 依据：确定性正则 + baseline 即存量
   // 本身，不存在「存量债冒充」；配套 tests/test_check_a11y.ts（纯核直测防空转假绿）。
   { tool: "check-a11y.ts", blockPolicy: "hard" },
-  { tool: "check-toast-duration.ts", blockPolicy: "debt" },
+  { tool: "check-toast-duration.ts", blockPolicy: "debt", debt: debt("提示时长口径存量违规，量小但分散") },
   // 设计令牌守规（2026-09 接线）：与 css-layer-check 互补——后者管「样式定义在哪一层生效」，
   // 本闸管「样式值是否走了令牌」。全量模式不传 --files（无 diff 上下文）→ 走 `--baseline`：
   // 这里是**账本漂移报告**（全库 vs scripts/baseline/design-tokens-baseline.json），
   // 不再参与提交 / 推送判定（判定已改真行级，见 FRONTEND_STATIC_TOOLS 的 ADR-256 注释）。
-  { tool: "check-design-tokens.ts", args: ["--baseline"], blockPolicy: "debt" },
+  { tool: "check-design-tokens.ts", args: ["--baseline"], blockPolicy: "debt", debt: debt("全库账本漂移报告：判定已改真行级，此处不参与提交/推送判定") },
   // i18n 未使用键（2026-09）：全量模式亦挂——死键是全仓性质的，与扫描域裁剪无关。
-  { tool: "check-i18n-unused.ts", args: ["--baseline"], blockPolicy: "debt" },
+  { tool: "check-i18n-unused.ts", args: ["--baseline"], blockPolicy: "debt", debt: debt("i18n 死键基线；含动态查表启发式成分，无法静态判定") },
   // Android 平台黑名单守卫（2026-09-08 纳入）：T1 编译期差集 / T2 运行期 ADR-047 守卫未登记 → 阻断。
   // 依赖 go 工具链；不可用时脚本降级为 T3/T4（_summary.degraded=true），不会因环境缺 go 而红灯。
   { tool: "check-android-unavailable.ts", blockPolicy: "hard" },
   // ── 2026-10-08 门禁清单对账（锐评复核实测）补挂：原真·未接线的 check-* ──
   // check-comment-history：ADR-234 D1 注释考古（WARN 观察期，非阻断）；实测 176ms，errors=0。
-  { tool: "check-comment-history.ts", blockPolicy: "debt" },
+  { tool: "check-comment-history.ts", blockPolicy: "debt", debt: debt("注释考古 WARN 观察期（ADR-234 D1），信号质量未验证", REVIEW_BY_OBSERVE) },
   // check-twin-siblings：改动同构同胞探针（纯提醒，走 _summary.warns）；实测 132ms。
-  { tool: "check-twin-siblings.ts", blockPolicy: "debt" },
+  { tool: "check-twin-siblings.ts", blockPolicy: "debt", debt: debt("同构同胞探针为纯提醒（走 _warns），无判定力", REVIEW_BY_OBSERVE) },
   // check-unread-fields：契约字段零读取审计——**刻意不接本地门禁**（2026-10-08 摘除）。
   // 摘除理由（三条均为其自述）：
   //   ① 成本：实测 18.3s 全仓文本解析，单条即吃掉 commit / push 两条路径的全部预算
@@ -155,7 +184,7 @@ export const DOC_STATIC_TOOLS: GateTool[] = [
   { tool: "gen-cli-completion.ts", args: ["--check"], autoFix: true, blockPolicy: "hard" },
   { tool: "gen-knowledge-autogen.ts", args: ["--check"], autoFix: true, blockPolicy: "hard" },
   { tool: "check-script-hygiene.ts", args: ["--strict"], blockPolicy: "hard" },
-  { tool: "check-proc-adoption.ts", blockPolicy: "debt" },
+  { tool: "check-proc-adoption.ts", blockPolicy: "debt", debt: debt("进程调用收口未完成的存量站点") },
   { tool: "check-workflow-refs.ts", blockPolicy: "hard" },
   { tool: "check-readme-index.ts", blockPolicy: "hard" },
   // docs markdown 裸标签：见 ALL_STATIC_TOOLS 同项注释（整站构建断裂前移为提交期判定）
@@ -176,10 +205,10 @@ export const DOC_EXTRA_SCRIPTS: GateTool[] = [
  * 与 ALL_STATIC_TOOLS 分工：后者全量扫描，此项增量门禁——只拦本次变更引入的新违规。
  */
 export const FRONTEND_STATIC_TOOLS: GateTool[] = [
-  { tool: "check-circular.ts", blockPolicy: "debt" },
-  { tool: "check-boolean-naming.ts", blockPolicy: "debt" },
-  { tool: "check-orphan-exports.ts", blockPolicy: "debt" },
-  { tool: "check-deadcode-baseline.ts", blockPolicy: "debt" },
+  { tool: "check-circular.ts", blockPolicy: "debt", debt: debt("全库循环依赖存量；--files 裁剪后只对本次变更面判定") },
+  { tool: "check-boolean-naming.ts", blockPolicy: "debt", debt: debt("命名启发式命中：值语义需人工判断，规则本身非确定性") },
+  { tool: "check-orphan-exports.ts", blockPolicy: "debt", debt: debt("导出面宽于消费面（多为缺 export 关键字/re-export），需分档回收") },
+  { tool: "check-deadcode-baseline.ts", blockPolicy: "debt", debt: debt("knip/jscpd 棘轮账本；噪声已分离，回收需分「删关键字」与「真删码」") },
   { tool: "check-tpl-refs.ts", blockPolicy: "hard" },
   { tool: "check-dynamic-import.ts", blockPolicy: "hard" },
   { tool: "auto-import.ts", args: ["--strict"], blockPolicy: "hard" },
@@ -191,12 +220,12 @@ export const FRONTEND_STATIC_TOOLS: GateTool[] = [
   // blockPolicy: debt —— 基线模式（存量冻结）；判定含启发式成分（动态查表无法静态判定），
   // 按 gate-config 准入判据「不存在存量债冒充」才可 hard，故记 debt。
   // 不置 scopedFiles：本闸是「全仓键使用面」分析，单文件无法独立判定（见脚本头注释）。
-  { tool: "check-i18n-unused.ts", args: ["--baseline"], blockPolicy: "debt" },
+  { tool: "check-i18n-unused.ts", args: ["--baseline"], blockPolicy: "debt", debt: debt("i18n 死键基线；含动态查表启发式成分，无法静态判定") },
   { tool: "event-graph.ts", args: ["--strict"], blockPolicy: "hard" },
   // a11y 基线守卫（ADR-308 D3）：见 ALL_STATIC_TOOLS 同项注释。无 scopedFiles——
   // 基线是全仓计数守卫，单文件无法独立判定。
   { tool: "check-a11y.ts", blockPolicy: "hard" },
-  { tool: "check-toast-duration.ts", blockPolicy: "debt" },
+  { tool: "check-toast-duration.ts", blockPolicy: "debt", debt: debt("提示时长口径存量违规，量小但分散") },
   { tool: "check-biome.ts", args: ["--strict"], blockPolicy: "hard" },
   { tool: "check-file-lines.ts", blockPolicy: "hard" },
   // 设计令牌守规（2026-09 接线，2026-09-16 改判真行级 ADR-256）：此前**只挂 pre-commit**，
@@ -219,6 +248,7 @@ export const FRONTEND_STATIC_TOOLS: GateTool[] = [
     tool: "check-design-tokens.ts",
     args: ["--added-lines"],
     blockPolicy: "debt",
+    debt: debt("行级判定已消存量冒充，观察一轮 push/CI 实况再议升 hard（ADR-256 D5）", REVIEW_BY_OBSERVE),
     scopedFiles: true,
   },
   // ── 三档位阈值扫描器（2026-09-13 接线）──
@@ -236,22 +266,22 @@ export const FRONTEND_STATIC_TOOLS: GateTool[] = [
   //      未触碰文件的存量债会把每次推送刷成全红。
   //   2. 控成本：check-params 全库墙钟 59.4s（getType() 逐参数触发类型检查），
   //      --files 裁剪到本次变更后降至 7.9s 量级，是它可挂门禁的前提。
-  { tool: "check-complexity.ts", blockPolicy: "debt", scopedFiles: true },
-  { tool: "check-params.ts", blockPolicy: "debt", scopedFiles: true },
-  { tool: "check-type-safety.ts", blockPolicy: "debt", scopedFiles: true },
+  { tool: "check-complexity.ts", blockPolicy: "debt", debt: debt("全库阈值+增量裁剪：被触碰的存量红档仍计命中，baseline 未落地前不得 hard"), scopedFiles: true },
+  { tool: "check-params.ts", blockPolicy: "debt", debt: debt("同上：全库阈值型，存量命中会淹没本次变更"), scopedFiles: true },
+  { tool: "check-type-safety.ts", blockPolicy: "debt", debt: debt("同上：生产域当前 errors=0，观察一轮后可单独升 hard"), scopedFiles: true },
 ];
 
 /**
  * Go 域 push 模式补挂静态工具（plan.go=true 时追加）。
  */
 export const GO_STATIC_TOOLS: GateTool[] = [
-  { tool: "jscpd-go.ts", blockPolicy: "debt" },
+  { tool: "jscpd-go.ts", blockPolicy: "debt", debt: debt("Go 侧克隆基线；含有意保留的兼容入口，需逐对判断") },
   { tool: "check-go-diff-coverage.ts", blockPolicy: "hard" },
   // check-go-coverage-threshold：包级最低函数覆盖率（语句加权，2026-09 口径修正后）。
   // 只读不写：本门禁不自动生成 .coverage/go-cover.out（pre-push 薄壳 / gate-blocks / CI 非门禁步
   // 均不写此文件），需人工或 CI 先 `go test -coverprofile` 喂料；产物缺失/陈旧时脚本已优雅
   // 降级（缺产物 WARN+exit1，陈旧产物打印醒目警告，见 P1-a 根治）。debt 接入 → 不阻断推送。
-  { tool: "check-go-coverage-threshold.ts", blockPolicy: "debt" },
+  { tool: "check-go-coverage-threshold.ts", blockPolicy: "debt", debt: debt("只读不写：产物需人工/CI 喂料，自动生成未接（降级路径已优雅）") },
 ];
 
 /**
@@ -264,3 +294,26 @@ export const SCRIPTS_TYPECHECK: GateTool = {
   allowRc2: true, // TS18003 无输入 = 尚未有 .ts，非错误
   blockPolicy: "hard",
 };
+
+/**
+ * 五张清单的固定展开序（**单一事实源**，2026-10-09）：
+ * 覆盖口径统计（gate-coverage）、存量债到期盘点（pre-push-gate --all）、契约测试
+ * （tests/test_gate_config.ts）三处消费同一序——新增/改名清单只改这里，杜绝
+ * 「三处各抄一份数组、新增清单漏一处」的漂移（本轮锐评反复见到的腐化形态）。
+ * 注意：域清单与 ALL 有重叠，覆盖/债统计均按**工具名去重**处理，勿直接相加当总数。
+ */
+export const ALL_GATE_TOOL_LISTS: readonly (readonly GateTool[])[] = [
+  ALL_STATIC_TOOLS,
+  DOC_STATIC_TOOLS,
+  DOC_EXTRA_SCRIPTS,
+  FRONTEND_STATIC_TOOLS,
+  GO_STATIC_TOOLS,
+  // scripts/ TS 域 typecheck（单条闸、无独立清单，同样是一条「清单条目」——
+  // 计入阻断构成，否则「44 条 hard+debt」与实况差一，又是口径不一）。
+  [SCRIPTS_TYPECHECK],
+];
+
+/** 五张清单展平（含重复；去重口径由消费方决定）。 */
+export function flattenGateTools(): GateTool[] {
+  return ALL_GATE_TOOL_LISTS.flatMap((l) => [...l]);
+}

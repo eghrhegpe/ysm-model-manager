@@ -18,13 +18,8 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import {
-  ALL_STATIC_TOOLS,
-  DOC_EXTRA_SCRIPTS,
-  DOC_STATIC_TOOLS,
-  FRONTEND_STATIC_TOOLS,
-  GO_STATIC_TOOLS,
-} from "./gate-config.ts";
+import { flattenGateTools } from "./gate-config.ts";
+import { summarizeDebt } from "./gate-debt.ts";
 import { ROOT } from "./scan-files.ts";
 
 /**
@@ -60,13 +55,7 @@ export const DOMAIN_BLOCK_CHECKS = [
  */
 export function listAllGateScripts(): string[] {
   const listed = new Set<string>();
-  for (const tool of [
-    ...ALL_STATIC_TOOLS,
-    ...DOC_STATIC_TOOLS,
-    ...DOC_EXTRA_SCRIPTS,
-    ...FRONTEND_STATIC_TOOLS,
-    ...GO_STATIC_TOOLS,
-  ]) {
+  for (const tool of flattenGateTools()) {
     listed.add(tool.tool);
   }
   for (const c of DOMAIN_BLOCK_CHECKS) listed.add(c);
@@ -90,13 +79,7 @@ export function listAllCheckScripts(): string[] {
 /** 已覆盖集：清单 + 域直连的并集（取 basename，容忍清单写法差异） */
 export function listCoveredCheckScripts(): Set<string> {
   const covered = new Set<string>();
-  for (const tool of [
-    ...ALL_STATIC_TOOLS,
-    ...DOC_STATIC_TOOLS,
-    ...DOC_EXTRA_SCRIPTS,
-    ...FRONTEND_STATIC_TOOLS,
-    ...GO_STATIC_TOOLS,
-  ]) {
+  for (const tool of flattenGateTools()) {
     // 2026-10-08 口径修正（第三轮审计 P0）：此处原为 `if (tool.tool.startsWith("check-"))`，
     // 把清单里**真实在跑**的非 check-* 条目全部排除在分子之外（12 条：jscpd-go / auto-import /
     // event-graph / build-novel-index / gen-routes×2 / gen-cli-×2 / gen-knowledge-autogen /
@@ -155,8 +138,48 @@ export const BYPASS_CHECKS = [
   // 原「刻意旁路（仅 commit-check 第 4 步）」注释随之过时：现一并走 pre-push 全量门禁。
 ] as const;
 
-/** 固定尾行文本（PASS/FAIL 两路共用，保证每次输出形态一致） */
-export function coverageTailLine(): string {
+export interface GateBlockComposition {
+  /** 真能阻断的工具数（按工具名去重；hard 优先）。 */
+  hard: number;
+  /** 记债不阻断的工具数（blockPolicy: debt，去重后）。 */
+  debt: number;
+  /** 其中复审截止日已过期的条目数（doctor --all 会红灯）。 */
+  expired: number;
+  /** 即将到期（≤ DUE_SOON_DAYS）的条目数。 */
+  dueSoon: number;
+  /** 最近到期的债（`<label>·<tool>`），无债时 null。 */
+  nextLabel: string | null;
+}
+
+/**
+ * 阻断构成（2026-10-09 审核体系锐评 · 到期制）。
+ *
+ * 动机：「清单 44 项已接入」会让人（与 AI）默认 44 道闸都在拦——实际按 blockPolicy 拆开后
+ * 只有 hard 档拦，debt 档 FAIL 只记一笔（存量债账本 knip 185 / css-token 308 /
+ * design-tokens 112 全是这一类）。尾行必须给出这个构成，否则「全绿」的语义仍然含糊：
+ * 它可能意味着「没有新增债」，也可能意味着「16 项债集体沉默」。
+ */
+export function gateBlockComposition(now = Date.now()): GateBlockComposition {
+  const tools = flattenGateTools();
+  const hard = new Set<string>();
+  for (const t of tools) if (t.blockPolicy !== "debt") hard.add(t.tool);
+  const sum = summarizeDebt(tools, now);
+  return {
+    hard: hard.size,
+    debt: sum.total,
+    expired: sum.expired.length,
+    dueSoon: sum.dueSoon.length,
+    nextLabel: sum.next
+      ? `${sum.next.tool} ${sum.next.status.reviewBy}（${
+          sum.next.status.daysLeft < 0 ? `已逾期 ${-sum.next.status.daysLeft} 天` : `剩 ${sum.next.status.daysLeft} 天`
+        }）`
+      : null,
+  };
+}
+
+/** 固定尾行文本（PASS/FAIL 两路共用，保证每次输出形态一致）。
+ * @param now 判定「债是否过期」的时刻（默认当前；测试注入固定值以锁两路文案） */
+export function coverageTailLine(now = Date.now()): string {
   const c = gateCoverage();
   const bypassed = c.uncovered.filter((f) => (BYPASS_CHECKS as readonly string[]).includes(f));
   const trulyUncovered = c.uncovered.filter(
@@ -167,5 +190,13 @@ export function coverageTailLine(): string {
     trulyUncovered.length ? `未接入: ${trulyUncovered.join(", ")}` : "",
   ].filter(Boolean);
   const detail = parts.length ? parts.join("；") : "全集全接入";
-  return `覆盖口径: ${c.covered}/${c.total} 项门禁清单条目已接入（含非 check-* 命名，如 jscpd-go/gen-*/auto-import；${detail}）—— 全绿 ≠ 仓库无风险`;
+  // 阻断构成（2026-10-09 到期制）：覆盖数 != 拦截数，且 debt 不沉默——到期即点名。
+  const comp = gateBlockComposition(now);
+  const compHead = `阻断构成(${comp.hard + comp.debt} 项清单条目): hard ${comp.hard} / debt ${comp.debt}`;
+  const debtPart = comp.expired
+    ? `${compHead}（**debt 已逾期 ${comp.expired} 项**：doctor --all 红灯，须处置或续期）`
+    : `${compHead}（debt FAIL 只记不拦${
+        comp.nextLabel ? `；最近复审 ${comp.nextLabel}` : ""
+      }）`;
+  return `覆盖口径: ${c.covered}/${c.total} 项门禁清单条目已接入（含非 check-* 命名，如 jscpd-go/gen-*/auto-import；${detail}）—— ${debtPart} —— 全绿 ≠ 仓库无风险`;
 }

@@ -12,29 +12,65 @@ source_files:
   - scripts/doctor.ts
   - scripts/commit-with-check.ts
   - scripts/_lib/gate-blocks/static-tools.ts
+  - scripts/_lib/gate-config.ts
+  - scripts/_lib/gate-coverage.ts
+  - scripts/_lib/gate-debt.ts
   - scripts/_lib/gate-ctx.ts
   - scripts/_lib/gate-parse.ts
   - scripts/_lib/commit-blocks/smart-stage.ts
 auto_fields:
   symbols_with_lines:
+    - ALL_GATE_TOOL_LISTS
+    - ALL_STATIC_TOOLS
     - buildScanVerdict
+    - BYPASS_CHECKS
+    - coverageTailLine
     - createGateCtx
+    - DebtInventoryResult
+    - debtNoteSuffix
+    - DebtRecorder
+    - DebtState
+    - debtStatus
+    - DebtStatus
+    - DebtSummary
     - deriveTestTargets
+    - DOC_EXTRA_SCRIPTS
+    - DOC_STATIC_TOOLS
+    - DOMAIN_BLOCK_CHECKS
+    - DUE_SOON_DAYS
     - ExecResult
+    - flattenGateTools
+    - FRONTEND_STATIC_TOOLS
     - GATE_TIMEOUT_MS
+    - gateBlockComposition
+    - GateBlockComposition
+    - gateCoverage
+    - GateCoverage
     - GateCtx
+    - GateDebt
     - GateResult
+    - GateTool
+    - GateToolBase
+    - GO_STATIC_TOOLS
     - isTestOrSpecFile
+    - listAllCheckScripts
+    - listAllGateScripts
+    - listCoveredCheckScripts
+    - MAX_REVIEW_HORIZON_DAYS
+    - parseDebtDate
     - ParsedToolOutput
     - parseToolOutput
     - readStagedSourceFiles
+    - recordDebtInventory
     - RecordOpts
     - requireSummaryField
     - requireSummaryOk
     - runScopedDocDrift
     - runTools
+    - SCRIPTS_TYPECHECK
     - stageFiles
     - stripSourceSuffix
+    - summarizeDebt
     - tryParseJson
     - tryParseSummary
     - WARNS_TOP_N
@@ -61,7 +97,7 @@ quick_intents:
   - 新增门禁块按哪套范式写（gate-blocks 还是 commit-blocks）
 pitfalls:
   - 本卡是横向拼图，单环纵深细节读 pre-commit-hook / pre-push-gate 两卡；勿用本卡替代细读
-  - 判定「某检查项是否真阻断」必须看它所在清单的 blockPolicy（hard/debt/failClosed），FAIL 非空 ≠ 被拦
+  - 判定「某检查项是否真阻断」必须看它所在清单的 blockPolicy（hard/debt/failClosed），FAIL 非空 ≠ 被拦；debt 还带 `reviewBy`（到期制）——到期后由 `doctor --all` 硬处置，别再把它当永久豁免
   - 注释与知识卡的「CI 是否同跑 gate」曾三处口径不一（钩子写尚未、同卡两行一写已接线一写尚未）；判断现状只认 .github/workflows/test.yml 实况
 status: active
 ---
@@ -103,6 +139,7 @@ CI ────────── test.yml 独立步骤：pre-push-gate --static
 - **只减不增型闸（biome 行级 / design-tokens / a11y / css-layer）**：按不变量须**双挂**——pre-commit 拦提交 + gate-config 清单拦推送/CI；只挂其一属单点防线。判定口径统一走真行级 `--added-lines`，不用行号入键。
 - **域级检查（go build/test、前端 build/vitest、契约测试）**：本地由 gate 域块承担；CI 由 test.yml 各步骤独立承担，**不经 gate 编排**。
 - **静态治理工具（42 个 `check-*.ts`，30 个为 `gate-config.ts` 精确 `tool:` 条目，其余 12 个走 pre-commit / gate-blocks 旁路，仅 1 个刻意挂起）**：清单单一事实源 = `scripts/_lib/gate-config.ts`，分 ALL / DOC / FRONTEND / GO 四张（**ALL 唯一条目 = 32 项**，其余为域子集，有重叠——旧口径「27/37 接入」「合计 40+ 项」均已过时，2026-10-08 复核实测修正）。统计口径：**只数 `tool: "X.ts"` 条目，注释里提名字不算**（2026-10-08 实测踩坑：子串匹配会把注释里的 `check-*.ts` 计入，虚高）。判定「真阻断」看该清单项 `blockPolicy`，FAIL 非空 ≠ 被拦。
+- **存量债到期制（2026-10-09，ADR-256-d1）**：`blockPolicy: "debt"` **必须**带 `debt: { reason, reviewBy }`（类型层面强制，`tsc -p scripts/tsconfig.json` 编译期拦），reviewBy 视界 ≤180 天（契约测试拒「9999 续期」）。三个出口：① 每次运行的固定尾行报「阻断构成(N 项清单条目): hard X / debt Y … 最近复审 …」——「N 项已接入」不再被读成「N 道闸都在拦」；② debt 项 FAIL 时 note 追加「已逾期 N 天，须处置或续期」；③ **`doctor --all` 遇逾期债记一条 hard FAIL**（判据在 `_lib/gate-debt.ts|recordDebtInventory`，由 `tests/test_gate_debt.ts` 直测）。刻意不进 push 热路径：存量债与本次变更无关，拿它挡无关推送者 = 假红训练人忽略红灯。
   - 2026-10-08 门禁清单对账（锐评复核）处置：补挂 `check-comment-history` / `check-twin-siblings` / `check-unread-fields`（ALL，debt）+ `check-go-coverage-threshold`（GO，debt）；`check-diff-coverage` **刻意挂起**——依赖前端 coverage-final.json 与 diff 基线 ref，本地无覆盖率会 rc=2 恒红（假阻断），正确归宿是 CI vitest --coverage 之后。判定「真阻断」看该清单项 `blockPolicy`，FAIL 非空 ≠ 被拦。
 - **审计留痕**：逃生阀命中分两级——`YSM_SKIP_GATE=1` 与 `YSM_SKIP_*` 命中写 `.git/gate-audit.log`（SKIPPED/PUSH 行，可审计）；`git commit --no-verify` / `git push --no-verify` 整钩不跑，零痕迹，只能靠 CI 远端拦截与 `doctor --audit-check` 对账事后回溯。
 
@@ -138,7 +175,8 @@ CI ────────── test.yml 独立步骤：pre-push-gate --static
 
 - **判断某环现状只认实况**（读 `.githooks/` 钩子 + `.github/workflows/*.yml` + 当前清单），不认注释里的历史快照——注释是决策时化石，会与后续落地脱节（2026-10-06 实证：「CI 尚未同跑 gate」在钩子与知识卡并存三处，实为 09-14 已接线）。
 - **pre-push 是唯一阻断的本地闸，但默认轻量档**：`YSM_FAST_PUSH` 未设/≠`0` 时跳过 vite build / tsc / vitest / go test（-race），只留静态治理层 + `go build`/`go vet`；`YSM_FAST_PUSH=0` 恢复全量（重型测试与构建交 CI）。commit 期间前端域红灯照落（pre-commit 不跑域级检查），真正拦截在 push / commit-with-check / doctor。
-- **清单单一事实源 = `gate-config.ts`**，新增检查项只改清单不 gate 调度；块内按 ALL/DOC/FRONTEND/GO 分挂。
+- **清单单一事实源 = `gate-config.ts`**，新增检查项只改清单不 gate 调度；块内按 ALL/DOC/FRONTEND/GO 分挂。五张清单的固定展开序另收在 `ALL_GATE_TOOL_LISTS` + `flattenGateTools()`（覆盖统计 / 债盘点 / 契约测试三处共用，勿再各抄一份）。
+- **`debt` 不是第三种状态**：它是「带到期日的债」。理由（reason）与复审日（reviewBy）由类型强制；到期由 `doctor --all` 硬处置。删掉 reviewBy 当豁免用 = 违反 ADR-256-d1，改配置请连带写理由。
 
 ## 相关
 

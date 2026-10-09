@@ -21,8 +21,17 @@ import assert from "node:assert";
 import fs from "node:fs";
 import path from "node:path";
 import {
+  ALL_STATIC_TOOLS,
+  DOC_EXTRA_SCRIPTS,
+  DOC_STATIC_TOOLS,
+  FRONTEND_STATIC_TOOLS,
+  GO_STATIC_TOOLS,
+  SCRIPTS_TYPECHECK,
+} from "../scripts/_lib/gate-config.ts";
+import {
   BYPASS_CHECKS,
   coverageTailLine,
+  gateBlockComposition,
   gateCoverage,
   listAllCheckScripts,
   listAllGateScripts,
@@ -93,6 +102,59 @@ assert.ok(
   line.includes("未接入") || line.includes("刻意旁路") || c.uncovered.length === 0,
   "有未接入项时尾行必须点名（未接入或刻意旁路）",
 );
+
+// 4b. 阻断构成（2026-10-09 审核体系锐评 · 到期制）：尾行必须拆出 hard/debt，并常态报出
+// 最近复审日。事故形态：尾行只报「53/56 已接入」，读法默认 56 道闸都在拦——实际只有
+// hard 拦，16 条 debt（knip/css-token/design-tokens 账本）FAIL 只记一笔，于是「全绿」
+// 可以并存于「存量债冻结不清」。可见性必须常态存在，不能只在到期前 14 天才出现。
+const comp = gateBlockComposition();
+{
+  const declared = new Set(
+    [
+      ...ALL_STATIC_TOOLS,
+      ...DOC_STATIC_TOOLS,
+      ...DOC_EXTRA_SCRIPTS,
+      ...FRONTEND_STATIC_TOOLS,
+      ...GO_STATIC_TOOLS,
+      SCRIPTS_TYPECHECK,
+    ].map((t) => t.tool),
+  );
+  assert.strictEqual(
+    comp.hard + comp.debt,
+    declared.size,
+    `hard(${comp.hard}) + debt(${comp.debt}) 必须覆盖全部清单条目（${declared.size}）——漏计即口径不一`,
+  );
+  assert.ok(comp.debt > 0, "清单应存在 debt 条目（全 hard 会让本断言失去意义）");
+  assert.ok(
+    line.includes(`hard ${comp.hard} / debt ${comp.debt}`),
+    `尾行必须报出阻断构成（hard ${comp.hard} / debt ${comp.debt}），实际: ${line}`,
+  );
+  assert.ok(comp.nextLabel, "清单既有 debt，构成里必须给出最近复审条目");
+  assert.ok(
+    line.includes("最近复审") || line.includes("已逾期"),
+    `未逾期时应常态报出「最近复审」；逾期时应点名逾期（实际: ${line}）`,
+  );
+}
+
+// 4c. 两路文案（注入固定时刻，与运行日无关）：逾期路必须点名 doctor --all 红灯，
+// 而不是把「16 项债集体沉默」混进一句平铺的「debt FAIL 只记不拦」。
+{
+  const future = Date.UTC(2030, 0, 1); // 全部债务必已逾期
+  const expiredLine = coverageTailLine(future);
+  const compExpired = gateBlockComposition(future);
+  assert.ok(compExpired.expired > 0, "2030 年时全部 debt 都应已逾期（判据自身回归网）");
+  assert.strictEqual(compExpired.expired, compExpired.debt, "逾期数应等于全部债条目数");
+  assert.ok(
+    expiredLine.includes(`debt 已逾期 ${compExpired.expired} 项`),
+    `逾期路必须点名逾期条数，实际: ${expiredLine}`,
+  );
+  assert.ok(expiredLine.includes("doctor --all 红灯"), "逾期路必须指明硬处置发生在 doctor --all");
+  assert.ok(expiredLine.includes("全绿"), "逾期路同样必须保留「全绿 ≠ 仓库无风险」警示");
+  const past = Date.UTC(2020, 0, 1); // 全部债都还早
+  const freshLine = coverageTailLine(past);
+  assert.ok(!freshLine.includes("已逾期"), `未逾期路不应出现「已逾期」，实际: ${freshLine}`);
+  assert.ok(freshLine.includes("最近复审"), "未逾期路必须报出最近复审（可见性常态）");
+}
 
 // 5. DOMAIN_BLOCK_CHECKS 双向同步（2026-09-13 锐评勘误 #9）：手工常量数组纳入测试网——
 //    gate-blocks 新增直连 ctx.record("check-…") 漏登记、或数组登记了已下线的检查，都 FAIL。

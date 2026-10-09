@@ -30,6 +30,7 @@
  * ——ADR-206 的目标态（pre-push-gate 只留 ~400 行调度骨架）。
  */
 import type { GateTool } from "../gate-config.ts";
+import { debtNoteSuffix, debtStatus } from "../gate-debt.ts";
 import { type ExecResult, GATE_TIMEOUT_MS, type GateCtx } from "../gate-ctx.ts";
 import { parseToolOutput } from "../gate-parse.ts";
 import { run as procRun } from "../proc.ts";
@@ -154,6 +155,11 @@ export function runTools(ctx: GateCtx, tools: readonly GateTool[]): void {
       const scopeNote = `--files 裁剪：本次变更 ${ctx.files.length} 文件`;
       note = note ? `${note}（${scopeNote}）` : scopeNote;
     }
+    // 存量债到期状态（2026-10-09 到期制）：debt 不是「永远只记一笔」——FAIL 时把债的
+    // 期限挂到 note，「第三次看到同一条 knip 债」与「到期未处置」在读输出时即可分辨。
+    // 刻意不在此升级阻断：存量债与本次变更无关，拿它挡住无关推送者正是本仓反复吃亏的
+    // 「假红训练人忽略红灯」；到期的硬处置收敛在 doctor --all 的到期盘点段。
+    if (!ok && entry.blockPolicy === "debt") note += debtNoteSuffix(debtStatus(entry.debt));
     // label = 完整检查命令（AI 失败时可直接抄，无需翻文档找脚本名）。
     // scoped 时 label 沿用全扫命令（--files 是门禁内部裁剪机制，AI 手动复查直接全扫
     // 即可看到完整命中方向——同 runScopedDocDrift 口径）；范围信息落在上方 note。

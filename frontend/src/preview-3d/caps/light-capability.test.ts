@@ -26,7 +26,7 @@ import {
 import type { SceneCapability } from "./scene-capability.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import { childIds, findNodeById, nodeIds } from "@/preview-3d/menu/menu-test-helpers.ts";
-import { ENV_STATE_SCHEMA, getParamRange } from "@/preview-3d/state/env-state-schema.ts";
+import { ENV_STATE_SCHEMA, deriveDefaultEnvState, getParamRange, getPresetKeys } from "@/preview-3d/state/env-state-schema.ts";
 import type { EnvState, EnvStateKey } from "@/preview-3d/state/env-state-schema.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { clearEnvCallbacks } from "@/preview-3d/state/env-dispatcher.ts";
@@ -998,6 +998,80 @@ describe("LightCapability — 持久化", () => {
     const raw = JSON.parse(localStorage.getItem("ysm-scene-cap-light")!) as Record<string, unknown>;
     expect(raw.currentPreset).toBeUndefined();
     expect(raw.manualPreset).toBeUndefined();
+  });
+
+  // [G-light] 逐键 schema round-trip 锁（对齐 [G-8]/[D3]/[G-fog]/[G-shadow]/[G-reflector]/[G-renderMode]）。
+  // 病灶（**现存漏网面极大**）：上一例「完整周期」:979 只覆盖 **4 个键**（key.enabled / ambient.intensity /
+  // key.type / volumetric.enabled），41 键里 **37 键无任何往返验证**。light 虽有 light-params.ts 的
+  // `lightEnvKeys(slot)` 覆盖度，但那只覆盖**每槽位 10 键 × 3 = 30 键**，漏 lightEnabled / lightHelperVisible /
+  // lightAmbientColor / lightVolumetric* 等 11 个非槽位键。
+  // 本锁用 `getPresetKeys("light")` 派生全 41 键 + `deriveDefaultEnvState` **自动校验偏离值 ≠ schema 默认**
+  //（防手写偏离值碰巧等于默认 → 恒真绕圈无判别力）。
+  it("[G-light] schema light 键集全部可 save/load round-trip（还原表不得漏登记）", () => {
+    const DEVIATION: Record<string, unknown> = {
+      lightEnabled: false,
+      lightHelperVisible: true,
+      lightKeyType: "spot",
+      lightKeyEnabled: false,
+      lightKeyColor: 0xff8800,
+      lightKeyIntensity: 3,
+      lightKeyAzimuth: 60,
+      lightKeyElevation: 20,
+      lightKeyAngle: 40,
+      lightKeyPenumbra: 0.5,
+      lightKeyDistance: 80,
+      lightKeyDecay: 2,
+      lightFillType: "point",
+      lightFillEnabled: true,
+      lightFillColor: 0x00ff88,
+      lightFillIntensity: 2,
+      lightFillAzimuth: 30,
+      lightFillElevation: 40,
+      lightFillAngle: 40,
+      lightFillPenumbra: 0.4,
+      lightFillDistance: 60,
+      lightFillDecay: 3,
+      lightRimType: "spot",
+      lightRimEnabled: true,
+      lightRimColor: 0x0000ff,
+      lightRimIntensity: 1.5,
+      lightRimAzimuth: 90,
+      lightRimElevation: 50,
+      lightRimAngle: 45,
+      lightRimPenumbra: 0.6,
+      lightRimDistance: 100,
+      lightRimDecay: 2.5,
+      lightAmbientColor: 0x884400,
+      lightAmbientIntensity: 1.2,
+      lightVolumetricEnabled: true,
+      lightVolumetricDriver: "key",
+      lightVolumetricOpacity: 0.7,
+      lightVolumetricFogPower: 2,
+      lightVolumetricEdgeFade: 0.5,
+      lightVolumetricBaseStrength: 1.2,
+      lightVolumetricTipStrength: 0.8,
+    };
+    const schemaKeys = getPresetKeys("light");
+    const defaults = deriveDefaultEnvState();
+    for (const k of schemaKeys) {
+      expect(DEVIATION[k], `light 键 ${k} 未登记偏离值`).toBeDefined();
+      expect(
+        DEVIATION[k],
+        `light 键 ${k} 偏离值 = schema 默认（恒真绕圈无判别力）: ${JSON.stringify(defaults[k])}`,
+      ).not.toEqual(defaults[k]);
+    }
+
+    const patch: Record<string, unknown> = {};
+    for (const k of schemaKeys) patch[k] = DEVIATION[k];
+    setEnvState(patch, { source: "manual" });
+    const cap = newCap();
+    cap.saveState();
+    resetEnvState();
+    const cap2 = newCap();
+    cap2.loadState();
+    for (const k of schemaKeys) {
+      expect(envState[k], `light 键 ${k} 未 round-trip 还原`).toEqual(DEVIATION[k]);
+    }
   });
 
   it("saveState/loadState 往返：volumetric=false + 聚光灯开启 → 体积光保持关闭（不被重新打开）", () => {

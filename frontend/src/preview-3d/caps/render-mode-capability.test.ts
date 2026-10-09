@@ -5,7 +5,8 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import { RenderModeCapability } from "./render-mode-capability.ts";
-import { resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
+import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
+import { getPresetKeys } from "@/preview-3d/state/env-state-schema.ts";
 import { clearEnvCallbacks } from "@/preview-3d/state/env-dispatcher.ts";
 import { findNodeById, nodeIds } from "@/preview-3d/menu/menu-test-helpers.ts";
 
@@ -360,6 +361,38 @@ describe("RenderModeCapability — 持久化", () => {
     expect(cap2.getSide()).toBe(THREE.DoubleSide);
     expect(cap2.getDepthWrite()).toBe(false);
     expect(cap2.isEnabled()).toBe(true);
+  });
+
+  // [G-renderMode] 逐键 schema round-trip 锁（对齐 [G-8]/[D3]/[G-fog]/[G-shadow]）。
+  // 病灶：上一例「完整周期」走 setter 路径且**手写枚举**，schema 加新 renderMode 键必漏
+  //（renderMode 键是 nullable-* 特殊类型，saveState:265 手写摘 5 键、loadState:275 手写还原）。
+  // 本锁用 `getPresetKeys("renderMode")` 派生 + 偏离值（≠ null 默认），未登记即红并点名。
+  it("[G-renderMode] schema renderMode 键集全部可 save/load round-trip（还原表不得漏登记）", () => {
+    const DEVIATION: Record<string, unknown> = {
+      renderModeWireframe: true,
+      renderModeBlending: THREE.AdditiveBlending,
+      renderModeDepthTest: false,
+      renderModeSide: THREE.DoubleSide,
+      renderModeDepthWrite: false,
+    };
+    const schemaKeys = getPresetKeys("renderMode");
+    const missing = schemaKeys.filter((k) => !(k in DEVIATION));
+    expect(
+      missing,
+      `schema 新增了 renderMode 键但本测试未登记偏离值: ${JSON.stringify(missing)}`,
+    ).toEqual([]);
+
+    const patch: Record<string, unknown> = {};
+    for (const k of schemaKeys) patch[k] = DEVIATION[k];
+    setEnvState(patch, { source: "manual" });
+    const cap = newCap(makeMesh());
+    cap.saveState();
+    resetEnvState();
+    const cap2 = newCap(makeMesh());
+    cap2.loadState();
+    for (const k of schemaKeys) {
+      expect(envState[k], `renderMode 键 ${k} 未 round-trip 还原`).toEqual(DEVIATION[k]);
+    }
   });
 
   it("loadState 空存储时早退", () => {

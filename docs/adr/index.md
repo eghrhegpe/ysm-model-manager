@@ -16,17 +16,17 @@ permalink: /adr/
 
 | 状态 | 数量 |
 |------|------|
-| [📝 提议中](#提议中) | 7 |
+| [📝 提议中](#提议中) | 6 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 15 |
-| [✅ 已采纳](#已采纳) | 308 |
+| [✅ 已采纳](#已采纳) | 309 |
 | [❌ 已取代](#已取代) | 8 |
 | [🧊 已废弃](#已废弃) | 0 |
 | [❓ 未归类](#未归类) | 0 |
 
 ## 按状态分组导航
 
-### 📝 提议中（7）
+### 📝 提议中（6）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
@@ -35,7 +35,6 @@ permalink: /adr/
 | [ADR-301](./ADR-301-workshop-community-naming-convergence.md) | 创作者频道与创意工坊命名轴收敛 | 📝 提议中 |
 | [ADR-292](./ADR-292-scene-environment-sky-ibl-env.md) | 环境贴图单一归属：scene.environment 所有权收口，sky IBL 降为 env 的数据源 | 📝 提议中 |
 | [ADR-284](./ADR-284-sky-reflector-shadow-decoupling-cleanup.md) | sky 散射参数与模型类别解耦 + reflector/shadow 清除 no-op 与噪声值 | 📝 提议中 |
-| [ADR-256-d1](./decisions/ADR-256-d1-gate-debt-expiry.md) | 存量债到期制：debt 条目必须带 reason 与 reviewBy，到期由 doctor --all 硬处置 | 📝 提议中 |
 | [ADR-151-d1](./decisions/ADR-151-d1-gen-stage-unknown-newfile.md) | gen-stage 未知新建文件默认排除（并发卷带硬化） | 📝 提议中 |
 
 ### 🔄 部分采纳（15）
@@ -58,7 +57,7 @@ permalink: /adr/
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 | [ADR-050](./ADR-050-plaza-browser-window.md) | 模型广场 · 浏览器窗口（Wails 第二窗口） | 🔄 部分采纳 |
 
-### ✅ 已采纳（308）
+### ✅ 已采纳（309）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
@@ -136,6 +135,7 @@ permalink: /adr/
 | [ADR-258](./ADR-258-diagnostics-nav-top-tabs.md) | 诊断页导航：左栏分段收敛为顶部统一 tab 范式 | ✅ 已采纳 |
 | [ADR-257](./ADR-257-water-level-decoupling-body-strategy.md) | 水面/容器解耦（`waterLevel`）+ 水体形态策略表（`WaterBodyStrategy`） | ✅ 已采纳 |
 | [ADR-256](./ADR-256-design-tokens-added-lines.md) | 设计令牌门禁改判真行级：判定与账本分离（行号位移幻影实证，复算见 §4） | ✅ 已采纳 |
+| [ADR-256-d1](./decisions/ADR-256-d1-gate-debt-expiry.md) | 存量债到期制：debt 条目必须带 reason 与 reviewBy，到期由 doctor --all 硬处置 | ✅ 已采纳 |
 | [ADR-255](./ADR-255-water-gerstner-uniform.md) | 水面波浪 uniform 化 + Gerstner 升级 | ✅ 已采纳 |
 | [ADR-254](./ADR-254-ground-material-preset-explicit-state.md) | 地面材质预设化：材质名兑现配色 + 显式预设状态 | ✅ 已采纳 |
 | [ADR-253](./ADR-253-3d-entry-siblings-unification.md) | 3D 入口统一：路由层 siblings 兜底与详情卡收编 | ✅ 已采纳 |
@@ -727,7 +727,7 @@ permalink: /adr/
 | ADR-270-d5 | R10 穿透债归属纠正：YSM 预览数据装配流水线自 views 迁入 preview-3d/adapters（否决再导出面） | ✅ 已采纳 | 2026-10-06 |
 | ADR-270-d6 | R10 收尾：截图多角度编排与菜单候选派生归属纠正（适配器域知识回迁 preview-3d/adapters） | ✅ 已采纳 | 2026-10-07 |
 | ADR-266-d1 | 体积光锥进截图：离屏/预览输出设置同构（toneMapping + 曝光镜像） | ✅ 已采纳 | 2026-10-04 |
-| ADR-256-d1 | 存量债到期制：debt 条目必须带 reason 与 reviewBy，到期由 doctor --all 硬处置 | 📝 提议中 | 2026-10-09 |
+| ADR-256-d1 | 存量债到期制：debt 条目必须带 reason 与 reviewBy，到期由 doctor --all 硬处置 | ✅ 已采纳 | 2026-10-09（实施与 CI 验证同日完成，用户逐刀批准） |
 | ADR-235-d1 | sky cap 资产管线下沉（太阳位置计算 + 天空资产）——cap 变薄编排壳 | ✅ 已采纳 | 2026-10-09 |
 | ADR-151-d1 | gen-stage 未知新建文件默认排除（并发卷带硬化） | 📝 提议中 | 2026-10-06 |
 | ADR-091-d1 | 环境能力 cap 拆分：hdr-cache/background 先行，ibl 所有权段单独一刀 | ✅ 已采纳 | 2026-10-08 |

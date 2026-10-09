@@ -418,6 +418,18 @@ jobs:
         run: |
           node scripts/pre-push-gate.ts --static
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      # 存量债到期报告 → 汇总页（2026-10-09 ADR-256-d1 收口：到期状态在远端常态可见）。
+      # `if: always()`：上一步的红与本报告无关——债表恰恰要在治理闸失败时也在场
+      # （读者需要「这次红是本次引入，还是那 16 笔到期债」的对照）。本步**不判定成败**
+      # （报告不是闸；--strict 才 exit 1，CI 刻意不带），恒 exit 0，不可能成为噪声源。
+      # debt-report 非 check-* 命名是刻意的（见其头注释）：它是呈现物，不进「44 道闸」分母。
+      - name: 存量债到期报告（debt-report --md → STEP_SUMMARY，非门禁）
+        if: always()
+        shell: pwsh
+        run: |
+          node scripts/debt-report.ts --md | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8
+          node scripts/debt-report.ts
   # ── Go Job：Go 编译/测试/覆盖率 ────────────────────────────────────────────
   go:
     name: Go（build + vet + test）

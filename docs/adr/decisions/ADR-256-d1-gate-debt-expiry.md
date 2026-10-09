@@ -1,10 +1,10 @@
 # ADR-256-d1：存量债到期制：debt 条目必须带 reason 与 reviewBy，到期由 doctor --all 硬处置
 
-- **状态**：📝 提议中（Proposed）
-- **日期**：2026-10-09
+- **状态**：✅ 已采纳（Accepted）
+- **日期**：2026-10-09（实施与 CI 验证同日完成，用户逐刀批准）
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **关联主 ADR**：ADR-256
-- **相关**：`scripts/_lib/gate-debt.ts / scripts/_lib/gate-config.ts / scripts/_lib/gate-coverage.ts / scripts/pre-push-gate.ts`
+- **相关**：`scripts/_lib/gate-debt.ts / scripts/_lib/gate-config.ts / scripts/_lib/gate-coverage.ts / scripts/pre-push-gate.ts / scripts/debt-report.ts（CI STEP_SUMMARY 呈现出口）`
 
 ---
 

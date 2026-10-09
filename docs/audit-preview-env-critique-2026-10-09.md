@@ -266,8 +266,20 @@ fog 键必漏**（fogColor 已实证漏过）。**meta 闸在此完全无判别�
 中间件是永久全局拦截器（组合根必建 cap，且跨模型切换 cap dispose/重建时中间件本就应持续注册），
 `unregister` 无实际用途、丢弃无害。**保持现状**。
 
-**⏳ 仍待拍板**：ground 主 cap 拆分（已减 20 行，942→922 行；DOM 交互已清，剩余是状态/渲染层
-合并——是否继续拆待定）、sky 5 死参数处置（暴露 UI 出口 vs 显式标记"死参数"）。
+**✅ 已推进：ground 叠加层拆出（commit `b41fb2997`）**——新建 `ground-overlay.ts`（GroundOverlay class）：
+原 cap 915 行混装「网格 + 表面材质 + 叠加层 + 生命周期」四职责，叠加层
+（`refreshOverlay`/`rebuildOverlay`/`makeOverlayTexture` + overlayMat/overlayTex/overlaySpec 私有态）
+是其中**最独立**的一层（不依赖网格/表面）。拆出后 cap **减 83 行 → 820 行**；**接口不变**
+（public setter 全经 envState 回调 `gs.refresh()`，`syncGeometry` 用 `gs.mesh` 换装，
+`dispose` 委托 `gs.dispose()`），cap 测试 193 例 + GroundOverlay 新单测 4 例全绿。
+
+**⏳ ground 主 cap 拆分到此为止（本批不再继续拆）**——剩余 surface 层与几何层**本质耦合**：
+`syncGeometry` 同时换装 surface+overlay 两 mesh、`createSurfaceMesh` 构造内递归 `refreshSurface`、
+`dispose` 里 surface/overlay 资源释放交错。强行拆会引入跨模块状态传递 + 间接层，**收益边际递减**。
+且 ground cap 820 行在**既有范式内**（`water-capability.ts` 2720 行远更重，各 cap 一文件是仓库惯例）。
+**结论：已清掉 DOM 违规 + 拆出最独立层，剩余保留。** 若未来行数/职责继续膨胀，再评估。
+
+**⏳ 仍待拍板**：sky 5 死参数处置（暴露 UI 出口 vs 显式标记"死参数"）。
 
 ### 📌 执行教训
 

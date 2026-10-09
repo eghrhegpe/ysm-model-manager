@@ -14,6 +14,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { findAdb, findSdkRoot } from "./_lib/android-sdk.ts";
 import { run } from "./_lib/proc.ts";
 import { getRoot } from "./_lib/scan-files.ts";
 
@@ -23,17 +24,6 @@ const APP_ID = "com.ysm.modelmanager"; // app/build.gradle applicationId
 // Activity 全名必须写全限定：namespace 是 com.wails.app（build.gradle），
 // 缩写 .MainActivity 会被 am start 按 applicationId 解析成 com.ysm.modelmanager.MainActivity 而失败
 const MAIN_ACTIVITY = `${APP_ID}/com.wails.app.MainActivity`;
-
-/** 定位 adb：优先 $ANDROID_HOME/platform-tools/adb[.exe]，回退 PATH */
-function findAdb() {
-  const home = process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT;
-  if (home) {
-    const exe = os.platform() === "win32" ? "adb.exe" : "adb";
-    const candidate = path.join(home, "platform-tools", exe);
-    if (fs.existsSync(candidate)) return candidate;
-  }
-  return "adb"; // 交给 PATH
-}
 
 /** 列出已连接（state=device）的设备序列号 */
 function connectedDevices(adb: string) {
@@ -71,10 +61,10 @@ if (!fs.existsSync(path.join(ANDROID_DIR, "settings.gradle"))) {
 const adb = findAdb();
 const devices = connectedDevices(adb);
 if (devices.length === 0) {
-  fail(`未检测到已连接设备（adb devices 无 device 状态设备）。
+  fail(`未检测到已连接设备（${adb} devices 无 device 状态设备）。
   ① USB 调试：手机开「开发者选项 → USB 调试」后连接，弹窗允许调试；
   ② 无线调试：开发者选项 → 无线调试 → 「adb pair <ip:port>」配对后「adb connect <ip:port>」。
-  若 adb 不在 PATH，请设置 ANDROID_HOME（当前: ${process.env.ANDROID_HOME || "未设置"}）。`);
+  若 adb 不在 PATH，请设置 ANDROID_HOME（SDK 探测结果: ${findSdkRoot() || "未找到——进程级/User 级/LOCALAPPDATA 均无"}）。`);
 }
 console.log(`[android-install] 设备: ${devices.join(", ")}`);
 

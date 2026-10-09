@@ -21,6 +21,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { findNdkInSdk, findSdkRoot, readUserEnv } from "./_lib/android-sdk.ts";
 import { run } from "./_lib/proc.ts";
 import { getRoot } from "./_lib/scan-files.ts";
 
@@ -37,7 +38,6 @@ const ARCHES: Record<string, { goarch: string; ndkTarget: string; abi: string }>
   amd64: { goarch: "amd64", ndkTarget: `x86_64-linux-android${MIN_SDK}`, abi: "x86_64" },
 };
 
-/** 宿主 → NDK llvm prebuilt 目录名 */
 /** 候选宿主 → NDK llvm prebuilt 目录名（目录名随 NDK 版本走：r26 起才出 darwin-arm64，
  *  旧 NDK 仅 darwin-x86_64——硬编码按 os.arch 猜会让 ARM Mac + 旧 NDK 报路径缺失） */
 function hostTagCandidates(): string[] {
@@ -63,74 +63,15 @@ function hostTag(ndkRoot: string) {
   return cands[0] ?? "linux-x86_64";
 }
 
-/** Windows 读 User 级环境变量（新开终端不继承，显式读 registry；非 Windows 直接返回空） */
-function readUserEnv(name: string) {
-  if (process.platform !== "win32") return "";
-  try {
-    const r = run("reg", ["query", "HKCU\\Environment", "/v", name]);
-    if (!r.ok) return "";
-    // reg query 输出为 tab/多空格分隔的三列：值名 类型(REG_EXPAND_SZ) 值。
-    // 末列即值（值内可含空格，逐列拆分后取末段最稳）。类型列是第二列，永不混入。
-    for (const l of r.out.split(/\r?\n/)) {
-      const cols = l.trim().split(/\s+/);
-      if (cols.length >= 3) return cols.slice(2).join(" "); // 第 3 列起都是该 REG 值
-    }
-    return "";
-  } catch {
-    return "";
-  }
-}
-
-/** NDK 目录名版本比较（语义序，非字符串序）："26.3.11579264" vs "26.10.x" 须 26.10 更晚。
- *  原实现 `.sort()` 字符串序，minor 达两位数（NDK r26.10+）时 `"26.3"` > `"26.10"` 判反，
- *  会选中旧 NDK。每段只取数字前缀（patch 段 `11579264` 是构建哈希，不参与语义，按数值兜底）。 */
-function ndkVersionSortKey(name: string): number[] {
-  return name.split(".").map((seg) => {
-    const m = /^\d+/.exec(seg.trim());
-    return m ? Number.parseInt(m[0], 10) : 0;
-  });
-}
-
-function compareNdkVersion(a: string, b: string): number {
-  const ka = ndkVersionSortKey(a);
-  const kb = ndkVersionSortKey(b);
-  for (let i = 0; i < Math.max(ka.length, kb.length); i++) {
-    const d = (ka[i] ?? 0) - (kb[i] ?? 0);
-    if (d !== 0) return d;
-  }
-  return 0;
-}
-
-/** 定位 NDK 根：$ANDROID_NDK_HOME，或 $SDK/ndk/<最新版本>（进程级→User 级→非 Windows 兜底） */
+/** 定位 NDK 根：$ANDROID_NDK_HOME，或 $SDK/ndk/<最新版本>（进程级→User 级→LOCALAPPDATA 兜底，
+ *  SDK 探测与版本排序归 _lib/android-sdk.ts——与 android-install.ts 共用同一事实源） */
 function findNdk() {
   const home = process.env.ANDROID_NDK_HOME || readUserEnv("ANDROID_NDK_HOME");
   if (home) {
     const ndkHome = home.replace(/"/g, "");
     if (fs.existsSync(ndkHome)) return ndkHome;
   }
-  const sdk =
-    process.env.ANDROID_HOME ||
-    process.env.ANDROID_SDK_ROOT ||
-    readUserEnv("ANDROID_HOME") ||
-    readUserEnv("ANDROID_SDK_ROOT") ||
-    // 2026-10-06 技术债审计：原硬编码 `C:\Android\Sdk` 是开发者本机路径，他人机器必不存在，
-    // 且违反跨平台。改用 %LOCALAPPDATA%\Android\Sdk（Android Studio 默认安装位）推导——
-    // 仍为「候选探测」兜底，真正单一事实源是 ANDROID_HOME 环境变量。
-    (process.env.LOCALAPPDATA &&
-    fs.existsSync(path.join(process.env.LOCALAPPDATA, "Android", "Sdk"))
-      ? path.join(process.env.LOCALAPPDATA, "Android", "Sdk")
-      : "");
-  if (sdk) {
-    const ndkDir = path.join(sdk.replace(/"/g, ""), "ndk");
-    if (fs.existsSync(ndkDir)) {
-      const versions = fs
-        .readdirSync(ndkDir)
-        .filter((d) => fs.statSync(path.join(ndkDir, d)).isDirectory())
-        .sort(compareNdkVersion);
-      if (versions.length > 0) return path.join(ndkDir, versions[versions.length - 1]!);
-    }
-  }
-  return null;
+  return findNdkInSdk(findSdkRoot()) || null;
 }
 
 function fail(msg: string): never {
@@ -187,7 +128,7 @@ if (!fs.existsSync(OVERLAY)) {
 const ndk = findNdk();
 if (!ndk)
   fail(
-    `未找到 NDK：设 ANDROID_NDK_HOME，或 ANDROID_HOME/ndk 下存在 NDK（当前: ${process.env.ANDROID_HOME || "未设置"}）`,
+    `未找到 NDK：设 ANDROID_NDK_HOME，或 ANDROID_HOME/ndk 下存在 NDK（SDK 探测结果: ${findSdkRoot() || "未找到——进程级/User 级/LOCALAPPDATA 均无"}）`,
   );
 console.log(`[android-build] NDK: ${ndk}`);
 

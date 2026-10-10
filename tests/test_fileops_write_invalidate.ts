@@ -40,7 +40,7 @@ const { sites, checked, violations } = runWriteGate({
   root: ROOT,
   appDir: "internal/app",
   minSites: 6, // 现网调用点 19，低于 6 = 派生/扫描坏了
-  packages: [{ dir: "go/fileops", alias: "fileops", satisfy: "scan", readonly: READONLY }],
+  packages: [{ dir: "go/fileops", alias: "fileops", satisfy: "scan", readonlyFns: READONLY }],
 });
 
 assert.ok(

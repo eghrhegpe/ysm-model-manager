@@ -27,9 +27,46 @@
 import fs from "node:fs";
 import path from "node:path";
 
+/** 失效签名族 */
+export type SatisfyKind = "scan" | "pair-or-clear";
+
+/** 一个被监视的包：dir=派生导出面的包目录（相对 root）；alias=app 层调用前缀 */
+export interface GatePackage {
+  dir: string;
+  alias: string;
+  /** 只读/纯计算/注册类豁免；以 Invalidate 或 Register 或 IsValid 开头的名字由引擎自动豁免。
+   *  字段名 readonlyFns——readonly 是 TS 修饰符关键字，作属性名会解析失败 */
+  readonlyFns: Set<string>;
+  satisfy: SatisfyKind;
+}
+
+/** 精确豁免位：文件 basename + 所属函数名 + 调用函数名 三元组 */
+export interface ExemptSite {
+  file: string;
+  fn: string;
+  call: string;
+  reason: string;
+}
+
+export interface GateConfig {
+  root: string;
+  appDir: string;
+  packages: GatePackage[];
+  exemptSites?: ExemptSite[];
+  /** 调用点总数空转下限（低于 = 派生/扫描本身坏了） */
+  minSites?: number;
+}
+
+export interface GateResult {
+  sites: number;
+  checked: number;
+  exemptHits: number;
+  violations: string[];
+}
+
 /** 生产 Go 文件（排除 _test.go 与隐藏目录） */
-export function productionGoFiles(dir) {
-  const out = [];
+export function productionGoFiles(dir: string): string[] {
+  const out: string[] = [];
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
     const abs = path.join(dir, e.name);
     if (e.isDirectory()) {
@@ -44,27 +81,27 @@ export function productionGoFiles(dir) {
 }
 
 /** 剥离块/行注释（简化实现：不处理字符串内 //——误剥方向只会漏检不会误报） */
-export function stripComments(src) {
+export function stripComments(src: string): string {
   return src
-    .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "))
+    .replace(/\/\*[\s\S]*?\*\//g, (m: string) => m.replace(/[^\n]/g, " "))
     .replace(/\/\/[^\n]*/g, "");
 }
 
 /** 从包目录（非测试 .go）派生导出函数名集合——候选写面的唯一事实源。 */
-export function exportedFuncs(pkgDir) {
-  const set = new Set();
+export function exportedFuncs(pkgDir: string): Set<string> {
+  const set = new Set<string>();
   for (const f of fs.readdirSync(pkgDir)) {
     if (!f.endsWith(".go") || f.endsWith("_test.go")) continue;
     for (const line of fs.readFileSync(path.join(pkgDir, f), "utf8").split("\n")) {
       const m = /^func ([A-Z]\w*)\(/.exec(line);
-      if (m) set.add(m[1]);
+      if (m && m[1]) set.add(m[1]);
     }
   }
   return set;
 }
 
 /** 定位 idx 所属顶层函数：返回 { name, body }；找不到返回 null。 */
-export function enclosingFunc(text, idx) {
+export function enclosingFunc(text: string, idx: number): { name: string; body: string } | null {
   const start = text.lastIndexOf("\nfunc ", idx);
   if (start < 0) return null;
   const braceAt = text.indexOf("{", start);
@@ -77,7 +114,7 @@ export function enclosingFunc(text, idx) {
       if (depth === 0) {
         const sig = text.slice(start, braceAt);
         const m = /func (?:\([^)]*\) )?([A-Za-z_]\w*)/.exec(sig);
-        return { name: m ? m[1] : "<anon>", body: text.slice(start, i + 1) };
+        return { name: m && m[1] ? m[1] : "<anon>", body: text.slice(start, i + 1) };
       }
     }
   }
@@ -89,25 +126,15 @@ const CLEAR_TOKEN = "a.ClearScanCache()";
 const PAIR_TOKENS = ["instance.InvalidateSyncItemsCache", "ysmsync.InvalidateSyncScanCaches"];
 
 /** 函数体是否满足该族失效签名。 */
-export function bodySatisfies(body, satisfy) {
+export function bodySatisfies(body: string, satisfy: SatisfyKind): boolean {
   if (satisfy === "scan") return SCAN_TOKENS.some((t) => body.includes(t));
   if (satisfy === "pair-or-clear")
     return body.includes(CLEAR_TOKEN) || PAIR_TOKENS.every((t) => body.includes(t));
   throw new Error(`unknown satisfy: ${satisfy}`);
 }
 
-/**
- * 跑一枚派生闸。cfg：
- *   root: 仓库根
- *   appDir: 被扫的调用方目录（相对 root）
- *   packages: [{ dir, alias, readonly: Set<string>, satisfy }]
- *     dir = 包目录（相对 root，用于派生导出面）；alias = app 层调用前缀（如 "ysmsync"）
- *     readonly = 只读/纯计算/注册类豁免（**必须覆盖全部被调用的非写导出**，漏即红）
- *   exemptSites: [{ file, fn, call, reason }]（file=basename，fn=所属函数名，call=函数名）
- *   minSites: 空转下限（调用点总数低于它 = 派生或扫描本身坏了）
- * 返回 { sites, checked, exemptHits, violations[] }
- */
-export function runWriteGate(cfg) {
+/** 跑一枚派生闸（语义见文件头注释）。 */
+export function runWriteGate(cfg: GateConfig): GateResult {
   const { root, appDir, packages, exemptSites = [], minSites = 1 } = cfg;
   const appAbs = path.join(root, appDir);
   const derived = packages.map((p) => ({
@@ -115,11 +142,11 @@ export function runWriteGate(cfg) {
     exports: exportedFuncs(path.join(root, p.dir)),
   }));
 
-  const violations = [];
+  const violations: string[] = [];
   let sites = 0;
   let checked = 0;
   let exemptHits = 0;
-  const seenExempt = new Set();
+  const seenExempt = new Set<string>();
 
   for (const abs of productionGoFiles(appAbs)) {
     const text = stripComments(fs.readFileSync(abs, "utf8"));
@@ -127,10 +154,11 @@ export function runWriteGate(cfg) {
     for (const p of derived) {
       const re = new RegExp(`\\b${p.alias}\\.([A-Z]\\w*)\\s*\\(`, "g");
       for (const m of text.matchAll(re)) {
-        const fn = m[1];
+        const fn = m[1] ?? "<unknown>";
         if (!p.exports.has(fn)) continue; // alias 与他包同名函数误撞（如 types.X），导出面为权威
         sites++;
-        if (p.readonly.has(fn) || /^(Invalidate|Register|IsValid)/.test(fn)) continue;
+        // 失效函数自身/注册/校验前缀自动豁免（闸的调用面里它们是机制本体，非写操作）
+        if (p.readonlyFns.has(fn) || /^(Invalidate|Register|IsValid)/.test(fn)) continue;
         const loc = enclosingFunc(text, m.index);
         if (loc === null) {
           violations.push(`${appDir}/${base}: 无法定位 ${p.alias}.${fn} 调用点所属函数`);

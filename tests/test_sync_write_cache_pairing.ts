@@ -47,13 +47,13 @@ const { sites, checked, exemptHits, violations } = runWriteGate({
   appDir: "internal/app",
   minSites: 15, // 现网三包调用点合计 34，低于 15 = 派生/扫描坏了
   packages: [
-    { dir: "go/sync", alias: "ysmsync", satisfy: "pair-or-clear", readonly: SYNC_READONLY },
-    { dir: "go/installer", alias: "installer", satisfy: "pair-or-clear", readonly: new Set() },
+    { dir: "go/sync", alias: "ysmsync", satisfy: "pair-or-clear", readonlyFns: SYNC_READONLY },
+    { dir: "go/installer", alias: "installer", satisfy: "pair-or-clear", readonlyFns: new Set() },
     {
       dir: "go/importer",
       alias: "importer",
       satisfy: "pair-or-clear",
-      readonly: IMPORTER_READONLY,
+      readonlyFns: IMPORTER_READONLY,
     },
   ],
   exemptSites: [

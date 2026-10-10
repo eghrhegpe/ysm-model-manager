@@ -46,9 +46,21 @@ const completedHashes = new Set<string>();
 /** 正在进行中的编码 hash 集合（防止重复调度） */
 const inProgressHashes = new Set<string>();
 
-/** 信号量：获取执行槽位，返回释放函数。取消时有排队任务则 reject（不静默挂起） */
+/** 信号量：获取执行槽位，返回释放函数。
+ *  **取消语义 = 一次性事件，不是持久闩锁**（锐评 F1 修复 2026-10-10）：
+ *  `cancelled` 为真时**立即 reject**，绝不入队——因为 `waitingQueue` 只由 `release()`
+ *  唤醒，而取消后若 `activeCount` 已为 0 则永无 release 到来 → promise 永久挂起
+ *  （`encodeAndCacheTexture` 是公开 API，可被不经 schedule 的调用方直接触发）。
+ *  原实现把 `cancelled` 当入队条件（`activeCount < MAX && !cancelled` 反义入队），
+ *  正是「取消后新请求永不结算」的一半漏网；另一半（取消时已在队者）已由
+ *  `cancelPendingEncodings` 的 reject 修复。 */
 function acquire(): Promise<() => void> {
   return new Promise((resolve, reject) => {
+    if (cancelled) {
+      // 已取消：本次请求不被受理（调用方按 EncodeCancelledError 静默退出）
+      reject(new EncodeCancelledError());
+      return;
+    }
     const task: WaitingTask = {
       reject,
       run: () => {
@@ -64,7 +76,7 @@ function acquire(): Promise<() => void> {
         });
       },
     };
-    if (activeCount < MAX_CONCURRENT && !cancelled) {
+    if (activeCount < MAX_CONCURRENT) {
       // 立即执行
       task.run();
     } else {
@@ -73,7 +85,12 @@ function acquire(): Promise<() => void> {
   });
 }
 
-/** 取消所有待执行的编码（已在执行的不受影响）：reject 队列中任务，避免 acquire 永久挂起 */
+/** 取消待执行的编码（已在执行的不受影响）：
+ *  ① reject 队列中已在等的任务；② 置 `cancelled` 使此后 acquire 的**新**请求立即被拒
+ *  （锐评 F1：`cancelled` 曾是永久闩锁且被当作入队条件，导致取消后经公开 API 直接发起的
+ *  编码永久挂在 waitingQueue——无在途则无 release 可唤醒。现取消是「一次性事件」语义：
+ *  拒绝新请求，而非让它们静默排队）。
+ *  复位点：`scheduleBackgroundEncoding` 入口的 `resetCancelled()`（新一轮调度 = 新会话意图）。 */
 export function cancelPendingEncodings(): void {
   cancelled = true;
   for (const task of waitingQueue) task.reject(new EncodeCancelledError());
@@ -109,15 +126,20 @@ export function resetEncoderState(): void {
  * 取消入口 `cancelPendingEncodings`（由 `mmd-build-result.ts` 会话 dispose 调用）——
  * 调度侧接了生命周期，池本身的生死无人管；若为有意取舍，仓内应有注释/ADR 论证（实测零论证）。
  *
- * **挂 `cleanupPreview` 而非终局拆除**：终局拆除依赖 `beforeunload`，
- * 而 Wails v3 桌面端确认**不派发**该事件（见 docs/archive/audit-host-env-coupling-review.md §三），
- * 挂上去等于死代码；`cleanupPreview` 是会话级确定路径。
+ * **挂 MMD 会话 dispose（`Stage6Dispose`），而非 `cleanupPreview`**（锐评 F4 更正 2026-10-10：
+ * 本段原写「挂 cleanupPreview … 供 cleanupPreview 重入」，与唯一生产调用点
+ * `mmd-build-result.ts|Stage6Dispose` 的注释「挂 MMD 会话 dispose 而非 cleanupPreview」
+ * 方向相反——是被否掉的旧方案文案未同步。实际理由：编码池是 **MMD 专用资源**，
+ * 跟 MMD 会话走，cooperate 多会话下互不误伤；`cleanupPreview` 是更粗的宿主级清理，
+ * 挂上去会误伤并行存活的其它 MMD 会话。
+ * ⚠️ 另注：终局拆除依赖 `beforeunload`，而 Wails v3 桌面端确认**不派发**该事件
+ * （见 docs/archive/audit-host-env-coupling-review.md §三），故不能作为回收点。
  *
  * **重建代价可接受**：`getKtx2WorkerPool` 的 `if (ktx2Workers) return` 懒建逻辑天然支持重建，
  * 下次打开 MMD 模型时自动重建（几百毫秒建池 + WASM init）——而该场景本来就要等编码落盘，
  * 代价基本被场景本身淹没。
  *
- * 幂等：冷态（无池）或重复调用均安全，供 `cleanupPreview` 重入。
+ * 幂等：冷态（无池）或重复调用均安全。
  */
 export function disposeKtx2WorkerPool(): void {
   // terminatePool 内部：逐个 terminate + 结算在途（settleError）+ 触发 onPoolTerminated

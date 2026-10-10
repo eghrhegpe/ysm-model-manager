@@ -99,6 +99,25 @@ function handleEmptyBytes(modelPath: string): null {
   return null;
 }
 
+/**
+ * 读取 `.json`（ysm.json spec）路径的作者头像并回填 `avatarUrl`。
+ *
+ * [锐评 decoder 轮 F2 复核 2026-10-10] 归属契约（**别改成「漏了 revoke」的假病**）：
+ * 本函数产出的 blob URL 是**交付物**而非临时态——它挂在 `result.authors[].avatarUrl`
+ * 上随 `result` 进 `cacheSet`，由 `model-cache.ts|collectBlobUrls` 在 LRU 淘汰时统一释放
+ * （该函数显式扫 `authors[].avatarUrl`，见 model-cache.ts:54-59）。故此处**不该** revoke：
+ * 成功路径 revoke = 头像图当场裂开。
+ *
+ * 与另外两条头像通路的差别（同 `collectTexturesAndAvatars` 的 `acc.avatars`）：
+ * 那条在 `TexAccum` 内、由 `revokeTexAccumBlobs` 兜早退；本条只依赖「进缓存」。
+ * 两条路都成立的共同前提 = **调用方必须把 result 交给 cacheSet**（本文件
+ * `tryJsonDispatch` 紧跟其后即做，中间只有两个纯赋值语句，无可抛异常窗口）。
+ *
+ * 唯一残余风险（已知、有守卫、非本层可修）：`model-cache` 的 evict 回调由
+ * `adapters/ysm-preview-cache.ts` 的模块级副作用注册，未 import 该模块的消费方
+ * 淘汰时 `if (_onEvict)` 静默跳过释放——属 cache 层的 fail-open 取舍
+ * （`model-cache.test.ts` 已覆盖「无回调时不炸」），不在解码层补丁范围内。
+ */
 async function loadAvatarsForJson(ctx: InflightCtx, result: DecodedYsm): Promise<void> {
   if (!result.authors?.length) return;
   for (const au of result.authors) {

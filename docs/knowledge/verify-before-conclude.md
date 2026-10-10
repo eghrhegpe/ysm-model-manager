@@ -9,6 +9,9 @@ source_files:
   - scripts/check-knowledge-drift.ts
   - scripts/check-adr-health.ts
   - scripts/doctor.ts
+auto_fields:
+  symbols_with_lines:
+    - findLingeringProgressLines
 use_when:
   - 要下结论说某个债已清/未清、某个门禁慢了、某处是误报时
   - 写审计报告、知识卡、ADR 或提交说明里的「实测」数字时

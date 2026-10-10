@@ -16,7 +16,7 @@ ADR-189 收敛 `src/core` 目录（断 core⇄backend 环 + 准入准则）后�
 | **P1 去重键用净化前原文** | `core/error-diary.ts` `logUiMsg` 先以原始 `msg` 算去重键、后做净化：仅路径段不同的两条原始消息去重键不同 → 双双落盘，净化后 title/detail 近乎逐字相同；单槽 last-dedup 令 A-B 交错风暴逐条穿透，注释「按设计逐条记录」把弱点粉饰成设计 |
 | **P1 AppError 文案跨语言无契约** | `stripPathSegments` 正则匹配 Go `AppError.Error()` 拼的 `源路径：`/`目标路径：`（全角冒号）token；Go 改文案前端静默失效、内部路径漏进日记（ADR-051 红线），两侧均无机械锚点 |
 | **P2 tr() 类型洗白 + 插值半套** | `tr(key: LocaleKey \| (string & {}))` + 体内 `as LocaleKey` cast 放行动态 key 不检查；`LocaleParams` 全放行——模板含 `{n}` 而调用漏传参时裸占位符上屏，无测试覆盖该类 bug |
-| **P2 注释考古化（D6 未落地）** | error-diary 注释占比近 45%（ADR-189 D6 自认「首个治理样本」后未收敛）；P2/P3/P4 修史标签、`（2026-XX P2-1 抽取）` 占位日期嵌在源码；`warnedKeys` 可变 Set 跨模块导出（smell 被注释记录而非重构） |
+| **P2 注释考古化（ADR-189 D6 家族）** | error-diary 注释占比近 45%（ADR-189 D6 自认「首个治理样本」后未收敛）；P2/P3/P4 修史标签、`（2026-XX P2-1 抽取）` 占位日期嵌在源码；`warnedKeys` 可变 Set 跨模块导出（smell 被注释记录而非重构） |
 | **P3 附带发现** | ① `scripts/gen-knowledge-autogen.ts:392/435` 用 `String.replace(正则, 替换串)`，替换串含 frontmatter 的 `$&/$1` 序列 → `$&` 展开为整个旧 frontmatter，`docs/knowledge/i18n.md` 被反复自追加（15 层重复 frontmatter 实锤）；② `utils/base/log.ts` 4 条 `eslint-disable` 残留（门禁是 biome）；③ app-toast `import { t as tr }` 别名与 core `tr`（安全取值）语义撞名 |
 
 ## 2. 决策（Decision）

@@ -33,13 +33,11 @@
 
 - **正面**：钉死否决理由，防止后人重复提案 tier3 Builder 化、浪费一轮评估；轻量 typed-base 修复即可捕获主要安全收益（编译期字段齐备校验）。
 - **负面 / 已知遗留**：`c` 运行时仍是单对象全闭包共享、跨 stage 可变；跨 stage 写入依赖管线序，未加额外不变式保护（tier2 Pick 收窄已限制各 stage 的*读域*，但未限制*写*）。若未来出现漏初始化 bug，再评估 typed-base 或局部 `Object.freeze`。
-- **后续待办**：typed seeded base 轻量修复——消除 `mmd-adapter.ts:1141` 的 `as` 强转，改为类型校验的构造（预计 ~1–2 函数改动，10% churn）。
 
 ## 4. 数据溯源
 
 - 构造点实测：`frontend/src/preview-3d/adapters/mmd/mmd-adapter.ts:1135-1165`（管线序）、`:1141`（`as` 强转）、`:184-269`（6 域接口）、`:278-348`（8 个 `Pick` stage Ctx）。
 - tier1 落地：`2fbfe5ce`（域拆分 + `!` 清零 + 转义）。
 - tier2 落地：`99d41318`（逐 stage `Pick` 收窄，字段 60→55）。
-- 审计卡已同步：`docs/knowledge/frontend-repo-audit.md` `:29` / `:52`（tier1/2 落地、tier3 Builder 化待办、行号刷新）。
 
 <!-- 文件名: mdmmbuildctx-tier3-builder.md → 实际文件 ADR-122-mdmmbuildctx-tier3-builder.md -->

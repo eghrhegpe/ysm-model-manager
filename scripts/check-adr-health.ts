@@ -156,7 +156,27 @@ const EMOJI_FOR_STATE: Record<string, string> = {
 };
 // 进度化石字样（决策未定状态的正文里出现 = 真待办信号）。
 // 仅对 proposed/partial（决策未定）扫描，已采纳/已废弃状态里的"进度"属历史叙述，天然排除。
-const PROGRESS_RE = /进度|排期|化石|待办|TODO|未落地|仍在进行|尚未完成|下一步|后续|计划/;
+// 2026-10-10 收紧（A1 前置补充实测）：①弱描述词「后续/计划/下一步」常见于决策散文（范围边界、
+// 队列语义、假设前提），不计数；②「进度」是域概念（下载进度事件/进度节流/UI 进度/知识卡实施进度），
+// 碰撞率极高，从强词剔除；③行内含「知识卡/实施状态/状态快照」= 受制裁的进度引用方式（ADR 不记
+// 实施进度、实施状态查知识卡），行级豁免。保留的强词均为无歧义状态标记：排期/化石/待办/TODO/
+// 未落地/仍在进行/尚未完成。
+const PROGRESS_RE = /排期|化石|待办|TODO|未落地|仍在进行|尚未完成/;
+const POINTER_LINE_RE = /知识卡|实施状态|状态快照/;
+
+/**
+ * ② 化石行级判定（导出供契约测试）：逐行匹配强待办标记，豁免「知识卡/实施状态」指针行。
+ * 返回命中行列表（1-based 行号 + 命中词）。
+ */
+export function findLingeringProgressLines(body: string): { line: number; hit: string }[] {
+  const out: { line: number; hit: string }[] = [];
+  body.split(/\r?\n/).forEach((line, i) => {
+    if (POINTER_LINE_RE.test(line)) return;
+    const m = line.match(PROGRESS_RE);
+    if (m) out.push({ line: i + 1, hit: m[0] });
+  });
+  return out;
+}
 
 function checkSuggest(statusRows: { id: string; file: string; title: string; raw: string; key: string; absPath: string }[]) {
   const missingEmoji: { id: string; relPath: string; key: string }[] = [];
@@ -182,9 +202,9 @@ function checkSuggest(statusRows: { id: string; file: string; title: string; raw
       } catch {
         continue;
       }
-      const m = body.match(PROGRESS_RE);
-      if (m) {
-        lingeringProgress.push({ id: r.id, relPath: r.file, hit: m[0] });
+      const hits = findLingeringProgressLines(body);
+      if (hits.length > 0) {
+        lingeringProgress.push({ id: r.id, relPath: r.file, hit: hits[0]!.hit });
       }
     }
   }
@@ -213,14 +233,26 @@ function main() {
       for (const p of lingeringProgress)
         console.log(`  ${p.id} ${p.relPath}（命中「${p.hit}」，建议迁实施进度到知识卡/issue）`);
       console.log(
-        "\n提示：以上为观察数据，确认无历史叙述误伤后可升 debt/hard 检查（pre-push gate 接 check-adr-health --suggest 的输出）。",
+        "\n提示：② 已升 hard（2026-10-10，命中即退出码 1）；①-a 维持默认 WARN 守护、①-b 维持观察（已清为 0）。",
       );
     }
-    process.exit(0);
+    process.exit(lingeringProgress.length > 0 ? 1 : 0);
     return;
   }
 
   if (!ONLY || ONLY === "--health") checkRegistry(statusRowsMap);
+
+  // A1/P1#16（2026-10-10 ② 升 hard）：决策未定 ADR 含进度化石 → errors 阻断（默认运行即卡点）。
+  // 前置已清：126 ✅ 补齐 + 指针行清零 + 检查器收紧（弱描述词/指针行豁免），当前 ②=0。
+  {
+    const { lingeringProgress } = checkSuggest(rows as any);
+    if (lingeringProgress.length > 0) {
+      errors.push(
+        `[进度化石] 决策未定 ADR ${lingeringProgress.length} 条正文含进度化石（迁实施进度到知识卡/issue）：` +
+          lingeringProgress.map((p) => `${p.id}(${p.hit})`).join("、"),
+      );
+    }
+  }
 
   if (JSON_OUT) {
     console.log(

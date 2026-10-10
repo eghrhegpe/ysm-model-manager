@@ -46,6 +46,16 @@ const SYNC_WRITE_OPS = [
   "ResolveConflicts", // 冲突解决：改实例/全局两侧文件
 ];
 
+/**
+ * 会改磁盘的 go/installer 落地入口（锐评 2026-10-10 第二轮扩面）：
+ * installer.Install/InstallDir 把仓库文件落地进实例目录，与 push/pull 同型，但走的是
+ * installer 包而非 sync 包——go/sync 的 `defer InvalidateSyncScanCaches()` 完全不覆盖它，
+ * 而 watcher 只监听全局仓库根、实例目录写入没有任何兜底。app 层消费点
+ * （InstallModelTo / InstallResourceToInstance 三出口）曾全部漏清，前端只有一条路径
+ * （sync.ts 批量回拉）事后补 InvalidateScanCache——正是导入侧注释明令反对的「赌前端记得清」。
+ */
+const INSTALLER_WRITE_OPS = ["Install", "InstallDir"];
+
 /** 生产 Go 文件（排除 _test.go） */
 function productionGoFiles(dir) {
   const out = [];
@@ -87,33 +97,35 @@ function enclosingFuncBody(text, idx) {
   return null;
 }
 
-const PAIRS = [
-  "instance.InvalidateSyncItemsCache(",
-  "ysmsync.InvalidateSyncScanCaches(",
-];
+const PAIRS = ["instance.InvalidateSyncItemsCache(", "ysmsync.InvalidateSyncScanCaches("];
 
 const violations = [];
 let callSites = 0;
 for (const abs of productionGoFiles(APP_DIR)) {
   const text = stripComments(fs.readFileSync(abs, "utf8"));
   const relPath = path.relative(ROOT, abs).split(path.sep).join("/");
-  for (const op of SYNC_WRITE_OPS) {
-    const re = new RegExp(`\\bysmsync\\.${op}\\s*\\(`, "g");
-    for (const m of text.matchAll(re)) {
-      callSites++;
-      const body = enclosingFuncBody(text, m.index);
-      if (body === null) {
-        violations.push(`${relPath}: 无法定位 ysmsync.${op} 调用点所属函数`);
-        continue;
-      }
-      // 允许 helper 自持配对（RelinkDir 收在 app 层 relinkDir helper 内），
-      // 此时调用点所在函数体即清理函数，天然满足；跨函数依赖不认。
-      for (const p of PAIRS) {
-        if (!body.includes(p)) {
-          const line = text.slice(0, m.index).split("\n").length;
-          violations.push(
-            `${relPath}:${line} ysmsync.${op} 调用点所在函数缺配对 ${p.slice(0, -1)}`,
-          );
+  for (const [pkg, ops] of [
+    ["ysmsync", SYNC_WRITE_OPS],
+    ["installer", INSTALLER_WRITE_OPS],
+  ]) {
+    for (const op of ops) {
+      const re = new RegExp(`\\b${pkg}\\.${op}\\s*\\(`, "g");
+      for (const m of text.matchAll(re)) {
+        callSites++;
+        const body = enclosingFuncBody(text, m.index);
+        if (body === null) {
+          violations.push(`${relPath}: 无法定位 ${pkg}.${op} 调用点所属函数`);
+          continue;
+        }
+        // 允许 helper 自持配对（RelinkDir 收在 app 层 relinkDir helper 内），
+        // 此时调用点所在函数体即清理函数，天然满足；跨函数依赖不认。
+        for (const p of PAIRS) {
+          if (!body.includes(p)) {
+            const line = text.slice(0, m.index).split("\n").length;
+            violations.push(
+              `${relPath}:${line} ${pkg}.${op} 调用点所在函数缺配对 ${p.slice(0, -1)}`,
+            );
+          }
         }
       }
     }
@@ -121,10 +133,12 @@ for (const abs of productionGoFiles(APP_DIR)) {
 }
 
 // 断言 0：写入口集合非空转——若全部改名/删除，本测试失去意义，须显式失败。
+// 基线 11 = 9 个 ysmsync 写调用点 + installer 落地族（InstallModelTo 1 +
+// InstallResourceToInstance 3 出口）。
 assert.ok(
-  callSites >= 7,
-  `internal/app 的 ysmsync 写入口调用点应 ≥7（配对审计基线），实际 ${callSites}——` +
-    "若重构收敛/迁移了入口，须同步更新本测试的 SYNC_WRITE_OPS 清单与调用面。",
+  callSites >= 11,
+  `internal/app 的 ysmsync/installer 写入口调用点应 ≥11（配对审计基线），实际 ${callSites}——` +
+    "若重构收敛/迁移了入口，须同步更新本测试的 SYNC_WRITE_OPS/INSTALLER_WRITE_OPS 清单与调用面。",
 );
 
 // 断言 1：每个写调用点所在函数体双缓存配对齐全。
@@ -137,5 +151,5 @@ assert.deepStrictEqual(
 );
 
 console.log(
-  `[test_sync_write_cache_pairing] OK — ${callSites} 个 ysmsync 写调用点全部双缓存配对`,
+  `[test_sync_write_cache_pairing] OK — ${callSites} 个 ysmsync/installer 写调用点全部双缓存配对`,
 );

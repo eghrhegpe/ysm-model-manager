@@ -15,10 +15,12 @@ import (
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/importer"
 	"ysm-model-manager/go/installer"
+	"ysm-model-manager/go/instance"
 	"ysm-model-manager/go/litematic"
 	"ysm-model-manager/go/packs"
 	"ysm-model-manager/go/repoaudit"
 	"ysm-model-manager/go/scanner"
+	ysmsync "ysm-model-manager/go/sync"
 	"ysm-model-manager/go/types"
 	typereg "ysm-model-manager/go/types/registry"
 )
@@ -461,6 +463,15 @@ func (a *App) RepoHealthAudit(ctx context.Context, dir string) (*repoaudit.Healt
 // InstallResourceToInstance 将资源文件安装到指定整合包
 // rtype: 资源类型（resourcepack/shaderpack 等），srcPath: 源文件路径，instanceName: 整合包名称
 func (a *App) InstallResourceToInstance(rtype, srcPath, instanceName string) error {
+	// 落地改实例目录、同步状态随之变化——defer 统一配对清两层派生缓存，覆盖下方三个
+	// installer 出口（与 InstallModelTo / push/pull/toggle 同口径，契约测试
+	// tests/test_sync_write_cache_pairing.ts；go/sync 不能反向依赖 go/instance，
+	// instance 侧失效归 app 层。锐评 2026-10-10）。无条件清：InstallDir 递归中途失败
+	// 时可能已写入部分文件。
+	defer func() {
+		instance.InvalidateSyncItemsCache()
+		ysmsync.InvalidateSyncScanCaches()
+	}()
 	cfg := a.LoadAppConfig()
 	if err := requireMcRoot(cfg); err != nil {
 		return err

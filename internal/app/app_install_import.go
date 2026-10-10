@@ -88,6 +88,14 @@ func (a *App) InstallModelTo(src, customDir string) error {
 	} else {
 		a.logger.Add(filepath.Base(src), src, customDir, 0, types.StatusSuccess, "")
 	}
+	// 安装落地改实例目录（customDir），同步状态随之变化——与 push/pull/toggle 等写入口
+	// 同口径配对清两层派生缓存（go/sync 不能反向依赖 go/instance，instance 侧失效归
+	// app 层；契约测试 tests/test_sync_write_cache_pairing.ts）。前端只有一条路径
+	// 事后补 InvalidateScanCache（sync.ts），右键「推送到整合包」无人清——watcher 只
+	// 监听全局仓库根，实例目录写入没有任何兜底（锐评 2026-10-10）。
+	// 无条件清：InstallDir 递归中途失败时可能已写入部分文件。
+	instance.InvalidateSyncItemsCache()
+	ysmsync.InvalidateSyncScanCaches()
 	return err
 }
 

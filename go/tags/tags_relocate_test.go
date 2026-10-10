@@ -9,6 +9,8 @@ package tags
 import (
 	"path/filepath"
 	"testing"
+
+	"ysm-model-manager/go/internal/testutil"
 )
 
 func TestRelocateKeys_DirMoveRekeysSubtree(t *testing.T) {
@@ -24,12 +26,8 @@ func TestRelocateKeys_DirMoveRekeysSubtree(t *testing.T) {
 
 	dirB := filepath.Join("repo", "modelB")
 	n, err := s.RelocateKeys(dirA, dirB, true, false)
-	if err != nil {
-		t.Fatalf("RelocateKeys: %v", err)
-	}
-	if n != 2 {
-		t.Fatalf("应迁移 2 键（ysm.json + sub/face.png），实得 %d", n)
-	}
+	testutil.NoError(t, err, "RelocateKeys")
+	testutil.Equal(t, n, 2, "应迁移 2 键（ysm.json + sub/face.png）")
 	// 新键在位、旧键消失
 	if got, _ := s.GetTags(filepath.Join(dirB, "ysm.json")); len(got) != 1 || got[0] != "联动" {
 		t.Errorf("新键 ysm.json 标签应跟随，实得 %v", got)
@@ -61,12 +59,8 @@ func TestRelocateKeys_FileRenameExactOnly(t *testing.T) {
 
 	newP := filepath.Join("repo", "c.ysm")
 	n, err := s.RelocateKeys(old, newP, false, false)
-	if err != nil {
-		t.Fatalf("RelocateKeys: %v", err)
-	}
-	if n != 1 {
-		t.Fatalf("精确迁移应只动 1 键，实得 %d", n)
-	}
+	testutil.NoError(t, err, "RelocateKeys")
+	testutil.Equal(t, n, 1, "精确迁移应只动 1 键")
 	if got, _ := s.GetTags(newP); len(got) != 1 || got[0] != "X" {
 		t.Errorf("新键应有旧标签，实得 %v", got)
 	}
@@ -82,12 +76,8 @@ func TestRelocateKeys_CopyKeepsSource(t *testing.T) {
 	_ = s.SetTags(src, []string{"复制我"})
 	dst := filepath.Join("repo", "copy", "m.ysm")
 	n, err := s.RelocateKeys(src, dst, false, true)
-	if err != nil {
-		t.Fatalf("RelocateKeys: %v", err)
-	}
-	if n != 1 {
-		t.Fatalf("copy 迁移 1 键，实得 %d", n)
-	}
+	testutil.NoError(t, err, "RelocateKeys")
+	testutil.Equal(t, n, 1, "copy 迁移 1 键")
 	if got, _ := s.GetTags(src); len(got) != 1 {
 		t.Errorf("copy=true 源标签必须保留，实得 %v", got)
 	}
@@ -101,12 +91,8 @@ func TestRelocateKeys_NoMatchSkipsPersist(t *testing.T) {
 	s := NewStore(t.TempDir())
 	// 空库迁移任何前缀 → 0 命中，不落盘、不报错
 	n, err := s.RelocateKeys(filepath.Join("a", "x"), filepath.Join("a", "y"), true, false)
-	if err != nil {
-		t.Fatalf("无命中不应报错: %v", err)
-	}
-	if n != 0 {
-		t.Fatalf("空库迁移应为 0，实得 %d", n)
-	}
+	testutil.NoError(t, err, "无命中不应报错")
+	testutil.Equal(t, n, 0, "空库迁移应为 0")
 	// from==to、空 from、空 to 全部 no-op
 	for _, tc := range [][2]string{{"same", "same"}, {"", "x"}, {"x", ""}} {
 		if nn, e := s.RelocateKeys(tc[0], tc[1], true, false); e != nil || nn != 0 {

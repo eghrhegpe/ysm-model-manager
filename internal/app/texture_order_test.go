@@ -43,8 +43,11 @@ func TestYsmTextureOrder_StringDeclaration(t *testing.T) {
 }`)
 
 	order, def := ysmTextureOrder(ysm)
-	// 字符串声明时保留完整文件名（不去扩展名，数组声明时才去扩展名）
-	wantOrder := []string{"single.png"}
+	// 单形态声明与数组声明共用 normTexPath 归一（去扩展名小写）——旧行为「保留完整
+	// 文件名 single.png」会让 orderTexByYSM 的 rank（键 single.png）匹配不上收集纹理
+	// （norm 后 single）→ 声明被静默吞掉回退尺寸序，而 TS 侧单形态包数组是归一的，
+	// 两条解码路径分叉。2026-10-10 跨语言对账收口（本断言此前锁的是 bug）。
+	wantOrder := []string{"single"}
 	wantDef := ""
 	if !reflect.DeepEqual(order, wantOrder) {
 		t.Fatalf("ysmTextureOrder order = %v, want %v", order, wantOrder)

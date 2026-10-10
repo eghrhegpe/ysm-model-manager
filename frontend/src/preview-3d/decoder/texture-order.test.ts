@@ -109,7 +109,10 @@ describe("buildOrderedTexKeys 无声明序（加密模型）按尺寸降序", ()
     expect(keys).toEqual(["texture", "arrow"]);
   });
 
-  it("matchTexKey 全不命中时返回空列表（不崩）", () => {
+  it("声明纹理与实际提取全部不命中 → 回退尺寸降序（对齐 Go orderTexItems：非空声明列表才走声明分支，全不命中与空声明同样回退）", () => {
+    // 曾返回 []（主路径退化成灰模，而 Go 兜底/搜索缩略走尺寸序有纹理）——
+    // 两路径相反结果正是「手抄双源」的静默分叉，现随语义对齐收口。
+    // areaOf 恒 0 → 稳定排序保持收集序。
     const keys = buildOrderedTexKeys({
       texKeys: ["arrow", "texture"],
       areaOf: () => 0,
@@ -117,7 +120,7 @@ describe("buildOrderedTexKeys 无声明序（加密模型）按尺寸降序", ()
       ysmDefaultTex: null,
       matchTexKey: match,
     });
-    expect(keys).toEqual([]);
+    expect(keys).toEqual(["arrow", "texture"]);
   });
 
   it("areaOf 全 0（尺寸不可解）→ 稳定保持收集序", () => {

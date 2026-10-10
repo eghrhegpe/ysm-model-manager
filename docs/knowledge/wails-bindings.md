@@ -220,7 +220,7 @@ status: active
 | `proxy.go` | 广场窗口反向代理：SSRF 守卫（含 CGNAT 段判定）+ WS 转发 |
 | `pathmgr.go` | PathManager 平台抽象层（ADR-046 P2）；平台分片 `pathmgr_desktop.go` / `pathmgr_android.go` |
 | `coi_middleware.go` | `CoopCoepMiddleware` 注入 COOP/COEP 响应头（ADR-079 M2，解锁 SharedArrayBuffer） |
-| `texture_order.go` | 纹理序口径（有 ysm.json 声明序 → 声明序 + default_texture 置首）；与前端 `decoder/texture-order.ts` 严格对称 |
+| `texture_order.go` | 纹理序口径（有 ysm.json 声明序 → 声明序 + default_texture 置首；无声明/不可解/声明全不命中 → 尺寸降序）；与前端 `decoder/texture-order.ts` 由黄金语料 `tests/fixtures/parity/texture-order.golden.json` 跨语言对账守卫（主源=Go，改一侧漏另一侧即红），非仅靠注释 |
 | `screen_windows.go` / `screen_other.go` | 屏幕尺寸查询平台分片 |
 | `mpr_on.go` / `mpr_off.go` | `mpr` 构建标签开关分片（`//go:build mpr` / `!mpr`） |
 

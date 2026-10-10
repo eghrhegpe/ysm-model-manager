@@ -43,6 +43,19 @@ func orderTexItems(items []ysmTexItem, ysmJSON []byte) ([]string, []string) {
 	return orderTexBySize(names, datas, items)
 }
 
+// normTexPath 声明纹理路径归一为匹配键：Base + 去扩展名 + 小写。
+// 数组分支与单形态（字符串/对象）分支**共用**——旧代码单形态直接回传原始路径
+// （"textures/main.png"），rank 永远匹配不上收集纹理（"main"），声明被静默吞掉
+// 回退尺寸序；而前端 wasm-meta-parser 把单形态包成数组、逐条走同一归一——
+// 又一处「两侧宣称一致、单形态分支实际分叉」的手抄双源（锐评 2026-10-10 跨语言对账收口）。
+func normTexPath(s string) string {
+	tn := strings.ToLower(filepath.Base(s))
+	if i := strings.LastIndexByte(tn, '.'); i >= 0 {
+		tn = tn[:i]
+	}
+	return tn
+}
+
 // ysmTextureOrder 解析 ysm.json 的 files.player.texture 声明序与 properties.default_texture。
 // 返回 (声明序纹理文件名列表[去扩展名小写], default_texture 文件名[去扩展名小写])。
 func ysmTextureOrder(ysmJSON []byte) ([]string, string) {
@@ -71,10 +84,11 @@ func ysmTextureOrder(ysmJSON []byte) ([]string, string) {
 	}
 	raw := strings.TrimSpace(string(root.Files.Player.Texture))
 	if !strings.HasPrefix(raw, "[") {
-		// 字符串/对象单形态声明：与前端 wasm.ts 包数组口径一致
+		// 字符串/对象单形态声明：与前端 wasm.ts 包数组口径一致，
+		// 且与数组分支共用 normTexPath 归一（旧代码回传原始路径 → rank 匹配不上 → 声明静默失效）
 		var single string
 		if json.Unmarshal(root.Files.Player.Texture, &single) == nil && single != "" {
-			return []string{single}, defName
+			return []string{normTexPath(single)}, defName
 		}
 		// 对象单形态（{"uv":..,"path":..}）——原实现只 unmarshal string，
 		// 对象形态失败后静默回退尺寸降序，与前端声明序分叉（2026-08-12 口径核对）
@@ -88,7 +102,7 @@ func ysmTextureOrder(ysmJSON []byte) ([]string, string) {
 				tn = obj.Path
 			}
 			if tn != "" {
-				return []string{tn}, defName
+				return []string{normTexPath(tn)}, defName
 			}
 		}
 		return nil, defName

@@ -1,0 +1,242 @@
+{
+  "$comment": "纹理序双端对账黄金语料（2026-10-10 锐评：texture-order.ts ↔ texture_order.go 手抄双源补自动守卫，tracker §未修清单收口）。主源 = Go internal/app/texture_order.go|orderTexItems；regen：YSM_PARITY_REGEN=1 go test ./internal/app -run TestTextureOrderParity。TS 消费方：frontend/src/preview-3d/decoder/texture-order-parity.test.ts（同 ysm.json 文本 + 同尺寸纹理，断言 buildOrderedTexKeys 同黄金值）。任一侧实现漂移即对账失败——此前两侧注释互指『严格对称』数月光靠人工纪律，且『声明全不命中』分支真实分叉（Go 回退尺寸序、TS 曾返回空列表 = WASM 主路径灰模 vs Go 兜底有纹理，两条解码路径相反结果）。",
+  "$semantics": "锁死口径：①有声明序且命中非空 → 声明序（只留声明中的纹理；重复声明后位胜出=Go rank 后写覆盖；收集名大小写折叠匹配）+ default_texture 置首（仅当在命中集中）；②无 ysm.json / 不可解析 / 空声明 / 声明全不命中 → 尺寸降序稳定排序（收集序兜底）；③路径一律正斜杠（Go filepath.Base 在 Windows 剥两种分隔符、TS 只 split('/')——反斜杠输入两侧口径不同，语料刻意排除，属已声明限制非缺陷）。golden 恒等于 Go 主源产出（regen 重写）。",
+  "cases": [
+    {
+      "id": "decl-array-default-first",
+      "$comment": "声明序与收集序不同 + default_texture 置首（default 声明在第 2 位、被提到首位）",
+      "ysmContent": "{\"files\":{\"player\":{\"texture\":[\"tex/arrow.png\",\"tex/default.png\",\"tex/default2.png\"]}},\"properties\":{\"default_texture\":\"tex/default.png\"}}",
+      "textures": [
+        {
+          "name": "arrow",
+          "w": 64,
+          "h": 64
+        },
+        {
+          "name": "default",
+          "w": 512,
+          "h": 512
+        },
+        {
+          "name": "default2",
+          "w": 128,
+          "h": 128
+        }
+      ],
+      "golden": [
+        "default",
+        "arrow",
+        "default2"
+      ]
+    },
+    {
+      "id": "decl-single-string",
+      "$comment": "texture 为字符串单形态（非数组）；未声明的 extra 被排除——声明分支只留显式声明",
+      "ysmContent": "{\"files\":{\"player\":{\"texture\":\"textures/main.png\"}}}",
+      "textures": [
+        {
+          "name": "main",
+          "w": 32,
+          "h": 32
+        },
+        {
+          "name": "extra",
+          "w": 1024,
+          "h": 1024
+        }
+      ],
+      "golden": [
+        "main"
+      ]
+    },
+    {
+      "id": "decl-object-uv-path",
+      "$comment": "数组元素为 {uv}/{path} 对象形态（uv 优先 path）",
+      "ysmContent": "{\"files\":{\"player\":{\"texture\":[{\"uv\":\"tex/texture.png\"},{\"path\":\"tex/arrow.png\"}]}}}",
+      "textures": [
+        {
+          "name": "arrow",
+          "w": 64,
+          "h": 64
+        },
+        {
+          "name": "texture",
+          "w": 512,
+          "h": 512
+        }
+      ],
+      "golden": [
+        "texture",
+        "arrow"
+      ]
+    },
+    {
+      "id": "no-ysm-file",
+      "$comment": "ysmContent=null → 无 ysm.json → 尺寸降序（big 在 collection 后位仍置首）",
+      "ysmContent": null,
+      "textures": [
+        {
+          "name": "small",
+          "w": 64,
+          "h": 64
+        },
+        {
+          "name": "big",
+          "w": 512,
+          "h": 512
+        }
+      ],
+      "golden": [
+        "big",
+        "small"
+      ]
+    },
+    {
+      "id": "ysm-unparseable",
+      "$comment": "ysm.json 存在但不可解析（加密包常见）→ 尺寸降序",
+      "ysmContent": "{{{not-json",
+      "textures": [
+        {
+          "name": "small",
+          "w": 64,
+          "h": 64
+        },
+        {
+          "name": "big",
+          "w": 512,
+          "h": 512
+        }
+      ],
+      "golden": [
+        "big",
+        "small"
+      ]
+    },
+    {
+      "id": "decl-empty-array",
+      "$comment": "声明为空数组 → 等同无声明 → 尺寸降序",
+      "ysmContent": "{\"files\":{\"player\":{\"texture\":[]}}}",
+      "textures": [
+        {
+          "name": "small",
+          "w": 64,
+          "h": 64
+        },
+        {
+          "name": "big",
+          "w": 512,
+          "h": 512
+        }
+      ],
+      "golden": [
+        "big",
+        "small"
+      ]
+    },
+    {
+      "id": "decl-all-miss",
+      "$comment": "★分叉收口用例：声明名全部匹配不上提取纹理（声明与实际文件对不上）→ 回退尺寸降序。旧 TS 在此返回 []（WASM 主路径退化成灰模，Go 兜底/搜索缩略却有纹理）——两条解码路径相反结果正是手抄双源的现形",
+      "ysmContent": "{\"files\":{\"player\":{\"texture\":[\"tex/xxx.png\",\"tex/yyy.png\"]}}}",
+      "textures": [
+        {
+          "name": "arrow",
+          "w": 64,
+          "h": 64
+        },
+        {
+          "name": "texture",
+          "w": 512,
+          "h": 512
+        }
+      ],
+      "golden": [
+        "texture",
+        "arrow"
+      ]
+    },
+    {
+      "id": "decl-duplicate-entry",
+      "$comment": "同一纹理重复声明 → 去重且后声明位胜出（对齐 Go rank 映射后写覆盖 + SliceStable）",
+      "ysmContent": "{\"files\":{\"player\":{\"texture\":[\"tex/arrow.png\",\"tex/texture.png\",\"tex/arrow.png\"]}}}",
+      "textures": [
+        {
+          "name": "arrow",
+          "w": 64,
+          "h": 64
+        },
+        {
+          "name": "texture",
+          "w": 512,
+          "h": 512
+        }
+      ],
+      "golden": [
+        "texture",
+        "arrow"
+      ]
+    },
+    {
+      "id": "decl-case-fold",
+      "$comment": "声明 ARROW.PNG 与收集名 Arrow：两侧都做大小写折叠匹配（TS 走生产 matchTexKey 小写映射兜底，Go 走 ToLower），结果保留收集序原始大小写",
+      "ysmContent": "{\"files\":{\"player\":{\"texture\":[\"tex/ARROW.PNG\",\"tex/texture.png\"]}}}",
+      "textures": [
+        {
+          "name": "Arrow",
+          "w": 64,
+          "h": 64
+        },
+        {
+          "name": "texture",
+          "w": 512,
+          "h": 512
+        }
+      ],
+      "golden": [
+        "Arrow",
+        "texture"
+      ]
+    },
+    {
+      "id": "default-already-first",
+      "$comment": "default_texture 已在首位 → 不重复移动（幂等）",
+      "ysmContent": "{\"files\":{\"player\":{\"texture\":[\"tex/default.png\",\"tex/arrow.png\"]}},\"properties\":{\"default_texture\":\"tex/default.png\"}}",
+      "textures": [
+        {
+          "name": "default",
+          "w": 512,
+          "h": 512
+        },
+        {
+          "name": "arrow",
+          "w": 64,
+          "h": 64
+        }
+      ],
+      "golden": [
+        "default",
+        "arrow"
+      ]
+    },
+    {
+      "id": "default-not-in-declaration",
+      "$comment": "default_texture 指向未声明纹理 → 不动任何项",
+      "ysmContent": "{\"files\":{\"player\":{\"texture\":[\"tex/arrow.png\",\"tex/default.png\"]}},\"properties\":{\"default_texture\":\"tex/ghost.png\"}}",
+      "textures": [
+        {
+          "name": "arrow",
+          "w": 64,
+          "h": 64
+        },
+        {
+          "name": "default",
+          "w": 512,
+          "h": 512
+        }
+      ],
+      "golden": [
+        "arrow",
+        "default"
+      ]
+    }
+  ]
+}

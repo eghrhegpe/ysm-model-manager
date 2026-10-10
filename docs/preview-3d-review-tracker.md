@@ -100,7 +100,7 @@
 - 遗留 / 下一轮建议：
   1. 下一轮按清单轮转取 **`infra`**（第 5 位；`decoder` 已巡，`caps` 已专项覆盖须跳过）。`infra/worker-bridge.ts` 本轮已被顺带读过（结算完整性/池终止四不变量均正确，并补了 `worker-bridge-settle.test.ts`），可作下轮起点。
   2. **未修的已知项**：F3（缓存快路径返回共享可变对象 + 浅拷贝）与 F5（`collectTexturesAndAvatars` 以去扩展名文件名为键，同名不同目录纹理静默互相覆盖 → 被覆盖 blob 立即泄漏）。两者都在 `wasm-decode.ts`，建议下轮或专门一轮处理 F5（对齐 `collectJsonSpecTextures` 的「覆盖者也登记」做法）。
-  3. **值得单独立项的漂移风险**：`decoder/texture-order.ts` 与 Go `internal/app/texture_order.go` 是**手抄双实现**，口径对称但只有人工纪律注释（`texture-order.ts:2`「改口径务必同步两侧」）而无自动一致性守卫。若要动这块，值得补一条跨语言契约测试。
+  3. **值得单独立项的漂移风险**：`decoder/texture-order.ts` 与 Go `internal/app/texture_order.go` 是**手抄双实现**，口径对称但只有人工纪律注释（`texture-order.ts:2`「改口径务必同步两侧」）而无自动一致性守卫。若要动这块，值得补一条跨语言契约测试。**→ 已收口（2026-10-10）**：黄金语料 `tests/fixtures/parity/texture-order.golden.json`（11 例，主源=Go `orderTexItems`，regen `YSM_PARITY_REGEN=1 go test ./internal/app -run TestTextureOrderParity`）+ Go `internal/app/texture_order_parity_test.go` + TS `frontend/src/preview-3d/decoder/texture-order-parity.test.ts`（走生产提取链 `parseYsmMetaFromFiles`+生产 `matchTexKey`，不手搓入参）。立项时「严格对称」宣称被证伪——揪出**三处真实分叉**并全对齐：① 声明全不命中 Go 回退尺寸序 / 旧 TS 返空（WASM 主路径灰模）；② Go 单形态声明回传原始路径 rank 匹配不上静默吞声明（TS 归一生效）；③ Go 后声明胜出+去重 / 旧 TS 前位胜出+不去重。变异（TS 改回前位胜出）精确转红，闸有牙。
   4. **方法论备查**：F2 是「子代理报 🔴 但复核后不可达」的实例——**发现必须回源码验证可达性**，否则会白改甚至改出新病（本仓「不为不可能场景加防御」原则）。
 
 ## 2026-10-10T18:45:00+08:00 巡检：infra

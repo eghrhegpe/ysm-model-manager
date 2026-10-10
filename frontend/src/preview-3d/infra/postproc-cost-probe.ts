@@ -180,19 +180,40 @@ interface GpuTimer {
   /** 取回已完成的 query（毫秒），并释放 query 对象 */
   poll(): Array<{ arm: ProbeArm; count: boolean; ms: number }>;
   pending(): number;
+  /**
+   * 释放全部未结算的 query（含未 `end` 的 active）。
+   *
+   * [锐评 infra 轮 2026-10-10 修复] 成因：`poll()` 只在 `QUERY_RESULT_AVAILABLE === true`
+   * 时 `deleteQuery`，而收尾轮询有 `DRAIN_MAX_FRAMES` 上限。若在窗口内 query 始终未就绪
+   * （后台标签页 rAF 被节流、驱动迟迟不落结果），这些 query **既不产出数字也不被删除**——
+   * `inflight` 是闭包局部数组，随本次探针一起被 GC，但其指向的 WebGL query 对象留在 GL 侧
+   * 成为孤儿（探针按设计会被反复跑，故逐次累积）。本方法在探针出口无条件补齐删除，
+   * 使「创建数 == 删除数」成为可断言的不变量。
+   */
+  dispose(): void;
 }
 
 /**
  * 构造 GPU 计时器。WebGL1 / 扩展缺席 / 创建 query 失败一律降级为 `available=false`
  * ——此时 `poll()` 恒返回空，上层据此把 gpuMs 记为 null。
+ *
+ * [锐评 infra 轮 2026-10-10] 导出供单测：query 是**真实 GPU 对象**，其创建/删除配对本探针
+ * 唯一的资源纪律；原为模块私有 + 零测试，泄漏无人可查（见下方 dispose 的成因注释）。
  */
-function createGpuTimer(gl: WebGL2RenderingContext | null): GpuTimer {
+export function createGpuTimer(gl: WebGL2RenderingContext | null): GpuTimer {
   const ext = gl?.getExtension("EXT_disjoint_timer_query_webgl2") as
     | { TIME_ELAPSED_EXT: number; GPU_DISJOINT_EXT?: number }
     | null
     | undefined;
   if (!gl || !ext) {
-    return { available: false, begin: () => {}, end: () => {}, poll: () => [], pending: () => 0 };
+    return {
+      available: false,
+      begin: () => {},
+      end: () => {},
+      poll: () => [],
+      pending: () => 0,
+      dispose: () => {},
+    };
   }
   const inflight: InflightQuery[] = [];
   let active: WebGLQuery | null = null;
@@ -232,6 +253,21 @@ function createGpuTimer(gl: WebGL2RenderingContext | null): GpuTimer {
     },
     pending(): number {
       return inflight.length;
+    },
+    dispose(): void {
+      // 未结算的 query 一律删除（含尚未 end 的 active）——创建/删除配对是本节唯一资源纪律。
+      // 先 endQuery 再删：GL 侧要求 query 处于非激活态才能安全删除（未 begin 过则跳过）。
+      if (active) {
+        try {
+          gl.endQuery(ext.TIME_ELAPSED_EXT);
+        } catch {
+          /* 未在计时中（驱动差异）——删除本身仍有效 */
+        }
+        gl.deleteQuery(active);
+        active = null;
+      }
+      for (const it of inflight) gl.deleteQuery(it.q);
+      inflight.length = 0;
     },
   };
 }
@@ -316,28 +352,35 @@ export async function runPostprocCostProbe(
 
   const total = warmup + framesPerArm * 2;
   let composerArmFrames = 0;
-  for (let i = 0; i < total; i++) {
-    await nextFrame();
-    // 交替：奇偶分工，两臂共享同一段墙钟（抵消热漂移/降频）
-    const arm: ProbeArm = i % 2 === 0 ? "composer" : "direct";
-    const count = i >= warmup;
-    timer.begin();
-    const t0 = performance.now();
-    // [ADR-299] 与 render-host 同款语义：`render()` 返回 false = 该帧没画（惰性常驻后
-    // 关闭态 composer 不存在），必须补直渲——否则 composer 臂测的是「什么都没渲染」的
-    // 空帧，A−B 差会变成负的垃圾数字。走通 composer 的帧另作计数，供报告自证。
-    const renderedByComposer = arm === "composer" && !!postProc && postProc.render(dt, lightCap);
-    if (!renderedByComposer) renderer.render(scene, camera);
-    else composerArmFrames++;
-    const submitMs = performance.now() - t0;
-    timer.end(arm, count);
-    collect();
-    if (count) submits[arm].push(submitMs);
-  }
-  // 收尾：等未完成的 query 落地（GPU 异步，最后一帧的结果总要晚几帧）
-  for (let k = 0; k < DRAIN_MAX_FRAMES && timer.pending() > 0; k++) {
-    await nextFrame();
-    collect();
+  try {
+    for (let i = 0; i < total; i++) {
+      await nextFrame();
+      // 交替：奇偶分工，两臂共享同一段墙钟（抵消热漂移/降频）
+      const arm: ProbeArm = i % 2 === 0 ? "composer" : "direct";
+      const count = i >= warmup;
+      timer.begin();
+      const t0 = performance.now();
+      // [ADR-299] 与 render-host 同款语义：`render()` 返回 false = 该帧没画（惰性常驻后
+      // 关闭态 composer 不存在），必须补直渲——否则 composer 臂测的是「什么都没渲染」的
+      // 空帧，A−B 差会变成负的垃圾数字。走通 composer 的帧另作计数，供报告自证。
+      const renderedByComposer = arm === "composer" && !!postProc && postProc.render(dt, lightCap);
+      if (!renderedByComposer) renderer.render(scene, camera);
+      else composerArmFrames++;
+      const submitMs = performance.now() - t0;
+      timer.end(arm, count);
+      collect();
+      if (count) submits[arm].push(submitMs);
+    }
+    // 收尾：等未完成的 query 落地（GPU 异步，最后一帧的结果总要晚几帧）
+    for (let k = 0; k < DRAIN_MAX_FRAMES && timer.pending() > 0; k++) {
+      await nextFrame();
+      collect();
+    }
+  } finally {
+    // [锐评 infra 轮 2026-10-10] **finally 出口无条件释放剩余 query**：drain 窗口有上限，
+    // 届时仍可能有未就绪 query（后台标签页 rAF 节流 / 驱动延迟）；且渲染段可能抛错。
+    // 不在出口删除则它们既不产数字、又永久留成 GL 侧孤儿（探针按设计反复跑 ⇒ 逐次累积）。
+    timer.dispose();
   }
 
   const composer = summarizeArm("composer", submits.composer, gpus.composer);

@@ -208,6 +208,7 @@ auto_fields:
     - createFbxParser
     - createFootIKController
     - createGazeController
+    - createGpuTimer
     - createHeaderToggle
     - createIconButton
     - createInstallableStyles

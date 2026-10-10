@@ -32,12 +32,14 @@ function wSliderNode(
   slider: { min: number; max: number; step: number; unit?: string },
   control: { get: () => number; set: (v: number) => void; getHint?: () => string },
   visibleWhen?: (s: Partial<PreviewSnapshot>) => boolean,
+  hintKey?: string,
 ): NodeFor<"slider"> {
   return {
     id,
     kind: "slider",
     labelKey,
     ...(visibleWhen ? { visibleWhen } : {}),
+    ...(hintKey ? { hintKey } : {}),
     control: {
       min: slider.min,
       max: slider.max,
@@ -147,6 +149,7 @@ export function buildWaterNodes(cap: WaterCapability): PreviewMenuNode[] {
           getParamRange("waterWetness"),
           { get: () => cap.getWetness(), set: (v) => cap.setWetness(v) },
           waterFilmOn,
+          "preview.waterWetnessHint",
         ),
         wColorNode(
           "water-color",

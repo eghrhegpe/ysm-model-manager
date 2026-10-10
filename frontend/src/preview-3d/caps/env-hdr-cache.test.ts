@@ -197,6 +197,33 @@ describe("EnvHdrCache.thumbnail（双态）", () => {
     c.thumbnail();
     expect(h.thumbnailMock).toHaveBeenCalledWith(tex, 128, 64);
   });
+
+  it("[S7-3] 同尺寸 memo 命中：不重复像素运算；换尺寸/换图/释放均失效", async () => {
+    const c = makeCache();
+    const tex = makeFakeTex();
+    const p = c.loadFromFile(makeFile("a.hdr"));
+    h.pendingLoad.onLoad?.(tex);
+    await p;
+
+    c.thumbnail(128, 64);
+    c.thumbnail(128, 64);
+    expect(h.thumbnailMock, "同尺寸二次调用应命中 memo，不重复像素运算").toHaveBeenCalledTimes(1);
+
+    c.thumbnail(64, 32);
+    expect(h.thumbnailMock, "换尺寸重算一次").toHaveBeenCalledTimes(2);
+
+    // 换图失效
+    const p2 = c.loadFromFile(makeFile("b.hdr"));
+    h.pendingLoad.onLoad?.(makeFakeTex());
+    await p2;
+    c.thumbnail(128, 64);
+    expect(h.thumbnailMock, "贴图变更后缩略图缓存失效并重算").toHaveBeenCalledTimes(3);
+
+    // 释放失效
+    c.dispose();
+    expect(c.thumbnail(128, 64)).toBeNull();
+    expect(h.thumbnailMock, "dispose 后无缓存不触像素运算").toHaveBeenCalledTimes(3);
+  });
 });
 
 describe("EnvHdrCache.dispose（清空）", () => {

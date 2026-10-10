@@ -1289,6 +1289,8 @@ export const en: Record<string, string> = {
   "preview.envSourceCustom": "Custom HDR",
   "preview.envIntensity": "Environment Intensity",
   "preview.envHistogram": "Luminance Histogram",
+  "preview.envHistogramHint":
+    "Luminance histogram: darker on the left, brighter on the right; peaks show overall lighting",
   "preview.envPickHdr": "Custom HDR",
   "preview.envPickHdrBtn": "Choose HDR File",
   "preview.envSectionBasic": "Basic",
@@ -1302,6 +1304,8 @@ export const en: Record<string, string> = {
   "preview.envUseAsBackgroundHint":
     "Show the current environment map as the scene background when enabled; restores previous background when disabled",
   "preview.envGroupPreset": "Preset",
+  "preview.envQuickPresetHint":
+    "Ambience preset: applies the whole environment at once (fine-tune in the environment panel)",
   "preview.envGroupCustomHdr": "Custom HDR",
   "preview.envGroupBackground": "Background & Intensity",
   "preview.fogGroupParams": "Fog Parameters",
@@ -1427,7 +1431,8 @@ export const en: Record<string, string> = {
   "preview.groundColorCenter": "Center Line Color",
   "preview.groundColorGrid": "Grid Line Color",
   "preview.groundMatSource": "Source",
-  "preview.groundCanvasStyle": "Style",
+  "preview.groundCanvasStyle": "Material preset",
+  "preview.groundCanvasStyleHint": "Selecting a preset overwrites custom tweaks",
   "preview.groundGroupOverlay": "Overlay",
   "preview.groundOverlay": "Overlay Style",
   "preview.groundOverlayColor": "Overlay Line Color",
@@ -1462,6 +1467,7 @@ export const en: Record<string, string> = {
   "preview.waterEnabled": "Enable Water",
   "preview.waterMode": "Water Mode",
   "preview.waterOpacity": "Opacity",
+  "preview.waterWetnessHint": "0 = no water surface (surface disappears)",
   "preview.waterSpeed": "Wave Speed",
   "preview.waterClarity": "Clarity",
   "preview.waterChoppiness": "Choppiness",

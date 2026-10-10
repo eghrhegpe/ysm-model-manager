@@ -302,6 +302,9 @@ export function buildEnvSchema(ctx: PreviewMenuCtx, menu?: SlideMenuHandle): Pre
       // [锐评 P2-1] 原「预设预览」是缩略图控件文案（envPresetThumbnail 给 hideLabel 的
       // thumb 控件专用），挂快捷 select 语义错位——复用既有组标题键「预设」（零新增键）
       labelKey: "preview.envGroupPreset",
+      // [锐评 S7-1 文案分界] 一级快捷 select = 氛围包（一次套用整套环境）；与子视图的
+      // 预设缩略图（单贴图预览）语义区分——hint 明示两者分工，防「两个预设哪来」的混淆
+      hintKey: "preview.envQuickPresetHint",
       control: {
         options: PRESET_ORDER.map((p) => ({
           value: p.id,

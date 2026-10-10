@@ -11,6 +11,7 @@ import type { LocaleKey } from "@/core/i18n/t.ts";
 import type { NodeFor, PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import type { FogCapability, FogMode } from "./fog-capability.ts";
+import { normalizeFogRange } from "./fog-capability.ts";
 
 const FOG_PARAMS_GROUP: LocaleKey = "preview.fogGroupParams";
 
@@ -86,6 +87,12 @@ function fcBuildParamsFolder(cap: FogCapability): NodeFor<"folder"> {
         ...getParamRange("fogFar"),
         get: () => cap.getFar(),
         set: (v) => cap.setLinearRange(undefined, v as number),
+        // [S9-1 余出口] 生效值 ≠ 显示值时的动态提示（消费端钳制 normalizeFogRange
+        //  保证 far ≥ near+FOG_MIN_DEPTH；未钳制时返回空串不打扰）
+        getHint: () => {
+          const eff = normalizeFogRange(cap.getNear(), cap.getFar()).far;
+          return eff === cap.getFar() ? "" : `生效 ${eff}`;
+        },
       },
     },
   ];

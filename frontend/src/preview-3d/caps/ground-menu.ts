@@ -195,10 +195,14 @@ function groundBuildMatFolder(cap: GroundCapability): NodeFor<"folder"> {
         set: (v) => cap.setSourceKind(v as GroundSourceKind),
       },
     },
+    // [锐评 S3-2] 选图/清图按钮紧跟来源下拉——原排在材质 5 控件之后，texture 模式要滚
+    // 5 个控件才见选图按钮，眼手都累（visibleWhen 保证非 texture 源时不占位）
+    ...textureButtonsNode(cap),
     {
       id: "ground-mat-canvas-style",
       kind: "select",
       labelKey: "preview.groundCanvasStyle",
+      hintKey: "preview.groundCanvasStyleHint",
       // ADR-249 §2.1：样式轴仅当来源轴 === canvas 时显示
       visibleWhen: (s) => s["cap.groundSourceKind"] === "canvas",
       control: {
@@ -252,7 +256,6 @@ function groundBuildMatFolder(cap: GroundCapability): NodeFor<"folder"> {
       getParamRange("groundMatAngleDeg"),
       { get: () => cap.getMatAngle(), set: (v) => cap.setMatAngle(v) },
     ),
-    ...textureButtonsNode(cap),
     sliderNode(
       "ground-mat-opacity",
       "preview.groundMatOpacity",

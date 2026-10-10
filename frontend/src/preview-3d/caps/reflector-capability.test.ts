@@ -458,9 +458,15 @@ describe("ReflectorCapability — 菜单控件联动（节点 control 闭包）"
     const by = (id: string) => findNodeById(folder.children!, id);
     by("reflector-opacity").control!.set!(0.9);
     expect(by("reflector-opacity").control!.get!(undefined)).toBe(0.9);
+    // [锐评 S11] 结构键（resolution/size）set 逐 tick no-op（拖动只动 UI、防逐帧重建 RT），
+    // 松手 onCommit 才写一次——对齐「拖动 set / 松手落盘」范式。
     by("reflector-resolution").control!.set!(2048);
+    expect(by("reflector-resolution").control!.get!(undefined)).toBe(1024);
+    by("reflector-resolution").control!.onCommit!(2048);
     expect(by("reflector-resolution").control!.get!(undefined)).toBe(2048);
     by("reflector-size").control!.set!(400);
+    expect(by("reflector-size").control!.get!(undefined)).toBe(100);
+    by("reflector-size").control!.onCommit!(400);
     expect(by("reflector-size").control!.get!(undefined)).toBe(400);
   });
 });

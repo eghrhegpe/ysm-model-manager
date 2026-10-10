@@ -19,6 +19,9 @@ export class EnvHdrCache {
   private customHdrName = "";
   /** 当前 HDR 是否正在异步加载（按钮禁用、失败会清空） */
   private customHdrLoading = false;
+  /** 缩略图 dataURL 缓存（[S7-3] 2026-10-10：texture 早已缓存、缩略图仍每帧重算像素
+   *  运算——补 memo，贴图变更/释放即失效） */
+  private customHdrThumbMemo: { w: number; h: number; url: string } | null = null;
   /** 用户选 preset=custom 但无缓存时，是否已告警（避免重复刷屏） */
   private customHdrWarnedMissing = false;
 
@@ -57,7 +60,17 @@ export class EnvHdrCache {
     // [ADR-311-d1 判别样本 2026-10-09] 无缓存**短路返回 null**（不触像素运算）——
     // 原实现无条件调 `customHdrThumbnail(null, …)`，语义虽等价（env-pixels 处理 null）但徒增无谓运算
     if (!this.customHdrTex) return null;
-    return customHdrThumbnail(this.customHdrTex, thumbW, thumbH);
+    // [S7-3] 同尺寸 memo 命中直接返回（贴图不变则 dataURL 恒定，重算纯浪费）
+    if (
+      this.customHdrThumbMemo &&
+      this.customHdrThumbMemo.w === thumbW &&
+      this.customHdrThumbMemo.h === thumbH
+    ) {
+      return this.customHdrThumbMemo.url;
+    }
+    const url = customHdrThumbnail(this.customHdrTex, thumbW, thumbH);
+    if (url) this.customHdrThumbMemo = { w: thumbW, h: thumbH, url };
+    return url;
   }
 
   /**
@@ -70,6 +83,7 @@ export class EnvHdrCache {
       this.customHdrTex = null;
     }
     this.customHdrName = "";
+    this.customHdrThumbMemo = null;
   }
 
   /**
@@ -102,6 +116,7 @@ export class EnvHdrCache {
       const old = this.customHdrTex;
       this.customHdrTex = tex;
       this.customHdrName = file.name;
+      this.customHdrThumbMemo = null; // [S7-3] 贴图变更 → 缩略图缓存失效
       if (old) old.dispose();
       this.customHdrWarnedMissing = false;
       return true;

@@ -35,6 +35,7 @@ function rcBuildParamsFolder(cap: ReflectorCapability): NodeFor<"folder"> {
     key: RangedKey,
     getValue: () => number,
     setValue: (v: number) => void,
+    commitOnRelease = false,
   ): NodeFor<"slider"> => ({
     id,
     kind: "slider",
@@ -42,7 +43,12 @@ function rcBuildParamsFolder(cap: ReflectorCapability): NodeFor<"folder"> {
     control: {
       ...getParamRange(key),
       get: () => getValue(),
-      set: (v) => setValue(v as number),
+      // [锐评 S11] 结构键（resolution/size）逐帧 set = 逐帧全量重建 RT：拖动只动 UI、
+      // 松手 onCommit 才写一次（对齐 vrm positionScale「拖动 set / 松手落盘」范式）；
+      // 参数键（opacity）保持逐帧实时。
+      ...(commitOnRelease
+        ? { set: () => {}, onCommit: (v) => setValue(v as number) }
+        : { set: (v) => setValue(v as number) }),
     },
   });
   return {
@@ -63,6 +69,7 @@ function rcBuildParamsFolder(cap: ReflectorCapability): NodeFor<"folder"> {
         "reflectorResolution",
         () => cap.getParams().resolution,
         (v) => cap.setResolution(v),
+        true,
       ),
       slider(
         "reflector-size",
@@ -70,6 +77,7 @@ function rcBuildParamsFolder(cap: ReflectorCapability): NodeFor<"folder"> {
         "reflectorSize",
         () => cap.getParams().size,
         (v) => cap.setSize(v),
+        true,
       ),
     ],
   };

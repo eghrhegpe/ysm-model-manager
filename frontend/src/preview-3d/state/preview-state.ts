@@ -213,6 +213,16 @@ function waterReflectionCap(): WaterReflectionCap | undefined {
   );
 }
 
+/** [S1-2 收口 2026-10-10] 天空能力开关（读/写 skyEnabled）——供 cap.skyEnabled 惰性绑定，
+ *  服务天空总开关关停时隐藏参数控件（visibleWhen B 轨消费，消「关掉后仍可盲调」）。 */
+interface SkyEnabledCap {
+  isEnabled(): boolean;
+  setEnabled(v: boolean): void;
+}
+function skyEnabledCap(): SkyEnabledCap | undefined {
+  return lazyCap<SkyEnabledCap>("sky", "isEnabled", "setEnabled");
+}
+
 /** [锐评 F-3 家族收口 2026-09-23] cap 态枚举探针的统一归一守卫。
  *  值域 = preview-paths.ts|PROBE_ENUM_VALUES（叶子影子表；preview-paths.test.ts 对账闸
  *  钉死 ⇄ schema enum 同步，**首成员 = schema default**）。非白名单值（脏 cap 态 /
@@ -318,6 +328,12 @@ const bindings: PathBindingMap = {
     get: () => waterReflectionCap()?.getWaterReflectionEnabled() ?? false,
     set: (v) => waterReflectionCap()?.setWaterReflectionEnabled(v === true),
     available: () => waterReflectionCap() !== undefined,
+  },
+  // [S1-2 收口 2026-10-10] 天空能力开关上浮——天空总开关关停时隐藏参数控件。
+  "cap.skyEnabled": {
+    get: () => skyEnabledCap()?.isEnabled() ?? true,
+    set: (v) => skyEnabledCap()?.setEnabled(v === true),
+    available: () => skyEnabledCap() !== undefined,
   },
   // [doc:adr-126-p4-d] 会话模式：mount 期写一次（setPreviewUiMode），dock 级 visibleWhen
   // 谓词写 `(s) => s["ui.mode"] !== "self"` 与旧 hideInSelfMode 语义等价

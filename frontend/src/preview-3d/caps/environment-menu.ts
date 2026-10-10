@@ -227,6 +227,12 @@ function envBuildBackgroundFolder(cap: EnvironmentCapability): NodeFor<"folder">
         },
       },
       envHistogramControlsNode(cap),
+      {
+        id: "cap-note-env-histogram-hint",
+        kind: "note",
+        // [锐评 S7-2] 直方图无说明——补脚注行解释读法（note 是专为此类辅助文案的 kind）
+        labelKey: "preview.envHistogramHint",
+      },
     ],
   };
 }

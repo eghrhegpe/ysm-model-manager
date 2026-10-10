@@ -166,6 +166,8 @@ describe("WaterCapability", () => {
     expect(poolHeight.visibleWhen?.(snap("film"))).toBe(false);
     expect(wetness.visibleWhen?.(snap("pool"))).toBe(false);
     expect(poolHeight.visibleWhen?.(snap("pool"))).toBe(true);
+    // [锐评 S5-2] wetness=0 水面消失——滑杆挂提示（0 = 无水面）
+    expect(wetness.hintKey).toBe("preview.waterWetnessHint");
     // [P2-1] film 的「水膜多明显」由 wetness（浓度）独占 ⇒ opacity 隐藏：一形态一旋钮，消「两旋钮一个自由度」
     expect(opacity.visibleWhen?.(snap("film")), "film 下 opacity 隐藏（浓度交给 wetness）").toBe(false);
     expect(opacity.visibleWhen?.(snap("pool")), "pool 下 opacity 是主控（内壁同步）").toBe(true);

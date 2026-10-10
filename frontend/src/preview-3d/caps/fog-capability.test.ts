@@ -360,6 +360,20 @@ describe("FogCapability — getMenuNodes 结构（节点化后 group 由 folder 
     expect(cap.isEnabled()).toBe(false);
   });
 
+  it("[S9-1] fog-far 生效值提示：未钳制返回空串，被 near 钳制时动态显示生效值", () => {
+    const cap = newCap();
+    const folder = findNodeById(cap.getMenuNodes(), "cap-group-fog-params");
+    const far = findNodeById(folder.children!, "fog-far");
+    const hint = () => far.control!.getHint?.() ?? "";
+    // 未钳制（far 远大于 near）→ 提示为空，不打扰
+    cap.setLinearRange(10, 200);
+    expect(hint()).toBe("");
+    // near=far → 消费端钳制生效（far 至少 near+FOG_MIN_DEPTH），提示显示生效值
+    cap.setLinearRange(100, 100);
+    expect(hint()).toContain("生效");
+    expect(hint()).not.toBe("");
+  });
+
   it("模式选择同步（节点 control 闭包）", () => {
     const cap = newCap();
     const modeNode = findNodeById(cap.getMenuNodes(), "fog-mode");

@@ -39,7 +39,13 @@ function skyTimelineControlsNode(cap: SkyCapability): NodeFor<"controls"> {
     onDragStart: (v) => cap.setTime(v as number, { phase: "dragging" }),
     onDragEnd: (v) => cap.setTime(v as number, { phase: "settled" }),
   };
-  return { id: "cap-node-sky-timeline", kind: "controls", controls: [timeline] };
+  return {
+    id: "cap-node-sky-timeline",
+    kind: "controls",
+    controls: [timeline],
+    // [锐评 S1-2] 天空总开关关停时隐藏参数控件（消盲调；B 轨 visibleWhen 吃快照）
+    visibleWhen: (s) => s["cap.skyEnabled"] !== false,
+  };
 }
 
 /** 完整参数面板节点树：sky-enabled 总开关 → timeline → 云量（[锐评 S1-1] 提级平铺）
@@ -59,6 +65,8 @@ export function buildSkyNodes(cap: SkyCapability): PreviewMenuNode[] {
     id: "sky-cloud",
     kind: "slider",
     labelKey: "preview.cloudCoverage",
+    // [锐评 S1-2] 总开关关停时隐藏
+    visibleWhen: (s) => s["cap.skyEnabled"] !== false,
     control: {
       ...getParamRange("skyCloudCoverage"),
       get: () => cap.getCloudCoverage(),
@@ -124,6 +132,8 @@ export function buildSkyNodes(cap: SkyCapability): PreviewMenuNode[] {
       id: "cap-group-sky-advanced",
       kind: "folder",
       labelKey: SKY_GROUP_ADVANCED,
+      // [锐评 S1-2] 总开关关停时隐藏整个高级组
+      visibleWhen: (s) => s["cap.skyEnabled"] !== false,
       children: advanced,
     },
   ];

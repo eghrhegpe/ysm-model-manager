@@ -32,6 +32,9 @@ export const KNOWN_PATHS = [
   // 本探针表达的是「天空 IBL 自持兜底开关」（env 缺席/关闭时 sky 走不走自持装载），
   // 与 sky cap 方法 `isSkyIblSelfHoldEnabled` 同源对齐（同 `cap.waterReflectionEnabled` 先例）。
   "cap.skyIblSelfHoldEnabled",
+  // [S1-2 收口 2026-10-10] 天空能力开关上浮（读/写 skyEnabled）——天空总开关关停时
+  // 隐藏 timeline/云量/高级参数（消「关掉后仍可盲调」；visibleWhen B 轨消费）。
+  "cap.skyEnabled",
   // [doc:adr-126-p5-c] 探针：cap 内部状态上浮至状态层快照，供 cap 控件
   // visibleWhen(s) 谓词消费（替代 cap 内 visible? 闭包），打通 B 轨。
   "cap.waterMode",
@@ -106,6 +109,7 @@ export type PathValue = {
   "render.maxPixelRatio": number;
   "render.wireframe": boolean;
   "cap.skyIblSelfHoldEnabled": boolean;
+  "cap.skyEnabled": boolean;
   // [锐评 F-3 家族收口 2026-09-23] 五个 cap 态枚举探针统一从 PROBE_ENUM_VALUES 派生精确联合
   // （原 string 让谓词 `=== "filmx"` 拼错编译不红、静默恒假，binding 侧 String(v) 直漏脏值）。
   // 值域表在文件头，与 schema enum 的同步由 preview-paths.test.ts 对账闸钉死。

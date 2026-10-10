@@ -185,6 +185,8 @@ describe("buildEnvSchema（2026 收口：行 + navigate 下钻）", () => {
     const schema = buildEnvSchema(makeCtx(), menu);
     expect(schema[0]!.id).toBe("env-preset-bar");
     expect(schema[0]!.kind).toBe("select");
+    // [锐评 S7-1 文案分界] 一级快捷 select 带「氛围包一次套用」提示，与子视图缩略图语义区分
+    expect(schema[0]!.hintKey).toBe("preview.envQuickPresetHint");
     // 卡壳层：sky 归「基础」、fog 归「氛围」（各 cap 自报 getEnvPlacement.section，env.ts 不指派）
     // 卡片成员（精确集合；order 排序不测）
     expect(schema.slice(1).map((n) => n.id).sort()).toEqual(["env-card-basic", "env-card-atmosphere"].sort());

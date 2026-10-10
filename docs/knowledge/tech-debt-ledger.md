@@ -147,7 +147,7 @@ quick_risk_lines:
 ## 待拍板项（2026-10-09 收拢：机器已做到位、剩下是人决策）
 
 1. **A1/P1#16「ADR emoji + 进度化石升 hard」**——**已执行（2026-10-10，选项 B）**：①-b 126 条缺 ✅ 全补齐 + 197 条「实施状态：查知识卡」指针行清零（`d8662cb3e`，契约测试 `test_adr_status_format` 钉死三不变量）；② 已升 hard（`78911e385`：检查器收紧——弱描述词「后续/计划/下一步」与域词「进度」剔除、行含「知识卡/实施状态/状态快照」指针豁免；默认运行 errors 阻断 + `--suggest` 命中即退出码 1，契约测试 `test_adr_lingering_progress` 钉死判定与退出码语义）；ADR-122 作废待办/断指针清理、ADR-207 背景行改述。当前 ①-b=0、②=0，①-a=1（ADR-218，维持默认 WARN 守护）。
-2. **env 活台账 §1 UX 挂账**（`docs/audit-env-review.md`，10-09 已时效核验）：S5-2（`waterWetness` min 域抬升或 hint「0=无水面」）/ S1-2（sky 总开关关后子控件置灰）/ S3-1~S3-3（地面菜单三项）/ S7-1~S7-3 / S9-1 余 hint 出口 / S11-1·S11-2（reflector 结构键改 onCommit 提交）。批拍板「修 / 弃 / 标不修」，落地者按台账规则删行。
+2. **env 活台账 §1 UX 挂账**——**已执行（2026-10-10 批拍板）**：**修 9 项**——S1-2（新增 `cap.skyEnabled` 探针 + B 轨 visibleWhen，总开关关停隐藏 timeline/云量/高级组）/ S3-2（选图按钮上提到来源下拉之后）/ S3-3（标签改「材质预设」+ 覆盖自定义警告 hint）/ S5-2（wetness 挂「0=无水面」hint）/ S7-1（氛围包文案分界 hint）/ S7-2（直方图脚注行）/ S7-3（缩略图 dataURL memo + 贴图变更失效）/ S9-1（fog far 生效值 `getHint`）/ S11-1·S11-2（结构键改 `onCommit` 提交，拖动不再逐帧重建 RT）；**标不修 2 组**——S3-1（网格双 toggle 降级，仅视觉收益）与 S3-4·S5-1·S5-3（folder 自动显隐，需改动态菜单机制、成本高于收益），已按台账规则迁入 §2 #22。契约测试同步（env-hdr-cache memo / sky visibleWhen / fog getHint / water hintKey / ground 按钮序 / env 快捷 select hint），前端受影响 8 套件 578 例 + build + biome 全绿。
 3. **i18n 13 死键**——已拍板完毕（`i18n.md` 卡 2026-09-24 批次：11 留置「文档举例存续期不删、勿逐键再议」+ 2 预留「ADR-300 S2 重构热区」），**无需再决策**，列此仅防后人重议。
 
 ## 相关

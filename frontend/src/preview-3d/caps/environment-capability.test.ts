@@ -1145,7 +1145,13 @@ describe("EnvironmentCapability — getMenuNodes（ADR-195 刀2 cap 直产节点
     expect(bgFolder.labelKey).toBe("preview.envGroupBackground");
     // 组内成员（精确集合，不测顺序）
     expect(childIds(bgFolder).sort()).toEqual(
-      ["env-use-as-background", "env-intensity", "cap-group-env-histogram"].sort(),
+      [
+        "env-use-as-background",
+        "env-intensity",
+        "cap-group-env-histogram",
+        // [锐评 S7-2] 直方图读法脚注行（note kind）
+        "cap-note-env-histogram-hint",
+      ].sort(),
     );
     // background 组内 toggle/slider 原生节点读写闭包直连 cap
     const useAsBg = findNodeById(bgFolder.children!, "env-use-as-background");

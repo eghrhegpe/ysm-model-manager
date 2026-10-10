@@ -576,6 +576,12 @@ describe("GroundCapability — 菜单控件联动", () => {
     expect(cap.getMaterialPreset()).toBe("grass");
     expect(cap.getCanvasStyle()).toBe("grass");
     expect(styleNode.control!.get!(undefined)).toBe("grass");
+    // [锐评 S3-2] 选图/清图按钮紧跟来源下拉（texture 模式免滚 5 控件才见选图按钮）
+    const materialChildren = nodes.find((n) => n.id === "cap-group-ground-material")!.children!;
+    const srcIdx = materialChildren.findIndex((c) => c.id === "ground-mat-source");
+    expect(materialChildren.findIndex((c) => c.id === "ground-mat-texture"), "选图按钮应在来源下拉之后紧邻").toBe(srcIdx + 1);
+    // [锐评 S3-3] 样式轴即材质预设 + 切走覆盖自定义微调的警告提示
+    expect(styleNode.hintKey).toBe("preview.groundCanvasStyleHint");
   });
 
   it("材质参数控件 setValue/getValue 全联动（canvas 模式下可见，节点 control 闭包）", () => {

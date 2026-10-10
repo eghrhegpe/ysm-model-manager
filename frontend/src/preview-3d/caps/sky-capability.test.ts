@@ -19,6 +19,7 @@ import { clearEnvCallbacks } from "@/preview-3d/state/env-dispatcher.ts";
 import { restoreState } from "./scene-capability.ts";
 import { findNodeById, childIds, nodeIds } from "@/preview-3d/menu/menu-test-helpers.ts";
 import type { SceneCapability } from "./scene-capability.ts";
+import type { PreviewSnapshot } from "@/preview-3d/state/preview-paths.ts";
 
 // ADR-196 单例化：SkyCapability 构造即注册 envState 回调（dispatch 广播），
 // 测试若不清理，残留实例会响应后续 setEnvState/update 的派发（fromScene 计数污染）。
@@ -403,6 +404,25 @@ describe("SkyCapability — getMenuNodes 结构（节点化后 group 由 folder 
     expect(childIdSet).toContain("sky-sun-disc");
     expect(childIdSet).toContain("sky-auto-rotate");
     expect(childIdSet).toContain("sky-godrays");
+  });
+
+  it("[锐评 S1-2] 天空总开关关停 → timeline/云量/高级组全部隐藏（B 轨谓词吃 cap.skyEnabled 快照，消盲调）", () => {
+    const cap = newCap();
+    const nodes = cap.getMenuNodes();
+    const snap = (enabled: boolean) => ({ "cap.skyEnabled": enabled } as Partial<PreviewSnapshot>);
+    const tl = findNodeById(nodes, "cap-node-sky-timeline");
+    const cloud = findNodeById(nodes, "sky-cloud");
+    const folder = findNodeById(nodes, "cap-group-sky-advanced");
+    // 总开关关 → 参数控件隐藏
+    expect(tl.visibleWhen?.(snap(false))).toBe(false);
+    expect(cloud.visibleWhen?.(snap(false))).toBe(false);
+    expect(folder.visibleWhen?.(snap(false))).toBe(false);
+    // 开 → 可见
+    expect(tl.visibleWhen?.(snap(true))).toBe(true);
+    expect(cloud.visibleWhen?.(snap(true))).toBe(true);
+    expect(folder.visibleWhen?.(snap(true))).toBe(true);
+    // 总开关本身不受限（toggle 恒可见，否则关掉后连开回来的入口都没了）
+    expect(findNodeById(nodes, "sky-enabled").visibleWhen).toBeUndefined();
   });
 
   it("[ADR-292 D4] 天空面板**不再**暴露 scene.environment 开关（写者唯一归 env 的来源选择）", () => {

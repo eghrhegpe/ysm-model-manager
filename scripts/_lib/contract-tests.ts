@@ -144,6 +144,9 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   // 整合包同步写入口双缓存配对（锐评 2026-10-10）：扫 internal/app 生产文件的
   // ysmsync 写调用点，函数体须配对清 instance+sync 两派生缓存——go 侧同步入口变更即须复核
   "test_sync_write_cache_pairing.ts": ["go", "tests"],
+  // 仓库文件写绑定的扫描缓存失效（锐评 2026-10-10 文件操作审计）：扫 internal/app
+  // 生产文件的 fileops 写调用点，成功路径须 scanner.Invalidate——go 侧文件绑定变更即须复核
+  "test_fileops_write_invalidate.ts": ["go", "tests"],
   "test_api_break.ts": ["tests"],
   "test_auto_import.ts": ["tests"],
   // 守卫跨三端：scripts 工具自身 + Go 侧 ADR-047 守卫信号（internal/app）+ 前端黑名单/bindings
@@ -354,6 +357,13 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
     "go/instance/",
     "go/sync/",
     "tests/test_sync_write_cache_pairing.ts",
+  ],
+  // 仓库文件写绑定扫描缓存失效：internal/app 生产文件全量在扫（目录哨兵），
+  // 薄壳本体 app_files.go 变更必触发
+  "test_fileops_write_invalidate.ts": [
+    "internal/app/",
+    "go/fileops/",
+    "tests/test_fileops_write_invalidate.ts",
   ],
   "test_api_break.ts": ["scripts/api-break.ts"],
   "test_auto_import.ts": [

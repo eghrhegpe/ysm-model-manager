@@ -109,5 +109,53 @@ func TestMoveModelFile_RootValidation(t *testing.T) {
 	}
 }
 
+// TestMoveCopyModelFile_InvalidatesScanCache 锁 app 层 fileops 写家族的一致性：
+// RenameDir/RemoveDir/RenameFile 成功路径全部 scanner.InvalidateCache()（防 30s 陈旧
+// 缓存"复活"），而 MoveModelFile/CopyModelFile 曾独漏——右键移动/复制后 tree:reload
+// 命中旧缓存，旧位置文件仍在列表、新位置文件不出现 ≤TTL；watcher 只在配置了 McRoot
+// 且存在整合包时兜底（app.go 启动条件 + syncAll 无实例短路），查看器模式无兜底。
+// 锐评 2026-10-10（回收站/删除链路审计）。
+func TestMoveCopyModelFile_InvalidatesScanCache(t *testing.T) {
+	t.Parallel()
+	base := t.TempDir()
+	sub := filepath.Join(base, "dst")
+	if err := os.MkdirAll(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	src := filepath.Join(base, "m.ysm")
+	if err := os.WriteFile(src, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	a := repoApp(t, types.AppConfig{FilesRoot: base})
+
+	// 预扫描建立缓存（同 app_scan_test 口径：首 miss、二 hit）
+	if _, hit := a.scanModelEntriesWithHit(base); hit {
+		t.Fatal("首次扫描不应命中缓存")
+	}
+	if _, hit := a.scanModelEntriesWithHit(base); !hit {
+		t.Fatal("二次扫描应命中缓存（前置条件）")
+	}
+	if err := a.MoveModelFile(src, sub); err != nil {
+		t.Fatalf("同根移动应成功: %v", err)
+	}
+	if _, hit := a.scanModelEntriesWithHit(base); hit {
+		t.Error("MoveModelFile 成功后不应命中旧扫描缓存")
+	}
+
+	// 重新建立缓存（移动后首次扫已 miss，第二次应 hit——前置条件）
+	if _, hit := a.scanModelEntriesWithHit(base); !hit {
+		t.Fatal("移动后重扫第二次应命中缓存（前置条件）")
+	}
+	if err := a.CopyModelFile(filepath.Join(sub, "m.ysm"), base); err != nil {
+		t.Fatalf("同根复制应成功: %v", err)
+	}
+	if _, hit := a.scanModelEntriesWithHit(base); hit {
+		t.Error("CopyModelFile 成功后不应命中旧扫描缓存")
+	}
+	if _, hit := a.scanModelEntriesWithHit(base); !hit {
+		t.Error("复制后重扫应命中新缓存")
+	}
+}
+
 // 注：FindPreviewImage / ExtractPreviewTexture 的守卫拒绝已由 app_audit_fix_test.go
 // 的 TestFindPreviewImage_Guard 覆盖，此处不再重复。

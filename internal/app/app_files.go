@@ -142,7 +142,15 @@ func (a *App) MoveModelFile(src, dstDir string) error {
 	if root == "" {
 		return fmt.Errorf("源与目标必须位于同一仓库根内: %s -> %s", src, dstDir)
 	}
-	return fileops.MoveModelFile(root, src, dstDir)
+	if err := fileops.MoveModelFile(root, src, dstDir); err != nil {
+		return err
+	}
+	// 与 RenameFile/RemoveDir/RenameDir 同族口径：移动改仓库树（旧位置消失 + 新位置出现），
+	// 不清缓存则右键移动后 tree:reload 命中旧扫描缓存 ≤TTL——旧位置仍在列表、新位置不出现；
+	// watcher 只在 McRoot 已配置且有整合包时兜底，查看器模式无兜底（锐评 2026-10-10，
+	// 测试锁 TestMoveCopyModelFile_InvalidatesScanCache）。
+	scanner.InvalidateCache()
+	return nil
 }
 
 // CopyModelFile 复制（同 MoveModelFile 修复：findMoveRoot 多根校验，fail-closed）
@@ -151,7 +159,12 @@ func (a *App) CopyModelFile(src, dstDir string) error {
 	if root == "" {
 		return fmt.Errorf("源与目标必须位于同一仓库根内: %s -> %s", src, dstDir)
 	}
-	return fileops.CopyModelFile(root, src, dstDir)
+	if err := fileops.CopyModelFile(root, src, dstDir); err != nil {
+		return err
+	}
+	// 同 MoveModelFile：复制在仓库树新增文件，不清缓存则副本 ≤TTL 不可见（锐评 2026-10-10）。
+	scanner.InvalidateCache()
+	return nil
 }
 
 // ImportModelFolder 文件夹型模型整组导入（YSM 解压目录 / MMD 模型目录，保留子目录层级，ADR-038 关联）

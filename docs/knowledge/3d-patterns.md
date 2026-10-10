@@ -30,6 +30,7 @@ auto_fields:
     - hasActivePreview
     - InstalledPreviewInfra
     - invalidatePreview
+    - labelTexCacheSizeForTest
     - loadModel2D
     - mount3D
     - Mount3DOptions
@@ -44,6 +45,7 @@ auto_fields:
     - rebuildDebug
     - registerPerFrame
     - registerReRoute
+    - releaseDebugLabelCache
     - removePerFrame
     - resetLoopState
     - SafeDisposable

@@ -471,6 +471,7 @@ auto_fields:
     - Ktx2EncodeResponse
     - Ktx2TextureLoader
     - Ktx2TextureLoaderDeps
+    - labelTexCacheSizeForTest
     - LARGE_MODEL_WARN_BYTES
     - LEGACY_CANVAS_PATTERNS
     - LEGACY_DEFAULT_WATER_LEVEL
@@ -751,6 +752,7 @@ auto_fields:
     - registerPerFrame
     - registerSchema
     - registerWaterBodyStrategy
+    - releaseDebugLabelCache
     - releaseTextureUrls
     - removeOwnHandle
     - removePerFrame

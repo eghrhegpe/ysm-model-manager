@@ -14,6 +14,7 @@ import type { LightCapability } from "@/preview-3d/caps/light-capability.ts";
 import type { ShadowCapability } from "@/preview-3d/caps/shadow-capability.ts";
 import type { CameraControlBridge } from "@/preview-3d/infra/camera-controls.ts";
 import { fitCameraToRoots } from "@/preview-3d/infra/camera-setup.ts";
+import { unregisterModelRoot } from "@/preview-3d/infra/frustum-cull.ts";
 import { guardGpuBudget } from "@/preview-3d/infra/gpu-budget.ts";
 import { TRACE_FORMAT_OTHER } from "@/preview-3d/infra/load-trace.ts";
 import { showLoadFailure } from "@/preview-3d/infra/preview-loading.ts";
@@ -285,8 +286,13 @@ function recoverSwitchFailure(
     // （keep 清除段不做 stale 移除，半成品无自愈路径，必须在此收走）。
     if (ctx.scene && beforeBuild) {
       const stale = ctx.scene.children.filter((c) => !beforeBuild.has(c));
+      // [锐评抽象扫描 2026-10-10] 与 recoverMountFailure 的 stale 清扫同型补注销：
+      // 半成品在 build 中段已 scene.add + registerModelRoot，句柄未产生 → 其 dispose
+      // 永不执行，本清扫是唯一兜底。只 remove + disposeObject3D 会让 modelRoots
+      // 残留幽灵根（infra 轮 F1 病理）。unregisterModelRoot 对未登记引用 no-op，安全。
       for (const c of stale) {
         ctx.scene.remove(c);
+        unregisterModelRoot(c);
         disposeObject3D(c);
       }
     }

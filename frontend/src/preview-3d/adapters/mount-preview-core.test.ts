@@ -141,6 +141,9 @@ import {
   _resetSingletons,
 } from "./mount-preview-core.ts";
 import { sceneRegistry } from "@/preview-3d/infra/scene-registry.ts";
+// [锐评抽象扫描] frustum-cull 已在上方 vi.mock——此处 import 拿到的即 vi.fn，
+// 既供测试适配器模拟中段登记，也供断言 stale 清扫是否成对注销。
+import { registerModelRoot, unregisterModelRoot } from "@/preview-3d/infra/frustum-cull.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import { GPU_BUDGET_CALIBRATION_KEY } from "@/preview-3d/infra/gpu-load-calibrate.ts";
 import { resetFakeRendererStats, setFakeRendererStats } from "@/test-utils/fake-webgl-renderer.ts";
@@ -1234,6 +1237,35 @@ describe("会话存活守卫：两条件版语义核实（防未来误『修复�
       // 反向验证：注释掉 recoverMountFailure 里的 disposeObject3D(c) 即归零
       expect(geoDispose).toHaveBeenCalledTimes(1);
       expect(matDispose).toHaveBeenCalledTimes(1);
+    } finally {
+      errSpy.mockRestore();
+      cleanupPreview();
+    }
+  });
+
+  it("[锐评抽象扫描] stale 清扫须连 frustum 根注册一起摘除（半成品 register 后抛错）", async () => {
+    // 病（同族第三处）：各格式在 build 中段 scene.add + registerModelRoot，之后还有
+    // 取相机/建菜单等步骤——任一步抛错时句柄未产生、其 dispose 永不执行，
+    // recoverMountFailure 的 stale 清扫只 remove + disposeObject3D，**不注销 frustum 根**
+    // → modelRoots 残留幽灵根（钉住已死子树 + 使 length 虚高绕过单根豁免，infra 轮 F1 病理）。
+    // 修复位置在清扫侧（recoverMountFailure / switch 失败分支）而非逐格式补 catch——
+    // 「register 早、句柄晚」是**所有格式共有**的形态，中央兜底才是长治。
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const adapter: PreviewAdapter = {
+        id: "vrm",
+        build: vi.fn(async (buildCtx: PreviewBuildCtx) => {
+          const g = new THREE.Group();
+          buildCtx.scene!.add(g);
+          registerModelRoot(g); // 模拟适配器中段登记
+          throw new Error("late build boom");
+        }),
+      };
+      await mount3D(adapter, "/m/latefrustum.vrm");
+      expect(
+        unregisterModelRoot,
+        "stale 清扫必须注销被移除子树的 frustum 登记（否则 modelRoots 永久残留）",
+      ).toHaveBeenCalled();
     } finally {
       errSpy.mockRestore();
       cleanupPreview();

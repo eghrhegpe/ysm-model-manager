@@ -5,7 +5,7 @@
 
 import { sceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
 import type { CameraControlBridge } from "@/preview-3d/infra/camera-controls.ts";
-import { clearModelRoots } from "@/preview-3d/infra/frustum-cull.ts";
+import { clearModelRoots, unregisterModelRoot } from "@/preview-3d/infra/frustum-cull.ts";
 import type { TdKeyAction } from "@/preview-3d/infra/keymap.ts";
 import { showLoadFailure } from "@/preview-3d/infra/preview-loading.ts";
 import {
@@ -382,8 +382,15 @@ export function recoverMountFailure(ctx: MountCtx, loadingEl: HTMLElement, e: un
     // 半成品子树只从 scene 摘除而不释放 → geometry/material 常驻 GPU。`adapter.build` 在
     // `scene.add` 之后才抛错的形态（如 MMD alloc 失败）必然命中此路径，且它没有自愈机会
     // （内容层未生成、不会重建同内容），故必须在此把资源一并收走。
+    // [锐评抽象扫描 2026-10-10] 摘除时须**连 frustum 根注册一起注销**：各格式适配器都在
+    // build 中段 scene.add + registerModelRoot（「register 早、句柄晚」是所有格式共有的
+    // 形态），此后任一步抛错 → 句柄未产生、其 dispose 永不执行。本清扫是这类半成品的
+    // 唯一中央兜底——只 remove + disposeObject3D 会让 modelRoots 残留幽灵根（钉住已死
+    // 子树 + 使 length 虚高绕过单根豁免，infra 轮 F1 病理）。unregisterModelRoot 对未
+    // 登记引用是 no-op（indexOf 守卫），重复调用安全。
     for (const c of stale) {
       infra.scene.remove(c);
+      unregisterModelRoot(c);
       disposeObject3D(c);
     }
   }

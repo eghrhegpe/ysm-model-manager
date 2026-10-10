@@ -351,7 +351,16 @@ func (a *App) ImportByType(rtype, srcPath string) error {
 	if dstDir == "" {
 		return fmt.Errorf("未设置 %s 目录", rtype)
 	}
-	return h.Import(srcPath, dstDir)
+	if err := h.Import(srcPath, dstDir); err != nil {
+		return err
+	}
+	// 策略经接口方法值 h.Import 落盘进仓库根（dstDir）——go/importer 包不引用 scanner，
+	// 失效责任归本 app 层：与 importModelFileWithOptions 同口径清三层派生缓存
+	// （scan + 容器指纹 + geo），否则菜单「导入文件/文件夹」后前端仅 vm._load()
+	// 不清缓存 → 新导入文件 ≤TTL 不可见（锐评 2026-10-10，测试 TestImportByType_InvalidatesScanCache）。
+	// 无条件清：目录型策略 copyDirRecursive 中途失败可能已落地部分兄弟文件。
+	a.ClearScanCache()
+	return nil
 }
 
 // DeleteResourcePack 删除资源（目录感知，ADR-038 D3.6）：

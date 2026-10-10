@@ -86,6 +86,7 @@ status: active
 - `ImportFromBase64(fileName, base64Data, ImportOptions{SkipCheck, Overwrite}, rootFn, logger) (destPath, rtype string, err error)` — base64 导入核心（**2026-08-29 返回值扩展**：回传落盘绝对路径与判定类型，「先入仓库再推送」组合链路依赖两者定位产物，类型判定单一事实源仍在本函数）
 - `DetectContainerType(data []byte) string` — ZIP 内容类型检测
 - `init()` 注册：resourcepack / shaderpack / blueprint / EntityPlayer / SceneModel / CustomAnim / CustomMorph / StageAnim / mmd-shader / DefaultAnim / DefaultMorph / maid-model / ysm / litematic / fbx（fbx 2026-09-05 锐评 P0 刀补注册，原缺 fbx 导致 ImportByType("fbx",...) 必报「未找到导入策略」）
+- **落盘后的派生缓存失效归 app 层**：`go/importer` 包不引用 scanner（分层：策略只做文件复制/落地，不碰缓存）。app 层 `ImportByType`（菜单「导入文件/文件夹」，`resource_bindings.go`）经 `importer.Get(rtype)` 取策略、以**接口方法值** `h.Import(srcPath, dstDir)` 写进仓库根后，必须 `a.ClearScanCache()`——否则前端仅 `vm._load()` 不清缓存（与 `sync.ts` 批量回拉路径不同，那条事后补 `InvalidateScanCache`），新导入文件 ≤TTL 不可见（锐评 2026-10-10；回归 `app_import_invalidate_test.go`）。此失效**枚举式契约闸天然看不见**（`h.Import` 是接口方法值、非 `importer.X(` 字面调用），是「写入口失效清单」结构性盲区的实例。
 
 ## 与其他子系统关系
 

@@ -116,7 +116,10 @@ func TestMoveModelFile_RootValidation(t *testing.T) {
 // 且存在整合包时兜底（app.go 启动条件 + syncAll 无实例短路），查看器模式无兜底。
 // 锐评 2026-10-10（回收站/删除链路审计）。
 func TestMoveCopyModelFile_InvalidatesScanCache(t *testing.T) {
-	t.Parallel()
+	// 不加 t.Parallel：本测试断言「二次 scan 命中包级全局 scanCache」这一前置，而并行组里
+	// TestMoveModelFile_RootValidation 调 MoveModelFile 会 InvalidateCache 全局缓存、打掉
+	// 本测试刚建立的 hit（MoveModelFile 上轮起纳入清缓存后新增的时序耦合）。非并行主序列
+	// 先于所有 t.Parallel 测试跑完，串行即隔离。
 	base := t.TempDir()
 	sub := filepath.Join(base, "dst")
 	if err := os.MkdirAll(sub, 0o755); err != nil {

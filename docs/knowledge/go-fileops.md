@@ -14,10 +14,12 @@ auto_fields:
     - FindPreviewImage
     - GetPackInfo
     - IsFileBanned
+    - MoveCopyTarget
     - MoveModelFile
     - RemoveDir
     - RenameDir
     - RenameFile
+    - RenameTarget
     - ToggleModelEnable
     - WriteModelFolder
 use_when:

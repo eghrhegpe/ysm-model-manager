@@ -75,10 +75,28 @@ func CreateDir(root, dir string) error {
 	return os.MkdirAll(fullPath, fsutil.DirPerms)
 }
 
+// renameTargetPath 计算改名后的目标路径（纯函数，不动盘）。
+// renameToNewName 与 RenameTarget 的唯一算式源——接线方算「标签键迁移目标」时
+// 必须与此同源，禁止另抄一份 Join(Dir(old), newName)（双份路径计算必漂移，
+// 本仓反复消灭的病根）。
+func renameTargetPath(oldPath, newName string) string {
+	return filepath.Join(filepath.Dir(oldPath), newName)
+}
+
+// RenameTarget 导出改名目标路径计算（供 app 层在 RenameFile/RenameDir 前算标签键
+// 迁移的 to；trim 口径与 opPrologue 一致——校验吃原串、拼接吃 trim 后）。
+// 参数空 → 空串（调用方据此跳过迁移，与绑定拒绝空参的口径一致）。
+func RenameTarget(oldPath, newName string) string {
+	oldPath, newName = strings.TrimSpace(oldPath), strings.TrimSpace(newName)
+	if oldPath == "" || newName == "" {
+		return ""
+	}
+	return renameTargetPath(oldPath, newName)
+}
+
 // renameToNewName 组装 newPath 并防覆盖重命名（RenameDir / RenameFile 共用尾部逻辑）。
 func renameToNewName(oldPath, newName string) error {
-	parent := filepath.Dir(oldPath)
-	newPath := filepath.Join(parent, newName)
+	newPath := renameTargetPath(oldPath, newName)
 	if _, err := os.Lstat(newPath); err == nil {
 		return fmt.Errorf("目标已存在: %s", newPath)
 	}
@@ -212,6 +230,7 @@ func MoveModelFile(root, src, dstDir string) error {
 	// 提升判定须在自嵌套检查之前执行——自嵌套检查必须用提升后的 src（目录）判定，
 	// 否则 dstDir 位于模型目录内部时会穿透检查、MkdirAll 后在模型目录内留下空 junk 目录
 	// 再 rename 失败（对齐 CopyModelFile 的「先提升、后自嵌套检查」顺序）。
+	// 判定走 shouldLiftYsmParent（与 MoveCopyTarget plan 同源——见谓词注释的防漂移纪律）。
 	liftToParent, err := shouldLiftYsmParent(root, src)
 	if err != nil {
 		return err
@@ -344,6 +363,51 @@ func crossDeviceCopyThenDeleteSource(src, dst string) error {
 	return nil
 }
 
+// modelDestPath 计算 Move/Copy 的目标全路径 = dstDir/<src 末段>（纯算式，不动盘）。
+// prepareModelDest 与 MoveCopyTarget 的唯一算式源——接线方算标签键迁移目标必须与此
+// 同源（同 renameTargetPath 的防漂移纪律）。
+func modelDestPath(src, dstDir string) string {
+	return filepath.Join(dstDir, filepath.Base(src))
+}
+
+// ysmLiftForCopy：CopyModelFile 的 ysm.json 提升判定（无条件提升为整夹）。
+// ⚠️ 与 Move 侧**刻意不对称**：MoveModelFile 经 shouldLiftYsmParent 对**根级** ysm.json
+// 豁免提升（根级提升会搬走整仓），Copy 无此豁免——这是既有行为，勿「统一」以免改搬迁语义。
+// 抽成命名谓词的目的：执行体（CopyModelFile）与迁移 plan（MoveCopyTarget）走**同一判定**，
+// 否则接线方自算 from 与真实搬迁路径分叉、标签迁到错误键（本 session 反复消灭的
+// 「双份路径计算必漂移」病根）。Move 侧 plan 直接复用 shouldLiftYsmParent（同一函数，无别名）。
+func ysmLiftForCopy(src string) bool { return registry.IsYsmEntryJSON(filepath.Base(src)) }
+
+// MoveCopyTarget 导出「实际搬迁的源/目标路径」计算（供 app 层在 MoveModelFile/CopyModelFile
+// 成功后算标签键迁移的 from/to）。复用 Move/Copy **各自内部同款**提升判定（见 ysmLiftFor*）：
+// isCopy=true 走 CopyModelFile 的无条件提升、false 走 MoveModelFile 的 shouldLiftYsmParent。
+//   - from：提升后的实际搬迁路径（ysm.json → 其父夹；其余 → src 本身）
+//   - to：modelDestPath(from, dstDir)（= 内部 prepareModelDest 的 dst）
+//
+// 键迁移用 subtree=true 覆盖整夹子键（分隔符边界天然防同前缀兄弟误伤，单文件也安全，
+// 见 go/tags RelocateKeys）。参数空 / 提升判定出错 → ok=false（调用方跳过迁移，
+// 与绑定对空参/越界的拒绝口径一致；越界守卫仍由 MoveModelFile/CopyModelFile 主体负责）。
+// 本函数**不做**仓库边界/symlink/自嵌套校验——那些是搬迁主体的安全链，此处仅算路径。
+func MoveCopyTarget(root, src, dstDir string, isCopy bool) (from, to string, ok bool) {
+	src, dstDir = strings.TrimSpace(src), strings.TrimSpace(dstDir)
+	if src == "" || dstDir == "" {
+		return "", "", false
+	}
+	from = src
+	if isCopy {
+		if ysmLiftForCopy(src) {
+			from = filepath.Dir(src)
+		}
+	} else {
+		if lift, err := shouldLiftYsmParent(root, src); err != nil {
+			return "", "", false
+		} else if lift {
+			from = filepath.Dir(src)
+		}
+	}
+	return from, modelDestPath(from, dstDir), true
+}
+
 // prepareModelDest 计算复制/移动的目标路径，并在 MkdirAll 前执行自嵌套检查。
 // 与 MoveModelFile / CopyModelFile 共用同一段「自嵌套检查 → 建目录 → 拼接 dst」逻辑
 // （jscpd 报告的文件内自重复，抽取为单一事实源以避免两处行为漂移；空 dstDir/src 由调用方前置校验）。
@@ -359,7 +423,7 @@ func prepareModelDest(src, dstDir string) (dst string, created bool, err error) 
 	if err = os.MkdirAll(dstDir, fsutil.DirPerms); err != nil {
 		return "", false, err
 	}
-	return filepath.Join(dstDir, filepath.Base(src)), created, nil
+	return modelDestPath(src, dstDir), created, nil
 }
 
 // CopyModelFile 复制 src 到 dstDir（root 用于路径安全校验，空则跳过校验）
@@ -406,8 +470,9 @@ func CopyModelFile(root, src, dstDir string) error {
 			return fmt.Errorf("源文件必须在仓库内: %s", src)
 		}
 	}
-	// ysm.json 提升：复制整个模型目录（ADR-038 D3）
-	if registry.IsYsmEntryJSON(filepath.Base(src)) {
+	// ysm.json 提升：复制整个模型目录（ADR-038 D3）。判定走 ysmLiftForCopy
+	// （与 MoveCopyTarget plan 同源，见谓词注释的防漂移纪律；与 Move 侧刻意不对称）。
+	if ysmLiftForCopy(src) {
 		src = filepath.Dir(src)
 	}
 	// 自嵌套检查须在 MkdirAll 之前执行——被拒复制不得在 src 内

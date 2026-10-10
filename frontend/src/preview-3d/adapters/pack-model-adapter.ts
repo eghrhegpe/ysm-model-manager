@@ -12,6 +12,7 @@ import * as THREE from "three";
 import { t } from "@/core/i18n/t.ts";
 import { requireSharedInfra } from "@/preview-3d/adapters/shared/shared-infra.ts";
 import { frameCameraSide } from "@/preview-3d/infra/camera-setup.ts";
+import { registerModelRoot, unregisterModelRoot } from "@/preview-3d/infra/frustum-cull.ts";
 import { safeDispose } from "@/preview-3d/infra/safe-dispose.ts";
 import { getTintColorSync, loadMcTints } from "@/preview-3d/materials/mc-tints.ts";
 import { multiModelSelectNode } from "@/preview-3d/menu/panels/multi-model.ts";
@@ -243,6 +244,10 @@ function frameCamera(ctx: PreviewBuildCtx, target: THREE.Object3D): void {
 
 /** 释放内容层 GPU 资源（复用：build 失败和 dispose 共用） */
 function disposeContent(state: PackState, scene: THREE.Scene): void {
+  // [锐评 infra 轮] 注销须在本函数**首行**：与 VRM/FBX 的隔离写法对齐。
+  // 若排在后续可能抛错的动作（safeDispose 系列）之后，抛错即漏注销 → 根残留
+  // （frustum-cull 的模块级 modelRoots 会永久钉住已卸载子树，同 infra 轮 F1/F3 病理）。
+  if (state.group) unregisterModelRoot(state.group);
   if (state.group?.parent) {
     scene.remove(state.group);
   }
@@ -325,6 +330,15 @@ async function buildPackScene(
   state.disposables = disposables;
   // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
   infra.scene.add(group);
+  // [锐评 infra 轮 抽象扫描修复 2026-10-10] 与其余 5 个格式对齐，登记 frustum 剔除根。
+  //
+  // 病：本适配器是**唯一**「scene.add 却不 registerModelRoot」的格式（ysm/vrm/fbx/mmd/
+  // litematic 五处都注册）。`registerBuiltScene`（infra）只把差量 roots 收进 sceneRegistry
+  // 供隐藏/取景/归属，**不代为注册** frustum 根——故注册责任在各适配器，此处漏了。
+  // 后果：用户开启视锥剔除（设置面板，默认关）后，资源包模型**对剔除不可见**——它永远不被
+  // 剔除，而同框的其它格式被剔除，行为按格式分叉；且 `_culled` 抑制态归属链对它失效。
+  // 修复路径与 vrm-adapter 同型（register 在 scene.add 旁）。
+  registerModelRoot(group);
   frameCamera(ctx, group);
   ctx.loadingEl.remove();
 

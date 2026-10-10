@@ -13,6 +13,7 @@ auto_fields:
     - Store.AllTags
     - Store.GetTags
     - Store.ListByTag
+    - Store.RelocateKeys
     - Store.RemoveTag
     - Store.SetTags
 use_when:

@@ -228,6 +228,11 @@ async function collectJsonSpecTextures(
         .pop()
         ?.replace(/\.\w+$/, "") || "";
     const url = URL.createObjectURL(blob);
+    // F5 同族（2026-10-11 修）：spec 声明同名纹理互相覆盖——被覆盖者立即 revoke。
+    // 它仍在 pendingBlobUrls（覆盖者也登记），失败路径二次 revoke 为 no-op 安全；
+    // 成功路径 pendingBlobUrls.clear() 只清 Set 不移交，被覆盖者已在此释放。
+    const prevTex = acc.textures[key];
+    if (prevTex) URL.revokeObjectURL(prevTex);
     acc.textures[key] = url;
     pendingBlobUrls.add(url);
     acc.texKeys.push(key);
@@ -475,7 +480,13 @@ function collectTexturesAndAvatars(files: DecodedFile[]): TexAccum {
           .split(/[/\\]/)
           .pop()
           ?.replace(/\.\w+$/, "") || "";
-      avatars[name] = URL.createObjectURL(blob);
+      const avatarUrl = URL.createObjectURL(blob);
+      // F5（2026-10-11 修）：同名不同目录头像以去扩展名文件名为键互相覆盖——
+      // 被覆盖者立即 revoke（revokeTexAccumBlobs 只扫最终值，覆盖者逃逸即泄漏）；
+      // 交付者（最后覆盖者）仍按既有归属走（进 authors[].avatarUrl，由缓存 evict 释放）。
+      const prevAvatar = avatars[name];
+      if (prevAvatar) URL.revokeObjectURL(prevAvatar);
+      avatars[name] = avatarUrl;
       continue;
     }
     // ⚠️ 隐性契约：这里用 `f.data.buffer` 整体构造 Blob，**只在 `FS.readFile`
@@ -490,7 +501,14 @@ function collectTexturesAndAvatars(files: DecodedFile[]): TexAccum {
         .split(/[/\\]/)
         .pop()
         ?.replace(/\.\w+$/, "") || "";
-    textures[key] = URL.createObjectURL(blob);
+    const url = URL.createObjectURL(blob);
+    // F5（2026-10-11 修）：同名不同目录纹理以去扩展名文件名为键互相覆盖——
+    // 被覆盖者立即 revoke（revokeTexAccumBlobs 只扫最终值，覆盖者逃逸即泄漏；
+    // collectJsonSpecTextures 同族已一并修，见 handleYsmJsonSpec 路径）。
+    // 交付者（最后覆盖者）仍由 revokeTexAccumBlobs / 移交 geometry 按既有归属走。
+    const prevTex = textures[key];
+    if (prevTex) URL.revokeObjectURL(prevTex);
+    textures[key] = url;
     texNameMap[key] = f.path;
     texLowerMap[key.toLowerCase()] = key;
     const arr = f.data;

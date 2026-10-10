@@ -184,3 +184,16 @@
   - `mc-tints.ts`：族①回访——`cache` 模块级永不清，但键域 = vendored 版本 JSON（有界、内容不可变），符合族①判据；`inflight` 失败清空（注释论证：一次网络瞬断不应永久锁死）正确。
 - 验证：materials/ + 两消费者（face-split / texture-alpha）7 文件 56 例绿。
 - 遗留 / 下一轮建议：下一轮按清单轮转取 **`mesh`**（第 7 位；face-split.ts 本轮已顺带读过判定正确，可作起点）。materials 目录本体判**已收敛**，短期无需回访。
+
+## 2026-10-11T02:20:00+08:00 追加：decoder 未修清单收口（F5）
+
+- 选定理由：decoder 轮（2026-10-10）遗留的第 2 条——`F5（collectTexturesAndAvatars 同名不同目录纹理键覆盖 → 被覆盖 blob 立即泄漏）`。texture-order 双源（同条第 3 条）已由 `cb1ce8d6d` 收口，F5 是 decoder 域最后一个活缺陷项。
+- **修复**：`wasm-decode.ts` 两处 collect 函数覆盖时立即 revoke 被覆盖者——
+  - `collectTexturesAndAvatars`（WASM 路径）：`textures[key]` 与 `avatars[name]` 赋值前 `if (prev) URL.revokeObjectURL(prev)`（被覆盖者从覆盖瞬间起无消费者：texKeys 消费只取当前值、revokeTexAccumBlobs 只扫最终值——覆盖者原逃逸即泄漏，成功/失败路径都漏）
+  - `collectJsonSpecTextures`（JSON spec 路径）：同族——`acc.textures[key]` 赋值前 revoke；其 pendingBlobUrls 失败路径二次 revoke 为 no-op 安全，成功路径 clear 只清 Set 不移交，被覆盖者已在此释放
+  - 交付者（最后覆盖者）归属不变：WASM 路径走 revokeTexAccumBlobs/移交 geometry，JSON 路径走 pendingBlobUrls/移交 result.geometry。
+- **测试（TDD 先红后绿）**：新 `wasm-decode-tex-collision.test.ts` 2 例（同名不同目录纹理 / 同名不同目录头像），修复前 `revoked=[]` 转红、修复后绿；wasm-decode.test.ts 26 例 + avatar-blob 2 例回归绿（成功路径 revoked==[]、失败路径 revoked==created 不受影响）；decoder 全族 146 例、vite build、typecheck、biome 全绿。
+- **遗留 / 下一轮建议**：
+  1. decoder 域未修项清空。下一轮按清单轮转取 `mesh`（第 7 位；materials 轮建议同向）。
+  2. 族② 残余仍在队列：抽象扫描第 3 批已收口 dispose 隔离与 build 归还（f3a59e7d4/4b89dd791/fb12e3321），`switch-preview.ts` clearSwitchContent !keep 分支的 stale 循环未兜注销（同轮回访点，低概率）可作 mesh 轮顺带确认。
+  3. infra 轮遗留未变：F4 双源常量（`DEFAULT_MSAA_SAMPLES` 探针与 cap 侧）、`load-trace.ts`/`preview-shell.ts` 无独立契约锁、scene-registry 焦点晋升产品问题仍挂起待拍板。

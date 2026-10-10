@@ -44,6 +44,7 @@ quick_risk_lines:
 pitfalls:
   - 离屏 renderer 未 dispose / blob URL 未通过 evict 回调释放 → WebGL 上下文 + 内存泄漏；整个「renderer 创建 → 场景构建 → 四角度循环」必须都在 try/finally 内
   - cacheSet 覆盖同 key 旧值不触发 evict → WASM 解码产物的旧 blob URL 泄漏；淘汰与覆盖都必须走 evict 回调
+  - WASM 解码 collect 阶段同名键覆盖（同名不同目录纹理/头像，`wasm-decode.ts|collectTexturesAndAvatars` / `collectJsonSpecTextures`）→ 被覆盖 blob URL 必须**覆盖时立即 revoke**（revokeTexAccumBlobs / pendingBlobUrls 只扫最终值，覆盖者逃逸即成功/失败路径都泄漏；2026-10-11 F5 修，测试 `wasm-decode-tex-collision.test.ts`）
   - GetModel3DSpec / JSON.parse 失败直接 reject → 消费者无 catch → unhandled rejection；失败应统一返回 null（P2 修复）
   - try 起点在角度循环而非场景构建段 → 场景构建抛错时 renderer 永不 dispose（P2 修复）
 status: active
@@ -80,6 +81,7 @@ status: active
 
 - 离屏渲染器必须 `preserveDrawingBuffer: true` 才能 toDataURL 截图；用完必须 dispose（geometry/material/renderer），否则 WebGL 上下文泄漏。**整个「renderer 创建 → 场景构建 → 四角度循环」都在 try/finally 内**（P2 修复：原 try 起点在角度循环，场景构建段抛错 renderer 永不 dispose），且失败统一返回 `null` 不 reject（P2 修复：原 spec 获取/JSON.parse 失败直接 reject，消费者无 catch → unhandled rejection）；dispose 后追加 `forceContextLoss()` 强制释放上下文（P3）
 - preview-cache 淘汰**与覆盖**都必须走 evict 回调释放 blob URL（P2 修复：原同 key `cacheSet` 覆盖旧值不触发 evict，WASM 解码产物的旧 URL 泄漏）
+- **解码层 collect 阶段的同名键覆盖也必须覆盖时立即 revoke 被覆盖者**（F5，2026-10-11 修）：`wasm-decode.ts` 的纹理/头像都以去扩展名文件名为键，同名不同目录条目互相覆盖——被覆盖者从覆盖瞬间起无消费者（`revokeTexAccumBlobs` 只扫最终值、`pendingBlobUrls` 成功路径只清 Set 不移交），不 revoke 即成功/失败路径都泄漏；交付者（最后覆盖者）仍按既有归属走（revokeTexAccumBlobs / 移交 geometry / 进缓存由 evict 释放）。测试 `wasm-decode-tex-collision.test.ts` 锁「被覆盖者 revoked、交付者保留」
 - 缓存是模块级单例：组件 disconnectedCallback 不得清空（跨页复用），淘汰只由 FIFO 上限驱动
 - Canvas 手动导出 PNG 按钮（原 canvas-export.ts）与仓库批量截图（batchRepoScreenshots）因长期无消费方已在死代码清理中移除；如需恢复以本卡与 git 历史为准
 - `AngleShot.name` 实现为 `string`（知识卡声明联合类型，运行时只产出四角度，类型收紧留待后续）

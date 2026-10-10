@@ -1173,6 +1173,7 @@
 | 网络错误未分类 | - | 一律显示未知错误；必须经 friendlyError 的网络错误分支 |
 | 离屏 renderer 未 dispose / blob URL 未通过 evict 回调释放 | - | WebGL 上下文 + 内存泄漏；整个「renderer 创建 → 场景构建 → 四角度循环」必须都在 try/finally 内 |
 | cacheSet 覆盖同 key 旧值不触发 evict | - | WASM 解码产物的旧 blob URL 泄漏；淘汰与覆盖都必须走 evict 回调 |
+| WASM 解码 collect 阶段同名键覆盖（同名不同目录纹理/头像， / `collectJsonSpecTextures`）→ 被覆盖 blob URL 必须**覆盖时立即 revoke**（revokeTexAccumBlobs / pendingBlobUrls 只扫最终值，覆盖者逃逸即成功/失败路径都泄漏；2026-10-11 F5 修，测试 `wasm-decode-tex-collision.test.ts`） | `wasm-decode.ts\|collectTexturesAndAvatars` | - |
 | GetModel3DSpec / JSON.parse 失败直接 reject | - | 消费者无 catch → unhandled rejection；失败应统一返回 null（P2 修复） |
 | try 起点在角度循环而非场景构建段 | - | 场景构建抛错时 renderer 永不 dispose（P2 修复） |
 | 拖拽导入等待异步注册表 | - | 导入按钮短暂不可用；必须用 RESOURCE_EXTS 静态表 |

@@ -172,3 +172,15 @@
   1. 下一轮按清单轮转取 **`materials`**（第 6 位）。
   2. **同族可回访点**：`switch-preview.ts` clearSwitchContent 的 !keep stale 循环只 remove 不 dispose/注销——其语义是「旧内容层随后由 dispose() 收尾」链是对的，但若 dispose 抛错（有 try 兜），frustum 注销也随句柄一起丢；中央清扫已兜 mount 侧，switch 该分支未兜（低概率，回访 materials 后有余力再看）。
   3. **本仓「N 实现方」债的元结论**：三轮扫描（const 容器 0 违规 / registerModelRoot 1 缺口 / dispose 隔离 2 实现脆 + build 归还 1 共有形态）表明该族共因是**责任外包给实现方而中央无兜底**。已落三枚契约测试（frustum-registration / adapter-dispose / stale 清扫断言）把「实现方自觉」翻成「机器拦截」；新格式接入时这三枚闸会先于人工评审抓到漏项。
+
+## 2026-10-11T02:20:00+08:00 巡检第 6 轮：materials
+
+- 选定理由：按轮转清单第 6 位（上轮建议）。5 源文件 / ~416 行，5/5 全有同名测试。
+- **结论：零缺陷轮**。逐文件深读 + 消费方对账：
+  - `materials-shared.ts`：ADR-180 骨架收编（mmd/vrm 逐字重复的四函数归一），越界 no-op / clamp / transparent 联动重置（≥1 恢复 false）均正确且有测试。
+  - `mmd-materials.ts` / `vrm-materials.ts`：薄壳只留领域差异（pmx 索引配对 vs needsUpdate 重编译注入），list 输入源不同不强行共享——注释论证成立。**非缺口**：`toggle*` 仅测试消费、UI 走 `setVisible`（material-controls.ts 鸭子类型 bridge），属 ADR-180 吸收的存量导出而非死代码。
+  - `alpha-index.ts`（ADR-118 面级透明索引）：前缀和构建/查询的边界（+1 哨兵行列、clamp、退化矩形）逐行核过；小矩形（≤128px）走逐像素精确路、大矩形走 tile **保守过近似**——对渲染路由是安全方向（宁可多判 blend 不漏判）。**已实证**（一次性探针 3 例，跑绿即删）：tile 路结果恒为精确结果的**超集**（`tile & exact === exact`）——部分覆盖 tile 时域外特征会被计入（superset 方向），域内特征绝不漏判；对齐矩形时两者一致。探针未转正：现有 4 例（单像素精确/跨 tile 聚合/clamp/全不透明）已覆盖行为面，超集不变量作为已知语义记录于此即可。
+  - `texture-alpha.ts` 消费对账：`AlphaIndex` 用 `pixels.width/height` 构建、`face-split.ts` 用 `info.width/height` 换算 UV→像素——**同一 `pixels` 对象**（texture-alpha.ts:25-27），坐标系同源无错配；canvas 路 256px 降采样时两者同步缩小，比例一致。
+  - `mc-tints.ts`：族①回访——`cache` 模块级永不清，但键域 = vendored 版本 JSON（有界、内容不可变），符合族①判据；`inflight` 失败清空（注释论证：一次网络瞬断不应永久锁死）正确。
+- 验证：materials/ + 两消费者（face-split / texture-alpha）7 文件 56 例绿。
+- 遗留 / 下一轮建议：下一轮按清单轮转取 **`mesh`**（第 7 位；face-split.ts 本轮已顺带读过判定正确，可作起点）。materials 目录本体判**已收敛**，短期无需回访。

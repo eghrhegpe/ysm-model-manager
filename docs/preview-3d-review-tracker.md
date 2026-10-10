@@ -151,3 +151,24 @@
   1. 下一轮按清单轮转取 **`materials`**（第 6 位；`infra` 已巡两轮）。
   2. **族② 的残余**：本轮只对账了 `registerModelRoot` 这一条不变量。同类「N 实现方」候选尚有：各适配器的 **`releaseTextures` 归还**（ysm 有显式降级告警，其余格式是否有对应契约？）、**`dispose` 的隔离度**（FBX `safeCall` / VRM try-catch / 其余裸写——本轮已由 `unloadModel` 兜底 frustum 一支，但「整份 dispose 的异常隔离」仍是三种写法并存）。建议下轮或专门一轮把「适配器 dispose 范式」收口为**唯一写法**（如统一经 `safeCall` 或 `safeDispose` 组合），一次消灭该族。
   3. **族① 的判据已留档**：若日后有人想扩张 `check-singleton-hygiene` 射程覆盖 `const` 容器，本轮清单与判据可直接作为「零基线」起点（当前 39 处全部合规，扩张后应立即全绿而非需登记存量）。
+
+## 2026-10-10T23:00:00+08:00 追加：抽象扫描第 3 批（dispose 隔离 + build 失败归还两族，收口上轮 §遗留 2）
+
+- 选定理由：续族②「N 实现方共享同一不变量」，本轮对账上轮清单点名的两条残余——**dispose 异常隔离**与**纹理引用归还对称**。
+- **族②b：dispose 异常隔离（抓到真缺陷，已修）**——5 实现方隔离度四分五裂，缺陷形态一致：**外部注入回调抛错 → 后续清理静默跳过**。
+  - **ysm（最脆）**：`dispose()` 完全无 try，`rayCleanup()` / `bonePanelRef.current?.()` 裸排在注销前——任一抛错则**八项清理全跳过且异常外泄**（实证：新测试令 rayCleanup 抛错，修前直接把 Error 抛给调用方）。修法对齐 VRM 范式：只隔离易抛项，其余裸写（注销/纯操作包 try 只会掩盖真缺陷）。
+  - **mmd**：一个大 try 包全链（bonePanelRef 抛错即跳过注销/mixer/感知层，catch 只 dbg）→ 拆为「面板清理单独 try」+ 主链裸写。
+  - **vrm/fbx** ✅ 两正确范式（单点 try/catch、逐项 safeCall）；**litematic** ✅ 裸写但前缀均不可抛，补注释钉「若插入回调须提前注销」。
+  - **契约化**：`adapter-dispose-contract.test.ts`（5 例）——判据是**逐处绑定**（每处回调向上找最近 try、遇 `} catch` 边界即判未受保护）。⚠️ 初版只判「存在某个 try」被变异验证当场抓获**假绿**（删掉两处隔离仍全绿），改锚定行级后同一变异精确报 L592。教训入档：**契约测试必须过变异验证，否则是装饰**。
+- **族②c：build 中途失败的归还对称（抓到跨格式共有形态，中央收口）**：
+  - 逐格式对账发现「**register 早、句柄晚**」是**所有 6 格式共有的形态**（scene.add + registerModelRoot 在中段，dispose 句柄在最后一行才产生），中段之后抛错 → 句柄 dispose 永不执行。
+  - **ysm 私有面**（textureCache 引用归还）：`buildYsmScene` 阶段②③包 try/catch 补 `releaseTextures` + 注销（`4b89dd791`，TDD 2 例先红后绿）。
+  - **全格式公共面**（frustum 根注销）：正解不在逐格式补 catch（N 实现方各补一遍 = 病根本身），而在**中央 stale 清扫**——`recoverMountFailure` 与 `recoverSwitchFailure`（keep 分支）的 remove + disposeObject3D 循环补 `unregisterModelRoot(c)`（no-op 幂等安全），一次覆盖全部格式含未来新增（`fb12e3321`，TDD 1 例先红后绿）。
+  - **驳回的假病**：VRM `vrmDiag` await 在 register 之后——读实现自带 try/catch「诊断不阻断」，不可抛，不修。
+- **族②a 残余 `releaseTextures` 对账结论**：仅 ysm/pack 用 textureCache 池（其余格式纹理不走池，无归还义务）；pack 的 `disposeContent` 与 build 失败路径**均已配对 release**（L268-270 / L326）——非缺口，设计如此。`menu/panels/env.ts` 的 per-mount WeakMap 订阅（`_envCapUnsubsByMenu`）有显式 `disposeEnvSubscriptions` 出口 + rebuild 前清旧，✅ 正确实现。
+- 验证：preview-3d 全量 217 文件绿；typecheck / vite build / biome / check-layering 全绿；三处修复各带变异验证（2 / 3 / 1 例转红）。
+- 提交：`f3a59e7d4`（dispose 隔离）、`4b89dd791`（ysm 后段归还）、`fb12e3321`（中央清扫注销）。
+- 遗留 / 下一轮建议：
+  1. 下一轮按清单轮转取 **`materials`**（第 6 位）。
+  2. **同族可回访点**：`switch-preview.ts` clearSwitchContent 的 !keep stale 循环只 remove 不 dispose/注销——其语义是「旧内容层随后由 dispose() 收尾」链是对的，但若 dispose 抛错（有 try 兜），frustum 注销也随句柄一起丢；中央清扫已兜 mount 侧，switch 该分支未兜（低概率，回访 materials 后有余力再看）。
+  3. **本仓「N 实现方」债的元结论**：三轮扫描（const 容器 0 违规 / registerModelRoot 1 缺口 / dispose 隔离 2 实现脆 + build 归还 1 共有形态）表明该族共因是**责任外包给实现方而中央无兜底**。已落三枚契约测试（frustum-registration / adapter-dispose / stale 清扫断言）把「实现方自觉」翻成「机器拦截」；新格式接入时这三枚闸会先于人工评审抓到漏项。

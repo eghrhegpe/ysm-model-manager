@@ -65,6 +65,10 @@ func (a *App) downloadFileWithQueue(ctx context.Context, rawURL, saveDir string)
 			err = dl.File(ctx, s.url, savePath, a.emitDownloadProgress)
 		}
 		if err == nil {
+			// 下载即落盘进仓库目录（队列 saveDir=GetRepoRoot 注入，见前端 download-queue.ts）——
+			// 与导入/文件夹导入同口径失效扫描缓存，否则前端立即 tree:reload 仍命中 ≤TTL 旧缓存，
+			// 新模型「下载了却看不见」（锐评 2026-10-10：三条落盘入口中下载是唯一漏清的一条）。
+			a.ClearScanCache()
 			return savePath, nil
 		}
 		lastErr = err
@@ -77,6 +81,12 @@ func (a *App) emitDownloadProgress(downloaded, total int64) {
 	// 进度事件高频（200ms/文件），只对 final（下载完成）打日志，避免长队列刷屏日志
 	if total > 0 && downloaded >= total {
 		log.Printf("[queue] emit download:progress final dl=%d total=%d", downloaded, total)
+	}
+	// a.app 由 SetApp 延迟注入（ADR-002 P1 闭包解析）：CLI/测试经零值 &App{} 走直下路径时
+	// 为 nil，Event.Emit 必然 panic——与 DownloadFromGitHub 的 appCtx nil 兜底对称，
+	// 进度事件在无 GUI 宿主时静默丢弃（锐评 2026-10-10）。
+	if a.app == nil {
+		return
 	}
 	a.app.Event.Emit("download:progress", downloaded, total)
 }

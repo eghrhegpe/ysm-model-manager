@@ -90,6 +90,8 @@ status: active
 ## 与其他子系统关系
 
 - `internal/app/app_download.go`：`downloadFileWithQueue` 用 `ResolveSavePath` 解析路径、按 Mirror 策略排序三个源、逐源调 `File`/`FromGitHubAPI`，任一成功即返回；进度经 `emitDownloadProgress` 转发 `download:progress` Wails 事件。**队列契约 DTO（`DownloadTask`/`QueueStatusInfo`）已下沉 `go/types`（ADR-145：跨包契约，供 go/cli AppService 接口引用；JSON tag 原样保留 → bindings 零漂移）**；`DownloadFromGitHub` 直下入口复用 `downloadFileWithQueue`，ctx 用 **App 级 `appCtx`**（NewApp 创建、`ServiceShutdown` 时 `appCancel`）——非队列任务，取消不随 `CancelQueue`，只随应用退出
+- **落盘成功必须失效扫描缓存**（`downloadFileWithQueue` 成功返回前 `a.ClearScanCache()`，锐评 2026-10-10）：队列任务 `saveDir` 由前端注入 `GetRepoRoot`，下载即写进仓库目录——与导入（`importModelFileWithOptions`）、文件夹导入（`importModelFolderAs`）是**同族三条落盘入口**，前两条都有缓存失效、下载曾漏清。症状：下载完成 → 前端立即 `tree:reload` → 命中 ≤TTL 旧扫描缓存 → 新模型「下载了却看不见」；watcher 兜底不可靠（`syncAll` 在无整合包时短路、不清缓存）。守卫：`internal/app/app_download_test.go`（httptest 真下载 + 预扫描建缓存 + 断言失效后重扫可见）
+- **`emitDownloadProgress` 的 `a.app` nil 守卫**：`a.app` 由 `SetApp` 延迟注入（ADR-002 P1 闭包解析），CLI/测试经零值 `&App{}` 走直下路径时为 nil——`commitAtomicWrite` 必发 final progress，无守卫即 panic；与 `DownloadFromGitHub` 的 `appCtx` nil 兜底对称，无 GUI 宿主时进度事件静默丢弃
 - 前端通过 Wails EventsOn 接收进度事件（`download-queue.ts`）
 
 ## 不变量

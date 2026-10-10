@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 
+	"ysm-model-manager/go/instance"
 	ysmsync "ysm-model-manager/go/sync"
 	"ysm-model-manager/go/types"
 )
@@ -80,6 +81,13 @@ func (a *App) ResolveConflicts(conflicts []ysmsync.FileConflict, defaultStrategy
 		targetDir,
 		globalDir,
 	)
+	// 冲突解决会改实例/全局两侧目录（ResolveConflict 内部 CopyFile 覆盖），但 go/sync
+	// 不能反向依赖 go/instance（instance 导入 sync），故 instance 同步结果缓存的失效
+	// 归 app 层配对——与其余六条写入口（push/pull/toggle/relink/收编/单条推拉）同口径，
+	// 缺这一条则整合包页继续展示旧同步状态 ≤TTL（锐评 2026-10-10 配对审计唯一漏网）。
+	// 无条件清：失败计数 >0 时也可能已有部分文件被改。
+	instance.InvalidateSyncItemsCache()
+	ysmsync.InvalidateSyncScanCaches()
 
 	return &types.SyncResolveResult{Resolved: resolved, Failed: failed, Manual: manual}, nil
 }

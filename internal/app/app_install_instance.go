@@ -242,8 +242,13 @@ func (a *App) SyncModelToggleStatus(instanceCustomDir, filesRoot string) (int, i
 // relinkDir 重新应用链接模式到单个目录
 // rtype 用于需要文件夹级重新链接的类型（ysm/EntityPlayer 等）
 // relinkDir 按哈希比对重链接实例目录（执行逻辑下沉 go/sync）
+// 与其余写入口同口径自带双缓存配对失效（锐评 2026-10-10 配对审计）：helper 自持
+// 契约，不依赖调用方经 scanner 级联兜底——调用方怎么变都不会漏。
 func (a *App) relinkDir(customDir, filesRoot, rtype string) (int, error) {
-	return ysmsync.RelinkDir(customDir, filesRoot, rtype, a.getLinkMode(), a.ScanModelEntries, a.logger.Add)
+	n, err := ysmsync.RelinkDir(customDir, filesRoot, rtype, a.getLinkMode(), a.ScanModelEntries, a.logger.Add)
+	instance.InvalidateSyncItemsCache()
+	ysmsync.InvalidateSyncScanCaches()
+	return n, err
 }
 
 // RelinkAllInstanceResources 重新应用链接模式到整合包所有资源类型目录

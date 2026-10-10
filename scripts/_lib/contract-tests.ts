@@ -141,6 +141,9 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   // 应用配置写唯一实参点（ADR-313）：扫 frontend/src 生产文件的 SaveAppConfig 调点 +
   // import 绑定 + 出口主题字面量——frontend 生产代码变更即须复核
   "test_config_write_single_exit.ts": ["frontend", "tests"],
+  // 整合包同步写入口双缓存配对（锐评 2026-10-10）：扫 internal/app 生产文件的
+  // ysmsync 写调用点，函数体须配对清 instance+sync 两派生缓存——go 侧同步入口变更即须复核
+  "test_sync_write_cache_pairing.ts": ["go", "tests"],
   "test_api_break.ts": ["tests"],
   "test_auto_import.ts": ["tests"],
   // 守卫跨三端：scripts 工具自身 + Go 侧 ADR-047 守卫信号（internal/app）+ 前端黑名单/bindings
@@ -344,6 +347,14 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   ],
   // 应用配置写唯一实参点（ADR-313）：出口文件即不变量本体，改它须触发本锁
   "test_config_write_single_exit.ts": ["frontend/src/views/config-write.ts"],
+  // 整合包同步写入口双缓存配对：internal/app 全部生产文件都是扫描对象（目录哨兵），
+  // 写入口本体 app_sync.go / app_install_instance.go / app_install_import.go 变更必触发
+  "test_sync_write_cache_pairing.ts": [
+    "internal/app/",
+    "go/instance/",
+    "go/sync/",
+    "tests/test_sync_write_cache_pairing.ts",
+  ],
   "test_api_break.ts": ["scripts/api-break.ts"],
   "test_auto_import.ts": [
     "scripts/auto-import-lexer.ts",

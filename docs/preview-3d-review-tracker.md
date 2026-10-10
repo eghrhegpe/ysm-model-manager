@@ -102,3 +102,25 @@
   2. **未修的已知项**：F3（缓存快路径返回共享可变对象 + 浅拷贝）与 F5（`collectTexturesAndAvatars` 以去扩展名文件名为键，同名不同目录纹理静默互相覆盖 → 被覆盖 blob 立即泄漏）。两者都在 `wasm-decode.ts`，建议下轮或专门一轮处理 F5（对齐 `collectJsonSpecTextures` 的「覆盖者也登记」做法）。
   3. **值得单独立项的漂移风险**：`decoder/texture-order.ts` 与 Go `internal/app/texture_order.go` 是**手抄双实现**，口径对称但只有人工纪律注释（`texture-order.ts:2`「改口径务必同步两侧」）而无自动一致性守卫。若要动这块，值得补一条跨语言契约测试。
   4. **方法论备查**：F2 是「子代理报 🔴 但复核后不可达」的实例——**发现必须回源码验证可达性**，否则会白改甚至改出新病（本仓「不为不可能场景加防御」原则）。
+
+## 2026-10-10T18:45:00+08:00 巡检：infra
+
+- 选定理由：上轮（decoder）建议取 `infra`（第 5 位；`caps` 已专项覆盖须跳过）。
+- 方式：主代理读 `render-host.ts` / `postproc-cost-probe.ts` / `scene-registry.ts` / `gpu-*.ts` / `worker-bridge.ts` / `preview-shell.ts` / `safe-dispose.ts` / `cleanup-helper.ts` / `content-bridges.ts` / `unload-model.ts` / `render-loop.ts` 等；子代理被派去全量读 35 文件但**未落盘报告**（疑大范围超时失效），本轮结论均为**主代理自证**。
+- **发现的真实缺陷（1 条 🔴，已修）**：
+  - **GPU 计时 query 未删孤儿**（`postproc-cost-probe.ts|createGpuTimer`）：`poll()` 只在 `QUERY_RESULT_AVAILABLE===true` 时 `deleteQuery`，而探针收尾 drain 有 `DRAIN_MAX_FRAMES` 上限。窗口内始终未就绪的 query（后台标签页 rAF 节流 / 驱动延迟）**既不产数字、也不被删除**——`inflight` 是闭包局部数组随本次探针被 GC，其指向的 WebGL query 对象留 GL 侧成孤儿；探针按设计反复跑（诊断用途）⇒ 逐次累积，每轮最多 8 个（`MAX_INFLIGHT_QUERIES`）。**同族第二路**：只 `begin` 未 `end` 的 active query（渲染段抛错打断）此前亦无删除路径。
+    - **实证**：新建 `postproc-cost-probe.gpu-timer.test.ts`（6 例，假 WebGL2 上下文记录 create/delete 计数）锁不变量**创建数 == 删除数**；变异验证（`dispose` 体换空实现）→ **3 例转红**（未就绪兜底 / 未 end active / 上限回收）。
+    - 修法：`GpuTimer` 增 `dispose()`（删全部 inflight + active，active 先 `endQuery` 再删）；探针测量段包 `try/finally`，出口无条件 `dispose()`。为可直测把 `createGpuTimer` 由私有改导出（原为零测试私有函数，泄漏无人可查）。
+- **驳回的两条候选（防假病，留档）**：
+  - `render-host.ts|animate` 首行无条件 `requestAnimationFrame` ⇒「早退不停环」：**非缺陷**。已由 `render-host.raf-contract.test.ts` 显式文档化并钉死（停环唯一手段 = `stopIfIdle`/`reset`），且生产清理路径（`mount-session.ts|unbindInputsAndStopLoop`）正是「`removePerFrame` → `stopIfIdle`」配对；`mount-preview-core.ts:286` 的 `resetLoopState()` 在 `_resetSingletons()`（测试用）内，非生产路径。
+  - `preview-shell.ts:106` 的 `body as HTMLElement` 强制 cast（复用路径 body 可能 null）：**潜在隐患非活缺陷**。`resetRefs()` 三字段同置 null，故「overlay 在而 body 为 null」不可达；且 `mount-shell.ts:64` 已按「用 `ensureViewContainer` 返回的权威 body」消费，并有回归锁（`mount-preview-core.test.ts:576-599`）。
+- **挂起的产品问题（非缺陷，待拍板）**：`scene-registry.ts|unregister` 的焦点晋升取 **Map 插入序末位**，而非「最近被激活者」。新增 `scene-registry-focus.test.ts`（5 例）把该语义**分离钉死**——既有测试（`scene-registry.test.ts:49-56`）只覆盖「唯一幸存者接任」，两种规则同解故未区分。用户可见影响：roles 面板 ✓ 高亮 / 菜单绑定 / 取景都跟 `activeId`。**待答**：点选过（但非最后插入）的模型是否该优先接任？
+- 本轮改动：
+  - `frontend/src/preview-3d/infra/postproc-cost-probe.ts` — `GpuTimer.dispose()` + try/finally 出口释放 + `createGpuTimer` 导出
+  - 新增测试：`postproc-cost-probe.gpu-timer.test.ts`（6 例，query 创建/删除配对）、`scene-registry-focus.test.ts`（5 例，焦点晋升语义）
+- 验证结果：`vitest run infra/` **绿**（33 文件 / 381 例，32→33）；`typecheck` **绿**；`check-biome --files` **绿**。query 修复变异验证 3 例转红。
+- 提交：`6e028556d`。
+- 遗留 / 下一轮建议：
+  1. 下一轮按清单轮转取 **`materials`**（第 6 位；`infra` 已巡）。实测该目录为 `frontend/src/preview-3d/materials/`（**仅此一个**，5 个非测试源文件；先前一次 `Test-Path` 探测曾误报 `material` 单数并存，经复核为无——特此更正，勿再据误报改名）。
+  2. **本轮未覆盖**：`render-budget.ts`（127）/ `gpu-load-calibrate.ts`（173）/ `frustum-cull.ts`（192）/ `input-and-animation.ts`（218）只读了接口面，未逐行审其中数学与边界；`load-trace.ts` / `keymap.ts` / `texture-bytes.ts` / `schema-registry.ts` 未读。建议下轮若回访 infra，从 `gpu-load-calibrate` 的标定量与其消费点一致性入手。
+  3. **子代理失效备查**：35 文件全量委派**未产出报告**——大范围委派宜拆成 2~3 个小批次并给明确文件清单，避免单一子代理超时后全轮无产出（本轮靠主代理自读兜住，未损失结论）。

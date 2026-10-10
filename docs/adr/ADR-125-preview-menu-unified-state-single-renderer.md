@@ -2,7 +2,6 @@
 
 - **状态**：❌ 已取代
 - **被取代**：[ADR-126](./ADR-126-menu-schema-final-form.md) 取代（P1/P2/P3 已纳入 ADR-126 P4-A/B/D 体系）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-08-28
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/utils/3d/adapters/preview-menu.ts, preview-menu-settings.ts, preview-menu-cap-controls.ts, preview-menu-node-types.ts, caps/scene-capability.ts, caps/scene-capability-registry.ts, ADR-085, ADR-093, ADR-076`

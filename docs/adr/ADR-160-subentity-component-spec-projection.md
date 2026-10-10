@@ -1,7 +1,6 @@
 # ADR-160：子实体统一为组件视图:GetModel3DSpec spec.models 唯一源 + 详情统计 = spec 投影(maid L0 清单退役)
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-02
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/views/app-preview/maid-3d.ts`、`frontend/src/views/app-preview/skeleton-render.ts`、`frontend/src/views/app-preview/tpl.ts`、`go/threejs/spec.go`、`frontend/src/bindings/ysm-model-manager/go/threejs/models.ts`、ADR-093、ADR-101、ADR-131、ADR-132

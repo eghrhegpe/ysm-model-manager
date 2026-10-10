@@ -49,6 +49,7 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "check-knowledge-body-line-refs.ts": ["docs", "tests"],
   "check-gen-routes-status.ts": ["docs", "tests"], // gen-routes status 闸隔离契约：--kc-dir 模拟冻结/草稿剔除 + --check 自洽
   "check-knowledge-frontmatter-line-refs.ts": ["docs", "tests"], // 5.10 frontmatter 人工字段行号引用 WARN
+  "test_adr_status_format.ts": ["docs"], // ADR 状态行格式契约（2026-10-10 A1 前置补充）：读 docs/adr 全量
   "check-knowledge-card-references.ts": ["docs", "tests"], // 5.11 卡间引用断链 WARN
   "check-knowledge-anchor-def-kind.ts": ["docs", "tests"],
   "check-knowledge-card-status.ts": ["docs", "tests"],
@@ -265,6 +266,13 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
     "scripts/adr-check.ts",
   ],
   "test_codemod_guards.ts": ["scripts/codemod.ts"],
+  // ADR 状态行格式契约（2026-10-10 A1 前置补充）：ADR 头部解析两库 + docs/adr 全目录任一
+  // 改动都须触发（目录形态 docs/adr/ 由 targetsHit 前缀展开）。
+  "test_adr_status_format.ts": [
+    "scripts/_lib/frontmatter.ts",
+    "scripts/_lib/adr-status-categories.ts",
+    "docs/adr/",
+  ],
   // G2 Worker 生命周期闸的契约测试（2026-10-08 补登记）：验证 scripts/check-worker-lifecycle.ts
   // 的扫描域 fail-loud（空域 exit 2）、`new Worker(` 站点终止出口判定、基线只减不增与豁免语法。
   // 为何必须登记（test_contract_tables_consistency 断言）：其 DOMAINS 标了 `tests`

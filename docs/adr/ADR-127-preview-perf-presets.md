@@ -1,7 +1,6 @@
 # ADR-127：性能档位薄壳版——数据表 + 通用套用器（低/中/高/自定义）
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-08-29
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/preview-3d/state/perf-presets.ts, ADR-125, ADR-126, docs/knowledge/preview-menu-settings-state.md`

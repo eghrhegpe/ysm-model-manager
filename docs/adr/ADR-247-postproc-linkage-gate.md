@@ -8,7 +8,6 @@
 > **D1（联动读浓度意图）与 D2（SSR 抑制态显式化）依然有效**，其测试与不变量保留。
 
 - **状态**：🔄 部分采纳（D3 被 ADR-250 取代；D1/D2 有效）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-16
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/preview-3d/caps/postprocessing-capability.ts, frontend/src/preview-3d/state/preview-state.ts, ADR-196, ADR-246, ADR-126, ADR-250（取代 D3）`

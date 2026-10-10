@@ -1,7 +1,6 @@
 # ADR-305：preview-3D 菜单命名脱钩裁定：三命名族稳定契约
 
 - **状态**：✅ 已采纳
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-24
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`ADR-257（wetnessGated 口径）/ ADR-286（applyChangedParams 分派表）/ ADR-246 D2（体积光语义命名）/ docs/audit-env-review.md S5-2 / scripts/check-i18n-unused.ts`

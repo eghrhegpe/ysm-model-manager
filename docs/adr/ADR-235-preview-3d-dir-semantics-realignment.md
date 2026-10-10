@@ -1,7 +1,6 @@
 # ADR-235：preview-3d 目录语义归位：adapters 拆分与 menu 前缀升格
 
 - **状态**：✅ 已采纳
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-14
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/preview-3d/adapters/`、`frontend/src/preview-3d/menu/`、`frontend/src/preview-3d/infra/`；ADR-227（单例收敛战役）、ADR-233（会话状态机，B 组近期落点）、ADR-146（路径别名反桶）、ADR-225（perception 下沉）

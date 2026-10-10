@@ -1,7 +1,6 @@
 # ADR-270：preview-3d/menu 目录物理分层（七层隐式收敛为显式子目录）
 
 - **状态**：✅ 已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-19
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/preview-3d/menu/ · ADR-195 控件/节点同构 · ADR-193 声明式化 · ADR-146 路径别名 · check-layering 门禁`

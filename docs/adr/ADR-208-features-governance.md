@@ -1,7 +1,6 @@
 # ADR-208：features 层治理收口：seam 门禁 / 400 行红线 / 菜单事实源 / i18n
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-09
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`ADR-040(≤400行) / ADR-190(D1a DOM模板归views, D2 注入真化) / ADR-021 B(菜单即数据) / ADR-045(i18n三语); frontend/src/features; scripts/check-layering.ts`

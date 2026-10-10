@@ -2,7 +2,6 @@
 
 - **状态**：✅ 已采纳（Accepted）
 - **衔接**：§2.5「只读扫描进即有引导空态 + 主按钮」的**落点**已由 [ADR-288](./ADR-288-diagnostics-scan-bar-persistent.md) 修正（启动按钮迁到常驻参数栏，空态留在结果区）；本节「进 tab 不跑进程」的**判据**不受影响，仍有效。§2.7 的**结构判据**（scan 平级成独立 tab、模式轴只留 single/conc 下拉）已由 [ADR-300](./ADR-300-diagnostics-nav-axis-convergence.md) 修订为纯**内容判据**（scan 是 bench 组第三子 pill、模式下拉退役为统一 pill）——「scan 参数面从不触碰共享控件、公共区在其下整体退场」的内容判据原样有效。
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-19
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：[ADR-262](./ADR-262-perf-observability-model.md)（性能载荷与目标集选择器；本 ADR 落实其**未落地**的「复用同一套控件」意图）、`views/app-content/tpl.ts`（tab 定义）、`diagnostics/perf.ts`（模式接线）、`diagnostics/perf-concurrent.ts`、`docs/knowledge/app-content-diagnostics.md`

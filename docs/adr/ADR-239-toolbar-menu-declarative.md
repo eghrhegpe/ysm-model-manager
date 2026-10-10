@@ -1,7 +1,6 @@
 # ADR-239：工具栏下拉菜单声明式收敛（对齐 ADR-021 菜单范式）
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-15
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`views/app-tree/toolbar-menus.ts, features/context-menu/menu-defs.ts, UI-Design.md §15`

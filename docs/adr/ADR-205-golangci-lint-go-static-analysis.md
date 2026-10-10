@@ -1,7 +1,6 @@
 # ADR-205：Go 静态分析引入 golangci-lint（仅补真空面，不接管自研 gofmt/jscpd-go）
 
 - **状态**：✅ 已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-08
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`scripts/pre-push-gate.ts:506 / .github/workflows/test.yml:143 / scripts/jscpd-go.ts / .githooks/pre-commit:213-235`

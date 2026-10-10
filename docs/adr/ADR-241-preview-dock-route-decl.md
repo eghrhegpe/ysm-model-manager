@@ -1,7 +1,6 @@
 # ADR-241：3D dock 一级路由声明化（组定义 direct 判定收敛 core.ts 隐式分支）
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-15
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/preview-3d/menu/engine/defs.ts (PreviewMenuGroupDef + PREVIEW_MENU_GROUPS); frontend/src/preview-3d/menu/engine/core.ts (renderPreviewDock L420-530)`

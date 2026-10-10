@@ -1,7 +1,6 @@
 # ADR-224：mock 路径守卫：vi.mock 目标存在性静态校验（M1 内部硬报 / M2 裸包 WARN / 豁免通道）
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-10
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`scripts/_lib/alias-resolve.ts`、`scripts/check-path-hygiene.ts`

@@ -1,7 +1,6 @@
 # ADR-309：VRM 播 VMD 播放语义收口（锐评 P1-P7 七处修法落定）
 
 - **状态**：✅ 已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-25
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：ADR-243（VMD→VRM 重定向管线）; ADR-306（VMD 表情改道）; ADR-230（代际守卫唯一出口）; `frontend/src/preview-3d/adapters/vrm/vrm-adapter.ts; frontend/src/preview-3d/adapters/vrm/vmd-retarget.ts; frontend/src/preview-3d/adapters/vrm/vmd-expression-map.ts; frontend/src/preview-3d/bone/vrm-foot-ik.ts`

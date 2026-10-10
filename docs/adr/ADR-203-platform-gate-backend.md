@@ -1,7 +1,6 @@
 # ADR-203：平台门控归位 backend——断 utils/dom→backend 依赖环
 
 - **状态**：🔄 部分采纳（D1–D3 采纳；D4 `directory-picker.ts` 迁移暂缓）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-07
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/utils/dom/android-bridge.ts,capabilities.ts,directory-picker.ts;frontend/src/backend/platform.ts,platform-web.ts`

@@ -1,7 +1,6 @@
 # ADR-217：backend 分层治理：纯解析函数下沉 parsers 断环 + Tier 判定收敛
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-09
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/backend/`、`frontend/src/parsers/`、`frontend/src/preview-3d/decoder/`

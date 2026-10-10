@@ -1,7 +1,6 @@
 # ADR-191：testutil 迁至 go/internal——消除内核测试对应用层的依赖倒挂
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡 `go-testutil`（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-05
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：ADR-003（逻辑下沉，薄壳+内核）、ADR-145（internal/app 不依赖 go/cli）、`go/internal/testutil/`、`internal/app/main_test.go`

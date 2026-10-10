@@ -1,6 +1,6 @@
 # ADR-118：面级透明分类：mesh 级 alpha 误判数据与分阶段落地
 
-- **状态**：已采纳（Accepted）——Phase A、B 全部定稿（见 §6）
+- **状态**：✅ 已采纳（Accepted）——Phase A、B 全部定稿（见 §6）
 - **日期**：2026-08-23
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`scripts/translucency-probe.ts`; `frontend/src/preview-3d/texture/texture-alpha.ts`; `frontend/src/preview-3d/model/ysm-object.ts`; upstream/ModernYSM-1.20.1-forge `YSMClientMapper.TranslucencyScanner`

@@ -1,7 +1,6 @@
 # ADR-240：3D 菜单内容型 panel 统一折叠卡渲染（kind 形态脱钩）
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-15
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/preview-3d/menu/render/render.ts (rmAppendFolder/hasFoldedBody); frontend/src/preview-3d/menu/node-render.test.ts; frontend/src/preview-3d/menu/roles.test.ts; menu-node-types.ts PreviewMenuNode.kind`

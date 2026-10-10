@@ -1,7 +1,6 @@
 # ADR-276：Preview 菜单 schema 补跨域订阅与树形行抽象评估
 
 - **状态**：✅ 已采纳（ADR-193 §2.2② 的收尾）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-19
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/preview-3d/menu/engine/sanctioned.ts; frontend/src/preview-3d/menu/render/render.ts; frontend/src/preview-3d/menu/panels/bones-panel-node.ts; frontend/src/preview-3d/adapters/vrm/vrm-bone-ui.ts; frontend/src/utils/base/pure/label.ts; ADR-193 §2.2（骨骼唯一永久例外二选一）; ADR-195（控件双轨收窄）; ADR-207 D3（t/tOf 双入口）; ADR-240（内容型 panel 折叠卡）; ADR-242（动作组入口行导航）`

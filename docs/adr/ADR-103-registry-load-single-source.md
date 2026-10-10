@@ -1,6 +1,6 @@
 # ADR-103：注册表加载单源化与僵尸覆盖分支清理
 
-- **状态**：已采纳（Accepted）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-08-19
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`ADR-058 纯exe内嵌数据, ADR-092 资源类型分组路由, go/types/resource.go, embed.go, internal/app/resource_bindings.go`

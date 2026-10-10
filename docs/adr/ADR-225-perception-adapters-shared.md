@@ -1,7 +1,6 @@
 # ADR-225：perception 模块下沉至 adapters/shared
 
 - **状态**：✅ 已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-11
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/preview-3d/perception/`、`frontend/src/preview-3d/adapters/`

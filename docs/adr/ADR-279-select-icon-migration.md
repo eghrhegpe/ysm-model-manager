@@ -1,7 +1,6 @@
 # ADR-279：设置页下拉图标死代码处置与自定义下拉迁移
 
 - **状态**：✅ 已采纳（D1 本批落地；D2 方向已定、实施另批）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-20
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/views/app-content/settings/tpl-settings.ts` / `tpl-settings-about.ts` / `frontend/src/views/app-tree/tpl-batch-rename.ts`（病灶模板）；`frontend/src/utils/dom/css.ts`（`.dd-wrap/.dd-menu/.dd-item` 共享基础样式）；`frontend/src/preview-3d/menu/panels/env.ts`（`<option>` 纯文本内容模型的实证注释先例）；ADR-208 D2（模板外移 views）、ADR-190 D1a（HTML 归 views）

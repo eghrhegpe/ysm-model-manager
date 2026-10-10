@@ -1,7 +1,6 @@
 # ADR-296：链接模式切换重链链路加固（锐评落地）
 
 - **状态**：✅ 已采纳（D1–D7 全部落地并经对抗审查放行；D8 明示不做项维持现状）
-- **实施状态**：查知识卡 `go-sync` / `go-installer`（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-22
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：ADR-028（先删后建原子替换）、ADR-038 D3.4（IsHardLink 目录排除）、ADR-044③（路径边界对称）、ADR-056（共享安装锁）、ADR-064（dirLevelSync 锚定）；代码 `go/sync/sync_relink.go`、`go/installer/installer.go`、`frontend/src/views/app-content/settings/init.ts`

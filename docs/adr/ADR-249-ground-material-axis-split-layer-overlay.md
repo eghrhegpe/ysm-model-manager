@@ -1,7 +1,6 @@
 # ADR-249：地面材质菜单拆轴与图层叠加（sourceKind 轴 + canvasStyle 轴 + 装饰叠加层）
 
 - **状态**：🔄 部分采纳（§2.2 被 [ADR-252](./ADR-252-ground-canvas-style-material-only.md) 取代——canvasStyle 收敛为纯材质轴；其余拆轴/图层叠加决策继续有效）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-16
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/preview-3d/caps/ground-menu.ts`、`frontend/src/preview-3d/caps/ground-surface-spec.ts`、`frontend/src/preview-3d/caps/ground-capability.ts`、`frontend/src/preview-3d/state/env-state-schema.ts`、[生效矩阵](../archive/ADR-249-ground-material-effect-matrix.md)、`docs/adr/ADR-117-ground-material-spec.md`、`docs/adr/ADR-195-cap-control-single-type.md`、`docs/adr/ADR-196-env-state-preset-unification.md`

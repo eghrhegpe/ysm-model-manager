@@ -1,7 +1,6 @@
 # ADR-260：页面级拆除单源——SubscriptionBucket 收异步清理，退役 repoEventsCleanup 旁路
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-17
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/views/app-content/subscription-bucket.ts`、`state.ts`、`index.ts`、`init-github.ts`、`init-workshop.ts`、`frontend/src/features/community/show-repo-models.ts`、ADR-163（页面面板常驻化，本 ADR 的清理时机与其绑定）、ADR-091 D22（订阅桶）

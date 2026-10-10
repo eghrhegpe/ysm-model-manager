@@ -1,7 +1,6 @@
 # ADR-228：网页版模型字节直读：消除 base64 往返
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-12
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/backend/read-model-bytes.ts, frontend/src/backend/web-fs-read.ts, frontend/src/preview-3d/decoder/wasm-decode.ts, docs/knowledge/model3d.md`

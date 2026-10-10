@@ -1,7 +1,6 @@
 # ADR-218：stats worker 池并发契约与协议收敛
 
 - **状态**：已采纳（Accepted）；§D2（协议收敛）被 [ADR-219](./ADR-219-stats-graceful-degradation.md) 部分修订（worker 级细粒度信道以 `partial` 流重开，服务看门狗与模型级降级）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-10
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/backend/web-stats.ts · frontend/src/workers/stats-protocol.ts · docs/knowledge/model-stats.md`

@@ -1,7 +1,6 @@
 # ADR-135：Go 端 jscpd 重复代码检测与增量门禁
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-08-30
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`scripts/jscpd-go.ts;scripts/pre-push-gate.ts;scripts/baseline/jscpd-go-baseline.json`

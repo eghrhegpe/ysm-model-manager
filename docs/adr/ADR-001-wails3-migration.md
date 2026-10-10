@@ -1,6 +1,6 @@
 # ADR-001：升级至 Wails 3
 
-- **状态**：已采纳（Accepted）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-07-14
 - **决策人**：Jieling（人类首席架构师）、Riku（联邦首席架构师 AI）
 - **相关**：wails.json / go.mod / main.go / app*.go / frontend/src

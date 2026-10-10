@@ -1,7 +1,6 @@
 # ADR-178：PreviewScene 能力分层接口
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-04
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/preview-3d/adapters/mount-preview-core.ts (PreviewScene/PreviewAdapter), ysm/vrm/mmd/fbx/litematic/pack 六适配器, preview-core 知识卡`

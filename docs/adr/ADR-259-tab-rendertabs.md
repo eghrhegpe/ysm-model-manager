@@ -1,7 +1,6 @@
 # ADR-259：tab 结构单点产出——renderTabs 工厂与结构契约
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-17
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/views/app-content/tabs-shell.ts`（新，`renderTabs` 工厂）、`frontend/src/views/app-content/tpl.ts`、`frontend/src/views/app-content/init-pages.ts`（`bindTabs` 运行期分发）、`frontend/src/views/app-content/tpl-structure.test.ts`、ADR-258（诊断页导航收敛，本 ADR 修其未对齐的容器结构）、`skills/pitfalls.md` #20

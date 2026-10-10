@@ -1,7 +1,6 @@
 # ADR-170：frontend 分层:backend 桥层收窄+解析簇下沉 parsers,dialogs 升格 features(二段式)
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-03
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：前端架构锐评 P0-1（`docs/knowledge/frontend-design-critique.md`）、ADR-123（右键可达性单一事实源）

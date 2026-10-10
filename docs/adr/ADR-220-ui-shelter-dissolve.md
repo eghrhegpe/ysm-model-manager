@@ -1,7 +1,6 @@
 # ADR-220：解散 ui 收容所——3D 菜单组件归位 preview-3d
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-10
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/ui, frontend/src/preview-3d/menu, frontend/src/preview-3d/adapters, frontend/src/views/app-tree`

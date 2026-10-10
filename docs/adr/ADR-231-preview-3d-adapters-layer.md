@@ -1,7 +1,6 @@
 # ADR-231：preview-3d adapters 按私有子系统分层
 
 - **状态**：✅ 已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-13
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/preview-3d/adapters/`、先例 `ADR-225`（adapters/shared 已建）、约束 `ADR-146`（@/ 路径约定）

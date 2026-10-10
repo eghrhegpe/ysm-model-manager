@@ -1,7 +1,6 @@
 # ADR-156：契约测试按变更文件精确裁剪（scripts 改动不再全量）
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-02
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：[ADR-155](./ADR-155-commit-with-check-lightweight.md)

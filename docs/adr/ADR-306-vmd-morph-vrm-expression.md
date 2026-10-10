@@ -1,7 +1,6 @@
 # ADR-306：VMD morph 重定向到 VRM expression（表情通道）
 
 - **状态**：✅ 已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-24
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/preview-3d/adapters/vrm/vmd-retarget.ts; frontend/src/preview-3d/adapters/vrm/vmd-expression-map.ts; frontend/src/preview-3d/adapters/vrm/vrm-adapter.ts; frontend/src/preview-3d/adapters/shared/perception/blink.ts; 依赖 @pixiv/three-vrm-core 的 VRMExpressionManager（getExpressionTrackName / setValue / update）; ADR-243（VMD→VRM 身体重定向，本 ADR 是其 §2.9 遗留项的收口）; ADR-081（语义骨骼层 §2.5 morph 语义未建立的遗留）`

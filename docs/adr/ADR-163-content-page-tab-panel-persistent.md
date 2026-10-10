@@ -1,7 +1,6 @@
 # ADR-163：主内容页 tab-panel 常驻化：替代整 DOM 重建
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-03
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/views/app-content/index.ts,frontend/src/views/app-content/diagnostics/dedup.ts,frontend-repo-audit.md,frontend-design-critique.md`

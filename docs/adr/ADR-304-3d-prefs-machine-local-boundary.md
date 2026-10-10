@@ -1,7 +1,6 @@
 # ADR-304：3D 预览设置持久化边界：机器本地 localStorage，不入 Go config 重置/迁移范围
 
 - **状态**：✅ 已采纳（Adopted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-24
 - **决策人**：Jieling（人类首席架构师）、AI 代理（用户「继续」批复设置页菜单收口 P3 处方时采纳）
 - **相关**：`frontend/src/preview-3d/infra/settings-schema.ts, frontend/src/preview-3d/state/preview-state.ts, frontend/src/preview-3d/state/perf-presets.ts, frontend/src/views/app-content/settings/`

@@ -1,7 +1,6 @@
 # ADR-196：预设三轴统一——全局 envState 单例 + cap 退化为渲染器（激进路线）
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-06
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：ADR-195（cap 控件单类型化，并列）；ADR-193（preview-menu declarative endgame）；`frontend/src/preview-3d/caps/scene-capability.ts`、`frontend/src/preview-3d/menu/panels/env.ts`、`frontend/src/preview-3d/adapters/shared-infra.ts`

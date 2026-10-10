@@ -1,7 +1,6 @@
 # ADR-318：测试套件分组与发版冒烟组（反馈回路提速）
 
 - **状态**：✅ 已采纳
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-10-04
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：ADR-206（pre-push gate 工具层）、ADR-244（变更范围归属）、`docs/releases/release-process.md`、`scripts/release-smoke.ts`

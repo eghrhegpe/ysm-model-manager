@@ -1,7 +1,6 @@
 # ADR-248：图标字段类型化：用类型取代清单与扫描（ADR-238 边界落地）
 
 - **状态**：✅ 已采纳
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-16
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：ADR-238（图标语义名规范，本 ADR 落地其 §1.3/§1.4 边界）、[ADR-245](./ADR-245-context-menu-adr-238.md)（右键菜单图标迁语义名）、[ADR-239](./ADR-239-toolbar-menu-declarative.md)（工具栏下拉）；`frontend/src/utils/icon/ui-icons.ts`、`frontend/src/utils/icon/resolve.ts`、`frontend/src/utils/resource/types.ts`、`frontend/src/preview-3d/menu/menu-node-types.ts`

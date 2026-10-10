@@ -1,7 +1,6 @@
 # ADR-310：整合包同步计数口径统一
 
 - **状态**：✅ 已采纳（Accepted，2026-09-25；用户「继续」拍板开工）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-25
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`docs/knowledge/go-sync.md`、`docs/knowledge/app-sidebar.md`、`docs/knowledge/app-sync-manager.md`、`go/sync/sync.go`、`go/instance/instance.go`、`frontend/src/views/app-sidebar/loader.ts`

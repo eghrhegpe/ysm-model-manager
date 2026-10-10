@@ -1,7 +1,6 @@
 # ADR-133：契约测试真实性：从存在性门禁升级为消费性校验
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-08-30
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`tests/test_testid_contract.ts（TESTID_REGISTRY / 存在性校验 line103-116）；ADR-035（G-1 抗脆弱测试基础设施）；事件链 5bfc6ff5→5cbbc43a→029ef285→46f45c19→9a43766d`

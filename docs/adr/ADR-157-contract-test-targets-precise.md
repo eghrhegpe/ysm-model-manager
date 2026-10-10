@@ -1,7 +1,6 @@
 # ADR-157：契约测试 TARGETS 宽哨兵收敛为精确文件清单
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-02
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：ADR-155（commit-with-check 解耦为独立轻量提交校验）、ADR-156（契约测试按变更文件精确裁剪）、`scripts/_lib/contract-tests.ts`（`CONTRACT_TEST_TARGETS`）、`tests/test_scripts_json.ts`（`JSON_SCRIPTS`）

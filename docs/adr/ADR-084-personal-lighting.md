@@ -1,6 +1,6 @@
 # ADR-084：个人灯光系统（Personal Lighting）——三点布光 + 聚光灯 + 体积光双引擎
 
-- **状态**：已采纳（Accepted）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-08-16
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/preview-3d/caps/light-capability.ts`、`frontend/src/preview-3d/adapters/mount-preview-core.ts`、`ADR-073` 联邦渲染能力、`ADR-076` 预览底部导航、`ADR-066` 通用资源预览

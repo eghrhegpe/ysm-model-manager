@@ -1,7 +1,6 @@
 # ADR-197：conc/scanner context 贯通——并发任务可取消
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-06
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：ADR-119（conc 确定性契约）、ADR-145（internal/app 与 go/cli 解耦）

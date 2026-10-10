@@ -1,7 +1,6 @@
 # ADR-121：Shadow DOM 样式隔离铁律
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-08-24
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`scripts/css-layer-check.ts` / `frontend/e2e/settings.spec.ts` / `docs/knowledge/app-content.md`（实施进度）

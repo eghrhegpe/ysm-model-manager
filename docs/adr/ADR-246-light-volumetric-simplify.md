@@ -8,7 +8,6 @@
 > **D1 其余项（删引擎抽象 / schema 字段 / 菜单下拉 / 持久化）与 D2、D3 依然有效**。
 
 - **状态**：🔄 部分采纳（D1 的 Bloom 联动门禁被 ADR-247 D1 取代；删空壳引擎主体与 D2/D3 有效）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-16
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/preview-3d/caps/light-capability.ts, frontend/src/preview-3d/caps/light-controls.ts, frontend/src/preview-3d/caps/light-cone.ts, frontend/src/preview-3d/state/env-state-schema.ts, ADR-081, ADR-177, ADR-196, ADR-247（取代 D1 的 Bloom 联动门禁）, ADR-250（composer 常驻使 needComposer 分支失去意义）`

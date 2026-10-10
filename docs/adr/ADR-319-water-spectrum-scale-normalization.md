@@ -1,7 +1,6 @@
 # ADR-319：水面波场尺度归一与泡沫判据可达性
 
 - **状态**：✅ 已采纳（Accepted，2026-10-04）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-10-04
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/preview-3d/caps/water-capability.ts` / `scripts/probe-water-wave.ts` / ADR-255（Gerstner + uniform 化）/ ADR-257 §6.4（振幅钳制「登记未改」）/ ADR-272（尺寸零重建）/ ADR-283（值域单一事实源）

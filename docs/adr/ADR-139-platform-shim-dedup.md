@@ -1,7 +1,6 @@
 # ADR-139：平台 shim 收敛 rustbridge 与 scanner 四 OS 重复
 
 - **状态**：🔄 部分采纳（L3 跨 OS 抽象不在批准范围，需独立 ADR）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-08-31
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`go/rustbridge/bridge_{windows,linux,darwin,android}.go; go/scanner/rust_backend_{windows,linux,darwin,android}.go; scripts/jscpd-go.ts; build/{darwin,linux,windows}/Taskfile.yml; scripts/android-build.ts; ADR-120`

@@ -1,7 +1,6 @@
 # ADR-171：preview3d 超大文件裁决式复核：FBXLoader 官方化 / 巨型单体维持
 
 - **状态**：✅ 已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-03
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`mount-preview-core.ts, wasm-decode.ts, caps/, vendor/fbx/FBXLoader.ts`

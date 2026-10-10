@@ -1,6 +1,6 @@
 # ADR-007：右键菜单代码组织决策
 
-- **状态**：已采纳（Accepted）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-08-03
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/core/context-menus.js` / `frontend/src/views/context-menu.js` / `frontend/src/app-modules.js`

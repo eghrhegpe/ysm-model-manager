@@ -1,7 +1,6 @@
 # ADR-221：跨视图共享状态归位 core 以消除视图域环
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-10
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/core/model-path-store.ts, frontend/src/views/app-content/init-pages.ts, frontend/src/views/app-tree, frontend/src/views/app-nav, frontend/src/views/app-preview`

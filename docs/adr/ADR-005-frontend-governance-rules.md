@@ -1,6 +1,6 @@
 # ADR-005：前端治理规则体系
 
-- **状态**：已采纳（Accepted）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-08-03（初定，规则时间线 v1.5.1 → 持续维护）
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/` 全量 / `docs/governance-rules.md`（规则条文唯一事实来源） / `UI-Design.md` / `AGENTS.md` §三

@@ -1,7 +1,6 @@
 # ADR-317：Android .ysm 解码 WebView 桥后端（Decoder 策略平台化）
 
 - **状态**：✅ 已采纳（2026-09-27 P1 桥骨架落地，桌面 E2E 全链路验证通过；P2 on-device 终测待办）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-27
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`ADR-316（wazero 退役 Node 桥）、docs/knowledge/ysm-wasi.md（三路基准实证）、internal/app/wasm_decoder.go（ysm.SetDecoder 注入点）、frontend/src/wasm/parser-shared.ts（前端解码管线）`

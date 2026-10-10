@@ -1,6 +1,6 @@
 # ADR-090：vitest 环境切换与 npm 三件套并行优化
 
-- **状态**：已采纳（Accepted）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-08-17
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`docs/knowledge/vitest-env-switch.md`

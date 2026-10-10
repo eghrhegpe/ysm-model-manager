@@ -1,7 +1,6 @@
 # ADR-210：core 收编：locale host 注入、手工缓存与死 API 清理
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-09
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/core/i18n/locale.ts / frontend/src/core/i18n/t.ts / frontend/src/core/error-diary.ts / docs/knowledge/i18n.md / docs/knowledge/core-error-diary.md / ADR-189（core 准入 D4）/ ADR-207（core 锐评整改）`

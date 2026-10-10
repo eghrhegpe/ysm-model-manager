@@ -1,7 +1,6 @@
 # ADR-158：check-readme-index 增加描述过时断言（提及但说错可机检）
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-02
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`scripts/check-readme-index.ts`、`tests/test_check_readme_index.ts`；前序 ADR-155（commit-with-check 解耦）/ ADR-156/157（契约测试精确裁剪）

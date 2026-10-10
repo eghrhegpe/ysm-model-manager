@@ -1,6 +1,6 @@
 # ADR-006：重命名文件名格式约束决策
 
-- **状态**：已采纳（Accepted）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-08-03
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/dialogs/rename.js` / `frontend/src/dialogs/batch-rename.js` / `frontend/src/utils/display.js`

@@ -1,7 +1,6 @@
 # ADR-290：体积光锥驱动源 schema 化（lightVolumetricDriver）
 
 - **状态**：✅ 已采纳（用户拍板 2026-09-20「两项都做」，与 point candela 补偿同批授权）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-20
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/preview-3d/caps/light-capability.ts`（getSpotLightForCone）、ADR-280（三灯统一实例，activeLight 焦点态引入者）、ADR-281（FLATTEN_MAP 真相源）、ADR-246 D3（体积光折叠卡）、`docs/knowledge/preview-env-state.md`

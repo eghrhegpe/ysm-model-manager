@@ -2,7 +2,6 @@
 
 - **状态**：✅ 已采纳（Accepted）
 - **衔接**：本 ADR 的**两段式判据**（常驻参数栏 + 独立结果区、启动按钮住栏内）不受导航收敛影响，原样有效；两个扫描面板的**落点**已由 [ADR-300](./ADR-300-diagnostics-nav-axis-convergence.md) 从并列顶层 tab 收进「体检」组的两个子 pill（`diag-*-bar` / `diag-*-list` 元素 id 与两段式结构一字未动）。
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-20
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：[ADR-278](./ADR-278-diagnostics-perf-ia.md)（诊断页分组；本 ADR 修正其 §2.5「只读扫描带引导空态 + 启动按钮」的**落点**）、[ADR-259](./ADR-259-tab-rendertabs.md)（面板结构走 renderTabs）、`views/app-content/tpl.ts`（tab body）、`diagnostics/conflicts.ts` / `diagnostics/health.ts` / `diagnostics/init.ts`（接线）、`css/content-diag.ts`（布局规则）、`docs/knowledge/app-content-diagnostics.md`

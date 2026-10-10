@@ -9,7 +9,6 @@ related: [ADR-086, ADR-087, scripts/pre-push-gate.ts, scripts/_lib/contract-test
 
 # ADR-088：检查体系并行调度——pre-push-gate 域间并行 + 静态工具分组 + pre-commit gen 并行
 
-- **实施状态**：查知识卡 [app-preview](../knowledge/app-preview.md)（ADR 只记决策方向，不记实施进度）
 
 - **状态**：✅ 已采纳
 - **日期**：2026-08-17

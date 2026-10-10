@@ -1,6 +1,6 @@
 # ADR-059：CLI 移除与裸 exe 发布
 
-- **状态**：已采纳（Accepted）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-08-14
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`cli_export.go / internal/app/cli.go / go/updater/updater.go / scripts/build-release.ps1`

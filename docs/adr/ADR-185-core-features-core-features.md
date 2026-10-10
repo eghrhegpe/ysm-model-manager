@@ -1,7 +1,6 @@
 # ADR-185：core 分层治理——特性文件整体迁移至 features，消除 core⇄features 包级环
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-05
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：ADR-014（core 类型化）、ADR-021（声明式菜单）、ADR-040（context-menu 拆分）、ADR-101（通用逻辑收敛）

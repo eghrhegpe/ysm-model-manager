@@ -1,7 +1,6 @@
 # ADR-152：gen-stage 并发卷带根除——快照变化 ∩ 非并行 dirty 判定（实证验收）
 
 - **状态**：✅ 已采纳
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-01
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`scripts/_lib/gen-stage.ts`, `.githooks/pre-commit`, `scripts/_lib/commit-temp-index.ts`

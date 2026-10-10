@@ -1,7 +1,6 @@
 # ADR-285：跑基准可用性收口：动作与参数同序、文案去重、术语本地化
 
 - **状态**：🔄 部分采纳（P0-1/2/4、P1-1、P3-1/2 采纳；P2-1 部分采纳（仅三语 label 终值，语义项另立）；**P0-3 否决**（见 §2.1）；P1-2/1-3 由 [ADR-300](./ADR-300-diagnostics-nav-axis-convergence.md) 的 bench 组重构吸收；P2-2/2-3 未拍板，不属本 ADR 范围）
-- **实施状态**：查知识卡 `docs/knowledge/app-content-diagnostics.md`（ADR 只记决策方向与理由，不记实施进度）
 - **日期**：2026-09-20
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`ADR-278 / ADR-262 / frontend/src/views/app-content/tpl.ts / frontend/src/views/app-content/diagnostics/perf.ts / frontend/src/locales`

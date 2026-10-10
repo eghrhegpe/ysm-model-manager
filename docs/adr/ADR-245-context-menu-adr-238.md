@@ -1,7 +1,6 @@
 # ADR-245：context-menu 图标语义名统一（对齐 ADR-238）
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-15
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：[ADR-238](./ADR-238-ui.md) 图标语义名规范；[ADR-021](./ADR-021-declarative-menu-testing.md) 声明式菜单；[ADR-239](./ADR-239-toolbar-menu-declarative.md) 工具栏下拉收敛；`frontend/src/views/app-tree/toolbar-menus.ts`（先行落地范式）

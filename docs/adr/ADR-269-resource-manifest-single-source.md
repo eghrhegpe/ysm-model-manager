@@ -1,7 +1,6 @@
 # ADR-269：资源清单单一事实源化：mcmeta 四份手抄收敛 + pack 内容摘要喂同步判定
 
 - **状态**：✅ 已采纳（D1 mcmeta 形状单一事实源、D2′ pack 内容摘要喂 sync 内容级判定、D3 rtype 前端双源收敛——三轴全部定稿）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-19
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`go/types/registry/resource.go PackMeta; go/types/config.go PackMetaView; frontend/src/parsers/pack-meta.ts; frontend/src/utils/format/pack-format.ts; go/packs/classify.go openContainerEntries; go/scanner/scanner.go repoIndexEntry/GenerateRepoIndex; go/fsutil/write.go SHA256File; go/download/download.go FileWithChecksum; frontend/src/utils/resource/schema.ts allResourceTypes/resourceTypesById（D3 前端 rtype 单一同步源，路径 B 异步 RPC 旁路已废）; frontend/src/utils/resource/types.ts; scripts/check-redlines.ts R11（前端 rtype 单一同步源守卫，禁 loadResourceRegistry/LoadResourceTypes 复活）`；D2′ 内容级判定：`go/sync/sync.go SyncResourcesWithConfig/DiffEntry; go/sync/sync_diff.go contentDiffers/ResourceDiff; go/sync/sync_dirlevel.go diffFolderContentsCore/collectFolderFilesFromScan/DiffFolderContentsScan; go/sync/sync_cache.go syncDirectoryScanKey; go/instance/instance.go buildDirLevelChildren/appendOneItem(Diverged 聚合); go/scanner/scanner.go ScanEntriesWithHit; internal/app/app_install_instance.go SyncResources`

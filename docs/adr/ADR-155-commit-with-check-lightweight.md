@@ -1,7 +1,6 @@
 # ADR-155：commit-with-check 重构为独立轻量提交校验（与重型 push 门禁解耦）
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-02
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`scripts/commit-with-check.ts`、`scripts/_lib/commit-check.ts`、`scripts/pre-push-gate.ts`；ADR-086（验证+提交一站式）、ADR-151（临时索引白名单提交）

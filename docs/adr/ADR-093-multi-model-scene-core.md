@@ -1,6 +1,6 @@
 # ADR-093：多模型同框引擎核心（注册表/dispatch/相机累加/路由接缝/上限）
 
-- **状态**：已采纳（Accepted）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-08-18
 - **决策人**：Jieling（人类首席架构师）、AI 代理（Riku）
 - **相关**：`frontend/src/preview-3d/adapters/mount-preview-core.ts`、`switch-preview.ts`、`camera-setup.ts`、`preview-library.ts`、`cleanup-3d.ts`、`bone-raycast.ts`；`Mount3DOptions.cooperate`、`switchPreview({keepInScene})`、`allContent`

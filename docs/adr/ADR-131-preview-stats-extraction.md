@@ -1,7 +1,6 @@
 # ADR-131：3D 渲染期统计提取（预览期统计与类型判定解耦）
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-08-29
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/preview-3d/adapters/mount-preview-core.ts:124 (PreviewAdapter.build), frontend/src/views/app-preview/tpl.ts:79 (statsCardHTML / StatsCardModel), frontend/src/preview-3d/adapters/vrm/vrm-adapter.ts:106 (readVrmMeta), internal/app/resourcepack_models.go:49 (ListPackModels), ADR-080 (pack-model-adapter)`

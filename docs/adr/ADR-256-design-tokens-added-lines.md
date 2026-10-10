@@ -1,7 +1,6 @@
 # ADR-256：设计令牌门禁改判真行级：判定与账本分离（行号位移幻影实证，复算见 §4）
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-16
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`scripts/check-design-tokens.ts, scripts/_lib/diff-source.ts, scripts/_lib/git-hunks.ts, .githooks/pre-commit, scripts/_lib/gate-config.ts, scripts/token-shift-audit.ts, docs/knowledge/pre-commit-hook.md`

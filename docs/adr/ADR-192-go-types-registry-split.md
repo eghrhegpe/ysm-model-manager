@@ -1,7 +1,6 @@
 # ADR-192：go/types 上帝包拆分：registry 域独立子包 + types 门面别名渐进迁移
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-05
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：ADR-179（internal/app 垂直切分同构先例）、docs/knowledge/go-design-critique.md（锐评刀⑥）、go/types/

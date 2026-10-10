@@ -1,7 +1,6 @@
 # ADR-268：环境面板 cap 自报归属（getEnvPlacement），退役 env.ts 硬编码成员清单
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-19
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/preview-3d/menu/panels/settings.ts collectSettingsCapControls(settingsOrder 先例); frontend/src/preview-3d/menu/panels/env.ts; docs/adr/ADR-125-preview-menu-unified-state-single-renderer.md`

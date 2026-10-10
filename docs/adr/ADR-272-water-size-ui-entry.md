@@ -1,7 +1,6 @@
 # ADR-272：waterSize 放开 UI 入口 + pool 尺寸零重建（sizeLinks）
 
 - **状态**：✅ 已采纳
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-19
 - **决策人**：Jieling（人类首席架构师）、AI 代理（deepseek）
 - **相关**：`frontend/src/preview-3d/caps/water-body-strategies.ts`（`WaterSizeLink` / `POOL_WALLS` / `applySizeLinks`）、`water-menu.ts`（`ground-water-size`）、`water-capability.ts`（`setWaterSize` / `getWaterSize`）；`frontend/src/locales/{zh-CN,en,ja}.ts`；修正 **ADR-255 §2.2 / §3**；收口 **ADR-257 §6.3** 遗留；延续 ADR-271（微细节法线 GPU 化）、ADR-196（envState 单一事实源）、ADR-195（cap 直产菜单节点）

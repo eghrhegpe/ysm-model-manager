@@ -1,7 +1,6 @@
 # ADR-242：3D 动作/模型组一级卡壳收纳（面板入口行 array，内容跳转后渲染）
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-15
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/preview-3d/menu/panels/env.ts (envCapRow/buildEnvCards 范式); frontend/src/preview-3d/menu/render/render.ts (rmAppendCard); frontend/src/preview-3d/menu/panels/roles-views.ts (modelDetailView/motionDetailView); frontend/src/preview-3d/menu/panels/bones-panel-node.ts`

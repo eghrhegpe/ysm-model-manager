@@ -1,7 +1,6 @@
 # ADR-179：internal/app 垂直切分子包（拆解扁平巨型包与 App god-object）
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-04
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：ADR-173（app→cli 环规避，allowedCommands 注入）、ADR-134（containerCache 全局抽离）、ADR-102（main.ts 拆分，前端侧同构先例）

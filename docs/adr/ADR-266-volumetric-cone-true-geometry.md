@@ -1,7 +1,6 @@
 # ADR-266：体积光锥改真锥体几何 + Fresnel 边缘辉光；修 ACES 旁路与过度重建
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-18
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/preview-3d/caps/light-cone.ts`（全量重写几何/shader）、`caps/light-capability.ts`（接线：`SPOT_GEO_CHANGES`、`getSpotDir()`、`SPOT_CHANGES` 分支收窄）、`caps/light-cone.test.ts`（新增）、`caps/light-capability.test.ts`（断言更新）；ADR-177（本类拆分出处）、ADR-246（D1 删 postprocess 空壳、D3 SpotLightHelper）、ADR-084（个人灯光三点布光）、ADR-107（天空 god rays 体积光，与本次「雾中光柱」非同一物）

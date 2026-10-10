@@ -1,7 +1,6 @@
 # ADR-250：后处理门禁降参——模型类别不写 cap 参数、composer 常驻、曝光属主归 sky
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-16
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/preview-3d/caps/postprocessing-capability.ts, frontend/src/preview-3d/caps/postprocessing-state.ts, frontend/src/preview-3d/caps/sky-capability.ts, frontend/src/preview-3d/adapters/shared-infra.ts, frontend/src/preview-3d/state/preview-state.ts, frontend/src/preview-3d/state/env-state-schema.ts, ADR-196, ADR-247, ADR-126`

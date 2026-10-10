@@ -1,7 +1,6 @@
 # ADR-244：CI 门禁的变更上下文与扫描域收口——post-push 不可得须显式给定，扫描域限于仓库跟踪文件
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-15
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`scripts/check-deadcode-baseline.ts · scripts/_lib/deadcode-attrib.ts · scripts/link-checker.ts · .github/workflows/{ci,test,release}.yml · scripts/_lib/changed-scope.ts（同类病理先例）`

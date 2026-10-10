@@ -2,7 +2,6 @@
 
 - **状态**：❌ 已取代
 - **被取代**：[ADR-129](./ADR-129-preview-3d-domain-root.md) 取代（第四刀截图归位已纳入 ADR-129 体系）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-08-31
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`docs/adr/ADR-129-preview-3d-domain-root.md, frontend/src/views/app-preview/screenshot-renderer.ts, frontend/src/views/app-preview/skeleton-render.ts, frontend/src/views/app-preview/model3d-loader.ts, frontend/src/features/preview-3d/screenshot.ts, frontend/src/features/preview-3d/caps/light-capability.ts`

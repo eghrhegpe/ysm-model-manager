@@ -1,7 +1,6 @@
 # ADR-202：Go 测试执行结构收敛：registry 并发安全 + 锁协议注入 + 包内并行解锁（测试税减负 Go 版）
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-07
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：ADR-191（testutil 迁址）、ADR-192（registry 拆分）、ADR-174（parity 对账基建）、docs/knowledge/test-tax-reduction.md（测试税三刀判据）、go/types/registry/resource.go、go/installer/installer.go、go/internal/testutil/、scripts/pre-push-gate.ts

@@ -1,7 +1,6 @@
 # ADR-295：组合间距档 --sp-vh-*：为高频「垂直+横向」组合值补标准化令牌（承接 ADR-294 D3 存量收敛）
 
 - **状态**：✅ 已采纳（D1/D2/D3 落地；D4 取代 ADR-294 的「明拒不建组合档」）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-22
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：ADR-294（`--sp-*` 五档体系）；`docs/UI-Design.md` §5 间距系统；`frontend/css/variables.css`；`scripts/_lib/design-tokens.ts`

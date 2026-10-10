@@ -1,7 +1,6 @@
 # ADR-161：渲染会话词汇章程:spec 契约单一镜像 + 尺度词消歧(组件/模型/内容层/条目)+ built 黑话退役
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-02
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/preview-3d/adapters/mount-preview-core.ts、frontend/src/preview-3d/mesh/model3d.ts、go/threejs/spec.go、frontend/src/bindings/ysm-model-manager/go/threejs/models.ts、frontend/src/preview-3d/adapters/scene-registry.ts、frontend/src/preview-3d/adapters/unload-role.ts、docs/knowledge/model3d.md、docs/knowledge/preview-core.md、ADR-066、ADR-093、ADR-159、ADR-160`

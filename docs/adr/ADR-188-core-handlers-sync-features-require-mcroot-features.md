@@ -1,7 +1,6 @@
 # ADR-188：core/handlers 迁出内核：sync 业务归 features，require-mcroot 归 features 共享原语
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-05
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：ADR-185（core-only 收敛）、ADR-187（features/ 目录归位，同期并行落地）

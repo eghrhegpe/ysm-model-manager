@@ -1,7 +1,6 @@
 # ADR-287：water 菜单 ground- 化石前缀重命名
 
 - **状态**：✅ 已采纳
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-20
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：[ADR-196](./ADR-196-presets-three-axis-unification.md)

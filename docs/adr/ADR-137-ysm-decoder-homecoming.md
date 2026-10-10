@@ -2,7 +2,6 @@
 
 - **状态**：❌ 已取代
 - **被取代**：[ADR-129](./ADR-129-preview-3d-domain-root.md) 取代（第五刀 YSM 解码归位已纳入 ADR-129 体系）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-08-31
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`docs/adr/ADR-129-preview-3d-domain-root.md, docs/adr/ADR-136-screenshot-domain-homecoming.md, frontend/src/views/app-preview/wasm.ts, frontend/src/views/app-preview/geometry.ts, frontend/src/views/app-preview/cache.ts, frontend/src/views/app-preview/parse-ysm-json.ts, frontend/src/views/app-preview/texture-order.ts, frontend/src/views/app-preview/utils.ts`

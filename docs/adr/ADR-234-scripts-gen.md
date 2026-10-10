@@ -1,7 +1,6 @@
 # ADR-234：scripts 治理三项软门禁：注释考古 / gen 并行 / 肥膘告警
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-13
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`scripts/check-comment-history.ts`（新建）/ `.githooks/pre-commit` L97-101 / `scripts/check-file-lines.ts` / `scripts/_lib/gen-cmds.ts` / `docs/adr/ADR-232-scripts-hooks.md`（前序）

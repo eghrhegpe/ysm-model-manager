@@ -1,7 +1,6 @@
 # ADR-308：键盘原语收敛与全局快捷键注册表
 
 - **状态**：✅ 已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-25
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/utils/dom/key-router.ts; frontend/src/views/app-content/tabs-a11y.ts; frontend/src/views/app-content/tabs-shell.ts; frontend/src/views/app-sync-manager/events.ts; frontend/src/preview-3d/menu/shell/slide-menu.ts; frontend/src/views/app-nav/index.ts; frontend/src/views/app-sidebar/; frontend/src/utils/dom/dropdown.ts`

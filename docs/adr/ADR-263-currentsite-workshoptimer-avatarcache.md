@@ -1,7 +1,6 @@
 # ADR-263：创意工坊页状态归属：currentSite 下沉、workshopTimer 留壳、avatarCache 上收
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-17
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/views/app-content/state.ts`、`site/workshop-page-state.ts`、`init-workshop.ts`、`site/workshop-tabs.ts`、`site/workshop-site-opener.ts`、`site/workshop-avatar.ts`、`index.ts`、`features/community/download-queue-store.ts`；ADR-261（同族前刀：幂等订阅入桶，本 ADR 接手其「已知遗留」）、ADR-163（面板常驻化，本 ADR 多处依赖其世代语义）、ADR-260（异步清理入桶）、ADR-091 D22（订阅桶）

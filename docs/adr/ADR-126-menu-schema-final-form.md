@@ -1,7 +1,6 @@
 # ADR-126：3D 预览菜单声明式 Schema 终态——状态层泛化 + 面板 schema 化 + 可见性谓词化 + dockGroup 解耦
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-08-28
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/utils/3d/state/settings-state.ts, preview-menu-node-types.ts:14-21, caps/scene-capability.ts, adapters/preview-menu.ts, preview-menu-settings.ts, ADR-085, ADR-125, ADR-076, ADR-093`

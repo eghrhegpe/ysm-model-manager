@@ -1,7 +1,6 @@
 # ADR-283：参数值域描述符：schema 承载 range/uiRange，钳制收口 setEnvState 唯一写入口
 
 - **状态**：✅ 已采纳
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-20
 - **决策人**：Jieling（人类首席架构师）、AI 代理（deepseek）
 - **相关**：`frontend/src/preview-3d/state/env-state-schema.ts`（`NumericRange` / `range` / `uiRange` / `clampFieldValue` / `getParamRange` / `RangedKey`）、`env-state.ts`（唯一写入口钳制）、`caps/water-menu.ts`（滑杆取值域）、`caps/water-capability.ts`（setter 去手写 clamp）、`caps/water-body-strategies.ts`（`clampPoolRoundness` 归一）；延续 **ADR-196**（envState 单一事实源）、**ADR-249 §2.6**（默认值单一事实源——本次把同一判例延伸到值域）、**ADR-272 §5**（接线收口第一批）

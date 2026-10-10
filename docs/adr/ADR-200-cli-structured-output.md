@@ -1,7 +1,6 @@
 # ADR-200：CLI 输出契约结构化：命令返回结果对象，--json 载荷去文本化
 
 - **状态**：✅ 已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-06
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`go/cli/cli.go`、`go/cli/json.go`、`go/cli/flow.go`、`frontend/src/views/app-content/diagnostics/perf-cli.ts`、ADR-173、ADR-199

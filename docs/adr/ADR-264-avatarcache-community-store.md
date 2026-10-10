@@ -1,7 +1,6 @@
 # ADR-264：avatarCache 上收 community 层 store + 订阅桶改收工厂堵孤儿订阅
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-17
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/features/community/creator-avatar-store.ts`、`download-queue-store.ts`、`views/app-content/state.ts`、`init-workshop.ts`、`site/workshop-avatar.ts`、`subscription-bucket.ts`、`init-pages.ts`；ADR-263（前刀：三字段分向裁定，本刀执行其「avatarCache 上收」遗留）、ADR-187 D3（download-queue-store 单例豁免声明，本 store 同构援引）、ADR-261（幂等订阅入桶，本刀修正其 API 形态）、ADR-216（listener-set 原语）

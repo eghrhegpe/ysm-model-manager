@@ -1,7 +1,6 @@
 # ADR-258：诊断页导航：左栏分段收敛为顶部统一 tab 范式
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-17
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/views/app-content/tpl.ts; frontend/src/views/app-content/diagnostics/init.ts; frontend/src/views/app-content/init-pages.ts`

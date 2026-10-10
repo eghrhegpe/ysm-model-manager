@@ -1,7 +1,6 @@
 # ADR-299：后处理 composer 惰性常驻——生命周期与每帧参与解耦（修订 ADR-250 §2.2）
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-24
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/preview-3d/caps/postprocessing-capability.ts, frontend/src/preview-3d/infra/render-host.ts, frontend/src/preview-3d/infra/postproc-cost-probe.ts, frontend/src/preview-3d/state/env-state-schema.ts, ADR-250, ADR-196`

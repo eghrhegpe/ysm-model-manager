@@ -1,7 +1,6 @@
 # ADR-274：css-layer-check 类归属判定：手写前缀表改为自推导命名空间
 
 - **状态**：✅ 已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-19
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`scripts/css-layer-check.ts`（检查 3 判定域 + 两个提取器）、`scripts/_lib/css-layer-utils.ts`（`expandStyleInterpolations`）、`tests/test_css_layer_check.ts`、[ADR-121](./ADR-121-shadow-dom.md)（§2.4 被本 ADR 取代）

@@ -1,7 +1,6 @@
 # ADR-142：缓存三通道统一：texture-cache 内存池 + 磁盘压缩分层
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-08-31
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`ADR-098 texture-cache / ADR-101 方向E KTX2 / ADR-066 vrm GLTF / ADR-112 fbx GLTF；frontend/src/preview-3d/texture-cache.ts；pack-model-adapter.ts；mmd-adapter.ts；mmd-ktx2-texture-loader.ts`

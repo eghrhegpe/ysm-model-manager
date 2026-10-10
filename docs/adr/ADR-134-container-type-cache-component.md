@@ -1,7 +1,6 @@
 # ADR-134：将 containerTypeCache 包级全局收进组件（破隐藏耦合）
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-08-30
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`docs/knowledge/app-cycle-injection.md`

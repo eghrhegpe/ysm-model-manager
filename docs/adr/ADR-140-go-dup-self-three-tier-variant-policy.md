@@ -1,7 +1,6 @@
 # ADR-140：Go 重复代码治理：文件内自重复三层判定与变体层不强制合并
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-08-31
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`scripts/jscpd-go.ts`（Go 端 jscpd 门禁 + 独立 baseline）、`tmp/jscpd-self-exact.mjs`（字节级自重复核验）、`go/fileops/fileops.go`（`opPrologue`）、`go/tags/tags.go`（`prepareWrite`）、`docs/adr/ADR-139-platform-shim-dedup.md`（平台 shim 收敛）

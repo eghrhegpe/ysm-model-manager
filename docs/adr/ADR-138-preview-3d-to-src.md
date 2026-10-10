@@ -2,7 +2,6 @@
 
 - **状态**：❌ 已取代
 - **被取代**：[ADR-129](./ADR-129-preview-3d-domain-root.md) 取代（去 features 中间层是 ADR-129 升格路线的收尾）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-08-31
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`ADR-129-preview-3d-domain-root.md, frontend/AGENTS.md, docs/review/knowledge-ref-analysis.md`

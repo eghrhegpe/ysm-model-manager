@@ -1,7 +1,6 @@
 # ADR-275：css-layer-check 检查 6：跨层存在性——收口命名空间盲区
 
 - **状态**：✅ 已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-19
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：[ADR-274](./ADR-274-css-layer-check.md)（检查 3 判定域自推导，本 ADR 补它的对偶盲区）、[ADR-121](./ADR-121-shadow-dom.md)、`scripts/css-layer-check.ts`（检查 6）、`scripts/_lib/css-layer-utils.ts`（`findUndefinedAnywhereClasses`）、`tests/test_css_layer_check.ts`（第 9 条锁）

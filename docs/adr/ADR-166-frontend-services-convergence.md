@@ -1,7 +1,6 @@
 # ADR-166：前端 services 层收敛：registry 搬迁 / recycle-bin / dedup 会话工厂 / path-cards
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-03
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/services/resource-registry.ts; frontend/src/views/app-content/diagnostics/dedup.ts(createDedupSession); frontend/src/views/app-content/settings/path-cards.ts; frontend/src/views/app-content/recycle-bin.ts; docs/knowledge/app-content-diagnostics.md; docs/knowledge/app-content-settings.md; docs/knowledge/resource-registry.md; docs/knowledge/go-dedup.md; ADR-044; ADR-119`

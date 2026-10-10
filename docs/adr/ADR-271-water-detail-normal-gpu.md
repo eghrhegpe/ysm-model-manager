@@ -1,7 +1,6 @@
 # ADR-271：水面微细节法线 GPU 化（移除 CPU DataTexture 链路）
 
 - **状态**：✅ 已采纳
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-19
 - **决策人**：Jieling（人类首席架构师）、AI 代理（deepseek）
 - **相关**：`frontend/src/preview-3d/caps/water-capability.ts` / `water-body-strategies.ts`；修正 ADR-255 §2.3（“CPU 法线贴图保留作微细节层”）；收口 ADR-257 §6.3 遗留；延续 ADR-196（envState 单一事实源）

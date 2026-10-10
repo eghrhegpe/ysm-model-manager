@@ -1,7 +1,6 @@
 # ADR-236：命名 stutter（go/sync alias）与注释篇幅：维持现状决策
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-14
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`go/sync/sync.go`、`internal/app/app_install_instance.go`、`internal/app/app_sync.go`、`internal/app/app_install_import.go`、`go/instance/instance.go`、`frontend/src/features/dnd/pack-dnd.ts`、`docs/knowledge/go-instance.md`、ADR-064、ADR-130、ADR-182、`go/AGENTS.md`

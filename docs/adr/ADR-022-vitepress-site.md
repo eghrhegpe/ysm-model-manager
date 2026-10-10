@@ -1,7 +1,6 @@
 # ADR-022：VitePress 建站
 
 - **状态**：✅ 已采纳
-- **实施状态**：查知识卡 [app-preview](../knowledge/app-preview.md)（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-08-03
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`docs/guide/`（26 篇）/ `docs/adr/` / `docs/knowledge/` / `docs/Gemfile` / `docs/_config.yml` / ADR-018 / 联邦 MikuMikuAR（VitePress 站点对标）

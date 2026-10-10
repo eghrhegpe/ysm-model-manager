@@ -1,6 +1,6 @@
 # ADR-048：CI 工作流架构：双 workflow 拆分 + 可复用测试门禁 + 三层缓存 + 版本单点
 
-- **状态**：已采纳（Accepted）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-08-10
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`.github/workflows/{ci,release,test}.yml; docs/releases/release-process.md; 仓库级 Variables（GO_VERSION/NODE_VERSION/WAILS_VERSION）`

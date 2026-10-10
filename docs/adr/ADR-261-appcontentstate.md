@@ -1,7 +1,6 @@
 # ADR-261：页面级状态下沉——幂等订阅入桶，退役 AppContentState 页私有字段
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-17
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/views/app-content/subscription-bucket.ts`、`state.ts`、`init-pages.ts`、`init-workshop.ts`、`index.ts`、ADR-091 D22（订阅桶）、ADR-163（面板常驻化，本 ADR 的世代语义基础）、ADR-260（同族收口：异步清理入桶）

@@ -1,7 +1,6 @@
 # ADR-177：拆分 LightCapability 为编排器 + 协作子模块
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-04
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/preview-3d/caps/light-capability.ts`（968 行，类体 ~560 行）；ADR-081 L1（体积光锥递进，预留 postprocess 引擎）；ADR-073（能力注册表驱动）；ADR-126 P5（手动预设优先）；ADR-168（类型下沉）

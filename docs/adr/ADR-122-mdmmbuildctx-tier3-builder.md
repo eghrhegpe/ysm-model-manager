@@ -1,7 +1,6 @@
 # ADR-122：MdMmBuildCtx 三档重构与 tier3 Builder 化否决
 
 - **状态**：🔄 部分采纳（Partially Accepted）— tier3 Builder 化方向已否决
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-08-26
 - **决策人**：Jieling（人类首席架构师）、AI 代理（Riku）
 - **相关**：`frontend/src/preview-3d/adapters/mmd/mmd-adapter.ts|BuildCtx`（原 ADR 误记 `utils/3d/adapters/`、`MdMmBuildCtx`：目录升格 preview-3d + 类型精简前缀，见 audit-20260922.md §二.1）；提交 `2fbfe5ce`（tier1 域拆分）、`99d41318`（tier2 Pick 收窄）；审计卡 `docs/knowledge/frontend-repo-audit.md`（`:29`/`:52` 已同步）

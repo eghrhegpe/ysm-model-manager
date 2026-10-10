@@ -1,7 +1,6 @@
 # ADR-302：菜单节点类型不做一次性判别联合——以运行期字段表为单一事实源（类型层派生）
 
 - **状态**：✅ 已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-24
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`ADR-195（cap 控件单类型化，走法乙）、ADR-194（MenuControlDef 判别联合，从未实施）、ADR-240（kind 形态脱钩）、frontend/src/preview-3d/menu/schema/node-validation.ts、frontend/src/preview-3d/menu/schema/menu-node-types.ts`

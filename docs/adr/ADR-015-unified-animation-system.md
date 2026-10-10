@@ -1,7 +1,6 @@
 # ADR-015：前端统一动画系统设计决策
 
 - **状态**：✅ 已采纳
-- **实施状态**：查知识卡 [animation-system](../knowledge/animation-system.md)（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-08-03（初定，决策时间线 v1.7.6）
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/`（动画相关 Web Components）/ `docs/UI-Design.md` §3 主题系统

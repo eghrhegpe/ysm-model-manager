@@ -1,7 +1,6 @@
 # ADR-209：移除 PageStore 孤儿状态机，page-store 收敛为纯函数模块
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-09
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：ADR-207（命名裁决，原 PageStore/registerPageStore 保留项被本 ADR 取代）、docs/knowledge/page-store.md、frontend/src/core/page-store.ts

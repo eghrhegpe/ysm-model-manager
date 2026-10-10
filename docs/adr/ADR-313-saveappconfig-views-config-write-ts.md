@@ -1,7 +1,6 @@
 # ADR-313：应用配置写唯一实参点：SaveAppConfig 六位置实参统一上移 views/config-write.ts
 
 - **状态**：✅ 已采纳（Adopted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-25
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：[ADR-307](./ADR-307-settings-page-p2-hardening.md)（设置域收口，本 ADR 是其遗留项闭环）、[ADR-190](./ADR-190-features-deps-convergence.md)（features 层与 `*-deps.ts` seam）、[ADR-208](./ADR-208-features-governance.md)（R5 白名单口径）、[ADR-146](./ADR-146-path-alias-anti-barrel.md)（import 路径）、[ADR-312](./ADR-312-dead-css-reverse-gate.md)（同批次治理：反向闸思路）

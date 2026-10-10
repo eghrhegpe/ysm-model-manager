@@ -1,6 +1,6 @@
 # ADR-008：事件注册位置与防重复规范
 
-- **状态**：已采纳（Accepted）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-08-03
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/bus.js` / `frontend/src/core/global-handlers.js` / `frontend/src/app-modules.js` / AGENTS.md §三

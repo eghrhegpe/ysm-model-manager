@@ -1,6 +1,6 @@
 # ADR-073：联邦 3D 渲染能力共享策略（程序化天空为首个落地能力）
 
-- **状态**：已采纳（Accepted）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-08-16
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/preview-3d/adapters/mount-preview-core.ts`、`docs/knowledge/preview-core.md`、`ADR-066`、`ADR-072`、`ADR-004`

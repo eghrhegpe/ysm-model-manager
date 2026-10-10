@@ -1,7 +1,6 @@
 # ADR-227：preview-3d 模块级单例收敛为实例（P1 战役）
 
 - **状态**：🔄 部分采纳（Partial）— 收敛范式与护栏采纳；`PreviewSession` 类实例化留作下一阶段方向
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-11
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/preview-3d/adapters/render-host.ts`；兄弟会话 A1(`625958fb8`) `createPerceptionPauseRef`；架构锐评 P1；方案 A（PreviewSession 类化）

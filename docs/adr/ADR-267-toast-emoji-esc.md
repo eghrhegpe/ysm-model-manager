@@ -1,7 +1,6 @@
 # ADR-267：toast 消息载荷 emoji→类型驱动语义图标，去 esc 文本槽盲区
 
 - **状态**：✅ 已采纳
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-18
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：[ADR-238](./ADR-238-ui.md)、`frontend/src/views/app-toast/index.ts`、`frontend/src/utils/icon/ui-icons.ts`

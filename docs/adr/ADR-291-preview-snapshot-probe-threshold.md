@@ -1,7 +1,6 @@
 # ADR-291：B 轨快照探针入册门槛（双轨状态镜像的治理边界）
 
 - **状态**：✅ 已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-21
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/preview-3d/state/preview-paths.ts`、`frontend/src/preview-3d/state/preview-state.ts`、`docs/knowledge/preview-menu.md`、`docs/knowledge/preview_paths.md`（routes 卡 `preview-paths.md`）、[ADR-126](./ADR-126-menu-schema-final-form.md) P4/P5、[ADR-168](./ADR-168-capability-preview-state.md) 二期、[ADR-195](./ADR-195-menucontroldef-menunode-cap.md) 刀2.5

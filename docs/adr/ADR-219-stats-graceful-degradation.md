@@ -1,7 +1,6 @@
 # ADR-219：stats worker 细粒度降级：per-model 流式回包 + 单 worker 静默看门狗
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-10
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/backend/web-stats.ts · frontend/src/workers/stats-protocol.ts · frontend/src/workers/stats.worker.ts · docs/adr/ADR-218-stats-pool-concurrency.md · docs/knowledge/model-stats.md · docs/knowledge/frontend-design-critique.md`

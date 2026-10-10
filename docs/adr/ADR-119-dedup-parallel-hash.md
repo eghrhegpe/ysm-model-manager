@@ -1,6 +1,6 @@
 # ADR-119：dedup 并行化：共享并行哈希管道（串行收集+并行哈希+序号还原）
 
-- **状态**：已采纳（Accepted）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-08-24
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`go/dedup/dedup.go; go/cli/dedup.go; internal/app/resource_bindings.go; go/repoaudit/repoaudit.go`

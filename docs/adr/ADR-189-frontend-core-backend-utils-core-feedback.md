@@ -1,7 +1,6 @@
 # ADR-189：frontend 内核目录收敛——断 core⇄backend 环、消 utils/core 与 feedback 双撞名
 
 - **状态**：✅ 已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-05
 - **决策人**：Jieling（人类首席架构师）、AI 代理（Riku，鲸鱼架构师）
 - **相关**：

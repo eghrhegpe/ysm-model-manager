@@ -1,7 +1,6 @@
 # ADR-303：3D 预览持久化偏好规格单一源
 
 - **状态**：✅ 已采纳
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-24
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/preview-3d/infra/settings-schema.ts, frontend/src/preview-3d/infra/keymap.ts, frontend/src/preview-3d/menu/panels/settings.ts, frontend/src/views/app-content/settings/tpl-settings.ts, ADR-036, ADR-085, ADR-125`

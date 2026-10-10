@@ -1,7 +1,6 @@
 # ADR-265：site 子模块收窄为最小依赖——root 直传 + 定时器登记函数，host 不再进 site 层
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-17
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/views/app-content/site/workshop-tabs.ts`、`site/workshop-site-opener.ts`、`init-workshop.ts`、`site/workshop-page-state.ts`；ADR-263（前刀：currentSite 下沉 + 「host 拆最小面」遗留的立项）、ADR-264（avatarCache 上收 + 订阅桶工厂形态）、ADR-261（幂等订阅入桶）

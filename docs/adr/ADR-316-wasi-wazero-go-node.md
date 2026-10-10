@@ -1,7 +1,6 @@
 # ADR-316：WASI 解码器生产化：wazero 纯 Go 宿主退役 Node 子进程桥
 
 - **状态**：✅ 已采纳（2026-09-27 拍板）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-27
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：知识卡 `docs/knowledge/ysm-wasi.md`（构建 recipe + 陷阱清单 + 实施进度）；`docs/knowledge/ysm-wasm.md`（被退役对象）；ADR-314 前后文（`docs/adr/` 索引）

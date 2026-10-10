@@ -1,7 +1,6 @@
 # ADR-172：社区创作者增量合并下沉 Go——新增 MergeCommunityCreatorsFromJSON 单次原子并入 binding
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-03
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：ADR-003（逻辑下沉精神祖先）、ADR-040（前端拆分与 internal 下沉）、ADR-053（网页桥边界）、ADR-071（网页版社区能力补齐）

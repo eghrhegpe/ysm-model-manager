@@ -1,7 +1,6 @@
 # ADR-312：死 CSS 反向闸——定义侧零消费者类纳入 css-layer-check 检查 7
 
 - **状态**：✅ 已采纳（Adopted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-25
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`scripts/css-layer-check.ts`（检查 7 本体）、`scripts/_lib/css-layer-utils.ts`（判定纯函数）、`tests/test_css_layer_check.ts`（契约锁）、[ADR-274](./ADR-274-css-layer-check.md)（闸本体决策）、[ADR-275](./ADR-275-css-layer-check-6.md)（检查 6 = 本闸对偶）、[ADR-015](./ADR-015-unified-animation-system.md)（`.stagger-in` 随本闸退役）

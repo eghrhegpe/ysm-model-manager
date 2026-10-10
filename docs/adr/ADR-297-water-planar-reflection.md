@@ -1,7 +1,6 @@
 # ADR-297：水面模型倒影：隐藏 Reflector 借官方 RT + 水 shader 投影采样
 
 - **状态**：✅ 已采纳（Adopted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-22
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/preview-3d/caps/water-capability.ts; frontend/src/preview-3d/caps/reflector-capability.ts; docs/knowledge/water.md`

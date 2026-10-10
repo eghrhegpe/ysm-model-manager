@@ -1,6 +1,6 @@
 # ADR-102：CLI 内嵌模式回归与诊断协同平台
 
-- **状态**：已采纳（Accepted）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-08-19
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`go/cli/ / internal/app/cli_bridge.go / frontend/src/services/cli-bridge.ts / frontend/src/views/app-content/diagnostics/`

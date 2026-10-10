@@ -1,7 +1,6 @@
 # ADR-168：capability 环倒置：preview-state 查询器注入断组合根运行时边
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-03
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：ADR-066（识别层注册表驱动）、ADR-073（能力注册表）、ADR-125/126（状态层上浮）、ADR-161（组合根统一）；代码：`preview-3d/state/preview-state.ts`、`preview-3d/caps/scene-capability-registry.ts`、`preview-3d/caps/scene-capability.ts`、`preview-3d/adapters/shared-infra.ts`

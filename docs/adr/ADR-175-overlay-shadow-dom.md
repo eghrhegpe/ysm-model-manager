@@ -1,7 +1,6 @@
 # ADR-175：3D 预览 overlay 链 Shadow DOM 化（锐评 G6 处置框架）
 
 - **状态**：✅ 已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-04
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/preview-3d/adapters/mount-preview-core.ts`（overlay 挂载）、`preview-3d/menu/engine/core.ts:104`（createSlideMenu 唯一生产消费）、`ui/ui-slide-menu.ts`、`ui/ui-components-styles.ts`、`ui/ui-slide-menu-styles.ts`、`views/app-tree/index.ts:296`（getElementById 守卫）、勘察报告 `frontend-src-critique-g6p1-survey.md` §3、锐评处置卡 G6 行、ADR-066/126

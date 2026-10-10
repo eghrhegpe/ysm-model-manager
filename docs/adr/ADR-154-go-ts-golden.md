@@ -1,7 +1,6 @@
 # ADR-154：Go-TS 解析层 golden 对拍（双端互锁契约）
 
 - **状态**：✅ 已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-02
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`go/types/extensions.go:257 MatchZipEntry`、`go/types/parity_test.go`（既有双端互锁范式）、`go/packs/classify.go:83 DetectByEntries`、`frontend/src/utils/resource/types.ts:376 matchZipEntryTS`、`frontend/src/backend/extract.ts:196 detectZipType`、`go/packs/testdata/classify-golden.json`

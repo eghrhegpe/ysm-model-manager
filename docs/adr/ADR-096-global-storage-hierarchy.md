@@ -1,6 +1,6 @@
 # ADR-096：全局库存储分层规范：MMD 子目录三链路消费
 
-- **状态**：已采纳（Accepted）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-08-18
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`go/types/extensions.go`（`IsMMDSubDir`）；`go/sync/sync_dirlevel.go`（`dirLevelSync`）；`go/instance/instance.go`（`BuildSyncItems` SubDir 填充）；`frontend/src/views/app-sync-manager/`（分组展示 + subdir 过滤）；`frontend/src/utils/resource/types.ts`（`MMD_SUBTYPES`）；ADR-092 / ADR-094 / ADR-095

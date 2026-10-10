@@ -1,7 +1,6 @@
 # ADR-216：域状态订阅提级原语层：createListenerSet
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-09
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/utils/base/primitives/、frontend/src/features/community/download-queue-store.ts、frontend/src/preview-3d/caps/scene-capability.ts`

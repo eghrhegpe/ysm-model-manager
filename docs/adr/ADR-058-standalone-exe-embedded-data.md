@@ -1,6 +1,6 @@
 # ADR-058：纯 exe 发布模型：数据编译期内嵌
 
-- **状态**：已采纳（Accepted）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-08-14
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`embed.go / internal/app/bundled_data.go / internal/app/app_workshop.go`

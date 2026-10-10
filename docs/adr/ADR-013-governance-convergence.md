@@ -1,6 +1,6 @@
 # ADR-013：治理体系收敛 — 文档宪法对账与联邦基线对齐
 
-- **状态**：已采纳（Accepted）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-08-03
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`AGENTS.md` §一 / `docs/adr/` / `docs/architecture/README.md` / `docs/knowledge/` / `.github/workflows/` / `PROJECT-INDEX.md` / `.agents/skills/review/SKILL.md` / `docs/release-notes/`

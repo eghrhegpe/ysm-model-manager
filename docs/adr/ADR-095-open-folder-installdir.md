@@ -1,6 +1,6 @@
 # ADR-095：OpenInstanceFolder 打开资源存储目录而非模组扫描目录
 
-- **状态**：已采纳（Accepted）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-08-18
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`internal/app/app_scan.go` `OpenInstanceFolder`；`resource_types.json`（`installDir` / `scanDir` 字段）；`go/types/extensions.go` `FindInstDir` / `SubDirMap`

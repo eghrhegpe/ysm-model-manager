@@ -1,7 +1,6 @@
 # ADR-222：文件行键空间统一：TreeRow.key 取磁盘路径
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-10
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/views/app-tree/entry-key.ts`（新增，契约净室）、`render.ts`（`flattenVisible` / `TreeRow`）、`row-common.ts`、`events.ts`、`index.ts`、`toolbar-events.ts`；被取代者：无

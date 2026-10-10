@@ -1,7 +1,6 @@
 # ADR-204：废弃 check-circular-go 与收敛 type-consistency 为派生守卫
 
 - **状态**：✅ 已采纳
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-08
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`scripts/check-circular-go.ts`、`scripts/type-consistency.ts`、`scripts/_lib/gate-config.ts`、`scripts/pre-push-gate.ts`、`go/types/registry/resource_types_consistency_test.go`；取代 `ADR-086` §2.3 第 69 行（type-consistency 保留项）与 §4.1 第 198 行 / §4.2 P4（check-circular-go）

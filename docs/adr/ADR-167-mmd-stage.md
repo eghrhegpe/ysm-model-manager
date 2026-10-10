@@ -1,7 +1,6 @@
 # ADR-167：MMD 适配器 stage 管线拆分
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-03
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：[ADR-066](./ADR-066-universal-resource-preview.md)（统一 3D 外壳 / PreviewAdapter 契约）、[ADR-077](./ADR-077-bottom-nav-shell-convergence.md)（mmd-bones）、[ADR-074](./ADR-074-bone-hierarchy-toolkit.md)（bones-panel-node 通用化）

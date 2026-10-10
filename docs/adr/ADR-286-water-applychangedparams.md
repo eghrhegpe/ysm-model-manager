@@ -1,7 +1,6 @@
 # ADR-286：water applyChangedParams 声明式分派表
 
 - **状态**：✅ 已采纳
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-20
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：[ADR-283](./ADR-283-env-param-range-descriptor.md) §2.6（拆独立 ADR 决策）、[ADR-257](./ADR-257-water-level-decoupling-body-strategy.md)

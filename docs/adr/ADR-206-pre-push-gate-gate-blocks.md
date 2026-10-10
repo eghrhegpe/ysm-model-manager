@@ -1,7 +1,6 @@
 # ADR-206：pre-push-gate 收敛分拆为 gate-blocks
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-08
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`scripts/pre-push-gate.ts`、`scripts/_lib/gate-parse.ts`、`scripts/_lib/gate-resolve.ts`、`scripts/_lib/gate-config.ts`、`tests/test_gate_parse_output.ts`

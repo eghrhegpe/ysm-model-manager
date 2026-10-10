@@ -1,7 +1,6 @@
 # ADR-298：工具栏命令注册表与下拉无障碍统一
 
 - **状态**：✅ 已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-23
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`views/app-tree/toolbar-menus.ts`、`views/app-tree/toolbar-events.ts`、`views/app-tree/toolbar-commands.ts`（新）、`utils/dom/dropdown.ts`、`features/context-menu/menu-defs.ts`、ADR-239（被本 ADR 修订 §2 收敛边界）、ADR-238、ADR-248

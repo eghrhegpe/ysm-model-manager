@@ -1,7 +1,6 @@
 # ADR-151：commit-with-check 临时索引白名单提交：并发隔离取代裸 git commit
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-01
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`scripts/commit-with-check.ts, scripts/_lib/commit-temp-index.ts, scripts/_lib/gen-cmds.ts, .githooks/pre-commit`

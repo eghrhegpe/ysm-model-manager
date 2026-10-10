@@ -1,7 +1,6 @@
 # ADR-253：3D 入口统一：路由层 siblings 兜底与详情卡收编
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-16
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/views/app-preview/preview-library.ts`、`frontend/src/views/app-preview/siblings.ts`、`frontend/src/views/app-nav/index.ts`、`ADR-066`、`ADR-132`（**不重复决策**，见 §2.0）

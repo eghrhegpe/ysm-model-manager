@@ -1,7 +1,6 @@
 # ADR-169：menu/core 类型叶下沉：PreviewMenuCtx 归位 node-types 断子模块纯 type 环
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-03
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：ADR-076（v3 菜单拆分）、ADR-093（声明式菜单 Schema）、ADR-126（状态层上浮）、ADR-168（capability 环倒置，同型「一实多虚」环处置先例）；代码：`preview-3d/menu/engine/core.ts`、`preview-3d/menu/node-types.ts`、`preview-3d/menu/{env,roles,switch,settings}.ts`

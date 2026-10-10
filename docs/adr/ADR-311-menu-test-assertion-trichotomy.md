@@ -1,7 +1,6 @@
 # ADR-311：菜单测试断言三分法契约（渐进执法）
 
 - **状态**：✅ 已采纳（D2/D3 基础设施同日落地；D4 渐进执法进行中——实施进度查知识卡 `menu-test-assertion.md`）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-25
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/preview-3d/menu/menu-test-helpers.ts`（helper 归址）/ `scripts/check-menu-test-layout.ts`（执法闸）/ `docs/.menu-test-layout-baseline.json`（只减不增基线）/ `docs/adr/ADR-021-declarative-menu-testing.md`（B 层「菜单即数据」——本 ADR 是其测试断言侧的续刀）/ `docs/adr/ADR-085-menu-single-source.md`（check-menu-health 门禁——本 ADR 新增姊妹闸）/ `docs/adr/ADR-302`（per-kind 字段契约——本 ADR 的字段错配门已覆盖）/ 知识卡 `menu-test-assertion.md`

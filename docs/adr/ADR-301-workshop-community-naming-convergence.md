@@ -1,7 +1,6 @@
 # ADR-301：创作者频道与创意工坊命名轴收敛
 
 - **状态**：📝 提议中（Proposed，待拍板 D1–D4）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-24
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：[ADR-300](./ADR-300-diagnostics-nav-axis-convergence.md)（诊断页导航轴收敛，同族「导航单轴化」——但那是页**内部** tab 轴，本 ADR 是**顶层页名**轴，二者正交不冲突）、[ADR-259](./ADR-259-tab-rendertabs.md)（结构单点产出）、`docs/knowledge/community-feature.md`（社区/创作者频道功能知识卡）

@@ -1,7 +1,6 @@
 # ADR-174：browser parity 判定规则单一源 + 对账硬锁策略（锐评 S2 处置框架）
 
 - **状态**：✅ 已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-03
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/backend/web-fs.ts, web-fs-container.ts, web-fs-read.ts, web-stats.ts`、`browser-adapter.contract-b1.test.ts`、`resource_types.json`、`go/types/resource.go`、`go/packs/classify.go`、`internal/app/app_scan.go / app_install_import.go`、`go/ysm/summary.go`、`frontend/src/parsers/ysm-header.ts, voxel-parse.ts`、ADR-066/070/071/144/159、锐评处置卡 S2 行

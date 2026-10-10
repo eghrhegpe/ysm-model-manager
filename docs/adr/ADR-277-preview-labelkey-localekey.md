@@ -1,7 +1,6 @@
 # ADR-277：preview 菜单 labelKey 全链钉死为 LocaleKey
 
 - **状态**：✅ 已采纳（Accepted）
-- **实施状态**：查知识卡 `docs/knowledge/preview-menu.md`（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-09-19
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：ADR-193（renderCustom 豁免）、ADR-195（菜单即数据 / 类型叶下沉）、ADR-207 D3（i18n 双入口）、ADR-210 D3（tr 退役）、ADR-276（豁免判据与 subscribe 抽象）

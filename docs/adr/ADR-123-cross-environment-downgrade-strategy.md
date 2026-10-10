@@ -1,7 +1,6 @@
 # ADR-123：跨环境降级策略统一
 
 - **状态**：✅ 已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：2026-08-27
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`ADR-049（网页版桥接）、ADR-071（能力门控）、frontend/src/features/community/download-queue-store.ts、frontend/src/features/import-dnd.ts、frontend/src/services/cli-bridge.ts`

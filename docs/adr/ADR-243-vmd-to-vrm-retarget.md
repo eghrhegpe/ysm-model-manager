@@ -1,7 +1,6 @@
 # ADR-243：VMD 动作重定向到 VRM 人形骨骼（跨格式动作复用）
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-15
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/preview-3d/adapters/vrm/vrm-adapter.ts; frontend/src/preview-3d/adapters/mmd/mmd-build-anim.ts; frontend/src/preview-3d/bone/semantic-bones.ts; frontend/src/preview-3d/bone/ik-solver.ts; frontend/src/preview-3d/bone/mmd-foot-ik.ts; frontend/src/preview-3d/adapters/mmd/mmd-anim-library.ts; 依赖 @moeru/three-mmd 的 buildAnimation 与 @pixiv/three-vrm 的 getNormalizedBoneNode; ADR-066（通用资源预览）; ADR-081（语义骨骼层）; ADR-231（preview-3d adapters 层）`

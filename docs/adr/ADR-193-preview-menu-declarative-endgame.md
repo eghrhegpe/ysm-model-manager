@@ -1,7 +1,6 @@
 # ADR-193：3D 菜单终局收口：roles 过程式内容组件声明式化，退役双通道
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-06
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`docs/knowledge/preview-menu.md`、`frontend/src/preview-3d/menu/engine/core.ts`、`frontend/src/preview-3d/adapters/menu-graph.ts`、ADR-126（本 ADR 是其 P4 的收官刀，不取代）

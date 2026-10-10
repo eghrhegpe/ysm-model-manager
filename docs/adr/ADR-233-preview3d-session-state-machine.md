@@ -1,7 +1,6 @@
 # ADR-233：preview-3d 会话生命周期状态机收敛（SessionStatus + teardown 单出口）
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-13
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：ADR-066（mount-preview-core 壳）、ADR-168（capability-preview-state）、ADR-125/126（状态层上浮）、ADR-093（同台追加）；代码：`preview-3d/adapters/mount-session.ts`、`preview-3d/adapters/switch-preview.ts`、`preview-3d/adapters/input-and-animation.ts`、`preview-3d/adapters/mount-preview-core.ts`

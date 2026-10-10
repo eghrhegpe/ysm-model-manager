@@ -1,7 +1,6 @@
 # ADR-159：sceneRegistry 容器语义：displayName + components（资源包=实体、包内模型=组件）
 
-- **状态**：已采纳（Accepted）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-09-02
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/preview-3d/adapters/scene-registry.ts`、`frontend/src/preview-3d/menu/panels/roles.ts`、`frontend/src/views/app-preview/pack-3d.ts`、`frontend/src/preview-3d/menu/panels/stats.ts`、ADR-093、ADR-131、ADR-132

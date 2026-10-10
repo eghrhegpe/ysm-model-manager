@@ -352,10 +352,15 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   "test_config_write_single_exit.ts": ["frontend/src/views/config-write.ts"],
   // 整合包同步写入口双缓存配对：internal/app 全部生产文件都是扫描对象（目录哨兵），
   // 写入口本体 app_sync.go / app_install_instance.go / app_install_import.go 变更必触发
+  // 派生 fail-closed 闸：internal/app 生产文件全量在扫（目录哨兵）+ 被监视包导出面
+  // 即候选写面（其增删直接改判定集）+ 派生引擎本体
   "test_sync_write_cache_pairing.ts": [
     "internal/app/",
     "go/instance/",
     "go/sync/",
+    "go/installer/",
+    "go/importer/",
+    "scripts/_lib/write-surface-gate.ts",
     "tests/test_sync_write_cache_pairing.ts",
   ],
   // 仓库文件写绑定扫描缓存失效：internal/app 生产文件全量在扫（目录哨兵），
@@ -363,6 +368,7 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   "test_fileops_write_invalidate.ts": [
     "internal/app/",
     "go/fileops/",
+    "scripts/_lib/write-surface-gate.ts",
     "tests/test_fileops_write_invalidate.ts",
   ],
   "test_api_break.ts": ["scripts/api-break.ts"],

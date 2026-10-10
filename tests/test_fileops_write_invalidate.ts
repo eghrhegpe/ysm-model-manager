@@ -1,115 +1,52 @@
 #!/usr/bin/env node
 /**
- * 契约测试：仓库文件写绑定成功路径必须失效扫描缓存（锐评 2026-10-10 文件操作审计）。
+ * 契约测试：仓库文件写绑定成功路径必须失效扫描缓存（派生 fail-closed 版，2026-10-10 翻转）。
  *
- * 背景：internal/app 薄壳把文件 CRUD 转发 go/fileops（纯执行层、不碰缓存，分层正确），
- * 缓存失效责任归 app 层绑定。`app_files.go` 的 RenameDir / RemoveDir / RenameFile /
- * WriteModelFolder(importModelFolderAs) 全部在成功路径调 `scanner.InvalidateCache()`，
- * 注释逐条写着「否则 30s 内旧名/已删目录仍可被扫描命中」——这是本域既定家族约定。
- * 审计发现 MoveModelFile / CopyModelFile 独漏：右键移动/复制后前端 tree:reload 命中
- * 旧扫描缓存 ≤TTL（旧位置仍在、新位置不出现），watcher 只在 McRoot 已配且有整合包时兜底
- * （syncAll 无实例短路），查看器模式无任何兜底。已补两行 + 单测 TestMoveCopyModelFile_InvalidatesScanCache。
+ * 旧版（同日早先）用人工枚举 FILE_WRITE_OPS 清单扫调用点——清单漏列即隐身（fail-open），
+ * 实证盲区：DeleteModelFile 手动配了失效但闸看不见。本版改由 scripts/_lib/write-surface-gate.ts
+ * **从 go/fileops 导出面自动派生**候选写函数：app 层每个 `fileops.X(` 调用点三选一归宿——
+ * ① X 在 READONLY 豁免表（真只读/纯计算，漏分类即红）；② 所在函数体含
+ * scanner.InvalidateCache/InvalidatePath；③ 进 exemptSites（带 reason，僵尸条目反查）。
+ * 新增写函数被调用而没归类 → 当场红。
  *
- * 本测试把「家族约定」固化为源码结构闸：app_files.go 里每个 `return fileops.<写操作>` 的
- * **直返形态**（无成功路径失效）一律违规。豁免 CreateDir（建空目录，不产模型条目、
- * 不改扫描结果）与只读函数。
- *
- * 规则：
- *   1. 扫描 internal/app/**.go（非测试）里 `fileops.X(` 调用点，X ∈ FILE_WRITE_OPS。
- *   2. 调用点所在函数体（含 defer 也算，但 defer 须显式调 InvalidateCache/InvalidatePath）
- *      必须出现 scanner.Invalidate 之一，否则违规。
+ * 历史（保留作理由）：app_files.go 的 RenameDir/RemoveDir/RenameFile/WriteModelFolder 历来
+ * 有失效（注释逐条写着「否则 30s 内旧名仍可被扫描命中」），审计抓到 MoveModelFile/
+ * CopyModelFile 独漏（右键移动/复制后 tree:reload 命中旧缓存 ≤TTL；watcher 查看器模式无兜底），
+ * 已补 + 单测 TestMoveCopyModelFile_InvalidatesScanCache。
  *
  * 运行：node tests/test_fileops_write_invalidate.ts（或经 _lib/contract-tests.ts 统一入口）。
  * 退出码：0 全绿；非 0 断言失败。
  */
 import assert from "node:assert";
-import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { runWriteGate } from "../scripts/_lib/write-surface-gate.ts";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const APP_DIR = path.join(ROOT, "internal", "app");
 
-/**
- * 会改「可被扫描的仓库文件树」的 go/fileops 操作。
- * CreateDir 排除：建空目录不产模型条目。只读操作（FindPreviewImage 等）不在列。
- */
-const FILE_WRITE_OPS = [
-  "RenameDir",
-  "RemoveDir",
-  "RenameFile",
-  "MoveModelFile",
-  "CopyModelFile",
-  "WriteModelFolder",
-  "ToggleModelEnable", // 启禁改文件名（.disabled/.ban 增删），扫描结果随变
-];
+// go/fileops 导出面中的只读/纯计算/不产条目类——**漏列一个被调用的非写函数即红**，
+// 漏列一个写函数则它会要求失效归宿（两个方向都 fail-closed）。
+const READONLY = new Set([
+  "CreateDir", // 建空目录：不产模型条目、不改扫描结果语义
+  "ExtractPreviewTexture", // 只读提取
+  "FindPreviewImage", // 只读查找
+  "GetPackInfo", // 只读解析
+  "IsFileBanned", // 只读判定
+  "MoveCopyTarget", // 纯路径计算（plan，不动盘）
+  "RenameTarget", // 纯路径计算（plan，不动盘）
+]);
 
-function productionGoFiles(dir) {
-  const out = [];
-  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-    const abs = path.join(dir, e.name);
-    if (e.isDirectory()) {
-      if (e.name === "node_modules" || e.name.startsWith(".")) continue;
-      out.push(...productionGoFiles(abs));
-      continue;
-    }
-    if (!e.name.endsWith(".go") || e.name.endsWith("_test.go")) continue;
-    out.push(abs);
-  }
-  return out;
-}
-
-function stripComments(src) {
-  return src
-    .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "))
-    .replace(/\/\/[^\n]*/g, "");
-}
-
-/** 定位调用点所属函数体（从 `\nfunc ` 起，到配平 `}`）。 */
-function enclosingFuncBody(text, idx) {
-  const start = text.lastIndexOf("\nfunc ", idx);
-  if (start < 0) return null;
-  const braceAt = text.indexOf("{", start);
-  if (braceAt < 0 || braceAt > idx) return null;
-  let depth = 0;
-  for (let i = braceAt; i < text.length; i++) {
-    if (text[i] === "{") depth++;
-    else if (text[i] === "}") {
-      depth--;
-      if (depth === 0) return text.slice(start, i + 1);
-    }
-  }
-  return null;
-}
-
-const INVALIDATE = ["scanner.InvalidateCache", "scanner.InvalidatePath"];
-
-const violations = [];
-let callSites = 0;
-for (const abs of productionGoFiles(APP_DIR)) {
-  const text = stripComments(fs.readFileSync(abs, "utf8"));
-  const relPath = path.relative(ROOT, abs).split(path.sep).join("/");
-  for (const op of FILE_WRITE_OPS) {
-    const re = new RegExp(`\\bfileops\\.${op}\\s*\\(`, "g");
-    for (const m of text.matchAll(re)) {
-      callSites++;
-      const body = enclosingFuncBody(text, m.index);
-      if (body === null) {
-        violations.push(`${relPath}: 无法定位 fileops.${op} 调用点所属函数`);
-        continue;
-      }
-      if (!INVALIDATE.some((inv) => body.includes(inv))) {
-        const line = text.slice(0, m.index).split("\n").length;
-        violations.push(`${relPath}:${line} fileops.${op} 成功路径缺 scanner.Invalidate 失效`);
-      }
-    }
-  }
-}
+const { sites, checked, violations } = runWriteGate({
+  root: ROOT,
+  appDir: "internal/app",
+  minSites: 6, // 现网调用点 19，低于 6 = 派生/扫描坏了
+  packages: [{ dir: "go/fileops", alias: "fileops", satisfy: "scan", readonly: READONLY }],
+});
 
 assert.ok(
-  callSites >= 6,
-  `internal/app 的 fileops 写操作调用点应 ≥6（家族约定基线），实际 ${callSites}——` +
-    "若重构收敛/迁移了绑定，须同步更新 FILE_WRITE_OPS 清单与调用面。",
+  checked >= 6,
+  `受审（非只读）调用点应 ≥6（写族基线：Rename×2+Remove+Move+Copy+WriteFolder+Delete+Toggle×2），实际 ${checked}——` +
+    "派生模块或导出面解析失效即空转。",
 );
 
 assert.deepStrictEqual(
@@ -121,5 +58,5 @@ assert.deepStrictEqual(
 );
 
 console.log(
-  `[test_fileops_write_invalidate] OK — ${callSites} 个 fileops 写调用点全部失效扫描缓存`,
+  `[test_fileops_write_invalidate] OK — 派生 fail-closed：${sites} 个 fileops 调用点，${checked} 个写点全部有失效归宿`,
 );

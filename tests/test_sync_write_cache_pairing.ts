@@ -1,155 +1,97 @@
 #!/usr/bin/env node
 /**
- * 契约测试：整合包同步写入口的双缓存配对守卫（锐评 2026-10-10 配对审计）。
+ * 契约测试：整合包/落地写入口的双缓存配对守卫（派生 fail-closed 版，2026-10-10 翻转）。
  *
- * 背景：整合包页与同步 diff 各有一层 30s TTL 派生缓存——go/instance 的同步结果缓存
- * （syncItemsCache）与 go/sync 的扫盘缓存（syncScanCache）。go/sync 的写操作内部
- * `defer InvalidateSyncScanCaches()` 自带后者；但前者**不能**由 go/sync 清——
- * go/instance 导入 go/sync，反向依赖成环。所以「改了磁盘 ⇒ 必须配对清两个缓存」
- * 是 **internal/app 层**每条 ysmsync 写入口的结构契约。
+ * 背景：整合包页与同步 diff 各有一层 30s TTL 派生缓存（go/instance 同步结果 + go/sync 扫盘）。
+ * go/sync 写操作内部 `defer InvalidateSyncScanCaches()` 自带 sync 一侧；但 instance 一侧
+ * **go/sync 不能清**（go/instance 导入 go/sync，反向即成环），失效归 **internal/app 层每条写入口**
+ * 成对调 instance.InvalidateSyncItemsCache() + ysmsync.InvalidateSyncScanCaches()（或等价的
+ * a.ClearScanCache() 三层清）。审计抓到七条 ysmsync 入口独漏 ResolveConflicts、installer 落地族
+ * 全漏（含活 bug ImportByType）——已全补。
  *
- * 审计发现：七条写入口六条配对，`ResolveConflicts`（冲突解决改实例/全局两侧文件）
- * 独漏 instance 一侧——整合包页继续展示旧同步状态 ≤TTL。本测试把该契约固化为门禁，
- * 防止第八条入口再漏、或有人重构时删掉配对的一半。
+ * 旧版（同日早先）用人工枚举 SYNC_WRITE_OPS/INSTALLER_WRITE_OPS 清单扫调用点——清单漏列一个
+ * 写函数它根本不进扫描（fail-open）。本版由 scripts/_lib/write-surface-gate.ts 从
+ * **go/sync + go/installer + go/importer 三包导出面自动派生**候选写函数，app 层每个 `pkg.X(`
+ * 调用点三选一归宿：① 只读豁免表（DetectConflicts/ListVersions/DetectContainerType 等，
+ * 漏分类即红）；② 所在函数体含配对失效（两行显式 或 a.ClearScanCache）；③ exemptSites
+ * （精确到 文件+函数+调用名，带 reason，僵尸条目反查防烂尾）。新增写函数被调用没归类 → 当场红。
  *
- * 规则（生产代码不变量，测试文件豁免）：
- *   1. internal/app/**.go（非测试）里每个 SYNC_WRITE_OPS 调用点，所在函数体内必须
- *      同时出现 `instance.InvalidateSyncItemsCache` 与 `ysmsync.InvalidateSyncScanCaches`。
- *   2. 读操作（DetectConflicts / SyncResourcesWithConfig / ListVersions）不在集合内——
- *      SyncResourcesWithConfig 仅当传入 config.ConflictPolicy 非空才写盘；当前 app 层
- *      全部传 nil（app_install_instance.go 注释 D2′-a），若未来传非 nil 须入写集合。
+ * 接口方法值盲区：importer.Get(rtype) 返回 Handler、经 h.Import() 落盘——枚举正则天然抓不到
+ * `h.Import(`。本版把 importer.Get 归类为**写**（其调用点所在函数必须有失效），间接覆盖
+ * ImportByType 这条活路径（其修复见 app_import_invalidate_test.go）。
  *
- * 边界：本测试只锁「函数体内配对存在」的结构不变量，不验运行时时序（那由
- * go/instance/instance_test.go 与 go/sync/sync_cache_test.go 的单元语义守护）。
- *
- * 依赖：node:fs / node:path（零第三方）。
  * 运行：node tests/test_sync_write_cache_pairing.ts（或经 _lib/contract-tests.ts 统一入口）。
  * 退出码：0 全绿；非 0 断言失败。
  */
 import assert from "node:assert";
-import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { runWriteGate } from "../scripts/_lib/write-surface-gate.ts";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const APP_DIR = path.join(ROOT, "internal", "app");
 
-/** 会改磁盘的 go/sync 写入口（别名 ysmsync 后的方法名）。 */
-const SYNC_WRITE_OPS = [
-  "SyncCustomToRepo", // 收编：写全局仓库目录
-  "PushResources", // 推送：写实例目录
-  "PullResources", // 拉取：写全局仓库目录
-  "PushSingleResource", // 单条推送：写实例目录
-  "PullSingleResource", // 单条拉取：写全局仓库目录
-  "SyncToggleStatus", // 启禁：改实例目录文件名
-  "RelinkDir", // 重链接：增删实例目录文件
-  "ResolveConflicts", // 冲突解决：改实例/全局两侧文件
-];
+// go/sync 导出面中的只读项（app 层会调用到）
+const SYNC_READONLY = new Set([
+  "DetectConflicts", // 纯 diff 读，不写盘
+  "ListVersions", // 只读枚举实例
+  "ResolutionStrategy", // 类型转换（非写动作）
+]);
+// go/importer 导出面的只读/注册项
+const IMPORTER_READONLY = new Set([
+  "DetectContainerType", // 内容类型检测（读）
+  "DetectContainerTypeFromBase64Tail", // 尾部探针检测（读）
+]);
 
-/**
- * 会改磁盘的 go/installer 落地入口（锐评 2026-10-10 第二轮扩面）：
- * installer.Install/InstallDir 把仓库文件落地进实例目录，与 push/pull 同型，但走的是
- * installer 包而非 sync 包——go/sync 的 `defer InvalidateSyncScanCaches()` 完全不覆盖它，
- * 而 watcher 只监听全局仓库根、实例目录写入没有任何兜底。app 层消费点
- * （InstallModelTo / InstallResourceToInstance 三出口）曾全部漏清，前端只有一条路径
- * （sync.ts 批量回拉）事后补 InvalidateScanCache——正是导入侧注释明令反对的「赌前端记得清」。
- */
-const INSTALLER_WRITE_OPS = ["Install", "InstallDir"];
+const { sites, checked, exemptHits, violations } = runWriteGate({
+  root: ROOT,
+  appDir: "internal/app",
+  minSites: 15, // 现网三包调用点合计 34，低于 15 = 派生/扫描坏了
+  packages: [
+    { dir: "go/sync", alias: "ysmsync", satisfy: "pair-or-clear", readonly: SYNC_READONLY },
+    { dir: "go/installer", alias: "installer", satisfy: "pair-or-clear", readonly: new Set() },
+    {
+      dir: "go/importer",
+      alias: "importer",
+      satisfy: "pair-or-clear",
+      readonly: IMPORTER_READONLY,
+    },
+  ],
+  exemptSites: [
+    {
+      file: "app_install_import.go",
+      fn: "InstallModelFile",
+      call: "InstallToGlobal",
+      reason:
+        "落点为整合包实例全局 custom 目录（mcRoot/SubDirMap(ysm)），非 scan/instance/sync 缓存键覆盖的目录；前端零消费者，仅 CLI go/cli/install.go 调用，CLI 进程每启即新、三层派生缓存不驻留——清缓存无对象。查证 2026-10-10（若未来 GUI 接入此绑定、或缓存键扩到实例目录，须移除豁免补失效）。",
+    },
+    {
+      file: "app_install_instance.go",
+      fn: "SyncResources",
+      call: "SyncResourcesWithConfig",
+      reason:
+        "app 层恒传 config=nil → 纯读不写盘（go/sync handleSyncConflicts 仅 ConflictPolicy 非空才落盘）。若未来传非 nil config，本函数即变写入口，须移除豁免补两行配对（见 go-sync 卡双缓存配对条注意项）。",
+    },
+  ],
+});
 
-/** 生产 Go 文件（排除 _test.go） */
-function productionGoFiles(dir) {
-  const out = [];
-  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-    const abs = path.join(dir, e.name);
-    if (e.isDirectory()) {
-      if (e.name === "node_modules" || e.name.startsWith(".")) continue;
-      out.push(...productionGoFiles(abs));
-      continue;
-    }
-    if (!e.name.endsWith(".go") || e.name.endsWith("_test.go")) continue;
-    out.push(abs);
-  }
-  return out;
-}
-
-/** 剥离注释（块 + 行注释）——叙述性注释提到 ysmsync.Push 不算调用点。
- *  简化实现不处理反引号字符串里的 //；本仓 Go 代码无此类字面量，误剥方向只可能漏检。 */
-function stripComments(src) {
-  return src
-    .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "))
-    .replace(/\/\/[^\n]*/g, "");
-}
-
-/** 从索引出发回溯定位所属函数体：返回该函数从 `func ` 到配平右括号的文本。 */
-function enclosingFuncBody(text, idx) {
-  const start = text.lastIndexOf("\nfunc ", idx);
-  if (start < 0) return null;
-  const braceAt = text.indexOf("{", start);
-  if (braceAt < 0 || braceAt > idx) return null;
-  let depth = 0;
-  for (let i = braceAt; i < text.length; i++) {
-    if (text[i] === "{") depth++;
-    else if (text[i] === "}") {
-      depth--;
-      if (depth === 0) return text.slice(start, i + 1);
-    }
-  }
-  return null;
-}
-
-const PAIRS = ["instance.InvalidateSyncItemsCache(", "ysmsync.InvalidateSyncScanCaches("];
-
-const violations = [];
-let callSites = 0;
-for (const abs of productionGoFiles(APP_DIR)) {
-  const text = stripComments(fs.readFileSync(abs, "utf8"));
-  const relPath = path.relative(ROOT, abs).split(path.sep).join("/");
-  for (const [pkg, ops] of [
-    ["ysmsync", SYNC_WRITE_OPS],
-    ["installer", INSTALLER_WRITE_OPS],
-  ]) {
-    for (const op of ops) {
-      const re = new RegExp(`\\b${pkg}\\.${op}\\s*\\(`, "g");
-      for (const m of text.matchAll(re)) {
-        callSites++;
-        const body = enclosingFuncBody(text, m.index);
-        if (body === null) {
-          violations.push(`${relPath}: 无法定位 ${pkg}.${op} 调用点所属函数`);
-          continue;
-        }
-        // 允许 helper 自持配对（RelinkDir 收在 app 层 relinkDir helper 内），
-        // 此时调用点所在函数体即清理函数，天然满足；跨函数依赖不认。
-        for (const p of PAIRS) {
-          if (!body.includes(p)) {
-            const line = text.slice(0, m.index).split("\n").length;
-            violations.push(
-              `${relPath}:${line} ${pkg}.${op} 调用点所在函数缺配对 ${p.slice(0, -1)}`,
-            );
-          }
-        }
-      }
-    }
-  }
-}
-
-// 断言 0：写入口集合非空转——若全部改名/删除，本测试失去意义，须显式失败。
-// 基线 11 = 9 个 ysmsync 写调用点 + installer 落地族（InstallModelTo 1 +
-// InstallResourceToInstance 3 出口）。
 assert.ok(
-  callSites >= 11,
-  `internal/app 的 ysmsync/installer 写入口调用点应 ≥11（配对审计基线），实际 ${callSites}——` +
-    "若重构收敛/迁移了入口，须同步更新本测试的 SYNC_WRITE_OPS/INSTALLER_WRITE_OPS 清单与调用面。",
+  checked >= 10,
+  `受审（非只读）写调用点应 ≥10（SyncCustomToRepo/Push×2/Pull×2/Toggle/Relink/Resolve/Install×3/importer 写族等），实际 ${checked}——派生模块或导出面解析失效即空转。`,
+);
+assert.strictEqual(
+  exemptHits,
+  2,
+  `两条精确豁免应各命中一次（InstallToGlobal / SyncResourcesWithConfig），实际 ${exemptHits}——僵尸豁免或归类漂移。`,
 );
 
-// 断言 1：每个写调用点所在函数体双缓存配对齐全。
 assert.deepStrictEqual(
   violations,
   [],
-  "整合包写入口必须同函数体内配对清两个派生缓存（go/sync 不能反向依赖 go/instance，" +
-    "instance 侧失效归 app 层）——缺半边 = 整合包页展示旧同步状态 ≤TTL。\n" +
+  "整合包/落地写入口必须同函数体内有失效归宿（go/sync 不能反向依赖 go/instance，" +
+    "instance 侧失效归 app 层）——缺半边 = 整合包页/新落地文件展示旧同步状态 ≤TTL。\n" +
     violations.map((v) => `  ${v}`).join("\n"),
 );
 
 console.log(
-  `[test_sync_write_cache_pairing] OK — ${callSites} 个 ysmsync/installer 写调用点全部双缓存配对`,
+  `[test_sync_write_cache_pairing] OK — 派生 fail-closed：${sites} 个 sync/installer/importer 调用点，${checked} 个写点全部有配对归宿，${exemptHits} 条精确豁免命中`,
 );

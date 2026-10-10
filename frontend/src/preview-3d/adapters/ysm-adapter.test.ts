@@ -410,6 +410,39 @@ describe("buildYsmScene 错误路径", () => {
     expect(h.unregisterModelRoot).not.toHaveBeenCalled();
   });
 
+  // ── [锐评抽象扫描 2026-10-10] buildYsmScene 后段（阶段②③④）失败的资源归还 ──
+  // loadAndBuild（阶段①）自带 try/catch 归还纹理（L245-251），但其**之后**的
+  // setupCameraAndBones / buildBonePanelAndAnim / buildMenuAndDebug 任一步抛错时，
+  // 纹理已 acquire、rootGroup 已 scene.add + registerModelRoot，而 dispose 句柄
+  // 尚未产生（makeSceneHandle 在最后一行）——无归还路径 = 纹理引用计数永久泄漏
+  // + frustum 根残留（recoverMountFailure 只 dispose 子树，不碰这两项）。
+  it.each([
+    ["阶段② setupCameraAndBones（fitCameraToScene 抛错）", "fitCamera"],
+    ["阶段③ buildBonePanelAndAnim（buildBoneTree 抛错）", "buildBoneTree"],
+  ] as const)("%s 抛错 → 归还纹理 + 注销 frustum 根", async (_label, mockKey) => {
+    const { preload, releaseTextures } = makePreload(specWith([["b1", "头"]]));
+    // 阶段① 必须成功（否则走不到后段）：显式装配 buildYsmObject 的正常返回
+    h.buildYsmObject.mockReturnValue(makeObj(["b1"]).obj);
+    h[mockKey].mockImplementationOnce(() => {
+      throw new Error("late-stage boom");
+    });
+    const { ctx } = makeCtx();
+    await expect(
+      buildYsmScene(ctx, "/m/late.ysm", {
+        loader: vi.fn(async () => ({} as unknown as BedrockGeometry)),
+        preload,
+      }),
+    ).rejects.toThrow(/late-stage boom/);
+    expect(
+      releaseTextures,
+      "后段失败同样必须归还纹理引用（否则 textureCache 计数泄漏，LRU 永久失效）",
+    ).toHaveBeenCalled();
+    expect(
+      h.unregisterModelRoot,
+      "后段失败同样必须注销已登记的 frustum 根（否则 modelRoots 残留）",
+    ).toHaveBeenCalled();
+  });
+
   it("preload 缺 releaseTextures → dispose 降级告警不抛", async () => {
     const preload = vi.fn(async () => ({
       texArr: [],

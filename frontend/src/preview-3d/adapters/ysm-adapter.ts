@@ -697,10 +697,21 @@ export async function buildYsmScene(
   sc.tLoadStart = sc.tStart;
 
   const core = await loadAndBuild(sc);
-  const cam = setupCameraAndBones(sc, core);
-  const anim = await buildBonePanelAndAnim(sc, core);
-  const menu = buildMenuAndDebug(sc, core, cam, anim);
-  return makeSceneHandle(sc, core, cam, anim, menu);
+  // [锐评抽象扫描 2026-10-10] 阶段①自带失败归还（loadAndBuild 内 try/catch），但其后的
+  // ②相机/拾取、③骨骼面板/动画、④菜单/debug 任一步抛错时：纹理已 acquire、rootGroup 已
+  // scene.add + registerModelRoot，而 dispose 句柄要到最后一行才产生——两项归还无人执行。
+  // scene 子树由调用方 recoverMountFailure 的 stale 清扫（remove + disposeObject3D）兜底，
+  // 故此处只补句柄独占的两件事：纹理引用归还 + frustum 根注销（重复处置会双 dispose）。
+  try {
+    const cam = setupCameraAndBones(sc, core);
+    const anim = await buildBonePanelAndAnim(sc, core);
+    const menu = buildMenuAndDebug(sc, core, cam, anim);
+    return makeSceneHandle(sc, core, cam, anim, menu);
+  } catch (e) {
+    core.releaseTextures?.();
+    unregisterModelRoot(core.obj.rootGroup);
+    throw e;
+  }
 }
 
 /** 工厂：构造统一 PreviewAdapter（shared 模式）。path 一律由 build 在 build/switchTo 时传入 */

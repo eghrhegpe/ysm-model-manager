@@ -15,6 +15,7 @@ source_files:
   - frontend/src/preview-3d/menu/schema/node-types.ts
   - frontend/src/preview-3d/menu/engine/defs.ts
   - frontend/src/preview-3d/menu/render/cap-controls.ts
+  - frontend/src/preview-3d/menu/render/timeline-band.ts
   - frontend/src/preview-3d/menu/engine/sanctioned.ts
   - frontend/src/utils/base/pure/label.ts
   - frontend/src/preview-3d/menu/panels/env.ts
@@ -26,6 +27,10 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - AssertCommonFieldIsExact
+    - BAND_TICKS
+    - bandColorAt
+    - BandStop
+    - bandStops
     - buildCameraSchema
     - buildCrossCuttingNodes
     - buildEnvSchema
@@ -213,6 +218,7 @@ status: active
 - **dock 一级路由声明化（ADR-241）**：点击路由由 `PREVIEW_MENU_GROUPS` 数据表显式声明，`renderPreviewDock` 纯查表（directToPanel → directViewKey → rootView → 兜底 makeGroupViewFn），无 `g.id === ...` 字面量。model/env/settings → `directToPanel` 静态直达；motion → `directViewKey:"motion"` 动态工厂（活跃角色详情，directToPanel 表达不了）；scene → `rootView:true` renderMenu 组根视图。`motion` 的 key→工厂映射仍在 core.ts（需注入 sceneRegistry/详情工厂），是多态路由表而非 id 特判。
 - **`dockGroup` 已是归属域单源，勿再改名 `navDomain`**（2026-09 复核证伪）：`dockGroup`（`PreviewDockGroup` = dock 组 ∪ `"stats"` 统计通道）是静态类型化声明字段，为 dock→panel 投影唯一真值源；`menu-graph.ts`（ADR-128）已把它投影成静态可机验导航图。改名是零增益 churn。`roles-views.ts` 的 `dockGroup === "model"|"motion"` 运行时过滤对象是**per-model 实例注入 panel**（适配器按模型类型产出），属本质运行时数据，无法静态化（MikuMikuAR 同样 per-model 运行时构建）。
 - **同一参数不得声明两条控件（sky 时间轴复盘，2026-09）**：`caps/sky-menu.ts|buildSkyNodes` 曾同时声明 `sky-timeline`（timeline 复杂控件，走 `controls` 通道）与 `sky-time`（slider 原生节点），二者**同源同槽**——读写都落在 `caps/sky-capability.ts|SkyCapability.getTimeOfDay` / `setTime`，行为上天然同步、不会打架，但 UI 冗余且诱发「这俩是不是一个意思」的误解。根因是 ADR-195 刀2 迁移时按「控件 kind 分流」（复杂→controls 通道、简单→原生节点）**各声明了一遍**，两条通道互不知情。**已删 `sky-time` slider**，`timeOfDay` 唯一控件 = timeline（自带 `HH:MM` 读数 + 指针拖动 + 触屏，精度远高于原 0.5h 步进；`menu/cap-controls.ts|renderCapTimeline`）。**新增 cap 控件时先查同 cap 内是否已有同 `get/set` 目标的控件**——kind 分流是渲染层实现细节，不该外溢成声明层的重复。
+- **昼夜色带由太阳高度角派生，禁回写死色标（S1-3 修复，2026-10-10）**：`cap-controls.ts|renderCapTimeline` 的底色渐变原为**写死的 5 个色标**（黑→蓝→浅蓝→橙→深蓝→黑），而同一控件里的太阳圆点却在跟 `caps/sky-sun.ts|computeHourToSun` 实时走——「一半实时一半假」比全假更误导（用户调云量/浑浊度，光斑在变、色带纹丝不动）。现色标由 `menu/render/timeline-band.ts|bandStops` 按小时采样 `bandColorAt`（**内部只调 `computeHourToSun` 取太阳高度角**，与 shader/圆点同一事实源）生成，并画 `BAND_TICKS`（6/12/18 = 地平线/峰值/地平线，位置 t = hour/24）。⚠️ **边界**：本模块只画「光照相位指示色」，**不重算大气散射**（ADR-073 红线禁止自写 Preetham），也不宣称复现最终画面——画面归 sky shader 唯一决定。⚠️ **禁退回硬编码**：`cap-controls.test.ts` 注入记录型 2D ctx 桩，断言色标数 > 5 且首尾闭环 + 三条刻度落位；只改纯函数而渲染器不消费会被该测试抓住（典型的「测了但没接线」）。
   - 注意区分三个「时间」：天空 time-of-day（本卡）／动画播放进度（`model/ysm-animation-player.ts|executeTimeline`，Molang 时间轴事件）／昼夜自动循环开关（`sky-auto-rotate`，按真实时间推进 timeOfDay）。名字相像，语义无关。
 - **timeline 拖动相位通道（2026-09-23，S2-1 修复配套）**：`PreviewControlDef` 增可选钩子 `onDragStart?/onDragEnd?(v)`（`cap-controls.ts|renderCapTimeline` 在 pointerdown 首发 / pointerup+pointercancel 松手触发）——**「逐帧写入 × 后端代价高（整场重建/全量 PMREM 烤图）」的控件，拖动期降为门控、松手 force 一次**。首例 = sky `setTime(hour, {phase})`：dragging → forceEnv=false 走阈值门控，settled → force 一次取当前帧图；未传 phase 保持旧默认 true（兼容既有调用方）。可选钩子，未声明的 timeline 消费方（motion 进度）行为零变化。reflector size/resolution（S11-1/2 结构键滑杆）是同处方待接候选。**烘焙决策单点纪律**：phase 只写 envState（skyTimeOfDay/skyForceEnv 同批），真烘焙判定统一在 registerEnvCallback 分支——setTime 不直调 bake，防相位语义 cap 侧双路径分叉。⚠️ `skyForceEnv` 是**脉冲键**：写侧须 `force:true` 绕 shouldOverwrite（resetEnvState 后无来源标记时 manual 也会被拒，S2-1 实证）。
 - **动作/模型组一级卡壳收纳（ADR-242）**：`modelDetailView`/`motionDetailView` 一级改为 `kind:"card"`(collapsible) 卡壳 + 面板**入口行 array**（`panelEntryRow`：`kind:"row"` + icon + label + `rowDensity:"compact"` + `action: ctx.navigate(makePanelView(item))`），照抄 env `envCapRow` 范式——**内容仅在 navigate 到次级菜单后渲染**，骨骼/表情/材质等巨多内容不再一级内联铺开（与环境组形态统一：环境有收纳，动作也有）。骨骼二级仍走 `makeBonePanelRenderer` 逃生舱（动态树 + 跨域拾取，schema 化 ROI 为负）；表情/材质二级仍走既有声明式 children。入口行 testid 形如 `preview-motion-entry-<id>` / `preview-model-entry-<id>`（row testid 统一 `preview-` 前缀）。此决策部分推翻 ADR-240 的「renderCustom 内容内联进卡 body」做法（视觉统一保留，内联内容改跳转入口）。

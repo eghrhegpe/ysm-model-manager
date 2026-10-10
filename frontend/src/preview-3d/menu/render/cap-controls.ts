@@ -19,6 +19,9 @@ import { MENU_BTN_CSS, MENU_SECTION_CSS } from "@/preview-3d/menu/style/menu-sty
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-state.ts";
 import { clampPct } from "@/utils/base/pure/clamp.ts";
 import { resolveLabel } from "@/utils/base/pure/label.ts";
+// [锐评 S1-3] 昼夜色带纯计算（相位色 + 6/12/18 锚点）自本文件拆出——renderCapTimeline 内联
+// 写死色标既不可直测，也与太阳标记的事实源脱节。同层（menu/render）精确同目录 → 相对 import。
+import { BAND_TICKS, bandStops } from "./timeline-band.ts";
 
 /**
  * [ADR-195 刀 2.5] 控件渲染统一视图：五个简单控件（divider/toggle/slider/select/color）
@@ -456,18 +459,20 @@ function renderCapTimeline(parent: HTMLElement, c: PreviewControlDef): void {
   canvas.className = "cc-canvas-fill";
   const cctx = canvas.getContext("2d");
   if (cctx) {
-    // 简化昼夜渐变：黑→蓝→浅蓝→橙→深蓝→黑
-    const stops = [
-      { t: 0.0, c: "#04060f" },
-      { t: 0.25, c: "#1a2b4a" }, // 6h 晨
-      { t: 0.5, c: "#9bc4e8" }, // 12h 午
-      { t: 0.75, c: "#ff8a5c" }, // 18h 暮
-      { t: 1.0, c: "#04060f" },
-    ];
+    // [锐评 S1-3] 色带由太阳高度角派生（`timeline-band.ts`，与太阳标记/shader 同源
+    // `computeHourToSun`）——原为写死的 5 个色标，调云量/浑浊度时纹丝不动，而太阳圆点
+    // 明明在动（「一半实时一半假」）。现按小时采样相位色，色带与圆点讲同一个故事。
     const grad = cctx.createLinearGradient(0, 0, canvas.width, 0);
-    for (const s of stops) grad.addColorStop(s.t, s.c);
+    for (const s of bandStops()) grad.addColorStop(s.t, s.c);
     cctx.fillStyle = grad;
     cctx.fillRect(0, 0, canvas.width, canvas.height);
+    // 锚点刻度：6/12/18（日出/正午/日落）——把控件自身的坐标系显式化，
+    // 让「圆点现在在哪一段」无需试拖即可读。位置与太阳标记同一坐标系（t = hour/24）。
+    cctx.fillStyle = "rgba(255,255,255,0.55)";
+    for (const k of BAND_TICKS) {
+      const x = Math.round(k.t * canvas.width) + 0.5; // +0.5 取像素中心，1px 线不糊
+      cctx.fillRect(x, 0, 1, canvas.height);
+    }
   }
 
   // 太阳位置标记（顶部圆点，y 由 elevation 决定）

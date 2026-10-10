@@ -65,6 +65,10 @@ auto_fields:
     - AutoDanceOptions
     - autoVmdPositionScale
     - bakeMeshFragments
+    - BAND_TICKS
+    - bandColorAt
+    - BandStop
+    - bandStops
     - BaseScene
     - BasisEncoderLike
     - BasisModuleLike

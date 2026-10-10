@@ -414,3 +414,66 @@ describe("[锐评 P1-3] 控件级 disabled 通道", () => {
     expect(row.title.length).toBeGreaterThan(0);
   });
 });
+
+// ===== [锐评 S1-3] 昼夜色带接线锁：色标来自 timeline-band 派生 + 6/12/18 刻度实测 =====
+// 纯计算已由 timeline-band.test.ts 钉死；此处只锁「渲染器真消费了它」——
+// 否则把 renderCapTimeline 改回写死色标，纯函数测试仍全绿（典型的「测了但没接线」）。
+describe("renderCapTimeline — 色带消费派生色标 + 锚点刻度", () => {
+  /** 探针 canvas：happy-dom 无真实 2D ctx，注入记录型 stub 以观测绘制调用 */
+  function stubCanvasCtx(): {
+    stops: Array<[number, string]>;
+    rects: Array<[number, number, number, number]>;
+  } {
+    const rec = {
+      stops: [] as Array<[number, string]>,
+      rects: [] as Array<[number, number, number, number]>,
+    };
+    const ctx = {
+      fillStyle: "" as string | CanvasGradient,
+      createLinearGradient: () => ({
+        addColorStop: (t: number, c: string) => rec.stops.push([t, c]),
+      }),
+      fillRect: (x: number, y: number, w: number, h: number) => rec.rects.push([x, y, w, h]),
+    };
+    const orig = HTMLCanvasElement.prototype.getContext;
+    // biome-ignore lint/suspicious/noExplicitAny: 测试桩需替换原生重载签名
+    HTMLCanvasElement.prototype.getContext = function (): any {
+      return ctx;
+    } as typeof HTMLCanvasElement.prototype.getContext;
+    // 还原由调用方 finally 负责（vitest 无 afterEach 时保持最小面）
+    (rec as unknown as { restore: () => void }).restore = () => {
+      HTMLCanvasElement.prototype.getContext = orig;
+    };
+    return rec;
+  }
+
+  it("色标 = bandStops() 全量（>5 个，破原写死 5 色）；首尾同色闭环", () => {
+    const rec = stubCanvasCtx();
+    try {
+      renderCapControls(document.createElement("div"), [probe("tl")]);
+    } finally {
+      (rec as unknown as { restore: () => void }).restore();
+    }
+    expect(rec.stops.length, "须逐色标调 addColorStop（原实现恒为 5）").toBeGreaterThan(5);
+    expect(rec.stops[0]![0]).toBe(0);
+    expect(rec.stops[rec.stops.length - 1]![0]).toBe(1);
+    // 与纯函数同源：首尾色一致（24h 回到 0h）
+    expect(rec.stops[0]![1]).toBe(rec.stops[rec.stops.length - 1]![1]);
+  });
+
+  it("绘制 6/12/18 三条锚点刻度（1px 竖线，位置 = 小时/24）", () => {
+    const rec = stubCanvasCtx();
+    try {
+      renderCapControls(document.createElement("div"), [probe("tl")]);
+    } finally {
+      (rec as unknown as { restore: () => void }).restore();
+    }
+    // 首条 fillRect 是底色填充（全幅），其后为刻度
+    const ticks = rec.rects.slice(1);
+    expect(ticks.length, "6/12/18 三条刻度").toBe(3);
+    for (const t of ticks) expect(t[2], "刻度线宽 1px").toBe(1);
+    // 位置：0.25/0.5/0.75 × 240 = 60/120/180，各 +0.5 像素中心（1px 线不糊）
+    expect(ticks.map((t) => t[0])).toEqual([60.5, 120.5, 180.5]);
+  });
+});
+

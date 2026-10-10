@@ -22,11 +22,12 @@
 
 | 编号 | 位置 | 问题 | 建议 |
 |---|---|---|---|
-| S1-3 | `cap-controls.ts` timeline 渐变 | 色带硬编码 5 色，与实际天空（turbidity/云量）脱节 | 按当前参数微调，或至少标 6/12/18 刻度线 |
 | S3-1 | `ground-menu.ts` | 地面/网格双 toggle 平铺，暗示二者独立 | **2026-10-10 拍板「标不修」**：网格默认已关（10-04 拍板），双 toggle 系刻意并列的装饰叠加，降级仅视觉收益 |
 | S3-4 / S5-1 / S5-3 | 各 cap menu | 空/稀疏 folder | **2026-10-10 拍板「标不修」**：自动显隐需改动态菜单机制，成本高于收益 |
 
 > **2026-10-10 UX 批修落地（对应行已删）**：S1-2 总开关关停隐藏参数（新增 `cap.skyEnabled` 探针 + B 轨 visibleWhen）/ S3-2 选图按钮上提到来源下拉之后 / S3-3 标签改「材质预设」+ 覆盖自定义警告 hint / S5-2 wetness 挂「0=无水面」hint / S7-1 氛围包文案分界 hint / S7-2 直方图脚注行 / S7-3 缩略图 dataURL memo（贴图变更失效）/ S9-1 fog far 生效值 `getHint` / S11-1·S11-2 结构键改 `onCommit` 提交（拖动不再逐帧重建 RT）。契约测试同步（env-hdr-cache memo / sky visibleWhen / fog getHint / water hintKey / ground 按钮序 / env 快捷 select hint）。
+>
+> **2026-10-10 追加收口：S1-3 昼夜色带**（原挂账「色带硬编码 5 色，与实际天空脱节」）——走建议中的**两条都做**：色带改由太阳高度角派生（新模块 `menu/render/timeline-band.ts`，内部只调 `computeHourToSun` 取相位，与太阳圆点/shader 同源）+ 补 6/12/18 锚点刻度。**未**按「按当前参数微调（云量/浑浊度）」路线做 CPU 重算——那需自写大气散射（违 ADR-073 红线）且与 shader 双源必漂移；现取「相位指示」口径并显式声明不宣称复现画面。证据：纯函数 8 例 + 渲染器接线锁 2 例（记录型 ctx 桩，含变异验证两轮转红）+ 真实 Chromium 探针逐小时采样表（`artifacts/audit-env-s13/`）。
 
 ### 接线 / 性能
 

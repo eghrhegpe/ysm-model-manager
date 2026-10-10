@@ -133,3 +133,21 @@
   3. **无同名测试的真实契约文件（3 个）**：`load-trace.ts`（环形上限 + 浅拷贝快照语义无断言）、`preview-shell.ts`（`resetRefs`/`ensureViewContainer` 的 body 兜底补建与权威引用回传无独立契约锁，其注释自陈易误用）、`content-bridges.ts`（纯类型，**建议不补**）。另 3 个无测试文件（`camera-controls` / `postprocessing` / `ui-constants`）为纯类型/常量，无运行期契约。
   4. **子代理失效备查（本轮教训）**：35 文件全量委派**未产出报告**——大范围委派宜拆成 2~3 个小批次并给明确文件清单，避免单一子代理超时后全轮无产出（本轮靠主代理自读兜住，未损失结论）。
   5. **`scene-registry` 焦点晋升的产品问题仍挂起**：`unregister` 取 Map 插入序末位而非「最近被激活者」，语义已由 `scene-registry-focus.test.ts` 分离钉死；待答「点选过的模型是否该优先接任」。
+
+## 2026-10-10T19:26:00+08:00 追加：抽象层扫描（不按目录，按**缺陷族**）
+
+- 选定理由：上轮尾声浮现一个比单点缺陷更值的问题——**同一不变量由 N 个实现方各自维护，而无人负责一致性**。故本轮不取 `materials`，先按族扫：①模块级 const 容器的 owner/清理出口 ②「N 实现方共享同一不变量」的一致性。
+- **族①：模块级 const 容器普查 → 零新缺陷**。逐个人工判定 39 处顶层 const 容器（排除纯常量查表），判据 = *无界增长 ∧ 无生产可达复位 ⇒ 违规*：`model-cache`（cap 50+FIFO）/ `pmxStatsCache`（CAP+clear）/ `specCache`（SPEC_CACHE_MAX+LRU）/ `warnedPaths`（MAX+驱逐）/ `_groupCache`（键域=schema group 有限集）/ `_decodeInFlight`（finally 自清）/ `folderCollapsedState`（会话内 clear）/ `customCleanups`（`!isConnected` 清扫）/ `_injectedOnce`（`setOverlayStyleTarget` 复位）/ `listeners`/`_callbacks`（订阅表，生命周期配对）——**均有上限或有可达清理出口**。
+  - **为什么值得记**：本仓 `check-singleton-hygiene` 的射程**自己声明**「`const` 容器（Map/Set 缓存）不测——属有界缓存范式，分开立法另议」⇒ 整类债无闸。本轮普查即该「另议」的一次人工兑现：结论是**当前无违规**，故不需要扩张闸门射程（避免噪音），但把判据留档备查。
+- **族②：N 实现方一致性 → 抓到 1 处真缺口（与上轮 F1 镜像）**：
+  - `registerModelRoot` 是**各格式适配器各自的职责**——`registerBuiltScene`（infra）只把差量 roots 收进 `sceneRegistry`（供隐藏/取景/归属），**不代为注册** frustum 根。
+  - 逐格式对账：ysm ✓ / vrm ✓ / fbx ✓ / mmd ✓ / litematic ✓ / **pack ✗**——`pack-model-adapter` 是**唯一** `scene.add(group)` 却不 `registerModelRoot` 的格式。
+  - **后果**：用户开启视锥剔除（设置面板，**默认关**）后资源包模型**对剔除不可见**——同框内行为按格式分叉（其它格式被剔、pack 不被剔），且 `_culled` 抑制态归属链对它失效。与上轮 F1（注册了却不注销）恰成**镜像病：一个多、一个少**。
+  - **修法**：`infra.scene.add(group)` 旁补 `registerModelRoot(group)`；`disposeContent` **首行**补 `unregisterModelRoot`（与 VRM/FBX 的隔离写法对齐，排在 `safeDispose` 之前防抛错漏注销）。
+- **契约化（防再漏格式）**：新增 `frustum-registration-contract.test.ts`（14 例）——逐格式断言注册/注销成对（6 格式全绿）；断言 `registerBuiltScene` **不**代为注册（若将来 infra 代为注册，本契约语义须重写，红即提示）；末条守卫「登记表未过期」（新格式忘登记会因计数不符提示）。
+- 验证：preview-3d 全量 215 文件绿；typecheck / vite build / biome / check-layering 全绿。
+- 提交：`b4c0ff294`。
+- 遗留 / 下一轮建议：
+  1. 下一轮按清单轮转取 **`materials`**（第 6 位；`infra` 已巡两轮）。
+  2. **族② 的残余**：本轮只对账了 `registerModelRoot` 这一条不变量。同类「N 实现方」候选尚有：各适配器的 **`releaseTextures` 归还**（ysm 有显式降级告警，其余格式是否有对应契约？）、**`dispose` 的隔离度**（FBX `safeCall` / VRM try-catch / 其余裸写——本轮已由 `unloadModel` 兜底 frustum 一支，但「整份 dispose 的异常隔离」仍是三种写法并存）。建议下轮或专门一轮把「适配器 dispose 范式」收口为**唯一写法**（如统一经 `safeCall` 或 `safeDispose` 组合），一次消灭该族。
+  3. **族① 的判据已留档**：若日后有人想扩张 `check-singleton-hygiene` 射程覆盖 `const` 容器，本轮清单与判据可直接作为「零基线」起点（当前 39 处全部合规，扩张后应立即全绿而非需登记存量）。

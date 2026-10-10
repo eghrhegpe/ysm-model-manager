@@ -168,29 +168,25 @@ func (a *App) SaveAppConfig(filesRoot, rpRoot, mcRoot, linkMode, theme, themeAut
 			return fmt.Errorf("游戏目录校验失败: %s", errMsg)
 		}
 	}
-	cfg := types.AppConfig{
-		FilesRoot:   orDefault(filesRoot, oldCfg.FilesRoot),
-		CustomRoots: oldCfg.CustomRoots, // 保留自定义根目录映射
-		McRoot:      orDefault(validated, oldCfg.McRoot),
-		// 净化已自兜底（空参→旧值、脏值→旧值、双脏→""），勿再套 orDefault（审查 ④）
-		LinkMode: install.SanitizeLinkMode(linkMode, oldCfg.LinkMode),
-		Theme:    orDefault(theme, oldCfg.Theme),
-		// P4 修复：theme-auto 落盘（localStorage 被清理后可从 ysm_config.json 回退）
-		ThemeAuto: orDefault(themeAuto, oldCfg.ThemeAuto),
-		Mirror:    oldCfg.Mirror,
-		// VoxelMaxBlocks 从 oldCfg 拷贝——原手工构造漏带该字段，
-		// 保存任何设置都会把用户体素上限重置为 0（默认 200000）
-		VoxelMaxBlocks: oldCfg.VoxelMaxBlocks,
-		// 保留窗口状态（SaveWindowPosition 写入的字段）
-		WinX:    oldCfg.WinX,
-		WinY:    oldCfg.WinY,
-		WinW:    oldCfg.WinW,
-		WinH:    oldCfg.WinH,
-		WinRelX: oldCfg.WinRelX,
-		WinRelY: oldCfg.WinRelY,
-		WinScrW: oldCfg.WinScrW,
-		WinScrH: oldCfg.WinScrH,
-	}
+	// 以旧为基（cfg := oldCfg 再覆盖本函数六入参涉及的字段），取代旧「白名单手工构造」：
+	// 白名单凡漏列一个字段就在保存时被零值覆盖——历史已两次踩中（VoxelMaxBlocks 曾被重置、
+	// 窗口状态曾散落），而 go/types AppConfig 的 8 个运行阈值字段（ScanCacheTTL/DownloadTimeout/
+	// LogMax*/PreviewReadLimit/UpdateCheck*）全部不在旧白名单内，用户经 SaveThresholds 设好后
+	// 改一次主题即被清零（回退各包默认）。结构性根治「逐字段手抄必漏」（同 SetDownloadMirror/
+	// SaveThresholds 的以旧为基模式）。rpRoot 是废弃入参（CustomRoots 承载），不再触碰 oldCfg.CustomRoots。
+	// 回归锁 TestSaveAppConfig_PreservesThresholdFields（锐评 2026-10-10）。
+	cfg := oldCfg
+	cfg.FilesRoot = orDefault(filesRoot, oldCfg.FilesRoot)
+	cfg.McRoot = orDefault(validated, oldCfg.McRoot)
+	// 净化已自兜底（空参→旧值、脏值→旧值、双脏→""），勿再套 orDefault（审查 ④）
+	cfg.LinkMode = install.SanitizeLinkMode(linkMode, oldCfg.LinkMode)
+	cfg.Theme = orDefault(theme, oldCfg.Theme)
+	// P4 修复：theme-auto 落盘（localStorage 被清理后可从 ysm_config.json 回退）
+	cfg.ThemeAuto = orDefault(themeAuto, oldCfg.ThemeAuto)
+	// 废弃独立字段清零——旧白名单构造「不拷贝它们」天然达成，以旧为基后必须显式清，
+	// 否则启动路径 loadAppConfig（不清废弃字段）留下的 YsmRoot 等会经这次保存重新落盘、
+	// 破坏 migrateLegacyConfigFields 的「防双源写入」不变量（值拷贝不含它们 = 与旧构造等价）。
+	clearDeprecatedFields(&cfg)
 	if err := a.saveConfig(cfg); err != nil {
 		return err
 	}

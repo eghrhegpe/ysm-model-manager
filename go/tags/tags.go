@@ -23,8 +23,13 @@ import (
 // Store 是标签存储，线程安全
 type Store struct {
 	mu   sync.RWMutex
-	path string
 	data map[string][]string // key: 文件绝对路径, value: 标签列表
+	// persistMu 串行化「序列化 → 落盘」整段（锐评 2026-10-10）：commit 的 s.mu 只覆盖
+	// 改内存，落盘在锁外——若两个并发 commit 各自在 s.mu 内取快照再裸写盘，
+	// 「快照序」与「落盘序」不同源：旧快照晚落盘会把新快照整体盖掉（丢更新）。
+	// 读路径（RLock）不受 persistMu 影响，2026-09 重构「读不被慢 IO 阻塞」的目标保留。
+	persistMu sync.Mutex
+	path      string
 }
 
 // NewStore 创建标签存储（懒加载：首次 Get/Set 时自动读取）
@@ -105,6 +110,13 @@ func (s *Store) load() error {
 // 写锁覆盖慢 IO，阻塞所有 GetTags/ListByTag/AllTags 读路径。现把「改数据 + 序列化」留在锁内
 // （保证快照一致），写盘移出锁外（persist）。锁边界不再依赖调用方自觉，无法误用。
 //
+// persistMu 二次串行化（锐评 2026-10-10 补齐）：仅「写盘移出 s.mu」时落盘序与快照序
+// 不同源——两个并发 commit 各自在 s.mu 内取快照、再裸竞 WriteFileAtomic，旧快照晚落盘
+// 即把新快照整体盖掉（实测 64 并发 key 重启后只剩 3 个；Windows 上还叠并发 rename
+// 撞同一目标报 Access denied）。现「取快照 + 落盘」整段收进 persistMu：落盘序 = 快照序，
+// 且最后一个落盘者的快照经 RLock 必然包含此前全部 mutate——丢更新在结构上不可表达。
+// 读路径仍不持 persistMu（RLock 读 s.data），2026-09「读不被慢 IO 阻塞」的目标保留。
+//
 // mutate 返回 changed=false 表示无需落盘（如 AddTag 命中已存在、RemoveTag 无变化），
 // 此时跳过 persist 直接返回——保持原有「无变化不写盘」语义。
 func (s *Store) commit(mutate func() (bool, error)) error {
@@ -113,16 +125,19 @@ func (s *Store) commit(mutate func() (bool, error)) error {
 	}
 	s.mu.Lock()
 	changed, err := mutate()
+	s.mu.Unlock()
 	if err != nil {
-		s.mu.Unlock()
 		return err
 	}
 	if !changed {
-		s.mu.Unlock()
 		return nil
 	}
+	// 快照在 persistMu 内、s.mu.RLock 下取：见上「落盘序 = 快照序」不变量。
+	s.persistMu.Lock()
+	defer s.persistMu.Unlock()
+	s.mu.RLock()
 	data, err := json.MarshalIndent(s.data, "", "  ")
-	s.mu.Unlock() // 锁只覆盖 改内存+序列化；写盘在锁外，不阻塞读
+	s.mu.RUnlock()
 	if err != nil {
 		return fmt.Errorf("序列化标签失败: %w", err)
 	}

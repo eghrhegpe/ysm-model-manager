@@ -907,7 +907,7 @@
 | resources kind 缓存键的 hashed 维度隔离与「Size-only collect」，nil 版先 populate 会污染带 scanFn 版的内容级判定 | `带哈希 collect` | - |
 | app 层手写同步 | - | 与 go/sync 判定不一致、冲突未处理；必须经 go/sync |
 | 同步不做 hash 校验 | - | 文件变更未检测；必须经 sync_hash 校验 |
-| 标签以文件绝对路径为 key——移动文件后旧 key 的标签丢失 | - | - |
+| 标签以文件绝对路径为 key——改名/移动/复制后旧 key 会成孤儿（**已修 2026-10-10**：app 层四绑定接线 Store.RelocateKeys 迁移，对齐 web rekey；详见不变量条） | `键迁移` | - |
 | tags.json 写入走 tmp + os.Rename 原子替换——直写会导致读取时读到半截数据 | - | - |
 | Store 懒加载——首次 GetTags/SetTags 时才读盘，之前操作不触发 IO | - | - |
 | SetTags 自动 trim/去重/排序——传入重复标签不会报错而是去重 | - | - |

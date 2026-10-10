@@ -25,13 +25,39 @@ func (a *App) CreateDir(dir string) error {
 	return fileops.CreateDir(a.ysmRoot(), dir)
 }
 
+// relocateTags 文件改名/移动/复制后迁移标签键（锐评 2026-10-10：桌面端补齐与 web
+// rekeyWebModelGroup 同语义——标签以绝对路径为 key，不迁移则旧键成孤儿，
+// go-tags 卡登记的老陷阱就此收口）。
+//   - from/to 由 fileops.RenameTarget/MoveCopyTarget 算出，与真实搬迁落点同源
+//     （接线不自算路径——双份路径计算必漂移）
+//   - keepSource：copy=true 保源（新旧各一份，对齐 web moveOrCopyWebModel）；rename/move=false 删旧键
+//   - **跨存储非原子，失败不回滚文件**：文件操作已成功落盘，撤文件才制造失踪假象
+//     （用户视角已见成功反馈）；迁移失败记 warn 日志暴露孤儿键，不做静默吞错。
+//   - 无命中键（模型从未打过标签，绝大多数场景）→ RelocateKeys no-op，不打日志不落盘。
+//
+// op 统一用 "rename"：logs OP_META 七类中没有 move/copy 键，用未注册 Operation 会在
+// 日志面板缺席；语义上标签键迁移就是「改名」，from→to 细节进消息体。
+func (a *App) relocateTags(from, to string, subtree, keepSource bool) {
+	if from == "" || to == "" || from == to {
+		return
+	}
+	_, err := a.getTagsStore().RelocateKeys(from, to, subtree, keepSource)
+	if err != nil {
+		a.AddOpLog("rename", filepath.Base(to), from, to, 0, types.StatusWarn,
+			fmt.Sprintf("标签迁移失败（旧位置标签成孤儿键）: %v", err))
+	}
+}
+
 func (a *App) RenameDir(oldPath, newName string) error {
 	if !a.isPathInRoot(oldPath) {
 		return fmt.Errorf("路径超出仓库目录")
 	}
+	newPath := fileops.RenameTarget(oldPath, newName)
 	if err := fileops.RenameDir(oldPath, newName); err != nil {
 		return err
 	}
+	// 目录改名 → 夹内全部键（entry path 指向 ysm.json/主文件，都在旧前缀下）整体迁移
+	a.relocateTags(oldPath, newPath, true, false)
 	// 改名后失效扫描缓存——否则 30s 内 ScanModelEntries 命中旧目录名（陈旧缓存"复活"）
 	scanner.InvalidateCache()
 	return nil
@@ -54,9 +80,12 @@ func (a *App) RenameFile(oldPath, newName string) error {
 	if !a.isPathInRoot(oldPath) {
 		return fmt.Errorf("路径超出仓库目录")
 	}
+	newPath := fileops.RenameTarget(oldPath, newName)
 	if err := fileops.RenameFile(oldPath, newName); err != nil {
 		return err
 	}
+	// 单文件改名 → 精确迁移该键（subtree=false：同前缀兄弟键不误伤）
+	a.relocateTags(oldPath, newPath, false, false)
 	// 改名后失效扫描缓存——否则 30s 内旧文件名仍可被扫描命中
 	scanner.InvalidateCache()
 	return nil
@@ -142,6 +171,9 @@ func (a *App) MoveModelFile(src, dstDir string) error {
 	if root == "" {
 		return fmt.Errorf("源与目标必须位于同一仓库根内: %s -> %s", src, dstDir)
 	}
+	// plan 在搬迁**前**算：提升判定语义上依赖 src 原样（当前为纯路径计算，先行是纪律
+	// 而非巧合——搬迁后算则任何未来加 stat 的判定都会塌）。
+	from, to, ok := fileops.MoveCopyTarget(root, src, dstDir, false)
 	if err := fileops.MoveModelFile(root, src, dstDir); err != nil {
 		return err
 	}
@@ -150,6 +182,9 @@ func (a *App) MoveModelFile(src, dstDir string) error {
 	// watcher 只在 McRoot 已配置且有整合包时兜底，查看器模式无兜底（锐评 2026-10-10，
 	// 测试锁 TestMoveCopyModelFile_InvalidatesScanCache）。
 	scanner.InvalidateCache()
+	if ok {
+		a.relocateTags(from, to, true, false)
+	}
 	return nil
 }
 
@@ -159,11 +194,16 @@ func (a *App) CopyModelFile(src, dstDir string) error {
 	if root == "" {
 		return fmt.Errorf("源与目标必须位于同一仓库根内: %s -> %s", src, dstDir)
 	}
+	from, to, ok := fileops.MoveCopyTarget(root, src, dstDir, true)
 	if err := fileops.CopyModelFile(root, src, dstDir); err != nil {
 		return err
 	}
 	// 同 MoveModelFile：复制在仓库树新增文件，不清缓存则副本 ≤TTL 不可见（锐评 2026-10-10）。
 	scanner.InvalidateCache()
+	if ok {
+		// copy=true → keepSource：源标签保留、目标得副本（对齐 web moveOrCopyWebModel）
+		a.relocateTags(from, to, true, true)
+	}
 	return nil
 }
 

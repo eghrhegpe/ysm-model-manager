@@ -33,7 +33,7 @@ quick_intents:
 quick_risk_lines:
   - 标签以文件绝对路径为 key 存 tags.json；写入走 tmp + os.Rename 原子替换，禁止直写
 pitfalls:
-  - 标签以文件绝对路径为 key——移动文件后旧 key 的标签丢失
+  - 标签以文件绝对路径为 key——改名/移动/复制后旧 key 会成孤儿（**已修 2026-10-10**：app 层四绑定接线 Store.RelocateKeys 迁移，对齐 web rekey；详见不变量「键迁移」条）
   - tags.json 写入走 tmp + os.Rename 原子替换——直写会导致读取时读到半截数据
   - Store 懒加载——首次 GetTags/SetTags 时才读盘，之前操作不触发 IO
   - SetTags 自动 trim/去重/排序——传入重复标签不会报错而是去重
@@ -62,6 +62,7 @@ status: active
 - `(*Store) RemoveTag(modelPath, tag string) error` — 移除单个标签（无变化则不落盘）
 - `(*Store) ListByTag(tag string) ([]string, error)` — 反查打了该标签的所有文件路径（排序）
 - `(*Store) AllTags() ([]string, error)` — 所有被使用的标签，按使用次数降序、同名按字典序
+- `(*Store) RelocateKeys(from, to string, subtree, keepSource bool) (int, error)` — 键迁移（改名/移动/复制后标签跟随）：`subtree=true` 按**分隔符边界**迁整棵子树（`/a/b` 不误伤 `/a/bc`）、`false` 只迁逐字相等的单键；`keepSource=true` 保源（复制语义）、`false` 删旧键（移动/改名语义）；退化输入（空/同路径/无命中）no-op 返回 0。from/to **不做路径归一**——调用方须传与写入同源的绝对路径
 
 ## 与其他子系统关系
 
@@ -75,6 +76,7 @@ status: active
 - **写路径锁归属内聚 `commit` + `load` 双检（2026-09 重构）**：原 `prepareWrite` 返回解锁函数、由调用方 `defer` 到函数结尾，使 `save()` 的 `json.MarshalIndent` 与 `fsutil.WriteFileAtomic`（磁盘 IO）**全程持写锁**，阻塞所有 `GetTags`/`ListByTag`/`AllTags`。现 `Store.commit(mutate func() (bool, error))` 统一临界区：load → 取写锁 → 改内存 → 序列化快照 → **解锁** → `Store.persist` 写盘（锁外）；`mutate` 返回 `changed=false`（AddTag 命中已存在 / RemoveTag 无变化）时跳过落盘，保持「无变化不写盘」语义。`load` 改「RLock 快路径 → 未加载才升写锁二次检查」，已加载后读路径唯一开销是一次 RLock（原先每次读都要取一次写锁）。`prepareWrite` 已删除（职责并入 `commit`）。回归：`TestStore_ConcurrentReadWrite_NoRace` / `TestStore_Commit_NoChangeSkipsPersist` / `TestStore_LoadDoubleCheck_ConcurrentFirstLoad`。
 - **落盘串行化 `persistMu`（锐评 2026-10-10 补齐 2026-09 重构的对偶缺口）**：只把写盘移出 `s.mu`，会让「内存快照序」与「落盘序」不同源——两个并发 commit 各自在 `s.mu` 内取快照、再裸竞 `WriteFileAtomic`，**旧快照晚落盘即把新快照整体盖掉**（丢更新：实测多 goroutine 各写一 key，重启后 fresh Store 只读盘，绝大多数 key 消失；Windows 上还叠并发 rename 撞同一 `tags.json` 目标报 Access denied）。现「取快照（`s.mu.RLock`）+ `persist` 落盘」整段收进 `Store.persistMu`：落盘序 = 快照序，且最后落盘者的快照经 RLock 必然含此前全部 mutate——丢更新在结构上不可表达。**锁序恒为 persistMu→s.mu（commit 内），无任何路径持 s.mu 再取 persistMu，不成环**；读路径不碰 persistMu，2026-09「读不被慢 IO 阻塞」的收益保留。回归 `TestStore_ConcurrentCommit_DiskKeepsAllKeys`（N 并发各写不同 key + 多轮重试压满序列化→落盘窗口，从磁盘重开 Store 断言全在）——修复前该测试实测缺 key 转红、修复后 -race -count 3 绿。
 - 标签统一 `TrimSpace`，空白标签被丢弃
+- **键迁移接线：改名/移动/复制后标签跟随（锐评 2026-10-10，桌面端补齐与 web 同语义）**：标签 key 是绝对路径，文件搬迁后旧键成孤儿——web 端 `web-fs-mutate.ts|rekeyWebModelGroup` 早已 P0 修过（`tags:`/`ban:` 前缀随组 rekey），桌面 Go 曾零迁移、跨端口径分叉。现 `Store.RelocateKeys` + `internal/app/app_files.go|relocateTags` 接线四绑定：`RenameFile`（精确单键）/`RenameDir`（子树）/`MoveModelFile`（子树，删旧键）/`CopyModelFile`（子树，keepSource 保源）成功后迁移。三条红线：① **from/to 由 `fileops.RenameTarget`/`MoveCopyTarget` 算出、与真实搬迁落点同源**（接线不自算路径——`shouldLiftYsmParent` 对根级 ysm.json 的「Move 豁免、Copy 提升」刻意不对称由 plan 忠实复刻，同源测试 `TestMoveCopyTarget_*` 真实跑搬迁再 Lstat(plan.to) 验）；② **跨存储非原子、失败不回滚文件**（文件已落盘，撤文件制造失踪假象；迁移失败记 warn 日志暴露孤儿键，不静默吞错）；③ CLI `move/copy/rename` 经 `ctx.App.*` 转发同一绑定、自动同语义（不留 CLI 分叉）。回归 `app_files_tags_migrate_test.go`（6 例端到端 + 兄弟前缀不误伤 + copy 保源 + 提升整夹），变异（掏空 relocateTags）即点名转红。
 - `SetTags` 每次写后都落盘（JSON 缩进格式，**tmp + `os.Rename` 原子替换**，rename 失败清理 tmp；`TestSaveLeavesNoTmp` 守护）；`GetTags` 返回副本防外部篡改
 - **损坏恢复**：tags.json 解析失败 → 备份 `.corrupt`（保留现场）→ 重建空存储（读路径恢复 + 写路径自我修复，`TestCorruptFileRecovers` 守护）——第 4 批修复，知识卡原卡未记载已补
 - P3 观察：`Store.persist` 失败（磁盘满/权限）时内存已变更、磁盘未更新，属「内存优先、落盘尽力」契约（调用方拿到 error 但 GetTags 读到新值，进程崩溃则上次写丢失）；`ListByTag` 空 tag 返回 nil 与 GetTags 的 `[]string{}` 约定不一致（P4）

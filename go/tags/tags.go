@@ -338,6 +338,66 @@ func (s *Store) AllTags() ([]string, error) {
 	return result, nil
 }
 
+// RelocateKeys 把标签键从 from 迁移到 to（2026-10-10 补齐桌面端与 web
+// rekeyWebModelGroup 同语义：文件改名/移动/复制后标签跟随，不丢孤儿键）。
+//   - subtree=true：迁移 from 目录下的全部键（含 from 本身），按**分隔符边界**匹配
+//     ——`from` 前缀须紧跟分隔符才算子路径，防 /a/b 误伤 /a/bc（字符串裸前缀陷阱）。
+//   - keepSource=true：保留旧键（复制语义，新旧各一份）；false：删除旧键（移动/改名语义）。
+//
+// from/to **不做路径归一**——调用方必须传与写入时同源的键形态（同一 App 的 entry.Path /
+// 绑定入参口径），否则相等/前缀判定静默失配（web 侧靠 idb 键天然同源，Go 侧此处同律）。
+// 落盘经 commit 串行化（继承 persistMu「落盘序=快照序」不变量，无并发丢更新）。
+// 返回实际迁移的键数；from==to 或空 from/to 一律 no-op 返回 0（不报错、不落盘）。
+func (s *Store) RelocateKeys(from, to string, subtree, keepSource bool) (int, error) {
+	if from == "" || to == "" || from == to {
+		return 0, nil
+	}
+	if err := checkModelPath(from); err != nil {
+		return 0, err
+	}
+	if err := checkModelPath(to); err != nil {
+		return 0, err
+	}
+	migrated := 0
+	err := s.commit(func() (bool, error) {
+		sep := string(filepath.Separator)
+		prefix := from + sep
+		// 先收集命中（遍历 data 期间不可改 data），再统一改写。
+		type relocation struct{ oldKey, newKey string }
+		var hits []relocation
+		for k := range s.data {
+			var nk string
+			switch {
+			case k == from:
+				nk = to
+			case subtree && strings.HasPrefix(k, prefix):
+				nk = to + sep + k[len(prefix):]
+			default:
+				continue
+			}
+			hits = append(hits, relocation{k, nk})
+		}
+		if len(hits) == 0 {
+			return false, nil
+		}
+		for _, h := range hits {
+			tg := s.data[h.oldKey]
+			snapshot := make([]string, len(tg))
+			copy(snapshot, tg)
+			if !keepSource {
+				delete(s.data, h.oldKey)
+			}
+			s.data[h.newKey] = snapshot
+			migrated++
+		}
+		return true, nil
+	})
+	if err != nil {
+		return 0, err
+	}
+	return migrated, nil
+}
+
 // maxTagLen 单标签长度上限（ADR-044② 数值守卫：Go 侧信任边界，前端 maxlength 可绕过）
 const maxTagLen = 50
 

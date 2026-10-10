@@ -72,7 +72,12 @@ vi.mock("@/preview-3d/bone/bone-raycast.ts", () => ({
 }));
 vi.mock("@/preview-3d/bone/bone-tools.ts", () => ({ buildBoneTree: h.buildBoneTree }));
 vi.mock("@/preview-3d/infra/cleanup-helper.ts", () => ({ disposeDebugGroup: h.disposeDebugGroup }));
-vi.mock("@/preview-3d/infra/debug-render.ts", () => ({ rebuildDebug: h.rebuildDebug }));
+vi.mock("@/preview-3d/infra/debug-render.ts", () => ({
+  rebuildDebug: h.rebuildDebug,
+  // [锐评 infra 轮 F2] 会话终结需释放标签纹理缓存——mock 须同步暴露该具名导出
+  // （漏则 vitest 报 "No export is defined on the mock" 并连带 15 例失败）
+  releaseDebugLabelCache: vi.fn(),
+}));
 vi.mock("@/preview-3d/infra/frustum-cull.ts", () => ({
   registerModelRoot: h.registerModelRoot,
   unregisterModelRoot: h.unregisterModelRoot,

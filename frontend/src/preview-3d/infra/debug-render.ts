@@ -22,6 +22,30 @@ function clearLabelTexCache(): void {
   for (const tex of _labelTexCache.values()) tex.dispose();
   _labelTexCache.clear();
 }
+
+/**
+ * 会话终结时释放标签纹理缓存（锐评 infra 轮 F2 修复 2026-10-10）。
+ *
+ * **病**：`_labelTexCache` 是模块级 Map，而 `clearLabelTexCache` 的**唯一**调用点原在
+ * {@link rebuildDebug} 内（被 `if (state.debugGroup)` 门控）。生产会话终结走的是另一条路
+ * ——`adapters/ysm-adapter.ts|dispose` 直接 `disposeDebugGroup(debugGroup)` + 置 null，
+ * **从不调 rebuildDebug** ⇒ 缓存跨会话留存：每进一个新模型（骨名不同）多一批
+ * 256×64 CanvasTexture 永久驻留，「进 3D → 按 F 调试 → 退出」循环单调增长。
+ * 该文件原注释自称「已修长时使用 OOM」——修在了不生效的路径上。
+ *
+ * **修法**：把「随 debug 组消亡」改为「随会话消亡」——由会话终结路径显式调用本出口。
+ * 保留 `rebuildDebug` 内的调用（会话内切模式仍需清，防同一会话内骨名集合变化后累积）。
+ *
+ * 幂等：冷态/重复调用安全。纹理 `dispose()` 幂等（three 只派发事件，不留标记）。
+ */
+export function releaseDebugLabelCache(): void {
+  clearLabelTexCache();
+}
+
+/** 测试用：当前缓存条目数（验证会话边界确实释放；生产代码不消费） */
+export function labelTexCacheSizeForTest(): number {
+  return _labelTexCache.size;
+}
 function makeTextTexture(text: string, color?: string): THREE.CanvasTexture {
   const key = color ? `${text}::${color}` : text;
   const cached = _labelTexCache.get(key);

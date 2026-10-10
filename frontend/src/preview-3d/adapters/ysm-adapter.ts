@@ -32,7 +32,7 @@ import type {
   YsmContentHandle,
   YsmControlsContext,
 } from "@/preview-3d/infra/content-bridges.ts";
-import { rebuildDebug } from "@/preview-3d/infra/debug-render.ts";
+import { rebuildDebug, releaseDebugLabelCache } from "@/preview-3d/infra/debug-render.ts";
 import { registerModelRoot, unregisterModelRoot } from "@/preview-3d/infra/frustum-cull.ts";
 import { recordLoadTrace, TRACE_FORMAT_OTHER } from "@/preview-3d/infra/load-trace.ts";
 import { sceneRegistry } from "@/preview-3d/infra/scene-registry.ts";
@@ -591,6 +591,11 @@ function makeSceneHandle(
         disposeDebugGroup(debugState.debugGroup);
         debugState.debugGroup = null;
       }
+      // [锐评 infra 轮 F2 修复 2026-10-10] 标签纹理缓存随**会话**消亡，不随 debug 组消亡：
+      // 原唯一清空点在 rebuildDebug 内（被 if(debugGroup) 门控），而本终结路径从不调它
+      // ⇒ 跨会话留存（每新模型一批 256×64 CanvasTexture 永久驻留）。无条件调用（debug 未开
+      // 时缓存本就空，safe 幂等）——勿挪进上面的 if 块，否则「开过调试再关」仍会漏。
+      releaseDebugLabelCache();
       animPlayer?.dispose();
       breath?.dispose();
       // [doc:adr-126-p5] dispose 注销 schema：防跨会话污染（陈旧 builder 闭包持有已销毁场景

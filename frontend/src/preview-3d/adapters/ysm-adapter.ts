@@ -574,8 +574,31 @@ function makeSceneHandle(
 
   return {
     dispose(): void {
-      rayCleanup();
-      bonePanelRef.current?.();
+      // [锐评抽象扫描 2026-10-10：N 实现方不变量一致性] 两处**外部注入回调**单独隔离，
+      // 保证其后的清理链无条件跑完。
+      //
+      // 病（实证）：原实现是 `rayCleanup(); bonePanelRef.current?.(); unregisterModelRoot(...)`
+      // 的**裸序列**——`rayCleanup` 是 `ctx.cam` 注入的清理器、`bonePanelRef.current` 是面板
+      // 注册的用户回调，两者都无异常保证。任一处抛错 → 整个 dispose **从这里中断**：
+      // frustum 根注销、纹理引用归还、F 键监听解绑、debug 组拆解、标签缓存释放、动画
+      // dispose、schema 注销、状态订阅退订——**八项全跳过**，且因调用方 `safeDispose`
+      // 吞异常而对用户完全静默。（单测实证：令 rayCleanup 抛错，原实现直接把异常抛给
+      // 调用方，`unregisterModelRoot` 与 `animPlayer.dispose` 均未被调用。）
+      //
+      // 修法：对齐 VRM `makeVrmDisposer` 的范式（只给可能抛错的那件事加 try/catch，
+      // 其余裸写）——本文件有两处这类回调，故两处都包。**注销与其余清理留在原地裸写**：
+      // 它们是不可抛的纯操作（frustum-cull 的 indexOf 守卫 / three 的 removeFromScene /
+      // 已判空的 dispose 链），包 try 只会掩盖真实缺陷。
+      try {
+        rayCleanup();
+      } catch (e) {
+        logWarn("preview-3d", "dispose rayCleanup 失败（不阻断后续清理）", e);
+      }
+      try {
+        bonePanelRef.current?.();
+      } catch (e) {
+        logWarn("preview-3d", "dispose 骨骼面板清理失败（不阻断后续清理）", e);
+      }
       unregisterModelRoot(obj.rootGroup);
       obj.removeFromScene(ctx.scene as THREE.Scene);
       // 归还预加载纹理引用（所有权归缓存池，不得 dispose——见 YsmPreloadedModel 契约注释）。

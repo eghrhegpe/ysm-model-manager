@@ -179,11 +179,21 @@ function Stage6Dispose(c: Stage6Ctx, s5: ReturnType<typeof Stage5Menu>): void {
       );
     }
   }
+  // [锐评抽象扫描 2026-10-10：N 实现方不变量一致性] 原为**一个 try 包住全链**——
+  // `bonePanelRef.current?.()`（面板注册的用户回调，无异常保证）抛错即跳到 catch，
+  // 其后的注销/移除/mixer/感知层 dispose **全部跳过**，而 catch 只 `dbg` 不补救 ⇒ 静默。
+  // 现改为**只隔离可能抛错的那件事**（对齐 VRM `makeVrmDisposer` 的范式）：
+  // 面板清理单独 try，其余裸写——裸写不是遗漏，是让真实缺陷（如 mixer 状态错乱）
+  // 仍能被 finally 之外的上层看见，而不是被一个大 try 掩盖。
   try {
     c.bonePanelRef.current?.();
-    // 从 scene 移除 mesh（disposeMmdMesh 只释放 GPU 资源，不处理 scene graph 引用）
-    c.ctx.scene?.remove(c.mesh);
-    unregisterModelRoot(c.mesh);
+  } catch (e) {
+    dbg("mmd", { op: "dispose-bone-panel-fail", err: safeErrorMessage(e) });
+  }
+  // 从 scene 移除 mesh（disposeMmdMesh 只释放 GPU 资源，不处理 scene graph 引用）
+  c.ctx.scene?.remove(c.mesh);
+  unregisterModelRoot(c.mesh);
+  try {
     c.mixer.stopAllAction();
     c.mixer.uncacheRoot(c.mesh);
     c.cameraMixer?.stopAllAction();

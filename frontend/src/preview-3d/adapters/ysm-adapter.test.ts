@@ -974,3 +974,56 @@ describe("多模型模式", () => {
     sceneRegistry.reset();
   });
 });
+
+// ── ⑪ dispose 的异常隔离（锐评抽象扫描：N 实现方不变量一致性）────
+// 抽象病：**同一不变量「dispose 必须跑完」由 5 个适配器各自维护，隔离度四分五裂**：
+//   FBX  逐项 safeCall（最稳）      VRM 只给 bonePanelRef 加 try/catch
+//   MMD  裸 try，注销排在 bonePanelRef **之后**（抛错即跳过注销，catch 只 dbg）
+//   Litematic 裸写但前置语句均不可抛（安全）   YSM **完全无 try**
+// YSM 是最脆的：`rayCleanup()`（外部注入回调）/ `bonePanelRef.current?.()`（用户回调）
+// 任一抛错 → **整个 dispose 中断**，后续六项清理全跳过且**静默**（unloadModel 的
+// safeDispose 吞掉异常）。本组把该风险钉死为可验契约。
+describe("dispose 异常隔离（rayCleanup / bonePanelRef 抛错不得吞掉后续清理）", () => {
+  afterEach(() => {
+    h.rayCleanup.mockReset();
+    sceneRegistry.reset();
+  });
+
+  /** 装配一个「可正常 build」的最小会话，供 dispose 路径使用 */
+  async function buildMinimal() {
+    const { player, dispose } = makeFakePlayer();
+    h.createYsmAnimPlayer.mockImplementation(() => player);
+    h.buildYsmObject.mockReturnValue(makeObj(["b1"]).obj);
+    h.registerBoneRaycast.mockReturnValue(h.rayCleanup);
+    const { ctx } = makeCtx();
+    const handle = await buildYsmScene(ctx, "/m/dispose.ysm", {
+      loader: vi.fn(async () => ({ bones: [] } as unknown as BedrockGeometry)),
+      preload: makePreload(specWith([])).preload,
+    });
+    return { handle, playerDispose: dispose, obj: h.buildYsmObject.mock.results.at(-1)?.value };
+  }
+
+  it("rayCleanup 抛错 → 后续清理仍必须执行（当前实现会中断，故本断言揭示缺陷）", async () => {
+    const { handle, obj } = await buildMinimal();
+    h.rayCleanup.mockImplementation(() => {
+      throw new Error("rayCleanup boom");
+    });
+
+    // dispose 本身不应把异常抛给调用方（unloadModel 侧有 safeDispose 兜，但契约应自持）
+    expect(() => handle.dispose(), "dispose 不得向调用方抛错").not.toThrow();
+
+    // 关键：前置回调抛错**不得**吞掉后续清理。
+    // 断言选 `unregisterModelRoot` 与 `removeFromScene`——二者在 dispose 链上**无条件**
+    // 执行且位置紧随其后，正是原实现被中断时最先丢失的两项。
+    // （不选 animPlayer.dispose：本最小装配无动画文件，animPlayer 合法为 null，其调用
+    // 是 no-op，断言它会假红——见 ysm-adapter.ts 中 animPlayer 仅在 allClips 非空时创建。）
+    expect(
+      h.unregisterModelRoot,
+      "注销 frustum 根必须执行（否则根残留，见 infra 轮 F1）",
+    ).toHaveBeenCalled();
+    expect(
+      obj?.removeFromScene,
+      "内容层出场景必须执行（否则 scene graph 残留、GC 无法回收）",
+    ).toHaveBeenCalled();
+  });
+});

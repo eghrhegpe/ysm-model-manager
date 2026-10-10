@@ -483,6 +483,12 @@ function buildResult(
       // 先从 scene 移除，再 dispose GPU 资源（防 scene graph 残留导致 GC 无法回收）
       ctx.scene?.remove(meshSet.modelGroup);
       ctx.scene?.remove(meshSet.grid);
+      // [锐评抽象扫描 2026-10-10] 注销排在两条 `scene.remove` 之后：**这是有意的、安全的**——
+      // 本 dispose 的其它实现方（ysm/mmd）需为前置语句加异常隔离，是因为它们前面有
+      // **外部注入回调**（rayCleanup / bonePanelRef / 面板 ref）；本文件的
+      // `unregisterSchema`（纯 Map 删）与 `Object3D.remove`（数组 splice + 置 parent=null）
+      // 都是不可抛的纯操作，故无需隔离，裸写即正确。**若日后在上方插入任何回调调用，
+      // 必须把注销提到它之前**（否则重演 ysm/mmd 的中断病理）。
       unregisterModelRoot(meshSet.modelGroup);
       meshSet.instancedMeshes.forEach((m) => {
         safeDispose(m);

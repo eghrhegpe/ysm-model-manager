@@ -31,10 +31,12 @@ func TestDownloadFileWithQueue_InvalidatesScanCache(t *testing.T) {
 
 	// 预扫描建立缓存（首次 miss、二次 hit——与 app_scan_test 同口径）
 	if _, hit := a.scanModelEntriesWithHit(base); hit {
-		t.Fatal("首次扫描不应命中缓存")
+		t.Error("首次扫描不应命中缓存")
+		return
 	}
 	if _, hit := a.scanModelEntriesWithHit(base); !hit {
-		t.Fatal("二次扫描应命中缓存（前置条件）")
+		t.Error("二次扫描应命中缓存（前置条件）")
+		return
 	}
 
 	// 下载落盘到同一仓库目录（模拟队列 saveDir=GetRepoRoot 注入）；
@@ -42,10 +44,12 @@ func TestDownloadFileWithQueue_InvalidatesScanCache(t *testing.T) {
 	// 解析成目录本身、rename 撞目录报 Access is denied。
 	savePath, err := a.downloadFileWithQueue(context.Background(), ts.URL+"/model.ysm", base)
 	if err != nil {
-		t.Fatalf("downloadFileWithQueue: %v", err)
+		t.Errorf("downloadFileWithQueue: %v", err)
+		return
 	}
 	if fi, serr := os.Stat(savePath); serr != nil || fi.Size() != int64(len(body)) {
-		t.Fatalf("下载产物不完整: %v", serr)
+		t.Errorf("下载产物不完整: %v", serr)
+		return
 	}
 
 	// 核心断言：下载成功后扫描缓存必须失效，tree:reload 立即可见新文件

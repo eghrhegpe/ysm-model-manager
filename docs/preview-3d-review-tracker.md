@@ -117,10 +117,19 @@
 - **挂起的产品问题（非缺陷，待拍板）**：`scene-registry.ts|unregister` 的焦点晋升取 **Map 插入序末位**，而非「最近被激活者」。新增 `scene-registry-focus.test.ts`（5 例）把该语义**分离钉死**——既有测试（`scene-registry.test.ts:49-56`）只覆盖「唯一幸存者接任」，两种规则同解故未区分。用户可见影响：roles 面板 ✓ 高亮 / 菜单绑定 / 取景都跟 `activeId`。**待答**：点选过（但非最后插入）的模型是否该优先接任？
 - 本轮改动：
   - `frontend/src/preview-3d/infra/postproc-cost-probe.ts` — `GpuTimer.dispose()` + try/finally 出口释放 + `createGpuTimer` 导出
-  - 新增测试：`postproc-cost-probe.gpu-timer.test.ts`（6 例，query 创建/删除配对）、`scene-registry-focus.test.ts`（5 例，焦点晋升语义）
-- 验证结果：`vitest run infra/` **绿**（33 文件 / 381 例，32→33）；`typecheck` **绿**；`check-biome --files` **绿**。query 修复变异验证 3 例转红。
-- 提交：`6e028556d`。
+  - `frontend/src/preview-3d/infra/unload-model.ts` — frustum 根注销收口（F1/F3）
+  - `frontend/src/preview-3d/infra/debug-render.ts` — 导出 `releaseDebugLabelCache()`（F2）
+  - `frontend/src/preview-3d/adapters/ysm-adapter.ts` — 会话终结调 `releaseDebugLabelCache()`（F2）
+  - 新增测试：`postproc-cost-probe.gpu-timer.test.ts`（6 例，query 创建/删除配对）、`scene-registry-focus.test.ts`（5 例，焦点晋升语义）、`unload-model-frustum.test.ts`（4 例，modelRoots 三集合一致性）、`debug-render-cache.test.ts`（5 例，标签纹理缓存会话边界）
+- **子代理产出（本轮主力）**：🔴2 / 🟡3 / 🟢2，报告 `artifacts/audit-infra/infra-findings.md`。主代理逐条复核后**修正了两处诊断口径**（见下），并独立发现并修掉 GPU query 孤儿。
+- 验证结果：`vitest run preview-3d/` **绿**（213 文件 / 3651 例）；`typecheck` **绿**；`vite build` **绿**；`check-biome` **绿**；`check-layering` **绿**。三处修复均做变异验证（分别 3 / 2 / 3 例转红）。
+- 提交：`6e028556d`（query 孤儿）、`a0372a2f0`（本轮记录+焦点测试）、`14ffff383`（F1/F3 + F2）。
+- **复核修正的两处口径（重要，防后人沿用错描述）**：
+  1. **F1 的成因不是「从不注销」而是「注销被抛错跳过（=F3）」**：5 个适配器的 `dispose()` **都**调了 `unregisterModelRoot`（ysm:579 / vrm:606 / litematic:486 / mmd-build-result:186 / fbx:335），只是 MMD·YSM·Litematic 把它排在可能抛错的语句之后。实证复现需让 `dispose` 抛错，而非「完全不调 dispose」。
+  2. **F2 的清空覆盖面比子代理设想更窄**：`clearLabelTexCache` 不只「只在 rebuildDebug 内」，而是**只在同一 rig 二次重建时**（`if (state.debugGroup)` 为真）才触发；换全新 rig（`debugGroup` 初值 null）再 rebuild 时缓存照样累积（实测 2+3=5）。故「会话内也会累积」而不止跨会话。
 - 遗留 / 下一轮建议：
   1. 下一轮按清单轮转取 **`materials`**（第 6 位；`infra` 已巡）。实测该目录为 `frontend/src/preview-3d/materials/`（**仅此一个**，5 个非测试源文件；先前一次 `Test-Path` 探测曾误报 `material` 单数并存，经复核为无——特此更正，勿再据误报改名）。
-  2. **本轮未覆盖**：`render-budget.ts`（127）/ `gpu-load-calibrate.ts`（173）/ `frustum-cull.ts`（192）/ `input-and-animation.ts`（218）只读了接口面，未逐行审其中数学与边界；`load-trace.ts` / `keymap.ts` / `texture-bytes.ts` / `schema-registry.ts` 未读。建议下轮若回访 infra，从 `gpu-load-calibrate` 的标定量与其消费点一致性入手。
-  3. **子代理失效备查**：35 文件全量委派**未产出报告**——大范围委派宜拆成 2~3 个小批次并给明确文件清单，避免单一子代理超时后全轮无产出（本轮靠主代理自读兜住，未损失结论）。
+  2. **本轮未修的已知项（子代理报告内，已复核）**：`F4 🟡` 探针 `DEFAULT_MSAA_SAMPLES=4`（`postproc-cost-probe.ts`）与 cap 侧 `POSTPROC_MSAA_SAMPLES=4`（`postprocessing-capability.ts`）**双源**——污染报告核心数字 `rtBytes*`，改一侧即静默报错；修法应把常量下沉 `infra/` 叶层（`infra` 本就是 cap 下层，注释里的「不反向 import」理由成立但与双源是两件事）。`F3 残留`：MMD/YSM/Litematic 三个适配器内的 `unregisterModelRoot` 仍排在其 `dispose()` 内可能抛错的语句之后（本轮已由 `unloadModel` 兜底，故不再致命，但**其他调用点**（如 `teardown("full")` 直走适配器 dispose）仍走旧序——建议顺手提到各自 dispose 首行）。
+  3. **无同名测试的真实契约文件（3 个）**：`load-trace.ts`（环形上限 + 浅拷贝快照语义无断言）、`preview-shell.ts`（`resetRefs`/`ensureViewContainer` 的 body 兜底补建与权威引用回传无独立契约锁，其注释自陈易误用）、`content-bridges.ts`（纯类型，**建议不补**）。另 3 个无测试文件（`camera-controls` / `postprocessing` / `ui-constants`）为纯类型/常量，无运行期契约。
+  4. **子代理失效备查（本轮教训）**：35 文件全量委派**未产出报告**——大范围委派宜拆成 2~3 个小批次并给明确文件清单，避免单一子代理超时后全轮无产出（本轮靠主代理自读兜住，未损失结论）。
+  5. **`scene-registry` 焦点晋升的产品问题仍挂起**：`unregister` 取 Map 插入序末位而非「最近被激活者」，语义已由 `scene-registry-focus.test.ts` 分离钉死；待答「点选过的模型是否该优先接任」。

@@ -23,10 +23,15 @@
  * 用法：
  *   node scripts/codemod-bare-assert-noerror.ts --dry-run   # 只报告：file:line + 所在函数 + before/after
  *   node scripts/codemod-bare-assert-noerror.ts             # 应用：改写文件 + gofmt + 报告统计
+ *
+ * 依赖：零第三方依赖（仅 node:fs / node:path / node:child_process + go / gofmt 命令）。
+ * 退出码：恒 0。情报型清债工具，不承担门禁阻断；gofmt 失败仅 stderr 警告并继续。
+ * 设计意图：把「~5000 处裸断言」从手工逐文件清理变成一条可复用口令——只吃**最规整
+ *   形态**保证机械正确（其余形态留给后续扩展或手工），应用后 go build + go test 验绿、
+ *   账本 --update-baseline 收缩，让债「永远可见」且可批量削减。
  */
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
-import { execFileSync as _efs, spawnSync } from "node:child_process";
 import path from "node:path";
 
 const ROOT = process.cwd();
@@ -90,10 +95,10 @@ function ensureImport(src: string, imp: string): string {
   if (src.includes(quoted)) return src;
   const m = src.match(/import \(\s*\n([\s\S]*?)\n\s*\)/);
   if (!m) return src; // 无 import 块：跳过（极罕见）
-  const block = m[1];
+  const block = m[1]!;
   // 插入到最后一个空行分组的末尾
   const groups = block.split(/\n\s*\n/);
-  const last = groups[groups.length - 1];
+  const last = groups[groups.length - 1]!;
   const newLast = last.replace(/\s*$/, "") + "\n\t" + quoted;
   groups[groups.length - 1] = newLast;
   return src.replace(block, groups.join("\n\n"));
@@ -110,8 +115,8 @@ interface Site {
 
 function enclosingFunc(lines: string[], idx: number): string {
   for (let i = idx; i >= 0; i--) {
-    const m = lines[i].match(/^\s*func\s+([^({]+)/);
-    if (m) return m[1].trim();
+    const m = lines[i]!.match(/^\s*func\s+([^({]+)/);
+    if (m) return m[1]!.trim();
   }
   return "(文件级)";
 }
@@ -119,11 +124,11 @@ function enclosingFunc(lines: string[], idx: number): string {
 /** 取所在函数签名（含参数类型）。 */
 function enclosingSig(lines: string[], idx: number): string {
   for (let i = idx; i >= 0; i--) {
-    if (/^\s*func\b/.test(lines[i])) {
-      let sig = lines[i];
+    if (/^\s*func\b/.test(lines[i]!)) {
+      let sig = lines[i]!;
       for (let j = i + 1; j < lines.length; j++) {
-        sig += " " + lines[j].trim();
-        if (lines[j].trim().endsWith("{")) break;
+        sig += " " + lines[j]!.trim();
+        if (lines[j]!.trim().endsWith("{")) break;
       }
       return sig;
     }
@@ -149,24 +154,24 @@ function findSites(rel: string, src: string): Site[] {
   const lines = src.split("\n");
   const sites: Site[] = [];
   for (let i = 0; i < lines.length; i++) {
-    const m = lines[i].match(/^([\t ]+)if (\w+) != nil \{$/);
+    const m = lines[i]!.match(/^([\t ]+)if (\w+) != nil \{$/);
     if (!m) continue;
-    const indent = m[1];
-    const err = m[2];
+    const indent = m[1]!;
+    const err = m[2]!;
     const body = lines[i + 1];
     const close = lines[i + 2];
     if (!body || !close) continue;
     const bm = body.match(new RegExp(`^${escapeRe(indent)}\\t(\\w+)\\.Fatal\\(${escapeRe(err)}\\)\\s*$`));
     if (!bm) continue;
     if (close.trim() !== "}" || close.slice(0, indent.length) !== indent) continue;
-    const recv = bm[1];
+    const recv = bm[1]!;
     // 安全网：非 *testing.T 的 Fatal（fuzz/bench/TB）不能过 testutil.NoError
     if (!tIsConcreteT(lines, i)) continue;
     sites.push({
       file: rel,
       line: i + 1,
       fn: enclosingFunc(lines, i),
-      before: [lines[i], body, close],
+      before: [lines[i]!, body, close],
       after: `${indent}testutil.NoError(${recv}, ${err})`,
     });
   }

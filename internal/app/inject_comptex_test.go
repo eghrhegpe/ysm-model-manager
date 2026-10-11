@@ -7,6 +7,7 @@ import (
 
 	"ysm-model-manager/go/threejs"
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/internal/testutil"
 )
 
 // TestBuildComponentTextureMap 验证：comps 的 ComponentTextures 提取为 typed map；
@@ -57,9 +58,7 @@ func TestModel3DSpecTypedRoundTrip(t *testing.T) {
 		ComponentTextures: map[string][]string{"foxcar": {"data:image/png;base64,XXX"}},
 	}
 	b, err := json.Marshal(spec)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	var back threejs.Model3DSpec
 	if err := json.Unmarshal(b, &back); err != nil {
 		t.Fatal(err)

@@ -15,15 +15,14 @@ import (
 
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/internal/app/install"
+	"ysm-model-manager/internal/testutil"
 )
 
 // writeRawConfig 向 fakePathMgr 的配置目录直写含指定 linkMode 的 ysm_config.json。
 func writeRawConfig(t *testing.T, linkMode string) {
 	t.Helper()
 	data, err := json.Marshal(types.AppConfig{LinkMode: linkMode})
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	p := configPath()
 	if p == "" {
 		t.Fatal("configPath 为空（pathMgr 未注入？）")
@@ -62,9 +61,7 @@ func TestLoadAppConfig_DirtyLinkModeWashedInSnapshotAndCache(t *testing.T) {
 	}
 	// 磁盘原样保留供人工修复
 	data, err := os.ReadFile(configPath())
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	var disk types.AppConfig
 	if err := json.Unmarshal(data, &disk); err != nil {
 		t.Fatal(err)
@@ -107,9 +104,7 @@ func TestLoadAppConfig_LazyPathWashesDirtyLinkMode(t *testing.T) {
 	}
 	// 磁盘仍原样（读路径不写盘，两路同契约）
 	data, err := os.ReadFile(configPath())
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	var disk types.AppConfig
 	if err := json.Unmarshal(data, &disk); err != nil {
 		t.Fatal(err)
@@ -145,9 +140,7 @@ func TestSaveAppConfig_WashesDirtyDiskLinkMode(t *testing.T) {
 				t.Fatalf("SaveAppConfig 失败: %v", err)
 			}
 			data, err := os.ReadFile(configPath())
-			if err != nil {
-				t.Fatal(err)
-			}
+			testutil.NoError(t, err)
 			var disk types.AppConfig
 			if err := json.Unmarshal(data, &disk); err != nil {
 				t.Fatal(err)

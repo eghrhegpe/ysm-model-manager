@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/internal/testutil"
 )
 
 // toMojibake 模拟前端 atob 的产物：把正确字符串的每个 UTF-8 字节当成一个 ISO-8859-1 码位。
@@ -89,9 +90,7 @@ func TestMergeCommunityCreatorsFromJSON_MojibakeRepair(t *testing.T) {
 		{Name: toMojibake("爱吃园田海味"), Type: "bilibili", Desc: toMojibake("东方project、LoveLive 开源分享")},
 	}
 	data, err := json.Marshal(community)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	added, updated, err := a.MergeCommunityCreatorsFromJSON(string(data))
 	if err != nil {
 		t.Fatalf("合并不应失败, got %v", err)

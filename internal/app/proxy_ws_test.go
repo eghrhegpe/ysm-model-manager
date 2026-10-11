@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"ysm-model-manager/internal/testutil"
 )
 
 // TestIsBlockedIP_CGNAT CGNAT 共享地址段 100.64.0.0/10 必须整段拦截，
@@ -39,9 +40,7 @@ func TestIsBlockedIP_CGNAT(t *testing.T) {
 func TestProxyWebSocketBidirectional(t *testing.T) {
 	// 假上游 WS 服务：握手回 101，之后回显收到的字节
 	upstream, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	defer upstream.Close()
 	go func() {
 		for {
@@ -88,9 +87,7 @@ func TestProxyWebSocketBidirectional(t *testing.T) {
 	defer ts.Close()
 
 	clientConn, err := net.Dial("tcp", strings.TrimPrefix(ts.URL, "http://"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	defer clientConn.Close()
 	clientConn.SetDeadline(time.Now().Add(5 * time.Second))
 

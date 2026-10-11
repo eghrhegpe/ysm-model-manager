@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/internal/testutil"
 )
 
 func TestReadJSONFile_BOMTrim(t *testing.T) {
@@ -207,9 +208,7 @@ func TestMergeWorkshopCreatorsFromJSON_FreshUser(t *testing.T) {
 		imported[i] = types.WorkshopCreator{Name: fmt.Sprintf("creator-%d", i), Type: "bilibili"}
 	}
 	data, err := json.Marshal(imported)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	added, updated, err := a.MergeWorkshopCreatorsFromJSON(string(data))
 	if err != nil {
 		t.Fatalf("全新用户首次 Merge 不应失败（P2-1），got %v", err)
@@ -288,9 +287,7 @@ func TestMergeCommunityCreatorsFromJSON_SegmentMerge(t *testing.T) {
 		{Name: "C", Type: "github", Desc: "新创作者"},
 	}
 	data, err := json.Marshal(community)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	added, updated, err := a.MergeCommunityCreatorsFromJSON(string(data))
 	if err != nil {
 		t.Fatalf("社区合并不应失败, got %v", err)
@@ -352,9 +349,7 @@ func TestMergeCommunityCreatorsFromJSON_Idempotent(t *testing.T) {
 	}
 	// 第二次并入同样社区：A 段已含、B 已存在 → 零变更
 	added, updated, err := a.MergeCommunityCreatorsFromJSON(string(data))
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if added != 0 || updated != 0 {
 		t.Fatalf("幂等并入应 added=0 updated=0, got added=%d updated=%d", added, updated)
 	}

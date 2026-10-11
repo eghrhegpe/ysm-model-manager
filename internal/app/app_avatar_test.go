@@ -11,6 +11,7 @@ import (
 	"ysm-model-manager/go/avatar"
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/types/registry"
+	"ysm-model-manager/internal/testutil"
 )
 
 // TestBatchExtractCreatorAvatars_CachedMime JPEG 头像缓存命中时，
@@ -39,9 +40,7 @@ func TestBatchExtractCreatorAvatars_CachedMime(t *testing.T) {
 	avatar.SaveAvatarData("testuser", jpegBytes, "image/jpeg")
 
 	result, err := a.BatchExtractCreatorAvatars()
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	got := result["testuser"]
 	if !strings.HasPrefix(got, "data:image/jpeg;base64,") {
 		t.Fatalf("JPEG 头像应嗅探为 image/jpeg, 得到 %q", got)

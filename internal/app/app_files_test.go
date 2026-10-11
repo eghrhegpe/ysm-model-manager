@@ -11,6 +11,7 @@ import (
 
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/types/registry"
+	"ysm-model-manager/internal/testutil"
 )
 
 func TestToggleEnable(t *testing.T) {
@@ -51,9 +52,7 @@ func TestToggleEnable(t *testing.T) {
 		}
 		// 再切换恢复
 		enabled2, err := a.ToggleEnable(pack + ".disabled")
-		if err != nil {
-			t.Fatal(err)
-		}
+		testutil.NoError(t, err)
 		if !enabled2 {
 			t.Error("恢复后应为启用态（true）")
 		}

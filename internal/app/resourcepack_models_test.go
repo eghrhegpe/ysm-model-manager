@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"ysm-model-manager/internal/testutil"
 )
 
 // makePackZip 构建临时资源包 zip（assets/minecraft/models/block/stone.json + 纹理占位）
@@ -16,15 +17,11 @@ func makePackZip(t *testing.T, files map[string]string) string {
 	dir := t.TempDir()
 	p := filepath.Join(dir, "testpack.zip")
 	f, err := os.Create(p)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	w := zip.NewWriter(f)
 	for name, content := range files {
 		entry, err := w.Create(name)
-		if err != nil {
-			t.Fatal(err)
-		}
+		testutil.NoError(t, err)
 		if _, err := entry.Write([]byte(content)); err != nil {
 			t.Fatal(err)
 		}

@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"ysm-model-manager/internal/testutil"
 )
 
 // R1 契约对齐（2026-08-10 修复）：orderTexByYSM 按 ysm.json 声明序重排 + default_texture 置首。
@@ -228,9 +229,7 @@ func TestDecodeYSMComponentsViaWASI_ValidYSM(t *testing.T) {
 
 	// 读取 .ysm 文件
 	ysmData, err := os.ReadFile(filepath.Join(dir, "ysm.json"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 
 	// 解码（wazero 内存直解，ADR-316）
 	comps, names := decodeYSMComponentsViaWASI(ysmData)

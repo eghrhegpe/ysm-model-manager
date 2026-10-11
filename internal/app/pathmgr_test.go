@@ -11,6 +11,7 @@ import (
 
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/types/registry"
+	"ysm-model-manager/internal/testutil"
 )
 
 // fakePathMgr 可注入的 pathManager（测 GetRepoRoot 平台默认回退，不依赖真实平台）
@@ -106,9 +107,7 @@ func TestGetRepoRoot_FallbackChain(t *testing.T) {
 		}
 		a := repoApp(t, cfg2)
 		got, err := a.GetRepoRoot("resourcepack")
-		if err != nil {
-			t.Fatal(err)
-		}
+		testutil.NoError(t, err)
 		if got != cfg2.CustomRoots["resourcepack"] {
 			t.Errorf("specificRoot 应优先, got %q want %q", got, cfg2.CustomRoots["resourcepack"])
 		}
@@ -117,9 +116,7 @@ func TestGetRepoRoot_FallbackChain(t *testing.T) {
 	t.Run("FilesRoot + 子目录", func(t *testing.T) {
 		a := repoApp(t, cfg)
 		got, err := a.GetRepoRoot("ysm")
-		if err != nil {
-			t.Fatal(err)
-		}
+		testutil.NoError(t, err)
 		// ADR-092 两层路由：FilesRoot/{group}/{storageSubDir}
 		want := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 		if got != want {
@@ -130,9 +127,7 @@ func TestGetRepoRoot_FallbackChain(t *testing.T) {
 	t.Run("rtype 空串返回 FilesRoot 根", func(t *testing.T) {
 		a := repoApp(t, cfg)
 		got, err := a.GetRepoRoot("")
-		if err != nil {
-			t.Fatal(err)
-		}
+		testutil.NoError(t, err)
 		if got != base {
 			t.Errorf("rtype 空串应返回 FilesRoot 根, got %q", got)
 		}
@@ -148,9 +143,7 @@ func TestGetRepoRoot_PlatformDefault(t *testing.T) {
 		pathMgr = fakePathMgr{repo: ""}
 		a := repoApp(t, types.AppConfig{})
 		got, err := a.GetRepoRoot("ysm")
-		if err != nil {
-			t.Fatal(err)
-		}
+		testutil.NoError(t, err)
 		if got != "" {
 			t.Errorf("desktop 未配置应返回空, got %q", got)
 		}
@@ -161,9 +154,7 @@ func TestGetRepoRoot_PlatformDefault(t *testing.T) {
 		pathMgr = fakePathMgr{repo: root}
 		a := repoApp(t, types.AppConfig{})
 		got, err := a.GetRepoRoot("ysm")
-		if err != nil {
-			t.Fatal(err)
-		}
+		testutil.NoError(t, err)
 		// ADR-092 两层路由：FilesRoot/{group}/{storageSubDir}
 		want := filepath.Join(root, registry.GroupStorageRoot("ysm"))
 		if got != want {
@@ -176,9 +167,7 @@ func TestGetRepoRoot_PlatformDefault(t *testing.T) {
 		pathMgr = fakePathMgr{repo: root}
 		a := repoApp(t, types.AppConfig{})
 		got, err := a.GetRepoRoot("ysm")
-		if err != nil {
-			t.Fatal(err)
-		}
+		testutil.NoError(t, err)
 		if got != "" {
 			t.Errorf("默认根不存在应返回空（保留未配置信号）, got %q", got)
 		}
@@ -194,9 +183,7 @@ func TestFilesRootForSync(t *testing.T) {
 	t.Run("EntityPlayer 走 group/storageSubDir", func(t *testing.T) {
 		a := repoApp(t, types.AppConfig{FilesRoot: base})
 		got, err := a.filesRootForSync("EntityPlayer")
-		if err != nil {
-			t.Fatal(err)
-		}
+		testutil.NoError(t, err)
 		// 用生产函数派生期望值（而非手写快照），注册表改了测试自动跟
 		want := filepath.Join(base, registry.GroupStorageRoot("EntityPlayer"))
 		if got != want {
@@ -213,9 +200,7 @@ func TestFilesRootForSync(t *testing.T) {
 			},
 		})
 		got, err := a.filesRootForSync("EntityPlayer")
-		if err != nil {
-			t.Fatal(err)
-		}
+		testutil.NoError(t, err)
 		if got != override {
 			t.Errorf("专属 CustomRoots 应优先, got %q want %q", got, override)
 		}
@@ -224,9 +209,7 @@ func TestFilesRootForSync(t *testing.T) {
 	t.Run("YSM 走 GetRepoRoot", func(t *testing.T) {
 		a := repoApp(t, types.AppConfig{FilesRoot: base})
 		got, err := a.filesRootForSync("ysm")
-		if err != nil {
-			t.Fatal(err)
-		}
+		testutil.NoError(t, err)
 		want := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 		if got != want {
 			t.Errorf("ysm 应走 GetRepoRoot, got %q want %q", got, want)
@@ -236,9 +219,7 @@ func TestFilesRootForSync(t *testing.T) {
 	t.Run("FilesRoot 为空回退 GetRepoRoot（不 panic）", func(t *testing.T) {
 		a := repoApp(t, types.AppConfig{})
 		got, err := a.filesRootForSync("EntityPlayer")
-		if err != nil {
-			t.Fatal(err)
-		}
+		testutil.NoError(t, err)
 		want, _ := a.GetRepoRoot("EntityPlayer")
 		if got != want {
 			t.Errorf("FilesRoot 空应回退 GetRepoRoot, got %q want %q", got, want)

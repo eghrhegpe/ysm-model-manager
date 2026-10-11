@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"ysm-model-manager/internal/testutil"
 )
 
 // makeContainerZip 构建临时容器 zip（name → 内容字节）。
@@ -16,15 +17,11 @@ func makeContainerZip(t *testing.T, files map[string][]byte) string {
 	dir := t.TempDir()
 	p := filepath.Join(dir, "container.zip")
 	f, err := os.Create(p)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	w := zip.NewWriter(f)
 	for name, content := range files {
 		entry, err := w.Create(name)
-		if err != nil {
-			t.Fatal(err)
-		}
+		testutil.NoError(t, err)
 		if _, err := entry.Write(content); err != nil {
 			t.Fatal(err)
 		}

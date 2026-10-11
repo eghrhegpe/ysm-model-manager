@@ -8,6 +8,7 @@ import (
 
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/types/registry"
+	"ysm-model-manager/internal/testutil"
 )
 
 // Build3DSpecFromGeometryJSON：Android 等无 Node 环境的 .ysm 3D 兜底通道
@@ -32,9 +33,7 @@ func TestBuild3DSpecFromGeometryJSON(t *testing.T) {
   }]
 }`
 	got, err := a.Build3DSpecFromGeometryJSON(geo)
-	if err != nil {
-		t.Fatalf("合法 geometry 不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "合法 geometry 不应报错")
 	if got == nil {
 		t.Fatal("合法 geometry 应构建出 spec，got nil")
 	}

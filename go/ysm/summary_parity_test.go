@@ -42,9 +42,7 @@ const summaryGoldenPath = "../../tests/fixtures/parity/ysm-summary.golden.json"
 func loadSummaryGolden(t *testing.T) *summaryGoldenFile {
 	t.Helper()
 	data, err := os.ReadFile(summaryGoldenPath)
-	if err != nil {
-		t.Fatalf("读黄金语料失败: %v", err)
-	}
+	testutil.NoError(t, err, "读黄金语料失败")
 	var gf summaryGoldenFile
 	if err := json.Unmarshal(data, &gf); err != nil {
 		t.Fatalf("解析黄金语料失败: %v", err)

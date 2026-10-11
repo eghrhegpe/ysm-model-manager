@@ -41,9 +41,7 @@ func TestToggleEnable(t *testing.T) {
 			t.Fatal(err)
 		}
 		enabled, err := a.ToggleEnable(pack)
-		if err != nil {
-			t.Fatalf("整合包内资源包应可启禁: %v", err)
-		}
+		testutil.NoError(t, err, "整合包内资源包应可启禁")
 		if enabled {
 			t.Error("首次切换应为禁用态（false）")
 		}
@@ -70,9 +68,7 @@ func TestToggleEnable(t *testing.T) {
 			t.Fatal(err)
 		}
 		enabled, err := a.ToggleEnable(f)
-		if err != nil {
-			t.Fatalf("仓库内 ysm 应可启禁: %v", err)
-		}
+		testutil.NoError(t, err, "仓库内 ysm 应可启禁")
 		if enabled {
 			t.Error("首次应为禁用态（false）")
 		}
@@ -91,9 +87,7 @@ func TestToggleEnable(t *testing.T) {
 			t.Fatal(err)
 		}
 		enabled, err := a.ToggleEnable(f)
-		if err != nil {
-			t.Fatalf("CustomRoots 内资源包应可启禁: %v", err)
-		}
+		testutil.NoError(t, err, "CustomRoots 内资源包应可启禁")
 		if enabled {
 			t.Error("首次应为禁用态（false）")
 		}

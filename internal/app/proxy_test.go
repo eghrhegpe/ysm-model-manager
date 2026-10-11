@@ -6,6 +6,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"testing"
+	"ysm-model-manager/internal/testutil"
 )
 
 // 回归测试（堵 717eb4af2 迁移后的行为回归缺口）：Rewrite 必须等价旧 Director——
@@ -14,13 +15,9 @@ import (
 // 故此处显式断言入站路径不被 target 的 /browse/skins 前缀污染。
 func TestRewritePlazaRequest_PreservesInboundPathIgnoresTargetPath(t *testing.T) {
 	target, err := url.Parse("https://site.example/browse/skins?tag=a")
-	if err != nil {
-		t.Fatalf("parse target: %v", err)
-	}
+	testutil.NoError(t, err, "parse target")
 	inbound, err := http.NewRequest("GET", "http://127.0.0.1:39999/assets/foo.js?v=1", nil)
-	if err != nil {
-		t.Fatalf("new request: %v", err)
-	}
+	testutil.NoError(t, err, "new request")
 	out := inbound.Clone(context.Background())
 	rewritePlazaRequest(&httputil.ProxyRequest{In: inbound, Out: out}, target, nil)
 
@@ -497,9 +494,7 @@ func TestStartStopProxy_Lifecycle(t *testing.T) {
 	target := "http://example.com/"
 
 	proxyURL, err := a.startProxy(target)
-	if err != nil {
-		t.Fatalf("startProxy 失败: %v", err)
-	}
+	testutil.NoError(t, err, "startProxy 失败")
 	if proxyURL == "" {
 		t.Fatal("startProxy 应返回非空 URL")
 	}

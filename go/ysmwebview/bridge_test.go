@@ -62,9 +62,7 @@ func TestDecode_RoundTrip(t *testing.T) {
 
 	files, err := b.Decode([]byte("ysm-bytes"), 5*time.Second)
 	<-done
-	if err != nil {
-		t.Fatalf("Decode: %v", err)
-	}
+	testutil.NoError(t, err, "Decode")
 	if len(files) != 1 || string(files[0].Data) != `{"a":1}` {
 		t.Fatalf("files = %+v", files)
 	}
@@ -168,9 +166,7 @@ func TestResolve_EmptyFiles(t *testing.T) {
 		}
 	}()
 	files, err := b.Decode([]byte("x"), 5*time.Second)
-	if err != nil {
-		t.Fatalf("Decode: %v", err)
-	}
+	testutil.NoError(t, err, "Decode")
 	if files == nil {
 		t.Fatal("空文件集应返回非 nil 切片")
 	}

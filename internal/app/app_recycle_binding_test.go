@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"ysm-model-manager/internal/testutil"
 )
 
 func TestRestoreFromRecycle_NotExist(t *testing.T) {
@@ -33,9 +34,7 @@ func TestEmptyRecycleBin_NoRecycleDir(t *testing.T) {
 	a, _, _ := packApp(t)
 	// 无 .recycle 目录：各根 recycle.Empty 返回 0 无错 → total=0 无错
 	n, err := a.EmptyRecycleBin()
-	if err != nil {
-		t.Fatalf("无回收站目录不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "无回收站目录不应报错")
 	if n != 0 {
 		t.Fatalf("无回收站目录应返回 0, got %d", n)
 	}

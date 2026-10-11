@@ -133,9 +133,7 @@ func TestWorkshopConfigWriteToConfigDir(t *testing.T) {
 	}
 	p := filepath.Join(dir, "YSM-Model-Manager", "workshop_sites.json")
 	data, err := os.ReadFile(p)
-	if err != nil {
-		t.Fatalf("应写入 configDir, got %v", err)
-	}
+	testutil.NoError(t, err, "应写入 configDir, got")
 	var got []types.WorkshopSite
 	if err := json.Unmarshal(data, &got); err != nil || len(got) != 1 || got[0].ID != "bilibili" {
 		t.Fatalf("写入内容异常: %v / %+v", err, got)
@@ -185,9 +183,7 @@ func TestBackupWorkshopCreators_NoFile(t *testing.T) {
 	defer func() { pathMgr = orig }()
 
 	bakPath, err := (&App{}).BackupWorkshopCreators()
-	if err != nil {
-		t.Fatalf("creators.json 不存在时备份应成功（无数据可备份），got %v", err)
-	}
+	testutil.NoError(t, err, "creators.json 不存在时备份应成功（无数据可备份），got")
 	if bakPath != "" {
 		t.Errorf("无数据可备份时应返回空路径, got %q", bakPath)
 	}
@@ -210,9 +206,7 @@ func TestMergeWorkshopCreatorsFromJSON_FreshUser(t *testing.T) {
 	data, err := json.Marshal(imported)
 	testutil.NoError(t, err)
 	added, updated, err := a.MergeWorkshopCreatorsFromJSON(string(data))
-	if err != nil {
-		t.Fatalf("全新用户首次 Merge 不应失败（P2-1），got %v", err)
-	}
+	testutil.NoError(t, err, "全新用户首次 Merge 不应失败（P2-1），got")
 	if added+updated != 100 {
 		t.Fatalf("100 条导入应全部计入 added/updated, got added=%d updated=%d", added, updated)
 	}
@@ -289,9 +283,7 @@ func TestMergeCommunityCreatorsFromJSON_SegmentMerge(t *testing.T) {
 	data, err := json.Marshal(community)
 	testutil.NoError(t, err)
 	added, updated, err := a.MergeCommunityCreatorsFromJSON(string(data))
-	if err != nil {
-		t.Fatalf("社区合并不应失败, got %v", err)
-	}
+	testutil.NoError(t, err, "社区合并不应失败, got")
 	if added != 1 || updated != 2 {
 		t.Fatalf("期望 added=1 updated=2, got added=%d updated=%d", added, updated)
 	}
@@ -394,9 +386,7 @@ func TestMergeCommunityCreatorsFromJSON_FreshUser(t *testing.T) {
 	community := []types.WorkshopCreator{{Name: "A", Type: "bilibili"}, {Name: "B", Type: "afdian"}}
 	data, _ := json.Marshal(community)
 	added, updated, err := a.MergeCommunityCreatorsFromJSON(string(data))
-	if err != nil {
-		t.Fatalf("全新用户社区合并不应失败, got %v", err)
-	}
+	testutil.NoError(t, err, "全新用户社区合并不应失败, got")
 	if added != 2 || updated != 0 {
 		t.Fatalf("期望 added=2 updated=0, got added=%d updated=%d", added, updated)
 	}
@@ -418,9 +408,7 @@ func TestMergeWorkshopSitesFromJSON_FreshUser(t *testing.T) {
 	}
 	data, _ := json.Marshal(imported)
 	added, updated, err := a.MergeWorkshopSitesFromJSON(string(data))
-	if err != nil {
-		t.Fatalf("全新用户首次 Merge 不应失败, got %v", err)
-	}
+	testutil.NoError(t, err, "全新用户首次 Merge 不应失败, got")
 	// 基准 = bundled 默认站（bilibili/afdian/github）：导入的两个默认站 id 命中
 	// 同值/同 id → updated（DeepEqual 判定变更），github 保留——默认站不被抹掉
 	// （code_review 31d30fb7 #1：空基准会让首次部分导入静默删除未出现的默认站）
@@ -460,9 +448,7 @@ func TestMergeWorkshopSitesFromJSON_FreshUser_CustomSite(t *testing.T) {
 	}
 	data, _ := json.Marshal(imported)
 	added, updated, err := a.MergeWorkshopSitesFromJSON(string(data))
-	if err != nil {
-		t.Fatalf("Merge 不应失败, got %v", err)
-	}
+	testutil.NoError(t, err, "Merge 不应失败, got")
 	if added != 1 || updated != 0 {
 		t.Fatalf("期望 added=1 updated=0, got added=%d updated=%d", added, updated)
 	}
@@ -587,9 +573,7 @@ func TestMergeWorkshopSitesFromJSON_OverwriteAndAdd(t *testing.T) {
 	}
 	data, _ := json.Marshal(incoming)
 	added, updated, err := a.MergeWorkshopSitesFromJSON(string(data))
-	if err != nil {
-		t.Fatalf("Merge 不应失败, got %v", err)
-	}
+	testutil.NoError(t, err, "Merge 不应失败, got")
 	if added != 1 || updated != 1 {
 		t.Fatalf("期望 added=1 updated=1, got added=%d updated=%d", added, updated)
 	}
@@ -677,9 +661,7 @@ func TestMergeCommunitySitesFromJSON_AddOnly(t *testing.T) {
 	}
 	data, _ := json.Marshal(community)
 	added, err := a.MergeCommunitySitesFromJSON(string(data))
-	if err != nil {
-		t.Fatalf("社区合并不应失败, got %v", err)
-	}
+	testutil.NoError(t, err, "社区合并不应失败, got")
 	if added != 2 {
 		t.Fatalf("期望 added=2（s2/s3），s1 命中跳过, got %d", added)
 	}
@@ -709,9 +691,7 @@ func TestMergeCommunitySitesFromJSON_Idempotent(t *testing.T) {
 	community := []types.WorkshopSite{{ID: "s1", Label: "站", URL: "https://s1"}}
 	data, _ := json.Marshal(community)
 	added, err := a.MergeCommunitySitesFromJSON(string(data))
-	if err != nil {
-		t.Fatalf("幂等合并不应失败, got %v", err)
-	}
+	testutil.NoError(t, err, "幂等合并不应失败, got")
 	if added != 0 {
 		t.Fatalf("全同应 added=0（幂等短路）, got %d", added)
 	}

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/internal/testutil"
 )
 
 // 落盘账本单测：队列常驻 worker 由 wake 驱动，异步消费——用有界轮询（waitFor）收敛时序，
@@ -18,9 +19,7 @@ import (
 func writeLedger(t *testing.T, path string, tasks []types.DownloadTask) {
 	t.Helper()
 	data, err := json.Marshal(ledgerState{SchemaVersion: ledgerSchemaVersion, Tasks: tasks})
-	if err != nil {
-		t.Fatalf("marshal 账本失败: %v", err)
-	}
+	testutil.NoError(t, err, "marshal 账本失败")
 	if err := os.WriteFile(path, data, 0o644); err != nil {
 		t.Fatalf("写账本失败: %v", err)
 	}

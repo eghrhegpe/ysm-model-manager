@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"ysm-model-manager/internal/testutil"
 )
 
 func TestMigrateFlatStorageToGrouped_FlatToGrouped(t *testing.T) {
@@ -33,9 +34,7 @@ func TestMigrateFlatStorageToGrouped_FlatToGrouped(t *testing.T) {
 	// 验证文件已迁移且内容一致
 	migratedPath := filepath.Join(groupedYsm, "test.ysm")
 	migratedData, err := os.ReadFile(migratedPath)
-	if err != nil {
-		t.Fatalf("迁移后的文件应存在: %v", err)
-	}
+	testutil.NoError(t, err, "迁移后的文件应存在")
 	if string(migratedData) != string(origContent) {
 		t.Errorf("迁移后文件内容不一致: 期望 %q, 实际 %q", origContent, migratedData)
 	}

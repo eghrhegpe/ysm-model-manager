@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"ysm-model-manager/internal/testutil"
 )
 
 // cliBridgeTestCommands 测试用注入命令列表（对应 go/cli 注册表，避免 app→cli 循环依赖）
@@ -145,9 +146,7 @@ func TestGetAllowedCLICommands(t *testing.T) {
 func TestMakeJsonResponse(t *testing.T) {
 	t.Run("success response", func(t *testing.T) {
 		result, err := makeJsonResponse("success", "test-cmd", map[string]string{"key": "value"}, nil, 100.0)
-		if err != nil {
-			t.Fatalf("makeJsonResponse 返回错误: %v", err)
-		}
+		testutil.NoError(t, err, "makeJsonResponse 返回错误")
 
 		var resp map[string]interface{}
 		if err := json.Unmarshal([]byte(result), &resp); err != nil {
@@ -170,9 +169,7 @@ func TestMakeJsonResponse(t *testing.T) {
 	t.Run("error response", func(t *testing.T) {
 		errData := map[string]string{"code": "test_error", "message": "test error message"}
 		result, err := makeJsonResponse("error", "test-cmd", nil, errData, 50.0)
-		if err != nil {
-			t.Fatalf("makeJsonResponse 返回错误: %v", err)
-		}
+		testutil.NoError(t, err, "makeJsonResponse 返回错误")
 
 		var resp map[string]interface{}
 		if err := json.Unmarshal([]byte(result), &resp); err != nil {
@@ -194,9 +191,7 @@ func TestMakeJsonResponse(t *testing.T) {
 
 	t.Run("timing info", func(t *testing.T) {
 		result, err := makeJsonResponse("success", "cmd", nil, nil, 123.456)
-		if err != nil {
-			t.Fatalf("makeJsonResponse 返回错误: %v", err)
-		}
+		testutil.NoError(t, err, "makeJsonResponse 返回错误")
 
 		var resp map[string]interface{}
 		if err := json.Unmarshal([]byte(result), &resp); err != nil {
@@ -219,9 +214,7 @@ func TestMakeJsonResponse(t *testing.T) {
 
 	t.Run("meta info", func(t *testing.T) {
 		result, err := makeJsonResponse("success", "cmd", nil, nil, 0.0)
-		if err != nil {
-			t.Fatalf("makeJsonResponse 返回错误: %v", err)
-		}
+		testutil.NoError(t, err, "makeJsonResponse 返回错误")
 
 		var resp map[string]interface{}
 		if err := json.Unmarshal([]byte(result), &resp); err != nil {

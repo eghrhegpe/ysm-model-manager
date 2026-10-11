@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/tetratelabs/wazero"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // TestReadOutBuf_ErrorPaths 定向补测 readOutBuf 的错误分支（2026-10-06 技术债审计
@@ -23,9 +24,7 @@ func TestReadOutBuf_ErrorPaths(t *testing.T) {
 	}
 	ctx := context.Background()
 	mod, err := runtime.InstantiateModule(ctx, compiled, moduleCfg)
-	if err != nil {
-		t.Fatalf("实例化 module: %v", err)
-	}
+	testutil.NoError(t, err, "实例化 module")
 	defer mod.Close(ctx)
 	mem := mod.Memory()
 	freeFn := mod.ExportedFunction("free")
@@ -71,9 +70,7 @@ func TestReadOutBuf_ErrorPaths(t *testing.T) {
 	happy := append(append(append(append(le32(1), le32(1)...), le32(2)...), 'a'), 'b', 'c')
 	ptr := alloc(happy)
 	files, err := readOutBuf(ctx, mem, freeFn, ptr)
-	if err != nil {
-		t.Fatalf("happy path 不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "happy path 不应报错")
 	if len(files) != 1 || files[0].Path != "a" || string(files[0].Data) != "bc" {
 		t.Fatalf("happy path 解析异常: %+v（期望 1 个文件 Path=a Data=bc）", files)
 	}
@@ -93,9 +90,7 @@ func TestDecodeWith_NilExports(t *testing.T) {
 	rt := wazero.NewRuntimeWithConfig(ctx, wazero.NewRuntimeConfig())
 	defer rt.Close(ctx)
 	cm, err := rt.CompileModule(ctx, empty)
-	if err != nil {
-		t.Fatalf("编译空 wasm: %v", err)
-	}
+	testutil.NoError(t, err, "编译空 wasm")
 	if _, err := decodeWith(ctx, rt, cm, []byte("hello")); err == nil {
 		t.Fatal("导出缺失的 module 应返回 error")
 	}

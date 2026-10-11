@@ -92,9 +92,7 @@ func TestMergeCommunityCreatorsFromJSON_MojibakeRepair(t *testing.T) {
 	data, err := json.Marshal(community)
 	testutil.NoError(t, err)
 	added, updated, err := a.MergeCommunityCreatorsFromJSON(string(data))
-	if err != nil {
-		t.Fatalf("合并不应失败, got %v", err)
-	}
+	testutil.NoError(t, err, "合并不应失败, got")
 	if added != 1 || updated != 1 {
 		t.Fatalf("期望 added=1 updated=1（乱码还原后与本地同名合并）, got added=%d updated=%d", added, updated)
 	}

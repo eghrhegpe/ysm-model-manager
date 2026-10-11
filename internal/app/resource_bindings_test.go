@@ -10,6 +10,7 @@ import (
 	"ysm-model-manager/go/logs"
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/types/registry"
+	"ysm-model-manager/internal/testutil"
 )
 
 // resourceApp 构造用于资源绑定测试的 App（注入 configCache + logger）
@@ -38,9 +39,7 @@ func TestFindDuplicateFiles_Guard(t *testing.T) {
 
 	// 根内路径应通过守卫（即使无重复也返回空切片而非 error）
 	groups, err := a.FindDuplicateFiles(context.Background(), root, "")
-	if err != nil {
-		t.Fatalf("根内路径不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "根内路径不应报错")
 	// 本用例只校验「根内路径不被守卫拒绝」（err 语义），不校验分组内容。
 	// 原写 `groups = []dedup.Group{}` 是无效赋值（ineffassign：赋完即弃），且上方注释误判
 	// 「无重复」——实测本 fixture 的 a.ysm/b.ysm 内容相同，实际返回 1 组，断言 len==0 会红。
@@ -83,9 +82,7 @@ func TestFindDuplicateFiles_Basic(t *testing.T) {
 
 	a := resourceApp(t, types.AppConfig{FilesRoot: base})
 	groups, err := a.FindDuplicateFiles(context.Background(), root, "")
-	if err != nil {
-		t.Fatalf("FindDuplicateFiles 失败: %v", err)
-	}
+	testutil.NoError(t, err, "FindDuplicateFiles 失败")
 
 	if len(groups) != 1 {
 		t.Fatalf("期望 1 个重复组, got %d: %+v", len(groups), groups)
@@ -113,9 +110,7 @@ func TestFindDuplicateFiles_WithStrategy(t *testing.T) {
 	// name_size 策略（文件名+大小）：a/b 同内容但文件名不同 → 不成组。
 	// 期望 0 组即可判别策略 token 确实生效——deep_hash（默认档）对同内容文件会返回 1 组。
 	groups, err := a.FindDuplicateFiles(context.Background(), root, "name_size")
-	if err != nil {
-		t.Fatalf("FindDuplicateFiles 失败: %v", err)
-	}
+	testutil.NoError(t, err, "FindDuplicateFiles 失败")
 	if len(groups) != 0 {
 		t.Fatalf("name_size 模式下文件名不同不应成组, got %d 组", len(groups))
 	}
@@ -135,9 +130,7 @@ func TestFindDuplicateFiles_NoDupNilFree(t *testing.T) {
 
 	a := resourceApp(t, types.AppConfig{FilesRoot: base})
 	groups, err := a.FindDuplicateFiles(context.Background(), root, "deep_hash")
-	if err != nil {
-		t.Fatalf("FindDuplicateFiles 失败: %v", err)
-	}
+	testutil.NoError(t, err, "FindDuplicateFiles 失败")
 	if groups == nil {
 		t.Fatal("无重复时应返回空切片（非 nil），否则前端 null 防御分支被误触发")
 	}
@@ -194,9 +187,7 @@ func TestRepoHealthAudit_Guard(t *testing.T) {
 
 	// 根内路径
 	_, err := a.RepoHealthAudit(context.Background(), root)
-	if err != nil {
-		t.Fatalf("根内路径不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "根内路径不应报错")
 
 	// 根外路径
 	outside := filepath.Join(base, "..", "outside")
@@ -216,9 +207,7 @@ func TestRepoHealthAudit_EmptyDir(t *testing.T) {
 
 	a := resourceApp(t, types.AppConfig{FilesRoot: base})
 	report, err := a.RepoHealthAudit(context.Background(), root)
-	if err != nil {
-		t.Fatalf("空目录体检不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "空目录体检不应报错")
 	if report == nil {
 		t.Fatal("报告不应为 nil")
 	}
@@ -243,9 +232,7 @@ func TestRepoHealthAudit_WithFiles(t *testing.T) {
 
 	a := resourceApp(t, types.AppConfig{FilesRoot: base})
 	report, err := a.RepoHealthAudit(context.Background(), root)
-	if err != nil {
-		t.Fatalf("体检失败: %v", err)
-	}
+	testutil.NoError(t, err, "体检失败")
 	if report.Resources.TotalFiles < 2 {
 		t.Errorf("应发现至少 2 个文件, got %d", report.Resources.TotalFiles)
 	}
@@ -287,9 +274,7 @@ func TestInstallResourceToInstance_Guard(t *testing.T) {
 
 	// 源文件在仓库根内，目标整合包存在
 	err := a.InstallResourceToInstance("ysm", filepath.Join(ysmRoot, "model.ysm"), "1.20.1")
-	if err != nil {
-		t.Fatalf("合法安装不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "合法安装不应报错")
 
 	// 验证文件已安装
 	installed := filepath.Join(customDir, "model.ysm")
@@ -389,9 +374,7 @@ func TestInstallResourceToInstance_FolderPush(t *testing.T) {
 
 	// 传入文件夹内的某个文件（ysm.json），应推送整个文件夹
 	err := a.InstallResourceToInstance("ysm", filepath.Join(modelDir, "ysm.json"), "1.20.1")
-	if err != nil {
-		t.Fatalf("文件夹级安装失败: %v", err)
-	}
+	testutil.NoError(t, err, "文件夹级安装失败")
 
 	// 验证整个文件夹已安装
 	installedDir := filepath.Join(customDir, "my_model")

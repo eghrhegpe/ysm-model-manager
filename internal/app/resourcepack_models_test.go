@@ -47,9 +47,7 @@ func TestListPackModels(t *testing.T) {
 	a := &App{}
 	p := makePackZip(t, packZipFiles)
 	got, err := a.ListPackModels(p)
-	if err != nil {
-		t.Fatalf("ListPackModels 返回 error: %v", err)
-	}
+	testutil.NoError(t, err, "ListPackModels 返回 error")
 	if len(got) != 3 {
 		t.Fatalf("期望 3 个模型（block/stone + block/cube_all + item/stone），实际 %d: %v", len(got), got)
 	}
@@ -118,9 +116,7 @@ func TestListPackModelsDetail(t *testing.T) {
 	a := &App{}
 	p := makePackZip(t, packDetailZipFiles)
 	res, err := a.ListPackModelsDetail(p)
-	if err != nil {
-		t.Fatalf("ListPackModelsDetail 返回 error: %v", err)
-	}
+	testutil.NoError(t, err, "ListPackModelsDetail 返回 error")
 	if res == nil {
 		t.Fatal("ListPackModelsDetail 返回 nil")
 	}
@@ -164,9 +160,7 @@ func TestListPackModelsDetail_Cap(t *testing.T) {
 	}
 	p := makePackZip(t, files)
 	res, err := a.ListPackModelsDetail(p)
-	if err != nil {
-		t.Fatalf("ListPackModelsDetail 返回 error: %v", err)
-	}
+	testutil.NoError(t, err, "ListPackModelsDetail 返回 error")
 
 	if res.Total != 250 {
 		t.Errorf("total 应 250，实际 %d", res.Total)
@@ -220,9 +214,7 @@ func TestListPackModelsDetail_InvalidEntriesExcluded(t *testing.T) {
 	}
 	p := makePackZip(t, files)
 	res, err := a.ListPackModelsDetail(p)
-	if err != nil {
-		t.Fatalf("ListPackModelsDetail 返回 error: %v", err)
-	}
+	testutil.NoError(t, err, "ListPackModelsDetail 返回 error")
 	if res.Total != 1 {
 		t.Fatalf("期望仅 1 个 block 模型（custom/outside 不入列），实际 total=%d: %v", res.Total, res.Models)
 	}

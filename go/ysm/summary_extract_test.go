@@ -76,9 +76,7 @@ func TestExtractYsmSummary_YSGP(t *testing.T) {
 		t.Fatal(err)
 	}
 	summary, err := ExtractYsmSummary(path)
-	if err != nil {
-		t.Fatalf("YSGP 分支不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "YSGP 分支不应报错")
 	if summary.Format != "ysm" {
 		t.Errorf("Format = %q, want ysm", summary.Format)
 	}
@@ -96,9 +94,7 @@ func TestExtractYsmSummary_PlainJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 	summary, err := ExtractYsmSummary(path)
-	if err != nil {
-		t.Fatalf("JSON 分支不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "JSON 分支不应报错")
 	if summary.Format != "ysm" {
 		t.Errorf("Format = %q, want ysm", summary.Format)
 	}
@@ -148,9 +144,7 @@ func TestExtractYsmSummary_ZipWithYsmJSON(t *testing.T) {
 		"geo/main.json": `{"minecraft:geometry": []}`,
 	})
 	summary, err := ExtractYsmSummary(path)
-	if err != nil {
-		t.Fatalf("ZIP 分支不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "ZIP 分支不应报错")
 	if summary.Format != "ysm" {
 		t.Errorf("Format = %q, want ysm", summary.Format)
 	}
@@ -190,9 +184,7 @@ func TestExtractYsmSummary_ZipFallbackNoYsmJSON(t *testing.T) {
 		"tex/a.png":                "png",
 	})
 	summary, err := ExtractYsmSummary(path)
-	if err != nil {
-		t.Fatalf("降级分支不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "降级分支不应报错")
 	if summary.Format != "zip" {
 		t.Errorf("Format = %q, want zip（无 ysm.json 降级）", summary.Format)
 	}
@@ -252,9 +244,7 @@ func TestExtractYsmSummary_ZipTexSizeFromGeometry(t *testing.T) {
 		"tex/default.png": "png",
 	})
 	summary, err := ExtractYsmSummary(path)
-	if err != nil {
-		t.Fatalf("ZIP 分支不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "ZIP 分支不应报错")
 	if summary.Stats.TexWidth != 128 || summary.Stats.TexHeight != 64 {
 		t.Errorf("TexWidth/TexHeight = %d/%d, want 128/64", summary.Stats.TexWidth, summary.Stats.TexHeight)
 	}
@@ -289,9 +279,7 @@ func TestExtractYsmSummary_NameFallback_PlainJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 	summary, err := ExtractYsmSummary(path)
-	if err != nil {
-		t.Fatalf("不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "不应报错")
 	if summary.Name != fileName {
 		t.Errorf("Name = %q, want %q（metadata.name 空时回退到去扩展名文件名）", summary.Name, fileName)
 	}
@@ -307,9 +295,7 @@ func TestExtractYsmSummary_NameFallback_Zip(t *testing.T) {
 		"geo/main.json": `{"minecraft:geometry": []}`,
 	})
 	summary, err := ExtractYsmSummary(path)
-	if err != nil {
-		t.Fatalf("不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "不应报错")
 	if summary.Name != fileName {
 		t.Errorf("Name = %q, want %q（ZIP 分支 metadata.name 空时应与裸 JSON 一致回退文件名）", summary.Name, fileName)
 	}

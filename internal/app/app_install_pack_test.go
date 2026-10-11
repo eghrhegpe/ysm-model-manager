@@ -16,6 +16,7 @@ import (
 	"ysm-model-manager/go/scanner"
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/types/registry"
+	"ysm-model-manager/internal/testutil"
 )
 
 var b64 = func(s string) string { return base64.StdEncoding.EncodeToString([]byte(s)) }
@@ -174,9 +175,7 @@ func TestImportFileAndPushToInstance_RootLevelModelRejected(t *testing.T) {
 	//     同源），查 ysmRoot 是查错地方（MMD 模型不会落到 ysm 根）。
 	a, _, customDir := packApp(t)
 	mmdRoot, err := a.GetRepoRoot("mmd")
-	if err != nil {
-		t.Fatalf("GetRepoRoot(mmd) 失败: %v", err)
-	}
+	testutil.NoError(t, err, "GetRepoRoot(mmd) 失败")
 	for _, name := range []string{"char.pmx", "char.pmd"} {
 		err := a.ImportFileAndPushToInstance(name, b64("mmd-bytes"), "TestInst")
 		if err == nil {

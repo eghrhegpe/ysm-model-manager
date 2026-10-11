@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // TestImportsClosedSet 契约测试（ADR-316 D3）：内嵌 wasm 的导入集是闭集，
@@ -155,13 +156,9 @@ func TestDecode_RealFixture(t *testing.T) {
 		t.Skip("未设置 YSMWASI_TEST_FIXTURE，跳过真实样本冒烟")
 	}
 	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("读取样本: %v", err)
-	}
+	testutil.NoError(t, err, "读取样本")
 	files, err := Decode(data)
-	if err != nil {
-		t.Fatalf("解码失败: %v", err)
-	}
+	testutil.NoError(t, err, "解码失败")
 	if len(files) == 0 {
 		t.Fatal("产物为空")
 	}

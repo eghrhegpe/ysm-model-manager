@@ -107,9 +107,7 @@ func TestListContainerEntries(t *testing.T) {
 		"builds/note.json":       []byte("{}"),
 	})
 	got, err := a.ListContainerEntries(p, ".nbt,.litematic,.schematic")
-	if err != nil {
-		t.Fatalf("ListContainerEntries 返回 error: %v", err)
-	}
+	testutil.NoError(t, err, "ListContainerEntries 返回 error")
 	want := []string{"builds/house.nbt", "builds/tower.litematic", "maps/area.schematic"}
 	if len(got) != len(want) {
 		t.Fatalf("期望 %d 条，实际 %d: %v", len(want), len(got), got)
@@ -132,17 +130,13 @@ func TestListContainerEntries_ExtFilter(t *testing.T) {
 	})
 	// 单扩展名过滤（无点前缀也生效）
 	got, err := a.ListContainerEntries(p, "nbt")
-	if err != nil {
-		t.Fatalf("ListContainerEntries 返回 error: %v", err)
-	}
+	testutil.NoError(t, err, "ListContainerEntries 返回 error")
 	if len(got) != 1 || got[0] != "a.nbt" {
 		t.Errorf("仅 .nbt 期望 [a.nbt]，实际 %v", got)
 	}
 	// 空 exts → 放行全部非目录
 	gotAll, err := a.ListContainerEntries(p, "")
-	if err != nil {
-		t.Fatalf("空 exts 返回 error: %v", err)
-	}
+	testutil.NoError(t, err, "空 exts 返回 error")
 	if len(gotAll) != 4 {
 		t.Errorf("空 exts 期望 4 条，实际 %v", gotAll)
 	}
@@ -175,9 +169,7 @@ func TestGetVoxelDataInContainer(t *testing.T) {
 	}
 	// .litematic 分支（默认）：Version-only root → Size [0,0,0] 空数据（合法）
 	gotL, errL := a.GetVoxelDataInContainer(p, "builds/tower.litematic", ".litematic")
-	if errL != nil {
-		t.Fatalf(".litematic 空数据不应报 error: %v", errL)
-	}
+	testutil.NoError(t, errL, ".litematic 空数据不应报 error")
 	if gotL == nil {
 		t.Fatal(".litematic 空数据应返回非 nil")
 	}
@@ -186,9 +178,7 @@ func TestGetVoxelDataInContainer(t *testing.T) {
 	}
 	// .schematic 分支：Width 2 Height 1 Length 1 → 1 个方块组
 	gotS, errS := a.GetVoxelDataInContainer(p, "maps/area.schematic", ".schematic")
-	if errS != nil {
-		t.Fatalf(".schematic 正常数据不应报 error: %v", errS)
-	}
+	testutil.NoError(t, errS, ".schematic 正常数据不应报 error")
 	if gotS == nil {
 		t.Fatal(".schematic 应返回非 nil")
 	}

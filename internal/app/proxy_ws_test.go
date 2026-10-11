@@ -102,9 +102,7 @@ func TestProxyWebSocketBidirectional(t *testing.T) {
 	one := make([]byte, 1)
 	for !strings.Contains(string(header), "\r\n\r\n") {
 		n, err := clientConn.Read(one)
-		if err != nil {
-			t.Fatalf("读握手响应头失败: %v", err)
-		}
+		testutil.NoError(t, err, "读握手响应头失败")
 		if n > 0 {
 			header = append(header, one[0])
 		}
@@ -131,9 +129,7 @@ func TestProxyWebSocketBidirectional(t *testing.T) {
 	}
 	select {
 	case err := <-handlerErr:
-		if err != nil {
-			t.Fatalf("proxyWebSocket 返回错误: %v", err)
-		}
+		testutil.NoError(t, err, "proxyWebSocket 返回错误")
 	case <-time.After(5 * time.Second):
 		t.Fatal("proxyWebSocket 未在双向结束后返回（存在方向未等待/连接未关闭）")
 	}

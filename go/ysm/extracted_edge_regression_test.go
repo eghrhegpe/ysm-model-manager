@@ -15,6 +15,7 @@ import (
 	"strings"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -254,9 +255,7 @@ func TestFindComponents_DeclaredOutOfRangeSameNameTex(t *testing.T) {
 		t.Fatalf("data URI 应为 PNG，实际前缀 %.40q", uri)
 	}
 	decoded, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(uri, "data:image/png;base64,"))
-	if err != nil {
-		t.Fatalf("data URI base64 解码失败: %v", err)
-	}
+	testutil.NoError(t, err, "data URI base64 解码失败")
 	if string(decoded) != string(skinBytes) {
 		t.Errorf("超范围声明组件应绑定共享默认皮肤 skin.png（%v），实际绑定 %v（若为 extra.png 即回归）", skinBytes, decoded)
 	}

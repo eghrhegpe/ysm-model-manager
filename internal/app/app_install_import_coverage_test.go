@@ -15,6 +15,7 @@ import (
 
 	"ysm-model-manager/go/texture_cache"
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/internal/testutil"
 )
 
 func buildZipB64T(t *testing.T, entries map[string]string) string {
@@ -110,9 +111,7 @@ func TestInstallModelFile_SrcGuard(t *testing.T) {
 	}
 	mcRoot := filepath.Join(t.TempDir(), ".minecraft")
 	dst, err := a.InstallModelFile(inRepo, mcRoot)
-	if err != nil {
-		t.Fatalf("仓库内 src 应安装成功: %v", err)
-	}
+	testutil.NoError(t, err, "仓库内 src 应安装成功")
 	if dst == "" {
 		t.Error("应返回落地文件路径")
 	}
@@ -142,9 +141,7 @@ func TestInstallModelFile_SrcInCustomRoot(t *testing.T) {
 		t.Fatal(err)
 	}
 	dst, err := a.InstallModelFile(inCustom, mcRoot)
-	if err != nil {
-		t.Fatalf("CustomRoots 根内 src 应安装成功: %v", err)
-	}
+	testutil.NoError(t, err, "CustomRoots 根内 src 应安装成功")
 	if _, err := os.Stat(dst); err != nil {
 		t.Fatalf("落地文件不存在: %v", err)
 	}

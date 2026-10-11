@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/threejs"
 )
 
@@ -15,9 +16,7 @@ func TestWineFoxBoatSpecTexIdx(t *testing.T) {
 	comps, _ := FindComponentsInExtractedYSM(ysmPath)
 
 	spec, err := threejs.BuildMulti(comps, nil)
-	if err != nil {
-		t.Fatalf("BuildMulti 失败: %v", err)
-	}
+	testutil.NoError(t, err, "BuildMulti 失败")
 
 	var doc struct {
 		Models []struct {

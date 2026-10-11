@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/internal/testutil"
 )
 
 // TestNewManager 构造函数测试
@@ -131,9 +132,7 @@ func TestSetLinkMode(t *testing.T) {
 
 	// 首次设置
 	err := m.SetLinkMode("symlink")
-	if err != nil {
-		t.Fatalf("SetLinkMode(symlink) 失败: %v", err)
-	}
+	testutil.NoError(t, err, "SetLinkMode(symlink) 失败")
 	if savedCfg.LinkMode != "symlink" {
 		t.Errorf("配置未持久化: LinkMode=%q", savedCfg.LinkMode)
 	}
@@ -143,15 +142,11 @@ func TestSetLinkMode(t *testing.T) {
 
 	// 重复设置相同值（应无操作）
 	err = m.SetLinkMode("symlink")
-	if err != nil {
-		t.Fatalf("重复设置相同值不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "重复设置相同值不应报错")
 
 	// 修改为新值
 	err = m.SetLinkMode("copy")
-	if err != nil {
-		t.Fatalf("SetLinkMode(copy) 失败: %v", err)
-	}
+	testutil.NoError(t, err, "SetLinkMode(copy) 失败")
 	if savedCfg.LinkMode != "copy" {
 		t.Errorf("配置未更新: LinkMode=%q", savedCfg.LinkMode)
 	}
@@ -254,9 +249,7 @@ func TestNewDownloadQueue_NilParent(t *testing.T) {
 func TestEnqueue_EmptyTasks(t *testing.T) {
 	q := NewDownloadQueue(context.Background(), nil, nil, nil)
 	err := q.Enqueue([]types.DownloadTask{})
-	if err != nil {
-		t.Fatalf("空任务列表不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "空任务列表不应报错")
 	status := q.Status()
 	if status.Remaining != 0 {
 		t.Errorf("空入队后队列应为空: got %d", status.Remaining)
@@ -267,9 +260,7 @@ func TestEnqueue_EmptyTasks(t *testing.T) {
 func TestEnqueue_NilQueue(t *testing.T) {
 	var q *DownloadQueue
 	err := q.Enqueue([]types.DownloadTask{{Name: "a", URL: "https://a", SaveDir: "/"}})
-	if err != nil {
-		t.Fatalf("nil queue Enqueue 不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "nil queue Enqueue 不应报错")
 }
 
 // TestEnqueue_InvalidURLScheme 测试非 https URL
@@ -305,9 +296,7 @@ func TestEnqueue_Basic(t *testing.T) {
 		{Name: "a", URL: "https://example.com/a", SaveDir: "/tmp"},
 		{Name: "b", URL: "https://example.com/b", SaveDir: "/tmp"},
 	})
-	if err != nil {
-		t.Fatalf("Enqueue 失败: %v", err)
-	}
+	testutil.NoError(t, err, "Enqueue 失败")
 	// 入队后队列可能已开始处理（异步 process），Remaining 可能为 1（正在处理第一个）或 2（尚未开始）
 	status := q.Status()
 	if status.Remaining < 1 || status.Remaining > 2 {
@@ -400,9 +389,7 @@ func TestCancel_ThenEnqueue(t *testing.T) {
 	q.Cancel()
 	// 取消后再入队
 	err := q.Enqueue([]types.DownloadTask{{Name: "b", URL: "https://b", SaveDir: "/"}})
-	if err != nil {
-		t.Fatalf("取消后入队失败: %v", err)
-	}
+	testutil.NoError(t, err, "取消后入队失败")
 	select {
 	case <-bDownloaded:
 	case <-time.After(5 * time.Second):

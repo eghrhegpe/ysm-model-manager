@@ -21,6 +21,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // ===== scanHeader：行分派归属 =====
@@ -262,9 +263,7 @@ func TestAppendAnimGroupsAndConfigs_LooseGroupAndNameFallback(t *testing.T) {
 		t.Fatal(err)
 	}
 	sum, err := ExtractYsmSummary(path)
-	if err != nil {
-		t.Fatalf("不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "不应报错")
 
 	wantGroups := []AnimGroup{
 		// name 空 → 经 "#sit" 查到 "坐姿"
@@ -303,9 +302,7 @@ func TestAppendAnimGroupsAndConfigs_AllInternalRefsGroupSkipped(t *testing.T) {
 		t.Fatal(err)
 	}
 	sum, err := ExtractYsmSummary(path)
-	if err != nil {
-		t.Fatalf("不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "不应报错")
 
 	want := []AnimGroup{
 		{ID: "real", Name: "实组", Items: []string{"实项"}},

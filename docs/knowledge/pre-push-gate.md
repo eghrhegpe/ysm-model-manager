@@ -205,7 +205,7 @@ invariant_anchors:
 
 ### 静态工具（`runTools`，串行）
 
-- 清单单一事实来源 = `_lib/gate-config.ts`（`ALL_STATIC_TOOLS` 31 项 / `DOC_STATIC_TOOLS` / `DOC_EXTRA_SCRIPTS` / `FRONTEND_STATIC_TOOLS` / `GO_STATIC_TOOLS`）；gate 只调度不改清单
+- 清单单一事实来源 = `_lib/gate-config.ts`（`ALL_STATIC_TOOLS` 全集 / `DOC_STATIC_TOOLS` / `DOC_EXTRA_SCRIPTS` / `FRONTEND_STATIC_TOOLS` / `GO_STATIC_TOOLS` 五张；条目数随时点演化，**不在正文写计数**——统计口径见「门禁覆盖边界」节）；gate 只调度不改清单
 - 审计类工具退出码不可靠（恒 0），必须解析 `--json` 的 `_summary` 判定——**判定语义收敛到 `_lib/gate-parse.ts`**（2026-09 锐评三刀 #3）：`parseToolOutput(out, rc, tool?)` 统一实现「`_summary.ok` → `errors===0` → 退回 rc」优先级链，`tryParseSummary` / `tryParseJson` 供域检查块/特殊块取字段；契约测试 `tests/test_gate_parse_output.ts` 锁死判定与 fail-closed 回退（非 JSON 输出 note 必须明示「回退 rc 判定」，不许静默假绿）
 - 生产端配对（2026-09-13）：扫描器用同模块的 `buildScanVerdict(errors, warnLines)` 把 `ok`/`errors`/`warns_list` 写进 `_summary`。**判定字段必须落在 `_summary` 内**——`parseToolOutput` 首行 `parsed._summary || parsed` 会在 `_summary` 存在时短路，写顶层 `ok` 一律读不到（实证：三脚本顶层 `ok` + rc 恒 0 → 门禁恒判通过）。`_summary.degraded===true` 时 note 追加 `degraded`，「扫描跳过」不得与「扫描通过」同形
 - autoFix 项（如 `event-graph --check`）FAIL 时自动跑写盘版刷新后重验（重验判定同样走 `parseToolOutput`）
@@ -223,7 +223,7 @@ AI 只读末尾 ~25 行 stderr，旧 tail 是 `slice(-12)` 的原始输出尾巴
 
 ### 门禁覆盖边界：清单外的 check 脚本（2026-09-13 核实）
 
-`scripts/check-*.ts` 共 **42** 个，`ALL_STATIC_TOOLS` 精确 `tool:` 条目 **30** 个（统计口径：只数 `tool: "X.ts"` 条目，注释提名字不算——2026-10-08 实测踩坑，子串匹配会虚高），差额不是笔误——部分脚本走 pre-commit / commit-with-check / CI 等旁路，或只挂前端域。**当前「未接入任何自动化入口」的只剩 1 个**：`check-diff-coverage.ts`（前端 diff 覆盖率，刻意挂起，理由见覆盖尾行条目）。2026-09-13 首查时无守护的是下面这 3 个（现已接线，表内为当前状态）：
+`scripts/check-*.ts` 全集与 `ALL_STATIC_TOOLS` 精确 `tool:` 条目存在差额（统计口径：只数 `tool: "X.ts"` 条目，注释提名字不算——2026-10-08 实测踩坑，子串匹配会虚高；**条数随时点演化，禁止把某次计数写进本文**——旧「42 个 / 30 个」硬计数已删，同 gate-chain-map 口径），差额不是笔误——部分脚本走 pre-commit / commit-with-check / CI 等旁路，或只挂前端域。**当前「未接入任何自动化入口」的刻意挂起者仅 `check-diff-coverage.ts` 一个**（前端 diff 覆盖率，理由见覆盖尾行条目）。2026-09-13 首查时无守护的是下面这 3 个（现已接线，表内为当前状态）：
 
 | 脚本 | 自动化入口 | 内容 |
 |------|-----------|------|

@@ -19,9 +19,7 @@ func makeTestZip(t *testing.T, entries map[string]string) []byte {
 	w := zip.NewWriter(&buf)
 	for name, content := range entries {
 		fw, err := w.Create(name)
-		if err != nil {
-			t.Fatal(err)
-		}
+		testutil.NoError(t, err)
 		if _, err := fw.Write([]byte(content)); err != nil {
 			t.Fatal(err)
 		}
@@ -39,9 +37,7 @@ func TestOpenZipBytes_EntriesAndRead(t *testing.T) {
 		"textures/a.png":   "PNG",
 	})
 	r, err := OpenZipBytes(data, int64(len(data)))
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	defer r.Close()
 
 	entries := r.Entries()
@@ -149,9 +145,7 @@ func TestOpenDir_Entries(t *testing.T) {
 	testutil.CreateTestFile(t, dir, "a.json", "{}")
 	testutil.CreateTestFile(t, dir, "sub/b.json", "{}")
 	r, err := OpenDir(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	defer r.Close()
 	names := map[string]bool{}
 	for _, e := range r.Entries() {
@@ -175,9 +169,7 @@ func TestOpenZipPath_EntriesAndSize(t *testing.T) {
 		t.Fatal(err)
 	}
 	r, err := OpenZipPath(p)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	defer r.Close()
 	byName := map[string]Entry{}
 	for _, e := range r.Entries() {
@@ -195,9 +187,7 @@ func TestOpenZipPath_EntriesAndSize(t *testing.T) {
 	}
 	// 条目可读
 	rc, err := byName["a.json"].Open()
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	defer rc.Close()
 	buf := make([]byte, 4)
 	if n, _ := rc.Read(buf); n != 4 || string(buf) != "AAAA" {
@@ -223,9 +213,7 @@ func TestOpenDir_NestedDirAndRead(t *testing.T) {
 	testutil.CreateTestFile(t, dir, "root.txt", "ROOT")
 	testutil.CreateTestFile(t, dir, "sub/nested.txt", "NESTED")
 	r, err := OpenDir(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	defer r.Close()
 	byName := map[string]Entry{}
 	var dirEntry *Entry
@@ -241,9 +229,7 @@ func TestOpenDir_NestedDirAndRead(t *testing.T) {
 	}
 	// 文件条目可读取内容
 	rc, err := byName["sub/nested.txt"].Open()
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	defer rc.Close()
 	buf := make([]byte, 16)
 	n, _ := rc.Read(buf)
@@ -344,9 +330,7 @@ func TestFindEntry(t *testing.T) {
 		"models/x.json":        "J",
 	})
 	r, err := OpenZipBytes(data, int64(len(data)))
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	defer r.Close()
 
 	if e, ok := FindEntry(r, "avatar/a.png"); !ok {
@@ -372,9 +356,7 @@ func TestFindEntry(t *testing.T) {
 func TestFindEntry_SkipsDirEntry(t *testing.T) {
 	data := makeTestZip(t, map[string]string{"dir/inner.txt": "I"})
 	r, err := OpenZipBytes(data, int64(len(data)))
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	defer r.Close()
 	e, ok := FindEntry(r, "inner.txt")
 	if !ok || e.IsDir() {

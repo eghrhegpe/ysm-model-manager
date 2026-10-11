@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // 复用 geometry 包已有的 7z 测试夹具（7z_full.7z 含完整模型结构）。
@@ -126,9 +127,7 @@ func TestSevenzipEntry_Methods(t *testing.T) {
 	}
 
 	r, err := Open7zPath(p)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	defer r.Close()
 
 	for _, e := range r.Entries() {

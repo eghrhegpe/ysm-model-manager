@@ -14,6 +14,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 
 	"ysm-model-manager/go/container"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 func TestReadFileFromContainer_NoMatch(t *testing.T) {
@@ -25,9 +26,7 @@ func TestReadFileFromContainer_NoMatch(t *testing.T) {
 		t.Fatal(err)
 	}
 	r, err := container.OpenZipBytes(buf.Bytes(), int64(buf.Len()))
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	defer r.Close()
 	if got := ReadFileFromContainer(r, "target.png"); got != nil {
 		t.Fatalf("目标不存在应 nil: %q", got)
@@ -39,9 +38,7 @@ func TestReadFileFromContainer_NoMatch(t *testing.T) {
 	_, _ = f2.Write([]byte("PNG"))
 	_ = w2.Close()
 	r2, err := container.OpenZipBytes(buf.Bytes(), int64(buf.Len()))
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	defer r2.Close()
 	if got := ReadFileFromContainer(r2, "avatars/a.png"); string(got) != "PNG" {
 		t.Fatalf("反斜杠路径应归一化匹配: %q", string(got))
@@ -191,9 +188,7 @@ func TestReadFileFromContainer_DirPrefix(t *testing.T) {
 	// 目标以 / 结尾（目录级）→ 根下该目录前缀匹配
 	data := makeZip(t, map[string]string{"avatar/face.png": "face-data"})
 	r, err := container.OpenZipBytes(data, int64(len(data)))
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	defer r.Close()
 	if got := ReadFileFromContainer(r, "avatar/"); string(got) != "face-data" {
 		t.Fatalf("目录级目标应命中 avatar/face.png, 得到 %q", string(got))
@@ -204,9 +199,7 @@ func TestReadFileFromContainer_ExactPathOnly(t *testing.T) {
 	// 带路径目标仅精确匹配：sub/avatar/face.png 不得命中 avatar/face.png（P3-3 收紧点）
 	data := makeZip(t, map[string]string{"sub/avatar/face.png": "x"})
 	r, err := container.OpenZipBytes(data, int64(len(data)))
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	defer r.Close()
 	if got := ReadFileFromContainer(r, "avatar/face.png"); got != nil {
 		t.Fatalf("sub/ 下同名条目不应命中精确路径目标, 得到 %q", string(got))
@@ -222,9 +215,7 @@ func TestReadFileFromContainer_EntryOpenFail(t *testing.T) {
 	w := zip.NewWriter(&buf)
 	h := &zip.FileHeader{Name: "avatar/x.png", Method: 99}
 	f, err := w.CreateHeader(h)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if _, err := f.Write([]byte("hello")); err != nil {
 		t.Fatal(err)
 	}
@@ -232,9 +223,7 @@ func TestReadFileFromContainer_EntryOpenFail(t *testing.T) {
 		t.Fatal(err)
 	}
 	r, err := container.OpenZipBytes(buf.Bytes(), int64(buf.Len()))
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	defer r.Close()
 	if got := ReadFileFromContainer(r, "avatar/x.png"); got != nil {
 		t.Fatalf("算法不支持条目应返回 nil, 得到 %q", string(got))
@@ -247,9 +236,7 @@ func TestReadFileFromContainer_ChecksumCorrupt(t *testing.T) {
 	w := zip.NewWriter(&buf)
 	h := &zip.FileHeader{Name: "avatar/c.png", Method: zip.Store}
 	f, err := w.CreateHeader(h)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if _, err := f.Write([]byte("ABCDEFGH")); err != nil {
 		t.Fatal(err)
 	}
@@ -263,9 +250,7 @@ func TestReadFileFromContainer_ChecksumCorrupt(t *testing.T) {
 	}
 	raw[idx+2] = 'X' // 篡改内容保持长度不变，CRC 校验必然失败
 	r, err := container.OpenZipBytes(raw, int64(len(raw)))
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	defer r.Close()
 	if got := ReadFileFromContainer(r, "avatar/c.png"); got != nil {
 		t.Fatalf("CRC 损坏条目应返回 nil, 得到 %q", string(got))
@@ -276,9 +261,7 @@ func TestReadFileFromContainer_Oversize(t *testing.T) {
 	// 条目解压后超 50MB：超限跳过（防 zip-bomb 解压膨胀 OOM）
 	data := makeZip(t, map[string]string{"avatar/big.png": string(make([]byte, (50<<20)+1))})
 	r, err := container.OpenZipBytes(data, int64(len(data)))
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	defer r.Close()
 	if got := ReadFileFromContainer(r, "avatar/big.png"); got != nil {
 		t.Fatalf("超限条目应返回 nil, 得到 %d 字节", len(got))
@@ -559,9 +542,7 @@ func TestCacheAvatarsFromJSON_EdgeCases(t *testing.T) {
 	}
 	CacheAvatarsFromJSON(jsonPath)
 	cached, err := os.ReadFile(filepath.Join(cacheDir, "alice.png"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if string(cached) != "old-data" {
 		t.Fatalf("已缓存作者不应被覆盖, 得到 %q", string(cached))
 	}
@@ -642,9 +623,7 @@ func TestCacheAvatarsFromModel_ZipAlreadyCached(t *testing.T) {
 	}
 	CacheAvatarsFromModel(zipPath)
 	cached, err := os.ReadFile(filepath.Join(cacheDir, "用户A.png"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if string(cached) != "old-data" {
 		t.Fatalf("已缓存作者不应重复提取覆盖, 得到 %q", string(cached))
 	}
@@ -664,9 +643,7 @@ func TestReadContainerAuthors(t *testing.T) {
 		"ysm.json": `{"metadata":{"authors":[{"name":"用户A"},{"name":"用户B"},{"name":""}]}}`,
 	})
 	r, err := container.OpenZipBytes(data, int64(len(data)))
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	defer r.Close()
 	authors := readContainerAuthors(r)
 	if len(authors) != 3 || authors[0].Name != "用户A" || authors[1].Name != "用户B" || authors[2].Name != "" {
@@ -676,9 +653,7 @@ func TestReadContainerAuthors(t *testing.T) {
 	// 无 ysm.json → nil
 	data2 := makeZip(t, map[string]string{"readme.txt": "x"})
 	r2, err := container.OpenZipBytes(data2, int64(len(data2)))
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	defer r2.Close()
 	if got := readContainerAuthors(r2); got != nil {
 		t.Errorf("无 ysm.json 应返回 nil, 得到 %v", got)
@@ -687,9 +662,7 @@ func TestReadContainerAuthors(t *testing.T) {
 	// 坏 JSON → nil
 	data3 := makeZip(t, map[string]string{"ysm.json": "not-json"})
 	r3, err := container.OpenZipBytes(data3, int64(len(data3)))
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	defer r3.Close()
 	if got := readContainerAuthors(r3); got != nil {
 		t.Errorf("坏 JSON 应返回 nil, 得到 %v", got)
@@ -727,9 +700,7 @@ func makeZip(t *testing.T, entries map[string]string) []byte {
 	w := zip.NewWriter(&buf)
 	for name, data := range entries {
 		f, err := w.Create(name)
-		if err != nil {
-			t.Fatal(err)
-		}
+		testutil.NoError(t, err)
 		if _, err := f.Write([]byte(data)); err != nil {
 			t.Fatal(err)
 		}

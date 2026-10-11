@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/container"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 func TestSafeName(t *testing.T) {
@@ -74,9 +75,7 @@ func TestReadFileFromContainer(t *testing.T) {
 	w.Close()
 
 	r, err := container.OpenZipBytes(buf.Bytes(), int64(buf.Len()))
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	defer r.Close()
 	data := ReadFileFromContainer(r, "test.png")
 	if data == nil {

@@ -24,16 +24,12 @@ func TestCountDuplicates_RecycleSkipToggle(t *testing.T) {
 	testutil.CreateTestFile(t, recycleDir, "r2.txt", "dup")
 
 	g, e, err := CountDuplicates(dir, true)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if g != 0 || e != 0 {
 		t.Fatalf("skipRecycle=true 应排除回收站重复: groups=%d extra=%d, want 0/0", g, e)
 	}
 	g2, e2, err := CountDuplicates(dir, false)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if g2 != 1 || e2 != 2 {
 		t.Fatalf("skipRecycle=false 应计入回收站重复: groups=%d extra=%d, want 1/2", g2, e2)
 	}
@@ -46,9 +42,7 @@ func TestCountDuplicates_EmptyFilesSkipped(t *testing.T) {
 	testutil.CreateTestFile(t, dir, "e2.txt", "")
 
 	g, e, err := CountDuplicates(dir, true)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if g != 0 || e != 0 {
 		t.Fatalf("空文件应全部跳过: groups=%d extra=%d, want 0/0", g, e)
 	}
@@ -78,9 +72,7 @@ func TestCountDuplicates_SymlinkChildSkipped(t *testing.T) {
 		t.Skipf("os.Symlink 不可用（需权限）: %v", err)
 	}
 	g, e, err := CountDuplicates(dir, true)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	// a.txt 与 b.txt 真实重复 → 1 组 1 多余；c.txt 符号链接被跳过
 	if g != 1 || e != 1 {
 		t.Fatalf("符号链接子项应被跳过: groups=%d extra=%d, want 1/1", g, e)
@@ -130,9 +122,7 @@ func TestFindDuplicateFiles_SymlinkChildSkipped(t *testing.T) {
 		t.Skipf("os.Symlink 不可用（需权限）: %v", err)
 	}
 	groups, err := FindDuplicateFiles(dir, true)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if len(groups) != 1 {
 		t.Fatalf("符号链接子项应被跳过: 期望 1 组（a/b 真实重复）, got %d", len(groups))
 	}
@@ -144,9 +134,7 @@ func TestFindDuplicateFiles_EmptyFilesSkipped(t *testing.T) {
 	testutil.CreateTestFile(t, dir, "e1.txt", "")
 	testutil.CreateTestFile(t, dir, "e2.txt", "")
 	groups, err := FindDuplicateFiles(dir, true)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if len(groups) != 0 {
 		t.Fatalf("空文件应全部跳过, got %d 组", len(groups))
 	}

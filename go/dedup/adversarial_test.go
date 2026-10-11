@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"testing"
 	"time"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // Bug 1 (HIGH): filepath.WalkDir follows symlinked subdirectories.
@@ -22,9 +23,7 @@ func TestAdversarial_SymlinkSubdirEscape(t *testing.T) {
 
 	// 1) Create a "secret" directory OUTSIDE the scan root
 	secretDir, err := os.MkdirTemp("", "secret")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	defer os.RemoveAll(secretDir)
 
 	secretFile := filepath.Join(secretDir, "secret.txt")
@@ -34,9 +33,7 @@ func TestAdversarial_SymlinkSubdirEscape(t *testing.T) {
 
 	// 2) Create the scan root
 	scanDir, err := os.MkdirTemp("", "scan")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	defer os.RemoveAll(scanDir)
 
 	// 3) Create a symlink inside scanDir -> secretDir
@@ -83,9 +80,7 @@ func TestAdversarial_RelativePathTraversal(t *testing.T) {
 // 行为跨平台一致，不再需要平台分支。
 func TestAdversarial_NULByteInPath(t *testing.T) {
 	validDir, err := os.MkdirTemp("", "nul-test")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	defer os.RemoveAll(validDir)
 
 	// Inject NUL byte after the valid prefix
@@ -100,9 +95,7 @@ func TestAdversarial_NULByteInPath(t *testing.T) {
 // Not a bug — measures how long FindDuplicateFiles takes with many duplicate files.
 func TestAdversarial_MassiveDirectoryPerformance(t *testing.T) {
 	dir, err := os.MkdirTemp("", "perf")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	defer os.RemoveAll(dir)
 
 	const numFiles = 100
@@ -129,9 +122,7 @@ func TestAdversarial_MassiveDirectoryPerformance(t *testing.T) {
 // Non-empty files are hashed as expected.
 func TestAdversarial_EmptyFileSkip(t *testing.T) {
 	dir, err := os.MkdirTemp("", "empty-skip")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	defer os.RemoveAll(dir)
 
 	// Create an empty file

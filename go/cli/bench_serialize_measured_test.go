@@ -12,6 +12,7 @@ import (
 	"strings"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -39,9 +40,7 @@ func TestSingleModelBench_SerializedPayloadMeasured(t *testing.T) {
 	// benchFakeApp.AnalyzeBedrockModel 返回固定模型 → 期望字节数可精确复算
 	// （与替身逐字对齐：Bones 物化是替身的契约，见 bench_concurrent_test.go 该桩注释）
 	want, err := json.Marshal(types.BedrockModel{BoneCount: 1, Bones: []types.Bone2D{{}}})
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if serial.Bytes != int64(len(want)) {
 		t.Errorf("⑥ 字节数应为实测序列化长度 %d, got %d（估算会随 4/3 假设漂移）", len(want), serial.Bytes)
 	}

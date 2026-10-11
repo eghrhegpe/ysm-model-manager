@@ -47,9 +47,7 @@ func buildParallelFixture(t *testing.T) string {
 func TestFindDuplicateFiles_ParallelLarge(t *testing.T) {
 	dir := buildParallelFixture(t)
 	groups, err := FindDuplicateFiles(dir, true)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if len(groups) != 3 {
 		t.Fatalf("期望 3 组重复，got %d", len(groups))
 	}
@@ -73,13 +71,9 @@ func TestFindDuplicateFiles_ParallelLarge(t *testing.T) {
 func TestCountDuplicates_ParallelConsistency(t *testing.T) {
 	dir := buildParallelFixture(t)
 	groups, err := FindDuplicateFiles(dir, true)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	gCount, extra, err := CountDuplicates(dir, true)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if gCount != len(groups) {
 		t.Fatalf("CountDuplicates 组数=%d 应等于 FindDuplicateFiles 组数=%d", gCount, len(groups))
 	}
@@ -110,9 +104,7 @@ func TestFindDuplicateFiles_ReadFailureSkipped(t *testing.T) {
 	}
 
 	groups, err := FindDuplicateFiles(dir, true)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if len(groups) != 1 {
 		t.Fatalf("期望 1 组（a/b 成组，c 读失败跳过），got %d", len(groups))
 	}
@@ -126,9 +118,7 @@ func TestFindDuplicateFiles_ReadFailureSkipped(t *testing.T) {
 	}
 	// 并行管道不留幽灵槽：CountDuplicates 同样跳过读失败文件
 	gCount, extra, err := CountDuplicates(dir, true)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if gCount != 1 || extra != 1 {
 		t.Fatalf("CountDuplicates 应 1 组 1 多余（c 跳过），got groups=%d extra=%d", gCount, extra)
 	}
@@ -155,9 +145,7 @@ func TestHashFilesParallel_UniqueSizeSkipsHash(t *testing.T) {
 	}
 
 	groups, err := FindDuplicateFiles(dir, true)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if _, ok := called[filepath.Join(dir, "b.txt")]; ok {
 		t.Fatal("唯一尺寸文件不应被哈希（size 预分组）")
 	}
@@ -172,9 +160,7 @@ func TestHashFilesParallel_UniqueSizeSkipsHash(t *testing.T) {
 	}
 	// CountDuplicates 同样跳过唯一尺寸（共享管道，P1 一致性）
 	_, _, err = CountDuplicates(dir, true)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if _, ok := called[filepath.Join(dir, "b.txt")]; ok {
 		t.Fatal("CountDuplicates 也不应哈希唯一尺寸文件")
 	}
@@ -191,9 +177,7 @@ func TestFindDuplicateFiles_SizeGrouping_Mixed(t *testing.T) {
 	testutil.CreateTestFile(t, dir, "uniq2.txt", "unique-content-number-x")
 
 	groups, err := FindDuplicateFiles(dir, true)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if len(groups) != 1 {
 		t.Fatalf("应 1 组重复，got %d", len(groups))
 	}
@@ -212,9 +196,7 @@ func TestFindDuplicateFiles_SizeGrouping_Mixed(t *testing.T) {
 func serialReference(t *testing.T, dir string) []Group {
 	t.Helper()
 	files, err := collectFiles(context.Background(), dir, true)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	algo := &DeepHash{}
 	byHash := map[string]*Group{}
 	var order []string
@@ -249,9 +231,7 @@ func TestParallelEqualsSerial_Golden(t *testing.T) {
 	testutil.CreateTestFile(t, dir, "solo.txt", "a-very-unique-size-content")
 
 	parallel, err := FindDuplicateFiles(dir, true)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	serial := serialReference(t, dir)
 
 	if len(parallel) != len(serial) {

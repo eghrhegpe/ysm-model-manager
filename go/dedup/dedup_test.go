@@ -15,9 +15,7 @@ func TestFindDuplicateFiles_NoDupes(t *testing.T) {
 	testutil.CreateTestFile(t, dir, "c.txt", "gamma")
 
 	groups, err := FindDuplicateFiles(dir, true)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if len(groups) != 0 {
 		t.Errorf("期望 0 组重复，得到 %d 组", len(groups))
 	}
@@ -30,9 +28,7 @@ func TestFindDuplicateFiles_WithDupes(t *testing.T) {
 	testutil.CreateTestFile(t, dir, "c.txt", "different")
 
 	groups, err := FindDuplicateFiles(dir, true)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if len(groups) != 1 {
 		t.Fatalf("期望 1 组重复，得到 %d 组", len(groups))
 	}
@@ -49,9 +45,7 @@ func TestFindDuplicateFiles_MultipleGroups(t *testing.T) {
 	testutil.CreateTestFile(t, dir, "d.txt", "content B")
 
 	groups, err := FindDuplicateFiles(dir, true)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if len(groups) != 2 {
 		t.Fatalf("期望 2 组重复，得到 %d 组", len(groups))
 	}
@@ -66,9 +60,7 @@ func TestFindDuplicateFiles_SkipRecycle(t *testing.T) {
 
 	// skipRecycle = true
 	groups, err := FindDuplicateFiles(dir, true)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	// 只有 keep.txt 一个文件，没有重复
 	if len(groups) != 0 {
 		t.Errorf("skipRecycle=true 时不应检测回收站内的重复，得到 %d 组", len(groups))
@@ -76,9 +68,7 @@ func TestFindDuplicateFiles_SkipRecycle(t *testing.T) {
 
 	// skipRecycle = false
 	groups2, err := FindDuplicateFiles(dir, false)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if len(groups2) != 1 {
 		t.Errorf("skipRecycle=false 时应检测到回收站内的重复，得到 %d 组", len(groups2))
 	}
@@ -92,9 +82,7 @@ func TestCountDuplicates(t *testing.T) {
 	testutil.CreateTestFile(t, dir, "d.txt", "unique")
 
 	groups, extra, err := CountDuplicates(dir, true)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if groups != 1 {
 		t.Errorf("期望 1 组重复，得到 %d", groups)
 	}
@@ -106,9 +94,7 @@ func TestCountDuplicates(t *testing.T) {
 func TestFindDuplicateFiles_EmptyDir(t *testing.T) {
 	dir := t.TempDir()
 	groups, err := FindDuplicateFiles(dir, true)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if len(groups) != 0 {
 		t.Errorf("空目录应返回 0 组，得到 %d", len(groups))
 	}
@@ -120,9 +106,7 @@ func TestFindDuplicateFiles_SortedOutput(t *testing.T) {
 	testutil.CreateTestFile(t, dir, "a.txt", "same")
 
 	groups, err := FindDuplicateFiles(dir, true)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if len(groups) != 1 {
 		t.Fatalf("期望 1 组重复，得到 %d 组", len(groups))
 	}

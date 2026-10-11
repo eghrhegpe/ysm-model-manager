@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -77,9 +78,7 @@ func TestNewHashAlgorithm_FrontendTokens(t *testing.T) {
 
 func TestDeepHash_ComputeHash(t *testing.T) {
 	dir, err := os.MkdirTemp("", "deep-hash-test-*")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	defer os.RemoveAll(dir)
 
 	path := filepath.Join(dir, "test.txt")
@@ -89,9 +88,7 @@ func TestDeepHash_ComputeHash(t *testing.T) {
 
 	dh := &DeepHash{}
 	hash1, err := dh.ComputeHash(path)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if hash1 == "" {
 		t.Error("哈希不应为空")
 	}
@@ -102,9 +99,7 @@ func TestDeepHash_ComputeHash(t *testing.T) {
 		t.Fatal(err)
 	}
 	hash2, err := dh.ComputeHash(path2)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if hash1 != hash2 {
 		t.Error("相同内容应产生相同哈希")
 	}
@@ -115,9 +110,7 @@ func TestDeepHash_ComputeHash(t *testing.T) {
 		t.Fatal(err)
 	}
 	hash3, err := dh.ComputeHash(path3)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if hash1 == hash3 {
 		t.Error("不同内容应产生不同哈希")
 	}
@@ -125,9 +118,7 @@ func TestDeepHash_ComputeHash(t *testing.T) {
 
 func TestQuickHash_ComputeHash(t *testing.T) {
 	dir, err := os.MkdirTemp("", "quick-hash-test-*")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	defer os.RemoveAll(dir)
 
 	path := filepath.Join(dir, "test.txt")
@@ -137,9 +128,7 @@ func TestQuickHash_ComputeHash(t *testing.T) {
 
 	qh := &QuickHash{}
 	hash, err := qh.ComputeHash(path)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if hash == "" {
 		t.Error("哈希不应为空")
 	}
@@ -147,9 +136,7 @@ func TestQuickHash_ComputeHash(t *testing.T) {
 
 func TestNameSizeHash_ComputeHash(t *testing.T) {
 	dir, err := os.MkdirTemp("", "name-size-hash-test-*")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	defer os.RemoveAll(dir)
 
 	path := filepath.Join(dir, "test.txt")
@@ -160,9 +147,7 @@ func TestNameSizeHash_ComputeHash(t *testing.T) {
 
 	nsh := &NameSizeHash{}
 	hash, err := nsh.ComputeHash(path)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if hash == "" {
 		t.Error("哈希不应为空")
 	}
@@ -220,9 +205,7 @@ func TestHashAlgorithm_FileNotFound(t *testing.T) {
 
 func TestFindDuplicateFiles_WithConfig(t *testing.T) {
 	dir, err := os.MkdirTemp("", "dedup-config-test-*")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	defer os.RemoveAll(dir)
 
 	// 创建重复文件
@@ -233,9 +216,7 @@ func TestFindDuplicateFiles_WithConfig(t *testing.T) {
 	// 使用默认配置（DeepHash）找重复
 	cfg := &types.DedupConfig{Strategy: "deep_hash"}
 	groups, err := FindDuplicateFiles(dir, false, cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if len(groups) != 1 {
 		t.Errorf("期望 1 组重复，实际 %d", len(groups))
 	}
@@ -246,9 +227,7 @@ func TestFindDuplicateFiles_WithConfig(t *testing.T) {
 	// 使用 QuickHash 也应找到相同重复
 	cfg2 := &types.DedupConfig{Strategy: "quick_hash"}
 	groups2, err := FindDuplicateFiles(dir, false, cfg2)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if len(groups2) != 1 {
 		t.Errorf("QuickHash 期望 1 组重复，实际 %d", len(groups2))
 	}
@@ -256,9 +235,7 @@ func TestFindDuplicateFiles_WithConfig(t *testing.T) {
 
 func TestFindDuplicateFiles_DefaultConfig(t *testing.T) {
 	dir, err := os.MkdirTemp("", "dedup-default-test-*")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	defer os.RemoveAll(dir)
 
 	writeTestFile(t, dir, "a.txt", "same")
@@ -266,9 +243,7 @@ func TestFindDuplicateFiles_DefaultConfig(t *testing.T) {
 
 	// 不传配置，应使用默认 DeepHash
 	groups, err := FindDuplicateFiles(dir, false)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if len(groups) != 1 {
 		t.Errorf("默认配置期望 1 组重复，实际 %d", len(groups))
 	}
@@ -276,9 +251,7 @@ func TestFindDuplicateFiles_DefaultConfig(t *testing.T) {
 
 func TestFindDuplicateFiles_NameSizeStrategy(t *testing.T) {
 	dir, err := os.MkdirTemp("", "dedup-namesize-test-*")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	defer os.RemoveAll(dir)
 
 	// 不同文件名但相同大小 → NameSizeHash 策略下不会被判定为重复
@@ -287,9 +260,7 @@ func TestFindDuplicateFiles_NameSizeStrategy(t *testing.T) {
 
 	cfg := &types.DedupConfig{Strategy: "name_size"}
 	groups, err := FindDuplicateFiles(dir, false, cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	// NameSizeHash 基于文件名+大小，不同文件名不会被判定为重复
 	if len(groups) != 0 {
 		t.Fatalf("NameSizeHash: 不同文件名+相同大小期望 0 组重复，实际 %d 组（内容相同不影响 name_size 策略）", len(groups))
@@ -305,9 +276,7 @@ func TestFindDuplicateFiles_NameSizeStrategy(t *testing.T) {
 	writeTestFile(t, dir2, "y.txt", "test content")
 
 	groups2, err := FindDuplicateFiles(dir2, false, cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	// NameSizeHash: x.txt_test content vs y.txt_test content → 不同 hash（文件名不同）
 	if len(groups2) != 0 {
 		t.Fatalf("NameSizeHash: 不同文件名相同内容期望 0 组，实际 %d 组（name_size 基于文件名+大小，不同名应不同 hash）", len(groups2))
@@ -316,9 +285,7 @@ func TestFindDuplicateFiles_NameSizeStrategy(t *testing.T) {
 
 func TestCountDuplicates_WithConfig(t *testing.T) {
 	dir, err := os.MkdirTemp("", "count-config-test-*")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	defer os.RemoveAll(dir)
 
 	writeTestFile(t, dir, "a.txt", "dup content")
@@ -327,9 +294,7 @@ func TestCountDuplicates_WithConfig(t *testing.T) {
 
 	cfg := &types.DedupConfig{Strategy: "deep_hash"}
 	groups, extra, err := CountDuplicates(dir, false, cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if groups != 1 {
 		t.Errorf("期望 1 组，实际 %d", groups)
 	}

@@ -1549,9 +1549,7 @@ func TestCompareSingleBenchBaseline(t *testing.T) {
 		{Name: "② JSON 解析", Ms: 100},
 	}
 	data, err := json.Marshal(base)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	baseFile := filepath.Join(dir, "baseline.json")
 	if err := os.WriteFile(baseFile, data, 0o644); err != nil {
 		t.Fatal(err)
@@ -1591,9 +1589,7 @@ func TestCompareSingleBenchBaseline_NoiseFloor(t *testing.T) {
 	// 历史基准 0.001ms（近零）→ 真实场景中第二次计时抖动即会 >50%
 	base := []benchStageMs{{Name: "① 文件读取", Ms: 0.001}}
 	data, err := json.Marshal(base)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	baseFile := filepath.Join(dir, "baseline.json")
 	if err := os.WriteFile(baseFile, data, 0o644); err != nil {
 		t.Fatal(err)
@@ -1618,9 +1614,7 @@ func TestSaveBenchBaseline_RoundTrip(t *testing.T) {
 		t.Fatalf("保存失败: %v", err)
 	}
 	data, err := os.ReadFile(p)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	var got []benchStageMs
 	if err := json.Unmarshal(data, &got); err != nil {
 		t.Fatalf("roundtrip 解析失败: %v", err)

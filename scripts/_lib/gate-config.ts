@@ -176,6 +176,11 @@ export const ALL_STATIC_TOOLS: GateTool[] = [
   // 必须有生产消费」）。实测全仓 ~300ms，当前 0 命中（收口后健康）——纯防御，未来加键忘接
   // 消费方即报告。debt 档：当前零违规不阻断，防复发为主。
   { tool: "check-env-schema-consumers.ts", blockPolicy: "debt", debt: debt("幽灵键守卫：当前 0 命中（纯防御），未来新增 schema 键忘接消费方即报告") },
+  // check-scene-slot-writers：scene.environment/background 槽位写者白名单闸（ADR-292 D1
+  // 「写者唯一」回归红线的机器锁，锐评 2026-10-11 P1-① 补齐——此前红线零闸，仅散文+行为测试）。
+  // 确定性规则（子串 + `=[^=]` 判定 + 注释行剔除），零存量债（白名单 = 现存全部合法写者）：
+  // 新 cap/管线在白名单外写槽位即阻断，扩白名单须先经锐评/ADR 拍板（WHITELIST 段即拍板记录）。
+  { tool: "check-scene-slot-writers.ts", blockPolicy: "hard" },
 ];
 
 /**

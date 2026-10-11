@@ -165,6 +165,20 @@ describe("GroundCapability — 表面材质层（spec 单源）", () => {
     expect(mat2.map).not.toBe(map0);
   });
 
+  it("[P0-①] getOwnedMaterials 返回当前表面材质（属主集合随重建换新引用）", () => {
+    const scene = new THREE.Scene();
+    const cap = new GroundCapability({ scene });
+    cap.apply();
+    const owned = cap.getOwnedMaterials();
+    expect(owned).toHaveLength(1);
+    // structural 变化 → rebuildSurface 换新材质实例 → 属主集合必须跟随新引用
+    // （env 侧 applyEnvIntensity 的排除集按引用现读，旧实例重建后即刻失效）
+    cap.setSourceKind("none");
+    const owned2 = cap.getOwnedMaterials();
+    expect(owned2).toHaveLength(1);
+    expect(owned2[0]).not.toBe(owned[0]);
+  });
+
   it("不透明度走原地路径且驱动 transparent/depthWrite", () => {
     const scene = new THREE.Scene();
     const cap = new GroundCapability({ scene });

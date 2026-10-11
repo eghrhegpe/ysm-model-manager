@@ -238,6 +238,20 @@ export class GroundCapability implements SceneCapability {
     if (!this.gs.mesh.parent) this.scene.add(this.gs.mesh);
   }
 
+  /**
+   * 材质属性单一属主（锐评 2026-10-11 P0-①）：表面材质 `envMapIntensity` 的键属主是本 cap
+   * 的 `groundMatEnvMapIntensity`（refreshSurface 重建/原地路径自重断值）。其他 cap 做
+   * envMapIntensity 批量应用（environment `applyEnvIntensity` 整场景 traverse）必须把本
+   * 集合排除（经 caps 查询通道取，ADR-168/216）——否则 env 组值顶掉地面键值，地面滑杆
+   * 「显示值在、生效值不在」。
+   * 只登记**有键属主**的材质：网格 GridHelper 无 envMapIntensity 属性（遍历天然跳过），
+   * 叠加层 overlayMat 无自有键（env 组全局值即其语义，与模型 mesh 同轨）。
+   * 每次调用现读 `surfaceMat` 当前引用——structural 重建会换新材质实例，属主集合随之换。
+   */
+  getOwnedMaterials(): THREE.Material[] {
+    return this.surfaceMat ? [this.surfaceMat] : [];
+  }
+
   /** 地面总显隐开关（参考网格/表面层/叠加层均跟随；水面由 water.enabled 独立控制） */
   setVisible(v: boolean, opts?: WriteOpts): void {
     setEnvState({ groundVisible: v }, writeOpts(opts));

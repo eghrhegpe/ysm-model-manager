@@ -59,17 +59,31 @@ import {
 
 export type { EnvPreset, EnvPresetId, SelectableEnvPresetId };
 
-/** 遍历 roots 设置所有 mesh 的 material.envMapIntensity（仅 Standard/Physical/Toon 支持） */
-function applyEnvIntensity(roots: THREE.Object3D[], intensity: number): void {
+/** 遍历 roots 设置所有 mesh 的 material.envMapIntensity（仅 Standard/Physical/Toon 支持）。
+ *
+ * 单一属主纪律（锐评 2026-10-11 P0-①）：`exclude` 为**别的 cap 键属主**持有的材质集合
+ * （如地面表面材质归 ground 组 `groundMatEnvMapIntensity`）——整场景 traverse 须排除，
+ * 否则 env 组值顶掉属主键值（地面滑杆「显示值在、生效值不在」的同物异主病灶）。
+ *
+ * 单一属主纪律（锐评 2026-10-11 P0-②）：改 `envMapIntensity` **不置 needsUpdate**——
+ * three r186 里它是逐帧刷新的 uniform（three.module.js refreshUniforms L15059/15075/15408），
+ * 而 `mat.needsUpdate = true` 等价 material.version++，强令该材质 shader program 重编译——
+ * 连续滑杆拖动 × 全场景逐材质 = 重编译风暴。 */
+function applyEnvIntensity(
+  roots: THREE.Object3D[],
+  intensity: number,
+  exclude?: readonly THREE.Material[],
+): void {
+  const excluded = exclude && exclude.length > 0 ? new Set(exclude) : null;
   for (const root of roots) {
     root.traverse((obj) => {
       const m = obj as THREE.Mesh;
       if (!m.isMesh || !m.material) return;
       const mats = Array.isArray(m.material) ? m.material : [m.material];
       for (const mat of mats) {
+        if (excluded?.has(mat)) continue;
         if ("envMapIntensity" in mat) {
           (mat as unknown as { envMapIntensity: number }).envMapIntensity = intensity;
-          mat.needsUpdate = true;
         }
       }
     });
@@ -195,7 +209,12 @@ export class EnvironmentCapability implements SceneCapability {
           this.ibl.build();
         }
         if (changed.has("envIntensity")) {
-          applyEnvIntensity([this.scene], envState.envIntensity);
+          // 单一属主纪律（锐评 2026-10-11 P0-①）：地面表面材质的 envMapIntensity 属 ground 组
+          // `groundMatEnvMapIntensity` 键（refreshSurface 自持重断），整场景 traverse 排除
+          // ground 属主材质（caps 查询通道，ADR-168/216）——独立预览（无组合根注入 caps）
+          // 时查询器缺席，退化为无排除的旧行为。
+          const groundOwned = getTypedCap(this.caps, "ground")?.getOwnedMaterials();
+          applyEnvIntensity([this.scene], envState.envIntensity, groundOwned);
         }
         // [ADR-293 收口 2026-10] 离散键 notify（subscribe 契约，对齐 fog/light 同款）：
         // 来源选择 / 背景开关 / 预设选择是离散控件，面板需实时刷新；连续滑块不 notify。

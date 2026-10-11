@@ -729,6 +729,25 @@ describe("EnvironmentCapability — 强度控制", () => {
     expect((multi.material as THREE.MeshStandardMaterial[])[1].envMapIntensity).toBe(2.5);
   });
 
+  it("[P0-①] 整场景下发排除 ground 属主材质（材质属性单一属主，groundMatEnvMapIntensity 键归 ground 组）", () => {
+    const scene = new THREE.Scene();
+    const modelMat = new THREE.MeshStandardMaterial();
+    const groundMat = new THREE.MeshStandardMaterial(); // MeshStandardMaterial 默认 envMapIntensity = 1
+    scene.add(new THREE.Mesh(new THREE.BoxGeometry(), modelMat));
+    scene.add(new THREE.Mesh(new THREE.PlaneGeometry(), groundMat));
+    const cap = new EnvironmentCapability({
+      scene,
+      renderer: makeFakeRenderer(),
+      caps: {
+        getById: (id: string) =>
+          id === "ground" ? { getOwnedMaterials: () => [groundMat] } : undefined,
+      } as never,
+    });
+    cap.setIntensity(2.5);
+    expect(modelMat.envMapIntensity, "模型 mesh 照常随 env 组下发").toBe(2.5);
+    expect(groundMat.envMapIntensity, "ground 属主材质不被 env 组顶掉（保留 groundMatEnvMapIntensity 自重断值）").toBe(1);
+  });
+
   it("syncMeshIntensity 对指定 roots 下发当前强度", () => {
     const std = new THREE.MeshStandardMaterial();
     const root = new THREE.Mesh(new THREE.BoxGeometry(), std);

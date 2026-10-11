@@ -40,7 +40,6 @@ auto_fields:
     - lightDirToPosition
     - lightHelperVisibleFor
     - lightTypeOf
-    - normalizeFogRange
     - normalizeShadowMapSize
     - ShadowCapability
     - ShadowType

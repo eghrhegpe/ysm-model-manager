@@ -41,7 +41,6 @@ auto_fields:
     - LightKey
     - mount3D
     - Mount3DOptions
-    - normalizeFogRange
     - normalizeShadowMapSize
     - PoseScene
     - PostprocessingCapability

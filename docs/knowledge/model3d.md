@@ -342,6 +342,7 @@ auto_fields:
     - flagsForAlpha
     - FLATTEN_MAP
     - flattenLightParams
+    - FOG_MIN_DEPTH
     - FogCapability
     - FogMode
     - FootIKController

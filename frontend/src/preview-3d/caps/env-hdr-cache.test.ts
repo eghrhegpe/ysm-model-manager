@@ -3,7 +3,7 @@
 // 此前仅经 environment-capability.test.ts 白盒探针间接覆盖。本测试把**叶层语义**双侧钉死：
 //   · loadFromFile 成功 / 失败 / 替换旧缓存三分支（判真 + 判非真）
 //   · thumbnail 双态（无缓存 null / 有缓存降采样 dataURL）
-//   · dispose 清空 + warnedMissing 读写
+//   · dispose 清空 + warnMissingOnce 首发/去重语义（P2-c 收编后宿主无写口）
 // 正当依赖隔离（非自证）：mock RGBELoader（外部依赖）、customHdrThumbnail（像素运算，env-pixels 独立单测）、
 // ringLog（重依赖）；断言目标始终是 EnvHdrCache 自身导出。
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
@@ -81,11 +81,13 @@ describe("EnvHdrCache 初始态与 getter", () => {
     expect(c.warnedMissing, "未告警").toBe(false);
   });
 
-  it("warnedMissing 可读写（buildCustomHdrTex 去重告警依赖）", () => {
+  it("[P2-c] warnMissingOnce 首发 true / 后续 false（宿主不再写容器旗标，读口保留）", () => {
     const c = makeCache();
-    expect(c.warnedMissing).toBe(false);
-    c.warnedMissing = true;
-    expect(c.warnedMissing).toBe(true);
+    expect(c.warnMissingOnce("ring-a", "console-a"), "首发告警").toBe(true);
+    expect(h.logMock).toHaveBeenCalledWith("env", "ring-a", "warn", expect.any(Function));
+    expect(c.warnMissingOnce("ring-b", "console-b"), "重复不刷屏").toBe(false);
+    expect(h.logMock, "只发一次").toHaveBeenCalledTimes(1);
+    expect(c.warnedMissing, "旗标只读可观测").toBe(true);
   });
 
   it("thumbnail 无缓存返回 null（双态之反例）", () => {
@@ -103,7 +105,7 @@ describe("EnvHdrCache 初始态与 getter", () => {
 describe("EnvHdrCache.loadFromFile 三分支（ADR-311-d1 判别样本）", () => {
   it("成功：tex 写入缓存 + 记名 + 复位告警 + 设置 mapping/colorSpace", async () => {
     const c = makeCache();
-    c.warnedMissing = true; // 成功应复位
+    c.warnMissingOnce("ring", "console"); // 置位旗标（成功应复位）
     const tex = makeFakeTex();
     const p = c.loadFromFile(makeFile("my.hdr"));
     expect(c.loading, "解码期间 loading=true").toBe(true);
@@ -233,7 +235,7 @@ describe("EnvHdrCache.dispose（清空）", () => {
     const p = c.loadFromFile(makeFile("a.hdr"));
     h.pendingLoad.onLoad?.(tex);
     await p;
-    c.warnedMissing = true;
+    c.warnMissingOnce("ring", "console"); // 置位旗标（dispose 不复位）
     const disposeSpy = vi.spyOn(tex, "dispose");
 
     c.dispose();

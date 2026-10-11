@@ -254,6 +254,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-327：自定义 HDR 路径持久化与重启恢复",
+        "link": "/adr/architecture/ADR-327-hdr"
+      },
+      {
         "text": "ADR-326：环境能力持久化键派生化：消灭手抄摘键/还原表",
         "link": "/adr/architecture/ADR-326-env-persist-schema-derived"
       },

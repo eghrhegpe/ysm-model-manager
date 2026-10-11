@@ -335,17 +335,11 @@ describe("EnvironmentCapability — buildEnvironment 管线（真实分支）", 
     expect(disposeSpy).toHaveBeenCalled();
   });
 
-  it("setResolution 在 enabled 时重建、disabled 时不动", () => {
+  it("[P1-②] 分辨率键已删：cap 无 setResolution、schema 无 envResolution（宽度收编 env-ibl 常量）", () => {
     const cap = newCap();
-    cap.apply();
-    const scene = (cap as unknown as { scene: THREE.Scene }).scene;
-    const envBefore = scene.environment;
-    cap.setResolution(512);
-    expect(scene.environment).not.toBe(envBefore); // 重建
-
-    cap.setEnabled(false);
-    cap.setResolution(256);
-    expect(scene.environment).toBeNull(); // disabled 不重建，保持还原态
+    expect((cap as unknown as Record<string, unknown>).setResolution).toBeUndefined();
+    // schema 侧键轨派生（getPresetKeys 单一事实源）——删键后键轨自动失配
+    expect(getPresetKeys("environment")).not.toContain("envResolution" as never);
   });
 
   it("envSource=custom 无缓存时 build 告警一次，且**不改写** envPreset（回落只影响渲染）", () => {
@@ -962,7 +956,6 @@ describe("EnvironmentCapability — 持久化", () => {
       envEnabled: false,
       envPreset: "night",
       envIntensity: 2.4,
-      envResolution: 512,
       envUseAsBackground: true,
       envSource: "sky",
     };
@@ -1641,7 +1634,8 @@ describe("EnvironmentCapability — ADR-292 批次三 来源选择控件", () =>
 //      判据①才能在升级用户身上继续成立——否则旧用户重启后画面突变。
 //
 // 安全性前置（已核）：env 不在 MODEL_DEFAULTS 的总开关键上（各模型只携 envPreset/envIntensity；
-// envResolution/envUseAsBackground 是死请求键，[锐评 2026-10-07] 已从 applyModelPreset 请求清单删除）
+// envUseAsBackground 是死请求键——[锐评 2026-10-07] 已从 applyModelPreset 请求清单删除；
+// envResolution 更已于 [锐评 2026-10-11 P1-②] 随半死键删除整体出 schema，本就不在请求清单）
 // → 无双轨写对手，故不需 isStateLoaded 守卫。
 describe("EnvironmentCapability — 能力级开关单门收口（shadow/reflector/sky 先例同法）", () => {
   beforeEach(() => {

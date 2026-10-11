@@ -21,8 +21,13 @@ describe("getArchiveKey / ARCHIVE_ALIAS（ADR-326 别名层）", () => {
   it("environment 方言键映射到无前缀存档键名", () => {
     expect(getArchiveKey("envPreset")).toBe("preset");
     expect(getArchiveKey("envIntensity")).toBe("intensity");
-    expect(getArchiveKey("envResolution")).toBe("resolution");
     expect(getArchiveKey("envUseAsBackground")).toBe("useAsBackground");
+  });
+
+  it("[P1-②] 已删键 envResolution 无别名（存档方言 `resolution` 成孤儿值）", () => {
+    // ENV_KEYS 派生自 schema，删键后键轨自动失配——本断言锁「别名表不残留死条目」
+    // （as string[]：已删键不在 EnvStateKey 联合内，直接 toContain 会编译期报错——这正是守卫意图）
+    expect([...ENV_KEYS] as string[]).not.toContain("envResolution");
   });
 
   it("无别名键同名（同形键不被别名表污染）", () => {
@@ -61,10 +66,10 @@ describe("saveEnvState（写侧派生）", () => {
   });
 
   it("键集与 ENV_KEYS 对称（每个 schema 键都以 getArchiveKey 落盘）", () => {
-    setEnvState(
-      { envEnabled: false, envPreset: "sunset", envSource: "custom", envResolution: 256 },
-      { source: "manual", force: true },
-    );
+    setEnvState({ envEnabled: false, envPreset: "sunset", envSource: "custom" }, {
+      source: "manual",
+      force: true,
+    });
     const saved = saveEnvState();
     for (const k of ENV_KEYS) {
       const archiveKey = getArchiveKey(k);
@@ -93,7 +98,6 @@ describe("restoreEnvPartial（读侧派生）", () => {
       envEnabled: false,
       envPreset: "night",
       envIntensity: 2.4,
-      envResolution: 512,
       envUseAsBackground: true,
       envSource: "sky",
     };
@@ -123,13 +127,18 @@ describe("restoreEnvPartial（读侧派生）", () => {
       preset: 123, // number 塞进 enum 键
       envSource: "banana", // 非法枚举
       intensity: "high", // string 塞进 number 键
-      resolution: 999999,
+      resolution: 999999, // [P1-②] 已删键 envResolution 的存档方言值（孤儿，见下条）
     });
     expect(partial.envPreset).toBeUndefined();
     expect(partial.envSource).toBeUndefined();
     expect(partial.envIntensity).toBeUndefined();
-    // 合法值仍恢复
-    expect(partial.envResolution).toBe(999999);
+  });
+
+  it("[P1-②] 已删键 envResolution 的存档方言值 `resolution` 是孤儿：读侧静默忽略（不还原、不报错）", () => {
+    const partial = restoreEnvPartial({ resolution: 256 });
+    // 键轨派生自 schema，envResolution 已删 ⇒ `resolution` 不在 ENV_KEYS，读侧不认
+    expect(partial).not.toHaveProperty("envResolution");
+    expect(Object.keys(partial)).toEqual([]);
   });
 
   it("null / 空存档 → 空 partial（与 restoreState 早退语义一致）", () => {

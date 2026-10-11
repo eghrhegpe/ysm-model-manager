@@ -103,6 +103,8 @@ describe("值域描述符（ADR-283：range / uiRange）", () => {
 // lightVolumetric{Base,Tip}Strength 原无 range，clampFieldValue 原样透传 ⇒ 脏档 NaN/
 // 物理超界值直进 three shader/RT/锥体，零报错。shadowMapSize **有意豁免**（离散档位，
 // 守卫在 shadow-capability.ts|normalizeShadowMapSize），本块锁「补了不回归 + 豁免不被误补」。
+// [锐评 2026-10-11 P1-②] envResolution 已随半死键删除（零 UI 写口/零生产调用方，
+// 宽度收编 env-ibl 常量）——本块剩 9 键，删键记录存 schema 侧化石注。
 describe("值域补钳制（锐评 2026-10-09）", () => {
   const clampedKeys = [
     "skyTimeOfDay",
@@ -111,13 +113,12 @@ describe("值域补钳制（锐评 2026-10-09）", () => {
     "skyMieCoefficient",
     "skyMieDirectionalG",
     "skyExposure",
-    "envResolution",
     "reflectorClipBias",
     "lightVolumetricBaseStrength",
     "lightVolumetricTipStrength",
   ] as const;
 
-  it("本轮 10 个原无钳制键均已声明 range（防误删）", () => {
+  it("补钳制键均仍声明 range（防误删）", () => {
     for (const k of clampedKeys) {
       const def = ENV_STATE_SCHEMA[k] as { range?: unknown };
       expect(def.range, `${k} 缺 range（锐评 2026-10-09 已补）`).toBeDefined();
@@ -133,7 +134,6 @@ describe("值域补钳制（锐评 2026-10-09）", () => {
   it("脏档 NaN 落 min、超域钳到边界（零报错洞闭合）", () => {
     expect(clampFieldValue("skyTurbidity", Number.NaN)).toBe(1);
     expect(clampFieldValue("skyExposure", Number.NaN)).toBe(0);
-    expect(clampFieldValue("envResolution", 999999)).toBe(4096);
     expect(clampFieldValue("reflectorClipBias", Number.NaN)).toBe(-0.1);
     expect(clampFieldValue("lightVolumetricTipStrength", 99)).toBe(2);
   });

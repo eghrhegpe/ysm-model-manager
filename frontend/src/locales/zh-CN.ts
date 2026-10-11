@@ -1255,7 +1255,8 @@ export const zhCN = {
   "preview.envSourceCustom": "自定义 HDR",
   "preview.envIntensity": "环境强度",
   "preview.envHistogram": "亮度直方图",
-  "preview.envHistogramHint": "亮度直方图：左暗右亮，峰位反映环境明暗",
+  "preview.envHistogramHint":
+    "亮度直方图：左暗右亮，峰位反映环境明暗。未加载自定义 HDR 且「用作背景」关闭时无数据源（全零 = 无数据，非纯黑画面）",
   "preview.envPickHdr": "自定义 HDR",
   "preview.envPickHdrBtn": "选择 HDR 文件",
   "preview.envSectionBasic": "基础",

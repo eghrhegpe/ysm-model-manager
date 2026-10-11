@@ -140,7 +140,7 @@ export class EnvironmentCapability implements SceneCapability {
   /** [ADR-293 收口 2026-10] 参数变更订阅（菜单局部刷新）：仅离散键变更 notify——
    *  与 fog/light/ground/water 同款 listenerSet，消除环境面板「订阅了不说话的 cap、
    *  却靠 applyPreset 手动 refresh 兜底」的接线不对称（锐评暗线 A）。连续滑块
-   *  （envIntensity / envResolution）恒不 notify（subscribe 契约，防指针脱靶）。 */
+   *  （envIntensity；envResolution 已随 P1-② 删键）恒不 notify（subscribe 契约，防指针脱靶）。 */
   private readonly listenerSet = createListenerSet();
   /** [R-1] 有存档恢复过 = 模型默认值让位（对齐 shadow/reflector/fog 同款守卫） */
   private isStateLoaded = false;
@@ -201,7 +201,6 @@ export class EnvironmentCapability implements SceneCapability {
         }
         const structural =
           changed.has("envPreset") ||
-          changed.has("envResolution") ||
           changed.has("envUseAsBackground") ||
           // [ADR-292 D7] 来源切换是结构性变更（换整条取图通路），必须重建
           changed.has("envSource");
@@ -398,6 +397,8 @@ export class EnvironmentCapability implements SceneCapability {
     if (this.isStateLoaded) return;
     // [锐评 2026-10-07 死键清收] envResolution / envUseAsBackground 曾是请求键，但 MODEL_DEFAULTS
     // 从不写这两键（分辨率/背景归属用户偏好，非模型类别离散值）——死键，删除请求。
+    // [锐评 2026-10-11 P1-②] envResolution 已随半死键删除整体出 schema（env-ibl 收编常量宽度），
+    // 请求清单本就无它——此注留作「删键后请求面零扰动」的实证锚。
     const picked = pickModelDefaultFields(modelType, ["envPreset", "envIntensity"]);
     if (Object.keys(picked).length > 0) setEnvState(picked, { source: "auto-model" });
   }
@@ -423,11 +424,6 @@ export class EnvironmentCapability implements SceneCapability {
 
   getIntensity(): number {
     return envState.envIntensity;
-  }
-
-  setResolution(v: number): void {
-    setEnvState({ envResolution: v }, { source: "manual" });
-    // callback → buildEnvironment（enabled 时）
   }
 
   setUseAsBackground(v: boolean): void {
@@ -531,18 +527,11 @@ export class EnvironmentCapability implements SceneCapability {
     // 若不在此处压掉，就会出现「来源显示自定义 HDR、实际渲染 studio」的两键分裂。
     // 放在读回之后 = 让「无缓存」这一运行时事实成为最终裁决者。
     if (partial.envPreset === "custom" && !this.hdr.tex) {
-      if (!this.hdr.warnedMissing) {
-        this.hdr.warnedMissing = true;
-        ringLog(
-          "env",
-          "上次设置为自定义 HDR，但 HDR 文件未持久化保存，已自动回退到「工作室」预设。请重新选择 HDR 文件。",
-          "warn",
-          () =>
-            console.warn(
-              "[EnvironmentCapability] loadState 读回 preset=custom，但 custom HDR 无法跨会话持久化，回退 studio",
-            ),
-        );
-      }
+      // [锐评 2026-10-11 P2-c] 告警去重由容器 read-once/write-once 承担（宿主不再手写旗标）
+      this.hdr.warnMissingOnce(
+        "上次设置为自定义 HDR，但 HDR 文件未持久化保存，已自动回退到「工作室」预设。请重新选择 HDR 文件。",
+        "[EnvironmentCapability] loadState 读回 preset=custom，但 custom HDR 无法跨会话持久化，回退 studio",
+      );
       partial.envPreset = "studio";
       partial.envSource = "preset";
     }

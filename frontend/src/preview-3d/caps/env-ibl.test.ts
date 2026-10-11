@@ -219,6 +219,46 @@ describe("envSource=sky 取图失败回落预设（ADR-311-d1 判别样本：不
   });
 });
 
+describe("EnvIbl.build 重入 pending（锐评 2026-10-11 P2-a：取图窗口同步派发不再静默丢更）", () => {
+  it("sky 取图内同步翻转 envSource → pending 尾随 build 收敛到 preset（非丢更）", () => {
+    const skyTex = new THREE.Texture();
+    let baked = false;
+    const scene = new THREE.Scene();
+    const hdr = new EnvHdrCache();
+    const ibl = new EnvIbl({ scene, renderer: new THREE.WebGLRenderer(), hdr });
+    // 模拟 sky 烘焙取图内同步派发（昼夜循环 skyForceEnv 脉冲 / auto-atmosphere 中间件并入 env 组键）：
+    // 翻转 envSource 至 preset，并再入一次 ibl.build（= cap 回调被 isBuilding 短路的那次）
+    h.getTypedCapMock.mockReturnValue({
+      bakeEnvironmentTexture: () => {
+        if (!baked) {
+          baked = true;
+          setEnvState({ envSource: "preset" }, { source: "manual", force: true });
+          ibl.build();
+        }
+        return skyTex;
+      },
+    });
+    setEnvState({ envEnabled: true, envSource: "sky" }, { source: "manual", force: true });
+
+    ibl.build();
+
+    expect(scene.environment, "pending 结构性请求须由尾随 build 补齐（旧早退 = 静默丢更）").not.toBe(skyTex);
+    expect(scene.environment).not.toBeNull();
+    expect((scene.environment as THREE.Texture).mapping).toBe(THREE.CubeUVReflectionMapping);
+  });
+
+  it("无重入时 pending 不触发多余尾随（收敛，非自激环）", () => {
+    const skyTex = new THREE.Texture();
+    h.getTypedCapMock.mockReturnValue(makeSkyCap({ tex: skyTex }));
+    const { ibl, scene } = makeHost();
+    setEnvState({ envEnabled: true, envSource: "sky" }, { source: "manual", force: true });
+    ibl.build();
+    // 无 pending：同引用短路后不应再有尾随 build（PMREM 调用次数为唯一可观察代理）
+    expect(h.pmremCalls).toBe(0);
+    expect(scene.environment).toBe(skyTex);
+  });
+});
+
 describe("PMREM 生成失败回滚（ADR-311-d1 判别样本：失败不悬空）", () => {
   // ⚠️ 变异实证（2026-10-09 主模型亲自变异）：仅移除 pmremToSceneEnv catch 里的
   // `scene.environment = this.prevEnvironment`，本用例**仍绿**——因 `fromEquirectangular`
@@ -264,5 +304,12 @@ describe("EnvIbl.dispose 两槽位还原 + 释放", () => {
     const { ibl } = makeHost();
     expect(ibl.getLuminanceHistogram()).toHaveLength(16);
     expect(h.lumMock).toHaveBeenCalled();
+  });
+
+  it("[P2-b] 直方图同数据源 memo：二次调用命中不重算像素运算", () => {
+    const { ibl } = makeHost();
+    ibl.getLuminanceHistogram();
+    ibl.getLuminanceHistogram();
+    expect(h.lumMock, "同引用对（双 null）命中 memo，不重复像素运算").toHaveBeenCalledTimes(1);
   });
 });

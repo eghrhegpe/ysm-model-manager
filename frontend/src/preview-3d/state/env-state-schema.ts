@@ -464,15 +464,15 @@ export const ENV_STATE_SCHEMA = {
     uiRange: { min: 0, max: 3, step: 0.05 },
   },
   envUseAsBackground: { type: "boolean", default: false, group: "environment" },
-  // [锐评 2026-10-09] envResolution 无 UI 直写出口（唯一消费者 env-ibl.ts 作 PMREM RT 宽度）。
-  //  原无 range ⇒ 脏档 999999 直进 PMREM RT 尺寸。语义为 **2 的幂档位**，完整枚举收编另议
-  //  （本批先补区间防超域/NaN，档位化不改 schema 类型）。域含默认 1024 与既有合法写入。
-  envResolution: {
-    type: "number",
-    default: 1024,
-    group: "environment",
-    range: { min: 256, max: 4096, step: 256 },
-  },
+  // [锐评 2026-10-11 P1-② 删键] `envResolution` 是**半死键**：零 UI 写口（菜单/设置面板均无控件）、
+  // 零生产调用方（`setResolution` 仅测试调用），却持续消耗治理预算（ARCHIVE_ALIAS 存档方言
+  // `resolution` + ADR-283 钳制 + P1-5 round-trip 锁 + 2026-10-09 补 range）——三件治理资产
+  // 挂在一枚用户摸不到的键上。删：预设 equirect 宽度收编 `env-ibl.ts|ENV_PRESET_TEX_WIDTH`
+  // 常量（1024 = 原默认，「512 足够」经验保留于该常量注）。跨代微损（可接受）：旧档
+  // `resolution` 方言值成**孤儿**——`restoreEnvPartial` 自 schema 派生键轨，已删键自动失配
+  // 跳过，非默认存档值静默回落 1024（零报错，方向与 ADR-283 脏档钳制一致）。
+  // 若未来要画质/性能档位，随 S11 拖动相位门控滑杆**整体加回**（勿只加裸键——
+  // 无 UI 出口的键正是本键被删的病根）。
   // [ADR-292 D5] 环境贴图数据源——scene.environment 唯一槽位的「谁在供图」单一事实源。
   // 三者互斥：preset（程序化 Canvas 预设）/ sky（跟随天空，向 SkyCapability 取烘焙图）/
   // custom（用户加载的 HDR 文件）。旧存档迁移见 caps/environment-migrations.ts。
@@ -981,14 +981,15 @@ export function getPresetKeys(group: string): EnvStateKey[] {
  *
  * 单一事实源：派生自 schema，取代 `saveState` 手摘键 + `loadState` 手写还原表的
  * 双轨手抄（漏登记即「自动持久化、静默不还原」）。
- * 当前唯一消费者 = `environment` 组（preset/intensity/resolution/useAsBackground
+ * 当前唯一消费者 = `environment` 组（preset/intensity/useAsBackground
  * 沿用无前缀历史方言，有跨代读者——迁移模块与 loadState 旧档分支，故不改名，
- * 只在此显式登记别名，ADR-326）。
+ * 只在此显式登记别名，ADR-326）。`resolution` 方言随 `envResolution` 删键
+ * （锐评 2026-10-11 P1-②）成孤儿值：restoreEnvPartial 键轨派生自 schema，
+ * 已删键自动失配跳过（旧档非默认值静默回落预设宽度常量，零报错）。
  */
 export const ARCHIVE_ALIAS: Readonly<Partial<Record<EnvStateKey, string>>> = {
   envPreset: "preset",
   envIntensity: "intensity",
-  envResolution: "resolution",
   envUseAsBackground: "useAsBackground",
 } as const satisfies Partial<Record<EnvStateKey, string>>;
 

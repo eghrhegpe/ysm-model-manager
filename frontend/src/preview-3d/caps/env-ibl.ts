@@ -26,6 +26,13 @@ export interface EnvIblHost {
   caps?: SceneCapabilityLookup | undefined;
 }
 
+/** 预设 equirect 纹理宽度（高 = 宽/2）。
+ *  [锐评 2026-10-11 P1-② 删键收编] 原 schema 键 `envResolution`（默认 1024）是半死键——
+ *  零 UI 写口、零生产调用方却持续耗治理预算（存档方言/钳制/P1-5 锁），删键后宽度
+ *  收敛为本常量。经验保留（原 schema 注释）：512 足够平滑；「分辨率画质/性能档位」
+ *  属产品需求，须随 S11 拖动相位门控滑杆整体加回 schema（勿只加裸键）。 */
+const ENV_PRESET_TEX_WIDTH = 1024;
+
 export class EnvIbl {
   private readonly scene: THREE.Scene;
   private readonly renderer: THREE.WebGLRenderer;
@@ -50,6 +57,16 @@ export class EnvIbl {
   private skySourcedTex: THREE.Texture | null = null;
   /** 防递归标记：build 内部 setEnvState 触发回调时跳过 */
   private isBuilding = false;
+  /**
+   * [锐评 2026-10-11 P2-a] 重入待建旗标：build 期间同步派发的 env 组写入（现行通路 =
+   * sky 烘焙取图内），被 isBuilding 早退短路的请求不再「静默丢失」——置 pending，
+   * finally 尾随一次 build（多次 pending 合并为一轮；force 取 OR：任一带 force 即
+   * 尾随走 force，守住 D-5 阈值门控语义）。
+   * 病灶实证：auto-atmosphere 等中间件一旦把 env 组键并入 sky patch，build 期间的
+   * 派发即成 lost update（envState 有值、槽位停旧值、零报错）——与本仓「同值重写
+   * 派发即契约」同族，重入窗口必须闭合。 */
+  private pendingRebuild = false;
+  private pendingForce = false;
 
   constructor(host: EnvIblHost) {
     this.scene = host.scene;
@@ -88,7 +105,7 @@ export class EnvIbl {
 
   private buildPresetEquirectTex(): THREE.Texture | null {
     const preset = ENV_PRESETS[envState.envPreset as SelectableEnvPresetId] ?? ENV_PRESETS.sky;
-    const W = envState.envResolution;
+    const W = ENV_PRESET_TEX_WIDTH;
     const H = Math.floor(W / 2);
     const canvas = document.createElement("canvas");
     canvas.width = W;
@@ -118,16 +135,12 @@ export class EnvIbl {
     // 由 normalizeEnvLegacyState 迁移补写 envSource，故此处无需再兼容 preset 信号。
     if (envState.envSource !== "custom") return null;
     if (this.hdr.tex) return this.hdr.tex;
-    if (!this.hdr.warnedMissing) {
-      this.hdr.warnedMissing = true;
-      ringLog(
-        "env",
-        "来源为「自定义 HDR」但尚未加载文件，暂以预设渲染。请点击「选择 HDR 文件」加载 .hdr。",
-        "warn",
-        () =>
-          console.warn("[EnvironmentCapability] envSource=custom 但无 HDR 缓存，暂回落预设渲染"),
-      );
-    }
+    // [锐评 2026-10-11 P2-c] 「无缓存」告警去重收编容器 read-once/write-once——
+    // 宿主不再读/写容器旗标（原 `if (!hdr.warnedMissing) hdr.warnedMissing = true` 手写式）。
+    this.hdr.warnMissingOnce(
+      "来源为「自定义 HDR」但尚未加载文件，暂以预设渲染。请点击「选择 HDR 文件」加载 .hdr。",
+      "[EnvironmentCapability] envSource=custom 但无 HDR 缓存，暂回落预设渲染",
+    );
     return null;
   }
 
@@ -208,7 +221,18 @@ export class EnvIbl {
    *   sky 未 dirty 交回同一纹理引用时本轮**整轮重建短路**，env 侧不再每帧全量重建。
    */
   build(skyForce = true): void {
-    if (this.isBuilding) return;
+    if (this.isBuilding) {
+      // [P2-a] 重入不再裸丢：挂 pending，由当前 build 的 finally 尾随一轮
+      this.pendingRebuild = true;
+      this.pendingForce = this.pendingForce || skyForce;
+      return;
+    }
+    // [P2-a] 上一窗口的 pending 由本轮兑现：force 取 OR（任一带 force 的丢失请求 ⇒
+    // 尾随轮亦走 force，守 D-5 阈值门控单调语义）；清旗后再取图，本轮内的新重入
+    // 重新置位 → 下一轮尾随（取图不派发的路径恒一轮收敛，无自激环）。
+    const effForce = this.pendingRebuild ? this.pendingForce || skyForce : skyForce;
+    this.pendingRebuild = false;
+    this.pendingForce = false;
     this.isBuilding = true; // 取图即置位：buildSkyEnvTex 内部触发的同步派发须同样被 isBuilding 短路（对齐旧序）
     try {
       // [D-5] 同引用短路须**先捕获旧纹理引用**：buildSkyEnvTex 会把 this.skySourcedTex
@@ -216,7 +240,7 @@ export class EnvIbl {
       const prevSkyTex = this.skySourcedTex;
       // [D-3/D-5] 「跟随天空」前置分派：sky 产物已滤波，直装槽位；同引用未换 → 免整轮重建。
       if (envState.envEnabled && envState.envSource === "sky") {
-        const skyTex = this.buildSkyEnvTex(skyForce);
+        const skyTex = this.buildSkyEnvTex(effForce);
         if (skyTex) {
           if (skyTex === prevSkyTex && this.scene.environment === skyTex) return;
           // [复审 D] 传覆盖前旧引用：skySourcedTex 此刻已被覆盖为新图，
@@ -259,14 +283,35 @@ export class EnvIbl {
       this.pmremToSceneEnv(srcTex);
     } finally {
       this.isBuilding = false;
+      // [P2-a] 尾随收敛：build 窗口内被短路的 env 组写入在此补一轮（重入时置位）
+      if (this.pendingRebuild) {
+        const force = this.pendingForce;
+        this.pendingRebuild = false;
+        this.pendingForce = false;
+        this.build(force);
+      }
     }
   }
 
+  /** 单槽直方图 memo（[锐评 2026-10-11 P2-b] S7-3 缩略图 memo 同范式——同日评审补了缩略图、
+   *  漏了同面板的直方图，「兄弟件半治」：面板每次 refresh 现算全幅像素运算纯浪费）。
+   *  键 = 数据源引用对（hdr.tex / backgroundSrcTex）：重建换引用自然失效，dispose 显式清空。 */
+  private histMemo: { hdr: THREE.Texture | null; bg: THREE.Texture | null; bins: number[] } | null =
+    null;
+
   /** 计算当前环境贴图的 16-bin 亮度直方图。
    *  数据源：customHdrTex（custom HDR 分支）或 backgroundSrcTex 的 canvas（程序化预设）。
-   *  返回 number[16]；无数据源时返回全 0 数组。像素运算下沉 env-pixels.ts#luminanceHistogram。 */
+   *  返回 number[16]；无数据源时返回全 0 数组。像素运算下沉 env-pixels.ts#luminanceHistogram，
+   *  经 histMemo 单槽去重（同数据源引用对命中即不重算）。 */
   getLuminanceHistogram(): number[] {
-    return luminanceHistogram(this.hdr.tex, this.backgroundSrcTex);
+    const hdrTex = this.hdr.tex;
+    const bgTex = this.backgroundSrcTex;
+    if (this.histMemo && this.histMemo.hdr === hdrTex && this.histMemo.bg === bgTex) {
+      return this.histMemo.bins;
+    }
+    const bins = luminanceHistogram(hdrTex, bgTex);
+    this.histMemo = { hdr: hdrTex, bg: bgTex, bins };
+    return bins;
   }
 
   /**
@@ -323,6 +368,7 @@ export class EnvIbl {
     ) {
       this.scene.background = this.prevBackground;
     }
+    this.histMemo = null; // [P2-b] 数据源纹理随 dispose 释放，memo 不得再引用已死对象
     this.disposeEnvironment();
   }
 }

@@ -1290,7 +1290,7 @@ export const en: Record<string, string> = {
   "preview.envIntensity": "Environment Intensity",
   "preview.envHistogram": "Luminance Histogram",
   "preview.envHistogramHint":
-    "Luminance histogram: darker on the left, brighter on the right; peaks show overall lighting",
+    "Luminance histogram: darker on the left, brighter on the right; peaks show overall lighting. No data source when custom HDR is not loaded and 'Use as background' is off (all-zero = no data, not a black image)",
   "preview.envPickHdr": "Custom HDR",
   "preview.envPickHdrBtn": "Choose HDR File",
   "preview.envSectionBasic": "Basic",

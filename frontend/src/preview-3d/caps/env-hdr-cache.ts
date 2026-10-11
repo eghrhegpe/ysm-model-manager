@@ -38,13 +38,25 @@ export class EnvHdrCache {
     return this.customHdrLoading;
   }
 
-  /** 无缓存告警已发过（cap 的 buildCustomHdrTex / loadState custom 裁决读它） */
+  /** 无缓存告警已发过（宿主侧只读观测；写口 = 下方 warnMissingOnce，锐评 2026-10-11 P2-c 收编） */
   get warnedMissing(): boolean {
     return this.customHdrWarnedMissing;
   }
 
-  set warnedMissing(v: boolean) {
-    this.customHdrWarnedMissing = v;
+  /**
+   * [锐评 2026-10-11 P2-c] 「无缓存」告警去重 = 读一次/写一次收编进容器：宿主
+   * （env-ibl `buildCustomHdrTex` / cap `loadState`）只传告警文案，旗标读写全在容器
+   * 内部——原公有 `set warnedMissing` 是容器自声明「纯生命周期」却让宿主探写内脏的
+   * 破口。复位语义不变：仅 `loadFromFile` 成功复位（dispose 不复位——dispose 用例锁定）。
+   * @returns 本次是否真的发出告警（首次 true / 后续 false）
+   */
+  warnMissingOnce(ringMessage: string, consoleMessage: string): boolean {
+    if (this.customHdrWarnedMissing) return false;
+    this.customHdrWarnedMissing = true;
+    ringLog("env", ringMessage, "warn", () => {
+      console.warn(consoleMessage);
+    });
+    return true;
   }
 
   /** 当前是否已有 custom HDR 缓存（按钮 hint / preset=custom 不告警） */

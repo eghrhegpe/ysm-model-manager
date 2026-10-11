@@ -17,6 +17,7 @@ import (
 	"strings"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types/registry"
 	"ysm-model-manager/internal/app"
 )
@@ -93,9 +94,7 @@ func TestSingleBench_MatrixByRtype_YsmFixtures(t *testing.T) {
 
 	var err error
 	out := captureOutput(t, func() { err = runSingleBenchMatrixJSON(ctx, spec) })
-	if err != nil {
-		t.Fatalf("矩阵模式报错: %v", err)
-	}
+	testutil.NoError(t, err, "矩阵模式报错")
 	var m singleBenchMatrixJSON
 	if err := json.Unmarshal([]byte(out), &m); err != nil {
 		t.Fatalf("矩阵载荷不是 JSON: %v\n%s", err, out)
@@ -139,9 +138,7 @@ func TestSingleBench_Matrix_UnsupportedTypeNotFaked(t *testing.T) {
 
 	var err error
 	out := captureOutput(t, func() { err = runSingleBenchMatrixJSON(ctx, spec) })
-	if err != nil {
-		t.Fatalf("矩阵模式报错: %v", err)
-	}
+	testutil.NoError(t, err, "矩阵模式报错")
 	var m singleBenchMatrixJSON
 	if err := json.Unmarshal([]byte(out), &m); err != nil {
 		t.Fatalf("矩阵载荷不是 JSON: %v\n%s", err, out)
@@ -228,9 +225,7 @@ func TestSingleBench_TargetAll_Fixtures(t *testing.T) {
 
 	var err error
 	out := captureOutput(t, func() { err = runSingleBenchMatrixJSON(ctx, spec) })
-	if err != nil {
-		t.Fatalf("--target all 报错: %v", err)
-	}
+	testutil.NoError(t, err, "--target all 报错")
 	var m singleBenchMatrixJSON
 	if err := json.Unmarshal([]byte(out), &m); err != nil {
 		t.Fatalf("矩阵载荷不是 JSON: %v\n%s", err, out)
@@ -291,9 +286,7 @@ func TestPerfTypeSummary_StagesDeclared(t *testing.T) {
 	spec := perfTargetSpec{Target: perfTargetAll, Order: perfOrderPath, MaxModels: 1, Iterations: 1}
 	var err error
 	out := captureOutput(t, func() { err = runSingleBenchMatrixJSON(ctx, spec) })
-	if err != nil {
-		t.Fatalf("--target all 报错: %v", err)
-	}
+	testutil.NoError(t, err, "--target all 报错")
 	var m singleBenchMatrixJSON
 	if err := json.Unmarshal([]byte(out), &m); err != nil {
 		t.Fatalf("矩阵载荷不是 JSON: %v\n%s", err, out)

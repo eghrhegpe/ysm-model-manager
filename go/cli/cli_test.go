@@ -31,9 +31,7 @@ func captureOutput(t *testing.T, fn func()) string {
 	t.Helper()
 	old := os.Stdout
 	r, w, err := os.Pipe()
-	if err != nil {
-		t.Fatalf("os.Pipe: %v", err)
-	}
+	testutil.NoError(t, err, "os.Pipe")
 	os.Stdout = w
 	t.Cleanup(func() { os.Stdout = old })
 
@@ -67,9 +65,7 @@ func withStdin(t *testing.T, input string) {
 	t.Helper()
 	old := os.Stdin
 	r, w, err := os.Pipe()
-	if err != nil {
-		t.Fatalf("os.Pipe: %v", err)
-	}
+	testutil.NoError(t, err, "os.Pipe")
 	os.Stdin = r
 	if _, err := w.WriteString(input); err != nil {
 		t.Fatalf("写入 stdin: %v", err)
@@ -756,9 +752,7 @@ func TestGUIFlow_WithVerbose(t *testing.T) {
 // 污染用户配置并触发 test_config_defaults.mjs FAIL ①；修复后文件应保持原样（存在则内容不变，不存在则不新建）。
 func TestGUIFlow_DoesNotWriteRealConfig(t *testing.T) {
 	userCfg, err := os.UserConfigDir()
-	if err != nil {
-		t.Fatalf("os.UserConfigDir: %v", err)
-	}
+	testutil.NoError(t, err, "os.UserConfigDir")
 	cfgPath := filepath.Join(userCfg, "YSM-Model-Manager", "ysm_config.json")
 	readCfg := func() ([]byte, bool) {
 		b, err := os.ReadFile(cfgPath)
@@ -1228,9 +1222,7 @@ func TestParseFlags_ExtractsFilesRoot(t *testing.T) {
 	fs := newCmdFlagSet("test")
 	fs.String("keyword", "", "关键词")
 	filesRoot, err := parseFlags(fs, []string{"--files-root", "/models", "--keyword", "warrior"})
-	if err != nil {
-		t.Fatalf("解析应成功, got: %v", err)
-	}
+	testutil.NoError(t, err, "解析应成功, got")
 	if filesRoot != "/models" {
 		t.Errorf("filesRoot 应为 /models, got: %s", filesRoot)
 	}
@@ -1239,9 +1231,7 @@ func TestParseFlags_ExtractsFilesRoot(t *testing.T) {
 func TestParseFlags_ExtractsFilesRootInline(t *testing.T) {
 	fs := newCmdFlagSet("test")
 	filesRoot, err := parseFlags(fs, []string{"--files-root=/models", "search"})
-	if err != nil {
-		t.Fatalf("解析应成功, got: %v", err)
-	}
+	testutil.NoError(t, err, "解析应成功, got")
 	if filesRoot != "/models" {
 		t.Errorf("filesRoot 应为 /models, got: %s", filesRoot)
 	}
@@ -1251,9 +1241,7 @@ func TestParseFlags_NoFilesRoot(t *testing.T) {
 	fs := newCmdFlagSet("test")
 	fs.String("keyword", "", "关键词")
 	filesRoot, err := parseFlags(fs, []string{"--keyword", "test"})
-	if err != nil {
-		t.Fatalf("解析应成功, got: %v", err)
-	}
+	testutil.NoError(t, err, "解析应成功, got")
 	if filesRoot != "" {
 		t.Errorf("filesRoot 应为空, got: %s", filesRoot)
 	}
@@ -1632,9 +1620,7 @@ func TestSaveBenchBaseline_RoundTrip(t *testing.T) {
 // 不可见。此例直接从 cwd 向上探测并断言拿到真实文件，把「路径」而非「内容」钉住。
 func TestFindOptimizationLog_LocatesRealDoc(t *testing.T) {
 	p, err := findOptimizationLog()
-	if err != nil {
-		t.Fatalf("应能在仓库内定位优化记录文档, got %v", err)
-	}
+	testutil.NoError(t, err, "应能在仓库内定位优化记录文档, got")
 	if filepath.Base(filepath.Dir(p)) != "knowledge" && filepath.Base(filepath.Dir(p)) != "archive" {
 		t.Errorf("优化记录文档应位于 docs/knowledge/ 或 docs/archive/, got %s", p)
 	}
@@ -2015,9 +2001,7 @@ func TestDownloadEnqueue_Success(t *testing.T) {
 	}}
 	out := captureOutput(t, func() {
 		err := runDownloadEnqueue(&CmdContext{App: fake, Args: []string{"--url", "https://example.com/a.zip", "--save-dir", t.TempDir()}})
-		if err != nil {
-			t.Fatalf("合法参数应成功入队, got %v", err)
-		}
+		testutil.NoError(t, err, "合法参数应成功入队, got")
 	})
 	if !strings.Contains(out, "已入队") {
 		t.Errorf("应输出已入队提示, got: %s", out)

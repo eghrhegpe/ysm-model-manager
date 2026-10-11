@@ -26,9 +26,7 @@ func TestOpen7zPath_EntriesAndRead(t *testing.T) {
 	}
 
 	r, err := Open7zPath(p)
-	if err != nil {
-		t.Fatalf("Open7zPath 失败: %v", err)
-	}
+	testutil.NoError(t, err, "Open7zPath 失败")
 	defer r.Close()
 
 	entries := r.Entries()
@@ -93,9 +91,7 @@ func TestOpen7zBytes_Success(t *testing.T) {
 	}
 
 	r, err := Open7zBytes(data, int64(len(data)))
-	if err != nil {
-		t.Fatalf("Open7zBytes 失败: %v", err)
-	}
+	testutil.NoError(t, err, "Open7zBytes 失败")
 	defer r.Close()
 
 	entries := r.Entries()

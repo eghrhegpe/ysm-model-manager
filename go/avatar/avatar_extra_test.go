@@ -93,18 +93,14 @@ func TestReadCachedAvatar_MimeSniff(t *testing.T) {
 	// JPEG 魔数（FF D8 FF）→ image/jpeg，而非硬编码 image/png
 	SaveAvatarData("jpeguser", []byte{0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10}, "image/jpeg")
 	uri, err := ReadCachedAvatar("jpeguser")
-	if err != nil {
-		t.Fatalf("ReadCachedAvatar error: %v", err)
-	}
+	testutil.NoError(t, err, "ReadCachedAvatar error")
 	if !strings.HasPrefix(uri, "data:image/jpeg;base64,") {
 		t.Errorf("JPEG 头像应嗅探为 image/jpeg, 得到 %q", uri)
 	}
 	// PNG 魔数（非 JPEG 头）→ image/png
 	SaveAvatarData("pnguser", []byte{0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A}, "image/png")
 	uri, err = ReadCachedAvatar("pnguser")
-	if err != nil {
-		t.Fatalf("ReadCachedAvatar error: %v", err)
-	}
+	testutil.NoError(t, err, "ReadCachedAvatar error")
 	if !strings.HasPrefix(uri, "data:image/png;base64,") {
 		t.Errorf("PNG 头像应保持 image/png, 得到 %q", uri)
 	}
@@ -735,9 +731,7 @@ func TestSaveAvatarData_Concurrent(t *testing.T) {
 
 	// 验证最终落盘文件完整可读（非半写残渣）
 	uri, err := ReadCachedAvatar("concurrentuser")
-	if err != nil {
-		t.Fatalf("并发写后读取失败: %v", err)
-	}
+	testutil.NoError(t, err, "并发写后读取失败")
 	if !strings.HasPrefix(uri, "data:image/png;base64,") {
 		t.Fatalf("并发写后应可读完整 PNG URI, 得到 %q", uri)
 	}

@@ -134,9 +134,7 @@ func TestOpen_DisableSuffixDispatch(t *testing.T) {
 		t.Fatal(err)
 	}
 	rd, err := Open(sub)
-	if err != nil {
-		t.Fatalf("目录 + 禁用后缀应走目录直读: %v", err)
-	}
+	testutil.NoError(t, err, "目录 + 禁用后缀应走目录直读")
 	rd.Close()
 }
 

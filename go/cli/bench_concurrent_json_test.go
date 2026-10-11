@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -66,9 +67,7 @@ func TestRunConcurrentBenchJSON_ShapeAndPurity(t *testing.T) {
 	// 进程级 stdout 接管（既有 captureOutput(t, fn) 形态）：串行执行，勿加 t.Parallel
 	var runErr error
 	console := captureOutput(t, func() { runErr = runConcurrentBench(ctx) })
-	if runErr != nil {
-		t.Fatalf("JSON 模式应成功: %v", runErr)
-	}
+	testutil.NoError(t, runErr, "JSON 模式应成功")
 
 	// ① stdout 纯度：可被 json.Unmarshal 直接吃掉（带任何人类文案都会失败）
 	var out concurrentBenchJSON
@@ -195,9 +194,7 @@ func TestRunConcurrentBench_TextModeLeavesNoPayload(t *testing.T) {
 	}
 	var runErr error
 	captureOutput(t, func() { runErr = runConcurrentBench(ctx) })
-	if runErr != nil {
-		t.Fatalf("text 模式应成功: %v", runErr)
-	}
+	testutil.NoError(t, runErr, "text 模式应成功")
 	if ctx.result != nil {
 		t.Errorf("text 模式不应设置结构化载荷（否则桥会把文本模式当 JSON 消费）, got %T", ctx.result)
 	}

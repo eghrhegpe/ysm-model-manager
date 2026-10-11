@@ -44,9 +44,7 @@ func TestAdversarial_SymlinkSubdirEscape(t *testing.T) {
 
 	// 4) Scan — if WalkDir follows the symlinked subdir, secret.txt appears
 	groups, err := FindDuplicateFiles(scanDir, false)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	testutil.NoError(t, err, "unexpected error")
 
 	// 5) Check whether the file outside scanDir was hashed
 	for _, g := range groups {
@@ -112,9 +110,7 @@ func TestAdversarial_MassiveDirectoryPerformance(t *testing.T) {
 	start := time.Now()
 	groups, err := FindDuplicateFiles(dir, false)
 	elapsed := time.Since(start)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	testutil.NoError(t, err, "unexpected error")
 	t.Logf("FindDuplicateFiles on %d files: %d groups in %v", numFiles, len(groups), elapsed)
 }
 
@@ -138,9 +134,7 @@ func TestAdversarial_EmptyFileSkip(t *testing.T) {
 	}
 
 	groups, err := FindDuplicateFiles(dir, false)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	testutil.NoError(t, err, "unexpected error")
 
 	// No duplicates expected (only 1 non-empty file), but verify empty file
 	// is NOT referenced anywhere in the results
@@ -155,9 +149,7 @@ func TestAdversarial_EmptyFileSkip(t *testing.T) {
 
 	// Also verify with CountDuplicates
 	groupsCount, extraCount, err := CountDuplicates(dir, false)
-	if err != nil {
-		t.Fatalf("unexpected error from CountDuplicates: %v", err)
-	}
+	testutil.NoError(t, err, "unexpected error from CountDuplicates")
 	if groupsCount != 0 || extraCount != 0 {
 		t.Fatalf("expected 0 groups, 0 extra from single non-empty file, got %d groups, %d extra",
 			groupsCount, extraCount)

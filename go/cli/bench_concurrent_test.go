@@ -299,9 +299,7 @@ func TestRunPerfSnapshot_EndToEnd(t *testing.T) {
 		t.Fatal(err)
 	}
 	err := runPerfSnapshot(&CmdContext{App: &benchFakeApp{}, FilesRoot: root, Args: []string{"--iterations", "1"}})
-	if err != nil {
-		t.Fatalf("perf-snapshot 端到端应成功: %v", err)
-	}
+	testutil.NoError(t, err, "perf-snapshot 端到端应成功")
 	// --model 显式路径也走通
 	if err := runPerfSnapshot(&CmdContext{App: &benchFakeApp{}, FilesRoot: root, Args: []string{"--model", modelPath}}); err != nil {
 		t.Fatalf("显式 --model 应成功: %v", err)
@@ -364,9 +362,7 @@ func TestRunConcurrentBench_EndToEnd(t *testing.T) {
 		FilesRoot: root,
 		Args:      []string{"--workers", "2", "--max-models", "5"},
 	})
-	if err != nil {
-		t.Fatalf("并发基准端到端应成功: %v", err)
-	}
+	testutil.NoError(t, err, "并发基准端到端应成功")
 	// 无模型仓库 → 报错
 	if err := runConcurrentBench(&CmdContext{App: &benchScanFakeApp{}, FilesRoot: t.TempDir()}); err == nil {
 		t.Error("空仓库应报「未找到任何模型」")

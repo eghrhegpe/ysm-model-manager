@@ -32,6 +32,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // stubBaselineSlot 注入临时基准槽。⚠️ 覆盖包级函数变量 ⇒ 本组用例**不得** t.Parallel()。
@@ -103,9 +104,7 @@ func TestEvaluateBaseline_Verdicts(t *testing.T) {
 	}
 
 	diff, err := evaluateBaseline(basePath, stages, 50)
-	if err != nil {
-		t.Fatalf("evaluateBaseline 出错: %v", err)
-	}
+	testutil.NoError(t, err, "evaluateBaseline 出错")
 	if diff.Verdict != baselineVerdictRegressed || diff.Degraded != 1 {
 		t.Errorf("恰有一个阶段超阈值 → verdict=regressed/degraded=1, got %q/%d", diff.Verdict, diff.Degraded)
 	}
@@ -223,9 +222,7 @@ func TestBuildBaselineJSON_VerdictAndSavePath(t *testing.T) {
 	t.Run("只保存时回显去向且无 diff", func(t *testing.T) {
 		savePath := filepath.Join(root, "saved.json")
 		block, err := buildBaselineJSON("", savePath, 50, stages)
-		if err != nil {
-			t.Fatalf("保存不应出错: %v", err)
-		}
+		testutil.NoError(t, err, "保存不应出错")
 		if block == nil || block.SavedTo != savePath {
 			t.Errorf("应回显保存去向 %q, got %+v", savePath, block)
 		}
@@ -337,9 +334,7 @@ func TestRunSingleBenchJSON_SaveBaselineSlot(t *testing.T) {
 	})
 
 	raw, err := os.ReadFile(slot)
-	if err != nil {
-		t.Fatalf("标准基准槽应被写入: %v", err)
-	}
+	testutil.NoError(t, err, "标准基准槽应被写入")
 	if !json.Valid(raw) {
 		t.Errorf("基准文件应为合法 JSON: %s", raw)
 	}

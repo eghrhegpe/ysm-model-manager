@@ -20,6 +20,7 @@ import (
 	"strings"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/internal/app"
 )
 
@@ -128,9 +129,7 @@ func TestRunSingleBenchRepo_JSONShape(t *testing.T) {
 
 	var err error
 	out := captureOutput(t, func() { err = runSingleBench(ctx) })
-	if err != nil {
-		t.Fatalf("--target repo --order size --max-models 2 报错: %v", err)
-	}
+	testutil.NoError(t, err, "--target repo --order size --max-models 2 报错")
 	var m singleBenchMatrixJSON
 	if err := json.Unmarshal([]byte(out), &m); err != nil {
 		t.Fatalf("载荷不是纯 JSON: %v\n%s", err, out)
@@ -186,9 +185,7 @@ func TestRunSingleBenchRepo_ModelOrderMatchesRanking(t *testing.T) {
 	}}
 	var err error
 	out := captureOutput(t, func() { err = runSingleBench(ctx) })
-	if err != nil {
-		t.Fatalf("--target repo 报错: %v", err)
-	}
+	testutil.NoError(t, err, "--target repo 报错")
 	var m singleBenchMatrixJSON
 	if err := json.Unmarshal([]byte(out), &m); err != nil {
 		t.Fatal(err)
@@ -257,9 +254,7 @@ func TestSingleBench_TargetAll_SizeOrder_CapPerType(t *testing.T) {
 	}}
 	var err error
 	out := captureOutput(t, func() { err = runSingleBench(ctx) })
-	if err != nil {
-		t.Fatalf("--target all --order size 报错: %v", err)
-	}
+	testutil.NoError(t, err, "--target all --order size 报错")
 	var m singleBenchMatrixJSON
 	if err := json.Unmarshal([]byte(out), &m); err != nil {
 		t.Fatalf("载荷不是纯 JSON: %v\n%s", err, out)

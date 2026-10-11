@@ -27,9 +27,7 @@ func TestScanCacheVerify(t *testing.T) {
 	testutil.WriteTestFileBytes(t, filepath.Join(root, "sub", "c.tga"), []byte("tga-bytes"))
 
 	infos, walkErrs, err := scanCacheVerify(root)
-	if err != nil {
-		t.Fatalf("scanCacheVerify error: %v", err)
-	}
+	testutil.NoError(t, err, "scanCacheVerify error")
 	if len(walkErrs) != 0 {
 		t.Fatalf("unexpected walkErrors: %v", walkErrs)
 	}
@@ -63,9 +61,7 @@ func TestScanCacheVerify(t *testing.T) {
 	// 缓存命中：预写 a.png 的哈希后重扫，应命中且 cacheSize 等于写入长度
 	aPath := filepath.Join(root, "a.png")
 	h, err := texture_cache.TextureHash(aPath)
-	if err != nil {
-		t.Fatalf("TextureHash: %v", err)
-	}
+	testutil.NoError(t, err, "TextureHash")
 	if err := texture_cache.WriteCached(h, []byte("ktx2-payload")); err != nil {
 		t.Fatalf("WriteCached: %v", err)
 	}
@@ -100,9 +96,7 @@ func TestScanMMDAssets(t *testing.T) {
 	testutil.WriteTestFileBytes(t, filepath.Join(root, "ignore.txt"), []byte("no"))
 
 	s, err := scanMMDAssets(root)
-	if err != nil {
-		t.Fatalf("scanMMDAssets error: %v", err)
-	}
+	testutil.NoError(t, err, "scanMMDAssets error")
 
 	// 注意：scanMMDAssets 中 case ".pmx", ".pmd" 共享同一分支，
 	// ModelFiles 字段语义为"模型文件"（同时容纳 pmx 与 pmd）。

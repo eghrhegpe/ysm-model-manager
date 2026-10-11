@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -53,9 +54,7 @@ func runGUIFlowForTest(t *testing.T) (*CmdContext, *flowFakeApp) {
 	}
 	var err error
 	_ = captureOutput(t, func() { err = runGUIFlow(ctx) })
-	if err != nil {
-		t.Fatalf("gui-flow 应全程成功（各阶段无失败）: %v", err)
-	}
+	testutil.NoError(t, err, "gui-flow 应全程成功（各阶段无失败）")
 	return ctx, fake
 }
 

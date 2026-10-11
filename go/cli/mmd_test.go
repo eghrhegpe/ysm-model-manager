@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // mmd_test.go — MMD 资产扫描的入口结论可信度。
@@ -51,9 +52,7 @@ func TestScanMMDAssets_HappyPath(t *testing.T) {
 	}
 
 	scan, err := scanMMDAssets(root)
-	if err != nil {
-		t.Fatalf("scanMMDAssets: %v", err)
-	}
+	testutil.NoError(t, err, "scanMMDAssets")
 	if len(scan.ModelFiles) != 1 || len(scan.VmdFiles) != 1 || len(scan.TextureFiles) != 1 {
 		t.Errorf("分类聚合异常: model=%d vmd=%d tex=%d",
 			len(scan.ModelFiles), len(scan.VmdFiles), len(scan.TextureFiles))

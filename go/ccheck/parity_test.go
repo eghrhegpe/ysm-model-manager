@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // go-ts-complexity 契约向量：与 tests/test_complexity_parity.ts 读同一份 JSON，
@@ -31,9 +32,7 @@ type fixtureFile struct {
 func repoRoot(t *testing.T) string {
 	t.Helper()
 	dir, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("Getwd: %v", err)
-	}
+	testutil.NoError(t, err, "Getwd")
 	for {
 		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
 			return dir
@@ -48,9 +47,7 @@ func repoRoot(t *testing.T) string {
 
 func TestComplexityParityWithTS(t *testing.T) {
 	raw, err := os.ReadFile(filepath.Join(repoRoot(t), "tests", "parity", "go-ts-complexity.json"))
-	if err != nil {
-		t.Fatalf("读取契约向量失败: %v", err)
-	}
+	testutil.NoError(t, err, "读取契约向量失败")
 	var fx fixtureFile
 	if err := json.Unmarshal(raw, &fx); err != nil {
 		t.Fatalf("解析契约向量失败: %v", err)

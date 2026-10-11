@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/scanner"
 )
 
@@ -49,9 +50,7 @@ func TestRunScanBench_JSONPayloadShapeAndHonesty(t *testing.T) {
 
 	var err error
 	out := captureOutput(t, func() { err = runScanBench(ctx) })
-	if err != nil {
-		t.Fatalf("scan-bench 报错: %v", err)
-	}
+	testutil.NoError(t, err, "scan-bench 报错")
 	var payload scanBenchJSON
 	if err := json.Unmarshal([]byte(out), &payload); err != nil {
 		t.Fatalf("stdout 不是纯 JSON: %v\n%s", err, out)
@@ -125,9 +124,7 @@ func TestRunScanBench_TextModeDoesNotFabricate(t *testing.T) {
 	ctx := &CmdContext{FilesRoot: root, Args: []string{"--iterations", "1"}}
 	var err error
 	out := captureOutput(t, func() { err = runScanBench(ctx) })
-	if err != nil {
-		t.Fatalf("scan-bench 文本模式报错: %v", err)
-	}
+	testutil.NoError(t, err, "scan-bench 文本模式报错")
 	// 断言语义 = 「报告的耗时字段不得渲染成 0.00」。
 	//
 	// 2026-10-07 修：原实现是裸子串 `strings.Contains(out, "0.00ms")`，有两重假红（实测约 1/3）：

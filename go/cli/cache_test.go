@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/texture_cache"
 )
 
@@ -20,9 +21,7 @@ func TestWriteCacheProbe_NoIndexPollution(t *testing.T) {
 	cacheDir := withTempCache(t)
 
 	path, err := writeCacheProbe([]byte("probe-payload"))
-	if err != nil {
-		t.Fatalf("writeCacheProbe: %v", err)
-	}
+	testutil.NoError(t, err, "writeCacheProbe")
 	defer os.Remove(path)
 
 	// ① 探针落在缓存目录内（否则测的不是缓存目录可写性）
@@ -31,9 +30,7 @@ func TestWriteCacheProbe_NoIndexPollution(t *testing.T) {
 	}
 	// ② 内容可回读且一致
 	got, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("探针不可读: %v", err)
-	}
+	testutil.NoError(t, err, "探针不可读")
 	if string(got) != "probe-payload" {
 		t.Errorf("探针内容不符: %q", got)
 	}

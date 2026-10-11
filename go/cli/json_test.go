@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -67,9 +68,7 @@ func TestDurationMs_SubMillisecondNotTruncated(t *testing.T) {
 func TestEnvelopeTiming_UsesDurationMs(t *testing.T) {
 	t.Parallel()
 	src, err := os.ReadFile("cli.go")
-	if err != nil {
-		t.Fatalf("读 cli.go 失败: %v", err)
-	}
+	testutil.NoError(t, err, "读 cli.go 失败")
 	s := string(src)
 	if strings.Contains(s, "time.Since(start).Milliseconds()") {
 		t.Errorf("信封耗时仍用 Milliseconds() 截断（快命令会报 0，前端当「没测到」）——应走 durationMs")
@@ -90,9 +89,7 @@ func TestEnvelopeTiming_UsesDurationMs(t *testing.T) {
 func TestCliTiming_NoTruncationAnywhere(t *testing.T) {
 	t.Parallel()
 	files, err := filepath.Glob("*.go")
-	if err != nil {
-		t.Fatalf("glob 失败: %v", err)
-	}
+	testutil.NoError(t, err, "glob 失败")
 	checked := 0
 	for _, f := range files {
 		if strings.HasSuffix(f, "_test.go") {

@@ -18,6 +18,7 @@ import (
 	"strings"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types/registry"
 )
 
@@ -59,9 +60,7 @@ func TestSingleBenchJSON_JSONShape(t *testing.T) {
 	}
 
 	b, err := json.Marshal(s)
-	if err != nil {
-		t.Fatalf("marshal 失败: %v", err)
-	}
+	testutil.NoError(t, err, "marshal 失败")
 	raw := string(b)
 	// stdout 载荷不含 sidecar：AttachSidecar 由桥接层在命令返回后注入（ADR-200 D5）
 	if strings.Contains(raw, `"output"`) {
@@ -98,9 +97,7 @@ func TestSingleBenchJSON_JSONShape(t *testing.T) {
 		t.Errorf("sidecar 未注入: output=%q filesRoot=%q", got.Output, got.FilesRoot)
 	}
 	withSidecar, err := json.Marshal(got)
-	if err != nil {
-		t.Fatalf("marshal 失败: %v", err)
-	}
+	testutil.NoError(t, err, "marshal 失败")
 	for _, want := range []string{`"output"`, `"filesRoot"`} {
 		if !strings.Contains(string(withSidecar), want) {
 			t.Errorf("桥载荷缺少 %s: %s", want, withSidecar)

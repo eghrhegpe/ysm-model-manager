@@ -19,6 +19,7 @@ import (
 	"strings"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -138,9 +139,7 @@ func TestGUIFlow_UnanalyzableOnlyRepoExplainsWhy(t *testing.T) {
 	ctx := &CmdContext{App: fake, FilesRoot: t.TempDir(), Args: []string{}}
 	var err error
 	captureOutput(t, func() { err = runGUIFlow(ctx) })
-	if err != nil {
-		t.Fatalf("「有模型但 CLI 不分析」是能力边界不是失败，不应返回 error: %v", err)
-	}
+	testutil.NoError(t, err, "「有模型但 CLI 不分析」是能力边界不是失败，不应返回 error")
 
 	byName := flowStageNames(t, ctx)
 	s, ok := byName["③ 模型分析"]

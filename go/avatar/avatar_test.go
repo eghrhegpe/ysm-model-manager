@@ -39,9 +39,7 @@ func TestReadCachedAvatarMissing(t *testing.T) {
 	defer func() { CacheDir = old }()
 
 	result, err := ReadCachedAvatar("nonexistent")
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
+	testutil.NoError(t, err, "expected no error, got")
 	if result != "" {
 		t.Fatalf("expected empty, got %q", result)
 	}
@@ -59,9 +57,7 @@ func TestSaveAndReadCachedAvatar(t *testing.T) {
 	}
 
 	result, err := ReadCachedAvatar("testuser")
-	if err != nil {
-		t.Fatalf("ReadCachedAvatar error: %v", err)
-	}
+	testutil.NoError(t, err, "ReadCachedAvatar error")
 	if result == "" {
 		t.Fatal("ReadCachedAvatar returned empty after save")
 	}

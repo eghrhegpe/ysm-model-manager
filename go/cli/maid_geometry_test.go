@@ -30,6 +30,7 @@ import (
 	"strings"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/texture_cache"
 	"ysm-model-manager/internal/app"
 )
@@ -51,9 +52,7 @@ func writeZip(t *testing.T, path string, entries []maidZipEntry) {
 		t.Fatalf("建目录失败: %v", err)
 	}
 	f, err := os.Create(path)
-	if err != nil {
-		t.Fatalf("建 zip 失败: %v", err)
-	}
+	testutil.NoError(t, err, "建 zip 失败")
 	defer f.Close()
 	w := zip.NewWriter(f)
 	for _, e := range entries {
@@ -117,9 +116,7 @@ func TestSingleBench_MatrixByRtype_MaidModelCollected(t *testing.T) {
 
 	var err error
 	out := captureOutput(t, func() { err = runSingleBenchMatrixJSON(ctx, spec) })
-	if err != nil {
-		t.Fatalf("矩阵模式报错: %v", err)
-	}
+	testutil.NoError(t, err, "矩阵模式报错")
 	var m singleBenchMatrixJSON
 	if err := json.Unmarshal([]byte(out), &m); err != nil {
 		t.Fatalf("矩阵载荷不是 JSON: %v\n%s", err, out)
@@ -159,9 +156,7 @@ func TestGUIFlow_PromotionSkipsCandidateWithoutGeometry(t *testing.T) {
 	// 这是「④ 必须跑在真正分析成功的 targetModel 上」的可观测判据——顺延只换 ③ 而 ④ 仍拿
 	// 首个候选去算，是「换了一半」的隐蔽缺陷（描述里看不出路径）。
 	packHash, hashErr := texture_cache.TextureHash(pack)
-	if hashErr != nil {
-		t.Fatalf("真包纹理哈希失败: %v", hashErr)
-	}
+	testutil.NoError(t, hashErr, "真包纹理哈希失败")
 	if writeErr := texture_cache.WriteCached(packHash, []byte("ktx2-payload")); writeErr != nil {
 		t.Fatalf("写缓存失败: %v", writeErr)
 	}

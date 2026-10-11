@@ -99,9 +99,7 @@ func TestHealthReport_OutputJSON(t *testing.T) {
 	}
 
 	data, err := os.ReadFile(outFile)
-	if err != nil {
-		t.Fatalf("读取 JSON 失败: %v", err)
-	}
+	testutil.NoError(t, err, "读取 JSON 失败")
 	var hr healthReportJSON
 	if err := json.Unmarshal(data, &hr); err != nil {
 		t.Fatalf("JSON 解析失败: %v", err)

@@ -13,6 +13,7 @@ import (
 	"flag"
 	"strings"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // newKnobsFlagSet 造一套与命令侧同形的 flag（含显式性判定所需的真实 FlagSet）。
@@ -107,9 +108,7 @@ func TestKnobsSpec_ValidationMatrix(t *testing.T) {
 				}
 				return
 			}
-			if err != nil {
-				t.Fatalf("期望通过，实际报错: %v", err)
-			}
+			testutil.NoError(t, err, "期望通过，实际报错")
 			if spec.Target != tc.want.Target || spec.Order != tc.want.Order ||
 				spec.Rtype != tc.want.Rtype || spec.ModelPath != tc.want.ModelPath ||
 				spec.MaxModels != tc.want.MaxModels {
@@ -127,9 +126,7 @@ func TestKnobsSpec_ExplicitMaxModelsDetected(t *testing.T) {
 		t.Fatalf("未传 --max-models 时不该判为显式: err=%v explicit=%v", err, spec.MaxModelsExplicit)
 	}
 	_, spec, err := newKnobsFlagSet(t, "--target", "repo", "--max-models", "5")
-	if err != nil {
-		t.Fatalf("repo + 显式 5 应通过: %v", err)
-	}
+	testutil.NoError(t, err, "repo + 显式 5 应通过")
 	if !spec.MaxModelsExplicit {
 		t.Fatal("显式传 --max-models 5 未被判为显式")
 	}

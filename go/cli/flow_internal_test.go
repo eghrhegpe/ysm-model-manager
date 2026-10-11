@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 func TestGuiFlowStructured_JSONShape(t *testing.T) {
@@ -26,9 +27,7 @@ func TestGuiFlowStructured_JSONShape(t *testing.T) {
 	g.AttachSidecar("raw output", "/models")
 
 	b, err := json.Marshal(g)
-	if err != nil {
-		t.Fatalf("marshal 失败: %v", err)
-	}
+	testutil.NoError(t, err, "marshal 失败")
 	s := string(b)
 	for _, want := range []string{
 		`"stages"`, `"status"`, `"name"`, `"ms"`, `"desc"`,

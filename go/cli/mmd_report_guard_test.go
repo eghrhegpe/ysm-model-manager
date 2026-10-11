@@ -128,14 +128,10 @@ func TestRunScanDir_JSONPayloadNumbers(t *testing.T) {
 	out := captureOutput(t, func() {
 		err = runScanDir(&CmdContext{Args: []string{"--dir", dir, "--output", outFile}})
 	})
-	if err != nil {
-		t.Fatalf("runScanDir: %v", err)
-	}
+	testutil.NoError(t, err, "runScanDir")
 
 	raw, rerr := os.ReadFile(outFile)
-	if rerr != nil {
-		t.Fatalf("读取 JSON 产物: %v", rerr)
-	}
+	testutil.NoError(t, rerr, "读取 JSON 产物")
 	var res scanDirResult
 	if uerr := json.Unmarshal(raw, &res); uerr != nil {
 		t.Fatalf("JSON 载荷非法: %v\n%s", uerr, raw)
@@ -199,9 +195,7 @@ func TestRunScanDir_TextReportNumbers(t *testing.T) {
 	out := captureOutput(t, func() {
 		err = runScanDir(&CmdContext{Args: []string{"--dir", dir}})
 	})
-	if err != nil {
-		t.Fatalf("runScanDir: %v", err)
-	}
+	testutil.NoError(t, err, "runScanDir")
 
 	for _, want := range []string{
 		"📁 扫描目录: " + dir,
@@ -268,9 +262,7 @@ func TestRunScanDir_LargeFileListCapsAtTen(t *testing.T) {
 	out := captureOutput(t, func() {
 		err = runScanDir(&CmdContext{Args: []string{"--dir", dir}})
 	})
-	if err != nil {
-		t.Fatalf("runScanDir: %v", err)
-	}
+	testutil.NoError(t, err, "runScanDir")
 
 	if !strings.Contains(out, "⚠️  大文件列表 (>10MB, 共 12 个):") {
 		t.Errorf("大文件清单表头错误:\n%s", out)
@@ -302,9 +294,7 @@ func TestRunScanDir_DetailListsFirstTwenty(t *testing.T) {
 	out := captureOutput(t, func() {
 		err = runScanDir(&CmdContext{Args: []string{"--dir", dir, "--detail"}})
 	})
-	if err != nil {
-		t.Fatalf("runScanDir: %v", err)
-	}
+	testutil.NoError(t, err, "runScanDir")
 
 	if !strings.Contains(out, "📝 文件详情 (前 20 个):") {
 		t.Fatalf("--detail 未打印详情段:\n%s", out)
@@ -337,9 +327,7 @@ func TestRunScanDir_MissingDirReportedNotFatal(t *testing.T) {
 	out := captureOutput(t, func() {
 		err = runScanDir(&CmdContext{Args: []string{"--dir", dir}})
 	})
-	if err != nil {
-		t.Fatalf("根目录不存在不应致命: %v", err)
-	}
+	testutil.NoError(t, err, "根目录不存在不应致命")
 
 	if !strings.Contains(out, "⚠️  扫描跳过 1 个异常路径:") {
 		t.Errorf("应提示跳过 1 个异常路径:\n%s", out)
@@ -379,14 +367,10 @@ func TestRunFileBench_JSONPayloadNumbers(t *testing.T) {
 		err = runFileBench(&CmdContext{App: &mmdBenchApp{}, Args: []string{
 			"--dir", dir, "--iterations", "2", "--output", outFile}})
 	})
-	if err != nil {
-		t.Fatalf("runFileBench: %v", err)
-	}
+	testutil.NoError(t, err, "runFileBench")
 
 	raw, rerr := os.ReadFile(outFile)
-	if rerr != nil {
-		t.Fatalf("读取基准 JSON: %v", rerr)
-	}
+	testutil.NoError(t, rerr, "读取基准 JSON")
 	var res fileBenchResult
 	if uerr := json.Unmarshal(raw, &res); uerr != nil {
 		t.Fatalf("基准 JSON 非法: %v\n%s", uerr, raw)
@@ -466,9 +450,7 @@ func writeBenchBaseline(t *testing.T) string {
 		IPCOverhead: ipcEstimate{OriginalSize: 1000, Base64Size: 1330, InflationRatio: 0.33, SerDescOverheadMs: 1},
 	}
 	raw, merr := json.MarshalIndent(baseline, "", "  ")
-	if merr != nil {
-		t.Fatalf("构造基准 JSON: %v", merr)
-	}
+	testutil.NoError(t, merr, "构造基准 JSON")
 	path := filepath.Join(t.TempDir(), "baseline.json")
 	if werr := os.WriteFile(path, raw, 0o644); werr != nil {
 		t.Fatalf("写入基准 JSON: %v", werr)
@@ -540,9 +522,7 @@ func TestRunFileBench_CompareWiring(t *testing.T) {
 		err = runFileBench(&CmdContext{App: &mmdBenchApp{}, Args: []string{
 			"--file", model, "--iterations", "1", "--compare", baselinePath}})
 	})
-	if err != nil {
-		t.Fatalf("runFileBench: %v", err)
-	}
+	testutil.NoError(t, err, "runFileBench")
 
 	for _, want := range []string{
 		"📈 基准对比:",
@@ -572,9 +552,7 @@ func TestRunFileBench_SmallFilesAreNotTested(t *testing.T) {
 	out := captureOutput(t, func() {
 		err = runFileBench(&CmdContext{App: &mmdBenchApp{}, Args: []string{"--dir", dir}})
 	})
-	if err != nil {
-		t.Fatalf("runFileBench: %v", err)
-	}
+	testutil.NoError(t, err, "runFileBench")
 	if !strings.Contains(out, "📭 没有找到大于 "+fsutil.FormatSize(cliLargeFileThreshold)) {
 		t.Errorf("应提示无大文件, got:\n%s", out)
 	}
@@ -592,9 +570,7 @@ func TestRunFileBench_MissingPathsAreSkippedNotFatal(t *testing.T) {
 	out := captureOutput(t, func() {
 		err = runFileBench(&CmdContext{App: &mmdBenchApp{}, Args: []string{"--dir", missingDir}})
 	})
-	if err != nil {
-		t.Fatalf("目录不存在不应致命: %v", err)
-	}
+	testutil.NoError(t, err, "目录不存在不应致命")
 	if !strings.Contains(out, "⚠️  扫描跳过 1 个异常路径") {
 		t.Errorf("应提示跳过 1 个异常路径:\n%s", out)
 	}
@@ -607,9 +583,7 @@ func TestRunFileBench_MissingPathsAreSkippedNotFatal(t *testing.T) {
 	out2 := captureOutput(t, func() {
 		err2 = runFileBench(&CmdContext{App: &mmdBenchApp{}, Args: []string{"--file", missingFile}})
 	})
-	if err2 != nil {
-		t.Fatalf("文件不存在不应致命（stat 失败跳过）: %v", err2)
-	}
+	testutil.NoError(t, err2, "文件不存在不应致命（stat 失败跳过）")
 	for _, want := range []string{"📊 单文件读取测试:", "📊 IPC 传输开销测量:", "   总大小: 0B"} {
 		if !strings.Contains(out2, want) {
 			t.Errorf("报告缺少 %q, got:\n%s", want, out2)
@@ -628,9 +602,7 @@ func TestRunFileBench_LongFileNameIsTruncated(t *testing.T) {
 		err = runFileBench(&CmdContext{App: &mmdBenchApp{}, Args: []string{
 			"--dir", dir, "--iterations", "1"}})
 	})
-	if err != nil {
-		t.Fatalf("runFileBench: %v", err)
-	}
+	testutil.NoError(t, err, "runFileBench")
 
 	listSection := reportSection(out, "📁 待测试文件:", "📊 单文件读取测试:")
 	if !strings.Contains(listSection, longName[:47]+"...") {

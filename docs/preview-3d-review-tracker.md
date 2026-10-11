@@ -522,3 +522,42 @@
 - 遗留 / 下一轮建议：
   1. 巡检域 13 格 + 各专项全清，tracker 已无「建议立即做」项——下一轮若继续，可选项：③ write-surface-gate 方法值链盲区提醒机制（已登记诚实边界，工作量大）；或等 scene-registry 焦点晋升 / F1 阴影进截图拍板。
   2. **族② 残余**（mergeCubes / computeBoneLocalPos 手抄双源）维持不动，无分叉证据不开战。
+
+## 2026-10-11T22:00:00+08:00 追加：专项全量技术债探明（账本实数 + 挂起项复核 + 未登记新债）
+
+- 选定理由：用户指令「探明 3d 预览技术债」——非单域轮转，按 `debt-ledger-refresh` 三层口径（已记账存量 / 裸露标记 / 账外盲区）全域横切；方法 = 主线程实跑 7 账本只读门禁 + 2 只读子代理（挂起债逐项核实 / ADR 开放切片 + env 台账 §1 逐行 + STALE 卡）+ 主模型抽查。HEAD 基准 `57ba82b2f`。
+- **账本实数（3D 切片，只读门禁今日实测）**：
+  - deadcode：knip 全仓 168（其中 **preview-3d 72 条**，live=baseline 零漂移）；jscpd 全仓 20 对（**preview-3d 10 对**，全为生产↔生产同族范式对，含 1 跨域 `ysm-meta-parser#ysm-anim-config`）；
+  - 复杂度：preview-3d **109 个函数超阈（橙 19 / 黄 90 / 红 0）**，最热 `decoder/wasm-decode.ts|collectTexturesAndAvatars`（认知 42）；
+  - 文件行数：`state/env-state-schema.ts` **1062** / `caps/sky-capability.ts` **922** 超 900 行 advisory（env 为 10-11 `a6451c1fc` 结构化升级主动 +24 行，非腐化）；`mount-preview-core.ts` 814 行（装配器合法厚度，卡口径已改判）；
+  - 单例卫生：7 处未受管顶层 let（6 文件，基线内）；分层反向边 0；doc-drift unregistered 0；jscpd-go 0 新增；
+  - i18n：dead 15（台账 10-10 拍板口径为 13）——新增 2 键 `preview.capStage.save/load` 系**动态键误报**（`scene-capability-registry.ts:183` 模板字符串 `t(\`preview.capStage.${stage}\`)` 消费，静态扫描看不见）；`i18n-unused-baseline.json` 仍为 09-26 版（count 17）未刷新；
+  - ADR 债清单（check-adr-health）：P1×1 = **ADR-317 P2 on-device 终测**（登记处 `ysm-wasi.md:147`，CI build-android 仅打 APK 无真机步骤，09-27 后无推进证据）；P3×14 中 3D 七笔复核后**开放切片全部为零**（见下）。
+- **挂起债逐项复核（子代理 #1，8 项）**：仍成立 3（scene-registry 焦点晋升取插入序末位 = 产品待拍板；离屏截图无阴影 = 产品待拍板，export.md 声明条 + 双向锁均在；mergeCubes/computeBoneLocalPos 双源无 parity 语料覆盖 = 5 份语料无一含这对，无分叉证据不动）；已变化 3（sky 4 键散文标记已升 noUi/noWrite/noPersist 结构化字段 + drift 守卫；dispose 注销顺序病理已结构性清偿、字面顺序残余为形式级；CSP new Function 债在位未动）；**已清偿 1**（`pmxObjectToResponse` 零直测遗留 → `mmd-pmx-parser.worker.test.ts` 专设 describe 25 例已于 10-07 `e9ca20da3` 清偿，**本台账 09-19 遗留项 1 可销账**）。
+- **knip 72 条二档分类（子代理 #1 逐符号全仓 grep）**：① 内部使用/导出面宽 51 条（非债）；② ADR 显式 re-export 垫层 8 条（其中 **12 符号当前零 import 消费 = 收缩候选**：vrm-adapter 10 + node-types 2）；③ 结构盲区 2 条（`LoadTraceStage/Texture` 经内联 `import("...").X` 实际存活，条目陈旧，刷新时自然消失）；④ **真死导出候选 5 条可立即修**：`PoseScene`（mount-preview-core）/ `EnvironmentParams`（environment-state）/ `ShadowType`（shadow-capability，删别名不动值表）/ `TRACE_FORMAT_ADAPTERS`（load-trace）/ `DecodeSource`（decoder/utils 死转述行）；⑤ 勿动 2 条（`registerWaterBodyStrategy` 空转扩展点——注释声明的未来水体形态入口，属「机件先行」；`mmdTypes.js` 整文件未引用——vendor 第三方永不改）。
+- **ADR 开放切片复核（子代理 #2，7 项）**：ADR-129 剩余方向**全部落地**（136/137/138 被取代行均回指 129 总纲坐实、`src/preview-3d` 唯一领域根、state 不再反向 import adapters）→ **129 可升 ✅**（状态行补取代链注记；附新细节：state 层现正向依赖 infra 开关原语 + caps 类型，无环，§3.1 后果措辞需校准）；ADR-246/247/249/251 四笔 P3 的开放切片**实测全部已落地**（空壳引擎已删、3 语义滑块、SpotLightHelper 折叠卡、Bloom 联动随 329 刀①下沉 composer 叶、SSR 双显式字段 + 测试锁、三轴 252 终态、surface-pixels 家族 1:1）→ P3 债可销账；**ADR-227 仍开放 1 项**（PreviewSession 类化「下一阶段方向」全仓零实现提交，仅前瞻注释 + ADR-235 撞车注记，记账观察）；ADR-317 P2 仍开放（唯一 P1）。
+- **env 活台账 §1 逐行复核实证（子代理 #2，补 10-09「其余各行未复核」）**：6 行维持（S2-6/S2-7/E-2/E-5/G-3/R-1）；**4 行需改述**（S2-3 守卫已中心化到 `shader-patches/patch-guard` 三调用点、S2-5 进 ctx.getCapByPanelId seam、E-1 前半 needsUpdate 风暴已根治余「滑杆通路复用 syncMeshIntensity roots」、ground 私有 enabled 僵尸门已按 ADR-328 切片 C 改名 `mounted` + 机器闸归零、根治待 ADR-328 拍板）；**L-4 可删行**（wetness hint 已落地 + 测试锁）；另 **ADR-328 为 📝 提议中**（ground cap-enabled 统一，路径 A 实测不可行 / B 收编死键 / C 语义澄清已落地）。
+- **3 张 STALE 知识卡（last_verified 滞后实证）**：
+  1. `mount3d-584-giant.md`：「内嵌闭包仅剩 escH」已漂移——escH 替换语义已随 stage2/3 拆至 `buildInfra`/`commitSession`，mount3D 本体现存 4 个 ctx 接线袋闭包（L452-463）；「约百行」口径现 131 行本体仍成立；
+  2. `mount-preview-module-singleton-race.md`：**`status: archived` 与物理位置矛盾坐实**（仍居 docs/knowledge/ 未 git mv archive，index.md 3 处仍活卡收录，入链 ADR-227:49 等 4 处）——按「快照卡终局 = 归档迁出」须迁 + 断链（迁前过三查）；
+  3. `test-discipline.md`：失准句 =「preview-3d 116 处 vi.mock 全部已核」——实测 146 处（增量 30 = 10-09→11 ADR-329 三刀叶测试，未经三机制复核定核）；10-11 的 Go codemod 批未伤本卡（零触 TS 方法论）；9 条 invariant_anchors 全未失锚。
+- **本次新发现、台账未登记的债（建议处置档）**：
+  | # | 债 | 处置档 |
+  |---|---|---|
+  | N1 | ADR-129 状态 🔄 陈旧（开放切片已清零）+ 取代链注记缺失 | 升 ✅ + 补注（纯文档） |
+  | N2 | ADR-246/247/249/251 P3 债账本仍挂「部分采纳」但实测开放切片全落地 | 销账（check-adr-health 债清单随状态流转自净，先升 129/246/247/249/251 状态行） |
+  | N3 | ADR-246/247「相关」字段指向被 329 刀①叶化的旧落点（D1 现居 postprocessing-composer） | 记账观察（相关字段刷新） |
+  | N4 | ADR-227 PreviewSession 类化「下一阶段方向」无推进机制（仅前瞻注释） | 记账观察（开放债，无到期日——按 sanctioned.ts 同类判据须带触发条件） |
+  | N5 | ADR-317 P2 on-device 终测 09-27 后无推进证据（CI 无真机步骤） | 记账观察（P1，Android 发版计划启动时升级） |
+  | N6 | i18n 基线文件 09-26 版未刷新（dead 13→15 且 2 键动态误报未入 dynamicSites 豁免口径） | 立即修（--update-baseline + 误报归因） |
+  | N7 | `mount-preview-module-singleton-race.md` 归档矛盾（archived 未迁出 + index 活收录 + 4 入链） | 立即修（git mv + 断链 + 重生成 index） |
+  | N8 | `mount3d-584-giant.md`「escH 仅剩」句漂移 | 立即修（一句话 + last_verified） |
+  | N9 | `test-discipline.md` vi.mock 计数句失准（116→146，增量未复核） | 立即修（改不变量口径 + 补 329 三刀叶测试核定） |
+  | N10 | 真死导出 5 条（PoseScene / EnvironmentParams / ShadowType / TRACE_FORMAT_ADAPTERS / DecodeSource 死转述行） | 立即修（删 5 处，同步 3 张知识卡登记，check-knowledge-drift 兜底） |
+  | N11 | ADR-315 D2 re-export 垫层 12 符号零消费收缩候选（vrm-adapter 10 + node-types 2） | 记账观察（删前须核 Wails 绑定面 / e2e 动态引用） |
+  | N12 | state→infra/frustum-cull、render-budget + caps/scene-capability type 依赖方向演化（无环、无违规，但 ADR-129「state 是零依赖地基」措辞已失准） | 记账观察（随 N1 升格补注） |
+- 验证：全程只读（2 子代理 + 主线程门禁实跑，零生产变更）；`docs` 无改动。
+- 遗留 / 下一轮建议：
+  1. **立即修批（N6/N7/N8/N9/N10 + 台账 §1 改述 4 行 + L-4 删行）**：均可小刀完成——N10 五条删导出 + 卡同步一批；N7 归档迁移走「迁出前三查」；N8/N9 一句话卡修；N6 i18n 基线刷新；台账 §1 改述并入 env 台账文档批。
+  2. **产品拍板批（维持挂账，勿擅动）**：scene-registry 焦点晋升语义（A1）/ 截图进阴影（A2）/ sky 4 键 UI 出口（A4）/ ADR-328 三路径（ground enabled 根治）——四条都已有机器闸钉死现状，拍板后翻转对应锁即可。
+  3. 巡检轮转下一域：13 格已巡完 + 本轮专项，若无拍板输入，下一轮取「族② mergeCubes/computeBoneLocalPos parity 语料」或 N 批清偿。

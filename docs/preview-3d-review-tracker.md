@@ -490,3 +490,16 @@
 - 知识卡：`gate-chain-map.md` 补挂条（体例沿 check-scene-slot-writers 行）。
 - 副产物（对账过程发现，非本轮开战项）：`vitest-env-switch.ts` 清单含两条死路（parsers/voxel-parse.test.ts、features/dnd-collector.test.ts——脚本 SKIP 打印、无害但清单腐化）；docs/adr 与 archive 的陈旧测试名引用属历史快照豁免（元规则：ADR 背景 = 决策时状态，不改）。
 - 验证：go build ./... 绿；go test registry/cli 两包绿；4 表联动契约测试全绿；biome 全绿；闸全仓 0 命中。
+
+## 2026-10-11T19:10:00+08:00 追加：治理层残留候选收口（15:30 审计批第①/②项）
+
+- 选定理由：15:30 批次审计登记的三项治理层残留候选（① bindings 漂移 commit 时点无同步 / ② `tsc -p scripts` 不在 commit/pre-push 门禁 / ③ write-surface-gate 方法值链盲区）本轮收前两项；③ 维持登记（诚实边界，换汇聚点即失防，无提醒机制——留档）。
+- **② scripts typecheck 补挂 push/files 模式**（审计候选②，**确认为真缺口**）：`schedule.ts|runScriptsTypecheck` 此前只在 `--all`/`--docs`/`--static` 跑，push 与 --files（commit-with-check）路径对 `scripts/_lib` 未类型化新代码零拦截（仅 CI `--static` 兜底，等红了才修——与 bindings 漂移同病）。成本实测 1.06s，秒级承诺内。修法 = 增 `testsDomain` 开关：push/files 模式 `plan.contractTests`（变更域含 scripts/ 或 tests/）时补跑；纯前端/纯 Go 推送不背固定税（按域裁剪哲学）。TDD：契约测试 2 例（testsDomain 补跑 rc=0 PASS / rc=1 阻断）先红后绿；**变异验证**（摘掉开关）精确转红。files 模式实测：scripts 域变更 → tsc 项真实出现（PASS 23/23）；纯前端变更 → 无 tsc 项（54/54，不误伤）。
+- **① bindings 漂移 commit 时点提示**（审计候选①，**两次复发 a43533009/a97f32c9d 均为此形态**）：Go 侧改绑定面（含只改 JSDoc 注释）→ bindings 生成物未同步提交 → CI「绑定保鲜」测试红了才补。`wails3 generate bindings` 实测 82.6s 且依赖 registry——精确对账超秒级承诺，正解 = prepare-commit-msg **非阻断提示**（审计建议原话）。新增 `hooks/bindings-sync-hint.ts`：staged 含 `internal/app/` 非测试 .go（binding-check.ts 同款扫描面）且未带 `frontend/bindings/` 生成物 → stderr 提醒 regenerate；恒 exit 0、逃生阀 `YSM_SKIP_BINDINGS_HINT=1`。契约测试 9 例钉判定口径/边界（go/ CLI 不误报、_test.go 不算、同 commit 带产物不提示、反斜杠归一）。接线：`.githooks/prepare-commit-msg` 增第四提示（卡内 ×3→×4）。
+- **踩坑实录（node 原生 TS 解析器）**：hint 脚本头注释写 `internal/app/**/*.go` glob——注释内 `**/` 的末两字符恰是 `*/`，node 的 TS 扫描器把块注释提前闭合，后续代码全当表达式（ERR_INVALID_TYPESCRIPT_SYNTAX）。改注释为「internal/app 下非测试 .go」规避。教训：**脚本注释里的 glob 写法要避开 `**/` 序列**（同类已知坑：shared-styles.md 记的 CSS 注释 `*/` 提前闭合）。
+- 验证：契约 140/140（含双表一致性守卫 DOMAINS 140/TARGETS 114）；scripts tsc 1.0s 绿；doctor --docs 全绿（knowledge-drift errors=0）；biome 行级无新增违规；README 索引闸过（check-readme-index）。
+- 提交：`489e7e72b`（10 文件，245+/6-）。
+- 遗留 / 下一轮建议：
+  1. 治理层残留候选③（write-surface-gate 方法值链盲区）维持不动——已登记诚实边界。
+  2. 第 12 轮遗留候选（check-env-schema-consumers 补写方检测、applyModelDefaults 手写有序清单）维持不动。
+  3. **可回访点（本轮副产物）**：`hooks/bindings-sync-hint.ts` 的判定是「staged 形态」启发式（改绑定面但产物同 commit 则不提示）。若日后想升精确对账，成本 = wails3 generate（~80s+）只适合挂 CI 或夜间任务，不适合 commit 时点——维持现状。

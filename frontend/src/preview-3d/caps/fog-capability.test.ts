@@ -2,7 +2,8 @@
 // ===== FogCapability 测试（ADR-196 迁移至 envState）=====
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import * as THREE from "three";
-import { FogCapability, normalizeFogRange } from "./fog-capability.ts";
+import { FogCapability } from "./fog-capability.ts";
+import { normalizeFogRange } from "./persist-utils.ts";
 import { getParamRange, getPresetKeys } from "@/preview-3d/state/env-state-schema.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
 import { clearEnvCallbacks, isEnvCallbacksSuspended } from "@/preview-3d/state/env-dispatcher.ts";

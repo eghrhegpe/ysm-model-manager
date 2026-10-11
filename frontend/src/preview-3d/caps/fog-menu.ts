@@ -11,7 +11,7 @@ import type { LocaleKey } from "@/core/i18n/t.ts";
 import type { NodeFor, PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import { getParamRange } from "@/preview-3d/state/env-state-schema.ts";
 import type { FogCapability, FogMode } from "./fog-capability.ts";
-import { normalizeFogRange } from "./fog-capability.ts";
+import { normalizeFogRange } from "./persist-utils.ts";
 
 const FOG_PARAMS_GROUP: LocaleKey = "preview.fogGroupParams";
 

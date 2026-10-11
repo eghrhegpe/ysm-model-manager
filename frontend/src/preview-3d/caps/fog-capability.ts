@@ -17,7 +17,7 @@ import { pickModelDefaultFields } from "@/preview-3d/state/model-defaults.ts";
 // ADR-216：监听器集合工厂提级共享原语（water 同源；fog 模式切换 notify 用）
 import { createListenerSet } from "@/utils/base/primitives/listener-set.ts";
 import { buildFogNodes } from "./fog-menu.ts";
-import { oneOf, restoreFields } from "./persist-utils.ts";
+import { normalizeFogRange, oneOf, restoreFields } from "./persist-utils.ts";
 import {
   type EnvPlacement,
   persistState,
@@ -29,19 +29,6 @@ export type FogMode = "linear" | "exp2";
 
 /** FogMode 合法值白名单（loadState 枚举校验用） */
 const FOG_MODES = ["linear", "exp2"] as const satisfies readonly FogMode[];
-
-/** 线性雾近/远端的**最小景深跨度**（锐评 X-2 2026-10-04） */
-const FOG_MIN_DEPTH = 1;
-
-/** 线性雾跨字段规范化（锐评 X-2 2026-10-04）：逐字段 schema `range` 管不到 near/far 的关系
- *  （`fogNear ∈ [0,500]`、`fogFar ∈ [10,2000]` 各自合法，`near=500 / far=10` 却可同时成立），
- *  而 three 线性雾的 GLSL 插值 `smoothstep(fogNear, fogFar, d)` 在 `edge0 ≥ edge1` 时进入未定义域。
- *  规则：**far 至少比 near 大 `FOG_MIN_DEPTH`**；near 原样透传。
- *  ⚠️ 这是**消费点**规范化：envState 仍存用户原值（面板显示原值）。「显示值 ≠ 生效值」的出口
- *  （far 滑杆挂 `getHint`）登记在 `docs/archive/audit-water-critique.md` §七 X-2，未接。 */
-export function normalizeFogRange(near: number, far: number): { near: number; far: number } {
-  return { near, far: Math.max(far, near + FOG_MIN_DEPTH) };
-}
 
 export class FogCapability implements SceneCapability {
   readonly id = "fog";

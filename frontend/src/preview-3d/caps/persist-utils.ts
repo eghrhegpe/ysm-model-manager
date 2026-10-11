@@ -94,6 +94,25 @@ export function oneOf<T extends string>(
  * @returns 至少一个字段成功回填 true；无存档、或存档值全部类型不匹配（含损坏数据）
  *   返回 false——「无存档」与「有存档但什么都没恢复」对调用方是同一早退语义。
  */
+/** 线性雾近/远端的最小景深跨度（锐评 X-2 2026-10-04）。
+ * 下沉自 fog-capability.ts——断开 fog-capability ↔ fog-menu 的循环依赖边：
+ * fog-menu 原本值导入 normalizeFogRange（运行时边），使两文件互相 import；纯函数落到本零依赖
+ * 叶后，fog-menu 不再对 fog-capability 产生运行时依赖边。FOG_MIN_DEPTH 仅本文件内
+ * normalizeFogRange 引用，刻意不 export（无外部消费者，避免新增未用导出被 deadcode 基线捕获）。 */
+const FOG_MIN_DEPTH = 1;
+
+/**
+ * 线性雾跨字段规范化（锐评 X-2 2026-10-04）：逐字段 schema `range` 管不到 near/far 的关系
+ * （`fogNear ∈ [0,500]`、`fogFar ∈ [10,2000]` 各自合法，`near=500 / far=10` 却可同时成立），
+ * 而 three 线性雾的 GLSL 插值 `smoothstep(fogNear, fogFar, d)` 在 `edge0 ≥ edge1` 时进入未定义域。
+ * 规则：**far 至少比 near 大 `FOG_MIN_DEPTH`**；near 原样透传。
+ * ⚠️ 这是消费点规范化：envState 仍存用户原值（面板显示原值）。「显示值 ≠ 生效值」的出口
+ * （far 滑杆挂 `getHint`）登记在 `docs/archive/audit-water-critique.md` §七 X-2，未接。
+ */
+export function normalizeFogRange(near: number, far: number): { near: number; far: number } {
+  return { near, far: Math.max(far, near + FOG_MIN_DEPTH) };
+}
+
 export function restoreFields(
   state: Record<string, unknown> | null,
   spec: Record<string, FieldRestorer>,

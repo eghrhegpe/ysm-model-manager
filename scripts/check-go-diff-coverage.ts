@@ -41,7 +41,8 @@
  * 除变更行覆盖率门禁外，本脚本还承担「测试断言增量红线」（ADR-202 刀5）：
  * 新增/变更的 *_test.go 行若裸调 t.Fatal/t.Fatalf（未走 testutil，失败即弃权），
  * 默认阻断（exit 1）；--suggest 时降为非阻断建议区块；--bare-assert=off 逃生。
- * 豁免：go/internal/testutil/ 自身、纯注释行；有意不拦 t.Error/t.Errorf
+ * 豁免：testutil 断言器实现树自身（go/internal/testutil/ 与根 internal/testutil/）、
+ * 纯注释行；有意不拦 t.Error/t.Errorf
  * （循环/goroutine 收集多失败是 Go 惯用法，testutil 无「记录不致命」等价面）。
  *
  * 退出码：0 = 全部达标；1 = 存在未达标文件；2 = 配置/用法错误（git 失败或 go 不可用）。
@@ -496,8 +497,9 @@ function main() {
   const renameMap = detectRenames(base, head, staged);
 
   // ── 测试断言增量红线（ADR-202 刀5）：新增/变更测试行裸 t.Fatal/t.Fatalf → 拦 ──
-  // 只查测试文件的「新增行」，存量行不罚；go/internal/testutil/ 自身豁免
-  // （它内部就是用 t.Fatalf 实现断言器的，自测裸写合法）。
+  // 只查测试文件的「新增行」，存量行不罚；testutil 断言器实现树自身豁免
+  // （go/internal/testutil/ 与根 internal/testutil/ 两树，2026-10-11 单源翻转后
+  // 实现上移根桥包；其内部就是用 t.Fatalf 实现断言器的，自测裸写合法）。
   // ADR-234：红线块必须位于「无改动源码提前退出」之前——
   // 原位置在 changed.length===0 exit(0) 之后，而 changed 排除 *_test.go → 纯测试文件
   // 变更（红线最典型目标场景）直接提前退出，红线形同虚设

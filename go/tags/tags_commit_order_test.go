@@ -45,20 +45,19 @@ func TestStore_ConcurrentCommit_DiskKeepsAllKeys(t *testing.T) {
 	fresh := NewStore(dir)
 	all, err := fresh.ListByTag("tag007")
 	testutil.NoError(t, err, "fresh ListByTag")
-	if len(all) != n {
-		missing := make([]string, 0, n)
-		seen := map[string]bool{}
-		for _, k := range all {
-			seen[k] = true
-		}
-		for i := 0; i < n; i++ {
-			key := filepath.ToSlash(filepath.Join("model", fmt.Sprintf("k%03d.ysm", i)))
-			if !seen[key] {
-				missing = append(missing, key)
-			}
-		}
-		testutil.Equal(t, len(all), n, "并发 SetTags 后磁盘丢 key（缺 %d 个，样例 %v）", len(missing), firstN(missing, 5))
+	// 缺样例明细在断言外算好，失败信息带缺失 key 样例（进块即恒真的守卫形态不如外提）
+	missing := make([]string, 0, n)
+	seen := map[string]bool{}
+	for _, k := range all {
+		seen[k] = true
 	}
+	for i := 0; i < n; i++ {
+		key := filepath.ToSlash(filepath.Join("model", fmt.Sprintf("k%03d.ysm", i)))
+		if !seen[key] {
+			missing = append(missing, key)
+		}
+	}
+	testutil.Equal(t, len(all), n, "并发 SetTags 后磁盘丢 key（缺 %d 个，样例 %v）", len(missing), firstN(missing, 5))
 }
 
 func firstN(s []string, n int) []string {

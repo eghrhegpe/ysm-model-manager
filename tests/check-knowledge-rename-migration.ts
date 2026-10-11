@@ -29,10 +29,12 @@ const TMP_CARD = path.join(KC_TMP_DIR, "zzz-rename-migration-tmp.md");
 const CARD_STEM = "zzz-rename-migration-tmp";
 
 const RENAME_HINT = "疑似历史重命名迁移至";
-// 仓库真实 rename 案例：internal/testutil/testutil.go → go/internal/testutil/testutil.go
-// （ADR-191 testutil 迁回 go/internal；当前 go/internal/... 存在、internal/... 已 404）
-const OLD_PATH = "internal/testutil/testutil.go";
-const NEW_PATH = "go/internal/testutil/testutil.go";
+// 仓库真实 rename 案例：internal/testutil/testutil_windows.go → go/internal/testutil/testutil_windows.go
+// （ADR-191 testutil 迁回 go/internal；当前 go/internal/... 存在、internal/... 已 404）。
+// 2026-10-11 G3 根桥包 internal/testutil 复活了同事件的头两个路径（testutil.go / testutil_test.go），
+// 故夹具改用同事件第三条 rename（testutil_windows.go，根侧未复活、仍 404）保持「已知 404」语义。
+const OLD_PATH = "internal/testutil/testutil_windows.go";
+const NEW_PATH = "go/internal/testutil/testutil_windows.go";
 
 function writeCard(src: string) {
   const fm = [

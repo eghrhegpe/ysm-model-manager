@@ -254,6 +254,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-329：3D 预览巨型 cap 对称叶化（sky/light/postprocessing 拆分）",
+        "link": "/adr/architecture/ADR-329-preview-cap-symmetry-leaf"
+      },
+      {
         "text": "ADR-328：cap 能力总开关统一收编 envState 与 ground 终态",
         "link": "/adr/architecture/ADR-328-cap-enabled-unification"
       },

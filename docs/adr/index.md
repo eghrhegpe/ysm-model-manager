@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **340** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **341** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > ADR 三区存放：根目录 = 存量（分级前）/ `architecture/` = 架构决策 / `decisions/` = 执行决策日志（ADR-320）。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -16,7 +16,7 @@ permalink: /adr/
 
 | 状态 | 数量 |
 |------|------|
-| [📝 提议中](#提议中) | 8 |
+| [📝 提议中](#提议中) | 9 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
 | [🔄 部分采纳](#部分采纳) | 15 |
 | [✅ 已采纳](#已采纳) | 309 |
@@ -26,10 +26,11 @@ permalink: /adr/
 
 ## 按状态分组导航
 
-### 📝 提议中（8）
+### 📝 提议中（9）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-329](./architecture/ADR-329-preview-cap-symmetry-leaf.md) | 3D 预览巨型 cap 对称叶化（sky/light/postprocessing 拆分） | 📝 提议中 |
 | [ADR-328](./architecture/ADR-328-cap-enabled-unification.md) | cap 能力总开关统一收编 envState 与 ground 终态 | 📝 提议中 |
 | [ADR-327](./architecture/ADR-327-hdr.md) | 自定义 HDR 路径持久化与重启恢复 | 📝 提议中 |
 | [ADR-325](./architecture/ADR-325-app-domain-sinking-over-multi-service.md) | App 瘦身走域下沉：拒绝 Wails 多 Service 外壳 | 📝 提议中 |
@@ -390,6 +391,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
+| ADR-329 | 3D 预览巨型 cap 对称叶化（sky/light/postprocessing 拆分） | 📝 提议中 | 2026-10-11 |
 | ADR-328 | cap 能力总开关统一收编 envState 与 ground 终态 | 📝 提议中 | 2026-10-11 |
 | ADR-327 | 自定义 HDR 路径持久化与重启恢复 | 📝 提议中 | 2026-10-11 |
 | ADR-326 | 环境能力持久化键派生化：消灭手抄摘键/还原表 | ✅ 已采纳 | 2026-10-08 |

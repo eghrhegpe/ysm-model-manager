@@ -113,7 +113,6 @@ function buildArchitectureTemplate(
   return `# ADR-${n}：${title}
 
 - **状态**：📝 提议中（Proposed）
-- **实施状态**：查知识卡（ADR 只记决策方向，不记实施进度）
 - **日期**：${today()}
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **准入理由**：${reason}

@@ -8,15 +8,14 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // Empty 在 recycleDir 未设置时应返回 (0, nil)（不 panic）
 func TestEmpty_RecycleDirUnset(t *testing.T) {
 	tm := &TrashManager{}
 	count, err := tm.Empty()
-	if err != nil {
-		t.Fatalf("recycleDir 未设置应返回 nil 错误: %v", err)
-	}
+	testutil.NoError(t, err, "recycleDir 未设置应返回 nil 错误")
 	if count != 0 {
 		t.Fatalf("应返回 0，得到 %d", count)
 	}
@@ -27,9 +26,7 @@ func TestEmpty_RecycleDirNotExist(t *testing.T) {
 	dir := t.TempDir()
 	tm := New(dir)
 	count, err := tm.Empty()
-	if err != nil {
-		t.Fatalf("回收站不存在应返回 nil 错误: %v", err)
-	}
+	testutil.NoError(t, err, "回收站不存在应返回 nil 错误")
 	if count != 0 {
 		t.Fatalf("应返回 0，得到 %d", count)
 	}

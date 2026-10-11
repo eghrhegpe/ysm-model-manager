@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/fsutil"
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 	typereg "ysm-model-manager/go/types/registry"
 )
@@ -105,9 +106,7 @@ func TestSimpleCopyImporter_Import_FileOverwrite(t *testing.T) {
 	}
 
 	err := NewSimpleCopy("test").Import(srcFile, dstDir)
-	if err != nil {
-		t.Fatalf("覆盖导入应成功，实际: %v", err)
-	}
+	testutil.NoError(t, err, "覆盖导入应成功，实际")
 	data, _ := os.ReadFile(dstFile)
 	if string(data) != "newdata" {
 		t.Fatalf("覆盖后内容 = %q, 期望 newdata", string(data))
@@ -154,9 +153,7 @@ func TestSimpleCopyImporter_Import_DirOverwrite(t *testing.T) {
 	}
 
 	err := NewSimpleCopy("test").Import(srcDir, dstDir)
-	if err != nil {
-		t.Fatalf("目录覆盖导入应成功，实际: %v", err)
-	}
+	testutil.NoError(t, err, "目录覆盖导入应成功，实际")
 	if _, err := os.Stat(filepath.Join(oldDir, "new.txt")); err != nil {
 		t.Fatalf("新文件未导入: %v", err)
 	}
@@ -326,9 +323,7 @@ func TestDirectoryCopyImporter_Import_Overwrite(t *testing.T) {
 	}
 
 	err := NewDirectoryCopy("EntityPlayer").Import(modelDir, dstDir)
-	if err != nil {
-		t.Fatalf("覆盖导入应成功，实际: %v", err)
-	}
+	testutil.NoError(t, err, "覆盖导入应成功，实际")
 	if _, err := os.Stat(filepath.Join(oldDir, "model.pmx")); err != nil {
 		t.Fatalf("新文件缺失: %v", err)
 	}
@@ -348,9 +343,7 @@ func TestDirectoryCopyImporter_Import_EmptyDir(t *testing.T) {
 		t.Fatal(err)
 	}
 	err := NewDirectoryCopy("EntityPlayer").Import(empty, dstDir)
-	if err != nil {
-		t.Fatalf("空目录导入应成功，实际: %v", err)
-	}
+	testutil.NoError(t, err, "空目录导入应成功，实际")
 	info, err := os.Stat(filepath.Join(dstDir, "emptymodel"))
 	if err != nil || !info.IsDir() {
 		t.Fatalf("目标空目录应存在: %v", err)
@@ -540,9 +533,7 @@ func TestImportFromBase64_NilLogger(t *testing.T) {
 	root := t.TempDir()
 	badYsm := base64.StdEncoding.EncodeToString([]byte{0xDE, 0xAD, 0xBE, 0xEF, 0x00})
 	_, _, err := ImportFromBase64("m.ysm", badYsm, ImportOptions{}, func(rtype string) string { return root }, nil)
-	if err != nil {
-		t.Fatalf("nil logger 不应影响导入: %v", err)
-	}
+	testutil.NoError(t, err, "nil logger 不应影响导入")
 	if _, err := os.Stat(filepath.Join(root, "m.ysm")); err != nil {
 		t.Fatalf("文件应已写入: %v", err)
 	}
@@ -605,9 +596,7 @@ func TestImportFromBase64_RtypeRouting(t *testing.T) {
 				}
 				return
 			}
-			if err != nil {
-				t.Fatalf("导入失败: %v", err)
-			}
+			testutil.NoError(t, err, "导入失败")
 			if got[tc.wantType] == 0 {
 				t.Fatalf("rootFn 应收到 %q，实际 %v", tc.wantType, got)
 			}
@@ -695,9 +684,7 @@ func makeSymlinkFixture(t *testing.T, src string) bool {
 func assertSymlinkCopied(t *testing.T, linkPath, wantTarget string) {
 	t.Helper()
 	info, err := os.Lstat(linkPath)
-	if err != nil {
-		t.Fatalf("符号链接应被复制: %v", err)
-	}
+	testutil.NoError(t, err, "符号链接应被复制")
 	if info.Mode()&os.ModeSymlink == 0 {
 		t.Fatalf("%s 应为符号链接，实际 %v", linkPath, info.Mode())
 	}

@@ -10,6 +10,7 @@ import (
 
 	"github.com/Tnze/go-mc/nbt"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types/registry"
 )
 
@@ -32,9 +33,7 @@ func makeMockRegion(t *testing.T, sx, sy, sz int, paletteNames []string, longs [
 func TestBuildRegionInfo_Valid(t *testing.T) {
 	region := makeMockRegion(t, 3, 3, 3, []string{"air", "minecraft:stone"}, []int64{0, 0})
 	info, err := buildRegionInfo(region)
-	if err != nil {
-		t.Fatalf("合法 region 不应 error: %v", err)
-	}
+	testutil.NoError(t, err, "合法 region 不应 error")
 	if info == nil {
 		t.Fatal("期望非 nil")
 	}
@@ -100,9 +99,7 @@ func TestBuildRegionInfo_NegativeSize(t *testing.T) {
 		"BlockStates":       []int64{0, 0},
 	}
 	info, err := buildRegionInfo(region)
-	if err != nil {
-		t.Fatalf("负 size 应标准化成功, 实际 error: %v", err)
-	}
+	testutil.NoError(t, err, "负 size 应标准化成功, 实际 error")
 	if info == nil {
 		t.Fatal("期望非 nil")
 	}
@@ -346,9 +343,7 @@ func TestParseNbtStructure_Valid(t *testing.T) {
 		},
 	}
 	raw, err := nbt.Marshal(root)
-	if err != nil {
-		t.Fatalf("nbt.Marshal 失败: %v", err)
-	}
+	testutil.NoError(t, err, "nbt.Marshal 失败")
 	var buf bytes.Buffer
 	gz := gzip.NewWriter(&buf)
 	if _, err := gz.Write(raw); err != nil {
@@ -385,9 +380,7 @@ func TestParseNbtStructure_SizeGuard(t *testing.T) {
 			"palette":     []any{map[string]any{"Name": "minecraft:stone"}},
 		}
 		raw, err := nbt.Marshal(root)
-		if err != nil {
-			t.Fatalf("nbt.Marshal 失败: %v", err)
-		}
+		testutil.NoError(t, err, "nbt.Marshal 失败")
 		var buf bytes.Buffer
 		gz := gzip.NewWriter(&buf)
 		if _, err := gz.Write(raw); err != nil {

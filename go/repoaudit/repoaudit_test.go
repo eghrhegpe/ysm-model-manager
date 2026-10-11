@@ -21,9 +21,7 @@ import (
 func TestAudit_EmptyDir(t *testing.T) {
 	dir := t.TempDir()
 	result, err := Audit(dir)
-	if err != nil {
-		t.Fatalf("Audit(empty) 应成功, got %v", err)
-	}
+	testutil.NoError(t, err, "Audit(empty) 应成功, got")
 	if result.Score != 100 {
 		t.Errorf("空仓库分数应为 100, got %d", result.Score)
 	}
@@ -40,9 +38,7 @@ func TestAudit_BadModelLowersScore(t *testing.T) {
 	testutil.WriteTestFileBytes(t, filepath.Join(dir, "broken.ysm"), []byte("not json"))
 
 	result, err := Audit(dir)
-	if err != nil {
-		t.Fatalf("Audit 应成功, got %v", err)
-	}
+	testutil.NoError(t, err, "Audit 应成功, got")
 	if result.Completeness.Checked != 1 || result.Completeness.Invalid != 1 {
 		t.Errorf("坏模型应记为 1 无效, got checked=%d invalid=%d", result.Completeness.Checked, result.Completeness.Invalid)
 	}
@@ -136,9 +132,7 @@ func TestAudit_RealFiles_ScoreExact(t *testing.T) {
 	}
 
 	res, err := Audit(dir)
-	if err != nil {
-		t.Fatalf("Audit 应成功, got %v", err)
-	}
+	testutil.NoError(t, err, "Audit 应成功, got")
 	if res.Completeness.Checked != 12 || res.Completeness.Valid != 10 || res.Completeness.Invalid != 2 {
 		t.Fatalf("完整性统计错位: checked=%d valid=%d invalid=%d",
 			res.Completeness.Checked, res.Completeness.Valid, res.Completeness.Invalid)
@@ -167,9 +161,7 @@ func TestHealthReportFor_VerdictFilled(t *testing.T) {
 		[]byte(`{"format_version":"1.16.0","minecraft:geometry":[]}`))
 
 	rep, err := HealthReportFor(dir)
-	if err != nil {
-		t.Fatalf("HealthReportFor 应成功, got %v", err)
-	}
+	testutil.NoError(t, err, "HealthReportFor 应成功, got")
 	if rep.Verdict != ScoreVerdict(rep.Score) {
 		t.Errorf("Verdict = %q, 期望 %q（score=%d）", rep.Verdict, ScoreVerdict(rep.Score), rep.Score)
 	}
@@ -187,9 +179,7 @@ func TestAudit_StructuralInvalid(t *testing.T) {
 	testutil.WriteTestFileBytes(t, filepath.Join(dir, "bad.ysm"), []byte(`{"foo": "bar"}`))
 
 	result, err := Audit(dir)
-	if err != nil {
-		t.Fatalf("Audit 应成功, got %v", err)
-	}
+	testutil.NoError(t, err, "Audit 应成功, got")
 	if result.Completeness.Valid != 0 || result.Completeness.Invalid != 1 {
 		t.Errorf("缺 format_version 的 JSON 应判无效, got valid=%d invalid=%d",
 			result.Completeness.Valid, result.Completeness.Invalid)
@@ -199,9 +189,7 @@ func TestAudit_StructuralInvalid(t *testing.T) {
 	dir2 := t.TempDir()
 	testutil.WriteTestFileBytes(t, filepath.Join(dir2, "ok.ysm"), []byte(`{"format_version":"1.16.0","minecraft:geometry":[]}`))
 	result2, err := Audit(dir2)
-	if err != nil {
-		t.Fatalf("Audit(ok) 应成功, got %v", err)
-	}
+	testutil.NoError(t, err, "Audit(ok) 应成功, got")
 	if result2.Completeness.Valid != 1 || result2.Completeness.Invalid != 0 {
 		t.Errorf("含 format_version 应判有效, got valid=%d invalid=%d",
 			result2.Completeness.Valid, result2.Completeness.Invalid)
@@ -220,9 +208,7 @@ func TestAudit_NestedDir(t *testing.T) {
 	testutil.WriteTestFileBytes(t, filepath.Join(sub, "tex.png"), []byte("png"))
 
 	result, err := Audit(dir)
-	if err != nil {
-		t.Fatalf("Audit 应成功, got %v", err)
-	}
+	testutil.NoError(t, err, "Audit 应成功, got")
 	if result.Resources.TotalFiles != 2 {
 		t.Errorf("嵌套目录应统计 2 个文件, got %d", result.Resources.TotalFiles)
 	}
@@ -246,9 +232,7 @@ func TestAudit_ByTypeLocationRouting(t *testing.T) {
 	testutil.WriteTestFileBytes(t, filepath.Join(pmxDir, "角色.pmx"), []byte("pmx"))
 
 	result, err := Audit(dir)
-	if err != nil {
-		t.Fatalf("Audit 应成功, got %v", err)
-	}
+	testutil.NoError(t, err, "Audit 应成功, got")
 	if result.Resources.ByType["EntityPlayer"] != 3 {
 		t.Errorf("mmd/PMX 下 3 个文件应全归 EntityPlayer, ByType=%v", result.Resources.ByType)
 	}
@@ -292,9 +276,7 @@ func TestAudit_BannedCount(t *testing.T) {
 	testutil.WriteTestFileBytes(t, filepath.Join(dir, "d.ysm.BAN"), []byte(`{"format_version":"1.16.0","minecraft:geometry":[]}`))
 
 	result, err := Audit(dir)
-	if err != nil {
-		t.Fatalf("Audit 应成功, got %v", err)
-	}
+	testutil.NoError(t, err, "Audit 应成功, got")
 	if result.Resources.Banned != 3 {
 		t.Errorf("3 个禁用文件（.disabled/.ban/.BAN）应记 banned=3, got %d", result.Resources.Banned)
 	}
@@ -311,9 +293,7 @@ func TestHealthReportFor_IncludesDedup(t *testing.T) {
 	testutil.WriteTestFileBytes(t, filepath.Join(dir, "c.ysm"), []byte("same content"))
 
 	report, err := HealthReportFor(dir)
-	if err != nil {
-		t.Fatalf("HealthReportFor 应成功, got %v", err)
-	}
+	testutil.NoError(t, err, "HealthReportFor 应成功, got")
 	if report.Dedup.Groups != 1 {
 		t.Errorf("应有 1 个去重组, got %d", report.Dedup.Groups)
 	}

@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types/registry"
 )
 
@@ -170,9 +171,7 @@ func TestBuildVoxelData_Success(t *testing.T) {
 	_, data := makeVoxelGz(t, 1, 100)
 	path := writeVoxelGz(t, data)
 	result, err := BuildVoxelData(path, 100)
-	if err != nil {
-		t.Fatalf("BuildVoxelData 失败: %v", err)
-	}
+	testutil.NoError(t, err, "BuildVoxelData 失败")
 	if result.Size != [3]int{1, 1, 1} {
 		t.Errorf("Size = %v, want [1 1 1]", result.Size)
 	}
@@ -196,9 +195,7 @@ func TestBuildVoxelData_PaletteIndex0IsAir(t *testing.T) {
 	_, data := makeVoxelGz(t, 0, 100)
 	path := writeVoxelGz(t, data)
 	result, err := BuildVoxelData(path, 100)
-	if err != nil {
-		t.Fatalf("BuildVoxelData 失败: %v", err)
-	}
+	testutil.NoError(t, err, "BuildVoxelData 失败")
 	if len(result.Groups) != 0 {
 		t.Errorf("air 索引应无方块, Groups = %+v", result.Groups)
 	}
@@ -209,9 +206,7 @@ func TestBuildVoxelData_MaxBlocksTruncate(t *testing.T) {
 	_, data := makeVoxelGz(t, 1, 0)
 	path := writeVoxelGz(t, data)
 	result, err := BuildVoxelData(path, 0)
-	if err != nil {
-		t.Fatalf("BuildVoxelData 失败: %v", err)
-	}
+	testutil.NoError(t, err, "BuildVoxelData 失败")
 	if !result.Truncated {
 		t.Error("maxBlocks=0 应 Truncated=true")
 	}
@@ -245,9 +240,7 @@ func TestBuildVoxelData_MultiRegion(t *testing.T) {
 	root := nbtCompound("", nbtInt("Version", 5), metadata, regions)
 	path := writeGzNbt(t, root)
 	result, err := BuildVoxelData(path, 100)
-	if err != nil {
-		t.Fatalf("BuildVoxelData 失败: %v", err)
-	}
+	testutil.NoError(t, err, "BuildVoxelData 失败")
 	if len(result.Groups) != 1 {
 		t.Fatalf("两 region 同一颜色应合并为 1 组, Groups = %+v", result.Groups)
 	}
@@ -269,9 +262,7 @@ func TestBuildVoxelData_NoRegions(t *testing.T) {
 	path := writeVoxelGz(t, buf.Bytes())
 
 	result, err := BuildVoxelData(path, 100)
-	if err != nil {
-		t.Fatalf("BuildVoxelData 失败: %v", err)
-	}
+	testutil.NoError(t, err, "BuildVoxelData 失败")
 	if result.Size != [3]int{2, 3, 4} {
 		t.Errorf("Size = %v, want [2 3 4]", result.Size)
 	}
@@ -300,9 +291,7 @@ func TestBuildVoxelData_InvalidFile(t *testing.T) {
 func TestBuildNbtVoxelData_Success(t *testing.T) {
 	path := writeVoxelGz(t, makeNbtStructureGz(t, 1))
 	result, err := BuildNbtVoxelData(path, 100)
-	if err != nil {
-		t.Fatalf("BuildNbtVoxelData 失败: %v", err)
-	}
+	testutil.NoError(t, err, "BuildNbtVoxelData 失败")
 	if result.Size != [3]int{1, 1, 1} {
 		t.Errorf("Size = %v, want [1 1 1]", result.Size)
 	}
@@ -319,9 +308,7 @@ func TestBuildNbtVoxelData_State0(t *testing.T) {
 	// state=0 → palette[0]=air，应跳过（与 BuildVoxelData/BuildSchematicVoxelData 一致）
 	path := writeVoxelGz(t, makeNbtStructureGz(t, 0))
 	result, err := BuildNbtVoxelData(path, 100)
-	if err != nil {
-		t.Fatalf("BuildNbtVoxelData 失败: %v", err)
-	}
+	testutil.NoError(t, err, "BuildNbtVoxelData 失败")
 	if len(result.Groups) != 0 {
 		t.Errorf("air 应被跳过, Groups = %+v", result.Groups)
 	}
@@ -344,9 +331,7 @@ func TestBuildNbtVoxelData_State0NonAirPalette(t *testing.T) {
 	root := nbtCompound("", size, palette, block)
 	path := writeGzNbt(t, root)
 	result, err := BuildNbtVoxelData(path, 100)
-	if err != nil {
-		t.Fatalf("BuildNbtVoxelData 失败: %v", err)
-	}
+	testutil.NoError(t, err, "BuildNbtVoxelData 失败")
 	if len(result.Groups) != 1 || len(result.Groups[0].Positions) != 1 {
 		t.Fatalf("palette[0]=stone 且 state=0 应保留 1 组 1 方块, Groups = %+v", result.Groups)
 	}
@@ -369,9 +354,7 @@ func TestBuildNbtVoxelData_AirAtNonZeroIndex(t *testing.T) {
 	root := nbtCompound("", size, palette, block)
 	path := writeGzNbt(t, root)
 	result, err := BuildNbtVoxelData(path, 100)
-	if err != nil {
-		t.Fatalf("BuildNbtVoxelData 失败: %v", err)
-	}
+	testutil.NoError(t, err, "BuildNbtVoxelData 失败")
 	if len(result.Groups) != 0 {
 		t.Errorf("palette[1]=air 且 state=1 应跳过, Groups = %+v", result.Groups)
 	}
@@ -380,9 +363,7 @@ func TestBuildNbtVoxelData_AirAtNonZeroIndex(t *testing.T) {
 func TestBuildNbtVoxelData_MaxBlocksTruncate(t *testing.T) {
 	path := writeVoxelGz(t, makeNbtStructureGz(t, 1))
 	result, err := BuildNbtVoxelData(path, 0)
-	if err != nil {
-		t.Fatalf("BuildNbtVoxelData 失败: %v", err)
-	}
+	testutil.NoError(t, err, "BuildNbtVoxelData 失败")
 	if !result.Truncated {
 		t.Error("maxBlocks=0 应 Truncated=true")
 	}
@@ -472,9 +453,7 @@ func makeBedrockStructureGz(t *testing.T) []byte {
 func TestBuildNbtVoxelData_BedrockSubLevels(t *testing.T) {
 	path := writeVoxelGz(t, makeBedrockStructureGz(t))
 	result, err := BuildNbtVoxelData(path, 100)
-	if err != nil {
-		t.Fatalf("BuildNbtVoxelData 失败: %v", err)
-	}
+	testutil.NoError(t, err, "BuildNbtVoxelData 失败")
 	if result.Size != [3]int{4, 1, 1} {
 		t.Errorf("Size = %v, want [4 1 1]（sub_levels 聚合包围盒）", result.Size)
 	}
@@ -521,9 +500,7 @@ func TestBuildSchematicVoxelData_V2BlockData(t *testing.T) {
 	// size 2x1x1，索引 0 = blockID 1（stone），索引 1 = 0（air）
 	path := writeVoxelGz(t, makeSchematicV2Gz(t, 2, 1, 1, []byte{0x01, 0x00}))
 	result, err := BuildSchematicVoxelData(path, 100)
-	if err != nil {
-		t.Fatalf("BuildSchematicVoxelData 失败: %v", err)
-	}
+	testutil.NoError(t, err, "BuildSchematicVoxelData 失败")
 	if result.Size != [3]int{2, 1, 1} {
 		t.Errorf("Size = %v, want [2 1 1]", result.Size)
 	}
@@ -537,9 +514,7 @@ func TestBuildSchematicVoxelData_V1Blocks(t *testing.T) {
 	// v1：Blocks byte array [1, 0, 1] + Palette → 2 个 stone 方块
 	path := writeVoxelGz(t, makeSchematicV1Gz(t, 3, 1, 1, []byte{0x01, 0x00, 0x01}))
 	result, err := BuildSchematicVoxelData(path, 100)
-	if err != nil {
-		t.Fatalf("BuildSchematicVoxelData 失败: %v", err)
-	}
+	testutil.NoError(t, err, "BuildSchematicVoxelData 失败")
 	if len(result.Groups) != 1 || len(result.Groups[0].Positions) != 2 {
 		t.Errorf("Groups = %+v, want 1 组 2 方块", result.Groups)
 	}
@@ -548,9 +523,7 @@ func TestBuildSchematicVoxelData_V1Blocks(t *testing.T) {
 func TestBuildSchematicVoxelData_MaxBlocksTruncate(t *testing.T) {
 	path := writeVoxelGz(t, makeSchematicV2Gz(t, 2, 1, 1, []byte{0x01, 0x01}))
 	result, err := BuildSchematicVoxelData(path, 1)
-	if err != nil {
-		t.Fatalf("BuildSchematicVoxelData 失败: %v", err)
-	}
+	testutil.NoError(t, err, "BuildSchematicVoxelData 失败")
 	if !result.Truncated {
 		t.Error("maxBlocks=1 应 Truncated=true")
 	}
@@ -592,9 +565,7 @@ func TestBuildSchematicVoxelData_NoBlocks(t *testing.T) {
 func TestOpenGzRootFromBytes_Success(t *testing.T) {
 	_, data := makeVoxelGz(t, 1, 100)
 	root, err := OpenGzRootFromBytes(data)
-	if err != nil {
-		t.Fatalf("OpenGzRootFromBytes 失败: %v", err)
-	}
+	testutil.NoError(t, err, "OpenGzRootFromBytes 失败")
 	if _, ok := root["Regions"]; !ok {
 		t.Error("root 应含 Regions（litematic 结构）")
 	}
@@ -617,17 +588,11 @@ func TestBuildVoxelDataFromRoot_MatchesPathEntry(t *testing.T) {
 	path := writeVoxelGz(t, data)
 
 	viaPath, err := BuildVoxelData(path, 100)
-	if err != nil {
-		t.Fatalf("BuildVoxelData 失败: %v", err)
-	}
+	testutil.NoError(t, err, "BuildVoxelData 失败")
 	root, err := OpenGzRootFromBytes(data)
-	if err != nil {
-		t.Fatalf("OpenGzRootFromBytes 失败: %v", err)
-	}
+	testutil.NoError(t, err, "OpenGzRootFromBytes 失败")
 	viaRoot, err := BuildVoxelDataFromRoot(root, 100)
-	if err != nil {
-		t.Fatalf("BuildVoxelDataFromRoot 失败: %v", err)
-	}
+	testutil.NoError(t, err, "BuildVoxelDataFromRoot 失败")
 	if viaPath.Size != viaRoot.Size {
 		t.Errorf("Size 不一致: path=%v root=%v", viaPath.Size, viaRoot.Size)
 	}
@@ -646,17 +611,11 @@ func TestBuildNbtVoxelDataFromRoot_MatchesPathEntry(t *testing.T) {
 	path := writeVoxelGz(t, data)
 
 	viaPath, err := BuildNbtVoxelData(path, 100)
-	if err != nil {
-		t.Fatalf("BuildNbtVoxelData 失败: %v", err)
-	}
+	testutil.NoError(t, err, "BuildNbtVoxelData 失败")
 	root, err := OpenGzRootFromBytes(data)
-	if err != nil {
-		t.Fatalf("OpenGzRootFromBytes 失败: %v", err)
-	}
+	testutil.NoError(t, err, "OpenGzRootFromBytes 失败")
 	viaRoot, err := BuildNbtVoxelDataFromRoot(root, 100)
-	if err != nil {
-		t.Fatalf("BuildNbtVoxelDataFromRoot 失败: %v", err)
-	}
+	testutil.NoError(t, err, "BuildNbtVoxelDataFromRoot 失败")
 	if len(viaPath.Groups) != len(viaRoot.Groups) {
 		t.Errorf("Groups 数不一致: path=%d root=%d", len(viaPath.Groups), len(viaRoot.Groups))
 	}

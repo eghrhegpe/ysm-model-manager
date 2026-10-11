@@ -87,9 +87,7 @@ func TestInstallToGlobal_Success(t *testing.T) {
 		t.Fatal(err)
 	}
 	dst, err := InstallToGlobal(src, mcRoot)
-	if err != nil {
-		t.Fatalf("InstallToGlobal = %v", err)
-	}
+	testutil.NoError(t, err, "InstallToGlobal =")
 	want := filepath.Join(mcRoot, "config", "yes_steve_model", "custom", "model.ysm")
 	if dst != want {
 		t.Errorf("目标路径 = %q, want %q", dst, want)
@@ -1061,9 +1059,7 @@ func TestInstallDir_DeadRecursionGuard_CaseSensitiveFS(t *testing.T) {
 		t.Skip("当前 FS 大小写不敏感，无法构造不同目录")
 	}
 	err := InstallDir(srcDir, dstDir, repo, "copy", "")
-	if err != nil {
-		t.Fatalf("大小写敏感 FS 上不同大小写目录应可安装（非死递归）, got %v", err)
-	}
+	testutil.NoError(t, err, "大小写敏感 FS 上不同大小写目录应可安装（非死递归）, got")
 	if _, statErr := os.Stat(filepath.Join(dstDir, "SRC", "model.ysm")); statErr != nil {
 		t.Fatalf("目标应被安装: %v", statErr)
 	}

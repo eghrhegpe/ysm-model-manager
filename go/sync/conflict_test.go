@@ -462,9 +462,7 @@ func TestCollectFileEntries_HashFailureIsEntryLevel(t *testing.T) {
 	defer restore()
 
 	entries, err := collectFileEntries(dir)
-	if err != nil {
-		t.Fatalf("哈希失败的条目不应导致 collectFileEntries 整体失败: %v", err)
-	}
+	testutil.NoError(t, err, "哈希失败的条目不应导致 collectFileEntries 整体失败")
 	if e, ok := entries["broken.bin"]; !ok || e.Hash != "" {
 		t.Fatalf("哈希失败的条目应保留且 Hash 为空，实际 ok=%v entry=%+v", ok, e)
 	}
@@ -495,9 +493,7 @@ func TestDetectConflicts_HashFailedReportedNotAborted(t *testing.T) {
 	defer restore()
 
 	report, err := DetectConflicts(localDir, remoteDir, "test")
-	if err != nil {
-		t.Fatalf("单文件哈希失败不应导致 DetectConflicts 整体失败: %v", err)
-	}
+	testutil.NoError(t, err, "单文件哈希失败不应导致 DetectConflicts 整体失败")
 
 	var contentConflict, hashFailed *FileConflict
 	for i := range report.Conflicts {

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/types/registry"
 )
@@ -289,13 +290,9 @@ func TestRelinkDir_FileLevel_Idempotent(t *testing.T) {
 		return []types.ModelEntry{{Name: "m.ysm", Path: filepath.Join(dir, "m.ysm"), Hash: "h1"}}
 	}
 	c1, err := RelinkDir(customDir, repoRoot, "resourcepack", "copy", scanFn, nilLogger)
-	if err != nil {
-		t.Fatalf("第一次 RelinkDir 失败: %v", err)
-	}
+	testutil.NoError(t, err, "第一次 RelinkDir 失败")
 	c2, err := RelinkDir(customDir, repoRoot, "resourcepack", "copy", scanFn, nilLogger)
-	if err != nil {
-		t.Fatalf("第二次 RelinkDir 失败: %v", err)
-	}
+	testutil.NoError(t, err, "第二次 RelinkDir 失败")
 	if c1 != c2 {
 		t.Logf("提示：两次 RelinkDir 计数不同 c1=%d c2=%d", c1, c2)
 	}
@@ -315,13 +312,9 @@ func TestPushResources_Idempotent_NoOp(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(targetDir, "pack.zip"), []byte("x"), 0644)
 
 	c1, e1 := PushResources("resourcepack", globalDir, targetDir, "copy", nilLogger)
-	if e1 != nil {
-		t.Fatalf("第一次推送失败: %v", e1)
-	}
+	testutil.NoError(t, e1, "第一次推送失败")
 	c2, e2 := PushResources("resourcepack", globalDir, targetDir, "copy", nilLogger)
-	if e2 != nil {
-		t.Fatalf("第二次推送失败: %v", e2)
-	}
+	testutil.NoError(t, e2, "第二次推送失败")
 	if c1 != 0 || c2 != 0 {
 		t.Logf("提示：已同步状态再次推送 count=%d/%d（预期均为 0）", c1, c2)
 	}
@@ -410,9 +403,7 @@ func TestPullSingleResource_Dir_SiblingOutside(t *testing.T) {
 	_ = os.MkdirAll(srcDir, 0755)
 	_ = os.WriteFile(filepath.Join(srcDir, "ysm.json"), []byte("{}"), 0644)
 	err := PullSingleResource(globalDir, targetDir, srcDir)
-	if err != nil {
-		t.Fatalf("PullSingleResource 目录失败: %v", err)
-	}
+	testutil.NoError(t, err, "PullSingleResource 目录失败")
 	if _, err := os.Stat(filepath.Join(globalDir, "pack", "ysm.json")); err != nil {
 		t.Fatalf("目录应被复制: %v", err)
 	}
@@ -481,9 +472,7 @@ func TestRelinkDir_EmptyRType(t *testing.T) {
 		return []types.ModelEntry{{Name: "m.ysm", Path: filepath.Join(dir, "m.ysm"), Hash: "h1"}}
 	}
 	c, e := RelinkDir(customDir, repoRoot, "", "copy", scanFn, nilLogger)
-	if e != nil {
-		t.Fatalf("空 rtype 不应报错: %v", e)
-	}
+	testutil.NoError(t, e, "空 rtype 不应报错")
 	_ = c
 }
 
@@ -660,9 +649,7 @@ func TestSyncToggleStatus_EnableTargetExistsSkipped(t *testing.T) {
 	}
 
 	disable, enable, err := SyncToggleStatus(customDir, repoDir, scanFn)
-	if err != nil {
-		t.Fatalf("不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "不应报错")
 	if disable != 0 {
 		t.Errorf("禁用应 = 0，实际 %d", disable)
 	}
@@ -705,9 +692,7 @@ func TestSyncToggleStatus_DisableTargetExistsSkipped(t *testing.T) {
 	}
 
 	disable, enable, err := SyncToggleStatus(customDir, repoDir, scanFn)
-	if err != nil {
-		t.Fatalf("不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "不应报错")
 	if disable != 0 {
 		t.Errorf("禁用应 = 0（.disabled 已存在跳过），实际 %d", disable)
 	}
@@ -743,9 +728,7 @@ func TestCopyDirRecursive_SymlinkOverwritesExisting(t *testing.T) {
 		t.Fatalf("复制失败: %v", err)
 	}
 	info, err := os.Lstat(filepath.Join(dst, "link"))
-	if err != nil {
-		t.Fatalf("链接应存在: %v", err)
-	}
+	testutil.NoError(t, err, "链接应存在")
 	if info.Mode()&os.ModeSymlink == 0 {
 		t.Fatalf("应为符号链接，实际 %v", info.Mode())
 	}

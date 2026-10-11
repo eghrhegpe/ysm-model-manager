@@ -51,9 +51,7 @@ func TestAudit_CacheHitRate_ContentHashBased(t *testing.T) {
 	_ = cacheDir
 
 	result, err := Audit(repo)
-	if err != nil {
-		t.Fatalf("Audit: %v", err)
-	}
+	testutil.NoError(t, err, "Audit")
 
 	if result.Cache.Hits != 2 {
 		t.Errorf("命中数应为 2, got %d", result.Cache.Hits)
@@ -84,9 +82,7 @@ func TestAudit_CacheHitRate_NoTextures(t *testing.T) {
 	testutil.WriteTestFileBytes(t, filepath.Join(repo, "model.ysm"), []byte(`{"format_version":"1.16.0"}`))
 
 	result, err := Audit(repo)
-	if err != nil {
-		t.Fatalf("Audit: %v", err)
-	}
+	testutil.NoError(t, err, "Audit")
 	if result.Cache.Hits != 0 || result.Cache.Misses != 0 || result.Cache.HitRate != 0 {
 		t.Errorf("无纹理时命中率维度应全零, got hits=%d misses=%d rate=%f",
 			result.Cache.Hits, result.Cache.Misses, result.Cache.HitRate)
@@ -116,9 +112,7 @@ func TestAudit_CacheHitRate_GlobalCacheDoesNotInflate(t *testing.T) {
 	_ = cacheDir
 
 	result, err := Audit(repo)
-	if err != nil {
-		t.Fatalf("Audit: %v", err)
-	}
+	testutil.NoError(t, err, "Audit")
 
 	// 旧实现此处会算出 50/1*100 → 截断成 100%（假绿）。正确口径：0 命中。
 	if result.Cache.Hits != 0 {
@@ -147,9 +141,7 @@ func TestMeasureCacheHitRate_SamplingLimit(t *testing.T) {
 	cacheHitSampleLimit = 2
 
 	result, err := Audit(repo)
-	if err != nil {
-		t.Fatalf("Audit: %v", err)
-	}
+	testutil.NoError(t, err, "Audit")
 	if !result.Cache.CacheSampled {
 		t.Error("纹理数达采样上限时应标记 CacheSampled（前端据此显示「≈」）")
 	}
@@ -173,9 +165,7 @@ func TestMeasureCacheHitRate_CacheDirUnavailable(t *testing.T) {
 	}
 
 	result, err := Audit(repo)
-	if err != nil {
-		t.Fatalf("Audit: %v", err)
-	}
+	testutil.NoError(t, err, "Audit")
 	if result.Cache.CacheScanErrors != 3 {
 		t.Errorf("缓存目录不可用时应全部计为探测失败, got scanErrs=%d", result.Cache.CacheScanErrors)
 	}

@@ -82,9 +82,7 @@ func TestReadPackMeta_Zip(t *testing.T) {
 		"pack.png":    "png-data",
 	})
 	meta, thumb, err := ReadPackMeta(path)
-	if err != nil {
-		t.Fatalf("ReadPackMeta(zip) 失败: %v", err)
-	}
+	testutil.NoError(t, err, "ReadPackMeta(zip) 失败")
 	if meta.Pack.PackFormat != 12 {
 		t.Errorf("pack_format = %d, 期望 12", meta.Pack.PackFormat)
 	}

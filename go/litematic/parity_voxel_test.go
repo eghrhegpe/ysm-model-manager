@@ -16,6 +16,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 type voxelDataFixture struct {
@@ -27,9 +28,7 @@ type voxelDataFixture struct {
 func repoRootFromLitematicPkg(t *testing.T) string {
 	t.Helper()
 	dir, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("Getwd: %v", err)
-	}
+	testutil.NoError(t, err, "Getwd")
 	for d := dir; ; d = filepath.Dir(d) {
 		if _, err := os.Stat(filepath.Join(d, "frontend", "src", "parsers", "voxel-colors-data.json")); err == nil {
 			return d
@@ -46,9 +45,7 @@ func loadVoxelDataFixture(t *testing.T) *voxelDataFixture {
 	t.Helper()
 	root := repoRootFromLitematicPkg(t)
 	raw, err := os.ReadFile(filepath.Join(root, "frontend", "src", "parsers", "voxel-colors-data.json"))
-	if err != nil {
-		t.Fatalf("读取 voxel-colors-data.json: %v", err)
-	}
+	testutil.NoError(t, err, "读取 voxel-colors-data.json")
 	var f voxelDataFixture
 	if err := json.Unmarshal(raw, &f); err != nil {
 		t.Fatalf("解析 voxel-colors-data.json: %v", err)

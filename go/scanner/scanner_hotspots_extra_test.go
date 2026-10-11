@@ -265,9 +265,7 @@ func TestGenerateRepoIndex_WorkflowExists(t *testing.T) {
 	}
 
 	indexPath, err := GenerateRepoIndex(dir)
-	if err != nil {
-		t.Fatalf("GenerateRepoIndex() = %v", err)
-	}
+	testutil.NoError(t, err, "GenerateRepoIndex() =")
 	if indexPath != filepath.Join(dir, "index.json") {
 		t.Errorf("indexPath = %q", indexPath)
 	}
@@ -296,9 +294,7 @@ func TestGenerateRepoIndex_MkdirAllError(t *testing.T) {
 	}
 
 	indexPath, err := GenerateRepoIndex(dir)
-	if err != nil {
-		t.Fatalf("index.json 生成不应被 workflow 失败影响: %v", err)
-	}
+	testutil.NoError(t, err, "index.json 生成不应被 workflow 失败影响")
 	if _, statErr := os.Stat(indexPath); statErr != nil {
 		t.Errorf("index.json 应已生成: %v", statErr)
 	}

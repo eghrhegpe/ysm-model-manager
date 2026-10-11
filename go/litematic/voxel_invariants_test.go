@@ -16,6 +16,7 @@ package litematic
 import (
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types/registry"
 )
 
@@ -81,9 +82,7 @@ func TestBuildSchematicVoxelDataFromRoot_V1CoordinateMapping(t *testing.T) {
 		},
 	}
 	vd, err := BuildSchematicVoxelDataFromRoot(root, 100)
-	if err != nil {
-		t.Fatalf("BuildSchematicVoxelDataFromRoot 失败: %v", err)
-	}
+	testutil.NoError(t, err, "BuildSchematicVoxelDataFromRoot 失败")
 	if vd.Size != [3]int{2, 2, 2} {
 		t.Errorf("Size = %v, want [2 2 2]", vd.Size)
 	}
@@ -110,9 +109,7 @@ func TestBuildSchematicVoxelDataFromRoot_V2MultiByteVarint(t *testing.T) {
 		},
 	}
 	vd, err := BuildSchematicVoxelDataFromRoot(root, 100)
-	if err != nil {
-		t.Fatalf("BuildSchematicVoxelDataFromRoot 失败: %v", err)
-	}
+	testutil.NoError(t, err, "BuildSchematicVoxelDataFromRoot 失败")
 	if vd.Size != [3]int{2, 2, 1} {
 		t.Errorf("Size = %v, want [2 2 1]", vd.Size)
 	}
@@ -143,9 +140,7 @@ func TestBuildNbtVoxelDataFromRoot_PaletteIndexToPosition(t *testing.T) {
 	}
 
 	vd, err := BuildNbtVoxelDataFromRoot(root, 100)
-	if err != nil {
-		t.Fatalf("BuildNbtVoxelDataFromRoot 失败: %v", err)
-	}
+	testutil.NoError(t, err, "BuildNbtVoxelDataFromRoot 失败")
 	// Size 直接取自 NBT size，不参与方块坐标裁剪——钉住「尺寸语义 = 声明值」
 	if vd.Size != [3]int{3, 2, 4} {
 		t.Errorf("Size = %v, want [3 2 4]", vd.Size)
@@ -161,9 +156,7 @@ func TestBuildNbtVoxelDataFromRoot_PaletteIndexToPosition(t *testing.T) {
 
 	// maxBlocks 截断经 FromRoot 入口同样生效（容器路径用的就是该入口）
 	truncated, err := BuildNbtVoxelDataFromRoot(root, 1)
-	if err != nil {
-		t.Fatalf("maxBlocks=1 失败: %v", err)
-	}
+	testutil.NoError(t, err, "maxBlocks=1 失败")
 	if !truncated.Truncated {
 		t.Error("maxBlocks=1 应 Truncated=true")
 	}
@@ -211,9 +204,7 @@ func TestBuildBedrockVoxelData_PerSubPaletteAndAggMinTranslation(t *testing.T) {
 	sub1 := makeTestSubLevel(t, 8, []string{"minecraft:red_concrete", "minecraft:air"}, 0)
 
 	vd, err := buildBedrockVoxelData([]any{sub0, sub1}, 100)
-	if err != nil {
-		t.Fatalf("buildBedrockVoxelData 失败: %v", err)
-	}
+	testutil.NoError(t, err, "buildBedrockVoxelData 失败")
 	if vd.Size != [3]int{4, 1, 1} {
 		t.Errorf("Size = %v, want [4 1 1]（聚合包围盒 max-min+1）", vd.Size)
 	}
@@ -231,9 +222,7 @@ func TestBuildNbtVoxelDataFromRoot_BedrockDispatch(t *testing.T) {
 	root := map[string]any{"sub_levels": []any{sub}}
 
 	vd, err := BuildNbtVoxelDataFromRoot(root, 100)
-	if err != nil {
-		t.Fatalf("BuildNbtVoxelDataFromRoot(sub_levels) 失败: %v", err)
-	}
+	testutil.NoError(t, err, "BuildNbtVoxelDataFromRoot(sub_levels) 失败")
 	if vd.Size != [3]int{1, 1, 1} {
 		t.Errorf("Size = %v, want [1 1 1]（min 平移后单格）", vd.Size)
 	}
@@ -280,9 +269,7 @@ func TestBuildNbtVoxelDataFromRoot_MalformedBlockEntries(t *testing.T) {
 		"palette": palette,
 	}
 	vd, err := BuildNbtVoxelDataFromRoot(root, 100)
-	if err != nil {
-		t.Fatalf("畸形条目应被跳过而非报错: %v", err)
-	}
+	testutil.NoError(t, err, "畸形条目应被跳过而非报错")
 	assertVoxelPositions(t, vd, map[string][][3]int16{
 		"#7F7F7F": {{2, 0, 0}},
 	})
@@ -305,9 +292,7 @@ func TestBuildBedrockVoxelData_AggBoundsAllAxes(t *testing.T) {
 		}
 	}
 	vd, err := buildBedrockVoxelData([]any{sub(1, 2, 3, 4, 5, 6), sub(-1, 0, 7, 2, 8, 9)}, 100)
-	if err != nil {
-		t.Fatalf("buildBedrockVoxelData 失败: %v", err)
-	}
+	testutil.NoError(t, err, "buildBedrockVoxelData 失败")
 	if vd.Size != [3]int{6, 9, 7} {
 		t.Errorf("Size = %v, want [6 9 7]（逐轴 gMax-gMin+1）", vd.Size)
 	}
@@ -327,9 +312,7 @@ func TestBuildRegionInfo_Int16BoundaryAccepted(t *testing.T) {
 	longs := make([]int64, 1024)
 	upper := makeMockRegion(t, 32768, 1, 1, names, longs)
 	info, err := buildRegionInfo(upper)
-	if err != nil {
-		t.Fatalf("origin 0 + size 32768（末位 x=32767）应被接受: %v", err)
-	}
+	testutil.NoError(t, err, "origin 0 + size 32768（末位 x=32767）应被接受")
 	if info == nil {
 		t.Fatal("期望非 nil")
 	}
@@ -341,9 +324,7 @@ func TestBuildRegionInfo_Int16BoundaryAccepted(t *testing.T) {
 	lower := makeMockRegion(t, 1, 1, 1, names, []int64{0})
 	lower["Position"] = map[string]any{"x": int32(-32768), "y": int32(0), "z": int32(0)}
 	info, err = buildRegionInfo(lower)
-	if err != nil {
-		t.Fatalf("origin -32768（int16 下限）应被接受: %v", err)
-	}
+	testutil.NoError(t, err, "origin -32768（int16 下限）应被接受")
 	if info == nil || info.originX != -32768 {
 		t.Errorf("info = %+v, want originX=-32768", info)
 	}
@@ -376,9 +357,7 @@ func TestBuildSchematicVoxelDataFromRoot_CoordOverInt16Skipped(t *testing.T) {
 		},
 	}
 	vd, err := BuildSchematicVoxelDataFromRoot(root, 100)
-	if err != nil {
-		t.Fatalf("BuildSchematicVoxelDataFromRoot 失败: %v", err)
-	}
+	testutil.NoError(t, err, "BuildSchematicVoxelDataFromRoot 失败")
 	// Size 取自声明值（不因丢弃越界方块而缩水）
 	if vd.Size != [3]int{32769, 1, 1} {
 		t.Errorf("Size = %v, want [32769 1 1]", vd.Size)
@@ -410,9 +389,7 @@ func TestBuildBedrockVoxelData_CoordOverInt16Skipped(t *testing.T) {
 		"blocks":        []any{block(40000), block(-40000), block(0)},
 	}
 	vd, err := buildBedrockVoxelData([]any{sub}, 100)
-	if err != nil {
-		t.Fatalf("buildBedrockVoxelData 失败: %v", err)
-	}
+	testutil.NoError(t, err, "buildBedrockVoxelData 失败")
 	if vd.Size != [3]int{1, 1, 1} {
 		t.Errorf("Size = %v, want [1 1 1]", vd.Size)
 	}

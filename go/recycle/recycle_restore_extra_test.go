@@ -88,9 +88,7 @@ func TestRestore_CrossDeviceFileFallback(t *testing.T) {
 	}
 	// 目标文件已还原且内容完整
 	got, err := os.ReadFile(src)
-	if err != nil {
-		t.Fatalf("恢复后源位置文件应存在: %v", err)
-	}
+	testutil.NoError(t, err, "恢复后源位置文件应存在")
 	if string(got) != "exdev content" {
 		t.Fatalf("内容不一致: 期望 %q, 得到 %q", "exdev content", string(got))
 	}

@@ -45,9 +45,7 @@ func TestCopyDirRecursive_WithSymlink(t *testing.T) {
 	// 符号链接应复制为链接本身（ModeSymlink），目标为原链接目标
 	dstLink := filepath.Join(dst, "link.ysm")
 	fi, err := os.Lstat(dstLink)
-	if err != nil {
-		t.Fatalf("link.ysm 应存在: %v", err)
-	}
+	testutil.NoError(t, err, "link.ysm 应存在")
 	if fi.Mode()&os.ModeSymlink == 0 {
 		t.Fatal("link.ysm 应为符号链接（不跟随复制内容）")
 	}

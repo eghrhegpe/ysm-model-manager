@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -41,9 +42,7 @@ func TestSyncToggleStatus_RecycleSubtreeSkipped(t *testing.T) {
 	}
 
 	disable, enable, err := SyncToggleStatus(customDir, repoDir, scanFn)
-	if err != nil {
-		t.Fatalf("不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "不应报错")
 	if enable != 1 || disable != 0 {
 		t.Errorf(".recycle 子树 .ban 应被跳过、model_a 应启用 1 个: enable=%d disable=%d", enable, disable)
 	}

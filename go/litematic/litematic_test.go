@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // ===== 最小 NBT 构造 helper =====
@@ -74,9 +75,7 @@ func TestParseMeta_Success(t *testing.T) {
 		t.Fatal(err)
 	}
 	meta, err := ParseMeta(path)
-	if err != nil {
-		t.Fatalf("ParseMeta 失败: %v", err)
-	}
+	testutil.NoError(t, err, "ParseMeta 失败")
 	if meta.Name != "test_projection" || meta.Author != "authorA" {
 		t.Errorf("元数据错误: Name=%q Author=%q", meta.Name, meta.Author)
 	}
@@ -158,9 +157,7 @@ func TestParseMeta_VersionField(t *testing.T) {
 				t.Fatal(err)
 			}
 			meta, err := ParseMeta(path)
-			if err != nil {
-				t.Fatalf("ParseMeta 失败: %v", err)
-			}
+			testutil.NoError(t, err, "ParseMeta 失败")
 			if int(meta.Version) != int(tt.version) {
 				t.Errorf("Version 应为 %d, got %d", tt.version, meta.Version)
 			}
@@ -193,9 +190,7 @@ func TestParseMeta_EnclosingSizePartial(t *testing.T) {
 	}
 
 	meta, err := ParseMeta(path)
-	if err != nil {
-		t.Fatalf("ParseMeta 失败: %v", err)
-	}
+	testutil.NoError(t, err, "ParseMeta 失败")
 	// z 缺失时应为 0（Go 零值）
 	if meta.EnclosingSize[2] != 0 {
 		t.Errorf("缺失的 z 应为 0, got %d", meta.EnclosingSize[2])

@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // =========================================================================
@@ -225,9 +226,7 @@ func TestBuildVoxelData_BlockStatesExtra(t *testing.T) {
 	)
 	path := writeGzNbt(t, root)
 	result, err := BuildVoxelData(path, 100)
-	if err != nil {
-		t.Fatalf("不应 panic: %v", err)
-	}
+	testutil.NoError(t, err, "不应 panic")
 	// 只取第 1 个 block（索引 1 = stone）
 	if len(result.Groups) != 1 {
 		t.Errorf("应生成 1 组, 得到 %d 组: %+v", len(result.Groups), result.Groups)
@@ -261,9 +260,7 @@ func TestBuildVoxelData_ZeroSizeAllAxes(t *testing.T) {
 	)
 	path := writeGzNbt(t, root)
 	result, err := BuildVoxelData(path, 100)
-	if err != nil {
-		t.Fatalf("不应 panic: %v", err)
-	}
+	testutil.NoError(t, err, "不应 panic")
 	if len(result.Groups) != 0 {
 		t.Errorf("零尺寸 region 应无方块（静默跳过）, 得到 %d 组", len(result.Groups))
 	}
@@ -291,9 +288,7 @@ func TestBuildVoxelData_ZeroSizeOneAxis(t *testing.T) {
 	)
 	path := writeGzNbt(t, root)
 	result, err := BuildVoxelData(path, 100)
-	if err != nil {
-		t.Fatalf("不应 panic: %v", err)
-	}
+	testutil.NoError(t, err, "不应 panic")
 	if len(result.Groups) != 0 {
 		t.Errorf("单轴零尺寸应无方块, 得到 %d 组", len(result.Groups))
 	}
@@ -323,9 +318,7 @@ func TestBuildVoxelData_PaletteIndexOutOfBounds(t *testing.T) {
 	)
 	path := writeGzNbt(t, root)
 	result, err := BuildVoxelData(path, 100)
-	if err != nil {
-		t.Fatalf("越界索引应被跳过而非 panic: %v", err)
-	}
+	testutil.NoError(t, err, "越界索引应被跳过而非 panic")
 	if len(result.Groups) != 0 {
 		t.Errorf("越界 palette 索引应被跳过, 得到 %d 组", len(result.Groups))
 	}
@@ -351,9 +344,7 @@ func TestBuildVoxelData_PaletteIndexAllOnes(t *testing.T) {
 	)
 	path := writeGzNbt(t, root)
 	result, err := BuildVoxelData(path, 100)
-	if err != nil {
-		t.Fatalf("不应 panic: %v", err)
-	}
+	testutil.NoError(t, err, "不应 panic")
 	if len(result.Groups) != 0 {
 		t.Errorf("全越界索引应全部跳过, 得到 %d 组", len(result.Groups))
 	}
@@ -383,9 +374,7 @@ func TestBuildVoxelData_PaletteMissingName(t *testing.T) {
 	)
 	path := writeGzNbt(t, root)
 	result, err := BuildVoxelData(path, 100)
-	if err != nil {
-		t.Fatalf("不应 panic: %v", err)
-	}
+	testutil.NoError(t, err, "不应 panic")
 	// 索引 0（air）跳过，索引 1（stone）保留 → 1 个方块
 	if len(result.Groups) != 1 {
 		t.Errorf("应生成 1 组, 得到 %d 组: %+v", len(result.Groups), result.Groups)
@@ -428,9 +417,7 @@ func TestBuildSchematicVoxelData_ZeroHeight(t *testing.T) {
 	)
 	path := writeGzNbt(t, root)
 	result, err := BuildSchematicVoxelData(path, 100)
-	if err != nil {
-		t.Fatalf("零高度应无 panic: %v", err)
-	}
+	testutil.NoError(t, err, "零高度应无 panic")
 	if len(result.Groups) != 0 {
 		t.Errorf("零高度应无方块, 得到 %d 组", len(result.Groups))
 	}
@@ -449,9 +436,7 @@ func TestBuildSchematicVoxelData_BlocksShorterThanTotal(t *testing.T) {
 	)
 	path := writeGzNbt(t, root)
 	result, err := BuildSchematicVoxelData(path, 100)
-	if err != nil {
-		t.Fatalf("Blocks 短于 total 应无 panic: %v", err)
-	}
+	testutil.NoError(t, err, "Blocks 短于 total 应无 panic")
 	// blockID=1 (stone) 和 blockID=2 (grass) 各 1 个 → 2 组
 	// 但声明了 4 个位置，只填了 2 个（静默截断）
 	totalBlocks := 0
@@ -476,9 +461,7 @@ func TestBuildSchematicVoxelData_BlocksEmpty(t *testing.T) {
 	)
 	path := writeGzNbt(t, root)
 	result, err := BuildSchematicVoxelData(path, 100)
-	if err != nil {
-		t.Fatalf("空 Blocks 应无 panic: %v", err)
-	}
+	testutil.NoError(t, err, "空 Blocks 应无 panic")
 	if len(result.Groups) != 0 {
 		t.Errorf("空 Blocks 应无方块, 得到 %d 组", len(result.Groups))
 	}
@@ -501,9 +484,7 @@ func TestBuildSchematicVoxelData_TruncatedVarint(t *testing.T) {
 	)
 	path := writeGzNbt(t, root)
 	result, err := BuildSchematicVoxelData(path, 100)
-	if err != nil {
-		t.Fatalf("截断 varint 应无 panic: %v", err)
-	}
+	testutil.NoError(t, err, "截断 varint 应无 panic")
 	// 循环退出时只处理了 0-1 个方块（取决于 readVarInt 返回值）
 	t.Logf("截断 varint: 生成 %d 组方块", len(result.Groups))
 }
@@ -521,9 +502,7 @@ func TestBuildSchematicVoxelData_VarintAllOverflow(t *testing.T) {
 	)
 	path := writeGzNbt(t, root)
 	result, err := BuildSchematicVoxelData(path, 100)
-	if err != nil {
-		t.Fatalf("全溢出 varint 应无 panic: %v", err)
-	}
+	testutil.NoError(t, err, "全溢出 varint 应无 panic")
 	t.Logf("全 0xFF varint: 生成 %d 组方块", len(result.Groups))
 }
 
@@ -547,9 +526,7 @@ func TestBuildNbtVoxelData_StateTooLarge(t *testing.T) {
 	root := nbtCompound("", size, palette, block)
 	path := writeGzNbt(t, root)
 	result, err := BuildNbtVoxelData(path, 100)
-	if err != nil {
-		t.Fatalf("越界 state 应被跳过而非 panic: %v", err)
-	}
+	testutil.NoError(t, err, "越界 state 应被跳过而非 panic")
 	if len(result.Groups) != 0 {
 		t.Errorf("state 越界应被跳过, 得到 %d 组", len(result.Groups))
 	}
@@ -571,9 +548,7 @@ func TestBuildNbtVoxelData_StateNegative(t *testing.T) {
 	root := nbtCompound("", size, palette, block)
 	path := writeGzNbt(t, root)
 	result, err := BuildNbtVoxelData(path, 100)
-	if err != nil {
-		t.Fatalf("负 state 应被跳过而非 panic: %v", err)
-	}
+	testutil.NoError(t, err, "负 state 应被跳过而非 panic")
 	if len(result.Groups) != 0 {
 		t.Errorf("负 state 应被跳过, 得到 %d 组", len(result.Groups))
 	}
@@ -595,9 +570,7 @@ func TestBuildNbtVoxelData_PosOutOfInt16Range(t *testing.T) {
 	root := nbtCompound("", size, palette, block)
 	path := writeGzNbt(t, root)
 	result, err := BuildNbtVoxelData(path, 100)
-	if err != nil {
-		t.Fatalf("越界 pos 应被跳过而非 panic: %v", err)
-	}
+	testutil.NoError(t, err, "越界 pos 应被跳过而非 panic")
 	if len(result.Groups) != 0 {
 		t.Errorf("pos 越界应被跳过, 得到 %d 组", len(result.Groups))
 	}
@@ -619,9 +592,7 @@ func TestBuildNbtVoxelData_PosNegativeOutOfInt16(t *testing.T) {
 	root := nbtCompound("", size, palette, block)
 	path := writeGzNbt(t, root)
 	result, err := BuildNbtVoxelData(path, 100)
-	if err != nil {
-		t.Fatalf("负越界 pos 应被跳过而非 panic: %v", err)
-	}
+	testutil.NoError(t, err, "负越界 pos 应被跳过而非 panic")
 	if len(result.Groups) != 0 {
 		t.Errorf("负越界 pos 应被跳过, 得到 %d 组", len(result.Groups))
 	}

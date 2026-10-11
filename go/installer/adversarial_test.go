@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -86,9 +87,7 @@ func TestAdversarial_InstallDir_CopiesExeWithEmptyRtype(t *testing.T) {
 
 	// rtype=""  →  isAllowed default 分支对所有文件放行
 	err := InstallDir(srcDir, customDir, repo, "copy", "")
-	if err != nil {
-		t.Fatalf("InstallDir(rtype='') 意外失败: %v", err)
-	}
+	testutil.NoError(t, err, "InstallDir(rtype='') 意外失败")
 
 	finalDst := filepath.Join(customDir, filepath.Base(srcDir))
 

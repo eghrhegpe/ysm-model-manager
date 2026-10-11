@@ -46,9 +46,7 @@ func TestInstall_Copy(t *testing.T) {
 	repo, custom, _, src := setupTestDirs(t)
 
 	err := Install(src, custom, repo, "copy")
-	if err != nil {
-		t.Fatalf("Install() = %v", err)
-	}
+	testutil.NoError(t, err, "Install() =")
 
 	// 验证文件已复制到 custom 目录
 	dst := filepath.Join(custom, filepath.Base(src))
@@ -65,9 +63,7 @@ func TestInstall_Hardlink(t *testing.T) {
 	repo, custom, _, src := setupTestDirs(t)
 
 	err := Install(src, custom, repo, "hardlink")
-	if err != nil {
-		t.Fatalf("Install(hardlink) = %v", err)
-	}
+	testutil.NoError(t, err, "Install(hardlink) =")
 	dst := filepath.Join(custom, filepath.Base(src))
 	// 验证目标是真实硬链接：与源共享 inode
 	si, err := os.Stat(src)
@@ -405,9 +401,7 @@ func TestInstallDir_Copy(t *testing.T) {
 
 	dstDir := custom // InstallDir 会再下一层
 	err := InstallDir(srcDir, dstDir, repo, "copy", "EntityPlayer")
-	if err != nil {
-		t.Fatalf("InstallDir() = %v", err)
-	}
+	testutil.NoError(t, err, "InstallDir() =")
 
 	// 验证目录已复制（InstallDir 在 dstDir 下创建 basename 目录）
 	baseName := filepath.Base(srcDir)
@@ -655,9 +649,7 @@ func TestInstallDirRel_PlacesUnderRelPath(t *testing.T) {
 
 	// relSlash="东方/角色A/model" → finalDst=custom/东方/角色A/model
 	err := InstallDirRel(srcDir, custom, "东方/角色A/model", repo, "copy", "EntityPlayer")
-	if err != nil {
-		t.Fatalf("InstallDirRel() = %v", err)
-	}
+	testutil.NoError(t, err, "InstallDirRel() =")
 
 	dstPmx := filepath.Join(custom, "东方", "角色A", "model", "char.pmx")
 	if _, err := os.Stat(dstPmx); os.IsNotExist(err) {
@@ -682,9 +674,7 @@ func TestInstallDirRel_EmptyRelFallsBack(t *testing.T) {
 	}
 
 	err := InstallDirRel(srcDir, custom, "", repo, "copy", "EntityPlayer")
-	if err != nil {
-		t.Fatalf("InstallDirRel('') = %v", err)
-	}
+	testutil.NoError(t, err, "InstallDirRel('') =")
 
 	// rel 为空 → finalDst=custom/mydir （与 InstallDir 原语义一致）
 	dst := filepath.Join(custom, "mydir", "file.pmx")

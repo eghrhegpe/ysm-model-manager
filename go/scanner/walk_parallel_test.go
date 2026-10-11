@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // TestWalkDirParallel_MatchesWalkDir 逐条对标 filepath.WalkDir：
@@ -57,9 +58,7 @@ func TestWalkDirParallel_MatchesWalkDir(t *testing.T) {
 		mu.Unlock()
 		return nil
 	})
-	if err != nil {
-		t.Fatalf("walkDirParallel 返回错误: %v", err)
-	}
+	testutil.NoError(t, err, "walkDirParallel 返回错误")
 	sort.Strings(par)
 
 	if len(seq) != len(par) {
@@ -98,9 +97,7 @@ func TestWalkDirParallel_SkipDir(t *testing.T) {
 		}
 		return nil
 	})
-	if err != nil {
-		t.Fatalf("walkDirParallel 返回错误: %v", err)
-	}
+	testutil.NoError(t, err, "walkDirParallel 返回错误")
 
 	gotSet := map[string]bool{}
 	for _, s := range got {
@@ -160,9 +157,7 @@ func TestWalkDirParallel_RootNotExist(t *testing.T) {
 		}
 		return nil
 	})
-	if err != nil {
-		t.Fatalf("根不存在时 walkDirParallel 应返回 nil（回调已处理错误），实际: %v", err)
-	}
+	testutil.NoError(t, err, "根不存在时 walkDirParallel 应返回 nil（回调已处理错误），实际")
 	if called != 1 {
 		t.Fatalf("预期仅回调一次（带 err），实际: %d", called)
 	}

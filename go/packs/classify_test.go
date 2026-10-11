@@ -24,6 +24,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/packs"
 	"ysm-model-manager/go/types/registry"
 )
@@ -39,9 +40,7 @@ type goldenCase struct {
 func loadGolden(t *testing.T) []goldenCase {
 	t.Helper()
 	data, err := os.ReadFile("testdata/classify-golden.json")
-	if err != nil {
-		t.Fatalf("读语料失败: %v", err)
-	}
+	testutil.NoError(t, err, "读语料失败")
 	var cases []goldenCase
 	if err := json.Unmarshal(data, &cases); err != nil {
 		t.Fatalf("解析语料失败: %v", err)
@@ -64,9 +63,7 @@ func buildCase(t *testing.T, dir string, c goldenCase) string {
 		t.Fatalf("建目录失败: %v", err)
 	}
 	f, err := os.Create(full)
-	if err != nil {
-		t.Fatalf("建 zip 失败: %v", err)
-	}
+	testutil.NoError(t, err, "建 zip 失败")
 	defer f.Close()
 	zw := zip.NewWriter(f)
 	for _, e := range c.Entries {

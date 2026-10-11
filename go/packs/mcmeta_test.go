@@ -58,9 +58,7 @@ func TestReadPackMeta_Dir(t *testing.T) {
 	}
 
 	meta, thumb, err := ReadPackMeta(dir)
-	if err != nil {
-		t.Fatalf("ReadPackMeta(dir) = %v", err)
-	}
+	testutil.NoError(t, err, "ReadPackMeta(dir) =")
 	if meta.Pack.PackFormat != 15 {
 		t.Errorf("pack_format = %d, want 15", meta.Pack.PackFormat)
 	}
@@ -84,9 +82,7 @@ func TestReadPackMeta_DirWithThumb(t *testing.T) {
 	}
 
 	_, thumb, err := ReadPackMeta(dir)
-	if err != nil {
-		t.Fatalf("ReadPackMeta() = %v", err)
-	}
+	testutil.NoError(t, err, "ReadPackMeta() =")
 	if thumb == "" {
 		t.Fatal("thumb = empty, want base64 data")
 	}
@@ -129,9 +125,7 @@ func writeZipPack(t *testing.T, png []byte) string {
 func TestReadPackMeta_ZipPackPngAtLimit(t *testing.T) {
 	path := writeZipPack(t, bytes.Repeat([]byte{1}, 10<<20))
 	_, thumb, err := ReadPackMeta(path)
-	if err != nil {
-		t.Fatalf("ReadPackMeta() = %v", err)
-	}
+	testutil.NoError(t, err, "ReadPackMeta() =")
 	if thumb == "" {
 		t.Fatal("pack.png 恰好 10MB 应保留缩略图")
 	}
@@ -140,9 +134,7 @@ func TestReadPackMeta_ZipPackPngAtLimit(t *testing.T) {
 func TestReadPackMeta_ZipPackPngOverLimit(t *testing.T) {
 	path := writeZipPack(t, bytes.Repeat([]byte{1}, (10<<20)+1))
 	_, thumb, err := ReadPackMeta(path)
-	if err != nil {
-		t.Fatalf("ReadPackMeta() = %v", err)
-	}
+	testutil.NoError(t, err, "ReadPackMeta() =")
 	if thumb != "" {
 		t.Fatal("pack.png 超过 10MB 应置空缩略图（截断检测），实际返回了缩略图")
 	}
@@ -159,9 +151,7 @@ func TestReadPackMeta_DirPackPngOverLimit(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, thumb, err := ReadPackMeta(dir)
-	if err != nil {
-		t.Fatalf("ReadPackMeta(dir) = %v", err)
-	}
+	testutil.NoError(t, err, "ReadPackMeta(dir) =")
 	if thumb != "" {
 		t.Fatal("目录形态 pack.png 超过 10MB 应置空缩略图，实际返回了缩略图")
 	}
@@ -356,9 +346,7 @@ func TestReadPackMeta_ZipBom(t *testing.T) {
 		"pack.mcmeta": "\xEF\xBB\xBF{\"pack\":{\"pack_format\":9,\"description\":\"bom\"}}",
 	})
 	meta, _, err := ReadPackMeta(path)
-	if err != nil {
-		t.Fatalf("BOM 前缀应解析成功: %v", err)
-	}
+	testutil.NoError(t, err, "BOM 前缀应解析成功")
 	if meta.Pack.PackFormat != 9 {
 		t.Errorf("pack_format = %d, want 9", meta.Pack.PackFormat)
 	}
@@ -372,9 +360,7 @@ func TestReadPackMeta_DirBom(t *testing.T) {
 		t.Fatal(err)
 	}
 	meta, _, err := ReadPackMeta(dir)
-	if err != nil {
-		t.Fatalf("dir BOM 前缀应解析成功: %v", err)
-	}
+	testutil.NoError(t, err, "dir BOM 前缀应解析成功")
 	if meta.Pack.PackFormat != 6 {
 		t.Errorf("pack_format = %d, want 6", meta.Pack.PackFormat)
 	}

@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // TestImportFromBase64_7zExtensionZipContentWarnsAndWrites：.7z 扩展名 + zip 内容
@@ -29,9 +30,7 @@ func TestImportFromBase64_7zExtensionZipContentWarnsAndWrites(t *testing.T) {
 	}
 	dest, rtype, err := ImportFromBase64("m.7z", base64.StdEncoding.EncodeToString(data),
 		ImportOptions{}, func(rtype string) string { return root }, logFn)
-	if err != nil {
-		t.Fatalf("魔数不匹配应仅 warn 不阻断: %v", err)
-	}
+	testutil.NoError(t, err, "魔数不匹配应仅 warn 不阻断")
 	if rtype != "resourcepack" {
 		t.Fatalf("rtype = %q, 期望 resourcepack（内容检测优先于扩展名）", rtype)
 	}
@@ -46,9 +45,7 @@ func TestImportFromBase64_7zExtensionZipContentWarnsAndWrites(t *testing.T) {
 	}
 
 	got, err := os.ReadFile(dest)
-	if err != nil {
-		t.Fatalf("落盘文件应可读: %v", err)
-	}
+	testutil.NoError(t, err, "落盘文件应可读")
 	if len(got) != len(data) {
 		t.Fatalf("落盘字节数 = %d, 期望 %d（魔数校验不得截断 payload）", len(got), len(data))
 	}
@@ -70,9 +67,7 @@ func TestImportFromBase64_7zMagicBranchSilencedBySkipCheck(t *testing.T) {
 	}
 	dest, rtype, err := ImportFromBase64("skip.7z", base64.StdEncoding.EncodeToString(data),
 		ImportOptions{SkipCheck: true}, func(rtype string) string { return root }, logFn)
-	if err != nil {
-		t.Fatalf("SkipCheck 导入应成功: %v", err)
-	}
+	testutil.NoError(t, err, "SkipCheck 导入应成功")
 	if rtype != "resourcepack" {
 		t.Fatalf("rtype = %q, 期望 resourcepack", rtype)
 	}

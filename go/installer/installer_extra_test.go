@@ -69,9 +69,7 @@ func TestCopyFileLocked_Success(t *testing.T) {
 	}
 	dstDir := filepath.Join(dir, "sub")
 	dst, err := CopyFileLocked(src, dstDir)
-	if err != nil {
-		t.Fatalf("CopyFileLocked failed: %v", err)
-	}
+	testutil.NoError(t, err, "CopyFileLocked failed")
 	if dst == "" {
 		t.Fatal("returned path should not be empty")
 	}
@@ -89,9 +87,7 @@ func TestCopyFileLocked_SameFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	dst, err := CopyFileLocked(src, dir)
-	if err != nil {
-		t.Fatalf("CopyFileLocked same file failed: %v", err)
-	}
+	testutil.NoError(t, err, "CopyFileLocked same file failed")
 	if dst != filepath.Join(dir, "file.ysm") {
 		t.Errorf("expected source path, got %q", dst)
 	}

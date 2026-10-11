@@ -28,10 +28,10 @@ func TestBatchExtractCreatorAvatars_CachedMime(t *testing.T) {
 	base := t.TempDir()
 	root := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 	if err := os.MkdirAll(root, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(root, "[testuser]model.ysm"), []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
 

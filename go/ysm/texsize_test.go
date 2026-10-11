@@ -79,7 +79,7 @@ func TestReadTexSizeFromFile_Zip(t *testing.T) {
 	path := testutil.WriteZipFile(t, "mod.jar", map[string]string{"model.geo.json": geomJSON})
 	zipPath := filepath.Join(t.TempDir(), "model.zip")
 	if err := os.Rename(path, zipPath); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	w, h := readTexSizeFromFile(zipPath)
 	if w != 64 || h != 32 {
@@ -92,7 +92,7 @@ func TestReadTexSizeFromFile_ZipNoGeometry(t *testing.T) {
 	path := testutil.WriteZipFile(t, "mod.jar", map[string]string{"data.txt": "hello"})
 	zipPath := filepath.Join(t.TempDir(), "empty.zip")
 	if err := os.Rename(path, zipPath); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	w, h := readTexSizeFromFile(zipPath)
 	if w != 0 || h != 0 {
@@ -104,7 +104,7 @@ func TestReadTexSizeFromFile_Ysm(t *testing.T) {
 	// .ysm 加密模型目前无法读取纹理尺寸 → 0,0
 	path := filepath.Join(t.TempDir(), "model.ysm")
 	if err := os.WriteFile(path, []byte("YSGP encrypted data"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	w, h := readTexSizeFromFile(path)
 	if w != 0 || h != 0 {
@@ -116,7 +116,7 @@ func TestReadTexSizeFromFile_7z(t *testing.T) {
 	// 7z 文件目前仅扫描前 64KB 文本，非 7z 格式返回 0,0
 	path := filepath.Join(t.TempDir(), "model.7z")
 	if err := os.WriteFile(path, []byte("not a real 7z"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	w, h := readTexSizeFromFile(path)
 	if w != 0 || h != 0 {
@@ -129,7 +129,7 @@ func TestReadTexSizeFromFile_7zWithTexData(t *testing.T) {
 	content := []byte(`some binary data texture_width":64,"texture_height":32 more data`)
 	path := filepath.Join(t.TempDir(), "model.7z")
 	if err := os.WriteFile(path, content, 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 当前实现不完整，7z 不解析 tex 尺寸（返回 0,0 是预期行为）；
 	// 本用例只验证不 panic，不锁返回值
@@ -150,7 +150,7 @@ func TestReadTexFromZip_Valid(t *testing.T) {
 func TestReadTexFromZip_NotZip(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "notzip.zip")
 	if err := os.WriteFile(path, []byte("notzip"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	w, h := readTexFromZip(path)
 	if w != 0 || h != 0 {
@@ -174,16 +174,16 @@ func TestScanFiles_Valid(t *testing.T) {
 	// 创建 .ysm, .zip, .7z 文件
 	for _, name := range []string{"model.ysm", "archive.zip", "data.7z", "readme.txt"} {
 		if err := os.WriteFile(filepath.Join(dir, name), []byte("data"), 0644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	// 子目录中的文件也应被扫描
 	subDir := filepath.Join(dir, "sub")
 	if err := os.MkdirAll(subDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(subDir, "nested.ysm"), []byte("data"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	entries := ScanFiles(dir)
@@ -234,7 +234,7 @@ func TestScanModelTexSizes_WithEntries(t *testing.T) {
 	// makeJar 创建的是 .jar 扩展名，重命名为 .zip 才能被 readTexSizeFromFile 识别
 	renamedZip := filepath.Join(t.TempDir(), "model.zip")
 	if err := os.Rename(zipPath, renamedZip); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	ysmPath := filepath.Join(t.TempDir(), "model.ysm")
@@ -242,7 +242,7 @@ func TestScanModelTexSizes_WithEntries(t *testing.T) {
 	data, err := os.ReadFile(renamedZip)
 	testutil.NoError(t, err)
 	if err := os.WriteFile(ysmPath, data, 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	entries := []ModelEntry{

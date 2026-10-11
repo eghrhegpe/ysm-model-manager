@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // makeFakeExe 构造一个内容非 PE 的临时更新包文件，返回其路径
@@ -20,7 +21,7 @@ func makeFakeExe(t *testing.T, content string) string {
 	t.Helper()
 	p := filepath.Join(t.TempDir(), "YSM-Model-Manager_windows_amd64.exe")
 	if err := os.WriteFile(p, []byte(content), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	return p
 }

@@ -109,11 +109,11 @@ func TestCleanupOldVersion_RemovesOldFile(t *testing.T) {
 
 	// 创建 .old 文件
 	if err := os.WriteFile(old, []byte("old"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 创建当前 exe（否则走恢复分支）
 	if err := os.WriteFile(exe, []byte("new"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	// 临时替换 os.Executable 不可行，但 CleanupOldVersion 调用 os.Executable()
@@ -137,7 +137,7 @@ func TestCopyFile_Success(t *testing.T) {
 	src := filepath.Join(dir, "src.txt")
 	dst := filepath.Join(dir, "dst.txt")
 	if err := os.WriteFile(src, []byte("copy me"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := fsutil.CopyFile(src, dst); err != nil {
 		t.Fatalf("copyFile 失败: %v", err)
@@ -161,7 +161,7 @@ func TestCopyFile_EmptyFile(t *testing.T) {
 	src := filepath.Join(dir, "empty.txt")
 	dst := filepath.Join(dir, "dst.txt")
 	if err := os.WriteFile(src, []byte{}, 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := fsutil.CopyFile(src, dst); err != nil {
 		t.Fatalf("copyFile 空文件失败: %v", err)
@@ -181,7 +181,7 @@ func TestCopyFile_LargeFile(t *testing.T) {
 		content[i] = byte(i % 256)
 	}
 	if err := os.WriteFile(src, content, 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := fsutil.CopyFile(src, dst); err != nil {
 		t.Fatalf("copyFile 大文件失败: %v", err)
@@ -221,7 +221,7 @@ func TestInstallUpdate_InvalidPackage(t *testing.T) {
 	exePath := filepath.Join(dir, "bad.exe")
 	// 写非 MZ 魔数的文件
 	if err := os.WriteFile(exePath, []byte("not a PE file"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	err := InstallUpdate(exePath)
 	if err == nil {

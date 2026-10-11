@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // 带指定骨骼名的 Bedrock geometry（各组件用不同骨骼名，便于断言排序/归属）
@@ -31,11 +32,11 @@ func TestFindComponentsInExtractedYSM(t *testing.T) {
 	dir := t.TempDir()
 	modelsDir := filepath.Join(dir, "models")
 	if err := os.MkdirAll(modelsDir, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	ysmJSON := `{"files":{"player":{"model":{"main":"models/main.json","arm":"models/arm.json"},"texture":["textures/skin.png"]}}}`
 	if err := os.WriteFile(filepath.Join(dir, "ysm.json"), []byte(ysmJSON), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 各组件用不同骨骼名：main→mainBone / arm→armBone / arrow→arrowBone / boat→boatBone，
 	// 排序回归（如 main 不在首位）会因断言失败而暴露
@@ -46,7 +47,7 @@ func TestFindComponentsInExtractedYSM(t *testing.T) {
 		"boat.json":  "boatBone",
 	} {
 		if err := os.WriteFile(filepath.Join(modelsDir, name), []byte(geoWithBone(bone)), 0o644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 

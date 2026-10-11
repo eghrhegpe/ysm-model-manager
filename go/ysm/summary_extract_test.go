@@ -52,7 +52,7 @@ func TestExtractYsmSummary_PlainJSONOverLimit(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "model.json")
 	// 50MB+1：触发 summary.go 的裸 json 上限守卫
 	if err := os.WriteFile(path, bytes.Repeat([]byte{' '}, (50<<20)+1), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if _, err := ExtractYsmSummary(path); err == nil {
 		t.Fatal("裸 ysm.json 超过 50MB 应拒绝解析，实际返回 nil 错误")
@@ -73,7 +73,7 @@ func TestExtractYsmSummary_YSGP(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "encrypted.ysm")
 	// YSGP 魔数 + 文本头（见 isYSGP 判定）
 	if err := os.WriteFile(path, []byte("YSGP\x00encrypted-binary"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	summary, err := ExtractYsmSummary(path)
 	testutil.NoError(t, err, "YSGP 分支不应报错")
@@ -91,7 +91,7 @@ func TestExtractYsmSummary_YSGP(t *testing.T) {
 func TestExtractYsmSummary_PlainJSON(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "model.json")
 	if err := os.WriteFile(path, []byte(minimalYsmJSON()), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	summary, err := ExtractYsmSummary(path)
 	testutil.NoError(t, err, "JSON 分支不应报错")
@@ -212,7 +212,7 @@ func TestExtractYsmSummary_NotExist(t *testing.T) {
 func TestExtractYsmSummary_PlainJSONInvalidContent(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "model.json")
 	if err := os.WriteFile(path, []byte("{not valid json"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if _, err := ExtractYsmSummary(path); err == nil {
 		t.Fatal("非法 JSON 内容的裸 ysm.json 应返回错误，实际返回 nil 错误")
@@ -276,7 +276,7 @@ func TestExtractYsmSummary_NameFallback_PlainJSON(t *testing.T) {
 	const fileName = "no_name_model"
 	path := filepath.Join(t.TempDir(), fileName+".json")
 	if err := os.WriteFile(path, []byte(noNameYsmJSON()), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	summary, err := ExtractYsmSummary(path)
 	testutil.NoError(t, err, "不应报错")

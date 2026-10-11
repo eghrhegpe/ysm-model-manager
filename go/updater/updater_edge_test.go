@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // =====================================================================
@@ -28,7 +29,7 @@ func TestInstallUpdate_InvalidPE(t *testing.T) {
 	// 直接写一个非 PE 内容的更新包文件（裸 exe 发布，无 zip 环节）
 	exePath := filepath.Join(tmpDir, "YSM-Model-Manager_windows_amd64.exe")
 	if err := os.WriteFile(exePath, []byte("NOT_A_PE_FILE"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	err := InstallUpdate(exePath)

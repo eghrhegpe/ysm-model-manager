@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // ====== extractKeys ======
@@ -240,7 +241,7 @@ func TestExtractFileStats_ModelAsObject(t *testing.T) {
 func TestIsYSGP_Yes(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "test.ysm")
 	if err := os.WriteFile(path, []byte("YSGP\n--- [Metadata]\n"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if !isYSGP(path) {
 		t.Error("YSGP 开头应返回 true")
@@ -250,7 +251,7 @@ func TestIsYSGP_Yes(t *testing.T) {
 func TestIsYSGP_WithBOM(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "bom.ysm")
 	if err := os.WriteFile(path, []byte("\xef\xbb\xbfYSGP\n--- [Metadata]\n"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if !isYSGP(path) {
 		t.Error("BOM+YSGP 应返回 true")
@@ -260,7 +261,7 @@ func TestIsYSGP_WithBOM(t *testing.T) {
 func TestIsYSGP_NotYSGP(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "normal.ysm")
 	if err := os.WriteFile(path, []byte("NOTYSGP"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if isYSGP(path) {
 		t.Error("非 YSGP 应返回 false")
@@ -270,7 +271,7 @@ func TestIsYSGP_NotYSGP(t *testing.T) {
 func TestIsYSGP_EmptyFile(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "empty.ysm")
 	if err := os.WriteFile(path, []byte(""), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if isYSGP(path) {
 		t.Error("空文件应返回 false")
@@ -286,7 +287,7 @@ func TestIsYSGP_NonExistent(t *testing.T) {
 func TestIsYSGP_TooShort(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "short.ysm")
 	if err := os.WriteFile(path, []byte("YSG"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if isYSGP(path) {
 		t.Error("短于 4 字节（不含 BOM）应返回 false")

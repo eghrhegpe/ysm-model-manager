@@ -22,10 +22,10 @@ func makePayload(t *testing.T, files []ysm.DecodedFile) string {
 	var buf bytes.Buffer
 	w := gzip.NewWriter(&buf)
 	if _, err := w.Write(raw); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := w.Close(); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	return base64.StdEncoding.EncodeToString(buf.Bytes())
 }

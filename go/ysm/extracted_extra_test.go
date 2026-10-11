@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/geometry"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // writeExtractedFixture 在 t.TempDir 下按 rel 路径写文件（自动建父目录），
@@ -24,10 +25,10 @@ func writeExtractedFixture(t *testing.T, files map[string]string) string {
 	for rel, content := range files {
 		p := filepath.Join(dir, filepath.FromSlash(rel))
 		if err := os.MkdirAll(filepath.Dir(p), 0755); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		if err := os.WriteFile(p, []byte(content), 0644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	return filepath.Join(dir, "ysm.json")
@@ -234,14 +235,14 @@ func TestFindGeometryInExtractedYSM_PathTraversalRejected(t *testing.T) {
 	dir := t.TempDir()
 	ysmPath := filepath.Join(dir, "mod", "ysm.json")
 	if err := os.MkdirAll(filepath.Dir(ysmPath), 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(ysmPath, []byte(`{"files":{"player":{"model":"../evil.geo.json"}}}`), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 越界文件确实存在于 ysm.json 目录之外
 	if err := os.WriteFile(filepath.Join(dir, "evil.geo.json"), []byte(geometryJSON("evil")), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	model, tex := FindGeometryInExtractedYSM(ysmPath)
 	// 注：裸几何兜底（extracted.go:293-297）会把任意合法 JSON ysm.json 包裹成

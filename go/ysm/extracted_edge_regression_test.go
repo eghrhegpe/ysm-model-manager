@@ -28,19 +28,19 @@ func TestFindComponents_BackslashTexDecl(t *testing.T) {
 	texDir := filepath.Join(dir, "textures")
 	for _, d := range []string{modelsDir, texDir} {
 		if err := os.MkdirAll(d, 0o755); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	// 裸字符串 + 反斜杠路径：textures\skin.png
 	ysmJSON := `{"files":{"player":{"model":"models/main.json","texture":["textures\\skin.png"]}}}`
 	if err := os.WriteFile(filepath.Join(dir, "ysm.json"), []byte(ysmJSON), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(modelsDir, "main.json"), []byte(geoWithBone("mainBone")), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(dir, "textures", "skin.png"), []byte{1, 2, 3}, 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	comps, texNames := FindComponentsInExtractedYSM(filepath.Join(dir, "ysm.json"))
@@ -62,23 +62,23 @@ func TestFindComponents_SubdirSameNameTex(t *testing.T) {
 	subTex := filepath.Join(dir, "textures", "variants")
 	for _, d := range []string{modelsDir, subTex} {
 		if err := os.MkdirAll(d, 0o755); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	// main 已声明（占 texture 声明 slot 0），arrow 未声明 → 由补扫进入、按名走 pngNameMap
 	ysmJSON := `{"files":{"player":{"model":{"main":"models/main.json"},"texture":["textures/skin.png"]}}}`
 	if err := os.WriteFile(filepath.Join(dir, "ysm.json"), []byte(ysmJSON), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(modelsDir, "main.json"), []byte(geoWithBone("mainBone")), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(modelsDir, "arrow.json"), []byte(geoWithBone("arrowBone")), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 同名纹理在 textures/variants/ 子目录（不在 textures/ 根）
 	if err := os.WriteFile(filepath.Join(subTex, "arrow.png"), []byte{1, 2, 3}, 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	comps, _ := FindComponentsInExtractedYSM(filepath.Join(dir, "ysm.json"))
@@ -110,22 +110,22 @@ func TestFindComponents_TgaSameNameTex(t *testing.T) {
 	texDir := filepath.Join(dir, "textures")
 	for _, d := range []string{modelsDir, texDir} {
 		if err := os.MkdirAll(d, 0o755); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	ysmJSON := `{"files":{"player":{"model":{"main":"models/main.json"},"texture":["textures/skin.png"]}}}`
 	if err := os.WriteFile(filepath.Join(dir, "ysm.json"), []byte(ysmJSON), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(modelsDir, "main.json"), []byte(geoWithBone("mainBone")), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(modelsDir, "boat.json"), []byte(geoWithBone("boatBone")), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 同名纹理为 .tga（非 Web 格式）
 	if err := os.WriteFile(filepath.Join(texDir, "boat.tga"), []byte{1, 2, 3}, 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	comps, _ := FindComponentsInExtractedYSM(filepath.Join(dir, "ysm.json"))
@@ -155,22 +155,22 @@ func TestFindComponents_JpgSameNameTex(t *testing.T) {
 	texDir := filepath.Join(dir, "textures")
 	for _, d := range []string{modelsDir, texDir} {
 		if err := os.MkdirAll(d, 0o755); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	ysmJSON := `{"files":{"player":{"model":{"main":"models/main.json"},"texture":["textures/skin.png"]}}}`
 	if err := os.WriteFile(filepath.Join(dir, "ysm.json"), []byte(ysmJSON), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(modelsDir, "main.json"), []byte(geoWithBone("mainBone")), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(modelsDir, "boat.json"), []byte(geoWithBone("boatBone")), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 同名纹理为 .jpg
 	if err := os.WriteFile(filepath.Join(texDir, "boat.jpg"), []byte{1, 2, 3}, 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	comps, _ := FindComponentsInExtractedYSM(filepath.Join(dir, "ysm.json"))
@@ -206,28 +206,28 @@ func TestFindComponents_DeclaredOutOfRangeSameNameTex(t *testing.T) {
 	texDir := filepath.Join(dir, "textures")
 	for _, d := range []string{modelsDir, texDir} {
 		if err := os.MkdirAll(d, 0o755); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	// model 声明 2 个（main + extra），texture 只声明 1 张（skin）→ extra 已声明但超范围
 	ysmJSON := `{"files":{"player":{"model":{"main":"models/main.json","extra":"models/extra.json"},"texture":["textures/skin.png"]}}}`
 	if err := os.WriteFile(filepath.Join(dir, "ysm.json"), []byte(ysmJSON), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(modelsDir, "main.json"), []byte(geoWithBone("mainBone")), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(modelsDir, "extra.json"), []byte(geoWithBone("extraBone")), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 共享默认皮肤 skin.png + extra 自己的同名纹理 extra.png（字节不同以便区分）
 	skinBytes := []byte{1, 2, 3}
 	extraBytes := []byte{9, 9, 9}
 	if err := os.WriteFile(filepath.Join(texDir, "skin.png"), skinBytes, 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(texDir, "extra.png"), extraBytes, 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	comps, _ := FindComponentsInExtractedYSM(filepath.Join(dir, "ysm.json"))

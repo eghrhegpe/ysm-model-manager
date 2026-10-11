@@ -24,7 +24,7 @@ func setupMinecraftRoot(t *testing.T) string {
 	root := t.TempDir()
 	customDir := filepath.Join(root, "versions", "1.20.1-Fabric", "config", "yes_steve_model", "custom")
 	if err := os.MkdirAll(customDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	return root
 }
@@ -48,7 +48,7 @@ func TestStartStop(t *testing.T) {
 	repoDir := t.TempDir()
 	mcDir := filepath.Join(repoDir, "versions", "1.20.1-Fabric", "config", "yes_steve_model", "custom")
 	if err := os.MkdirAll(mcDir, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	w := New(repoDir, mcDir, mockScanFunc)
@@ -68,7 +68,7 @@ func TestStartTwice(t *testing.T) {
 	repoDir := t.TempDir()
 	mcDir := filepath.Join(repoDir, "versions", "1.20.1-Fabric", "config", "yes_steve_model", "custom")
 	if err := os.MkdirAll(filepath.Join(mcDir, "..", "..", ".."), 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	w := New(repoDir, mcDir, mockScanFunc)
@@ -85,7 +85,7 @@ func TestStopWithoutStart(t *testing.T) {
 	repoDir := t.TempDir()
 	mcDir := filepath.Join(repoDir, "versions", "1.20.1-Fabric", "config", "yes_steve_model", "custom")
 	if err := os.MkdirAll(mcDir, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	w := New(repoDir, mcDir, mockScanFunc)
@@ -132,7 +132,7 @@ func TestFileEventTriggersSync(t *testing.T) {
 	// 创建文件 → 触发 Create 事件 → 触发射频同步
 	testFile := filepath.Join(repoDir, "test.ysm")
 	if err := os.WriteFile(testFile, []byte("test"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	// 条件等待防抖（800ms）+ syncAll 执行，替代固定 sleep
@@ -151,7 +151,7 @@ func TestRenameEventTriggersSync(t *testing.T) {
 
 	existingFile := filepath.Join(repoDir, "existing.ysm")
 	if err := os.WriteFile(existingFile, []byte("data"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	w := New(repoDir, mcDir, scanFn)
@@ -163,7 +163,7 @@ func TestRenameEventTriggersSync(t *testing.T) {
 
 	newFile := filepath.Join(repoDir, "renamed.ysm")
 	if err := os.Rename(existingFile, newFile); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	testutil.WaitForCall(t, &callCount, 3*time.Second)
@@ -231,7 +231,7 @@ func TestStartStopRestart(t *testing.T) {
 	w.WaitReady()
 	testFile := filepath.Join(repoDir, "restart.ysm")
 	if err := os.WriteFile(testFile, []byte("test"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	testutil.WaitForCall(t, &callCount, 3*time.Second)
 }
@@ -244,15 +244,15 @@ func TestSyncAllSerialized(t *testing.T) {
 	// 真实执行、scanFn 被多次调用——修复前 scanFn 恒返 nil，短路路径只串行调 1 次，
 	// maxConcurrent 恒为 1，断言从未被挑战（空断言，watcher 子代理审计发现）
 	if err := os.WriteFile(filepath.Join(repoDir, "bar.ysm"), []byte("bar"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	mcDir := setupMinecraftRoot(t)
 	customDir := filepath.Join(mcDir, "versions", "1.20.1-Fabric", "config", "yes_steve_model", "custom")
 	if err := os.MkdirAll(customDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(customDir, "bar.ysm"), []byte("bar"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	var concurrent atomic.Int32
@@ -274,7 +274,7 @@ func TestSyncAllSerialized(t *testing.T) {
 
 	w := New(repoDir, mcDir, scanFn)
 	if err := w.Start(); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	defer w.Stop()
 
@@ -316,7 +316,7 @@ func TestCreateSubdirTriggersSync(t *testing.T) {
 	// 级联创建两层新目录（mkdir -p 场景：事件到达时目录树已就位，须递归补监听）
 	sub := filepath.Join(repoDir, "nested")
 	if err := os.MkdirAll(filepath.Join(sub, "deep"), 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 给 loop 补监听新目录留传播时间（Create 事件 → watchNewDir WalkDir Add）
 	time.Sleep(300 * time.Millisecond)
@@ -327,7 +327,7 @@ func TestCreateSubdirTriggersSync(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		f := filepath.Join(sub, "deep", "child"+string(rune('0'+i))+".ysm")
 		if err := os.WriteFile(f, []byte("x"), 0644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		time.Sleep(150 * time.Millisecond)
 	}
@@ -349,7 +349,7 @@ func TestStopWaitsForSync(t *testing.T) {
 
 	w := New(repoDir, mcDir, scanFn)
 	if err := w.Start(); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	go w.syncAll() // 模拟防抖 timer 触发的同步

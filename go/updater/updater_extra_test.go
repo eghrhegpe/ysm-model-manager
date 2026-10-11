@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // ====== assetPattern ======
@@ -52,7 +53,7 @@ func TestCleanupOldVersion_WithFile(t *testing.T) {
 	}
 	oldPath := exe + ".old"
 	if err := os.WriteFile(oldPath, []byte("old version"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	defer os.Remove(oldPath)
 
@@ -85,7 +86,7 @@ func TestInstallUpdate_BadExe(t *testing.T) {
 	dir := t.TempDir()
 	badExe := filepath.Join(dir, "bad.exe")
 	if err := os.WriteFile(badExe, []byte("not a PE binary"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	err := InstallUpdate(badExe)
 	if err == nil {

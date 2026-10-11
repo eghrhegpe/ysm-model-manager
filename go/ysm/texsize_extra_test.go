@@ -121,7 +121,7 @@ func TestReadTexFrom7z_Not7z(t *testing.T) {
 	// 非 7z 内容 → OpenReader 报错 → 0,0
 	path := filepath.Join(t.TempDir(), "model.7z")
 	if err := os.WriteFile(path, []byte("not a real 7z archive"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	w, h := readTexFrom7z(path)
 	if w != 0 || h != 0 {
@@ -135,7 +135,7 @@ func TestReadTexFrom7z_Truncated7z(t *testing.T) {
 	testutil.NoError(t, err)
 	path := filepath.Join(t.TempDir(), "trunc.7z")
 	if err := os.WriteFile(path, data[:len(data)/2], 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	w, h := readTexFrom7z(path)
 	if w != 0 || h != 0 {
@@ -155,12 +155,12 @@ func TestReadTexFrom7z_OversizedEntry(t *testing.T) {
 	}
 	bigPath := filepath.Join(dir, "huge.json")
 	if err := os.WriteFile(bigPath, []byte(hugeJSON+strings.Repeat(" ", pad)), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	smallPath := filepath.Join(dir, "small.geo.json")
 	smallJSON := `{"minecraft:geometry":[{"description":{"texture_width":64,"texture_height":32},"bones":[{"name":"s","cubes":[]}]}]}`
 	if err := os.WriteFile(smallPath, []byte(smallJSON), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 条目顺序：huge.json 在前，验证超大条目被跳过而非返回 999x888
 	archive := generateTest7z(t, dir, "oversize.7z", []string{"huge.json", "small.geo.json"})
@@ -181,7 +181,7 @@ func TestReadTexFrom7z_SkipNonJsonAndYsmJson(t *testing.T) {
 		"main.geo.json": `{"minecraft:geometry":[{"description":{"texture_width":64,"texture_height":32},"bones":[]}]}`,
 	} {
 		if err := os.WriteFile(filepath.Join(dir, f), []byte(content), 0644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	archive := generateTest7z(t, dir, "skip.7z", []string{"tex1.png", "ysm.json", "main.geo.json"})
@@ -201,7 +201,7 @@ func TestReadTexFrom7z_NoGeometryFound(t *testing.T) {
 		"data.json": `{"format_version":"1.8.0","animations":{}}`,
 	} {
 		if err := os.WriteFile(filepath.Join(dir, f), []byte(content), 0644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	archive := generateTest7z(t, dir, "nogeo.7z", []string{"tex1.png", "ysm.json", "data.json"})

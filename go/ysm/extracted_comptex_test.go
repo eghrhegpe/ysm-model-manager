@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // setupExtractedDir 搭建解压目录：ysm.json 声明 main/arm + 2 张纹理，
@@ -18,10 +19,10 @@ func setupExtractedDir(t *testing.T) string {
 	modelsDir := filepath.Join(dir, "models")
 	texturesDir := filepath.Join(dir, "textures")
 	if err := os.MkdirAll(modelsDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.MkdirAll(texturesDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	ysmJSON := `{
 	  "files": {
@@ -38,7 +39,7 @@ func setupExtractedDir(t *testing.T) string {
 	write := func(rel string, data []byte) {
 		t.Helper()
 		if err := os.WriteFile(filepath.Join(dir, rel), data, 0644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	write("ysm.json", []byte(ysmJSON))
@@ -104,7 +105,7 @@ func TestFindComponentsInExtractedYSM_PerComponentTextures(t *testing.T) {
 func TestFindComponentsInExtractedYSM_PerComponentNoTexture(t *testing.T) {
 	dir := setupExtractedDir(t)
 	if err := os.Remove(filepath.Join(dir, "textures", "arrow.png")); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	comps, texNames := FindComponentsInExtractedYSM(filepath.Join(dir, "ysm.json"))

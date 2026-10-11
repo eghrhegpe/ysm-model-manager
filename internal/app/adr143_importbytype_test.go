@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/internal/testutil"
 )
 
 // TestImportByType_Contract_SuccessReturnsNil 成功路径返回 nil error。
@@ -19,7 +20,7 @@ func TestImportByType_Contract_SuccessReturnsNil(t *testing.T) {
 	a, _, _ := packApp(t)
 	src := filepath.Join(t.TempDir(), "mod.ysm")
 	if err := os.WriteFile(src, []byte("{}"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if got := a.ImportByType("resourcepack", src); got != nil {
 		t.Fatalf("ImportByType 成功应返回 nil，got=%v", got)

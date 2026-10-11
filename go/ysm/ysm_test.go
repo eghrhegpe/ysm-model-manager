@@ -38,7 +38,7 @@ modId="other_mod"
 	// 非 zip 文件 → false
 	bad := filepath.Join(t.TempDir(), "bad.jar")
 	if err := os.WriteFile(bad, []byte("notzip"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if IsYSMJar(bad) {
 		t.Fatal("非 zip 不应识别")
@@ -104,7 +104,7 @@ func TestHasModInDir(t *testing.T) {
 	// ysm：需打开 ZIP 确认
 	jar := testutil.WriteZipFile(t, "mod.jar", map[string]string{"META-INF/mods.toml": ysmModToml})
 	if err := os.Rename(jar, filepath.Join(modsDir, "ysm-1.0.jar")); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if !HasModInDir(modsDir, "ysm") {
 		t.Fatal("ysm jar 应 true")
@@ -164,7 +164,7 @@ func TestAnalyzeYSMModel_Valid(t *testing.T) {
 	path := testutil.WriteZipFile(t, "mod.jar", map[string]string{"model.json": validModelJSON})
 	ysmPath := filepath.Join(t.TempDir(), "test.ysm")
 	if err := os.Rename(path, ysmPath); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	meta := AnalyzeYSMModel(ysmPath)
 	if meta.Name != "TestModel" {
@@ -201,7 +201,7 @@ func TestAnalyzeYSMModel_ZipExt(t *testing.T) {
 	path := testutil.WriteZipFile(t, "mod.jar", map[string]string{"model.json": validModelJSON})
 	zipPath := filepath.Join(t.TempDir(), "model.zip")
 	if err := os.Rename(path, zipPath); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	meta := AnalyzeYSMModel(zipPath)
 	if meta.HasError {
@@ -217,7 +217,7 @@ func TestAnalyzeYSMModel_BanYsmExt(t *testing.T) {
 	path := testutil.WriteZipFile(t, "mod.jar", map[string]string{"model.json": validModelJSON})
 	banPath := filepath.Join(t.TempDir(), "test.ysm.ban")
 	if err := os.Rename(path, banPath); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	meta := AnalyzeYSMModel(banPath)
 	if meta.HasError {
@@ -233,7 +233,7 @@ func TestAnalyzeYSMModel_BanOtherExt(t *testing.T) {
 	path := testutil.WriteZipFile(t, "mod.jar", map[string]string{"model.json": validModelJSON})
 	banPath := filepath.Join(t.TempDir(), "test.txt.ban")
 	if err := os.Rename(path, banPath); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	meta := AnalyzeYSMModel(banPath)
 	if !meta.HasError {
@@ -245,7 +245,7 @@ func TestAnalyzeYSMModel_UnsupportedExt(t *testing.T) {
 	path := testutil.WriteZipFile(t, "mod.jar", map[string]string{"model.json": validModelJSON})
 	txtPath := filepath.Join(t.TempDir(), "test.txt")
 	if err := os.Rename(path, txtPath); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	meta := AnalyzeYSMModel(txtPath)
 	if !meta.HasError {
@@ -256,7 +256,7 @@ func TestAnalyzeYSMModel_UnsupportedExt(t *testing.T) {
 func TestAnalyzeYSMModel_NotZip(t *testing.T) {
 	bad := filepath.Join(t.TempDir(), "bad.ysm")
 	if err := os.WriteFile(bad, []byte("notzip"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	meta := AnalyzeYSMModel(bad)
 	if !meta.HasError {
@@ -268,7 +268,7 @@ func TestAnalyzeYSMModel_NoModelJSON(t *testing.T) {
 	path := testutil.WriteZipFile(t, "mod.jar", map[string]string{"other.txt": "data"})
 	ysmPath := filepath.Join(t.TempDir(), "empty.ysm")
 	if err := os.Rename(path, ysmPath); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	meta := AnalyzeYSMModel(ysmPath)
 	if !meta.HasError {
@@ -280,7 +280,7 @@ func TestAnalyzeYSMModel_InvalidJSON(t *testing.T) {
 	path := testutil.WriteZipFile(t, "mod.jar", map[string]string{"model.json": "{not valid json}"})
 	ysmPath := filepath.Join(t.TempDir(), "badjson.ysm")
 	if err := os.Rename(path, ysmPath); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	meta := AnalyzeYSMModel(ysmPath)
 	if !meta.HasError {
@@ -296,7 +296,7 @@ func TestAnalyzeYSMModel_TexturesAsObject(t *testing.T) {
 	path := testutil.WriteZipFile(t, "mod.jar", map[string]string{"model.json": modelJSON})
 	ysmPath := filepath.Join(t.TempDir(), "objtex.ysm")
 	if err := os.Rename(path, ysmPath); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	meta := AnalyzeYSMModel(ysmPath)
 	if meta.Textures != 2 {
@@ -309,7 +309,7 @@ func TestAnalyzeYSMModel_NoModelField(t *testing.T) {
 	path := testutil.WriteZipFile(t, "mod.jar", map[string]string{"model.json": modelJSON})
 	ysmPath := filepath.Join(t.TempDir(), "nomodel.ysm")
 	if err := os.Rename(path, ysmPath); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	meta := AnalyzeYSMModel(ysmPath)
 	if meta.HasError {
@@ -351,7 +351,7 @@ func TestHasModInDir_MaidModel(t *testing.T) {
 	}
 	// 清空 mods 目录 → false
 	if err := os.RemoveAll(modsDir); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	empty := t.TempDir()
 	if HasModInDir(empty, "maid-model") {

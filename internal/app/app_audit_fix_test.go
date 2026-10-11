@@ -16,6 +16,7 @@ import (
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/types/registry"
 	"ysm-model-manager/go/ysm"
+	"ysm-model-manager/internal/testutil"
 )
 
 // TestExtractYSMHeaderFromBase64_Oversized：超大 base64 输入应被预检拒绝，
@@ -45,13 +46,13 @@ func TestIsPathInRootOrSelf_SymlinkEscape(t *testing.T) {
 	root := filepath.Join(base, "repo")
 	outside := filepath.Join(base, "outside")
 	if err := os.MkdirAll(root, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.MkdirAll(outside, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(outside, "secret.txt"), []byte("s"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	link := filepath.Join(root, "link")
 	if err := os.Symlink(outside, link); err != nil {
@@ -64,7 +65,7 @@ func TestIsPathInRootOrSelf_SymlinkEscape(t *testing.T) {
 	// 正常根内路径不受影响
 	inside := filepath.Join(root, "model.ysm")
 	if err := os.WriteFile(inside, []byte("m"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if !a.isPathInRootOrSelf(inside) {
 		t.Error("根内真实文件应放行")
@@ -76,7 +77,7 @@ func TestResolvedRootCache(t *testing.T) {
 	base := t.TempDir()
 	root := filepath.Join(base, "repo")
 	if err := os.MkdirAll(root, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	a := scanApp(t, types.AppConfig{FilesRoot: root})
 
@@ -113,7 +114,7 @@ func TestFindPreviewImage_Guard(t *testing.T) {
 	outside := filepath.Join(base, "outside")
 	for _, d := range []string{root, outside} {
 		if err := os.MkdirAll(d, 0o755); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	a := scanApp(t, types.AppConfig{FilesRoot: root})

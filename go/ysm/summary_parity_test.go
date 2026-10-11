@@ -62,7 +62,7 @@ func buildSummaryFixture(t *testing.T, c summaryParityCase) string {
 	case "plain-json", "raw":
 		path := filepath.Join(t.TempDir(), c.Filename)
 		if err := os.WriteFile(path, []byte(c.Content), 0644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		return path
 	default:
@@ -89,7 +89,7 @@ func runSummaryCase(t *testing.T, c summaryParityCase) (m map[string]any, isErrC
 	testutil.NoError(t, mErr)
 	var got map[string]any
 	if err := json.Unmarshal(out, &got); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	delete(got, "size") // D3 双端排除
 	return got, false

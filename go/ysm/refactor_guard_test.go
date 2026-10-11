@@ -260,7 +260,7 @@ func TestAppendAnimGroupsAndConfigs_LooseGroupAndNameFallback(t *testing.T) {
 
 	path := filepath.Join(t.TempDir(), "model.json")
 	if err := os.WriteFile(path, []byte(payload), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	sum, err := ExtractYsmSummary(path)
 	testutil.NoError(t, err, "不应报错")
@@ -299,7 +299,7 @@ func TestAppendAnimGroupsAndConfigs_AllInternalRefsGroupSkipped(t *testing.T) {
 
 	path := filepath.Join(t.TempDir(), "model.json")
 	if err := os.WriteFile(path, []byte(payload), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	sum, err := ExtractYsmSummary(path)
 	testutil.NoError(t, err, "不应报错")

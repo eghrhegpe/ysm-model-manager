@@ -73,7 +73,7 @@ func TestInstallUpdate_NotPE_Windows(t *testing.T) {
 	dir := t.TempDir()
 	badExe := filepath.Join(dir, "YSM-Model-Manager_windows_amd64.exe")
 	if err := os.WriteFile(badExe, []byte("not a PE binary"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	err := InstallUpdate(badExe)
 	if err == nil {

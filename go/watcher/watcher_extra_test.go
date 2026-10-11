@@ -114,24 +114,24 @@ func TestSyncAllSyncsInstances(t *testing.T) {
 	repoDir := t.TempDir()
 	// 仓库：foo.ysm.ban（已禁用）+ bar.ysm（启用中）
 	if err := os.WriteFile(filepath.Join(repoDir, "foo.ysm.ban"), []byte("foo"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(repoDir, "bar.ysm"), []byte("bar"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	mcDir := setupMinecraftRoot(t)
 	customDir := filepath.Join(mcDir, "versions", "1.20.1-Fabric", "config", "yes_steve_model", "custom")
 	// 整合包：foo.ysm（应被禁用为 .ban）+ bar.ysm（状态已一致，不动）
 	if err := os.WriteFile(filepath.Join(customDir, "foo.ysm"), []byte("foo"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(customDir, "bar.ysm"), []byte("bar"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 无 custom 目录的版本 → Exists=false 实例，应被跳过
 	if err := os.MkdirAll(filepath.Join(mcDir, "versions", "vanilla2"), 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	var calls atomic.Int32
@@ -170,7 +170,7 @@ func TestSyncAllSyncError(t *testing.T) {
 	mcDir := setupMinecraftRoot(t)
 	customDir := filepath.Join(mcDir, "versions", "1.20.1-Fabric", "config", "yes_steve_model", "custom")
 	if err := os.WriteFile(filepath.Join(customDir, "foo.ysm"), []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	var calls atomic.Int32

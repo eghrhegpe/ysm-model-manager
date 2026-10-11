@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // setupGuiPlaneDir 构造 wine_fox 17_mini 的病灶复刻：
@@ -20,7 +21,7 @@ func setupGuiPlaneDir(t *testing.T) string {
 	guiDir := filepath.Join(texturesDir, "gui")
 	for _, d := range []string{modelsDir, texturesDir, guiDir} {
 		if err := os.MkdirAll(d, 0o755); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	ysmJSON := `{
@@ -39,10 +40,10 @@ func setupGuiPlaneDir(t *testing.T) string {
 	write := func(rel string, data []byte) {
 		t.Helper()
 		if err := os.MkdirAll(filepath.Dir(filepath.Join(dir, rel)), 0o755); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		if err := os.WriteFile(filepath.Join(dir, rel), data, 0o644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	write("ysm.json", []byte(ysmJSON))

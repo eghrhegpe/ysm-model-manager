@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/types/registry"
 )
@@ -21,7 +22,7 @@ func TestSyncAllPanicResetsPending(t *testing.T) {
 	// 否则 Exists=false 被 syncAll 跳过、走不到 scanFn）才会触达 panic 注入点
 	mcDir := filepath.Join(mcRoot, "instances", "t1", ".minecraft")
 	if err := os.MkdirAll(filepath.Join(mcDir, registry.SubDirMap("ysm")), 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	var calls atomic.Int32

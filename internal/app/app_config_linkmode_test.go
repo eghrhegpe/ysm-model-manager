@@ -28,10 +28,10 @@ func writeRawConfig(t *testing.T, linkMode string) {
 		t.Fatal("configPath 为空（pathMgr 未注入？）")
 	}
 	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(p, data, 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 }
 
@@ -64,7 +64,7 @@ func TestLoadAppConfig_DirtyLinkModeWashedInSnapshotAndCache(t *testing.T) {
 	testutil.NoError(t, err)
 	var disk types.AppConfig
 	if err := json.Unmarshal(data, &disk); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if disk.LinkMode != "mirror" {
 		t.Errorf("loadAppConfig 不应写盘洗磁盘内容，磁盘 linkMode=%q want mirror", disk.LinkMode)
@@ -107,7 +107,7 @@ func TestLoadAppConfig_LazyPathWashesDirtyLinkMode(t *testing.T) {
 	testutil.NoError(t, err)
 	var disk types.AppConfig
 	if err := json.Unmarshal(data, &disk); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if disk.LinkMode != "mirror" {
 		t.Errorf("惰性路径不应写盘，磁盘 linkMode=%q want mirror", disk.LinkMode)
@@ -143,7 +143,7 @@ func TestSaveAppConfig_WashesDirtyDiskLinkMode(t *testing.T) {
 			testutil.NoError(t, err)
 			var disk types.AppConfig
 			if err := json.Unmarshal(data, &disk); err != nil {
-				t.Fatal(err)
+				testutil.NoError(t, err)
 			}
 			if disk.LinkMode != tc.want {
 				t.Errorf("脏值不得回流磁盘：磁盘 linkMode=%q want %q", disk.LinkMode, tc.want)

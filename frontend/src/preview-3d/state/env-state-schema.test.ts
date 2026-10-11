@@ -153,4 +153,41 @@ describe("值域补钳制（锐评 2026-10-09）", () => {
     expect((ENV_STATE_SCHEMA.waterColor as { range?: unknown }).range).toBeUndefined();
     expect(clampFieldValue("waterColor", 0x123456)).toBe(0x123456);
   });
+
+  it("[锐评 2026-10-11 #5] schema 结构化标记 noUi/noWrite/noPersist 集合稳定（drift 守卫）", () => {
+    // 取代旧散文「无 UI 出口/无持久化/无写入方」——这些标记是机器可命中的事实，
+    // 钉死集合防日后漂移（有人加标记却无对应语义、或删键忘删字段）。
+    const tagged = (flag: "noUi" | "noWrite" | "noPersist") =>
+      Object.entries(ENV_STATE_SCHEMA)
+        .filter(([, def]) => (def as Record<string, unknown>)[flag])
+        .map(([k]) => k)
+        .sort();
+    // 死参数四键（sky uniform 默认、用户不可调、saveState 不摘）
+    expect(tagged("noUi")).toEqual(
+      [
+        "lightVolumetricBaseStrength",
+        "lightVolumetricTipStrength",
+        "skyExposure",
+        "skyMieCoefficient",
+        "skyMieDirectionalG",
+        "skyRayleigh",
+        "skyTurbidity",
+      ].sort(),
+    );
+    // 死参数四键无写入方；skyExposure 程序化/测试会写 → 不入；base/tip 有测试 EXEMPT 摘键但仍有写方
+    expect(tagged("noWrite")).toEqual(
+      ["skyMieCoefficient", "skyMieDirectionalG", "skyRayleigh", "skyTurbidity"].sort(),
+    );
+    // 死参数四键 + light 锥体强度两键不进 cap.saveState 摘键
+    expect(tagged("noPersist")).toEqual(
+      [
+        "lightVolumetricBaseStrength",
+        "lightVolumetricTipStrength",
+        "skyMieCoefficient",
+        "skyMieDirectionalG",
+        "skyRayleigh",
+        "skyTurbidity",
+      ].sort(),
+    );
+  });
 });

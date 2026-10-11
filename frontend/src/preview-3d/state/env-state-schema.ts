@@ -47,6 +47,13 @@ type _FieldDef<TType extends keyof FieldDefaultMap> = {
   default: FieldDefaultMap[TType];
   /** dispatch 分组：字段变化时触发哪些 cap 回调。未指定 = 不触发。 */
   group?: string | readonly string[];
+  /** 无 UI 出口：菜单/设置面板无控件直写（如 sky 大气 uniform 默认、light 锥体强度经派生 tipRatio）。
+   *  仅作结构化标记，取代旧散文「无 UI 出口」——env-state-schema.test.ts 钉死集合防漂移。 */
+  noUi?: boolean;
+  /** 无写入方：除默认值/程序化外无任何途径（用户手改、预设、恢复）会写它。 */
+  noWrite?: boolean;
+  /** 无持久化：cap.saveState 不摘此键（区别于 env 组全量落盘的 saveEnvState）。 */
+  noPersist?: boolean;
 } & (TType extends "enum" ? { values: readonly string[] } : object) &
   (TType extends "number" ? { range?: NumericRange; uiRange?: NumericRange } : object);
 
@@ -99,6 +106,9 @@ export const ENV_STATE_SCHEMA = {
     type: "number",
     default: 7.5,
     group: "sky",
+    noUi: true,
+    noWrite: true,
+    noPersist: true,
     // Preetham 浑浊度；>30 时散射项 exp 溢出（官方 Sky 无 range，自吞）。
     range: { min: 1, max: 30, step: 0.1 },
   },
@@ -106,6 +116,9 @@ export const ENV_STATE_SCHEMA = {
     type: "number",
     default: 2.5,
     group: "sky",
+    noUi: true,
+    noWrite: true,
+    noPersist: true,
     // 瑞利散射系数（three 官方默认 1，本项目 2.5）；>6 天空趋白失去分层。
     range: { min: 1, max: 6, step: 0.1 },
   },
@@ -113,6 +126,9 @@ export const ENV_STATE_SCHEMA = {
     type: "number",
     default: 0.005,
     group: "sky",
+    noUi: true,
+    noWrite: true,
+    noPersist: true,
     // 米氏散射系数，物理域 [0,1]。
     range: { min: 0, max: 1, step: 0.001 },
   },
@@ -120,6 +136,9 @@ export const ENV_STATE_SCHEMA = {
     type: "number",
     default: 0.8,
     group: "sky",
+    noUi: true,
+    noWrite: true,
+    noPersist: true,
     // Henyey-Greenstein 相函数参数 g：**|g|>1 时 hgPhase 内 `1-g²` 变负 → 天空出负光强/NaN**
     //（three 官方 hgPhase = ONE_OVER_FOURPI * (1-g²) * 1/pow(1-2g·cosθ+g², 1.5)，无 clamp）。
     // 这是本批补钳制的**硬依据**：不钳即 shader 爆炸，不是纯理论。
@@ -145,12 +164,13 @@ export const ENV_STATE_SCHEMA = {
     type: "number",
     default: 0.5,
     group: "sky",
+    noUi: true,
     // 曝光乘数（唯一属主 = SkyCapability.applyExposure，经 effectiveToneMappingExposure 单源）。
     // 域 [0,3] 覆盖 three 典型曝光行程；NaN/负值/超大值钳回，防脏档黑屏或白爆。
     // ⚠️ **活跃但无 UI 出口**（锐评 2026-10-09 更正，勿归入"死参数"类）：skyExposure 是 sky 侧
     // 基础曝光，用户经 postprocessing 的 `ppExposure`（乘法系数）调有效曝光，本键保持 per-type
-    // 默认；程序化/测试会写（postprocessing-capability.test.ts 大量 setEnvState({skyExposure})）。
-    // 故 [G-sky] 锁仍 EXEMPT 它（saveState 不存、用户不直调）。
+    // 默认；程序化/测试会写（postprocessing-capability.test.ts 大量 setEnvState({skyExposure})），
+    // 故不标 noWrite/noPersist。菜单无控件直写（标 noUi）。
     range: { min: 0, max: 3, step: 0.01 },
   },
   skyEnvironment: { type: "boolean", default: true, group: "sky" },
@@ -891,19 +911,23 @@ export const ENV_STATE_SCHEMA = {
     group: "light",
     range: { min: 0, max: 1, step: 0.05 },
   },
-  // [锐评 2026-10-09 补 range] base/tip 两键**无 UI 直写出口**（菜单走派生 tipRatio，
-  //  测试显式 EXEMPT lightVolumetricBaseStrength，light-capability.test.ts）。原无钳制 ⇒ 脏档
-  //  NaN/负值直进 VolumetricCone 强度。域取锥体强度物理行程，默认 0.9/0.25 均在域内。
+  // base/tip 两键**无 UI 直写出口**（菜单走派生 tipRatio），saveState 摘键时 EXEMPT（测试显式豁免，
+  // light-capability.test.ts），故 noUi + noPersist。原无钳制 ⇒ 脏档 NaN/负值直进 VolumetricCone 强度。
+  // 域取锥体强度物理行程，默认 0.9/0.25 均在域内。
   lightVolumetricBaseStrength: {
     type: "number",
     default: 0.9,
     group: "light",
+    noUi: true,
+    noPersist: true,
     range: { min: 0, max: 2, step: 0.05 },
   },
   lightVolumetricTipStrength: {
     type: "number",
     default: 0.25,
     group: "light",
+    noUi: true,
+    noPersist: true,
     range: { min: 0, max: 2, step: 0.05 },
   },
 } as const satisfies Record<string, _AnyFieldDef>;

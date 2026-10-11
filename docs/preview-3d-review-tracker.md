@@ -447,3 +447,13 @@
   2. CSP 债（mmd-ktx2-basis.ts new Function）是唯一需上游/基建配合的项，非本巡检能独立清——保留标记，勿开战。
   3. 第 12 轮遗留候选（check-env-schema-consumers 补写方检测、applyModelDefaults 手写有序清单）维持不动。
 - 验证：无代码改动（纯巡检判净）；Go go test ./internal/app/ -run TextureOrder ok + TS texture 4 测试文件 44 例全绿；doctor --docs 早前 23/23 PASS。
+
+## 2026-10-11T14:45:00+08:00 追加：shader-patches 域 F1/F2/F3（本会话第 11 轮补刀——他会话判净后同域实测出契约零锁缺口，开战）
+
+- 背景：他会话 14:00 记第 11 轮 shader-patches **判净（未开战）**——对「守卫本体行为正确」成立；本会话同域实测发现三处「治理声明无机器锁/化石」缺口，对「契约有防」不成立。同域并行处置照第 9/10 轮教训：改动全落测试 + 注释防腐，不碰他会话在途文件；台账以追加记，不改他条。
+- **F1 守卫接线契约零锁**：三消费者「REVISION 断言 ∈ 构造链」全靠注释背书（[锐评 P1-1] 曾把 reflector 断言从 apply 期提回构造期治 mount 崩——修复无回归锁，挪回去全套测试照绿）。锁 = patch-guard.test.ts「守卫接线契约」两例：①REVISION=199 失配态下 sky/water/reflector 直接 new 必抛（三家接线形态互异：直调 / 经 inject / 经 buildWave 材质链）；②端到端 createAll 失配态恰缺 patch 系三 cap、ground 等存活（water.md「throw → cap 缺失」不变量首次机器执法）。变异实证：断言挪回 inject 期（复刻病灶）→ 两例同时红（构造不抛 + reflector 竟存活），还原复绿。
+- **F2 water 六锚点从未吃过真实管线文本 + 化石死行**：water 146 例全喂手写 fakeShader()（chunk 名近似的合成文本）——真文本漂移桩测不到。补 patch-guard.test.ts「六锚点 × 真实 three meshphysical」：取 `THREE.ShaderLib.physical` 原文（WebGLProgram 编译期 onBeforeCompile 收到的即此模板，与生产同源）喂守卫，双判据（无 water miss 告警 + 六注入逐一落地，防告警文案改字后判据独苗）。取数自纠错一例：首版凭记忆写 `ShaderLib.meshphysical`，探针实证真实键 `physical`——红的是取数不是锚点，先修取数再谈契约。变异实证：改坏 normal_fragment_maps 锚 → 真实管线锁独红且分检精确 `detail=miss`。另删 water-shader.ts 化石行 `replace("void main() {", "void main() {\n")`（纯插换行 no-op，可追 650051afd 引入即空壳残留，六锚点不查、零测试锁存在=可静删自证），原位留防腐注释。
+- **F3 镜面 X-8 失配路径零回归锁**：[锐评 X-8]「锚点失配不得写 uOpacity（防『参数已设、渲染无 effect』静默假象）」落地后失配分支从未被任何测试执行。补 reflector-capability.test.ts「锚点失配路径」两例：临时破坏官方 `Reflector.ReflectorShader.fragmentShader` alpha 锚走通失配——**破坏前先断言 replace 真实改变文本**（防「破坏未遂→路径没走→断言空转假绿」，第 9 轮 F2 桩形状病的「测试自证」变体）；验分检告警（decl=ok alpha=miss）/ uniform 缺席 / setOpacity 不炸且不复活幽灵 uniform。变异实证：回退无条件写 → 两例独红（幽灵 uniform 现形），还原复绿。
+- 知识卡同步：`water.md` patch-guard 条「四处注入检测」更正为六处（P1-2/ADR-297 各扩一锚卡未跟）+ 两把新锁指针；`preview-env-state.md` reflector 块补「锚点失配契约（X-8）」条。
+- 方法教训：**「判净」的审计对象必须含「治理声明有没有机器锁」**——行为对 ≠ 契约有防；本轮三处全是「修好了没上锁」或「声明无执法」形态。
+- 验证：patch-guard 10 + reflector 43 + water 146 + sky 111 = 310 例绿；typecheck / biome / vite build 全绿。

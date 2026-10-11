@@ -253,8 +253,13 @@ invariant_anchors:
   `waterReflectionEnabled` 默认关 + `waterReflectDisableWhenSSR` 默认 true（SSR 活跃时跳渲归零，
   逐帧现读 pp 键——pp 键属 postprocessing 组，water 回调收不到派发，不另订第二路订阅）。
   地面镜面与 RT 嵌套：水面 RT 渲染内含地面 Reflector 时，官方 scope.visible 自排除保证不无限递归。
-- **shader-patches / patch-guard**：REVISION 断言（宽松区间）+ 四处注入检测（vertex 波浪函数、
-  `objectNormal` 覆盖、fragment 圆角段、微细节 `normal` 覆写点），失配即告警而非静默降级。
+- **shader-patches / patch-guard**：REVISION 断言（宽松区间 [185,190)）+ 六锚点注入检测
+  （vertex 波浪函数 / `objectNormal` 覆盖 / begin_vertex 位移 / fragment common 独有声明 /
+  微细节 `normal` 覆写点 / 倒影混合块——P1-2 与 ADR-297 各补一锚后由四处扩为六处），
+  失配即告警而非静默降级。接线与锚点的机器锁（巡检第 11 轮）：patch-guard.test.ts
+  「守卫接线契约」（失配态三消费者构造期即抛 + createAll 端到端只缺 patch 系 cap）与
+  「六锚点 × 真实 three meshphysical 管线文本」（喂 `ShaderLib.physical` 原文，桩测不到
+  的真文本漂移由它兜底；红 = 重钉锚点）。
 
 ## 不变量
 

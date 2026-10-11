@@ -273,7 +273,10 @@ export function buildWaveWaterMaterial(opts: {
            normal = normalize(normal + (viewMatrix * vec4(detailWorld, 0.0)).xyz);
          }`,
     );
-    shader.fragmentShader = shader.fragmentShader.replace("void main() {", "void main() {\n");
+    // （巡检第 11 轮 F2：此处原有一行 `replace("void main() {", "void main() {\n")` 纯插换行
+    //  no-op 化石——650051afd 引入时 ground 侧就是空壳残留，六锚点守卫不查它、无任何测试
+    //  锁其存在（可静删 = 无锁自证），GLSL 空白无关，删除行为零变更。真实管线锁见
+    //  patch-guard.test.ts「六锚点 × 真实 three meshphysical」。已删，勿回流。）
     shader.fragmentShader = shader.fragmentShader.replace(
       "#include <dithering_fragment>",
       `#include <dithering_fragment>

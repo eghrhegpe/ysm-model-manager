@@ -2,6 +2,7 @@
 // ===== ReflectorCapability 测试（ADR-196 迁移至 envState）=====
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
+import { Reflector } from "three/addons/objects/Reflector.js";
 import { ReflectorCapability } from "./reflector-capability.ts";
 import { getParamRange, getPresetKeys } from "@/preview-3d/state/env-state-schema.ts";
 import { envState, resetEnvState, setEnvState } from "@/preview-3d/state/env-state.ts";
@@ -582,5 +583,90 @@ describe("ReflectorCapability — 能力总开关单门收口（锐评 F-1）", 
     const scene = (cap as unknown as { scene: THREE.Scene }).scene;
     expect(scene.getObjectByName("ysm-reflector"), "中毒后须能救回").toBeDefined();
     expect(cap.isEnabled()).toBe(true);
+  });
+});
+
+// [锐评 X-8 契约锁 · 巡检第 11 轮 F3] 锚点失配时必须**整体放弃** uOpacity 通道：
+// createReflectorMesh 里 `if (opacityInjected) mat.uniforms.uOpacity = {...}`——若回退成
+// 无条件写入，就造出「uniform 在、shader 无对应声明」的静默假象（opacity 参数可调、
+// getParams 有读数、画面零变化——最难查的一类）。X-8 修复落地时只改了实现，失配路径
+// 从未被任何测试执行过：回归无闸。本组用**临时破坏官方 ReflectorShader 静态文本**
+// （模拟 three 升级改名锚点）走通失配路径，锁三件事：①告警按锚点分检留痕；
+// ②uniform 不写；③setOpacity 走 envState 不炸、且不得凭空造出 uOpacity。
+describe("ReflectorCapability — 锚点失配路径（X-8 契约：回退官方 shader，不造静默假象）", () => {
+  beforeEach(() => {
+    resetEnvState();
+    localStorage.removeItem("ysm-scene-cap-reflector");
+  });
+  afterEach(() => localStorage.removeItem("ysm-scene-cap-reflector"));
+
+  /** 破坏 alpha 锚点（decl 锚保留）→ decl=ok alpha=miss 的分检形态 */
+  function withBrokenAlphaAnchor(fn: () => void): void {
+    const src = (
+      Reflector as unknown as { ReflectorShader: { fragmentShader: string } }
+    ).ReflectorShader;
+    const orig = src.fragmentShader;
+    const broken = orig.replace(
+      "gl_FragColor = vec4( blendOverlay( base.rgb, color ), 1.0 );",
+      "gl_FragColor = vec4( blendOverlay( base.rgb, tint ), 1.0 );",
+    );
+    // 防「破坏未生效→失配路径没走→断言空转假绿」：replace 必须真实改变了文本
+    expect(broken, "alpha 锚点文本须与 Reflector.js 现行源码一致（变了先修此处再谈契约）").not.toBe(orig);
+    src.fragmentShader = broken;
+    try {
+      fn();
+    } finally {
+      src.fragmentShader = orig;
+    }
+  }
+
+  it("alpha 锚失配：ringLog 分检留痕（decl=ok alpha=miss），uniform 不写，shader 保持官方原样", () => {
+    const logged: Array<{ mod: string; msg: string; lvl: string | undefined }> = [];
+    (globalThis as { __ysmRingLog?: unknown }).__ysmRingLog = (
+      mod: string,
+      msg: string,
+      lvl?: string,
+    ) => logged.push({ mod, msg, lvl });
+    try {
+      const cap = newCap();
+      withBrokenAlphaAnchor(() => cap.setEnabledReflector(true));
+      const scene = (cap as unknown as { scene: THREE.Scene }).scene;
+      const reflector = scene.getObjectByName("ysm-reflector") as THREE.Mesh;
+      expect(reflector, "失配不回退整 cap——镜面本体仍须建起").toBeDefined();
+      const mat = reflector.material as THREE.ShaderMaterial;
+      // ① 分检告警在场，且指明是 alpha 锚失配（非模糊整体 warn——2026-09-14 加固口径）
+      const warn = logged.find((l) => l.mod === "reflector" && l.msg.includes("锚点未匹配"));
+      expect(warn, "失配必须留痕（reportPatchIssue warn）").toBeDefined();
+      expect(warn!.msg).toContain("alpha=miss");
+      expect(warn!.msg).toContain("decl=ok");
+      // ② X-8 本体：uniform 不写（回退成无条件写 → 本断言红）
+      expect(mat.uniforms.uOpacity, "失配态不得凭空造 uOpacity uniform").toBeUndefined();
+      // ③ fragment 无 uOpacity 声明（shader 回退官方原样）
+      expect(mat.fragmentShader).not.toContain("uOpacity");
+    } finally {
+      delete (globalThis as { __ysmRingLog?: unknown }).__ysmRingLog;
+    }
+  });
+
+  it("失配态下 setOpacity 只动 envState，不炸且不复活幽灵 uniform（静默假象焊死）", () => {
+    const logged: Array<{ mod: string; msg: string; lvl: string | undefined }> = [];
+    (globalThis as { __ysmRingLog?: unknown }).__ysmRingLog = (
+      mod: string,
+      msg: string,
+      lvl?: string,
+    ) => logged.push({ mod, msg, lvl });
+    try {
+      const cap = newCap();
+      withBrokenAlphaAnchor(() => cap.setEnabledReflector(true));
+      const scene = (cap as unknown as { scene: THREE.Scene }).scene;
+      const mat = (scene.getObjectByName("ysm-reflector") as THREE.Mesh)
+        .material as THREE.ShaderMaterial;
+      expect(() => cap.setOpacity(0.3)).not.toThrow();
+      expect(envState.reflectorOpacity).toBe(0.3);
+      expect(mat.uniforms.uOpacity, "参数写口不得绕过注入结果造 uniform").toBeUndefined();
+      expect(cap.getParams().opacity, "读数仍来自 envState（参数面与渲染面的分裂由告警承担，不造假象）").toBe(0.3);
+    } finally {
+      delete (globalThis as { __ysmRingLog?: unknown }).__ysmRingLog;
+    }
   });
 });

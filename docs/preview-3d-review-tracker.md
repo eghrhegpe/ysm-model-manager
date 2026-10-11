@@ -347,7 +347,7 @@
 - 深读判净（未开战）：`screenshot.ts` 透明背景三态还原（background/canvas size/clearColor）与 `getSize().x` 坑已注释钉死；`screenshot-lights.ts` 总闸 `isEnabled()` 门 + `isIblActive` 判据与预览共用同一纯函数；`screenshot-cone.ts` 复用预览 `VolumetricCone` 单源。
 - 验证：screenshot 5 文件 52 例绿；preview-3d 全量绿；typecheck / vite build / biome / check-layering 全绿。`export.md` 不变量同步。
 - 遗留 / 下一轮建议：
-  1. 轮转清单已巡：const/infra/registry/…/materials/mesh/model/screenshot。下一轮按清单轮转取 **`bone`**（骨骼动画族，第 8 轮 model 遗留未列但队列已近尾）；或评估轮转清单是否已近尾、改向「剩余族② 候选」。
+  1. 轮转清单已巡：const/infra/registry/…/materials/mesh/model/screenshot。**修正**：本建议原写「取 bone」系误读台账——`bone` 早在 2026-09-19 已巡（见本文件 §巡检记录 2026-09-19T15:44:07Z），台账明列 bone（2）已审。**下一轮真正取靶 = 未审首项 `shader-patches`**（未审 = shader-patches / state / texture，按轮转清单顺序）；或评估清单近尾后改向「族② parity 候选」。
   2. **族② parity 候选维持不动**：mergeCubes / computeBoneLocalPos（轮 7 遗留 2），无新证据不开战。
 
 ## 2026-10-11T13:55:00+08:00 追加：screenshot 域 F1/F2/F3（两会话同域并行合流点）
@@ -389,3 +389,18 @@
      否则同域并行时被对方吞走测试半边即制造瞬时矛盾 HEAD。本仓 `--files` 白名单防「卷入
      他人」，防「被卷入」只能靠缩短在途窗口（写完即交）。
   3. 轮转下一位取他会话建议 `bone` 重访或清单尾部未审位（shader-patches / state / texture）。
+
+
+## 2026-10-11T14:00:00+08:00 巡检第 11 轮：shader-patches
+
+- 选定理由：修正第 10 轮「下一轮取 bone」的误读（bone 已于 2026-09-19 巡，见本文件 2026-09-19T15:44:07Z 条目）；台账未审 = shader-patches / state / texture，按轮转清单取首项 shader-patches。
+- **判净（未开战）**：域内 3 文件 / ~319 行 + 三处调用方（sky/water/reflector）全部经 patch-guard 双件套（`assertRevisionRange` + `reportPatchIssue`），锚点失配不再静默：
+  - `sky-patch.ts`（194 行）：`injectSkySunScalePatch` 四层幂等（声明 / 解耦① vSunE 缩放 / 解耦② 太阳盘）+ `showSunDisc` 锚点失配兜底（`gradient` 函数前插）+ 分字段半残修复（uniform 在但乘法缺 → 二次调用补全）。测试在 `sky-capability.test.ts:717-884`——**用真 `new Sky()`**，锚点对 three r186 真源验证（非合成字符串）：幂等 / 半残 / 锚点彻底失配 / 兜底 / `needsUpdate` 共 12 例。
+  - `water-shader.ts`：`onBeforeCompile` 六锚点 + chunk include 替换，allowed 宽松 `[185,189]`——`L54-59` 刻意不对称失败哲学（REVISION 失配=前提崩塌→throw；锚点失配=局部漂移→warn 保现场），**勿「统一」收紧**。`water-capability.test.ts:2234`「不告警 = 五锚点全命中」钉住。
+  - `reflector-capability.ts`：`injectOpacityIntoShader` + `assertRevisionRange` 提到构造期（`L52`），`reflector-capability.test.ts` 25KB 覆盖。
+- **三处 allowed 列表已被测试钉住**：sky=`["186"]` / water=`[185-189]` / reflector=`["185","186"]`，与已装 three `^0.186.1`（REVISION 186）一致；water/reflector 经构造触发 `assertRevisionRange`，sky 经真 Sky 注入触发——**升级漂移会让对应测试转红**，不再是手抄死值。
+- **grep 全 src 补丁位点：无绕过 patch-guard 的裸字符串锚点替换**——所有 `fragmentShader/vertexShader.replace` 都落在这三处域内，无散落兄弟。
+- 遗留 / 下一轮：
+  1. **自定义 shader 依赖 three chunk 集无版本守卫（域外候选，勿在本轮开战）**：`caps/light-cone.ts:79-80`（`<tonemapping_fragment>`/`<colorspace_fragment>`）、`caps/sun-beams.ts:44,74`（`<common>`）——它们是**自写 ShaderMaterial** 的 chunk include，非「对 three 官方 shader 的补丁」，不入 patch-guard 域；且 chunk 名消失 = three 打 Shader Error（**响**），非静默降级，优先级低。若要统一可另立「three chunk include 版本守卫」议题。
+  2. **water allowed 乐观声明 187-189 未审计**——但对应 `L54-59` 刻意决策（不对称失败哲学），不视为缺陷。
+  3. 轮转清单已巡至 shader-patches，未审剩 **`state` / `texture`**。下一轮取 **`state`**（有大量 incidental 提及但无专项审计报告）。

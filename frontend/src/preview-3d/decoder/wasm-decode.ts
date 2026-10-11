@@ -28,6 +28,33 @@ import {
 } from "./wasm-geometry.ts";
 import { type DecodedFile, parseYsmMetaFromFiles, type YsmMeta } from "./ysm-meta-parser.ts";
 
+/**
+ * 把字节视图转成 `BlobPart`，**语义 = 「只要视图覆盖的字节」**。
+ *
+ * 为什么不能直接 `new Blob([bytes])`：TS 的 `BlobPart` 要求
+ * `ArrayBufferView<ArrayBuffer>`，而 `Uint8Array` 的 `buffer` 类型是
+ * `ArrayBufferLike`（可能是 `SharedArrayBuffer`）→ 类型不兼容（TS2322）。
+ *
+ * 为什么不能退回 `bytes.buffer`：那正是本函数要消灭的历史缺陷——`.buffer` 是
+ * **底层整块**，当 bytes 是 subarray 视图（byteOffset≠0 / byteLength<buffer 长）时
+ * 会多吞字节 → 纹理花屏/头像损坏且不报错。
+ *
+ * 正确做法：**整视图**（byteOffset=0 且占满底层）→ 直接传视图（零拷贝）；
+ * **偏移视图** → `.slice()` 收窄出精确字节（此时拷贝是必要的，且只在少见路径发生）。
+ * 语义与 `utils/base/primitives/base64.ts|bytesToArrayBuffer` 同构，但返回
+ * `Uint8Array`（BlobPart）而非 `ArrayBuffer`——后者会强制整视图也走 buffer 别名。
+ */
+function viewAsBlobPart(bytes: Uint8Array): BlobPart {
+  const { byteOffset, byteLength } = bytes;
+  // 整视图：视图即完整字节区间，直接交给 Blob（零拷贝；Blob 会自行读取）
+  if (byteOffset === 0 && bytes.buffer.byteLength === byteLength) {
+    return bytes as unknown as BlobPart;
+  }
+  // 偏移视图：`Uint8Array.prototype.slice()` 把**视图区间**复制进新缓冲
+  // （收窄语义——只含视图字节，杜绝底层哨兵夹带）
+  return bytes.slice() as unknown as BlobPart;
+}
+
 /** 并发去重：同一路径在途解码共享（Android 兜底与纹理并行触发时只解一次）。
  *  无此守卫时 preloadModel 并行发起的两次 decodeYsmViaWasm 会各自完整解码
  *  （atob 大字符串 ×2 + 解析 ×2，内存翻倍、时间翻倍、WASM 状态竞争——容错下降）。 */
@@ -129,7 +156,10 @@ async function loadAvatarsForJson(ctx: InflightCtx, result: DecodedYsm): Promise
           : `avatar/${au.avatarPath}`;
       const avatarBytes = await ctx.ReadBytes(`${ctx.baseDir}/${avatarRel}`);
       if (avatarBytes?.length) {
-        const blob = new Blob([avatarBytes.buffer as ArrayBuffer]);
+        // 传视图语义（非 `.buffer`）：`ReadBytes` 在网页版走 IndexedDB 零拷贝视图路径
+        // （`readWebFileArrayBuffer` 可能返回 subarray），用 `.buffer` 会吞入底层缓冲
+        // 的多余字节 → 头像图损坏且不报错。`viewAsBlobPart` 保证只取视图区间。
+        const blob = new Blob([viewAsBlobPart(avatarBytes)]);
         au.avatarUrl = URL.createObjectURL(blob);
       }
     } catch (e) {
@@ -219,7 +249,9 @@ async function collectJsonSpecTextures(
     if (!texBytes) continue;
 
     const lower = tfStr.toLowerCase();
-    const blob = new Blob([texBytes.buffer as ArrayBuffer], {
+    // 同 loadAvatarsForJson：传视图而非 `.buffer`，消除「必须恰好占满底层缓冲」
+    // 的隐性契约（ReadBytes 零拷贝视图路径下 `.buffer` 会多吞字节致纹理花屏）。
+    const blob = new Blob([viewAsBlobPart(texBytes)], {
       type: lower.endsWith(".jpg") || lower.endsWith(".jpeg") ? "image/jpeg" : "image/png",
     });
     const key =
@@ -474,7 +506,9 @@ function collectTexturesAndAvatars(files: DecodedFile[]): TexAccum {
         f.path.toLowerCase().endsWith(".jpg") || f.path.toLowerCase().endsWith(".jpeg")
           ? "image/jpeg"
           : "image/png";
-      const blob = new Blob([f.data.buffer as ArrayBuffer], { type: mime });
+      // 用 `viewAsBlobPart(f.data)`（视图语义）而非 `f.data.buffer`：Blob 只取视图
+      // 区间，不依赖「数组恰好占满底层缓冲」的隐性契约（详见该 helper 注释）。
+      const blob = new Blob([viewAsBlobPart(f.data)], { type: mime });
       const name =
         f.path
           .split(/[/\\]/)
@@ -489,13 +523,14 @@ function collectTexturesAndAvatars(files: DecodedFile[]): TexAccum {
       avatars[name] = avatarUrl;
       continue;
     }
-    // ⚠️ 隐性契约：这里用 `f.data.buffer` 整体构造 Blob，**只在 `FS.readFile`
-    // 返回「恰好占满底层 ArrayBuffer」的数组时正确**（byteOffset=0 且
-    // byteLength === buffer.byteLength）。若将来有人把 `collectOutputFiles` 改成
-    // 返回 subarray 视图做「零拷贝」，`.buffer` 会指向整个更大的底层缓冲 →
-    // 静默把多余字节塞进 Blob（纹理损坏/花屏）。改那条路径时**必须**连这里一起处理
-    // （改用 `f.data.slice()` 或 `new Blob([f.data])`）。审查 C-1 附注。
-    const blob = new Blob([f.data.buffer as ArrayBuffer]);
+    // [2026-10-11 收敛] 原先用 `f.data.buffer` 整体构造 Blob，正确性依赖一条
+    // **隐性契约**：`FS.readFile` 必须返回「恰好占满底层 ArrayBuffer」的数组
+    // （byteOffset=0 且 byteLength === buffer.byteLength）。一旦上游把
+    // `collectOutputFiles` 改成返回 subarray 视图做零拷贝，`.buffer` 会指向更大的
+    // 底层缓冲 → 静默把多余字节塞进 Blob（纹理损坏/花屏，且不报错）。
+    // 现经 `viewAsBlobPart` 只取视图区间——无论上游返回独立数组还是 subarray，
+    // 结果都精确（整视图零拷贝，偏移视图 slice 收窄）。
+    const blob = new Blob([viewAsBlobPart(f.data)]);
     const key =
       f.path
         .split(/[/\\]/)

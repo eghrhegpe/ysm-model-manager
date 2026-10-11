@@ -318,10 +318,19 @@ export class RendererHost {
       // [2026-09 修复] 原条件 `|| hasCapUpdate`（扫描 getSceneCaps 找实现了 update 的 cap）
       // 恒真——10 个内置 cap 里 sky/water 都实现了 update，故标志**每帧**被置脏，
       // 恰好在下一行 cullModelGroups 消费它之前，frustum-cull 的「动静分治」
-      // （_matricesDirty=false 时跳过 expandBoxVisible 的全子树 updateWorldMatrix）
+      // （矩阵未脏时跳过 expandBoxVisible 的全子树 updateWorldMatrix）
       // 永不生效，即其注释宣称已修掉的「每帧双重全树矩阵更新」依然存在。
       // 且判据本身是错的：cap 的 update() 只推进 uniform/时间值（water 写 waterTime、
       // sky 写 beams.time），**从不写 Object3D 变换**，本就不该触发矩阵刷新。
+      //
+      // [2026-10-11 逐根化 — 此处仍走**全体**形态，属已知的有意保守]
+      // `frustum-cull|markCullMatricesDirty(root?)` 已支持逐根置脏（只刷真有变换写入
+      // 的根），但本循环**无法归属** perFrame 回调改写了哪个根——`registerPerFrame(f)`
+      // 的契约为 `(dt) => void`，不带根身份（`mount-preview-core|setPerFrame` 亦只透传
+      // 回调）。要真正吃到逐根收益，需把根身份沿 perFrame 契约打通到 6 个 adapter，
+      // 属跨层改动，超出本处范围。故此处保持全体置脏（正确性优先）；
+      // adapter 侧若能定位自己的根（如骨骼动画驱动者），可直接调
+      // `markCullMatricesDirty(root)` 增量采用，无需等本循环改造。
       if (this._perFrames.length > 0) markCullMatricesDirty();
       cullModelGroups(cam);
     } else restoreModelGroupsVisible();

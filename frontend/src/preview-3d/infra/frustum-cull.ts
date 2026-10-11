@@ -25,23 +25,47 @@ const _culled = new Set<THREE.Object3D>();
 // expandBoxVisible 原每帧对每个根 updateWorldMatrix(true, true) 递归全子树，
 // 随后 render() 内部又 updateMatrixWorld 一遍——多模型同框时每帧两遍全场景遍历。
 // 动静分治：矩阵自上次 render 后未变（无 perFrame 动画）时跳过强制更新，直接
-// 复用 render() 留下的新鲜 matrixWorld。标记位何时置 dirty：
-//   ① registerModelRoot（新根的 matrixWorld 未渲染过，恒 stale）
+// 复用 render() 留下的新鲜 matrixWorld。
+//
+// [2026-10-11 逐根化] 原实现是**全局布尔** `_matricesDirty`——只要**任一** session
+// 有 perFrame 回调（render-host 判 `_perFrames.length > 0`），全部注册根都被强制
+// 刷新。多模型同框的典型病态：MMD#1 有 SpringBone（perFrame），YSM#2/VRM#3 完全
+// 静态，却每帧陪着刷整棵子树——与「动静分治」的承诺相反。
+// 现改为**逐根**粒度：`_dirtyRoots` 记录「本帧确有变换写入」的根；
+// `_allDirty` 用于必须全体失效的场景（新注册/清空——此时无法预知哪些根脏）。
+// 标记位何时置脏：
+//   ① registerModelRoot（新根的 matrixWorld 未渲染过，恒 stale）→ _allDirty
 //   ② render-loop 每帧检测到 perFrame 回调（模型动画改写局部变换）
+//      → markCullMatricesDirty(root?)：带参=只脏该根；不带参=全体（保守兜底，
+//        渲染循环无法逐根归属时用）
 // 何时视为 clean：cullModelGroups 走完多根路径后（紧随其后的 render() 会再刷一遍，
 // 此后到下一帧 cull 前若无 ①②，矩阵保持新鲜）。
-let _matricesDirty = true;
+let _allDirty = true;
+const _dirtyRoots = new Set<THREE.Object3D>();
 
-/** 标记矩阵已失效（render-loop 有 perFrame 回调的帧调用；测试路径可直接调） */
-export function markCullMatricesDirty(): void {
-  _matricesDirty = true;
+/** 标记矩阵已失效。
+ *
+ *  - 传 `root`：只置该根为脏（perFrame 回调能定位到自己改写的根时优先用此形态，
+ *    避免「一个模型动画、全体陪刷」）。
+ *  - 不传：全体失效的保守兜底（新注册根 / 渲染循环无法逐根归属 / 测试路径）。 */
+export function markCullMatricesDirty(root?: THREE.Object3D): void {
+  if (root === undefined) {
+    _allDirty = true;
+    return;
+  }
+  _dirtyRoots.add(root);
+}
+
+/** 某根本帧是否需要强制刷新矩阵（逐根判据）。 */
+function isRootDirty(root: THREE.Object3D): boolean {
+  return _allDirty || _dirtyRoots.has(root);
 }
 
 /** 注册模型根节点（adapter 调用） */
 export function registerModelRoot(obj: THREE.Object3D): void {
   if (!modelRoots.includes(obj)) {
     modelRoots.push(obj);
-    _matricesDirty = true; // 新根未渲染过，matrixWorld 恒 stale
+    _allDirty = true; // 新根未渲染过，matrixWorld 恒 stale
   }
 }
 
@@ -51,6 +75,7 @@ export function unregisterModelRoot(obj: THREE.Object3D): void {
   if (i >= 0) modelRoots.splice(i, 1);
   // 抑制态一并摘除：已注销的根不再由我们负责还原（引用可能被 adapter 复用/释放）
   _culled.delete(obj);
+  _dirtyRoots.delete(obj); // 脏标记同摘——避免 Set 持有已释放对象引用
 }
 
 /** 获取当前注册的模型根节点数 */
@@ -106,7 +131,7 @@ export function cullModelGroups(camera: THREE.Camera): void {
     // 多组件模型里隐藏的车/载具会把 bounding box 撑大并偏移，导致视锥剔除在
     // 边界来回翻转（角色闪烁）。手写递归跳过 !visible 子树修复此问题。
     _box.makeEmpty();
-    expandBoxVisible(obj, _box);
+    expandBoxVisible(obj, _box, isRootDirty(obj));
     if (_box.isEmpty()) {
       obj.visible = false;
       _culled.add(obj);
@@ -121,16 +146,22 @@ export function cullModelGroups(camera: THREE.Camera): void {
   }
   // 本帧矩阵已刷新（紧随其后的 render() 再次 updateMatrixWorld，保持新鲜）；
   // 下帧若无 ①注册/②perFrame 置脏，expandBoxVisible 可跳过强制更新
-  _matricesDirty = false;
+  _allDirty = false;
+  _dirtyRoots.clear();
 }
 
-/** 递归展开 bounding box，只计入 visible 子树（跳过隐藏的载具/投射物组件） */
-function expandBoxVisible(obj: THREE.Object3D, box: THREE.Box3): void {
+/** 递归展开 bounding box，只计入 visible 子树（跳过隐藏的载具/投射物组件）。
+ *
+ *  @param forceRefresh 是否强制 `updateWorldMatrix(true, true)`——由调用方按**该根**的
+ *   脏标记传入（逐根粒度，2026-10-11）；子树共享同一判据（子树变换随根一同更新，
+ *    无需逐节点再判）。静态根传 false 时直接复用 render() 留下的新鲜 matrixWorld，
+ *    省一遍全子树递归。 */
+function expandBoxVisible(obj: THREE.Object3D, box: THREE.Box3, forceRefresh: boolean): void {
   if (!obj.visible) return;
-  // 动静分治（code review #4）：仅矩阵置脏时强制 updateWorldMatrix(true, true)——
-  // 首帧/新注册根/有 perFrame 动画的帧必刷（对齐 Box3.setFromObject 内部语义）；
-  // 静态帧直接复用 render() 留下的新鲜 matrixWorld，省一遍全子树递归。
-  if (_matricesDirty) {
+  // 动静分治（code review #4 / 2026-10-11 逐根化）：仅该根置脏时强制
+  // updateWorldMatrix(true, true)——首帧/新注册根/有 perFrame 动画的根必刷
+  // （对齐 Box3.setFromObject 内部语义）；静态根直接复用新鲜 matrixWorld。
+  if (forceRefresh) {
     obj.updateWorldMatrix(true, true);
   }
   const mesh = obj as THREE.Mesh;
@@ -148,14 +179,15 @@ function expandBoxVisible(obj: THREE.Object3D, box: THREE.Box3): void {
       box.expandByPoint(_vec);
     }
   }
-  for (const child of obj.children) expandBoxVisible(child, box);
+  for (const child of obj.children) expandBoxVisible(child, box, forceRefresh);
 }
 
 /** 清空所有注册（session 结束时调用） */
 export function clearModelRoots(): void {
   modelRoots.length = 0;
   _culled.clear(); // 抑制态随注册表一同消亡，防跨会话残留引用了已 dispose 的根
-  _matricesDirty = true; // 下次裁剪从保守态起步
+  _dirtyRoots.clear();
+  _allDirty = true; // 下次裁剪从保守态起步
 }
 
 // ===== 视锥裁剪开关（localStorage 持久化，设置面板可关）=====

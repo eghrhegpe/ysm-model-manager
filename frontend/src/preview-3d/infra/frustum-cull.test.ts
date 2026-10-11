@@ -151,6 +151,64 @@ describe("frustum-cull", () => {
     boundsSpy.mockRestore();
   });
 
+  it("单根置脏只刷该根：静态根不被牵连（2026-10-11 逐根化）", () => {
+    // 场景：MMD#1 有 SpringBone（perFrame 每帧置脏），YSM#2 完全静态。
+    // 旧实现（全局布尔）下，只要任一根置脏，**全部**根都被
+    // updateWorldMatrix(true, true) 递归刷新——多模型同框的隐性开销。
+    // 现为逐根粒度：markCullMatricesDirty(animated) 只脏 animated 根。
+    const animated = makeGroup("animated");
+    animated.position.set(0, 0, 0);
+    const staticRoot = makeGroup("static");
+    staticRoot.position.set(0, 0, 0);
+    const scene = new THREE.Scene();
+    scene.add(animated);
+    scene.add(staticRoot);
+    registerModelRoot(animated);
+    registerModelRoot(staticRoot);
+    const cam = makeCamera();
+    cam.position.set(0, 0, 5);
+    cam.lookAt(0, 0, 0);
+
+    // 首帧：注册使全体置脏 → 两根均刷新
+    cullModelGroups(cam);
+
+    // 稳态静态帧：两根都不刷
+    const animSpy = vi.spyOn(animated, "updateWorldMatrix");
+    const staticSpy = vi.spyOn(staticRoot, "updateWorldMatrix");
+    cullModelGroups(cam);
+    expect(animSpy, "静态帧不刷 animated").not.toHaveBeenCalled();
+    expect(staticSpy, "静态帧不刷 static").not.toHaveBeenCalled();
+
+    // 只给 animated 置脏（模拟带 SpringBone 的模型驱动）→ 仅 animated 刷新
+    markCullMatricesDirty(animated);
+    cullModelGroups(cam);
+    expect(animSpy, "animated 置脏 → 必刷").toHaveBeenCalled();
+    expect(staticSpy, "static 未被置脏 → 不得陪刷（逐根化核心收益）").not.toHaveBeenCalled();
+
+    animSpy.mockRestore();
+    staticSpy.mockRestore();
+  });
+
+  it("无参 markCullMatricesDirty 仍然全体置脏（保守兜底不退化）", () => {
+    const a = makeGroup("a");
+    const b = makeGroup("b");
+    const scene = new THREE.Scene();
+    scene.add(a);
+    scene.add(b);
+    registerModelRoot(a);
+    registerModelRoot(b);
+    cullModelGroups(makeCamera()); // 首帧消费注册置脏
+
+    const aSpy = vi.spyOn(a, "updateWorldMatrix");
+    const bSpy = vi.spyOn(b, "updateWorldMatrix");
+    markCullMatricesDirty(); // 无参 = 全体（渲染循环无法逐根归属时的兜底）
+    cullModelGroups(makeCamera());
+    expect(aSpy, "无参置脏 → a 刷").toHaveBeenCalled();
+    expect(bSpy, "无参置脏 → b 刷（全体语义保留）").toHaveBeenCalled();
+    aSpy.mockRestore();
+    bSpy.mockRestore();
+  });
+
   it("多模型独立裁剪", () => {
     const g1 = makeGroup("near");
     g1.position.set(0, 0, 0);

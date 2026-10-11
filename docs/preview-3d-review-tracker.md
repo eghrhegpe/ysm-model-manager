@@ -404,3 +404,21 @@
   1. **自定义 shader 依赖 three chunk 集无版本守卫（域外候选，勿在本轮开战）**：`caps/light-cone.ts:79-80`（`<tonemapping_fragment>`/`<colorspace_fragment>`）、`caps/sun-beams.ts:44,74`（`<common>`）——它们是**自写 ShaderMaterial** 的 chunk include，非「对 three 官方 shader 的补丁」，不入 patch-guard 域；且 chunk 名消失 = three 打 Shader Error（**响**），非静默降级，优先级低。若要统一可另立「three chunk include 版本守卫」议题。
   2. **water allowed 乐观声明 187-189 未审计**——但对应 `L54-59` 刻意决策（不对称失败哲学），不视为缺陷。
   3. 轮转清单已巡至 shader-patches，未审剩 **`state` / `texture`**。下一轮取 **`state`**（有大量 incidental 提及但无专项审计报告）。
+
+
+## 2026-10-11T14:20:00+08:00 巡检第 12 轮：state
+
+- 选定理由：未审剩 state / texture，按轮转清单取 state（台账「大量 incidental 提及但无专项审计报告」）。域内 10 源文件 / ~2504 行 + 6 测试文件；近期提交密集治理（a8751377d envResolution 死键 / af392f7c5 sky 死参数显式标记 / ba5cbdc5c 值域钳制 / de3ce7cf7 ARCHIVE_ALIAS 派生 / 0ca845e3e applyModelPreset 契约），故先结合 `git log -- state` 定位「已治理 vs 残留」。
+- **判净（未开战）**：逐项核证近 8 条 state 相关提交声称的修复与当前源码树一致，无残留：
+  - **无幽灵键**：`check-env-schema-consumers` 绿（150 键全有生产消费）；envResolution 已删（`env-state-schema.ts:467-475` 详述删因与跨代微损）；sky 4 死参数（turbidity/rayleigh/mieCoefficient/mieDirectionalG）在 `:91-127` **显式标记 + range 防御**（唯一作用 = three Sky shader 默认 uniform），skyExposure `:150-153` 更正为「活跃但无 UI 出口」非死参数。
+  - **写方覆盖（现有检测器盲区，我手工扫过）**：`check-env-schema-consumers` 只查「消费/提及」，不查写方——「有读无写」的潜伏死键它抓不到。机械扫描 `setEnvState({})`/`setStateValue()` 得 44 键无直接字面写，逐个追源：4 个 sky 死参数（文档化）+ skyExposure（仅程序化/测试写，文档化）+ **39 个 light 键经 `caps/light-persist.ts` 的 `FLATTEN_MAP`（`light-params|readLightParams` 派生，`persist:199` `setEnvState(acc, {source:"auto-model"})` 变量传参）写入**——非字面量所以正则漏掉，实为活键。**无真死键**。
+  - **单一写入口 + 钳制单源**：`env-state.ts:114` `clampFieldValue`（ADR-283，enum 回退 default / 数值钳 range / undefined 短路）；各 cap 不自备 clamp（历史提交 ba5cbdc5c 已把 10 个原无 range 键上收）。
+  - **派生谓词单源**：`isSsrRenderActive`（`env-state.ts:152`）/ `effectiveToneMappingExposure`（`:166`）收编跨 cap 手抄公式；`toModelType`（`model-defaults.ts:66`，Object.hasOwn 防原型链误判）。
+  - **键派生无手抄清单**：`ARCHIVE_ALIAS` 仅 3 别名且 typed（`schema:990-999`，ADR-326）；`EnvState`/`EnvStateKey`/`getPresetKeys`/`deriveDefaultEnvState` 均派生自 schema。
+  - **无跨通道双源**：Go 侧零 `envState` 引用（env 状态纯前端，经 cap saveState 落盘）。
+  - **`getPresetKeys` 模块级 `_groupCache` 从不失效**：grep 确认无测试修改 `ENV_STATE_SCHEMA`（只读），schema 是运行时不可变 const，缓存安全（非缺陷）。
+- 遗留 / 下一轮：
+  1. **`check-env-schema-consumers` 只查读不查写**：本次我手工扫的「无直接写方」类缺陷是它盲区（light 键经 FLATTEN_MAP 变量传参即证正则法不可靠）。若要机器化，建议把写方检测做进该脚本（读 FLATTEN_MAP 派生写 + `setStateValue` + loadState 键轨），但写模式多态（变量/展开/派生），误报风险高——**列为候选，勿本轮做**。
+  2. **`applyModelDefaults` 调用方是手写有序清单**（`shared-infra.ts:58-76`，sky→fog→shadow→reflector→environment + postProc 另路 `:367`）——非 registry 派生；但 `:50-56` 注释详述「实现序非依赖序、写互不相交、顺序可调」，且 shared-infra.test.ts「各调一次」契约锁兜底。属刻意设计，非缺陷。
+  3. 轮转清单已巡至 state，未审剩 **`texture`**。下一轮取 `texture`（texture-loader / texture_cache / mmd-ktx2-basis 等，域较散）。
+- 验证：无代码改动（纯巡检判净）；`check-env-schema-consumers` / `check-cap-enabled-duality` 均绿；`doctor --docs` 早前 23/23 PASS。

@@ -8,15 +8,15 @@ import (
 	"golang.org/x/text/encoding/simplifiedchinese"
 	"golang.org/x/text/encoding/traditionalchinese"
 	"golang.org/x/text/transform"
+
+	"ysm-model-manager/internal/testutil"
 )
 
-// mustEncode 用指定编码器编码字符串（测试辅助）；失败 panic。
+// mustEncode 用指定编码器编码字符串（测试辅助）；失败即 fail（走 testutil，失败输出带前缀）。
 func mustEncode(t *testing.T, enc transform.Transformer, s string) string {
 	t.Helper()
 	b, _, err := transform.String(enc, s)
-	if err != nil {
-		t.Fatalf("encode %q failed: %v", s, err)
-	}
+	testutil.NoError(t, err, "encode %q failed", s)
 	return b
 }
 

@@ -1,6 +1,6 @@
 {
-  "generated": "2026-10-11T10:50:19.255Z",
-  "count": 5000,
+  "generated": "2026-10-11T11:24:19.881Z",
+  "count": 4999,
   "note": "裸 t.Fatal/t.Fatalf 存量债账本（ADR-202 刀5 补：计数口径，无行号；debt 档不阻断，仅供 doctor 报告 / 收债排期）；清理后重跑 --update-baseline 收缩",
   "files": {
     "cmd/ccheck/main_test.go": 12,
@@ -41,7 +41,6 @@
     "go/container/container_7z_test.go": 8,
     "go/container/container_fuzz_test.go": 3,
     "go/container/container_test.go": 28,
-    "go/container/encoding_test.go": 1,
     "go/dedup/adversarial_test.go": 19,
     "go/dedup/dedup_ctx_test.go": 9,
     "go/dedup/dedup_extra_test.go": 36,

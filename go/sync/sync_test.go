@@ -330,7 +330,7 @@ func TestSyncResources_PackFolderOnlyForPackType(t *testing.T) {
 	// 含 pack.mcmeta 的资源包文件夹
 	pack := filepath.Join(globalDir, "my-pack")
 	if err := os.MkdirAll(pack, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	_ = os.WriteFile(filepath.Join(pack, "pack.mcmeta"), []byte("{}"), 0644)
 	hasPack := func(list []string) bool {

@@ -28,14 +28,14 @@ func modeSwitchFixture(t *testing.T, content string) (repoRoot, customDir, repoF
 	repoRoot = filepath.Join(base, "repo")
 	customDir = filepath.Join(base, "inst", ".minecraft", "resourcepacks")
 	if err := os.MkdirAll(repoRoot, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.MkdirAll(customDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	repoFile = filepath.Join(repoRoot, "m.ysm")
 	if err := os.WriteFile(repoFile, []byte(content), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	customFile = filepath.Join(customDir, "m.ysm")
 	hash := computeHash(repoFile)
@@ -134,7 +134,7 @@ func TestRelinkDir_SymlinkToCopy_Decouples(t *testing.T) {
 func TestRelinkDir_CopyToHardLink_Links(t *testing.T) {
 	repoRoot, customDir, repoFile, customFile, scanFn := modeSwitchFixture(t, "same")
 	if err := os.WriteFile(customFile, []byte("same"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	if n := relinkQuiet(t, customDir, repoRoot, "hardlink", scanFn); n != 1 {
@@ -159,7 +159,7 @@ func TestRelinkDir_DirLevelSnapshotMissingRefusesRename(t *testing.T) {
 	repoRoot := filepath.Join(base, "repo")
 	customDir := filepath.Join(base, "inst", ".minecraft", "resourcepacks")
 	if err := os.MkdirAll(filepath.Join(repoRoot, "m"), 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 仓库侧实体目录；实例侧 sub 目录**故意不建**——注入 scanFn 撒谎快照 dstParent
 	_ = os.WriteFile(filepath.Join(repoRoot, "m", "ysm.json"), []byte("repo"), 0644)
@@ -202,16 +202,16 @@ func TestRelinkDir_DirLevelSnapshotReplacedRefusesRename(t *testing.T) {
 	repoRoot := filepath.Join(base, "repo")
 	customDir := filepath.Join(base, "inst", ".minecraft", "resourcepacks")
 	if err := os.MkdirAll(filepath.Join(repoRoot, "m"), 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.MkdirAll(customDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	_ = os.WriteFile(filepath.Join(repoRoot, "m", "ysm.json"), []byte("repo"), 0644)
 	// dstParent = customDir/occ，被**普通文件**占据（模拟外部改动把目录换成异体类型）
 	occupied := filepath.Join(customDir, "occ")
 	if err := os.WriteFile(occupied, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	scanFn := func(dir string) []types.ModelEntry {
 		if dir == repoRoot {
@@ -251,7 +251,7 @@ func TestRelinkDir_NoHashOrBanned_Untouched(t *testing.T) {
 	banned := filepath.Join(customDir, "m.ysm.ban")
 	for _, p := range []string{noHash, banned} {
 		if err := os.WriteFile(p, []byte("stale"), 0644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	hash := computeHash(repoFile)

@@ -23,7 +23,7 @@ func setupSyncDirs(t *testing.T) (globalDir, targetDir string) {
 	targetDir = filepath.Join(base, "inst", ".minecraft", "resourcepacks")
 	for _, d := range []string{globalDir, targetDir} {
 		if err := os.MkdirAll(d, 0755); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	return
@@ -33,7 +33,7 @@ func TestPushResources_CopyMode(t *testing.T) {
 	t.Parallel()
 	globalDir, targetDir := setupSyncDirs(t)
 	if err := os.WriteFile(filepath.Join(globalDir, "pack.zip"), []byte("data"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	var logs []string
@@ -59,7 +59,7 @@ func TestPullResources(t *testing.T) {
 	t.Parallel()
 	globalDir, targetDir := setupSyncDirs(t)
 	if err := os.WriteFile(filepath.Join(targetDir, "extra.zip"), []byte("data"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	count, err := PullResources("resourcepack", globalDir, targetDir,
@@ -74,7 +74,7 @@ func TestPullSingleResource_File(t *testing.T) {
 	globalDir, targetDir := setupSyncDirs(t)
 	src := filepath.Join(targetDir, "extra.zip")
 	if err := os.WriteFile(src, []byte("x"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	testutil.NoError(t, PullSingleResource(globalDir, targetDir, src), "PullSingle 失败")
 	testutil.FileExists(t, filepath.Join(globalDir, "extra.zip"))
@@ -85,10 +85,10 @@ func TestPullSingleResource_Dir(t *testing.T) {
 	globalDir, targetDir := setupSyncDirs(t)
 	srcDir := filepath.Join(targetDir, "pack")
 	if err := os.MkdirAll(srcDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(srcDir, "a.txt"), []byte("x"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	testutil.NoError(t, PullSingleResource(globalDir, targetDir, srcDir), "文件夹拉取失败")
 	testutil.FileExists(t, filepath.Join(globalDir, "pack", "a.txt"))
@@ -99,7 +99,7 @@ func TestPushSingleResource_File(t *testing.T) {
 	globalDir, targetDir := setupSyncDirs(t)
 	src := filepath.Join(globalDir, "pack.zip")
 	if err := os.WriteFile(src, []byte("x"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	testutil.NoError(t, PushSingleResource(src, targetDir, globalDir, "copy", "resourcepack"), "PushSingle 失败")
 	testutil.FileExists(t, filepath.Join(targetDir, "pack.zip"))
@@ -111,19 +111,19 @@ func TestSyncCustomToRepo(t *testing.T) {
 	customDir := filepath.Join(base, "custom")
 	repoDir := filepath.Join(base, "repo")
 	if err := os.MkdirAll(customDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.MkdirAll(repoDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(customDir, "new.ysm"), []byte("new"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(customDir, "dup.ysm"), []byte("x"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(repoDir, "dup.ysm"), []byte("x"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	scanFn := func(dir string) []types.ModelEntry {
@@ -169,11 +169,11 @@ func TestSyncCustomToRepo_HoldsInstallLock(t *testing.T) {
 	repoDir := filepath.Join(base, "repo")
 	for _, d := range []string{customDir, repoDir} {
 		if err := os.MkdirAll(d, 0755); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	if err := os.WriteFile(filepath.Join(customDir, "new.ysm"), []byte("new"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	lockViolated := false
@@ -217,7 +217,7 @@ func TestPushResources_FolderLevelYSM(t *testing.T) {
 	globalDir, targetDir := setupSyncDirs(t)
 	_ = os.MkdirAll(filepath.Join(globalDir, "modelpack"), 0755)
 	if err := os.WriteFile(filepath.Join(globalDir, "modelpack", "ysm.json"), []byte("{}"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	var logs []string
@@ -233,7 +233,7 @@ func TestPushResources_FolderLevelMMD(t *testing.T) {
 	globalDir, targetDir := setupSyncDirs(t)
 	_ = os.MkdirAll(filepath.Join(globalDir, "mmdmodel"), 0755)
 	if err := os.WriteFile(filepath.Join(globalDir, "mmdmodel", "char.pmx"), []byte("pmx"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	count, err := PushResources("EntityPlayer", globalDir, targetDir, "copy",
@@ -246,10 +246,10 @@ func TestPushResources_AllSyncedNoOp(t *testing.T) {
 	t.Parallel()
 	globalDir, targetDir := setupSyncDirs(t)
 	if err := os.WriteFile(filepath.Join(globalDir, "pack.zip"), []byte("x"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(targetDir, "pack.zip"), []byte("x"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	count, err := PushResources("resourcepack", globalDir, targetDir, "copy",
@@ -265,10 +265,10 @@ func TestPullResources_FolderLevelDir(t *testing.T) {
 	globalDir, targetDir := setupSyncDirs(t)
 	_ = os.MkdirAll(filepath.Join(targetDir, "extra-pack"), 0755)
 	if err := os.WriteFile(filepath.Join(targetDir, "extra-pack", "m.ysm"), []byte("e"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(targetDir, "flat.ysm"), []byte("f"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	count, err := PullResources("ysm", globalDir, targetDir,
@@ -283,10 +283,10 @@ func TestPullResources_NoExtra(t *testing.T) {
 	t.Parallel()
 	globalDir, targetDir := setupSyncDirs(t)
 	if err := os.WriteFile(filepath.Join(globalDir, "same.zip"), []byte("x"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(targetDir, "same.zip"), []byte("x"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	count, err := PullResources("resourcepack", globalDir, targetDir,
@@ -300,7 +300,7 @@ func TestPullResources_MMDFolderLevel(t *testing.T) {
 	globalDir, targetDir := setupSyncDirs(t)
 	_ = os.MkdirAll(filepath.Join(targetDir, "mmd-pack"), 0755)
 	if err := os.WriteFile(filepath.Join(targetDir, "mmd-pack", "m.pmx"), []byte("m"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	count, err := PullResources("EntityPlayer", globalDir, targetDir,

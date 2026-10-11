@@ -19,22 +19,22 @@ func TestSyncToggleStatus_HashComputedOutsideLock(t *testing.T) {
 	repoDir := filepath.Join(base, "repo")
 	customDir := filepath.Join(base, "custom")
 	if err := os.MkdirAll(repoDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.MkdirAll(customDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	// 在仓库中放一个被禁用的文件
 	repoFile := filepath.Join(repoDir, "model.ysm.ban")
 	if err := os.WriteFile(repoFile, []byte("test content for hash outside lock"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	// 实例中放一个同名但不同路径的文件（改名场景，relKey miss，需要哈希）
 	customFile := filepath.Join(customDir, "renamed_model.ysm")
 	if err := os.WriteFile(customFile, []byte("test content for hash outside lock"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	// scanFn 预设 Hash（模拟 relKey miss 场景，hash 匹配路径）
@@ -66,19 +66,19 @@ func TestSyncToggleStatus_LockReleasedDuringHash(t *testing.T) {
 	repoDir := filepath.Join(base, "repo")
 	customDir := filepath.Join(base, "custom")
 	if err := os.MkdirAll(repoDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.MkdirAll(customDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	repoFile := filepath.Join(repoDir, "big_model.ysm.ban")
 	if err := os.WriteFile(repoFile, []byte("big content"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	customFile := filepath.Join(customDir, "renamed_big_model.ysm")
 	if err := os.WriteFile(customFile, []byte("big content"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	// scanFn 预设 Hash（模拟 relKey miss 场景，hash 匹配路径）

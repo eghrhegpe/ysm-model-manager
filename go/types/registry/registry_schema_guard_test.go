@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"ysm-model-manager/internal/testutil"
 )
 
 // guardViolations 解析注册表 payload 并运行 schema 守卫，返回违规列表。
@@ -38,7 +39,7 @@ func writeTempRegistry(t *testing.T, payload string) string {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "resource_types.json")
 	if err := os.WriteFile(path, []byte(payload), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	SetRegistryPath(path)
 	return path

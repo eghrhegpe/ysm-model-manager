@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"ysm-model-manager/internal/testutil"
 )
 
 // ====== RegistryType ======
@@ -64,7 +65,7 @@ func TestRegistryType_ExtensionsDeepCopy(t *testing.T) {
 		{"id":"ysm","name":"YSM","extensions":[".ysm",".zip"],"storageSubDir":"ysm"}
 	]}`
 	if err := os.WriteFile(p, []byte(payload), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	SetRegistryPath(p)
 	defer SetRegistryPath("")

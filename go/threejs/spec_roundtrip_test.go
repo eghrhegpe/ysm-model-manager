@@ -14,7 +14,7 @@ func TestModel3DSpecRoundTripKeepsInjectedFields(t *testing.T) {
 	raw := `{"models":[{"id":"comp_0","name":"foxcar","textureWidth":512,"textureHeight":89}]}`
 	var m map[string]any
 	if err := json.Unmarshal([]byte(raw), &m); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 复刻 app_model.go injectTexArrOrder + injectComponentTextures 注入
 	m["texArrOrder"] = []string{"skin", "", "", "", "foxcar"}
@@ -24,7 +24,7 @@ func TestModel3DSpecRoundTripKeepsInjectedFields(t *testing.T) {
 
 	var spec Model3DSpec
 	if err := json.Unmarshal(injected, &spec); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if len(spec.TexArrOrder) != 5 || spec.TexArrOrder[4] != "foxcar" {
 		t.Fatalf("texArrOrder 往返丢失/错序: %#v", spec.TexArrOrder)
@@ -38,7 +38,7 @@ func TestModel3DSpecRoundTripKeepsInjectedFields(t *testing.T) {
 	testutil.NoError(t, err)
 	var back map[string]any
 	if err := json.Unmarshal(out, &back); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if _, ok := back["texArrOrder"]; !ok {
 		t.Fatal("再序列化后 texArrOrder 缺失")

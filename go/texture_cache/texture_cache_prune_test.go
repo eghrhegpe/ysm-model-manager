@@ -36,10 +36,10 @@ func writeCacheFile(t *testing.T, dir, name string, data []byte, mod time.Time) 
 	t.Helper()
 	path := filepath.Join(dir, name)
 	if err := os.WriteFile(path, data, 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.Chtimes(path, mod, mod); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	return path
 }
@@ -151,7 +151,7 @@ func TestWriteCached_TriggersPrune(t *testing.T) {
 	setLimits(t, 250, 0, 0) // interval=0 → 每次写都触发；容量 250
 	for i := 0; i < 4; i++ {
 		if err := WriteCached(fmt.Sprintf("hash%d", i), make([]byte, 100)); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	// 每次写后 prune 到 ≤250：写满 4 个（400B）后应只剩最新的 2 个（200B）
@@ -269,7 +269,7 @@ func TestWriteCached_ShutdownCtx_Cancelled_SkipsPrune(t *testing.T) {
 	cancel() // 已取消：分叉的淘汰应立即放弃
 	SetShutdownCtx(ctx)
 	if err := WriteCached("newhash", make([]byte, 50)); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	deadline := time.Now().Add(2 * time.Second)
 	for pruneInFlight.Load() && time.Now().Before(deadline) {
@@ -290,7 +290,7 @@ func TestWriteCached_ShutdownCtx_Live_Prunes(t *testing.T) {
 	defer cancel()
 	SetShutdownCtx(ctx) // live ctx：淘汰正常执行
 	if err := WriteCached("newhash", make([]byte, 50)); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	deadline := time.Now().Add(2 * time.Second)
 	for pruneInFlight.Load() && time.Now().Before(deadline) {

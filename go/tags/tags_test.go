@@ -159,7 +159,7 @@ func TestCorruptFileRecovers(t *testing.T) {
 	s := NewStore(dir)
 	// 先写一个损坏的 tags.json
 	if err := os.WriteFile(s.path, []byte("{not valid json"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 读应不报错（已备份重建），返回空
 	tags, err := s.GetTags("/m")
@@ -217,7 +217,7 @@ func TestSaveLeavesNoTmp(t *testing.T) {
 	dir := t.TempDir()
 	s := NewStore(dir)
 	if err := s.SetTags("/m", []string{"x"}); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if _, err := os.Stat(s.path + ".tmp"); err == nil {
 		t.Error("tags.json.tmp should not remain after save")

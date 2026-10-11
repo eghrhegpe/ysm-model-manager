@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"ysm-model-manager/internal/testutil"
 )
 
 func TestAllExts(t *testing.T) {
@@ -364,7 +365,7 @@ func TestLoadRegistry_CorruptFallbackToEmbedded(t *testing.T) {
 	dir := t.TempDir()
 	bad := filepath.Join(dir, "resource_types.json")
 	if err := os.WriteFile(bad, []byte("{ 这不是合法 JSON !!"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	SetRegistryPath(bad)
 	defer SetRegistryPath("") // 恢复默认，避免污染其他测试

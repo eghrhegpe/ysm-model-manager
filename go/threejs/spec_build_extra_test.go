@@ -471,7 +471,7 @@ func TestBuildMulti_SkipEmptyComponent(t *testing.T) {
 	testutil.NoError(t, err)
 	var spec Model3DSpec
 	if err := json.Unmarshal([]byte(out), &spec); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if len(spec.Models) != 1 || spec.Models[0].ID != "comp_1" {
 		t.Fatalf("空组件应被跳过, models = %d (ID=%q)", len(spec.Models), func() string {

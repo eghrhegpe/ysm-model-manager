@@ -115,7 +115,7 @@ func TestCollectFolderFilesFromScanEqualsWalk(t *testing.T) {
 func mkdir(t *testing.T, p string) {
 	t.Helper()
 	if err := os.MkdirAll(p, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 }
 

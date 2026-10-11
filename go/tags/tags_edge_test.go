@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // =====================================================================
@@ -53,7 +54,7 @@ func TestStore_RemoveTag_NULInPath(t *testing.T) {
 	tmpDir := t.TempDir()
 	store := NewStore(tmpDir)
 	if err := store.SetTags("/m", []string{"x"}); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	path := filepath.Join(tmpDir, "safe.ysm") + "\x00" + "..\\evil.json"
 	if err := store.RemoveTag(path, "x"); err == nil {

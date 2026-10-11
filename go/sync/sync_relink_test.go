@@ -17,10 +17,10 @@ func TestRelinkDir_MatchesByHash(t *testing.T) {
 	repoRoot := filepath.Join(base, "repo")
 	customDir := filepath.Join(base, "inst", ".minecraft", "resourcepacks")
 	if err := os.MkdirAll(repoRoot, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.MkdirAll(customDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	_ = os.WriteFile(filepath.Join(repoRoot, "m.ysm"), []byte("same"), 0644)
 	_ = os.WriteFile(filepath.Join(customDir, "m.ysm"), []byte("same"), 0644)
@@ -64,10 +64,10 @@ func TestRelinkDir_ScanNotHeldLock(t *testing.T) {
 	repoRoot := filepath.Join(base, "repo")
 	customDir := filepath.Join(base, "inst")
 	if err := os.MkdirAll(repoRoot, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.MkdirAll(customDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	_ = os.WriteFile(filepath.Join(repoRoot, "m.ysm"), []byte("same"), 0644)
 	_ = os.WriteFile(filepath.Join(customDir, "m.ysm"), []byte("same"), 0644)
@@ -107,10 +107,10 @@ func TestRelinkDir_FlatEntryAtCustomDirRoot(t *testing.T) {
 	repoRoot := filepath.Join(base, "repo")
 	customDir := filepath.Join(base, "inst", ".minecraft", "resourcepacks")
 	if err := os.MkdirAll(filepath.Join(repoRoot, "subdir"), 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.MkdirAll(customDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 仓库侧：ysm.json 在子目录（hash 匹配按全树扫描，路径无关）
 	_ = os.WriteFile(filepath.Join(repoRoot, "subdir", "ysm.json"), []byte("repo-version"), 0644)
@@ -160,10 +160,10 @@ func TestRelinkDir_BanEntrySkipped(t *testing.T) {
 	repoRoot := filepath.Join(base, "repo")
 	customDir := filepath.Join(base, "inst", ".minecraft", "resourcepacks")
 	if err := os.MkdirAll(repoRoot, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.MkdirAll(customDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 仓库侧活跃版 + 实例侧禁用态（.ban），hash 相同
 	_ = os.WriteFile(filepath.Join(repoRoot, "m.ysm"), []byte("same"), 0644)
@@ -201,10 +201,10 @@ func TestRelinkDir_DirLevelReplacesOldDir(t *testing.T) {
 	repoRoot := filepath.Join(base, "repo")
 	customDir := filepath.Join(base, "inst", ".minecraft", "resourcepacks")
 	if err := os.MkdirAll(filepath.Join(repoRoot, "repo-sub"), 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.MkdirAll(filepath.Join(customDir, "custom-sub"), 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	_ = os.WriteFile(filepath.Join(repoRoot, "repo-sub", "ysm.json"), []byte("repo-version"), 0644)
 	_ = os.WriteFile(filepath.Join(customDir, "custom-sub", "ysm.json"), []byte("stale"), 0644)
@@ -251,16 +251,16 @@ func TestRelinkDir_RelinkBackupCorpsesSkipped(t *testing.T) {
 	repoRoot := filepath.Join(base, "repo")
 	customDir := filepath.Join(base, "inst", ".minecraft", "resourcepacks")
 	if err := os.MkdirAll(repoRoot, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.MkdirAll(filepath.Join(customDir, "m.ysm.relink-bak-123"), 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(repoRoot, "m.ysm"), []byte("same"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(customDir, "m.ysm"), []byte("same"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	corpse := filepath.Join(customDir, "m.ysm.relink-bak-123", "m.ysm")
 	_ = os.WriteFile(corpse, []byte("same"), 0644)
@@ -332,7 +332,7 @@ func TestSyncToggleStatus_RelinkBackupCorpsesSkipped(t *testing.T) {
 	_, repoDir, customDir := newToggleEnv(t)
 	repoFile := filepath.Join(repoDir, "model.ysm.ban")
 	if err := os.WriteFile(repoFile, []byte("AAA"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 正常实例文件（应被禁用）+ 备份尸体内的同内容文件（应不动）
 	live := filepath.Join(customDir, "mymodel.ysm")
@@ -340,10 +340,10 @@ func TestSyncToggleStatus_RelinkBackupCorpsesSkipped(t *testing.T) {
 	corpse := filepath.Join(corpseDir, "mymodel.ysm")
 	for _, p := range []string{live, corpse} {
 		if err := os.MkdirAll(filepath.Dir(p), 0755); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		if err := os.WriteFile(p, []byte("AAA"), 0644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	hash := computeHash(repoFile)

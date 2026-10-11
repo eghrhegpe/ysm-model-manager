@@ -36,10 +36,10 @@ func TestSyncToggleStatus_RelKeyMiss_FallsBackToHash(t *testing.T) {
 	// repo: model.ysm.ban（已禁用）；实例侧用户把同名文件改名为 mymodel.ysm（仍启用）
 	repoFile := filepath.Join(repoDir, "model.ysm.ban")
 	if err := os.WriteFile(repoFile, []byte("AAA"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(customDir, "mymodel.ysm"), []byte("AAA"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	hash := computeHash(repoFile)
@@ -78,14 +78,14 @@ func TestSyncToggleStatus_RelKeyWinsOverHash(t *testing.T) {
 	repoA := filepath.Join(repoDir, "model_a.ysm")
 	repoB := filepath.Join(repoDir, "model_b.ysm.ban")
 	if err := os.WriteFile(repoA, []byte("AAA"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(repoB, []byte("AAA"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 实例 model_a.ysm 内容同仓库 model_a
 	if err := os.WriteFile(filepath.Join(customDir, "model_a.ysm"), []byte("AAA"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	hash := computeHash(repoA)

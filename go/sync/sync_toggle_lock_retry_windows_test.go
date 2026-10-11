@@ -21,18 +21,18 @@ func TestSyncToggleStatus_LockedFileSkippedSilently(t *testing.T) {
 	filesRoot := filepath.Join(base, "repo")
 	customDir := filepath.Join(base, "custom")
 	if err := os.MkdirAll(filesRoot, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.MkdirAll(customDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	repoFile := filepath.Join(filesRoot, "m.ysm")
 	if err := os.WriteFile(repoFile, []byte("repo"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	disabled := filepath.Join(customDir, "m.ysm.disabled")
 	if err := os.WriteFile(disabled, []byte("local"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	// 独占锁定待启用的源文件（share=0），令 Rename 失败

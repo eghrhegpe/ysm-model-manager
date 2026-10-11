@@ -46,7 +46,7 @@ func TestSave_MkdirAllFailure(t *testing.T) {
 	base := t.TempDir()
 	blocker := filepath.Join(base, "blocker")
 	if err := os.WriteFile(blocker, []byte("i am a file"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	s := NewStore(blocker) // path = blocker/tags.json，但 blocker 是普通文件
 	err := s.SetTags("/m", []string{"x"})
@@ -64,14 +64,14 @@ func TestSave_WriteAtomicFailure(t *testing.T) {
 	dir := t.TempDir()
 	s := NewStore(dir)
 	if err := s.SetTags("/m", []string{"x"}); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 用同名目录替换 tags.json 文件 → WriteFileAtomic 的 rename 目标非法
 	if err := os.Remove(s.path); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.MkdirAll(s.path, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	err := s.SetTags("/m", []string{"y"})
 	if err == nil {
@@ -86,7 +86,7 @@ func TestSave_WriteAtomicFailure(t *testing.T) {
 func TestGetTags_LoadErrorPropagates(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(dir, "tags.json"), 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	s := NewStore(dir)
 	if _, err := s.GetTags("/m"); err == nil {
@@ -100,11 +100,11 @@ func TestLoad_CorruptBackupRenameFailure(t *testing.T) {
 	dir := t.TempDir()
 	s := NewStore(dir)
 	if err := os.WriteFile(s.path, []byte("{not valid json"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 用目录占住 .corrupt 目标 → os.Rename(file, dir) 失败
 	if err := os.MkdirAll(s.path+".corrupt", 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if _, err := s.GetTags("/m"); err == nil {
 		t.Fatal("损坏文件备份失败时应报错")
@@ -117,7 +117,7 @@ func TestLoad_JSONNullContent(t *testing.T) {
 	dir := t.TempDir()
 	s := NewStore(dir)
 	if err := os.WriteFile(s.path, []byte("null"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	tags, err := s.GetTags("/m")
 	testutil.NoError(t, err, "JSON null 内容不应报错")
@@ -138,7 +138,7 @@ func TestLoad_JSONNullContent(t *testing.T) {
 func TestSetTags_LoadErrorPropagates(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(dir, "tags.json"), 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	s := NewStore(dir)
 	if err := s.SetTags("/m", []string{"x"}); err == nil {
@@ -158,7 +158,7 @@ func TestAddTag_EmptyTagNoOp(t *testing.T) {
 func TestAddTag_LoadErrorPropagates(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(dir, "tags.json"), 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	s := NewStore(dir)
 	if err := s.AddTag("/m", "x"); err == nil {
@@ -178,7 +178,7 @@ func TestRemoveTag_EmptyTagNoOp(t *testing.T) {
 func TestRemoveTag_LoadErrorPropagates(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(dir, "tags.json"), 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	s := NewStore(dir)
 	if err := s.RemoveTag("/m", "x"); err == nil {
@@ -190,7 +190,7 @@ func TestRemoveTag_NoChangeNoOp(t *testing.T) {
 	dir := t.TempDir()
 	s := NewStore(dir)
 	if err := s.SetTags("/m", []string{"a", "b"}); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := s.RemoveTag("/m", "z"); err != nil {
 		t.Fatalf("移除不存在的 tag 应 no-op: %v", err)
@@ -201,7 +201,7 @@ func TestRemoveTag_LastTagDeletesEntry(t *testing.T) {
 	dir := t.TempDir()
 	s := NewStore(dir)
 	if err := s.SetTags("/m", []string{"a"}); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := s.RemoveTag("/m", "a"); err != nil {
 		t.Fatalf("移除最后一条失败: %v", err)
@@ -227,7 +227,7 @@ func TestListByTag_EmptyTagNil(t *testing.T) {
 func TestListByTag_LoadErrorPropagates(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(dir, "tags.json"), 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	s := NewStore(dir)
 	if _, err := s.ListByTag("x"); err == nil {
@@ -239,7 +239,7 @@ func TestListByTag_LoadErrorPropagates(t *testing.T) {
 func TestAllTags_LoadErrorPropagates(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(dir, "tags.json"), 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	s := NewStore(dir)
 	if _, err := s.AllTags(); err == nil {

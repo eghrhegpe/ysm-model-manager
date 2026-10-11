@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/fsutil"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // ===== copyFile 错误分支 =====
@@ -24,7 +25,7 @@ func assertNoFsutilTmp(t *testing.T, dir string) {
 		if os.IsNotExist(err) {
 			return
 		}
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	for _, e := range entries {
 		if strings.HasPrefix(e.Name(), ".copy-") {
@@ -63,7 +64,7 @@ func TestCopyFile_TmpNameRandomized(t *testing.T) {
 	_ = os.WriteFile(src, []byte("data"), 0644)
 	dst := filepath.Join(base, "out", "f.txt")
 	if err := os.MkdirAll(dst+".copy-tmp", 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	_ = os.WriteFile(filepath.Join(dst+".copy-tmp", "guard"), []byte("g"), 0644)
 	if err := fsutil.CopyFile(src, dst); err != nil {

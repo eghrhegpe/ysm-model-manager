@@ -7,6 +7,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"ysm-model-manager/internal/testutil"
 )
 
 // --- helper: 合法的 resource_types.json (含 ysm 类型) ---
@@ -61,7 +62,7 @@ func TestLoadRegistry_ConcurrentReadAndSetPath(t *testing.T) {
 	dir := t.TempDir()
 	regPath := filepath.Join(dir, "external.json")
 	if err := os.WriteFile(regPath, validRegistryJSON(true), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	const goroutines = 12
@@ -355,7 +356,7 @@ func TestLoadRegistry_DefaultNameNotReadFromCwd(t *testing.T) {
 	p := filepath.Join(dir, "resource_types.json")
 	markerJSON := []byte(`{"resourceTypes":[{"id":"MARKER-TYPE-UNIQUE","name":"marker","extensions":[".mk"],"storageSubDir":"mk","configField":"MkRoot","instanceDir":"mk"}]}`)
 	if err := os.WriteFile(p, markerJSON, 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	// 用 registryPath 指向该文件 (通过完整路径)—— 但源码按名字跳过

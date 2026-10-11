@@ -19,7 +19,7 @@ func TestComputeHash_Valid(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "test.txt")
 	if err := os.WriteFile(path, []byte("hello world"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	h := computeHash(path)
 	if h == "" {
@@ -41,7 +41,7 @@ func TestComputeHash_EmptyFile(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "empty.txt")
 	if err := os.WriteFile(path, []byte{}, 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	h := computeHash(path)
 	if h == "" {
@@ -156,10 +156,10 @@ func writeEntityPlayerZip(t *testing.T) string {
 	w, err := zw.Create("model.pmx")
 	testutil.NoError(t, err)
 	if _, err := w.Write([]byte("pmx")); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := zw.Close(); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	return p
 }
@@ -181,7 +181,7 @@ func TestIsModelFile_UnknownType(t *testing.T) {
 func TestIsDirTypeModelFolder_Yes(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "model.ysm"), []byte("data"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if !isDirTypeModelFolder(dir, "ysm") {
 		t.Error("dir with .ysm should be ysm model folder")
@@ -191,7 +191,7 @@ func TestIsDirTypeModelFolder_Yes(t *testing.T) {
 func TestIsDirTypeModelFolder_No(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "readme.txt"), []byte("data"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if isDirTypeModelFolder(dir, "ysm") {
 		t.Error("dir without model files should NOT be model folder")
@@ -224,7 +224,7 @@ func TestGetLinkType_RegularFile(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "regular.txt")
 	if err := os.WriteFile(path, []byte("data"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	lt := GetLinkType(path)
 	// 原 `if lt == LinkUnknown { t.Logf(...) }` 永不失败——

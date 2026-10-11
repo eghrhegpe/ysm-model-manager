@@ -36,7 +36,7 @@ func TestBuildMulti_TwoComponents(t *testing.T) {
 	testutil.NoError(t, err)
 	var spec Model3DSpec
 	if err := json.Unmarshal([]byte(out), &spec); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if len(spec.Models) != 2 {
 		t.Fatalf("models 数量 = %d, want 2", len(spec.Models))
@@ -116,7 +116,7 @@ func TestBuildMulti_texIdxBaseNil(t *testing.T) {
 	testutil.NoError(t, err)
 	var spec Model3DSpec
 	if err := json.Unmarshal([]byte(out), &spec); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if len(spec.Models) != 2 {
 		t.Fatalf("models 数量 = %d, want 2", len(spec.Models))

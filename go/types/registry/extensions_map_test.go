@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"ysm-model-manager/internal/testutil"
 )
 
 // 扩展名集合 map 缓存（IsSupportedExt/ShouldHashExt 性能收敛）行为锁定：
@@ -36,11 +37,11 @@ func TestExtSetCache_RebuildOnRegistrySwap(t *testing.T) {
 	dir := t.TempDir()
 	reg1 := filepath.Join(dir, "r1.json")
 	if err := os.WriteFile(reg1, []byte(`{"resourceTypes":[{"id":"alpha","extensions":[".aaa"],"hashable":true,"storageSubDir":"alpha"}]}`), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	reg2 := filepath.Join(dir, "r2.json")
 	if err := os.WriteFile(reg2, []byte(`{"resourceTypes":[{"id":"beta","extensions":[".bbb"],"hashable":true,"storageSubDir":"beta"}]}`), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	SetRegistryPath(reg1)

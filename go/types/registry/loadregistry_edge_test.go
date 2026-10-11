@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"ysm-model-manager/internal/testutil"
 )
 
 // 探测 LoadRegistry 在畸形 JSON 输入下的回退与缓存行为。
@@ -16,7 +17,7 @@ func TestLoadRegistry_Edge_EmptyArray(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "resource_types.json")
 	if err := os.WriteFile(path, []byte(`{"resourceTypes": []}`), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	SetRegistryPath(path)
 	defer SetRegistryPath("")
@@ -39,7 +40,7 @@ func TestLoadRegistry_Edge_NullArray(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "resource_types.json")
 	if err := os.WriteFile(path, []byte(`{"resourceTypes": null}`), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	SetRegistryPath(path)
 	defer SetRegistryPath("")
@@ -65,7 +66,7 @@ func TestLoadRegistry_Edge_EntryMissingExtensions(t *testing.T) {
 		]
 	}`
 	if err := os.WriteFile(path, []byte(payload), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	SetRegistryPath(path)
 	defer SetRegistryPath("")
@@ -106,7 +107,7 @@ func TestLoadRegistry_Edge_DuplicateID(t *testing.T) {
 		]
 	}`
 	if err := os.WriteFile(path, []byte(payload), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	SetRegistryPath(path)
 	defer SetRegistryPath("")
@@ -132,7 +133,7 @@ func TestLoadRegistry_Edge_MalformedJSON_Fallback(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "resource_types.json")
 	if err := os.WriteFile(path, []byte(`{not json`), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	SetRegistryPath(path)
 	defer SetRegistryPath("")
@@ -157,7 +158,7 @@ func TestLoadRegistry_Edge_ExtraFields_Ignored(t *testing.T) {
 		"unknownTopLevel": "ignored"
 	}`
 	if err := os.WriteFile(path, []byte(payload), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	SetRegistryPath(path)
 	defer SetRegistryPath("")
@@ -179,7 +180,7 @@ func TestLoadRegistry_Edge_CacheIdentity(t *testing.T) {
 	path := filepath.Join(dir, "resource_types.json")
 	payload := `{"resourceTypes": [{"id": "ysm", "extensions": [".ysm"]}]}`
 	if err := os.WriteFile(path, []byte(payload), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	SetRegistryPath(path)
 	defer SetRegistryPath("")
@@ -197,7 +198,7 @@ func TestLoadRegistry_Edge_ResetToBaseline(t *testing.T) {
 	path := filepath.Join(dir, "resource_types.json")
 	// 空数组 → 修复后触发回退，不再污染
 	if err := os.WriteFile(path, []byte(`{"resourceTypes": []}`), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	SetRegistryPath(path)
 	defer SetRegistryPath("")
@@ -225,7 +226,7 @@ func TestLoadRegistry_Edge_EmptyFile_Fallback(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "resource_types.json")
 	if err := os.WriteFile(path, []byte{}, 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	SetRegistryPath(path)
 	defer SetRegistryPath("")

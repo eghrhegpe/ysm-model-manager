@@ -11,7 +11,7 @@ func TestTextureHash(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "test.png")
 	if err := os.WriteFile(path, []byte("hello world"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	hash, err := TextureHash(path)
 	testutil.NoError(t, err)
@@ -79,7 +79,7 @@ func TestWriteAndReadCached(t *testing.T) {
 	data := []byte("ktx2 test data")
 
 	if err := WriteCached(hash, data); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	read, ok, err := ReadCached(hash)
@@ -145,7 +145,7 @@ func TestClearCache(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "other.txt"), []byte("data"), 0644)
 
 	if err := ClearCache(); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	entries, _ := os.ReadDir(dir)
@@ -165,7 +165,7 @@ func TestWriteCached_Atomic(t *testing.T) {
 	data := []byte("atomic write test data")
 
 	if err := WriteCached(hash, data); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	// Verify no .tmp file remains

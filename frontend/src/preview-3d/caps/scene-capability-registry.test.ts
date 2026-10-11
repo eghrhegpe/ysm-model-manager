@@ -302,4 +302,38 @@ describe("SceneCapabilityRegistry 险恶测试", () => {
       ).toBe("function");
     }
   });
+
+  it("[锐评 2026-10-11] 半残实例不被静默复用：构造中途有 cap 被吞 → 二次 createAll 同 ctx 重建补全", () => {
+    // 复现雷：第一次 createAll 某工厂抛错被 try/catch 静默吞，instances 比 factories 少；
+    // 异常退出未走 dispose（lastCtx 仍指向同宿主）。旧复用短路只比三引用全等 → 复用半残集，
+    // 缺失的 cap 永久缺席且无提示。现数量守恒哨应纠正为重建。
+    const goodCap = makeFakeCap("sky");
+    const flaky = (): never => { throw new Error("oom"); };
+    registry.add(() => goodCap);
+    registry.add(flaky); // 构造即抛 → 被吞，instances=1 < factories=2
+    stubConsoleWarn();
+    const first = registry.createAll({} as unknown as CreateAllCtx);
+    expect(first).toHaveLength(1);
+    // 二次同 ctx createAll：flaky 仍在 factories（累加不可移除），但本次补回一个正常 ground。
+    // 数量守恒哨（instances=1 ≠ factories=3）命中 → 纠正为重建（先 dispose 旧半残集）；
+    // 重建后 flaky 仍抛被吞，正常项 sky/ground 入列。旧代码会复用第一次的 [sky]（缺 ground 永久缺席）。
+    const goodCap2 = makeFakeCap("ground");
+    registry.add(() => goodCap2);
+    const second = registry.createAll({} as unknown as CreateAllCtx);
+    const ids = second.map((c) => c.id);
+    expect(ids, "半残集被纠正重建，ground 不再永久缺席（旧复用短路会漏掉它）").toEqual(
+      expect.arrayContaining(["sky", "ground"]),
+    );
+    expect(ids, "不复用第一次的半残集（长度应为 2，非 1）").toHaveLength(2);
+  });
+
+  it("[锐评 2026-10-11] 正常复用仍生效：数量守恒 + 三引用全等 → 不重建（复用语义零回归）", () => {
+    const factory = vi.fn(() => makeFakeCap("sky"));
+    const ctx = { scene: {}, renderer: {}, camera: {} } as unknown as CreateAllCtx;
+    registry.add(factory);
+    const first = registry.createAll(ctx);
+    const second = registry.createAll(ctx);
+    expect(second).toEqual(first); // 同批实例
+    expect(factory).toHaveBeenCalledTimes(1); // 不重跑工厂
+  });
 });

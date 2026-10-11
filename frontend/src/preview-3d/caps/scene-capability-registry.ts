@@ -100,18 +100,38 @@ export class SceneCapabilityRegistry {
     renderer: THREE.WebGLRenderer;
     camera: THREE.PerspectiveCamera;
   }): SceneCapability[] {
-    // 同宿主复用：instances 非空且 scene/renderer/camera 三引用全等 → 现有实例
-    // 仍有效，跳过 dispose→重建→apply 整套（apply 状态已就位，loadAll 由调用方
-    // 按需执行不影响正确性）
+    // 同宿主复用：[锐评 2026-10-11] 三引用全等 + **数量守恒** 才走复用短路。
+    // 数量守恒是半残态的唯一可机检信号：上方 for 的 try/catch 会静默吞掉单个 cap
+    // 构造失败，留下 `instances.length < factories.length` 的半残实例集；若异常退出
+    // 未走 dispose（lastCtx 仍指向同宿主），下次复用会把缺的 cap 永久缺席、零提示。
+    // 数量不符 ⇒ 上次有 cap 被吞 ⇒ 先 dispose 再重建（复用短路不 dispose，故必须显式兜底）。
     const last = this.lastCtx;
-    if (
+    const canReuse =
       this.instances.length > 0 &&
+      this.instances.length === this.factories.length &&
       last &&
       last.scene === ctx.scene &&
       last.renderer === ctx.renderer &&
-      last.camera === ctx.camera
-    ) {
+      last.camera === ctx.camera;
+    if (canReuse) {
       return [...this.instances];
+    }
+    // 仅「非空实例集数量失配」即半残态打诊断级告警：上次 createAll 有 cap 构造被
+    // try/catch 吞，instances 比 factories 少（含上次异常退出未走 dispose 的残留）。
+    // 全新 registry 首次 createAll（instances=0）或宿主变更的正常重建（数量守恒）不打，避免噪音。
+    if (this.instances.length > 0 && this.instances.length !== this.factories.length) {
+      // 仅「数量失配」即半残态打诊断级告警（非用户 toast——属内部状态修复）：
+      // 上次 createAll 有 cap 构造被 try/catch 吞，instances 比 factories 少；本次纠正为
+      // 重建，缺失的 cap 将补回。宿主变更的正常重建（数量守恒）不打，避免噪音。
+      ringLog(
+        "scene-cap",
+        `createAll 复用纠正（半残→重建）：instances=${this.instances.length} factories=${this.factories.length}`,
+        "warn",
+        () =>
+          console.warn(
+            `[scene-cap] createAll 复用纠正（半残→重建）：instances=${this.instances.length} factories=${this.factories.length}`,
+          ),
+      );
     }
     this.dispose(); // 清理旧实例
     this.lastCtx = ctx;

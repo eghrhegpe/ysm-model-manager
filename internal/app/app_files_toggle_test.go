@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/internal/testutil"
 )
 
 // TestToggleEnable_GuardAndToggle 覆盖 ToggleEnable 的路径守卫（拒绝仓库外路径）+ 根内
@@ -17,13 +18,10 @@ func TestToggleEnable_GuardAndToggle(t *testing.T) {
 
 	// 根内文件：切换为禁用（生成 .disabled）→ 再切回启用
 	inside := filepath.Join(base, "model.ysm")
-	if err := os.WriteFile(inside, []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
-	}
+	err := os.WriteFile(inside, []byte("x"), 0o644)
+	testutil.NoError(t, err, "WriteFile")
 	enabled, err := a.ToggleEnable(inside)
-	if err != nil {
-		t.Fatalf("根内切换应成功: %v", err)
-	}
+	testutil.NoError(t, err, "根内切换应成功")
 	if enabled {
 		t.Errorf("首次切换应变为禁用(enabled=false), got %v", enabled)
 	}
@@ -32,18 +30,15 @@ func TestToggleEnable_GuardAndToggle(t *testing.T) {
 	}
 	// 切回启用
 	enabled, err = a.ToggleEnable(inside + ".disabled")
-	if err != nil {
-		t.Fatalf("根内切回应成功: %v", err)
-	}
+	testutil.NoError(t, err, "根内切回应成功")
 	if !enabled {
 		t.Errorf("二次切换应变为启用(enabled=true), got %v", enabled)
 	}
 
 	// 根外路径：拒绝
 	outside := filepath.Join(t.TempDir(), "evil.ysm")
-	if err := os.WriteFile(outside, []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
-	}
+	err = os.WriteFile(outside, []byte("x"), 0o644)
+	testutil.NoError(t, err, "WriteFile")
 	if _, err := a.ToggleEnable(outside); err == nil {
 		t.Error("仓库外路径应被拒绝(返回 error)")
 	}
@@ -61,18 +56,14 @@ func TestToggleEnable_TagRoundTripPreservesBasePath(t *testing.T) {
 	a := repoApp(t, types.AppConfig{FilesRoot: base})
 
 	canonical := filepath.Join(base, "model.ysm")
-	if err := os.WriteFile(canonical, []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := a.SetModelTags(canonical, []string{"联动"}); err != nil {
-		t.Fatalf("打标应成功: %v", err)
-	}
+	err := os.WriteFile(canonical, []byte("x"), 0o644)
+	testutil.NoError(t, err, "WriteFile")
+	err = a.SetModelTags(canonical, []string{"联动"})
+	testutil.NoError(t, err, "打标应成功")
 
 	// 禁用：文件变 model.ysm.disabled，标签必须仍在规范路径
 	enabled, err := a.ToggleEnable(canonical)
-	if err != nil {
-		t.Fatalf("禁用应成功: %v", err)
-	}
+	testutil.NoError(t, err, "禁用应成功")
 	if enabled {
 		t.Error("首次切换应变为禁用(enabled=false)")
 	}
@@ -85,9 +76,7 @@ func TestToggleEnable_TagRoundTripPreservesBasePath(t *testing.T) {
 
 	// re-enable：从 .disabled 切回启用，标签原样复原
 	enabled, err = a.ToggleEnable(canonical + ".disabled")
-	if err != nil {
-		t.Fatalf("启回应成功: %v", err)
-	}
+	testutil.NoError(t, err, "启回应成功")
 	if !enabled {
 		t.Error("二次切换应变为启用(enabled=true)")
 	}
@@ -100,9 +89,7 @@ func TestToggleEnable_TagRoundTripPreservesBasePath(t *testing.T) {
 func listByTagAll(t *testing.T, a *App, tag string) []string {
 	t.Helper()
 	paths, err := a.ListByTag(tag)
-	if err != nil {
-		t.Fatalf("ListByTag(%q) 失败: %v", tag, err)
-	}
+	testutil.NoError(t, err, "ListByTag(%q) 失败", tag)
 	if paths == nil {
 		return []string{}
 	}
@@ -144,20 +131,17 @@ func TestMoveModelFile_RootValidation(t *testing.T) {
 	srcDir := filepath.Join(base, "src")
 	dstDir := filepath.Join(base, "dst")
 	for _, d := range []string{srcDir, dstDir} {
-		if err := os.MkdirAll(d, 0o755); err != nil {
-			t.Fatal(err)
-		}
+		err := os.MkdirAll(d, 0o755)
+		testutil.NoError(t, err, "MkdirAll")
 	}
 	src := filepath.Join(srcDir, "m.ysm")
-	if err := os.WriteFile(src, []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
-	}
+	err := os.WriteFile(src, []byte("x"), 0o644)
+	testutil.NoError(t, err, "WriteFile")
 	a := repoApp(t, types.AppConfig{FilesRoot: base, CustomRoots: map[string]string{"mmd": filepath.Join(base, "mmd")}})
 
 	// 同根：src 与 dst 都在 FilesRoot 内 → 允许（移动成功）
-	if err := a.MoveModelFile(src, dstDir); err != nil {
-		t.Fatalf("同根移动应成功: %v", err)
-	}
+	err = a.MoveModelFile(src, dstDir)
+	testutil.NoError(t, err, "同根移动应成功")
 	if _, err := os.Stat(filepath.Join(dstDir, "m.ysm")); err != nil {
 		t.Errorf("移动后目标文件应存在: %v", err)
 	}
@@ -182,36 +166,29 @@ func TestMoveCopyModelFile_InvalidatesScanCache(t *testing.T) {
 	// 先于所有 t.Parallel 测试跑完，串行即隔离。
 	base := t.TempDir()
 	sub := filepath.Join(base, "dst")
-	if err := os.MkdirAll(sub, 0o755); err != nil {
-		t.Fatal(err)
-	}
+	err := os.MkdirAll(sub, 0o755)
+	testutil.NoError(t, err, "MkdirAll")
 	src := filepath.Join(base, "m.ysm")
-	if err := os.WriteFile(src, []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
-	}
+	err = os.WriteFile(src, []byte("x"), 0o644)
+	testutil.NoError(t, err, "WriteFile")
 	a := repoApp(t, types.AppConfig{FilesRoot: base})
 
 	// 预扫描建立缓存（同 app_scan_test 口径：首 miss、二 hit）
-	if _, hit := a.scanModelEntriesWithHit(base); hit {
-		t.Fatal("首次扫描不应命中缓存")
-	}
-	if _, hit := a.scanModelEntriesWithHit(base); !hit {
-		t.Fatal("二次扫描应命中缓存（前置条件）")
-	}
-	if err := a.MoveModelFile(src, sub); err != nil {
-		t.Fatalf("同根移动应成功: %v", err)
-	}
+	_, hit := a.scanModelEntriesWithHit(base)
+	testutil.Equal(t, hit, false, "首次扫描不应命中缓存")
+	_, hit = a.scanModelEntriesWithHit(base)
+	testutil.Equal(t, hit, true, "二次扫描应命中缓存（前置条件）")
+	err = a.MoveModelFile(src, sub)
+	testutil.NoError(t, err, "同根移动应成功")
 	if _, hit := a.scanModelEntriesWithHit(base); hit {
 		t.Error("MoveModelFile 成功后不应命中旧扫描缓存")
 	}
 
 	// 重新建立缓存（移动后首次扫已 miss，第二次应 hit——前置条件）
-	if _, hit := a.scanModelEntriesWithHit(base); !hit {
-		t.Fatal("移动后重扫第二次应命中缓存（前置条件）")
-	}
-	if err := a.CopyModelFile(filepath.Join(sub, "m.ysm"), base); err != nil {
-		t.Fatalf("同根复制应成功: %v", err)
-	}
+	_, hit = a.scanModelEntriesWithHit(base)
+	testutil.Equal(t, hit, true, "移动后重扫第二次应命中缓存（前置条件）")
+	err = a.CopyModelFile(filepath.Join(sub, "m.ysm"), base)
+	testutil.NoError(t, err, "同根复制应成功")
 	if _, hit := a.scanModelEntriesWithHit(base); hit {
 		t.Error("CopyModelFile 成功后不应命中旧扫描缓存")
 	}

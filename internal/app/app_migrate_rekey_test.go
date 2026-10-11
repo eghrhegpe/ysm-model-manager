@@ -13,6 +13,7 @@ import (
 
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/types/registry"
+	"ysm-model-manager/internal/testutil"
 )
 
 func TestMigrateAndRekey_TagsFollowGroupedMigration(t *testing.T) {
@@ -27,12 +28,10 @@ func TestMigrateAndRekey_TagsFollowGroupedMigration(t *testing.T) {
 	// 模拟老版本留下的标签库（键在扁平路径——绑定守卫认的仓库根是分组新根，
 	// 扁平路径 SetModelTags 会被拒，直接落 store 层）
 	store := a.getTagsStore()
-	if err := store.SetTags(flatYsm, []string{"主"}); err != nil {
-		t.Fatal(err)
-	}
-	if err := store.SetTags(flatTex, []string{"纹理"}); err != nil {
-		t.Fatal(err)
-	}
+	err := store.SetTags(flatYsm, []string{"主"})
+	testutil.NoError(t, err, "SetTags(主)")
+	err = store.SetTags(flatTex, []string{"纹理"})
+	testutil.NoError(t, err, "SetTags(纹理)")
 
 	// 启动入口：迁移 + 标签跟随
 	a.migrateAndRekey(base)
@@ -40,9 +39,7 @@ func TestMigrateAndRekey_TagsFollowGroupedMigration(t *testing.T) {
 	groupedRoot := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 	newYsm := filepath.Join(groupedRoot, "modelA", "ysm.json")
 	newTex := filepath.Join(groupedRoot, "modelA", "sub", "face.png")
-	if _, err := os.Lstat(newYsm); err != nil {
-		t.Fatalf("文件应真实迁到分组新落点: %v", err)
-	}
+	testutil.FileExists(t, newYsm, "文件应真实迁到分组新落点")
 	if got, _ := store.GetTags(newYsm); len(got) != 1 || got[0] != "主" {
 		t.Errorf("迁移后新 ysm.json 键应继承标签，实得 %v", got)
 	}
@@ -62,15 +59,13 @@ func TestMigrateAndRekey_TargetExistsKeepsTags(t *testing.T) {
 	base := t.TempDir()
 	flat := filepath.Join(base, "ysm", "a.ysm")
 	touch(t, flat)
-	if err := os.MkdirAll(filepath.Join(base, registry.GroupStorageRoot("ysm")), 0o755); err != nil {
-		t.Fatal(err)
-	}
+	err := os.MkdirAll(filepath.Join(base, registry.GroupStorageRoot("ysm")), 0o755)
+	testutil.NoError(t, err, "MkdirAll")
 
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
 	store := a.getTagsStore()
-	if err := store.SetTags(flat, []string{"驻留"}); err != nil {
-		t.Fatal(err)
-	}
+	err = store.SetTags(flat, []string{"驻留"})
+	testutil.NoError(t, err, "SetTags(驻留)")
 
 	a.migrateAndRekey(base)
 
@@ -84,9 +79,7 @@ func TestMigrateFlatStorageToGrouped_ReturnsMigratedPairs(t *testing.T) {
 	base := t.TempDir()
 	touch(t, filepath.Join(base, "ysm", "a.ysm"))
 	pairs := migrateFlatStorageToGrouped(base)
-	if len(pairs) != 1 {
-		t.Fatalf("应返回 1 对迁移路径，实得 %d", len(pairs))
-	}
+	testutil.Equal(t, len(pairs), 1, "应返回 1 对迁移路径，实得 %d", len(pairs))
 	wantFrom := filepath.Join(base, "ysm")
 	wantTo := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 	if pairs[0][0] != wantFrom || pairs[0][1] != wantTo {

@@ -16,6 +16,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/internal/testutil"
 )
 
 func TestDeleteFromRecycle_PrunesTagKeys(t *testing.T) {
@@ -24,20 +25,16 @@ func TestDeleteFromRecycle_PrunesTagKeys(t *testing.T) {
 	repo := ysmRepoRoot(t, a)
 	src := filepath.Join(repo, "fox.ysm")
 	touch(t, src)
-	if err := a.SetModelTags(src, []string{"狐"}); err != nil {
-		t.Fatal(err)
-	}
+	err := a.SetModelTags(src, []string{"狐"})
+	testutil.NoError(t, err, "SetModelTags")
 	// 移入回收站：临时孤儿态（条目可恢复），键保留
-	if err := a.MoveToRecycle(src); err != nil {
-		t.Fatalf("MoveToRecycle: %v", err)
-	}
-	if got, _ := a.GetModelTags(src); len(got) != 1 {
-		t.Fatalf("条目永久删除前标签键应保留（restore 自愈），实得 %v", got)
-	}
+	err = a.MoveToRecycle(src)
+	testutil.NoError(t, err, "MoveToRecycle")
+	got, _ := a.GetModelTags(src)
+	testutil.Equal(t, len(got), 1, "条目永久删除前标签键应保留（restore 自愈），实得 %v", got)
 	recEntry := filepath.Join(repo, ".recycle", "fox.ysm")
-	if err := a.DeleteFromRecycle(recEntry); err != nil {
-		t.Fatalf("DeleteFromRecycle: %v", err)
-	}
+	err = a.DeleteFromRecycle(recEntry)
+	testutil.NoError(t, err, "DeleteFromRecycle")
 	if got, _ := a.GetModelTags(src); len(got) != 0 {
 		t.Errorf("条目永久删除后标签键应清理，实得 %v", got)
 	}
@@ -52,20 +49,16 @@ func TestDeleteFromRecycle_DirGroupPrunesSubtree(t *testing.T) {
 	texA := filepath.Join(dirA, "sub", "face.png")
 	touch(t, ysmA)
 	touch(t, texA)
-	if err := a.SetModelTags(ysmA, []string{"主"}); err != nil {
-		t.Fatal(err)
-	}
-	if err := a.SetModelTags(texA, []string{"纹理"}); err != nil {
-		t.Fatal(err)
-	}
+	err := a.SetModelTags(ysmA, []string{"主"})
+	testutil.NoError(t, err, "SetModelTags")
+	err = a.SetModelTags(texA, []string{"纹理"})
+	testutil.NoError(t, err, "SetModelTags")
 	// 整目录组移入回收站后永久删除 → 子树剪枝盖住组内全部键
-	if err := a.MoveToRecycle(dirA); err != nil {
-		t.Fatalf("MoveToRecycle: %v", err)
-	}
+	err = a.MoveToRecycle(dirA)
+	testutil.NoError(t, err, "MoveToRecycle")
 	recEntry := filepath.Join(repo, ".recycle", "modelA")
-	if err := a.DeleteFromRecycle(recEntry); err != nil {
-		t.Fatalf("DeleteFromRecycle: %v", err)
-	}
+	err = a.DeleteFromRecycle(recEntry)
+	testutil.NoError(t, err, "DeleteFromRecycle")
 	if got, _ := a.GetModelTags(ysmA); len(got) != 0 {
 		t.Errorf("目录组永久删除后 ysm.json 键应清理，实得 %v", got)
 	}
@@ -82,21 +75,16 @@ func TestEmptyRecycleBin_PrunesTagKeys(t *testing.T) {
 	dirSrc := filepath.Join(repo, "modelB")
 	touch(t, fileSrc)
 	touch(t, filepath.Join(dirSrc, "ysm.json"))
-	if err := a.SetModelTags(fileSrc, []string{"独"}); err != nil {
-		t.Fatal(err)
-	}
-	if err := a.SetModelTags(filepath.Join(dirSrc, "ysm.json"), []string{"组"}); err != nil {
-		t.Fatal(err)
-	}
-	if err := a.MoveToRecycle(fileSrc); err != nil {
-		t.Fatal(err)
-	}
-	if err := a.MoveToRecycle(dirSrc); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := a.EmptyRecycleBin(); err != nil {
-		t.Fatalf("EmptyRecycleBin: %v", err)
-	}
+	err := a.SetModelTags(fileSrc, []string{"独"})
+	testutil.NoError(t, err, "SetModelTags")
+	err = a.SetModelTags(filepath.Join(dirSrc, "ysm.json"), []string{"组"})
+	testutil.NoError(t, err, "SetModelTags")
+	err = a.MoveToRecycle(fileSrc)
+	testutil.NoError(t, err, "MoveToRecycle")
+	err = a.MoveToRecycle(dirSrc)
+	testutil.NoError(t, err, "MoveToRecycle")
+	_, err = a.EmptyRecycleBin()
+	testutil.NoError(t, err, "EmptyRecycleBin")
 	if got, _ := a.GetModelTags(fileSrc); len(got) != 0 {
 		t.Errorf("清空回收站后文件条目键应清理，实得 %v", got)
 	}
@@ -112,20 +100,17 @@ func TestMoveToRecycle_NotPruned(t *testing.T) {
 	repo := ysmRepoRoot(t, a)
 	src := filepath.Join(repo, "keep.ysm")
 	touch(t, src)
-	if err := a.SetModelTags(src, []string{"留"}); err != nil {
-		t.Fatal(err)
-	}
-	if err := a.MoveToRecycle(src); err != nil {
-		t.Fatal(err)
-	}
+	err := a.SetModelTags(src, []string{"留"})
+	testutil.NoError(t, err, "SetModelTags")
+	err = a.MoveToRecycle(src)
+	testutil.NoError(t, err, "MoveToRecycle")
 	if got, _ := a.GetModelTags(src); len(got) != 1 || got[0] != "留" {
 		t.Errorf("移入回收站后键应保留（restore 自愈，prune 即丢标签），实得 %v", got)
 	}
 	// Restore 自愈闭环
 	recEntry := filepath.Join(repo, ".recycle", "keep.ysm")
-	if err := a.RestoreFromRecycle(recEntry, repo); err != nil {
-		t.Fatalf("RestoreFromRecycle: %v", err)
-	}
+	err = a.RestoreFromRecycle(recEntry, repo)
+	testutil.NoError(t, err, "RestoreFromRecycle")
 	if _, err := os.Lstat(src); err != nil {
 		t.Errorf("恢复后文件应回原位: %v", err)
 	}

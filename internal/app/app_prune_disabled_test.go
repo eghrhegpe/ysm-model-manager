@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/internal/testutil"
 )
 
 // repoRootFor 返回指定 rtype 的实际仓库根（GetRepoRoot 派生 FilesRoot/{group}/{storageSubDir}），
@@ -14,12 +15,10 @@ import (
 func repoRootFor(t *testing.T, a *App, rtype string) string {
 	t.Helper()
 	root, err := a.GetRepoRoot(rtype)
-	if err != nil || root == "" {
-		t.Fatalf("GetRepoRoot(%q) 应可用，得 %q %v", rtype, root, err)
-	}
-	if err := os.MkdirAll(root, 0o755); err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err, "GetRepoRoot(%q)", rtype)
+	testutil.Equal(t, root != "", true, "GetRepoRoot(%q) 应可用", rtype)
+	err = os.MkdirAll(root, 0o755)
+	testutil.NoError(t, err, "MkdirAll")
 	return root
 }
 
@@ -34,27 +33,20 @@ func TestDeleteResourcePack_DisabledFilePrunesBasePath(t *testing.T) {
 	root := repoRootFor(t, a, "ysm")
 
 	sub := filepath.Join(root, "X")
-	if err := os.MkdirAll(sub, 0o755); err != nil {
-		t.Fatal(err)
-	}
+	err := os.MkdirAll(sub, 0o755)
+	testutil.NoError(t, err, "MkdirAll")
 	canonical := filepath.Join(sub, "model.ysm")
-	if err := os.WriteFile(canonical, []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := a.SetModelTags(canonical, []string{"联动"}); err != nil {
-		t.Fatalf("打标应成功: %v", err)
-	}
-	if _, err := a.ToggleEnable(canonical); err != nil {
-		t.Fatalf("禁用应成功: %v", err)
-	}
-	if _, err := os.Stat(canonical + ".disabled"); err != nil {
-		t.Fatalf("禁用后应有 .disabled 文件: %v", err)
-	}
+	err = os.WriteFile(canonical, []byte("x"), 0o644)
+	testutil.NoError(t, err, "WriteFile")
+	err = a.SetModelTags(canonical, []string{"联动"})
+	testutil.NoError(t, err, "打标应成功")
+	_, err = a.ToggleEnable(canonical)
+	testutil.NoError(t, err, "禁用应成功")
+	testutil.FileExists(t, canonical+".disabled", "禁用后应有 .disabled 文件")
 
 	// 删除禁用态文件（文件型资源，绝对路径）
-	if err := a.DeleteResourcePack(canonical+".disabled", "ysm"); err != nil {
-		t.Fatalf("删除禁用文件应成功: %v", err)
-	}
+	err = a.DeleteResourcePack(canonical+".disabled", "ysm")
+	testutil.NoError(t, err, "删除禁用文件应成功")
 	if got, _ := a.GetModelTags(canonical); len(got) != 0 {
 		t.Errorf("删除禁用文件后规范路径标签应清空（防复活）, got %v", got)
 	}
@@ -72,28 +64,21 @@ func TestDeleteResourcePack_DisabledDirPrunesBasePath(t *testing.T) {
 	root := repoRootFor(t, a, "maid-model")
 
 	dir := filepath.Join(root, "Group")
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatal(err)
-	}
+	err := os.MkdirAll(dir, 0o755)
+	testutil.NoError(t, err, "MkdirAll")
 	canonical := filepath.Join(dir, "ysm.json")
-	if err := os.WriteFile(canonical, []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	if err := a.SetModelTags(canonical, []string{"联动"}); err != nil {
-		t.Fatalf("打标应成功: %v", err)
-	}
+	err = os.WriteFile(canonical, []byte("x"), 0o644)
+	testutil.NoError(t, err, "WriteFile")
+	err = a.SetModelTags(canonical, []string{"联动"})
+	testutil.NoError(t, err, "打标应成功")
 	// 目录级禁用：父目录名变 Group.disabled
 	disabledDir := dir + ".disabled"
-	if _, err := a.ToggleEnable(canonical); err != nil {
-		t.Fatalf("禁用应成功: %v", err)
-	}
-	if _, err := os.Stat(disabledDir); err != nil {
-		t.Fatalf("整组禁用后应有 .disabled 目录: %v", err)
-	}
+	_, err = a.ToggleEnable(canonical)
+	testutil.NoError(t, err, "禁用应成功")
+	testutil.FileExists(t, disabledDir, "整组禁用后应有 .disabled 目录")
 
-	if err := a.DeleteResourcePack(filepath.Join(disabledDir, "ysm.json"), "maid-model"); err != nil {
-		t.Fatalf("删除禁用整夹应成功: %v", err)
-	}
+	err = a.DeleteResourcePack(filepath.Join(disabledDir, "ysm.json"), "maid-model")
+	testutil.NoError(t, err, "删除禁用整夹应成功")
 	if got, _ := a.GetModelTags(canonical); len(got) != 0 {
 		t.Errorf("删除禁用整夹后规范路径标签应清空, got %v", got)
 	}

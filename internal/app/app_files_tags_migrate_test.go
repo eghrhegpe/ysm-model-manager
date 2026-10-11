@@ -10,16 +10,15 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/internal/testutil"
 )
 
 func touch(t *testing.T, p string) {
 	t.Helper()
-	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(p, []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
-	}
+	err := os.MkdirAll(filepath.Dir(p), 0o755)
+	testutil.NoError(t, err, "MkdirAll")
+	err = os.WriteFile(p, []byte("x"), 0o644)
+	testutil.NoError(t, err, "WriteFile")
 }
 
 // ysmRepoRoot 返回 app 层重命名守卫实际认的仓库根（GetRepoRoot("ysm")，= FilesRoot
@@ -27,12 +26,10 @@ func touch(t *testing.T, p string) {
 func ysmRepoRoot(t *testing.T, a *App) string {
 	t.Helper()
 	root, err := a.GetRepoRoot("ysm")
-	if err != nil || root == "" {
-		t.Fatalf("GetRepoRoot(ysm) 应可用，得 %q %v", root, err)
-	}
-	if err := os.MkdirAll(root, 0o755); err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err, "GetRepoRoot(ysm)")
+	testutil.Equal(t, root != "", true, "GetRepoRoot(ysm) 应可用")
+	err = os.MkdirAll(root, 0o755)
+	testutil.NoError(t, err, "MkdirAll")
 	return root
 }
 
@@ -42,13 +39,11 @@ func TestRenameFile_TagsFollow(t *testing.T) {
 	repo := ysmRepoRoot(t, a)
 	src := filepath.Join(repo, "a.ysm")
 	touch(t, src)
-	if err := a.SetModelTags(src, []string{"联动"}); err != nil {
-		t.Fatal(err)
-	}
+	err := a.SetModelTags(src, []string{"联动"})
+	testutil.NoError(t, err, "SetModelTags")
 	newAbs := filepath.Join(repo, "b.ysm")
-	if err := a.RenameFile(src, "b.ysm"); err != nil {
-		t.Fatalf("RenameFile: %v", err)
-	}
+	err = a.RenameFile(src, "b.ysm")
+	testutil.NoError(t, err, "RenameFile")
 	if got, _ := a.GetModelTags(newAbs); len(got) != 1 || got[0] != "联动" {
 		t.Errorf("改名后新路径应有标签，实得 %v", got)
 	}
@@ -72,9 +67,8 @@ func TestRenameFile_SiblingPrefixNotTouched(t *testing.T) {
 	touch(t, sib)
 	_ = a.SetModelTags(src, []string{"改我"})
 	_ = a.SetModelTags(sib, []string{"别碰"})
-	if err := a.RenameFile(src, "z.ysm"); err != nil {
-		t.Fatal(err)
-	}
+	err := a.RenameFile(src, "z.ysm")
+	testutil.NoError(t, err, "RenameFile")
 	if got, _ := a.GetModelTags(sib); len(got) != 1 || got[0] != "别碰" {
 		t.Errorf("同前缀兄弟键 subtree=false 不该被动，实得 %v", got)
 	}
@@ -95,9 +89,8 @@ func TestRenameDir_TagsFollowSubtree(t *testing.T) {
 	sibYsm := filepath.Join(sibling, "ysm.json")
 	_ = a.SetModelTags(sibYsm, []string{"无关"})
 
-	if err := a.RenameDir(dirA, "modelB"); err != nil {
-		t.Fatalf("RenameDir: %v", err)
-	}
+	err := a.RenameDir(dirA, "modelB")
+	testutil.NoError(t, err, "RenameDir")
 	newYsm := filepath.Join(repo, "modelB", "ysm.json")
 	if got, _ := a.GetModelTags(newYsm); len(got) != 1 || got[0] != "联动" {
 		t.Errorf("夹改名后新路径 ysm.json 应继承标签，实得 %v", got)
@@ -121,15 +114,12 @@ func TestMoveModelFile_YsmJsonLiftsEntireFolder(t *testing.T) {
 	_ = a.SetModelTags(texA, []string{"纹理"})
 
 	dstDir := filepath.Join(repo, "nested")
-	if err := a.MoveModelFile(ysmA, dstDir); err != nil {
-		t.Fatalf("MoveModelFile: %v", err)
-	}
+	err := a.MoveModelFile(ysmA, dstDir)
+	testutil.NoError(t, err, "MoveModelFile")
 	// move 提升：src=ysm.json → from=父夹 modelA → to=nested/modelA，子键整体跟随
 	movedYsm := filepath.Join(dstDir, "modelA", "ysm.json")
 	movedTex := filepath.Join(dstDir, "modelA", "sub", "face.png")
-	if _, err := os.Lstat(movedYsm); err != nil {
-		t.Fatalf("文件应真实搬到 plan.to 下: %v", err)
-	}
+	testutil.FileExists(t, movedYsm, "文件应真实搬到 plan.to 下")
 	if got, _ := a.GetModelTags(movedYsm); len(got) != 1 || got[0] != "主" {
 		t.Errorf("提升整夹移动后 ysm.json 标签应跟随新落点，实得 %v", got)
 	}
@@ -149,13 +139,10 @@ func TestCopyModelFile_KeepsSource(t *testing.T) {
 	touch(t, src)
 	_ = a.SetModelTags(src, []string{"复制我"})
 	dstDir := filepath.Join(repo, "out")
-	if err := a.CopyModelFile(src, dstDir); err != nil {
-		t.Fatalf("CopyModelFile: %v", err)
-	}
+	err := a.CopyModelFile(src, dstDir)
+	testutil.NoError(t, err, "CopyModelFile")
 	dst := filepath.Join(dstDir, "m.ysm")
-	if _, err := os.Lstat(dst); err != nil {
-		t.Fatalf("复制目标应存在: %v", err)
-	}
+	testutil.FileExists(t, dst, "复制目标应存在")
 	if got, _ := a.GetModelTags(src); len(got) != 1 {
 		t.Errorf("copy=true 源标签必须保留，实得 %v", got)
 	}
@@ -172,9 +159,8 @@ func TestMoveModelFile_NoTagsNoOp(t *testing.T) {
 	src := filepath.Join(repo, "clean.ysm")
 	touch(t, src)
 	dstDir := filepath.Join(repo, "out")
-	if err := a.MoveModelFile(src, dstDir); err != nil {
-		t.Fatalf("MoveModelFile: %v", err)
-	}
+	err := a.MoveModelFile(src, dstDir)
+	testutil.NoError(t, err, "MoveModelFile")
 	if got, _ := a.GetModelTags(filepath.Join(dstDir, "clean.ysm")); len(got) != 0 {
 		t.Errorf("无标签模型移动后应仍无标签，实得 %v", got)
 	}

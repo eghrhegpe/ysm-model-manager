@@ -20,6 +20,7 @@ import {
   isGoTestSource,
   isRewriteLine,
   isRewriteOnlyDiff,
+  isTestutilTree,
   packagePatternFor,
   parseGoCover,
   stmtPctForChangedLines,
@@ -151,11 +152,28 @@ check("isExemptEntry 普通文件不豁免", () => {
 // ── 8.5 isExemptAssert（断言器实现文件豁免）──
 check("isExemptAssert 断言器文件豁免", () => {
   assert.equal(isExemptAssert("go/internal/testutil/assert.go"), true);
+  assert.equal(isExemptAssert("internal/testutil/testutil.go"), true); // 根桥包实现（单源翻转）
 });
 
 check("isExemptAssert 普通文件不豁免", () => {
   assert.equal(isExemptAssert("go/internal/testutil/testutil.go"), false);
+  assert.equal(isExemptAssert("go/internal/testutil/assert_test.go"), false);
   assert.equal(isExemptAssert("go/download/download.go"), false);
+});
+
+// ── 8.6 isTestutilTree（断言器实现树前缀豁免）──
+check("isTestutilTree 命中两棵断言器实现树", () => {
+  assert.equal(isTestutilTree("go/internal/testutil/assert.go"), true);
+  assert.equal(isTestutilTree("go/internal/testutil/assert_test.go"), true);
+  assert.equal(isTestutilTree("internal/testutil/testutil.go"), true);
+  assert.equal(isTestutilTree("internal/testutil/testutil_test.go"), true);
+});
+
+check("isTestutilTree 非两棵树不命中", () => {
+  assert.equal(isTestutilTree("go/tags/tags_commit_order_test.go"), false);
+  assert.equal(isTestutilTree("internal/app/app_config_preserve_test.go"), false);
+  assert.equal(isTestutilTree("internal/test.go"), false); // 根 internal 非 testutil 子目录
+  assert.equal(isTestutilTree("testutil.go"), false); // 裸名不吃前缀豁免
 });
 
 // ── 9. isRewriteLine（纯结构行识别）──

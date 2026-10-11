@@ -193,10 +193,17 @@ export function isRewriteOnlyDiff(diffText: string | null) {
 // 反模式：失败即弃权（第一个断言失败丢弃同函数剩余断言信息，调试往返翻倍）；
 // 正解：改用 testutil（NoError / Equal / ErrorContains / FileExists），统一 diff 输出。
 // 只拦截测试文件（*_test.go）的「新增行」（diff + 行）；存量行不罚，纯增量红线。
-// 豁免：① go/internal/testutil/ 自身（它内部就是用 t.Fatalf 实现断言器的）；② 纯注释行。
+// 豁免：① testutil 断言器实现树自身（go/internal/testutil/ 与根 internal/testutil/——
+//  2026-10-11 断言族单一事实源翻转到根桥包后两树都是断言器实现，其内部就是用
+//  t.Fatalf 实现断言的）；② 纯注释行。
 // 有意不拦 t.Error/t.Errorf：循环/goroutine 内收集多失败判读是 Go 惯用法，且
 // testutil 无「记录不致命」等价面，拦了反而误伤。
 // ────────────────────────────────────────────────────────────────────────────
+
+/** testutil 断言器实现树（go/ 侧原实现 + 根 internal/ 桥包，2026-10-11 单源翻转）。 */
+export function isTestutilTree(f: string) {
+  return f.startsWith("go/internal/testutil/") || f.startsWith("internal/testutil/");
+}
 
 /** 测试源文件（*_test.go，排除 testdata 夹具目录）。 */
 export function isGoTestSource(f: string) {
@@ -297,12 +304,15 @@ export function buildBareAssertBlock(
 /**
  * 断言器实现文件豁免：testutil 断言的失败分支走 t.Fatalf → runtime.Goexit，
  * 进程内 recover 拦不住，失败路径结构性不可直测（assert_test.go 头部注释已述）。
- * 正常路径由同包 assert_test.go 覆盖；失败行为由消费包测试的失败断言反证
+ * 正常路径由同包 testutil_test.go 覆盖；失败行为由消费包测试的失败断言反证
  * （断言若失效，消费测试即红）——项目既定策略，非「真裸奔」。
+ * 2026-10-11 断言族单一事实源翻转到根桥包 internal/testutil|testutil.go
+ * （go/internal/testutil/assert.go 降为纯转发层），故豁免条目同步两根实现文件。
  * 新增须注释理由；禁止把「懒得写测试的真裸奔」塞进来。
  */
 const EXEMPT_ASSERT_FILES = new Set([
   "go/internal/testutil/assert.go", // 断言失败分支 t.Fatalf → Goexit 不可捕获
+  "internal/testutil/testutil.go", // 同左：根桥包实现（go 侧转发层的单一事实源）
 ]);
 
 /** 是否命中断言器实现文件豁免。导出供单测。 */
@@ -497,9 +507,9 @@ function main() {
         .split(",")
         .map((s) => s.trim())
         .filter(Boolean)
-        .filter((f) => isGoTestSource(f) && !f.startsWith("go/internal/testutil/"))
+        .filter((f) => isGoTestSource(f) && !isTestutilTree(f))
     : (getChangedGoTestFiles(base, head, uncommitted, staged) ?? []).filter(
-        (f) => !f.startsWith("go/internal/testutil/"),
+        (f) => !isTestutilTree(f),
       );
   const bareAssertHits: { file: string; items: { line: number; text: string }[] }[] = [];
   for (const f of testChanged) {

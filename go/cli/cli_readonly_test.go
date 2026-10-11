@@ -3,6 +3,8 @@ package cli
 import (
 	"sort"
 	"testing"
+
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // 语义分级（锐评 2026-10-11 收口）：GetAllowedCommands 只暴露只读命令（fail-closed），
@@ -11,9 +13,7 @@ import (
 func TestGetAllowedCommands_OnlyReadOnly(t *testing.T) {
 	for _, name := range GetAllowedCommands() {
 		cmd, exists := GetCommand(name)
-		if !exists {
-			t.Fatalf("GetAllowedCommands 返回了未注册命令 %q", name)
-		}
+		testutil.Equal(t, exists, true, "GetAllowedCommands 返回了未注册命令 %q", name)
 		if !cmd.ReadOnly {
 			t.Errorf("暴露给前端的命令 %q 必须 ReadOnly=true（mutating 不应暴露）", name)
 		}
@@ -31,9 +31,7 @@ func TestGetAllowedCommands_ExcludesKnownMutating(t *testing.T) {
 		"recycle", "cache-clear", "config", "tags", "avatar", "instance",
 		"download", "link-mode", "creator", "workshop"}
 	for _, name := range mutating {
-		if !IsCommandAllowed(name) {
-			t.Fatalf("前置：%q 应已注册（本断言才有效）", name)
-		}
+		testutil.Equal(t, IsCommandAllowed(name), true, "前置：%q 应已注册（本断言才有效）", name)
 		if allowed[name] {
 			t.Errorf("mutating 命令 %q 不得暴露给前端桥（应保持零值 ReadOnly=false）", name)
 		}
@@ -46,15 +44,11 @@ func TestGetAllowedCommands_ExcludesKnownMutating(t *testing.T) {
 // RO 子集非空且排序稳定（前端动态名单依赖确定性）。
 func TestGetAllowedCommands_NonEmptyAndSorted(t *testing.T) {
 	got := GetAllowedCommands()
-	if len(got) == 0 {
-		t.Fatal("只读子集不应为空（否则前端 CLI 桥全锁死）")
-	}
+	testutil.Equal(t, len(got) > 0, true, "只读子集不应为空（否则前端 CLI 桥全锁死）")
 	want := append([]string(nil), got...)
 	sort.Strings(want)
 	for i := range got {
-		if got[i] != want[i] {
-			t.Fatalf("GetAllowedCommands 应有序，got[%d]=%q want %q", i, got[i], want[i])
-		}
+		testutil.Equal(t, got[i], want[i], "GetAllowedCommands 应有序，got[%d]=%q want %q", i, got[i], want[i])
 	}
 }
 
@@ -62,9 +56,7 @@ func TestGetAllowedCommands_NonEmptyAndSorted(t *testing.T) {
 func TestGetAllowedCommandSpecs_ReadOnlyConsistent(t *testing.T) {
 	cmds := GetAllowedCommands()
 	specs := GetAllowedCommandSpecs()
-	if len(specs) != len(cmds) {
-		t.Fatalf("规格与命令数应一致: cmds=%d specs=%d", len(cmds), len(specs))
-	}
+	testutil.Equal(t, len(specs), len(cmds), "规格与命令数应一致: cmds=%d specs=%d", len(cmds), len(specs))
 	seen := map[string]bool{}
 	for _, s := range specs {
 		if !s.ReadOnly {

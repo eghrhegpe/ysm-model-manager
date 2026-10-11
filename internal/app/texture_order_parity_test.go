@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"os"
 	"testing"
+
+	"ysm-model-manager/internal/testutil"
 )
 
 type texOrderParityCase struct {
@@ -72,16 +74,11 @@ func fakePNG(w, h int) []byte {
 
 func TestTextureOrderParity(t *testing.T) {
 	data, err := os.ReadFile(texOrderGoldenPath)
-	if err != nil {
-		t.Fatalf("读黄金语料失败: %v", err)
-	}
+	testutil.NoError(t, err, "读黄金语料失败")
 	var gf texOrderGoldenFile
-	if err := json.Unmarshal(data, &gf); err != nil {
-		t.Fatalf("解析黄金语料失败: %v", err)
-	}
-	if len(gf.Cases) == 0 {
-		t.Fatal("黄金语料为空")
-	}
+	err = json.Unmarshal(data, &gf)
+	testutil.NoError(t, err, "解析黄金语料失败")
+	testutil.Equal(t, len(gf.Cases) > 0, true, "黄金语料不得为空")
 	regen := os.Getenv("YSM_PARITY_REGEN") == "1"
 
 	for i := range gf.Cases {
@@ -102,12 +99,9 @@ func TestTextureOrderParity(t *testing.T) {
 
 	if regen {
 		out, err := json.MarshalIndent(gf, "", "  ")
-		if err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(texOrderGoldenPath, append(out, '\n'), 0o644); err != nil {
-			t.Fatalf("写黄金语料失败: %v", err)
-		}
+		testutil.NoError(t, err, "MarshalIndent(gf)")
+		err = os.WriteFile(texOrderGoldenPath, append(out, '\n'), 0o644)
+		testutil.NoError(t, err, "写黄金语料失败")
 		fmt.Printf("黄金语料已重写: %s\n", texOrderGoldenPath)
 	}
 }

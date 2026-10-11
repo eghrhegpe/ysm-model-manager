@@ -8,6 +8,7 @@ source_files:
   - go/internal/testutil/testutil_windows.go
   - go/internal/testutil/assert.go
   - go/internal/testutil/determinism.go
+  - internal/testutil/testutil.go
 auto_fields:
   symbols_with_lines:
     - BytesZip
@@ -33,6 +34,8 @@ auto_fields:
     - WriteZipFile
   tests:
     - go/internal/testutil/testutil_test.go
+    - go/internal/testutil/assert_test.go
+    - internal/testutil/testutil_test.go
 use_when:
   - 跨包复用测试 helper
   - 创建测试文件
@@ -60,6 +63,8 @@ status: active
 
 `go/internal/testutil/` 包提供跨包复用的 Go 单元测试辅助函数，解决原先各包各自实现同名 helper 导致的重复维护问题。
 
+**断言族单一事实源翻转（2026-10-11，G3 清偿）**：8 个断言函数（`NoError`/`ErrorContains`/`ErrorIs`/`Equal`/`Nil`/`NotNil`/`FileExists`/`FileNotExists`）的实现**已上移根 `internal/testutil|testutil.go`**（自足实现，含 `prefixFromArgs`/`isNil` 私有 helper）；`go/internal/testutil|assert.go` 降为**纯转发层**（逐函数透传根实现，判据/diff 语义零分叉）。原因：Go internal 可见性规则方向——`go/internal/...` 只允许 `go/` 子树内导入（父目录=go/），而 `go/` 子树内包（rooted 模块根）**可以**导入根 `internal/...`（父目录=模块根），故「根包转发 go 包」（前序尝试，报 not allowed）不可编译，唯一合法单源形态 = 根侧实现 + go 侧转发。根 `internal/testutil` 仅根 `internal/app`（Wails 应用层，位于 go/ 子树外）消费；go/ 侧消费方 import 路径不变。**变更断言行为只改根实现，go 侧转发层永不复制逻辑**。
+
 ## 核心职责
 
 - 统一 `CreateTestFile`（原先 dedup/fsutil/recycle 三处各自实现）
@@ -85,7 +90,8 @@ status: active
 
 ## 已知债（ADR-202 刀5 裸断言增量）
 
-- **2026-10-11 修复批次审计登记（未收口）**：`check-go-diff-coverage` 的「测试断言增量红线」（新增/变更 `*_test.go` 行禁裸 `t.Fatal`/`t.Fatalf`，须走 testutil 断言）是**增量闸**——只扫 diff 窗口。2026-10-10/11 批次中 6 个测试文件 ~24 处裸 t.Fatal 已随推送窗口 grandparent 化，闸不再复扫；`45a6a8177` 只收了同族 1/6（tags_relocate_test）。（清单以 `node scripts/check-go-diff-coverage.ts --base 47f9ccd83` 实测为准，2026-10-11 审计记录：10 文件红、6 属该批次——tags_commit_order / fileops_target_plan / app_files_tags_migrate / app_config_preserve / app_prune_disabled / app_files_toggle。）收口 = 一次性改走 testutil 断言（参照 `45a6a8177` 先例），改完以债前 commit 为 base 重跑该闸转绿。
+- **~~2026-10-11 修复批次审计登记（未收口）~~→ 已收口（2026-10-11）**：~~`check-go-diff-coverage` 的「测试断言增量红线」（新增/变更 `*_test.go` 行禁裸 `t.Fatal`/`t.Fatalf`，须走 testutil 断言）是**增量闸**——只扫 diff 窗口。2026-10-10/11 批次中 6 个测试文件 ~24 处裸 t.Fatal 已随推送窗口 grandparent 化，闸不再复扫；`45a6a8177` 只收了同族 1/6（tags_relocate_test）。~~（清单以 `node scripts/check-go-diff-coverage.ts --base 47f9ccd83` 实测为准，2026-10-11 审计记录：10 文件红、6 属该批次——tags_commit_order / fileops_target_plan / app_files_tags_migrate / app_config_preserve / app_prune_disabled / app_files_toggle。）收口 = **一次性改走 testutil 断言**（参照 `45a6a8177` 先例）：go/ 侧 5 文件（tags_commit_order / fileops_target_plan / cli_readonly / geometry_select_parity / cube_mesh_parity，28 处）+ 根 internal/app 8 文件（config_preserve / files_tags_migrate / files_toggle / import_invalidate / migrate_rekey / prune_disabled / recycle_tags / texture_order_parity，82 处）全部改走 testutil 断言；夹带根桥包 `internal/testutil`（断言族单一事实源翻转，见概览）。改完以债前 commit（`47f9ccd83`）为 base 重跑该闸转绿（提交后复验）。
+- **已知债（结构性，非本次）**：`source_files` 中根 `internal/testutil|testutil.go` 与 go 侧 `assert.go` 断言函数**双条目同符号**（无多行），断言族实现虽已单源化，但符号面在漂移检查里是双登记——若未来需要严格单源登记，可让 go 侧 `assert.go` 从卡内 source_files 移除（转发层符号由根实现卡承载），暂维持现状。
 
 ## 相关
 

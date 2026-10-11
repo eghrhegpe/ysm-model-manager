@@ -1,10 +1,9 @@
-// ===== testutil 自测 =====
-// 覆盖边界：断言失败分支走 t.Fatalf → runtime.Goexit，进程内不可优雅捕获
-// （recover 拦不住 Goexit），故只测：
-//   - prefixFromArgs 纯函数全分支（含 Sprintf 展开、非 string 忽略）
-//   - 各断言的正常契约路径（不误杀合法输入）
-//
-// 失败终止行为由 5 个消费包测试的失败断言反证（断言若失效，消费测试即红）。
+// ===== testutil 转发层自测（单一事实源已上移根 internal/testutil，G3 清偿 2026-10-11）=====
+// 本包 8 个断言函数为对根 internal/testutil 的纯转发；`prefixFromArgs` 私有 helper
+// 随实现上移，其全分支自测随迁根侧（internal/testutil/testutil_test.go）。本文件保留
+// 各断言的正常契约路径（*_Pass）——兼作**转发链冒烟**：转发若退化（如被复制成双份
+// 逻辑），这些契约测试仍会钉住行为。失败分支走 t.Fatalf → runtime.Goexit，进程内
+// 不可优雅捕获，由消费包测试的失败断言反证。
 package testutil
 
 import (
@@ -13,34 +12,6 @@ import (
 	"path/filepath"
 	"testing"
 )
-
-func TestPrefixFromArgs(t *testing.T) {
-	t.Parallel()
-	cases := []struct {
-		name string
-		args []any
-		want string
-	}{
-		{"无参数", nil, ""},
-		{"单 string", []any{"下载失败"}, "下载失败: "},
-		{"string + 参数 Sprintf", []any{"normalizeScanKey(%q)", "/a/b/"}, `normalizeScanKey("/a/b/"): `},
-		{"带 %% 的 string（单 string 不做格式化，%% 原样保留）", []any{"进度 100%%"}, "进度 100%%: "},
-		{"带 %% 的 string + 参数（走 Sprintf 折叠）", []any{"进度 %d%%", 100}, "进度 100%: "},
-		{"非 string 首参忽略", []any{42, "x"}, ""},
-		{"空 string", []any{""}, ": "},
-		{"零值占位符无参数", []any{"(%v)"}, "(%v): "},
-	}
-	for _, c := range cases {
-		c := c
-		t.Run(c.name, func(t *testing.T) {
-			t.Parallel()
-			got := prefixFromArgs(c.args...)
-			if got != c.want {
-				t.Fatalf("prefixFromArgs(%v) = %q, want %q", c.args, got, c.want)
-			}
-		})
-	}
-}
 
 func TestNoError_Pass(t *testing.T) {
 	t.Parallel()

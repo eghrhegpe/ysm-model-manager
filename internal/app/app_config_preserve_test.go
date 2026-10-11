@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/internal/testutil"
 )
 
 func baselineThresholds() types.AppConfig {
@@ -42,14 +43,12 @@ func TestSaveAppConfig_PreservesThresholdFields(t *testing.T) {
 	a := newLinkModeApp()
 	// 建立基线：全字段落盘 + 进 configCache
 	base := baselineThresholds()
-	if err := a.saveConfig(base); err != nil {
-		t.Fatalf("saveConfig 基线: %v", err)
-	}
+	err := a.saveConfig(base)
+	testutil.NoError(t, err, "saveConfig 基线")
 
 	// 模拟改主题保存：六个入参里只 theme 非空，其余传空（orDefault 保旧值、不触发 watcher 重建）
-	if err := a.SaveAppConfig("", "", "", "", "dark", "off"); err != nil {
-		t.Fatalf("SaveAppConfig: %v", err)
-	}
+	err = a.SaveAppConfig("", "", "", "", "dark", "off")
+	testutil.NoError(t, err, "SaveAppConfig")
 
 	got := a.LoadAppConfig()
 	// 整数字段逐条断言
@@ -110,9 +109,8 @@ func TestSaveAppConfig_ClearsDeprecatedFields(t *testing.T) {
 	a.configLoaded = true
 	a.configMu.Unlock()
 
-	if err := a.SaveAppConfig("", "", "", "", "dark", "off"); err != nil {
-		t.Fatalf("SaveAppConfig: %v", err)
-	}
+	err := a.SaveAppConfig("", "", "", "", "dark", "off")
+	testutil.NoError(t, err, "SaveAppConfig")
 	if got := a.LoadAppConfig().YsmRoot; got != "" {
 		t.Errorf("废弃字段 YsmRoot 不得经以旧为基重新落盘（防双源不变量），实得 %q", got)
 	}

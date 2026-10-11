@@ -1,126 +1,51 @@
-// 统一断言 helper（ADR-202 刀5）：
-// 替代散落在各测试文件里的裸 if+Fatalf，收敛为：
-//   - NoError / ErrorContains：错误断言
-//   - Equal：struct/slice 值比较（go-cmp，自动 diff 输出）
-//   - FileExists / FileNotExists：文件系统断言
+// 统一断言 helper（ADR-202 刀5）——**纯转发层**（单一事实源翻转，G3 清偿 2026-10-11）。
 //
-// 复用判据：同模式在测试中出现 ≥3 处即应改用本 helper。
+// 实现已上移模块根 internal/testutil（根桥包自足实现 8 个断言函数）：Go
+// internal 可见性规则的**方向**是——go/internal/... 只允许 go/ 子树内导入
+// （父目录=go/），而 go/... 包（rooted 模块根）**可以**导入根 internal/...
+// （父目录=模块根）。故「根包转发 go 包」不可编译（前序实证 not allowed），
+// 唯一合法单源形态 = 根侧实现 + go 侧转发。本文件逐函数透传，判据/
+// diff/豁免语义与翻转正体（internal/testutil|testutil.go）零分叉——
+// 若两侧行为需变更，只改根侧实现，本层永不复制逻辑。
+//
+// 消费方 import 路径不变（仍 "ysm-model-manager/go/internal/testutil"）：
+// 既有 go/ 测试零改动；根 internal/app 测试直接引 "ysm-model-manager/internal/testutil"。
 package testutil
 
 import (
-	"errors"
-	"fmt"
-	"os"
-	"reflect"
-	"strings"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
+	rt "ysm-model-manager/internal/testutil"
 )
 
-// prefixFromArgs 把可选消息参数统一成断言失败前缀：
-// 首个参数为 string 时作为前缀；若后随额外参数则按 fmt.Sprintf 格式化（如
-// Equal(t, got, want, "normalizeScanKey(%q)", key)）。非 string 首参一律忽略，
-// 避免测试失败信息里出现字节噪声。全部断言函数共用此规则，语义一致。
-func prefixFromArgs(msgAndArgs ...any) string {
-	if len(msgAndArgs) == 0 {
-		return ""
-	}
-	s, ok := msgAndArgs[0].(string)
-	if !ok {
-		return ""
-	}
-	if len(msgAndArgs) > 1 {
-		return fmt.Sprintf(s, msgAndArgs[1:]...) + ": "
-	}
-	return s + ": "
-}
+// NoError 断言 err 为 nil，否则致命失败并附加上下文（透传 rt.NoError）。
+func NoError(t *testing.T, err error, msgAndArgs ...any) { rt.NoError(t, err, msgAndArgs...) }
 
-// NoError 断言 err 为 nil，否则致命失败并附加上下文。
-func NoError(t *testing.T, err error, msgAndArgs ...any) {
-	t.Helper()
-	if err != nil {
-		t.Fatalf("%sunexpected error: %v", prefixFromArgs(msgAndArgs...), err)
-	}
-}
-
-// ErrorContains 断言 err 非 nil 且 Error() 包含 substr。
+// ErrorContains 断言 err 非 nil 且 Error() 包含 substr（透传 rt.ErrorContains）。
 func ErrorContains(t *testing.T, err error, substr string, msgAndArgs ...any) {
-	t.Helper()
-	if err == nil {
-		t.Fatalf("%sexpected error containing %q, got nil", prefixFromArgs(msgAndArgs...), substr)
-	}
-	if !strings.Contains(err.Error(), substr) {
-		t.Fatalf("%serror %q does not contain %q", prefixFromArgs(msgAndArgs...), err.Error(), substr)
-	}
+	rt.ErrorContains(t, err, substr, msgAndArgs...)
 }
 
-// ErrorIs 断言 err 非 nil 且 errors.Is(err, target) 成立（错误链可分类）。
-// 替代 `if !errors.Is(err, target) { t.Fatalf(...) }`（#11 错误分类正解）。
-func ErrorIs(t *testing.T, err error, target error, msgAndArgs ...any) {
-	t.Helper()
-	if err == nil {
-		t.Fatalf("%sexpected error matching %v, got nil", prefixFromArgs(msgAndArgs...), target)
-	}
-	if !errors.Is(err, target) {
-		t.Fatalf("%serror %q does not match %v (errors.Is=false)", prefixFromArgs(msgAndArgs...), err.Error(), target)
-	}
+// ErrorIs 断言 err 非 nil 且 errors.Is(err, target) 成立（透传 rt.ErrorIs）。
+func ErrorIs(t *testing.T, err, target error, msgAndArgs ...any) {
+	rt.ErrorIs(t, err, target, msgAndArgs...)
 }
 
-// Equal 断言 got == want（go-cmp 深度比较），失败时输出 diff。
+// Equal 断言 got == want（go-cmp 深度比较，透传 rt.Equal）。
 func Equal[T any](t *testing.T, got, want T, msgAndArgs ...any) {
-	t.Helper()
-	if diff := cmp.Diff(want, got); diff != "" {
-		t.Fatalf("%sunexpected diff (-want +got):\n%s", prefixFromArgs(msgAndArgs...), diff)
-	}
+	rt.Equal(t, got, want, msgAndArgs...)
 }
 
-// isNil 判定 any 值是否为 nil（含 typed nil：指针/切片/map/chan/func/interface）。
-func isNil(v any) bool {
-	if v == nil {
-		return true
-	}
-	rv := reflect.ValueOf(v)
-	switch rv.Kind() {
-	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice:
-		return rv.IsNil()
-	default:
-		return false
-	}
-}
+// Nil 断言 v 为 nil（含 typed nil，透传 rt.Nil）。
+func Nil(t *testing.T, v any, msgAndArgs ...any) { rt.Nil(t, v, msgAndArgs...) }
 
-// Nil 断言 v 为 nil（含 typed nil 指针/切片/map）。替代 `if v != nil { t.Fatalf }`。
-func Nil(t *testing.T, v any, msgAndArgs ...any) {
-	t.Helper()
-	if !isNil(v) {
-		t.Fatalf("%sexpected nil, got %T: %+v", prefixFromArgs(msgAndArgs...), v, v)
-	}
-}
+// NotNil 断言 v 非 nil（透传 rt.NotNil）。
+func NotNil(t *testing.T, v any, msgAndArgs ...any) { rt.NotNil(t, v, msgAndArgs...) }
 
-// NotNil 断言 v 非 nil。替代 `if v == nil { t.Fatal }`。
-func NotNil(t *testing.T, v any, msgAndArgs ...any) {
-	t.Helper()
-	if isNil(v) {
-		t.Fatalf("%sexpected non-nil, got nil", prefixFromArgs(msgAndArgs...))
-	}
-}
+// FileExists 断言 path 存在（透传 rt.FileExists）。
+func FileExists(t *testing.T, path string, msgAndArgs ...any) { rt.FileExists(t, path, msgAndArgs...) }
 
-// FileExists 断言 path 存在（文件或目录）。
-func FileExists(t *testing.T, path string, msgAndArgs ...any) {
-	t.Helper()
-	if _, err := os.Stat(path); err != nil {
-		t.Fatalf("%spath should exist: %v", prefixFromArgs(msgAndArgs...), err)
-	}
-}
-
-// FileNotExists 断言 path 不存在。
+// FileNotExists 断言 path 不存在（Lstat 口径，透传 rt.FileNotExists）。
 func FileNotExists(t *testing.T, path string, msgAndArgs ...any) {
-	t.Helper()
-	// code_review e8d9afdcf（P3）：用 os.Lstat 而非 os.Stat——dangling symlink
-	// （条目存在、目标缺失）使 os.Stat 报错 → 断言误过；本 helper 是安全测试断言
-	// 「被拒操作不留残留」的标准方式（symlink 逃逸类残留正是要抓的），
-	// Lstat 对任何现存条目（含断链）都视为「路径不应存在」而失败
-	if _, err := os.Lstat(path); err == nil {
-		t.Fatalf("%spath should not exist: %s", prefixFromArgs(msgAndArgs...), path)
-	}
+	rt.FileNotExists(t, path, msgAndArgs...)
 }

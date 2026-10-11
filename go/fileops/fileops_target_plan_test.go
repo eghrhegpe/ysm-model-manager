@@ -10,16 +10,16 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"ysm-model-manager/go/internal/testutil"
 )
 
 func writeFile(t *testing.T, p string) {
 	t.Helper()
-	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(p, []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
-	}
+	err := os.MkdirAll(filepath.Dir(p), 0o755)
+	testutil.NoError(t, err, "MkdirAll")
+	err = os.WriteFile(p, []byte("x"), 0o644)
+	testutil.NoError(t, err, "WriteFile")
 }
 
 func TestRenameTarget_MatchesActualDest(t *testing.T) {
@@ -28,9 +28,8 @@ func TestRenameTarget_MatchesActualDest(t *testing.T) {
 	oldPath := filepath.Join(base, "a.ysm")
 	writeFile(t, oldPath)
 	got := RenameTarget(oldPath, "b.ysm")
-	if err := RenameFile(oldPath, "b.ysm"); err != nil {
-		t.Fatal(err)
-	}
+	err := RenameFile(oldPath, "b.ysm")
+	testutil.NoError(t, err, "RenameFile")
 	if _, err := os.Lstat(got); err != nil {
 		t.Errorf("RenameTarget 算出的落点应存在（同源判据）: %v", err)
 	}
@@ -54,16 +53,13 @@ func TestMoveCopyTarget_DirRenameLiftsToFolder(t *testing.T) {
 	dstParent := filepath.Join(base, "nested")
 
 	from, to, ok := MoveCopyTarget(base, srcJSON, dstParent, false)
-	if !ok {
-		t.Fatal("MoveCopyTarget 应 ok")
-	}
+	testutil.Equal(t, ok, true, "MoveCopyTarget 应 ok")
 	// move：ysm.json 提升为整夹 → from=父夹、to=nested/modelA
 	if from != filepath.Join(base, "modelA") || to != filepath.Join(dstParent, "modelA") {
 		t.Errorf("提升后 from/to 错: %q → %q", from, to)
 	}
-	if err := MoveModelFile(base, srcJSON, dstParent); err != nil {
-		t.Fatalf("MoveModelFile: %v", err)
-	}
+	err := MoveModelFile(base, srcJSON, dstParent)
+	testutil.NoError(t, err, "MoveModelFile")
 	// 同源判据：plan 的 to 恰好是搬迁后 ysm.json 所在目录
 	if _, err := os.Lstat(filepath.Join(to, "ysm.json")); err != nil {
 		t.Errorf("文件实际落点应在 plan.to 下（漂移即标签迁错键）: %v", err)
@@ -81,15 +77,12 @@ func TestMoveCopyTarget_RootLevelYsmJsonMoveNoLift(t *testing.T) {
 	dstDir := filepath.Join(base, "sub")
 
 	from, to, ok := MoveCopyTarget(base, srcJSON, dstDir, false)
-	if !ok {
-		t.Fatal("ok")
-	}
+	testutil.Equal(t, ok, true, "ok")
 	if from != srcJSON || to != filepath.Join(dstDir, "ysm.json") {
 		t.Errorf("根级 ysm.json move 应走单文件: %q → %q", from, to)
 	}
-	if err := MoveModelFile(base, srcJSON, dstDir); err != nil {
-		t.Fatalf("MoveModelFile: %v", err)
-	}
+	err := MoveModelFile(base, srcJSON, dstDir)
+	testutil.NoError(t, err, "MoveModelFile")
 	if _, err := os.Lstat(to); err != nil {
 		t.Errorf("单文件落点应等于 plan.to: %v", err)
 	}
@@ -103,9 +96,7 @@ func TestMoveCopyTarget_RootLevelYsmJsonCopyLiftsFolder(t *testing.T) {
 	dstDir := filepath.Join(base, "sub")
 
 	from, to, ok := MoveCopyTarget(base, srcJSON, dstDir, true)
-	if !ok {
-		t.Fatal("ok")
-	}
+	testutil.Equal(t, ok, true, "ok")
 	if from != base || to != filepath.Join(dstDir, filepath.Base(base)) {
 		t.Errorf("根级 ysm.json copy 应提升为整夹: %q → %q", from, to)
 	}
@@ -119,12 +110,11 @@ func TestMoveCopyTarget_PlainFile(t *testing.T) {
 	dstDir := filepath.Join(base, "out")
 
 	from, to, ok := MoveCopyTarget(base, src, dstDir, false)
-	if !ok || from != src || to != filepath.Join(dstDir, "m.pmx") {
-		t.Fatalf("单文件 plan 错: %q → %q ok=%v", from, to, ok)
-	}
-	if err := MoveModelFile(base, src, dstDir); err != nil {
-		t.Fatal(err)
-	}
+	testutil.Equal(t, ok, true, "单文件 plan ok")
+	testutil.Equal(t, from, src, "单文件 plan from")
+	testutil.Equal(t, to, filepath.Join(dstDir, "m.pmx"), "单文件 plan to")
+	err := MoveModelFile(base, src, dstDir)
+	testutil.NoError(t, err, "MoveModelFile")
 	if _, err := os.Lstat(to); err != nil {
 		t.Errorf("落点应等于 plan.to: %v", err)
 	}

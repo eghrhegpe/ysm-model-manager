@@ -13,6 +13,8 @@ import (
 	"path/filepath"
 	"sync"
 	"testing"
+
+	"ysm-model-manager/go/internal/testutil"
 )
 
 func TestStore_ConcurrentCommit_DiskKeepsAllKeys(t *testing.T) {
@@ -42,9 +44,7 @@ func TestStore_ConcurrentCommit_DiskKeepsAllKeys(t *testing.T) {
 	// 磁盘终态：重开全新 Store（只读盘），所有 n 个 key 必须都在
 	fresh := NewStore(dir)
 	all, err := fresh.ListByTag("tag007")
-	if err != nil {
-		t.Fatalf("fresh ListByTag: %v", err)
-	}
+	testutil.NoError(t, err, "fresh ListByTag")
 	if len(all) != n {
 		missing := make([]string, 0, n)
 		seen := map[string]bool{}
@@ -57,8 +57,7 @@ func TestStore_ConcurrentCommit_DiskKeepsAllKeys(t *testing.T) {
 				missing = append(missing, key)
 			}
 		}
-		t.Fatalf("并发 SetTags 后磁盘丢 key：期望 %d 个、实得 %d 个（缺 %v 个，样例 %v）",
-			n, len(all), len(missing), firstN(missing, 5))
+		testutil.Equal(t, len(all), n, "并发 SetTags 后磁盘丢 key（缺 %d 个，样例 %v）", len(missing), firstN(missing, 5))
 	}
 }
 

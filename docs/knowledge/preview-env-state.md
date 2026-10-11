@@ -24,6 +24,7 @@ tests:
   - frontend/src/preview-3d/adapters/shared-infra.test.ts
   - frontend/src/preview-3d/caps/scene-capability-persist.test.ts
   - frontend/src/preview-3d/caps/water-persist.test.ts
+  - frontend/src/preview-3d/caps/sky-bake-pipeline.test.ts
 auto_fields:
   symbols_with_lines:
     - applyModelDefaults

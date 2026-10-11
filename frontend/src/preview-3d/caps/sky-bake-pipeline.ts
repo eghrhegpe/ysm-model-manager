@@ -26,6 +26,10 @@
 //      且门控基准 lastPmremElevation **不更新**（下次仍会真烘焙一次，不吞错误）。
 //   ④ 返回纹理归本叶（renderTarget 持有）所有，调用方（env cap / cap 自持装载）**不得**
 //      跨重建长期持有或 dispose——生命周期随 dispose/重建走。
+//
+// ⚠️ 注入口契约（写测试时踩过的坑，勿再踩）：`sunDiscUniform` 访问器**必须返回 uniform 本体引用**
+//   （真实实现 = `uniforms.showSunDisc` 本身），不能返回临时对象如 `{ value: 当前值 }`
+//   ——后者会让叶的写入落在临时对象上，观察点永远读到旧值，不变量②就此「假绿」。
 
 import * as THREE from "three";
 import { ringLog } from "./scene-capability.ts";

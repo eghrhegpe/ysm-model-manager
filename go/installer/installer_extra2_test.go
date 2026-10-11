@@ -21,7 +21,7 @@ func mcCustomDir(t *testing.T) string {
 	t.Helper()
 	dir := filepath.Join(t.TempDir(), ".minecraft", "versions", "1.20", "config", "yes_steve_model", "custom")
 	if err := os.MkdirAll(dir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	return dir
 }
@@ -38,7 +38,7 @@ func TestInstallToGlobal_EmptyMcRoot(t *testing.T) {
 	dir := t.TempDir()
 	src := filepath.Join(dir, "model.ysm")
 	if err := os.WriteFile(src, []byte("data"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if _, err := InstallToGlobal(src, ""); err == nil {
 		t.Fatal("空 mcRoot 应返回错误")
@@ -49,7 +49,7 @@ func TestInstallToGlobal_NonMinecraftPath(t *testing.T) {
 	dir := t.TempDir()
 	src := filepath.Join(dir, "model.ysm")
 	if err := os.WriteFile(src, []byte("data"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if _, err := InstallToGlobal(src, dir); err == nil {
 		t.Fatal("mcRoot 不含 .minecraft marker 应返回错误")
@@ -59,15 +59,15 @@ func TestInstallToGlobal_NonMinecraftPath(t *testing.T) {
 func TestInstallToGlobal_MkdirFail(t *testing.T) {
 	mcRoot := filepath.Join(t.TempDir(), ".minecraft")
 	if err := os.MkdirAll(mcRoot, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	blocker := filepath.Join(mcRoot, "config")
 	if err := os.WriteFile(blocker, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	src := filepath.Join(t.TempDir(), "model.ysm")
 	if err := os.WriteFile(src, []byte("data"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	_, err := InstallToGlobal(src, mcRoot) // config 是文件 → MkdirAll 失败
 	var ae types.AppError
@@ -79,12 +79,12 @@ func TestInstallToGlobal_MkdirFail(t *testing.T) {
 func TestInstallToGlobal_Success(t *testing.T) {
 	mcRoot := filepath.Join(t.TempDir(), ".minecraft")
 	if err := os.MkdirAll(mcRoot, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	src := filepath.Join(t.TempDir(), "model.ysm")
 	content := []byte("global model data")
 	if err := os.WriteFile(src, content, 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	dst, err := InstallToGlobal(src, mcRoot)
 	testutil.NoError(t, err, "InstallToGlobal =")
@@ -105,7 +105,7 @@ func TestInstallDir_NonMinecraftDst(t *testing.T) {
 	repo, _, _, _ := setupTestDirs(t)
 	srcDir := filepath.Join(repo, "m")
 	if err := os.MkdirAll(srcDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	err := InstallDir(srcDir, t.TempDir(), repo, "copy", "")
 	var ae types.AppError
@@ -130,7 +130,7 @@ func TestInstallDirRecursive_MkdirFail(t *testing.T) {
 	base := t.TempDir()
 	blocker := filepath.Join(base, "file")
 	if err := os.WriteFile(blocker, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	err := installDirRecursive(t.TempDir(), filepath.Join(blocker, "sub"), "copy", "", "", nil)
 	var ae types.AppError
@@ -152,7 +152,7 @@ func TestInstallDirRecursive_OutsideMinecraft(t *testing.T) {
 func TestInstallDirRecursive_ReadDirFail(t *testing.T) {
 	srcFile := filepath.Join(t.TempDir(), "notdir.ysm")
 	if err := os.WriteFile(srcFile, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	err := installDirRecursive(srcFile, filepath.Join(mcCustomDir(t), "model"), "copy", "", "", nil)
 	if err == nil {
@@ -163,16 +163,16 @@ func TestInstallDirRecursive_ReadDirFail(t *testing.T) {
 func TestInstallDirRecursive_NestedSubdir(t *testing.T) {
 	srcDir := filepath.Join(t.TempDir(), "model")
 	if err := os.MkdirAll(filepath.Join(srcDir, "tex"), 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(srcDir, "root.pmx"), []byte("pmx"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(srcDir, "tex", "tex.png"), []byte("png"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(srcDir, "ignore.txt"), []byte("no"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	finalDst := filepath.Join(mcCustomDir(t), "model")
 	if err := installDirRecursive(srcDir, finalDst, "copy", "EntityPlayer", "", nil); err != nil {
@@ -200,21 +200,21 @@ func TestInstallDirRecursive_NestedSubdir(t *testing.T) {
 func TestInstallDirRecursive_PartialFailure(t *testing.T) {
 	srcDir := filepath.Join(t.TempDir(), "model")
 	if err := os.MkdirAll(filepath.Join(srcDir, "sub"), 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(srcDir, "sub", "a.ysm"), []byte("a"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(srcDir, "ok.ysm"), []byte("ok"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	finalDst := filepath.Join(mcCustomDir(t), "model")
 	if err := os.MkdirAll(finalDst, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 用同名文件占位 sub 目录 → 递归落地时 MkdirAll 失败
 	if err := os.WriteFile(filepath.Join(finalDst, "sub"), []byte("blocker"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	err := installDirRecursive(srcDir, finalDst, "copy", "", "", nil)
 	if err == nil {
@@ -231,12 +231,12 @@ func TestInstallDirRecursive_SymlinkEscape(t *testing.T) {
 	repo, custom, _, _ := setupTestDirs(t)
 	srcDir := filepath.Join(repo, "linked_model")
 	if err := os.MkdirAll(srcDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	outside := t.TempDir()
 	realFile := filepath.Join(outside, "secret.ysm")
 	if err := os.WriteFile(realFile, []byte("data"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	link := filepath.Join(srcDir, "escaped.ysm")
 	if err := os.Symlink(realFile, link); err != nil {
@@ -256,7 +256,7 @@ func TestCheckDstSymlinkSegments_OutsideSymlink(t *testing.T) {
 	mcRoot := t.TempDir()
 	mc := filepath.Join(mcRoot, ".minecraft")
 	if err := os.MkdirAll(mc, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	outside := t.TempDir()
 	link := filepath.Join(mc, "link_out")
@@ -275,7 +275,7 @@ func TestCheckDstSymlinkSegments_MaxDepth(t *testing.T) {
 	mcRoot := t.TempDir()
 	mc := filepath.Join(mcRoot, ".minecraft")
 	if err := os.MkdirAll(mc, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	// 构造一个超过 256 层的路径（不实际创建目录）
@@ -297,11 +297,11 @@ func TestInstall_SubdirRelPath(t *testing.T) {
 	repo, custom, _, _ := setupTestDirs(t)
 	sub := filepath.Join(repo, "subdir")
 	if err := os.MkdirAll(sub, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	src := filepath.Join(sub, "model.ysm")
 	if err := os.WriteFile(src, []byte("data"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := Install(src, custom, repo, "copy"); err != nil {
 		t.Fatalf("Install = %v", err)
@@ -327,11 +327,11 @@ func TestCopyFileLocked_MkdirAllFail(t *testing.T) {
 	base := t.TempDir()
 	blocker := filepath.Join(base, "file")
 	if err := os.WriteFile(blocker, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	src := filepath.Join(base, "src.ysm")
 	if err := os.WriteFile(src, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if _, err := CopyFileLocked(src, filepath.Join(blocker, "sub")); err == nil {
 		t.Fatal("MkdirAll 失败应返回错误")
@@ -343,18 +343,18 @@ func TestCopyFileLocked_RenameFail(t *testing.T) {
 	dir := t.TempDir()
 	src := filepath.Join(dir, "model.ysm")
 	if err := os.WriteFile(src, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	dstDir := filepath.Join(dir, "dst")
 	if err := os.MkdirAll(dstDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	block := filepath.Join(dstDir, "model.ysm")
 	if err := os.MkdirAll(block, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(block, "x"), []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	_, err := CopyFileLocked(src, dstDir) // rename tmp → 非空目录必败
 	var ae types.AppError
@@ -381,11 +381,11 @@ func TestSymlinkOrCopyLocked_MkdirAllFail(t *testing.T) {
 	base := t.TempDir()
 	blocker := filepath.Join(base, "file")
 	if err := os.WriteFile(blocker, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	src := filepath.Join(base, "src.ysm")
 	if err := os.WriteFile(src, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := SymlinkOrCopyLocked(src, filepath.Join(blocker, "sub")); err == nil {
 		t.Fatal("MkdirAll 失败应返回错误")
@@ -408,7 +408,7 @@ func TestSymlinkOrCopyLocked_RenameFail(t *testing.T) {
 	dir := t.TempDir()
 	src := filepath.Join(dir, "model.ysm")
 	if err := os.WriteFile(src, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 先探测平台 symlink 能力
 	probe := filepath.Join(dir, "probe")
@@ -419,14 +419,14 @@ func TestSymlinkOrCopyLocked_RenameFail(t *testing.T) {
 
 	dstDir := filepath.Join(dir, "dst")
 	if err := os.MkdirAll(dstDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	block := filepath.Join(dstDir, "model.ysm")
 	if err := os.MkdirAll(block, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(block, "x"), []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	err := SymlinkOrCopyLocked(src, dstDir) // rename tmp → 非空目录必败
 	var ae types.AppError
@@ -525,11 +525,11 @@ func TestInstallToGlobal_UnsupportedExt_ValidMcRoot(t *testing.T) {
 	// 实际触发的是 marker 分支而非扩展名分支；此处 mcRoot 含 marker 才能走到 ext 校验
 	mcRoot := filepath.Join(t.TempDir(), ".minecraft")
 	if err := os.MkdirAll(mcRoot, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	badFile := filepath.Join(t.TempDir(), "payload.exe")
 	if err := os.WriteFile(badFile, []byte("data"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	_, err := InstallToGlobal(badFile, mcRoot)
 	var ae types.AppError
@@ -545,7 +545,7 @@ func TestInstall_CustomDirSymlinkOutside(t *testing.T) {
 	outside := t.TempDir()
 	externalCustom := filepath.Join(outside, "custom")
 	if err := os.MkdirAll(externalCustom, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	link := filepath.Join(mcRoot, ".minecraft", "versions", "link_out")
 	if err := os.Symlink(outside, link); err != nil {
@@ -554,7 +554,7 @@ func TestInstall_CustomDirSymlinkOutside(t *testing.T) {
 	// custom 路径字符串含 .minecraft 通过守卫；EvalSymlinks 解析到仓库外 → 二次校验拒绝
 	custom := filepath.Join(link, "custom")
 	if _, err := os.Stat(custom); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	err := Install(src, custom, repo, "copy")
 	var ae types.AppError
@@ -568,7 +568,7 @@ func TestInstall_SrcSymlinkOutside(t *testing.T) {
 	outside := t.TempDir()
 	realFile := filepath.Join(outside, "model.ysm")
 	if err := os.WriteFile(realFile, []byte("data"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	link := filepath.Join(repo, "link_out")
 	if err := os.Symlink(outside, link); err != nil {
@@ -588,11 +588,11 @@ func TestInstall_SrcSymlinkOutside(t *testing.T) {
 func TestInstallDir_FinalDstInsideSrc(t *testing.T) {
 	repo := filepath.Join(t.TempDir(), ".minecraft", "versions", "1.20") // repo 含 marker
 	if err := os.MkdirAll(repo, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	srcDir := filepath.Join(repo, "a")
 	if err := os.MkdirAll(srcDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	err := InstallDir(srcDir, repo, repo, "copy", "")
 	var ae types.AppError
@@ -606,17 +606,17 @@ func TestInstallDir_ExistingFinalDst(t *testing.T) {
 	repo, custom, _, _ := setupTestDirs(t)
 	srcDir := filepath.Join(repo, "model")
 	if err := os.MkdirAll(srcDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(srcDir, "a.ysm"), []byte("a"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	finalDst := filepath.Join(custom, "model")
 	if err := os.MkdirAll(finalDst, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(finalDst, "keep.txt"), []byte("keep"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := InstallDir(srcDir, custom, repo, "copy", ""); err != nil {
 		t.Fatalf("InstallDir = %v", err)
@@ -631,10 +631,10 @@ func TestInstallDir_RollbackRemoveFail(t *testing.T) {
 	repo, custom, _, _ := setupTestDirs(t)
 	srcDir := filepath.Join(repo, "model")
 	if err := os.MkdirAll(srcDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(srcDir, "a.ysm"), []byte("a"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// dstDir 含 NUL 字节：os.Stat/RemoveAll/MkdirAll 均以非 NotExist 错误失败（win32 ERROR_INVALID_NAME）
 	dstDir := filepath.Join(custom, "x\x00y")
@@ -654,7 +654,7 @@ func TestInstallDirRecursive_SymlinkSegmentReject(t *testing.T) {
 	mcRoot := t.TempDir()
 	mc := filepath.Join(mcRoot, ".minecraft")
 	if err := os.MkdirAll(mc, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	outside := t.TempDir()
 	link := filepath.Join(mc, "link_out")
@@ -663,7 +663,7 @@ func TestInstallDirRecursive_SymlinkSegmentReject(t *testing.T) {
 	}
 	srcDir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(srcDir, "a.ysm"), []byte("a"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	err := installDirRecursive(srcDir, filepath.Join(link, "sub", "model"), "copy", "", "", nil)
 	var ae types.AppError
@@ -679,18 +679,18 @@ func TestInstallDirRecursive_EntryFailures(t *testing.T) {
 		t.Helper()
 		srcDir = t.TempDir()
 		if err := os.WriteFile(filepath.Join(srcDir, "conflict.ysm"), []byte("x"), 0644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		finalDst = filepath.Join(mcCustomDir(t), "model")
 		if err := os.MkdirAll(finalDst, 0755); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		block := filepath.Join(finalDst, "conflict.ysm")
 		if err := os.MkdirAll(block, 0755); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		if err := os.WriteFile(filepath.Join(block, "x"), []byte("x"), 0644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		return
 	}
@@ -729,11 +729,11 @@ func TestLinkOrCopyLocked_MkdirAllFail(t *testing.T) {
 	base := t.TempDir()
 	blocker := filepath.Join(base, "file")
 	if err := os.WriteFile(blocker, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	src := filepath.Join(base, "src.ysm")
 	if err := os.WriteFile(src, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := LinkOrCopyLocked(src, filepath.Join(blocker, "sub")); err == nil {
 		t.Fatal("MkdirAll 失败应返回错误")
@@ -745,18 +745,18 @@ func TestLinkOrCopyLocked_RenameFail(t *testing.T) {
 	dir := t.TempDir()
 	src := filepath.Join(dir, "model.ysm")
 	if err := os.WriteFile(src, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	dstDir := filepath.Join(dir, "dst")
 	if err := os.MkdirAll(dstDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	block := filepath.Join(dstDir, "model.ysm")
 	if err := os.MkdirAll(block, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(block, "x"), []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	err := LinkOrCopyLocked(src, dstDir) // os.Link 成功 → Rename(tmp, 非空目录) 必败
 	var ae types.AppError
@@ -772,11 +772,11 @@ func TestSymlinkOrCopyLocked_Idempotent(t *testing.T) {
 	dir := t.TempDir()
 	src := filepath.Join(dir, "model.ysm")
 	if err := os.WriteFile(src, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	dstDir := filepath.Join(dir, "dst")
 	if err := os.MkdirAll(dstDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.Symlink(src, filepath.Join(dstDir, "model.ysm")); err != nil {
 		t.Skipf("平台不支持符号链接: %v", err)
@@ -791,18 +791,18 @@ func TestSymlinkOrCopyLocked_SymlinkErr(t *testing.T) {
 	dir := t.TempDir()
 	src := filepath.Join(dir, "model.ysm")
 	if err := os.WriteFile(src, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	dstDir := filepath.Join(dir, "dst")
 	if err := os.MkdirAll(dstDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	block := filepath.Join(dstDir, "model.ysm.symlink-tmp")
 	if err := os.MkdirAll(block, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(block, "x"), []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	err := SymlinkOrCopyLocked(src, dstDir) // os.Remove 忽略失败 → os.Symlink 撞上目录必败
 	var ae types.AppError
@@ -836,7 +836,7 @@ func TestSameSource_SrcMissing(t *testing.T) {
 	src := filepath.Join(dir, "missing.ysm")
 	dst := filepath.Join(dir, "dst.ysm")
 	if err := os.WriteFile(dst, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	same, err := sameSource(src, dst, false)
 	if err == nil || same {
@@ -849,7 +849,7 @@ func TestSameSource_DanglingSymlink(t *testing.T) {
 	dir := t.TempDir()
 	src := filepath.Join(dir, "src.ysm")
 	if err := os.WriteFile(src, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	dst := filepath.Join(dir, "dangling.ysm")
 	if err := os.Symlink(filepath.Join(dir, "gone.ysm"), dst); err != nil {
@@ -866,7 +866,7 @@ func TestInstallDir_ReadDirFailRollback(t *testing.T) {
 	repo, custom, _, _ := setupTestDirs(t)
 	srcFile := filepath.Join(repo, "notdir.ysm")
 	if err := os.WriteFile(srcFile, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	err := InstallDir(srcFile, custom, repo, "copy", "")
 	if err == nil {
@@ -898,7 +898,7 @@ func TestCopyFileLocked_ReadDirAsSourceFails(t *testing.T) {
 	dir := t.TempDir()
 	srcDir := filepath.Join(dir, "srcdir")
 	if err := os.MkdirAll(srcDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	dstDir := filepath.Join(dir, "dst")
 	_, err := CopyFileLocked(srcDir, dstDir)
@@ -1003,10 +1003,10 @@ func TestInstallDir_DenyExecutablesWithEmptyRtype(t *testing.T) {
 	repo, custom, _, _ := setupTestDirs(t)
 	srcDir := filepath.Join(repo, "troll_model")
 	if err := os.MkdirAll(srcDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(srcDir, "model.ysm"), []byte("ysm"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	denied := []string{
 		"payload.exe", "exploit.bat", "evil.dll", "script.cmd",
@@ -1014,7 +1014,7 @@ func TestInstallDir_DenyExecutablesWithEmptyRtype(t *testing.T) {
 	}
 	for _, name := range denied {
 		if err := os.WriteFile(filepath.Join(srcDir, name), []byte("x"), 0644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	if err := InstallDir(srcDir, custom, repo, "copy", ""); err != nil {
@@ -1040,18 +1040,18 @@ func TestInstallDir_DeadRecursionGuard_CaseSensitiveFS(t *testing.T) {
 	}
 	repo := filepath.Join(t.TempDir(), ".minecraft", "versions", "1.20")
 	if err := os.MkdirAll(repo, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	srcDir := filepath.Join(repo, "SRC")
 	dstDir := filepath.Join(repo, "src")
 	if err := os.MkdirAll(srcDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.MkdirAll(dstDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(srcDir, "model.ysm"), []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	si, _ := os.Lstat(srcDir)
 	di, _ := os.Lstat(dstDir)
@@ -1072,10 +1072,10 @@ func TestSameDir(t *testing.T) {
 	a := filepath.Join(base, "a")
 	b := filepath.Join(base, "b")
 	if err := os.MkdirAll(a, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.MkdirAll(b, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if !sameDir(a, a) {
 		t.Error("sameDir(a,a) 应为 true")

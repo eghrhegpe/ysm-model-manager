@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/fsutil"
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -38,7 +39,7 @@ func TestNestDirLevelTree_NestedContainer(t *testing.T) {
 	instDir := filepath.Join(base, "inst")
 	a := filepath.Join(globalDir, "a")
 	if err := os.MkdirAll(a, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	flat := []types.ResourceSyncItem{
 		{Path: filepath.Join(a, "b.ysm"), Name: "b.ysm", Status: types.SyncStatusSynced, Type: "ysm"},
@@ -80,7 +81,7 @@ func TestNestDirLevelTree_SameSegmentLeafAndContainer(t *testing.T) {
 	instDir := filepath.Join(base, "inst")
 	a := filepath.Join(globalDir, "a")
 	if err := os.MkdirAll(a, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	flat := []types.ResourceSyncItem{
 		// 先插容器 a（来自全局侧 a/b.ysm + a/c.ysm）
@@ -121,7 +122,7 @@ func TestFileSize_ExistingAndMissing(t *testing.T) {
 	dir := t.TempDir()
 	p := filepath.Join(dir, "f.bin")
 	if err := os.WriteFile(p, make([]byte, 1024), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// fileSize 已收敛至 fsutil.FileSize（锐评 #17）
 	if got := fsutil.FileSize(p); got != 1024 {
@@ -153,7 +154,7 @@ func TestNestDirLevelTree_SamePathSelfMarkerMerged(t *testing.T) {
 	a := filepath.Join(globalDir, "a")
 	sub := filepath.Join(a, "sub")
 	if err := os.MkdirAll(sub, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	marker := types.ResourceSyncItem{
 		Path: a, Name: "a", Status: types.SyncStatusSynced, Type: "ysm", IsDir: true,

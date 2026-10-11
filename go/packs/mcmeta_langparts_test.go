@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // writeLangDir 在临时目录下建 lang/en_US.lang，返回包根目录。
@@ -23,10 +24,10 @@ func writeLangDir(t *testing.T, content string) string {
 	dir := t.TempDir()
 	langDir := filepath.Join(dir, "lang")
 	if err := os.MkdirAll(langDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(langDir, "en_US.lang"), []byte(content), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	return dir
 }
@@ -105,7 +106,7 @@ func TestReadShaderpackLangParts_NonZipFile(t *testing.T) {
 	dir := t.TempDir()
 	plain := filepath.Join(dir, "not-a-pack.txt")
 	if err := os.WriteFile(plain, []byte("pack.name=不该被读到的名字"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	name, entries := ReadShaderpackLangParts(plain)
 	if name != "" || len(entries) != 0 {

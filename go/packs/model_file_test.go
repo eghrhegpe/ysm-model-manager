@@ -77,7 +77,7 @@ func TestIsTypeModelFile_ZipEntry_NoMatchNotModel(t *testing.T) {
 func TestIsTypeModelFile_ZipEntry_BadZipNotModel(t *testing.T) {
 	bad := filepath.Join(t.TempDir(), "broken.zip")
 	if err := os.WriteFile(bad, []byte("this is not a zip"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if packs.IsTypeModelFile(bad, "DefaultAnim") {
 		t.Fatalf("损坏 zip 不得识别为 DefaultAnim 模型: %s", bad)
@@ -89,7 +89,7 @@ func TestIsTypeModelFile_ZipEntry_BadZipNotModel(t *testing.T) {
 func TestIsTypeModelFile_ZipEntry_NonZipEntryTypeUnaffected(t *testing.T) {
 	p := filepath.Join(t.TempDir(), "pack.zip")
 	if err := os.WriteFile(p, []byte("zip"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if !packs.IsTypeModelFile(p, "resourcepack") {
 		t.Fatalf("resourcepack 的 .zip 仍应直判为资源包（detector != zipentry 不受影响）")

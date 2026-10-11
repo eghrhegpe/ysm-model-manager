@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // bedrockBoundsMap 构造 local_bounds compound（字段名同基岩版，值类型 int32）。
@@ -243,7 +244,7 @@ func TestParseNbtStructure_BedrockTruncated(t *testing.T) {
 	gz := fuzzGz(t, root)
 	path := filepath.Join(t.TempDir(), "trunc_bedrock.nbt")
 	if err := os.WriteFile(path, gz[:len(gz)/2], 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if result := ParseNbtStructure(path); result != nil {
 		t.Errorf("截断的基岩版结构应返回 nil, 得到 %v", result)

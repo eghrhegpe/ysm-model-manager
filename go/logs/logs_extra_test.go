@@ -35,7 +35,7 @@ func TestLogger_NewLogger_MkdirFail(t *testing.T) {
 	base := t.TempDir()
 	blocker := filepath.Join(base, "file")
 	if err := os.WriteFile(blocker, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	l := NewLogger(filepath.Join(blocker, "sub")) // blocker 是文件 → MkdirAll 失败
 	if l.path != "" {
@@ -71,14 +71,14 @@ func TestLogger_Load_ReadErrorBackupRenameFail(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "logs.json")
 	if err := os.MkdirAll(path, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	corrupt := path + corruptSuffix
 	if err := os.MkdirAll(corrupt, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(corrupt, "x"), []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	l := &Logger{path: path}
 	l.load() // Rename 失败仅记日志
@@ -95,14 +95,14 @@ func TestLogger_Load_CorruptJSONBackupRenameFail(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "logs.json")
 	if err := os.WriteFile(path, []byte("{invalid json"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	corrupt := path + corruptSuffix
 	if err := os.MkdirAll(corrupt, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(corrupt, "x"), []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	l := &Logger{path: path}
 	l.load()
@@ -119,7 +119,7 @@ func TestLogger_Load_JSONNull(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "logs.json")
 	if err := os.WriteFile(path, []byte("null"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	l := &Logger{path: path}
 	l.load()
@@ -142,7 +142,7 @@ func TestLogger_Load_Over500Trim(t *testing.T) {
 	data, err := json.Marshal(entries)
 	testutil.NoError(t, err)
 	if err := os.WriteFile(path, data, 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	l := &Logger{path: path}
 	l.load()
@@ -190,11 +190,11 @@ func TestLogger_CleanupStaleCorrupt(t *testing.T) {
 
 	t.Run("过新的不删", func(t *testing.T) {
 		if err := os.WriteFile(corrupt, []byte("x"), 0644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		now := time.Now()
 		if err := os.Chtimes(corrupt, now, now); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		l.cleanupStaleCorrupt()
 		if _, err := os.Stat(corrupt); err != nil {
@@ -205,11 +205,11 @@ func TestLogger_CleanupStaleCorrupt(t *testing.T) {
 
 	t.Run("过旧的删除", func(t *testing.T) {
 		if err := os.WriteFile(corrupt, []byte("x"), 0644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		old := time.Now().Add(-(corruptRetentionDays + 1) * 24 * time.Hour)
 		if err := os.Chtimes(corrupt, old, old); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		l.cleanupStaleCorrupt()
 		if _, err := os.Stat(corrupt); !os.IsNotExist(err) {
@@ -219,14 +219,14 @@ func TestLogger_CleanupStaleCorrupt(t *testing.T) {
 
 	t.Run("删除失败仅记录", func(t *testing.T) {
 		if err := os.MkdirAll(corrupt, 0755); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		if err := os.WriteFile(filepath.Join(corrupt, "x"), []byte("x"), 0644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		old := time.Now().Add(-(corruptRetentionDays + 1) * 24 * time.Hour)
 		if err := os.Chtimes(corrupt, old, old); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		l.cleanupStaleCorrupt() // 非空目录 os.Remove 失败 → 仅记录
 		if _, err := os.Stat(corrupt); err != nil {
@@ -251,7 +251,7 @@ func TestLogger_Save_MkdirFail(t *testing.T) {
 	base := t.TempDir()
 	blocker := filepath.Join(base, "file")
 	if err := os.WriteFile(blocker, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	l := &Logger{path: filepath.Join(blocker, "sub", "logs.json"), logs: []types.ImportLog{{ModelName: "m"}}}
 	l.save() // MkdirAll 失败 → 仅日志
@@ -351,7 +351,7 @@ func TestRuntimeBuffer_WriteRealloc(t *testing.T) {
 	b := &RuntimeBuffer{logs: make([]types.RuntimeLog, 0, 100), cap: 3}
 	for i := 0; i < 4; i++ {
 		if _, err := b.Write([]byte("msg")); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	if got := len(b.GetAll()); got != 3 {

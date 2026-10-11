@@ -154,7 +154,7 @@ func TestDetectResourceType_ZipEntry_SevenZipNoFallback(t *testing.T) {
 	dir := t.TempDir()
 	sevenPath := filepath.Join(dir, "pkg.7z")
 	if err := os.WriteFile(sevenPath, []byte("not really 7z"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if got := DetectResourceType(sevenPath, reg); got != "container" {
 		t.Fatalf("坏 .7z 应标 container（容器无指纹），实际 %q", got)

@@ -12,6 +12,7 @@ import (
 	"strings"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -49,7 +50,7 @@ func TestLogger_Health_SaveFailureLatches(t *testing.T) {
 	// 用「已存在的文件」占住日志路径的父目录名 → save 里 MkdirAll 必失败
 	blocker := filepath.Join(dir, "blocker")
 	if err := os.WriteFile(blocker, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	l := NewLogger(dir) // NewLogger 自身 MkdirAll(dir) 成功（dir 存在），故初始健康
 	if !l.Health().PersistOK {
@@ -223,11 +224,11 @@ func TestRuntimeBuffer_MetaSurvivesStorm(t *testing.T) {
 	b := NewRuntimeBuffer(20) // 配额 15 / 5，构造混合态
 	for i := 0; i < 40; i++ {
 		if _, err := b.Write([]byte("[watcher] 业务日志 ")); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	if _, err := b.Write([]byte("[meta] 写入日志文件失败: disk full")); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	all := b.GetAll()
 	found := false
@@ -252,11 +253,11 @@ func TestRuntimeBuffer_MetaTagMustAnchorLineStart(t *testing.T) {
 	// 中段 [meta] 写在**最旧**位：若它被判为受保护条目就会在 40 条普通日志后存活，
 	// 故「是否仍在场」直接反证分区谓词是否锚定行首
 	if _, err := b.Write([]byte("业务消息里提到 [meta] 字样")); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	for i := 0; i < 40; i++ {
 		if _, err := b.Write([]byte("[watcher] 业务日志 ")); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	all := b.GetAll()
@@ -275,7 +276,7 @@ func TestRuntimeBuffer_MetaTagMustAnchorLineStart(t *testing.T) {
 func TestRuntimeBuffer_MetaLevelInferred(t *testing.T) {
 	b := NewRuntimeBuffer(20)
 	if _, err := b.Write([]byte("[meta] 写入日志文件失败: disk full")); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	got := b.GetAll()
 	if len(got) != 1 {

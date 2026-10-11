@@ -13,6 +13,7 @@ import (
 	"sort"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/types/registry"
 )
@@ -21,10 +22,10 @@ import (
 func writeFile(t *testing.T, path, content string) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 }
 

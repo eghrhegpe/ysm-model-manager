@@ -16,14 +16,14 @@ func TestCopyDir_Basic(t *testing.T) {
 
 	// 创建源目录结构
 	if err := os.WriteFile(filepath.Join(src, "a.txt"), []byte("aaa"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	sub := filepath.Join(src, "sub")
 	if err := os.MkdirAll(sub, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(sub, "b.txt"), []byte("bbb"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	if err := copyDir(src, dst); err != nil {
@@ -48,11 +48,11 @@ func TestCopyDir_OverwriteExisting(t *testing.T) {
 	dst := t.TempDir()
 
 	if err := os.WriteFile(filepath.Join(src, "new.txt"), []byte("new"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 在 dst 放一个同名文件
 	if err := os.WriteFile(filepath.Join(dst, "new.txt"), []byte("old"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	if err := copyDir(src, dst); err != nil {

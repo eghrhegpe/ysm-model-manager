@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -199,7 +200,7 @@ func TestLogger_LoadFromInvalidFile(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "bad-logs.json")
 	if err := os.WriteFile(path, []byte("{invalid json}"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	l := &Logger{path: path}
 	l.load()

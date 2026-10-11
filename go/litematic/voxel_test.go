@@ -68,10 +68,10 @@ func makeSchematicV2Gz(t *testing.T, w, h, l int, blockData []byte) []byte {
 	var buf bytes.Buffer
 	gz := gzip.NewWriter(&buf)
 	if _, err := gz.Write(root); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := gz.Close(); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	return buf.Bytes()
 }
@@ -91,10 +91,10 @@ func makeSchematicV1Gz(t *testing.T, w, h, l int, blocks []byte) []byte {
 	var buf bytes.Buffer
 	gz := gzip.NewWriter(&buf)
 	if _, err := gz.Write(root); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := gz.Close(); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	return buf.Bytes()
 }
@@ -117,10 +117,10 @@ func makeNbtStructureGz(t *testing.T, state int32) []byte {
 	var buf bytes.Buffer
 	gz := gzip.NewWriter(&buf)
 	if _, err := gz.Write(root); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := gz.Close(); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	return buf.Bytes()
 }
@@ -149,10 +149,10 @@ func makeVoxelGz(t *testing.T, blockStates int64, maxBlocks int) (*registry.Lite
 	var buf bytes.Buffer
 	gz := gzip.NewWriter(&buf)
 	if _, err := gz.Write(root); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := gz.Close(); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	_ = maxBlocks
 	return nil, buf.Bytes()
@@ -162,7 +162,7 @@ func writeVoxelGz(t *testing.T, data []byte) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "test.litematic")
 	if err := os.WriteFile(path, data, 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	return path
 }
@@ -279,7 +279,7 @@ func TestBuildVoxelData_InvalidFile(t *testing.T) {
 	// 非 gzip 数据
 	bad := filepath.Join(t.TempDir(), "bad.litematic")
 	if err := os.WriteFile(bad, []byte("notgzip"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if _, err := BuildVoxelData(bad, 100); err == nil {
 		t.Fatal("非 gzip 应报错")
@@ -442,10 +442,10 @@ func makeBedrockStructureGz(t *testing.T) []byte {
 	var buf bytes.Buffer
 	gz := gzip.NewWriter(&buf)
 	if _, err := gz.Write(root); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := gz.Close(); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	return buf.Bytes()
 }

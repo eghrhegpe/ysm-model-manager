@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -15,7 +16,7 @@ func TestImportFromBase64_Success(t *testing.T) {
 	base := t.TempDir()
 	root := filepath.Join(base, "repo")
 	if err := os.MkdirAll(root, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	b64 := base64.StdEncoding.EncodeToString([]byte("modeldata"))
 	dest, _, err := ImportFromBase64("m.ysm", b64, ImportOptions{}, func(rtype string) string { return root },
@@ -36,7 +37,7 @@ func TestImportFromBase64_FileExists(t *testing.T) {
 	base := t.TempDir()
 	root := filepath.Join(base, "repo")
 	if err := os.MkdirAll(root, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	_ = os.WriteFile(filepath.Join(root, "m.ysm"), []byte("old"), 0644)
 	b64 := base64.StdEncoding.EncodeToString([]byte("new"))
@@ -73,7 +74,7 @@ func TestImportFromBase64_JsonWhitelist(t *testing.T) {
 	base := t.TempDir()
 	root := filepath.Join(base, "repo")
 	if err := os.MkdirAll(root, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	rootFn := func(rtype string) string { return root }
 	logFn := func(name, src, dst string, size int64, status, msg string) {}
@@ -124,7 +125,7 @@ func TestImportFromBase64_WriteFailureCleanup(t *testing.T) {
 	base := t.TempDir()
 	root := filepath.Join(base, "repo")
 	if err := os.MkdirAll(root, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	rootFn := func(rtype string) string { return root }
 	logFn := func(name, src, dst string, size int64, status, msg string) {}
@@ -134,7 +135,7 @@ func TestImportFromBase64_WriteFailureCleanup(t *testing.T) {
 	// Rename 到目录必然失败（Windows 上 os.Rename 不覆盖已存在目录）
 	blocker := filepath.Join(root, "blocker.ysm")
 	if err := os.MkdirAll(blocker, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	_, _, err := ImportFromBase64("blocker.ysm", b64, ImportOptions{Overwrite: true}, rootFn, logFn)
 	if err == nil {

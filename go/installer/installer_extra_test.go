@@ -14,7 +14,7 @@ func TestLinkOrCopy_Success(t *testing.T) {
 	dir := t.TempDir()
 	src := filepath.Join(dir, "source.ysm")
 	if err := os.WriteFile(src, []byte("link data"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	dstDir := filepath.Join(dir, "dst")
 	if err := linkOrCopy(src, dstDir); err != nil {
@@ -39,7 +39,7 @@ func TestSymlinkOrCopy_Success(t *testing.T) {
 	dir := t.TempDir()
 	src := filepath.Join(dir, "source.ysm")
 	if err := os.WriteFile(src, []byte("symlink data"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	dstDir := filepath.Join(dir, "dst")
 	err := symlinkOrCopy(src, dstDir)
@@ -65,7 +65,7 @@ func TestCopyFileLocked_Success(t *testing.T) {
 	src := filepath.Join(dir, "src.ysm")
 	content := []byte("copy data")
 	if err := os.WriteFile(src, content, 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	dstDir := filepath.Join(dir, "sub")
 	dst, err := CopyFileLocked(src, dstDir)
@@ -84,7 +84,7 @@ func TestCopyFileLocked_SameFile(t *testing.T) {
 	dir := t.TempDir()
 	src := filepath.Join(dir, "file.ysm")
 	if err := os.WriteFile(src, []byte("data"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	dst, err := CopyFileLocked(src, dir)
 	testutil.NoError(t, err, "CopyFileLocked same file failed")
@@ -108,7 +108,7 @@ func TestSameSource_LinkType(t *testing.T) {
 	src := filepath.Join(dir, "src.ysm")
 	dst := filepath.Join(dir, "dst.ysm")
 	if err := os.WriteFile(src, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	t.Run("hardlink 目标匹配 hardlink 模式", func(t *testing.T) {

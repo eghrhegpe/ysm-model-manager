@@ -58,13 +58,13 @@ func TestSimpleCopyImporter_Import_Errors(t *testing.T) {
 	dstDir := t.TempDir()
 	srcFile := filepath.Join(srcDir, "ok.txt")
 	if err := os.WriteFile(srcFile, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// dstDir 的父级被文件占据 → MkdirAll 失败
 	blockerParent := t.TempDir()
 	blocker := filepath.Join(blockerParent, "afile")
 	if err := os.WriteFile(blocker, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	badDst := filepath.Join(blocker, "sub", "out")
 
@@ -98,11 +98,11 @@ func TestSimpleCopyImporter_Import_FileOverwrite(t *testing.T) {
 	dstDir := t.TempDir()
 	srcFile := filepath.Join(srcDir, "a.bin")
 	if err := os.WriteFile(srcFile, []byte("newdata"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	dstFile := filepath.Join(dstDir, "a.bin")
 	if err := os.WriteFile(dstFile, []byte("OLD"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	err := NewSimpleCopy("test").Import(srcFile, dstDir)
@@ -118,11 +118,11 @@ func TestSimpleCopyImporter_Import_FileTargetIsDir(t *testing.T) {
 	dstDir := t.TempDir()
 	srcFile := filepath.Join(srcDir, "a.bin")
 	if err := os.WriteFile(srcFile, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 目标同名位置已存在为目录 → 文件导入必须失败且不留临时残渣
 	if err := os.MkdirAll(filepath.Join(dstDir, "a.bin"), 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	err := NewSimpleCopy("test").Import(srcFile, dstDir)
 	if err == nil {
@@ -141,15 +141,15 @@ func TestSimpleCopyImporter_Import_DirOverwrite(t *testing.T) {
 	dstDir := t.TempDir()
 	folder := filepath.Base(srcDir)
 	if err := os.WriteFile(filepath.Join(srcDir, "new.txt"), []byte("new"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 目标同名目录已存在（含旧文件）→ 应备份替换
 	oldDir := filepath.Join(dstDir, folder)
 	if err := os.MkdirAll(oldDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(oldDir, "old.txt"), []byte("old"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	err := NewSimpleCopy("test").Import(srcDir, dstDir)
@@ -172,10 +172,10 @@ func TestSimpleCopyImporter_Import_DirEmptySubdir(t *testing.T) {
 	dstDir := t.TempDir()
 	empty := filepath.Join(srcDir, "emptydir")
 	if err := os.MkdirAll(empty, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(srcDir, "b.txt"), []byte("b"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	err := NewSimpleCopy("test").Import(srcDir, dstDir)
@@ -194,14 +194,14 @@ func TestCopyDirRecursive_OverwriteExisting(t *testing.T) {
 	src := t.TempDir()
 	dst := filepath.Join(t.TempDir(), "target")
 	if err := os.WriteFile(filepath.Join(src, "b.txt"), []byte("bbb"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 目标已存在（含旧文件）→ 备份替换
 	if err := os.MkdirAll(dst, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(dst, "old.txt"), []byte("old"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := copyDirRecursive(src, dst); err != nil {
 		t.Fatalf("copyDirRecursive 覆盖失败: %v", err)
@@ -220,7 +220,7 @@ func TestCopyDirRecursive_OverwriteExisting(t *testing.T) {
 func TestCopyDirRecursive_DstMissing(t *testing.T) {
 	src := t.TempDir()
 	if err := os.WriteFile(filepath.Join(src, "a.txt"), []byte("aaa"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	dst := filepath.Join(t.TempDir(), "target")
 	if err := copyDirRecursive(src, dst); err != nil {
@@ -235,12 +235,12 @@ func TestCopyDirRecursive_Errors(t *testing.T) {
 	src := t.TempDir()
 	srcFile := filepath.Join(src, "f")
 	if err := os.WriteFile(srcFile, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	blockerParent := t.TempDir()
 	blocker := filepath.Join(blockerParent, "afile")
 	if err := os.WriteFile(blocker, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	tests := []struct {
 		name string
@@ -266,12 +266,12 @@ func TestDirectoryCopyImporter_Import_Errors(t *testing.T) {
 	dstDir := t.TempDir()
 	modelDir := filepath.Join(srcDir, "model")
 	if err := os.MkdirAll(modelDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	blockerParent := t.TempDir()
 	blocker := filepath.Join(blockerParent, "afile")
 	if err := os.WriteFile(blocker, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	badDst := filepath.Join(blocker, "sub", "out")
 
@@ -308,18 +308,18 @@ func TestDirectoryCopyImporter_Import_Overwrite(t *testing.T) {
 	folderName := "mmd_model"
 	modelDir := filepath.Join(srcDir, folderName)
 	if err := os.MkdirAll(modelDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(modelDir, "model.pmx"), []byte("pmx"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 目标同名目录已存在 → 备份替换
 	oldDir := filepath.Join(dstDir, folderName)
 	if err := os.MkdirAll(oldDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(oldDir, "stale.pmx"), []byte("stale"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	err := NewDirectoryCopy("EntityPlayer").Import(modelDir, dstDir)
@@ -340,7 +340,7 @@ func TestDirectoryCopyImporter_Import_EmptyDir(t *testing.T) {
 	dstDir := t.TempDir()
 	empty := filepath.Join(srcDir, "emptymodel")
 	if err := os.MkdirAll(empty, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	err := NewDirectoryCopy("EntityPlayer").Import(empty, dstDir)
 	testutil.NoError(t, err, "空目录导入应成功，实际")
@@ -355,7 +355,7 @@ func TestDirectoryCopyImporter_Import_EmptyDir(t *testing.T) {
 func TestCopyFile(t *testing.T) {
 	src := filepath.Join(t.TempDir(), "src.txt")
 	if err := os.WriteFile(src, []byte("content"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 目标父目录不存在 → MkdirAll 自动创建
 	dst := filepath.Join(t.TempDir(), "nested", "deep", "dst.txt")
@@ -378,17 +378,17 @@ func TestCopyFile_Errors(t *testing.T) {
 	srcDir := t.TempDir()
 	dstDir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(srcDir, "ok.txt"), []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 目标已存在为目录 → os.Create 失败
 	dirTarget := filepath.Join(dstDir, "d")
 	if err := os.MkdirAll(dirTarget, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 目标父级是文件 → MkdirAll 失败
 	blocker := filepath.Join(t.TempDir(), "afile")
 	if err := os.WriteFile(blocker, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	tests := []struct {
 		name string
@@ -543,7 +543,7 @@ func TestImportFromBase64_NilLogger(t *testing.T) {
 func TestImportFromBase64_MkdirFailed(t *testing.T) {
 	blocker := filepath.Join(t.TempDir(), "afile")
 	if err := os.WriteFile(blocker, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	rootFn := func(rtype string) string { return filepath.Join(blocker, "sub", "repo") }
 	_, _, err := ImportFromBase64("m.ysm", base64.StdEncoding.EncodeToString([]byte("x")), ImportOptions{}, rootFn,
@@ -641,7 +641,7 @@ func TestWriteFileAtomic_ErrorCodes(t *testing.T) {
 		// destPath 已存在为目录 → Rename 必然失败
 		dirTarget := filepath.Join(root, "blocked.ysm")
 		if err := os.MkdirAll(dirTarget, 0755); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		err := WriteFileAtomic(dirTarget, []byte("x"))
 		if err == nil {
@@ -663,13 +663,13 @@ func makeSymlinkFixture(t *testing.T, src string) bool {
 	t.Helper()
 	sub := filepath.Join(src, "sub")
 	if err := os.MkdirAll(sub, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(sub, "real.txt"), []byte("real"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(src, "file.txt"), []byte("file"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.Symlink(filepath.Join(src, "file.txt"), filepath.Join(src, "file-link")); err != nil {
 		return false

@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 func TestRegistry(t *testing.T) {
@@ -96,7 +97,7 @@ func TestSimpleCopyImporter_Import(t *testing.T) {
 	// 准备源文件
 	srcFile := filepath.Join(srcDir, "test.txt")
 	if err := os.WriteFile(srcFile, []byte("hello"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	imp := NewSimpleCopy("test")
@@ -121,13 +122,13 @@ func TestSimpleCopyImporter_Import_Dir(t *testing.T) {
 	dstDir := t.TempDir()
 	subDir := filepath.Join(srcDir, "sub")
 	if err := os.MkdirAll(subDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(subDir, "a.txt"), []byte("a"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(srcDir, "b.txt"), []byte("b"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	imp := NewSimpleCopy("test")
@@ -163,13 +164,13 @@ func TestDirectoryCopyImporter_Import(t *testing.T) {
 	folderName := "mmd_model"
 	modelDir := filepath.Join(srcDir, folderName)
 	if err := os.MkdirAll(modelDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(modelDir, "model.pmx"), []byte("pmx"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(modelDir, "tex.png"), []byte("png"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	imp := NewDirectoryCopy("EntityPlayer")
@@ -195,10 +196,10 @@ func TestDirectoryCopyImporter_Import_Dir(t *testing.T) {
 	folderName := "vrc_model"
 	modelDir := filepath.Join(srcDir, folderName)
 	if err := os.MkdirAll(modelDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(modelDir, "model.vrm"), []byte("vrm"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	imp := NewDirectoryCopy("vrm")

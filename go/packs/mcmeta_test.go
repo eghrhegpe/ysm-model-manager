@@ -54,7 +54,7 @@ func TestReadPackMeta_Dir(t *testing.T) {
 	metaPath := filepath.Join(dir, "pack.mcmeta")
 	metaContent := `{"pack":{"pack_format":15,"description":"测试资源包"}}`
 	if err := os.WriteFile(metaPath, []byte(metaContent), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	meta, thumb, err := ReadPackMeta(dir)
@@ -74,11 +74,11 @@ func TestReadPackMeta_DirWithThumb(t *testing.T) {
 	dir := t.TempDir()
 	metaPath := filepath.Join(dir, "pack.mcmeta")
 	if err := os.WriteFile(metaPath, []byte(`{"pack":{"pack_format":1,"description":"with thumb"}}`), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	pngPath := filepath.Join(dir, "pack.png")
 	if err := os.WriteFile(pngPath, []byte("fake-png-data"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	_, thumb, err := ReadPackMeta(dir)
@@ -100,7 +100,7 @@ func TestReadPackMeta_InvalidJSON(t *testing.T) {
 	dir := t.TempDir()
 	metaPath := filepath.Join(dir, "pack.mcmeta")
 	if err := os.WriteFile(metaPath, []byte(`not json`), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	_, _, err := ReadPackMeta(dir)
 	if err == nil {
@@ -144,11 +144,11 @@ func TestReadPackMeta_DirPackPngOverLimit(t *testing.T) {
 	dir := t.TempDir()
 	metaPath := filepath.Join(dir, "pack.mcmeta")
 	if err := os.WriteFile(metaPath, []byte(`{"pack":{"pack_format":15,"description":"测试"}}`), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 目录形态 pack.png > 10MB：stat 预检跳过
 	if err := os.WriteFile(filepath.Join(dir, "pack.png"), bytes.Repeat([]byte{1}, (10<<20)+1), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	_, thumb, err := ReadPackMeta(dir)
 	testutil.NoError(t, err, "ReadPackMeta(dir) =")
@@ -161,11 +161,11 @@ func TestReadShaderpackLang_Dir(t *testing.T) {
 	dir := t.TempDir()
 	langDir := filepath.Join(dir, "lang")
 	if err := os.MkdirAll(langDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	langContent := "pack.name=光影测试包\ntitle=My Shader\nsome.key=任意值"
 	if err := os.WriteFile(filepath.Join(langDir, "en_US.lang"), []byte(langContent), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	resultStr := ReadShaderpackLang(dir)
@@ -192,7 +192,7 @@ func TestReadShaderpackLang_SupportedFormats(t *testing.T) {
 	// [int] 格式
 	fr := registry.FormatRange{}
 	if err := fr.UnmarshalJSON([]byte(`5`)); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if fr.Min != 5 || fr.Max != 5 {
 		t.Errorf("[int] → Min=%d Max=%d, want 5,5", fr.Min, fr.Max)
@@ -200,7 +200,7 @@ func TestReadShaderpackLang_SupportedFormats(t *testing.T) {
 	// [int, int] 格式
 	fr = registry.FormatRange{}
 	if err := fr.UnmarshalJSON([]byte(`[3,7]`)); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if fr.Min != 3 || fr.Max != 7 {
 		t.Errorf("[int,int] → Min=%d Max=%d, want 3,7", fr.Min, fr.Max)
@@ -208,7 +208,7 @@ func TestReadShaderpackLang_SupportedFormats(t *testing.T) {
 	// 对象格式
 	fr = registry.FormatRange{}
 	if err := fr.UnmarshalJSON([]byte(`{"min_inclusive":1,"max_inclusive":2}`)); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if fr.Min != 1 || fr.Max != 2 {
 		t.Errorf("对象 → Min=%d Max=%d, want 1,2", fr.Min, fr.Max)
@@ -222,7 +222,7 @@ func TestReadShaderpackLang_DirOverLimit(t *testing.T) {
 	dir := t.TempDir()
 	langDir := filepath.Join(dir, "lang")
 	if err := os.MkdirAll(langDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// >1MB lang 文件
 	big := make([]byte, (1<<20)+1024)
@@ -230,7 +230,7 @@ func TestReadShaderpackLang_DirOverLimit(t *testing.T) {
 		big[i] = 'a'
 	}
 	if err := os.WriteFile(filepath.Join(langDir, "en_US.lang"), big, 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	resultStr := ReadShaderpackLang(dir)
 	var result map[string]interface{}
@@ -246,7 +246,7 @@ func TestReadShaderpackLang_DirExactLimit(t *testing.T) {
 	dir := t.TempDir()
 	langDir := filepath.Join(dir, "lang")
 	if err := os.MkdirAll(langDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 恰好 1MB（含 title 行）仍应解析成功
 	exact := make([]byte, (1<<20)-len("title=ok\n"))
@@ -255,7 +255,7 @@ func TestReadShaderpackLang_DirExactLimit(t *testing.T) {
 		exact[i] = 'b'
 	}
 	if err := os.WriteFile(filepath.Join(langDir, "en_US.lang"), exact, 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	resultStr := ReadShaderpackLang(dir)
 	var result map[string]interface{}
@@ -277,7 +277,7 @@ func TestReadShaderpackLang_ZipOverLimit(t *testing.T) {
 	// 构造含 >1MB lang 的 zip
 	data := testutil.MakeZipBytes(t, map[string]string{"lang/en_US.lang": string(big)})
 	if err := os.WriteFile(zipPath, data, 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	resultStr := ReadShaderpackLang(zipPath)
 	var result map[string]interface{}
@@ -304,7 +304,7 @@ func TestReadPackMeta_DirMcmetaOverLimitIsSentinel(t *testing.T) {
 	dir := t.TempDir()
 	big := bytes.Repeat([]byte{'a'}, (1<<20)+1)
 	if err := os.WriteFile(filepath.Join(dir, "pack.mcmeta"), big, 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	_, _, err := ReadPackMeta(dir)
 	if !errors.Is(err, ErrPackMetaTooLarge) {
@@ -333,7 +333,7 @@ func TestReadPackMeta_DirMcmetaExactLimit(t *testing.T) {
 		exact[i] = ' '
 	}
 	if err := os.WriteFile(filepath.Join(dir, "pack.mcmeta"), exact, 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if _, _, err := ReadPackMeta(dir); err != nil {
 		t.Fatalf("恰好 1MB pack.mcmeta 应成功: %v", err)
@@ -357,7 +357,7 @@ func TestReadPackMeta_DirBom(t *testing.T) {
 	dir := t.TempDir()
 	content := "\xEF\xBB\xBF{\"pack\":{\"pack_format\":6,\"description\":\"dir bom\"}}"
 	if err := os.WriteFile(filepath.Join(dir, "pack.mcmeta"), []byte(content), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	meta, _, err := ReadPackMeta(dir)
 	testutil.NoError(t, err, "dir BOM 前缀应解析成功")
@@ -370,7 +370,7 @@ func TestReadPackMeta_DirBom(t *testing.T) {
 func TestReadPackMeta_NotZipNoMcmeta(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "lib.jar")
 	if err := os.WriteFile(path, []byte("jar"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	_, _, err := ReadPackMeta(path)
 	if !errors.Is(err, ErrPackMetaNotFound) {
@@ -441,7 +441,7 @@ func TestHasExt_CaseInsensitive(t *testing.T) {
 func TestIsYsmFile_YsmJsonFile(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "ysm.json")
 	if err := os.WriteFile(path, []byte(`{"spec":2}`), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if !isYsmFile(path) {
 		t.Error("ysm.json 应返回 true（注册表声明 .json 为 YSM 扩展）")
@@ -451,7 +451,7 @@ func TestIsYsmFile_YsmJsonFile(t *testing.T) {
 func TestIsYsmFile_OtherJsonNotYsm(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "animation.json")
 	if err := os.WriteFile(path, []byte(`{}`), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if isYsmFile(path) {
 		t.Error("非 ysm.json 的 .json 不应判为 YSM（scanner 同口径）")
@@ -467,7 +467,7 @@ func TestDetectResourceType_YsmJsonFile(t *testing.T) {
 	}
 	path := filepath.Join(t.TempDir(), "ysm.json")
 	if err := os.WriteFile(path, []byte(`{"spec":2}`), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if got := DetectResourceType(path, reg); got != "ysm-model" {
 		t.Fatalf("ysm.json 应分类为 ysm-model, 得到 %q", got)

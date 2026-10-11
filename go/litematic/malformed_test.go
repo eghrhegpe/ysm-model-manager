@@ -720,7 +720,7 @@ func writeGzNbt(t *testing.T, nbtData []byte) string {
 	_ = gz.Close()
 	path := filepath.Join(t.TempDir(), "test.litematic")
 	if err := os.WriteFile(path, buf.Bytes(), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	return path
 }

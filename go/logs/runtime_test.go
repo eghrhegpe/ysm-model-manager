@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -31,7 +32,7 @@ func TestRuntimeBuffer_RingOverflow(t *testing.T) {
 	b := NewRuntimeBuffer(3)
 	for i := 0; i < 6; i++ {
 		if _, err := b.Write([]byte("msg")); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	all := b.GetAll()
@@ -61,7 +62,7 @@ func TestRuntimeBuffer_CapacityFallback(t *testing.T) {
 func TestRuntimeBuffer_GetAllIsCopy(t *testing.T) {
 	b := NewRuntimeBuffer(10)
 	if _, err := b.Write([]byte("a")); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	all := b.GetAll()
 	// 外部修改副本不影响内部
@@ -75,7 +76,7 @@ func TestRuntimeBuffer_GetAllIsCopy(t *testing.T) {
 func TestRuntimeBuffer_Clear(t *testing.T) {
 	b := NewRuntimeBuffer(10)
 	if _, err := b.Write([]byte("x")); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	b.Clear()
 	if all := b.GetAll(); len(all) != 0 {
@@ -102,7 +103,7 @@ func TestRuntimeBuffer_TagExtraction(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			b := NewRuntimeBuffer(10)
 			if _, err := b.Write([]byte(c.in)); err != nil {
-				t.Fatal(err)
+				testutil.NoError(t, err)
 			}
 			got := b.GetAll()[0]
 			if got.Tag != c.tag {
@@ -137,7 +138,7 @@ func TestRuntimeBuffer_LevelInference(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			b := NewRuntimeBuffer(10)
 			if _, err := b.Write([]byte(c.in)); err != nil {
-				t.Fatal(err)
+				testutil.NoError(t, err)
 			}
 			if got := b.GetAll()[0].Level; got != c.level {
 				t.Errorf("Level = %q, 期望 %q", got, c.level)
@@ -150,7 +151,7 @@ func TestRuntimeBuffer_LevelInference(t *testing.T) {
 func TestRuntimeBuffer_LevelPriority(t *testing.T) {
 	b := NewRuntimeBuffer(10)
 	if _, err := b.Write([]byte("[sync] 警告: 同步失败\n")); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if got := b.GetAll()[0].Level; got != types.LevelError {
 		t.Errorf("error 应优先于 warn，实际 %q", got)

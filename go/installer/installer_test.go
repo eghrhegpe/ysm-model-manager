@@ -24,19 +24,19 @@ func setupTestDirs(t *testing.T) (repoRoot, customDir, mcRoot, ysmFile string) {
 	// 创建 .minecraft marker
 	mcDir := filepath.Join(mcRoot, ".minecraft")
 	if err := os.MkdirAll(mcDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	// custom 目录（整合包内路径）
 	customDir = filepath.Join(mcDir, "versions", "1.20.1-Fabric", "config", "yes_steve_model", "custom")
 	if err := os.MkdirAll(customDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	// 仓库中的 YSM 文件
 	ysmFile = filepath.Join(repoRoot, "[作者]作品-变体(202506).ysm")
 	if err := os.WriteFile(ysmFile, []byte("test model data"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	return
@@ -89,15 +89,15 @@ func TestInstall_NonYSMFile_PerTypeRepoRoot(t *testing.T) {
 			mcRoot := t.TempDir()
 			mcDir := filepath.Join(mcRoot, ".minecraft")
 			if err := os.MkdirAll(mcDir, 0755); err != nil {
-				t.Fatal(err)
+				testutil.NoError(t, err)
 			}
 			customDir := filepath.Join(mcDir, "versions", "1.20.1-Fabric", "config", "yes_steve_model", "custom")
 			if err := os.MkdirAll(customDir, 0755); err != nil {
-				t.Fatal(err)
+				testutil.NoError(t, err)
 			}
 			src := filepath.Join(repoRoot, "resource"+ext)
 			if err := os.WriteFile(src, []byte("payload"), 0644); err != nil {
-				t.Fatal(err)
+				testutil.NoError(t, err)
 			}
 
 			// 关键断言：用该类型仓库根作为 filesRoot 安装，应通过 IsInside 守卫（不再报 ErrInvalidPath）
@@ -148,7 +148,7 @@ func TestInstall_Overwrite(t *testing.T) {
 
 	// 先以 copy 模式安装（目标为独立副本）
 	if err := Install(src, custom, repo, "copy"); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	dst := filepath.Join(custom, filepath.Base(src))
 	si, _ := os.Stat(src)
@@ -158,7 +158,7 @@ func TestInstall_Overwrite(t *testing.T) {
 	}
 	// 更新仓库源内容（模拟下载新版本）
 	if err := os.WriteFile(src, []byte("new version data"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 再以 hardlink 模式安装：旧副本应被原子替换为指向新源的硬链接
 	if err := Install(src, custom, repo, "hardlink"); err != nil {
@@ -178,7 +178,7 @@ func TestInstall_ReinstallIdempotent(t *testing.T) {
 	repo, custom, _, src := setupTestDirs(t)
 
 	if err := Install(src, custom, repo, "hardlink"); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 重复安装同源硬链接应幂等且不报错
 	if err := Install(src, custom, repo, "hardlink"); err != nil {
@@ -197,10 +197,10 @@ func TestInstallDir_Hardlink(t *testing.T) {
 
 	srcDir := filepath.Join(repo, "mmd_model")
 	if err := os.MkdirAll(srcDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(srcDir, "model.pmx"), []byte("pmx"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := InstallDir(srcDir, custom, repo, "hardlink", "EntityPlayer"); err != nil {
 		t.Fatalf("InstallDir(hardlink) = %v", err)
@@ -223,13 +223,13 @@ func TestInstallDir_TypeFilter(t *testing.T) {
 
 	srcDir := filepath.Join(repo, "ysm_model")
 	if err := os.MkdirAll(srcDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(srcDir, "model.json"), []byte("{}"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(srcDir, "notes.txt"), []byte("no"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := InstallDir(srcDir, custom, repo, "copy", "ysm"); err != nil {
 		t.Fatalf("InstallDir(ysm) = %v", err)
@@ -250,7 +250,7 @@ func TestInstallDir_MMDVmdWhiteList(t *testing.T) {
 
 	srcDir := filepath.Join(repo, "mmd_model")
 	if err := os.MkdirAll(filepath.Join(srcDir, "anims"), 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 模型 + 随行动画/表情/槽位映射 + 干扰项
 	for f, data := range map[string]string{
@@ -264,7 +264,7 @@ func TestInstallDir_MMDVmdWhiteList(t *testing.T) {
 		"evil.exe":        "MZ",
 	} {
 		if err := os.WriteFile(filepath.Join(srcDir, f), []byte(data), 0644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	if err := InstallDir(srcDir, custom, repo, "copy", "EntityPlayer"); err != nil {
@@ -290,7 +290,7 @@ func TestInstallToGlobal_UnsupportedExt(t *testing.T) {
 
 	badFile := filepath.Join(t.TempDir(), "payload.exe")
 	if err := os.WriteFile(badFile, []byte("data"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if _, err := InstallToGlobal(badFile, mcRoot); err == nil {
 		t.Fatal("不支持的文件类型应返回错误")
@@ -364,7 +364,7 @@ func TestInstall_SrcOutsideRepo(t *testing.T) {
 	// src 在仓库之外
 	outsideFile := filepath.Join(t.TempDir(), "outside.ysm")
 	if err := os.WriteFile(outsideFile, []byte("data"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	err := Install(outsideFile, custom, repo, "copy")
 	if err == nil {
@@ -376,7 +376,7 @@ func TestInstall_UnsupportedExt(t *testing.T) {
 	repo, custom, _, _ := setupTestDirs(t)
 	badFile := filepath.Join(repo, "file.exe")
 	if err := os.WriteFile(badFile, []byte("data"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	err := Install(badFile, custom, repo, "copy")
 	if err == nil {
@@ -390,13 +390,13 @@ func TestInstallDir_Copy(t *testing.T) {
 	// 创建源目录结构（模拟 MMD 模型）
 	srcDir := filepath.Join(repo, "mmd_model")
 	if err := os.MkdirAll(srcDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(srcDir, "model.pmx"), []byte("pmx"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(srcDir, "tex.png"), []byte("png"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	dstDir := custom // InstallDir 会再下一层
@@ -508,7 +508,7 @@ func TestInstallDir_DstInsideSrc(t *testing.T) {
 	// dstDir 是 srcDir 的子目录 → finalDst = srcDir/<base> 在其内部 → 死递归
 	inner := filepath.Join(repo, "inner")
 	if err := os.MkdirAll(inner, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	err := InstallDir(repo, inner, repo, "copy", "")
 	if err == nil {
@@ -530,11 +530,11 @@ func TestInstall_EvalSymlinksGuard_CustomDirSymlink(t *testing.T) {
 	outside := t.TempDir()
 	externalCustom := filepath.Join(outside, "custom")
 	if err := os.MkdirAll(externalCustom, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	link := filepath.Join(mcRoot, ".minecraft", "versions", "link_out")
 	if err := os.Symlink(outside, link); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	custom := filepath.Join(link, "custom")
 
@@ -557,11 +557,11 @@ func TestInstall_EvalSymlinksGuard_SrcSymlink(t *testing.T) {
 	outside := t.TempDir()
 	realFile := filepath.Join(outside, "model.ysm")
 	if err := os.WriteFile(realFile, []byte("data"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	link := filepath.Join(repo, "link_out")
 	if err := os.Symlink(outside, link); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	src := filepath.Join(link, "model.ysm")
 
@@ -585,17 +585,17 @@ func TestInstallDir_DstExistedRollback(t *testing.T) {
 	// srcDir：一个可读子目录（正常复制）+ 一个权限 000 的不可读子目录（注入失败）
 	srcDir := filepath.Join(repo, "bad_model")
 	if err := os.MkdirAll(filepath.Join(srcDir, "ok"), 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(srcDir, "ok", "model.pmx"), []byte("pmx"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	blocked := filepath.Join(srcDir, "blocked")
 	if err := os.MkdirAll(blocked, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.Chmod(blocked, 0000); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 当前用户若不受权限位约束（root 等特权用户）无法注入失败 → 跳过
 	if _, err := os.ReadDir(blocked); err == nil {
@@ -613,11 +613,11 @@ func TestInstallDir_DstExistedRollback(t *testing.T) {
 
 	// 场景 B：finalDst 已存在（用户既有数据）→ 失败后不得被删除
 	if err := os.MkdirAll(finalDst, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	marker := filepath.Join(finalDst, "keep.txt")
 	if err := os.WriteFile(marker, []byte("keep"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := InstallDir(srcDir, custom, repo, "copy", "EntityPlayer"); err == nil {
 		t.Fatal("srcDir 含不可读条目时安装应报错")
@@ -635,16 +635,16 @@ func TestInstallDirRel_PlacesUnderRelPath(t *testing.T) {
 	// 源目录：repo/东方/角色A/model （多层嵌套）
 	srcDir := filepath.Join(repo, "东方", "角色A", "model")
 	if err := os.MkdirAll(srcDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.MkdirAll(filepath.Join(srcDir, "tex"), 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(srcDir, "char.pmx"), []byte("pmx"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(srcDir, "tex", "toon.png"), []byte("png"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	// relSlash="东方/角色A/model" → finalDst=custom/东方/角色A/model
@@ -667,10 +667,10 @@ func TestInstallDirRel_EmptyRelFallsBack(t *testing.T) {
 
 	srcDir := filepath.Join(repo, "mydir")
 	if err := os.MkdirAll(srcDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(srcDir, "file.pmx"), []byte("pmx"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	err := InstallDirRel(srcDir, custom, "", repo, "copy", "EntityPlayer")
@@ -689,7 +689,7 @@ func TestInstallDirRel_RejectsEscape(t *testing.T) {
 
 	srcDir := filepath.Join(repo, "model")
 	if err := os.MkdirAll(srcDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	tests := []struct {

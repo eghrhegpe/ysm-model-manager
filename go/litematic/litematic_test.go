@@ -59,10 +59,10 @@ func makeLitematicGz(t *testing.T, version int32, extraRootTags ...[]byte) []byt
 	var buf bytes.Buffer
 	gz := gzip.NewWriter(&buf)
 	if _, err := gz.Write(root); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := gz.Close(); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	return buf.Bytes()
 }
@@ -72,7 +72,7 @@ func makeLitematicGz(t *testing.T, version int32, extraRootTags ...[]byte) []byt
 func TestParseMeta_Success(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "test.litematic")
 	if err := os.WriteFile(path, makeLitematicGz(t, 5), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	meta, err := ParseMeta(path)
 	testutil.NoError(t, err, "ParseMeta 失败")
@@ -100,7 +100,7 @@ func TestParseMeta_Errors(t *testing.T) {
 			name: "非 gzip 数据",
 			makeFile: func(t *testing.T, path string) {
 				if err := os.WriteFile(path, []byte("notgzip"), 0644); err != nil {
-					t.Fatal(err)
+					testutil.NoError(t, err)
 				}
 			},
 			wantErrContains: "",
@@ -114,7 +114,7 @@ func TestParseMeta_Errors(t *testing.T) {
 				gz.Write(root)
 				gz.Close()
 				if err := os.WriteFile(path, buf.Bytes(), 0644); err != nil {
-					t.Fatal(err)
+					testutil.NoError(t, err)
 				}
 			},
 			wantErrContains: "Metadata",
@@ -154,7 +154,7 @@ func TestParseMeta_VersionField(t *testing.T) {
 		t.Run("", func(t *testing.T) {
 			path := filepath.Join(t.TempDir(), "test.litematic")
 			if err := os.WriteFile(path, makeLitematicGz(t, tt.version), 0644); err != nil {
-				t.Fatal(err)
+				testutil.NoError(t, err)
 			}
 			meta, err := ParseMeta(path)
 			testutil.NoError(t, err, "ParseMeta 失败")
@@ -186,7 +186,7 @@ func TestParseMeta_EnclosingSizePartial(t *testing.T) {
 
 	path := filepath.Join(t.TempDir(), "test.litematic")
 	if err := os.WriteFile(path, buf.Bytes(), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	meta, err := ParseMeta(path)

@@ -25,14 +25,14 @@ func TestAdversarial_InstallToGlobal_ArbitraryRead(t *testing.T) {
 	evilDir := t.TempDir()
 	evilFile := filepath.Join(evilDir, "evil.ysm")
 	if err := os.WriteFile(evilFile, []byte("malicious-content"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	// 设置合法的 mcRoot（含 .minecraft marker）
 	mcRoot := t.TempDir()
 	mcDir := filepath.Join(mcRoot, ".minecraft")
 	if err := os.MkdirAll(mcDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	result, err := InstallToGlobal(evilFile, mcDir)
@@ -64,25 +64,25 @@ func TestAdversarial_InstallDir_CopiesExeWithEmptyRtype(t *testing.T) {
 	mcDir := filepath.Join(mcRoot, ".minecraft")
 	customDir := filepath.Join(mcDir, "versions", "1.20.1", "config", "yes_steve_model", "custom")
 	if err := os.MkdirAll(customDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	// 在 repo 内创建 srcDir，包含正常模型和危险文件
 	srcDir := filepath.Join(repo, "troll_model")
 	if err := os.MkdirAll(srcDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(srcDir, "model.ysm"), []byte("ysm"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(srcDir, "payload.exe"), []byte("MZ\x90\x00"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(srcDir, "exploit.bat"), []byte("@echo off & whoami"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(srcDir, "malware.dll"), []byte("DLL"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	// rtype=""  →  isAllowed default 分支对所有文件放行
@@ -118,22 +118,22 @@ func TestAdversarial_InstallDir_CaseMismatchDeadRecursion(t *testing.T) {
 	mcDir := filepath.Join(mcRoot, ".minecraft")
 	customDir := filepath.Join(mcDir, "versions", "1.20.1", "config", "yes_steve_model", "custom")
 	if err := os.MkdirAll(customDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	// Linux 上创建两个不同大小写的目录（真正不同的目录）
 	srcDir := filepath.Join(repo, "SRC")
 	if err := os.MkdirAll(srcDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(srcDir, "model.ysm"), []byte("ysm"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	// 不同大小写的 dstDir——Linux 上是另一个目录
 	dstDir := filepath.Join(repo, "src")
 	if err := os.MkdirAll(dstDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	// 验证二者在 FS 上确实是不同目录
@@ -176,18 +176,18 @@ func TestAdversarial_InstallToGlobal_SymlinkBypass(t *testing.T) {
 	outside := t.TempDir()
 	realFile := filepath.Join(outside, "secret.ysm")
 	if err := os.WriteFile(realFile, []byte("SECRET-DATA"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	// 在 repo 内创建指向仓库外的符号链接
 	linkPath := filepath.Join(repo, "leak.ysm")
 	if err := os.Symlink(realFile, linkPath); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	// 确认符号链接已创建且指向预期目标
 	if _, err := os.Lstat(linkPath); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	resolved, _ := filepath.EvalSymlinks(linkPath)
 	if resolved != realFile {
@@ -198,7 +198,7 @@ func TestAdversarial_InstallToGlobal_SymlinkBypass(t *testing.T) {
 	mcRoot := t.TempDir()
 	mcDir := filepath.Join(mcRoot, ".minecraft")
 	if err := os.MkdirAll(mcDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	// InstallToGlobal 不接受 filesRoot 参数，也不会 EvalSymlinks

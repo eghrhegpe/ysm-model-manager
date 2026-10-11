@@ -274,13 +274,13 @@ func TestParseSchematicSummary_Valid(t *testing.T) {
 	var buf bytes.Buffer
 	gz := gzip.NewWriter(&buf)
 	if _, err := gz.Write(root); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	gz.Close()
 
 	path := filepath.Join(t.TempDir(), "test.schematic")
 	if err := os.WriteFile(path, buf.Bytes(), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	result := ParseSchematicSummary(path)
@@ -305,7 +305,7 @@ func TestParseSchematicSummary_NonExistent(t *testing.T) {
 func TestParseSchematicSummary_NotGzip(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "bad.schematic")
 	if err := os.WriteFile(path, []byte("notgzip"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	result := ParseSchematicSummary(path)
 	if result != nil {
@@ -321,7 +321,7 @@ func TestParseSchematicSummary_NotNBT(t *testing.T) {
 	gz.Close()
 	path := filepath.Join(t.TempDir(), "badnbt.schematic")
 	if err := os.WriteFile(path, buf.Bytes(), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	result := ParseSchematicSummary(path)
 	if result != nil {
@@ -347,13 +347,13 @@ func TestParseNbtStructure_Valid(t *testing.T) {
 	var buf bytes.Buffer
 	gz := gzip.NewWriter(&buf)
 	if _, err := gz.Write(raw); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	gz.Close()
 
 	path := filepath.Join(t.TempDir(), "test.nbt")
 	if err := os.WriteFile(path, buf.Bytes(), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	result := ParseNbtStructure(path)
@@ -384,12 +384,12 @@ func TestParseNbtStructure_SizeGuard(t *testing.T) {
 		var buf bytes.Buffer
 		gz := gzip.NewWriter(&buf)
 		if _, err := gz.Write(raw); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		gz.Close()
 		path := filepath.Join(t.TempDir(), "size.nbt")
 		if err := os.WriteFile(path, buf.Bytes(), 0644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		return path
 	}
@@ -437,12 +437,12 @@ func TestParseNbtStructure_NoSizeOrBlocks(t *testing.T) {
 	var buf bytes.Buffer
 	gz := gzip.NewWriter(&buf)
 	if _, err := gz.Write(root); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	gz.Close()
 	path := filepath.Join(t.TempDir(), "empty.nbt")
 	if err := os.WriteFile(path, buf.Bytes(), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	result := ParseNbtStructure(path)
 	if result != nil {

@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/scanner"
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/types/registry"
@@ -22,10 +23,10 @@ func TestBuildSyncItems_Basic(t *testing.T) {
 	globalDir := filepath.Join(base, "global")
 	instDir := filepath.Join(filepath.Join(base, "inst"), sub)
 	if err := os.MkdirAll(globalDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.MkdirAll(instDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// Synced: 两处一致
 	_ = os.WriteFile(filepath.Join(globalDir, "m.ysm"), []byte("x"), 0644)
@@ -78,22 +79,22 @@ func TestBuildSyncItems_SyncedPackFolderExactlyOnce(t *testing.T) {
 	globalDir := filepath.Join(base, "global")
 	instDir := filepath.Join(base, "inst")
 	if err := os.MkdirAll(globalDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 实例侧与全局侧都有同一资源包文件夹（含 pack.mcmeta）→ SyncResources 判 Synced
 	instPack := filepath.Join(instDir, "PackA")
 	globalPack := filepath.Join(globalDir, "PackA")
 	if err := os.MkdirAll(instPack, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.MkdirAll(globalPack, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(instPack, "pack.mcmeta"), []byte("{}"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(globalPack, "pack.mcmeta"), []byte("{}"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	ins := &types.VersionInstance{VersionDir: base}
 	items := BuildSyncItems(ins, []registry.ResourceType{{ID: "resourcepack", Icon: "🎨"}}, map[string]string{"resourcepack": globalDir}, "")
@@ -117,18 +118,18 @@ func TestBuildSyncItems_InstExtraFile(t *testing.T) {
 	globalDir := filepath.Join(base, "global")
 	instDir := filepath.Join(base, "resourcepacks")
 	if err := os.MkdirAll(globalDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.MkdirAll(instDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 实例标准目录（versionDir/resourcepacks）独有 .zip（资源包合法扩展名）→ Optional
 	if err := os.WriteFile(filepath.Join(instDir, "pack-user.zip"), []byte("zip"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 实例标准目录独有 .txt（非资源包扩展名）→ extMatch 过滤，不应添加
 	if err := os.WriteFile(filepath.Join(instDir, "notes.txt"), []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	ins := &types.VersionInstance{VersionDir: base}
 	items := BuildSyncItems(ins, []registry.ResourceType{{ID: "resourcepack", Icon: "🎨"}}, map[string]string{"resourcepack": globalDir}, "")
@@ -249,10 +250,10 @@ func TestBuildSyncItems_DisabledThreeBranches(t *testing.T) {
 	globalDir := filepath.Join(base, "global")
 	instDir := filepath.Join(filepath.Join(base, "inst"), sub)
 	if err := os.MkdirAll(globalDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.MkdirAll(instDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// Synced + disabled：两处一致
 	_ = os.WriteFile(filepath.Join(globalDir, "synced.ysm.disabled"), []byte("x"), 0644)
@@ -298,14 +299,14 @@ func TestBuildSyncItems_ExtraHardLinkLegacy(t *testing.T) {
 	globalDir := filepath.Join(base, "global")
 	instDir := filepath.Join(filepath.Join(base, "inst"), sub)
 	if err := os.MkdirAll(globalDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.MkdirAll(instDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	legacy := filepath.Join(instDir, "legacy.ysm")
 	if err := os.WriteFile(legacy, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 建立真实硬链接使 nlink=2（跨平台 os.Link，Windows NTFS 亦支持）
 	if err := os.Link(legacy, filepath.Join(instDir, "legacy2.ysm")); err != nil {
@@ -335,10 +336,10 @@ func TestBuildSyncItems_YsmJSONEntryOnly(t *testing.T) {
 	globalDir := filepath.Join(base, "global")
 	instDir := filepath.Join(filepath.Join(base, "inst"), sub)
 	if err := os.MkdirAll(globalDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.MkdirAll(instDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// ysm.json：全局有、实例缺 → Missing 展示
 	_ = os.WriteFile(filepath.Join(globalDir, "ysm.json"), []byte("{}"), 0644)
@@ -367,10 +368,10 @@ func TestBuildSyncItems_SyncedFileNoDup(t *testing.T) {
 	globalDir := filepath.Join(base, "global")
 	instDir := filepath.Join(base, "resourcepacks")
 	if err := os.MkdirAll(globalDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.MkdirAll(instDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	_ = os.WriteFile(filepath.Join(globalDir, "pack.zip"), []byte("zip"), 0644)
 	_ = os.WriteFile(filepath.Join(instDir, "pack.zip"), []byte("zip"), 0644)
@@ -542,10 +543,10 @@ func TestBuildSyncItems_DirEntrySizeFallsBackWhenNoChildren(t *testing.T) {
 	// packExtra 只存在于实例侧（Extra 条目，global 侧无镜像 → children 为 nil）
 	instPack := filepath.Join(instDir, "packExtra")
 	if err := os.MkdirAll(instPack, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(instPack, "x.ysm"), make([]byte, 111), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	ins := &types.VersionInstance{Name: "t", VersionDir: filepath.Join(base, "inst")}

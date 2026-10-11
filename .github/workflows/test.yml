@@ -306,7 +306,9 @@ jobs:
         working-directory: frontend
         shell: pwsh
         run: |
-          pnpm exec vitest run --coverage | Out-String -Width 200
+          # ⚠️ 勿加 `| Out-String`：会把 vitest 输出缓冲成字符串，失败时 FAIL 详情未必 flush 到
+          # CI 日志 ⇒ 诊断盲区（与 Go 检查步同坑，2026-10-11 修）。直接流输出，$LASTEXITCODE 不变。
+          pnpm exec vitest run --coverage
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       # 前端 diff-coverage 门禁：消费上方 vitest --coverage 产出的 coverage-final.json，

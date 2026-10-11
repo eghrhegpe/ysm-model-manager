@@ -177,6 +177,13 @@ go job 要用 `pnpm install` + `vite build`（`//go:embed all:frontend/dist` 前
   job failure 日志里都没有 FAIL 行）。已改为直接流输出（去 `Out-String`，`$LASTEXITCODE` 语义
   不变），失败现场原样进日志。教训：合并多步输出做「格式化/控宽」会牺牲失败现场——诊断能力
   优先于行宽美观。
+- **同类排查（2026-10-11）**：除 Go 检查步外，前端 Vitest 步（`test.yml`）原写
+  `pnpm exec vitest run --coverage | Out-String -Width 200`——**完全同坑**（外部命令 + Out-String
+  缓冲 + `$LASTEXITCODE`），失败时 FAIL 详情同样可能被吞。已一并改为直接流输出。**判定口径**：
+  `New-Item | Out-Null`（建目录）、`git fetch 2>$null`（丢 stderr 进度）、`Out-File` 写 step
+  summary 均**合理**（非诊断目标）；`Out-String` 包住**待诊断的外部命令**（`go test`/`vitest`/
+  `pnpm`/`npm`）才是坑。仓库脚本（`node scripts/*.ts --json`）失败走 stderr 不受 Out-String
+  影响，风险低但同样建议去 `Out-String` 保诊断能力。
 
 ### 6. 浅克隆与基线解析（反复踩的坑）
 

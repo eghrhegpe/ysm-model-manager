@@ -197,3 +197,12 @@
   1. decoder 域未修项清空。下一轮按清单轮转取 `mesh`（第 7 位；materials 轮建议同向）。
   2. 族② 残余仍在队列：抽象扫描第 3 批已收口 dispose 隔离与 build 归还（f3a59e7d4/4b89dd791/fb12e3321），`switch-preview.ts` clearSwitchContent !keep 分支的 stale 循环未兜注销（同轮回访点，低概率）可作 mesh 轮顺带确认。
   3. infra 轮遗留未变：F4 双源常量（`DEFAULT_MSAA_SAMPLES` 探针与 cap 侧）、`load-trace.ts`/`preview-shell.ts` 无独立契约锁、scene-registry 焦点晋升产品问题仍挂起待拍板。
+
+## 2026-10-11T10:00:00+08:00 追加：infra 轮遗留收口（F4 双源常量）
+
+- 选定理由：infra 轮（2026-10-10）遗留第 2 条的 F4——探针 `DEFAULT_MSAA_SAMPLES`（`postproc-cost-probe.ts`）与 cap 侧 `POSTPROC_MSAA_SAMPLES`（`postprocessing-capability.ts`）双源硬编码 4，改一侧即静默报错（污染报告核心数字 `rtBytes*`）。
+- **修复（下沉 infra 叶层单源）**：新叶 `infra/msaa-samples.ts` 导出 `POSTPROC_MSAA_SAMPLES = 4`，probe 与 cap 同指本值——双源在结构上不可表达。方向合规：cap 属上层可 import infra（既有先例 postprocessing.ts / render-budget.ts），check-layering R9 preview-3d 反向边 0 命中。
+- **验证**：probe（含 run.test 报告口径 msaaSamples=4）+ cap（[P2] samples 断言）145 例绿；preview-3d 全族 218 文件 / 3696 例绿；vite build / typecheck / biome 全绿。
+- **遗留 / 下一轮建议**：
+  1. infra 轮遗留仅剩：`load-trace.ts`/`preview-shell.ts` 无独立契约锁（补测试项）、scene-registry 焦点晋升产品问题（待拍板，非缺陷）。下一轮按清单轮转取 `mesh`（第 7 位）。
+  2. `switch-preview.ts` clearSwitchContent !keep 分支 stale 循环未兜注销（低概率回访点）可作 mesh 轮顺带确认。

@@ -690,6 +690,7 @@ auto_fields:
     - PmxVertexData
     - poolStrategy
     - PoseScene
+    - POSTPROC_MSAA_SAMPLES
     - POSTPROC_PERSIST_FIELDS
     - PostprocessingCapability
     - PostprocessingLike

@@ -25,6 +25,7 @@
 
 import type * as THREE from "three";
 import type { SceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
+import { POSTPROC_MSAA_SAMPLES } from "@/preview-3d/infra/msaa-samples.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
 
 /** 双臂标识 */
@@ -32,9 +33,6 @@ export type ProbeArm = "composer" | "direct";
 
 /** HalfFloatType + RGBA 的每像素字节数（2 字节/通道 × 4 通道） */
 const HALF_FLOAT_RGBA_BYTES = 8;
-
-/** 与 postprocessing-capability.ts 的 POSTPROC_MSAA_SAMPLES 对齐（不反向 import：cap 属上层） */
-const DEFAULT_MSAA_SAMPLES = 4;
 
 /** 默认每臂采样帧数（交替，故墙钟约 2×N 帧） */
 const DEFAULT_FRAMES_PER_ARM = 60;
@@ -339,7 +337,7 @@ export async function runPostprocCostProbe(
   const bufferW = canvas.width;
   const bufferH = canvas.height;
   const antialiasGranted = renderer.getContext()?.getContextAttributes?.()?.antialias === true;
-  const msaaSamples = antialiasGranted ? DEFAULT_MSAA_SAMPLES : 0;
+  const msaaSamples = antialiasGranted ? POSTPROC_MSAA_SAMPLES : 0;
 
   const gl = renderer.getContext() as WebGL2RenderingContext | null;
   const timer = createGpuTimer(gl);

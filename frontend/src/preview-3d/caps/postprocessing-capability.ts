@@ -33,6 +33,7 @@ import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { SSAOPass } from "three/addons/postprocessing/SSAOPass.js";
 import { SSRPass } from "three/addons/postprocessing/SSRPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
+import { POSTPROC_MSAA_SAMPLES } from "@/preview-3d/infra/msaa-samples.ts";
 import type { PostprocessingLike } from "@/preview-3d/infra/postprocessing.ts";
 import { previewPixelRatio } from "@/preview-3d/infra/render-budget.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
@@ -96,9 +97,6 @@ function toneMappingValue(key: PostprocessingParams["toneMapping"]): THREE.ToneM
 
 /** SSRPass.OUTPUT 枚举（0=Default 正常显示反射混合），其他调试项 1=Beauty 2=SSR 仅深度 3=Blur 4=Normal 5=Metalness 先不暴露 */
 const SSRPASS_OUTPUT_DEFAULT = 0;
-
-/** composer 读/写缓冲的 MSAA 采样数（与 renderer 的 antialias 意图对齐；WebGL2 下才生效） */
-const POSTPROC_MSAA_SAMPLES = 4;
 
 export class PostprocessingCapability implements SceneCapability, PostprocessingLike {
   readonly id = "postprocessing";

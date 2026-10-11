@@ -967,6 +967,8 @@
   "preview.groupEnv": "环境",
   "preview.groupScene": "场景",
   "preview.groupSettings": "设置",
+  "preview.webglContextLost": "3D 渲染上下文已丢失，正在等待浏览器恢复（可能因 GPU 进程重置或驱动切换）",
+  "preview.webglContextRestored": "3D 渲染上下文已恢复",
   "preview.renderFail": "面板渲染失败",
   "preview.eyeHide": "隐藏",
   "preview.eyeShow": "显示",

@@ -967,6 +967,8 @@
   "preview.groupEnv": "Environment",
   "preview.groupScene": "Scene",
   "preview.groupSettings": "Settings",
+  "preview.webglContextLost": "3D rendering context lost; waiting for the browser to restore (GPU process reset or driver switch?)",
+  "preview.webglContextRestored": "3D rendering context restored",
   "preview.renderFail": "Panel render failed",
   "preview.eyeHide": "Hide",
   "preview.eyeShow": "Show",

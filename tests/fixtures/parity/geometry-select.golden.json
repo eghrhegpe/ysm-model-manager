@@ -1,0 +1,225 @@
+{
+  "$comment": "geometry 选择链双端黄金语料（主源 = Go go/geometry/parse.go|ParseBedrockGeometry；regen: YSM_PARITY_REGEN=1 go test ./go/geometry -run TestGeometrySelectParity）。TS 消费方 frontend/src/preview-3d/model/geometry-select-parity.test.ts 走生产入口 buildSpecFromGeometryJSON。",
+  "$semantics": "只锁选择链骨架（选了哪条/哪个键、GUI 过滤后剩哪些骨、纹理尺寸钳制、null/空模型契约），不锁 cube 逐值（cube-mesh 语料射程）。骨架字段全为字符串/整数/布尔，JSON 数字跨语言逐位一致，无容差。reject = 主源 ParseBedrockGeometry 返回 nil 或零骨空模型（TS 侧两态同落 \"{}\"）。texW/texH = clampTexSize 后值（越界/负→0 哨兵）。bones 序 = 输入骨序（GUI 骨整骨剔除后）。input 为 compact JSON 字符串——两侧逐字节共享同一入参。",
+  "cases": [
+    {
+      "id": "new-single",
+      "$note": "新格式单条目基线：2 骨（head 挂 body）+ 纹理 16×16",
+      "input": "{\"format_version\":\"1.16.0\",\"minecraft:geometry\":[{\"description\":{\"identifier\":\"g\",\"texture_width\":16,\"texture_height\":16},\"bones\":[{\"name\":\"body\",\"cubes\":[{\"origin\":[0,0,0],\"size\":[1,1,1],\"texture\":0},{\"origin\":[2,0,0],\"size\":[1,1,1],\"texture\":1}]},{\"name\":\"head\",\"cubes\":[{\"origin\":[0,0,0],\"size\":[1,1,1],\"texture\":1}],\"pivot\":[0,1,0],\"parent\":\"body\"}]}]}",
+      "expected": {
+        "reject": false,
+        "texW": 16,
+        "texH": 16,
+        "bones": [
+          {
+            "name": "body",
+            "parent": "",
+            "cubeCount": 2
+          },
+          {
+            "name": "head",
+            "parent": "body",
+            "cubeCount": 1
+          }
+        ],
+        "totalCubes": 3
+      }
+    },
+    {
+      "id": "new-multi-first-wins",
+      "$note": "多条目首条非空即取首条（first-wins 契约，钉「不取更大/更后者」）",
+      "input": "{\"format_version\":\"1.16.0\",\"minecraft:geometry\":[{\"description\":{\"identifier\":\"g0\",\"texture_width\":8,\"texture_height\":8},\"bones\":[{\"name\":\"a\",\"cubes\":[{\"origin\":[0,0,0],\"size\":[1,1,1],\"texture\":0}]}]},{\"description\":{\"identifier\":\"g1\",\"texture_width\":32,\"texture_height\":32},\"bones\":[{\"name\":\"b\",\"cubes\":[{\"origin\":[0,0,0],\"size\":[1,1,1],\"texture\":0},{\"origin\":[2,0,0],\"size\":[1,1,1],\"texture\":0}]}]}]}",
+      "expected": {
+        "reject": false,
+        "texW": 8,
+        "texH": 8,
+        "bones": [
+          {
+            "name": "a",
+            "parent": "",
+            "cubeCount": 1
+          }
+        ],
+        "totalCubes": 1
+      }
+    },
+    {
+      "id": "new-multi-skip-empty-shell",
+      "$note": "多条目首条空壳（仅 description）→ 跳空壳取第二条（SkipEmptyBones 行为）",
+      "input": "{\"format_version\":\"1.16.0\",\"minecraft:geometry\":[{\"description\":{\"identifier\":\"g0\"}},{\"description\":{\"identifier\":\"g1\",\"texture_width\":24,\"texture_height\":24},\"bones\":[{\"name\":\"real\",\"cubes\":[{\"origin\":[0,0,0],\"size\":[1,1,1],\"texture\":0}]}]}]}",
+      "expected": {
+        "reject": false,
+        "texW": 24,
+        "texH": 24,
+        "bones": [
+          {
+            "name": "real",
+            "parent": "",
+            "cubeCount": 1
+          }
+        ],
+        "totalCubes": 1
+      }
+    },
+    {
+      "id": "new-multi-all-empty",
+      "$note": "多条目全空 → 拒绝（null；空壳不再吞后续有效模型的镜像：此处无有效模型）",
+      "input": "{\"format_version\":\"1.16.0\",\"minecraft:geometry\":[{\"description\":{\"identifier\":\"g0\"}},{\"description\":{\"identifier\":\"g1\"},\"bones\":[]}]}",
+      "expected": {
+        "reject": true
+      }
+    },
+    {
+      "id": "new-single-no-bones",
+      "$note": "单条目无 bones 键 → 空模型（非 nil、零骨）：Go 侧非 nil，TS 入口同落 \"{}\"（单条目宽容契约）",
+      "input": "{\"format_version\":\"1.16.0\",\"minecraft:geometry\":[{\"description\":{\"identifier\":\"g0\",\"texture_width\":8,\"texture_height\":8}}]}",
+      "expected": {
+        "reject": true
+      }
+    },
+    {
+      "id": "old-canonical-swap",
+      "$note": "旧格式多 geometry.* 键：字典序 + 规范键 geometry.model 与首位**互换**（非覆盖挪位）→ model 胜出",
+      "input": "{\"format_version\":\"1.8.0\",\"geometry.alpha\":{\"texturewidth\":4,\"textureheight\":4,\"bones\":[{\"name\":\"alphaB\",\"cubes\":[{\"origin\":[0,0,0],\"size\":[1,1,1],\"texture\":0}]}]},\"geometry.model\":{\"texturewidth\":10,\"textureheight\":10,\"bones\":[{\"name\":\"modelB\",\"cubes\":[{\"origin\":[0,0,0],\"size\":[1,1,1],\"texture\":0},{\"origin\":[1,0,0],\"size\":[1,1,1],\"texture\":0}]}]},\"geometry.zeus\":{\"texturewidth\":6,\"textureheight\":6,\"bones\":[{\"name\":\"zeusB\",\"cubes\":[{\"origin\":[0,0,0],\"size\":[1,1,1],\"texture\":0}]}]}}",
+      "expected": {
+        "reject": false,
+        "texW": 10,
+        "texH": 10,
+        "bones": [
+          {
+            "name": "modelB",
+            "parent": "",
+            "cubeCount": 2
+          }
+        ],
+        "totalCubes": 2
+      }
+    },
+    {
+      "id": "old-model-empty-swap-pins",
+      "$note": "model 键空壳 + 互换（非覆盖）钉死：swap 后 [model, alpha, zeus]，model 空跳过 → 取 alpha；覆盖挪位会丢 alpha 变取 zeus",
+      "input": "{\"format_version\":\"1.8.0\",\"geometry.alpha\":{\"texturewidth\":4,\"textureheight\":4,\"bones\":[{\"name\":\"alphaB\",\"cubes\":[{\"origin\":[0,0,0],\"size\":[1,1,1],\"texture\":0}]}]},\"geometry.model\":{\"texturewidth\":10,\"textureheight\":10,\"bones\":[]},\"geometry.zeus\":{\"texturewidth\":6,\"textureheight\":6,\"bones\":[{\"name\":\"zeusB\",\"cubes\":[{\"origin\":[0,0,0],\"size\":[1,1,1],\"texture\":0}]}]}}",
+      "expected": {
+        "reject": false,
+        "texW": 4,
+        "texH": 4,
+        "bones": [
+          {
+            "name": "alphaB",
+            "parent": "",
+            "cubeCount": 1
+          }
+        ],
+        "totalCubes": 1
+      }
+    },
+    {
+      "id": "old-lexicographic-no-model",
+      "$note": "无 geometry.model 键：纯字典序取最小（bee \u003c zed）",
+      "input": "{\"format_version\":\"1.8.0\",\"geometry.zed\":{\"texturewidth\":4,\"textureheight\":4,\"bones\":[{\"name\":\"zedB\",\"cubes\":[{\"origin\":[0,0,0],\"size\":[1,1,1],\"texture\":0}]}]},\"geometry.bee\":{\"texturewidth\":4,\"textureheight\":4,\"bones\":[{\"name\":\"beeB\",\"cubes\":[{\"origin\":[0,0,0],\"size\":[1,1,1],\"texture\":0}]}]}}",
+      "expected": {
+        "reject": false,
+        "texW": 4,
+        "texH": 4,
+        "bones": [
+          {
+            "name": "beeB",
+            "parent": "",
+            "cubeCount": 1
+          }
+        ],
+        "totalCubes": 1
+      }
+    },
+    {
+      "id": "old-bad-value-skip",
+      "$note": "geometry.* 值非对象（字符串）→ Go unmarshal 失败 / TS typeof 检查，两侧同 skip → 取 good",
+      "input": "{\"format_version\":\"1.8.0\",\"geometry.bad\":\"not-an-object\",\"geometry.good\":{\"texturewidth\":8,\"textureheight\":8,\"bones\":[{\"name\":\"goodB\",\"cubes\":[{\"origin\":[0,0,0],\"size\":[1,1,1],\"texture\":0}]}]}}",
+      "expected": {
+        "reject": false,
+        "texW": 8,
+        "texH": 8,
+        "bones": [
+          {
+            "name": "goodB",
+            "parent": "",
+            "cubeCount": 1
+          }
+        ],
+        "totalCubes": 1
+      }
+    },
+    {
+      "id": "fallback-new-empty-to-old",
+      "$note": "新格式空数组 → parseNewFormat nil → 两段式回退旧格式 geometry.model",
+      "input": "{\"format_version\":\"1.8.0\",\"minecraft:geometry\":[],\"geometry.model\":{\"texturewidth\":12,\"textureheight\":12,\"bones\":[{\"name\":\"fbB\",\"cubes\":[{\"origin\":[0,0,0],\"size\":[1,1,1],\"texture\":0}]}]}}",
+      "expected": {
+        "reject": false,
+        "texW": 12,
+        "texH": 12,
+        "bones": [
+          {
+            "name": "fbB",
+            "parent": "",
+            "cubeCount": 1
+          }
+        ],
+        "totalCubes": 1
+      }
+    },
+    {
+      "id": "gui-filter",
+      "$note": "GUI 装饰骨整骨过滤：GuiRoot/Backgrounds/guiOverlay（前缀）零骨剔除，body 保留",
+      "input": "{\"format_version\":\"1.16.0\",\"minecraft:geometry\":[{\"description\":{\"identifier\":\"g\",\"texture_width\":16,\"texture_height\":16},\"bones\":[{\"name\":\"GuiRoot\",\"cubes\":[]},{\"name\":\"Backgrounds\",\"cubes\":[]},{\"name\":\"guiOverlay\",\"cubes\":[]},{\"name\":\"body\",\"cubes\":[{\"origin\":[0,0,0],\"size\":[1,1,1],\"texture\":0},{\"origin\":[2,0,0],\"size\":[1,1,1],\"texture\":0}]}]}]}",
+      "expected": {
+        "reject": false,
+        "texW": 16,
+        "texH": 16,
+        "bones": [
+          {
+            "name": "body",
+            "parent": "",
+            "cubeCount": 2
+          }
+        ],
+        "totalCubes": 2
+      }
+    },
+    {
+      "id": "gui-veto-exact",
+      "$note": "GUI 判定一票否决 + 精确名表：guinea（gui 前缀但有 1 cube）保留；white_curtain/curtain（精确名零骨）剔除",
+      "input": "{\"format_version\":\"1.16.0\",\"minecraft:geometry\":[{\"description\":{\"identifier\":\"g\",\"texture_width\":16,\"texture_height\":16},\"bones\":[{\"name\":\"guinea\",\"cubes\":[{\"origin\":[0,0,0],\"size\":[1,1,1],\"texture\":0}]},{\"name\":\"white_curtain\",\"cubes\":[]},{\"name\":\"curtain\",\"cubes\":[]}]}]}",
+      "expected": {
+        "reject": false,
+        "texW": 16,
+        "texH": 16,
+        "bones": [
+          {
+            "name": "guinea",
+            "parent": "",
+            "cubeCount": 1
+          }
+        ],
+        "totalCubes": 1
+      }
+    },
+    {
+      "id": "old-tex-clamp",
+      "$note": "旧格式纹理尺寸钳制：texturewidth=100000（\u003e65536→0）/ textureheight=-5（\u003c0→0）",
+      "input": "{\"format_version\":\"1.8.0\",\"geometry.model\":{\"texturewidth\":100000,\"textureheight\":-5,\"bones\":[{\"name\":\"clampB\",\"cubes\":[{\"origin\":[0,0,0],\"size\":[1,1,1],\"texture\":0}]}]}}",
+      "expected": {
+        "reject": false,
+        "texW": 64,
+        "texH": 64,
+        "bones": [
+          {
+            "name": "clampB",
+            "parent": "",
+            "cubeCount": 1
+          }
+        ],
+        "totalCubes": 1
+      }
+    }
+  ]
+}

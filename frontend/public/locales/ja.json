@@ -967,6 +967,8 @@
   "preview.groupEnv": "環境",
   "preview.groupScene": "シーン",
   "preview.groupSettings": "設定",
+  "preview.webglContextLost": "3D レンダリングコンテキストが失われました。ブラウザの復元を待機中（GPU プロセス再起動またはドライバー切替の可能性）",
+  "preview.webglContextRestored": "3D レンダリングコンテキストが復元されました",
   "preview.renderFail": "パネル描画に失敗",
   "preview.eyeHide": "非表示",
   "preview.eyeShow": "表示",

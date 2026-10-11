@@ -15,6 +15,7 @@ auto_fields:
   symbols_with_lines:
     - __resetLargeModelWarnForTest
     - __resetSceneTextureBytesForTest
+    - __resetWebGlContextLostForTest
     - __setEncodeImplForTest
     - _clearPmxStatsCache
     - _resetSingletons
@@ -240,6 +241,7 @@ auto_fields:
     - DEFAULT_LIGHT_PARAMS
     - DEFAULT_POSTPROC_PARAMS
     - DEFAULT_TD_KEYMAP
+    - defaultContextLostHooks
     - deferred
     - derandomize
     - derandomizeDual
@@ -449,6 +451,7 @@ auto_fields:
     - installGpuCalibrationHook
     - installOnceStyles
     - installSlideMenuStyles
+    - installWebGlContextGuard
     - invalidateMaxFpsCache
     - invalidatePreview
     - isEnvCallbacksSuspended
@@ -463,6 +466,7 @@ auto_fields:
     - isPreviewOverlayActive
     - isRenderableModel
     - isSsrRenderActive
+    - isWebGlContextLost
     - JavaModelFace
     - JavaModelResult
     - KIND_SPECIFIC_FIELDS
@@ -1067,6 +1071,7 @@ auto_fields:
     - WAVE_DEGENERATE_WA
     - WAVE_STEEP_SIZE_REF
     - WAVE_STEEP_SUM_LIMIT
+    - WebGlContextGuard
     - withEnvCallbacksSuspended
     - WorkerBridge
     - WorkerErrorStrategy

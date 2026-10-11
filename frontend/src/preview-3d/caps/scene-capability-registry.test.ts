@@ -14,6 +14,7 @@ import type { SceneCapability } from "./scene-capability.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import type { LocaleKey } from "@/core/i18n/t.ts";
 import { stubConsoleWarn } from "@/test-utils/mock-log.ts";
+import * as toastMod from "@/utils/dom/toast.ts";
 
 /** createAll 的 ctx 参数类型（测试传空对象桩时精确断言，替代 as never） */
 type CreateAllCtx = Parameters<SceneCapabilityRegistry["createAll"]>[0];
@@ -140,6 +141,58 @@ describe("SceneCapabilityRegistry 险恶测试", () => {
     registry.loadAll();
     expect(cap1.loadState).toHaveBeenCalledTimes(1);
     expect(cap2.loadState).toHaveBeenCalledTimes(1);
+  });
+
+  it("[锐评 2026-10-11] loadState 失败 → 单条聚合 toast 对用户可见（不再静默吞）", () => {
+    const cap1 = makeFakeCap("sky", { loadState: vi.fn() });
+    const badCap = makeFakeCap("ground", { loadState: vi.fn(() => { throw new Error("disk gone"); }) });
+    registry.add(() => cap1);
+    registry.add(() => badCap);
+    registry.createAll({} as unknown as CreateAllCtx);
+    const toastSpy = vi.spyOn(toastMod, "toast").mockImplementation(() => {});
+    try {
+      registry.loadAll();
+      // 单条聚合（而非逐 cap 各一条）：仅一次 toast，且载荷含失败项数与阶段
+      expect(toastSpy).toHaveBeenCalledTimes(1);
+      const [msg] = toastSpy.mock.calls[0] as [string, ...unknown[]];
+      expect(msg).toContain("ground");
+      expect(msg).toContain("1");
+    } finally {
+      toastSpy.mockRestore();
+    }
+  });
+
+  it("[锐评 2026-10-11] saveState 失败 → 聚合 toast；全成功零 toast", () => {
+    const good = makeFakeCap("sky", { saveState: vi.fn() });
+    const bad = makeFakeCap("ground", { saveState: vi.fn(() => { throw new Error("quota"); }) });
+    registry.add(() => good);
+    registry.add(() => bad);
+    registry.createAll({} as unknown as CreateAllCtx);
+    const toastSpy = vi.spyOn(toastMod, "toast").mockImplementation(() => {});
+    try {
+      registry.saveAll();
+      expect(toastSpy).toHaveBeenCalledTimes(1);
+      const [msg] = toastSpy.mock.calls[0] as [string, ...unknown[]];
+      expect(msg).toContain("ground");
+    } finally {
+      toastSpy.mockRestore();
+    }
+  });
+
+  it("[锐评 2026-10-11] 持久化全成功 → 不弹 toast（不打扰用户）", () => {
+    const c1 = makeFakeCap("sky", { loadState: vi.fn(), saveState: vi.fn() });
+    const c2 = makeFakeCap("ground", { loadState: vi.fn(), saveState: vi.fn() });
+    registry.add(() => c1);
+    registry.add(() => c2);
+    registry.createAll({} as unknown as CreateAllCtx);
+    const toastSpy = vi.spyOn(toastMod, "toast").mockImplementation(() => {});
+    try {
+      registry.loadAll();
+      registry.saveAll();
+      expect(toastSpy).not.toHaveBeenCalled();
+    } finally {
+      toastSpy.mockRestore();
+    }
   });
 
   it("[#2 拓扑序 2026-10-07] loadAll 按 LOAD_DEPS 拓扑：environment 依赖 sky，注册序颠倒也先 load sky", () => {

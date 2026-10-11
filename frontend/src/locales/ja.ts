@@ -1139,7 +1139,7 @@ export const ja: Record<string, string> = {
   "preview.webglContextRestored": "3D レンダリングコンテキストが復元されました",
   // シーン能力の永続化（保存/復元）失敗の集約通知（preview-3d/caps/scene-capability-registry.ts）
   "preview.capPersistenceFailed":
-    "{stage}に {n} 件失敗しました。一部の環境設定が反映されていない可能性があります",
+    "{stage}に {n} 件失敗しました（{caps}）。一部の環境設定が反映されていない可能性があります",
   "preview.capStage.save": "環境設定の保存",
   "preview.capStage.load": "環境設定の復元",
   // 3D パネル描画エラー境界 + マテリアル表示 eye ボタン（preview-menu core/render/roles）

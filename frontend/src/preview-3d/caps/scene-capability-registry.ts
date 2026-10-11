@@ -162,6 +162,7 @@ export class SceneCapabilityRegistry {
       t("preview.capPersistenceFailed", {
         stage: t(`preview.capStage.${stage}`),
         n: failed.length,
+        caps: failed.join("、"),
       }),
       TOAST_MS.long,
       "error",

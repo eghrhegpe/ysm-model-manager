@@ -969,7 +969,7 @@
   "preview.groupSettings": "设置",
   "preview.webglContextLost": "3D 渲染上下文已丢失，正在等待浏览器恢复（可能因 GPU 进程重置或驱动切换）",
   "preview.webglContextRestored": "3D 渲染上下文已恢复",
-  "preview.capPersistenceFailed": "{stage}失败 {n} 项，部分环境设置可能未生效",
+  "preview.capPersistenceFailed": "{stage}失败 {n} 项（{caps}），部分环境设置可能未生效",
   "preview.capStage.save": "保存环境设置",
   "preview.capStage.load": "恢复环境设置",
   "preview.renderFail": "面板渲染失败",

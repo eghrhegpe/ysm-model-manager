@@ -1138,7 +1138,7 @@ export const en: Record<string, string> = {
   "preview.webglContextRestored": "3D rendering context restored",
   // Capability persistence (save/load) failure aggregate notice (preview-3d/caps/scene-capability-registry.ts)
   "preview.capPersistenceFailed":
-    "{stage} failed for {n} item(s); some environment settings may not have applied",
+    "{stage} failed for {n} item(s) ({caps}); some environment settings may not have applied",
   "preview.capStage.save": "Saving environment settings",
   "preview.capStage.load": "Restoring environment settings",
   // 3D panel render error boundary + material visibility eye button

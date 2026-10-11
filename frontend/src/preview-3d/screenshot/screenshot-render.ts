@@ -194,8 +194,16 @@ export async function renderMultiAngle(
     // 防御性提前返回（调用方按 null 处理，不写脏 PNG）。
     if (!Number.isFinite(maxDim) || maxDim <= 0) return null;
 
-    const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
+    // [锐评 screenshot 轮 2026-10-11] 近/远裁剪面按包围盒**夹逼**（不搬预览的
+    // camera-setup 常量——其 near=0.05 只因预览 dist 带 +2 地板才安全，截图 dist
+    // =1.7×maxDim 无地板，小模型会整模型落入近平面之后）。旧实现 far 硬编码 1000：
+    // maxDim 超过约 588 时背侧最远点（≈dist+maxDim）越过 far → 远端静默裁切；
+    // fixed 0.1/1000 对角色尺度只有约 10000:1 深度精度，远劣于夹逼。
+    // fov 45 是有意与预览 50 不同的缩略图固定取景（多角度导出需跨模型一致），不动。
     const dist = (maxDim / (2 * Math.tan((45 * Math.PI) / 360)) / 0.85) * 1.2;
+    const camNear = Math.max(maxDim * 0.05, 1e-4);
+    const camFar = dist + maxDim * 2;
+    const camera = new THREE.PerspectiveCamera(45, 1, camNear, camFar);
 
     const angles: Array<{ name: string; theta: number }> = [
       { name: "front", theta: 0 },

@@ -210,6 +210,7 @@ shotButton action → saveScreenshot(key="front/45/side/back45/all")
 - **离屏渲染器必须 try/finally 全程**：创建→场景构建→四角度循环全程在 try/finally 内（P2 修复：原 try 起点在角度循环，buildYsmObject 抛错时 renderer 永不 dispose）
 - **失败统一返回 `null` 不 reject**（P2）；`saveScreenshot` 对 `current` 空值抛错以便消费者统一 catch + toast
 - **`AngleShot` 结果集剔除空 base64**（GPU 异常防御，P3）；`maxDim` 非有限或 ≤0 提前返回 null（Box3 为空时相机位置 NaN）
+- **renderMultiAngle 相机近/远裁剪面按包围盒夹逼**（锐评 2026-10-11）：`near = max(maxDim×0.05, 1e-4)`、`far = dist + maxDim×2`——几何落在 `[dist−maxDim, dist+maxDim]`，故任意尺度既不近裁也不远裁。旧实现 `0.1/1000` 固定：maxDim>588 背侧越过 far 远端裁切；对角色尺度只有约 10000:1 深度精度（预览按 `maxDim*50` 收紧到 ~100:1 正是为根除 z-fighting）。**不要搬 `camera-setup` 的 `near=0.05`**——它只因预览 `dist` 带 `+2` 地板才安全，截图 `dist=1.7×maxDim` 无地板，小模型会整模型落入近平面之后。fov 45（vs 预览 50）是有意的缩略图固定取景，跨模型一致，不动
 - **cache 覆盖同 key 不无条件 evict**：新旧 blob URL 差集判定，防同对象 re-set 时 revoke 仍在用的 URL（P1）
 - **cache 是模块级单例**：组件 `disconnectedCallback` 不得清空（跨页复用），淘汰仅由 FIFO 上限驱动
 - **WASM 兜底由视图层注入**：`screenshot-render.ts` 不 import views 类型（保边界），`decodeYsm` 通过 `opts.decodeYsm` 依赖注入（ADR-136 第四刀）

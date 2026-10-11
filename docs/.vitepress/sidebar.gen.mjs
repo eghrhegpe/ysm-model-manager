@@ -254,6 +254,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-328：cap 能力总开关统一收编 envState 与 ground 终态",
+        "link": "/adr/architecture/ADR-328-cap-enabled-unification"
+      },
+      {
         "text": "ADR-327：自定义 HDR 路径持久化与重启恢复",
         "link": "/adr/architecture/ADR-327-hdr"
       },

@@ -286,6 +286,7 @@
      `computeBoneLocalPos`（JS 有、Go 在 spec-bones.go）也属同型手抄双源，若日后回访可并入本语料
      或另建；当前无分叉证据，不主动开战。
 
+
 ## 2026-10-11T13:05:00+08:00 巡检第 8 轮：model
 
 - 选定理由：按轮转清单第 9 位（第 7 轮遗留建议）。5 源文件 / 1628 行，全部有同名测试。
@@ -333,3 +334,18 @@
   1. 下一轮按清单轮转取 **`screenshot`**（第 10 位）；`menu`（第 8 位）已有 preview-menu 卡 +
      大量专项测试，判**已覆盖**（本轮正式销账，台账补记）。
   2. 轮 7 遗留 2（mergeCubes / computeBoneLocalPos 同族 parity 候选）维持不动，无新证据。
+
+## 2026-10-11T13:40:00+08:00 巡检第 10 轮：screenshot
+
+- 选定理由：第 8 轮遗留建议（第 10 位；`menu` 已判覆盖销账）。4 源文件 / ~493 行，全部有同名测试（含 ADR-266-d1 光柱/输出设置镜像、S1 照度守恒专项）。
+- **抓到 1 处真缺陷（已修）**：`screenshot-render.ts` 相机近/远裁剪面硬编码 `0.1/1000`——与预览 `camera-setup` 的「按包围盒收紧到 `maxDim*50`」深度纪律分叉：
+  - 大模型远端裁切：`dist≈1.7×maxDim`，maxDim>588 时背侧最远点（≈`dist+maxDim`）越过 far=1000 → 静默裁切。
+  - 深度精度：`0.1/1000` 对角色尺度只有约 10000:1，而预览 `maxDim*50` 收到 ~100:1——`camera-setup` 注释点名残留 far 正是 z-fighting/遮挡错乱的根因，截图侧不应重蹈。
+- **修法（夹逼，不搬预览常量）**：`near = max(maxDim×0.05, 1e-4)`、`far = dist + maxDim×2`。**不搬 `camera-setup` 的 `near=0.05`**——它只因预览 `dist` 带 `+2` 地板才安全，截图 `dist=1.7×maxDim` 无地板，小模型（maxDim<~0.03）会整模型落入近平面之后。夹逼依据：几何落在 `[dist−maxDim, dist+maxDim]`。
+- **fov 45（vs 预览 50）判为有意差异不动**：多角度导出是**缩略图**（跨模型固定取景），非「当前视角导出」（后者走 `screenshotFn` 用活跃渲染器与相机）；lights/toneMapping/exposure/outputColorSpace 已镜像（ADR-266-d1 D2），fov 刻意不镜像。已入 `export.md` 不变量。
+- **测试（TDD 先红后绿）**：`screenshot-render.test.ts` 新 describe「相机近/远裁剪面自适应」1 例——不变量断言「任意尺度（2 / 0.01 / 500）远≥`dist+maxDim` 且 0<near<dist」；修前 far=1000 精确报 `expected 1000 to be 25000`（初版断言 `maxDim*50`，后改夹逼口径并加 dim=0.01 钉住「小模型不近裁」）。变异方向双向覆盖：far 回 1000 → maxDim=500 转红；near 回 0.05 → maxDim=0.01 转红。
+- 深读判净（未开战）：`screenshot.ts` 透明背景三态还原（background/canvas size/clearColor）与 `getSize().x` 坑已注释钉死；`screenshot-lights.ts` 总闸 `isEnabled()` 门 + `isIblActive` 判据与预览共用同一纯函数；`screenshot-cone.ts` 复用预览 `VolumetricCone` 单源。
+- 验证：screenshot 5 文件 52 例绿；preview-3d 全量绿；typecheck / vite build / biome / check-layering 全绿。`export.md` 不变量同步。
+- 遗留 / 下一轮建议：
+  1. 轮转清单已巡：const/infra/registry/…/materials/mesh/model/screenshot。下一轮按清单轮转取 **`bone`**（骨骼动画族，第 8 轮 model 遗留未列但队列已近尾）；或评估轮转清单是否已近尾、改向「剩余族② 候选」。
+  2. **族② parity 候选维持不动**：mergeCubes / computeBoneLocalPos（轮 7 遗留 2），无新证据不开战。

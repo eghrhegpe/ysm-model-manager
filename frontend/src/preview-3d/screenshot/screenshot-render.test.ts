@@ -8,8 +8,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { stubConsoleWarn } from "@/test-utils/mock-log.ts";
 
-const { getAppMock, specMock, loadTexturesMock, releaseTextureUrlsMock, buildSceneMeshMock, buildYsmObjectMock, buildSpecMock, coneMock, threeStub } =
+const { getAppMock, specMock, loadTexturesMock, releaseTextureUrlsMock, buildSceneMeshMock, buildYsmObjectMock, buildSpecMock, coneMock, cams, threeStub } =
   vi.hoisted(() => {
+    // 相机实例记录：断言 renderMultiAngle 自建相机的近/远裁剪面是否按包围盒自适应
+    const cams: FakeCamera[] = [];
     class FakeVec {
       x = 0;
       y = 0;
@@ -158,8 +160,13 @@ const { getAppMock, specMock, loadTexturesMock, releaseTextureUrlsMock, buildSce
       setSize = vi.fn();
       setPixelRatio = vi.fn();
       getSize = vi.fn(function (this: FakeWebGLRenderer, v: any) {
-        v.width = this.domElement.width;
-        v.height = this.domElement.height;
+        // [巡检第 9 轮 2026-10-11 F2] 忠实被测面：screenshot.ts 读的是 `.x/.y`（真
+        // THREE.Vector2 同时提供 width/height 别名访问器，故旧桩写 width/height 在
+        // 生产无恙、在测试失真——FakeVec 是无别名的手写类，写 .width 不写 .x，
+        // SUT 恒读到 0，「opts.width 与现尺寸比对 → setSize/复位」整条链在本文件
+        // 零判别力。桩写错形状 = 被测契约隐身。）
+        v.x = this.domElement.width;
+        v.y = this.domElement.height;
         return v;
       });
       setPreserveDrawingBuffer = vi.fn();
@@ -175,6 +182,14 @@ const { getAppMock, specMock, loadTexturesMock, releaseTextureUrlsMock, buildSce
     class FakeCamera {
       position = { set() {} };
       lookAt() {}
+      near: number;
+      far: number;
+      updateProjectionMatrix() {}
+      constructor(_fov?: number, _aspect?: number, near = 0.1, far = 1000) {
+        this.near = near;
+        this.far = far;
+        cams.push(this);
+      }
     }
     return {
       getAppMock: vi.fn(),
@@ -188,6 +203,8 @@ const { getAppMock, specMock, loadTexturesMock, releaseTextureUrlsMock, buildSce
       // [ADR-266-d1] 离屏光柱桥桩：本文件只验接线（调用/释放/输出设置），
       // 几何与落位由 screenshot-cone.test.ts 用真 three 验
       coneMock: vi.fn(),
+      // 相机实例记录（近/远裁剪面自适应断言用）
+      cams,
       threeStub: {
         NoToneMapping: 0,
         WebGLRenderer: FakeWebGLRenderer,
@@ -299,6 +316,7 @@ beforeEach(() => {
   threeStub.DirectionalLight.instances.length = 0; // [S1] 灯光桩实例记录逐用例清零（Ambient/Directional 同 FakeLight 类，共享静态数组）
   threeStub.SpotLight.instances.length = 0;
   threeStub.PointLight.instances.length = 0;
+  cams.length = 0; // 相机实例记录逐用例清零（防跨测试累积）
   getAppMock.mockResolvedValue({ GetModel3DSpec: specMock });
   specMock.mockResolvedValue(validSpec);
   loadTexturesMock.mockResolvedValue([{}]);
@@ -374,6 +392,29 @@ describe("renderMultiAngle — 防御路径", () => {
   });
 });
 
+describe("renderMultiAngle — 相机近/远裁剪面自适应", () => {
+  it("近/远裁剪面按包围盒夹逼：小模型不近裁、大模型不远裁", async () => {
+    // 旧实现 far 硬编码 1000 / near 固定 0.1：
+    //  · maxDim=500 → dist≈852，背侧最远点≈1352 > 1000 → 远端静默裁切；
+    //  · maxDim=0.01 → dist≈0.017，模型整体在 fixed near=0.1 之后 → 整图空白；
+    //  · 两向都只在特定尺度露馅，故用「任意尺度都不裁」的不变量锁，而非单一尺度精确值。
+    // 夹逼依据：相机在 dist=1.7×maxDim 处、模型半长 ≤ maxDim，几何落在 [dist-maxDim, dist+maxDim]。
+    const distFor = (m: number) => (m / (2 * Math.tan((45 * Math.PI) / 360)) / 0.85) * 1.2;
+    for (const dim of [2, 0.01, 500]) {
+      threeStub.Box3.sizeValue = [dim, dim, dim];
+      const shots = await renderMultiAngle("/m/a.ysm", []);
+      expect(shots).not.toBeNull();
+      const cam = cams.at(-1);
+      expect(cam, "renderMultiAngle 应创建并记录相机").toBeDefined();
+      const d = distFor(dim);
+      // 远：必须盖住背侧最远点（否则远端裁切）；近：必须远小于 dist（否则整模型被近平面切掉）
+      expect(cam!.far).toBeGreaterThanOrEqual(d + dim);
+      expect(cam!.near).toBeLessThan(d);
+      expect(cam!.near).toBeGreaterThan(0);
+    }
+  });
+});
+
 describe("renderMultiAngle — 成功路径", () => {
   it("酒狐回归：把每组件纹理映射传给共享 YSM 场景构建器", async () => {
     const globalTexture = { id: "global" };
@@ -415,6 +456,18 @@ describe("renderMultiAngle — 成功路径", () => {
   it("opts.size 生效 → setSize 使用指定尺寸", async () => {
     await renderMultiAngle("/m/a.ysm", [], { size: 128 });
     expect(lastRenderer().setSize).toHaveBeenCalledWith(128, 128);
+  });
+
+  it("尺寸覆盖贯通到截图纯函数：每角度 setSize(128,128,false) 后复位 512（F2 桩形状修复的判别力锁）", async () => {
+    await renderMultiAngle("/m/a.ysm", [], { size: 128 });
+    const r = lastRenderer();
+    // 构造期 setSize(128,128)（无 updateStyle 参）之后，screenshotFromRenderer 读到
+    // 桩现值 512 ≠ 128 → 每角度一对 setSize(128,128,false) + finally 复位(512,512,false)。
+    // 旧桩写 .width/.height 使 SUT 恒读 0、覆盖从不触发，本断言在修桩前必红（锁判别力）。
+    expect(r.setSize).toHaveBeenCalledWith(128, 128, false);
+    expect(r.setSize).toHaveBeenLastCalledWith(512, 512, false);
+    // 4 角度 × (覆盖 + 复位) = 8 次 + 构造期 1 次
+    expect((r.setSize as { mock: { calls: unknown[] } }).mock.calls).toHaveLength(9);
   });
 
   it("空 base64（GPU 异常）→ 跳过不入结果集", async () => {
@@ -612,5 +665,31 @@ describe("renderMultiAngle — IBL 边界（锐评 P1-1 已知差异）", () => 
     const { fileURLToPath } = await import("node:url");
     const doc = readFileSync(fileURLToPath(new URL("../../../../docs/knowledge/export.md", import.meta.url)), "utf8");
     expect(doc, "已知差异声明条在场").toContain("IBL 反射不参与截图");
+  });
+});
+
+// ===== [巡检第 9 轮 2026-10-11 F1] 阴影边界锁：离屏多角度导出**不参与阴影** =====
+// 与 IBL 锁同构的双向样本（声明在 export.md「阴影不参与多角度截图」条）。
+// 病：预览默认 `envState.shadowEnabled = true`（schema 实证）→ ShadowCapability 给
+// 活跃 renderer 置 shadowMap.enabled + 灯/mesh castShadow，模型在预览里有接触阴影；
+// 离屏 renderMultiAngle 自建 renderer **零阴影接线** → 多角度导出图无阴影，模型显
+// 「浮起」——继背景层 / pass 层 / 环境贴图光照层之后的**第四条 WYSIWYG 缝**，且此前
+// 无声明（区别于 IBL：阴影无「跨 context 不可共享」的硬件借口，离屏技术上可重建，
+// 属产品需求——本锁只声明 + 机器锁边界，实现与否待拍板，勿静默漂移）。
+describe("renderMultiAngle — 阴影边界（巡检第 9 轮 F1 已知差异）", () => {
+  it("离屏不接线阴影：shadowMap 从未被启用（若实现阴影入截图，本例翻转断言方向并同步声明）", async () => {
+    const shots = await renderMultiAngle("/m/a.ysm", []);
+    expect(shots, "成功路径").not.toBeNull();
+    const r = lastRenderer() as unknown as { shadowMap?: { enabled?: boolean } };
+    // fake 桩无 shadowMap 字段：若 SUT 开始写 renderer.shadowMap.enabled，桩上即
+    // TypeError → shots 变 null 红；真 three 下该字段恒存在，断言 enabled 非真。
+    expect(r.shadowMap?.enabled ?? false, "离屏不启用 shadowMap").toBe(false);
+  });
+
+  it("export.md 已声明「阴影不参与多角度截图」已知差异（声明与行为互为镜像，删其一即红）", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { fileURLToPath } = await import("node:url");
+    const doc = readFileSync(fileURLToPath(new URL("../../../../docs/knowledge/export.md", import.meta.url)), "utf8");
+    expect(doc, "已知差异声明条在场").toContain("阴影不参与多角度截图");
   });
 });

@@ -15,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -25,15 +26,28 @@ import (
 	"ysm-model-manager/internal/app"
 )
 
+// stdoutSwapMu 串行化所有对全局 os.Stdout 的换写/还原：并发换写 os.Stdout 与
+// 并行测试的 fmt.Println（读 os.Stdout）互为 DATA RACE（CI 曾 flaky，报错形如
+// "fmt.Println reads os.Stdout vs captureOutput cleanup writes os.Stdout"）。
+// 本包打印 stdout 的测试已全部去并行化（见各处「刻意串行」注记）；此锁作第二道
+// 保险，防止未来给 captureOutput 调用点重加 t.Parallel 时 helper 之间互撞。
+var stdoutSwapMu sync.Mutex
+
 // captureOutput 捕获调用期间的 stdout 输出
 // 修复：在 fn() 执行前启动异步 reader，避免 Windows pipe 缓冲区满导致 fmt.Println 阻塞死锁
 func captureOutput(t *testing.T, fn func()) string {
 	t.Helper()
+	stdoutSwapMu.Lock()
+	defer stdoutSwapMu.Unlock()
 	old := os.Stdout
 	r, w, err := os.Pipe()
 	testutil.NoError(t, err, "os.Pipe")
 	os.Stdout = w
-	t.Cleanup(func() { os.Stdout = old })
+	t.Cleanup(func() {
+		stdoutSwapMu.Lock()
+		defer stdoutSwapMu.Unlock()
+		os.Stdout = old
+	})
 
 	var out strings.Builder
 	readerDone := make(chan struct{})

@@ -119,7 +119,8 @@ func TestScanFirstModel_LexicographicDeterministic(t *testing.T) {
 // TestRunConcurrentBench_RejectsUnanalyzableOnly 并发基准调 AnalyzeBedrockModel，
 // 仓库里只有不可分析类型时必须**如实报错**，而不是退回「取任意条目」把空模型跑成实测。
 func TestRunConcurrentBench_RejectsUnanalyzableOnly(t *testing.T) {
-	t.Parallel()
+	// 刻意串行：本测试打印 stdout（fmt.Println/runPerfSnapshot），与 captureOutput 换写 os.Stdout
+	// 并行即 DATA RACE（CI 曾 flaky：fmt 读 os.Stdout vs Cleanup 写回）。要并行须先根治输出捕获。
 	root := t.TempDir()
 	vrm := filepath.Join(root, "a.vrm")
 	if err := os.WriteFile(vrm, []byte("x"), 0o644); err != nil {

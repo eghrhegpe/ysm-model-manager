@@ -350,7 +350,8 @@ func TestRunSingleBenchJSON_SaveBaselineSlot(t *testing.T) {
 // TestSingleBench_BaselineRejectedInMatrixMode 矩阵模式的载荷是 models[]，
 // 基准是**单模型**概念——原先静默吞掉参数，应改为明确拒绝（宁可报错不可吞）。
 func TestSingleBench_BaselineRejectedInMatrixMode(t *testing.T) {
-	t.Parallel()
+	// 刻意串行：本测试打印 stdout（fmt.Println/runPerfSnapshot），与 captureOutput 换写 os.Stdout
+	// 并行即 DATA RACE（CI 曾 flaky：fmt 读 os.Stdout vs Cleanup 写回）。要并行须先根治输出捕获。
 	cases := [][]string{
 		{"--target", "all", "--format", "json", "--baseline", "x.json"},
 		{"--target", "all", "--format", "json", "--save-baseline", "x.json"},

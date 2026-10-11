@@ -135,7 +135,8 @@ func TestMsOf(t *testing.T) {
 }
 
 func TestRunConcurrentBench_ParamValidation(t *testing.T) {
-	t.Parallel()
+	// 刻意串行：本测试打印 stdout（fmt.Println/runPerfSnapshot），与 captureOutput 换写 os.Stdout
+	// 并行即 DATA RACE（CI 曾 flaky：fmt 读 os.Stdout vs Cleanup 写回）。要并行须先根治输出捕获。
 	cases := []struct {
 		args []string
 		want string
@@ -292,7 +293,8 @@ func TestSingleBenchReadNote(t *testing.T) {
 }
 
 func TestRunPerfSnapshot_EndToEnd(t *testing.T) {
-	t.Parallel()
+	// 刻意串行：本测试打印 stdout（fmt.Println/runPerfSnapshot），与 captureOutput 换写 os.Stdout
+	// 并行即 DATA RACE（CI 曾 flaky：fmt 读 os.Stdout vs Cleanup 写回）。要并行须先根治输出捕获。
 	root := t.TempDir()
 	modelPath := filepath.Join(root, "m.ysm")
 	if err := os.WriteFile(modelPath, []byte("fake-model-bytes"), 0o644); err != nil {
@@ -314,7 +316,8 @@ func TestRunPerfSnapshot_EndToEnd(t *testing.T) {
 // 锐评 2026-10-09：原实现 N 轮跑同一模型全命中 geoCache，「② 解析」avg 严重低估
 // （测的是缓存 lookup 而非 WASM 解码）；对齐 scan-bench「缓存命中不算测量」范式。
 func TestRunBenchIterations_InvalidatesCacheEachIter(t *testing.T) {
-	t.Parallel()
+	// 刻意串行：本测试打印 stdout（fmt.Println/runPerfSnapshot），与 captureOutput 换写 os.Stdout
+	// 并行即 DATA RACE（CI 曾 flaky：fmt 读 os.Stdout vs Cleanup 写回）。要并行须先根治输出捕获。
 	root := t.TempDir()
 	modelPath := filepath.Join(root, "m.ysm")
 	testutil.NoError(t, os.WriteFile(modelPath, []byte("fake-model-bytes"), 0o644))
@@ -345,7 +348,8 @@ func (f *benchScanFakeApp) ScanModelEntries(dir string) []types.ModelEntry {
 }
 
 func TestRunConcurrentBench_EndToEnd(t *testing.T) {
-	t.Parallel()
+	// 刻意串行：本测试打印 stdout（fmt.Println/runPerfSnapshot），与 captureOutput 换写 os.Stdout
+	// 并行即 DATA RACE（CI 曾 flaky：fmt 读 os.Stdout vs Cleanup 写回）。要并行须先根治输出捕获。
 	root := t.TempDir()
 	var paths []string
 	for _, name := range []string{"a.ysm", "b.ysm", "c.ysm", "readme.txt"} {

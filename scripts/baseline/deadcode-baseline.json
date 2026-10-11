@@ -1,5 +1,5 @@
 {
-  "generated": "2026-10-08T16:30:10.843Z",
+  "generated": "2026-10-11T10:25:42.863Z",
   "knip": [
     "src/backend/platform.ts|duplicates|isViewerPlatform#isViewerMode",
     "src/backend/platform.ts|exports|isViewerPlatform",
@@ -177,7 +177,6 @@
     "preview-3d/caps/environment-capability.ts#preview-3d/caps/fog-capability.ts",
     "preview-3d/caps/environment-capability.ts#preview-3d/caps/sky-capability.ts",
     "preview-3d/caps/ground-capability.ts#preview-3d/caps/water-capability.ts",
-    "preview-3d/caps/light-capability.ts#preview-3d/caps/light-capability.ts",
     "preview-3d/caps/postprocessing-capability.ts#preview-3d/caps/shadow-capability.ts",
     "preview-3d/caps/surface-pixels/grass.ts#preview-3d/caps/surface-pixels/sand.ts",
     "preview-3d/caps/water-body-strategies.ts#preview-3d/caps/water-body-strategies.ts",

@@ -199,8 +199,9 @@ export class PostprocessingComposer {
   }
 
   /** 反射模式变更处理（cap.onEnvChanged 委托）。免重建：已经建了 composer 才补挂 SSR /
-   *  调档位（[锐评 P2-4]：切档不重建——three 0.186.1 SSRPass.dispose 漏释放 ssrMaterial，
-   *  从根上避免每次切档累积 ShaderMaterial）。 */
+   *  调档位（[锐评 P2-4]：切档不重建——避免每次切档重建整链的 GPU 抖动；
+   *  [2026-10-11] 原立论「three 0.186.1 SSRPass.dispose 漏释放 ssrMaterial」已补丁化，
+   *  见 `disposeComposer`——泄漏不再成立，但「切档不重建」本身仍是正确的性能选择）。 */
   syncReflectionMode(state: EnvState): void {
     if (!this.composer) return;
     // 已启用 + 需要 SSR + 尚无 ssrPass → 补挂（重建整链）
@@ -359,6 +360,16 @@ export class PostprocessingComposer {
   disposeComposer(): void {
     this.ssaoPass?.dispose();
     this.ssaoPass = null;
+    // [2026-10-11 上游泄漏补丁] `SSRPass.dispose()` 漏释放 `ssrMaterial`——读源码实证
+    // (`three/examples/jsm/postprocessing/SSRPass.js` 的 dispose)：它释放 7 个 RT
+    // (beauty/prev/normal/metalness/ssr/blur/blur2) + 7 个材质 (normalMaterial /
+    // metalnessOn/OffMaterial / blurMaterial / blurMaterial2 / copyMaterial /
+    // depthRenderMaterial) + fsQuad，**唯独漏掉主 ShaderMaterial `ssrMaterial`**——
+    // 而它持 `tDiffuse`/`tNormal`/`tMetalness`/`tDepth` 四张纹理引用 + 全部 defines/uniforms。
+    // 不补即每次拆链漏一个 ShaderMaterial 及其 GPU program。
+    // 类型依据：`ssrMaterial` 在官方 `@types/three` 的 SSRPass.d.ts 有公开声明（无需强转）。
+    // 撤除条件：three 上游修复后（本文件 `postprocessing-ssr-dispose.test.ts` 首例会转红提示）。
+    this.ssrPass?.ssrMaterial.dispose();
     this.ssrPass?.dispose();
     this.ssrPass = null;
     this.renderPass?.dispose();

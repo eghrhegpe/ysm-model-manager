@@ -41,6 +41,8 @@ pitfalls:
   - ListByTag 返回路径是排序的——不保证与原始写入顺序一致
   - tags.json 损坏时 Store 会创建 .corrupt 备份并返回空 Store
   - AddTag 已存在则跳过——不会报错也不会计数
+  - 已知缺口（2026-10-11 修复批次审计登记，未修）：启动扁平→分组迁移 `internal/app/app.go|migrateFlatStorageToGrouped` 裸 os.Rename/CopyDirRecursive 不走 RelocateKeys——老用户升级后被迁目录内标签键全成孤儿（ListByTag 出死路径、同名重建复活旧标签）；rekey 派生闸只盯 go/fileops 导出面，裸 os 调用天然不可见
+  - 已知缺口（2026-10-11 修复批次审计登记，未修）：回收站删除半侧未接 PruneKeys——`go/recycle` MoveToRecycle/dedup clean 移入 .recycle 后键成孤儿至 Restore，EmptyRecycleBin/DeleteFromRecycle 则永久孤儿（同名重导/同步回拉复活旧标签，正是 PruneKeys 立因病）；recycle 方法值链（r.Restore/r.Delete）叠加 write-surface-gate 已登记的盲区
 status: active
 ---
 
@@ -83,6 +85,7 @@ status: active
 - `SetTags` 每次写后都落盘（JSON 缩进格式，**tmp + `os.Rename` 原子替换**，rename 失败清理 tmp；`TestSaveLeavesNoTmp` 守护）；`GetTags` 返回副本防外部篡改
 - **损坏恢复**：tags.json 解析失败 → 备份 `.corrupt`（保留现场）→ 重建空存储（读路径恢复 + 写路径自我修复，`TestCorruptFileRecovers` 守护）——第 4 批修复，知识卡原卡未记载已补
 - P3 观察：`Store.persist` 失败（磁盘满/权限）时内存已变更、磁盘未更新，属「内存优先、落盘尽力」契约（调用方拿到 error 但 GetTags 读到新值，进程崩溃则上次写丢失）；`ListByTag` 空 tag 返回 nil 与 GetTags 的 `[]string{}` 约定不一致（P4）
+- **登记未收口缺口（2026-10-11 修复批次审计，见 pitfalls 两条「已知缺口」）**：① 启动扁平→分组迁移 `migrateFlatStorageToGrouped` 不走 RelocateKeys（老用户升级后被迁目录标签键全孤儿）；② 回收站 `MoveToRecycle`/`EmptyRecycleBin`/`DeleteFromRecycle`/CLI dedup clean 未接 PruneKeys（移入 .recycle 键孤儿至 Restore，清空/删除即永久孤儿）。两者均在 write-surface-gate 派生面之外（裸 os 调用 / 方法值链），**修前先扩闸或人工核路径，勿只补调用点**。测试侧同族债（裸 t.Fatal 增量）见 `go-testutil.md`「已知债」。
 
 ## 相关
 

@@ -9,14 +9,17 @@
 // 的地基，且 JS/Go 各一份手抄。texture-order 的先例（cb1ce8d6d）已证明「两侧各有测试、
 // 各自绿」证不了「两侧互等」——那一族真实分叉 3 处。cube 侧此前同样只有各自侧手算期望值。
 //
-// 口径（详见语料 $semantics）：
-//   · 全部浮点项走**相对容差 1e-12**（positions/normals/uvs/localPosition/localRotation）；
-//     indices/texIdx/id/boneId 精确比对。
-//     ⚠️ 原设计以为「IEEE754 四则运算跨语言逐位一致」可做精确比对，**该假设被本语料
-//     自己证伪**：zero-thickness-float-rounding 的 uvs[32] Go 产出 0.250015625、
-//     V8 产出 0.25001562499999996（差 1 ULP，`(u+z+x+z)/texW` 的求值/收缩差异）。
-//     1e-12 仍远小于真实公式改动产生的偏差（量级 ≥1e-2），抓漂移能力不受影响。
-//   · 特殊浮点以字符串哨兵 "nan"/"inf"/"-inf" 表达（JSON 无此字面量），双端各自映射
+// 口径（详见语料 $semantics，与 expectExact/sameRot 实现一致）：
+//   · positions/normals/uvs/localPosition 及 indices/texIdx/id/boneId 走**逐位精确比对**：
+//     全由加减乘构成，IEEE754 对同一运算顺序结果确定——有差异必然是两侧抄写的表达式/
+//     结合序不同（非平台噪声），必须精确才抓得住。建语料初期（aaa3ac8b6）曾观测
+//     zero-thickness-float-rounding 差 1 ULP 并以 1e-12 容差放行；后查明根因是 JS South
+//     面结合序抄错（`u+z+x+z` vs Blockbench 权威 `u+sz+sz+sx`，c40c93040 对齐权威），
+//     全语料恢复逐位相等，口径即恢复精确。
+//   · 仅 localRotation 走 1e-9 相对容差（eulerToQuaternion 含 cos/sin/sqrt，跨实现可差
+//     1 ULP，属真噪声）——见 sameRot 头注。
+//   · 特殊浮点以字符串哨兵 "nan"/"inf"/"-inf" 表达（JSON 无此字面量），双端各自映射。
+//   ⚠️ 勿为「让测试变绿」把精确项改回容差——那等于把抄写分叉永久藏起来。
 import { describe, expect, it } from "vitest";
 import { buildCubeMeshData } from "./cube-mesh.ts";
 import type { Cube2D, Vec3 } from "@/preview-3d/model/spec-builder.ts";

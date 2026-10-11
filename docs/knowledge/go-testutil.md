@@ -83,6 +83,10 @@ status: active
 - `CreateTestFile` 使用 `t.Fatal` 而非返回错误（测试上下文惯例）
 - `WriteZipFile` 的临时目录由 `t.TempDir()` 管理，测试结束自动清理
 
+## 已知债（ADR-202 刀5 裸断言增量）
+
+- **2026-10-11 修复批次审计登记（未收口）**：`check-go-diff-coverage` 的「测试断言增量红线」（新增/变更 `*_test.go` 行禁裸 `t.Fatal`/`t.Fatalf`，须走 testutil 断言）是**增量闸**——只扫 diff 窗口。2026-10-10/11 批次中 6 个测试文件 ~24 处裸 t.Fatal 已随推送窗口 grandparent 化，闸不再复扫；`45a6a8177` 只收了同族 1/6（tags_relocate_test）。（清单以 `node scripts/check-go-diff-coverage.ts --base 47f9ccd83` 实测为准，2026-10-11 审计记录：10 文件红、6 属该批次——tags_commit_order / fileops_target_plan / app_files_tags_migrate / app_config_preserve / app_prune_disabled / app_files_toggle。）收口 = 一次性改走 testutil 断言（参照 `45a6a8177` 先例），改完以债前 commit 为 base 重跑该闸转绿。
+
 ## 相关
 
 - `go/dedup/`、`go/fsutil/`、`go/recycle/`（测试文件）

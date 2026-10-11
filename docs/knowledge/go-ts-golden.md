@@ -117,6 +117,7 @@ invariant_anchors:
 - **pilot 1（识别层指纹）**：Go `types.MatchZipEntry` ↔ TS `matchZipEntryTS`，fixture `tests/parity/go-ts-zipentry.json`（语料源：classify-golden entries + 全类型 zipEntries + 边界），双端 27 条全绿。
 - **pilot 2（方块配色）**：Go `MapColor`/`ResolveBlockName` ↔ TS `mapColor`/`resolveBlockName`。Go 侧 `parity_voxel_test.go` 直接读 `voxel-colors-data.json` 逐键验证（生成物过期检测器），TS 侧 `voxel-colors.parity.test.ts` 消费同一 data.json。已捕获并修复真实漂移：`118:3` 曾为 "minecraft:cauldront"（typo），Go 源码正确为 "minecraft:cauldron"。
 - **已知遗留**：容器级 `detectZipType` 对拍待 TS 补 (priority desc, id asc) 裁决后纳入（ADR-154 §2.4）；装配层（scanWebModels/searchWebModels）永久无法 golden（输入面不同）。
+- **已知缺口（2026-10-11 审计登记）**：preview-3d 3D 几何/纹理族语料（`tests/fixtures/parity/cube-mesh.golden.json` / `texture-order.golden.json`，机制同源、主源=Go）之外，`frontend/src/preview-3d/model/spec-builder.ts|parseBedrockGeometry` ↔ Go `go/geometry/parse.go` 条目**选择链**（旧格式回退/跳空壳/GUI 过滤；16db29a8d 已按 Go 四段同构对齐结构面）仍**无跨语言黄金语料**——「两侧各有测试、不互对账」形态（texture-order/cube 该形态已被实证出 3+1 处真实分叉）。候选收口：复用 tests/fixtures/parity 机制补 geometry-select golden（主源=Go，regen 沿 `YSM_PARITY_REGEN=1` 先例），或并入 cube-mesh 语料；tracker 登记见 `docs/preview-3d-review-tracker.md` 2026-10-11T15:30 审计回补条。
 
 ## 对外 API / 入口
 

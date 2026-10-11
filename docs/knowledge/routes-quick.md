@@ -895,6 +895,7 @@
 | 回收站空间上限（配置项）超限时自动清理最旧条目 | - | - |
 | 跨设备移动（硬链接失效）时回收站中的条目变为独立副本 | - | - |
 | 批量清空回收站时需注意文件锁定——被占用文件跳过不报错 | - | - |
+| 标签删除半侧未接线（2026-10-11 审计登记，未修）：回收站各删除出口（`Move`/`Empty`/`Delete` + CLI dedup clean）未接 `Store.PruneKeys`——移入 .recycle 后标签键成孤儿至 Restore，清空/永久删除即永久孤儿（同名重导/同步回拉复活旧标签，正是 PruneKeys 立因病）；且 recycle 方法值链（r.Restore/r.Delete）在 write-surface-gate 正则盲区。详见 go-tags.md pitfalls 两条 | `已知缺口` | - |
 | 容器指纹缓存失效需调 ClearScanCache——文件变更后不失效会导致缓存命中旧数据 | - | - |
 | resource_types.json 是唯一事实来源——修改类型定义后必须重新扫描 | - | - |
 | ScanEntries 排除 .recycle 目录——换用不排 .recycle 的 scanFn 会重新引入误判 | - | - |
@@ -914,6 +915,8 @@
 | ListByTag 返回路径是排序的——不保证与原始写入顺序一致 | - | - |
 | tags.json 损坏时 Store 会创建 .corrupt 备份并返回空 Store | - | - |
 | AddTag 已存在则跳过——不会报错也不会计数 | - | - |
+| 已知缺口（2026-10-11 修复批次审计登记，未修）：启动扁平→分组迁移  裸 os.Rename/CopyDirRecursive 不走 RelocateKeys——老用户升级后被迁目录内标签键全成孤儿（ListByTag 出死路径、同名重建复活旧标签）；rekey 派生闸只盯 go/fileops 导出面，裸 os 调用天然不可见 | `internal/app/app.go\|migrateFlatStorageToGrouped` | - |
+| 已知缺口（2026-10-11 修复批次审计登记，未修）：回收站删除半侧未接 PruneKeys—— MoveToRecycle/dedup clean 移入 .recycle 后键成孤儿至 Restore，EmptyRecycleBin/DeleteFromRecycle 则永久孤儿（同名重导/同步回拉复活旧标签，正是 PruneKeys 立因病）；recycle 方法值链（r.Restore/r.Delete）叠加 write-surface-gate 已登记的盲区 | `go/recycle` | - |
 | 各包自行实现同名测试 helper | - | 重复维护、行为漂移；一律复用本包 |
 | 前端手写骨骼转换 | - | 与 go/threejs 输出不一致、四元数旋转错乱；必须经 spec.go |
 | spec 字段漏转换 | - | 骨骼变形丢失；必须完整覆盖所有 spec 字段 |

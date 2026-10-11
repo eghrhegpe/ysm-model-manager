@@ -1,6 +1,8 @@
 // ===== 纹理序口径（2026-08-10 统一；2026-10-10 语义对齐收口）=====
-// 与 Go 端 internal/app/texture_order.go|orderTexItems **逐分支对称**（口径由跨语言
-// 契约 tests/test_texture_order_parity.ts 锁死，改一侧忘另一侧即红——此前只靠本注释）：
+// 与 Go 端 internal/app/texture_order.go|orderTexItems **逐分支对称**（口径由跨语言黄金
+// 语料对账锁死：Go TestTextureOrderParity（internal/app/texture_order_parity_test.go，主源）
+// 与本目录 texture-order-parity.test.ts 共享 tests/fixtures/parity/texture-order.golden.json，
+// 改一侧忘另一侧即红；「只靠注释互指」阶段已于 cb1ce8d6d 收口——双源病实证出 3 处真实分叉）：
 // 有 ysm.json 声明序 → 声明序 + default_texture 置首（只保留声明中的纹理）；
 // 声明序**全部匹配不上**（加密包/声明名与提取名对不上）→ 与空声明同样回退尺寸降序
 // （Go 侧该行为另有 panic 防护动因；旧 TS 返回 [] 会让 WASM 主路径退化成灰模、

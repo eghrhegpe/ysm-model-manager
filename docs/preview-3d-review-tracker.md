@@ -466,3 +466,14 @@
 - **真正的风险（新 ground 键漏登记 restorer → 自动持久化静默不还原）已被 G-8 契约锁机器闸兜住**：`ground-capability.test.ts:1293`「[G-8] schema ground 键集全部可 save/load round-trip（还原表不得漏登记）」——遍历 `getPresetKeys("ground")`（`:1325`），每个 schema ground 键**必须有偏离值**（缺失即 `:1327-1330` 点名红，把加键动作逼回 loadState 登记）；且断言每个偏离值 `≠` 当前值（`:1334-1337`，「锁形同虚设」自失能防死）；save→reset→load 后逐键断言回到偏离值（`:1351-1355`）；`enabled` 断言不进存档（`:1347`）+ 构造默认 true 唯一真相源（`:1356`，防回填闸）。**实跑绿**（ground 81 例含 G-8，非跳过/空转）。
 - **更正结论**：ground restoreFields 手抄是**合法行为表设计**（两族 restorer + oneOf + 刻意排除），其漂移风险由 G-8 契约锁兜底——**升格为「非缺陷 + 已有机器闸」，移出候选**。与 sky 4 键同属「形式不对称但已有闸，且不可简单对称化」。
 - 由此，第 12 轮遗留候选只剩：`check-env-schema-consumers` 补写方检测（写模式多态误报高，维持不动）、`applyModelDefaults` 手写有序清单（契约锁兜底，维持不动）。
+
+
+## 2026-10-11T15:30:00+08:00 追加：近期修复批次「根治性」审计回补（10-10/11 两批 ~33 提交）
+
+> 对 2026-10-10/11 的 preview-3d / tags·app / gates·CI 三族修复提交做「是否根治」审计（判据 = 结构根因 + 机器闸实测 + 族收敛；三族并行子代理调研 + 主代理抽查 + 变异抽测）。**总判定：整体根治**——11 项 preview-3d fix 与 9/11 项 tags·app fix 全部落在结构根因、机器闸实测绿（doctor 全量 68/69，唯一 FAIL 为 28 天窗口内存量债 check-design-tokens）。本条只登记审计新抓到的**未登记缺口**与**注释腐化**（顺手已修，同提交），不重复各轮已留痕内容。
+
+- **G-geometry（未登记缺口·中低危）**：`spec-builder.ts|parseBedrockGeometry` ↔ Go `geometry/parse.go` 条目**选择链**（旧格式回退/跳空壳/GUI 过滤）是手抄双源——16db29a8d（第 8 轮）已按 Go 四段同构对齐结构面，但**无跨语言黄金语料对账**，与 texture-order/cube-mesh「两侧各有测试、不互对账」同型（该形态已被两次实证出 3+1 处真实分叉）。候选收口：复用 tests/fixtures/parity 机制补 geometry-select golden（主源=Go，regen 沿 `YSM_PARITY_REGEN=1` 先例），或并入 cube-mesh 语料；机制归属见知识卡 `go-ts-golden.md` 已知缺口条。
+- **注释腐化两处（已顺手更正，本条同提交）**：① `cube-mesh-parity.test.ts` 头注仍写「全浮点 1e-12 相对容差 + 精确假设被证伪」——系建语料初期（aaa3ac8b6）中间态口径；c40c93040 对齐 South 结合序后已恢复逐位精确（仅 localRotation 1e-9），头注与测体/语料 $semantics/提交说明四向矛盾，已更正；② `texture-order.ts` 头注引用不存在的 `tests/test_texture_order_parity.ts`（真守卫 = Go TestTextureOrderParity + `decoder/texture-order-parity.test.ts` 双端共享 golden），已更正。
+- **Go 侧未登记缺口（已登记知识卡，本条只做指针）**：G1 回收站删除半侧未接 PruneKeys（`go-tags.md` + `go-recycle.md`）、G2 启动扁平→分组迁移 `migrateFlatStorageToGrouped` 不走 RelocateKeys（`go-tags.md`）、G3 六文件 ~24 处裸 t.Fatal（ADR-202 刀5 增量债，窗口 grandparent 化后 `check-go-diff-coverage` 不再复扫，`go-testutil.md`）。
+- **治理层残留候选（下一批次，未动手）**：① bindings 漂移 commit 时点无同步机制（仅 CI 时点 fail-closed 兜底，已两次复发 a43533009/a97f32c9d——建议 pre-push 轻量档或 prepare-commit-msg 提示 regenerate）；② `tsc -p scripts` 不在 commit/pre-push 门禁（`scripts/_lib` 未类型化新代码可溜过，b869a753c 自认缺口至今在）；③ vitest 阻断步仍 `| Out-String -Width 200`（test.yml 前端 job，与 bb6e5e1d4 修的 go test 步同坑，`ci-tuning.md` 已登记未收口）；④ write-surface-gate 方法值链盲区（r.Restore/r.Delete/h.Import 类——已登记诚实边界，换汇聚点即失防，无提醒机制）。
+- 验证：审计全程只读（调研子代理未改码）；变异抽测（write-surface-gate 空转/僵尸豁免两方向）转红后已还原、git status 干净；本条更正的两注释文件 typecheck / vite build 绿 + cube-mesh-parity 23 例实测绿。

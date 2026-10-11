@@ -25,8 +25,8 @@
 
 import type * as THREE from "three";
 import type { SceneCapabilityRegistry } from "@/preview-3d/caps/scene-capability-registry.ts";
-import { POSTPROC_MSAA_SAMPLES } from "@/preview-3d/infra/msaa-samples.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
+import { POSTPROC_MSAA_SAMPLES } from "./msaa-samples.ts";
 
 /** 双臂标识 */
 export type ProbeArm = "composer" | "direct";

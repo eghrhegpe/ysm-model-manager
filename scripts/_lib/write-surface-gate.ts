@@ -23,12 +23,18 @@
  *   - "scan"：scanner.InvalidateCache / InvalidatePath（级联钩子自动带下两派生缓存）
  *   - "pair-or-clear"：a.ClearScanCache()（scan+容器+geo 三层）或 instance+sync 显式配对
  *     （go/sync 不能反向依赖 go/instance，配对责任在 app 层——见 go-sync 卡不变量）
+ *   - "rekey"：a.relocateTags(...)——标签键随改名/移动/复制跟随（go-tags 卡不变量）
+ *   - "prune"：a.pruneTags(...)——标签键随删除清理（同卡的「删除半侧」不变量）
+ *     rekey/prune 是**固定 token**（非派生）：Store 侧改名会让本闸整片转红（响亮且可见），
+ *     属与 SCAN_TOKENS 同型的「固定签名 + 响亮破坏」取舍，不新造哲学。
+ *     注意两族的覆盖边界：只锁「调用点必须走对应 helper」；helper 内部是否真接 Store 的
+ *     RelocateKeys/PruneKeys 由对应契约测试单独断言。
  */
 import fs from "node:fs";
 import path from "node:path";
 
 /** 失效签名族 */
-export type SatisfyKind = "scan" | "pair-or-clear";
+export type SatisfyKind = "scan" | "pair-or-clear" | "rekey" | "prune";
 
 /** 一个被监视的包：dir=派生导出面的包目录（相对 root）；alias=app 层调用前缀 */
 export interface GatePackage {
@@ -124,12 +130,18 @@ export function enclosingFunc(text: string, idx: number): { name: string; body: 
 const SCAN_TOKENS = ["scanner.InvalidateCache", "scanner.InvalidatePath"];
 const CLEAR_TOKEN = "a.ClearScanCache()";
 const PAIR_TOKENS = ["instance.InvalidateSyncItemsCache", "ysmsync.InvalidateSyncScanCaches"];
+// 标签键跟随/清理：app 层统一经 helper（落点不自算，双份路径计算必漂移），故锁 helper 调用。
+// helper 内部是否真接 Store 的 RelocateKeys/PruneKeys，由契约测试单独断言（见文件头注释）。
+const REKEY_TOKEN = "a.relocateTags(";
+const PRUNE_TOKEN = "a.pruneTags(";
 
 /** 函数体是否满足该族失效签名。 */
 export function bodySatisfies(body: string, satisfy: SatisfyKind): boolean {
   if (satisfy === "scan") return SCAN_TOKENS.some((t) => body.includes(t));
   if (satisfy === "pair-or-clear")
     return body.includes(CLEAR_TOKEN) || PAIR_TOKENS.every((t) => body.includes(t));
+  if (satisfy === "rekey") return body.includes(REKEY_TOKEN);
+  if (satisfy === "prune") return body.includes(PRUNE_TOKEN);
   throw new Error(`unknown satisfy: ${satisfy}`);
 }
 

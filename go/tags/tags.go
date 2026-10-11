@@ -398,6 +398,51 @@ func (s *Store) RelocateKeys(from, to string, subtree, keepSource bool) (int, er
 	return migrated, nil
 }
 
+// PruneKeys 删除 prefix 前缀下的全部标签键（2026-10-11 锐评收口：RelocateKeys 只补了
+// 「迁移半侧」，RemoveDir / DeleteResourcePack 失效扫描缓存却不清标签键——
+// 孤儿键单调累积，且**同名重建会复活旧标签**（删掉「狐狸」再导入一个「狐狸」，
+// 上一个的标签静静贴上来）。本方法补齐「删除半侧」，语义与 RelocateKeys 对称：
+//   - subtree=true：删除 prefix 本身及其下全部键，按**分隔符边界**匹配（/a/b 不误伤 /a/bc）
+//   - subtree=false：只删精确键（单文件删除）
+//
+// 无命中一律 no-op 返回 0（不落盘，与 RelocateKeys 同律）；落盘走 commit 继承
+// persistMu「落盘序=快照序」不变量。返回实际清理的键数。
+func (s *Store) PruneKeys(prefix string, subtree bool) (int, error) {
+	if prefix == "" {
+		return 0, nil
+	}
+	if err := checkModelPath(prefix); err != nil {
+		return 0, err
+	}
+	pruned := 0
+	err := s.commit(func() (bool, error) {
+		// 先收集命中（遍历 data 期间不可改 data），再统一删除——与 RelocateKeys 同范式。
+		var hits []string
+		if subtree {
+			sep := string(filepath.Separator)
+			for k := range s.data {
+				if k == prefix || strings.HasPrefix(k, prefix+sep) {
+					hits = append(hits, k)
+				}
+			}
+		} else if _, ok := s.data[prefix]; ok {
+			hits = append(hits, prefix)
+		}
+		if len(hits) == 0 {
+			return false, nil
+		}
+		for _, k := range hits {
+			delete(s.data, k)
+			pruned++
+		}
+		return true, nil
+	})
+	if err != nil {
+		return 0, err
+	}
+	return pruned, nil
+}
+
 // maxTagLen 单标签长度上限（ADR-044② 数值守卫：Go 侧信任边界，前端 maxlength 可绕过）
 const maxTagLen = 50
 

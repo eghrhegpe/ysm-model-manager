@@ -394,6 +394,12 @@ func (a *App) DeleteResourcePack(path, rtype string) error {
 		if err := os.RemoveAll(realClean); err != nil {
 			return err
 		}
+		// 删除后清理标签键（2026-10-11 锐评收口：仅失效扫描缓存不够——标签键成孤儿，
+		// 同名重建会复活旧标签；与 app_files.RemoveDir 同律补齐删除半侧）。
+		// 双前缀都清：clean 是逻辑路径、realClean 是符号链接解析后的真实路径，
+		// 二者其一命中即可（PruneKeys 无命中 no-op，不落盘）。
+		a.pruneTags(clean, true)
+		a.pruneTags(realClean, true)
 	} else {
 		// 文件型资源：按 rtype 获取对应仓库根（非 ysm 类型可能在其他根下）
 		filesRoot, _ := a.GetRepoRoot(rtype)
@@ -403,6 +409,9 @@ func (a *App) DeleteResourcePack(path, rtype string) error {
 		if err := fileops.DeleteModelFile(filesRoot, path); err != nil {
 			return err
 		}
+		// 单文件删除 → 只清精确键；path 可能相对根也可能已绝对，双形态都清（无命中 no-op）
+		a.pruneTags(filepath.Join(filesRoot, path), false)
+		a.pruneTags(path, false)
 	}
 	scanner.InvalidateCache()
 	return nil

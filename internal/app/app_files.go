@@ -48,6 +48,21 @@ func (a *App) relocateTags(from, to string, subtree, keepSource bool) {
 	}
 }
 
+// pruneTags 文件/目录**删除**后清理标签键（2026-10-11 锐评收口：RelocateKeys 只补了
+// 「迁移半侧」——RemoveDir/DeleteResourcePack 失效扫描缓存却不清标签键，孤儿键单调累积，
+// 且**同名重建会复活旧标签**。本函数补齐「删除半侧」，与 relocateTags 同律：
+// subtree=true 清整棵子树（目录删除）、false 只清精确键（单文件删除），
+// 键形态同样不自算——传删除目标本身（与写入时同源的绝对路径）。
+func (a *App) pruneTags(prefix string, subtree bool) {
+	if prefix == "" {
+		return
+	}
+	if _, err := a.getTagsStore().PruneKeys(prefix, subtree); err != nil {
+		a.AddOpLog("delete", filepath.Base(prefix), prefix, "", 0, types.StatusWarn,
+			fmt.Sprintf("标签清理失败（旧键成孤儿，同名重建会复活旧标签）: %v", err))
+	}
+}
+
 func (a *App) RenameDir(oldPath, newName string) error {
 	if !a.isPathInRoot(oldPath) {
 		return fmt.Errorf("路径超出仓库目录")
@@ -72,6 +87,8 @@ func (a *App) RemoveDir(dir string) error {
 	}
 	// 删除后失效扫描缓存——否则 30s 内已删目录仍出现在扫描结果
 	scanner.InvalidateCache()
+	// 删除后清理标签键——目录没了，其下全部键即成孤儿；不清则同名重建会复活旧标签
+	a.pruneTags(dir, true)
 	return nil
 }
 

@@ -19,8 +19,8 @@
 // + `disposeContent` 首行补 `unregisterModelRoot`。本文件把「每个格式都必须注册」固化为
 // 可机验契约，防再漏一个格式。
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { readFileSync, readdirSync } from "node:fs";
+import { resolve, sep } from "node:path";
 
 const ROOT = resolve(__dirname, "..", "..", "..", "..");
 const P3D = resolve(ROOT, "frontend", "src", "preview-3d");
@@ -54,6 +54,21 @@ function read(rel: string): string {
   return readFileSync(resolve(P3D, rel), "utf8");
 }
 
+/** 递归收集 adapters/ 下全部非测试 .ts，返回相对 P3D 的正斜杠路径（派生交叉校验用）。 */
+function scanAdapterFiles(): string[] {
+  const root = resolve(P3D, "adapters");
+  const out: string[] = [];
+  const walk = (dir: string): void => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      const p = resolve(dir, e.name);
+      if (e.isDirectory()) walk(p);
+      else if (e.name.endsWith(".ts") && !e.name.endsWith(".test.ts")) out.push(p);
+    }
+  };
+  walk(root);
+  return out.map((p) => p.slice(P3D.length + 1).split(sep).join("/"));
+}
+
 describe("frustum 根的注册契约（逐格式全绿）", () => {
   it.each(FORMATS)("$name：调用 registerModelRoot（清单与源码一致）", ({ file, name }) => {
     expect(read(file), `${name} 应注册 frustum 根`).toContain("registerModelRoot");
@@ -71,11 +86,50 @@ describe("frustum 根的注册契约（逐格式全绿）", () => {
     ).not.toContain("registerModelRoot");
   });
 
-  it("仅含 `registerModelRoot(` 出现的文件数与流程格式数一致（防新格式漏登记）", () => {
-    // 该断言是「清单未过期」的守卫：新增格式适配器若忘了登记 FORMATS，
-    // 它照样会在这里被计入，从而与清单长度不符 → 提示补登记。
-    const filesWithRegister = new Set(FORMATS.map((f) => f.file));
-    const counted = [...filesWithRegister].filter((f) => read(f).includes("registerModelRoot"));
-    expect(counted.length, "登记表内每个格式都必须含注册调用").toBe(FORMATS.length);
+  // 重建后**重注册**位白名单：若未来某文件既 scene.add 又在 build 外重挂载时重注册，
+// 必须显式登记于此（当前为空——派生集与 FORMATS 应完全重合）。
+// 注意：`unregisterModelRoot(` 会被 includes("registerModelRoot") 误命中，故派生扫描用调用点正则。
+const RE_REGISTER_ALLOWLIST: readonly string[] = [];
+
+/** 真调用 `registerModelRoot(` 的判定：排除 `unregisterModelRoot(` 与前缀 import。
+ *  用纯字符串判定而非正则字面量——本仓 auto-import 词法在正则里遇 `(?<!` 会断串，
+ *  把正则内部的标识符当成裸引用误报（锐评 2026-10-11 实测踩坑）。 */
+const WORD_CHARS = new Set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_$".split(""));
+function hasRegisterCall(src: string): boolean {
+  let i = src.indexOf("registerModelRoot(");
+  while (i >= 0) {
+    const lineStart = src.lastIndexOf("\n", i) + 1;
+    const lineEnd = src.indexOf("\n", i);
+    const line = src.slice(lineStart, lineEnd === -1 ? src.length : lineEnd);
+    const prev = i > lineStart ? src[i - 1] : "";
+    const isUnregister = src.slice(Math.max(0, i - 2), i) === "un";
+    const inImport = line.includes("import");
+    if (!inImport && !isUnregister && !WORD_CHARS.has(prev)) return true;
+    i = src.indexOf("registerModelRoot(", i + 1);
+  }
+  return false;
+}
+
+it("派生注册集 ⊇ FORMATS，且多出者必须在重注册白名单内（防清单漂移）", () => {
+    // 原断言只在 FORMATS 内自证（漏登记的文件根本不进集合），属**自证断言**——
+    // 「新格式漏登记」永不会红（锐评 2026-10-11 P1 抓出的假闸）。
+    // 现改为**从 adapters 目录派生**真含 `registerModelRoot(` 的文件集，再对账：
+    //   ① 每个 FORMATS 文件必须都在派生集内（清单项丢失 = 该格式不注册了，红）；
+    //   ② 派生集里不属于 FORMATS 的文件必须落在 RE_REGISTER_ALLOWLIST（重建后重注册位）
+    //      ——新增一个「注册了却没入表、也不在重注册白名单」的文件，红。
+    // 诚实边界（写进注释，不吹成 fail-closed）：一个「新格式适配器既没注册、也没入表」的
+    // 缺口静态扫描抓不到——那需 registry（格式→适配器）派生，超出本文件范围。
+    const derived = new Set(scanAdapterFiles().filter((f) => hasRegisterCall(read(f))));
+    const listed = FORMATS.map((f) => f.file);
+
+    const missing = listed.filter((f) => !derived.has(f));
+    expect(missing, "FORMATS 清单内每个格式的文件都必须真调用 registerModelRoot(").toEqual([]);
+
+    const unlisted = [...derived].filter((f) => !listed.includes(f)).sort();
+    const stray = unlisted.filter((f) => !RE_REGISTER_ALLOWLIST.includes(f));
+    expect(
+      stray,
+      "派生出的注册文件应全部来自 FORMATS 或重注册白名单；多出者需登记为重建后重注册位",
+    ).toEqual([]);
   });
 });

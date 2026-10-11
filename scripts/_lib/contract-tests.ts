@@ -147,6 +147,9 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   // 仓库文件写绑定的扫描缓存失效（锐评 2026-10-10 文件操作审计）：扫 internal/app
   // 生产文件的 fileops 写调用点，成功路径须 scanner.Invalidate——go 侧文件绑定变更即须复核
   "test_fileops_write_invalidate.ts": ["go", "tests"],
+  // 仓库文件写绑定的标签键跟随+清理（锐评 2026-10-11 收口）：扫 internal/app 生产文件的
+  // fileops 写调用点，改名/移动/复制须 relocateTags、删除须 pruneTags——go 侧文件绑定变更即须复核
+  "test_fileops_tag_sync.ts": ["go", "tests"],
   "test_api_break.ts": ["tests"],
   "test_auto_import.ts": ["tests"],
   // 守卫跨三端：scripts 工具自身 + Go 侧 ADR-047 守卫信号（internal/app）+ 前端黑名单/bindings
@@ -370,6 +373,14 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
     "go/fileops/",
     "scripts/_lib/write-surface-gate.ts",
     "tests/test_fileops_write_invalidate.ts",
+  ],
+  // 标签键跟随+清理：internal/app 生产文件全量在扫（目录哨兵）+ 被监视包导出面 + 派生引擎本体
+  "test_fileops_tag_sync.ts": [
+    "internal/app/",
+    "go/tags/",
+    "go/fileops/",
+    "scripts/_lib/write-surface-gate.ts",
+    "tests/test_fileops_tag_sync.ts",
   ],
   "test_api_break.ts": ["scripts/api-break.ts"],
   "test_auto_import.ts": [

@@ -52,12 +52,15 @@ function jsonExit(code: number, payload: Record<string, unknown>): never {
   process.exit(code);
 }
 
-/** 白名单（basename 匹配；理由见文件头「判定」段——扩白名单须先经锐评/ADR 拍板）。 */
+/** 白名单（**相对根的精确路径**；理由见文件头「判定」段——扩白名单须先经锐评/ADR 拍板）。
+ *  2026-10-11 锐评收口：原 basename 匹配在 `adapters/shared-infra.ts`（真写者）与
+ *  `adapters/shared/shared-infra.ts`（被动豁免）**撞名已实存**——未来后者写槽位会静默放行。
+ *  改全路径后撞名即红。 */
 const WHITELIST: readonly string[] = [
-  "env-ibl.ts",
-  "sky-capability.ts",
-  "shared-infra.ts",
-  "screenshot.ts",
+  "frontend/src/preview-3d/caps/env-ibl.ts", // D1 槽位唯一写者（环境/背景两槽 + 构造前快照还原）
+  "frontend/src/preview-3d/caps/sky-capability.ts", // sky IBL 自持兜底装载 + dispose 对称守卫（ADR-292 D3/D10）
+  "frontend/src/preview-3d/adapters/shared-infra.ts", // 基础设施初始化 background = Color（cap 构造前，非能力写者）
+  "frontend/src/preview-3d/screenshot/screenshot.ts", // 截图期 background 保存/还原（离屏侧，不触 environment）
 ];
 
 /** 槽位赋值模式（子串判定，确定性优先于正则前缀体操）：
@@ -117,7 +120,9 @@ function main(): void {
 
   for (const file of files) {
     const base = path.basename(file);
-    if (base.endsWith(".test.ts") || WHITELIST.includes(base)) continue; // 白名单/测试夹具豁免
+    // 全路径匹配（正斜杠相对根），杜绝 basename 撞名导致的静默豁免
+    const rel = path.relative(ROOT, file).split(path.sep).join("/");
+    if (base.endsWith(".test.ts") || WHITELIST.includes(rel)) continue; // 白名单/测试夹具豁免
     const lines = fs.readFileSync(file, "utf8").split("\n");
     lines.forEach((raw, idx) => {
       const t = raw.trim();

@@ -26,7 +26,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 // go/fileops 导出面中的只读/纯计算/不产条目类——**漏列一个被调用的非写函数即红**，
 // 漏列一个写函数则它会要求失效归宿（两个方向都 fail-closed）。
-const READONLY = new Set([
+const FILEOPS_READONLY = new Set([
   "CreateDir", // 建空目录：不产模型条目、不改扫描结果语义
   "ExtractPreviewTexture", // 只读提取
   "FindPreviewImage", // 只读查找
@@ -36,11 +36,34 @@ const READONLY = new Set([
   "RenameTarget", // 纯路径计算（plan，不动盘）
 ]);
 
+// recycle/download 两包（2026-10-11 锐评收口补入监视面——此前仅靠"人肉守约"手写失效）。
+// 诚实边界：`New` 是构造器归只读；recycle 的真实写方法是**方法值链**（r.Restore/r.Delete），
+// 闸的正则 `recycle.X(` 抓不到，仍属闸的既有盲区（文档见 write-surface-gate.ts 文件头）。
+// 能被抓的只有两个函数式入口：recycle.Move / recycle.RemoveRepoDuplicates。
+const RECYCLE_READONLY = new Set(["New"]); // 构造器：写发生在其返回对象的方法链上
+const DOWNLOAD_READONLY = new Set(["New", "ResolveSavePath"]); // 构造器 + 纯路径计算
+
+// RemoveRepoDuplicates 在 clearInstanceDir 内被调，但失效由调用方 RemoveInstanceDupes
+// 在批量循环后统一做一次（逐目录失效浪费）——豁免并留痕。
+const EXTRA_EXEMPT = [
+  {
+    file: "app_install_instance.go",
+    fn: "clearInstanceDir",
+    call: "RemoveRepoDuplicates",
+    reason: "失效由调用方 RemoveInstanceDupes 批量循环后统一 InvalidateCache() 一次（:114）",
+  },
+];
+
 const { sites, checked, violations } = runWriteGate({
   root: ROOT,
   appDir: "internal/app",
-  minSites: 6, // 现网调用点 19，低于 6 = 派生/扫描坏了
-  packages: [{ dir: "go/fileops", alias: "fileops", satisfy: "scan", readonlyFns: READONLY }],
+  minSites: 6, // 现网调用点 19+，低于 6 = 派生/扫描坏了
+  packages: [
+    { dir: "go/fileops", alias: "fileops", satisfy: "scan", readonlyFns: FILEOPS_READONLY },
+    { dir: "go/recycle", alias: "recycle", satisfy: "scan", readonlyFns: RECYCLE_READONLY },
+    { dir: "go/download", alias: "download", satisfy: "scan", readonlyFns: DOWNLOAD_READONLY },
+  ],
+  exemptSites: EXTRA_EXEMPT,
 });
 
 assert.ok(
@@ -58,5 +81,5 @@ assert.deepStrictEqual(
 );
 
 console.log(
-  `[test_fileops_write_invalidate] OK — 派生 fail-closed：${sites} 个 fileops 调用点，${checked} 个写点全部有失效归宿`,
+  `[test_fileops_write_invalidate] OK — 派生 fail-closed：${sites} 个调用点（fileops/recycle/download），${checked} 个写点全部有失效归宿`,
 );

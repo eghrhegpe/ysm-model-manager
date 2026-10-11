@@ -222,6 +222,14 @@ func runDedupClean(ctx *CmdContext) error {
 		}
 		moved++
 	}
+	// 失效派生缓存（2026-10-11 锐评收口）：GUI 经 ExecuteCLI 进程内直调本命令时
+	// （ADR-199，无自 fork），扫描/容器/几何缓存与 GUI 同驻——不失效则 ≤TTL 内
+	// scan/search 仍报这些「已移入回收站」的文件（回收站目录本身被扫描面排除，
+	// 所以是"消失"而非"搬家"，必须显式失效；与 fileops.go 的 rename/move 同范式）。
+	// 仅 moved>0 才清：全失败即仓库树无变化，清了是浪费。
+	if moved > 0 {
+		ctx.App.ClearScanCache()
+	}
 	fmt.Printf("🗑️  已移入回收站: %d 个文件（共 %d 个）\n", moved, len(victims))
 	for _, f := range failures {
 		fmt.Printf("  ⚠️  %s\n", f)

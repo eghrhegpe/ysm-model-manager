@@ -17,8 +17,8 @@
 // ⚠️ 实现说明：用**行扫描**而非正则切函数体——因为 YSM 的修复注释里**字面提到了**
 // `unregisterModelRoot(...)` 作为病理描述，正则切体会误命中注释行。行扫描 + 跳过注释行。
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { readFileSync, readdirSync } from "node:fs";
+import { resolve, sep } from "node:path";
 
 const ROOT = resolve(__dirname, "..", "..", "..", "..");
 const P3D = resolve(ROOT, "frontend", "src", "preview-3d");
@@ -29,7 +29,30 @@ const DISPOSERS: Array<{ name: string; file: string; throwable: RegExp }> = [
   { name: "mmd", file: "adapters/mmd/mmd-build-result.ts", throwable: /bonePanelRef\.current\?\.\(\)/ },
   { name: "vrm", file: "adapters/vrm/vrm-adapter.ts", throwable: /bonePanelRef\.current\?\.\(\)/ },
   { name: "litematic", file: "adapters/litematic-adapter.ts", throwable: /bonePanelRef|rayCleanup/ },
+  // 2026-10-11 锐评收口补入 fbx/pack（此前手工清单漏列——它们各自合法范式不同：
+  // fbx 逐项 safeCall 隔离、pack 首行注销，故注销前无裸回调，本契约的判据对它们成立）。
+  { name: "fbx", file: "adapters/fbx/fbx-adapter.ts", throwable: /bonePanelRef|rayCleanup/ },
+  { name: "pack", file: "adapters/pack-model-adapter.ts", throwable: /bonePanelRef|rayCleanup/ },
 ];
+
+/** 也调用 unregisterModelRoot 但**不是格式 disposer** 的陈旧清扫位（重挂载/切换时兜底注销）。
+ *  派生交叉校验用它放行；新增此类文件若不登记在此，同样会红。 */
+const STALE_CLEANUP_ALLOWLIST: readonly string[] = ["adapters/mount-session.ts", "adapters/switch-preview.ts"];
+
+/** 递归收集 adapters/ 下全部非测试 .ts，返回相对 P3D 的正斜杠路径（派生交叉校验用）。 */
+function scanAdapterFiles(): string[] {
+  const root = resolve(P3D, "adapters");
+  const out: string[] = [];
+  const walk = (dir: string): void => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      const p = resolve(dir, e.name);
+      if (e.isDirectory()) walk(p);
+      else if (e.name.endsWith(".ts") && !e.name.endsWith(".test.ts")) out.push(p);
+    }
+  };
+  walk(root);
+  return out.map((p) => p.slice(P3D.length + 1).split(sep).join("/"));
+}
 
 interface Line {
   n: number;
@@ -114,9 +137,25 @@ describe("适配器 dispose：外部回调不得排在注销之前（未隔离�
     ).toBe(0);
   });
 
-  it("全部四个 disposer 都注销 frustum 根（无遗漏格式）", () => {
+  it("全部六个 disposer 都注销 frustum 根（无遗漏格式）", () => {
     for (const d of DISPOSERS) {
       expect(unregisterCallLine(d.file), `${d.name} 应注销 frustum 根`).toBeGreaterThan(0);
     }
+  });
+
+  it("派生的 unregister 调用文件集 ⊇ DISPOSERS，多出者必须落在陈旧清扫白名单内（防清单漂移）", () => {
+    // 原「全部四个 disposer」只在 DISPOSERS 内自证——新增格式既不注销也不入表即隐身
+    // （锐评 2026-10-11 P1 抓出的手工清单自证病）。现从 adapters 目录派生：
+    // ① 每个 DISPOSERS 文件必须真调用 unregisterModelRoot（注销缺失 = 红）；
+    // ② 派生集里不属于 DISPOSERS 的文件必须在 STALE_CLEANUP_ALLOWLIST（陈旧清扫位），
+    //    否则红——未来新增注销文件必须登记为 disposer 或陈旧清扫位。
+    const derived = new Set(scanAdapterFiles().filter((f) => unregisterCallLine(f) > 0));
+    const listed = DISPOSERS.map((d) => d.file);
+
+    const missing = listed.filter((f) => !derived.has(f));
+    expect(missing, "DISPOSERS 清单内每个格式都必须真调用 unregisterModelRoot").toEqual([]);
+
+    const stray = [...derived].filter((f) => !listed.includes(f) && !STALE_CLEANUP_ALLOWLIST.includes(f));
+    expect(stray, "派生出的注销文件应全部来自 DISPOSERS 或陈旧清扫白名单").toEqual([]);
   });
 });

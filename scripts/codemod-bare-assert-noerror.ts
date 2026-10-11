@@ -12,7 +12,10 @@
  * - 不含 `if err := f(); err != nil {`（init-statement）：那种形态 err 作用域限于
  *   if，挪到外面会编译错，**故意不匹配**。
  * - 不含 else / else-if：挪出 if 后 else 语义不可等价。
- * - err / recv 必须是纯标识符（`t.Fatal(err)` 这种，不是 `t.Fatalf("...", err)`）。
+ * - err / recv 必须是纯标识符（`t.Fatal(err)` 这种）。另支持**规整 Fatalf 形态**：
+ *   `t.Fatalf("<fmt>", err)`（恰 2 参、fmt 是双引号字面量、尾随单个 %v/%w、err 为唯一变量）
+ *   → `testutil.NoError(t, err, "<前缀>")`；fmt 就是 "%v" → 无前缀。fmt 含其它 verb /
+ *   含转义引号 / 多 verb 时**跳过不猜**（宁少转不错转）。
  *
  * 导入选源（防 test 导入环）：
  * - 默认用 go 侧 `ysm-model-manager/go/internal/testutil`（带 WriteTestFile/MakeZipBytes 等）。
@@ -150,6 +153,22 @@ function tIsConcreteT(lines: string[], idx: number): boolean {
   return false;
 }
 
+/** 把 `Fatalf("<fmt>", err)` 的 fmt 机械映射成 testutil 消息。
+ *  只认规整形态：fmt 为双引号字面量、**恰一个**尾随 %v/%w、err 是唯一变量参数。
+ *  映射失败返回 null（跳过，不猜）——宁少转不错转。 */
+function mapFatalfMsg(fmtRaw: string): string | null {
+  const body = fmtRaw.slice(1, -1); // 去双引号
+  if (/[\\"]/.test(body)) return null; // 含转义引号/反斜杠：fmt 可能是拼接或复杂文本，跳过
+  if ((body.match(/%[^vw]/g) || []).length > 0) return null; // 其它 verb（%d/%s/%%…）
+  if ((body.match(/%[vw]/g) || []).length !== 1) return null; // 只认单个 %v/%w
+  if (/^%[vw]$/.test(body)) return '""'; // fmt 就是 "%v" → 无前缀
+  const m = body.match(/^(.*?)\s*:\s*%[vw]$/) || body.match(/^(.*?)\s+%[vw]$/);
+  if (!m) return null;
+  const prefix = m[1]!;
+  if (!prefix || prefix.includes("%")) return null;
+  return JSON.stringify(prefix);
+}
+
 function findSites(rel: string, src: string): Site[] {
   const lines = src.split("\n");
   const sites: Site[] = [];
@@ -161,18 +180,30 @@ function findSites(rel: string, src: string): Site[] {
     const body = lines[i + 1];
     const close = lines[i + 2];
     if (!body || !close) continue;
-    const bm = body.match(new RegExp(`^${escapeRe(indent)}\\t(\\w+)\\.Fatal\\(${escapeRe(err)}\\)\\s*$`));
-    if (!bm) continue;
     if (close.trim() !== "}" || close.slice(0, indent.length) !== indent) continue;
-    const recv = bm[1]!;
-    // 安全网：非 *testing.T 的 Fatal（fuzz/bench/TB）不能过 testutil.NoError
-    if (!tIsConcreteT(lines, i)) continue;
+    // 形态 A：t.Fatal(err)
+    const a = body.match(new RegExp(`^${escapeRe(indent)}\\t(\\w+)\\.Fatal\\(${escapeRe(err)}\\)\\s*$`));
+    // 形态 B：t.Fatalf("<fmt>", err)（规整：恰 2 参、fmt 字面量、err 是唯一变量）
+    const b = body.match(new RegExp(`^${escapeRe(indent)}\\t(\\w+)\\.Fatalf\\(("(?:[^"\\\\]|\\\\.)*")\\s*,\\s*${escapeRe(err)}\\)\\s*$`));
+    let after: string | null = null;
+    if (a) {
+      const recv = a[1]!;
+      if (!tIsConcreteT(lines, i)) continue;
+      after = `${indent}testutil.NoError(${recv}, ${err})`;
+    } else if (b) {
+      const recv = b[1]!;
+      const msg = mapFatalfMsg(b[2]!);
+      if (msg === null || !tIsConcreteT(lines, i)) continue;
+      after = `${indent}testutil.NoError(${recv}, ${err}, ${msg})`;
+    } else {
+      continue;
+    }
     sites.push({
       file: rel,
       line: i + 1,
       fn: enclosingFunc(lines, i),
       before: [lines[i]!, body, close],
-      after: `${indent}testutil.NoError(${recv}, ${err})`,
+      after,
     });
   }
   return sites;
@@ -210,6 +241,78 @@ function applyFile(rel: string, sites: Site[], imp: string): { applied: number }
     process.stderr.write(`⚠️ gofmt 失败 ${rel}: ${g.stderr || ""}\n`);
   }
   return { applied: byLine.length };
+}
+
+// ---------- 编译期校验 + 自动还原 ----------
+/** 还原单个站点（用回原始 3 行）。现场必须是「已转成的 after 单行」，否则不动（防并发会话改）。 */
+function revertSite(rel: string, s: Site): boolean {
+  const abs = path.join(ROOT, rel);
+  const src = readFileSync(abs, "utf8");
+  const lines = src.replace(/\r\n/g, "\n").split("\n");
+  // 按内容定位（多站点文件转换后行号漂移，s.line 不可靠）：找 after 单行的首次出现
+  const afterTrim = s.after.trim();
+  const idx = lines.findIndex((l) => l.trim() === afterTrim);
+  if (idx < 0) return false;
+  lines.splice(idx, 1, ...s.before);
+  writeFileSync(abs, lines.join("\n"), "utf8");
+  spawnSync("gofmt", ["-w", abs], { encoding: "utf8" });
+  return true;
+}
+
+/** 编译期校验 + 自动还原：`if <X> != nil { t.Fatalf(fmt, X) }` 里 X **未必是 error**——
+ *  切片 / map / 指针也能 `!= nil`（NoError 只收 error）→ 用 `go test -run=__none__` 编译
+ *  全部测试包，把报 "cannot use X as error" 的站点按原样还原。保证工具可复用不出错转。
+ *  返回还原处数。 */
+function verifyAndRevert(perFile: Map<string, Site[]>): number {
+  let reverted = 0;
+  // go test 单次运行只报每包前几处错误 → 循环「编译→还原」直到无错或不再进展
+  for (let pass = 0; pass < 4; pass++) {
+    const r = spawnSync("go", ["test", "-count=1", "-run=__codemod_nonexistent__", "./go/...", "./internal/..."], {
+      encoding: "utf8", cwd: ROOT, stdio: ["ignore", "pipe", "pipe"],
+    });
+    const out = `${r.stdout || ""}${r.stderr || ""}`;
+    const re = /([\w\\/.-]+\.go):(\d+):\d+: cannot use (\w+).* as error/g;
+    let m: RegExpExecArray | null;
+    const toRevert: { rel: string; site: Site }[] = [];
+    while ((m = re.exec(out))) {
+      const file = m[1]!.split(path.sep).join("/");
+      const ident = m[3]!;
+      const sites = perFile.get(file);
+      if (!sites) continue;
+      for (const s of sites) {
+        if (new RegExp(`,\\s*${escapeRe(ident)}(?:,|\\))`).test(s.after)) toRevert.push({ rel: file, site: s });
+      }
+    }
+    if (toRevert.length === 0) break;
+    // 从高行号开始还原，避免行号漂移
+    toRevert.sort((a, b) => b.site.line - a.site.line);
+    let done = 0;
+    for (const { rel, site } of toRevert) if (revertSite(rel, site)) done++;
+    reverted += done;
+    if (done === 0) break; // 有报错但还原不动 → 放弃，避免死循环
+  }
+  // 清孤儿 import：全站还原后 testutil import 可能变「imported and not used」
+  const r2 = spawnSync("go", ["test", "-count=1", "-run=__codemod_nonexistent__", "./go/...", "./internal/..."], {
+    encoding: "utf8", cwd: ROOT, stdio: ["ignore", "pipe", "pipe"],
+  });
+  const out2 = `${r2.stdout || ""}${r2.stderr || ""}`;
+  const re2 = /([\w\\/.-]+\.go):\d+:\d+: "([^"]+)" imported and not used/g;
+  let m2: RegExpExecArray | null;
+  const done = new Set<string>();
+  while ((m2 = re2.exec(out2))) {
+    const rel = m2[1]!.split(path.sep).join("/");
+    const imp = m2[2]!;
+    if (done.has(rel)) continue;
+    const abs = path.join(ROOT, rel);
+    let src = readFileSync(abs, "utf8");
+    const next = src.split("\n").filter((l) => l.trim() !== `"${imp}"`).join("\n");
+    if (next !== src) {
+      writeFileSync(abs, next, "utf8");
+      spawnSync("gofmt", ["-w", abs], { encoding: "utf8" });
+      done.add(rel);
+    }
+  }
+  return reverted;
 }
 
 // ---------- 主流程 ----------
@@ -264,5 +367,11 @@ if (rows.length > 120) console.log(`\n… 另有 ${rows.length - 120} 处（共 
 console.log(`\n合计可替换: ${total} 处 / ${perFile.size} 文件`);
 
 if (!DRY_RUN) {
-  console.log("\n已应用并 gofmt。下一步必须：go build ./... + go test ./... + 账本 --update-baseline");
+  const reverted = verifyAndRevert(perFile);
+  console.log(
+    reverted > 0
+      ? `\n⚠️ 编译期校验还原 ${reverted} 处非 error 误转（'if X != nil' 但 X 非 error，NoError 不收）`
+      : "\n✅ 编译期校验通过：无 'if X != nil' 但 X 非 error 的误转",
+  );
+  console.log("下一步必须：go build ./... + go test ./... + 账本 --update-baseline");
 }

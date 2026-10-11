@@ -11,10 +11,6 @@ import * as THREE from "three";
 import { Sky } from "three/addons/objects/Sky.js";
 import { SkyCapability } from "./sky-capability.ts";
 import type { SkyBakePipeline } from "./sky-bake-pipeline.ts";
-// [ADR-329 刀③A] 白盒探针：从 cap 取烘焙叶（TS private 运行时即普通属性，同 hdrOf/iblOf/composerOf 范式）
-function bakeOf(cap: SkyCapability): SkyBakePipeline {
-  return (cap as unknown as { bake: SkyBakePipeline }).bake;
-}
 import { injectSkySunScalePatch } from "@/preview-3d/shader-patches/sky-patch.ts";
 import type { SunBeams } from "./sun-beams.ts";
 import { MODEL_DEFAULTS } from "@/preview-3d/state/model-defaults.ts";
@@ -77,8 +73,12 @@ function spyRingLog() {
   };
 }
 
-function makeFakeRenderer(overrides: { toneMapping?: THREE.ToneMapping; toneMappingExposure?: number } = {}) {
-  return {
+// [ADR-329 刀③A] 白盒探针：从 cap 取烘焙叶（TS private 运行时即普通属性，同 hdrOf/iblOf/composerOf 范式）
+function bakeOf(cap: SkyCapability): SkyBakePipeline {
+  return (cap as unknown as { bake: SkyBakePipeline }).bake;
+}
+
+function makeFakeRenderer(overrides: { toneMapping?: THREE.ToneMapping; toneMappingExposure?: number } = {}) {  return {
     capabilities: { isWebGL2: true, maxTextures: 16 },
     properties: new Map(),
     info: { autoReset: true, memory: { textures: 0, geometries: 0 }, render: { calls: 0, triangles: 0, points: 0, frame: 0 }, reset: () => {} },

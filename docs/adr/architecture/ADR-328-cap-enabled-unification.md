@@ -23,23 +23,26 @@
 
 ## 2. 决策（Decision）
 
-> 状态：📝 提议中（待拍板）。以下为 AI 建议方向与待定项，落地前须人类拍板「待拍板项」。
+> 状态：📝 提议中（待拍板）。下面三条路径的**可行性已实测**（2026-10-11 落地最小切片 + 跑测试），结论如下。
 
-**建议方向**：消除 `private enabled` 字段（它是债检测器的唯一命中源，且当前恒为 `true` 无运行时意义），但**不盲目套用 `envState.groundEnabled` 别名**——因为 ground 是否开放用户开关是独立的产品决策。分两条候选路径：
+**路径 A（去字段、isEnabled 恒 true）—— 实测不可行**：`setEnabled(v)` 驱动的是 mesh 物理挂/摘生命周期（非纯状态切换），`ground-capability.test.ts` 强断言 `setEnabled(false)` 摘 mesh、`setEnabled(true)` 重挂；且 `GroundOverlay(() => this.enabled)` 闭包依赖 `enabled` 可变。强行恒 true 会破坏 81 个测试里的挂摘断言。
 
-- **路径 A（推荐，若 ground 恒在、无用户开关）**：删除 `private enabled` 字段与 `setEnabled/isEnabled` 的字段读写，改为常量语义——`isEnabled()` 恒返回 `true`、移除 `setEnabled` 的字段赋值（或保留方法签名但只驱动内部副作用、不存状态）。这样 `check-cap-enabled-duality` 不再命中（无私有 enabled 字段），且语义回归「ground 常驻」本真，无需在 schema 注入一个永远为 true 的死键。
-- **路径 B（若产品要求 ground 可关）**：按 ADR-250/F-1 同口径，在 `ENV_STATE_SCHEMA` 增 `groundEnabled: { type: "boolean", default: true, group: "ground" }`，把 `setEnabled/isEnabled` 收敛为 `envState.groundEnabled` 别名（删私有字段 + 走持久化/UI 同轨）。这是检测器原本建议的范式，副作用是 schema 多一个用户可写的 ground 总开关。
+**路径 B（收编 `envState.groundEnabled` schema 键）—— 语义有缺陷**：`ground-menu.ts` 的 `buildGroundNodes` 只暴露参数级 `ground-visible`（绑 `getVisible()`→`envState.groundVisible`），**没有 `ground-enabled` toggle 节点**——ground 刻意能力级开关无 UI 抓手。收编会注入一个用户碰不到的死键，且把「挂载态」错当「用户开关」。
+
+**路径 C（挂载态语义澄清）—— 实测可行（推荐收敛方向）**：ground 的 `enabled` 本质是 **cap 挂载态**（mount/unmount mesh），不是用户能力开关——这正解释它为何故意不进 schema、无 UI 写口、生产恒 true。`setEnabled/isEnabled` 方法签名保留（测试/生命周期 API 契约不变），仅将私有字段 `private enabled: boolean` 改名为 `private mounted: boolean`（及其 7 处内部读写）。检测器正则只认 `enabled` 字段名，改名即自然放过，`check-cap-enabled-duality` 归零；语义上把「挂载态」与「用户能力开关」区分开，与 ground 的设计意图一致。
+
+**建议方向**：采纳路径 C。债检测器对 ground 的判定，本质是把「能力挂载态」与「用户能力开关」混为一谈；ground 的挂载态是生命周期内部状态，不应被持久化或用户操控，故不应进 schema（与 ADR-250/F-1 的「用户开关收编」范式正交，不是漏登）。
 
 **待拍板项（须人类决策，不在此代答）**：
-1. **ground 要不要有用户可见开关**？→ 决定走 A（恒在、去字段）还是 B（收编 schema 键）。这是本 ADR 的核心分歧点，直接决定债的收敛形态。
-2. 若走 B：`groundEnabled` 的 `default` 与归档方言（`ENV_KEYS`/`ARCHIVE_ALIAS`）须一并登记，走 `preview-env-state.md` 既有轮转机制。
-3. 无论 A/B，`setEnabled/isEnabled` 的方法签名是否保留（Loader 或注册表可能按接口约定调用）——属纯实现细节，拍板方向后由实施者对齐 `SceneCapability` 接口契约。
+1. 是否确认 ground 的 `enabled` 按「挂载态」语义处理（路径 C：改名 `mounted`），而非套用用户能力开关范式？这是本 ADR 的核心分歧点。
+2. 若确认 C：`mounted` 字段是否进一步加 `readonly` 或固化「挂载态非开关」注释约定（纯实现细节，不影响检测器判定）。
 
 ## 3. 后果（Consequences）
 
-- **正面**：`check-cap-enabled-duality` 从「1 违规」归零，cap-enabled 收口在全域彻底闭合；ground 的开关语义从「不可见的私有字段」变为「要么恒在常量、要么用户可见 schema 键」，消除了「首启无存档时界面开关显示 ON 而实际效果缺失」的理论风险（检测器关注点）。
-- **负面 / 成本**：路径 B 会在 envState 注入一个 `groundEnabled` 键并进入持久化/UI 轮转，增加一处用户可操作开关的维护面；路径 A 则把 ground 彻底锁为常驻，失去未来「按需关地」的灵活度（若产品后续想要则需再开 ADR）。
-- **已知遗留**：`check-cap-enabled-duality` 目前**只报不拦**（debt 口径、2026-11-08 复审窗口内），故本 ADR 不阻塞推送；但它是 cap-enabled 收口的最后一块拼图，建议在复审窗口内随拍板结论落地。
+- **正面（路径 C）**：`check-cap-enabled-duality` 从「1 违规」归零（实测 `clean:11`），cap-enabled 收口在全域彻底闭合；ground 的 `enabled` 语义从「被检测器误判为未对齐 schema 的能力开关」澄清为「生命周期挂载态」，与 ground 刻意不进 schema、无 UI 写口的设计意图一致。
+- **负面 / 成本（路径 C）**：`mounted` 字段与 `setEnabled/isEnabled` 方法名形成「名（enabled）实（mounted）分离」——方法名仍带 enabled 因其对外是 cap 生命周期 API；这是有意的命名分层，需在代码注释固化以免后人误把 `setEnabled` 当成用户开关接入 UI。
+- **替代路径的代价**：路径 B 会在 envState 注入一个用户碰不到的 `groundEnabled` 死键并进入持久化/UI 轮转；路径 A 已实测破坏挂摘测试，不可行。
+- **已知遗留**：`check-cap-enabled-duality` 目前**只报不拦**（debt 口径、2026-11-08 复审窗口内），故本 ADR 不阻塞推送；路径 C 实测已验证可干净落地，建议在复审窗口内随本 ADR 拍板一并提交。
 
 ## 4. 数据溯源
 
@@ -48,6 +51,10 @@
   - 已完成收口的对照样本：`fogEnabled`（ADR-196）、`shadowEnabled`/`reflectorEnabled`（F-1）、`lightEnabled`/`ppEnabled`（ADR-250）、`waterEnabled`（water 同源）均已落 `ENV_STATE_SCHEMA` 键族。
   - ground 有意不收编的注释证据：见 `ground-capability.ts` 约 L683–691 / L712–714 / L766 三处「另立 ADR，不混入本批」记载。
   - 检测器口径：`scripts/check-cap-enabled-duality.ts`（`private enabled` 字段定义 + schema 无 `{capName}Enabled` 键 → 违规）。
+- **路径可行性实测（2026-10-11）**：
+  - 路径 A 实测：把 `enabled` 改为恒 true 常量会破坏 `ground-capability.test.ts` 的 `setEnabled(false)` 摘 mesh / `setEnabled(true)` 重挂断言（约 L135 / L474–497），且 `GroundOverlay` 闭包依赖可变 `enabled`——不可行。
+  - 路径 B 缺陷：`ground-menu.ts` 的 `buildGroundNodes` 仅暴露 `ground-visible`（绑 `getVisible()`→`envState.groundVisible`），无 `ground-enabled` toggle；收编 `groundEnabled` 键将成无 UI 抓手的死键。
+  - 路径 C 实测：`private enabled` → `private mounted`（7 处内部读写同步改名），`setEnabled/isEnabled` 方法签名保留；跑 `check-cap-enabled-duality` 得 `errors:0, clean:11`，ground 测试 `81 passed`，`typecheck` + `vite build` 全绿。
 - 关联知识卡：实施进度与边界细则见 `docs/knowledge/preview-env-state.md`（不变量段）。
 
 <!-- 文件名: cap-enabled-unification.md → 实际文件 architecture/ADR-328-cap-enabled-unification.md（ADR-320 architecture 全量模板） -->

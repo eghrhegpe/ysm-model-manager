@@ -137,7 +137,11 @@ export class GroundCapability implements SceneCapability {
   /** 叠加层（锐评 2026-10-09 拆出：原 refreshOverlay/rebuildOverlay/makeOverlayTexture 及
    *  overlayMat/overlayTex/overlaySpec 私有态已下沉 ground-overlay.ts，本字段仅托管实例）。 */
   private readonly gs: GroundOverlay;
-  private enabled: boolean;
+  /** 能力挂载态（mount/unmount mesh 生命周期），非用户能力开关——ground 的「开关」是参数级
+   *  可见性 groundVisible（见 getVisible 注释），此处仅记录 cap 是否挂载。刻意不进 schema、
+   *  无 UI 写口、生产恒 true；改名 mounted 以与「用户能力开关」语义区分，使
+   *  check-cap-enabled-duality 不再误判本挂载态为「未对齐 schema 的能力开关」。 */
+  private mounted: boolean;
   /** 订阅参数变更（menu 局部刷新用）；仅**离散操作** notify——菜单结构只随来源/样式/
    *  叠加层模式等 select/toggle 变化，滑杆与取色器拖动不触发重建。 */
   private readonly listenerSet = createListenerSet();
@@ -149,9 +153,9 @@ export class GroundCapability implements SceneCapability {
     enabled?: boolean;
   }) {
     this.scene = opts.scene;
-    this.enabled = opts.enabled ?? true;
+    this.mounted = opts.enabled ?? true;
     this.grid = this.createGridHelper();
-    this.gs = new GroundOverlay(() => this.enabled);
+    this.gs = new GroundOverlay(() => this.mounted);
     this.surface = this.createSurfaceMesh();
     // 参考网格显隐的首次落地（构造期读 envState：enabled × 总开关 × 网格开关）
     this.updateGridVisible();
@@ -232,7 +236,7 @@ export class GroundCapability implements SceneCapability {
   }
 
   apply(): void {
-    if (!this.enabled) return;
+    if (!this.mounted) return;
     if (!this.grid.parent) this.scene.add(this.grid);
     if (!this.surface.parent) this.scene.add(this.surface);
     if (!this.gs.mesh.parent) this.scene.add(this.gs.mesh);
@@ -315,7 +319,7 @@ export class GroundCapability implements SceneCapability {
   }
 
   setEnabled(v: boolean): void {
-    this.enabled = v;
+    this.mounted = v;
     if (v) this.apply();
     else {
       if (this.grid.parent) this.grid.parent.remove(this.grid);
@@ -420,7 +424,7 @@ export class GroundCapability implements SceneCapability {
   private updateGridVisible(): void {
     // [下沉 ground-visible.ts] 判据单一事实源（能力开关 × 总开关 × 网格开关）
     this.grid.visible = groundGridVisibleFor(
-      this.enabled,
+      this.mounted,
       envState.groundVisible,
       envState.groundGridVisible,
     );
@@ -429,7 +433,7 @@ export class GroundCapability implements SceneCapability {
   /** 表面层显隐门控：能力开关 × 总开关 × 来源非 none（水面层独立于表面层） */
   private updateSurfaceVisible(): void {
     this.surface.visible = groundSurfaceVisibleFor(
-      this.enabled,
+      this.mounted,
       envState.groundVisible,
       envState.groundSourceKind,
     );
@@ -515,7 +519,7 @@ export class GroundCapability implements SceneCapability {
    *  （e2e 见 web-preview ground 用例 / ysmGroundProbe 探针）。 */
   isSurfaceVisible(): boolean {
     // 与 updateSurfaceVisible 同口径——统一走 ground-visible.ts 单一谓词（不再手抄第二份）
-    return groundSurfaceVisibleFor(this.enabled, envState.groundVisible, envState.groundSourceKind);
+    return groundSurfaceVisibleFor(this.mounted, envState.groundVisible, envState.groundSourceKind);
   }
   setSourceKind(kind: GroundSourceKind): void {
     if (envState.groundSourceKind === kind) return;
@@ -652,7 +656,7 @@ export class GroundCapability implements SceneCapability {
   }
 
   isEnabled(): boolean {
-    return this.enabled;
+    return this.mounted;
   }
 
   /* -------- ADR-195 刀2：cap 直产节点（getMenuNodes）-------- */

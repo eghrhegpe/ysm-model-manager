@@ -142,14 +142,59 @@ func (a *App) DeleteFromRecycle(src string) error {
 	defer installer.InstallLocker.Unlock()
 	cfg := a.LoadAppConfig()
 	for _, r := range a.allRecycleRoots(cfg) {
-		if recycle.New(r).RecycleDir() == "" {
+		tm := recycle.New(r)
+		if tm.RecycleDir() == "" {
 			continue
 		}
-		if err := recycle.New(r).Delete(src); err == nil {
+		if err := tm.Delete(src); err == nil {
+			a.pruneRecycleEntry(tm, src)
 			return nil
 		}
 	}
-	return recycle.New(a.ysmRoot()).Delete(src)
+	fb := recycle.New(a.ysmRoot())
+	if err := fb.Delete(src); err != nil {
+		return err
+	}
+	a.pruneRecycleEntry(fb, src)
+	return nil
+}
+
+// pruneRecycleEntry 回收站条目**永久删除**后清理标签键（审计 G1 收口 2026-10-11）：
+// 条目永灭，原始路径旧键成永久孤儿——同名重导/同步回拉即复活旧标签（PruneKeys
+// 立因病）。同族律与 pruneTags 一致：键形态不自算，原始路径由条目 rel 反推
+// （recycleOriginal，与 Restore 落点推导同源）。
+// 刻意区分：MoveToRecycle（临时态）不接 prune——Restore 自愈，prune 反而丢标签。
+func (a *App) pruneRecycleEntry(tm *recycle.TrashManager, entry string) {
+	if o := recycleOriginal(tm, entry); o != "" {
+		a.pruneTags(o, true)
+	}
+}
+
+// recycleOriginal 由回收站条目（.recycle/<rel>）反推其原始路径（标签键源头）：
+// .recycle 内按源文件相对资源根的 rel 逐层镜像（go-recycle 卡「回收站在盘上的
+// 结构」），原路径 = 资源根/<rel>。越权/不可解析条目返回空串（跳过不剪，
+// 剪错前缀比不剪危害大）。
+func recycleOriginal(tm *recycle.TrashManager, entry string) string {
+	if tm.RecycleDir() == "" || entry == "" {
+		return ""
+	}
+	rel, err := filepath.Rel(tm.RecycleDir(), entry)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return ""
+	}
+	return filepath.Join(filepath.Dir(tm.RecycleDir()), rel)
+}
+
+// recycleOriginals 枚举回收站全部条目对应的原始路径（List 过滤口径：含 ysm.json
+// 的文件夹模型整组算 1 条）——清空前必须枚举，清空后 List 为空无从反推。
+func recycleOriginals(tm *recycle.TrashManager) []string {
+	out := []string{}
+	for _, e := range tm.List() {
+		if o := recycleOriginal(tm, e.Path); o != "" {
+			out = append(out, o)
+		}
+	}
+	return out
 }
 
 // EmptyRecycleBin 清空所有已配置资源根目录的回收站，返回删除条目总数。
@@ -162,12 +207,19 @@ func (a *App) EmptyRecycleBin() (int, error) {
 	total := 0
 	failed := []string{}
 	for _, r := range a.allRecycleRoots(cfg) {
-		n, err := recycle.New(r).Empty()
+		tm := recycle.New(r)
+		// 清空前枚举条目原始路径（清空后 List 为空无从反推）；清空成功才批量
+		// prune 标签键（审计 G1 收口 2026-10-11）——清空失败则不动键
+		orphans := recycleOriginals(tm)
+		n, err := tm.Empty()
 		if err != nil {
 			failed = append(failed, r)
 			continue
 		}
 		total += n
+		for _, o := range orphans {
+			a.pruneTags(o, true)
+		}
 	}
 	scanner.InvalidateCache()
 	if len(failed) > 0 {

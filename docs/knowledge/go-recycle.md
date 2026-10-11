@@ -46,7 +46,7 @@ pitfalls:
   - 回收站空间上限（配置项）超限时自动清理最旧条目
   - 跨设备移动（硬链接失效）时回收站中的条目变为独立副本
   - 批量清空回收站时需注意文件锁定——被占用文件跳过不报错
-  - 标签删除半侧未接线（2026-10-11 审计登记，未修）：回收站各删除出口（`Move`/`Empty`/`Delete` + CLI dedup clean）未接 `Store.PruneKeys`——移入 .recycle 后标签键成孤儿至 Restore，清空/永久删除即永久孤儿（同名重导/同步回拉复活旧标签，正是 PruneKeys 立因病）；且 recycle 方法值链（r.Restore/r.Delete）在 write-surface-gate 正则盲区。详见 go-tags.md pitfalls 两条「已知缺口」
+  - 标签删除半侧未接线（2026-10-11 审计登记）→ **已修 2026-10-11**：app 层 `DeleteFromRecycle`/`EmptyRecycleBin`（**永久**删除出口）经 `recycleOriginal`/`recycleOriginals` 由条目 rel 反推原始路径后接 `Store.PruneKeys`（回归 `internal/app/app_recycle_tags_test.go` 4 例）；`Move` 入站为临时态**刻意不 prune**（Restore 自愈，prune 反丢标签）。方法值链（r.Restore/r.Delete）仍在 write-surface-gate 正则盲区（已登记诚实边界）。详见 go-tags.md pitfalls「已知缺口」两条
 status: active
 ---
 

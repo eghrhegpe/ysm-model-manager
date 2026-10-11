@@ -223,7 +223,7 @@ func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 
 	// 创建所有存储子目录（注册表驱动，防手写漂移；ADR-092 两层路由：有 group 则建 FilesRoot/{group}/{storageSubDir}）
 	if cfg.FilesRoot != "" {
-		migrateFlatStorageToGrouped(cfg.FilesRoot)
+		a.migrateAndRekey(cfg.FilesRoot)
 		ensureStorageSubdirs(cfg.FilesRoot, storageSubdirRelPaths(registry.LoadRegistry().ResourceTypes))
 	}
 
@@ -382,9 +382,16 @@ func (a *App) GetAppVersion() string {
 // 检测 FilesRoot 下是否存在扁平的子目录（如 ysm/、mmd/、vrchat/），
 // 自动重命名为分组结构（如 minecraft-mod/ysm/、mmd/EntityPlayer/、vrm/vrchat/）。
 // 仅当目标路径不存在时才迁移，避免覆盖已有数据。
-func migrateFlatStorageToGrouped(filesRoot string) {
+//
+// 返回成功迁移的 (旧路径, 新路径) 绝对路径对——调用方须逐对跟标签键
+// （relocateTags subtree 删旧键，审计 G2 收口 2026-10-11）：本函数用裸
+// os.Rename/CopyDirRecursive（write-surface-gate 派生面之外的盲区），不碰
+// 标签库（包级函数无 App 依赖，迁移本身与标签解耦），跟随语义由
+// migrateAndRekey 唯一入口收口。
+func migrateFlatStorageToGrouped(filesRoot string) [][2]string {
 	reg := registry.LoadRegistry()
 	moved := 0
+	pairs := [][2]string{}
 	for _, rt := range reg.ResourceTypes {
 		subDir := registry.StorageSubDir(rt.ID)
 		// 目标路径：FilesRoot/{group}/{storageSubDir}
@@ -428,8 +435,20 @@ func migrateFlatStorageToGrouped(filesRoot string) {
 		}
 		log.Printf("[migrate] 已迁移: %s → %s", subDir, targetRel)
 		moved++
+		pairs = append(pairs, [2]string{flatPath, targetPath})
 	}
 	if moved > 0 {
 		log.Printf("[migrate] 共迁移 %d 个存储目录到分组结构", moved)
+	}
+	return pairs
+}
+
+// migrateAndRekey 启动存储迁移的唯一入口：扁平→分组（ADR-092）迁移 + 标签键
+// 同对跟随（subtree 删旧键）。两者必须成对执行——只迁移不 rekey 即老用户升级
+// 后全部标签键成永久孤儿（审计 G2，2026-10-11 登记）；relocateTags 自带
+// no-op（无命中键不落盘）与失败 warn 日志，幂等安全（第二次启动无迁移对即空转）。
+func (a *App) migrateAndRekey(filesRoot string) {
+	for _, p := range migrateFlatStorageToGrouped(filesRoot) {
+		a.relocateTags(p[0], p[1], true, false)
 	}
 }

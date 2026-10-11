@@ -41,8 +41,8 @@ pitfalls:
   - ListByTag 返回路径是排序的——不保证与原始写入顺序一致
   - tags.json 损坏时 Store 会创建 .corrupt 备份并返回空 Store
   - AddTag 已存在则跳过——不会报错也不会计数
-  - 已知缺口（2026-10-11 修复批次审计登记，未修）：启动扁平→分组迁移 `internal/app/app.go|migrateFlatStorageToGrouped` 裸 os.Rename/CopyDirRecursive 不走 RelocateKeys——老用户升级后被迁目录内标签键全成孤儿（ListByTag 出死路径、同名重建复活旧标签）；rekey 派生闸只盯 go/fileops 导出面，裸 os 调用天然不可见
-  - 已知缺口（2026-10-11 修复批次审计登记，未修）：回收站删除半侧未接 PruneKeys——`go/recycle` MoveToRecycle/dedup clean 移入 .recycle 后键成孤儿至 Restore，EmptyRecycleBin/DeleteFromRecycle 则永久孤儿（同名重导/同步回拉复活旧标签，正是 PruneKeys 立因病）；recycle 方法值链（r.Restore/r.Delete）叠加 write-surface-gate 已登记的盲区
+  - 已知缺口（2026-10-11 修复批次审计登记）→ **已修 2026-10-11**：启动扁平→分组迁移 `internal/app/app.go|migrateFlatStorageToGrouped` 现返回成功迁移 (旧,新) 路径对，启动经 `migrateAndRekey` 唯一入口逐对 RelocateKeys（subtree 删旧键）——老用户升级后被迁目录标签键不再成永久孤儿；回归 `app_migrate_rekey_test.go` 3 例（含幂等：二次启动无迁移对即空转）
+  - 已知缺口（2026-10-11 修复批次审计登记）→ **已修 2026-10-11**：回收站**永久删除**半侧（`DeleteFromRecycle`/`EmptyRecycleBin`）经 `recycleOriginal`/`recycleOriginals` 由条目 rel 反推原始路径后 PruneKeys——清空/永久删除不再留永久孤儿（同名重建复活旧标签，PruneKeys 立因病）；回归 `app_recycle_tags_test.go` 4 例（M1/M2 变异实证）。**刻意不 prune 的临时态**：`MoveToRecycle`（含 dedup 移入回收站）键暂孤儿、Restore 自愈——prune 反而丢标签，属设计取舍非缺口；recycle 方法值链（r.Restore/r.Delete）仍在 write-surface-gate 正则盲区（已登记诚实边界）
 status: active
 ---
 
@@ -85,7 +85,7 @@ status: active
 - `SetTags` 每次写后都落盘（JSON 缩进格式，**tmp + `os.Rename` 原子替换**，rename 失败清理 tmp；`TestSaveLeavesNoTmp` 守护）；`GetTags` 返回副本防外部篡改
 - **损坏恢复**：tags.json 解析失败 → 备份 `.corrupt`（保留现场）→ 重建空存储（读路径恢复 + 写路径自我修复，`TestCorruptFileRecovers` 守护）——第 4 批修复，知识卡原卡未记载已补
 - P3 观察：`Store.persist` 失败（磁盘满/权限）时内存已变更、磁盘未更新，属「内存优先、落盘尽力」契约（调用方拿到 error 但 GetTags 读到新值，进程崩溃则上次写丢失）；`ListByTag` 空 tag 返回 nil 与 GetTags 的 `[]string{}` 约定不一致（P4）
-- **登记未收口缺口（2026-10-11 修复批次审计，见 pitfalls 两条「已知缺口」）**：① 启动扁平→分组迁移 `migrateFlatStorageToGrouped` 不走 RelocateKeys（老用户升级后被迁目录标签键全孤儿）；② 回收站 `MoveToRecycle`/`EmptyRecycleBin`/`DeleteFromRecycle`/CLI dedup clean 未接 PruneKeys（移入 .recycle 键孤儿至 Restore，清空/删除即永久孤儿）。两者均在 write-surface-gate 派生面之外（裸 os 调用 / 方法值链），**修前先扩闸或人工核路径，勿只补调用点**。测试侧同族债（裸 t.Fatal 增量）见 `go-testutil.md`「已知债」。
+- **删除/迁移半侧缺口收口态（2026-10-11 审计登记→当日修复）**：审计 G1/G2 两处「闸派生面之外」缺口已收口——① 启动扁平→分组迁移现经 `migrateAndRekey` 唯一入口逐对 RelocateKeys（回归 `app_migrate_rekey_test.go` 3 例，含幂等空转）；② 回收站**永久**删除（`DeleteFromRecycle`/`EmptyRecycleBin`）现经 `recycleOriginal`/`recycleOriginals` 由条目 rel 反推原始路径 PruneKeys（回归 `app_recycle_tags_test.go` 4 例，M1/M2 变异实证）。移入回收站（Move/dedup 移入）刻意不 prune：临时态、Restore 自愈，prune 反而丢用户标签（设计取舍非缺口）。**仍留的结构性盲区**：rekey/prune 派生闸只盯 go/fileops 导出面——裸 os 调用与方法值链（r.Restore/r.Delete）天然不可见，新缺口须靠人工审计发现（本条即此形态），勿假设闸能自保。测试侧同族债（裸 t.Fatal 增量）见 `go-testutil.md`「已知债」。
 
 ## 相关
 

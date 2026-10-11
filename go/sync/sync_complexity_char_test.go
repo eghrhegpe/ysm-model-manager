@@ -61,10 +61,10 @@ func (s *charSink) allMsgs() string {
 func writeCharFile(t *testing.T, path, content string) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 }
 
@@ -88,7 +88,7 @@ func TestChar_RelinkDir_RepoIndexSkipsCorpsesAndHashless(t *testing.T) {
 	repoRoot := filepath.Join(base, "repo")
 	customDir := filepath.Join(base, "inst")
 	if err := os.MkdirAll(customDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	realRepo := filepath.Join(repoRoot, "real.ysm")
 	writeCharFile(t, realRepo, "payload")
@@ -139,7 +139,7 @@ func TestChar_RelinkDir_FlatCopyFailureLogged(t *testing.T) {
 	repoRoot := filepath.Join(base, "repo")
 	customDir := filepath.Join(base, "inst")
 	if err := os.MkdirAll(repoRoot, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	customModel := filepath.Join(customDir, "ysm.json")
 	writeCharFile(t, customModel, "keep")
@@ -175,7 +175,7 @@ func TestChar_RelinkDir_DirReplaceFailureRollsBack(t *testing.T) {
 	repoRoot := filepath.Join(base, "repo")
 	customDir := filepath.Join(base, "inst")
 	if err := os.MkdirAll(repoRoot, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	sub := filepath.Join(customDir, "sub")
 	writeCharFile(t, filepath.Join(sub, "keep.txt"), "keep")
@@ -223,7 +223,7 @@ func TestChar_SyncToggleStatus_RepoOutsideFilesRoot_BaseNameFallback(t *testing.
 	repoDir := filepath.Join(base, "repo")
 	customDir := filepath.Join(base, "inst")
 	if err := os.MkdirAll(repoDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 仓库条目落在 filesRoot 之外（模拟注入的异构 scanFn 结果）
 	outsideRepo := filepath.Join(base, "elsewhere", "ysm.json.ban")
@@ -287,7 +287,7 @@ func TestChar_PullResources_DirLevelCopyFailure(t *testing.T) {
 	globalDir := filepath.Join(base, "global")
 	targetDir := filepath.Join(base, "inst")
 	if err := os.MkdirAll(globalDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	extra := filepath.Join(targetDir, "x.ysm")
 	writeCharFile(t, extra, "extra")
@@ -320,10 +320,10 @@ func TestChar_SyncCustomToRepo_EmptySourceIsNoop(t *testing.T) {
 	customDir := filepath.Join(base, "inst")
 	repoDir := filepath.Join(base, "repo")
 	if err := os.MkdirAll(customDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.MkdirAll(repoDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	sink := &charSink{}
 	count, err := SyncCustomToRepo(customDir, repoDir, func(string) []types.ModelEntry { return nil }, sink.logger())
@@ -344,7 +344,7 @@ func TestChar_SyncCustomToRepo_SkipAndFailureAccounting(t *testing.T) {
 	customDir := filepath.Join(base, "inst")
 	repoDir := filepath.Join(base, "repo")
 	if err := os.MkdirAll(repoDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	dupName := filepath.Join(customDir, "ysm.json")
 	writeCharFile(t, dupName, "dup")

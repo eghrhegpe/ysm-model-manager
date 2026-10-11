@@ -17,14 +17,14 @@ func TestCopyDirRecursive_WithSymlink(t *testing.T) {
 	dir := t.TempDir()
 	src := filepath.Join(dir, "src")
 	if err := os.MkdirAll(filepath.Join(src, "sub"), 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	fileA := filepath.Join(src, "a.ysm")
 	if err := os.WriteFile(fileA, []byte("A"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(src, "sub", "b.ysm"), []byte("B"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	link := filepath.Join(src, "link.ysm")
 	if err := os.Symlink(fileA, link); err != nil {
@@ -61,14 +61,14 @@ func TestCopyDirRecursive_MkdirAllError(t *testing.T) {
 	dir := t.TempDir()
 	src := filepath.Join(dir, "src")
 	if err := os.MkdirAll(src, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(src, "a.ysm"), []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	blocker := filepath.Join(dir, "blocker")
 	if err := os.WriteFile(blocker, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := copyDirRecursive(src, filepath.Join(blocker, "sub", "dst")); err == nil {
 		t.Fatal("目标父路径组件为文件时应报错")

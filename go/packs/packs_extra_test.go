@@ -16,7 +16,7 @@ import (
 func TestIsYsmFile_YsmExt(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "model.ysm")
 	if err := os.WriteFile(path, []byte("ysm"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if !isYsmFile(path) {
 		t.Error(".ysm 应直接返回 true")
@@ -26,7 +26,7 @@ func TestIsYsmFile_YsmExt(t *testing.T) {
 func TestIsYsmFile_7zExt(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "model.7z")
 	if err := os.WriteFile(path, []byte("not7z"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if isYsmFile(path) {
 		t.Error("坏 .7z 不应判 YSM（容器指纹失败即 false，不再扩展名直判）")
@@ -57,7 +57,7 @@ func TestIsYsmFile_ZipWithoutYsm(t *testing.T) {
 func TestIsYsmFile_OtherExt(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "file.txt")
 	if err := os.WriteFile(path, []byte("data"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if isYsmFile(path) {
 		t.Error(".txt 应返回 false")
@@ -67,7 +67,7 @@ func TestIsYsmFile_OtherExt(t *testing.T) {
 func TestIsYsmFile_BadZip(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "bad.zip")
 	if err := os.WriteFile(path, []byte("notzip"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if isYsmFile(path) {
 		t.Error("坏 zip 应返回 false")
@@ -105,7 +105,7 @@ func TestReadPackMeta_ZipNoMcmeta(t *testing.T) {
 func TestReadPackMeta_ZipBadZip(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "bad.zip")
 	if err := os.WriteFile(path, []byte("notzip"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	_, _, err := ReadPackMeta(path)
 	if err == nil {

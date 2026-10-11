@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // TestMove_PreservesRecycleTreeLayout 钉「移入后」终态：源不再存在，
@@ -22,11 +23,11 @@ func TestMove_PreservesRecycleTreeLayout(t *testing.T) {
 	tm := New(dir)
 	sub := filepath.Join(dir, "sub", "nested")
 	if err := os.MkdirAll(sub, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	src := filepath.Join(sub, "deep.ysm")
 	if err := os.WriteFile(src, []byte("deep content"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	if err := tm.Move(src); err != nil {
@@ -48,7 +49,7 @@ func TestMove_PreservesRecycleTreeLayout(t *testing.T) {
 
 	// 终态 3：同 rel 再次移入 → 冲突后缀落在同层目录内
 	if err := os.WriteFile(src, []byte("second"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := tm.Move(src); err != nil {
 		t.Fatalf("同名再次移入失败: %v", err)
@@ -80,10 +81,10 @@ func TestRestore_RoundTrip_ByteIdentical(t *testing.T) {
 	for rel, content := range files {
 		full := filepath.Join(modelDir, filepath.FromSlash(rel))
 		if err := os.MkdirAll(filepath.Dir(full), 0755); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		if err := os.WriteFile(full, content, 0644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 
@@ -133,14 +134,14 @@ func TestRemoveRepoDuplicates_Idempotent(t *testing.T) {
 	recycleRoot := filepath.Join(base, "ysm")
 	for _, d := range []string{dir, repoRoot, recycleRoot} {
 		if err := os.MkdirAll(d, 0755); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	write := func(root, name, content string) string {
 		t.Helper()
 		p := filepath.Join(root, name)
 		if err := os.WriteFile(p, []byte(content), 0644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		return p
 	}
@@ -203,15 +204,15 @@ func TestRemoveRepoDuplicates_InRecycleRoot_MovesToTrash(t *testing.T) {
 	repoRoot := filepath.Join(base, "repo")
 	for _, d := range []string{dir, repoRoot} {
 		if err := os.MkdirAll(d, 0755); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	if err := os.WriteFile(filepath.Join(repoRoot, "m.ysm"), []byte("same-bytes"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	src := filepath.Join(dir, "m.ysm")
 	if err := os.WriteFile(src, []byte("same-bytes"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	if n := RemoveRepoDuplicates(dir, repoRoot, recycleRoot, nil); n != 1 {
@@ -254,7 +255,7 @@ func TestIsDedupableDir_RejectsFilesystemRoots(t *testing.T) {
 	// 经 RemoveRepoDuplicates 的空 dir 早退：返回 0 且不触碰仓库
 	repoRoot := t.TempDir()
 	if err := os.WriteFile(filepath.Join(repoRoot, "m.ysm"), []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if n := RemoveRepoDuplicates("", repoRoot, "", nil); n != 0 {
 		t.Errorf("空 dir 应返回 0, 得到 %d", n)

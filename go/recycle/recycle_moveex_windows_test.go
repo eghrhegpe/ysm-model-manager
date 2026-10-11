@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"syscall"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // TestMoveEx_WindowsCrossVolumeErrno 注入真实跨卷错误码 ERROR_NOT_SAME_DEVICE(17)，
@@ -18,10 +19,10 @@ func TestMoveEx_WindowsCrossVolumeErrno(t *testing.T) {
 	dir := t.TempDir()
 	modDir := filepath.Join(dir, "mod")
 	if err := os.MkdirAll(modDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(modDir, "ysm.json"), []byte("{}"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	tm := newTMWithRenameErr(t, dir, syscall.Errno(17)) // ERROR_NOT_SAME_DEVICE
 

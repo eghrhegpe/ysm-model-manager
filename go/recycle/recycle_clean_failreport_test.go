@@ -20,7 +20,7 @@ func setupRecycleDirs(t *testing.T) (recycleRoot, dir, filesRoot string) {
 	filesRoot = filepath.Join(base, "repo")
 	for _, root := range []string{recycleRoot, dir, filesRoot} {
 		if err := os.MkdirAll(root, 0755); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	return
@@ -30,13 +30,13 @@ func setupRecycleDirs(t *testing.T) (recycleRoot, dir, filesRoot string) {
 func putDup(t *testing.T, dir, filesRoot, subdir, name, content string) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Join(dir, subdir), 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(dir, subdir, name+".bin"), []byte(content), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(filesRoot, name+".bin"), []byte(content), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 }
 
@@ -46,10 +46,10 @@ func blockRecycleLanding(t *testing.T, recycleRoot, subdir string) {
 	t.Helper()
 	blockParent := filepath.Join(recycleRoot, ".recycle", subdir)
 	if err := os.MkdirAll(blockParent, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(blockParent, "a"), []byte("block"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 }
 
@@ -71,10 +71,10 @@ func TestRemoveRepoDuplicates_NilLoggerBackwardCompat(t *testing.T) {
 	t.Parallel()
 	_, dir, filesRoot := setupRecycleDirs(t)
 	if err := os.WriteFile(filepath.Join(dir, "a.bin"), []byte("c"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(filesRoot, "a.bin"), []byte("c"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	removed := RemoveRepoDuplicates(dir, filesRoot, "", nil)
 	testutil.Equal(t, removed, 1)

@@ -50,10 +50,10 @@ func TestMoveEx_CrossDeviceCopyFails_CleansDst(t *testing.T) {
 	dir := t.TempDir()
 	modDir := filepath.Join(dir, "mod")
 	if err := os.MkdirAll(modDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(modDir, "ysm.json"), []byte("{}"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	tm := newTMWithRenameErr(t, dir, syscall.EXDEV)
 	// 模拟复制中途失败：先写入半截文件再报错，验证 dst 整棵被清理

@@ -202,7 +202,7 @@ func TestAudit_NestedDir(t *testing.T) {
 	dir := t.TempDir()
 	sub := filepath.Join(dir, "模型A", "textures")
 	if err := os.MkdirAll(sub, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	testutil.WriteTestFileBytes(t, filepath.Join(dir, "模型A", "model.json"), []byte(`{"format_version":"1.16.0","minecraft:geometry":[]}`))
 	testutil.WriteTestFileBytes(t, filepath.Join(sub, "tex.png"), []byte("png"))
@@ -224,7 +224,7 @@ func TestAudit_ByTypeLocationRouting(t *testing.T) {
 	dir := t.TempDir()
 	pmxDir := filepath.Join(dir, "mmd", "PMX", "2.大学学姐")
 	if err := os.MkdirAll(pmxDir, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 模型包 zip + 表情 vpd + 裸 pmx（写最小合法 zip 内容即可，审计不校验内容）
 	testutil.WriteTestFileBytes(t, filepath.Join(pmxDir, "角色包.zip"), []byte("PK\x03\x04"))
@@ -325,7 +325,7 @@ func TestIsModelFileValid_SizeLimit(t *testing.T) {
 	big := []byte(`{"format_version":"1.16.0","pad":"` + strings.Repeat("a", 4096) + `"}`)
 	bigPath := filepath.Join(dir, "big.json")
 	if err := os.WriteFile(bigPath, big, 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	orig := modelFileReadLimit
@@ -352,11 +352,11 @@ func TestClassifyWith_RebuildOnRegistrySwap(t *testing.T) {
 	dir := t.TempDir()
 	reg1 := filepath.Join(dir, "r1.json")
 	if err := os.WriteFile(reg1, []byte(`{"resourceTypes":[{"id":"alpha","extensions":[".aaa"],"hashable":true,"storageSubDir":"alpha"}]}`), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	reg2 := filepath.Join(dir, "r2.json")
 	if err := os.WriteFile(reg2, []byte(`{"resourceTypes":[{"id":"beta","extensions":[".bbb"],"hashable":true,"storageSubDir":"beta"}]}`), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	registry.SetRegistryPath(reg1)
@@ -405,7 +405,7 @@ func TestHealthReportForCtx_PreCancelled(t *testing.T) {
 	cancel()
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "a.ysm"), []byte("{}"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	_, err := HealthReportForCtx(ctx, dir)
 	if !errors.Is(err, context.Canceled) {

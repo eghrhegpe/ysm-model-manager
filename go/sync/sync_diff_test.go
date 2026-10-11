@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -87,10 +88,10 @@ func TestSyncResourcesWithConfig_HashDetectsContentChange(t *testing.T) {
 	inst := t.TempDir()
 	// 同名同大小（均 4 字节）、内容不同——纯 Size 对比会误判 Synced
 	if err := os.WriteFile(filepath.Join(global, "pack.zip"), []byte("AAAA"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(inst, "pack.zip"), []byte("BBBB"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	scanFn := func(dir string) []types.ModelEntry {
@@ -137,18 +138,18 @@ func TestDiffFolderContentsScan_HashDetectsDivergence(t *testing.T) {
 	instRoot := t.TempDir()
 	instFolder := filepath.Join(instRoot, "ipkg")
 	if err := os.MkdirAll(globalFolder, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.MkdirAll(instFolder, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 三文件同名同大小（4 字节），内容各异——纯 Size 对比全判 Synced（假绿）。
 	for _, name := range []string{"a.pmx", "b.pmx", "d.pmx"} {
 		if err := os.WriteFile(filepath.Join(globalFolder, name), []byte("AAAA"), 0o644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		if err := os.WriteFile(filepath.Join(instFolder, name), []byte("BBBB"), 0o644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	rtype := "EntityPlayer" // 无嵌套模式，走 scan 反推路径
@@ -265,24 +266,24 @@ func TestSyncResourcesWithConfig_PackFoldDetectsContentChange(t *testing.T) {
 	gPack := filepath.Join(global, "packA")
 	iPack := filepath.Join(inst, "packA")
 	if err := os.MkdirAll(filepath.Join(gPack, "assets"), 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.MkdirAll(filepath.Join(iPack, "assets"), 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// pack.mcmeta 令两侧被识别为资源包夹
 	if err := os.WriteFile(filepath.Join(gPack, "pack.mcmeta"), []byte("{}"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(iPack, "pack.mcmeta"), []byte("{}"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 同名纹理、大小不同（.png 被过滤不入条目，仅经目录折叠指纹暴露）
 	if err := os.WriteFile(filepath.Join(gPack, "assets", "t.png"), []byte("AAAA"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(iPack, "assets", "t.png"), []byte("BBBBB"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	wantDir := gPack
 
@@ -297,7 +298,7 @@ func TestSyncResourcesWithConfig_PackFoldDetectsContentChange(t *testing.T) {
 
 	// 两侧纹理改成同大小同内容 → 折叠指纹一致 → Synced
 	if err := os.WriteFile(filepath.Join(iPack, "assets", "t.png"), []byte("AAAA"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 清缓存：30s TTL 内 collect 会命中旧结果，改盘后需失效（生产靠 scanner 联动；测试手动清）
 	InvalidateSyncScanCaches()

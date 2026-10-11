@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -15,13 +16,13 @@ func TestRemoveRepoDuplicates_RemovesRepoFilesOnly(t *testing.T) {
 	repoRoot := filepath.Join(base, "repo")
 	recycleRoot := filepath.Join(base, "ysm")
 	if err := os.MkdirAll(dir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.MkdirAll(repoRoot, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.MkdirAll(recycleRoot, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 仓库文件：repo 有 m.ysm，inst 也有 → 应被清理
 	_ = os.WriteFile(filepath.Join(repoRoot, "m.ysm"), []byte("x"), 0644)
@@ -57,10 +58,10 @@ func TestRemoveRepoDuplicates_SameNameDiffContent_Kept(t *testing.T) {
 	dir := filepath.Join(base, "inst")
 	repoRoot := filepath.Join(base, "repo")
 	if err := os.MkdirAll(dir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.MkdirAll(repoRoot, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	_ = os.WriteFile(filepath.Join(repoRoot, "m.ysm"), []byte("repo-version"), 0644)
 	_ = os.WriteFile(filepath.Join(dir, "m.ysm"), []byte("user-custom"), 0644)
@@ -78,11 +79,11 @@ func TestDeduplicateEntries(t *testing.T) {
 	base := t.TempDir()
 	recycleRoot := filepath.Join(base, "ysm")
 	if err := os.MkdirAll(recycleRoot, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// Move 内部 WalkDir 回收站目录，需先存在
 	if err := os.MkdirAll(filepath.Join(recycleRoot, ".recycle"), 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 两个相同哈希（内容相同）的文件（置于 recycleRoot 内以满足 Move 的路径安全校验）
 	a := filepath.Join(recycleRoot, "a.ysm")

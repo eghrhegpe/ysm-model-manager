@@ -59,13 +59,13 @@ func TestScanEntries_GithubDirSkipped(t *testing.T) {
 	dir := t.TempDir()
 	ghDir := filepath.Join(dir, ".github")
 	if err := os.MkdirAll(filepath.Join(ghDir, "workflows"), 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(ghDir, "workflows", "script.ysm"), []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(dir, "normal.ysm"), []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	entries := ScanEntries(dir)
 	if len(entries) != 1 || entries[0].Name != "normal.ysm" {
@@ -77,10 +77,10 @@ func TestScanEntries_GithubDirSkipped(t *testing.T) {
 func TestScanEntries_DisabledRestored(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "model.ysm.disabled"), []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(dir, "notes.txt.disabled"), []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	entries := ScanEntries(dir)
 	if len(entries) != 1 {
@@ -119,7 +119,7 @@ func TestScanEntries_HashSkippedOversize(t *testing.T) {
 	f, err := os.Create(p)
 	testutil.NoError(t, err)
 	if err := f.Truncate(registry.MaxImportSize + 1); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	f.Close()
 
@@ -141,7 +141,7 @@ func TestComputeFileHash_Oversize(t *testing.T) {
 	f, err := os.Create(p)
 	testutil.NoError(t, err)
 	if err := f.Truncate(registry.MaxImportSize + 1); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	f.Close()
 
@@ -179,7 +179,7 @@ func TestScanLocalAuthors_Branches(t *testing.T) {
 	}
 	for _, f := range files {
 		if err := os.WriteFile(filepath.Join(f.dir, f.name), []byte("x"), 0644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 
@@ -223,7 +223,7 @@ func TestGenerateRepoIndex_WriteError(t *testing.T) {
 	dir := t.TempDir()
 	repoPath := filepath.Join(dir, "repo-file")
 	if err := os.WriteFile(repoPath, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	_, err := GenerateRepoIndex(repoPath)
 	if err == nil {
@@ -236,10 +236,10 @@ func TestGenerateRepoIndex_WriteError(t *testing.T) {
 func TestGenerateRepoIndex_RenameError(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "a.ysm"), []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.MkdirAll(filepath.Join(dir, "index.json"), 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	_, err := GenerateRepoIndex(dir)
 	if err == nil {
@@ -254,14 +254,14 @@ func TestGenerateRepoIndex_RenameError(t *testing.T) {
 func TestGenerateRepoIndex_WorkflowExists(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "a.ysm"), []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	wfPath := filepath.Join(dir, ".github", "workflows", "generate-index.yml")
 	if err := os.MkdirAll(filepath.Dir(wfPath), 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(wfPath, []byte("existing content"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	indexPath, err := GenerateRepoIndex(dir)
@@ -287,10 +287,10 @@ func TestGenerateRepoIndex_WorkflowExists(t *testing.T) {
 func TestGenerateRepoIndex_MkdirAllError(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "a.ysm"), []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(dir, ".github"), []byte("not a dir"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	indexPath, err := GenerateRepoIndex(dir)

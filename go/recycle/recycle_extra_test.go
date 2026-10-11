@@ -33,7 +33,7 @@ func TestPackageLevelMove(t *testing.T) {
 	dir := t.TempDir()
 	src := testutil.CreateTestFile(t, dir, "test.ysm", "content")
 	if err := Move(src, dir); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	tm := New(dir)
 	entries := tm.List()
@@ -55,7 +55,7 @@ func TestCopyFile_Success(t *testing.T) {
 	src := filepath.Join(dir, "src.ysm")
 	content := []byte("copy test data")
 	if err := os.WriteFile(src, content, 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	dst := filepath.Join(dir, "sub", "dst.ysm")
 	if err := fsutil.CopyFile(src, dst); err != nil {
@@ -79,7 +79,7 @@ func TestCopyFile_DstDirCreate(t *testing.T) {
 	dir := t.TempDir()
 	src := filepath.Join(dir, "src.ysm")
 	if err := os.WriteFile(src, []byte("data"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 目标目录不存在，应自动创建
 	dst := filepath.Join(dir, "a", "b", "dst.ysm")

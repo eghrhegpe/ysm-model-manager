@@ -23,7 +23,7 @@ func TestMoveAndRestore(t *testing.T) {
 	src := testutil.CreateTestFile(t, dir, "test.ysm", "test content")
 	// 移到回收站
 	if err := tm.Move(src); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if _, err := os.Stat(src); !os.IsNotExist(err) {
 		t.Error("源文件应该已被删除")
@@ -37,7 +37,7 @@ func TestMoveAndRestore(t *testing.T) {
 
 	// 恢复
 	if err := tm.Restore(entries[0].Path); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if _, err := os.Stat(src); os.IsNotExist(err) {
 		t.Error("恢复后源文件应存在")
@@ -50,14 +50,14 @@ func TestDelete(t *testing.T) {
 
 	src := testutil.CreateTestFile(t, dir, "test.ysm", "delete me")
 	if err := tm.Move(src); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	entries := tm.List()
 	if len(entries) != 1 {
 		t.Fatalf("回收站应有 1 个文件")
 	}
 	if err := tm.Delete(entries[0].Path); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if len(tm.List()) != 0 {
 		t.Error("删除后回收站应为空")
@@ -162,11 +162,11 @@ func TestMoveDuplicateName(t *testing.T) {
 
 	src := testutil.CreateTestFile(t, dir, "dup.ysm", "first")
 	if err := tm.Move(src); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	src2 := testutil.CreateTestFile(t, dir, "dup.ysm", "second")
 	if err := tm.Move(src2); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	entries := tm.List()
 	if len(entries) != 2 {
@@ -190,7 +190,7 @@ func TestRestoreConflict(t *testing.T) {
 
 	src := testutil.CreateTestFile(t, dir, "keep.ysm", "orig")
 	if err := tm.Move(src); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	testutil.CreateTestFile(t, dir, "keep.ysm", "new") // 恢复前在源位置重建
 	entries := tm.List()
@@ -198,7 +198,7 @@ func TestRestoreConflict(t *testing.T) {
 		t.Fatalf("回收站应有 1 个文件")
 	}
 	if err := tm.Restore(entries[0].Path); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if _, err := os.Stat(filepath.Join(dir, "keep(1).ysm")); err != nil {
 		t.Error("冲突恢复应生成 keep(1).ysm")
@@ -215,21 +215,21 @@ func TestRestoreConflict_NonNotExistError(t *testing.T) {
 	// 嵌套路径移入回收站：dir/sub/keep.ysm → 回收站 sub/keep.ysm（rel 保留层级）
 	subDir := filepath.Join(dir, "sub")
 	if err := os.MkdirAll(subDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	src := filepath.Join(subDir, "keep.ysm")
 	if err := os.WriteFile(src, []byte("orig"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := tm.Move(src); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 破坏恢复目标：把 sub 目录删掉、换成同名文件 → MkdirAll(dir/sub) 遇文件报 ENOTDIR（非 IsNotExist）
 	if err := os.RemoveAll(subDir); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(subDir, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	entries := tm.List()
 	if len(entries) != 1 {
@@ -248,16 +248,16 @@ func TestList_FolderModelGrouped(t *testing.T) {
 	// 构造一个文件夹模型目录：模型A/ysm.json + main.json + textures/
 	modelDir := filepath.Join(dir, "模型A")
 	if err := os.MkdirAll(filepath.Join(modelDir, "textures"), 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(modelDir, "ysm.json"), []byte(`{"spec":1}`), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(modelDir, "main.json"), []byte(`{}`), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(modelDir, "textures", "skin.png"), []byte("PNG"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 整组移入回收站
 	if err := tm.Move(modelDir); err != nil {
@@ -266,7 +266,7 @@ func TestList_FolderModelGrouped(t *testing.T) {
 	// 另放一个单文件模型
 	single := testutil.CreateTestFile(t, dir, "single.ysm", "x")
 	if err := tm.Move(single); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	entries := tm.List()
@@ -313,11 +313,11 @@ func TestList_FolderModelNotGrouped(t *testing.T) {
 	// 普通目录（无 ysm.json）
 	plainDir := filepath.Join(dir, "plain")
 	if err := os.MkdirAll(plainDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	plainFile := testutil.CreateTestFile(t, plainDir, "a.ysm", "x")
 	if err := tm.Move(plainFile); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	entries := tm.List()
@@ -338,13 +338,13 @@ func TestList_FiltersUnsupportedAndBan(t *testing.T) {
 
 	// 三个文件都进回收站：支持的 .ysm、禁用标记 .ban、不支持扩展 .xyz
 	if err := tm.Move(testutil.CreateTestFile(t, dir, "keep.ysm", "x")); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := tm.Move(testutil.CreateTestFile(t, dir, "disabled.ban", "x")); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := tm.Move(testutil.CreateTestFile(t, dir, "notes.xyz", "x")); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	entries := tm.List()
@@ -372,13 +372,13 @@ func TestDelete_FolderModelGrouped(t *testing.T) {
 	// 文件夹模型整组移入回收站
 	modelDir := filepath.Join(dir, "模型A")
 	if err := os.MkdirAll(filepath.Join(modelDir, "textures"), 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(modelDir, "ysm.json"), []byte(`{"spec":1}`), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(modelDir, "main.json"), []byte(`{}`), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := tm.Move(modelDir); err != nil {
 		t.Fatalf("整组移入回收站失败: %v", err)
@@ -411,7 +411,7 @@ func TestDelete_RootRejected(t *testing.T) {
 	// 先移入一个文件确保 .recycle 目录已存在
 	src := testutil.CreateTestFile(t, dir, "test.ysm", "x")
 	if err := tm.Move(src); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if _, err := os.Stat(tm.RecycleDir()); err != nil {
 		t.Fatalf("前置条件失败：.recycle 目录应存在: %v", err)

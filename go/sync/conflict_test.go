@@ -20,7 +20,7 @@ func setupTestDirs(t *testing.T) (string, string, func()) {
 	remoteDir, err := os.MkdirTemp("", "sync-conflict-remote-*")
 	if err != nil {
 		os.RemoveAll(localDir)
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	cleanup := func() {
 		os.RemoveAll(localDir)
@@ -34,7 +34,7 @@ func writeFile(t *testing.T, dir, name, content string, modTime time.Time) {
 	t.Helper()
 	path := testutil.WriteTestFile(t, filepath.Join(dir, name), content)
 	if err := os.Chtimes(path, modTime, modTime); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 }
 

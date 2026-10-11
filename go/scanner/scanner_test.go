@@ -18,7 +18,7 @@ func TestScanEntries_FilterAndHash(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "a.ysm"), []byte("data"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	_ = os.WriteFile(filepath.Join(dir, "b.txt"), []byte("x"), perm)
 	_ = os.WriteFile(filepath.Join(dir, "c.ysm.ban"), []byte("x"), perm)
@@ -26,7 +26,7 @@ func TestScanEntries_FilterAndHash(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(dir, "ysm.json"), []byte("{}"), perm)
 	recycle := filepath.Join(dir, ".recycle")
 	if err := os.MkdirAll(recycle, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	_ = os.WriteFile(filepath.Join(recycle, "d.ysm"), []byte("x"), perm)
 
@@ -68,21 +68,21 @@ func TestInvalidatePath_AncestorDescendant(t *testing.T) {
 	root := filepath.Join(base, "root")
 	sub := filepath.Join(root, "sub")
 	if err := os.MkdirAll(sub, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(root, "a.ysm"), []byte("x"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(sub, "b.ysm"), []byte("x"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	testutil.Equal(t, len(ScanEntries(root)), 2, "root 首扫应 2 个（含 sub 递归）")
 	testutil.Equal(t, len(ScanEntries(sub)), 1, "sub 首扫应 1 个")
 	if err := os.WriteFile(filepath.Join(root, "c.ysm"), []byte("x"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(sub, "d.ysm"), []byte("x"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	testutil.Equal(t, len(ScanEntries(root)), 2, "缓存命中应仍 2 个")
 	testutil.Equal(t, len(ScanEntries(sub)), 1, "缓存命中应仍 1 个")
@@ -100,21 +100,21 @@ func TestInvalidatePath_UnrelatedKeyUntouched(t *testing.T) {
 	dirA := filepath.Join(base, "aaa")
 	dirB := filepath.Join(base, "aab")
 	if err := os.MkdirAll(dirA, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.MkdirAll(dirB, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(dirA, "a.ysm"), []byte("x"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(dirB, "b.ysm"), []byte("x"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	testutil.Equal(t, len(ScanEntries(dirA)), 1, "dirA 首扫应 1 个")
 	testutil.Equal(t, len(ScanEntries(dirB)), 1, "dirB 首扫应 1 个")
 	if err := os.WriteFile(filepath.Join(dirA, "c.ysm"), []byte("x"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	InvalidatePath(dirA)
 	testutil.Equal(t, len(ScanEntries(dirA)), 2, "失效 dirA 后应重新扫到 2 个")
@@ -126,7 +126,7 @@ func TestComputeFileHash(t *testing.T) {
 	dir := t.TempDir()
 	p := filepath.Join(dir, "f")
 	if err := os.WriteFile(p, []byte("hello"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	h := ComputeFileHash(p)
 	testutil.Equal(t, len(h), 64, "SHA256 应为 64 hex")

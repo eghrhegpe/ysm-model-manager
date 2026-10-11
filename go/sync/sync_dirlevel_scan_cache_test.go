@@ -9,6 +9,7 @@ import (
 	"sync"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -21,13 +22,13 @@ func TestSyncDirLevelScan_HitReusesScanDerivation(t *testing.T) {
 	instanceDir := filepath.Join(base, "instance")
 	for _, d := range []string{globalDir, instanceDir} {
 		if err := os.MkdirAll(d, 0o755); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	// 放一个模型文件使 scanFn 返回的 entries 非空（命中 collectEntriesFromScan）
 	modelFile := filepath.Join(globalDir, "a.ysm")
 	if err := os.WriteFile(modelFile, []byte("{}"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	var mu sync.Mutex

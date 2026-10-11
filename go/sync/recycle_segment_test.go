@@ -30,10 +30,10 @@ func TestSyncToggleStatus_RecycleSubtreeSkipped(t *testing.T) {
 	}
 	for p, c := range want {
 		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		if err := os.WriteFile(p, []byte(c), 0o644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 

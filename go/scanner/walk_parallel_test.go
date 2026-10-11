@@ -22,16 +22,16 @@ func TestWalkDirParallel_MatchesWalkDir(t *testing.T) {
 	for f := 0; f < 20; f++ {
 		d := filepath.Join(root, fmt.Sprintf("model_%04d", f))
 		if err := os.MkdirAll(d, 0o755); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		for j := 0; j < 4; j++ {
 			p := filepath.Join(d, fmt.Sprintf("f%02d.ysm", j))
 			if err := os.WriteFile(p, []byte("x"), 0o644); err != nil {
-				t.Fatal(err)
+				testutil.NoError(t, err)
 			}
 		}
 		if err := os.WriteFile(filepath.Join(d, "ysm.json"), []byte("{}"), 0o644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 

@@ -31,7 +31,7 @@ func TestRestore_RecycleRootRejected(t *testing.T) {
 	// 先移入一个文件确保 .recycle 目录已存在
 	src := testutil.CreateTestFile(t, dir, "test.ysm", "x")
 	if err := tm.Move(src); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := tm.Restore(tm.RecycleDir()); err == nil {
 		t.Fatal("恢复回收站根目录应被拒绝")
@@ -75,7 +75,7 @@ func TestRestore_CrossDeviceFileFallback(t *testing.T) {
 	tm := New(dir)
 	src := testutil.CreateTestFile(t, dir, "keep.ysm", "exdev content")
 	if err := tm.Move(src); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	entries := tm.List()
 	if len(entries) != 1 {
@@ -104,16 +104,16 @@ func TestRestore_CrossDeviceDirFallback(t *testing.T) {
 	tm := New(dir)
 	modelDir := filepath.Join(dir, "模型A")
 	if err := os.MkdirAll(filepath.Join(modelDir, "textures"), 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(modelDir, "ysm.json"), []byte(`{"spec":1}`), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(modelDir, "model.pmx"), []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(modelDir, "textures", "skin.png"), []byte("PNG"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := tm.Move(modelDir); err != nil {
 		t.Fatalf("整组移入回收站失败: %v", err)
@@ -146,10 +146,10 @@ func TestRestore_CrossDeviceDirCopyFails_CleansDst(t *testing.T) {
 	tm := New(dir)
 	modelDir := filepath.Join(dir, "模型B")
 	if err := os.MkdirAll(modelDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(modelDir, "ysm.json"), []byte(`{"spec":1}`), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := tm.Move(modelDir); err != nil {
 		t.Fatalf("整组移入回收站失败: %v", err)
@@ -190,7 +190,7 @@ func TestRestore_CrossDeviceFileCopyFails_CleansDst(t *testing.T) {
 	tm := New(dir)
 	src := testutil.CreateTestFile(t, dir, "keep.ysm", "exdev content")
 	if err := tm.Move(src); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	entries := tm.List()
 	if len(entries) != 1 {

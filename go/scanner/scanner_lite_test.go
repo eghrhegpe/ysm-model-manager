@@ -18,10 +18,10 @@ func TestScanEntriesLite_FilteringParity(t *testing.T) {
 	write := func(rel string) {
 		p := filepath.Join(dir, rel)
 		if err := os.MkdirAll(filepath.Dir(p), 0755); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		if err := os.WriteFile(p, []byte("x"), 0o644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	write("[作者C]模型.ysm")
@@ -52,13 +52,13 @@ func TestScanEntriesLite_FilteringParity(t *testing.T) {
 func TestScanEntriesLite_BypassesCacheBothWays(t *testing.T) {
 	dirA := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dirA, "[甲]a.ysm"), []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if got := ScanEntries(dirA); len(got) != 1 {
 		t.Fatalf("前置全量扫描应 1 条，实际 %d", len(got))
 	}
 	if err := os.WriteFile(filepath.Join(dirA, "[乙]b.ysm"), []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if cached, hit := ScanEntriesWithHit(dirA); !hit || len(cached) != 1 {
 		t.Fatalf("全量路径应命中缓存返回 1 条, hit=%v n=%d", hit, len(cached))
@@ -68,7 +68,7 @@ func TestScanEntriesLite_BypassesCacheBothWays(t *testing.T) {
 	}
 	dirB := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dirB, "[丙]c.ysm"), []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	_ = ScanEntriesLite(dirB)
 	if _, hit := ScanEntriesWithHit(dirB); hit {

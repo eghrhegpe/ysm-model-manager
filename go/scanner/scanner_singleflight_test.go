@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -46,7 +47,7 @@ func TestScanEntriesWithHit_ConcurrentSameDir_SingleWalk(t *testing.T) {
 
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "a.ysm"), []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	// 钩子制造确定性重叠：owner 进入 walk 后阻塞，等待方全部挂在在途航班上再放行
@@ -193,7 +194,7 @@ func TestScanEntriesWithHit_WaiterInvalidatedDuringFlight_Rescans(t *testing.T) 
 
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "a.ysm"), []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	ownerStarted := make(chan struct{}, 1)

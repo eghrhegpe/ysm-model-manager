@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // TestScanEntriesLiteCtx_Cancelled：预取消的 ctx 立即中止 walk，不产出条目（ADR-197）。
@@ -12,7 +13,7 @@ func TestScanEntriesLiteCtx_Cancelled(t *testing.T) {
 	dir := t.TempDir()
 	for _, name := range []string{"a.ysm", "b.ysm", "c.ysm"} {
 		if err := os.WriteFile(filepath.Join(dir, name), []byte("x"), 0o644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	// 未取消：应有结果
@@ -32,7 +33,7 @@ func TestScanEntriesLiteCtx_Cancelled(t *testing.T) {
 func TestScanEntriesWithHitCtx_CancelledNotCached(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "m.ysm"), []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()

@@ -51,13 +51,13 @@ func TestScanEntries_DirBanSkipped(t *testing.T) {
 	dir := t.TempDir()
 	banDir := filepath.Join(dir, "modelA.ban")
 	if err := os.MkdirAll(banDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(banDir, "inside.ysm"), []byte("x"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(dir, "normal.ysm"), []byte("x"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	entries := ScanEntries(dir)
 	testutil.Equal(t, len(entries), 1, "应只扫到 normal.ysm")
@@ -78,7 +78,7 @@ func TestScanEntries_CacheGenInvalidateDuringScan(t *testing.T) {
 func TestScanEntries_ExpiredCacheLazyEviction(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "a.ysm"), []byte("x"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if _, hit := ScanEntriesWithHit(dir); hit {
 		t.Fatal("首次扫描不应命中缓存")
@@ -94,7 +94,7 @@ func TestScanEntries_ExpiredCacheLazyEviction(t *testing.T) {
 		t.Fatal("扫描后缓存应有条目")
 	}
 	if err := os.WriteFile(filepath.Join(dir, "b.ysm"), []byte("x"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	entries, hit := ScanEntriesWithHit(dir)
 	testutil.Equal(t, hit, false, "过期缓存应视为未命中并惰性淘汰")
@@ -179,10 +179,10 @@ func TestScanEntries_WalkErrorTolerated(t *testing.T) {
 	dir := t.TempDir()
 	ok := filepath.Join(dir, "ok")
 	if err := os.MkdirAll(ok, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(ok, "a.ysm"), []byte("x"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	bad := filepath.Join(dir, "broken")
 	if err := os.Symlink(filepath.Join(dir, "不存在"), bad); err != nil {

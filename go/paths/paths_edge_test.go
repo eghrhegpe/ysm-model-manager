@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // ---------- Bug 1: Symlink escape (HIGH, 已修复) ----------
@@ -26,7 +27,7 @@ func TestIsInsideResolved_SymlinkEscape(t *testing.T) {
 	outsideDir := t.TempDir()
 	targetFile := filepath.Join(outsideDir, "target.ysm")
 	if err := os.WriteFile(targetFile, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	symlinkPath := filepath.Join(baseDir, "symlink")

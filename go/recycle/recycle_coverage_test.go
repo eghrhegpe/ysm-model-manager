@@ -29,7 +29,7 @@ func makeModelDir(t *testing.T, dir string) string {
 	t.Helper()
 	modelDir := filepath.Join(dir, "model")
 	if err := os.MkdirAll(modelDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	return modelDir
 }
@@ -69,10 +69,10 @@ func TestMove_CrossDevice_Dir(t *testing.T) {
 
 	modelDir := makeModelDir(t, dir)
 	if err := os.WriteFile(filepath.Join(modelDir, "ysm.json"), []byte("{}"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(modelDir, "model.pmx"), []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	res := tm.MoveEx(modelDir)
 	if res.Action != "recycled" {
@@ -119,7 +119,7 @@ func TestRestore_CrossDevice_File(t *testing.T) {
 	tm := New(dir)
 	src := testutil.CreateTestFile(t, dir, "r.ysm", "content")
 	if err := tm.Move(src); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	entries := tm.List()
 	if len(entries) != 1 {
@@ -143,10 +143,10 @@ func TestRestore_SymlinkInside(t *testing.T) {
 	// 在回收站内放真实文件，并建一个指向它的符号链接条目
 	targetInside := filepath.Join(tm.RecycleDir(), "real.ysm")
 	if err := os.MkdirAll(tm.RecycleDir(), 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(targetInside, []byte("target content"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	recEntry := filepath.Join(tm.RecycleDir(), "link.ysm")
 	if err := os.Symlink(targetInside, recEntry); err != nil {
@@ -172,7 +172,7 @@ func TestEmpty_SymlinkRejected(t *testing.T) {
 	tm := New(dir)
 	// 把 .recycle 换成指向外部目录的 symlink
 	if err := os.RemoveAll(tm.RecycleDir()); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	ext := t.TempDir()
 	if err := os.Symlink(ext, tm.RecycleDir()); err != nil {
@@ -211,7 +211,7 @@ func TestMoveEx_CrossDevice_Dir_SourceRemoveLocked(t *testing.T) {
 	modelDir := makeModelDir(t, dir)
 	locked := filepath.Join(modelDir, "lock.txt")
 	if err := os.WriteFile(locked, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 独占写锁：使源目录删除（os.RemoveAll）失败，触发副本回滚分支
 	fh, err := os.OpenFile(locked, os.O_RDWR, 0)

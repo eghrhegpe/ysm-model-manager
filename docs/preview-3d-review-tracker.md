@@ -218,3 +218,21 @@
 - **遗留 / 下一轮建议**：
   1. infra 轮遗留全清（scene-registry 焦点晋升为产品问题待拍板，非缺陷）。下一轮按清单轮转取 `mesh`（第 7 位）。
   2. `switch-preview.ts` clearSwitchContent !keep 分支 stale 循环未兜注销（低概率回访点）可作 mesh 轮顺带确认。
+
+## 2026-10-11T10:25:00+08:00 巡检第 7 轮：mesh
+
+- 选定理由：按轮转清单第 7 位（materials / decoder / infra 三轮建议同向）。7 源文件 / 1123 行，全部有同名测试（含 mesh-cycle-guard 专测环检测）。
+- **结论：实现零缺陷**——但收口 1 个 infra 轮回访项（switch stale 清扫漏注销，**确认是真缺陷非低概率摆设**）+ 抓到 1 个高危结构性风险（cube UV 双源无 parity 守卫，待拍板）。
+- 逐文件深读：
+  - `cube-mesh.ts`(463) / `quaternion.ts`：与 Go `threejs/spec.go`+`spec-cube.go` **逐函数核到逐值一致**——applyInflate(origin X 翻号 + size +2i)/clampThickness/resolveCubePivot(cp[0]=-pivot)/computeLocalVertices/fixZeroThickness/六面顶点序+法线+索引/up-down UV 槽位反转 [s3,s2,s1,s0]/box UV 六面展开表(down fh=-z)/mirror(east↔west 互换 + 逐面 u 交换)/parseFaceUV 空面回退/localPos 公式/四元数 Rz·Ry·Rx 展开三行——全等。两侧各自引黄金参照 GeoCube.java + 各有测试（JS cube-mesh.test.ts ↔ Go TestBuildCubeMeshData_*）。
+  - `mesh.ts`：buildSceneMesh 两遍构建（先全建组后连边）+ 环检测 `ancestorChainContains` 降级挂组件根（孤儿更糟的论证成立），cycle-guard 测试钉不变量；disposeMaterial 与 scene-stats 共用 ALL_TEXTURE_KEYS 单源。✅
+  - `mesh-builder.ts`：perComponent 索引空间分离（compTexArr 局部 0 基 vs 全局 md.texIdx，混用越界误报品红）；blend 双 pass（BackSide depth pre-pass colorWrite:false + FrontSide 混合）根除正背面排序闪烁，clone 后原 mat 显式 dispose。✅
+  - `face-split.ts` / `mesh-baker.ts`：UV→像素换算与 AlphaIndex 同源（materials 轮已证）；bake 按 bone:texIdx:mode 分组，法线仅旋转不平移。✅
+- **✅ 回访项收口（本轮修复）**：`switch-preview.ts|clearSwitchContent` 的 !keep stale 清扫**漏注销 frustum 根**——L198 `scene.remove(c)` 只出场景，注销寄望随后的 `content.dispose()`，而它被 try/catch 包住（L202-206 只 logError）：dispose 中途抛错（外部回调排在注销之前，ysm/mmd 已证该语句序）即跳过注销 ⇒ 幽灵根永久残留。mount 侧 `recoverMountFailure` 已中央兜底（fb12e3321），本分支补齐 switch 侧 `unregisterModelRoot(c)`。
+  - **测试（TDD 先红后绿）**：`switch-preview.test.ts` 新 describe 1 例——旧 content.dispose 抛错，断言根出场景**且** `getModelRootCount()` 归零；修前精确报 `expected 1 to be 0`，修后 37 例绿；变异验证（摘掉注销行）转红。
+- **⚠️ 结构性风险（本轮唯一新发现，待拍板是否收口）**：`cube-mesh.ts` ↔ Go `spec.go`/`spec-cube.go` 是**手抄双源**，与 `texture-order.ts`↔`texture_order.go` **同型**——那个「两侧各有测试、各自绿、展开表仍分叉 3 处」的病刚在 `cb1ce8d6d` 被证实并补了黄金语料 parity 守卫。cube UV 目前**只有各自侧手算期望值测试，无跨语言黄金语料对账**：若有人改 Go 表并同步改 Go 测试、另一人改 JS 表并同步改 JS 测试，两侧可**同时绿但已分叉**（texture-order 的失效模式）。cube UV 是 3D 渲染正确性的地基（每 cube 每面贴图方向），分叉后果 = 模型贴图错乱，比纹理序回退更严重。
+  - **建议收口法**：复用 `cb1ce8d6d` 的 `tests/fixtures/parity/*.golden.json` 机制——Go 侧 `TestCubeMeshParity`（`YSM_PARITY_REGEN=1` dump 代表性 cube{origin,size,pivot,inflate,mirror,faceUV,rotation}×texDim 的 positions/normals/uvs/indices/localPos/localRot 为 golden），TS 侧 `cube-mesh-parity.test.ts` 读同一 golden 断言 `buildCubeMeshData` 逐值等。工作量中等，一次建成根除地基漂移。
+- 验证：preview-3d 全量 **220 文件 / 3706 例绿**；typecheck / vite build / biome / check-layering 全绿。
+- 遗留 / 下一轮建议：
+  1. **cube UV parity 守卫**（见上 ⚠️）——是否建由用户拍板；属高价值可选项，非当前缺陷（两侧现值一致）。
+  2. 下一轮按清单轮转取 **`model`**（第 9 位；第 8 位 `menu` 已有 preview-menu 知识卡 + 大量专项测试，可评估是否视为已覆盖）。

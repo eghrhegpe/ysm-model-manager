@@ -13,6 +13,11 @@ import { collectSceneStats } from "@/preview-3d/infra/scene-stats.ts";
 import { setStatsMenuMerger } from "@/preview-3d/infra/register-built-scene.ts";
 import { mergeStatsMenuItems } from "@/preview-3d/menu/panels/stats.ts";
 import { sceneRegistry, MAX_MODELS } from "@/preview-3d/infra/scene-registry.ts";
+import {
+  clearModelRoots,
+  getModelRootCount,
+  registerModelRoot,
+} from "@/preview-3d/infra/frustum-cull.ts";
 import { bus } from "@/bus";
 import type { LocaleKey } from "@/core/i18n/t.ts";
 
@@ -768,5 +773,41 @@ describe("switchToSession perFrame await 窗口（审核 P3-1）", () => {
     });
     await switchToSession(ctx, "new.glb", { keepInScene: true });
     expect(seenDuringBuild).toBe(oldUpdate); // 同台模式旧模型仍在场景，不中断
+  });
+});
+
+// ── [锐评 mesh 轮 2026-10-11] clearSwitchContent !keep 的 stale 清扫须注销 frustum 根 ──
+// 病（mesh 轮回访 tracker 遗留点确认）：!keep 分支 L198 `ctx.scene.remove(c)` 只出场景
+// 不注销 frustum 登记；注销寄望随后的 `content.dispose()`——而它被 try/catch 包住
+// （L202-206），dispose 中途抛错（外部回调在前，见 ysm/mmd 已证的语句序）则注销被跳过，
+// catch 只 logError ⇒ 幽灵根永久残留 modelRoots（infra 轮 F1 病理）。mount 侧
+// recoverMountFailure 已中央兜底（fb12e3321），switch 侧此分支未兜——本例钉死同一契约。
+describe("clearSwitchContent !keep：stale 清扫中央注销 frustum 根", () => {
+  it("旧 content dispose 抛错 → 其根仍必须出 modelRoots（不依赖 dispose 跑到底）", async () => {
+    const { ctx, state, mockScene } = makeMockCtx();
+    const root = new THREE.Object3D();
+    mockScene.add(root);
+    registerModelRoot(root);
+    expect(getModelRootCount()).toBe(1);
+    // root 不在 baseline → !keep 切换时判为 stale
+    state.sceneBaseline = new Set();
+    // 旧 content 的 dispose 在注销**之前**抛错（模拟 ysm/mmd 已证的中断形态）
+    state.content = {
+      dispose: () => {
+        throw new Error("dispose boom");
+      },
+    } as unknown as PreviewScene;
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      await switchToSession(ctx, "new.glb");
+      expect(root.parent, "根已出场景（stale 清扫）").toBeNull();
+      expect(
+        getModelRootCount(),
+        "frustum 登记必须随 stale 清扫中央注销（dispose 抛错不得吞掉注销）",
+      ).toBe(0);
+    } finally {
+      errSpy.mockRestore();
+      clearModelRoots();
+    }
   });
 });

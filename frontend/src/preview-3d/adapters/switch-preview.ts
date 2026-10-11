@@ -195,7 +195,16 @@ function clearSwitchContent(ctx: SwitchContext, keep: boolean): Set<THREE.Object
   if (!keep && ctx.scene && ctx.getSceneBaseline()) {
     // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     const stale = ctx.scene.children.filter((c) => !ctx.getSceneBaseline()!.has(c));
-    for (const c of stale) ctx.scene.remove(c);
+    // [锐评 mesh 轮 2026-10-11] 出场景时**中央注销 frustum 登记**，不寄望随后的
+    // content.dispose()：注销虽由各适配器 dispose 执行，但它排在外部回调之后且整段
+    // 被 try/catch 包住（L202-206 只 logError）——dispose 中途抛错即跳过注销 ⇒ 幽灵根
+    // 永久残留 modelRoots（infra 轮 F1 病理；mount 侧 recoverMountFailure 已中央兜底
+    // fb12e3321，本分支补齐 switch 侧）。unregisterModelRoot 对未登记引用 no-op，
+    // 与 dispose 内的同款调用重复执行安全。
+    for (const c of stale) {
+      ctx.scene.remove(c);
+      unregisterModelRoot(c);
+    }
   }
   // 释放旧内容层 GPU 资源（非同台模式才 dispose；同台模式下旧模型仍需保持）
   if (!keep) {

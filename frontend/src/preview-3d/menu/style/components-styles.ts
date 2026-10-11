@@ -1,5 +1,5 @@
 // 🥉 ui-helpers 组件库样式（MikuMikuAR app.css 迁移产物；迁移脚本属 MikuMikuAR 上游，
-// 本仓无再生管线——改样式直接手工编辑本字符串，并在 ui-components-styles.test.ts 补契约断言）。
+// 本仓无再生管线——改样式直接手工编辑本字符串，并在 components-styles.test.ts 补契约断言）。
 // 消费方式：
 //  - Shadow DOM 组件：root.adoptedStyleSheets = [componentsStyleSheet, ...others];
 //  - 全局/light-DOM：installComponentsStyles() 会把样式注入 document.head 一次。

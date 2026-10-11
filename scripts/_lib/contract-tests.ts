@@ -61,6 +61,7 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "check-knowledge-claim-overlap.ts": ["docs", "tests"], // 5.15 跨卡认领重复（≥3 条认领且 0 条独占 WARN）
   "check-knowledge-source-containment.ts": ["docs", "tests"], // 5.16 卡内 source_files 包含冗余（目录吞掉同卡文件条目 WARN）
   "test_check_readme_index.ts": ["docs", "tests"],
+  "test_check_stale_test_refs.ts": ["tests", "go", "frontend"], // 陈旧测试引用闸：验 scripts 纯函数 + 全仓生产注释自洽（go/frontend 注释改动即触发）
   "test_check_knowledge_content.ts": ["docs", "tests"], // 知识卡正文机制锚探针（P1 补网）
   // link-checker 扫描域 = git 跟踪 ∩ 可扫（防未跟踪 md 拦住全仓推送）——docs 域变更亦触发
   "test_link_checker_scope.ts": ["docs", "tests"],
@@ -276,6 +277,13 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
     "scripts/adr-check.ts",
   ],
   "test_codemod_guards.ts": ["scripts/codemod.ts"],
+  // 陈旧测试引用闸：本体 + 全仓生产注释（go/frontend 任一注释改动都可能引入/消灭陈旧点名）。
+  "test_check_stale_test_refs.ts": [
+    "scripts/check-stale-test-refs.ts",
+    "scripts/_lib/gate-config.ts",
+    "go/",
+    "frontend/src/",
+  ],
   // ADR 状态行格式契约（2026-10-10 A1 前置补充）：ADR 头部解析两库 + docs/adr 全目录任一
   // 改动都须触发（目录形态 docs/adr/ 由 targetsHit 前缀展开）。
   "test_adr_status_format.ts": [

@@ -2,7 +2,7 @@
 // 对齐 MikuMikuAR 范式：底部根按钮 → createSlideMenu 多层导航。
 // 唯一事实来源：仅描述结构（id / icon / labelKey / kind / 能力门槛）。
 // 渲染与 handler 见 preview-menu.ts；测试遍历本表 + 适配器真实注入项断言结构与
-// dock 渲染（preview-menu-items.test.ts，对齐 MikuMikuAR 声明式菜单测试范式）。
+// dock 渲染（items.test.ts，对齐 MikuMikuAR 声明式菜单测试范式）。
 //
 // 整条链路已统一 PreviewMenuNode（方案 A 收尾）：CORE_MENU_ITEMS 与适配器注入
 // 都是 PreviewMenuNode[]，不再有 PreviewMenuItemDef 往返转换。

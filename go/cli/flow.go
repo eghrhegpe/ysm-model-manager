@@ -265,4 +265,6 @@ func runGUIFlow(ctx *CmdContext) error {
 // 此前调用 a.SaveAppConfig 会写穿真实用户配置（APPDATA/ysm_config.json）并可能重启 watcher，
 // 属 CLI 测试副作用污染源。现 CLI 全路径均不落盘（审核 #4）：DispatchCommand 对
 // --files-root 仅做内存会话覆写（app.SetSessionFilesRoot），此处仅需 LoadAppConfig 读取。
-// 见 cli_test.go「TestDispatchCommand_SessionRootNoWriteThrough」机检约束。
+// 见 cli_test.go「TestDispatchCommand_SessionRootInMemory」机检约束（原点名的
+// SessionRootNoWriteThrough 哨兵用例已随写穿机制从类型层面消失而撤除——
+// saveConfigFn 形参删除后无任何入口能触发 SaveAppConfig，见其测试注释）。

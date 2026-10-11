@@ -477,3 +477,16 @@
 - **Go 侧未登记缺口（已登记知识卡，本条只做指针）**：G1 回收站删除半侧未接 PruneKeys（`go-tags.md` + `go-recycle.md`）、G2 启动扁平→分组迁移 `migrateFlatStorageToGrouped` 不走 RelocateKeys（`go-tags.md`）、G3 六文件 ~24 处裸 t.Fatal（ADR-202 刀5 增量债，窗口 grandparent 化后 `check-go-diff-coverage` 不再复扫，`go-testutil.md`）。
 - **治理层残留候选（下一批次，未动手）**：① bindings 漂移 commit 时点无同步机制（仅 CI 时点 fail-closed 兜底，已两次复发 a43533009/a97f32c9d——建议 pre-push 轻量档或 prepare-commit-msg 提示 regenerate）；② `tsc -p scripts` 不在 commit/pre-push 门禁（`scripts/_lib` 未类型化新代码可溜过，b869a753c 自认缺口至今在）；③ vitest 阻断步仍 `| Out-String -Width 200`（test.yml 前端 job，与 bb6e5e1d4 修的 go test 步同坑，`ci-tuning.md` 已登记未收口）；④ write-surface-gate 方法值链盲区（r.Restore/r.Delete/h.Import 类——已登记诚实边界，换汇聚点即失防，无提醒机制）。
 - 验证：审计全程只读（调研子代理未改码）；变异抽测（write-surface-gate 空转/僵尸豁免两方向）转红后已还原、git status 干净；本条更正的两注释文件 typecheck / vite build 绿 + cube-mesh-parity 23 例实测绿。
+
+
+## 2026-10-11T15:52:00+08:00 巡检第 14 轮（专项）：治理声明↔机器锁全仓对账 → 假声明制度化清剿（新闸 check-stale-test-refs）
+
+- 选定理由：13 格轮转巡完，取 tracker 共识「改专项」；且第 11 轮方法教训（判净必须含「治理声明有没有机器锁」）只在本域人工执行过——本轮把它**升为全仓机械对账**。并行会话 15:30 批次审计独立抓到同族两处（texture-order.ts 头注引用不存在的测试、cube-mesh 注释口径腐化），证家族性非偶发。
+- **对账法**：非测试源文件（frontend/src、go、internal、scripts）注释行点名的测试引用逐一验存在——Go `TestXxx` 符号对全仓 `func TestX(` 索引（2919 函数）、TS `x.test.ts` 文件名对全仓测试文件集（479 文件）。豁免面（防误伤合法虚构）：代码行不判（字符串字面量喂被测函数合法）、通配/片段（`*.parity.test.ts`）不判、示例名启发式（x/foo/fake-*/_r6——仓内真实测试无一采用）、数据值形态（引号紧邻 "TestModel"、XML 串）不判、行内 `claim-check:ignore: <理由>`（空理由不豁免）。
+- **命中 7 处假声明（全清）**：`findinst.go:70` 点名 TestFindInstDir_ResourcepackZipKept——真身早已改造为 `_NoFallback` 且测试注释自陈此事，生产注释留在旧名；`flow.go:268` 点名 SessionRootNoWriteThrough 哨兵——该用例已随写穿机制类型层消失而**撤除**（非改名），注释改为写实；menu 域根迁移旧名 ×2（preview-menu-health/items.test.ts → engine/health|items.test.ts）、style `ui-` 前缀旧名 ×2（现名无 ui- 前缀）、fake-image 来历点名 model3d-loader.test.ts（已随 ADR-270-d5 消亡）→ 改为指认两名现役消费者。**改名后不跟的注释 = 谎称存在一条并不存在的机器防线**，是「注释承诺 > 实现」漂移的镜像形态。
+- **长治 = 立闸而非手改**（与 check-env-schema-consumers / check-cap-enabled-duality 先例同法：一次性人工扫描抓到的病族必须留工具）：新增 `scripts/check-stale-test-refs.ts`（纯函数 scanText/scanAll/buildIndex + CLI + _summary 契约）；接 `gate-config.ts` ALL 清单 debt 档（0 命中纯防御）；三表登记齐（CONTRACT_TEST_DOMAINS + TARGETS + test_gate_policy_baseline 期望分层——**双表一致性守卫 test_contract_tables_consistency 强制**）；契约测试 `tests/test_check_stale_test_refs.ts` 9 例（合成索引直测各判据面 + 全仓自检 0 命中哨）。
+- 契约测试抓到纯函数层真漏洞：`_test.go` 直喂 scanText 照样判（排除只做在 scanAll 层）——修在函数本体（**域守卫必须住进被保护的函数，不住调用方**）。
+- 变异实证：注入假名 TestFindInstDir_PhantomMutantLock → 闸红（点名报行位）+ 契约自检红（0 命中哨破）；还原复绿、diff 干净。
+- 知识卡：`gate-chain-map.md` 补挂条（体例沿 check-scene-slot-writers 行）。
+- 副产物（对账过程发现，非本轮开战项）：`vitest-env-switch.ts` 清单含两条死路（parsers/voxel-parse.test.ts、features/dnd-collector.test.ts——脚本 SKIP 打印、无害但清单腐化）；docs/adr 与 archive 的陈旧测试名引用属历史快照豁免（元规则：ADR 背景 = 决策时状态，不改）。
+- 验证：go build ./... 绿；go test registry/cli 两包绿；4 表联动契约测试全绿；biome 全绿；闸全仓 0 命中。

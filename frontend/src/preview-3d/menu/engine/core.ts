@@ -204,7 +204,7 @@ export interface PreviewMenuRouters {
 /**
  * [子函数 4/9] 构建 core 面板路由表（schemaBuilders 声明式 + runners 动作；第四刀起无 fillers）。
  *   roles 面板需要 setAdapterItems 回写 dock——handle 尚未构造时经 shell 延迟读取。
- *   导出供 preview-menu-health.test.ts 复用（ADR-128 落地前哨：真正执行每个常驻面板渲染器，
+ *   导出供 health.test.ts 复用（ADR-128 落地前哨：真正执行每个常驻面板渲染器，
  *   捕捉「菜单没迁移就断渲染」），与 check-menu-health.mjs（正则静态扫表）互补。
  */
 export function buildPreviewMenuRouters(

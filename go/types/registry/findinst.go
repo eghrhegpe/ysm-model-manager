@@ -67,7 +67,8 @@ func dirContainsFlag(root, flag string) bool {
 // 散落的 .zip（模组安装包/资源包 zip）会被兜底扫描误判为蓝图/投影目录。仅当该
 // 类型扩展集还存在非容器主证据（如 .nbt/.schematic/.litematic/.ysm/.pmx）时
 // 剔除；纯容器类型（resourcepack/shaderpack 扩展集仅 .zip/.7z）保留，否则其
-// 兜底扫描完全失效（回归守卫 TestFindInstDir_ResourcepackZipKept）。
+// 兜底扫描完全失效（回归守卫 TestFindInstDir_Resourcepack_NoFallback；原点名
+// ResourcepackZipKept 已随 2026-08-23 兜底默认关闭改造为断言反向语义，见其测试注释）。
 func FindInstDir(versionDir, subDir, rtype string) string {
 	standard := filepath.Join(versionDir, subDir)
 	// 消费注册表 detector 字段（ADR-065 合规），不硬编码 rtype。

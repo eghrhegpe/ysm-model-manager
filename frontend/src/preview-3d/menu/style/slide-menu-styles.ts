@@ -1,6 +1,6 @@
 // 🥉 slide-menu 外壳样式（MikuMikuAR app.css 迁移，仅外壳层，不含菜单导航引擎；
 // 本仓手工维护——.menu-wrapper.slide-menu 背景已有意改为玻璃质感，对齐 ysm 3D HUD 的 .ysm-3d-popup，
-// 故允许针对 3D 浮层手工微调；类名契约由 ui-slide-menu-styles.test.ts 兜底）。
+// 故允许针对 3D 浮层手工微调；类名契约由 slide-menu-styles.test.ts 兜底）。
 // 消费方式：
 //  - Shadow DOM 组件：root.adoptedStyleSheets = [slideMenuStyleSheet, ...others];
 //  - 全局/light-DOM：installSlideMenuStyles() 会把样式注入 document.head 一次。

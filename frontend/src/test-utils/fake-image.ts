@@ -1,6 +1,7 @@
 // ===== 可控 Image 测试辅助（ADR-035 测试基础设施）=====
 // src setter 同步触发 onload/onerror（happy-dom 无真实网络），供各测试 stubGlobal("Image", ...)。
-// 从 model3d-loader.test.ts 抽出共享，避免多份复制（ADR-136 第四刀 jscpd 去重）。
+// 由重复的 Image stub 抽出共享，避免多份复制（ADR-136 第四刀 jscpd 去重）。
+// 现役消费者：texture-loader.test.ts、ysm-model-preloader.test.ts。
 export class FakeImage {
   onload: (() => void) | null = null;
   onerror: (() => void) | null = null;

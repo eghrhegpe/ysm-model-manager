@@ -33,6 +33,7 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - addedLinesFromDiffText
+    - BARE_ASSERT_BASELINE_FILE
     - BaselineCheck
     - BaselineGuardInput
     - buildBareAssertBlock
@@ -40,6 +41,7 @@ auto_fields:
     - CHANGED_NULL_REASON
     - checkBaselineMeaningful
     - CI_INDEPENDENT_TOOLS
+    - diffBareAssertDebt
     - findBareFatalAddedLines
     - getChangedGoFiles
     - getChangedGoTestFiles
@@ -55,15 +57,18 @@ auto_fields:
     - isRewriteOnlyDiff
     - isTestutilTree
     - isVitestExcluded
+    - loadBareAssertBaseline
     - packagePatternFor
     - parseGoCover
     - runContractTestsBlock
     - runCoverProfile
     - runScriptsTypecheck
     - runStaticToolsDispatch
+    - scanBareAssertDebt
     - statementPctForChangedLines
     - stmtPctForChangedLines
     - stripModulePrefix
+    - writeBareAssertBaseline
 use_when:
   - 改 GitHub Actions workflow 前
   - 缓存不生效 / CI 时长反常
@@ -338,6 +343,10 @@ go job 要用 `pnpm install` + `vite build`（`//go:embed all:frontend/dist` 前
   ③ **护栏**（`tests/test_check_diff_coverage.ts`）：直接 spawn 脚本断言**退出码语义**
      （纯函数测不到 exit）——基线==HEAD 须 exit 2 且文案含「同一提交」；`--suggest` 须 exit 0；
      `--files` 不得误伤；并加**反向锚**断言 Go 版有同款守卫（两门禁同病，只修一处 = 假绿回流）。
+- **2026-10-11 补（裸断言债，`check-go-diff-coverage`）**：另加**全库计数账本**（`--update-baseline`，账本
+  `scripts/baseline/go-bare-assert-baseline.json`）。它跑在「无改动源码提前退出」**之前**——即使 diff 为空
+  （空转形态），也全库重扫裸断言条数并与账本比对，超出即 WARN/debt 档（不阻断）。**「没跑」与「真通过」
+  之外还有第三态：债不随 diff 为空而消失。**
 - **教训**：门禁的「通过」必须能与「没跑」区分。凡归属依赖 `base...HEAD` 的检查，都要断言
   **基线确实指向 HEAD 之前**，否则绿灯可能只是空转。这与 `changes` job 自测发现的
   「空变更集 ⇒ 假绿通道」（`test.yml` 内注释）是同一族问题的两个面。

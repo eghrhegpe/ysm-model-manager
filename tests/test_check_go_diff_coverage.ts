@@ -12,6 +12,7 @@ import {
   addLinesFromDiff,
   buildBareAssertBlock,
   buildSuggestBlock,
+  diffBareAssertDebt,
   findBareFatalAddedLines,
   isBareFatalAssertLine,
   isExemptAssert,
@@ -23,6 +24,7 @@ import {
   isTestutilTree,
   packagePatternFor,
   parseGoCover,
+  scanBareAssertDebt,
   stmtPctForChangedLines,
   stripModulePrefix,
 } from "../scripts/check-go-diff-coverage.ts";
@@ -320,6 +322,57 @@ check("buildBareAssertBlock 生成建议区块", () => {
   assert.ok(block.includes("## Go 裸断言建议（非阻断）"));
   assert.ok(block.includes("go/x/x_test.go:12"));
   assert.ok(block.includes("testutil.Equal(t, got, want)"));
+});
+
+check("diffBareAssertDebt 超出基线 → over=true + overFiles 列出该收未收的文件", () => {
+  const scan = { count: 5, files: { "go/a/a_test.go": 3, "go/b/b_test.go": 2 } };
+  const baseline = { count: 3, files: { "go/a/a_test.go": 1, "go/b/b_test.go": 2 } };
+  const d = diffBareAssertDebt(scan, baseline);
+  assert.equal(d.over, true);
+  assert.equal(d.current, 5);
+  assert.equal(d.baseline, 3);
+  // 只列真正「超出」的文件，且按条数降序
+  assert.deepEqual(
+    d.overFiles.map((o) => o.file),
+    ["go/a/a_test.go"],
+  );
+  assert.deepEqual(d.overFiles[0], { file: "go/a/a_test.go", current: 3, baseline: 1 });
+});
+
+check("diffBareAssertDebt 等于基线 → over=false + 无 overFiles（账本收缩后不误报）", () => {
+  const scan = { count: 3, files: { "go/a/a_test.go": 3 } };
+  const baseline = { count: 3, files: { "go/a/a_test.go": 3 } };
+  const d = diffBareAssertDebt(scan, baseline);
+  assert.equal(d.over, false);
+  assert.deepEqual(d.overFiles, []);
+});
+
+check("diffBareAssertDebt 低于基线（已收缩）→ over=false", () => {
+  const scan = { count: 1, files: { "go/a/a_test.go": 1 } };
+  const baseline = { count: 4, files: { "go/a/a_test.go": 4 } };
+  const d = diffBareAssertDebt(scan, baseline);
+  assert.equal(d.over, false);
+  assert.deepEqual(d.overFiles, []);
+});
+
+check("diffBareAssertDebt 空账本（新文件引入裸断言）→ 立即超基线", () => {
+  const scan = { count: 2, files: { "go/new/new_test.go": 2 } };
+  const baseline = { count: 0, files: {} };
+  const d = diffBareAssertDebt(scan, baseline);
+  assert.equal(d.over, true);
+  assert.deepEqual(d.overFiles.map((o) => o.file), ["go/new/new_test.go"]);
+});
+
+// 全库扫描只断言结构健康，不锚定具体条数（债数随代码演化，锚数即腐）
+check("scanBareAssertDebt 结构健康（count 数字 + files 正整数值）", () => {
+  const s = scanBareAssertDebt();
+  assert.equal(typeof s.count, "number");
+  assert.ok(s.count >= 0);
+  assert.equal(typeof s.files, "object");
+  for (const [rel, n] of Object.entries(s.files)) {
+    assert.ok(rel.endsWith("_test.go"), `${rel} 应为 _test.go`);
+    assert.ok(Number.isInteger(n) && n > 0, `${rel} 条数应为正整数，实为 ${n}`);
+  }
 });
 
 if (errors.length) {

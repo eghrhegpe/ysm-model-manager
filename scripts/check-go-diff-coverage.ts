@@ -37,6 +37,7 @@
  *   node scripts/check-go-diff-coverage.ts --suggest                # 非阻断建议（输出 commit message 建议区块，永远 exit 0）
  *   node scripts/check-go-diff-coverage.ts --json                   # JSON（CI / 子代理消费）
  *   node scripts/check-go-diff-coverage.ts --bare-assert=off        # 逃生阀：关闭测试断言增量红线（ADR-202 刀5）
+ *   node scripts/check-go-diff-coverage.ts --update-baseline        # 全库裸断言债扫描，写入/收缩计数账本（debt 档）
  *
  * 除变更行覆盖率门禁外，本脚本还承担「测试断言增量红线」（ADR-202 刀5）：
  * 新增/变更的 *_test.go 行若裸调 t.Fatal/t.Fatalf（未走 testutil，失败即弃权），
@@ -44,6 +45,12 @@
  * 豁免：testutil 断言器实现树自身（go/internal/testutil/ 与根 internal/testutil/）、
  * 纯注释行；有意不拦 t.Error/t.Errorf
  * （循环/goroutine 收集多失败是 Go 惯用法，testutil 无「记录不致命」等价面）。
+ *
+ * 2026-10-11 补：裸断言存量债计数账本（ADR-202 刀5 补，堵「债被提交边界吸收」）。
+ * 刀5 原是纯增量红线——含债的提交一起推则红，下个小提交不覆盖那些行则绿，债被
+ * 藏起来。现按文件记「裸断言条数」（不记行号，行号会漂移），每次运行全库重扫并与
+ * 账本比对：超出基线 → WARN/debt 档（doctor 报告永远可见，不阻断）；diff 新增仍
+ * ERROR（原阻断语义不变）。首次或清理后跑 --update-baseline 建立/收缩基线。
  *
  * 退出码：0 = 全部达标；1 = 存在未达标文件；2 = 配置/用法错误（git 失败或 go 不可用）。
  * 说明：Go 无持久覆盖率产物，本脚本对受影响包现跑 `go test -coverprofile`（单包 ~0.5s），
@@ -66,7 +73,7 @@ import {
 } from "./_lib/diff-coverage-core.ts";
 import { parseArgs } from "./_lib/parse-args.ts";
 import { run } from "./_lib/proc.ts";
-import { ROOT } from "./_lib/scan-files.ts";
+import { ROOT, relPosix, walk } from "./_lib/scan-files.ts";
 
 // ── re-export（契约测试 import 路径锁：tests/test_check_go_diff_coverage.ts）──
 export {
@@ -321,6 +328,119 @@ export function isExemptAssert(f: string) {
   return EXEMPT_ASSERT_FILES.has(f);
 }
 
+// ────────────────────────────────────────────────────────────────────────────
+// 裸断言存量债账本（ADR-202 刀5 补：堵「债被提交边界吸收」结构漏洞）
+// 病：ADR-202 刀5 是**纯增量**红线（只判 diff 新增行）。一批含债的提交一起推 → diff
+//   覆盖到 → 红；下一个小提交推 → diff 不覆盖那些行 → 绿。债没消失，只是从闸门视野
+//   里消失（2026-10-11 六文件裸 t.Fatal 债实证：c70fa4f09 登记、隔几批提交就再也
+//   看不到，直到某次 diff 恰好覆盖才复红）。
+// 治：与 check-deadcode-baseline 同构的**计数基线**——按文件记裸断言**条数**（不记
+//   行号，行号会漂移），每次运行全库重扫，与基线比对。diff 新增仍 ERROR（阻断，
+//   原语义不变）；全库计数 > 基线计数 → WARN/debt 档（doctor 报告可见，**永远
+//   可见**，不阻断）。计数与提交边界无关 ⇒ 债再也藏不住。
+// 豁免同刀5：断言器实现树自身（其内部就是用 t.Fatalf 实现断言器的，自测裸写合法）。
+// ────────────────────────────────────────────────────────────────────────────
+
+/** Go 裸断言债基线文件路径（count 口径，无行号 → 不漂移）。 */
+export const BARE_ASSERT_BASELINE_FILE = path.join(
+  ROOT,
+  "scripts",
+  "baseline",
+  "go-bare-assert-baseline.json",
+);
+
+/** Go 扫描目录跳过项：只留 Go 源码树（go/、根 internal/、根 .go 文件）。 */
+function skipGoScanDir(name: string) {
+  return (
+    name.startsWith(".") ||
+    name === "node_modules" ||
+    name === "vendor" ||
+    name === "docs" ||
+    name === "frontend" ||
+    name === "artifacts" ||
+    name === "scripts" ||
+    name === "tests" ||
+    name === "e2e"
+  );
+}
+
+/** 全库裸断言扫描：返回 { count, files: {rel: 条数} }（排除断言器实现树）。导出供单测。 */
+export function scanBareAssertDebt(): { count: number; files: Record<string, number> } {
+  const files: Record<string, number> = {};
+  const list = walk(ROOT, { exts: [".go"], skipDir: skipGoScanDir, rel: true }) as Array<{
+    abs: string;
+    rel: string;
+  }>;
+  let count = 0;
+  for (const f of list) {
+    if (!isGoTestSource(f.rel) || isTestutilTree(f.rel)) continue;
+    let text: string;
+    try {
+      text = fs.readFileSync(f.abs, "utf8");
+    } catch {
+      continue;
+    }
+    let n = 0;
+    for (const line of text.split("\n")) if (isBareFatalAssertLine(line)) n++;
+    if (n > 0) {
+      files[f.rel] = n;
+      count += n;
+    }
+  }
+  return { count, files };
+}
+
+/** 读取裸断言债基线；缺失/损坏返回 null（fail-open：debt 档不阻断，仅跳过对账）。 */
+export function loadBareAssertBaseline(): { count: number; files: Record<string, number> } | null {
+  try {
+    const j = JSON.parse(fs.readFileSync(BARE_ASSERT_BASELINE_FILE, "utf8"));
+    if (typeof j?.count !== "number" || !j?.files || typeof j.files !== "object") return null;
+    return { count: j.count, files: j.files as Record<string, number> };
+  } catch {
+    return null;
+  }
+}
+
+/** 写裸断言债基线（--update-baseline 用）。返回写入条数。 */
+export function writeBareAssertBaseline(scan: { count: number; files: Record<string, number> }) {
+  fs.mkdirSync(path.dirname(BARE_ASSERT_BASELINE_FILE), { recursive: true });
+  fs.writeFileSync(
+    BARE_ASSERT_BASELINE_FILE,
+    `${JSON.stringify(
+      {
+        generated: new Date().toISOString(),
+        count: scan.count,
+        note: "裸 t.Fatal/t.Fatalf 存量债账本（ADR-202 刀5 补：计数口径，无行号；debt 档不阻断，仅供 doctor 报告 / 收债排期）；清理后重跑 --update-baseline 收缩",
+        files: scan.files,
+      },
+      null,
+      2,
+    )}\n`,
+    "utf8",
+  );
+  return scan.count;
+}
+
+/**
+ * 全库裸断言债比对结果：count 超基线时列出「该收未收」的文件（debt 档，不阻断）。
+ * 导出供单测：断言"债永远可见"这一机制本身。
+ */
+export function diffBareAssertDebt(scan: { count: number; files: Record<string, number> }, baseline: {
+  count: number;
+  files: Record<string, number>;
+}) {
+  const overFiles = Object.entries(scan.files)
+    .filter(([f, n]) => n > (baseline.files[f] ?? 0))
+    .map(([file, current]) => ({ file, current, baseline: baseline.files[file] ?? 0 }))
+    .sort((a, b) => b.current - a.current);
+  return {
+    current: scan.count,
+    baseline: baseline.count,
+    over: scan.count > baseline.count,
+    overFiles,
+  };
+}
+
 /** 跑 `go test -coverprofile` 解析出的文件→语句块映射。 */
 export function runCoverProfile(packagePattern: string, tmp: string) {
   const r1 = run("go", ["test", `-coverprofile=${tmp}`, packagePattern, "-count=1"], {
@@ -435,12 +555,12 @@ export function buildSuggestBlock(failures: any[], threshold: number) {
 
 function main() {
   const args = parseArgs(process.argv.slice(2), {
-    bools: ["uncommitted", "json", "suggest", "staged"],
+    bools: ["uncommitted", "json", "suggest", "staged", "update-baseline"],
     strings: ["threshold", "base", "head", "files", "bare-assert"],
   });
   if (args.unknown.length) {
     console.error(
-      `[check-go-diff-coverage] 未知参数: ${args.unknown.join(" ")}（支持 --threshold/--base/--head/--files/--uncommitted/--staged/--suggest/--json/--bare-assert=off）`,
+      `[check-go-diff-coverage] 未知参数: ${args.unknown.join(" ")}（支持 --threshold/--base/--head/--files/--uncommitted/--staged/--suggest/--json/--bare-assert=off/--update-baseline）`,
     );
     process.exit(USAGE_ERROR);
   }
@@ -459,6 +579,22 @@ function main() {
   if (!Number.isFinite(threshold)) {
     console.error(`[check-go-diff-coverage] --threshold 需为数字，收到：${args.threshold ?? "60"}`);
     process.exit(USAGE_ERROR);
+  }
+
+  // ── --update-baseline：全库裸断言债扫描，写入计数账本（debt 档排期用，无 git 上下文）──
+  if (args["update-baseline"]) {
+    const scan = scanBareAssertDebt();
+    const n = writeBareAssertBaseline(scan);
+    if (json) {
+      console.log(
+        JSON.stringify({ _summary: { ok: true, mode: "update-baseline", count: n } }, null, 2),
+      );
+    } else {
+      console.log(
+        `✅ 已写入 Go 裸断言债基线：${n} 条 → ${relPosix(BARE_ASSERT_BASELINE_FILE)}`,
+      );
+    }
+    process.exit(0);
   }
 
   const failOrWarn: (msg: any) => never = (msg) => {
@@ -535,6 +671,33 @@ function main() {
     if (items.length > 0) bareAssertHits.push({ file: f, items });
   }
   const bareFail = bareAssertHits.length > 0 && !bareAssertOff;
+
+  // ── 裸断言存量债对账（debt 档，不阻断）：让债在提交边界外也永远可见 ──
+  // 必须位于「无改动源码提前退出」之前——否则「本次无 Go 改动」的常见推流会直接 exit(0)，
+  // 计数对账一次都不跑（同 ADR-234 把增量红线前移的理由）。
+  const bareAssertDebt = (() => {
+    const baseline = loadBareAssertBaseline();
+    if (!baseline) {
+      console.error(
+        "[check-go-diff-coverage] ⚠️ 裸断言债基线未建立（debt 档：跳过存量对账）。" +
+          "请运行 node scripts/check-go-diff-coverage.ts --update-baseline 建立基线。",
+      );
+      return null;
+    }
+    return diffBareAssertDebt(scanBareAssertDebt(), baseline);
+  })();
+  if (bareAssertDebt?.over) {
+    console.error(
+      `\n[check-go-diff-coverage] ⚠️ 裸断言存量债 ${bareAssertDebt.current} 条 > 基线 ${bareAssertDebt.baseline} 条` +
+        "（debt 档不阻断；ADR-202 刀5 补：债不随提交边界消失）：",
+    );
+    for (const o of bareAssertDebt.overFiles.slice(0, 12))
+      console.error(`  ${o.file}: ${o.current} 条（基线 ${o.baseline} 条）`);
+    if (bareAssertDebt.overFiles.length > 12)
+      console.error(
+        `  … 另有 ${bareAssertDebt.overFiles.length - 12} 个文件超出基线`,
+      );
+  }
 
   if (changed.length === 0) {
     const msg = `[check-go-diff-coverage] 本次无改动 Go 源码需要检查（阈值 ${threshold}%）。通过。`;
@@ -663,10 +826,14 @@ function main() {
             failed: failures.length,
             exempt: rows.filter((r) => r.exemptLifecycle || r.exemptEntry || r.exemptAssert).length,
             bareAssert: bareAssertHits.length,
+            bareAssertDebt: bareAssertDebt
+              ? { current: bareAssertDebt.current, baseline: bareAssertDebt.baseline }
+              : null,
           },
           rows,
           failures,
           bareAssert: bareAssertHits,
+          bareAssertDebt,
         },
         null,
         2,

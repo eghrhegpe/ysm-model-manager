@@ -241,16 +241,25 @@
 
 - 选定理由：用户拍板建 cube UV 双端对账守卫（mesh 轮 ⚠️ 项）。
 - **⚠️ 更正上一轮的结论**：我在 mesh 轮写「两侧现值一致（我逐值核过）」——**错了**。
-  逐值人工核对 21 个用例后，黄金语料对账**第一次跑就抓到 1 处真实分叉**：
-  `guard-nan-bone-pivot` Go 返回 nil、TS 却产出对象。
-  根因：**Go `buildCubeMeshData` 有第四道守卫 `checkFinite(localPos)`（spec.go L240-243），
-  TS 只有三道**（入口 / inflate 后 / 顶点派生后），localPos 那道漏了。
-  后果（真 bug，非口径差异）：bonePivot 含 NaN/Inf 时 TS 把 NaN 写进 `MeshData.localPosition`
-  → 下游 `Object3D.position.set(NaN,…)` 使该 mesh 及子树 matrixWorld 全 NaN →
-  **渲染整体消失且不报错**（静默丢件）。Go 侧正确拒绝产出。
-  → 教训入档：**人工逐值核对会漏，跨语言对账不能靠读**。我上轮「逐函数核到逐值一致」
-  的结论覆盖了展开表/顶点序/UV 口径，但**漏了守卫链的条数比对**——这正是机器守卫存在的理由。
-- **修复**：`cube-mesh.ts` 补第四道 `assertFinite(localPos, …)` 对齐 Go（注释记由 parity 首次抓出）。
+  黄金语料对账**首轮抓到 1 处、补例后再抓 2 处，共三处真实分叉**：
+  1. **TS 缺 `localPos` 守卫**（`guard-nan-bone-pivot` Go 返 nil、TS 产出对象）：Go 有
+     `checkFinite(localPos)`（spec.go），TS 只有三道守卫。后果：bonePivot 含 NaN/Inf 时
+     TS 把 NaN 写进 `MeshData.localPosition` → 下游 `Object3D.position.set(NaN,…)` 使该
+     mesh 及子树 matrixWorld 全 NaN → **渲染整体消失且不报错**（静默丢件）。已补对齐。
+  2. **TS 缺 `lx..hz` 顶点相对 pivot 守卫**：极值 origin/pivot 使 `hx2=(tx-fx)*0.5` 溢出。
+     此路此前被 `spec-builder.test.ts` 一条用例**以「JS 浮点边界行为」为由钉成期望**——
+     该前提是错的（1e308+1e308=Inf 是 IEEE754 语义，Go/JS 完全一致，Go 同输入返回 nil），
+     等于把分叉合理化。已补守卫并**更正该测试**（连带更正 localPos 那条同类用例）。
+  3. **JS South 面结合序抄错**：Go `u + sz + sz + sx`（对齐 Blockbench 权威
+     `size[2]*2 + size[0]`），JS 抄成 `u + z + x + z`——数学等价但**加法不满足结合律**，
+     z 与 x 量级悬殊时（z=8、x=0.001）落在不同舍入粒度 → 差 1 ULP。
+     ⚠️ **我一度想用相对容差抹平它，这是错的**：纯加减乘出现 ULP 差的唯一成因就是
+     抄写的结合序不同 = 真实分叉，改容差等于把它永久藏起来。已改 JS 对齐权威，
+     并**恢复逐位精确比对**（仅 `localRotation` 保留 1e-9 容差，因其含 cos/sin/sqrt）。
+  → 教训入档：**人工逐值核对会漏守卫链条数与表达式结合序**；跨语言对账不能靠读，
+  且对账的比对精度本身不可为「变绿」而放宽。
+- **修复**：`cube-mesh.ts` 补两道守卫 + South 结合序对齐 Blockbench 权威；
+  `spec-builder.test.ts` 两条「JS 浮点边界」用例更正为断言 Go 对齐语义。
 - **机制建成（沿 cb1ce8d6d parity 先例）**：
   - Go 主源 `go/threejs/cube_mesh_parity_test.go`：`TestCubeMeshParity`，
     regen = `YSM_PARITY_REGEN=1 go test ./go/threejs -run TestCubeMeshParity`。

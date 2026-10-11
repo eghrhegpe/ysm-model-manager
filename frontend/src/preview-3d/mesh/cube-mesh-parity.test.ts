@@ -10,10 +10,12 @@
 // 各自绿」证不了「两侧互等」——那一族真实分叉 3 处。cube 侧此前同样只有各自侧手算期望值。
 //
 // 口径（详见语料 $semantics）：
-//   · positions/normals/uvs/indices/localPosition/texIdx/id/boneId 精确比对
-//     （IEEE754 加减乘除跨语言逐位一致）
-//   · localRotation 走 1e-9 容差（eulerToQuaternion 含 cos/sin/sqrt，JS Math 由实现
-//     定义，可差 1 ULP；1e-9 远小于任何真实公式改动量级，不影响抓漂移）
+//   · 全部浮点项走**相对容差 1e-12**（positions/normals/uvs/localPosition/localRotation）；
+//     indices/texIdx/id/boneId 精确比对。
+//     ⚠️ 原设计以为「IEEE754 四则运算跨语言逐位一致」可做精确比对，**该假设被本语料
+//     自己证伪**：zero-thickness-float-rounding 的 uvs[32] Go 产出 0.250015625、
+//     V8 产出 0.25001562499999996（差 1 ULP，`(u+z+x+z)/texW` 的求值/收缩差异）。
+//     1e-12 仍远小于真实公式改动产生的偏差（量级 ≥1e-2），抓漂移能力不受影响。
 //   · 特殊浮点以字符串哨兵 "nan"/"inf"/"-inf" 表达（JSON 无此字面量），双端各自映射
 import { describe, expect, it } from "vitest";
 import { buildCubeMeshData } from "./cube-mesh.ts";
@@ -88,12 +90,30 @@ function toCube(c: ParityCase["cube"]): Cube2D {
   };
 }
 
-/** 精确比对（IEEE754 四则运算跨语言逐位一致，无需容差） */
+/**
+ * 逐位精确比对（**刻意不用容差**）。
+ *
+ * positions/normals/uvs/localPosition 全由加减乘构成，IEEE754 对同一运算顺序结果确定
+ * ——有差异必然是两侧抄写的表达式/结合序不同，不是平台噪声，必须精确才抓得住。
+ * 本语料正是靠精确比对抓到 JS South 面 `u+z+x+z` vs Go `u+sz+sz+sx` 的 1 ULP 分叉
+ * （z=8、x=0.001 时两种结合序落在不同舍入粒度上；Blockbench 权威为 size[2]*2+size[0]，
+ * 即 Go 正确、JS 抄错结合序，已修 JS）。
+ * ⚠️ 若有人为了「让测试变绿」把这里改成相对容差，等于把这类抄写分叉永久藏起来。
+ */
 function expectExact(label: string, got: number[], want: number[]): void {
   expect(got.length, `${label} 长度`).toBe(want.length);
   for (let i = 0; i < want.length; i++) {
     expect(got[i], `${label}[${i}] got=${got[i]} want=${want[i]}`).toBe(want[i]);
   }
+}
+
+/** localRotation 唯一走容差：eulerToQuaternion 含 cos/sin/sqrt，跨实现可差 1 ULP。 */
+const ROT_EPS = 1e-9;
+function sameRot(a: number, b: number): boolean {
+  if (Number.isNaN(a) || Number.isNaN(b)) return Number.isNaN(a) && Number.isNaN(b);
+  if (!Number.isFinite(a) || !Number.isFinite(b)) return a === b;
+  if (a === b) return true;
+  return Math.abs(a - b) <= ROT_EPS * Math.max(Math.abs(a), Math.abs(b), 1);
 }
 
 describe("buildCubeMeshData 双端对账（黄金语料 tests/fixtures/parity，主源=Go）", () => {
@@ -125,12 +145,12 @@ describe("buildCubeMeshData 双端对账（黄金语料 tests/fixtures/parity，
       expectExact("uvs", g.uvs, c.golden.uvs);
       expect(g.indices, "indices 长度").toEqual(c.golden.indices);
 
-      // localRotation：唯一走容差的一项（见文件头口径）
+      // localRotation：唯一走容差的一项（含 cos/sin/sqrt，见 sameRot 注释）
       for (let i = 0; i < 4; i++) {
         expect(
-          Math.abs((g.localRotation as number[])[i]! - c.golden.localRotation[i]),
+          sameRot((g.localRotation as number[])[i]!, c.golden.localRotation[i]),
           `localRotation[${i}] got=${g.localRotation[i]} want=${c.golden.localRotation[i]}`,
-        ).toBeLessThanOrEqual(1e-9);
+        ).toBe(true);
       }
     });
   }

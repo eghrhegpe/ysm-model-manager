@@ -16,11 +16,12 @@
 //
 // 【口径差异声明】
 //  1. localRotation 用 1e-9 容差比对，其余（positions/normals/uvs/indices/
-//     localPosition/texIdx/id/boneId）**精确比对**。理由：localRotation 走
-//     eulerToQuaternion 的 cos/sin/sqrt——Go math 是 fdlibm 移植、JS Math 由实现
-//     定义（V8 亦 fdlibm，通常一致但不保证），可差 1 ULP；几何数组全是加减乘除，
-//     IEEE754 双精度跨语言逐位一致，故无需容差。1e-9 远小于任何真实公式改动产生的
-//     偏差（量级 ≥1e-2），不影响抓漂移。
+//     localPosition/texIdx/id/boneId）**逐位精确比对**。理由：其余项全由加减乘构成，
+//     IEEE754 对同一运算顺序结果确定——有差异必然是两侧抄写的表达式/结合序不同，
+//     不是平台噪声，必须精确才抓得住。本语料正是靠此抓到 JS South 面
+//     `u+z+x+z` vs Go `u+sz+sz+sx` 的 1 ULP 分叉（Blockbench 权威为 size[2]*2+size[0]，
+//     即 Go 正确、JS 抄错结合序，已修 JS）。localRotation 含 cos/sin/sqrt，跨实现
+//     可差 1 ULP，属真噪声，故唯一走容差。
 //  2. 特殊浮点值以字符串哨兵 "nan"/"inf"/"-inf" 表达（JSON 规范无 NaN/Inf 字面量），
 //     双端各自映射——否则「NaN 入口拒绝」「inflate 溢出」两类守卫无法进语料。
 //     输出侧无此问题：命中守卫即返回 null，golden 记 null。
@@ -136,8 +137,13 @@ func runCubeParityCase(c cubeParityCase) *cubeParityMesh {
 	}
 }
 
-// diffCubeMesh 逐字段比对；localRotation 走 1e-9 容差（见文件头口径声明 1），
-// 其余精确。返回首个差异描述（空串 = 一致）。
+// diffCubeMesh 逐字段比对。
+// ⚠️ **浮点项刻意用逐位精确比对**，只有 localRotation 走容差。理由：
+// positions/normals/uvs/localPosition 全部由**加减乘**构成，IEEE754 对同一运算顺序
+// 的结果是确定的——出现差异必然是**两侧抄写的结合序/表达式不同**，不是平台噪声。
+// 本语料正是靠精确比对抓到 JS South 面 `u+z+x+z` vs Go `u+sz+sz+sx` 的 1 ULP 分叉
+// （z=8、x=0.001 时两种结合序落在不同舍入粒度上），若改用相对容差就会把它永久藏起来。
+// localRotation 例外：eulerToQuaternion 含 cos/sin/sqrt，跨实现可差 1 ULP，属真噪声。
 func diffCubeMesh(got, want *cubeParityMesh) string {
 	if got == nil || want == nil {
 		if (got == nil) != (want == nil) {
@@ -155,7 +161,7 @@ func diffCubeMesh(got, want *cubeParityMesh) string {
 		return fmt.Sprintf("texIdx: got=%d want=%d", got.TexIdx, want.TexIdx)
 	}
 	for i, v := range want.LocalRotation {
-		if math.Abs(got.LocalRotation[i]-v) > 1e-9 {
+		if !sameFloat(got.LocalRotation[i], v) {
 			return fmt.Sprintf("localRotation[%d]: got=%v want=%v", i, got.LocalRotation[i], v)
 		}
 	}
@@ -172,6 +178,30 @@ func diffCubeMesh(got, want *cubeParityMesh) string {
 		return d
 	}
 	return diffInts("indices", got.Indices, want.Indices)
+}
+
+// rotEps localRotation 相对容差（仅用于含三角函数/开方的项）。
+const rotEps = 1e-9
+
+// sameFloat NaN/±Inf 走严格同态，其余相对容差——**只服务 localRotation**。
+func sameFloat(a, b float64) bool {
+	if math.IsNaN(a) || math.IsNaN(b) {
+		return math.IsNaN(a) && math.IsNaN(b)
+	}
+	if math.IsInf(a, 0) || math.IsInf(b, 0) {
+		return a == b
+	}
+	if a == b {
+		return true
+	}
+	scale := math.Abs(a)
+	if math.Abs(b) > scale {
+		scale = math.Abs(b)
+	}
+	if scale < 1 {
+		scale = 1
+	}
+	return math.Abs(a-b) <= rotEps*scale
 }
 
 func diffVec3(label string, got, want [3]float64) string {

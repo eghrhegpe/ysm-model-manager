@@ -168,6 +168,15 @@ function mdCmPrepPivotAndVertices(
   let hy = cy + hy2 - cp[1];
   let hz = cz + hz2 - cp[2];
 
+  // [锐评 mesh 轮 2026-10-11] 顶点相对 pivot 溢出守卫——对齐 Go spec.go L201-204
+  // （在 fixZeroThickness **之前**，与 Go 同序）。极值 origin/pivot 时 hx2=(tx-fx)*0.5
+  // 溢出为 ±Inf → lx/hx 为 ±Inf，若不拦则写进 positions → matrixWorld 全 NaN →
+  // 该子树静默消失。此前 TS 缺这道，且 spec-builder.test.ts 旧用例以「JS 浮点边界
+  // 行为」为由把分叉钉成期望——**该前提是错的**：1e308+1e308=Inf 是 IEEE754 语义，
+  // Go/JS 完全一致，Go 侧正是同输入返回 nil（TestBuildCubeMeshData_VertexRelPivotOverflow）。
+  if (!assertFinite([lx, ly, lz, hx, hy, hz], `顶点相对 pivot 溢出 bone=${boneID} cube=${cubeIdx}`))
+    return null;
+
   if (lx === hx) hx += THICKNESS_EPSILON;
   if (ly === hy) hy += THICKNESS_EPSILON;
   if (lz === hz) hz += THICKNESS_EPSILON;
@@ -455,7 +464,12 @@ function expandBoxUV(
     { fu: u + z + x, fv: v + z, fw: z, fh: y, f: 1 }, // West
     { fu: u + z, fv: v, fw: x, fh: z, f: 2 }, // Up
     { fu: u + z + x, fv: v + z, fw: x, fh: -z, f: 3 }, // Down
-    { fu: u + z + x + z, fv: v + z, fw: x, fh: y, f: 4 }, // South
+    // South 的 fu 结合序必须与 Go / Blockbench 一致：BB 权威 `size[2]*2 + size[0]`
+    // （先 2z 再加 x），Go 写作 `u + sz + sz + sx`。原 JS 抄成 `u + z + x + z`
+    // （把 x 插在两个 z 之间）——数学等价但 **IEEE754 加法不满足结合律**：
+    // 当 z 与 x 量级悬殊（如 z=8、x=0.001）时，(8+0.001)+8 与 (8+8)+0.001 落在不同的
+    // 舍入粒度上，差 1 ULP。由 cube-mesh parity 语料 zero-thickness-float-rounding 抓到。
+    { fu: u + z + z + x, fv: v + z, fw: x, fh: y, f: 4 }, // South
     { fu: u + z, fv: v + z, fw: x, fh: y, f: 5 }, // North
   ];
 

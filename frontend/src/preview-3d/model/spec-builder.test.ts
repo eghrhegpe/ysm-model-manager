@@ -287,12 +287,13 @@ describe("buildSpecFromGeometryJSON 契约（对齐 Go TestBuild3DSpecFromGeomet
     expect(result).toBe("{}");
   });
 
-  // 镜像 Go TestBuildCubeMeshData_VertexRelPivotOverflow（spec_build_extra_test.go:202）
-  // Go 端 buildCubeMeshData 有 lx/hx 等顶点的 -Inf 守卫；
-  // TS 端 assertFinite 仅覆盖入口和 [tx,ty,tz]，顶点派生 lx/hx 阶段未加守卫。
-  // 本用例验证 TS 行为：极值输入不崩溃（产生 Infinity 顶点是预期 JS 行为），
-  // 正常 cube 不受影响，2 个 mesh 均产出。
-  it("origin/pivot 极值溢出 → 不崩溃，正常 cube 仍产出 mesh（共 2 个）", () => {
+  // 镜像 Go TestBuildCubeMeshData_VertexRelPivotOverflow（spec_build_extra_test.go:400）
+  // [锐评 mesh 轮 2026-10-11 更正] 旧注释称「TS 端 lx/hx 未加守卫，产生 Infinity 顶点属
+  // JS 浮点边界行为」——**该前提是错的**：1e308+1e308=Inf 是 IEEE754 语义，Go/JS 完全一致，
+  // Go 侧同输入返回 nil。旧用例等于把双端分叉钉成期望。TS 已补第四道守卫对齐 Go，
+  // 故极值 cube 被拒、只剩正常 cube 产出 mesh。由 cube-mesh parity 语料
+  // guard-vertex-rel-pivot-overflow 例钉住。
+  it("origin/pivot 极值溢出 → 极值 cube 被拒（对齐 Go），正常 cube 仍产出", () => {
     const spec = JSON.parse(buildSpecFromGeometryJSON(geo("geometry.overflow",
       '{ "name": "b1", "pivot": [0,0,0], "cubes": [' +
         '{ "origin": [-1e308,0,0], "size": [8,8,8], "pivot": [1e308,0,0], "pivotSet": true, "uv": [0,0] },' +
@@ -300,26 +301,25 @@ describe("buildSpecFromGeometryJSON 契约（对齐 Go TestBuild3DSpecFromGeomet
       '] }'))) as {
       models: { meshGroups: { id: string; positions: number[] }[] }[];
     };
-    // 两个 cube 均产出 mesh（极值 cube 的顶点为 Infinity，但不崩溃）
-    expect(spec.models[0].meshGroups.length).toBe(2);
+    const meshes = spec.models[0].meshGroups;
+    expect(meshes.length, "极值 cube 应被守卫拒绝，仅正常 cube 产出").toBe(1);
+    expect(meshes[0]!.id).toBe("b1_1");
     // 正常 cube 的 mesh 顶点全有限
-    const normalMesh = spec.models[0].meshGroups.find((m) => m.id === "b1_1");
-    expect(normalMesh).toBeDefined();
-    expect(normalMesh!.positions.every((v) => Number.isFinite(v))).toBe(true);
+    expect(meshes[0]!.positions.every((v) => Number.isFinite(v))).toBe(true);
   });
 
-  // 镜像 Go TestBuildCubeMeshData_LocalPosOverflow（spec_build_extra_test.go:251）
-  // Go 端 buildCubeMeshData 检查 mesh localPos 有限性；TS 端 lx/hx 无守卫。
-  // 本用例验证 TS 不崩溃，mesh 仍可产出（顶点含 Infinity 属 JS 浮点边界行为）。
-  it("骨骼 pivot 与 cube pivot 距离溢出 → 不崩溃，mesh 仍可产出", () => {
+  // 镜像 Go TestBuildCubeMeshData_LocalPosOverflow（spec_build_extra_test.go:449）
+  // [锐评 mesh 轮 2026-10-11 更正] 同上：旧注释自认「TS 端 lx/hx 无守卫」并把
+  // 「mesh 仍可产出（顶点含 Infinity）」当预期——TS 已补 localPos 守卫对齐 Go 的
+  // checkFinite(localPos)，同输入两侧一致返回 null（不产出 mesh）。
+  it("骨骼 pivot 与 cube pivot 距离溢出 → 该 cube 被拒（对齐 Go 返回 nil）", () => {
     const spec = JSON.parse(buildSpecFromGeometryJSON(geo("geometry.locpos-overflow",
       '{ "name": "b1", "pivot": [1e308,0,0], "cubes": [' +
         '{ "origin": [0,0,0], "size": [8,8,8], "pivot": [-1e308,0,0], "pivotSet": true, "uv": [0,0] }' +
       '] }'))) as {
       models: { meshGroups: unknown[] }[];
     };
-    // mesh 产出但顶点含 Infinity（JS 浮点边界，非 null 拒绝路径）
-    expect(spec.models[0].meshGroups.length).toBe(1);
+    expect(spec.models[0].meshGroups.length, "localPos 溢出应拒绝产出").toBe(0);
   });
 
   // 镜像 Go TestBuildCubeMeshData_NoUVZeroFill（spec_build_extra_test.go:237）

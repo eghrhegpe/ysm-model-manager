@@ -49,6 +49,66 @@ func TestToggleEnable_GuardAndToggle(t *testing.T) {
 	}
 }
 
+// TestToggleEnable_TagRoundTripPreservesBasePath 锁「启用/禁用不 relocate 标签」这一设计：
+// ToggleEnable 只是给同一基准路径加/摘 .disabled 后缀——文件身份（规范路径）没变，
+// 标签键停在基准路径上，禁用期间 ListByTag 仍能查到（ListByTag 是 Store 侧查询、不查磁盘），
+// re-enable 后原样复原。若按「改键须 relocate」硬接 relocateTags，反而会把标签搬到
+// .disabled 上，re-enable 时就变成新的基准路径孤儿（反向病）。锐评 2026-10-11 复盘实证。
+// 不加 t.Parallel()：repoApp 走包级全局 configDirOverride（无锁、t.Cleanup 还原），
+// 并行会互踩导致 TempDir 清理失败（Windows "directory is not empty"）。
+func TestToggleEnable_TagRoundTripPreservesBasePath(t *testing.T) {
+	base := t.TempDir()
+	a := repoApp(t, types.AppConfig{FilesRoot: base})
+
+	canonical := filepath.Join(base, "model.ysm")
+	if err := os.WriteFile(canonical, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := a.SetModelTags(canonical, []string{"联动"}); err != nil {
+		t.Fatalf("打标应成功: %v", err)
+	}
+
+	// 禁用：文件变 model.ysm.disabled，标签必须仍在规范路径
+	enabled, err := a.ToggleEnable(canonical)
+	if err != nil {
+		t.Fatalf("禁用应成功: %v", err)
+	}
+	if enabled {
+		t.Error("首次切换应变为禁用(enabled=false)")
+	}
+	if got, _ := a.GetModelTags(canonical); len(got) != 1 || got[0] != "联动" {
+		t.Errorf("禁用后规范路径标签应保留, got %v", got)
+	}
+	if paths := listByTagAll(t, a, "联动"); len(paths) != 1 || paths[0] != canonical {
+		t.Errorf("禁用期间 ListByTag 应仍命中规范路径, got %v", paths)
+	}
+
+	// re-enable：从 .disabled 切回启用，标签原样复原
+	enabled, err = a.ToggleEnable(canonical + ".disabled")
+	if err != nil {
+		t.Fatalf("启回应成功: %v", err)
+	}
+	if !enabled {
+		t.Error("二次切换应变为启用(enabled=true)")
+	}
+	if got, _ := a.GetModelTags(canonical); len(got) != 1 || got[0] != "联动" {
+		t.Errorf("启回后规范路径标签应原样保留, got %v", got)
+	}
+}
+
+// listByTagAll 包装 ListByTag，容忍其返回 nil/空切片两种表示。
+func listByTagAll(t *testing.T, a *App, tag string) []string {
+	t.Helper()
+	paths, err := a.ListByTag(tag)
+	if err != nil {
+		t.Fatalf("ListByTag(%q) 失败: %v", tag, err)
+	}
+	if paths == nil {
+		return []string{}
+	}
+	return paths
+}
+
 // TestIsFileBanned 覆盖 IsFileBanned 对 .disabled / .ban 后缀的统一判定（转发 fileops，
 // 但绑定层是前端禁用态来源，守卫语义需锁死）。
 func TestIsFileBanned(t *testing.T) {

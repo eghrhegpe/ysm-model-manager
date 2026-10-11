@@ -17,9 +17,13 @@
  * 额外钉死 helper 内部：relocateTags 必须真接 `getTagsStore().RelocateKeys(`、
  * pruneTags 必须真接 `getTagsStore().PruneKeys(`（否则外层走 helper 也是空转）。
  *
- * 已知残余（honest debt，不隐藏）：ToggleModelEnable/ToggleEnable 实为改 .ban/.disabled
- * 后缀（键变更），当前未接 relocate——需 fileops 返回真实 from/to 才能接线，
- * 此处两枚闸均豁免并把理由写进 reason，便于后续补全时反查。
+ * 启禁（ToggleModelEnable/ToggleEnable）本测试已实证**不 relocate**（
+ * internal/app/app_files_toggle_test.go|TestToggleEnable_TagRoundTripPreservesBasePath）：
+ * 它只是给同一基准路径加/摘 .disabled 后缀，标签键停在规范路径上，禁用期间 ListByTag
+ * 仍能查到、启回后原样复原；真去 relocate 反而会把标签搬到 .disabled 上、启回时变
+ * 成新的基准路径孤儿（反向病）。故此处两枚闸均豁免，reason 写清设计原因而非记账。
+ * 唯一余口（已补）：禁用态下删除会把规范路径键留成孤儿——DeleteResourcePack 现补清
+ * StripDisableSuffix 后的 base path（internal/app/app_prune_disabled_test.go 两例守护）。
  *
  * 运行：node tests/test_fileops_tag_sync.ts（或经 _lib/contract-tests.ts 统一入口）。
  * 退出码：0 全绿；非 0 断言失败。
@@ -43,8 +47,8 @@ const READONLY = new Set([
   "RenameTarget", // 纯路径计算（plan，不动盘）
 ]);
 
-const TAG_DEBT = "启禁实为改 .ban/.disabled 后缀（键变更），未接 relocateTags——" +
-  "已知残余债务：补全需 fileops 返回真实 from/to，见 go-tags 卡";
+const TAG_DEBT = "启禁不 relocateTags（刻意设计，非债务）：只是给同一基准路径加/摘 .disabled，" +
+  "标签键停在规范路径上往返后复原；relocate 反而制造反向孤儿。见 app_files_toggle_test.go|TestToggleEnable_TagRoundTripPreservesBasePath";
 
 // ========== 闸一：rekey（改名/移动/复制必须跟随标签键）==========
 const rekeyExempt = [

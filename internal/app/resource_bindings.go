@@ -375,7 +375,13 @@ func (a *App) DeleteResourcePack(path, rtype string) error {
 	rt := typereg.RegistryType(rtype)
 	if rt != nil && rt.IsDir {
 		// 目录型资源：删除父文件夹（合并原 DeleteModelDir 语义）
-		root := a.ysmRoot()
+		// 守卫根用 rtype 自身根（与下方文件分支同口径）；原硬编码 a.ysmRoot() 会让
+		// 非 ysm 根下的目录型资源（如 maid-model 各自根）删除被「路径超出仓库目录」误拒
+		// （存量 bug，锐评 2026-10-11 复盘 TestDeleteResourcePack_DisabledDirPrunesBasePath 实证）。
+		root, _ := a.GetRepoRoot(rtype)
+		if root == "" {
+			root = a.ysmRoot()
+		}
 		clean := filepath.Clean(filepath.Dir(path))
 		// 符号链接解析后校验——防精心构造的链接绕过路径守卫删除仓库外目录
 		realClean, errC := filepath.EvalSymlinks(clean)
@@ -400,6 +406,9 @@ func (a *App) DeleteResourcePack(path, rtype string) error {
 		// 二者其一命中即可（PruneKeys 无命中 no-op，不落盘）。
 		a.pruneTags(clean, true)
 		a.pruneTags(realClean, true)
+		// 目录型同理：删的是 X.disabled 整夹，规范路径 X 下的标签键是孤儿，补清 base path
+		a.pruneTags(typereg.StripDisableSuffix(clean), true)
+		a.pruneTags(typereg.StripDisableSuffix(realClean), true)
 	} else {
 		// 文件型资源：按 rtype 获取对应仓库根（非 ysm 类型可能在其他根下）
 		filesRoot, _ := a.GetRepoRoot(rtype)
@@ -412,6 +421,11 @@ func (a *App) DeleteResourcePack(path, rtype string) error {
 		// 单文件删除 → 只清精确键；path 可能相对根也可能已绝对，双形态都清（无命中 no-op）
 		a.pruneTags(filepath.Join(filesRoot, path), false)
 		a.pruneTags(path, false)
+		// 禁用态删除：删的是 X/model.ysm.disabled，但标签键停在规范路径 X/model.ysm
+		// （启禁是可逆往返、标签不 relocate，见 app_files_toggle_test.go|TestToggleEnable_TagRoundTripPreservesBasePath）——
+		// 删禁用文件会留规范路径孤儿，补清 base path（无命中 no-op）。
+		a.pruneTags(typereg.StripDisableSuffix(filepath.Join(filesRoot, path)), false)
+		a.pruneTags(typereg.StripDisableSuffix(path), false)
 	}
 	scanner.InvalidateCache()
 	return nil

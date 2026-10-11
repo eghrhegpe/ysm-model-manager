@@ -1,8 +1,8 @@
 {
-  "generated": "2026-10-11T03:28:45.964Z",
+  "generated": "2026-10-11T03:56:35.645Z",
   "count": 65,
   "violations": [
-    "internal/app/resource_bindings.go:W7:394",
+    "internal/app/resource_bindings.go:W7:400",
     "./scripts/check-redlines.ts:R2:\"repoRoot name\",:217",
     "./scripts/port-align.ts:R2:const root = join(repoRoot, \"upstream\", \"blockbench-master\");:101",
     "./scripts/port-align.ts:R2:export function checkOracleBaseline(repoRoot: string): BaselineResult {:100",

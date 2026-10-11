@@ -19,6 +19,7 @@ source_files:
   - frontend/src/preview-3d/caps/env-hdr-cache.ts
   - frontend/src/preview-3d/caps/env-ibl.ts
   - frontend/src/preview-3d/caps/postprocessing-composer.ts
+  - frontend/src/preview-3d/caps/light-instances.ts
 tests:
   - frontend/src/preview-3d/adapters/shared-infra.test.ts
   - frontend/src/preview-3d/caps/scene-capability-persist.test.ts
@@ -56,6 +57,9 @@ auto_fields:
     - getStateValue
     - isEnvCallbacksSuspended
     - isSsrRenderActive
+    - LightInstances
+    - LightInstancesDeps
+    - LightSlotKey
     - MODEL_DEFAULTS
     - ModelType
     - NumericRange
@@ -125,6 +129,7 @@ invariant_anchors:
   # ADR-329 刀① 锚（2026-10-11 补）：composer 管线叶的入口与不变量承载点——
   # 叶失名/字段被搬回 cap 只剩散文描述，机器无从判，故升格为锚。
   - frontend/src/preview-3d/caps/postprocessing-composer.ts|PostprocessingComposer
+  - frontend/src/preview-3d/caps/light-instances.ts|LightInstances
   - frontend/src/preview-3d/state/env-state-schema.ts|ARCHIVE_ALIAS
   - frontend/src/preview-3d/caps/env-persist.ts|saveEnvState
   - frontend/src/preview-3d/caps/env-persist.ts|restoreEnvPartial
@@ -371,7 +376,15 @@ invariant_anchors:
   - **⚠️ 叶 dispose 的顺序不变量**：`PostprocessingComposer.dispose()` 顺序 = `disposeComposer()` → `restoreOutputSettings()` → 尺寸凭据复位（`lastW/lastH/lastPixelRatio`）——`restoreOutputSettings` 不可漏（漏则 renderer.toneMapping 永不归还构造期快照，由「dispose 还原 renderer 输出设置」用例转红钉死）；凭据复位不可省（同 ADR-299 惰性常驻：复用实例下新会话若沿用旧凭据会按失配尺寸建缓冲）。`isStateLoaded` 仍归 cap（不涉管线）。
   - **测试注入点迁移**：composer/pass/尺寸凭据经 `composerOf(cap)` 取叶实例（TS `private` 运行时即普通属性，同 `hdrOf`/`iblOf` 白盒范式）；`buildComposer`/`disposeComposer` 的 spy 改挂 `PostprocessingComposer.prototype`。
   - **护栏（勿在拆分中丢的硬不变量）**：① SSR 独占链首（`SSRPass` 忽略 readBuffer、把 beauty 覆写进 writeBuffer，故必须紧跟 `RenderPass`）；② MSAA 经 `POSTPROC_MSAA_SAMPLES` 且以 renderer 实际授予的 `antialias` 为准；③ 关闭态 `setSize`/`setPixelRatio` 仍**无条件记录凭据**（否则惰性创建时按猜的像素比建缓冲）；④ `restoreOutputSettings` 的字段归属判定（sky 在场让位；`outputColorSpace` 以仍等于本叶写入常量才归还）。
-  - **遗留**：刀② light 实例/helper 生命周期、刀③ sky 烘焙/IBL 管线待续（方向见 `ADR-329`；进度只查本卡，ADR 不记进度）。
+  - **遗留**：刀③ sky 烘焙/IBL 管线待续（方向见 `ADR-329`；进度只查本卡，ADR 不记进度）。
+- **[ADR-329 刀② 实施进度 2026-10-11] `LightCapability` 拆分——灯实例/helper/target 生命周期退叶。**
+  承前两刀叶化（ADR-091-d1 environment / 刀① postprocessing），把三槽位灯的 Three 对象生命周期整块下沉 `caps/light-instances.ts|light-instances.ts` 的 `LightInstances`（**构造注入** scene/target/targetHeight + `isMasterOn()` 谓词回调），cap 持一个该叶实例，公开 API（`getLights`/`setTarget`/`getTarget`/`setTargetHeight`/`getSpotLightForCone`/`apply`/`detach`/`dispose`）全部委托、签名零变更——shadow cap / screenshot / menu / registry / 测试的调用方无需改动。
+  - **叶收编的职责**：三盏灯实例（创建/参数原地更新/挂载/释放）+ 共享 `spotTarget` + 三副 helper（工厂/显隐/挂载，`DIR_HELPER_COLORS` 一并迁入）+ `target`/`targetHeight`（灯位与锥长的共同基准）+ `spotDir`（锥体朝向锚）。
+  - **cap 保留的职责**：`enabled` 门、`onEnvChanged` 分派、锥体编排（`VolumetricCone` 本就独立叶，此处只管挂载时机）、**ambient**（`refreshAmbientFromSky` 消费 caps 查询器的 sky 让位判据——属编排面非实例面）、setter 群、菜单、持久化、`activeLight`。
+  - **⚠️ 跨 cap 协作刻意留在 cap**：类型切换后 `getTypedCap(caps,"shadow")?.apply()`（裸新灯不碰 castShadow，而 ShadowCapability 只订阅 shadow 组，派发永不到它）是**状态编排语义**，叶不该知道 shadow 存在——故叶的 `syncLight` 收 `rebuildHook` 回调参数由 cap 注入。
+  - **⚠️ 三个拆叶易丢的不变量**（已写进叶文件头，勿在后续重构中丢）：① spot 灯的 `.target` 必须是叶内共享 `spotTarget`，否则锥体朝向失锚；② `applyLightParams` 的 candela 补偿距离 d = 灯位→target，target 迁叶后漏传即**静默**照度算错（不报错，只偏亮/偏暗）；③ detach 清单里三盏灯各自的 `DirectionalLight.target`（独立对象）与共享 `spotTarget` 不是同一个东西，不可合并简化。
+  - **叶不重建参数映射**：envState 键读取一律复用 `light-params.ts|readLightParams` 真值源，不手抄键名拼装（否则与 `FLATTEN_MAP` 分叉出第二份事实——这正是 2026-10-04「S1 收口」治过的病）。
+  - **测试注入点迁移**：`keyLight`/`keyHelper` 等经 `instancesOf(cap)` 测试本地探针取（TS `private` 运行时即普通属性，同 `hdrOf`/`iblOf`/`composerOf` 范式）；注意类型切换后灯是**新对象**，断言重建结果的用例须经探针重取（持旧引用会打到已 dispose 的灯）。
 
 ## 相关
 

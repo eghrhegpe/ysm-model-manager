@@ -946,8 +946,11 @@ describe("ShadowCapability — 灯类型切换跨能力补挂（L-2）", () => {
     shadowRef.apply();
     return { light: lightRef, shadow: shadowRef };
   }
+  // [ADR-329 刀②] 灯实例随拆分迁入 LightInstances 叶——经 instancesOf 探针取（白盒等价）
   const privKeyLight = (light: LightCapability) =>
-    (light as unknown as { keyLight: THREE.Light }).keyLight;
+    (
+      (light as unknown as { instances: { getLight: (w: "key") => THREE.Light } }).instances
+    ).getLight("key");
 
   it("directional→spot 重建后新灯仍带阴影配置", () => {
     const { light, shadow } = wiredPair();

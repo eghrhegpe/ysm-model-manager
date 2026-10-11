@@ -6,6 +6,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import * as THREE from "three";
 import { LightCapability } from "./light-capability.ts";
+import type { LightInstances } from "./light-instances.ts";
 import { spotDistanceAttenuation } from "./light-math.ts";
 // [作用域三组分治] 组 id 由实现侧导出：测试与实现共用同一常量，防两边平行手抄同一字符串
 // （同 LIGHT_MASTER_NODE_ID 的处理口径）。
@@ -42,6 +43,11 @@ function makeFakeRenderer() {
     toneMappingExposure: 1,
   } as unknown as THREE.WebGLRenderer;
   return renderer;
+}
+
+// [ADR-329 刀②] 白盒探针：从 cap 取灯实例叶（TS private 运行时即普通属性，同 hdrOf/iblOf/composerOf 范式）
+function instancesOf(cap: LightCapability): LightInstances {
+  return (cap as unknown as { instances: LightInstances }).instances;
 }
 
 function newCap(opts: { enabled?: boolean; target?: THREE.Vector3; targetHeight?: number } = {}) {
@@ -1258,7 +1264,8 @@ describe("LightCapability — 锥组挂载态更新路径", () => {
   it("[锐评根治 2026-10] point 灯与 spot 同吃 candela 补偿（强度语义跨 type 统一）", () => {
     const cap = newCap();
     cap.setLightParams("key", { type: "point", intensity: 1.2 });
-    const pl = (cap as unknown as { keyLight: THREE.PointLight }).keyLight;
+    // [ADR-329 刀②] 灯实例随拆分迁叶——经 instancesOf 探针取 keyLight
+    const pl = (instancesOf(cap) as unknown as { keyLight: THREE.PointLight }).keyLight;
     expect(pl).toBeInstanceOf(THREE.PointLight);
     // 同式：candela = UI 照度 ÷ 到模型中心衰减系数（d = targetHeight 默认 8）
     const d = pl.position.distanceTo(cap.getTarget());
@@ -1267,7 +1274,8 @@ describe("LightCapability — 锥组挂载态更新路径", () => {
     expect(pl.intensity).toBeCloseTo(1.2 / falloff, 5);
     // 跨 type 语义对齐：point→spot 同参数切换，模型中心处照度不变（原实现反向瞬升 ~23 倍）
     cap.setLightParams("key", { type: "spot" });
-    const sp = (cap as unknown as { keyLight: THREE.SpotLight }).keyLight;
+    // [ADR-329 刀②] 类型切换后 keyLight 是新对象——须经 instancesOf 重新取（旧引用会指向已 dispose 的灯）
+    const sp = (instancesOf(cap) as unknown as { keyLight: THREE.SpotLight }).keyLight;
     expect(sp.intensity).toBeCloseTo(pl.intensity, 5);
   });
 
@@ -1845,8 +1853,10 @@ describe("LightCapability — helper 可见谓词单源（S1）", () => {
     const scene = new THREE.Scene();
     const cap = new LightCapability({ scene, renderer: makeFakeRenderer(), enabled: false });
     cap.setHelperVisible(true); // 线框闸开——若谓词缺总闸，此处 helper 就会漏放
-    // 入口① createHelper（构造期）：总闸关 → 不可见
-    const keyHelper = (cap as unknown as { keyHelper: THREE.Object3D }).keyHelper;
+    // 入口① createHelper（构造期）：总闸关 → 不可见（[ADR-329 刀②] helper 随实例迁叶，经 instancesOf 取）
+    const keyHelper = (instancesOf(cap) as unknown as {
+      keyHelper: THREE.Object3D;
+    }).keyHelper;
     expect(keyHelper.visible).toBe(false);
     // 入口② syncHelper：改灯参数 / 线框闸触发原地更新
     cap.setLightParams("key", { intensity: 2 }); // 触发 syncLight → syncHelper
@@ -1858,7 +1868,10 @@ describe("LightCapability — helper 可见谓词单源（S1）", () => {
     cap.saveState();
     const cap2 = newCap();
     cap2.loadState();
-    const helper2 = (cap2 as unknown as { keyHelper: THREE.Object3D }).keyHelper;
+    // [ADR-329 刀②] helper 随实例迁叶，经 instancesOf 取
+    const helper2 = (instancesOf(cap2) as unknown as {
+      keyHelper: THREE.Object3D;
+    }).keyHelper;
     expect(helper2.visible).toBe(false);
     expect(cap2.isEnabled()).toBe(false); // 前提自洽：总闸确实关着
   });

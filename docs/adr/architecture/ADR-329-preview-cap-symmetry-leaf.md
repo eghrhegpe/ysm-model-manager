@@ -1,6 +1,6 @@
 # ADR-329：3D 预览巨型 cap 对称叶化（sky/light/postprocessing 拆分）
 
-- **状态**：🔄 部分采纳（pp 一刀已落地；light/sky 两刀待续——实施进度查知识卡 `model3d.md`）
+- **状态**：🔄 部分采纳（pp/light 两刀已落地；sky 一刀待续——实施进度查知识卡 `preview-env-state.md`）
 - **日期**：2026-10-11
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **准入理由**：三个最复杂 SceneCapability（sky 920+/light 952/pp 951 行）未按 environment 先例对称叶化，880+ 行单类持续耗治理预算；拆分方向难逆转、跨 caps/menu/persist 影响面

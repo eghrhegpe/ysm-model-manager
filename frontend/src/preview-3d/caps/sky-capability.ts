@@ -45,13 +45,14 @@ import {
   getTypedCap,
   persistState,
   restoreState,
-  ringLog,
   type SceneCapability,
   type SceneCapabilityLookup,
 } from "./scene-capability.ts";
 // [ADR-235-d1 子提交 B] 天空资产下沉 `sky-asset.ts`（Sky mesh 创建 + sky/envSky 双写 uniform 机制），
 // cap 只做 changed 门控编排，不再手写双写样板。
 import { applyScaledUniformToPair, applyUniformToPair, createSky } from "./sky-asset.ts";
+// [ADR-329 刀③A] 烘焙内核下沉（PMREM 生成器 + renderTarget + 高度角阈值门控）
+import { SkyBakePipeline } from "./sky-bake-pipeline.ts";
 import { buildSkyNodes } from "./sky-menu.ts";
 // [ADR-235-d1 子提交 A] 太阳位置纯计算下沉 `sky-sun.ts`（零 three 依赖、参数化），
 // cap 只调结果；hourToSun / getSunPosition / sunVector 三个符号原先内联在本类。
@@ -82,12 +83,13 @@ export class SkyCapability implements SceneCapability {
   private scene: THREE.Scene;
   private renderer: THREE.WebGLRenderer;
   private caps?: SceneCapabilityLookup;
-  /** PMREMGenerator 延迟创建（构造函数不依赖 WebGL，node 测试友好） */
-  private pmrem: THREE.PMREMGenerator | null = null;
   private sky: Sky;
   private envScene: THREE.Scene;
   private envSky: Sky;
-  private renderTarget: THREE.WebGLRenderTarget | null = null;
+  // [ADR-329 刀③A] PMREM 烘焙内核（生成器 + renderTarget + 高度角阈值门控）下沉为叶：
+  //   envScene/envSky 仍属本类（Sky 材质体系 + 与主天空 uniform 双写，见构造函数注释），
+  //   叶只接收 envScene 引用 + `elevation` 判据回调 + showSunDisc uniform 访问器。
+  private readonly bake: SkyBakePipeline;
   /** ADR-196：取消订阅函数 */
   private unsubscribeEnv: () => void;
   /** [ADR-293 收口 2026-10] 参数变更订阅（菜单局部刷新）：仅离散键变更 notify（对齐 fog/light 同款）。 */
@@ -149,6 +151,18 @@ export class SkyCapability implements SceneCapability {
     });
     this.envScene = new THREE.Scene();
     this.envScene.add(this.envSky);
+    // [ADR-329 刀③A] 装配烘焙叶：叶持 PMREM 生成器 + renderTarget + 阈值门控，
+    // 只经三个注入口接触本类的资产——envScene（fromScene 的源）、elevation（判据）、
+    // showSunDisc uniform（烘焙期间隐藏太阳盘；uniform 属主在本类，不下沉）。
+    this.bake = new SkyBakePipeline({
+      renderer: this.renderer,
+      envScene: this.envScene,
+      currentElevation: () => this.elevation,
+      sunDiscUniform: () =>
+        (this.envSky.material as THREE.ShaderMaterial).uniforms.showSunDisc as
+          | { value: number }
+          | undefined,
+    });
     // 日落光束 + tint overlay（默认禁用；SunBeams 内聚 cones/tint/time 状态机）
     this.beams = new SunBeams(this.scene, SKY_SCALE);
 
@@ -339,13 +353,7 @@ export class SkyCapability implements SceneCapability {
     this.requestEnvironmentRefresh(state.skyForceEnv);
   }
 
-  /** 确保 PMREMGenerator 已创建（延迟到首次需要时） */
-  private ensurePMREM(): THREE.PMREMGenerator {
-    if (!this.pmrem) {
-      this.pmrem = new THREE.PMREMGenerator(this.renderer);
-    }
-    return this.pmrem;
-  }
+  /** [ADR-329 刀③A] ensurePMREM（PMREM 生成器惰性创建）已下沉 bake 叶——叶内持有生成器。 */
 
   /** 应用天空到场景（背景 + 可选 IBL + tone mapping + god rays） */
   apply(): void {
@@ -422,44 +430,16 @@ export class SkyCapability implements SceneCapability {
   }
 
   /**
-   * 烘焙 IBL 纹理（**纯生产，不碰 scene.environment**）。
+   * 烘焙 IBL 纹理（**纯生产，不碰 scene.environment**）——[ADR-329 刀③A] 委托烘焙叶。
    *
    * [ADR-292 D2] 从 `regenerateEnvironment` 拆出的「只烤不装」半边：槽位写入归
    * {@link regenerateEnvironment}（sky 自持路径）或 EnvironmentCapability（envSource="sky" 路径）。
-   *
-   * @param force 跳过「太阳高度角变化阈值」门控强制烘焙。
-   *   阈值门控存在的理由：昼夜循环每帧推进 timeOfDay，无门控会**每帧全量 PMREM**
-   *   （GPU 熔炉，见 sky-capability.test.ts 的云量回归）。故连续动画走阈值，
-   *   离散的结构性变更（来源/预设切换）显式 force。
-   *   首帧（renderTarget 尚未建立）无条件烘焙——从无到有一律装载。
-   * @returns 烘焙是否成功（成功则 this.renderTarget 可读）
+   * 阈值门控判据与「烘焙期间隐藏太阳盘 + finally 复原 + 失败置 null」全部在叶内
+   * （见 sky-bake-pipeline.ts 文件头的四个不变量），cap 不再手写。
+   * @returns 烘焙是否成功（成功则叶内 texture() 可读）
    */
   private bakeEnvironment(force = false): boolean {
-    if (!force) {
-      // 阈值门控：太阳高度角未显著变化时不重建（IBL 反射差异肉眼不可辨）。
-      // renderTarget 为 null（首次）时无条件烘焙——从无到有一律装载。
-      const dirty =
-        Math.abs(this.elevation - this.lastPmremElevation) >=
-        SkyCapability.PMREM_ELEVATION_THRESHOLD;
-      if (this.renderTarget && !dirty) return true;
-    }
-    // 生成环境贴图时隐藏太阳盘，避免光斑伪影（Sky 文档建议）
-    this.envSky.material.uniforms.showSunDisc.value = 0;
-    try {
-      if (this.renderTarget) this.renderTarget.dispose();
-      this.renderTarget = this.ensurePMREM().fromScene(this.envScene);
-      // 同步阈值基准：任何重建路径（手动 forceEnv / 循环阈值命中 / setSun / preset）
-      // 都以此时太阳高度角为新的门控基准，避免循环在手动调参后首帧冗余重建。
-      this.lastPmremElevation = this.elevation;
-      return true;
-    } catch (e) {
-      ringLog("sky", `环境贴图生成失败: ${e}`, "error");
-      // catch 后 renderTarget 可能悬空（fromScene 抛错时 renderTarget 已 dispose 但未重置）
-      this.renderTarget = null;
-      return false;
-    } finally {
-      this.envSky.material.uniforms.showSunDisc.value = 1;
-    }
+    return this.bake.bake(force);
   }
 
   /**
@@ -468,14 +448,14 @@ export class SkyCapability implements SceneCapability {
    * [ADR-292] envSource="sky" 时改用 {@link bakeEnvironmentTexture}：由 env 装载，
    * sky 不碰槽位（D1 所有权收口）。
    * [锐评 S2-1 门控统一] 烘焙决策的唯一权威在 bakeEnvironment(force) 内部
-   * （force 或首帧才真烘焙；非 force 时按 lastPmremElevation 阈值门控）。
+   * （force 或首帧才真烘焙；非 force 时按叶内 lastPmremElevation 阈值门控）。
    * 本方法（装）与 bakeEnvironmentTexture（烤）共享同一烘焙器，故自持装载 /
    * env 取图两条路的「是否重烤」判定一致，不会各自为政。
    */
   private regenerateEnvironment(force = false): void {
     this.bakeEnvironment(force);
-    // bakeEnvironment 失败时已把 renderTarget 置 null，故此处读值天然带 null 语义
-    this.scene.environment = this.renderTarget?.texture ?? null;
+    // bakeEnvironment 失败时已把叶内 renderTarget 置 null，故此处读值天然带 null 语义
+    this.scene.environment = this.bake.texture();
   }
 
   private clearEnvironment(): void {
@@ -487,7 +467,7 @@ export class SkyCapability implements SceneCapability {
     // 注释断言的「同源」并未成立（无共享定义，只有一致的巧合）。现判据真下沉为envShouldYieldSlot，
     // 注释与代码首次名副其实。
     if (envShouldYieldSlot(getTypedCap(this.caps, "environment"))) return;
-    if (this.scene.environment === this.renderTarget?.texture) {
+    if (this.scene.environment === this.bake.texture()) {
       this.scene.environment = null;
     }
   }
@@ -618,15 +598,10 @@ export class SkyCapability implements SceneCapability {
   // loadState 挂起派发后只写 envState，镜像永不回填 ⇒ 重启后开关「存档里是 true、
   // isAutoRotating() 读 false」，昼夜循环静默失效。现读 envState 单一真值源。
   private static readonly AUTO_ROTATE_HOURS_PER_SEC = 1;
-  /**
-   * 上次 PMREM 环境贴图重建时的太阳高度角（°）。
-   * 昼夜循环下 setTime 每帧被 update(dt) 驱动——环境贴图重生是「立方体贴图 + mip 模糊」的
-   * 重活（锐评 P1 GPU 熔炉）：高度角变化未超阈值时不重建（IBL 反射差异肉眼不可辨），
-   * 手动 setTime（滑块/时间轴）走 forceEnv=true 强制刷新（拖动即见，体验不降级）。
-   * 初始 -999 保证首次 setTime 必然重建（无论手动或循环首帧）。
-   */
-  private lastPmremElevation = -999;
-  private static readonly PMREM_ELEVATION_THRESHOLD = 2.0; // 太阳高度角变化 ≥ 2° 才重建
+  // [ADR-329 刀③A] lastPmremElevation（门控基准）+ PMREM_ELEVATION_THRESHOLD（阈值常量）
+  //   已下沉 bake 叶：它们是**烘焙产物的属性**（上次烤时太阳多高、烤多少度算「显著」），
+  //   而非 cap 的判据状态——留在 cap 会让「谁的重活谁记账」失准（叶重建就丢门控基准）。
+  //   详见 sky-bake-pipeline.ts|PMREM_ELEVATION_THRESHOLD 与文件头不变量①③。
 
   /** 启动昼夜循环；已开则 no-op（实际推进由 update(dt) 驱动）。
    *  刀⑳：走 setEnvState 单一事实源（对齐 setEnabled 范式）——该键随 saveState/loadState
@@ -748,7 +723,7 @@ export class SkyCapability implements SceneCapability {
    * @returns PMREM 预滤波后的环境纹理；烘焙失败时 null（调用方应安全降级）
    */
   bakeEnvironmentTexture(opts?: { force?: boolean }): THREE.Texture | null {
-    return this.bakeEnvironment(opts?.force ?? false) ? (this.renderTarget?.texture ?? null) : null;
+    return this.bakeEnvironment(opts?.force ?? false) ? this.bake.texture() : null;
   }
 
   /** 当前云量（ADR-085 S2：菜单初始化惰性读，消灭硬编码 "0%"） */
@@ -924,12 +899,9 @@ export class SkyCapability implements SceneCapability {
     this.stopAutoRotate();
     this.unsubscribeEnv();
     this.detach();
-    // 守卫依据：本能力生成过的 environment 贴图引用（须在 renderTarget dispose/置空前捕获）
-    const ownedEnv = this.renderTarget?.texture ?? null;
-    if (this.renderTarget) {
-      this.renderTarget.dispose();
-      this.renderTarget = null;
-    }
+    // 守卫依据：本能力生成过的 environment 贴图引用（须在烘焙叶 dispose/置空前捕获）
+    const ownedEnv = this.bake.texture();
+    this.bake.dispose();
     // tone mapping 已由 detach()→releaseTone() 回滚，此处不再重复处理。
     // dispose 还原 scene.environment 到构造前状态（detach 仅 clearEnvironment 不还原 prev）。
     // 仅当当前 environment 仍归本能力所有（自建贴图或已被
@@ -943,7 +915,6 @@ export class SkyCapability implements SceneCapability {
     (this.sky.material as THREE.Material).dispose();
     this.envSky.geometry.dispose();
     (this.envSky.material as THREE.Material).dispose();
-    this.pmrem?.dispose();
     // 释放日落光束 + tint overlay（SunBeams.dispose：disposeObject3D uuid 去重——
     // 光束两 mesh 共享 material 只释放一次）
     this.beams.dispose();

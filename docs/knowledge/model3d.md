@@ -677,6 +677,7 @@ auto_fields:
     - pickModelDefaultFields
     - pickPerceptionCaps
     - pickPersistFields
+    - PMREM_ELEVATION_THRESHOLD
     - PMX_MAT_FLAG_DOUBLE_SIDE
     - PmxBoneData
     - PmxBuilderConfig
@@ -899,6 +900,8 @@ auto_fields:
     - shouldRenderPreviewFrame
     - showLoadFailure
     - showModelGroup
+    - SkyBakeDeps
+    - SkyBakePipeline
     - SkyCapability
     - slideMenuCss
     - SlideMenuHandle

@@ -10,6 +10,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import * as THREE from "three";
 import { Sky } from "three/addons/objects/Sky.js";
 import { SkyCapability } from "./sky-capability.ts";
+import type { SkyBakePipeline } from "./sky-bake-pipeline.ts";
+// [ADR-329 刀③A] 白盒探针：从 cap 取烘焙叶（TS private 运行时即普通属性，同 hdrOf/iblOf/composerOf 范式）
+function bakeOf(cap: SkyCapability): SkyBakePipeline {
+  return (cap as unknown as { bake: SkyBakePipeline }).bake;
+}
 import { injectSkySunScalePatch } from "@/preview-3d/shader-patches/sky-patch.ts";
 import type { SunBeams } from "./sun-beams.ts";
 import { MODEL_DEFAULTS } from "@/preview-3d/state/model-defaults.ts";
@@ -1030,7 +1035,8 @@ describe("SkyCapability — apply 管线（真实分支）", () => {
     const renderer = makeFakeRenderer({ toneMapping: THREE.NoToneMapping, toneMappingExposure: 3.3 });
     const cap = new SkyCapability({ scene, renderer });
     cap.apply();
-    const pmrem = (cap as unknown as { pmrem: { dispose: () => void } | null }).pmrem;
+    // [ADR-329 刀③A] PMREM 生成器随烘焙内核下沉为叶——经 bakeOf 探针取
+    const pmrem = (bakeOf(cap) as unknown as { pmrem: { dispose: () => void } | null }).pmrem;
     expect(pmrem).not.toBeNull();
     const pmremSpy = vi.spyOn(pmrem!, "dispose");
     cap.dispose();
@@ -1038,7 +1044,8 @@ describe("SkyCapability — apply 管线（真实分支）", () => {
     expect(renderer.toneMappingExposure).toBe(3.3);
     expect((cap as unknown as { sky: Sky }).sky.parent).toBeNull();
     expect(scene.environment).toBeNull();
-    expect((cap as unknown as { renderTarget: { dispose: () => void } | null }).renderTarget).toBeNull();
+    // [ADR-329 刀③A] renderTarget 随叶迁走，dispose 后叶内清空
+    expect((bakeOf(cap) as unknown as { renderTarget: unknown }).renderTarget).toBeNull();
     const beams = (cap as unknown as { beams: SunBeams }).beams;
     expect(beams.group).toBeNull();
     expect(beams.tintMesh).toBeNull();
@@ -1198,8 +1205,9 @@ describe("SkyCapability — apply 管线（真实分支）", () => {
       const scene = new THREE.Scene();
       const cap = new SkyCapability({ scene, renderer: makeFakeRenderer() });
       cap.apply();
-      const held = (cap as unknown as { renderTarget: { texture: THREE.Texture } }).renderTarget
-        .texture;
+      // [ADR-329 刀③A] 烘焙产物随内核下沉为叶——经 bakeOf 探针取
+      const held = (bakeOf(cap) as unknown as { renderTarget: { texture: THREE.Texture } })
+        .renderTarget.texture;
       scene.environment = held;
       cap.setEnabled(false);
       expect(scene.environment, "env 缺席时 sky 自持装载/清除如旧").toBeNull();

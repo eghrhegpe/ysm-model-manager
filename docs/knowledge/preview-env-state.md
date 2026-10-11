@@ -385,6 +385,14 @@ invariant_anchors:
   - **⚠️ 三个拆叶易丢的不变量**（已写进叶文件头，勿在后续重构中丢）：① spot 灯的 `.target` 必须是叶内共享 `spotTarget`，否则锥体朝向失锚；② `applyLightParams` 的 candela 补偿距离 d = 灯位→target，target 迁叶后漏传即**静默**照度算错（不报错，只偏亮/偏暗）；③ detach 清单里三盏灯各自的 `DirectionalLight.target`（独立对象）与共享 `spotTarget` 不是同一个东西，不可合并简化。
   - **叶不重建参数映射**：envState 键读取一律复用 `light-params.ts|readLightParams` 真值源，不手抄键名拼装（否则与 `FLATTEN_MAP` 分叉出第二份事实——这正是 2026-10-04「S1 收口」治过的病）。
   - **测试注入点迁移**：`keyLight`/`keyHelper` 等经 `instancesOf(cap)` 测试本地探针取（TS `private` 运行时即普通属性，同 `hdrOf`/`iblOf`/`composerOf` 范式）；注意类型切换后灯是**新对象**，断言重建结果的用例须经探针重取（持旧引用会打到已 dispose 的灯）。
+- **[ADR-329 刀③A 实施进度 2026-10-11] `SkyCapability` 拆分（**范围经实施评估收窄**）——只下沉纯烘焙内核。**
+  原计划整块下沉「烘焙/IBL 管线 + D10 路由器 + syncSunFromTime」，实施时实测三处耦合会令拆分**反增复杂度**，故收窄为纯烘焙内核 `caps/sky-bake-pipeline.ts|sky-bake-pipeline.ts` 的 `SkyBakePipeline`（**构造注入** renderer / envScene / `currentElevation()` 判据回调 / `showSunDisc` uniform 访问器），cap 持一个该叶实例。
+  - **叶收编**：PMREM 生成器惰性创建 + `renderTarget` 持有 + 高度角阈值门控基准（`lastPmremElevation` + `PMREM_ELEVATION_THRESHOLD`）+ 烘焙失败回滚 + `dispose`（RT + 生成器）。
+  - **留在 cap（含理由）**：① `envScene`/`envSky`——envSky 是与主天空**双写 uniforms** 的第二套 `Sky` 实例，一并下沉会形成 cap↔叶 双向耦合（叶要读 uniform、cap 要写），比现状更糟；② `regenerateEnvironment`/`clearEnvironment`——**槽位写入面**，`scene.environment` 的 D1 红线要求写者唯一（env cap），判据继续消费 `environment-ownership.ts|envShouldYieldSlot` 单一事实源，判据与槽位必须在同一编排层；③ `requestEnvironmentRefresh` D10 路由器与 tone 引用计数仲裁。
+  - **⚠️ 烘焙侧四个不变量**（已写进叶文件头）：① 阈值门控（`force=false` 且高度角变化 < 2° 且已有 RT → 不重建；首帧无条件烘焙）——昼夜循环每帧推进 timeOfDay，漏门即每帧全量 PMREM（GPU 熔炉）；② 烘焙期间 `showSunDisc=0` 且 **`finally` 必须复原为 `1`**——漏复原会让太阳盘永久消失；③ 失败时 RT 置 null **且不更新门控基准**（下次仍真烤一次，不吞错误）；④ 返回纹理归叶所有，调用方（env cap 取图通路）不得跨重建长期持有或 dispose。
+  - **数值语义保持**：叶写 `showSunDisc` 用 `0`/`1` 数字（原实现语义），**勿"顺手现代化"成布尔**——three uniform 是 float，赋 true/false 虽等价但改变了被观测的值类型，测试锁 `1`。
+  - **测试注入点迁移**：`pmrem`/`renderTarget` 经 `bakeOf(cap)` 测试本地探针取。
+  - **遗留**：刀①②③ 全线收官（ADR-329 已 ✅）；sky 剩余的真正复杂度在**材质/色调/tone 仲裁**面，那部分不适合整块搬走，若日后要治应另立 ADR。
 
 ## 相关
 

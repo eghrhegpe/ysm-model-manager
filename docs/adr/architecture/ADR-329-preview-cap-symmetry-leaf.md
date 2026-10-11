@@ -1,6 +1,6 @@
 # ADR-329：3D 预览巨型 cap 对称叶化（sky/light/postprocessing 拆分）
 
-- **状态**：🔄 部分采纳（pp/light 两刀已落地；sky 一刀待续——实施进度查知识卡 `preview-env-state.md`）
+- **状态**：✅ 已采纳（pp/light 两刀整块下沉；sky 一刀按实施评估收窄为「纯烘焙内核」——范围决策见 §2 刀③，实施细节查知识卡 `preview-env-state.md`）
 - **日期**：2026-10-11
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **准入理由**：三个最复杂 SceneCapability（sky 920+/light 952/pp 951 行）未按 environment 先例对称叶化，880+ 行单类持续耗治理预算；拆分方向难逆转、跨 caps/menu/persist 影响面
@@ -40,10 +40,15 @@
 - `createLight` / `applyLightParams` / `mountLight` / `disposeLight` / `syncHelper` / `mountHelper` / `rebuildConeIfNeeded` / `getSpotDir` 下沉（继续复用 `light-params` 纯函数读取；新增叶与 `light-persist`/`light-controls` 同域）。
 - **比刀①浅**：实例管理与 helper 联动（cone 几何 / 可见性）与 cap 的 `setTarget`/`setTargetHeight` 有状态耦合，下沉时须把 target 也作为叶字段或注入协作者，风险略高于 pp。
 
-### 刀③：sky 烘焙/IBL 管线下沉
+### 刀③（实施时**范围收窄**为 刀③A）：sky 烘焙**内核**下沉
 
-- `ensurePMREM` / `bakeEnvironment` / `regenerateEnvironment` / `clearEnvironment` / `requestEnvironmentRefresh` / `maybeRegenerateEnvironment` / `syncSunFromTime` 下沉，**D10 让权判据必须继续消费 `environment-ownership.ts|envShouldYieldSlot` 单一事实源**（ADR-292 P1-2 已收口的判据，不得在手抄回 cap）。
-- **注意**：sky 的 `requestEnvironmentRefresh` 是目前 D10 路由器的唯一 sky 侧调用点，下沉时保持「router 判据 → 转交 env / 自持兜底」语义不变，守卫 = `environment-ownership.test.ts` 5 例 + sky 让位变异的现有锁。
+- 原计划把 `ensurePMREM` / `bakeEnvironment` / `regenerateEnvironment` / `clearEnvironment` / `requestEnvironmentRefresh` / `maybeRegenerateEnvironment` / `syncSunFromTime` 整块下沉。**实施时评估发现三处耦合使整块下沉反增复杂度，范围收窄为「纯烘焙内核」**（决策修正记此，实施细节见知识卡）：
+  ① `envScene` 内含第二套 `Sky` 实例（envSky），其 uniforms 与主天空在 cap 侧**双写**——一并下沉会形成 cap↔叶 双向耦合；
+  ② `bakeEnvironmentTexture()` 是 `EnvironmentCapability` 消费的公共 API（envSource="sky" 通路），下沉后需改 env cap 调用点，而 env 侧已有 `env-ibl.ts` 承担装载面，边界变模糊；
+  ③ `PMREM_ELEVATION_THRESHOLD` 等常量与 tone 仲裁静态成员与 cap 判据面耦合。
+- **实际下沉范围**：PMREM 生成器惰性创建 + `renderTarget` 持有 + 「太阳高度角变化阈值」门控基准 + 烘焙失败回滚 → `SkyBakePipeline`（构造注入 renderer/envScene/`currentElevation()` 判据回调/`showSunDisc` uniform 访问器）。
+- **留在 cap**：`envScene`/`envSky`（Sky 材质体系与 uniform 双写）、`regenerateEnvironment`/`clearEnvironment`（**槽位写入面——D10 让权判据继续消费 `environment-ownership.ts|envShouldYieldSlot` 单一事实源，不得手抄回叶**）、`requestEnvironmentRefresh` 路由器、tone 仲裁。
+- **注意**：sky 的 `requestEnvironmentRefresh` 仍是 D10 路由器的唯一 sky 侧调用点，保持「router 判据 → 转交 env / 自持兜底」语义不变，守卫 = `environment-ownership.test.ts` 5 例 + sky 让位变异的现有锁。
 
 **统一纪律**（三刀共用，承 ADR-091-d1 教训）：
 - 生产调用方（menu 闭包 / registry / 测试）API 零变更——cap 公开方法名与签名全部保留，内部实现改委托叶；

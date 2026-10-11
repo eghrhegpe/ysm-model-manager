@@ -206,3 +206,15 @@
 - **遗留 / 下一轮建议**：
   1. infra 轮遗留仅剩：`load-trace.ts`/`preview-shell.ts` 无独立契约锁（补测试项）、scene-registry 焦点晋升产品问题（待拍板，非缺陷）。下一轮按清单轮转取 `mesh`（第 7 位）。
   2. `switch-preview.ts` clearSwitchContent !keep 分支 stale 循环未兜注销（低概率回访点）可作 mesh 轮顺带确认。
+
+## 2026-10-11T10:10:00+08:00 追加：infra 轮遗留收口（load-trace / preview-shell 契约锁）
+
+- 选定理由：infra 轮遗留第 3 条「无同名测试的真实契约文件（3 个）……`load-trace.ts`（环形上限 + 浅拷贝快照语义无断言）、`preview-shell.ts`（`resetRefs`/`ensureViewContainer` 的 body 兜底补建与权威引用回传无独立契约锁，其注释自陈易误用）」。content-bridges.ts（纯类型）按原建议不补。
+- **本轮改动（纯测试，零生产变更）**：
+  - 新 `infra/load-trace.test.ts`（3 例）：环形上限 50（55 条后最旧 0..4 被挤掉、5..54 保留、顺序保持）；`getLoadTraces()` 返回数组级快照（外部 push/splice 不影响内部 store）；`clearLoadTraces` 清空后可重录。
+  - 新 `infra/preview-shell.test.ts`（6 例）：`resetRefs` 三字段同置 null；`ensureOverlayShell` 首建（id/role/aria-modal/aria-label + body 进 shadow root + host 记录引用 + 样式目标切到 shadow root）；attachShadow 缺失 → 降级 light DOM（root = overlay 本体）；复用路径不重建（同一 overlay / root、shadow root 内仅一份 .mpc-body）；`ensureViewContainer` body 兜底补建（body=null → 补建 .mpc-body 进 root、host 记录、返回权威引用——调用方须用返回值而非入参）；复用路径 viewContainer 同一引用不重复创建。
+- **变异验证**：`MAX_RECORDS` 50→3 环形上限用例精确转红（length 50 断言捕获），恢复后绿——测试非空转。
+- **验证**：infra 全族 41 文件 / 430 例绿；vite build / typecheck / biome（测试文件按约定忽略）全绿。
+- **遗留 / 下一轮建议**：
+  1. infra 轮遗留全清（scene-registry 焦点晋升为产品问题待拍板，非缺陷）。下一轮按清单轮转取 `mesh`（第 7 位）。
+  2. `switch-preview.ts` clearSwitchContent !keep 分支 stale 循环未兜注销（低概率回访点）可作 mesh 轮顺带确认。

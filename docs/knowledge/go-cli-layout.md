@@ -47,6 +47,7 @@ auto_fields:
     - ExitSuccess
     - GetAllCommands
     - GetCommand
+    - IsReadOnlyCommand
     - ParamBool
     - ParamNumber
     - ParamSpec
@@ -56,6 +57,7 @@ auto_fields:
     - PrintError
     - RegisterCommand
     - RegisterCommandC
+    - RegisterCommandRO
     - RunCLI
     - RunCLIInProcess
     - SidecarOutput

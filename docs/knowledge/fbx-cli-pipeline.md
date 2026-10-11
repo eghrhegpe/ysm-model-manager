@@ -38,6 +38,7 @@ auto_fields:
     - GetCommand
     - IsCommandAllowed
     - IsMatrix
+    - IsReadOnlyCommand
     - JsonError
     - JsonResponse
     - JsonResponse.ToJson
@@ -54,6 +55,7 @@ auto_fields:
     - PrintError
     - RegisterCommand
     - RegisterCommandC
+    - RegisterCommandRO
     - RunCLI
     - RunCLIInProcess
     - SidecarOutput

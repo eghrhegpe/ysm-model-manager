@@ -285,6 +285,73 @@ func TestParseBedrockGeometry_OldFormatNamedKey(t *testing.T) {
 	testutil.Equal(t, m.Bones[0].Name, "body")
 }
 
+// ====== isGuiBone：GUI 装饰骨骼过滤（wine_fox 兼容性引入，此前零覆盖）======
+// 精确表 + 前缀表 + 两条反直觉短路：cubeCount>0 一票否决（有几何体就不是 GUI
+// 覆盖层）；"gui" 只认前缀不认包含（baguette 不误杀）。TS 侧 spec-builder.ts
+// 移植（2026-10 巡检第 8 轮）以本表为权威锚，两侧漂移即红。
+
+func TestIsGuiBone(t *testing.T) {
+	cases := []struct {
+		name  string
+		cubes int
+		want  bool
+	}{
+		{"gui", 0, true},
+		{"GUI", 0, true},
+		{"GuiRoot", 0, true},
+		{"curtain", 0, true},
+		{"white_curtain", 0, true},
+		{"backgrounds", 0, true},
+		{"background1", 0, true},
+		{"gui_panel", 0, true},
+		{"background_dark", 0, true},
+		{"baguette", 0, false},
+		{"head", 0, false},
+		{"gui", 1, false},
+		{"GuiRoot", 3, false},
+	}
+	for _, c := range cases {
+		testutil.Equal(t, isGuiBone(c.name, c.cubes), c.want, "isGuiBone(", c.name, ", ", c.cubes, ")")
+	}
+}
+
+func TestParseBedrockGeometry_SkipsGuiBones(t *testing.T) {
+	geom := `{"format_version":"1.16.0","minecraft:geometry":[{"description":{"identifier":"t","texture_width":64,"texture_height":64},"bones":[
+		{"name":"GuiRoot","cubes":[]},
+		{"name":"backgrounds","cubes":[]},
+		{"name":"gui","cubes":[{"origin":[0,0,0],"size":[1,1,1],"uv":[0,0]}]},
+		{"name":"head","cubes":[{"origin":[0,0,0],"size":[8,8,8],"uv":[0,0]}]}
+	]}]}`
+	m := ParseBedrockGeometry([]byte(geom))
+	testutil.NotNil(t, m, "应解析成功")
+	testutil.Equal(t, m.BoneCount, 2, "GuiRoot/backgrounds 无 cube 应被过滤；gui 有 cube 保留")
+	testutil.Equal(t, len(m.Bones), m.BoneCount, "BoneCount == len(Bones) 不变量（concurrent.go 校验依赖）")
+	testutil.Equal(t, m.CubeCount, 2)
+	if len(m.Bones) == 2 {
+		// 保序：过滤只删不重排
+		if m.Bones[0].Name != "gui" {
+			t.Errorf("Bones[0].Name = %q, 期望 gui", m.Bones[0].Name)
+		}
+		if m.Bones[1].Name != "head" {
+			t.Errorf("Bones[1].Name = %q, 期望 head", m.Bones[1].Name)
+		}
+	}
+}
+
+func TestParseBedrockGeometry_OldFormatSkipsGuiBones(t *testing.T) {
+	// 旧版格式走同一个 buildModel → GUI 过滤同口径生效
+	geom := `{"format_version":"1.10.0","geometry.model":{"texturewidth":64,"textureheight":64,"bones":[
+		{"name":"GuiRoot","cubes":[]},
+		{"name":"body","cubes":[{"origin":[0,0,0],"size":[8,12,4],"uv":[0,0]}]}
+	]}}`
+	m := ParseBedrockGeometry([]byte(geom))
+	testutil.NotNil(t, m, "应解析成功")
+	testutil.Equal(t, m.BoneCount, 1, "旧版格式的 GuiRoot 同样应被过滤")
+	if len(m.Bones) == 1 && m.Bones[0].Name != "body" {
+		t.Errorf("Bones[0].Name = %q, 期望 body", m.Bones[0].Name)
+	}
+}
+
 func TestParseBedrockGeometry_OldFormatTexClamp(t *testing.T) {
 	// 旧版格式纹理尺寸溢出也应钳制
 	geom := `{"format_version":"1.10.0","geometry.model":{"texturewidth":1e100,"textureheight":-5,"bones":[{"name":"b","cubes":[]}]}}`

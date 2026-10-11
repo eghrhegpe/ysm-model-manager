@@ -30,9 +30,11 @@
 > **已审覆盖台账（2026-10-10 补记，防重复劳动）**：轮转顺序**不等于**「未审优先」——
 > `caps/` 位置靠前但已被 4 份专项审计覆盖（env ×4 / ground / water / postprocessing），
 > 故取靶时须跳过。判定依据 = `docs/archive/audit-*.md` 是否有该域的专项报告。
-> 现状：adapters（第1轮）/ bone（第2轮）/ caps（专项覆盖）/ **decoder（第3轮）** 已审；
-> 未审 = infra / materials / menu / mesh / model / screenshot / shader-patches / state / texture
-> （其中 menu/state 有大量 incidental 提及，但无专项审计报告）。
+> 现状（第 8 轮后）：adapters（1）/ bone（2）/ caps（专项覆盖）/ decoder（3、4）/ infra（5 及两批抽象扫描）/
+> materials（6）/ **menu（判已覆盖：preview-menu 卡 + menu-test-assertion 执法闸 + 大量专项测试，2026-10-11 第 8 轮正式销账）**/
+> mesh（7 + cube parity 守卫）/ model（8）已审；
+> 未审 = screenshot / shader-patches / state / texture
+> （其中 state 有大量 incidental 提及，但无专项审计报告）。
 
 ## 巡检记录（新轮追加到此段末尾）
 
@@ -283,3 +285,51 @@
   2. **同族推广候选**：本轮证明「守卫链条数」是人工核对的盲区。`mergeCubes`（JS/Go 双份）与
      `computeBoneLocalPos`（JS 有、Go 在 spec-bones.go）也属同型手抄双源，若日后回访可并入本语料
      或另建；当前无分叉证据，不主动开战。
+
+## 2026-10-11T13:05:00+08:00 巡检第 8 轮：model
+
+- 选定理由：按轮转清单第 9 位（第 7 轮遗留建议）。5 源文件 / 1628 行，全部有同名测试。
+- **结论：抓到 3 处结构级双端契约分叉并全部收口**——本轮方法论是轮 7 教训的推广：
+  parity 锁的是**值面**（逐数值），本轮巡检的是**结构面**（两侧走不走同一条条目选择链）。
+  `spec-builder.ts parseBedrockGeometry` 是 Go `geometry/parse.go` 的手抄镜像，逐值核时
+  两侧数值全等，但 Go 有、TS 缺的整段选择链让同一份输入跨通道产出分叉。
+- **可达性总证**：`geometryRaw` 是原文件文本（`wasm-decode.ts|firstGeoRaw`，L187 首个成功
+  解析的 geometry 原文）。Android/桌面走 Go binding `Build3DSpecFromGeometryJSON`（真
+  `ParseBedrockGeometry`），网页兜底走 TS 镜像——同一文本，Go 能解析、TS 拒绝/崩溃 = 跨通道分叉。
+- 三处分叉（均有 Go 测试/真实语料背书，非理论路径）：
+  1. **A 旧版 `geometry.*` 格式回退缺失**：Go `parseOldFormat`（包注释点名车万女仆 mod，
+     `TestParseBedrockGeometry_OldFormat` 钉死）；TS 直读 `minecraft:geometry[0]` 即拒。
+     后果：旧格式模型桌面正常、网页兜底通道 `{}` 无预览。
+  2. **B 多 geometry 跳空壳缺失**：Go `SkipEmptyBones`（注释：Blockbench 导出偶发首条仅
+     description 占位）；TS 无条件取首条 → 首条空壳时 `for...of undefined` **TypeError 崩溃**，
+     预览整挂（连 `{}` 都到不了）。单条目 bones/description 缺席同崩（Go NoBones/NoDescription
+     测试钉 Go 宽容形态）。
+  3. **C GUI 装饰骨骼过滤缺失**：Go `isGuiBone`（wine_fox 兼容性引入）；TS 零过滤 → 网页预览
+     骨骼列表混入 GuiRoot/Backgrounds 浮动干扰几何，桌面 Go 路径不出现——跨通道不一致。
+  ⚠️ **射程边界**：三元组边界值容错类分叉（origin/size 过短/过长/对象形态）属真实语料
+  51,400 cube 零命中的死路径，`3d-patterns.md` §14 已裁决**不收敛**（ADR-129），本轮不动它
+  （triple-tolerance 8 例照绿即为未破坏）。
+- **Go 侧补锚**：`isGuiBone` 自引入（3364c606f wine_fox 轮）起**零测试覆盖**——补
+  `TestIsGuiBone`（13 例表驱动：精确/前缀/大小写/cubeCount>0 一票否决/baguette 不误杀）+
+  `TestParseBedrockGeometry_SkipsGuiBones`（过滤保序 + `BoneCount==len(Bones)` 不变量）+
+  `_OldFormatSkipsGuiBones`（新旧共享 buildModel 同口径）。TS 移植以这三条为权威锚。
+- **修复**：`spec-builder.ts` 按 Go 结构同构重构——`parseNewFormat`/`parseOldFormat`/
+  `buildModel`/`isGuiBone` 四段与 Go 一一对位（共享构建主体，非在旧函数里打补丁）。
+- **TDD 战果（红→绿 10→59）**：新 3 块（A/B/C）12 例修前 10 红；变异验证 M1-M4 全被钉死
+  （M1 覆盖式挪位、M2 无条件取首条、M3 删 GUI 过滤调用、M4 绕过 cubeCount 短路）。
+  **M1 格外值得一提**：我实装时第一版就写成了覆盖式挪位（`keys[0]=keys[mi]; keys[mi]="geometry.model"`
+  丢原首键），是本轮**补的「互换非挪位」用例当场抓住我自己的实现缺陷**——红测先于实现的价值实证。
+- **行为变更说明**：网页预览从此不再显示无 cube 的 GUI 骨骼（GuiRoot/curtain/background* 等）——
+  这是向桌面 Go 路径对齐，非新增限制。
+- 深读判净（未开战）：`model-group-builder.ts` 骨骼合并/断链修复逻辑与 Go 对位（mergeCubes/
+  computeBoneLocalPos 双源风险见轮 7 遗留 2，无新证据）；`ysm-object.ts` 分类/绑定索引同空间
+  契约完好；`ysm-animation-player.ts` `mdApDispose` 的 `playing=true` 是「重置到初态」语义
+  （初态即 playing，测试钉死），非缺陷。
+- 验证：spec-builder 59 例绿；model 目录 6 文件 133 例；消费链（adapters/screenshot/mesh/decoder
+  geometry）21 文件 314 例；`go test ./go/geometry` 绿；`go build ./...` 绿；typecheck /
+  vite build / biome（--write 后）全绿。知识卡 `model3d.md` 新增不变量「geometry 输入选择链与
+  Go parse.go 同构」。
+- 遗留 / 下一轮建议：
+  1. 下一轮按清单轮转取 **`screenshot`**（第 10 位）；`menu`（第 8 位）已有 preview-menu 卡 +
+     大量专项测试，判**已覆盖**（本轮正式销账，台账补记）。
+  2. 轮 7 遗留 2（mergeCubes / computeBoneLocalPos 同族 parity 候选）维持不动，无新证据。

@@ -147,7 +147,10 @@ export function buildSpecFromGeometryJSON(geometryJSON: string): string {
 
 /**
  * 解析标准 Bedrock geometry JSON（minecraft:geometry 格式）。
- * 对齐 Go geometry/parse.go ParseBedrockGeometry。
+ * 对齐 Go geometry/parse.go ParseBedrockGeometry：优先新版数组格式，失败回退
+ * 旧版 geometry.* 格式（format_version ≤ 1.10.0，如车万女仆 mod——Go binding
+ * 在 Android 上能解析的输入，网页兜底通道同样必须能解析，否则同一份
+ * geometryRaw 跨通道产出分叉）。
  */
 function parseBedrockGeometry(data: string): BedrockModel | null {
   if (data.length > MAX_PARSE_SIZE) {
@@ -160,35 +163,130 @@ function parseBedrockGeometry(data: string): BedrockModel | null {
   } catch {
     return null;
   }
-  if (!raw?.["minecraft:geometry"] || raw["minecraft:geometry"].length === 0) {
-    return null;
-  }
-  const g = raw["minecraft:geometry"][0];
-  const desc = g.description;
-  // texture_width/height 钳到 [0, MAX_TEX_DIM]（越界置 0）
-  const texW = clampTexSize(desc.texture_width);
-  const texH = clampTexSize(desc.texture_height);
+  if (!raw || typeof raw !== "object") return null;
+  return parseNewFormat(raw) ?? parseOldFormat(raw);
+}
 
+/**
+ * 新版 minecraft:geometry[] 数组格式（Go parseNewFormat）。
+ * 单条目宽容契约（Go 测试锁定，勿收紧）：bones 缺席/无 description 均返回模型
+ * （TestParseBedrockGeometry_NoBones / _NoDescription）——非 nil 空模型经入口
+ * bones.length===0 落 "{}"，与 Go binding 空 Model3DSpec 同形。
+ * 多条目：跳过 bones 空壳条目取第一个非空者（Go SkipEmptyBones——Blockbench 导出
+ * 偶发首条仅 description 占位，静默取首条会吞掉后续有效模型）；全部为空 → null
+ * （Go AllEmptyBones_ReturnsNil）；首条非空仍取首条（MultipleGeometryFirstOnly）。
+ */
+function parseNewFormat(raw: RawGeometryJSON): BedrockModel | null {
+  const arr = raw["minecraft:geometry"];
+  if (!Array.isArray(arr) || arr.length === 0) return null;
+  const formatVersion = typeof raw.format_version === "string" ? raw.format_version : "";
+  const build = (g: RawGeometry): BedrockModel | null =>
+    buildModel(
+      formatVersion,
+      clampTexSize(g.description?.texture_width),
+      clampTexSize(g.description?.texture_height),
+      g.bones ?? [],
+    );
+  if (arr.length === 1) return build(arr[0] ?? {});
+  for (const g of arr) {
+    if (!g?.bones || g.bones.length === 0) continue;
+    return build(g);
+  }
+  return null;
+}
+
+/**
+ * 旧版 geometry.* 格式（Go parseOldFormat，车万女仆等 mod）。纹理尺寸字段为
+ * texturewidth/textureheight（无下划线，条目顶层）。确定性选键（同 Go）：字典序
+ * 排序后规范键 geometry.model 与首位**互换**（非 unshift——保留互换位的原首键），
+ * 无骨骼/解析失败的键 continue 到下一键；全部落空 → null。
+ */
+function parseOldFormat(raw: RawGeometryJSON): BedrockModel | null {
+  const keys = Object.keys(raw).filter((k) => k.startsWith("geometry."));
+  if (keys.length === 0) return null;
+  keys.sort();
+  const mi = keys.indexOf("geometry.model");
+  if (mi > 0) {
+    // Go keys[0],keys[i] = keys[i],keys[0] —— **互换**（非覆盖挪位）：model 空壳
+    // 落空时原首键仍在候选表。两次顺序赋值会丢原 keys[0]，必须解构交换。
+    [keys[0], keys[mi]] = [keys[mi], keys[0]];
+  }
+  const formatVersion = typeof raw.format_version === "string" ? raw.format_version : "";
+  for (const key of keys) {
+    const v = raw[key];
+    if (!v || typeof v !== "object") continue; // Go：条目 Unmarshal err → log + continue
+    const entry = v as { texturewidth?: number; textureheight?: number; bones?: unknown };
+    if (!Array.isArray(entry.bones) || entry.bones.length === 0) continue;
+    const m = buildModel(
+      formatVersion,
+      clampTexSize(entry.texturewidth),
+      clampTexSize(entry.textureheight),
+      entry.bones as RawBone[],
+    );
+    if (m) return m; // 内部畸形守卫拒绝 → 下一键（Go err → continue 同构）
+  }
+  return null;
+}
+
+/** GUI 装饰骨骼精确名表（Go isGuiBone 的 switch 精确匹配，小写域） */
+const GUI_EXACT_NAMES = new Set([
+  "gui",
+  "curtain",
+  "white_curtain",
+  "guiroot",
+  "backgrounds",
+  "background1",
+]);
+
+/**
+ * GUI 装饰骨骼判定（Go isGuiBone 逐字移植，锚 = go/geometry TestIsGuiBone）：
+ * 无几何体（cubeCount>0 一票否决）+ 名称不区分大小写命中精确表或 gui/background
+ * **前缀**（前缀不认包含——baguette 不误杀）。wine_fox 等模型自带 GuiRoot/
+ * Backgrounds 等仅屏幕空间覆盖骨骼，3D 预览中是浮动干扰几何。
+ * name 缺席映射 Go string 零值 ""（非防御，是零值语义移植）。
+ */
+function isGuiBone(name: string | undefined, cubeCount: number): boolean {
+  if (cubeCount > 0) return false;
+  const lower = (name ?? "").toLowerCase();
+  return GUI_EXACT_NAMES.has(lower) || lower.startsWith("gui") || lower.startsWith("background");
+}
+
+/**
+ * 从骨骼数组 + 纹理尺寸构建模型（Go buildModel——新旧格式共享主体）。
+ * GUI 骨骼在 cube 解析后过滤（Go 判定依赖 len(cubes)）；被过滤骨骼的 cube
+ * 不计入 cubeTotal。BoneCount 以**过滤后**长度为准——Go 侧不变量注释：破坏
+ * BoneCount == len(Bones) 会让 concurrent.go 校验误报「骨骼数不一致」。
+ */
+function buildModel(
+  formatVersion: string,
+  texW: number,
+  texH: number,
+  bones: RawBone[],
+): BedrockModel | null {
   const model: BedrockModel = {
     boneCount: 0,
     cubeCount: 0,
     texWidth: texW,
     texHeight: texH,
     sourceName: "",
-    format: raw.format_version || "",
+    format: formatVersion,
     bones: [],
   };
 
   let cubeTotal = 0;
-  for (const b of g.bones) {
+  for (const b of bones) {
     // P2-6 修复：畸形输入防护——骨骼缺失/cubes 非 null 非数组时返回 null（契约外输入不抛 TypeError）
     // 契约对齐 Go parse.go：cubes 缺席（undefined）或 null → 视为空数组（无 cube 的纯父骨骼合法），
     // 仅 cubes 存在但非数组（如字符串）才视为畸形输入拒绝。
+    // （Go 对 null 骨骼项宽容出零值骨骼——畸形死路径分叉，3d-patterns §14 已裁决不收敛，
+    // 由「骨骼数组含 null 项」用例钉 TS 严侧。）
     if (!b) return null;
     const boneCubes = b.cubes ?? [];
     if (!Array.isArray(boneCubes)) return null;
     const cubes = parseCubes(boneCubes, texW, texH);
     if (cubes === null) return null;
+    // GUI 装饰骨骼过滤（Go buildModel 同位：无几何体 + 名称匹配 → 整骨跳过）
+    if (isGuiBone(b.name, cubes.length)) continue;
     model.bones.push({
       name: b.name,
       parent: b.parent || "",
@@ -199,7 +297,7 @@ function parseBedrockGeometry(data: string): BedrockModel | null {
     });
     cubeTotal += cubes.length;
   }
-  model.boneCount = g.bones.length;
+  model.boneCount = model.bones.length;
   model.cubeCount = cubeTotal;
   return model;
 }
@@ -321,11 +419,14 @@ function buildMulti(models: BedrockModel[], texIdxBase: number[] | null): string
 interface RawGeometryJSON {
   format_version?: string;
   "minecraft:geometry"?: RawGeometry[];
+  /** 旧版格式 geometry.<name> 条目（parseOldFormat 消费）。值形态不定，消费处窄化。 */
+  [key: string]: unknown;
 }
 
-/** minecraft:geometry 数组元素（对齐 Bedrock geometry 规范） */
+/** minecraft:geometry 数组元素（对齐 Bedrock geometry 规范；Go 解码宽容——
+ *  description/bones 缺席均为合法零值形态，TestParseBedrockGeometry_NoDescription/_NoBones） */
 interface RawGeometry {
-  description: {
+  description?: {
     /** @non-ui Bedrock 几何标识符（第三方规格字段，MC 格式里为可选）。
      * 本仓用不到它（骨骼/纹理尺寸才是所需），但类型要忠于规范，
      * 否则 `description` 的可选性会与真实 JSON 不符。 */
@@ -333,7 +434,7 @@ interface RawGeometry {
     texture_width?: number;
     texture_height?: number;
   };
-  bones: RawBone[];
+  bones?: RawBone[];
 }
 
 /** 骨骼声明（cubes 缺席/null 视为空数组，非数组才是畸形输入） */

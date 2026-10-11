@@ -596,3 +596,227 @@ d3("parseBedrockGeometry 特征基线 — 畸形输入守卫（补测前零命�
     warn.mockRestore();
   });
 });
+
+// ===== 巡检第 8 轮（2026-10-11）— geometry 解析的结构级双端对齐 =====
+// 轮 7 cube parity 教训：逐值核只能抓值面一致；本轮巡检的是「结构面一致」——
+// TS parseBedrockGeometry 是否走与 Go parse.go **相同的条目选择链**。
+// 三条分叉均有 Go 测试 / 真实语料背书可达（geometryRaw 是原文件文本，
+// wasm-decode.ts firstGeoRaw：同一文本 Go binding（Android 主路径）与 TS（网页兜底
+// 通道）必须产出同形 spec）：
+//   A 旧版 geometry.* 格式回退（包注释点名车万女仆 mod；Go TestParseBedrockGeometry_OldFormat）
+//   B 多 geometry 跳空壳首条（Go SkipEmptyBones 注释：Blockbench 导出偶发首条仅
+//     description 占位——修复前 TS 对首条空壳直接 TypeError 崩溃，预览整挂）
+//   C GUI 装饰骨骼过滤（Go isGuiBone，wine_fox 语料引入；Go TestIsGuiBone 本轮补锚）
+// ⚠️ 边界值容错类分叉（origin/size 过短/过长/对象形态）属「真实语料 51,400 cube
+// 零命中」的死路径，3d-patterns §14 已裁决**不收敛**（ADR-129），不在本块射程。
+{
+  const d4 = d3;
+  const it4 = it3;
+  const expect4 = expect3;
+
+  /** Go oldFormatGeom 镜像（车万女仆 mod 形态：geometry.model 键 + texturewidth 无下划线） */
+  const OLD_GEOM = `{
+    "format_version": "1.10.0",
+    "geometry.model": {
+      "texturewidth": 128,
+      "textureheight": 128,
+      "bones": [
+        { "name": "head", "parent": "body", "pivot": [0, 18, 0],
+          "cubes": [{ "origin": [-4, 18, -4], "size": [8, 8, 8], "uv": [0, 12] }] },
+        { "name": "hair", "parent": "head", "pivot": [0, 18, 4], "rotation": [10, 0, 0],
+          "cubes": [{ "origin": [3, 8, 3], "size": [1, 10, 1], "uv": [32, 56] }] }
+      ]
+    }
+  }`;
+
+  d4("Go parse.go 结构对齐 — A 旧版 geometry.* 格式（分叉①）", () => {
+    it4("旧版格式 → 正常产出 spec（Go binding Android 能解析的输入，网页兜底不能拒）", () => {
+      const got = buildSpecFromGeometryJSON(OLD_GEOM);
+      expect(got).not.toBe("{}");
+      const spec = JSON.parse(got) as {
+        models: { bones: { name: string }[]; meshGroups: unknown[] }[];
+      };
+      expect(spec.models[0].bones.some((b) => b.name === "head")).toBe(true);
+      expect(spec.models[0].meshGroups.length).toBe(2);
+    });
+
+    it4("旧版格式 texturewidth 越界 → 0 哨兵 → 默认 64 分母（Go OldFormatTexClamp）", () => {
+      const geom = `{
+        "format_version": "1.10.0",
+        "geometry.model": { "texturewidth": 1e100, "textureheight": -5,
+          "bones": [{ "name": "b", "cubes": [{ "origin": [0,0,0], "size": [2,2,2], "uv": [0,0] }] }] }
+      }`;
+      expect(firstMesh(geom).uvs[2]).toBeCloseTo(2 / 64, 6);
+    });
+
+    it4("多 geometry.* 键：规范键 geometry.model 优先于字典序（Go sort+swap）", () => {
+      const geom = `{
+        "format_version": "1.10.0",
+        "geometry.aaa": { "texturewidth": 64, "textureheight": 64,
+          "bones": [{ "name": "from_aaa", "cubes": [{ "origin": [0,0,0], "size": [2,2,2], "uv": [0,0] }] }] },
+        "geometry.model": { "texturewidth": 64, "textureheight": 64,
+          "bones": [{ "name": "from_model", "cubes": [{ "origin": [0,0,0], "size": [2,2,2], "uv": [0,0] }] }] }
+      }`;
+      const spec = JSON.parse(buildSpecFromGeometryJSON(geom)) as {
+        models: { bones: { name: string }[] }[];
+      };
+      expect(spec.models[0].bones.some((b) => b.name === "from_model")).toBe(true);
+      expect(spec.models[0].bones.some((b) => b.name === "from_aaa")).toBe(false);
+    });
+
+    it4("新旧格式共存 → 新版胜出（Go NewFormatPreferred）", () => {
+      const geom = `{
+        "format_version": "1.16.0",
+        "minecraft:geometry": [{ "description": { "texture_width": 64, "texture_height": 64 },
+          "bones": [{ "name": "new_bone", "cubes": [{ "origin": [0,0,0], "size": [2,2,2], "uv": [0,0] }] }] }],
+        "geometry.model": { "texturewidth": 64, "textureheight": 64,
+          "bones": [{ "name": "old_bone", "cubes": [{ "origin": [0,0,0], "size": [2,2,2], "uv": [0,0] }] }] }
+      }`;
+      const spec = JSON.parse(buildSpecFromGeometryJSON(geom)) as {
+        models: { bones: { name: string }[] }[];
+      };
+      expect(spec.models[0].bones.some((b) => b.name === "new_bone")).toBe(true);
+      expect(spec.models[0].bones.some((b) => b.name === "old_bone")).toBe(false);
+    });
+
+    it4("旧版格式首键无骨骼 → 跳到下一个 geometry.* 键（Go parseOldFormat continue 口径）", () => {
+      const geom = `{
+        "format_version": "1.10.0",
+        "geometry.aaa": { "texturewidth": 64, "textureheight": 64, "bones": [] },
+        "geometry.bbb": { "texturewidth": 64, "textureheight": 64,
+          "bones": [{ "name": "from_bbb", "cubes": [{ "origin": [0,0,0], "size": [2,2,2], "uv": [0,0] }] }] }
+      }`;
+      const spec = JSON.parse(buildSpecFromGeometryJSON(geom)) as {
+        models: { bones: { name: string }[] }[];
+      };
+      expect(spec.models[0].bones.some((b) => b.name === "from_bbb")).toBe(true);
+    });
+
+    it4("model 提到首位用**互换**（Go keys[0],keys[i]=keys[i],keys[0]）：model 空壳时原首键不丢", () => {
+      // Go 语义：keys=[aaa,model] 字典序 → swap → [model,aaa] → model 无骨骼
+      // continue → aaa 仍被访问、产出其模型。若实现是「覆盖式挪位」（把 model
+      // 塞回原位），aaa 从候选表消失 → 错误地返回 {}。
+      const geom = `{
+        "format_version": "1.10.0",
+        "geometry.aaa": { "texturewidth": 64, "textureheight": 64,
+          "bones": [{ "name": "from_aaa", "cubes": [{ "origin": [0,0,0], "size": [2,2,2], "uv": [0,0] }] }] },
+        "geometry.model": { "texturewidth": 64, "textureheight": 64, "bones": [] }
+      }`;
+      const spec = JSON.parse(buildSpecFromGeometryJSON(geom)) as {
+        models: { bones: { name: string }[] }[];
+      };
+      expect(spec.models[0].bones.some((b) => b.name === "from_aaa")).toBe(true);
+    });
+  });
+
+  d4("Go parse.go 结构对齐 — B 多 geometry 选条（分叉②：SkipEmptyBones）", () => {
+    it4("首条仅 description 空壳 → 跳过取第一个非空条目（Go SkipEmptyBones，Blockbench 偶发形态）", () => {
+      const geom = `{
+        "format_version": "1.16.0",
+        "minecraft:geometry": [
+          { "description": { "identifier": "empty", "texture_width": 1, "texture_height": 1 } },
+          { "description": { "identifier": "real", "texture_width": 32, "texture_height": 64 },
+            "bones": [{ "name": "head", "cubes": [{ "origin": [0,0,0], "size": [4,4,4], "uv": [0,0] }] }] }
+        ]
+      }`;
+      const got = buildSpecFromGeometryJSON(geom);
+      expect(got).not.toBe("{}");
+      const spec = JSON.parse(got) as { models: { bones: { name: string }[] }[] };
+      expect(spec.models[0].bones.some((b) => b.name === "head")).toBe(true);
+    });
+
+    it4("多条目全空壳 → {}（Go AllEmptyBones_ReturnsNil）", () => {
+      const geom = `{
+        "format_version": "1.16.0",
+        "minecraft:geometry": [ { "description": { "identifier": "a" } }, { "description": { "identifier": "b" } } ]
+      }`;
+      expect(buildSpecFromGeometryJSON(geom)).toBe("{}");
+    });
+
+    it4("首条 bones:[]（键在空数组）也是空壳 → 取后续非空条目（Go len(g.Bones)==0 含缺席与空数组两形态）", () => {
+      const geom = `{
+        "format_version": "1.16.0",
+        "minecraft:geometry": [
+          { "description": { "texture_width": 64, "texture_height": 64 }, "bones": [] },
+          { "description": { "texture_width": 64, "texture_height": 64 },
+            "bones": [{ "name": "real_bone", "cubes": [{ "origin": [0,0,0], "size": [2,2,2], "uv": [0,0] }] }] }
+        ]
+      }`;
+      const spec = JSON.parse(buildSpecFromGeometryJSON(geom)) as {
+        models: { bones: { name: string }[] }[];
+      };
+      expect(spec.models[0].bones.some((b) => b.name === "real_bone")).toBe(true);
+    });
+
+    it4("首条有骨骼 → 仍取首条（Go MultipleGeometryFirstOnly：非空即首条优先）", () => {
+      const geom = `{
+        "format_version": "1.16.0",
+        "minecraft:geometry": [
+          { "description": { "texture_width": 16, "texture_height": 16 },
+            "bones": [{ "name": "first_bone", "cubes": [{ "origin": [0,0,0], "size": [2,2,2], "uv": [0,0] }] }] },
+          { "description": { "texture_width": 128, "texture_height": 128 },
+            "bones": [{ "name": "second_bone", "cubes": [{ "origin": [0,0,0], "size": [2,2,2], "uv": [0,0] }] }] }
+        ]
+      }`;
+      const spec = JSON.parse(buildSpecFromGeometryJSON(geom)) as {
+        models: { bones: { name: string }[] }[];
+      };
+      expect(spec.models[0].bones.some((b) => b.name === "first_bone")).toBe(true);
+      expect(spec.models[0].bones.some((b) => b.name === "second_bone")).toBe(false);
+    });
+
+    it4("单条目 bones 键缺席 → {} 且不崩溃（Go NoBones：空模型非 nil → binding 空 spec）", () => {
+      const geom = `{
+        "format_version": "1.16.0",
+        "minecraft:geometry": [{ "description": { "identifier": "t", "texture_width": 64, "texture_height": 64 } }]
+      }`;
+      expect(buildSpecFromGeometryJSON(geom)).toBe("{}");
+    });
+
+    it4("单条目 description 缺席 → 骨骼照常解析、纹理尺寸默认 64（Go NoDescription）", () => {
+      const geom = `{
+        "format_version": "1.16.0",
+        "minecraft:geometry": [{ "bones": [{ "name": "b", "cubes": [{ "origin": [0,0,0], "size": [2,2,2], "uv": [0,0] }] }] }]
+      }`;
+      const m = firstMesh(geom);
+      expect4(m.uvs[2]).toBeCloseTo(2 / 64, 6);
+    });
+  });
+
+  d4("Go parse.go 结构对齐 — C GUI 装饰骨骼过滤（分叉③：isGuiBone，Go TestIsGuiBone 锚）", () => {
+    it4("无 cube 的 GuiRoot/backgrounds 被过滤，gui（有 cube）保留（Go SkipsGuiBones 同款）", () => {
+      const geom = geo(
+        "geometry.gui",
+        '{ "name": "GuiRoot", "cubes": [] }, ' +
+          '{ "name": "backgrounds" }, ' +
+          '{ "name": "gui", "cubes": [{ "origin": [0,0,0], "size": [1,1,1], "uv": [0,0] }] }, ' +
+          '{ "name": "head", "cubes": [{ "origin": [4,0,0], "size": [8,8,8], "uv": [0,0] }] }',
+      );
+      const spec = JSON.parse(buildSpecFromGeometryJSON(geom)) as {
+        models: { bones: { name: string }[]; meshGroups: unknown[] }[];
+      };
+      const names = spec.models[0].bones.map((b) => b.name);
+      expect4(names.includes("gui")).toBe(true);
+      expect4(names.includes("head")).toBe(true);
+      expect4(names.includes("GuiRoot")).toBe(false);
+      expect4(names.includes("backgrounds")).toBe(false);
+      expect4(spec.models[0].meshGroups.length).toBe(2);
+    });
+
+    it4("GUI 前缀名大小写不敏感 + 有 cube 一票否决 + baguette 不误杀（Go isGuiBone 表）", () => {
+      const geom = geo(
+        "geometry.gui2",
+        '{ "name": "BACKGROUND_DARK" }, ' +
+          '{ "name": "curtain", "cubes": [{ "origin": [0,0,0], "size": [2,2,2], "uv": [0,0] }] }, ' +
+          '{ "name": "baguette", "cubes": [{ "origin": [4,0,0], "size": [2,2,2], "uv": [0,0] }] }',
+      );
+      const spec = JSON.parse(buildSpecFromGeometryJSON(geom)) as {
+        models: { bones: { name: string }[] }[];
+      };
+      const names = spec.models[0].bones.map((b) => b.name);
+      expect4(names.includes("BACKGROUND_DARK")).toBe(false);
+      expect4(names.includes("curtain")).toBe(true); // cubeCount>0 → 非 GUI 覆盖层
+      expect4(names.includes("baguette")).toBe(true); // 前缀匹配不认包含
+    });
+  });
+}

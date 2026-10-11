@@ -33,6 +33,7 @@ auto_fields:
     - GetAllowedCommandSpecs
     - GetCommand
     - IsCommandAllowed
+    - IsReadOnlyCommand
     - JsonError
     - JsonResponse
     - JsonResponse.ToJson
@@ -48,6 +49,7 @@ auto_fields:
     - ParamType
     - RegisterCommand
     - RegisterCommandC
+    - RegisterCommandRO
     - TimingInfo
 use_when:
   - 修改 GUI 桥可调用 CLI 命令的参数时（新增 flag / 需要传空值语义）

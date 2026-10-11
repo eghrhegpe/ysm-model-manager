@@ -342,7 +342,6 @@ auto_fields:
     - flagsForAlpha
     - FLATTEN_MAP
     - flattenLightParams
-    - FOG_MIN_DEPTH
     - FogCapability
     - FogMode
     - FootIKController
@@ -1189,6 +1188,7 @@ perf:
 ## 不变量
 
 - **几何口径唯一事实源 = Go `GetModel3DSpec`**：网页兜底统一走 `cube-mesh.ts`（与 Go 逐值同构，双端测试锁定）；旧第二套 JS 兜底 `model3d-spec.ts buildSpecFromModel` 因 cubePivot/cubeOrigin 与 Go 口径漂移且无生产调用，已于 2026-09 删除，禁止再私改/私建几何计算口径（pivot X 取反等以 Go 端为准）
+- **geometry 输入选择链与 Go `parse.go` 同构**（巡检第 8 轮 2026-10-11，值面同构 ≠ 结构同构——轮 7 逐值核抓不到的东西，本轮靠「两侧走不走同一条条目选择链」抓到）：`spec-builder.ts parseBedrockGeometry` 必须与 Go 权威走**相同的选条与过滤链**——① 新版 `minecraft:geometry[]`：单条目宽容（bones/description 缺席 → 非 nil 空模型 → 入口落 `{}`），多条目跳 bones 空壳取首个非空（Blockbench 偶发首条占位）；② 新版失败**回退旧版 `geometry.*`**（车万女仆 mod 形态，texturewidth 无下划线；字典序 sort 后规范键 model 与首位**解构互换**非覆盖挪位）；③ `isGuiBone` 过滤（Go `TestIsGuiBone` 为锚——cubeCount>0 一票否决、大小写不敏感、gui/background **前缀**不认包含）。**可达性依据**：`geometryRaw` 是原文件文本（`wasm-decode.ts|firstGeoRaw`），同一文本 Android Go binding 与网页 TS 兜底必须同形产出 spec，否则跨通道分叉。⚠️ 射程边界：本条管**结构面**（选条/回退/过滤），**值面**逐值由轮 7 parity 锁；**边界值容错类**（origin/size 过短过长对象形态）属真实语料零命中的死路径，`3d-patterns.md` §14 已裁决**不收敛**（ADR-129），勿顺手"统一"。执法：`spec-builder.test.ts`「Go parse.go 结构对齐」三块（A/B/C）变异验证 M1-M4 全钉死
 - **纹理所有权归缓存池**：`loadTextures` acquire → 用完 `releaseTextureUrls`（引用 -1），禁止 `tex.dispose()`——LRU 失效三重后果（见 `3d-patterns.md` §7.1）
 - **dispose 必须完整遍历子对象**：`geometry?.dispose()` / `material?.dispose()` / `texture?.dispose()`；`Object3D.remove()` 不释放 WebGL 资源
 - **mesh 级 `frustumCulled = false`**：骨骼旋转时扁平部件（脸部）会误判不可见

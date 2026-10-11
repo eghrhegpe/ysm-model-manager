@@ -46,24 +46,13 @@ export type LoadTraceFormat = string;
 /** 兜底哨兵：无法归类的加载（非注册表身份）。 */
 export const TRACE_FORMAT_OTHER: LoadTraceFormat = "other";
 
-/** 全部 adapter 产生的身份样本（仅文档用途，非类型约束——单一事实源 = registry 契约）。 */
-export const TRACE_FORMAT_ADAPTERS = [
-  "ysm",
-  "EntityPlayer",
-  "mmd",
-  "mmd-scene",
-  "vrm",
-  "fbx",
-  "litematic",
-] as const;
-
 /**
  * 解码器来源**码**（`_decodedBy`）——**解码器是唯一事实源**：
  * 凡经某条解码路径产出的结果都盖此章，写入缓存/纹理预览等旁路也随对象传播。
  *
  * [ADR-270-d2 R10] 自 decoder/utils.ts 迁入 infra 加载剖析值域：views 入口面仅许
  * import infra 值域面（R10 白名单），DECODE_SOURCE 是「来源码家族」值域常量
- * （与 TRACE_FORMAT_OTHER / TRACE_FORMAT_ADAPTERS 同族），归加载剖析值域。
+ * （与 TRACE_FORMAT_OTHER 同族），归加载剖析值域。
  *
  *  ⚠️ 数据层只存**来源码**，不存展示文案：文案进数据 ⇒ i18n 失效（切语言不变）、
  *  图标退化成 emoji 字形（ADR-238：不受 currentColor 控制 / 跨平台漂移 / 不随字号缩放）。

@@ -42,7 +42,6 @@ auto_fields:
     - mount3D
     - Mount3DOptions
     - normalizeShadowMapSize
-    - PoseScene
     - PostprocessingCapability
     - PostprocessingParams
     - PreviewAdapter
@@ -57,7 +56,6 @@ auto_fields:
     - SelectableEnvPresetId
     - SemanticScene
     - ShadowCapability
-    - ShadowType
     - SkyCapability
     - switchPreview
     - UpdateableScene

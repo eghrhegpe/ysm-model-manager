@@ -1,6 +1,6 @@
 // ===== 环境能力状态/序列化层（拆轴自 environment-capability.ts）=====
 // 收口「巨型 cap 混装状态与 Three 装配」的锐评结论：本文件收敛纯数据 + 纯类型轴
-// （EnvPreset / ENV_PRESETS / EnvironmentParams；EnvPresetId 与每预设默认强度已下沉
+// （EnvPreset / ENV_PRESETS；EnvPresetId 与每预设默认强度已下沉
 //  state/env-preset-types.ts），零 THREE 依赖、无顶层副作用；
 // environment-capability.ts 保留 envMap 管线 / PMREM / canvas equirect 绘制 / HDR 加载等渲染轴。
 // 注意：sky-capability.ts 亦跨文件消费 ENV_PRESETS（sunPos 口径对齐），下沉后 import 路径更短。
@@ -91,15 +91,6 @@ export const ENV_PRESETS: Record<SelectableEnvPresetId, EnvPreset> = {
 /**
  * 注：EnvPresetLinkage / ENV_PRESET_LINKAGE 已由 atmosphere-presets.ts 的 ATMOSPHERE_PRESETS 取代
  * （完整氛围快照 + auto-atmosphere source + 统一 setEnvState 派发），旧硬编码联动表不再消费。
+ * 注：EnvironmentParams 旧接口已删（knip 死导出 2026-10-11 探明销账——全仓零消费，
+ * 参数口径统一走 envState schema 键），本面仅余 EnvPreset / ENV_PRESETS 纯数据轴。
  */
-
-export interface EnvironmentParams {
-  enabled: boolean;
-  preset: EnvPresetId;
-  /** envMap 反射强度（作用于所有 mesh 的 material.envMapIntensity） */
-  intensity: number;
-  /** 程序化纹理分辨率（宽，高=宽/2）；越大过渡越平滑，512 足够 */
-  resolution: number;
-  /** 是否把当前环境贴图（HDR 原图/程序化 canvas）作为 scene.background */
-  useAsBackground: boolean;
-}

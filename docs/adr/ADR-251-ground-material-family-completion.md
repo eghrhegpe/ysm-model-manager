@@ -2,7 +2,7 @@
 
 > ⚠️ **§2.2 已被 [ADR-252](./ADR-252-ground-canvas-style-material-only.md) 取代**（部分取代）：本 ADR 曾拒绝把几何图案迁出 `canvasStyle`（保留共存），ADR-252 据用户实机反馈推翻该决定。本 ADR 的其余部分（§2.1 补 sand/grass、§2.3 不加前缀、§2.4 矩阵归属）**继续有效**。
 
-- **状态**：🔄 部分采纳（§2.2 被 ADR-252 取代，其余有效）
+- **状态**：🔄 部分采纳（§2.2 被 ADR-252 取代，其余有效。2026-10-11 探明复核：材质家族补全已落地——`caps/surface-pixels/` 现 noise/grass/sand/marble/plain/anti-repeat 六件 + 图案分工经 ADR-252 第三轴 overlay 承担（`GroundOverlayStyle` 5 图案 + `generateOverlayPixels`）+ `ground-texture-picker.ts` 在场，无开放切片，🔄 仅记录 §2.2 被取代的生命周期事实）
 - **日期**：2026-09-16
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/preview-3d/caps/ground-surface-spec.ts`、`frontend/src/preview-3d/caps/ground-menu.ts`、`frontend/src/preview-3d/caps/ground-capability.ts`、`docs/adr/ADR-249-ground-material-axis-split-layer-overlay.md`、`docs/adr/ADR-252-ground-canvas-style-material-only.md`、`docs/archive/ADR-249-ground-material-effect-matrix.md`

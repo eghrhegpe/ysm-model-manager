@@ -140,3 +140,43 @@ export function groupByPrefix(keys: readonly string[]): Array<{ prefix: string; 
     .map(([prefix, count]) => ({ prefix, count }))
     .sort((a, b) => b.count - a.count || a.prefix.localeCompare(b.prefix));
 }
+
+/**
+ * 提取「键构造式站点」的**静态前缀**（动态覆盖判定用）。
+ *
+ * 背景（2026-10-11 探明 N6）：`t(\`preview.capStage.${stage}\`)` 这类构造式查表
+ * 让真实在用的键（`preview.capStage.save` / `preview.capStage.load`）**不以字面量
+ * 出现**，静态判定把它们误判 dead（i18n 死键 13→15 的 2 增量即此）。`constructed`
+ * 计数（countDynamicKeySites）只报「风险存在」不给「覆盖范围」——本函数补上范围：
+ * 构造式站点的静态键前缀（模板串 `前缀.` + `${` / 字符串拼接 `"前缀."` + `+`）下的
+ * 全部键视为**动态覆盖**（非死键）。保守方向不变：只豁免「前缀精确匹配 + 该前缀
+ * 确有构造式站点在场」的键，不动其它 dead 判定。
+ *
+ * @returns 去重后的静态前缀集合（含尾点，如 `"preview.capStage."`）
+ */
+export function constructedKeyPrefixes(corpus: string): Set<string> {
+  const out = new Set<string>();
+  // 模板串形态：t(`preview.capStage.${stage}`) → 前缀 = 反引号内 ${ 之前的静态段（含尾点）
+  for (const m of corpus.matchAll(/\bt\(\s*`([a-zA-Z][a-zA-Z0-9_.]*(?:\.[a-zA-Z0-9_]+)*)\.\$\{/g)) {
+    if (m[1]) out.add(m[1] + ".");
+  }
+  // 字符串拼接形态：t("import." + x) → 前缀 = 引号内完整静态段（须以点结尾才是键前缀）
+  for (const m of corpus.matchAll(/\bt\(\s*["']([a-zA-Z][a-zA-Z0-9_.]*\.)["']\s*\+/g)) {
+    if (m[1]) out.add(m[1]);
+  }
+  return out;
+}
+
+/**
+ * 动态覆盖判定：键是否落在任一构造式站点的静态前缀之下。
+ *
+ * 语义：`preview.capStage.save` 落在构造式站点 `t(\`preview.capStage.${stage}\`)` 的
+ * 前缀 `preview.capStage.` 之下 ⇒ 该键**可能**由该站点运行时拼出 ⇒ 不判死（保守豁免，
+ * 与「注释提及也算已用」同向——只可能漏报死键，不可能把活键判死）。
+ */
+export function isKeyDynamicallyCovered(key: string, prefixes: ReadonlySet<string>): boolean {
+  for (const p of prefixes) {
+    if (key.startsWith(p)) return true;
+  }
+  return false;
+}

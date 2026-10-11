@@ -16,8 +16,9 @@ import type { DecodeSource } from "@/preview-3d/infra/load-trace.ts";
 export { DECODE_SOURCE } from "@/preview-3d/infra/load-trace.ts";
 // [ADR-270-d2 R10] 解码器来源码家族单一事实源迁至 infra 加载剖析值域（load-trace.ts）：
 // views 入口面（tpl.ts / loader.ts）改引 infra/load-trace.ts（R10 白名单）。
-// 本面仅再导出，内部消费者（wasm-decode.ts 等）零改动——射程收窄。
-export type { DecodeSource };
+// 本面仅再导出 DECODE_SOURCE 值面（内部消费者 wasm-decode.ts 等零改动）。
+// DecodeSource 类型不再经本面再转述（2026-10-11 knip 死转述行销账——全仓无经本面
+// import 该类型的消费方；本文件自身经 L14 import 供 DecodedYsm._decodedBy 字段使用）。
 
 /** WASM 解码结果（decodeYsmViaWasm 返回） */
 export interface DecodedYsm {

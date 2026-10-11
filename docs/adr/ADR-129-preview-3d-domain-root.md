@@ -1,6 +1,6 @@
 # ADR-129：3D 预览领域根升格（utils/3d → features/preview-3d，修依赖倒置）
 
-- **状态**：🔄 部分采纳（总纲方向「升格为领域根 + 修依赖倒置」有效；第四刀/第五刀/收尾分别被 [ADR-136](./ADR-136-screenshot-domain-homecoming.md) / [ADR-137](./ADR-137-ysm-decoder-homecoming.md) / [ADR-138](./ADR-138-preview-3d-to-src.md) 取代，见 §1 子刀表格）
+- **状态**：✅ 已采纳（总纲「升格为领域根 + 修依赖倒置」已全量落地——2026-10-11 探明复核：`src/preview-3d` 为唯一领域根（`utils/3d`/`features/preview-3d` 双旧路径已消失）、第四/五刀/收尾被 [ADR-136](./ADR-136-screenshot-domain-homecoming.md)/[ADR-137](./ADR-137-ysm-decoder-homecoming.md)/[ADR-138](./ADR-138-preview-3d-to-src.md) 取代后**回吸纳入本总纲体系**（三卡「被取代」行均指回本 ADR，非 ADR-235/253 疑设）、state 不再反向 import adapters。措辞校准：「state 是零依赖地基」已演化——state 现正向持有 infra 开关原语（frustum-cull/render-budget）+ caps 类型（scene-capability type-only），无环无违规，§3.1 后果叙述按此理解）
 - **日期**：2026-08-29
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/utils/3d/ (adapters/state/caps/perception), frontend/src/views/app-preview/, frontend/AGENTS.md (features 约定), state/preview-state.ts:30 (依赖倒置点), ADR-128`

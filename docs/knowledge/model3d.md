@@ -12,6 +12,8 @@ tests:
   - frontend/src/preview-3d/mesh/model3d.test.ts
   - frontend/src/preview-3d/adapters/ysm-model-preloader.test.ts
   - frontend/src/preview-3d/decoder/wasm-decode-blob-view.test.ts
+  - frontend/src/preview-3d/caps/postprocessing-tonemapping-ownership.test.ts
+  - frontend/src/preview-3d/infra/render-host-frame-order.test.ts
 auto_fields:
   symbols_with_lines:
     - __resetLargeModelWarnForTest
@@ -287,7 +289,6 @@ auto_fields:
     - EnvIbl
     - EnvIblHost
     - EnvironmentCapability
-    - EnvironmentParams
     - EnvMigrationInput
     - envOwnsSceneEnvironment
     - EnvPlacement
@@ -698,7 +699,6 @@ auto_fields:
     - PmxRigidBodyData
     - PmxVertexData
     - poolStrategy
-    - PoseScene
     - POSTPROC_MSAA_SAMPLES
     - POSTPROC_PERSIST_FIELDS
     - PostprocessingCapability
@@ -893,7 +893,6 @@ auto_fields:
     - setVrmMaterialOpacity
     - setVrmMaterialVisible
     - ShadowCapability
-    - ShadowType
     - SharedInfra
     - SharedMaterialDetail
     - SharedMaterialListItem
@@ -991,7 +990,6 @@ auto_fields:
     - TONE_MAPPING_KEYS
     - toScreenshotLights
     - toStatePath
-    - TRACE_FORMAT_ADAPTERS
     - TRACE_FORMAT_OTHER
     - trackAlloc
     - UnloadCtx
@@ -1190,7 +1188,7 @@ perf:
 - `buildYsmObject(geo)` / `buildYsmScene(ctx)` — YSM 适配器内容层
 - `renderMultiAngle(path, urls, opts)` — 离屏多角度渲染
 - `screenshotFromRenderer(renderer, scene, camera, opts)` — 纯函数截图
-- `SceneCapability` 接口族（`BaseScene` + `UpdateableScene`/`ScreenshotScene`/`CameraControlScene`/`GroupedScene`/`SemanticScene`/`PoseScene`）— ADR-178 能力拆分，adapter.build 返回能力组合
+- `SceneCapability` 接口族（`BaseScene` + `UpdateableScene`/`ScreenshotScene`/`CameraControlScene`/`GroupedScene`/`SemanticScene`）— ADR-178 能力拆分，adapter.build 返回能力组合（`PoseScene` 接口已删 2026-10-11：applyPose 姿势能力经 `PreviewScene` 可选字段 + MMD 内联 `SemanticScene & { applyPose? }` 承载，接口形制无人消费）
 
 ## 与其他子系统关系
 
@@ -1209,6 +1207,8 @@ perf:
 - **mesh 级 `frustumCulled = false`**：骨骼旋转时扁平部件（脸部）会误判不可见
 - **perComponent 纹理索引分类与绑定索引同一空间**：组件分支恒用局部槽 0，非组件回退全局 `texIdx`/`resolvedTexIdx`
 - **大文件解码 peak ~3-4× 文件大小**：base64 → Uint8Array → WASM HEAP → MEMFS → readFile → JSON.parse 六层拷贝并存（100MB 阈值是网页版唯一防线）。2026-09 补**事前告知**：`infra/large-model.ts|warnLargeModelIfNeeded(bytes, path)` 在受限平台（`isViewerMode`：网页版 / Android）超 50MB 时给一条带实测字节数 + 3× 峰值估算的 toast（文案 `preview.largeModelWarn` 三语，会话内同路径只提示一次）；调用点 `decoder/wasm-decode.ts|doDecodeYsmViaWasm` 拿到字节后——复用已有字节数，**不做额外 IO 探测**。⚠️ 这**不改内存模型**：六层拷贝并存仍是长期债，警示只把「静默 OOM」变成「有预期的卡顿」
+- **renderer 输出字段的归还必须「逐字段归属判定」，不得按「谁在场」整块跳过**（2026-10-11）：`postprocessing-composer.ts|restoreOutputSettings` 原以 `if (sky 启用) return;` **整块提前退出**——因 sky 也写 `renderer.toneMapping`（`sky-capability.ts|apply` 写定值 **ACESFilmic** 并自行引用计数归还），作者怕盲还原打回 sky 的值。但**「sky 在场」≠「sky 是当前持有者」**：本 cap 写 `toneMappingValue(envState.ppToneMapping)`（用户可选 none/linear/reinhard/aces/cineon）——用户选**非 aces**（如 reinhard）时 renderer 上就是**本 cap 的值**，提前退出 = 放弃归还自己的写入，**残留成第三种状态**（既非 sky 的 ACES 也非快照）。正解 = 判据 `renderer.toneMapping === 本 cap 写值 ? 归还 : 不动`（同文件 `outputColorSpace` 已是此范式、同 `frustum-cull|_culled` 抑制态归属）——「非持有者」自然跳过，原提前退出想保的场景由**判据本身**覆盖。执法：`postprocessing-tonemapping-ownership.test.ts`（4 例；重引入提前退出即 3 例红，已实测）。**附带清理**：该判定原经 `deps.caps` 查询器，修完 `caps` 参数/字段/import 全无消费者 → 一并删除（死缝不留）
+- **帧末钩子 `SceneCapability.afterFrameUpdate?()`**（2026-10-11 新增）：在 **WASD 相机输入 + 全部 perFrame 回调之后、主渲染之前**调用，供「需要读本帧已更新场景状态」的渲染准备使用（消费例 = 水面倒影 RT）。契约：**只产出资源、不推进时钟**（时钟属 `update`）。`update` 的语义同步收窄为「前段：推进内部时钟/uniform」。时序守卫 = `render-host-frame-order.test.ts`
 - **Blob 构造必须走「视图语义」而非 `.buffer`**（2026-10-11 收敛，四处统一）：`decoder/wasm-decode.ts` 的纹理/头像 Blob 构造一律经 `viewAsBlobPart(bytes)`——**整视图**（byteOffset=0 且占满底层）零拷贝直传视图；**偏移视图**才 `.slice()` 收窄。**禁止退回 `bytes.buffer`**：那是底层**整块**，当 bytes 是 subarray 视图时会把多余字节塞进 Blob → 纹理花屏/头像损坏**且不报错**（同族正确性基准：`backend/web-community.ts` 显式按 `byteOffset/byteLength` 切片、`utils/base/primitives/base64.ts|bytesToArrayBuffer` 注明「仅偏移视图才 slice」）。**可达性依据**：`InflightCtx.ReadBytes` 在网页版走 IDB `ArrayBuffer` 直出（ADR-228），可能返回 subarray 视图；WASM 侧 `FS.readFile` 将来若改零拷贝视图同理。⚠️ 类型陷阱：TS 的 `BlobPart` 要求 `ArrayBufferView<ArrayBuffer>`，而 `Uint8Array.buffer` 是 `ArrayBufferLike`（可能 `SharedArrayBuffer`）→ 直接 `new Blob([bytes])` 报 TS2322；**helper 内的 `as unknown as BlobPart` 是必要断言，不是偷懒**。执法：`wasm-decode-blob-view.test.ts` 用**错位 subarray**（底层前后各 8 字节 0xAA 哨兵）驱动生产路径，三例全红于 `.buffer` 变异（已实测）
 - **解码读取链已升格为「字节直读」**（ADR-228）：`decoder/wasm-decode.ts` **不再接触 base64**——`InflightCtx.ReadBytes: (path) => Promise<Uint8Array | null>` 替代原 `ReadFileBytes`（base64 字符串契约），入口与三处子文件读取（avatar / model / tex）统一走 `backend/read-model-bytes.ts|readModelBytes`。**平台分叉只在该 seam 内存在**：网页版走 `web-fs-read.ts|readWebFileArrayBuffer`（IndexedDB `ArrayBuffer` **零拷贝视图**直出，省掉 base64 往返 ≈4.3N）；桌面 / Android 仍走 `getApp().ReadFileBytes` + `base64ToBytes`（Wails 传输只有 JSON，这层躲不掉）。**不改 Wails binding 契约**（`readModelBytes` 不进 `browserAdapter`——`webImpls` 是 `satisfies Partial<GoBindingShape>`，且不该为纯前端优化动 binding 契约），故 `generate:bindings` / Android 桥 / 桌面行为全不变
 - **解码拷贝链实测口径与前提更正**（2026-09 专项调研，V8 13.6 / N=64MB 实测）：L1 base64 串(1.33N) + L2 `atob` 串(1.0N) + L3 `charCodeAt` 拷贝(1.0N) + `HEAPU8.set`(1.0N) = **4.33N**——「3-4×」是 **N_in 口径的下界**，尚未计 C++ 内部 `m_buffer`/`m_binaryData`/`m_decrypted`（各 ~N_in）与输出侧 N_out（.ysm 是压缩格式，N_out 可能显著大于 N_in）。前提更正：① **MEMFS 的 `node.contents` 是 JS 侧数组、不在 WASM 线性内存**（Emscripten 的 MEMFS 是 JS 实现）；② `atob` 产出 **Latin-1 one-byte string（1 字节/字符）**，非 UTF-16 的 2 字节；③ `new Uint8Array(arrayBuffer)` 是**视图（别名）**非拷贝——拷贝须用 `new Uint8Array(typedArray)`。已落地的优化：审查 C-1（`sniffTexSize` 复用 `f.data` 免每张纹理整拷贝 −N_tex、内存直解路径补 MEMFS 收集后清理）+ **ADR-228 网页版消除 base64 往返**。⚠️ **比峰值更隐蔽的风险：WASM 线性内存只增不减**（上限 2GB），HEAP 高位常驻整个应用生命周期。**已排除路线**（勿重复论证）：Go binding 直接返回 ArrayBuffer（Wails 传输只有 JSON）、分块流式喂解析器（`YSMParserFactory::Create` 要求完整缓冲）、Web Worker 降峰值（dedicated worker 与页面同渲染进程，只改卡顿不改内存）、**桌面资产服务器二进制路由**（2026-09 核实：机制可行但 ROI 太小——桌面这条链一次性开销仅 50MB≈0.13–0.17s / 100MB≈0.29–0.35s，且桌面已被 `large-model` 排除在内存告警外；详见锐评卡刀⑭ 的证据链）。另**桌面「改 Go 优先让 4.33N 归零」亦不成立**：Go 的 `.ysm` 路径（`runYSMParserOnFile` → `decodeYSMViaNodeJS`）不产出内嵌动画，且 `authors`/`avatars` 依赖 WASM 结果，改排序会三样齐丢

@@ -7,10 +7,10 @@
 > ADR-250 改为「门禁降为 `envState.ppEnabled` 参数 + composer 常驻 + 曝光属主归 sky」。
 > **D1（联动读浓度意图）与 D2（SSR 抑制态显式化）依然有效**，其测试与不变量保留。
 
-- **状态**：🔄 部分采纳（D3 被 ADR-250 取代；D1/D2 有效）
+- **状态**：🔄 部分采纳（D3 被 ADR-250 取代；D1/D2 有效。**2026-10-11 探明复核：有效决策无开放切片**——D1 门禁随 ADR-329 刀①下沉 `postprocessing-composer.ts`（`ppBloomFollowVolumetric` + R2 数值守卫）、D2 双显式字段 + 测试锁在场、ADR-250 三件套已收退役；本行保留 🔄 仅记录 D3 被取代的生命周期事实，非行动项）
 - **日期**：2026-09-16
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`frontend/src/preview-3d/caps/postprocessing-capability.ts, frontend/src/preview-3d/state/preview-state.ts, ADR-196, ADR-246, ADR-126, ADR-250（取代 D3）`
+- **相关**：`frontend/src/preview-3d/caps/postprocessing-capability.ts（SSR 抑制 D2 现驻）, frontend/src/preview-3d/caps/postprocessing-composer.ts（Bloom 联动 D1 随 ADR-329 刀①下沉于此，2026-10-11 勘误：原落点 postprocessing-capability.ts 旧行址）, frontend/src/preview-3d/state/preview-state.ts, ADR-196, ADR-246, ADR-126, ADR-250（取代 D3）`
 
 ---
 

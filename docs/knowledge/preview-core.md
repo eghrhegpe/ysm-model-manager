@@ -35,7 +35,6 @@ auto_fields:
     - MountCtx
     - MpSessionState
     - ownHandle
-    - PoseScene
     - PreviewAdapter
     - PreviewBuildCtx
     - PreviewHandle

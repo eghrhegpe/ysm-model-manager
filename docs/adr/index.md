@@ -17,8 +17,8 @@ permalink: /adr/
 | 状态 | 数量 |
 |------|------|
 | [📝 提议中](#提议中) | 8 |
-| [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
-| [🔄 部分采纳](#部分采纳) | 15 |
+| [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 1 |
+| [🔄 部分采纳](#部分采纳) | 14 |
 | [✅ 已采纳](#已采纳) | 310 |
 | [❌ 已取代](#已取代) | 8 |
 | [🧊 已废弃](#已废弃) | 0 |
@@ -39,7 +39,13 @@ permalink: /adr/
 | [ADR-284](./ADR-284-sky-reflector-shadow-decoupling-cleanup.md) | sky 散射参数与模型类别解耦 + reflector/shadow 清除 no-op 与噪声值 | 📝 提议中 |
 | [ADR-151-d1](./decisions/ADR-151-d1-gen-stage-unknown-newfile.md) | gen-stage 未知新建文件默认排除（并发卷带硬化） | 📝 提议中 |
 
-### 🔄 部分采纳（15）
+### ⚠️ 已采纳但遗留未修复（1）
+
+| ADR | 标题 | 状态 |
+|-----|------|------|
+| [ADR-129](./ADR-129-preview-3d-domain-root.md) | 3D 预览领域根升格（utils/3d → features/preview-3d，修依赖倒置） | ⚠️ 已采纳（违规或未修复） |
+
+### 🔄 部分采纳（14）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
@@ -55,7 +61,6 @@ permalink: /adr/
 | [ADR-203](./ADR-203-platform-gate-backend.md) | 平台门控归位 backend——断 utils/dom→backend 依赖环 | 🔄 部分采纳 |
 | [ADR-186](./ADR-186-i18n-tr-locale-core.md) | i18n 治理：tr 单轨收敛 + 影子包卡口 + locale 数据外移 core | 🔄 部分采纳 ⚠️ 被 [ADR-210] |
 | [ADR-139](./ADR-139-platform-shim-dedup.md) | 平台 shim 收敛 rustbridge 与 scanner 四 OS 重复 | 🔄 部分采纳 |
-| [ADR-129](./ADR-129-preview-3d-domain-root.md) | 3D 预览领域根升格（utils/3d → features/preview-3d，修依赖倒置） | 🔄 部分采纳 |
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 | [ADR-050](./ADR-050-plaza-browser-window.md) | 模型广场 · 浏览器窗口（Wails 第二窗口） | 🔄 部分采纳 |
 
@@ -591,7 +596,7 @@ permalink: /adr/
 | ADR-132 | 多模型选择菜单原语（跨资源类型统一 select） | ✅ 已采纳 | 2026-08-29 |
 | ADR-131 | 3D 渲染期统计提取（预览期统计与类型判定解耦） | ✅ 已采纳 | 2026-08-29 |
 | ADR-130 | 整合包卡片拖拽导入：先入仓库再推送 | ✅ 已采纳 | 2026-08-29 |
-| ADR-129 | 3D 预览领域根升格（utils/3d → features/preview-3d，修依赖倒置） | 🔄 部分采纳 | 2026-08-29 |
+| ADR-129 | 3D 预览领域根升格（utils/3d → features/preview-3d，修依赖倒置） | ⚠️ 已采纳（违规或未修复） | 2026-08-29 |
 | ADR-128 | 菜单导航图生成器与 e2e 选择器派生（声明式收口后的可验证性） | ✅ 已采纳 | 2026-08-29 |
 | ADR-127 | 性能档位薄壳版——数据表 + 通用套用器（低/中/高/自定义） | ✅ 已采纳 | 2026-08-29 |
 | ADR-126 | 3D 预览菜单声明式 Schema 终态——状态层泛化 + 面板 schema 化 + 可见性谓词化 + dockGroup 解耦 | ✅ 已采纳 | 2026-08-28 |

@@ -37,7 +37,6 @@ auto_fields:
     - OpenerOptions
     - openModel3DFullscreen
     - OpenModel3DOptions
-    - PoseScene
     - PreviewAdapter
     - PreviewBuildCtx
     - PreviewHandle

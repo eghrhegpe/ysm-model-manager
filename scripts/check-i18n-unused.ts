@@ -41,9 +41,11 @@ import fs from "node:fs";
 import path from "node:path";
 import {
   classifyKeyUsage,
+  constructedKeyPrefixes,
   countDynamicKeySites,
   extractDottedTokens,
   groupByPrefix,
+  isKeyDynamicallyCovered,
   parseLocaleKeys,
 } from "./_lib/i18n-unused.ts";
 import { parseArgs } from "./_lib/parse-args.ts";
@@ -140,7 +142,18 @@ const allCorpus = `${prodCorpus}\n${readAll(testFiles)}\n${readAll(extraFiles)}`
 
 const prodLits = extractDottedTokens(prodCorpus);
 const allLits = extractDottedTokens(allCorpus);
-const rows = classifyKeyUsage(keys, prodLits, allLits);
+let rows = classifyKeyUsage(keys, prodLits, allLits);
+// 动态覆盖豁免（2026-10-11 探明 N6）：构造式查表站点（如 `t(\`preview.capStage.${stage}\`)`）
+// 会让真实在用的键不以字面量出现而被误判 dead。按「构造式站点所在语料层」把被其静态
+// 前缀覆盖的键归位：生产语料的构造式 → 视为 used；仅测试/脚本语料的构造式 → 视为 test-only。
+// 保守方向不变（只可能把「误判死」的活键拉回，不新增死键误判）。
+const prodPrefixes = constructedKeyPrefixes(prodCorpus);
+const allPrefixes = constructedKeyPrefixes(allCorpus);
+rows = rows.map((r) => {
+  if (r.usage === "dead" && isKeyDynamicallyCovered(r.key, prodPrefixes)) return { key: r.key, usage: "used" as const };
+  if (r.usage === "dead" && isKeyDynamicallyCovered(r.key, allPrefixes)) return { key: r.key, usage: "test-only" as const };
+  return r;
+});
 const dyn = countDynamicKeySites(allCorpus);
 
 const dead = rows.filter((r) => r.usage === "dead").map((r) => r.key);

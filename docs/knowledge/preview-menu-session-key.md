@@ -32,7 +32,6 @@ auto_fields:
     - makeYsmModelSchemaId
     - mount3D
     - Mount3DOptions
-    - PoseScene
     - PreviewAdapter
     - PreviewBuildCtx
     - PreviewHandle
@@ -152,5 +151,5 @@ invariant_anchors:
 
 - `docs/knowledge/preview-panel-declarative.md`（ADR-126 P5 受控 schema）
 - `docs/knowledge/preview-state.md`（状态层与 cap 派生）
-- `docs/knowledge/mount-preview-module-singleton-race.md`（mount 单例竞态）
+- `docs/archive/mount-preview-module-singleton-race.md`（mount 单例竞态，已归档）
 - litematic 分层切片 `litematic-layer-controls.test.ts`（per-scene key 测试样板）

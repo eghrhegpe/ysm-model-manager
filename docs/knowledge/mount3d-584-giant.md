@@ -20,7 +20,6 @@ auto_fields:
     - invalidatePreview
     - mount3D
     - Mount3DOptions
-    - PoseScene
     - PreviewAdapter
     - PreviewBuildCtx
     - PreviewHandle
@@ -45,7 +44,7 @@ use_when:
 perf:
   - gpu-bound
 status: active
-last_verified: 2026-10-06
+last_verified: 2026-10-11
 ---
 
 # mount3D 巨函数拆分现状（2026-10-06 复核）
@@ -60,9 +59,9 @@ last_verified: 2026-10-06
 - `render-loop.ts` — rAF 全局循环 + perFrame 注册表
 - `wasd-camera.ts`/`unified-pick.ts`/`unload-model.ts`/`input-and-animation.ts`/`switch-preview.ts` — 分别承载 WASD/拾取/卸载/输入/会话切换
 
-「再拆 vs 维持」的结构性判定仍成立（闭包接线器无 stage 缝，强行外移需 15-20 参数 ctx 化，ROI 低），最重的生命周期函数已外置；**残余内嵌闭包仅剩 `escH`**（`mount-preview-core.ts|escH` 相关段——session 可变引用，与 `switchTo` 的旧 handler 替换语义耦合，见卡片 `preview-core` §不变量）与 animate/rAF 调度（`render-loop.ts` 持有的 perFrame 表）。旧文的「6 个内嵌闭包」「fullCleanup ~60 行内嵌」等表述已过时。
+「再拆 vs 维持」的结构性判定仍成立（闭包接线器无 stage 缝，强行外移需 15-20 参数 ctx 化，ROI 低），最重的生命周期函数已外置；**2026-10-11 复核更正：escH 已拆出 mount3D 本体**（注册在 stage 2 `buildInfra`，`switchTo` 后的替换语义在收尾 `commitSession`——两处均函数级、非内嵌闭包）；本体现在残存内嵌闭包 = **4 个 ctx 接线袋闭包**（`getInfra`/`getGen`/`getSwitchCtx`/`clearSingletons`，接线袋非业务逻辑）与 animate/rAF 调度（`render-loop.ts` 持有的 perFrame 表）。旧文的「6 个内嵌闭包」「fullCleanup ~60 行内嵌」「仅剩 escH」表述均已过时。
 
-**代际守卫**（并发安全核心）：代际计数器自 ADR-227 起由 `session-ledger.ts|sessionLedger`（`SessionLedgerHost` 实例）持有 / `mount3D` 入口 `sessionLedger.beginSession()` 分配代数 / 三处 `ctx.myGen !== ctx.getGen()` 守卫弃旧（与卡片 `mount-preview-module-singleton-race` 一致）。
+**代际守卫**（并发安全核心）：代际计数器自 ADR-227 起由 `session-ledger.ts|sessionLedger`（`SessionLedgerHost` 实例）持有 / `mount3D` 入口 `sessionLedger.beginSession()` 分配代数 / 三处 `ctx.myGen !== ctx.getGen()` 守卫弃旧（与归档卡 `docs/archive/mount-preview-module-singleton-race.md` 一致）。
 
 ---
 
@@ -98,7 +97,7 @@ last_verified: 2026-10-06
 ## 当前残留问题（2026-10-06 复核后实况）
 
 1. **mount3D 本体约百行（定性为合法装配器厚度，2026-10-09 锐评改口径）**：薄壳装配器——最重生命周期已外置（mount-session.ts），非巨函数状态。历史口径「仍超 100 行红线」对不可变事实反复批评、不产生行为变化，已改判为**装配器职责下的合法厚度**，不再计入红线违规；判据见下方「建议动作」。
-2. **内嵌闭包仅剩 `escH`**：`escH` 可变引用（与 `switchTo` 旧 handler 替换语义耦合）仍内嵌；`animate`/perFrame 调度由 `render-loop.ts` 持有
+2. **内嵌闭包仅剩 ctx 接线袋**（2026-10-11 复核）：escH 已随 stage 2 `buildInfra` 注册 / `commitSession` 替换语义拆出本体；本体现在残存 4 个 ctx 接线袋闭包（`getInfra`/`getGen`/`getSwitchCtx`/`clearSingletons`，非业务逻辑）；`animate`/perFrame 调度由 `render-loop.ts`/`render-host.ts` 持有
 3. **`animate` 调度已外置**：rAF loop + 自适应像素比 + perFrame 迭代 + 视锥裁剪 + 后处理由 `render-host.ts` 的 `RendererHost` 承载（`render-loop.ts` 现为薄门面，ADR-227）
 4. ~~**`fullCleanup` 内嵌**~~：已外置为 `mount-session.ts` 的 `runFullCleanup(ctx)`（MountCtx 上下文模式，10 步清理链语义保留）
 
@@ -112,7 +111,7 @@ last_verified: 2026-10-06
 ## 相关
 
 - 兄弟卡：`3d-oversize-file-codesplit-feasibility`（docs/archive，决策：当前不拆，P3 优先级）
-- 归档卡：`mount-preview-module-singleton-race`（_gen 并发竞态已闭环，卡已转 archived）
+- 归档卡：`mount-preview-module-singleton-race`（_gen 并发竞态已闭环，卡已于 2026-10-11 迁 `docs/archive/`，`status: archived` 与物理位置归一）
 - 统一核心：`preview-core`（ADR-066 D2 统一外壳已落地）
 - ADR-066 P3（收缴 vrm/litematic 复制脚手架）
 - ADR-076 v2（声明式根菜单，顶栏砍掉）

@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 203 张知识卡
+> 总计: 202 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -260,7 +260,7 @@
 - **workspace-exe-write-denied**（仓内二进制写用户目录被静默拒绝（代理沙箱按镜像位置拦截））：2026-09-27 排查「wails3 dev 下所有临时文件创建失败（Access is denied），但浏览功能全部正常」：实锤为 **AI 代理沙箱按 exe 镜像位置拦截**——可执行文件位于代理工作区（C:\Users\...…
 - **ysm-wasi**（WASI 解码器（wazero 内存直解，node 桥已退役））：2026-09-27 最小验证完成：**把 YSMParser 重编成 emscripten standalone（非真 WASI 目标）+ wazero 纯 Go 运行时内存直解，node 子进程桥可整条退役**。12 个真实 .ysm（…
 
-## rendering（21 张）
+## rendering（20 张）
 
 *3D 渲染与预览核心（preview-core、model2d/3d、perception、render-federation）*
 
@@ -273,7 +273,6 @@
 | 🍃 mc-ao-tint | MC 环境光遮蔽(AO) 权重 + biome 配色 参考实现 | leaf | cpu-bound | MC 方块模型 AO / 平滑光照, biome tint / 草叶水配色 / 4 类 tint, pack-model-adapter 材质升级后续（ADR-080）, 顶点色遮蔽权重 |
 | 🏗 model2d | 2D 预览渲染 model2d | architecture | cpu-bound | 2D 预览, 骨骼图, Canvas 渲染, 前视图, 骨骼热区, 鼠标拾取, 线框图 |
 | 🏗 model3d | 3D 预览渲染 model3d | architecture | memory-heavy, gpu-bound | 3D 渲染层, Three.js, 相机, 骨骼渲染, 自由相机, 3D 截图, 纹理加载, spec 兜底 |
-| 🍃 mount-preview-module-singleton-race | mount3D 并发竞态（已闭环 — _gen 代际守卫） | leaf | concurrent | mount3D 并发竞态（已闭环）, 评审模块级单例守卫（历史） |
 | 🍃 mount3d-584-giant | mount3D 巨函数拆分现状（2026-10-06 复核） | leaf | gpu-bound | 拆 mount3D 巨函数, 评审 mount-preview-core.ts |
 | 🍃 pack-gui-light | gui_light 语义与「死解析立牌」（pack 模型光照元数据） | leaf | — | 想把模型 JSON 的 gui_light / display / ambientocclusion 接进渲染或灯光, 查 pack 模型「声明了光照偏好却不生效」, 资源包模型预览光照 |
 | 🏗 perception | 3D 感知系统 perception | architecture | cpu-bound | 自主动画, 眨眼, 节拍检测, 模型感知 |
@@ -296,7 +295,6 @@
 - **ground-texture-gen**（程序化地面贴图生成 surface-pixels）：`caps/surface-pixels/` 是 ground 地面材质（plain / marble / sand / grass）的纯像素生成器目录，从 `ground-surface-spec.ts` 的 `generateSurfa…
 - **model2d**（2D 预览渲染 model2d）：Canvas 2D 渲染基岩版模型骨骼的线框/正交投影图（前视图 + 可选 Y 轴旋转），是预览面板的轻量视图；与 [model3d](./model3d.md) 共享同一套 Bedrock 几何口径。
 - **model3d**（3D 预览渲染 model3d）：`frontend/src/preview-3d/`（含 `adapters/ysm-model-preloader.ts`）构成 YSM/VRM/MMD/Litematic/FBX 等格式的 **3D 渲染层**——将 Go 端 spec…
-- **mount-preview-module-singleton-race**（mount3D 并发竞态（已闭环 — _gen 代际守卫））：**已闭环**。代际计数器（原 `mount-preview-core.ts` 模块级 `let _gen = 0`，ADR-227 后为 `session-ledger.ts` 的 `sessionLedger` 实例字段）在 `moun…
 - **mount3d-584-giant**（mount3D 巨函数拆分现状（2026-10-06 复核））：`mount3D` 是 3D 预览统一挂载入口：单例外壳复用（renderer/canvas/overlay/scene/camera/controls）+ 声明式根菜单装配（mountPreviewRootMenu）+ shared/se…
 - **pack-gui-light**（gui_light 语义与「死解析立牌」（pack 模型光照元数据））：Java 资源包模型 JSON 里的三个「光照/显示元数据」字段——`gui_light`、`display`、`ambientocclusion`——在本产品中解析后**有意不消费**（死解析）。本卡立牌：说清上游语义、为何不消费、以及若…
 - **preview-core**（统一 3D 预览核心 preview-core）：`frontend/src/preview-3d/adapters/mount-preview-core.ts` 是**所有富格式 3D 预览的单一事实外壳**——持有单实例 renderer / scene / camera / Orbi…
@@ -473,7 +471,7 @@
 | io-bound | IO 密集（批量读写/RPC/网络） | app-modules, app-sync-manager, backend-idb, community-feature, community-virtual-list, go-avatar, go-avatar-decode, go-dedup, go-download, go-fileops, go-fsutil, go-geometry, go-importer, go-installer, go-instance, go-logs, go-packs, go-recycle, go-repoaudit, go-scanner, go-sync, go-tags, go-updater, go-watcher, go-ysm-parser, import-queue, oldest-models, recycle-bin, version-updater |
 | cpu-bound | CPU 密集（解析/编译/解算/编码） | animation-system, app-content-diagnostics, bone-tools, community-virtual-list, go-threejs, ground-cap-materialgroup-factories, ground-surface-spec, ik-solver, mc-ao-tint, model-stats, model2d, perception, ysm-anim-pipeline, ysm-wasm |
 | gpu-bound | GPU/显存敏感（纹理/3D 渲染） | app-content-diagnostics, model3d, mount3d-584-giant, multi-model-select, preview-core, preview-env-state, preview-panel-declarative, render-federation, scene-capability-registry, utils-export |
-| concurrent | 多核并行（goroutine 池/Worker 池/pthread/Promise 竞速） | app-content-diagnostics, go-scanner, go-threejs, model-stats, mount-preview-module-singleton-race |
+| concurrent | 多核并行（goroutine 池/Worker 池/pthread/Promise 竞速） | app-content-diagnostics, go-scanner, go-threejs, model-stats |
 | single-thread | 单线程顺序执行（顺序流水线/串行队列） | go-avatar-decode, go-download, scripts-readme-index, ysm-wasm |
 | memory-heavy | 内存/显存大户（大缓冲/长驻缓存） | go-geometry, go-repoaudit, model3d, utils-export |
 

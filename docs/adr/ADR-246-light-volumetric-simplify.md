@@ -7,7 +7,7 @@
 > 另：`needComposer` 的 volumetric 分支随后随 [ADR-250](./ADR-250-cap-composer-sky.md)（composer 常驻）彻底失去意义。
 > **D1 其余项（删引擎抽象 / schema 字段 / 菜单下拉 / 持久化）与 D2、D3 依然有效**。
 
-- **状态**：🔄 部分采纳（D1 的 Bloom 联动门禁被 ADR-247 D1 取代；删空壳引擎主体与 D2/D3 有效）
+- **状态**：🔄 部分采纳（D1 的 Bloom 联动门禁被 ADR-247 D1 取代；删空壳引擎主体与 D2/D3 有效。**2026-10-11 探明复核：无开放切片**——空壳引擎已删（`infra/postprocessing.ts` 仅存 14 行 PostprocessingLike 契约）、体积光 5→3 语义滑块已落（`light-controls.ts` 经 `getParamRange` 挂 schema 键 + ratio 派生）、D3 可视化在场（`light-instances.ts` SpotLightHelper + `light-controls.ts` 折叠卡）；🔄 仅记录 D1 半句被取代的生命周期事实）
 - **日期**：2026-09-16
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/preview-3d/caps/light-capability.ts, frontend/src/preview-3d/caps/light-controls.ts, frontend/src/preview-3d/caps/light-cone.ts, frontend/src/preview-3d/state/env-state-schema.ts, ADR-081, ADR-177, ADR-196, ADR-247（取代 D1 的 Bloom 联动门禁）, ADR-250（composer 常驻使 needComposer 分支失去意义）`

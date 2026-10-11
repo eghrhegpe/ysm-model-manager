@@ -177,11 +177,6 @@ export interface SemanticScene extends BaseScene {
   semanticBones?: SemanticBoneMap | undefined;
 }
 
-/** 姿势应用能力（VPD 姿势，MMD 专属；无 = 该格式不支持） */
-export interface PoseScene extends BaseScene {
-  applyPose?(index: number): void;
-}
-
 /**
  * 内容场景契约（兼容别名，ADR-178 渐进迁移期保留）：
  * = BaseScene + 全部可选能力。存量 adapter 返回类型仍可标 PreviewScene；

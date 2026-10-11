@@ -35,7 +35,6 @@ const SHADOW_MAP_SIZE_OPTIONS: readonly number[] = [512, 1024, 2048, 4096];
 export function normalizeShadowMapSize(v: number, fallback: number): number {
   return SHADOW_MAP_SIZE_OPTIONS.includes(v) ? v : fallback;
 }
-export type ShadowType = (typeof SHADOW_TYPES)[number];
 
 export class ShadowCapability implements SceneCapability {
   readonly id = "shadow";

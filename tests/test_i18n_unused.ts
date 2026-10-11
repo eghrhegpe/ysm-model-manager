@@ -7,9 +7,11 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   classifyKeyUsage,
+  constructedKeyPrefixes,
   countDynamicKeySites,
   extractDottedTokens,
   groupByPrefix,
+  isKeyDynamicallyCovered,
   parseLocaleKeys,
 } from "../scripts/_lib/i18n-unused.ts";
 
@@ -177,6 +179,30 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
   assert.ok(tokens.size > 20, `锚点文件应抽出足量 token（实测 ${tokens.size}）`);
   assert.ok(tokens.has("preview.unloadModel"), "roles-views.ts 的 preview.unloadModel 应被抽出");
   console.log(`  ✓ 生产语料覆盖: 锚点文件抽出 ${tokens.size} token，含已知在用键`);
+}
+
+// ── 9. 构造式站点前缀覆盖（N6 动态假阳性豁免）──────────────
+// 背景：`t(\`preview.capStage.${stage}\`)` 这类构造式查表让真实在用的键
+//（preview.capStage.save / .load）不以字面量出现，静态判定误判 dead（i18n 死键
+// 13→15 的 2 增量即此，2026-10-11 探明 N6）。constructedKeyPrefixes 提取构造式
+// 站点的静态前缀，isKeyDynamicallyCovered 判定键是否落在前缀下——保守豁免，
+// 只把「误判死」的活键拉回，不新增死键误判。
+{
+  // biome-ignore lint/suspicious/noTemplateCurlyInString: 被测对象就是构造式模板串，字面量写法刻意
+  const tpl = "stage: t(`preview.capStage.${stage}`)";
+  const prefixes = constructedKeyPrefixes(tpl);
+  assert.ok(prefixes.has("preview.capStage."), "模板串构造式应抽出静态前缀（含尾点）");
+  assert.ok(isKeyDynamicallyCovered("preview.capStage.save", prefixes), "前缀下键应判动态覆盖");
+  assert.ok(isKeyDynamicallyCovered("preview.capStage.load", prefixes), "同前缀另一键同样覆盖");
+  assert.ok(!isKeyDynamicallyCovered("preview.close3d", prefixes), "前缀外键不得豁免");
+  assert.ok(!isKeyDynamicallyCovered("preview.capStage", prefixes), "前缀本体（非其子键）不得豁免");
+
+  // 字符串拼接形态：t("import." + x) → 前缀 import.（引号内须以点结尾）
+  const concatPrefixes = constructedKeyPrefixes('x = t("import." + k);');
+  assert.ok(concatPrefixes.has("import."), "字符串拼接形态应抽出引号内前缀");
+  // 无尾点 = 非键前缀，不抽（t("import") 是完整字面量键，不是构造式）
+  assert.equal(constructedKeyPrefixes('t("import")').size, 0, "无尾点不应抽出前缀");
+  console.log("  ✓ constructedKeyPrefixes/isKeyDynamicallyCovered: 构造式前缀覆盖豁免语义");
 }
 
 console.log("\n✅ test_i18n_unused.ts 全部通过");

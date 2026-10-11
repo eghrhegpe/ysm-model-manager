@@ -36,7 +36,6 @@ auto_fields:
     - mount3D
     - Mount3DOptions
     - normalizeFbxScale
-    - PoseScene
     - PreviewAdapter
     - PreviewBuildCtx
     - PreviewHandle

@@ -2242,10 +2242,6 @@ export const autoSidebar = [
             "link": "/knowledge/model3d"
           },
           {
-            "text": "mount3D 并发竞态（已闭环 — _gen 代际守卫）",
-            "link": "/knowledge/mount-preview-module-singleton-race"
-          },
-          {
             "text": "mount3D 巨函数拆分现状（2026-10-06 复核）",
             "link": "/knowledge/mount3d-584-giant"
           },

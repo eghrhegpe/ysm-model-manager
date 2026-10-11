@@ -42,7 +42,6 @@ auto_fields:
     - lightTypeOf
     - normalizeShadowMapSize
     - ShadowCapability
-    - ShadowType
     - spotDistanceAttenuation
     - sunVectorFromSpherical
     - volumetricTipFromRatio
@@ -76,7 +75,7 @@ invariant_anchors:
   - frontend/src/preview-3d/caps/light-math.test.ts|除零守卫
   - frontend/src/preview-3d/caps/shadow-capability.test.ts|脏档值回退
   - docs/adr/decisions/ADR-311-d1-mock.md|决策
-last_verified: 2026-10-09
+last_verified: 2026-10-11
 ---
 
 # 测试纪律：禁 mock 断言谓词 / 判别样本 / 变异探针
@@ -94,7 +93,10 @@ last_verified: 2026-10-09
 
 ## 核心职责
 
-- 拦截"mock 替身冒充真实现"的自证模式（`preview-3d` 116 处 `vi.mock` 全部已核：无自证，落在依赖边界）。
+- 拦截"mock 替身冒充真实现"的自证模式。核定口径（不变量，勿用「N 处已核」硬计数——计数随测试演化必腐）：
+  ① `vi.mock` 目标模块 ≠ 断言目标模块（mock 只许落在外部依赖 / 协作模块边界，见「不变量」）；
+  ② 核定是时点快照——2026-10-09 快照点 preview-3d 全部 `vi.mock` 实例经三机制核定无自证；
+  ③ **新增测试须随批按同口径复核**（实证：ADR-329 叶测试三处 mock = `three` / `env-pixels` / `scene-capability`，全落依赖边界，2026-10-11 补核定核通过；`sky-bake-pipeline.test.ts` 零 mock 纯夹具）。
 - 为新拆 / 新增模块补**叶层独立测试**（而非只经 cap 层白盒探针间接覆盖）——`EnvIbl` / `EnvHdrCache`
   即因拆分产生叶层直测缺口而补。
 - 用变异探针暴露测试盲区与实现冗余（见"不变量"的实证案例）。

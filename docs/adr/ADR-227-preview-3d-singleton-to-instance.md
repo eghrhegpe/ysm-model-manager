@@ -1,6 +1,6 @@
 # ADR-227：preview-3d 模块级单例收敛为实例（P1 战役）
 
-- **状态**：🔄 部分采纳（Partial）— 收敛范式与护栏采纳；`PreviewSession` 类实例化留作下一阶段方向
+- **状态**：🔄 部分采纳（Partial）— 收敛范式与护栏已落地（host 实例字段化 + ADR-233 状态机 + 代际守卫闭环，见知识卡 `mount3d-584-giant`）；`PreviewSession` 类实例化留作下一阶段方向（**触发条件**：出现真实多预览实例需求——多窗口 / 嵌入式预览 / 测试须强制隔离实例时立项；此前维持实例收敛终态，勿提前类化）
 - **日期**：2026-09-11
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/preview-3d/adapters/render-host.ts`；兄弟会话 A1(`625958fb8`) `createPerceptionPauseRef`；架构锐评 P1；方案 A（PreviewSession 类化）
@@ -46,4 +46,4 @@ P1 判定这是最严重结构病：① 不可能存在两个独立 3D 预览实
 - 架构锐评 P1 → 识别 4 文件 ~15 处模块级单例，判定为最严重结构病。
 - 兄弟会话 A1 (`625958fb8`) → `createPerceptionPauseRef` 工厂 + 必选参数范式先例（感知子系统）。
 - 约束边界依据：Three.js 官方「单 renderer 多 scene」推荐模式；浏览器 WebGL context 数量上限。
-- 实施进度与逐项落点见知识卡：`docs/knowledge/mount-preview-module-singleton-race.md`、`docs/knowledge/3d-patterns.md`（§10 并发防护模式）、`docs/knowledge/mount3d-584-giant.md`。
+- 实施进度与逐项落点见知识卡：`docs/archive/mount-preview-module-singleton-race.md`（已归档卡）、`docs/knowledge/3d-patterns.md`（§10 并发防护模式）、`docs/knowledge/mount3d-584-giant.md`。

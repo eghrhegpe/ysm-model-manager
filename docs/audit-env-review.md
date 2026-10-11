@@ -17,6 +17,7 @@
 
 > 这些是**仍未修**的项。修掉一项删一行；新增挂账须同时在此登记。
 > **2026-10-09 时效核验**（锐评收敛 `799ac4aa8` 基准，逐条对源码复核）：S5-2 维持挂账（`waterWetness` min 仍 0、无 hint，与 L-4「维持」决策一致）；S9-1 消费端钳制已落地、行已改述；G-2/G-7 已被否决、迁 §2 #21。其余各行未经锐评系列触及，未逐条复核。
+> **2026-10-11 全量技术债探明·逐行复核实证**（补上条「其余各行未复核」，HEAD `57ba82b2f`，子代理+主模型抽查）：S2-3/S2-5/E-1 三行改述（位置漂移/进 seam/前半已根治）、ground 僵尸门行改述（ADR-328 切片 C 已改名 `mounted` + 机器闸归零，「可随手清」判词作废）、L-4 删行（wetness hint 已落地+测试锁）；S2-6/S2-7/E-2/E-5/G-3/R-1 六行复核维持原判。
 
 ### UX（低优先级）
 
@@ -33,17 +34,17 @@
 
 | 编号 | 位置 | 问题 |
 |---|---|---|
-| S2-3 | `sky-capability.ts` `assertRevisionRange` | shader 锚点/版本号硬编码——守卫已到位，属**可控**硬编码 |
-| S2-5 | `env.ts` 预设 select 的 `get` | 每次求值调 `sceneCapabilityRegistry.getById("environment")`（逐字复核仍在 `select.get` 内） |
+| S2-3 | `shader-patches/patch-guard.ts` `assertRevisionRange`（2026-10-11 改述：原挂 `sky-capability.ts`，守卫已中心化——调用点 3 处 = `sky-patch.ts`（allowed ["186"]）/`reflector-capability.ts`（["185","186"]）/`water-shader.ts`（[185-189]）） | shader 锚点/版本号硬编码——守卫已到位，属**可控**硬编码（原「位置列」过期，行已改述） |
+| S2-5 | `menu/panels/env.ts` 预设 select 的 `get`（2026-10-11 改述：直接 `getById` 调用点已消失，重构进 `ctx.getCapByPanelId ?? ctx.getCap` seam，落点 `adapters/mount-shell.ts`） | 每次求值仍触发 registry lookup（特性未变，只是调用形态变了）；判不修维持 |
 | S2-6 | `slide-menu.ts` `refresh` | N cap 订阅 → N 次 `renderTop` **无 rAF 合批**（与 §2/§13 同源，均判不修） |
 | S2-7 | sky 持久化接缝 | 设计判断，维持 |
-| E-1 | `environment-capability.ts` `applyEnvIntensity` | 滑杆逐帧 → `mat.needsUpdate = true`；`syncMeshIntensity` 已存在但**回调仍传 `[this.scene]`**，「复用 roots」未落地 |
+| E-1 | `environment-capability.ts` `applyEnvIntensity` | （2026-10-11 改述：前半「滑杆逐帧 `mat.needsUpdate = true` 重编译风暴」**已根治**——2026-10-11 锐评 P0-② 收口，three r186 逐帧刷 uniform、needsUpdate 等价 version++，`applyEnvIntensity` 实现已无 needsUpdate 置位（文件头注释钉死）；**余项仍开放** = `syncMeshIntensity` 已存在但滑杆通路回调仍传 `[this.scene]`，「复用 roots」未落地） |
 | E-2 | `buildEnvironment` | 同 spec 重写也全量 PMREM 重建（仅 sky 通路有同引用短路） |
 | E-5 | — | 观察项，维持 |
 | G-3 | `env-state-schema.ts` | `groundSize` default 80 与 `waterSize` default 80 的对齐**靠命名巧合，无机制断言** |
 | R-1 | `reflector-capability.ts` `setClipBias` | schema 键 + 持久化齐全，但 `reflector-menu.ts` **无 UI 出口** |
-| L-2 / L-4 / L-5 | §20 登记 | 水面三项：一名三拍改名成本 > 收益 / L-4（= S5-2、S5-3）中 **S5-2 已 2026-10-10 批修（wetness hint）**、S5-3 标不修 / L-5 观察项 |
-| — | `ground-capability.ts` 私有 `enabled` | 「僵尸门」：无 UI 写口、生产恒 `true`。**无行为收益，可随手清**；`56300e506` 查证背书，定性维持 |
+| L-2 / L-5 | §20 登记 | 水面两项：一名三拍改名成本 > 收益 / L-5 观察项（L-4 = S5-2 已 2026-10-10 批修落地 + `water-capability.test.ts` 测试锁，行删） |
+| — | `ground-capability.ts` 私有 `mounted`（原 `enabled`，2026-10-11 改述） | 「僵尸门」：无 UI 写口、生产恒 `true`。已按 **ADR-328 切片 C**（`a7511002a`）改名 `enabled`→`mounted` 与用户能力开关语义区分 + `check-cap-enabled-duality` 归零；**原「可随手清」判词作废**——ADR-328 实测路径 A 不可行，根治（并入 schema / 降级常量）待 ADR-328 拍板 |
 
 ## §2 已被推翻的判定清单
 

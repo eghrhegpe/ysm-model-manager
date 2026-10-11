@@ -172,6 +172,7 @@ function mapFatalfMsg(fmtRaw: string): string | null {
 function findSites(rel: string, src: string): Site[] {
   const lines = src.split("\n");
   const sites: Site[] = [];
+  // ---- 形态 A/B：`if X != nil {` 3 行规整块（无 init、块内唯一语句）----
   for (let i = 0; i < lines.length; i++) {
     const m = lines[i]!.match(/^([\t ]+)if (\w+) != nil \{$/);
     if (!m) continue;
@@ -206,7 +207,62 @@ function findSites(rel: string, src: string): Site[] {
       after,
     });
   }
+  // ---- 形态 C：`if [init;] X != nil {` 块内（任意深度）独立成行、与头 nil 变量同名
+  //      的 t.Fatal(X) / 规整 t.Fatalf(fmt, X)。只换块内行，保留 if 结构——
+  //      init-statement / else / 多语句块通吃，语义严格等价。----
+  for (let i = 0; i < lines.length; i++) {
+    const stripped = stripLine(lines[i]!);
+    // 宽松头：`if [任意条件] <var> != nil {`（兼容 init 头 `if err := f(); err != nil {`、
+    // 多条件；末尾 `(\w+) != nil` 的变量即被检查对象，块内 Fatal 须与其同名才换）
+    const h = stripped.match(/^([\t ]+)if\s+[\s\S]*?(\w+)\s*!=\s*nil\s*\{$/);
+    if (!h) continue;
+    const indent = h[1]!;
+    const nilVar = h[2]!;
+    const hasInit = /;\s*\w+\s*!=\s*nil\s*\{$/.test(stripped);
+    // 跳过形态 A/B 已覆盖的「无 init + 块内唯一语句」3 行块（防重复）
+    if (!hasInit) {
+      const b1 = lines[i + 1];
+      const c1 = lines[i + 2];
+      const singleFatal = b1 && c1 && c1.trim() === "}" && c1.slice(0, indent.length) === indent &&
+        new RegExp(`^${escapeRe(indent)}\\t(\\w+)\\.Fatal\\(${escapeRe(nilVar)}\\)\\s*$`).test(b1);
+      const singleFatalf = b1 && c1 && c1.trim() === "}" && c1.slice(0, indent.length) === indent &&
+        new RegExp(`^${escapeRe(indent)}\\t(\\w+)\\.Fatalf\\("`).test(b1);
+      if (singleFatal || singleFatalf) continue;
+    }
+    // 花括号平衡扫描块内（i+1 起，depth 归 0 为止）
+    let depth = 1;
+    for (let k = i + 1; k < lines.length; k++) {
+      const raw = lines[k]!;
+      const f = raw.match(new RegExp(`^(\\s*)(\\w+)\\.Fatal\\(${escapeRe(nilVar)}\\)\\s*$`));
+      const ff = raw.match(new RegExp(`^(\\s*)(\\w+)\\.Fatalf\\("((?:[^"\\\\]|\\\\.)*)"\\s*,\\s*${escapeRe(nilVar)}\\)\\s*$`));
+      let after: string | null = null;
+      if (f) {
+        const recv = f[2]!;
+        if (tIsConcreteT(lines, k)) after = `${f[1]!}testutil.NoError(${recv}, ${nilVar})`;
+      } else if (ff) {
+        const recv = ff[2]!;
+        const msg = mapFatalfMsg(ff[3]!);
+        if (msg !== null && tIsConcreteT(lines, k)) after = `${ff[1]!}testutil.NoError(${recv}, ${nilVar}, ${msg})`;
+      }
+      if (after !== null) {
+        sites.push({
+          file: rel,
+          line: k + 1,
+          fn: enclosingFunc(lines, k),
+          before: [raw],
+          after,
+        });
+      }
+      depth += (stripLine(raw).match(/{/g) || []).length - (stripLine(raw).match(/}/g) || []).length;
+      if (depth <= 0) break;
+    }
+  }
   return sites;
+}
+
+/** 去字符串/注释后的行（供 if 头与花括号判定用） */
+function stripLine(line: string): string {
+  return line.replace(/"(?:\\.|[^"\\])*"/g, '""').replace(/`[^`]*`/g, "``").replace(/\/\/.*$/, "");
 }
 
 function escapeRe(s: string) {
@@ -227,10 +283,12 @@ function applyFile(rel: string, sites: Site[], imp: string): { applied: number }
   const byLine = sites.slice().sort((a, b) => b.line - a.line);
   for (const s of byLine) {
     const idx = s.line - 1;
-    // 校验现场未变（防并发会话改同一文件）
-    if (lines[idx] !== s.before[0] || lines[idx + 1] !== s.before[1] || lines[idx + 2] !== s.before[2]) continue;
-    lines[idx] = s.after;
-    lines.splice(idx + 1, 2);
+    // 校验现场未变（防并发会话改同一文件）；before 长度=站点原始行数（A/B=3 行，C=1 行）
+    const n = s.before.length;
+    let ok = true;
+    for (let k = 0; k < n; k++) if (lines[idx + k] !== s.before[k]) { ok = false; break; }
+    if (!ok) continue;
+    lines.splice(idx, n, s.after);
   }
   src = lines.join("\n");
   src = ensureImport(src, imp);

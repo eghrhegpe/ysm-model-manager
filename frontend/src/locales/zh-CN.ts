@@ -1102,6 +1102,10 @@ export const zhCN = {
   "preview.groupEnv": "环境",
   "preview.groupScene": "场景",
   "preview.groupSettings": "设置",
+  // WebGL context lost/restored 守卫（preview-3d/infra/webgl-context-guard.ts）
+  "preview.webglContextLost":
+    "3D 渲染上下文已丢失，正在等待浏览器恢复（可能因 GPU 进程重置或驱动切换）",
+  "preview.webglContextRestored": "3D 渲染上下文已恢复",
   // 3D 面板渲染错误边界 + 材质显隐 eye 按钮（preview-menu core/render/roles）
   "preview.renderFail": "面板渲染失败",
   "preview.eyeHide": "隐藏",

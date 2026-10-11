@@ -54,11 +54,20 @@ export function getFrameIntervalMs(): number {
 const ADAPTIVE_SAMPLE_FRAMES = 30;
 const SLOW_FRAME_MS = 22;
 const MIN_PIXEL_RATIO = 0.75;
+/** 回升滞回：连续多少个「健康采样窗口」（每窗 30 帧 ≈ 1.5s）才回升一档。
+ *  防抖语义与降档的「单窗口立即降」互补：降档要快（护帧率），回升要慢（防边缘抖动）。
+ *  0.75 → 1.5 全程回升需 (1.5-0.75)/0.25 × 3 ≈ 9 个窗口 ≈ 4.5s 稳定健康。 */
+const RECOVER_WINDOWS = 3;
 
 export interface AdaptiveRenderBudget {
   pixelRatio: number;
+  /** 创建时的初始像素比（= previewPixelRatio(devicePixelRatio)）——回升上限。
+   *  降档可到底板 MIN_PIXEL_RATIO；回升**不可越过初值**（不升超用户 DPR 上限）。 */
+  initialPixelRatio: number;
   sampleStart: number;
   sampleFrames: number;
+  /** 连续健康采样窗口计数（跌破即复位 0）——回升滞回的判据状态（锐评 2026-10-11 P1）。 */
+  healthyWindows: number;
 }
 
 export function previewPixelRatio(devicePixelRatio: number): number {
@@ -67,7 +76,13 @@ export function previewPixelRatio(devicePixelRatio: number): number {
 }
 
 export function createAdaptiveRenderBudget(pixelRatio: number, now: number): AdaptiveRenderBudget {
-  return { pixelRatio, sampleStart: now, sampleFrames: 0 };
+  return {
+    pixelRatio,
+    initialPixelRatio: pixelRatio,
+    sampleStart: now,
+    sampleFrames: 0,
+    healthyWindows: 0,
+  };
 }
 
 /** GPU 饱和软线 = 拦截硬顶的 50%。两者用途不同：
@@ -100,14 +115,23 @@ function isGpuSaturated(gpu: Pick<GpuLoadSample, "drawCalls" | "triangles">): bo
  *  帧间隔 ~33ms > SLOW_FRAME_MS(22ms)，采样器会把用户强制节流误判为慢机器而
  *  降级到 0.75 地板——阈值为 max(SLOW_FRAME_MS, capInterval) 不降级）。
  *
- *  gpu = GPU 负载采样（可选，2026 锐评 P2）：CPU 帧时是「提交速度」代理指标，
- *  GPU 已排队时主线程仍可能 16ms 完成提交——单看帧时会漏掉 GPU 饱和。
- *  传入后 GPU 高位即使帧时正常也降一档（预防性，见 isGpuSaturated 语义边界）。 */
+ *  gpu = GPU 负载采样函数（可选，2026 锐评 P2 / 2026-10-11 惰性化）：GPU 已排队时
+ *  主线程仍可能 16ms 完成提交——单看帧时会漏掉 GPU 饱和。传入后 GPU 高位即使帧时
+ *  正常也降一档（预防性，见 isGpuSaturated 语义边界）。
+ *  ⚠️ 惰性化（锐评 2026-10-11 P1）：gpu 由「每帧构造对象」改为「仅窗口结算帧调用
+ *  的采样函数」——ADAPTIVE_SAMPLE_FRAMES(30) 帧里只有 1 帧消费采样结果，其余 29 帧
+ *  构造对象是白造的。调用方传同一函数引用（render-host 实例字段），rAF 热路径零分配。
+ *
+ *  回升（锐评 2026-10-11 P1 新增）：降档是单向不可逆的旧行为——GPU 压力消失后
+ *  像素比永不回升，用户「越看越糊且不可感知」。现为双向：窗口结算时健康（不慢帧
+ *  且 GPU 不饱和）累计 healthyWindows，连续 RECOVER_WINDOWS 个窗口才 +0.25 回升一档，
+ *  上限 initialPixelRatio（创建时初值）；慢帧/GPU 高位任一命中即复位计数并降档。
+ *  回升慢、降档快 = 滞回设计，防边缘抖动乒乓。 */
 export function sampleAdaptivePixelRatio(
   budget: AdaptiveRenderBudget,
   now: number,
   capIntervalMs = 0,
-  gpu?: Pick<GpuLoadSample, "drawCalls" | "triangles">,
+  gpu?: () => Pick<GpuLoadSample, "drawCalls" | "triangles"> | undefined,
 ): number | null {
   budget.sampleFrames++;
   if (budget.sampleFrames < ADAPTIVE_SAMPLE_FRAMES) return null;
@@ -116,10 +140,25 @@ export function sampleAdaptivePixelRatio(
   budget.sampleFrames = 0;
   const threshold = Math.max(SLOW_FRAME_MS, capIntervalMs || 0);
   const slowFrame = averageFrameMs > threshold;
-  const gpuHigh = gpu !== undefined && isGpuSaturated(gpu);
-  if ((!slowFrame && !gpuHigh) || budget.pixelRatio <= MIN_PIXEL_RATIO) return null;
-  budget.pixelRatio = Math.max(MIN_PIXEL_RATIO, budget.pixelRatio - 0.25);
-  return budget.pixelRatio;
+  // 惰性：仅窗口结算帧才调用采样函数（其余帧零调用零分配）
+  const gpuSample = gpu?.();
+  const gpuHigh = gpuSample !== undefined && isGpuSaturated(gpuSample);
+  const degraded = slowFrame || gpuHigh;
+  if (degraded) {
+    // 降档分支（原行为）：复位回升计数——健康连续性被打破
+    budget.healthyWindows = 0;
+    if (budget.pixelRatio <= MIN_PIXEL_RATIO) return null;
+    budget.pixelRatio = Math.max(MIN_PIXEL_RATIO, budget.pixelRatio - 0.25);
+    return budget.pixelRatio;
+  }
+  // 健康窗口：累计；连续满档且未回满初值才回升一档（滞回防抖）
+  budget.healthyWindows++;
+  if (budget.healthyWindows >= RECOVER_WINDOWS && budget.pixelRatio < budget.initialPixelRatio) {
+    budget.healthyWindows = 0;
+    budget.pixelRatio = Math.min(budget.initialPixelRatio, budget.pixelRatio + 0.25);
+    return budget.pixelRatio;
+  }
+  return null;
 }
 
 export function shouldRenderPreviewFrame(now: number, nextFrame: number, hidden: boolean): boolean {

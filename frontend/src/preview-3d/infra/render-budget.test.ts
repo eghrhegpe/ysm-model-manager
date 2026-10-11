@@ -97,7 +97,7 @@ describe("sampleAdaptivePixelRatio GPU 饱和反压", () => {
     localStorage.removeItem(GPU_BUDGET_CALIBRATION_KEY);
   });
 
-  /** 驱动 N 帧（每 30 帧一次采样窗口），返回本轮所有降级结果 */
+  /** 驱动 N 帧（每 30 帧一次采样窗口），返回本轮所有降级/回升结果 */
   const drive = (
     budget: ReturnType<typeof createAdaptiveRenderBudget>,
     frames: number,
@@ -107,7 +107,7 @@ describe("sampleAdaptivePixelRatio GPU 饱和反压", () => {
     let now = 0;
     for (let i = 0; i < frames; i++) {
       now += HEALTHY_FRAME_MS;
-      const r = sampleAdaptivePixelRatio(budget, now, 0, gpu);
+      const r = sampleAdaptivePixelRatio(budget, now, 0, () => gpu);
       if (r !== null) results.push(r);
     }
     return results;
@@ -153,7 +153,10 @@ describe("sampleAdaptivePixelRatio GPU 饱和反压", () => {
     const budget = createAdaptiveRenderBudget(1.5, 0);
     let changed: number | null = null;
     for (let frame = 1; frame <= 30; frame++) {
-      changed = sampleAdaptivePixelRatio(budget, frame * 33, 33, { drawCalls: 900, triangles: 0 });
+      changed = sampleAdaptivePixelRatio(budget, frame * 33, 33, () => ({
+        drawCalls: 900,
+        triangles: 0,
+      }));
     }
     expect(changed).toBe(1.25);
   });
@@ -167,5 +170,88 @@ describe("sampleAdaptivePixelRatio GPU 饱和反压", () => {
     const after = createAdaptiveRenderBudget(1.5, 0);
     expect(drive(after, 30, { drawCalls: 900, triangles: 0 })).toEqual([]);
     expect(after.pixelRatio).toBe(1.5);
+  });
+});
+
+// ===== P1：自适应像素比回升（锐评 2026-10-11）=====
+// 病症：降档是单向不可逆的——GPU 压力消失后像素比永不回升，用户「越看越糊」。
+// 现为双向：连满 RECOVER_WINDOWS(3) 个健康窗口才 +0.25 回升一档，上限创建时初值。
+// 设计：降档快（单窗口立即降）回升慢（3 窗 ≈ 4.5s）——滞回防抖，边缘不乒乓。
+describe("sampleAdaptivePixelRatio 回升（锐评 2026-10-11 P1）", () => {
+  const HEALTHY_FRAME_MS = 16.7;
+
+  beforeEach(() => {
+    localStorage.removeItem(GPU_BUDGET_CALIBRATION_KEY);
+  });
+
+  const drive = (
+    budget: ReturnType<typeof createAdaptiveRenderBudget>,
+    frames: number,
+    gpu?: { drawCalls: number; triangles: number },
+  ): (number | null)[] => {
+    const results: (number | null)[] = [];
+    let now = 0;
+    for (let i = 0; i < frames; i++) {
+      now += HEALTHY_FRAME_MS;
+      const r = sampleAdaptivePixelRatio(budget, now, 0, () => gpu);
+      if (r !== null) results.push(r);
+    }
+    return results;
+  };
+
+  it("GPU 高位降一档 → 恢复低位连续 3 个健康窗口后回升一档", () => {
+    const budget = createAdaptiveRenderBudget(1.5, 0);
+    // 第 1 个窗口：GPU 高位 → 降 1.25
+    expect(drive(budget, 30, { drawCalls: 900, triangles: 0 })).toEqual([1.25]);
+    expect(budget.pixelRatio).toBe(1.25);
+    // 健康 2 个窗口（60 帧）：回升计数未达 3，保持 1.25
+    expect(drive(budget, 60)).toEqual([]);
+    expect(budget.pixelRatio).toBe(1.25);
+    // 第 3 个健康窗口：回升 +0.25 → 1.5（回初值）
+    expect(drive(budget, 30)).toEqual([1.5]);
+    expect(budget.pixelRatio).toBe(1.5);
+  });
+
+  it("回升不超过创建时初值（不升超用户 DPR 上限）", () => {
+    const budget = createAdaptiveRenderBudget(1.0, 0);
+    // 降到 0.75
+    expect(drive(budget, 30, { drawCalls: 900, triangles: 0 })).toEqual([0.75]);
+    // 连续 6 个健康窗口：0.75→1.0（clamp 初值）后停，不再越升
+    expect(drive(budget, 180)).toEqual([1.0]);
+    expect(budget.pixelRatio).toBe(1.0);
+    // 继续健康：已达初值，不再有回升事件
+    expect(drive(budget, 90)).toEqual([]);
+    expect(budget.pixelRatio).toBe(1.0);
+  });
+
+  it("回升计数被降档打断：健康 2 窗后 GPU 再高位 → 计数复位，需重新 3 窗", () => {
+    const budget = createAdaptiveRenderBudget(1.5, 0);
+    expect(drive(budget, 30, { drawCalls: 900, triangles: 0 })).toEqual([1.25]);
+    // 健康 2 窗（计数到 2）
+    expect(drive(budget, 60)).toEqual([]);
+    // 再高位 1 窗 → 降 1.0 且 healthyWindows 复位
+    expect(drive(budget, 30, { drawCalls: 900, triangles: 0 })).toEqual([1.0]);
+    // 健康 3 窗才回升（计数从 0 重新累计）
+    expect(drive(budget, 60)).toEqual([]);
+    expect(drive(budget, 30)).toEqual([1.25]);
+    expect(budget.pixelRatio).toBe(1.25);
+  });
+
+  it("未降档的健康会话（初值即满）不产生回升事件（与旧行为一致）", () => {
+    const budget = createAdaptiveRenderBudget(1.5, 0);
+    expect(drive(budget, 300)).toEqual([]);
+    expect(budget.pixelRatio).toBe(1.5);
+  });
+
+  it("慢帧降档同样参与回升链（GPU 与 CPU 两路对称）", () => {
+    const budget = createAdaptiveRenderBudget(1.5, 0);
+    // 用慢帧触发降档（不带 gpu，纯 CPU 路）：34ms 帧间隔 > 22ms 阈值
+    let changed: number | null = null;
+    for (let frame = 1; frame <= 30; frame++) {
+      changed = sampleAdaptivePixelRatio(budget, frame * 34);
+    }
+    expect(changed).toBe(1.25);
+    // 恢复健康帧时 → 3 窗回升
+    expect(drive(budget, 90)).toEqual([1.5]);
   });
 });

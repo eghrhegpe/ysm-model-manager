@@ -149,6 +149,7 @@ pitfalls:
 ## 不变量
 
 - **外壳单例**：renderer/scene/camera/controls/rAF 循环全局唯一，`clearSingletons()` 只在 `runFullCleanup` 完整关闭时调用——`runFailedMountCleanup` / `switchTo` 不动单例
+- **renderer 终局守卫（锐评 2026-10-11 P2 落地）**：`SceneInfraHost.webGlContextGuard`（`preview-3d/infra/webgl-context-guard.ts`）随 renderer 单例创建安装 lost/restored 监听、teardown 时 **uninstall 先于 forceContextLoss**（forceContextLoss 触发 lost 事件，守卫未摘会误发「等待恢复」toast）。守卫生命周期绑定 renderer 而非 session——**勿挂 mount-session 清理**（renderer 跨 session 复用，摘了下次 context lost 静默黑场复发）
 - **escH 可变引用**：switchTo 后旧 handler 被替换，cleanup 必须按**当前引用** remove；移除顺序必须先 save 旧引用再替换，否则移新函数（从未注册）旧函数仍残留
 - **escH 解绑三档统一**（刀⑰）：`teardown` 的 `early`/`failed`/`full` 三档在共用区首段统一解绑 escH，**调用方不再各自补**——escH 闭包捕获整个 `ctx`，任一档漏解绑即跨会话泄漏 + 会话已拆但 ESC 仍触发陈旧 handler；曾由 `recoverMountFailure` 手动补（责任错配），新增 failed 调用点易忘。回归守卫见 `mount-preview-core.test.ts`（直数 document 监听器存活数）
 - **能力注册表 `saveAll/dispose` 只在 `runFullCleanup`**——build 失败路径不清（可能共享）；`evictZeroRefIfNeeded` 只淘汰 `refs===0` 条目，已 dispose 纹理禁止再次 dispose（LRU 失效）

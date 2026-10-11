@@ -10,6 +10,7 @@
 // 签名零变更，消费方（mount-preview-core/mount-session/render-host/测试）零改动。
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { t } from "@/core/i18n/t.ts";
 import type { EnvironmentCapability } from "@/preview-3d/caps/environment-capability.ts";
 import type { FogCapability } from "@/preview-3d/caps/fog-capability.ts";
 import type { LightCapability } from "@/preview-3d/caps/light-capability.ts";
@@ -25,11 +26,16 @@ import {
 import type { PostprocessingLike } from "@/preview-3d/infra/postprocessing.ts";
 import { previewPixelRatio } from "@/preview-3d/infra/render-budget.ts";
 import { setSceneCapRegistry, setSceneCapsProvider } from "@/preview-3d/infra/render-host.ts";
+import {
+  installWebGlContextGuard,
+  type WebGlContextGuard,
+} from "@/preview-3d/infra/webgl-context-guard.ts";
 import type { PreviewMenuHandle } from "@/preview-3d/menu/engine/core.ts";
 import { type ModelType, toModelType } from "@/preview-3d/state/model-defaults.ts";
 import { applyPerfPreset, getPerfPreset } from "@/preview-3d/state/perf-presets.ts";
 // [ADR-168] 状态层 cap 查询器注入：组合根 createAll 后注入 registry，断 preview-state→registry 运行时环
 import { setSceneCapabilityLookup } from "@/preview-3d/state/preview-state.ts";
+import { toast } from "@/utils/dom/toast.ts";
 import type { PreviewAdapter } from "./mount-preview-core.ts";
 
 /**
@@ -127,6 +133,9 @@ export class SceneInfraHost {
   caps: SceneCapability[] = [];
   /** unload 钩子是否已安装（惰性一次性，首次 buildSharedInfra 时注册） */
   unloadHookInstalled = false;
+  /** WebGL context lost/restored 守卫句柄（renderer 单例生命周期内安装一次，
+   *  teardown 时 uninstall——锐评 2026-10-11 P2） */
+  webGlContextGuard: WebGlContextGuard | null = null;
 
   /** 置空场景级单例（cleanupPreview / _resetSingletons 调用）。
    *  P0 修复①：归零前主动遍历 scene 树释放 geometry/material GPU 资源——否则后续 session
@@ -184,6 +193,10 @@ export class SceneInfraHost {
     this.camera = null;
     if (this.renderer) {
       const r = this.renderer;
+      // 终局拆除：先摘 context 守卫再 forceContextLoss（forceContextLoss 会触发
+      // contextlost 事件——若守卫仍挂着会误发「正在等待恢复」toast，uninstall 先行）
+      this.webGlContextGuard?.uninstall();
+      this.webGlContextGuard = null;
       r.dispose();
       r.forceContextLoss?.();
       r.domElement.remove();
@@ -300,6 +313,13 @@ export function buildSharedInfra(
     sceneInfraHost.renderer.setPixelRatio(previewPixelRatio(window.devicePixelRatio));
     sceneInfraHost.renderer.domElement.style.touchAction = "none";
     viewContainer.appendChild(sceneInfraHost.renderer.domElement);
+    // [锐评 2026-10-11 P2] context lost/restored 守卫：renderer 单例生命周期内安装一次
+    //（跨 session 复用——勿挂 session 清理）。lost 时 toast 明示「GPU 被重置、等待恢复」，
+    // 恢复后 toast 提示；不接管恢复本身（浏览器 + three 内部完成）。
+    sceneInfraHost.webGlContextGuard = installWebGlContextGuard(sceneInfraHost.renderer, {
+      onLost: () => toast(t("preview.webglContextLost"), 4000, "warn"),
+      onRestored: () => toast(t("preview.webglContextRestored"), 3000, "success"),
+    });
   } else {
     // [P0 联动·P2 修复] renderer 跨 session 复用，须每次重新对齐像素比与画布尺寸——
     // 否则自适应降采样把 pixelRatio 钉在低档后，关预览→再开仍停低分辨率（render-host

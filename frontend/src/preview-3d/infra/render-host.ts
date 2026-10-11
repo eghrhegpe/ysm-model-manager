@@ -21,6 +21,7 @@ import {
   markCullMatricesDirty,
   restoreModelGroupsVisible,
 } from "./frustum-cull.ts";
+import type { GpuLoadSample } from "./gpu-load.ts";
 import { sampleGpuLoad } from "./gpu-load.ts";
 import type { TdKeyAction } from "./keymap.ts";
 import {
@@ -58,6 +59,10 @@ export interface ActiveInputSession {
 const PER_FRAME_WARN_MS = 50;
 /** 告警节流间隔：持续超阈值帧最多每 N ms 报一条，防刷屏加重卡顿 */
 const PER_FRAME_WARN_THROTTLE_MS = 5000;
+
+/** caps 提供器未注入时的空集（锐评 2026-10-11 P3）：原 `_capsProvider ? _capsProvider() : []`
+ *  在未注入分支每帧 new 空数组，与「rAF 热路径零分配」自我契约相悖。 */
+const NO_CAPS: readonly SceneCapability[] = [];
 
 /**
  * 渲染宿主：持有单 rAF loop 的全部可变状态（原 render-loop.ts 模块级 let 集群）。
@@ -126,6 +131,13 @@ export class RendererHost {
   private readonly _forward = new THREE.Vector3();
   private readonly _right = new THREE.Vector3();
   private readonly _move = new THREE.Vector3();
+
+  /** 惰性 GPU 负载采样（锐评 2026-10-11 P1）：sampler 只读 renderer.info（无副作用），
+   *  经 sampleAdaptivePixelRatio 传引用、仅在窗口结算帧调用——rAF 热路径零对象分配。 */
+  private readonly _sampleGpuLoad = (): Pick<GpuLoadSample, "drawCalls" | "triangles"> => {
+    const infra = this._infra;
+    return infra ? sampleGpuLoad(infra.renderer) : { drawCalls: 0, triangles: 0 };
+  };
 
   /** 注册活跃输入会话（build 成功后调用；重复注册同一引用为 no-op） */
   setActiveInputSession(s: ActiveInputSession): void {
@@ -266,7 +278,7 @@ export class RendererHost {
     const dt = Math.min((now - this._lastTime) / 1000, 0.1);
     this._lastTime = now;
     // 推进逐帧动态效果（水面波纹/弹簧骨骼等；能力自行决定是否需要更新）
-    for (const c of _capsProvider ? _capsProvider() : []) c.update?.(dt);
+    for (const c of _capsProvider ? _capsProvider() : NO_CAPS) c.update?.(dt);
     // 每帧从动态活跃输入会话读取 keys/camSpeed/orbitMode，不再闭包捕获首个 session
     const activeInput = this._activeInputSession;
     if (activeInput) {
@@ -323,9 +335,10 @@ export class RendererHost {
       this._adaptiveBudget,
       now,
       interval,
-      // 单看 CPU 帧时会漏掉「主线程提交快、GPU 已排队」
-      // 的饱和态；传入后 GPU 高位即使帧时正常也预防性降一档（读 info 无副作用）。
-      sampleGpuLoad(infra.renderer),
+      // 惰性 GPU 采样（锐评 2026-10-11 P1）：sampler 只在窗口结算帧消费 gpu，
+      // 其余 29 帧构造 GpuLoadSample 是白造。传「引用同一函数」而非每帧闭包/对象，
+      // rAF 热路径零分配。读 renderer.info 无副作用（gpu-load.ts 头部注释）。
+      this._sampleGpuLoad,
     );
     if (nextPixelRatio !== null) {
       infra.renderer.setPixelRatio(nextPixelRatio);

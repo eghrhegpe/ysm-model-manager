@@ -1132,6 +1132,10 @@ export const en: Record<string, string> = {
   "preview.groupEnv": "Environment",
   "preview.groupScene": "Scene",
   "preview.groupSettings": "Settings",
+  // WebGL context lost/restored guard (preview-3d/infra/webgl-context-guard.ts)
+  "preview.webglContextLost":
+    "3D rendering context lost; waiting for the browser to restore (GPU process reset or driver switch?)",
+  "preview.webglContextRestored": "3D rendering context restored",
   // 3D panel render error boundary + material visibility eye button
   "preview.renderFail": "Panel render failed",
   "preview.eyeHide": "Hide",

@@ -1133,6 +1133,10 @@ export const ja: Record<string, string> = {
   "preview.groupEnv": "環境",
   "preview.groupScene": "シーン",
   "preview.groupSettings": "設定",
+  // WebGL コンテキスト lost/restored ガード（preview-3d/infra/webgl-context-guard.ts）
+  "preview.webglContextLost":
+    "3D レンダリングコンテキストが失われました。ブラウザの復元を待機中（GPU プロセス再起動またはドライバー切替の可能性）",
+  "preview.webglContextRestored": "3D レンダリングコンテキストが復元されました",
   // 3D パネル描画エラー境界 + マテリアル表示 eye ボタン（preview-menu core/render/roles）
   "preview.renderFail": "パネル描画に失敗",
   "preview.eyeHide": "非表示",

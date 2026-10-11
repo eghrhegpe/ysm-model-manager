@@ -202,7 +202,7 @@ func TestDecodeYSMComponentsViaWASI_ValidYSM(t *testing.T) {
 	dir := t.TempDir()
 	modelsDir := filepath.Join(dir, "models")
 	if err := os.MkdirAll(modelsDir, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	// ysm.json 引用两个模型组件
@@ -218,13 +218,13 @@ func TestDecodeYSMComponentsViaWASI_ValidYSM(t *testing.T) {
 	armJSON := `{"format_version":"1.16.0","minecraft:geometry":[{"description":{"identifier":"arm","texture_width":64,"texture_height":64},"bones":[{"name":"LeftArm","cubes":[{"origin":[2,10,2],"size":[4,12,4],"uv":[0,0]}]}]}]}`
 
 	if err := os.WriteFile(filepath.Join(dir, "ysm.json"), []byte(ysmJSON), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(modelsDir, "main.json"), []byte(mainJSON), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(modelsDir, "arm.json"), []byte(armJSON), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	// 读取 .ysm 文件

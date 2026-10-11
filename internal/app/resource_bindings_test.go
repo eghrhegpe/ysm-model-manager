@@ -26,13 +26,13 @@ func TestFindDuplicateFiles_Guard(t *testing.T) {
 	base := t.TempDir()
 	root := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 	if err := os.MkdirAll(root, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(root, "a.ysm"), []byte("same"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(root, "b.ysm"), []byte("same"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	a := resourceApp(t, types.AppConfig{FilesRoot: base})
@@ -66,18 +66,18 @@ func TestFindDuplicateFiles_Basic(t *testing.T) {
 	base := t.TempDir()
 	root := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 	if err := os.MkdirAll(root, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 两个内容相同的文件
 	if err := os.WriteFile(filepath.Join(root, "a.ysm"), []byte("identical content"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(root, "b.ysm"), []byte("identical content"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 一个不同的文件
 	if err := os.WriteFile(filepath.Join(root, "c.ysm"), []byte("different"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	a := resourceApp(t, types.AppConfig{FilesRoot: base})
@@ -97,13 +97,13 @@ func TestFindDuplicateFiles_WithStrategy(t *testing.T) {
 	base := t.TempDir()
 	root := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 	if err := os.MkdirAll(root, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(root, "a.ysm"), []byte("same"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(root, "b.ysm"), []byte("same"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	a := resourceApp(t, types.AppConfig{FilesRoot: base})
@@ -122,10 +122,10 @@ func TestFindDuplicateFiles_NoDupNilFree(t *testing.T) {
 	base := t.TempDir()
 	root := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 	if err := os.MkdirAll(root, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(root, "a.ysm"), []byte("unique"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	a := resourceApp(t, types.AppConfig{FilesRoot: base})
@@ -144,10 +144,10 @@ func TestInvalidateScanCache(t *testing.T) {
 	base := t.TempDir()
 	root := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 	if err := os.MkdirAll(root, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(root, "a.ysm"), []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	a := resourceApp(t, types.AppConfig{FilesRoot: base})
@@ -180,7 +180,7 @@ func TestRepoHealthAudit_Guard(t *testing.T) {
 	base := t.TempDir()
 	root := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 	if err := os.MkdirAll(root, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	a := resourceApp(t, types.AppConfig{FilesRoot: base})
@@ -202,7 +202,7 @@ func TestRepoHealthAudit_EmptyDir(t *testing.T) {
 	base := t.TempDir()
 	root := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 	if err := os.MkdirAll(root, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	a := resourceApp(t, types.AppConfig{FilesRoot: base})
@@ -221,13 +221,13 @@ func TestRepoHealthAudit_WithFiles(t *testing.T) {
 	base := t.TempDir()
 	root := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 	if err := os.MkdirAll(root, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(root, "a.ysm"), []byte("{}"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(root, "b.ysm"), []byte("{}"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	a := resourceApp(t, types.AppConfig{FilesRoot: base})
@@ -259,11 +259,11 @@ func TestInstallResourceToInstance_Guard(t *testing.T) {
 	customDir := filepath.Join(instDir, "config", "yes_steve_model", "custom")
 	for _, d := range []string{ysmRoot, customDir} {
 		if err := os.MkdirAll(d, 0o755); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	if err := os.WriteFile(filepath.Join(ysmRoot, "model.ysm"), []byte("ysm"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	cfg := types.AppConfig{
@@ -289,7 +289,7 @@ func TestInstallResourceToInstance_UnknownType(t *testing.T) {
 	mcRoot := filepath.Join(base, ".minecraft")
 	instDir := filepath.Join(mcRoot, "versions", "1.20.1")
 	if err := os.MkdirAll(instDir, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	cfg := types.AppConfig{FilesRoot: base, McRoot: mcRoot}
@@ -307,10 +307,10 @@ func TestInstallResourceToInstance_MissingInstance(t *testing.T) {
 	ysmRoot := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 	mcRoot := filepath.Join(base, ".minecraft")
 	if err := os.MkdirAll(ysmRoot, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(ysmRoot, "model.ysm"), []byte("ysm"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	cfg := types.AppConfig{FilesRoot: base, McRoot: mcRoot}
@@ -327,10 +327,10 @@ func TestInstallResourceToInstance_MissingMcRoot(t *testing.T) {
 	base := t.TempDir()
 	ysmRoot := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 	if err := os.MkdirAll(ysmRoot, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(ysmRoot, "model.ysm"), []byte("ysm"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	cfg := types.AppConfig{FilesRoot: base} // 无 McRoot
@@ -351,22 +351,22 @@ func TestInstallResourceToInstance_FolderPush(t *testing.T) {
 	customDir := filepath.Join(instDir, "config", "yes_steve_model", "custom")
 	for _, d := range []string{ysmRoot, customDir} {
 		if err := os.MkdirAll(d, 0o755); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	// 创建模型文件夹（含配套文件）
 	modelDir := filepath.Join(ysmRoot, "my_model")
 	if err := os.MkdirAll(modelDir, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(modelDir, "ysm.json"), []byte("{}"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(modelDir, "model.geo.json"), []byte("{}"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(modelDir, "texture.png"), []byte("png"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	cfg := types.AppConfig{FilesRoot: base, McRoot: mcRoot}
@@ -391,10 +391,10 @@ func TestFindDuplicateFiles_Cancelled(t *testing.T) {
 	base := t.TempDir()
 	root := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 	if err := os.MkdirAll(root, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(root, "a.ysm"), []byte("same"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	a := resourceApp(t, types.AppConfig{FilesRoot: base})
 
@@ -411,10 +411,10 @@ func TestRepoHealthAudit_Cancelled(t *testing.T) {
 	base := t.TempDir()
 	root := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 	if err := os.MkdirAll(root, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(root, "a.ysm"), []byte("{}"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	a := resourceApp(t, types.AppConfig{FilesRoot: base})
 

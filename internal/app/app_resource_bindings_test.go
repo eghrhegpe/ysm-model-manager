@@ -10,6 +10,7 @@ import (
 
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/types/registry"
+	"ysm-model-manager/internal/testutil"
 )
 
 func TestSpecificRoot_Priority(t *testing.T) {
@@ -142,7 +143,7 @@ func TestRepoDirAccessible_File(t *testing.T) {
 	dir := t.TempDir()
 	p := filepath.Join(dir, "a.txt")
 	if err := os.WriteFile(p, []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if repoDirAccessible(p) {
 		t.Error("文件路径不应判定为可读目录")

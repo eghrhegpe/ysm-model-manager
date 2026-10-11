@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"ysm-model-manager/internal/testutil"
 )
 
 // TestMoveToRecycle_EmptyRootGuard 验证：当 findRecycleRoot 返回空串时，
@@ -18,7 +19,7 @@ func TestMoveToRecycle_EmptyRootGuard(t *testing.T) {
 	tmpDir := t.TempDir()
 	src := filepath.Join(tmpDir, "outside-root.ysm")
 	if err := os.WriteFile(src, []byte("data"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	// findRecycleRoot 对找不到根的文件返回空串

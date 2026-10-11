@@ -32,7 +32,7 @@ func packApp(t *testing.T) (*App, string, string) {
 	mcRoot := filepath.Join(base, ".minecraft")
 	instVer := filepath.Join(mcRoot, "versions", "TestInst")
 	if err := os.MkdirAll(instVer, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	customDir := filepath.Join(instVer, registry.SubDirMap("ysm"))
 	a := repoApp(t, types.AppConfig{
@@ -47,7 +47,7 @@ func packApp(t *testing.T) (*App, string, string) {
 	a.logger = logs.NewLogger(t.TempDir()) // repoApp 不带 logger，推送记账路径需要
 	ysmRoot := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 	if err := os.MkdirAll(ysmRoot, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	return a, ysmRoot, customDir
 }

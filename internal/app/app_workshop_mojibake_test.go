@@ -80,7 +80,7 @@ func TestMergeCommunityCreatorsFromJSON_MojibakeRepair(t *testing.T) {
 	// 本地已有一条干净创作者
 	seed := []types.WorkshopCreator{{Name: "雾雨波波沙", Type: "bilibili", Desc: "车万/暮色森林二创", Role: "creator"}}
 	if err := a.SaveWorkshopCreators(seed); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	// 社区索引同时含：① 一条与本地同名的乱码条目（应还原后 update 合并，不新增重复）

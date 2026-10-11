@@ -29,16 +29,16 @@ func TestToggleEnable(t *testing.T) {
 	// GetRepoRoot("ysm") = FilesRoot/{GroupStorageRoot("ysm")}（ADR-092 两层路由）
 	ysmRoot := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 	if err := os.MkdirAll(ysmRoot, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	t.Run("整合包内资源包可启禁（McRoot，原 ToggleModelEnable 拒绝场景）", func(t *testing.T) {
 		pack := filepath.Join(mc, "resourcepacks", "3D-muskets.zip")
 		if err := os.MkdirAll(filepath.Dir(pack), 0o755); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		if err := os.WriteFile(pack, []byte("x"), 0o644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		enabled, err := a.ToggleEnable(pack)
 		testutil.NoError(t, err, "整合包内资源包应可启禁")
@@ -62,10 +62,10 @@ func TestToggleEnable(t *testing.T) {
 	t.Run("仓库内 ysm 模型可启禁（落在 ysmRoot 子根）", func(t *testing.T) {
 		f := filepath.Join(ysmRoot, "狐狸", "狐狸.ysm")
 		if err := os.MkdirAll(filepath.Dir(f), 0o755); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		if err := os.WriteFile(f, []byte("x"), 0o644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		enabled, err := a.ToggleEnable(f)
 		testutil.NoError(t, err, "仓库内 ysm 应可启禁")
@@ -80,11 +80,11 @@ func TestToggleEnable(t *testing.T) {
 	t.Run("仓库内 resourcepack（CustomRoots 覆写）可启禁", func(t *testing.T) {
 		rpRoot := cfg.CustomRoots["resourcepack"]
 		if err := os.MkdirAll(rpRoot, 0o755); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		f := filepath.Join(rpRoot, "a.zip")
 		if err := os.WriteFile(f, []byte("x"), 0o644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		enabled, err := a.ToggleEnable(f)
 		testutil.NoError(t, err, "CustomRoots 内资源包应可启禁")
@@ -96,7 +96,7 @@ func TestToggleEnable(t *testing.T) {
 	t.Run("仓库外路径拒绝", func(t *testing.T) {
 		outside := filepath.Join(t.TempDir(), "x.ysm")
 		if err := os.WriteFile(outside, []byte("x"), 0o644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		_, err := a.ToggleEnable(outside)
 		if err == nil {

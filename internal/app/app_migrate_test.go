@@ -14,7 +14,7 @@ func TestMigrateFlatStorageToGrouped_FlatToGrouped(t *testing.T) {
 	os.MkdirAll(flatYsm, 0755)
 	origContent := []byte("x")
 	if err := os.WriteFile(filepath.Join(flatYsm, "test.ysm"), origContent, 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	migrateFlatStorageToGrouped(base)

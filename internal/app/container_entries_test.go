@@ -23,11 +23,11 @@ func makeContainerZip(t *testing.T, files map[string][]byte) string {
 		entry, err := w.Create(name)
 		testutil.NoError(t, err)
 		if _, err := entry.Write(content); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	if err := w.Close(); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	f.Close()
 	return p
@@ -49,10 +49,10 @@ func gzNbtBytes(t *testing.T) []byte {
 	var buf bytes.Buffer
 	gz := gzip.NewWriter(&buf)
 	if _, err := gz.Write(root); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := gz.Close(); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	return buf.Bytes()
 }
@@ -88,10 +88,10 @@ func gzSchematicBytes(t *testing.T) []byte {
 	var buf bytes.Buffer
 	gz := gzip.NewWriter(&buf)
 	if _, err := gz.Write(root); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := gz.Close(); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	return buf.Bytes()
 }

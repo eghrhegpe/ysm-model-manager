@@ -10,6 +10,7 @@ import (
 
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/types/registry"
+	"ysm-model-manager/internal/testutil"
 )
 
 // guardedApp 构造注入 configCache 的 App（各资源根指向 temp 子目录），复用 repoApp 注入样板
@@ -19,7 +20,7 @@ func guardedApp(t *testing.T) (*App, string) {
 	// ADR-092 两层路由：ysm 根在 FilesRoot/{group}/{storageSubDir}
 	ysm := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 	if err := os.MkdirAll(ysm, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	a := repoApp(t, types.AppConfig{
 		FilesRoot:        base,
@@ -38,7 +39,7 @@ func migratedApp(t *testing.T, customRoots map[string]string) (*App, string) {
 	base := t.TempDir()
 	ysm := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 	if err := os.MkdirAll(ysm, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	a := repoApp(t, types.AppConfig{
 		FilesRoot:   base,
@@ -86,7 +87,7 @@ func TestFindRecycleRoot_RootNotMatched(t *testing.T) {
 func TestFindRecycleRoot_CustomRootsIncluded(t *testing.T) {
 	mmdCustom := filepath.Join(t.TempDir(), "mmd-custom")
 	if err := os.MkdirAll(mmdCustom, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	a, _ := migratedApp(t, map[string]string{"mmd": mmdCustom})
 

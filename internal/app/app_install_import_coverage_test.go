@@ -96,7 +96,7 @@ func TestInstallModelFile_SrcGuard(t *testing.T) {
 	outside := t.TempDir()
 	outsideFile := filepath.Join(outside, "evil.ysm")
 	if err := os.WriteFile(outsideFile, []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if _, err := a.InstallModelFile(outsideFile, t.TempDir()); err == nil {
 		t.Error("仓库外 src 应被拒绝")
@@ -107,7 +107,7 @@ func TestInstallModelFile_SrcGuard(t *testing.T) {
 	// 仓库内 src → 放行（InstallToGlobal: mcRoot 需含 .minecraft 段）
 	inRepo := filepath.Join(ysm, "m.ysm")
 	if err := os.WriteFile(inRepo, []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	mcRoot := filepath.Join(t.TempDir(), ".minecraft")
 	dst, err := a.InstallModelFile(inRepo, mcRoot)
@@ -138,7 +138,7 @@ func TestInstallModelFile_SrcInCustomRoot(t *testing.T) {
 
 	inCustom := filepath.Join(custom, "m.ysm")
 	if err := os.WriteFile(inCustom, []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	dst, err := a.InstallModelFile(inCustom, mcRoot)
 	testutil.NoError(t, err, "CustomRoots 根内 src 应安装成功")
@@ -148,7 +148,7 @@ func TestInstallModelFile_SrcInCustomRoot(t *testing.T) {
 
 	inFiles := filepath.Join(base, "skip.ysm")
 	if err := os.WriteFile(inFiles, []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if _, err := a.InstallModelFile(inFiles, mcRoot); err != nil {
 		t.Fatalf("FilesRoot 内 src 不应被空 CustomRoots 值干扰: %v", err)
@@ -167,7 +167,7 @@ func TestInstallModelFile_SymlinkEscapeRejected(t *testing.T) {
 	outside := t.TempDir()
 	secret := filepath.Join(outside, "secret.ysm")
 	if err := os.WriteFile(secret, []byte("S"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	link := filepath.Join(ysm, "leak.ysm")
 	if err := os.Symlink(secret, link); err != nil {

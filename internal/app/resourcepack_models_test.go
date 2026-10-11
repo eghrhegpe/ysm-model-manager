@@ -23,11 +23,11 @@ func makePackZip(t *testing.T, files map[string]string) string {
 		entry, err := w.Create(name)
 		testutil.NoError(t, err)
 		if _, err := entry.Write([]byte(content)); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	if err := w.Close(); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	f.Close()
 	return p

@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/internal/testutil"
 )
 
 func TestOrDefault(t *testing.T) {
@@ -48,7 +49,7 @@ func TestFindConfigFile(t *testing.T) {
 	dir := t.TempDir()
 	real := filepath.Join(dir, "real.json")
 	if err := os.WriteFile(real, []byte("{}"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	missing := filepath.Join(dir, "missing.json")
 
@@ -95,7 +96,7 @@ func TestValidateMinecraftDir(t *testing.T) {
 	t.Run("含 versions/ 子目录 → 接受", func(t *testing.T) {
 		dir := t.TempDir()
 		if err := os.MkdirAll(filepath.Join(dir, "versions"), 0o755); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		got, msg := a.ValidateMinecraftDir(dir)
 		if got == "" {
@@ -107,7 +108,7 @@ func TestValidateMinecraftDir(t *testing.T) {
 		dir := t.TempDir()
 		mcSub := filepath.Join(dir, ".minecraft")
 		if err := os.MkdirAll(filepath.Join(mcSub, "versions"), 0o755); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		got, _ := a.ValidateMinecraftDir(dir)
 		if got != mcSub {
@@ -118,7 +119,7 @@ func TestValidateMinecraftDir(t *testing.T) {
 	t.Run("含 instances/ 子目录（PrismLauncher）→ 接受", func(t *testing.T) {
 		dir := t.TempDir()
 		if err := os.MkdirAll(filepath.Join(dir, "instances"), 0o755); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		got, msg := a.ValidateMinecraftDir(dir)
 		if got == "" {

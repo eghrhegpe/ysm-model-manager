@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"ysm-model-manager/go/types/registry"
+	"ysm-model-manager/internal/testutil"
 )
 
 // countDetect 返回一个累计调用次数的 detectFn（断言缓存是否短路检测）
@@ -28,7 +29,7 @@ func TestContainerTypeCache_MissThenHit(t *testing.T) {
 	c := newContainerTypeCache(countDetect(t, &calls))
 	p := filepath.Join(t.TempDir(), "m.zip")
 	if err := os.WriteFile(p, []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	if got := c.Get(p, registry.LoadRegistry()); got != "ysm" {
@@ -51,14 +52,14 @@ func TestContainerTypeCache_FileChangedInvalidates(t *testing.T) {
 	c := newContainerTypeCache(countDetect(t, &calls))
 	p := filepath.Join(t.TempDir(), "m.zip")
 	if err := os.WriteFile(p, []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	c.Get(p, registry.LoadRegistry())
 
 	// 改文件内容（size + modtime 同步变化）→ 指纹失效，应重新检测
 	time.Sleep(15 * time.Millisecond)
 	if err := os.WriteFile(p, []byte("yy"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	c.Get(p, registry.LoadRegistry())
 
@@ -81,7 +82,7 @@ func TestContainerTypeCache_ClearResets(t *testing.T) {
 	c := newContainerTypeCache(countDetect(t, &calls))
 	p := filepath.Join(t.TempDir(), "m.zip")
 	if err := os.WriteFile(p, []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	c.Get(p, registry.LoadRegistry())
 	c.Clear()
@@ -98,10 +99,10 @@ func TestContainerTypeCache_DistinctPathsIndependent(t *testing.T) {
 	a := filepath.Join(t.TempDir(), "a.zip")
 	b := filepath.Join(t.TempDir(), "b.zip")
 	if err := os.WriteFile(a, []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(b, []byte("y"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	c.Get(a, registry.LoadRegistry())
 	c.Get(b, registry.LoadRegistry())

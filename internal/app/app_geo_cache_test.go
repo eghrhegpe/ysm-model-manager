@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/internal/testutil"
 )
 
 // fakeModel 测试用几何结果
@@ -21,7 +22,7 @@ func TestGeoCache_HitReusesResult(t *testing.T) {
 	c := newGeoCache()
 	p := filepath.Join(t.TempDir(), "m.ysm")
 	if err := os.WriteFile(p, []byte("geo"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	calls := 0
@@ -49,13 +50,13 @@ func TestGeoCache_ModTimeChangeInvalidates(t *testing.T) {
 	c := newGeoCache()
 	p := filepath.Join(t.TempDir(), "m.ysm")
 	if err := os.WriteFile(p, []byte("v1"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	c.Get(p, func() types.BedrockModel { return fakeModel(1) })
 
 	time.Sleep(2 * time.Second) // 确保 mtime 前进（部分 FS 秒级精度）
 	if err := os.WriteFile(p, []byte("v2"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	calls := 0
@@ -73,13 +74,13 @@ func TestGeoCache_SizeChangeInvalidates(t *testing.T) {
 	c := newGeoCache()
 	p := filepath.Join(t.TempDir(), "m.ysm")
 	if err := os.WriteFile(p, []byte("short"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	c.Get(p, func() types.BedrockModel { return fakeModel(1) })
 
 	// 同字节数不同内容（mtime 可能不变，size 不同也应失效）
 	if err := os.WriteFile(p, []byte("longer"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	calls := 0
@@ -138,7 +139,7 @@ func TestGeoCache_ClearInvalidatesAll(t *testing.T) {
 	c := newGeoCache()
 	p := filepath.Join(t.TempDir(), "m.ysm")
 	if err := os.WriteFile(p, []byte("geo"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	c.Get(p, func() types.BedrockModel { return fakeModel(3) })
 

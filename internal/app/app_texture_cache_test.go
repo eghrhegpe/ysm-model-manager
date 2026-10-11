@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/texture_cache"
+	"ysm-model-manager/internal/testutil"
 )
 
 // 审计 R18/R22 后发现的契约缺陷测试：
@@ -22,7 +23,7 @@ func TestHasCachedTextures_CachedHitAndMiss(t *testing.T) {
 	// 命中 hash：手动放一个 KTX2 文件
 	hitHash := "existshash"
 	if err := os.WriteFile(filepath.Join(dir, hitHash+".ktx2"), []byte("data"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	app := &App{}

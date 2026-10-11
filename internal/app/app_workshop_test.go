@@ -24,7 +24,7 @@ func TestReadJSONFile_BOMTrim(t *testing.T) {
 		p := filepath.Join(dir, "bom.json")
 		// UTF-8 BOM: EF BB BF
 		if err := os.WriteFile(p, []byte{0xEF, 0xBB, 0xBF, '{', '}', '\n'}, 0o644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		var v map[string]int
 		if err := readJSONFile(p, &v); err != nil {
@@ -35,7 +35,7 @@ func TestReadJSONFile_BOMTrim(t *testing.T) {
 	t.Run("无 BOM 正常解析", func(t *testing.T) {
 		p := filepath.Join(dir, "plain.json")
 		if err := os.WriteFile(p, []byte(`{"a":1}`), 0o644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		var v map[string]int
 		if err := readJSONFile(p, &v); err != nil {
@@ -49,7 +49,7 @@ func TestReadJSONFile_BOMTrim(t *testing.T) {
 	t.Run("损坏 JSON 返回错误", func(t *testing.T) {
 		p := filepath.Join(dir, "broken.json")
 		if err := os.WriteFile(p, []byte("{oops"), 0o644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		var v map[string]int
 		if err := readJSONFile(p, &v); err == nil {
@@ -233,10 +233,10 @@ func TestSaveWorkshopCreatorsBySite_TypeSegmentMatch(t *testing.T) {
 		{Name: "b-a", Type: "b;a"},    // 应移除
 	}
 	if err := a.SaveWorkshopCreators(seed); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := a.SaveWorkshopCreatorsBySite("a", []types.WorkshopCreator{{Name: "a-new", Type: "a"}}); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	got := a.LoadWorkshopCreators()
 	names := map[string]bool{}
@@ -273,7 +273,7 @@ func TestMergeCommunityCreatorsFromJSON_SegmentMerge(t *testing.T) {
 		{Name: "B", Type: "afdian"},
 	}
 	if err := a.SaveWorkshopCreators(seed); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	community := []types.WorkshopCreator{
 		{Name: "A", Type: "bilibili;afdian", Desc: "社区补充描述"},
@@ -332,12 +332,12 @@ func TestMergeCommunityCreatorsFromJSON_Idempotent(t *testing.T) {
 	a := repoApp(t, types.AppConfig{})
 	seed := []types.WorkshopCreator{{Name: "A", Type: "bilibili"}}
 	if err := a.SaveWorkshopCreators(seed); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	community := []types.WorkshopCreator{{Name: "A", Type: "bilibili;afdian"}, {Name: "B", Type: "github"}}
 	data, _ := json.Marshal(community)
 	if _, _, err := a.MergeCommunityCreatorsFromJSON(string(data)); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 第二次并入同样社区：A 段已含、B 已存在 → 零变更
 	added, updated, err := a.MergeCommunityCreatorsFromJSON(string(data))
@@ -473,7 +473,7 @@ func TestMergeWorkshopSitesFromJSON_SingleSiteRejected(t *testing.T) {
 	// 预置一个「自定义站点文件」（模拟已有单站配置），文件存在 → 基准 = 该文件
 	seed := []types.WorkshopSite{{ID: "solo", Label: "独站", URL: "https://solo.test"}}
 	if err := a.SaveWorkshopSites(seed); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 再拖入同 id 新值：合并后仍 1 条 → 越界拒绝，文件不得被写坏
 	incoming := []types.WorkshopSite{{ID: "solo", Label: "独站改", URL: "https://solo2.test"}}
@@ -505,7 +505,7 @@ func TestMergeWorkshopSitesFromJSON_OverLimitRejected(t *testing.T) {
 		seed = append(seed, types.WorkshopSite{ID: fmt.Sprintf("seed-%02d", i), Label: "s", URL: "https://s.test"})
 	}
 	if err := a.SaveWorkshopSites(seed); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	incoming := []types.WorkshopSite{
 		{ID: "extra-1", Label: "x1", URL: "https://x1.test"},
@@ -535,7 +535,7 @@ func TestMergeWorkshopSitesFromJSON_IdempotentNoWrite(t *testing.T) {
 	a := repoApp(t, types.AppConfig{})
 	seed := []types.WorkshopSite{{ID: "s1", Label: "站点1", URL: "https://s1.test"}}
 	if err := a.SaveWorkshopSites(seed); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 首次拖入扩展：s2 追加 → added=1 写盘
 	incoming := []types.WorkshopSite{{ID: "s2", Label: "站点2", URL: "https://s2.test"}}
@@ -565,7 +565,7 @@ func TestMergeWorkshopSitesFromJSON_OverwriteAndAdd(t *testing.T) {
 	a := repoApp(t, types.AppConfig{})
 	seed := []types.WorkshopSite{{ID: "s1", Label: "旧名", URL: "https://old.test"}}
 	if err := a.SaveWorkshopSites(seed); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	incoming := []types.WorkshopSite{
 		{ID: "s1", Label: "新名", URL: "https://new.test"}, // 命中 → 覆盖
@@ -625,10 +625,10 @@ func TestMergeWorkshopSitesFromJSON_CorruptExistingAborts(t *testing.T) {
 	// 写一个损坏的 workshop_sites.json
 	p := workshopSitesPath()
 	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(p, []byte("{oops"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	imported := []types.WorkshopSite{{ID: "s1", Label: "新站", URL: "https://s1.test"}}
 	data, _ := json.Marshal(imported)
@@ -651,7 +651,7 @@ func TestMergeCommunitySitesFromJSON_AddOnly(t *testing.T) {
 	a := repoApp(t, types.AppConfig{})
 	// 用户已有自定义站点 s1（Label 用户改过）
 	if err := a.SaveWorkshopSites([]types.WorkshopSite{{ID: "s1", Label: "用户自定义", URL: "https://custom"}}); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 社区索引含 s1（本地已有 → 跳过）+ s2/s3（新增）
 	community := []types.WorkshopSite{
@@ -686,7 +686,7 @@ func TestMergeCommunitySitesFromJSON_Idempotent(t *testing.T) {
 
 	a := repoApp(t, types.AppConfig{})
 	if err := a.SaveWorkshopSites([]types.WorkshopSite{{ID: "s1", Label: "站", URL: "https://s1"}}); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	community := []types.WorkshopSite{{ID: "s1", Label: "站", URL: "https://s1"}}
 	data, _ := json.Marshal(community)

@@ -11,6 +11,7 @@ import (
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/types/registry"
+	"ysm-model-manager/internal/testutil"
 )
 
 // installApp 构造注入 configCache + logger 的 App（AddOpLog 依赖 logger）
@@ -27,7 +28,7 @@ func TestCountMatchingInDir(t *testing.T) {
 	inst := filepath.Join(base, "inst")
 	for _, d := range []string{repo, inst} {
 		if err := os.MkdirAll(d, 0o755); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	a := installApp(t, types.AppConfig{})
@@ -78,10 +79,10 @@ func TestIsResourcePackFolder(t *testing.T) {
 	t.Run("含 pack.mcmeta → true", func(t *testing.T) {
 		p := filepath.Join(dir, "rp")
 		if err := os.MkdirAll(p, 0o755); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		if err := os.WriteFile(filepath.Join(p, "pack.mcmeta"), []byte("{}"), 0o644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		if !fsutil.IsResourcePackFolder(p) {
 			t.Error("含 pack.mcmeta 的目录应判定为资源包")
@@ -90,7 +91,7 @@ func TestIsResourcePackFolder(t *testing.T) {
 	t.Run("不含 pack.mcmeta → false", func(t *testing.T) {
 		p := filepath.Join(dir, "not-rp")
 		if err := os.MkdirAll(p, 0o755); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		if fsutil.IsResourcePackFolder(p) {
 			t.Error("不含 pack.mcmeta 的目录不应判定为资源包")
@@ -112,7 +113,7 @@ func TestFindRecycleRoot_MultiType(t *testing.T) {
 	base := t.TempDir()
 	rp := filepath.Join(base, "resourcepacks")
 	if err := os.MkdirAll(rp, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	a := installApp(t, types.AppConfig{
 		FilesRoot: base,
@@ -132,7 +133,7 @@ func TestFindRecycleRoot_MultiType(t *testing.T) {
 		// ysm 子目录在 FilesRoot 内 → 应命中默认根
 		ysm := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 		if err := os.MkdirAll(ysm, 0o755); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		got := a.findRecycleRoot(filepath.Join(ysm, "m.ysm"))
 		if got != ysm {

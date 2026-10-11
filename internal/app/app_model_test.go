@@ -52,12 +52,12 @@ func TestReadFileBytes_MultiRootGuard(t *testing.T) {
 	base := t.TempDir()
 	vrcRoot := filepath.Join(base, "vrchat")
 	if err := os.MkdirAll(vrcRoot, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	content := []byte("vrm-bytes")
 	vrmPath := filepath.Join(vrcRoot, "avatar.vrm")
 	if err := os.WriteFile(vrmPath, content, 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	cfg := types.AppConfig{FilesRoot: filepath.Join(base, "ysm"), VrcRoot: vrcRoot}
@@ -70,11 +70,11 @@ func TestReadFileBytes_MultiRootGuard(t *testing.T) {
 	// 2. ysm 根内文件仍可读（回归：既有行为不破坏）
 	ysmRoot := filepath.Join(cfg.FilesRoot, registry.GroupStorageRoot("ysm"))
 	if err := os.MkdirAll(ysmRoot, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	ysmPath := filepath.Join(ysmRoot, "a.ysm")
 	if err := os.WriteFile(ysmPath, content, 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if got := a.ReadFileBytes(ysmPath); string(got) != "vrm-bytes" {
 		t.Fatalf("ysm 根内文件应可读，got %q", got)
@@ -97,13 +97,13 @@ func TestReadFileBytesBatch_SmallBatchSequential(t *testing.T) {
 	base := t.TempDir()
 	ysmRoot := filepath.Join(base, "ysm", "models")
 	if err := os.MkdirAll(ysmRoot, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	paths := make([]string, 4)
 	for i := range 4 {
 		p := filepath.Join(ysmRoot, fmt.Sprintf("file_%d.bin", i))
 		if err := os.WriteFile(p, []byte(fmt.Sprintf("data_%d", i)), 0o644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		paths[i] = p
 	}
@@ -124,14 +124,14 @@ func TestReadFileBytesBatch_LargeBatchConcurrent(t *testing.T) {
 	base := t.TempDir()
 	ysmRoot := filepath.Join(base, "ysm", "models")
 	if err := os.MkdirAll(ysmRoot, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	const n = 16
 	paths := make([]string, n)
 	for i := range n {
 		p := filepath.Join(ysmRoot, fmt.Sprintf("file_%d.bin", i))
 		if err := os.WriteFile(p, []byte(fmt.Sprintf("data_%d", i)), 0o644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		paths[i] = p
 	}
@@ -152,7 +152,7 @@ func TestReadFileBytesBatch_PathGuardConcurrent(t *testing.T) {
 	base := t.TempDir()
 	ysmRoot := filepath.Join(base, "ysm", "models")
 	if err := os.MkdirAll(ysmRoot, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	validPaths := make([]string, 10)
 	for i := range 10 {
@@ -195,7 +195,7 @@ func TestReadFileBytesBatch_ConcurrentPartialFail(t *testing.T) {
 	base := t.TempDir()
 	ysmRoot := filepath.Join(base, "ysm", "models")
 	if err := os.MkdirAll(ysmRoot, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 创建 10 个合法文件 + 5 个不存在的路径
 	paths := make([]string, 15)
@@ -330,25 +330,25 @@ func TestReadFileBytesBatchWithMeta_SymlinkEscapeRejected(t *testing.T) {
 	base := t.TempDir()
 	ysmRoot := filepath.Join(base, "ysm", "models")
 	if err := os.MkdirAll(ysmRoot, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 10 个合法文件（≥5 保并发分支）
 	paths := make([]string, 10)
 	for i := range 10 {
 		p := filepath.Join(ysmRoot, fmt.Sprintf("ok_%d.bin", i))
 		if err := os.WriteFile(p, []byte("ok"), 0o644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		paths[i] = p
 	}
 	// 根**外** secret 目录（base 的兄弟，不在 FilesRoot 下）+ 根内 symlink 指向它
 	outside := filepath.Join(t.TempDir(), "secret")
 	if err := os.MkdirAll(outside, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	secret := filepath.Join(outside, "secret.txt")
 	if err := os.WriteFile(secret, []byte("top-secret"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	link := filepath.Join(base, "ysm", "link")
 	if err := os.Symlink(outside, link); err != nil {

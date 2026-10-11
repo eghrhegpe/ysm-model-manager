@@ -16,6 +16,7 @@ import (
 	"ysm-model-manager/go/logs"
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/types/registry"
+	"ysm-model-manager/internal/testutil"
 )
 
 // scanApp 构造注入 configCache + logger 的 App（AddOpLog 依赖 logger）
@@ -32,7 +33,7 @@ func TestIsPathInRoot_Boundaries(t *testing.T) {
 	// ysm 子目录：FilesRoot/ysm
 	root := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 	if err := os.MkdirAll(root, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	cases := []struct {
@@ -68,13 +69,13 @@ func TestListFileNames_Guard(t *testing.T) {
 	base := t.TempDir()
 	root := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 	if err := os.MkdirAll(filepath.Join(root, "sub"), 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(root, "a.ysm"), []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(root, "sub", "b.ysm"), []byte("y"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
 
@@ -107,10 +108,10 @@ func TestListFileNames_Guard(t *testing.T) {
 		mmdRoot := filepath.Join(base, "mmd")
 		modelDir := filepath.Join(mmdRoot, "模型A")
 		if err := os.MkdirAll(modelDir, 0o755); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		if err := os.WriteFile(filepath.Join(modelDir, "tex.png"), []byte("x"), 0o644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		a2 := scanApp(t, types.AppConfig{FilesRoot: base, MmdRoot: mmdRoot})
 		got := a2.ListAllFilePaths(modelDir)
@@ -124,17 +125,17 @@ func TestCheckFileExists_Guard(t *testing.T) {
 	base := t.TempDir()
 	root := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 	if err := os.MkdirAll(root, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	inside := filepath.Join(root, "a.ysm")
 	if err := os.WriteFile(inside, []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	outside := filepath.Join(filepath.Dir(base), "outside-secret.ysm")
 	// 2026-08-16 修复：CheckFileExists 改 isPathInRootOrSelf（与 ReadFileBytes 同口径，
 	// FilesRoot 整仓可读可查存在）——真正根外 = FilesRoot 之外（父目录），仍拒绝
 	if err := os.WriteFile(outside, []byte("s"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
 
@@ -153,11 +154,11 @@ func TestScanModelEntries_CacheHit(t *testing.T) {
 	base := t.TempDir()
 	root := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 	if err := os.MkdirAll(root, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 最小合法 .ysm 文件（扫描器按扩展名识别，不做深度解析）
 	if err := os.WriteFile(filepath.Join(root, "a.ysm"), []byte("{}"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
 
@@ -179,10 +180,10 @@ func TestScanModelEntries_SiblingTypeRootAllowed(t *testing.T) {
 	base := t.TempDir()
 	rpRoot := filepath.Join(base, registry.GroupStorageRoot("resourcepack"))
 	if err := os.MkdirAll(rpRoot, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(rpRoot, "rp.zip"), []byte("{}"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
 
@@ -201,10 +202,10 @@ func TestScanModelEntriesWithLabel_Guard(t *testing.T) {
 	base := t.TempDir()
 	root := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 	if err := os.MkdirAll(root, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(root, "a.ysm"), []byte("{}"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
 
@@ -220,7 +221,7 @@ func TestScanModelEntriesWithHit_CacheSemantics(t *testing.T) {
 	base := t.TempDir()
 	root := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 	if err := os.MkdirAll(root, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
 
@@ -249,7 +250,7 @@ func TestListModelAuthors_PrefixExtraction(t *testing.T) {
 	base := t.TempDir()
 	root := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 	if err := os.MkdirAll(root, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	files := []string{
 		"[作者A] 角色一.ysm",
@@ -259,7 +260,7 @@ func TestListModelAuthors_PrefixExtraction(t *testing.T) {
 	}
 	for _, f := range files {
 		if err := os.WriteFile(filepath.Join(root, f), []byte("{}"), 0o644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
@@ -287,10 +288,10 @@ func TestIsPathInRootOrSelf_Boundaries(t *testing.T) {
 	ysmRoot := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 	rpRoot := filepath.Join(base, registry.GroupStorageRoot("resourcepack"))
 	if err := os.MkdirAll(ysmRoot, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.MkdirAll(rpRoot, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	a := scanApp(t, types.AppConfig{
 		FilesRoot:        base,
@@ -335,7 +336,7 @@ func TestIsPathInRootOrSelf_RootItselfAllowed(t *testing.T) {
 	base := t.TempDir()
 	root := filepath.Join(base, registry.GroupStorageRoot("ysm"))
 	if err := os.MkdirAll(root, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
 
@@ -398,7 +399,7 @@ func TestResolveInstDirTarget_VanillaYsm(t *testing.T) {
 	instDir := filepath.Join(mcRoot, "versions", "1.20.1-Fabric")
 	ysmDir := filepath.Join(instDir, "config", "yes_steve_model", "custom")
 	if err := os.MkdirAll(ysmDir, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if got := resolveInstDirTarget(instDir, "ysm"); got != ysmDir {
 		t.Errorf("vanilla+ysm = %q, 期望 %q", got, ysmDir)
@@ -411,7 +412,7 @@ func TestResolveInstDirTarget_VanillaResourcepack(t *testing.T) {
 	instDir := filepath.Join(mcRoot, "versions", "1.20.1-Fabric")
 	rpDir := filepath.Join(instDir, "resourcepacks")
 	if err := os.MkdirAll(rpDir, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if got := resolveInstDirTarget(instDir, "resourcepack"); got != rpDir {
 		t.Errorf("vanilla+resourcepack = %q, 期望 %q", got, rpDir)
@@ -424,7 +425,7 @@ func TestResolveInstDirTarget_PrismYsm(t *testing.T) {
 	instDir := filepath.Join(base, ".minecraft")
 	ysmDir := filepath.Join(instDir, "config", "yes_steve_model", "custom")
 	if err := os.MkdirAll(ysmDir, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if got := resolveInstDirTarget(instDir, "ysm"); got != ysmDir {
 		t.Errorf("Prism+ysm = %q, 期望 %q", got, ysmDir)
@@ -437,7 +438,7 @@ func TestResolveInstDirTarget_PrismResourcepack(t *testing.T) {
 	instDir := filepath.Join(base, ".minecraft")
 	rpDir := filepath.Join(instDir, "resourcepacks")
 	if err := os.MkdirAll(rpDir, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if got := resolveInstDirTarget(instDir, "resourcepack"); got != rpDir {
 		t.Errorf("Prism+resourcepack = %q, 期望 %q", got, rpDir)
@@ -466,7 +467,7 @@ func TestResolveInstDirTarget_YsmConfigTree(t *testing.T) {
 	instDir := t.TempDir()
 	customDir := filepath.Join(instDir, "config", "yes_steve_model", "custom")
 	if err := os.MkdirAll(customDir, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if got := resolveInstDirTarget(instDir, "ysm"); got != customDir {
 		t.Errorf("ysm instanceDir 优先 = %q, 期望 %q", got, customDir)
@@ -480,7 +481,7 @@ func TestResolveInstDirTarget_YsmConfigTreeCustom(t *testing.T) {
 	// 创建 custom 目录（实际存放路径）
 	custom := filepath.Join(instDir, "config", "yes_steve_model", "custom")
 	if err := os.MkdirAll(custom, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 同时创建 ysm 目录（installDir 指定的路径），验证不影响结果
 	ysmDir := filepath.Join(instDir, "ysm")
@@ -499,7 +500,7 @@ func TestResolveInstDirTarget_MaidModelStandard(t *testing.T) {
 	instDir := t.TempDir()
 	packDir := filepath.Join(instDir, "tlm_custom_pack")
 	if err := os.MkdirAll(packDir, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if got := resolveInstDirTarget(instDir, "maid-model"); got != packDir {
 		t.Errorf("maid-model instanceDir 命中 = %q, 期望 %q", got, packDir)
@@ -574,15 +575,15 @@ func writeYsmModelFixture(t *testing.T, dir, modelName string, bones int) string
 	t.Helper()
 	modelDir := filepath.Join(dir, modelName)
 	if err := os.MkdirAll(modelDir, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	geoName := modelName + ".geo.json"
 	ysmJSON := fmt.Sprintf(`{"files":{"player":{"model":{"main":"%s"}}}}`, geoName)
 	if err := os.WriteFile(filepath.Join(modelDir, "ysm.json"), []byte(ysmJSON), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(modelDir, geoName), []byte(geoJSON(modelName, bones)), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	return modelDir
 }
@@ -846,7 +847,7 @@ func TestSearchModels_DeterministicOrder_SameName(t *testing.T) {
 	base := t.TempDir()
 	ysmRoot := filepath.Join(base, "ysm", "models")
 	if err := os.MkdirAll(ysmRoot, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 两个不同父目录下各放一个同名子目录 fixture → ScanModelEntries 扫出两条同名不同路径条目。
 	// 声明序：dirA/mymodel 先于 dirB/mymodel（WalkDir 字典序：aaa < bbb）。
@@ -854,15 +855,15 @@ func TestSearchModels_DeterministicOrder_SameName(t *testing.T) {
 	for _, d := range dirs {
 		packDir := filepath.Join(ysmRoot, d, "mymodel")
 		if err := os.MkdirAll(packDir, 0o755); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		geoName := "mymodel.geo.json"
 		ysmContent := fmt.Sprintf(`{"files":{"player":{"model":{"main":"%s"}}}}`, geoName)
 		if err := os.WriteFile(filepath.Join(packDir, "ysm.json"), []byte(ysmContent), 0o644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		if err := os.WriteFile(filepath.Join(packDir, geoName), []byte(geoJSON("mymodel", 3)), 0o644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	// 再加几个不同名的模型凑成 > 2 候选，强制走并发路径。
@@ -937,7 +938,7 @@ func TestSearchModels_GeoCacheHit(t *testing.T) {
 	base := t.TempDir()
 	ysmRoot := filepath.Join(base, "ysm", "models")
 	if err := os.MkdirAll(ysmRoot, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	writeYsmModelFixture(t, ysmRoot, "warrior", 5)
 	writeYsmModelFixture(t, ysmRoot, "mage", 3)
@@ -976,7 +977,7 @@ func TestClearScanCache_InvalidatesGeoCache(t *testing.T) {
 	base := t.TempDir()
 	ysmRoot := filepath.Join(base, "ysm", "models")
 	if err := os.MkdirAll(ysmRoot, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	writeYsmModelFixture(t, ysmRoot, "warrior", 5)
 
@@ -1019,14 +1020,14 @@ func writeZip(t *testing.T, path string, entries ...string) {
 	zw := zip.NewWriter(&buf)
 	for _, name := range entries {
 		if _, err := zw.Create(name); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	if err := zw.Close(); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(path, buf.Bytes(), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 }
 
@@ -1035,7 +1036,7 @@ func TestScanModelEntriesFiltered_ContainerFingerprint(t *testing.T) {
 	base := t.TempDir()
 	dir := filepath.Join(base, "scan_filter_dir")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	// 1) 内部含 .vrm 的 zip → DetectResourceType 命中 EntityPlayer（zipEntries 含 .vrm）
@@ -1045,7 +1046,7 @@ func TestScanModelEntriesFiltered_ContainerFingerprint(t *testing.T) {
 	writeZip(t, filepath.Join(dir, "rp_pack.zip"), "pack.mcmeta")
 	// 3) 非容器 .vrm 文件 → 扩展名直接命中 → 应收（验证非容器分支不受影响）
 	if err := os.WriteFile(filepath.Join(dir, "scene.vrm"), []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 4) 内部无关的 zip（readme 条目）→ 无类型指纹 → 扫 EntityPlayer tab 应丢弃
 	writeZip(t, filepath.Join(dir, "notes.zip"), "readme.txt")
@@ -1078,7 +1079,7 @@ func TestScanModelEntriesFiltered_ContainerMatchesOwnType(t *testing.T) {
 	base := t.TempDir()
 	dir := filepath.Join(base, "scan_filter_dir2")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	writeZip(t, filepath.Join(dir, "rp_pack.zip"), "pack.mcmeta")
 	writeZip(t, filepath.Join(dir, "vrm_real.zip"), "model.vrm")
@@ -1103,7 +1104,7 @@ func TestScanModelEntriesFiltered_DisabledRetained(t *testing.T) {
 	base := t.TempDir()
 	dir := filepath.Join(base, "scan_filter_dir3")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	writeZip(t, filepath.Join(dir, "active.zip"), "pack.mcmeta")
 	// 禁用态容器：内部仍 pack.mcmeta（resourcepack 指纹），但文件名带 .disabled
@@ -1135,16 +1136,16 @@ func TestScanModelEntriesFiltered_BannedFieldFilled(t *testing.T) {
 	dir := filepath.Join(base, "scan_filter_dir_banned")
 	bannedDir := filepath.Join(dir, "banned-group.disabled")
 	if err := os.MkdirAll(bannedDir, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(dir, "ok.ysm"), []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(dir, "off.ysm.disabled"), []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(bannedDir, "ingroup.ysm"), []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
@@ -1171,7 +1172,7 @@ func TestScanModelEntriesFiltered_DisabledContainerNoCrossTabLeak(t *testing.T) 
 	base := t.TempDir()
 	dir := filepath.Join(base, "scan_filter_dir4")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	writeZip(t, filepath.Join(dir, "disabled.zip.disabled"), "pack.mcmeta")
 

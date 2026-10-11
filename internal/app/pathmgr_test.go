@@ -43,7 +43,7 @@ func TestRepoDirAccessible(t *testing.T) {
 	}
 	file := filepath.Join(dir, "a.txt")
 	if err := os.WriteFile(file, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if repoDirAccessible(file) {
 		t.Error("文件（非目录）不应可访问")
@@ -236,10 +236,10 @@ func TestGlobalRootSuspicious(t *testing.T) {
 	// 普通专门目录（无宽目录特征）→ false
 	dedicated := filepath.Join(base, "blueprints")
 	if err := os.MkdirAll(dedicated, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(dedicated, "a.nbt"), []byte("n"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if globalRootSuspicious(dedicated) {
 		t.Errorf("专门蓝图目录不应判为过宽: %s", dedicated)

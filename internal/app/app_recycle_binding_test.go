@@ -46,7 +46,7 @@ func TestMoveToRecycle_Success(t *testing.T) {
 	a, ysmRoot, _ := packApp(t)
 	src := filepath.Join(ysmRoot, "recycle-me.ysm")
 	if err := os.WriteFile(src, []byte("data"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := a.MoveToRecycle(src); err != nil {
 		t.Fatalf("回收失败: %v", err)
@@ -62,7 +62,7 @@ func TestListRecycleBin_IteratesRoots(t *testing.T) {
 	a, ysmRoot, _ := packApp(t)
 	src := filepath.Join(ysmRoot, "list-me.ysm")
 	if err := os.WriteFile(src, []byte("data"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := a.MoveToRecycle(src); err != nil {
 		t.Fatalf("预置回收失败: %v", err)
@@ -84,7 +84,7 @@ func TestListRecycleBin_ScopeIncludesParentRelation(t *testing.T) {
 	a, ysmRoot, _ := packApp(t)
 	src := filepath.Join(ysmRoot, "scoped.ysm")
 	if err := os.WriteFile(src, []byte("data"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if actionErr := a.MoveToRecycle(src); actionErr != nil {
 		t.Fatalf("预置回收失败: %v", actionErr)
@@ -100,7 +100,7 @@ func TestListRecycleBin_ScopedByRecyclePath(t *testing.T) {
 	a, ysmRoot, _ := packApp(t)
 	src := filepath.Join(ysmRoot, "scoped.ysm")
 	if err := os.WriteFile(src, []byte("data"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if actionErr := a.MoveToRecycle(src); actionErr != nil {
 		t.Fatalf("预置回收失败: %v", actionErr)

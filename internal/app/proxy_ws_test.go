@@ -94,7 +94,7 @@ func TestProxyWebSocketBidirectional(t *testing.T) {
 	// 发起升级握手
 	req := "GET /ws HTTP/1.1\r\nHost: proxy\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n"
 	if _, err := clientConn.Write([]byte(req)); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	// 读响应头（直到空行）
@@ -113,7 +113,7 @@ func TestProxyWebSocketBidirectional(t *testing.T) {
 
 	// 上行：客户端 → 上游（经代理转发，上游回显）
 	if _, err := clientConn.Write([]byte("hello-ws")); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	echo := make([]byte, len("hello-ws"))
 	if _, err := io.ReadFull(clientConn, echo); err != nil {
@@ -125,7 +125,7 @@ func TestProxyWebSocketBidirectional(t *testing.T) {
 
 	// 下行收尾：客户端断开 → 代理两个方向都应结束（goroutine 泄漏即挂测试 deadline）
 	if err := clientConn.Close(); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	select {
 	case err := <-handlerErr:

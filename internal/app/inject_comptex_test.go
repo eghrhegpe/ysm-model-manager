@@ -61,7 +61,7 @@ func TestModel3DSpecTypedRoundTrip(t *testing.T) {
 	testutil.NoError(t, err)
 	var back threejs.Model3DSpec
 	if err := json.Unmarshal(b, &back); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if len(back.TexArrOrder) != 5 || back.TexArrOrder[4] != "foxcar" {
 		t.Fatalf("texArrOrder 往返丢失/错序: %#v", back.TexArrOrder)

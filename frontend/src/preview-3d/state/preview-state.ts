@@ -23,8 +23,10 @@
 //
 // 持久化边界（ADR-125 P1，防双写，本文件继承）：
 //   - 三项真正无 cap 归属的横切项由本层读写 localStorage，键名与迁移前完全一致
-//   - bloom / skyIblSelfHold / wireframe 走 cap 的 get/set 派生映射，本层不落盘；
-//     cap 存自己的域（cap.saveState），本层不重复存
+//   - 派生项（render.wireframe / cap.*）走 cap 的 get/set 映射，本层不落盘：
+//     多数 cap.* 写 cap 私有域（cap.saveState 落 localStorage）；但 render.wireframe /
+//     cap.skyIblSelfHoldEnabled 两桥的 cap setter 内部又写回 envState（仍过仲裁），
+//     本层只作视图桥，不持事实源、不重复存
 
 // [doc:adr-129-第一刀] 状态层核心类型本位（修依赖倒置：原住 adapters 平铺的 preview-menu-node-types.ts，
 // state 反向 import adapters → 类型归位 state，adapters 反过来前向 import state，方向正）
@@ -270,7 +272,12 @@ const bindings: PathBindingMap = {
     },
     available: () => true,
   },
-  // ── cap 派生项：走 get/set 映射，本层不落盘（cap 存自己的域）──
+  // ── cap 派生项：走 get/set 映射，本层不落盘（view 桥，不持有事实源）──
+  //   多数 cap.* 写 cap 私有域（water/ground/fog/reflection/enabled 各有独立状态 + localStorage 存档，
+  //   本就不该混进 envState 单例）；但 `render.wireframe` / `cap.skyIblSelfHoldEnabled` 两桥的
+  //   cap setter 内部写回 envState（renderMode.setWireframe → setEnvState(renderModeWireframe) /
+  //   sky.setSkyIblSelfHoldEnabled → setEnvState(skyEnvironment)），仍过 shouldOverwrite 来源仲裁——
+  //   故「3D 状态最终都过 envState 仲裁」对这两条依然成立，本段不是第二条事实源。
   //   与 cap 自报控件同源（sky-env 随 [ADR-292 D4] 退场，PMREM 供图归 env 面板来源单选）
   // [ADR-250] `render.bloom` 已退场——后处理是视觉项，与 wireframe/skyIblSelfHold 同类不进性能档位表。
   // 历史：该路径经 setMasterEnabled 写 cap 私有总闸字段，与 per-type 门禁二元相与，

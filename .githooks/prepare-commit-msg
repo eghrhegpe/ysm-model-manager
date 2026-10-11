@@ -27,4 +27,10 @@ fi
 if [ "${YSM_SKIP_GO_COVERAGE_HINT:-0}" != "1" ]; then
   "$NODE" "$ROOT/scripts/hooks/go-coverage-hint.ts" "${1:-}" "${2:-}" || true
 fi
+# Wails bindings 同步提醒（非阻断）：本次 staged 改了绑定面源文件（internal/app/*.go）
+# 但未带 frontend/bindings/ 生成物 → 提示 regenerate（CI 绑定保鲜测试曾两次等红了才补）。
+# 逃生阀：YSM_SKIP_BINDINGS_HINT=1 git commit
+if [ "${YSM_SKIP_BINDINGS_HINT:-0}" != "1" ]; then
+  "$NODE" "$ROOT/scripts/hooks/bindings-sync-hint.ts" "${1:-}" "${2:-}" || true
+fi
 exit 0

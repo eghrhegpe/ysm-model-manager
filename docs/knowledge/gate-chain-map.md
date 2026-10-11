@@ -132,7 +132,7 @@ CI ────────── test.yml 独立步骤：pre-push-gate --static
 | 入口 | 触发 | 委托终点 | 阻断性 | 逃生阀 |
 |------|------|---------|--------|--------|
 | pre-commit | commit 时 | 内联 sh（快照/stage/格式/防御）+ 直调各 check 脚本 | 三段 **hard**（android-lite / biome 行级 / design-tokens 行级），其余仅提示 | `YSM_SKIP_*`（命中即留痕 SKIPPED_PRECOMMIT） |
-| prepare-commit-msg | commit 时 | `scripts/hooks/`×3 提示脚本 | 恒 exit 0，纯提示 | 各 `YSM_SKIP_*_HINT=1` |
+| prepare-commit-msg | commit 时 | `scripts/hooks/`×4 提示脚本 | 恒 exit 0，纯提示 | 各 `YSM_SKIP_*_HINT=1` |
 | post-commit | commit 后 | `gen-staged-pair.ts` 清索引残留 | 恒 exit 0 | `YSM_SKIP_POSTCLEAN=1` |
 | pre-push | push 时 | `pre-push-gate.ts`（薄壳→调度器→gate-blocks→gate-config 清单） | hard 档阻断；debt/failClosed 只记录 | `YSM_SKIP_GATE=1`（留痕 SKIPPED）／`--no-verify`（零痕迹） |
 | doctor | 手动 | 全部委托 `pre-push-gate`（三模式） | 同 pre-push | 同 pre-push |
@@ -142,6 +142,7 @@ CI ────────── test.yml 独立步骤：pre-push-gate --static
 
 - **只减不增型闸（biome 行级 / design-tokens / a11y / css-layer）**：按不变量须**双挂**——pre-commit 拦提交 + gate-config 清单拦推送/CI；只挂其一属单点防线。判定口径统一走真行级 `--added-lines`，不用行号入键。
 - **域级检查（go build/test、前端 build/vitest、契约测试）**：本地由 gate 域块承担；CI 由 test.yml 各步骤独立承担，**不经 gate 编排**。
+- **scripts typecheck（`tsc -p scripts/tsconfig.json`）**：脚本域自身的类型闸——`--all`/`--docs`/`--static` 恒跑；**push/--files 模式按变更域补跑**（2026-10-11 审计候选②：变更域含 scripts/ 或 tests/ 即 `plan.contractTests` 为真时补跑，成本实测 ~1s，纯前端/纯 Go 推送不背固定税）。此前只挂 all/docs/static，改 `scripts/_lib` 未类型化新代码本地可溜过（仅 CI --static 兜底）——现已由 `pre-push-gate.ts` 调用 `schedule.ts|runScriptsTypecheck` 的 `testsDomain` 开关补网。契约测试 `tests/test_gate_schedule.ts` 钉自守卫/三态 rc/缺失阻断/testsDomain 四态。
 - **静态治理工具（`check-*.ts` 全集；其中 `gate-config.ts` 精确 `tool:` 条目走门禁，其余走 pre-commit / commit-with-check / CI 旁路，刻意挂起者仅 `check-diff-coverage.ts` 一个）**：清单单一事实源 = `scripts/_lib/gate-config.ts`，分 ALL / DOC / FRONTEND / GO 四张（ALL 为全集、其余为域子集、有重叠）。统计口径：**只数 `tool: "X.ts"` 条目，注释里提名字不算**（2026-10-08 实测踩坑：子串匹配会把注释里的 `check-*.ts` 计入，虚高）；条数随时点演化，**禁止把某次计数写进文档正文**（旧口径「27/37 接入」「合计 40+ 项」与 2026-10-08 的 42/30/32 硬计数均已删，只留口径）。判定「真阻断」看该清单项 `blockPolicy`，FAIL 非空 ≠ 被拦。
   - 2026-10-11 锐评 P1-① 补挂 `check-scene-slot-writers`（ALL，hard）：`scene.environment`/`scene.background` 槽位写者白名单闸（ADR-292 D1「写者唯一」红线的机器锁，白名单 = env-ibl / sky 自持兜底 / shared-infra 初始化 / screenshot 保存还原 / 测试夹具，零存量债；扩白名单须先经锐评/ADR 拍板）。
   - 2026-10-11 巡检第 14 轮补挂 `check-stale-test-refs`（ALL，debt）：生产源码**注释点名**的测试引用（Go `TestXxx` 符号 / TS `x.test.ts` 文件名）必须真实存在于测试索引——「注释承诺 > 实现」漂移的镜像形态（注释谎称「守卫 = TestXxx」而该测试早已改名/消亡 = 假声明）。上线即清账 7 处（flow.go/findinst.go 假名 + menu 域根迁移旧名 ×2 + style `ui-` 前缀旧名 ×2 + fake-image 来历旧名），现 0 命中，debt 档纯防御防复发。判据只认注释行（代码行字符串字面量合法）；示例名（x/foo/fake-*）与数据值形态（引号紧邻/XML 串）启发式豁免；刻意虚构引用加行内 `claim-check:ignore: <理由>`（空理由不豁免）。契约测试 = `tests/test_check_stale_test_refs.ts`（合成索引直测纯函数 + 全仓自检 0 命中哨）。

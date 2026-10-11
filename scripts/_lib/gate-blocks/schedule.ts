@@ -158,18 +158,28 @@ export function runStaticToolsDispatch(
   }
 }
 
-/** scripts/ TS 类型检查（--all / --docs 模式；.ts 文件随 _lib/ 迁移逐步出现）。
+/** scripts/ TS 类型检查（--all / --docs / --static 模式；push/--files 模式在变更域含 scripts/ 或 tests/ 时补跑）。
  * tsc 不是 mjs 脚本，不走 runTools 的 node scripts/ 路径；TS18003（无输入）容忍为通过。
  *
  * ⚠️ 二进制须经 `_lib/tool-bin.ts` 双根探测（2026-09-15 CI 实证）：本地常在根 `npm i`
  * （工具落根 .bin），CI 只在 `frontend/` 跑 `pnpm install`（工具落 frontend/.bin）——
  * 曾硬编码根路径，致本步在 CI 报 cmd 的「找不到路径」并以 hard 策略阻断整步。
- * `opts.resolveBin` 为测试注入缝（默认走真实探测），使契约测试可脱离环境断言。 */
+ * `opts.resolveBin` 为测试注入缝（默认走真实探测），使契约测试可脱离环境断言。
+ *
+ * 审计候选②（2026-10-11）：push 与 --files 模式此前不跑本步——改 scripts/_lib
+ * 未类型化新代码本地可溜过（仅 CI --static 兜底）。现按变更域补跑：`testsDomain`
+ * 为真（plan.contractTests = 变更含 scripts/ 或 tests/）即跑；成本实测 ~1s 秒级。
+ * 刻意不无条件在 push 跑——纯前端/纯 Go 推送不该背 tsc 固定税（按域裁剪哲学）。 */
 export async function runScriptsTypecheck(
   ctx: GateCtx,
-  opts: { allMode: boolean; docsMode: boolean; resolveBin?: (name: string) => string | null },
+  opts: {
+    allMode: boolean;
+    docsMode: boolean;
+    testsDomain?: boolean;
+    resolveBin?: (name: string) => string | null;
+  },
 ): Promise<void> {
-  if (!opts.allMode && !opts.docsMode) return;
+  if (!opts.allMode && !opts.docsMode && !opts.testsDomain) return;
   const t0 = Date.now();
   const tsc = (opts.resolveBin ?? resolveToolBin)("tsc");
   if (!tsc) {

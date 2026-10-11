@@ -332,7 +332,14 @@ async function main() {
   runStaticToolsDispatch(ctx, { allMode, docsMode, staticMode });
   // scripts typecheck 在 --static 下同样执行（CI 需要保证 scripts/ 自身类型正确，
   // 且成本仅秒级）；契约测试由 CI 独立跑 scripts/contract-tests.ts，此处不重复。
-  await runScriptsTypecheck(ctx, { allMode: allMode || staticMode, docsMode });
+  // 审计候选②（2026-10-11）：push/--files 模式此前不跑本步——变更域含 scripts/ 或
+  // tests/（plan.contractTests）时补跑，堵「改 scripts/_lib 未类型化代码本地可溜过」
+  // （成本实测 ~1s；--all/--docs/--static 已由 allMode/docsMode 覆盖，不传 testsDomain）。
+  await runScriptsTypecheck(ctx, {
+    allMode: allMode || staticMode,
+    docsMode,
+    testsDomain: plan.contractTests,
+  });
 
   /* --- 存量债到期盘点（仅 --all，2026-10-09 到期制 / ADR-256-d1）--- */
   // 判据（逾期 ⇒ hard FAIL / 未逾期 ⇒ 如实报最近复审 / 无债 ⇒ 静默）全在 _lib/gate-debt.ts

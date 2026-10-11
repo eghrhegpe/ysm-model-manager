@@ -54,6 +54,38 @@ const STUB_TSC = () => "/stub/node_modules/.bin/tsc";
   console.log("  ✓ runScriptsTypecheck 自守卫：非 all/docs 模式 no-op");
 }
 
+// ── 1b. runScriptsTypecheck：testsDomain（push/--files 模式改 scripts/tests）补跑 ──
+// 审计候选②（2026-10-11）：push 与 --files 模式此前不跑 scripts typecheck——改
+// scripts/_lib 未类型化新代码本地可溜过（CI --static 才兜底）。成本实测 1.06s 秒级，
+// 变更域含 scripts/ 或 tests/（plan.contractTests）时补跑，其余 push 仍 no-op。
+{
+  const ctx = makeCtx({}, async () => ({ rc: 0, out: "" }));
+  await runScriptsTypecheck(ctx, {
+    allMode: false,
+    docsMode: false,
+    testsDomain: true,
+    resolveBin: STUB_TSC,
+  });
+  assert.equal(ctx.results.length, 1, "testsDomain=true 应跑 scripts typecheck");
+  assert.equal(ctx.results[0].ok, true);
+  assert.ok(ctx.results[0].label.includes("tsc"), "label 应含 tsc");
+  console.log("  ✓ runScriptsTypecheck：testsDomain=true → 跑（rc=0 PASS）");
+}
+
+// ── 1c. runScriptsTypecheck：testsDomain=true 且 rc=1 → 阻断 ──
+{
+  const ctx = makeCtx({}, async () => ({ rc: 1, out: "error TS2304: x\n" }));
+  await runScriptsTypecheck(ctx, {
+    allMode: false,
+    docsMode: false,
+    testsDomain: true,
+    resolveBin: STUB_TSC,
+  });
+  assert.equal(ctx.results[0].ok, false);
+  assert.equal(ctx.blocked, true, "testsDomain 模式 tsc 失败应置 blocked");
+  console.log("  ✓ runScriptsTypecheck：testsDomain=true 且 rc=1 → FAIL + blocked");
+}
+
 // ── 2. runScriptsTypecheck：rc=0 通过 ──
 {
   const ctx = makeCtx({}, async () => ({ rc: 0, out: "" }));

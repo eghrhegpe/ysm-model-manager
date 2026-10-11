@@ -126,6 +126,7 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   // —— tests（验证 scripts 工具 / _lib 共享层自身，工具改动 → 全量）——
   "coverage-suggest-hint.ts": ["tests"],
   "go-coverage-hint.ts": ["tests"],
+  "bindings-sync-hint.ts": ["tests"],
   "test_alias-resolve.ts": ["tests"],
   // 变更域过滤共享层（--files / --changed）——三个档位扫描器接门禁的增量裁剪唯一实现点
   "test_changed_scope.ts": ["tests"],
@@ -322,6 +323,7 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
     "scripts/hooks/knowledge-affected-hint.ts",
   ],
   "go-coverage-hint.ts": ["scripts/hooks/go-coverage-hint.ts"],
+  "bindings-sync-hint.ts": ["scripts/hooks/bindings-sync-hint.ts"],
   "test_alias-resolve.ts": ["scripts/_lib/alias-resolve.ts", "scripts/_lib/scan-files.ts"],
   // R8 模板闸扫描核：仅改纯函数核（或本测试自身）才需重跑
   "test_innerhtml_hygiene.ts": [

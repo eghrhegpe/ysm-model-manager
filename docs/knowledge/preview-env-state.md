@@ -130,6 +130,10 @@ invariant_anchors:
   # 叶失名/字段被搬回 cap 只剩散文描述，机器无从判，故升格为锚。
   - frontend/src/preview-3d/caps/postprocessing-composer.ts|PostprocessingComposer
   - frontend/src/preview-3d/caps/light-instances.ts|LightInstances
+  # ADR-329 刀③A 锚（2026-10-11 补）：烘焙内核叶——阈值门控判据与门控基准随烘焙器走，
+  # 若日后把 lastPmremElevation 搬回 cap 或常量改写手抄，机器即刻失守。
+  - frontend/src/preview-3d/caps/sky-bake-pipeline.ts|SkyBakePipeline
+  - frontend/src/preview-3d/caps/sky-bake-pipeline.ts|PMREM_ELEVATION_THRESHOLD
   - frontend/src/preview-3d/state/env-state-schema.ts|ARCHIVE_ALIAS
   - frontend/src/preview-3d/caps/env-persist.ts|saveEnvState
   - frontend/src/preview-3d/caps/env-persist.ts|restoreEnvPartial

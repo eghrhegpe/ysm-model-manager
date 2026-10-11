@@ -143,24 +143,25 @@ getAppMock.mockResolvedValue({
 
 ## 已切换文件清单
 
-### 第一批（27 个，提交 e834ad55 + 后续）
+### 第一批（27 个，提交 e834ad55 + 后续；路径为迁移后的现名）
 
 | 文件 | 切换方式 | 注意事项 |
 |------|---------|---------|
-| `backend/extract.test.ts` | 直接标注 | 纯逻辑 |
-| `backend/nbt-parse.test.ts` | 直接标注 | 纯逻辑 |
-| `backend/voxel-parse.test.ts` | 直接标注 | 纯逻辑 |
+| `parsers/extract.test.ts` | 直接标注 | 纯逻辑（原 backend/，ADR-170 迁 parsers/） |
+| `parsers/nbt-parse.test.ts` | 直接标注 | 纯逻辑（原 backend/） |
 | `backend/web-stats.test.ts` | 直接标注 | 纯逻辑 |
 | `backend/web-store.logs.test.ts` | 直接标注 | 纯逻辑 |
-| `backend/coi-sw.test.ts` | 标注 + 模式1 | 隔壁已修 `vi.stubGlobal` |
-| `core/handlers/instance-ops.test.ts` | 直接标注 | 纯逻辑 |
-| `core/context-menus.test.ts` | 标注 + 模式2 | 隔壁已修 `document` mock |
-| `features/dnd-collector.test.ts` | 直接标注 | 纯逻辑 |
-| 14 个 `preview-3d/*.test.ts` | 直接标注 | 纯逻辑（骨骼/材质/感知/能力） |
-| `preview-3d/adapters/vrm-bone.test.ts` | 直接标注 | 纯逻辑 |
+| `workers/coi-sw.test.ts` | 标注 + 模式1 | 隔壁已修 `vi.stubGlobal`（原 backend/ 迁 workers/） |
+| `features/pack-ops/instance-ops.test.ts` | 直接标注 | 纯逻辑（原 core/handlers/ 迁 features/） |
+| `features/context-menu/context-menus.test.ts` | 标注 + 模式2 | 隔壁已修 `document` mock（原 core/ 迁 features/） |
+| 6 个 `preview-3d/adapters/shared/perception/*.test.ts` | 直接标注 | 纯逻辑（原 preview-3d/perception/ 迁 adapters/shared/） |
+| 8 个 `preview-3d/*.test.ts` | 直接标注 | 纯逻辑（骨骼/材质/解析/能力；`adapters/vrm-bone` 亦在此族） |
+| `preview-3d/caps/ground-capability.test.ts` / `light-capability.test.ts` | 直接标注 | 纯逻辑（能力） |
 | `views/app-preview/mmd-siblings.test.ts` | 直接标注 | 纯逻辑 |
 | `views/app-sidebar/loader.test.ts` | 标注 + 模式4 | mock `getApp` |
 | `views/app-tree/bus-handlers.test.ts` | 标注 + 模式3 | mock `capabilities` |
+
+> ⚠️ 原 `backend/voxel-parse.test.ts` 已随 parsers 域收敛删除（d17e5a9c8，voxel 能力拆为 voxel-colors/voxel-views）；原 `features/dnd-collector.test.ts` 已拆分（ADR-060 统一收集器 → `dnd/import-dnd` + `dnd/pack-dnd`，二者未标注 node 故不列此清单）。**权威快照 = `scripts/perf/vitest-env-switch.ts` 清单**：迁移/改名后必须同步，契约测试 `tests/vitest-env-switch.ts` 锁「条目全存在 + 全已标注」两不变量（fail-closed，死路即红）。
 
 ### 第二批（2026-08-17 神桶拆分 + 3 个 window 耦合测试）
 

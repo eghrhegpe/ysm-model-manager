@@ -503,3 +503,22 @@
   1. 治理层残留候选③（write-surface-gate 方法值链盲区）维持不动——已登记诚实边界。
   2. 第 12 轮遗留候选（check-env-schema-consumers 补写方检测、applyModelDefaults 手写有序清单）维持不动。
   3. **可回访点（本轮副产物）**：`hooks/bindings-sync-hint.ts` 的判定是「staged 形态」启发式（改绑定面但产物同 commit 则不提示）。若日后想升精确对账，成本 = wails3 generate（~80s+）只适合挂 CI 或夜间任务，不适合 commit 时点——维持现状。
+
+## 2026-10-11T19:40:00+08:00 追加：vitest-env-switch 清单腐化收口（第 14 轮副产物）
+
+- 选定理由：第 14 轮副产物记录「`vitest-env-switch.ts` 清单含两条死路（脚本 SKIP 打印、无害但清单腐化）」——本轮实测**远不止两条**，实为 9 条死路。
+- **清点（TDD 实测，`node scripts/perf/vitest-env-switch.ts`）**：清单 23 条中 9 条不存在——
+  - `parsers/voxel-parse.test.ts`：**真删**（d17e5a9c8 随 parsers 域收敛删除，voxel 能力拆为 voxel-colors/voxel-views）；
+  - `core/context-menus.test.ts` → `features/context-menu/context-menus.test.ts`（9b554d496 迁出 core）；
+  - `core/handlers/instance-ops.test.ts` → `features/pack-ops/instance-ops.test.ts`；
+  - `features/dnd-collector.test.ts`：**已拆分**（ADR-060 统一收集器 → `dnd/import-dnd` + `dnd/pack-dnd`，二者未标注 node 故不列入清单）；
+  - `preview-3d/perception/{autodance,beat-detector,blink,breath,gaze,lipsync}.test.ts` ×6 → `preview-3d/adapters/shared/perception/`。
+  - 6 个 perception 文件与 context-menus/instance-ops 均已带 `@vitest-environment node`（只迁路径未标标注），dnd 两后代文件未标注——列入清单会诱导本轮擅自改环境，故不列（环境切换是有意决策，非清理轮范围）。
+- **修复（清单 + 机器锁，非手改）**：① 清单更新为 21 条现名（删 3 条真死/已拆、更新 9 条漂移现名）；② **fail-closed**——`--check` 模式 + `checkListEntries`/`checkListAnnotated` 纯函数：条目不存在或已登记未标注即 exit 1 点名，不再 SKIP 静默吞死路；③ 新契约测试 `tests/vitest-env-switch.ts` 3 例（存在性/非空无重复/标注完整性）锁死不变量；④ 主流程加 `import.meta` 守卫（纯函数测试不触发写盘副作用）。
+- **变异实证**：注入死路条目 `preview-3d/phantom-dead.test.ts` → 契约测试精确转红（点名该条目），还原复绿——测试非空转。
+- 知识卡：`vitest-env-switch.md`「已切换文件清单」第一批 14 行全用迁移前老路径（backend/、core/、preview-3d/perception/）——**老路径是假路标**，全替换为现名并注迁移来历 + 真删/拆分说明 + 权威快照指针。scripts/README.md 已有登记（无需新增）。
+- 验证：契约 141/141（双表一致性守卫 DOMAINS 141/TARGETS 115 过）；scripts tsc 绿；`--check` 21 条全绿；doctor --docs 23/23 PASS；biome --write 后 0 违规。
+- 提交：见本轮 commit。
+- 遗留 / 下一轮建议：
+  1. 巡检域 13 格 + 各专项全清，tracker 已无「建议立即做」项——下一轮若继续，可选项：③ write-surface-gate 方法值链盲区提醒机制（已登记诚实边界，工作量大）；或等 scene-registry 焦点晋升 / F1 阴影进截图拍板。
+  2. **族② 残余**（mergeCubes / computeBoneLocalPos 手抄双源）维持不动，无分叉证据不开战。

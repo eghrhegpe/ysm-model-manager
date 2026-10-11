@@ -17,6 +17,7 @@ import (
 	"strings"
 	"syscall"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // forceRenameError 替换 renameForMove 恒返回指定错误（非 EXDEV → 走失败清理分支），
@@ -75,9 +76,7 @@ func TestMoveModelFile_EndState_SourceGoneTargetByteIdentical(t *testing.T) {
 	}
 	// 终态②：目标存在且逐字节一致（防半截文件/Windows 文本模式改写）
 	got, err := os.ReadFile(filepath.Join(dstDir, "m.ysm"))
-	if err != nil {
-		t.Fatalf("目标不可读: %v", err)
-	}
+	testutil.NoError(t, err, "目标不可读")
 	if !bytes.Equal(got, content) {
 		t.Fatalf("目标内容不一致: got %q want %q", got, content)
 	}
@@ -237,9 +236,7 @@ func TestMoveModelFile_CrossDeviceFileCopyFailKeepsSource(t *testing.T) {
 	}
 	// 不留半成品：目标落点无半截文件、无 .copy-*.tmp 残渣
 	entries, derr := os.ReadDir(dstDir)
-	if derr != nil {
-		t.Fatalf("dstDir 应存在: %v", derr)
-	}
+	testutil.NoError(t, derr, "dstDir 应存在")
 	for _, e := range entries {
 		if strings.HasPrefix(e.Name(), ".copy-") {
 			t.Fatalf("复制失败残留临时文件: %s", e.Name())

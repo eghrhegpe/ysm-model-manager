@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -42,9 +43,7 @@ func TestFileInventory_ComponentsPath(t *testing.T) {
 		"animations/main.animation.json": `{"animations":{}}`,
 	})
 	models, _, err := ParseComponentsFromZip(data, int64(len(data)))
-	if err != nil {
-		t.Fatalf("ParseComponentsFromZip: %v", err)
-	}
+	testutil.NoError(t, err, "ParseComponentsFromZip")
 	if len(models) < 2 {
 		t.Fatalf("期望至少 2 个组件, 实际 %d", len(models))
 	}

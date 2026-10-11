@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // =====================================================================
@@ -63,9 +64,7 @@ func TestSimpleCopyImporter_RelativeSrc(t *testing.T) {
 
 	importer := NewSimpleCopy("ysm")
 	err := importer.Import(src, dstDir)
-	if err != nil {
-		t.Fatalf("SimpleCopyImporter 相对路径导入失败: %v", err)
-	}
+	testutil.NoError(t, err, "SimpleCopyImporter 相对路径导入失败")
 	if _, statErr := os.Stat(dstDir); statErr != nil {
 		t.Fatalf("目标目录未创建: %v", statErr)
 	}
@@ -97,9 +96,7 @@ func TestSimpleCopyImporter_SameDirSelfCopy(t *testing.T) {
 	importer := NewSimpleCopy("ysm")
 	// 目标目录与源文件同目录——复制后文件名应相同
 	err := importer.Import(src, tmpDir)
-	if err != nil {
-		t.Fatalf("SimpleCopyImporter 同目录自拷贝失败: %v", err)
-	}
+	testutil.NoError(t, err, "SimpleCopyImporter 同目录自拷贝失败")
 	// 同目录复制不得破坏源文件
 	if data, rErr := os.ReadFile(src); rErr != nil || string(data) != "test" {
 		t.Fatalf("源文件被破坏: %v %q", rErr, string(data))
@@ -135,9 +132,7 @@ func TestDirectoryCopyImporter_FileInsideDir(t *testing.T) {
 	importer := NewDirectoryCopy("ysm")
 	// srcPath 为 modelDir/data.json——应取父目录 modelDir 作为导入源
 	err := importer.Import(filepath.Join(modelDir, "data.json"), dstDir)
-	if err != nil {
-		t.Fatalf("DirectoryCopyImporter 从子文件取父目录导入失败: %v", err)
-	}
+	testutil.NoError(t, err, "DirectoryCopyImporter 从子文件取父目录导入失败")
 	if _, statErr := os.Stat(dstDir); statErr != nil {
 		t.Fatalf("目标目录未创建: %v", statErr)
 	}

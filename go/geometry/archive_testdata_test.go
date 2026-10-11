@@ -26,9 +26,7 @@ func loadTestdataZip(t *testing.T) []byte {
 	zw := zip.NewWriter(&buf)
 	dir := "testdata/multi_tex"
 	entries, err := os.ReadDir(dir)
-	if err != nil {
-		t.Fatalf("读取 testdata 失败: %v", err)
-	}
+	testutil.NoError(t, err, "读取 testdata 失败")
 	for _, e := range entries {
 		if e.IsDir() {
 			continue
@@ -58,9 +56,7 @@ func loadTestdataZip(t *testing.T) []byte {
 func TestComponentsFromRealSample(t *testing.T) {
 	data := loadTestdataZip(t)
 	comps, texNames, err := ParseComponentsFromZip(data, int64(len(data)))
-	if err != nil {
-		t.Fatalf("ParseComponentsFromZip 失败: %v", err)
-	}
+	testutil.NoError(t, err, "ParseComponentsFromZip 失败")
 	if len(comps) != 2 {
 		t.Fatalf("期望 2 组件（main+arm）, 得到 %d", len(comps))
 	}

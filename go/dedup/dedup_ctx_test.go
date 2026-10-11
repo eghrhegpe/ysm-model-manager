@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // ctxTestDir 构造两个内容相同的文件（触发完整 collect→hash→group 管道）。
@@ -48,13 +49,9 @@ func TestFindDuplicateFilesCtx_EquivalentToShell(t *testing.T) {
 	dir := ctxTestDir(t)
 
 	shell, err := FindDuplicateFiles(dir, true)
-	if err != nil {
-		t.Fatalf("薄壳路径失败: %v", err)
-	}
+	testutil.NoError(t, err, "薄壳路径失败")
 	ctxPath, err := FindDuplicateFilesCtx(context.Background(), dir, true)
-	if err != nil {
-		t.Fatalf("ctx 路径失败: %v", err)
-	}
+	testutil.NoError(t, err, "ctx 路径失败")
 
 	if len(shell) != len(ctxPath) || len(shell) != 1 {
 		t.Fatalf("两路径应各得 1 组: shell=%d ctx=%d", len(shell), len(ctxPath))

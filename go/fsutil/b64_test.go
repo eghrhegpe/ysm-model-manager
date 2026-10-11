@@ -4,13 +4,12 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 func TestDecodeBase64Limited_OK(t *testing.T) {
 	data, err := DecodeBase64Limited("aGVsbG8=", 100) // "hello"
-	if err != nil {
-		t.Fatalf("合法输入不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "合法输入不应报错")
 	if string(data) != "hello" {
 		t.Fatalf("解码结果不符: %q", data)
 	}
@@ -50,9 +49,7 @@ func TestDecodeBase64Limited_NewlineInput(t *testing.T) {
 	// 不再把换行计入长度误判超大（DecodeString 本身忽略 \r\n）
 	wrapped := "aGVs\r\nbG8=\n"
 	data, err := DecodeBase64Limited(wrapped, 100)
-	if err != nil {
-		t.Fatalf("带换行的合法输入不应被预检误拒: %v", err)
-	}
+	testutil.NoError(t, err, "带换行的合法输入不应被预检误拒")
 	if string(data) != "hello" {
 		t.Fatalf("解码结果不符: %q", data)
 	}

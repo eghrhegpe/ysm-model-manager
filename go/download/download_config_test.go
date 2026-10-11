@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/config"
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -96,9 +97,7 @@ func TestFromGitHubAPIWithChecksum_OK(t *testing.T) {
 	savePath := dir + "/out.bin"
 
 	err := d.FromGitHubAPIWithChecksum(context.Background(), server.URL, savePath, nil, expectedHash)
-	if err != nil {
-		t.Fatalf("FromGitHubAPIWithChecksum 失败: %v", err)
-	}
+	testutil.NoError(t, err, "FromGitHubAPIWithChecksum 失败")
 	data, err := os.ReadFile(savePath)
 	if err != nil || string(data) != "checksum me" {
 		t.Fatalf("内容不符: %q %v", string(data), err)

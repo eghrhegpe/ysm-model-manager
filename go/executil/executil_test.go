@@ -4,6 +4,7 @@ import (
 	"os/exec"
 	"runtime"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // TestHideWindow_NonWindows_IsNoop 非 Windows 平台验证 HideWindow 不 panic、cmd 仍可执行。
@@ -19,9 +20,7 @@ func TestHideWindow_NonWindows_IsNoop(t *testing.T) {
 	}
 	// 实际执行验证 cmd 仍然可用
 	out, err := cmd.CombinedOutput()
-	if err != nil {
-		t.Fatalf("执行 echo 失败: %v", err)
-	}
+	testutil.NoError(t, err, "执行 echo 失败")
 	got := string(out)
 	if got != "ok\n" {
 		t.Fatalf("输出 %q，期望 %q", got, "ok\n")

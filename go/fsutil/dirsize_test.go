@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 func writeFile(t *testing.T, path string, size int) {
@@ -28,9 +29,7 @@ func TestDirSize_RecursiveSum(t *testing.T) {
 	writeFile(t, filepath.Join(dir, "textures", "skin.png"), 3000)
 
 	got, err := DirSize(dir)
-	if err != nil {
-		t.Fatalf("DirSize 不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "DirSize 不应报错")
 	if got != 115+2000+3000 {
 		t.Errorf("应递归合计全部文件字节, got %d", got)
 	}

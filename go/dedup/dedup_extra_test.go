@@ -82,9 +82,7 @@ func TestCountDuplicates_SymlinkChildSkipped(t *testing.T) {
 // 根目录不存在：WalkDir 回调收到 lstat 错误 → log + 继续 → 返回空结果不报错
 func TestCountDuplicates_NonexistentRootNoError(t *testing.T) {
 	g, e, err := CountDuplicates(filepath.Join(t.TempDir(), "missing"), true)
-	if err != nil {
-		t.Fatalf("不存在的根目录不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "不存在的根目录不应报错")
 	if g != 0 || e != 0 {
 		t.Fatalf("不存在的根目录应返回 0/0, got %d/%d", g, e)
 	}
@@ -143,9 +141,7 @@ func TestFindDuplicateFiles_EmptyFilesSkipped(t *testing.T) {
 // 根目录不存在：访问失败 log + 继续 → 返回空结果不报错
 func TestFindDuplicateFiles_NonexistentRootNoError(t *testing.T) {
 	groups, err := FindDuplicateFiles(filepath.Join(t.TempDir(), "missing"), true)
-	if err != nil {
-		t.Fatalf("不存在的根目录不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "不存在的根目录不应报错")
 	if len(groups) != 0 {
 		t.Fatalf("不存在的根目录应返回 0 组, got %d", len(groups))
 	}
@@ -257,9 +253,7 @@ func TestFindDuplicateFiles_UnreadableFileSkipped(t *testing.T) {
 	}
 
 	groups, err := FindDuplicateFiles(dir, true)
-	if err != nil {
-		t.Fatalf("不可读文件应被跳过（log+continue），不得返回错误: %v", err)
-	}
+	testutil.NoError(t, err, "不可读文件应被跳过（log+continue），不得返回错误")
 	// a.txt 可读、b.txt 打开失败被跳过 → 只有 1 个文件被哈希 → 0 组重复
 	if len(groups) != 0 {
 		t.Fatalf("期望 0 组重复（b.txt 打开失败被跳过），got %d 组", len(groups))
@@ -284,9 +278,7 @@ func TestCountDuplicates_UnreadableFileSkipped(t *testing.T) {
 	}
 
 	g, e, err := CountDuplicates(dir, true)
-	if err != nil {
-		t.Fatalf("不可读文件应被跳过，不得返回错误: %v", err)
-	}
+	testutil.NoError(t, err, "不可读文件应被跳过，不得返回错误")
 	if g != 0 || e != 0 {
 		t.Fatalf("期望 0 组 0 多余（b.txt 打开失败被跳过），got groups=%d extra=%d", g, e)
 	}

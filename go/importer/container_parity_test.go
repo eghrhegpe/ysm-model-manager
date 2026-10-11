@@ -30,9 +30,7 @@ const containerGoldenPath = "../../tests/fixtures/parity/container-fingerprint.g
 func loadContainerGolden(t *testing.T) *containerGoldenFile {
 	t.Helper()
 	data, err := os.ReadFile(containerGoldenPath)
-	if err != nil {
-		t.Fatalf("读黄金语料失败: %v", err)
-	}
+	testutil.NoError(t, err, "读黄金语料失败")
 	var gf containerGoldenFile
 	if err := json.Unmarshal(data, &gf); err != nil {
 		t.Fatalf("解析黄金语料失败: %v", err)

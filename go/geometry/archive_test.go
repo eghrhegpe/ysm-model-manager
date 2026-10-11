@@ -327,9 +327,7 @@ func TestParseComponentsFromZip_MainFirstAndTexSlot(t *testing.T) {
 		"arm.geo.json":  geoArmJSON,   // arm 骨骼
 	})
 	comps, _, err := ParseComponentsFromZip(data, int64(len(data)))
-	if err != nil {
-		t.Fatalf("ParseComponentsFromZip 失败: %v", err)
-	}
+	testutil.NoError(t, err, "ParseComponentsFromZip 失败")
 	if len(comps) != 2 {
 		t.Fatalf("期望 2 个组件, 得到 %d", len(comps))
 	}
@@ -400,9 +398,7 @@ func TestParseComponentsFromZip_MaidModelNamespaceFilter(t *testing.T) {
 		"assets/ns_b/models/entity/marisa.json": maidOldFormatGeo,
 	})
 	comps, _, err := ParseComponentsFromZip(data, int64(len(data)))
-	if err != nil {
-		t.Fatalf("ParseComponentsFromZip 失败: %v", err)
-	}
+	testutil.NoError(t, err, "ParseComponentsFromZip 失败")
 	// 只有 ns_a 的 1 个组件（ns_b 被过滤）
 	if len(comps) != 1 {
 		t.Errorf("组件数 = %d, 期望 1（仅首个 namespace）", len(comps))
@@ -441,9 +437,7 @@ func TestParseComponentsFromZip_MainPriorityOverDeclOrder(t *testing.T) {
 		"arm.geo.json":  geoArmJSON,
 	})
 	comps, _, err := ParseComponentsFromZip(data, int64(len(data)))
-	if err != nil {
-		t.Fatalf("ParseComponentsFromZip 失败: %v", err)
-	}
+	testutil.NoError(t, err, "ParseComponentsFromZip 失败")
 	if len(comps) != 2 {
 		t.Fatalf("期望 2 个组件, 得到 %d", len(comps))
 	}
@@ -474,9 +468,7 @@ func TestParseComponentsFromZip_TexSlotClamp(t *testing.T) {
 		"arm.geo.json":  geoArmJSON,
 	})
 	comps, _, err := ParseComponentsFromZip(data, int64(len(data)))
-	if err != nil {
-		t.Fatalf("ParseComponentsFromZip 失败: %v", err)
-	}
+	testutil.NoError(t, err, "ParseComponentsFromZip 失败")
 	if len(comps) != 2 {
 		t.Fatalf("期望 2 个组件, 得到 %d", len(comps))
 	}

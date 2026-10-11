@@ -21,9 +21,7 @@ func openZipEntries(t *testing.T, entries map[string]string) []container.Entry {
 	t.Helper()
 	data := testutil.MakeZipBytes(t, entries)
 	reader, err := container.OpenZipBytes(data, int64(len(data)))
-	if err != nil {
-		t.Fatalf("OpenZipBytes 失败: %v", err)
-	}
+	testutil.NoError(t, err, "OpenZipBytes 失败")
 	return reader.Entries()
 }
 

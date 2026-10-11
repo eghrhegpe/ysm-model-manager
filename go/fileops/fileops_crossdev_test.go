@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"syscall"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // forceEXDEV 替换 renameForMove 使每次 rename 返回 EXDEV（跨设备错误），
@@ -38,9 +39,7 @@ func TestMoveModelFile_CrossDeviceFallback(t *testing.T) {
 	// 目标存在且内容一致
 	dst := filepath.Join(dstDir, "m.ysm")
 	got, err := os.ReadFile(dst)
-	if err != nil {
-		t.Fatalf("目标不存在/不可读: %v", err)
-	}
+	testutil.NoError(t, err, "目标不存在/不可读")
 	if string(got) != "content" {
 		t.Errorf("内容不一致: got %q", got)
 	}

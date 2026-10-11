@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // maidMiniGeo 返回最小合法 geometry（1 骨骼 1 方块），cube.texture=i 可区分 subModel texSlot
@@ -490,9 +491,7 @@ func TestL0_StripNsPrefix_AllBranches(t *testing.T) {
 	// 动态构造"当前平台原生绝对路径"：避免写死 Unix / Windows 任一方的格式。
 	// （filepath.IsAbs 在 Windows 上对 "/tmp/x.json" 返回 false，不能拿来写死。）
 	cwd, err := filepath.Abs(".")
-	if err != nil {
-		t.Fatalf("filepath.Abs 失败: %v", err)
-	}
+	testutil.NoError(t, err, "filepath.Abs 失败")
 	// 用真实目录拼接出干净的平台原生绝对路径（Unix: /…/platform/abs.json，
 	// Windows: C:\…\platform\abs.json）。此前 cwd[:1]+":\platform\abs.json" 在 Unix
 	// 会拼出垃圾路径 /:\platform\abs.json，且 IsAbs fallback 在所有平台都不可达。

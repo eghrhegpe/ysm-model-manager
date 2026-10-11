@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // load7zFixture 读取 testdata 下预生成的 7z 夹具字节
@@ -151,9 +152,7 @@ func TestParseComponentsFrom7z_Full(t *testing.T) {
 	// 组件路径：含 arm（独立组件）、main 优先、TexSlot 全局化、texNames R1 契约
 	data := load7zFixture(t, "7z_full.7z")
 	comps, texNames, err := ParseComponentsFrom7z(data, int64(len(data)))
-	if err != nil {
-		t.Fatalf("ParseComponentsFrom7z 失败: %v", err)
-	}
+	testutil.NoError(t, err, "ParseComponentsFrom7z 失败")
 	if len(comps) != 3 {
 		t.Fatalf("组件数 = %d, 期望 3（main/arm/arrow，broken 解析失败跳过）", len(comps))
 	}
@@ -196,9 +195,7 @@ func TestParseComponentsFrom7z_MapModel(t *testing.T) {
 	// map 格式 + 对象纹理：main 声明 → texSlot 0、texNames 去扩展名
 	data := load7zFixture(t, "7z_map.7z")
 	comps, texNames, err := ParseComponentsFrom7z(data, int64(len(data)))
-	if err != nil {
-		t.Fatalf("ParseComponentsFrom7z 失败: %v", err)
-	}
+	testutil.NoError(t, err, "ParseComponentsFrom7z 失败")
 	if len(comps) != 1 {
 		t.Fatalf("组件数 = %d, 期望 1（missing.geo.json 未存在于归档中）", len(comps))
 	}
@@ -281,9 +278,7 @@ func TestParseComponentsFrom7z_ModelObjects(t *testing.T) {
 	// 组件路径 + 对象数组 model + 子目录几何：texSlot 按声明序、texNames R1 契约
 	data := load7zFixture(t, "7z_obj.7z")
 	comps, texNames, err := ParseComponentsFrom7z(data, int64(len(data)))
-	if err != nil {
-		t.Fatalf("ParseComponentsFrom7z 失败: %v", err)
-	}
+	testutil.NoError(t, err, "ParseComponentsFrom7z 失败")
 	if len(comps) != 2 {
 		t.Fatalf("组件数 = %d, 期望 2（main+extra；third 未存在于归档中）", len(comps))
 	}

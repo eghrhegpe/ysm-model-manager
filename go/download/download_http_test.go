@@ -355,9 +355,7 @@ func TestHTTP_ChunkedEncoding_Success(t *testing.T) {
 	dl := New()
 	savePath := filepath.Join(t.TempDir(), "chunked.txt")
 	err := dl.File(context.Background(), ts.URL, savePath, nil)
-	if err != nil {
-		t.Fatalf("chunked encoding 下载失败: %v", err)
-	}
+	testutil.NoError(t, err, "chunked encoding 下载失败")
 	data, _ := os.ReadFile(savePath)
 	if string(data) != "chunk1-chunk2-chunk3" {
 		t.Fatalf("内容不符: got %q, want %q", string(data), "chunk1-chunk2-chunk3")
@@ -381,9 +379,7 @@ func TestHTTP_ZeroByteBody_WithContentLength0(t *testing.T) {
 	dl := New()
 	savePath := filepath.Join(t.TempDir(), "zero.txt")
 	err := dl.File(context.Background(), ts.URL, savePath, nil)
-	if err != nil {
-		t.Fatalf("Content-Length: 0 下载失败: %v", err)
-	}
+	testutil.NoError(t, err, "Content-Length: 0 下载失败")
 	data, _ := os.ReadFile(savePath)
 	if len(data) != 0 {
 		t.Fatalf("预期空文件，实际 %d 字节", len(data))
@@ -426,9 +422,7 @@ func TestHTTP_ConcurrentSamePath_MutexSafety(t *testing.T) {
 	}
 
 	data, err := os.ReadFile(savePath)
-	if err != nil {
-		t.Fatalf("文件不存在: %v", err)
-	}
+	testutil.NoError(t, err, "文件不存在")
 	if string(data) != "concurrent-mutex-test-content" {
 		t.Fatalf("内容不符: got %q", string(data))
 	}
@@ -647,9 +641,7 @@ func TestHTTP_ErrorClassification_NoTruncationOnFullDownload(t *testing.T) {
 	dl := New()
 	savePath := filepath.Join(t.TempDir(), "full.txt")
 	err := dl.File(context.Background(), ts.URL, savePath, nil)
-	if err != nil {
-		t.Fatalf("正常下载不应报截断错误: %v", err)
-	}
+	testutil.NoError(t, err, "正常下载不应报截断错误")
 
 	data, _ := os.ReadFile(savePath)
 	if len(data) != len(body) {
@@ -785,9 +777,7 @@ func TestAudit_DownloadFail_PreservesOldFile_NoTempResidue(t *testing.T) {
 
 	// 旧文件必须原样保留
 	data, rErr := os.ReadFile(savePath)
-	if rErr != nil {
-		t.Fatalf("失败后旧文件丢失: %v", rErr)
-	}
+	testutil.NoError(t, rErr, "失败后旧文件丢失")
 	if string(data) != "OLD-VALUE" {
 		t.Fatalf("失败后旧文件被改写: got %q, want %q", string(data), "OLD-VALUE")
 	}
@@ -850,9 +840,7 @@ func TestAudit_RenameFailure_SavePathIsDirectory(t *testing.T) {
 
 	// 目录必须保留
 	info, sErr := os.Stat(savePath)
-	if sErr != nil {
-		t.Fatalf("失败后目录丢失: %v", sErr)
-	}
+	testutil.NoError(t, sErr, "失败后目录丢失")
 	if !info.IsDir() {
 		t.Fatalf("savePath 不再是目录: %v", info.Mode())
 	}
@@ -943,9 +931,7 @@ func TestHTTP_Checksum_Match(t *testing.T) {
 		t.Fatalf("checksum 匹配应下载成功: %v", err)
 	}
 	data, err := os.ReadFile(savePath)
-	if err != nil {
-		t.Fatalf("下载文件缺失: %v", err)
-	}
+	testutil.NoError(t, err, "下载文件缺失")
 	if string(data) != string(body) {
 		t.Fatalf("内容不符: got %q, want %q", string(data), string(body))
 	}

@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/ysm"
 )
 
@@ -38,9 +39,7 @@ func TestExtractTextureViaYSM_MockDecoderHitPNG(t *testing.T) {
 		t.Fatal(err)
 	}
 	got, err := extractTextureViaYSM(path)
-	if err != nil {
-		t.Fatalf("注入解码器不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "注入解码器不应报错")
 	if string(got) != string(png) {
 		t.Errorf("应返回解码出的 PNG, 得到 %d 字节", len(got))
 	}

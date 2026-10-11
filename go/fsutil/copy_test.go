@@ -143,9 +143,7 @@ func TestCopyDirRecursive_Success(t *testing.T) {
 
 	dst := filepath.Join(t.TempDir(), "dst")
 	err := CopyDirRecursive(src, dst, CopyDirOptions{Overwrite: true, Rollback: true})
-	if err != nil {
-		t.Fatalf("CopyDirRecursive 失败: %v", err)
-	}
+	testutil.NoError(t, err, "CopyDirRecursive 失败")
 	// 验证文件
 	data, err := os.ReadFile(filepath.Join(dst, "a.txt"))
 	if err != nil || string(data) != "AAA" {
@@ -193,9 +191,7 @@ func TestCopyDirRecursive_CopySymlink(t *testing.T) {
 
 	dst := filepath.Join(t.TempDir(), "dst")
 	err := CopyDirRecursive(src, dst, CopyDirOptions{RejectSymlink: false, Overwrite: true})
-	if err != nil {
-		t.Fatalf("复制 symlink 本身应成功: %v", err)
-	}
+	testutil.NoError(t, err, "复制 symlink 本身应成功")
 	// 验证 symlink 被复制（保留链接语义）
 	fi, err := os.Lstat(filepath.Join(dst, "link.txt"))
 	testutil.NoError(t, err)
@@ -267,9 +263,7 @@ func TestCopyDirRecursive_AtomicRename_DstMissing(t *testing.T) {
 
 	dst := filepath.Join(t.TempDir(), "dst")
 	err := CopyDirRecursive(src, dst, CopyDirOptions{AtomicRename: true, Overwrite: true})
-	if err != nil {
-		t.Fatalf("AtomicRename 目标不存在失败: %v", err)
-	}
+	testutil.NoError(t, err, "AtomicRename 目标不存在失败")
 	// 验证内容
 	data, err := os.ReadFile(filepath.Join(dst, "a.txt"))
 	if err != nil || string(data) != "AAA" {
@@ -302,9 +296,7 @@ func TestCopyDirRecursive_AtomicRename_OverwriteExisting(t *testing.T) {
 	}
 
 	err := CopyDirRecursive(src, dst, CopyDirOptions{AtomicRename: true, Overwrite: true})
-	if err != nil {
-		t.Fatalf("AtomicRename 覆盖已有目录失败: %v", err)
-	}
+	testutil.NoError(t, err, "AtomicRename 覆盖已有目录失败")
 	// 新文件存在
 	data, err := os.ReadFile(filepath.Join(dst, "a.txt"))
 	if err != nil || string(data) != "NEW" {
@@ -375,9 +367,7 @@ func TestRelJoin(t *testing.T) {
 	for _, tt := range tests {
 		t.Run("", func(t *testing.T) {
 			got, err := relJoin(dst, src, tt.p)
-			if err != nil {
-				t.Fatalf("不应报错: %v", err)
-			}
+			testutil.NoError(t, err, "不应报错")
 			if got != tt.expected {
 				t.Errorf("relJoin(%q,%q,%q) = %q, 期望 %q", dst, src, tt.p, got, tt.expected)
 			}
@@ -423,9 +413,7 @@ func TestRecoverAtomicRename_Recovery(t *testing.T) {
 
 	// 执行恢复
 	recovered, err := RecoverAtomicRename(dir)
-	if err != nil {
-		t.Fatalf("RecoverAtomicRename 失败: %v", err)
-	}
+	testutil.NoError(t, err, "RecoverAtomicRename 失败")
 	if recovered != 1 {
 		t.Fatalf("应恢复 1 个 backup，实际 %d", recovered)
 	}
@@ -457,9 +445,7 @@ func TestRecoverAtomicRename_AlreadyRecovered(t *testing.T) {
 	}
 
 	recovered, err := RecoverAtomicRename(dir)
-	if err != nil {
-		t.Fatalf("RecoverAtomicRename 失败: %v", err)
-	}
+	testutil.NoError(t, err, "RecoverAtomicRename 失败")
 	if recovered != 0 {
 		t.Fatalf("原始目录已存在时应跳过，实际恢复 %d", recovered)
 	}
@@ -490,9 +476,7 @@ func TestRecoverAtomicRename_MultipleBackups(t *testing.T) {
 	}
 
 	recovered, err := RecoverAtomicRename(dir)
-	if err != nil {
-		t.Fatalf("RecoverAtomicRename 失败: %v", err)
-	}
+	testutil.NoError(t, err, "RecoverAtomicRename 失败")
 	if recovered != 1 {
 		t.Fatalf("应恢复 1 个 backup，实际 %d", recovered)
 	}
@@ -508,9 +492,7 @@ func TestRecoverAtomicRename_MultipleBackups(t *testing.T) {
 func TestRecoverAtomicRename_EmptyDir(t *testing.T) {
 	dir := t.TempDir()
 	recovered, err := RecoverAtomicRename(dir)
-	if err != nil {
-		t.Fatalf("空目录不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "空目录不应报错")
 	if recovered != 0 {
 		t.Fatalf("空目录应恢复 0，实际 %d", recovered)
 	}
@@ -519,9 +501,7 @@ func TestRecoverAtomicRename_EmptyDir(t *testing.T) {
 // TestRecoverAtomicRename_NonExistentDir 验证目录不存在时返回 0
 func TestRecoverAtomicRename_NonExistentDir(t *testing.T) {
 	recovered, err := RecoverAtomicRename(filepath.Join(t.TempDir(), "nope"))
-	if err != nil {
-		t.Fatalf("目录不存在不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "目录不存在不应报错")
 	if recovered != 0 {
 		t.Fatalf("目录不存在应恢复 0，实际 %d", recovered)
 	}
@@ -544,9 +524,7 @@ func TestRecoverAtomicRename_IgnoresRelinkBakFamily(t *testing.T) {
 		t.Fatal(err)
 	}
 	recovered, err := RecoverAtomicRename(dir)
-	if err != nil {
-		t.Fatalf("不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "不应报错")
 	if recovered != 0 {
 		t.Fatalf(".relink-bak-* 不得被 .bak-* 自愈认领，实际恢复 %d", recovered)
 	}

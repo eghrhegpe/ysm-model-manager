@@ -35,9 +35,7 @@ func TestMoveModelFile_CrossDeviceDeleteSourceFails_KeepsBothCopies(t *testing.T
 	testutil.NoError(t, err)
 	h, err := syscall.CreateFile(ptr, syscall.GENERIC_READ, syscall.FILE_SHARE_READ, nil,
 		syscall.OPEN_EXISTING, syscall.FILE_ATTRIBUTE_NORMAL, 0)
-	if err != nil {
-		t.Fatalf("构造独占读句柄失败: %v", err)
-	}
+	testutil.NoError(t, err, "构造独占读句柄失败")
 	// 句柄必须在 t.Cleanup（含 TempDir 清理）之前关闭（defer 早于 t.Cleanup 执行）
 	defer func() { _ = syscall.CloseHandle(h) }()
 

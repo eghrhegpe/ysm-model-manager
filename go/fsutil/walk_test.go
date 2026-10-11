@@ -213,9 +213,7 @@ func TestSafeWalk_LogsSkippedError(t *testing.T) {
 	err := SafeWalk(dir, func(p string, d os.DirEntry, walkErr error) error {
 		return nil
 	})
-	if err != nil {
-		t.Fatalf("SafeWalk 顶层不应返回错误，得到 %v", err)
-	}
+	testutil.NoError(t, err, "SafeWalk 顶层不应返回错误，得到")
 
 	// 只要 chmod 降权在该平台生效（err != nil 真发生），SafeWalk 必须补记日志。
 	// 若平台未生效（err 始终 nil），则无日志也属正确，跳过断言。

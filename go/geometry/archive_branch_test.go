@@ -96,16 +96,12 @@ func TestMakeZipRaw_Sanity(t *testing.T) {
 	// 自检：makeZipRaw 生成的 method=0 ZIP 可被 archive/zip 正常读取
 	raw := makeZipRaw(t, []rawZipEntry{{name: "a.txt", method: 0, data: "hello"}})
 	r, err := zip.NewReader(bytes.NewReader(raw), int64(len(raw)))
-	if err != nil {
-		t.Fatalf("自检失败: makeZipRaw 产物无法解析: %v", err)
-	}
+	testutil.NoError(t, err, "自检失败: makeZipRaw 产物无法解析")
 	if len(r.File) != 1 || r.File[0].Name != "a.txt" {
 		t.Fatalf("自检失败: 条目异常 %+v", r.File)
 	}
 	rc, err := r.File[0].Open()
-	if err != nil {
-		t.Fatalf("自检失败: Open 报错: %v", err)
-	}
+	testutil.NoError(t, err, "自检失败: Open 报错")
 	buf := new(bytes.Buffer)
 	_, _ = buf.ReadFrom(rc)
 	if buf.String() != "hello" {
@@ -114,9 +110,7 @@ func TestMakeZipRaw_Sanity(t *testing.T) {
 	// method=99 条目：Open 应报错（ErrAlgorithm）
 	raw2 := makeZipRaw(t, []rawZipEntry{{name: "bad.dat", method: 99, data: "x"}})
 	r2, err := zip.NewReader(bytes.NewReader(raw2), int64(len(raw2)))
-	if err != nil {
-		t.Fatalf("自检失败: method=99 目录解析应成功: %v", err)
-	}
+	testutil.NoError(t, err, "自检失败: method=99 目录解析应成功")
 	if _, err := r2.File[0].Open(); err == nil {
 		t.Fatalf("自检失败: method=99 条目 Open 应报错")
 	}
@@ -203,9 +197,7 @@ func TestParseComponentsFromZip_YsmOpenError(t *testing.T) {
 	entries[0].method = 99
 	data := makeZipRaw(t, entries)
 	comps, texNames, err := ParseComponentsFromZip(data, int64(len(data)))
-	if err != nil {
-		t.Fatalf("应无错误: %v", err)
-	}
+	testutil.NoError(t, err, "应无错误")
 	if len(comps) != 1 {
 		t.Fatalf("组件数 = %d, 期望 1（几何回退）", len(comps))
 	}
@@ -412,9 +404,7 @@ func TestParseComponentsFromZip_BackslashEntryNames(t *testing.T) {
 		"a\\first.geo.json":  validGeoJSON,
 	})
 	comps, _, err := ParseComponentsFromZip(data, int64(len(data)))
-	if err != nil {
-		t.Fatalf("ParseComponentsFromZip 失败: %v", err)
-	}
+	testutil.NoError(t, err, "ParseComponentsFromZip 失败")
 	if len(comps) != 2 {
 		t.Fatalf("组件数 = %d, 期望 2", len(comps))
 	}
@@ -432,9 +422,7 @@ func TestParseComponentsFromZip_ModelMapBadValue(t *testing.T) {
 		"tex1.png":      "PNG-DATA",
 	})
 	comps, texNames, err := ParseComponentsFromZip(data, int64(len(data)))
-	if err != nil {
-		t.Fatalf("ParseComponentsFromZip 失败: %v", err)
-	}
+	testutil.NoError(t, err, "ParseComponentsFromZip 失败")
 	if len(comps) != 1 {
 		t.Fatalf("组件数 = %d, 期望 1", len(comps))
 	}
@@ -457,9 +445,7 @@ func TestParseComponentsFromZip_NoDeclarations(t *testing.T) {
 		"arrow.json":    miniGeo,
 	})
 	comps, texNames, err := ParseComponentsFromZip(data, int64(len(data)))
-	if err != nil {
-		t.Fatalf("ParseComponentsFromZip 失败: %v", err)
-	}
+	testutil.NoError(t, err, "ParseComponentsFromZip 失败")
 	if len(comps) != 3 {
 		t.Fatalf("组件数 = %d, 期望 3", len(comps))
 	}
@@ -488,9 +474,7 @@ func TestParseComponentsFromZip_TextureObjects(t *testing.T) {
 		"tex1.png":       "PNG-DATA",
 	})
 	comps, texNames, err := ParseComponentsFromZip(data, int64(len(data)))
-	if err != nil {
-		t.Fatalf("ParseComponentsFromZip 失败: %v", err)
-	}
+	testutil.NoError(t, err, "ParseComponentsFromZip 失败")
 	if len(comps) != 1 {
 		t.Fatalf("组件数 = %d, 期望 1", len(comps))
 	}
@@ -511,9 +495,7 @@ func TestParseComponentsFromZip_ModelObjectsNameOnly(t *testing.T) {
 		"tex1.png":       "PNG-DATA",
 	})
 	comps, texNames, err := ParseComponentsFromZip(data, int64(len(data)))
-	if err != nil {
-		t.Fatalf("ParseComponentsFromZip 失败: %v", err)
-	}
+	testutil.NoError(t, err, "ParseComponentsFromZip 失败")
 	if len(comps) != 1 {
 		t.Fatalf("组件数 = %d, 期望 1", len(comps))
 	}
@@ -533,9 +515,7 @@ func TestParseComponentsFromZip_TextureEmptyUV(t *testing.T) {
 		"model.geo.json": validGeoJSON,
 	})
 	comps, texNames, err := ParseComponentsFromZip(data, int64(len(data)))
-	if err != nil {
-		t.Fatalf("ParseComponentsFromZip 失败: %v", err)
-	}
+	testutil.NoError(t, err, "ParseComponentsFromZip 失败")
 	if len(comps) != 1 {
 		t.Fatalf("组件数 = %d, 期望 1", len(comps))
 	}
@@ -554,9 +534,7 @@ func TestParseComponentsFromZip_InvalidYsmJSON(t *testing.T) {
 		"tex1.png":       "PNG-DATA",
 	})
 	comps, texNames, err := ParseComponentsFromZip(data, int64(len(data)))
-	if err != nil {
-		t.Fatalf("应无错误: %v", err)
-	}
+	testutil.NoError(t, err, "应无错误")
 	if len(comps) != 1 {
 		t.Fatalf("组件数 = %d, 期望 1（几何回退）", len(comps))
 	}
@@ -574,9 +552,7 @@ func TestParseComponentsFromZip_ModelAsString(t *testing.T) {
 		"tex1.png":       "PNG-DATA",
 	})
 	comps, texNames, err := ParseComponentsFromZip(data, int64(len(data)))
-	if err != nil {
-		t.Fatalf("ParseComponentsFromZip 失败: %v", err)
-	}
+	testutil.NoError(t, err, "ParseComponentsFromZip 失败")
 	if len(comps) != 1 {
 		t.Fatalf("组件数 = %d, 期望 1", len(comps))
 	}
@@ -597,9 +573,7 @@ func TestParseComponentsFromZip_TextureBackslashUV(t *testing.T) {
 		"tex1.png":       "PNG-DATA",
 	})
 	comps, texNames, err := ParseComponentsFromZip(data, int64(len(data)))
-	if err != nil {
-		t.Fatalf("ParseComponentsFromZip 失败: %v", err)
-	}
+	testutil.NoError(t, err, "ParseComponentsFromZip 失败")
 	if len(comps) != 1 {
 		t.Fatalf("组件数 = %d, 期望 1", len(comps))
 	}
@@ -619,9 +593,7 @@ func TestParseComponentsFromZip_EntryOpenErrors(t *testing.T) {
 		{name: "tex1.png", method: 99, data: "x"},
 	})
 	comps, texNames, err := ParseComponentsFromZip(data, int64(len(data)))
-	if err != nil {
-		t.Fatalf("应无错误: %v", err)
-	}
+	testutil.NoError(t, err, "应无错误")
 	if len(comps) != 1 || comps[0].Bones[0].Name != "head" {
 		t.Fatalf("组件 = %+v, 期望仅 model(head) 成功解析", comps)
 	}
@@ -639,9 +611,7 @@ func TestParseComponentsFromZip_PngBackslashName(t *testing.T) {
 		"sub\\tex1.png":  "PNG-DATA",
 	})
 	_, _, err := ParseComponentsFromZip(data, int64(len(data)))
-	if err != nil {
-		t.Fatalf("ParseComponentsFromZip 失败: %v", err)
-	}
+	testutil.NoError(t, err, "ParseComponentsFromZip 失败")
 }
 
 func TestParseFromZip_PngSubdirAndBackslashNames(t *testing.T) {
@@ -740,9 +710,7 @@ func TestBuildComponents_ModelTexNameMap(t *testing.T) {
 		"textures/boat.png":       "BOAT",
 	})
 	comps, texNames, err := ParseComponentsFromZip(data, int64(len(data)))
-	if err != nil {
-		t.Fatalf("ParseComponentsFromZip 失败: %v", err)
-	}
+	testutil.NoError(t, err, "ParseComponentsFromZip 失败")
 	if len(comps) != 5 {
 		t.Fatalf("组件数 = %d, 期望 5（main/arm/foxcar/minecart/boat）", len(comps))
 	}

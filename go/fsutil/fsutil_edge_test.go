@@ -89,13 +89,9 @@ func TestWriteFileAtomic_RelativePath(t *testing.T) {
 	_ = os.Chdir(tmpDir)
 
 	err := WriteFileAtomic("relative.ysm", []byte("test"))
-	if err != nil {
-		t.Fatalf("相对路径应正常工作: %v", err)
-	}
+	testutil.NoError(t, err, "相对路径应正常工作")
 	data, err := os.ReadFile(filepath.Join(tmpDir, "relative.ysm"))
-	if err != nil {
-		t.Fatalf("相对路径文件未找到: %v", err)
-	}
+	testutil.NoError(t, err, "相对路径文件未找到")
 	t.Logf("FIXED(INFO-REL): 相对路径写入成功, data=%s", string(data))
 }
 

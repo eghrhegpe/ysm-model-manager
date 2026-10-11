@@ -24,9 +24,7 @@ func TestPrepareAtomicWrite_Success(t *testing.T) {
 	dir := t.TempDir()
 	savePath := filepath.Join(dir, "out.bin")
 	af, cleanup, err := prepareAtomicWrite(savePath)
-	if err != nil {
-		t.Fatalf("prepareAtomicWrite: %v", err)
-	}
+	testutil.NoError(t, err, "prepareAtomicWrite")
 	if af.savePath != savePath {
 		t.Fatalf("savePath = %q, want %q", af.savePath, savePath)
 	}
@@ -68,9 +66,7 @@ func TestCommitAtomicWrite_SuccessAndProgress(t *testing.T) {
 		cbDownloaded = downloaded
 		cbTotal = total
 	})
-	if err != nil {
-		t.Fatalf("commitAtomicWrite: %v", err)
-	}
+	testutil.NoError(t, err, "commitAtomicWrite")
 	if !af.committed {
 		t.Fatal("提交后 committed 应为 true")
 	}
@@ -108,9 +104,7 @@ func TestVerifyDownloadedFile_Checksum(t *testing.T) {
 	sum := sha256Sum(t, "hello")
 	// 匹配 → 通过，返回 usedTotal=total
 	used, err := verifyDownloadedFile(f, 5, 5, true, sum)
-	if err != nil {
-		t.Fatalf("校验和匹配不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "校验和匹配不应报错")
 	if used != 5 {
 		t.Fatalf("usedTotal = %d, want 5", used)
 	}
@@ -126,9 +120,7 @@ func TestVerifyDownloadedFile_UnknownTotal(t *testing.T) {
 
 	// total<=0 时返回 downloaded 而非 total
 	used, err := verifyDownloadedFile(f, -1, 5, false, nil)
-	if err != nil {
-		t.Fatalf("未知 total 不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "未知 total 不应报错")
 	if used != 5 {
 		t.Fatalf("usedTotal = %d, want 5", used)
 	}
@@ -155,9 +147,7 @@ func tempFileWithContent(t *testing.T, s string) *os.File {
 func TestCopyResponseBodyWithProgress(t *testing.T) {
 	var buf bytes.Buffer
 	n, err := copyResponseBodyWithProgress(context.Background(), strings.NewReader("hello world"), &buf, 11, nil)
-	if err != nil {
-		t.Fatalf("copyResponseBodyWithProgress: %v", err)
-	}
+	testutil.NoError(t, err, "copyResponseBodyWithProgress")
 	if n != 11 {
 		t.Fatalf("downloaded = %d, want 11", n)
 	}

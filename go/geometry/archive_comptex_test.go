@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -26,9 +27,7 @@ func TestComponentTextures_Declared_HasEntry(t *testing.T) {
 		"textures/arrow.png": tinyPNG(),
 	})
 	models, _, err := ParseComponentsFromZip(data, int64(len(data)))
-	if err != nil {
-		t.Fatalf("ParseComponentsFromZip: %v", err)
-	}
+	testutil.NoError(t, err, "ParseComponentsFromZip")
 	var arrowComp *types.BedrockModel
 	for i := range models {
 		if models[i].SourceName == "arrow" {
@@ -59,9 +58,7 @@ func TestComponentTextures_Undeclared_SameNameFallback(t *testing.T) {
 		"textures/arm.png":  tinyPNG(), // arm.png 存在：同名兜底应绑定
 	})
 	models, _, err := ParseComponentsFromZip(data, int64(len(data)))
-	if err != nil {
-		t.Fatalf("ParseComponentsFromZip: %v", err)
-	}
+	testutil.NoError(t, err, "ParseComponentsFromZip")
 	var armComp *types.BedrockModel
 	for i := range models {
 		if models[i].SourceName == "arm" {
@@ -89,9 +86,7 @@ func TestComponentTextures_Undeclared_NoSameNameFile(t *testing.T) {
 		"textures/skin.png": tinyPNG(),
 	})
 	models, _, err := ParseComponentsFromZip(data, int64(len(data)))
-	if err != nil {
-		t.Fatalf("ParseComponentsFromZip: %v", err)
-	}
+	testutil.NoError(t, err, "ParseComponentsFromZip")
 	var armComp *types.BedrockModel
 	for i := range models {
 		if models[i].SourceName == "arm" {

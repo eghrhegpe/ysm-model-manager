@@ -61,7 +61,7 @@ invariant_anchors:
   - frontend/src/preview-3d/caps/light-cone.ts|applyTransform
   - frontend/src/preview-3d/caps/light-cone.ts|ConeGeometry
   - frontend/src/preview-3d/caps/light-capability.ts|CONE_GEO_CHANGES
-  - frontend/src/preview-3d/caps/light-capability.ts|getSpotDir
+  - frontend/src/preview-3d/caps/light-instances.ts|spotDir
   - frontend/src/preview-3d/screenshot/screenshot-cone.ts|applyVolumetricCone
 ---
 
@@ -100,7 +100,7 @@ invariant_anchors:
 
 ## 与其他子系统关系
 
-- **`LightCapability`**：三盏灯（key/fill/rim）各可在 directional/point/spot 间切换；锥体驱动源 = envState 键 `lightVolumetricDriver`（`getSpotLightForCone` 只读该键，与 `activeLight` 无关），方向由 `getSpotDir(spotLight)`（光源 → 靶点）算出。重建触发面 = `CONE_GEO_CHANGES`（type/enabled/angle/penumbra），位置变更走 `syncPosition`，其余走 uniforms 快路径。
+- **`LightCapability`**：三盏灯（key/fill/rim）各可在 directional/point/spot 间切换；锥体驱动源 = envState 键 `lightVolumetricDriver`（`getSpotLightForCone` 只读该键，与 `activeLight` 无关），方向由 `LightInstances.spotDir(spotLight, out)`（光源 → 靶点）算出（[ADR-329 刀②] 靶点生命周期下沉叶后，该计算随 `spotTarget` 一并迁入 `light-instances.ts`，cap 侧经 `this.instances.spotDir` 调用）。重建触发面 = `CONE_GEO_CHANGES`（type/enabled/angle/penumbra），位置变更走 `syncPosition`，其余走 uniforms 快路径。
 - **envState / env-dispatcher**：参数变更经 `setEnvState` 派发，`onEnvChanged` 分派到锥体。
 - **灯 helper**（ADR-246 D3 扩展）：每盏灯按当前 type 配对应 helper（Directional↔DirectionalLightHelper / Spot↔SpotLightHelper / Point↔PointLightHelper），类型切换时重建；体积光锥是视觉光柱本体。
 - **截图渲染**（`preview-3d/screenshot/screenshot-lights.ts` + `preview-3d/screenshot/screenshot-cone.ts`）：**同构**（ADR-266-d1，取代 ADR-246 期「预览与截图本就不同构」的旧口径）——`toScreenshotLights()` 经 `light-capability.ts|getSpotLightForCone` 取驱动槽位（不重算驱动规则），离屏经 `screenshot-cone.ts|applyVolumetricCone` **复用本类**建锥（同一几何/shader，非第二套「截图专用光柱」）；无驱动 spot / 未开体积光 / 能力总闸关 → `volumetric` 为 null（预览没有的东西，截图不凭空出现）。同构义务不止几何：离屏 renderer 的 `toneMapping` / `toneMappingExposure` / `outputColorSpace` 一律镜像活跃预览 renderer 的**现值**（`ScreenshotLights.output`；读现值而非重推 sky/pp 属主链——推导即手抄）。

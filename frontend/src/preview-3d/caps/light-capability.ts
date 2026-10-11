@@ -71,7 +71,7 @@ import {
 // 本文件**不再重导出**它们——需要时请从 light-math.ts 直引，保持叶消费，避免把截图拉回本文件。
 
 // [ADR-329 刀② 2026-10-11] 灯实例 / helper / target 生命周期已下沉
-// `light-instances.ts|light-instances.ts` 的 `LightInstances`，本 cap 退化为**状态编排薄壳**：
+// `light-instances.ts` 的 `LightInstances`，本 cap 退化为**状态编排薄壳**：
 //   - 持有 instances 叶实例（构造装配接口同前：scene/target/targetHeight/caps）；
 //   - 保留：enabled 门、onEnvChanged 分派（结构性重建委托叶 syncLight）、锥体（VolumetricCone
 //     已独立叶，此处仅编排挂载时机）、ambient（refreshAmbientFromSky 依赖 caps 查询器的 sky
@@ -235,7 +235,7 @@ function hasAny(changed: Set<EnvStateKey>, keys: Set<EnvStateKey>): boolean {
 }
 
 // [light-gizmo] DIR_HELPER_COLORS（方向灯辅助配色）随 helper 群迁入
-// light-instances.ts|light-instances.ts（仅 helper 工厂消费，cap 不再持有）。
+// light-instances.ts 的 DIR_HELPER_COLORS（仅 helper 工厂消费，cap 不再持有）。
 
 export class LightCapability implements SceneCapability {
   readonly id = "light";

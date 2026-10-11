@@ -20,6 +20,7 @@ source_files:
   - frontend/src/preview-3d/caps/env-ibl.ts
   - frontend/src/preview-3d/caps/postprocessing-composer.ts
   - frontend/src/preview-3d/caps/light-instances.ts
+  - frontend/src/preview-3d/caps/sky-bake-pipeline.ts
 tests:
   - frontend/src/preview-3d/adapters/shared-infra.test.ts
   - frontend/src/preview-3d/caps/scene-capability-persist.test.ts
@@ -65,6 +66,7 @@ auto_fields:
     - ModelType
     - NumericRange
     - pickModelDefaultFields
+    - PMREM_ELEVATION_THRESHOLD
     - PostprocessingComposer
     - PostprocessingComposerDeps
     - RangedKey
@@ -83,6 +85,8 @@ auto_fields:
     - setEnvState
     - setStateValue
     - SharedInfra
+    - SkyBakeDeps
+    - SkyBakePipeline
     - suspendEnvCallbacks
     - teardownSharedInfra
     - toModelType

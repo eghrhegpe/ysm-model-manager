@@ -935,6 +935,27 @@ describe("PostprocessingCapability — 启用意图 ppEnabled（ADR-250）", () 
     expect(internals.composer).toBe(composerAtStart);
   });
 
+  it("[ADR-299 对照] composer 未建时改 ppReflectionMode 零分配（补挂不得越权建 composer）", () => {
+    // [ADR-329 刀① 复核 2026-10-11] 独立审查报出的窄路径，本仓核实结论 = 不可达
+    // （cap 侧 `hasComposer()` 门先挡，叶永不被调用），但 ADR-299「未启用会话一个 RenderTarget
+    //  都不分配」是 GPU 常驻税的支付对象，值得机器钉死而非靠推理：日后若有人把 cap 侧那层门
+    //  挪进叶内、或删掉门只留叶内判断，本用例即转红。
+    const cap = newCap({});
+    const internals = composerOf(cap) as unknown as { composer: unknown };
+    expect(internals.composer, "前置：默认关闭会话未建 composer").toBeNull();
+    const spy = buildSpy();
+    spy.mockClear();
+    // 三个档位全切一遍（envmap-only / ssr-only / envmap+ssr）——任一档触发建链即越权
+    cap.setReflectionMode("envmap-only");
+    cap.setReflectionMode("ssr-only");
+    cap.setReflectionMode("envmap+ssr");
+    expect(internals.composer, "未启用会话切反射档位不得分配 composer").toBeNull();
+    expect(spy, "未启用会话切反射档位不得触发 buildComposer").not.toHaveBeenCalled();
+    // 补一句正向对照：真启用后同一路径才建（证明上面不是「切档根本不派发」的假绿）
+    cap.setEnabled(true);
+    expect(internals.composer).not.toBeNull();
+  });
+
   it("[症状②] MMD 开启后处理不抬高 exposure（1.8× 亮瞎消除，数值锁定）", () => {
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
@@ -993,6 +1014,13 @@ describe("PostprocessingCapability — 真实 composer 构建管线", () => {
 
   function internalsOf(cap: PostprocessingCapability) {
     // [ADR-329 刀①] composer/pass/尺寸凭据随拆分迁移至 composer 叶——经 composerOf 探针取
+    //
+    // ⚠️ **快照语义**（独立审查 2026-10-11 记录）：拆前此处是 `cap as unknown as {...}`（活对象，
+    //   字段实时读取）；拆后改为展开叶 → 得到的是**读取时刻的值快照**。
+    //   现有 46 个调用点全部是「单次读取」或「取出 Pass 实例引用后再改其属性」（引用仍活），
+    //   故当前零影响。**但**：勿写出 `const x = internalsOf(cap); cap.setEnabled(true);
+    //   expect(x.composer).not.toBeNull()` 这种写法——快照恒为旧值，会假绿。
+    //   要观察变化就重新调 internalsOf(cap)。
     return {
       ...(composerOf(cap) as unknown as {
         composer: EffectComposer; renderPass: Pass; bloomPass: Pass; outputPass: Pass;

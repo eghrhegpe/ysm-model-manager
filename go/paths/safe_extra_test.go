@@ -6,6 +6,8 @@ package paths
 import (
 	"path/filepath"
 	"testing"
+
+	"ysm-model-manager/go/internal/testutil"
 )
 
 func TestHasTraversal(t *testing.T) {
@@ -39,9 +41,8 @@ func TestHasTraversal(t *testing.T) {
 func TestResolveOrKeep(t *testing.T) {
 	dir := t.TempDir()
 	// 存在的目录 → EvalSymlinks 成功，解析为真实路径（非空）
-	if got := ResolveOrKeep(dir); got == "" {
-		t.Fatal("存在路径应解析非空")
-	}
+	// 用「空串判断取反」表达非空（testutil 无 NotEqual，避免为单一用例扩断言面）
+	testutil.Equal(t, ResolveOrKeep(dir) == "", false, "存在路径应解析非空")
 	// 不存在的路径 → 保留原样（EvalSymlinks 失败不 panic 不改写）
 	missing := filepath.Join(dir, "does-not-exist")
 	if got := ResolveOrKeep(missing); got != missing {

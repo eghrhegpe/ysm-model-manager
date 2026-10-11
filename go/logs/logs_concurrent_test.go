@@ -3,6 +3,8 @@ package logs
 import (
 	"sync"
 	"testing"
+
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // 并发交错压力：Add/GetAll/Flush/Clear 多 goroutine 混跑不死锁、-race 干净，
@@ -30,14 +32,10 @@ func TestLogger_ConcurrentAccess(t *testing.T) {
 	wg.Wait()
 
 	l.Flush()
-	if got := len(l.GetAll()); got != workers*rounds {
-		t.Fatalf("并发写入后条数 = %d, 期望 %d", got, workers*rounds)
-	}
+	testutil.Equal(t, len(l.GetAll()), workers*rounds, "并发写入后条数")
 
 	// 清空后立即读盘验证：Clear 的落盘仍是同步语义（返回即已落盘）
 	l.Clear()
 	reloaded := NewLogger(dir)
-	if n := len(reloaded.GetAll()); n != 0 {
-		t.Fatalf("Clear 后重载日志条数 = %d, 期望 0", n)
-	}
+	testutil.Equal(t, len(reloaded.GetAll()), 0, "Clear 后重载日志条数")
 }

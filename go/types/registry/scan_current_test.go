@@ -5,6 +5,10 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	// 此处只能用**根桥** internal/testutil：go/internal/testutil 依赖本包（registry），
+	// 本包测试再引它会成 test 导入环（go: import cycle not allowed in test）。
+	"ysm-model-manager/internal/testutil"
 )
 
 // TestSchemaGuard_ScanCurrentResourceTypes 用守卫扫描当前 resource_types.json，
@@ -16,9 +20,8 @@ func TestSchemaGuard_ScanCurrentResourceTypes(t *testing.T) {
 		t.Skipf("无法读取 resource_types.json: %v", err)
 	}
 	var reg ResourceTypeRegistry
-	if err := json.Unmarshal(data, &reg); err != nil {
-		t.Fatalf("解析失败: %v", err)
-	}
+	err = json.Unmarshal(data, &reg)
+	testutil.NoError(t, err, "解析失败")
 	violations := validateRegistrySchema(&reg)
 	if len(violations) == 0 {
 		t.Log("当前 resource_types.json 零红线违规 ✅")

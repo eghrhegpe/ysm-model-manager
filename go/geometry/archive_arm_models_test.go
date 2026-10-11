@@ -27,9 +27,7 @@ func TestParseFromZip_ExcludesArm(t *testing.T) {
 		"tex1.png":         pngData,
 	})
 	model, _, _ := ParseFromZip(data, int64(len(data)))
-	if model == nil {
-		t.Fatal("模型应为非 nil")
-	}
+	testutil.NotNil(t, model, "模型应为非 nil")
 	if model.BoneCount != 1 {
 		t.Errorf("BoneCount = %d, 期望 1（仅 main.json 的 head）", model.BoneCount)
 	}

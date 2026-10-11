@@ -36,9 +36,8 @@ func TestCacheVerify_ExtSetMatchesRegistry(t *testing.T) {
 	testutil.WriteTestFileBytes(t, filepath.Join(dir, "g.txt"), []byte("not a texture"))
 
 	out := captureOutput(t, func() {
-		if err := runCacheVerify(&CmdContext{App: &app.App{}, Args: []string{"--dir", dir}}); err != nil {
-			t.Fatalf("runCacheVerify 应成功, got %v", err)
-		}
+		err := runCacheVerify(&CmdContext{App: &app.App{}, Args: []string{"--dir", dir}})
+		testutil.NoError(t, err, "runCacheVerify 应成功")
 	})
 
 	// 贴图总数应为 4（4 个受支持格式），而非 6

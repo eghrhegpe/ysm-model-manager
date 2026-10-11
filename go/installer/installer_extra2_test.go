@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/fsutil"
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -94,9 +95,7 @@ func TestInstallToGlobal_Success(t *testing.T) {
 		t.Errorf("目标路径 = %q, want %q", dst, want)
 	}
 	readBack, err := os.ReadFile(dst)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if string(readBack) != string(content) {
 		t.Errorf("内容 = %q, want %q", string(readBack), string(content))
 	}
@@ -499,9 +498,7 @@ func TestEvalSymlinksOrKeep(t *testing.T) {
 	// 存在的路径解析为真实路径（与 EvalSymlinks 结果一致；Windows 上 Temp 目录
 	// 可能是 junction，不能与原始字符串直接比较）
 	resolved, err := filepath.EvalSymlinks(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if got := evalSymlinksOrKeep(dir); got != resolved {
 		t.Errorf("已存在路径应解析为真实路径, got %q, want %q", got, resolved)
 	}

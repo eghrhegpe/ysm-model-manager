@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // =====================================================================
@@ -112,9 +113,7 @@ func TestExtractPreviewTexture_ArbitraryZipRead(t *testing.T) {
 	zipPath := filepath.Join(tmpDir, "arbitrary.zip")
 	// 用合法 zip 写入
 	f, err := os.Create(zipPath)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	// 写最小 zip 头部（PK + 无效 body——extractFirstPNGFromZip 返回 nil）
 	f.Write([]byte("PK\x03\x04"))
 	f.Close()

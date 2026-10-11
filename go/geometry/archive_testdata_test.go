@@ -15,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // loadTestdataZip 读取 testdata/multi_tex 全部文件并打包为 zip 字节
@@ -37,9 +38,7 @@ func loadTestdataZip(t *testing.T) []byte {
 			t.Fatalf("读取 %s 失败: %v", e.Name(), err)
 		}
 		w, err := zw.Create(e.Name())
-		if err != nil {
-			t.Fatal(err)
-		}
+		testutil.NoError(t, err)
 		if _, err := w.Write(data); err != nil {
 			t.Fatal(err)
 		}

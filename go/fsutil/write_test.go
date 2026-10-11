@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 func TestWriteFileAtomic_Success(t *testing.T) {
@@ -21,9 +22,7 @@ func TestWriteFileAtomic_Success(t *testing.T) {
 		t.Fatalf("内容不符: %q %v", string(data), err)
 	}
 	fi, err := os.Stat(dst)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	// 平台感知：Windows 的 os.Chmod(0644) 只映射只读位、实际权限为 0666——
 	// 断言「非只读」（拥有者/组/其他均可写）而非精确 0644，跨平台稳定
 	want := os.FileMode(0644)

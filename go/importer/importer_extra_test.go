@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // ====== copyDir ======
@@ -31,16 +32,12 @@ func TestCopyDir_Basic(t *testing.T) {
 
 	// 验证文件已复制
 	data, err := os.ReadFile(filepath.Join(dst, "a.txt"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if string(data) != "aaa" {
 		t.Errorf("a.txt = %q, 期望 aaa", string(data))
 	}
 	data, err = os.ReadFile(filepath.Join(dst, "sub", "b.txt"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if string(data) != "bbb" {
 		t.Errorf("sub/b.txt = %q, 期望 bbb", string(data))
 	}
@@ -62,9 +59,7 @@ func TestCopyDir_OverwriteExisting(t *testing.T) {
 		t.Fatalf("copyDir 覆盖失败: %v", err)
 	}
 	data, err := os.ReadFile(filepath.Join(dst, "new.txt"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if string(data) != "new" {
 		t.Errorf("内容应被覆盖: %q, 期望 new", string(data))
 	}

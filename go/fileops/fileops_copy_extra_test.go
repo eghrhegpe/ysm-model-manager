@@ -11,15 +11,14 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // 断言 dir 下无 .copy-* 临时文件残留（copyFile 失败路径的 defer 清理）
 func assertNoCopyTmp(t *testing.T, dir string) {
 	t.Helper()
 	entries, err := os.ReadDir(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	for _, e := range entries {
 		if strings.HasPrefix(e.Name(), ".copy-") {
 			t.Fatalf("失败后应有 .copy-* 临时文件残留: %s", e.Name())

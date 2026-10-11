@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -142,9 +143,7 @@ func TestWriteModelFolderFiles_SymlinkFileRejected(t *testing.T) {
 	}
 	// 外部文件内容应未被改写
 	data, err := os.ReadFile(leak)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if string(data) != "original" {
 		t.Fatalf("外部文件不应被改写: %q", data)
 	}

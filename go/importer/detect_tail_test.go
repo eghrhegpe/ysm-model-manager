@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // buildZipB64 用 archive/zip 构造内存 zip 并转 base64（标准填充，len%4==0）。
@@ -78,17 +79,13 @@ func TestDetectContainerTypeFromBase64Tail_LargePaddingFile(t *testing.T) {
 	var buf bytes.Buffer
 	w := zip.NewWriter(&buf)
 	fw, err := w.CreateHeader(&zip.FileHeader{Name: "big.bin", Method: zip.Store})
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if _, err := fw.Write(bytes.Repeat([]byte{0}, 51<<20)); err != nil {
 		t.Fatal(err)
 	}
 	for _, name := range []string{"ysm.json", "model/body.ysm"} {
 		fw2, err := w.Create(name)
-		if err != nil {
-			t.Fatal(err)
-		}
+		testutil.NoError(t, err)
 		fw2.Write([]byte("{}"))
 	}
 	if err := w.Close(); err != nil {
@@ -107,8 +104,6 @@ func TestDetectContainerTypeFromBase64Tail_LargePaddingFile(t *testing.T) {
 func mustDecode(t *testing.T, b64 string) []byte {
 	t.Helper()
 	data, err := base64.StdEncoding.DecodeString(b64)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	return data
 }

@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // TestPrepareAtomicWrite_Success 创建临时文件 + 清理闭包幂等。
@@ -56,9 +57,7 @@ func TestCommitAtomicWrite_SuccessAndProgress(t *testing.T) {
 	dir := t.TempDir()
 	savePath := filepath.Join(dir, "out.bin")
 	af, cleanup, err := prepareAtomicWrite(savePath)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	defer cleanup()
 	if _, err := af.tmp.WriteString("hello"); err != nil {
 		t.Fatal(err)
@@ -139,9 +138,7 @@ func TestVerifyDownloadedFile_UnknownTotal(t *testing.T) {
 func tempFileWithContent(t *testing.T, s string) *os.File {
 	t.Helper()
 	f, err := os.CreateTemp(t.TempDir(), "v")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	t.Cleanup(func() {
 		f.Close()
 		os.Remove(f.Name())

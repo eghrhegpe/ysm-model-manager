@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // =====================================================================
@@ -120,9 +121,7 @@ func TestWalkAllFiles_SymlinkRoot(t *testing.T) {
 	}
 	// 创建外部目录
 	secretDir, err := os.MkdirTemp("", "secret")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	defer os.RemoveAll(secretDir)
 	os.WriteFile(filepath.Join(secretDir, "secret.txt"), []byte("SECRET"), 0644)
 

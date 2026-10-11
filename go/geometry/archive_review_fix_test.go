@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/container"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // ===== 2026-08-26 审查修复专项：确定性/口径统一行为锁 =====
@@ -43,9 +44,7 @@ func TestDetectMaidNs_MatchesLongestManifestHeuristic(t *testing.T) {
 		"main/ns_b/maid_model.json":    `{"model_list":[{"name":"b1","model_id":"b1"},{"name":"b2","model_id":"b2"},{"name":"b3","model_id":"b3"}]}`,
 	})
 	r, err := container.OpenZipBytes(data, int64(len(data)))
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	defer r.Close()
 	entries := r.Entries()
 

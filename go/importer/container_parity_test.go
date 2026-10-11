@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"os"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 type containerParityCase struct {
@@ -49,9 +50,7 @@ func buildZipBytes(t *testing.T, entries []string) []byte {
 	w := zip.NewWriter(&buf)
 	for _, name := range entries {
 		f, err := w.Create(name)
-		if err != nil {
-			t.Fatal(err)
-		}
+		testutil.NoError(t, err)
 		if _, err := f.Write(nil); err != nil {
 			t.Fatal(err)
 		}
@@ -86,9 +85,7 @@ func TestContainerFingerprintParity(t *testing.T) {
 	}
 	if regen {
 		out, err := json.MarshalIndent(gf, "", "  ")
-		if err != nil {
-			t.Fatal(err)
-		}
+		testutil.NoError(t, err)
 		if err := os.WriteFile(containerGoldenPath, append(out, '\n'), 0644); err != nil {
 			t.Fatalf("写黄金语料失败: %v", err)
 		}

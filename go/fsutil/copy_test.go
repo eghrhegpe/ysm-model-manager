@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // ===== StepError：步骤标注不破坏既有错误断言（ADR-044 机制归 fsutil）=====
@@ -93,9 +94,7 @@ func TestCopyFile_Success(t *testing.T) {
 		want = 0666
 	}
 	got, err := os.Stat(dst)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if got.Mode().Perm() != want {
 		t.Errorf("权限应为 %o，实际 %o", want, got.Mode().Perm())
 	}
@@ -199,9 +198,7 @@ func TestCopyDirRecursive_CopySymlink(t *testing.T) {
 	}
 	// 验证 symlink 被复制（保留链接语义）
 	fi, err := os.Lstat(filepath.Join(dst, "link.txt"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if fi.Mode()&os.ModeSymlink == 0 {
 		t.Error("symlink 应被复制为 symlink，而非普通文件")
 	}

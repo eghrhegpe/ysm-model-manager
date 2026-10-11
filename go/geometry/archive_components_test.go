@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // 最小 Bedrock geometry：Root + 1 cube
@@ -37,9 +38,7 @@ func TestParseComponentsFromZip(t *testing.T) {
 	zw := zip.NewWriter(&buf)
 	for _, e := range entries {
 		w, err := zw.Create(e.name)
-		if err != nil {
-			t.Fatal(err)
-		}
+		testutil.NoError(t, err)
 		if _, err := w.Write([]byte(e.content)); err != nil {
 			t.Fatal(err)
 		}
@@ -50,9 +49,7 @@ func TestParseComponentsFromZip(t *testing.T) {
 	data := buf.Bytes()
 
 	comps, texNames, err := ParseComponentsFromZip(data, int64(len(data)))
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if len(comps) != 3 {
 		t.Fatalf("组件数 = %d, 期望 3（main/arm/arrow）", len(comps))
 	}

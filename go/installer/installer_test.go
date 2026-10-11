@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -70,9 +71,7 @@ func TestInstall_Hardlink(t *testing.T) {
 	dst := filepath.Join(custom, filepath.Base(src))
 	// 验证目标是真实硬链接：与源共享 inode
 	si, err := os.Stat(src)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	di, err := os.Stat(dst)
 	if err != nil {
 		t.Fatal("硬链接目标未创建")
@@ -112,9 +111,7 @@ func TestInstall_NonYSMFile_PerTypeRepoRoot(t *testing.T) {
 			}
 			dst := filepath.Join(customDir, filepath.Base(src))
 			si, err := os.Stat(src)
-			if err != nil {
-				t.Fatal(err)
-			}
+			testutil.NoError(t, err)
 			di, err := os.Stat(dst)
 			if err != nil {
 				t.Fatalf("%s 硬链接目标未创建", ext)
@@ -215,9 +212,7 @@ func TestInstallDir_Hardlink(t *testing.T) {
 	srcFile := filepath.Join(srcDir, "model.pmx")
 	dstFile := filepath.Join(custom, filepath.Base(srcDir), "model.pmx")
 	si, err := os.Stat(srcFile)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	di, err := os.Stat(dstFile)
 	if err != nil {
 		t.Fatal("目录硬链接目标未创建")

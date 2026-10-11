@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // TestExtractFirstPNG_PackPngPreferred 验证封面候选名优先于"第一张 PNG"：
@@ -19,9 +20,7 @@ func TestExtractFirstPNG_PackPngPreferred(t *testing.T) {
 		{"pack.png", "PACK_PNG"},
 	} {
 		w, err := zw.Create(e.name)
-		if err != nil {
-			t.Fatal(err)
-		}
+		testutil.NoError(t, err)
 		if _, err := w.Write([]byte(e.content)); err != nil {
 			t.Fatal(err)
 		}

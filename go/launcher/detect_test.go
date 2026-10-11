@@ -17,9 +17,7 @@ func TestDetectPCLIsolatedInstance(t *testing.T) {
 	testutil.WriteTestFile(t, filepath.Join(versionDir, "PCL", "Setup.ini"), "VersionArgumentIndieV2=True\n")
 
 	got, err := Detect(root)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if len(got) != 1 {
 		t.Fatalf("instances = %d, want 1: %#v", len(got), got)
 	}
@@ -44,9 +42,7 @@ func TestDetectPCLSharedInstance(t *testing.T) {
 	testutil.WriteTestFile(t, filepath.Join(gameRoot, "versions", "Forge-1.19.2", "PCL", "Setup.ini"), "VersionArgumentIndieV2=False\n")
 
 	got, err := Detect(root)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if len(got) != 1 || got[0].Launcher != "PCL" {
 		t.Fatalf("unexpected result: %#v", got)
 	}
@@ -59,9 +55,7 @@ func TestDetectRejectsPlainMinecraftDirectory(t *testing.T) {
 	root := t.TempDir()
 	testutil.WriteTestFile(t, filepath.Join(root, ".minecraft", "versions", "1.20.1", "1.20.1.json"), `{"id":"1.20.1"}`)
 	got, err := Detect(root)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if len(got) != 0 {
 		t.Fatalf("plain Minecraft directory must not be reported as HMCL/PCL: %#v", got)
 	}
@@ -79,9 +73,7 @@ func TestDetectHMCLConfiguredDirectoryAndRunningDirectory(t *testing.T) {
 	testutil.WriteTestFile(t, filepath.Join(versionDir, ".hmcl", "config", "instance-game-settings.json"), settings)
 
 	got, err := Detect(launcherRoot)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if len(got) != 1 {
 		t.Fatalf("instances = %d, want 1: %#v", len(got), got)
 	}
@@ -100,9 +92,7 @@ func TestDetectHMCLModpackUsesVersionDirectory(t *testing.T) {
 	testutil.WriteTestFile(t, filepath.Join(versionDir, "modpack.cfg"), "")
 
 	got, err := Detect(root)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if len(got) != 1 || got[0].GameDir != versionDir {
 		t.Fatalf("unexpected result: %#v", got)
 	}

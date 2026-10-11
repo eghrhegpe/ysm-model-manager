@@ -18,6 +18,7 @@ import (
 	"strings"
 	"syscall"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 func TestMoveModelFile_CrossDeviceDeleteSourceFails_KeepsBothCopies(t *testing.T) {
@@ -31,9 +32,7 @@ func TestMoveModelFile_CrossDeviceDeleteSourceFails_KeepsBothCopies(t *testing.T
 
 	// 持有源句柄：共享模式缺 FILE_SHARE_DELETE → 复制可读、删除被拒
 	ptr, err := syscall.UTF16PtrFromString(src)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	h, err := syscall.CreateFile(ptr, syscall.GENERIC_READ, syscall.FILE_SHARE_READ, nil,
 		syscall.OPEN_EXISTING, syscall.FILE_ATTRIBUTE_NORMAL, 0)
 	if err != nil {

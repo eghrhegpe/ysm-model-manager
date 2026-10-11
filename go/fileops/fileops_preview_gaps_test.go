@@ -17,6 +17,7 @@ import (
 	"strings"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/ysm"
 )
 
@@ -105,9 +106,7 @@ func TestExtractPreviewTexture_UpperDisabledSuffixStillPreviews(t *testing.T) {
 	var buf bytes.Buffer
 	w := zip.NewWriter(&buf)
 	f, err := w.Create("preview.png")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if _, err := f.Write([]byte("PNGDATA123")); err != nil {
 		t.Fatal(err)
 	}

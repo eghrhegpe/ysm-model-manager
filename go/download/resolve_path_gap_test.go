@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 func TestResolveSavePath_HostOnlyURLDegradesToSaveDir(t *testing.T) {
@@ -23,13 +24,9 @@ func TestResolveSavePath_HostOnlyURLDegradesToSaveDir(t *testing.T) {
 	}
 	// 终态：relPath 退化为 "."，savePath 精确等于 Clean(saveDir)
 	absDir, err := filepath.Abs(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	absSave, err := filepath.Abs(savePath)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if absSave != absDir {
 		t.Fatalf("host-only URL 应收敛到 saveDir 自身: absSave=%q absDir=%q", absSave, absDir)
 	}

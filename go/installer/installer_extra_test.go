@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // ====== linkOrCopy ======
@@ -75,9 +76,7 @@ func TestCopyFileLocked_Success(t *testing.T) {
 		t.Fatal("returned path should not be empty")
 	}
 	readBack, err := os.ReadFile(dst)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if string(readBack) != string(content) {
 		t.Errorf("content mismatch: got %q, want %q", string(readBack), string(content))
 	}

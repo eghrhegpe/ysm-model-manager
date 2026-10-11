@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -18,9 +19,7 @@ func makeZipWithFiles(t *testing.T, files map[string]string) []byte {
 	w := zip.NewWriter(&buf)
 	for name, content := range files {
 		f, err := w.Create(name)
-		if err != nil {
-			t.Fatal(err)
-		}
+		testutil.NoError(t, err)
 		if _, err := f.Write([]byte(content)); err != nil {
 			t.Fatal(err)
 		}

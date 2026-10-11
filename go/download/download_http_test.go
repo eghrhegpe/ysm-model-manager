@@ -24,9 +24,7 @@ import (
 func startRawHTTPServer(t *testing.T, status int, contentLength int, body []byte) (url string, cleanup func()) {
 	t.Helper()
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	go func() {
 		conn, err := ln.Accept()
 		if err != nil {
@@ -455,9 +453,7 @@ func TestHTTP_ConcurrentSamePath_MutexSafety(t *testing.T) {
 func startTruncatingServer(t *testing.T, declaredLength, actualSend int) (url string, cleanup func()) {
 	t.Helper()
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	go func() {
 		conn, err := ln.Accept()
 		if err != nil {
@@ -822,9 +818,7 @@ func TestAudit_DownloadSuccess_AtomicallyReplacesOldFile(t *testing.T) {
 		t.Fatalf("下载失败: %v", err)
 	}
 	data, err := os.ReadFile(savePath)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if string(data) != "hello world" {
 		t.Fatalf("成功覆盖失败: got %q, want %q", string(data), "hello world")
 	}
@@ -893,9 +887,7 @@ func TestAudit_MkdirAllFailure_ParentIsFile(t *testing.T) {
 // client.Do 网络错误分支（连接被拒），与 ctx 取消区分——错误非 nil 且不是 context.Canceled。
 func TestAudit_NetworkError_RequestFailed(t *testing.T) {
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	addr := ln.Addr().String()
 	ln.Close() // 立即关闭，保证后续连接被拒
 

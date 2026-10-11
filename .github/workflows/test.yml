@@ -513,7 +513,10 @@ jobs:
           # 一次编译同时产出 race 判定（退出码）与覆盖率趋势（coverprofile 产物）。
           # -coverprofile 路径必须加引号（PS 成员访问坑，见 ci-tuning §5）；-timeout 硬阀防烧满 job。
           New-Item -ItemType Directory -Force '.coverage' | Out-Null
-          go test -race ./... -coverprofile='.coverage/go-cover.out' -count=1 -timeout 15m | Out-String -Width 400
+          # ⚠️ 勿加 `| Out-String`：会把 go test 输出缓冲成单个字符串，失败时未必 flush 到
+          # CI 日志 ⇒ 诊断盲区（实测 flaky 时看不到 `--- FAIL` / `panic:` / race 报告，无法定位
+          # 是 internal/app|go/scanner 哪个测试抖动）。直接流输出，$LASTEXITCODE 语义不变。
+          go test -race ./... -coverprofile='.coverage/go-cover.out' -count=1 -timeout 15m
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       # Go 覆盖率趋势（非阻断，仅 main）：与上方同一次编译的产物，仅做汇总展示，

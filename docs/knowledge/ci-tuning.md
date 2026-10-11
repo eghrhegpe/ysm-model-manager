@@ -171,6 +171,12 @@ go job 要用 `pnpm install` + `vite build`（`//go:embed all:frontend/dist` 前
 - PowerShell 坑：`-coverprofile=.coverage/go-cover.out` **必须加引号**——否则 PS 把 `.coverage/...`
   解析成成员访问（值为 null），profile 落盘 0 字节，`go tool cover -func=` 收到空参数报 too many
   arguments。
+- PowerShell 坑（诊断盲区，2026-10-11 修）：Go 检查步曾写 `go test ... | Out-String -Width 400`，
+  把 go test 输出缓冲成单个字符串——flaky 失败时 `--- FAIL` / `panic:` / race 报告**未必 flush 到
+  CI 日志**，导致无法定位具体是 `internal/app|go/scanner` 哪个测试抖动（本次即踩坑：两次 Go
+  job failure 日志里都没有 FAIL 行）。已改为直接流输出（去 `Out-String`，`$LASTEXITCODE` 语义
+  不变），失败现场原样进日志。教训：合并多步输出做「格式化/控宽」会牺牲失败现场——诊断能力
+  优先于行宽美观。
 
 ### 6. 浅克隆与基线解析（反复踩的坑）
 

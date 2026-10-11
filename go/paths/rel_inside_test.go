@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // TestRelInside 覆盖 RelInside 核心语义：正常子路径 / 等值 / 越界 / 空输入 /
@@ -61,9 +62,7 @@ func TestRelInside_MapBack(t *testing.T) {
 	}
 	src := "/repo/vendor/char/model.ysm"
 	rel, err := RelInside("/repo", src)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if got := filepath.Join("/repo", rel); got != src {
 		t.Errorf("Join(base, rel) = %q, want 还原 %q", got, src)
 	}

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/packs"
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/types/registry"
@@ -149,15 +150,11 @@ func writeEntityPlayerZip(t *testing.T) string {
 	t.Helper()
 	p := filepath.Join(t.TempDir(), "model.zip")
 	f, err := os.Create(p)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	defer f.Close()
 	zw := zip.NewWriter(f)
 	w, err := zw.Create("model.pmx")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if _, err := w.Write([]byte("pmx")); err != nil {
 		t.Fatal(err)
 	}

@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/ysm"
 )
 
@@ -17,9 +18,7 @@ import (
 func makePayload(t *testing.T, files []ysm.DecodedFile) string {
 	t.Helper()
 	raw, err := json.Marshal(filesPayload{Files: files})
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	var buf bytes.Buffer
 	w := gzip.NewWriter(&buf)
 	if _, err := w.Write(raw); err != nil {

@@ -74,9 +74,7 @@ func TestEmpty(t *testing.T) {
 	tm.Move(filepath.Join(dir, "b.ysm"))
 
 	count, err := tm.Empty()
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if count != 2 {
 		t.Errorf("应清空 2 个文件，得到 %d", count)
 	}
@@ -100,9 +98,7 @@ func TestEmptyWithSubdir(t *testing.T) {
 	}
 
 	count, err := tm.Empty()
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if count != 1 {
 		t.Errorf("应清空 1 个文件，得到 %d", count)
 	}

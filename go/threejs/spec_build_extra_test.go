@@ -6,6 +6,7 @@ import (
 	"math"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -277,9 +278,7 @@ func TestBuildModelGroup_ZeroTexDimDefaults(t *testing.T) {
 		}},
 	}
 	mg, err := buildModelGroup(model, "main", 0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if mg.TextureWidth != 64 || mg.TextureHeight != 64 {
 		t.Fatalf("TexWidth/Height 为 0 应默认 64, got %v x %v", mg.TextureWidth, mg.TextureHeight)
 	}
@@ -300,9 +299,7 @@ func TestBuildModelGroup_PureParentReference(t *testing.T) {
 		}},
 	}
 	mg, err := buildModelGroup(model, "main", 0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	// 补充缺失骨骼：ghost 进 bones，无 pivot → 挂 root
 	foundGhost := false
 	for _, b := range mg.Bones {
@@ -340,9 +337,7 @@ func TestBuildModelGroup_DuplicateNameMergeNoOverwrite(t *testing.T) {
 		},
 	}
 	mg, err := buildModelGroup(model, "main", 0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	boneCount := 0
 	for _, b := range mg.Bones {
 		if b.Name == "dup" {
@@ -372,9 +367,7 @@ func TestBuildModelGroup_ArmAttach(t *testing.T) {
 		},
 	}
 	mg, err := buildModelGroup(model, "main", 0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	parents := map[string]string{}
 	for _, b := range mg.Bones {
 		if b.ParentID != nil {
@@ -475,9 +468,7 @@ func TestBuildMulti_SkipEmptyComponent(t *testing.T) {
 		}},
 	}
 	out, err := BuildMulti([]types.BedrockModel{empty, valid}, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	var spec Model3DSpec
 	if err := json.Unmarshal([]byte(out), &spec); err != nil {
 		t.Fatal(err)
@@ -495,9 +486,7 @@ func TestBuildMulti_SkipEmptyComponent(t *testing.T) {
 // 全部组件为空 → 空 spec
 func TestBuildMulti_AllEmpty(t *testing.T) {
 	out, err := BuildMulti([]types.BedrockModel{{}, {}}, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if out != "{}" {
 		t.Fatalf("全空组件应返回 {}, got %q", out)
 	}

@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // 目录树复制：文件 + 子目录 + 符号链接混合，符号链接应复制链接本身（不跟随目标）
@@ -51,9 +52,7 @@ func TestCopyDirRecursive_WithSymlink(t *testing.T) {
 		t.Fatal("link.ysm 应为符号链接（不跟随复制内容）")
 	}
 	got, err := os.Readlink(dstLink)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if got != fileA {
 		t.Fatalf("链接目标 = %q, 期望 %q", got, fileA)
 	}

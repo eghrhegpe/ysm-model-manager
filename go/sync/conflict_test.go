@@ -16,9 +16,7 @@ import (
 func setupTestDirs(t *testing.T) (string, string, func()) {
 	t.Helper()
 	localDir, err := os.MkdirTemp("", "sync-conflict-local-*")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	remoteDir, err := os.MkdirTemp("", "sync-conflict-remote-*")
 	if err != nil {
 		os.RemoveAll(localDir)
@@ -51,9 +49,7 @@ func TestDetectConflicts_NoConflicts(t *testing.T) {
 	writeFile(t, remoteDir, "only_remote.txt", "remote content", time.Now())
 
 	report, err := DetectConflicts(localDir, remoteDir, "test")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if report.TotalConflicts != 0 {
 		t.Errorf("期望 0 个冲突，实际 %d", report.TotalConflicts)
 	}
@@ -69,9 +65,7 @@ func TestDetectConflicts_ContentConflict(t *testing.T) {
 	writeFile(t, remoteDir, "same_file.txt", "remote version content", time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC))
 
 	report, err := DetectConflicts(localDir, remoteDir, "test")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if report.TotalConflicts != 1 {
 		t.Fatalf("期望 1 个冲突，实际 %d", report.TotalConflicts)
 	}
@@ -97,9 +91,7 @@ func TestDetectConflicts_SameContent_NoConflict(t *testing.T) {
 	writeFile(t, remoteDir, "identical.txt", "same content", time.Date(2024, 1, 2, 0, 0, 0, 0, time.UTC))
 
 	report, err := DetectConflicts(localDir, remoteDir, "test")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if report.TotalConflicts != 0 {
 		t.Errorf("相同内容期望 0 个冲突，实际 %d", report.TotalConflicts)
 	}
@@ -117,9 +109,7 @@ func TestDetectConflicts_MultipleConflicts(t *testing.T) {
 	writeFile(t, remoteDir, "sub/file2.txt", "remote 2", time.Now())
 
 	report, err := DetectConflicts(localDir, remoteDir, "test")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if report.TotalConflicts != 2 {
 		t.Fatalf("期望 2 个冲突，实际 %d", report.TotalConflicts)
 	}
@@ -142,9 +132,7 @@ func TestDetectConflicts_SortedByPath(t *testing.T) {
 	}
 
 	report, err := DetectConflicts(localDir, remoteDir, "test")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if report.TotalConflicts != 3 {
 		t.Fatalf("期望 3 个冲突，实际 %d", report.TotalConflicts)
 	}
@@ -172,9 +160,7 @@ func TestDetectConflicts_EmptyDirs(t *testing.T) {
 	defer cleanup()
 
 	report, err := DetectConflicts(localDir, remoteDir, "test")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if report.TotalConflicts != 0 {
 		t.Errorf("空目录期望 0 个冲突，实际 %d", report.TotalConflicts)
 	}
@@ -206,15 +192,11 @@ func TestResolveConflict_ForceRemote(t *testing.T) {
 	}
 
 	err := ResolveConflict(conflict, ResolveForceRemote, localDir, remoteDir)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 
 	// 验证本地内容被远端覆盖
 	content, err := os.ReadFile(filepath.Join(localDir, "test.txt"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if string(content) != "remote content" {
 		t.Errorf("期望 'remote content'，实际 '%s'", string(content))
 	}
@@ -249,9 +231,7 @@ func TestResolveConflict_ForceRemote_CopyFail_LocalIntact(t *testing.T) {
 
 	// 本地内容必须完好无损
 	content, err := os.ReadFile(filepath.Join(localDir, "test.txt"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if string(content) != "local content" {
 		t.Errorf("失败路径不得破坏本地文件：期望 'local content'，实际 '%s'", string(content))
 	}
@@ -276,15 +256,11 @@ func TestResolveConflict_ForceLocal(t *testing.T) {
 	}
 
 	err := ResolveConflict(conflict, ResolveForceLocal, localDir, remoteDir)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 
 	// 本地内容应保持不变
 	content, err := os.ReadFile(filepath.Join(localDir, "test.txt"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if string(content) != "local content" {
 		t.Errorf("期望 'local content'，实际 '%s'", string(content))
 	}
@@ -390,9 +366,7 @@ func TestSuggestStrategy(t *testing.T) {
 func TestCollectFileEntries(t *testing.T) {
 	t.Parallel()
 	dir, err := os.MkdirTemp("", "collect-test-*")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	defer os.RemoveAll(dir)
 
 	// 创建测试文件
@@ -400,9 +374,7 @@ func TestCollectFileEntries(t *testing.T) {
 	writeFile(t, dir, "sub/file2.txt", "content 2", time.Now())
 
 	entries, err := collectFileEntries(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 
 	if len(entries) != 2 {
 		t.Errorf("期望 2 个文件，实际 %d", len(entries))
@@ -428,17 +400,13 @@ func TestCollectFileEntries(t *testing.T) {
 func TestSHA256File(t *testing.T) {
 	t.Parallel()
 	dir, err := os.MkdirTemp("", "hash-test-*")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	defer os.RemoveAll(dir)
 
 	writeFile(t, dir, "test.txt", "hello world", time.Now())
 
 	hash1, err := fsutil.SHA256File(filepath.Join(dir, "test.txt"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if hash1 == "" {
 		t.Error("哈希不应为空")
 	}
@@ -446,9 +414,7 @@ func TestSHA256File(t *testing.T) {
 	// 相同内容应产生相同哈希
 	writeFile(t, dir, "test2.txt", "hello world", time.Now())
 	hash2, err := fsutil.SHA256File(filepath.Join(dir, "test2.txt"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if hash1 != hash2 {
 		t.Error("相同内容应产生相同哈希")
 	}
@@ -456,9 +422,7 @@ func TestSHA256File(t *testing.T) {
 	// 不同内容应产生不同哈希
 	writeFile(t, dir, "test3.txt", "different content", time.Now())
 	hash3, err := fsutil.SHA256File(filepath.Join(dir, "test3.txt"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if hash1 == hash3 {
 		t.Error("不同内容应产生不同哈希")
 	}
@@ -488,9 +452,7 @@ func injectHashFailure(t *testing.T) func() {
 // （chmod 000 对目录不生效、symlink 需开发者模式），故用包级 seam 注入。
 func TestCollectFileEntries_HashFailureIsEntryLevel(t *testing.T) {
 	dir, err := os.MkdirTemp("", "collect-hashfail-*")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	defer os.RemoveAll(dir)
 
 	writeFile(t, dir, "ok.txt", "ok", time.Now())
@@ -622,9 +584,7 @@ func TestResolveConflict_PathTraversal_SafeSubpath(t *testing.T) {
 		t.Fatalf("合法相对子路径不应被守卫拦截: %v", err)
 	}
 	content, err := os.ReadFile(filepath.Join(localDir, "nested", "test.txt"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if string(content) != "remote content" {
 		t.Errorf("期望被远端覆盖为 'remote content'，实际 '%s'", string(content))
 	}

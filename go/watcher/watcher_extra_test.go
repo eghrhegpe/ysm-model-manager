@@ -11,6 +11,7 @@ import (
 	"ysm-model-manager/go/types"
 
 	"github.com/fsnotify/fsnotify"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // —— isNoiseEvent 纯函数表驱动 ——
@@ -273,9 +274,7 @@ func TestSyncAllNoClearCacheWithoutInstances(t *testing.T) {
 // TestLoopErrorEvent loop 收到错误事件时记录日志并继续运行
 func TestLoopErrorEvent(t *testing.T) {
 	fw, err := fsnotify.NewWatcher()
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	defer fw.Close()
 	w := &Watcher{
 		w:         fw,
@@ -296,9 +295,7 @@ func TestLoopErrorEvent(t *testing.T) {
 // 用真实事件（FIFO 消费顺序）做同步点，断言全程仅 1 次同步调用
 func TestLoopNoiseEventFiltered(t *testing.T) {
 	fw, err := fsnotify.NewWatcher()
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	defer fw.Close()
 
 	var calls atomic.Int32

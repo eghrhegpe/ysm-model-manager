@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -139,9 +140,7 @@ func TestLogger_Load_Over500Trim(t *testing.T) {
 		entries[i] = types.ImportLog{ModelName: "m", Timestamp: int64(i)}
 	}
 	data, err := json.Marshal(entries)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if err := os.WriteFile(path, data, 0644); err != nil {
 		t.Fatal(err)
 	}

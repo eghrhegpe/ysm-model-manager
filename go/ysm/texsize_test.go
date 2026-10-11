@@ -240,9 +240,7 @@ func TestScanModelTexSizes_WithEntries(t *testing.T) {
 	ysmPath := filepath.Join(t.TempDir(), "model.ysm")
 	// 复制 zip 内容到 .ysm 文件（当作加密模型返回 0,0）
 	data, err := os.ReadFile(renamedZip)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if err := os.WriteFile(ysmPath, data, 0644); err != nil {
 		t.Fatal(err)
 	}

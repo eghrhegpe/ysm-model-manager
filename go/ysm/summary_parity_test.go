@@ -88,9 +88,7 @@ func runSummaryCase(t *testing.T, c summaryParityCase) (m map[string]any, isErrC
 		t.Fatalf("[%s] 不应报错: %v", c.ID, err)
 	}
 	out, mErr := json.Marshal(summary)
-	if mErr != nil {
-		t.Fatal(mErr)
-	}
+	testutil.NoError(t, mErr)
 	var got map[string]any
 	if err := json.Unmarshal(out, &got); err != nil {
 		t.Fatal(err)
@@ -117,9 +115,7 @@ func TestYsmSummaryParity(t *testing.T) {
 					gf.Cases[i].Golden = json.RawMessage(`{"error":true}`)
 				} else {
 					out, mErr := json.Marshal(got)
-					if mErr != nil {
-						t.Fatal(mErr)
-					}
+					testutil.NoError(t, mErr)
 					gf.Cases[i].Golden = json.RawMessage(out)
 				}
 				return
@@ -138,9 +134,7 @@ func TestYsmSummaryParity(t *testing.T) {
 	}
 	if regen {
 		out, err := json.MarshalIndent(gf, "", "  ")
-		if err != nil {
-			t.Fatal(err)
-		}
+		testutil.NoError(t, err)
 		if err := os.WriteFile(summaryGoldenPath, append(out, '\n'), 0644); err != nil {
 			t.Fatalf("写黄金语料失败: %v", err)
 		}

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -32,9 +33,7 @@ func TestBuildMulti_TwoComponents(t *testing.T) {
 	}
 
 	out, err := BuildMulti([]types.BedrockModel{compA, compB}, []int{0, 1})
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	var spec Model3DSpec
 	if err := json.Unmarshal([]byte(out), &spec); err != nil {
 		t.Fatal(err)
@@ -80,9 +79,7 @@ func TestBuildMulti_TwoComponents(t *testing.T) {
 // TestBuildMulti_Empty 验证空组件列表返回空 spec。
 func TestBuildMulti_Empty(t *testing.T) {
 	out, err := BuildMulti(nil, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if out != "{}" {
 		t.Errorf("空输入应返回 {}, got %q", out)
 	}
@@ -116,9 +113,7 @@ func TestBuildMulti_texIdxBaseNil(t *testing.T) {
 	}
 
 	out, err := BuildMulti([]types.BedrockModel{compA, compB}, nil) // nil texIdxBase
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	var spec Model3DSpec
 	if err := json.Unmarshal([]byte(out), &spec); err != nil {
 		t.Fatal(err)

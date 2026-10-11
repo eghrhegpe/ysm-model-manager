@@ -7,6 +7,7 @@ package threejs
 import (
 	"encoding/json"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 func TestModel3DSpecRoundTripKeepsInjectedFields(t *testing.T) {
@@ -19,9 +20,7 @@ func TestModel3DSpecRoundTripKeepsInjectedFields(t *testing.T) {
 	m["texArrOrder"] = []string{"skin", "", "", "", "foxcar"}
 	m["componentTextures"] = map[string][]string{"foxcar": {"data:image/png;base64,XXX"}}
 	injected, err := json.Marshal(m)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 
 	var spec Model3DSpec
 	if err := json.Unmarshal(injected, &spec); err != nil {
@@ -36,9 +35,7 @@ func TestModel3DSpecRoundTripKeepsInjectedFields(t *testing.T) {
 
 	// 再序列化（Wails 桥出参）字段仍须在场
 	out, err := json.Marshal(spec)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	var back map[string]any
 	if err := json.Unmarshal(out, &back); err != nil {
 		t.Fatal(err)

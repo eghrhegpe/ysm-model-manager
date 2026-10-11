@@ -9,6 +9,7 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/types/registry"
 )
@@ -116,9 +117,7 @@ func TestScanEntries_HashSkippedOversize(t *testing.T) {
 	dir := t.TempDir()
 	p := filepath.Join(dir, "big.ysm")
 	f, err := os.Create(p)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if err := f.Truncate(registry.MaxImportSize + 1); err != nil {
 		t.Fatal(err)
 	}
@@ -140,9 +139,7 @@ func TestComputeFileHash_Oversize(t *testing.T) {
 	dir := t.TempDir()
 	p := filepath.Join(dir, "big.zip")
 	f, err := os.Create(p)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if err := f.Truncate(registry.MaxImportSize + 1); err != nil {
 		t.Fatal(err)
 	}
@@ -275,17 +272,13 @@ func TestGenerateRepoIndex_WorkflowExists(t *testing.T) {
 		t.Errorf("indexPath = %q", indexPath)
 	}
 	data, err := os.ReadFile(wfPath)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if string(data) != "existing content" {
 		t.Errorf("workflow 应保留原内容, got %q", string(data))
 	}
 	// index.json 已生成且含 a.ysm
 	idx, err := os.ReadFile(filepath.Join(dir, "index.json"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if !strings.Contains(string(idx), "a.ysm") {
 		t.Errorf("index.json 应含 a.ysm: %s", idx)
 	}

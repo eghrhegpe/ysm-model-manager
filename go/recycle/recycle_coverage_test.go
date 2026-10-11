@@ -215,9 +215,7 @@ func TestMoveEx_CrossDevice_Dir_SourceRemoveLocked(t *testing.T) {
 	}
 	// 独占写锁：使源目录删除（os.RemoveAll）失败，触发副本回滚分支
 	fh, err := os.OpenFile(locked, os.O_RDWR, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	defer fh.Close()
 
 	res := tm.MoveEx(modelDir)

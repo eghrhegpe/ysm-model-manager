@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // setCacheDir 把 CacheDir 指向临时目录，测试结束自动还原
@@ -47,9 +48,7 @@ func TestPrune_EmptyCacheDir(t *testing.T) {
 	setCacheDir(t)
 	setLimits(t, 1024, time.Hour, 0)
 	res, err := Prune()
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if res.RemovedCount != 0 {
 		t.Fatalf("空目录不应删除任何文件，got %d", res.RemovedCount)
 	}
@@ -60,9 +59,7 @@ func TestPrune_CacheDirUnavailable(t *testing.T) {
 	t.Cleanup(func() { CacheDir = old })
 	CacheDir = func() string { return "" }
 	res, err := Prune()
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if res.RemovedCount != 0 {
 		t.Fatalf("缓存目录不可用时应 no-op，got %d", res.RemovedCount)
 	}
@@ -74,9 +71,7 @@ func TestPrune_SkipsNonKtx2(t *testing.T) {
 	writeCacheFile(t, dir, "aaa.ktx2", []byte("x"), time.Now())
 	writeCacheFile(t, dir, "notes.txt", []byte("x"), time.Now().Add(-100*time.Hour))
 	res, err := Prune()
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if res.RemovedCount != 0 {
 		t.Fatalf("非 .ktx2 不应参与淘汰，got %d", res.RemovedCount)
 	}
@@ -92,9 +87,7 @@ func TestPrune_OverCapacity_DeletesOldest(t *testing.T) {
 	// 上限 400：总 600 超限 → 删 aaa(100) 剩 500 仍超 → 删 bbb(200) 剩 300 ≤400
 	setLimits(t, 400, 0, 0)
 	res, err := Prune()
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if res.RemovedCount != 2 {
 		t.Fatalf("应删 2 个最旧文件，got %d", res.RemovedCount)
 	}
@@ -121,9 +114,7 @@ func TestPrune_TTL_ExpiredRemoved_FreshKept(t *testing.T) {
 	writeCacheFile(t, dir, "old.ktx2", []byte("x"), time.Now().Add(-2*time.Hour))
 	writeCacheFile(t, dir, "new.ktx2", []byte("x"), time.Now())
 	res, err := Prune()
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if res.RemovedCount != 1 {
 		t.Fatalf("应只删超龄的 1 个，got %d", res.RemovedCount)
 	}
@@ -146,9 +137,7 @@ func TestPrune_CombinedTTLAndCapacity(t *testing.T) {
 	// TTL 1 小时先删 expired(500)；容量 150 再删最旧：f1(100) → 剩 200 仍超 → f2(100) → 剩 100
 	setLimits(t, 150, time.Hour, 0)
 	res, err := Prune()
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if res.RemovedCount != 3 {
 		t.Fatalf("应删 3 个（1 超龄 + 2 超容量），got %d", res.RemovedCount)
 	}
@@ -190,9 +179,7 @@ func TestPrune_RemoveFailure_NoFalseAccounting(t *testing.T) {
 	writeCacheFile(t, dir, "bbb.ktx2", make([]byte, 80), time.Now())
 	failRemove(t) // 删除全部失败
 	res, err := Prune()
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if res.RemovedCount != 0 {
 		t.Fatalf("删除失败不应计数，got %d", res.RemovedCount)
 	}
@@ -212,9 +199,7 @@ func TestPrune_TTLRemoveFailure_KeepsExpired(t *testing.T) {
 	writeCacheFile(t, dir, "old.ktx2", []byte("x"), time.Now().Add(-2*time.Hour))
 	failRemove(t)
 	res, err := Prune()
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if res.RemovedCount != 0 || res.FreedBytes != 0 {
 		t.Fatalf("删除失败不应记账，got removed=%d freed=%d", res.RemovedCount, res.FreedBytes)
 	}
@@ -233,9 +218,7 @@ func TestPrune_OrphanTmp_ExpiredCleaned(t *testing.T) {
 	writeCacheFile(t, dir, "old.ktx2.tmp", []byte("x"), time.Now().Add(-2*time.Hour))
 	writeCacheFile(t, dir, "fresh.ktx2.tmp", []byte("x"), time.Now())
 	res, err := Prune()
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if res.RemovedCount != 1 {
 		t.Fatalf("应清 1 个超龄 .tmp 残留，got %d", res.RemovedCount)
 	}
@@ -255,9 +238,7 @@ func TestPrune_TmpNotCountedInCapacity(t *testing.T) {
 	writeCacheFile(t, dir, "partial.ktx2.tmp", make([]byte, 300), now)
 	setLimits(t, 150, 0, 0) // 容量 150：ktx2 总 200 > 150 → 删最旧 a
 	res, err := Prune()
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if res.RemovedCount != 1 {
 		t.Fatalf("应只删 1 个 ktx2，got %d", res.RemovedCount)
 	}

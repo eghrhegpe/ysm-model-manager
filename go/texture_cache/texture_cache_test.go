@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 func TestTextureHash(t *testing.T) {
@@ -13,9 +14,7 @@ func TestTextureHash(t *testing.T) {
 		t.Fatal(err)
 	}
 	hash, err := TextureHash(path)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if hash == "" {
 		t.Fatal("expected non-empty hash")
 	}
@@ -84,9 +83,7 @@ func TestWriteAndReadCached(t *testing.T) {
 	}
 
 	read, ok, err := ReadCached(hash)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if !ok {
 		t.Fatal("expected cache hit")
 	}
@@ -103,9 +100,7 @@ func TestReadCached_Miss(t *testing.T) {
 	CacheDir = func() string { return dir }
 
 	_, ok, err := ReadCached("nonexistent")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if ok {
 		t.Fatal("expected cache miss")
 	}
@@ -123,17 +118,13 @@ func TestHasCached(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, hash+".ktx2"), []byte("data"), 0644)
 
 	exists, err := HasCached(hash)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if !exists {
 		t.Fatal("expected cache to exist")
 	}
 
 	exists, err = HasCached("nope")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if exists {
 		t.Fatal("expected cache to not exist")
 	}
@@ -198,9 +189,7 @@ func TestListCacheFiles_Empty(t *testing.T) {
 	CacheDir = func() string { return dir }
 
 	files, err := ListCacheFiles()
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if len(files) != 0 {
 		t.Fatalf("expected 0 files, got %d", len(files))
 	}
@@ -220,9 +209,7 @@ func TestListCacheFiles_WithFiles(t *testing.T) {
 	os.WriteFile(filepath.Join(dir, "other.txt"), []byte("ignore"), 0644)
 
 	files, err := ListCacheFiles()
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if len(files) != 2 {
 		t.Fatalf("expected 2 files, got %d", len(files))
 	}
@@ -245,9 +232,7 @@ func TestListCacheFiles_EmptyDir(t *testing.T) {
 	CacheDir = func() string { return "" }
 
 	files, err := ListCacheFiles()
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if files != nil {
 		t.Fatal("expected nil when cache dir is empty")
 	}

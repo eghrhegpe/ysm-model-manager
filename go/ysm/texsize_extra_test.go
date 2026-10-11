@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // fixture7zPath 返回 geometry 包 testdata 下 7z 夹具的路径（相对 go/ysm 包目录）
@@ -131,9 +132,7 @@ func TestReadTexFrom7z_Not7z(t *testing.T) {
 func TestReadTexFrom7z_Truncated7z(t *testing.T) {
 	// 合法 7z 截断为一半 → 主 header 读取失败 → 0,0（不 panic）
 	data, err := os.ReadFile(fixture7zPath(t, "7z_full.7z"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	path := filepath.Join(t.TempDir(), "trunc.7z")
 	if err := os.WriteFile(path, data[:len(data)/2], 0644); err != nil {
 		t.Fatal(err)

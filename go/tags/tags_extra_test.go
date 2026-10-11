@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // NewStore("") → 内存态存储（平台数据根缺失，Android 沙盒不可用等）：
@@ -210,9 +211,7 @@ func TestRemoveTag_LastTagDeletesEntry(t *testing.T) {
 		t.Fatalf("移除最后一条失败: %v", err)
 	}
 	tags, err := s.GetTags("/m")
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if len(tags) != 0 {
 		t.Fatalf("移除最后一条后应返回空, got %v", tags)
 	}

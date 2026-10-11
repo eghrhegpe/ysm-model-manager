@@ -62,9 +62,7 @@ func TestCopyFile_Success(t *testing.T) {
 		t.Fatalf("copyFile 失败: %v", err)
 	}
 	readBack, err := os.ReadFile(dst)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	if string(readBack) != string(content) {
 		t.Errorf("内容不一致: 期望 %q, 得到 %q", string(content), string(readBack))
 	}

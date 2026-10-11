@@ -132,11 +132,12 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     caps?: SceneCapabilityLookup;
   }) {
     // [ADR-329 刀①] composer 叶构造装配（管线状态全在叶，prev 快照等服务叶内）
+    // [2026-10-11] 不再传 caps——叶曾用它做「sky 属主判定」，现改为逐字段归属判定
+    // （见 postprocessing-composer.ts|restoreOutputSettings），该查询缝已无消费者。
     this.composerHost = new PostprocessingComposer({
       scene: opts.scene,
       renderer: opts.renderer,
       camera: opts.camera,
-      ...(opts.caps !== undefined ? { caps: opts.caps } : {}),
     });
     // 条件赋值（对齐 sky/light 惯例）：exactOptionalPropertyTypes 下 undefined 不写入字段
     if (opts.caps !== undefined) this.caps = opts.caps;

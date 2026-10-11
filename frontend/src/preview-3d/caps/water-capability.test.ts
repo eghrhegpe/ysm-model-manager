@@ -1924,6 +1924,20 @@ describe("WaterCapability — 水面模型倒影（ADR-297）", () => {
     setEnvState({ waterEnabled: true }, { source: "manual" });
   });
 
+  /**
+   * 模拟 render-host 的**一帧**（时序与生产一致）。
+   *
+   * [2026-10-11 时序拆分] 倒影 RT 渲染已从 `update(dt)` 移到 `afterFrameUpdate()`——
+   * 原挂 update 段时早于 perFrame 骨骼动画，倒影恒滞后一帧（见 `scene-capability.ts`
+   * 的 afterFrameUpdate 契约）。生产调用序为
+   * `cap.update(dt)` → WASD/perFrame → `cap.afterFrameUpdate()` → `renderer.render`。
+   * 测试须按同一序驱动，否则测的不是生产路径。
+   */
+  function frame(cap: WaterCapability, dt = 0.016): void {
+    cap.update(dt);
+    cap.afterFrameUpdate();
+  }
+
   /** 假 renderer：覆盖官方 Reflector.onBeforeRender 的渲染器触点（r185 实证清单：
    *  getRenderTarget / xr.enabled / shadowMap.autoUpdate / setRenderTarget /
    *  state.buffers.depth.setMask / autoClear / render / state.viewport） */
@@ -1983,18 +1997,18 @@ describe("WaterCapability — 水面模型倒影（ADR-297）", () => {
     const cap = new WaterCapability({ scene, renderer: makeFakeRenderer(), camera: makeCamera() });
     cap.apply();
     cap.setWaterReflectionEnabled(true);
-    cap.update(0.016);
+    frame(cap);
     const refl1 = cap["reflect"]!.reflector!;
     expect(refl1).toBeTruthy();
     cap.setWaterReflectionClipBias(1.5);
-    cap.update(0.016);
+    frame(cap);
     const refl2 = cap["reflect"]!.reflector!;
     expect(refl2, "bias 变 → 旧载体弃、新载体懒建").toBeTruthy();
     expect(refl2).not.toBe(refl1);
     expect(refl2.getRenderTarget().width, "重建即时补挂当前分辨率（不白弃一帧）").toBe(
       envState.waterReflectionResolution,
     );
-    cap.update(0.016);
+    frame(cap);
     expect(cap["reflect"]!.reflector, "bias 未再变 → 载体幸存（防每帧重建抖动）").toBe(refl2);
   });
 
@@ -2003,11 +2017,11 @@ describe("WaterCapability — 水面模型倒影（ADR-297）", () => {
     const cap = new WaterCapability({ scene, renderer: makeFakeRenderer(), camera: makeCamera() });
     cap.apply();
     cap.setWaterReflectionEnabled(true);
-    cap.update(0.016);
+    frame(cap);
     const refl1 = cap["reflect"]!.reflector;
     // 默认 3 → 3.04（Δ=0.04 < 0.05 死区）：肉眼不可感的微调不应触发整场 RT 重建
     cap.setWaterReflectionClipBias(3.04);
-    cap.update(0.016);
+    frame(cap);
     expect(cap["reflect"]!.reflector).toBe(refl1);
   });
 
@@ -2016,10 +2030,10 @@ describe("WaterCapability — 水面模型倒影（ADR-297）", () => {
     const cap = new WaterCapability({ scene, renderer: makeFakeRenderer(), camera: makeCamera() });
     cap.apply();
     cap.setWaterReflectionEnabled(true);
-    cap.update(0.016);
+    frame(cap);
     const refl1 = cap["reflect"]!.reflector;
     cap.setWaterReflectionClipBias(3.1);
-    cap.update(0.016);
+    frame(cap);
     const refl2 = cap["reflect"]!.reflector!;
     expect(refl2).not.toBe(refl1);
   });
@@ -2028,7 +2042,7 @@ describe("WaterCapability — 水面模型倒影（ADR-297）", () => {
     const scene = new THREE.Scene();
     const cap = new WaterCapability({ scene, renderer: makeFakeRenderer(), camera: makeCamera() });
     cap.apply();
-    cap.update(0.016);
+    frame(cap);
     expect(cap["reflect"]!.reflector).toBeNull();
   });
 
@@ -2038,7 +2052,7 @@ describe("WaterCapability — 水面模型倒影（ADR-297）", () => {
     cap.apply();
     cap.setWaterReflectionEnabled(true);
     const uni = compileTop(cap);
-    cap.update(0.016);
+    frame(cap);
     expect(cap["reflect"]!.reflector).toBeNull();
     expect(uni.uReflStrength!.value).toBe(0);
   });
@@ -2060,7 +2074,7 @@ describe("WaterCapability — 水面模型倒影（ADR-297）", () => {
     cap.apply();
     cap.setWaterReflectionEnabled(true);
     const uni = compileTop(cap);
-    cap.update(0.016);
+    frame(cap);
     const refl = cap["reflect"]!.reflector!;
     expect(refl.parent, "载体不入场景：主渲染零开销、零拾取污染").toBeNull();
     expect(scene.children).not.toContain(refl);
@@ -2082,11 +2096,11 @@ describe("WaterCapability — 水面模型倒影（ADR-297）", () => {
     cap.apply();
     cap.setWaterReflectionEnabled(true);
     const uni = compileTop(cap);
-    cap.update(0.016);
+    frame(cap);
     cap.setLevel(2.5);
     cap.setWaterReflectionResolution(1024);
     cap.setWaterReflectionStrength(0.9);
-    cap.update(0.016);
+    frame(cap);
     const refl = cap["reflect"]!.reflector!;
     expect(refl.position.y).toBeCloseTo(2.5, 5);
     expect(refl.getRenderTarget().width, "RT 原位扩缩，不重建载体").toBe(1024);
@@ -2103,26 +2117,26 @@ describe("WaterCapability — 水面模型倒影（ADR-297）", () => {
     const uni = compileTop(cap);
     // envmap-only：SSR 未活跃 → 倒影照常
     setEnvState({ ppEnabled: true, ppReflectionMode: "envmap-only" }, { source: "manual" });
-    cap.update(0.016);
+    frame(cap);
     expect(renderCount).toBe(1);
     // envmap+ssr：抑制生效（默认开）→ 跳渲 + uniform 0
     setEnvState({ ppReflectionMode: "envmap+ssr" }, { source: "manual" });
-    cap.update(0.016);
+    frame(cap);
     expect(renderCount, "SSR 活跃时不再整场重渲").toBe(1);
     expect(uni.uReflStrength!.value).toBe(0);
     // ssr-only 同样抑制
     setEnvState({ ppReflectionMode: "ssr-only" }, { source: "manual" });
-    cap.update(0.016);
+    frame(cap);
     expect(renderCount).toBe(1);
     // 关掉抑制开关 → 恢复双跑（用户显式选择，两倒影叠不叠归用户）
     cap.setWaterReflectDisableWhenSSR(false);
-    cap.update(0.016);
+    frame(cap);
     expect(renderCount).toBe(2);
     expect(uni.uReflStrength!.value).toBeCloseTo(0.6, 5);
     // pp 总开关关 → 无 ssr → 恢复
     cap.setWaterReflectDisableWhenSSR(true);
     setEnvState({ ppEnabled: false }, { source: "manual" });
-    cap.update(0.016);
+    frame(cap);
     expect(renderCount).toBe(3);
   });
 
@@ -2133,11 +2147,11 @@ describe("WaterCapability — 水面模型倒影（ADR-297）", () => {
     cap.apply();
     cap.setWaterReflectionEnabled(true);
     cap.setWaterEnabled(false);
-    cap.update(0.016);
+    frame(cap);
     expect(renderCount).toBe(0);
     expect(cap["reflect"]!.reflector).toBeNull();
     cap.setWaterEnabled(true);
-    cap.update(0.016);
+    frame(cap);
     expect(renderCount).toBe(1);
   });
 
@@ -2148,10 +2162,10 @@ describe("WaterCapability — 水面模型倒影（ADR-297）", () => {
     cap.apply();
     cap.setWaterReflectionEnabled(true);
     cap.setWaterReflectionStrength(0);
-    cap.update(0.016);
+    frame(cap);
     expect(renderCount, "强度 0：混合块被 shader 跳过，RT 不渲").toBe(0);
     cap.setWaterReflectionStrength(0.9);
-    cap.update(0.016);
+    frame(cap);
     expect(renderCount, "强度回升：stale uniform 清零后 RT 恢复（拉回即渲染，无需重建）").toBe(1);
     const uni = compileTop(cap);
     expect(uni.uReflStrength!.value).toBeCloseTo(0.9, 5);
@@ -2163,7 +2177,7 @@ describe("WaterCapability — 水面模型倒影（ADR-297）", () => {
     const cap = new WaterCapability({ scene, renderer: makeFakeRenderer(() => { renderCount += 1; }), camera: makeCamera() });
     cap.apply();
     cap.setWaterReflectionEnabled(true);
-    expect(() => cap.update(0.016)).not.toThrow();
+    expect(() => frame(cap)).not.toThrow();
     expect(renderCount).toBe(1);
     const uni = compileTop(cap);
     expect(uni.uReflTex!.value, "onBeforeCompile 补挂：镜像已在场，编译即重绑").toBeTruthy();
@@ -2176,12 +2190,12 @@ describe("WaterCapability — 水面模型倒影（ADR-297）", () => {
     const cap = new WaterCapability({ scene, renderer: makeFakeRenderer(() => { renderCount += 1; }), camera: makeCamera() });
     cap.apply();
     cap.setWaterReflectionEnabled(true);
-    cap.update(0.016);
+    frame(cap);
     const reflBefore = cap["reflect"]!.reflector!;
     cap.setWaterMode("pool");
     cap.apply();
     expect(cap["reflect"]!.reflector, "模式重建不动载体（RT 不白弃）").toBe(reflBefore);
-    cap.update(0.016);
+    frame(cap);
     const uniB = compileTop(cap);
     expect(uniB.uReflTex!.value, "新顶面材质重绑同一 RT 贴图").toBe(
       reflBefore.getRenderTarget().texture,
@@ -2196,7 +2210,7 @@ describe("WaterCapability — 水面模型倒影（ADR-297）", () => {
     cap.setWaterEnabled(true);
     cap.setWetness(0); // alpha = 0 ⇒ 虽可见（可见性单门）但无水可倒映
     cap.setWaterReflectionEnabled(true);
-    cap.update(0.016);
+    frame(cap);
     expect(
       cap["reflect"]!.reflector,
       "alpha=0 ⇒ 不建载体（该路径原被 wetness 门挡住，单门改造后必须由 alpha 门接管）",
@@ -2208,7 +2222,7 @@ describe("WaterCapability — 水面模型倒影（ADR-297）", () => {
     const cap = new WaterCapability({ scene, renderer: makeFakeRenderer(), camera: makeCamera() });
     cap.apply();
     cap.setWaterReflectionEnabled(true);
-    cap.update(0.016);
+    frame(cap);
     const rt = cap["reflect"]!.reflector!.getRenderTarget();
     expect(rt.samples, "three 上游默认 samples=4，此处必须显式为 0").toBe(0);
   });
@@ -2218,7 +2232,7 @@ describe("WaterCapability — 水面模型倒影（ADR-297）", () => {
     const cap = new WaterCapability({ scene, renderer: makeFakeRenderer(), camera: makeCamera() });
     cap.apply();
     cap.setWaterReflectionEnabled(true);
-    cap.update(0.016);
+    frame(cap);
     const holder = cap["reflect"]!;
     const reflector = holder.reflector!;
     expect(reflector).toBeTruthy();
@@ -2727,5 +2741,4 @@ describe("WaterCapability — 旧档水位默认值迁移（锐评 2026-10-04 P1
     );
   });
 });
-
 

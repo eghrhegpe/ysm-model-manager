@@ -5,8 +5,8 @@
 // 但 cap 内 setter 仍在」同族病）。本叶把管线整块收编，cap 退化为状态薄壳。
 //
 // 拆分范式承 ADR-091-d1（EnvironmentCapability → env-ibl.ts / env-hdr-cache.ts）：
-//   - 叶构造注入 renderer/scene/camera + caps 查询器（跨 cap 联动经 getTypedCap 现场取），
-//     该页状态（composer/pass 引用/尺寸凭据 prev 快照）全部收进叶实例；
+//   - 叶构造注入 renderer/scene/camera，该页状态（composer/pass 引用/尺寸凭据
+//     prev 快照）全部收进叶实例；
 //   - cap 公开 API（render/setSize/setPixelRatio/dispose 等签名）零变更，内部委托本叶；
 //   - 测试注入点 = `composerOf(cap)` 白盒探针（TS private 运行时即普通属性，同 hdrOf/iblOf
 //     范式）。
@@ -43,7 +43,6 @@ import { effectiveToneMappingExposure, envState } from "@/preview-3d/state/env-s
 import type { EnvState, EnvStateKey } from "@/preview-3d/state/env-state-schema.ts";
 import type { LightCapability } from "./light-capability.ts";
 import { bloomThresholdToLinear, type PostprocessingParams } from "./postprocessing-state.ts";
-import { getTypedCap, type SceneCapabilityLookup } from "./scene-capability.ts";
 
 /** 惰性求值 THREE 枚举：调用期才触碰 THREE.ToneMapping（规避测试 mock 缺枚举导出的收集期崩溃） */
 function toneMappingValue(key: PostprocessingParams["toneMapping"]): THREE.ToneMapping {
@@ -71,8 +70,6 @@ export interface PostprocessingComposerDeps {
   scene: THREE.Scene;
   renderer: THREE.WebGLRenderer;
   camera: THREE.PerspectiveCamera;
-  /** cap 间协调查询器（组合根注入）——restoreOutputSettings 的 sky 属主判定经查询器 */
-  caps?: SceneCapabilityLookup;
 }
 
 /**
@@ -158,7 +155,6 @@ export class PostprocessingComposer {
   private readonly scene: THREE.Scene;
   private readonly renderer: THREE.WebGLRenderer;
   private readonly camera: THREE.PerspectiveCamera;
-  private readonly caps?: SceneCapabilityLookup;
 
   // composer（惰性常驻：首次启用才建，dispose 才拆）
   private composer: EffectComposer | null = null;
@@ -185,8 +181,6 @@ export class PostprocessingComposer {
     this.scene = deps.scene;
     this.renderer = deps.renderer;
     this.camera = deps.camera;
-    // 条件赋值（对齐 sky/light 惯例）：exactOptionalPropertyTypes 下 undefined 不写入字段
-    if (deps.caps !== undefined) this.caps = deps.caps;
     this.prevToneMapping = this.renderer.toneMapping;
     this.prevOutputColorSpace = this.renderer.outputColorSpace;
   }
@@ -494,13 +488,24 @@ export class PostprocessingComposer {
    *
    * [ADR-250 §2.3] 曝光已不在本 cap 属主范围内——`toneMappingExposure` 由 sky 独占
    * （`skyExposure × ppExposure`），故此处**只归还 toneMapping / outputColorSpace**。
-   * sky 活跃即让位：sky 对 renderer 有持续写入权，此刻它才是属主；盲还原会把 sky 当前值
-   * 打回默认，制造「关后处理却让天空跳变」的二次伤害。按字段归属归还（对齐
-   * applyReflectorSync 的抑制态归属范式）。
+   *
+   * [2026-10-11 逐字段归属] 原实现以 `if (skyOwns) return;` **整块提前退出**——
+   * 作者担心「盲还原会把 sky 当前值打回默认，制造『关后处理却让天空跳变』」。
+   * 但**「sky 在场」≠「sky 是 toneMapping 的当前持有者」**：
+   *   - sky 只写 **ACESFilmic**（定值，见 `sky-capability.ts|apply`）；
+   *   - 本 cap 写 `toneMappingValue(envState.ppToneMapping)`（用户可选 none/linear/
+   *     reinhard/aces/cineon）。
+   * 当用户选的**不是** aces 时（如 reinhard），renderer 上的值就是**本 cap 写的**、
+   * 与 sky 无关——此时提前退出 = 本 cap 放弃归还自己写的值，**残留**成第三种状态
+   * （既非 sky 的 ACES，也非构造前快照）。实测复现：sky 开 → pp 开选 reinhard →
+   * 关 pp ⇒ renderer 停在 Reinhard 而非快照值。
+   *
+   * 正解 = **逐字段归属判定**（与下方 outputColorSpace、`frustum-cull.ts|_culled` 的
+   * 抑制态归属同范式）：**「renderer 上仍是本 cap 写的值」才归还**。
+   * 若 renderer 上是 sky 的 ACES（≠ 本 cap 写值）→ 判定「非持有者」自然跳过，
+   * 原提前退出想保住的那个场景**由判据本身覆盖**，无需整块退出。
    */
   restoreOutputSettings(): void {
-    const skyOwns = getTypedCap(this.caps, "sky")?.isEnabled() === true;
-    if (skyOwns) return;
     if (this.renderer.toneMapping === toneMappingValue(envState.ppToneMapping)) {
       this.renderer.toneMapping = this.prevToneMapping;
     }

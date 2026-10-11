@@ -230,11 +230,20 @@ export class WaterCapability implements SceneCapability {
     this.water.root.visible = envState.waterEnabled;
   }
 
-  /** 推进水面波纹动画（render loop 调用）。visible 已含 waterEnabled 语义，单判即可。
-   *  ADR-297：反射 RT 渲染同受此门控——水面不可见时倒影无意义，一并免掉整场重渲。 */
+  /** 推进水面波纹动画（render loop 前段调用）。visible 已含 waterEnabled 语义，单判即可。
+   *
+   *  [2026-10-11 时序拆分] 原实现还在此调 `renderReflection()`——但本钩子早于 perFrame
+   *  骨骼动画回调，导致**动画模型的倒影恒滞后一帧**（RT 里是上一帧姿态）。
+   *  现只推进时钟，倒影 RT 移到 `afterFrameUpdate`（相机输入 + perFrame 之后、主渲染之前）。 */
   update(dt: number): void {
     if (!this.water.root.visible) return;
     this.waterTime.value += dt * envState.waterWaveSpeed;
+  }
+
+  /** 帧末倒影渲染（render loop 后段：WASD 相机输入 + perFrame 动画之后，主渲染之前）。
+   *  ADR-297：受与 update 同一可见性门控——水面不可见时倒影无意义，一并免掉整场重渲。 */
+  afterFrameUpdate(): void {
+    if (!this.water.root.visible) return;
     this.renderReflection();
   }
 

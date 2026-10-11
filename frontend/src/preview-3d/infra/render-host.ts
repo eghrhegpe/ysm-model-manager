@@ -338,6 +338,10 @@ export class RendererHost {
     // [ADR-270-d1] registry 经组合根注入（typed getById 保 K 收窄；宽状态层 lookup 需 cast，故不走）
     const postProcCap = _capRegistry?.getById("postprocessing");
     const lightCap = _capRegistry?.getById("light") ?? null;
+    // [2026-10-11] 帧末能力钩子：相机输入 + perFrame 动画**之后**、主渲染**之前**。
+    // 消费者 = 水面倒影 RT（原挂 update 段，倒影恒滞后一帧；见 SceneCapability.afterFrameUpdate 契约）。
+    // 置于此处的必要性：只读「本帧已更新完的场景状态」，早了拿上一帧、晚了赶不上本帧采样。
+    for (const c of _capsProvider ? _capsProvider() : NO_CAPS) c.afterFrameUpdate?.();
     const rendered = postProcCap ? postProcCap.render(dt, lightCap) : false;
     if (!rendered) infra.renderer.render(infra.scene, cam);
     const nextPixelRatio = sampleAdaptivePixelRatio(

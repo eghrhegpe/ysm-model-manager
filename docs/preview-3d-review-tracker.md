@@ -236,3 +236,41 @@
 - 遗留 / 下一轮建议：
   1. **cube UV parity 守卫**（见上 ⚠️）——是否建由用户拍板；属高价值可选项，非当前缺陷（两侧现值一致）。
   2. 下一轮按清单轮转取 **`model`**（第 9 位；第 8 位 `menu` 已有 preview-menu 知识卡 + 大量专项测试，可评估是否视为已覆盖）。
+
+## 2026-10-11T10:45:00+08:00 追加：cube UV parity 守卫建成 → **当场抓到真实分叉，并推翻我上一轮的判断**
+
+- 选定理由：用户拍板建 cube UV 双端对账守卫（mesh 轮 ⚠️ 项）。
+- **⚠️ 更正上一轮的结论**：我在 mesh 轮写「两侧现值一致（我逐值核过）」——**错了**。
+  逐值人工核对 21 个用例后，黄金语料对账**第一次跑就抓到 1 处真实分叉**：
+  `guard-nan-bone-pivot` Go 返回 nil、TS 却产出对象。
+  根因：**Go `buildCubeMeshData` 有第四道守卫 `checkFinite(localPos)`（spec.go L240-243），
+  TS 只有三道**（入口 / inflate 后 / 顶点派生后），localPos 那道漏了。
+  后果（真 bug，非口径差异）：bonePivot 含 NaN/Inf 时 TS 把 NaN 写进 `MeshData.localPosition`
+  → 下游 `Object3D.position.set(NaN,…)` 使该 mesh 及子树 matrixWorld 全 NaN →
+  **渲染整体消失且不报错**（静默丢件）。Go 侧正确拒绝产出。
+  → 教训入档：**人工逐值核对会漏，跨语言对账不能靠读**。我上轮「逐函数核到逐值一致」
+  的结论覆盖了展开表/顶点序/UV 口径，但**漏了守卫链的条数比对**——这正是机器守卫存在的理由。
+- **修复**：`cube-mesh.ts` 补第四道 `assertFinite(localPos, …)` 对齐 Go（注释记由 parity 首次抓出）。
+- **机制建成（沿 cb1ce8d6d parity 先例）**：
+  - Go 主源 `go/threejs/cube_mesh_parity_test.go`：`TestCubeMeshParity`，
+    regen = `YSM_PARITY_REGEN=1 go test ./go/threejs -run TestCubeMeshParity`。
+  - 黄金语料 `tests/fixtures/parity/cube-mesh.golden.json`：**21 例**，覆盖
+    基本 box UV / 显式 pivot X 翻号 / **inflate+boxUV（钉「parseUV 用原始 size 而非膨胀后」口径）** /
+    mirror 完整语义（east↔west 互换）/ per-face faceUV（含 up/down 负 uv_size，foxcar 回归）/
+    faceUV 空对象与非法 JSON 两路回退 / 零厚度与负 size clamp / 三轴旋转 + 单轴 90°/180°
+    （四元数分支切换点）/ cubeTexW 覆盖 / texW=0 零填充 / 无 UV 零填充 / mirror+faceUV /
+    负 inflate 收缩 / **四道守卫各一例**（NaN origin、Inf size、inflate 溢出、NaN bonePivot）。
+  - TS 消费侧 `frontend/src/preview-3d/mesh/cube-mesh-parity.test.ts`：喂同一 cube 断言逐值等。
+  - **口径设计（关键取舍，写进语料 $semantics）**：`positions/normals/uvs/indices/localPosition/
+    texIdx/id/boneId` **精确比对**（IEEE754 四则运算跨语言逐位一致，无需容差）；
+    **仅 `localRotation` 走 1e-9 容差**——`eulerToQuaternion` 含 cos/sin/sqrt，JS Math 由实现
+    定义（V8 亦 fdlibm 通常一致但不保证），可差 1 ULP；1e-9 远小于任何真实公式改动量级（≥1e-2），
+    不影响抓漂移。特殊浮点用字符串哨兵 `"nan"/"inf"/"-inf"`（JSON 无此字面量），双端各自映射。
+- 验证：TS parity 21 例绿（修前 1 红）；mesh/ 8 文件 97 例绿；Go `./go/threejs` 全包绿（含既有
+  TestBuildCubeMeshData_* 未破）；`go build ./...` 绿；gofmt 干净；typecheck / vite build /
+  biome / check-path-hygiene（parity 跨界读语料走既有白名单，fail=0）全绿。
+- 遗留 / 下一轮建议：
+  1. 下一轮按清单轮转取 **`model`**（第 9 位）。
+  2. **同族推广候选**：本轮证明「守卫链条数」是人工核对的盲区。`mergeCubes`（JS/Go 双份）与
+     `computeBoneLocalPos`（JS 有、Go 在 spec-bones.go）也属同型手抄双源，若日后回访可并入本语料
+     或另建；当前无分叉证据，不主动开战。

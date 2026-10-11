@@ -1113,7 +1113,7 @@
   "preview.envSourceCustom": "カスタム HDR",
   "preview.envIntensity": "環境強度",
   "preview.envHistogram": "輝度ヒストグラム",
-  "preview.envHistogramHint": "輝度ヒストグラム：左が暗・右が明るい。ピークが環境の明暗を示す",
+  "preview.envHistogramHint": "輝度ヒストグラム：左が暗・右が明るい。ピークが環境の明暗を示す。カスタム HDR 未ロードかつ「背景として使用」OFF のときはデータソースなし（全ゼロ＝データ無、純黒画像ではない）",
   "preview.envPickHdr": "カスタム HDR",
   "preview.envSectionBasic": "基本",
   "preview.envSectionAtmosphere": "雰囲気",

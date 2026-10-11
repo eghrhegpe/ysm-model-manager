@@ -326,6 +326,12 @@ export function buildCubeMeshData(
     cp[1] - bonePivot.y,
     cp[2] - bonePivot.z,
   ];
+  // [锐评 mesh 轮 2026-10-11] localPos 有限性守卫——对齐 Go spec.go L240-243 的第四道
+  // checkFinite。此前三道（入口 / inflate 后 / 顶点派生后）两侧同构，**唯独这道 TS 漏了**：
+  // bonePivot 含 NaN/Inf 时 Go 拒绝产出，TS 却把 NaN 写进 MeshData.localPosition，
+  // 下游 `Object3D.position.set(NaN,…)` 使该 mesh 及其子树 matrixWorld 全变 NaN →
+  // 渲染整体消失（且不报错，静默丢件）。由 cube-mesh-parity.test.ts 双端对账首次抓出。
+  if (!assertFinite(localPos, `mesh localPos 溢出 bone=${boneID} cube=${cubeIdx}`)) return null;
   const localRot = eulerToQuaternion(-c.rotation[0], -c.rotation[1], c.rotation[2]);
 
   return {

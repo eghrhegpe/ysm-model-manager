@@ -56,7 +56,6 @@ auto_fields:
     - getParamRange
     - getPresetKeys
     - getSceneCaps
-    - getStateValue
     - isEnvCallbacksSuspended
     - isSsrRenderActive
     - LightInstances
@@ -83,7 +82,6 @@ auto_fields:
     - sceneInfraHost
     - SceneInfraHost
     - setEnvState
-    - setStateValue
     - SharedInfra
     - SkyBakeDeps
     - SkyBakePipeline

@@ -1106,6 +1106,10 @@ export const zhCN = {
   "preview.webglContextLost":
     "3D 渲染上下文已丢失，正在等待浏览器恢复（可能因 GPU 进程重置或驱动切换）",
   "preview.webglContextRestored": "3D 渲染上下文已恢复",
+  // 场景能力持久化（保存/恢复）失败聚合提示（preview-3d/caps/scene-capability-registry.ts）
+  "preview.capPersistenceFailed": "{stage}失败 {n} 项，部分环境设置可能未生效",
+  "preview.capStage.save": "保存环境设置",
+  "preview.capStage.load": "恢复环境设置",
   // 3D 面板渲染错误边界 + 材质显隐 eye 按钮（preview-menu core/render/roles）
   "preview.renderFail": "面板渲染失败",
   "preview.eyeHide": "隐藏",

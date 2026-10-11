@@ -5,8 +5,6 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import {
   envState,
   setEnvState,
-  getStateValue,
-  setStateValue,
   resetEnvState,
   isSsrRenderActive,
   registerEnvStateMiddleware,
@@ -91,9 +89,8 @@ describe("env-state 守卫优先级", () => {
     expect(fired).toHaveLength(1);
   });
 
-  it("setStateValue 走 manual 来源；getStateValue 读回", () => {
-    setStateValue(KEY, true);
-    expect(getStateValue(KEY)).toBe(true);
+  it("manual 来源经 setEnvState 写入并读回", () => {
+    setEnvState({ [KEY]: true }, { source: "manual" });
     expect(envState.fogEnabled).toBe(true);
   });
 });
@@ -131,11 +128,6 @@ describe("值域钳制（唯一写入口）", () => {
   it("非 manual 来源同样受钳：预设 / 存档路径无豁免", () => {
     setEnvState({ waterPoolHeight: 99 }, { source: "auto-model" });
     expect(envState.waterPoolHeight).toBe(5);
-  });
-
-  it("setStateValue 这条旁路也过钳制", () => {
-    setStateValue("waterClarity", 3);
-    expect(envState.waterClarity).toBe(1);
   });
 
   it("钳制后仍正常派发", () => {

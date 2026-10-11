@@ -6,7 +6,10 @@
 // 菜单/持久化/生命周期全部由框架驱动，零手工 wiring。
 
 import type * as THREE from "three";
+import { t } from "@/core/i18n/t.ts";
 import { ringLog } from "@/preview-3d/ring-log.ts";
+import { toast } from "@/utils/dom/toast.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { EnvironmentCapability } from "./environment-capability.ts";
 import { envShouldYieldSlot } from "./environment-ownership.ts";
 import { FogCapability } from "./fog-capability.ts";
@@ -145,30 +148,56 @@ export class SceneCapabilityRegistry {
     return this.instances.find((c) => (c.panelId ?? c.id) === panelId);
   }
 
+  /**
+   * 持久化失败聚合上报：[锐评 2026-10-11] 原每 cap 各自 `ringLog("warn")` 仅落环形日志，
+   * 用户只见黑场景 / 缺环境光、零提示。现聚合为单条 toast，让恢复 / 保存失败对用户可见。
+   * 环形日志保留（静默诊断），toast 仅作用户出口；无失败时零副作用。
+   */
+  private reportPersistenceFailures(stage: "save" | "load", failed: string[]): void {
+    if (failed.length === 0) return;
+    ringLog("scene-cap", `${stage} 失败 ${failed.length} 项: ${failed.join(",")}`, "warn", () =>
+      console.warn(`[scene-cap] ${stage} 失败 ${failed.length} 项: ${failed.join(",")}`),
+    );
+    toast(
+      t("preview.capPersistenceFailed", {
+        stage: t(`preview.capStage.${stage}`),
+        n: failed.length,
+      }),
+      TOAST_MS.long,
+      "error",
+    );
+  }
+
   /** 保存所有能力状态到 localStorage */
   saveAll(): void {
+    const failed: string[] = [];
     for (const cap of this.instances) {
       try {
         cap.saveState();
       } catch (e) {
+        failed.push(cap.id);
         ringLog("scene-cap", `${cap.id} 保存失败: ${e}`, "warn", () =>
           console.warn(`[scene-cap] ${cap.id} 保存失败: ${e}`),
         );
       }
     }
+    this.reportPersistenceFailures("save", failed);
   }
 
   /** 从 localStorage 恢复所有能力状态（按 LOAD_DEPS 拓扑序，依赖恒先于依赖方） */
   loadAll(): void {
+    const failed: string[] = [];
     for (const cap of this.topoLoadOrder()) {
       try {
         cap.loadState();
       } catch (e) {
+        failed.push(cap.id);
         ringLog("scene-cap", `${cap.id} 恢复失败: ${e}`, "warn", () =>
           console.warn(`[scene-cap] ${cap.id} 恢复失败: ${e}`),
         );
       }
     }
+    this.reportPersistenceFailures("load", failed);
   }
 
   /**

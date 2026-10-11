@@ -126,20 +126,6 @@ export function setEnvState(
 }
 
 /**
- * StatePath 读（菜单控件用）。
- */
-export function getStateValue(path: string): unknown {
-  return (envState as unknown as Record<string, unknown>)[path];
-}
-
-/**
- * StatePath 写（菜单控件用）。
- */
-export function setStateValue(path: string, value: unknown): void {
-  setEnvState({ [path]: value } as Partial<EnvState>, { source: "manual" });
-}
-
-/**
  * [锐评 F-1] SSR 活跃判定的唯一事实源：后处理主开关开 ∧ 反射模式含 ssr。
  * 语义 = 「SSRPass 此刻真的在渲染」——R-1 血案修正：pp 关掉时 pass 已旁路，SSR 没在
  * 渲染，不得白禁地面镜面 / 白跳水面镜像。判别式曾被两处各手抄一份（pp 侧还随血案

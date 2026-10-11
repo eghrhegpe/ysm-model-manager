@@ -25,40 +25,33 @@
 // - 结构性变化（ssaoEnabled/reflectionMode）→ callback 内 rebuild composer
 // - getParams() 从 envState 组装新对象（兼容层，供 menu/测试读）
 // - saveState/loadState 沿用旧 params 键名（向后兼容已有存档），读写走 envState
+//
+// [ADR-329 刀① 2026-10-11] composer 管线（构建/pass 管理/渲染/尺寸）已下沉
+// `postprocessing-composer.ts|PostprocessingComposer`，本 cap 退化为**状态编排薄壳**：
+//   - 持有 composerHost 叶实例（构造装配接口同前：scene/renderer/camera/caps）；
+//   - 保留：enabled 门、onEnvChanged 编排（结构性重建委托叶 build/applySSRModeToPass）、
+//     SSR↔Reflector 抑制联动、setter 群、getMenuNodes、持久化、apply/dispose 委托；
+//   - 管线细节（Pass 链序/MSAA/尺寸凭据/同步表）一律在叶——**勿**把 pass 字段或 build
+//     逻辑搬回本 cap（叶文件头部注明职责边界）。
 
-import * as THREE from "three";
-import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
-import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
-import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
-import { SSAOPass } from "three/addons/postprocessing/SSAOPass.js";
-import { SSRPass } from "three/addons/postprocessing/SSRPass.js";
-import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
-import { POSTPROC_MSAA_SAMPLES } from "@/preview-3d/infra/msaa-samples.ts";
+import type * as THREE from "three";
 import type { PostprocessingLike } from "@/preview-3d/infra/postprocessing.ts";
-import { previewPixelRatio } from "@/preview-3d/infra/render-budget.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/menu-node-types.ts";
 import { registerEnvCallback } from "@/preview-3d/state/env-dispatcher.ts";
-// ADR-196：统一状态层
-import {
-  effectiveToneMappingExposure,
-  envState,
-  isSsrRenderActive,
-  setEnvState,
-} from "@/preview-3d/state/env-state.ts";
+import { envState, isSsrRenderActive, setEnvState } from "@/preview-3d/state/env-state.ts";
 import type { EnvState, EnvStateKey } from "@/preview-3d/state/env-state-schema.ts";
 import { pickModelDefaultFields, toModelType } from "@/preview-3d/state/model-defaults.ts";
 // [锐评 X-6 / 方案 C 2026-10-04] 菜单局部刷新订阅原语（fog/water/reflector 同源）
 import { createListenerSet } from "@/utils/base/primitives/listener-set.ts";
 import type { LightCapability } from "./light-capability.ts";
 import { type FieldRestorer, oneOf, restoreFields } from "./persist-utils.ts";
+// [ADR-329 刀①] composer 管线叶（构建/渲染/尺寸/参数同步全在叶）
+import { PostprocessingComposer } from "./postprocessing-composer.ts";
 import { buildPostprocessingNodes } from "./postprocessing-menu.ts";
 // 状态/序列化轴（PostprocessingParams / 默认值 / toneMapping 键表）已下沉
 // postprocessing-state.ts；此处透传导出，保持既有调用方（postprocessing-capability.test.ts、
-// cap-configs.test.ts 等）的 import 路径不破坏。THREE.ToneMapping 枚举求值仍在本文件
-// toneMappingValue()（惰性，测试 mock 约束见 state 文件头注释）。
-// [ADR-250] POSTPROC_PRESETS 已删除——模型类别默认偏好改走 MODEL_DEFAULTS 写 `ppEnabled`。
+// cap-configs.test.ts 等）的 import 路径不破坏。
 import {
-  bloomThresholdToLinear,
   DEFAULT_POSTPROC_PARAMS,
   POSTPROC_PERSIST_FIELDS,
   type PostprocessingParams,
@@ -77,27 +70,6 @@ import {
 export type { PostprocessingParams, ReflectionMode };
 export { DEFAULT_POSTPROC_PARAMS };
 
-/** 惰性求值 THREE 枚举：调用期才触碰 THREE.ToneMapping（规避测试 mock 缺枚举导出的收集期崩溃） */
-function toneMappingValue(key: PostprocessingParams["toneMapping"]): THREE.ToneMapping {
-  switch (key) {
-    case "none":
-      return THREE.NoToneMapping;
-    case "linear":
-      return THREE.LinearToneMapping;
-    case "reinhard":
-      return THREE.ReinhardToneMapping;
-    case "aces":
-      return THREE.ACESFilmicToneMapping;
-    case "cineon":
-      return THREE.CineonToneMapping;
-    default:
-      return THREE.NoToneMapping;
-  }
-}
-
-/** SSRPass.OUTPUT 枚举（0=Default 正常显示反射混合），其他调试项 1=Beauty 2=SSR 仅深度 3=Blur 4=Normal 5=Metalness 先不暴露 */
-const SSRPASS_OUTPUT_DEFAULT = 0;
-
 export class PostprocessingCapability implements SceneCapability, PostprocessingLike {
   readonly id = "postprocessing";
   /** [暗线 C1 收口] 面板渲染 id（core.ts dock 绑定）≠ cap id：面板用 postproc / cap 用 postprocessing */
@@ -106,25 +78,9 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
   readonly icon = "sparkle";
   readonly descKey = "preview.postprocessingDesc";
 
-  private scene: THREE.Scene;
-  private renderer: THREE.WebGLRenderer;
-  private camera: THREE.PerspectiveCamera;
-
-  // composer
-  private composer: EffectComposer | null = null;
-  private renderPass: RenderPass | null = null;
-  private bloomPass: UnrealBloomPass | null = null;
-  private ssaoPass: SSAOPass | null = null;
-  private ssrPass: SSRPass | null = null;
-  private outputPass: OutputPass | null = null;
-
-  // [ADR-299] composer 惰性常驻的尺寸凭据。关闭态 composer 尚未创建，render-host 每帧
-  // 下发的 setSize / setPixelRatio 必须留下记录，否则首次启用时只能按
-  // `previewPixelRatio(devicePixelRatio)` 现场猜——自适应降档（render-host 的
-  // sampleAdaptivePixelRatio）后就会建出与 renderer 实际像素比不符的读写缓冲。
-  private lastW = 0;
-  private lastH = 0;
-  private lastPixelRatio = 0;
+  // [ADR-329 刀①] composer 管线叶——所有 pass/尺寸/渲染细节收进叶，cap 只留编排
+  /** composer 叶实例（构造装配；composerOf(cap) 白盒探针取同一引用） */
+  private readonly composerHost: PostprocessingComposer;
 
   // 联动 ReflectorCapability（SSR 开启时可自动禁用）——2026-09-14 起经构造注入的
   // caps 查询器现场取（getTypedCap(this.caps, "reflector")），替代原 setReflectorCap 注入器
@@ -145,11 +101,6 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
   private get enabled(): boolean {
     return envState.ppEnabled;
   }
-
-  // prev 状态（dispose 还原）
-  // [ADR-250] prevExposure 已删除——曝光属主归 sky，本 cap 不再持有/归还该字段。
-  private prevToneMapping: THREE.ToneMapping;
-  private prevOutputColorSpace: string;
 
   // ADR-196：取消订阅函数
   private unsubscribeEnv: () => void;
@@ -180,9 +131,13 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     /** cap 间协调查询器（组合根 createAll 注入）——reflector 联动经查询器，不手工接线 */
     caps?: SceneCapabilityLookup;
   }) {
-    this.scene = opts.scene;
-    this.renderer = opts.renderer;
-    this.camera = opts.camera;
+    // [ADR-329 刀①] composer 叶构造装配（管线状态全在叶，prev 快照等服务叶内）
+    this.composerHost = new PostprocessingComposer({
+      scene: opts.scene,
+      renderer: opts.renderer,
+      camera: opts.camera,
+      ...(opts.caps !== undefined ? { caps: opts.caps } : {}),
+    });
     // 条件赋值（对齐 sky/light 惯例）：exactOptionalPropertyTypes 下 undefined 不写入字段
     if (opts.caps !== undefined) this.caps = opts.caps;
     // [ADR-250] 显式传值才写状态层；不传则尊重 envState 现有值（含用户存档恢复的顺序）。
@@ -192,9 +147,6 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
       setEnvState({ ppEnabled: opts.enabled }, { source: "manual" });
     }
 
-    this.prevToneMapping = this.renderer.toneMapping;
-    this.prevOutputColorSpace = this.renderer.outputColorSpace;
-
     // [ADR-250 §2.2 → ADR-299] composer **惰性常驻**：构造期只在「启用意图已为真」时建
     // （存档恢复 / 调用方显式传 enabled=true 的场景）；默认 `ppEnabled=false`
     // （env-state-schema 默认值）的会话**一个 RenderTarget 都不分配**。
@@ -203,7 +155,7 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     // 管线过路费是载荷的 5 倍。建后仍常驻（换模型/启停不销毁），ADR-250 §2.2 的
     // 「换模型不重建 GPU 资源」收益完整保留。
     // syncReflector=false：构造期不压制 reflector（见 buildComposer 注释）。
-    if (this.enabled) this.buildComposer(false);
+    if (this.enabled) this.composerHost.buildComposer();
 
     // ADR-196：订阅 envState 变更，同步 pass 属性 / 重建 composer（只接收 postprocessing 组的键）
     this.unsubscribeEnv = registerEnvCallback(this, this.onEnvChanged, "postprocessing");
@@ -215,87 +167,6 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
   }
 
   /* -------- ADR-196：envState 变更回调（同步 pass 属性 / 重建 composer）-------- */
-
-  /** 参数同步表：`键组 → 写入函数`。取代原先 6 段并排的 `if (changed.has(k)) { 逐项赋值 }`。
-   *
-   *  写入函数收 `(cap, state)`，返回 false 表示目标 pass 尚不存在（无需处理）。
-   *  按键触发语义由调用方保留：只有真正出现在 `changed` 里的键才唤起对应条目——
-   *  不能退化为「整组无条件全写」（`changed` 已由 dispatcher 按 postprocessing 组过滤）。
-   *
-   *  结构性变化（`ppSsaoEnabled` 重建 / `ppReflectionMode` 补挂）**不入本表**：它们要
-   *  重建或增删 pass，属控制流而非属性写入，留在 onEnvChanged 主干。 */
-  private static readonly PARAM_SYNC: ReadonlyArray<{
-    keys: readonly EnvStateKey[];
-    write: (cap: PostprocessingCapability, state: EnvState) => boolean;
-  }> = [
-    {
-      keys: ["ppBloomEnabled"],
-      write: (cap) => {
-        if (!cap.bloomPass) return false;
-        cap.bloomPass.enabled = envState.ppBloomEnabled;
-        return true;
-      },
-    },
-    {
-      keys: ["ppBloomStrength", "ppBloomThreshold", "ppBloomRadius"],
-      write: (cap, s) => {
-        if (!cap.bloomPass) return false;
-        // base 值；render() 时 syncBloomPass 再应用体积光联动。
-        // [2026-10 bloom 域修复] threshold 在**每个写入点**都做曝光域换算——与
-        // syncBloomPass/attachSSRAndBloomPasses 同域，防「键变更→下一 render 之前」
-        // 的帧窗口里 pass 躺着一帧裸用户值（症状：拖阈值滑杆瞬间辉光先炸再收）。
-        cap.bloomPass.strength = s.ppBloomStrength;
-        cap.bloomPass.threshold = bloomThresholdToLinear(
-          s.ppBloomThreshold,
-          effectiveToneMappingExposure(),
-        );
-        cap.bloomPass.radius = s.ppBloomRadius;
-        return true;
-      },
-    },
-    {
-      keys: ["ppSsaoRadius", "ppSsaoMinDist", "ppSsaoMaxDist"],
-      write: (cap, s) => {
-        if (!cap.ssaoPass) return false;
-        cap.ssaoPass.kernelRadius = s.ppSsaoRadius;
-        cap.ssaoPass.minDistance = s.ppSsaoMinDist;
-        cap.ssaoPass.maxDistance = s.ppSsaoMaxDist;
-        return true;
-      },
-    },
-    {
-      keys: [
-        "ppSsrOpacity",
-        "ppSsrMaxDistance",
-        "ppSsrThickness",
-        "ppSsrBlur",
-        "ppSsrDistanceAttenuation",
-        "ppSsrFresnel",
-        "ppSsrBouncing",
-      ],
-      write: (cap, s) => {
-        if (!cap.ssrPass) return false;
-        // ssr-only 档无屏外 fallback，混合无意义 → 不透明度恒为 1
-        cap.ssrPass.opacity = s.ppReflectionMode === "ssr-only" ? 1 : s.ppSsrOpacity;
-        cap.ssrPass.maxDistance = s.ppSsrMaxDistance;
-        cap.ssrPass.thickness = s.ppSsrThickness;
-        cap.ssrPass.blur = s.ppSsrBlur;
-        cap.ssrPass.distanceAttenuation = s.ppSsrDistanceAttenuation;
-        cap.ssrPass.fresnel = s.ppSsrFresnel;
-        cap.ssrPass.bouncing = s.ppSsrBouncing;
-        return true;
-      },
-    },
-    {
-      keys: ["ppToneMapping"],
-      write: (cap) => {
-        // enabled 守卫：未启用时不得夺取 renderer.toneMapping（否则「关了后处理却改色调」）
-        if (!cap.enabled) return false;
-        cap.applyToneMapping();
-        return true;
-      },
-    },
-  ];
 
   private onEnvChanged = (changed: Set<EnvStateKey>, state: EnvState): void => {
     // ① 启用意图翻转（ADR-250 + ADR-299）：**不销毁** composer（常驻），只切每帧参与 +
@@ -315,7 +186,7 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     //    `ssrMaterial`（持有 defines 与全部 uniforms 的 ShaderMaterial）——上游客源缺陷，
     //    本仓无法直接修，故从根上不重建，反复切档不再累积未释放的 ShaderMaterial。
     if (changed.has("ppSsaoEnabled")) {
-      if (this.composer) this.buildComposer();
+      if (this.composerHost.hasComposer()) this.composerHost.buildComposer();
       return;
     }
     // 反射模式：唯一需要动 pass 组合的情况是「已启用 + 需要 SSR + 尚无 ssrPass」→ 补挂。
@@ -323,195 +194,20 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     //    否则「SSR 开→压制单平面镜 / SSR 关→归还」的联动失效（原实现靠 buildComposer 内那次
     //    applyReflectorSync 兜住，改为免重建后须显式触发）。
     if (changed.has("ppReflectionMode")) {
-      if (this.composer && !this.ssrPass && state.ppReflectionMode !== "envmap-only") {
-        this.buildComposer();
-      } else if (this.ssrPass) {
-        this.applySSRModeToPass();
+      if (this.composerHost.hasComposer()) {
+        // [ADR-329 刀①] 叶内封装「需 SSR 且尚无 ssrPass → 补挂；已有 → 调档位」判定
+        this.composerHost.syncReflectionMode(state);
       }
     }
 
-    // ③ 参数属性同步（按键触发，表驱动；见 PARAM_SYNC）
-    for (const entry of PostprocessingCapability.PARAM_SYNC) {
-      if (entry.keys.some((k) => changed.has(k))) entry.write(this, state);
-    }
+    // ③ 参数属性同步（按键触发，表驱动；PARAM_SYNC 已下沉叶，经 syncParamsIfChanged 委托）
+    this.composerHost.syncParamsIfChanged(changed, state);
 
     // ④ Reflector 联动：SSR 是否在渲染（isSsrRenderActive）决定单平面镜的压制/归还。
     if (changed.has("ppReflectorDisableWhenSSR") || changed.has("ppReflectionMode")) {
       this.applyReflectorSync();
     }
   };
-
-  /* -------- 内部：构建/销毁 composer -------- */
-
-  /** [ADR-250 §2.2 + ADR-299] composer **生命周期**惰性常驻：首次启用才建，建后不随
-   *  启用意图/模型切换销毁（GPU 资源与模型轴解耦的收益保留）。
-   *  ⚠️ 但「生命周期常驻」≠「每帧都走 composer」——本方法答的是后者：关闭态一律 false，
-   *  把渲染交回 render-host 的直渲兜底，避免 ADR-299 实测的 1.05ms/帧过路费。
-   *  两者分开，才能既省每帧又保住「换模型不重建」。
-   *  `lightCap` 形参保留以兼容 PostprocessingLike 契约与既有调用方。 */
-  private needComposer(lightCap: LightCapability | null): boolean {
-    // [ADR-246 D1] 体积光分支已删除（条件恒不成立）。
-    void lightCap;
-    return this.composer !== null && this.enabled;
-  }
-
-  private createComposerBase(): EffectComposer {
-    // [ADR-299] 尺寸优先取 host 下发过的凭据（见字段注释），无凭据时才回落到 renderer 现值
-    // 与 `previewPixelRatio`——惰性化后 composer 可能在会话中段才建，此时 devicePixelRatio
-    // 已不能代表 renderer 的实际像素比（自适应降档）。
-    const logicalSize = this.renderer.getSize(new THREE.Vector2());
-    const w = this.lastW > 0 ? this.lastW : Math.max(logicalSize.x, 1);
-    const h = this.lastH > 0 ? this.lastH : Math.max(logicalSize.y, 1);
-    const pixelRatio =
-      this.lastPixelRatio > 0 ? this.lastPixelRatio : previewPixelRatio(window.devicePixelRatio);
-    // [P2 修复] EffectComposer 自建读/写缓冲时不带 samples（three 0.186.1 构造器
-    // ——实装版本，`frontend/package.json` 声明 `^0.186.1`；本行原写「r185」，属版本标签陈旧，
-    // 该构造器签名自 r185 起未变、结论不受影响：
-    // `new WebGLRenderTarget(w, h, { type: HalfFloatType })`，samples 默认 0），而共享 renderer
-    // 是 `antialias: true` 建的——后期一开，整链改画进非 MSAA 离屏缓冲 → 抗锯齿被静默旁路，
-    // 边缘锯齿回归。此处显式给 composer 的缓冲开 MSAA，与 renderer 的抗锯齿意图对齐
-    // （构造器会 `renderTarget.clone()` 作 renderTarget2，samples 随 copy() 一并带上；
-    //  后续 setSize 只改尺寸，不丢 samples）。
-    // 采样数按 renderer **实际**拿到的 antialias 属性决定：浏览器未授予时给 0，避免白付带宽。
-    const gl = this.renderer.getContext() as WebGLRenderingContext | null | undefined;
-    const antialiasGranted = gl?.getContextAttributes?.()?.antialias === true;
-    const renderTarget = new THREE.WebGLRenderTarget(
-      Math.max(1, Math.round(w * pixelRatio)),
-      Math.max(1, Math.round(h * pixelRatio)),
-      { type: THREE.HalfFloatType, samples: antialiasGranted ? POSTPROC_MSAA_SAMPLES : 0 },
-    );
-    const composer = new EffectComposer(this.renderer, renderTarget);
-    composer.setPixelRatio(pixelRatio);
-    composer.setSize(w, h);
-
-    this.renderPass = new RenderPass(this.scene, this.camera);
-    composer.addPass(this.renderPass);
-
-    this.outputPass = new OutputPass();
-    composer.addPass(this.outputPass);
-
-    return composer;
-  }
-
-  /** [2026-10 锐评 P2-1] pass 构造尺寸统一取 host 下发的凭据（与 composer 同源）。
-   *  原实现从 `renderer.getSize()` 现取，而 composer 用 `lastW/lastH`——同一函数内两套
-   *  尺寸源，在「容器已变但尚未下发」的窗口内会分叉。凭据为空时才回落 renderer 现值。 */
-  private passSizes(): { w: number; h: number } {
-    const logical = this.renderer.getSize(new THREE.Vector2());
-    return {
-      w: Math.max(this.lastW > 0 ? this.lastW : logical.x, 1),
-      h: Math.max(this.lastH > 0 ? this.lastH : logical.y, 1),
-    };
-  }
-
-  private attachSSAOPass(composer: EffectComposer): void {
-    if (!envState.ppSsaoEnabled) return;
-    const { w, h } = this.passSizes();
-    this.ssaoPass = new SSAOPass(this.scene, this.camera, w, h, 32);
-    this.ssaoPass.kernelRadius = envState.ppSsaoRadius;
-    this.ssaoPass.minDistance = envState.ppSsaoMinDist;
-    this.ssaoPass.maxDistance = envState.ppSsaoMaxDist;
-    this.ssaoPass.output =
-      (SSAOPass as unknown as { OUTPUT: { Default: number } }).OUTPUT?.Default ?? 0;
-    // [锐评 P1-1] 走 insertPass（addPass/insertPass 是唯一会按物理尺寸下发 setSize 的
-    // 同步点），替代原 `composer.passes.splice(...)` 直插——后者绕过同步，使新 pass
-    // 停留在构造期的逻辑尺寸上，「插入即正确」的不变量失守。
-    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-    composer.insertPass(this.ssaoPass, composer.passes.indexOf(this.renderPass!) + 1);
-  }
-
-  private attachSSRAndBloomPasses(composer: EffectComposer, useSSR: boolean): void {
-    const { w, h } = this.passSizes();
-
-    this.bloomPass = new UnrealBloomPass(
-      new THREE.Vector2(w, h),
-      envState.ppBloomStrength,
-      envState.ppBloomRadius,
-      // [2026-10 bloom 域修复] 用户阈值是「曝光后可见亮度」语义，pass 消费的是
-      // 「曝光前线性 HDR」域（OutputPass 的 ACES+曝光在 bloom **之后**）——除以有效
-      // 曝光换算回线性域。render() 每帧 syncBloomPass 重算，曝光滑杆变化自动跟上。
-      bloomThresholdToLinear(envState.ppBloomThreshold, effectiveToneMappingExposure()),
-    );
-    // [锐评 P1-1] insertPass 替代 splice（同 attachSSAOPass）。
-    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-    composer.insertPass(this.bloomPass, composer.passes.indexOf(this.outputPass!));
-
-    if (useSSR) {
-      // ⚠️ groundReflector 必须保持 null（2026-09 读 three r185 源码核实）：SSRPass 期望的是
-      // `ReflectorForSSRPass` 实例（`import { ReflectorForSSRPass } from "three/addons/objects/..."`），
-      // 其 render 会调 `groundReflector.doRender(...)`——本仓用的是官方 `Reflector`（无 doRender），
-      // 误接线会在 SSRPass.render 抛 "doRender is not a function"。
-      // 且 ReflectorForSSRPass 是**替代品**而非附加品（自带与 SSR 对齐的 maxDistance/opacity/
-      // fresnel uniform），要启用须整体替换 ReflectorCapability 的 mesh，不是在此补参数。
-      // 现状无需它：SSR 活动时 applyReflectorSync 已按 envState.ppReflectorDisableWhenSSR（默认 true）
-      // 压制单平面镜，双反射默认不可达。
-      // selects=null 是**故意的**：使 SSRPass 的 `selective = Array.isArray(null) = false` →
-      // 跳过 metalness pass（少一次整场渲染），全场景统一走非 select 分支。
-      this.ssrPass = new SSRPass({
-        renderer: this.renderer,
-        scene: this.scene,
-        camera: this.camera,
-        width: w,
-        height: h,
-        selects: null,
-        groundReflector: null,
-        isBouncing: envState.ppSsrBouncing,
-      });
-      this.ssrPass.output = SSRPASS_OUTPUT_DEFAULT;
-      this.ssrPass.opacity = envState.ppSsrOpacity;
-      this.ssrPass.maxDistance = envState.ppSsrMaxDistance;
-      this.ssrPass.thickness = envState.ppSsrThickness;
-      this.ssrPass.blur = envState.ppSsrBlur;
-      this.ssrPass.distanceAttenuation = envState.ppSsrDistanceAttenuation;
-      this.ssrPass.fresnel = envState.ppSsrFresnel;
-      if (envState.ppReflectionMode === "ssr-only") this.ssrPass.opacity = 1;
-      // [顺序修复] SSR 必须独占链首（紧跟 RenderPass）：读 three r185 SSRPass.js 核实，
-      // OUTPUT.Default 分支把**自己的** beautyRenderTarget.texture 以 NoBlending 整片写入
-      // writeBuffer（`readBuffer` 形参在 render() 里被注释忽略），因此任何排在它之前的 pass
-      // （SSAO/Bloom）成果都会被覆盖——原顺序「Bloom → SSR」导致一开 SSR 就静默吃掉 Bloom/SSAO。
-      // 插在 renderPass 之后即位于 SSAO 之前；SSAO 用 CustomBlending 叠在 readBuffer 上、
-      // Bloom 也读 readBuffer，二者排在其后即可全保。
-      // [锐评 P1-1] insertPass 替代 splice（同上）：插入即按物理尺寸初始化。
-      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-      composer.insertPass(this.ssrPass, composer.passes.indexOf(this.renderPass!) + 1);
-    }
-  }
-
-  /** [锐评 P2-4] 反射模式变更时把档位落到既有 ssrPass，不重建 composer。
-   *  `ssr-only` 需把 opacity 顶到 1（纯 SSR、无屏外环境贴图补全）；
-   *  其余档位恢复用户设定的 opacity（`envmap+ssr` 为半混合）。
-   *  enabled 由 render() 每帧按 `ppReflectionMode !== "envmap-only"` 统一同步，此处不重复。 */
-  private applySSRModeToPass(): void {
-    if (!this.ssrPass) return;
-    this.ssrPass.opacity = envState.ppReflectionMode === "ssr-only" ? 1 : envState.ppSsrOpacity;
-  }
-
-  private buildComposer(syncReflector = true): void {
-    this.disposeComposer();
-    const useSSR = envState.ppReflectionMode !== "envmap-only";
-    this.composer = this.createComposerBase();
-    this.attachSSAOPass(this.composer);
-    this.attachSSRAndBloomPasses(this.composer, useSSR);
-    // [ADR-250] 构造期建 composer 时不触发 reflector 抑制（`syncReflector=false`）：
-    // 抑制是「启用后借走 reflector」的动作，未启用即压制属越权，且会破坏
-    // 「enable 才同步」的既有语义（reflector 联动测试锁死）。
-    if (syncReflector) this.applyReflectorSync();
-  }
-
-  private disposeComposer(): void {
-    this.ssaoPass?.dispose();
-    this.ssaoPass = null;
-    this.ssrPass?.dispose();
-    this.ssrPass = null;
-    this.renderPass?.dispose();
-    this.renderPass = null;
-    this.bloomPass?.dispose();
-    this.bloomPass = null;
-    this.outputPass?.dispose();
-    this.outputPass = null;
-    this.composer?.dispose();
-    this.composer = null;
-  }
 
   /* -------- Reflector 联动：SSR on 时可自动禁用 ReflectorCapability 单平面镜面 -------- */
 
@@ -549,115 +245,6 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     }
   }
 
-  /* -------- 参数应用 -------- */
-
-  /**
-   * 写入色彩映射。[ADR-250 §2.3] **不再写 `toneMappingExposure`**——曝光属主归 sky。
-   *
-   * 历史（本 ADR 的根因）：本方法与 `SkyCapability.apply()` 并写同一个
-   * `renderer.toneMappingExposure`，值为 `ppExposure`(全局 1.0) 对 `skyExposure`(per-type 0.5~0.6)。
-   * 后处理一开即夺走属主，造成约 1.8× 亮度跳变——这才是「MMD 亮瞎」的真因
-   * （per-type 亮度参数实为空，见 ADR §1.1）。且该跳变被误归因为「切档位忘了归还」，
-   * 「切模型门禁翻 true」这条同源路径从未被识别。
-   *
-   * 现口径：`renderer.toneMappingExposure = skyExposure × ppExposure`，由 sky 侧统一写入
-   * （`sky-capability.ts|applyExposure`），本 cap 只负责 tone mapping 与色彩空间。
-   */
-  private applyToneMapping(): void {
-    this.renderer.toneMapping = toneMappingValue(envState.ppToneMapping);
-    this.renderer.outputColorSpace = THREE.SRGBColorSpace;
-  }
-
-  /**
-   * 归还输出设置给构造前的值。
-   *
-   * [ADR-250 §2.3] 曝光已不在本 cap 属主范围内——`toneMappingExposure` 由 sky 独占
-   * （`skyExposure × ppExposure`），故此处**只归还 toneMapping / outputColorSpace**。
-   * 原实现归还 exposure 的那段「是否仍持有」的归属判定随之退役：
-   * 并发持有是无解的（不像 reflector 可串行压制），只能定单一属主。
-   */
-  private restoreOutputSettings(): void {
-    // sky 活跃即让位（一个字段都不写）：sky 对 renderer 有持续写入权
-    //（ACESFilmic + skyExposure × ppExposure，经 refcount 仲裁多 session 共享 renderer），
-    // 此刻它才是 tone/outputColorSpace 的属主。本 cap 的构造期快照可能陈旧
-    //（组合根 createAll 时本 cap 先于 sky.apply 构造，快照=sky 接管前的默认值），
-    // 盲还原会把 sky 当前值打回默认，制造「关后处理却让天空跳变」的二次伤害。
-    const skyOwns = getTypedCap(this.caps, "sky")?.isEnabled() === true;
-    if (skyOwns) return;
-    // sky 缺席/停用时，按字段各自的归属归还：renderer 上仍是本 cap 写入的值
-    // 才说明我们仍是持有者（对齐本文件 applyReflectorSync 的抑制态归属范式）。
-    if (this.renderer.toneMapping === toneMappingValue(envState.ppToneMapping)) {
-      this.renderer.toneMapping = this.prevToneMapping;
-    }
-    // outputColorSpace 同样按**字段各自的归属**归还——本 cap 在 applyToneMapping 里写的是
-    // 常量 `THREE.SRGBColorSpace`，故「renderer 上仍是 SRGB」才说明我们仍是持有者。
-    // 缺此判定时，若他处（适配器自建流程 / 其它 cap）已把色彩空间改成别的值，本 cap 停用
-    // 会把别人的值盲打回构造期快照——与上面 toneMapping 的范式不对称，属漏判。
-    if (this.renderer.outputColorSpace === THREE.SRGBColorSpace) {
-      this.renderer.outputColorSpace = this.prevOutputColorSpace as THREE.ColorSpace;
-    }
-  }
-
-  private syncBloomPass(lightCap: LightCapability | null): void {
-    if (!this.bloomPass) return;
-    // 独立辉光开关：false 时整个 bloomPass 旁路（Pass.enabled=false），不影响 SSAO/SSR
-    this.bloomPass.enabled = envState.ppBloomEnabled;
-    if (!envState.ppBloomEnabled) return;
-    // [2026-10 bloom 域修复] 用户阈值语义 =「曝光后可见亮度」，pass 阈值域 =「曝光前线性
-    // HDR」（ACES+曝光压在 OutputPass、位于 bloom 之后）。统一在此现读有效曝光做域换算，
-    // 每帧自愈：用户拖曝光滑杆（sky 组键，不派发本 cap）下一帧阈值即对齐，无需跨组订阅。
-    // threshold 先按联动 ±20% 缩放、再换域（联动是「浓度微调」语义，作用于用户可见值上）。
-    const exposure = effectiveToneMappingExposure();
-    if (envState.ppBloomFollowVolumetric && lightCap) {
-      const vol = lightCap.getParams().volumetric;
-      // [ADR-247] 联动门禁只看联动开关本身，读「浓度意图」opacity，与体积光「此刻是否可见」解耦。
-      // 历史：ADR-246 D1 曾把门禁收紧为 volumetric.enabled（原实现无条件读 opacity，而该
-      // opacity 在 postprocess 模式下被引擎强制关闭，更荒谬）——但读「可见性」会让联动开关
-      // 继承另一功能的运行时状态：默认配置（联动 on + 体积光 off）下 gain 恒 0，开关显示
-      // 「开」却从不生效，正是「开关撒谎」。联动语义是「是否接受体积光浓度调制 bloom」的
-      // 用户偏好；可见性取决于聚光灯这一物理前置，不该静默撤销用户偏好。
-      // [ADR-247 D1 审查补强 R2] 数值守卫：原式 `vol.enabled ? vol.opacity : 0` 在体积光关闭时
-      // 短路为 0，顺带掩盖了 opacity 缺失；改成直读后，undefined 会经乘法扩散成 NaN 并永久
-      // 污染 bloomPass（strength/threshold 无 clamp）。生产路径 readVolParams 恒出数值，
-      // 但 syncBloomPass 接受外部 LightCapability stub，需自守。
-      const raw = vol.opacity;
-      const gain = typeof raw === "number" && Number.isFinite(raw) ? raw : 0;
-      // [doc:adr-126-p5] 联动解耦（用户拍板方案 b）：以用户设置（bloomStrength/bloomThreshold）
-      // 为基准，体积光 opacity 仅做 ±20% 微调。此前 opacity 直接放大成 strength 系数
-      //（满值 1.5 = 默认 2.5 倍）+ 阈值压到 0.2——开体积光即亮爆；体积光是光柱浓度语义，
-      // 不该主导全局 bloom。radius 保持用户设置（edgeFade 联动半径本就怪）。
-      this.bloomPass.threshold = bloomThresholdToLinear(
-        envState.ppBloomThreshold * (1 - 0.2 * gain),
-        exposure,
-      );
-      // strength 是加性增益、无「亮度域」语义，且随 OutputPass 曝光自然缩放——不换域。
-      this.bloomPass.strength = envState.ppBloomStrength * (1 + 0.2 * gain);
-      this.bloomPass.radius = envState.ppBloomRadius;
-    } else {
-      this.bloomPass.threshold = bloomThresholdToLinear(envState.ppBloomThreshold, exposure);
-      this.bloomPass.strength = envState.ppBloomStrength;
-      this.bloomPass.radius = envState.ppBloomRadius;
-    }
-  }
-
-  private syncSSAOPass(): void {
-    if (!this.ssaoPass) return;
-    this.ssaoPass.kernelRadius = envState.ppSsaoRadius;
-    this.ssaoPass.minDistance = envState.ppSsaoMinDist;
-    this.ssaoPass.maxDistance = envState.ppSsaoMaxDist;
-  }
-
-  private syncSSRPass(): void {
-    if (!this.ssrPass) return;
-    this.ssrPass.opacity = envState.ppReflectionMode === "ssr-only" ? 1 : envState.ppSsrOpacity;
-    this.ssrPass.maxDistance = envState.ppSsrMaxDistance;
-    this.ssrPass.thickness = envState.ppSsrThickness;
-    this.ssrPass.blur = envState.ppSsrBlur;
-    this.ssrPass.distanceAttenuation = envState.ppSsrDistanceAttenuation;
-    this.ssrPass.fresnel = envState.ppSsrFresnel;
-    this.ssrPass.bouncing = envState.ppSsrBouncing;
-  }
-
   /* -------- 兼容旧 PostprocessingManager 对外 API -------- */
 
   /** 每帧调用：若返回 true 表示已渲染（composer.render）；否则调用方需 renderer.render。
@@ -665,56 +252,25 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
    *  的直渲兜底，不再付 composer 的每帧过路费（实测 1.05ms/帧、+53.7%，见 ADR-299）。
    *  composer 本身不销毁（ADR-250 §2.2 常驻语义），仅退出每帧参与。 */
   render(dt: number, lightCap: LightCapability | null): boolean {
-    // needComposer 已含 `this.enabled`，故此处起 composer 与「已启用」二者同时成立。
-    if (!this.needComposer(lightCap)) return false;
-    if (this.ssaoPass) this.ssaoPass.enabled = envState.ppSsaoEnabled;
-    if (this.ssrPass) this.ssrPass.enabled = envState.ppReflectionMode !== "envmap-only";
-    if (this.bloomPass) this.bloomPass.enabled = envState.ppBloomEnabled;
-    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-    this.renderPass!.enabled = true;
-    this.syncBloomPass(lightCap);
-    this.syncSSAOPass();
-    this.syncSSRPass();
-    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-    this.composer!.render(dt);
+    // [ADR-329 刀①] 判定留在 cap（enabled 门 + hasComposer），叶只管渲染动作；返回语义不变
+    if (!this.enabled || !this.composerHost.hasComposer()) return false;
+    this.composerHost.render(dt, lightCap);
     return true;
   }
 
   setSize(width: number, height: number): void {
-    // [ADR-299] 凭据无条件记录：关闭态 composer 为 null，但首次启用时要按此尺寸建缓冲。
-    this.lastW = width;
-    this.lastH = height;
-    // [2026-10 锐评 P1-1] 此处**只**记凭据并交给 composer 驱动，不得手写 ssrPass.setSize。
-    //
-    // 病根（读 three 0.186.1 源码核实）：`EffectComposer.setSize` 会以
-    // `_width * _pixelRatio`（物理量）遍历所有 pass 下发尺寸；原实现在其后紧跟一句
-    // `this.ssrPass.setSize(width, height)`（逻辑量）二次覆盖 → SSRPass 的
-    // beauty/normal/metalness RT 被打回逻辑尺寸，DPR>1 时只有主链一半线性分辨率。
-    // 而 SSRPass 独占链首、每帧在 beautyRenderTarget 上整场重渲并以 NoBlending 整片覆写
-    // writeBuffer → **整帧**被拉到逻辑尺寸，SSAO/Bloom/Output 全部继承（症状是「整帧糊」，
-    // 而非反射错位——SSR 自身的 resolution uniform 与 beauty 一致，采样仍自洽）。
-    //
-    // 更本质的一层：passes 经 `composer.passes.splice(...)` 直插数组，绕过了
-    // `addPass`/`insertPass`——那两者是**唯一**会下发物理尺寸的同步点，而 `Pass` 基类的
-    // `setSize` 是空实现（Pass.js:74）。故 SSRPass 自构造起就从未被正确初始化。
-    // 现改为全程用 `addPass`/`insertPass`（见 createComposerBase/attach*），
-    // 插入即自动获得物理尺寸，resize 则由 composer.setSize 单一驱动。
-    this.composer?.setSize(width, height);
+    this.composerHost.setSize(width, height);
   }
 
   setPixelRatio(pixelRatio: number): void {
-    // [ADR-299] 同 setSize：关闭态也记，供惰性创建时对齐 renderer 的实际像素比。
-    // [锐评 P1-1] composer.setPixelRatio 内部会以 `setSize(_width, _height)` 级联重算
-    // 所有 pass 的物理尺寸，故此处无需也不得额外碰 ssrPass。
-    this.lastPixelRatio = pixelRatio;
-    this.composer?.setPixelRatio(pixelRatio);
+    this.composerHost.setPixelRatio(pixelRatio);
   }
 
   /* -------- SceneCapability 接口 -------- */
 
   apply(): void {
     // [ADR-250] 曝光归 sky，本 cap 只在启用时接管 tone mapping / 色彩空间
-    if (this.enabled) this.applyToneMapping();
+    if (this.enabled) this.composerHost.applyToneMapping();
   }
 
   /** 写入启用意图。[ADR-250] 唯一真值源 = `envState.ppEnabled`——本方法走 setEnvState，
@@ -731,10 +287,10 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     if (this.enabled) {
       // syncReflector=false：抑制由本函数末尾那次 applyReflectorSync() 统一落地，
       // 避免 buildComposer 内触发一次、此处再触发一次的重复（reflector 两态非幂等敏感）。
-      if (!this.composer) this.buildComposer(false);
-      this.applyToneMapping();
+      if (!this.composerHost.hasComposer()) this.composerHost.buildComposer();
+      this.composerHost.applyToneMapping();
     } else {
-      this.restoreOutputSettings();
+      this.composerHost.restoreOutputSettings();
     }
     this.applyReflectorSync();
   }
@@ -918,7 +474,7 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     this.isStateLoaded = true; // [R-1] 有存档 = 模型默认让位（置于恢复写后、副作用应用前）
 
     // [ADR-250] 恢复后按启用意图落输出设置（曝光已归 sky，此处只管 tone mapping）
-    if (this.enabled) this.applyToneMapping();
+    if (this.enabled) this.composerHost.applyToneMapping();
     this.applyReflectorSync();
   }
 
@@ -934,18 +490,15 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
     }
     this.reflectorSuppressing = false;
     this.unsubscribeEnv();
-    this.disposeComposer();
-    this.restoreOutputSettings();
+    // [ADR-329 刀①] composer 销毁 + 会话级字段复位（lastW/lastH/lastPixelRatio）全在叶
+    this.composerHost.dispose();
     // [2026-10 锐评 P1-2 / P2-5] 会话级字段必须复位。
     // `scene-capability-registry.createAll` 有「同宿主三引用全等则复用实例」短路
     //（scene-capability-registry.ts:86-95），复用后上个会话的残留会让：
     //  ① `isStateLoaded` 恒真 → `applyModelPreset` 的守卫永久挡下本会话的模型默认
     //    （换 YSM/VRM/MMD 都不再改变后处理开关）；
-    //  ② `lastW/lastH/lastPixelRatio` 是上个会话的值 → 若本会话未下发 resize 就启用，
-    //    惰性创建的 composer 会按**上个会话**的尺寸/像素比建缓冲（自适应降档后尤甚）。
+    //  ② 尺寸凭据（现收在叶 dispose 内复位）若残留 → 本会话惰性创建的 composer 按
+    //     **上个会话**的尺寸/像素比建缓冲（自适应降档后尤甚）。
     this.isStateLoaded = false;
-    this.lastW = 0;
-    this.lastH = 0;
-    this.lastPixelRatio = 0;
   }
 }

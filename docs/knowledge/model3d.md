@@ -697,6 +697,8 @@ auto_fields:
     - POSTPROC_MSAA_SAMPLES
     - POSTPROC_PERSIST_FIELDS
     - PostprocessingCapability
+    - PostprocessingComposer
+    - PostprocessingComposerDeps
     - PostprocessingLike
     - PostprocessingParams
     - PostprocProbeOptions

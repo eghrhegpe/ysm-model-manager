@@ -16,9 +16,9 @@ permalink: /adr/
 
 | 状态 | 数量 |
 |------|------|
-| [📝 提议中](#提议中) | 9 |
+| [📝 提议中](#提议中) | 8 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 0 |
-| [🔄 部分采纳](#部分采纳) | 15 |
+| [🔄 部分采纳](#部分采纳) | 16 |
 | [✅ 已采纳](#已采纳) | 309 |
 | [❌ 已取代](#已取代) | 8 |
 | [🧊 已废弃](#已废弃) | 0 |
@@ -26,11 +26,10 @@ permalink: /adr/
 
 ## 按状态分组导航
 
-### 📝 提议中（9）
+### 📝 提议中（8）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
-| [ADR-329](./architecture/ADR-329-preview-cap-symmetry-leaf.md) | 3D 预览巨型 cap 对称叶化（sky/light/postprocessing 拆分） | 📝 提议中 |
 | [ADR-328](./architecture/ADR-328-cap-enabled-unification.md) | cap 能力总开关统一收编 envState 与 ground 终态 | 📝 提议中 |
 | [ADR-327](./architecture/ADR-327-hdr.md) | 自定义 HDR 路径持久化与重启恢复 | 📝 提议中 |
 | [ADR-325](./architecture/ADR-325-app-domain-sinking-over-multi-service.md) | App 瘦身走域下沉：拒绝 Wails 多 Service 外壳 | 📝 提议中 |
@@ -40,10 +39,11 @@ permalink: /adr/
 | [ADR-284](./ADR-284-sky-reflector-shadow-decoupling-cleanup.md) | sky 散射参数与模型类别解耦 + reflector/shadow 清除 no-op 与噪声值 | 📝 提议中 |
 | [ADR-151-d1](./decisions/ADR-151-d1-gen-stage-unknown-newfile.md) | gen-stage 未知新建文件默认排除（并发卷带硬化） | 📝 提议中 |
 
-### 🔄 部分采纳（15）
+### 🔄 部分采纳（16）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-329](./architecture/ADR-329-preview-cap-symmetry-leaf.md) | 3D 预览巨型 cap 对称叶化（sky/light/postprocessing 拆分） | 🔄 部分采纳 |
 | [ADR-323](./architecture/ADR-323-pre-commit-commit-blocks.md) | pre-commit 钩子逻辑下沉 commit-blocks 与薄壳化 | 🔄 部分采纳 |
 | [ADR-285](./ADR-285-bench-usability-copy-diff-plan.md) | 跑基准可用性收口：动作与参数同序、文案去重、术语本地化 | 🔄 部分采纳 |
 | [ADR-251](./ADR-251-ground-material-family-completion.md) | 地面材质家族补全：噪声材质与非几何图案分工 | 🔄 部分采纳 |
@@ -391,7 +391,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
-| ADR-329 | 3D 预览巨型 cap 对称叶化（sky/light/postprocessing 拆分） | 📝 提议中 | 2026-10-11 |
+| ADR-329 | 3D 预览巨型 cap 对称叶化（sky/light/postprocessing 拆分） | 🔄 部分采纳 | 2026-10-11 |
 | ADR-328 | cap 能力总开关统一收编 envState 与 ground 终态 | 📝 提议中 | 2026-10-11 |
 | ADR-327 | 自定义 HDR 路径持久化与重启恢复 | 📝 提议中 | 2026-10-11 |
 | ADR-326 | 环境能力持久化键派生化：消灭手抄摘键/还原表 | ✅ 已采纳 | 2026-10-08 |

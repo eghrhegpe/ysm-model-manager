@@ -53,6 +53,7 @@ auto_fields:
     - isGoTestSource
     - isRewriteLine
     - isRewriteOnlyDiff
+    - isTestutilTree
     - isVitestExcluded
     - packagePatternFor
     - parseGoCover

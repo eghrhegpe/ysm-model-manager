@@ -9,6 +9,7 @@ import {
   PostprocessingCapability,
   DEFAULT_POSTPROC_PARAMS,
 } from "./postprocessing-capability.ts";
+import { PostprocessingComposer } from "./postprocessing-composer.ts";
 import { findNodeById, nodeIds, childIds } from "@/preview-3d/menu/menu-test-helpers.ts";
 import { ReflectorCapability } from "./reflector-capability.ts";
 import { POSTPROC_PERSIST_FIELDS, PP_PARAMS_TO_ENV } from "./postprocessing-state.ts";
@@ -98,6 +99,12 @@ function newCap(opts: { enabled?: boolean; params?: Partial<import("./postproces
     camera,
     ...(opts.enabled !== undefined ? { enabled: opts.enabled } : {}),
   });
+}
+
+/** [ADR-329 刀①] 白盒探针：从 cap 取 composer 叶实例（TS private 运行时即普通属性，
+ *  同 hdrOf/iblOf 范式）——composer/pass/尺寸凭据字段随拆分迁移到叶，测试据此取。 */
+function composerOf(cap: PostprocessingCapability): PostprocessingComposer {
+  return (cap as unknown as { composerHost: PostprocessingComposer }).composerHost;
 }
 
 describe("PostprocessingCapability — 构造与默认值", () => {
@@ -239,7 +246,8 @@ describe("PostprocessingCapability — Bloom 参数", () => {
   it("setBloomEnabled 立即旁路 bloomPass（composer 已构建时）", () => {
     const cap = newCap({ enabled: true });
     const fakePass = { enabled: true } as unknown as { enabled: boolean };
-    (cap as unknown as { bloomPass: { enabled: boolean } | null }).bloomPass = fakePass;
+    (composerOf(cap) as unknown as { bloomPass: { enabled: boolean } | null }).bloomPass =
+      fakePass;
     cap.setBloomEnabled(false);
     expect(fakePass.enabled).toBe(false);
     cap.setBloomEnabled(true);
@@ -647,7 +655,7 @@ describe("PostprocessingCapability — bloom 体积光联动（解耦缩放）",
   // 放大成 strength（满值 1.5）+ 阈值压到 0.2，开体积光即亮爆；本组锁「不超用户设置区间」契约。
   function mockBloomPass(cap: PostprocessingCapability): { threshold: number; strength: number; radius: number } {
     const bp = { threshold: 0, strength: 0, radius: 0 };
-    (cap as unknown as { bloomPass: unknown }).bloomPass = bp;
+    (composerOf(cap) as unknown as { bloomPass: unknown }).bloomPass = bp;
     return bp;
   }
   // [ADR-247] 联动读「用户浓度意图」而非「体积光此刻是否可见」：
@@ -660,7 +668,7 @@ describe("PostprocessingCapability — bloom 体积光联动（解耦缩放）",
   it("默认体积光（opacity 0.45）：threshold 落用户设置 ±20% 再除曝光、radius 保持用户设置", () => {
     const cap = newCap({ params: { bloomStrength: 0.6, bloomThreshold: 0.6, bloomRadius: 0.5 } });
     const bp = mockBloomPass(cap);
-    (cap as unknown as { syncBloomPass: (l: unknown) => void }).syncBloomPass(lightCap(0.45));
+    (composerOf(cap) as unknown as { syncBloomPass: (l: unknown) => void }).syncBloomPass(lightCap(0.45));
     // [2026-10 域修复] threshold 现落「曝光前线性域」= 用户值÷曝光，联动 ±20% 在用户域缩放
     expect(bp.threshold).toBeGreaterThanOrEqual(linTh(0.6 * 0.8));
     expect(bp.threshold).toBeLessThanOrEqual(linTh(0.6));
@@ -676,9 +684,9 @@ describe("PostprocessingCapability — bloom 体积光联动（解耦缩放）",
     const bp = mockBloomPass(cap);
     const withEnabled = (enabled: boolean) =>
       ({ getParams: () => ({ volumetric: { enabled, opacity: 1.0 } }) }) as unknown as SceneCapability;
-    (cap as unknown as { syncBloomPass: (l: unknown) => void }).syncBloomPass(withEnabled(false));
+    (composerOf(cap) as unknown as { syncBloomPass: (l: unknown) => void }).syncBloomPass(withEnabled(false));
     const off = { threshold: bp.threshold, strength: bp.strength };
-    (cap as unknown as { syncBloomPass: (l: unknown) => void }).syncBloomPass(withEnabled(true));
+    (composerOf(cap) as unknown as { syncBloomPass: (l: unknown) => void }).syncBloomPass(withEnabled(true));
     // 两种可见性下联动结果必须一致（均按 opacity=1.0 微调）
     expect(bp.threshold).toBeCloseTo(off.threshold, 10);
     expect(bp.strength).toBeCloseTo(off.strength, 10);
@@ -688,7 +696,7 @@ describe("PostprocessingCapability — bloom 体积光联动（解耦缩放）",
   it("满值体积光（opacity 1.0）：不再爆——strength ≤ +20%、threshold 用户域 ≥ -20%", () => {
     const cap = newCap({ params: { bloomStrength: 0.6, bloomThreshold: 0.6, bloomRadius: 0.5 } });
     const bp = mockBloomPass(cap);
-    (cap as unknown as { syncBloomPass: (l: unknown) => void }).syncBloomPass(lightCap(1.0));
+    (composerOf(cap) as unknown as { syncBloomPass: (l: unknown) => void }).syncBloomPass(lightCap(1.0));
     expect(bp.threshold).toBeGreaterThanOrEqual(linTh(0.6 * 0.8) - 1e-9);
     expect(bp.strength).toBeLessThanOrEqual(0.6 * 1.2 + 1e-9);
   });
@@ -698,7 +706,7 @@ describe("PostprocessingCapability — bloom 体积光联动（解耦缩放）",
     // 超过用户设置——违反「不超用户设置区间」契约；去下限后应跟随 0.8×user
     const cap = newCap({ params: { bloomStrength: 0.6, bloomThreshold: 0.04, bloomRadius: 0.5 } });
     const bp = mockBloomPass(cap);
-    (cap as unknown as { syncBloomPass: (l: unknown) => void }).syncBloomPass(lightCap(1.0));
+    (composerOf(cap) as unknown as { syncBloomPass: (l: unknown) => void }).syncBloomPass(lightCap(1.0));
     expect(bp.threshold).toBeCloseTo(linTh(0.04 * 0.8), 6); // 用户域 0.032 → 线性域 0.064
   });
 
@@ -706,7 +714,7 @@ describe("PostprocessingCapability — bloom 体积光联动（解耦缩放）",
     const cap = newCap({ params: { bloomStrength: 0.9, bloomThreshold: 0.7, bloomRadius: 0.4 } });
     cap.setBloomFollowVolumetric(false);
     const bp = mockBloomPass(cap);
-    (cap as unknown as { syncBloomPass: (l: unknown) => void }).syncBloomPass(lightCap(1.0));
+    (composerOf(cap) as unknown as { syncBloomPass: (l: unknown) => void }).syncBloomPass(lightCap(1.0));
     expect(bp.threshold).toBeCloseTo(linTh(0.7), 6); // 0.7 ÷ 0.5 = 1.4
     expect(bp.strength).toBe(0.9); // strength 不换域
     expect(bp.radius).toBe(0.4);
@@ -725,7 +733,7 @@ describe("PostprocessingCapability — bloom 体积光联动（解耦缩放）",
     const cap = newCap({ params: { bloomStrength: 0.6, bloomThreshold: 0.6, bloomRadius: 0.5 } });
     const bp = mockBloomPass(cap);
     const stub = { getParams: () => ({ volumetric: { opacity: bad } }) } as unknown as SceneCapability;
-    (cap as unknown as { syncBloomPass: (l: unknown) => void }).syncBloomPass(stub);
+    (composerOf(cap) as unknown as { syncBloomPass: (l: unknown) => void }).syncBloomPass(stub);
     expect(Number.isFinite(bp.threshold)).toBe(true);
     expect(Number.isFinite(bp.strength)).toBe(true);
     expect(bp.threshold).toBeCloseTo(linTh(0.6), 6); // 与「不联动」等价（gain=0 后同换域）
@@ -749,10 +757,10 @@ describe("PostprocessingCapability — bloom 体积光联动（解耦缩放）",
       const cap = newCap({ params: { bloomThreshold: 0.6 } });
       cap.setBloomFollowVolumetric(false); // 排除联动噪声，只看域换算
       const bp = mockBloomPass(cap);
-      (cap as unknown as { syncBloomPass: (l: unknown) => void }).syncBloomPass(null);
+      (composerOf(cap) as unknown as { syncBloomPass: (l: unknown) => void }).syncBloomPass(null);
       const atHalf = bp.threshold; // 曝光 0.5 → 1.2
       setEnvState({ skyExposure: 0.25 }, { source: "manual" });
-      (cap as unknown as { syncBloomPass: (l: unknown) => void }).syncBloomPass(null);
+      (composerOf(cap) as unknown as { syncBloomPass: (l: unknown) => void }).syncBloomPass(null);
       expect(bp.threshold).toBeCloseTo(atHalf * 2, 6); // 曝光再减半 → 阈值翻倍
       expect(bp.threshold).toBeCloseTo(0.6 / 0.25, 6);
     });
@@ -774,13 +782,13 @@ describe("PostprocessingCapability — 启用意图 ppEnabled（ADR-250）", () 
 
   function buildSpy() {
     return vi.spyOn(
-      PostprocessingCapability.prototype as unknown as { buildComposer: () => void },
+      PostprocessingComposer.prototype as unknown as { buildComposer: () => void },
       "buildComposer",
     );
   }
   function disposeSpy() {
     return vi.spyOn(
-      PostprocessingCapability.prototype as unknown as { disposeComposer: () => void },
+      PostprocessingComposer.prototype as unknown as { disposeComposer: () => void },
       "disposeComposer",
     );
   }
@@ -904,7 +912,10 @@ describe("PostprocessingCapability — 启用意图 ppEnabled（ADR-250）", () 
 
   it("[症状③] 换模型（ppEnabled 翻转）不重建 composer——GPU 资源同一实例", () => {
     const cap = newCap({});
-    const internals = cap as unknown as { composer: unknown; buildComposer: () => void };
+    const internals = composerOf(cap) as unknown as {
+      composer: unknown;
+      buildComposer: () => void;
+    };
     // [ADR-299] 惰性常驻的前半段：默认 `ppEnabled=false` 的会话构造期**不分配** composer——
     // 这正是常驻税的支付对象（实测 1.05ms/帧 + 35.3MB，见 ADR-299）。
     expect(internals.composer).toBeNull();
@@ -981,10 +992,14 @@ describe("PostprocessingCapability — 真实 composer 构建管线", () => {
   }
 
   function internalsOf(cap: PostprocessingCapability) {
-    return cap as unknown as {
-      composer: EffectComposer; renderPass: Pass; bloomPass: Pass; outputPass: Pass;
-      ssaoPass: Pass | null; ssrPass: Pass | null;
-      lastW: number; lastH: number; lastPixelRatio: number; isStateLoaded: boolean;
+    // [ADR-329 刀①] composer/pass/尺寸凭据随拆分迁移至 composer 叶——经 composerOf 探针取
+    return {
+      ...(composerOf(cap) as unknown as {
+        composer: EffectComposer; renderPass: Pass; bloomPass: Pass; outputPass: Pass;
+        ssaoPass: Pass | null; ssrPass: Pass | null;
+        lastW: number; lastH: number; lastPixelRatio: number;
+      }),
+      isStateLoaded: (cap as unknown as { isStateLoaded: boolean }).isStateLoaded,
     };
   }
 
@@ -1810,8 +1825,8 @@ describe("PostprocessingCapability — onEnvChanged 键组写入等价性（重�
     const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
     setEnvState({ ppSsaoEnabled: true, ppReflectionMode: "envmap+ssr" }, { source: "manual" });
     const cap = new PostprocessingCapability({ scene, renderer, camera, enabled: true });
-    // 内部 pass 经 composer.passes 取（addPass/insertPass 后即在此数组）
-    const internals = cap as unknown as {
+    // [ADR-329 刀①] 内部 pass 经 composerOf 取叶实例（composer/ssrPass/ssaoPass/bloomPass 随拆分迁叶）
+    const internals = composerOf(cap) as unknown as {
       composer: { passes: Array<{ constructor: { name: string } }> } | null;
       ssrPass: Record<string, unknown> | null;
       ssaoPass: Record<string, unknown> | null;
@@ -1920,7 +1935,10 @@ describe("PostprocessingCapability — onEnvChanged 键组写入等价性（重�
 
   it("色彩映射：ppToneMapping 仅在启用态接管 renderer.toneMapping", () => {
     const { cap } = newEnabledCap();
-    const renderer = (cap as unknown as { renderer: THREE.WebGLRenderer }).renderer;
+    // [ADR-329 刀①] renderer 随 composer 叶下沉，经 composerOf 探针取
+    const renderer = (composerOf(cap) as unknown as {
+      renderer: THREE.WebGLRenderer;
+    }).renderer;
 
     setEnvState({ ppToneMapping: "linear" }, { source: "manual" });
     expect(renderer.toneMapping, "启用态：ppToneMapping → renderer.toneMapping").toBe(

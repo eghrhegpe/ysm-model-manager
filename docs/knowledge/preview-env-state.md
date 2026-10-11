@@ -18,6 +18,7 @@ source_files:
   - frontend/src/preview-3d/caps/env-persist.ts
   - frontend/src/preview-3d/caps/env-hdr-cache.ts
   - frontend/src/preview-3d/caps/env-ibl.ts
+  - frontend/src/preview-3d/caps/postprocessing-composer.ts
 tests:
   - frontend/src/preview-3d/adapters/shared-infra.test.ts
   - frontend/src/preview-3d/caps/scene-capability-persist.test.ts
@@ -59,6 +60,8 @@ auto_fields:
     - ModelType
     - NumericRange
     - pickModelDefaultFields
+    - PostprocessingComposer
+    - PostprocessingComposerDeps
     - RangedKey
     - registerEnvCallback
     - registerEnvStateMiddleware
@@ -119,6 +122,9 @@ invariant_anchors:
   # ADR-326 派生锚（2026-10-08 补）：环境持久化键轨的单一事实源——存档键名派生自 schema，
   # 手抄摘键/还原表已消灭；别名表漏声明 / 派生函数失名即 ERROR 阻断。
   - frontend/src/preview-3d/state/env-state-schema.ts|getArchiveKey
+  # ADR-329 刀① 锚（2026-10-11 补）：composer 管线叶的入口与不变量承载点——
+  # 叶失名/字段被搬回 cap 只剩散文描述，机器无从判，故升格为锚。
+  - frontend/src/preview-3d/caps/postprocessing-composer.ts|PostprocessingComposer
   - frontend/src/preview-3d/state/env-state-schema.ts|ARCHIVE_ALIAS
   - frontend/src/preview-3d/caps/env-persist.ts|saveEnvState
   - frontend/src/preview-3d/caps/env-persist.ts|restoreEnvPartial
@@ -358,6 +364,14 @@ invariant_anchors:
   - **P2-b 直方图单槽 memo**：`getLuminanceHistogram` 原每次面板 refresh 现算全幅像素运算（与 S7-3 同日给缩略图补 memo 时漏掉的「兄弟件半治」）。现 memo 键 = 数据源引用对（`hdr.tex` / `backgroundSrcTex`），重建换引用自然失效、`dispose` 显式清空。同批补 locale 提示：`preview.envHistogramHint` 三语言补「无数据源 = 全零非纯黑」（默认 `useAsBackground=false` + 无 custom HDR 时直方图恒全零的读法说明）。
   - **P2-c `EnvHdrCache` 契约收编**：「无缓存告警」去重的读一次/写一次（原 `get/set warnedMissing` 公开写口让宿主探写容器内脏，与容器自声明「纯生命周期」自相矛盾）收编为 `warnMissingOnce(ringMsg, consoleMsg)`（旗标读写全在容器内；宿主只传文案）。复位语义不变（仅 `loadFromFile` 成功复位，dispose 不复位）。守卫 = `env-hdr-cache.test.ts`「[P2-c] 首发 true / 后续 false」。
   - **P1-③ 自定义 HDR 跨重启持久化（📝 提议中，待拍板）**：现 `envPreset:"custom"` 能被归档带回，但其所指文件从未离开内存——`env-hdr-cache.ts|EnvHdrCache` 只持 `customHdrTex`、无路径句柄，`loadState` `customWithoutCache` 分支只能兜底回退 `studio`（静默断点）。跨前端/Go绑定/存储三域、且路径一旦入档难逆转，已立 `docs/adr/architecture/ADR-327-hdr.md`（架构级，📝 提议中）；待拍板项 = 路径存哪（当前倾向新增 `envState` schema key `envCustomHdrPath`，与现存 ENV_KEYS 归档方言零成本对接）/ 失效语义（走 `warnMissingOnce` 回退 `studio`，无回归）/ Go 侧 allowed-roots 校验（硬前置）。本期只立 ADR 不实施。
+- **[ADR-329 刀① 实施进度 2026-10-11] `PostprocessingCapability` 拆分——composer 管线退叶，cap 只剩状态编排。**
+  承 `EnvironmentCapability` 叶化先例（上方 ADR-091-d1 条），把 pp 内高内聚的管线整块下沉 `caps/postprocessing-composer.ts|postprocessing-composer.ts` 的 `PostprocessingComposer`（**构造注入** renderer/scene/camera + caps 查询器，ADR-168 范式），cap 持有一个该叶实例 `composerHost`，公开 API（`render`/`setSize`/`setPixelRatio`/`dispose`）全部委托、签名零变更——生产调用方（render-host / shared-infra / menu / registry / 测试）无需改动。
+  - **叶收编的职责**：`createComposerBase`/`attachSSAOPass`/`attachSSRAndBloomPasses`/`applySSRModeToPass`/`buildComposer`/`disposeComposer`/`applyToneMapping`/`restoreOutputSettings`/`syncBloomPass`/`syncSSAOPass`/`syncSSRPass`/`render`/`setSize`/`setPixelRatio` + `PARAM_SYNC` 键组同步表（表收为 `private static`，因表内 `write` 需读叶私有 pass 字段——TS `private` 类外不可见，这是把表放模块级会编译不过的原因）。
+  - **cap 保留的职责**：`enabled` 门（读 envState）、`onEnvChanged` 编排、`applyReflectorSync`（SSR↔Reflector 跨 cap 抑制联动）、32 个 setter 薄壳、`getMenuNodes`、持久化 `saveState`/`loadState`、`applyEnabledSideEffects`。
+  - **⚠️ 叶 dispose 的顺序不变量**：`PostprocessingComposer.dispose()` 顺序 = `disposeComposer()` → `restoreOutputSettings()` → 尺寸凭据复位（`lastW/lastH/lastPixelRatio`）——`restoreOutputSettings` 不可漏（漏则 renderer.toneMapping 永不归还构造期快照，由「dispose 还原 renderer 输出设置」用例转红钉死）；凭据复位不可省（同 ADR-299 惰性常驻：复用实例下新会话若沿用旧凭据会按失配尺寸建缓冲）。`isStateLoaded` 仍归 cap（不涉管线）。
+  - **测试注入点迁移**：composer/pass/尺寸凭据经 `composerOf(cap)` 取叶实例（TS `private` 运行时即普通属性，同 `hdrOf`/`iblOf` 白盒范式）；`buildComposer`/`disposeComposer` 的 spy 改挂 `PostprocessingComposer.prototype`。
+  - **护栏（勿在拆分中丢的硬不变量）**：① SSR 独占链首（`SSRPass` 忽略 readBuffer、把 beauty 覆写进 writeBuffer，故必须紧跟 `RenderPass`）；② MSAA 经 `POSTPROC_MSAA_SAMPLES` 且以 renderer 实际授予的 `antialias` 为准；③ 关闭态 `setSize`/`setPixelRatio` 仍**无条件记录凭据**（否则惰性创建时按猜的像素比建缓冲）；④ `restoreOutputSettings` 的字段归属判定（sky 在场让位；`outputColorSpace` 以仍等于本叶写入常量才归还）。
+  - **遗留**：刀② light 实例/helper 生命周期、刀③ sky 烘焙/IBL 管线待续（方向见 `ADR-329`；进度只查本卡，ADR 不记进度）。
 
 ## 相关
 

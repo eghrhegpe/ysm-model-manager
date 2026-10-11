@@ -403,9 +403,12 @@ jobs:
         # 且写盘不随提交入库 ⇒ 下次比对仍见同一批「新增」），故注释明写
         # 「CI（--json）只报告不写盘」。去掉 --json 会让 CI 在 absorbable>0 时写 runner 工作区，
         # 重演知识卡 pre-push-gate.md「基线自动收编必须随提交入库」记的那次事故形态。
-        # 可读性代价由 `| Out-String -Width 200` 承担（--json 下这是唯一人读手段）。
+        # 可读性代价原由 `| Out-String -Width 200` 承担（--json 下唯一人读手段）；但 Out-String
+        # 缓冲有诊断盲区（与 Go/vitest 同坑，2026-10-11 修）：失败时输出未必 flush 到 CI 日志。
+        # 改为直接流输出——`--json` 保留（CI 不写盘开关不变），$LASTEXITCODE 语义不变，
+        # 诊断能力优先于 json 行宽美观。node 失败走 stderr 仍可见，此修让 --json stdout 也不丢。
         run: |
-          node scripts/check-deadcode-baseline.ts --json | Out-String -Width 200
+          node scripts/check-deadcode-baseline.ts --json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       # 本地 gate 的静态 hard 项在 CI 的远端兜底（否则逃生阀可零痕迹直推 main）。

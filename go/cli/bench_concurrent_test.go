@@ -224,7 +224,7 @@ func TestRunSingleModelBench_StagesAndFailureBranch(t *testing.T) {
 	root := t.TempDir()
 	modelPath := filepath.Join(root, "m.ysm")
 	if err := os.WriteFile(modelPath, []byte("fake-model-bytes"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	stages := runSingleModelBench(&benchFakeApp{}, modelPath, root)
 	if len(stages) != 7 {
@@ -252,7 +252,7 @@ func TestRunSingleModelBench_ZeroDurationNoFakeThroughput(t *testing.T) {
 	root := t.TempDir()
 	modelPath := filepath.Join(root, "m.ysm")
 	if err := os.WriteFile(modelPath, nil, 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	stages := runSingleModelBench(&benchFakeApp{}, modelPath, root)
 	if len(stages) == 0 {
@@ -298,7 +298,7 @@ func TestRunPerfSnapshot_EndToEnd(t *testing.T) {
 	root := t.TempDir()
 	modelPath := filepath.Join(root, "m.ysm")
 	if err := os.WriteFile(modelPath, []byte("fake-model-bytes"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	err := runPerfSnapshot(&CmdContext{App: &benchFakeApp{}, FilesRoot: root, Args: []string{"--iterations", "1"}})
 	testutil.NoError(t, err, "perf-snapshot 端到端应成功")
@@ -355,7 +355,7 @@ func TestRunConcurrentBench_EndToEnd(t *testing.T) {
 	for _, name := range []string{"a.ysm", "b.ysm", "c.ysm", "readme.txt"} {
 		p := filepath.Join(root, name)
 		if err := os.WriteFile(p, []byte("bench-bytes-"+name), 0o644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		if strings.HasSuffix(name, ".ysm") {
 			paths = append(paths, p)
@@ -378,7 +378,7 @@ func TestRunSingleBenchJSON_SaveAndCompareRoundTrip(t *testing.T) {
 	root := t.TempDir()
 	modelPath := filepath.Join(root, "m.ysm")
 	if err := os.WriteFile(modelPath, []byte("fake-model-bytes"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	basePath := filepath.Join(root, "baseline.json")
 
@@ -417,7 +417,7 @@ func TestRunSingleBenchJSON_SaveAndCompareRoundTrip(t *testing.T) {
 	declineJSON, _ := json.Marshal(decline)
 	declinePath := filepath.Join(root, "decline.json")
 	if err := os.WriteFile(declinePath, declineJSON, 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := compareSingleBenchBaseline(declinePath, declineStages, 1); err == nil {
 		t.Error("对照 0.001ms 历史基准必须触发退化门禁")
@@ -437,7 +437,7 @@ func TestRunSingleBenchJSON_SaveAndCompareRoundTrip(t *testing.T) {
 	subJSON, _ := json.Marshal(subBase)
 	subPath := filepath.Join(root, "subnoise.json")
 	if err := os.WriteFile(subPath, subJSON, 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := compareSingleBenchBaseline(subPath, subStages, 50); err != nil {
 		t.Errorf("亚毫秒基准 + 小幅绝对增量不应触发退化门禁: %v", err)

@@ -45,11 +45,11 @@ func TestScanBenchTargets_DeterministicAndTyped(t *testing.T) {
 	// CLI 不可分析的类型：默认目标集（rtype 空）不得收录，防「自动挑首个模型」挑到跑不动的
 	pmxDir := filepath.Join(root, "mmd", "PMX")
 	if err := os.MkdirAll(pmxDir, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	pmx := filepath.Join(pmxDir, "角色.pmx")
 	if err := os.WriteFile(pmx, []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	all := scanBenchTargets(root, "", 10)
@@ -128,10 +128,10 @@ func TestSingleBench_Matrix_UnsupportedTypeNotFaked(t *testing.T) {
 	root := t.TempDir()
 	pmxDir := filepath.Join(root, "mmd", "PMX")
 	if err := os.MkdirAll(pmxDir, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(pmxDir, "角色.pmx"), []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	ctx := &CmdContext{App: &app.App{}, FilesRoot: root}
 	spec := perfTargetSpec{Target: perfTargetRtype, Order: perfOrderPath, Rtype: "EntityPlayer", MaxModels: 5, Iterations: 1}
@@ -276,10 +276,10 @@ func TestPerfTypeSummary_StagesDeclared(t *testing.T) {
 	// 它必须让 StagesDeclared=false（0 是 Go 零值，不是「声明为 0 段」）
 	pmxDir := filepath.Join(root, "mmd", "PMX")
 	if err := os.MkdirAll(pmxDir, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(pmxDir, "角色.pmx"), []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	ctx := &CmdContext{App: &app.App{}, FilesRoot: root}

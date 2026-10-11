@@ -21,11 +21,11 @@ func makeTestZip(t *testing.T, entries map[string]string) []byte {
 		fw, err := w.Create(name)
 		testutil.NoError(t, err)
 		if _, err := fw.Write([]byte(content)); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	if err := w.Close(); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	return buf.Bytes()
 }
@@ -81,7 +81,7 @@ func TestOpen_UnsupportedExt(t *testing.T) {
 	dir := t.TempDir()
 	p := dir + "/x.txt"
 	if err := os.WriteFile(p, []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if _, err := Open(p); err == nil {
 		t.Error(".txt 不应作为容器打开")
@@ -106,7 +106,7 @@ func TestOpen_DisableSuffixDispatch(t *testing.T) {
 	for _, name := range []string{"m.zip.disabled", "m.zip.ban", "M.ZIP.DISABLED"} {
 		p := filepath.Join(dir, name)
 		if err := os.WriteFile(p, data, 0644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		r, err := Open(p)
 		if err != nil {
@@ -121,17 +121,17 @@ func TestOpen_DisableSuffixDispatch(t *testing.T) {
 	// 剥离只影响分派：非容器格式 + 禁用后缀仍拒绝；目录 + 禁用后缀仍走目录直读
 	txt := dir + "/x.txt.disabled"
 	if err := os.WriteFile(txt, []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if _, err := Open(txt); err == nil {
 		t.Error(".txt.disabled 不应作为容器打开")
 	}
 	sub := dir + "/d.disabled"
 	if err := os.MkdirAll(sub, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(sub+"/e.json", []byte("{}"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	rd, err := Open(sub)
 	testutil.NoError(t, err, "目录 + 禁用后缀应走目录直读")
@@ -164,7 +164,7 @@ func TestOpenZipPath_EntriesAndSize(t *testing.T) {
 		"b.json": "BBBBBBBB",
 	})
 	if err := os.WriteFile(p, zipBytes, 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	r, err := OpenZipPath(p)
 	testutil.NoError(t, err)
@@ -256,19 +256,19 @@ func TestZipMatchesEntries(t *testing.T) {
 	})
 	pZip := dir + "/pkg.zip"
 	if err := os.WriteFile(pZip, zipData, 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	pDisabled := dir + "/pkg.zip.disabled"
 	if err := os.WriteFile(pDisabled, zipData, 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	pBad := dir + "/bad.zip"
 	if err := os.WriteFile(pBad, []byte("not a zip"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	pFake7z := dir + "/fake.7z"
 	if err := os.WriteFile(pFake7z, zipData, 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	matchA := func(string) bool { return true }
 

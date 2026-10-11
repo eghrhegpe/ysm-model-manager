@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 	"unicode"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // 辅助：构造超长路径字符串
@@ -289,7 +290,7 @@ func TestResolveSavePath_SaveDirIsFile(t *testing.T) {
 	dir := t.TempDir()
 	filePath := filepath.Join(dir, "not-a-dir")
 	if err := os.WriteFile(filePath, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	savePath, jsd, api := ResolveSavePath(
 		"https://raw.githubusercontent.com/user/repo/main/a.ysm", filePath)

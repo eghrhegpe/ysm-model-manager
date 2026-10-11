@@ -34,7 +34,7 @@ func TestScanMMDAssets_MissingRoot(t *testing.T) {
 func TestScanMMDAssets_RootIsFile(t *testing.T) {
 	f := filepath.Join(t.TempDir(), "a.pmx")
 	if err := os.WriteFile(f, []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	if _, err := scanMMDAssets(f); err == nil || !strings.Contains(err.Error(), "不是目录") {
@@ -47,7 +47,7 @@ func TestScanMMDAssets_HappyPath(t *testing.T) {
 	root := t.TempDir()
 	for _, n := range []string{"m.pmx", "a.vmd", "t.png", "x.txt"} {
 		if err := os.WriteFile(filepath.Join(root, n), []byte("x"), 0o644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 

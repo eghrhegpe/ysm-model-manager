@@ -91,7 +91,7 @@ func TestEvaluateBaseline_Verdicts(t *testing.T) {
 	raw, _ := json.Marshal(base)
 	basePath := filepath.Join(root, "base.json")
 	if err := os.WriteFile(basePath, raw, 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	stages := []singleBenchStage{
@@ -161,7 +161,7 @@ func TestEvaluateBaseline_DoesNotPrint(t *testing.T) {
 	raw, _ := json.Marshal([]benchStageMs{{Name: "① 文件读取", Ms: 0.001}})
 	basePath := filepath.Join(root, "base.json")
 	if err := os.WriteFile(basePath, raw, 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	out := captureOutput(t, func() {
 		if _, err := evaluateBaseline(basePath, []singleBenchStage{{Name: "① 文件读取", Duration: time.Second}}, 1); err != nil {
@@ -195,7 +195,7 @@ func TestBuildBaselineJSON_VerdictAndSavePath(t *testing.T) {
 	basePath := filepath.Join(root, "base.json")
 	raw, _ := json.Marshal([]benchStageMs{{Name: "① 文件读取", Ms: 0.001}})
 	if err := os.WriteFile(basePath, raw, 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	stages := []singleBenchStage{{Name: "① 文件读取", Duration: 50 * time.Millisecond}}
 
@@ -242,7 +242,7 @@ func TestRunSingleBenchJSON_BaselinePurityAndAttach(t *testing.T) {
 	root := t.TempDir()
 	modelPath := filepath.Join(root, "m.ysm")
 	if err := os.WriteFile(modelPath, []byte("fake-model-bytes"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	basePath := filepath.Join(root, "base.json")
 
@@ -300,7 +300,7 @@ func TestRunSingleBenchJSON_BaselineBlockOnlyWhenUsed(t *testing.T) {
 	root := t.TempDir()
 	modelPath := filepath.Join(root, "m.ysm")
 	if err := os.WriteFile(modelPath, []byte("fake-model-bytes"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	ctx := &CmdContext{App: &benchFakeApp{}, FilesRoot: root}
 	out := captureOutput(t, func() {
@@ -324,7 +324,7 @@ func TestRunSingleBenchJSON_SaveBaselineSlot(t *testing.T) {
 
 	modelPath := filepath.Join(root, "m.ysm")
 	if err := os.WriteFile(modelPath, []byte("fake-model-bytes"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	ctx := &CmdContext{App: &benchFakeApp{}, FilesRoot: root}
 	_ = captureOutput(t, func() {
@@ -460,7 +460,7 @@ func TestBuildBaselineJSON_UnavailableCarriesToken(t *testing.T) {
 	t.Run("文件损坏 → invalid", func(t *testing.T) {
 		broken := filepath.Join(root, "broken.json")
 		if err := os.WriteFile(broken, []byte("{ not json"), 0o644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		block, err := buildBaselineJSON(broken, "", 50, stages)
 		if err == nil || block == nil {

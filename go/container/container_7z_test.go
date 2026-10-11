@@ -74,7 +74,7 @@ func TestOpen7zPath_NotA7z(t *testing.T) {
 	dir := t.TempDir()
 	p := filepath.Join(dir, "not7z.7z")
 	if err := os.WriteFile(p, []byte("this is not a 7z file"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	_, err := Open7zPath(p)
 	if err == nil {

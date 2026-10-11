@@ -28,7 +28,7 @@ func TestAdversarial_SymlinkSubdirEscape(t *testing.T) {
 
 	secretFile := filepath.Join(secretDir, "secret.txt")
 	if err := os.WriteFile(secretFile, []byte("SECRET_CONTENT_12345"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	// 2) Create the scan root
@@ -39,7 +39,7 @@ func TestAdversarial_SymlinkSubdirEscape(t *testing.T) {
 	// 3) Create a symlink inside scanDir -> secretDir
 	symlinkPath := filepath.Join(scanDir, "subdir")
 	if err := os.Symlink(secretDir, symlinkPath); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	// 4) Scan — if WalkDir follows the symlinked subdir, secret.txt appears
@@ -103,7 +103,7 @@ func TestAdversarial_MassiveDirectoryPerformance(t *testing.T) {
 	for i := 0; i < numFiles; i++ {
 		fn := filepath.Join(dir, fmt.Sprintf("file_%04d.txt", i))
 		if err := os.WriteFile(fn, content, 0644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 
@@ -124,13 +124,13 @@ func TestAdversarial_EmptyFileSkip(t *testing.T) {
 	// Create an empty file
 	emptyFile := filepath.Join(dir, "empty.txt")
 	if err := os.WriteFile(emptyFile, []byte{}, 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	// Create a non-empty file
 	nonEmptyFile := filepath.Join(dir, "data.txt")
 	if err := os.WriteFile(nonEmptyFile, []byte("hello"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	groups, err := FindDuplicateFiles(dir, false)

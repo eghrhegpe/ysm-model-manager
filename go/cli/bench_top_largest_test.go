@@ -28,10 +28,10 @@ import (
 func writeFileBytes(t *testing.T, path string, size int) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(path, make([]byte, size), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 }
 
@@ -188,7 +188,7 @@ func TestRunSingleBenchRepo_ModelOrderMatchesRanking(t *testing.T) {
 	testutil.NoError(t, err, "--target repo 报错")
 	var m singleBenchMatrixJSON
 	if err := json.Unmarshal([]byte(out), &m); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if len(m.Models) != len(ranked) {
 		t.Fatalf("载荷条数应与排名一致: %d vs %d", len(m.Models), len(ranked))

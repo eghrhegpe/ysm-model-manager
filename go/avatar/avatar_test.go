@@ -130,7 +130,7 @@ func TestExtractAvatarURI_FromZip(t *testing.T) {
 
 	zipPath := filepath.Join(t.TempDir(), "model.zip")
 	if err := os.WriteFile(zipPath, buf.Bytes(), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	result := ExtractAvatarURI(zipPath, "测试用户")
@@ -161,7 +161,7 @@ func TestExtractAvatarURI_FromZipBareName(t *testing.T) {
 
 	zipPath := filepath.Join(t.TempDir(), "model.zip")
 	if err := os.WriteFile(zipPath, buf.Bytes(), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	result := ExtractAvatarURI(zipPath, "测试用户")
@@ -190,7 +190,7 @@ func TestExtractAvatarURI_FromZipNoMatch(t *testing.T) {
 
 	zipPath := filepath.Join(t.TempDir(), "model.zip")
 	if err := os.WriteFile(zipPath, buf.Bytes(), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	// 请求不存在的用户 → authors 非空且用户不在列表 → 不降级（对齐 .ysm 分支）→ 空
@@ -203,7 +203,7 @@ func TestExtractAvatarURI_FromZipNoMatch(t *testing.T) {
 func TestExtractAvatarURI_FromZipBadData(t *testing.T) {
 	bad := filepath.Join(t.TempDir(), "bad.zip")
 	if err := os.WriteFile(bad, []byte("notzip"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	result := ExtractAvatarURI(bad, "test")
 	if result != "" {
@@ -221,11 +221,11 @@ func TestExtractAvatarURI_FromJSON(t *testing.T) {
 	jsonPath := filepath.Join(dir, "model.json")
 	jsonData := `{"metadata":{"authors":[{"name":"张三","avatar":"avatar/face.png"}]}}`
 	if err := os.WriteFile(jsonPath, []byte(jsonData), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	os.MkdirAll(filepath.Join(dir, "avatar"), 0755)
 	if err := os.WriteFile(filepath.Join(dir, "avatar", "face.png"), []byte("face-data"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	result := ExtractAvatarURI(jsonPath, "张三")
@@ -248,7 +248,7 @@ func TestExtractAvatarURI_FromJSONNoAvatarDir(t *testing.T) {
 	jsonPath := filepath.Join(dir, "model.json")
 	jsonData := `{"metadata":{"authors":[{"name":"李四","avatar":"avatar/face.png"}]}}`
 	if err := os.WriteFile(jsonPath, []byte(jsonData), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 不创建 avatar 目录
 

@@ -22,7 +22,7 @@ func TestScanCacheVerify(t *testing.T) {
 	testutil.WriteTestFileBytes(t, filepath.Join(root, "b.jpg"), []byte("jpg-bytes"))
 	testutil.WriteTestFileBytes(t, filepath.Join(root, "notes.txt"), []byte("ignored-not-texture"))
 	if err := os.MkdirAll(filepath.Join(root, "sub"), 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	testutil.WriteTestFileBytes(t, filepath.Join(root, "sub", "c.tga"), []byte("tga-bytes"))
 
@@ -90,7 +90,7 @@ func TestScanMMDAssets(t *testing.T) {
 	testutil.WriteTestFileBytes(t, filepath.Join(root, "p.vpd"), []byte("v"))
 	testutil.WriteTestFileBytes(t, filepath.Join(root, "t.png"), []byte("tt"))
 	if err := os.MkdirAll(filepath.Join(root, "sub"), 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	testutil.WriteTestFileBytes(t, filepath.Join(root, "sub", "deep.pmx"), []byte("dd"))
 	testutil.WriteTestFileBytes(t, filepath.Join(root, "ignore.txt"), []byte("no"))

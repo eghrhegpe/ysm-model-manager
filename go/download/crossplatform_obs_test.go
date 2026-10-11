@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // =====================================================================
@@ -137,10 +138,10 @@ func TestCrossPlatform_SymlinkBehavior(t *testing.T) {
 	}
 	dir := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(dir, "target"), 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(dir, "target", "file.ysm"), []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	err := os.Symlink(filepath.Join(dir, "target"), filepath.Join(dir, "link"))
 	if err != nil {

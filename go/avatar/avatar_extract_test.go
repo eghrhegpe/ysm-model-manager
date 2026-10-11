@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/ysm"
 )
 
@@ -130,10 +131,10 @@ func TestCacheAvatarsFromJSON_MultiAuthor(t *testing.T) {
 	jsonPath := filepath.Join(dir, "model.json")
 	jsonData := `{"metadata":{"authors":[{"name":"alice","avatar":"avatar/a.png"},{"name":"bob","avatar":"avatar/b.png"}]}}`
 	if err := os.WriteFile(jsonPath, []byte(jsonData), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.MkdirAll(filepath.Join(dir, "avatar"), 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	os.WriteFile(filepath.Join(dir, "avatar", "a.png"), []byte("A"), 0644)
 	os.WriteFile(filepath.Join(dir, "avatar", "b.png"), []byte("B"), 0644)

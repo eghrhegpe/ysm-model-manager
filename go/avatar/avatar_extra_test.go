@@ -23,7 +23,7 @@ func TestReadFileFromContainer_NoMatch(t *testing.T) {
 	f, _ := w.Create("other.txt")
 	_, _ = f.Write([]byte("x"))
 	if err := w.Close(); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	r, err := container.OpenZipBytes(buf.Bytes(), int64(buf.Len()))
 	testutil.NoError(t, err)
@@ -113,7 +113,7 @@ func TestReadCachedAvatar_IOError(t *testing.T) {
 	CacheDir = func() string { return dir }
 	defer func() { CacheDir = old }()
 	if err := os.MkdirAll(filepath.Join(dir, "baddir.png"), 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	uri, err := ReadCachedAvatar("baddir")
 	if err == nil {
@@ -162,7 +162,7 @@ func TestSaveAvatarData_CacheDirUnwritable(t *testing.T) {
 	old := CacheDir
 	blocker := filepath.Join(t.TempDir(), "blocker")
 	if err := os.WriteFile(blocker, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	CacheDir = func() string { return filepath.Join(blocker, "cache") }
 	defer func() { CacheDir = old }()
@@ -213,10 +213,10 @@ func TestReadFileFromContainer_EntryOpenFail(t *testing.T) {
 	f, err := w.CreateHeader(h)
 	testutil.NoError(t, err)
 	if _, err := f.Write([]byte("hello")); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := w.Close(); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	r, err := container.OpenZipBytes(buf.Bytes(), int64(buf.Len()))
 	testutil.NoError(t, err)
@@ -234,10 +234,10 @@ func TestReadFileFromContainer_ChecksumCorrupt(t *testing.T) {
 	f, err := w.CreateHeader(h)
 	testutil.NoError(t, err)
 	if _, err := f.Write([]byte("ABCDEFGH")); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := w.Close(); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	raw := buf.Bytes()
 	idx := bytes.Index(raw, []byte("ABCDEFGH"))
@@ -278,11 +278,11 @@ func TestExtractAvatarURI_FromJSON_BareName(t *testing.T) {
 	jsonPath := filepath.Join(dir, "model.json")
 	jsonData := `{"metadata":{"authors":[{"name":"张三","avatar":"sdf"}]}}`
 	if err := os.WriteFile(jsonPath, []byte(jsonData), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	os.MkdirAll(filepath.Join(dir, "avatar"), 0755)
 	if err := os.WriteFile(filepath.Join(dir, "avatar", "sdf.png"), []byte("face-data"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	result := ExtractAvatarURI(jsonPath, "张三")
@@ -302,11 +302,11 @@ func TestCacheAvatarsFromJSON_BareName(t *testing.T) {
 	jsonPath := filepath.Join(dir, "model.json")
 	jsonData := `{"metadata":{"authors":[{"name":"张三","avatar":"sdf"}]}}`
 	if err := os.WriteFile(jsonPath, []byte(jsonData), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	os.MkdirAll(filepath.Join(dir, "avatar"), 0755)
 	if err := os.WriteFile(filepath.Join(dir, "avatar", "sdf.png"), []byte("face-data"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	CacheAvatarsFromJSON(jsonPath)
@@ -324,11 +324,11 @@ func TestExtractAvatarURI_FromJSON_JPG(t *testing.T) {
 	jsonPath := filepath.Join(dir, "model.json")
 	jsonData := `{"metadata":{"authors":[{"name":"张三","avatar":"avatar/face.jpg"}]}}`
 	if err := os.WriteFile(jsonPath, []byte(jsonData), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	os.MkdirAll(filepath.Join(dir, "avatar"), 0755)
 	if err := os.WriteFile(filepath.Join(dir, "avatar", "face.jpg"), []byte("jpeg-data"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	result := ExtractAvatarURI(jsonPath, "张三")
@@ -347,11 +347,11 @@ func TestExtractAvatarURI_FromJSON_PathTraversal(t *testing.T) {
 	jsonPath := filepath.Join(dir, "model.json")
 	jsonData := `{"metadata":{"authors":[{"name":"张三","avatar":"../evil.png"}]}}`
 	if err := os.WriteFile(jsonPath, []byte(jsonData), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 逃逸目标真实存在（模型目录外）也不得读取
 	if err := os.WriteFile(filepath.Join(filepath.Dir(dir), "evil.png"), []byte("evil"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	result := ExtractAvatarURI(jsonPath, "张三")
@@ -365,7 +365,7 @@ func TestExtractAvatarURI_FromJSON_BadJSON(t *testing.T) {
 	dir := t.TempDir()
 	jsonPath := filepath.Join(dir, "model.json")
 	if err := os.WriteFile(jsonPath, []byte("not-json"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if result := ExtractAvatarURI(jsonPath, "张三"); result != "" {
 		t.Fatalf("坏 JSON 应返回空, 得到 %q", result)
@@ -385,7 +385,7 @@ func TestExtractAvatarURI_FromJSON_DirAsFile(t *testing.T) {
 	dir := t.TempDir()
 	modelDir := filepath.Join(dir, "model.json")
 	if err := os.MkdirAll(modelDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if result := ExtractAvatarURI(modelDir, "张三"); result != "" {
 		t.Fatalf("目录占位 .json 应返回空, 得到 %q", result)
@@ -406,7 +406,7 @@ func TestExtractAvatarURI_FromZip_JPG(t *testing.T) {
 	})
 	zipPath := filepath.Join(t.TempDir(), "model.zip")
 	if err := os.WriteFile(zipPath, data, 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	result := ExtractAvatarURI(zipPath, "测试用户")
 	if !strings.HasPrefix(result, "data:image/jpeg;base64,") {
@@ -420,7 +420,7 @@ func TestExtractAvatarURI_FromZip_PathTraversal(t *testing.T) {
 	data := makeZip(t, map[string]string{"ysm.json": ysmJSON})
 	zipPath := filepath.Join(t.TempDir(), "model.zip")
 	if err := os.WriteFile(zipPath, data, 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if result := ExtractAvatarURI(zipPath, "测试用户"); result != "" {
 		t.Fatalf("zip 逃逸路径应返回空, 得到 %q", result)
@@ -437,7 +437,7 @@ func TestExtractAvatarURI_FromZip_MissingAvatar(t *testing.T) {
 	})
 	zipPath := filepath.Join(t.TempDir(), "model.zip")
 	if err := os.WriteFile(zipPath, data, 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	result := ExtractAvatarURI(zipPath, "测试用户")
 	if result != "" {
@@ -451,7 +451,7 @@ func TestExtractAvatarURI_FromZip_NoYSMJSON(t *testing.T) {
 	data := makeZip(t, map[string]string{"avatar/face.png": "face-data"})
 	zipPath := filepath.Join(t.TempDir(), "model.zip")
 	if err := os.WriteFile(zipPath, data, 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	result := ExtractAvatarURI(zipPath, "测试用户")
 	if result == "" {
@@ -471,7 +471,7 @@ func TestExtractAvatarURI_DirAsYSM(t *testing.T) {
 	dir := t.TempDir()
 	modelDir := filepath.Join(dir, "model.ysm")
 	if err := os.MkdirAll(modelDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if result := ExtractAvatarURI(modelDir, "测试用户"); result != "" {
 		t.Fatalf("目录占位 .ysm 应返回空, 得到 %q", result)
@@ -495,14 +495,14 @@ func TestCacheAvatarsFromJSON_EdgeCases(t *testing.T) {
 
 	// 坏 JSON → log 后返回
 	if err := os.WriteFile(filepath.Join(dir, "bad.json"), []byte("not-json"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	CacheAvatarsFromJSON(filepath.Join(dir, "bad.json"))
 
 	// 作者缺 name/avatar 字段 → 跳过
 	sparsePath := filepath.Join(dir, "sparse.json")
 	if err := os.WriteFile(sparsePath, []byte(`{"metadata":{"authors":[{"avatar":"avatar/a.png"},{"name":"x"}]}}`), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	CacheAvatarsFromJSON(sparsePath)
 	if _, err := os.Stat(filepath.Join(cacheDir, "x.png")); err == nil {
@@ -512,11 +512,11 @@ func TestCacheAvatarsFromJSON_EdgeCases(t *testing.T) {
 	// 逃逸路径 → 跳过且不写缓存
 	evilPath := filepath.Join(dir, "evil.json")
 	if err := os.WriteFile(evilPath, []byte(`{"metadata":{"authors":[{"name":"eviler","avatar":"../evil.png"}]}}`), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	os.MkdirAll(filepath.Dir(dir), 0755)
 	if err := os.WriteFile(filepath.Join(filepath.Dir(dir), "evil.png"), []byte("evil"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	CacheAvatarsFromJSON(evilPath)
 	if _, err := os.Stat(filepath.Join(cacheDir, "eviler.png")); err == nil {
@@ -528,13 +528,13 @@ func TestCacheAvatarsFromJSON_EdgeCases(t *testing.T) {
 	os.MkdirAll(filepath.Join(okDir, "avatar"), 0755)
 	jsonPath := filepath.Join(okDir, "model.json")
 	if err := os.WriteFile(jsonPath, []byte(`{"metadata":{"authors":[{"name":"alice","avatar":"avatar/face.png"}]}}`), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(okDir, "avatar", "face.png"), []byte("new-data"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(cacheDir, "alice.png"), []byte("old-data"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	CacheAvatarsFromJSON(jsonPath)
 	cached, err := os.ReadFile(filepath.Join(cacheDir, "alice.png"))
@@ -546,7 +546,7 @@ func TestCacheAvatarsFromJSON_EdgeCases(t *testing.T) {
 	// avatar 文件不存在 → 跳过不写缓存
 	missPath := filepath.Join(dir, "miss.json")
 	if err := os.WriteFile(missPath, []byte(`{"metadata":{"authors":[{"name":"bob","avatar":"avatar/none.png"}]}}`), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	CacheAvatarsFromJSON(missPath)
 	if _, err := os.Stat(filepath.Join(cacheDir, "bob.png")); err == nil {
@@ -566,11 +566,11 @@ func TestCacheAvatarsFromModel_JSON(t *testing.T) {
 	dir := t.TempDir()
 	jsonPath := filepath.Join(dir, "model.json")
 	if err := os.WriteFile(jsonPath, []byte(`{"metadata":{"authors":[{"name":"张三","avatar":"avatar/face.png"}]}}`), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	os.MkdirAll(filepath.Join(dir, "avatar"), 0755)
 	if err := os.WriteFile(filepath.Join(dir, "avatar", "face.png"), []byte("face-data"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	CacheAvatarsFromModel(jsonPath)
 	if _, err := os.Stat(filepath.Join(cacheDir, "张三.png")); err != nil {
@@ -591,7 +591,7 @@ func TestCacheAvatarsFromModel_Zip(t *testing.T) {
 	})
 	zipPath := filepath.Join(t.TempDir(), "model.zip")
 	if err := os.WriteFile(zipPath, data, 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	CacheAvatarsFromModel(zipPath)
 	if _, err := os.Stat(filepath.Join(cacheDir, "用户A.png")); err != nil {
@@ -606,7 +606,7 @@ func TestCacheAvatarsFromModel_ZipAlreadyCached(t *testing.T) {
 	defer func() { CacheDir = old }()
 
 	if err := os.WriteFile(filepath.Join(cacheDir, "用户A.png"), []byte("old-data"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	ysmJSON := `{"metadata":{"authors":[{"name":"用户A","avatar":"avatar/face.png"}]}}`
 	data := makeZip(t, map[string]string{
@@ -615,7 +615,7 @@ func TestCacheAvatarsFromModel_ZipAlreadyCached(t *testing.T) {
 	})
 	zipPath := filepath.Join(t.TempDir(), "model.zip")
 	if err := os.WriteFile(zipPath, data, 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	CacheAvatarsFromModel(zipPath)
 	cached, err := os.ReadFile(filepath.Join(cacheDir, "用户A.png"))
@@ -671,7 +671,7 @@ func TestReadLimitedAvatar_Oversize(t *testing.T) {
 	// 头像文件超 20MB 上限 → 返回错误（防损坏/超大缓存整读内存膨胀）
 	big := filepath.Join(t.TempDir(), "big.png")
 	if err := os.WriteFile(big, make([]byte, (20<<20)+1), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if _, err := readLimitedAvatar(big); err == nil {
 		t.Fatal("超 20MB 头像应返回错误")
@@ -682,7 +682,7 @@ func TestReadLimitedModel_Oversize(t *testing.T) {
 	// 模型文件超 50MB 上限 → 返回错误
 	big := filepath.Join(t.TempDir(), "big.json")
 	if err := os.WriteFile(big, make([]byte, (50<<20)+1), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if _, err := readLimitedModel(big); err == nil {
 		t.Fatal("超 50MB 模型应返回错误")
@@ -698,11 +698,11 @@ func makeZip(t *testing.T, entries map[string]string) []byte {
 		f, err := w.Create(name)
 		testutil.NoError(t, err)
 		if _, err := f.Write([]byte(data)); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	if err := w.Close(); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	return buf.Bytes()
 }

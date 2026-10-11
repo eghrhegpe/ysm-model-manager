@@ -1511,10 +1511,10 @@ func TestCollectTestFiles(t *testing.T) {
 	writeFileAt := func(p, content string) {
 		t.Helper()
 		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		if err := os.WriteFile(p, []byte(content), 0o644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	writeFileAt(filepath.Join(dir, "a.json"), "{}")
@@ -1554,7 +1554,7 @@ func TestCompareSingleBenchBaseline(t *testing.T) {
 	testutil.NoError(t, err)
 	baseFile := filepath.Join(dir, "baseline.json")
 	if err := os.WriteFile(baseFile, data, 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	stages := []singleBenchStage{
@@ -1594,7 +1594,7 @@ func TestCompareSingleBenchBaseline_NoiseFloor(t *testing.T) {
 	testutil.NoError(t, err)
 	baseFile := filepath.Join(dir, "baseline.json")
 	if err := os.WriteFile(baseFile, data, 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// now 比 base 慢 10 倍（0.001ms → 0.01ms）仍属子毫秒噪声区间 → 不应报退化
 	quiet := []singleBenchStage{{Name: "① 文件读取", Duration: time.Microsecond * 10}}

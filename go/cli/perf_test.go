@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // ===== perf-log 解析层 =====
@@ -121,10 +122,10 @@ func TestResolveTargetModel_ScansFirst(t *testing.T) {
 	root := t.TempDir()
 	want := filepath.Join(root, "a.ysm")
 	if err := os.WriteFile(want, []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(root, "readme.txt"), []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	got, err := resolveTargetModel(&flowFakeApp{}, "", root)
 	if err != nil || got != want {
@@ -143,7 +144,7 @@ func TestGetModelSize(t *testing.T) {
 	t.Parallel()
 	p := filepath.Join(t.TempDir(), "m.ysm")
 	if err := os.WriteFile(p, []byte("12345"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if got := getModelSize(p); got != 5 {
 		t.Errorf("应返回文件大小 5, got %d", got)
@@ -270,7 +271,7 @@ func TestScanFirstModel(t *testing.T) {
 	unanalyzable := t.TempDir()
 	for _, name := range []string{"a.txt", "b.vrm"} {
 		if err := os.WriteFile(filepath.Join(unanalyzable, name), []byte("x"), 0o644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	if got := scanFirstModel(fake, unanalyzable); got != "" {
@@ -281,7 +282,7 @@ func TestScanFirstModel(t *testing.T) {
 	mixed := t.TempDir()
 	for _, name := range []string{"a.txt", "b.vrm", "c.ysm"} {
 		if err := os.WriteFile(filepath.Join(mixed, name), []byte("x"), 0o644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	want := filepath.Join(mixed, "c.ysm")

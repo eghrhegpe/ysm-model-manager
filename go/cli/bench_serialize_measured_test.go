@@ -21,7 +21,7 @@ func TestSingleModelBench_SerializedPayloadMeasured(t *testing.T) {
 	dir := t.TempDir()
 	modelPath := filepath.Join(dir, "m.ysm")
 	if err := os.WriteFile(modelPath, []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	stages := runSingleModelBench(&benchFakeApp{}, modelPath, dir)

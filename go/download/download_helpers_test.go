@@ -58,7 +58,7 @@ func TestCommitAtomicWrite_SuccessAndProgress(t *testing.T) {
 	testutil.NoError(t, err)
 	defer cleanup()
 	if _, err := af.tmp.WriteString("hello"); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	var cbDownloaded, cbTotal int64
@@ -136,10 +136,10 @@ func tempFileWithContent(t *testing.T, s string) *os.File {
 		os.Remove(f.Name())
 	})
 	if _, err := f.WriteString(s); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if _, err := f.Seek(0, io.SeekStart); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	return f
 }

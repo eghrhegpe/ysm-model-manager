@@ -766,7 +766,7 @@ func TestAudit_DownloadFail_PreservesOldFile_NoTempResidue(t *testing.T) {
 	saveDir := t.TempDir()
 	savePath := filepath.Join(saveDir, "model.ysm")
 	if err := os.WriteFile(savePath, []byte("OLD-VALUE"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	dl := New()
@@ -800,7 +800,7 @@ func TestAudit_DownloadSuccess_AtomicallyReplacesOldFile(t *testing.T) {
 	saveDir := t.TempDir()
 	savePath := filepath.Join(saveDir, "model.ysm")
 	if err := os.WriteFile(savePath, []byte("OLD-VALUE-OLD"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	dl := New()
@@ -829,7 +829,7 @@ func TestAudit_RenameFailure_SavePathIsDirectory(t *testing.T) {
 	saveDir := t.TempDir()
 	savePath := filepath.Join(saveDir, "target")
 	if err := os.MkdirAll(savePath, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	dl := New()
@@ -860,7 +860,7 @@ func TestAudit_MkdirAllFailure_ParentIsFile(t *testing.T) {
 	saveDir := t.TempDir()
 	blocker := filepath.Join(saveDir, "blocker")
 	if err := os.WriteFile(blocker, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	savePath := filepath.Join(blocker, "sub", "x.ysm")
 

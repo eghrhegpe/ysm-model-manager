@@ -17,6 +17,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // =====================================================================
@@ -69,10 +70,10 @@ func TestCrossPlatform_CaseSensitivity(t *testing.T) {
 	dir := t.TempDir()
 	upper := filepath.Join(dir, "UPPER")
 	if err := os.MkdirAll(upper, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(upper, "file.ysm"), []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	// 用不同大小写的路径做 ResolveSavePath 测试

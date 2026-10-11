@@ -49,7 +49,7 @@ func writeConcurrentBenchFixture(t *testing.T, n int) (root string, paths []stri
 	for i := 0; i < n; i++ {
 		p := filepath.Join(root, string(rune('a'+i))+".ysm")
 		if err := os.WriteFile(p, []byte("bench-bytes-"+p), 0o644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		paths = append(paths, p)
 	}
@@ -157,7 +157,7 @@ func TestRunConcurrentBenchJSON_FileReadAbsentWhenNoCandidate(t *testing.T) {
 	for i := 0; i < benchFileLimit; i++ {
 		p := filepath.Join(root, fmt.Sprintf("m%02d.ysm", i))
 		if err := os.WriteFile(p, make([]byte, 512*1024), 0o644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	model := filepath.Join(root, "m00.ysm")

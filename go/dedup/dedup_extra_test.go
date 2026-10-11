@@ -244,7 +244,7 @@ func TestFindDuplicateFiles_UnreadableFileSkipped(t *testing.T) {
 	_ = testutil.CreateTestFile(t, dir, "a.txt", "same content")
 	b := testutil.CreateTestFile(t, dir, "b.txt", "same content")
 	if err := os.Chmod(b, 0000); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	defer os.Chmod(b, 0644)
 	if f, err := os.Open(b); err == nil {
@@ -269,7 +269,7 @@ func TestCountDuplicates_UnreadableFileSkipped(t *testing.T) {
 	_ = testutil.CreateTestFile(t, dir, "a.txt", "same content")
 	b := testutil.CreateTestFile(t, dir, "b.txt", "same content")
 	if err := os.Chmod(b, 0000); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	defer os.Chmod(b, 0644)
 	if f, err := os.Open(b); err == nil {

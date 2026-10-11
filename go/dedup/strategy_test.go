@@ -83,7 +83,7 @@ func TestDeepHash_ComputeHash(t *testing.T) {
 
 	path := filepath.Join(dir, "test.txt")
 	if err := os.WriteFile(path, []byte("hello world"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	dh := &DeepHash{}
@@ -96,7 +96,7 @@ func TestDeepHash_ComputeHash(t *testing.T) {
 	// 相同内容应产生相同哈希
 	path2 := filepath.Join(dir, "test2.txt")
 	if err := os.WriteFile(path2, []byte("hello world"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	hash2, err := dh.ComputeHash(path2)
 	testutil.NoError(t, err)
@@ -107,7 +107,7 @@ func TestDeepHash_ComputeHash(t *testing.T) {
 	// 不同内容应产生不同哈希
 	path3 := filepath.Join(dir, "test3.txt")
 	if err := os.WriteFile(path3, []byte("different"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	hash3, err := dh.ComputeHash(path3)
 	testutil.NoError(t, err)
@@ -123,7 +123,7 @@ func TestQuickHash_ComputeHash(t *testing.T) {
 
 	path := filepath.Join(dir, "test.txt")
 	if err := os.WriteFile(path, []byte("hello world"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	qh := &QuickHash{}
@@ -142,7 +142,7 @@ func TestNameSizeHash_ComputeHash(t *testing.T) {
 	path := filepath.Join(dir, "test.txt")
 	content := "hello world"
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	nsh := &NameSizeHash{}
@@ -308,6 +308,6 @@ func writeTestFile(t *testing.T, dir, name, content string) {
 	t.Helper()
 	path := filepath.Join(dir, name)
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 }

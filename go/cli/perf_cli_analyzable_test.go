@@ -24,6 +24,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/types/registry"
 )
@@ -108,7 +109,7 @@ func TestScanFirstModel_LexicographicDeterministic(t *testing.T) {
 	// 逆序创建：若实现沿用 Walk 首命中，则会返回 z.ysm
 	for _, name := range []string{"z.ysm", "a.ysm"} {
 		if err := os.WriteFile(filepath.Join(root, name), []byte("x"), 0o644); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	if got, want := scanFirstModel(&flowFakeApp{}, root), filepath.Join(root, "a.ysm"); got != want {
@@ -124,7 +125,7 @@ func TestRunConcurrentBench_RejectsUnanalyzableOnly(t *testing.T) {
 	root := t.TempDir()
 	vrm := filepath.Join(root, "a.vrm")
 	if err := os.WriteFile(vrm, []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	var err error
 	_ = captureOutput(t, func() {

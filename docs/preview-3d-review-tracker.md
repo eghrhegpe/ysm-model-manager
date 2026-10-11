@@ -422,3 +422,12 @@
   2. **`applyModelDefaults` 调用方是手写有序清单**（`shared-infra.ts:58-76`，sky→fog→shadow→reflector→environment + postProc 另路 `:367`）——非 registry 派生；但 `:50-56` 注释详述「实现序非依赖序、写互不相交、顺序可调」，且 shared-infra.test.ts「各调一次」契约锁兜底。属刻意设计，非缺陷。
   3. 轮转清单已巡至 state，未审剩 **`texture`**。下一轮取 `texture`（texture-loader / texture_cache / mmd-ktx2-basis 等，域较散）。
 - 验证：无代码改动（纯巡检判净）；`check-env-schema-consumers` / `check-cap-enabled-duality` 均绿；`doctor --docs` 早前 23/23 PASS。
+
+
+### 子代理复核（补充）
+
+- 并行的写方扫描子代理返回，与我的机械扫描结论一致（44 键无直接字面写全部有解释），但**另提两件我判净的项**，辨析如下：
+- **4 枚 sky 散射键（skyTurbidity/Rayleigh/MieCoefficient/MieDirectionalG）**——子代理主张「与 envResolution 同型、未同样收编常量」。**我保留判净**：envResolution 删键判据是「**零生产调用方**」（`setResolution` 仅测试调用）= 零读；这 4 键有**生产读方**（`sky-capability.ts:407-410` 作 shader 默认 uniform、`:195-202` applyUniform、`:598-601` params 导出），是「schema 作默认值单源 + cap 读」的合法只读默认模式，非真死键。且 `af392f7c5` 是**显式标记**决策（`:91-97` 自陈「若未来加 UI 出口须补 saveState + 移除 [G-sky] EXEMPT」），带重新评估触发条件。**若日后要收编**：爆炸半径不小（删 4 schema 条目 + 3 处 sky-capability 读点 + 若干测试，含 `env-state-schema.test.ts:128-131` 的 hgPhase 硬边界钳制用例——那是 ADR-283 对「若未来有写」的防御，删键即失守），且是设计取舍非 bug 修复——**列候选，拍板再动**。
+- **`ground-capability.ts:685-686/715` restoreFields 读侧手抄 ~30 字段**（写侧 `:698` 已 `getPresetKeys("ground")` 派生）——**这条子代理说得对**，是 ADR-326 系在 ground 未彻底的真不对称（漏登记即「自动持久化、静默不还原」的经典风险）。非静默（`ground-capability.test.ts:1293` G-8 round-trip 契约锁兜住），故非缺陷；列为**下一轮候选**：让 restoreFields 走 `getPresetKeys("ground")` 派生读侧，与写侧对称。
+- `ground-capability.ts:561/570` 双钳制冗余（显式 `clampFieldValue` 后 `setEnvState` 内部再 clamp）——钳制幂等、无害，仅写法不统一，**非缺陷**。
+- 下一轮建议更新：**优先做 ground restoreFields 派生**（真不对称、有契约锁兜底、改动局部）；sky 4 键收编属设计拍板，等产品侧决定「是否可能加 UI 出口」。

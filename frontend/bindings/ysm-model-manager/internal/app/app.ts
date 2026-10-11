@@ -1235,7 +1235,10 @@ export function SetAllowedCommandSpecs(specs: $models.CommandSpecDTO[] | null): 
 
 /**
  * SetAllowedCommands 注入可用 CLI 命令列表（由 main.go 调用 cli.GetAllowedCommands() 提供）
- * 避免 app→cli 循环依赖：命令注册表单一事实来源在 go/cli，前端可见列表经此注入
+ * 避免 app→cli 循环依赖：命令注册表单一事实来源在 go/cli，前端可见列表经此注入。
+ * ⚠️ 锐评 2026-10-11：必须喂 cli.GetAllowedCommands()（只读子集，fail-closed）；
+ * 若误喂 cli.GetAllCommands()（全量）会把 mutating 命令重新暴露给前端桥，绕过
+ * 绑定层的扫描缓存失效 / 标签键跟随——分级闸在 go/cli 注册表（ReadOnly 字段），不要在这绕。
  */
 export function SetAllowedCommands(cmds: string[] | null): $CancellablePromise<void> {
     return $Call.ByID(4179505329, cmds);

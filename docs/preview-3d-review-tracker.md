@@ -431,3 +431,19 @@
 - **`ground-capability.ts:685-686/715` restoreFields 读侧手抄 ~30 字段**（写侧 `:698` 已 `getPresetKeys("ground")` 派生）——**这条子代理说得对**，是 ADR-326 系在 ground 未彻底的真不对称（漏登记即「自动持久化、静默不还原」的经典风险）。非静默（`ground-capability.test.ts:1293` G-8 round-trip 契约锁兜住），故非缺陷；列为**下一轮候选**：让 restoreFields 走 `getPresetKeys("ground")` 派生读侧，与写侧对称。
 - `ground-capability.ts:561/570` 双钳制冗余（显式 `clampFieldValue` 后 `setEnvState` 内部再 clamp）——钳制幂等、无害，仅写法不统一，**非缺陷**。
 - 下一轮建议更新：**优先做 ground restoreFields 派生**（真不对称、有契约锁兜底、改动局部）；sky 4 键收编属设计拍板，等产品侧决定「是否可能加 UI 出口」。
+
+
+## 2026-10-11T14:38:00+08:00 巡检第 13 轮：texture（轮转清单末格）
+
+- 选定理由：未审剩 texture（域散：adapters/mmd / caps / decoder / infra / texture 五簇 9 源文件 / 约1231 行）。最近一条提交 cb1ce8d6d「纹理序手抄双源三处真实分叉全对齐 + 跨语言黄金语料对账守卫」刚落地，故先结合 git log -- texture 核证该根治是否真收口。
+- **判净（未开战）**：
+  - **跨语言纹理序 parity 是实守卫、非纸守卫**：cb1ce8d6d 声称「Go texture_order_parity_test.go + TS texture-order-parity.test.ts + 11 例 golden 语料」三件套。核证：golden 语料 tests/fixtures/parity/texture-order.golden.json（11 例）存在；Go 侧 internal/app/texture_order_parity_test.go 存在（初查只搜 go/ 与 tests/ 漏掉 internal/app/，扩搜全仓 .go 才命中——正反两侧都验过）；TS 侧 decoder/texture-order-parity.test.ts 存在。两侧实跑：go test ./internal/app/ -run TextureOrder ok、TS 44 例（含 11 parity）全绿。
+  - **引用计数配对完整**：loadTextures/releaseTextureUrls 全部消费方平衡——ysm-model-preloader.ts:180-185 前置定义 releaseTextures 闭包（released 防重入守卫）+ :191/:221 catch 释放 + :275 随结果返回；ysm-adapter.ts 三处释放（:249 加载失败 / :609 dispose 路径 / :711 build 失败，:700-704 注释详述为何要补句柄独占的两件事）。无泄漏缺口。
+  - **cache 层不双源**：Go texture_cache = 纹理文件磁盘缓存（cache-status/cache-clear 消费），TS textureCache = GPU Texture 实例池（texture-cache.ts acquire/release + LRU 归零淘汰 + disposeAll）——不同层、不同职责，非跨通道双源。
+  - **texture-loader.ts 单源干净**：只用 textureCache、无 Go 侧逻辑；15s 悬挂超时 + loadError→invalidate→null（:36-39/:62/:82-87）；releaseTextureUrls 语义定案（:96-104：归零不 dispose、不去重、幂等安全、禁 tex.dispose()——僵尸条目让 LRU 永久失效）。
+  - 剩余标注项均为**文档化技术债**：mmd-ktx2-basis.ts:4/11/59 CSP unsafe-eval（new Function 执行 UMD 文本，上严格 CSP 前须换 import()/ESM 形态）；:117 P3-9 审核结论（输出缓冲按 w*h*4 保守上限，记录暂不改）；texture-cache.ts:8 MMD/VRM 走 blob URL + 内置 Loader 暂不接池（ROI 低，estimateSceneTextureBytes 已覆盖全格式口径）。
+- 遗留 / 下一轮：
+  1. **轮转清单已巡完**（adapters/bone/caps/decoder/infra/materials/menu/mesh/model/screenshot/shader-patches/state/texture 全 13 格）。下一轮建议不再按域转单圈，改**专项**：优先 ground restoreFields 读侧派生（第 12 轮子代理发现，ADR-326 在 ground 未彻底的真不对称；待并行会话 ground 工作落地后再动，避免撞车）。
+  2. CSP 债（mmd-ktx2-basis.ts new Function）是唯一需上游/基建配合的项，非本巡检能独立清——保留标记，勿开战。
+  3. 第 12 轮遗留候选（check-env-schema-consumers 补写方检测、applyModelDefaults 手写有序清单）维持不动。
+- 验证：无代码改动（纯巡检判净）；Go go test ./internal/app/ -run TextureOrder ok + TS texture 4 测试文件 44 例全绿；doctor --docs 早前 23/23 PASS。

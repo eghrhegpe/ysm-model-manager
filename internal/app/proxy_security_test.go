@@ -18,6 +18,8 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"testing"
+
+	"ysm-model-manager/internal/testutil"
 )
 
 // TestRewritePlazaRequest_StripsForwardedAndSecurityHeaders
@@ -26,13 +28,9 @@ import (
 // 安全头若不剥离，源站策略与前端注入策略会互相污染。
 func TestRewritePlazaRequest_StripsForwardedAndSecurityHeaders(t *testing.T) {
 	target, err := url.Parse("https://site.example/browse")
-	if err != nil {
-		t.Fatalf("parse target: %v", err)
-	}
+	testutil.NoError(t, err, "parse target")
 	inbound, err := http.NewRequest("GET", "http://127.0.0.1:39999/assets/foo.js", nil)
-	if err != nil {
-		t.Fatalf("new request: %v", err)
-	}
+	testutil.NoError(t, err, "new request")
 	// 模拟浏览器伪造的转发头 + 源站下发的安全头
 	for _, h := range []string{
 		"X-Forwarded-For", "X-Forwarded-Host", "X-Forwarded-Proto",
@@ -61,13 +59,9 @@ func TestRewritePlazaRequest_StripsForwardedAndSecurityHeaders(t *testing.T) {
 // 否则代理转发会丢会话。cookie 按出站 URL 的 hostname 取，故用 target 域播种。
 func TestRewritePlazaRequest_AddsCookiesFromJar(t *testing.T) {
 	target, err := url.Parse("https://site.example/browse")
-	if err != nil {
-		t.Fatalf("parse target: %v", err)
-	}
+	testutil.NoError(t, err, "parse target")
 	inbound, err := http.NewRequest("GET", "http://127.0.0.1:39999/assets/foo.js", nil)
-	if err != nil {
-		t.Fatalf("new request: %v", err)
-	}
+	testutil.NoError(t, err, "new request")
 
 	jar := newCookieJar()
 	jar.SetCookies(target, []*http.Cookie{
@@ -94,13 +88,9 @@ func TestRewritePlazaRequest_AddsCookiesFromJar(t *testing.T) {
 // jar 为 nil（测试/未初始化会话）时不得 panic，且不注入任何 cookie。
 func TestRewritePlazaRequest_NoCookiesWhenJarNil(t *testing.T) {
 	target, err := url.Parse("https://site.example/browse")
-	if err != nil {
-		t.Fatalf("parse target: %v", err)
-	}
+	testutil.NoError(t, err, "parse target")
 	inbound, err := http.NewRequest("GET", "http://127.0.0.1:39999/assets/foo.js", nil)
-	if err != nil {
-		t.Fatalf("new request: %v", err)
-	}
+	testutil.NoError(t, err, "new request")
 	// 入站请求本身带 cookie，断言 rewrite 不额外注入（也不清空既有）
 	inbound.AddCookie(&http.Cookie{Name: "existing", Value: "kept"})
 
@@ -123,13 +113,9 @@ func TestRewritePlazaRequest_NoCookiesWhenJarNil(t *testing.T) {
 // 返回移动版/降级内容。
 func TestRewritePlazaRequest_SetsUserAgent(t *testing.T) {
 	target, err := url.Parse("https://site.example/browse")
-	if err != nil {
-		t.Fatalf("parse target: %v", err)
-	}
+	testutil.NoError(t, err, "parse target")
 	inbound, err := http.NewRequest("GET", "http://127.0.0.1:39999/", nil)
-	if err != nil {
-		t.Fatalf("new request: %v", err)
-	}
+	testutil.NoError(t, err, "new request")
 	inbound.Header.Set("User-Agent", "OldUA/1.0")
 
 	out := inbound.Clone(context.Background())
@@ -145,13 +131,9 @@ func TestRewritePlazaRequest_SetsUserAgent(t *testing.T) {
 // Out.Host 与 Host 头必须同步为 target host，否则 HTTP/1.1 虚主机路由会落到默认站。
 func TestRewritePlazaRequest_SyncsHostHeader(t *testing.T) {
 	target, err := url.Parse("https://site.example:8443/browse")
-	if err != nil {
-		t.Fatalf("parse target: %v", err)
-	}
+	testutil.NoError(t, err, "parse target")
 	inbound, err := http.NewRequest("GET", "http://127.0.0.1:39999/", nil)
-	if err != nil {
-		t.Fatalf("new request: %v", err)
-	}
+	testutil.NoError(t, err, "new request")
 
 	out := inbound.Clone(context.Background())
 	rewritePlazaRequest(&httputil.ProxyRequest{In: inbound, Out: out}, target, nil)

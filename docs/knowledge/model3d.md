@@ -492,10 +492,13 @@ auto_fields:
     - lightEnvKeys
     - lightHelperVisibleFor
     - LightInstanceParams
+    - LightInstances
+    - LightInstancesDeps
     - LightKey
     - LightParams
     - lightResetPatch
     - LightSlot
+    - LightSlotKey
     - lightSlotLabelKey
     - LightType
     - lightTypeOf

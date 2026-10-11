@@ -183,7 +183,7 @@ shotButton action → saveScreenshot(key="front/45/side/back45/all")
 ### 灯光提取
 - `toScreenshotLights()` 从 `LightCapability` 取三点布光 + `attenuateAmbientForSky` PMREM 衰减（所见即所得）
 - **三点全关是用户刻意暗场景** → 截图保持暗（不 fallback 标准灯）；cap 缺失才 fallback（ADR-126-P5）
-- `lightDirToPosition(d, 5)` 将方向向量转位置（radius=5 对齐预览 `createDirectional`）
+- **灯位半径 = `ScreenshotLights.radius` = 预览 `LightCapability.getTargetHeight()`**（动态 `max(maxDim*0.8, 6)`，随模型尺度）——非固定值；旧文档写 `lightDirToPosition(d, 5)`（radius=5 对齐 createDirectional）系 2026-10 前的腐化描述，现值以 `screenshot-render.ts|applyLights` 为准（巡检第 9 轮 F3 更正）。
 - **体积光锥入镜（ADR-266-d1）**：`ScreenshotLights.volumetric` 非空 ⟺ 预览此刻确有光柱（能力总闸开 ∧ 体积光开 ∧ 存在启用的驱动 spot）；离屏经 `screenshot-cone.ts|applyVolumetricCone` 复用**同一** `VolumetricCone` 建锥——锥高 = `radius`、锥顶 = 模型中心 + 方向 × radius、朝向 = 靶点 − 锥顶，与预览 `LightCapability|rebuildConeIfNeeded` 同源公式（不写第二套实现）。
 - **输出设置同构（ADR-266-d1 D2）**：离屏 renderer 的 `toneMapping` / `toneMappingExposure` / `outputColorSpace` 一律镜像活跃预览 renderer 的**现值**（`ScreenshotLights.output`）；读现值而非重推 sky/pp 属主链（推导即手抄）。这与上方「后期效果不参与截图」是两回事——镜像的是 renderer 级输出设置，不含 Bloom/SSAO/SSR pass。
 
@@ -191,6 +191,11 @@ shotButton action → saveScreenshot(key="front/45/side/back45/all")
 - **现象**：预览里 IBL（`scene.environment` 环境贴图，env cap 装载的 PMREM）参与 PBR 材质反射 lobe 与环境光；**截图 / 多角度导出的图没有**——PBR 模型在截图里比预览略暗、反射细节缺失。
 - **成因**：离屏走**独立 WebGL context**（`screenshot-render.ts` 自建 `new THREE.WebGLRenderer`），预览侧的 PMREM 纹理（`scene.environment`）**跨 context 不可共享**；`toScreenshotLights` 只镜像 renderer 级输出三字段（ADR-266-d1 D2），`scene.environment` 无镜像通道。ambient 环境光经 `screenshot-lights.ts|attenuateAmbientForSky` 的 PMREM 衰减系数做了**近似补偿**（环境光维度同构），但**反射 lobe（高光 / 各向异性镜面响应）离屏不复现**——这是与「后期效果不参与截图」「环境贴图作背景不入截图」两条已知差异**正交**的第三处缝（背景层 / pass 层 / 环境贴图光照层）。
 - **决策（2026-10-08 锐评）**：**记录已知差异 + 锁边界**（`screenshot-render.ts` 离屏 `new THREE.Scene()` 处注释与本条互为镜像，双向锁）——不擅自实现 IBL 进截图（那是产品需求，涉及离屏侧 PMREM 重建 + `isIblActive` 门控，须另立 ADR 拍板）。本条只保证**差异被声明、边界被机器锁**，不静默。
+
+### ⚠️ 阴影不参与多角度截图（已知差异，巡检第 9 轮 2026-10-11 F1 记录）
+- **现象**：预览默认开阴影（`envState.shadowEnabled` 默认 `true`，schema 实证）→ `ShadowCapability` 给活跃 renderer 置 `shadowMap.enabled` + 灯/mesh `castShadow/receiveShadow`，模型有接触阴影、有「接地感」；而 `renderMultiAngle` 自建离屏 renderer **零阴影接线** → 多角度导出图**没有阴影**，模型显「浮起」。
+- **定位**：继「环境贴图作背景不入截图（背景层）」「后期效果不入截图（pass 层）」「IBL 反射不入截图（环境贴图光照层）」之后的**第四条 WYSIWYG 缝（阴影层）**。与 IBL 那条的关键区别：IBL 有「PMREM 纹理跨 WebGL context 不可共享」的硬件借口，**阴影没有**——离屏侧重建 shadowMap 技术上完全可行（同灯参、同 mesh 遍历），属未做的产品决策，不是做不了。
+- **决策（本轮巡检）**：**只声明 + 机器锁边界，不擅自实现**（对齐 IBL 条先例：改变截图画面内容的属产品需求，须拍板后立项——最小实现 = 离屏 renderer `shadowMap.enabled=true` + `applyLights` 产出的 dir/spot 灯置 `castShadow` + mesh `castShadow/receiveShadow`，参数字段经 `ScreenshotLights` 扩展透传 `shadowEnabled/shadowType/shadowMapSize` 现值）。双向锁 = `screenshot-render.test.ts`「阴影边界」两例（行为侧：离屏 shadowMap 未被启用；声明侧：本条在场，删其一即红）。若「阴影进截图」立项，翻转行为锁断言方向并同步本条。
 
 ### Blob URL 释放
 - `decoder/model-cache.ts`：覆盖同 key 时新旧 blob URL 差集判定，仅差集 URL 才 revoke（P1 修复，防同对象 re-set 误 revoke）

@@ -176,6 +176,13 @@ export async function renderMultiAngle(
     // ambient 已由 screenshot-lights.ts|attenuateAmbientForSky 近似补偿（见 export.md「IBL 反射
     // 不参与截图」已知差异条）。若「IBL 进截图」成为产品需求，须在此处按 preview renderer 现值
     // 重建 PMREM（isIblActive 门控）并移除本声明——本注释与 export.md 条互为镜像，改动需同步。
+    //
+    // [巡检 2026-10-11 F1] 第四条 WYSIWYG 缝同址声明：**阴影也不入多角度截图**——离屏
+    // renderer 无 shadowMap 接线、applyLights 灯无 castShadow、mesh 未置 cast/receiveShadow，
+    // 而预览默认 shadowEnabled=true，导出图模型无接触阴影显「浮起」。与 IBL 不同，阴影**无
+    // 跨 context 借口**（离屏重建技术可行），属未做的产品决策。声明与双向锁见 export.md
+    // 「阴影不参与多角度截图」条 + screenshot-render.test.ts「阴影边界」两例；立项实现时
+    // 翻转行为锁断言方向并同步本注释与那条声明。
 
     ysmObject = buildYsmObject(spec, texArr, componentTexMap, 0);
     const { rootGroup } = ysmObject;

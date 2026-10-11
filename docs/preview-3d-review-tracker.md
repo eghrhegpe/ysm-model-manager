@@ -349,3 +349,43 @@
 - 遗留 / 下一轮建议：
   1. 轮转清单已巡：const/infra/registry/…/materials/mesh/model/screenshot。下一轮按清单轮转取 **`bone`**（骨骼动画族，第 8 轮 model 遗留未列但队列已近尾）；或评估轮转清单是否已近尾、改向「剩余族② 候选」。
   2. **族② parity 候选维持不动**：mergeCubes / computeBoneLocalPos（轮 7 遗留 2），无新证据不开战。
+
+## 2026-10-11T13:55:00+08:00 追加：screenshot 域 F1/F2/F3（两会话同域并行合流点）
+
+> 与上条「第 10 轮」是**两个会话在同域的并行动作**：他会话交夹逼修复（`251cfc5f3`）时
+> 把我工作区的在途改动（F2 桩修复 + 判别力锁 + F1 阴影双向锁）一并卷入该提交，但 F1
+> 声明条（export.md）与代码镜像注释未随行——**`251cfc5f3` 落盘瞬间 HEAD 自相矛盾**
+> （声明锁测试断言的声明文本在 HEAD 不存在，纯 checkout 必红）。本补录交代三发现并交
+> 一致性修复（export.md 条 + 镜像注释，随本块同提交复原一致性）。
+
+- **F1 第四条 WYSIWYG 缝（阴影不参与多角度截图）——声明 + 双向锁**：预览默认
+  `shadowEnabled=true`（schema 实证）→ ShadowCapability 给活跃 renderer 置 shadowMap +
+  灯/mesh castShadow；离屏 `renderMultiAngle` 自建 renderer **零阴影接线** → 导出图无接触
+  阴影、模型「浮起」。与已声明三条缝（背景层 / pass 层 / 环境贴图光照层）正交的第四层
+  （阴影层），**此前静默无声明**。关键区别：IBL 有「PMREM 跨 context 不可共享」硬件借口，
+  阴影没有——离屏重建技术可行，属未做的产品决策。处置对齐 IBL 先例：**不擅自实现**（改变
+  截图画面内容须拍板），只声明（export.md 新条 + `screenshot-render.ts` 离屏 Scene 构造处
+  镜像注释）+ 双向锁（test「阴影边界」两例：行为侧 shadowMap 未被启用、声明侧 export.md
+  条在场，删其一即红）。最小实现路径已写入声明条尾（离屏 shadowMap.enabled + 灯 castShadow
+  + mesh cast/receive，参数经 ScreenshotLights 扩展透传现值），立项时翻转行为锁并同步两条声明。
+- **F2 测试桩形状失真（判别力隐身病）**：`FakeWebGLRenderer.getSize` 写 `v.width/v.height`，
+  SUT 读 `.x/.y`——真 THREE.Vector2 有 width/height **别名访问器**（three 0.186.1 实证
+  `get width => True`），生产无恙；但桩 FakeVec 是无别名手写类，SUT 恒读到 0 → multi-angle
+  域的「尺寸比对 → setSize/复位」契约（正是 5d9d0e30e P1 修过的坑）**在测试里零判别力**。
+  修桩（写 .x/.y）+ 新判别力锁用例；**变异实证**：桩回写缺陷态 → 恰该用例独红。
+  **教训**：桩的形状必须忠实**被测面读取的访问路径**，不是生产类型的公开面——别名访问器
+  在桩上不存在，契约就隐身。
+- **F3 知识卡腐化**：export.md 灯光提取条写 `lightDirToPosition(d, 5)`（radius=5 对齐
+  createDirectional）——现实现 radius = `cap.getTargetHeight()`（动态 `max(maxDim*0.8,6)`），
+  与同卡 ADR-266-d1 条自相矛盾。更正为现值口径并留腐化标记。
+- 判净（未开战）：`screenshot.ts` 状态三还原 + 透明双前提注释扎实（10 例直测）；
+  `screenshot-lights.ts` 总闸门 + isIblActive 判据共用纯函数（P0 判别样本两例在场）；
+  `screenshot-cone.ts` 单源复用 + 双门收口。他会话夹逼修复复核无异议（fake 相机构造默认参
+  与 FakeVec 无 mulScalar 两处测试适配经推演正确）。
+- 验证：screenshot 域 5 文件 **55 例绿**（含卷入的 F1×2 + F2 锁×1）；typecheck / biome 绿。
+- 遗留 / 下一轮建议：
+  1. **F1 阴影进截图 = 产品待拍板**（最小实现路径已入 export.md 条尾，拍板后立项翻转双向锁）。
+  2. **并行合流教训入档**：声明锁类改动（测试断言文档文本）必须**测试与声明同一提交**，
+     否则同域并行时被对方吞走测试半边即制造瞬时矛盾 HEAD。本仓 `--files` 白名单防「卷入
+     他人」，防「被卷入」只能靠缩短在途窗口（写完即交）。
+  3. 轮转下一位取他会话建议 `bone` 重访或清单尾部未审位（shader-patches / state / texture）。

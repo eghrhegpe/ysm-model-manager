@@ -457,3 +457,12 @@
 - 知识卡同步：`water.md` patch-guard 条「四处注入检测」更正为六处（P1-2/ADR-297 各扩一锚卡未跟）+ 两把新锁指针；`preview-env-state.md` reflector 块补「锚点失配契约（X-8）」条。
 - 方法教训：**「判净」的审计对象必须含「治理声明有没有机器锁」**——行为对 ≠ 契约有防；本轮三处全是「修好了没上锁」或「声明无执法」形态。
 - 验证：patch-guard 10 + reflector 43 + water 146 + sky 111 = 310 例绿；typecheck / biome / vite build 全绿。
+
+
+### 更正（第 13 轮补，推翻第 12 轮对子代理 finding #2 的采纳）
+
+- 第 12 轮我把「ground restoreFields 读侧手抄」列为**下一轮候选（真不对称，ADR-326 未彻底）**。第 13 轮轮转巡完后专项核证，**该定性过重，须收回**：
+- **read 侧不是键清单，而是行为表**：`ground-capability.ts:715-800` restoreFields 的每个字段各带专属 restorer——`groundVisible/gridVisible` 走公开 setter（`:721/:725`）、`groundSourceKind/MaterialPreset/CanvasStyle/Overlay` 走 `oneOf(...)` 白名单（`:727/:733/:736/:779`）、`groundMat*` 分两族（`setMatOpacity/Scale/Rotation/Roughness/Metalness/OverlaySize` 走 setter 且**必须显式传 RESTORE_SOURCE** 否则被冻成 manual，`:761-769`；`Color/Color2/GridSize/MicroNoise/EnvMapIntensity` 直接 setEnvState）、`enabled` **刻意排除**（`:716-718` 恒真值绕圈除根）。**这是每键行为，不可从 `getPresetKeys("ground")` 派生**——子代理「读侧走派生与写侧对称」的建议方向会丢掉 restorer 语义（setter vs setEnvState、oneOf、skipMiddleware、刻意排除），属**改坏**而非修复。
+- **真正的风险（新 ground 键漏登记 restorer → 自动持久化静默不还原）已被 G-8 契约锁机器闸兜住**：`ground-capability.test.ts:1293`「[G-8] schema ground 键集全部可 save/load round-trip（还原表不得漏登记）」——遍历 `getPresetKeys("ground")`（`:1325`），每个 schema ground 键**必须有偏离值**（缺失即 `:1327-1330` 点名红，把加键动作逼回 loadState 登记）；且断言每个偏离值 `≠` 当前值（`:1334-1337`，「锁形同虚设」自失能防死）；save→reset→load 后逐键断言回到偏离值（`:1351-1355`）；`enabled` 断言不进存档（`:1347`）+ 构造默认 true 唯一真相源（`:1356`，防回填闸）。**实跑绿**（ground 81 例含 G-8，非跳过/空转）。
+- **更正结论**：ground restoreFields 手抄是**合法行为表设计**（两族 restorer + oneOf + 刻意排除），其漂移风险由 G-8 契约锁兜底——**升格为「非缺陷 + 已有机器闸」，移出候选**。与 sky 4 键同属「形式不对称但已有闸，且不可简单对称化」。
+- 由此，第 12 轮遗留候选只剩：`check-env-schema-consumers` 补写方检测（写模式多态误报高，维持不动）、`applyModelDefaults` 手写有序清单（契约锁兜底，维持不动）。

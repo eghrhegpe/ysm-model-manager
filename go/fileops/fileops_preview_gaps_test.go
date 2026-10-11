@@ -30,23 +30,23 @@ func wantPNGDataURI(png []byte) string {
 func TestExtractPreviewTexture_JSONTexturesSkipsSubdirAndFallsBack(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "model.json"), []byte(`{}`), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	texDir := filepath.Join(dir, "textures")
 	if err := os.MkdirAll(texDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 名字以 .png 结尾的**目录**：不得被当作纹理读取（IsDir 跳过）
 	if err := os.MkdirAll(filepath.Join(texDir, "sub.png"), 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(texDir, "layer.txt"), []byte("not png"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 同目录 PNG 作为回退命中
 	const payload = "FALLBACK"
 	if err := os.WriteFile(filepath.Join(dir, "preview.png"), []byte(payload), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	got := ExtractPreviewTexture(filepath.Join(dir, "model.json"))
@@ -59,19 +59,19 @@ func TestExtractPreviewTexture_JSONTexturesSkipsSubdirAndFallsBack(t *testing.T)
 func TestExtractPreviewTexture_JSONSkipsEmptyPNGAndContinues(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "model.json"), []byte(`{}`), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	texDir := filepath.Join(dir, "textures")
 	if err := os.MkdirAll(texDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// ReadDir 升序 → aaa.png 先被读到；空文件不得中断搜索
 	if err := os.WriteFile(filepath.Join(texDir, "aaa.png"), nil, 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	const payload = "REAL"
 	if err := os.WriteFile(filepath.Join(texDir, "bbb.png"), []byte(payload), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	got := ExtractPreviewTexture(filepath.Join(dir, "model.json"))
@@ -93,7 +93,7 @@ func TestExtractPreviewTexture_YSMSuccessViaInjectedDecoder(t *testing.T) {
 
 	path := filepath.Join(t.TempDir(), "model.ysm")
 	if err := os.WriteFile(path, []byte("YSGP\x00test"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if got, want := ExtractPreviewTexture(path), wantPNGDataURI(png); got != want {
 		t.Fatalf(".ysm 解码命中纹理应产出 data URI\n got=%q\nwant=%q", got, want)
@@ -108,14 +108,14 @@ func TestExtractPreviewTexture_UpperDisabledSuffixStillPreviews(t *testing.T) {
 	f, err := w.Create("preview.png")
 	testutil.NoError(t, err)
 	if _, err := f.Write([]byte("PNGDATA123")); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := w.Close(); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	path := filepath.Join(dir, "model.ZIP.DISABLED")
 	if err := os.WriteFile(path, buf.Bytes(), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	got := ExtractPreviewTexture(path)

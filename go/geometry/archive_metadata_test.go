@@ -21,11 +21,11 @@ func makeZipWithFiles(t *testing.T, files map[string]string) []byte {
 		f, err := w.Create(name)
 		testutil.NoError(t, err)
 		if _, err := f.Write([]byte(content)); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	if err := w.Close(); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	return buf.Bytes()
 }

@@ -26,7 +26,7 @@ func TestMoveModelFile_CrossDeviceDeleteSourceFails_KeepsBothCopies(t *testing.T
 	dir := t.TempDir()
 	src := filepath.Join(dir, "m.ysm")
 	if err := os.WriteFile(src, []byte("payload"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	dstDir := filepath.Join(dir, "sub")
 

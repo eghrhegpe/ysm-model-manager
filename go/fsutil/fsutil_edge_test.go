@@ -53,7 +53,7 @@ func TestWriteFileAtomic_SymlinkDest(t *testing.T) {
 	// 创建合法目标文件
 	realDest := filepath.Join(tmpDir, "real.ysm")
 	if err := os.WriteFile(realDest, []byte("original"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	// 创建 symlink 指向 realDest

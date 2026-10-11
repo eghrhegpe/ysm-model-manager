@@ -16,7 +16,7 @@ func TestExtractTextureViaYSM_NoDecoderInjected(t *testing.T) {
 	// 解码器未注入（测试默认状态）→ 按不可用报错，静默降级
 	path := filepath.Join(t.TempDir(), "m.ysm")
 	if err := os.WriteFile(path, []byte("YSGP\x00test"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if _, err := extractTextureViaYSM(path); err == nil {
 		t.Fatal("未注入解码器应报错")
@@ -36,7 +36,7 @@ func TestExtractTextureViaYSM_MockDecoderHitPNG(t *testing.T) {
 
 	path := filepath.Join(t.TempDir(), "m.ysm")
 	if err := os.WriteFile(path, []byte("YSGP\x00test"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	got, err := extractTextureViaYSM(path)
 	testutil.NoError(t, err, "注入解码器不应报错")
@@ -56,7 +56,7 @@ func TestExtractTextureViaYSM_MockDecoderNoPNG(t *testing.T) {
 
 	path := filepath.Join(t.TempDir(), "m.ysm")
 	if err := os.WriteFile(path, []byte("YSGP\x00test"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if _, err := extractTextureViaYSM(path); err == nil {
 		t.Fatal("无纹理产物应报错")

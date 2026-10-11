@@ -30,7 +30,7 @@ func TestMoveModelFile_CrossDeviceFallback(t *testing.T) {
 	src := filepath.Join(dir, "m.ysm")
 	dstDir := filepath.Join(dir, "sub")
 	if err := os.WriteFile(src, []byte("content"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	if err := MoveModelFile(dir, src, dstDir); err != nil {
@@ -57,7 +57,7 @@ func TestMoveModelFile_CrossDeviceBannedKeepsSuffix(t *testing.T) {
 	src := filepath.Join(dir, "m.ysm.disabled")
 	dstDir := filepath.Join(dir, "sub")
 	if err := os.WriteFile(src, []byte("banned"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	if err := MoveModelFile(dir, src, dstDir); err != nil {
@@ -81,10 +81,10 @@ func TestMoveModelFile_CrossDeviceIgnoresUnrelatedBanSibling(t *testing.T) {
 	src := filepath.Join(dir, "m.ysm")
 	banSibling := src + ".disabled" // 无关的被禁模型
 	if err := os.WriteFile(src, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(banSibling, []byte("unrelated"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	if err := MoveModelFile(dir, src, dstDirOf(t, dir)); err != nil {
@@ -105,7 +105,7 @@ func dstDirOf(t *testing.T, dir string) string {
 	t.Helper()
 	dstDir := filepath.Join(dir, "sub")
 	if err := os.MkdirAll(dstDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	return dstDir
 }
@@ -117,10 +117,10 @@ func TestMoveModelFile_CrossDeviceBannedDirKeepsSuffix(t *testing.T) {
 	dir := t.TempDir()
 	srcDir := filepath.Join(dir, "modelA.disabled")
 	if err := os.MkdirAll(srcDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(srcDir, "m.ysm"), []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	dstDir := filepath.Join(dir, "sub")
 	if err := MoveModelFile(dir, srcDir, dstDir); err != nil {
@@ -141,10 +141,10 @@ func TestMoveModelFile_CrossDeviceDirNestedBanSurvives(t *testing.T) {
 	dir := t.TempDir()
 	srcDir := filepath.Join(dir, "modelA")
 	if err := os.MkdirAll(srcDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(srcDir, "loose.ysm.disabled"), []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	dstDir := filepath.Join(dir, "sub")
 	if err := MoveModelFile(dir, srcDir, dstDir); err != nil {

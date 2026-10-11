@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // 空路径应报错
@@ -36,11 +37,11 @@ func TestToggleModelEnable_BanSuffixedRootRejected(t *testing.T) {
 	base := t.TempDir()
 	root := filepath.Join(base, "mod.ban")
 	if err := os.MkdirAll(root, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	ysmPath := filepath.Join(root, "ysm.json")
 	if err := os.WriteFile(ysmPath, []byte(`{"spec":1}`), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if _, err := ToggleModelEnable(root, ysmPath); err == nil {
 		t.Fatal("根目录自身 .ban 结尾时整组操作应被拒绝")
@@ -55,12 +56,12 @@ func TestToggleModelEnable_DirBanWithFileBanResidue(t *testing.T) {
 	base := t.TempDir()
 	bannedDir := filepath.Join(base, "模型A.ban")
 	if err := os.MkdirAll(bannedDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 目录级 .ban 内残留文件级 .ban（旧状态）
 	residue := filepath.Join(bannedDir, "loose.ysm.ban")
 	if err := os.WriteFile(residue, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	enabled, err := ToggleModelEnable(base, residue)
 	if err != nil || !enabled {
@@ -80,15 +81,15 @@ func TestToggleModelEnable_DirBanFileNewExists(t *testing.T) {
 	base := t.TempDir()
 	bannedDir := filepath.Join(base, "模型A.ban")
 	if err := os.MkdirAll(bannedDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	residue := filepath.Join(bannedDir, "loose.ysm.ban")
 	if err := os.WriteFile(residue, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 预置还原目标文件 → 应先命中「目标已存在」
 	if err := os.WriteFile(filepath.Join(bannedDir, "loose.ysm"), []byte("y"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if _, err := ToggleModelEnable(base, residue); err == nil {
 		t.Fatal("文件还原目标已存在应报错")
@@ -107,15 +108,15 @@ func TestToggleModelEnable_DirBanDirNewExists(t *testing.T) {
 	base := t.TempDir()
 	bannedDir := filepath.Join(base, "模型A.ban")
 	if err := os.MkdirAll(bannedDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	ysmPath := filepath.Join(bannedDir, "ysm.json")
 	if err := os.WriteFile(ysmPath, []byte(`{"spec":1}`), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 预置同名原目录（未带 .ban）→ 父目录还原目标已存在
 	if err := os.MkdirAll(filepath.Join(base, "模型A"), 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if _, err := ToggleModelEnable(base, ysmPath); err == nil {
 		t.Fatal("父目录还原目标已存在应报错")
@@ -143,11 +144,11 @@ func TestToggleModelEnable_EnableTargetExists(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "m.ysm")
 	if err := os.WriteFile(path, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 预置 .disabled 目标文件 → 禁用时应报错（目标已存在）
 	if err := os.WriteFile(path+".disabled", []byte("y"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if _, err := ToggleModelEnable(dir, path); err == nil {
 		t.Fatal("禁用目标 .disabled 已存在应报错")
@@ -157,13 +158,13 @@ func TestToggleModelEnable_EnableTargetExists(t *testing.T) {
 	}
 	// 清理预置的 .disabled 后，改为测试启用侧：先禁用成功，再预置还原目标 → 启用应报错
 	if err := os.Remove(path + ".disabled"); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if _, err := ToggleModelEnable(dir, path); err != nil {
 		t.Fatalf("禁用应成功: %v", err)
 	}
 	if err := os.WriteFile(path, []byte("z"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if _, err := ToggleModelEnable(dir, path+".disabled"); err == nil {
 		t.Fatal("启用目标已存在应报错")

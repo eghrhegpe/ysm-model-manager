@@ -14,10 +14,10 @@ import (
 func writeFile(t *testing.T, path string, size int) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(path, make([]byte, size), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 }
 

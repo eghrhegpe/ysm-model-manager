@@ -40,11 +40,11 @@ func TestParseComponentsFromZip(t *testing.T) {
 		w, err := zw.Create(e.name)
 		testutil.NoError(t, err)
 		if _, err := w.Write([]byte(e.content)); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	if err := zw.Close(); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	data := buf.Bytes()
 

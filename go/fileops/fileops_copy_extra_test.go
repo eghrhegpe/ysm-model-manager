@@ -40,7 +40,7 @@ func TestCopyFile_SymlinkSrcRejected(t *testing.T) {
 	dir := t.TempDir()
 	target := filepath.Join(dir, "t.txt")
 	if err := os.WriteFile(target, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	link := filepath.Join(dir, "l.txt")
 	if err := os.Symlink(target, link); err != nil {
@@ -56,11 +56,11 @@ func TestCopyFile_MkdirAllError(t *testing.T) {
 	dir := t.TempDir()
 	src := filepath.Join(dir, "src.txt")
 	if err := os.WriteFile(src, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	blocker := filepath.Join(dir, "blocker")
 	if err := os.WriteFile(blocker, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := copyFile(src, filepath.Join(blocker, "sub", "dst.txt")); err == nil {
 		t.Fatal("目标父路径组件为文件时应报错")
@@ -72,7 +72,7 @@ func TestCopyFile_SrcIsDir(t *testing.T) {
 	dir := t.TempDir()
 	sub := filepath.Join(dir, "subdir")
 	if err := os.MkdirAll(sub, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := copyFile(sub, filepath.Join(dir, "dst.txt")); err == nil {
 		t.Fatal("源为目录时应报错（io.Copy 失败）")
@@ -85,11 +85,11 @@ func TestCopyFile_RenameOverExistingDir(t *testing.T) {
 	dir := t.TempDir()
 	src := filepath.Join(dir, "src.txt")
 	if err := os.WriteFile(src, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	dst := filepath.Join(dir, "dst.txt")
 	if err := os.MkdirAll(dst, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := copyFile(src, dst); err == nil {
 		t.Fatal("目标为已存在目录时应报错（rename 失败）")
@@ -106,18 +106,18 @@ func TestCopyDirRecursive_TargetExistsRollsBack(t *testing.T) {
 	dir := t.TempDir()
 	src := filepath.Join(dir, "src")
 	if err := os.MkdirAll(src, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(src, "a.ysm"), []byte("A"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	dst := filepath.Join(dir, "dst")
 	if err := os.MkdirAll(dst, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 预置同名目标文件 → 复制应失败
 	if err := os.WriteFile(filepath.Join(dst, "a.ysm"), []byte("OLD"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := copyDirRecursive(src, dst); err == nil {
 		t.Fatal("目标已存在应报错")
@@ -133,11 +133,11 @@ func TestCopyDirRecursive_SymlinkRejected(t *testing.T) {
 	dir := t.TempDir()
 	src := filepath.Join(dir, "src")
 	if err := os.MkdirAll(src, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	target := filepath.Join(dir, "outside.txt")
 	if err := os.WriteFile(target, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.Symlink(target, filepath.Join(src, "evil.ysm")); err != nil {
 		t.Skipf("os.Symlink 不可用（需权限）: %v", err)
@@ -158,11 +158,11 @@ func TestCopyModelFile_IgnoresBanSibling(t *testing.T) {
 	dir := t.TempDir()
 	src := filepath.Join(dir, "m.ysm")
 	if err := os.WriteFile(src, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	banTarget := filepath.Join(dir, "ban-target.txt")
 	if err := os.WriteFile(banTarget, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.Symlink(banTarget, src+".disabled"); err != nil {
 		t.Skipf("os.Symlink 不可用（需权限）: %v", err)

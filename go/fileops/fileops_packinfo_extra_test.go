@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // ysm-pack.json 为非法 JSON → 返回空 PackInfo
@@ -15,7 +16,7 @@ func TestGetPackInfo_InvalidJSON(t *testing.T) {
 	dir := t.TempDir()
 	jsonPath := filepath.Join(dir, "ysm-pack.json")
 	if err := os.WriteFile(jsonPath, []byte(`not-json{{{`), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	info := GetPackInfo("", dir)
 	if info.Name != "" || info.Description != "" {
@@ -31,11 +32,11 @@ func TestGetPackInfo_LangOverrideAndImage(t *testing.T) {
 		"lang":{"en":{"name":"LangName","description":"LangDesc"},
 		        "zh_cn":{"name":"LangName","description":"LangDesc"}}}`
 	if err := os.WriteFile(filepath.Join(dir, "ysm-pack.json"), []byte(content), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	pngPath := filepath.Join(dir, "ysm-pack.png")
 	if err := os.WriteFile(pngPath, []byte("PNGDATA"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	info := GetPackInfo("", dir)
 	if info.Name != "LangName" || info.Description != "LangDesc" {
@@ -52,7 +53,7 @@ func TestGetPackInfo_LangEmptyNameNoOverride(t *testing.T) {
 	content := `{"name":"原始名","description":"原始描述",
 		"lang":{"en":{"name":"","description":"EN only"}}}`
 	if err := os.WriteFile(filepath.Join(dir, "ysm-pack.json"), []byte(content), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	info := GetPackInfo("", dir)
 	if info.Name != "原始名" {

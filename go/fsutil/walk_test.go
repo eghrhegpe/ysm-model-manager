@@ -170,7 +170,7 @@ func TestCleanEmptyDirs_NonExistent(t *testing.T) {
 func TestIsResourcePackFolder_Yes(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "pack.mcmeta"), []byte("{}"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if !IsResourcePackFolder(dir) {
 		t.Error("dir with pack.mcmeta should be a resource pack folder")
@@ -201,7 +201,7 @@ func TestSafeWalk_LogsSkippedError(t *testing.T) {
 	// 故用交叉校验：用 os.Chmod 降权，并在 chmod 实际生效的平台断言）。
 	badDir := filepath.Join(dir, "bad")
 	if err := os.Mkdir(badDir, 0o000); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	defer os.Chmod(badDir, 0o755) // 还原，便于临时目录清理
 

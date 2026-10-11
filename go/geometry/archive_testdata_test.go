@@ -38,11 +38,11 @@ func loadTestdataZip(t *testing.T) []byte {
 		w, err := zw.Create(e.Name())
 		testutil.NoError(t, err)
 		if _, err := w.Write(data); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	if err := zw.Close(); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	return buf.Bytes()
 }

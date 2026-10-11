@@ -34,7 +34,7 @@ func TestRenameFile_Ok(t *testing.T) {
 	dir := t.TempDir()
 	oldPath := filepath.Join(dir, "a.ysm")
 	if err := os.WriteFile(oldPath, []byte("x"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	testutil.NoError(t, RenameFile(oldPath, "b.ysm"))
 	testutil.FileExists(t, filepath.Join(dir, "b.ysm"))
@@ -46,10 +46,10 @@ func TestRenameFile_TargetExists(t *testing.T) {
 	a := filepath.Join(dir, "a.ysm")
 	b := filepath.Join(dir, "b.ysm")
 	if err := os.WriteFile(a, []byte("x"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(b, []byte("y"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := RenameFile(a, "b.ysm"); err == nil {
 		t.Fatal("目标已存在应报错")
@@ -94,7 +94,7 @@ func TestMoveModelFile(t *testing.T) {
 	dir := t.TempDir()
 	src := filepath.Join(dir, "a.ysm")
 	if err := os.WriteFile(src, []byte("x"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	dst := filepath.Join(dir, "sub")
 	testutil.NoError(t, MoveModelFile(dir, src, dst))
@@ -146,7 +146,7 @@ func TestMoveModelFile_TargetExists(t *testing.T) {
 	base := t.TempDir()
 	src1 := filepath.Join(base, "a.ysm")
 	if err := os.WriteFile(src1, []byte("x"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	dstDir := filepath.Join(base, "sub")
 	testutil.NoError(t, MoveModelFile(base, src1, dstDir))
@@ -154,11 +154,11 @@ func TestMoveModelFile_TargetExists(t *testing.T) {
 	// 同名第二个源 → 防覆盖
 	src2Dir := filepath.Join(base, "other")
 	if err := os.MkdirAll(src2Dir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	src2 := filepath.Join(src2Dir, "a.ysm")
 	if err := os.WriteFile(src2, []byte("y"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := MoveModelFile(base, src2, dstDir); err == nil {
 		t.Fatal("目标已存在应报错")
@@ -195,7 +195,7 @@ func TestMoveModelFile_YsmJsonLiftWithoutRoot(t *testing.T) {
 	modelDir := makeYsmModelDir(base, "模型A")
 	dstDir := filepath.Join(base, "dst")
 	if err := os.MkdirAll(dstDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	testutil.NoError(t, MoveModelFile("", filepath.Join(modelDir, "ysm.json"), dstDir))
 	testutil.FileExists(t, filepath.Join(dstDir, "模型A", "ysm.json"))
@@ -210,16 +210,16 @@ func TestMoveCopyModelFile_SymlinkMiddleSegmentRejected(t *testing.T) {
 	base := t.TempDir()
 	repo := filepath.Join(base, "repo")
 	if err := os.MkdirAll(repo, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	src := filepath.Join(repo, "m.ysm")
 	if err := os.WriteFile(src, []byte("x"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	outside := t.TempDir()
 	symDir := filepath.Join(repo, "symdir")
 	if err := os.Symlink(outside, symDir); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := MoveModelFile(repo, src, filepath.Join(symDir, "sub")); err == nil {
 		t.Fatal("MoveModelFile 应拦截指向仓库外的 symlink 中间段")
@@ -237,7 +237,7 @@ func TestCopyModelFile_PathSafety(t *testing.T) {
 	root := t.TempDir()
 	src := filepath.Join(root, "a.ysm")
 	if err := os.WriteFile(src, []byte("x"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 目录外 → 拦截
 	if err := CopyModelFile(root, src, t.TempDir()); err == nil {
@@ -280,7 +280,7 @@ func TestCopyModelFile_DirRecursiveCopiesBan(t *testing.T) {
 	_ = os.MkdirAll(dstRepo, 0755)
 	modelDir := makeYsmModelDir(srcRepo, "模型D")
 	if err := os.WriteFile(filepath.Join(modelDir, "ysm.json.ban"), []byte("x"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	testutil.NoError(t, CopyModelFile(base, modelDir, dstRepo))
@@ -310,7 +310,7 @@ func TestWriteModelFolder_SymlinkParentRejected(t *testing.T) {
 	outside := t.TempDir()
 	symDir := filepath.Join(repo, "symdir")
 	if err := os.Symlink(outside, symDir); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	files := []types.ImportFileItem{{RelPath: "ysm.json", Base64: b64(`{}`)}}
 	if err := WriteModelFolder(repo, "", "symdir", files); err == nil {
@@ -326,16 +326,16 @@ func TestWriteModelFolder_SymlinkFileRejected(t *testing.T) {
 	repo := t.TempDir()
 	modelDir := filepath.Join(repo, "模型A")
 	if err := os.MkdirAll(modelDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	outside := t.TempDir()
 	target := filepath.Join(outside, "leaked.txt")
 	if err := os.WriteFile(target, []byte("original"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	symFile := filepath.Join(modelDir, "ysm.json")
 	if err := os.Symlink(target, symFile); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	files := []types.ImportFileItem{{RelPath: "ysm.json", Base64: b64(`{"spec":1}`)}}
 	if err := WriteModelFolder(repo, "", "模型A", files); err == nil {
@@ -350,7 +350,7 @@ func TestToggleModelEnable(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "m.ysm")
 	if err := os.WriteFile(path, []byte("x"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 禁用
 	enabled, err := ToggleModelEnable(dir, path)
@@ -424,7 +424,7 @@ func TestToggleModelEnable_RootLevelYsmJsonFallsBack(t *testing.T) {
 	base := t.TempDir()
 	rootYsm := filepath.Join(base, "ysm.json")
 	if err := os.WriteFile(rootYsm, []byte(`{"spec":1}`), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	modelDir := makeYsmModelDir(base, "模型A")
 
@@ -443,7 +443,7 @@ func TestToggleModelEnable_MixedDirEnableSymmetry(t *testing.T) {
 	modelDir := makeYsmModelDir(base, "模型A")
 	looseYsm := filepath.Join(modelDir, "loose.ysm")
 	if err := os.WriteFile(looseYsm, []byte("x"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	_, err := ToggleModelEnable(base, filepath.Join(modelDir, "ysm.json"))
@@ -467,7 +467,7 @@ func TestToggleModelEnable_UpperBanSuffix(t *testing.T) {
 	modelDir := makeYsmModelDir(base, "模型A")
 	bannedDir := modelDir + ".BAN"
 	if err := os.Rename(modelDir, bannedDir); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	bannedYsm := filepath.Join(bannedDir, "ysm.json")
 	if !IsFileBanned(bannedYsm) {
@@ -534,7 +534,7 @@ func TestGetPackInfo(t *testing.T) {
 	content := `{"name":"测试包","description":"描述"}`
 	jsonPath := filepath.Join(dir, "ysm-pack.json")
 	if err := os.WriteFile(jsonPath, []byte(content), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	info := GetPackInfo("", dir)
 	testutil.Equal(t, info.Name, "测试包")
@@ -542,7 +542,7 @@ func TestGetPackInfo(t *testing.T) {
 	// BOM 前缀剥离
 	bom := append([]byte{0xEF, 0xBB, 0xBF}, []byte(content)...)
 	if err := os.WriteFile(jsonPath, bom, perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	info = GetPackInfo("", dir)
 	testutil.Equal(t, info.Name, "测试包")
@@ -562,7 +562,7 @@ func TestFindPreviewImage(t *testing.T) {
 	}
 	pngPath := filepath.Join(dir, "m.png")
 	if err := os.WriteFile(pngPath, []byte("PNGDATA"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	got := FindPreviewImage(model)
 	if !strings.HasPrefix(got, "data:image/png;base64,") {
@@ -575,7 +575,7 @@ func TestFindPreviewImage_JpgMime(t *testing.T) {
 	dir := t.TempDir()
 	model := filepath.Join(dir, "m.ysm")
 	if err := os.WriteFile(filepath.Join(dir, "m.jpg"), []byte("JPGDATA"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	got := FindPreviewImage(model)
 	if !strings.HasPrefix(got, "data:image/jpeg;base64,") {
@@ -593,7 +593,7 @@ func TestFindPreviewImage_FallbackCandidates(t *testing.T) {
 		_ = os.Remove(filepath.Join(dir, "cover.png"))
 		_ = os.Remove(filepath.Join(dir, "thumbnail.png"))
 		if err := os.WriteFile(filepath.Join(dir, c), []byte(c), perm); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 		got := FindPreviewImage(model)
 		if !strings.HasPrefix(got, "data:image/png;base64,") {
@@ -609,7 +609,7 @@ func TestRenameDir_Ok(t *testing.T) {
 	dir := t.TempDir()
 	oldPath := filepath.Join(dir, "olddir")
 	if err := os.MkdirAll(oldPath, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	testutil.NoError(t, RenameDir(oldPath, "newdir"))
 	testutil.FileExists(t, filepath.Join(dir, "newdir"))
@@ -640,10 +640,10 @@ func TestRenameDir_TargetExists(t *testing.T) {
 	old := filepath.Join(dir, "old")
 	existing := filepath.Join(dir, "new")
 	if err := os.MkdirAll(old, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.MkdirAll(existing, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := RenameDir(old, "new"); err == nil {
 		t.Fatal("目标已存在应报错")
@@ -658,7 +658,7 @@ func TestRemoveDir_Ok(t *testing.T) {
 	dir := t.TempDir()
 	sub := filepath.Join(dir, "subdir")
 	if err := os.MkdirAll(sub, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	testutil.NoError(t, RemoveDir(sub))
 	testutil.FileNotExists(t, sub)
@@ -692,7 +692,7 @@ func TestExtractPreviewTexture_FromZip(t *testing.T) {
 	w.Close()
 	zipPath := filepath.Join(dir, "model.zip")
 	if err := os.WriteFile(zipPath, buf.Bytes(), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	got := ExtractPreviewTexture(zipPath)
 	if !strings.HasPrefix(got, "data:image/png;base64,") {
@@ -710,7 +710,7 @@ func TestExtractPreviewTexture_FromZipNoPNG(t *testing.T) {
 	w.Close()
 	zipPath := filepath.Join(dir, "model.zip")
 	if err := os.WriteFile(zipPath, buf.Bytes(), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	got := ExtractPreviewTexture(zipPath)
 	testutil.Equal(t, got, "")
@@ -721,7 +721,7 @@ func TestExtractPreviewTexture_From7zBadData(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "model.7z")
 	if err := os.WriteFile(path, []byte("not7z"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	got := ExtractPreviewTexture(path)
 	testutil.Equal(t, got, "")
@@ -732,7 +732,7 @@ func TestExtractPreviewTexture_FromYSM(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "model.ysm")
 	if err := os.WriteFile(path, []byte("fake ysm data"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	got := ExtractPreviewTexture(path)
 	testutil.Equal(t, got, "")
@@ -743,14 +743,14 @@ func TestExtractPreviewTexture_FromJSON(t *testing.T) {
 	dir := t.TempDir()
 	jsonPath := filepath.Join(dir, "model.json")
 	if err := os.WriteFile(jsonPath, []byte("{}"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	texDir := filepath.Join(dir, "textures")
 	if err := os.MkdirAll(texDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(texDir, "tex.png"), []byte("TEXDATA"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	got := ExtractPreviewTexture(jsonPath)
 	if !strings.HasPrefix(got, "data:image/png;base64,") {
@@ -763,10 +763,10 @@ func TestExtractPreviewTexture_FromJSONFallback(t *testing.T) {
 	dir := t.TempDir()
 	jsonPath := filepath.Join(dir, "model.json")
 	if err := os.WriteFile(jsonPath, []byte("{}"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(dir, "tex.png"), []byte("FALLBACK"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	got := ExtractPreviewTexture(jsonPath)
 	if !strings.HasPrefix(got, "data:image/png;base64,") {
@@ -784,7 +784,7 @@ func TestExtractPreviewTexture_BanSuffixStripped(t *testing.T) {
 	_ = w.Close()
 	zipPath := filepath.Join(dir, "model.zip.ban")
 	if err := os.WriteFile(zipPath, buf.Bytes(), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	got := ExtractPreviewTexture(zipPath)
 	if !strings.HasPrefix(got, "data:image/png;base64,") {
@@ -797,13 +797,13 @@ func TestExtractPreviewTexture_JsonEmptyTexturesFallback(t *testing.T) {
 	dir := t.TempDir()
 	jsonPath := filepath.Join(dir, "model.json")
 	if err := os.WriteFile(jsonPath, []byte("{}"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.MkdirAll(filepath.Join(dir, "textures"), 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(dir, "tex.png"), []byte("FALLBACK"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	got := ExtractPreviewTexture(jsonPath)
 	if !strings.HasPrefix(got, "data:image/png;base64,") {
@@ -917,7 +917,7 @@ func TestDeleteModelFile_SingleFile(t *testing.T) {
 	dir := t.TempDir()
 	fp := filepath.Join(dir, "m.ysm")
 	if err := os.WriteFile(fp, []byte("x"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	testutil.NoError(t, DeleteModelFile(dir, fp))
 	testutil.FileNotExists(t, fp)
@@ -936,7 +936,7 @@ func TestDeleteModelFile_RootLevelYsmJsonFallsBack(t *testing.T) {
 	base := t.TempDir()
 	rootYsm := filepath.Join(base, "ysm.json")
 	if err := os.WriteFile(rootYsm, []byte(`{"spec":1}`), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	modelDir := makeYsmModelDir(base, "模型A")
 	testutil.NoError(t, DeleteModelFile(base, rootYsm))
@@ -951,7 +951,7 @@ func TestDeleteModelFile_OutOfRootRejected(t *testing.T) {
 	outside := t.TempDir()
 	ysmPath := filepath.Join(outside, "ysm.json")
 	if err := os.WriteFile(ysmPath, []byte(`{"spec":1}`), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := DeleteModelFile(base, ysmPath); err == nil {
 		t.Fatal("仓库外 ysm.json 删除应被拒绝")
@@ -976,7 +976,7 @@ func TestCopyModelFile_SourceIsDir(t *testing.T) {
 	root := t.TempDir()
 	srcDir := filepath.Join(root, "model_dir")
 	if err := os.Mkdir(srcDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	dst := filepath.Join(root, "sub")
 	testutil.NoError(t, CopyModelFile(root, srcDir, dst))
@@ -988,7 +988,7 @@ func TestCopyModelFile_TargetExists(t *testing.T) {
 	root := t.TempDir()
 	src := filepath.Join(root, "a.ysm")
 	if err := os.WriteFile(src, []byte("hello"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	dstDir := filepath.Join(root, "sub")
 	testutil.NoError(t, CopyModelFile(root, src, dstDir))
@@ -1002,7 +1002,7 @@ func TestCopyModelFile_DstDirCreated(t *testing.T) {
 	root := t.TempDir()
 	src := filepath.Join(root, "a.ysm")
 	if err := os.WriteFile(src, []byte("content"), perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	dstDir := filepath.Join(root, "new_sub")
 	testutil.NoError(t, CopyModelFile(root, src, dstDir))
@@ -1019,7 +1019,7 @@ func TestReadLimitedFile_Normal(t *testing.T) {
 	path := filepath.Join(dir, "small.txt")
 	payload := []byte("hello world")
 	if err := os.WriteFile(path, payload, perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	data := readLimitedFile(path)
 	if data == nil {
@@ -1033,7 +1033,7 @@ func TestReadLimitedFile_Empty(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "empty.txt")
 	if err := os.WriteFile(path, []byte{}, perm); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	_ = readLimitedFile(path) // 只需不 panic
 }

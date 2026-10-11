@@ -86,11 +86,11 @@ func TestWriteModelFolderFiles_MkdirAllError(t *testing.T) {
 	dir := t.TempDir()
 	dstRoot := filepath.Join(dir, "model")
 	if err := os.MkdirAll(dstRoot, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	blocker := filepath.Join(dstRoot, "sub")
 	if err := os.WriteFile(blocker, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	files := []types.ImportFileItem{{RelPath: "sub/a.ysm", Base64: b64("x")}}
 	if err := writeModelFolderFiles(dstRoot, files); err == nil {
@@ -103,7 +103,7 @@ func TestWriteModelFolderFiles_SymlinkParentRejected(t *testing.T) {
 	dir := t.TempDir()
 	dstRoot := filepath.Join(dir, "model")
 	if err := os.MkdirAll(dstRoot, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	outside := t.TempDir()
 	symDir := filepath.Join(dstRoot, "symdir")
@@ -126,12 +126,12 @@ func TestWriteModelFolderFiles_SymlinkFileRejected(t *testing.T) {
 	dstRoot := filepath.Join(dir, "model")
 	sub := filepath.Join(dstRoot, "sub")
 	if err := os.MkdirAll(sub, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	outside := t.TempDir()
 	leak := filepath.Join(outside, "leaked.txt")
 	if err := os.WriteFile(leak, []byte("original"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	symFile := filepath.Join(sub, "a.ysm")
 	if err := os.Symlink(leak, symFile); err != nil {

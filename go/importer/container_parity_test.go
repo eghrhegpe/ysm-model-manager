@@ -50,11 +50,11 @@ func buildZipBytes(t *testing.T, entries []string) []byte {
 		f, err := w.Create(name)
 		testutil.NoError(t, err)
 		if _, err := f.Write(nil); err != nil {
-			t.Fatal(err)
+			testutil.NoError(t, err)
 		}
 	}
 	if err := w.Close(); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	return buf.Bytes()
 }

@@ -147,10 +147,10 @@ func TestDirectoryCopyImporter_Import_SrcEqualsDst(t *testing.T) {
 	tmpDir := t.TempDir()
 	modelDir := filepath.Join(tmpDir, "model")
 	if err := os.MkdirAll(modelDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(modelDir, "model.pmx"), []byte("pmx"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	importer := NewDirectoryCopy("EntityPlayer")
@@ -172,10 +172,10 @@ func TestDirectoryCopyImporter_Import_DstInsideSrc(t *testing.T) {
 	tmpDir := t.TempDir()
 	modelDir := filepath.Join(tmpDir, "model")
 	if err := os.MkdirAll(modelDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(modelDir, "model.pmx"), []byte("pmx"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	importer := NewDirectoryCopy("EntityPlayer")
@@ -193,7 +193,7 @@ func TestDirectoryCopyImporter_Import_DstInsideSrc(t *testing.T) {
 func TestCopyDir_SrcEqualsDst(t *testing.T) {
 	src := t.TempDir()
 	if err := os.WriteFile(filepath.Join(src, "a.txt"), []byte("aaa"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := copyDir(src, src); err == nil {
 		t.Fatal("copyDir(src, src) 应拒绝")

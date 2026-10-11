@@ -56,15 +56,15 @@ func TestMoveModelFile_EndState_SourceGoneTargetByteIdentical(t *testing.T) {
 	srcDir := filepath.Join(base, "src")
 	dstDir := filepath.Join(base, "dst")
 	if err := os.MkdirAll(srcDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.MkdirAll(dstDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	src := filepath.Join(srcDir, "m.ysm")
 	content := []byte("payload\x00binary\xff\xfe")
 	if err := os.WriteFile(src, content, 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	if err := MoveModelFile(base, src, dstDir); err != nil {
@@ -92,7 +92,7 @@ func TestMoveModelFile_RenameFailRollsBackCreatedDstDir(t *testing.T) {
 	base := t.TempDir()
 	src := filepath.Join(base, "m.ysm")
 	if err := os.WriteFile(src, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	dstDir := filepath.Join(base, "sub") // 不存在 → 由本次 prepareModelDest 新建
 
@@ -120,15 +120,15 @@ func TestMoveModelFile_RenameFailKeepsPreexistingDstDir(t *testing.T) {
 	base := t.TempDir()
 	src := filepath.Join(base, "m.ysm")
 	if err := os.WriteFile(src, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	dstDir := filepath.Join(base, "sub")
 	if err := os.MkdirAll(dstDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	sentinel := filepath.Join(dstDir, "keep-me.ysm")
 	if err := os.WriteFile(sentinel, []byte("precious"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	if err := MoveModelFile(base, src, dstDir); err == nil {
@@ -148,15 +148,15 @@ func TestMoveModelFile_TargetOutsideRootRejected(t *testing.T) {
 	base := t.TempDir()
 	repo := filepath.Join(base, "repo")
 	if err := os.MkdirAll(repo, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	src := filepath.Join(repo, "m.ysm")
 	if err := os.WriteFile(src, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	outside := filepath.Join(base, "outside")
 	if err := os.MkdirAll(outside, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	err := MoveModelFile(repo, src, outside)
@@ -181,7 +181,7 @@ func TestMoveModelFile_AbsErrorPropagated(t *testing.T) {
 	base := t.TempDir()
 	src := filepath.Join(base, "m.ysm")
 	if err := os.WriteFile(src, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	dstDir := filepath.Join(base, "sub")
 	if _, probeErr := filepath.Abs("a\x00b"); probeErr == nil {
@@ -212,7 +212,7 @@ func TestMoveModelFile_CrossDeviceFileCopyFailKeepsSource(t *testing.T) {
 	base := t.TempDir()
 	src := filepath.Join(base, "m.ysm")
 	if err := os.WriteFile(src, []byte("payload"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	dstDir := filepath.Join(base, "sub")
 
@@ -250,10 +250,10 @@ func TestMoveModelFile_CrossDeviceDirCopyFailKeepsSource(t *testing.T) {
 	base := t.TempDir()
 	srcDir := filepath.Join(base, "modelA")
 	if err := os.MkdirAll(srcDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(srcDir, "m.ysm"), []byte("payload"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	dstDir := filepath.Join(base, "sub")
 
@@ -284,7 +284,7 @@ func TestMoveModelFile_CrossDeviceStatSourceFails(t *testing.T) {
 	base := t.TempDir()
 	src := filepath.Join(base, "m.ysm")
 	if err := os.WriteFile(src, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	dstDir := filepath.Join(base, "sub")
 

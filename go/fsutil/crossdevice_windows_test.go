@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"syscall"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // ====== IsCrossDeviceErr 测试（Windows）=====
@@ -68,7 +69,7 @@ func TestIsHardLink_Dir(t *testing.T) {
 	dir := t.TempDir()
 	sub := filepath.Join(dir, "sub")
 	if err := os.MkdirAll(sub, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if IsHardLink(sub) {
 		t.Error("目录应返回 false（目录无硬链接语义，不可误判）")
@@ -80,7 +81,7 @@ func TestIsHardLink_SingleFile(t *testing.T) {
 	dir := t.TempDir()
 	f := filepath.Join(dir, "single.txt")
 	if err := os.WriteFile(f, []byte("hello"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if IsHardLink(f) {
 		t.Error("普通单文件应返回 false")
@@ -94,7 +95,7 @@ func TestIsHardLink_HardLink(t *testing.T) {
 	src := filepath.Join(dir, "src.txt")
 	dst := filepath.Join(dir, "dst.txt")
 	if err := os.WriteFile(src, []byte("linkme"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.Link(src, dst); err != nil {
 		t.Skipf("os.Link 失败（可能跨卷或权限不足），跳过：%v", err)
@@ -112,7 +113,7 @@ func TestIsHardLink_Symlink(t *testing.T) {
 	target := filepath.Join(dir, "target.txt")
 	link := filepath.Join(dir, "link.txt")
 	if err := os.WriteFile(target, []byte("data"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.Symlink(target, link); err != nil {
 		t.Skipf("Windows: symlink 创建需管理员/开发者模式，跳过：%v", err)

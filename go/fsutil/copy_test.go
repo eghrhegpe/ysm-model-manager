@@ -74,7 +74,7 @@ func TestCopyFile_Success(t *testing.T) {
 	src := filepath.Join(dir, "src.txt")
 	dst := filepath.Join(dir, "sub", "dst.txt")
 	if err := os.WriteFile(src, []byte("hello world"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := CopyFile(src, dst); err != nil {
 		t.Fatalf("CopyFile 失败: %v", err)
@@ -118,10 +118,10 @@ func TestCopyFile_DstDirIsFile(t *testing.T) {
 	src := filepath.Join(dir, "src.txt")
 	blocker := filepath.Join(dir, "blocker")
 	if err := os.WriteFile(src, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(blocker, []byte("block"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	err := CopyFile(src, filepath.Join(blocker, "dst.txt"))
 	if err == nil {
@@ -132,13 +132,13 @@ func TestCopyFile_DstDirIsFile(t *testing.T) {
 func TestCopyDirRecursive_Success(t *testing.T) {
 	src := t.TempDir()
 	if err := os.WriteFile(filepath.Join(src, "a.txt"), []byte("AAA"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.MkdirAll(filepath.Join(src, "sub"), 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(src, "sub", "b.txt"), []byte("BBB"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	dst := filepath.Join(t.TempDir(), "dst")
@@ -161,10 +161,10 @@ func TestCopyDirRecursive_RejectSymlink(t *testing.T) {
 	}
 	src := t.TempDir()
 	if err := os.WriteFile(filepath.Join(src, "target.txt"), []byte("target"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.Symlink("target.txt", filepath.Join(src, "link.txt")); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	dst := filepath.Join(t.TempDir(), "dst")
@@ -183,10 +183,10 @@ func TestCopyDirRecursive_CopySymlink(t *testing.T) {
 	}
 	src := t.TempDir()
 	if err := os.WriteFile(filepath.Join(src, "target.txt"), []byte("target"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.Symlink("target.txt", filepath.Join(src, "link.txt")); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	dst := filepath.Join(t.TempDir(), "dst")
@@ -203,15 +203,15 @@ func TestCopyDirRecursive_CopySymlink(t *testing.T) {
 func TestCopyDirRecursive_OverwriteFalse(t *testing.T) {
 	src := t.TempDir()
 	if err := os.WriteFile(filepath.Join(src, "a.txt"), []byte("AAA"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	dst := filepath.Join(t.TempDir(), "dst")
 	if err := os.MkdirAll(dst, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(dst, "a.txt"), []byte("OLD"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	err := CopyDirRecursive(src, dst, CopyDirOptions{Overwrite: false, Rollback: false})
@@ -226,16 +226,16 @@ func TestCopyDirRecursive_OverwriteFalse(t *testing.T) {
 func TestCopyDirRecursive_RollbackOnFailure(t *testing.T) {
 	src := t.TempDir()
 	if err := os.WriteFile(filepath.Join(src, "a.txt"), []byte("AAA"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	// 用 Overwrite=false + 预置目标文件来制造失败
 	dst := filepath.Join(t.TempDir(), "dst")
 	if err := os.MkdirAll(dst, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(dst, "a.txt"), []byte("OLD"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	err := CopyDirRecursive(src, dst, CopyDirOptions{Overwrite: false, Rollback: true})
@@ -252,13 +252,13 @@ func TestCopyDirRecursive_RollbackOnFailure(t *testing.T) {
 func TestCopyDirRecursive_AtomicRename_DstMissing(t *testing.T) {
 	src := t.TempDir()
 	if err := os.WriteFile(filepath.Join(src, "a.txt"), []byte("AAA"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.MkdirAll(filepath.Join(src, "sub"), 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(src, "sub", "b.txt"), []byte("BBB"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	dst := filepath.Join(t.TempDir(), "dst")
@@ -283,16 +283,16 @@ func TestCopyDirRecursive_AtomicRename_DstMissing(t *testing.T) {
 func TestCopyDirRecursive_AtomicRename_OverwriteExisting(t *testing.T) {
 	src := t.TempDir()
 	if err := os.WriteFile(filepath.Join(src, "a.txt"), []byte("NEW"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	dst := filepath.Join(t.TempDir(), "target")
 	// 预置旧目录
 	if err := os.MkdirAll(dst, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(dst, "old.txt"), []byte("OLD"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	err := CopyDirRecursive(src, dst, CopyDirOptions{AtomicRename: true, Overwrite: true})
@@ -316,7 +316,7 @@ func TestCopyDirRecursive_AtomicRename_OverwriteExisting(t *testing.T) {
 func TestCopyDirRecursive_AtomicRename_AncestorGuard(t *testing.T) {
 	src := t.TempDir()
 	if err := os.WriteFile(filepath.Join(src, "a.txt"), []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	// dst 是 src 的后代 → 拒绝
@@ -343,7 +343,7 @@ func TestCopyDirRecursive_AtomicRename_SrcIsFile(t *testing.T) {
 	dir := t.TempDir()
 	src := filepath.Join(dir, "afile")
 	if err := os.WriteFile(src, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	dst := filepath.Join(dir, "out")
 	err := CopyDirRecursive(src, dst, CopyDirOptions{AtomicRename: true, Overwrite: true})
@@ -399,10 +399,10 @@ func TestRecoverAtomicRename_Recovery(t *testing.T) {
 	// 模拟崩溃状态：dst 缺失，backup 残留
 	backup := filepath.Join(dir, "mydir.bak-1234567890")
 	if err := os.MkdirAll(filepath.Join(backup, "sub"), 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(backup, "a.txt"), []byte("recovered"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	// 确认 dst 不存在
@@ -436,12 +436,12 @@ func TestRecoverAtomicRename_AlreadyRecovered(t *testing.T) {
 	// 原始目录已存在
 	dst := filepath.Join(dir, "mydir")
 	if err := os.MkdirAll(dst, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// backup 也存在（残留）
 	backup := filepath.Join(dir, "mydir.bak-1234567890")
 	if err := os.MkdirAll(backup, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	recovered, err := RecoverAtomicRename(dir)
@@ -463,16 +463,16 @@ func TestRecoverAtomicRename_MultipleBackups(t *testing.T) {
 	backup1 := filepath.Join(dir, "mydir.bak-100")
 	backup2 := filepath.Join(dir, "mydir.bak-200")
 	if err := os.MkdirAll(backup1, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.MkdirAll(backup2, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(backup1, "old.txt"), []byte("old"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(backup2, "new.txt"), []byte("new"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	recovered, err := RecoverAtomicRename(dir)
@@ -518,10 +518,10 @@ func TestRecoverAtomicRename_IgnoresRelinkBakFamily(t *testing.T) {
 	// 一个 relink 备份尸体 + 其 dst 原样存在（模拟 relink 崩溃后现场）
 	relinkBak := filepath.Join(dir, "model.relink-bak-1700000000")
 	if err := os.MkdirAll(relinkBak, 0o755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if err := os.WriteFile(filepath.Join(relinkBak, "ysm.json"), []byte("bak"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	recovered, err := RecoverAtomicRename(dir)
 	testutil.NoError(t, err, "不应报错")

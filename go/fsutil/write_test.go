@@ -44,7 +44,7 @@ func TestWriteFileAtomic_TempCreateFailureCleansUp(t *testing.T) {
 	base := t.TempDir()
 	blocker := filepath.Join(base, "blocker")
 	if err := os.WriteFile(blocker, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	err := WriteFileAtomic(filepath.Join(blocker, "out.json"), []byte("x"))
 	if err == nil {

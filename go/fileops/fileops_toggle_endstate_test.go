@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // 文件级禁用→启用：目录条目全集在后缀追加/去掉之间往返，内容逐字节不变。
@@ -22,7 +23,7 @@ func TestToggleModelEnable_EndState_FileSuffixAppendedNotReplaced(t *testing.T) 
 	src := filepath.Join(dir, "m.ysm")
 	content := []byte("payload\x00binary")
 	if err := os.WriteFile(src, content, 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	enabled, err := ToggleModelEnable(dir, src)
@@ -56,7 +57,7 @@ func TestToggleModelEnable_EndState_DirGroupMovesAsWhole(t *testing.T) {
 	modelDir := makeYsmModelDir(base, "模型A")
 	loose := filepath.Join(modelDir, "loose.ysm")
 	if err := os.WriteFile(loose, []byte("loose"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	enabled, err := ToggleModelEnable(base, filepath.Join(modelDir, "ysm.json"))
@@ -100,15 +101,15 @@ func TestToggleModelEnable_DirBanResidueDirNewExistsKeepsDiskUntouched(t *testin
 	base := t.TempDir()
 	bannedDir := filepath.Join(base, "模型A.ban")
 	if err := os.MkdirAll(bannedDir, 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	residue := filepath.Join(bannedDir, "loose.ysm.ban")
 	if err := os.WriteFile(residue, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	// 预置父目录还原目标 → 应命中「父目录目标已存在」
 	if err := os.MkdirAll(filepath.Join(base, "模型A"), 0755); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 
 	if _, err := ToggleModelEnable(base, residue); err == nil {
@@ -133,7 +134,7 @@ func TestToggleModelEnable_AbsErrorPropagatedNotFailOpen(t *testing.T) {
 	dir := t.TempDir()
 	src := filepath.Join(dir, "m.ysm")
 	if err := os.WriteFile(src, []byte("x"), 0644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if _, probeErr := filepath.Abs("a\x00b"); probeErr == nil {
 		t.Skip("本平台 filepath.Abs 对 NUL 不报错，Abs 错误分支不可达")

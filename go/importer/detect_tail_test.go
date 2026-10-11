@@ -81,7 +81,7 @@ func TestDetectContainerTypeFromBase64Tail_LargePaddingFile(t *testing.T) {
 	fw, err := w.CreateHeader(&zip.FileHeader{Name: "big.bin", Method: zip.Store})
 	testutil.NoError(t, err)
 	if _, err := fw.Write(bytes.Repeat([]byte{0}, 51<<20)); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	for _, name := range []string{"ysm.json", "model/body.ysm"} {
 		fw2, err := w.Create(name)
@@ -89,7 +89,7 @@ func TestDetectContainerTypeFromBase64Tail_LargePaddingFile(t *testing.T) {
 		fw2.Write([]byte("{}"))
 	}
 	if err := w.Close(); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if buf.Len() < 50<<20 {
 		t.Fatalf("构造的 zip 应大于 50MB, got %d", buf.Len())

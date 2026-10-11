@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"sync"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // TestStore_ConcurrentReadWrite_NoRace 并发 Get/Set/Add/Remove 压测：
@@ -42,9 +43,7 @@ func TestStore_ConcurrentReadWrite_NoRace(t *testing.T) {
 
 	// 最终态自洽：所有 key 的标签有序、无重复（SetTags/AddTag 的排序不变量）
 	all, err := store.AllTags()
-	if err != nil {
-		t.Fatalf("AllTags = %v", err)
-	}
+	testutil.NoError(t, err, "AllTags =")
 	for _, tag := range all {
 		if tag == "" {
 			t.Fatal("AllTags 不应含空标签")
@@ -66,17 +65,13 @@ func TestStore_Commit_NoChangeSkipsPersist(t *testing.T) {
 	}
 	// 记录首次落盘后的 mtime
 	info1, err := os.Stat(store.path)
-	if err != nil {
-		t.Fatalf("stat = %v", err)
-	}
+	testutil.NoError(t, err, "stat =")
 	// 移除一个不存在的标签 → changed=false → 不应触发落盘（mtime 不变）
 	if err := store.RemoveTag("m.ysm", "nonexistent"); err != nil {
 		t.Fatalf("RemoveTag(无变化) = %v", err)
 	}
 	info2, err := os.Stat(store.path)
-	if err != nil {
-		t.Fatalf("stat2 = %v", err)
-	}
+	testutil.NoError(t, err, "stat2 =")
 	if !info1.ModTime().Equal(info2.ModTime()) {
 		t.Fatalf("无变化操作不应重写文件：mtime %v → %v", info1.ModTime(), info2.ModTime())
 	}

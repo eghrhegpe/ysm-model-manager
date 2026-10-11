@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 func TestNormalize(t *testing.T) {
@@ -207,9 +208,7 @@ func TestDownload_OK(t *testing.T) {
 	// "127.0.0.1:PORT"（冒号非法文件名），os.Create 失败 → 主平台测试必挂
 	// hash：R30 P2-3 后空 hash 前置拒绝，成功路径必须传真实哈希
 	path, err := Download(server.URL+"/pkg.zip", fmt.Sprintf("%x", sha256.Sum256(body)))
-	if err != nil {
-		t.Fatalf("Download() = %v", err)
-	}
+	testutil.NoError(t, err, "Download() =")
 	defer os.Remove(path)
 
 	data, err := os.ReadFile(path)
@@ -232,9 +231,7 @@ func TestDownloadWithProgress_KnownLength(t *testing.T) {
 	path, err := DownloadWithProgress(server.URL+"/pkg.zip", fmt.Sprintf("%x", sha256.Sum256(body)), func(done, total int64) {
 		calls = append(calls, struct{ done, total int64 }{done, total})
 	})
-	if err != nil {
-		t.Fatalf("DownloadWithProgress() = %v", err)
-	}
+	testutil.NoError(t, err, "DownloadWithProgress() =")
 	defer os.Remove(path)
 
 	if len(calls) == 0 {
@@ -272,9 +269,7 @@ func TestDownloadWithProgress_UnknownLength(t *testing.T) {
 	path, err := DownloadWithProgress(server.URL+"/pkg.zip", fmt.Sprintf("%x", sha256.Sum256(body)), func(done, total int64) {
 		calls = append(calls, struct{ done, total int64 }{done, total})
 	})
-	if err != nil {
-		t.Fatalf("DownloadWithProgress() = %v", err)
-	}
+	testutil.NoError(t, err, "DownloadWithProgress() =")
 	defer os.Remove(path)
 
 	if len(calls) == 0 {
@@ -310,9 +305,7 @@ func TestDownloadWithProgress_ChunkedShortBody(t *testing.T) {
 	path, err := DownloadWithProgress(server.URL+"/pkg.zip", fmt.Sprintf("%x", sha256.Sum256(body)), func(done, total int64) {
 		calls = append(calls, struct{ done, total int64 }{done, total})
 	})
-	if err != nil {
-		t.Fatalf("DownloadWithProgress() = %v", err)
-	}
+	testutil.NoError(t, err, "DownloadWithProgress() =")
 	defer os.Remove(path)
 
 	if len(calls) == 0 {
@@ -407,9 +400,7 @@ func TestDownload_MultiSource_DirectFirst(t *testing.T) {
 	defer func() { ghProxyPrefixes = oldPrefixes }()
 
 	path, err := Download(direct.URL+"/pkg.zip", fmt.Sprintf("%x", sha256.Sum256(body)))
-	if err != nil {
-		t.Fatalf("Download() = %v", err)
-	}
+	testutil.NoError(t, err, "Download() =")
 	defer os.Remove(path)
 	if proxyHits != 0 {
 		t.Errorf("直连成功时代理不应被请求，实际 %d 次", proxyHits)
@@ -433,9 +424,7 @@ func TestDownload_MultiSource_FallbackToProxy(t *testing.T) {
 	defer func() { ghProxyPrefixes = oldPrefixes }()
 
 	path, err := Download(direct.URL+"/pkg.zip", fmt.Sprintf("%x", sha256.Sum256(body)))
-	if err != nil {
-		t.Fatalf("Download() = %v", err)
-	}
+	testutil.NoError(t, err, "Download() =")
 	defer os.Remove(path)
 	data, err := os.ReadFile(path)
 	if err != nil || !bytes.Equal(data, body) {
@@ -489,9 +478,7 @@ func TestCheck_FindsNewer(t *testing.T) {
 	defer server.Close()
 
 	info, err := CheckWithClient(server.Client(), server.URL, "1.0.0")
-	if err != nil {
-		t.Fatalf("CheckWithClient() = %v", err)
-	}
+	testutil.NoError(t, err, "CheckWithClient() =")
 	if !info.Available {
 		t.Fatal("应检测到新版本")
 	}
@@ -516,9 +503,7 @@ func TestCheck_NoNewer(t *testing.T) {
 	defer server.Close()
 
 	info, err := CheckWithClient(server.Client(), server.URL, "1.0.0")
-	if err != nil {
-		t.Fatalf("CheckWithClient() = %v", err)
-	}
+	testutil.NoError(t, err, "CheckWithClient() =")
 	if info.Available {
 		t.Fatal("无新版本时不应 available")
 	}
@@ -535,9 +520,7 @@ func TestCheck_SkipsPrerelease(t *testing.T) {
 	defer server.Close()
 
 	info, err := CheckWithClient(server.Client(), server.URL, "1.0.0")
-	if err != nil {
-		t.Fatalf("CheckWithClient() = %v", err)
-	}
+	testutil.NoError(t, err, "CheckWithClient() =")
 	if info.Available {
 		t.Fatal("prerelease/draft 不应触发更新")
 	}

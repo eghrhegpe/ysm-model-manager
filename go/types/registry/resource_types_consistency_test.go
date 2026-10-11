@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/types/registry"
+	"ysm-model-manager/internal/testutil"
 )
 
 // TestResourceTypesEmbedJSONConsistency 验证单源化契约：
@@ -25,9 +26,7 @@ func TestResourceTypesEmbedJSONConsistency(t *testing.T) {
 	// 读取仓库根 resource_types.json（单一事实来源）
 	jsonPath := filepath.Join("..", "..", "..", "resource_types.json")
 	raw, err := os.ReadFile(jsonPath)
-	if err != nil {
-		t.Fatalf("read resource_types.json: %v", err)
-	}
+	testutil.NoError(t, err, "read resource_types.json")
 
 	// 直接解码根文件 → 结构体（与 LoadRegistry 同构，避免 map/struct 字段不对称）
 	var fileReg registry.ResourceTypeRegistry

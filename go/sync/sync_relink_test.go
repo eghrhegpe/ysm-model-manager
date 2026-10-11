@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/installer"
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/types/registry"
 )
@@ -350,9 +351,7 @@ func TestSyncToggleStatus_RelinkBackupCorpsesSkipped(t *testing.T) {
 		return []types.ModelEntry{{Name: "model.ysm.ban", Path: repoFile, Hash: hash}}
 	}
 	disable, _, err := SyncToggleStatus(customDir, repoDir, scanFn)
-	if err != nil {
-		t.Fatalf("不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "不应报错")
 	if disable != 1 {
 		t.Errorf("只应禁用正常位置的 1 个（尸体被过滤），disable=%d", disable)
 	}

@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 func TestAppError_Error(t *testing.T) {
@@ -31,9 +32,7 @@ func TestAppError_Error(t *testing.T) {
 // 同 PR 同步 fixture + Go 文案 + 前端正则。
 func TestAppError_Error_MatchesFixture(t *testing.T) {
 	data, err := os.ReadFile("../../tests/fixtures/apperror-sample.json")
-	if err != nil {
-		t.Fatalf("读契约 fixture 失败: %v", err)
-	}
+	testutil.NoError(t, err, "读契约 fixture 失败")
 	var fx struct {
 		WithPaths string `json:"withPaths"`
 		NoPaths   string `json:"noPaths"`

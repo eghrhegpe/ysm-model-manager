@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -13,9 +14,7 @@ import (
 
 func TestBuildEmptyModel(t *testing.T) {
 	out, err := Build(types.BedrockModel{})
-	if err != nil {
-		t.Fatalf("Build error: %v", err)
-	}
+	testutil.NoError(t, err, "Build error")
 	if out != "{}" {
 		t.Fatalf("empty model: got %q, want {}", out)
 	}
@@ -37,9 +36,7 @@ func TestBuildSingleCube(t *testing.T) {
 		}},
 	}
 	out, err := Build(model)
-	if err != nil {
-		t.Fatalf("Build error: %v", err)
-	}
+	testutil.NoError(t, err, "Build error")
 	if !strings.Contains(out, `"name":"b1"`) {
 		t.Fatalf("bone b1 missing in: %s", out)
 	}
@@ -69,9 +66,7 @@ func TestBuildCubeMeshData_InflateOverflow(t *testing.T) {
 		}},
 	}
 	out, err := Build(model)
-	if err != nil {
-		t.Fatalf("Build error: %v", err)
-	}
+	testutil.NoError(t, err, "Build error")
 	if strings.Contains(out, "Infinity") || strings.Contains(out, "NaN") {
 		t.Fatalf("inflate 运算溢出应被拦截，不得产出 Inf/NaN: %s", out)
 	}
@@ -96,9 +91,7 @@ func TestBuildCubeMeshData_OriginPlusSizeOverflow(t *testing.T) {
 		}},
 	}
 	out, err := Build(model)
-	if err != nil {
-		t.Fatalf("Build error: %v", err)
-	}
+	testutil.NoError(t, err, "Build error")
 	if strings.Contains(out, "Infinity") || strings.Contains(out, "NaN") {
 		t.Fatalf("origin+size 派生溢出应被拦截，不得产出 Inf/NaN: %s", out)
 	}
@@ -125,9 +118,7 @@ func TestBuildDuplicateBoneMerge(t *testing.T) {
 		},
 	}
 	out, err := Build(model)
-	if err != nil {
-		t.Fatalf("Build error: %v", err)
-	}
+	testutil.NoError(t, err, "Build error")
 	var spec Model3DSpec
 	if err := json.Unmarshal([]byte(out), &spec); err != nil {
 		t.Fatalf("unmarshal: %v\n%s", err, out)
@@ -231,9 +222,7 @@ func TestMeshIDMultiCube(t *testing.T) {
 		}},
 	}
 	out, err := Build(model)
-	if err != nil {
-		t.Fatalf("Build error: %v", err)
-	}
+	testutil.NoError(t, err, "Build error")
 	var spec Model3DSpec
 	if err := json.Unmarshal([]byte(out), &spec); err != nil {
 		t.Fatalf("unmarshal: %v", err)
@@ -270,9 +259,7 @@ func TestBuildBoneLocalPosition_XFlip(t *testing.T) {
 		}},
 	}
 	out, err := Build(model)
-	if err != nil {
-		t.Fatalf("Build error: %v", err)
-	}
+	testutil.NoError(t, err, "Build error")
 	var spec Model3DSpec
 	if err := json.Unmarshal([]byte(out), &spec); err != nil {
 		t.Fatalf("unmarshal: %v", err)

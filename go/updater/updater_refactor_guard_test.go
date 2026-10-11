@@ -24,6 +24,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // sha256Hex 测试侧哈希（downloadOnce 期望的格式：小写 hex）。
@@ -56,9 +57,7 @@ func TestCheckWithClient_NoPlatformAssetWithSums(t *testing.T) {
 	defer server.Close()
 
 	info, err := CheckWithClient(server.Client(), server.URL, "1.0.0")
-	if err != nil {
-		t.Fatalf("CheckWithClient() = %v", err)
-	}
+	testutil.NoError(t, err, "CheckWithClient() =")
 	if info.Available {
 		t.Fatal("无本平台安装包不应 available")
 	}
@@ -136,18 +135,14 @@ func TestDownloadOnce_HappyPathWritesVerifiedFile(t *testing.T) {
 	defer server.Close()
 
 	path, err := downloadOnce(server.URL+"/pkg.exe", strings.ToUpper(sha256Hex(body)), nil)
-	if err != nil {
-		t.Fatalf("校验通过应返回临时文件路径: %v", err)
-	}
+	testutil.NoError(t, err, "校验通过应返回临时文件路径")
 	if path == "" {
 		t.Fatal("成功时应返回落盘路径")
 	}
 	t.Cleanup(func() { _ = os.Remove(path) })
 
 	got, rerr := os.ReadFile(path)
-	if rerr != nil {
-		t.Fatalf("读取落盘文件: %v", rerr)
-	}
+	testutil.NoError(t, rerr, "读取落盘文件")
 	if !bytes.Equal(got, body) {
 		t.Errorf("落盘字节数与响应体不符: got %d bytes, want %d", len(got), len(body))
 	}
@@ -176,15 +171,11 @@ func TestDownloadOnceExactLimitIsNotTruncation(t *testing.T) {
 	defer server.Close()
 
 	path, err := downloadOnce(server.URL+"/pkg.exe", sha256Hex(body), nil)
-	if err != nil {
-		t.Fatalf("恰好等于上限的包不得被误判为截断: %v", err)
-	}
+	testutil.NoError(t, err, "恰好等于上限的包不得被误判为截断")
 	t.Cleanup(func() { _ = os.Remove(path) })
 
 	got, rerr := os.ReadFile(path)
-	if rerr != nil {
-		t.Fatalf("读取落盘文件: %v", rerr)
-	}
+	testutil.NoError(t, rerr, "读取落盘文件")
 	if len(got) != len(body) {
 		t.Errorf("落盘字节数 = %d, 期望恰好 %d", len(got), len(body))
 	}
@@ -211,9 +202,7 @@ func TestDownloadOnce_ProgressCallbacks(t *testing.T) {
 		path, err := downloadOnce(server.URL+"/pkg.exe", sha256Hex(body), func(done, total int64) {
 			seen = append(seen, struct{ done, total int64 }{done, total})
 		})
-		if err != nil {
-			t.Fatalf("downloadOnce: %v", err)
-		}
+		testutil.NoError(t, err, "downloadOnce")
 		t.Cleanup(func() { _ = os.Remove(path) })
 
 		if len(seen) == 0 {
@@ -243,9 +232,7 @@ func TestDownloadOnce_ProgressCallbacks(t *testing.T) {
 		path, err := downloadOnce(server.URL+"/pkg.exe", sha256Hex(body), func(done, total int64) {
 			seen = append(seen, struct{ done, total int64 }{done, total})
 		})
-		if err != nil {
-			t.Fatalf("downloadOnce: %v", err)
-		}
+		testutil.NoError(t, err, "downloadOnce")
 		t.Cleanup(func() { _ = os.Remove(path) })
 
 		if len(seen) == 0 {

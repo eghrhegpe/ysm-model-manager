@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"ysm-model-manager/internal/testutil"
 )
 
 type zipentryParityFixture struct {
@@ -22,9 +23,7 @@ func loadZipentryParityFixture(t *testing.T) *zipentryParityFixture {
 	t.Helper()
 	root := repoRootFromPkgDir(t)
 	raw, err := os.ReadFile(filepath.Join(root, "tests", "parity", "go-ts-zipentry.json"))
-	if err != nil {
-		t.Fatalf("读取 parity fixture: %v", err)
-	}
+	testutil.NoError(t, err, "读取 parity fixture")
 	var f zipentryParityFixture
 	if err := json.Unmarshal(raw, &f); err != nil {
 		t.Fatalf("解析 parity fixture: %v", err)

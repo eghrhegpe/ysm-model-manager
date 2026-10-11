@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/geometry"
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -50,9 +51,7 @@ func collectSpecFloats(v interface{}, out *[]float64) {
 func TestBuildMulti_RealDecodedFixture_Lucia(t *testing.T) {
 	models := fixtureModels(t, "lucia")
 	out, err := BuildMulti(models, nil)
-	if err != nil {
-		t.Fatalf("BuildMulti(lucia 真实产物) 失败: %v", err)
-	}
+	testutil.NoError(t, err, "BuildMulti(lucia 真实产物) 失败")
 	if out == "{}" {
 		t.Fatal("lucia 真实产物不应返回空 spec")
 	}

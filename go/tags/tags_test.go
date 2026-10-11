@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"sort"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 func TestNewStore(t *testing.T) {
@@ -23,14 +24,10 @@ func TestSetAndGetTags(t *testing.T) {
 	s := NewStore(dir)
 
 	err := s.SetTags("/path/to/model", []string{"tag1", "tag2"})
-	if err != nil {
-		t.Fatalf("SetTags failed: %v", err)
-	}
+	testutil.NoError(t, err, "SetTags failed")
 
 	tags, err := s.GetTags("/path/to/model")
-	if err != nil {
-		t.Fatalf("GetTags failed: %v", err)
-	}
+	testutil.NoError(t, err, "GetTags failed")
 	if len(tags) != 2 || tags[0] != "tag1" || tags[1] != "tag2" {
 		t.Errorf("unexpected tags: %v", tags)
 	}
@@ -98,9 +95,7 @@ func TestListByTag(t *testing.T) {
 	s.SetTags("/c", []string{"y"})
 
 	paths, err := s.ListByTag("x")
-	if err != nil {
-		t.Fatalf("ListByTag failed: %v", err)
-	}
+	testutil.NoError(t, err, "ListByTag failed")
 	if len(paths) != 2 || paths[0] != "/a" || paths[1] != "/b" {
 		t.Errorf("unexpected paths for tag x: %v", paths)
 	}
@@ -115,9 +110,7 @@ func TestAllTags(t *testing.T) {
 	s.SetTags("/c", []string{"z"})
 
 	all, err := s.AllTags()
-	if err != nil {
-		t.Fatalf("AllTags failed: %v", err)
-	}
+	testutil.NoError(t, err, "AllTags failed")
 	// x appears twice, y once, z once → x first
 	if len(all) != 3 || all[0] != "x" {
 		t.Errorf("unexpected tags order: %v (want x first)", all)
@@ -150,9 +143,7 @@ func TestNoFileOnFirstUse(t *testing.T) {
 	dir := t.TempDir()
 	s := NewStore(dir)
 	tags, err := s.GetTags("/nonexistent")
-	if err != nil {
-		t.Fatalf("GetTags on fresh store failed: %v", err)
-	}
+	testutil.NoError(t, err, "GetTags on fresh store failed")
 	if len(tags) != 0 {
 		t.Errorf("expected empty tags, got %v", tags)
 	}
@@ -172,9 +163,7 @@ func TestCorruptFileRecovers(t *testing.T) {
 	}
 	// 读应不报错（已备份重建），返回空
 	tags, err := s.GetTags("/m")
-	if err != nil {
-		t.Fatalf("GetTags after corrupt should not error: %v", err)
-	}
+	testutil.NoError(t, err, "GetTags after corrupt should not error")
 	if len(tags) != 0 {
 		t.Errorf("expected empty tags after corrupt recovery, got %v", tags)
 	}

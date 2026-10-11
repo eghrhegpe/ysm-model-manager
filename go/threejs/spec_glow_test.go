@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/geometry"
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -52,9 +53,7 @@ func TestBuildGlowBone(t *testing.T) {
 	}
 
 	spec, err := Build(model)
-	if err != nil {
-		t.Fatalf("Build: %v", err)
-	}
+	testutil.NoError(t, err, "Build")
 
 	// 解析 spec JSON 验证 Glow 字段
 	var parsed struct {
@@ -103,9 +102,7 @@ func TestBuildGlowBoneCaseInsensitive(t *testing.T) {
 	}
 
 	spec, err := Build(model)
-	if err != nil {
-		t.Fatalf("Build: %v", err)
-	}
+	testutil.NoError(t, err, "Build")
 
 	var parsed struct {
 		Models []struct {
@@ -134,17 +131,13 @@ func TestBuildGlowBoneCaseInsensitive(t *testing.T) {
 func TestGlowMeshUVMatchesGeometry(t *testing.T) {
 	p := filepath.Join("..", "..", "tests", "fixtures", "ysm", "01_taisho_maid", "models", "foxcar.json")
 	data, err := os.ReadFile(p)
-	if err != nil {
-		t.Fatalf("read fixture: %v", err)
-	}
+	testutil.NoError(t, err, "read fixture")
 	m := geometry.ParseBedrockGeometry(data)
 	if m == nil {
 		t.Fatal("parse nil")
 	}
 	mg, err := buildModelGroup(*m, "main", 0)
-	if err != nil {
-		t.Fatalf("build: %v", err)
-	}
+	testutil.NoError(t, err, "build")
 	tw, th := mg.TextureWidth, mg.TextureHeight
 
 	glowMeshes := 0

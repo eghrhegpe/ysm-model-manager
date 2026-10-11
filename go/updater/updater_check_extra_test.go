@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // failRT 固定返回传输错误的 RoundTripper（不发起任何真实网络请求）
@@ -94,9 +95,7 @@ func TestCheckWithClient_NoPlatformAsset(t *testing.T) {
 	defer server.Close()
 
 	info, err := CheckWithClient(server.Client(), server.URL, "1.0.0")
-	if err != nil {
-		t.Fatalf("CheckWithClient() = %v", err)
-	}
+	testutil.NoError(t, err, "CheckWithClient() =")
 	if info.Available {
 		t.Fatal("无本平台安装包不应 available")
 	}
@@ -128,9 +127,7 @@ func TestCheckWithClient_HashFetchFails(t *testing.T) {
 	defer server.Close()
 
 	info, err := CheckWithClient(server.Client(), server.URL, "1.0.0")
-	if err != nil {
-		t.Fatalf("CheckWithClient() = %v", err)
-	}
+	testutil.NoError(t, err, "CheckWithClient() =")
 	if info.Available {
 		t.Fatal("hash 获取失败时应更新不可用（R30 P2-3 fail-closed）")
 	}
@@ -161,9 +158,7 @@ func TestCheckWithClient_NoReleaseNotes(t *testing.T) {
 	defer server.Close()
 
 	info, err := CheckWithClient(server.Client(), server.URL, "1.0.0")
-	if err != nil {
-		t.Fatalf("CheckWithClient() = %v", err)
-	}
+	testutil.NoError(t, err, "CheckWithClient() =")
 	if !info.Available {
 		t.Fatal("应检测到新版本")
 	}
@@ -191,9 +186,7 @@ func TestFetchExpectedHash_SumsPrefix(t *testing.T) {
 	defer server.Close()
 
 	got, err := fetchExpectedHash(server.URL+"/sums", "YSM-Model-Manager_windows_arm64.exe")
-	if err != nil {
-		t.Fatalf("fetchExpectedHash() = %v", err)
-	}
+	testutil.NoError(t, err, "fetchExpectedHash() =")
 	if got != "fed789cba012" {
 		t.Errorf("hash = %q, 期望 fed789cba012", got)
 	}

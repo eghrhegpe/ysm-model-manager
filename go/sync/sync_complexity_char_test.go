@@ -16,6 +16,7 @@ import (
 	"strings"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -116,9 +117,7 @@ func TestChar_RelinkDir_RepoIndexSkipsCorpsesAndHashless(t *testing.T) {
 
 	sink := &charSink{}
 	count, err := RelinkDir(customDir, repoRoot, "ysm", "hardlink", scanFn, sink.logger())
-	if err != nil {
-		t.Fatalf("不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "不应报错")
 	if count != 1 {
 		t.Errorf("count = %d, want 1（仅 ysm.json 一条走平铺重链）", count)
 	}
@@ -155,9 +154,7 @@ func TestChar_RelinkDir_FlatCopyFailureLogged(t *testing.T) {
 
 	sink := &charSink{}
 	count, err := RelinkDir(customDir, repoRoot, "ysm", "hardlink", scanFn, sink.logger())
-	if err != nil {
-		t.Fatalf("不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "不应报错")
 	if count != 0 {
 		t.Errorf("count = %d, want 0", count)
 	}
@@ -195,9 +192,7 @@ func TestChar_RelinkDir_DirReplaceFailureRollsBack(t *testing.T) {
 
 	sink := &charSink{}
 	count, err := RelinkDir(customDir, repoRoot, "ysm", "hardlink", scanFn, sink.logger())
-	if err != nil {
-		t.Fatalf("不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "不应报错")
 	if count != 0 {
 		t.Errorf("count = %d, want 0", count)
 	}
@@ -242,9 +237,7 @@ func TestChar_SyncToggleStatus_RepoOutsideFilesRoot_BaseNameFallback(t *testing.
 
 	sink := &charSink{}
 	disable, enable, err := SyncToggleStatus(customDir, repoDir, scanFn)
-	if err != nil {
-		t.Fatalf("不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "不应报错")
 	if disable != 1 || enable != 0 {
 		t.Errorf("disable/enable = %d/%d, want 1/0（basename 兜底命中禁用）", disable, enable)
 	}
@@ -275,9 +268,7 @@ func TestChar_SyncToggleStatus_UnsupportedExtSkipped(t *testing.T) {
 
 	sink := &charSink{}
 	disable, enable, err := SyncToggleStatus(customDir, repoDir, scanFn)
-	if err != nil {
-		t.Fatalf("不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "不应报错")
 	if disable != 0 || enable != 0 {
 		t.Errorf("disable/enable = %d/%d, want 0/0（无状态差异）", disable, enable)
 	}
@@ -336,9 +327,7 @@ func TestChar_SyncCustomToRepo_EmptySourceIsNoop(t *testing.T) {
 	}
 	sink := &charSink{}
 	count, err := SyncCustomToRepo(customDir, repoDir, func(string) []types.ModelEntry { return nil }, sink.logger())
-	if err != nil {
-		t.Fatalf("不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "不应报错")
 	if count != 0 {
 		t.Errorf("count = %d, want 0", count)
 	}
@@ -378,9 +367,7 @@ func TestChar_SyncCustomToRepo_SkipAndFailureAccounting(t *testing.T) {
 
 	sink := &charSink{}
 	count, err := SyncCustomToRepo(customDir, repoDir, scanFn, sink.logger())
-	if err != nil {
-		t.Fatalf("不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "不应报错")
 	if count != 1 {
 		t.Errorf("count = %d, want 1", count)
 	}

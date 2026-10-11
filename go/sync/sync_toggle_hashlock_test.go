@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"ysm-model-manager/go/installer"
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -49,9 +50,7 @@ func TestSyncToggleStatus_HashComputedOutsideLock(t *testing.T) {
 
 	// 执行 SyncToggleStatus
 	disable, enable, err := SyncToggleStatus(customDir, repoDir, scanFn)
-	if err != nil {
-		t.Fatalf("不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "不应报错")
 	if disable != 1 {
 		t.Errorf("改名文件应经 hash 兜底被禁用，disable = %d, want 1", disable)
 	}
@@ -91,9 +90,7 @@ func TestSyncToggleStatus_LockReleasedDuringHash(t *testing.T) {
 
 	// 执行 SyncToggleStatus
 	_, _, err := SyncToggleStatus(customDir, repoDir, scanFn)
-	if err != nil {
-		t.Fatalf("不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "不应报错")
 
 	// 验证锁可正常获取（说明 SyncToggleStatus 正确释放了锁）
 	// 若锁未释放，此处会阻塞直到超时

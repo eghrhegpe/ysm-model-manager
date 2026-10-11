@@ -29,6 +29,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/geometry"
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -400,9 +401,7 @@ func TestRealWorldUVAudit(t *testing.T) {
 		auditModel(stats, *model, rel)
 		return nil
 	})
-	if err != nil {
-		t.Fatalf("walk: %v", err)
-	}
+	testutil.NoError(t, err, "walk")
 	t.Logf("UV 真实库审计：文件=%d 模型=%d cubes=%d（box=%d perface=%d 无UV=%d mirror=%d 其中perface+mirror=%d 空uv对象=%d 坏faceJSON=%d）",
 		stats.files, stats.models, stats.cubes, stats.box, stats.perFace, stats.noUV, stats.mirror, stats.perFaceMirr, stats.emptyFace, stats.badFaceJSON)
 	if len(stats.mismatches) > 0 {

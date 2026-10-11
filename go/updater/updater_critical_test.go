@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/fsutil"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // ---- Check（0% 覆盖）----
@@ -39,9 +40,7 @@ func TestCheck_FindsNewer_Critical(t *testing.T) {
 
 	// Check 内部用默认 client + 默认 repo URL；这里用 CheckWithClient 测同等逻辑
 	info, err := CheckWithClient(server.Client(), server.URL, "1.0.0")
-	if err != nil {
-		t.Fatalf("CheckWithClient() = %v", err)
-	}
+	testutil.NoError(t, err, "CheckWithClient() =")
 	if !info.Available {
 		t.Fatal("应检测到新版本")
 	}
@@ -60,9 +59,7 @@ func TestCheck_NoNewer_Critical(t *testing.T) {
 	defer server.Close()
 
 	info, err := CheckWithClient(server.Client(), server.URL, "1.0.0")
-	if err != nil {
-		t.Fatalf("CheckWithClient() = %v", err)
-	}
+	testutil.NoError(t, err, "CheckWithClient() =")
 	if info.Available {
 		t.Fatal("无新版本时不应 available")
 	}
@@ -76,9 +73,7 @@ func TestCheck_EmptyReleases(t *testing.T) {
 	defer server.Close()
 
 	info, err := CheckWithClient(server.Client(), server.URL, "1.0.0")
-	if err != nil {
-		t.Fatalf("CheckWithClient() = %v", err)
-	}
+	testutil.NoError(t, err, "CheckWithClient() =")
 	if info.Available {
 		t.Fatal("空 release 列表不应 available")
 	}

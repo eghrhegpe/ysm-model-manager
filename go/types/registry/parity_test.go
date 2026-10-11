@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"ysm-model-manager/internal/testutil"
 )
 
 type parityFixture struct {
@@ -23,9 +24,7 @@ type parityFixture struct {
 func repoRootFromPkgDir(t *testing.T) string {
 	t.Helper()
 	dir, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("Getwd: %v", err)
-	}
+	testutil.NoError(t, err, "Getwd")
 	for d := dir; ; d = filepath.Dir(d) {
 		if _, err := os.Stat(filepath.Join(d, "tests", "parity", "go-rust-predicates.json")); err == nil {
 			return d
@@ -42,9 +41,7 @@ func loadParityFixture(t *testing.T) *parityFixture {
 	t.Helper()
 	root := repoRootFromPkgDir(t)
 	raw, err := os.ReadFile(filepath.Join(root, "tests", "parity", "go-rust-predicates.json"))
-	if err != nil {
-		t.Fatalf("读取 parity fixture: %v", err)
-	}
+	testutil.NoError(t, err, "读取 parity fixture")
 	var f parityFixture
 	if err := json.Unmarshal(raw, &f); err != nil {
 		t.Fatalf("解析 parity fixture: %v", err)

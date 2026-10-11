@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types/registry"
 )
 
@@ -289,9 +290,7 @@ func TestPushResources_MultiLayerYsmFilePreservesHierarchy(t *testing.T) {
 	os.WriteFile(filepath.Join(globalDir, "vendor", "char2", "model.ysm"), []byte("2"), 0644)
 
 	count, err := PushResources("ysm", globalDir, targetDir, "copy", nil)
-	if err != nil {
-		t.Fatalf("PushResources 失败: %v", err)
-	}
+	testutil.NoError(t, err, "PushResources 失败")
 	if count != 2 {
 		t.Fatalf("应推送 2 个条目，实际 %d", count)
 	}
@@ -319,9 +318,7 @@ func TestPushResources_MultiLayerModelFolderPreservesHierarchy(t *testing.T) {
 	os.WriteFile(filepath.Join(globalDir, "rpg", "weapons", "sword", "tex.png"), []byte("png"), 0644)
 
 	count, err := PushResources("ysm", globalDir, targetDir, "copy", nil)
-	if err != nil {
-		t.Fatalf("PushResources 失败: %v", err)
-	}
+	testutil.NoError(t, err, "PushResources 失败")
 	if count != 1 {
 		t.Fatalf("应推送 1 个文件夹，实际 %d", count)
 	}
@@ -353,9 +350,7 @@ func TestPushResources_PartialPush(t *testing.T) {
 	os.WriteFile(filepath.Join(targetDir, "vendorA", "char1", "model.ysm"), []byte("1"), 0644)
 
 	count, err := PushResources("ysm", globalDir, targetDir, "copy", nil)
-	if err != nil {
-		t.Fatalf("PushResources 失败: %v", err)
-	}
+	testutil.NoError(t, err, "PushResources 失败")
 	if count != 2 {
 		t.Fatalf("应推送 2 个 missing 条目，实际 %d", count)
 	}
@@ -384,9 +379,7 @@ func TestPullResources_MultiLayerPreservesHierarchy(t *testing.T) {
 	os.WriteFile(filepath.Join(targetDir, "community", "author1", "model.ysm"), []byte("extra"), 0644)
 
 	count, err := PullResources("ysm", globalDir, targetDir, nil)
-	if err != nil {
-		t.Fatalf("PullResources 失败: %v", err)
-	}
+	testutil.NoError(t, err, "PullResources 失败")
 	if count != 1 {
 		t.Fatalf("应拉取 1 个条目，实际 %d", count)
 	}
@@ -411,9 +404,7 @@ func TestPullResources_MultiLayerMixed(t *testing.T) {
 	os.WriteFile(filepath.Join(targetDir, "nested", "deep", "deep_extra.ysm"), []byte("deep"), 0644)
 
 	count, err := PullResources("ysm", globalDir, targetDir, nil)
-	if err != nil {
-		t.Fatalf("PullResources 失败: %v", err)
-	}
+	testutil.NoError(t, err, "PullResources 失败")
 	if count != 2 {
 		t.Fatalf("应拉取 2 个条目，实际 %d", count)
 	}
@@ -446,9 +437,7 @@ func TestPushPull_MultiLayerRoundTrip(t *testing.T) {
 
 	// Push
 	count, err := PushResources("ysm", globalDir, targetDir, "copy", nil)
-	if err != nil {
-		t.Fatalf("Push 失败: %v", err)
-	}
+	testutil.NoError(t, err, "Push 失败")
 	if count != 1 {
 		t.Fatalf("Push 应推送 1 个，实际 %d", count)
 	}
@@ -463,9 +452,7 @@ func TestPushPull_MultiLayerRoundTrip(t *testing.T) {
 
 	// Pull 回来
 	count, err = PullResources("ysm", globalDir, targetDir, nil)
-	if err != nil {
-		t.Fatalf("Pull 失败: %v", err)
-	}
+	testutil.NoError(t, err, "Pull 失败")
 	if count != 1 {
 		t.Fatalf("Pull 应拉取 1 个，实际 %d", count)
 	}
@@ -594,9 +581,7 @@ func TestPushResources_DirLevel_PreservesHierarchy(t *testing.T) {
 	os.WriteFile(filepath.Join(modelDir, "tex", "toon.png"), []byte("png-tex"), 0644)
 
 	count, err := PushResources("EntityPlayer", globalDir, targetDir, "copy", nil)
-	if err != nil {
-		t.Fatalf("PushResources 失败: %v", err)
-	}
+	testutil.NoError(t, err, "PushResources 失败")
 	if count != 1 {
 		t.Fatalf("应推送 1 个文件夹，实际 %d", count)
 	}
@@ -619,9 +604,7 @@ func TestPushResources_DirLevel_PreservesHierarchy(t *testing.T) {
 
 	// 二次推送应为 0（幂等验证——relKey 匹配已存在）
 	count2, err2 := PushResources("EntityPlayer", globalDir, targetDir, "copy", nil)
-	if err2 != nil {
-		t.Fatalf("二次推送失败: %v", err2)
-	}
+	testutil.NoError(t, err2, "二次推送失败")
 	if count2 != 0 {
 		t.Fatalf("二次推送应为 0（已同步），实际 %d", count2)
 	}
@@ -640,9 +623,7 @@ func TestPushResources_FolderLevelMMD_Compatibility(t *testing.T) {
 	os.WriteFile(filepath.Join(globalDir, "mmdmodel", "char.pmx"), []byte("pmx"), 0644)
 
 	count, err := PushResources("EntityPlayer", globalDir, targetDir, "copy", nil)
-	if err != nil {
-		t.Fatalf("Push MMD 失败: %v", err)
-	}
+	testutil.NoError(t, err, "Push MMD 失败")
 	if count != 1 {
 		t.Fatalf("应推送 1 个 MMD 文件夹，实际 %d", count)
 	}

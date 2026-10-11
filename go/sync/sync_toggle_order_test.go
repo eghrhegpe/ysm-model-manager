@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -52,9 +53,7 @@ func TestSyncToggleStatus_RelKeyMiss_FallsBackToHash(t *testing.T) {
 	}
 
 	disable, enable, err := SyncToggleStatus(customDir, repoDir, scanFn)
-	if err != nil {
-		t.Fatalf("不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "不应报错")
 	if disable != 1 {
 		t.Errorf("改名文件应经 hash 兜底被禁用，disable = %d, want 1", disable)
 	}
@@ -103,9 +102,7 @@ func TestSyncToggleStatus_RelKeyWinsOverHash(t *testing.T) {
 	}
 
 	disable, enable, err := SyncToggleStatus(customDir, repoDir, scanFn)
-	if err != nil {
-		t.Fatalf("不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "不应报错")
 	if disable != 0 {
 		t.Errorf("relKey 对应启用状态，不应误禁 model_a，disable = %d, want 0", disable)
 	}

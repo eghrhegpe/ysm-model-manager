@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -386,9 +387,7 @@ func TestSyncToggleStatus_EnableDisable(t *testing.T) {
 	}
 
 	disable, enable, err := SyncToggleStatus(customDir, repoDir, scanFn)
-	if err != nil {
-		t.Fatalf("SyncToggleStatus 失败: %v", err)
-	}
+	testutil.NoError(t, err, "SyncToggleStatus 失败")
 	if disable != 1 {
 		t.Errorf("应禁用 1 个（model_a），实际 %d", disable)
 	}
@@ -422,9 +421,7 @@ func TestSyncToggleStatus_NoMatch(t *testing.T) {
 	}
 
 	disable, enable, err := SyncToggleStatus(customDir, repoDir, scanFn)
-	if err != nil {
-		t.Fatalf("SyncToggleStatus 失败: %v", err)
-	}
+	testutil.NoError(t, err, "SyncToggleStatus 失败")
 	if disable != 0 || enable != 0 {
 		t.Errorf("无匹配文件应不动，实际 disable=%d enable=%d", disable, enable)
 	}

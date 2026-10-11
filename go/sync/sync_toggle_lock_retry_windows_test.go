@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -58,9 +59,7 @@ func TestSyncToggleStatus_LockedFileSkippedSilently(t *testing.T) {
 	}, nil)
 
 	disableCount, enableCount, err := SyncToggleStatus(customDir, filesRoot, scanFn)
-	if err != nil {
-		t.Fatalf("锁定文件应静默跳过而非报错，got: %v", err)
-	}
+	testutil.NoError(t, err, "锁定文件应静默跳过而非报错，got")
 	if enableCount != 0 || disableCount != 0 {
 		t.Fatalf("锁定期间不应有任何改名生效，got disable=%d enable=%d", disableCount, enableCount)
 	}

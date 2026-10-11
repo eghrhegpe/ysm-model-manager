@@ -21,9 +21,7 @@ func TestNewStore_EmptyConfigDirMemoryMode(t *testing.T) {
 	}
 	// 读：空数据，无文件访问
 	tags, err := s.GetTags("/m")
-	if err != nil {
-		t.Fatalf("内存态 GetTags 失败: %v", err)
-	}
+	testutil.NoError(t, err, "内存态 GetTags 失败")
 	if len(tags) != 0 {
 		t.Fatalf("内存态 GetTags 应返回空, got %v", tags)
 	}
@@ -122,9 +120,7 @@ func TestLoad_JSONNullContent(t *testing.T) {
 		t.Fatal(err)
 	}
 	tags, err := s.GetTags("/m")
-	if err != nil {
-		t.Fatalf("JSON null 内容不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "JSON null 内容不应报错")
 	if len(tags) != 0 {
 		t.Fatalf("JSON null 内容应读为空数据, got %v", tags)
 	}
@@ -222,9 +218,7 @@ func TestListByTag_EmptyTagNil(t *testing.T) {
 	dir := t.TempDir()
 	s := NewStore(dir)
 	res, err := s.ListByTag("  ")
-	if err != nil {
-		t.Fatalf("空白 tag 不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "空白 tag 不应报错")
 	if res != nil {
 		t.Fatalf("空白 tag 应返回 nil, got %v", res)
 	}
@@ -275,9 +269,7 @@ func TestStoreMemoryModeRetainsWrites(t *testing.T) {
 	}
 	// 数据仍在会话内：GetTags 应能读到（load 初始化了 data map）
 	got, err := s.GetTags("/models/a.ysm")
-	if err != nil {
-		t.Fatalf("内存态 GetTags 不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "内存态 GetTags 不应报错")
 	// 注意：load 的内存态分支在 data!=nil 守卫之前重建空 map，
 	// 故首次 SetTags 后 data 可能为空——这是已知行为，不在此测试中锁定
 	_ = got

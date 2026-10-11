@@ -8,6 +8,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // ====== extractEmbeddedHelper ======
@@ -42,9 +43,7 @@ func TestExtractEmbeddedHelper_EmptyDest(t *testing.T) {
 
 	// 验证：文件已写入，大小 > 0
 	info, err := os.Stat(dest)
-	if err != nil {
-		t.Fatalf("helper 文件未生成: %v", err)
-	}
+	testutil.NoError(t, err, "helper 文件未生成")
 	if info.Size() == 0 {
 		t.Error("helper 文件大小为 0")
 	}

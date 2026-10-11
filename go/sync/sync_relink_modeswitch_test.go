@@ -15,6 +15,7 @@ import (
 	"strings"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -80,9 +81,7 @@ func TestRelinkDir_HardLinkToCopy_Decouples(t *testing.T) {
 		t.Fatalf("应重链接 1 个，实际 %d", n)
 	}
 	ci, err := os.Stat(customFile)
-	if err != nil {
-		t.Fatalf("实例文件应存在: %v", err)
-	}
+	testutil.NoError(t, err, "实例文件应存在")
 	if os.SameFile(si, ci) {
 		t.Fatal("hardlink→copy 后仍共享 inode——切模式未解耦（真缺陷，按 ADR-296 D1 排查 linkMode 时序/scanner 缓存）")
 	}
@@ -113,9 +112,7 @@ func TestRelinkDir_SymlinkToCopy_Decouples(t *testing.T) {
 		t.Fatalf("应重链接 1 个，实际 %d", n)
 	}
 	li, err := os.Lstat(customFile)
-	if err != nil {
-		t.Fatalf("实例文件应存在: %v", err)
-	}
+	testutil.NoError(t, err, "实例文件应存在")
 	if li.Mode()&os.ModeSymlink != 0 {
 		t.Fatal("symlink→copy 后仍是符号链接——未解耦")
 	}

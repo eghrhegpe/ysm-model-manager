@@ -173,9 +173,7 @@ func TestExtractYsmSummary_MalformedExtraAnim(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "mal.json")
 	os.WriteFile(path, []byte(payload), 0o644)
 	sum, err := ExtractYsmSummary(path)
-	if err != nil {
-		t.Fatalf("畸形 extra_animation 不应再让整文件解析失败: %v", err)
-	}
+	testutil.NoError(t, err, "畸形 extra_animation 不应再让整文件解析失败")
 	// 修复后：metadata.Name 必须保留（修复前随整个 Unmarshal 一起丢失）
 	if sum.Name != "mal" {
 		t.Errorf("metadata.Name 应保留 = \"mal\", 实际 = %q", sum.Name)
@@ -196,9 +194,7 @@ func TestExtractYsmSummary_EmptyPlayerArrays(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "empty.json")
 	os.WriteFile(path, []byte(payload), 0o644)
 	sum, err := ExtractYsmSummary(path)
-	if err != nil {
-		t.Fatalf("空数组不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "空数组不应报错")
 	if sum.Name != "empty" {
 		t.Errorf("Name = %q, want empty", sum.Name)
 	}
@@ -212,9 +208,7 @@ func TestExtractYsmSummary_MissingFiles(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "nofiles.json")
 	os.WriteFile(path, []byte(`{"spec":1,"metadata":{"name":"nof"}}`), 0o644)
 	sum, err := ExtractYsmSummary(path)
-	if err != nil {
-		t.Fatalf("缺 files 应容错: %v", err)
-	}
+	testutil.NoError(t, err, "缺 files 应容错")
 	if sum.Name != "nof" {
 		t.Errorf("Name = %q", sum.Name)
 	}
@@ -243,9 +237,7 @@ func TestExtractYsmSummary_ZipSuffixShadow(t *testing.T) {
 		"geo/evil.txt.json": shadowJSON,
 	})
 	sum, err := ExtractYsmSummary(path)
-	if err != nil {
-		t.Fatalf("不应报错: %v", err)
-	}
+	testutil.NoError(t, err, "不应报错")
 	// 期望从 `geo/main.json` 取到 64x32
 	if sum.Stats.TexWidth != 64 || sum.Stats.TexHeight != 32 {
 		// 如果拿到 128x128 说明 HasSuffix 匹配到 evil.txt.json（源码脆弱点）
@@ -264,9 +256,7 @@ func TestExtractYsmSummary_StringModel(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "str.json")
 	os.WriteFile(path, []byte(payload), 0o644)
 	sum, err := ExtractYsmSummary(path)
-	if err != nil {
-		t.Fatalf("字符串 model 应容错: %v", err)
-	}
+	testutil.NoError(t, err, "字符串 model 应容错")
 	if sum.Stats.Models != 1 {
 		t.Errorf("字符串 model 统计 = %d, want 1", sum.Stats.Models)
 	}
@@ -288,9 +278,7 @@ func TestExtractYsmSummary_MalformedConfigForms(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "cf.json")
 	os.WriteFile(path, []byte(payload), 0o644)
 	sum, err := ExtractYsmSummary(path)
-	if err != nil {
-		t.Fatalf("畸形 config_forms 应容错: %v", err)
-	}
+	testutil.NoError(t, err, "畸形 config_forms 应容错")
 	if len(sum.ConfigMenus) != 1 {
 		t.Fatalf("应有 1 个 ConfigMenu，实际 = %d", len(sum.ConfigMenus))
 	}
@@ -314,9 +302,7 @@ func TestExtractYsmSummary_EmptyAuthorsNilContact(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "a0.json")
 	os.WriteFile(path, []byte(payload), 0o644)
 	sum, err := ExtractYsmSummary(path)
-	if err != nil {
-		t.Fatalf("空 author + nil contact 应容错: %v", err)
-	}
+	testutil.NoError(t, err, "空 author + nil contact 应容错")
 	// contact 为 nil 时 Bilibili 应回退到空串；author 列表长度应保留
 	if len(sum.Authors) != 1 {
 		t.Errorf("Authors 长度 = %d, 期望 1（空 name 的 author 条目仍应被保留）", len(sum.Authors))
@@ -476,9 +462,7 @@ func TestExtractYsmSummary_ZipLongTips(t *testing.T) {
 	}`, tips)
 	path := testutil.WriteZipFile(t, "long.ysm", map[string]string{"ysm.json": payload})
 	sum, err := ExtractYsmSummary(path)
-	if err != nil {
-		t.Fatalf("超长 tips 应容错: %v", err)
-	}
+	testutil.NoError(t, err, "超长 tips 应容错")
 	if utf8.RuneCountInString(sum.Tips) > 203 { // 200 + "..."
 		t.Errorf("Tips rune 长度 = %d，应 ≤ 203（TruncateLimit 上限）", utf8.RuneCountInString(sum.Tips))
 	}
@@ -547,9 +531,7 @@ func TestExtractYsmSummary_YSGP_NoStats(t *testing.T) {
 	p := filepath.Join(dir, "enc.ysm")
 	os.WriteFile(p, []byte("YSGP\x00encrypted"), 0o644)
 	sum, err := ExtractYsmSummary(p)
-	if err != nil {
-		t.Fatalf("YSGP 分支不应返回 error: %v", err)
-	}
+	testutil.NoError(t, err, "YSGP 分支不应返回 error")
 	if sum.Stats.Models != 0 || sum.Stats.Textures != 0 {
 		t.Errorf("YSGP 分支 stats 应全 0，实际 = %+v", sum.Stats)
 	}

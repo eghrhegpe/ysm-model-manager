@@ -86,7 +86,7 @@ func (s *scanBenchJSON) AttachSidecar(output, filesRoot string) {
 }
 
 func init() {
-	RegisterCommandC("scan-bench", CatPerf, "扫描基准（Go walk 单引擎耗时测量）", runScanBench,
+	RegisterCommandRO("scan-bench", CatPerf, "扫描基准（Go walk 单引擎耗时测量）", runScanBench,
 		ParamSpec{Key: "iterations", Type: ParamNumber},
 		ParamSpec{Key: "format", Type: ParamString},
 	)

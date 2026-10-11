@@ -28,7 +28,7 @@ const registered = new Set();
 for (const f of fs.readdirSync(CLI_DIR)) {
   if (!f.endsWith(".go") || f.endsWith("_test.go")) continue;
   const text = fs.readFileSync(path.join(CLI_DIR, f), "utf8");
-  const re = /RegisterCommandC\(\s*"([a-z0-9-]+)"/g;
+  const re = /RegisterCommand(?:C|RO)\(\s*"([a-z0-9-]+)"/g;
   for (const m of text.matchAll(re)) registered.add(m[1]);
 }
 

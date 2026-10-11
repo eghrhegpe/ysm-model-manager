@@ -14,8 +14,8 @@ import (
 )
 
 func init() {
-	RegisterCommandC("perf-log", CatPerf, "输出优化记录日志（按时间倒序，含问题/做法/效果/提交）", runPerfLog)
-	RegisterCommandC("perf-snapshot", CatPerf, "一站式性能快照（AI 友好 JSON，前置探测瓶颈）", runPerfSnapshot)
+	RegisterCommandRO("perf-log", CatPerf, "输出优化记录日志（按时间倒序，含问题/做法/效果/提交）", runPerfLog)
+	RegisterCommandRO("perf-snapshot", CatPerf, "一站式性能快照（AI 友好 JSON，前置探测瓶颈）", runPerfSnapshot)
 }
 
 // optEntry 一条优化记录（对齐 optimization_log.md 表格 6 列）

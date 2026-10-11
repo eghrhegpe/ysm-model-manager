@@ -111,14 +111,14 @@ invariant_anchors:
 | `perf_*`（4 文件） | 性能诊断：`perf.go`（`perf-log` 优化记录）、`perf_snapshot.go`（`perf-snapshot` 一站式快照）、`perf_identity.go`（报告身份块，ADR-262 D2）、`perf_targets.go` + `perf_target_set.go`（目标集解析与三旋钮 selector×order×limit，ADR-262 D3） | — |
 | `flow_*`（3 文件） | `gui-flow` 命令：`flow.go`（类型 + `runGUIFlow` 主流程）、`flow_phases.go`（各 `runPhase*` 实现）、`flow_report.go`（数据准备 + 渲染估算 + 报告） | 原 781 行单文件拆分 |
 | `scan_bench.go` | 扫描基准（Go walk 单引擎耗时测量） | — |
-| `json.go` | JSON 输出封装（信封 `NewJsonSuccess` / `NewJsonError`）+ 命令清单导出（`GetAllowedCommands` / `GetAllowedCommandSpecs`） | — |
+| `json.go` | JSON 输出封装（信封 `NewJsonSuccess` / `NewJsonError`）+ 命令清单导出（`GetAllowedCommands` / `GetAllowedCommandSpecs`，**只出 ReadOnly=true 的子集**） | — |
 
 ## 对外 API / 入口
 
 - `RunCLI(app AppService, args []string) error` — CLI 模式入口（根 `main.go` 调用）
 - `RunCLIInProcess(app, parent, args) (string, error)` — 进程内执行（ADR-199，替代 GUI fork 子进程）
-- `RegisterCommandC(name, cat, desc, fn)` / `RegisterCommandCParams(...)` — 命令注册（ParamSpec 登记）
-- `AllowedCommands` / `GetAllowedCommandSpecs()` — 供 `main.go` 注入 GUI 桥
+- `RegisterCommandC(name, cat, desc, fn)` / `RegisterCommandCParams(...)` — 命令注册（ParamSpec 登记）；只读命令用 `RegisterCommandRO`（签名同形，语义分级 ReadOnly=true）
+- `AllowedCommands` / `GetAllowedCommandSpecs()` — 供 `main.go` 注入 GUI 桥；**只含只读命令**（2026-10-11 起 mutating 命令不再暴露，防进程内桥绕过绑定层失效/标签跟随）
 
 ## 与其他子系统关系
 

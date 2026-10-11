@@ -15,9 +15,9 @@ import (
 )
 
 func init() {
-	RegisterCommandC("resource-scan", CatResource, "扫描模型仓库资源，统计资产分布", runResourceScan)
-	RegisterCommandC("repo-audit", CatResource, "仓库健康审计（完整性 + 缓存 + 资产）", runRepoAudit)
-	RegisterCommandC("resource-types", CatResource, "输出资源类型注册表（验证 resource_types.json 读取能力）", runResourceTypes)
+	RegisterCommandRO("resource-scan", CatResource, "扫描模型仓库资源，统计资产分布", runResourceScan)
+	RegisterCommandRO("repo-audit", CatResource, "仓库健康审计（完整性 + 缓存 + 资产）", runRepoAudit)
+	RegisterCommandRO("resource-types", CatResource, "输出资源类型注册表（验证 resource_types.json 读取能力）", runResourceTypes)
 }
 
 // resourceScanResult 资源扫描结果

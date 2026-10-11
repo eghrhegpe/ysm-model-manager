@@ -86,7 +86,7 @@ GUI→CLI 参数链路（frontend buildArgsMap → Wails map → ExecuteCLI → 
 
 | 决策 | 状态 | 落点 |
 |------|------|------|
-| A1 规格下沉 go/cli 注册表 | ✅ 落地 | `registry.go`：`ParamSpec{Key,Type,AllowEmpty}` + `CliCommand.Params` + `RegisterCommandC` 变参（既有调用零改动）；`json.go` `GetAllowedCommandSpecs()` 与 `GetAllowedCommands()` 同源派生防漂移 |
+| A1 规格下沉 go/cli 注册表 | ✅ 落地 | `registry.go`：`ParamSpec{Key,Type,AllowEmpty}` + `CliCommand.Params` + `RegisterCommandC` 变参（既有调用零改动）；只读命令走 `RegisterCommandRO`（签名同形，置 `ReadOnly=true`）；`json.go` `GetAllowedCommandSpecs()` 与 `GetAllowedCommands()` 同源派生防漂移，**2026-10-11 起两者只出只读子集**（mutating 命令不暴露给前端桥） |
 | A2 桥接按规格序列化 | ✅ 落地 | `internal/app/cli_bridge.go`：`buildCLIArgs`（纯函数可单测）——有规格按声明序输出 + AllowEmpty=true 时显式空值（`--key=` / `--key 0` / `--key=false`）；无规格走 legacy 降级；规格外键/类型不符 → 告警 + 尾部追加不丢参。逐键规则抽为 `appendSpecKey`（与 legacy 路径 `appendLegacyKey` 对称；2026-10-07 复杂度拆解，行为逐项等价） |
 | A1→A2 装配通道 | ✅ 落地 | `main.go` `cliSpecsToDTO` 字段级薄转换（internal/app 零依赖 go/cli）；`SetAllowedCommandSpecs` 独立 once 注入（旧装配/测试只注入名单 → 自动 legacy） |
 | A4 第一波登记 | ✅ 落地 | 5 个有参数高频命令：search（8 参）/ analyze（model）/ list（limit,format）/ single-bench（6 参）/ gui-flow（model,verbose）；**全部 AllowEmpty=false**（与旧行为逐位等价，空值仍丢） |

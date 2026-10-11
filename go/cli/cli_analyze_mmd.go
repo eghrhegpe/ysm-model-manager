@@ -13,7 +13,7 @@ import (
 )
 
 func init() {
-	RegisterCommandC("analyze-mmd", CatResource, "分析 MMD 模型资产（贴图、PMX、VMD 等）", runAnalyzeMMD)
+	RegisterCommandRO("analyze-mmd", CatResource, "分析 MMD 模型资产（贴图、PMX、VMD 等）", runAnalyzeMMD)
 }
 
 type mmdAssetScan struct {

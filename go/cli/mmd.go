@@ -18,7 +18,7 @@ import (
 )
 
 func init() {
-	RegisterCommandC("file-bench", CatPerf, "测试大文件读取性能（原始读取吞吐；不解析/不解码，任意类型大文件都可测）", runFileBench)
+	RegisterCommandRO("file-bench", CatPerf, "测试大文件读取性能（原始读取吞吐；不解析/不解码，任意类型大文件都可测）", runFileBench)
 }
 
 // CLI 阈值常量

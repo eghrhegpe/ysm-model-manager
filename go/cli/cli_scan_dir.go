@@ -16,7 +16,7 @@ import (
 )
 
 func init() {
-	RegisterCommandC("scan-dir", CatResource, "扫描 MMD 目录结构并统计资产", runScanDir)
+	RegisterCommandRO("scan-dir", CatResource, "扫描 MMD 目录结构并统计资产", runScanDir)
 }
 
 type scanDirResult struct {

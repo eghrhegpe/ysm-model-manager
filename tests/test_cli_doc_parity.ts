@@ -4,7 +4,7 @@
  *
  * 背景：CLI 命令一度「已注册但 AGENTS.md 文档停在 18 个」造成入口漂移。
  * 本测试锁住三条线：
- *  1. go/cli 的 RegisterCommandC 注册命令名集合 == docs/cli-commands.md 文档命令名集合（双向相等）
+ *  1. go/cli 的 RegisterCommandC/RegisterCommandRO 注册命令名集合 == docs/cli-commands.md 文档命令名集合（双向相等）
  *  2. AGENTS.md 根文档引用 docs/cli-commands.md（入口指针不漂移）
  *  3. 文档含 GEN 标记且命令数不低于注册表下限（防文档被整节静默删除）
  * 纯静态、读源码 + 生成物、零副作用、零 Go 编译，可进每次 push 门禁。
@@ -33,12 +33,12 @@ function readOrDie(rel) {
   return fs.readFileSync(p, "utf8");
 }
 
-// ── 1) 注册命令名集合（与 gen-cli-doc.mjs 同口径：RegisterCommandC + 排除 _test.go）──
+// ── 1) 注册命令名集合（与 gen-cli-doc.mjs 同口径：RegisterCommand(C|RO) + 排除 _test.go）──
 const goFiles = fs.readdirSync(CLI_DIR).filter((f) => f.endsWith(".go") && !f.endsWith("_test.go"));
 const registered = new Set();
 for (const f of goFiles) {
   const text = readOrDie(`go/cli/${f}`);
-  const re = /RegisterCommandC\(\s*"([a-z0-9-]+)"/g;
+  const re = /RegisterCommand(?:C|RO)\(\s*"([a-z0-9-]+)"/g;
   for (const m of text.matchAll(re)) registered.add(m[1]);
 }
 

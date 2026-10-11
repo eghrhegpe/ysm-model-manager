@@ -13,7 +13,7 @@ import (
 )
 
 func init() {
-	RegisterCommandC("gui-flow", CatPerf, "模拟 GUI 完整加载流程（配置→扫描→加载→渲染预估）", runGUIFlow,
+	RegisterCommandRO("gui-flow", CatPerf, "模拟 GUI 完整加载流程（配置→扫描→加载→渲染预估）", runGUIFlow,
 		ParamSpec{Key: "model", Type: ParamString},
 		ParamSpec{Key: "verbose", Type: ParamBool},
 	)

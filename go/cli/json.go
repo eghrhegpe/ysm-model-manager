@@ -130,12 +130,17 @@ func IsCommandAllowed(command string) bool {
 	return exists
 }
 
-// GetAllowedCommands 返回所有已注册命令（自动派生自 cliCommands 注册表）
-// 新增命令只需 RegisterCommand，无需手动同步白名单
+// GetAllowedCommands 返回可暴露给前端桥的只读命令（自动派生自 cliCommands 注册表，需 ReadOnly=true）。
+// 锐评 2026-10-11 收口（原为全量注册表 → fail-open）：进程内桥（ADR-199）与 GUI 同驻派生缓存，
+// mutating 命令若自动暴露，前端一调就绕过绑定层的 scanner.InvalidateCache / 标签键跟随。
+// 现仅分级为只读的命令才暴露；mutating 命令仍可在 CLI 终端运行（DispatchCommand/GetAllCommands 不筛选）。
+// 新增命令只需 RegisterCommandRO 即自动入列，无需手动同步白名单。
 func GetAllowedCommands() []string {
 	names := make([]string, 0, len(cliCommands))
-	for name := range cliCommands {
-		names = append(names, name)
+	for name, cmd := range cliCommands {
+		if cmd.ReadOnly {
+			names = append(names, name)
+		}
 	}
 	sort.Strings(names)
 	return names
@@ -144,17 +149,18 @@ func GetAllowedCommands() []string {
 // CommandSpec 命令 + 参数规格（ADR-173 A1：供 main.go 装配注入 app 桥接层）
 // 未登记规格的命令 Params 为 nil，app 侧对其走 legacy 降级序列化
 type CommandSpec struct {
-	Name   string
-	Params []ParamSpec
+	Name     string
+	Params   []ParamSpec
+	ReadOnly bool // 语义分级（锐评 2026-10-11）：桥接层可据此做只读门控（当前 GetAllowedCommands 已只出 RO）
 }
 
-// GetAllowedCommandSpecs 返回全部注册命令的名称 + 参数规格（声明序=桥序列化序）
-// 与 GetAllowedCommands 同源派生，杜绝「名单与规格漂移」
+// GetAllowedCommandSpecs 返回可暴露命令的名称 + 参数规格（声明序=桥序列化序）
+// 与 GetAllowedCommands 同源派生，杜绝「名单与规格漂移」——只包含只读命令
 func GetAllowedCommandSpecs() []CommandSpec {
 	names := GetAllowedCommands()
 	specs := make([]CommandSpec, 0, len(names))
 	for _, name := range names {
-		specs = append(specs, CommandSpec{Name: name, Params: cliCommands[name].Params})
+		specs = append(specs, CommandSpec{Name: name, Params: cliCommands[name].Params, ReadOnly: true})
 	}
 	return specs
 }

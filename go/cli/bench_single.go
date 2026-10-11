@@ -14,7 +14,7 @@ import (
 )
 
 func init() {
-	RegisterCommandC("single-bench", CatPerf, "单模型加载基准测试（优化基础，单模型快=所有场景快）", runSingleBench,
+	RegisterCommandRO("single-bench", CatPerf, "单模型加载基准测试（优化基础，单模型快=所有场景快）", runSingleBench,
 		// 与 flag 定义序一致：iterations → registerPerfTargetFlags 的 target/order/rtype/model/max-models
 		// → 基准三参 → format。
 		// ⚠️ --target 是**目标集 selector**（model/rtype/all/repo），--model 是该 selector 下的**路径载荷**，

@@ -49,7 +49,12 @@ type CliCommand struct {
 	Description string
 	// Params 参数规格（ADR-173：默认 nil=未登记，桥接层走 legacy 降级保持兼容）
 	Params []ParamSpec
-	Run    func(ctx *CmdContext) error
+	// ReadOnly 语义分级（锐评 2026-10-11 收口）：true=只读巡检/报告，可暴露给前端桥；
+	// false（零值，fail-closed）=mutating（移动/删除/写缓存/写配置/写标签…）。
+	// 进程内桥（ADR-199 直调）与 GUI 同驻派生缓存，mutating 命令若可被前端调用，
+	// 会绕过绑定层的 scanner.InvalidateCache / 标签键跟随——故 GetAllowedCommands 只导出 RO 子集。
+	ReadOnly bool
+	Run      func(ctx *CmdContext) error
 }
 
 // 命令分类常量
@@ -85,6 +90,23 @@ func RegisterCommandC(name, category, description string, run func(ctx *CmdConte
 		Params:      params,
 		Run:         run,
 	}
+}
+
+// RegisterCommandRO 注册只读（巡检/报告）CLI 子命令——唯一会把命令暴露给前端桥的注册方式。
+// 语义与 RegisterCommandC 完全一致，仅追加 ReadOnly=true（其余命令零值 = mutating，
+// 自动不出现在 GetAllowedCommands 里，故新增命令默认 fail-closed、不会被前端误调）。
+func RegisterCommandRO(name, category, description string, run func(ctx *CmdContext) error, params ...ParamSpec) {
+	RegisterCommandC(name, category, description, run, params...)
+	if c, exists := cliCommands[name]; exists {
+		c.ReadOnly = true
+		cliCommands[name] = c
+	}
+}
+
+// IsReadOnlyCommand 查询命令是否被分级为只读（未注册命令视为 mutating，fail-closed）
+func IsReadOnlyCommand(name string) bool {
+	cmd, exists := cliCommands[name]
+	return exists && cmd.ReadOnly
 }
 
 // GetCommand 获取已注册的命令

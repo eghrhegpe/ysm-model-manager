@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	RegisterCommandC("health-report", CatResource, "一键全仓体检报告（完整性+缓存+资源+去重，--bench 追加性能基线）", runHealthReport)
+	RegisterCommandRO("health-report", CatResource, "一键全仓体检报告（完整性+缓存+资源+去重，--bench 追加性能基线）", runHealthReport)
 }
 
 // healthReportJSON health-report 的 JSON 载荷：内嵌 repoaudit.HealthReport

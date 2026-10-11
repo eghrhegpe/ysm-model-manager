@@ -7,7 +7,7 @@ import (
 )
 
 func init() {
-	RegisterCommandC("scan", CatResource, "扫描入口聚合（子命令: models/authors/resources）", runScan)
+	RegisterCommandRO("scan", CatResource, "扫描入口聚合（子命令: models/authors/resources）", runScan)
 }
 
 // runScan 父命令：分发子命令。无子命令时打印用法。

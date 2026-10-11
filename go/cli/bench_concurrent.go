@@ -38,7 +38,7 @@ func perfSpecs(prefix []ParamSpec, suffix ...ParamSpec) []ParamSpec {
 }
 
 func init() {
-	RegisterCommandC("concurrent-bench", CatPerf, "并发能力基准测试（串行 vs 并行对比，建议先优化单模型）", runConcurrentBench,
+	RegisterCommandRO("concurrent-bench", CatPerf, "并发能力基准测试（串行 vs 并行对比，建议先优化单模型）", runConcurrentBench,
 		// ADR-173：登记后桥才走 ParamSpec 通道；此前无 spec → 走 legacy 告警路径。
 		// 与 flag 定义序一致（workers → registerPerfTargetFlags 的五参 → format）。
 		perfSpecs(

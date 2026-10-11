@@ -14,10 +14,10 @@ import (
 )
 
 func init() {
-	RegisterCommandC("cache-status", CatCache, "查看纹理缓存状态（路径、大小、文件数）", runCacheStatus)
-	RegisterCommandC("cache-verify", CatCache, "检查模型贴图的缓存命中情况", runCacheVerify)
+	RegisterCommandRO("cache-status", CatCache, "查看纹理缓存状态（路径、大小、文件数）", runCacheStatus)
+	RegisterCommandRO("cache-verify", CatCache, "检查模型贴图的缓存命中情况", runCacheVerify)
 	RegisterCommandC("cache-clear", CatCache, "清空纹理缓存", runCacheClear)
-	RegisterCommandC("cache-diag", CatCache, "诊断缓存流程（哈希计算、读写功能、目录权限）", runCacheDiag)
+	RegisterCommandRO("cache-diag", CatCache, "诊断缓存流程（哈希计算、读写功能、目录权限）", runCacheDiag)
 }
 
 // runCacheStatus 查看纹理缓存状态

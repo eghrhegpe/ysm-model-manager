@@ -355,7 +355,18 @@ func pruneDir(dir string) (PruneResult, error) {
 	if err != nil {
 		return res, fmt.Errorf("texture_cache: 扫描缓存目录 %s: %w", dir, err)
 	}
-	totalFiles := len(files)
+	// 条目口径基数（P4 清偿 2026-10-12）：KeptCount 与 FreedBytes/Remaining/
+	// ListCacheFiles/GetCacheStats 同定义——.tmp 崩溃残留不是缓存条目。
+	// 原实现 totalFiles − RemovedCount 混入 .tmp，且容量段不裁剪 files 切片，
+	// 终扫切片亦不可靠（删而未滤），故显式「条目基数 − 条目成功删除数」双计数。
+	// 删除失败不记 removedKtx2 → 失败残留如实计入 Kept（与 Remaining「磁盘现状」对称）。
+	totalKtx2 := 0
+	for _, f := range files {
+		if !f.tmp {
+			totalKtx2++
+		}
+	}
+	var removedKtx2 int
 	now := time.Now()
 
 	// 最旧优先排序（确定性：同 mtime 按路径字典序）
@@ -368,12 +379,16 @@ func pruneDir(dir string) (PruneResult, error) {
 
 	// remove 成功返回 true 才记账——删除失败（占用/只读）不得虚报 FreedBytes、
 	// 不得低估 Remaining，且容量段失败时不减 total（继续尝试下一个直到达标）。
-	remove := func(p string) bool {
+	// isTmp 同步条目记账（removedKtx2 只认 .ktx2，.tmp 残留不动条目数）。
+	remove := func(p string, isTmp bool) bool {
 		if err := removeFile(p); err != nil {
 			log.Printf("texture_cache: 淘汰删除失败 %s: %v", p, err)
 			return false
 		}
 		res.RemovedCount++
+		if !isTmp {
+			removedKtx2++
+		}
 		return true
 	}
 
@@ -383,9 +398,9 @@ func pruneDir(dir string) (PruneResult, error) {
 		cutoff := now.Add(-maxAge)
 		kept := files[:0]
 		for _, f := range files {
-			if f.mod.Before(cutoff) && remove(f.path) {
+			if f.mod.Before(cutoff) && remove(f.path, f.tmp) {
 				// .tmp 崩溃残留不是缓存条目，不计 FreedBytes（F-12 统计口径修复）
-				if !strings.HasSuffix(f.path, ".tmp") {
+				if !f.tmp {
 					res.FreedBytes += f.size
 				}
 				continue
@@ -411,7 +426,7 @@ func pruneDir(dir string) (PruneResult, error) {
 			if total <= maxBytes {
 				break
 			}
-			if remove(f.path) {
+			if remove(f.path, false) { // 容量段前置 f.tmp 过滤，此处必为非 tmp 条目
 				total -= f.size
 				res.FreedBytes += f.size
 			}
@@ -428,7 +443,11 @@ func pruneDir(dir string) (PruneResult, error) {
 		res.Remaining = total
 	}
 
-	res.KeptCount = totalFiles - res.RemovedCount
+	// KeptCount = 条目基数 − 条目成功删除数（P4 清偿 2026-10-12）：与 FreedBytes/
+	// Remaining/ListCacheFiles/GetCacheStats 同口径——.tmp 崩溃残留不是缓存条目。
+	// 原实现 totalFiles − RemovedCount 混入 .tmp；删除失败不记 removedKtx2 →
+	// 失败残留如实计入保留（与 Remaining「磁盘现状」对称）。
+	res.KeptCount = totalKtx2 - removedKtx2
 	return res, nil
 }
 

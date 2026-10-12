@@ -228,6 +228,12 @@ func TestPrune_OrphanTmp_ExpiredCleaned(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(dir, "fresh.ktx2.tmp")); err != nil {
 		t.Fatal("新鲜 .tmp 应保留（可能仍在写入）")
 	}
+	// 口径钉死（P4 清偿 2026-10-12）：.tmp 不是缓存条目——KeptCount 与
+	// FreedBytes/Remaining/ListCacheFiles/GetCacheStats 同定义，只计 .ktx2。
+	// 本例零 .ktx2，删一个 .tmp 留一个 .tmp → 条目保留数恒 0。
+	if res.KeptCount != 0 {
+		t.Fatalf("KeptCount 不应计入 .tmp 残留（条目口径），got %d", res.KeptCount)
+	}
 }
 
 func TestPrune_TmpNotCountedInCapacity(t *testing.T) {
@@ -251,6 +257,11 @@ func TestPrune_TmpNotCountedInCapacity(t *testing.T) {
 	// Remaining 只计 .ktx2（100B），不含 tmp
 	if res.Remaining != 100 {
 		t.Fatalf("剩余应只计 ktx2=100B，got %d", res.Remaining)
+	}
+	// 口径钉死（P4 清偿）：留 b.ktx2=1 条目；partial.ktx2.tmp 存留不计入 KeptCount
+	// （原实现 KeptCount = totalFiles(3) − RemovedCount(1) = 2 混入 .tmp，与上条自相矛盾）
+	if res.KeptCount != 1 {
+		t.Fatalf("KeptCount 应只计保留的 .ktx2 条目=1，got %d", res.KeptCount)
 	}
 }
 

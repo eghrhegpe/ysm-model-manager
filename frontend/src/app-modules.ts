@@ -175,6 +175,12 @@ if (typeof window !== "undefined") {
       toast(`已跟随系统切换至${e.matches ? "深色" : "浅色"}主题`, TOAST_MS.success, "info");
     }
   });
+  // [D9⑥] OS 动画偏好热更：reduce 切换时重跑 applyUIPrefs 刷新 .no-animations
+  // （applyUIPrefs 已读一次 matchMedia：OS reduce + 用户未显式开动画 → 自动关动画；
+  //  用户显式开动画则尊重手动选择。此监听把「启动时读一次」升级为「OS 切换即热更」）
+  window.matchMedia("(prefers-reduced-motion: reduce)").addEventListener("change", () => {
+    applyUIPrefs();
+  });
 }
 
 // ===== 通知原语（ADR-270-d4）：toast:show 一律走 utils/dom/toast.ts，禁裸发 bus.emit =====

@@ -246,6 +246,36 @@ describe("mount3D 主路径（shared 基础设施 + build 注入）", () => {
     expect(hasActivePreview()).toBe(true);
   });
 
+  it("[D9④] mount3D 后焦点移入 overlay（模态 dialog 打开聚焦，WCAG 2.4.3）", async () => {
+    const adapter = makeAdapter();
+    await mount3D(adapter, "/m/a.vrm");
+    const overlay = document.getElementById("ysm-overlay-3d");
+    expect(overlay).not.toBeNull();
+    // overlay 自身可程序聚焦（tabindex=-1），open 时焦点从触发按钮移入模态内
+    expect(overlay!.tabIndex).toBe(-1);
+    expect(document.activeElement).toBe(overlay);
+    cleanupPreview();
+  });
+
+  it("[D9⑤] loadingEl 带 role=status + aria-live=polite（加载态 SR 可感知）", async () => {
+    // build 成功后 loadingEl 已被适配器移除；role=status 是创建时语义，经
+    // 失败路径验证——build 抛错后 loadingEl 保留（showLoadFailure 载体），
+    // 正好断言其语义属性。
+    const badAdapter: PreviewAdapter = {
+      id: "vrm",
+      onClose: vi.fn(),
+      build: vi.fn(async () => { throw new Error("parse boom"); }),
+    };
+    await mount3D(badAdapter, "/m/bad.vrm");
+    // .mpc-loading 在 overlay shadow root 内（document.querySelector 不穿透 shadow 边界）
+    const overlay = document.getElementById("ysm-overlay-3d");
+    const loadingEl = overlay!.shadowRoot!.querySelector(".mpc-loading");
+    expect(loadingEl).not.toBeNull();
+    expect(loadingEl!.getAttribute("role")).toBe("status");
+    expect(loadingEl!.getAttribute("aria-live")).toBe("polite");
+    cleanupPreview();
+  });
+
   it("hasActivePreview 初始为 false；invalidatePreview 无活跃会话时不抛错", () => {
     expect(hasActivePreview()).toBe(false);
     expect(() => invalidatePreview()).not.toThrow();

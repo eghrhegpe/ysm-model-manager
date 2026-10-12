@@ -76,6 +76,11 @@ export function assembleShell(ctx: MountCtx): AssembledShell {
 
   const loadingEl = document.createElement("div");
   loadingEl.className = "mpc-loading";
+  // [D9⑤] loadingEl 内容随渲染/失败而变化，须让 SR 在加载开始/完成时播报。
+  // role=status 隐式 aria-live=polite，仍显式声明以兼容部分 AT 实现。
+  // 注：成功路径 loadingEl.remove()（终点无播报需求）；失败路径文案变更由本属性触发播报。
+  loadingEl.setAttribute("role", "status");
+  loadingEl.setAttribute("aria-live", "polite");
   viewContainer.appendChild(loadingEl);
   ctx.loadingEl = loadingEl;
 

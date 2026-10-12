@@ -55,6 +55,8 @@ describe("ensureOverlayShell 首建", () => {
     expect(overlay.getAttribute("role")).toBe("dialog");
     expect(overlay.getAttribute("aria-modal")).toBe("true");
     expect(overlay.getAttribute("aria-label")).toBe("3D 预览");
+    // [D9④] overlay 为模态 dialog，须可程序聚焦（open 时 mount3D 移焦入内，WCAG 2.4.3）
+    expect(overlay.tabIndex).toBe(-1);
     expect(document.getElementById(PREVIEW_OVERLAY_ID)).toBe(overlay);
     expect(root).toBe(overlay.shadowRoot);
     expect(body.className).toContain("mpc-body");

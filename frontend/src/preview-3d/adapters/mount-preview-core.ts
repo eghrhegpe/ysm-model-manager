@@ -471,6 +471,10 @@ export async function mount3D(
 
   // ===== stage 1: 外壳装配（overlay/camBridge/viewContainer/根菜单/loadingEl + input 容器）=====
   const shell = assembleShell(ctx);
+  // [D9④] 模态 open 后立即移焦入内（WCAG 2.4.3）：焦点从触发按钮（FAB）进入 overlay，
+  // 关闭时 rememberTrigger/returnFocus 归还。装配完成即聚焦，不等异步 build——
+  // 用户打开 3D 预览的瞬间焦点就应落入模态，SR 才能读 dialog 名称与内容。
+  shell.overlay.focus();
   // ===== stage 2: 基础设施装配（escH/shared infra/输入/rAF/tip/switchCtx）=====
   const installed = buildInfra(ctx, shell);
   slots.infra = installed.infra; // 回填 ctx.getInfra() 槽位（buildInfra 后 camBridge 经 getter 读到）

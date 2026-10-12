@@ -80,6 +80,9 @@ export function ensureOverlayShell(deps: OverlayShellDeps): {
     overlay.setAttribute("role", "dialog");
     overlay.setAttribute("aria-modal", "true");
     overlay.setAttribute("aria-label", deps.ariaLabel);
+    // [D9④] 模态 dialog 可程序聚焦（WCAG 2.4.3）：tabindex=-1 不进 Tab 序，
+    // 但 mount3D open 时能 overlay.focus() 把焦点移入模态内（配合 rememberTrigger 归还）
+    overlay.tabIndex = -1;
     document.body.appendChild(overlay);
     const shadow =
       typeof overlay.attachShadow === "function" ? overlay.attachShadow({ mode: "open" }) : null;

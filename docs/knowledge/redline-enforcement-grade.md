@@ -53,7 +53,7 @@ pitfalls:
 
 ## 关键闸事实（决定 B 级含金量）
 
-`check-redlines` 的 12 条规则（R1–R11 / W1–W9）中，映射本批红线的只有 **W6（bypass dialogs）/ W9（settings 卡片唯一造法）/ R7（资源类型魔法串）/ R11（资源类型清单单一同步源）**。其中 W6/W9/R7/R11 均**不在 WARN 集**（`const WARN_RULES = new Set(["R2","R5","R7","R4","W1"])` 实际含 R7，但 W6/W9 不在），属 pre-push 阻断规则。但 `check-redlines` **只在本地 pre-push 跑，CI `--static` 不跑 redlines**，可被 `git push --no-verify` 绕过——这是 B 级普遍存在的"闸可被绕过"盲区，需后续把 redlines 接入 CI。
+`check-redlines` 的规则集（以脚本内 `add()` 调用为唯一事实源，勿在此维护计数）映射本批红线的是 **W6（bypass dialogs）/ W9（settings 卡片唯一造法）/ R7（资源类型魔法串）/ R11（资源类型清单单一同步源）/ R12（pointer 事件统一，2026-10-12 补）/ R14（menu 域 role/aria 引 dom-contract 常量，2026-10-12 补）**。其中 R12/R14 均不在 WARN 集属 pre-push 阻断；R13（绑定层终止型中文错误）为 WARN 债务型——存量 14 处含合理中文透传，阻断会绑架 D1 拍板批。但 `check-redlines` **只在本地 pre-push 跑，CI `--static` 不跑 redlines**，可被 `git push --no-verify` 绕过——这是 B 级普遍存在的"闸可被绕过"盲区，需后续把 redlines 接入 CI。
 
 ## 逐条审计结果（37 条）
 
@@ -111,8 +111,20 @@ D | 184 | ui-components（无收口） | 否 | `glob frontend/src/**/ui-componen
 3. **B 级 → 进 CI**：把 `check-redlines` 接入 CI `--static` 或独立 CI job，消除"本地闸、可绕过"盲区。
 4. **文档漂移修复**：#476 红线文本 `summarize.ts` → `tpl-summary.ts`；#216 红线 `moveItem` → `moveItemMut`。
 
+## 2026-10-12 补闸（C→B 实例化，preview-3d 第三轮审计 D12/D1 批）
+
+两条原「红线宣称可 grep 验证却无门禁」的 C 级裸奔条目，已按 W9 范式升 B 级：
+
+| 红线 | 原状态 | 新闸 | 档位 |
+|------|--------|------|------|
+| pointer-events.md「零残留 mouse 事件」 | 承诺可 grep 验证，实无闸 | `check-redlines` **R12**：三种注册形态全拦 + `// pointer-allow: <理由>` 行注台账（±1 行窗）；存量 7 处落账 | 阻断（不在 WARN 集） |
+| dom-contract.ts「渲染函数 role/class 统一引用此处，禁止手写字符串」 | 契约零执法、全仓手写 role 18 处 | `check-redlines` **R14**：menu 域生产文件裸写属性名即拦；menu 17 处收编常量化，`check-a11y countCoverage` 同步认 `ARIA_ATTR.*` 引用形态防收编假跌 | 阻断（不在 WARN 集） |
+| （配套）绑定层终止型中文错误（D4 前向闸） | 无闸 | `check-redlines` **R13**：`internal/app` 无 `%w` 裸中文 error 扫描，RE2 无负向预查故 `%w` 排除走 JS filter | WARN 债务型（存量 14 处含合理透传，入基线不阻断） |
+
+范围边界（如实登记，非执法漏洞）：R14 只圈 `preview-3d/menu/`——`infra/preview-shell.ts` 等域外裸串受 check-layering **R9 方向闸**保护性隔离（infra→menu 运行时 import 被禁，先例全为 `import type`，收编需契约下沉或 R9 拍板批）；全仓其余 15 处手写 role 属他域存量，扩闸前需分档。
+
 ## 相关
 
 - `routes-quick.md`（索引，顶部物种分流注 + 列改名"主 ADR(如有)"）
-- `scripts/check-redlines.ts`（W6/W9/R7/R11 规则）
+- `scripts/check-redlines.ts`（W6/W9/R7/R11/R12/R13/R14 规则）
 - `scripts/gen-routes-quick.ts`（列头/说明生成源）

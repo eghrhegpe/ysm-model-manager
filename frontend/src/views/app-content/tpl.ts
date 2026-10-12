@@ -312,11 +312,20 @@ export function diagnosticsHTML(): string {
         <input id="diag-perf-baseline-th" type="number" min="1" step="1" value="50" data-testid="diag-perf-baseline-th">
       </div>
       <div class="diag-bar-row" data-perf-mode="single">
-        <button class="btn-base accent" id="diag-perf-run" data-testid="diag-perf-run">${UI_ICONS.performance} ${t("diagnostics.perfRunSingle")}</button>
         <label for="diag-perf-iter" id="diag-perf-iter-label" data-testid="diag-perf-iter-label">${t("diagnostics.perfIterations")}</label>
         <input id="diag-perf-iter" type="number" min="1" step="1" value="3">
         <label for="diag-perf-max" id="diag-perf-max-label" data-testid="diag-perf-max-label" title="${t("diagnostics.perfMaxModelsHint")}">${t("diagnostics.perfMaxModels")}</label>
         <input id="diag-perf-max" type="number" min="1" step="1" value="5" data-testid="diag-perf-max">
+      </div>
+      <!-- 主 CTA 独占一行（2026-10-12）：原先「跑基准」与「迭代次数/取样上限」同行，
+           主按钮被两个数字参数夹住、视觉重量被稀释；conc 屏本就是独占行，三屏待遇不一致。
+           抽成独立行后与 conc 同款（参数在前、执行在末行），用户动线即「填参数 → 点运行」。
+           ⚠️ 两条纪律：① 不要给行加额外 class —— perf-mode.test.ts 按「行开标签字面量 +
+           div 配平」反查控件的行归属，加 class 会让那道门禁失配；② 本注释里也不得出现
+           行开标签的字面量 —— tpl-structure.test.ts 数 div 时不排除 HTML 注释，会凭空
+           多出一个开标签（本次即踩到，配平报 expected 55 to be 56）。 -->
+      <div class="diag-bar-row" data-perf-mode="single">
+        <button class="btn-base accent" id="diag-perf-run" data-testid="diag-perf-run">${UI_ICONS.performance} ${t("diagnostics.perfRunSingle")}</button>
       </div>
       <div class="diag-bar-row" data-perf-mode="conc">
         <label for="diag-perf-conc-workers">${t("diagnostics.perfConcurrentWorkers")}</label>
@@ -328,9 +337,13 @@ export function diagnosticsHTML(): string {
         <button class="btn-base accent" id="diag-perf-conc-run" data-testid="diag-perf-conc-run">${UI_ICONS.performance} ${t("diagnostics.perfRunConcurrent")}</button>
       </div>
       <div class="diag-bar-row" data-perf-mode="scan">
-        <button class="btn-base accent" id="diag-perf-scan-bench" data-testid="diag-perf-scan-bench">${UI_ICONS.performance} ${t("diagnostics.perfScanBenchRun")}</button>
         <label for="diag-perf-scan-iter" id="diag-perf-scan-iter-label" data-testid="diag-perf-scan-iter-label">${t("diagnostics.perfIterations")}</label>
         <input id="diag-perf-scan-iter" type="number" min="1" step="1" value="3" data-testid="diag-perf-scan-iter">
+      </div>
+      <!-- 同上（2026-10-12）：引擎对照的「运行」按钮原本与迭代次数同行，一并抽成独立行，
+           使 bench 三屏的主 CTA 待遇一致（同 conc / single）。 -->
+      <div class="diag-bar-row" data-perf-mode="scan">
+        <button class="btn-base accent" id="diag-perf-scan-bench" data-testid="diag-perf-scan-bench">${UI_ICONS.performance} ${t("diagnostics.perfScanBenchRun")}</button>
       </div>
       <div class="diag-bar-row" data-perf-mode="scan">
         <div class="diag-bar-hint">${t("diagnostics.perfScanBenchHint")}</div>

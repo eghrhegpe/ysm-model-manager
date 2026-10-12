@@ -1155,7 +1155,12 @@ export const en: Record<string, string> = {
   "preview.stats.textures": "Textures",
   "preview.stats.morphs": "Morphs",
   "preview.stats.cubes": "Cubes",
+  "preview.unit.boneCount": "{n} bones",
+  "preview.unit.blockCount": "{n} blocks",
   "preview.pack.textures": "Referenced Textures",
+  "preview.texture.declaration": "Declaration {decl}",
+  "preview.texture.loaded": "Loaded {size}",
+  "preview.texture.fallback": "Texture {n}",
   // MMD detail card (P2: PMX file-parse scope, distinct from runtime stats)
   "preview.stats.file": "📊 File Stats",
   "preview.stats.vertices": "Vertices",

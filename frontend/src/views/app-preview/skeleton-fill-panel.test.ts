@@ -12,6 +12,7 @@ import type { PreviewSnapshot } from "@/preview-3d/state/preview-state.ts";
 import type { Spec3D } from "@/preview-3d/mesh/model3d.ts";
 import * as THREE from "three";
 import { findNodeById } from "@/preview-3d/menu/menu-test-helpers.ts";
+import { t } from "@/core/i18n/t.ts"; // [D2] 断言与被测代码同源走翻译函数，不锁具体措辞
 
 /** 最小 spec（单组件）：1 个 modelGroup，2 根骨骼，2 个纹理槽 */
 function makeSpec(overrides: { models?: unknown[] } = {}) {
@@ -61,14 +62,14 @@ describe("buildYsmModelSchema（声明式 schema）", () => {
     // 单组件 → 无 select
     expect(nodes.some((n) => n.kind === "select")).toBe(false);
     // 统计（逐 id 硬断言，非位置索引）
-    expect(findNodeById(nodes, "ysm-stats-bones")).toMatchObject({ id: "ysm-stats-bones", kind: "field", value: "2 根" });
-    expect(findNodeById(nodes, "ysm-stats-cubes")).toMatchObject({ id: "ysm-stats-cubes", kind: "field", value: "3 个" });
+    expect(findNodeById(nodes, "ysm-stats-bones")).toMatchObject({ id: "ysm-stats-bones", kind: "field", value: t("preview.unit.boneCount", { n: 2 }) });
+    expect(findNodeById(nodes, "ysm-stats-cubes")).toMatchObject({ id: "ysm-stats-cubes", kind: "field", value: t("preview.unit.blockCount", { n: 3 }) });
     // 纹理行
     const texNodes = nodes.filter((n) => n.kind === "row");
     expect(texNodes.length).toBe(2);
     expect(texNodes[0].id).toBe("ysm-tex-0");
-    expect(texNodes[0].value).toContain("声明 64×32");
-    expect(texNodes[0].value).toContain("加载 64×32");
+    expect(texNodes[0].value).toContain(t("preview.texture.declaration", { decl: "64×32" }));
+    expect(texNodes[0].value).toContain(t("preview.texture.loaded", { size: "64×32" }));
   });
 
   it("多组件：组件选择 select 出现，get/set 闭包读写会话 activeComponent，选项含 All + 各组件", () => {
@@ -105,8 +106,8 @@ describe("buildYsmModelSchema（声明式 schema）", () => {
     } as unknown as Parameters<typeof buildYsmModelSchema>[0];
     const active = sessionActive(1);
     const nodes = buildYsmModelSchema(multiCtx, snap(1), active);
-    expect(nodes.find((n) => n.id === "ysm-stats-bones")?.value).toBe("1 根");
-    expect(nodes.find((n) => n.id === "ysm-stats-cubes")?.value).toBe("2 个");
+    expect(nodes.find((n) => n.id === "ysm-stats-bones")?.value).toBe(t("preview.unit.boneCount", { n: 1 }));
+    expect(nodes.find((n) => n.id === "ysm-stats-cubes")?.value).toBe(t("preview.unit.blockCount", { n: 2 }));
     // 组件 1 只有 1 个槽位
     expect(nodes.filter((n) => n.kind === "row").length).toBe(1);
   });
@@ -131,8 +132,7 @@ describe("buildYsmModelSchema（声明式 schema）", () => {
     expect(rows.length).toBe(2); // 专属纹理 2 行（替代全局槽行）
     expect(rows[0].id).toBe("ysm-tex-ex-0");
     expect(rows[0].label).toBe("armor #1"); // 专属纹理 >1 个时带序号
-    expect(rows[0].value).toContain("专属纹理");
-    expect(rows[0].value).toContain("声明 128×64");
+    expect(rows[0].value).toContain(t("preview.texture.declaration", { decl: "128×64" })); // 专属纹理声明行含 i18n 键
     expect(rows[1].id).toBe("ysm-tex-ex-1");
     expect(rows[1].label).toBe("armor #2");
   });

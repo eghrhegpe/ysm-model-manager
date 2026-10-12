@@ -1,6 +1,8 @@
 // ===== skeleton-fill-panel.ts — YSM 模型面板声明式 schema（ADR-126 P5）=====
 // 填充 3D 信息面板：统计 + 纹理 + 模型选择（声明式节点）
+// [D2 补 i18n] 硬编码中文转翻译函数，见下方三处替换点
 
+import { t } from "@/core/i18n/t.ts"; // [D2] i18n 翻译函数
 import { ysmComponentSelectNode } from "@/preview-3d/adapters/ysm-component-select.ts";
 import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
@@ -105,13 +107,13 @@ export function buildYsmModelSchema(
       id: "ysm-stats-bones",
       kind: "field",
       labelKey: "preview.section.bones",
-      value: `${bones} 根`,
+      value: t("preview.unit.boneCount", { n: bones }), // [D2 i18n] 硬编码"{bones}根"→翻译键
     },
     {
       id: "ysm-stats-cubes",
       kind: "field",
       labelKey: "preview.cubesLabel",
-      value: `${cubes} 个`,
+      value: t("preview.unit.blockCount", { n: cubes }), // [D2 i18n] 硬编码"{cubes}个"→翻译键
     },
   );
 
@@ -133,7 +135,7 @@ export function buildYsmModelSchema(
         id: `ysm-tex-ex-${k}`,
         kind: "row",
         label: `${compName}${exclusive.length > 1 ? ` #${k + 1}` : ""}`,
-        value: `专属纹理 声明 ${decl}`,
+        value: `${t("preview.pack.textures")} ${t("preview.texture.declaration", { decl })}`, // [D2 i18n] 硬编码「专属纹理 声明 X」→双翻译键
       });
     });
   } else {
@@ -145,7 +147,7 @@ export function buildYsmModelSchema(
           ?.split(/[/\\]/)
           .pop()
           ?.replace(/\.[^.]+$/, "") ||
-        `纹理 ${s + 1}`;
+        t("preview.texture.fallback", { n: s + 1 }); // [D2 i18n] 硬编码兜底名「纹理 N」→翻译键
       const cat = ctx.model.textureCategories?.[s] || "";
       const ud = (tex as unknown as { userData?: { imgWidth?: unknown; imgHeight?: unknown } })
         ?.userData;
@@ -156,7 +158,8 @@ export function buildYsmModelSchema(
         id: `ysm-tex-${s}`,
         kind: "row",
         label: name,
-        value: `${cat ? `${cat} · ` : ""}声明 ${decl} · 加载 ${size}`,
+        // [D2 i18n] 硬编码「声明 X · 加载 Y」→双翻译键（cat 为数据值原样保留）
+        value: `${cat ? `${cat} · ` : ""}${t("preview.texture.declaration", { decl })} · ${t("preview.texture.loaded", { size })}`,
       });
     }
   }

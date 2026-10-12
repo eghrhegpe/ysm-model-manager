@@ -1156,7 +1156,10 @@ export const ja: Record<string, string> = {
   "preview.stats.textures": "テクスチャ",
   "preview.stats.morphs": "表情",
   "preview.stats.cubes": "キューブ (Cubes)",
-  "preview.pack.textures": "专属纹理",
+  "preview.pack.textures": "参照テクスチャ",
+  "preview.texture.declaration": "宣言 {decl}",
+  "preview.texture.loaded": "読込 {size}",
+  "preview.texture.fallback": "テクスチャ {n}",
   // MMD 詳細カード（P2: PMX ファイル解析口径, 描画実測と区別）
   "preview.stats.file": "📊 ファイル統計",
   "preview.stats.vertices": "頂点",
@@ -1183,6 +1186,8 @@ export const ja: Record<string, string> = {
   "preview.loadFailed": "3D 読み込み失敗",
   "preview.largeModelWarn":
     "大容量ファイル（{size}MB）：デコード時のピークメモリは {peak}MB に達し、低性能デバイスでは動作が重くなるかクラッシュする可能性があります",
+  "preview.unit.boneCount": "{n} 本",
+  "preview.unit.blockCount": "{n} ブロック",
   "preview.gpuBudgetAppend": "GPU 負荷が予算を超過（{reasons}）、これ以上追加できません",
   "preview.gpuBudgetLoad": "GPU 負荷が予算を超過（{reasons}）、読み込みを続行できません",
   "preview.detailTab": "詳細",

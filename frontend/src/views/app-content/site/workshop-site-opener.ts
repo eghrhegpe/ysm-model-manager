@@ -12,12 +12,10 @@ import { backendGetApp } from "@/views/backend-deps.ts";
 import type { BrowseMode } from "./workshop-browse-mode.ts";
 import type { WorkshopPageState } from "./workshop-page-state.ts";
 
-// 扩展 HTMLIFrameElement 以携带加载超时 AbortController（实例级，非模块级）
-declare global {
-  interface HTMLIFrameElement {
-    _wsLoadAbort?: AbortController;
-  }
-}
+// 加载超时 AbortController 按 iframe 实例存 WeakMap：不再向 HTMLIFrameElement 挂
+// `_wsLoadAbort` 伪字段（曾需 declare global 污染原生类型）——与 app-tree/render.ts
+// 「vsStates WeakMap 替代 container._vsRows」同一教义，DOM 原生元素保持零私搭状态。
+const loadAborts = new WeakMap<HTMLIFrameElement, AbortController>();
 
 /** 内嵌浏览加载超时（15s 未完成加载 → 提示此站点不允许内嵌浏览） */
 const WS_EMBED_TIMEOUT_MS = 15000;
@@ -63,7 +61,7 @@ function openEmbedded(root: ShadowRoot, _site: WorkshopSite, url: string): void 
   const blockedEl = root.getElementById("ws-blocked");
 
   // abort 上一轮 timer（如有）：防止快速连续打开时旧 timer 残留触发 blocked 弹层
-  if (iframe?._wsLoadAbort) iframe._wsLoadAbort.abort();
+  if (iframe) loadAborts.get(iframe)?.abort();
 
   if (urlEl) urlEl.textContent = url;
   if (blockedEl) blockedEl.style.display = "none";
@@ -71,7 +69,7 @@ function openEmbedded(root: ShadowRoot, _site: WorkshopSite, url: string): void 
   if (iframe) {
     iframe.style.display = "";
     const ab = new AbortController();
-    iframe._wsLoadAbort = ab;
+    loadAborts.set(iframe, ab);
     iframe.src = url;
     const timer = window.setTimeout(() => {
       if (!ab.signal.aborted && blockedEl) blockedEl.style.display = "flex";
@@ -91,7 +89,7 @@ export function bindSiteEvents(root: ShadowRoot, page: WorkshopPageState): void 
   // 返回按钮：abort 当前加载 timer + 隐藏浏览器面板
   root.getElementById("ws-back")?.addEventListener("click", () => {
     const iframe = root.getElementById("ws-iframe") as HTMLIFrameElement | null;
-    if (iframe?._wsLoadAbort) iframe._wsLoadAbort.abort();
+    if (iframe) loadAborts.get(iframe)?.abort();
     if (iframe) iframe.src = "";
     const browserEl = root.getElementById("ws-browser");
     if (browserEl) browserEl.style.display = "none";

@@ -891,11 +891,20 @@ describe("bindToolbarEvents — 批量与更多菜单", () => {
 
     const btn = getByTestId("tree-more-genindex") as HTMLElement;
     btn.click();
+    // busy 态同步可观察（命令在 click 内同步启动，首个 await 前已换图标/禁用）。
+    // 断言用结构判据不比对 innerHTML 字符串：序列化器会把 <polyline/> 归一成
+    // <polyline></polyline>，字节比对绑不过解析往返（这亦是字符串快照的罪证之一）。
+    expect((btn as HTMLButtonElement).disabled).toBe(true);
+    expect(btn.querySelector("svg")).not.toBeNull();
+    expect(btn.textContent).toBe("");
     await new Promise((r) => setTimeout(r, 0));
 
     expect(GenerateRepoIndexMock).toHaveBeenCalledWith("/repo");
     expect(toasts.some((t) => t.msg.includes("index.json 已生成"))).toBe(true);
     expect((btn as HTMLButtonElement).disabled).toBe(false);
+    // 恢复契约：原节点（fixture 里的文本「生成索引」）原位搬回，图标不残留
+    expect(btn.textContent).toBe("生成索引");
+    expect(btn.querySelector("svg")).toBeNull();
   });
 
   it("menu-more genindex 未配置仓库 → warn toast 且不生成", async () => {
@@ -926,5 +935,7 @@ describe("bindToolbarEvents — 批量与更多菜单", () => {
     // ADR-051：裸 JS Error 无 AppError.Code → 走默认 fallback（不依赖具体文案）
     expect(toasts.some((t) => t.type === "error")).toBe(true);
     expect((btn as HTMLButtonElement).disabled).toBe(false);
+    // 失败路径同样走 finally：内容按原结构归位（ADR-238 伤疤不许复发）
+    expect(btn.textContent).toBe("生成索引");
   });
 });

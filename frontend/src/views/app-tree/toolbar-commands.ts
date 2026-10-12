@@ -163,8 +163,11 @@ export const TOOLBAR_COMMANDS = {
   genindex: async (_ctx, el) => {
     const btn = el as HTMLButtonElement;
     // 捕获声明表渲染的完整内容（book 图标 + 文案）；finally 必须按原结构恢复，
-    // 曾用 textContent 恢复会抹掉图标且菜单不重渲染永不归位（ADR-238 结案）
-    const origHtml = btn.innerHTML;
+    // 曾用 textContent 恢复会抹掉图标且菜单不重渲染永不归位（ADR-238 结案）。
+    // 快照由「innerHTML 字符串往返」改为「节点搬移」：原子节点整体摘进 fragment
+    // 原位保管，恢复即搬回——不重解析字符串，监听器与 SVG 属性零损耗。
+    const origNodes = document.createDocumentFragment();
+    origNodes.append(...btn.childNodes);
     btn.innerHTML = UI_ICONS.refresh;
     btn.disabled = true;
     try {
@@ -187,7 +190,7 @@ export const TOOLBAR_COMMANDS = {
       }
       toast(t("tree.indexGenerated"), TOAST_MS.normal, "success");
     } finally {
-      btn.innerHTML = origHtml;
+      btn.replaceChildren(origNodes);
       btn.disabled = false;
     }
   },

@@ -51,7 +51,12 @@ export async function scanEachDirectory(
   const allResults: ScanGroupResult[] = [];
   for (let i = 0; i < targets.length; i++) {
     const target = targets[i];
-    await new Promise((r) => setTimeout(r, 10));
+    // 让出一帧再启动本目录扫描（确定性帧信号）：原 setTimeout(10) 是墙钟猜测——
+    // 慢机器等不到上一行进度上屏、快机器纯白等 10ms；rAF 回调即下一帧已开始合成，
+    // 与机器速度解耦（vitest happy-dom 下 rAF 真实驱动，waitFor 轮询可正常排空）。
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => resolve());
+    });
     // ADR-314：逐目录全量哈希可取消——进度行带「取消」按钮，点按 cancel() 直达 Go ctx；
     // CancelError 静默落「已取消」（取消不是失败），其余错误原样上抛交会话外壳渲染。
     const scanPromise = FindDuplicateFiles(target.dir, strategy);

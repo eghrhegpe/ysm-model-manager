@@ -85,7 +85,7 @@
 |------|------|----|
 | cmReBindContextMenu | `frontend/src/features/community/repo-events-bindings.ts` | 126 |
 | showMenu | `frontend/src/features/context-menu/context-menus.setup.ts` | 152 |
-| bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 135 |
+| bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 136 |
 | atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 260 |
 | atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 286 |
 | atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 298 |
@@ -223,7 +223,7 @@
 | cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 267 |
 | anActivateNavPage | `frontend/src/views/app-nav/index.ts` | 51 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 219 |
-| bindFooter | `frontend/src/views/app-sidebar/events.ts` | 276 |
+| bindFooter | `frontend/src/views/app-sidebar/events.ts` | 277 |
 | atTlBindRepoSwitch | `frontend/src/views/app-tree/toolbar-events.ts` | 88 |
 
 **订阅方（on）：**
@@ -238,7 +238,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | bindCardClickHandler | `frontend/src/views/app-sidebar/events.ts` | 91 |
-| restoreSelectedCard | `frontend/src/views/app-sidebar/events.ts` | 262 |
+| restoreSelectedCard | `frontend/src/views/app-sidebar/events.ts` | 263 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -272,7 +272,7 @@
 | initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 300 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 211 |
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 130 |
-| _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 303 |
+| _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 288 |
 
 ### `repo:search-creator`
 
@@ -297,7 +297,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 326 |
+| _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 310 |
 
 ### `stats:refresh`
 
@@ -323,8 +323,8 @@
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 76 |
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 141 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 288 |
-| _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 225 |
-| _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 244 |
+| _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 211 |
+| _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 230 |
 | runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 104 |
 | atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 131 |
 | atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 198 |
@@ -335,7 +335,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 122 |
-| _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 283 |
+| _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 269 |
 
 ### `sync:download:done`
 

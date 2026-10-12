@@ -108,7 +108,7 @@ status: active
 ## 与其他子系统关系
 
 - `workshop-icons.ts`（`utils/icon`）→ SVG 图标表 `ICONS` 与 `getSiteIcon` / `getTagIconFromRole`（site/events、site/render 消费）
-- `workshop-site-opener.ts` → `ctx.openUrl` 把搜索链路 `fillSearch` 拼好的带词链接透传给 `openSite`（site 视图的打开器在 `init-workshop.ts` 装配，见主卡）；内嵌分支 `workshop-site-opener.ts|openEmbedded` 的加载超时由 iframe 实例级 `_wsLoadAbort`（AbortController）承载（`WS_EMBED_TIMEOUT_MS` 15s 未完成加载 → 提示站点不允许内嵌浏览）：开新页先 abort 上一轮、load 完成或超时均 abort 收口、返回按钮同样 abort，消除 timer 残留竞态
+- `workshop-site-opener.ts` → `ctx.openUrl` 把搜索链路 `fillSearch` 拼好的带词链接透传给 `openSite`（site 视图的打开器在 `init-workshop.ts` 装配，见主卡）；内嵌分支 `workshop-site-opener.ts|openEmbedded` 的加载超时由模块级 `loadAborts` WeakMap（iframe → AbortController，键随元素 GC 自动回收；原 iframe 伪字段 `_wsLoadAbort` + `declare global` 已除——与 app-tree `vsStates` 同教义：原生 DOM 元素不私搭状态）承载（`WS_EMBED_TIMEOUT_MS` 15s 未完成加载 → 提示站点不允许内嵌浏览）：开新页先 abort 上一轮、load 完成或超时均 abort 收口、返回按钮同样 abort，消除 timer 残留竞态
 - 主卡 `app-content` 负责页面编排与分发；本卡只管站点视图自身的渲染与交互
 - **页作用域句柄 `workshop-page-state.ts`（ADR-263）**：`createWorkshopPageState()` → `WorkshopPageState { getCurrentSite() / setCurrentSite(site) }`，承载「当前浏览站点」。它是 `currentSite` 从 `AppContentState` 下沉后的家——tabs（写）/ opener（读）/ `init-workshop.ts` 注入链（读写）共享**同一实例**（由 `init-workshop.ts` 创建并下传），与 `WorkshopRefs` 同构：只给工厂、**不给模块级单例**，防「形状相同、实例不同」的 stale 错位。两者分工：refs 收**可替换的整份数据**（sites/creators 整体换新），page-state 收**页面级游标**（当前站点）
 

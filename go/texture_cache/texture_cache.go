@@ -332,7 +332,9 @@ type PruneResult struct {
 }
 
 // Prune 淘汰纹理缓存：先清超龄（TTL），再按容量从最旧删到上限内。
-// 可被 repoaudit / CLI / 应用启动按需调用；WriteCached 写路径也会限频自动触发。
+// 生产唯一调用路径 = WriteCached 写后限频自动触发（maybePrune，结果仅日志）；
+// 本函数导出是为**人工/外部按需调用留口**（CLI 清缓存、审计脚本可直调）——
+// 截至 2026-10-12 repoaudit / CLI / 应用启动均未接线，勿按「已被调用」理解。
 func Prune() (PruneResult, error) {
 	return pruneDir(CacheDir())
 }

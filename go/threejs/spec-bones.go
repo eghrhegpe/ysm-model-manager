@@ -16,8 +16,9 @@ import (
 const glowingPrefix = "ysmglow"
 
 // isGlowBone 判定骨骼名是否为发光骨骼（前缀 "ysmGlow"，大小写不敏感）。
-// 上游用区分大小写的 startsWith；实际模型文件均用小写 "ysmGlow" 前缀
-// （如 ysmGlowFrontHeadlights），故 ToLower 后比较更宽松、不背离上游语义。
+// 上游用区分大小写的 startsWith；实际模型文件的前缀形态为 **ysmGlow（混合大小写，
+// G 大写）**——故常量取小写 "ysmglow"、比较前 ToLower，宽松匹配不背离上游语义
+// （P4 措辞修正 2026-10-12：原文「均用小写 ysmGlow」自相矛盾，ysmGlow 本身含大写 G）。
 func isGlowBone(name string) bool {
 	return strings.HasPrefix(strings.ToLower(name), glowingPrefix)
 }

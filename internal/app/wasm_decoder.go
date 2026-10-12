@@ -164,9 +164,11 @@ func decodeYSMComponentsViaWASI(ysmData []byte) ([]types.BedrockModel, []string)
 	}
 
 	// 收集模型文件（ParseBedrockGeometry 非空的 .json；动画 JSON 解析为 nil 自动过滤）
+	// 解析结果直接入列复用——旧写法首遍只为判非空丢弃结果、二遍再解同一份
+	// geometry JSON（大模型可达数 MB×2，P4 记账清偿，2026-10-12）。
 	type mf struct {
 		path string
-		data []byte
+		g    *types.BedrockModel
 	}
 	var modelFiles []mf
 	for _, f := range files {
@@ -175,7 +177,7 @@ func decodeYSMComponentsViaWASI(ysmData []byte) ([]types.BedrockModel, []string)
 			continue
 		}
 		if g := geometry.ParseBedrockGeometry(f.Data); g != nil {
-			modelFiles = append(modelFiles, mf{path: f.Path, data: f.Data})
+			modelFiles = append(modelFiles, mf{path: f.Path, g: g})
 		}
 	}
 	if len(modelFiles) == 0 {
@@ -196,10 +198,9 @@ func decodeYSMComponentsViaWASI(ysmData []byte) ([]types.BedrockModel, []string)
 
 	comps := make([]types.BedrockModel, 0, len(modelFiles))
 	for i, mf := range modelFiles {
-		g := geometry.ParseBedrockGeometry(mf.data)
-		if g == nil {
-			continue
-		}
+		// mf.g 首遍解析已判非空（ParseBedrockGeometry 对同一 data 确定性返回，
+		// 纯函数无二次校验必要——二遍判空属防御不存在场景，删）
+		g := mf.g
 		// SourceName = 组件源模型文件名（去扩展名，如 main/arm/arrow），UI 组件名用
 		src := mf.path
 		if idx := strings.LastIndexAny(src, "/\\"); idx >= 0 {

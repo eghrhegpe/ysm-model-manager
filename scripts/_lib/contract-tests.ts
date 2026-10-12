@@ -239,6 +239,9 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "test_jscpd_pairs.ts": ["tests"],
   "test_knowledge_common.ts": ["tests"],
   "test_redlines_changed_files.ts": ["tests"],
+  // R15 纯核（redlineCodeGapHits）判别力对账：两侧解析（CODE_KEYS 映射集 / types.go
+  // 常量表）任一退化即假绿——独立重导逐行等值锁死（2026-10-12 随 R15 立法登记）
+  "test_redlines_code_gap.ts": ["tests"],
   "test_scripts_json.ts": ["tests"],
   "test_scripts_lib.ts": ["tests"],
   "test_orphan_exports_smart.ts": ["tests", "frontend"],
@@ -556,6 +559,7 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   "check-knowledge-claim-overlap.ts": ["scripts/check-knowledge-drift.ts"],
   "check-knowledge-source-containment.ts": ["scripts/check-knowledge-drift.ts"],
   "test_redlines_changed_files.ts": ["scripts/check-redlines.ts"],
+  "test_redlines_code_gap.ts": ["scripts/check-redlines.ts"],
   "test_scripts_lib.ts": [
     "scripts/_lib/scan-files.ts",
     "scripts/_lib/to-posix.ts",

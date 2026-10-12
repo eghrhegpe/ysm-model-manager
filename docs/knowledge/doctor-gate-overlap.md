@@ -10,6 +10,7 @@ source_files:
   - scripts/check-redlines.ts
 auto_fields:
   symbols_with_lines:
+    - redlineCodeGapHits
     - redlineFilterKeysByChangedFiles
 use_when:
   - 双调度器

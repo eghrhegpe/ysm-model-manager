@@ -165,7 +165,7 @@ const BASELINE_FILE = path.join(ROOT, "scripts", "baseline", "redlines-baseline.
  * 安全/缺陷类真红线（R1 window.__ / R8 innerHTML XSS / R10 esc 单点 / W7 缓存失效
  * / W6 bypass dialogs / R6 JS in public / R3 .file API / W2 window.go）保持阻断。
  */
-const WARN_RULES = new Set(["R2", "R5", "R7", "R4", "W1", "R13"]);
+const WARN_RULES = new Set(["R2", "R5", "R7", "R4", "W1", "R13", "R15"]);
 
 function runChecks() {
   /** 每次 runChecks 新建独立缓存，不持有模块级状态。 */
@@ -794,7 +794,76 @@ function runChecks() {
     "属性名一律引 schema/dom-contract.ts 的 ROLE / ARIA_ATTR（role → ARIA_ATTR.role，值 ROLE.x；aria-* → ARIA_ATTR.名）",
   );
 
+  // R15（CODE_KEYS 漂移前向闸，2026-10-12 立法，审计 D4 拍板批的机器哨兵）：
+  // Go 侧 `Code: types.ErrXxx` 实际产出的错误码，必须在前端 friendlyError 的
+  // CODE_KEYS 映射表中有 i18n 归宿——否则该 Code 到前端必走「Reason 中文透传」，
+  // en/ja 泄漏中文（D1 的 D4 侧残余成因）。产出点全集 ∩ 未映射集 = 违规行。
+  // 当前未映射 7 码（FILE_TOO_LARGE/FILE_EMPTY/MKDIR_FAILED/WRITE_FAILED/IO_ERROR/
+  // LINK_FAILED/UNKNOWN）的写路径产出点**有意**不映射——errors.ts 注释裁决「各 Code
+  // 的 Reason/Suggestion 比通用分类更具体，映射会误导用户」，属拍板后的设计现状。
+  // 故本闸只拦**新增**产出点（基线外），不推翻既有裁决：读路径若未来挂上这些 Code
+  // （D4 修法必然引入的『中文泄漏从全部变部分』前向隐患），第一处新产出即 WARN 现形。
+  // 档位 = WARN（债务型）：与 R13 同理，扩映射是产品决策，闸只做哨兵不做法官。
+  // 单源解析走 redlineCodeGapHits 纯核（供 test_redlines_code_gap 直测防空转）。
+  add(
+    "R15",
+    "Go error Code produced but absent from frontend CODE_KEYS (i18n leak forward guard)",
+    redlineCodeGapHits(),
+    "新增 AppError 产出点须同步 frontend/src/utils/dom/errors.ts|CODE_KEYS 补映射，或走『保留中文 Reason』拍板并 node scripts/check-redlines.ts --json --update-baseline 落账",
+  );
+
   return results;
+}
+
+/**
+ * R15 纯核（导出供契约测试直测判别力，同 innerhtml-hygiene/scanSourceText 惯例）：
+ * 交叉两个事实源——Go 生产码里 `Code: types.ErrX` 的产出点 × 前端 CODE_KEYS 的
+ * 已映射集——产出点键 ∉ 映射集 即违规行。
+ * 两侧解析都取「键」而非值：CODE_KEYS 的键 = 大写蛇形（FILE_EXISTS），
+ * Go 侧 `Code: types.ErrFileExists` 的常量名经 types.go 的 `ErrX ErrorCode = "SNAKE"`
+ * 表映射回同一大写蛇形键再比对（两侧不共享命名空间，直接比字符串会全漏）。
+ */
+export function redlineCodeGapHits(): string[] {
+  // 1. 前端已映射集：errors.ts 的 CODE_KEYS 对象字面量键
+  let mappedKeys: Set<string> | null = null;
+  try {
+    const fe = fs.readFileSync(path.join(ROOT, "frontend/src/utils/dom/errors.ts"), "utf-8");
+    const block = fe.match(/const CODE_KEYS[^{]*\{([\s\S]*?)\n\};/);
+    mappedKeys = new Set<string>();
+    for (const m of block ? block[1].matchAll(/^\s*([A-Z][A-Z0-9_]*)\s*:/gm) : []) {
+      mappedKeys.add(m[1] as string);
+    }
+  } catch {
+    // 前端源缺失：跳过本规则（rg 健康门另有兜底，不在此假绿——返回空而非全报）
+    return [];
+  }
+  if (!mappedKeys.size) return [];
+
+  // 2. Go 侧常量名 → 大写蛇形键表（types.go 的 `ErrX ErrorCode = "SNAKE"`）
+  const constToKey = new Map<string, string>();
+  try {
+    const gt = fs.readFileSync(path.join(ROOT, "go/types/types.go"), "utf-8");
+    for (const m of gt.matchAll(/(Err\w+)\s+ErrorCode\s*=\s*"([A-Z][A-Z0-9_]*)"/g)) {
+      constToKey.set(m[1] as string, m[2] as string);
+    }
+  } catch {
+    return [];
+  }
+  if (!constToKey.size) return [];
+
+  // 3. 产出点：`Code: types.ErrX`（实测全仓 71 处均为 types. 限定形态）
+  const hits: string[] = [];
+  for (const l of rgTracked("Code: (types\\.)?Err\\w+", ["go", "internal/app"], ["*.go"])) {
+    const [f] = parseRgLine(l);
+    if (String(f).includes("_test.go")) continue;
+    if (/:\d+:\s*(?:\/\/|\*|\/\*)/.test(l)) continue; // 注释行不计产出
+    const m = l.match(/Code: (?:types\.)?(Err\w+)/);
+    if (!m) continue;
+    const key = constToKey.get(m[1] as string);
+    if (key === undefined) continue; // 未知常量名：types.go 无此表项，交 review
+    if (!mappedKeys.has(key)) hits.push(l); // 有产出、无 i18n 映射 → 违规行
+  }
+  return hits;
 }
 
 function outputText(results: any[]) {

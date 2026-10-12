@@ -254,6 +254,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-331：3D 错误消息国际化：friendlyError 旁路收窄与 CODE_KEYS 单源",
+        "link": "/adr/architecture/ADR-331-3d-friendlyerror-code-keys"
+      },
+      {
         "text": "ADR-330：frustum-cull 逐根矩阵置脏：perFrame 契约携带根身份，消除多模型同框全体 updateWorldMatrix",
         "link": "/adr/architecture/ADR-330-frustum-per-root-dirty"
       },

@@ -101,4 +101,32 @@ describe("readModelBytes — 桌面 / Android 路径（base64 契约 + 结构化
     h.readMetaBatch.mockRejectedValue(new Error("backend down"));
     await expect(readModelBytes("/repo/a.ysm")).rejects.toThrow("backend down");
   });
+
+  it("切片 C 消费端：FILE_TOO_LARGE → throw AppError 形状 Error（cause.Code 命中 friendlyError）", async () => {
+    h.readMetaBatch.mockResolvedValue({
+      "/repo/huge.ysm": { data: null, hash: "", errorCode: "FILE_TOO_LARGE", reason: "文件超过读取上限" },
+    });
+    await expect(readModelBytes("/repo/huge.ysm")).rejects.toThrow("文件超过读取上限");
+    // cause.Code 是 friendlyError 查 CODE_KEYS 的依据（ADR-331-d1 决策 #2）
+    await expect(readModelBytes("/repo/huge.ysm")).rejects.toMatchObject({
+      cause: { Code: "FILE_TOO_LARGE" },
+    });
+  });
+
+  it("切片 C 消费端：INVALID_PATH → throw AppError 形状 Error（cause.Code 命中 friendlyError）", async () => {
+    h.readMetaBatch.mockResolvedValue({
+      "/repo/越权.ysm": { data: null, hash: "", errorCode: "INVALID_PATH", reason: "路径非法（越权读）" },
+    });
+    await expect(readModelBytes("/repo/越权.ysm")).rejects.toThrow("路径非法");
+    await expect(readModelBytes("/repo/越权.ysm")).rejects.toMatchObject({
+      cause: { Code: "INVALID_PATH" },
+    });
+  });
+
+  it("切片 C 消费端：IO_ERROR → 仍返回 null（瞬时错误回退 Go，不 throw）", async () => {
+    h.readMetaBatch.mockResolvedValue({
+      "/repo/io.ysm": { data: null, hash: "", errorCode: "IO_ERROR", reason: "文件读取失败：xxx" },
+    });
+    expect(await readModelBytes("/repo/io.ysm")).toBeNull();
+  });
 });

@@ -38,7 +38,7 @@ vi.mock("@/wasm/ysm-parser.ts", () => ({
 
 vi.mock("@/backend/app.ts", () => ({
   getApp: vi.fn().mockResolvedValue({
-    ReadFileBytes: readFileBytesMock,
+    ReadFileBytesBatchWithMeta: readFileBytesMock,
     CacheModelAvatars: vi.fn().mockResolvedValue(undefined),
   }),
 }));
@@ -136,7 +136,11 @@ describe("wasm-decode — Blob 按视图取字节（视图精确性契约）", (
     vi.clearAllMocks();
     initMock.mockResolvedValue(true);
     readFileBytesMock.mockReset();
-    readFileBytesMock.mockResolvedValue(mainFileB64());
+    readFileBytesMock.mockImplementation(async (paths: string[]) => {
+      const out: Record<string, { data: string | null; hash: string }> = {};
+      for (const p of paths) out[p] = { data: mainFileB64(), hash: "" };
+      return out;
+    });
     decodeMemoryMock.mockReset();
     decodeMemoryMock.mockResolvedValue(decodedFiles());
   });

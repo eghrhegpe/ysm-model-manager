@@ -21,7 +21,7 @@ vi.mock("@/wasm/ysm-parser.ts", () => ({
 
 vi.mock("@/backend/app.ts", () => ({
   getApp: vi.fn().mockResolvedValue({
-    ReadFileBytes: readFileBytesMock,
+    ReadFileBytesBatchWithMeta: readFileBytesMock,
     // wasm-decode.ts 在 swallowError 内盲调 CacheModelAvatars；mock 缺省会解构成
     // undefined → TypeError 经 logWarn 泄漏噪声（生产 fail-open，属测试 mock 不全）
     CacheModelAvatars: vi.fn().mockResolvedValue(undefined),
@@ -124,7 +124,11 @@ beforeEach(() => {
   // jsdom 无 URL.createObjectURL 实现（生产浏览器有）——补 mock 防纹理提取抛错
   URL.createObjectURL = URL.createObjectURL || (() => "blob:mock");
   URL.revokeObjectURL = URL.revokeObjectURL || (() => {});
-  readFileBytesMock.mockResolvedValue(FAKE_B64);
+  readFileBytesMock.mockImplementation(async (paths: string[]) => {
+    const out: Record<string, { data: string | null; hash: string }> = {};
+    for (const p of paths) out[p] = { data: FAKE_B64, hash: "" };
+    return out;
+  });
   decodeMemoryMock.mockResolvedValue(fakeDecodedFiles());
   memfsMock.mockResolvedValue([]); // 默认无 MEMFS 输出（快路径成功时不触发）
 });
@@ -170,7 +174,11 @@ describe("decodeYsmViaWasm 并发去重", () => {
     expect(first).toBeNull();
 
     // 后端已恢复：第二次应重试读文件并成功解码
-    readFileBytesMock.mockResolvedValue(FAKE_B64);
+    readFileBytesMock.mockImplementation(async (paths: string[]) => {
+    const out: Record<string, { data: string | null; hash: string }> = {};
+    for (const p of paths) out[p] = { data: FAKE_B64, hash: "" };
+    return out;
+  });
     const second = await decodeYsmViaWasm("/repo/transient.ysm");
     expect(second).not.toBeNull(); // 重试成功，非 null
     expect(readFileBytesMock).toHaveBeenCalledTimes(2); // 重试：读了两次
@@ -232,8 +240,10 @@ describe("decodeYsmViaWasm .json 路径几何合并（ysm.json spec 格式）", 
     calls.set("/repo/textures/body.png", texB64);
     calls.set("/repo/avatar/sdf", "");
 
-    readFileBytesMock.mockImplementation(async (path: string) => {
-      return calls.get(path) || null;
+    readFileBytesMock.mockImplementation(async (paths: string[]) => {
+      const out: Record<string, { data: string | null; hash: string }> = {};
+      for (const p of paths) out[p] = { data: calls.get(p) || null, hash: "" };
+      return out;
     });
 
     const result = await decodeYsmViaWasm("/repo/ysm.json");
@@ -306,7 +316,11 @@ describe("decodeYsmViaWasm .json 路径几何合并（ysm.json spec 格式）", 
     });
     const b64 = btoa(new TextDecoder().decode(encoder.encode(directJson)));
 
-    readFileBytesMock.mockResolvedValue(b64);
+    readFileBytesMock.mockImplementation(async (paths: string[]) => {
+      const out: Record<string, { data: string | null; hash: string }> = {};
+      for (const p of paths) out[p] = { data: b64, hash: "" };
+      return out;
+    });
     const result = await decodeYsmViaWasm("/repo/direct.json");
     expect(result).not.toBeNull();
     // minecraft:geometry 格式：直接解析，不触发合并
@@ -320,7 +334,11 @@ describe("decodeYsmViaWasm .json 路径几何合并（ysm.json spec 格式）", 
 
 describe("decodeYsmViaWasm 未覆盖分支补测", () => {
   it("ReadFileBytes 返回空 → 缓存 _wasmFailed，二次不再读", async () => {
-    readFileBytesMock.mockResolvedValue(null); // 文件不存在 → 空字节守卫
+    readFileBytesMock.mockImplementation(async (paths: string[]) => {
+      const out: Record<string, { data: string | null; hash: string }> = {};
+      for (const p of paths) out[p] = { data: null, hash: "" };
+      return out;
+    }); // 文件不存在 → 空字节守卫
     const first = await decodeYsmViaWasm("/repo/nofile.ysm");
     expect(first).toBeNull();
     const second = await decodeYsmViaWasm("/repo/nofile.ysm");
@@ -329,7 +347,11 @@ describe("decodeYsmViaWasm 未覆盖分支补测", () => {
   });
 
   it(".json 路径非法 JSON → 外层 catch 缓存 _wasmFailed", async () => {
-    readFileBytesMock.mockResolvedValue(btoa("{not valid json")); // JSON.parse 抛错
+    readFileBytesMock.mockImplementation(async (paths: string[]) => {
+      const out: Record<string, { data: string | null; hash: string }> = {};
+      for (const p of paths) out[p] = { data: btoa("{not valid json"), hash: "" };
+      return out;
+    }); // JSON.parse 抛错
     const first = await decodeYsmViaWasm("/repo/bad.json");
     expect(first).toBeNull();
     const second = await decodeYsmViaWasm("/repo/bad.json");
@@ -419,7 +441,11 @@ describe("decodeYsmViaWasm 未覆盖分支补测", () => {
     calls.set("/repo/ysm.json", ysmJsonB64);
     calls.set("/repo/main.json", modelJsonB64);
     calls.set("/repo/textures/body.png", texB64);
-    readFileBytesMock.mockImplementation(async (path: string) => calls.get(path) || null);
+    readFileBytesMock.mockImplementation(async (paths: string[]) => {
+      const out: Record<string, { data: string | null; hash: string }> = {};
+      for (const p of paths) out[p] = { data: calls.get(p) || null, hash: "" };
+      return out;
+    });
 
     const result = await decodeYsmViaWasm("/repo/ysm.json");
     expect(result).not.toBeNull();
@@ -439,7 +465,11 @@ describe("decodeYsmViaWasm 未覆盖分支补测", () => {
     const calls = new Map<string, string>();
     calls.set("/repo/avatar.json", ysmJsonB64);
     calls.set("/repo/avatar/a.png", pngB64());
-    readFileBytesMock.mockImplementation(async (path: string) => calls.get(path) || null);
+    readFileBytesMock.mockImplementation(async (paths: string[]) => {
+      const out: Record<string, { data: string | null; hash: string }> = {};
+      for (const p of paths) out[p] = { data: calls.get(p) || null, hash: "" };
+      return out;
+    });
 
     const result = await decodeYsmViaWasm("/repo/avatar.json");
     expect(result).not.toBeNull();
@@ -493,9 +523,13 @@ describe("handleYsmJsonSpec 特征基线 — modelFiles/texFiles 声明形态与
     return btoa(new TextDecoder().decode(encoder.encode(JSON.stringify(ysmJson))));
   }
 
-  /** 安装 ReadFileBytes 替身（键 = 精确路径） */
+  /** 安装 ReadFileBytesBatchWithMeta 替身（键 = 精确路径，切片 C 迁移） */
   function installReader(calls: Record<string, string>): void {
-    readFileBytesMock.mockImplementation(async (path: string) => calls[path] ?? null);
+    readFileBytesMock.mockImplementation(async (paths: string[]) => {
+      const out: Record<string, { data: string | null; hash: string }> = {};
+      for (const p of paths) out[p] = { data: calls[p] ?? null, hash: "" };
+      return out;
+    });
   }
 
   /** 捕获 createObjectURL 产出并记录 revoke 调用（blob 归属断言用） */

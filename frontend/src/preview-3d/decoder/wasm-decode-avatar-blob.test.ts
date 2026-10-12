@@ -24,7 +24,7 @@ vi.mock("@/wasm/ysm-parser.ts", () => ({
 
 vi.mock("@/backend/app.ts", () => ({
   getApp: vi.fn().mockResolvedValue({
-    ReadFileBytes: readFileBytesMock,
+    ReadFileBytesBatchWithMeta: readFileBytesMock,
     CacheModelAvatars: vi.fn().mockResolvedValue(undefined),
   }),
 }));
@@ -71,7 +71,11 @@ describe("wasm-decode — 头像 blob URL 的归属（F2）", () => {
       "/repo/av1.json": btoa(new TextDecoder().decode(new TextEncoder().encode(JSON.stringify(ysmJson)))),
       "/repo/avatar/a.png": pngB64(),
     };
-    readFileBytesMock.mockImplementation(async (p: string) => calls[p] ?? null);
+    readFileBytesMock.mockImplementation(async (paths: string[]) => {
+      const out: Record<string, { data: string | null; hash: string }> = {};
+      for (const p of paths) out[p] = { data: calls[p] ?? null, hash: "" };
+      return out;
+    });
 
     const { created, revoked } = spyBlobUrls();
     const result = await decodeYsmViaWasm("/repo/av1.json");

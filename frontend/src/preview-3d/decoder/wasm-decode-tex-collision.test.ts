@@ -23,7 +23,7 @@ vi.mock("@/wasm/ysm-parser.ts", () => ({
 
 vi.mock("@/backend/app.ts", () => ({
   getApp: vi.fn().mockResolvedValue({
-    ReadFileBytes: readFileBytesMock,
+    ReadFileBytesBatchWithMeta: readFileBytesMock,
     CacheModelAvatars: vi.fn().mockResolvedValue(undefined),
   }),
 }));
@@ -59,7 +59,11 @@ beforeEach(() => {
   vi.clearAllMocks();
   URL.createObjectURL = URL.createObjectURL || (() => "blob:mock");
   URL.revokeObjectURL = URL.revokeObjectURL || (() => {});
-  readFileBytesMock.mockResolvedValue("AQID");
+  readFileBytesMock.mockImplementation(async (paths: string[]) => {
+    const out: Record<string, { data: string | null; hash: string }> = {};
+    for (const p of paths) out[p] = { data: "AQID", hash: "" };
+    return out;
+  });
   decodeMemoryMock.mockResolvedValue([]);
   memfsMock.mockResolvedValue([]);
 });

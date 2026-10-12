@@ -45,11 +45,21 @@ export async function readModelBytes(path: string): Promise<Uint8Array | null> {
     return ab ? new Uint8Array(ab) : null;
   }
   const { ReadFileBytesBatchWithMeta } = await getApp();
+  // 桥 reject（瞬时后端/网络错误）原样上抛——wasm-decode catch 据 cause.Code 分流：
+  // 无 Code = 桥 reject → return null 回退 Go（不缓存，可重试）；有 Code = 确定性失败 → 冒泡。
   const metas = await ReadFileBytesBatchWithMeta([path]);
   const meta = metas?.[path];
   if (!meta?.data) {
-    // meta.errorCode / meta.reason 已随绑定返回——本函数契约保持返回 null（不改调用方），
-    // 需要结构化错误的消费点应改走 mmd-data-port / 直接调绑定读取这两个字段
+    // 切片 C 消费端（ADR-331-d1 决策 #2 落地）：确定性失败 throw AppError 形状 Error，
+    // 让错误沿 wasm-decode → pipeline → mount-preview-core catch → showLoadFailure →
+    // friendlyError 冒泡，命中 CODE_KEYS 出 i18n 译文。Go 兜底（AnalyzeBedrockModel）对
+    // 超限/路径非法同样静默失败，故这两类回退无意义、必须抛错让用户可见。
+    // 瞬时 IO_ERROR 仍返回 null——回退 Go 可能重试成功，不阻断。
+    if (meta?.errorCode === "FILE_TOO_LARGE" || meta?.errorCode === "INVALID_PATH") {
+      throw new Error(meta.reason || `read failed: ${meta.errorCode}`, {
+        cause: { Code: meta.errorCode },
+      });
+    }
     return null;
   }
   return base64ToBytes(meta.data);

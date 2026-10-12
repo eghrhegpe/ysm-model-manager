@@ -121,6 +121,7 @@ interface ProcessModelCtx {
 
 // ===== 阶段① 同步分派辅助：缺文件 / 直接 JSON / YSM spec JSON =====
 
+/** 空字节守卫：缓存 _wasmFailed 避免重复解码空文件（读失败 reject 不缓存——被 catch 拦截）。 */
 function handleEmptyBytes(modelPath: string): null {
   cacheSet(modelPath, { _wasmFailed: true });
   return null;
@@ -811,13 +812,19 @@ async function doDecodeYsmViaWasm(modelPath: string): Promise<DecodedYsm | null>
     // 本层不再接触 base64 中间串（原 `Base64ToBytes` 链已下沉到 seam）。
     bytes = await readModelBytes(modelPath);
   } catch (e) {
-    // 读文件/后端瞬时失败：不缓存 _wasmFailed（那是解码失败标记），仅记日志返回 null，
-    // 下次调用可重试读文件——避免后端短暂不可用导致本会话永久跳过该模型。
+    // 切片 C 消费端（ADR-331-d1）：readModelBytes 对确定性失败（FILE_TOO_LARGE /
+    // INVALID_PATH）throw 带 cause.Code 的 AppError 形状 Error，此处**重新 throw** 让错误
+    // 冒泡到 mount-preview-core catch → showLoadFailure → friendlyError 出 i18n 译文。
+    // 桥 reject（无 cause.Code）= 瞬时后端错误 → return null 回退 Go，不缓存 _wasmFailed
+    // （原 P3 修复契约：读失败可重试）。IO_ERROR 不 throw（返回 null 走原回退）。
     devLog(`[YSM] ❌ ${safeErrorMessage(e)}`);
+    if ((e as { cause?: { Code?: unknown } })?.cause?.Code) throw e;
     return null;
   }
   devLog(`[YSM] 读取 ${bytes?.length || 0} bytes`);
 
+  // 空字节/IO_ERROR（readModelBytes 返回 null）→ 缓存 _wasmFailed 避免重复解码空文件。
+  // 桥 reject 不缓存（被 catch 拦截 return null，可重试）；FILE_TOO_LARGE/INVALID_PATH 已 throw。
   if (!bytes?.length) return handleEmptyBytes(modelPath);
 
   // 受限平台大文件内存风险前置告知：峰值 ≈4.33× 文件大小（拷贝链实测，ADR-228），

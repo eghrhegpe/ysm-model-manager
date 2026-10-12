@@ -8,6 +8,7 @@
 // 历史：原 §4b 自 mount-preview-core 拆出（2026 锐评整改），持有 7 个模块级 let 单例；
 // 现收敛为 RendererHost 实例字段（preview-3d P1 战役，与兄弟会话 A1 同一步伐）。
 
+import type { Object3D } from "three";
 import type { SharedInfra } from "@/preview-3d/adapters/shared-infra.ts";
 import type { ActiveInputSession } from "./render-host.ts";
 import { rendererHost } from "./render-host.ts";
@@ -27,9 +28,10 @@ export function getActiveInputSession(): ActiveInputSession | null {
   return rendererHost.getActiveInputSession();
 }
 
-/** 注册 perFrame 回调（setPerFrame 统一入口的落点） */
-export function registerPerFrame(f: (dt: number) => void): void {
-  rendererHost.registerPerFrame(f);
+/** 注册 perFrame 回调（setPerFrame 统一入口的落点）。[ADR-330] root = 该回调驱动的模型根
+ *  （frustum-cull 逐根置脏消费）；缺省 = 无根身份 → 消费端保守全体置脏 */
+export function registerPerFrame(f: (dt: number) => void, root?: Object3D): void {
+  rendererHost.registerPerFrame(f, root);
 }
 
 /** 注销 perFrame 回调（setPerFrame 换回调 / unloadModel / fullCleanup 用） */

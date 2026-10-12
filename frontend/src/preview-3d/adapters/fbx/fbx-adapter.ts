@@ -321,6 +321,8 @@ export async function buildFbxScene(
 
   return {
     menuItems,
+    // [ADR-330] 模型根身份：frustum-cull 逐根置脏消费（与 L290 registerModelRoot 同一 group）
+    root: group,
     update: (dt: number) => {
       mixer?.update(dt);
       // 不写全局暂停标志（#9）：全局标志是模块级单例（perception/core.ts），而 FBX

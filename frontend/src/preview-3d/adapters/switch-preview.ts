@@ -74,7 +74,9 @@ export interface SwitchContext {
   getCurrentSubtype?: () => string;
   /** 可变：build 后赋值 */
   getPerFrame: () => ((dt: number) => void) | null;
-  setPerFrame: (f: ((dt: number) => void) | null) => void;
+  /** 设置每帧回调（setPerFrame 统一入口）；[ADR-330] root = 该回调驱动的模型根
+   *  （BaseScene.root 透传，frustum-cull 逐根置脏消费）；null = 清空 */
+  setPerFrame: (f: ((dt: number) => void) | null, root?: THREE.Object3D) => void;
   /** 可变：_handle 构造后赋值 */
   getHandle: () => PreviewHandle | null;
   /** [P0 修复] 模块级句柄列表引用（switchTo 闭包按 gen 查找自身 handle 用） */
@@ -415,7 +417,7 @@ function syncSwitchView(
   if (ctx.renderer && ctx.orbitTarget && ctx.controls && ctx.camera) {
     ctx.orbitTarget.copy(ctx.controls.target);
   }
-  ctx.setPerFrame(next.update ?? null);
+  ctx.setPerFrame(next.update ?? null, next.root);
   syncLightTargetFromContent(ctx.scene, ctx.getSceneBaseline(), ctx.lightCap);
   // 切换模型后新根节点差量同步（shadow cast + envMapIntensity；集中函数，锐评 2026-10-07 #4 收口）
   syncNewModelRoots(ctx.scene, beforeBuild, {

@@ -821,11 +821,19 @@ YSM#2 / VRM#3 完全静态，却每帧陪刷整棵子树的 `updateWorldMatrix(t
    否则 Set 长期持有已释放对象引用（同 `_culled` 的既有纪律）。
 
 ### 关键诚实边界（勿过度承诺）
-改完 API ≠ 改完收益。本案 `render-host` 仍走**不带参**形态，因为
+改完 API ≠ 改完收益。本案 `render-host` 原仍走**不带参**形态，因为
 `registerPerFrame(f)` 的契约是 `(dt) => void`、**不带根身份**，循环无法归属
 「这个回调改了哪个根」。要真正吃到逐根收益，需把根身份沿 perFrame 契约打通到 6 个
 adapter——属跨层改动。**正确做法是 API 就绪 + 注释写明现状与采用路径**，
 而不是：(a) 假装已优化；或 (b) 为凑收益去猜归属（猜错=静态根不刷新=模型位置陈旧）。
+
+**[收口记录 2026-10-12 / ADR-330]** 跨层打通已落地：根身份沿
+`BaseScene.root`（adapter 内容层暴露，= `registerModelRoot` 同一对象）→
+`setPerFrame(f, root?)` / `registerPerFrame(f, root?)` 透传，`render-host`
+帧循环收集「本帧实际驱动的根」逐根置脏（`markCullMatricesDirty(root)` 循环），
+**任一回调无根身份 → 保守回退全体形态**（本节的诚实边界仍是现行兜底语义，
+非历史遗留）；静态格式无 `update` → perFrame 为 null 不受影响。
+执法 = `render-host-per-root-dirty.test.ts`（逐根/全体回退/剔除关/空 四判据互有牙）。
 
 ### 检验清单
 - 改写脏标记粒度前，先问：**调用方能否把「变动」归属到具体单位？** 不能 → 保留全体形态。

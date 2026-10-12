@@ -146,6 +146,10 @@ export interface BaseScene {
   menuItems?: PreviewMenuNode[] | null;
   /** 多模型下由统一拾取器调用：点中该模型骨骼时打开其面板（ADR-093 T5） */
   onBonePick?: (boneId: string) => void;
+  /** [ADR-330] 该内容的模型根（= adapter 经 registerModelRoot 注册的同一对象）。
+   *  仅动效格式（有 update）须暴露：setPerFrame 透传给 registerPerFrame，frustum-cull
+   *  逐根置脏消费；静态格式无 update → perFrame 为 null，此字段可缺省（消费端保守全体）。 */
+  root?: THREE.Object3D;
 }
 
 /** 动态内容能力：每帧驱动（VRM SpringBone / 动画等）；无则仅静态渲染 */
@@ -616,7 +620,7 @@ function buildInfra(ctx: MountCtx, shell: AssembledShell): InstalledPreviewInfra
     getCurrentRtype: () => (opts.rtype?.trim() ? opts.rtype : adapter.id),
     getCurrentSubtype: () => opts.subtype ?? "",
     getPerFrame: () => session.perFrame,
-    setPerFrame: (f) => {
+    setPerFrame: (f, root?) => {
       // 切换模型时先从全局 perFrame 列表移除旧回调（防已 dispose 的旧内容层
       // update 持续执行），再注册新回调——移除/注册对称维护，初次 mount 与
       // 切换统一经此注册（rAF 引导块不再一次性 push）
@@ -625,7 +629,8 @@ function buildInfra(ctx: MountCtx, shell: AssembledShell): InstalledPreviewInfra
       session.perFrame = f;
       // P3 对称维护：新回调非空时重新注册，否则列表与 perFrame 引用脱节
       // （初次 mount 与切换统一经 setPerFrame 注册）
-      if (f) registerPerFrame(f);
+      // [ADR-330] root = 内容层模型根（BaseScene.root），逐根置脏消费
+      if (f) registerPerFrame(f, root);
     },
     getHandle: () => sessionLedger.activeHandle(),
     handles: sessionLedger.handles,
@@ -683,7 +688,7 @@ async function runBuild(
 
   // 同步通用相机状态到适配器已设定的取景（包围盒/尺寸定相机）——仅 shared 模式
   if (i) syncSharedCameraState(i, session);
-  switchCtx.setPerFrame(session.content.update ?? null);
+  switchCtx.setPerFrame(session.content.update ?? null, session.content.root);
   // ===== §4c 生命周期管理（cooperate/switchTo/代际守卫）=====
   // 初始模型的 allContent 登记已上移到 build 成功后的第一时刻（见上方 [P1 修复]）——
   // 此处不再重复 push（allContent 无去重，重复登记会让 fullCleanup 对同一 content dispose 两次）。

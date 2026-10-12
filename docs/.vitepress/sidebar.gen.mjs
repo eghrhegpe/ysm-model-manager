@@ -254,6 +254,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-330：frustum-cull 逐根矩阵置脏：perFrame 契约携带根身份，消除多模型同框全体 updateWorldMatrix",
+        "link": "/adr/architecture/ADR-330-frustum-per-root-dirty"
+      },
+      {
         "text": "ADR-329：3D 预览巨型 cap 对称叶化（sky/light/postprocessing 拆分）",
         "link": "/adr/architecture/ADR-329-preview-cap-symmetry-leaf"
       },

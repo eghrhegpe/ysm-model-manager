@@ -648,6 +648,8 @@ function makeSceneHandle(
       Promise.resolve(screenshotFromRenderer(sc.infra.renderer, sc.infra.scene, sc.infra.camera)),
     boneMaps,
     menuItems,
+    // [ADR-330] 模型根身份：frustum-cull 逐根置脏消费（与 L244 registerModelRoot(obj.rootGroup) 同一根）
+    root: obj.rootGroup,
     onBonePick: (id: string) => ctx.menu.openPanel(id),
     update: (dt: number): void => {
       // #9 全局暂停标志：动画激活时感知 controller 自查静默（breath 已挂标志），

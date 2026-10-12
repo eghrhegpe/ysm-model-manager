@@ -658,6 +658,8 @@ function Stage5BuildResult(
   // 本函数退化为纯编排。依赖经对象一次性传入，语义等价于原闭包捕获。
   return {
     menuItems,
+    // [ADR-330] 模型根身份：frustum-cull 逐根置脏消费（与 L319 registerModelRoot(vrm.scene) 同一根）
+    root: vrm.scene,
     update: makeVrmUpdater({ vrm, motion, perception, semanticBones, vrmFootIK, ctx }),
     dispose: makeVrmDisposer({
       vrm,

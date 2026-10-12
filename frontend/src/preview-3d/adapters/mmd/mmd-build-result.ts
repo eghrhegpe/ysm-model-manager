@@ -149,6 +149,9 @@ export function Stage6Result(
     ScreenshotScene &
     SemanticScene & { applyPose?: ((index: number) => void) | undefined } = {
     menuItems: items,
+    // [ADR-330] 模型根身份：frustum-cull 逐根置脏消费（与 mmd-build-scene registerModelRoot
+    // 同一 c.mesh；dispose 处 unregisterModelRoot(c.mesh) 同源）
+    root: c.mesh,
     update: (dt: number): void => {
       lipSyncTime = stage6Update(c, s5, dt, lipSyncTime);
     },

@@ -64,6 +64,14 @@ const PER_FRAME_WARN_THROTTLE_MS = 5000;
  *  在未注入分支每帧 new 空数组，与「rAF 热路径零分配」自我契约相悖。 */
 const NO_CAPS: readonly SceneCapability[] = [];
 
+/** [ADR-330] perFrame 注册项：回调 + 可选根身份。root = 该回调驱动的模型根（adapter 经
+ *  BaseScene.root 暴露、setPerFrame 透传），供 frustum-cull 逐根置脏；缺省（undefined）=
+ *  无法归属 → 消费端保守回退全体置脏（行为不劣化于 ADR-330 之前的全体形态）。 */
+export interface PerFrameEntry {
+  f: (dt: number) => void;
+  root?: THREE.Object3D;
+}
+
 /**
  * 渲染宿主：持有单 rAF loop 的全部可变状态（原 render-loop.ts 模块级 let 集群）。
  * 仅此一处创建/驱动 global rAF；perFrame 回调与活跃输入会话均为实例字段，
@@ -72,8 +80,9 @@ const NO_CAPS: readonly SceneCapability[] = [];
 export class RendererHost {
   /** rAF 全局唯一标识（0 = 循环未运行） */
   private _animId = 0;
-  /** 所有 session 的 perFrame 回调（共享同一 renderer） */
-  private _perFrames: Array<(dt: number) => void> = [];
+  /** 所有 session 的 perFrame 回调（共享同一 renderer）；root = [ADR-330] 该回调驱动的
+   *  模型根（供 frustum-cull 逐根置脏；缺省 = 无法归属 → 保守全体置脏） */
+  private _perFrames: Array<PerFrameEntry> = [];
   /**
    * 上次 perFrame 阻塞告警时间戳（节流用，见 animate 内超时告警）。
    * 初值 `null` = 「从未告警过」——不能用 0：页面刚加载时 `performance.now()` 本身
@@ -91,7 +100,7 @@ export class RendererHost {
    */
   private _lastRemoveMissWarnTs: number | null = null;
   /** perFrame 快照缓存（dirty 重建）：注册表变更才分配，rAF 热路径零分配（R1-P1-1） */
-  private _perFrameSnapshot: Array<(dt: number) => void> | null = null;
+  private _perFrameSnapshot: Array<PerFrameEntry> | null = null;
   private _perFramesDirty = true;
 
   /** 当前活跃输入会话（rAF 每帧动态读取 keys/camSpeed/orbitMode 驱动相机运动）。
@@ -131,6 +140,8 @@ export class RendererHost {
   private readonly _forward = new THREE.Vector3();
   private readonly _right = new THREE.Vector3();
   private readonly _move = new THREE.Vector3();
+  /** [ADR-330] 本帧 perFrame 实际驱动的模型根集合（每帧 clear 复用容量，rAF 热路径零分配） */
+  private readonly _drivenRoots = new Set<THREE.Object3D>();
 
   /** 惰性 GPU 负载采样（锐评 2026-10-11 P1）：sampler 只读 renderer.info（无副作用），
    *  经 sampleAdaptivePixelRatio 传引用、仅在窗口结算帧调用——rAF 热路径零对象分配。 */
@@ -164,9 +175,10 @@ export class RendererHost {
     return this._activeInputSession;
   }
 
-  /** 注册 perFrame 回调（setPerFrame 统一入口的落点） */
-  registerPerFrame(f: (dt: number) => void): void {
-    this._perFrames.push(f);
+  /** 注册 perFrame 回调（setPerFrame 统一入口的落点）。[ADR-330] root = 该回调驱动的模型根
+   *  （adapter 经 BaseScene.root 暴露）：frustum-cull 逐根置脏消费；缺省 = 无法归属 → 保守全体 */
+  registerPerFrame(f: (dt: number) => void, root?: THREE.Object3D): void {
+    this._perFrames.push(root !== undefined ? { f, root } : { f });
     this._perFramesDirty = true;
   }
 
@@ -182,7 +194,8 @@ export class RendererHost {
    * 仅在「本该移除」时告警：列表为空是合法（重复注销/清空后重入），不刷屏。
    */
   removePerFrame(f: (dt: number) => void): void {
-    const idx = this._perFrames.indexOf(f);
+    // [ADR-330] 注册项为 PerFrameEntry（f + 可选 root）——按回调引用相等定位条目
+    const idx = this._perFrames.findIndex((e) => e.f === f);
     if (idx >= 0) {
       this._perFrames.splice(idx, 1);
     } else if (this._perFrames.length > 0) {
@@ -204,7 +217,7 @@ export class RendererHost {
   }
 
   /** 取本次帧迭代快照：仅注册表变更时重建（每帧 spread 会无条件分配，见 animate 注释） */
-  private perFrameIterable(): Array<(dt: number) => void> {
+  private perFrameIterable(): Array<PerFrameEntry> {
     if (this._perFramesDirty || this._perFrameSnapshot === null) {
       this._perFrameSnapshot = [...this._perFrames];
       this._perFramesDirty = false;
@@ -294,10 +307,15 @@ export class RendererHost {
       );
     }
     // 驱动所有 session 的 perFrame 回调（快照迭代）
-    for (const fn of this.perFrameIterable()) {
+    // [ADR-330] 收集本帧 perFrame 实际驱动的模型根（frustum-cull 逐根置脏消费）；
+    // 剔除关闭时不收集（_drivenRoots 保持空），cullOn 帧内恒定（模块态只跨帧变）
+    const cullOn = isFrustumCullEnabled();
+    this._drivenRoots.clear();
+    let anyRootlessPerFrame = false;
+    for (const entry of this.perFrameIterable()) {
       const pfStart = performance.now();
       try {
-        fn(dt);
+        entry.f(dt);
       } catch (err) {
         logWarn("perFrame", `session 回调异常: ${String(err)}`);
       }
@@ -311,8 +329,12 @@ export class RendererHost {
         this._lastPerFrameWarnTs = pfNow;
         logWarn("perFrame", `阻塞 ${pfMs.toFixed(1)}ms (>${PER_FRAME_WARN_MS}ms 阈值)`);
       }
+      if (cullOn) {
+        if (entry.root !== undefined) this._drivenRoots.add(entry.root);
+        else anyRootlessPerFrame = true;
+      }
     }
-    if (isFrustumCullEnabled()) {
+    if (cullOn) {
       // 矩阵置脏只由「真有变换写入」的 perFrame 回调决定：`_perFrames` 非空即置脏。
       //
       // [2026-09 修复] 原条件 `|| hasCapUpdate`（扫描 getSceneCaps 找实现了 update 的 cap）
@@ -323,15 +345,17 @@ export class RendererHost {
       // 且判据本身是错的：cap 的 update() 只推进 uniform/时间值（water 写 waterTime、
       // sky 写 beams.time），**从不写 Object3D 变换**，本就不该触发矩阵刷新。
       //
-      // [2026-10-11 逐根化 — 此处仍走**全体**形态，属已知的有意保守]
-      // `frustum-cull|markCullMatricesDirty(root?)` 已支持逐根置脏（只刷真有变换写入
-      // 的根），但本循环**无法归属** perFrame 回调改写了哪个根——`registerPerFrame(f)`
-      // 的契约为 `(dt) => void`，不带根身份（`mount-preview-core|setPerFrame` 亦只透传
-      // 回调）。要真正吃到逐根收益，需把根身份沿 perFrame 契约打通到 6 个 adapter，
-      // 属跨层改动，超出本处范围。故此处保持全体置脏（正确性优先）；
-      // adapter 侧若能定位自己的根（如骨骼动画驱动者），可直接调
-      // `markCullMatricesDirty(root)` 增量采用，无需等本循环改造。
-      if (this._perFrames.length > 0) markCullMatricesDirty();
+      // [ADR-330 / 2026-10-12 逐根化收口] 本帧实际驱动的根经 perFrame 注册项携带的
+      // 根身份（BaseScene.root → setPerFrame 透传）逐根置脏：静态根不再被「别的模型
+      // 有动画」陪刷全子树矩阵。任一回调无根身份 → 保守回退全体置脏（正确性不变，
+      // 行为不劣化于 ADR-330 之前的全体形态）。
+      if (this._perFrames.length > 0) {
+        if (anyRootlessPerFrame) {
+          markCullMatricesDirty(); // 保守全体（含无根回调的归属盲区）
+        } else {
+          for (const r of this._drivenRoots) markCullMatricesDirty(r); // 逐根
+        }
+      }
       cullModelGroups(cam);
     } else restoreModelGroupsVisible();
     // 每帧动态解析（coop 会话切换后指向当前存活 cap；全清后为 null 走直渲兜底）

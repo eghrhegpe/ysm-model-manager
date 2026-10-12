@@ -4,7 +4,7 @@
 //
 // 从预览 LightCapability 提取截图灯光（仅 light cap 缺失才回退标准灯——三点全关是用户
 // 刻意的暗场景，截图必须保持暗——[doc:adr-126-p5] 截图灯光割裂修复：所见即所得）。
-import type * as THREE from "three";
+import * as THREE from "three";
 import { sceneInfraHost } from "@/preview-3d/adapters/shared-infra.ts";
 import { attenuateAmbientForSky } from "@/preview-3d/caps/light-math.ts";
 import type { LightInstanceParams, VolumetricParams } from "@/preview-3d/caps/light-params.ts";
@@ -12,6 +12,8 @@ import {
   isIblActive,
   sceneCapabilityRegistry,
 } from "@/preview-3d/caps/scene-capability-registry.ts";
+// 阴影值读 envState 单一事实源（与 shadow cap 的 apply 路径同源取数，防第二套口径分叉）
+import { envState } from "@/preview-3d/state/env-state.ts";
 
 /** 截图输出设置（渲染器输出三参数）——必须与活跃预览 renderer 逐字段一致。
  *  [ADR-266-d1 D2] 光柱 shader 内含 `<tonemapping_fragment>` + `<colorspace_fragment>`，
@@ -41,6 +43,28 @@ export interface ScreenshotVolumetric {
   params: VolumetricParams;
 }
 
+/** 阴影截图描述（[巡检第 9 轮 F1 → 2026-10-12 落地] 第四条 WYSIWYG 缝的补洞）。
+ *
+ *  预览默认 `envState.shadowEnabled = true` → `ShadowCapability` 给活跃 renderer 置
+ *  `shadowMap.enabled` + 灯/mesh `castShadow`，模型有接触阴影；离屏多角度截图原**零阴影接线**
+ *  → 导出图模型「浮起」。与 IBL 那条的关键区别：IBL 有「PMREM 纹理跨 WebGL context 不可共享」
+ *  的硬件借口，**阴影没有**——离屏重建完全可行，故本项属「未做的产品决策」而非「做不了」，
+ *  经拍板后落地。
+ *
+ *  字段语义逐项镜像预览现行值（读 `shadow-capability.ts` 的 apply 路径同源取数）：
+ *  `enabled`/`type`/`mapSize` 取自 envState（预览 renderer.shadowMap 的真值源），
+ *  `bias`/`normalBias`/`cameraSize` 供方向灯 shadow camera 与预览同参。
+ *  `null` = 预览此刻无 shadow cap（无现值可镜像）→ 离屏不接线（与 output 同语义）。 */
+export interface ScreenshotShadow {
+  enabled: boolean;
+  type: THREE.ShadowMapType;
+  mapSize: number;
+  bias: number;
+  normalBias: number;
+  /** 方向灯 shadow 正交相机半宽（预览 `envState.shadowCameraSize`） */
+  cameraSize: number;
+}
+
 /** 截图灯光描述（与预览 light-capability 三点布光同构——截图所见即所得）。
  *  `radius` = 预览的 targetHeight：灯位 = 模型中心 + 方位角/仰角 × radius，
  *  spot/point 属位置敏感光源，缺此值截图与预览会不一致。 */
@@ -53,6 +77,8 @@ export interface ScreenshotLights {
   rim: LightInstanceParams;
   /** [ADR-266-d1] 体积光锥（预览此刻无光柱时为 null） */
   volumetric: ScreenshotVolumetric | null;
+  /** [巡检 F1 → 2026-10-12] 阴影镜像（预览 shadow cap 缺席时为 null） */
+  shadow: ScreenshotShadow | null;
   /** [ADR-266-d1 D2] 输出设置镜像源；`null` = 无活跃预览 renderer（无「现值」可镜像，
    *  离屏保持自身默认——此时也没有预览可同构，不构成新分叉） */
   output: ScreenshotOutputSettings | null;
@@ -71,6 +97,11 @@ export function toScreenshotLights(): ScreenshotLights | undefined {
   // 就会出现「预览全黑，截图却立着一根光柱」（新的 WYSIWYG 破洞）。
   const driving = on ? cap.getSpotLightForCone() : null;
   const renderer = sceneInfraHost.renderer;
+  // [巡检 F1 → 2026-10-12] 阴影镜像：与灯/锥同契——cap 在场且启用才接线（预览没开的
+  // 东西截图不许凭空出现）。值全部读 envState 单一事实源（= shadow cap 的 apply 路径同源），
+  // 不重推 cap 的私有快照，防第二套口径分叉。
+  const shadowCap = sceneCapabilityRegistry.getById("shadow");
+  const shadowOn = shadowCap?.isEnabled();
   return {
     // 镜像预览的 PMREM 环境光衰减——截图与预览 ambient 同构：
     // 判据读组合根 isIblActive（IBL 真供图者 = env cap 在场且启用），系数/公式走
@@ -92,6 +123,20 @@ export function toScreenshotLights(): ScreenshotLights | undefined {
           // 驱动源已保证「该槽位是启用的 spot」→ 原参透传（enabled 必为 true）
           spot: p[driving.which],
           params: p.volumetric,
+        }
+      : null,
+    shadow: shadowOn
+      ? {
+          enabled: true,
+          // 与 shadow-capability|applyShadows 同式：soft → PCFSoftShadowMap
+          type:
+            envState.shadowType === "soft"
+              ? (THREE.PCFSoftShadowMap as THREE.ShadowMapType)
+              : (THREE.BasicShadowMap as THREE.ShadowMapType),
+          mapSize: envState.shadowMapSize,
+          bias: envState.shadowBias,
+          normalBias: envState.shadowNormalBias,
+          cameraSize: envState.shadowCameraSize,
         }
       : null,
     output: renderer

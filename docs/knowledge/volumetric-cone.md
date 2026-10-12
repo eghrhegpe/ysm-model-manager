@@ -28,6 +28,7 @@ auto_fields:
     - LightCapability
     - LightKey
     - ScreenshotLights
+    - ScreenshotShadow
     - ScreenshotVolumetric
     - toScreenshotLights
     - volParamKeys

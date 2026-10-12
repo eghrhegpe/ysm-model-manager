@@ -42,6 +42,7 @@ function applyLights(
   scene: THREE.Scene,
   lights: ScreenshotLights | undefined,
   origin: THREE.Vector3,
+  sh: import("./screenshot-lights.ts").ScreenshotShadow | null = null,
 ): void {
   if (!lights) {
     addStandardSceneLights(scene);
@@ -82,6 +83,33 @@ function applyLights(
       light = dl;
     }
     if (light instanceof THREE.SpotLight) light.target = sharedTarget;
+    // [巡检 F1 → 2026-10-12] 阴影接线（与预览 ShadowCapability 同参）：
+    // 仅 dir/spot 能投影（three 限制），point 不接线；参数逐项镜像预览现值。
+    // mesh 侧 cast/receive 由调用方在场景建好后统一置（见 wireShadows）。
+    if (sh && (light instanceof THREE.DirectionalLight || light instanceof THREE.SpotLight)) {
+      light.castShadow = true;
+      light.shadow.mapSize.set(sh.mapSize, sh.mapSize);
+      light.shadow.bias = sh.bias;
+      light.shadow.normalBias = sh.normalBias;
+      const cam = light.shadow.camera;
+      if (light instanceof THREE.DirectionalLight) {
+        // 方向灯：正交相机，半宽 = shadowCameraSize（同 shadow-capability|applyDirLightShadow）
+        const oc = cam as THREE.OrthographicCamera;
+        oc.left = -sh.cameraSize;
+        oc.right = sh.cameraSize;
+        oc.top = sh.cameraSize;
+        oc.bottom = -sh.cameraSize;
+        oc.near = 0.5;
+        oc.far = 100;
+      } else {
+        // 聚光灯：透视相机（同 shadow-capability|applySpotShadow）
+        const pc = cam as THREE.PerspectiveCamera;
+        pc.near = 0.5;
+        pc.far = Math.max(light.distance, 50);
+      }
+      cam.updateProjectionMatrix();
+      light.shadow.needsUpdate = true;
+    }
     scene.add(light);
   }
 }
@@ -177,22 +205,39 @@ export async function renderMultiAngle(
     // 不参与截图」已知差异条）。若「IBL 进截图」成为产品需求，须在此处按 preview renderer 现值
     // 重建 PMREM（isIblActive 门控）并移除本声明——本注释与 export.md 条互为镜像，改动需同步。
     //
-    // [巡检 2026-10-11 F1] 第四条 WYSIWYG 缝同址声明：**阴影也不入多角度截图**——离屏
-    // renderer 无 shadowMap 接线、applyLights 灯无 castShadow、mesh 未置 cast/receiveShadow，
-    // 而预览默认 shadowEnabled=true，导出图模型无接触阴影显「浮起」。与 IBL 不同，阴影**无
-    // 跨 context 借口**（离屏重建技术可行），属未做的产品决策。声明与双向锁见 export.md
-    // 「阴影不参与多角度截图」条 + screenshot-render.test.ts「阴影边界」两例；立项实现时
-    // 翻转行为锁断言方向并同步本注释与那条声明。
+    // [巡检 2026-10-11 F1 声明 → 2026-10-12 落地] 第四条 WYSIWYG 缝已补：**阴影入多角度
+    // 截图**。原声明「阴影不入截图」属未做的产品决策（与 IBL 不同，阴影无跨 context 借口），
+    // 经拍板后按 export.md 指定的最小实现落地：离屏 renderer `shadowMap.enabled` +
+    // applyLights 对 dir/spot 灯置 `castShadow`（参数逐项镜像预览现值）+ 模型 mesh 置
+    // cast/receiveShadow。镜像源 = `ScreenshotLights.shadow`（由 toScreenshotLights 从
+    // envState 单源读出，cap 缺席/总闸关时为 null → 不接线，与灯/锥同契）。
+    // 声明与双向锁已同步翻转：export.md「阴影参与多角度截图」条 + test「阴影边界」两例。
 
     ysmObject = buildYsmObject(spec, texArr, componentTexMap, 0);
     const { rootGroup } = ysmObject;
     scene.add(rootGroup);
 
+    // [F1 落地] 阴影接线：renderer 级开关 + mesh 级 cast/receive。
+    // 顺序在 applyLights 之前——灯建好时 shadowMap 已启用，首帧即正确（不留一帧无影）。
+    // mesh 遍历在 rootGroup 建好后（与 shadow-capability|applyMeshes 同式：全量 mesh 置真）。
+    const shadowSpec = opts.lights?.shadow ?? null;
+    if (shadowSpec?.enabled) {
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = shadowSpec.type;
+      renderer.shadowMap.needsUpdate = true;
+      rootGroup.traverse((obj) => {
+        const m = obj as THREE.Mesh;
+        if (!m.isMesh) return;
+        m.castShadow = true;
+        m.receiveShadow = true;
+      });
+    }
+
     scene.updateMatrixWorld();
     const box = new THREE.Box3().setFromObject(rootGroup);
     const center = box.getCenter(new THREE.Vector3());
     // 灯光在模型中心算出后再建：spot/point 灯位需相对模型中心（与预览同构）
-    applyLights(scene, opts.lights, center);
+    applyLights(scene, opts.lights, center, shadowSpec);
     // [ADR-266-d1 D1] 体积光锥入镜：复用预览同一 VolumetricCone（几何/shader 单源）
     cone = applyVolumetricCone(scene, opts.lights, center);
     const maxDim = Math.max(...box.getSize(new THREE.Vector3()).toArray());

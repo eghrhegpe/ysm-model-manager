@@ -855,6 +855,7 @@ auto_fields:
     - ScreenshotLights
     - ScreenshotOpts
     - ScreenshotScene
+    - ScreenshotShadow
     - ScreenshotVolumetric
     - SelectableEnvPresetId
     - SEMANTIC_BONE_IDS

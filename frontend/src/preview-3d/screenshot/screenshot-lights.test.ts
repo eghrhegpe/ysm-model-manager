@@ -22,6 +22,9 @@ const { host, stub } = vi.hoisted(() => ({
     iblOn: false,
     /** 同时桩一个 sky cap：它的 isSkyIblSelfHoldEnabled 应被忽略（IBL 判据不问 sky）。 */
     skyEnvOn: false,
+    /** [F1 落地 2026-10-12] shadow cap 桩：undefined = cap 缺席（默认），
+     *  否则须提供 isEnabled()（阴影接线与灯/锥同契：cap 在场且启用才接线）。 */
+    shadowCap: undefined as unknown,
   },
 }));
 
@@ -40,6 +43,7 @@ vi.mock("@/preview-3d/caps/scene-capability-registry.ts", async (importOriginal)
     if (id === "light") return stub.cap;
     if (id === "environment") return { isEnabled: () => stub.iblOn } as unknown;
     if (id === "sky") return { isSkyIblSelfHoldEnabled: () => stub.skyEnvOn } as unknown;
+    if (id === "shadow") return stub.shadowCap;
     return undefined;
   };
   return actual;
@@ -79,7 +83,35 @@ beforeEach(() => {
   stub.cap = makeCap();
   stub.iblOn = false;
   stub.skyEnvOn = false;
+  stub.shadowCap = undefined; // 默认 cap 缺席（各例按需临时赋值）
   host.renderer = null;
+});
+
+// ===== [F1 落地 2026-10-12] 阴影同构提取：cap 在场且启用才产 shadow 块 =====
+// 与灯/锥同契：预览没开的阴影，截图不许凭空出现（否则导出图比预览「多一层影」）。
+describe("toScreenshotLights — 阴影同构提取（F1 落地）", () => {
+  it("shadow cap 缺席 → shadow 为 null（不凭空接线）", () => {
+    stub.shadowCap = undefined;
+    expect(toScreenshotLights()!.shadow).toBeNull();
+  });
+
+  it("shadow cap 在场但总闸关 → shadow 为 null（预览关着的阴影截图不许出现）", () => {
+    stub.shadowCap = { isEnabled: () => false };
+    expect(toScreenshotLights()!.shadow).toBeNull();
+  });
+
+  it("shadow cap 在场且启用 → shadow 块逐字段取 envState 单源现值", async () => {
+    const { envState } = await import("@/preview-3d/state/env-state.ts");
+    stub.shadowCap = { isEnabled: () => true };
+    const sh = toScreenshotLights()!.shadow!;
+    expect(sh.enabled).toBe(true);
+    expect(sh.mapSize, "mapSize 同 envState.shadowMapSize").toBe(envState.shadowMapSize);
+    expect(sh.bias, "bias 同 envState.shadowBias").toBe(envState.shadowBias);
+    expect(sh.normalBias).toBe(envState.shadowNormalBias);
+    expect(sh.cameraSize).toBe(envState.shadowCameraSize);
+    // soft → PCFSoftShadowMap / hard → BasicShadowMap（同 shadow-capability|applyShadows 映射）
+    expect(sh.type).toBe(envState.shadowType === "soft" ? THREE.PCFSoftShadowMap : THREE.BasicShadowMap);
+  });
 });
 
 describe("toScreenshotLights — 光柱同构（预览有 ⟺ 截图有）", () => {

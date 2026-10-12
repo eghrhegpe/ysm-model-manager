@@ -96,6 +96,17 @@ const { getAppMock, specMock, loadTexturesMock, releaseTextureUrlsMock, buildSce
       color: unknown;
       intensity: unknown;
       target: unknown = null;
+      // [F1 落地 2026-10-12] 同 FakeSpotLight：阴影接线需要 shadow 面（dir 走正交相机分支）
+      shadow = {
+        mapSize: { x: 0, y: 0, set(a: number, b: number) { this.x = a; this.y = b; } },
+        bias: 0,
+        normalBias: 0,
+        needsUpdate: false,
+        camera: {
+          left: 0, right: 0, top: 0, bottom: 0, near: 0, far: 0,
+          updateProjectionMatrix: () => {},
+        },
+      };
       constructor(color?: unknown, intensity?: unknown) {
         this.color = color;
         this.intensity = intensity;
@@ -120,6 +131,19 @@ const { getAppMock, specMock, loadTexturesMock, releaseTextureUrlsMock, buildSce
       angle: unknown;
       penumbra: unknown;
       decay: unknown;
+      // [F1 落地 2026-10-12] 阴影接线读 `light.shadow.{mapSize,bias,normalBias,camera}`——
+      // 桩须忠实提供（原 Test-2 断言已预言：SUT 开始写阴影即需该面，否则 TypeError 假红）。
+      // mapSize 用带 x/y 的可写对象（真 three 是 Vector2）；camera 带 updateProjectionMatrix。
+      shadow = {
+        mapSize: { x: 0, y: 0, set(a: number, b: number) { this.x = a; this.y = b; } },
+        bias: 0,
+        normalBias: 0,
+        needsUpdate: false,
+        camera: {
+          left: 0, right: 0, top: 0, bottom: 0, near: 0, far: 0,
+          updateProjectionMatrix: () => {},
+        },
+      };
       constructor(
         color?: unknown, intensity?: unknown, distance?: unknown,
         angle?: unknown, penumbra?: unknown, decay?: unknown,
@@ -175,6 +199,9 @@ const { getAppMock, specMock, loadTexturesMock, releaseTextureUrlsMock, buildSce
       dispose = vi.fn();
       forceContextLoss = vi.fn();
       outputColorSpace = 0;
+      // [F1 落地 2026-10-12] 离屏阴影接线写 `renderer.shadowMap.{enabled,type,needsUpdate}`——
+      // 桩须忠实提供该面（原注释已预言：SUT 开始写时桩无此字段即 TypeError 假红）。
+      shadowMap = { enabled: false, type: 0, needsUpdate: false };
       constructor() {
         FakeWebGLRenderer.instances.push(this);
       }
@@ -500,6 +527,8 @@ describe("renderMultiAngle — 体积光锥与输出设置同构（ADR-266-d1）
         spot,
         params: { ...DEFAULT_LIGHT_PARAMS.volumetric, enabled: true },
       },
+      // [F1 落地] 阴影维默认 null（本组测锥/输出，不涉阴影；需要时经 over 显式传）
+      shadow: null,
       output: { toneMapping: 4, exposure: 0.55, outputColorSpace: "srgb" },
       ...over,
     };
@@ -564,6 +593,8 @@ describe("renderMultiAngle — 灯光对象落地（S1 照度守恒）", () => {
         spot: { ...DEFAULT_LIGHT_PARAMS.key, type: "spot" as const, enabled: true },
         params: { ...DEFAULT_LIGHT_PARAMS.volumetric, enabled: true },
       },
+      // [F1 落地] 阴影维默认 null（本组测灯对象落地，不涉阴影）
+      shadow: null,
       output: null,
       ...over,
     };
@@ -668,28 +699,54 @@ describe("renderMultiAngle — IBL 边界（锐评 P1-1 已知差异）", () => 
   });
 });
 
-// ===== [巡检第 9 轮 2026-10-11 F1] 阴影边界锁：离屏多角度导出**不参与阴影** =====
-// 与 IBL 锁同构的双向样本（声明在 export.md「阴影不参与多角度截图」条）。
-// 病：预览默认 `envState.shadowEnabled = true`（schema 实证）→ ShadowCapability 给
-// 活跃 renderer 置 shadowMap.enabled + 灯/mesh castShadow，模型在预览里有接触阴影；
-// 离屏 renderMultiAngle 自建 renderer **零阴影接线** → 多角度导出图无阴影，模型显
-// 「浮起」——继背景层 / pass 层 / 环境贴图光照层之后的**第四条 WYSIWYG 缝**，且此前
-// 无声明（区别于 IBL：阴影无「跨 context 不可共享」的硬件借口，离屏技术上可重建，
-// 属产品需求——本锁只声明 + 机器锁边界，实现与否待拍板，勿静默漂移）。
-describe("renderMultiAngle — 阴影边界（巡检第 9 轮 F1 已知差异）", () => {
-  it("离屏不接线阴影：shadowMap 从未被启用（若实现阴影入截图，本例翻转断言方向并同步声明）", async () => {
-    const shots = await renderMultiAngle("/m/a.ysm", []);
+// ===== [巡检第 9 轮 2026-10-11 F1 → 2026-10-12 落地] 阴影边界锁（已翻转）=====
+// 原为「离屏多角度导出**不参与**阴影」的已知差异锁；经拍板后按 export.md 指定的最小实现
+// 落地阴影入截图，**两例断言方向随之翻转**（这正是原锁注释里预留的升级路径：
+// 「若实现阴影入截图，本例翻转断言方向并同步声明」）。
+// 现锁：① 行为侧 —— 有 shadow 描述时离屏 renderer 必须启用 shadowMap；
+//        ② 声明侧 —— export.md 的条目标题已改为「阴影参与多角度截图」。
+describe("renderMultiAngle — 阴影边界（F1 落地后）", () => {
+  /** 本 describe 独立的 lights 构造（含 shadow 维；其余维度取最小可用值） */
+  function makeShadowLights(shadow: ScreenshotLights["shadow"]): ScreenshotLights {
+    return {
+      ambient: { color: 0xffffff, intensity: 0.3 },
+      radius: 8,
+      key: { ...DEFAULT_LIGHT_PARAMS.key, type: "directional" as const, enabled: true },
+      fill: { ...DEFAULT_LIGHT_PARAMS.fill, enabled: false },
+      rim: { ...DEFAULT_LIGHT_PARAMS.rim, enabled: false },
+      volumetric: null,
+      shadow,
+      output: null,
+    };
+  }
+
+  it("离屏接线阴影：传 shadow 描述时 renderer.shadowMap 被启用（行为锁，已翻转）", async () => {
+    const lights = makeShadowLights({
+      enabled: true,
+      type: 2 as import("three").ShadowMapType, // PCFSoftShadowMap
+      mapSize: 1024,
+      bias: -0.0005,
+      normalBias: 0.02,
+      cameraSize: 8,
+    });
+
+    const shots = await renderMultiAngle("/m/a.ysm", [], { lights });
     expect(shots, "成功路径").not.toBeNull();
     const r = lastRenderer() as unknown as { shadowMap?: { enabled?: boolean } };
-    // fake 桩无 shadowMap 字段：若 SUT 开始写 renderer.shadowMap.enabled，桩上即
-    // TypeError → shots 变 null 红；真 three 下该字段恒存在，断言 enabled 非真。
-    expect(r.shadowMap?.enabled ?? false, "离屏不启用 shadowMap").toBe(false);
+    expect(r.shadowMap?.enabled, "有 shadow 描述 ⇒ 离屏启用 shadowMap").toBe(true);
   });
 
-  it("export.md 已声明「阴影不参与多角度截图」已知差异（声明与行为互为镜像，删其一即红）", async () => {
+  it("无 shadow 描述时不接线（cap 缺席/总闸关 = 预览没开的东西截图不许凭空出现）", async () => {
+    const shots = await renderMultiAngle("/m/a.ysm", [], { lights: makeShadowLights(null) });
+    expect(shots, "成功路径").not.toBeNull();
+    const r = lastRenderer() as unknown as { shadowMap?: { enabled?: boolean } };
+    expect(r.shadowMap?.enabled ?? false, "无 shadow 描述 ⇒ 不启用").toBe(false);
+  });
+
+  it("export.md 已声明「阴影参与多角度截图」（声明与行为互为镜像，删其一即红）", async () => {
     const { readFileSync } = await import("node:fs");
     const { fileURLToPath } = await import("node:url");
     const doc = readFileSync(fileURLToPath(new URL("../../../../docs/knowledge/export.md", import.meta.url)), "utf8");
-    expect(doc, "已知差异声明条在场").toContain("阴影不参与多角度截图");
+    expect(doc, "声明条在场").toContain("阴影参与多角度截图");
   });
 });

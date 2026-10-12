@@ -42,6 +42,8 @@ function makeLights(volumetric: ScreenshotVolumetric | null, radius = 8): Screen
     fill: DEFAULT_LIGHT_PARAMS.fill,
     rim: DEFAULT_LIGHT_PARAMS.rim,
     volumetric,
+    // [F1 落地 2026-10-12] 阴影维：本文件测锥体几何/落位/门禁，与阴影无关 → null
+    shadow: null,
     output: null,
   };
 }

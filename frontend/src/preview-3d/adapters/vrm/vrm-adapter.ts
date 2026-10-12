@@ -298,7 +298,7 @@ async function Stage1ReadParse(
     b64 ? "ok" : "fail",
     b64 ? `bytes=${b64.length}` : "ReadFileBytes 返回空（路径语义/守卫？）",
   );
-  if (!b64) throw new Error("ReadFileBytes 返回空");
+  if (!b64) throw new Error(t("preview.err.readBytes")); // [D1 收口]
   const bytes = base64ToBytes(b64) as Uint8Array;
   const buffer = bytes.buffer.slice(
     bytes.byteOffset,
@@ -311,7 +311,7 @@ async function Stage1ReadParse(
     loader.parse(buffer, "", resolve, reject);
   });
   const vrm = (gltf.userData as { vrm?: VRM }).vrm;
-  if (!vrm) throw new Error("VRM 实例解析失败（非标准 .vrm？）");
+  if (!vrm) throw new Error(t("preview.err.vrmParse")); // [D1 收口]
   const metaVersion = vrm.meta.metaVersion;
   if (metaVersion === "0") ParseGlbVrm0(vrm, gltf);
   else ParseGlbVrm1(vrm, gltf);

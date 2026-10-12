@@ -1162,6 +1162,17 @@ export const ja: Record<string, string> = {
   "preview.texture.fallback": "テクスチャ {n}",
   "preview.overview.mmd": "{b} ボーン · {m} マテリアル · {f} モーフ",
   "preview.overview.vrm": "{b} ボーン {m} マテリアル",
+  // [D1 收口 2026-10-12] adapter 加载失败路径自构中文 Error → t() 键
+  "preview.err.fbxRead": "FBX バイト読み取り失敗（ReadFileBytes が空を返却）",
+  "preview.err.specEmpty": "3D spec が空です",
+  "preview.err.dataLoad": "モデルデータ読み込み失敗: {path}",
+  "preview.err.zipRead": "ReadFileBytes が空を返却（zip ファイル）",
+  "preview.err.zipNoModel": "ZIP 内に .pmx / .pmd モデルファイルが見つかりません",
+  "preview.err.readBytes": "ReadFileBytes が空を返却",
+  "preview.err.vrmParse": "VRM インスタンス解析失敗（非標準 .vrm？）",
+  "preview.err.mmdParseEmpty": "MMD parse が空の結果を返却",
+  "preview.err.packParse": "パック内モデル解析失敗: {path}",
+  "preview.err.packNoTex": "パック内モデルに完全なテクスチャ参照なし: {path}",
   // MMD 詳細カード（P2: PMX ファイル解析口径, 描画実測と区別）
   "preview.stats.file": "📊 ファイル統計",
   "preview.stats.vertices": "頂点",

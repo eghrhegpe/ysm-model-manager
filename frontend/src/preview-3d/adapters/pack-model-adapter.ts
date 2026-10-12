@@ -292,12 +292,12 @@ async function buildPackScene(
     model = await parseJavaModel(entryPath, async (e) => deps.readEntry(zipPath, e));
   } catch {
     ctx.loadingEl.remove();
-    throw new Error(`资源包内模型解析失败: ${entryPath}`);
+    throw new Error(t("preview.err.packParse", { path: entryPath })); // [D1 收口]
   }
   // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
   if (!isRenderableModel(model!)) {
     ctx.loadingEl.remove();
-    throw new Error(`资源包内模型无完整纹理引用: ${entryPath}`);
+    throw new Error(t("preview.err.packNoTex", { path: entryPath })); // [D1 收口]
   }
 
   // 预载 MC biome tint 表（vendored minecraft-data，ADR-080 §5.4 L4）；失败则降级 plains 默认常量

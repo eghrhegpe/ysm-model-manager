@@ -5,7 +5,6 @@
 // 改文案 / 改样式只需改这一处。
 
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
-import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
@@ -40,6 +39,16 @@ export function renderLoadingState(
 
 /** 3D 预览加载失败：loadingEl 渲染失败提示 + 全局 toast 报错 */
 export function showLoadFailure(loadingEl: HTMLElement, e: unknown): void {
-  loadingEl.innerHTML = `<div style="font-size:var(--fs-xl)">${UI_ICONS.warning}</div><div>${t("preview.loadFailed")}: ${esc(safeErrorMessage(e))}</div>`;
-  toast(`${friendlyError(e, t("preview.loadFailed"))}`, TOAST_MS.long, "error");
+  // [D1 收口 2026-10-12] 内层文案改走 friendlyError（原 safeErrorMessage 的「轻量无 i18n」
+  // 本意是 Worker 安全，此处非 Worker）：AppError.Code 命中 CODE_KEYS 即出译文——D4 刚把
+  // 守卫拒绝 AppError 化，en/ja 用户的 INVALID_PATH 从此不再泄漏中文 Reason。
+  // 前缀策略：friendlyError 对英文消息自带 fallback 前缀（startsWith 判重则不叠）；
+  // 中文透传无前言 → 补 loadFailed 前缀（旧 innerHTML 语义逐字保真）。
+  // 同批统一：旧代码 innerHTML 与 toast 两路对中文消息前缀有无不一致（toast 缺），
+  // 现两路同串——toast 对中文消息获得前缀是一致性修复而非回归。
+  const loadFailed = t("preview.loadFailed");
+  const detail = friendlyError(e, loadFailed);
+  const msg = detail.startsWith(loadFailed) ? detail : `${loadFailed}: ${detail}`;
+  loadingEl.innerHTML = `<div style="font-size:var(--fs-xl)">${UI_ICONS.warning}</div><div>${esc(msg)}</div>`;
+  toast(msg, TOAST_MS.long, "error");
 }

@@ -16,6 +16,7 @@ import { getApp } from "@/backend/app.ts";
 import { isViewerMode } from "@/backend/platform.ts";
 import { isWebPlatform } from "@/backend/platform-web.ts";
 import type { Model3DSpec } from "@/bindings/ysm-model-manager/go/threejs/models.ts";
+import { t } from "@/core/i18n/t.ts";
 import { decodeYsmViaWasm } from "@/preview-3d/decoder/wasm-decode.ts";
 import { recordLoadTrace, TRACE_FORMAT_OTHER } from "@/preview-3d/infra/load-trace.ts";
 import { buildSpecFromGeometryJSON } from "@/preview-3d/model/spec-builder.ts";
@@ -80,7 +81,7 @@ async function fetchSpec(model: ModelLike): Promise<Model3DSpec> {
       const spec = await fetchSpecViaWasmFallback(model);
       if (spec) return spec;
     }
-    throw new Error("3D spec 为空");
+    throw new Error(t("preview.err.specEmpty")); // [D1 收口] 原裸中文「3D spec 为空」
   }
   return parsed;
 }

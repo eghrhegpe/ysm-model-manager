@@ -14,6 +14,7 @@
 // 原挂 renderer.domElement（canvas 无 tabIndex/.focus() 保障 → keydown 永不触发，功能空转），
 // 改挂 document 并对齐核心 escH 模式；dispose 配对移除（经 YsmMenuDebug.onFKeyDown 运输）。
 import type * as THREE from "three";
+import { t } from "@/core/i18n/t.ts";
 import type { ListAllFilePaths } from "@/preview-3d/adapters/shared/data-port.ts";
 import { createBreathController } from "@/preview-3d/adapters/shared/perception/breath.ts";
 import {
@@ -227,7 +228,7 @@ interface YsmMenuDebug {
 async function loadAndBuild(sc: YsmSceneCtx): Promise<YsmBuildCore> {
   const model = await sc.opts.loader(sc.path);
   sc.tLoadEnd = performance.now();
-  if (!model) throw new Error(`模型数据加载失败: ${sc.path}`);
+  if (!model) throw new Error(t("preview.err.dataLoad", { path: sc.path })); // [D1 收口]
 
   const texIdx = sc.opts.texIdx ?? 0;
   sc.tPreloadStart = performance.now();

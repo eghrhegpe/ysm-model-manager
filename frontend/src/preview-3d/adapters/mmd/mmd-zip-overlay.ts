@@ -10,6 +10,7 @@
 //   2. readFileBytesBatch([...])  → 逐条分流（zip 内 / zip 外）
 //   3. listAllFilePaths(dir)      → dir 为虚拟目录 → 返回 zip 所有 entry 路径
 
+import { t } from "@/core/i18n/t.ts";
 import { extractZip } from "@/parsers/extract.ts";
 import { base64ToBytes, u8ToBase64 } from "@/utils/base/primitives/base64.ts";
 import type { MmdDataPort } from "./mmd-adapter.ts";
@@ -41,7 +42,7 @@ export async function resolveMmdZipConfig(
   port: MmdDataPort,
 ): Promise<MmdZipConfig> {
   const zipB64 = await port.readFileBytes(zipPath);
-  if (!zipB64) throw new Error("ReadFileBytes 返回空（zip 文件）");
+  if (!zipB64) throw new Error(t("preview.err.zipRead")); // [D1 收口]
   const zipBytes = base64ToBytes(zipB64) as Uint8Array;
   const { entries, metas } = extractZip(zipBytes);
 
@@ -82,7 +83,7 @@ export async function resolveMmdZipConfig(
       }
     }
   }
-  if (candidates.length === 0) throw new Error("ZIP 内未找到 .pmx / .pmd 模型文件");
+  if (candidates.length === 0) throw new Error(t("preview.err.zipNoModel")); // [D1 收口]
   candidates.sort((a, b) => {
     const pa = a.ext === ".pmx" ? 0 : 1;
     const pb = b.ext === ".pmx" ? 0 : 1;

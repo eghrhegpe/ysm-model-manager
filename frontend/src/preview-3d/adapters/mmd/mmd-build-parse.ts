@@ -3,6 +3,7 @@
 import { MMDLoader } from "@moeru/three-mmd";
 import { MMDAmmoPlugin } from "@moeru/three-mmd-physics-ammo";
 import type * as THREE from "three";
+import { t } from "@/core/i18n/t.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { buildPmxScene } from "./mmd-pmx-parser.ts";
 import { disposeMmdMesh, mmdDiag, trackAlloc } from "./mmd-shared.ts";
@@ -166,7 +167,7 @@ async function parsePmdWithLoader(c: ParsePmdCtx): Promise<void> {
   // 结构化守卫替代 !：loadAsync 成功返回后 mmd 必非空，但仍显式校验
   // （parse 失败已在上方 throw，走到此处即成功路径）
   if (!c.mmd) {
-    throw new Error("MMD parse 返回空结果");
+    throw new Error(t("preview.err.mmdParseEmpty")); // [D1 收口]
   }
   c.mesh = c.mmd.mesh;
   // 分配即登记失败释放（2026-09-03 注册表化；值捕获防后续覆盖漏释放）

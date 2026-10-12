@@ -2,6 +2,7 @@
 
 import * as THREE from "three";
 import { KTX2Loader } from "three/addons/loaders/KTX2Loader.js";
+import { t } from "@/core/i18n/t.ts";
 import { Ktx2TextureLoader } from "@/preview-3d/decoder/mmd-ktx2-texture-loader.ts";
 import { renderLoadingState } from "@/preview-3d/infra/preview-loading.ts";
 import { base64ToBytes, bytesToArrayBuffer, u8ToBase64 } from "@/utils/base/primitives/base64.ts";
@@ -64,7 +65,7 @@ export async function Stage1Input(c: Stage1Ctx): Promise<void> {
     c.modelB64 ? "ok" : "fail",
     c.modelB64 ? `bytes=${c.modelB64.length}` : "ReadFileBytes 返回空",
   );
-  if (!c.modelB64) throw new Error("ReadFileBytes 返回空");
+  if (!c.modelB64) throw new Error(t("preview.err.readBytes")); // [D1 收口]
   c.bytes = c.zipModelOverride?.bytes ?? (base64ToBytes(c.modelB64) as Uint8Array);
   c.modelBase =
     c.zipModelOverride?.base ?? (c.effectivePath.split(/[/\\]/).pop() || "").toLowerCase();

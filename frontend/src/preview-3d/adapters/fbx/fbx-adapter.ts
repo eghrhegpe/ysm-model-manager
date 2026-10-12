@@ -10,6 +10,7 @@
 
 import * as THREE from "three";
 import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
+import { t } from "@/core/i18n/t.ts";
 import { concurrentMap } from "@/preview-3d/adapters/mmd/mmd-utils.ts"; // 有界并发映射（对齐 ADR-101 后端 goroutine 池设计）
 import type {
   PreviewAdapter,
@@ -202,7 +203,7 @@ export async function buildFbxScene(
   const tStart = performance.now();
   const b64 = await port.readFileBytes(path);
   if (!b64) {
-    throw new Error("FBX 字节读取失败（ReadFileBytes 返回空）");
+    throw new Error(t("preview.err.fbxRead")); // [D1 收口] 原裸中文——进 showLoadFailure 通道
   }
   const bytes = bytesToArrayBuffer(base64ToBytes(b64) as Uint8Array);
   const blobUrl = URL.createObjectURL(new Blob([bytes], { type: "application/octet-stream" }));

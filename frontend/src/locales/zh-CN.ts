@@ -1132,6 +1132,18 @@ export const zhCN = {
   "preview.texture.fallback": "纹理 {n}",
   "preview.overview.mmd": "{b} 骨骼 · {m} 材质 · {f} 表情",
   "preview.overview.vrm": "{b} 骨骼 {m} 材质",
+  // [D1 收口 2026-10-12] adapter 加载失败路径自构中文 Error → t() 键
+  // （zh 值逐字保真旧文案，既有 rejects.toThrow 子串锁不破；en/ja 由此不再泄漏中文）
+  "preview.err.fbxRead": "FBX 字节读取失败（ReadFileBytes 返回空）",
+  "preview.err.specEmpty": "3D spec 为空",
+  "preview.err.dataLoad": "模型数据加载失败: {path}",
+  "preview.err.zipRead": "ReadFileBytes 返回空（zip 文件）",
+  "preview.err.zipNoModel": "ZIP 内未找到 .pmx / .pmd 模型文件",
+  "preview.err.readBytes": "ReadFileBytes 返回空",
+  "preview.err.vrmParse": "VRM 实例解析失败（非标准 .vrm？）",
+  "preview.err.mmdParseEmpty": "MMD parse 返回空结果",
+  "preview.err.packParse": "资源包内模型解析失败: {path}",
+  "preview.err.packNoTex": "资源包内模型无完整纹理引用: {path}",
   // MMD 详情卡（P2：PMX 文件解析口径，与渲染实测区分）
   "preview.stats.file": "📊 文件统计",
   "preview.stats.vertices": "顶点",

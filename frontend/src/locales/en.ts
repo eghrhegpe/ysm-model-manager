@@ -1163,6 +1163,17 @@ export const en: Record<string, string> = {
   "preview.texture.fallback": "Texture {n}",
   "preview.overview.mmd": "{b} bones · {m} materials · {f} morphs",
   "preview.overview.vrm": "{b} bones {m} materials",
+  // [D1 收口 2026-10-12] adapter 加载失败路径自构中文 Error → t() 键
+  "preview.err.fbxRead": "FBX byte read failed (ReadFileBytes returned empty)",
+  "preview.err.specEmpty": "3D spec is empty",
+  "preview.err.dataLoad": "Model data load failed: {path}",
+  "preview.err.zipRead": "ReadFileBytes returned empty (zip file)",
+  "preview.err.zipNoModel": "No .pmx / .pmd model file found in ZIP",
+  "preview.err.readBytes": "ReadFileBytes returned empty",
+  "preview.err.vrmParse": "VRM instance parse failed (non-standard .vrm?)",
+  "preview.err.mmdParseEmpty": "MMD parse returned empty result",
+  "preview.err.packParse": "Pack model parse failed: {path}",
+  "preview.err.packNoTex": "Pack model missing complete texture references: {path}",
   // MMD detail card (P2: PMX file-parse scope, distinct from runtime stats)
   "preview.stats.file": "📊 File Stats",
   "preview.stats.vertices": "Vertices",

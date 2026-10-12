@@ -63,5 +63,48 @@ export function applyPerfPreset(level: PerfLevel): void {
 /** 切换档位：持久化 + 套用 */
 export function setPerfPreset(level: PerfLevel): void {
   safeSet(PERF_PRESET_KEY, level);
+  _ssrScaleCache = null; // 档位变更 → SSR 缩放缓存失效（模块级缓存纪律，对齐 getMaxFps 范式）
   applyPerfPreset(level);
+}
+
+/**
+ * SSR 反射缓冲缩放（`SSRPass.resolutionScale` 的档位派生值）。
+ *
+ * [2026-10-12] 上游 `SSRPass` 本就提供 `resolutionScale`（默认 1 = 全分辨率），本仓此前
+ * 从未启用。它**只降 SSR 自己的三张缓冲**（`ssrRenderTarget`/`prevRenderTarget`/两张 blur），
+ * `beauty`/`normal`/`metalness` 保持全分辨率——**主渲染完全不受影响**，与「全屏降分辨率」
+ * 的霰弹枪方案有本质区别。
+ *
+ * 为什么这是**精准**旋钮：`SSRPass.setSize` 内
+ * `MAX_STEP = √(w² + h²)`（`SSRPass.js`）——SSR 的射线步进数正比于**屏幕对角线**，
+ * 故分辨率是 SSR 成本的主因子；缩小反射缓冲同时砍掉步进数与三张缓冲的显存。
+ *
+ * 为何不做用户旋钮：SSR 是**近似反射**，缩放在视觉上属「可接受的精度取舍」而非功能开关，
+ * 与 `maxFps`/`maxPixelRatio` 同属性能项 → 归口档位表，不另立 UI（避免第七个旋钮的
+ * 七处接线）。`custom` 档位（用户手调）取 `high` 值：不擅自替用户降质。
+ *
+ * ⚠️ 消费点必须在**建 pass / setSize 时**读（`resolutionScale` 只在那两处生效），
+ * 不得进 rAF 热路径。
+ */
+const SSR_SCALE_BY_LEVEL: Record<Exclude<PerfLevel, "custom">, number> = {
+  low: 0.5,
+  medium: 0.75,
+  high: 1,
+};
+
+let _ssrScaleCache: number | null = null;
+
+/** 取当前档位对应的 SSR 反射缓冲缩放（0.5–1；模块级缓存，档位变更加载时失效）。 */
+export function getSsrResolutionScale(): number {
+  if (_ssrScaleCache !== null) return _ssrScaleCache;
+  const level = getPerfPreset();
+  // custom = 用户手调档：按「不擅自降质」取 high（1.0 全分辨率）
+  const v = level === "custom" ? 1 : SSR_SCALE_BY_LEVEL[level];
+  _ssrScaleCache = v;
+  return v;
+}
+
+/** 测试钩子：清 SSR 缩放缓存（生产由 setPerfPreset 失效，测试直写 localStorage 后需手动清）。 */
+export function __resetSsrScaleCacheForTest(): void {
+  _ssrScaleCache = null;
 }

@@ -41,6 +41,7 @@ import { POSTPROC_MSAA_SAMPLES } from "@/preview-3d/infra/msaa-samples.ts";
 import { previewPixelRatio } from "@/preview-3d/infra/render-budget.ts";
 import { effectiveToneMappingExposure, envState } from "@/preview-3d/state/env-state.ts";
 import type { EnvState, EnvStateKey } from "@/preview-3d/state/env-state-schema.ts";
+import { getSsrResolutionScale } from "@/preview-3d/state/perf-presets.ts";
 import type { LightCapability } from "./light-capability.ts";
 import { bloomThresholdToLinear, type PostprocessingParams } from "./postprocessing-state.ts";
 
@@ -335,6 +336,12 @@ export class PostprocessingComposer {
       this.ssrPass.distanceAttenuation = envState.ppSsrDistanceAttenuation;
       this.ssrPass.fresnel = envState.ppSsrFresnel;
       if (envState.ppReflectionMode === "ssr-only") this.ssrPass.opacity = 1;
+      // [2026-10-12] 反射缓冲缩放（档位派生，见 perf-presets|getSsrResolutionScale）：
+      // 上游 `resolutionScale` 只降 SSR 自己的三张缓冲，主渲染不受影响；且 `setSize` 内
+      // `MAX_STEP = √(w²+h²)`（步进 ∝ 屏幕对角线）→ 缩放同时砍步进数与显存。
+      // ⚠️ 必须在 insertPass **之前**设：insertPass 会按物理尺寸下发 setSize，
+      // 而 resolutionScale 只在 setSize 内被消费（事后设需再触发一次 setSize）。
+      this.ssrPass.resolutionScale = getSsrResolutionScale();
       // [顺序修复] SSR 必须独占链首（紧跟 RenderPass）：读 three r185 SSRPass.js 核实，
       // OUTPUT.Default 分支把**自己的** beautyRenderTarget.texture 以 NoBlending 整片写入
       // writeBuffer（`readBuffer` 形参在 render() 里被注释忽略），因此任何排在它之前的 pass
@@ -399,6 +406,27 @@ export class PostprocessingComposer {
   setPixelRatio(pixelRatio: number): void {
     this.lastPixelRatio = pixelRatio;
     this.composer?.setPixelRatio(pixelRatio);
+  }
+
+  /**
+   * 是否「启用但无任何子效果」= 空转态。
+   *
+   * [2026-10-12] ADR-299 修掉了「**未启用**（`ppEnabled=false`）却每帧付管线过路费」；
+   * 本判据补上另一半——**启用后三个子效果全关**时，`EffectComposer.render` 仍要跑
+   * `RenderPass`（整场渲进离屏 HalfFloat RT）+ `OutputPass`（全屏 quad 拷回画布）两趟全屏，
+   * 换来与直渲**逐像素等价**的画面（依据：`OutputPass` 读 `renderer.toneMapping`/
+   * `outputColorSpace` 把同一变换烘进 shader，属重复 renderer 自渲已做的事；
+   * `applyToneMapping` 直接写 renderer 两字段，故 toneMapping **不依赖 composer**）。
+   *
+   * 判据 = 「三个子效果维度**全关**」——与 `render()` 里各 pass 的 `enabled` 同步口径同源，
+   * 任一处新增子效果（如后续加 DOF）须同步扩本判据，否则会误判为空转而静默吞掉该效果。
+   */
+  isFullyIdle(): boolean {
+    return (
+      !envState.ppBloomEnabled &&
+      !envState.ppSsaoEnabled &&
+      envState.ppReflectionMode === "envmap-only"
+    );
   }
 
   /* -------- 每帧渲染 -------- */

@@ -255,6 +255,10 @@ export class PostprocessingCapability implements SceneCapability, Postprocessing
   render(dt: number, lightCap: LightCapability | null): boolean {
     // [ADR-329 刀①] 判定留在 cap（enabled 门 + hasComposer），叶只管渲染动作；返回语义不变
     if (!this.enabled || !this.composerHost.hasComposer()) return false;
+    // [2026-10-12 空转短路] 启用但三个子效果全关 ⇒ 交回直渲，省离屏 RT + 全屏 quad 两趟。
+    // 与 composer 未建同语义（都返回 false → render-host 直渲），故 toneMapping 不受影响：
+    // `applyToneMapping` 已直接写 renderer 两字段，renderer 自渲即生效（本叶注释有完整依据）。
+    if (this.composerHost.isFullyIdle()) return false;
     this.composerHost.render(dt, lightCap);
     return true;
   }

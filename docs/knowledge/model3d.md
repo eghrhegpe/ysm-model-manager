@@ -13,11 +13,15 @@ tests:
   - frontend/src/preview-3d/adapters/ysm-model-preloader.test.ts
   - frontend/src/preview-3d/decoder/wasm-decode-blob-view.test.ts
   - frontend/src/preview-3d/caps/postprocessing-tonemapping-ownership.test.ts
+  - frontend/src/preview-3d/caps/postprocessing-ssr-dispose.test.ts
+  - frontend/src/preview-3d/caps/postprocessing-idle-bypass.test.ts
+  - frontend/src/preview-3d/state/perf-presets-ssr-scale.test.ts
   - frontend/src/preview-3d/infra/render-host-frame-order.test.ts
 auto_fields:
   symbols_with_lines:
     - __resetLargeModelWarnForTest
     - __resetSceneTextureBytesForTest
+    - __resetSsrScaleCacheForTest
     - __resetWebGlContextLostForTest
     - __setEncodeImplForTest
     - _clearPmxStatsCache
@@ -388,6 +392,7 @@ auto_fields:
     - getSchema
     - getSemanticBone
     - getSemanticMorph
+    - getSsrResolutionScale
     - getStateValue
     - getTextureAlphaInfo
     - getTextureAlphaMode
@@ -1185,6 +1190,8 @@ perf:
   - **后处理 Pass 链序硬约束 + MSAA（读 three r185 源码核实，2026-09）**：**SSR 必须独占链首**（紧跟 `RenderPass`，位于 SSAO/Bloom 之前）——`SSRPass.OUTPUT.Default` 把自身的 `beautyRenderTarget.texture` 以 `NoBlending` **整片覆写**进 `writeBuffer`，且 `render(renderer, writeBuffer /*, readBuffer, ...*/)` 的 `readBuffer` 形参被注释忽略；而 `SSAOPass.OUTPUT.Default` 是 `CustomBlending` 写 `readBuffer`（正确叠加前序结果）、`UnrealBloomPass` 亦读 `readBuffer`。故原顺序（Bloom → SSR）会让**一开 SSR 就静默吃掉 Bloom/SSAO 的成果**；正确链序 = `RenderPass → SSR(可选) → SSAO(可选) → Bloom → OutputPass`。另：`EffectComposer` 自建读/写缓冲为 `new WebGLRenderTarget(w, h, { type: HalfFloatType })`**不带 `samples`**（=MSAA 被静默旁路，renderer 的 `antialias: true` 失效），本仓改为传入带 `samples` 的 target（采样数按 `renderer.getContext().getContextAttributes().antialias` 实际授予与否决定）
     - **渲染选项之间没有硬冲突，故不设互斥下拉（2026-09 结论）**：① **MSAA × SSR 不冲突**——MSAA 是 `WebGLRenderer` **构造期 context 属性**（`antialias`），**运行期无法切换**，故不具备做菜单项的前提；它只对「正在光栅化几何」的 `RenderPass`（及 SSR 自渲的 beauty/normal）有意义，其余 pass 都是全屏 quad。SSRPass 的 5 个内部目标（beauty 带 depthTexture/normal/metalness/ssr/prev）**全为 samples=0**，与 composer 缓冲的 MSAA 各管各的；three 有完整支持（`useMultisampledRTT` 需 `WEBGL_multisampled_render_to_texture`，否则退回 multisampled renderbuffer + blit；切目标时自动 `updateMultisampleRenderTarget` resolve）。② **SSR × SSAO/Bloom 不是冲突而是链序依赖**——stock pass 里**只有 SSRPass 忽略 `readBuffer`**，链序修正后三者可同时开。③ **SSR × 单平面镜**才真需取舍，已由 `ppReflectorDisableWhenSSR`（默认 true 自动抑制）+ 一个 toggle 覆盖，无需下拉。④ 现有菜单已具备切换能力（均 MenuNode schema）：`pp-reflection-mode` 是 `kind:"select"` 三档、`pp-reflector-disable-when-ssr` 与 SSAO 是 `kind:"toggle"`。**唯一未处理的渲染选项组合是「后期 × 截图」（后期不入截图）——见 `export.md` 的已知差异条**
   - **composer 惰性常驻（ADR-299，实测裁定 2026-09-24）**：ADR-250 §2.2 的「构造即建、常驻」被实测推翻了一半——`needComposer()` 退化成 `composer !== null` 使 `render()` 恒返回 `true`，`render-host` 的直渲兜底成死代码，而 `ppEnabled` 默认 `false`，即**默认会话从不启用后处理却每帧付管线过路费**。实测（`postproc-cost-probe`，948×610@DPR1）：直渲 1.96 / 关闭态走 composer 3.02 / 开启态 3.48 ms——**常驻税 1.05ms/帧（+53.7%）**，且其中真实效果仅 0.21ms（默认 bloom/ssao/ssr 全关），**管线成本是载荷的 5 倍**；常驻双缓冲 35.3MB。现按两轴解耦：**生命周期**=首次启用才建、建后不销毁（保住「换模型不重建 GPU 资源」）；**每帧参与**=`composer !== null && enabled`，关闭态 `render()` 返回 `false` 交回直渲。⚠️ 惰性化的隐藏坑：关闭态 `setSize`/`setPixelRatio` 必须**无条件记录凭据**（`lastW/lastH/lastPixelRatio`），否则自适应降档后才启用会按 `devicePixelRatio` 建出与 renderer 实际像素比不符的缓冲
+  - **空转短路（2026-10-12 补 ADR-299 的另一半）**：ADR-299 管「**未启用**（`ppEnabled=false`）却付过路费」；本条管「**启用但三个子效果全关**」——此时 `EffectComposer.render` 仍要跑 `RenderPass`（整场渲进离屏 HalfFloat RT）+ `OutputPass`（全屏 quad 拷回画布）**两趟全屏**，换来与直渲**逐像素等价**的画面。**等价性根据**（非推测）：① `OutputPass` 不产新效果——它读 `renderer.toneMapping`/`outputColorSpace`（`OutputPass.js`）把同一变换烘进自己的 shader，属**重复** renderer 在 `renderer.render()` 里已做的事；② `postprocessing-capability|applyToneMapping` 直接写 renderer 两字段，故 **toneMapping 不依赖 composer**。实现 = `postprocessing-composer|isFullyIdle()`（判据：`!ppBloomEnabled && !ppSsaoEnabled && ppReflectionMode === "envmap-only"`）+ `cap.render` 命中即返回 `false`（与「composer 未建」同语义，交 render-host 直渲）。⚠️ **新增任何子效果（如 DOF）必须同步扩 `isFullyIdle` 判据**，否则被静默吞掉。执法 `postprocessing-idle-bypass.test.ts`
+  - **SSR 反射缓冲缩放（档位派生，2026-10-12）**：上游 `SSRPass.resolutionScale`（默认 1=全分辨率）本仓此前**从未设置**。现按性能档位派生（low 0.5 / medium 0.75 / high 1 / **custom 1**——不擅自替用户降质），走 `perf-presets|getSsrResolutionScale()`（模块级缓存 + 切档失效）。**只缩 SSR 自己的三张缓冲**（ssr/prev/blur×2），beauty/normal/metalness 与**主渲染不受影响**——与「全屏降分辨率」的霰弹枪方案有本质区别。精准性依据：`SSRPass.setSize` 内 `MAX_STEP = √(w²+h²)`（步进 ∝ 屏幕对角线）。⚠️ 赋值**必须在 `insertPass` 之前**（`resolutionScale` 只在 `setSize` 内被消费）。执法 `perf-presets-ssr-scale.test.ts` + `postprocessing-idle-bypass.test.ts` 接线例
   - **WebGL context lost/restored 守卫（`infra/webgl-context-guard.ts`，锐评 2026-10-11 P2 落地）**：WebView2 GPU 进程重置（内存压力/驱动切换/核显独显切换）时浏览器抛 `webglcontextlost`，three 静默挂起渲染 → 用户见黑场且零提示。守卫在 renderer 单例创建时挂 lost/restored 一对监听：lost 必 `preventDefault()`（否则 context 销毁不可恢复）+ toast「等待恢复」；restored 清标志 + toast「已恢复」。**不接管恢复本身**（浏览器 + three 内部完成）。生命周期：`shared-infra|buildSharedInfra` renderer 创建分支安装一次（renderer 跨 session 复用故守卫常驻），**teardown 时先 uninstall 再 forceContextLoss**（forceContextLoss 会触发 lost 事件，守卫未摘会误发 toast）。对外查询 `isWebGlContextLost()`。
 - **GPU 预算与纹理字节计量**（`gpu-load.ts`/`gpu-budget.ts`/`gpu-load-calibrate.ts`/`texture-bytes.ts`）：4 维预算（draw calls / triangles / 纹理数 / textureBytes）统一经 `gpu-budget|guardGpuBudget` 判定，两条入口共用（追加通道 + 直挂通道）。**字节维度双口径取大者**：场景图（`texture-bytes|estimateSceneTextureBytes`，覆盖 MMD/VRM/FBX 等**不进 `textureCache`** 的格式）+ 池累计（`textureCache|getTotalBytes`）——单用池会对 MMD/VRM 恒 0（最吃显存的格式反而不被计量）。预算上限走 `gpu-load-calibrate|resolveGpuLoadLimits()`（真机标定生效、clamp 到默认 ×0.1~×10 防自锁）
 - **2D 预览**（`views/app-preview/model2d/model2d.ts`）：平铺/网格 2D 缩略图（Canvas 2D 正交投影）

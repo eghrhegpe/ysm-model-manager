@@ -144,6 +144,11 @@ ADR-085（菜单单一事实来源）采纳的 S1 注册表、S3 refreshDock 已
 一键性能档位 = **纯数据表 + 通用套用器**，刻意规避隔壁 MikuMikuAR 的坑（每个模式手写参数映射 + Go 绑定 + custom 档手动 reRender）：
 
 - `PERF_PRESETS`：低/中/高三档 → `StatePath → 值`（路径类型 `typeof KNOWN_PATHS[number]` 编译期守卫）。只控有状态层路径的性能项：`render.maxFps` / `render.maxPixelRatio`。wireframe/pmrem/**bloom** 是视觉项不进表；frustumCull 是纯优化（无画质损失）恒开不进表。
+- **第二类档位派生值：不进 `StatePath`、不落盘，直接由档位算出**（[2026-10-12] 首个 = `getSsrResolutionScale()`）。判据：该项**只需在「建 pass / setSize」时读一次**（非逐帧、非用户手调），且其值是「同一档位下唯一合理取值」——此时为它单开一条 state path（要扩 KNOWN_PATHS + PathValue + binding 三处）属**过度接线**。现口径：
+  - `low=0.5 / medium=0.75 / high=1`，**`custom`（用户手调档）取 1**——不擅自替用户降质；
+  - 走**模块级缓存 + 档位变更加载时失效**（对齐 `render-budget.ts|getMaxFps` 范式，`setPerfPreset` 内 `_ssrScaleCache = null`），防 rAF 侧重复读 localStorage；
+  - 消费点 `postprocessing-composer` 建 SSRPass 时赋值 `ssrPass.resolutionScale`——**必须在 `insertPass` 之前**（`resolutionScale` 只在 `SSRPass.setSize` 内被消费，insertPass 会下发 setSize；事后设需再触发一次）。
+  - 上游依据：`SSRPass.resolutionScale` 本就存在（默认 1 = 全分辨率），本仓此前从未启用；它**只缩 SSR 自己的三张缓冲**，beauty/normal/metalness 与主渲染不受影响。精准性来自 `SSRPass.setSize` 内 `MAX_STEP = √(w²+h²)`（步进 ∝ 屏幕对角线）——分辨率是 SSR 成本主因子。
 - `applyPerfPreset(level)`：遍历表走 `setStateValue`（cap 缺席的派生路径静默跳过）；**custom 不套用**（保持用户手调，零副作用）。
 - `setPerfPreset(level)`：持久化（键 `ysm_3d_perfPreset`）+ 套用；`getPerfPreset()` 无存档回 `medium`。
 - 设置面板性能组**顶部**档位 select（低/中/高/自定义，`settings-perf-preset` 节点）。切档套用后**定点刷新**（2026-10 菜单收口）：档位表只改 `render.maxFps`/`render.maxPixelRatio` 两条状态路径，故 `settings.ts|refreshPresetSiblings` 只把 fps select / 分辨率 slider 两兄弟行经初绘渲染器（`renderCapSelect`/`renderCapSlider`）原位重渲，不再全板 `menu.refresh()`（全板重建牵动订阅重绑闸——ADR-293 P0 501 次自激教训所在路径，且丢焦点/滚动位）；栈顶非设置面板时行查无天然 no-op。契约：`preview-state.test.ts`「性能档位切档定点刷新」用例（旧行离 list、新行经渲染器重显 120/1.5、`refresh` spy 零调用）。

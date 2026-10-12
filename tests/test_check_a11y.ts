@@ -49,8 +49,12 @@ function runA11y(args) {
         encoding: "utf8",
       },
     );
+    // 成功（rc=0）：stdout 必须是无前缀纯 JSON——只取 stdout，绝不拼 stderr，
+    // 否则守卫明细（往 stderr 打）会污染 JSON.parse（D10 复现的
+    // "Unexpected non-whitespace character after JSON" 真源）。
     return { rc: 0, out };
   } catch (e) {
+    // 失败（rc≠0）：stdout 可能为空，诊断信息在 stderr——合并用于报错展示
     return { rc: e.status ?? 1, out: (e.stdout || "") + (e.stderr || "") };
   }
 }
@@ -183,14 +187,18 @@ check("--json 输出合法 JSON 且 _summary 契约齐全，当前树基线内 r
   assert.equal(data._summary.regressions, 0, "scatter 不得有回归");
 });
 
-check("coverage 非空转（真仓 aria-label/role/tabindex 必有命中）", () => {
+check("coverage 非空转（真仓 aria-* 必有命中且 tabindex/role 中性指标有记录）", () => {
   const { out } = runA11y(["--json"]);
   const data = JSON.parse(out);
-  for (const k of ["aria-label", "role", "tabindex"]) {
+  // aria-* 覆盖度（守基线的硬指标）不得空转
+  for (const k of ["aria-label", "aria-selected", "aria-expanded"]) {
     assert.ok((data.coverage[k] ?? 0) > 0, `真仓 ${k} 应 >0（防空转假绿）`);
   }
+  // 中性指标只记录、不守基线，但仍应在真仓有真实命中（防空转）
+  assert.ok((data.coverageNeutral.tabindex ?? 0) > 0, "真仓 tabindex 应 >0（记为中性指标）");
+  assert.ok((data.coverageNeutral.role ?? 0) > 0, "真仓 role 应 >0（记为中性指标）");
   assert.ok(
-    (data.coverage["prefers-reduced-motion"] ?? 0) >= 2,
+    (data.coverageNeutral["prefers-reduced-motion"] ?? 0) >= 2,
     "reduced-motion 并轨点应 ≥2（ui-prefs + 通配桥注释外实码）",
   );
 });
@@ -210,7 +218,10 @@ check("基线文件存在且 generatedAt 非空", () => {
   assert.ok(fs.existsSync(p), "docs/.a11y-baseline.json 应存在");
   const data = JSON.parse(fs.readFileSync(p, "utf8"));
   assert.ok(data.generatedAt, "generatedAt 应非空");
-  assert.ok(data._comment.includes("只增不减"), "_comment 应说明 floor 语义");
+  assert.ok(
+    data._comment.includes("只增不减") || data._comment.includes("fail-open"),
+    "_comment 应说明 floor 语义（coverage 只增不减 / coverageNeutral fail-open）",
+  );
 });
 
 if (fails.length > 0) {

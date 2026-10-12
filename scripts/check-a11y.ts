@@ -47,25 +47,37 @@ const SCATTER_EXEMPT = ["utils/dom/key-router.ts"];
 
 /** 写入 baseline 的说明头（人读入口：双向语义 + 收紧/放松命令） */
 const BASELINE_COMMENT =
-  "a11y 覆盖基线（ADR-308 D3）：coverage=各指标出现次数下限（只增不减），scatter=document 级 keydown 散点文件→次数上限（只减不增；utils/dom/key-router.ts 为唯一合法出口已豁免不入册，在册文件=有意维持现状的已知散点，豁免理由见 key-router.ts 头注）。收紧: node scripts/check-a11y.ts --update；放松需 --force 并在提交说明附理由。";
+  "a11y 覆盖基线（ADR-308 D3）：coverage=aria-* 覆盖度出现次数下限（只增不减，hard），coverageNeutral=role/tabindex/prefers-reduced-motion 中性指标（只记录、不守基线，fail-open——删冗余/非法 role=button 嵌套或冗余 tabindex 是合理的 a11y 收敛，不该被误判退化），scatter=document 级 keydown 散点文件→次数上限（只减不增；utils/dom/key-router.ts 为唯一合法出口已豁免不入册，在册文件=有意维持现状的已知散点，豁免理由见 key-router.ts 头注）。收紧: node scripts/check-a11y.ts --update；放松需 --force 并在提交说明附理由。";
 
 /* ---------- 类型 ---------- */
-/** coverage 计数：键 = aria 属性名 + role/tabindex/prefers-reduced-motion，值 = 全仓出现次数 */
+/** coverage 计数：键 = aria 属性名（+ role/tabindex/prefers-reduced-motion 中性指标），值 = 全仓出现次数 */
 type CoverageMap = Record<string, number>;
 /** scatter 明细：键 = 相对 src 路径，值 = 命中行号（1-based） */
 type ScatterDetail = Record<string, number[]>;
 /** scatter 计数（baseline 存储形态）：键 = 相对 src 路径，值 = 该文件散点数 */
 type ScatterCounts = Record<string, number>;
 
+/**
+ * coverage 中性指标：不是「越多越好」的覆盖度，而是「该有则有、不该堆」的 ARIA 语义载体
+ * （role / tabindex / prefers-reduced-motion）。把它们与 aria-* 一起用「只增不减」守下限是
+ * 误判——删冗余/非法的 role=button 嵌套、冗余 tabindex（D9 之类清理）会被误判为「退化」，
+ * 直接卡死合理的 a11y 收敛（D10 根因）。故中性指标只记录、不守基线（fail-open）。
+ */
+const NEUTRAL_KEYS = new Set(["role", "tabindex", "prefers-reduced-motion"]);
+
 interface A11yBaseline {
   _comment: string;
   generatedAt: string;
+  /** aria-* 覆盖度（真覆盖，越多越好）：只增不减（hard 守卫） */
   coverage: CoverageMap;
+  /** 中性指标（role/tabindex/prefers-reduced-motion）：只记录，不守基线（fail-open） */
+  coverageNeutral: CoverageMap;
   scatter: ScatterCounts;
 }
 
 interface ScanResult {
   coverage: CoverageMap;
+  coverageNeutral: CoverageMap;
   scatter: ScatterDetail;
   fileCount: number;
 }
@@ -235,6 +247,7 @@ function scatterToCounts(scatter: ScatterDetail): ScatterCounts {
 
 function scan(): ScanResult {
   const coverage: CoverageMap = {};
+  const coverageNeutral: CoverageMap = {};
   const scatter: ScatterDetail = {};
   let fileCount = 0;
   for (const abs of walk(SRC_ROOT, SCAN_OPTS) as string[]) {
@@ -242,24 +255,40 @@ function scan(): ScanResult {
     fileCount++;
     const text = readFileSync(abs, "utf8");
     for (const [k, v] of Object.entries(countCoverage(text))) {
-      coverage[k] = (coverage[k] ?? 0) + v;
+      // 中性指标（role/tabindex/prefers-reduced-motion）分流到 coverageNeutral，不守基线
+      if (NEUTRAL_KEYS.has(k)) {
+        coverageNeutral[k] = (coverageNeutral[k] ?? 0) + v;
+      } else {
+        coverage[k] = (coverage[k] ?? 0) + v;
+      }
     }
     if (SCATTER_EXEMPT.includes(rel)) continue;
     const lines = scatterHits(text);
     if (lines.length > 0) scatter[rel] = lines;
   }
-  return { coverage, scatter, fileCount };
+  return { coverage, coverageNeutral, scatter, fileCount };
 }
 
 /* ---------- main 编排层辅助 ---------- */
 function loadBaseline(): { baseline: A11yBaseline; exists: boolean } {
   if (!existsSync(BASELINE_FILE)) {
     return {
-      baseline: { _comment: "", generatedAt: "", coverage: {}, scatter: {} },
+      baseline: { _comment: "", generatedAt: "", coverage: {}, coverageNeutral: {}, scatter: {} },
       exists: false,
     };
   }
-  return { baseline: JSON.parse(readFileSync(BASELINE_FILE, "utf8")), exists: true };
+  const parsed = JSON.parse(readFileSync(BASELINE_FILE, "utf8")) as Partial<A11yBaseline>;
+  // 兼容旧基线（D10 前无 coverageNeutral 键）
+  return {
+    baseline: {
+      _comment: parsed._comment ?? "",
+      generatedAt: parsed.generatedAt ?? "",
+      coverage: parsed.coverage ?? {},
+      coverageNeutral: parsed.coverageNeutral ?? {},
+      scatter: parsed.scatter ?? {},
+    },
+    exists: true,
+  };
 }
 
 function buildJsonReport(
@@ -273,11 +302,13 @@ function buildJsonReport(
       files: result.fileCount,
       coverageTotal: Object.values(result.coverage).reduce((a, b) => a + b, 0),
       coverageKeys: Object.keys(result.coverage).length,
+      coverageNeutralTotal: Object.values(result.coverageNeutral).reduce((a, b) => a + b, 0),
       scatterTotal,
       deficits: deficits.length,
       regressions: regressions.length,
     },
     coverage: result.coverage,
+    coverageNeutral: result.coverageNeutral,
     scatter: Object.fromEntries(Object.entries(result.scatter).map(([f, v]) => [f, v.length])),
     scatter_detail: result.scatter,
     coverage_deficits: deficits,
@@ -292,7 +323,15 @@ function printHumanReport(result: ScanResult, scatterTotal: number): void {
     .sort((a, b) => b[1] - a[1])
     .map(([k, v]) => `${k}=${v}`)
     .join(", ");
-  console.log(`  coverage: ${coverageSummary}`);
+  console.log(`  coverage（aria-*，只增不减）: ${coverageSummary}`);
+  const neutralSummary = Object.entries(result.coverageNeutral)
+    .filter(([, v]) => v > 0)
+    .sort((a, b) => b[1] - a[1])
+    .map(([k, v]) => `${k}=${v}`)
+    .join(", ");
+  console.log(
+    `  coverageNeutral（role/tabindex/prefers-reduced-motion，只记录不守）: ${neutralSummary}`,
+  );
   const fileCount = Object.keys(result.scatter).length;
   console.log(
     `  scatter（document 级 keydown 散点，key-router.ts 豁免）: 共 ${scatterTotal} 处 / ${fileCount} 文件`,
@@ -308,6 +347,7 @@ function updateBaseline(
   exists: boolean,
   force: boolean,
   coverage: CoverageMap,
+  coverageNeutral: CoverageMap,
   scatterCounts: ScatterCounts,
   scatterTotal: number,
 ): void {
@@ -321,6 +361,7 @@ function updateBaseline(
     _comment: BASELINE_COMMENT,
     generatedAt: new Date().toISOString().slice(0, 10),
     coverage,
+    coverageNeutral,
     scatter: scatterCounts,
   };
   writeFileSync(BASELINE_FILE, `${JSON.stringify(doc, null, 2)}\n`);
@@ -389,7 +430,15 @@ function main() {
   }
 
   if (parsed.update)
-    return updateBaseline(baseline, exists, force, result.coverage, scatterCounts, scatterTotal);
+    return updateBaseline(
+      baseline,
+      exists,
+      force,
+      result.coverage,
+      result.coverageNeutral,
+      scatterCounts,
+      scatterTotal,
+    );
   if (!exists) {
     console.error(
       `\n❌ 基线不存在: ${relative(REPO_ROOT, BASELINE_FILE)}——先跑 node scripts/check-a11y.ts --update 初始化`,

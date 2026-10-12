@@ -331,11 +331,11 @@ export function renderPreviewPanel(
 ): void {
   const { menu, hideMenu, actionCtx, makeRow, makePanelView } = deps;
   list.innerHTML = "";
-  // 面板可定位（2026-08-28 反馈通道）：data-panel-id 机器可读（测试/诊断/外部工具），
-  // title hover 提示人读——用户悬停面板内容即可读到内部 id，
-  // 反馈「我看到的这个面板」时直接报 id，免去视觉路径转译歧义
+  // 面板可定位（2026-08-28 反馈通道；[D12 收口 2026-10-12]）：data-panel-id 机器可读
+  // （测试/诊断/外部工具 + devtools 右键即见内部 id）——原 title 裸诊断串
+  // 「panel: <id>」不经 i18n、en/ja 悬停仍是英文裸串，已删（用户可见语义由
+  // 面板自身 label 承载，反馈定位价值全部在 data-*）
   list.dataset.panelId = node.id;
-  list.title = `panel: ${node.id}`;
   try {
     const builder = corePanelBuilder(routers, node.id);
     if (builder) {
@@ -601,11 +601,12 @@ function renderPreviewDock(
     const btn = document.createElement("button");
     btn.className = "preview-dock-navbtn";
     btn.dataset.testid = `dock-${g.id}`;
-    // dock 按钮同样可定位（2026-08-28 反馈通道）：组名 fallback 是「模型」但点击直达
-    // roles 面板（「加载角色」）——hover 提示写明组 id 与组内项，消除「按钮叫模型、
-    // 进去叫加载角色」的语义错位；机器可读 data-dock-group 供测试/诊断
+    // dock 按钮同样可定位（2026-08-28 反馈通道；[D12 收口 2026-10-12]）：机器可读全部
+    // 走 data-*（data-dock-group + data-dock-items，devtools 右键即见）——原 title 裸
+    // 诊断串「dock: <id> · <项 id 列表>」不经 i18n 且对普通用户无信息增量（组名已由
+    // 可见 label 承载），已删
     btn.dataset.dockGroup = g.id;
-    btn.title = `dock: ${g.id} · ${groupItems.map((n) => n.id).join(" / ")}`;
+    btn.dataset.dockItems = groupItems.map((n) => n.id).join("/");
     btn.innerHTML = `<span class="preview-ic">${resolveIcon(g.icon)}</span><span class="preview-dock-navlabel">${tOf(g.labelKey)}</span>`;
     btn.onclick = (e: MouseEvent): void => {
       e.stopPropagation();

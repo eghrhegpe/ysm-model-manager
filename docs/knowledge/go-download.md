@@ -104,6 +104,10 @@ status: active
 - **取消后不消费新批次**：`consume` 入口先判 `len(tasks)==0` 即返回且**不置 running**——`Cancel` 已清空 tasks，故陈旧消费驱动不会把已取消的队列重新标记为运行中（原由 epoch 比对守卫的同一保护目标，现为结构保证）
 - **`commitAtomicWrite` 的 Sync 失败分支必须显式 `Close` 释放句柄**（R26 P2-2 修复）：旧实现 Sync 失败直接 return，Close 没被调用，依赖外层 cleanup 的 Close 顺序。Windows 上句柄未释放会导致后续 Remove 失败、`.part-*` 残留。修复：Sync 失败分支显式 `_ = af.tmp.Close()` 释放句柄后再 return。Close 的错误被丢弃——Sync 已失败，Close 失败不影响错误分类。
 - **`len(via) >= 10` 重定向上限与标准库对齐，非 off-by-one**（R26 P2-1 误判澄清）：Go 语义里 `via` 是「已发起的请求」（含原始请求），`len(via) >= 10` 拒绝第 10 次重定向（第 11 个请求），允许 9 次重定向——与 Go 标准库 `net/http` 的 `defaultMaxRedirect=10` 语义完全对齐（外部源码，不在本仓）。子代理曾误判为 off-by-one，核查标准库源码后确认不修。
+- **`ResolveSavePath` 的路径安全面已收口，残留两条「登记项」经复核均非产品缺陷**（2026-10-12 订正）：
+  - **连续多斜杠（原 BUG-11）= 假待办，属测试判据缺陷**：`sanitizeRelPath` 首行即 `strings.ReplaceAll("/", Separator)`、`joinSavePathUnderDir` 再走 `filepath.Clean(filepath.Join(...))`，**已归一化**。原断言 `strings.Contains(savePath, "//")` 在本机（Windows 分隔符 `\`）**永不成立**，那行 `t.Log("TODO(BUG-11)…")` 不可能触发。正解 = 按 `filepath.Separator` 判连续分隔符 + 对结果钉 `filepath.Join("a","b","file.ysm")` 后缀（变异去掉归一化即红，已实测）。
+  - **Unicode 同形字符（原 BUG-7）= 真但性质被误述为「绕过校验」**：`fіle.ysm`（Cyrillic `і`）的同形字符在**文件名主干**，而 `filepath.Ext()` 取末尾扩展名 `.ysm`（纯 ASCII），`registry.IsSupportedExt` **照常通过**——不构成扩展名校验绕过。真实性质是**文件名欺骗**（肉眼误读），属展示层观感，是否做 confusable 归一化是产品决策（本仓无此需求，不越权实现）。测试已钉住「实现保留原字节」+「扩展名仍为 ASCII `.ysm`」两条事实，并注明「若扩展名被污染才升级为校验缺陷」。
+  - **教训（适用全仓测试）**：`t.Log("TODO(…)")` **只记录不断言** —— 它不会让测试失败，因而「登记在测」与「实际守卫」是两回事。凡在测试里标 TODO/BUG 的条目，须复核三件事：①产品是否真有缺陷（可能已修或本就正确）；②**测试判据本身是否成立**（本次 BUG-11 即判据写死错分隔符）；③改断言后**变异验证**（去掉实现里的归一化，断言须红）。三者缺一即留下「看起来在管、其实管不住」的假守卫。
 
 ## 相关
 

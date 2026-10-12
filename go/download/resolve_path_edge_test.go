@@ -144,13 +144,25 @@ func TestResolveSavePath_UnicodeLookalike(t *testing.T) {
 	if savePath == "" {
 		t.Fatal("expected non-empty savePath")
 	}
-	t.Logf("INFO(7): savePath 含同形 Unicode 字符: %q", savePath)
-	// 验证 savePath 中是否含有非 ASCII 字符
+	// [2026-10-12 订正 BUG-7 的表述] 原 t.Log 称「可能绕过前端/文件系统过滤」——**该表述不成立**：
+	// 同形字符位于**文件名主干**（`fіle`），而 `filepath.Ext()` 取的是末尾扩展名 `.ysm`
+	// （纯 ASCII），`registry.IsSupportedExt(".ysm")` 照常通过——**扩展名校验不受同形字符影响**。
+	// 真实性质 = **文件名欺骗**（用户/审核者肉眼把 `fіle.ysm` 读作 `file.ysm`），属显示/展示层
+	// 的观感问题，不是校验绕过。本断言钉住「实现确实保留原字节」这一事实；是否在展示层做
+	// confusable 归一化属产品决策（本仓未见需求），不在此越权实现。
+	hasNonASCII := false
 	for _, r := range savePath {
 		if r > unicode.MaxASCII {
-			t.Log("TODO(BUG-7): savePath 包含非 ASCII 同形字符，可能绕过前端/文件系统过滤:", savePath)
+			hasNonASCII = true
 			break
 		}
+	}
+	if !hasNonASCII {
+		t.Fatal("同形字符应被保留（实现不剥离非 ASCII）——若失败说明下游新增了归一化，须同步本条与 BUG-7 表述")
+	}
+	// 交叉验证：扩展名仍是 ASCII 的 .ysm，故 IsSupportedExt 判定不受影响（BUG-7 非校验缺陷的根据）
+	if ext := strings.ToLower(filepath.Ext(savePath)); ext != ".ysm" {
+		t.Fatalf("扩展名应为 ASCII %q，实际 %q —— 若扩展名被同形字符污染，BUG-7 才升级为校验缺陷", ".ysm", ext)
 	}
 }
 
@@ -200,12 +212,21 @@ func TestResolveSavePath_MultipleSlashes(t *testing.T) {
 	if savePath == "" {
 		t.Fatal("expected non-empty savePath")
 	}
-	// 检查是否被 Clean 归一化
-	if strings.Contains(savePath, "//") {
-		t.Log("TODO(BUG-11): 连续多斜杠未被归一化", savePath)
-		return
+	// [2026-10-12 订正 BUG-11：**假待办**] 原断言 `strings.Contains(savePath, "//")` 是**永不成立**的
+	// 检查——`sanitizeRelPath` 首行就把 `/` 全量换成 `filepath.Separator`（Windows 下为 `\`），
+	// 故 savePath 在 Windows 上**永远不含** `//`，那行 `t.Log("TODO(BUG-11): 连续多斜杠未被归一化")`
+	// 不可能触发（实测输出 `...\a\b\file.ysm`，已归一化）。属**测试自身的判据缺陷**，非产品缺陷。
+	//
+	// 正解 = 按**本机分隔符**判连续分隔符，并对结果钉死归一化后的结构：
+	sep := string(filepath.Separator)
+	if strings.Contains(savePath, sep+sep) {
+		t.Fatalf("连续分隔符未被归一化: %q", savePath)
 	}
-	t.Logf("INFO(11): Clean 归一化 OK: %q", savePath)
+	// 结果应是「saveDir 下的 a/b/file.ysm」（中间的空段被 filepath.Clean 吃掉）
+	wantSuffix := filepath.Join("a", "b", "file.ysm")
+	if !strings.HasSuffix(savePath, wantSuffix) {
+		t.Fatalf("多斜杠应归一化为 %q，实际 %q", wantSuffix, savePath)
+	}
 }
 
 // ---------- 12. saveDir 越界 ----------

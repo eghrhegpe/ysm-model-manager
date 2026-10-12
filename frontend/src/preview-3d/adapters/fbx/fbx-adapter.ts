@@ -117,7 +117,7 @@ async function loadFbxViaBlob(
       blobUrl,
       (g) => resolve(g as THREE.Group & { animations: THREE.AnimationClip[] }),
       undefined,
-      (e) => reject(e instanceof Error ? e : new Error(safeErrorMessage(e))),
+      (e) => reject(e),
     );
   });
 }

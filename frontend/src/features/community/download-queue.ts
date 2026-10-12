@@ -9,7 +9,7 @@ import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { currentRepoType } from "@/features/repo/repo-rtype.ts";
 import { swallowError } from "@/utils/base/primitives/async.ts";
-import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
+import { friendlyError } from "@/utils/dom/errors.ts";
 import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
@@ -330,7 +330,7 @@ async function cmDqEnqueue(ctx: CmDqCtx, tasks: DownloadTask[]): Promise<void> {
     await enqueueDownloads(tasks);
   } catch (e) {
     rollbackToIdle();
-    toast(`${t("workshop.enqueueFailed")}: ${safeErrorMessage(e)}`, TOAST_MS.verbose, "error");
+    toast(friendlyError(e, t("workshop.enqueueFailed")), TOAST_MS.verbose, "error");
     cmDqCleanupProgressUI(ctx);
   }
 }

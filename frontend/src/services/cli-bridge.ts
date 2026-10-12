@@ -14,7 +14,8 @@ import { getApp } from "@/backend/app.ts";
 import { CLI_ALLOWLIST, type CLIAllowlistCommand } from "@/backend/cli-allowlist.ts";
 import { isWebPlatform } from "@/backend/platform-web.ts";
 import { WebUnsupportedError } from "@/backend/web-common.ts";
-import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
+import { t } from "@/core/i18n/t.ts";
+import { friendlyError } from "@/utils/dom/errors.ts";
 
 // ===== 类型定义 =====
 
@@ -161,7 +162,7 @@ export async function executeCLI(command: string, args: CLIArgs = {}): Promise<C
       command,
       error: {
         code: "call_failed",
-        message: safeErrorMessage(err),
+        message: friendlyError(err, t("error.fallback")),
       },
       // 与 not_supported 分支形状一致，消费方可统一读 meta.platform
       meta: { platform: isWebPlatform() ? "web" : "native" },

@@ -8,7 +8,6 @@ import { t } from "@/core/i18n/t.ts";
 import { loadYsmSummaryMeta } from "@/preview-3d/adapters/ysm-preview-cache.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
 import { safeGet } from "@/utils/base/primitives/storage.ts";
-import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { describeVersionRange } from "@/utils/format/pack-format.ts";
 import { esc } from "@/utils/html/html.ts";
@@ -356,7 +355,7 @@ export async function showShaderpack(
     ctx.root.innerHTML = pageShellHTML({
       icon: iconHtml,
       title: label,
-      body: errorPlaceholderHTML(safeErrorMessage(e)),
+      body: errorPlaceholderHTML(friendlyError(e, t("preview.loadFailed"))),
     });
   }
 }

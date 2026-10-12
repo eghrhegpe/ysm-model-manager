@@ -93,7 +93,7 @@ describe("setErrorResp / setErrorCatch", () => {
     expect(el.innerHTML).toContain("boom");
   });
 
-  it("setErrorCatch 取 safeErrorMessage", () => {
+  it("setErrorCatch 取 friendlyError", () => {
     stubConsoleError(); // 屏蔽 [diagnostics] perf-cli 失败 预期噪声（setErrorCatch 内部 logError）
     const el = { innerHTML: "" } as HTMLElement;
     setErrorCatch(el, new Error("x"), (s: unknown) => s as string);

@@ -5,7 +5,7 @@
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import type { executeCLI } from "@/services/cli-bridge.ts";
 import { logError } from "@/utils/base/primitives/log.ts";
-import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
+import { friendlyError } from "@/utils/dom/errors.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { copyWithToast } from "./copy-toast.ts";
 import type { EscFn } from "./logs.ts";
@@ -156,7 +156,7 @@ function setErrorResp(out: HTMLElement, resp: CLIResp, esc: EscFn): void {
 
 function setErrorCatch(out: HTMLElement, e: unknown, esc: EscFn): void {
   logError("diagnostics", "perf-cli 失败", e);
-  out.innerHTML = errorHTML(`${t("diagnostics.perfFail")}: ${safeErrorMessage(e)}`, esc);
+  out.innerHTML = errorHTML(friendlyError(e, t("diagnostics.perfFail")), esc);
 }
 
 function errorHTML(msg: string, esc: EscFn, detail?: string): string {

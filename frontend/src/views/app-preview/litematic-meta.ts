@@ -2,7 +2,7 @@ import { t } from "@/core/i18n/t.ts";
 import { createLoadGuard } from "@/utils/async/load-guard.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
 import { safeGet } from "@/utils/base/primitives/storage.ts";
-import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
+import { friendlyError } from "@/utils/dom/errors.ts";
 import { esc } from "@/utils/html/html.ts";
 import { renderFormattedText } from "@/utils/html/mc-format.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
@@ -275,7 +275,7 @@ export async function showLitematic(ctx: PreviewRoot, path: string): Promise<voi
     if (litematicGuard.stale(gen)) return;
     const detailDiv = ctx.root.getElementById("preview-detail");
     if (detailDiv) {
-      detailDiv.innerHTML = errorPlaceholderHTML(safeErrorMessage(e));
+      detailDiv.innerHTML = errorPlaceholderHTML(friendlyError(e, t("preview.parseFailed")));
     }
   }
 }

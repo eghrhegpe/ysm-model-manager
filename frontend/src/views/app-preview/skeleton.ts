@@ -10,7 +10,7 @@ import {
 import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
 import { safeSet } from "@/utils/base/primitives/storage.ts";
-import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
+import { friendlyError } from "@/utils/dom/errors.ts";
 import { esc } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { renderModel2D } from "@/views/app-preview/model2d/model2d.ts";
@@ -178,6 +178,6 @@ export async function loadModel2D(
       modelPath,
     );
   } catch (e) {
-    container.innerHTML = `<div class="pv-error-title" style="color:var(--status-error)">${UI_ICONS.build} ${t("preview.skeletonStructure")}</div><div class="pv-error-body">${UI_ICONS.warning} ${t("preview.parseFailed")}: ${esc(safeErrorMessage(e))}</div>`;
+    container.innerHTML = `<div class="pv-error-title" style="color:var(--status-error)">${UI_ICONS.build} ${t("preview.skeletonStructure")}</div><div class="pv-error-body">${UI_ICONS.warning} ${esc(friendlyError(e, t("preview.parseFailed")))}</div>`;
   }
 }

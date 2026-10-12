@@ -20,7 +20,7 @@ import type {
 import type { SlideMenuHandle, SlideMenuView } from "@/preview-3d/menu/shell/slide-menu.ts";
 import { switchNormPath } from "@/preview-3d/menu/shell/switch.ts";
 import { MENU_ERROR_NOTE_CSS } from "@/preview-3d/menu/style/menu-styles.ts";
-import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
+import { friendlyError } from "@/utils/dom/errors.ts";
 import { attachTooltip } from "@/utils/dom/tooltip.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 
@@ -152,7 +152,7 @@ export function modelDetailView(
             console.error("[preview-menu] 模型信息面板渲染失败", primary.id, err);
             const errRow = document.createElement("div");
             errRow.className = "fr-error-note";
-            errRow.textContent = `${t("preview.renderFail")}: ${safeErrorMessage(err)}`;
+            errRow.textContent = friendlyError(err, t("preview.renderFail"));
             l.appendChild(errRow);
           }
         }

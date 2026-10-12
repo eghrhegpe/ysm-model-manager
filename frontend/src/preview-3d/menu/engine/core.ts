@@ -52,8 +52,8 @@ import { makeSwitchState } from "@/preview-3d/menu/shell/switch.ts";
 import { MENU_ERROR_NOTE_CSS } from "@/preview-3d/menu/style/menu-styles.ts";
 import { previewSnapshot, setPreviewUiMode } from "@/preview-3d/state/preview-state.ts";
 import { resolveLabel } from "@/utils/base/pure/label.ts";
-import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { dbg } from "@/utils/debug/debug.ts";
+import { friendlyError } from "@/utils/dom/errors.ts";
 import { applyIcon, resolveIcon } from "@/utils/icon/resolve.ts";
 import { CORE_MENU_ITEMS, PREVIEW_MENU_GROUPS, type PreviewMenuGroupDef } from "./defs.ts";
 
@@ -369,7 +369,7 @@ export function renderPreviewPanel(
     console.error("[preview-menu] renderPanel FAILED", node.id, err);
     const errRow = document.createElement("div");
     errRow.className = "cm-error-note";
-    errRow.textContent = `${t("preview.renderFail")}: ${safeErrorMessage(err)}`;
+    errRow.textContent = friendlyError(err, t("preview.renderFail"));
     list.appendChild(errRow);
   }
 }

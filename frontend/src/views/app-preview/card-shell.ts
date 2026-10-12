@@ -10,7 +10,7 @@
 // 不走 i18n：type id 是技术标识，翻进语言包会 fork 出第二事实源（违反 ADR-116 前端只读不判）。
 
 import { t } from "@/core/i18n/t.ts";
-import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
+import { friendlyError } from "@/utils/dom/errors.ts";
 import { renderIconHtml } from "@/utils/icon/resolve.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { type AppBindings, backendGetApp } from "@/views/backend-deps.ts";
@@ -74,7 +74,7 @@ export async function showCard(
     ctx.root.innerHTML = pageShellHTML({
       icon: renderIconHtml(config.icon),
       title: config.label,
-      body: errorPlaceholderHTML(safeErrorMessage(e)),
+      body: errorPlaceholderHTML(friendlyError(e, t("preview.loadFailed"))),
     });
   }
 }

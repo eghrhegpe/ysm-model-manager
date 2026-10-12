@@ -9,7 +9,6 @@ import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { createLoadGuard } from "@/utils/async/load-guard.ts";
 import { logError, logWarn } from "@/utils/base/primitives/log.ts";
-import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import type { RovingHandle } from "@/utils/dom/bind-roving.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
@@ -263,7 +262,7 @@ export class AppSyncManager extends WebComponentBase {
     errDiv.setAttribute("role", "alert"); // a11y：渲染/加载失败须被屏幕阅读器即时播报（非 polite）
     errDiv.style.padding = "12px";
     errDiv.style.color = "var(--err)";
-    errDiv.textContent = `${head}: ${safeErrorMessage(e)}`;
+    errDiv.textContent = friendlyError(e, head);
     const listEl = this.querySelector(".sm-list");
     if (listEl) listEl.appendChild(errDiv);
     else this.appendChild(errDiv);

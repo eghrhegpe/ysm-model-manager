@@ -4,8 +4,8 @@
 
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
-import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 import { initDropdown } from "@/utils/dom/dropdown.ts";
+import { friendlyError } from "@/utils/dom/errors.ts";
 import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
@@ -251,7 +251,7 @@ async function runPush(
       toast(t("sidebar.pushDoneAll", { n: selected.length }), TOAST_MS.info, "success");
     }
   } catch (err) {
-    toast(t("sidebar.pushFailed", { msg: safeErrorMessage(err) }), TOAST_MS.normal, "error");
+    toast(t("sidebar.pushFailed", { msg: friendlyError(err) }), TOAST_MS.normal, "error");
   } finally {
     resetButton(pushBtn, "push");
     syncInProgress.val = false;
@@ -288,7 +288,7 @@ async function runPull(
     bus.emit("stats:refresh");
     bus.emit("tree:reload");
   } catch (err) {
-    toast(t("sidebar.pullFailed", { msg: safeErrorMessage(err) }), TOAST_MS.normal, "error");
+    toast(t("sidebar.pullFailed", { msg: friendlyError(err) }), TOAST_MS.normal, "error");
   } finally {
     resetButton(pullBtn, "pull");
     syncInProgress.val = false;

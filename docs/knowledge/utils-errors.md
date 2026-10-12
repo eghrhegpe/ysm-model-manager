@@ -48,18 +48,17 @@ status: active
 ## 核心职责
 
 - Go 结构化 AppError.Code → i18n key 映射（单一事实来源，ADR-051 完成）
-- 未列出的 Code：透传 Reason 中文（Go 端已在 Reason 中填写用户可读文案），含内部路径段经 `stripPathSegments` 剥离
-- 非 AppError（纯字符串/JS Error）：含汉字直接透传；英文兜底拼接可配置前缀
-- 已含中文的消息直接透传（Go 端已友好化/已翻译）
+- 未映射 Code（含未知 Code）：统一走 fallback 前缀拼接，含内部路径段经 `stripPathSegments` 剥离（ADR-331 §2.1 旁路收窄，不再原样透传 Reason 中文）
+- 非 AppError（纯字符串/JS Error）：统一走 fallback 前缀拼接（ADR-331 §2.1 旁路收窄，原「含汉字直接透传」分支已删除）
 
 ## 对外 API / 入口
 
 - `friendlyError(err: unknown, fallback = "操作失败"): string`
   - 空值 → `"未知错误"`；err 可为 Error 对象或字符串
-  - 优先级：**① 结构化 AppError.Code**（CODE_KEYS 映射 → i18n key）→ **② 未列出 Code 含中文 Reason**（透传，剥离路径段）→ **③ 含汉字消息**（透传）→ **④ 英文兜底**（`${fallback}: ${message}`）
+  - 优先级：**① 结构化 AppError.Code**（CODE_KEYS 映射 → i18n key）→ **② 未映射 Code 兜底**（`${fallback}: ${message}`，剥离路径段）→ **③ 非 AppError 兜底**（`${fallback}: ${message}`，剥离路径段）。已无「含汉字透传」分支（ADR-331 §2.1 旁路收窄）
   - CODE_KEYS 覆盖：FILE_EXISTS/ALREADY_EXISTS → alreadyExists；INVALID_PARAM/INVALID_PATH/FILENAME_INVALID → invalidArg；FILE_TYPE_UNSUPPORTED/UNSUPPORTED_FORMAT → unsupported；DECODE_FAILED → dataFormat；FILE_TOO_LARGE → fileTooLarge；FILE_EMPTY → fileEmpty；MKDIR_FAILED → mkdirFailed；WRITE_FAILED → writeFailed；IO_ERROR → ioError；LINK_FAILED → linkFailed
   - 未列出 Code：仅 UNKNOWN，由 `error.unknown` 兜底（Go `AppError.Code` 全集 15 个已全映射，2026-10-12 切片 A 补齐差集）
-  - ⚠️ 互斥声明备案：本卡「不变量」称「前端只消费结构化字段做 i18n」，但 `friendlyError` 对**未映射 Code / 非 AppError 的含汉字消息仍原样透传**（ADR-051 完成后的遗留，见切片 B / ADR-331 待立项）；切片 A 已补 CODE_KEYS 差集，旁路收窄属切片 B 范畴
+  - ✅ 旁路收窄已落地（切片 B-1 / ADR-331 §2.1，2026-10-12）：`friendlyError` 对**未映射 Code / 非 AppError 的含汉字消息**不再原样透传，统一走 `${fallback}: ${message}`（剥离路径段），避免 en/ja 界面显中文。此前「互斥声明备案」的遗留已解决
 
 ## 与其他子系统关系
 

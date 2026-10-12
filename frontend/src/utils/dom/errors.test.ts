@@ -14,19 +14,19 @@ vi.mock("@/core/i18n/t.ts", () => ({
 vi.resetModules();
 const { friendlyError, stripPathSegments, isFileExistsError } = await import("./errors.ts");
 
-describe("friendlyError 空值与中文直通", () => {
+describe("friendlyError 空值与中文兜底（ADR-331 §2.1 旁路收窄）", () => {
   it("null/undefined/空串 → 未知错误", () => {
     expect(friendlyError(null)).toBe("error.unknown");
     expect(friendlyError(undefined)).toBe("error.unknown");
     expect(friendlyError("")).toBe("error.unknown");
   });
 
-  it("已含中文的字符串直接返回", () => {
-    expect(friendlyError("磁盘已满，请清理")).toBe("磁盘已满，请清理");
+  it("已含中文的字符串 → fallback 前缀拼接（不再原样透传）", () => {
+    expect(friendlyError("磁盘已满，请清理")).toBe("error.fallback: 磁盘已满，请清理");
   });
 
-  it("已含中文的 Error.message 直接返回", () => {
-    expect(friendlyError(new Error("存储路径未配置"))).toBe("存储路径未配置");
+  it("已含中文的 Error.message → fallback 前缀拼接（不再原样透传）", () => {
+    expect(friendlyError(new Error("存储路径未配置"))).toBe("error.fallback: 存储路径未配置");
   });
 });
 
@@ -68,19 +68,21 @@ describe("friendlyError 结构化 AppError Code（ADR-051 单一事实来源）"
     );
   });
 
-  it("未列入的 Code（未知）→ 透传中文 Reason 或 fallback", () => {
-    // WEIRD_CODE 不在 CODE_KEYS：中文 Reason 透传
-    expect(friendlyError({ Code: "WEIRD_CODE", message: "奇怪的错误" })).toBe("奇怪的错误");
-    // WEIRD_CODE + 英文 message → fallback（Go 端不会这样，仅测试兜底）
+  it("未列入的 Code（未知）→ fallback 前缀拼接（ADR-331 §2.1 旁路收窄）", () => {
+    // WEIRD_CODE 不在 CODE_KEYS：中文 Reason 不再原样透传，改走 fallback 前缀
+    expect(friendlyError({ Code: "WEIRD_CODE", message: "奇怪的错误" })).toBe(
+      "error.fallback: 奇怪的错误",
+    );
+    // WEIRD_CODE + 英文 message → fallback（语义不变）
     expect(friendlyError({ Code: "WEIRD_CODE", message: "something odd happened" })).toBe(
       "error.fallback: something odd happened",
     );
   });
 
-  it("未知 Code 含内部路径 → stripPathSegments 后 fallback", () => {
+  it("未知 Code 含内部路径 → stripPathSegments 后 fallback 前缀", () => {
     const msg = "无法创建目标目录 源路径：C:\\Users\\test 目标路径：D:\\game 解决建议：重试";
     expect(friendlyError({ Code: "WEIRD_CODE", message: msg })).toBe(
-      "无法创建目标目录 解决建议：重试",
+      "error.fallback: 无法创建目标目录 解决建议：重试",
     );
   });
 });
@@ -105,8 +107,22 @@ describe("friendlyError 兜底与非结构化输入", () => {
     expect(result).toBe("error.fallback: [object Object]");
   });
 
-  it("含中文的 Error.message → 直接透传", () => {
-    expect(friendlyError(new Error("网络超时，请重试"))).toBe("网络超时，请重试");
+  // ADR-331 §2.1：旁路收窄后，英文消息在 AppError / 非 AppError 两条路径均带 fallback 前缀
+  it("英文消息始终带 fallback 前缀（AppError 与非 AppError 两条路径一致）", () => {
+    // 非 AppError：纯字符串
+    expect(friendlyError("quantum flux")).toBe("error.fallback: quantum flux");
+    // 非 AppError：Error 对象
+    expect(friendlyError(new Error("ENOTFOUND host"))).toBe("error.fallback: ENOTFOUND host");
+    // AppError 未映射 Code
+    expect(friendlyError({ Code: "WEIRD_CODE", message: "boom" })).toBe(
+      "error.fallback: boom",
+    );
+    // 自定义 fallback 参数同样生效
+    expect(friendlyError("quantum flux", "重命名失败")).toBe("重命名失败: quantum flux");
+  });
+
+  it("含中文的 Error.message → fallback 前缀拼接（不再直接透传）", () => {
+    expect(friendlyError(new Error("网络超时，请重试"))).toBe("error.fallback: 网络超时，请重试");
   });
 });
 
@@ -127,8 +143,10 @@ describe("friendlyError — 边界输入与嵌套 cause", () => {
     expect(friendlyError(err)).toBe("error.fallback: boom: io error");
   });
 
-  it("Code 为空串 + 中文 message → 透传中文", () => {
-    expect(friendlyError({ Code: "", message: "网络超时，请重试" })).toBe("网络超时，请重试");
+  it("Code 为空串 + 中文 message → fallback 前缀拼接（旁路收窄）", () => {
+    expect(friendlyError({ Code: "", message: "网络超时，请重试" })).toBe(
+      "error.fallback: 网络超时，请重试",
+    );
   });
 });
 

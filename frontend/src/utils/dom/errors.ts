@@ -10,6 +10,7 @@ import { APP_ERROR_PATH_RE } from "@/utils/base/pure/apperror-text.ts";
 // WRITE_FAILED/FILE_EMPTY/FILE_TOO_LARGE/LINK_FAILED 差集，此前靠 Reason 中文透传，
 // en/ja 界面会显中文）。剩余未列出的 Code 仅剩 UNKNOWN，且 UNKNOWN 已由
 // error.unknown 兜底（friendlyError 的 !err/空值路径），无需在此映射。
+// 旁路已收窄（切片 B-1 / ADR-331 §2.1）：未映射 Code 含中文不再原样透传，统一走 fallback 前缀。
 // 值收窄为 LocaleKey：映射表的 key 必须是语言包合法 key（字面量拼错编译期报错）。
 const CODE_KEYS: Record<string, LocaleKey> = {
   FILE_EXISTS: "error.alreadyExists",
@@ -60,15 +61,15 @@ export function friendlyError(err: unknown, fallback?: string): string {
   if (code !== undefined) {
     const key = CODE_KEYS[code];
     if (key) return t(key);
-    // 未列出的 Code：透传 Reason 中文（Go 端已在 Reason 中填写用户可读文案）
+    // 未映射 Code（含未知 Code）：统一走 fallback 前缀（ADR-331 §2.1 旁路收窄，
+    // 未列出的 Code 含中文不再原样透传，避免 en/ja 界面显中文）
     const msg = String((err as { message?: unknown }).message || err);
-    if (/[\u4e00-\u9fff]/.test(msg)) return stripPathSegments(msg);
     return `${fb}: ${stripPathSegments(msg)}`;
   }
 
-  // 非 AppError（如纯字符串/JS Error）：含中文直接透传，否则 fallback
+  // 非 AppError（如纯字符串/JS Error）：统一走 fallback 前缀（ADR-331 §2.1 旁路收窄，
+  // 删除了原「含汉字直接透传」分支）
   const msg = typeof err === "string" ? err : String((err as { message?: unknown }).message || err);
-  if (/[\u4e00-\u9fff]/.test(msg)) return stripPathSegments(msg);
   return `${fb}: ${stripPathSegments(msg)}`;
 }
 

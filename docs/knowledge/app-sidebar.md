@@ -124,6 +124,7 @@ status: active
 - **只在 connectedCallback 绑一次的绑定必须收 getter，禁按值捕获（2026-10 修复「全选跨 reload 蒸发」）**：`bindSelectAll` 曾在 connectedCallback 按值收 `rtype`/`instances`，而彼时 `_instances` 还是初始 `[]`、`_reload` 又换的是**新数组引用**——捕获的旧引用永远为空 → 全选只改 DOM、从未写入 `_checkedSets`，任何一次 reload 后选择即丢（`rtype` 同理：按值捕获会把勾选写进切类型前的旧桶）。同型先例：`bindSyncSelected`/`restoreCheckboxes` 早已走 `() => this._instances` 形态。回归锁 `app-sidebar.sync.test.ts`「全选 → 跨 reload 存活」
 - **选中名键与去重键同源派生（`events.ts|rtypeKeyOf`，2026-10 收口）**：`sb_selectedName_<rtype>` 的读写两侧与 `makeEmitKey` 前缀都取 `instances[0]?.rtype || currentRepoType()`（列表级 rtype）——原先点击路径用 `pkg.rtype` 落盘、restore 用 `instances[0].rtype` 读取，混合 rtype 列表下写读落进不同桶、选中名静默恢复不了。**新增任何选中态持久化键前，先确认读写同源**
 - **禁伪 async（2026-10 锐评全页收口）**：生命周期回调（`connectedCallback`）与 bus handler（`repo:rtype-changed`）、渲染段（`bindFooter` 的 stat-sync）一律不得标 `async` 而函数体零 `await`——返回值无人接管时，同步抛错会被转成 unhandled rejection（仓内 `render` 曾同病：错误提示整段变死码）。真实异步入口显式 `void this._reload()` 发起；本次三处已归正
+- **卡片入场阶梯必须封顶，禁用裸 `idx * step`（2026-10 修复「卡卡」直因）**：`render.ts|renderVersionCards` 的 `animation-delay` 走共享原语 `utils/animation/stagger.ts|stagger(idx, 40)`（300ms 封顶）。原实现 `idx * 40` 无封顶，而 `.instance-card` 的 animation 带 **`both` 填充**——延迟期间卡片停在 from 态（透明/位移），包多时（MMD 用户常几十个）第 30 张要等 **1160ms** 才出现、下半屏长时间空白；且每次 `stats:refresh`（任何导入/同步/删除）整列表重建都会**重演**一遍。站点卡片（`app-content/site/render.ts`）早已同口径封顶，本例是漏网。回归锁 `render.test.ts`「入场延迟带封顶（stagger）」
 
 ## 相关
 

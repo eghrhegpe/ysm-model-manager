@@ -2,6 +2,7 @@
 
 import { t } from "@/core/i18n/t.ts";
 import { currentRepoType } from "@/features/repo/repo-rtype.ts";
+import { stagger } from "@/utils/animation/stagger.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import type { SidebarInstance } from "./data.ts";
 import { instanceCardHeaderHTML } from "./tpl.ts";
@@ -27,6 +28,12 @@ export function renderVersionCards(container: HTMLElement, instances: SidebarIns
   // ADR-308 D2：结构性 option 角色（交互态 roving tabindex/aria-selected 由 bindRoving 管）；
   // 统一 tabindex=-1——键盘入口唯一性（恰一 tabindex 0）由 _renderCards 尾部 syncIndex 布局保证
   container.setAttribute("role", "listbox");
+  // 2026-10 批量插入（与 stagger 封顶同批的「卡卡」收口）：原逐张 appendChild 到**已连接**容器，
+  // N 张卡 = N 次 DOM 插入各自的布局失效；改 DocumentFragment 一次落位。
+  // ⚠️ 这条是纯机制优化、**可观测行为不变**（卡片数/idx/延迟照旧），故不设机制断言：
+  // happy-dom 下两条口径都无区分度（fragment 插入被展开成每子节点一条 childList 记录；
+  // 共享 appendChild 致 spy 的 mock.instances 一律记成容器）——勿再花时间补「假锁」。
+  const frag = document.createDocumentFragment();
   instances.forEach((ins, idx) => {
     const card = document.createElement("div");
     card.className = "instance-card";
@@ -34,7 +41,12 @@ export function renderVersionCards(container: HTMLElement, instances: SidebarIns
     card.setAttribute("tabindex", "-1");
     card.setAttribute("aria-selected", "false");
     card.dataset.idx = String(idx);
-    card.style.animationDelay = `${idx * 40}ms`;
+    // 入场阶梯延迟：走共享原语 stagger()（40ms/张、300ms 封顶）。
+    // ⚠️ 不可退回 `idx * 40` 无封顶——`.instance-card` 的 animation 带 `both` 填充，
+    // 延迟期间卡片停在 from 态（透明/位移），包多时（MMD 用户常几十个）下半屏要等
+    // 一秒以上才出现，且每次 stats:refresh 整列表重建都会重演一次 = 「卡卡」直因；
+    // 站点卡片（app-content/site/render.ts）早已用同口径封顶。
+    card.style.animationDelay = `${stagger(idx, 40)}ms`;
     card.innerHTML = instanceCardHeaderHTML(
       ins.name,
       ins.synced,
@@ -44,6 +56,7 @@ export function renderVersionCards(container: HTMLElement, instances: SidebarIns
       ins.hasMod,
       ins.rtype || currentRepoType(),
     );
-    container.appendChild(card);
+    frag.appendChild(card);
   });
+  container.appendChild(frag);
 }

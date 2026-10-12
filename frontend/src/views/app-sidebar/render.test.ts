@@ -62,6 +62,31 @@ describe("renderVersionCards", () => {
     expect(instanceCardHeaderHTML).toHaveBeenNthCalledWith(1, "P1", 3, 2, 1, 0, false, "pack");
     expect(instanceCardHeaderHTML).toHaveBeenNthCalledWith(2, "P2", 2, 1, 0, 1, true, "ysm");
   });
+
+  // 2026-10 修复的回归锁（「卡卡」直因）：入场延迟原为 idx*40ms **无封顶**，而
+  // .instance-card 的 animation 用 `both` 填充 → 延迟期间卡片停在 from 态（透明/位移），
+  // 50 个包 = 第 50 张等 2 秒才出现；且每次 stats:refresh 都整列表重建 → 反复「下半屏空着」。
+  // 现走共享原语 stagger()（与站点卡片同口径，300ms 封顶）。
+  it("入场延迟带封顶（stagger）：尾部卡片不再等 N*40ms 才可见", () => {
+    const container = document.createElement("div");
+    const many = Array.from({ length: 30 }, (_, i) => instance({ name: `P${i}` }));
+    renderVersionCards(container, many);
+    const cards = Array.from(container.querySelectorAll<HTMLElement>(".instance-card"));
+    expect(cards).toHaveLength(30);
+    // 头部仍保持阶梯节奏（不破坏「瀑布流」观感）
+    expect(cards[1].style.animationDelay).toBe("40ms");
+    expect(cards[2].style.animationDelay).toBe("80ms");
+    // 尾部必须封顶：旧实现这里是 1160ms（29*40），下半屏要等一秒多才可见
+    expect(parseInt(cards[29].style.animationDelay, 10)).toBeLessThanOrEqual(320);
+    // 封顶值单调不减（视觉顺序稳定）
+    const delays = cards.map((c) => parseInt(c.style.animationDelay, 10));
+    for (let i = 1; i < delays.length; i++) expect(delays[i]).toBeGreaterThanOrEqual(delays[i - 1]);
+  });
+
+  // 注：批量插入（DocumentFragment 一次落位）**不设机制断言**——实测两条环境口径都无区分度：
+  // ① happy-dom 把 fragment 插入展开成每子节点一条 childList 记录（MutationObserver 两条路径都得 30 条 1）；
+  // ② 其 `appendChild` 是共享函数对象，`vi.spyOn` 的 `mock.instances` 对 fragment/容器的调用一律记成容器
+  //    （31 次全判「落在容器上」）。可观测行为（卡片数/idx/延迟）已由上方用例锁死，此处不留假锁。
 });
 
 describe("instanceCardHeaderHTML 徽章 chips（真实实现）", () => {

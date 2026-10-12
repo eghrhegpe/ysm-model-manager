@@ -31,8 +31,11 @@ export interface WorkerBridge<Req extends { id: number }, Resp, Ok> {
   request: (reqWithoutId: Omit<Req, "id">, transfer?: Transferable[]) => Promise<Ok>;
   /** 供外部 worker.onmessage 委托 */
   handleMessage: (resp: Resp) => void;
-  /** 供外部 worker.onerror 委托（按策略 resolveAllError / terminatePool） */
-  handleWorkerError: () => void;
+  /** 供外部 worker.onerror 委托（按策略 resolveAllError / terminatePool）。
+   *  @param failed 出错的 worker 实例（**建议传**）：传了即精确隔离，只重建该实例；
+   *    不传 = 无法归属 → 全体标记并重建全池（保守回退，语义同旧版）。
+   *    [2026-10-12] 池语义修正引入——详见 `createWorkerBridge` 内 `handleWorkerError` 注释。 */
+  handleWorkerError: (failed?: Worker) => void;
   /** 终止整池并结算在途（≈ handleWorkerError 的 terminatePool 分支） */
   dispose: () => void;
   /** 显式终止整池（ktx2 onerror 路径） */
@@ -95,6 +98,11 @@ export function createWorkerBridge<Req extends { id: number }, Resp, Ok>(
 
   const pickWorker = opts.pickWorker ?? ((_id: number, ws: Worker[]) => ws[rr++ % ws.length]);
 
+  /** 已报错的 worker（[2026-10-12] 池语义修正的记账）：`onerror` 是唯一死亡信号，
+   *  由 {@link handleWorkerError} 标记，`rebuildDeadWorkers` 只重建被标记的实例。
+   *  用 Set 而非布尔：支持「池内多个各自崩」逐个消化，且注销后不留悬垂引用。 */
+  const deadWorkers = new Set<Worker>();
+
   /** 单请求失败结算：超时 / dispose / onerror 复用 */
   function settleError(id: number, msg: string): void {
     const entry = pending.get(id);
@@ -138,11 +146,22 @@ export function createWorkerBridge<Req extends { id: number }, Resp, Ok>(
     onPoolTerminated?.();
   }
 
-  function handleWorkerError(): void {
+  /**
+   * worker 报错入口（`w.onerror` 委托点）。
+   *
+   * @param failed 出错的 worker 实例。**建议传**——传了即**精确隔离**（只重建它，健康实例
+   *   不受影响）；不传则退化为「全体标记」（保守：无法归属时宁可重建全池，也不留下死实例
+   *   让后续 request 吃满超时）。三层调用点（`createResolveModeBridge` 自建、各调用点
+   *   手写 `w.onerror`、测试）可渐进传参，未传者行为与旧版一致，**不构成破坏性变更**。
+   */
+  function handleWorkerError(failed?: Worker): void {
     if (onWorkerError === "terminatePool") {
       terminatePool();
       return;
     }
+    // 记账：传了只标记该实例（精确隔离）；未传 = 无法归属 → 全体标记（保守，语义同旧版）
+    if (failed) deadWorkers.add(failed);
+    else for (const w of workers) deadWorkers.add(w);
     for (const [id] of pending) settleError(id, "Worker 错误");
     rebuildDeadWorkers();
   }
@@ -150,10 +169,20 @@ export function createWorkerBridge<Req extends { id: number }, Resp, Ok>(
   /** resolve-mode 自愈（参照 mmd-texture-decoder.ts 崩溃重建模式）：worker 死亡后仅结算
    *  在途不够——池里仍是死实例，后续 request 全部 postMessage 给死 worker 吃满 30s 超时。
    *  此处 terminate 死实例 + 就地重建替补并接线（onmessage/onerror 委托回本桥），
-   *  下一次 request 经 pickWorker 读 workers 数组自动用上新实例（惰性自愈）。 */
+   *  下一次 request 经 pickWorker 读 workers 数组自动用上新实例（惰性自愈）。
+   *
+   *  [2026-10-12 池语义修正] `Worker` 无 `readyState` 可查，本桥**无法反查**「哪一个是死的」，
+   *  故原实现退化为「无条件 terminate 池中每一个」——把注释承诺的「terminate **死实例**」
+   *  做成了**全池连坐**：健康 worker 的在途请求被一并 settleError，且整池重建。
+   *  现改为**事件驱动标记**：`onerror` 是该 worker 死亡的唯一可靠信号（真实接线在
+   *  `createResolveModeBridge` / 各调用点的 `w.onerror = () => bridge.handleWorkerError()`），
+   *  由 `markDead` 记账、此处只重建被标记的，重建后清账。
+   *  ⚠️ 语义边界：若**同时**多个 worker 报错，本函数会被多次调用，每次只重建当时已标记的
+   *  （逐个消化、不重复重建），与「一次报错触发一次重建」等价且更精确。 */
   function rebuildDeadWorkers(): void {
     if (!opts.createWorker) return;
     for (let i = 0; i < workers.length; i++) {
+      if (!deadWorkers.has(workers[i])) continue; // 健康实例不动（故障隔离）
       const dead = workers[i];
       try {
         dead.terminate();
@@ -164,6 +193,7 @@ export function createWorkerBridge<Req extends { id: number }, Resp, Ok>(
       replacement.onmessage = (e: MessageEvent<Resp>) => handleMessage(e.data);
       replacement.onerror = () => handleWorkerError();
       workers[i] = replacement;
+      deadWorkers.delete(dead);
     }
   }
 
@@ -219,7 +249,9 @@ export function createResolveModeBridge<Resp extends ResolveModeResponse>(
   // 若漏接，worker 响应永不结算、恒超时 ok:false 静默回退主线程
   // （回归锁：worker-bridge.test.ts「工厂内部接线」两例，409b060e 曾丢失）
   worker.onmessage = (e: MessageEvent<Resp>) => bridge.handleMessage(e.data);
-  worker.onerror = () => bridge.handleWorkerError();
+  // 传实例 → 精确隔离（只重建这一个）。单 worker 池下与不传等价，但把「身份」这一
+  // 信息在类型层固定下来，将来池化时调用点照抄即正确（[2026-10-12] 池语义修正）。
+  worker.onerror = () => bridge.handleWorkerError(worker);
   return {
     request: (bytes) => bridge.request({ bytes }, [bytes]),
     dispose: () => bridge.dispose(),

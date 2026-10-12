@@ -191,8 +191,78 @@ describe("resolve 模式 — onerror resolveAllError 分支", () => {
   });
 });
 
-describe("创建契约（resolveAllError 必须传 makeErrorResponse）", () => {
-  it("resolveAllError 且未传 makeErrorResponse → 构造期抛错，阻止静默变 reject-mode", () => {
+// ===== resolve-mode 重建的**池语义**：只重建死实例，不连坐健康 worker（2026-10-12）=====
+//
+// 病：`rebuildDeadWorkers` 的注释写「terminate **死实例** + 就地重建替补」，实现却是
+// `for (workers) { dead.terminate(); workers[i] = create() }`——**无条件终止池中每一个**
+// worker（含健康的），把「故障隔离」做成了「全池连坐」。属**注释承诺 ≠ 实现**的漂移。
+//
+// 当前无实际受害者（生产唯一多 worker 池 = ktx2，走 `terminatePool` 分支，不达本函数；
+// 而走本函数的 resolve-mode 生产用户 `createResolveModeBridge` 只传**单** worker——
+// 池长为 1 时「杀死的」与「杀全部」是同一个操作）。故本条是把将来池化必踩的暗雷**提前拆掉**：
+// 让实现与注释对齐，而非留着等第二个多 worker resolve 池出现时爆。
+describe("resolve-mode 重建 — 池语义（只重建死实例）", () => {
+  /** 建多 worker resolve 桥并接 onerror（真实调用点形态：`w.onerror = () => bridge.handleWorkerError(w)`——
+   *  传实例是 [2026-10-12] 池语义修正后的推荐写法，生产 `createResolveModeBridge` 已照此接线） */
+  function makeMultiPool(bridge: WorkerBridge<FakeReq, FakeResp, BridgeResp>, ws: FakeWorker[]): void {
+    for (const w of ws) w.onerror = () => bridge.handleWorkerError(w as unknown as Worker);
+  }
+
+  it("多 worker 池中只有一个崩溃 → 健康 worker 不被 terminate", async () => {
+    const w1 = makeWorker();
+    const w2 = makeWorker();
+    const created: FakeWorker[] = [];
+    let bridge!: WorkerBridge<FakeReq, FakeResp, BridgeResp>;
+    bridge = makeResolveBridge([w1, w2], {
+      createWorker: () => {
+        const w = makeWorker();
+        w.onmessage = (e) => bridge.handleMessage(e.data as unknown as BridgeResp);
+        // 替补也须接 onerror（真实接线同理），否则二次崩溃丢失自愈能力
+        w.onerror = () => bridge.handleWorkerError(w as unknown as Worker);
+        created.push(w);
+        return w as unknown as Worker;
+      },
+    } as never);
+    makeMultiPool(bridge, [w1, w2]);
+
+    w1.crash(); // 池里只有 w1 死
+
+    expect(w1.terminate, "死实例须被终止").toHaveBeenCalled();
+    expect(
+      w2.terminate,
+      "健康 worker 不得被连坐终止（注释承诺「terminate 死实例」，实现须与之一致）",
+    ).not.toHaveBeenCalled();
+    expect(created.length, "只补一个替补（死一个补一个，不重建全池）").toBe(1);
+  });
+
+  it("两个 worker 各崩一次 → 各补一个替补，健康实例始终不被触碰", async () => {
+    const w1 = makeWorker();
+    const w2 = makeWorker();
+    const created: FakeWorker[] = [];
+    let bridge!: WorkerBridge<FakeReq, FakeResp, BridgeResp>;
+    bridge = makeResolveBridge([w1, w2], {
+      createWorker: () => {
+        const w = makeWorker();
+        w.onmessage = (e) => bridge.handleMessage(e.data as unknown as BridgeResp);
+        w.onerror = () => bridge.handleWorkerError(w as unknown as Worker);
+        created.push(w);
+        return w as unknown as Worker;
+      },
+    } as never);
+    makeMultiPool(bridge, [w1, w2]);
+
+    w1.crash();
+    // 中间判据（关键）：w1 崩溃那一轮，w2（健康）**不得**被 terminate
+    expect(w2.terminate, "w1 崩溃时 w2 未被连坐（故障隔离的核心判据）").not.toHaveBeenCalled();
+
+    w2.crash();
+    expect(created.length, "两次崩溃各补一个（共 2 个替补）").toBe(2);
+    // w2 此时才作为「死实例」被终止一次——与「连坐」区分：各算各的账
+    expect(w2.terminate, "w2 崩溃后才被终止（不是被 w1 连坐）").toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("创建契约（resolveAllError 必须传 makeErrorResponse）", () => {  it("resolveAllError 且未传 makeErrorResponse → 构造期抛错，阻止静默变 reject-mode", () => {
     expect(() =>
       createWorkerBridge<FakeReq, FakeResp, FakeResp>({
         workers: [makeWorker() as unknown as Worker],

@@ -1581,6 +1581,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-331-d1：ReadFileBytes 无 error 通道缺口：ReadFileMeta 结构化错误字段（切片 C）",
+        "link": "/adr/decisions/ADR-331-d1-readfilebytes-error-readfilemeta-c"
+      },
+      {
         "text": "ADR-311-d1：测试纪律：禁 mock 被断言谓词（自证）+ 判别样本 + 变异探针",
         "link": "/adr/decisions/ADR-311-d1-mock"
       },

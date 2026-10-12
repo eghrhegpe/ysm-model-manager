@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **343** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **344** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > ADR 三区存放：根目录 = 存量（分级前）/ `architecture/` = 架构决策 / `decisions/` = 执行决策日志（ADR-320）。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -16,7 +16,7 @@ permalink: /adr/
 
 | 状态 | 数量 |
 |------|------|
-| [📝 提议中](#提议中) | 8 |
+| [📝 提议中](#提议中) | 9 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 1 |
 | [🔄 部分采纳](#部分采纳) | 14 |
 | [✅ 已采纳](#已采纳) | 312 |
@@ -26,10 +26,11 @@ permalink: /adr/
 
 ## 按状态分组导航
 
-### 📝 提议中（8）
+### 📝 提议中（9）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-331-d1](./decisions/ADR-331-d1-readfilebytes-error-readfilemeta-c.md) | ReadFileBytes 无 error 通道缺口：ReadFileMeta 结构化错误字段（切片 C） | 📝 提议中 |
 | [ADR-328](./architecture/ADR-328-cap-enabled-unification.md) | cap 能力总开关统一收编 envState 与 ground 终态 | 📝 提议中 |
 | [ADR-327](./architecture/ADR-327-hdr.md) | 自定义 HDR 路径持久化与重启恢复 | 📝 提议中 |
 | [ADR-325](./architecture/ADR-325-app-domain-sinking-over-multi-service.md) | App 瘦身走域下沉：拒绝 Wails 多 Service 外壳 | 📝 提议中 |
@@ -732,6 +733,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
+| ADR-331-d1 | ReadFileBytes 无 error 通道缺口：ReadFileMeta 结构化错误字段（切片 C） | 📝 提议中 | 2026-10-12 |
 | ADR-311-d1 | 测试纪律：禁 mock 被断言谓词（自证）+ 判别样本 + 变异探针 | ✅ 已采纳 | 2026-10-09 |
 | ADR-293-d1 | 灯光首启默认分治：辅助线框关、浏览最小光照、环境光降档 | ✅ 已采纳 | 2026-10-04 |
 | ADR-292-d1 | envSource 迁移判据① 供血线单源化（不再跨槽读 sky 存档键形） | ✅ 已采纳 | 2026-10-07 |

@@ -254,6 +254,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-332：诊断页信息架构与版式收口：四项待拍板决策",
+        "link": "/adr/architecture/ADR-332-diagnostics-ia-and-layout-consolidation"
+      },
+      {
         "text": "ADR-331：3D 错误消息国际化：friendlyError 旁路收窄与 CODE_KEYS 单源",
         "link": "/adr/architecture/ADR-331-3d-friendlyerror-code-keys"
       },

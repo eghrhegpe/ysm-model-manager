@@ -239,20 +239,27 @@ describe("buildModelGroup — 断链修复的判定顺序与坐标（补测前�
   });
 });
 
-describe("buildModelGroup — textureId 双端有意分歧（D7 锁定；接线时须先删本节）", () => {
-  // 分歧根因与接线条件见 model-group-builder.ts `postProcessAndTextures` 注释：
-  // Go 侧已条件下发 `tex_<idx>`，TS 侧因 `BedrockModel` 无 texture/textures 字段只能恒 null。
-  // 此断言用类型断言**强推**纹理数据，锁定「即使有数据也恒 null」——接线时若忘删本节，
-  // 本断言会立刻失败并提示删除（接线不应静默绕过审计）。
-  it("有纹理数据的模型 → textureId 仍恒 null（前端零消费）", () => {
+describe("buildModelGroup — textureId 条件下发（D7 接线后双端对齐）", () => {
+  // 复刻 Go 侧 buildModelGroup（go/threejs/spec.go）：有 texture/textures 时给 `tex_<texIdxBase>`
+  // ——原 D7 锁定「有数据仍恒 null」的断言已随接线删除，本组改为正面用例。
+  it("有纹理数据的模型 → textureId = tex_<base>", () => {
     const withTexture = makeModel(
       [{ name: "b", parent: "", pivot: [0, 0, 0], rotation: [0, 0, 0], cubes: [cube()], groupId: "" }],
-      {
-        // 强推 Go 侧字段面：TS 类型无此两键，正是「无数据可判」的分歧根因
-        texture: "textures/models/foo.png",
-        textures: ["textures/models/foo.png"],
-      } as unknown as Partial<BedrockModel>,
+      { texture: "textures/models/foo.png", textures: ["textures/models/foo.png"] },
     );
-    expect(buildModelGroup(withTexture, "comp-tex", 3).textureId).toBeNull();
+    expect(buildModelGroup(withTexture, "comp-tex", 3).textureId).toBe("tex_3");
+  });
+
+  it("仅有 texture 而无 textures → 仍下发 tex_<base>", () => {
+    const onlyTexture = makeModel(
+      [{ name: "b", parent: "", pivot: [0, 0, 0], rotation: [0, 0, 0], cubes: [cube()], groupId: "" }],
+      { texture: "textures/models/foo.png" },
+    );
+    expect(buildModelGroup(onlyTexture, "comp-tex-only", 7).textureId).toBe("tex_7");
+  });
+
+  it("无纹理数据 → textureId = null", () => {
+    const bare = makeModel([{ name: "b", parent: "", pivot: [0, 0, 0], rotation: [0, 0, 0], cubes: [cube()], groupId: "" }]);
+    expect(buildModelGroup(bare, "comp-bare", 3).textureId).toBeNull();
   });
 });

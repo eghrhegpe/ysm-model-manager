@@ -10,6 +10,7 @@
         "reject": false,
         "texW": 16,
         "texH": 16,
+        "textureId": null,
         "bones": [
           {
             "name": "body",
@@ -33,6 +34,7 @@
         "reject": false,
         "texW": 8,
         "texH": 8,
+        "textureId": null,
         "bones": [
           {
             "name": "a",
@@ -51,6 +53,7 @@
         "reject": false,
         "texW": 24,
         "texH": 24,
+        "textureId": null,
         "bones": [
           {
             "name": "real",
@@ -66,7 +69,8 @@
       "$note": "多条目全空 → 拒绝（null；空壳不再吞后续有效模型的镜像：此处无有效模型）",
       "input": "{\"format_version\":\"1.16.0\",\"minecraft:geometry\":[{\"description\":{\"identifier\":\"g0\"}},{\"description\":{\"identifier\":\"g1\"},\"bones\":[]}]}",
       "expected": {
-        "reject": true
+        "reject": true,
+        "textureId": null
       }
     },
     {
@@ -74,7 +78,8 @@
       "$note": "单条目无 bones 键 → 空模型（非 nil、零骨）：Go 侧非 nil，TS 入口同落 \"{}\"（单条目宽容契约）",
       "input": "{\"format_version\":\"1.16.0\",\"minecraft:geometry\":[{\"description\":{\"identifier\":\"g0\",\"texture_width\":8,\"texture_height\":8}}]}",
       "expected": {
-        "reject": true
+        "reject": true,
+        "textureId": null
       }
     },
     {
@@ -85,6 +90,7 @@
         "reject": false,
         "texW": 10,
         "texH": 10,
+        "textureId": null,
         "bones": [
           {
             "name": "modelB",
@@ -103,6 +109,7 @@
         "reject": false,
         "texW": 4,
         "texH": 4,
+        "textureId": null,
         "bones": [
           {
             "name": "alphaB",
@@ -121,6 +128,7 @@
         "reject": false,
         "texW": 4,
         "texH": 4,
+        "textureId": null,
         "bones": [
           {
             "name": "beeB",
@@ -139,6 +147,7 @@
         "reject": false,
         "texW": 8,
         "texH": 8,
+        "textureId": null,
         "bones": [
           {
             "name": "goodB",
@@ -157,6 +166,7 @@
         "reject": false,
         "texW": 12,
         "texH": 12,
+        "textureId": null,
         "bones": [
           {
             "name": "fbB",
@@ -175,6 +185,7 @@
         "reject": false,
         "texW": 16,
         "texH": 16,
+        "textureId": null,
         "bones": [
           {
             "name": "body",
@@ -193,6 +204,7 @@
         "reject": false,
         "texW": 16,
         "texH": 16,
+        "textureId": null,
         "bones": [
           {
             "name": "guinea",
@@ -211,6 +223,7 @@
         "reject": false,
         "texW": 64,
         "texH": 64,
+        "textureId": null,
         "bones": [
           {
             "name": "clampB",

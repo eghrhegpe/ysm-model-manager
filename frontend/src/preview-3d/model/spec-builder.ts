@@ -64,6 +64,10 @@ export interface BedrockModel {
   sourceName: string;
   format: string;
   bones: Bone2D[];
+  /** 模型自带纹理文件路径（Go types/bedrock.go Texture）；textures 为纹理槽表。D7 接线用。 */
+  texture?: string;
+  /** 纹理槽表（Go types/bedrock.go Textures）；长度 > 0 时下发 `tex_<idx>`。 */
+  textures?: string[];
   /** L0 清单派生的子模型列表（多角色包内切换用）；
    *  来源优先级：L0（maid_model.json model/model_list 权威清单）→ L1（geoFiles 枚举兜底）
    *  无多角色时可能缺省或长度为 1。 */

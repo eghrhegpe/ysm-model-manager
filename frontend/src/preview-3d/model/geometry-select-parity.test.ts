@@ -35,16 +35,16 @@ interface GSExpected {
   reject: boolean;
   texW?: number;
   texH?: number;
+  textureId?: string | null;
   bones?: GSBone[];
   totalCubes?: number;
 }
 
 /** 从 spec 串提取选择链骨架（与 Go gsSkeleton 同字段面）。"{}" → null。
  *
- * 锁面**有意不含 textureId**：TS 孪生恒 null（TS `BedrockModel` 无 texture/textures 字段可判），
- * 而 Go 侧已条件下发 `tex_<idx>`——双端语义分歧，纳入锁面会恒红。分歧根因与接线条件见
- * model-group-builder.ts `postProcessAndTextures` 注释（D7，2026-10-12 审计）；接线时须同步
- * 把 textureId 加入 Go gsSkeleton 与本锁面。 */
+ * 锁面含 textureId：D7 接线后双端语义对齐——TS `postProcessAndTextures` 复刻 Go
+ * 条件下发 `tex_<idx>`，当前黄金语料走 ParseBedrockGeometry 不填 Textures、Go 侧产 nil，
+ * 双端均 null，纳入锁面不会红。 */
 function extractSkeleton(specStr: string): GSSkeleton | null {
   if (specStr === "{}") return null;
   const spec = JSON.parse(specStr) as { models?: ModelGroup[] };
@@ -58,6 +58,7 @@ function extractSkeleton(specStr: string): GSSkeleton | null {
   return {
     texW: g.textureWidth,
     texH: g.textureHeight,
+    textureId: g.textureId ?? null,
     bones,
     totalCubes: bones.reduce((s, b) => s + b.cubeCount, 0),
   };
@@ -66,6 +67,7 @@ function extractSkeleton(specStr: string): GSSkeleton | null {
 interface GSSkeleton {
   texW: number;
   texH: number;
+  textureId: string | null;
   bones: GSBone[];
   totalCubes: number;
 }
@@ -88,6 +90,7 @@ describe("parseBedrockGeometry 选择链双端对账（黄金语料 tests/fixtur
       // 骨架值若漂移必为两侧选择链抄写分叉，不是平台噪声）
       expect(got!.texW, "texW").toBe(want.texW ?? 0);
       expect(got!.texH, "texH").toBe(want.texH ?? 0);
+      expect(got!.textureId, "textureId").toBe(want.textureId ?? null);
       const wantBones = want.bones ?? [];
       expect(got!.bones.map((b) => b.name), "bones 名序").toEqual(wantBones.map((b) => b.name));
       for (let i = 0; i < wantBones.length; i++) {

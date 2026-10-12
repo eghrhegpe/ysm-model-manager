@@ -45,6 +45,7 @@ type gsParityExpected struct {
 	Reject     bool           `json:"reject"`
 	TexW       int            `json:"texW,omitempty"`
 	TexH       int            `json:"texH,omitempty"`
+	TextureID  *string        `json:"textureId"`
 	Bones      []gsParityBone `json:"bones,omitempty"`
 	TotalCubes int            `json:"totalCubes,omitempty"`
 }
@@ -80,6 +81,7 @@ func gsSkeleton(m *types.BedrockModel) *gsParityExpected {
 		Models []struct {
 			TextureWidth  float64 `json:"textureWidth"`
 			TextureHeight float64 `json:"textureHeight"`
+			TextureID     *string `json:"textureId"`
 			Bones         []struct {
 				Name      string  `json:"name"`
 				ParentID  *string `json:"parentId"`
@@ -101,7 +103,7 @@ func gsSkeleton(m *types.BedrockModel) *gsParityExpected {
 		bones = append(bones, gsParityBone{Name: b.Name, Parent: parent, CubeCount: b.CubeCount})
 		total += b.CubeCount
 	}
-	return &gsParityExpected{Reject: false, TexW: int(g.TextureWidth), TexH: int(g.TextureHeight), Bones: bones, TotalCubes: total}
+	return &gsParityExpected{Reject: false, TexW: int(g.TextureWidth), TexH: int(g.TextureHeight), TextureID: g.TextureID, Bones: bones, TotalCubes: total}
 }
 
 // diffGSSkeleton 逐字段比对（点名第一个漂移字段）。
@@ -120,6 +122,12 @@ func diffGSSkeleton(got, want *gsParityExpected) string {
 	}
 	if got.TexH != want.TexH {
 		return fmt.Sprintf("texH: got=%d want=%d", got.TexH, want.TexH)
+	}
+	if (got.TextureID == nil) != (want.TextureID == nil) {
+		return fmt.Sprintf("textureId nil 性: got=%v want=%v", got.TextureID, want.TextureID)
+	}
+	if got.TextureID != nil && *got.TextureID != *want.TextureID {
+		return fmt.Sprintf("textureId: got=%q want=%q", *got.TextureID, *want.TextureID)
 	}
 	if len(got.Bones) != len(want.Bones) {
 		return fmt.Sprintf("bones 数量: got=%d want=%d", len(got.Bones), len(want.Bones))

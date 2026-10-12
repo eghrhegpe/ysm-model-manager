@@ -663,3 +663,67 @@ describe("handleYsmJsonSpec 特征基线 — modelFiles/texFiles 声明形态与
     expect(revoked).toEqual([]);
   });
 });
+
+// ===== 切片 C 消费端分流（ADR-331-d1）：readModelBytes 的 throw 分流判据 =====
+// read-model-bytes 对确定性失败（FILE_TOO_LARGE / INVALID_PATH）throw 带 cause.Code 的
+// Error；本层据 cause 的**键存在性**分流——有 Code 键 → 重新 throw 冒泡（i18n 译文），
+// 无 cause（桥 reject）→ return null 回退 Go（可重试）。
+//
+// 为什么要立这组测试：分流两侧口径曾不一致——来源按 `errorCode === "FILE_TOO_LARGE"`
+// 字面量判，本层按 `?.cause?.Code` **真值**判。Code 为假值（如空串）时两侧结论相反：
+// 来源 throw、本层吞掉 → 用户既看不到 i18n 译文、又拿不到 Go 兜底
+//（AnalyzeBedrockModelUncached 对确定性失败返回空 BedrockModel）。
+// 键存在性判据（"Code" in cause）与来源同源，且对空串同样冒泡。
+describe("切片 C 消费端分流 — cause 判据（ADR-331-d1）", () => {
+  /** 让 readModelBytes 的桥路径 reject（普通 Error，无 cause = 瞬时后端错误） */
+  function rejectBridge(err: unknown): void {
+    readFileBytesMock.mockRejectedValue(err);
+  }
+
+  /** 让 readModelBytes 的桥路径返回带 errorCode 的 Meta（确定性失败通道）。
+   *  Meta 按请求路径回填，故不再需要调用方传 path。 */
+  function metaWithError(errorCode: string, reason: string): void {
+    readFileBytesMock.mockImplementation(async (paths: string[]) => {
+      const out: Record<string, unknown> = {};
+      for (const p of paths) {
+        out[p] = { data: null, hash: "", errorCode, reason };
+      }
+      return out;
+    });
+  }
+
+  it("确定性失败 FILE_TOO_LARGE → 冒泡（不被吞成 null 回退 Go）", async () => {
+    metaWithError("FILE_TOO_LARGE", "文件超过读取上限");
+    await expect(decodeYsmViaWasm("/repo/c-huge.ysm")).rejects.toMatchObject({
+      cause: { Code: "FILE_TOO_LARGE" },
+    });
+  });
+
+  it("确定性失败 INVALID_PATH → 冒泡（不被吞成 null 回退 Go）", async () => {
+    metaWithError("INVALID_PATH", "路径非法（越权读）");
+    await expect(decodeYsmViaWasm("/repo/c-越权.ysm")).rejects.toMatchObject({
+      cause: { Code: "INVALID_PATH" },
+    });
+  });
+
+  // 判据回归锁：Code 为空串仍是「有 Code 键」的确定性失败，必须冒泡。
+  // 旧的 `?.cause?.Code` 真值判据在此返回 null（假绿：错误被静默吞掉）。
+  it("[判据] cause.Code 为空串 → 仍冒泡（键存在性判据，非真值判据）", async () => {
+    rejectBridge(
+      new Error("read failed: ", { cause: { Code: "" } }),
+    );
+    await expect(decodeYsmViaWasm("/repo/c-empty-code.ysm")).rejects.toMatchObject({
+      cause: { Code: "" },
+    });
+  });
+
+  it("桥 reject（无 cause）→ 回退 Go（return null），不冒泡", async () => {
+    rejectBridge(new Error("backend down"));
+    expect(await decodeYsmViaWasm("/repo/c-bridge-down.ysm")).toBeNull();
+  });
+
+  it("IO_ERROR（瞬时）→ 来源 return null 路径：本层照旧回退 Go", async () => {
+    metaWithError("IO_ERROR", "文件读取失败");
+    expect(await decodeYsmViaWasm("/repo/c-io.ysm")).toBeNull();
+  });
+});

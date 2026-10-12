@@ -815,10 +815,16 @@ async function doDecodeYsmViaWasm(modelPath: string): Promise<DecodedYsm | null>
     // 切片 C 消费端（ADR-331-d1）：readModelBytes 对确定性失败（FILE_TOO_LARGE /
     // INVALID_PATH）throw 带 cause.Code 的 AppError 形状 Error，此处**重新 throw** 让错误
     // 冒泡到 mount-preview-core catch → showLoadFailure → friendlyError 出 i18n 译文。
-    // 桥 reject（无 cause.Code）= 瞬时后端错误 → return null 回退 Go，不缓存 _wasmFailed
+    // 桥 reject（无 cause.Code 键）= 瞬时后端错误 → return null 回退 Go，不缓存 _wasmFailed
     // （原 P3 修复契约：读失败可重试）。IO_ERROR 不 throw（返回 null 走原回退）。
+    //
+    // 判据 = cause 上**存在 Code 键**，而非 `cause.Code` 真值：来源按字面量
+    // (`errorCode === "FILE_TOO_LARGE"` 等) 决定 throw，两侧口径必须同源。若此处用真值判，
+    // 空串 Code 会出现「来源 throw、本层吞掉」的分裂——用户既看不到 i18n 译文、又拿不到
+    // Go 兜底（AnalyzeBedrockModelUncached 对确定性失败静默返回空 BedrockModel）。
     devLog(`[YSM] ❌ ${safeErrorMessage(e)}`);
-    if ((e as { cause?: { Code?: unknown } })?.cause?.Code) throw e;
+    const cause = (e as { cause?: unknown })?.cause;
+    if (cause !== null && typeof cause === "object" && "Code" in cause) throw e;
     return null;
   }
   devLog(`[YSM] 读取 ${bytes?.length || 0} bytes`);

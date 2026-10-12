@@ -122,7 +122,7 @@ export async function encodeToKTX2Basis(img: {
     // 风险/收益不成比例：待日后换可核查的 basis 构建（含 encode 返回语义文档）再优化。
     const out = new Uint8Array(img.width * img.height * 4);
     const n = enc.encode(out);
-    if (n <= 0) throw new Error(`BasisEncoder.encode 返回 ${n}`);
+    if (n <= 0) throw new Error(`BasisEncoder.encode 返回 ${n}`); // i18n-allow: 内部诊断
     // slice 复制真实压缩数据（subarray 是视图，.buffer 会带整个底层 ArrayBuffer）
     return out.slice(0, n).buffer as ArrayBuffer;
   } finally {

@@ -36,7 +36,7 @@ export interface WebEnqueueCtx {
 
 /** 触发浏览器直链保存（web 下载回退分支：大文件 / 协议不符 / fetch 失败） */
 function triggerAnchorDownload(url: string, name: string): void {
-  if (!url) throw new Error("空下载地址");
+  if (!url) throw new Error(t("downloadQueue.emptyUrl"));
   const a = document.createElement("a");
   a.href = url;
   a.download = name || "";

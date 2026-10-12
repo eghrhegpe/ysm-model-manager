@@ -290,7 +290,7 @@ describe("saveScreenshot", () => {
     const setShotState = vi.fn();
     await expect(
       saveScreenshot(makeModel(), "current", setShotState, screenshotFn),
-    ).rejects.toThrow("截图返回空");
+    ).rejects.toThrow("preview.err.shotEmpty"); // i18n 键（t() mock 返键名）——切片 B-4 收口后走 t()
     expect(setShotState).not.toHaveBeenCalledWith("\u2705");
   });
 

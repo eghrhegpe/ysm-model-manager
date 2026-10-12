@@ -3,6 +3,7 @@
 // utils/resource/importable.ts（backend/web-fs-auth 直引同口径，消除 backend →
 // features 反向依赖）；本文件仅内部依赖 getExt / isImportableFile，不再 re-export。
 // CollectedEntry 事实源在 ./collector.ts——消费方请直引该文件，勿经本文件中转。
+import { t } from "@/core/i18n/t.ts";
 import { isImportableFile } from "@/utils/resource/importable.ts";
 import { extOf } from "@/utils/resource/types.ts";
 import { type CollectedEntry, collectFiles } from "./collector.ts";
@@ -69,7 +70,7 @@ export const fileToBase64 = (file: File): Promise<string> =>
     // Promise 永久 pending → 调用方卡死、在途标记永不释放。取 10s 覆盖大文件读取
     const timer = setTimeout(() => {
       reader.abort();
-      reject(new Error(`读取文件超时: ${file.name}`));
+      reject(new Error(t("import.readTimeout", { name: file.name })));
     }, 10000);
     reader.onload = () => {
       clearTimeout(timer);
@@ -77,7 +78,7 @@ export const fileToBase64 = (file: File): Promise<string> =>
     };
     reader.onerror = () => {
       clearTimeout(timer);
-      reject(new Error(`读取文件失败: ${file.name}`));
+      reject(new Error(t("import.readFailed", { name: file.name })));
     };
     reader.readAsDataURL(file);
   });

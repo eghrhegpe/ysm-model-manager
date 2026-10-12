@@ -172,7 +172,7 @@ export function collectMenuGraph(opts: CollectMenuGraphOpts): MenuGraph {
     try {
       nodes = builder(menu);
     } catch (e) {
-      throw new Error(`collectMenuGraph: 面板 "${id}" builder 抛错（${(e as Error).message}）`);
+      throw new Error(`collectMenuGraph: 面板 "${id}" builder 抛错（${(e as Error).message}）`); // i18n-allow: 内部诊断
     }
     allResolvedNodes.push(nodes);
     allPanels.push(buildPanelNode(id, nodes, snapshots, lookupDock(id) ?? nodes[0]?.dockGroup));

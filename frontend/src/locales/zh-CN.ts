@@ -309,6 +309,8 @@ export const zhCN = {
   "import.alreadyExists": "已存在，请重命名文件夹后再导入",
   "import.success": "导入成功",
   "import.queueFull": "导入队列已满",
+  "import.readTimeout": "读取文件超时: {name}",
+  "import.readFailed": "读取文件失败: {name}",
 
   // ── 启动器检测（实例页空态） ──
   "launcher.mc.selectDir": "选择游戏目录",
@@ -1030,6 +1032,7 @@ export const zhCN = {
   "downloadQueue.failedListTitle": "{n} 个文件下载失败：",
   "downloadQueue.hint.failed": "下载失败",
   "downloadQueue.moreCount": "还有 {n} 个",
+  "downloadQueue.emptyUrl": "空下载地址",
 
   // ── 错误消息 ──
   "error.fallback": "操作失败",
@@ -1150,6 +1153,9 @@ export const zhCN = {
   "preview.err.mmdParseEmpty": "MMD parse 返回空结果",
   "preview.err.packParse": "资源包内模型解析失败: {path}",
   "preview.err.packNoTex": "资源包内模型无完整纹理引用: {path}",
+  "preview.err.packMetaEmpty": "资源包信息为空",
+  "preview.err.litematicUnparseable": "无法解析",
+  "preview.err.shotEmpty": "截图返回空（3D 渲染尚未就绪）",
   // MMD 详情卡（P2：PMX 文件解析口径，与渲染实测区分）
   "preview.stats.file": "📊 文件统计",
   "preview.stats.vertices": "顶点",

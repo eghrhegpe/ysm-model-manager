@@ -85,7 +85,7 @@ export class SceneCapabilityRegistry {
       this.factories.push((ctx) => {
         const cap = factory(ctx);
         if (cap.id !== id) {
-          throw new Error(`[scene-cap] 能力 id 不匹配：注册为 "${id}"，实例为 "${cap.id}"`);
+          throw new Error(`[scene-cap] 能力 id 不匹配：注册为 "${id}"，实例为 "${cap.id}"`); // i18n-allow: 内部诊断
         }
         return cap;
       });

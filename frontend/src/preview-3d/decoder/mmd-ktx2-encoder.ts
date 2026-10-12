@@ -225,7 +225,7 @@ function getKtx2WorkerPool(): Worker[] | null {
       timeoutMsg: `KTX2 编码超时（${KTX2_ENCODE_TIMEOUT_MS}ms）`,
       settle: (r, { resolve, reject }) => {
         if (r.ok && r.buffer) resolve(r.buffer);
-        else reject(new Error(r.error ?? "KTX2 worker 编码失败"));
+        else reject(new Error(r.error ?? "KTX2 worker 编码失败")); // i18n-allow: 内部诊断
       },
       onWorkerError: "terminatePool",
       // 崩溃终止整池后清空缓存，下次调度重建（降级同步路径）

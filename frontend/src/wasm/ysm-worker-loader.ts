@@ -114,7 +114,7 @@ async function loadMtAssets(): Promise<ParserAssets> {
  */
 export async function initYsmParserInWorkerMt(): Promise<boolean> {
   const { wasm, glue } = await loadMtAssets();
-  if (!glue) throw new Error("mt 胶水代码空");
+  if (!glue) throw new Error("mt 胶水代码空"); // i18n-allow: 内部诊断
   const blobUrl = URL.createObjectURL(new Blob([glue], { type: "application/javascript" }));
   // init 失败时 pthread worker 未创建（或已随失败终止），Blob URL 不再被引用；
   // 成功路径按上方注释保留不 revoke（pthread worker 生命周期内持续使用）
@@ -135,8 +135,8 @@ async function initParserInWorker(
 ): Promise<boolean> {
   return mod.ensureInit(async () => {
     // 1. 资产校验（数据文件为自动生成的 base64 常量）
-    if (!wasmBinary?.byteLength) throw new Error("wasmBinary 空");
-    if (!glueCode) throw new Error("胶水代码空");
+    if (!wasmBinary?.byteLength) throw new Error("wasmBinary 空"); // i18n-allow: 内部诊断
+    if (!glueCode) throw new Error("胶水代码空"); // i18n-allow: 内部诊断
 
     // 2/3/4/5 组装注入点 + 间接 eval + MODULARIZE 工厂，收敛于 installYsmModule
     //    （ADR-079 M4：pthread 变体额外注入 mainScriptUrlOrBlob Blob URL；ADR-039 §2.1）
@@ -180,7 +180,7 @@ function getHeap(): Uint8Array {
   if (h) return h;
   const m = mod.get();
   if (m?.HEAPU8) return m.HEAPU8;
-  throw new Error("无法获取 WASM HEAPU8");
+  throw new Error("无法获取 WASM HEAPU8"); // i18n-allow: 内部诊断
 }
 
 /** 将 JS 数据写入 WASM 内存，返回指针（写入算法见 parser-shared.writeHeapBytes） */
@@ -204,7 +204,7 @@ export async function decodeYsmInWorker(bytes: Uint8Array): Promise<YsmDecodedFi
   const m = mod.get()!;
   const FS = m.FS;
   const ccall = m.ccall;
-  if (!ccall) throw new Error("ccall 不可用，请重新编译 WASM");
+  if (!ccall) throw new Error("ccall 不可用，请重新编译 WASM"); // i18n-allow: 内部诊断
 
   let ptr = 0;
   try {
@@ -251,7 +251,7 @@ export async function decodeYsmInWorkerMemfs(bytes: Uint8Array): Promise<YsmDeco
   // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
   const m = mod.get()!;
   const FS = m.FS;
-  if (!FS) throw new Error("YSMParser FS 不可用");
+  if (!FS) throw new Error("YSMParser FS 不可用"); // i18n-allow: 内部诊断
 
   try {
     wipeDir(FS, "/input");

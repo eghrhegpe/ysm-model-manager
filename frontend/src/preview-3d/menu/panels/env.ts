@@ -172,7 +172,7 @@ const ENV_SUBVIEW_DEPS = {
     );
   },
   makePanelView: (): never => {
-    throw new Error("cap 参数子视图不应含 panel/action/row 节点（cap getMenuNodes 直产）");
+    throw new Error("cap 参数子视图不应含 panel/action/row 节点（cap getMenuNodes 直产）"); // i18n-allow: 内部诊断
   },
   menu: {
     refresh: (): void => {},

@@ -454,7 +454,7 @@ export async function mount3D(
     getSwitchCtx: () => {
       // buildInfra 完成前不存在合法 switchCtx；提前调用属装配时序 bug，显式炸出而非静默 undefined
       if (!slots.switchCtx)
-        throw new Error("[mount-preview-core] getSwitchCtx 在 buildInfra 之前被调用");
+        throw new Error("[mount-preview-core] getSwitchCtx 在 buildInfra 之前被调用"); // i18n-allow: 内部诊断
       return slots.switchCtx;
     },
     clearSingletons: () => {

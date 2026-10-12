@@ -102,7 +102,7 @@ class NbtReader {
 
   private take(n: number): Uint8Array {
     if (n < 0 || this.off + n > this.data.length) {
-      throw new Error(`nbt 截断（需要 ${n} 字节，剩余 ${this.data.length - this.off}）`);
+      throw new Error(`nbt 截断（需要 ${n} 字节，剩余 ${this.data.length - this.off}）`); // i18n-allow: 内部诊断
     }
     const out = this.data.subarray(this.off, this.off + n);
     this.off += n;
@@ -157,22 +157,22 @@ class NbtReader {
 
   private readByteArray(): number[] {
     const n = this.i32();
-    if (n < 0 || n > this.data.length - this.off) throw new Error("nbt byteArray 长度异常");
+    if (n < 0 || n > this.data.length - this.off) throw new Error("nbt byteArray 长度异常"); // i18n-allow: 内部诊断
     return Array.from(this.take(n));
   }
 
   private readList(elemType: number, depth: number): unknown[] {
     const n = this.i32();
-    if (n < 0) throw new Error("nbt list 长度异常");
+    if (n < 0) throw new Error("nbt list 长度异常"); // i18n-allow: 内部诊断
     const remaining = this.data.length - this.off;
     const elemMin = minPayloadBytes(elemType);
     if (elemMin > 0 && n > remaining / elemMin) {
       throw new Error(
-        `nbt list 长度异常: 声明 ${n} 元素（最小 ${elemMin}B/个），剩余 ${remaining} 字节`,
+        `nbt list 长度异常: 声明 ${n} 元素（最小 ${elemMin}B/个），剩余 ${remaining} 字节`, // i18n-allow: 内部诊断
       );
     }
     if (elemMin === 0 && n > remaining) {
-      throw new Error(`nbt list 长度异常: 声明 ${n} 元素，剩余 ${remaining} 字节`);
+      throw new Error(`nbt list 长度异常: 声明 ${n} 元素，剩余 ${remaining} 字节`); // i18n-allow: 内部诊断
     }
     const out: unknown[] = [];
     for (let i = 0; i < n; i++) out.push(this.payload(elemType, depth + 1));
@@ -193,7 +193,7 @@ class NbtReader {
   private readIntArray(): number[] {
     const n = this.i32();
     if (n < 0 || n > Math.floor((this.data.length - this.off) / 4))
-      throw new Error("nbt intArray 长度异常");
+      throw new Error("nbt intArray 长度异常"); // i18n-allow: 内部诊断
     const b = this.take(n * 4);
     const out: number[] = new Array(n);
     for (let i = 0; i < n; i++) {
@@ -205,7 +205,7 @@ class NbtReader {
   private readLongArray(): unknown[] {
     const n = this.i32();
     if (n < 0 || n > Math.floor((this.data.length - this.off) / 8))
-      throw new Error("nbt longArray 长度异常");
+      throw new Error("nbt longArray 长度异常"); // i18n-allow: 内部诊断
     const b = this.take(n * 8);
     if (this.longsExact) {
       const out: bigint[] = new Array(n);
@@ -228,7 +228,7 @@ class NbtReader {
 
   /** 解析一个 payload（无名字；list 元素与 compound 子 payload 共用） */
   payload(type: number, depth: number): unknown {
-    if (depth > MAX_NBT_DEPTH) throw new Error("nbt 嵌套过深");
+    if (depth > MAX_NBT_DEPTH) throw new Error("nbt 嵌套过深"); // i18n-allow: 内部诊断
     switch (type) {
       case TAG_BYTE: {
         const b = this.u8();
@@ -261,7 +261,7 @@ class NbtReader {
       case TAG_LONG_ARRAY:
         return this.readLongArray();
       default:
-        throw new Error(`未知 NBT 标签类型 ${type}`);
+        throw new Error(`未知 NBT 标签类型 ${type}`); // i18n-allow: 内部诊断
     }
   }
 }
@@ -273,10 +273,10 @@ function gunzipNbt(bytes: Uint8Array): Uint8Array {
   if (bytes.length < 2 || bytes[0] !== GZIP_MAGIC_0 || bytes[1] !== GZIP_MAGIC_1) return bytes;
   const isize = gzipIsizedUpperBound(bytes);
   if (isize !== null && isize > MAX_NBT_BYTES) {
-    throw new Error(`nbt gzip ISIZE ${isize} 超过 ${MAX_NBT_BYTES} 字节上限`);
+    throw new Error(`nbt gzip ISIZE ${isize} 超过 ${MAX_NBT_BYTES} 字节上限`); // i18n-allow: 内部诊断
   }
   const data = gunzipSync(bytes);
-  if (data.length > MAX_NBT_BYTES) throw new Error(`nbt 解压后超过 ${MAX_NBT_BYTES} 字节上限`);
+  if (data.length > MAX_NBT_BYTES) throw new Error(`nbt 解压后超过 ${MAX_NBT_BYTES} 字节上限`); // i18n-allow: 内部诊断
   return data;
 }
 
@@ -288,7 +288,7 @@ function gunzipNbt(bytes: Uint8Array): Uint8Array {
 export function parseNbtRoot(bytes: Uint8Array): Record<string, unknown> {
   const r = new NbtReader(gunzipNbt(bytes));
   const { type } = r.namedTag();
-  if (type !== TAG_COMPOUND) throw new Error(`根标签不是 compound（${type}）`);
+  if (type !== TAG_COMPOUND) throw new Error(`根标签不是 compound（${type}）`); // i18n-allow: 内部诊断
   return r.payload(TAG_COMPOUND, 0) as Record<string, unknown>;
 }
 
@@ -301,7 +301,7 @@ export function parseNbtRoot(bytes: Uint8Array): Record<string, unknown> {
 export function parseNbtRootExact(bytes: Uint8Array): Record<string, unknown> {
   const r = new NbtReader(gunzipNbt(bytes), true);
   const { type } = r.namedTag();
-  if (type !== TAG_COMPOUND) throw new Error(`根标签不是 compound（${type}）`);
+  if (type !== TAG_COMPOUND) throw new Error(`根标签不是 compound（${type}）`); // i18n-allow: 内部诊断
   return r.payload(TAG_COMPOUND, 0) as Record<string, unknown>;
 }
 

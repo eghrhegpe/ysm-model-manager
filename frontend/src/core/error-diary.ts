@@ -88,7 +88,7 @@ export function registerErrorDiary(sink: DiarySink): DiaryHandle {
   // 幂等：已注册则返回「未接管」句柄（taken=false 可区分「本人 sink 未生效」，不再静默 no-op）
   if (currentHandle) return { taken: false, dispose() {} };
   if (typeof sink !== "function") {
-    throw new TypeError("registerErrorDiary: sink 必须为函数");
+    throw new TypeError("registerErrorDiary: sink 必须为函数"); // i18n-allow: 内部诊断
   }
 
   // ── 闭包状态（registerErrorDiary 调用间隔离；重注册即重置去重窗口）──

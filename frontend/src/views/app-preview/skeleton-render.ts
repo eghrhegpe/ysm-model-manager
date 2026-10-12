@@ -266,7 +266,7 @@ export async function saveScreenshot(
     if (!b64) {
       // 抛错而非静默吞错：让消费者统一 catch（setIcon ❌ + toast），
       // 否则用户只见 ❌ 无原因（陷阱 #3 静类：异步失败须可观测）
-      throw new Error("截图返回空（3D 渲染尚未就绪）");
+      throw new Error(t("preview.err.shotEmpty"));
     }
     const ts = new Date().toISOString().replace(/[:.]/g, "-");
     await SaveScreenshotFile(`${base}_${ts}.png`, b64);

@@ -153,16 +153,18 @@ async function parseLitematicMeta(ext: string, path: string): Promise<LitematicM
   if (ext === ".nbt") {
     const raw = await ReadNbtStructure(path);
     meta = raw as unknown as LitematicMeta;
-    if (!meta || (!meta.size && !meta.blockCount)) throw new Error("无法解析");
+    if (!meta || (!meta.size && !meta.blockCount))
+      throw new Error(t("preview.err.litematicUnparseable"));
   } else if (ext === ".schematic") {
     const raw = await ReadSchematic(path);
     meta = raw as unknown as LitematicMeta;
-    if (!meta || (!meta.size && !meta.blockCount)) throw new Error("无法解析");
+    if (!meta || (!meta.size && !meta.blockCount))
+      throw new Error(t("preview.err.litematicUnparseable"));
   } else {
     const raw = await ReadLitematicMeta(path);
     meta = raw as unknown as LitematicMeta;
     if (!meta || (!meta.name && !meta.author && meta.totalBlocks === undefined))
-      throw new Error("无法解析");
+      throw new Error(t("preview.err.litematicUnparseable"));
   }
   return meta;
 }

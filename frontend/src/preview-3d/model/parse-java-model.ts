@@ -175,14 +175,14 @@ async function resolveModel(
   isRoot = false,
 ): Promise<ResolvedModel> {
   const entry = entryOf(name);
-  if (visited.has(entry)) throw new Error(`parent 循环引用: ${entry}`);
+  if (visited.has(entry)) throw new Error(`parent 循环引用: ${entry}`); // i18n-allow: 内部诊断
   visited.add(entry);
 
   let raw = jsonCache.get(entry);
   if (!raw) {
     const b64 = await read(entry);
     if (!b64) {
-      if (isRoot) throw new Error(`模型缺失: ${entry}`);
+      if (isRoot) throw new Error(`模型缺失: ${entry}`); // i18n-allow: 内部诊断
       return { textures: {}, elements: [], display: {}, ambientocclusion: true, gui_light: null };
     }
     raw = JSON.parse(b64ToText(b64)) as Record<string, unknown>;
@@ -227,7 +227,7 @@ function resolveTextureRef(
   // 纯色值（#RRGGBB）优先判定——不能落入变量分支（# 前缀冲突）
   if (COLOR_RE.test(ref)) return { kind: "color", color: ref };
   if (ref.startsWith("#")) {
-    if (visited.has(ref)) throw new Error(`纹理变量循环引用: ${ref}`);
+    if (visited.has(ref)) throw new Error(`纹理变量循环引用: ${ref}`); // i18n-allow: 内部诊断
     visited.add(ref);
     const val = textures[ref.slice(1)];
     if (val === undefined) return null; // 缺失变量 → 渲染兜底/跳过

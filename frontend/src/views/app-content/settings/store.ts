@@ -18,7 +18,7 @@ let cfg: SettingsCfg | undefined;
 /** 当前配置读取器（initSettings 注入前调用会抛错——调用时机错位的显式信号） */
 export function getCfg(): SettingsCfg {
   if (!cfg)
-    throw new Error("[settings/store] cfg 未初始化：initSettings 未运行或 reset 后被提前读取");
+    throw new Error("[settings/store] cfg 未初始化：initSettings 未运行或 reset 后被提前读取"); // i18n-allow: 内部诊断
   return cfg;
 }
 

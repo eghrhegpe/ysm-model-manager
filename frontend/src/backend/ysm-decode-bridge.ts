@@ -67,7 +67,7 @@ export function installYsmDecodeBridge(): void {
     decodeChain = decodeChain
       .then(async () => {
         const bytes = base64ToBytes(b64);
-        if (!bytes) throw new Error("输入 base64 解码失败");
+        if (!bytes) throw new Error("输入 base64 解码失败"); // i18n-allow: 内部诊断
         const files = (await decodeYsmFileFromMemory(bytes)) ?? [];
         await ResolveYsmDecode(id, await buildResultPayload(files), "");
       })

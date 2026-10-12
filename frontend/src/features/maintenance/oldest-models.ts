@@ -109,7 +109,7 @@ export async function loadOldestModel(
   const renderPage =
     deps?.renderPage ||
     (() => {
-      throw new Error("OldestDeps.renderPage 未注入（应由 views 组合根提供，见 tpl-oldest.ts）");
+      throw new Error("OldestDeps.renderPage 未注入（应由 views 组合根提供，见 tpl-oldest.ts）"); // i18n-allow: 内部诊断
     });
   if (!container) return { cleanup: () => {}, onShow: () => {} };
   const guard = createLoadGuard();

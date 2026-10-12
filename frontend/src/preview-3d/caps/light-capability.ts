@@ -202,7 +202,7 @@ function assertConeChangeSetConsistent(): void {
   ]);
   for (const k of derived) {
     if (!universe.has(k)) {
-      throw new Error(`[light] 派生变更集出现 FLATTEN_MAP 之外的键：${k}`);
+      throw new Error(`[light] 派生变更集出现 FLATTEN_MAP 之外的键：${k}`); // i18n-allow: 内部诊断
     }
   }
   for (const which of LIGHT_SLOTS) {

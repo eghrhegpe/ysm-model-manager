@@ -132,7 +132,7 @@ export function writeHeapBytes(
   const src = data instanceof Uint8Array ? data : new Uint8Array(data);
   const len = src.length;
   const ptr = malloc(len);
-  if (!ptr) throw new Error(`malloc 失败 (${len} bytes)`);
+  if (!ptr) throw new Error(`malloc 失败 (${len} bytes)`); // i18n-allow: 内部诊断
   getHeap().set(src, ptr);
   return ptr;
 }
@@ -171,7 +171,7 @@ export async function resolveWasmFactory(
   const mod = factory(moduleArg);
   const resolved = mod instanceof Promise ? await mod : mod;
   if (!resolved || typeof (resolved as WasmModuleLike).ccall !== "function") {
-    throw new Error("YSMParserModule 工厂返回异常值");
+    throw new Error("YSMParserModule 工厂返回异常值"); // i18n-allow: 内部诊断
   }
   return resolved as WasmModuleLike;
 }
@@ -269,6 +269,6 @@ export async function installYsmModule(
   const factory = host.YSMParserModule as
     | ((module: unknown) => unknown | Promise<unknown>)
     | undefined;
-  if (!factory) throw new Error("YSMParserModule 未定义");
+  if (!factory) throw new Error("YSMParserModule 未定义"); // i18n-allow: 内部诊断
   return resolveWasmFactory(factory, moduleCfg);
 }

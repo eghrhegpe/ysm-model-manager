@@ -693,10 +693,10 @@ function validateAdapterItemIds(items: PreviewMenuNode[]): void {
   const seen = new Set<string>();
   for (const it of items) {
     if (seen.has(it.id)) {
-      throw new Error(`[preview-menu] setAdapterItems 重复 id: "${it.id}"（适配器项之间冲突）`);
+      throw new Error(`[preview-menu] setAdapterItems 重复 id: "${it.id}"（适配器项之间冲突）`); // i18n-allow: 内部诊断
     }
     if (CORE_MENU_ITEMS.some((c) => c.id === it.id)) {
-      throw new Error(`[preview-menu] setAdapterItems id "${it.id}" 与 CORE_MENU_ITEMS 冲突`);
+      throw new Error(`[preview-menu] setAdapterItems id "${it.id}" 与 CORE_MENU_ITEMS 冲突`); // i18n-allow: 内部诊断
     }
     seen.add(it.id);
   }

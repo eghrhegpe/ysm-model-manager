@@ -30,7 +30,7 @@ export function openDB(): Promise<IDBDatabase> {
   if (dbPromise) return dbPromise;
   dbPromise = new Promise<IDBDatabase>((resolve, reject) => {
     if (typeof indexedDB === "undefined") {
-      reject(new Error("[idb] IndexedDB 不可用（非浏览器环境）"));
+      reject(new Error("[idb] IndexedDB 不可用（非浏览器环境）")); // i18n-allow: 内部诊断
       return;
     }
     const req = indexedDB.open(DB_NAME, DB_VERSION);
@@ -58,7 +58,7 @@ export function openDB(): Promise<IDBDatabase> {
     // 不 reject 不 resolve → 后续所有 idb 操作永久挂起且不触发内存降级）。
     // 明确 reject，让 getIdb 捕获后置 forcedMemory 走内存分支。
     req.onblocked = () => {
-      reject(new Error("[idb] open 被阻塞（其他标签页持有旧连接），已降级内存模式"));
+      reject(new Error("[idb] open 被阻塞（其他标签页持有旧连接），已降级内存模式")); // i18n-allow: 内部诊断
     };
   });
   // open() 失败（隐私模式等）时清空单例，让 getIdb 捕获后降级内存，

@@ -65,8 +65,8 @@ export async function initYSMParser(): Promise<boolean> {
     const { _getGlueCode } = await import("./ysm-glue-data.js");
     const wasmBinary = _getWasmBinary() as ArrayBuffer | null;
     const glueCode = _getGlueCode() as string | null;
-    if (!wasmBinary?.byteLength) throw new Error("wasmBinary 空");
-    if (!glueCode) throw new Error("胶水代码空");
+    if (!wasmBinary?.byteLength) throw new Error("wasmBinary 空"); // i18n-allow: 内部诊断
+    if (!glueCode) throw new Error("胶水代码空"); // i18n-allow: 内部诊断
 
     // 注入 point：window.Module；间接 eval + MODULARIZE 工厂组装收敛于 installYsmModule
     //（ADR-039 §2.1 可信链：仅执行 auto-generated 内嵌胶水代码，无外部输入）
@@ -94,7 +94,7 @@ function _getHeap(): Uint8Array {
   // 兜底：取 wasmModule 上的（老版本 Emscripten）
   const m = mod.get();
   if (m?.HEAPU8) return m.HEAPU8;
-  throw new Error("无法获取 WASM HEAPU8");
+  throw new Error("无法获取 WASM HEAPU8"); // i18n-allow: 内部诊断
 }
 
 /** 将 JS 数据写入 WASM 内存，返回指针（写入算法见 parser-shared.writeHeapBytes） */
@@ -110,14 +110,14 @@ function _writeHeap(data: Uint8Array): number {
 export async function decodeYsmFileFromMemory(bytes: Uint8Array): Promise<YsmDecodedFile[] | null> {
   if (!mod.isInited()) {
     const ok = await initYSMParser();
-    if (!ok) throw new Error("YSMParser WASM 未就绪");
+    if (!ok) throw new Error("YSMParser WASM 未就绪"); // i18n-allow: 内部诊断
   }
 
   // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
   const m = mod.get()!;
   const FS = m.FS;
   const ccall = m.ccall;
-  if (!ccall) throw new Error("ccall 不可用，请重新编译 WASM");
+  if (!ccall) throw new Error("ccall 不可用，请重新编译 WASM"); // i18n-allow: 内部诊断
 
   let ptr = 0;
   try {
@@ -169,12 +169,12 @@ export async function decodeYsmFileFromMemory(bytes: Uint8Array): Promise<YsmDec
 export async function decodeYsmFile(bytes: Uint8Array): Promise<YsmDecodedFile[]> {
   if (!mod.isInited()) {
     const ok = await initYSMParser();
-    if (!ok) throw new Error("YSMParser WASM 未就绪");
+    if (!ok) throw new Error("YSMParser WASM 未就绪"); // i18n-allow: 内部诊断
   }
   // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
   const m = mod.get()!;
   const FS = m.FS;
-  if (!FS) throw new Error("YSMParser FS 不可用");
+  if (!FS) throw new Error("YSMParser FS 不可用"); // i18n-allow: 内部诊断
 
   try {
     // 这些 FS 操作同样可能触发 trap，纳入 catch 确保重置单例

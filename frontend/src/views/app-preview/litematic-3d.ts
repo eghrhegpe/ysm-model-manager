@@ -55,7 +55,7 @@ function makeVoxelCall(voxelFn: string): (path: string) => Promise<VoxelData | n
       "": (p) => App.GetLitematicVoxelData(p) as unknown as Promise<VoxelData | null>,
     };
     const fn = table[voxelFn];
-    if (!fn) throw new Error(`未识别的 voxel RPC 名: ${voxelFn}`);
+    if (!fn) throw new Error(`未识别的 voxel RPC 名: ${voxelFn}`); // i18n-allow: 内部诊断
     return await fn(path);
   };
 }

@@ -324,7 +324,7 @@ function rowElOf(row: SmRow): HTMLElement {
     rowTplCache.set(row, tpl);
   }
   const el = tpl.content.firstElementChild as HTMLElement | null;
-  if (!el) throw new Error(`rowElOf: row.html 未产出元素（key=${row.key}）`);
+  if (!el) throw new Error(`rowElOf: row.html 未产出元素（key=${row.key}）`); // i18n-allow: 内部诊断
   return el.cloneNode(true) as HTMLElement;
 }
 

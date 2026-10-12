@@ -202,7 +202,7 @@ export async function showResourcePack(ctx: PreviewCtx, path: string): Promise<v
     label: t("preview.resourcePack"),
     fetchMeta: async (_ctx, path, app) => {
       const meta = await app.ReadPackMeta(path);
-      if (!meta) throw new Error("资源包信息为空");
+      if (!meta) throw new Error(t("preview.err.packMetaEmpty"));
       return meta;
     },
     renderCard: (_ctx, path, meta) => {

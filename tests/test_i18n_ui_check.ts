@@ -146,7 +146,7 @@ check("行号语义：命中行 = 字面量所在行（多行文件二分反查�
 
 /* ---------- 2. 真仓 CLI ---------- */
 
-check("真仓 --json：throw/reject 中文现被通道三捕获（内部诊断豁免在随附切片补 i18n-allow）", () => {
+check("真仓 --json：通道三命中全量归零——切片 B-4 分类处理完成，drift=0", () => {
   const out = execFileSync(
     process.execPath,
     [path.join(ROOT, "scripts", "i18n-ui-check.ts"), "--json"],
@@ -157,12 +157,9 @@ check("真仓 --json：throw/reject 中文现被通道三捕获（内部诊断�
   );
   const data = JSON.parse(out);
   assert.equal(typeof data.drift, "number", "drift 应为 number");
-  // D1 收口（ADR-331 §2.5）：throw/reject 中文入通道三后真仓不再零漂移——判据射程扩大是
-  // 本次改动的**预期新行为**（旧 drift=0 是「throw 盲区」造成的假绿）。内部诊断约 20 处
-  // （parse-java-model 循环引用 / menu-graph builder 抛错等）靠 `// i18n-allow: 内部诊断`
-  // 台账注豁免（ADR-331 §2.4），该豁免注由随附切片补打；在此之前本闸如实报告 throw/reject
-  // 中文，故此处只断言「至少捕获 1 处」以证明通道三在真仓上生效，不断言精确计数。
-  assert.ok(data.drift >= 1, `真仓应捕获至少 1 处 throw/reject 中文，实得 ${data.drift}`);
+  // 切片 B-4（ADR-331 §2.4）分类处理完成：用户可见构造点走 t()（新增 6 个 i18n 键），
+  // 内部诊断构造点补 `// i18n-allow: 内部诊断` 台账豁免注——真仓 drift 应收敛到 0。
+  assert.equal(data.drift, 0, `真仓应零漂移，实得 ${data.drift}`);
 });
 
 check("--strict 拼错（--stric）退 1——flag 白名单守卫不因 main 重构丢失", () => {

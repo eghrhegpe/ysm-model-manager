@@ -308,6 +308,8 @@ export const en: Record<string, string> = {
   "import.alreadyExists": "Already exists, please rename the folder before importing",
   "import.success": "Import successful",
   "import.queueFull": "Import queue is full",
+  "import.readTimeout": "File read timeout: {name}",
+  "import.readFailed": "File read failed: {name}",
 
   // ── Launcher detection (instance empty state) ──
   "launcher.mc.selectDir": "Select game directory",
@@ -1057,6 +1059,7 @@ export const en: Record<string, string> = {
   "downloadQueue.failedListTitle": "{n} files failed to download:",
   "downloadQueue.hint.failed": "Download failed",
   "downloadQueue.moreCount": "{n} more",
+  "downloadQueue.emptyUrl": "Empty download URL",
 
   // ── Error Messages ──
   "error.fallback": "Operation failed",
@@ -1180,6 +1183,9 @@ export const en: Record<string, string> = {
   "preview.err.mmdParseEmpty": "MMD parse returned empty result",
   "preview.err.packParse": "Pack model parse failed: {path}",
   "preview.err.packNoTex": "Pack model missing complete texture references: {path}",
+  "preview.err.packMetaEmpty": "Resource pack information is empty",
+  "preview.err.litematicUnparseable": "Unable to parse",
+  "preview.err.shotEmpty": "Screenshot returned empty (3D rendering not ready)",
   // MMD detail card (P2: PMX file-parse scope, distinct from runtime stats)
   "preview.stats.file": "📊 File Stats",
   "preview.stats.vertices": "Vertices",

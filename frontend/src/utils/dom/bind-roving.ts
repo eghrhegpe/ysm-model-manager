@@ -214,7 +214,7 @@ export function bindRoving(spec: RovingSpec): RovingHandle {
         // fail-loud：itemsOf 与 itemSelector 必须至少提供一个（未来调用传了 itemsOf
         // 而漏 itemSelector 属类型违约的反面——可选化后两者皆缺是静默失效，
         // 空匹配只会让键盘原语无声不响应，比报错更难查）。
-        throw new TypeError("bindRoving: itemsOf 与 itemSelector 必须至少提供一个");
+        throw new TypeError("bindRoving: itemsOf 与 itemSelector 必须至少提供一个"); // i18n-allow: 内部诊断
       }
       return Array.from(c.querySelectorAll(spec.itemSelector)) as HTMLElement[];
     });

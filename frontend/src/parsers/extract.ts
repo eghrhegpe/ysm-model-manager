@@ -155,10 +155,10 @@ export function extractZip(data: Uint8Array): ExtractResult {
   const totalUncompressed = metas.reduce((sum, m) => sum + m.uncompressedSize, 0);
 
   if (metas.length > MAX_ZIP_ENTRIES) {
-    throw new Error(`ZIP 炸弹防护：条目数 ${metas.length} 超过上限 ${MAX_ZIP_ENTRIES}`);
+    throw new Error(`ZIP 炸弹防护：条目数 ${metas.length} 超过上限 ${MAX_ZIP_ENTRIES}`); // i18n-allow: 内部诊断
   }
   if (totalUncompressed > MAX_ZIP_TOTAL_BYTES) {
-    throw new Error(`ZIP 炸弹防护：解压后总大小超过上限 ${MAX_ZIP_TOTAL_BYTES} bytes`);
+    throw new Error(`ZIP 炸弹防护：解压后总大小超过上限 ${MAX_ZIP_TOTAL_BYTES} bytes`); // i18n-allow: 内部诊断
   }
 
   // unzipSync 解压（fflate ~8KB，同步 API，3-5x 快于 JSZip）

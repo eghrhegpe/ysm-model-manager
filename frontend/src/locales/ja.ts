@@ -310,6 +310,8 @@ export const ja: Record<string, string> = {
   "import.alreadyExists": "既に存在します。インポート前にフォルダ名を変更してください",
   "import.success": "インポート成功",
   "import.queueFull": "インポートキューが満杯です",
+  "import.readTimeout": "ファイル読み取りタイムアウト: {name}",
+  "import.readFailed": "ファイル読み取り失敗: {name}",
 
   // ── ランチャー検出（インスタンス空状態） ──
   "launcher.mc.selectDir": "ゲームディレクトリを選択",
@@ -1056,6 +1058,7 @@ export const ja: Record<string, string> = {
   "downloadQueue.failedListTitle": "{n} 個のファイルのダウンロードに失敗：",
   "downloadQueue.hint.failed": "ダウンロードに失敗",
   "downloadQueue.moreCount": "他 {n} 個",
+  "downloadQueue.emptyUrl": "空のダウンロードURL",
 
   // ── Error Messages ──
   "error.fallback": "操作に失敗しました",
@@ -1179,6 +1182,9 @@ export const ja: Record<string, string> = {
   "preview.err.mmdParseEmpty": "MMD parse が空の結果を返却",
   "preview.err.packParse": "パック内モデル解析失敗: {path}",
   "preview.err.packNoTex": "パック内モデルに完全なテクスチャ参照なし: {path}",
+  "preview.err.packMetaEmpty": "リソースパック情報が空です",
+  "preview.err.litematicUnparseable": "解析できません",
+  "preview.err.shotEmpty": "スクリーンショットが空（3D レンダリング未準備）",
   // MMD 詳細カード（P2: PMX ファイル解析口径, 描画実測と区別）
   "preview.stats.file": "📊 ファイル統計",
   "preview.stats.vertices": "頂点",

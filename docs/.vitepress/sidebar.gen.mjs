@@ -254,7 +254,7 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
-        "text": "ADR-332：诊断页信息架构与版式收口：四项待拍板决策",
+        "text": "ADR-332：诊断页信息架构与版式收口：四项拍板决策",
         "link": "/adr/architecture/ADR-332-diagnostics-ia-and-layout-consolidation"
       },
       {

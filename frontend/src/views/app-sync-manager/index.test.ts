@@ -78,6 +78,31 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
     unmountElement(el);
   });
 
+  // 2026-10 修复的组件级回归锁：权威源 = localStorage repo_rtype（app-nav 直接写），
+  // 原 state.ts 模块级缓存会让「切类型时面板未挂载」的旧值盖过新鲜 default-type 属性，
+  // 面板按错类型拉数据。此处构造「面板先挂载过一次别的类型 + 外部改键」的时序。
+  it("外部改 repo_rtype（app-nav 切类型）→ 以新类型发起加载，不吃模块级陈旧缓存", async () => {
+    // 先跑一轮，坐实「模块已被加载过」的现实（模块级缓存若有，此刻已被钉在 ysm）
+    const first = document.createElement("app-sync-manager");
+    first.setAttribute("instance", "test");
+    document.body.appendChild(first);
+    await waitFor(() => mocks.GetInstanceSyncStatus.mock.calls.length > 0, 5000);
+    unmountElement(first);
+
+    // 外部（app-nav 切换器）直接写权威键，再挂载新面板并给 default-type=mmd
+    localStorage.setItem("repo_rtype", "mmd");
+    mocks.GetInstanceSyncStatus.mockClear();
+    const el = document.createElement("app-sync-manager");
+    el.setAttribute("instance", "test2");
+    el.setAttribute("default-type", "mmd");
+    document.body.appendChild(el);
+    await waitFor(() => mocks.GetInstanceSyncStatus.mock.calls.length > 0, 5000);
+    // 第三参 = selectedType：必须是权威源新值 mmd
+    expect(mocks.GetInstanceSyncStatus).toHaveBeenCalledWith("test2", "", "mmd");
+    localStorage.removeItem("repo_rtype");
+    unmountElement(el);
+  });
+
   it("connected 有 instance → 渲染列表和推送按钮", async () => {
     const el = document.createElement("app-sync-manager");
     el.setAttribute("instance", "1.20.1-Fabric");

@@ -13,17 +13,21 @@ import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 export const LAST_TYPE_KEY = "ysm_syncLastType";
 // 全局类型焦点主键（app-nav 双下拉同源）
 const GLOBAL_RTYPE_KEY = "repo_rtype";
-// 优先读全局主键，兼容旧键，兜底 YSM。不导出裸 let——读写统一走
-// getLastSelectedType/setLastSelectedType（HMR 重载不再依赖模块绑定活性）
-let lastSelectedType = safeGet(GLOBAL_RTYPE_KEY) || safeGet(LAST_TYPE_KEY) || RESOURCE_TYPES.YSM;
 
-/** 上次选中类型读取器 */
+/**
+ * 上次选中类型读取器。**权威源 = localStorage 的 `repo_rtype`，每次实读**。
+ *
+ * 2026-10 修复（锐评：缓存盖过权威源）：原实现用模块级缓存（import 时读一次），而
+ * `repo_rtype` 的写入方是 app-nav 切换器（`app-nav/index.ts` 直接 `safeSet`，不经本模块）
+ * ——「面板未挂载期间用户在仓库页切类型」后缓存陈旧，再挂载时旧值还会**盖过新鲜的
+ * `default-type` 属性**（`_selectedType = getLastSelectedType() || _defaultType`），
+ * 面板按错类型拉数据直到用户再动一次下拉。读多写少，实读成本可忽略。
+ */
 export function getLastSelectedType(): string {
-  return lastSelectedType;
+  return safeGet(GLOBAL_RTYPE_KEY) || safeGet(LAST_TYPE_KEY) || RESOURCE_TYPES.YSM;
 }
 
 export function setLastSelectedType(type: string): void {
-  lastSelectedType = type;
   safeSet(GLOBAL_RTYPE_KEY, type); // 统一写全局（nav 下拉下次初始化读到一致值）
   safeSet(LAST_TYPE_KEY, type); // 旧键同步（防历史读取者）
 }

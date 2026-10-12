@@ -19,6 +19,7 @@ auto_fields:
     - ErrB64TooLarge
     - ErrChmodFailed
     - ErrCloseFailed
+    - ErrFileTooLarge
     - ErrRenameFailed
     - ErrSyncFailed
     - ErrTempCreateFailed
@@ -30,6 +31,7 @@ auto_fields:
     - IsHardLink
     - IsRecycleDir
     - IsResourcePackFolder
+    - ReadFileLimited
     - ReadLimitedEntry
     - RecoverAtomicRename
     - SafeWalk

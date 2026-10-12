@@ -7,7 +7,6 @@ package app
 import (
 	"encoding/base64"
 	"log"
-	"os"
 
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/texture_cache"
@@ -58,7 +57,7 @@ func (a *App) GetCachedTexture(path string) (CachedTextureResult, error) {
 // readWithHash 读取原始纹理文件并以 PNG 格式返回。
 // 注意：路径守卫由调用方（GetCachedTexture）负责，本函数为内部辅助。
 func readWithHash(path string, hash string) (CachedTextureResult, error) {
-	data, err := os.ReadFile(path)
+	data, err := fsutil.ReadFileLimited(path, registry.MaxReadLimit)
 	if err != nil {
 		return CachedTextureResult{}, err
 	}

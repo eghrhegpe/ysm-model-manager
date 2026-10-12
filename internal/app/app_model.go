@@ -65,7 +65,7 @@ func (a *App) ReadFileBytes(path string) []byte {
 	if !a.isPathInRootOrSelf(path) {
 		return nil
 	}
-	data, err := os.ReadFile(path)
+	data, err := fsutil.ReadFileLimited(path, registry.MaxReadLimit)
 	if err != nil {
 		return nil
 	}
@@ -93,7 +93,7 @@ func (a *App) readFileBytesBatchSequential(paths []string) map[string][]byte {
 		if !a.isPathInRootOrSelf(p) {
 			continue
 		}
-		data, err := os.ReadFile(p)
+		data, err := fsutil.ReadFileLimited(p, registry.MaxReadLimit)
 		if err != nil {
 			continue
 		}
@@ -117,7 +117,7 @@ func (a *App) readFileBytesBatchConcurrent(paths []string) map[string][]byte {
 		if !a.isPathInRootOrSelf(p) {
 			return fileRead{}, false
 		}
-		data, err := os.ReadFile(p)
+		data, err := fsutil.ReadFileLimited(p, registry.MaxReadLimit)
 		if err != nil {
 			return fileRead{}, false
 		}
@@ -143,7 +143,7 @@ type ReadFileMeta struct {
 // allScanRoots 逐根 Lstat，是批量纹理读取热路径上的重复 IO。守卫统一收敛到
 // 调用方循环入口（唯一必需的一处），此处只做读取+哈希。
 func (a *App) readFileWithHashUnchecked(path string) ([]byte, string) {
-	data, err := os.ReadFile(path)
+	data, err := fsutil.ReadFileLimited(path, registry.MaxReadLimit)
 	if err != nil {
 		return nil, ""
 	}
@@ -219,7 +219,7 @@ func (a *App) analyzeBedrockModelUncached(modelPath string) types.BedrockModel {
 	if ext == ".ysm" {
 		return a.runYSMParserOnFile(modelPath)
 	}
-	data, err := os.ReadFile(modelPath)
+	data, err := fsutil.ReadFileLimited(modelPath, registry.MaxReadLimit)
 	if err != nil {
 		return types.BedrockModel{}
 	}
@@ -282,7 +282,7 @@ func (a *App) AnalyzeBedrockModelEntry(modelPath, subPath string) types.BedrockM
 		// .ysm 为二进制不可分 entry；让前端回退到全量解析
 		return types.BedrockModel{}
 	}
-	data, err := os.ReadFile(modelPath)
+	data, err := fsutil.ReadFileLimited(modelPath, registry.MaxReadLimit)
 	if err != nil {
 		return types.BedrockModel{}
 	}
@@ -427,17 +427,17 @@ func buildComponentTextureMap(comps []types.BedrockModel) map[string][]string {
 func (a *App) collect3DComponents(modelPath, ext string) ([]types.BedrockModel, []string) {
 	switch ext {
 	case ".ysm":
-		if data, err := os.ReadFile(modelPath); err == nil {
+		if data, err := fsutil.ReadFileLimited(modelPath, registry.MaxReadLimit); err == nil {
 			return decodeYSMComponentsViaWASI(data)
 		}
 	case ".zip":
-		if data, err := os.ReadFile(modelPath); err == nil {
+		if data, err := fsutil.ReadFileLimited(modelPath, registry.MaxReadLimit); err == nil {
 			if comps, tn, cerr := geometry.ParseComponentsFromZip(data, int64(len(data))); cerr == nil {
 				return comps, tn
 			}
 		}
 	case ".7z":
-		if data, err := os.ReadFile(modelPath); err == nil {
+		if data, err := fsutil.ReadFileLimited(modelPath, registry.MaxReadLimit); err == nil {
 			if comps, tn, cerr := geometry.ParseComponentsFrom7z(data, int64(len(data))); cerr == nil {
 				return comps, tn
 			}
@@ -478,7 +478,7 @@ func (a *App) SaveScreenshotFile(filename string, base64Data string) error {
 func (a *App) runYSMParserOnFile(modelPath string) types.BedrockModel {
 	// 2026-08-08 架构决策：YSMParser.exe sidecar 已停发（FindCLI 恒空已删除），
 	// 统一走内嵌 WASM 解码（decodeYSMViaWASI：wazero 内存直解，ADR-316 后 Android 同样可用）
-	if data, err := os.ReadFile(modelPath); err == nil {
+	if data, err := fsutil.ReadFileLimited(modelPath, registry.MaxReadLimit); err == nil {
 		if m := decodeYSMViaWASI(data); m != nil {
 			return *m
 		}

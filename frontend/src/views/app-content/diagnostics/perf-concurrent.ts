@@ -31,7 +31,6 @@ import {
   perfTargetEchoHTML,
   readPerfOrder,
 } from "./perf-matrix-render.ts";
-import { webGate } from "./web-gate.ts";
 
 // 代际守卫（ADR-230）：快速连点「运行」时旧响应不得覆盖新结果
 const perfConcGuard = createLoadGuard();
@@ -291,7 +290,6 @@ export async function runConcurrentBench(root: ShadowRoot, esc: EscFn): Promise<
     setErrorMsg(out, t("diagnostics.perfConcurrentParamInvalid"), esc);
     return;
   }
-  if (webGate("diagnostics.webNoPerf")) return;
   setBusy(out);
   try {
     const resp = await executeCLI("concurrent-bench", params);

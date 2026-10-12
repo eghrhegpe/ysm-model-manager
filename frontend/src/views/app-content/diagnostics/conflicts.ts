@@ -12,7 +12,6 @@ import { backendGetApp } from "@/views/backend-deps.ts";
 import type { EscFn } from "./logs.ts";
 import { optionRows } from "./option-rows.ts";
 import { msgRowHTML } from "./status-row.ts";
-import { webGate } from "./web-gate.ts";
 
 // 同步冲突扫描并发标志（纯并发守卫，无跨调用配置状态——【范式豁免】同 dedup 会话工厂
 // 改造 ROI 低，不立项；try/finally 兜底复位）
@@ -148,7 +147,6 @@ export async function runSyncConflictScan(
   esc: EscFn,
   target: DgCfScanTarget,
 ): Promise<void> {
-  if (webGate("diagnostics.webNoSyncConflictScan")) return;
   if (diagSyncBusy) return;
   diagSyncBusy = true;
   dgCfSetScanEnabled(target.scanBtn, false);

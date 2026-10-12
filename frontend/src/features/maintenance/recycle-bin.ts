@@ -9,8 +9,10 @@ import { useCurrentResourceType } from "@/features/repo/repo-rtype.ts";
 import { createLoadGuard, type LoadGuard } from "@/utils/async/load-guard.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { modalConfirm } from "@/utils/dom/modal-confirm.ts";
+import { msgRowHTML } from "@/utils/dom/status-row.ts";
 import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { escUnknown as esc } from "@/utils/html/html.ts";
 import { UI_ICONS, type UiIconName } from "@/utils/icon/ui-icons.ts";
 import { type RESOURCE_TYPES, typeIconOf } from "@/utils/resource/types.ts";
 import { maintenanceGetApp } from "./maintenance-deps.ts";
@@ -241,15 +243,12 @@ function renderRecycleError(
   e: unknown,
   t: TFn,
 ): void {
-  // R8：DOM API 构建零 HTML 字面量；textContent 自转义替代旧 esc() 手拼路径
-  const row = document.createElement("div");
-  row.className = "stat-row";
-  row.style.padding = "12px";
-  row.style.color = "var(--status-error)";
-  row.style.fontSize = "var(--fs-sm)";
-  row.innerHTML = UI_ICONS.error;
-  row.appendChild(document.createTextNode(` ${friendlyError(e, t("recycle.loadFailed"))}`));
-  list.replaceChildren(row);
+  // ADR-332 D1：复用跨域状态行外壳，消除手写行内样式将就（且修正 .stat-row 基类
+  // space-between 把图标/文案推到两端的视觉缺陷——diag-msg 族自带 flex-start + gap）。
+  // 友好错误文案可能含 Go 透传文本，过 esc 单点转义（原 textContent 亦转义等效）。
+  list.innerHTML = msgRowHTML("error", friendlyError(e, t("recycle.loadFailed")), esc, {
+    icon: UI_ICONS.error,
+  });
   if (count) count.textContent = t("common.loadFailed");
 }
 

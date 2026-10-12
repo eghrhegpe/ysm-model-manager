@@ -8,6 +8,7 @@ import { t } from "@/core/i18n/t.ts";
 import { useCurrentResourceType } from "@/features/repo/repo-rtype.ts";
 import { createLoadGuard } from "@/utils/async/load-guard.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
+import { statRowHTML } from "@/utils/dom/status-row.ts";
 import { parseHealthReport } from "@/utils/health-report.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from "@/utils/resource/types.ts";
@@ -47,17 +48,17 @@ export interface RepoStats {
   healthTagClass: string;
 }
 
-/** 状态行（加载中/空/错误）——DOM API 构建，零 HTML 字面量（R8，同 community/data.ts 「非
- * 字符串拼接」范式）。状态碎片粒度小到不构成页面模板，不单独开 tpl 注入口；整页仍走
- * deps.renderPage（views 注入）。textContent 自动转义，无需 esc。 */
-function statusRow(opts: { tone: "muted" | "error"; icon?: string; text: string }): HTMLElement {
-  const row = document.createElement("div");
-  row.style.padding = "12px";
-  row.style.color = opts.tone === "error" ? "var(--status-error)" : "var(--muted)";
-  row.style.fontSize = "var(--fs-base)";
-  if (opts.icon) row.innerHTML = opts.icon;
-  row.appendChild(document.createTextNode(opts.icon ? ` ${opts.text}` : opts.text));
-  return row;
+/** 状态行（加载中/空/错误）——ADR-332 D1：复用跨域 statRowHTML（diag-stat 族，fs-base 居中），
+ * 消除手写行内样式将就。文案为可信 t() 输出，按现状口径不转义、直插。 */
+function statusRow(opts: { tone: "muted" | "error"; icon?: string; text: string }): string {
+  return statRowHTML(opts.tone, opts.text, undefined, opts.icon ? { icon: opts.icon } : undefined);
+}
+
+/** 把单根状态行 HTML 串解析为元素（无 innerHTML 拼接风险，仅一次 template 反序列化）。 */
+function statusRowEl(opts: { tone: "muted" | "error"; icon?: string; text: string }): HTMLElement {
+  const tpl = document.createElement("template");
+  tpl.innerHTML = statusRow(opts);
+  return tpl.content.firstElementChild as HTMLElement;
 }
 
 function handleContainerClick(e: MouseEvent): void {
@@ -116,14 +117,14 @@ export async function loadOldestModel(
   async function render(): Promise<void> {
     const gen = guard.next();
     container.replaceChildren(
-      statusRow({ tone: "muted", icon: UI_ICONS.refresh, text: t("oldest.scanning") }),
+      statusRowEl({ tone: "muted", icon: UI_ICONS.refresh, text: t("oldest.scanning") }),
     );
     try {
       const { ScanModelEntriesWithLabel, GetRepoRoot } = await maintenanceGetApp();
       const filesRoot = await GetRepoRoot(getCurrentType());
       if (guard.stale(gen)) return;
       if (!filesRoot) {
-        container.replaceChildren(statusRow({ tone: "error", text: t("oldest.configTypeDir") }));
+        container.replaceChildren(statusRowEl({ tone: "error", text: t("oldest.configTypeDir") }));
         return;
       }
       const entries: ModelEntry[] =
@@ -133,7 +134,7 @@ export async function loadOldestModel(
         )) || [];
       if (guard.stale(gen)) return;
       if (!entries?.length) {
-        container.replaceChildren(statusRow({ tone: "muted", text: t("oldest.repoEmpty") }));
+        container.replaceChildren(statusRowEl({ tone: "muted", text: t("oldest.repoEmpty") }));
         return;
       }
       // 统计降级（对接锐评②）：RepoHealthAudit 是全库 SHA256 级重活，失败只降级
@@ -154,7 +155,7 @@ export async function loadOldestModel(
       if (guard.stale(gen)) return;
       // 低优先③：friendlyError 单源（AppError Code→i18n、Go 中文透传、英文加前缀）
       container.replaceChildren(
-        statusRow({
+        statusRowEl({
           tone: "error",
           icon: UI_ICONS.error,
           text: friendlyError(err, t("resource.loadFailed")),

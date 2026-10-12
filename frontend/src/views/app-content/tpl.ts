@@ -302,20 +302,26 @@ export function diagnosticsHTML(): string {
           ${perfOrderOptionsHTML()}
         </select>
       </div>
-      <div class="diag-bar-row" data-perf-mode="single">
-        <input id="diag-perf-model" type="text" data-testid="diag-perf-model" placeholder="${t("diagnostics.perfModelPlaceholder")}">
-        <label for="diag-perf-baseline-save">${t("diagnostics.perfBaselineSave")}</label>
-        <input id="diag-perf-baseline-save" type="checkbox" data-testid="diag-perf-baseline-save">
-        <label for="diag-perf-baseline-compare">${t("diagnostics.perfBaselineCompare")}</label>
-        <input id="diag-perf-baseline-compare" type="checkbox" data-testid="diag-perf-baseline-compare" title="${t("diagnostics.perfBaselineHint")}">
-        <label for="diag-perf-baseline-th">${t("diagnostics.perfBaselineThreshold")}</label>
-        <input id="diag-perf-baseline-th" type="number" min="1" step="1" value="50" data-testid="diag-perf-baseline-th">
+      <div class="diag-param-group">   <!-- ADR-332 D3：参数组① = 单模型路径框（外层容器，行本身不加 class 以保 perf-mode 门禁字面量） -->
+        <div class="diag-bar-row" data-perf-mode="single">
+          <input id="diag-perf-model" type="text" data-testid="diag-perf-model" placeholder="${t("diagnostics.perfModelPlaceholder")}">
+        </div>
+      </div>
+      <div class="diag-param-group">   <!-- ADR-332 D3：参数组② = 基准三件套（记录 / 对比 / 阈值），与路径组形成可见边界 -->
+        <div class="diag-bar-row" data-perf-mode="single">
+          <label for="diag-perf-baseline-save">${t("diagnostics.perfBaselineSave")}</label>
+          <input id="diag-perf-baseline-save" type="checkbox" data-testid="diag-perf-baseline-save">
+          <label for="diag-perf-baseline-compare">${t("diagnostics.perfBaselineCompare")}</label>
+          <input id="diag-perf-baseline-compare" type="checkbox" data-testid="diag-perf-baseline-compare" title="${t("diagnostics.perfBaselineHint")}">
+          <label for="diag-perf-baseline-th">${t("diagnostics.perfBaselineThreshold")}</label>
+          <input id="diag-perf-baseline-th" type="number" min="1" step="1" value="50" data-testid="diag-perf-baseline-th" class="diag-config-num">
+        </div>
       </div>
       <div class="diag-bar-row" data-perf-mode="single">
         <label for="diag-perf-iter" id="diag-perf-iter-label" data-testid="diag-perf-iter-label">${t("diagnostics.perfIterations")}</label>
-        <input id="diag-perf-iter" type="number" min="1" step="1" value="3">
+        <input id="diag-perf-iter" type="number" min="1" step="1" value="3" class="diag-config-num">
         <label for="diag-perf-max" id="diag-perf-max-label" data-testid="diag-perf-max-label" title="${t("diagnostics.perfMaxModelsHint")}">${t("diagnostics.perfMaxModels")}</label>
-        <input id="diag-perf-max" type="number" min="1" step="1" value="5" data-testid="diag-perf-max">
+        <input id="diag-perf-max" type="number" min="1" step="1" value="5" data-testid="diag-perf-max" class="diag-config-num">
       </div>
       <!-- 主 CTA 独占一行（2026-10-12）：原先「跑基准」与「迭代次数/取样上限」同行，
            主按钮被两个数字参数夹住、视觉重量被稀释；conc 屏本就是独占行，三屏待遇不一致。
@@ -329,16 +335,16 @@ export function diagnosticsHTML(): string {
       </div>
       <div class="diag-bar-row" data-perf-mode="conc">
         <label for="diag-perf-conc-workers">${t("diagnostics.perfConcurrentWorkers")}</label>
-        <input id="diag-perf-conc-workers" type="number" min="1" max="256" step="1" value="4" data-testid="diag-perf-conc-workers">
+        <input id="diag-perf-conc-workers" type="number" min="1" max="256" step="1" value="4" data-testid="diag-perf-conc-workers" class="diag-config-num">
         <label for="diag-perf-conc-max">${t("diagnostics.perfMaxModels")}</label>
-        <input id="diag-perf-conc-max" type="number" min="1" step="1" value="20" data-testid="diag-perf-conc-max" title="${t("diagnostics.perfMaxModelsHint")}">
+        <input id="diag-perf-conc-max" type="number" min="1" step="1" value="20" data-testid="diag-perf-conc-max" title="${t("diagnostics.perfMaxModelsHint")}" class="diag-config-num">
       </div>
       <div class="diag-bar-row" data-perf-mode="conc">
         <button class="btn-base accent" id="diag-perf-conc-run" data-testid="diag-perf-conc-run">${UI_ICONS.performance} ${t("diagnostics.perfRunConcurrent")}</button>
       </div>
       <div class="diag-bar-row" data-perf-mode="scan">
         <label for="diag-perf-scan-iter" id="diag-perf-scan-iter-label" data-testid="diag-perf-scan-iter-label">${t("diagnostics.perfIterations")}</label>
-        <input id="diag-perf-scan-iter" type="number" min="1" step="1" value="3" data-testid="diag-perf-scan-iter">
+        <input id="diag-perf-scan-iter" type="number" min="1" step="1" value="3" data-testid="diag-perf-scan-iter" class="diag-config-num">
       </div>
       <!-- 同上（2026-10-12）：引擎对照的「运行」按钮原本与迭代次数同行，一并抽成独立行，
            使 bench 三屏的主 CTA 待遇一致（同 conc / single）。 -->

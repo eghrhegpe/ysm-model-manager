@@ -29,7 +29,6 @@ import {
   setErrorCatch,
 } from "./perf-common.ts";
 import { singleBenchReadIterations } from "./perf-single-bench.ts";
-import { webGate } from "./web-gate.ts";
 
 // 代际守卫（ADR-230）：可连点触发，旧响应后到不得覆盖新结果
 const scanBenchGuard = createLoadGuard();
@@ -240,7 +239,6 @@ export async function runScanBench(root: ShadowRoot, esc: EscFn): Promise<void> 
   const gen = scanBenchGuard.next();
   const out = getOutBox(root, "diag-perf-scan-bench-out");
   if (!out) return;
-  if (webGate("diagnostics.webNoPerf")) return;
   // 迭代次数读 scan tab **自己**的输入框（ADR-278 §2.7：scan 独立成 tab 后不再与 single 共用控件）
   const params: ScanBenchParams = {
     iterations: singleBenchReadIterations(root, "diag-perf-scan-iter"),

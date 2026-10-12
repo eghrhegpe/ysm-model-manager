@@ -263,12 +263,4 @@ describe("扫描引擎对照面板（ADR-262 D3）", () => {
     expect(text).toContain("未取得引擎对照结果");
     expect(text).not.toContain("0.00ms");
   });
-
-  it("web 平台不发 CLI（走 toast 提示）", async () => {
-    isWebPlatform.mockReturnValue(true);
-    const root = makeRoot();
-    initPerfPanel(root, esc);
-    await clickAndFlush(root);
-    expect(executeCLI).not.toHaveBeenCalled();
-  });
 });

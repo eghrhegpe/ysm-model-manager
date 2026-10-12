@@ -4,7 +4,7 @@
 // 覆盖：
 //  - initSyncConflictPanel（常驻参数栏，ADR-288 D2/D3）：类型/实例下拉填充（Exists 过滤 +
 //    默认选首）/ 无游戏目录 / 无可用实例 / 上下文读取失败（原因落结果区 + 按钮禁用）/ 缺元素静默
-//  - runSyncConflictScan：web 门禁 / 重入守卫（并发第二次早退 + 禁用外观）/ 无冲突 / 有冲突渲染 /
+//  - runSyncConflictScan：重入守卫（并发第二次早退 + 禁用外观）/ 无冲突 / 有冲突渲染 /
 //    error 通道 / 异常兜底 / **扫描后扫描按钮仍在且可复用**（ADR-288 §1 dead-end 墓碑）
 //  - 同步冲突解决：ResolveConflicts 策略透传 + 结果计数 + 1.5s 自动复扫 / error / 异常
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -178,19 +178,6 @@ describe("initSyncConflictPanel（常驻参数栏）", () => {
 });
 
 describe("runSyncConflictScan", () => {
-  it("web 门禁：isWebPlatform → toast 警告，不触达 Go 桥，结果区不动", async () => {
-    isWebPlatform.mockReturnValue(true);
-    const list = document.createElement("div");
-    list.innerHTML = '<span class="sentinel">占位</span>';
-    await runSyncConflictScan(list, esc, target());
-    expect(busEmit).toHaveBeenCalledWith(
-      "toast:show",
-      expect.objectContaining({ msg: "网页版不支持同步冲突扫描", type: "warn" }),
-    );
-    expect(getApp).not.toHaveBeenCalled();
-    expect(list.innerHTML).toContain("sentinel");
-  });
-
   it("重入守卫：并发第二次早退，首次完成后复位可再扫（扫描期按钮禁用）", async () => {
     const { detect, release } = detectPendingThenOk({ conflicts: [], totalConflicts: 0 });
     mockApp({ DetectConflicts: detect });

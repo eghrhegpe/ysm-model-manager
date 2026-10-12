@@ -266,12 +266,4 @@ describe("并发基准面板（ADR-262 D5）", () => {
     const text = (root.getElementById("diag-perf-conc-out") as HTMLElement).textContent ?? "";
     expect(text).not.toContain("测什么 ysm 类型");
   });
-
-  it("web 平台不发 CLI（走 toast 提示）", async () => {
-    isWebPlatform.mockReturnValue(true);
-    const root = makeRoot();
-    initPerfPanel(root, esc);
-    await clickAndFlush(root);
-    expect(executeCLI).not.toHaveBeenCalled();
-  });
 });

@@ -1,7 +1,8 @@
-# ADR-332：诊断页信息架构与版式收口：四项待拍板决策
+# ADR-332：诊断页信息架构与版式收口：四项拍板决策
 
-- **状态**：📝 提议中（Proposed）
+- **状态**：✅ 已采纳（Accepted）
 - **日期**：2026-10-12
+- **拍板**：2026-10-13
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **准入理由**：诊断页积累了跨模块 CSS 词汇归属、平台能力缺席策略、控件门禁语义三类跨域决策，各自都难逆转且影响面跨 features/views/platform，不拍板会继续以行内 hack 与静默漂移的形式沉淀
 - **相关**：`frontend/src/views/app-content/diagnostics/, frontend/src/views/app-content/tpl.ts, frontend/src/views/app-content/css/content-diag.ts, docs/knowledge/app-content-diagnostics.md`
@@ -38,7 +39,7 @@
 
 ## 2. 待拍板决策（Decision）
 
-> 以下四项**均未拍板**。每项给出方案与推荐，供拍板；本 ADR 不代拍。
+> 以下四项**已于 2026-10-13 拍板**，结论见各节「决策（拍板）」子节。本 ADR 只记决策方向，落地进度归各自治理/知识卡。
 
 ### D1. 跨模块状态行外壳的归属
 
@@ -51,6 +52,8 @@
 
 **推荐**：**A**，但归到「CSS 归属治理」而非「诊断页修复」名下做——它是 CSS 分层问题借诊断页冒出来的。
 
+**决策（拍板，2026-10-13）**：采纳 **A 提炼跨域外壳**。落地归口「CSS 分层治理」而非诊断页修复——提炼一族跨域消息行外壳，使 features 等跨模块消费点（如 `recycle-bin.ts:246` 的三条行内样式）不再手写行内样式。具体归属与文件波及见后续治理落地（不在本 ADR 记进度）。
+
 ### D2. 状态行/空态的「居中」有两套词汇
 
 **现状**：logs 空态走 `.diag-stat`（`display:block` + `text-align:center`），bench/audit 空闲态走 `.stat-row-idle`（`flex-direction:column` + `text-align:center`）。两族都能居中，但是两套词汇、各自覆盖基类的机制不同。取证确认二者当前**行为等价**（文字中心与列表中心偏移恒为 0），差异只在 CSS 机制。
@@ -60,6 +63,8 @@
 - **B. 保留两族 + 写明各自适用面**：承认是两种语义（列表内状态行 vs 结果区空闲态），但补注释固化边界。
 
 **推荐**：先查清 `status-row.ts` 注释所称的「刻意视觉区分」是否仍被产品需要；若否，选 A。
+
+**决策（拍板，2026-10-13）**：先查「刻意视觉区分」诉求 → **诉求仍在**：`status-row.ts`（2026-09-18 单点收口）显式声明两族是「用户已定，不是待办」，字号/对齐为刻意区分、不在收敛范围。故**不统一**，保留两族（即选项 B：保留 + 注释固化边界，已由 `status-row.ts` 落实）。本 ADR 不再推动合并。
 
 ### D3. bench `single` 行2 的参数组混排
 
@@ -71,6 +76,8 @@
 - **C. 不动**：现状可用，分组感属偏好。
 
 **推荐**：**A**，且必须同批给数字框加显式宽度规则（否则 UA 固有 177px 会长期误导后续判断）。
+
+**决策（拍板，2026-10-13）**：采纳 **A 引入参数组容器 + 收窄数字框**。路径输入与基准三件套拆为两个有边界的组，并给 `input[type="number"]` 显式宽度规则，消除 UA 固有 177px 误导。
 
 ### D4. 同一组功能在两个平台有**两种缺席方式**
 
@@ -86,6 +93,10 @@
 - **C. 保留现状**：认为 web 的 toast 拦截已足够。
 
 **推荐**：**A**——「看得见却不能用」比「明确告知不可用」更伤信任；且 Android 侧已有告知行实现，web 侧改动路径更短。
+
+**决策（拍板，2026-10-13）**：采纳 **A 统一为「可见缺席」**。
+
+**落地修订（拍板后查证）**：本决策原立论「web 仍渲染组 + 点击时 toast 拦截」是 **ADR-300 §2.5 之前的状态快照**——现 `isViewerMode() === (mode !== "desktop")`（platform.ts:87-94，含 web），且 `tpl.ts:198` 早已 `viewerMode: isViewerMode()` + `viewerNotice`（"性能基准与仓库体检仅桌面版可用"）。故 web **已经**走 `renderTabs` 的 `desktopOnly` 隐藏 + 告知行，与 Android viewer 同构。三项 `webGate(...)` 拦截（conflicts.ts:151 / perf-concurrent.ts:294 / perf-scan-bench.ts:243）因此已是 **dead code**（web 组不渲染 → 处理器不接线；桌面/Android `isWebPlatform()` 恒 false → 空操作）。故 D4 的实际落地 = **移除这三处 dead guard + `web-gate.ts` 模块 + 其「web→toast」旧范式测试**，而非「新增隐藏」。
 
 ---
 

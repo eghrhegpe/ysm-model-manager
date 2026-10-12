@@ -139,6 +139,12 @@ export const contentDiagCSS: string = `
 .diag-bar-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; min-width:0; }
 .diag-bar-row > input[type="text"] { flex:1; min-width:180px; }
 .diag-bar-spacer { flex:1; }
+/* ADR-332 D3：bench single 模式「路径输入框」与「基准三件套」收口为两个有边界参数组
+   （外层 .diag-param-group 包 .diag-bar-row，行本身不加 class 以保 perf-mode 门禁字面量）。
+   两组间靠边框 + .diag-bar 列间距形成可见分组感；窄屏折行时标签仍与控件同组不拆两行。 */
+.diag-param-group { border:1px solid var(--bd); border-radius:var(--radius-md); padding:var(--sp-1) var(--sp-2); }
+/* 数字框显式窄化：消 UA 固有 177px 误导（同组 number 框都命中）；不动 min/max/step 语义。 */
+.diag-config-num { width:72px; }
 /* 提示行：.diag-bar-row 是 flex 容器，flex-basis:100% 让说明文字独占一行，
    与栏内控件行同语义但无交互权重（不可点、不截断 title）。 */
 .diag-bar-hint { flex-basis:100%; color:var(--muted); font-size:var(--fs-xs); line-height:1.4; }

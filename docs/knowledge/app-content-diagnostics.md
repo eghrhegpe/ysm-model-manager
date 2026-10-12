@@ -45,7 +45,6 @@ auto_fields:
     - loadDiagnosticsLogs
     - loadRuntimeLogs
     - MoveToRecycleFn
-    - msgRowHTML
     - OptionRow
     - optionRows
     - parseHealthReport
@@ -94,15 +93,10 @@ auto_fields:
     - ScanFile
     - ScanGroup
     - ScanGroupResult
-    - scanRowWithCancelHTML
     - ScanTarget
     - sectionHeader
     - singleBenchReadIterations
-    - statRowHTML
-    - StatusRowKind
-    - StatusRowOpts
     - syncPerfBaselineControls
-    - webGate
   tests:
     - frontend/src/views/app-content/diagnostics/conflicts.test.ts
     - frontend/src/views/app-content/diagnostics/health.test.ts

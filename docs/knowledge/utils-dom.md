@@ -35,6 +35,7 @@ auto_fields:
     - DropdownOptions
     - ensureTooltipStyles
     - esc
+    - EscFn
     - escUnknown
     - findCollisions
     - findTabbableAcrossShadow
@@ -70,6 +71,7 @@ auto_fields:
     - ModalPromptOptions
     - modalSelect
     - ModalSelectOptions
+    - msgRowHTML
     - noAnimationsCSS
     - popInputBlock
     - promoteTitle
@@ -85,11 +87,15 @@ auto_fields:
     - RovingHandle
     - RovingPreset
     - RovingSpec
+    - scanRowWithCancelHTML
     - setPendingTreeSearch
     - setRepoSearchFocusPending
     - ShadowStyle
     - ShortcutCombo
     - ShortcutSpec
+    - statRowHTML
+    - StatusRowKind
+    - StatusRowOpts
     - stripPathSegments
     - tabBtnCSS
     - takePendingTreeSearch

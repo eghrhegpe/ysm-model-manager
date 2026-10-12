@@ -198,8 +198,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| handleContainerClick | `frontend/src/features/maintenance/oldest-models.ts` | 67 |
-| onRecycleListClick | `frontend/src/features/maintenance/recycle-bin.ts` | 214 |
+| handleContainerClick | `frontend/src/features/maintenance/oldest-models.ts` | 68 |
+| onRecycleListClick | `frontend/src/features/maintenance/recycle-bin.ts` | 216 |
 | bindPreviewClicks | `frontend/src/views/app-content/diagnostics/dedup-render.ts` | 107 |
 | showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 247 |
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 334 |
@@ -310,8 +310,8 @@
 | handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 182 |
 | (顶层) | `frontend/src/features/import/executor.ts` | 49 |
 | importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 177 |
-| setupRecycleActions | `frontend/src/features/maintenance/recycle-bin.ts` | 128 |
-| onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 198 |
+| setupRecycleActions | `frontend/src/features/maintenance/recycle-bin.ts` | 130 |
+| onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 200 |
 | registerInstanceOps | `frontend/src/features/pack-ops/instance-ops.ts` | 135 |
 | registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 55 |
 | runDownloadMissing | `frontend/src/features/sync/sync.ts` | 87 |
@@ -416,8 +416,8 @@
 | handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 183 |
 | (顶层) | `frontend/src/features/import/executor.ts` | 50 |
 | importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 176 |
-| setupRecycleActions | `frontend/src/features/maintenance/recycle-bin.ts` | 129 |
-| onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 199 |
+| setupRecycleActions | `frontend/src/features/maintenance/recycle-bin.ts` | 131 |
+| onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 201 |
 | registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 54 |
 | handleSyncDownloadMissing | `frontend/src/features/sync/sync.ts` | 118 |
 | handleSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 223 |

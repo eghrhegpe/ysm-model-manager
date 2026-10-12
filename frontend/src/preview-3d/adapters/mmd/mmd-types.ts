@@ -30,9 +30,19 @@ import type { DecodedTexture } from "./mmd-texture-decoder.ts";
 export interface MmdDataPort {
   readFileBytes: ReadFileBytes;
   readFileBytesBatch(paths: string[]): Promise<Record<string, string | null>>;
-  /** 批量读取 + SHA256 hash（一次 RPC 返回数据和哈希，替代前端算 hash） */
+  /** 批量读取 + SHA256 hash（一次 RPC 返回数据和哈希，替代前端算 hash）；
+   *  切片 C（ADR-331-d1）：失败条目保留（Data=null）并带 errorCode/reason——
+   *  errorCode/reason 可选：桌面端口（mmd-data-port）与 web-fs 提供，zip overlay 内条目无此概念；
+   *  调用方按需消费，不破坏「hash 空串不阻断纹理加载」契约 */
   readFileBytesBatchWithMeta?:
-    | ((paths: string[]) => Promise<Record<string, { data: string | null; hash: string } | null>>)
+    | ((
+        paths: string[],
+      ) => Promise<
+        Record<
+          string,
+          { data: string | null; hash: string; errorCode?: string; reason?: string } | null
+        >
+      >)
     | undefined;
   listAllFilePaths: ListAllFilePaths;
   addOpLog: AddOpLog;

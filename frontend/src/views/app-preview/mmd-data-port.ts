@@ -24,10 +24,15 @@ export async function makeMmdDataPort(scope: string): Promise<MmdDataPort> {
       }
     },
     // KTX2 缓存管线依赖 hash：一次 RPC 拿回数据+hash，缺失则 blobUrlToHash 恒空 → 编码/替换全短路
+    // 切片 C（ADR-331-d1）：条目带 errorCode/reason——守卫失败/读失败不再静默丢条目，
+    // 调用方（mmd-build-load 三级降级链）可按需消费；此处原样透传，不在此抛错（诊断不阻断加载）。
     readFileBytesBatchWithMeta: async (paths) => {
       try {
         const r = await App.ReadFileBytesBatchWithMeta(paths);
-        const out: Record<string, { data: string | null; hash: string } | null> = {};
+        const out: Record<
+          string,
+          { data: string | null; hash: string; errorCode: string; reason: string } | null
+        > = {};
         if (r) for (const k of Object.keys(r)) out[k] = r[k] ?? null;
         return out;
       } catch {

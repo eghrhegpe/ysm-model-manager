@@ -71,12 +71,15 @@ describe("makeMmdDataPort", () => {
       tex1: { data: "d1", hash: "h1" },
       tex2: null,
       tex3: undefined,
+      // 切片 C（ADR-331-d1）：失败条目保留 + 带 errorCode/reason，原样透传不丢
+      tex4: { data: null, hash: "", errorCode: "IO_ERROR", reason: "文件读取失败" },
     });
     const port = await makeMmdDataPort("mmd-scene");
-    expect(await port.readFileBytesBatchWithMeta!(["tex1", "tex2", "tex3"])).toEqual({
+    expect(await port.readFileBytesBatchWithMeta!(["tex1", "tex2", "tex3", "tex4"])).toEqual({
       tex1: { data: "d1", hash: "h1" },
       tex2: null,
       tex3: null,
+      tex4: { data: null, hash: "", errorCode: "IO_ERROR", reason: "文件读取失败" },
     });
     App.ReadFileBytesBatchWithMeta.mockResolvedValue(null);
     expect(await port.readFileBytesBatchWithMeta!(["x"])).toEqual({});

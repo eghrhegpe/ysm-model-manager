@@ -211,11 +211,20 @@ export const webFsBindings = {
   },
   ReadFileBytesBatchWithMeta: async (paths: string[] | null) => {
     if (!paths) return null;
-    const out: Record<string, { data: string | null; hash: string }> = {};
+    // 切片 C（ADR-331-d1）：与 Go 侧 ReadFileMeta 对齐加 errorCode/reason——web 侧
+    // readWebFile 失败返回 null 且不带错误类型，统一映射 IO_ERROR（web 无越权读，
+    // INVALID_PATH 在 Go 由 isPathInRootOrSelf 判定，web 不存在该形态）。
+    const out: Record<
+      string,
+      { data: string | null; hash: string; errorCode: string; reason: string }
+    > = {};
     // hash 暂置空：网页版不为纹理缓存做 SHA256 批量预算，MMD 贴图加载不受影响
     await Promise.all(
       paths.map(async (p) => {
-        out[p] = { data: await readWebFile(p), hash: "" };
+        const data = await readWebFile(p);
+        out[p] = data
+          ? { data, hash: "", errorCode: "", reason: "" }
+          : { data: null, hash: "", errorCode: "IO_ERROR", reason: "文件不存在或不可读" };
       }),
     );
     return out;

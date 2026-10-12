@@ -651,9 +651,19 @@ describe("批量读取 / 根路径 / 类型识别 / YSM 头部摘要", () => {
     expect(await webFsBindings.ReadFileBytesBatchWithMeta(null)).toBeNull();
     const meta = (await webFsBindings.ReadFileBytesBatchWithMeta(["/web/ysm/组B/main.ysm"])) as Record<
       string,
-      { data: string | null; hash: string }
+      { data: string | null; hash: string; errorCode: string; reason: string }
     >;
-    expect(meta["/web/ysm/组B/main.ysm"]).toEqual({ data: btoa("x"), hash: "" });
+    expect(meta["/web/ysm/组B/main.ysm"]).toEqual({ data: btoa("x"), hash: "", errorCode: "", reason: "" });
+    // 切片 C（ADR-331-d1）：web 侧缺失条目保留 + 填 errorCode（readWebFile 失败统一 IO_ERROR）
+    const metaMissing = (await webFsBindings.ReadFileBytesBatchWithMeta([
+      "/web/ysm/组B/缺.ysm",
+    ])) as Record<string, { data: string | null; errorCode: string; reason: string }>;
+    expect(metaMissing["/web/ysm/组B/缺.ysm"]).toEqual({
+      data: null,
+      hash: "",
+      errorCode: "IO_ERROR",
+      reason: "文件不存在或不可读",
+    });
   });
 
   it("GetRepoRoot / GetDefaultRepoRoot：rtype 含 / 替换为 _", async () => {

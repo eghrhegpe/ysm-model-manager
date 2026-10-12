@@ -1,6 +1,7 @@
-// ===== readModelBytes 平台分叉测试（ADR-228）=====
+// ===== readModelBytes 平台分叉测试（ADR-228 / ADR-331-d1）=====
 // 核心断言：网页版走 IDB ArrayBuffer 直出（**不碰** Wails 桥）；
-// 桌面/Android 走 ReadFileBytes + base64 解码（契约不变）。
+// 桌面/Android 走 ReadFileBytesBatchWithMeta([path]) + base64 解码（切片 C 迁入，
+// 一次 RPC 顺带拿回 ErrorCode/Reason 结构化错误通道）。
 // 两条路径都返回独立 Uint8Array；失败统一 null。
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -9,7 +10,9 @@ const h = vi.hoisted(() => ({
   /** 平台开关：true = 网页版 */
   isWeb: true,
   readAb: vi.fn<(path: string) => Promise<ArrayBuffer | null>>(),
-  readFileBytes: vi.fn<(path: string) => Promise<string | null>>(),
+  readMetaBatch: vi.fn<
+    (paths: string[]) => Promise<Record<string, { data: string | null; hash: string; errorCode?: string; reason?: string } | null> | null>
+  >(),
 }));
 
 vi.mock("@/backend/platform.ts", () => ({
@@ -19,7 +22,7 @@ vi.mock("@/backend/web-fs-read.ts", () => ({
   readWebFileArrayBuffer: h.readAb,
 }));
 vi.mock("@/backend/app.ts", () => ({
-  getApp: async () => ({ ReadFileBytes: h.readFileBytes }),
+  getApp: async () => ({ ReadFileBytesBatchWithMeta: h.readMetaBatch }),
 }));
 
 import { readModelBytes } from "./read-model-bytes.ts";
@@ -32,7 +35,7 @@ const b64 = (s: string): string => btoa(String.fromCharCode(...new TextEncoder()
 beforeEach(() => {
   h.isWeb = true;
   h.readAb.mockReset();
-  h.readFileBytes.mockReset();
+  h.readMetaBatch.mockReset();
 });
 
 describe("readModelBytes — 网页版路径（IDB ArrayBuffer 直出）", () => {
@@ -42,7 +45,7 @@ describe("readModelBytes — 网页版路径（IDB ArrayBuffer 直出）", () =>
     expect(bytes).toBeInstanceOf(Uint8Array);
     expect(new TextDecoder().decode(bytes!)).toBe("HELLO");
     expect(h.readAb).toHaveBeenCalledWith("/web/ysm/a/a.ysm");
-    expect(h.readFileBytes).not.toHaveBeenCalled();
+    expect(h.readMetaBatch).not.toHaveBeenCalled();
   });
 
   it("文件不存在（IDB 返回 null）→ null", async () => {
@@ -63,37 +66,39 @@ describe("readModelBytes — 网页版路径（IDB ArrayBuffer 直出）", () =>
   });
 });
 
-describe("readModelBytes — 桌面 / Android 路径（base64 契约）", () => {
+describe("readModelBytes — 桌面 / Android 路径（base64 契约 + 结构化错误通道）", () => {
   beforeEach(() => {
     h.isWeb = false;
   });
 
-  it("ReadFileBytes 的 base64 → 解码为字节，且**不碰** IDB", async () => {
-    h.readFileBytes.mockResolvedValue(b64("DESKTOP"));
+  it("ReadFileBytesBatchWithMeta 的 base64 → 解码为字节，且**不碰** IDB", async () => {
+    h.readMetaBatch.mockResolvedValue({ "/repo/ysm/a.ysm": { data: b64("DESKTOP"), hash: "h" } });
     const bytes = await readModelBytes("/repo/ysm/a.ysm");
     expect(new TextDecoder().decode(bytes!)).toBe("DESKTOP");
-    expect(h.readFileBytes).toHaveBeenCalledWith("/repo/ysm/a.ysm");
+    expect(h.readMetaBatch).toHaveBeenCalledWith(["/repo/ysm/a.ysm"]);
     expect(h.readAb).not.toHaveBeenCalled();
   });
 
-  it("ReadFileBytes 返回 null（文件缺失/非路径）→ null", async () => {
-    h.readFileBytes.mockResolvedValue(null);
+  it("条目缺失 / data 为 null（文件缺失/非路径）→ null", async () => {
+    h.readMetaBatch.mockResolvedValue(null);
+    expect(await readModelBytes("/repo/nope.ysm")).toBeNull();
+    h.readMetaBatch.mockResolvedValue({ "/repo/nope.ysm": { data: null, hash: "", errorCode: "IO_ERROR", reason: "文件读取失败" } });
     expect(await readModelBytes("/repo/nope.ysm")).toBeNull();
   });
 
   it("非法 base64 → null（不抛，交由调用方按「读不到」处理）", async () => {
-    h.readFileBytes.mockResolvedValue("!!!not-base64!!!");
+    h.readMetaBatch.mockResolvedValue({ "/repo/bad.ysm": { data: "!!!not-base64!!!", hash: "" } });
     expect(await readModelBytes("/repo/bad.ysm")).toBeNull();
   });
 
   it("空串 base64 → null（\"\" 是 falsy，空文件与缺失文件同路径）", async () => {
-    h.readFileBytes.mockResolvedValue("");
+    h.readMetaBatch.mockResolvedValue({ "/repo/empty.ysm": { data: "", hash: "" } });
     const r = await readModelBytes("/repo/empty.ysm");
-    expect(r).toBeNull(); // b64 ? ... : null 的 falsy 判定——勿改实现返回空数组，会绕过 !bytes?.length 守卫
+    expect(r).toBeNull(); // data ? ... : null 的 falsy 判定——勿改实现返回空数组，会绕过 !bytes?.length 守卫
   });
 
   it("桥抛错 → 原样上抛（由调用方 catch 决定降级）", async () => {
-    h.readFileBytes.mockRejectedValue(new Error("backend down"));
+    h.readMetaBatch.mockRejectedValue(new Error("backend down"));
     await expect(readModelBytes("/repo/a.ysm")).rejects.toThrow("backend down");
   });
 });

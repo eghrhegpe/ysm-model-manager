@@ -29,7 +29,11 @@ import { readWebFileArrayBuffer } from "./web-fs-read.ts";
  * - 网页版：IndexedDB `ArrayBuffer` 直出（**零 base64 往返**）。注意
  *   `new Uint8Array(ab)` 是**视图而非拷贝**——本路径**零拷贝**；因 IDB 反序列化
  *   每次本就产生新的 `ArrayBuffer`，别名不共享给其他持有者，安全。
- * - 桌面 / Android：`ReadFileBytes`（base64 契约）→ `Uint8Array`（解码产生新缓冲）。
+ * - 桌面 / Android：`ReadFileBytesBatchWithMeta([path])`（base64 契约 + 结构化错误
+ *   通道）→ `Uint8Array`（解码产生新缓冲）。切片 C（ADR-331-d1）把单文件路径从
+ *   `ReadFileBytes` 迁到 `ReadFileBytesBatchWithMeta`：一次 RPC 顺带拿回
+ *   `ErrorCode`/`Reason`，失败时不再只能看到 `null`，可据此构造 `AppError` 走
+ *   `friendlyError` i18n（ADR-331 §2.1 旁路已收窄）。
  *
  * 两条路径返回的 `Uint8Array` 都**独占自己的底层缓冲**（且 `byteOffset === 0`、
  * `byteLength === buffer.byteLength`），调用方可安全持有并写进 WASM 堆。
@@ -40,7 +44,13 @@ export async function readModelBytes(path: string): Promise<Uint8Array | null> {
     const ab = await readWebFileArrayBuffer(path);
     return ab ? new Uint8Array(ab) : null;
   }
-  const { ReadFileBytes } = await getApp();
-  const b64 = await ReadFileBytes(path);
-  return b64 ? base64ToBytes(b64) : null;
+  const { ReadFileBytesBatchWithMeta } = await getApp();
+  const metas = await ReadFileBytesBatchWithMeta([path]);
+  const meta = metas?.[path];
+  if (!meta?.data) {
+    // meta.errorCode / meta.reason 已随绑定返回——本函数契约保持返回 null（不改调用方），
+    // 需要结构化错误的消费点应改走 mmd-data-port / 直接调绑定读取这两个字段
+    return null;
+  }
+  return base64ToBytes(meta.data);
 }

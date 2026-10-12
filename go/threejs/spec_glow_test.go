@@ -133,9 +133,7 @@ func TestGlowMeshUVMatchesGeometry(t *testing.T) {
 	data, err := os.ReadFile(p)
 	testutil.NoError(t, err, "read fixture")
 	m := geometry.ParseBedrockGeometry(data)
-	if m == nil {
-		t.Fatal("parse nil")
-	}
+	testutil.NotNil(t, m, "parse nil")
 	mg, err := buildModelGroup(*m, "main", 0)
 	testutil.NoError(t, err, "build")
 	tw, th := mg.TextureWidth, mg.TextureHeight

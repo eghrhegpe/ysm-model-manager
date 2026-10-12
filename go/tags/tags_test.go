@@ -11,9 +11,7 @@ import (
 func TestNewStore(t *testing.T) {
 	dir := t.TempDir()
 	s := NewStore(dir)
-	if s == nil {
-		t.Fatal("NewStore returned nil")
-	}
+	testutil.NotNil(t, s, "NewStore returned nil")
 	if s.path != filepath.Join(dir, "tags.json") {
 		t.Errorf("unexpected path: %s", s.path)
 	}

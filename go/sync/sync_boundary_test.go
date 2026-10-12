@@ -423,9 +423,7 @@ func TestPullSingleResource_DirOutside_Rejected(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(outside, "m.pmx"), []byte("m"), 0644)
 
 	err := PullSingleResource(globalDir, targetDir, outside)
-	if err == nil {
-		t.Fatal("越界目录应报错，实际 nil")
-	}
+	testutil.NotNil(t, err, "越界目录应报错，实际 nil")
 	if _, err := os.Stat(filepath.Join(globalDir, "outside-pack")); err == nil {
 		t.Fatal("越界目录不应退化为 basename 落到 globalDir 根")
 	}

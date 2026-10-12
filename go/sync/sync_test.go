@@ -436,9 +436,7 @@ func TestSyncToggleStatus_EmptyRepo(t *testing.T) {
 
 	scanFn := func(dir string) []types.ModelEntry { return nil }
 	_, _, err := SyncToggleStatus(customDir, repoDir, scanFn)
-	if err == nil {
-		t.Fatal("空仓库应报错「未找到模型文件」")
-	}
+	testutil.NotNil(t, err, "空仓库应报错「未找到模型文件」")
 }
 
 // ===== SyncResourcesDirLevel =====

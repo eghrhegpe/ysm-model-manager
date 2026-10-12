@@ -64,9 +64,7 @@ func TestIsInside_EmptyPathCWDMatch(t *testing.T) {
 	}
 
 	err = IsInside(baseDir, "")
-	if err == nil {
-		t.Fatal("FIXED(BUG-2): 空路径应被拒绝")
-	}
+	testutil.NotNil(t, err, "FIXED(BUG-2): 空路径应被拒绝")
 	if errors.Is(err, ErrEmptyPath) {
 		t.Logf("FIXED(BUG-2): 空路径已拒绝（ErrEmptyPath）, err=%v", err)
 	} else {
@@ -84,9 +82,7 @@ func TestIsInside_CrossDriveWindows(t *testing.T) {
 	}
 
 	err := IsInside(`C:\repo`, `D:\evil\file.ysm`)
-	if err == nil {
-		t.Fatal("BUG-3: 跨驱动器路径未被拒绝")
-	}
+	testutil.NotNil(t, err, "BUG-3: 跨驱动器路径未被拒绝")
 	var esc *ErrPathEscalation
 	if errors.As(err, &esc) {
 		if errors.Is(err, ErrRelFailed) {
@@ -100,9 +96,7 @@ func TestIsInside_CrossDriveWindows(t *testing.T) {
 
 	// 补充：同一驱动器但不同根目录（如 C:\a vs C:\b）也需拒绝
 	err2 := IsInside(`C:\a`, `C:\b\file.ysm`)
-	if err2 == nil {
-		t.Fatal("BUG-3(b): 同驱动器不同根路径未被拒绝")
-	}
+	testutil.NotNil(t, err2, "BUG-3(b): 同驱动器不同根路径未被拒绝")
 	t.Logf("FIXED/INFO(BUG-3b): 同驱动器不同根已拒绝: err=%v", err2)
 }
 
@@ -152,9 +146,7 @@ func TestIsInside_NULByte(t *testing.T) {
 		}
 	} else {
 		err := IsInside(baseDir, nulPath)
-		if err == nil {
-			t.Fatal("FIXED(BUG-5): Windows 上 NUL 字节路径应被拒绝")
-		}
+		testutil.NotNil(t, err, "FIXED(BUG-5): Windows 上 NUL 字节路径应被拒绝")
 		if errors.Is(err, ErrNULByte) {
 			t.Logf("FIXED(BUG-5, Windows): NUL 字节已拒绝（ErrNULByte）, err=%v", err)
 		} else {

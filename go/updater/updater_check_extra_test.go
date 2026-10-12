@@ -25,18 +25,14 @@ func (failRT) RoundTrip(*http.Request) (*http.Response, error) {
 // TestCheckWithClient_InvalidURL 覆盖 http.NewRequest 失败分支（非法 URL）
 func TestCheckWithClient_InvalidURL(t *testing.T) {
 	_, err := CheckWithClient(&http.Client{}, "://bad-url", "1.0.0")
-	if err == nil {
-		t.Fatal("非法 URL 应返回错误")
-	}
+	testutil.NotNil(t, err, "非法 URL 应返回错误")
 }
 
 // TestCheckWithClient_TransportError 覆盖 client.Do 传输层错误分支
 // （自定义 RoundTripper 直接返回错误，零网络）
 func TestCheckWithClient_TransportError(t *testing.T) {
 	_, err := CheckWithClient(&http.Client{Transport: failRT{}}, "http://example.invalid/releases", "1.0.0")
-	if err == nil {
-		t.Fatal("传输错误应返回错误")
-	}
+	testutil.NotNil(t, err, "传输错误应返回错误")
 	if !strings.Contains(err.Error(), "transport down") {
 		t.Errorf("错误信息应透传底层错误, got %v", err)
 	}
@@ -52,9 +48,7 @@ func TestCheckWithClient_NonJSONErrorBody(t *testing.T) {
 	defer server.Close()
 
 	_, err := CheckWithClient(server.Client(), server.URL, "1.0.0")
-	if err == nil {
-		t.Fatal("403 应返回错误")
-	}
+	testutil.NotNil(t, err, "403 应返回错误")
 	if strings.Contains(err.Error(), "plain text") {
 		t.Errorf("非 JSON 错误体不应拼入 message, got %v", err)
 	}
@@ -72,9 +66,7 @@ func TestCheckWithClient_InvalidJSONBody(t *testing.T) {
 	defer server.Close()
 
 	_, err := CheckWithClient(server.Client(), server.URL, "1.0.0")
-	if err == nil {
-		t.Fatal("非法 JSON 应返回解码错误")
-	}
+	testutil.NotNil(t, err, "非法 JSON 应返回解码错误")
 }
 
 // TestCheckWithClient_NoPlatformAsset 覆盖「有新版本但无本平台安装包」分支：
@@ -173,9 +165,7 @@ func TestCheckWithClient_NoReleaseNotes(t *testing.T) {
 // 与 updater_test.go 中 DNS 失败的 TestFetchExpectedHash_InvalidURL 互补）
 func TestFetchExpectedHash_MalformedURL(t *testing.T) {
 	_, err := fetchExpectedHash("://bad-url/sums", "test.zip")
-	if err == nil {
-		t.Fatal("非法 URL 应返回错误")
-	}
+	testutil.NotNil(t, err, "非法 URL 应返回错误")
 }
 
 // TestFetchExpectedHash_SumsPrefix 覆盖 <hash> *<filename> 星号前缀格式（多行 + 空行跳过）
@@ -202,7 +192,5 @@ func TestFetchExpectedHash_TruncatedBody(t *testing.T) {
 	defer server.Close()
 
 	_, err := fetchExpectedHash(server.URL+"/sums", "YSM-Model-Manager_windows_amd64.zip")
-	if err == nil {
-		t.Fatal("截断的 sums 响应应返回错误")
-	}
+	testutil.NotNil(t, err, "截断的 sums 响应应返回错误")
 }

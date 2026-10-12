@@ -114,9 +114,7 @@ func TestLoadRegistry_ConcurrentReadAndSetPath(t *testing.T) {
 func TestLoadRegistry_PointerStabilityOnCacheHit(t *testing.T) {
 	// 先确保有缓存
 	reg := LoadRegistry()
-	if reg == nil {
-		t.Fatal("首次 LoadRegistry 不应返回 nil")
-	}
+	testutil.NotNil(t, reg, "首次 LoadRegistry 不应返回 nil")
 	_ = reg
 
 	// 用 RegistryType 的返回值间接判断指针是否同一次加载
@@ -145,9 +143,7 @@ func TestLoadRegistry_PointerStabilityOnCacheHit(t *testing.T) {
 	SetRegistryPath("")
 	defer SetRegistryPath("")
 	reg3 := LoadRegistry()
-	if reg3 == nil {
-		t.Fatal("SetRegistryPath 后 LoadRegistry 不应 nil")
-	}
+	testutil.NotNil(t, reg3, "SetRegistryPath 后 LoadRegistry 不应 nil")
 	// 缓存已被清，重新 load → 新的 &reg 分配
 	// 但底层数据可能是 embedded (同字节), 结构体对象是新分配
 	// 我们验证 slice 头部地址不再相同 (大概率)——不做强断言, 只做观察
@@ -165,17 +161,13 @@ func TestLoadRegistry_PointerChangeAfterSetPath(t *testing.T) {
 
 	reg1 := LoadRegistry()
 	reg1rt := RegistryType("ysm")
-	if reg1rt == nil {
-		t.Fatal("p1 加载后 ysm 应可见")
-	}
+	testutil.NotNil(t, reg1rt, "p1 加载后 ysm 应可见")
 
 	// 切路径 → 触发重新加载
 	SetRegistryPath(p2)
 	reg2 := LoadRegistry()
 	reg2rt := RegistryType("ysm")
-	if reg2rt == nil {
-		t.Fatal("p2 加载后 ysm 应可见")
-	}
+	testutil.NotNil(t, reg2rt, "p2 加载后 ysm 应可见")
 
 	// reg1.ResourceTypes[0] 与 reg2.ResourceTypes[0] 地址应不同 (不同加载)
 	if &reg1.ResourceTypes[0] == &reg2.ResourceTypes[0] {
@@ -198,9 +190,7 @@ func TestLoadRegistry_PathEmptyString(t *testing.T) {
 	defer SetRegistryPath("")
 
 	reg := LoadRegistry()
-	if reg == nil {
-		t.Fatal("空路径应走 embedded 回退而非 nil")
-	}
+	testutil.NotNil(t, reg, "空路径应走 embedded 回退而非 nil")
 	// 空串触发 embedded 回退 → ysm 应可见
 	rt := RegistryType("ysm")
 	if rt == nil {
@@ -283,9 +273,7 @@ func TestLoadRegistry_LoadFromExplicitFile(t *testing.T) {
 	defer SetRegistryPath("")
 
 	reg := LoadRegistry()
-	if reg == nil {
-		t.Fatal("显式文件应成功加载")
-	}
+	testutil.NotNil(t, reg, "显式文件应成功加载")
 	// 显式文件含 custom-test 类型 (embedded 中没有)
 	rt := RegistryType("custom-test")
 	if rt == nil {
@@ -316,9 +304,7 @@ func TestLoadRegistry_CacheSurvivesFileDelete(t *testing.T) {
 
 	// 再次 LoadRegistry → 应返回缓存 (不变)
 	reg2 := LoadRegistry()
-	if reg2 == nil {
-		t.Fatal("缓存命中时不应返回 nil")
-	}
+	testutil.NotNil(t, reg2, "缓存命中时不应返回 nil")
 	if len(reg2.ResourceTypes) != firstCount {
 		t.Errorf("缓存命中率下数量应不变: %d vs %d", len(reg2.ResourceTypes), firstCount)
 	}
@@ -331,9 +317,7 @@ func TestLoadRegistry_CacheSurvivesFileDelete(t *testing.T) {
 	SetRegistryPath(p2)
 	defer SetRegistryPath("")
 	reg3 := LoadRegistry()
-	if reg3 == nil {
-		t.Fatal("切到新文件后应成功加载")
-	}
+	testutil.NotNil(t, reg3, "切到新文件后应成功加载")
 	// 新文件加载应得到相同逻辑内容
 	if RegistryType("ysm") == nil {
 		t.Error("切到新文件后 ysm 应仍可见")
@@ -366,9 +350,7 @@ func TestLoadRegistry_DefaultNameNotReadFromCwd(t *testing.T) {
 
 	// 绝对路径 ≠ "resource_types.json", 所以被读取
 	reg := LoadRegistry()
-	if reg == nil {
-		t.Fatal("LoadRegistry 应成功")
-	}
+	testutil.NotNil(t, reg, "LoadRegistry 应成功")
 	rt := RegistryType("MARKER-TYPE-UNIQUE")
 	if rt == nil {
 		t.Error("绝对路径下应读到 marker 类型")
@@ -378,9 +360,7 @@ func TestLoadRegistry_DefaultNameNotReadFromCwd(t *testing.T) {
 	SetRegistryPath("resource_types.json")
 	defer SetRegistryPath("")
 	reg2 := LoadRegistry()
-	if reg2 == nil {
-		t.Fatal("默认名应走 embedded")
-	}
+	testutil.NotNil(t, reg2, "默认名应走 embedded")
 	rt2 := RegistryType("MARKER-TYPE-UNIQUE")
 	if rt2 != nil {
 		t.Error("默认名 'resource_types.json' 应跳过显式路径, 不应读到 marker 类型")
@@ -426,9 +406,7 @@ func TestLoadRegistry_ConcurrentRegistryTypePointerCopy(t *testing.T) {
 
 	// 再次查询 ysm, ID 应是干净的 "ysm"
 	rt := RegistryType("ysm")
-	if rt == nil {
-		t.Fatal("并发压力后 ysm 应仍可见")
-	}
+	testutil.NotNil(t, rt, "并发压力后 ysm 应仍可见")
 	if rt.ID != "ysm" {
 		t.Errorf("RegistryType 应返回指针拷贝: ID = %q (应 'ysm')", rt.ID)
 	}

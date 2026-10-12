@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // isolateProxy 将 ghProxyPrefixes 置空——错误路径不得回退到真实代理（避免真实网络）
@@ -29,9 +30,7 @@ func isolateProxy(t *testing.T) {
 func TestDownloadOnce_InvalidURL(t *testing.T) {
 	isolateProxy(t)
 	path, err := Download("://bad-url/pkg.zip", "")
-	if err == nil {
-		t.Fatal("非法 URL 应返回错误")
-	}
+	testutil.NotNil(t, err, "非法 URL 应返回错误")
 	if path != "" {
 		t.Errorf("失败时不应返回路径, got %q", path)
 	}
@@ -46,9 +45,7 @@ func TestDownloadOnce_ConnectionRefused(t *testing.T) {
 	server.Close() // 端口立即释放，后续连接必然被拒
 
 	_, err := Download(deadURL+"/pkg.zip", "x")
-	if err == nil {
-		t.Fatal("连接被拒应返回错误")
-	}
+	testutil.NotNil(t, err, "连接被拒应返回错误")
 	if !strings.Contains(err.Error(), "个源均失败") {
 		t.Errorf("应聚合源错误信息, got %v", err)
 	}
@@ -67,9 +64,7 @@ func TestDownloadOnce_TruncatedResponse(t *testing.T) {
 
 	// hash 传非空：截断读错误先于 hash 检查触发，保住截断分支
 	path, err := Download(server.URL+"/pkg.zip", "x")
-	if err == nil {
-		t.Fatal("截断响应应返回错误")
-	}
+	testutil.NotNil(t, err, "截断响应应返回错误")
 	if path != "" {
 		t.Errorf("失败时不应返回路径, got %q", path)
 	}
@@ -98,9 +93,7 @@ func TestDownloadOnce_TruncationProbe(t *testing.T) {
 	defer server.Close()
 
 	_, err := Download(server.URL+"/pkg.zip", "x")
-	if err == nil {
-		t.Fatal("超过上限应返回错误")
-	}
+	testutil.NotNil(t, err, "超过上限应返回错误")
 	if !strings.Contains(err.Error(), "上限") {
 		t.Errorf("错误信息应包含大小上限, got %v", err)
 	}
@@ -131,9 +124,7 @@ func TestDownloadOnce_ContentLengthMismatch(t *testing.T) {
 	defer func() { newDownloadClient = old }()
 
 	path, err := downloadOnce("https://example.invalid/pkg", "x", nil)
-	if err == nil {
-		t.Fatal("Content-Length 与实收不符应返回错误")
-	}
+	testutil.NotNil(t, err, "Content-Length 与实收不符应返回错误")
 	if path != "" {
 		t.Errorf("失败时不应返回路径, got %q", path)
 	}
@@ -154,9 +145,7 @@ func TestDownload_ContentLengthMismatch_ThroughDownload(t *testing.T) {
 	isolateProxy(t)
 
 	_, err := Download("https://example.invalid/pkg", "x")
-	if err == nil {
-		t.Fatal("截断下载应返回错误")
-	}
+	testutil.NotNil(t, err, "截断下载应返回错误")
 	if !errors.Is(err, ErrDownloadIncomplete) {
 		t.Errorf("应可通过 errors.Is 匹配 ErrDownloadIncomplete, got %v", err)
 	}
@@ -171,9 +160,7 @@ func TestDownload_HashMismatch_Sentinel(t *testing.T) {
 	defer server.Close()
 
 	_, err := Download(server.URL+"/pkg", "deadbeef")
-	if err == nil {
-		t.Fatal("hash 不匹配应报错")
-	}
+	testutil.NotNil(t, err, "hash 不匹配应报错")
 	if !errors.Is(err, ErrHashMismatch) {
 		t.Errorf("应可通过 errors.Is 匹配 ErrHashMismatch, got %v", err)
 	}
@@ -188,9 +175,7 @@ func TestDownload_RejectsOversized_Sentinel(t *testing.T) {
 	defer server.Close()
 
 	_, err := Download(server.URL+"/pkg", "x")
-	if err == nil {
-		t.Fatal("Content-Length 超限应返回错误")
-	}
+	testutil.NotNil(t, err, "Content-Length 超限应返回错误")
 	if !errors.Is(err, ErrDownloadTooBig) {
 		t.Errorf("应可通过 errors.Is 匹配 ErrDownloadTooBig, got %v", err)
 	}
@@ -206,9 +191,7 @@ func TestDownload_RejectsEmptyHash(t *testing.T) {
 	defer server.Close()
 
 	_, err := Download(server.URL+"/pkg.zip", "")
-	if err == nil {
-		t.Fatal("空 hash 必须拒绝下载（R30 P2-3：哈希不可得时禁止无完整性校验）")
-	}
+	testutil.NotNil(t, err, "空 hash 必须拒绝下载（R30 P2-3：哈希不可得时禁止无完整性校验）")
 	if !errors.Is(err, ErrHashMismatch) {
 		t.Errorf("应 errors.Is 匹配 ErrHashMismatch, got %v", err)
 	}
@@ -234,9 +217,7 @@ func TestDownload_TruncationProbe_Sentinel(t *testing.T) {
 	defer server.Close()
 
 	_, err := Download(server.URL+"/pkg", "x")
-	if err == nil {
-		t.Fatal("超过上限应返回错误")
-	}
+	testutil.NotNil(t, err, "超过上限应返回错误")
 	if !errors.Is(err, ErrDownloadTooBig) {
 		t.Errorf("应可通过 errors.Is 匹配 ErrDownloadTooBig, got %v", err)
 	}

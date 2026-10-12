@@ -45,9 +45,7 @@ func TestEmpty_RecycleDirIsSymlinkRejected(t *testing.T) {
 	}
 	tm := New(dir)
 	_, err := tm.Empty()
-	if err == nil {
-		t.Fatal(".recycle 是 symlink 时应拒绝, 得到 nil 错误")
-	}
+	testutil.NotNil(t, err, ".recycle 是 symlink 时应拒绝, 得到 nil 错误")
 	if !strings.Contains(err.Error(), "符号链接") {
 		t.Fatalf("错误应提及符号链接, 得到: %v", err)
 	}

@@ -225,9 +225,7 @@ func TestResolveConflict_ForceRemote_CopyFail_LocalIntact(t *testing.T) {
 	}
 
 	err := ResolveConflict(conflict, ResolveForceRemote, localDir, remoteDir)
-	if err == nil {
-		t.Fatal("远端缺失时应返回错误")
-	}
+	testutil.NotNil(t, err, "远端缺失时应返回错误")
 
 	// 本地内容必须完好无损
 	content, err := os.ReadFile(filepath.Join(localDir, "test.txt"))
@@ -543,9 +541,7 @@ func TestResolveConflict_PathTraversal_Rejected(t *testing.T) {
 
 	// 穿越路径必须被拒绝（三个策略都要过守卫，取最会写盘的 ForceRemote 验证）
 	err := ResolveConflict(conflict, ResolveForceRemote, localDir, remoteDir)
-	if err == nil {
-		t.Fatal("穿越路径应当被守卫拒绝，实际返回 nil")
-	}
+	testutil.NotNil(t, err, "穿越路径应当被守卫拒绝，实际返回 nil")
 	// 错误应含越界语境（而非文件操作失败）
 	if !strings.Contains(err.Error(), "冲突路径越界") {
 		t.Errorf("错误应指明越界守卫，实际: %v", err)

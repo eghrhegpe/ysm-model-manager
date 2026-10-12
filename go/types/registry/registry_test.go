@@ -371,9 +371,7 @@ func TestLoadRegistry_CorruptFallbackToEmbedded(t *testing.T) {
 	defer SetRegistryPath("") // 恢复默认，避免污染其他测试
 
 	reg := LoadRegistry()
-	if reg == nil {
-		t.Fatal("损坏 JSON 应回退嵌入基线而非返回 nil")
-	}
+	testutil.NotNil(t, reg, "损坏 JSON 应回退嵌入基线而非返回 nil")
 	// 嵌入基线含 ysm 类型 → 扩展名查询应可用（不回退成空表）
 	if !IsSupportedExt(".ysm") {
 		t.Error("损坏 JSON 回退嵌入基线后 .ysm 应仍被支持（不能缓存空注册表）")

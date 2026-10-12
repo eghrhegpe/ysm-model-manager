@@ -87,17 +87,13 @@ func TestCheck_BadJSON(t *testing.T) {
 	defer server.Close()
 
 	_, err := CheckWithClient(server.Client(), server.URL, "1.0.0")
-	if err == nil {
-		t.Fatal("非法 JSON 应返回错误")
-	}
+	testutil.NotNil(t, err, "非法 JSON 应返回错误")
 }
 
 func TestCheck_HTTPClientError(t *testing.T) {
 	// 无效 URL 导致 client.Do 报错
 	_, err := CheckWithClient(&http.Client{}, "http://invalid.local:99999/api", "1.0.0")
-	if err == nil {
-		t.Fatal("网络错误应返回错误")
-	}
+	testutil.NotNil(t, err, "网络错误应返回错误")
 }
 
 // ---- CleanupOldVersion（54.5% 覆盖）----
@@ -151,9 +147,7 @@ func TestCopyFile_Success(t *testing.T) {
 func TestCopyFile_SrcNotFound(t *testing.T) {
 	dir := t.TempDir()
 	err := fsutil.CopyFile(filepath.Join(dir, "nope.txt"), filepath.Join(dir, "dst.txt"))
-	if err == nil {
-		t.Fatal("源文件不存在应报错")
-	}
+	testutil.NotNil(t, err, "源文件不存在应报错")
 }
 
 func TestCopyFile_EmptyFile(t *testing.T) {
@@ -205,9 +199,7 @@ func TestInstallUpdate_NotWindows(t *testing.T) {
 		t.Skip("非 Windows 测试仅在非 Windows 平台运行")
 	}
 	err := InstallUpdate("/fake/path.exe")
-	if err == nil {
-		t.Fatal("非 Windows 应报错")
-	}
+	testutil.NotNil(t, err, "非 Windows 应报错")
 	if !errors.Is(err, ErrNotWindows) {
 		t.Errorf("应返回 ErrNotWindows，实际 %v", err)
 	}
@@ -224,9 +216,7 @@ func TestInstallUpdate_InvalidPackage(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	err := InstallUpdate(exePath)
-	if err == nil {
-		t.Fatal("无效 PE 应报错")
-	}
+	testutil.NotNil(t, err, "无效 PE 应报错")
 	if !errors.Is(err, ErrInvalidPackage) {
 		t.Errorf("应返回 ErrInvalidPackage，实际 %v", err)
 	}
@@ -237,9 +227,7 @@ func TestInstallUpdate_SrcNotFound(t *testing.T) {
 		t.Skip("InstallUpdate 仅在 Windows 平台测试")
 	}
 	err := InstallUpdate("/nonexistent/path.exe")
-	if err == nil {
-		t.Fatal("源文件不存在应报错")
-	}
+	testutil.NotNil(t, err, "源文件不存在应报错")
 	if !strings.Contains(err.Error(), "打开更新包失败") {
 		t.Errorf("错误信息应包含打开失败提示: %v", err)
 	}

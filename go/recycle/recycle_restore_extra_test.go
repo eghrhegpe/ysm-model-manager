@@ -47,9 +47,7 @@ func TestRestore_SourceMissing(t *testing.T) {
 	dir := t.TempDir()
 	tm := New(dir)
 	err := tm.Restore(filepath.Join(tm.RecycleDir(), "missing.ysm"))
-	if err == nil {
-		t.Fatal("源不存在恢复应报错")
-	}
+	testutil.NotNil(t, err, "源不存在恢复应报错")
 	// 目标位置不应有残留
 	if _, statErr := os.Stat(filepath.Join(dir, "missing.ysm")); !os.IsNotExist(statErr) {
 		t.Fatalf("目标位置不应有残留文件: %v", statErr)

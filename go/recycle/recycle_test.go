@@ -282,9 +282,7 @@ func TestList_FolderModelGrouped(t *testing.T) {
 			break
 		}
 	}
-	if groupEntry == nil {
-		t.Fatal("应存在整组目录条目 模型A")
-	}
+	testutil.NotNil(t, groupEntry, "应存在整组目录条目 模型A")
 	// Path 应指向目录本身（而非 ysm.json 单文件）
 	if _, err := os.Stat(filepath.Join(groupEntry.Path, "ysm.json")); err != nil {
 		t.Fatalf("整组条目 Path 应指向含 ysm.json 的目录: %v", err)

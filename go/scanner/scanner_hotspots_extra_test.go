@@ -226,9 +226,7 @@ func TestGenerateRepoIndex_WriteError(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	_, err := GenerateRepoIndex(repoPath)
-	if err == nil {
-		t.Fatal("repoPath 为文件时应返回错误（无法写 index.json）")
-	}
+	testutil.NotNil(t, err, "repoPath 为文件时应返回错误（无法写 index.json）")
 }
 
 // TestGenerateRepoIndex_RenameError index.json 预置为目录 → rename 原子替换失败，
@@ -242,9 +240,7 @@ func TestGenerateRepoIndex_RenameError(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	_, err := GenerateRepoIndex(dir)
-	if err == nil {
-		t.Fatal("index.json 为目录时应返回错误")
-	}
+	testutil.NotNil(t, err, "index.json 为目录时应返回错误")
 	if _, statErr := os.Stat(filepath.Join(dir, "index.json.tmp")); !os.IsNotExist(statErr) {
 		t.Error("rename 失败后 .tmp 应被清理")
 	}

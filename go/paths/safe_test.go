@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 func TestIsInside(t *testing.T) {
@@ -30,9 +31,7 @@ func TestIsInside(t *testing.T) {
 	t.Run("目录外（.. 穿越）→ ErrPathEscalation", func(t *testing.T) {
 		outside := filepath.Join(base, "..", "evil.ysm")
 		err := IsInside(base, outside)
-		if err == nil {
-			t.Fatal("期望错误, got nil")
-		}
+		testutil.NotNil(t, err, "期望错误, got nil")
 		var esc *ErrPathEscalation
 		if !errors.As(err, &esc) {
 			t.Fatalf("期望 ErrPathEscalation, got %T: %v", err, err)
@@ -123,9 +122,7 @@ func TestErrPathEscalation_Error(t *testing.T) {
 // 未覆盖分支补测：空基准目录必须显式拒绝（ErrEmptyBase）
 func TestIsInside_EmptyBaseDir(t *testing.T) {
 	err := IsInside("", "model.ysm")
-	if err == nil {
-		t.Fatal("空基准目录应被拒绝, got nil")
-	}
+	testutil.NotNil(t, err, "空基准目录应被拒绝, got nil")
 	if !errors.Is(err, ErrEmptyBase) {
 		t.Fatalf("期望分类 ErrEmptyBase, got %v", err)
 	}
@@ -138,9 +135,7 @@ func TestIsInside_EmptyBaseDir(t *testing.T) {
 // 未覆盖分支补测：基准目录含 NUL 字节必须拒绝（ErrNULByte，与路径侧同哨兵）
 func TestIsInside_NULInBaseDir(t *testing.T) {
 	err := IsInside("repo\x00base", "model.ysm")
-	if err == nil {
-		t.Fatal("含 NUL 的基准目录应被拒绝, got nil")
-	}
+	testutil.NotNil(t, err, "含 NUL 的基准目录应被拒绝, got nil")
 	if !errors.Is(err, ErrNULByte) {
 		t.Fatalf("期望分类 ErrNULByte, got %v", err)
 	}
@@ -184,9 +179,7 @@ func TestIsInside_RelFailureSentinel_Windows(t *testing.T) {
 		t.Skip("Windows only: 跨驱动器 Rel 错误是 Windows 特性")
 	}
 	err := IsInside(`C:\repo`, `D:\evil\file.ysm`)
-	if err == nil {
-		t.Fatal("跨驱动器应被拒绝, got nil")
-	}
+	testutil.NotNil(t, err, "跨驱动器应被拒绝, got nil")
 	if !errors.Is(err, ErrRelFailed) {
 		t.Fatalf("期望分类 ErrRelFailed, got %v", err)
 	}

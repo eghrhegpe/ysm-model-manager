@@ -3,6 +3,7 @@ package registry
 import (
 	"path/filepath"
 	"testing"
+	"ysm-model-manager/internal/testutil"
 )
 
 // ===== FindInstDir / 类型解析的健壮性契约 =====
@@ -20,9 +21,7 @@ import (
 // 有回退、SubDirMap 有回退、FindInstDir 没有，三者各说各话。
 func TestRegistryTypeResolution_CaseVariantEquivalence(t *testing.T) {
 	base := RegistryType("ysm")
-	if base == nil {
-		t.Fatal("前置失败：注册表应含 id=ysm")
-	}
+	testutil.NotNil(t, base, "前置失败：注册表应含 id=ysm")
 	if got := resolveRegistryType("YSM"); got == nil {
 		t.Fatal(`resolveRegistryType("YSM") = nil，大小写变体应解析成功`)
 	} else if got.ID != base.ID {

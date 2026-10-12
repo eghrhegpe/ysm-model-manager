@@ -50,9 +50,7 @@ func TestSave_MkdirAllFailure(t *testing.T) {
 	}
 	s := NewStore(blocker) // path = blocker/tags.json，但 blocker 是普通文件
 	err := s.SetTags("/m", []string{"x"})
-	if err == nil {
-		t.Fatal("父路径为文件时 save 的 MkdirAll 应报错")
-	}
+	testutil.NotNil(t, err, "父路径为文件时 save 的 MkdirAll 应报错")
 	if !strings.Contains(err.Error(), "创建标签目录失败") {
 		t.Fatalf("错误信息不符: %v", err)
 	}
@@ -74,9 +72,7 @@ func TestSave_WriteAtomicFailure(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	err := s.SetTags("/m", []string{"y"})
-	if err == nil {
-		t.Fatal("落地目标为目录时 save 应报错")
-	}
+	testutil.NotNil(t, err, "落地目标为目录时 save 应报错")
 	if !strings.Contains(err.Error(), "写入标签文件失败") {
 		t.Fatalf("错误信息不符: %v", err)
 	}

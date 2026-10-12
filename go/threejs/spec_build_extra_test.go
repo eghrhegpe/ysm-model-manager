@@ -146,9 +146,7 @@ func TestBuildCubeMeshData_FaceUVUpDownCornerOrder(t *testing.T) {
 		FaceUV: faceUV,
 	}
 	md := buildCubeMeshData(c, vec3{}, 64, 64, "b1", 0)
-	if md == nil {
-		t.Fatal("buildCubeMeshData 返回 nil")
-	}
+	testutil.NotNil(t, md, "buildCubeMeshData 返回 nil")
 	// 每面 4 顶点 × 2 UV = 8；面序 east/west/up/down/south/north
 	assertFaceUV(t, md.Uvs, 0, [8]float64{0, 0.125, 0.125, 0.125, 0, 0.25, 0.125, 0.25}, "east(side)")
 	assertFaceUV(t, md.Uvs, 2, [8]float64{0.125, 0.25, 0, 0.25, 0.125, 0.125, 0, 0.125}, "up(reversed)")
@@ -167,9 +165,7 @@ func TestBuildCubeMeshData_BoxUVUpDownParity(t *testing.T) {
 		UV: [2]float64{0, 0},
 	}
 	md := buildCubeMeshData(c, vec3{}, 64, 64, "b1", 0)
-	if md == nil {
-		t.Fatal("buildCubeMeshData 返回 nil")
-	}
+	testutil.NotNil(t, md, "buildCubeMeshData 返回 nil")
 	assertFaceUV(t, md.Uvs, 2, [8]float64{0.25, 0.125, 0.125, 0.125, 0.25, 0, 0.125, 0}, "box up")
 	assertFaceUV(t, md.Uvs, 3, [8]float64{0.375, 0, 0.25, 0, 0.375, 0.125, 0.25, 0.125}, "box down")
 }
@@ -184,9 +180,7 @@ func TestBuildCubeMeshData_FaceUVUpMirror(t *testing.T) {
 		FaceUV: faceUV, Mirror: true,
 	}
 	md := buildCubeMeshData(c, vec3{}, 64, 64, "b1", 0)
-	if md == nil {
-		t.Fatal("buildCubeMeshData 返回 nil")
-	}
+	testutil.NotNil(t, md, "buildCubeMeshData 返回 nil")
 	assertFaceUV(t, md.Uvs, 2, [8]float64{0, 0.25, 0.125, 0.25, 0, 0.125, 0.125, 0.125}, "mirrored up")
 }
 
@@ -211,9 +205,7 @@ func TestBuildCubeMeshData_BoxMirrorEastWestSwap(t *testing.T) {
 		Mirror: true,
 	}
 	md := buildCubeMeshData(c, vec3{}, 64, 64, "b1", 0)
-	if md == nil {
-		t.Fatal("buildCubeMeshData 返回 nil")
-	}
+	testutil.NotNil(t, md, "buildCubeMeshData 返回 nil")
 	// east = west 原矩形（fu=16 → u∈[.25,.375]）翻转：s0/s2 取右缘 .375，s1/s3 取左缘 .25
 	assertFaceUV(t, md.Uvs, 0, [8]float64{0.375, 0.125, 0.25, 0.125, 0.375, 0.25, 0.25, 0.25}, "mirror east(=west flipped)")
 	// west = east 原矩形（fu=0 → u∈[0,.125]）翻转：s0/s2 取右缘 .125，s1/s3 取左缘 0
@@ -428,9 +420,7 @@ func TestBuildCubeMeshData_ZeroThicknessFloatRounding(t *testing.T) {
 func TestBuildCubeMeshData_NoUVZeroFill(t *testing.T) {
 	c := types.Cube2D{Origin: [3]float64{0, 0, 0}, Size: [3]float64{8, 8, 8}, UV: [2]float64{0, 0}}
 	md := buildCubeMeshData(c, vec3{}, 0, 64, "b1", 0) // texW=0
-	if md == nil {
-		t.Fatal("texW=0 时 cube 仍应构建（UV 降级全零）")
-	}
+	testutil.NotNil(t, md, "texW=0 时 cube 仍应构建（UV 降级全零）")
 	for _, u := range md.Uvs {
 		if u != 0 {
 			t.Fatalf("texW=0 时 UV 应全零填充, got %f", u)

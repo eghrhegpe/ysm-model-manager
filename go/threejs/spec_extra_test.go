@@ -5,6 +5,7 @@ import (
 	"math"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -291,9 +292,7 @@ func TestBuildCubeMeshData_ZeroSize(t *testing.T) {
 	// 全零尺寸 cube → 对齐 C#：保留（三轴均被 thicknessEpsilon 修正，见 spec_portability 对比 #3）
 	c := types.Cube2D{Size: [3]float64{0, 0, 0}}
 	md := buildCubeMeshData(c, vec3{}, 64, 64, "bone1", 0)
-	if md == nil {
-		t.Fatal("零尺寸 cube 应保留（不再返回 nil）")
-	}
+	testutil.NotNil(t, md, "零尺寸 cube 应保留（不再返回 nil）")
 	// 每轴跨度 ≥ thicknessEpsilon
 	for _, axis := range []int{0, 1, 2} {
 		lo, hi := 1e9, -1e9
@@ -320,9 +319,7 @@ func TestBuildCubeMeshData_Valid(t *testing.T) {
 		UV:     [2]float64{0, 0},
 	}
 	md := buildCubeMeshData(c, vec3{0, 0, 0}, 64, 64, "bone1", 0)
-	if md == nil {
-		t.Fatal("有效 cube 应返回非 nil")
-	}
+	testutil.NotNil(t, md, "有效 cube 应返回非 nil")
 	if md.BoneID != "bone1" {
 		t.Errorf("BoneID = %q, 期望 bone1", md.BoneID)
 	}
@@ -351,9 +348,7 @@ func TestBuildCubeMeshData_CustomTexDim(t *testing.T) {
 		CubeTexH: 64,
 	}
 	md := buildCubeMeshData(c, vec3{0, 0, 0}, 64, 64, "bone1", 0)
-	if md == nil {
-		t.Fatal("有效 cube 应返回非 nil")
-	}
+	testutil.NotNil(t, md, "有效 cube 应返回非 nil")
 	// 验证 UV 使用了自定义纹理尺寸（128x64 而非 64x64）
 	// east face: u0 = 0/128 = 0, v0 = 8/64 = 0.125
 	if md.Uvs[0] != 0 || md.Uvs[1] != 0.125 {
@@ -370,9 +365,7 @@ func TestBuildCubeMeshData_ThinCube(t *testing.T) {
 		UV:     [2]float64{0, 0},
 	}
 	md := buildCubeMeshData(c, vec3{0, 0, 0}, 64, 64, "bone1", 0)
-	if md == nil {
-		t.Fatal("零尺寸 cube 应保留（不再返回 nil）")
-	}
+	testutil.NotNil(t, md, "零尺寸 cube 应保留（不再返回 nil）")
 	// lx==hx → hx += thicknessEpsilon：X 方向跨度（East 面 x=hx，West 面 x=lx）非零
 	// East 面顶点1 是 Positions[0..2]，West 面顶点1 是 Positions[12..14]
 	xEast, xWest := md.Positions[0], md.Positions[12]
@@ -393,9 +386,7 @@ func TestBuildCubeMeshData_Inflate(t *testing.T) {
 		Inflate: 0.5,
 	}
 	md := buildCubeMeshData(c, vec3{0, 0, 0}, 64, 64, "bone1", 0)
-	if md == nil {
-		t.Fatal("有效 cube 应返回非 nil")
-	}
+	testutil.NotNil(t, md, "有效 cube 应返回非 nil")
 	// East 面（x=hx）顶点 x = (cx+hx2) - cp[0]；cx/hx2 基于膨胀后 fx..tx
 	// 膨胀后 fx=-0.5, tx=8.5 → cx=4, hx2=4.5 → lx=-0.5, hx=8.5（相对 pivot 4）
 	xMin, xMax := md.Positions[12], md.Positions[0]
@@ -435,9 +426,7 @@ func TestBuildCubeMeshData_InflateClamp(t *testing.T) {
 		Inflate: -1.0, // 1 + 2*(-1) = -1 → clamp
 	}
 	md := buildCubeMeshData(c, vec3{0, 0, 0}, 64, 64, "bone1", 0)
-	if md == nil {
-		t.Fatal("clamp 后 cube 应仍有效")
-	}
+	testutil.NotNil(t, md, "clamp 后 cube 应仍有效")
 	// East x=hx、West x=lx（相对 pivot 0.5）：clamp 后 hx > lx
 	xWest, xEast := md.Positions[12], md.Positions[0]
 	if xEast <= xWest {
@@ -466,9 +455,7 @@ func TestBuildCubeMeshData_Mirror(t *testing.T) {
 		UV:     [2]float64{0, 0},
 	}
 	md := buildCubeMeshData(c, vec3{0, 0, 0}, 64, 64, "bone1", 0)
-	if md == nil {
-		t.Fatal("有效 cube 应返回非 nil")
-	}
+	testutil.NotNil(t, md, "有效 cube 应返回非 nil")
 	eastU0, eastU2, westU0, westU2 := md.Uvs[0], md.Uvs[2], md.Uvs[8], md.Uvs[10]
 	if eastU0 == eastU2 || westU0 == westU2 {
 		t.Fatal("非 mirror 的 east/west 自身 u应对不同（测试前提不成立）")
@@ -500,9 +487,7 @@ func TestBuildCubeMeshData_PivotFallback(t *testing.T) {
 		// PivotSet=false（未显式 pivot）
 	}
 	md := buildCubeMeshData(c, vec3{0, 0, 0}, 64, 64, "bone1", 0)
-	if md == nil {
-		t.Fatal("有效 cube 应返回非 nil")
-	}
+	testutil.NotNil(t, md, "有效 cube 应返回非 nil")
 	// fallback pivot = 中心 → cp = [-4, 4, 4]（cube origin X 镜像后 ox=-8, sx=8, 中心=-4）
 	// localPos[0] = bonePivot.x + cp[0] = 0 + (-4) = -4（cp[0] 已 X 翻号）
 	lp := md.LocalPosition
@@ -527,9 +512,7 @@ func TestBuildCubeMeshData_ExplicitZeroPivot(t *testing.T) {
 		UV:       [2]float64{0, 0},
 	}
 	md := buildCubeMeshData(c, vec3{0, 0, 0}, 64, 64, "bone1", 0)
-	if md == nil {
-		t.Fatal("有效 cube 应返回非 nil")
-	}
+	testutil.NotNil(t, md, "有效 cube 应返回非 nil")
 	lp := md.LocalPosition
 	if lp[0] != 0 || lp[1] != 0 || lp[2] != 0 {
 		t.Errorf("显式 pivot [0,0,0] 应保留原点旋转中心: localPos = %v, 期望 [0 0 0]（不得 fallback 到中心）", lp)

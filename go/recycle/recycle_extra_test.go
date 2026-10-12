@@ -70,9 +70,7 @@ func TestCopyFile_Success(t *testing.T) {
 
 func TestCopyFile_SrcMissing(t *testing.T) {
 	err := fsutil.CopyFile("/nonexistent/path.ysm", "/tmp/dst.ysm")
-	if err == nil {
-		t.Fatal("源文件不存在应报错")
-	}
+	testutil.NotNil(t, err, "源文件不存在应报错")
 }
 
 func TestCopyFile_DstDirCreate(t *testing.T) {

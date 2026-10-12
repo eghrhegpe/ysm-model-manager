@@ -296,9 +296,7 @@ func TestChar_PullResources_DirLevelCopyFailure(t *testing.T) {
 
 	sink := &charSink{}
 	count, err := PullResources("ysm", globalDir, targetDir, sink.logger())
-	if err == nil {
-		t.Fatal("目标被目录占据时复制必失败，应返回 ErrPartialSync")
-	}
+	testutil.NotNil(t, err, "目标被目录占据时复制必失败，应返回 ErrPartialSync")
 	if !errors.Is(err, ErrPartialSync) {
 		t.Errorf("应为 ErrPartialSync，实际 %v", err)
 	}

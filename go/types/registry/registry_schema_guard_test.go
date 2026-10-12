@@ -225,9 +225,7 @@ func TestSchemaGuard_LoadRegistryIntegration(t *testing.T) {
 		t.Fatalf("ResourceTypes 长度 = %d，期望 2", got)
 	}
 	rt := RegistryType("type-x")
-	if rt == nil {
-		t.Fatal("RegistryType('type-x') 应为非 nil")
-	}
+	testutil.NotNil(t, rt, "RegistryType('type-x') 应为非 nil")
 	if rt.StorageSubDir != "evil" {
 		t.Errorf("type-x.StorageSubDir = %q，期望 'evil'（守卫不改数据）", rt.StorageSubDir)
 	}

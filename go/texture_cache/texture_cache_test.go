@@ -27,9 +27,7 @@ func TestTextureHash(t *testing.T) {
 
 func TestTextureHash_FileNotFound(t *testing.T) {
 	_, err := TextureHash("/nonexistent/file.png")
-	if err == nil {
-		t.Fatal("expected error for nonexistent file")
-	}
+	testutil.NotNil(t, err, "expected error for nonexistent file")
 }
 
 func TestCacheDir(t *testing.T) {
@@ -233,9 +231,7 @@ func TestListCacheFiles_EmptyDir(t *testing.T) {
 
 	files, err := ListCacheFiles()
 	testutil.NoError(t, err)
-	if files != nil {
-		t.Fatal("expected nil when cache dir is empty")
-	}
+	testutil.Nil(t, files, "expected nil when cache dir is empty")
 }
 
 func TestGetCacheStats_Empty(t *testing.T) {

@@ -134,11 +134,22 @@ describe("updateStat 计数动画（2026-09 收债：先读后写 data-total）"
     updateStat(ctx, el, [mkEntry("a"), mkEntry("b")]);
     expect(el.textContent).toContain("共 2 项");
     expect(el.dataset.total).toBe("2");
-    // 二帧 total 变化：动画句柄登记、终值文案延迟落位
+    // 二帧 total 多位进位（2→141，3 帧）：动画在途，句柄登记、终值文案延迟落位
+    const many: TreeEntry[] = Array.from({ length: 141 }, (_, i) => mkEntry(`m${i}`));
+    updateStat(ctx, el, many);
+    expect(el.dataset.total).toBe("141");
+    expect(ctx.statAnim.has(el), "多帧动画在途应登记取消句柄").toBe(true);
+    await sleep(800); // 动画(默认 700ms)自然结束 → onFinish 落终值文案并自清句柄
+    expect(el.textContent).toContain("共 141 项");
+    expect(ctx.statAnim.has(el), "onFinish 落定后条目自清").toBe(false);
+  });
+
+  it("单帧短路（2→5 个位）→ 同步落定终值文案，不留在途句柄", () => {
+    const ctx = createTreeRenderCtx();
+    const el = document.createElement("span");
+    updateStat(ctx, el, [mkEntry("a"), mkEntry("b")]);
     updateStat(ctx, el, [mkEntry("a"), mkEntry("b"), mkEntry("c"), mkEntry("d"), mkEntry("e")]);
-    expect(el.dataset.total).toBe("5");
-    expect(ctx.statAnim.has(el), "total 变化应走 animateNumber 分支").toBe(true);
-    await sleep(800); // 动画(700ms)结束后 updateStat 落终值文案
+    // animateNumber 单帧分支同步触发 onFinish：文案即刻完整、无 700ms 尾巴、无登记
     expect(el.textContent).toContain("共 5 项");
     expect(ctx.statAnim.has(el)).toBe(false);
   });

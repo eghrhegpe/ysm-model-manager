@@ -71,7 +71,7 @@ status: active
 
 - 右下角 fixed 小角标，仅 web 模式（`resolveWebMode()`）创建
 - 数值条件搜索时显示 `🧵×N ⚙️ x/y`（Worker 批进度），统计完成隐藏
-- Worker 降级时短暂显示 `⚠️` 提示，3s 后隐藏
+- Worker 降级时短暂显示 `⚠️` 提示，`TOAST_MS.normal`（3000ms）后隐藏——与同屏 warn toast 时长同源；show/hide 一律先撤在途 hide timer（角标是模块级单例，防上一轮迟到 hide 误杀新一轮在途进度角标）
 
 ## 流通链路
 

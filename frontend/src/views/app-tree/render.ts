@@ -446,8 +446,9 @@ export interface TreeRenderCtx {
   rowTplCache: WeakMap<object, HTMLTemplateElement>;
   /** 虚拟滚动实例状态（WeakMap——DOM 元素为 key，元素 GC 自动回收） */
   vsStates: WeakMap<HTMLElement, VsState>;
-  /** 统计动画句柄（WeakMap——DOM 元素为 key） */
-  statAnim: WeakMap<HTMLElement, { cancel: () => void; timer: ReturnType<typeof setTimeout> }>;
+  /** 在途统计动画句柄（WeakMap——DOM 元素为 key，值为取消函数；终值写回由
+   *  animateNumber 的 onFinish 完成事件驱动，调用方无独立墙钟 timer，条目随落定自清） */
+  statAnim: WeakMap<HTMLElement, () => void>;
 }
 
 /** 创建渲染上下文（AppTree 实例化时调用） */
@@ -647,23 +648,28 @@ export function updateStat(ctx: TreeRenderCtx, el: HTMLElement | null, entries: 
   // 写后再读恒等于新值，`oldTotal !== total` 恒假、animateNumber 永不触发（2026-09 收债）。
   const oldTotal = parseInt(el.dataset.total || "0", 10) || 0;
   el.dataset.total = String(total);
-  // 先取消在途动画与定时器：连续触发时旧动画中间值会干扰下一次 textContent 判断，定时器堆积
+  // 先取消在途动画：旧动画中间值会干扰下一次 textContent 判断；取消不触发旧轮
+  // onFinish（值未落定），本轮的终值写接管元素，不存在双写竞态
   const prev = ctx.statAnim.get(el);
   if (prev) {
-    prev.cancel();
-    clearTimeout(prev.timer);
+    prev();
     ctx.statAnim.delete(el);
   }
   if (el.textContent !== newText) {
     // 动画起点 = 上面写入前捕获的 oldTotal（P1.3 修复：原 `match(/(\d+)\s*项/)` 硬编码
     // 中文「项」，en/ja locale 失效；属性通道取向保留，起点读取随之修正）
     if (oldTotal > 0 && oldTotal !== total && total > 0) {
-      const cancel = animateNumber(el, total, 700);
-      const timer = setTimeout(() => {
+      // 完成事件替墙钟接力（收债双 700 魔法数）：终值文案写回由 onFinish 驱动，
+      // 时长单一事实源 = animateNumber 默认参——调用方不再抄同速常量，
+      // 「动画终点 = 收尾时点」由结构保证，不由约定
+      let settled = false;
+      const cancel = animateNumber(el, total, undefined, () => {
+        settled = true;
         el.textContent = newText;
         ctx.statAnim.delete(el);
-      }, 700);
-      ctx.statAnim.set(el, { cancel, timer });
+      });
+      // 同步短路落定（单帧/等值/无数字）不留登记：登记 = 动画真正在途
+      if (!settled) ctx.statAnim.set(el, cancel);
     } else {
       el.textContent = newText;
     }

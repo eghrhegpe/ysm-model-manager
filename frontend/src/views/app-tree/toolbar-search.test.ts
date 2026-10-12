@@ -219,7 +219,41 @@ describe("openAdvFilterDialog — 网页版统计角标 + Worker 降级提示", 
     expect(badge.innerHTML).toContain("Worker 降级");
     expect(badge.style.display).toBe(""); // 刚显示
     await vi.advanceTimersByTimeAsync(3000);
-    expect(badge.style.display).toBe("none"); // 3s 自动隐藏
+    expect(badge.style.display).toBe("none"); // 3s 自动隐藏（时长 = TOAST_MS.normal）
+  });
+
+  it("降级隐藏窗口内再起数值搜索 → 新角标不被旧 hide timer 误杀", async () => {
+    vi.useFakeTimers();
+    const { $, vm } = setupDom();
+    if (badgeEl) document.body.appendChild(badgeEl); // 重挂游离的模块级角标（同降级用例）
+    isWebPlatformMock.mockReturnValue(true);
+    consumeWebSearchDegradedMock.mockReturnValue(true);
+    onStatsProgressMock.mockImplementation(() => {});
+    modalAdvFilterMock.mockResolvedValue({ keyword: "", minBones: "2" });
+    const first = openAdvFilterDialog($, vm as unknown as Parameters<typeof openAdvFilterDialog>[1]);
+    await vi.advanceTimersByTimeAsync(0);
+    await first;
+    const badge = document.getElementById("web-stats-badge")!;
+    badgeEl = badge;
+    expect(badge.style.display).toBe(""); // 降级角标 + 自动隐藏在途
+    await vi.advanceTimersByTimeAsync(1000);
+    // 第二轮数值搜索（本轮不降级）：preparing 角标 show 必须撤掉第一轮遗留的 hide
+    consumeWebSearchDegradedMock.mockReturnValue(false);
+    let resolveSecond: (v: Array<{ path: string }>) => void = () => {};
+    getAppMock.mockResolvedValue({
+      SearchModels: () =>
+        new Promise<Array<{ path: string }>>((r) => {
+          resolveSecond = r;
+        }),
+    });
+    const second = openAdvFilterDialog($, vm as unknown as Parameters<typeof openAdvFilterDialog>[1]);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(badge.innerHTML).toContain("×2"); // 新一轮 preparing 角标已接管
+    await vi.advanceTimersByTimeAsync(2500); // 越过第一轮 hide 的到期时点（t=3000）
+    expect(badge.style.display).toBe(""); // 未被旧 timer 误杀
+    resolveSecond([{ path: "/repo/a.ysm" }]);
+    await second;
+    expect(badge.style.display).toBe("none"); // finally 正常收口
   });
 });
 

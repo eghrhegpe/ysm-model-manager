@@ -50,8 +50,16 @@ type $Id = (id: string) => HTMLElement | null;
 // 而非 remove，避免重复创建/样式重注入）；非越权全局状态，无 reset 路径属故意豁免
 // （对照红线要求：模块级可变 let 须有 reset 或注释豁免——此处为注释豁免）。
 let statsBadge: HTMLElement | null = null;
+/** 在途自动隐藏 timer 句柄（与 statsBadge 同属上条注释的模块级单例豁免）：
+ *  单例角标可被多轮内容复用，show/hide 一律先撤旧 timer——防上一轮降级提示的
+ *  迟到 hide 误杀新一轮在途角标 */
+let statsBadgeHideTimer: ReturnType<typeof setTimeout> | null = null;
 
 function showStatsBadge(text: string, icon?: UiIconName): void {
+  if (statsBadgeHideTimer) {
+    clearTimeout(statsBadgeHideTimer);
+    statsBadgeHideTimer = null;
+  }
   if (!statsBadge) {
     statsBadge = document.createElement("div");
     statsBadge.id = "web-stats-badge";
@@ -65,6 +73,10 @@ function showStatsBadge(text: string, icon?: UiIconName): void {
 }
 
 function hideStatsBadge(): void {
+  if (statsBadgeHideTimer) {
+    clearTimeout(statsBadgeHideTimer);
+    statsBadgeHideTimer = null;
+  }
   if (statsBadge) statsBadge.style.display = "none";
 }
 
@@ -234,7 +246,8 @@ function advFilterWarnWebDegraded(hasNumRange: boolean): void {
   if (isWebPlatform() && hasNumRange && consumeWebSearchDegraded()) {
     toast(t("tree.webStatsDegraded"), TOAST_MS.normal, "warn");
     showStatsBadge(t("tree.statsBadgeDegraded"), "warning");
-    setTimeout(hideStatsBadge, 3000);
+    // 时长与同屏 warn toast 同源（原裸 3000 恰为 normal 档字面量——收口进单一事实源）
+    statsBadgeHideTimer = setTimeout(hideStatsBadge, TOAST_MS.normal);
   }
 }
 

@@ -421,4 +421,33 @@ describe("同步冲突解决（do-resolve-btn）", () => {
     await waitFor(() => expect(list.textContent).toContain("写入失败"));
     expect(list.innerHTML).toContain("diag-msg-error");
   });
+
+  it("连点两次解决 → 迟到复扫合并为一次（WeakMap coalesce，消除叠加 RPC）", async () => {
+    const detectFn = vi.fn(() => ({
+      conflicts: [makeConflict()],
+      totalConflicts: 1,
+    }));
+    const resolveFn = vi.fn(() => ({ resolved: 1, failed: 0, manual: 0 }));
+    mockApp({ DetectConflicts: detectFn, ResolveConflicts: resolveFn });
+    const list = document.createElement("div");
+    document.body.appendChild(list); // 复扫守卫要求 isConnected
+    await runSyncConflictScan(list, esc, target());
+    await waitFor(() => expect(list.querySelector("#do-resolve-btn")).toBeTruthy());
+    const btn = list.querySelector("#do-resolve-btn") as HTMLElement;
+
+    vi.useFakeTimers();
+    try {
+      // 结果行为 append 不移除按钮：连点各排一次复扫——合并后只留最后一次
+      btn.click();
+      btn.click();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(resolveFn).toHaveBeenCalledTimes(2);
+      await vi.advanceTimersByTimeAsync(1500);
+      // detect 总次数 = 首轮 1 + 合并后的一次复扫（不合并会是 3）
+      expect(detectFn).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+    document.body.removeChild(list);
+  });
 });

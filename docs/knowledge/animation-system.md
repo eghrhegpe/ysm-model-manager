@@ -113,7 +113,7 @@ status: active
 - 符号唯一定义处；生产消费者 `preview-3d/model/ysm-animation-player.ts` 与 `preview-3d/adapters/ysm-adapter.ts` 直接从此文件导入，**禁止再从 `animation.ts` 取**（2026-09 曾存在的兼容 re-export 已删——它造成 animation.ts ⇄ animation-evaluator.ts 运行时循环依赖，`check-circular` 拦下）
 
 `animate.ts`：
-- `animateNumber(el, to, duration=700): () => void` — 里程表式滚动进位（个位先转 → 十位 → 百位），替换元素文本中的首个数字串，返回取消函数（组件卸载时调用）
+- `animateNumber(el, to, duration=700, onFinish?): () => void` — 里程表式滚动进位（个位先转 → 十位 → 百位），替换元素文本中的首个数字串，返回取消函数（组件卸载时调用）；`onFinish` 为**完成落定事件**——自然结束或短路分支（单帧/等值/无数字，值已就位）触发，**被取消（显式或新轮隐式接管）不触发**（取消即终值归接管方），消费方借此取代「调用方另配同速 setTimeout 接力」的约定式同步
 
 `stagger.ts`：
 - `stagger(index, step=30, max=300): number` — 入场动画延迟毫秒数 `min(index*step, max)`，用于 `animation-delay:${stagger(i)}ms`
@@ -174,7 +174,7 @@ status: active
 - **molangjs 全容错原语（2026-08-25 实测）**：molangjs 用容错解析器——对 `"("`、`"@@"`、`"1..2"`、`"query."` 等任意非法/残缺 token 都不抛错、直接返回 0。故 `compileMolang` 走「解析异常→返回 null」的路径在真实世界中几乎不可达，`parseAnimationControllerJSON` 上报「转换条件编译失败」与运行时「condition=null 跳过不触发」均为几乎不触发的防御分支（测试用构造对象直接命中），属低价值死防御，可作后续清理候选
 - **molangjs 全容错**（见上）亦意味着 Molang 条件「真值」判定需注意：未识别表达式稳定返回 0 = 恒假，不会误触发转换
 - 播放循环（RAF）由消费方组件自行管理并须在卸载时 cancelAnimationFrame；曾有的 AnimationPlayer 封装类因长期无消费方已在死代码清理中移除，如需播放器请基于 evaluateClip 重建
-- **求值链路运行时消费方**（2026-08-21 更新）：`evaluateClip` 由 YSM 动画播放器消费（`preview-3d/model/ysm-animation-player.ts`，ADR-100 L1-L3，每帧求值局部变换驱动骨骼 Group，层级由 Three.js 场景树传播）；`parseBedrockAnimationJSON` 消费方 `preview-3d/decoder/wasm-decode.ts`（+loader.ts，ADR-137 归位）与 `ysm-adapter.ts`（动画扫描）；`animateNumber` 实际返回取消函数 `() => void`（**JSDoc 已标注 `@returns 取消函数`**），消费方 app-tree/render.ts、app-sidebar/events.ts **忽略取消函数**（快速连续渲染叠加未清理 timer，P3 观察）；`isMolang` 已删除（旧文"死代码"断言过时——已彻底移除）
+- **求值链路运行时消费方**（2026-08-21 更新）：`evaluateClip` 由 YSM 动画播放器消费（`preview-3d/model/ysm-animation-player.ts`，ADR-100 L1-L3，每帧求值局部变换驱动骨骼 Group，层级由 Three.js 场景树传播）；`parseBedrockAnimationJSON` 消费方 `preview-3d/decoder/wasm-decode.ts`（+loader.ts，ADR-137 归位）与 `ysm-adapter.ts`（动画扫描）；`animateNumber` 实际返回取消函数 `() => void`（**JSDoc 已标注 `@returns 取消函数`**），并有 `onFinish` 完成落定回调（2026-10 收口：app-tree/render.ts `updateStat` 终值写回从「setTimeout(700) 与动画同速约定」改为 onFinish 事件驱动，statAnim 只存在途取消句柄、随落定自清）；app-sidebar/events.ts 仍忽略返回值（依赖 animate.ts 模块级 activeAnims 的重复调用自动取消兜底，原「叠加未清理 timer」P3 观察由该内部防线覆盖）；`isMolang` 已删除（旧文"死代码"断言过时——已彻底移除）
 - **层级传播归 Three.js**（2026-09 更新）：`evaluateClip` 原非 localOnly 分支（欧拉角相加/向量相加的简化层级传播）零业务消费者且实现与注释不符，已随 2026-09 清理删除——播放器只取局部变换，层级传播由 Three.js Object3D 场景树完成
 - **旋转通道口径（2026-08-24 定版，2026-09 修正喂角）**：`parseBedrockAnimationJSON` 出口的 rotation 通道统一做**度→弧度 + X/Y 取负、Z 不取负**换算（`convertRotationKeyframes`，对齐上游 ModernYSM/TLM 共同口径 `RawBoneKeyFrame.init` + `RotationValue.convert`）；Molang 动态轴包求值后换算闭包（molang 三角函数按度求值）。此前缺失导致 bedrock 的度被当弧度直喂 Euler（45°→2578°），是预览角色乱飞根因。下游全弧度域：player 按轴名直喂 `Euler(rx,ry,rz,'ZYX')`（Rz·Ry·Rx，对齐 Go spec.go / quaternion.ts / Blockbench euler_order='ZYX' / ModernYSM `eulerZYXToQuaternion`）；早期误写 `Euler(rz,ry,rx)` 使 X/Z 角互换（见 pitfalls）。位移通道保持像素原值 + X 取负叠加 pivot（player 层做）。测试夹具手工构造的 Keyframe 绕过解析层，须自备弧度值
 - **消费方文件名漂移已修正**（2026-08-09；2026-08-31 ADR-137 再迁 decoder/wasm-decode.ts）：`parseBedrockAnimationJSON` 消费方为 `preview-3d/decoder/wasm-decode.ts`（+loader.ts，旧文 preview-wasm.ts 已过时）；stagger 消费方含 `app-content/site/render.ts`（旧文 site-view.ts 过时）；测试文件均为 `.ts`（旧文 .js 过时）

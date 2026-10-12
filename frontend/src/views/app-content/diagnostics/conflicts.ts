@@ -18,6 +18,12 @@ import { webGate } from "./web-gate.ts";
 // 改造 ROI 低，不立项；try/finally 兜底复位）
 let diagSyncBusy = false;
 
+/** resolve 成功后自动复扫延迟：给用户留读「已解决 N」结果消息的窗口 */
+const RESOLVE_RESCAN_MS = 1500;
+/** list → 在途复扫 timer（WeakMap 合并——结果行为 append 不移除按钮，连点 resolve
+ *  若各排一次复扫会叠重复 RPC + 双写列表；合并后只保留最后一次，键随 list GC 自清） */
+const pendingRescans = new WeakMap<HTMLElement, ReturnType<typeof setTimeout>>();
+
 // ===== 同步冲突绑定类型（已 struct 化，ADR-143 P0） =====
 // DetectConflicts / ResolveConflicts 现返回 typed struct，失败走 error 通道（Promise reject）
 
@@ -265,13 +271,19 @@ async function dgCfExecuteResolve(
     okDiv.style.marginTop = "12px";
     okDiv.innerHTML = resultMsg;
     list.appendChild(okDiv);
-    // 1.5s 后自动复扫（resolve 后刷新冲突态）。守卫：用户已离开诊断页（list 分离）
+    // 稍后自动复扫（resolve 后刷新冲突态）。守卫：用户已离开诊断页（list 分离）
     // 则作废这次迟到的复扫——省一次后端 RPC，也避免向分离 DOM 写 innerHTML。
     // 复扫按**原目标**重跑（把当次扫描的 target 原样带回来），栏内新选中值不参与本次复扫。
-    setTimeout(() => {
-      if (!list.isConnected) return;
-      void runSyncConflictScan(list, esc, target);
-    }, 1500);
+    const prevRescan = pendingRescans.get(list);
+    if (prevRescan) clearTimeout(prevRescan);
+    pendingRescans.set(
+      list,
+      setTimeout(() => {
+        pendingRescans.delete(list);
+        if (!list.isConnected) return;
+        void runSyncConflictScan(list, esc, target);
+      }, RESOLVE_RESCAN_MS),
+    );
   } catch (err) {
     const errDiv = document.createElement("div");
     errDiv.className = "stat-row diag-msg diag-msg-error";

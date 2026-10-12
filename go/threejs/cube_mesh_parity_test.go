@@ -79,9 +79,61 @@ type cubeParityCase struct {
 }
 
 type cubeParityGoldenFile struct {
-	Comment   string           `json:"$comment"`
-	Semantics string           `json:"$semantics"`
-	Cases     []cubeParityCase `json:"cases"`
+	Comment           string             `json:"$comment"`
+	Semantics         string             `json:"$semantics"`
+	SemanticsBoneL    string             `json:"$semanticsBoneLocalPos"`
+	SemanticsMerge    string             `json:"$semanticsMergeCubes"`
+	Cases             []cubeParityCase   `json:"cases"`
+	BoneLocalPosCases []boneLocalPosCase `json:"boneLocalPosCases"`
+	MergeCubesCases   []mergeCubesCase   `json:"mergeCubesCases"`
+}
+
+// ===== 族②残余：computeBoneLocalPos（Go buildBoneLocalData）对账 =====
+
+// boneLocalPosCase 一条骨骼本地位置对账用例。
+// parentPivot=null 表示「根骨骼」**或**「声明了父骨骼但父 pivot 缺失」——Go 侧
+// buildBoneLocalData 与 TS computeBoneLocalPos 在这两种情形都回落 X 翻转根公式
+// （spec-bones.go L71/L74），故语料把它们收成同一输入形态；
+// declaredParent 显式标注 Go 侧 b.Parent 是否非空，驱动走哪条分支
+// （TS 侧只看到 parentPivot 空/非空，无法区分根骨骼与父 pivot 缺失——这条靠
+// declaredParent 钉死 Go 的分支语义，防日后一方改分支判据另一方不跟）。
+type boneLocalPosCase struct {
+	ID             string    `json:"id"`
+	Comment        string    `json:"$comment,omitempty"`
+	BonePivot      []any     `json:"bonePivot"`
+	ParentPivot    []any     `json:"parentPivot"` // null = 无父 pivot
+	DeclaredParent bool      `json:"declaredParent"`
+	Golden         []float64 `json:"golden"` // [x,y,z]，纯加减乘可精确比对
+}
+
+// parityCube 全字段立方体快照（mergeCubes 输入/输出 golden 用）。
+// Cube2D.PivotSet/CubeTexW/H 在 Go 侧是 json:"-"（不序列化），故语料显式写出、
+// regen 后回填——与 buildCubeMeshData 用例对 cube 的处理完全一致。
+type parityCube struct {
+	Origin   [3]float64 `json:"origin"`
+	Size     [3]float64 `json:"size"`
+	Pivot    [3]float64 `json:"pivot"`
+	PivotSet bool       `json:"pivotSet"`
+	UV       [2]float64 `json:"uv"`
+	FaceUV   string     `json:"faceUV"`
+	Rotation [3]float64 `json:"rotation"`
+	TexSlot  int        `json:"texSlot"`
+	Inflate  float64    `json:"inflate"`
+	Mirror   bool       `json:"mirror"`
+	CubeTexW int        `json:"cubeTexW"`
+	CubeTexH int        `json:"cubeTexH"`
+}
+
+// mergeCubesCase 一条 cube 合并对账用例。输入 old/new 为 Cube2D 数组，
+// golden 为合并后按序输出的完整 cube 快照（mergeCubes 只做「引用搬运」，不运算，
+// 故输出 cube 是某个输入 cube 的原样拷贝——逐位精确比对即钉住「哪条被替换、
+// 哪条被追加、顺序如何」的全部语义）。
+type mergeCubesCase struct {
+	ID      string       `json:"id"`
+	Comment string       `json:"$comment,omitempty"`
+	Old     []parityCube `json:"old"`
+	New     []parityCube `json:"new"`
+	Golden  []parityCube `json:"golden"`
 }
 
 const cubeMeshGoldenPath = "../../tests/fixtures/parity/cube-mesh.golden.json"
@@ -136,6 +188,118 @@ func runCubeParityCase(c cubeParityCase) *cubeParityMesh {
 		Positions: md.Positions, Normals: md.Normals, Uvs: md.Uvs,
 		Indices: md.Indices, TexIdx: md.TexIdx,
 	}
+}
+
+// runBoneLocalPosCase 按 case 构造输入走真实入口 buildBoneLocalData。
+// bonePivot → b.Pivot 派生（bp）；parentPivot 非空 → pivots["P"]；declaredParent=true
+// → b.Parent="P"（触发 Go 的父骨骼分支或「父 pivot 缺失回落根公式」分支）。
+func runBoneLocalPosCase(c boneLocalPosCase) [3]float64 {
+	bp := vec3{fOf(c.BonePivot[0]), fOf(c.BonePivot[1]), fOf(c.BonePivot[2])}
+	b := types.Bone2D{}
+	pivots := map[string]vec3{}
+	if c.ParentPivot != nil {
+		pivots["P"] = vec3{fOf(c.ParentPivot[0]), fOf(c.ParentPivot[1]), fOf(c.ParentPivot[2])}
+	}
+	if c.DeclaredParent {
+		b.Parent = "P"
+	}
+	localPos, _, _ := buildBoneLocalData(b, bp, pivots)
+	return localPos
+}
+
+// toParityCube / fromParityCube：parityCube（语料形状）↔ types.Cube2D（运行时形状）。
+// PivotSet/CubeTexW/H 由语料显式带回——Go 侧序列化会丢，必须手动搬运。
+func toParityCube(c types.Cube2D) parityCube {
+	return parityCube{
+		Origin: c.Origin, Size: c.Size, Pivot: c.Pivot, PivotSet: c.PivotSet,
+		UV: c.UV, FaceUV: c.FaceUV, Rotation: c.Rotation, TexSlot: c.TexSlot,
+		Inflate: c.Inflate, Mirror: c.Mirror, CubeTexW: c.CubeTexW, CubeTexH: c.CubeTexH,
+	}
+}
+
+func fromParityCube(pc parityCube) types.Cube2D {
+	return types.Cube2D{
+		Origin: pc.Origin, Size: pc.Size, Pivot: pc.Pivot, PivotSet: pc.PivotSet,
+		UV: pc.UV, FaceUV: pc.FaceUV, Rotation: pc.Rotation, TexSlot: pc.TexSlot,
+		Inflate: pc.Inflate, Mirror: pc.Mirror, CubeTexW: pc.CubeTexW, CubeTexH: pc.CubeTexH,
+	}
+}
+
+// runMergeCubesCase 按 case 构造输入走真实入口 mergeCubes。
+func runMergeCubesCase(c mergeCubesCase) []parityCube {
+	old := make([]types.Cube2D, 0, len(c.Old))
+	for _, pc := range c.Old {
+		old = append(old, fromParityCube(pc))
+	}
+	newC := make([]types.Cube2D, 0, len(c.New))
+	for _, pc := range c.New {
+		newC = append(newC, fromParityCube(pc))
+	}
+	res := mergeCubes(old, newC)
+	out := make([]parityCube, 0, len(res))
+	for _, r := range res {
+		out = append(out, toParityCube(r))
+	}
+	return out
+}
+
+// diffBoneLocalPos 骨骼本地位置逐位精确比对（纯加减乘，无容差）。
+func diffBoneLocalPos(got, want [3]float64) string {
+	return diffVec3("golden", got, want)
+}
+
+// diffParityCube 单条 cube 全字段逐位精确比对。
+func diffParityCube(label string, got, want parityCube) string {
+	if got.Origin != want.Origin {
+		return fmt.Sprintf("%s.origin: got=%v want=%v", label, got.Origin, want.Origin)
+	}
+	if got.Size != want.Size {
+		return fmt.Sprintf("%s.size: got=%v want=%v", label, got.Size, want.Size)
+	}
+	if got.Pivot != want.Pivot {
+		return fmt.Sprintf("%s.pivot: got=%v want=%v", label, got.Pivot, want.Pivot)
+	}
+	if got.PivotSet != want.PivotSet {
+		return fmt.Sprintf("%s.pivotSet: got=%v want=%v", label, got.PivotSet, want.PivotSet)
+	}
+	if got.UV != want.UV {
+		return fmt.Sprintf("%s.uv: got=%v want=%v", label, got.UV, want.UV)
+	}
+	if got.FaceUV != want.FaceUV {
+		return fmt.Sprintf("%s.faceUV: got=%q want=%q", label, got.FaceUV, want.FaceUV)
+	}
+	if got.Rotation != want.Rotation {
+		return fmt.Sprintf("%s.rotation: got=%v want=%v", label, got.Rotation, want.Rotation)
+	}
+	if got.TexSlot != want.TexSlot {
+		return fmt.Sprintf("%s.texSlot: got=%d want=%d", label, got.TexSlot, want.TexSlot)
+	}
+	if got.Inflate != want.Inflate {
+		return fmt.Sprintf("%s.inflate: got=%v want=%v", label, got.Inflate, want.Inflate)
+	}
+	if got.Mirror != want.Mirror {
+		return fmt.Sprintf("%s.mirror: got=%v want=%v", label, got.Mirror, want.Mirror)
+	}
+	if got.CubeTexW != want.CubeTexW {
+		return fmt.Sprintf("%s.cubeTexW: got=%d want=%d", label, got.CubeTexW, want.CubeTexW)
+	}
+	if got.CubeTexH != want.CubeTexH {
+		return fmt.Sprintf("%s.cubeTexH: got=%d want=%d", label, got.CubeTexH, want.CubeTexH)
+	}
+	return ""
+}
+
+// diffParityCubes 合并输出按序逐条精确比对。
+func diffParityCubes(label string, got, want []parityCube) string {
+	if len(got) != len(want) {
+		return fmt.Sprintf("%s 长度: got=%d want=%d", label, len(got), len(want))
+	}
+	for i := range want {
+		if d := diffParityCube(fmt.Sprintf("%s[%d]", label, i), got[i], want[i]); d != "" {
+			return d
+		}
+	}
+	return ""
 }
 
 // diffCubeMesh 逐字段比对。
@@ -256,6 +420,38 @@ func TestCubeMeshParity(t *testing.T) {
 				return
 			}
 			if d := diffCubeMesh(got, c.Golden); d != "" {
+				t.Errorf("[%s] 对账漂移：%s", c.ID, d)
+			}
+		})
+	}
+
+	// 族②残余：computeBoneLocalPos（Go buildBoneLocalData ↔ TS computeBoneLocalPos）
+	for i := range gf.BoneLocalPosCases {
+		c := gf.BoneLocalPosCases[i]
+		t.Run(c.ID, func(t *testing.T) {
+			got := runBoneLocalPosCase(c)
+			if regen {
+				gf.BoneLocalPosCases[i].Golden = got[:]
+				return
+			}
+			var want [3]float64
+			copy(want[:], c.Golden)
+			if d := diffBoneLocalPos(got, want); d != "" {
+				t.Errorf("[%s] 对账漂移：%s", c.ID, d)
+			}
+		})
+	}
+
+	// 族②残余：mergeCubes（Go spec.go mergeCubes ↔ TS cube-mesh.ts mergeCubes）
+	for i := range gf.MergeCubesCases {
+		c := gf.MergeCubesCases[i]
+		t.Run(c.ID, func(t *testing.T) {
+			got := runMergeCubesCase(c)
+			if regen {
+				gf.MergeCubesCases[i].Golden = got
+				return
+			}
+			if d := diffParityCubes("golden", got, c.Golden); d != "" {
 				t.Errorf("[%s] 对账漂移：%s", c.ID, d)
 			}
 		})

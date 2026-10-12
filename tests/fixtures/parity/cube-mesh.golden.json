@@ -1,6 +1,8 @@
 {
   "$comment": "立方体几何双端对账黄金语料（2026-10-11 巡检第 7 轮：cube-mesh.ts ↔ Go threejs/spec.go 手抄双源补自动守卫）。主源 = Go threejs/spec.go|buildCubeMeshData；regen：YSM_PARITY_REGEN=1 go test ./go/threejs -run TestCubeMeshParity。TS 消费方：frontend/src/preview-3d/mesh/cube-mesh-parity.test.ts（同 cube 入参，断言 buildCubeMeshData 同黄金值）。任一侧展开表漂移即对账失败——此前两侧各自有测试、各自绿，但「两侧互等」只靠注释互指，与 texture-order 分叉 3 处（cb1ce8d6d）同型风险。",
   "$semantics": "锁死口径：① positions/normals/uvs/localPosition 走**逐位精确比对**——这些项全由加减乘构成，IEEE754 对同一运算顺序结果确定，有差异必然是两侧抄写的表达式/结合序不同（非平台噪声），必须精确才抓得住：本语料正是靠精确比对抓到 JS South 面 `u+z+x+z` vs Go/Blockbench 权威 `u+sz+sz+sx`（size[2]*2+size[0]）的 1 ULP 结合序分叉（z=8、x=0.001 时两种结合序舍入粒度不同）。⚠️ 勿为「让测试变绿」改成相对容差——那等于把抄写分叉永久藏起来。仅 localRotation 走 1e-9 相对容差（eulerToQuaternion 含 cos/sin/sqrt，跨实现可差 1 ULP，属真噪声）；indices/texIdx/id/boneId 精确。② 特殊浮点以字符串哨兵 \"nan\"/\"inf\"/\"-inf\" 表达（JSON 无此字面量），双端各自映射；命中守卫则 golden 记 null。③ parseUV 的 sx/sy/sz 取**原始 c.Size**（非 inflate/clamp 后），两侧同口径——inflate+boxUV 组合用例专钉此条。④ pivotSet=false 时 cube pivot 用几何中心；true 时用声明 pivot 且 X 翻号。⑤ cubeTexW/H\u003e0 覆盖 texW/texH。⑥ texW/texH ≤0 → parseUV false → hasUV=false → uvs 全零填充（非跳过面）。⑦ 双端各缺的守卫已补齐对齐：TS 曾缺 lx..hz 顶点溢出与 localPos 两道（后者导致 NaN 静默进 MeshData.localPosition → 子树 matrixWorld 全 NaN 渲染消失），spec-builder.test.ts 曾以「JS 浮点边界行为」把前者钉成期望——前提有误已更正。",
+  "$semanticsBoneLocalPos": "锁死 computeBoneLocalPos（Go spec-bones.go buildBoneLocalData）口径：① 根骨骼（declaredParent=false，等价 TS parentPivot=null）→ [-pivot.x, pivot.y, pivot.z]（X 翻号 = ysmview 口径，trap #11）；② 有父骨骼且父 pivot 存在 → [pp.x-bp.x, bp.y-pp.y, bp.z-pp.z]；③ declaredParent=true 但 parentPivot=null（声明了父骨骼但父 pivot 缺失）→ Go buildBoneLocalData 回落根公式、TS 消费方把 parentPivot 传 null，两侧同输出——此分支靠 declaredParent 显式钉死，防日后一方改分支判据另一方不跟。④ golden 为 [x,y,z]，全由加减构成，**逐位精确比对**（无容差），任一侧抄写结合序/符号漂移即抓。",
+  "$semanticsMergeCubes": "锁死 mergeCubes（Go spec.go ↔ TS cube-mesh.ts）语义：① 新 cube 按序与旧 cube 逐个判重叠（判据 = origin/size/rotation 三元全部在 cubeEpsilon=0.001 内，**非逐位**），首个命中即替换该旧位并标记 matched——同一旧位不会被后续新 cube 再次命中（防重复匹配）；未命中的新 cube 追加到末尾，**追加后的 cube 不参与后续匹配**（匹配只扫原 old 数组）。② 输出 cube 是某个输入 cube 的原样引用（identity 拷贝，无运算），**全字段逐位精确比对**，钉住「哪条替换、哪条追加、顺序」的全部语义。③ 边界：|diff| ≤ cubeEpsilon 视为重叠（含恰为 0.001），\u003e eps 视为不重叠。",
   "cases": [
     {
       "id": "basic-box-uv",
@@ -5600,6 +5602,1566 @@
         ],
         "texIdx": 0
       }
+    }
+  ],
+  "boneLocalPosCases": [
+    {
+      "id": "root-bone-flip-x",
+      "$comment": "根骨骼：X 翻号、Y/Z 原样（ysmview 口径 trap #11）",
+      "bonePivot": [
+        3,
+        -2,
+        5
+      ],
+      "parentPivot": null,
+      "declaredParent": false,
+      "golden": [
+        -3,
+        -2,
+        5
+      ]
+    },
+    {
+      "id": "root-bone-zero-pivot",
+      "$comment": "根骨骼 pivot 全零：结果全零（X 翻号对 0 恒等）",
+      "bonePivot": [
+        0,
+        0,
+        0
+      ],
+      "parentPivot": null,
+      "declaredParent": false,
+      "golden": [
+        -0,
+        0,
+        0
+      ]
+    },
+    {
+      "id": "child-single-layer",
+      "$comment": "单层父子：X = pp.x-bp.x（X 翻号），Y/Z = bp - pp",
+      "bonePivot": [
+        10,
+        20,
+        30
+      ],
+      "parentPivot": [
+        5,
+        10,
+        15
+      ],
+      "declaredParent": true,
+      "golden": [
+        -5,
+        10,
+        15
+      ]
+    },
+    {
+      "id": "child-negative-parent",
+      "$comment": "父骨骼 pivot 含负值：钉 X 翻号与 Y/Z 相减的符号路径",
+      "bonePivot": [
+        -4,
+        0,
+        6
+      ],
+      "parentPivot": [
+        2,
+        8,
+        -3
+      ],
+      "declaredParent": true,
+      "golden": [
+        6,
+        -8,
+        9
+      ]
+    },
+    {
+      "id": "multi-level-chain-immediate-parent",
+      "$comment": "多层链（A→B→C）末节点：localPos 只依赖**直接**父 B 的 pivot，与祖链无关",
+      "bonePivot": [
+        1,
+        50,
+        1
+      ],
+      "parentPivot": [
+        0,
+        40,
+        2
+      ],
+      "declaredParent": true,
+      "golden": [
+        -1,
+        10,
+        -1
+      ]
+    },
+    {
+      "id": "declared-parent-missing-pivot",
+      "$comment": "声明了父骨骼但父 pivot 缺失：Go 回落根公式（spec-bones.go L71），TS 消费方传 parentPivot=null——两侧同输出，靠 declaredParent 钉分支",
+      "bonePivot": [
+        7,
+        11,
+        13
+      ],
+      "parentPivot": null,
+      "declaredParent": true,
+      "golden": [
+        -7,
+        11,
+        13
+      ]
+    },
+    {
+      "id": "fractional-pivots",
+      "$comment": "小数 pivot：纯加减，逐位精确比对可抓任一侧结合序/符号抄写漂移",
+      "bonePivot": [
+        0.5,
+        -0.25,
+        3.75
+      ],
+      "parentPivot": [
+        2.125,
+        1.5,
+        -0.5
+      ],
+      "declaredParent": true,
+      "golden": [
+        1.625,
+        -1.75,
+        4.25
+      ]
+    }
+  ],
+  "mergeCubesCases": [
+    {
+      "id": "append-disjoint",
+      "$comment": "不重叠追加：新 cube 按序追加到末尾，旧位不动",
+      "old": [
+        {
+          "origin": [
+            0,
+            0,
+            0
+          ],
+          "size": [
+            4,
+            4,
+            4
+          ],
+          "pivot": [
+            0,
+            0,
+            0
+          ],
+          "pivotSet": false,
+          "uv": [
+            0,
+            0
+          ],
+          "faceUV": "",
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "texSlot": 0,
+          "inflate": 0,
+          "mirror": false,
+          "cubeTexW": 0,
+          "cubeTexH": 0
+        }
+      ],
+      "new": [
+        {
+          "origin": [
+            10,
+            0,
+            0
+          ],
+          "size": [
+            4,
+            4,
+            4
+          ],
+          "pivot": [
+            0,
+            0,
+            0
+          ],
+          "pivotSet": false,
+          "uv": [
+            0,
+            0
+          ],
+          "faceUV": "",
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "texSlot": 0,
+          "inflate": 0,
+          "mirror": false,
+          "cubeTexW": 0,
+          "cubeTexH": 0
+        }
+      ],
+      "golden": [
+        {
+          "origin": [
+            0,
+            0,
+            0
+          ],
+          "size": [
+            4,
+            4,
+            4
+          ],
+          "pivot": [
+            0,
+            0,
+            0
+          ],
+          "pivotSet": false,
+          "uv": [
+            0,
+            0
+          ],
+          "faceUV": "",
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "texSlot": 0,
+          "inflate": 0,
+          "mirror": false,
+          "cubeTexW": 0,
+          "cubeTexH": 0
+        },
+        {
+          "origin": [
+            10,
+            0,
+            0
+          ],
+          "size": [
+            4,
+            4,
+            4
+          ],
+          "pivot": [
+            0,
+            0,
+            0
+          ],
+          "pivotSet": false,
+          "uv": [
+            0,
+            0
+          ],
+          "faceUV": "",
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "texSlot": 0,
+          "inflate": 0,
+          "mirror": false,
+          "cubeTexW": 0,
+          "cubeTexH": 0
+        }
+      ]
+    },
+    {
+      "id": "replace-single-carries-fields",
+      "$comment": "单点重叠替换：新 cube 整体替换旧位（含 texSlot 等全字段），非合并字段",
+      "old": [
+        {
+          "origin": [
+            0,
+            0,
+            0
+          ],
+          "size": [
+            4,
+            4,
+            4
+          ],
+          "pivot": [
+            0,
+            0,
+            0
+          ],
+          "pivotSet": false,
+          "uv": [
+            0,
+            0
+          ],
+          "faceUV": "",
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "texSlot": 0,
+          "inflate": 0,
+          "mirror": false,
+          "cubeTexW": 0,
+          "cubeTexH": 0
+        }
+      ],
+      "new": [
+        {
+          "origin": [
+            0,
+            0,
+            0
+          ],
+          "size": [
+            4,
+            4,
+            4
+          ],
+          "pivot": [
+            0,
+            0,
+            0
+          ],
+          "pivotSet": false,
+          "uv": [
+            0,
+            0
+          ],
+          "faceUV": "",
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "texSlot": 1,
+          "inflate": 0,
+          "mirror": false,
+          "cubeTexW": 0,
+          "cubeTexH": 0
+        }
+      ],
+      "golden": [
+        {
+          "origin": [
+            0,
+            0,
+            0
+          ],
+          "size": [
+            4,
+            4,
+            4
+          ],
+          "pivot": [
+            0,
+            0,
+            0
+          ],
+          "pivotSet": false,
+          "uv": [
+            0,
+            0
+          ],
+          "faceUV": "",
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "texSlot": 1,
+          "inflate": 0,
+          "mirror": false,
+          "cubeTexW": 0,
+          "cubeTexH": 0
+        }
+      ]
+    },
+    {
+      "id": "multi-overlap-no-rematch",
+      "$comment": "两个新 cube 都撞同一旧位：第一个命中后 matched 标记，第二个只能追加——钉死防重复匹配",
+      "old": [
+        {
+          "origin": [
+            0,
+            0,
+            0
+          ],
+          "size": [
+            4,
+            4,
+            4
+          ],
+          "pivot": [
+            0,
+            0,
+            0
+          ],
+          "pivotSet": false,
+          "uv": [
+            0,
+            0
+          ],
+          "faceUV": "",
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "texSlot": 0,
+          "inflate": 0,
+          "mirror": false,
+          "cubeTexW": 0,
+          "cubeTexH": 0
+        },
+        {
+          "origin": [
+            10,
+            0,
+            0
+          ],
+          "size": [
+            4,
+            4,
+            4
+          ],
+          "pivot": [
+            0,
+            0,
+            0
+          ],
+          "pivotSet": false,
+          "uv": [
+            0,
+            0
+          ],
+          "faceUV": "",
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "texSlot": 0,
+          "inflate": 0,
+          "mirror": false,
+          "cubeTexW": 0,
+          "cubeTexH": 0
+        }
+      ],
+      "new": [
+        {
+          "origin": [
+            0,
+            0,
+            0
+          ],
+          "size": [
+            4,
+            4,
+            4
+          ],
+          "pivot": [
+            0,
+            0,
+            0
+          ],
+          "pivotSet": false,
+          "uv": [
+            0,
+            0
+          ],
+          "faceUV": "",
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "texSlot": 1,
+          "inflate": 0,
+          "mirror": false,
+          "cubeTexW": 0,
+          "cubeTexH": 0
+        },
+        {
+          "origin": [
+            0,
+            0,
+            0
+          ],
+          "size": [
+            4,
+            4,
+            4
+          ],
+          "pivot": [
+            0,
+            0,
+            0
+          ],
+          "pivotSet": false,
+          "uv": [
+            0,
+            0
+          ],
+          "faceUV": "",
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "texSlot": 2,
+          "inflate": 0,
+          "mirror": false,
+          "cubeTexW": 0,
+          "cubeTexH": 0
+        }
+      ],
+      "golden": [
+        {
+          "origin": [
+            0,
+            0,
+            0
+          ],
+          "size": [
+            4,
+            4,
+            4
+          ],
+          "pivot": [
+            0,
+            0,
+            0
+          ],
+          "pivotSet": false,
+          "uv": [
+            0,
+            0
+          ],
+          "faceUV": "",
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "texSlot": 1,
+          "inflate": 0,
+          "mirror": false,
+          "cubeTexW": 0,
+          "cubeTexH": 0
+        },
+        {
+          "origin": [
+            10,
+            0,
+            0
+          ],
+          "size": [
+            4,
+            4,
+            4
+          ],
+          "pivot": [
+            0,
+            0,
+            0
+          ],
+          "pivotSet": false,
+          "uv": [
+            0,
+            0
+          ],
+          "faceUV": "",
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "texSlot": 0,
+          "inflate": 0,
+          "mirror": false,
+          "cubeTexW": 0,
+          "cubeTexH": 0
+        },
+        {
+          "origin": [
+            0,
+            0,
+            0
+          ],
+          "size": [
+            4,
+            4,
+            4
+          ],
+          "pivot": [
+            0,
+            0,
+            0
+          ],
+          "pivotSet": false,
+          "uv": [
+            0,
+            0
+          ],
+          "faceUV": "",
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "texSlot": 2,
+          "inflate": 0,
+          "mirror": false,
+          "cubeTexW": 0,
+          "cubeTexH": 0
+        }
+      ]
+    },
+    {
+      "id": "empty-old",
+      "$comment": "old 为空：全部走追加，输出 = new 原序",
+      "old": [],
+      "new": [
+        {
+          "origin": [
+            0,
+            0,
+            0
+          ],
+          "size": [
+            4,
+            4,
+            4
+          ],
+          "pivot": [
+            0,
+            0,
+            0
+          ],
+          "pivotSet": false,
+          "uv": [
+            0,
+            0
+          ],
+          "faceUV": "",
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "texSlot": 0,
+          "inflate": 0,
+          "mirror": false,
+          "cubeTexW": 0,
+          "cubeTexH": 0
+        }
+      ],
+      "golden": [
+        {
+          "origin": [
+            0,
+            0,
+            0
+          ],
+          "size": [
+            4,
+            4,
+            4
+          ],
+          "pivot": [
+            0,
+            0,
+            0
+          ],
+          "pivotSet": false,
+          "uv": [
+            0,
+            0
+          ],
+          "faceUV": "",
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "texSlot": 0,
+          "inflate": 0,
+          "mirror": false,
+          "cubeTexW": 0,
+          "cubeTexH": 0
+        }
+      ]
+    },
+    {
+      "id": "empty-new",
+      "$comment": "new 为空：old 原样返回",
+      "old": [
+        {
+          "origin": [
+            0,
+            0,
+            0
+          ],
+          "size": [
+            4,
+            4,
+            4
+          ],
+          "pivot": [
+            0,
+            0,
+            0
+          ],
+          "pivotSet": false,
+          "uv": [
+            0,
+            0
+          ],
+          "faceUV": "",
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "texSlot": 0,
+          "inflate": 0,
+          "mirror": false,
+          "cubeTexW": 0,
+          "cubeTexH": 0
+        }
+      ],
+      "new": [],
+      "golden": [
+        {
+          "origin": [
+            0,
+            0,
+            0
+          ],
+          "size": [
+            4,
+            4,
+            4
+          ],
+          "pivot": [
+            0,
+            0,
+            0
+          ],
+          "pivotSet": false,
+          "uv": [
+            0,
+            0
+          ],
+          "faceUV": "",
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "texSlot": 0,
+          "inflate": 0,
+          "mirror": false,
+          "cubeTexW": 0,
+          "cubeTexH": 0
+        }
+      ]
+    },
+    {
+      "id": "boundary-within-eps",
+      "$comment": "origin 差 0.0005（\u003c cubeEpsilon=0.001）：视为重叠 → 替换",
+      "old": [
+        {
+          "origin": [
+            0,
+            0,
+            0
+          ],
+          "size": [
+            4,
+            4,
+            4
+          ],
+          "pivot": [
+            0,
+            0,
+            0
+          ],
+          "pivotSet": false,
+          "uv": [
+            0,
+            0
+          ],
+          "faceUV": "",
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "texSlot": 0,
+          "inflate": 0,
+          "mirror": false,
+          "cubeTexW": 0,
+          "cubeTexH": 0
+        }
+      ],
+      "new": [
+        {
+          "origin": [
+            0.0005,
+            0,
+            0
+          ],
+          "size": [
+            4,
+            4,
+            4
+          ],
+          "pivot": [
+            0,
+            0,
+            0
+          ],
+          "pivotSet": false,
+          "uv": [
+            0,
+            0
+          ],
+          "faceUV": "",
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "texSlot": 0,
+          "inflate": 0,
+          "mirror": false,
+          "cubeTexW": 0,
+          "cubeTexH": 0
+        }
+      ],
+      "golden": [
+        {
+          "origin": [
+            0.0005,
+            0,
+            0
+          ],
+          "size": [
+            4,
+            4,
+            4
+          ],
+          "pivot": [
+            0,
+            0,
+            0
+          ],
+          "pivotSet": false,
+          "uv": [
+            0,
+            0
+          ],
+          "faceUV": "",
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "texSlot": 0,
+          "inflate": 0,
+          "mirror": false,
+          "cubeTexW": 0,
+          "cubeTexH": 0
+        }
+      ]
+    },
+    {
+      "id": "boundary-exact-eps",
+      "$comment": "origin 差恰为 0.001（floatEqual 判据 v \u003e eps 为假）：**仍视为重叠** → 替换，钉死含边界的闭区间判据",
+      "old": [
+        {
+          "origin": [
+            0,
+            0,
+            0
+          ],
+          "size": [
+            4,
+            4,
+            4
+          ],
+          "pivot": [
+            0,
+            0,
+            0
+          ],
+          "pivotSet": false,
+          "uv": [
+            0,
+            0
+          ],
+          "faceUV": "",
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "texSlot": 0,
+          "inflate": 0,
+          "mirror": false,
+          "cubeTexW": 0,
+          "cubeTexH": 0
+        }
+      ],
+      "new": [
+        {
+          "origin": [
+            0.001,
+            0,
+            0
+          ],
+          "size": [
+            4,
+            4,
+            4
+          ],
+          "pivot": [
+            0,
+            0,
+            0
+          ],
+          "pivotSet": false,
+          "uv": [
+            0,
+            0
+          ],
+          "faceUV": "",
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "texSlot": 0,
+          "inflate": 0,
+          "mirror": false,
+          "cubeTexW": 0,
+          "cubeTexH": 0
+        }
+      ],
+      "golden": [
+        {
+          "origin": [
+            0.001,
+            0,
+            0
+          ],
+          "size": [
+            4,
+            4,
+            4
+          ],
+          "pivot": [
+            0,
+            0,
+            0
+          ],
+          "pivotSet": false,
+          "uv": [
+            0,
+            0
+          ],
+          "faceUV": "",
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "texSlot": 0,
+          "inflate": 0,
+          "mirror": false,
+          "cubeTexW": 0,
+          "cubeTexH": 0
+        }
+      ]
+    },
+    {
+      "id": "boundary-beyond-eps",
+      "$comment": "origin 差 0.002（\u003e cubeEpsilon）：视为不重叠 → 追加",
+      "old": [
+        {
+          "origin": [
+            0,
+            0,
+            0
+          ],
+          "size": [
+            4,
+            4,
+            4
+          ],
+          "pivot": [
+            0,
+            0,
+            0
+          ],
+          "pivotSet": false,
+          "uv": [
+            0,
+            0
+          ],
+          "faceUV": "",
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "texSlot": 0,
+          "inflate": 0,
+          "mirror": false,
+          "cubeTexW": 0,
+          "cubeTexH": 0
+        }
+      ],
+      "new": [
+        {
+          "origin": [
+            0.002,
+            0,
+            0
+          ],
+          "size": [
+            4,
+            4,
+            4
+          ],
+          "pivot": [
+            0,
+            0,
+            0
+          ],
+          "pivotSet": false,
+          "uv": [
+            0,
+            0
+          ],
+          "faceUV": "",
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "texSlot": 0,
+          "inflate": 0,
+          "mirror": false,
+          "cubeTexW": 0,
+          "cubeTexH": 0
+        }
+      ],
+      "golden": [
+        {
+          "origin": [
+            0,
+            0,
+            0
+          ],
+          "size": [
+            4,
+            4,
+            4
+          ],
+          "pivot": [
+            0,
+            0,
+            0
+          ],
+          "pivotSet": false,
+          "uv": [
+            0,
+            0
+          ],
+          "faceUV": "",
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "texSlot": 0,
+          "inflate": 0,
+          "mirror": false,
+          "cubeTexW": 0,
+          "cubeTexH": 0
+        },
+        {
+          "origin": [
+            0.002,
+            0,
+            0
+          ],
+          "size": [
+            4,
+            4,
+            4
+          ],
+          "pivot": [
+            0,
+            0,
+            0
+          ],
+          "pivotSet": false,
+          "uv": [
+            0,
+            0
+          ],
+          "faceUV": "",
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "texSlot": 0,
+          "inflate": 0,
+          "mirror": false,
+          "cubeTexW": 0,
+          "cubeTexH": 0
+        }
+      ]
+    },
+    {
+      "id": "rotation-within-eps",
+      "$comment": "rotation 差 0.0005（\u003c eps）：仍重叠 → 替换（判据含 rotation 维）",
+      "old": [
+        {
+          "origin": [
+            0,
+            0,
+            0
+          ],
+          "size": [
+            4,
+            4,
+            4
+          ],
+          "pivot": [
+            0,
+            0,
+            0
+          ],
+          "pivotSet": false,
+          "uv": [
+            0,
+            0
+          ],
+          "faceUV": "",
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "texSlot": 0,
+          "inflate": 0,
+          "mirror": false,
+          "cubeTexW": 0,
+          "cubeTexH": 0
+        }
+      ],
+      "new": [
+        {
+          "origin": [
+            0,
+            0,
+            0
+          ],
+          "size": [
+            4,
+            4,
+            4
+          ],
+          "pivot": [
+            0,
+            0,
+            0
+          ],
+          "pivotSet": false,
+          "uv": [
+            0,
+            0
+          ],
+          "faceUV": "",
+          "rotation": [
+            0.0005,
+            0,
+            0
+          ],
+          "texSlot": 0,
+          "inflate": 0,
+          "mirror": false,
+          "cubeTexW": 0,
+          "cubeTexH": 0
+        }
+      ],
+      "golden": [
+        {
+          "origin": [
+            0,
+            0,
+            0
+          ],
+          "size": [
+            4,
+            4,
+            4
+          ],
+          "pivot": [
+            0,
+            0,
+            0
+          ],
+          "pivotSet": false,
+          "uv": [
+            0,
+            0
+          ],
+          "faceUV": "",
+          "rotation": [
+            0.0005,
+            0,
+            0
+          ],
+          "texSlot": 0,
+          "inflate": 0,
+          "mirror": false,
+          "cubeTexW": 0,
+          "cubeTexH": 0
+        }
+      ]
+    },
+    {
+      "id": "size-beyond-eps-appends",
+      "$comment": "size 差 0.002（\u003e eps）使判据失效：origin/rotation 相同也不重叠 → 追加",
+      "old": [
+        {
+          "origin": [
+            0,
+            0,
+            0
+          ],
+          "size": [
+            4,
+            4,
+            4
+          ],
+          "pivot": [
+            0,
+            0,
+            0
+          ],
+          "pivotSet": false,
+          "uv": [
+            0,
+            0
+          ],
+          "faceUV": "",
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "texSlot": 0,
+          "inflate": 0,
+          "mirror": false,
+          "cubeTexW": 0,
+          "cubeTexH": 0
+        }
+      ],
+      "new": [
+        {
+          "origin": [
+            0,
+            0,
+            0
+          ],
+          "size": [
+            4.002,
+            4,
+            4
+          ],
+          "pivot": [
+            0,
+            0,
+            0
+          ],
+          "pivotSet": false,
+          "uv": [
+            0,
+            0
+          ],
+          "faceUV": "",
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "texSlot": 0,
+          "inflate": 0,
+          "mirror": false,
+          "cubeTexW": 0,
+          "cubeTexH": 0
+        }
+      ],
+      "golden": [
+        {
+          "origin": [
+            0,
+            0,
+            0
+          ],
+          "size": [
+            4,
+            4,
+            4
+          ],
+          "pivot": [
+            0,
+            0,
+            0
+          ],
+          "pivotSet": false,
+          "uv": [
+            0,
+            0
+          ],
+          "faceUV": "",
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "texSlot": 0,
+          "inflate": 0,
+          "mirror": false,
+          "cubeTexW": 0,
+          "cubeTexH": 0
+        },
+        {
+          "origin": [
+            0,
+            0,
+            0
+          ],
+          "size": [
+            4.002,
+            4,
+            4
+          ],
+          "pivot": [
+            0,
+            0,
+            0
+          ],
+          "pivotSet": false,
+          "uv": [
+            0,
+            0
+          ],
+          "faceUV": "",
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "texSlot": 0,
+          "inflate": 0,
+          "mirror": false,
+          "cubeTexW": 0,
+          "cubeTexH": 0
+        }
+      ]
+    },
+    {
+      "id": "append-then-no-rematch",
+      "$comment": "首个新 cube 命中替换后，第二个新 cube 即使与**已追加/已替换**的结果重叠也只会追加——匹配只扫原 old 数组（钉 matched 范围）",
+      "old": [
+        {
+          "origin": [
+            0,
+            0,
+            0
+          ],
+          "size": [
+            4,
+            4,
+            4
+          ],
+          "pivot": [
+            0,
+            0,
+            0
+          ],
+          "pivotSet": false,
+          "uv": [
+            0,
+            0
+          ],
+          "faceUV": "",
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "texSlot": 0,
+          "inflate": 0,
+          "mirror": false,
+          "cubeTexW": 0,
+          "cubeTexH": 0
+        }
+      ],
+      "new": [
+        {
+          "origin": [
+            0.0005,
+            0,
+            0
+          ],
+          "size": [
+            4,
+            4,
+            4
+          ],
+          "pivot": [
+            0,
+            0,
+            0
+          ],
+          "pivotSet": false,
+          "uv": [
+            0,
+            0
+          ],
+          "faceUV": "",
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "texSlot": 0,
+          "inflate": 0,
+          "mirror": false,
+          "cubeTexW": 0,
+          "cubeTexH": 0
+        },
+        {
+          "origin": [
+            0.001,
+            0,
+            0
+          ],
+          "size": [
+            4,
+            4,
+            4
+          ],
+          "pivot": [
+            0,
+            0,
+            0
+          ],
+          "pivotSet": false,
+          "uv": [
+            0,
+            0
+          ],
+          "faceUV": "",
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "texSlot": 0,
+          "inflate": 0,
+          "mirror": false,
+          "cubeTexW": 0,
+          "cubeTexH": 0
+        }
+      ],
+      "golden": [
+        {
+          "origin": [
+            0.0005,
+            0,
+            0
+          ],
+          "size": [
+            4,
+            4,
+            4
+          ],
+          "pivot": [
+            0,
+            0,
+            0
+          ],
+          "pivotSet": false,
+          "uv": [
+            0,
+            0
+          ],
+          "faceUV": "",
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "texSlot": 0,
+          "inflate": 0,
+          "mirror": false,
+          "cubeTexW": 0,
+          "cubeTexH": 0
+        },
+        {
+          "origin": [
+            0.001,
+            0,
+            0
+          ],
+          "size": [
+            4,
+            4,
+            4
+          ],
+          "pivot": [
+            0,
+            0,
+            0
+          ],
+          "pivotSet": false,
+          "uv": [
+            0,
+            0
+          ],
+          "faceUV": "",
+          "rotation": [
+            0,
+            0,
+            0
+          ],
+          "texSlot": 0,
+          "inflate": 0,
+          "mirror": false,
+          "cubeTexW": 0,
+          "cubeTexH": 0
+        }
+      ]
     }
   ]
 }

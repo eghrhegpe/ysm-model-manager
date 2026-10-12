@@ -19,8 +19,12 @@
  *      通道一 · 字面量同时含 [汉字] + [HTML 信号] → 候选（渲染进 DOM 的模板）；
  *      通道二 · 字面量含 [汉字] 且所在行是 UI 值字段上下文（`value|text|tooltip` 赋值）
  *               → 候选（MenuNode schema 的 value 侧——D2 病灶形态 `${n} 个` 无 HTML 信号，
- *               正是通道一漏的那族）。label 侧不查：判净#5 裁决「label: 静态中文 = 键缺失
- *               合法回退」；throw new Error(中文) 不查：内部诊断通道归 D1 拍板批（65 处）。
+ *               正是通道一漏的那族）。
+ *      通道三 · 字面量含 [汉字] 且行内前缀是错误构造头（`throw new Error` / `reject(new Error)`
+ *               / `throw new TypeError`）→ 候选（ADR-331 §2.5：throw/reject 中文会经
+ *               friendlyError/showLoadFailure 上屏，属用户可见硬编码）。内部诊断走台账豁免：
+ *               `// i18n-allow: 内部诊断` 行注（命中行或上一行）即跳过（ADR-331 §2.4）。
+ *               label 侧不查：判净#5 裁决「label: 静态中文 = 键缺失合法回退」。
  *   4. 若该字面量是 `t("...")` 直接参数（前缀 `\bt(\s*`）→ 已翻译，跳过；
  *   5. 排除：语言选择器原生名（value="zh-CN"/"en"/"ja" 的 option 文本，标准 UX 刻意不翻）、
  *      行级豁免尾注 `// i18n-allow: <理由>`（同 r8-allow/pointer-allow 先例，命中行或上一行）。
@@ -57,6 +61,11 @@ const HTML_SIGNAL =
 // 如 `{ id, kind, labelKey, value: "中文" }` 与 `value: \`模板\``）。
 const UI_VALUE_ASSIGN =
   /^\s*(?:value|text|tooltip)\s*[:=]\s*["'`]?\s*$|[{,]\s*(?:value|text|tooltip)\s*[:=]\s*["'`]?\s*$/;
+// 通道三（D1 收口配套）：throw new Error(中文) / reject(new Error(中文)) —— 错误构造点。
+// 这些串不进 DOM（无 HTML 信号）、非 value/text/tooltip 赋值，但会经 friendlyError/showLoadFailure
+// 上屏，属用户可见硬编码中文。判据取「行首到字面量之间的错误构造头」。
+const THROW_REJECT =
+  /(?:throw\s+new\s+Error|reject\s*\(\s*new\s+Error|throw\s+new\s+TypeError)\s*\(/;
 // 语言选择器原生名（刻意不翻，标准 UX）
 const LANG_PICKER = /value="(zh-CN|en|ja)"/;
 
@@ -155,16 +164,17 @@ export function scanSourceText(raw: string) {
       if (!HAN.test(stripped)) continue;
     }
     if (LANG_PICKER.test(lit)) continue; // 语言选择器原生名
-    // 双通道判据（D3 补 2026-10-12）：t()/插值剥离之后、入册之前。
+    // 三通道判据（D3 双通道 + D1 收口补 THROW_REJECT 通道）：t()/插值剥离之后、入册之前。
     const lineIdx = lineIndexOf(start);
     if (HTML_SIGNAL.test(lit)) {
       // 通道一（原判据）：字面量自带 HTML 标记 → 渲染模板，直接入册。
     } else {
-      // 通道二（新补）：UI 值字段上下文——字面量之前的行内前缀匹配赋值头。
+      // 通道二 / 三（新补）：字面量之前的行内前缀匹配 UI 值字段 / 错误构造头。
       const linePrefix = maskedLines[lineIdx]!.slice(0, start - lineStarts[lineIdx]!);
-      if (!UI_VALUE_ASSIGN.test(linePrefix)) continue;
+      if (!UI_VALUE_ASSIGN.test(linePrefix) && !THROW_REJECT.test(linePrefix)) continue;
       // 行级豁免台账（同 pointer-allow 先例）：`// i18n-allow: <理由>` 命中行或上一行
-      // ——用 raw 原文行判（masked 把注释遮成空格，豁免注必须看得见原文才生效）
+      // ——用 raw 原文行判（masked 把注释遮成空格，豁免注必须看得见原文才生效）。
+      // 通道三特例：内部诊断 throw/reject 中文靠 `// i18n-allow: 内部诊断` 豁免（ADR-331 §2.4）。
       const win = `${rawLines[lineIdx - 1] ?? ""}\n${rawLines[lineIdx] ?? ""}`;
       if (/i18n-allow:/.test(win)) continue;
     }
@@ -230,7 +240,7 @@ function main(): void {
 
   console.log("i18n UI 漂移检查 (i18n-ui-check)");
   console.log(
-    "规则: 中文 +（HTML 信号 ∪ UI 值字段上下文）+ 未包 t() → 漂移（已排除语言包/测试/语言选择器原生名/i18n-allow 台账）",
+    "规则: 中文 +（HTML 信号 ∪ UI 值字段上下文 ∪ throw/reject 错误构造）+ 未包 t() → 漂移（已排除语言包/测试/语言选择器原生名/i18n-allow 台账）",
   );
   console.log(`扫描: ${files.length} 个 .ts`);
   console.log("─".repeat(60));

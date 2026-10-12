@@ -5,13 +5,15 @@
  * 背景（第三轮审计 D3）：原判据要求「HTML 信号」才入候选——`value: \`${n} 个\``（D2 病灶）
  * 与 `throw new Error("中文")` 均无 HTML 信号，判定层直接跳过，「全绿」是判据射程造成的
  * 假绿（「检查器承诺 > 检查器射程」）。本测试锁双通道判据的**判别力**（防空转假绿，
- * 同 test_check_layering / innerhtml-hygiene 纯核直测惯例）。
+ * 同 test_check_layering / innerhtml-hygiene 纯核直测惯例）。切片 B-3（D1 收口）补第三通道
+ * THROW_REJECT：throw/reject/TypeError 中文入射程，内部诊断靠 `// i18n-allow: 内部诊断` 台账豁免。
  *
  * 覆盖：
  *   1. 纯核直测 scanSourceText：通道一（HTML 信号）回归不劣化；通道二（UI 值字段上下文）
- *      各形态（同行对象/缩进多行/模板串）；豁免族（t() 包裹/label 判净#5/throw 归 D1/
- *      语言选择器/注释遮罩）；i18n-allow 行级台账（命中行/上一行）
- *   2. 真仓 CLI：--json 合法 + 当前树 drift=0；--stric 拼错退 1（flag 白名单回归）
+ *      各形态（同行对象/缩进多行/模板串）；通道三（throw/reject/TypeError 中文 + t() 豁免 +
+ *      i18n-allow 内部诊断豁免）；豁免族（t() 包裹/label 判净#5/语言选择器/注释遮罩）；
+ *      i18n-allow 行级台账（命中行/上一行/相隔两行不逃逸）
+ *   2. 真仓 CLI：--json 合法 + 通道三生效（throw/reject 中文被捕获）；--stric 拼错退 1（flag 白名单回归）
  *
  * 零依赖（node:assert / node:child_process / node:path / node:url）。
  * 运行：node tests/test_i18n_ui_check.ts
@@ -69,11 +71,27 @@ check("通道二豁免族：不属 value 侧的中文不得命中", () => {
   );
   // 判净#5：label 侧静态中文 = 键缺失合法回退，明确不查
   assert.equal(hitCount('const n = { label: "环绕" }; void n;'), 0, "label 侧不查（判净#5）");
-  // throw 通道归 D1 拍板批（65 处内部诊断），本闸不扩
+  // 通道三（D1 收口）：throw/reject 中文现入本闸射程——无 i18n-allow 台账即命中
   assert.equal(
-    hitCount('function f(): void { throw new Error("内部诊断中文"); }'),
+    hitCount('function f(): void { throw new Error("资源包信息为空"); }'),
+    1,
+    "throw new Error(中文) 入通道三",
+  );
+  assert.equal(
+    hitCount('function f(): Promise<void> { return Promise.reject(new Error("编码失败")); }'),
+    1,
+    "reject(new Error(中文)) 入通道三",
+  );
+  // 通道三豁免族：已包 t() 或带 `// i18n-allow: 内部诊断` 台账注均跳过
+  assert.equal(
+    hitCount('throw new Error(t("preview.err.fbxRead"));'),
     0,
-    "throw 不查",
+    "t() 直参已翻译（throw 亦然）",
+  );
+  assert.equal(
+    hitCount('throw new Error("循环引用"); // i18n-allow: 内部诊断\nvoid 0;'),
+    0,
+    "内部诊断 i18n-allow 台账豁免（ADR-331 §2.4）",
   );
   // 语言选择器原生名（刻意不翻）——真实形态 = 通道一的 option HTML（LANG_PICKER 豁免）
   assert.equal(
@@ -128,7 +146,7 @@ check("行号语义：命中行 = 字面量所在行（多行文件二分反查�
 
 /* ---------- 2. 真仓 CLI ---------- */
 
-check("真仓 --json：drift=0（D2/D3 清偿后全树干净）", () => {
+check("真仓 --json：throw/reject 中文现被通道三捕获（内部诊断豁免在随附切片补 i18n-allow）", () => {
   const out = execFileSync(
     process.execPath,
     [path.join(ROOT, "scripts", "i18n-ui-check.ts"), "--json"],
@@ -139,7 +157,12 @@ check("真仓 --json：drift=0（D2/D3 清偿后全树干净）", () => {
   );
   const data = JSON.parse(out);
   assert.equal(typeof data.drift, "number", "drift 应为 number");
-  assert.equal(data.drift, 0, `真仓应零漂移（新增裸中文 value 即红），实得 ${data.drift}`);
+  // D1 收口（ADR-331 §2.5）：throw/reject 中文入通道三后真仓不再零漂移——判据射程扩大是
+  // 本次改动的**预期新行为**（旧 drift=0 是「throw 盲区」造成的假绿）。内部诊断约 20 处
+  // （parse-java-model 循环引用 / menu-graph builder 抛错等）靠 `// i18n-allow: 内部诊断`
+  // 台账注豁免（ADR-331 §2.4），该豁免注由随附切片补打；在此之前本闸如实报告 throw/reject
+  // 中文，故此处只断言「至少捕获 1 处」以证明通道三在真仓上生效，不断言精确计数。
+  assert.ok(data.drift >= 1, `真仓应捕获至少 1 处 throw/reject 中文，实得 ${data.drift}`);
 });
 
 check("--strict 拼错（--stric）退 1——flag 白名单守卫不因 main 重构丢失", () => {

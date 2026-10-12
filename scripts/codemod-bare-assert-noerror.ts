@@ -257,6 +257,34 @@ function findSites(rel: string, src: string): Site[] {
       if (depth <= 0) break;
     }
   }
+  // ---- 形态 D：`if X == nil { t.Fatal("msg") }` / `if X != nil { t.Fatal("msg") }`
+  //      3 行块（块内唯一、纯字符串消息、无 else）→ testutil.NotNil / Nil。
+  //      Nil/NotNil 收 any（非 error 也能断言 nil 态），比 NoError 更安全；== 头不
+  //      与 NoError 形态重叠。----
+  for (let i = 0; i < lines.length; i++) {
+    const h = lines[i]!.match(/^([\t ]+)if (\w+) (==|!=) nil \{$/);
+    if (!h) continue;
+    const indent = h[1]!;
+    const x = h[2]!;
+    const op = h[3]!;
+    const b = lines[i + 1];
+    const cl = lines[i + 2];
+    if (!b || !cl) continue;
+    if (cl.trim() !== "}" || cl.slice(0, indent.length) !== indent) continue;
+    const fb = b.match(new RegExp(`^${escapeRe(indent)}\\t(\\w+)\\.Fatal\\("([^"]*)"\\)\\s*$`));
+    if (!fb) continue;
+    const recv = fb[1]!;
+    if (!tIsConcreteT(lines, i)) continue;
+    const msg = JSON.stringify(fb[2]!);
+    const fn = op === "==" ? "NotNil" : "Nil";
+    sites.push({
+      file: rel,
+      line: i + 1,
+      fn: enclosingFunc(lines, i),
+      before: [lines[i]!, b, cl],
+      after: `${indent}testutil.${fn}(${recv}, ${x}, ${msg})`,
+    });
+  }
   return sites;
 }
 

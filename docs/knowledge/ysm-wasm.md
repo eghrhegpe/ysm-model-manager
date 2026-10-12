@@ -68,20 +68,15 @@ status: active  # Go 侧 Node 子进程桥已按 ADR-316 退役（2026-09-27）�
 
 ## 概览
 
-YSMParser WASM 的前端胶水层（算法口径与 YSMViewer 一致）：`ysm-parser.ts` 负责加载、初始化与解码调用；`ysm-wasm-data.js` / `ysm-glue-data.js` 是 base64 内嵌的 WASM 二进制与 Emscripten 胶水代码。采用 `Module.wasmBinary` 注入方式加载，规避 WebView2 的 fetch() 限制。**解码能力同一份 C++ 解析器，但存在两条运行时路径**：前端 WebView2（本卡）与 Go 端 Node.js 子进程（`internal/app/wasm_decoder.go`，生产主路径，见下节）。Go 端元数据解析见 [go_ysm_parser](./go-ysm-parser.md)。
+YSMParser WASM 的前端胶水层（算法口径与 YSMViewer 一致）：`ysm-parser.ts` 负责加载、初始化与解码调用；`ysm-wasm-data.js` / `ysm-glue-data.js` 是 base64 内嵌的 WASM 二进制与 Emscripten 胶水代码。采用 `Module.wasmBinary` 注入方式加载，规避 WebView2 的 fetch() 限制。**解码能力同一份 C++ 解析器，两条运行时路径**：前端 WebView2 预览（本卡）与 Go 端（`internal/app/wasm_decoder.go` 的 `decodeYSMBest`：ADR-317 WebView 桥优先 + ADR-316 wazero 内存直解兜底，构建 recipe 见 [ysm-wasi](./ysm-wasi.md)）。Go 端元数据解析见 [go_ysm_parser](./go-ysm-parser.md)。
 
 ## WASM 资产（同一份）
 
-前端内嵌（`ysm-wasm-data.js` + `ysm-glue-data.js`）与 `frontend/public/wasm/YSMParser.{js,wasm}`（`embed.go` → `frontend/dist/wasm/`）**是同一份二进制**（sha256 一致，均 2026-08-08 重出，含 `ysm_decode_from_memory` / `_malloc` / `ccall` 与 `_main`）。历史曾分裂为「前端 6-08 有内存直解 / Go 6-17 仅 callMain」两份导出面不同的资产，现已合并统一。Go 端出于历史原因仍走 `callMain` + MEMFS（见下节），虽资产已含 `ysm_decode_from_memory` 但未切换内存直解路径。
+前端内嵌（`ysm-wasm-data.js` + `ysm-glue-data.js`）与 `frontend/public/wasm/YSMParser.{js,wasm}`（`embed.go` → `frontend/dist/wasm/`）**是同一份二进制**（sha256 一致，均 2026-08-08 重出，含 `ysm_decode_from_memory` / `_malloc` / `ccall` 与 `_main`）。历史曾分裂为「前端 6-08 有内存直解 / Go 6-17 仅 callMain」两份导出面不同的资产，现已合并统一；Go 端亦已切内存直解（ADR-316 wazero，见下节退役史）。
 
-## Go 端 Node.js + WASM 解码（生产主路径）
+## Go 端解码路径（⚠️ Node 子进程桥已退役，仅存史观）
 
-`.ysm` 解码的唯一路径——`app_model.go` 的 `runYSMParserOnFile` → `decodeYSMViaNodeJS`。（⚠️ 原描述「`FindCLI()` 找不到 exe → …」已过时：exe sidecar 于 2026-08-08 停发，`go/ysm/cli.go` 的 `FindCLI` **已删除**，解码器改经 `go/ysm|SetDecoder` 注入。）
-
-1. `findNodeJS()` 在 PATH 找 `node`/`node.exe`（`wasm_decoder.go` 内 `nodeJSPath` 包级变量），无 node 则此路径不可用；
-2. 内嵌 glue + wasm 写临时目录，拼 `decode.cjs`：`require(glue)` → `await YSMParser({ wasmBinary, noInitialRun: true })` → `FS.writeFile('/input/model.ysm')` → **`mod.callMain(['-i','/input','-o','/output'])`** → 递归收集 `/output`，打 `FILES_JSON:` 标记；
-3. 子进程 `HideWindow` + **context 超时护栏**（`go/avatar/avatar_decode.go` `exec.CommandContext` + `decodeTimeout` 60s，node 卡死超时即弃；`limitedBuffer` 流式截断 stdout/stderr——`decodeMaxOutput` 200MB 输出上限 + stderr 8MB 封顶，防解压炸弹膨胀父进程内存，ADR-164 后全仓单例化）；输出经 `geometry.ParseBedrockGeometry` 合并多骨骼/纹理 base64 → `types.BedrockModel`；
-4. **纯 Node 即可解码，不依赖浏览器**（已实测 `upstream/` 下 10 个 .ysm 全部解出骨骼/动画/纹理/头像）。`go/avatar/avatar_decode.go` `DecodeYSMData` 同机制复用（头像提取），`internal/app/wasm_decoder.go` 调本函数（薄封装，禁止复刻）。
+> **本节是历史快照**：Node.js 子进程桥（`decodeYSMViaNodeJS`，临时目录 + MEMFS + stdout JSON 搬运 + `HideWindow`/60s 超时/200MB 输出护栏）已随 **ADR-316（2026-09-27）** 整体退役——Go 侧现行解码 = `internal/app/wasm_decoder.go|decodeYSMBest`（ADR-317 WebView 桥优先，失败/未就绪回退 **wazero 纯 Go 内存直解**，零子进程零文件系统搬运），并经 `ysm.SetDecoder` 注入供 `go/` 层（含 avatar 头像提取）统一消费。构建 recipe、imports 闭集契约与陷阱清单见 **[ysm-wasi](./ysm-wasi.md)**，本卡不再维护 Go 侧细节。**勿按本节旧文排查问题**（`findNodeJS`/`decode.cjs`/`avatar_decode.go` 均已不存在）。
 
 ## 核心职责
 

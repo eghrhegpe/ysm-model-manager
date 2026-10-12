@@ -57,7 +57,6 @@ status: active
 - `avatar_extract_ysm.go` — .ysm 分支：单作者提取（extractAvatarFromYSM）与批量缓存（cacheYSMavatars），一次 WASM 解码复用文件列表
 - `avatar_extract_container.go` — .zip/.7z 分支：openModelContainer/extractAvatarFromArchive/cacheContainerAvatars/extractAvatarFromContainer*
 - `avatar_extract_json.go` — 解压目录 .json 分支：extractAvatarFromJSON/CacheAvatarsFromJSON/resolveAvatarRef
-- `avatar_decode.go` — .ysm 二进制经 Node.js + YSMParser WASM 子进程解码（DecodeYSMData）
 - `avatar_zip.go` — 容器内受限读取（ReadFileFromContainer）与 ysm.json 路径判定
 
 ## 对外 API / 入口
@@ -71,20 +70,16 @@ status: active
 - `CacheAvatarsFromModel(modelPath string)` — 通用批量缓存（.ysm/.zip/.7z/.json 按扩展名分派；authors 非空时仅缓存「声明 avatar 且可解析」的作者，不降级落盘）
 - `PurgeAvatarCache() (int, error)` — 清空头像缓存目录下所有文件，返回删除数（P1-2，2026-09-14；CLI `avatar purge` 调用）
 - `ReadFileFromContainer(r container.Reader, target string) []byte` — 按 `container.FindEntry`（`MatchEntryName` 契约，反斜杠/大小写归一化）从统一容器受限读取文件；原 zip 专用 `ReadFileFromZip` 已随 ADR-068 收敛**删除**（2026-09-14，生产零引用，测试 6 处迁至本函数）
-- `SetNodeJS(nodePath string, glueFn func() string, wasmFn func() []byte)` — 注入 Node.js 路径与 WASM 胶水代码/二进制加载器（由 wasm_decoder.go 在启动时调用）
-- `DecodeYSMData(ysmData []byte) []ysmDecodedFile` — 全仓唯一 Node+WASM 解码桥（ADR-164），起隐藏子进程执行 YSMParser WASM，把 .ysm 二进制解码为文件列表（path + 原始字节）。200MB 输入/输出护栏 + 60s 超时。`internal/app/wasm_decoder.go` 调本函数（薄封装，禁止复刻）
 
 ## 与其他子系统关系
 
 - 被 `internal/app/app_avatar.go` 调用（GetCachedAvatar / ExtractAuthorAvatar 等 binding）
-- 被 `internal/app/wasm_decoder.go` 调用（`SetNodeJS` 注入解码环境）
-- 依赖 YSMParser WASM（与 [go_ysm_parser](./go-ysm-parser.md) 同源算法口径）、Node.js 运行时
+- .ysm 分支的解码走 [`ysm.DecodeYSM`](./go-ysm-parser.md)（注入点 `go/ysm/decode_inject.go`，解码器由 `internal/app/wasm_decoder.go` 的 init 注入：ADR-317 WebView 桥优先 + ADR-316 wazero 内存直解兜底）；本包不再自带解码桥
 
 ## 不变量
 
 - 头像路径必须位于 `avatar/` 目录下（`isSafeAvatarPath` 强校验：`path.Clean` 规范化后严格 `avatar/` 前缀 + 拒绝 `..` 段 + 落盘前 `filepath.Rel` 复查），防止读取包内任意文件或逃逸读磁盘任意文件。**裸名归一化仅对纯文件名（不含 `/`）生效**（P3 修复：原实现对任意非 `avatar/` 前缀路径归一化，`avatar/../x` 先被 `path.Clean` 折叠为 `x` 再归一化为 `avatar/x` 放行，而调用方 `filepath.Join(dir, 原始路径)` 实际读到 avatar/ 之外、模型目录内的任意文件）
-- `SetNodeJS` 未注入时 `DecodeYSMData` 直接返回 nil，不 panic
-- 解码临时目录 `MkdirTemp` 用完必 `RemoveAll`；Windows 子进程 `HideWindow` 不弹窗口；Node 子进程带 60s 超时护栏（`exec.CommandContext`），WASM 死循环/卡死不会永久挂起 UI 线程
+- `ysm.SetDecoder` 未注入时 `ysm.DecodeYSM` 直接返回 nil（不 panic），本包 .ysm 分支按「解码不可用」静默降级——与 Android 无桥时口径一致
 - 缓存文件名一律经 `SafeName` 清洗（非法字符 + Windows 保留设备名 CON/PRN/AUX/NUL/COM1-9/LPT1-9 + 尾部点/空格），防路径穿越与写缓存失败
 - **读回缓存按文件头嗅探 mime**（P3 修复：JPEG 头像以 `.png` 落盘、读回恒硬编码 `data:image/png` → MIME 错误；现 `FFD8FF` 头识别为 `image/jpeg`）
 - **P3 已对齐**：降级取 avatar/ 第一张图已由 .ysm/.zip/.7z 三态实现（.json 分支不降级）；`CacheAvatarsFromModel`（.ysm 走 `cacheYSMavatars` 单遍、容器走 `containerAuthorNames`）批量路径已同步补 .7z 分支（R20 审核 P3-4，原仅 `ExtractAvatarURI` 路径支持 .7z）；`ExtractAvatarURI` 由旧 `DecodeOneAvatar(modelPath, cacheDir, safeName)` 重构为 `(modelPath, safeName)`，`cacheDir` 形参已废弃（落盘走全局 `CacheDir()`）
@@ -92,7 +87,7 @@ status: active
 - **R32 修复链（2026-08-31）**：
   - P2-1 `ReadFileFromZip` defer-in-loop：`defer rc.Close()` 位于 for 循环体内，多条目命中时累积未关闭句柄。修复：循环内显式 `rc.Close()`，不依赖 defer。
   - P2-2 `ReadFileFromZip` 死代码：生产路径已全面切换到 `container.Reader`，全包仅测试引用。**已删除**（2026-09-14）：函数移除，测试 6 处迁至 `ReadFileFromContainer`（`FindEntry`/`MatchEntryName` 同一契约，行为等价）。
-  - P3-1 `DecodeYSMData` 重复解码：批量 `CacheAvatarsFromModel` 时每个作者重复触发一次 `extractAvatarFromYSM`→`DecodeYSMData`，同一 .ysm 被解码 N 次。**已实现**：`cacheYSMavatars`（avatar_extract_ysm.go）单遍解码 + 内存内逐作者匹配落盘（一次受限整读 + 一次 WASM 解码）。
+  - P3-1 重复解码：批量 `CacheAvatarsFromModel` 时每个作者重复触发一次 `extractAvatarFromYSM`（→ 当时的解码桥），同一 .ysm 被解码 N 次。**已实现**：`cacheYSMavatars`（avatar_extract_ysm.go）单遍解码 + 内存内逐作者匹配落盘（一次受限整读 + 一次 WASM 解码；解码现走 `ysm.DecodeYSM`）。
 
 ## 相关
 

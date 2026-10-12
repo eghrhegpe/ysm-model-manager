@@ -2,7 +2,7 @@
 //
 // 本文件（avatar_extract_ysm.go）：.ysm 模型包头像提取——单作者
 // （extractAvatarFromYSM）与批量缓存（cacheYSMavatars）共用同一份
-// WASM 解码产物（DecodeYSMData），按 authors 声明匹配或降级取 avatar/
+// WASM 解码产物（ysm.DecodeYSM，注入点见 go/ysm/decode_inject.go），按 authors 声明匹配或降级取 avatar/
 // 目录首图。拆分自 avatar_extract.go（ADR-040 文件行数治理）。
 package avatar
 

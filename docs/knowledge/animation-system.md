@@ -139,7 +139,7 @@ status: active
 - `stagger` 消费方：`app-content/index.ts`、`app-sync-manager/tpl.ts`、`dialogs/batch-rename.ts`、`features/community/render.ts`、`app-content/site/render.ts`（卡片入场）
 - ⚠️ **`.stagger-in` 类已作废**（ADR-312 死 CSS 反向闸，2026-10）：`components.css` 的 `.stagger-in > *:nth-child(n)` 全族零消费者——交错入场实际**全走 `stagger()` 工具函数**算 `animation-delay`（ADR-015 §2.2 的「方式 A」已注明作废）。新增交错入场只走工具函数，新加 `.stagger-in` 会被 `scripts/css-layer-check.ts` 检查 7 判死类 ERROR
 - 全局开关：`views/app-content/settings/ui-prefs.ts`（经 `app-modules.ts` 启动链调用）按设置切换 `document.documentElement` 的 `no-animations` class；CSS 侧为**双层通配**——文档层 `variables.css` 的 `.no-animations *`，Shadow 层各域 adopt `utils/dom/css.ts` 的 `noAnimationsCSS`（`:host-context(.no-animations) *`）。漏带片段的 shadow 域由 `scripts/css-layer-check.ts` 检查 4 阻断（ADR-015 §2.4 约束 1 的可执行断言）
-- **a11y 并轨（2026 复测补缺）**：OS 层 `prefers-reduced-motion: reduce` 媒体查询并入 `no-animations` 开关——`applyUIPrefs` 单点判定「系统请求减少动态效果 **且** 用户未显式开动画（localStorage `ui-animations` 无 `"on"`）」即自动挂类；显式开动画尊重手动选择（意图优先于 OS 偏好）
+- **a11y 并轨（2026 复测补缺）**：OS 层 `prefers-reduced-motion: reduce` 媒体查询并入 `no-animations` 开关——`applyUIPrefs` 单点判定「系统请求减少动态效果 **且** 用户未显式开动画（localStorage `ui-animations` 无 `"on"`）」即自动挂类；显式开动画尊重手动选择（意图优先于 OS 偏好）。**OS 切换热更**：`app-modules.ts` 启动链注册 `prefers-reduced-motion` change 监听 → 重跑 `applyUIPrefs`（2026-10 D9⑥ 前仅启动读一次、OS 运行期切换不热更）
 - **Molang 消费方**：
   - 解析阶段（`animation.ts`）：`parseAxisItem` / `parseKeyValue` / `extractKeyframe` 调用 `molang.ts` 的 `compileMolang`
   - 求值阶段（`animation-evaluator.ts`）：`resolveFramePost` / `evaluateKeyframes` / `evaluateClip` 调用编译后的 `MolangFn`

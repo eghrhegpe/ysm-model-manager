@@ -239,7 +239,7 @@ export const autoSidebar = [
         "link": "/event-graph"
       },
       {
-        "text": "preview-3d 巡检追踪器",
+        "text": "preview-3d 巡检追踪器（活指针卡）",
         "link": "/preview-3d-review-tracker"
       },
       {

@@ -191,4 +191,40 @@ describe("loadInstances", () => {
     await Promise.all([p1, p2]);
     expect(GetResourceInstanceStatus).toHaveBeenCalledTimes(2);
   });
+
+  // 2026-10 修复回归锁：原 finally 无条件 `_inflight.delete(key)`——force 刷新后，先收尾的
+  // 旧请求会把新请求的登记项与 30s 淘汰表一起抹掉，后续普通读请求不再合并、重发第三次 IPC
+  //（在途去重存在的意义正是防「同秒重复扫描」）。本例精确构造「旧先收尾、新仍在途」时序。
+  it("force 在途时旧请求先收尾 → 不得抹掉新请求登记（普通读仍并入 force 请求）", async () => {
+    const { LoadAppConfig, ListVersionInstances, GetResourceInstanceStatus, GetRepoRoot } = mockBindings();
+    LoadAppConfig.mockResolvedValue({ mcRoot: "/mc" });
+    ListVersionInstances.mockResolvedValue([{ Name: "A", VersionDir: "/v/a", Exists: true }]);
+    GetRepoRoot.mockResolvedValue("/repo");
+    const resolvers: Array<() => void> = [];
+    GetResourceInstanceStatus.mockImplementation(
+      () => new Promise((resolve) => { resolvers.push(() => resolve([])); }),
+    );
+
+    const p1 = loadInstances("ysm");
+    await vi.waitFor(() => {
+      expect(GetResourceInstanceStatus).toHaveBeenCalledTimes(1);
+    });
+    const p2 = loadInstances("ysm", { force: true });
+    await vi.waitFor(() => {
+      expect(GetResourceInstanceStatus).toHaveBeenCalledTimes(2);
+    });
+
+    // 只放行旧请求 p1（其收尾 finally 是竞态当事者），p2 保持挂起
+    resolvers[0]!();
+    await p1;
+
+    // p1 收尾后，p2 的登记项必须仍在 → 普通读并入 p2，而不是新发第三次请求
+    const p3 = loadInstances("ysm");
+    expect(p3).toBe(p2);
+    expect(GetResourceInstanceStatus).toHaveBeenCalledTimes(2);
+
+    resolvers[1]!();
+    await Promise.all([p2, p3]);
+    expect(GetResourceInstanceStatus).toHaveBeenCalledTimes(2);
+  });
 });

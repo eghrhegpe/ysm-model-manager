@@ -45,11 +45,18 @@ export function loadInstances(
     if (running) return running;
   }
   const p = doLoadInstances(key).finally(() => {
-    _inflight.delete(key);
-    const timer = _inflightTimers.get(key);
-    if (timer) {
-      clearTimeout(timer);
-      _inflightTimers.delete(key);
+    // 2026-10 修复（锐评：登记项与收尾者可能不是同一个请求）——原无条件 delete 会让
+    // **先收尾的旧请求把后发起（force）请求的登记项与 30s 淘汰表一并抹掉**：force 刷新
+    // 后紧接着的普通读请求本应并入仍在途的 force 请求，却因表已空而新发第三次 IPC/扫描，
+    // 在途去重形同虚设（「同秒重复扫描」正是本表要治的病）。改为身份守卫，与下方 30s
+    // 淘汰定时器同口径：只有自己仍是当前登记项时才摘除。
+    if (_inflight.get(key) === p) {
+      _inflight.delete(key);
+      const timer = _inflightTimers.get(key);
+      if (timer) {
+        clearTimeout(timer);
+        _inflightTimers.delete(key);
+      }
     }
   });
   _inflight.set(key, p);

@@ -22,6 +22,7 @@ auto_fields:
     - SetCacheLimits
     - SetShutdownCtx
     - TextureHash
+    - ValidHash
     - WriteCached
 tests:
   - go/texture_cache/texture_cache_test.go

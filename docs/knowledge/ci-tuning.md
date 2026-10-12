@@ -41,6 +41,7 @@ auto_fields:
     - CHANGED_NULL_REASON
     - checkBaselineMeaningful
     - CI_INDEPENDENT_TOOLS
+    - classifyBareAssertDebt
     - diffBareAssertDebt
     - findBareFatalAddedLines
     - getChangedGoFiles

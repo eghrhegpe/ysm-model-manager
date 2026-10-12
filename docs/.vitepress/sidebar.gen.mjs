@@ -1650,7 +1650,7 @@ export const autoSidebar = [
         "collapsed": true,
         "items": [
           {
-            "text": "AI 审查器偏差与查证方法论（9 轮实战沉淀）",
+            "text": "AI 审查器偏差与查证方法论（10 轮实战沉淀）",
             "link": "/knowledge/ai-review-pitfalls"
           },
           {

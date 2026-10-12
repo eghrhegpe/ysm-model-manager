@@ -599,11 +599,16 @@
 | 测试报绿但没验到东西时，查静默吞异常与条件跳过 | [E2E 视觉反馈（截图取证）](./e2e-visual-feedback.md) | 用 waitForTimeout 等应用启动（而非轮询就绪条件）在本机恒绿、CI 慢启动必红 | - |
 | 测试窗口、固定时钟、确定性等待 helper | [测试辅助函数 go/internal/testutil](./go-testutil.md) | - | - |
 | 测试辅助函数、go/internal/testutil 包在哪 | [测试辅助函数 go/internal/testutil](./go-testutil.md) | 测试 helper 必须走 go/internal/testutil 跨包复用，禁止各包各自实现同名 helper | - |
+| 查拆轴/新增正交层的回归审核要点 | [AI 审查器偏差与查证方法论（10 轮实战沉淀）](./ai-review-pitfalls.md) | - | - |
+| 查审查器假阳性/假阴性模式 | [AI 审查器偏差与查证方法论（10 轮实战沉淀）](./ai-review-pitfalls.md) | 审查报告分级不等于实测结论——P1/P2 抽验后方可采信 | - |
 | 创建测试文件、构造内存 ZIP、跨包复用测试 helper | [测试辅助函数 go/internal/testutil](./go-testutil.md) | - | - |
 | 等待 DOM 内容或 mock 调用出现 / 组件 init 链落定 | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) | 禁止用 waitFor 条件耦合组件内部实现细节 | - |
 | 挂载/卸载自定义元素 | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) | - | - |
 | 派发 click / input / keydown / drag & drop 等模拟事件 | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) | 禁止把负向定时器窗口断言换成短 sleep | - |
+| 评估子代理/审查报告可信度（分级不可采信） | [AI 审查器偏差与查证方法论（10 轮实战沉淀）](./ai-review-pitfalls.md) | 单一事实源矩阵被早退/局部 if 打破 = ADR-249 §2.4 红线 | - |
+| 去哪里找真缺陷（高产出缺口类型 A/B/C） | [AI 审查器偏差与查证方法论（10 轮实战沉淀）](./ai-review-pitfalls.md) | - | - |
 | 确认 Go-TS 解析层是否漂移 → 跑 go test ./go/types ./go/litematic + vitest src/backend/*.parity.test.ts | [Go-TS 解析层 golden 对拍（ADR-154 双端互锁）](./go-ts-golden.md) | Go MatchZipEntry 与 TS matchZipEntryTS 的首命中序依赖 resource_types.json 顺序——重排类型定义即两端漂移 | - |
+| 审查 finding 的基线新鲜度核对（audit-freshness） | [AI 审查器偏差与查证方法论（10 轮实战沉淀）](./ai-review-pitfalls.md) | - | - |
 | 视觉异常说不清来源时，做单变量开关对照实验 | [E2E 视觉反馈（截图取证）](./e2e-visual-feedback.md) | 断言写成 if (count() > 0) 或 .catch(() => {}) 会让未生效的流程报绿 | - |
 | 想知道界面长什么样，用截图取证而非断言计数 | [E2E 视觉反馈（截图取证）](./e2e-visual-feedback.md) | 元素在 Shadow DOM 内，页面内 querySelector 查不到而截图里明明有 | - |
 | 修改识别层指纹后自检 → 重跑两端 parity 测试（fixture 期望值以 Go 输出为准） | [Go-TS 解析层 golden 对拍（ADR-154 双端互锁）](./go-ts-golden.md) | voxel-colors-data.json 无复跑生成器（gen/main.go 只生成 block_ids_data.go），靠 parity_voxel_test.go 兜底 | - |
@@ -638,6 +643,12 @@
 | 新增命令参数若不登记 ParamSpec，桥接层走 legacy 降级（空串/0/false 丢弃）——与 ADR-173 前行为等价，但拿不到声明序输出与显式空值能力；无 flag 命令（cache-status/perf-log）无需登记 | - | - |
 | scripts/_lib/cli-registry.ts 的 CMD_RE 只解析到 runFn 不强制收尾 ——RegisterCommandC 尾随变参 ParamSpec 拆行注册合法（2026-09-03 教训：曾要求完整 `)` 闭合致 5 命令从注册表解析消失、completions/文档 parity 双双拉红） | `)` | - |
 | "**flag 注册必须留在命令 run 函数体内**（2026-10-08 复核教训）：`scripts/_lib/cli-registry.ts` 的 `extractFlags` 只对 runFn 函数体正则提取 `fs.String/Bool/Int(…)`——把注册抽到共享 helper（如 `scan_flags.go`）会让 `docs/cli-commands.md` 丢掉选项表、`completions/_ysm.ps1`/`ysm.bash` 丢掉 flag tab 补全，且 doctor 自洽不红。**重构只抽，注册行不迁**；`go/cli/scan_flags.go` 头注已固化此约束" | `解析 + 校验` | - |
+| 审查器 P1 级凭推断的断言必须实测——getClip API（r185 有公开方法）、缓存失效时序（现实调用序先于预热）两条都是 | `推断成立、实测打折扣` | - |
+| 跑测试是审查器的能力边界——类缺陷（拆轴后快照键/通知语义/嵌套错乱）只有 vitest 实测才暴露，审查器只读 diff 文本看不见 | `测试与实现脱钩` | - |
+| 新层/新范式必须与既有层行为矩阵对一遍——ADR-249 三轮 13 条真缺陷全是（repeat/显隐门控/生命周期/订阅语义） | `新层与既有层口径不一致` | - |
+| 审查报告的分级不可直接采信——第 10 轮三域审查的 P1/P2 抽验 3/3 不成立（2 项性质不符、1 项早已实现）；分级由而非「实测确认」产生 | `命中了模式` | - |
+| 本仓注释默认是而非待办——顺「同族未治/已知限制」注释找缺口，9 条候选仅 1 条真是待办（其余是病历记录或刻意设计） | `已处理的历史` | - |
+| 只读单点代码找不到真缺陷——第 10 轮全部产出（7 批）都来自的三类缺口 | `跳出单一模块自检范围` | - |
 | 直接请求 MANAGE_EXTERNAL_STORAGE | - | 新版 Android 拒绝、Google Play 下架；必须走 SAF |
 | 目录选择未回传 URI | - | 后续访问失败；必须经 android-bridge 持久化 URI |
 | 各组件各自注册 | - | 重复监听、返回键冲突；必须经 registerAndroidEvents |

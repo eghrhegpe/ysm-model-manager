@@ -49,7 +49,7 @@
 
 | 标识 | 名称 | tier | 性能 | 关键词 |
 |------|------|------|------|--------|
-| 🏗 ai-review-pitfalls | AI 审查器偏差与查证方法论（9 轮实战沉淀） | architecture | — | AI 审查器（code_review）finding 的取舍与查证流程, 新层/新范式落地后的回归审核 |
+| 🏗 ai-review-pitfalls | AI 审查器偏差与查证方法论（10 轮实战沉淀） | architecture | — | AI 审查器（code_review）finding 的取舍与查证流程, 新层/新范式落地后的回归审核, 子代理/审查报告的采信纪律, 去哪里找真缺陷（缺口定位法） |
 | 🏗 android-bridge | Android 桥接层：存储授权 + 目录选择器 | architecture | — | Android, 存储授权, 目录选择, MANAGE_EXTERNAL_STORAGE, SAF |
 | 🏗 android-events | Android 系统事件消费（back/网络/存储授权） | architecture | — | android:back, 返回键, 弹窗, 系统事件, ScreenLocked, NetworkChanged |
 | 🏗 backend-idb | 浏览器后端 IndexedDB 封装 | architecture | io-bound | IndexedDB, 网页版, backend, 模型库, browser adapter, web mode |
@@ -79,7 +79,7 @@
 
 ### 摘要
 
-- **ai-review-pitfalls**（AI 审查器偏差与查证方法论（9 轮实战沉淀））：9 轮 AI 审查器（code_review deep）实战沉淀：~57 条 finding 中真缺陷 15 处、假阳性/已覆盖 ~31 条、留档 ~11 条。本文记录审查器的系统性偏差模式与对应的查证方法论，供后续「审核产出」工作流直接命…
+- **ai-review-pitfalls**（AI 审查器偏差与查证方法论（10 轮实战沉淀））：10 轮 AI 审查器（code_review deep / 子代理分区审查）实战沉淀：~57 条 finding 中真缺陷 15 处、假阳性/已覆盖 ~31 条、留档 ~11 条；第 10 轮为 3 子代理分域审查（架构性能 / UI 视…
 - **android-bridge**（Android 桥接层：存储授权 + 目录选择器）：Android 专属的 Java ↔ 前端桥（`WailsJSBridge` 以 `wails` 名注册到 WebView，桌面端无此桥返回 `null`）与跨平台目录选择器。解决 Android 上 Wails 官方**拒绝目录选择**（…
 - **android-events**（Android 系统事件消费（back/网络/存储授权））：前端消费 Java 层经 Wails 事件总线转发的 `android:*` 系统事件（ADR-046 P2，参照 MikuMikuAR ADR-017 A3-04）。桌面端无 Java 层，这些事件永不触发，注册无害。生命周期由 `reg…
 - **backend-idb**（浏览器后端 IndexedDB 封装）：`backend/` 目录是 YSM 网页版的后端抽象层（ADR-049 Phase 1-2），在桌面/Android 走 Wails Go 绑定、网页版走 `browser-adapter.ts` + `idb.ts` 的同一接口。`id…

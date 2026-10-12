@@ -39,7 +39,7 @@
 | S2-6 | `slide-menu.ts` `refresh` | N cap 订阅 → N 次 `renderTop` **无 rAF 合批**（与 §2/§13 同源，均判不修） |
 | S2-7 | sky 持久化接缝 | 设计判断，维持 |
 | E-1 | `environment-capability.ts` `applyEnvIntensity` | （2026-10-11 改述：前半「滑杆逐帧 `mat.needsUpdate = true` 重编译风暴」**已根治**——2026-10-11 锐评 P0-② 收口，three r186 逐帧刷 uniform、needsUpdate 等价 version++，`applyEnvIntensity` 实现已无 needsUpdate 置位（文件头注释钉死）；**余项仍开放** = `syncMeshIntensity` 已存在但滑杆通路回调仍传 `[this.scene]`，「复用 roots」未落地） |
-| E-2 | `buildEnvironment` | 同 spec 重写也全量 PMREM 重建（仅 sky 通路有同引用短路） |
+| E-2 | `buildEnvironment` | （2026-10-12 改述：**影响面核完，降级为记账观察**——buildEnvironment 触发入口全枚举：①envEnabled toggle ②structural 键（全离散 select/toggle，**零滑杆**）③custom HDR 选/清 ④loadState 每会话一次 ⑤applyModelPreset 每 mount 一次 ⑥refreshFromSkySource 经 D-5 阈值门控短路。同 spec 全量 PMREM 重建（仅 sky 通路有同引用短路）频率 = 离散点击级（≤每分钟个位数，单次几十 ms，均用户主动操作）——原「同 spec 重写也全量重建」的性能忧从挂账优先项**降级为观察项**，不排期；短路优化若将来落地只需给非 sky 通路补同引用判断 |
 | E-5 | — | 观察项，维持 |
 | G-3 | `env-state-schema.ts` | `groundSize` default 80 与 `waterSize` default 80 的对齐**靠命名巧合，无机制断言** |
 | R-1 | `reflector-capability.ts` `setClipBias` | schema 键 + 持久化齐全，但 `reflector-menu.ts` **无 UI 出口** |
@@ -222,7 +222,7 @@
 
 | 项 | 描述 | 优先级 |
 |---|---|---|
-| **W3** 重建成本半收口 | env PMREM 全重建 + 逐帧 needsUpdate（E-1/E-2）；reflector `size`/`resolution` 结构键无 `onCommit`（S11-1/S11-2 挂账）；ground 回调四连（G-7 活挂账） | 🟡 |
+| **W3** 重建成本半收口 | env PMREM 全重建（E-2，2026-10-12 影响面核完**降级为观察项**）+ 逐帧 needsUpdate（E-1 前半已根治，余项 = syncMeshIntensity 滑杆通路复用 roots）；reflector `size`/`resolution` 结构键无 `onCommit`（S11-1/S11-2 挂账）；ground 回调四连（G-7 活挂账） | 🟡 |
 | **W4** 测试守护分裂 | 手写列表 vs 结构推导双轨并存。`env.test.ts` 的 master id 列表已升级为「cap 真值派生 ⇔ 期望集」双向集合锁（仿 postprocessing B 类范式），过期 `ground-water-enabled` 已修正为 `water-enabled` | 🟡 → 部分已收口 |
 | **W5** 预设 id 散 5 源 | `EnvPresetId` 联合 + `ENV_PRESETS` + `ATMOSPHERE_PRESETS` + `PRESET_ORDER` + `ENV_PRESET_LABEL_KEY: Record<string>`（无编译锁） | 🟡 |
 

@@ -17,7 +17,13 @@ vi.mock("@/preview-3d/infra/load-trace.ts", () => ({
   recordLoadTrace: vi.fn(),
 }));
 
-import { buildLitematicScene } from "./litematic-adapter.ts";
+import {
+  buildLitematicScene,
+  CONTAINER_VOXEL_EXTS,
+  entryExtOf,
+  isContainerPath,
+  voxelFnFor,
+} from "./litematic-adapter.ts";
 
 const VALID_JSON = {
   groups: [{ positions: [[1, 2, 3], [4, 5, 6]], color: "#ff0000" }],
@@ -216,5 +222,34 @@ describe("loadingEl 语义契约", () => {
     expect(ctx.loadingEl.innerHTML).toContain('<svg class="ws-icon"');
     result.dispose();
     document.body.removeChild(ctx.loadingEl);
+  });
+});
+
+// ===== ADR-132 遗留 1 收口（2026-10-12 下沉）：体素域纯派生判据 =====
+// 移自 litematic-3d.ts 的 4 个纯函数（与 DOM/backend 解耦，可独立单测）。
+describe("体素域纯派生判据（litematic-3d → 本层下沉）", () => {
+  it("CONTAINER_VOXEL_EXTS 白名单对齐 VOXEL_RPC_BY_EXT 键（.nbt/.litematic/.schematic）", () => {
+    expect(CONTAINER_VOXEL_EXTS).toBe(".nbt,.litematic,.schematic");
+  });
+
+  it("isContainerPath：.zip/.7z 为容器，其余裸文件否（G1：7z 与 zip 同判，勿特判 .zip）", () => {
+    expect(isContainerPath("/lib/a.zip")).toBe(true);
+    expect(isContainerPath("/lib/a.7z")).toBe(true);
+    expect(isContainerPath("/lib/a.litematic")).toBe(false);
+    expect(isContainerPath("/lib/a.nbt")).toBe(false);
+  });
+
+  it("entryExtOf：命中 VOXEL_RPC_BY_EXT 才回自身 ext，未知扩展名回空（= 走默认体素构建）", () => {
+    expect(entryExtOf("/c/x.nbt")).toBe(".nbt");
+    expect(entryExtOf("/c/x.schematic")).toBe(".schematic");
+    expect(entryExtOf("/c/x.litematic")).toBe(".litematic");
+    expect(entryExtOf("/c/x.png")).toBe(""); // 未知 → 空串（默认语义）
+  });
+
+  it("voxelFnFor：按 ext 解析 RPC 名，未知名回 GetLitematicVoxelData（历史兜底）", () => {
+    expect(voxelFnFor("/a.nbt")).toBe("GetNbtVoxelData");
+    expect(voxelFnFor("/a.schematic")).toBe("GetSchematicVoxelData");
+    expect(voxelFnFor("/a.litematic")).toBe("GetLitematicVoxelData");
+    expect(voxelFnFor("/a.xyz")).toBe("GetLitematicVoxelData"); // 未知名 → 兜底
   });
 });

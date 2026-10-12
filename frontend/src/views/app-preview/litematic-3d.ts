@@ -1,37 +1,30 @@
 // ===== Litematic 体素 3D 预览（ADR-066 P3：脚手架收缴进 mount-preview-core.ts）=====
-// 内容层抽到 litematic-adapter.ts。本文件仅作兼容薄包装，保留
-// createLitematic3D / cleanupVoxel3D / invalidateLitematicPreview 公开符号，
-// litematic-meta.ts 与既有测试无需改动。voxelFn 经适配器工厂传入，决定走哪条 Go RPC。
+// 内容层在 litematic-adapter.ts。本文件 = 路由注册 + getApp 注入 + 容器分支编排
+// （ADR-072 边界判据：backend 枚举/读取归 view 侧注入，pack-3d ListPackModels 同形态）；
+// 域「纯派生」判据（ext→RPC / 容器判定 / 条目 ext）已下沉 litematic-adapter.ts
+// （ADR-132 遗留 1 收口，2026-10-12）。保留 createLitematic3D / cleanupVoxel3D /
+// appendLitematicPreview 公开符号（litematic-meta.ts 与既有测试零改动）。
 // ADR-132 遗留 1：.zip 蓝图/投影容器先 ListContainerEntries 枚举 → 装配容器内多模型
 // adapter（containerPath + modelEntries + 容器内 voxelCall），修复「zip 被当 gzip 打开」坏预览。
 
 import type { VoxelData } from "@/parsers/voxel-types.ts";
-import { makeLitematicAdapter } from "@/preview-3d/adapters/litematic-adapter.ts";
+import {
+  CONTAINER_VOXEL_EXTS,
+  entryExtOf,
+  isContainerPath,
+  makeLitematicAdapter,
+  voxelFnFor,
+} from "@/preview-3d/adapters/litematic-adapter.ts";
 import {
   cleanupPreview,
   type Mount3DOptions,
   mount3D,
 } from "@/preview-3d/adapters/mount-preview-core.ts";
-import { extOf, isContainerExt, RESOURCE_TYPES, VOXEL_RPC_BY_EXT } from "@/utils/resource/types.ts";
+import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import { openModel3DFullscreen, registerReRoute, withPreviewExtras } from "./preview-library.ts";
 
-/** 容器内体素条目扩展名白名单（ListContainerEntries 过滤口径，对齐 VOXEL_RPC_BY_EXT 键） */
-const CONTAINER_VOXEL_EXTS = ".nbt,.litematic,.schematic";
-
-/** 是否容器路径（.zip/.7z 蓝图/投影包）——容器内条目走枚举 + 容器内 voxelCall。
- *  G1 收口：改 isContainerExt（原 .zip 特判）。Go container 包统一支持 zip/7z/目录
- *  （go/container/container.go），.7z 蓝图包同样可 ListContainerEntries 枚举；
- *  特判 .zip 会让 7z 包走裸容器路径（被当 gzip 打开失败，ADR-132 zip 同类缺陷）。 */
-function isContainerPath(path: string): boolean {
-  return isContainerExt(path);
-}
-
-/** 容器内条目扩展名（.nbt/.litematic/.schematic 等；无匹配回退空 = 走默认体素构建） */
-function entryExtOf(entry: string): string {
-  const ext = extOf(entry);
-  return VOXEL_RPC_BY_EXT[ext] ? ext : "";
-}
+// ===== getApp 注入层（适配器 0 backend import，ADR-072 边界判据；pack-3d makePackDeps 先例形态）=====
 
 /** voxel RPC 查表（单一分派点，替代 if/else 链——注册表新增 RPC 名只需在此加一行）。
  *  三 Go 绑定签名一致（GetNbtVoxelData / GetSchematicVoxelData / GetLitematicVoxelData，
@@ -44,10 +37,8 @@ type VoxelApp = {
   GetLitematicVoxelData(p: string): Promise<unknown>;
 };
 
-/** voxelCall 注入（视图壳层保留 getApp；适配器 0 backend import，ADR-072 边界判据）。
- *  voxelFn 是 VOXEL_RPC_BY_EXT 的 Go RPC 名（GetNbtVoxelData / GetSchematicVoxelData /
- *  GetLitematicVoxelData，三签名一致）——动态 key 保留（工厂注入），查表分派；
- *  未知名显式抛错（fail-loud，注册表增长失败响亮，同原审查 P3 意图）。
+/** voxelCall 注入：voxelFn 是 VOXEL_RPC_BY_EXT 的 Go RPC 名（三签名一致）——动态 key 保留
+ *  （工厂注入），查表分派；未知名显式抛错（fail-loud，注册表增长失败响亮，同原审查 P3 意图）。
  *  ADR-143 P1：绑定返回 typed VoxelData | null（原 string JSON）。 */
 function makeVoxelCall(voxelFn: string): (path: string) => Promise<VoxelData | null> {
   return async (path: string): Promise<VoxelData | null> => {
@@ -129,11 +120,6 @@ export async function createLitematic3D(
     // 现降级仍走原错误契约而非崩溃）
   }
   await mount3D(makeLitematicAdapter({ voxelCall: makeVoxelCall(voxelFn) }), path, extraOpts);
-}
-
-/** 按扩展名解析体素 RPC（对齐 litematic-meta.ts 的 VOXEL_RPC_BY_EXT 映射） */
-function voxelFnFor(path: string): string {
-  return VOXEL_RPC_BY_EXT[extOf(path)] || "GetLitematicVoxelData";
 }
 
 /** 跨类型换角色注册：投影/蓝图进入类型 tab（P2-2），opener 透传 siblings（P1-2） */

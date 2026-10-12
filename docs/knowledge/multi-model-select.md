@@ -29,8 +29,11 @@ auto_fields:
     - BuildVoxelDataFromRoot
     - buildYsmModelSchema
     - cleanupVoxel3D
+    - CONTAINER_VOXEL_EXTS
     - createLitematic3D
+    - entryExtOf
     - Error
+    - isContainerPath
     - LITEMATIC_SLICE_SCHEMA_ID
     - LitematicAdapterDeps
     - LitematicBuildOpts
@@ -51,6 +54,7 @@ auto_fields:
     - PackMenuItemsOpts
     - packTextureLabel
     - playNodes
+    - voxelFnFor
     - YsmComponentSelectCtx
     - ysmComponentSelectNode
     - ysmModelStats

@@ -200,6 +200,7 @@ auto_fields:
     - computeSunPosition
     - concurrentMap
     - ConsoleLogger
+    - CONTAINER_VOXEL_EXTS
     - CORE_MENU_ITEMS
     - corePanelBuilder
     - CorePanelId
@@ -278,6 +279,7 @@ auto_fields:
     - ensureOverlayShell
     - ensureReflector
     - ensureViewContainer
+    - entryExtOf
     - entryPathOf
     - ENV_KEYS
     - ENV_PRESET_DEFAULT_INTENSITY
@@ -456,6 +458,7 @@ auto_fields:
     - installWebGlContextGuard
     - invalidateMaxFpsCache
     - invalidatePreview
+    - isContainerPath
     - isEnvCallbacksSuspended
     - isEnvDisposableSource
     - isFrustumCullEnabled
@@ -1030,6 +1033,7 @@ auto_fields:
     - VolumetricParams
     - volumetricTipFromRatio
     - volumetricTipRatioFor
+    - voxelFnFor
     - VrmAdapterDeps
     - VrmBonePanelCtx
     - VrmDataPort

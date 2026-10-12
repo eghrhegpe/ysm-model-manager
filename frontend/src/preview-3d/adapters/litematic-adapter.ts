@@ -20,12 +20,40 @@ import type { NodeFor, PreviewMenuNode } from "@/preview-3d/menu/schema/node-typ
 import { screenshotFromRenderer } from "@/preview-3d/screenshot/screenshot.ts"; // ADR-052 P3：截图走共享 renderer（通用化）
 import type { PreviewSnapshot } from "@/preview-3d/state/preview-state.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
+import { extOf, isContainerExt, VOXEL_RPC_BY_EXT } from "@/utils/resource/types.ts";
 import type {
   PreviewAdapter,
   PreviewBuildCtx,
   PreviewScene,
   ScreenshotScene,
 } from "./mount-preview-core.ts";
+
+// ===== ADR-132 遗留 1 收口（2026-10-12 下沉）：体素域「纯派生」判据自 view 归位 =====
+// 原 litematic-3d.ts 本地 4 函数；view 层只保留「路由注册 + getApp 注入 + 容器分支编排」
+// （ADR-072 边界判据：backend 枚举在 view 侧，pack-3d ListPackModels 同形态），
+// 域「判定」（ext→RPC / 容器判定 / 条目 ext 派生）下沉本层——与 DOM/backend 解耦可单测。
+
+/** 容器内体素条目扩展名白名单（ListContainerEntries 过滤口径，对齐 VOXEL_RPC_BY_EXT 键） */
+export const CONTAINER_VOXEL_EXTS = ".nbt,.litematic,.schematic";
+
+/** 是否容器路径（.zip/.7z 蓝图/投影包）——容器内条目走枚举 + 容器内 voxelCall。
+ *  G1 收口：用 isContainerExt（原 .zip 特判）。Go container 包统一支持 zip/7z/目录
+ *  （go/container/container.go），.7z 蓝图包同样可 ListContainerEntries 枚举；
+ *  特判 .zip 会让 7z 包走裸容器路径（被当 gzip 打开失败，ADR-132 zip 同类缺陷）。 */
+export function isContainerPath(path: string): boolean {
+  return isContainerExt(path);
+}
+
+/** 容器内条目扩展名（.nbt/.litematic/.schematic 等；无匹配回退空 = 走默认体素构建） */
+export function entryExtOf(entry: string): string {
+  const ext = extOf(entry);
+  return VOXEL_RPC_BY_EXT[ext] ? ext : "";
+}
+
+/** 按扩展名解析体素 RPC（对齐 litematic-meta.ts 的 VOXEL_RPC_BY_EXT 映射） */
+export function voxelFnFor(path: string): string {
+  return VOXEL_RPC_BY_EXT[extOf(path)] || "GetLitematicVoxelData";
+}
 
 // 提取魔法数值常量（体素尺寸 / 默认色 / chunk 维 / 截断上限）
 /** litematic 截断警告条样式(P1 批次11:cssText 抽类;插 ctx.overlay——ADR-175 M1 后为 overlay shadow root,ensureMdliStyles 经桥注入同域) */

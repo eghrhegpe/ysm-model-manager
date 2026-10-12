@@ -8,10 +8,14 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - buildLitematicScene
+    - CONTAINER_VOXEL_EXTS
+    - entryExtOf
+    - isContainerPath
     - LITEMATIC_SLICE_SCHEMA_ID
     - LitematicAdapterDeps
     - LitematicBuildOpts
     - makeLitematicAdapter
+    - voxelFnFor
 use_when:
   - 黑话
   - 命名

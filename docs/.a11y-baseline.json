@@ -2,14 +2,14 @@
   "_comment": "a11y 覆盖基线（ADR-308 D3）：coverage=aria-* 覆盖度出现次数下限（只增不减，hard），coverageNeutral=role/tabindex/prefers-reduced-motion 中性指标（只记录、不守基线，fail-open——删冗余/非法 role=button 嵌套或冗余 tabindex 是合理的 a11y 收敛，不该被误判退化），scatter=document 级 keydown 散点文件→次数上限（只减不增；utils/dom/key-router.ts 为唯一合法出口已豁免不入册，在册文件=有意维持现状的已知散点，豁免理由见 key-router.ts 头注）。收紧: node scripts/check-a11y.ts --update；放松需 --force 并在提交说明附理由。",
   "generatedAt": "2026-10-12",
   "coverage": {
-    "aria-modal": 7,
-    "aria-label": 37,
-    "aria-disabled": 7,
-    "aria-valuenow": 2,
-    "aria-expanded": 16,
-    "aria-controls": 7,
-    "aria-valuemin": 1,
-    "aria-valuemax": 1,
+    "aria-modal": 8,
+    "aria-label": 38,
+    "aria-disabled": 9,
+    "aria-valuenow": 5,
+    "aria-valuemin": 2,
+    "aria-valuemax": 2,
+    "aria-expanded": 17,
+    "aria-controls": 8,
     "aria-checked": 10,
     "aria-labelledby": 5,
     "aria-live": 3,
@@ -24,7 +24,7 @@
     "aria-level": 4
   },
   "coverageNeutral": {
-    "role": 31,
+    "role": 36,
     "tabindex": 58,
     "prefers-reduced-motion": 2
   },

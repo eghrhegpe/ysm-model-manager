@@ -3,30 +3,30 @@
   "generatedAt": "2026-10-12",
   "coverage": {
     "aria-modal": 8,
-    "aria-label": 38,
+    "aria-live": 4,
+    "aria-label": 39,
     "aria-disabled": 9,
     "aria-valuenow": 5,
     "aria-valuemin": 2,
     "aria-valuemax": 2,
     "aria-expanded": 17,
     "aria-controls": 8,
-    "aria-checked": 10,
+    "aria-checked": 11,
     "aria-labelledby": 5,
-    "aria-live": 3,
     "aria-atomic": 1,
     "aria-selected": 15,
     "aria-haspopup": 1,
     "aria-keyshortcuts": 5,
-    "aria-hidden": 8,
+    "aria-hidden": 7,
     "aria-describedby": 3,
     "aria-pressed": 2,
     "aria-current": 2,
     "aria-level": 4
   },
   "coverageNeutral": {
+    "prefers-reduced-motion": 3,
     "role": 36,
-    "tabindex": 58,
-    "prefers-reduced-motion": 2
+    "tabindex": 60
   },
   "scatter": {
     "preview-3d/adapters/mount-preview-core.ts": 2,

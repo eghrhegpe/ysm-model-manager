@@ -62,25 +62,19 @@ export const statusColorOf = (status: string): string => STATUS_COLOR[status] ??
 /** 状态操作按钮（missing/diverged→push；optional→pull；legacy→pullHere；其余无） */
 export function actionBtnHTML(status: string): string {
   if (status === "missing" || status === "diverged") {
-    return (
-      '<button class="sm-item-btn" data-testid="sm-push" data-action="push" style="border:1px solid var(--accent);color:var(--accent)">' +
-      t("syncManager.push") +
-      "</button>"
-    );
+    return `<button class="sm-item-btn" data-testid="sm-push" data-action="push" style="border:1px solid var(--accent);color:var(--accent)">${t(
+      "syncManager.push",
+    )}</button>`;
   }
   if (status === "optional") {
-    return (
-      '<button class="sm-item-btn" data-testid="sm-pull" data-action="pull" style="border:1px solid var(--sm-optional);color:var(--sm-optional)">' +
-      t("syncManager.pull") +
-      "</button>"
-    );
+    return `<button class="sm-item-btn" data-testid="sm-pull" data-action="pull" style="border:1px solid var(--sm-optional);color:var(--sm-optional)">${t(
+      "syncManager.pull",
+    )}</button>`;
   }
   if (status === "legacy") {
-    return (
-      '<button class="sm-item-btn" data-action="pull" style="border:1px solid var(--muted);color:var(--txt)">' +
-      t("syncManager.pullHere") +
-      "</button>"
-    );
+    return `<button class="sm-item-btn" data-action="pull" style="border:1px solid var(--muted);color:var(--txt)">${t(
+      "syncManager.pullHere",
+    )}</button>`;
   }
   return "";
 }
@@ -103,35 +97,23 @@ export function syncDirRowHTML(
   const actionBtn = actionBtnHTML(syncItem.status);
   const arrow = shouldOpen ? UI_ICONS.chevronDown : UI_ICONS.chevronRight;
   return (
-    '<div class="sm-item sm-dir" data-path="' +
-    esc(opPath || path) +
-    '" data-status="' +
-    esc(syncItem.status) +
-    '" data-type="' +
-    esc(syncItem.type) +
-    '" style="padding-left:' +
-    indent +
-    'px">' +
+    `<div class="sm-item sm-dir" data-path="${esc(opPath || path)}" data-status="${esc(
+      syncItem.status,
+    )}" data-type="${esc(syncItem.type)}" style="padding-left:${indent}px">` +
     // a11y（2026 复测补缺）：箭头由装饰 span 升为原生 button（键盘可达 + 原生 Enter/Space），
     // 展开态走 aria-expanded，可访问名 = 文件夹名（屏幕阅读器读「名称，已展开/折叠」）；
     // 点击冒泡到 ③ dir 行委托翻转（既有事件链不变，零新增 handler）
-    '<button class="sm-dir-arrow" aria-expanded="' +
-    shouldOpen +
-    '" aria-label="' +
-    esc(syncItem.name) +
-    '">' +
-    arrow +
-    "</button>" +
-    '<span aria-hidden="true" style="flex-shrink:0;font-size:var(--fs-base)">' +
-    (syncItem.icon || UI_ICONS.folder) +
-    "</span>" +
-    '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt)">' +
-    renderFormattedText(syncItem.name) +
-    "</span>" +
+    `<button class="sm-dir-arrow" aria-expanded="${shouldOpen}" aria-label="${esc(
+      syncItem.name,
+    )}">${arrow}</button>` +
+    `<span aria-hidden="true" style="flex-shrink:0;font-size:var(--fs-base)">${
+      syncItem.icon || UI_ICONS.folder
+    }</span>` +
+    `<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt)">${renderFormattedText(
+      syncItem.name,
+    )}</span>` +
     (sizeStr
-      ? '<span style="flex-shrink:0;color:var(--muted);font-size:var(--fs-xs)">' +
-        sizeStr +
-        "</span>"
+      ? `<span style="flex-shrink:0;color:var(--muted);font-size:var(--fs-xs)">${sizeStr}</span>`
       : "") +
     actionBtn +
     "</div>"
@@ -139,77 +121,83 @@ export function syncDirRowHTML(
 }
 
 /**
- * 容器骨架
+ * 容器骨架。
+ * ⚠️ 模板化迁移说明：原拼接段之间的 TS 注释已提升至本块（模板字符串内不可夹 JS 注释）。
+ *
+ * 定高行（原贴 .sm-item 处）：虚拟滚动要求同行等高，且行高必须随用户 --fs-scale
+ * （设置页可调）缩放——故用 calc 从 --fs-sm 派生（12px 基准 → 25.8px），TS 侧首帧实测取整
+ * （见 renderer 行高实测）。注意：这里是**静态** height，非 height 过渡——ADR-015 §2.4
+ * 约束 3 禁的是虚拟滚动组件上的 height/max-height **transition**（与 innerHTML 替换冲突
+ * 触发闪烁）；定高恰是窗口化的前提，且本行 transition 只列 background。另：行不再挂入场
+ * 动画，理由同该 ADR「已知例外」（模型树子行淡入即因此禁用：animation-fill-mode:both
+ * 叠加窗口化替换会滚动闪烁）。
+ *
+ * 状态筛选 tab 样式回归样式表（原为 statusTabHTML 里字符串拼接的行内 style=）——行内
+ * 样式绕开样式表，主题切换 / 媒体查询 / 复用都够不着；且与既有 transition 规则分裂成
+ * 两处。12px 横向内边距走 --btn-padding-filter（沿用 --btn-padding-* 既有简写约定）。
+ *
+ * 选中态用「accent 18% 淡化」而非实心 accent：本栏 6 个筛选并排（all/synced/missing/
+ * disabled/optional/legacy），实心会成视觉噪音。与 .cr-tag-filter-btn.active 逐值同款——
+ * 判据：**并排 4+ 个的筛选组用 18% 淡化**（.cr-tag-filter-btn / .diag-log-fbtn /
+ * .diag-sub-tab / .sm-status-tab 逐值同款）；**2 个的切换组用实心 accent**（仅 .pv-tab，
+ * 见 app-preview/css.ts .pv-tab-active）——实心底 + accent 字在「二选一」场景才是强反馈，
+ * 在「多并排筛选」场景则成噪音。
+ *
+ * a11y（2026 复测补缺）：目录箭头 span→button 后的原生 button 复位（样式归样式表，
+ * 行内 style 只留缩进等动态值）——继承行字号/行高，仅重置按钮自带外框。
+ *
+ * 筛选栏重构：.sm-status-tabs（flex 行）= 只读类型指示槽位 + radiogroup；指示器非 radio，
+ * 不入 radiogroup 组（ARIA 规范：radiogroup 子节点应全为 radio）。
+ *
+ * 当前类型只读指示（原同样是行内 style=）。
+ *
+ * 空状态图标尺寸：原内联 20px（design-tokens 的 inline-style-font-size，属基线内已知债）。
+ * 20px 无精确令牌 → 按既有「归最近档位」口径收为 --fs-xl(24px)：样式从内联回到样式表、
+ * 硬编码字号消失，债真正还掉（非仅搬位置——闸对硬编码字号位置无关）。
+ *
+ * 状态筛选栏（类型选择已全局化到 nav 下拉，sm-cur-type 只读指示随本栏渲染）；
+ * a11y：radiogroup 语义 + aria-label（i18n）；六个状态页签是互斥筛选而非页面 tab，
+ * 走 radio 组（仓内先例 tabs-shell diag 子切换同族，且天然避开嵌套 tablist 红线）。
  */
 export function containerHTML(): string {
-  return (
-    "<style>" +
-    // 定高行：虚拟滚动要求同行等高，且行高必须随用户 --fs-scale（设置页可调）缩放——
-    // 故用 calc 从 --fs-sm 派生（12px 基准 → 25.8px），TS 侧首帧实测取整（见 renderer 行高实测）。
-    // 注意：这里是**静态** height，非 height 过渡——ADR-015 §2.4 约束 3 禁的是虚拟滚动组件上的
-    // height/max-height **transition**（与 innerHTML 替换冲突触发闪烁）；定高恰是窗口化的前提，
-    // 且本行 transition 只列 background。另：行不再挂入场动画，理由同该 ADR「已知例外」
-    // （模型树子行淡入即因此禁用：animation-fill-mode:both 叠加窗口化替换会滚动闪烁）。
-    ".sm-item{display:flex;align-items:center;gap:4px;padding:var(--btn-padding-std);height:calc(var(--fs-sm) * 1.4 + 9px);box-sizing:border-box;font-size:var(--fs-sm);border-bottom:1px solid var(--bd);cursor:default;transition:background var(--tr-fast)}" +
-    ".sm-item:hover{background:var(--hover)}" +
-    ".sm-item-btn{padding:var(--pad-btn-secondary) 8px;border-radius:var(--radius-sm);background:transparent;cursor:pointer;flex-shrink:0;font-size:var(--fs-btn-secondary);transition:background var(--tr-fast),border-color var(--tr-fast),color var(--tr-fast)}" +
-    ".sm-item-btn:hover{background:var(--hover)}" +
-    ".sm-tab{transition:var(--tr-fast)}" +
-    // 状态筛选 tab：样式回到样式表（原为 statusTabHTML 里字符串拼接的行内 style=）——
-    // 行内样式绕开样式表，主题切换 / 媒体查询 / 复用都够不着；且与既有 transition 规则分裂成两处。
-    // 12px 横向内边距走 --btn-padding-filter（沿用 --btn-padding-* 既有简写约定）。
-    ".sm-status-tab{padding:var(--btn-padding-filter);border-radius:var(--radius-sm);border:1px solid transparent;background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;font-size:var(--fs-filter);white-space:nowrap;transition:background var(--tr-fast),color var(--tr-fast),border-color var(--tr-fast)}" +
-    // 选中态用「accent 18% 淡化」而非实心 accent：本栏 6 个筛选并排（all/synced/missing/
-    // disabled/optional/legacy），实心会成视觉噪音。与 .cr-tag-filter-btn.active 逐值同款——
-    // 判据：**并排 4+ 个的筛选组用 18% 淡化**（.cr-tag-filter-btn / .diag-log-fbtn /
-    // .diag-sub-tab / .sm-status-tab 逐值同款）；**2 个的切换组用实心 accent**（仅 .pv-tab，
-    // 见 app-preview/css.ts .pv-tab-active）——实心底 + accent 字在「二选一」场景才是强反馈，
-    // 在「多并排筛选」场景则成噪音。
-    ".sm-status-tab.active{border-color:var(--accent);background:color-mix(in srgb, var(--accent) 18%, transparent);color:var(--accent)}" +
-    // a11y（2026 复测补缺）：目录箭头 span→button 后的原生 button 复位（样式归样式表，
-    // 行内 style 只留缩进等动态值）——继承行字号/行高，仅重置按钮自带外框
-    ".sm-dir-arrow{flex-shrink:0;width:14px;text-align:center;cursor:pointer;color:var(--muted);background:transparent;border:0;padding:0;font:inherit;line-height:1}" +
-    // 筛选栏重构：.sm-status-tabs（flex 行）= 只读类型指示槽位 + radiogroup；
-    // 指示器非 radio，不入 radiogroup 组（ARIA 规范：radiogroup 子节点应全为 radio）
-    ".sm-cur-type-slot{display:contents}" +
-    ".sm-status-radios{display:flex;gap:var(--sp-1);flex:1;min-width:0}" +
-    // 当前类型只读指示（原同样是行内 style=）
-    ".sm-cur-type{display:inline-flex;align-items:center;gap:4px;padding:0 8px;color:var(--accent);font-size:var(--fs-filter);white-space:nowrap;border-right:1px solid var(--bd);margin-right:6px}" +
-    ".sm-empty{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;height:100%;color:var(--muted);font-size:var(--fs-base);animation:fade-in .2s ease}" +
-    // 空状态图标尺寸：原内联 20px（design-tokens 的 inline-style-font-size，属基线内已知债）。
-    // 20px 无精确令牌 → 按既有「归最近档位」口径收为 --fs-xl(24px)：样式从内联回到样式表、
-    // 硬编码字号消失，债真正还掉（非仅搬位置——闸对硬编码字号位置无关）。
-    ".sm-empty-icon{font-size:var(--fs-xl)}" +
-    ".sm-list{animation:fade-in .15s ease}" +
-    ".sm-loading{display:flex;flex-direction:column;gap:8px;padding:var(--sp-3)}" +
-    ".sm-dir{cursor:pointer}" +
-    ".sm-dir .sm-dir-arrow{transition:color var(--tr-fast)}" +
-    ".sm-dir:hover{background:var(--hover)}" +
-    ".sm-file{cursor:default}" +
-    ".sm-file:hover{background:transparent}" +
-    ".sm-shimmer{height:12px;border-radius:var(--radius-md);background:linear-gradient(90deg,var(--bd) 25%,var(--hover) 50%,var(--bd) 75%);background-size:200% 100%;animation:sk-shimmer 1.5s infinite}" +
-    ".sm-shimmer-w80{width:80%}" +
-    ".sm-shimmer-w60{width:60%}" +
-    ".sm-shimmer-w70{width:70%}" +
-    "@keyframes fade-in{from{opacity:0}to{opacity:1}}" +
-    "@keyframes sk-shimmer{from{background-position:-200% 0}to{background-position:200% 0}}" +
-    "</style>" +
-    '<div class="sm-wrap" style="display:flex;flex-direction:column;height:100%;overflow:hidden">' +
-    // 状态筛选栏（类型选择已全局化到 nav 下拉，sm-cur-type 只读指示随本栏渲染）
-    // a11y：radiogroup 语义 + aria-label（i18n）；六个状态页签是互斥筛选而非页面 tab，
-    // 走 radio 组（仓内先例 tabs-shell diag 子切换同族，且天然避开嵌套 tablist 红线）
-    '<div class="sm-status-tabs" style="display:flex;align-items:center;gap:2px;padding:var(--btn-padding-tool-lg);flex-shrink:0;border-bottom:1px solid var(--bd);font-size:var(--fs-xs)">' +
-    '<span class="sm-cur-type-slot"></span>' +
-    '<div class="sm-status-radios" role="radiogroup" aria-label="' +
-    esc(t("syncManager.statusFiltersAria")) +
-    '"></div>' +
-    "</div>" +
-    // 摘要栏
-    '<div class="sm-summary" style="display:flex;align-items:center;gap:8px;padding:var(--btn-padding-tool-lg);flex-shrink:0;border-bottom:1px solid var(--bd);font-size:var(--fs-xs)"></div>' +
-    // 列表容器
-    '<div class="sm-list" style="flex:1;overflow-y:auto;padding:var(--pad-v-2)"></div>' +
-    "</div>"
-  );
+  return `<style>
+.sm-item{display:flex;align-items:center;gap:4px;padding:var(--btn-padding-std);height:calc(var(--fs-sm) * 1.4 + 9px);box-sizing:border-box;font-size:var(--fs-sm);border-bottom:1px solid var(--bd);cursor:default;transition:background var(--tr-fast)}
+.sm-item:hover{background:var(--hover)}
+.sm-item-btn{padding:var(--pad-btn-secondary) 8px;border-radius:var(--radius-sm);background:transparent;cursor:pointer;flex-shrink:0;font-size:var(--fs-btn-secondary);transition:background var(--tr-fast),border-color var(--tr-fast),color var(--tr-fast)}
+.sm-item-btn:hover{background:var(--hover)}
+.sm-tab{transition:var(--tr-fast)}
+.sm-status-tab{padding:var(--btn-padding-filter);border-radius:var(--radius-sm);border:1px solid transparent;background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;font-size:var(--fs-filter);white-space:nowrap;transition:background var(--tr-fast),color var(--tr-fast),border-color var(--tr-fast)}
+.sm-status-tab.active{border-color:var(--accent);background:color-mix(in srgb, var(--accent) 18%, transparent);color:var(--accent)}
+.sm-dir-arrow{flex-shrink:0;width:14px;text-align:center;cursor:pointer;color:var(--muted);background:transparent;border:0;padding:0;font:inherit;line-height:1}
+.sm-cur-type-slot{display:contents}
+.sm-status-radios{display:flex;gap:var(--sp-1);flex:1;min-width:0}
+.sm-cur-type{display:inline-flex;align-items:center;gap:4px;padding:0 var(--sp-2);color:var(--accent);font-size:var(--fs-filter);white-space:nowrap;border-right:1px solid var(--bd);margin-right:6px}
+.sm-empty{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;height:100%;color:var(--muted);font-size:var(--fs-base);animation:fade-in .2s ease}
+.sm-empty-icon{font-size:var(--fs-xl)}
+.sm-list{animation:fade-in .15s ease}
+.sm-loading{display:flex;flex-direction:column;gap:8px;padding:var(--sp-3)}
+.sm-dir{cursor:pointer}
+.sm-dir .sm-dir-arrow{transition:color var(--tr-fast)}
+.sm-dir:hover{background:var(--hover)}
+.sm-file{cursor:default}
+.sm-file:hover{background:transparent}
+.sm-shimmer{height:12px;border-radius:var(--radius-md);background:linear-gradient(90deg,var(--bd) 25%,var(--hover) 50%,var(--bd) 75%);background-size:200% 100%;animation:sk-shimmer 1.5s infinite}
+.sm-shimmer-w80{width:80%}
+.sm-shimmer-w60{width:60%}
+.sm-shimmer-w70{width:70%}
+@keyframes fade-in{from{opacity:0}to{opacity:1}}
+@keyframes sk-shimmer{from{background-position:-200% 0}to{background-position:200% 0}}
+</style>
+<div class="sm-wrap" style="display:flex;flex-direction:column;height:100%;overflow:hidden">
+<div class="sm-status-tabs" style="display:flex;align-items:center;gap:2px;padding:var(--btn-padding-tool-lg);flex-shrink:0;border-bottom:1px solid var(--bd);font-size:var(--fs-xs)">
+<span class="sm-cur-type-slot"></span>
+<div class="sm-status-radios" role="radiogroup" aria-label="${esc(
+    t("syncManager.statusFiltersAria"),
+  )}"></div>
+</div>
+<div class="sm-summary" style="display:flex;align-items:center;gap:8px;padding:var(--btn-padding-tool-lg);flex-shrink:0;border-bottom:1px solid var(--bd);font-size:var(--fs-xs)"></div>
+<div class="sm-list" style="flex:1;overflow-y:auto;padding:var(--pad-v-2)"></div>
+</div>`;
 }
 
 /** 状态筛选标签 HTML
@@ -224,20 +212,9 @@ export function containerHTML(): string {
 export function statusTabHTML(id: string, label: string, count: number, active: boolean): string {
   const cls = active ? " active" : "";
   const showCount = count > 0 ? ` (${count})` : "";
-  return (
-    '<button class="sm-status-tab' +
-    cls +
-    '" data-status="' +
-    id +
-    '" role="radio" aria-checked="' +
-    active +
-    '" tabindex="' +
-    (active ? "0" : "-1") +
-    '">' +
-    label +
-    showCount +
-    "</button>"
-  );
+  return `<button class="sm-status-tab${cls}" data-status="${id}" role="radio" aria-checked="${active}" tabindex="${
+    active ? "0" : "-1"
+  }">${label}${showCount}</button>`;
 }
 
 /**
@@ -253,32 +230,20 @@ export function itemHTML(item: SyncItem, indent: number): string {
     // code review P1：class 补 sm-file——children/扁平文件行统一 .sm-item sm-file
     //（旧 syncFileRowHTML 语义；渲染层 children 走 itemHTML，无 sm-file 会让
     // 展开后的子文件行无法被 .sm-file 选择器命中）
-    '<div class="sm-item sm-file" data-path="' +
-    esc(item.path) +
-    '" data-status="' +
-    esc(item.status) +
-    '" data-type="' +
-    esc(item.type) +
-    '" style="padding-left:' +
-    indent +
-    'px">' +
+    `<div class="sm-item sm-file" data-path="${esc(item.path)}" data-status="${esc(
+      item.status,
+    )}" data-type="${esc(item.type)}" style="padding-left:${indent}px">` +
     // a11y（2026 复测补缺）：状态图标（SVG）与文件图标（emoji）均为装饰，aria-hidden 降噪——
     // 屏幕阅读器读「名称 + 大小」即可，行动语义由行内原生 button（push/pull）承担
-    '<span aria-hidden="true" style="flex-shrink:0;width:14px;text-align:center;color:' +
-    statusColor +
-    '">' +
-    statusIcon +
-    "</span>" +
-    '<span aria-hidden="true" style="flex-shrink:0;font-size:var(--fs-base)">' +
-    (item.icon || UI_ICONS.package) +
-    "</span>" +
-    '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt)">' +
-    renderFormattedText(item.name) +
-    "</span>" +
+    `<span aria-hidden="true" style="flex-shrink:0;width:14px;text-align:center;color:${statusColor}">${statusIcon}</span>` +
+    `<span aria-hidden="true" style="flex-shrink:0;font-size:var(--fs-base)">${
+      item.icon || UI_ICONS.package
+    }</span>` +
+    `<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt)">${renderFormattedText(
+      item.name,
+    )}</span>` +
     (sizeStr
-      ? '<span style="flex-shrink:0;color:var(--muted);font-size:var(--fs-xs)">' +
-        sizeStr +
-        "</span>"
+      ? `<span style="flex-shrink:0;color:var(--muted);font-size:var(--fs-xs)">${sizeStr}</span>`
       : "") +
     actionBtn +
     "</div>"
@@ -292,16 +257,7 @@ export function itemHTML(item: SyncItem, indent: number): string {
 export function emptyHintHTML(msg: string): string {
   // 原为两处行内 style=（外层容器 + `font-size:20px` 的图标行）。后者是**基线内已知债**
   //（design-tokens 的 inline-style-font-size），本次一并还掉：样式归 .sm-empty / .sm-empty-icon。
-  return (
-    '<div class="sm-empty">' +
-    '<div class="sm-empty-icon">' +
-    UI_ICONS.inboxEmpty +
-    "</div>" +
-    "<div>" +
-    msg +
-    "</div>" +
-    "</div>"
-  );
+  return `<div class="sm-empty"><div class="sm-empty-icon">${UI_ICONS.inboxEmpty}</div><div>${msg}</div></div>`;
 }
 
 /**
@@ -309,13 +265,7 @@ export function emptyHintHTML(msg: string): string {
  * a11y：role=status（隐式 aria-live=polite）——屏幕阅读器自动播报加载开始
  */
 export function loadingHTML(): string {
-  return (
-    '<div class="sm-loading" role="status" aria-label="' +
-    esc(t("common.loading")) +
-    '">' +
-    '<div class="sm-shimmer sm-shimmer-w80"></div>' +
-    '<div class="sm-shimmer sm-shimmer-w60"></div>' +
-    '<div class="sm-shimmer sm-shimmer-w70"></div>' +
-    "</div>"
-  );
+  return `<div class="sm-loading" role="status" aria-label="${esc(
+    t("common.loading"),
+  )}"><div class="sm-shimmer sm-shimmer-w80"></div><div class="sm-shimmer sm-shimmer-w60"></div><div class="sm-shimmer sm-shimmer-w70"></div></div>`;
 }

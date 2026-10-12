@@ -70,12 +70,34 @@ function ensureSkeleton(self: SyncRenderSelf): boolean {
   return true;
 }
 
+/** 计入状态徽标的合法键（tabStatus 折叠 diverged→missing 后）。 */
+const COUNTED_STATUS = ["synced", "missing", "disabled", "optional", "legacy"] as const;
+type CountedStatus = (typeof COUNTED_STATUS)[number];
+const isCountedStatus = (s: string): s is CountedStatus =>
+  (COUNTED_STATUS as readonly string[]).includes(s);
+
 /**
- * 递归统计各类型桶与全局的状态计数。
+ * 单节点状态入桶：已知状态计数，未知状态 logWarn 显式暴露（不入桶）。
+ * 旧实现 `(c as unknown as Record<string, number>)[st]++` 动态塞键——Go 侧新增而前端
+ * 未同步的状态（如 "conflicted"）会 `undefined++` 产出 NaN 静默污染计数对象；
+ * 现白名单收口：未知键告警跳过，total 仍无条件计入（列表行数口径不丢）。
+ */
+function bumpCount(c: TypeCounts, status: string): void {
+  if (isCountedStatus(status)) {
+    c[status]++;
+  } else {
+    logWarn("sync-manager", `未知同步状态未计入徽标: ${status}`);
+  }
+  c.total++;
+}
+
+/**
+ * 递归统计各类型桶与全局的状态计数（导出供直测——renderer 层纯函数，与 store.ts
+ * 导出 tabStatus 同款先例；键集合恒定：无未知状态动态塞键）。
  * 遍历全部嵌套 children 而非仅顶层——保证徽标数 = 列表可见行数（口径与 applyFilter 一致，
  * tabStatus 折叠 diverged→missing）。
  */
-function collectCounts(self: SyncRenderSelf): {
+export function collectCounts(self: SyncRenderSelf): {
   typeCounts: Record<string, TypeCounts>;
   globalCounts: TypeCounts;
 } {
@@ -101,11 +123,8 @@ function collectCounts(self: SyncRenderSelf): {
   const countNode = (item: SyncItem): void => {
     const c = typeCounts[item.type];
     const st = tabStatus(item);
-    if (c) {
-      (c as unknown as Record<string, number>)[st]++;
-      c.total++;
-    }
-    (globalCounts as unknown as Record<string, number>)[st]++;
+    if (c) bumpCount(c, st);
+    bumpCount(globalCounts, st);
     item.children?.forEach(countNode);
   };
   for (const item of self._allItems) countNode(item);
@@ -172,15 +191,9 @@ function renderStatusTabs(
   const curTypeSlot = self.querySelector(".sm-cur-type-slot");
   if (curTypeSlot) {
     curTypeSlot.innerHTML = self._selectedType
-      ? '<span class="sm-cur-type" data-rtype="' +
-        esc(self._selectedType) +
-        '" title="' +
-        t("syncManager.curTypeHint") +
-        '">' +
-        esc(curIcon) +
-        " " +
-        esc(curLabel) +
-        "</span>"
+      ? `<span class="sm-cur-type" data-rtype="${esc(self._selectedType)}" title="${t(
+          "syncManager.curTypeHint",
+        )}">${esc(curIcon)} ${esc(curLabel)}</span>`
       : "";
   }
   const radiosEl = self.querySelector(".sm-status-radios");
@@ -211,11 +224,9 @@ function renderScanDirs(self: SyncRenderSelf): void {
     return;
   }
   const cell = (label: string, dir: string): string =>
-    '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)" title="' +
-    esc(dir) +
-    '">' +
-    esc(label) +
-    "</span>";
+    `<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)" title="${esc(
+      dir,
+    )}">${esc(label)}</span>`;
   if (dirs.warningCode === "scan_dir_wide" && dirs.warningParams) {
     // 仓库基准疑似过宽：优先展示告警，避免静默混入（后端只给 code+参数，文案走 i18n 组装）
     const warnText = t("syncManager.scanDirWide", {
@@ -223,12 +234,9 @@ function renderScanDirs(self: SyncRenderSelf): void {
       dir: dirs.warningParams.dir,
       subDir: dirs.warningParams.subDir,
     });
-    summaryEl.innerHTML =
-      '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--err)" title="' +
-      esc(warnText) +
-      '">' +
-      esc(warnText) +
-      "</span>";
+    summaryEl.innerHTML = `<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--err)" title="${esc(
+      warnText,
+    )}">${esc(warnText)}</span>`;
     return;
   }
   summaryEl.innerHTML =

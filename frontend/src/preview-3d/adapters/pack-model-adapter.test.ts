@@ -266,6 +266,21 @@ describe("纹理缓存", () => {
     preview.dispose!();
     expect(textureCache.release).toHaveBeenCalled();
   });
+
+  it("同纹理 N 面 → release 次数 == acquire 次数（引用计数对称，池条目可归零）", async () => {
+    // 10-12 探明 P2（推倒 10-11 族②a「形式配对即非缺口」判定）：loadTexture 按面 acquire，
+    // 旧 release 走 Set 去重每唯一 URL 一次 → N 面共享同纹理时 refs 恒残 N-1，
+    // evictZeroRefIfNeeded 永不淘汰该条目，textureCache LRU 上界对 pack 格式失效。
+    // 判据 = 引用计数对称（acquire/release 同次数），不依赖「去重/不去重」实现形态。
+    const { textureCache } = await import("@/preview-3d/texture/texture-cache.ts");
+    const deps = makeDeps();
+    const ctx = makeCtx();
+    const preview = await buildPackScene(ctx, "dirt.json", deps, "/packs.zip");
+    // 默认模型两面共享 textures/block/dirt.png → acquire 每面一次 = 2
+    expect(textureCache.acquire).toHaveBeenCalledTimes(2);
+    preview.dispose!();
+    expect(textureCache.release).toHaveBeenCalledTimes(2);
+  });
 });
 
 describe("材质签名", () => {

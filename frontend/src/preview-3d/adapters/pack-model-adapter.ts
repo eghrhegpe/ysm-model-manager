@@ -73,7 +73,7 @@ export function packTextureLabel(texEntry: string): string {
 interface PackState {
   group: THREE.Group | null;
   disposables: THREE.Object3D[];
-  usedTextures: Set<string>;
+  usedTextures: string[];
 }
 
 /** 工厂（对齐 ADR-161 §2.5 make<Format>Adapter 单参 deps 契约：mmd/vrm/ysm/fbx/litematic 均单参）。
@@ -101,17 +101,18 @@ interface MatWithKey {
   key: string;
 }
 
-/** 读纹理 base64 → 缓存 Texture（失败返回 null） */
+/** 读纹理 base64 → 缓存 Texture（失败返回 null）
+ *  usedTextures = 每次 acquire 一条（不去重）——与 release 侧逐条归还对齐（引用计数对称）。 */
 async function loadTexture(
   deps: PackDeps,
   path: string,
   texEntry: string,
-  usedTextures: Set<string>,
+  usedTextures: string[],
 ): Promise<THREE.Texture | null> {
   const b64 = await deps.readEntry(path, texEntry);
   if (!b64) return null;
   const dataUrl = b64ToDataURL(b64);
-  usedTextures.add(dataUrl);
+  usedTextures.push(dataUrl);
   return textureCache.acquire(dataUrl, (u) => {
     const t = new THREE.Texture(new Image());
     t.colorSpace = THREE.SRGBColorSpace;
@@ -130,7 +131,7 @@ async function textureFor(
   deps: PackDeps,
   path: string,
   face: JavaModelResult["faces"][number],
-  usedTextures: Set<string>,
+  usedTextures: string[],
 ): Promise<MatWithKey> {
   // tint 面：保留纹理 × tint（Three 中 map 与 color 相乘）——行业做法是 tint 乘到顶点色并照常采样纹理，
   // 纯色平板是对 vanilla 染色面（grass_block 顶面/overlay 等均带纹理）的错误简化。
@@ -190,7 +191,7 @@ async function buildModelGroup(
   deps: PackDeps,
   path: string,
   model: JavaModelResult,
-  usedTextures: Set<string>,
+  usedTextures: string[],
 ): Promise<{ group: THREE.Group; disposables: THREE.Object3D[] }> {
   const group = new THREE.Group();
   const disposables: THREE.Object3D[] = [];
@@ -270,7 +271,7 @@ function disposeContent(state: PackState, scene: THREE.Scene): void {
   }
   state.disposables = [];
   state.group = null;
-  state.usedTextures.clear();
+  state.usedTextures = [];
 }
 
 /** 构建资源包模型预览场景（ADR-080 D3 + ADR-084 L2 + ADR-132 多模型 select） */
@@ -283,7 +284,7 @@ async function buildPackScene(
 ): Promise<CameraControlScene & ScreenshotScene> {
   const infra = requireSharedInfra(ctx);
 
-  const state: PackState = { group: null, disposables: [], usedTextures: new Set() };
+  const state: PackState = { group: null, disposables: [], usedTextures: [] };
 
   // 解析模型（entryPath = zip 内路径，readEntry 取 zip 内文件内容）
   let model: JavaModelResult | null = null;

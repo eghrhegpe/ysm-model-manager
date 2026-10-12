@@ -286,7 +286,11 @@ export function getTextureDecoder(): TextureDecoder {
   return sharedDecoder;
 }
 
-/** 释放共享解码器（适配器 dispose/清理路径调用，防 Worker 池越积越多） */
+/** 释放共享解码器（进程级单例，**无会话回收点——有意设计**，2026-10-12 探明更正：
+ *  旧注释「适配器 dispose/清理路径调用」无生产调用方。coop 多 MMD 会话共享本池，
+ *  挂会话 dispose 会误杀兄弟会话池（与 KTX2 **编码**池挂 MMD 会话 dispose 刻意不同）；
+ *  池本体 = 懒建单例 + 固定 4 worker + 崩溃即时清算/重建（P2-4），无「越积越多」风险。
+ *  当前消费方仅测试（会话结束回收场景）。 */
 export function disposeTextureDecoder(): void {
   if (sharedDecoder) {
     sharedDecoder.dispose();

@@ -1,6 +1,6 @@
 # ADR-328：cap 能力总开关统一收编 envState 与 ground 终态
 
-- **状态**：📝 提议中（Proposed）
+- **状态**：✅ 已采纳（Accepted；路径 C `mounted` 收编已落地 2026-10-12）
 - **日期**：2026-10-11
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **准入理由**：ground 的 private enabled 字段是 cap-enabled 收口（ADR-250/F-1）遗留的唯一孤岛，是否并入 schema 或降级为常量需架构拍板，方向难逆转且影响持久化/UI 语义。

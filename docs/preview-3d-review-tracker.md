@@ -16,15 +16,13 @@
 | # | 名称 | 状态 | 指向源码 `文件\|符号` | last_verified |
 |---|---|---|---|---|
 | A1 | scene-registry 焦点晋升取 Map 插入序末位，非「最近被激活者」 | 产品拍板 | `preview-3d/infra/scene-registry.ts\|unregister`；锁 `scene-registry-focus.test.ts` | 2026-10-12 |
-| A2 | 离屏多角度截图零阴影接线（WYSIWYG 第四缝） | 产品拍板 | `preview-3d/screenshot/screenshot-render.ts`；声明锁 = `docs/knowledge/export.md` 条目 + `screenshot-render.test.ts`「阴影边界」 | 2026-10-12 |
 | A4 | sky 4 键（skyTurbidity / Rayleigh / MieCoefficient / MieDirectionalG）UI 出口 | 产品拍板 | `preview-3d/state/env-state-schema.ts`；`preview-3d/caps/sky-capability.ts\|applyUniform` | 2026-10-12 |
-| ADR-328 | ground cap-enabled 三路径收编（A/B/C） | 产品拍板 | `preview-3d/state/env-state.ts\|clampFieldValue`；`preview-3d/state/env-state-schema.ts\|ARCHIVE_ALIAS` | 2026-10-12 |
-| ADR-317 | P1 on-device 终测（CI build-android 仅打 APK，无真机步骤） | 记账观察 | `.github/workflows/android-build*`；`docs/knowledge/ysm-wasi.md` | 2026-10-12 |
+| ADR-317 | P1 on-device 终测（CI build-android 仅打 APK，无真机步骤） | 记账观察 | `.github/workflows/release.yml\|build-android`；`scripts/android-build.ts`；`docs/knowledge/ysm-wasi.md` | 2026-10-12 |
 | CSP | `new Function` 执行 UMD 文本（unsafe-eval），上严格 CSP 前须换 `import()`/ESM | 记账观察 | `preview-3d/decoder/mmd-ktx2-basis.ts` | 2026-10-12 |
-| 族②残余 | `mergeCubes` / `computeBoneLocalPos` 手抄双源，无跨语言黄金语料对账（无分叉证据，不开战） | 记账观察 | `preview-3d/model/model-group-builder.ts\|mergeCubes`；`go/threejs/spec-bones.go`；`preview-3d/model/spec-builder.ts\|computeBoneLocalPos` | 2026-10-12 |
-| 机器闸边界 | `write-surface-gate` 方法值链盲区（`r.Restore`/`r.Delete`/`h.Import` 类），换汇聚点即失防、无提醒机制 | 记账观察 | `scripts/check-write-surface-gate.ts` | 2026-10-12 |
+| 族②残余 | `mergeCubes` / `computeBoneLocalPos` 手抄双源，无专属跨语言黄金语料对账（无分叉证据，不开战） | 记账观察 | `preview-3d/mesh/cube-mesh.ts\|mergeCubes`；`preview-3d/mesh/cube-mesh.ts\|computeBoneLocalPos`；`go/threejs/spec.go\|mergeCubes`；`go/threejs/spec-bones.go\|buildBoneLocalData` | 2026-10-12 |
+| 机器闸边界 | `write-surface-gate` 方法值链盲区（`r.Restore`/`r.Delete`/`h.Import` 类），换汇聚点即失防、无提醒机制 | 记账观察 | `scripts/_lib/write-surface-gate.ts` | 2026-10-12 |
 | 候选 | `check-env-schema-consumers` 补写方检测（写模式多态，误报高，不做） | 候选 | `scripts/check-env-schema-consumers.ts`；`preview-3d/caps/light-persist.ts\|FLATTEN_MAP` | 2026-10-12 |
-| 候选 | `applyModelDefaults` 调用方手写有序清单（有契约锁兜底，设计如此） | 候选 | `preview-3d/infra/shared-infra.ts\|applyModelDefaults`；锁 `shared-infra.test.ts` | 2026-10-12 |
+| 候选 | `applyModelDefaults` 调用方手写有序清单（有契约锁兜底，设计如此） | 候选 | `preview-3d/adapters/shared-infra.ts\|applyModelDefaults`；锁 `preview-3d/adapters/shared-infra.test.ts` | 2026-10-12 |
 
 ---
 
@@ -49,6 +47,8 @@
 - **D11** — `preview-settings.md` 硬计数改指针口径 + 三卡退役 API 标注 + 豁免清单双向对账 + `go-avatar-decode.md` 整卡重写，见 `docs/knowledge/preview-settings.md`、`docs/knowledge/go-avatar-decode.md`。
 - **D12** — `check-redlines` 补 **R12**（pointer 红线闸）+ **R14**（dom-contract 收编 + 属性名裸写闸），见 `scripts/check-redlines.ts`、`preview-3d/menu/dom-contract.ts\|ARIA_ATTR`。
 - **D12-残余·dock/panel 诊断串（2026-10-12 侦察定性）** — **已清偿**。原 `title` 裸诊断串「`panel: <id>`」/「`dock: <id> · <项 id 列表>」不经 i18n、en/ja 悬停显英文裸串，`[D12 收口 2026-10-12]` 已删，改走机器可读 `data-panel-id`/`data-dock-group`/`data-dock-items`（devtools 右键即见）。判词来源：`preview-3d/menu/engine/core.ts:336` 与 `:606` 的 `[D12 收口]` 注释 + 实际代码用 `list.dataset.panelId`/`btn.dataset.dockGroup`。**原活卡「产品拍板」判词过时，移出未清偿清单。**
+- **A2 离屏多角度截图零阴影（2026-10-12 侦察定性）** — **已清偿**。`preview-3d/screenshot/screenshot-render.ts:208-234` 注释「[巡检 2026-10-11 F1 → 2026-10-12 落地] 第四条 WYSIWYG 缝已补：阴影入多角度截图」+ `renderer.shadowMap.enabled` + mesh cast/receiveShadow + applyLights castShadow。双向锁已翻转：`screenshot-render.test.ts:702-750`「阴影边界锁」+ `docs/knowledge/export.md:196-200`「✅ 阴影参与多角度截图（2026-10-12 落地）」。**原活卡「产品拍板」判词过时，移出未清偿清单。**
+- **ADR-328 ground cap-enabled（2026-10-12 侦察定性）** — **路径 C 已实施 + ADR 已采纳**。`preview-3d/caps/ground-capability.ts:144` `private enabled` 改名 `private mounted`，注释「能力挂载态…非用户能力开关」= ADR-328 路径 C 原文推荐命名；`node scripts/check-cap-enabled-duality.ts --json` 实测 `errors:0, clean:11`。ADR-328 状态字段已同步「已采纳」。⚠️ **原活卡锚点 `clampFieldValue`/`ARCHIVE_ALIAS` 与 ADR-328 无关，已纠错为 `ground-capability.ts\|mounted`。**
 - **#2 水 clipBias onCommit** — `preview-3d/caps/water-menu.ts\|wSliderNode`（结构键走 S11 onCommit 范式）。
 - **#3 frustum 逐根化（ADR-330）** — `PerFrameEntry{f,root?}` + 4 个动效格式补 `root`，见 `preview-3d/infra/render-host.ts\|markCullMatricesDirty`。
 - **#4 KTX2 池终止文案** — 盲区登记注释，见 `preview-3d/infra/worker-bridge.ts\|request`。

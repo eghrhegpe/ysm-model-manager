@@ -1796,7 +1796,7 @@ export const autoSidebar = [
             "link": "/knowledge/go-android-platform-guard"
           },
           {
-            "text": "Go 头像提取：纯函数 vs Node+WASM 解码分界",
+            "text": "Go 头像提取：扩展名分界与纯函数链",
             "link": "/knowledge/go-avatar-decode"
           },
           {

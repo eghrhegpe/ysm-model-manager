@@ -224,7 +224,12 @@ function captureThemeChange() {
       cb: never,
       opts?: never,
     ) => {
-      if (type === "change") cbs.push(cb as (e: { matches: boolean }) => void);
+      // 只捕获 color-scheme change：本 describe 断言「系统主题跟随」行为。
+      // D9⑥ 起 app-modules 另有 prefers-reduced-motion change 监听（OS 动画偏好热更），
+      // 语义与本组无关，按 query 分流避免污染 cbs（否则 toHaveLength(1) 恒红）。
+      if (type === "change" && q === "(prefers-color-scheme: dark)") {
+        cbs.push(cb as (e: { matches: boolean }) => void);
+      }
       return add(type, cb, opts);
     };
     return mql;

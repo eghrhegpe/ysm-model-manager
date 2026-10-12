@@ -31,7 +31,7 @@
 | 场景参数 / envState / 统一状态层 | [3D 预览统一状态层 envState（ADR-196）](./preview-env-state.md) | cap 参数必须存 envState，禁止各自 this.params 私有化（ADR-196） | ADR-196, ADR-293-d1 |
 | 场景能力 / cap / registry | [场景能力注册表 scene-capability-registry](./scene-capability-registry.md) | 3D 能力必须走 scene-capability-registry 注册，禁止在 adapter 里直接创建场景对象 | ADR-132 |
 | 程序化纹理生成 | [地面材质 spec 单一事实源 ground-surface-spec](./ground-surface-spec.md) | - | - |
-| 纯函数 vs Node+WASM 解码分界 | [Go 头像提取：纯函数 vs Node+WASM 解码分界](./go-avatar-decode.md) | ADR-316 后 Node+WASM 解码桥已退役：.ysm 解码走 ysm.DecodeYSM 注入点（wazero），禁止新建 Node 子进程桥 | - |
+| 纯函数 vs Node+WASM 解码分界 | [Go 头像提取：扩展名分界与纯函数链](./go-avatar-decode.md) | ADR-316 后 Node+WASM 解码桥已退役：.ysm 解码走 ysm.DecodeYSM 注入点（wazero），禁止新建 Node 子进程桥 | - |
 | 地面材质/地面贴图/地板/surface（GroundMaterialSpec/specKey/textureToken） | [地面材质 spec 单一事实源 ground-surface-spec](./ground-surface-spec.md) | 地面材质必须走 ground-surface-spec 的 buildGroundSurfaceSpec，spec 是唯一数据源 | - |
 | 顶点 / UV / 四元数 | [3D 骨骼 spec go/threejs](./go-threejs.md) | - | - |
 | 动画分组、配置菜单、ysm.json | [YSM 动画分组与配置菜单提取](./format-ysm-anim-config.md) | YSM 动画分组与配置菜单必须经 extractAnimGroupsAndConfigs 从 ysm.json properties 提取 | - |
@@ -66,10 +66,11 @@
 | 水面/水池/water/波浪/wave | [水面能力 WaterCapability（Gerstner 波浪 + GPU 微细节法线）](./water.md) | 水面 shader 有 REVISION 断言与注入守卫（vertex 波浪函数 / objectNormal 覆盖 / 圆角段 / 微细节覆写点 / 倒影混合块）：升级 three 后必须重跑 water-capability.test.ts | ADR-255, ADR-257, ADR-271, ADR-272, ADR-283, ADR-297, ADR-319 |
 | 水位与水膜（waterLevel / wetness） | [水面能力 WaterCapability（Gerstner 波浪 + GPU 微细节法线）](./water.md) | - | ADR-255, ADR-257, ADR-271, ADR-272, ADR-283, ADR-297, ADR-319 |
 | 条件显隐控件不出现 | [3D 预览设置面板统一状态层与自动 cap 聚合（ADR-125）](./preview-menu-settings-state.md) | - | - |
+| 通用红线 | [Go 头像提取：扩展名分界与纯函数链](./go-avatar-decode.md) | 本卡 §退役快照 是历史档案，勿按旧文排查现役问题（现役口径见 go-avatar / ysm-wasi） | - |
 | 通用红线 | [统一 3D 预览核心 preview-core](./preview-core.md) | 截图入口走 shotNodes 菜单闭包，禁止往 PreviewHandle 透传 screenshot（2026-09-04 死透传已删） | ADR-125 |
 | 头像、作者、创作者 avatar | [头像 go/avatar](./go-avatar.md) | 头像提取必须走 go/avatar 的 ExtractAvatarURI，前端禁止手写头像路径拼接 | - |
 | 头像缓存、缩略图 | [头像 go/avatar](./go-avatar.md) | - | - |
-| 头像提取、ysm.DecodeYSM、ExtractAvatarURI | [Go 头像提取：纯函数 vs Node+WASM 解码分界](./go-avatar-decode.md) | 头像提取路径必须按扩展名分发（.ysm → WASM 解码 / .zip/.7z → 归档解压 / .json → 直读），禁止跨扩展名混用 | - |
+| 头像提取、ysm.DecodeYSM、ExtractAvatarURI | [Go 头像提取：扩展名分界与纯函数链](./go-avatar-decode.md) | 头像提取路径必须按扩展名分发（.ysm → WASM 解码 / .zip/.7z → 归档解压 / .json → 直读），禁止跨扩展名混用 | - |
 | 投影、litematic、schematic、nbt、蓝图 | [Litematic 解析 go/litematic](./go-litematic.md) | Litematic 蓝图必须走 go/litematic 的 parser/schematic/structure 三层解析，禁止前端手写 Litematic 解析 | - |
 | 腿链提取、链根取谁 | [CCD IK 求解器 ik-solver / 足部锚地 mmd-foot-ik](./ik-solver.md) | - | - |
 | 为什么 VMD 表情帧在 VRM 上脸不动 | [VMD→VRM 动作重定向 vmd-retarget](./vmd-vrm-retarget.md) | 表情载体 weight 未初始化 = mixer 静默不写（不报错） | ADR-243, ADR-306, ADR-309 |
@@ -842,8 +843,8 @@
 | 陷阱：Go 新增桌面专属拒绝项未同步 platform-web.ts | `前端/后端黑名单不同步` | 三谓词测试 platform-parity.test.ts 会爆 |
 | 陷阱：Android 上调用 os.Executable + exec.Command | `重启假设` | Activity 生命周期不兼容，显式拒绝 |
 | 跨扩展名混用提取逻辑 | - | 解析失败、抛异常；必须按扩展名分发 |
-| 测试环境三件套（nodeJSPath / glueCode / wasmBinary）为空 | - | 静默降级空列表；必须在测试里 mock 三件套 |
-| DecodeYSMFiles 已退役（ADR-164 后彻底删除，非薄封装）——新代码必须用 DecodeYSMData，grep 旧名仅命中历史 ADR/注释 | - | - |
+| 测试喂的必须是现役  切片——退役 Node 桥的本地 `ysmDecodedFile` 已随桥删除，照旧文建 fixture 会编译不过 | `ysm.DecodedFile` | - |
+| 按排查现役 .ysm 解码问题必然查不到代码（`DecodeYSMData`/`SetNodeJS` 已随 ADR-316 退役，Go 侧生产代码零命中） | `Node 桥 / 三件套注入` | - |
 | 手写头像路径拼接 | - | 越权路径穿越、缓存污染；必须经 isSafeAvatarPath 校验 |
 | zip/7z 容器打开统一走 openModelContainer（avatar_extract_container.go，2026-09-06 收口孪生函数）——批量缓存未命中会打日志（非静默吞错） | - | - |
 | 头像缓存不失效 | - | 换头像后仍显示旧图；手动 `avatar purge` CLI 清空重建（P1-2 落地 2026-09-14），自动失效（ModTime 键）留待后续 |

@@ -19,7 +19,7 @@
 | A4 | sky 4 键（skyTurbidity / Rayleigh / MieCoefficient / MieDirectionalG）UI 出口 | 产品拍板 | `preview-3d/state/env-state-schema.ts`；`preview-3d/caps/sky-capability.ts\|applyUniform` | 2026-10-12 |
 | ADR-317 | P1 on-device 终测（CI build-android 仅打 APK，无真机步骤） | 记账观察 | `.github/workflows/release.yml\|build-android`；`scripts/android-build.ts`；`docs/knowledge/ysm-wasi.md` | 2026-10-12 |
 | CSP | `new Function` 执行 UMD（unsafe-eval）。**侦察纠错（2026-10-12）**：前端 `import()` 迁移无效——`basis_encoder.js`（Emscripten 预编译产物）内部 dynCall/embind 也用 `new Function`，转 `import()` 只消除我们这层，严格 CSP 下仍失败；真修法 = `-sDYNAMIC_EXECUTION=0` 重编译（参照 `basis_transcoder.js` 同参数已无 `new Function`），需 Basis Universal 源码 + Emscripten SDK 工具链 | 记账观察 | `preview-3d/decoder/mmd-ktx2-basis.ts\|loadBasisModule`；`frontend/public/basis/basis_encoder.js`（内部 `new Function`）；`frontend/public/basis/basis_transcoder.js`（无 `new Function`，参照） | 2026-10-12 |
-| 机器闸边界 | `write-surface-gate` 方法值链盲区（`r.Restore`/`r.Delete`/`h.Import` 类），换汇聚点即失防、无提醒机制 | 记账观察 | `scripts/_lib/write-surface-gate.ts` | 2026-10-12 |
+| 机器闸边界 | `write-surface-gate` 方法值链盲区（`r.Restore`/`r.Delete`/`h.Import` 类）。**侦察定性（2026-10-12）**：闸已 fail-closed 自动派生（`7fa6c3b55` 翻转，读包导出面 `^func [A-Z]\w*(` 派生候选写函数），剩余盲区是**正则扫 `pkg.X(` 的固有边界**（非 AST）；真修法 = 换 AST 解析（`go/ast`/tree-sitter）——**大改**。当前无活跃 bug（方法值绕过是潜在风险，`write-surface-gate.ts` 头注已诚实声明剩余边界） | 记账观察 | `scripts/_lib/write-surface-gate.ts` | 2026-10-12 |
 | 候选 | `check-env-schema-consumers` 补写方检测（写模式多态，误报高，不做） | 候选 | `scripts/check-env-schema-consumers.ts`；`preview-3d/caps/light-persist.ts\|FLATTEN_MAP` | 2026-10-12 |
 | 候选 | `applyModelDefaults` 调用方手写有序清单（有契约锁兜底，设计如此） | 候选 | `preview-3d/adapters/shared-infra.ts\|applyModelDefaults`；锁 `preview-3d/adapters/shared-infra.test.ts` | 2026-10-12 |
 

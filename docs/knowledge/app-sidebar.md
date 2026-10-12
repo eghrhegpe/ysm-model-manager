@@ -121,6 +121,8 @@ status: active
 - 渲染后经 `_restoreCheckboxes` 恢复勾选，选中卡片经 localStorage 恢复；**`restoreSelectedCard` 去重由宿主注入的去重状态机（`SidebarHost`/`EmitDedupe`）跨 reload 生效**（P2 复核修复：原「list 替换时复位」因复用分支不可达而每次复位、去重恒真失效、每次重发 `package:selected` 反复重建 `<app-sync-manager>`；现状态由宿主实例持有，同组件 reload 不复位，仅新挂载会话经宿主的 `resetSelectedEmit()` 重置，由 `disconnectedCallback` 调用）。2026-09 定位降级：app-content 已改为**复用**同一面板实例（只改属性），重复 emit 不再导致丢状态，本状态机退化为省事件扩散的优化
 - **推送 done 按 token 精确匹配 + 识别 `skipped`**（P1 修复，与 sync.ts 联动）：原 `instanceName ===` fallback 会把「busy 被吞未处理」误判为成功（toast 报 ✅ 实际未推）；现 sync.ts busy 命中时回 done 带 `skipped: true`，sidebar 按拒绝处理
 - **roving handle 实例级**（`_roving`，ADR-308 D2）：`disconnectedCallback` 必 `dispose()`，卸载后键位全寂（契约测试 `app-sidebar.keyboard.test.ts`「卸载后 keydown 死寂」锁定）；键盘激活走合成 click 复用委托链，**禁止**在键盘路径另写高亮/emit/去重逻辑
+- **只在 connectedCallback 绑一次的绑定必须收 getter，禁按值捕获（2026-10 修复「全选跨 reload 蒸发」）**：`bindSelectAll` 曾在 connectedCallback 按值收 `rtype`/`instances`，而彼时 `_instances` 还是初始 `[]`、`_reload` 又换的是**新数组引用**——捕获的旧引用永远为空 → 全选只改 DOM、从未写入 `_checkedSets`，任何一次 reload 后选择即丢（`rtype` 同理：按值捕获会把勾选写进切类型前的旧桶）。同型先例：`bindSyncSelected`/`restoreCheckboxes` 早已走 `() => this._instances` 形态。回归锁 `app-sidebar.sync.test.ts`「全选 → 跨 reload 存活」
+- **选中名键与去重键同源派生（`events.ts|rtypeKeyOf`，2026-10 收口）**：`sb_selectedName_<rtype>` 的读写两侧与 `makeEmitKey` 前缀都取 `instances[0]?.rtype || currentRepoType()`（列表级 rtype）——原先点击路径用 `pkg.rtype` 落盘、restore 用 `instances[0].rtype` 读取，混合 rtype 列表下写读落进不同桶、选中名静默恢复不了。**新增任何选中态持久化键前，先确认读写同源**
 - **禁伪 async（2026-10 锐评全页收口）**：生命周期回调（`connectedCallback`）与 bus handler（`repo:rtype-changed`）、渲染段（`bindFooter` 的 stat-sync）一律不得标 `async` 而函数体零 `await`——返回值无人接管时，同步抛错会被转成 unhandled rejection（仓内 `render` 曾同病：错误提示整段变死码）。真实异步入口显式 `void this._reload()` 发起；本次三处已归正
 
 ## 相关

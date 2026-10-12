@@ -258,6 +258,18 @@ describe("emitKey 键格式（makeEmitKey 单一事实源）", () => {
     (container.querySelectorAll(".instance-card-header")[1] as HTMLElement).click();
     expect(mockHost.getLastEmittedPkg()).toBe("mmd:B1"); // 不是 "ysm:B1"
   });
+
+  // 2026-10 收口回归锁：落盘键与 restore 读取键必须同源（rtypeKeyOf）。
+  // 原点击路径用 pkg.rtype 落盘、restore 用 instances[0].rtype 读取——混合 rtype 列表下
+  // 写进 "sb_selectedName_ysm" 却从 "sb_selectedName_mmd" 读，选中名静默恢复不了。
+  it("落盘键与 restore 读取键同源：混合 rtype 下写读落在同一桶", () => {
+    const mixed = [instance("A1"), instance("B1")];
+    mixed[0]!.rtype = "mmd"; // 首实例 mmd、被点击实例 B1 保持 ysm
+    const { container } = mount(mixed);
+    (container.querySelectorAll(".instance-card-header")[1] as HTMLElement).click();
+    expect(localStorage.getItem("sb_selectedName_mmd")).toBe("B1"); // 与 restore 同桶
+    expect(localStorage.getItem("sb_selectedName_ysm")).toBeNull(); // 不得写进被点击实例自己的桶
+  });
 });
 
 // P3 补测（审核）：原绑定状态为模块级共享变量（_lastList/_clickHandler/currentInstances），

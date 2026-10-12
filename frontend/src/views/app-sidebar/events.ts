@@ -42,6 +42,14 @@ function makeEmitKey(rtype: string, name: string): string {
   return `${rtype}:${name}`;
 }
 
+/** 列表级 rtype 键——**去重键前缀与 localStorage 选中名键前缀的单一派生点**。
+ *  取首实例 rtype（列表由同一次 loadInstances 产出，rtype 同批一致；空列表回落全局当前类型）。
+ *  2026-10 收口：点击路径曾用 `pkg.rtype` 落盘、restore 路径用 `instances[0].rtype` 读取——
+ *  同一个「选中名键」两套派生，混合 rtype 列表下写读落进不同桶，选中名静默恢复不了。 */
+function rtypeKeyOf(instances: SidebarInstance[]): string {
+  return instances[0]?.rtype || currentRepoType();
+}
+
 /** 构建卡片点击处理器闭包（心跳式：高亮 + 涟漪 + 去重状态机 + 空 rtype 拦截）。
  * 引用 root（高亮/涟漪作用于完整列表与头部）与 st（读写最新实例与绑定态）。
  * P1/P2/P2-1 修复注释随闭包迁移，见原 bindCardEvents。 */
@@ -98,8 +106,11 @@ function bindCardClickHandler(
       // ⚠️ 行为口径：点击/右键/restore 三路径**统一严格拦截**空 rtype（见上方 :77 P1 修复），
       // 不存在「点击容错、右键拒绝」的对称设计——下方 emitKey 构造中的
       // `instances[0]?.rtype || currentRepoType()` 仅为去重 key 的字符串兜底，非行为 fallback。
-      host.setLastEmittedPkg(makeEmitKey(st.instances[0]?.rtype || currentRepoType(), pkg.name));
-      safeSet(`sb_selectedName_${pkg.rtype || currentRepoType()}`, pkg.name);
+      const rtypeKey = rtypeKeyOf(st.instances);
+      host.setLastEmittedPkg(makeEmitKey(rtypeKey, pkg.name));
+      // 落盘键与 restore 读取键同源（rtypeKeyOf）——原此处用 pkg.rtype，与 restore 的
+      // instances[0].rtype 落进不同桶，混合 rtype 列表下选中名静默恢复不了
+      safeSet(`sb_selectedName_${rtypeKey}`, pkg.name);
     }
   };
 }
@@ -230,7 +241,7 @@ function restoreSelectedCard(
   host: SidebarHost,
 ): void {
   try {
-    const rtypeKey = instances[0]?.rtype || currentRepoType();
+    const rtypeKey = rtypeKeyOf(instances);
     const savedName = safeGet(`sb_selectedName_${rtypeKey}`);
     if (!savedName) return;
     const idx = instances.findIndex((i) => i.name === savedName);

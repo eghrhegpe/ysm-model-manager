@@ -20,7 +20,7 @@ vi.mock("./loader.ts", () => ({ loadInstances: vi.fn() }));
 import { bus } from "@/bus";
 import { loadInstances } from "./loader.ts";
 import "./index.ts"; // customElements.define("app-sidebar")
-import { waitFor } from "@/test-utils/wait.ts";
+import { waitFor, sleep } from "@/test-utils/wait.ts";
 import { mountCustomElement, unmountElement } from "@/test-utils/render.ts";
 import type { SidebarInstance } from "./data.ts";
 
@@ -121,6 +121,27 @@ describe("app-sidebar — 全选/恢复勾选", () => {
     const chks = el.shadowRoot!.querySelectorAll(".chk") as NodeListOf<HTMLInputElement>;
     expect(chks.length).toBeGreaterThan(0);
     chks.forEach((c) => expect(c.checked).toBe(true));
+  });
+
+  it("全选 → 跨 reload 存活（勾选集合真被写入，非只改 DOM）", async () => {
+    const el = await mountSidebar();
+    const cb = $<HTMLInputElement>(el, "#sb-select-all");
+    cb.checked = true;
+    cb.dispatchEvent(new Event("change", { bubbles: true }));
+
+    // 触发 reload：renderVersionCards 重建卡片 + restoreCheckboxes 以「勾选集合」为准恢复
+    bus.emit("stats:refresh");
+    await waitFor(() => {
+      const c = el.shadowRoot!.querySelector(".chk") as HTMLInputElement | null;
+      // 等 reload 完成（旧 DOM 被替换后新勾选框仍在）
+      return c !== null && el.shadowRoot!.querySelectorAll(".chk").length > 0;
+    });
+    await sleep(400); // reload 防抖（300ms）+ 渲染落定
+    const after = el.shadowRoot!.querySelectorAll(".chk") as NodeListOf<HTMLInputElement>;
+    expect(after.length).toBeGreaterThan(0);
+    // 2026-10 回归锁：原 bindSelectAll 按值捕获绑定时（connectedCallback）的空 instances 数组，
+    // _reload 换的是新数组引用 → 全选只改 DOM、从未写入勾选集合，reload 后选择即蒸发。
+    after.forEach((c) => expect(c.checked).toBe(true));
   });
 
   it("同一实例 reload → 恢复已勾选状态", async () => {

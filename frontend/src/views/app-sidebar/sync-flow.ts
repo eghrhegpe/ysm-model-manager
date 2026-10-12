@@ -29,17 +29,26 @@ function checkedSetFor(rtype: string, getCheckedSets: () => Map<string, Set<stri
 const SYNC_TIMEOUT_MS = 30_000;
 
 // ---------- bindSelectAll ----------
+/**
+ * 全选勾选框绑定（**只在 connectedCallback 绑一次**，故两个随渲染变化的值必须以
+ * getter 注入而非按值捕获——2026-10 修复「全选跨 reload 蒸发」：原实现按值收
+ * `rtype`/`instances`，绑定点在 connectedCallback，彼时 `_instances` 还是初始 `[]`，
+ * 而 `_reload` 换的是**新数组引用**，捕获的旧引用永远是空数组 → `instances[idx]`
+ * 恒 undefined → 全选只改 DOM、从未写入勾选集合，任何一次 reload 后选择即丢；
+ * `rtype` 同理：按值捕获会在切换类型后把勾选写进旧类型的集合）。
+ */
 export function bindSelectAll(
   root: ShadowRoot,
-  rtype: string,
-  instances: SidebarInstance[],
+  getRtype: () => string,
+  getInstances: () => SidebarInstance[],
   getCheckedSets: () => Map<string, Set<string>>,
 ): void {
   const cb = root.getElementById("sb-select-all") as HTMLInputElement | null;
   if (!cb) return;
   cb.addEventListener("change", () => {
     const checked = cb.checked;
-    const set = checkedSetFor(rtype, getCheckedSets);
+    const instances = getInstances();
+    const set = checkedSetFor(getRtype(), getCheckedSets);
     root.querySelectorAll(".chk").forEach((c) => {
       const input = c as HTMLInputElement;
       input.checked = checked;

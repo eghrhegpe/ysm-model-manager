@@ -128,7 +128,14 @@ class AppSidebar extends WebComponentBase {
   }
 
   private _bindSelectAll(): void {
-    bindSelectAll(this._root, this._rtype, this._instances, () => this._checkedSets);
+    // getter 注入而非按值捕获：本函数只在 connectedCallback 跑一次，而 _rtype/_instances
+    // 都随 reload/切类型变化（按值捕获 = 全选写不进勾选集合，见 sync-flow.bindSelectAll 注释）
+    bindSelectAll(
+      this._root,
+      () => this._rtype,
+      () => this._instances,
+      () => this._checkedSets,
+    );
   }
 
   private _bindSyncSelected(): void {

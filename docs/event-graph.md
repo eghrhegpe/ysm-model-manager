@@ -85,7 +85,7 @@
 |------|------|----|
 | cmReBindContextMenu | `frontend/src/features/community/repo-events-bindings.ts` | 126 |
 | showMenu | `frontend/src/features/context-menu/context-menus.setup.ts` | 152 |
-| bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 136 |
+| bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 147 |
 | atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 260 |
 | atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 286 |
 | atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 298 |
@@ -223,7 +223,7 @@
 | cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 267 |
 | anActivateNavPage | `frontend/src/views/app-nav/index.ts` | 51 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 219 |
-| bindFooter | `frontend/src/views/app-sidebar/events.ts` | 277 |
+| bindFooter | `frontend/src/views/app-sidebar/events.ts` | 288 |
 | atTlBindRepoSwitch | `frontend/src/views/app-tree/toolbar-events.ts` | 88 |
 
 **订阅方（on）：**
@@ -237,8 +237,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| bindCardClickHandler | `frontend/src/views/app-sidebar/events.ts` | 91 |
-| restoreSelectedCard | `frontend/src/views/app-sidebar/events.ts` | 263 |
+| bindCardClickHandler | `frontend/src/views/app-sidebar/events.ts` | 99 |
+| restoreSelectedCard | `frontend/src/views/app-sidebar/events.ts` | 274 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -322,7 +322,7 @@
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 311 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 76 |
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 141 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 310 |
+| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 319 |
 | _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 236 |
 | runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 104 |
 | atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 131 |
@@ -347,15 +347,15 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| pushOne | `frontend/src/views/app-sidebar/sync-flow.ts` | 142 |
-| waitBusQuiet | `frontend/src/views/app-sidebar/sync-flow.ts` | 183 |
+| pushOne | `frontend/src/views/app-sidebar/sync-flow.ts` | 151 |
+| waitBusQuiet | `frontend/src/views/app-sidebar/sync-flow.ts` | 192 |
 
 ### `sync:download:missing`
 
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| pushOne | `frontend/src/views/app-sidebar/sync-flow.ts` | 157 |
+| pushOne | `frontend/src/views/app-sidebar/sync-flow.ts` | 166 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -424,7 +424,7 @@
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 189 |
 | applyFsaState | `frontend/src/views/app-content/settings/init.ts` | 389 |
 | onWebRepoAuthClick | `frontend/src/views/app-content/settings/init.ts` | 417 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 311 |
+| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 320 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |

@@ -55,8 +55,8 @@ export class DragSliderController {
       // 后再次 mousedown 会直接覆盖引用，旧监听永久滞留并跨滑块串扰（幽灵调值）。
       this.moveDisp?.dispose();
       this.endDisp?.dispose();
-      this.moveDisp = addDisposableListener(document, "mousemove", this.onDragMove);
-      this.endDisp = addDisposableListener(document, "mouseup", this.onDragEnd);
+      this.moveDisp = addDisposableListener(document, "mousemove", this.onDragMove); // pointer-allow: mousedown 兜底路径的拖拽监听（pointer 主路径互斥防双触发，理由见 onMouseDown 头注）
+      this.endDisp = addDisposableListener(document, "mouseup", this.onDragEnd); // pointer-allow: 兜底路径配对 up（同上）
     };
 
     const onPointerDown = (e: PointerEvent): void => {
@@ -83,7 +83,7 @@ export class DragSliderController {
     // 点击游标区域（mousedown 以外的 click）直接跳转
     el.addEventListener("click", this.onElClick);
 
-    el.addEventListener("mousedown", onMouseDown);
+    el.addEventListener("mousedown", onMouseDown); // pointer-allow: 无 pointer 支持环境/测试派发 mouse 事件的兜底入口（pointerDown 互斥守卫，见 onMouseDown）
     el.addEventListener("pointerdown", onPointerDown);
     el.addEventListener("pointercancel", this.onPointerCancel);
     el.addEventListener("keydown", onKeyDown);

@@ -177,8 +177,8 @@ export function createTooltipManager(): TooltipManager {
       cancelTimer();
       if (st.target === el || st.timer !== null) hide();
     };
-    el.addEventListener("mouseenter", onEnter);
-    el.addEventListener("mouseleave", onLeave);
+    el.addEventListener("mouseenter", onEnter); // pointer-allow: tooltip 仅 hover 设备触发（触屏无 hover 语义本就不该弹，pointer-events.md 已裁决豁免）
+    el.addEventListener("mouseleave", onLeave); // pointer-allow: 配对 leave 兼作 blur 兜底（同上豁免）
     el.addEventListener("blur", onLeave);
     ensureScrollHandler();
     return () => {

@@ -93,7 +93,7 @@ ADR-047 核心立项 A：全前端拖拽/缩放/旋转/hover 交互从 mouse 事
 
 ## 不变量
 
-- **零残留 mouse 事件**：全前端（非测试）不得出现 `mousedown/mousemove/mouseup/mouseenter/mouseleave` 注册（红线，check 可 grep 验证）
+- **零残留 mouse 事件**：全前端（非测试）不得出现 `mousedown/mousemove/mouseup/mouseenter/mouseleave` 注册（红线，**执法闸 = check-redlines R12**，2026-10 补「注释承诺 > 门禁实现」缺口——原文「check 可 grep 验证」时并无对应扫描）。三种注册形态均拦：`addEventListener("mouse*"` / `addDisposableListener(<t>, "mouse*"` / `onmouse* =` 属性赋值；`removeEventListener`（拆监听）与注释不计。确有豁免理由（hover 语义 / 兜底互斥）须落行注 `// pointer-allow: <理由>` 台账（窗口 = 命中行 ±1），存量 3 文件 7 处已全部落账：`slider-controller.ts`（mousedown 兜底 + pointerDown 互斥）、`tooltip.ts`（触屏无 hover，已裁决豁免）、`menu/engine/core.ts`（行 hover 高亮 = D12 记账债，修复属 a11y 产品拍板批 tracker D8/D9）
 - **左键守卫**：拖拽类 `pointerdown` 必须 `e.button === 0`（排除右键/触控笔右键）
 - **捕获成对**：`setPointerCapture` 与 `releasePointerCapture` 成对，释放前 `hasPointerCapture` 守卫（jsdom 无捕获实现时测试不炸）
 - **touch-action 全覆盖**：拖拽元素必须 `touch-action:none`，否则触屏上浏览器抢占手势

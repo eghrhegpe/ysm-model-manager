@@ -6,7 +6,7 @@ import { scanSource as scanInnerHtmlSrc } from "./_lib/innerhtml-hygiene.ts";
 import { parseArgs } from "./_lib/parse-args.ts";
 import { parseRgLine } from "./_lib/rg-line.ts";
 /**
- * 代码红线审查。12 条规则 × 违规扫描（依赖 ripgrep）。
+ * 代码红线审查。13 条规则 × 违规扫描（依赖 ripgrep）。
  * W3 empty JSDoc / W4 TODO 无编号已移交 comment-checker.ts（避免双重扫描）。
  * 由 scripts/review.py 迁移（2026-08-03），规则与输出逻辑逐点保真。
  * 设计意图：治理审查工具（原 review.mjs，2026-08-05 更名去误导）
@@ -710,6 +710,43 @@ function runChecks() {
       })
       .filter((l) => !/:\d+:\s*(?:\/\/|\/\*|\*)/.test(l)),
     "按钮外观一律走 utils/dom/css.ts|btnBaseCSS（`.btn-base` 唯一出处），禁在 css.ts 外手写 `.btn-base {` 基线规则",
+  );
+
+  // R12 pointer 事件统一红线（pointer-events.md「零残留 mouse 事件」的机器执法，
+  // 2026-10 立法补「注释承诺 > 门禁实现」缺口——该红线原文标注「check 可 grep 验证」
+  // 但全仓并无对应扫描）。全前端（非测试）禁注册 mouse{down,move,up,enter,leave}：
+  // 混用 mouse+pointer → 触屏双触发/桌面手势冲突（pointer-events.md 核心病）。
+  // 三种注册形态一网打尽：addEventListener("mouse*" / addDisposableListener(<t>, "mouse*"
+  // （仓内委托包装，滑块拖拽用它）/ onmouse* = 属性赋值。豁免仅两种：
+  // 行注 pointer-allow（`// pointer-allow: <理由>` 精确记账，同 r8-allow 先例——
+  // 存量 3 文件 7 处已逐一落账，理由含「a11y 产品拍板批 D8/D9 待修」等）与
+  // removeEventListener（拆监听是守卫生命周期，不是注册）。
+  add(
+    "R12",
+    "raw mouse event registration (pointer events only)",
+    rgTracked(
+      'addEventListener\\(\\s*"mouse(down|move|up|enter|leave)"|addDisposableListener\\([^,]+,\\s*"mouse(down|move|up|enter|leave)"|\\bon(mouse(down|move|up|enter|leave))\\s*=',
+      "frontend/src",
+      ["*.js", "*.ts"],
+    )
+      .filter((l) => {
+        const [f] = parseRgLine(l);
+        return !f.includes(".test.");
+      })
+      // removeEventListener 含 addEventListener 子串——拆监听不注册，勿误报
+      .filter((l) => !l.includes("removeEventListener"))
+      .filter((l) => !/:\d+:\s*(?:\/\/|\/\*|\*)/.test(l))
+      // 精确行级豁免台账：新增 mouse 注册须先自问「触屏双触发防线在哪」，
+      // 答得出才落 `// pointer-allow: <理由>`——窗口 = 命中行 ±1（同行尾注 /
+      // 上方行注 / biome 会把 `{` 后尾注挪进块内首行，三种形态都认；再宽即失焦）
+      .filter((l) => {
+        const [f, line] = parseRgLine(l); // line 为 1-based，lines[] 0-based → 命中行 = lines[line-1]
+        const lines = readFileLines(f, cache);
+        if (!lines) return true;
+        const window = `${lines[line - 2] ?? ""}\n${lines[line - 1] ?? ""}\n${lines[line] ?? ""}`;
+        return !/pointer-allow:/.test(window);
+      }),
+    "统一走 pointerdown/pointermove/pointerup（pointer-events.md）；确有豁免理由（hover 语义/兜底互斥）时行注 // pointer-allow: <理由> 落台账",
   );
 
   return results;

@@ -170,9 +170,11 @@ function makePreviewMenuRow(node: PreviewMenuNode, opts?: { chevron?: boolean })
     chev.className = "cm-row-chev"; // CSS .cm-row-chev 已含 margin-left:auto 推行尾
     row.append(chev);
   }
+  // pointer-allow: 行 hover 高亮——D12 记账债（触屏不触发且无焦点态替代，修复属 a11y 产品拍板批 tracker D8/D9；正解 = CSS :hover + 焦点态，勿新增同类）
   row.onmouseenter = (): void => {
     row.style.background = "rgba(255,255,255,0.08)";
   };
+  // pointer-allow: hover 高亮配对 leave（同上台账）
   row.onmouseleave = (): void => {
     row.style.background = "transparent";
   };

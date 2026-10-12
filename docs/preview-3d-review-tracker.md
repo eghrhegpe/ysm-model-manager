@@ -19,7 +19,6 @@
 | A4 | sky 4 键（skyTurbidity / Rayleigh / MieCoefficient / MieDirectionalG）UI 出口 | 产品拍板 | `preview-3d/state/env-state-schema.ts`；`preview-3d/caps/sky-capability.ts\|applyUniform` | 2026-10-12 |
 | ADR-317 | P1 on-device 终测（CI build-android 仅打 APK，无真机步骤） | 记账观察 | `.github/workflows/release.yml\|build-android`；`scripts/android-build.ts`；`docs/knowledge/ysm-wasi.md` | 2026-10-12 |
 | CSP | `new Function` 执行 UMD（unsafe-eval）。**侦察纠错（2026-10-12）**：前端 `import()` 迁移无效——`basis_encoder.js`（Emscripten 预编译产物）内部 dynCall/embind 也用 `new Function`，转 `import()` 只消除我们这层，严格 CSP 下仍失败；真修法 = `-sDYNAMIC_EXECUTION=0` 重编译（参照 `basis_transcoder.js` 同参数已无 `new Function`），需 Basis Universal 源码 + Emscripten SDK 工具链 | 记账观察 | `preview-3d/decoder/mmd-ktx2-basis.ts\|loadBasisModule`；`frontend/public/basis/basis_encoder.js`（内部 `new Function`）；`frontend/public/basis/basis_transcoder.js`（无 `new Function`，参照） | 2026-10-12 |
-| 族②残余 | `mergeCubes` / `computeBoneLocalPos` 手抄双源，无专属跨语言黄金语料对账（无分叉证据，不开战） | 记账观察 | `preview-3d/mesh/cube-mesh.ts\|mergeCubes`；`preview-3d/mesh/cube-mesh.ts\|computeBoneLocalPos`；`go/threejs/spec.go\|mergeCubes`；`go/threejs/spec-bones.go\|buildBoneLocalData` | 2026-10-12 |
 | 机器闸边界 | `write-surface-gate` 方法值链盲区（`r.Restore`/`r.Delete`/`h.Import` 类），换汇聚点即失防、无提醒机制 | 记账观察 | `scripts/_lib/write-surface-gate.ts` | 2026-10-12 |
 | 候选 | `check-env-schema-consumers` 补写方检测（写模式多态，误报高，不做） | 候选 | `scripts/check-env-schema-consumers.ts`；`preview-3d/caps/light-persist.ts\|FLATTEN_MAP` | 2026-10-12 |
 | 候选 | `applyModelDefaults` 调用方手写有序清单（有契约锁兜底，设计如此） | 候选 | `preview-3d/adapters/shared-infra.ts\|applyModelDefaults`；锁 `preview-3d/adapters/shared-infra.test.ts` | 2026-10-12 |
@@ -59,6 +58,7 @@
 - **`decodeYSMComponentsViaWASI` 二次解析** — 首遍 `*types.BedrockModel` 入列复用，见 `internal/app/`。
 - **`isGlowBone` 措辞** — 见 `go/threejs/spec-bones.go`。
 - **cube UV parity / geometry 选择链 parity** — 见 `tests/fixtures/parity/cube-mesh.golden.json`、`tests/fixtures/parity/geometry-select.golden.json`。
+- **族②残余·mergeCubes / computeBoneLocalPos parity（2026-10-12，`1f7ac4811`+`9da6b00d8`）** — 补跨语言黄金语料（防御性补强；侦察确认 TS/Go 两版逐行一致、无分叉）。扩展现有 `tests/fixtures/parity/cube-mesh.golden.json`：加 `$semanticsBoneLocalPos`/`$semanticsMergeCubes` + `boneLocalPosCases`(7)/`mergeCubesCases`(11)，主源 = Go。regen 一条命令（`YSM_PARITY_REGEN=1 go test ./go/threejs -run TestCubeMeshParity`）幂等已验证。口径：`computeBoneLocalPos` 逐位精确（纯加减）；`mergeCubes` 重叠判据走 `cubeEpsilon=0.001` 容差、输出 cube 全字段逐位精确。见 `frontend/src/preview-3d/mesh/cube-mesh.ts\|mergeCubes`、`\|computeBoneLocalPos`、`go/threejs/spec.go\|mergeCubes`、`go/threejs/spec-bones.go\|buildBoneLocalData`、`frontend/src/preview-3d/mesh/cube-mesh-merge-parity.test.ts`。
 - **F1 decoder 取消闩锁 / F5 decoder 纹理键覆盖 revoke / GPU query 孤儿 / pack 纹理引用计数对称 / adapter dispose 隔离 / build 失败归还 / frustum 注册契约** — 逐轮已清偿，见 archive 快照 §各轮记录 + 对应契约测试。
 
 ---

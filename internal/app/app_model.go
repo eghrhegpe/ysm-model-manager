@@ -334,7 +334,7 @@ func (a *App) GetModel3DSpec(modelPath string) (*threejs.Model3DSpec, error) {
 		if err == nil && specJSON != "{}" {
 			var spec threejs.Model3DSpec
 			if err := json.Unmarshal([]byte(specJSON), &spec); err != nil {
-				return nil, fmt.Errorf("解析 Model3DSpec 失败: %w", err)
+				return nil, decodeModel3DSpecErr(err)
 			}
 			// R1 契约（texArrOrder）+ ADR-114 perComponent（componentTextures）：
 			// typed 字段直填，不再走「拼 map → 注入 string → 再 Unmarshal」双轨——
@@ -356,9 +356,16 @@ func (a *App) GetModel3DSpec(modelPath string) (*threejs.Model3DSpec, error) {
 	}
 	var spec threejs.Model3DSpec
 	if err := json.Unmarshal([]byte(specJSON), &spec); err != nil {
-		return nil, fmt.Errorf("解析 Model3DSpec 失败: %w", err)
+		return nil, decodeModel3DSpecErr(err)
 	}
 	return &spec, nil
+}
+
+// decodeModel3DSpecErr 统一 3D spec JSON 反序列化失败的 AppError 构造点（D1 切片 A：
+// 原三处裸 fmt.Errorf 让前端 friendlyError 走中文 Reason 透传旁路，en/ja 界面必显中文；
+// WithCause 保留底层 err 供 errors.Is/As 穿透）。
+func decodeModel3DSpecErr(err error) error {
+	return types.AppError{Code: types.ErrDecodeFailed, Operation: "加载 3D 预览", Reason: "解析 Model3DSpec 失败"}.WithCause(err)
 }
 
 // Build3DSpecFromGeometryJSON 从 bedrock geometry JSON 构建 3D spec（纯 Go，无 Node 依赖）。
@@ -368,7 +375,7 @@ func (a *App) GetModel3DSpec(modelPath string) (*threejs.Model3DSpec, error) {
 // 返回 nil 表示不可用（前端据此决定是否报错/提示）。
 func (a *App) Build3DSpecFromGeometryJSON(geometryJSON string) (*threejs.Model3DSpec, error) {
 	if geometryJSON == "" {
-		return nil, fmt.Errorf("geometryJSON 为空")
+		return nil, types.AppError{Code: types.ErrInvalidParam, Operation: "加载 3D 预览", Reason: "geometryJSON 为空"}
 	}
 	model := geometry.ParseBedrockGeometry([]byte(geometryJSON))
 	if model == nil || len(model.Bones) == 0 {
@@ -383,7 +390,7 @@ func (a *App) Build3DSpecFromGeometryJSON(geometryJSON string) (*threejs.Model3D
 	}
 	var spec threejs.Model3DSpec
 	if err := json.Unmarshal([]byte(specJSON), &spec); err != nil {
-		return nil, fmt.Errorf("解析 Model3DSpec 失败: %w", err)
+		return nil, decodeModel3DSpecErr(err)
 	}
 	return &spec, nil
 }

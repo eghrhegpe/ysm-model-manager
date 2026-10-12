@@ -90,7 +90,7 @@ func (a *App) GetSchematicVoxelData(path string) (*typereg.LitematicVoxelData, e
 func (a *App) ReadSchematic(path string) (map[string]interface{}, error) {
 	result := litematic.ParseSchematicSummary(path)
 	if result == nil {
-		return nil, fmt.Errorf("无法解析 schematic")
+		return nil, types.AppError{Code: types.ErrDecodeFailed, Operation: "读取 schematic 信息", Reason: "无法解析 schematic"}
 	}
 	return result, nil
 }
@@ -99,7 +99,7 @@ func (a *App) ReadSchematic(path string) (map[string]interface{}, error) {
 func (a *App) ReadNbtStructure(path string) (map[string]interface{}, error) {
 	result := litematic.ParseNbtStructure(path)
 	if result == nil {
-		return nil, fmt.Errorf("无法解析 NBT 结构")
+		return nil, types.AppError{Code: types.ErrDecodeFailed, Operation: "读取 NBT 结构信息", Reason: "无法解析 NBT 结构"}
 	}
 	return result, nil
 }

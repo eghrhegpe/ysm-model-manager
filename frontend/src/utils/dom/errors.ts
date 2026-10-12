@@ -6,9 +6,10 @@
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import { APP_ERROR_PATH_RE } from "@/utils/base/pure/apperror-text.ts";
 
-// CODE_KEYS 覆盖所有有明确分类语义的 Code；未列出的 Code（IO_ERROR/MKDIR_FAILED/
-// WRITE_FAILED/FILE_EMPTY/FILE_TOO_LARGE/LINK_FAILED）语义靠 Reason 中文透传，
-// 不在此武断归类（各 Code 的 Reason/Suggestion 比通用分类更具体，映射会误导用户）。
+// CODE_KEYS 覆盖所有有明确分类语义的 Code（D1 切片 A 补齐 IO_ERROR/MKDIR_FAILED/
+// WRITE_FAILED/FILE_EMPTY/FILE_TOO_LARGE/LINK_FAILED 差集，此前靠 Reason 中文透传，
+// en/ja 界面会显中文）。剩余未列出的 Code 仅剩 UNKNOWN，且 UNKNOWN 已由
+// error.unknown 兜底（friendlyError 的 !err/空值路径），无需在此映射。
 // 值收窄为 LocaleKey：映射表的 key 必须是语言包合法 key（字面量拼错编译期报错）。
 const CODE_KEYS: Record<string, LocaleKey> = {
   FILE_EXISTS: "error.alreadyExists",
@@ -19,6 +20,12 @@ const CODE_KEYS: Record<string, LocaleKey> = {
   FILE_TYPE_UNSUPPORTED: "error.unsupported",
   UNSUPPORTED_FORMAT: "error.unsupported",
   DECODE_FAILED: "error.dataFormat",
+  FILE_TOO_LARGE: "error.fileTooLarge",
+  FILE_EMPTY: "error.fileEmpty",
+  MKDIR_FAILED: "error.mkdirFailed",
+  WRITE_FAILED: "error.writeFailed",
+  IO_ERROR: "error.ioError",
+  LINK_FAILED: "error.linkFailed",
 };
 
 /**

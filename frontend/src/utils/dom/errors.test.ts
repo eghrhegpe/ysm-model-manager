@@ -46,34 +46,40 @@ describe("friendlyError 结构化 AppError Code（ADR-051 单一事实来源）"
     expect(friendlyError({ Code: "ALREADY_EXISTS" })).toBe("error.alreadyExists");
   });
 
-  it("未知 Code → 透传中文 Reason 或 fallback", () => {
-    // FILE_TOO_LARGE：中文 Reason 透传
+  // D1 切片 A：补齐 CODE_KEYS 差集——此前这 6 个 Code 靠 Reason 中文透传，en/ja 界面显中文
+  it("D1 差集 Code → 映射 i18n（不再中文透传）", () => {
     expect(friendlyError({ Code: "FILE_TOO_LARGE", message: "文件大小超过 500MB 限制" })).toBe(
-      "文件大小超过 500MB 限制",
+      "error.fileTooLarge",
     );
-    // FILE_EMPTY：中文 Reason 透传
-    expect(friendlyError({ Code: "FILE_EMPTY", message: "文件内容为空" })).toBe("文件内容为空");
-    // LINK_FAILED：中文 Reason 透传
-    expect(friendlyError({ Code: "LINK_FAILED", message: "创建符号链接需要管理员权限" })).toBe(
-      "创建符号链接需要管理员权限",
+    expect(friendlyError({ Code: "FILE_EMPTY", message: "文件内容为空" })).toBe(
+      "error.fileEmpty",
     );
-    // IO_ERROR：英文 message → fallback（Go 端不会这样，仅测试兜底）
-    expect(friendlyError({ Code: "IO_ERROR", message: "io: read/write on closed file" })).toBe(
-      "error.fallback: io: read/write on closed file",
-    );
-    // WRITE_FAILED：英文 message → fallback
-    expect(friendlyError({ Code: "WRITE_FAILED", message: "写入失败: boom" })).toBe(
-      "写入失败: boom",
-    );
-    // MKDIR_FAILED：中文 Reason 透传
     expect(friendlyError({ Code: "MKDIR_FAILED", message: "无法创建目标目录" })).toBe(
-      "无法创建目标目录",
+      "error.mkdirFailed",
+    );
+    expect(friendlyError({ Code: "WRITE_FAILED", message: "写入失败: boom" })).toBe(
+      "error.writeFailed",
+    );
+    expect(friendlyError({ Code: "IO_ERROR", message: "io: read/write on closed file" })).toBe(
+      "error.ioError",
+    );
+    expect(friendlyError({ Code: "LINK_FAILED", message: "创建符号链接需要管理员权限" })).toBe(
+      "error.linkFailed",
+    );
+  });
+
+  it("未列入的 Code（未知）→ 透传中文 Reason 或 fallback", () => {
+    // WEIRD_CODE 不在 CODE_KEYS：中文 Reason 透传
+    expect(friendlyError({ Code: "WEIRD_CODE", message: "奇怪的错误" })).toBe("奇怪的错误");
+    // WEIRD_CODE + 英文 message → fallback（Go 端不会这样，仅测试兜底）
+    expect(friendlyError({ Code: "WEIRD_CODE", message: "something odd happened" })).toBe(
+      "error.fallback: something odd happened",
     );
   });
 
   it("未知 Code 含内部路径 → stripPathSegments 后 fallback", () => {
     const msg = "无法创建目标目录 源路径：C:\\Users\\test 目标路径：D:\\game 解决建议：重试";
-    expect(friendlyError({ Code: "MKDIR_FAILED", message: msg })).toBe(
+    expect(friendlyError({ Code: "WEIRD_CODE", message: msg })).toBe(
       "无法创建目标目录 解决建议：重试",
     );
   });
@@ -117,7 +123,7 @@ describe("friendlyError — 边界输入与嵌套 cause", () => {
 
   it("cause.Code 未知 + 外层英文 message → fallback", () => {
     const err = new Error("boom: io error");
-    (err as { cause?: unknown }).cause = { Code: "IO_ERROR" };
+    (err as { cause?: unknown }).cause = { Code: "WEIRD_CODE" };
     expect(friendlyError(err)).toBe("error.fallback: boom: io error");
   });
 

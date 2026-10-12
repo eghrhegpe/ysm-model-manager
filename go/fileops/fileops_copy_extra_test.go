@@ -30,9 +30,7 @@ func assertNoCopyTmp(t *testing.T, dir string) {
 func TestCopyFile_LstatError(t *testing.T) {
 	dir := t.TempDir()
 	err := copyFile(filepath.Join(dir, "nope.ysm"), filepath.Join(dir, "dst.ysm"))
-	if err == nil {
-		t.Fatal("源不存在应报错")
-	}
+	testutil.NotNil(t, err, "源不存在应报错")
 }
 
 // copyFile 源为符号链接：应拒绝（防读取越界）

@@ -178,9 +178,7 @@ func TestFindDuplicateFiles_SymlinkRootErrorIsClassifiable(t *testing.T) {
 		t.Skipf("os.Symlink 不可用（需权限）: %v", err)
 	}
 	_, err := FindDuplicateFiles(link, true)
-	if err == nil {
-		t.Fatal("符号链接根应报错")
-	}
+	testutil.NotNil(t, err, "符号链接根应报错")
 	// 陷阱 #11 修复验证：errors.Is 可判定（不依赖错误文本内容）
 	if !errors.Is(err, ErrSymlinkRoot) {
 		t.Fatalf("FindDuplicateFiles 符号链接根错误应 errors.Is(ErrSymlinkRoot), got %v", err)
@@ -200,9 +198,7 @@ func TestCountDuplicates_SymlinkRootErrorIsClassifiable(t *testing.T) {
 		t.Skipf("os.Symlink 不可用（需权限）: %v", err)
 	}
 	_, _, err := CountDuplicates(link, true)
-	if err == nil {
-		t.Fatal("符号链接根应报错")
-	}
+	testutil.NotNil(t, err, "符号链接根应报错")
 	if !errors.Is(err, ErrSymlinkRoot) {
 		t.Fatalf("CountDuplicates 符号链接根错误应 errors.Is(ErrSymlinkRoot), got %v", err)
 	}

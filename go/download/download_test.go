@@ -158,7 +158,5 @@ func TestDownloadCtxCancel(t *testing.T) {
 
 	dl := New()
 	err := dl.File(ctx, ts.URL, filepath.Join(t.TempDir(), "cancel.txt"), nil)
-	if err == nil {
-		t.Fatal("expected cancellation error, got nil")
-	}
+	testutil.NotNil(t, err, "expected cancellation error, got nil")
 }

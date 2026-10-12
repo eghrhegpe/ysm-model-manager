@@ -345,9 +345,7 @@ func TestRunScanDir_MissingDirReportedNotFatal(t *testing.T) {
 // TestRunScanDir_RejectsUnknownFlag 覆盖 parseFlags 失败分支（应包成 *ErrParam）。
 func TestRunScanDir_RejectsUnknownFlag(t *testing.T) {
 	err := runScanDir(&CmdContext{Args: []string{"--dir", t.TempDir(), "--no-such-flag"}})
-	if err == nil {
-		t.Fatal("未知 flag 应报错")
-	}
+	testutil.NotNil(t, err, "未知 flag 应报错")
 	if _, ok := err.(*ErrParam); !ok {
 		t.Errorf("应为 *ErrParam, got %T: %v", err, err)
 	}
@@ -623,9 +621,7 @@ func TestRunScanDir_JSONWriteFailure(t *testing.T) {
 	out := captureOutput(t, func() {
 		err = runScanDir(&CmdContext{Args: []string{"--dir", dir, "--output", badOutput}})
 	})
-	if err == nil {
-		t.Fatal("输出路径不可写应报错")
-	}
+	testutil.NotNil(t, err, "输出路径不可写应报错")
 	if _, ok := err.(*ErrRuntime); !ok {
 		t.Errorf("应为 *ErrRuntime, got %T: %v", err, err)
 	}
@@ -644,9 +640,7 @@ func TestRunFileBench_RejectsUnknownFlag(t *testing.T) {
 	out := captureOutput(t, func() {
 		err = runFileBench(&CmdContext{App: &mmdBenchApp{}, Args: []string{"--no-such-flag"}})
 	})
-	if err == nil {
-		t.Fatal("未知 flag 应报错")
-	}
+	testutil.NotNil(t, err, "未知 flag 应报错")
 	if _, ok := err.(*ErrParam); !ok {
 		t.Errorf("应为 *ErrParam, got %T: %v", err, err)
 	}
@@ -667,9 +661,7 @@ func TestRunFileBench_OutputWriteFailure(t *testing.T) {
 		err = runFileBench(&CmdContext{App: &mmdBenchApp{}, Args: []string{
 			"--dir", dir, "--iterations", "1", "--output", badOutput}})
 	})
-	if err == nil {
-		t.Fatal("输出路径不可写应报错")
-	}
+	testutil.NotNil(t, err, "输出路径不可写应报错")
 	if _, ok := err.(*ErrRuntime); !ok {
 		t.Errorf("应为 *ErrRuntime, got %T: %v", err, err)
 	}

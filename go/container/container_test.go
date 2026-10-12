@@ -222,9 +222,7 @@ func TestOpenDir_NestedDirAndRead(t *testing.T) {
 		}
 	}
 	// 嵌套目录条目应存在且 IsDir=true
-	if dirEntry == nil {
-		t.Fatal("嵌套目录 sub/ 应有目录条目")
-	}
+	testutil.NotNil(t, dirEntry, "嵌套目录 sub/ 应有目录条目")
 	// 文件条目可读取内容
 	rc, err := byName["sub/nested.txt"].Open()
 	testutil.NoError(t, err)

@@ -28,9 +28,7 @@ func TestCrossPlatform_filepathAbs_NULBehavior(t *testing.T) {
 	_, err := filepath.Abs(nulPath)
 	switch runtime.GOOS {
 	case "windows":
-		if err == nil {
-			t.Fatal("Windows: filepath.Abs 遇 NUL 应报错，实际 nil")
-		}
+		testutil.NotNil(t, err, "Windows: filepath.Abs 遇 NUL 应报错，实际 nil")
 		t.Logf("观察: Windows filepath.Abs 遇 NUL 报错（攻击自然失效）: %v", err)
 	case "linux", "darwin":
 		if err != nil {

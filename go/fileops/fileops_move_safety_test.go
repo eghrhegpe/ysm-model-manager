@@ -97,9 +97,7 @@ func TestMoveModelFile_RenameFailRollsBackCreatedDstDir(t *testing.T) {
 	dstDir := filepath.Join(base, "sub") // 不存在 → 由本次 prepareModelDest 新建
 
 	err := MoveModelFile(base, src, dstDir)
-	if err == nil {
-		t.Fatal("rename 失败应报错")
-	}
+	testutil.NotNil(t, err, "rename 失败应报错")
 	// 原始错误必须透传（不吞错、不换成笼统文案）
 	if !strings.Contains(err.Error(), "simulated rename failure") {
 		t.Fatalf("应透传原 rename 错误，got %v", err)
@@ -160,9 +158,7 @@ func TestMoveModelFile_TargetOutsideRootRejected(t *testing.T) {
 	}
 
 	err := MoveModelFile(repo, src, outside)
-	if err == nil {
-		t.Fatal("目标目录在仓库外应被拒绝")
-	}
+	testutil.NotNil(t, err, "目标目录在仓库外应被拒绝")
 	if !strings.Contains(err.Error(), "目标目录必须在仓库内") {
 		t.Fatalf("应命中目标越界守卫，got %v", err)
 	}
@@ -297,9 +293,7 @@ func TestMoveModelFile_CrossDeviceStatSourceFails(t *testing.T) {
 	t.Cleanup(func() { renameForMove = orig })
 
 	err := MoveModelFile(base, src, dstDir)
-	if err == nil {
-		t.Fatal("源已消失时应报错")
-	}
+	testutil.NotNil(t, err, "源已消失时应报错")
 	// 透传 os.Stat 的原始错误（不包装），调用方可按 NotExist 分类
 	if !os.IsNotExist(err) {
 		t.Fatalf("应透传 NotExist，got %v", err)

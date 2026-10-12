@@ -8,6 +8,7 @@ import (
 	"io"
 	"math"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // ---- 辅助类型 ----
@@ -97,9 +98,7 @@ func TestReadLimitedEntry_LimitNegative(t *testing.T) {
 func TestReadLimitedEntry_EmptyContent(t *testing.T) {
 	rc := &noopCloser{Reader: bytes.NewReader(nil)}
 	got := ReadLimitedEntry(rc, 100)
-	if got == nil {
-		t.Fatal("limit>0 时空内容应返回空切片，而非 nil")
-	}
+	testutil.NotNil(t, got, "limit>0 时空内容应返回空切片，而非 nil")
 	if len(got) != 0 {
 		t.Fatalf("空内容长度应为 0，实际 %d", len(got))
 	}

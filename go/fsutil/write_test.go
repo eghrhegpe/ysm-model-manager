@@ -47,9 +47,7 @@ func TestWriteFileAtomic_TempCreateFailureCleansUp(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	err := WriteFileAtomic(filepath.Join(blocker, "out.json"), []byte("x"))
-	if err == nil {
-		t.Fatal("destDir 为文件时应失败")
-	}
+	testutil.NotNil(t, err, "destDir 为文件时应失败")
 	if !errors.Is(err, ErrTempCreateFailed) {
 		t.Errorf("CreateTemp 阶段失败应携带 ErrTempCreateFailed，实际 %v", err)
 	}

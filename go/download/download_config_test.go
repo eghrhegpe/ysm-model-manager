@@ -58,9 +58,7 @@ func TestDownloadTimeout_ZeroValueFallback(t *testing.T) {
 func TestNewWithClient(t *testing.T) {
 	customClient := &http.Client{Timeout: 0}
 	d := NewWithClient(customClient)
-	if d == nil {
-		t.Fatal("NewWithClient 返回 nil")
-	}
+	testutil.NotNil(t, d, "NewWithClient 返回 nil")
 	// httpClient() 应返回注入的 client
 	client := d.httpClient()
 	if client != customClient {
@@ -73,9 +71,7 @@ func TestNew_DefaultTimeout(t *testing.T) {
 	config.Set(nil)
 	t.Cleanup(func() { config.Set(nil) })
 	d := New()
-	if d == nil {
-		t.Fatal("New 返回 nil")
-	}
+	testutil.NotNil(t, d, "New 返回 nil")
 	if d.timeout != defaultTimeout {
 		t.Errorf("New() timeout = %v, 期望 %v", d.timeout, defaultTimeout)
 	}
@@ -118,7 +114,5 @@ func TestFromGitHubAPIWithChecksum_Mismatch(t *testing.T) {
 	savePath := dir + "/out.bin"
 
 	err := d.FromGitHubAPIWithChecksum(context.Background(), server.URL, savePath, nil, make([]byte, 32))
-	if err == nil {
-		t.Fatal("checksum 不匹配应报错")
-	}
+	testutil.NotNil(t, err, "checksum 不匹配应报错")
 }

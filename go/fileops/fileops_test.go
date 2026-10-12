@@ -372,9 +372,7 @@ func TestToggleModelEnable_RootRejected(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	_, err := ToggleModelEnable(dir, dir)
-	if err == nil {
-		t.Fatal("path==root 应拒绝")
-	}
+	testutil.NotNil(t, err, "path==root 应拒绝")
 	testutil.FileNotExists(t, dir+".disabled", "根目录不得被改名成 .disabled")
 	testutil.FileExists(t, dir)
 }
@@ -385,9 +383,7 @@ func TestToggleModelEnable_RootRejectedCaseInsensitive(t *testing.T) {
 	mixed := strings.ToUpper(dir)
 	if runtime.GOOS == "windows" {
 		_, err := ToggleModelEnable(dir, mixed)
-		if err == nil {
-			t.Fatal("Windows 大小写不同的根应拒绝")
-		}
+		testutil.NotNil(t, err, "Windows 大小写不同的根应拒绝")
 	} else {
 		_, err := ToggleModelEnable(dir, mixed)
 		if err != nil && IsFileBanned(dir+".ban") {
@@ -1022,9 +1018,7 @@ func TestReadLimitedFile_Normal(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	data := readLimitedFile(path)
-	if data == nil {
-		t.Fatal("正常小文件应返回非 nil")
-	}
+	testutil.NotNil(t, data, "正常小文件应返回非 nil")
 	testutil.Equal(t, string(data), string(payload))
 }
 
@@ -1041,9 +1035,7 @@ func TestReadLimitedFile_Empty(t *testing.T) {
 func TestReadLimitedFile_NonExistent(t *testing.T) {
 	t.Parallel()
 	data := readLimitedFile("/nonexistent/path/does/not/exist.txt")
-	if data != nil {
-		t.Fatal("不存在文件应返回 nil")
-	}
+	testutil.Nil(t, data, "不存在文件应返回 nil")
 }
 
 // ====== helper ======

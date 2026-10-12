@@ -135,9 +135,7 @@ func TestRunConcurrentBench_RejectsUnanalyzableOnly(t *testing.T) {
 			Args:      []string{"--workers", "2"},
 		})
 	})
-	if err == nil {
-		t.Fatal("只有 CLI 不可分析类型时应报错，不得静默跑空模型")
-	}
+	testutil.NotNil(t, err, "只有 CLI 不可分析类型时应报错，不得静默跑空模型")
 	if !strings.Contains(err.Error(), "CLI 可分析") {
 		t.Errorf("错误信息应说明「无可分析模型」, got %q", err.Error())
 	}

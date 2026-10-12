@@ -132,9 +132,7 @@ func TestParseFromZip_YsmOpenError(t *testing.T) {
 	entries[0].method = 99
 	data := makeZipRaw(t, entries)
 	model, pngs, _ := ParseFromZip(data, int64(len(data)))
-	if model == nil {
-		t.Fatal("ysm.json Open 失败时模型仍应从几何文件回退解析")
-	}
+	testutil.NotNil(t, model, "ysm.json Open 失败时模型仍应从几何文件回退解析")
 	if model.BoneCount != 1 {
 		t.Errorf("BoneCount = %d, 期望 1", model.BoneCount)
 	}
@@ -160,9 +158,7 @@ func TestParseFromZip_PngOpenError(t *testing.T) {
 	entries[2].method = 99
 	data := makeZipRaw(t, entries)
 	model, pngs, _ := ParseFromZip(data, int64(len(data)))
-	if model == nil {
-		t.Fatal("模型应为非 nil")
-	}
+	testutil.NotNil(t, model, "模型应为非 nil")
 	if len(pngs) != 0 {
 		t.Errorf("pngs = %d, 期望 0（纹理 Open 失败被跳过）", len(pngs))
 	}
@@ -213,9 +209,7 @@ func TestParseFromZip_InvalidYsmJSON(t *testing.T) {
 		"model.geo.json": validGeoJSON,
 	})
 	model, _, _ := ParseFromZip(ysm, int64(len(ysm)))
-	if model == nil {
-		t.Fatal("ysm.json 非法时模型仍应从几何文件回退解析")
-	}
+	testutil.NotNil(t, model, "ysm.json 非法时模型仍应从几何文件回退解析")
 	if model.BoneCount != 1 {
 		t.Errorf("BoneCount = %d, 期望 1", model.BoneCount)
 	}
@@ -230,9 +224,7 @@ func TestParseFromZip_ModelMapBadValue(t *testing.T) {
 		"tex1.png":       "PNG-DATA",
 	})
 	model, pngs, _ := ParseFromZip(data, int64(len(data)))
-	if model == nil {
-		t.Fatal("model map 值类型错误时模型仍应回退解析")
-	}
+	testutil.NotNil(t, model, "model map 值类型错误时模型仍应回退解析")
 	if model.BoneCount != 1 {
 		t.Errorf("BoneCount = %d, 期望 1", model.BoneCount)
 	}
@@ -254,9 +246,7 @@ func TestParseFromZip_BackslashEntryNames(t *testing.T) {
 		"tex_a.png":          "PNG-A",
 	})
 	model, pngs, _ := ParseFromZip(data, int64(len(data)))
-	if model == nil {
-		t.Fatal("模型应为非 nil")
-	}
+	testutil.NotNil(t, model, "模型应为非 nil")
 	// 声明序 a 在前 → 合并结果 first(head) 应排在 second 前（排序查询键归一化）
 	if len(model.Bones) != 2 {
 		t.Fatalf("BoneCount = %d, 期望 2", len(model.Bones))
@@ -296,9 +286,7 @@ func TestParseFromZip_UndeclaredGeoAndPng(t *testing.T) {
 		"extra.png":         "PNG-X", // 未声明纹理
 	})
 	model, pngs, _ := ParseFromZip(data, int64(len(data)))
-	if model == nil {
-		t.Fatal("模型应为非 nil")
-	}
+	testutil.NotNil(t, model, "模型应为非 nil")
 	// 声明项 declared 排前，未声明项按稳定序落尾（map 写入序随机 → 只校验集合）
 	if len(model.Bones) != 3 {
 		t.Fatalf("BoneCount = %d, 期望 3（declared/main/extra 合并）", len(model.Bones))
@@ -334,9 +322,7 @@ func TestParseFromZip_TextureMixedSeparators(t *testing.T) {
 		"extra.png":      "PNG-X", // 未声明 → hasI=false 兜底分支
 	})
 	model, pngs, _ := ParseFromZip(data, int64(len(data)))
-	if model == nil {
-		t.Fatal("模型应为非 nil")
-	}
+	testutil.NotNil(t, model, "模型应为非 nil")
 	if len(pngs) != 3 {
 		t.Fatalf("pngs = %d, 期望 3", len(pngs))
 	}
@@ -376,9 +362,7 @@ func TestParseFromZip_TexSlotBoundToTexOrder(t *testing.T) {
 		"tex_b.png":     "PNG-B",
 	})
 	model, _, _ := ParseFromZip(data, int64(len(data)))
-	if model == nil {
-		t.Fatal("模型应为非 nil")
-	}
+	testutil.NotNil(t, model, "模型应为非 nil")
 	for _, b := range model.Bones {
 		for _, c := range b.Cubes {
 			switch b.Name {
@@ -624,9 +608,7 @@ func TestParseFromZip_PngSubdirAndBackslashNames(t *testing.T) {
 		"sub\\tex2.png":  "PNG-2",
 	})
 	model, pngs, _ := ParseFromZip(data, int64(len(data)))
-	if model == nil {
-		t.Fatal("模型应为非 nil")
-	}
+	testutil.NotNil(t, model, "模型应为非 nil")
 	if len(pngs) != 2 {
 		t.Fatalf("pngs = %d, 期望 2", len(pngs))
 	}
@@ -773,9 +755,7 @@ func TestTextureCategories_CaseInsensitiveReorder(t *testing.T) {
 		"textures/Skin.png": "PNG-DATA", // 大写 S：texOrder 会存 skin.png，pngNames 保留 Skin
 	})
 	model, _, _ := ParseFromZip(data, int64(len(data)))
-	if model == nil {
-		t.Fatal("模型不应为 nil")
-	}
+	testutil.NotNil(t, model, "模型不应为 nil")
 	if len(model.TextureNames) != 1 || model.TextureNames[0] != "Skin" {
 		t.Fatalf("TextureNames = %v, 期望 [Skin]", model.TextureNames)
 	}
@@ -808,9 +788,7 @@ func TestTextureCategories_L0Rebuild(t *testing.T) {
 		"assets/touhou/textures/Marisa.png":    "PNG-DATA",
 	})
 	model, _, _ := ParseFromZip(data, int64(len(data)))
-	if model == nil {
-		t.Fatal("L0 清单合法时模型不应为 nil")
-	}
+	testutil.NotNil(t, model, "L0 清单合法时模型不应为 nil")
 	// L0 生效：texOrder 被 maid_model.json 清单覆盖为 2 项，texCategories 应同步重建为 2 项全 player
 	if len(model.TextureNames) != 2 {
 		t.Fatalf("TextureNames 长度 = %d, 期望 2（L0 清单 2 张纹理）", len(model.TextureNames))

@@ -43,9 +43,7 @@ func TestPrepareAtomicWrite_Success(t *testing.T) {
 func TestPrepareAtomicWrite_CreateTempFail(t *testing.T) {
 	// 不存在的目录 → CreateTemp 必然失败
 	_, _, err := prepareAtomicWrite(filepath.Join(t.TempDir(), "no-such-dir", "out.bin"))
-	if err == nil {
-		t.Fatal("期望 CreateTemp 失败返回 error")
-	}
+	testutil.NotNil(t, err, "期望 CreateTemp 失败返回 error")
 	if !strings.Contains(err.Error(), "创建临时文件失败") {
 		t.Fatalf("错误应包装原因, got %v", err)
 	}

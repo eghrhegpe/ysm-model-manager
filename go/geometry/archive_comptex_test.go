@@ -35,9 +35,7 @@ func TestComponentTextures_Declared_HasEntry(t *testing.T) {
 			break
 		}
 	}
-	if arrowComp == nil {
-		t.Fatal("未找到 arrow 组件")
-	}
+	testutil.NotNil(t, arrowComp, "未找到 arrow 组件")
 	// arrow 声明了 textures/arrow.png → ComponentTextures["arrow"] 应有 base64 条目
 	texs := arrowComp.ComponentTextures["arrow"]
 	if len(texs) == 0 {
@@ -66,9 +64,7 @@ func TestComponentTextures_Undeclared_SameNameFallback(t *testing.T) {
 			break
 		}
 	}
-	if armComp == nil {
-		t.Fatal("未找到 arm 组件")
-	}
+	testutil.NotNil(t, armComp, "未找到 arm 组件")
 	// arm 与 main 共用同一套 player.texture 皮肤（ModernYSM 权威，见 IsArmModelName 注释）：
 	// arm 不走同名纹理兜底，不填 ComponentTextures，前端走全局 texArr[0]。
 	// 即使 arm.png 存在，arm 也不会绑定它——arm 的纹理来自 main 的皮肤数组。
@@ -94,9 +90,7 @@ func TestComponentTextures_Undeclared_NoSameNameFile(t *testing.T) {
 			break
 		}
 	}
-	if armComp == nil {
-		t.Fatal("未找到 arm 组件")
-	}
+	testutil.NotNil(t, armComp, "未找到 arm 组件")
 	// 无 arm.png → 兜底不触发 → 无条目（既有行为不变）
 	if len(armComp.ComponentTextures["arm"]) != 0 {
 		t.Errorf("无同名纹理文件不应兜底, 实际 %v", armComp.ComponentTextures)

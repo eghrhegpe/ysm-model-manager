@@ -12,6 +12,7 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // flakyTransport 前 N 次返回网络错误（连接重置），之后透传真实 transport——
@@ -62,9 +63,7 @@ func TestRetry_Exhausted_ReturnsLastError(t *testing.T) {
 
 	dl := NewWithClient(ts.Client()).WithRetry(3, time.Millisecond)
 	err := dl.File(context.Background(), ts.URL, filepath.Join(t.TempDir(), "f.txt"), nil)
-	if err == nil {
-		t.Fatal("应返回错误")
-	}
+	testutil.NotNil(t, err, "应返回错误")
 	var httpErr *HTTPStatusError
 	if !errors.As(err, &httpErr) || httpErr.Code != http.StatusBadGateway {
 		t.Fatalf("重试耗尽应返回末次错误（HTTP 502）且分类不变，got %T: %v", err, err)
@@ -123,9 +122,7 @@ func TestRetry_DefaultDisabled(t *testing.T) {
 
 	dl := NewWithClient(ts.Client()) // 默认不重试（零值，行为零漂移）
 	err := dl.File(context.Background(), ts.URL, filepath.Join(t.TempDir(), "f.txt"), nil)
-	if err == nil {
-		t.Fatal("应返回错误")
-	}
+	testutil.NotNil(t, err, "应返回错误")
 	if got := atomic.LoadInt32(&calls); got != 1 {
 		t.Fatalf("默认应不重试，应请求 1 次，got %d", got)
 	}

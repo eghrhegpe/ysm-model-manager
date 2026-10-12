@@ -40,9 +40,7 @@ func TestMoveModelFile_CrossDeviceDeleteSourceFails_KeepsBothCopies(t *testing.T
 	defer func() { _ = syscall.CloseHandle(h) }()
 
 	moveErr := MoveModelFile(dir, src, dstDir)
-	if moveErr == nil {
-		t.Fatal("删除源失败必须报错（不得静默成功）")
-	}
+	testutil.NotNil(t, moveErr, "删除源失败必须报错（不得静默成功）")
 	if !strings.Contains(moveErr.Error(), "复制成功但删除源失败") {
 		t.Fatalf("应报「复制成功但删除源失败」，got %v", moveErr)
 	}

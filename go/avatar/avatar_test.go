@@ -74,9 +74,7 @@ func TestReadFileFromContainer(t *testing.T) {
 	testutil.NoError(t, err)
 	defer r.Close()
 	data := ReadFileFromContainer(r, "test.png")
-	if data == nil {
-		t.Fatal("ReadFileFromContainer returned nil")
-	}
+	testutil.NotNil(t, data, "ReadFileFromContainer returned nil")
 	if string(data) != "png-data" {
 		t.Fatalf("got %q, want %q", string(data), "png-data")
 	}

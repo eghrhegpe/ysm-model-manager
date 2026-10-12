@@ -15,9 +15,7 @@ func TestHideWindow_NonWindows_IsNoop(t *testing.T) {
 	cmd := exec.Command("echo", "ok")
 	// 调用应为 no-op，不应 panic
 	HideWindow(cmd)
-	if cmd == nil {
-		t.Fatal("cmd 不应为 nil")
-	}
+	testutil.NotNil(t, cmd, "cmd 不应为 nil")
 	// 实际执行验证 cmd 仍然可用
 	out, err := cmd.CombinedOutput()
 	testutil.NoError(t, err, "执行 echo 失败")

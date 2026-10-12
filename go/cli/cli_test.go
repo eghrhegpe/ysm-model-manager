@@ -1395,9 +1395,7 @@ func TestJsonDataPayload(t *testing.T) {
 	}
 	// 非空 output：含 output/lines/filesRoot（lines 按行切分）
 	got := jsonDataPayload("line1\nline2\n", "/repo")
-	if got == nil {
-		t.Fatal("非空 output 应返回非 nil Payload")
-	}
+	testutil.NotNil(t, got, "非空 output 应返回非 nil Payload")
 	if got["filesRoot"] != "/repo" {
 		t.Errorf("filesRoot 应为 /repo, got: %v", got["filesRoot"])
 	}

@@ -477,9 +477,7 @@ func TestHTTP_ErrorClassification_TruncationDetected(t *testing.T) {
 
 	dl := New()
 	err := dl.File(context.Background(), url, filepath.Join(t.TempDir(), "trunc.txt"), nil)
-	if err == nil {
-		t.Fatal("#11 截断静默陷阱：服务端声明 1000 字节但只发送 7 字节，截断未被检测到，损坏文件可能被装盘")
-	}
+	testutil.NotNil(t, err, "#11 截断静默陷阱：服务端声明 1000 字节但只发送 7 字节，截断未被检测到，损坏文件可能被装盘")
 
 	// 验证错误可通过 errors.As 分类——不需要 strings.Contains 文本匹配
 	var truncErr *TruncationError
@@ -516,9 +514,7 @@ func TestHTTP_ErrorClassification_HTTPStatusError(t *testing.T) {
 
 	dl := New()
 	err := dl.File(context.Background(), ts.URL, filepath.Join(t.TempDir(), "404.txt"), nil)
-	if err == nil {
-		t.Fatal("expected error for 404")
-	}
+	testutil.NotNil(t, err, "expected error for 404")
 
 	var httpErr *HTTPStatusError
 	if !errors.As(err, &httpErr) {
@@ -536,9 +532,7 @@ func TestHTTP_ErrorClassification_UnsupportedScheme(t *testing.T) {
 	dl := New()
 	err := dl.File(context.Background(), "ftp://example.com/file",
 		filepath.Join(t.TempDir(), "ftp.txt"), nil)
-	if err == nil {
-		t.Fatal("expected error for ftp:// scheme")
-	}
+	testutil.NotNil(t, err, "expected error for ftp:// scheme")
 	if !errors.Is(err, ErrUnsupportedScheme) {
 		t.Fatalf("expected errors.Is(err, ErrUnsupportedScheme), got: %v", err)
 	}
@@ -560,9 +554,7 @@ func TestHTTP_ErrorClassification_PartialResponse(t *testing.T) {
 	dl := New()
 	err := dl.File(context.Background(), ts.URL,
 		filepath.Join(t.TempDir(), "partial.txt"), nil)
-	if err == nil {
-		t.Fatal("expected error for 200 + Content-Range")
-	}
+	testutil.NotNil(t, err, "expected error for 200 + Content-Range")
 	if !errors.Is(err, ErrPartialResponse) {
 		t.Fatalf("expected errors.Is(err, ErrPartialResponse), got: %v", err)
 	}
@@ -581,9 +573,7 @@ func TestHTTP_ErrorClassification_NonBinaryContentType(t *testing.T) {
 	dl := New()
 	err := dl.File(context.Background(), ts.URL,
 		filepath.Join(t.TempDir(), "html.txt"), nil)
-	if err == nil {
-		t.Fatal("expected error for text/html Content-Type")
-	}
+	testutil.NotNil(t, err, "expected error for text/html Content-Type")
 	if !errors.Is(err, ErrNonBinaryContentType) {
 		t.Fatalf("expected errors.Is(err, ErrNonBinaryContentType), got: %v", err)
 	}
@@ -667,9 +657,7 @@ func TestHTTP_ErrorClassification_OverReadTruncationError(t *testing.T) {
 	dl := New()
 	err := dl.File(context.Background(), url,
 		filepath.Join(t.TempDir(), "overread.txt"), nil)
-	if err == nil {
-		t.Fatal("#11 截断静默陷阱：超读/截断未被检测到")
-	}
+	testutil.NotNil(t, err, "#11 截断静默陷阱：超读/截断未被检测到")
 
 	// 无论走 TruncationError 路径还是 IO 错误路径，err 应非 nil
 	var truncErr *TruncationError
@@ -706,9 +694,7 @@ func TestHTTP_ErrorClassification_RedirectChainTooLong(t *testing.T) {
 	dl := New()
 	err := dl.File(context.Background(), servers[0].URL,
 		filepath.Join(t.TempDir(), "chain.txt"), nil)
-	if err == nil {
-		t.Fatal("expected error for redirect chain exceeding limit")
-	}
+	testutil.NotNil(t, err, "expected error for redirect chain exceeding limit")
 	if !errors.Is(err, ErrRedirectChainTooLong) {
 		t.Fatalf("expected errors.Is(err, ErrRedirectChainTooLong), got: %v", err)
 	}
@@ -727,9 +713,7 @@ func TestHTTP_ErrorClassification_RedirectToUnsafeScheme(t *testing.T) {
 	dl := New()
 	err := dl.File(context.Background(), ts.URL,
 		filepath.Join(t.TempDir(), "file.txt"), nil)
-	if err == nil {
-		t.Fatal("expected error for file:// redirect")
-	}
+	testutil.NotNil(t, err, "expected error for file:// redirect")
 	if !errors.Is(err, ErrRedirectToUnsafeScheme) {
 		t.Fatalf("expected errors.Is(err, ErrRedirectToUnsafeScheme), got: %v", err)
 	}
@@ -771,9 +755,7 @@ func TestAudit_DownloadFail_PreservesOldFile_NoTempResidue(t *testing.T) {
 
 	dl := New()
 	err := dl.File(context.Background(), url, savePath, nil)
-	if err == nil {
-		t.Fatal("截断下载应失败")
-	}
+	testutil.NotNil(t, err, "截断下载应失败")
 
 	// 旧文件必须原样保留
 	data, rErr := os.ReadFile(savePath)
@@ -834,9 +816,7 @@ func TestAudit_RenameFailure_SavePathIsDirectory(t *testing.T) {
 
 	dl := New()
 	err := dl.File(context.Background(), ts.URL, savePath, nil)
-	if err == nil {
-		t.Fatal("savePath 是目录时 rename 应失败")
-	}
+	testutil.NotNil(t, err, "savePath 是目录时 rename 应失败")
 
 	// 目录必须保留
 	info, sErr := os.Stat(savePath)
@@ -866,9 +846,7 @@ func TestAudit_MkdirAllFailure_ParentIsFile(t *testing.T) {
 
 	dl := New()
 	err := dl.File(context.Background(), ts.URL, savePath, nil)
-	if err == nil {
-		t.Fatal("父级是普通文件时 MkdirAll 应失败")
-	}
+	testutil.NotNil(t, err, "父级是普通文件时 MkdirAll 应失败")
 }
 
 // TestAudit_NetworkError_RequestFailed
@@ -882,9 +860,7 @@ func TestAudit_NetworkError_RequestFailed(t *testing.T) {
 	dl := New()
 	err = dl.File(context.Background(), "http://"+addr+"/x",
 		filepath.Join(t.TempDir(), "net.txt"), nil)
-	if err == nil {
-		t.Fatal("连接被拒应返回错误")
-	}
+	testutil.NotNil(t, err, "连接被拒应返回错误")
 	if errors.Is(err, context.Canceled) {
 		t.Fatalf("网络错误被误判为 ctx 取消: %v", err)
 	}
@@ -950,9 +926,7 @@ func TestHTTP_Checksum_Mismatch(t *testing.T) {
 	saveDir := t.TempDir()
 	savePath := filepath.Join(saveDir, "ck-mismatch.txt")
 	err := dl.FileWithChecksum(context.Background(), ts.URL, savePath, nil, make([]byte, 32))
-	if err == nil {
-		t.Fatal("checksum 不匹配应报错")
-	}
+	testutil.NotNil(t, err, "checksum 不匹配应报错")
 	if !errors.Is(err, ErrChecksumMismatch) {
 		t.Fatalf("应为 ErrChecksumMismatch, got %T: %v", err, err)
 	}

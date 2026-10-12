@@ -31,9 +31,7 @@ func TestParseFrom7z_Full(t *testing.T) {
 	// 完整路径：ysm.json 数组格式 + main/arm/arrow/broken 几何 + 3 纹理 + 动画 + avatar
 	data := load7zFixture(t, "7z_full.7z")
 	model, pngs := ParseFrom7z(data, int64(len(data)))
-	if model == nil {
-		t.Fatal("模型应为非 nil")
-	}
+	testutil.NotNil(t, model, "模型应为非 nil")
 	// arm.geo.json 被排除（第一人称手臂），broken.geo.json 解析失败跳过 → main(head)+arrow
 	if model.BoneCount != 2 {
 		t.Errorf("BoneCount = %d, 期望 2（head+arrow，arm 排除、broken 跳过）", model.BoneCount)
@@ -75,9 +73,7 @@ func TestParseFrom7z_ArmExcluded(t *testing.T) {
 	// 7z 合并路径同样排除第一人称手臂模型（与 ZIP 路径口径一致）
 	data := load7zFixture(t, "7z_full.7z")
 	model, _ := ParseFrom7z(data, int64(len(data)))
-	if model == nil {
-		t.Fatal("模型应为非 nil")
-	}
+	testutil.NotNil(t, model, "模型应为非 nil")
 	for _, b := range model.Bones {
 		if b.Name == "arm" {
 			t.Errorf("arm 骨骼不应出现在 7z 合并结果中（第一人称手臂须排除）")
@@ -89,9 +85,7 @@ func TestParseFrom7z_NoYsm(t *testing.T) {
 	// 无 ysm.json：无 modelOrder 声明，几何文件仍回退解析（ZIP 路径同口径）
 	data := load7zFixture(t, "7z_noym.7z")
 	model, pngs := ParseFrom7z(data, int64(len(data)))
-	if model == nil {
-		t.Fatal("无 ysm.json 时模型仍应从几何文件回退解析")
-	}
+	testutil.NotNil(t, model, "无 ysm.json 时模型仍应从几何文件回退解析")
 	if model.BoneCount != 1 {
 		t.Errorf("BoneCount = %d, 期望 1", model.BoneCount)
 	}
@@ -107,9 +101,7 @@ func TestParseFrom7z_ModelAsMap(t *testing.T) {
 	// model map 格式 + texture 对象数组（uv 字段）：声明序即纹理槽
 	data := load7zFixture(t, "7z_map.7z")
 	model, pngs := ParseFrom7z(data, int64(len(data)))
-	if model == nil {
-		t.Fatal("模型应为非 nil")
-	}
+	testutil.NotNil(t, model, "模型应为非 nil")
 	if model.BoneCount != 1 {
 		t.Errorf("BoneCount = %d, 期望 1", model.BoneCount)
 	}
@@ -125,9 +117,7 @@ func TestParseFrom7z_ModelAsString(t *testing.T) {
 	// model/texture 单字符串格式（字符串 texture 不参与声明序）
 	data := load7zFixture(t, "7z_str.7z")
 	model, pngs := ParseFrom7z(data, int64(len(data)))
-	if model == nil {
-		t.Fatal("模型应为非 nil")
-	}
+	testutil.NotNil(t, model, "模型应为非 nil")
 	if model.BoneCount != 1 {
 		t.Errorf("BoneCount = %d, 期望 1", model.BoneCount)
 	}
@@ -213,9 +203,7 @@ func TestParseFrom7z_ModelObjects(t *testing.T) {
 	// 纹理声明序排序、TexSlot 钳制（模型数 > 纹理声明数）
 	data := load7zFixture(t, "7z_obj.7z")
 	model, pngs := ParseFrom7z(data, int64(len(data)))
-	if model == nil {
-		t.Fatal("模型应为非 nil")
-	}
+	testutil.NotNil(t, model, "模型应为非 nil")
 	// sub/main.geo.json + sub/extra.geo.json（third 未存在于归档中）
 	if model.BoneCount != 2 {
 		t.Errorf("BoneCount = %d, 期望 2（main+extra）", model.BoneCount)
@@ -248,9 +236,7 @@ func TestParseFrom7z_ModelMapBadValue(t *testing.T) {
 	// model map 值为非字符串（123）→ Decoder 中途失败 break，不崩溃、几何回退解析
 	data := load7zFixture(t, "7z_badmap.7z")
 	model, pngs := ParseFrom7z(data, int64(len(data)))
-	if model == nil {
-		t.Fatal("model map 值类型错误时模型仍应回退解析")
-	}
+	testutil.NotNil(t, model, "model map 值类型错误时模型仍应回退解析")
 	if model.BoneCount != 1 {
 		t.Errorf("BoneCount = %d, 期望 1", model.BoneCount)
 	}
@@ -263,9 +249,7 @@ func TestParseFrom7z_InvalidYsm(t *testing.T) {
 	// ysm.json 内容非法 → 声明解析失败，几何仍回退解析（与 ZIP 路径同口径）
 	data := load7zFixture(t, "7z_invalid.7z")
 	model, pngs := ParseFrom7z(data, int64(len(data)))
-	if model == nil {
-		t.Fatal("ysm.json 非法时模型仍应从几何文件回退解析")
-	}
+	testutil.NotNil(t, model, "ysm.json 非法时模型仍应从几何文件回退解析")
 	if model.BoneCount != 1 {
 		t.Errorf("BoneCount = %d, 期望 1", model.BoneCount)
 	}

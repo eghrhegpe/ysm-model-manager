@@ -108,9 +108,7 @@ func TestCopyFile_Success(t *testing.T) {
 func TestCopyFile_SrcNotFound(t *testing.T) {
 	dir := t.TempDir()
 	err := CopyFile(filepath.Join(dir, "nope.txt"), filepath.Join(dir, "dst.txt"))
-	if err == nil {
-		t.Fatal("源文件不存在应报错")
-	}
+	testutil.NotNil(t, err, "源文件不存在应报错")
 }
 
 func TestCopyFile_DstDirIsFile(t *testing.T) {
@@ -124,9 +122,7 @@ func TestCopyFile_DstDirIsFile(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	err := CopyFile(src, filepath.Join(blocker, "dst.txt"))
-	if err == nil {
-		t.Fatal("目标父目录为文件时应报错")
-	}
+	testutil.NotNil(t, err, "目标父目录为文件时应报错")
 }
 
 func TestCopyDirRecursive_Success(t *testing.T) {
@@ -169,9 +165,7 @@ func TestCopyDirRecursive_RejectSymlink(t *testing.T) {
 
 	dst := filepath.Join(t.TempDir(), "dst")
 	err := CopyDirRecursive(src, dst, CopyDirOptions{RejectSymlink: true, Overwrite: true})
-	if err == nil {
-		t.Fatal("RejectSymlink=true 时应拒绝 symlink")
-	}
+	testutil.NotNil(t, err, "RejectSymlink=true 时应拒绝 symlink")
 	if !strings.Contains(err.Error(), "拒绝复制符号链接") {
 		t.Errorf("错误信息应包含拒绝提示: %v", err)
 	}
@@ -215,9 +209,7 @@ func TestCopyDirRecursive_OverwriteFalse(t *testing.T) {
 	}
 
 	err := CopyDirRecursive(src, dst, CopyDirOptions{Overwrite: false, Rollback: false})
-	if err == nil {
-		t.Fatal("Overwrite=false 且目标存在时应报错")
-	}
+	testutil.NotNil(t, err, "Overwrite=false 且目标存在时应报错")
 	if !strings.Contains(err.Error(), "目标已存在") {
 		t.Errorf("错误信息应包含存在提示: %v", err)
 	}
@@ -239,9 +231,7 @@ func TestCopyDirRecursive_RollbackOnFailure(t *testing.T) {
 	}
 
 	err := CopyDirRecursive(src, dst, CopyDirOptions{Overwrite: false, Rollback: true})
-	if err == nil {
-		t.Fatal("应报错")
-	}
+	testutil.NotNil(t, err, "应报错")
 	// Rollback=true 时应清理 dst 目录
 	_, err = os.Stat(dst)
 	if err == nil {
@@ -322,18 +312,14 @@ func TestCopyDirRecursive_AtomicRename_AncestorGuard(t *testing.T) {
 	// dst 是 src 的后代 → 拒绝
 	dst := filepath.Join(src, "sub", "out")
 	err := CopyDirRecursive(src, dst, CopyDirOptions{AtomicRename: true, Overwrite: true})
-	if err == nil {
-		t.Fatal("src 包含 dst 时应拒绝")
-	}
+	testutil.NotNil(t, err, "src 包含 dst 时应拒绝")
 	if !strings.Contains(err.Error(), "死循环") {
 		t.Errorf("错误信息应包含死循环提示: %v", err)
 	}
 
 	// src == dst → 拒绝
 	err = CopyDirRecursive(src, src, CopyDirOptions{AtomicRename: true, Overwrite: true})
-	if err == nil {
-		t.Fatal("src == dst 时应拒绝")
-	}
+	testutil.NotNil(t, err, "src == dst 时应拒绝")
 	if !strings.Contains(err.Error(), "相同") {
 		t.Errorf("错误信息应包含相同提示: %v", err)
 	}
@@ -347,9 +333,7 @@ func TestCopyDirRecursive_AtomicRename_SrcIsFile(t *testing.T) {
 	}
 	dst := filepath.Join(dir, "out")
 	err := CopyDirRecursive(src, dst, CopyDirOptions{AtomicRename: true, Overwrite: true})
-	if err == nil {
-		t.Fatal("源是文件时应报错")
-	}
+	testutil.NotNil(t, err, "源是文件时应报错")
 }
 
 func TestRelJoin(t *testing.T) {

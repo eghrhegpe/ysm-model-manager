@@ -178,9 +178,7 @@ func TestEvaluateBaseline_DoesNotPrint(t *testing.T) {
 func TestEvaluateBaseline_MissingFileActionable(t *testing.T) {
 	t.Parallel()
 	_, err := evaluateBaseline(filepath.Join(t.TempDir(), "nope.json"), nil, 50)
-	if err == nil {
-		t.Fatal("基准文件不存在应报错")
-	}
+	testutil.NotNil(t, err, "基准文件不存在应报错")
 	if !strings.Contains(err.Error(), "记录一次基准") {
 		t.Errorf("缺基准文件时应引导「先记录基准」, got %q", err.Error())
 	}
@@ -385,15 +383,11 @@ func TestBuildBaselineJSON_SaveSurvivesCompareFailure(t *testing.T) {
 	stages := []singleBenchStage{{Name: "① 文件读取", Duration: 5 * time.Millisecond}}
 
 	block, err := buildBaselineJSON(missing, savePath, 50, stages)
-	if err == nil {
-		t.Fatal("对比失败必须回传错误，否则 CI 会把「没比成」当成功")
-	}
+	testutil.NotNil(t, err, "对比失败必须回传错误，否则 CI 会把「没比成」当成功")
 	if _, statErr := os.Stat(savePath); statErr != nil {
 		t.Fatalf("对比失败不得吞掉记录动作，基准文件应已写出: %v", statErr)
 	}
-	if block == nil {
-		t.Fatal("载荷仍应交出（规律六）：本次记录的去向就在里面")
-	}
+	testutil.NotNil(t, block, "载荷仍应交出（规律六）：本次记录的去向就在里面")
 	if block.SavedTo != savePath {
 		t.Errorf("载荷应回显本次记录的去向 %q, got %q", savePath, block.SavedTo)
 	}
@@ -414,9 +408,7 @@ func TestApplyBenchBaseline_SaveSurvivesCompareFailure(t *testing.T) {
 	stages := []singleBenchStage{{Name: "① 文件读取", Duration: 5 * time.Millisecond}}
 
 	err := applyBenchBaseline(missing, savePath, 50, stages)
-	if err == nil {
-		t.Fatal("对比失败必须回传错误")
-	}
+	testutil.NotNil(t, err, "对比失败必须回传错误")
 	if _, statErr := os.Stat(savePath); statErr != nil {
 		t.Fatalf("text 路径同样不得吞掉记录动作: %v", statErr)
 	}
@@ -440,12 +432,8 @@ func TestBuildBaselineJSON_UnavailableCarriesToken(t *testing.T) {
 	t.Run("文件不存在 → missing", func(t *testing.T) {
 		missing := filepath.Join(root, "no-such.json")
 		block, err := buildBaselineJSON(missing, "", 50, stages)
-		if err == nil {
-			t.Fatal("基准不可用必须回传错误（退出码是 CI 的判据）")
-		}
-		if block == nil {
-			t.Fatal("不可用时也要交载荷（规律六），否则前端只能转述中文散文")
-		}
+		testutil.NotNil(t, err, "基准不可用必须回传错误（退出码是 CI 的判据）")
+		testutil.NotNil(t, block, "不可用时也要交载荷（规律六），否则前端只能转述中文散文")
 		if block.Error != baselineErrMissing {
 			t.Errorf("应给 token %q, got %q", baselineErrMissing, block.Error)
 		}
@@ -508,13 +496,9 @@ func TestReconcileBaselineErrors_NoDoublePrefix(t *testing.T) {
 	saved := filepath.Join(dir, "saved.json")
 
 	_, compareErr := evaluateBaseline(missing, nil, 50)
-	if compareErr == nil {
-		t.Fatal("缺基准文件应报错")
-	}
+	testutil.NotNil(t, compareErr, "缺基准文件应报错")
 	got := reconcileBaselineErrors(compareErr, saved)
-	if got == nil {
-		t.Fatal("对比失败必须回传错误")
-	}
+	testutil.NotNil(t, got, "对比失败必须回传错误")
 	if strings.Count(got.Error(), "运行时错误") != 1 {
 		t.Errorf("错误前缀只应出现一次（二次包装陷阱）, got %q", got.Error())
 	}
@@ -532,9 +516,7 @@ func TestEvaluateBaseline_TextProseUnchanged(t *testing.T) {
 	t.Parallel()
 	path := filepath.Join(t.TempDir(), "nope.json")
 	_, err := evaluateBaseline(path, nil, 50)
-	if err == nil {
-		t.Fatal("应报错")
-	}
+	testutil.NotNil(t, err, "应报错")
 	for _, want := range []string{"运行时错误", "未找到基准文件", path, "--save-baseline"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("text 模式人话不应改变，缺 %q: %q", want, err.Error())

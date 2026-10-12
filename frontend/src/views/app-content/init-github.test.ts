@@ -417,6 +417,45 @@ describe("githubRenderModels — 清理与异常", () => {
     expect(renderList.mock.calls.length, "#2 仍完成初始渲染").toBeGreaterThan(rendersBefore);
   });
 
+  it("双跑时序锁（ADR-260 ⚠️ 注释灰区）：drain 落在 re-bind await 挂起窗口 → 旧 cleanup 双跑且仍完成新绑定", async () => {
+    // 锁对象：init-github.ts L322-L325 注释论证的既有竞态——「lang:changed 的 cleanupPage()
+    // 落在 re-bind 的 await 挂起期间时，旧 cleanup 会被 drain 与 re-bind 各跑一次（双跑）。
+    // bindRepoEvents 的 cleanup（退订 bus 监听 + 取消下载队列定时器）幂等无害，双跑安全」。
+    // 本用例钉死该时序：双跑恰好发生 + 非幂等化前回归信号（调用次数漂移到 1/3 即红）。
+    const { host, raw, el } = makeHost();
+    mockApp({
+      LoadGitHubRepos: vi.fn(() => [{ name: "o/r1", desc: "d" }, { name: "o/r2", desc: "d" }]),
+    });
+    // 共享门控 deferred：re-bind 与 drain 两个 await 站点挂起在同一个 promise 上
+    let resolveGate!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      resolveGate = resolve;
+    });
+    const firstCleanup = vi.fn((): Promise<void> => gate);
+    bindRepoEvents.mockImplementationOnce(() => ({ renderList, cleanup: firstCleanup }));
+    raw.state.githubCache = new Map<string, RepoCacheEntry>([
+      ["o/r1", { models: [{ name: "m1", path: "p1" }], source: "raw" }],
+      ["o/r2", { models: [{ name: "m2", path: "p2" }], source: "raw" }],
+    ]);
+
+    initGithubPage(host);
+    await waitFor(() => gridOf(el).querySelectorAll(".gh-repo-card").length === 2);
+    const cards = gridOf(el).querySelectorAll<HTMLElement>(".gh-repo-card");
+    cards[0]!.click(); // 绑定 #1：槽位 = firstCleanup
+    await waitFor(() => bindRepoEvents.mock.calls.length === 1);
+
+    cards[1]!.click(); // 重绑 #2：读槽位 → await firstCleanup（挂起，槽位此刻仍非 null）
+    raw.subs.cleanupPage(); // drain 落在挂起窗口：读槽位 → 置 null → await（第二跑）
+    await flushPromises();
+    expect(firstCleanup, "drain 与 re-bind 各跑一次").toHaveBeenCalledTimes(2);
+
+    // 双跑幂等安全：放行门控后 re-bind 仍完成新绑定
+    resolveGate();
+    await flushPromises();
+    await waitFor(() => bindRepoEvents.mock.calls.length === 2);
+    expect((callArgs(bindRepoEvents, 1)[1] as { repo: string }).repo).toBe("o/r2");
+  });
+
   it("bindRepoEvents 同步抛错 → catch 留痕不逸出（fire-and-forget 回归）", async () => {
     const { host, el } = makeHost();
     mockApp({ LoadGitHubRepos: vi.fn(() => [{ name: "o/r1", desc: "d" }]) });

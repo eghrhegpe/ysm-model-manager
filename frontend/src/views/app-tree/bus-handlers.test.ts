@@ -277,6 +277,45 @@ describe("batchToggleAll — 批量启用/禁用（ADR-298 D2：直调，不再�
     expect(ToggleEnableMock).not.toHaveBeenCalled();
   });
 
+  it("19 条快照 → 按 BATCH=8 分批（在途峰值精确 =8，BATCH 常量行为锁）", async () => {
+    stubConsoleWarn();
+    const vm = makeVM(
+      Array.from({ length: 19 }, (_, i) =>
+        makeEntry({ name: `m${i}.ysm`, fullPath: `/repo/m${i}.ysm`, banned: true }),
+      ),
+    );
+    await bind(vm);
+    // 在途计数 + 逐波放行：批次常量被改大（峰值>8）或改小/改回串行（峰值<8）都红。
+    // 首波 8 个 deferred 同步发射（Promise.allSettled map 同步段）故峰值恒 8。
+    let inFlight = 0;
+    let peak = 0;
+    const gates: Array<() => void> = [];
+    ToggleEnableMock.mockImplementation(
+      () =>
+        new Promise<void>((r) => {
+          inFlight++;
+          peak = Math.max(peak, inFlight);
+          gates.push(() => {
+            inFlight--;
+            r();
+          });
+        }),
+    );
+    const done = batchToggleAll(vm as unknown as Parameters<typeof batchToggleAll>[0], true);
+    // 泵式放行：首波由生产代码异步发射（backendGetApp await 之后），测试须「等待发射 → 放行 ≤8 →
+    // 再等下一波」交替进行；每轮放行 ≤8（与 BATCH 同宽）不掩盖真实并发
+    let guard = 0;
+    while (guard++ < 500) {
+      gates.splice(0, 8).forEach((g) => g());
+      await Promise.resolve();
+      await new Promise((r) => setTimeout(r, 0));
+      if (gates.length === 0 && ToggleEnableMock.mock.calls.length >= 19) break;
+    }
+    await done;
+    expect(ToggleEnableMock).toHaveBeenCalledTimes(19);
+    expect(peak, "波次超限/欠批（BATCH 常量回归）").toBe(8);
+  });
+
   it("YSM 树 batch toggle 成功 → 发 sync:toggle:status（YSM 同步链）", async () => {
     const vm = makeVM([makeEntry({ fullPath: "/repo/a.ysm", banned: true })]);
     vm.setRootAttr("ysm"); // YSM 树（默认）

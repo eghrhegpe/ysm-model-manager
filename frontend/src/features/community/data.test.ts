@@ -244,6 +244,67 @@ describe("tryFetchModels 失败路径（全部源失败时的根因诊断）", (
   });
 });
 
+describe("tryFetchModels — 孤儿请求防护（ctrl abort 后延时源不再发射）", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it("raw 成功胜出 → p2/p3 不再发射（fetch 恰好 1 次）", async () => {
+    vi.useFakeTimers();
+    const models = [{ name: "m" }];
+    const fetchMock = mockFetch(() => Promise.resolve(okJson(models)));
+    await tryFetchModels("owner/repo", "");
+    // 推进越过 p2/p3 的计划发射点（2s/4s）：胜出后 ctrl abort，
+    // delayUntil 提前唤醒 → aborted 检查拦截 → 迟到/孤儿请求零发射
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(String(fetchMock.mock.calls[0]![0])).toContain("raw.githubusercontent.com");
+  });
+
+  it("raw 404 确定性早退 → p2/p3 不再发射（fetch 恰好 1 次 + NoIndex）", async () => {
+    vi.useFakeTimers();
+    const fetchMock = mockFetch(() => Promise.resolve(errResp(404)));
+    const promise = tryFetchModels("owner/repo", "");
+    const assertion = expect(promise).rejects.toThrow("NoIndex");
+    await vi.advanceTimersByTimeAsync(5000);
+    await assertion;
+    // raw 404 早退 abort 整体：jsd(2s)/api(4s) 唤醒即 "race settled" 拦截
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("jsd 404 不误杀在途 raw → raw 胜出后 p3 不再发射（fetch 恰好 2 次）", async () => {
+    vi.useFakeTimers();
+    const models = [{ name: "raw-ok" }];
+    let resolveRaw!: (r: FetchResp) => void;
+    const fetchMock = mockFetch((url, init) =>
+      url.includes("jsdelivr.net")
+        ? Promise.resolve(errResp(404))
+        : new Promise<FetchResp>((resolve, reject) => {
+            (init?.signal as AbortSignal | undefined)?.addEventListener(
+              "abort",
+              () => reject(new Error("Aborted")),
+            );
+            resolveRaw = resolve;
+          }),
+    );
+    const promise = tryFetchModels("owner/repo", "");
+    await vi.advanceTimersByTimeAsync(2500); // jsd 发射 → 404（非 raw 仅记录，不误杀在途 raw）
+    resolveRaw(okJson(models));
+    await promise;
+    // raw 胜出 abort → p3（4s 计划点）提前唤醒被 "race settled" 拦截，无孤儿请求
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(
+      fetchMock.mock.calls.map((c: unknown[]) => String(c[0])),
+      "两次发射 = raw + jsd，无 api 孤儿",
+    ).toEqual([
+      "https://raw.githubusercontent.com/owner/repo/main/index.json",
+      "https://cdn.jsdelivr.net/gh/owner/repo@main/index.json",
+    ]);
+  });
+});
+
 describe("tryFetchModels — 过滤回收站条目", () => {
   afterEach(() => {
     vi.useRealTimers();

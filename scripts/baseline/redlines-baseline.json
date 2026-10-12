@@ -1,6 +1,6 @@
 {
-  "generated": "2026-10-11T14:24:54.891Z",
-  "count": 64,
+  "generated": "2026-10-12T07:38:54.020Z",
+  "count": 78,
   "violations": [
     "internal/app/resource_bindings.go:W7:400",
     "./scripts/check-redlines.ts:R2:\"repoRoot name\",:217",
@@ -27,7 +27,7 @@
     "frontend/src/preview-3d/caps/env-pixels.ts:R5:hGrad.addColorStop(1, \"rgba(255,255,255,0)\");:81",
     "frontend/src/preview-3d/caps/env-pixels.ts:R5:return `rgb(${r},${g},${b})`;:91",
     "frontend/src/preview-3d/caps/env-pixels.ts:R5:return `rgba(${r},${g},${b},${a})`;:97",
-    "frontend/src/preview-3d/caps/water-capability.test.ts:R4:expect(hint!(), \"未钳制 ⇒ 空串（slider 臂据此 display:none）\").toBe(\"\");:2395",
+    "frontend/src/preview-3d/caps/water-capability.test.ts:R4:expect(hint!(), \"未钳制 ⇒ 空串（slider 臂据此 display:none）\").toBe(\"\");:2419",
     "frontend/src/preview-3d/infra/debug-render.ts:R5:ctx.fillStyle = \"rgba(0,0,0,0)\";:58",
     "frontend/src/preview-3d/infra/debug-render.ts:R5:ctx.fillStyle = color || \"#ffffff\";:60",
     "frontend/src/preview-3d/infra/debug-render.ts:R5:ctx.shadowColor = \"rgba(0,0,0,0.8)\";:63",
@@ -65,6 +65,20 @@
     "frontend/src/views/app-content/tabs-shell.ts:R4:*    `\"op runtime\"`），单项即普通面板（`\"trace\"`）；初始态由模板 inline `display:none`:192",
     "frontend/src/views/app-content/tabs-shell.ts:R4:/** 面板组（每个 tab 一个 `.tab-body`，首个可见、其余 display:none） */:82",
     "frontend/src/views/app-preview/model2d/model2d-draw.ts:R5:return `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${alpha})`;:100",
-    "frontend/src/views/app-sidebar/sync-flow.ts:R4:*  状态/ARIA 单源留在控制器内——2026-09 收口：原实现手改 display:none + 重置 aria-expanded，:79"
+    "frontend/src/views/app-sidebar/sync-flow.ts:R4:*  状态/ARIA 单源留在控制器内——2026-09 收口：原实现手改 display:none + 重置 aria-expanded，:79",
+    "internal/app/app_config.go:R13:return fmt.Errorf(\"RestartApplication: Android 不支持进程重启，请手动重新打开应用\"):377",
+    "internal/app/app_files.go:R13:return errors.New(\"RevealInExplorer: Android 不支持在资源管理器中显示，请在文件管理器中手动查找\"):342",
+    "internal/app/app_files.go:R13:return fmt.Errorf(\"OpenFolder: Android 不支持打开文件夹，请在文件管理器中手动查找\"):365",
+    "internal/app/app_files.go:R13:return fmt.Errorf(\"请先设置文件存储路径\"):268",
+    "internal/app/app_files.go:R13:return fmt.Errorf(\"路径为空\"):327",
+    "internal/app/app_install_import.go:R13:return fmt.Errorf(\"请先设置文件存储路径\"):163",
+    "internal/app/app_install_import.go:R13:return fmt.Errorf(\"请先设置文件存储路径\"):271",
+    "internal/app/app_install_instance.go:R13:return fmt.Errorf(\"未设置目录\"):399",
+    "internal/app/app_install_recycle.go:R13:return fmt.Errorf(\"不能把资源根目录整体移入回收站\"):40",
+    "internal/app/app_install_recycle.go:R13:return fmt.Errorf(\"找不到包含该文件的资源根目录，无法移入回收站\"):32",
+    "internal/app/app_model.go:R13:return fmt.Errorf(\"文件名不能包含路径\"):461",
+    "internal/app/install/link.go:R13:return fmt.Errorf(\"install manager 未初始化\"):42",
+    "internal/app/install/queue.go:R13:return fmt.Errorf(\"应用正在退出，下载队列已停止，拒绝新任务\"):101",
+    "internal/app/resource_bindings.go:R13:return errors.New(\"配置目录不可用：平台数据根缺失（Android 沙盒不可用）\"):319"
   ]
 }

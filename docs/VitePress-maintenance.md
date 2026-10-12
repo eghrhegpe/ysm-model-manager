@@ -94,7 +94,7 @@ Pages 自 2026-09-18 起连续失败 6 次才被定位（2026-09-19 修）。事
 ```bash
 node scripts/doctor.ts --docs     # 改文档时用，轻量秒级（仅文档/ADR/索引检查，跳过 Go/前端编译与测试）
 node scripts/doctor.ts            # 全量自检（编译 + 构建 + 文件 + 红线 + Git）
-node scripts/check-redlines.ts            # 红线扫描（R1-R10 + W1/W2/W5-W7；W3/W4 在 comment-checker.ts）
+node scripts/check-redlines.ts            # 红线扫描（R/W 规则集以 check-redlines.ts 内 add() 调用为唯一事实源，勿在此维护计数；W3/W4 在 comment-checker.ts）
 node scripts/check-adr-health.ts  # ADR 状态机与登记表一致性
 node scripts/link-checker.ts      # 文档断链
 node scripts/check-deadcode-baseline.ts  # 死代码/重复代码门禁

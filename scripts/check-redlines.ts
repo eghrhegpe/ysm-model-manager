@@ -6,7 +6,7 @@ import { scanSource as scanInnerHtmlSrc } from "./_lib/innerhtml-hygiene.ts";
 import { parseArgs } from "./_lib/parse-args.ts";
 import { parseRgLine } from "./_lib/rg-line.ts";
 /**
- * 代码红线审查。13 条规则 × 违规扫描（依赖 ripgrep）。
+ * 代码红线审查。R/W 规则集 × 违规扫描（依赖 ripgrep；规则数以本文件 add() 调用为唯一事实源）。
  * W3 empty JSDoc / W4 TODO 无编号已移交 comment-checker.ts（避免双重扫描）。
  * 由 scripts/review.py 迁移（2026-08-03），规则与输出逻辑逐点保真。
  * 设计意图：治理审查工具（原 review.mjs，2026-08-05 更名去误导）
@@ -165,7 +165,7 @@ const BASELINE_FILE = path.join(ROOT, "scripts", "baseline", "redlines-baseline.
  * 安全/缺陷类真红线（R1 window.__ / R8 innerHTML XSS / R10 esc 单点 / W7 缓存失效
  * / W6 bypass dialogs / R6 JS in public / R3 .file API / W2 window.go）保持阻断。
  */
-const WARN_RULES = new Set(["R2", "R5", "R7", "R4", "W1"]);
+const WARN_RULES = new Set(["R2", "R5", "R7", "R4", "W1", "R13"]);
 
 function runChecks() {
   /** 每次 runChecks 新建独立缓存，不持有模块级状态。 */
@@ -747,6 +747,31 @@ function runChecks() {
         return !/pointer-allow:/.test(window);
       }),
     "统一走 pointerdown/pointermove/pointerup（pointer-events.md）；确有豁免理由（hover 语义/兜底互斥）时行注 // pointer-allow: <理由> 落台账",
+  );
+
+  // R13（D4 配套机器闸，2026-10-12 立法）：绑定层（internal/app）终止型中文错误——
+  // `return fmt.Errorf("…中文…")` / `errors.New("…中文…")` 不带 %w 包装的直接返回。
+  // 病根（第三轮审计 D1/D4）：前端 friendlyError 对「含中文消息」走直接透传旁路，
+  // CODE_KEYS 永不命中 → en/ja 界面必然显示中文；D4 的 9 处守卫已 AppError 化并用
+  // app_guard_apperror_test.go 锁死，但**新增**裸中文 error 无任何机器闸——本条补网。
+  // RE2 无负向预查（Go 专属坑点同训），「不含 %w」判定收敛到 JS 层 filter。
+  // 档位 = WARN（债务型）：存量 14 处属「需拍板批」（D1 前端 i18n 结构化改造时统一
+  // 清偿或明写豁免），阻断会把 D1 排期绑架到本闸上；新增只 WARN 提示、不拦推送。
+  add(
+    "R13",
+    "binding-layer terminal Chinese error (friendlyError passthrough leak)",
+    rgTracked(
+      'return (fmt\\.Errorf|errors\\.New)\\("[^"]*[\\u4e00-\\u9fff][^"]*"\\)',
+      "internal/app",
+      ["*.go"],
+    )
+      .filter((l) => {
+        const [f] = parseRgLine(l);
+        return !f.includes("_test.");
+      })
+      // %w 包装链向上抛的是底层英文 err，中文只是前缀——不算终止型用户文案
+      .filter((l) => !l.includes("%w")),
+    "守卫/业务拒绝应返回 types.AppError{Code, Operation, Reason}（friendlyError 可按 Code 映射 i18n）；确需中文透传（如 Android 能力缺失提示）排入 D1 拍板批或改 AppError.Reason",
   );
 
   return results;

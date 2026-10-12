@@ -3,7 +3,9 @@ package texture_cache
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+
 	"ysm-model-manager/go/internal/testutil"
 )
 
@@ -287,5 +289,41 @@ func TestGetCacheStats_EmptyDir(t *testing.T) {
 	}
 	if stats.FileCount != 0 {
 		t.Fatalf("expected 0 files, got %d", stats.FileCount)
+	}
+}
+
+// TestValidHash 锁定缓存 key 的格式契约：只有 TextureHash 产出的 64 位小写 hex 合法。
+// 该谓词是绑定层守卫的唯一事实源——CachePath 对 `..\..\evil` 会经 filepath.Clean
+// 折叠到缓存目录之外，而 WriteCached 还会 MkdirAll 建中间目录再落盘（真写越界）。
+func TestValidHash(t *testing.T) {
+	cases := map[string]bool{
+		// TextureHash 实际产出（SHA256 of "hello world"）
+		"b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9": true,
+		// 合法长度但非 hex
+		"z94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9": false,
+		// 测试曾用的短 key（修复前能穿透）
+		"existshash":         false,
+		"newhash":            false,
+		"testhash123":        false,
+		"abc123":             false,
+		"other-repo-hash-00": false,
+		// 路径穿越（本次修复的靶点）
+		"..\\..\\evil":    false,
+		"../../evil":      false,
+		"C:/Users/x/evil": false,
+		"..\x00evil":      false,
+		"evil.ktx2":       false,
+		// 长度边界
+		"":                      false,
+		strings.Repeat("0", 63): false,
+		strings.Repeat("0", 64): true,
+		strings.Repeat("0", 65): false,
+		// 大写 hex 不接受（TextureHash 恒产出小写，拒绝大写避免双写同一条目）
+		strings.ToUpper("b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9"): false,
+	}
+	for hash, want := range cases {
+		if got := ValidHash(hash); got != want {
+			t.Errorf("ValidHash(%q) = %v, want %v", hash, got, want)
+		}
 	}
 }

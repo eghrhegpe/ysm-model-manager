@@ -17,6 +17,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -47,6 +48,20 @@ func TextureHash(path string) (string, error) {
 		return "", fmt.Errorf("texture_cache: 计算哈希 %s: %w", path, err)
 	}
 	return hash, nil
+}
+
+// hashRe 缓存 key 格式：TextureHash 恒产出 SHA256 小写 hex（64 字符）。
+var hashRe = regexp.MustCompile(`^[0-9a-f]{64}$`)
+
+// ValidHash 判定缓存 key 是否为合法 SHA256 hex。
+// 用途：CachePath 的 hash→路径拼接 `filepath.Join(dir, hash+".ktx2")` 对
+// `..\..\..\evil` 会经 Clean 折叠到缓存目录之外，而 WriteCached 还会先
+// MkdirAll 建中间目录再 WriteFileAtomic 落盘——是**真写越界**，不只是读越界。
+// hash 的唯一外部输入源是 Wails 绑定（SaveCachedTexture / GetCachedTextureByHash /
+// HasCachedTexture(s)，前端可传任意字符串），故守卫放在绑定层（与 GetCachedTexture 的
+// isPathInRootOrSelf 同构），CachePath 保持纯映射语义供内部与测试以任意 key 探路。
+func ValidHash(hash string) bool {
+	return hashRe.MatchString(hash)
 }
 
 // CachePath 返回给定哈希对应的缓存文件路径。

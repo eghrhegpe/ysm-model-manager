@@ -78,10 +78,11 @@ func TestSaveCachedTexture(t *testing.T) {
 	t.Cleanup(func() { texture_cache.CacheDir = orig })
 
 	a, _ := guardedApp(t)
-	if err := a.SaveCachedTexture("h1", base64.StdEncoding.EncodeToString([]byte("ktx2-data"))); err != nil {
+	// hash 须为合法 SHA256 hex（绑定层 key 守卫）；本用例只测 DecodeBase64Limited 口径
+	if err := a.SaveCachedTexture(strings.Repeat("a", 64), base64.StdEncoding.EncodeToString([]byte("ktx2-data"))); err != nil {
 		t.Fatalf("合法 base64 应写入成功: %v", err)
 	}
-	if err := a.SaveCachedTexture("h2", "not-base64!!"); err == nil {
+	if err := a.SaveCachedTexture(strings.Repeat("b", 64), "not-base64!!"); err == nil {
 		t.Error("非法 base64 应报错")
 	}
 }

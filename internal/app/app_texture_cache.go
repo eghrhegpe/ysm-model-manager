@@ -12,6 +12,7 @@ import (
 
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/texture_cache"
+	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/types/registry"
 )
 
@@ -71,7 +72,13 @@ func readWithHash(path string, hash string) (CachedTextureResult, error) {
 
 // SaveCachedTexture 保存前端 WASM 编码后的 KTX2 数据到缓存。
 // hash 是 GetCachedTexture 返回的 Hash 值，data 是 KTX2 字节的 base64。
+// hash 来自 Wails 绑定（前端可传任意字符串），须校验为 SHA256 hex：
+// 未校验时 filepath.Join 会把 `..\..\evil` 折叠到缓存目录之外，而 WriteCached
+// 会先 MkdirAll 建中间目录再落盘——真写越界（与 GetCachedTexture 的路径守卫同构）。
 func (a *App) SaveCachedTexture(hash string, b64Data string) error {
+	if !texture_cache.ValidHash(hash) {
+		return types.AppError{Code: types.ErrInvalidPath, Operation: "纹理缓存写入", Reason: "非法缓存 key"}
+	}
 	data, err := fsutil.DecodeBase64Limited(b64Data, registry.MaxReadLimit)
 	if err != nil {
 		return err
@@ -81,6 +88,9 @@ func (a *App) SaveCachedTexture(hash string, b64Data string) error {
 
 // HasCachedTexture 检查指定纹理的内容哈希是否已有 KTX2 缓存。
 func (a *App) HasCachedTexture(hash string) (bool, error) {
+	if !texture_cache.ValidHash(hash) {
+		return false, types.AppError{Code: types.ErrInvalidPath, Operation: "纹理缓存查询", Reason: "非法缓存 key"}
+	}
 	return texture_cache.HasCached(hash)
 }
 
@@ -88,6 +98,9 @@ func (a *App) HasCachedTexture(hash string) (bool, error) {
 // hash 由前端从已读纹理数据计算 SHA256 得到。
 // 返回 base64 编码的 KTX2 数据；缓存未命中时返回空字符串。
 func (a *App) GetCachedTextureByHash(hash string) (string, error) {
+	if !texture_cache.ValidHash(hash) {
+		return "", types.AppError{Code: types.ErrInvalidPath, Operation: "纹理缓存读取", Reason: "非法缓存 key"}
+	}
 	data, ok, err := texture_cache.ReadCached(hash)
 	if err != nil {
 		return "", err
@@ -106,6 +119,13 @@ func (a *App) GetCachedTextureByHash(hash string) (string, error) {
 func (a *App) HasCachedTextures(hashes []string) map[string]bool {
 	result := make(map[string]bool, len(hashes))
 	for _, h := range hashes {
+		// hash 来自 Wails binding 外部输入边界：非法 key（如 `..\..\evil`）会在
+		// filepath.Join 折叠后越出缓存目录，故先校验，非法即视为未命中（不触碰磁盘）。
+		if !texture_cache.ValidHash(h) {
+			log.Printf("[texture_cache] 非法缓存 key %q，视为未命中", h)
+			result[h] = false
+			continue
+		}
 		ok, err := texture_cache.HasCached(h)
 		if err != nil {
 			// hash 来自 Wails binding 外部输入边界，%q 转义防控制字符日志注入

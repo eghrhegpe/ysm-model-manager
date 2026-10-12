@@ -1,11 +1,14 @@
 package app
 
 import (
+	"encoding/base64"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"ysm-model-manager/go/texture_cache"
+	"ysm-model-manager/go/types"
 	"ysm-model-manager/internal/testutil"
 )
 
@@ -20,8 +23,8 @@ func TestHasCachedTextures_CachedHitAndMiss(t *testing.T) {
 	dir := t.TempDir()
 	texture_cache.CacheDir = func() string { return dir }
 
-	// 命中 hash：手动放一个 KTX2 文件
-	hitHash := "existshash"
+	// 命中 hash：手动放一个 KTX2 文件（须为合法 SHA256 hex，否则命中绑定层 key 守卫）
+	hitHash := "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9"
 	if err := os.WriteFile(filepath.Join(dir, hitHash+".ktx2"), []byte("data"), 0o644); err != nil {
 		testutil.NoError(t, err)
 	}
@@ -62,5 +65,77 @@ func TestHasCachedTextures_CheckErrorWritesFalse(t *testing.T) {
 	}
 	if result["h\x00ash"] {
 		t.Fatal("检查出错时该 hash 应返回 false，不得误报命中")
+	}
+}
+
+// 审计第三轮 D6：SaveCachedTexture 是写绑定，hash 为前端可控输入。
+// 修复前 hash 直传 texture_cache.CachePath 拼 `filepath.Join(dir, hash+".ktx2")`，
+// `..\..\evil` 经 Clean 折叠到缓存目录之外，且 WriteCached 会先 MkdirAll 建中间目录
+// 再 WriteFileAtomic 落盘——真写越界（不只是读越界）。
+// 本测试的关键断言是**越界文件不存在**，而非仅断言返回 error。
+func TestSaveCachedTexture_TraversalHashRejected(t *testing.T) {
+	parent := t.TempDir()
+	cacheDir := filepath.Join(parent, "YSM-Model-Manager", "texture_cache")
+	old := texture_cache.CacheDir
+	defer func() { texture_cache.CacheDir = old }()
+	texture_cache.CacheDir = func() string { return cacheDir }
+
+	app := &App{}
+	data := base64.StdEncoding.EncodeToString([]byte("fake-ktx2"))
+
+	for _, evil := range []string{"..\\..\\evil", "../../evil", "C:/Users/x/evil"} {
+		err := app.SaveCachedTexture(evil, data)
+		if err == nil {
+			t.Fatalf("SaveCachedTexture(%q) 应拒绝非法缓存 key", evil)
+		}
+		var ae types.AppError
+		if !errors.As(err, &ae) || ae.Code != types.ErrInvalidPath {
+			t.Errorf("SaveCachedTexture(%q) 应返回 AppError{INVALID_PATH}，实得 %T: %v", evil, err, err)
+		}
+		// 关键：越界路径绝不能被创建（MkdirAll + WriteFileAtomic 的靶点）。
+		// 断言用「stat 必须报错」而非 ErrNotExist——非纯相对段的 key（如 `C:/...`）
+		// 经 filepath.Join 会产出不合法路径，stat 报语法错而非 NotExist。
+		target := filepath.Join(cacheDir, evil+".ktx2")
+		if _, statErr := os.Stat(target); statErr == nil {
+			t.Errorf("越界文件不应存在 %s", target)
+		}
+	}
+}
+
+func TestGetCachedTextureByHash_InvalidKey(t *testing.T) {
+	app := &App{}
+	_, err := app.GetCachedTextureByHash("../../etc/passwd")
+	var ae types.AppError
+	if !errors.As(err, &ae) || ae.Code != types.ErrInvalidPath {
+		t.Fatalf("非法 key 应返回 AppError{INVALID_PATH}，实得 %T: %v", err, err)
+	}
+}
+
+func TestHasCachedTexture_InvalidKey(t *testing.T) {
+	app := &App{}
+	ok, err := app.HasCachedTexture("..\\..\\sneaky")
+	if ok {
+		t.Fatal("非法 key 不得误报命中")
+	}
+	var ae types.AppError
+	if !errors.As(err, &ae) || ae.Code != types.ErrInvalidPath {
+		t.Fatalf("非法 key 应返回 AppError{INVALID_PATH}，实得 %T: %v", err, err)
+	}
+}
+
+// 批量版沿用既有契约：非法 key 写 key=false + 留日志，不整批失败。
+func TestHasCachedTextures_InvalidKeyWritesFalse(t *testing.T) {
+	old := texture_cache.CacheDir
+	defer func() { texture_cache.CacheDir = old }()
+	texture_cache.CacheDir = func() string { return t.TempDir() }
+
+	app := &App{}
+	bad := "..\\..\\bulk"
+	result := app.HasCachedTextures([]string{bad, "nope"})
+	if result[bad] {
+		t.Fatal("非法 key 不得误报命中")
+	}
+	if _, present := result[bad]; !present {
+		t.Fatal("非法 key 也必须写入 key=false（不得静默缺失）")
 	}
 }

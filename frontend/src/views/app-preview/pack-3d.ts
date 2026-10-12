@@ -60,11 +60,11 @@ export async function createPack3D(
   // 调用方有 .catch("[preview] pack3D:") 记录；不能 catch-all 吞掉导致无预览无诊断）
   const arr: string[] | null =
     App && typeof App.ListPackModels === "function" ? await App.ListPackModels(path) : [];
-  // 与 Go/web 的大小写不敏感清单（packModelEntryMatch / webPackModelEntryMatch）一致：
-  // Block/Item 大写目录的包也能被筛中，否则详情页点模型行静默无响应
-  const entries = (arr ?? []).filter(
-    (e) => e.toLowerCase().includes("/block/") || e.toLowerCase().includes("/item/"),
-  );
+  // 严格清单单源 = Go/web ListPackModels 契约（assets/*/models/{block,item}/**.json 过滤 +
+  // 升序，两侧实现逐字镜像；[10-12 探明 P2 收口] 原 view 内联 loose filter（`/block/|/item/`
+  // 双 includes）与 Go/web 严格判定三源漂移——纹理 .png 等条目会混入 3D 切换下拉，已删；
+  // 大小写不敏感由 Go packModelEntryMatch / web webPackModelEntryMatch 各自 ToLower 承担）
+  const entries = arr ?? [];
   if (entries.length === 0) return;
 
   // 指定初始 entry（详情页模型清单点击直达；ADR-131 P3），否则首个 entry

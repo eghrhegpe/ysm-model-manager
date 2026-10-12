@@ -172,6 +172,11 @@ export function createWorkerBridge<Req extends { id: number }, Resp, Ok>(
       const id = nextId++;
       const timer = setTimeout(() => settleError(id, timeoutMsg), timeoutMs);
       pending.set(id, { resolve, reject, timer });
+      // [盲区登记 10-12 探明 P2-#4] pickWorker 命中已 terminate 的 worker 时，postMessage
+      // 同步抛原生 DOMException（InvalidStateError）→ 该 request 以原生错误 reject（非契约
+      // 文案）。行为面无挂起：ktx2 侧 getKtx2WorkerPool 懒建——终止后下次调度重建池自愈，
+      // 此同步抛错仅为「池刚终止的那一拍」的瞬态。不为此加 terminated 快拒（无分叉证据，
+      // 不为瞬态加防御）；若未来出现非懒建消费方再契约化。
       pickWorker(id, workers).postMessage({ ...reqWithoutId, id } as Req, transfer ?? []);
     });
   }

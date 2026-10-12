@@ -300,13 +300,24 @@ describe("ReadPackMeta / ReadShaderpackLang", () => {
 
 // ===== 资源包 3D（ListPackModels / Detail / ReadPackEntry）=====
 describe("资源包 3D 装配", () => {
-  it("ListPackModels：zip 全条目；缺文件 → []", async () => {
+  it("ListPackModels：镜像 Go 契约——仅 assets/*/models/{block,item}/**.json（纹理/非模型条目滤出）；缺文件 → []", async () => {
+    // [10-12 探明 P2 收口] 原实现返回 zip 全条目（与 Go ListPackModels 严格过滤漂移——
+    //  web 模式 3D 切换下拉会混入纹理 .png 等条目，选中即坏预览）。对齐 Go 契约。
     await seedGroup("resourcepack", "包C", {
-      "p.zip": ab2u8(zipSync({ "assets/m/models/block/a.json": strToU8("{}") })),
+      "p.zip": ab2u8(
+        zipSync({
+          "assets/m/models/block/a.json": strToU8("{}"),
+          "assets/m/models/item/b.json": strToU8("{}"),
+          "assets/m/textures/block/a.png": strToU8("PNG"),
+          "assets/m/models/other/c.json": strToU8("{}"),
+          "pack.mcmeta": strToU8("{}"),
+        }),
+      ),
     });
     const path = "/web/resourcepack/包C/p.zip";
     expect(await webFsBindings.ListPackModels(path)).toEqual([
       "assets/m/models/block/a.json",
+      "assets/m/models/item/b.json",
     ]);
     expect(await webFsBindings.ListPackModels("/web/resourcepack/包C/无.zip")).toEqual([]);
   });

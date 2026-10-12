@@ -25,7 +25,11 @@ const waterPoolOn = (s: Partial<PreviewSnapshot>) => s["cap.waterMode"] === "poo
 /** 模型倒影开启谓词（ADR-297：强度/分辨率/SSR 抑制三从控仅在此时出场） */
 const waterReflectOn = (s: Partial<PreviewSnapshot>) => s["cap.waterReflectionEnabled"] === true;
 
-/** slider 原生节点（wSlider 的节点版） */
+/** slider 原生节点（wSlider 的节点版）
+ *  [锐评 S11·水] commitOnRelease = true 时结构键（resolution/clip-bias）走「拖动 no-op /
+ *  松手 onCommit 单写」范式（对齐 reflector-menu S11 / vrm positionScale）：逐 tick 写
+ *  envState 会逐帧触发 ensureReflector 载体弃建（clip-bias 死区 0.05 < step 0.1 恒超），
+ *  拖动只动 UI、松手才落盘一次。 */
 function wSliderNode(
   id: string,
   labelKey: LocaleKey,
@@ -33,6 +37,7 @@ function wSliderNode(
   control: { get: () => number; set: (v: number) => void; getHint?: () => string },
   visibleWhen?: (s: Partial<PreviewSnapshot>) => boolean,
   hintKey?: string,
+  commitOnRelease = false,
 ): NodeFor<"slider"> {
   return {
     id,
@@ -46,7 +51,9 @@ function wSliderNode(
       step: slider.step,
       ...(slider.unit !== undefined ? { unit: slider.unit } : {}),
       get: () => control.get(),
-      set: (v) => control.set(v as number),
+      ...(commitOnRelease
+        ? { set: () => {}, onCommit: (v: number) => control.set(v) }
+        : { set: (v) => control.set(v as number) }),
       // [锐评 2026-10-04 P1-2] 动态 hint 透传（slider 臂渲染为 label 右侧小字，随拖动刷新）
       ...(control.getHint ? { getHint: control.getHint } : {}),
     },
@@ -292,10 +299,15 @@ export function buildWaterNodes(cap: WaterCapability): PreviewMenuNode[] {
             set: (v) => cap.setWaterReflectionResolution(v),
           },
           waterReflectOn,
+          undefined,
+          true,
         ),
         // [锐评 F-2] 裁剪偏置滑杆：原 ensureReflector 裸字面量 3 的下沉归宿，键化后补
         // UI 出口（R-1「持久化活、菜单缺席」同病不自犯）。高级参数语义：0 = 官方裸裁剪
         // （掠射角倒影易闪断），默认 3 已验证，拖大进一步回拉裁剪面。
+        // [锐评 S11·水] resolution/clip-bias 是结构键（ensureReflector 载体弃建/RT 扩缩），
+        // 走 commitOnRelease：拖动逐 tick no-op、松手 onCommit 单写（防逐帧弃载体重建，
+        // clip-bias 死区 0.05 < step 0.1 恒超死区，逐 tick 写 = 每次拖动 ~100 次重建）。
         wSliderNode(
           "water-reflection-clip-bias",
           "preview.waterReflectionClipBias",
@@ -305,6 +317,8 @@ export function buildWaterNodes(cap: WaterCapability): PreviewMenuNode[] {
             set: (v) => cap.setWaterReflectionClipBias(v),
           },
           waterReflectOn,
+          undefined,
+          true,
         ),
         {
           id: "water-reflect-ssr-suppress",

@@ -584,3 +584,8 @@
   1. **记账观察批**：#2 水 clipBias onCommit（与 S11 同范式，小刀可批）/ #3 frustum 逐根喂根身份（跨 6 adapter，另立战役）/ #4 KTX2 契约文案（一行注释）/ #5 pack 双源过滤（先核可达性）/ litematic-3d 域逻辑下沉（ADR-132 遗留 1）/ E-2 销账拍板。
   2. **盲区登记（P3，不排期）**：五格式 WebGL e2e 零覆盖——最便宜补法 `web-vrm-3d.spec.ts` + 1 个 tracked VRM0 文本 fixture（仓内唯一 VRM 样本 = 未跟踪 `upstream/橘雪莉.vrm` 可取材）；组合层「双格式同 session」登记为架构不变量（勿动）。
   3. 产品拍板批维持：焦点晋升 / 截图进阴影 / sky 4 键 / ADR-328 三路径（均已有机器闸钉死现状）。
+- **（2026-10-12 当批追加）记账观察批三件小刀已清偿**：
+  - **#2 水 clipBias onCommit（已修）**：`water-menu.ts` `wSliderNode` 增 `commitOnRelease` 参数，水倒影组结构键 resolution/clip-bias 走「拖动 no-op / 松手 onCommit 单写」S11 范式（对齐 reflector-menu 先例）——clip-bias 死区 0.05 < step 0.1 恒超死区，原逐 tick 写 envState = 每次拖动 ~100 次弃载体全量重建（几何+材质+RT），现降为 1 次；strength 参数键保持实时。TDD 先红（set 立即写）后绿；存量「21 项双向读写」测试两结构键断言改走 onCommit。
+  - **#5 pack 双源过滤（已修）**：web `listWebPackModels` 原返回 zip **全条目**（与 Go `ListPackModels` 严格 `packModelEntryMatch` 漂移）+ view `pack-3d.ts` 内联第三套 loose filter（`/block/|/item/` 双 includes，注释自称「与 Go/web 一致」为假）——纹理 `.png`/`models/custom/` 等非模型条目在 **web 模式**混入 3D 切换下拉（选中即坏预览，真实可达）。收口：① web 侧补 `.filter(webPackModelEntryMatch).sort()` 镜像 Go 契约（TDD 先红后绿，测试夹具补纹理+非模型条目钉死滤出）；② 删 view 内联 loose filter（清单单源回归 Go/web 契约，view 不再第三源判归属——回归红线 1）。browser-adapter 既有断言 `toContain(model)` 不破坏。
+  - **#4 KTX2 池终止后 InvalidStateError（已登记）**：`worker-bridge.ts|request` L175 postMessage 到已 terminate worker 同步抛原生 DOMException——懒建重建自愈在位、行为面无挂起，仅「池刚终止那一拍」瞬态错误文案非契约化。按「不为瞬态加防御」只加**盲区登记注释**（不改行为，留「非懒建消费方出现时再契约化」触发条件）。
+  - 验证：preview-3d + backend 全量 **253 文件 4327 例绿**；`tsc --noEmit` 0；biome 增量过。

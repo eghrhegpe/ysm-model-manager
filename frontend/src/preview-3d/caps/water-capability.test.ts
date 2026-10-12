@@ -1303,9 +1303,11 @@ describe("WaterCapability — 菜单控件全联动", () => {
     expect(by("water-reflection").control!.get!(undefined)).toBe(true);
     by("water-reflection-strength").control!.set!(0.8);
     expect(by("water-reflection-strength").control!.get!(undefined)).toBeCloseTo(0.8, 5);
-    by("water-reflection-resolution").control!.set!(1024);
+    // [锐评 S11·水] resolution/clip-bias 是结构键：set 逐 tick no-op（拖动不写 envState，
+    // 防 ensureReflector 逐帧弃载体重建），松手 onCommit 才单写——对齐 reflector S11 先例。
+    by("water-reflection-resolution").control!.onCommit!(1024);
     expect(by("water-reflection-resolution").control!.get!(undefined)).toBe(1024);
-    by("water-reflection-clip-bias").control!.set!(5.5);
+    by("water-reflection-clip-bias").control!.onCommit!(5.5);
     expect(by("water-reflection-clip-bias").control!.get!(undefined)).toBeCloseTo(5.5, 5);
     by("water-reflect-ssr-suppress").control!.set!(false);
     expect(by("water-reflect-ssr-suppress").control!.get!(undefined)).toBe(false);
@@ -2311,6 +2313,28 @@ describe("WaterCapability — 水面模型倒影（ADR-297）", () => {
     cap.setWaterReflectDisableWhenSSR(false);
     expect(hits, "从控不涉显隐，不发通知（防拖滑块重渲染风暴）").toBe(1);
     off();
+  });
+
+  it("[锐评 S11·水] 结构键（resolution/clip-bias）set 逐 tick no-op、onCommit 才写一次（防拖动逐帧弃载体重建）", () => {
+    const scene = new THREE.Scene();
+    const cap = new WaterCapability({ scene });
+    const reflect = findNodeById(cap.getMenuNodes(), "cap-group-water-reflect");
+    const by = (id: string) => findNodeById(reflect.children!, id);
+    // 参数键 strength 保持实时逐帧（uniform，廉价）
+    by("water-reflection-strength").control!.set!(0.4);
+    expect(by("water-reflection-strength").control!.get!(undefined)).toBe(0.4);
+    // 结构键 resolution：拖动 set 逐 tick no-op（get 不跟），松手 onCommit 才写
+    const resDefault = by("water-reflection-resolution").control!.get!(undefined);
+    by("water-reflection-resolution").control!.set!(2048);
+    expect(by("water-reflection-resolution").control!.get!(undefined), "拖动 set 不写 envState（no-op）").toBe(resDefault);
+    by("water-reflection-resolution").control!.onCommit!(2048);
+    expect(by("water-reflection-resolution").control!.get!(undefined), "onCommit 写一次").toBe(2048);
+    // 结构键 clip-bias：同上——死区 0.05 < step 0.1 恒超死区，逐 tick 写 = 逐 tick 弃载体重建
+    const biasDefault = by("water-reflection-clip-bias").control!.get!(undefined);
+    by("water-reflection-clip-bias").control!.set!(5);
+    expect(by("water-reflection-clip-bias").control!.get!(undefined), "拖动 set 不写 envState（no-op）").toBe(biasDefault);
+    by("water-reflection-clip-bias").control!.onCommit!(5);
+    expect(by("water-reflection-clip-bias").control!.get!(undefined), "onCommit 写一次").toBe(5);
   });
 
   it("loadState 还原倒影五键并触发一次重建落地（suspend 纪律不破）", () => {

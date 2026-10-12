@@ -67,12 +67,16 @@ export async function readShaderpackLangJson(
   }
 }
 
-/** 资源包 3D：ListPackModels 枚举 zip 内条目（对齐 Go ListPackModels 契约，返回 string[]） */
+/** 资源包 3D：ListPackModels 枚举 zip 内 block/item 模型 JSON 条目（升序，镜像 Go
+ *  ListPackModels 契约——严格 webPackModelEntryMatch 过滤，非全条目；[10-12 探明 P2 收口]
+ *  原实现返回 zip 全条目，与 Go 漂移致 web 3D 切换下拉混入纹理等非模型条目）。 */
 export async function listWebPackModels(path: string): Promise<string[]> {
   try {
     const entries = await readWebZipEntries(path);
     if (!entries) return [];
-    return Object.keys(entries);
+    return Object.keys(entries)
+      .filter((k) => webPackModelEntryMatch(k))
+      .sort();
   } catch {
     return [];
   }

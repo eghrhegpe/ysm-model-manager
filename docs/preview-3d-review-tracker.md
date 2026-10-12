@@ -624,7 +624,8 @@
   2. ~~「3D 错误不国际化的根因是 Go Code 未映射」~~——**根因归错，但差集本身是真账**。`CODE_KEYS` 白名单 8 个 vs Go `ErrorCode` 全集 15 个，差集 7 个（FILE_TOO_LARGE / FILE_EMPTY / MKDIR_FAILED / WRITE_FAILED / IO_ERROR / LINK_FAILED / UNKNOWN），**实测仅出现在 fsutil/write、importer、installer（写/导入/安装面），零命中 3D 读路径** → 今日用户可见中文的**直接根因是 D4（3D 域 0 个 Code），不是差集**。差集的正确定位 = **前向隐患 P3**：一旦读路径补上 `Code: ErrFileTooLarge/ErrIO`（D4 修法必然引入），若不补齐这 7 个映射，中文泄漏会**从「全部」变成「部分」**而更显隐蔽。
   3. ~~「3D 域测试盲区」~~——**证伪**。coverage 实数：preview-3d 245 文件，最低 0% 的仅 4 个 `*.worker.ts` + 1 个 vendor `ILogger.js`（Worker 由 e2e 覆盖，非盲区）；非 vendor 最低 `mmd-model-select.ts` **71%**，无「语句数 ≥15 且 <60%」的盲区文件；views/app-preview 29 文件最低 `view-shell.ts` 0%（5 条语句、2 个薄注入函数，结构性）；2D 预览链路（model2d 四文件）90-100%。**覆盖率不是 3D 域的债。**
 - **其他实数（只读门禁，3D 切片）**：`check-a11y --json` 全绿（files 606 / coverageTotal 207 / scatterTotal 8 / deficits 0）——但 scatter 在册 8 处 document 级 keydown 是 **ADR-308 D1 combo 单出口的登记豁免台账**，非新债也非无债；3D 目录仅 1 处裸露技术债注释（`mmd-ktx2-basis.ts:11` CSP unsafe-eval，10-11 已登记）；3D 加载失败呈现层已单点收口（`infra/preview-loading.ts`，无手写 HTML 字面量回潮）。
-- 验证：全程只读（4 子代理 + 主模型逐点读码复核，零生产变更）；`git status` 干净；`doctor --docs` 23/23 PASS。
+- 验证：探查全程只读（4 子代理 + 主模型逐点读码复核 `render.ts` / `slide-menu.ts` / `rows.ts` / `texture_cache.go` / `app_texture_cache.go` / `app_model.go` / `resource_bindings_test.go` / `preview-paths.ts` / `preview-settings.md`）；`doctor --docs` 23/23 PASS。
+- **本轮已清偿（1 处小刀）**：D11 的 `preview-settings.md` 「10 条已落地横切设置路径」硬编码计数（实测 `KNOWN_PATHS` = 14 条，且列举的 `env.groundMatSource` / `ui.activeComponent` 均已退表）——删计数与逐条列举、改「清单以 `preview-paths.ts` 为准」，三条已退表路径连同退表理由移入「已退表（勿复活）」小节保留。这是**违反仓内既有规范**（docs/knowledge/AGENTS.md「禁止硬编码计数——ADR-162 去行号精神延伸到散文层」）而非单纯陈旧，故可直接清偿；同家族 `preview-state.md` 早已示范正确口径，本卡是漏网的旧写法。顺手消掉 `:144`「卡间口径以 10 条为准」这条**错误计数的传播源**。
 - 遗留 / 下一轮建议：见下（本条为四子代理补充后的最终版）。
 
 ### 子代理复核（Go 支撑链 / 读面上限·守卫 / a11y 键盘 / 知识卡陈旧）
@@ -650,7 +651,7 @@
   7. ~~「`isSafeAvatarPath` 早返回绕过 `..` 检查」「`readLimitedAvatar` 泄漏句柄」「`decoder` 包级变量竞态」~~ → 均**判伪**（`path.Clean` 折叠等价 / `ReadLimitedEntry` 内部 `defer rc.Close()` / `decode_inject.go:17-22` 有 `sync.RWMutex`）。
   8. **P4 记账（不动）**：`extractBits` mask 在 `bitCount==64` 时 `1<<64` 回绕为 0（`go/litematic/nbt.go:417`，当前不可达，需 palette > 2⁶³）；`Prune.KeptCount` 含 `.tmp` 而 `FreedBytes`/`Remaining` 排除（`texture_cache.go:369-416`，口径自相矛盾）；`isGlowBone` 注释称「小写 ysmGlow」而 `ysmGlow` 含大写 G（代码正确，仅措辞）；`decodeYSMComponentsViaWASI` 对同一 geometry JSON 解析两次（`wasm_decoder.go:172-180` 首遍结果丢弃、`:198-202` 再解一遍，大模型 geometry 可达数 MB）；`core.ts:602-606` / `:332-336` 把 `dock: <id 串>` / `panel: <id>` **内部诊断串当用户 tooltip**（未经 i18n，en/ja 下仍是英文裸串）——与 D1 同族，属「产品拍板的反馈通道」需明写豁免或改挂 `aria-label` + `data-*`。
 - **修订后的处置建议**（覆盖上方原第 2/3 条）：
-  1. **小刀可批（低风险，建议本轮就做）**：①D11 的 `preview-settings.md:138-144` 删硬编码计数、改「以 `preview-paths.ts` 为准」（对齐 `preview-state.md:70-71`，纯文档 1 分钟）；②D6 的 `CachePath` 入口加 `^[0-9a-f]{64}$` 校验（单点一处正则，读写全链生效）；③D5 的 6 处裸读换 `os.LimitReader` + `registry.MaxReadLimit`（单点收敛，不改绑定契约）。
+  1. **小刀可批（低风险，建议本轮就做）**：①D11 的 `preview-settings.md` 硬编码计数漂移 **已清偿**（本轮提交）；②D6 的 `CachePath` 入口加 `^[0-9a-f]{64}$` 校验（单点一处正则，读写全链生效）；③D5 的 6 处裸读换 `os.LimitReader` + `registry.MaxReadLimit`（单点收敛，不改绑定契约）。
   2. **小刀可批（需产品知情）**：D4 的 9 处 `fmt.Errorf("路径超出仓库目录")` 换 `&types.AppError{Code: ErrInvalidPath, …}`——**签名不变**，测试范式现成（`resource_bindings_test.go:49-58`），机械替换。这是本轮**性价比最高的一刀**：直接消解 D1 的 3D 侧成因。
   3. **需拍板（破坏契约）**：D4 的 6 个无 error 通道绑定（`ReadFileBytes` 等）+ `GetModel3DSpec` 空 spec 原因——建议伴生 `ReadFileBytesEx` / `GetModel3DSpecDiagnostics` 增量并存（破坏契约的签名改造需排期）；配套补 `CODE_KEYS` 差集 7 Code + 三语键，否则中文泄漏会从「全部」变「部分」而更显隐蔽。
   4. **需 ADR（动不变量）**：D1 的前端自构 Error 引入结构化键（37+13+2 处构造点 + `friendlyError` 旁路收窄 + overlay 侧改走 `friendlyError`——现用 `safeErrorMessage`，其「轻量无 i18n」本意是 Worker 安全，而 `preview-loading.ts:43` 此处非 Worker）。须与 `utils-errors.md` 的互斥声明同批同步。

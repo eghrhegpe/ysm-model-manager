@@ -135,13 +135,12 @@ status: active
 
 ### 域二：3D 全域状态层
 - `preview-3d/state/preview-state.ts`（ADR-126 P4-A 升格；ADR-129 第一刀归位）
-- 10 条已落地横切设置路径（`KNOWN_PATHS`，见 `preview-paths.ts`；ADR-125 P1 六条 → ADR-126 P4-A 升格 → 后扩至 11 → [ADR-250] 退 1 至 10）：
-  - 直管 localStorage（3 条）：`render.maxFps`（60）、`render.maxPixelRatio`（1.5）、`render.frustumCull`
-  - cap 派生（不落盘，4 条）：`render.wireframe` / `cap.skyIblSelfHoldEnabled` / `cap.waterMode` / `env.groundMatSource`
-    （**`render.bloom` 已随 [ADR-250] 退场**——后处理开关唯一入口 = cap 自报的 `pp-enabled` 控件写 `envState.ppEnabled`；它兼具性能总闸与模型门禁语义，属「一枚字段三重语义」，且档位切换会覆盖用户手动开关。）
-  - per-scene 会话态（不落盘，1 条）：`ui.activeComponent`（`-1 = All`）
-  - 探针路径（2 条，cap 内部状态上浮供 `visibleWhen` 谓词消费）：`ui.mode`（预览会话模式 shared/self）、`cap.skyGroundCap`（环境能力可用性）
-  - 详见 [preview-state](./preview-state.md)（卡间口径以 10 条为准）
+- 已落地横切设置路径 = `KNOWN_PATHS`，**清单以 `preview-3d/state/preview-paths.ts` 为准，勿在卡内维护计数或逐条列举**（ADR-162 去计数精神，同口径见 [preview-state](./preview-state.md)）。新增路径两步走：扩 `KNOWN_PATHS` + 填 bindings，缺一步编译不过（类型契约即运行时实现，未落地键编译期报错）。
+- 已退表（勿复活，理由代码读不出）：
+  - `render.bloom`（ADR-250）——后处理是视觉项（与 wireframe / skyIblSelfHold 同类），不进性能档位；开关唯一入口 = postprocessing cap 自报的 `pp-enabled` 控件写 `envState.ppEnabled`（它兼具性能总闸与模型门禁语义，属「一枚字段三重语义」，且档位切换会覆盖用户手动开关）。
+  - `env.groundMatSource`（ADR-249 §2.1 拆轴）——原单枚举拆为 `cap.groundSourceKind` / `cap.groundCanvasStyle` 两键。
+  - `ui.activeComponent`——已由 per-scene 闭包（`sessionActiveComponent`）取代，`preview-paths.ts` 内仅留注释标记「不再写入」。
+- 探针入册门槛（判定输入须是 cap 态上浮值 / 三处登记一步不缺 + 活体消费者守卫 / 控件基元归一在 binding 内）见 [ADR-291]。
 
 ### 域三：截图 & 填充面板
 - `shot-panel-shared.ts`（6 角度按钮）、`skeleton-render.ts`（`saveScreenshot`）、`skeleton-fill-panel.ts`（组件选择 + 统计 + 纹理）

@@ -12,6 +12,7 @@ auto_fields:
     - AppSyncManager
     - bindDelegatedEvents
     - cleanupSyncVirtualScroll
+    - collectCounts
     - containerHTML
     - emptyHintHTML
     - EventSelf

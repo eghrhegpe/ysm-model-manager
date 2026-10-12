@@ -70,4 +70,13 @@ export interface ReadFileMeta {
      * SHA256 十六进制
      */
     "hash": string;
+
+    /**
+     * 切片 C（ADR-331-d1）：结构化错误通道。守卫失败或读失败时 Data=nil、Hash=""，
+     * ErrorCode 填 types.ErrorCode 常量名（INVALID_PATH / IO_ERROR / FILE_TOO_LARGE），
+     * Reason 填中文描述——前端据此构造 AppError 走 friendlyError i18n，不再只能看到
+     * "条目缺失"。条目保留在 result map（不 continue），与成功条目同 key。
+     */
+    "errorCode": string;
+    "reason": string;
 }

@@ -969,6 +969,8 @@ export function ReadFileBytesBatch(paths: string[] | null): $CancellablePromise<
  * ReadFileBytesBatchWithMeta 批量读取文件并返回内容 + SHA256 哈希。
  * 一次 RPC 完成数据读取和 hash 计算，避免前端额外算 hash 或二次 RPC。
  * 路径守卫和行为与 ReadFileBytesBatch 一致。
+ * 切片 C（ADR-331-d1）：守卫失败/读失败不再 continue 静默丢条目——填 ErrorCode/Reason
+ * 保留条目（条目在 map 中但 Data=nil），前端据此区分「路径非法/不存在/超限/IO 错」。
  */
 export function ReadFileBytesBatchWithMeta(paths: string[] | null): $CancellablePromise<{ [_ in string]?: $models.ReadFileMeta } | null> {
     return $Call.ByID(919610209, paths);
@@ -1107,6 +1109,9 @@ export function SaveAppConfig(filesRoot: string, rpRoot: string, mcRoot: string,
 /**
  * SaveCachedTexture 保存前端 WASM 编码后的 KTX2 数据到缓存。
  * hash 是 GetCachedTexture 返回的 Hash 值，data 是 KTX2 字节的 base64。
+ * hash 来自 Wails 绑定（前端可传任意字符串），须校验为 SHA256 hex：
+ * 未校验时 filepath.Join 会把 `..\..\evil` 折叠到缓存目录之外，而 WriteCached
+ * 会先 MkdirAll 建中间目录再落盘——真写越界（与 GetCachedTexture 的路径守卫同构）。
  */
 export function SaveCachedTexture(hash: string, b64Data: string): $CancellablePromise<void> {
     return $Call.ByID(3781776119, hash, b64Data);

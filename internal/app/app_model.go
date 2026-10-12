@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -134,36 +135,55 @@ func (a *App) readFileBytesBatchConcurrent(paths []string) map[string][]byte {
 type ReadFileMeta struct {
 	Data []byte `json:"data"` // 文件内容（Wails 自动 base64）
 	Hash string `json:"hash"` // SHA256 十六进制
+	// 切片 C（ADR-331-d1）：结构化错误通道。守卫失败或读失败时 Data=nil、Hash=""，
+	// ErrorCode 填 types.ErrorCode 常量名（INVALID_PATH / IO_ERROR / FILE_TOO_LARGE），
+	// Reason 填中文描述——前端据此构造 AppError 走 friendlyError i18n，不再只能看到
+	// "条目缺失"。条目保留在 result map（不 continue），与成功条目同 key。
+	ErrorCode string `json:"errorCode"`
+	Reason    string `json:"reason"`
 }
 
-// readFileWithHashUnchecked 读取文件并计算 SHA256，返回 data 和 hex hash。
+// readFileWithHashUnchecked 读取文件并计算 SHA256，返回 data 与 hex hash；
+// 失败时返回 nil data + 错误码 + 中文描述（ADR-331-d1：原实现把
+// fsutil.ReadFileLimited 的错误信息丢弃为 return nil, ""，前端无法区分
+// 路径非法/文件不存在/超限/IO 错，也无法 i18n）。
 // ⚠️ 不做路径守卫——调用方必须先自行 isPathInRootOrSelf 校验（函数名即契约）。
 // 原实现内置守卫，与两个调用方（ReadFileBytesBatchWithMeta 的顺序/并发分支）
 // 各自的前置校验重复：每文件白付一次 isPathInRootOrSelf——该函数遍历全部
 // allScanRoots 逐根 Lstat，是批量纹理读取热路径上的重复 IO。守卫统一收敛到
 // 调用方循环入口（唯一必需的一处），此处只做读取+哈希。
-func (a *App) readFileWithHashUnchecked(path string) ([]byte, string) {
-	data, err := fsutil.ReadFileLimited(path, registry.MaxReadLimit)
+func (a *App) readFileWithHashUnchecked(path string) (data []byte, hash string, errCode string, reason string) {
+	buf, err := fsutil.ReadFileLimited(path, registry.MaxReadLimit)
 	if err != nil {
-		return nil, ""
+		// fsutil 不依赖 go/types（见 go/fsutil/write.go 的包级说明），错误码映射留在本包。
+		if errors.Is(err, fsutil.ErrFileTooLarge) {
+			return nil, "", string(types.ErrFileTooLarge), "文件超过读取上限"
+		}
+		return nil, "", string(types.ErrIO), "文件读取失败：" + err.Error()
 	}
-	h := sha256.Sum256(data)
-	hash := hex.EncodeToString(h[:])
-	return data, hash
+	h := sha256.Sum256(buf)
+	return buf, hex.EncodeToString(h[:]), "", ""
 }
 
 // ReadFileBytesBatchWithMeta 批量读取文件并返回内容 + SHA256 哈希。
 // 一次 RPC 完成数据读取和 hash 计算，避免前端额外算 hash 或二次 RPC。
 // 路径守卫和行为与 ReadFileBytesBatch 一致。
+// 切片 C（ADR-331-d1）：守卫失败/读失败不再 continue 静默丢条目——填 ErrorCode/Reason
+// 保留条目（条目在 map 中但 Data=nil），前端据此区分「路径非法/不存在/超限/IO 错」。
 func (a *App) ReadFileBytesBatchWithMeta(paths []string) map[string]ReadFileMeta {
 	if len(paths) <= 4 {
 		result := make(map[string]ReadFileMeta, len(paths))
 		for _, p := range paths {
 			if !a.isPathInRootOrSelf(p) {
+				result[p] = ReadFileMeta{
+					ErrorCode: string(types.ErrInvalidPath),
+					Reason:    "路径非法（越权读）",
+				}
 				continue
 			}
-			data, hash := a.readFileWithHashUnchecked(p)
+			data, hash, errCode, reason := a.readFileWithHashUnchecked(p)
 			if data == nil {
+				result[p] = ReadFileMeta{ErrorCode: errCode, Reason: reason}
 				continue
 			}
 			result[p] = ReadFileMeta{Data: data, Hash: hash}
@@ -180,11 +200,14 @@ func (a *App) ReadFileBytesBatchWithMeta(paths []string) map[string]ReadFileMeta
 			return fileMeta{}, false
 		}
 		if !a.isPathInRootOrSelf(p) {
-			return fileMeta{}, false
+			return fileMeta{
+				path: p,
+				meta: ReadFileMeta{ErrorCode: string(types.ErrInvalidPath), Reason: "路径非法（越权读）"},
+			}, true
 		}
-		data, hash := a.readFileWithHashUnchecked(p)
+		data, hash, errCode, reason := a.readFileWithHashUnchecked(p)
 		if data == nil {
-			return fileMeta{}, false
+			return fileMeta{path: p, meta: ReadFileMeta{ErrorCode: errCode, Reason: reason}}, true
 		}
 		return fileMeta{path: p, meta: ReadFileMeta{Data: data, Hash: hash}}, true
 	})

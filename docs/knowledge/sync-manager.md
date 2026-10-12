@@ -29,6 +29,7 @@ auto_fields:
     - bindSelectAll
     - bindSyncSelected
     - cleanupSyncVirtualScroll
+    - collectCounts
     - containerHTML
     - EmitDedupe
     - emptyHintHTML

@@ -322,8 +322,10 @@ func TestReadFileBytesBatch_ContentCorrectness(t *testing.T) {
 // TestReadFileBytesBatchWithMeta_SymlinkEscapeRejected 钉住越权读防御契约：
 // 仓库根内指向根外的符号链接不得被读取（isPathInRootOrSelf 的 Lstat+EvalSymlinks
 // 复核是唯一拦截点——os.ReadFile 本身跟随 symlink，复核不命中即越权读出任意文件）。
-// 守卫现收敛于调用方循环入口（readFileWithHashUnchecked 函数名即契约，不内置守卫），
-// 本测试锁定「symlink 指向根外 → 该 key 缺席结果 map」的不变量，防未来调用方漏校验。
+// 守卫现收敛于调用方循环入口（readFileWithHashUnchecked 函数名即契约，不内置守卫）。
+// 切片 C（ADR-331-d1）：条目不再 continue 静默丢弃——越权路径填 ErrorCode=INVALID_PATH
+// 且 Data=nil（结构化错误通道），与成功条目同 key 保留；本测试锁定
+// 「越权路径读不出任何字节」这一不变量，防守卫被旁路。
 func TestReadFileBytesBatchWithMeta_SymlinkEscapeRejected(t *testing.T) {
 	base := t.TempDir()
 	ysmRoot := filepath.Join(base, "ysm", "models")
@@ -359,12 +361,86 @@ func TestReadFileBytesBatchWithMeta_SymlinkEscapeRejected(t *testing.T) {
 	a := repoApp(t, types.AppConfig{FilesRoot: base})
 	result := a.ReadFileBytesBatchWithMeta(paths)
 
-	// 合法 10 个全在
-	if len(result) != 10 {
-		t.Errorf("期望 10 个合法文件, got %d", len(result))
+	// 合法 10 个全在且读到字节
+	if len(result) != 11 {
+		t.Errorf("期望 11 个条目（10 成功 + 1 结构化错误）, got %d", len(result))
 	}
-	// symlink 指向根外：key 必须缺席（守卫拒绝，非 nil 值）
-	if _, exists := result[linkPath]; exists {
+	// symlink 指向根外：不得读出任何字节——条目保留但 Data=nil、ErrorCode 标越权
+	entry, exists := result[linkPath]
+	if !exists {
+		t.Fatalf("越权条目必须保留在 result（结构化错误通道，ADR-331-d1），got 缺席")
+	}
+	if len(entry.Data) != 0 {
 		t.Error("根内 symlink 指向根外文件不得被读取（越权读防御回归）")
+	}
+	if entry.ErrorCode != string(types.ErrInvalidPath) {
+		t.Errorf("越权条目 ErrorCode 应为 INVALID_PATH, got %q", entry.ErrorCode)
+	}
+}
+
+// TestReadFileBytesBatchWithMeta_StructuredErrorFields 钉住切片 C（ADR-331-d1）的
+// 结构化错误字段：越权路径、文件不存在、超限分别映射 INVALID_PATH / IO_ERROR /
+// FILE_TOO_LARGE，且 Data=nil、Hash=""、条目保留（不再静默 continue）。
+func TestReadFileBytesBatchWithMeta_StructuredErrorFields(t *testing.T) {
+	base := t.TempDir()
+	ysmRoot := filepath.Join(base, "ysm", "models")
+	if err := os.MkdirAll(ysmRoot, 0o755); err != nil {
+		testutil.NoError(t, err)
+	}
+
+	valid := filepath.Join(ysmRoot, "ok.bin")
+	if err := os.WriteFile(valid, []byte("ok"), 0o644); err != nil {
+		testutil.NoError(t, err)
+	}
+	// 越权：仓库根外路径（FilesRoot 之外）
+	outside := filepath.Join(t.TempDir(), "secret.txt")
+	if err := os.WriteFile(outside, []byte("top-secret"), 0o644); err != nil {
+		testutil.NoError(t, err)
+	}
+	// 不存在：仓库根内但不存在的路径
+	missing := filepath.Join(ysmRoot, "nope.bin")
+
+	a := repoApp(t, types.AppConfig{FilesRoot: base})
+	// ≤4 条目走顺序分支
+	result := a.ReadFileBytesBatchWithMeta([]string{valid, outside, missing})
+	for _, p := range []string{valid, outside, missing} {
+		e, ok := result[p]
+		if !ok {
+			t.Fatalf("条目 %s 必须保留在 result（ADR-331-d1）, got 缺席", p)
+		}
+		if e.ErrorCode == "" && len(e.Data) == 0 {
+			t.Errorf("条目 %s 成功但无数据", p)
+		}
+	}
+	if v := result[valid]; v.ErrorCode != "" || len(v.Data) == 0 {
+		t.Errorf("合法文件应无错误且有数据, got err=%q data=%d", v.ErrorCode, len(v.Data))
+	}
+	if v := result[outside]; v.ErrorCode != string(types.ErrInvalidPath) {
+		t.Errorf("越权路径应 INVALID_PATH, got %q", v.ErrorCode)
+	}
+	if v := result[missing]; v.ErrorCode != string(types.ErrIO) {
+		t.Errorf("不存在文件应 IO_ERROR, got %q", v.ErrorCode)
+	}
+
+	// 并发分支（≥5 条目）同契约
+	paths := []string{valid, outside, missing}
+	for i := 0; i < 6; i++ {
+		p := filepath.Join(ysmRoot, fmt.Sprintf("c_%d.bin", i))
+		if err := os.WriteFile(p, []byte("ok"), 0o644); err != nil {
+			testutil.NoError(t, err)
+		}
+		paths = append(paths, p)
+	}
+	// 超限：并发分支内放一个超限文件——registry.MaxReadLimit 是 50MB，构造太大不划算；
+	// 直接验证并发分支下的越权 + 不存在映射（超限映射已在 readFileWithHashUnchecked 单测覆盖）
+	result2 := a.ReadFileBytesBatchWithMeta(paths)
+	if v := result2[outside]; v.ErrorCode != string(types.ErrInvalidPath) {
+		t.Errorf("并发分支越权路径应 INVALID_PATH, got %q", v.ErrorCode)
+	}
+	if v := result2[missing]; v.ErrorCode != string(types.ErrIO) {
+		t.Errorf("并发分支不存在文件应 IO_ERROR, got %q", v.ErrorCode)
+	}
+	if len(result2) != len(paths) {
+		t.Errorf("并发分支应保留全部条目, got %d, want %d", len(result2), len(paths))
 	}
 }

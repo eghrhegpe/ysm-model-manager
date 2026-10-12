@@ -93,9 +93,7 @@ func TestFindComponents_SubdirSameNameTex(t *testing.T) {
 			break
 		}
 	}
-	if arrow == nil {
-		t.Fatal("未找到补扫组件 arrow")
-	}
+	testutil.NotNil(t, arrow, "未找到补扫组件 arrow")
 	if len(arrow.ComponentTextures) == 0 {
 		t.Fatal("未声明组件应命中子目录同名纹理兜底（ComponentTextures 非空）")
 	}
@@ -139,9 +137,7 @@ func TestFindComponents_TgaSameNameTex(t *testing.T) {
 			break
 		}
 	}
-	if boat == nil {
-		t.Fatal("未找到补扫组件 boat")
-	}
+	testutil.NotNil(t, boat, "未找到补扫组件 boat")
 	if len(boat.ComponentTextures) != 0 {
 		t.Fatalf(".tga 同名纹理不得产出 data URI（浏览器不可解码），实际 ComponentTextures = %v", boat.ComponentTextures)
 	}
@@ -184,9 +180,7 @@ func TestFindComponents_JpgSameNameTex(t *testing.T) {
 			break
 		}
 	}
-	if boat == nil {
-		t.Fatal("未找到补扫组件 boat")
-	}
+	testutil.NotNil(t, boat, "未找到补扫组件 boat")
 	ct, ok := boat.ComponentTextures["boat"]
 	if !ok || len(ct) != 1 {
 		t.Fatalf("未声明组件应命中 .jpg 同名纹理兜底，实际 ComponentTextures = %v", boat.ComponentTextures)
@@ -241,9 +235,7 @@ func TestFindComponents_DeclaredOutOfRangeSameNameTex(t *testing.T) {
 			break
 		}
 	}
-	if extra == nil {
-		t.Fatal("未找到声明组件 extra")
-	}
+	testutil.NotNil(t, extra, "未找到声明组件 extra")
 	// extra 已声明但超范围：应钳到最后一张声明纹理 skin（共享默认皮肤），
 	// 而非绑定自己的 extra.png 同名纹理
 	ct, ok := extra.ComponentTextures["extra"]

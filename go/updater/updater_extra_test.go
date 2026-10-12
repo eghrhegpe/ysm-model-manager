@@ -71,9 +71,7 @@ func TestInstallUpdate_NonWindows(t *testing.T) {
 		t.Skip("非 Windows 专用测试")
 	}
 	err := InstallUpdate("/tmp/fake.zip")
-	if err == nil {
-		t.Fatal("非 Windows 平台应报错")
-	}
+	testutil.NotNil(t, err, "非 Windows 平台应报错")
 	if !strings.Contains(err.Error(), "仅支持 Windows") {
 		t.Errorf("错误信息应提示仅支持 Windows, 得到: %v", err)
 	}
@@ -89,7 +87,5 @@ func TestInstallUpdate_BadExe(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	err := InstallUpdate(badExe)
-	if err == nil {
-		t.Fatal("坏 exe 应报错")
-	}
+	testutil.NotNil(t, err, "坏 exe 应报错")
 }

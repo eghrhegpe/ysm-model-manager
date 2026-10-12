@@ -33,9 +33,7 @@ func TestInstallUpdate_InvalidPE(t *testing.T) {
 	}
 
 	err := InstallUpdate(exePath)
-	if err == nil {
-		t.Fatal("InstallUpdate 应拒绝非 PE 文件")
-	}
+	testutil.NotNil(t, err, "InstallUpdate 应拒绝非 PE 文件")
 	if !strings.Contains(err.Error(), "有效 Windows 程序") {
 		t.Errorf("错误信息应提示 PE 校验失败: %v", err)
 	}
@@ -262,9 +260,7 @@ func TestDownloadOnce_EnormousContentLength(t *testing.T) {
 	defer server.Close()
 
 	_, err := downloadOnce(server.URL, "", nil)
-	if err == nil {
-		t.Fatal("超大 Content-Length 应被拒绝")
-	}
+	testutil.NotNil(t, err, "超大 Content-Length 应被拒绝")
 	if strings.Contains(err.Error(), "超过") || strings.Contains(err.Error(), "limit") || strings.Contains(err.Error(), "上限") {
 		t.Logf("FIXED(INFO-ENOCL): 超大 Content-Length 被拒绝: %v", err)
 	} else {
@@ -281,9 +277,7 @@ func TestDownloadOnce_HashMismatch(t *testing.T) {
 	defer server.Close()
 
 	_, err := downloadOnce(server.URL, "nonexistenthash", nil)
-	if err == nil {
-		t.Fatal("SHA256 不匹配应被拒绝")
-	}
+	testutil.NotNil(t, err, "SHA256 不匹配应被拒绝")
 	if !strings.Contains(err.Error(), "SHA256") {
 		t.Fatalf("SHA256 不匹配应返回 SHA256 错误, 实际: %v", err)
 	}

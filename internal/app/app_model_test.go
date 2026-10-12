@@ -34,9 +34,7 @@ func TestBuild3DSpecFromGeometryJSON(t *testing.T) {
 }`
 	got, err := a.Build3DSpecFromGeometryJSON(geo)
 	testutil.NoError(t, err, "合法 geometry 不应报错")
-	if got == nil {
-		t.Fatal("合法 geometry 应构建出 spec，got nil")
-	}
+	testutil.NotNil(t, got, "合法 geometry 应构建出 spec，got nil")
 	if len(got.Models) == 0 {
 		t.Fatalf("spec.models 为空")
 	}

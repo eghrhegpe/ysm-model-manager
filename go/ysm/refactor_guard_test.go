@@ -133,9 +133,7 @@ func TestParsePlayerModel_RawDeclarationsNotNormalized(t *testing.T) {
 	}}`)
 
 	pm := parsePlayerModel(data)
-	if pm == nil {
-		t.Fatal("parsePlayerModel 不应返回 nil")
-	}
+	testutil.NotNil(t, pm, "parsePlayerModel 不应返回 nil")
 
 	// model map：写入序（main 先声明）必须保序
 	if want := []string{"models/Main.GEO.JSON", `models\Arm.json`}; !reflect.DeepEqual(pm.names, want) {
@@ -169,9 +167,7 @@ func TestParsePlayerModel_NonStringMapValueKeepsLaterKeys(t *testing.T) {
 	data := []byte(`{"files":{"player":{"model":{"bad":123,"main":"models/main.json","boom":{"a":1},"arm":"models/arm.json"}}}}`)
 
 	pm := parsePlayerModel(data)
-	if pm == nil {
-		t.Fatal("parsePlayerModel 不应返回 nil")
-	}
+	testutil.NotNil(t, pm, "parsePlayerModel 不应返回 nil")
 	if want := []string{"models/main.json", "models/arm.json"}; !reflect.DeepEqual(pm.names, want) {
 		t.Errorf("names = %q, want %q（坏值后必须 continue 而非 break）", pm.names, want)
 	}
@@ -183,9 +179,7 @@ func TestParsePlayerModel_NonStringMapValueKeepsLaterKeys(t *testing.T) {
 // 裸字符串 model 走 default 分支去引号；map 形态之外不得设 mapOrig。
 func TestParsePlayerModel_BareStringModel(t *testing.T) {
 	pm := parsePlayerModel([]byte(`{"files":{"player":{"model":"models/main.json"}}}`))
-	if pm == nil {
-		t.Fatal("parsePlayerModel 不应返回 nil")
-	}
+	testutil.NotNil(t, pm, "parsePlayerModel 不应返回 nil")
 	if want := []string{"models/main.json"}; !reflect.DeepEqual(pm.names, want) {
 		t.Errorf("names = %q, want %q（裸字符串应去引号入 names）", pm.names, want)
 	}
@@ -197,9 +191,7 @@ func TestParsePlayerModel_BareStringModel(t *testing.T) {
 // files.player 畸形（非对象）：解析失败只跳过该段，filesObj 仍须可供其他段消费。
 func TestParsePlayerModel_MalformedPlayerKeepsFilesObj(t *testing.T) {
 	pm := parsePlayerModel([]byte(`{"files":{"player":"not-an-object","projectiles":[]}}`))
-	if pm == nil {
-		t.Fatal("player 段畸形不应返回 nil（filesObj 仍可供其他段消费）")
-	}
+	testutil.NotNil(t, pm, "player 段畸形不应返回 nil（filesObj 仍可供其他段消费）")
 	if pm.names != nil || pm.mapOrig != nil || pm.texDecl != nil {
 		t.Errorf("畸形 player 不得产出任何字段, got names=%v mapOrig=%v texDecl=%v",
 			pm.names, pm.mapOrig, pm.texDecl)

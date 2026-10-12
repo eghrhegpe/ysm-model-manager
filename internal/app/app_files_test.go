@@ -99,9 +99,7 @@ func TestToggleEnable(t *testing.T) {
 			testutil.NoError(t, err)
 		}
 		_, err := a.ToggleEnable(outside)
-		if err == nil {
-			t.Fatal("仓库外路径应拒绝")
-		}
+		testutil.NotNil(t, err, "仓库外路径应拒绝")
 		if !strings.Contains(err.Error(), "拒绝操作仓库外路径") {
 			t.Errorf("错误应含仓库外提示, got %v", err)
 		}
@@ -109,9 +107,7 @@ func TestToggleEnable(t *testing.T) {
 
 	t.Run("path==仓库子根拒绝（ysmRoot 根守卫）", func(t *testing.T) {
 		_, err := a.ToggleEnable(ysmRoot)
-		if err == nil {
-			t.Fatal("对仓库子根启禁应拒绝")
-		}
+		testutil.NotNil(t, err, "对仓库子根启禁应拒绝")
 		if !strings.Contains(err.Error(), "资源根目录") {
 			t.Errorf("错误应含根目录提示, got %v", err)
 		}
@@ -119,9 +115,7 @@ func TestToggleEnable(t *testing.T) {
 
 	t.Run("path==FilesRoot 根拒绝", func(t *testing.T) {
 		_, err := a.ToggleEnable(base)
-		if err == nil {
-			t.Fatal("对 FilesRoot 根启禁应拒绝")
-		}
+		testutil.NotNil(t, err, "对 FilesRoot 根启禁应拒绝")
 		if !strings.Contains(err.Error(), "资源根目录") {
 			t.Errorf("错误应含根目录提示, got %v", err)
 		}

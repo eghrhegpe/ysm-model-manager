@@ -6,6 +6,7 @@ package app
 import (
 	"sync"
 	"testing"
+	"ysm-model-manager/internal/testutil"
 )
 
 // TestGetTagsStore_PanicRecovery 验证：tagsStore 被置 nil 后（模拟 panic），
@@ -23,9 +24,7 @@ func TestGetTagsStore_PanicRecovery(t *testing.T) {
 
 	// 第二次调用：旧实现返回 nil（bug），新实现重试
 	store := a.getTagsStore()
-	if store == nil {
-		t.Fatal("getTagsStore 在 tagsStore=nil 时应重试初始化，但返回了 nil（sync.Once 永久锁死）")
-	}
+	testutil.NotNil(t, store, "getTagsStore 在 tagsStore=nil 时应重试初始化，但返回了 nil（sync.Once 永久锁死）")
 }
 
 // TestGetTagsStore_ConcurrentSafe 验证并发调用不 data race

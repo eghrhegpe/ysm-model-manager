@@ -33,18 +33,14 @@ func TestImportByType_Contract_FailureIsTypedError(t *testing.T) {
 	a, _, _ := packApp(t)
 
 	err := a.ImportByType("nonexistent-type", "/x/a.ysm")
-	if err == nil {
-		t.Fatal("未知类型应返回非 nil error")
-	}
+	testutil.NotNil(t, err, "未知类型应返回非 nil error")
 	// 人类可读文案
 	if err.Error() == "" {
 		t.Fatal("error 应有可读文案")
 	}
 
 	err = a.ImportByType("resourcepack", "")
-	if err == nil {
-		t.Fatal("空源路径应返回非 nil error")
-	}
+	testutil.NotNil(t, err, "空源路径应返回非 nil error")
 	if err.Error() == "" {
 		t.Fatal("error 应有可读文案")
 	}

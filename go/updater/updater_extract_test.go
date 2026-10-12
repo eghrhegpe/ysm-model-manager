@@ -19,9 +19,7 @@ func TestExtractEmbeddedHelper_NonWindows_ReturnsNil(t *testing.T) {
 		t.Skip("仅非 Windows")
 	}
 	err := extractEmbeddedHelper("/any/path/ysm-updater-helper.exe")
-	if err == nil {
-		t.Fatal("非 Windows 平台应返回错误")
-	}
+	testutil.NotNil(t, err, "非 Windows 平台应返回错误")
 	if !strings.Contains(err.Error(), "仅 Windows 可用") {
 		t.Errorf("错误信息应包含'仅 Windows 可用'，得到: %v", err)
 	}
@@ -57,9 +55,7 @@ func TestInstallUpdate_NonWindows_PlatformGuard(t *testing.T) {
 		t.Skip("仅非 Windows")
 	}
 	err := InstallUpdate("/tmp/fake.zip")
-	if err == nil {
-		t.Fatal("非 Windows 平台应报错")
-	}
+	testutil.NotNil(t, err, "非 Windows 平台应报错")
 	if !strings.Contains(err.Error(), "仅支持 Windows") {
 		t.Errorf("错误信息应提示仅支持 Windows，得到: %v", err)
 	}
@@ -76,9 +72,7 @@ func TestInstallUpdate_NotPE_Windows(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	err := InstallUpdate(badExe)
-	if err == nil {
-		t.Fatal("非 PE 更新包应报错")
-	}
+	testutil.NotNil(t, err, "非 PE 更新包应报错")
 	// 应报 PE 校验失败，而非 helper 释放失败（校验先行）
 	if strings.Contains(err.Error(), "释放更新助手") {
 		t.Errorf("错误信息不应包含'释放更新助手'，说明未先校验 PE: %v", err)

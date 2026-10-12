@@ -202,9 +202,7 @@ func TestExtractYsmSummary_ZipFallbackNoYsmJSON(t *testing.T) {
 
 func TestExtractYsmSummary_NotExist(t *testing.T) {
 	_, err := ExtractYsmSummary(filepath.Join(t.TempDir(), "nope.ysm"))
-	if err == nil {
-		t.Fatal("不存在的文件应报错")
-	}
+	testutil.NotNil(t, err, "不存在的文件应报错")
 }
 
 // 裸 ysm.json 内容为非法 JSON → 必须返回结构化错误（summary.go L170-175），

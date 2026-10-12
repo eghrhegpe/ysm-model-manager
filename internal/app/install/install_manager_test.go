@@ -19,9 +19,7 @@ func TestNewManager(t *testing.T) {
 		SaveAppConfig: func(cfg types.AppConfig) error { return nil },
 	}
 	m := NewManager(queue, deps)
-	if m == nil {
-		t.Fatal("NewManager 应返回非 nil Manager")
-	}
+	testutil.NotNil(t, m, "NewManager 应返回非 nil Manager")
 	if m.Queue == nil {
 		t.Fatal("Manager.Queue 应被设置")
 	}
@@ -40,9 +38,7 @@ func TestNewManager_NilQueue(t *testing.T) {
 		SaveAppConfig: func(cfg types.AppConfig) error { return nil },
 	}
 	m := NewManager(nil, deps)
-	if m == nil {
-		t.Fatal("NewManager 应返回非 nil Manager")
-	}
+	testutil.NotNil(t, m, "NewManager 应返回非 nil Manager")
 	if m.Queue != nil {
 		t.Fatal("Manager.Queue 应为 nil")
 	}
@@ -226,9 +222,7 @@ func TestGetLinkMode_NilManager(t *testing.T) {
 // TestNewDownloadQueue 构造函数测试
 func TestNewDownloadQueue(t *testing.T) {
 	q := NewDownloadQueue(context.Background(), nil, nil, nil)
-	if q == nil {
-		t.Fatal("NewDownloadQueue 应返回非 nil")
-	}
+	testutil.NotNil(t, q, "NewDownloadQueue 应返回非 nil")
 	status := q.Status()
 	if status.Remaining != 0 || status.Running {
 		t.Errorf("新队列状态应为空: got %+v", status)
@@ -240,9 +234,7 @@ func TestNewDownloadQueue_NilParent(t *testing.T) {
 	// 本用例正是验证「nil parent → 回退 context.Background()」，nil 是被测输入，不可替换。
 	//nolint:staticcheck // SA1012：刻意传 nil 以覆盖 queue.go 的 nil 兜底分支
 	q := NewDownloadQueue(nil, nil, nil, nil)
-	if q == nil {
-		t.Fatal("NewDownloadQueue(nil parent) 应返回非 nil（回退 Background）")
-	}
+	testutil.NotNil(t, q, "NewDownloadQueue(nil parent) 应返回非 nil（回退 Background）")
 }
 
 // TestEnqueue_EmptyTasks 测试空任务列表

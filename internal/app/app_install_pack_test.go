@@ -158,9 +158,7 @@ func TestImportFileAndPushToInstance_BareYsmJsonRejected(t *testing.T) {
 	// 单文件命中即父目录=仓库根 → 整仓落地灾难。binding 层前置拒绝（前端同款提示）。
 	a, ysmRoot, customDir := packApp(t)
 	err := a.ImportFileAndPushToInstance("ysm.json", b64("{}"), "TestInst")
-	if err == nil {
-		t.Fatal("光杆 ysm.json 单文件应被拒绝")
-	}
+	testutil.NotNil(t, err, "光杆 ysm.json 单文件应被拒绝")
 	assertFileAbsent(t, filepath.Join(ysmRoot, "ysm.json"))
 	assertFileAbsent(t, filepath.Join(customDir, "ysm.json"))
 }

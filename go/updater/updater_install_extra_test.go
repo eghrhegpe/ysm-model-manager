@@ -33,9 +33,7 @@ func TestInstallUpdate_MissingFile(t *testing.T) {
 	}
 	missing := filepath.Join(t.TempDir(), "no-such-update.exe")
 	err := InstallUpdate(missing)
-	if err == nil {
-		t.Fatal("更新包不存在应报错")
-	}
+	testutil.NotNil(t, err, "更新包不存在应报错")
 	if !strings.Contains(err.Error(), "打开更新包失败") {
 		t.Errorf("错误信息应指向打开失败, got %v", err)
 	}
@@ -49,9 +47,7 @@ func TestInstallUpdate_NotPE(t *testing.T) {
 	}
 	p := makeFakeExe(t, "this is not a PE binary")
 	err := InstallUpdate(p)
-	if err == nil {
-		t.Fatal("非 PE 内容的更新包应报错")
-	}
+	testutil.NotNil(t, err, "非 PE 内容的更新包应报错")
 	if !strings.Contains(err.Error(), "有效 Windows 程序") {
 		t.Errorf("错误信息应提示 PE 校验失败, got %v", err)
 	}
@@ -65,9 +61,7 @@ func TestInstallUpdate_NonWindows_Sentinel(t *testing.T) {
 		t.Skip("仅非 Windows")
 	}
 	err := InstallUpdate("/tmp/fake.exe")
-	if err == nil {
-		t.Fatal("非 Windows 平台应报错")
-	}
+	testutil.NotNil(t, err, "非 Windows 平台应报错")
 	if !errors.Is(err, ErrNotWindows) {
 		t.Errorf("应可通过 errors.Is 匹配 ErrNotWindows, got %v", err)
 	}
@@ -80,9 +74,7 @@ func TestInstallUpdate_InvalidPE_Sentinel(t *testing.T) {
 	}
 	p := makeFakeExe(t, "not a PE binary")
 	err := InstallUpdate(p)
-	if err == nil {
-		t.Fatal("非 PE 更新包应报错")
-	}
+	testutil.NotNil(t, err, "非 PE 更新包应报错")
 	if !errors.Is(err, ErrInvalidPackage) {
 		t.Errorf("应可通过 errors.Is 匹配 ErrInvalidPackage, got %v", err)
 	}

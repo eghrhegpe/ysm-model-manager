@@ -57,9 +57,7 @@ func TestFindGeometryInExtractedYSM_ModelMapExcludesArm(t *testing.T) {
 		"models/arm.geo.json":  geometryJSON("arm"),
 	})
 	model, _ := FindGeometryInExtractedYSM(ysmPath)
-	if model == nil {
-		t.Fatal("模型应为非 nil")
-	}
+	testutil.NotNil(t, model, "模型应为非 nil")
 	if len(model.Bones) != 1 || model.Bones[0].Name != "main" {
 		t.Errorf("应仅合并 main 骨骼, 得到 %d 根", len(model.Bones))
 	}
@@ -78,9 +76,7 @@ func TestFindGeometryInExtractedYSM_ModelArrayAllLoaded(t *testing.T) {
 		"models/extra.geo.json": geometryJSON("extra"),
 	})
 	model, _ := FindGeometryInExtractedYSM(ysmPath)
-	if model == nil {
-		t.Fatal("模型应为非 nil")
-	}
+	testutil.NotNil(t, model, "模型应为非 nil")
 	if len(model.Bones) != 2 {
 		t.Fatalf("应合并 2 根骨骼, 得到 %d", len(model.Bones))
 	}
@@ -115,9 +111,7 @@ func TestFindGeometryInExtractedYSM_TextureOrderFromYsm(t *testing.T) {
 		"textures/b.jpg":       "JPEGDATA-B",
 	})
 	model, texData := FindGeometryInExtractedYSM(ysmPath)
-	if model == nil {
-		t.Fatal("模型应为非 nil")
-	}
+	testutil.NotNil(t, model, "模型应为非 nil")
 	if len(texData) != 2 {
 		t.Fatalf("texData = %d, 期望 2", len(texData))
 	}
@@ -160,9 +154,7 @@ func TestFindGeometryInExtractedYSM_TextureSameDir(t *testing.T) {
 		"ignore.tga":    "TGADATA",
 	})
 	model, texData := FindGeometryInExtractedYSM(ysmPath)
-	if model == nil {
-		t.Fatal("模型应为非 nil")
-	}
+	testutil.NotNil(t, model, "模型应为非 nil")
 	if len(texData) != 2 {
 		t.Fatalf("同目录纹理应读 2 张（tga 不入同目录段）, 得到 %d", len(texData))
 	}
@@ -281,9 +273,7 @@ func TestFindGeometryInExtractedYSM_ModelMapExtraKeyMergeAndClamp(t *testing.T) 
 		"models/arm.geo.json":   geometryJSON("arm"),
 	})
 	model, _ := FindGeometryInExtractedYSM(ysmPath)
-	if model == nil {
-		t.Fatal("模型应为非 nil")
-	}
+	testutil.NotNil(t, model, "模型应为非 nil")
 	if len(model.Bones) != 2 {
 		t.Fatalf("应合并 main+extra 2 根骨骼（arm 排除）, 得到 %d", len(model.Bones))
 	}
@@ -339,9 +329,7 @@ func TestFindGeometryInExtractedYSM_TextureBackslashAndPartialOrder(t *testing.T
 		"textures/stray.png":   "PNGDATA-S",
 	})
 	model, texData := FindGeometryInExtractedYSM(ysmPath)
-	if model == nil {
-		t.Fatal("模型应为非 nil")
-	}
+	testutil.NotNil(t, model, "模型应为非 nil")
 	if len(texData) != 4 {
 		t.Fatalf("应读 4 张纹理, 得到 %d", len(texData))
 	}

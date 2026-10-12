@@ -64,9 +64,7 @@ func TestFindComponentsInExtractedYSM_PlaneSharedSkinNoGui(t *testing.T) {
 
 	// ① 合并版：TextureNames 不得含 background
 	geo, _ := FindGeometryInExtractedYSM(ysmPath)
-	if geo == nil {
-		t.Fatal("合并版解析失败")
-	}
+	testutil.NotNil(t, geo, "合并版解析失败")
 	for _, n := range geo.TextureNames {
 		if n == "background" {
 			t.Errorf("合并版把 gui/background.png 纳入纹理槽（texArr 污染）")
@@ -95,9 +93,7 @@ func TestFindComponentsInExtractedYSM_PlaneSharedSkinNoGui(t *testing.T) {
 			texSlot    int
 		}{c.SourceName, c.ComponentTextures, slot}
 	}
-	if plane == nil {
-		t.Fatal("plane 组件缺失（vehicles 声明模型应被补扫收集）")
-	}
+	testutil.NotNil(t, plane, "plane 组件缺失（vehicles 声明模型应被补扫收集）")
 	tex, ok := plane.compTex["plane"]
 	if !ok {
 		t.Fatalf("plane 组件应获 ComponentTextures=skin（共享皮肤），实际 %v", plane.compTex)

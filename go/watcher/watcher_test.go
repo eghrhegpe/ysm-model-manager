@@ -33,9 +33,7 @@ func TestNew(t *testing.T) {
 	repoDir := t.TempDir()
 	mcDir := filepath.Join(repoDir, "mc")
 	w := New(repoDir, mcDir, mockScanFunc)
-	if w == nil {
-		t.Fatal("New() = nil")
-	}
+	testutil.NotNil(t, w, "New() = nil")
 	if w.filesRoot != repoDir {
 		t.Errorf("filesRoot = %q", w.filesRoot)
 	}

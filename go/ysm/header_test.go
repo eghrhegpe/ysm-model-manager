@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // ====== hasTextHeader ======
@@ -287,9 +288,7 @@ func TestDetectYSGPHeader_Simple(t *testing.T) {
 	// detectYSGPHeader 只读取前 100 字节，<name> 值提取到换行符为止
 	path := writeTempFile(t, "YSGP\n--- [Metadata]\n<name>TestModel\n</name>\n")
 	h := detectYSGPHeader(path)
-	if h == nil {
-		t.Fatal("期望非 nil")
-	}
+	testutil.NotNil(t, h, "期望非 nil")
 	if !h.IsYSM {
 		t.Error("IsYSM 应为 true")
 	}
@@ -304,9 +303,7 @@ func TestDetectYSGPHeader_Simple(t *testing.T) {
 func TestDetectYSGPHeader_WithBOM(t *testing.T) {
 	path := writeTempFile(t, "\xef\xbb\xbfYSGP\n--- [Metadata]\n<name>BOMTest\n</name>\n")
 	h := detectYSGPHeader(path)
-	if h == nil {
-		t.Fatal("期望非 nil")
-	}
+	testutil.NotNil(t, h, "期望非 nil")
 	if h.Name != "BOMTest" {
 		t.Errorf("Name = %q, 期望 BOMTest", h.Name)
 	}
@@ -339,9 +336,7 @@ func TestDetectYSGPHeader_NameInAuthorSection(t *testing.T) {
 	// <name> 在 [Authors] 段内，不应被提取为模型名称
 	path := writeTempFile(t, "YSGP\n--- [Authors]\n<name>AuthorName</name>\n")
 	h := detectYSGPHeader(path)
-	if h == nil {
-		t.Fatal("期望非 nil")
-	}
+	testutil.NotNil(t, h, "期望非 nil")
 	if h.Name != "" {
 		t.Errorf("Name 应为空（在 Authors 段内）, 得到 %q", h.Name)
 	}

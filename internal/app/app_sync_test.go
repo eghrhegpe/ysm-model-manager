@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/internal/testutil"
 )
 
 // 未配置游戏根目录 → 必须返回 error，而非「空冲突报告」——
@@ -46,9 +47,7 @@ func TestDetectConflicts_NoInstance_ReturnsError(t *testing.T) {
 	a := repoApp(t, types.AppConfig{FilesRoot: base, McRoot: base})
 
 	_, err := a.DetectConflicts("ysm", "non-existent-instance")
-	if err == nil {
-		t.Fatal("错误响应必须返回非 nil error")
-	}
+	testutil.NotNil(t, err, "错误响应必须返回非 nil error")
 	// 进一步断言错误信息内容
 	if !strings.Contains(err.Error(), "未找到整合包") {
 		t.Errorf("错误信息应包含 '未找到整合包', got %q", err.Error())

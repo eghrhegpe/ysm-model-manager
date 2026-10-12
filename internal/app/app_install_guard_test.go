@@ -51,9 +51,7 @@ func migratedApp(t *testing.T, customRoots map[string]string) (*App, string) {
 func TestMoveToRecycle_RootRejected(t *testing.T) {
 	a, ysm := guardedApp(t)
 	err := a.MoveToRecycle(ysm)
-	if err == nil {
-		t.Fatal("MoveToRecycle(资源根) 应拒绝")
-	}
+	testutil.NotNil(t, err, "MoveToRecycle(资源根) 应拒绝")
 	if !strings.Contains(err.Error(), "资源根目录整体移入回收站") {
 		t.Fatalf("应提示根级拒绝, got %v", err)
 	}

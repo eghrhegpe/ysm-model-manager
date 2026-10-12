@@ -38,9 +38,7 @@ func TestFindGeometryInExtractedYSM_ExcludesArm(t *testing.T) {
 	if err != nil {
 		t.Fatalf("FindGeometryInExtractedYSM 失败: %v", err)
 	}
-	if model == nil {
-		t.Fatal("模型应为非 nil")
-	}
+	testutil.NotNil(t, model, "模型应为非 nil")
 	for _, b := range model.Bones {
 		if b.Name == "LeftArm" {
 			t.Error("arm 骨骼不应出现在结果中（第一人称手臂须排除）")
@@ -69,9 +67,7 @@ func TestFindGeometryInExtractedYSM_ArmMissing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("FindGeometryInExtractedYSM 失败: %v", err)
 	}
-	if model == nil {
-		t.Fatal("模型应为非 nil（main.json 应正常加载）")
-	}
+	testutil.NotNil(t, model, "模型应为非 nil（main.json 应正常加载）")
 	if len(model.Bones) != 1 || model.Bones[0].Name != "head" {
 		t.Errorf("应仅加载 main 骨骼，得到 %v", model.Bones)
 	}

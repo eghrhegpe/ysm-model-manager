@@ -170,18 +170,14 @@ func TestGetVoxelDataInContainer(t *testing.T) {
 	// .litematic 分支（默认）：Version-only root → Size [0,0,0] 空数据（合法）
 	gotL, errL := a.GetVoxelDataInContainer(p, "builds/tower.litematic", ".litematic")
 	testutil.NoError(t, errL, ".litematic 空数据不应报 error")
-	if gotL == nil {
-		t.Fatal(".litematic 空数据应返回非 nil")
-	}
+	testutil.NotNil(t, gotL, ".litematic 空数据应返回非 nil")
 	if gotL.Size != ([3]int{0, 0, 0}) {
 		t.Errorf("size 应为 [0,0,0]，实际 %v", gotL.Size)
 	}
 	// .schematic 分支：Width 2 Height 1 Length 1 → 1 个方块组
 	gotS, errS := a.GetVoxelDataInContainer(p, "maps/area.schematic", ".schematic")
 	testutil.NoError(t, errS, ".schematic 正常数据不应报 error")
-	if gotS == nil {
-		t.Fatal(".schematic 应返回非 nil")
-	}
+	testutil.NotNil(t, gotS, ".schematic 应返回非 nil")
 	if len(gotS.Groups) == 0 {
 		t.Errorf(".schematic 应有 1 个 stone 方块组，实际空 groups")
 	}

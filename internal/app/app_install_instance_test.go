@@ -6,6 +6,7 @@ import (
 
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/types/registry"
+	"ysm-model-manager/internal/testutil"
 )
 
 // GetSyncScanDirs 契约回归（i18n 修复）：返回结构化 warningCode/warningParams，
@@ -17,9 +18,7 @@ import (
 func TestGetSyncScanDirs_StructuredWarningContract(t *testing.T) {
 	a := repoApp(t, types.AppConfig{})
 	got, err := a.GetSyncScanDirs("litematic", "x")
-	if err == nil {
-		t.Fatal("空配置（未配置游戏根）应返回 error")
-	}
+	testutil.NotNil(t, err, "空配置（未配置游戏根）应返回 error")
 	if got.WarningCode != "" {
 		t.Errorf("空配置路径 warningCode 应为空串, got %q", got.WarningCode)
 	}

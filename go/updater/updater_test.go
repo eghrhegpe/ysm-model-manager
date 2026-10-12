@@ -329,9 +329,7 @@ func TestDownload_HashMismatch(t *testing.T) {
 	defer func() { ghProxyPrefixes = oldPrefixes }()
 
 	path, err := Download(server.URL+"/pkg.zip", "deadbeef")
-	if err == nil {
-		t.Fatal("hash 不匹配应报错")
-	}
+	testutil.NotNil(t, err, "hash 不匹配应报错")
 	if path != "" {
 		t.Error("校验失败时不应返回路径")
 	}
@@ -373,9 +371,7 @@ func TestDownload_HTTPError(t *testing.T) {
 
 	// hash 传非空：404 状态码检查先于下载，传任意非空保住 404 分支
 	path, err := Download(server.URL+"/pkg.zip", "deadbeef")
-	if err == nil {
-		t.Fatal("404 应返回错误（错误页不得当更新包）")
-	}
+	testutil.NotNil(t, err, "404 应返回错误（错误页不得当更新包）")
 	if path != "" {
 		t.Errorf("失败时不应返回临时文件路径，得到 %q", path)
 	}
@@ -448,9 +444,7 @@ func TestDownload_MultiSource_AllFail(t *testing.T) {
 	defer func() { ghProxyPrefixes = oldPrefixes }()
 
 	_, err := Download(direct.URL+"/pkg.zip", "deadbeef")
-	if err == nil {
-		t.Fatal("全部源失败应报错")
-	}
+	testutil.NotNil(t, err, "全部源失败应报错")
 	if !strings.Contains(err.Error(), "个源均失败") {
 		t.Errorf("错误信息应聚合源数: %v", err)
 	}
@@ -534,9 +528,7 @@ func TestCheck_APIError(t *testing.T) {
 	defer server.Close()
 
 	_, err := CheckWithClient(server.Client(), server.URL, "1.0.0")
-	if err == nil {
-		t.Fatal("API 错误应返回错误")
-	}
+	testutil.NotNil(t, err, "API 错误应返回错误")
 	if !strings.Contains(err.Error(), "rate limit") {
 		t.Errorf("错误信息应包含 GitHub message, got %v", err)
 	}

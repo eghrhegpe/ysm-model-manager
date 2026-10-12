@@ -167,7 +167,5 @@ func TestResolve_EmptyFiles(t *testing.T) {
 	}()
 	files, err := b.Decode([]byte("x"), 5*time.Second)
 	testutil.NoError(t, err, "Decode")
-	if files == nil {
-		t.Fatal("空文件集应返回非 nil 切片")
-	}
+	testutil.NotNil(t, files, "空文件集应返回非 nil 切片")
 }

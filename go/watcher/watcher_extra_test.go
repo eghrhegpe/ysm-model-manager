@@ -233,9 +233,7 @@ func TestStopClearsDebounceTimer(t *testing.T) {
 	w.mu.Lock()
 	left := w.debounce
 	w.mu.Unlock()
-	if left != nil {
-		t.Fatal("debounce timer reference not cleared after Stop")
-	}
+	testutil.Nil(t, left, "debounce timer reference not cleared after Stop")
 }
 
 // TestSyncAllEmptyRepoShortCircuit 有整合包但仓库扫描为空 → 短路返回，不进入

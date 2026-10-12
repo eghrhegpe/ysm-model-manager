@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // mergeGeo 返回单骨骼单方块的合法 geometry，texture_width/height 可自定义、cube.texture=i
@@ -35,9 +36,7 @@ func TestMergeBehavior_CubeTexDimsFromOwnFileMaxTexSize(t *testing.T) {
 		"models/b.geo.json": mergeGeo("boneB", 128, 64, 1),
 	})
 	geo, _, _, _ := parseModelFromEntries(entries, "zip")
-	if geo == nil {
-		t.Fatal("模型不应为 nil")
-	}
+	testutil.NotNil(t, geo, "模型不应为 nil")
 	// geo 级尺寸取最大
 	if geo.TexWidth != 128 || geo.TexHeight != 64 {
 		t.Fatalf("geo TexWidth/Height = %d×%d, 期望 128×64（取最大）", geo.TexWidth, geo.TexHeight)
@@ -75,9 +74,7 @@ func TestMergeBehavior_L1SubModelTexSlotClampedToPngs(t *testing.T) {
 	})
 	pngsCount := 1
 	geo, pngs, _, _ := parseModelFromEntries(entries, "zip")
-	if geo == nil {
-		t.Fatal("模型不应为 nil")
-	}
+	testutil.NotNil(t, geo, "模型不应为 nil")
 	if len(pngs) != pngsCount {
 		t.Fatalf("pngs = %d, 期望 %d", len(pngs), pngsCount)
 	}

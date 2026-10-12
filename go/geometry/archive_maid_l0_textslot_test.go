@@ -29,9 +29,7 @@ func TestL0_TexSlot_SharedTexture(t *testing.T) {
 		"assets/touhou/textures/flandre.png":    "FLANDRE",
 	})
 	model, pngs, _ := ParseFromZip(data, int64(len(data)))
-	if model == nil {
-		t.Fatal("模型不应为 nil")
-	}
+	testutil.NotNil(t, model, "模型不应为 nil")
 	if len(model.SubModels) != 3 {
 		t.Fatalf("SubModels = %d, 期望 3", len(model.SubModels))
 	}
@@ -70,9 +68,7 @@ func TestL0_TexSlot_ModelIdInfer(t *testing.T) {
 		"assets/mypack/textures/entity/heroine.png": "HEROINE",
 	})
 	model, _, _ := ParseFromZip(data, int64(len(data)))
-	if model == nil {
-		t.Fatal("模型不应为 nil")
-	}
+	testutil.NotNil(t, model, "模型不应为 nil")
 	if len(model.SubModels) != 2 {
 		t.Fatalf("SubModels = %d, 期望 2", len(model.SubModels))
 	}
@@ -107,9 +103,7 @@ func TestL0_TexSlot_MissingTexture_NoPanic(t *testing.T) {
 		"assets/ns/textures/b.png":    "B-PNG",
 	})
 	model, _, _ := ParseFromZip(data, int64(len(data)))
-	if model == nil {
-		t.Fatal("模型不应为 nil")
-	}
+	testutil.NotNil(t, model, "模型不应为 nil")
 	if len(model.SubModels) != 2 {
 		t.Fatalf("SubModels = %d, 期望 2", len(model.SubModels))
 	}
@@ -150,9 +144,7 @@ func TestL0_TexSlot_MixedCaseEntries(t *testing.T) {
 		"assets/mypack/Textures/Entity/Heroine.png": "HEROINE",
 	})
 	model, pngs, _ := ParseFromZip(data, int64(len(data)))
-	if model == nil {
-		t.Fatal("模型不应为 nil")
-	}
+	testutil.NotNil(t, model, "模型不应为 nil")
 	if len(model.SubModels) != 2 {
 		t.Fatalf("SubModels = %d, 期望 2", len(model.SubModels))
 	}

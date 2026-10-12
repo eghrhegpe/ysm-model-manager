@@ -69,9 +69,7 @@ func TestInstall_Hardlink(t *testing.T) {
 	si, err := os.Stat(src)
 	testutil.NoError(t, err)
 	di, err := os.Stat(dst)
-	if err != nil {
-		t.Fatal("硬链接目标未创建")
-	}
+	testutil.Nil(t, err, "硬链接目标未创建")
 	if !os.SameFile(si, di) {
 		t.Fatal("目标不是指向源文件的硬链接")
 	}
@@ -129,9 +127,7 @@ func TestInstall_Symlink(t *testing.T) {
 	}
 	dst := filepath.Join(custom, filepath.Base(src))
 	li, err := os.Lstat(dst)
-	if err != nil {
-		t.Fatal("符号链接目标未创建")
-	}
+	testutil.Nil(t, err, "符号链接目标未创建")
 	if li.Mode()&os.ModeSymlink == 0 {
 		t.Fatal("目标不是符号链接")
 	}
@@ -210,9 +206,7 @@ func TestInstallDir_Hardlink(t *testing.T) {
 	si, err := os.Stat(srcFile)
 	testutil.NoError(t, err)
 	di, err := os.Stat(dstFile)
-	if err != nil {
-		t.Fatal("目录硬链接目标未创建")
-	}
+	testutil.Nil(t, err, "目录硬链接目标未创建")
 	if !os.SameFile(si, di) {
 		t.Fatal("目录安装的 pmx 不是硬链接")
 	}
@@ -346,17 +340,13 @@ func TestSymlinkErr_Errno(t *testing.T) {
 func TestInstall_EmptySrc(t *testing.T) {
 	_, custom, _, _ := setupTestDirs(t)
 	err := Install("", custom, "/tmp", "copy")
-	if err == nil {
-		t.Fatal("空源路径应返回错误")
-	}
+	testutil.NotNil(t, err, "空源路径应返回错误")
 }
 
 func TestInstall_EmptyCustomDir(t *testing.T) {
 	repo, _, _, src := setupTestDirs(t)
 	err := Install(src, "", repo, "copy")
-	if err == nil {
-		t.Fatal("空目标路径应返回错误")
-	}
+	testutil.NotNil(t, err, "空目标路径应返回错误")
 }
 
 func TestInstall_SrcOutsideRepo(t *testing.T) {
@@ -367,9 +357,7 @@ func TestInstall_SrcOutsideRepo(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	err := Install(outsideFile, custom, repo, "copy")
-	if err == nil {
-		t.Fatal("仓库外文件应返回错误")
-	}
+	testutil.NotNil(t, err, "仓库外文件应返回错误")
 }
 
 func TestInstall_UnsupportedExt(t *testing.T) {
@@ -379,9 +367,7 @@ func TestInstall_UnsupportedExt(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	err := Install(badFile, custom, repo, "copy")
-	if err == nil {
-		t.Fatal("不支持的文件类型应返回错误")
-	}
+	testutil.NotNil(t, err, "不支持的文件类型应返回错误")
 }
 
 func TestInstallDir_Copy(t *testing.T) {
@@ -418,17 +404,13 @@ func TestInstallDir_Copy(t *testing.T) {
 func TestInstallDir_EmptySrc(t *testing.T) {
 	_, custom, _, _ := setupTestDirs(t)
 	err := InstallDir("", custom, "/tmp", "copy", "EntityPlayer")
-	if err == nil {
-		t.Fatal("空源目录应返回错误")
-	}
+	testutil.NotNil(t, err, "空源目录应返回错误")
 }
 
 func TestInstallDir_EmptyDst(t *testing.T) {
 	repo, _, _, _ := setupTestDirs(t)
 	err := InstallDir(repo, "", repo, "copy", "EntityPlayer")
-	if err == nil {
-		t.Fatal("空目标目录应返回错误")
-	}
+	testutil.NotNil(t, err, "空目标目录应返回错误")
 }
 
 func TestIsValidRepoRoot(t *testing.T) {
@@ -465,9 +447,7 @@ func TestCopyFile_SrcMissing(t *testing.T) {
 	missing := filepath.Join(t.TempDir(), "不存在.ysm")
 
 	_, err := CopyFile(missing, custom)
-	if err == nil {
-		t.Fatal("源文件不存在应返回错误")
-	}
+	testutil.NotNil(t, err, "源文件不存在应返回错误")
 
 	// 失败路径不得在目标目录残留半截文件
 	dst := filepath.Join(custom, filepath.Base(missing))
@@ -481,9 +461,7 @@ func TestInstall_CopySrcMissing(t *testing.T) {
 	missing := filepath.Join(repo, "不存在.ysm")
 
 	err := Install(missing, custom, repo, "copy")
-	if err == nil {
-		t.Fatal("源文件不存在应返回错误")
-	}
+	testutil.NotNil(t, err, "源文件不存在应返回错误")
 
 	dst := filepath.Join(custom, filepath.Base(missing))
 	if _, statErr := os.Stat(dst); !os.IsNotExist(statErr) {
@@ -497,9 +475,7 @@ func TestInstallDir_SrcEqualsDst(t *testing.T) {
 	repo, _, _, _ := setupTestDirs(t)
 
 	err := InstallDir(repo, repo, repo, "copy", "")
-	if err == nil {
-		t.Fatal("srcDir==dstDir 应拒绝（死递归守卫）")
-	}
+	testutil.NotNil(t, err, "srcDir==dstDir 应拒绝（死递归守卫）")
 }
 
 // TestInstallDir_DstInsideSrc 死递归守卫：finalDst 位于 srcDir 内时拒绝
@@ -511,9 +487,7 @@ func TestInstallDir_DstInsideSrc(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	err := InstallDir(repo, inner, repo, "copy", "")
-	if err == nil {
-		t.Fatal("finalDst 位于 srcDir 内应拒绝（死递归守卫）")
-	}
+	testutil.NotNil(t, err, "finalDst 位于 srcDir 内应拒绝（死递归守卫）")
 }
 
 // ====== EvalSymlinks 二次校验守卫（P2 补测）======

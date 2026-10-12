@@ -23,13 +23,9 @@ func TestFileInventory_Classified(t *testing.T) {
 		"avatar/wmdj.jpg":                          `fake-jpg`,
 	})
 	geo, _, _ := ParseFromZip(data, int64(len(data)))
-	if geo == nil {
-		t.Fatal("ParseFromZip 返回 nil")
-	}
+	testutil.NotNil(t, geo, "ParseFromZip 返回 nil")
 	inv := geo.FileInventory
-	if inv == nil {
-		t.Fatal("期望 geo.FileInventory 非 nil（parseModelFromEntries 挂载）")
-	}
+	testutil.NotNil(t, inv, "期望 geo.FileInventory 非 nil（parseModelFromEntries 挂载）")
 	checkInv(t, inv)
 }
 
@@ -59,9 +55,7 @@ func TestFileInventory_ComponentsPath(t *testing.T) {
 // 直接测 classifyFileInventory：无 ysm.json 声明的文件归属（含旧格式几何识别）
 func TestClassifyFileInventory_Direct(t *testing.T) {
 	inv := classifyFileInventory(nil)
-	if inv == nil {
-		t.Fatal("classifyFileInventory 不应返回 nil")
-	}
+	testutil.NotNil(t, inv, "classifyFileInventory 不应返回 nil")
 	// 空 entries → 全空
 	if len(inv.Animations) != 0 || len(inv.Controllers) != 0 || len(inv.LangFiles) != 0 {
 		t.Errorf("空 entries 应全空: %+v", inv)
@@ -82,13 +76,9 @@ func TestParseLegacyMetadata(t *testing.T) {
 }`,
 	})
 	geo, _, _ := ParseFromZip(data, int64(len(data)))
-	if geo == nil {
-		t.Fatal("无 ysm.json 旧格式包应仍能解析出 geo（L1 枚举）")
-	}
+	testutil.NotNil(t, geo, "无 ysm.json 旧格式包应仍能解析出 geo（L1 枚举）")
 	m := geo.Metadata
-	if m == nil {
-		t.Fatal("期望 info.json 元数据挂载")
-	}
+	testutil.NotNil(t, m, "期望 info.json 元数据挂载")
 	if m.Name != "旧格式测试模型" {
 		t.Errorf("Name = %q, 期望 旧格式测试模型", m.Name)
 	}
@@ -110,9 +100,7 @@ func TestParseLegacyMetadata_NoInfoJSON(t *testing.T) {
 		"textures/skin.png": tinyPNG(),
 	})
 	geo, _, _ := ParseFromZip(data, int64(len(data)))
-	if geo == nil {
-		t.Fatal("geo 应为非 nil")
-	}
+	testutil.NotNil(t, geo, "geo 应为非 nil")
 	if geo.Metadata != nil {
 		t.Errorf("无 info.json 应 nil, 实际 %+v", geo.Metadata)
 	}
@@ -127,9 +115,7 @@ func TestParseLegacyMetadata_NewFormatNotOverridden(t *testing.T) {
 		"info.json":         `{"name":"旧格式名"}`,
 	})
 	geo, _, _ := ParseFromZip(data, int64(len(data)))
-	if geo == nil {
-		t.Fatal("geo 应为非 nil")
-	}
+	testutil.NotNil(t, geo, "geo 应为非 nil")
 	if geo.Metadata == nil || geo.Metadata.Name != "新格式名" {
 		t.Errorf("新格式 metadata 应优先（info.json 不覆盖）, 实际 %+v", geo.Metadata)
 	}
@@ -143,9 +129,7 @@ func TestParseLegacyMetadata_Malformed(t *testing.T) {
 		"info.json":         "not-json{{{",
 	})
 	geo, _, _ := ParseFromZip(data, int64(len(data)))
-	if geo == nil {
-		t.Fatal("geo 应为非 nil（畸形 info.json 不阻断）")
-	}
+	testutil.NotNil(t, geo, "geo 应为非 nil（畸形 info.json 不阻断）")
 	if geo.Metadata != nil {
 		t.Errorf("畸形 info.json 应 nil, 实际 %+v", geo.Metadata)
 	}
@@ -160,9 +144,7 @@ func TestParseLegacyMetadata_NestedInfoJSONIgnored(t *testing.T) {
 		"textures/skin_info.json": `{"name":"皮肤信息"}`,
 	})
 	geo, _, _ := ParseFromZip(data, int64(len(data)))
-	if geo == nil {
-		t.Fatal("geo 应为非 nil")
-	}
+	testutil.NotNil(t, geo, "geo 应为非 nil")
 	if geo.Metadata != nil {
 		t.Errorf("嵌套 skin_info.json 不应挂载, 实际 %+v", geo.Metadata)
 	}
@@ -178,9 +160,7 @@ func TestParseLegacyMetadata_EmptyPlaceholder_Continues(t *testing.T) {
 		"INFO.json":         `{"name":"大写有效"}`,
 	})
 	geo, _, _ := ParseFromZip(data, int64(len(data)))
-	if geo == nil {
-		t.Fatal("geo 应为非 nil")
-	}
+	testutil.NotNil(t, geo, "geo 应为非 nil")
 	if geo.Metadata == nil || geo.Metadata.Name != "大写有效" {
 		t.Errorf("空占位后应继续找到有效候选, 实际 %+v", geo.Metadata)
 	}

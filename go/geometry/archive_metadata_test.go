@@ -67,9 +67,7 @@ func parseZipWithMetadata(t *testing.T, ysmJSON string) *parseResult {
 		"textures/skin.png": tinyPNG(),
 	})
 	geo, pngs, _ := ParseFromZip(data, int64(len(data)))
-	if geo == nil {
-		t.Fatal("ParseFromZip 返回 nil（fixture 无效）")
-	}
+	testutil.NotNil(t, geo, "ParseFromZip 返回 nil（fixture 无效）")
 	return &parseResult{geo: geo, pngs: pngs}
 }
 
@@ -82,9 +80,7 @@ type parseResult struct {
 func TestMetadata_Parsed(t *testing.T) {
 	r := parseZipWithMetadata(t, metadataYsmJSON)
 	m := r.geo.Metadata
-	if m == nil {
-		t.Fatal("期望 geo.Metadata 非 nil")
-	}
+	testutil.NotNil(t, m, "期望 geo.Metadata 非 nil")
 	if m.Name != "Wine Fox（酒狐）" {
 		t.Errorf("Name = %q, 期望 %q", m.Name, "Wine Fox（酒狐）")
 	}
@@ -141,9 +137,7 @@ func TestMetadata_PartialNameOnly(t *testing.T) {
   "files": { "player": { "model": { "main": "models/main.json" }, "texture": [ "textures/skin.png" ] } }
 }`)
 	m := r.geo.Metadata
-	if m == nil {
-		t.Fatal("期望 Metadata 非 nil")
-	}
+	testutil.NotNil(t, m, "期望 Metadata 非 nil")
 	if m.Name != "只名字" {
 		t.Errorf("Name = %q, 期望 只名字", m.Name)
 	}
@@ -180,9 +174,7 @@ func TestMetadata_TipsOnly_Mounts(t *testing.T) {
   "files": { "player": { "model": { "main": "models/main.json" }, "texture": [ "textures/skin.png" ] } }
 }`)
 	m := r.geo.Metadata
-	if m == nil {
-		t.Fatal("仅 tips 的 metadata 应挂载（谓词含 Tips）")
-	}
+	testutil.NotNil(t, m, "仅 tips 的 metadata 应挂载（谓词含 Tips）")
 	if m.Tips == "" {
 		t.Error("期望 Tips 非空")
 	}

@@ -91,9 +91,7 @@ func TestReadPackMeta_DirWithThumb(t *testing.T) {
 func TestReadPackMeta_NotFound(t *testing.T) {
 	dir := t.TempDir()
 	_, _, err := ReadPackMeta(dir)
-	if err == nil {
-		t.Fatal("ReadPackMeta(empty dir) = nil, want error")
-	}
+	testutil.NotNil(t, err, "ReadPackMeta(empty dir) = nil, want error")
 }
 
 func TestReadPackMeta_InvalidJSON(t *testing.T) {
@@ -103,9 +101,7 @@ func TestReadPackMeta_InvalidJSON(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	_, _, err := ReadPackMeta(dir)
-	if err == nil {
-		t.Fatal("ReadPackMeta(invalid JSON) = nil, want error")
-	}
+	testutil.NotNil(t, err, "ReadPackMeta(invalid JSON) = nil, want error")
 }
 
 // writeZipPack 构造 ZIP 资源包（pack.mcmeta + 可选 pack.png），返回文件路径

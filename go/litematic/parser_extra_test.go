@@ -9,6 +9,7 @@ package litematic
 import (
 	"reflect"
 	"testing"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 func TestParseSchematicSummary_FullFields(t *testing.T) {
@@ -34,9 +35,7 @@ func TestParseSchematicSummary_FullFields(t *testing.T) {
 	)
 	path := writeGzNbt(t, root)
 	result := ParseSchematicSummary(path)
-	if result == nil {
-		t.Fatal("期望非 nil")
-	}
+	testutil.NotNil(t, result, "期望非 nil")
 	if result["version"] != 2 || result["dataVersion"] != 2566 {
 		t.Errorf("version/dataVersion = %v/%v, 期望 2/2566", result["version"], result["dataVersion"])
 	}
@@ -81,9 +80,7 @@ func TestParseSchematicSummary_NoPaletteStatsFromBlocks(t *testing.T) {
 	)
 	path := writeGzNbt(t, root)
 	result := ParseSchematicSummary(path)
-	if result == nil {
-		t.Fatal("期望非 nil")
-	}
+	testutil.NotNil(t, result, "期望非 nil")
 	if result["blockCount"] != 5 {
 		t.Errorf("blockCount = %v, 期望 5", result["blockCount"])
 	}
@@ -133,9 +130,7 @@ func TestParseSchematicSummary_MissingMetadata(t *testing.T) {
 	)
 	path := writeGzNbt(t, root)
 	result := ParseSchematicSummary(path)
-	if result == nil {
-		t.Fatal("缺 Metadata 但仍有 version/size, 期望非 nil")
-	}
+	testutil.NotNil(t, result, "缺 Metadata 但仍有 version/size, 期望非 nil")
 	if _, ok := result["author"]; ok {
 		t.Errorf("缺 Metadata 不应有 author, 得到 %v", result["author"])
 	}
@@ -158,9 +153,7 @@ func TestParseSchematicSummary_MissingBlocks(t *testing.T) {
 	)
 	path := writeGzNbt(t, root)
 	result := ParseSchematicSummary(path)
-	if result == nil {
-		t.Fatal("期望非 nil")
-	}
+	testutil.NotNil(t, result, "期望非 nil")
 	if _, ok := result["blockCount"]; ok {
 		t.Errorf("缺 Blocks 不应有 blockCount, 得到 %v", result["blockCount"])
 	}
@@ -178,9 +171,7 @@ func TestParseSchematicSummary_MissingPalette(t *testing.T) {
 	)
 	path := writeGzNbt(t, root)
 	result := ParseSchematicSummary(path)
-	if result == nil {
-		t.Fatal("期望非 nil")
-	}
+	testutil.NotNil(t, result, "期望非 nil")
 	if result["paletteMax"] != 7 {
 		t.Errorf("paletteMax = %v, 期望 7", result["paletteMax"])
 	}
@@ -203,9 +194,7 @@ func TestParseSchematicSummary_TileEntitiesAndEntities(t *testing.T) {
 	)
 	path := writeGzNbt(t, root)
 	result := ParseSchematicSummary(path)
-	if result == nil {
-		t.Fatal("期望非 nil")
-	}
+	testutil.NotNil(t, result, "期望非 nil")
 	if result["tileEntityCount"] != 1 {
 		t.Errorf("tileEntityCount = %v, 期望 1", result["tileEntityCount"])
 	}

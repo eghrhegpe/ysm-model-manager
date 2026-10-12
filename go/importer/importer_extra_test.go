@@ -67,9 +67,7 @@ func TestCopyDir_OverwriteExisting(t *testing.T) {
 
 func TestCopyDir_SrcMissing(t *testing.T) {
 	err := copyDir("/nonexistent/path", t.TempDir())
-	if err == nil {
-		t.Fatal("源目录不存在应报错")
-	}
+	testutil.NotNil(t, err, "源目录不存在应报错")
 }
 
 func TestCopyDir_EmptyDir(t *testing.T) {

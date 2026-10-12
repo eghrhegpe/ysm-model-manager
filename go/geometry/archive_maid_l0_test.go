@@ -52,9 +52,7 @@ func maidEntriesMixed() []rawZipEntry {
 func TestMaidL0_ManifestPriority(t *testing.T) {
 	data := makeZipRaw(t, maidEntriesMixed())
 	model, pngs, _ := ParseFromZip(data, int64(len(data)))
-	if model == nil {
-		t.Fatal("L0 清单合法时模型不应为 nil")
-	}
+	testutil.NotNil(t, model, "L0 清单合法时模型不应为 nil")
 	// 断言 1：只收了 2 个 geometry（reimu + marisa），junk 被排除
 	// → Bones 聚合：reimu 1 bone + marisa 1 bone = 2
 	if model.BoneCount != 2 {
@@ -89,9 +87,7 @@ func TestMaidL0_MissingFallback_L1(t *testing.T) {
 	}
 	data := makeZipRaw(t, entries)
 	model, pngs, _ := ParseFromZip(data, int64(len(data)))
-	if model == nil {
-		t.Fatal("L1 兜底时模型不应为 nil")
-	}
+	testutil.NotNil(t, model, "L1 兜底时模型不应为 nil")
 	// L1：所有 geometry 都被收 → 2 bone
 	if model.BoneCount != 2 {
 		t.Errorf("L1 兜底 BoneCount = %d, 期望 2", model.BoneCount)
@@ -115,9 +111,7 @@ func TestMaidL0_EmptyModelArray_Fallback(t *testing.T) {
 	}
 	data := makeZipRaw(t, entries)
 	model, _, _ := ParseFromZip(data, int64(len(data)))
-	if model == nil {
-		t.Fatal("L0 空清单时应回退 L1，模型不应为 nil")
-	}
+	testutil.NotNil(t, model, "L0 空清单时应回退 L1，模型不应为 nil")
 	if model.BoneCount != 1 {
 		t.Errorf("L0 空清单回退 BoneCount = %d, 期望 1", model.BoneCount)
 	}
@@ -135,9 +129,7 @@ func TestMaidL0_MalformedJSON_Fallback(t *testing.T) {
 	}
 	data := makeZipRaw(t, entries)
 	model, _, _ := ParseFromZip(data, int64(len(data)))
-	if model == nil {
-		t.Fatal("L0 畸形 JSON 时应回退 L1，模型不应为 nil")
-	}
+	testutil.NotNil(t, model, "L0 畸形 JSON 时应回退 L1，模型不应为 nil")
 	if model.BoneCount != 1 {
 		t.Errorf("L0 畸形 JSON 回退 BoneCount = %d, 期望 1", model.BoneCount)
 	}
@@ -169,9 +161,7 @@ func TestMaidL0_ModelListKey(t *testing.T) {
 	}
 	data := makeZipRaw(t, entries)
 	model, pngs, _ := ParseFromZip(data, int64(len(data)))
-	if model == nil {
-		t.Fatal("model_list[] 应被识别为 L0 清单，模型不应为 nil")
-	}
+	testutil.NotNil(t, model, "model_list[] 应被识别为 L0 清单，模型不应为 nil")
 	// 2 model_list 条目 × 每个 1 bone = 2，unused 被排除
 	if model.BoneCount != 2 {
 		t.Errorf("BoneCount = %d, 期望 2（aru + kayoko）", model.BoneCount)
@@ -218,9 +208,7 @@ func TestMaidL0_MultiNs_PickLongestManifest(t *testing.T) {
 	}
 	data := makeZipRaw(t, entries)
 	model, pngs, _ := ParseFromZip(data, int64(len(data)))
-	if model == nil {
-		t.Fatal("主包有 3 条目清单应命中")
-	}
+	testutil.NotNil(t, model, "主包有 3 条目清单应命中")
 	// 选对了主命名空间 → BoneCount=3（reimu+marisa+flandre），不是 1
 	if model.BoneCount != 3 {
 		t.Errorf("BoneCount = %d, 期望 3（应选清单最长的主命名空间 touhou，不是 credits）", model.BoneCount)
@@ -259,9 +247,7 @@ func TestMaidL0_ModelIdPathInfer(t *testing.T) {
 	}
 	data := makeZipRaw(t, entries)
 	model, pngs, _ := ParseFromZip(data, int64(len(data)))
-	if model == nil {
-		t.Fatal("路径推断 + basename 后备应命中")
-	}
+	testutil.NotNil(t, model, "路径推断 + basename 后备应命中")
 	if model.BoneCount != 2 {
 		t.Errorf("BoneCount = %d, 期望 2（hero + heroine，junk 排除）", model.BoneCount)
 	}
@@ -282,9 +268,7 @@ func TestMaidL0_ModelIdPathInfer(t *testing.T) {
 func TestParseFromZipEntry(t *testing.T) {
 	data := makeZipRaw(t, maidEntriesMixed())
 	full, _, _ := ParseFromZip(data, int64(len(data)))
-	if full == nil {
-		t.Fatal("合并解析应为非 nil")
-	}
+	testutil.NotNil(t, full, "合并解析应为非 nil")
 	if len(full.SubModels) != 2 {
 		t.Fatalf("SubModels = %d, 期望 2（L0）", len(full.SubModels))
 	}
@@ -398,9 +382,7 @@ func TestMaidL0_BasenameFallback_NonTemplatePath(t *testing.T) {
 	}
 	data := makeZipRaw(t, entries)
 	model, pngs, _ := ParseFromZip(data, int64(len(data)))
-	if model == nil {
-		t.Fatal("basename 回扫应命中，模型不应为 nil")
-	}
+	testutil.NotNil(t, model, "basename 回扫应命中，模型不应为 nil")
 	if model.BoneCount != 1 {
 		t.Errorf("BoneCount = %d, 期望 1", model.BoneCount)
 	}
@@ -434,9 +416,7 @@ func TestMaidL0_ModelNsPrefixedExplicitPath(t *testing.T) {
 	}
 	data := makeZipRaw(t, entries)
 	model, pngs, _ := ParseFromZip(data, int64(len(data)))
-	if model == nil {
-		t.Fatal("带 nsBase 前缀的显式路径应命中，模型不应为 nil")
-	}
+	testutil.NotNil(t, model, "带 nsBase 前缀的显式路径应命中，模型不应为 nil")
 	if model.BoneCount != 1 {
 		t.Errorf("BoneCount = %d, 期望 1", model.BoneCount)
 	}
@@ -468,9 +448,7 @@ func TestMaidL0_ModelForeignNs_TreatedAsModelId(t *testing.T) {
 	}
 	data := makeZipRaw(t, entries)
 	model, pngs, _ := ParseFromZip(data, int64(len(data)))
-	if model == nil {
-		t.Fatal("外来命名空间冒号写法应经 model_id 推断命中，模型不应为 nil")
-	}
+	testutil.NotNil(t, model, "外来命名空间冒号写法应经 model_id 推断命中，模型不应为 nil")
 	if model.BoneCount != 1 {
 		t.Errorf("BoneCount = %d, 期望 1", model.BoneCount)
 	}

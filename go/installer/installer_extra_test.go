@@ -28,9 +28,7 @@ func TestLinkOrCopy_Success(t *testing.T) {
 
 func TestLinkOrCopy_SrcMissing(t *testing.T) {
 	err := linkOrCopy("/nonexistent/path.ysm", t.TempDir())
-	if err == nil {
-		t.Fatal("missing source should error")
-	}
+	testutil.NotNil(t, err, "missing source should error")
 }
 
 // ====== symlinkOrCopy ======
@@ -95,9 +93,7 @@ func TestCopyFileLocked_SameFile(t *testing.T) {
 
 func TestCopyFileLocked_SrcMissing(t *testing.T) {
 	_, err := CopyFileLocked("/nonexistent/path.ysm", t.TempDir())
-	if err == nil {
-		t.Fatal("missing source should error")
-	}
+	testutil.NotNil(t, err, "missing source should error")
 }
 
 // TestSameSource_LinkType 链接类型判定（P2 审计修复回归）：

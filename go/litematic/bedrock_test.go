@@ -39,9 +39,7 @@ func TestParseBedrockStructure_DataVersionAndJunkSubLevel(t *testing.T) {
 		map[string]any{"local_bounds": bedrockBoundsMap(0, 0, 0, 0, 0, 0)},
 	}
 	result := parseBedrockStructure(root, subLevels)
-	if result == nil {
-		t.Fatal("含 local_bounds 应非 nil")
-	}
+	testutil.NotNil(t, result, "含 local_bounds 应非 nil")
 	if result["dataVersion"] != 2566 {
 		t.Errorf("dataVersion = %v, 期望 2566", result["dataVersion"])
 	}
@@ -64,9 +62,7 @@ func TestParseBedrockStructure_EntityCountsAndJunkBlockElement(t *testing.T) {
 		"block_entities": []any{map[string]any{"id": "chest"}},
 	}
 	result := parseBedrockStructure(map[string]any{}, []any{sub})
-	if result == nil {
-		t.Fatal("期望非 nil")
-	}
+	testutil.NotNil(t, result, "期望非 nil")
 	if result["blockCount"] != 2 {
 		t.Errorf("blockCount = %v, 期望 2（含非 compound 元素）", result["blockCount"])
 	}
@@ -91,9 +87,7 @@ func TestParseBedrockStructure_EmptyEntityListsOmitKeys(t *testing.T) {
 		"block_entities": []any{},
 	}
 	result := parseBedrockStructure(map[string]any{}, []any{sub})
-	if result == nil {
-		t.Fatal("有 local_bounds 即应非 nil")
-	}
+	testutil.NotNil(t, result, "有 local_bounds 即应非 nil")
 	for _, key := range []string{"blockCount", "entityCount", "tileEntityCount"} {
 		if _, ok := result[key]; ok {
 			t.Errorf("计数为 0 不应写入 %s: %v", key, result[key])
@@ -128,9 +122,7 @@ func TestParseBedrockStructure_BlockCountAloneKeepsResult(t *testing.T) {
 		"block_palette": []any{bedrockPaletteEntry("minecraft:stone")},
 	}
 	result := parseBedrockStructure(map[string]any{}, []any{sub})
-	if result == nil {
-		t.Fatal("有 blockCount + paletteStats 时不应返回 nil")
-	}
+	testutil.NotNil(t, result, "有 blockCount + paletteStats 时不应返回 nil")
 	if _, ok := result["size"]; ok {
 		t.Errorf("无 local_bounds 不应有 size: %v", result["size"])
 	}
@@ -144,9 +136,7 @@ func TestParseBedrockStructure_EmptyLocalBoundsStillCountsAsBounds(t *testing.T)
 	// 空 compound → 全零包围盒 → size = [1 1 1]
 	sub := map[string]any{"local_bounds": map[string]any{}}
 	result := parseBedrockStructure(map[string]any{}, []any{sub})
-	if result == nil {
-		t.Fatal("local_bounds 存在即视为有包围盒，应非 nil")
-	}
+	testutil.NotNil(t, result, "local_bounds 存在即视为有包围盒，应非 nil")
 	sz, ok := result["size"].([]int)
 	if !ok || sz[0] != 1 || sz[1] != 1 || sz[2] != 1 {
 		t.Errorf("size = %v, 期望 [1 1 1]", result["size"])
@@ -160,9 +150,7 @@ func TestParseBedrockStructure_BoundsAggregationSemantics(t *testing.T) {
 	subFirst := map[string]any{"local_bounds": bedrockBoundsMap(5, 5, 5, 100, 100, 100)}
 	subPartial := map[string]any{"local_bounds": map[string]any{"min_x": int32(9), "max_x": int32(200)}}
 	result := parseBedrockStructure(map[string]any{}, []any{subNoBounds, subFirst, subPartial})
-	if result == nil {
-		t.Fatal("期望非 nil")
-	}
+	testutil.NotNil(t, result, "期望非 nil")
 	sz, ok := result["size"].([]int)
 	if !ok {
 		t.Fatalf("size 缺失或类型错误: %v", result["size"])
@@ -197,9 +185,7 @@ func TestParseBedrockStructure_PaletteReferenceGuards(t *testing.T) {
 		},
 	}
 	result := parseBedrockStructure(map[string]any{}, []any{sub})
-	if result == nil {
-		t.Fatal("期望非 nil")
-	}
+	testutil.NotNil(t, result, "期望非 nil")
 	if result["blockCount"] != 7 {
 		t.Errorf("blockCount = %v, 期望 7", result["blockCount"])
 	}
@@ -223,9 +209,7 @@ func TestParseNbtStructure_BedrockDataVersionEndToEnd(t *testing.T) {
 		nbtList("sub_levels", 0x0A, sub),
 	)
 	result := ParseNbtStructure(writeGzNbt(t, root))
-	if result == nil {
-		t.Fatal("基岩版结构应解析成功，得到 nil")
-	}
+	testutil.NotNil(t, result, "基岩版结构应解析成功，得到 nil")
 	if result["dataVersion"] != 2566 {
 		t.Errorf("dataVersion = %v, 期望 2566", result["dataVersion"])
 	}

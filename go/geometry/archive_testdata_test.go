@@ -108,9 +108,7 @@ func TestComponentsFromRealSample(t *testing.T) {
 func TestTextureNamesFromRealSample(t *testing.T) {
 	data := loadTestdataZip(t)
 	model, pngs, _ := ParseFromZip(data, int64(len(data)))
-	if model == nil {
-		t.Fatal("模型应为非 nil")
-	}
+	testutil.NotNil(t, model, "模型应为非 nil")
 	if len(pngs) != 2 {
 		t.Fatalf("pngs = %d, 期望 2（真实样本 2 张纹理）", len(pngs))
 	}

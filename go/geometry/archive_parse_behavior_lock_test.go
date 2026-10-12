@@ -67,9 +67,7 @@ func TestParseFromEntries_L0GeoFilesExcludesJunk(t *testing.T) {
 	})
 
 	geo, _, _, geoFiles := parseModelFromEntries(entries, "zip")
-	if geo == nil {
-		t.Fatal("模型不应为 nil")
-	}
+	testutil.NotNil(t, geo, "模型不应为 nil")
 	if got, want := geoFileBases(geoFiles), []string{"reimu.geo.json", "marisa.geo.json"}; !cmp.Equal(got, want) {
 		t.Fatalf("geoFiles = %v, 期望 %v（L0 生效应排除清单外 junk 且按声明序）", got, want)
 	}
@@ -99,9 +97,7 @@ func TestParseFromEntries_L0EmptyHit_KeepL1GeoFiles(t *testing.T) {
 	})
 
 	geo, _, _, geoFiles := parseModelFromEntries(entries, "zip")
-	if geo == nil {
-		t.Fatal("模型不应为 nil")
-	}
+	testutil.NotNil(t, geo, "模型不应为 nil")
 	// geoFiles 回退：保留 L1 全量收集
 	if got := geoFileBases(geoFiles); !cmp.Equal(got, []string{"x.geo.json"}) {
 		t.Fatalf("geoFiles = %v, 期望 [x.geo.json]（L0 空命中回退保留 L1 收集）", got)

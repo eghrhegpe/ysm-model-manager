@@ -24,9 +24,7 @@ func TestOpenGzRoot_EmptyFile(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "empty.litematic")
 	_ = os.WriteFile(path, []byte{}, 0644)
 	_, err := openGzRoot(path)
-	if err == nil {
-		t.Fatal("空文件应报错")
-	}
+	testutil.NotNil(t, err, "空文件应报错")
 	// 验证错误类型：应是 io.EOF 或 gzip 相关错误
 	if !errors.Is(err, io.EOF) && err.Error()[:4] != "gzip" {
 		t.Logf("错误类型: %v (预期 io.EOF 或 gzip 错误)", err)
@@ -44,9 +42,7 @@ func TestOpenGzRoot_TruncatedGzip(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "trunc.litematic")
 	_ = os.WriteFile(path, truncated, 0644)
 	_, err := openGzRoot(path)
-	if err == nil {
-		t.Fatal("截断 gzip 应报错")
-	}
+	testutil.NotNil(t, err, "截断 gzip 应报错")
 }
 
 func TestOpenGzRoot_OnlyGzipHeader(t *testing.T) {
@@ -54,9 +50,7 @@ func TestOpenGzRoot_OnlyGzipHeader(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "hdr.litematic")
 	_ = os.WriteFile(path, []byte{0x1F, 0x8B}, 0644)
 	_, err := openGzRoot(path)
-	if err == nil {
-		t.Fatal("仅 gzip header 应报错")
-	}
+	testutil.NotNil(t, err, "仅 gzip header 应报错")
 }
 
 // =========================================================================
@@ -68,9 +62,7 @@ func TestReadRootCompound_UnknownRootTag(t *testing.T) {
 	data := []byte{0xFF, 0x00, 0x00}
 	path := writeGzNbt(t, data)
 	_, err := openGzRoot(path)
-	if err == nil {
-		t.Fatal("未知 root tag 类型应报错")
-	}
+	testutil.NotNil(t, err, "未知 root tag 类型应报错")
 }
 
 func TestReadRootCompound_RootEndTag(t *testing.T) {
@@ -78,9 +70,7 @@ func TestReadRootCompound_RootEndTag(t *testing.T) {
 	data := []byte{0x00}
 	path := writeGzNbt(t, data)
 	_, err := openGzRoot(path)
-	if err == nil {
-		t.Fatal("根 end tag 应报错")
-	}
+	testutil.NotNil(t, err, "根 end tag 应报错")
 	// 验证错误包含 "nbt" 前缀（来自 openGzRootFromReader 的 wrapping）
 	if err.Error()[:3] != "nbt" {
 		t.Logf("错误类型: %v (预期 nbt 前缀)", err)
@@ -98,9 +88,7 @@ func TestReadRootCompound_TruncatedCompound(t *testing.T) {
 	}
 	path := writeGzNbt(t, data)
 	_, err := openGzRoot(path)
-	if err == nil {
-		t.Fatal("截断 compound（缺 end）应报错")
-	}
+	testutil.NotNil(t, err, "截断 compound（缺 end）应报错")
 }
 
 func TestReadRootCompound_FloatDataShort(t *testing.T) {
@@ -113,9 +101,7 @@ func TestReadRootCompound_FloatDataShort(t *testing.T) {
 	}
 	path := writeGzNbt(t, data)
 	_, err := openGzRoot(path)
-	if err == nil {
-		t.Fatal("float 数据不足应报错")
-	}
+	testutil.NotNil(t, err, "float 数据不足应报错")
 }
 
 func TestReadRootCompound_ByteArrayNegativeLength(t *testing.T) {
@@ -128,9 +114,7 @@ func TestReadRootCompound_ByteArrayNegativeLength(t *testing.T) {
 	}
 	path := writeGzNbt(t, data)
 	_, err := openGzRoot(path)
-	if err == nil {
-		t.Fatal("byteArray 负长度应报错")
-	}
+	testutil.NotNil(t, err, "byteArray 负长度应报错")
 }
 
 func TestReadRootCompound_LongArrayNegativeLength(t *testing.T) {
@@ -143,9 +127,7 @@ func TestReadRootCompound_LongArrayNegativeLength(t *testing.T) {
 	}
 	path := writeGzNbt(t, data)
 	_, err := openGzRoot(path)
-	if err == nil {
-		t.Fatal("longArray 负长度应报错")
-	}
+	testutil.NotNil(t, err, "longArray 负长度应报错")
 }
 
 // =========================================================================

@@ -155,9 +155,7 @@ func TestInstallDirRecursive_ReadDirFail(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	err := installDirRecursive(srcFile, filepath.Join(mcCustomDir(t), "model"), "copy", "", "", nil)
-	if err == nil {
-		t.Fatal("srcDir 是文件时 ReadDir 应报错")
-	}
+	testutil.NotNil(t, err, "srcDir 是文件时 ReadDir 应报错")
 }
 
 func TestInstallDirRecursive_NestedSubdir(t *testing.T) {
@@ -217,9 +215,7 @@ func TestInstallDirRecursive_PartialFailure(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	err := installDirRecursive(srcDir, finalDst, "copy", "", "", nil)
-	if err == nil {
-		t.Fatal("应返回错误, got nil")
-	}
+	testutil.NotNil(t, err, "应返回错误, got nil")
 	// MkdirAll 失败是 fatal，不应包含「部分失败」（partial 语义）
 	if strings.Contains(err.Error(), "部分失败") {
 		t.Fatalf("MkdirAll 失败应返回 fatal 而非 partial, got %v", err)
@@ -639,9 +635,7 @@ func TestInstallDir_RollbackRemoveFail(t *testing.T) {
 	// dstDir 含 NUL 字节：os.Stat/RemoveAll/MkdirAll 均以非 NotExist 错误失败（win32 ERROR_INVALID_NAME）
 	dstDir := filepath.Join(custom, "x\x00y")
 	err := InstallDir(srcDir, dstDir, repo, "copy", "")
-	if err == nil {
-		t.Fatal("无效目标路径应安装失败")
-	}
+	testutil.NotNil(t, err, "无效目标路径应安装失败")
 	if !strings.Contains(err.Error(), "回滚失败") {
 		t.Fatalf("回滚失败应返回复合错误, got %v", err)
 	}
@@ -869,9 +863,7 @@ func TestInstallDir_ReadDirFailRollback(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	err := InstallDir(srcFile, custom, repo, "copy", "")
-	if err == nil {
-		t.Fatal("srcDir 是文件时安装应报错")
-	}
+	testutil.NotNil(t, err, "srcDir 是文件时安装应报错")
 	finalDst := filepath.Join(custom, "notdir.ysm")
 	if _, statErr := os.Stat(finalDst); !os.IsNotExist(statErr) {
 		t.Fatalf("新建 finalDst 应被回滚删除: %v", statErr)

@@ -34,9 +34,7 @@ func TestBuildRegionInfo_Valid(t *testing.T) {
 	region := makeMockRegion(t, 3, 3, 3, []string{"air", "minecraft:stone"}, []int64{0, 0})
 	info, err := buildRegionInfo(region)
 	testutil.NoError(t, err, "合法 region 不应 error")
-	if info == nil {
-		t.Fatal("期望非 nil")
-	}
+	testutil.NotNil(t, info, "期望非 nil")
 	if info.sizeX != 3 || info.sizeY != 3 || info.sizeZ != 3 {
 		t.Errorf("size = %d,%d,%d, 期望 3,3,3", info.sizeX, info.sizeY, info.sizeZ)
 	}
@@ -100,9 +98,7 @@ func TestBuildRegionInfo_NegativeSize(t *testing.T) {
 	}
 	info, err := buildRegionInfo(region)
 	testutil.NoError(t, err, "负 size 应标准化成功, 实际 error")
-	if info == nil {
-		t.Fatal("期望非 nil")
-	}
+	testutil.NotNil(t, info, "期望非 nil")
 	if info.sizeX != 3 || info.sizeY != 3 || info.sizeZ != 3 {
 		t.Errorf("size 应标准化为正: %d,%d,%d", info.sizeX, info.sizeY, info.sizeZ)
 	}
@@ -284,9 +280,7 @@ func TestParseSchematicSummary_Valid(t *testing.T) {
 	}
 
 	result := ParseSchematicSummary(path)
-	if result == nil {
-		t.Fatal("期望非 nil")
-	}
+	testutil.NotNil(t, result, "期望非 nil")
 	if result["version"] != 2 {
 		t.Errorf("version = %v, 期望 2", result["version"])
 	}
@@ -357,9 +351,7 @@ func TestParseNbtStructure_Valid(t *testing.T) {
 	}
 
 	result := ParseNbtStructure(path)
-	if result == nil {
-		t.Fatal("期望非 nil")
-	}
+	testutil.NotNil(t, result, "期望非 nil")
 	if result["dataVersion"] != 2566 {
 		t.Errorf("dataVersion = %v, 期望 2566", result["dataVersion"])
 	}
@@ -396,9 +388,7 @@ func TestParseNbtStructure_SizeGuard(t *testing.T) {
 
 	t.Run("valid positive", func(t *testing.T) {
 		result := ParseNbtStructure(mkSizeNbt([]any{int32(3), int32(4), int32(5)}))
-		if result == nil {
-			t.Fatal("期望非 nil")
-		}
+		testutil.NotNil(t, result, "期望非 nil")
 		got, ok := result["size"].([]int)
 		if !ok || got[0] != 3 || got[1] != 4 || got[2] != 5 {
 			t.Errorf("size = %v, 期望 [3 4 5]", result["size"])
@@ -503,9 +493,7 @@ func TestParseNbtStructure_BedrockSubLevels(t *testing.T) {
 	path := makeBedrockStructure(t, sub1, sub2)
 
 	result := ParseNbtStructure(path)
-	if result == nil {
-		t.Fatal("基岩版 sub_levels 结构应解析成功，得到 nil")
-	}
+	testutil.NotNil(t, result, "基岩版 sub_levels 结构应解析成功，得到 nil")
 	// 全局包围盒：min 取各子结构最小、max 取最大 → size = (max-min+1)
 	size, ok := result["size"].([]int)
 	if !ok {
@@ -544,9 +532,7 @@ func TestParseNbtStructure_BedrockEmptyBlocks(t *testing.T) {
 	path := makeBedrockStructure(t, sub)
 
 	result := ParseNbtStructure(path)
-	if result == nil {
-		t.Fatal("含 local_bounds 的 sub_levels 应解析成功，得到 nil")
-	}
+	testutil.NotNil(t, result, "含 local_bounds 的 sub_levels 应解析成功，得到 nil")
 	if _, ok := result["size"]; !ok {
 		t.Errorf("size 缺失（local_bounds 应推导包围盒）: %v", result)
 	}
@@ -565,9 +551,7 @@ func TestParseNbtStructure_BedrockPaletteIdOutOfRange(t *testing.T) {
 	path := makeBedrockStructure(t, sub)
 
 	result := ParseNbtStructure(path)
-	if result == nil {
-		t.Fatal("越界 palette_id 不应使解析失败")
-	}
+	testutil.NotNil(t, result, "越界 palette_id 不应使解析失败")
 	stats, ok := result["paletteStats"].([]registry.LitematicBlockStat)
 	if !ok {
 		t.Fatalf("paletteStats 缺失: %v", result)

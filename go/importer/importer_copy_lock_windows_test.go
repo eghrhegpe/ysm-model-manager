@@ -79,9 +79,7 @@ func TestDirectoryCopyImport_CopyDirErrorLocked(t *testing.T) {
 
 	dstDir := filepath.Join(base, "out")
 	err := NewDirectoryCopy("EntityPlayer").Import(modelDir, dstDir)
-	if err == nil {
-		t.Fatal("copyDir 失败应返回错误消息")
-	}
+	testutil.NotNil(t, err, "copyDir 失败应返回错误消息")
 	if !strings.Contains(err.Error(), "复制文件夹失败") {
 		t.Fatalf("错误消息 %q 应包含「复制文件夹失败」", err)
 	}

@@ -125,9 +125,7 @@ func TestSimpleCopyImporter_Import_FileTargetIsDir(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	err := NewSimpleCopy("test").Import(srcFile, dstDir)
-	if err == nil {
-		t.Fatal("目标为目录时文件导入应报错")
-	}
+	testutil.NotNil(t, err, "目标为目录时文件导入应报错")
 	if n := globCount(t, dstDir, ".import-*.tmp"); n != 0 {
 		t.Fatalf("失败后不应有 .import-*.tmp 残留，实际 %d 个", n)
 	}
@@ -644,9 +642,7 @@ func TestWriteFileAtomic_ErrorCodes(t *testing.T) {
 			testutil.NoError(t, err)
 		}
 		err := WriteFileAtomic(dirTarget, []byte("x"))
-		if err == nil {
-			t.Fatal("目标为目录时落地应失败")
-		}
+		testutil.NotNil(t, err, "目标为目录时落地应失败")
 		if code := appErrCode(t, err); code != "WRITE_FAILED" {
 			t.Fatalf("错误码 = %q, 期望 WRITE_FAILED", code)
 		}

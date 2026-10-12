@@ -126,9 +126,7 @@ func TestParseMeta_Errors(t *testing.T) {
 			path := filepath.Join(t.TempDir(), "test.litematic")
 			tt.makeFile(t, path)
 			_, err := ParseMeta(path)
-			if err == nil {
-				t.Fatal("应报错")
-			}
+			testutil.NotNil(t, err, "应报错")
 			if tt.wantErrContains != "" && !strings.Contains(err.Error(), tt.wantErrContains) {
 				t.Errorf("错误信息应包含 %q, got: %v", tt.wantErrContains, err)
 			}

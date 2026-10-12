@@ -313,9 +313,7 @@ func TestBuildRegionInfo_Int16BoundaryAccepted(t *testing.T) {
 	upper := makeMockRegion(t, 32768, 1, 1, names, longs)
 	info, err := buildRegionInfo(upper)
 	testutil.NoError(t, err, "origin 0 + size 32768（末位 x=32767）应被接受")
-	if info == nil {
-		t.Fatal("期望非 nil")
-	}
+	testutil.NotNil(t, info, "期望非 nil")
 	if info.sizeX != 32768 || info.originX != 0 {
 		t.Errorf("sizeX/originX = %d/%d, want 32768/0", info.sizeX, info.originX)
 	}

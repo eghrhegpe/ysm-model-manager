@@ -81,9 +81,7 @@ func TestSimpleCopyImporter_RootSrc(t *testing.T) {
 	// copyDirRecursive(tmpDir, tmpDir/dest/<uuid>)——tmpDir 包含目标目录，
 	// 若无守卫则死递归。修复后返回错误。
 	err := importer.Import(tmpDir, dstDir)
-	if err == nil {
-		t.Fatal("copyDirRecursive 应检测到 src 包含 dst 并拒绝")
-	}
+	testutil.NotNil(t, err, "copyDirRecursive 应检测到 src 包含 dst 并拒绝")
 
 }
 
@@ -115,9 +113,7 @@ func TestDirectoryCopyImporter_NonExistentSrc(t *testing.T) {
 
 	importer := NewDirectoryCopy("ysm")
 	err := importer.Import(filepath.Join(tmpDir, "nonexistent.ysm"), dstDir)
-	if err == nil {
-		t.Fatal("DirectoryCopyImporter 应报告不存在源")
-	}
+	testutil.NotNil(t, err, "DirectoryCopyImporter 应报告不存在源")
 
 }
 
@@ -156,9 +152,7 @@ func TestDirectoryCopyImporter_Import_SrcEqualsDst(t *testing.T) {
 	importer := NewDirectoryCopy("EntityPlayer")
 	// dstDir 为 modelDir 的父目录 → dstPath == srcDir
 	err := importer.Import(modelDir, tmpDir)
-	if err == nil {
-		t.Fatal("DirectoryCopyImporter 应拒绝 src==dst（源与目标相同）")
-	}
+	testutil.NotNil(t, err, "DirectoryCopyImporter 应拒绝 src==dst（源与目标相同）")
 	// 源模型文件夹不得被破坏/替换
 	if data, err := os.ReadFile(filepath.Join(modelDir, "model.pmx")); err != nil || string(data) != "pmx" {
 		t.Fatalf("源模型目录不应被破坏: %v %q", err, string(data))
@@ -181,9 +175,7 @@ func TestDirectoryCopyImporter_Import_DstInsideSrc(t *testing.T) {
 	importer := NewDirectoryCopy("EntityPlayer")
 	dstDir := filepath.Join(modelDir, "imports")
 	err := importer.Import(modelDir, dstDir)
-	if err == nil {
-		t.Fatal("DirectoryCopyImporter 应拒绝目标位于源文件夹内")
-	}
+	testutil.NotNil(t, err, "DirectoryCopyImporter 应拒绝目标位于源文件夹内")
 	if data, err := os.ReadFile(filepath.Join(modelDir, "model.pmx")); err != nil || string(data) != "pmx" {
 		t.Fatalf("源模型目录不应被破坏: %v %q", err, string(data))
 	}

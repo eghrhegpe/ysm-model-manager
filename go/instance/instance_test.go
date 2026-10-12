@@ -427,9 +427,7 @@ func TestBuildSyncItems_DirLevelChildren(t *testing.T) {
 			break
 		}
 	}
-	if packItem == nil {
-		t.Fatal("未找到 packA 条目")
-	}
+	testutil.NotNil(t, packItem, "未找到 packA 条目")
 
 	// 验证 packA 是 Diverged 状态（子文件有 missing/optional 差异）
 	if packItem.Status != types.SyncStatusDiverged {
@@ -596,9 +594,7 @@ func TestBuildSyncItems_DirLevelNoChildrenForMissing(t *testing.T) {
 			break
 		}
 	}
-	if packItem == nil {
-		t.Fatal("未找到 packB 条目")
-	}
+	testutil.NotNil(t, packItem, "未找到 packB 条目")
 
 	// packB 应是 Missing 状态（整体缺失，不降级为 diverged）
 	if packItem.Status != types.SyncStatusMissing {
@@ -651,9 +647,7 @@ func TestBuildSyncItems_MissingDirRepoPreview(t *testing.T) {
 			break
 		}
 	}
-	if packItem == nil {
-		t.Fatal("未找到 [Almeta_owx]【galgame】 条目")
-	}
+	testutil.NotNil(t, packItem, "未找到 [Almeta_owx]【galgame】 条目")
 	// 整体缺失 → 保持 missing（不降级 diverged）；isDir 可展开
 	if packItem.Status != types.SyncStatusMissing {
 		t.Errorf("缺失真模型夹应保持 missing，实际 %q", packItem.Status)
@@ -774,9 +768,7 @@ func TestBuildSyncItems_NestedContainer_PathDirection(t *testing.T) {
 			break
 		}
 	}
-	if instC == nil {
-		t.Fatal("未找到 inst_only_container 容器")
-	}
+	testutil.NotNil(t, instC, "未找到 inst_only_container 容器")
 	if instC.Status != types.SyncStatusOptional {
 		t.Errorf("纯实例独有容器应 optional（可拉取），实际 %q", instC.Status)
 	}
@@ -792,9 +784,7 @@ func TestBuildSyncItems_NestedContainer_PathDirection(t *testing.T) {
 			break
 		}
 	}
-	if repoC == nil {
-		t.Fatal("未找到 repo_only_container 容器")
-	}
+	testutil.NotNil(t, repoC, "未找到 repo_only_container 容器")
 	if repoC.Status != types.SyncStatusMissing && repoC.Status != types.SyncStatusDiverged {
 		t.Errorf("仓库独有容器应 missing/diverged，实际 %q", repoC.Status)
 	}

@@ -244,9 +244,7 @@ func TestLogger_NewLogger(t *testing.T) {
 	// NewLogger 使用注入的配置目录，不能保证写入成功
 	// 只验证不 panic
 	l := NewLogger(t.TempDir())
-	if l == nil {
-		t.Fatal("NewLogger 应返回非 nil")
-	}
+	testutil.NotNil(t, l, "NewLogger 应返回非 nil")
 	_ = l
 }
 

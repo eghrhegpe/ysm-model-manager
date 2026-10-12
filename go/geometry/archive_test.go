@@ -80,9 +80,7 @@ func TestParseFromZip_Valid(t *testing.T) {
 		"tex1.png":       pngData,
 	})
 	model, pngs, _ := ParseFromZip(data, int64(len(data)))
-	if model == nil {
-		t.Fatal("模型应为非 nil")
-	}
+	testutil.NotNil(t, model, "模型应为非 nil")
 	if model.BoneCount != 1 || model.CubeCount != 1 {
 		t.Errorf("BoneCount/CubeCount = %d/%d, 期望 1/1", model.BoneCount, model.CubeCount)
 	}
@@ -113,9 +111,7 @@ func TestParseFromZip_ModelAsObjects(t *testing.T) {
 		"tex_b.png":          pngB + "B",
 	})
 	model, pngs, _ := ParseFromZip(data, int64(len(data)))
-	if model == nil {
-		t.Fatal("模型应为非 nil")
-	}
+	testutil.NotNil(t, model, "模型应为非 nil")
 	if model.BoneCount != 1 {
 		t.Errorf("BoneCount = %d, 期望 1", model.BoneCount)
 	}
@@ -143,9 +139,7 @@ func TestParseFromZip_ModelAsMap(t *testing.T) {
 		"tex1.png":      pngData,
 	})
 	model, _, _ := ParseFromZip(data, int64(len(data)))
-	if model == nil {
-		t.Fatal("模型应为非 nil")
-	}
+	testutil.NotNil(t, model, "模型应为非 nil")
 	if model.BoneCount != 2 {
 		t.Errorf("BoneCount = %d, 期望 2（两个模型合并）", model.BoneCount)
 	}
@@ -172,9 +166,7 @@ func TestParseFromZip_ModelAsString(t *testing.T) {
 		"tex1.png":       pngData,
 	})
 	model, _, _ := ParseFromZip(data, int64(len(data)))
-	if model == nil {
-		t.Fatal("模型应为非 nil")
-	}
+	testutil.NotNil(t, model, "模型应为非 nil")
 	if model.BoneCount != 1 {
 		t.Errorf("BoneCount = %d, 期望 1", model.BoneCount)
 	}
@@ -199,9 +191,7 @@ func TestParseFromZip_TextureAsObjects(t *testing.T) {
 		"tex2.png":       png2,
 	})
 	model, pngs, names := ParseFromZip(data, int64(len(data)))
-	if model == nil {
-		t.Fatal("模型应为非 nil")
-	}
+	testutil.NotNil(t, model, "模型应为非 nil")
 	if len(pngs) != 2 {
 		t.Errorf("期望 2 个 PNG, 得到 %d", len(pngs))
 	}
@@ -236,9 +226,7 @@ func TestParseFromZip_AnimationJSON(t *testing.T) {
 		"tex1.png":             pngData,
 	})
 	model, _, _ := ParseFromZip(data, int64(len(data)))
-	if model == nil {
-		t.Fatal("模型应为非 nil，animation JSON 不应影响解析")
-	}
+	testutil.NotNil(t, model, "模型应为非 nil，animation JSON 不应影响解析")
 	if model.BoneCount != 1 {
 		t.Errorf("BoneCount = %d, 期望 1", model.BoneCount)
 	}
@@ -294,9 +282,7 @@ func TestParseFromZip_TextureNames(t *testing.T) {
 		"tex_b.png":      string(makePngData(t, "tex_b")),
 	})
 	model, pngs, _ := ParseFromZip(data, int64(len(data)))
-	if model == nil {
-		t.Fatal("模型应为非 nil")
-	}
+	testutil.NotNil(t, model, "模型应为非 nil")
 	if len(pngs) != 2 {
 		t.Fatalf("pngs = %d, 期望 2", len(pngs))
 	}
@@ -373,9 +359,7 @@ func TestParseFromZip_MaidModelNamespaceFilter(t *testing.T) {
 	}
 	data := makeZipRaw(t, entries)
 	model, pngs, _ := ParseFromZip(data, int64(len(data)))
-	if model == nil {
-		t.Fatal("应解析成功")
-	}
+	testutil.NotNil(t, model, "应解析成功")
 	// ns_a 在条目序中先于 ns_b → 应只加载 ns_a（骨骼名固定为 head）
 	if model.BoneCount != 1 {
 		t.Errorf("BoneCount = %d, 期望 1（仅首个 namespace ns_a）", model.BoneCount)
@@ -412,9 +396,7 @@ func TestParseFromZip_NonMaidModelNoFilter(t *testing.T) {
 		"models/b.json": validGeoJSON,
 	})
 	model, _, _ := ParseFromZip(data, int64(len(data)))
-	if model == nil {
-		t.Fatal("应解析成功")
-	}
+	testutil.NotNil(t, model, "应解析成功")
 	// 两个 JSON 的骨骼都合并
 	if model.BoneCount != 2 {
 		t.Errorf("BoneCount = %d, 期望 2（无 maid-model 不过滤）", model.BoneCount)

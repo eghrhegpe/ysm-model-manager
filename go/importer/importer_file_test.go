@@ -138,9 +138,7 @@ func TestImportFromBase64_WriteFailureCleanup(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	_, _, err := ImportFromBase64("blocker.ysm", b64, ImportOptions{Overwrite: true}, rootFn, logFn)
-	if err == nil {
-		t.Fatal("目标为目录时导入应失败")
-	}
+	testutil.NotNil(t, err, "目标为目录时导入应失败")
 	// 结构化错误码：落地阶段失败 → WRITE_FAILED
 	var ae types.AppError
 	if !errors.As(err, &ae) {

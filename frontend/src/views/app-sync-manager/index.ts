@@ -225,17 +225,20 @@ export class AppSyncManager extends WebComponentBase {
    * 并发重入防护：仅首次 `_init` 绑定 click handler，后续 `_init` 仅更新回调引用。
    */
   private _bindDelegate(self: SyncManagerSelf): void {
+    // 回调契约单点构造（2026-10 收口：原首绑与重入分支各自抄一份同构字面量——
+    // 两份漂移会让「重入后行为变样」且无编译错误兜底）
+    const cb = {
+      doRender: () => this._doRender(),
+      doPerformOp: (op: "push" | "pull", path: string) =>
+        performSingleOp(self, op, path, {
+          doLoadData: () => loadData(self),
+          doRender: () => this._doRender(),
+          doEmitStats: () => bus.emit("stats:refresh"),
+        }),
+    };
     if (!this._eventsBound) {
       this._clickHandler = null;
-      const unsub = bindDelegatedEvents(self, {
-        doRender: () => this._doRender(),
-        doPerformOp: (op, path) =>
-          performSingleOp(self, op, path, {
-            doLoadData: () => loadData(self),
-            doRender: () => this._doRender(),
-            doEmitStats: () => bus.emit("stats:refresh"),
-          }),
-      });
+      const unsub = bindDelegatedEvents(self, cb);
       this._eventsBound = true;
       // ⚠️ 不进 _unsubs 桶：_init 顶部会对 _unsubs 全量 unsub（re-init 清理 bus 订阅），
       // click 委托若进桶会在第二次 _init 被连带销毁（_clickHandler=null + _cbRef=undefined），
@@ -246,15 +249,7 @@ export class AppSyncManager extends WebComponentBase {
     }
     // 后续 _init：仅更新 cbRef 中的回调引用，不重复 addEventListener
     if (self._cbRef) {
-      self._cbRef.cb = {
-        doRender: () => this._doRender(),
-        doPerformOp: (op, path) =>
-          performSingleOp(self, op, path, {
-            doLoadData: () => loadData(self),
-            doRender: () => this._doRender(),
-            doEmitStats: () => bus.emit("stats:refresh"),
-          }),
-      };
+      self._cbRef.cb = cb;
     }
   }
 

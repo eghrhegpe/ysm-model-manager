@@ -3,6 +3,7 @@
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { requireMcRoot } from "@/features/require-mcroot.ts";
+import { logWarn } from "@/utils/base/primitives/log.ts";
 import { copyText } from "@/utils/dom/clipboard.ts";
 import { modalConfirm } from "@/utils/dom/modal-confirm.ts";
 import { toast, toastEmptyRtype, toastError } from "@/utils/dom/toast.ts";
@@ -58,7 +59,9 @@ export function registerInstanceOps(unsubs: Array<() => void>): void {
               totalFiles += files.length;
             }
           } catch (e) {
-            console.warn(`[instance-ops] ListFileNames 失败 (${labels[i]}):`, e);
+            // 走统一告警通道（log.ts）：console.warn 直调绕开环形日志 sink，与 ADR-044
+            // 「排查往环形日志面板塞」口径不符——部分目录读失败时清单照发，但线索必须可查
+            logWarn("instance-ops", `ListFileNames 失败 (${labels[i]}):`, e);
           }
         }
 

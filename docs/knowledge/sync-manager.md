@@ -125,7 +125,7 @@ status: active
 ### `app-sync-manager`（逐文件级）
 - **状态呈现**：`loadData` 拉取 `SyncItem[]` → `applyFilter`（`tabStatus` 把 `diverged` 折叠进 `missing` tab）→ `flattenRows` 展平为定高行数组 → `renderSlice` 窗口化渲染（只注入可见行 ± 缓冲）
 - **单文件 push/pull**：`performSingleOp` 顺序守卫 + `_singleBusy` 按钮视觉
-- **摘要栏**：`GetSyncScanDirs` 显示实际扫描目录 + `scan_dir_wide` 告警
+- **摘要栏**：`GetSyncScanDirs` 显示实际扫描目录 + `scan_dir_wide` 告警；该调用失败属非关键路径（用户侧静默，`logWarn` 留痕），但**主加载失败时须清 `_scanDirs`**（2026-10：否则摘要栏残留上一任目标的目录对，与失败态列表说两套话）
 - **a11y 模板语义（2026 复测补缺）**：状态筛选栏 = `role="radiogroup"` + 六个 `role="radio"`（`aria-checked` + roving tabindex 由 `statusTabHTML` 模板随重渲染自动迁移）；目录行箭头为原生 `button` + `aria-expanded` + 名称标签；装饰图标 `aria-hidden`；加载态 `role="status"`；错误 div `role="alert"`。键盘半边 = `bindDelegatedEvents` 的单点 keydown 委托（方向键循环移动即激活、Home/End 只移焦点——仓内先例 `tabs-shell.ts` diag 子切换同口径），契约 `tpl.test.ts`（属性字符串）+ `a11y.dom.test.ts`（键盘行为）
 
 ### `app-sidebar`（整包级）

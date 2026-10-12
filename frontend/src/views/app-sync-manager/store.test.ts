@@ -135,16 +135,23 @@ describe("store.loadData", () => {
     });
   });
 
-  it("GetSyncScanDirs 失败 → 静默降级不 toast，主数据仍在", async () => {
+  it("GetSyncScanDirs 失败 → 静默降级不 toast（但环形日志留痕）", async () => {
     const app = {
       GetInstanceSyncStatus: vi.fn().mockResolvedValue([{ path: "a", name: "a", status: "synced", type: "ysm" }]),
       GetSyncScanDirs: vi.fn().mockRejectedValue(new Error("boom")),
     };
     getAppMock.mockResolvedValue(app as never);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     const self = makeSelf({ _selectedType: "ysm" });
     await loadData(self);
     expect(busEmit).not.toHaveBeenCalled();
     expect(self._allItems).toHaveLength(1);
+    // 用户侧不打扰（无 toast/bus），但排障线索必须留：logWarn 经 console.warn 透出
+    expect(warn).toHaveBeenCalledWith(
+      "[sync-manager] GetSyncScanDirs 失败（目录摘要降级）:",
+      expect.any(Error),
+    );
+    warn.mockRestore();
   });
 
   it("主加载失败 → 空数组降级 + warn toast", async () => {
@@ -153,5 +160,18 @@ describe("store.loadData", () => {
     await loadData(self);
     expect(self._allItems).toEqual([]);
     expect(busEmit).toHaveBeenCalledTimes(1);
+  });
+
+  // 2026-10 修复回归锁：失败时必须连扫描目录一起清，否则摘要栏继续显示上一任目标
+  //（列表失败态 + 路径指旧实例 = 两套话），用户会误判失败的是那对目录。
+  it("主加载失败 → 清空 _scanDirs（不残留上一任实例的目录摘要）", async () => {
+    getAppMock.mockRejectedValue(new Error("boom"));
+    const self = makeSelf({
+      _selectedType: "ysm",
+      _scanDirs: { ysm: { global: "/old/global", instance: "/old/inst" } },
+    });
+    await loadData(self);
+    expect(self._allItems).toEqual([]);
+    expect(self._scanDirs).toEqual({});
   });
 });

@@ -31,7 +31,7 @@
 | `repo:rtype-changed` | 1 | 6 | 0 | 0 | ✅ |
 | `repo:search-creator` | 2 | 1 | 0 | 0 | ✅ |
 | `repo:subdir-changed` | 1 | 1 | 0 | 0 | ✅ |
-| `stats:refresh` | 26 | 2 | 0 | 0 | ✅ |
+| `stats:refresh` | 25 | 2 | 0 | 0 | ✅ |
 | `sync:download:done` | 2 | 2 | 0 | 0 | ✅ |
 | `sync:download:missing` | 1 | 1 | 0 | 0 | ✅ |
 | `sync:toggle:status` | 3 | 1 | 0 | 0 | ✅ |
@@ -153,7 +153,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| registerInstanceOps | `frontend/src/features/pack-ops/instance-ops.ts` | 90 |
+| registerInstanceOps | `frontend/src/features/pack-ops/instance-ops.ts` | 93 |
 
 ### `instance:export-list`
 
@@ -165,7 +165,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| registerInstanceOps | `frontend/src/features/pack-ops/instance-ops.ts` | 17 |
+| registerInstanceOps | `frontend/src/features/pack-ops/instance-ops.ts` | 18 |
 
 ### `lang:changed`
 
@@ -272,7 +272,7 @@
 | initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 300 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 211 |
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 113 |
-| _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 313 |
+| _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 308 |
 
 ### `repo:search-creator`
 
@@ -297,7 +297,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 335 |
+| _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 330 |
 
 ### `stats:refresh`
 
@@ -312,7 +312,7 @@
 | importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 177 |
 | setupRecycleActions | `frontend/src/features/maintenance/recycle-bin.ts` | 128 |
 | onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 198 |
-| registerInstanceOps | `frontend/src/features/pack-ops/instance-ops.ts` | 132 |
+| registerInstanceOps | `frontend/src/features/pack-ops/instance-ops.ts` | 135 |
 | registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 55 |
 | runDownloadMissing | `frontend/src/features/sync/sync.ts` | 87 |
 | runSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 197 |
@@ -324,7 +324,6 @@
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 141 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 310 |
 | _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 236 |
-| _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 255 |
 | runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 104 |
 | atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 131 |
 | atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 198 |
@@ -335,7 +334,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 104 |
-| _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 294 |
+| _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 289 |
 
 ### `sync:download:done`
 

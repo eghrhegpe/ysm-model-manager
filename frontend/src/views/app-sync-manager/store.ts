@@ -4,6 +4,7 @@
 // 依赖 DAG：index → store ← network（网络操作后调 loadData 刷新）
 
 import { t } from "@/core/i18n/t.ts";
+import { logWarn } from "@/utils/base/primitives/log.ts";
 import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { allResourceTypes } from "@/utils/resource/schema.ts";
@@ -67,13 +68,19 @@ export async function loadData(self: SyncStoreSelf): Promise<void> {
               }
             : {}),
         };
-      } catch {
-        /* 目录摘要非关键路径，静默降级 */
+      } catch (e) {
+        // 目录摘要非关键路径：用户侧静默降级，但环形日志留痕（否则「摘要栏空白/过宽告警
+        // 消失」在排查时全无线索——本 catch 曾是零信息的空块）
+        logWarn("sync-manager", "GetSyncScanDirs 失败（目录摘要降级）:", e);
       }
     }
   } catch {
     if (self._guard.stale(gen)) return;
     self._allItems = [];
+    // 2026-10 修复（锐评：失败态与摘要栏说两套话）——原只清 `_allItems`，摘要栏继续显示
+    // 上一任实例/类型残留的扫描目录对：列表已是失败态、路径却仍指旧目标，误导用户以为
+    // 失败的是那对目录。扫描目录与本次数据同源同命，失败时一并清空。
+    self._scanDirs = {};
     toast(t("syncManager.loadSyncStatusFailed"), TOAST_MS.normal, "warn");
   }
 }

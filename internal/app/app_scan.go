@@ -343,7 +343,7 @@ func (a *App) ListModelAuthors() []types.AuthorInfo {
 // GenerateRepoIndex 生成 index.json（含 GitHub Actions workflow 模板）
 func (a *App) GenerateRepoIndex(repoPath string) (string, error) {
 	if !a.isPathInRootOrSelf(repoPath) {
-		return "", fmt.Errorf("路径超出仓库目录")
+		return "", types.AppError{Code: types.ErrInvalidPath, Operation: "生成仓库索引", SourcePath: repoPath, Reason: "路径超出仓库目录"}
 	}
 	return scanner.GenerateRepoIndex(repoPath)
 }

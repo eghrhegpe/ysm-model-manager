@@ -2,9 +2,8 @@
 package app
 
 import (
-	"fmt"
-
 	"ysm-model-manager/go/tags"
+	"ysm-model-manager/go/types"
 )
 
 // getTagsStore 初始化或获取标签存储实例（懒加载，sync.Mutex + nil 检查）
@@ -23,7 +22,7 @@ func (a *App) GetModelTags(modelPath string) ([]string, error) {
 	// 路径守卫：Wails binding 可被前端传入任意路径，须限制在合法仓库根内
 	// （与 ReadFileBytes 对齐 isPathInRootOrSelf，防止读取系统任意文件的标签）
 	if !a.isPathInRootOrSelf(modelPath) {
-		return nil, fmt.Errorf("路径超出仓库目录")
+		return nil, types.AppError{Code: types.ErrInvalidPath, Operation: "读取标签", SourcePath: modelPath, Reason: "路径超出仓库目录"}
 	}
 	return a.getTagsStore().GetTags(modelPath)
 }
@@ -32,7 +31,7 @@ func (a *App) GetModelTags(modelPath string) ([]string, error) {
 func (a *App) SetModelTags(modelPath string, tags []string) error {
 	// 路径守卫：与 GetModelTags 对齐 isPathInRootOrSelf，防止向系统任意文件写入标签
 	if !a.isPathInRootOrSelf(modelPath) {
-		return fmt.Errorf("路径超出仓库目录")
+		return types.AppError{Code: types.ErrInvalidPath, Operation: "设置标签", SourcePath: modelPath, Reason: "路径超出仓库目录"}
 	}
 	return a.getTagsStore().SetTags(modelPath, tags)
 }

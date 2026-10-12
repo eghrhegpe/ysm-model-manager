@@ -323,7 +323,7 @@ func (a *App) GetModel3DSpec(modelPath string) (*threejs.Model3DSpec, error) {
 	// 路径守卫：GetModel3DSpec 是 Wails binding，原实现无校验可读取系统任意文件。
 	// 与 ReadFileBytes/AnalyzeBedrockModel 对齐 isPathInRootOrSelf。
 	if !a.isPathInRootOrSelf(modelPath) {
-		return nil, fmt.Errorf("路径超出仓库目录")
+		return nil, types.AppError{Code: types.ErrInvalidPath, Operation: "加载 3D 预览", SourcePath: modelPath, Reason: "路径超出仓库目录"}
 	}
 	// 多组件路径（YSMViewer 式）：.ysm（WASM 解码）/ .zip / 解压目录 ysm.json
 	// 各自组件独立构建，合并 spec.models；纹理 texIdx 由解析层全局化（组件 i → i），

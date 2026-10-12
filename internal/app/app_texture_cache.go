@@ -6,7 +6,6 @@ package app
 
 import (
 	"encoding/base64"
-	"fmt"
 	"log"
 	"os"
 
@@ -30,7 +29,7 @@ func (a *App) GetCachedTexture(path string) (CachedTextureResult, error) {
 	// 路径守卫：Wails binding 可被前端传入任意路径，须限制在合法仓库根内
 	// （与 ReadFileBytes/AnalyzeBedrockModel 对齐 isPathInRootOrSelf）
 	if !a.isPathInRootOrSelf(path) {
-		return CachedTextureResult{}, fmt.Errorf("路径超出仓库目录")
+		return CachedTextureResult{}, types.AppError{Code: types.ErrInvalidPath, Operation: "读取纹理缓存", SourcePath: path, Reason: "路径超出仓库目录"}
 	}
 	// 计算内容哈希（基于文件内容，非路径）
 	hash, err := texture_cache.TextureHash(path)

@@ -65,7 +65,7 @@ func (a *App) pruneTags(prefix string, subtree bool) {
 
 func (a *App) RenameDir(oldPath, newName string) error {
 	if !a.isPathInRoot(oldPath) {
-		return fmt.Errorf("路径超出仓库目录")
+		return types.AppError{Code: types.ErrInvalidPath, Operation: "重命名目录", SourcePath: oldPath, Reason: "路径超出仓库目录"}
 	}
 	newPath := fileops.RenameTarget(oldPath, newName)
 	if err := fileops.RenameDir(oldPath, newName); err != nil {
@@ -80,7 +80,7 @@ func (a *App) RenameDir(oldPath, newName string) error {
 
 func (a *App) RemoveDir(dir string) error {
 	if !a.isPathInRoot(dir) {
-		return fmt.Errorf("路径超出仓库目录")
+		return types.AppError{Code: types.ErrInvalidPath, Operation: "删除目录", SourcePath: dir, Reason: "路径超出仓库目录"}
 	}
 	if err := fileops.RemoveDir(dir); err != nil {
 		return err
@@ -95,7 +95,7 @@ func (a *App) RemoveDir(dir string) error {
 func (a *App) RenameFile(oldPath, newName string) error {
 	// 补路径守卫——原实现无校验，任意 oldPath 均可被改名（知识卡守卫清单漏列 RenameFile）
 	if !a.isPathInRoot(oldPath) {
-		return fmt.Errorf("路径超出仓库目录")
+		return types.AppError{Code: types.ErrInvalidPath, Operation: "重命名文件", SourcePath: oldPath, Reason: "路径超出仓库目录"}
 	}
 	newPath := fileops.RenameTarget(oldPath, newName)
 	if err := fileops.RenameFile(oldPath, newName); err != nil {

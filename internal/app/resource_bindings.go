@@ -395,7 +395,7 @@ func (a *App) DeleteResourcePack(path, rtype string) error {
 		}
 		rel, err := filepath.Rel(realRoot, realClean)
 		if err != nil || rel == "." || strings.HasPrefix(rel, "..") {
-			return fmt.Errorf("路径超出仓库目录")
+			return types.AppError{Code: types.ErrInvalidPath, Operation: "删除资源包", SourcePath: clean, Reason: "路径超出仓库目录"}
 		}
 		if err := os.RemoveAll(realClean); err != nil {
 			return err

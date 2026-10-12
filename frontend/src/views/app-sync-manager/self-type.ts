@@ -25,8 +25,6 @@ export interface SyncManagerFields {
   _typeConfig: Array<{ id: string; name?: string | undefined; icon?: string | undefined }>;
   /** 展开/折叠状态（dir-level 层级展示用，key = item path） */
   _dirOpen: Record<string, boolean>;
-  /** 各资源类型在 FilesRoot 下的仓库根路径缓存 */
-  _filesRoots: Record<string, string>;
   /** 各资源类型实际同步目录对（GetSyncScanDirs 结果：global=仓库基准, instance=实例扫描；
    *  warningCode=结构化告警码（scan_dir_wide），warningParams=告警参数，显示文案由 i18n 组装） */
   _scanDirs: Record<

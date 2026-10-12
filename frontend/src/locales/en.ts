@@ -310,6 +310,15 @@ export const en: Record<string, string> = {
   "import.queueFull": "Import queue is full",
   "import.readTimeout": "File read timeout: {name}",
   "import.readFailed": "File read failed: {name}",
+  // ── Pack card drag & drop (features/dnd/pack-dnd.ts) ──
+  "import.packDropWebUnsupported":
+    "Dragging into modpacks is not supported on the web version, please use the desktop app",
+  "import.packOversizeSkipped":
+    "{n} file(s) exceeded the {mb} MB limit and were skipped ({name}{more})",
+  "import.packPushedAll": "Imported to library and pushed to {inst} ({n} item(s))",
+  "import.packPushedPartial": "Pushed {n} item(s), {failed} failed: {first}{more}",
+  "import.packPushFailedAll": "Push to {inst} failed: {first}{more}",
+  "import.moreSuffix": " etc.",
 
   // ── Launcher detection (instance empty state) ──
   "launcher.mc.selectDir": "Select game directory",

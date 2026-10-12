@@ -151,18 +151,33 @@ async function pushOne(insName: string, rt: string): Promise<void> {
   });
 }
 
-/** 等待当前同步活动归位（最后一次非 skipped done 后 resolve），防后续推送竞态 */
-async function waitBusQuiet(): Promise<void> {
+/** 静默宽限期：waitBusQuiet 若在此期间没等到任何非 skipped done，判定通道已空闲 */
+const BUS_QUIET_GRACE_MS = 2_000;
+
+/**
+ * 等待当前同步活动归位（最后一次非 skipped done 后 resolve），防后续推送竞态。
+ * 2026-10 修复「静默期 30s 干等」：done 事件先于本订阅发出即错过——原实现只剩
+ * 30s 超时兜底，一条已死的在途能把整个多包循环卡死半分钟。现改双轨：①收到
+ * 非 skipped done 即 resolve（原语义不变）；②宽限期内零 done 判定通道空闲，
+ * resolve 放行下一条——真实生产者 sync.ts 对每个 missing 必回 done（含 busy
+ * skipped），静默只可能是竞态错过，等待更多静默不会等到更多事件。
+ * 导出供直测（store.tabStatus 同款「叶函数导出直测」先例）。
+ */
+export async function waitBusQuiet(): Promise<void> {
   await new Promise<void>((resolve) => {
+    let settled = false;
+    const finish = (): void => {
+      if (settled) return;
+      settled = true;
+      waitUnsub();
+      clearTimeout(graceTimer);
+      resolve();
+    };
     const waitUnsub = bus.on("sync:download:done", (p) => {
       if (p?.skipped) return;
-      waitUnsub();
-      resolve();
+      finish();
     });
-    setTimeout(() => {
-      waitUnsub();
-      resolve();
-    }, SYNC_TIMEOUT_MS);
+    const graceTimer = setTimeout(finish, BUS_QUIET_GRACE_MS);
   });
 }
 

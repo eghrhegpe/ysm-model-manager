@@ -44,7 +44,11 @@ function handleItemButton(e: Event, btn: Element, cbRef: SyncCbRef): void {
 /** ③ dir 行：点击整行切换展开/折叠（箭头 + 内部文件可见性） */
 function toggleDirRow(self: EventSelf, dir: Element, cbRef: SyncCbRef): void {
   const path = (dir as HTMLElement).dataset.path || "";
-  const dirOpen = self._dirOpen || {};
+  // 2026-10 修复（锐评「写进空气」）：原 `self._dirOpen || {}` 在字段真为 falsy 时
+  // 把翻转写进一次性空对象并整个丢弃——目录永不开且零报错。现在 falsy 时先落位
+  // 再取引用，写的一定是组件持有对象（与 _resetViewState 的初始化口径一致）。
+  if (!self._dirOpen) self._dirOpen = {};
+  const dirOpen = self._dirOpen;
   dirOpen[path] = !dirOpen[path];
   cbRef.cb.doRender();
 }

@@ -342,7 +342,8 @@ function rowElOf(row: SmRow): HTMLElement {
  * 未点过（undefined）才允许 status 筛选的 _forceOpenPaths 强开。
  */
 function flattenRows(self: SyncRenderSelf, out: SmRow[]): void {
-  const dirOpen = self._dirOpen || {};
+  // 读侧快照（无写入）：_dirOpen 缺失按空对象语义处理；写侧守卫见 events.toggleDirRow
+  const dirOpen = self._dirOpen;
   const forceOpen = self._forceOpenPaths;
   const walk = (items: SyncItem[], depth: number): void => {
     const indent = ROW_PAD_LEFT + depth * INDENT_PER_LEVEL;
@@ -352,7 +353,7 @@ function flattenRows(self: SyncRenderSelf, out: SmRow[]): void {
         continue;
       }
       const hasChildren = !!item.children?.length;
-      const isOpen = hasChildren && (dirOpen[item.path] ?? !!forceOpen?.has(item.path));
+      const isOpen = hasChildren && (dirOpen?.[item.path] ?? !!forceOpen?.has(item.path));
       out.push({
         key: item.path,
         html: syncDirRowHTML(item.path, item, isOpen, indent, item.path),

@@ -117,8 +117,9 @@ function bindCardContextHandler(st: CardBindState): (e: MouseEvent) => void {
     const idx = parseInt(card.dataset.idx || "", 10);
     const pkg = st.instances[idx];
     if (!pkg) return;
-    const nameEl = card.querySelector(".name");
-    const name = nameEl ? nameEl.textContent.replace(/^📦\s*/, "") : "";
+    // 2026-10 收口：名称直取数据源 pkg.name——原实现从 .name 节点的 textContent
+    // 正则剥 📦 逆向解析回来，而 tpl 早把 📦 移入隔壁 .pkg-icon span，正则已是
+    // 无靶可打的化石；数据在手不再绕道 DOM 捡残渣。
     // P0 修复：rtype 必须明确指定，不能 fallback 到 YSM——
     // 否则 MMD/VRC 等右键操作会按 YSM 逻辑处理，打开错误目录。
     // 点击允许 fallback（预览无害），右键拒绝（操作危险）。
@@ -136,7 +137,7 @@ function bindCardContextHandler(st: CardBindState): (e: MouseEvent) => void {
       x: e.clientX,
       y: e.clientY,
       type: "instance",
-      instanceName: name,
+      instanceName: pkg.name,
       path,
       rtype,
       // 扁平化架构下，透传全局资源类型选择（rtype），

@@ -1,9 +1,9 @@
 // ===== <app-sync-manager> index.ts 生命周期分支补测 =====
 // 兄弟文件 index.test.ts 覆盖渲染/交互主链路（renderer 真实）；本文件把 render
 // mock 成可控（resolve / reject / 同步 throw），锁 index 的守卫与失败分支：
-// attributeChangedCallback 重载、gen 代际守卫、loadRepoRoots 兜底、stats:refresh /
+// attributeChangedCallback 重载、gen 代际守卫、stats:refresh /
 // repo:rtype-changed / repo:subdir-changed 三订阅的重载失败 .catch、_doRender .catch。
-// 注意：store.load* 与 loadRepoRoots 内部吞错永不 reject，各 .catch 仅由
+// 注意：store.load* 内部吞错永不 reject，各 .catch 仅由
 // _doRender 内 render 同步抛错触发——这是刻意的 mock 契约，不是绕过。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { waitFor, sleep } from "@/test-utils/wait.ts";
@@ -18,7 +18,6 @@ const { mocks, renderMock } = vi.hoisted(() => ({
     GetInstanceSyncStatus: vi.fn().mockResolvedValue(
       JSON.stringify([{ path: "a.ysm", name: "模型A", status: "synced", type: "ysm", size: 1 }]),
     ),
-    GetRepoRoot: vi.fn().mockResolvedValue("/repo"),
     GetSyncScanDirs: vi.fn().mockResolvedValue(
       JSON.stringify({ global: "/repo", instance: "/mc/x", warningCode: "" }),
     ),
@@ -29,7 +28,6 @@ const { mocks, renderMock } = vi.hoisted(() => ({
 vi.mock("@/backend/app.ts", () => ({
   getApp: vi.fn().mockResolvedValue({
     GetInstanceSyncStatus: mocks.GetInstanceSyncStatus,
-    GetRepoRoot: mocks.GetRepoRoot,
     GetSyncScanDirs: mocks.GetSyncScanDirs,
   }),
 }));
@@ -43,7 +41,6 @@ type SelfView = {
   _defaultType: string;
   _selectedType: string;
   _subtype: string;
-  _filesRoots: Record<string, string>;
   _guard: LoadGuard;
 };
 
@@ -122,21 +119,13 @@ describe("app-sync-manager — attributeChangedCallback 与代际守卫", () => 
     await waitFor(() => renderMock.mock.calls.length >= 1, 5000);
     // gen=1 的收尾不得渲染；gen=2 正常渲染一次（锁「不多」= toBeCalledTimes(1)；
     // ⚠️ waitFor(>=1) 返回后即断言，尾部窗口≈0——当前 store/renderer 链零定时器故安全，
-    // 若日后 loadRepoRoots/render 引入定时器，须补 flushAsyncTurns + 复断防第二次渲染漏网）
+    // 若日后 render 引入定时器，须补 flushAsyncTurns + 复断防第二次渲染漏网）
     expect(renderMock).toHaveBeenCalledTimes(1);
     unmountElement(el);
   });
 });
 
-describe("app-sync-manager — 失败分支（loadRepoRoots 兜底 / render 抛错链）", () => {
-  it("GetRepoRoot 拒绝 → _filesRoots[rtype] 兜底空串（不炸初始化）", async () => {
-    mocks.GetRepoRoot.mockRejectedValueOnce(new Error("root down"));
-    const { el, self } = mount();
-    await waitFor(() => "ysm" in self._filesRoots, 5000);
-    expect(self._filesRoots["ysm"]).toBe("");
-    unmountElement(el);
-  });
-
+describe("app-sync-manager — 失败分支（render 抛错链）", () => {
   it("render 同步抛错 → _init catch：错误块 + error toast（145-151）", async () => {
     stubConsoleError(); // 静音生产 logError("sync-manager",context)（_showError 经 logError 落盘）
     renderMock.mockImplementation(() => {

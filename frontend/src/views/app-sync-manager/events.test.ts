@@ -207,6 +207,18 @@ describe("bindDelegatedEvents — 命中优先级与消费语义", () => {
     expect(self._dirOpen[""]).toBe(true); // 缺 data-path → 空串键（原口径）
   });
 
+  it("dir 行：_dirOpen 为 falsy 时点击先落位再写（2026-10「写进空气」回归锁）", () => {
+    const { self, host } = makeSelf('<div class="sm-item sm-dir" data-path="/repo/v">V</div>');
+    // @ts-expect-error 故意注入 falsy 态，验证守卫不再把翻转写进一次性 {}
+    self._dirOpen = undefined;
+    const cb = makeCb();
+    bindDelegatedEvents(self, cb);
+    (host.querySelector('[data-path="/repo/v"]') as HTMLElement).click();
+    expect(self._dirOpen).toEqual({ "/repo/v": true }); // 写进了组件持有对象
+    (host.querySelector('[data-path="/repo/v"]') as HTMLElement).click();
+    expect(self._dirOpen["/repo/v"]).toBe(false); // 二次点击在同一对象上翻转
+  });
+
   it("未命中任何选择器 → 无副作用", () => {
     const { self, host } = makeSelf('<div class="other">x</div>');
     const cb = makeCb();

@@ -307,7 +307,7 @@
 | runWebEnqueue | `frontend/src/features/community/download-queue-web.ts` | 107 |
 | cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 124 |
 | refreshUI | `frontend/src/features/context-menu/context-menu-shared.ts` | 19 |
-| handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 164 |
+| handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 182 |
 | (顶层) | `frontend/src/features/import/executor.ts` | 49 |
 | importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 177 |
 | setupRecycleActions | `frontend/src/features/maintenance/recycle-bin.ts` | 128 |
@@ -322,7 +322,7 @@
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 311 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 76 |
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 141 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 288 |
+| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 303 |
 | _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 211 |
 | _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 230 |
 | runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 104 |
@@ -349,7 +349,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | pushOne | `frontend/src/views/app-sidebar/sync-flow.ts` | 135 |
-| waitBusQuiet | `frontend/src/views/app-sidebar/sync-flow.ts` | 157 |
+| waitBusQuiet | `frontend/src/views/app-sidebar/sync-flow.ts` | 176 |
 
 ### `sync:download:missing`
 
@@ -414,7 +414,7 @@
 | runWebEnqueue | `frontend/src/features/community/download-queue-web.ts` | 106 |
 | cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 123 |
 | refreshUI | `frontend/src/features/context-menu/context-menu-shared.ts` | 18 |
-| handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 165 |
+| handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 183 |
 | (顶层) | `frontend/src/features/import/executor.ts` | 50 |
 | importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 176 |
 | setupRecycleActions | `frontend/src/features/maintenance/recycle-bin.ts` | 129 |
@@ -425,7 +425,7 @@
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 189 |
 | applyFsaState | `frontend/src/views/app-content/settings/init.ts` | 389 |
 | onWebRepoAuthClick | `frontend/src/views/app-content/settings/init.ts` | 417 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 289 |
+| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 304 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |

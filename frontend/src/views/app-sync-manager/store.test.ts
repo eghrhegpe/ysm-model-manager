@@ -29,7 +29,6 @@ function makeSelf(over: Partial<SyncManagerSelf> = {}): SyncManagerSelf {
     _filteredItems: [],
     _typeConfig: [],
     _dirOpen: {},
-    _filesRoots: {},
     _scanDirs: {},
     isConnected: true,
     ...over,

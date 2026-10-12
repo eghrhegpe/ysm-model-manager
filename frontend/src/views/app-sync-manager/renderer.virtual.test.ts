@@ -19,7 +19,6 @@ const { mocks } = vi.hoisted(() => {
     GetInstanceSyncStatus: vi.fn().mockResolvedValue([]),
     PushSingleResourceToInstance: vi.fn().mockResolvedValue(undefined),
     PullSingleResourceFromInstance: vi.fn().mockResolvedValue(undefined),
-    GetRepoRoot: vi.fn().mockResolvedValue("/repo"),
     GetSyncScanDirs: vi.fn().mockResolvedValue({
       global: "/repo",
       instance: "/inst",
@@ -34,7 +33,6 @@ vi.mock("@/backend/app.ts", () => ({
     GetInstanceSyncStatus: mocks.GetInstanceSyncStatus,
     PushSingleResourceToInstance: mocks.PushSingleResourceToInstance,
     PullSingleResourceFromInstance: mocks.PullSingleResourceFromInstance,
-    GetRepoRoot: mocks.GetRepoRoot,
     GetSyncScanDirs: mocks.GetSyncScanDirs,
   }),
 }));

@@ -16,7 +16,6 @@ import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
-import { backendGetApp } from "@/views/backend-deps.ts";
 import type { SyncManagerFields, SyncManagerSelf } from "./self-type.ts";
 import { loadData, loadTypeConfig } from "./store.ts";
 import type { SyncItem } from "./tpl.ts";
@@ -34,17 +33,6 @@ import { getLastSelectedType, setLastSelectedType } from "./state.ts";
 // 已下沉至 state.ts，打破 index ↔ events 循环依赖
 // 2026-08-18：sm-tabs 移除后类型完全由全局 nav 下拉驱动——订阅 repo:rtype-changed 跟随，
 // 状态主键统一 repo_rtype（state.ts），LAST_TYPE_KEY 仅历史兼容。
-
-/** 按需加载当前 rtype 的 FilesRoot 仓库根路径（缓存到 _filesRoots，供 renderer 建树时扫描子条目） */
-async function loadRepoRoots(self: SyncManagerSelf, rtype: string): Promise<void> {
-  if (self._filesRoots[rtype]) return;
-  try {
-    const { GetRepoRoot } = await backendGetApp();
-    self._filesRoots[rtype] = (await GetRepoRoot(rtype || "")) || "";
-  } catch {
-    self._filesRoots[rtype] = "";
-  }
-}
 
 /** 本组件错误文案键（i18n 字面量联合：t() 只收已知键，裸 string 会被拒收） */
 type SyncErrorMsgKey = "sync.renderFailed" | "syncManager.loadSyncStatusFailed";
@@ -80,7 +68,6 @@ export class AppSyncManager extends WebComponentBase {
   private _unsubs: Array<() => void> = [];
   _singleBusy = new Set<string>();
   _dirOpen: Record<string, boolean> = {};
-  _filesRoots: Record<string, string> = {};
   /** 与 self-type.ts 契约同形（原 {warning?} 为过期形态——renderer/store 经 SyncManagerSelf 读写 warningCode/warningParams，TS 查不到此层） */
   _scanDirs: Record<
     string,
@@ -153,12 +140,11 @@ export class AppSyncManager extends WebComponentBase {
     this._bindDelegate(self);
 
     // 加载段异常统一出口：原为浮动 Promise（connectedCallback / attributeChangedCallback
-    // 均未 catch），三段 await 任一 reject 即 unhandled rejection + 骨架 spinner 永久卡死、
+    // 均未 catch），任一 await reject 即 unhandled rejection + 骨架 spinner 永久卡死、
     // 用户零反馈。此处转错误 UI + toast 并早退（过期代际/已卸载则静默丢弃）。
     try {
       await loadTypeConfig(self);
       await loadData(self);
-      await loadRepoRoots(self, this._selectedType);
     } catch (e) {
       if (this._guard.stale(gen) || !this.isConnected) return;
       this._showError("_init 加载失败:", e, "syncManager.loadSyncStatusFailed");
@@ -285,9 +271,8 @@ export class AppSyncManager extends WebComponentBase {
       const gen = this._guard.current;
       dbg("sync-manager", "stats:refresh 收到");
       loadData(self)
-        .then(async () => {
+        .then(() => {
           if (this._guard.stale(gen)) return;
-          await loadRepoRoots(self, this._selectedType);
           dbg("sync-manager", "_loadData 完成, items:", this._allItems ? this._allItems.length : 0);
           this._doRender();
         })
@@ -309,11 +294,10 @@ export class AppSyncManager extends WebComponentBase {
       this._subtype = ""; // 切类型重置子类型选择
       const gen = this._guard.current;
       loadData(self)
-        .then(async () => {
+        .then(() => {
           if (this._guard.stale(gen)) return;
           // ADR-269 D3③：_typeConfig 已同步派生自 resource_types.json（loadData 前已就绪），
-          // 类型切换无需重载——此处仅刷新仓库根后渲染。
-          await loadRepoRoots(self, rt);
+          // 类型切换无需重载——直接渲染。
           this._doRender();
         })
         .catch((err) => {

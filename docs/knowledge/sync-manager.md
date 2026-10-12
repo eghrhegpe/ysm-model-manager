@@ -62,6 +62,7 @@ auto_fields:
     - SyncStoreSelf
     - tabStatus
     - VIEW_TESTIDS
+    - waitBusQuiet
   tests:
     - frontend/src/views/app-sync-manager/index.test.ts
     - frontend/src/views/app-sync-manager/index.branches.test.ts
@@ -128,7 +129,7 @@ status: active
 - **a11y 模板语义（2026 复测补缺）**：状态筛选栏 = `role="radiogroup"` + 六个 `role="radio"`（`aria-checked` + roving tabindex 由 `statusTabHTML` 模板随重渲染自动迁移）；目录行箭头为原生 `button` + `aria-expanded` + 名称标签；装饰图标 `aria-hidden`；加载态 `role="status"`；错误 div `role="alert"`。键盘半边 = `bindDelegatedEvents` 的单点 keydown 委托（方向键循环移动即激活、Home/End 只移焦点——仓内先例 `tabs-shell.ts` diag 子切换同口径），契约 `tpl.test.ts`（属性字符串）+ `a11y.dom.test.ts`（键盘行为）
 
 ### `app-sidebar`（整包级）
-- **`runPush`**：顺序 `for insName × for rtype` → `sync:download:missing` handler 后台安装缺失，等 `sync:download:done` token（30s 超时，skipped reject）
+- **`runPush`**：顺序 `for insName × for rtype` → `sync:download:missing` handler 后台安装缺失，等 `sync:download:done` token（30s 超时，skipped reject）；竞态静默由 `waitBusQuiet` 双轨收敛（非 skipped done 即醒 / 2s 宽限判空闲，2026-10 起不再干等 30s）
 - **`runPull`**：`Promise.allSettled` 并拉 `PullResourceFromInstance`
 - **`_syncInProgress`** 守卫：防止并发 sync 竞态
 - **同步流程层（`sync-flow.ts`，2026-09-08 从 `index.ts` 拆出）**：`runPush`/`runPull`/`bindSelectAll`/`bindSyncSelected`/`restoreCheckboxes` + `_checkedSets`（按 rtype 隔离的勾选状态 Map）全部迁至独立文件，`index.ts` 仅保留 Web Component 生命周期与渲染编排
@@ -154,14 +155,14 @@ getApp().GetInstanceSyncStatus(instance, subtype, rtype)
 **sidebar 整包推送链**：
 ```
 用户点击 push 菜单项
-  → asbBeginSync（取 selected + _syncInProgress + 按钮 loading）
+  → beginSync（取 selected + _syncInProgress + 按钮 loading）
   → runPush
     → 顺序 for insName × for rtype
-       → asbPushOne(insName, rt)
+       → pushOne(insName, rt)
          → token = `${insName}:${rt}:${Date.now()}`
          → bus.emit("sync:download:missing", { instanceName, rtype, token })
          → Promise 等待 sync:download:done（匹配 token，30s 超时）
-         → asbWaitBusQuiet（防并发竞态）
+         → waitBusQuiet（防并发竞态：非 skipped done 或 2s 静默宽限即放行，不再干等 30s）
     → 汇总 toast
   → finally：按钮复位 + _syncInProgress=false
 ```
@@ -187,7 +188,7 @@ getApp().GetInstanceSyncStatus(instance, subtype, rtype)
 | ~~`LoadResourceTypes()`~~ | ~~sync-manager/store.ts~~ | ADR-269 D3③ 已废：store.ts 改同步读 `utils/resource/schema.ts`，前端不再调此 RPC |
 | `GetInstanceSyncStatus(instance, subtype, rtype)` | sync-manager/store.ts | 拉层级 `SyncItem[]` |
 | `GetSyncScanDirs(rtype, instance)` | sync-manager/store.ts | 摘要栏扫描目录 |
-| `GetRepoRoot(rtype)` | sync-manager/index.ts、features/sync.ts | 仓库根路径 |
+| `GetRepoRoot(rtype)` | features/sync.ts | 仓库根路径（sync-manager/index.ts 侧的 `_filesRoots` 死缓存消费已于 2026-10 锐评摘除——只写不读，勿回接） |
 | `PushSingleResourceToInstance(rtype, instance, path)` | sync-manager/network.ts | 单文件推送 |
 | `PullSingleResourceFromInstance(rtype, path, instance)` | sync-manager/network.ts | 单文件拉取 |
 | `PullResourceFromInstance(rtype, instance)` | sidebar/index.ts | 整包拉取 |

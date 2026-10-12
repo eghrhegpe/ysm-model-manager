@@ -63,7 +63,7 @@ export async function handleInstanceDrop(
 
   try {
     if (isWebPlatform()) {
-      toast("网页版暂不支持拖入整合包，请在桌面端操作", TOAST_MS.verbose, "warn");
+      toast(t("import.packDropWebUnsupported"), TOAST_MS.verbose, "warn");
       return;
     }
     logDrop(`pack-drop: 目标实例 ${instanceName}`);
@@ -80,7 +80,12 @@ export async function handleInstanceDrop(
     const oversized = collected0.filter((c) => c.file.size > MAX_IMPORT_BYTES);
     if (oversized.length > 0) {
       toast(
-        `⚠️ ${oversized.length} 个文件超过 ${Math.round(MAX_IMPORT_BYTES / 1024 / 1024)}MB 上限已跳过（${oversized[0].file.name}${oversized.length > 1 ? " 等" : ""}）`,
+        t("import.packOversizeSkipped", {
+          n: oversized.length,
+          mb: Math.round(MAX_IMPORT_BYTES / 1024 / 1024),
+          name: oversized[0].file.name,
+          more: oversized.length > 1 ? t("import.moreSuffix") : "",
+        }),
         TOAST_MS.long,
         "warn",
       );
@@ -146,16 +151,29 @@ export async function handleInstanceDrop(
 
     // 反馈：成功/部分失败/全失败三分；只要有调用即刷新（导入可能已落仓库，防陈旧）
     if (okUnits > 0 && failures.length === 0) {
-      toast(`已导入仓库并推送到 ${instanceName}（${okUnits} 项）`, TOAST_MS.success, "success");
+      toast(
+        t("import.packPushedAll", { inst: instanceName, n: okUnits }),
+        TOAST_MS.success,
+        "success",
+      );
     } else if (okUnits > 0 && failures.length > 0) {
       toast(
-        `推送完成 ${okUnits} 项，${failures.length} 项失败：${failures[0]}${failures.length > 1 ? " 等" : ""}`,
+        t("import.packPushedPartial", {
+          n: okUnits,
+          failed: failures.length,
+          first: failures[0],
+          more: failures.length > 1 ? t("import.moreSuffix") : "",
+        }),
         TOAST_MS.verbose,
         "warn",
       );
     } else if (failures.length > 0) {
       toast(
-        `❌ 推送到 ${instanceName} 失败：${failures[0]}${failures.length > 1 ? " 等" : ""}`,
+        t("import.packPushFailedAll", {
+          inst: instanceName,
+          first: failures[0],
+          more: failures.length > 1 ? t("import.moreSuffix") : "",
+        }),
         TOAST_MS.verbose,
         "error",
       );

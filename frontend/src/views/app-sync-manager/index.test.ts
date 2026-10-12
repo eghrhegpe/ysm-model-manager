@@ -23,7 +23,6 @@ const { mocks } = vi.hoisted(() => {
     ]),
     PushSingleResourceToInstance: vi.fn().mockResolvedValue(undefined),
     PullSingleResourceFromInstance: vi.fn().mockResolvedValue(undefined),
-    GetRepoRoot: vi.fn().mockResolvedValue("/repo"),
     GetSyncScanDirs: vi.fn().mockResolvedValue({
       global: "/repo/schematics", instance: "/mc/inst/x/schematics", warningCode: "",
     }),
@@ -37,7 +36,6 @@ vi.mock("@/backend/app.ts", () => ({
     GetInstanceSyncStatus: mocks.GetInstanceSyncStatus,
     PushSingleResourceToInstance: mocks.PushSingleResourceToInstance,
     PullSingleResourceFromInstance: mocks.PullSingleResourceFromInstance,
-    GetRepoRoot: mocks.GetRepoRoot,
     GetSyncScanDirs: mocks.GetSyncScanDirs,
     ScanModelEntriesWithLabel: mocks.ScanModelEntriesWithLabel,
   }),
@@ -192,7 +190,6 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
       _filteredItems: SyncItem[];
       _typeConfig: Array<{ id: string }>;
       _dirOpen: Record<string, boolean>;
-      _filesRoots: Record<string, string>;
       _doRender: () => void;
     };
     self._selectedType = "EntityPlayer";
@@ -209,7 +206,6 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
       ] },
     ];
     self._filteredItems = self._allItems;
-    self._filesRoots = { "EntityPlayer": "/repo" };
     self._dirOpen = {};
     mocks.ScanModelEntriesWithLabel.mockResolvedValue([]);
 
@@ -388,7 +384,6 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
       _filteredItems: SyncItem[];
       _typeConfig: Array<{ id: string; name: string; icon: string }>;
       _dirOpen: Record<string, boolean>;
-      _filesRoots: Record<string, string>;
       _doRender: () => void;
     };
     self._selectedType = "blueprint";
@@ -403,7 +398,6 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
       ] },
     ];
     self._filteredItems = self._allItems;
-    self._filesRoots = { "blueprint": "/repo" };
     self._dirOpen = {};
 
     // code review P1：新 renderer 无 ScanModelEntriesWithLabel 路径——children 已内联
@@ -450,7 +444,6 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
       _typeConfig: Array<{ id: string }>;
       _dirOpen: Record<string, boolean>;
       _statusFilter: string;
-      _filesRoots: Record<string, string>;
       _doRender: () => void;
     };
     self._selectedType = "EntityPlayer";
@@ -462,7 +455,6 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
     ];
     self._filteredItems = self._allItems;
     self._statusFilter = "missing"; // diverged 折叠进 missing tab（store.applyFilter 契约）
-    self._filesRoots = { "EntityPlayer": "/repo" };
     self._dirOpen = {};
 
     self._doRender();
@@ -495,7 +487,6 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
       _typeConfig: Array<{ id: string }>;
       _dirOpen: Record<string, boolean>;
       _statusFilter: string;
-      _filesRoots: Record<string, string>;
       _forceOpenPaths: Set<string>;
       _doRender: () => void;
     };
@@ -508,7 +499,6 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
     ];
     self._filteredItems = self._allItems;
     self._statusFilter = "missing";
-    self._filesRoots = { "EntityPlayer": "/repo" };
     // 用户显式折叠该目录（点过）——即使它命中 forceOpenPaths 也必须保持折叠
     self._dirOpen = { "模型A": false };
     self._forceOpenPaths = new Set(["模型A"]);
@@ -539,7 +529,6 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
       _filteredItems: SyncItem[];
       _typeConfig: Array<{ id: string; name?: string; icon?: string }>;
       _dirOpen: Record<string, boolean>;
-      _filesRoots: Record<string, string>;
       _doRender: () => void;
     };
     self._selectedType = "ysm";
@@ -556,7 +545,6 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
       }],
     }];
     self._filteredItems = self._allItems;
-    self._filesRoots = { "ysm": "/repo/ysm" };
     self._dirOpen = {};
 
     self._doRender();
@@ -602,7 +590,6 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
       _typeConfig: Array<{ id: string }>;
       _dirOpen: Record<string, boolean>;
       _statusFilter: string;
-      _filesRoots: Record<string, string>;
       _doRender: () => void;
     };
     self._selectedType = "resourcepack";
@@ -617,7 +604,6 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
     }];
     self._filteredItems = self._allItems;
     self._statusFilter = "disabled";
-    self._filesRoots = { resourcepack: "/repo" };
     self._dirOpen = {};
 
     self._doRender();
@@ -644,7 +630,6 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
       _typeConfig: Array<{ id: string }>;
       _dirOpen: Record<string, boolean>;
       _statusFilter: string;
-      _filesRoots: Record<string, string>;
       _doRender: () => void;
     };
     self._selectedType = "resourcepack";
@@ -657,7 +642,6 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
     }];
     self._filteredItems = self._allItems;
     self._statusFilter = "all";
-    self._filesRoots = { resourcepack: "/repo" };
     self._dirOpen = {};
 
     self._doRender();
@@ -687,7 +671,6 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
       _typeConfig: Array<{ id: string }>;
       _dirOpen: Record<string, boolean>;
       _statusFilter: string;
-      _filesRoots: Record<string, string>;
       _doRender: () => void;
     };
     self._selectedType = "ysm";
@@ -705,7 +688,6 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
     }];
     self._filteredItems = self._allItems;
     self._statusFilter = "disabled";
-    self._filesRoots = { ysm: "/repo" };
     self._dirOpen = {}; // 全部折叠
 
     self._doRender();
@@ -730,7 +712,6 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
       _typeConfig: Array<{ id: string }>;
       _dirOpen: Record<string, boolean>;
       _statusFilter: string;
-      _filesRoots: Record<string, string>;
       _doRender: () => void;
     };
     self._selectedType = "ysm";
@@ -745,7 +726,6 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
     }];
     self._filteredItems = self._allItems;
     self._statusFilter = "missing";
-    self._filesRoots = { ysm: "/repo" };
     self._dirOpen = {};
 
     self._doRender();
@@ -770,7 +750,6 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
       _filteredItems: SyncItem[];
       _typeConfig: Array<{ id: string }>;
       _dirOpen: Record<string, boolean>;
-      _filesRoots: Record<string, string>;
       _doRender: () => void;
     };
     self._selectedType = "ysm";
@@ -781,7 +760,6 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
       ] },
     ];
     self._filteredItems = self._allItems;
-    self._filesRoots = { ysm: "/repo" };
     self._dirOpen = {};
 
     // 模拟并发：连续两次 _doRender（原 bindEvents 每次 render 后全量重绑 → 双绑）

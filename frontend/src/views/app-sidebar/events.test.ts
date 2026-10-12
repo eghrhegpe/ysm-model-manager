@@ -487,12 +487,15 @@ describe("bindCardEvents — 右键菜单（ctx:show）", () => {
     });
   }
 
-  it("右键卡片 → preventDefault + ctx:show payload（name 剥 📦 / subdir 读 storage）", () => {
+  it("右键卡片 → preventDefault + ctx:show payload（name 取数据源 pkg.name / subdir 读 storage）", () => {
     localStorage.setItem("repo_subdir", " subdirA ");
     const pkg = instance("A1");
     const { container } = mount([pkg]);
     const hdr = container.querySelector(".instance-card-header") as HTMLElement;
-    (hdr.querySelector(".name") as HTMLElement).textContent = "📦 A1";
+    // 2026-10 收口锁：右键 payload 的 instanceName 来自数据源 pkg.name，与 DOM 展示文本无关——
+    // 故意把 .name 节点文本污染成带 📦 前缀的脏值，payload 仍须是 "A1"
+    //（原实现从 textContent 正则剥 📦 逆向解析，DOM 即真相源的反模式，已退役）。
+    (hdr.querySelector(".name") as HTMLElement).textContent = "📦 篡改文本";
     const ev = ctxEvent();
     (container.querySelector(".instance-card") as HTMLElement).dispatchEvent(ev);
     expect(ev.defaultPrevented).toBe(true);

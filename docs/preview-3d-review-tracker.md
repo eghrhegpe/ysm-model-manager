@@ -42,7 +42,7 @@
 - **D4** — 9 处守卫拒绝站点改返回 `types.AppError{Code: ErrInvalidPath, …}`，见 `internal/app/app_guard_apperror_test.go`。
 - **D5** — 新增 `go/fsutil/limited_read.go::ReadFileLimited`，`app_model.go` 九处裸读全切 50MB 单源口径。
 - **D6** — `go/texture_cache/texture_cache.go::ValidHash` + 4 个绑定入口守卫。
-- **D7** — 已决策最小接线：TS `BedrockModel` 补 `textures`/`textureId` + 复刻 Go 生产者 + parity 锁面纳入 textureId，见 `preview-3d/model/spec-builder.ts\|BedrockModel`、`preview-3d/model/model-group-builder.ts\|postProcessAndTextures`。
+- **D7** — **已接线（2026-10-12 `3ab39bd7f`）**：TS `BedrockModel` 补 `texture`/`textures` + 复刻 Go 生产者 + parity 锁面纳入 `textureId`。⚠️ **价值存疑**：字段零业务消费者（全仓 `.textureId` 仅类型声明/测试断言），`tex_<idx>` 为槽位别名非内容哈希，无法缓存命中/按内容去重；历史上一度登记「接线留待产品拍板」（`6ade00e20`），本卡维持接线终态但**不排除未来删除**。**删除路径（低成本）**：拆 `go/threejs/spec_multicomponent_test.go` 3 断言 + `npm run generate:bindings` + 删 TS 字段与两处写入。见 `preview-3d/model/spec-builder.ts\|BedrockModel`、`preview-3d/model/model-group-builder.ts\|postProcessAndTextures`、`go/threejs/spec.go\|TextureID`。
 - **D8** — 可折叠容器 disclosure 触发器（`role="button"` + `aria-expanded` + `aria-controls`），见 `preview-3d/menu/render.ts`、`preview-3d/menu/slide-menu.ts\|onActivate`。
 - **D9** — ① 去 `role="button"` 包裹 + ② 五处 icon-only 补 `aria-label` + ③ header-toggle `aria-label` + ④ overlay 主动移焦 + ⑤ loadingEl `role="status"` + ⑥ prefers-reduced-motion 热更，见 `preview-3d/adapters/mount-preview-core.ts`、`preview-3d/adapters/mount-shell.ts`、`app-modules.ts`。
 - **D10** — `check-a11y` 增 `coverageNeutral` 口径 + 契约测试消费健壮性，见 `scripts/check-a11y.ts`。

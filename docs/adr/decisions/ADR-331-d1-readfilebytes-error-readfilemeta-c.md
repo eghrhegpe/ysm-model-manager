@@ -1,6 +1,6 @@
 # ADR-331-d1：ReadFileBytes 无 error 通道缺口：ReadFileMeta 结构化错误字段（切片 C）
 
-- **状态**：📝 提议中（Proposed）
+- **状态**：✅ 已采纳（Accepted，2026-10-12 切片 C 落地）
 - **日期**：2026-10-12
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **关联主 ADR**：ADR-331

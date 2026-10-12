@@ -16,21 +16,20 @@ permalink: /adr/
 
 | 状态 | 数量 |
 |------|------|
-| [📝 提议中](#提议中) | 9 |
+| [📝 提议中](#提议中) | 8 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 1 |
 | [🔄 部分采纳](#部分采纳) | 14 |
-| [✅ 已采纳](#已采纳) | 312 |
+| [✅ 已采纳](#已采纳) | 313 |
 | [❌ 已取代](#已取代) | 8 |
 | [🧊 已废弃](#已废弃) | 0 |
 | [❓ 未归类](#未归类) | 0 |
 
 ## 按状态分组导航
 
-### 📝 提议中（9）
+### 📝 提议中（8）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
-| [ADR-331-d1](./decisions/ADR-331-d1-readfilebytes-error-readfilemeta-c.md) | ReadFileBytes 无 error 通道缺口：ReadFileMeta 结构化错误字段（切片 C） | 📝 提议中 |
 | [ADR-328](./architecture/ADR-328-cap-enabled-unification.md) | cap 能力总开关统一收编 envState 与 ground 终态 | 📝 提议中 |
 | [ADR-327](./architecture/ADR-327-hdr.md) | 自定义 HDR 路径持久化与重启恢复 | 📝 提议中 |
 | [ADR-325](./architecture/ADR-325-app-domain-sinking-over-multi-service.md) | App 瘦身走域下沉：拒绝 Wails 多 Service 外壳 | 📝 提议中 |
@@ -65,11 +64,12 @@ permalink: /adr/
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 | [ADR-050](./ADR-050-plaza-browser-window.md) | 模型广场 · 浏览器窗口（Wails 第二窗口） | 🔄 部分采纳 |
 
-### ✅ 已采纳（312）
+### ✅ 已采纳（313）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
 | [ADR-331](./architecture/ADR-331-3d-friendlyerror-code-keys.md) | 3D 错误消息国际化：friendlyError 旁路收窄与 CODE_KEYS 单源 | ✅ 已采纳 |
+| [ADR-331-d1](./decisions/ADR-331-d1-readfilebytes-error-readfilemeta-c.md) | ReadFileBytes 无 error 通道缺口：ReadFileMeta 结构化错误字段（切片 C） | ✅ 已采纳 |
 | [ADR-330](./architecture/ADR-330-frustum-per-root-dirty.md) | frustum-cull 逐根矩阵置脏：perFrame 契约携带根身份，消除多模型同框全体 updateWorldMatrix | ✅ 已采纳 |
 | [ADR-329](./architecture/ADR-329-preview-cap-symmetry-leaf.md) | 3D 预览巨型 cap 对称叶化（sky/light/postprocessing 拆分） | ✅ 已采纳 |
 | [ADR-326](./architecture/ADR-326-env-persist-schema-derived.md) | 环境能力持久化键派生化：消灭手抄摘键/还原表 | ✅ 已采纳 |
@@ -733,7 +733,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
-| ADR-331-d1 | ReadFileBytes 无 error 通道缺口：ReadFileMeta 结构化错误字段（切片 C） | 📝 提议中 | 2026-10-12 |
+| ADR-331-d1 | ReadFileBytes 无 error 通道缺口：ReadFileMeta 结构化错误字段（切片 C） | ✅ 已采纳 | 2026-10-12 |
 | ADR-311-d1 | 测试纪律：禁 mock 被断言谓词（自证）+ 判别样本 + 变异探针 | ✅ 已采纳 | 2026-10-09 |
 | ADR-293-d1 | 灯光首启默认分治：辅助线框关、浏览最小光照、环境光降档 | ✅ 已采纳 | 2026-10-04 |
 | ADR-292-d1 | envSource 迁移判据① 供血线单源化（不再跨槽读 sky 存档键形） | ✅ 已采纳 | 2026-10-07 |

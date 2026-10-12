@@ -1074,4 +1074,44 @@ test.describe("诊断页 · bench 模式语义诚实层（ADR-278 §2.6）", () 
 
   // ⚠️ 语种口径：e2e 浏览器被 playwright.config 钉在 locale: "en-US"（防 CI 系统语言翻车），
   // 文案断言用 en 包关键词 + zh 对照注释；toast 在 <app-toast> shadowRoot 内，选择器必须穿透。
+
+  test("状态行「图标+文案」左对齐：.diag-msg 不被基类 space-between 撕到行尾", async ({ page }) => {
+    // 2026-10-12 版面修复防线。立因：`.diag-msg` / `.diag-warn` 的行内容是
+    // **SVG 图标节点 + 文本节点 = 两个 flex item**，而基类 `.stat-row` 带
+    // `justify-content:space-between`（它是为「标签…数值」两栏数据行设的）→ 图标顶到行首、
+    // 整句提示推到行尾，1440px 实测两者相距 ≈740px，警告与解释被迫跨屏对读。
+    // 同形中招的四处：ADR-322 日志未落盘红条、conflicts 错误行/成功行、health 警告行。
+    //
+    // ⚠️ 防线为何必须落在真实浏览器：status-row.test.ts 对这两族外壳断言的是
+    // **HTML 字符串逐字相等**，对 flex 几何完全失明——这正是该缺陷长期存活的原因。
+    // 判据取「图标右缘 → 相邻文本左缘的间距」，与语种文案无关（不写死中英日）。
+    await clickBySelector(page, '.repo-tab[data-tab="audit"]');
+    await clickBySelector(page, `[data-testid="diag-sub-audit-sync"]`);
+    const gap = await page.evaluate(async () => {
+      const root = document.querySelector("app-content")?.shadowRoot;
+      // 「无可用实例」的不可用态是异步落结果区的，轮询等它出现（最多 ~5s）
+      for (let i = 0; i < 50; i++) {
+        // 定位走 data-testid 通道（e2e 定位通道门禁：#id 有同名 testid 即硬违规）
+        const msg = root
+          ?.querySelector('[data-testid="diag-sync-conflict-list"]')
+          ?.querySelector(".diag-msg");
+        const svg = msg?.querySelector("svg");
+        if (msg && svg) {
+          for (const n of Array.from(msg.childNodes)) {
+            if (n.nodeType === Node.TEXT_NODE && (n.textContent ?? "").trim()) {
+              const r = document.createRange();
+              r.selectNodeContents(n);
+              return Math.round(r.getBoundingClientRect().left - svg.getBoundingClientRect().right);
+            }
+          }
+        }
+        await new Promise((res) => setTimeout(res, 100));
+      }
+      return -1; // 等了 5s 都没出现带图标的状态行 → 下方 expect 判失败
+    });
+    expect(gap).toBeGreaterThan(0);
+    // 修复后 = gap token（实测 4px）；space-between 下是行宽量级（实测 ≈740px）。
+    // 阈值 40：能抓住「分居两端」回归，又容得下多语种下图标与首词的真实间距。
+    expect(gap).toBeLessThan(40);
+  });
 });

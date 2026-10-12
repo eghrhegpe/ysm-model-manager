@@ -224,7 +224,16 @@ export const contentDiagCSS: string = `
 .perf-trace-hint { color:var(--muted);font-size:var(--fs-xs);padding:4px 2px 8px;text-align:center;opacity:.6;border-top:1px solid var(--bd);margin-top:6px; }
 
 /* ===== 诊断页去重 UI (diag-dedup) ===== */
-.diag-msg { padding:var(--sp-3);font-size:var(--fs-sm); }
+/* justify-content/gap：把「图标 + 整句提示」收回左对齐（status-row.ts 两族外壳的既定口径）。
+   立因：基类 .stat-row 是 display:flex + justify-content:space-between（为「标签…数值」
+   两栏数据行而设），而本族行内是 SVG 图标节点 + 文本节点 = **两个 flex item** → space-between
+   把图标顶到行首、把整句提示推到行尾，中间留一条横贯屏幕的空白（1440px 实测约 1050px），
+   警告与其解释被迫跨屏对读。基类口径不动（14 处消费点多数被 stat-row-idle/行内样式覆盖），
+   只在本族与 .diag-warn 两处「图标+文案」形态上纠正。
+   ⚠️ 单 item（纯文案行）下 flex-start 与 space-between 表现相同，故本规则对扫描中提示行等
+   无视觉变化；deps 侧已有的 style="justify-content:center"（dedup.ts / dedup-scan.ts /
+   tpl-oldest.ts）行内优先级更高，行为不变，清理与否另议。 */
+.diag-msg { padding:var(--sp-3);font-size:var(--fs-sm);justify-content:flex-start;gap:var(--sp-1); }
 .diag-msg-error { color:var(--status-error); }
 .diag-msg-success { color:var(--status-success); }
 .diag-msg-muted { color:var(--muted); }
@@ -272,7 +281,7 @@ export const contentDiagCSS: string = `
    而是常驻 .diag-bar（选择器 + 按钮直接排在栏内）——旧卡片类失去生产者，规则一并退场。 */
 .diag-sync-resolve { margin-top:16px; padding:var(--sp-3); background:var(--surf); border-radius:var(--radius-lg); }
 .diag-dedup-config { padding:var(--sp-vh-pane); }
-.diag-warn { color:var(--status-warning); font-weight:600; } /* 审计 P2-6：删 --status-warning 冗余回退（6 主题已定义） */
+.diag-warn { color:var(--status-warning); font-weight:600;justify-content:flex-start;gap:var(--sp-1); } /* 审计 P2-6：删 --status-warning 冗余回退（6 主题已定义）；justify-content/gap 同 .diag-msg——体检警告行是「图标+整句」，会被基类 space-between 撕到两端 */
 
 /* P1 批次12:工坊行名称容器(community/render.ts nameWrap,gh-row 列1 内部 flex 容器) → 已归位 content-gh.ts */
 `;

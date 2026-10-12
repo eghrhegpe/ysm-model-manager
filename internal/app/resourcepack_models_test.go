@@ -117,9 +117,7 @@ func TestListPackModelsDetail(t *testing.T) {
 	p := makePackZip(t, packDetailZipFiles)
 	res, err := a.ListPackModelsDetail(p)
 	testutil.NoError(t, err, "ListPackModelsDetail 返回 error")
-	if res == nil {
-		t.Fatal("ListPackModelsDetail 返回 nil")
-	}
+	testutil.NotNil(t, res, "ListPackModelsDetail 返回 nil")
 
 	if res.Total != 4 {
 		t.Fatalf("期望 4 个模型，实际 total=%d: %v", res.Total, res.Models)

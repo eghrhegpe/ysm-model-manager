@@ -49,9 +49,7 @@ func TestFindDuplicateFiles_Guard(t *testing.T) {
 	// 根外路径应被守卫拒绝，且错误为结构化 AppError（INVALID_PATH，friendlyError 可映射 i18n）
 	outside := filepath.Join(base, "..", "outside")
 	_, err = a.FindDuplicateFiles(context.Background(), outside, "")
-	if err == nil {
-		t.Fatal("根外路径应被守卫拒绝返回 error")
-	}
+	testutil.NotNil(t, err, "根外路径应被守卫拒绝返回 error")
 	var appErr types.AppError
 	if !errors.As(err, &appErr) {
 		t.Fatalf("守卫错误应为 AppError, got %T: %v", err, err)
@@ -131,9 +129,7 @@ func TestFindDuplicateFiles_NoDupNilFree(t *testing.T) {
 	a := resourceApp(t, types.AppConfig{FilesRoot: base})
 	groups, err := a.FindDuplicateFiles(context.Background(), root, "deep_hash")
 	testutil.NoError(t, err, "FindDuplicateFiles 失败")
-	if groups == nil {
-		t.Fatal("无重复时应返回空切片（非 nil），否则前端 null 防御分支被误触发")
-	}
+	testutil.NotNil(t, groups, "无重复时应返回空切片（非 nil），否则前端 null 防御分支被误触发")
 	if len(groups) != 0 {
 		t.Fatalf("无重复时期望 0 组, got %d", len(groups))
 	}
@@ -208,9 +204,7 @@ func TestRepoHealthAudit_EmptyDir(t *testing.T) {
 	a := resourceApp(t, types.AppConfig{FilesRoot: base})
 	report, err := a.RepoHealthAudit(context.Background(), root)
 	testutil.NoError(t, err, "空目录体检不应报错")
-	if report == nil {
-		t.Fatal("报告不应为 nil")
-	}
+	testutil.NotNil(t, report, "报告不应为 nil")
 	if report.Resources.TotalFiles != 0 {
 		t.Errorf("空目录 TotalFiles 应为 0, got %d", report.Resources.TotalFiles)
 	}

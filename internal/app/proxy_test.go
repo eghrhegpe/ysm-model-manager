@@ -175,9 +175,7 @@ func TestCookieJar(t *testing.T) {
 
 func TestNewSSRFTransport(t *testing.T) {
 	tr := newSSRFTransport()
-	if tr == nil {
-		t.Fatal("expected non-nil transport")
-	}
+	testutil.NotNil(t, tr, "expected non-nil transport")
 	if tr.TLSClientConfig == nil {
 		t.Error("expected non-nil TLSClientConfig")
 	}
@@ -237,9 +235,7 @@ func TestAppStopProxyNonexistentSession(t *testing.T) {
 
 func TestNewCookieJar(t *testing.T) {
 	jar := newCookieJar()
-	if jar == nil {
-		t.Fatal("expected non-nil jar")
-	}
+	testutil.NotNil(t, jar, "expected non-nil jar")
 	if jar.store == nil {
 		t.Error("expected non-nil store")
 	}

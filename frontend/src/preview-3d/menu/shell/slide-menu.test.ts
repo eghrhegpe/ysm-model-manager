@@ -579,6 +579,55 @@ describe("createSlideMenu 键盘导航", () => {
     expect(after.map((el) => el.tabIndex)).toEqual([-1, 0, -1]);
     expect(document.activeElement).toBe(after[1]);
   });
+
+  // ── D8：可折叠 disclosure 项，roving 聚焦 header 而非 section，Enter/Space 切换 ──
+  it("D8 disclosure 项：roving 聚焦 header（非 section 容器），Enter/Space 触发折叠切换", () => {
+    const h = mountMenu();
+    h.home({
+      title: "nav",
+      render: (list: HTMLElement) => {
+        list.innerHTML = "";
+        const section = document.createElement("div");
+        section.className = "cap-folder";
+        const header = document.createElement("div");
+        header.className = "cap-section-header";
+        header.setAttribute("role", "button");
+        header.setAttribute("aria-expanded", "true");
+        header.setAttribute("aria-controls", "fld-x-body");
+        const body = document.createElement("div");
+        body.id = "fld-x-body";
+        body.className = "cap-section-body";
+        body.style.display = "block";
+        section.append(header, body);
+        list.appendChild(section);
+        // 模拟 render.ts 的 disclosure 折叠监听（header.click → 切换 aria-expanded + body display）
+        header.addEventListener("click", () => {
+          const nowCollapsed = body.style.display === "none";
+          body.style.display = nowCollapsed ? "block" : "none";
+          header.setAttribute("aria-expanded", String(nowCollapsed ? "true" : "false"));
+        });
+        const row = document.createElement("button");
+        row.className = "slide-item";
+        row.textContent = "B";
+        list.appendChild(row);
+      },
+    });
+    const section = h.list.querySelector(".cap-folder") as HTMLElement;
+    const header = section.querySelector(".cap-section-header") as HTMLElement;
+    const body = h.list.querySelector("#fld-x-body") as HTMLElement;
+    // [D8] disclosure header 是首个 roving 导航项：tabindex 落在 header，section 容器不抢焦点
+    expect(header.tabIndex).toBe(0);
+    expect(section.tabIndex).toBe(-1);
+    // 聚焦 header 按 Enter → onActivate 走「disclosure 项 → header.click()」→ 折叠
+    header.focus();
+    h.list.dispatchEvent(keyEvent("Enter"));
+    expect(header.getAttribute("aria-expanded")).toBe("false");
+    expect(body.style.display).toBe("none");
+    // 再按 Space → 展开
+    h.list.dispatchEvent(keyEvent(" "));
+    expect(header.getAttribute("aria-expanded")).toBe("true");
+    expect(body.style.display).toBe("block");
+  });
 });
 
 // ===================================================================

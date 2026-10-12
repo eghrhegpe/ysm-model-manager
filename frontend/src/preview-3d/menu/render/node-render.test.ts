@@ -1178,6 +1178,68 @@ describe("renderMenu card：卡牌分组容器", () => {
     expect(container.querySelector(".cap-section-header")).not.toBeNull();
     expect(container.querySelector(".cap-section-arrow")).not.toBeNull();
   });
+
+  // ── D8：可折叠 disclosure 键盘可达 a11y ──────────────────────────────
+  it("folder: D8 disclosure a11y —— header 作折叠触发器（role=button + aria-expanded + aria-controls 指向 body 真实 id）", () => {
+    const nodes: PreviewMenuNode[] = [
+      {
+        id: "fld-a11y",
+        kind: "folder",
+        labelKey: "preview.skyGroupAdvanced",
+        defaultOpen: false,
+        children: [{ id: "child-a11y", kind: "field", labelKey: "preview.child" as LocaleKey, value: "v" }],
+      },
+    ];
+    const container = document.createElement("div");
+    renderMenu(container, nodes, makeDeps() as any);
+    const header = container.querySelector(".cap-section-header") as HTMLElement;
+    expect(header).not.toBeNull();
+    expect(header.getAttribute("role")).toBe("button");
+    // 默认折叠（defaultOpen:false）→ aria-expanded=false
+    expect(header.getAttribute("aria-expanded")).toBe("false");
+    const body = container.querySelector('[data-testid="fld-a11y-body"]') as HTMLElement;
+    // aria-controls 须指向 body 真实 id（非 data-testid 字符串误用）
+    expect(body.id).toBe("fld-a11y-body");
+    expect(header.getAttribute("aria-controls")).toBe(body.id);
+    // 点击展开 → aria-expanded 翻 true，body 显
+    header.click();
+    expect(header.getAttribute("aria-expanded")).toBe("true");
+    expect(body.style.display).toBe("block");
+    // 再点折叠 → 翻 false
+    header.click();
+    expect(header.getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it("card: collapsible D8 disclosure a11y —— 折叠头 role=button + aria-expanded + aria-controls 指向 body id", () => {
+    const makeNodes = (): PreviewMenuNode[] => [
+      {
+        id: "card-a11y",
+        kind: "card",
+        labelKey: "preview.envSectionBasic",
+        collapsible: true,
+        defaultOpen: false,
+        children: [{ id: "child-a11y2", kind: "field", labelKey: "preview.child" as LocaleKey, value: "v" }],
+      },
+    ];
+    const c1 = document.createElement("div");
+    renderMenu(c1, makeNodes(), makeDeps() as any);
+    const header = c1.querySelector(".cap-card-header--collapsible") as HTMLElement;
+    expect(header.getAttribute("role")).toBe("button");
+    expect(header.getAttribute("aria-expanded")).toBe("false");
+    const body = c1.querySelector('[data-testid="card-a11y-body"]') as HTMLElement;
+    expect(header.getAttribute("aria-controls")).toBe(body.id);
+    // 展开后 aria-expanded 翻 true
+    header.click();
+    expect(header.getAttribute("aria-expanded")).toBe("true");
+    // 不可折叠卡无 disclosure 语义
+    const plain: PreviewMenuNode[] = [
+      { id: "card-plain2", kind: "card", labelKey: "preview.envSectionBasic", children: [{ id: "c", kind: "field", labelKey: "preview.child" as LocaleKey, value: "v" }] },
+    ];
+    const c2 = document.createElement("div");
+    renderMenu(c2, plain, makeDeps() as any);
+    const plainHeader = c2.querySelector(".cap-card-header") as HTMLElement;
+    expect(plainHeader.getAttribute("role")).toBeNull();
+  });
 });
 
 

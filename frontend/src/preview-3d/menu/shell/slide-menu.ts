@@ -107,6 +107,12 @@ export function createSlideMenu(opts?: { title?: string }): SlideMenuHandle {
     activeElementBase: true,
     stateAttr: null,
     onActivate: (item: HTMLElement): void => {
+      // [D8 disclosure] 可折叠项（header 带 aria-expanded + aria-controls）：激活即折叠/展开
+      // 自身，而非误点 body 内首个控件（原实现 Enter 命中 body 控件或静默，D8 痛点）。
+      if (item.getAttribute("aria-expanded") !== null && item.getAttribute("aria-controls")) {
+        item.click();
+        return;
+      }
       const clickable =
         item.querySelector<HTMLElement>("button, a[href], [role='button'], input") ?? item;
       clickable.click();
@@ -309,9 +315,16 @@ function smBindBackButton(backBtn: HTMLSpanElement, handleBack: () => void): voi
 
 /** list 可见直接子节点（菜单项 / section wrapper）；Element 入参 = 兼作 bindRoving itemsOf 提供器 */
 function smGetNavItems(list: Element): HTMLElement[] {
-  return Array.from(list.children).filter(
-    (el): el is HTMLElement => el instanceof HTMLElement && el.offsetParent !== null,
-  );
+  const out: HTMLElement[] = [];
+  for (const el of Array.from(list.children)) {
+    if (!(el instanceof HTMLElement) || el.offsetParent === null) continue;
+    // [D8 disclosure] 可折叠 section（folder/card）的折叠触发器是 header（role=button），
+    // 键盘导航聚焦 header 而非 section 容器——容器含 body 内交互控件，不宜作 button；
+    // aria-expanded 须落在焦点元素上供 AT 播报。disclosure 项经 onActivate 走「item.click()」。
+    const disclosure = el.querySelector<HTMLElement>(":scope > [role='button']");
+    out.push(disclosure ?? el);
+  }
+  return out;
 }
 
 /** roving tabindex：当前项 0，其余 -1；focus（onShow 首项聚焦用；导航 roving 已归 bindRoving） */

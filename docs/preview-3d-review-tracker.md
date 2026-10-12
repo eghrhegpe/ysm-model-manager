@@ -19,7 +19,6 @@
 | A2 | 离屏多角度截图零阴影接线（WYSIWYG 第四缝） | 产品拍板 | `preview-3d/screenshot/screenshot-render.ts`；声明锁 = `docs/knowledge/export.md` 条目 + `screenshot-render.test.ts`「阴影边界」 | 2026-10-12 |
 | A4 | sky 4 键（skyTurbidity / Rayleigh / MieCoefficient / MieDirectionalG）UI 出口 | 产品拍板 | `preview-3d/state/env-state-schema.ts`；`preview-3d/caps/sky-capability.ts\|applyUniform` | 2026-10-12 |
 | ADR-328 | ground cap-enabled 三路径收编（A/B/C） | 产品拍板 | `preview-3d/state/env-state.ts\|clampFieldValue`；`preview-3d/state/env-state-schema.ts\|ARCHIVE_ALIAS` | 2026-10-12 |
-| D12-残余 | `core.ts:602-606`/`:332-336` `dock:`/`panel:` 内部诊断串当用户 tooltip | 产品拍板 | `menu/core.ts\|renderTooltip` | 2026-10-12 |
 | ADR-317 | P1 on-device 终测（CI build-android 仅打 APK，无真机步骤） | 记账观察 | `.github/workflows/android-build*`；`docs/knowledge/ysm-wasi.md` | 2026-10-12 |
 | CSP | `new Function` 执行 UMD 文本（unsafe-eval），上严格 CSP 前须换 `import()`/ESM | 记账观察 | `preview-3d/decoder/mmd-ktx2-basis.ts` | 2026-10-12 |
 | 族②残余 | `mergeCubes` / `computeBoneLocalPos` 手抄双源，无跨语言黄金语料对账（无分叉证据，不开战） | 记账观察 | `preview-3d/model/model-group-builder.ts\|mergeCubes`；`go/threejs/spec-bones.go`；`preview-3d/model/spec-builder.ts\|computeBoneLocalPos` | 2026-10-12 |
@@ -49,6 +48,7 @@
 - **D10** — `check-a11y` 增 `coverageNeutral` 口径 + 契约测试消费健壮性，见 `scripts/check-a11y.ts`。
 - **D11** — `preview-settings.md` 硬计数改指针口径 + 三卡退役 API 标注 + 豁免清单双向对账 + `go-avatar-decode.md` 整卡重写，见 `docs/knowledge/preview-settings.md`、`docs/knowledge/go-avatar-decode.md`。
 - **D12** — `check-redlines` 补 **R12**（pointer 红线闸）+ **R14**（dom-contract 收编 + 属性名裸写闸），见 `scripts/check-redlines.ts`、`preview-3d/menu/dom-contract.ts\|ARIA_ATTR`。
+- **D12-残余·dock/panel 诊断串（2026-10-12 侦察定性）** — **已清偿**。原 `title` 裸诊断串「`panel: <id>`」/「`dock: <id> · <项 id 列表>」不经 i18n、en/ja 悬停显英文裸串，`[D12 收口 2026-10-12]` 已删，改走机器可读 `data-panel-id`/`data-dock-group`/`data-dock-items`（devtools 右键即见）。判词来源：`preview-3d/menu/engine/core.ts:336` 与 `:606` 的 `[D12 收口]` 注释 + 实际代码用 `list.dataset.panelId`/`btn.dataset.dockGroup`。**原活卡「产品拍板」判词过时，移出未清偿清单。**
 - **#2 水 clipBias onCommit** — `preview-3d/caps/water-menu.ts\|wSliderNode`（结构键走 S11 onCommit 范式）。
 - **#3 frustum 逐根化（ADR-330）** — `PerFrameEntry{f,root?}` + 4 个动效格式补 `root`，见 `preview-3d/infra/render-host.ts\|markCullMatricesDirty`。
 - **#4 KTX2 池终止文案** — 盲区登记注释，见 `preview-3d/infra/worker-bridge.ts\|request`。

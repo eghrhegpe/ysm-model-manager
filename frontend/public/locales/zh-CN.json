@@ -989,6 +989,8 @@
   "preview.texture.declaration": "声明 {decl}",
   "preview.texture.loaded": "加载 {size}",
   "preview.texture.fallback": "纹理 {n}",
+  "preview.overview.mmd": "{b} 骨骼 · {m} 材质 · {f} 表情",
+  "preview.overview.vrm": "{b} 骨骼 {m} 材质",
   "preview.stats.file": "📊 文件统计",
   "preview.stats.vertices": "顶点",
   "preview.stats.faces": "面数",

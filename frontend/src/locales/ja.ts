@@ -1160,6 +1160,8 @@ export const ja: Record<string, string> = {
   "preview.texture.declaration": "宣言 {decl}",
   "preview.texture.loaded": "読込 {size}",
   "preview.texture.fallback": "テクスチャ {n}",
+  "preview.overview.mmd": "{b} ボーン · {m} マテリアル · {f} モーフ",
+  "preview.overview.vrm": "{b} ボーン {m} マテリアル",
   // MMD 詳細カード（P2: PMX ファイル解析口径, 描画実測と区別）
   "preview.stats.file": "📊 ファイル統計",
   "preview.stats.vertices": "頂点",

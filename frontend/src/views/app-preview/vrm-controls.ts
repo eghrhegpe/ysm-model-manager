@@ -1,6 +1,7 @@
 // ===== VRM 3D 菜单面板填充（ADR-076 v2 Phase 2：对齐 ysm-controls.ts 模式）=====
 // VRM 专属面板（材质）集中于此，由 vrm-adapter 经 ctx.menu.setAdapterItems 注入 ⚙️ 根菜单。
 
+import { t } from "@/core/i18n/t.ts"; // [D2 补] overview 模板硬编码中文→翻译键
 import type { VrmModelInfoCtx } from "@/preview-3d/adapters/vrm/vrm-adapter.ts";
 import type {
   VrmMaterialDetail,
@@ -30,7 +31,7 @@ export function vrmModelInfoNodes(ctx: VrmModelInfoCtx): PreviewMenuNode[] {
       id: "vrm-model-overview",
       kind: "field",
       labelKey: "preview.modelOverview",
-      value: `${ctx.boneCount} 骨骼 ${ctx.materialCount} 材质`,
+      value: t("preview.overview.vrm", { b: ctx.boneCount, m: ctx.materialCount }), // [D2 补] 原「${n} 骨骼 ${n} 材质」裸中文模板
     },
   ];
   // [VRM meta] 头部元信息（title/author/license/version，vrm-adapter 归一化的文本摘要）。

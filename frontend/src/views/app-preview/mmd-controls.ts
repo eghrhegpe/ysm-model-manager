@@ -5,6 +5,7 @@
 // （self 模式由 visibleWhen: s["ui.mode"]!=="self" 谓词隐藏，[doc:adr-126-p4-d]）。
 // 材质面板 buildMaterialControls 保留复用（纯渲染层，状态经 bridge 下沉 mmd-materials.ts，ADR-072）。
 
+import { t } from "@/core/i18n/t.ts"; // [D2 补] overview 模板硬编码中文→翻译键
 import { mmdModelSelectNode } from "@/preview-3d/adapters/mmd/mmd-model-select.ts";
 // [S4 层级倒置收敛] 内容层桥契约已下沉 preview-3d/adapters/content-bridges.ts——
 // import 供本文件函数签名本地绑定；导出面收敛（knip）：CameraControlBridge /
@@ -40,7 +41,11 @@ export function mmdModelInfoNodes(ctx: MmdBottomNavCtx): PreviewMenuNode[] {
       id: "mmd-model-overview",
       kind: "field",
       labelKey: "preview.modelOverview",
-      value: `${pmx.bones.length} 骨骼 · ${pmx.materials.length} 材质 · ${pmx.morphs.length} 表情`,
+      value: t("preview.overview.mmd", {
+        b: pmx.bones.length,
+        m: pmx.materials.length,
+        f: pmx.morphs.length,
+      }), // [D2 补] 原「${n} 骨骼 · ${n} 材质 · ${n} 表情」裸中文模板
     },
   );
   // [PMX 规约] 头部元信息（modelName/comment 等规约字段，如「禁止贩卖/禁止改模」类说明）。

@@ -989,6 +989,8 @@
   "preview.texture.declaration": "Declaration {decl}",
   "preview.texture.loaded": "Loaded {size}",
   "preview.texture.fallback": "Texture {n}",
+  "preview.overview.mmd": "{b} bones · {m} materials · {f} morphs",
+  "preview.overview.vrm": "{b} bones {m} materials",
   "preview.stats.file": "📊 File Stats",
   "preview.stats.vertices": "Vertices",
   "preview.stats.faces": "Faces",

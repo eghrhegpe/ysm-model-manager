@@ -1130,6 +1130,8 @@ export const zhCN = {
   "preview.texture.declaration": "声明 {decl}",
   "preview.texture.loaded": "加载 {size}",
   "preview.texture.fallback": "纹理 {n}",
+  "preview.overview.mmd": "{b} 骨骼 · {m} 材质 · {f} 表情",
+  "preview.overview.vrm": "{b} 骨骼 {m} 材质",
   // MMD 详情卡（P2：PMX 文件解析口径，与渲染实测区分）
   "preview.stats.file": "📊 文件统计",
   "preview.stats.vertices": "顶点",

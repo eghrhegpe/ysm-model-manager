@@ -5,6 +5,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { vrmModelInfoNodes, vrmShotNodes } from "./vrm-controls.ts";
 import { findNodeById, nodeIds } from "@/preview-3d/menu/menu-test-helpers.ts";
+import { t } from "@/core/i18n/t.ts"; // [D2] 断言同源派生，不锁措辞
 import type { PreviewActionMenuCtx } from "@/preview-3d/menu/schema/node-types.ts";
 
 // 截图链路（Wails 绑定 SaveScreenshotFile）在 node 测试环境不可用——
@@ -23,7 +24,7 @@ describe("vrmModelInfoNodes（模型信息声明式节点）", () => {
     const nameNode = findNodeById(nodes, "vrm-model-name");
     expect(nameNode).toMatchObject({ labelKey: "preview.nameLabel", value: "test" });
     const overviewNode = findNodeById(nodes, "vrm-model-overview");
-    expect(overviewNode.value).toBe("52 骨骼 3 材质");
+    expect(overviewNode.value).toBe(t("preview.overview.vrm", { b: 52, m: 3 }));
   });
 
   it("meta 缺失 → 保持基础 2 行 field", () => {

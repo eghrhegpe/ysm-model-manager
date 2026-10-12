@@ -14,9 +14,16 @@
  * 判定（精确、低误报）：
  *   1. 先遮罩注释（行/块注释 → 同长空格，保留换行与偏移，行号才准）；
  *   2. 抽所有字符串字面量（单/双/反引号，反引号可跨行）；
- *   3. 字面量同时含 [汉字] + [HTML 信号] → 候选；
+ *   3. 双通道入候选（D3 补，2026-10-12——原单 HTML 判据对无标记的 UI 值字段全绿放行，
+ *      即「检查器承诺 > 检查器射程」）：
+ *      通道一 · 字面量同时含 [汉字] + [HTML 信号] → 候选（渲染进 DOM 的模板）；
+ *      通道二 · 字面量含 [汉字] 且所在行是 UI 值字段上下文（`value|text|tooltip` 赋值）
+ *               → 候选（MenuNode schema 的 value 侧——D2 病灶形态 `${n} 个` 无 HTML 信号，
+ *               正是通道一漏的那族）。label 侧不查：判净#5 裁决「label: 静态中文 = 键缺失
+ *               合法回退」；throw new Error(中文) 不查：内部诊断通道归 D1 拍板批（65 处）。
  *   4. 若该字面量是 `t("...")` 直接参数（前缀 `\bt(\s*`）→ 已翻译，跳过；
- *   5. 排除：语言选择器原生名（value="zh-CN"/"en"/"ja" 的 option 文本，标准 UX 刻意不翻）。
+ *   5. 排除：语言选择器原生名（value="zh-CN"/"en"/"ja" 的 option 文本，标准 UX 刻意不翻）、
+ *      行级豁免尾注 `// i18n-allow: <理由>`（同 r8-allow/pointer-allow 先例，命中行或上一行）。
  *
  * HTML 信号 = 含 `<字母|/|!` 标签，或 class=/data-testid/placeholder=/title=/id=/</
  *             /<option/<button 之一。只抓「渲染到 DOM 的用户可见文本」，避开标识符/数据映射。
@@ -36,26 +43,20 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { getRoot, walk } from "./_lib/scan-files.ts";
 
 const ROOT = getRoot();
 const SRC = path.join(ROOT, "frontend", "src");
 
-const args = new Set(process.argv.slice(2));
-const JSON_OUT = args.has("--json");
-const STRICT = args.has("--strict");
-// 未知 flag 白名单拦截（批次4 P2）：`--stric` 拼错会被 Set 静默忽略 → 严格门禁悄悄关闭（假绿）。
-// 与 link-checker/codemod 同款守卫，拼错即退 1。
-const KNOWN_FLAGS = new Set(["--json", "--strict", "--help", "-h"]);
-const unknownFlags = [...args].filter((a) => a.startsWith("--") && !KNOWN_FLAGS.has(a));
-if (unknownFlags.length) {
-  console.error(`[i18n-ui-check] 未知 flag: ${unknownFlags.join(", ")}（支持 --json / --strict）`);
-  process.exit(1);
-}
-
 const HAN = /[一-鿿]/;
 const HTML_SIGNAL =
   /<[a-zA-Z/!]|class\s*=|data-testid|placeholder\s*=|title\s*=|id\s*=|<\/|<option|<button/;
+// 通道二（D3 补）：UI 值字段上下文行——MenuNode schema `value:` / 控件 text/tooltip 侧。
+// 判据取「行首到字面量之间的赋值头」：`value:` `text:` `tooltip:`（含对象字面量同行形态，
+// 如 `{ id, kind, labelKey, value: "中文" }` 与 `value: \`模板\``）。
+const UI_VALUE_ASSIGN =
+  /^\s*(?:value|text|tooltip)\s*[:=]\s*["'`]?\s*$|[{,]\s*(?:value|text|tooltip)\s*[:=]\s*["'`]?\s*$/;
 // 语言选择器原生名（刻意不翻，标准 UX）
 const LANG_PICKER = /value="(zh-CN|en|ja)"/;
 
@@ -83,17 +84,34 @@ function maskTsTypeIndex(src: string) {
 /** 字符串字面量正则：单/双/反引号，反引号可跨行。 */
 const STR_RE = /(["'`])((?:\\.|(?!\1)[^\\])*?)\1/gs;
 
-function lineOf(src: string, idx: number) {
-  let line = 1;
-  for (let i = 0; i < idx && i < src.length; i++) {
-    if (src[i] === "\n") line++;
-  }
-  return line;
-}
-
-function scanFile(file: string) {
-  const raw = fs.readFileSync(file, "utf8");
+/**
+ * 纯核（D3 补后导出供契约测试直测「判据非空转」，同 _lib/innerhtml-hygiene 惯例）：
+ * 输入遮罩前源码文本，输出漂移命中（行号 + 片段）。
+ * 行号反查用二分（原线性 lineOf 在 622 文件全扫下 O(n²) 热点，随本次重构移除）。
+ */
+export function scanSourceText(raw: string) {
   const masked = maskTsTypeIndex(maskComments(raw));
+  const rawLines = raw.split("\n");
+  const maskedLines = masked.split("\n");
+  // 行首偏移表：由字面量起点反查所在行（行号语义与 mask 等长替换保持一致）
+  const lineStarts: number[] = [];
+  {
+    let acc = 0;
+    for (const l of maskedLines) {
+      lineStarts.push(acc);
+      acc += l.length + 1;
+    }
+  }
+  const lineIndexOf = (idx: number): number => {
+    let lo = 0;
+    let hi = lineStarts.length - 1;
+    while (lo < hi) {
+      const mid = (lo + hi + 1) >> 1;
+      if (lineStarts[mid]! <= idx) lo = mid;
+      else hi = mid - 1;
+    }
+    return lo;
+  };
   const hits: { line: number; snippet: string }[] = [];
   STR_RE.lastIndex = 0;
   let m = STR_RE.exec(masked);
@@ -103,7 +121,6 @@ function scanFile(file: string) {
     const lit = cur[2]!;
     const start = cur.index;
     if (!HAN.test(lit)) continue;
-    if (!HTML_SIGNAL.test(lit)) continue;
     if (/\bt\(\s*$/.test(masked.slice(0, start))) continue; // 已翻译
     // 拼接链（'a' + t("key") + 'b'）：剥离其中的 t("key") 调用段，若剩余中文都在 t() 里则视为已翻译
     if (/\bt\(/.test(lit)) {
@@ -138,55 +155,97 @@ function scanFile(file: string) {
       if (!HAN.test(stripped)) continue;
     }
     if (LANG_PICKER.test(lit)) continue; // 语言选择器原生名
+    // 双通道判据（D3 补 2026-10-12）：t()/插值剥离之后、入册之前。
+    const lineIdx = lineIndexOf(start);
+    if (HTML_SIGNAL.test(lit)) {
+      // 通道一（原判据）：字面量自带 HTML 标记 → 渲染模板，直接入册。
+    } else {
+      // 通道二（新补）：UI 值字段上下文——字面量之前的行内前缀匹配赋值头。
+      const linePrefix = maskedLines[lineIdx]!.slice(0, start - lineStarts[lineIdx]!);
+      if (!UI_VALUE_ASSIGN.test(linePrefix)) continue;
+      // 行级豁免台账（同 pointer-allow 先例）：`// i18n-allow: <理由>` 命中行或上一行
+      // ——用 raw 原文行判（masked 把注释遮成空格，豁免注必须看得见原文才生效）
+      const win = `${rawLines[lineIdx - 1] ?? ""}\n${rawLines[lineIdx] ?? ""}`;
+      if (/i18n-allow:/.test(win)) continue;
+    }
     hits.push({
-      line: lineOf(masked, start),
+      line: lineIdx + 1,
       snippet: lit.length > 60 ? `${lit.slice(0, 57)}…` : lit,
     });
   }
   return hits;
 }
 
-// 复用共享层 walk（原为自研递归）。
-// 「跳过语言包源」从死分支修正为生效（2026-09）：原自研实现比对 `path.resolve(p) === LOCALE_DIR`
-// 且 LOCALE_DIR 写作 src/core/i18n/locales，但该目录在 i18n 迁移后已不存在——语言包实际在
-// src/locales/{en,ja,zh-CN}.ts，判断恒 false（死分支），语言包源长期被误扫。
-// 后果实证：修复前 13 处告警（ja 6 + zh-CN 7）全部来自语言包自身译文——语言包里的
-// `"content.errNoIndex": "❌ 无 index.json<br>"` 这类含 HTML 标签的富文本译文，
-// 天然命中「HTML 信号 + 中文 + 未包 t()」，但它本身就是译文、不是硬编码 UI。
-// 按原设计意图排除（语言包是译文的源头，不该被当违规源）。
-const LOCALE_DIR = path.join(SRC, "locales");
-const files = walk(SRC, {
-  exts: [".ts"],
-  skipDir: (name) => path.join(SRC, name) === LOCALE_DIR,
-  skipFile: /\.test\.ts$/,
-}) as string[];
-const report: { file: string; hits: { line: number; snippet: string }[] }[] = [];
-let total = 0;
-for (const f of files) {
-  const hits = scanFile(f);
-  if (hits.length) {
-    total += hits.length;
-    report.push({ file: path.relative(ROOT, f).split(path.sep).join("/"), hits });
-  }
+function scanFile(file: string) {
+  return scanSourceText(fs.readFileSync(file, "utf8"));
 }
 
-if (JSON_OUT) {
-  console.log(JSON.stringify({ drift: total, files: report.length, details: report }, null, 2));
+// main 守卫：本文件被契约测试 import（取 scanSourceText 纯核）时不得执行全仓扫描、
+// 更不得 process.exit（会杀死测试进程）；仅 `node scripts/i18n-ui-check.ts` 直跑才扫。
+// flag 解析亦移入 main——顶层读 process.argv 会让 import 方（测试运行器）的 argv 被
+// 当成本脚本参数（未知 flag 直接 exit 1，全绿也变崩）。
+function main(): void {
+  const args = new Set(process.argv.slice(2));
+  const JSON_OUT = args.has("--json");
+  const STRICT = args.has("--strict");
+  // 未知 flag 白名单拦截（批次4 P2）：`--stric` 拼错会被 Set 静默忽略 → 严格门禁悄悄关闭（假绿）。
+  // 与 link-checker/codemod 同款守卫，拼错即退 1。
+  const KNOWN_FLAGS = new Set(["--json", "--strict", "--help", "-h"]);
+  const unknownFlags = [...args].filter((a) => a.startsWith("--") && !KNOWN_FLAGS.has(a));
+  if (unknownFlags.length) {
+    console.error(
+      `[i18n-ui-check] 未知 flag: ${unknownFlags.join(", ")}（支持 --json / --strict）`,
+    );
+    process.exit(1);
+  }
+
+  // 复用共享层 walk（原为自研递归）。
+  // 「跳过语言包源」从死分支修正为生效（2026-09）：原自研实现比对 `path.resolve(p) === LOCALE_DIR`
+  // 且 LOCALE_DIR 写作 src/core/i18n/locales，但该目录在 i18n 迁移后已不存在——语言包实际在
+  // src/locales/{en,ja,zh-CN}.ts，判断恒 false（死分支），语言包源长期被误扫。
+  // 后果实证：修复前 13 处告警（ja 6 + zh-CN 7）全部来自语言包自身译文——语言包里的
+  // `"content.errNoIndex": "❌ 无 index.json<br>"` 这类含 HTML 标签的富文本译文，
+  // 天然命中「HTML 信号 + 中文 + 未包 t()」，但它本身就是译文、不是硬编码 UI。
+  // 按原设计意图排除（语言包是译文的源头，不该被当违规源）。
+  const LOCALE_DIR = path.join(SRC, "locales");
+  const files = walk(SRC, {
+    exts: [".ts"],
+    skipDir: (name) => path.join(SRC, name) === LOCALE_DIR,
+    skipFile: /\.test\.ts$/,
+  }) as string[];
+  const report: { file: string; hits: { line: number; snippet: string }[] }[] = [];
+  let total = 0;
+  for (const f of files) {
+    const hits = scanFile(f);
+    if (hits.length) {
+      total += hits.length;
+      report.push({ file: path.relative(ROOT, f).split(path.sep).join("/"), hits });
+    }
+  }
+
+  if (JSON_OUT) {
+    console.log(JSON.stringify({ drift: total, files: report.length, details: report }, null, 2));
+    process.exit(STRICT && total ? 1 : 0);
+  }
+
+  console.log("i18n UI 漂移检查 (i18n-ui-check)");
+  console.log(
+    "规则: 中文 +（HTML 信号 ∪ UI 值字段上下文）+ 未包 t() → 漂移（已排除语言包/测试/语言选择器原生名/i18n-allow 台账）",
+  );
+  console.log(`扫描: ${files.length} 个 .ts`);
+  console.log("─".repeat(60));
+  if (!total) {
+    console.log("✅ 未发现硬编码中文 UI（动态菜单已接入 t()）");
+  } else {
+    for (const r of report) {
+      console.log(`📄 ${r.file}  (${r.hits.length} 处)`);
+      for (const h of r.hits) console.log(`   L${h.line}: ${h.snippet}`);
+    }
+    console.log("─".repeat(60));
+    console.log(`共 ${total} 处漂移，涉及 ${report.length} 个文件`);
+  }
   process.exit(STRICT && total ? 1 : 0);
 }
 
-console.log("i18n UI 漂移检查 (i18n-ui-check)");
-console.log("规则: 含 HTML 标记 + 含中文 + 未包 t() → 漂移（已排除语言包/测试/语言选择器原生名）");
-console.log(`扫描: ${files.length} 个 .ts`);
-console.log("─".repeat(60));
-if (!total) {
-  console.log("✅ 未发现硬编码中文 UI（动态菜单已接入 t()）");
-} else {
-  for (const r of report) {
-    console.log(`📄 ${r.file}  (${r.hits.length} 处)`);
-    for (const h of r.hits) console.log(`   L${h.line}: ${h.snippet}`);
-  }
-  console.log("─".repeat(60));
-  console.log(`共 ${total} 处漂移，涉及 ${report.length} 个文件`);
-}
-process.exit(STRICT && total ? 1 : 0);
+const invokedDirectly = process.argv[1] && pathToFileURL(process.argv[1]).href === import.meta.url;
+if (invokedDirectly) main();

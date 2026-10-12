@@ -10,6 +10,7 @@ import {
   onOverlayStyleTargetReset,
   overlayStyleRoot,
 } from "@/preview-3d/infra/overlay-style-bridge.ts";
+import { ARIA_ATTR } from "@/preview-3d/menu/schema/dom-contract.ts";
 import { attachTooltip } from "@/utils/dom/tooltip.ts";
 
 export const YSW_FAB_CSS = `
@@ -86,7 +87,7 @@ export function createIconButton(opts: IconButtonOpts): HTMLButtonElement {
   const btn = document.createElement("button");
   btn.className = opts.className || "ysm-ovl-btn";
   if (opts.title) {
-    btn.setAttribute("aria-label", opts.title);
+    btn.setAttribute(ARIA_ATTR.label, opts.title);
     attachTooltip(btn, opts.title);
   }
   if (opts.icon) {

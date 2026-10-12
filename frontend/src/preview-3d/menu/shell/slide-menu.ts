@@ -23,6 +23,7 @@
 //    isInputBlocked()=true → input-and-animation 暂停相机 WASD/方向键）
 
 import { t } from "@/core/i18n/t.ts";
+import { ARIA_ATTR, ROLE } from "@/preview-3d/menu/schema/dom-contract.ts";
 import { installComponentsStyles } from "@/preview-3d/menu/style/components-styles.ts";
 import { installSlideMenuStyles } from "@/preview-3d/menu/style/slide-menu-styles.ts";
 import { bindRoving } from "@/utils/dom/bind-roving.ts";
@@ -109,7 +110,7 @@ export function createSlideMenu(opts?: { title?: string }): SlideMenuHandle {
     onActivate: (item: HTMLElement): void => {
       // [D8 disclosure] 可折叠项（header 带 aria-expanded + aria-controls）：激活即折叠/展开
       // 自身，而非误点 body 内首个控件（原实现 Enter 命中 body 控件或静默，D8 痛点）。
-      if (item.getAttribute("aria-expanded") !== null && item.getAttribute("aria-controls")) {
+      if (item.getAttribute(ARIA_ATTR.expanded) !== null && item.getAttribute(ARIA_ATTR.controls)) {
         item.click();
         return;
       }
@@ -233,10 +234,10 @@ function smBuildShell(opts?: { title?: string }): SmShell {
 
   const backBtn = document.createElement("span");
   backBtn.className = "slide-back";
-  backBtn.setAttribute("role", "button");
+  backBtn.setAttribute(ARIA_ATTR.role, ROLE.button);
   backBtn.tabIndex = 0;
   // [D9②] icon-only 关闭按钮：title 仅视觉 tooltip，可达名由 aria-label 承担（仓内口径 dom-fab.md）
-  backBtn.setAttribute("aria-label", t("common.close"));
+  backBtn.setAttribute(ARIA_ATTR.label, t("common.close"));
   // 关闭图标恒为 UI_ICONS.close（ADR-238 §1.4 结构槽走 SVG）。
   // 原 `closeIcon?: string` 覆盖参数已删——它把「未转义的 HTML 串」作为公开注入面，
   // 触发 check-redlines R8（innerHTML XSS）；而全仓唯一调用方 core.ts 早就不传它。
@@ -291,7 +292,7 @@ function smRenderTop(
     backBtn.innerHTML = UI_ICONS.back;
   }
   backBtn.title = atRoot ? t("common.close") : t("common.back");
-  backBtn.setAttribute("aria-label", atRoot ? t("common.close") : t("common.back"));
+  backBtn.setAttribute(ARIA_ATTR.label, atRoot ? t("common.close") : t("common.back"));
   top.render(list);
 
   // 恢复焦点到原索引位置的菜单项

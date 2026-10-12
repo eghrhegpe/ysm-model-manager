@@ -1,7 +1,10 @@
 // [doc:architecture] ui-header-toggle — 标题栏小型开关（toggle.header-toggle）
-// 零依赖叶子（自 MikuMikuAR 迁移，经 ui-rows 抽出以断开文件级双向环）。
+// 业务零依赖叶子（自 MikuMikuAR 迁移，经 ui-rows 抽出以断开文件级双向环）；
+// 仅引 dom-contract 常量叶（纯 aria 名常量，不成环，check-a11y W 口径豁免据此）。
 // 统一双触发去重 + disabled + forceToggle。
 // 注意：状态回写场景走菜单 refresh 重建语义（重建即最新态），勿复刻已删的 control-registry 注册链。
+
+import { ARIA_ATTR } from "@/preview-3d/menu/schema/dom-contract.ts";
 
 export interface HeaderToggleConfig {
   value: boolean;
@@ -39,7 +42,7 @@ export function createHeaderToggle(config: HeaderToggleConfig): HeaderToggleElem
   input.checked = config.value;
   input.disabled = !!config.disabled;
   // [D9③] checkbox 无可见文本标签（label 仅含 SVG 滑块）→ 显式可达名，否则 SR 无名
-  if (config.label) input.setAttribute("aria-label", config.label);
+  if (config.label) input.setAttribute(ARIA_ATTR.label, config.label);
   const slider = document.createElement("span");
   slider.className = "slider";
   toggle.appendChild(input);

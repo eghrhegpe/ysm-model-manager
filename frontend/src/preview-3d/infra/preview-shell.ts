@@ -75,6 +75,8 @@ export function ensureOverlayShell(deps: OverlayShellDeps): {
     // 无障碍：3D 全屏预览是模态体验——告诉屏幕阅读器这是对话框、独占焦点、名称用
     // 已有 preview.title3d i18n key（与 FAB aria-label 同源，3 语言包已同步）
     // D3：aria 挂 host（host 在 document 树，语义对屏幕阅读器可见）
+    // [D12 注] 本文件不引 menu/schema/dom-contract——R9 方向闸禁 infra→menu 运行时边
+    // （先例仅 import type）；3 处裸串属已登记范围边界，收编需 R9 --force 豁免或契约下沉拍板批
     overlay.setAttribute("role", "dialog");
     overlay.setAttribute("aria-modal", "true");
     overlay.setAttribute("aria-label", deps.ariaLabel);

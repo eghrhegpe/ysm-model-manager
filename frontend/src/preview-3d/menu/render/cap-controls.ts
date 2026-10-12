@@ -272,7 +272,7 @@ export function renderCapSlider(parent: HTMLElement, v: CapControlView): void {
   const bar = document.createElement("div");
   bar.className = SLIDER_BAR_CLASS;
   bar.tabIndex = 0;
-  bar.setAttribute("role", ROLE.slider);
+  bar.setAttribute(ARIA_ATTR.role, ROLE.slider);
   bar.setAttribute(ARIA_ATTR.label, capLabel(v));
   bar.setAttribute(ARIA_ATTR.valuemin, String(min));
   bar.setAttribute(ARIA_ATTR.valuemax, String(max));

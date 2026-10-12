@@ -8,6 +8,7 @@
 
 import { installOnceStyles } from "@/preview-3d/infra/overlay-style-bridge.ts";
 import { getSchema } from "@/preview-3d/infra/schema-registry.ts";
+import { ARIA_ATTR, ROLE } from "@/preview-3d/menu/schema/dom-contract.ts";
 import {
   isPreviewFolderNode,
   type NodeFor,
@@ -208,8 +209,8 @@ function rmAppendFolder(container: HTMLElement, node: PreviewMenuNode, deps: Ren
   // （smGetNavItems 把 disclosure header 作为导航项聚焦，onActivate 走「disclosure 项 →
   // header.click()」统一切换）。原实现 header 无 role/键盘出口，section 聚焦后 Enter 命中
   // body 首个控件或静默无反应（D8 痛点：折叠无法键盘触发）。
-  header.setAttribute("role", "button");
-  header.setAttribute("aria-expanded", String(!collapsed));
+  header.setAttribute(ARIA_ATTR.role, ROLE.button);
+  header.setAttribute(ARIA_ATTR.expanded, String(!collapsed));
   // [对齐 MikuMikuAR PopupRow.headerToggle] folder 功能总开关：嵌在 header（label 与箭头间）。
   // createHeaderToggle 内置 stopPropagation → 开关点击不触发 header 折叠。
   // 菜单打开期间 cap 变化回写 UI：经 menu.refresh() 重建式渲染承担
@@ -230,13 +231,13 @@ function rmAppendFolder(container: HTMLElement, node: PreviewMenuNode, deps: Ren
   // body.style.display 初值 + 点击切换），抽类无法承载运行时状态，保留内联。
   body.style.cssText = `display:${collapsed ? "none" : "block"}`;
   body.id = body.dataset.testid; // aria-controls 需真实 id（D8 disclosure 指针）
-  header.setAttribute("aria-controls", body.id);
+  header.setAttribute(ARIA_ATTR.controls, body.id);
   header.addEventListener("click", (ev: MouseEvent): void => {
     ev.stopPropagation();
     const nowCollapsed = body.style.display === "none";
     body.style.display = nowCollapsed ? "block" : "none";
     arrow.textContent = nowCollapsed ? "▾" : "▸";
-    header.setAttribute("aria-expanded", String(nowCollapsed ? "true" : "false"));
+    header.setAttribute(ARIA_ATTR.expanded, String(nowCollapsed ? "true" : "false"));
     folderCollapsedState.set(node.id, !nowCollapsed); // 仅记用户交互态（ADR-193 第三刀；true=折叠）
   });
   if (isCustomBody) {
@@ -300,15 +301,15 @@ function rmAppendCard(container: HTMLElement, node: PreviewMenuNode, deps: Rende
     // [D8 disclosure] 折叠语义收口到 header（role=button + aria-expanded + aria-controls）；
     // 鼠标点 header 经 header.click 监听切换，键盘由 roving onActivate 走「disclosure 项 →
     // header.click()」统一切换（原 header 无 role/键盘出口）。
-    header.setAttribute("role", "button");
-    header.setAttribute("aria-expanded", String(!collapsed));
-    header.setAttribute("aria-controls", body.id);
+    header.setAttribute(ARIA_ATTR.role, ROLE.button);
+    header.setAttribute(ARIA_ATTR.expanded, String(!collapsed));
+    header.setAttribute(ARIA_ATTR.controls, body.id);
     header.addEventListener("click", (ev: MouseEvent): void => {
       ev.stopPropagation();
       const nowCollapsed = body.style.display === "none";
       body.style.display = nowCollapsed ? "block" : "none";
       if (arrow) arrow.textContent = nowCollapsed ? "▾" : "▸";
-      header.setAttribute("aria-expanded", String(nowCollapsed ? "true" : "false"));
+      header.setAttribute(ARIA_ATTR.expanded, String(nowCollapsed ? "true" : "false"));
       folderCollapsedState.set(node.id, !nowCollapsed); // true=折叠
     });
   }

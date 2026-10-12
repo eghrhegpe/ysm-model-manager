@@ -166,6 +166,15 @@ const ARIA_RE = /(?<![-\w])aria-[a-z]+(?:-[a-z]+)*\b/g;
 const ROLE_RE = /(?<![\w\-.])role\s*[=:]\s*["'`]/g;
 const TABINDEX_RE = /(?<![-\w])tab[iI]ndex\b/g;
 const RM_RE = /prefers-reduced-motion/g;
+// 常量引用形态（D12 收编后新增）：menu 渲染层属性名一律走 dom-contract 的
+// ARIA_ATTR.<key>，字面量只在契约声明处出现一次。键名 = aria- 去前缀 kebab 名
+// （label→aria-label / valuemin→aria-valuemin / …，契约文件按此命名）。
+// 不认此形态则「收编字面量为常量」会假跌 coverage——计数指标必须认识
+// 同一语义的全部合法表示形态（D10「检查器射程 < 现实」同族，2026-10-12 补）。
+const ARIA_CONST_RE = /(?<![\w.])ARIA_ATTR\.([a-z]+)\b/g;
+// ARIA_ATTR.role 是属性名「role」的常量形态，但 ROLE_RE 只认 `role =/: "…"` 字面量
+// 赋值形态，引用形态单独计（role 属中性指标，只记录不守基线）。
+const ROLE_CONST_RE = /(?<![\w.])ARIA_ATTR\.role\b/g;
 
 /** 指标名（baseline JSON 键）：aria 属性按命中名分组 + 三个汇总指标 */
 export function countCoverage(text: string): CoverageMap {
@@ -175,7 +184,11 @@ export function countCoverage(text: string): CoverageMap {
     if (hits > 0) counts[key] = (counts[key] ?? 0) + hits;
   };
   for (const m of clean.matchAll(ARIA_RE)) bump(m[0], 1);
-  bump("role", [...clean.matchAll(ROLE_RE)].length);
+  for (const m of clean.matchAll(ARIA_CONST_RE)) {
+    if (m[1] === "role") continue; // role 名单独并入 role 汇总
+    bump(`aria-${m[1]}`, 1);
+  }
+  bump("role", [...clean.matchAll(ROLE_RE)].length + [...clean.matchAll(ROLE_CONST_RE)].length);
   bump("tabindex", [...clean.matchAll(TABINDEX_RE)].length);
   bump("prefers-reduced-motion", [...clean.matchAll(RM_RE)].length);
   return counts;

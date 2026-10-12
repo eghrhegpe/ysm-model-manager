@@ -15,6 +15,8 @@ export const ROLE = {
 
 /** aria 属性名常量 */
 export const ARIA_ATTR = {
+  /** role 属性名（值域见 ROLE；`setAttribute(ARIA_ATTR.role, ROLE.x)` 成对用法） */
+  role: "role",
   valuemin: "aria-valuemin",
   valuemax: "aria-valuemax",
   valuenow: "aria-valuenow",
@@ -26,6 +28,12 @@ export const ARIA_ATTR = {
   /** 控件禁用态：自绘控件（cs-bar）与行容器无原生 disabled 属性，
    *  须显式标注无障碍态（原生 select/input 另有 disabled 属性，两者并用）。 */
   disabled: "aria-disabled",
+  /** 折叠披露态（D8 disclosure）：可折叠 header 的展开/收起播报 */
+  expanded: "aria-expanded",
+  /** 披露触发器 → 受控面板 id 绑定（D8 disclosure，与 expanded 成对） */
+  controls: "aria-controls",
+  /** 模态语义（overlay `aria-modal="true"`，焦点陷阱据此收敛） */
+  modal: "aria-modal",
 } as const;
 
 /** 滑动条本体 class（cap 栈 renderCapSlider 自绘 .cs-bar，经 uiComponentsStyleSheet 消费） */

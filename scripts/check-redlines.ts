@@ -774,6 +774,26 @@ function runChecks() {
     "守卫/业务拒绝应返回 types.AppError{Code, Operation, Reason}（friendlyError 可按 Code 映射 i18n）；确需中文透传（如 Android 能力缺失提示）排入 D1 拍板批或改 AppError.Reason",
   );
 
+  // R14（D12 遗尾收编 + 契约执法，2026-10-12 立法）：3D 菜单域（preview-3d/menu）渲染
+  // 生产文件禁裸写 role/aria 属性名——一律走 schema/dom-contract.ts 的 ROLE/ARIA_ATTR
+  // 常量（契约声明「渲染函数产出 role/class 时统一引用此处，禁止手写字符串」，此前
+  // 全仓零执法、契约不可信）。收编自 D8 披露态（role/expanded/controls）+ D9 可达名
+  // （label）+ slider（valuemin/max/now）共 17 处；值侧 ROLE.x 或字面量均可（判据锁
+  // **属性名**是契约单源本体，值字面量「button」不脱钩常量表由 review 管——防把本闸
+  // 扩成值域检查后与 happy-dom/jsdom 测试夹具互相误伤）。
+  // 范围只圈 menu/：infra→menu 的运行时 import 被 check-layering R9 方向闸禁止
+  // （preview-shell.ts 3 处裸串因此保留，已就地注记——收编需契约下沉或 R9 --force 拍板）。
+  add(
+    "R14",
+    "menu role/aria raw strings (dom-contract single source)",
+    rgTracked(
+      'set(Attribute|AttributeNS)\\("(role|aria-[a-z-]+)"|get(Attribute|AttributeNS)\\("(role|aria-[a-z-]+)"',
+      "frontend/src/preview-3d/menu",
+      ["*.ts", "!*.test.ts"],
+    ).filter((l) => !/:\d+:\s*(?:\/\/|\*|\/\*)/.test(l)),
+    "属性名一律引 schema/dom-contract.ts 的 ROLE / ARIA_ATTR（role → ARIA_ATTR.role，值 ROLE.x；aria-* → ARIA_ATTR.名）",
+  );
+
   return results;
 }
 

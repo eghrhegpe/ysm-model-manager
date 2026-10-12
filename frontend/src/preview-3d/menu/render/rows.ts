@@ -10,6 +10,7 @@
 // 溯源注释随函数逐字搬迁——注释是资料，未删改语义。
 
 import { t, tOf } from "@/core/i18n/t.ts";
+import { ARIA_ATTR } from "@/preview-3d/menu/schema/dom-contract.ts";
 import type {
   NodeFor,
   PreviewActionMenuCtx,
@@ -222,7 +223,7 @@ export function rmAppendDynamicRow(
     applyIcon(radio, node.radio.active ? "radioOn" : "radioOff");
     radio.title = node.radio.title;
     // [D9②] icon-only 按钮：title 仅视觉 tooltip，可达名由 aria-label 承担（仓内口径 dom-fab.md）
-    radio.setAttribute("aria-label", node.radio.title);
+    radio.setAttribute(ARIA_ATTR.label, node.radio.title);
     radio.className = `rm-radio-btn${node.radio.active ? " row-radio-active" : ""}`;
     radio.onclick = (ev): void => {
       ev.stopPropagation();
@@ -251,7 +252,7 @@ export function rmAppendDynamicRow(
     applyIcon(badge, node.badge.icon);
     badge.title = node.badge.title;
     // [D9②] icon-only 按钮：title 仅视觉 tooltip，可达名由 aria-label 承担
-    badge.setAttribute("aria-label", node.badge.title);
+    badge.setAttribute(ARIA_ATTR.label, node.badge.title);
     badge.className = "cc-btn cc-btn-ghost rm-inline-btn rm-ml-auto";
     badge.onclick = (ev): void => {
       ev.stopPropagation();
@@ -349,7 +350,7 @@ export function rmAppendMaterialRow(container: HTMLElement, node: NodeFor<"mater
   const eyeApply = (v: boolean): void => {
     eye.textContent = v ? "👁" : "🚫";
     eye.title = v ? t("preview.eyeHide") : t("preview.eyeShow");
-    eye.setAttribute("aria-label", v ? t("preview.eyeHide") : t("preview.eyeShow"));
+    eye.setAttribute(ARIA_ATTR.label, v ? t("preview.eyeHide") : t("preview.eyeShow"));
   };
   const toggleEye = (): void => {
     const next = !node.eye?.get();

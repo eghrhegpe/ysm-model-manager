@@ -111,6 +111,26 @@ check("countCoverage：模板串 ${} 插值内注释正确恢复 code 帧", () =
   assert.equal(c["aria-hidden"], 1, `应为 1，实际 ${c["aria-hidden"]}`);
 });
 
+check("countCoverage：ARIA_ATTR 常量引用形态计数（D12 收编不假跌）", () => {
+  // 收编后渲染层写 setAttribute(ARIA_ATTR.label, …)——字面量在契约声明处、
+  // 引用在消费处。两种形态都必须计入同一指标，否则「收编 = 覆盖率下降」假红。
+  const src = [
+    "el.setAttribute(ARIA_ATTR.label, t('x'));",
+    "header.setAttribute(ARIA_ATTR.expanded, String(v));",
+    "header.setAttribute(ARIA_ATTR.role, ROLE.button);",
+    "const bar = ARIA_ATTR.valuenow;",
+    "el.setAttribute(ARIA_ATTR.live, 'polite'); // ARIA_ATTR.dead 注释不计",
+  ].join("\n");
+  const c = countCoverage(src);
+  assert.equal(c["aria-label"], 1, "ARIA_ATTR.label → aria-label");
+  assert.equal(c["aria-expanded"], 1, "ARIA_ATTR.expanded → aria-expanded");
+  assert.equal(c["aria-valuenow"], 1, "ARIA_ATTR.valuenow → aria-valuenow");
+  assert.equal(c["aria-live"], 1, "代码位 ARIA_ATTR.live 计数（注释位不增计）");
+  assert.equal(c.role, 1, "ARIA_ATTR.role 并入 role 汇总（不建 aria-role 野键）");
+  assert.equal(c["aria-role"], undefined, "role 不得建 aria- 前缀键");
+  assert.equal(c["aria-dead"], undefined, "注释内引用不得计数");
+});
+
 check("scatterHits：单双引号命中且行号正确", () => {
   const src = [
     "x();",

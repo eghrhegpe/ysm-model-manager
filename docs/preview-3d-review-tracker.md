@@ -22,7 +22,6 @@
 | ADR-328 | ground cap-enabled 三路径收编（A/B/C） | 产品拍板 | `preview-3d/state/env-state.ts\|clampFieldValue`；`preview-3d/state/env-state-schema.ts\|ARCHIVE_ALIAS` | 2026-10-12 |
 | D12-残余 | `core.ts:602-606`/`:332-336` `dock:`/`panel:` 内部诊断串当用户 tooltip | 产品拍板 | `menu/core.ts\|renderTooltip` | 2026-10-12 |
 | D4-残余 | 6 个无 error 通道绑定（`ReadFileBytes` 等）+ `GetModel3DSpec` 空 spec 无结构化原因 | 记账观察 | `internal/app/app_model.go\|ReadFileBytes`；`internal/app/app_model.go\|GetModel3DSpec` | 2026-10-12 |
-| 前向 P3 | `CODE_KEYS` 白名单 8 vs Go `ErrorCode` 全集 15，差集 7 Code（FILE_TOO_LARGE/FILE_EMPTY/MKDIR_FAILED/WRITE_FAILED/IO_ERROR/LINK_FAILED/UNKNOWN）零 3D 命中 | 记账观察 | `frontend/src/utils/dom/errors.ts\|CODE_KEYS`；`internal/types/errors.go\|ErrorCode` | 2026-10-12 |
 | ADR-317 | P1 on-device 终测（CI build-android 仅打 APK，无真机步骤） | 记账观察 | `.github/workflows/android-build*`；`docs/knowledge/ysm-wasi.md` | 2026-10-12 |
 | CSP | `new Function` 执行 UMD 文本（unsafe-eval），上严格 CSP 前须换 `import()`/ESM | 记账观察 | `preview-3d/decoder/mmd-ktx2-basis.ts` | 2026-10-12 |
 | 族②残余 | `mergeCubes` / `computeBoneLocalPos` 手抄双源，无跨语言黄金语料对账（无分叉证据，不开战） | 记账观察 | `preview-3d/model/model-group-builder.ts\|mergeCubes`；`go/threejs/spec-bones.go`；`preview-3d/model/spec-builder.ts\|computeBoneLocalPos` | 2026-10-12 |
@@ -37,6 +36,7 @@
 > 判词全部留在 archive 快照；此处仅给源码锚，现状以源码树为准。
 
 - **D1 主批** — 7 个 adapter 构造点已 `t()` 收口（2026-10-12），剩余见上表 D1-残余。`friendlyError` 定义处 = `frontend/src/utils/dom/errors.ts:47`（原台账错写成 `errors.ts:64` 已更正）。
+- **前向 P3（切片 A，`4accae610`）** — `CODE_KEYS` 补齐 FILE_TOO_LARGE/FILE_EMPTY/MKDIR_FAILED/WRITE_FAILED/IO_ERROR/LINK_FAILED 差集 + 5 处 Go 裸中文 error 改 `AppError`，见 `frontend/src/utils/dom/errors.ts\|CODE_KEYS`、`internal/app/resource_bindings.go\|ReadSchematic`。
 - **D2** — `skeleton-fill-panel.ts` 5 处硬编码中文 + `views/app-preview/{mmd-controls,vrm-controls}.ts` 两处 overview 模板全走 `t()`，见 `preview-3d/adapters/mmd/skeleton-fill-panel.ts`。
 - **D3** — `i18n-ui-check` 补「UI 值字段上下文」第二判据，见 `scripts/i18n-ui-check.ts`。
 - **D4** — 9 处守卫拒绝站点改返回 `types.AppError{Code: ErrInvalidPath, …}`，见 `internal/app/app_guard_apperror_test.go`。

@@ -57,8 +57,9 @@ status: active
 - `friendlyError(err: unknown, fallback = "操作失败"): string`
   - 空值 → `"未知错误"`；err 可为 Error 对象或字符串
   - 优先级：**① 结构化 AppError.Code**（CODE_KEYS 映射 → i18n key）→ **② 未列出 Code 含中文 Reason**（透传，剥离路径段）→ **③ 含汉字消息**（透传）→ **④ 英文兜底**（`${fallback}: ${message}`）
-  - CODE_KEYS 覆盖：FILE_EXISTS/ALREADY_EXISTS → alreadyExists；INVALID_PARAM/INVALID_PATH/FILENAME_INVALID → invalidArg；FILE_TYPE_UNSUPPORTED/UNSUPPORTED_FORMAT → unsupported；DECODE_FAILED → dataFormat
-  - 未列出 Code（IO_ERROR/MKDIR_FAILED/WRITE_FAILED/FILE_EMPTY/FILE_TOO_LARGE/LINK_FAILED）靠 Reason 中文透传，不武断归类
+  - CODE_KEYS 覆盖：FILE_EXISTS/ALREADY_EXISTS → alreadyExists；INVALID_PARAM/INVALID_PATH/FILENAME_INVALID → invalidArg；FILE_TYPE_UNSUPPORTED/UNSUPPORTED_FORMAT → unsupported；DECODE_FAILED → dataFormat；FILE_TOO_LARGE → fileTooLarge；FILE_EMPTY → fileEmpty；MKDIR_FAILED → mkdirFailed；WRITE_FAILED → writeFailed；IO_ERROR → ioError；LINK_FAILED → linkFailed
+  - 未列出 Code：仅 UNKNOWN，由 `error.unknown` 兜底（Go `AppError.Code` 全集 15 个已全映射，2026-10-12 切片 A 补齐差集）
+  - ⚠️ 互斥声明备案：本卡「不变量」称「前端只消费结构化字段做 i18n」，但 `friendlyError` 对**未映射 Code / 非 AppError 的含汉字消息仍原样透传**（ADR-051 完成后的遗留，见切片 B / ADR-331 待立项）；切片 A 已补 CODE_KEYS 差集，旁路收窄属切片 B 范畴
 
 ## 与其他子系统关系
 

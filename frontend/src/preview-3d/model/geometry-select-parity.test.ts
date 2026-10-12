@@ -39,7 +39,12 @@ interface GSExpected {
   totalCubes?: number;
 }
 
-/** 从 spec 串提取选择链骨架（与 Go gsSkeleton 同字段面）。"{}" → null。 */
+/** 从 spec 串提取选择链骨架（与 Go gsSkeleton 同字段面）。"{}" → null。
+ *
+ * 锁面**有意不含 textureId**：TS 孪生恒 null（TS `BedrockModel` 无 texture/textures 字段可判），
+ * 而 Go 侧已条件下发 `tex_<idx>`——双端语义分歧，纳入锁面会恒红。分歧根因与接线条件见
+ * model-group-builder.ts `postProcessAndTextures` 注释（D7，2026-10-12 审计）；接线时须同步
+ * 把 textureId 加入 Go gsSkeleton 与本锁面。 */
 function extractSkeleton(specStr: string): GSSkeleton | null {
   if (specStr === "{}") return null;
   const spec = JSON.parse(specStr) as { models?: ModelGroup[] };

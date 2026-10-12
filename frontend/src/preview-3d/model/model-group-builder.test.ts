@@ -238,3 +238,21 @@ describe("buildModelGroup — 断链修复的判定顺序与坐标（补测前�
     expect(byName.LeftArm.localPosition).toEqual([-1, 13, 0]);
   });
 });
+
+describe("buildModelGroup — textureId 双端有意分歧（D7 锁定；接线时须先删本节）", () => {
+  // 分歧根因与接线条件见 model-group-builder.ts `postProcessAndTextures` 注释：
+  // Go 侧已条件下发 `tex_<idx>`，TS 侧因 `BedrockModel` 无 texture/textures 字段只能恒 null。
+  // 此断言用类型断言**强推**纹理数据，锁定「即使有数据也恒 null」——接线时若忘删本节，
+  // 本断言会立刻失败并提示删除（接线不应静默绕过审计）。
+  it("有纹理数据的模型 → textureId 仍恒 null（前端零消费）", () => {
+    const withTexture = makeModel(
+      [{ name: "b", parent: "", pivot: [0, 0, 0], rotation: [0, 0, 0], cubes: [cube()], groupId: "" }],
+      {
+        // 强推 Go 侧字段面：TS 类型无此两键，正是「无数据可判」的分歧根因
+        texture: "textures/models/foo.png",
+        textures: ["textures/models/foo.png"],
+      } as unknown as Partial<BedrockModel>,
+    );
+    expect(buildModelGroup(withTexture, "comp-tex", 3).textureId).toBeNull();
+  });
+});

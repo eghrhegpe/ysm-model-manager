@@ -328,8 +328,18 @@ function postProcessAndTextures(
 
   // ⚠️ 刀⑳：此处原有 `const hasTextures = false; if (hasTextures) { texID = ... }` 恒假死分支
   // （texIdxBase 参数在生产路径因此完全未被使用，仅用于喂这条死路）。删除后统一返回 null；
-  // 参数 texIdxBase 保留以维持 `buildModelGroup` 既有调用签名（对齐 Go spec.go 的同名契约），
-  // 待 Go 侧切片真正下发纹理 ID 时再接线。
+  // 参数 texIdxBase 保留以维持 `buildModelGroup` 既有调用签名（对齐 Go spec.go 的同名契约）。
+  //
+  // ⚠️ 双端有意分歧（D7，2026-10-12 审计坐实——勿按旧注释「待 Go 侧下发」理解）：
+  // ① 旧注释的前提已被 Go 侧**证伪**：go/threejs/spec.go buildModelGroup 早已条件下发
+  //    （`len(model.Textures) > 0 || model.Texture != ""` 时给 `tex_<texIdxBase>`，否则 nil），
+  //    且 go/threejs/spec_multicomponent_test.go 已锁定 tex_0/tex_1 分配与 nil 回退。
+  // ② 根因不是「死分支」而是**类型无数据**：TS `BedrockModel`（spec-builder.ts）根本没有
+  //    `texture`/`textures` 字段，无从判定纹理是否存在——只能恒 null。
+  // ③ TS 维持恒 null 的理由 = **前端零业务消费**（全仓无 `.textureId` 读取点），接线无收益。
+  // 接线（双端对齐）须先给 TS 类型补纹理字段 + 上游构造点填充，属产品决策；接线时须同步删掉
+  // model-group-builder.test.ts 的「有纹理数据仍恒 null」分歧锁定断言，并把 textureId 纳入
+  // geometry-select-parity 锁面（当前锁面有意不含，因双端语义分歧）。
   void texIdxBase;
   return null;
 }

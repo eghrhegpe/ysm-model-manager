@@ -1,12 +1,15 @@
 // @vitest-environment node
-// ===== scene-registry 焦点转移语义补测（锐评 infra 轮 2026-10-10）=====
+// ===== scene-registry 焦点转移语义补测（锐评 infra 轮 2026-10-10；2026-10-13 翻转）=====
 //
 // 关注点：`unregister` 后 activeId 的**晋升规则**。既有测试（scene-registry.test.ts:49-56）
 // 只覆盖「两模型、注销前者 → 后者接任」，即晋升结果与唯一幸存者重合，**规则未被区分**：
 // 「取 Map 末位（插入序）」与「取最近被激活者」在该用例下同解。
 //
-// 本文件把两者**分离**验证，钉死实际语义（Map 插入序），供后人判断是否符合产品预期——
-// 因为 roles 面板的 ✓ 高亮 / 菜单绑定 / 取景都跟 activeId 走，选错角色是用户可见的。
+// 本文件把两者**分离**验证，钉死实际语义。
+// ⚠️ 2026-10-13 产品拍板（多文档编辑器 Ctrl+W 回上一 tab 的通行为）：
+//   晋升规则由「Map 插入序末位」改为「最近被激活者」（LRU 激活序）。
+//   注：`register` 也算一次激活（新注册模型自动激活），故「最近被激活」以
+//   register/setActive 两个入口共同维护的激活序为准。
 import { describe, expect, it, beforeEach, vi } from "vitest";
 import * as THREE from "three";
 import { sceneRegistry } from "./scene-registry.ts";
@@ -20,29 +23,29 @@ describe("SceneRegistry — 注销后的焦点晋升规则", () => {
     sceneRegistry.reset();
   });
 
-  it("晋升取 **Map 末位（插入序）**，不是「最近被激活者」——语义已钉死", () => {
-    const a = makeEntry("a.glb"); // m1，插入位 1
-    const b = makeEntry("b.glb"); // m2，插入位 2
-    const c = makeEntry("c.glb"); // m3，插入位 3
+  it("晋升取「最近被激活」的幸存者，**不是** Map 插入序末位（2026-10-13 产品拍板翻转）", () => {
+    const a = makeEntry("a.glb"); // m1，最早插入
+    const b = makeEntry("b.glb"); // m2
+    const c = makeEntry("c.glb"); // m3，最晚插入 → 插入序末位 = c
 
-    // 显式激活最早插入的 a（模拟用户在 roles 面板点选 a）
-    sceneRegistry.setActive(a);
-    expect(sceneRegistry.getActiveId()).toBe(a);
+    // 让激活序与插入序**分离**：c 是最新插入（从未被 setActive），
+    // 但最后被显式激活的是 b（b 是最近活跃者）。
+    sceneRegistry.setActive(b);
+    sceneRegistry.setActive(a); // a 成为活跃；激活序（末=最近）现为 [c, b, a]
 
-    // 注销当前活跃的 a：幸存 {b, c}
+    // 注销当前活跃的 a：幸存 {b, c}，激活序栈自末向前首个幸存 = b
     sceneRegistry.unregister(a);
 
-    // 实际语义：取插入序末位 = c（**非** b，尽管 b 比 c 更早也从未被激活过）
-    // ⚠️ 这是「插入序」而非「最近活跃序」的**证据**：若将来改为「最近活跃」，
-    // 本例会红——届时须确认产品意图（点选过的 b 是否该优先接任）。
+    // 区分证据：插入序末位 = c，最近激活幸存 = b。若实现退化为「插入序」本断言会红。
+    // 这正是语义被钉死的证据——「最近活跃」与「插入序」在两个幸存者中指向不同对象。
     expect(
       sceneRegistry.getActiveId(),
-      "当前实现 = 插入序末位（c）；与 b 是否被激活过无关",
-    ).toBe(c);
+      "晋升 = 最近被激活者（b），非插入序末位（c）",
+    ).toBe(b);
 
-    // 反向确认：把 c 注销后，剩下 b 接任（唯一幸存者，规则不产生歧义）
-    sceneRegistry.unregister(c);
-    expect(sceneRegistry.getActiveId()).toBe(b);
+    // 反向确认：把 b 注销后，剩下 c 接任（唯一幸存，规则不产生歧义）
+    sceneRegistry.unregister(b);
+    expect(sceneRegistry.getActiveId()).toBe(c);
   });
 
   it("注销**非活跃**模型不改变 activeId（焦点稳定，不被无关操作夺走）", () => {

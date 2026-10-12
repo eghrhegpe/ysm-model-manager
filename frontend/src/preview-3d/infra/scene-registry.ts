@@ -109,6 +109,28 @@ class SceneRegistry {
   private menuSink: MenuItemsSink | null = null;
   /** root → entry 索引：拾取时沿父链 O(depth) 查 Map，替代 O(entries×roots) 双重遍历 */
   private objToEntry = new WeakMap<THREE.Object3D, ModelEntry>();
+  /**
+   * 激活序（LRU 栈，末尾 = 最近激活）：unregister 注销当前焦点时取「最近被激活」晋升，
+   * 而非 Map 插入序末位（产品拍板 2026-10-13，多文档编辑器 Ctrl+W 回上一 tab 的通行为）。
+   * 与 `entries` 不同步增删之外还要防悬空：取栈顶时会跳过已注销的 id。
+   */
+  private activationOrder: string[] = [];
+
+  /** 把 id 置为最近激活（栈顶）；已在栈内则重排到末尾（LRU touch） */
+  private touchActivation(id: string): void {
+    const i = this.activationOrder.indexOf(id);
+    if (i >= 0) this.activationOrder.splice(i, 1);
+    this.activationOrder.push(id);
+  }
+
+  /** 取激活序中最近激活且仍存活（entries 中存在）的 id，无则 null */
+  private lastSurvivingActivation(): string | null {
+    for (let i = this.activationOrder.length - 1; i >= 0; i--) {
+      const id = this.activationOrder[i];
+      if (this.entries.has(id)) return id;
+    }
+    return null;
+  }
 
   /** 重置（会话开始/关闭时调用，清空全部模型记录） */
   reset(): void {
@@ -118,6 +140,7 @@ class SceneRegistry {
     this.activeId = null;
     this.menuSink = null;
     this.objToEntry = new WeakMap();
+    this.activationOrder = [];
   }
 
   /**
@@ -148,6 +171,7 @@ class SceneRegistry {
         }
       }
       this.activeId = existing;
+      this.touchActivation(existing);
       return existing;
     }
     const id = `m${++this.seq}`;
@@ -158,6 +182,7 @@ class SceneRegistry {
       this.objToEntry.set(r, entry);
     }
     this.activeId = id;
+    this.touchActivation(id);
     return id;
   }
 
@@ -168,9 +193,10 @@ class SceneRegistry {
       for (const r of e.roots) this.objToEntry.delete(r);
     }
     this.entries.delete(id);
+    const ai = this.activationOrder.indexOf(id);
+    if (ai >= 0) this.activationOrder.splice(ai, 1);
     if (this.activeId === id) {
-      const rest = [...this.entries.keys()];
-      this.activeId = rest.length ? rest[rest.length - 1] : null;
+      this.activeId = this.lastSurvivingActivation();
     }
   }
 
@@ -214,6 +240,7 @@ class SceneRegistry {
     const e = this.entries.get(id);
     if (!e) return;
     this.activeId = id;
+    this.touchActivation(id);
     if (this.menuSink && e.menuItems) this.menuSink.setAdapterItems(e.menuItems);
   }
   getActiveId(): string | null {

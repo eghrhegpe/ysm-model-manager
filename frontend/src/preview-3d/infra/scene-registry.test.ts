@@ -47,6 +47,8 @@ describe("SceneRegistry 生命周期", () => {
   });
 
   it("unregister 删除 entry，activeId 回落到剩余最后一项", () => {
+    // 两模型场景下「插入序末位」与「最近激活」同解（唯一幸存者），规则未区分；
+    // 晋升语义的分离验证见 scene-registry-focus.test.ts。
     const a = makeEntry("a.glb", [new THREE.Object3D()]); // m1
     const b = makeEntry("b.glb", [new THREE.Object3D()]); // m2
     sceneRegistry.unregister(a);

@@ -311,9 +311,10 @@ export const zhCN = {
   "import.queueFull": "导入队列已满",
   "import.readTimeout": "读取文件超时: {name}",
   "import.readFailed": "读取文件失败: {name}",
-  // ── 整合包卡片拖拽（features/dnd/pack-dnd.ts）──
+  // ── 拖拽导入共用文案（features/dnd/pack-dnd.ts + import-dnd.ts）──
   "import.packDropWebUnsupported": "网页版暂不支持拖入整合包，请在桌面端操作",
-  "import.packOversizeSkipped": "{n} 个文件超过 {mb}MB 上限已跳过（{name}{more}）",
+  "import.webFolderDropUnsupported": "网页版暂不支持文件夹导入，请拖入 .ysm 等模型文件",
+  "import.oversizeSkipped": "{n} 个文件超过 {mb}MB 上限已跳过（{name}{more}）",
   "import.packPushedAll": "已导入仓库并推送到 {inst}（{n} 项）",
   "import.packPushedPartial": "推送完成 {n} 项，{failed} 项失败：{first}{more}",
   "import.packPushFailedAll": "推送到 {inst} 失败：{first}{more}",

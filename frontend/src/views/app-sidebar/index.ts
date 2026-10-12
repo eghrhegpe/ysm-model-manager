@@ -17,32 +17,11 @@ export { appSidebarStyle };
 
 import { bindPackCardDnD } from "@/features/dnd/pack-dnd.ts";
 import type { SidebarInstance } from "./data.ts";
-import { bindCardEvents, bindFooter, type SidebarHost } from "./events.ts";
+import { bindCardEvents, bindFooter } from "./events.ts";
 import { loadInstances } from "./loader.ts";
 import { renderVersionCards } from "./render.ts";
 import { bindSelectAll, bindSyncSelected, restoreCheckboxes } from "./sync-flow.ts";
 import { footerHTML, headerHTML, listContainerHTML } from "./tpl.ts";
-
-// ---------- renderCards ----------
-function renderCards(
-  root: ShadowRoot,
-  rtype: string,
-  instances: SidebarInstance[],
-  cardCleanup: (() => void) | null,
-  getCheckedSets: () => Map<string, Set<string>>,
-  host: SidebarHost,
-): { cardCleanup: (() => void) | null } {
-  const container = root.getElementById("sidebar-instance-list");
-  if (!container) return { cardCleanup };
-  renderVersionCards(container, instances);
-  if (cardCleanup) {
-    cardCleanup();
-    cardCleanup = null;
-  }
-  cardCleanup = bindCardEvents(root, instances, host);
-  restoreCheckboxes(root, rtype, instances, getCheckedSets);
-  return { cardCleanup };
-}
 
 // ---------- AppSidebar 类 ----------
 class AppSidebar extends WebComponentBase {
@@ -162,16 +141,24 @@ class AppSidebar extends WebComponentBase {
     );
   }
 
+  /**
+   * 渲染卡片列表并重绑卡片事件（原模块级 `renderCards` 内联为私有方法，2026-10 锐评收口：
+   * 该函数六个入参全是 this 的字段/闭包，靠「入参 cardCleanup + 返回 { cardCleanup }」模拟
+   * 出参，实为把实例状态当参数倒手；内联后入参归零）。
+   * ⚠️ 保留原早退语义：容器缺失（`_renderLayout` 未执行/异常）时本次不动，**旧 `_cardCleanup`
+   * 原样保留**——不可改成置 null（会把仍挂在旧容器上的监听变成失联句柄、泄漏）。
+   */
   private _renderCards(): void {
-    const { cardCleanup } = renderCards(
-      this._root,
-      this._rtype,
-      this._instances,
-      this._cardCleanup,
-      () => this._checkedSets,
-      this,
-    );
-    this._cardCleanup = cardCleanup;
+    const container = this._root.getElementById("sidebar-instance-list");
+    if (container) {
+      renderVersionCards(container, this._instances);
+      if (this._cardCleanup) {
+        this._cardCleanup();
+        this._cardCleanup = null;
+      }
+      this._cardCleanup = bindCardEvents(this._root, this._instances, this);
+      restoreCheckboxes(this._root, this._rtype, this._instances, () => this._checkedSets);
+    }
     // ADR-308 D2：重渲染后新卡片全为 tabindex=-1（render.ts 统一落点），键盘入口须由
     // 原语重新布局「恰一 tabindex 0」——落点 0；若有保存选中，restoreSelectedCard 的
     // rAF（晚于本同步路径）经 syncRestoredIndex 校正到选中卡，最终态正确

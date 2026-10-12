@@ -312,10 +312,12 @@ export const ja: Record<string, string> = {
   "import.queueFull": "インポートキューが満杯です",
   "import.readTimeout": "ファイル読み取りタイムアウト: {name}",
   "import.readFailed": "ファイル読み取り失敗: {name}",
-  // ── MOD パックカードのドラッグ＆ドロップ（features/dnd/pack-dnd.ts）──
+  // ── MOD パックカード／ツリーのドラッグ＆ドロップ共通（features/dnd/pack-dnd.ts + import-dnd.ts）──
   "import.packDropWebUnsupported":
     "Web版ではMODパックへのドラッグ未対応です。デスクトップ版をご利用ください",
-  "import.packOversizeSkipped":
+  "import.webFolderDropUnsupported":
+    "Web版ではフォルダインポート未対応です。.ysm などのモデルファイルをドラッグしてください",
+  "import.oversizeSkipped":
     "{n} 個のファイルが{mb}MB上限を超えたためスキップしました（{name}{more}）",
   "import.packPushedAll": "ライブラリに追加し {inst} へプッシュしました（{n} 件）",
   "import.packPushedPartial": "{n} 件プッシュ完了、{failed} 件失敗：{first}{more}",

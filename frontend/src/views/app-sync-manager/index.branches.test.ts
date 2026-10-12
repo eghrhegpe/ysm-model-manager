@@ -234,3 +234,56 @@ describe("app-sync-manager — 失败分支（render 抛错链）", () => {
   // 同步抛，同步契约由 index.ts 的 _RENDER_SYNC_GUARD 编译期守卫锁定（改回 async 即编译失败），
   // 运行时的错误呈现由上方「render 同步抛错 → _init catch：错误块 + error toast」守卫。
 });
+
+// ===== instance 置空 / 移除（2026-10 锐评修复的回归锁）=====
+// 原行为：`attributeChangedCallback` 空值分支直接跳过一切清理——上一任实例的列表残留屏上，
+// 且三条 bus 订阅继续以空实例名调 GetInstanceSyncStatus("") 并重渲染。现统一走 `_showNoInstance`
+// 出口（代际失效 + 运行期拆解 + 复位 + 占位块）。此前该分支零测试锁定，故本例为新增防线。
+describe("app-sync-manager — instance 置空/移除（空实例态收口）", () => {
+  it("置空 → 渲染未指定整合包占位 + 旧骨架清除 + bus 订阅摘除（stats:refresh 不再拉数据）", async () => {
+    const { el } = mount();
+    await waitFor(() => renderMock.mock.calls.length > 0, 5000);
+    await flushAsyncTurns();
+    expect(el.querySelector(".sm-list")).not.toBeNull(); // 初始骨架在
+
+    el.setAttribute("instance", ""); // 空串置空
+    await waitFor(() => el.innerHTML.includes("未指定整合包"), 5000);
+    expect(el.querySelector(".sm-list")).toBeNull(); // 旧骨架被占位块替换（不再残留旧 UI）
+
+    // 订阅已摘：stats:refresh 不得再以空实例名拉数据
+    const callsBefore = mocks.GetInstanceSyncStatus.mock.calls.length;
+    bus.emit("stats:refresh");
+    // 负向窗口：订阅已摘，waitFor(===) 会立即返回（假绿），须走满窗口确认无延迟重载
+    await sleep(150);
+    expect(mocks.GetInstanceSyncStatus.mock.calls.length).toBe(callsBefore);
+    unmountElement(el);
+  });
+
+  it("removeAttribute('instance') 同款收口（newVal=null 路径）", async () => {
+    const { el } = mount();
+    await waitFor(() => renderMock.mock.calls.length > 0, 5000);
+    el.removeAttribute("instance");
+    await waitFor(() => el.innerHTML.includes("未指定整合包"), 5000);
+    unmountElement(el);
+  });
+
+  it("置空后再回填非空 instance → 重新加载渲染（订阅/委托可重挂）", async () => {
+    const { el, self } = mount();
+    await waitFor(() => renderMock.mock.calls.length > 0, 5000);
+    el.setAttribute("instance", "");
+    await waitFor(() => el.innerHTML.includes("未指定整合包"), 5000);
+    await flushAsyncTurns();
+
+    const callsBefore = mocks.GetInstanceSyncStatus.mock.calls.length;
+    const rendersBefore = renderMock.mock.calls.length;
+    el.setAttribute("instance", "back");
+    await waitFor(
+      () => mocks.GetInstanceSyncStatus.mock.calls.length === callsBefore + 1,
+      5000,
+    );
+    // 代际失效后重入 _init 必重新渲染（订阅重建、委托重绑由 _init 单点保证）
+    await waitFor(() => renderMock.mock.calls.length > rendersBefore, 5000);
+    expect(self._instance).toBe("back");
+    unmountElement(el);
+  });
+});

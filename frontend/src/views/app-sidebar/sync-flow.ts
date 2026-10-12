@@ -100,28 +100,35 @@ function resolveTypes(rt: string): string[] {
   return rt === SYNC_TYPE_ALL ? ALL_RESOURCE_TYPES : [rt];
 }
 
-// ---------- beginSync ----------
-// push/pull 前置守卫共用的入闸流程（取 selected → 判空 toast → 置 inprogress → 关菜单 → 按钮 loading）
+/** 同步在途标志访问器：替代原 `{ val: boolean }` 可变盒子（2026-10 锐评收口——
+ *  该字面量曾在 bindSyncSelected 两处同构重抄，且盒子只映射组件的 _syncInProgress 单布尔）。
+ *  读写语义与 `_syncInProgress` 一一对应，装配处直接传组件访问器对，零适配层。 */
+interface SyncBusyFlag {
+  get: () => boolean;
+  set: (v: boolean) => void;
+}
+
+/**
+ * beginSync：推送/拉取入闸流程（判空 toast → 置 inprogress → 关菜单 → 按钮 loading）。
+ * `.dd-item` 的定位与 `data-sync-type` 读取都由调用方完成（2026-10 锐评收口：原先本函数与
+ * handleSyncMenuClick 各自 `closest(".dd-item")` 一次，同一 target 查两遍）。
+ */
 function beginSync(
-  e: Event,
   verb: string,
   root: ShadowRoot,
   instances: SidebarInstance[],
-  syncInProgress: { val: boolean },
-  closeAll: () => void,
+  busy: SyncBusyFlag,
+  closeAllMenus: () => void,
   btn: HTMLButtonElement,
 ): string[] | null {
-  const target = e.target as HTMLElement | null;
-  const item = target ? target.closest(".dd-item") : null;
-  if (!item) return null;
   const selected = getSelected(root, instances);
   if (!selected.length) {
     toast(t("sidebar.selectPackFirst", { verb }), TOAST_MS.success, "info");
     return null;
   }
-  if (syncInProgress.val) return null;
-  syncInProgress.val = true;
-  closeAll();
+  if (busy.get()) return null;
+  busy.set(true);
+  closeAllMenus();
   btn.innerHTML = UI_ICONS.refresh;
   btn.disabled = true;
   return selected;
@@ -213,25 +220,25 @@ function handleSyncMenuClick(
   closeAll: () => void,
   root: ShadowRoot,
   getInstances: () => SidebarInstance[],
-  syncInProgress: { val: boolean },
+  busy: SyncBusyFlag,
 ): void {
+  // 命中判定与 syncType 读取都只需要一次 closest（原实现 beginSync 内一次、此处又一次）
+  const ddItem = (e.target as HTMLElement | null)?.closest(".dd-item");
+  if (!ddItem) return;
   const selected = beginSync(
-    e,
     verb === "push" ? t("sidebar.verbPush") : t("sidebar.verbPull"),
     root,
     getInstances(),
-    syncInProgress,
+    busy,
     closeAll,
     btn,
   );
   if (!selected) return;
-  const types = resolveTypes(
-    (e.target as HTMLElement)?.closest<HTMLElement>(".dd-item")?.dataset.syncType || SYNC_TYPE_ALL,
-  );
+  const types = resolveTypes((ddItem as HTMLElement).dataset.syncType || SYNC_TYPE_ALL);
   if (verb === "push") {
-    void runPush(selected, types, btn, syncInProgress);
+    void runPush(selected, types, btn, busy);
   } else {
-    void runPull(selected, types, btn, syncInProgress);
+    void runPull(selected, types, btn, busy);
   }
 }
 
@@ -240,7 +247,7 @@ async function runPush(
   selected: string[],
   types: string[],
   pushBtn: HTMLButtonElement,
-  syncInProgress: { val: boolean },
+  busy: SyncBusyFlag,
 ): Promise<void> {
   let skipped = 0;
   let timedOut = 0;
@@ -269,7 +276,7 @@ async function runPush(
     toast(t("sidebar.pushFailed", { msg: friendlyError(err) }), TOAST_MS.normal, "error");
   } finally {
     resetButton(pushBtn, "push");
-    syncInProgress.val = false;
+    busy.set(false);
   }
 }
 
@@ -278,7 +285,7 @@ async function runPull(
   selected: string[],
   types: string[],
   pullBtn: HTMLButtonElement,
-  syncInProgress: { val: boolean },
+  busy: SyncBusyFlag,
 ): Promise<void> {
   let totalPulled = 0;
   let failed = 0;
@@ -306,7 +313,7 @@ async function runPull(
     toast(t("sidebar.pullFailed", { msg: friendlyError(err) }), TOAST_MS.normal, "error");
   } finally {
     resetButton(pullBtn, "pull");
-    syncInProgress.val = false;
+    busy.set(false);
   }
 }
 
@@ -339,24 +346,14 @@ export function bindSyncSelected(
   // 程序化收起统一走控制器句柄（closeAllMenus 见上方）：不再手改 display / aria-expanded
   const closeAllMenusBoth = (): void => closeAllMenus(disposePush.close, disposePull.close);
 
+  // 在途标志访问器对（2026-10 锐评收口：原 push/pull 各写一份 `{ get val(){...}, set val(v){...} }`
+  // 同构字面量，现单例直通组件访问器——语义不变，装配处两处合一）
+  const busyFlag: SyncBusyFlag = { get: getSyncInProgress, set: setSyncInProgress };
+
   pushMenu.addEventListener("click", (e) =>
-    handleSyncMenuClick("push", e, pushBtn, closeAllMenusBoth, root, getInstances, {
-      get val() {
-        return getSyncInProgress();
-      },
-      set val(v) {
-        setSyncInProgress(v);
-      },
-    }),
+    handleSyncMenuClick("push", e, pushBtn, closeAllMenusBoth, root, getInstances, busyFlag),
   );
   pullMenu.addEventListener("click", (e) =>
-    handleSyncMenuClick("pull", e, pullBtn, closeAllMenusBoth, root, getInstances, {
-      get val() {
-        return getSyncInProgress();
-      },
-      set val(v) {
-        setSyncInProgress(v);
-      },
-    }),
+    handleSyncMenuClick("pull", e, pullBtn, closeAllMenusBoth, root, getInstances, busyFlag),
   );
 }

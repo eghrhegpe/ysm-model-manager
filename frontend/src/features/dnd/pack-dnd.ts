@@ -80,7 +80,7 @@ export async function handleInstanceDrop(
     const oversized = collected0.filter((c) => c.file.size > MAX_IMPORT_BYTES);
     if (oversized.length > 0) {
       toast(
-        t("import.packOversizeSkipped", {
+        t("import.oversizeSkipped", {
           n: oversized.length,
           mb: Math.round(MAX_IMPORT_BYTES / 1024 / 1024),
           name: oversized[0].file.name,

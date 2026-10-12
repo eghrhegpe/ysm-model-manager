@@ -183,13 +183,14 @@ function noModLabelOf(rtype: string): string {
 }
 
 /** 单个整合包卡片头部。
- *  idx 用于绑定安装缺失按钮的 data-idx */
+ *  idx 用于绑定安装缺失按钮的 data-idx。
+ *  ⚠️ 原第 5 位 `_status` 陪跑参数已删（2026-10 锐评收口：函数体零消费——徽章展示
+ *  全由三计数 + hasMod 驱动；该参数只是调用方按 loader 派生字段顺位递进来的「陪跑」。 */
 export function instanceCardHeaderHTML(
   name: string,
   synced: number,
   missing: number,
   extra: number,
-  _status: string,
   idx = -1,
   hasMod = true,
   rtype = RESOURCE_TYPES.YSM,

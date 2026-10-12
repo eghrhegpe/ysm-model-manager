@@ -40,7 +40,6 @@ export function renderVersionCards(container: HTMLElement, instances: SidebarIns
       ins.synced,
       ins.missing,
       ins.extra,
-      ins.status,
       idx,
       ins.hasMod,
       ins.rtype || currentRepoType(),

@@ -92,7 +92,7 @@ export class AppSyncManager extends WebComponentBase {
     this._defaultType = this.getAttribute("default-type") || RESOURCE_TYPES.YSM;
     this._selectedType = getLastSelectedType() || this._defaultType;
     if (!this._instance) {
-      this.innerHTML = `<div style="padding:var(--sp-3);color:var(--err)">${UI_ICONS.warning} ${t("sync.noInstance")}</div>`;
+      this._showNoInstance();
       return;
     }
     // _init 内部已统一 catch（加载段转错误 UI + toast），此处 void 仅表「不等待」意图
@@ -104,21 +104,46 @@ export class AppSyncManager extends WebComponentBase {
     if (name === "instance") {
       this._instance = newVal || "";
       if (this._instance) void this._init();
+      // 2026-10 修复（锐评：置空残留旧 UI）：原实现空值分支直接跳过——上一任实例的列表
+      // 原样留在屏上，且三条 bus 订阅继续以空实例名调 GetInstanceSyncStatus("") 并重渲染。
+      // 现统一走空实例态出口（与 connectedCallback 同源）。
+      else this._showNoInstance();
     } else if (name === "default-type") {
       this._defaultType = newVal || RESOURCE_TYPES.YSM;
     }
   }
 
   disconnectedCallback(): void {
-    // 虚拟滚动监听（scroll + ResizeObserver）随卸载断开——同 _init 前置清理口径
+    this._teardownRuntime();
+  }
+
+  /**
+   * 空实例态呈现（`connectedCallback` 无 instance 与 `attributeChangedCallback` 置空共用）。
+   * 四步收口：代际失效（丢弃在途加载/重载结果，防其把占位覆盖回去）→ 运行期拆解
+   * （bus 订阅 / click 委托 / 虚拟滚动监听）→ 复位视图状态与数据 → 渲染占位块。
+   */
+  private _showNoInstance(): void {
+    this._guard.invalidate();
+    this._teardownRuntime();
+    this._resetViewState();
+    this._allItems = [];
+    this._filteredItems = [];
+    this.innerHTML = `<div style="padding:var(--sp-3);color:var(--err)">${UI_ICONS.warning} ${t("sync.noInstance")}</div>`;
+  }
+
+  /**
+   * 运行期资源拆解（`disconnectedCallback` 与 `_showNoInstance` 共用单一出口）：
+   * 虚拟滚动监听（scroll + ResizeObserver 强引用，不 disconnect 会吊着废弃容器）→
+   * bus 订阅桶 → click 委托 unsub（其内部连带清 keydown/roving 与 `_cbRef`）。
+   * 三者同为「跟随元素连接期」的资源，故与 `_init` 的 `_pruneSubs`（只清 bus 订阅）职责分离。
+   */
+  private _teardownRuntime(): void {
     const vsListEl = this.querySelector<HTMLElement>(".sm-list");
     if (vsListEl) cleanupSyncVirtualScroll(vsListEl);
-    if (this._unsubs) {
-      this._unsubs.forEach((fn) => {
-        fn();
-      });
-      this._unsubs = [];
-    }
+    this._unsubs.forEach((fn) => {
+      fn();
+    });
+    this._unsubs = [];
     // click 委托清理（_clickUnsub 内部：removeEventListener + 清 _clickHandler + 清 _cbRef）
     // 替换原 `if (_eventsBound && _clickHandler)` 显式分支——unsub 统一出口，
     // 与 bindDelegatedEvents 的清理逻辑单一事实源对齐

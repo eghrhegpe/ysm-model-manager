@@ -56,7 +56,7 @@ export async function handleTreeDrop(
     if (isWebPlatform()) {
       const files = Array.from(e.dataTransfer?.files || []);
       if (files.length === 0) {
-        toast("网页版暂不支持文件夹导入，请拖入 .ysm 等模型文件", TOAST_MS.verbose, "warn");
+        toast(t("import.webFolderDropUnsupported"), TOAST_MS.verbose, "warn");
         return;
       }
       await importWebFilesWithToast(files);
@@ -74,11 +74,16 @@ export async function handleTreeDrop(
       toast(`📂 ${t("import.noSupportedFiles")}（${DROP_EXTS_STR}）`, TOAST_MS.normal, "info");
       return;
     }
-    // oversize 逐文件过滤
+    // oversize 逐文件过滤（与整合包卡片拖入共用 import.oversizeSkipped 单源）
     const oversized = collected0.filter((c) => c.file.size > MAX_IMPORT_BYTES);
     if (oversized.length > 0) {
       toast(
-        `${oversized.length} 个文件超过 ${Math.round(MAX_IMPORT_BYTES / 1024 / 1024)}MB 上限已跳过（${oversized[0].file.name}${oversized.length > 1 ? " 等" : ""}）`,
+        t("import.oversizeSkipped", {
+          n: oversized.length,
+          mb: Math.round(MAX_IMPORT_BYTES / 1024 / 1024),
+          name: oversized[0].file.name,
+          more: oversized.length > 1 ? t("import.moreSuffix") : "",
+        }),
         TOAST_MS.long,
         "warn",
       );

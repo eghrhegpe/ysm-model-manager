@@ -113,13 +113,15 @@ status: active
 ## 不变量
 
 - 三徽章计数与面板链**同源**（ADR-310）：`synced`/`missing`/`extra`/`disabled` 均为 Go 单元级计数（dirLevel=模型夹、fileLevel=文件），红徽章已含 diverged 折叠（内容分叉学面板 `tabStatus` 归红，不补第四色）；列表内容 `array.length` **不再是**徽章数（`Missing` 为文件级一键安装清单）
-- 禁用项（`.ban`）只进 `disabled` 计数与 `items.disabled`，不驱动红/橙徽章——与面板 `aggregateStatus`「disabled 中立」一致，避免「禁用=有差异」误导
+- 禁用项（`.ban`）只进 `disabled` 计数，不驱动红/橙徽章——与面板 `aggregateStatus`「disabled 中立」一致，避免「禁用=有差异」误导
+- **`SidebarInstance` 不再携带路径清单/`items` 死 payload（2026-10 锐评摘除）**：`_missingPaths`/`_extraPaths`/`items` 三字段曾由 loader 逐实例构建，但全仓**零生产读者**（老 JS 时代的消费方 `actions.js` 已随 TS 重写消失，注释却仍宣称「一键安装/展开卡片用」= 第二事实源说谎）。需要文件级清单请直接消费 `GetResourceInstanceStatus` 响应（`features/sync/sync.ts|runDownloadMissing` 即此路径：`Missing` + `MissingDirs` 当次调用内取用，不过 sidebar 中转）。**新增 payload 字段前先 grep 消费者**，勿再让「注释承诺的未来消费方」长期占位
 - `bus.on` 订阅全部收进 `_unsubs` 并在 `disconnectedCallback` 清理；`_cardCleanup` / `_packDndCleanup`（document 级 DnD）/ `_docClickHandler`（document 级）同步清理
 - `_loading` 守卫防止并发 `_reload`（`_reloadGen` 代数校验丢弃过期结果 + `_pendingReload` 补跑最新 rtype）；`_syncInProgress` 守卫防止推送/拉取并发触发；`stats:refresh` 走 300ms 防抖
 - **实例级** `_checkedSets`（`AppSidebar` 实例字段 `private _checkedSets = new Map<string, Set<string>>()`，定义在 `index.ts`，非模块级——模块级会跨组件实例共享、成泄漏源；sync-flow.ts 仅经 `getCheckedSets()` 回调读）按 rtype 隔离跨重渲染持久化勾选状态（实例级 = 组件 GC 自动回收）；事件绑定用事件委托 + 「list 未变则复用 handler」——**该复用分支生产不可达**（`_cardCleanup` 先置空 `_lastList`），实际每次 reload 都是「全量摘监听→重绑」，监听不累积（防泄漏语义成立，与「复用」描述有出入）
 - 渲染后经 `_restoreCheckboxes` 恢复勾选，选中卡片经 localStorage 恢复；**`restoreSelectedCard` 去重由宿主注入的去重状态机（`SidebarHost`/`EmitDedupe`）跨 reload 生效**（P2 复核修复：原「list 替换时复位」因复用分支不可达而每次复位、去重恒真失效、每次重发 `package:selected` 反复重建 `<app-sync-manager>`；现状态由宿主实例持有，同组件 reload 不复位，仅新挂载会话经宿主的 `resetSelectedEmit()` 重置，由 `disconnectedCallback` 调用）。2026-09 定位降级：app-content 已改为**复用**同一面板实例（只改属性），重复 emit 不再导致丢状态，本状态机退化为省事件扩散的优化
 - **推送 done 按 token 精确匹配 + 识别 `skipped`**（P1 修复，与 sync.ts 联动）：原 `instanceName ===` fallback 会把「busy 被吞未处理」误判为成功（toast 报 ✅ 实际未推）；现 sync.ts busy 命中时回 done 带 `skipped: true`，sidebar 按拒绝处理
 - **roving handle 实例级**（`_roving`，ADR-308 D2）：`disconnectedCallback` 必 `dispose()`，卸载后键位全寂（契约测试 `app-sidebar.keyboard.test.ts`「卸载后 keydown 死寂」锁定）；键盘激活走合成 click 复用委托链，**禁止**在键盘路径另写高亮/emit/去重逻辑
+- **禁伪 async（2026-10 锐评全页收口）**：生命周期回调（`connectedCallback`）与 bus handler（`repo:rtype-changed`）、渲染段（`bindFooter` 的 stat-sync）一律不得标 `async` 而函数体零 `await`——返回值无人接管时，同步抛错会被转成 unhandled rejection（仓内 `render` 曾同病：错误提示整段变死码）。真实异步入口显式 `void this._reload()` 发起；本次三处已归正
 
 ## 相关
 

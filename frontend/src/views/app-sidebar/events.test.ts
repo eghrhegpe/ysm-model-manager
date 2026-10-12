@@ -57,9 +57,6 @@ function instance(name: string): SidebarInstance {
     extra: 0,
     disabled: 0,
     rtype: "ysm",
-    _missingPaths: [],
-    _extraPaths: [],
-    items: { synced: [] },
   };
 }
 

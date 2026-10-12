@@ -94,7 +94,6 @@ async function doLoadInstances(rtypeActual: string): Promise<SidebarInstance[]> 
 
     const instances: SidebarInstance[] = rawInstances.map((ins) => {
       const st: InstanceStatusView = statusMap[ins.Name] || {};
-      const missingList = st.Missing || [];
       const extraList = st.Extra || [];
       const disabledList = st.Disabled || [];
       // ADR-310：badge 数取 Go 聚合的单元数（MMD 等 dirLevel 类型的变体聚合
@@ -115,13 +114,6 @@ async function doLoadInstances(rtypeActual: string): Promise<SidebarInstance[]> 
         extra: extraTotal,
         disabled: disabledTotal,
         rtype: rtypeActual,
-        // 仅存原始路径，展开卡片时按需构建对象
-        _missingPaths: missingList,
-        _extraPaths: extraList,
-        items: {
-          synced: [],
-          disabled: disabledList,
-        },
       };
     });
 

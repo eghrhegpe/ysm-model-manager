@@ -314,17 +314,17 @@ export function bindFooter(root: ShadowRoot, instances: SidebarInstance[]): void
   }
 
   const statSync = root.getElementById("stat-sync");
-  (async () => {
-    if (!instances?.length) return;
+  // 2026-10 收口（锐评）：原为「零 await 的 async IIFE」——伪 async 会把同步抛错转成
+  // 无人接管的 rejected promise（仓内 render 曾同病：错误提示整段变死码）。本段本就
+  // 无异步语义，直接同步块落位；顺带把 syncedCount 的计算收进 statSync 存在的分支。
+  if (instances?.length && statSync) {
     const total = instances.length;
     const syncedCount = instances.filter(
       (ins) => (ins.missing || 0) + (ins.extra || 0) === 0,
     ).length;
-    if (statSync) {
-      // 修复（审核）：原三目两分支输出相同字符串（全同步时 syncedCount===total），
-      // 死代码；label 统一走 i18n（与 footerHTML 初始文案一致，防硬编码漂移）
-      statSync.textContent = `${t("sidebar.syncFully")} ${syncedCount}/${total}`;
-      animateNumber(statSync, syncedCount);
-    }
-  })();
+    // 修复（审核）：原三目两分支输出相同字符串（全同步时 syncedCount===total），
+    // 死代码；label 统一走 i18n（与 footerHTML 初始文案一致，防硬编码漂移）
+    statSync.textContent = `${t("sidebar.syncFully")} ${syncedCount}/${total}`;
+    animateNumber(statSync, syncedCount);
+  }
 }

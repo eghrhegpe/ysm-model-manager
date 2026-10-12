@@ -112,9 +112,6 @@ describe("loadInstances", () => {
     expect(ins.disabled).toBe(1); // 不再硬编码 0
     expect(ins.synced).toBe(7);
     expect(ins.status).toBe("missing");
-    expect(ins._missingPaths).toHaveLength(3); // 一键安装用的文件级清单保持完整
-    expect(ins._extraPaths).toEqual(["/inst/m3", "/inst/m4"]);
-    expect(ins.items.disabled).toEqual(["/inst/banned.pmx.ban"]);
   });
 
   it("ADR-310：diverged 已在 Go 折叠进 MissingCount（无第四态），状态红优先于橙", async () => {

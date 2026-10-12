@@ -75,7 +75,10 @@ class AppSidebar extends WebComponentBase {
     }
   }
 
-  async connectedCallback(): Promise<void> {
+  // 2026-10 收口（锐评）：原标 `async` 但函数体零 await——Web Component 生命周期
+  // 回调的返回值无人接管，伪 async 只会把同步抛错转成 unhandled rejection（仓内
+  // render 曾同病：错误提示整段变死码）。真实异步入口全部经 `void this._reload()` 等显式发起。
+  connectedCallback(): void {
     this._renderLayout();
 
     // ADR-308 D2：整合包卡片键盘导航（roving tabindex + 方向键，list 预设垂直向）。
@@ -105,8 +108,9 @@ class AppSidebar extends WebComponentBase {
     );
 
     // 监听全局 subtab 类型切换 → 重新加载该类型的统计
+    // （2026-10 收口：原 handler 标 async 但体零 await，同伪 async 病）
     this._unsubs.push(
-      bus.on("repo:rtype-changed", async (rtype) => {
+      bus.on("repo:rtype-changed", (rtype) => {
         if (rtype && rtype !== this._rtype) {
           this._rtype = rtype;
           clearTimeout(this._debounceTimer ?? undefined);

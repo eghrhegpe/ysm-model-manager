@@ -40,12 +40,6 @@ function makeInstances(): SidebarInstance[] {
       extra: 1,
       disabled: 0,
       rtype: "ysm",
-      _missingPaths: [],
-      _extraPaths: [],
-      // 类型要求 { synced: unknown[]; missing?; extra?; disabled? } 对象（宽松兼容
-      // loader 的 {synced,disabled} 与 fallback 的 {synced,missing,extra}）——
-      // 传 [] 会触发 TS2741，破坏 typecheck 门槛
-      items: { synced: [] },
     },
   ];
 }

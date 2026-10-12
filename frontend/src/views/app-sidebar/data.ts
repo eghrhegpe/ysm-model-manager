@@ -23,15 +23,4 @@ export interface SidebarInstance {
   extra: number;
   disabled: number;
   rtype: string;
-  /** 仓库侧文件级路径清单（一键安装/详情用；长度 ≠ missing 计数，勿当数用） */
-  _missingPaths: string[];
-  /** 实例侧独有单元路径清单 */
-  _extraPaths: string[];
-  /** loader 生成 { synced, disabled }；fallback 模拟数据为 { synced, missing, extra }——宽松化以兼容两者 */
-  items: {
-    synced: unknown[];
-    missing?: unknown[];
-    extra?: unknown[];
-    disabled?: unknown[];
-  };
 }

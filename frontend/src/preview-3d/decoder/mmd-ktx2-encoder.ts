@@ -1,4 +1,4 @@
-import { u8ToBase64 } from "@/utils/base/primitives/base64.ts";
+import { bytesToArrayBuffer, u8ToBase64 } from "@/utils/base/primitives/base64.ts";
 import { safeErrorMessage } from "@/utils/base/pure/safe-error-msg.ts";
 
 // ===== MMD 纹理 KTX2 后台编码器 =====
@@ -169,7 +169,17 @@ async function blobUrlToImageData(blobUrl: string): Promise<{
   const ctx = canvas.getContext("2d")!;
   ctx.drawImage(img, 0, 0);
   const imageData = ctx.getImageData(0, 0, img.width, img.height);
-  return { data: new Uint8Array(imageData.data.buffer), width: img.width, height: img.height };
+  // [2026-10-12 视图语义收敛] 原为 `new Uint8Array(imageData.data.buffer)`——取**底层整块**
+  // 重建，而非沿用 `imageData.data` 自身的 offset/length。`ImageData.data` 虽通常是全量
+  // `Uint8ClampedArray`，但其规范未保证「视图恰好占满底层 buffer」，一旦浏览器复用内部
+  // 分配（返回偏移视图），这里会**静默放大**成比实际像素更多的字节 → 下游按 width×height×4
+  // 解读即像素错位。改为**视图拷贝**（`Uint8Array.from` 按视图区间逐值取，与像素数据同长），
+  // 既消除契约依赖，也把 `Uint8ClampedArray` 归一成下游契约要求的 `Uint8Array`。
+  return {
+    data: Uint8Array.from(imageData.data),
+    width: img.width,
+    height: img.height,
+  };
 }
 
 // ===== 本地 basis_encoder WASM 加载与 KTX2 编码（绕开 loaders.gl 的 subarray().buffer 假成功 bug）=====
@@ -257,8 +267,15 @@ async function encodeToKTX2(img: {
     // 降级：同步编码（测试环境 / Worker 被屏蔽）
     return encodeToKTX2Basis(img);
   }
-  // blobUrlToImageData 返回 new Uint8Array(imageData.data.buffer)，保证是 ArrayBuffer（非 SharedArrayBuffer）
-  const dataBuf = img.data.buffer as ArrayBuffer;
+  // [2026-10-12 视图语义收敛] 原为 `img.data.buffer as ArrayBuffer` + 注释「blobUrlToImageData
+  // 返回 new Uint8Array(imageData.data.buffer)，保证是 ArrayBuffer」——该前提**只在唯一生产调用方
+  // （encodeAndCacheTexture → blobUrlToImageData）成立**，而本函数签名（`data: Uint8Array`）
+  // **不编码这一前置条件**：一旦有调用方传入 subarray 视图，`.buffer` 会送出（并 transfer
+  // **detach**）超出视图的整块底层缓冲——worker 按 `width×height×4` 解读即**数据错位**，
+  // 且调用方原数据被连带清空（transfer 语义）。走 `bytesToArrayBuffer` 即消除该前提依赖
+  // （整视图零拷贝别名 / 偏移视图 slice 收窄），与 mmd 家族其余入口一致。
+  // ⚠️ transfer list 传的必须正是送出的那份 buffer（helper 返回值），否则 detach 的不是被送对象。
+  const dataBuf = bytesToArrayBuffer(img.data);
   // 工厂接管 id + round-robin 选 worker + 超时 + pending + onerror 终止整池
   return ktx2Bridge.request({ width: img.width, height: img.height, data: dataBuf }, [dataBuf]);
 }

@@ -876,9 +876,49 @@ describe("disposeKtx2WorkerPool（锐评 P1-0：会话级回收 worker 池）", 
     vi.unstubAllGlobals();
   });
 
-  // 行为不变量①：dispose 后全部 worker 被 terminate（真终止，非仅清引用）
-  it("dispose → 池内全部 worker 被 terminate（不等崩溃）", async () => {
+  // [2026-10-12 视图语义收敛] 传送给 worker 的必须是**视图区间**，而非底层整块。
+  // 病：原 `img.data.buffer` 直接送 + transfer。整数生产路径（blobUrlToImageData 用
+  // `new Uint8Array(imageData.data.buffer)` 整视图）恰好无害，但 `encodeToKTX2` 的签名
+  // （`data: Uint8Array`）**不编码该前提**——传 subarray 视图时会送出（并 detach）超出
+  // 视图的整块底层缓冲，worker 按 width×height×4 解读 ⇒ 数据错位 + 调用方原数据被清空。
+  it("img.data 为 subarray 视图 → 送出的 buffer 只含视图区间（不夹带底层缓冲）", async () => {
+    // 构造底层含哨兵的偏移视图：底层 4+4+4 字节，视图 = 中间 4 字节
+    const backing = new Uint8Array([0xaa, 0xaa, 0xaa, 0xaa, 1, 2, 3, 4, 0xbb, 0xbb, 0xbb, 0xbb]);
+    const view = new Uint8Array(backing.buffer, 4, 4); // byteOffset=4, len=4, buffer=12
+
+    // 让 canvas.getImageData 返回该视图（ImageData.data 通常是 Uint8ClampedArray；
+    // 被测只按 Uint8Array 消费，故用类型断言模拟上游给视图的形态）
+    const ctxMock = {
+      drawImage: vi.fn(),
+      getImageData: vi.fn(() => ({ data: view, width: 1, height: 1 })),
+    };
+    const canvasMock = { width: 1, height: 1, getContext: vi.fn(() => ctxMock) };
+    vi.stubGlobal("document", { createElement: vi.fn(() => canvasMock) });
+
+    // 捕获送出的 buffer（transfer list 与被送 payload 的 data 都必须指向同一份）
+    const sent: ArrayBuffer[] = [];
+    class CaptureWorker extends FakeKtx2Worker {
+      override postMessage(msg: { id: number; data?: ArrayBuffer }, transfer?: Transferable[]): void {
+        if (msg.data) sent.push(msg.data);
+        if (transfer) for (const t of transfer) expect(t).toBe(msg.data); // 送出即所传
+        super.postMessage(msg, transfer);
+      }
+    }
+    vi.stubGlobal("Worker", CaptureWorker);
+
     const port = makeLocalPort();
+    await fresh.encodeAndCacheTexture("hash_view", "blob:view", port);
+
+    expect(sent.length, "应有一次带数据的 worker 派发").toBeGreaterThan(0);
+    const buf = sent[0];
+    expect(buf.byteLength, "送出长度须 = 视图长度 4，而非底层 12").toBe(4);
+    expect([...new Uint8Array(buf)], "送出字节须为视图内容 [1,2,3,4]，不含 0xaa/0xbb 哨兵").toEqual([
+      1, 2, 3, 4,
+    ]);
+  });
+
+  // 行为不变量①：dispose 后全部 worker 被 terminate（真终止，非仅清引用）
+  it("dispose → 池内全部 worker 被 terminate（不等崩溃）", async () => {    const port = makeLocalPort();
     const ok = await fresh.encodeAndCacheTexture("hash_p1_0_a", "blob:pool", port);
     expect(ok).toBe(true);
     expect(createdWorkers.length).toBeGreaterThan(0);

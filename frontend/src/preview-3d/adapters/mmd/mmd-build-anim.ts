@@ -62,7 +62,14 @@ export async function Stage4Anim(c: Stage4Ctx): Promise<void> {
       const vpdB64 = animBatch[v] ?? null;
       if (!vpdB64) continue;
       const vpdBytes = base64ToBytes(vpdB64) as Uint8Array;
-      const vpdBlobUrl = URL.createObjectURL(new Blob([vpdBytes.buffer as ArrayBuffer]));
+      // [2026-10-12 同族收敛] 原为 `new Blob([vpdBytes.buffer as ArrayBuffer])`——与本文件
+      // L44（VMD 路径）及 mmd-build-load/mmd-build-scene 的全部入口**不一致**：那些都走
+      // `bytesToArrayBuffer`（整视图零拷贝 / 偏移视图 slice 收窄），唯独此处直取 `.buffer`。
+      // `.buffer` 是**底层整块**：`base64ToBytes` 目前恰好返回精确数组（新分配、占满），故当前
+      // 无 bug；但这是**跨模块隐性契约**——`utils/base/primitives/base64.ts|bytesToArrayBuffer`
+      // 的注释已在讨论「零拷贝视图」方向，一旦上游改成返回 subarray，这里会静默把多余字节
+      // 塞进 Blob → VPD 姿态文件损坏且不报错。改走同族 helper 即消除该契约依赖。
+      const vpdBlobUrl = URL.createObjectURL(new Blob([bytesToArrayBuffer(vpdBytes)]));
       c.blobUrls.push(vpdBlobUrl);
       const vpd = await new VPDLoader().loadAsync(vpdBlobUrl);
       c.vpdPoses.push({

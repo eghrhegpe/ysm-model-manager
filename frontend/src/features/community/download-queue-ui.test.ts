@@ -389,6 +389,34 @@ describe("createDownloadQueue UI 层", () => {
     emit("queue:file-start", ["f.ysm", 1, 1]);
     expect(sr.querySelector("#gh-queue-status")!.innerHTML).toBe("");
   });
+
+  // ===== 双跑幂等（ADR-260 ⚠️ cleanup 双跑契约反向锁）=====
+  // init-github.ts L322-L325 注释宣称「bindRepoEvents cleanup（含 queue.cancel）幂等无害，双跑安全」——
+  // 本节把宣称变可证伪：队列层并发双 cancel、双 cancelled 迁移、双 destroy 必须全无害。
+  it("并发双 cancel：双 resolve 不逸出 reject，且 cancelled 双迁移状态机不烂", async () => {
+    const { ctrl } = createCtrl();
+    enqueueMock.mockResolvedValue(undefined);
+    repoRootMock.mockResolvedValue("/repo");
+    await ctrl.enqueue([{ url: "u", saveDir: "", name: "a.ysm", size: 1 }]);
+    // downloading 态：drain 与 re-bind 两个 cleanup 站点同时调 cancel（都过活跃守卫）
+    const results = await Promise.allSettled([ctrl.cancel(), ctrl.cancel()]);
+    expect(
+      results.map((r) => r.status),
+      "双 cancel 必须双 resolve（cleanup 路径引入非幂等副作用即红）",
+    ).toEqual(["fulfilled", "fulfilled"]);
+    const mod = await import("./download-queue.ts");
+    // 双迁移：cancelled 事件连发两次，第二次必须幂等（不抛、状态不烂）
+    emit("queue:status", ["cancelled", 0]);
+    emit("queue:status", ["cancelled", 0]);
+    expect(mod.getStateSnapshot().status).toBe("cancelled");
+    expect(mod.getStateSnapshot().remaining).toBe(0);
+  });
+
+  it("双 destroy：二次调用 no-op（unsub/stuckGuardReset 双跑不抛）", () => {
+    const { ctrl } = createCtrl();
+    ctrl.destroy();
+    expect(() => ctrl.destroy(), "二次 destroy 必须无害").not.toThrow();
+  });
 });
 
 // ── 陷阱 #6：Content-Length=-1 / 99% 卡进度锁定状态机 ──

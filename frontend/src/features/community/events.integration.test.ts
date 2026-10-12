@@ -252,4 +252,19 @@ describe("community 仓库页事件编排（G-1 样板）", () => {
     expect(toastSpy.mock.calls[0][0].msg).toBe(t("workshop.downloading"));
     expect(queueMock.enqueue).not.toHaveBeenCalled();
   });
+
+  // ===== 双跑幂等（ADR-260 ⚠️ cleanup 双跑契约反向锁，init-github.ts L322-L325 注释的论证变可证伪）=====
+  it("14. cleanup 双跑无害：二次调用不 reject，监听不复活，真实层逐一无害", async () => {
+    const { sr, ctx, handle } = mount();
+    await handle.cleanup();
+    // drain（订阅桶）与 re-bind 两个 await 站点可能把同一 cleanup 各跑一次（旧 cleanup 双跑）。
+    // 真实现层逐一审视：virtualList.destroy×2（disposeScroll 置 null 后 no-op）/ removeEventListener×2
+    // （已移除=无害）/ doneTimer clear×2（null 安全）/ selectedSet.clear×2 / queue.cancel+destroy×2
+    await handle.cleanup();
+    expect(queueMock.cancel).toHaveBeenCalledTimes(2);
+    expect(queueMock.destroy).toHaveBeenCalledTimes(2);
+    // 监听不复活：双跑后点返回不再触发 backToSite（cloneNode 暴力清监听反模式的回归红线）
+    fireClick(sr.querySelector('[data-testid="gh-back"]') as HTMLElement);
+    expect(ctx.backToSite).not.toHaveBeenCalled();
+  });
 });

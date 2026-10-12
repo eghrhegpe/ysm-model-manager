@@ -88,3 +88,35 @@ describe("filterModels", () => {
   });
 });
 
+describe("WeakMap 惰性缓存（O(N+M) 收益锁 — render.ts hashSetOf 契约）", () => {
+  /** 计数 values() 遍历：hashSetOf 若退化为每次判定重建 hash Set（或 WeakMap 缓存被删），
+   *  计数将随判定次数线性膨胀——本锁让 O(N×M) 回归立刻变红 */
+  class CountingMap extends Map<string, string> {
+    valuesCalls = 0;
+    override values(): MapIterator<string> {
+      this.valuesCalls += 1;
+      return super.values();
+    }
+  }
+
+  it("同一 localMap 实例 N 次判定 → values() 仅遍历 1 次（N×M → N+M）", () => {
+    const local = new CountingMap([
+      ["a.ysm", "h1"],
+      ["b.ysm", "h2"],
+    ]);
+    for (let i = 0; i < 100; i++) {
+      isModelMissing({ name: `m${i}`, path: "x", hash: "h1" }, local);
+    }
+    expect(local.valuesCalls, "100 次判定只建一次 hash Set（退化为逐次构建则为 100）").toBe(1);
+  });
+
+  it("独立 localMap 实例各建各的缓存（WeakMap 按实例隔离，互不串用）", () => {
+    const a = new CountingMap([["a.ysm", "h1"]]);
+    const b = new CountingMap([["a.ysm", "h1"]]);
+    isModelMissing({ name: "x", path: "x", hash: "h1" }, a);
+    isModelMissing({ name: "x", path: "x", hash: "h1" }, b);
+    expect(a.valuesCalls).toBe(1);
+    expect(b.valuesCalls, "B 实例不复用 A 的缓存").toBe(1);
+  });
+});
+

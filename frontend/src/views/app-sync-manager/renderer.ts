@@ -379,8 +379,8 @@ function restoreBusyState(listEl: HTMLElement): void {
     row.querySelectorAll(".sm-item-btn").forEach((btn) => {
       const b = btn as HTMLButtonElement;
       b.disabled = true;
-      b.style.opacity = "0.55";
-      b.style.cursor = "wait";
+      // 与 network.setRowButtonsBusy 同一视觉出口（样式表类，非内联 style）
+      b.classList.add("sm-item-btn--busy");
     });
   });
 }
@@ -437,19 +437,12 @@ function renderList(self: SyncRenderSelf, listEl: HTMLElement): void {
         ? t("syncManager.emptyFiltered", { status: statusLabels[self._statusFilter] || "" })
         : t("syncManager.emptyType");
     listEl.innerHTML = emptyHintHTML(hint);
-    // 空态无行可滚：摘监听 + 清占位 padding，防上次窗口化的撑高残留
+    // 空态无行可滚：清占位 padding（防上次窗口化的撑高残留）+ 走统一清理出口。
+    // 2026-10 收口：原实现内联复刻了 cleanupSyncVirtualScroll 的五行拆解（订阅/ResizeObserver/
+    // rAF/rows 各自摘一遍），与出口两处口径各自演化；现单源，顺带补上 rowH 复位（下次重新实测）。
     listEl.style.paddingTop = "";
     listEl.style.paddingBottom = "";
-    const st = vsOf(listEl);
-    st.rows = [];
-    st.cleanup?.();
-    st.cleanup = null;
-    st.resizeObserver?.disconnect();
-    st.resizeObserver = null;
-    if (st.pendingRaf !== null) {
-      cancelAnimationFrame(st.pendingRaf);
-      st.pendingRaf = null;
-    }
+    cleanupSyncVirtualScroll(listEl);
     return;
   }
 

@@ -79,8 +79,8 @@ function setRowButtonsBusy(self: NetworkSelf, path: string, busy: boolean): void
     row.querySelectorAll(".sm-item-btn").forEach((btn) => {
       const htmlBtn = btn as HTMLButtonElement;
       htmlBtn.disabled = busy;
-      htmlBtn.style.opacity = busy ? "0.55" : "";
-      htmlBtn.style.cursor = busy ? "wait" : "pointer";
+      // 在途视觉归样式表（.sm-item-btn--busy，tpl.ts）——原两模块各自内联写 opacity/cursor
+      htmlBtn.classList.toggle("sm-item-btn--busy", busy);
     });
   });
 }

@@ -304,19 +304,18 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
       new Promise((r) => setTimeout(() => r(undefined), 100)),
     );
     pushBtn.click();
-    // 在途：按钮 disabled=true、opacity=0.55、cursor=wait
+    // 在途：按钮 disabled=true + 在途视觉类（2026-10 收口：原内联 style.opacity/cursor 两模块
+    // 各写一份，现只 toggle .sm-item-btn--busy，视觉归 tpl 样式表）
     await waitFor(() => (el.querySelector('[data-testid="sm-push"]') as HTMLButtonElement)?.disabled === true, 3000);
     const busyBtn = el.querySelector('[data-testid="sm-push"]') as HTMLButtonElement;
-    expect(busyBtn.style.opacity).toBe("0.55");
-    expect(busyBtn.style.cursor).toBe("wait");
+    expect(busyBtn.classList.contains("sm-item-btn--busy")).toBe(true);
     // 完成：复位（注意 _render 会重建 DOM，故按钮引用须重取；delta 守卫）
     await waitFor(() => {
       const b = el.querySelector('[data-testid="sm-push"]') as HTMLButtonElement | null;
       return b !== null && b.disabled === false;
     }, 5000);
     const finalBtn = el.querySelector('[data-testid="sm-push"]') as HTMLButtonElement;
-    expect(finalBtn.style.opacity).toBe("");
-    expect(finalBtn.style.cursor).toBe("");
+    expect(finalBtn.classList.contains("sm-item-btn--busy")).toBe(false);
     unmountElement(el);
   });
 

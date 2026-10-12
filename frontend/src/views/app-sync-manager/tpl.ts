@@ -164,6 +164,9 @@ export function containerHTML(): string {
 .sm-item{display:flex;align-items:center;gap:4px;padding:var(--btn-padding-std);height:calc(var(--fs-sm) * 1.4 + 9px);box-sizing:border-box;font-size:var(--fs-sm);border-bottom:1px solid var(--bd);cursor:default;transition:background var(--tr-fast)}
 .sm-item:hover{background:var(--hover)}
 .sm-item-btn{padding:var(--pad-btn-secondary) 8px;border-radius:var(--radius-sm);background:transparent;cursor:pointer;flex-shrink:0;font-size:var(--fs-btn-secondary);transition:background var(--tr-fast),border-color var(--tr-fast),color var(--tr-fast)}
+/* 在途单行按钮视觉（2026-10 收口：原 network.setRowButtonsBusy 与 renderer.restoreBusyState
+   各自内联写 style.opacity/cursor 两处重复——样式归样式表，两处只 toggle 类名） */
+.sm-item-btn--busy{opacity:.55;cursor:wait}
 .sm-item-btn:hover{background:var(--hover)}
 .sm-tab{transition:var(--tr-fast)}
 .sm-status-tab{padding:var(--btn-padding-filter);border-radius:var(--radius-sm);border:1px solid transparent;background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;font-size:var(--fs-filter);white-space:nowrap;transition:background var(--tr-fast),color var(--tr-fast),border-color var(--tr-fast)}
@@ -172,9 +175,9 @@ export function containerHTML(): string {
 .sm-cur-type-slot{display:contents}
 .sm-status-radios{display:flex;gap:var(--sp-1);flex:1;min-width:0}
 .sm-cur-type{display:inline-flex;align-items:center;gap:4px;padding:0 var(--sp-2);color:var(--accent);font-size:var(--fs-filter);white-space:nowrap;border-right:1px solid var(--bd);margin-right:6px}
-.sm-empty{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;height:100%;color:var(--muted);font-size:var(--fs-base);animation:fade-in .2s ease}
+.sm-empty{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;height:100%;color:var(--muted);font-size:var(--fs-base);animation:sm-fade-in .2s ease}
 .sm-empty-icon{font-size:var(--fs-xl)}
-.sm-list{animation:fade-in .15s ease}
+.sm-list{animation:sm-fade-in .15s ease}
 .sm-loading{display:flex;flex-direction:column;gap:8px;padding:var(--sp-3)}
 .sm-dir{cursor:pointer}
 .sm-dir .sm-dir-arrow{transition:color var(--tr-fast)}
@@ -185,7 +188,7 @@ export function containerHTML(): string {
 .sm-shimmer-w80{width:80%}
 .sm-shimmer-w60{width:60%}
 .sm-shimmer-w70{width:70%}
-@keyframes fade-in{from{opacity:0}to{opacity:1}}
+@keyframes sm-fade-in{from{opacity:0}to{opacity:1}}
 @keyframes sk-shimmer{from{background-position:-200% 0}to{background-position:200% 0}}
 </style>
 <div class="sm-wrap" style="display:flex;flex-direction:column;height:100%;overflow:hidden">

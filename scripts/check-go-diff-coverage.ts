@@ -390,6 +390,50 @@ export function scanBareAssertDebt(): { count: number; files: Record<string, num
   return { count, files };
 }
 
+/** 裸断言债语义分类（情报维度：让「裸断言 N 条」有构成，供收债排期；不计入账本、不阻断）。 */
+export function classifyBareAssertDebt(): {
+  total: number;
+  infoFatalf: number;
+  msgAssert: number;
+  fuzzBench: number;
+  other: number;
+} {
+  const cls = { total: 0, infoFatalf: 0, msgAssert: 0, fuzzBench: 0, other: 0 };
+  const list = walk(ROOT, { exts: [".go"], skipDir: skipGoScanDir, rel: true }) as Array<{
+    abs: string;
+    rel: string;
+  }>;
+  for (const f of list) {
+    if (!isGoTestSource(f.rel) || isTestutilTree(f.rel)) continue;
+    let text: string;
+    try {
+      text = fs.readFileSync(f.abs, "utf8");
+    } catch {
+      continue;
+    }
+    const isFuzzBench = /fuzz|_bench/i.test(f.rel);
+    for (const line of text.split("\n")) {
+      if (!isBareFatalAssertLine(line)) continue;
+      cls.total++;
+      if (isFuzzBench) {
+        cls.fuzzBench++;
+      } else {
+        // 只剥注释（保留字符串内容以识别参数结构）
+        const code = line.replace(/\/\/.*$/, "").replace(/\/\*[\s\S]*?\*\//g, "").trim();
+        const mf = code.match(/\bt\.Fatalf\("([^"]*)"(\s*,.*)$/);
+        if (mf && mf[2]!.trim().length > 0) {
+          cls.infoFatalf++; // fmt 字符串后带逗号参数 → 信息型（含上下文）
+        } else if (/^.*\bt\.Fatal\("[^"]*"\)\s*$/.test(code)) {
+          cls.msgAssert++; // Fatal("纯字符串") → 消息断言
+        } else {
+          cls.other++;
+        }
+      }
+    }
+  }
+  return cls;
+}
+
 /** 读取裸断言债基线；缺失/损坏返回 null（fail-open：debt 档不阻断，仅跳过对账）。 */
 export function loadBareAssertBaseline(): { count: number; files: Record<string, number> } | null {
   try {
@@ -698,6 +742,13 @@ function main() {
         `  … 另有 ${bareAssertDebt.overFiles.length - 12} 个文件超出基线`,
       );
   }
+  // 债语义分类（情报维度：让「N 条」有构成，供收债排期；debt 档不阻断）
+  const debtClass = classifyBareAssertDebt();
+  if (debtClass.total > 0) {
+    console.error(
+      `[check-go-diff-coverage] 裸断言债构成: 信息型 Fatalf ${debtClass.infoFatalf} / 消息断言 ${debtClass.msgAssert} / fuzz·bench ${debtClass.fuzzBench} / 其它 ${debtClass.other}（共 ${debtClass.total} 条）`,
+    );
+  }
 
   if (changed.length === 0) {
     const msg = `[check-go-diff-coverage] 本次无改动 Go 源码需要检查（阈值 ${threshold}%）。通过。`;
@@ -827,7 +878,11 @@ function main() {
             exempt: rows.filter((r) => r.exemptLifecycle || r.exemptEntry || r.exemptAssert).length,
             bareAssert: bareAssertHits.length,
             bareAssertDebt: bareAssertDebt
-              ? { current: bareAssertDebt.current, baseline: bareAssertDebt.baseline }
+              ? {
+                  current: bareAssertDebt.current,
+                  baseline: bareAssertDebt.baseline,
+                  classification: debtClass,
+                }
               : null,
           },
           rows,

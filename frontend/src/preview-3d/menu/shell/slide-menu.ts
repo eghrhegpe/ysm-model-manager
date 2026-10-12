@@ -235,6 +235,8 @@ function smBuildShell(opts?: { title?: string }): SmShell {
   backBtn.className = "slide-back";
   backBtn.setAttribute("role", "button");
   backBtn.tabIndex = 0;
+  // [D9②] icon-only 关闭按钮：title 仅视觉 tooltip，可达名由 aria-label 承担（仓内口径 dom-fab.md）
+  backBtn.setAttribute("aria-label", t("common.close"));
   // 关闭图标恒为 UI_ICONS.close（ADR-238 §1.4 结构槽走 SVG）。
   // 原 `closeIcon?: string` 覆盖参数已删——它把「未转义的 HTML 串」作为公开注入面，
   // 触发 check-redlines R8（innerHTML XSS）；而全仓唯一调用方 core.ts 早就不传它。
@@ -289,6 +291,7 @@ function smRenderTop(
     backBtn.innerHTML = UI_ICONS.back;
   }
   backBtn.title = atRoot ? t("common.close") : t("common.back");
+  backBtn.setAttribute("aria-label", atRoot ? t("common.close") : t("common.back"));
   top.render(list);
 
   // 恢复焦点到原索引位置的菜单项

@@ -10,6 +10,9 @@ export interface HeaderToggleConfig {
   disabled?: boolean;
   /** 禁用态点击回调（如弹出提示） */
   onDisabledClick?: () => void;
+  /** [D9③] checkbox 可达名：toggle 可见标签在 <label> 外（仅 SVG 滑块，无文本），
+   *  须显式给 input 一个 aria-label（取所在行/folder 的标题），否则 SR 读到无名开关 */
+  label?: string;
 }
 
 /** createHeaderToggle 返回值：label 开关 + 程序化翻转出口。
@@ -35,6 +38,8 @@ export function createHeaderToggle(config: HeaderToggleConfig): HeaderToggleElem
   input.type = "checkbox";
   input.checked = config.value;
   input.disabled = !!config.disabled;
+  // [D9③] checkbox 无可见文本标签（label 仅含 SVG 滑块）→ 显式可达名，否则 SR 无名
+  if (config.label) input.setAttribute("aria-label", config.label);
   const slider = document.createElement("span");
   slider.className = "slider";
   toggle.appendChild(input);

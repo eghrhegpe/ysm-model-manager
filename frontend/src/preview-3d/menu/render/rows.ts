@@ -221,6 +221,8 @@ export function rmAppendDynamicRow(
     // 语义名图标（ADR-238：UI chrome 走 SVG，不靠字形）：off 单环 / on 环+圆心
     applyIcon(radio, node.radio.active ? "radioOn" : "radioOff");
     radio.title = node.radio.title;
+    // [D9②] icon-only 按钮：title 仅视觉 tooltip，可达名由 aria-label 承担（仓内口径 dom-fab.md）
+    radio.setAttribute("aria-label", node.radio.title);
     radio.className = `rm-radio-btn${node.radio.active ? " row-radio-active" : ""}`;
     radio.onclick = (ev): void => {
       ev.stopPropagation();
@@ -237,6 +239,7 @@ export function rmAppendDynamicRow(
     const tg = createHeaderToggle({
       value: ht.value,
       onChange: (v: boolean) => ht.onChange(v),
+      label: rmLabel(node), // [D9③] checkbox 可达名取行标题
     });
     if (!node.badge && !node.action) tg.classList.add("rm-ml-auto");
     row.appendChild(tg);
@@ -247,6 +250,8 @@ export function rmAppendDynamicRow(
     badge.dataset.testid = "row-badge";
     applyIcon(badge, node.badge.icon);
     badge.title = node.badge.title;
+    // [D9②] icon-only 按钮：title 仅视觉 tooltip，可达名由 aria-label 承担
+    badge.setAttribute("aria-label", node.badge.title);
     badge.className = "cc-btn cc-btn-ghost rm-inline-btn rm-ml-auto";
     badge.onclick = (ev): void => {
       ev.stopPropagation();
@@ -335,15 +340,16 @@ export function rmAppendMaterialRow(container: HTMLElement, node: NodeFor<"mater
   const wrap = document.createElement("div");
   wrap.className = "slide-item rm-control-row";
   wrap.dataset.testid = `preview-${node.id}`;
-  // 整行可点翻转显隐（对齐旧 buildMaterialControls 的 role/tabIndex/row.onclick——249bc6d0 review P3）
-  wrap.setAttribute("role", "button");
-  wrap.tabIndex = 0;
+  // 整行可点翻转显隐（鼠标）：行是容器，eye 按钮才是可访问开关——不得在容器上套
+  // role="button" 包裹 <button>/<input>（ARIA 非法嵌套，D9①）。键盘经 roving 聚焦
+  // .slide-item 后 Enter → onActivate 点首个后代 eye 按钮翻转（与 wrap.onclick 同语义）。
   const eye = document.createElement("button");
   eye.type = "button";
   eye.className = "rm-eye";
   const eyeApply = (v: boolean): void => {
     eye.textContent = v ? "👁" : "🚫";
     eye.title = v ? t("preview.eyeHide") : t("preview.eyeShow");
+    eye.setAttribute("aria-label", v ? t("preview.eyeHide") : t("preview.eyeShow"));
   };
   const toggleEye = (): void => {
     const next = !node.eye?.get();

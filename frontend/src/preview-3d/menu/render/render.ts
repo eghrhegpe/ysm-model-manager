@@ -219,6 +219,7 @@ function rmAppendFolder(container: HTMLElement, node: PreviewMenuNode, deps: Ren
     const tg = createHeaderToggle({
       value: ht.value,
       onChange: (v: boolean) => ht.onChange(v),
+      label: rmLabel(node), // [D9③] checkbox 可达名取 folder 标题
     });
     header.appendChild(tg);
   }

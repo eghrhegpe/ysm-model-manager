@@ -184,6 +184,32 @@ describe("renderMenu 新 kind", () => {
     expect(visible).toBe(true);
   });
 
+  it("material-row D9：容器不套 role=button（避免包裹 button/input 的 ARIA 非法嵌套），eye 按钮带 aria-label", () => {
+    let visible = true;
+    let opacity = 80;
+    const nodes: PreviewMenuNode[] = [
+      {
+        id: "mat-a11y",
+        kind: "material-row",
+        label: "Body",
+        eye: { get: () => visible, set: (v: boolean) => { visible = v; } },
+        opacity: { get: () => opacity, set: (v: number) => { opacity = v; } },
+      },
+    ];
+    const container = document.createElement("div");
+    renderMenu(container, nodes, makeDeps() as any);
+    const row = container.querySelector('[data-testid="preview-mat-a11y"]') as HTMLElement;
+    // [D9①] 行容器不是 button（eye 按钮才是可访问开关）
+    expect(row.getAttribute("role")).toBeNull();
+    const eye = row.querySelector("button.rm-eye") as HTMLButtonElement;
+    expect(eye).not.toBeNull();
+    // [D9②] eye 为 icon-only，可达名由 aria-label 承担
+    expect(eye.getAttribute("aria-label")).toBe("隐藏");
+    // 翻转后 aria-label 同步（显示态 → eyeShow）
+    eye.click();
+    expect(eye.getAttribute("aria-label")).toBe("显示");
+  });
+
   it("material-row 空态：mat-empty field 渲染提示文本（不落 id 原文）", () => {
     // [doc:adr-126-p5] P2 回归锁：preview.noMaterial 键缺失时 rmAppendField 的 tr 落
     // node.id（mat-empty 原文）——补键后应渲染 locale 文本

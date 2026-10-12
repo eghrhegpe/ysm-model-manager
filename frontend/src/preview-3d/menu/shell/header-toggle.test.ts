@@ -164,6 +164,18 @@ describe("样式与类名", () => {
     expect(toggle.className).toBe("toggle header-toggle");
   });
 
+  it("D9③：label 配置 → input 带 aria-label 可达名（无可见文本标签）", () => {
+    const toggle = createHeaderToggle(makeConfig({ label: "天空盒" }));
+    const input = toggle.querySelector("input") as HTMLInputElement;
+    expect(input.getAttribute("aria-label")).toBe("天空盒");
+  });
+
+  it("D9③：未传 label → input 无 aria-label（调用方按上下文取舍）", () => {
+    const toggle = createHeaderToggle(makeConfig());
+    const input = toggle.querySelector("input") as HTMLInputElement;
+    expect(input.getAttribute("aria-label")).toBeNull();
+  });
+
   it("禁用态追加 'toggle-disabled'", () => {
     const toggle = createHeaderToggle(makeConfig({ disabled: true }));
     expect(toggle.className).toBe("toggle header-toggle toggle-disabled");

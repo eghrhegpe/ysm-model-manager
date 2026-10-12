@@ -234,7 +234,15 @@ export function diagnosticsHTML(): string {
         <button class="diag-log-fbtn" data-status="failed">${UI_ICONS.error} ${t("diagnostics.failed")}</button>
         <button class="diag-log-fbtn" data-status="warn">${UI_ICONS.warning} ${t("diagnostics.warn")}</button>
         <button class="diag-log-fbtn" data-status="skipped">${UI_ICONS.skip} ${t("diagnostics.skipped")}</button>
-        <select id="diag-log-op-filter" data-testid="diag-log-op-filter" class="diag-log-op-filter">
+        <select id="diag-log-op-filter" data-testid="diag-log-op-filter" class="diag-log-op-filter" data-sub-group="logs" data-sub-pane="op">
+          <!-- data-sub-pane="op"（2026-10-12）：操作类型只对操作日志成立——types.RuntimeLog
+               没有 Operation 字段（只有 Message/Level/Tag/Time），运行时子屏下这个下拉的
+               change 处理器是**空操作**（init.ts 的 dgInBindLogOpFilter 只在非 runtime 时
+               重载列表）。与其留一个「看得见、点不动」的控件，不如按声明式门控整项退场
+               （同 diag-clear）。顺带消掉跨屏状态污染：此前在 runtime 屏误选的值会残留，
+               切回 op 屏直接把操作日志筛窄，用户只看到「日志怎么变少了」。chips 不受
+               影响——ADR-289 已让它在 runtime 下按 Level 真正生效，筛选能力不丢。
+               ⚠️ 本注释位于模板字符串内，反引号会提前闭合字符串（知识卡已记过同类坑）。 -->
           <option value="all">${t("diagnostics.opAll")}</option>
           <option value="import">${t("diagnostics.opImport")}</option>
           <option value="scan">${t("diagnostics.opScan")}</option>

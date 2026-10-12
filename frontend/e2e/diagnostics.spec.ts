@@ -1075,6 +1075,50 @@ test.describe("诊断页 · bench 模式语义诚实层（ADR-278 §2.6）", () 
   // ⚠️ 语种口径：e2e 浏览器被 playwright.config 钉在 locale: "en-US"（防 CI 系统语言翻车），
   // 文案断言用 en 包关键词 + zh 对照注释；toast 在 <app-toast> shadowRoot 内，选择器必须穿透。
 
+  test("运行时子屏不出现「操作类型」下拉：RuntimeLog 无 Operation 维度（2026-10-12）", async ({
+    page,
+  }) => {
+    // 该下拉在 runtime 子屏下曾是**纯装饰**：init.ts|dgInBindLogOpFilter 的 change 处理器
+    // 在 runtime 时是空操作，而 UI 照常渲染 → 用户看到可用的筛选器，点了什么都不发生。
+    // chips 不受牵连（ADR-289 让它按 Level 在 runtime 下真正生效），chips 必须仍在场。
+    await clickBySelector(page, '.repo-tab[data-tab="logs"]');
+    await clickBySelector(page, `[data-testid="diag-sub-logs-runtime"]`);
+    // 走 testid 通道（e2e 定位通道门禁：#id 有同名 testid 即硬违规）。bindSubBar 直接写
+    // pane.style.display，故只看元素自身 computed display 即可，不必再爬祖先链量尺寸。
+    const opFilterDisplay = async (): Promise<string> =>
+      page.evaluate(() => {
+        const root = document.querySelector("app-content")?.shadowRoot;
+        const el = root?.querySelector('[data-testid="diag-log-op-filter"]') as HTMLElement | null;
+        return el ? getComputedStyle(el).display : "missing";
+      });
+    await expect
+      .poll(opFilterDisplay, {
+        timeout: 5000,
+        message: "运行时子屏仍显示「操作类型」下拉（该维度对 RuntimeLog 不成立）",
+      })
+      .toBe("none");
+    // 对照：状态 chips 在 runtime 子屏是真功能，必须保留
+    const chipVisible = await page.evaluate(() => {
+      const root = document.querySelector("app-content")?.shadowRoot;
+      const chip = root?.querySelector(
+        '.diag-log-fbtn[data-status="failed"]',
+      ) as HTMLElement | null;
+      if (!chip) return false;
+      const r = chip.getBoundingClientRect();
+      return r.width > 0 && r.height > 0 && getComputedStyle(chip).display !== "none";
+    });
+    expect(chipVisible).toBe(true);
+
+    // 切回操作日志屏，该下拉必须复现（门控是逐子屏的，不是整组退休）
+    await clickBySelector(page, `[data-testid="diag-sub-logs-op"]`);
+    await expect
+      .poll(opFilterDisplay, {
+        timeout: 5000,
+        message: "切回操作日志屏后「操作类型」下拉未复现",
+      })
+      .not.toBe("none");
+  });
+
   test("状态行「图标+文案」左对齐：.diag-msg 不被基类 space-between 撕到行尾", async ({ page }) => {
     // 2026-10-12 版面修复防线。立因：`.diag-msg` / `.diag-warn` 的行内容是
     // **SVG 图标节点 + 文本节点 = 两个 flex item**，而基类 `.stat-row` 带

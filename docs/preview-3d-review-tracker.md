@@ -626,6 +626,7 @@
 - **其他实数（只读门禁，3D 切片）**：`check-a11y --json` 全绿（files 606 / coverageTotal 207 / scatterTotal 8 / deficits 0）——但 scatter 在册 8 处 document 级 keydown 是 **ADR-308 D1 combo 单出口的登记豁免台账**，非新债也非无债；3D 目录仅 1 处裸露技术债注释（`mmd-ktx2-basis.ts:11` CSP unsafe-eval，10-11 已登记）；3D 加载失败呈现层已单点收口（`infra/preview-loading.ts`，无手写 HTML 字面量回潮）。
 - 验证：探查全程只读（4 子代理 + 主模型逐点读码复核 `render.ts` / `slide-menu.ts` / `rows.ts` / `texture_cache.go` / `app_texture_cache.go` / `app_model.go` / `resource_bindings_test.go` / `preview-paths.ts` / `preview-settings.md`）；`doctor --docs` 23/23 PASS。
 - **本轮已清偿（1 处小刀）**：D11 的 `preview-settings.md` 「10 条已落地横切设置路径」硬编码计数（实测 `KNOWN_PATHS` = 14 条，且列举的 `env.groundMatSource` / `ui.activeComponent` 均已退表）——删计数与逐条列举、改「清单以 `preview-paths.ts` 为准」，三条已退表路径连同退表理由移入「已退表（勿复活）」小节保留。这是**违反仓内既有规范**（docs/knowledge/AGENTS.md「禁止硬编码计数——ADR-162 去行号精神延伸到散文层」）而非单纯陈旧，故可直接清偿；同家族 `preview-state.md` 早已示范正确口径，本卡是漏网的旧写法。顺手消掉 `:144`「卡间口径以 10 条为准」这条**错误计数的传播源**。
+- **本轮已清偿（池语义同族变体，非 D 编号）**：`worker-bridge.ts|rebuildDeadWorkers` 给**替补**接线的 `onerror` 原为不传实例的 `handleWorkerError()`——替补二次崩溃即走无参分支「全体标记 → 全池连坐」，把 `6f13e8cfc` 的池语义修复原样绕开（同源病灶：接线点在**重建函数内部**，而该提交只改了**调用点**；属「同一缺陷族搜变体」方法论的自反实例——上一提交自己漏了变体）。修法 = 接线改 `handleWorkerError(replacement)`；同段注释还把真实接线误写成不传参形态、引用不存在的 `markDead`（注释自身漂移，一并改正）。TDD：先写「替补二次崩溃」例（红：健康实例被连坐 terminate），修后全绿 + vite build / typecheck / biome 过；执法升为**三例**（`model3d.md` pitfalls 同名条目已同步）。
 - 遗留 / 下一轮建议：见下（本条为四子代理补充后的最终版）。
 
 ### 子代理复核（Go 支撑链 / 读面上限·守卫 / a11y 键盘 / 知识卡陈旧）

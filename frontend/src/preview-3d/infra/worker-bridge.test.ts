@@ -260,6 +260,35 @@ describe("resolve-mode 重建 — 池语义（只重建死实例）", () => {
     // w2 此时才作为「死实例」被终止一次——与「连坐」区分：各算各的账
     expect(w2.terminate, "w2 崩溃后才被终止（不是被 w1 连坐）").toHaveBeenCalledTimes(1);
   });
+
+  it("替补二次崩溃 → 仍只重建该替补，不连坐全池（rebuildDeadWorkers 自身接线须传实例）", async () => {
+    // [2026-10-12 同族变体] 上一提交给「调用点」补了传实例，但**替补的接线在
+    // rebuildDeadWorkers 内部**（createWorker 返回裸 Worker，onerror 由重建代码后设）——
+    // 若此处仍是 handleWorkerError() 无参形态，替补一崩即「全体标记 → 全池连坐」，
+    // 把池语义修复原样绕开。本测试直接 crash 替补，判据 = 健康实例不动 + 只再补一个。
+    const w1 = makeWorker();
+    const w2 = makeWorker();
+    const created: FakeWorker[] = [];
+    let bridge!: WorkerBridge<FakeReq, FakeResp, BridgeResp>;
+    bridge = makeResolveBridge([w1, w2], {
+      createWorker: () => {
+        const w = makeWorker();
+        w.onmessage = (e) => bridge.handleMessage(e.data as unknown as BridgeResp);
+        created.push(w);
+        return w as unknown as Worker;
+      },
+    } as never);
+    makeMultiPool(bridge, [w1, w2]);
+
+    w1.crash(); // w1 死 → 替补 r1 由 rebuildDeadWorkers 重建并接线
+    expect(created.length, "首轮只补一个替补").toBe(1);
+    const replacement = created[0];
+
+    replacement.crash(); // 替补二次崩溃 → 接线若不传实例即全池连坐（本测试要钉死的变体）
+    expect(w2.terminate, "替补崩溃不得连坐健康实例（否则池语义修复被绕开）").not.toHaveBeenCalled();
+    expect(w1.terminate, "死实例已终止过一次，不重复清算").toHaveBeenCalledTimes(1);
+    expect(created.length, "只再补一个（合计 2），非全池重建").toBe(2);
+  });
 });
 
 describe("创建契约（resolveAllError 必须传 makeErrorResponse）", () => {  it("resolveAllError 且未传 makeErrorResponse → 构造期抛错，阻止静默变 reject-mode", () => {

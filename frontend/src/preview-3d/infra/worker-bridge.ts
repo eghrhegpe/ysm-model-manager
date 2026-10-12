@@ -175,8 +175,8 @@ export function createWorkerBridge<Req extends { id: number }, Resp, Ok>(
    *  故原实现退化为「无条件 terminate 池中每一个」——把注释承诺的「terminate **死实例**」
    *  做成了**全池连坐**：健康 worker 的在途请求被一并 settleError，且整池重建。
    *  现改为**事件驱动标记**：`onerror` 是该 worker 死亡的唯一可靠信号（真实接线在
-   *  `createResolveModeBridge` / 各调用点的 `w.onerror = () => bridge.handleWorkerError()`），
-   *  由 `markDead` 记账、此处只重建被标记的，重建后清账。
+   *  `createResolveModeBridge` 与本函数重建替补处，均**传实例**：`bridge.handleWorkerError(w)`），
+   *  由 `deadWorkers` 记账、此处只重建被标记的，重建后清账。
    *  ⚠️ 语义边界：若**同时**多个 worker 报错，本函数会被多次调用，每次只重建当时已标记的
    *  （逐个消化、不重复重建），与「一次报错触发一次重建」等价且更精确。 */
   function rebuildDeadWorkers(): void {
@@ -191,7 +191,9 @@ export function createWorkerBridge<Req extends { id: number }, Resp, Ok>(
       }
       const replacement = opts.createWorker();
       replacement.onmessage = (e: MessageEvent<Resp>) => handleMessage(e.data);
-      replacement.onerror = () => handleWorkerError();
+      // [2026-10-12 同族变体收口] 替补的 onerror 接线在**这里**（createWorker 返回裸实例）——
+      // 须传实例：不传则替补二次崩溃走无参分支「全体标记 → 全池连坐」，把池语义修复绕开。
+      replacement.onerror = () => handleWorkerError(replacement);
       workers[i] = replacement;
       deadWorkers.delete(dead);
     }

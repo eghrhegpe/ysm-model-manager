@@ -15,7 +15,6 @@
 
 | # | 名称 | 状态 | 指向源码 `文件\|符号` | last_verified |
 |---|---|---|---|---|
-| D1-残余 | `friendlyError` 旁路收窄（ADR 批）；另 12 处 overlay `safeErrorMessage` 站点 + 20 处内部诊断中文未治理 | 产品拍板 | `preview-3d/adapters/mount-session.ts\|showLoadFailure`；`preview-3d/infra/preview-loading.ts\|safeErrorMessage`；`frontend/src/utils/dom/errors.ts:47\|friendlyError` | 2026-10-12 |
 | A1 | scene-registry 焦点晋升取 Map 插入序末位，非「最近被激活者」 | 产品拍板 | `preview-3d/infra/scene-registry.ts\|unregister`；锁 `scene-registry-focus.test.ts` | 2026-10-12 |
 | A2 | 离屏多角度截图零阴影接线（WYSIWYG 第四缝） | 产品拍板 | `preview-3d/screenshot/screenshot-render.ts`；声明锁 = `docs/knowledge/export.md` 条目 + `screenshot-render.test.ts`「阴影边界」 | 2026-10-12 |
 | A4 | sky 4 键（skyTurbidity / Rayleigh / MieCoefficient / MieDirectionalG）UI 出口 | 产品拍板 | `preview-3d/state/env-state-schema.ts`；`preview-3d/caps/sky-capability.ts\|applyUniform` | 2026-10-12 |
@@ -35,7 +34,8 @@
 
 > 判词全部留在 archive 快照；此处仅给源码锚，现状以源码树为准。
 
-- **D1 主批** — 7 个 adapter 构造点已 `t()` 收口（2026-10-12），剩余见上表 D1-残余。`friendlyError` 定义处 = `frontend/src/utils/dom/errors.ts:47`（原台账错写成 `errors.ts:64` 已更正）。
+- **D1 主批** — 7 个 adapter 构造点已 `t()` 收口（2026-10-12）。`friendlyError` 定义处 = `frontend/src/utils/dom/errors.ts:47`（原台账错写成 `errors.ts:64` 已更正）。
+- **D1-残余（ADR-331 切片 B，2026-10-12）** — 旁路收窄（B-1 `c462a67ab`，删两处汉字透传）+ 12 处 overlay `safeErrorMessage`→`friendlyError` 与 fbx 保留 Code（B-2 `c3b6dbb51`）+ `i18n-ui-check` 第三通道 THROW_REJECT 把假绿抓成真 59 处（B-3 `f12014f7d`）+ 59 处分类处理（B-4 `9d70a5d27`，8 处用户可见走 `t()` + 51 处内部诊断 `// i18n-allow` 豁免，drift 归零）。见 `frontend/src/utils/dom/errors.ts\|friendlyError`、`docs/knowledge/utils-errors.md`。
 - **前向 P3（切片 A，`4accae610`）** — `CODE_KEYS` 补齐 FILE_TOO_LARGE/FILE_EMPTY/MKDIR_FAILED/WRITE_FAILED/IO_ERROR/LINK_FAILED 差集 + 5 处 Go 裸中文 error 改 `AppError`，见 `frontend/src/utils/dom/errors.ts\|CODE_KEYS`、`internal/app/resource_bindings.go\|ReadSchematic`。
 - **D2** — `skeleton-fill-panel.ts` 5 处硬编码中文 + `views/app-preview/{mmd-controls,vrm-controls}.ts` 两处 overview 模板全走 `t()`，见 `preview-3d/adapters/mmd/skeleton-fill-panel.ts`。
 - **D3** — `i18n-ui-check` 补「UI 值字段上下文」第二判据，见 `scripts/i18n-ui-check.ts`。

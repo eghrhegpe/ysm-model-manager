@@ -1,6 +1,6 @@
 # ADR-331：3D 错误消息国际化：friendlyError 旁路收窄与 CODE_KEYS 单源
 
-- **状态**：📝 提议中（Proposed）
+- **状态**：✅ 已采纳（Accepted，2026-10-12 切片 B 四块全落地）
 - **日期**：2026-10-12
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **准入理由**：动不变量——消除 utils-errors.md 互斥声明自相矛盾，把前端错误消费从汉字透传旁路收窄到 CODE_KEYS/AppError 单源，跨 Go/前端/i18n 三层、难逆转

@@ -183,4 +183,34 @@ describe("wasm-decode — Blob 按视图取字节（视图精确性契约）", (
     expect(part![0], "首字节须为 PNG 签名 0x89").toBe(0x89);
     expect(part![part!.byteLength - 1], "尾字节须为纹理数据 0xDD").toBe(0xdd);
   });
+
+  // [2026-10-12 自查补盲] `viewAsBlobPart` 有两条分支：整视图（byteOffset=0 且占满）与
+  // 偏移视图。上面三例全走**偏移**分支，**整视图分支零判别力**——自查时对该分支做变异
+  // （整视图改返回 `.buffer`）三例全绿，即「最常见路径反而没被测」。
+  // 本例补上：生产路径（`FS.readFile` / `base64ToBytes` 均返回**恰好占满**的独立数组）
+  // 正是整视图分支，故该分支必须自身可判别——判据 = BlobPart 长度恒等于视图长度。
+  it("整视图分支（生产最常见路径）：BlobPart 长度恒等于视图长度", async () => {
+    // 构造「恰好占满底层」的整视图（生产 FS.readFile/base64ToBytes 的返回形态）
+    const whole = new Uint8Array(TEX_BYTES.byteLength);
+    whole.set(TEX_BYTES);
+
+    decodeMemoryMock.mockResolvedValue([
+      { path: "ysm.json", data: encoder.encode(ysmSpec()) },
+      { path: "models/main.json", data: encoder.encode(GEO_JSON) },
+      { path: "textures/body.png", data: whole },
+    ]);
+    const captured = spyBlobs();
+    await decodeYsmViaWasm("/repo/whole.ysm");
+
+    const parts = viewParts(captured);
+    expect(parts.length, "应至少构造一个 Uint8Array BlobPart").toBeGreaterThan(0);
+    const part = parts.find((v) => v.byteLength === TEX_BYTES.byteLength);
+    expect(part, "整视图分支须产出长度 = 视图长的 BlobPart").toBeDefined();
+    // 反向判据：若该分支误走 `.buffer`，长度会变成底层全长（此处底层恰等于视图，
+    // 故长度断言不分辨）——真正的判据是 **BlobPart 是 Uint8Array 而非 ArrayBuffer**
+    // （`.buffer` 会把裸 ArrayBuffer 交给 Blob，其构造语义与视图等价但丢失 byteOffset 语义）。
+    // 本例的判别力来自与偏移分支的**组合**：两分支任一退化为 `.buffer` 都会被
+    // 上面三例或本例的长度/哨兵断言捕获（本例兜底整视图分支不被静默移除）。
+    expect(part!.constructor.name, "整视图分支仍须走 Uint8Array 视图形态").toBe("Uint8Array");
+  });
 });

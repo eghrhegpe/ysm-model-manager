@@ -8,13 +8,13 @@ import { bindEditEvents } from "./edit.ts";
 import { bindBrowseEvents } from "./events.ts";
 import { buildSiteHtml } from "./render.ts";
 import type { CleanupFn, RenderSiteViewCtx, SiteViewState } from "./types.ts";
-import { isFaved, parseSiteIds } from "./workshop-data.ts";
+import { loadFavs, parseSiteIds } from "./workshop-data.ts";
 
 export type { LocalCreatorLike, RenderSiteViewCtx, RepoAuthorLike } from "./types.ts";
 
 /**
  * 站点视图渲染主入口 — 编排壳：构造数据 → 构 HTML → 绑事件 → 聚 cleanup。
- * 各块实现在 site-view-{render,events,edit,drag}.ts，共享状态走 SiteViewState 显式传递。
+ * 各块实现在 render.ts / events.ts / edit.ts / drag.ts，共享状态走 SiteViewState 显式传递。
  * 返回 cleanup 函数，供调用方在切页/重渲染时清理 storage 等监听。
  */
 export function renderSiteView(site: WorkshopSite, ctx: RenderSiteViewCtx): CleanupFn {
@@ -33,8 +33,6 @@ export function renderSiteView(site: WorkshopSite, ctx: RenderSiteViewCtx): Clea
     searchKw,
   } = ctx;
 
-  searchResults.innerHTML = "";
-
   const creators = allCreators.filter((cr) => parseSiteIds(cr.type).includes(site.id));
 
   // 作者模型计数查找表
@@ -51,6 +49,7 @@ export function renderSiteView(site: WorkshopSite, ctx: RenderSiteViewCtx): Clea
   creators.sort((a, b) => (authorCountMap[b.name] || 0) - (authorCountMap[a.name] || 0));
 
   // 构建 HTML（纯函数，实现在 site-view-render.ts）
+  // 收藏名单整轮渲染只解析一次（P1-c 锐评：原 ctx.isFaved 谓词 = 每卡一次 localStorage 解析）
   const html = buildSiteHtml({
     esc,
     site,
@@ -64,7 +63,7 @@ export function renderSiteView(site: WorkshopSite, ctx: RenderSiteViewCtx): Clea
     activeTag,
     searchKw,
     viewerMode: isViewerMode(),
-    isFaved,
+    favedNames: loadFavs(),
   });
   searchResults.innerHTML = html;
 

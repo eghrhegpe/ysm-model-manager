@@ -44,7 +44,7 @@ function cmCrBuildDetailHtml(
   esc: (s: unknown) => string,
   avatarCache: Record<string, string> | undefined,
   authorCountMap: Record<string, number>,
-): { html: string; fallbackChar: string; isFav: boolean } {
+): { html: string; fallbackChar: string } {
   const identity = getCreatorIdentity(cr as CreatorIdentityInput);
   // 身份行与 tag chip 同口径（复核 N1）：role 能映射到真实身份才渲染该行。未知 role 时
   // getCreatorIdentity 会回退「YSM 创作者」，而 chip 已按 getTagDisplayLabel 原样显示该 role
@@ -144,7 +144,7 @@ function cmCrBuildDetailHtml(
     "</button>" +
     "</div>" +
     "</div>";
-  return { html, fallbackChar: detailFallbackChar, isFav };
+  return { html, fallbackChar: detailFallbackChar };
 }
 
 function cmCrBindOverlayEvents(

@@ -60,7 +60,7 @@ function makeCtx(overrides: Partial<BuildSiteHtmlCtx> = {}): BuildSiteHtmlCtx {
     activeTag: "",
     searchKw: "",
     viewerMode: false,
-    isFaved: () => false,
+    favedNames: [],
     ...overrides,
   };
 }
@@ -98,9 +98,8 @@ describe("buildSiteHtml 浏览态", () => {
   });
 
   it("2. 有创作者 → 计数 + 搜索框回填 searchKw + 收藏置顶排序（P2-8 不再就地改入参）", () => {
-    loadFavs.mockReturnValue(["乙"]);
     const creators = [{ name: "甲" }, { name: "乙" }] as LocalCreatorLike[];
-    const ctx = makeCtx({ creators, searchKw: "猫" });
+    const ctx = makeCtx({ creators, searchKw: "猫", favedNames: ["乙"] });
     const root = renderHtml(ctx);
     expect(root.querySelector("#ws-cr-count")?.textContent).toBe("(2/2)");
     expect(
@@ -115,6 +114,11 @@ describe("buildSiteHtml 浏览态", () => {
     expect(grid!.querySelectorAll(".cr-creator-card")).toHaveLength(2);
     expect(grid!.querySelector(".cr-card-name")?.textContent).toBe("乙");
     expect(root.querySelector(".placeholder-box")).toBeNull();
+    // P1-c 锐评：收藏判定经 favedNames 一次性注入——整轮渲染对 loadFavs
+    //（= localStorage.getItem + JSON.parse）**零调用**（原每卡一次 isFaved → N+1 次解析）。
+    // 本断言把「渲染层是纯函数」钉成可执行契约：未来任何人把 isFaved/loadFavs 引回
+    // createCrCard/sort 循环，这里立刻转红。
+    expect(loadFavs).not.toHaveBeenCalled();
   });
 
   it("3. 标签过滤行：按本站实际身份派生 + active 高亮（不再硬编码三按钮）", () => {
@@ -251,6 +255,13 @@ describe("buildSiteHtml 编辑态", () => {
     expect(chips[1]?.classList.contains("active")).toBe(false);
     const roleSel = card.querySelector('select[data-fld="role"]') as HTMLSelectElement;
     expect([...roleSel.options].find((o) => o.selected)?.value).toBe("official");
+    // 🟡4 锐评：五项身份 option 的展示文案全走单源（vup/oc 曾写裸字面量 "VUP"/"OC"，
+    // 与卡片/筛选行的 getTagDisplayLabel 口径分裂）。value 仍是原始 role id（数据语义）。
+    const opt = (v: string) => [...roleSel.options].find((o) => o.value === v);
+    expect(opt("vup")?.textContent).toBe(t("workshop.roleVup"));
+    expect(opt("vup")?.textContent).not.toBe("VUP");
+    expect(opt("oc")?.textContent).toBe(t("workshop.roleOc"));
+    expect(opt("oc")?.textContent).not.toBe("OC");
   });
 });
 

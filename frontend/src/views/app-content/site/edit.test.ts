@@ -213,6 +213,33 @@ describe("保存流程（eeSyncAllEditInputs 回写 + 落盘）", () => {
     cleanup!();
   });
 
+  it("4b. role 单选 select 回写取单值，不拼站点分号串（🟡1 埋雷收拢回归）", async () => {
+    // 历史：syncFieldToCreator 的 select 分支用 joinSiteIds（**站点归属**拼装器）处理 role。
+    // 单选时巧合等价（单值恒等），语义却错配——一旦 role 加 multiple 或新增任何
+    // 非站点 select，role 会被拼成 "official;vup" 式脏值直接落盘。
+    const { state, searchResults, creators } = makeState();
+    searchResults.innerHTML =
+      '<button class="btn-base sm cr-save-btn"></button>' +
+      '<div class="cr-edit-card" data-edit-idx="0">' +
+      '<input data-idx="0" data-fld="name" value="Alice">' +
+      '<select data-idx="0" data-fld="role"><option value="creator">c</option><option value="vup">v</option></select>' +
+      "</div>";
+    const cleanup = bindEditEvents(state, () => {});
+
+    const roleSel = searchResults.querySelector('select[data-fld="role"]') as HTMLSelectElement;
+    roleSel.value = "vup";
+    roleSel.dispatchEvent(new Event("input", { bubbles: true }));
+
+    expect(creators[0].role).toBe("vup");
+    expect(String(creators[0].role)).not.toContain(";");
+
+    searchResults.querySelector(".cr-save-btn")!.dispatchEvent(new Event("click", { bubbles: true }));
+    await vi.waitFor(() => expect(backend.SaveWorkshopCreatorsBySite).toHaveBeenCalledTimes(1));
+    const saved = backend.SaveWorkshopCreatorsBySite.mock.calls[0][1] as LocalCreatorLike[];
+    expect(saved[0].role).toBe("vup");
+    cleanup!();
+  });
+
   it("5b. 保存不得把预设的 q 覆盖成 label（bowlroll 实数据回归：label≠q 时 q 须原样落盘）", async () => {
     // 历史缺陷：保存时只构造 { label }，q 被静默丢弃 → Go 整数组替换落盘，
     // 用户哪怕一个字没改，一次保存就把「热门日系模型 → MMD」永久覆盖成 q=label。

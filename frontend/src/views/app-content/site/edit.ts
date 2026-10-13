@@ -55,11 +55,12 @@ function syncFieldToCreator(
         .filter(Boolean),
     );
   } else if (inp instanceof HTMLSelectElement) {
-    creators[idx][fld] = joinSiteIds(
-      Array.from(inp.selectedOptions)
-        .map((o) => o.value)
-        .filter(Boolean),
-    );
+    // 单选 select（当前唯一消费者 = role 下拉）：直接取 value。
+    // 历史：此分支原走 joinSiteIds(selectedOptions)——那是**站点归属**的分号拼装器
+    // （P1-5 已退役 type 的 select multiple 形态，type 现走 chip 组）。role 单选时
+    // 二者巧合等价（单值恒等），但语义错配是埋雷：一旦有人给 role 加 multiple、
+    // 或新增任何非站点的 select，role 会被拼成 "official;vup" 式脏值直接落盘。
+    creators[idx][fld] = inp.value;
   } else if ("value" in inp && typeof inp.value === "string") {
     creators[idx][fld] = inp.value.trim();
   }

@@ -15,7 +15,6 @@ import {
   compareFavFirst,
   getTagDisplayLabel,
   getTagFromRole,
-  loadFavs,
   parseSiteIds,
 } from "./workshop-data.ts";
 
@@ -50,8 +49,12 @@ export interface BuildSiteHtmlCtx {
   searchKw: string;
   /** 查看器模式（网页版/Android ADR-049 能力门控）：隐藏桌面专属的创作者编辑入口（保存走未桥接 BySite 绑定） */
   viewerMode: boolean;
-  /** 收藏状态查询函数（供卡片工厂声明式渲染星标） */
-  isFaved: (name: string) => boolean;
+  /**
+   * 收藏名单（2026-10-13 锐评 P1-c：由调用方一次性 loadFavs 后注入）。
+   * 渲染层是纯函数——不得在 N 张卡的循环里各调一次 isFaved/loadFavs
+   * （原写法每次渲染 = 收藏者数+1 次 localStorage.getItem + JSON.parse）。
+   */
+  favedNames: readonly string[];
 }
 
 /** 创作者卡片工厂 */
@@ -161,13 +164,15 @@ function buildSiteSearchSection(ctx: BuildSiteHtmlCtx): string {
 }
 
 /** 收藏置顶排序（P2-8 锐评：不再就地改 ctx.creators——buildSiteHtml 保持纯函数无副作用。返回新数组）。
- *  比较器为 compareFavFirst（workshop-data.ts 单源），与收藏后 DOM 就地重排共用同一口径。 */
+ *  比较器为 compareFavFirst（workshop-data.ts 单源），与收藏后 DOM 就地重排共用同一口径。
+ *  P1-c 锐评：收藏名单由调用方注入（favedNames），排序层不再自取 loadFavs——
+ *  原写法 + 卡内 isFaved 合成每渲染一轮 N+1 次 localStorage 解析。 */
 function sortCreatorsFavedFirst(
   creators: LocalCreatorLike[],
   authorCountMap: Record<string, number>,
+  favedNames: readonly string[],
 ): LocalCreatorLike[] {
-  const faved = loadFavs();
-  return [...creators].sort((a, b) => compareFavFirst(a, b, faved, authorCountMap));
+  return [...creators].sort((a, b) => compareFavFirst(a, b, favedNames, authorCountMap));
 }
 
 /**
@@ -339,8 +344,13 @@ function buildSiteBrowseSection(ctx: BuildSiteHtmlCtx): string {
     }</div>`,
   );
   if (creators.length) {
+    // P1-c 锐评：收藏名单 Set 化一次，供排序与 N 张卡共用——
+    // 原每卡各调 ctx.isFaved→loadFavs（localStorage.getItem + JSON.parse），
+    // 一轮渲染解析 N+1 次；现整轮零 localStorage 访问（favedNames 由调用方注入）。
+    const favSet = new Set(ctx.favedNames);
+    const isFavedNow = (name: string): boolean => favSet.has(name);
     // P2-8：sortCreatorsFavedFirst 返回新数组——不再就地改 ctx.creators（原数组保持 allCreators 过滤序）
-    const sortedCreators = sortCreatorsFavedFirst(creators, authorCountMap);
+    const sortedCreators = sortCreatorsFavedFirst(creators, authorCountMap, ctx.favedNames);
     parts.push(buildSiteTagFilterRow(ctx));
     // 声明式生成创作者卡片（不再留空 grid 给 events 填充）
     // 分档预计算一次（O(n log n)）；stagger 延迟取展示位次——收藏置顶卡按视觉顺序入场
@@ -353,7 +363,7 @@ function buildSiteBrowseSection(ctx: BuildSiteHtmlCtx): string {
       .map((cr, i) =>
         createCrCard(cr, {
           esc: ctx.esc,
-          isFaved: ctx.isFaved,
+          isFaved: isFavedNow,
           authorCountMap: ctx.authorCountMap,
           avatarCache: ctx.avatarCache,
           site: ctx.site,
@@ -434,13 +444,17 @@ export function buildCreatorEditCard(
           }" data-site-id="${esc(s.id)}" title="${esc(s.label)}">${esc(s.label)}</button>`,
       )
       .join("")}</div>` +
+    // 🟡4 锐评：vup/oc 两档曾写字面量 "VUP"/"OC"——同一下拉里三个身份走 t()、两个走
+    // 裸字面量，ja/en 用户看到的身份词与卡片/筛选行（getTagDisplayLabel 单源）口径分裂。
+    // 现五项全走单源：已知身份 → i18n label，未知 → 原样（编辑下拉 = role 权威枚举源，
+    // 与 getCreatorIdentity 的 switch 分支一一对应）。
     `<select data-idx="${idx}" data-fld="role" class="cr-input-role">${roleOption(
       "creator",
       t("content.roleCreator"),
-    )}${roleOption("official", t("content.roleOfficial"))}${roleOption("vup", "VUP")}${roleOption(
-      "oc",
-      "OC",
-    )}${roleOption("repo", t("content.roleRepo"))}</select></div></div></div>`
+    )}${roleOption("official", t("content.roleOfficial"))}${roleOption(
+      "vup",
+      getTagDisplayLabel("vup"),
+    )}${roleOption("oc", getTagDisplayLabel("oc"))}${roleOption("repo", t("content.roleRepo"))}</select></div></div></div>`
   );
 }
 
@@ -465,7 +479,8 @@ function buildSiteCreatorEditCards(ctx: BuildSiteHtmlCtx): string {
 /**
  * 构建站点视图 HTML 字符串（纯函数，不碰 DOM）。
  * 返回 parts.join("") 的完整 HTML，由主入口负责写入 searchResults.innerHTML。
- * 按分区委托给 buildSiteSearchSection / buildSiteBrowseSection / buildSiteEditSection。
+ * 按分区委托给 buildSiteSearchSection / buildSiteBrowseSection（浏览态）与
+ * buildSitePresetEditCards + buildSiteCreatorEditCards（编辑态）。
  */
 export function buildSiteHtml(ctx: BuildSiteHtmlCtx): string {
   const parts: string[] = [];

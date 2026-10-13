@@ -84,8 +84,6 @@ function atTeBindSelCheckboxes(ctx: AtTeCtx, e: MouseEvent, target: HTMLElement)
     }
     vm.toggleBusy = true;
     const fullPath = flCk.dataset.fullpath || flCk.dataset.path;
-    const fl = flCk.closest<HTMLElement>(".fl, .fl-list");
-    flashBtn(fl);
     // P1-2 乐观更新（2026-10-13）：banned 是本地布尔位——先翻转 entries 内该条目并
     // 局部重渲（行高随数据变化，.ck on/.ban 态即时反馈），IPC 落盘成功后后台 reload 校正
     // 真值。替代原「IPC 成功 → _load() 全盘重扫 → 全量重渲」串行链：2000 模型仓库点一次
@@ -97,7 +95,14 @@ function atTeBindSelCheckboxes(ctx: AtTeCtx, e: MouseEvent, target: HTMLElement)
       entry.banned = !entry.banned;
       return true;
     };
-    if (flipLocal()) vm._renderTree();
+    if (flipLocal()) {
+      vm._renderTree();
+      // flash 必须在乐观重渲**之后**取新行——旧行 DOM 已被重渲整体重建，先 flash 后
+      // 重渲会把闪烁加在即将被丢弃的节点上（用户看不到；本卡初版即此回归，
+      // app-tree.state.test.ts「flash 同步添加、渲染异步重建」回归锁为证）
+      flashBtn(flCk.closest<HTMLElement>(".fl, .fl-list"));
+    }
+    const rollbackGen = vm._guard.current;
     backendGetApp()
       .then(({ ToggleEnable }) => ToggleEnable(fullPath || ""))
       .then(async () => {
@@ -113,8 +118,17 @@ function atTeBindSelCheckboxes(ctx: AtTeCtx, e: MouseEvent, target: HTMLElement)
       })
       .catch((err) => {
         logWarn("tree", `ToggleEnable 失败: ${fullPath}`, err);
-        // 乐观位回滚（reload 拿真值也可，但失败路径走全量重扫太重——本地 revert 即可）
-        if (flipLocal()) vm._renderTree();
+        // 乐观位回滚（reload 拿真值也可，但失败路径走全量重扫太重——本地 revert 即可）。
+        // 双守卫：① 代际（回滚期间 root 已切换/树已重载 → 旧 entries 引用上的 revert
+        // 是过期写入，新树由新数据渲染自洽）；② 条目换出（reload 后 entries 不再含该
+        // 路径 → 无从 revert）。两者任一命中都跳过 revert，但 toast 必达——失败不可静默。
+        if (!vm._guard.stale(rollbackGen)) {
+          const entry = vm.entries.find((e) => entryKey(e) === fullPath);
+          if (entry) {
+            entry.banned = !entry.banned;
+            vm._renderTree();
+          }
+        }
         toast(
           t("tree.toggleFail", {
             name: fullPath ? fullPath.split(/[/\\]/).pop() || "" : "",

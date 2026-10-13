@@ -804,6 +804,8 @@
   "diagnostics.opAll": "All operations",
   "diagnostics.opImport": "Import",
   "diagnostics.opScan": "Scan",
+  "diagnostics.opDrop": "Drop import",
+  "diagnostics.opPackDrop": "Pack drop",
   "diagnostics.opDownload": "Download",
   "diagnostics.opSync": "Sync",
   "diagnostics.opRename": "Rename",

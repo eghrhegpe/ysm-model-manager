@@ -804,6 +804,8 @@
   "diagnostics.opAll": "全部操作",
   "diagnostics.opImport": "导入",
   "diagnostics.opScan": "扫描",
+  "diagnostics.opDrop": "拖拽导入",
+  "diagnostics.opPackDrop": "拖入整合包",
   "diagnostics.opDownload": "下载",
   "diagnostics.opSync": "同步",
   "diagnostics.opRename": "重命名",

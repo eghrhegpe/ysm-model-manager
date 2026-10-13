@@ -501,6 +501,38 @@ describe("click 复选框（单文件 ToggleEnable）", () => {
     expect(ToggleEnableMock).toHaveBeenCalledWith("/repo/a.ysm");
     expect(h.vm.toggleBusy).toBe(false);
   });
+
+  it("乐观时序：flash 加在重渲后的新行上（旧行已被 _renderTree 重建，flash 不落空）", async () => {
+    const h = makeHarness();
+    h.vm.entriesState = [makeEntry("/repo/a.ysm", "/repo/a.ysm", false)];
+    ToggleEnableMock.mockReturnValue(new Promise<void>(() => {})); // IPC 长挂起
+    h.container.appendChild(fileRow("/repo/a.ysm", "a.ysm"));
+    bindTreeEvents(h.container, h.vm);
+    click(h.container.querySelector(".fl .ck") as Element);
+    // 同步段：_renderTree 已重建行 → flash 必须命中**重建后**的行节点
+    // （回归锁：flash 落在即将被丢弃的旧行 = 用户看不到闪烁）
+    const newRow = h.container.querySelector(".fl .ck") as HTMLElement;
+    const newFl = newRow.closest(".fl, .fl-list") as HTMLElement;
+    expect(newFl?.classList.contains("flash")).toBe(true);
+  });
+
+  it("回滚代际守卫：失败前树已重载（_guard 推进）→ 跳过 revert 但 toast 必达", async () => {
+    stubConsoleWarn();
+    const h = makeHarness();
+    h.vm.entriesState = [makeEntry("/repo/a.ysm", "/repo/a.ysm", false)];
+    ToggleEnableMock.mockRejectedValue(new Error("io"));
+    h.container.appendChild(fileRow("/repo/a.ysm", "a.ysm"));
+    bindTreeEvents(h.container, h.vm);
+    // 同步段先取乐观重渲后的代际，再模拟「IPC 失败前树已 reload」推进代际
+    click(h.container.querySelector(".fl .ck") as Element);
+    const vmAny = h.vm as { _guard: { invalidate(): void } };
+    vmAny._guard.invalidate(); // 模拟 root 切换/reload 已推进代际（invalidate 使在途代全过期）
+    await flush();
+    // 未 revert（代际过期，旧 entries 引用上的写入是过期写入），但 error toast 仍发
+    expect((h.vm.entriesState[0] as TreeEntry).banned).toBe(true);
+    const toasts = emitted("toast:show") as Array<{ msg: string; type: string }>;
+    expect(toasts.some((t) => t.msg.includes("切换失败") && t.type === "error")).toBe(true);
+  });
 });
 
 describe("click 复选框（文件夹批量 toggleFolderBatch）", () => {

@@ -804,6 +804,8 @@
   "diagnostics.opAll": "すべての操作",
   "diagnostics.opImport": "インポート",
   "diagnostics.opScan": "スキャン",
+  "diagnostics.opDrop": "ドラッグ取り込み",
+  "diagnostics.opPackDrop": "パックへドロップ",
   "diagnostics.opDownload": "ダウンロード",
   "diagnostics.opSync": "同期",
   "diagnostics.opRename": "リネーム",

@@ -10,7 +10,6 @@ import { friendlyError } from "@/utils/dom/errors.ts";
 import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { esc, escUnknown } from "@/utils/html/html.ts";
-import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { createDedupSession } from "@/views/app-content/diagnostics/dedup.ts";
 import { initDiagnostics } from "@/views/app-content/diagnostics/init.ts";
@@ -100,7 +99,12 @@ export function initRepositoryPage(host: AppContentHost): void {
   // 同值 setAttribute 被 oldVal === newVal 拦下——repo:rtype-changed 的同值重放零成本
   // （「强制刷新」语义已改走 tree:reload，见 settings/init.ts）。
   const mountTree = (rtype: string, subdir: string): void => {
-    if (!treeBody) return;
+    if (!treeBody) {
+      // 与 bindTabs 缺面板同款「响亮告警」：模板结构变更导致 #repo-tab-tree 缺失时，
+      // 静默不渲染且无反馈会让仓库树永久空白且不报错——此处钉成可观测
+      logWarn("repo", "仓库页缺挂载点 #repo-tab-tree（模板结构可能已变更），文件树未挂载");
+      return;
+    }
     const existing = treeBody.querySelector("app-tree");
     if (existing) {
       existing.setAttribute("root", rtype);
@@ -272,23 +276,10 @@ async function initDedupTab(
   // 每宿主一个去重会话：busy/exec 重入守卫与去重配置收进会话闭包，跨 tab 开关/类型切换复用同一配置
   const dedup = createDedupSession();
   let dedupType = safeGet("repo_rtype") || RESOURCE_TYPES.YSM;
-  container.innerHTML =
-    '<div style="display:flex;flex-direction:column;height:100%">' +
-    '<div style="display:flex;align-items:center;gap:8px;padding:var(--btn-padding-filter-lg);border-bottom:1px solid var(--bd)">' +
-    '<span style="flex:1;font-size:var(--fs-sm);color:var(--muted)">' +
-    UI_ICONS.pin +
-    " " +
-    t("dedup.sha256Hint") +
-    "</span>" +
-    '<button class="btn-base accent" id="dedup-start-btn">' +
-    UI_ICONS.link +
-    " " +
-    t("dedup.startDedup") +
-    "</button>" +
-    "</div>" +
-    '<div id="dedup-config-panel" style="padding:var(--btn-padding-filter-lg);border-bottom:1px solid var(--bd)"></div>' +
-    '<div id="dedup-result-list" style="flex:1;overflow-y:auto;padding:var(--pad-v-8)"></div>' +
-    "</div>";
+  // ADR-190 D1a：面板 DOM 模板经动态导入的 tpl-dedup.ts 产出（与 recycle/oldest 同构，
+  // 抽到叶模板使 Vite 按功能拆分 chunk，且消除易漏闭合标签的内联拼接）
+  const { dedupPanelHTML } = await import("./tpl-dedup.ts");
+  container.innerHTML = dedupPanelHTML();
   const panel = container.querySelector("#dedup-config-panel") as HTMLElement | null;
   if (panel) dedup.initConfig(panel);
   const doDedup = (): void => {

@@ -84,9 +84,11 @@ export const VIEW_TESTIDS: readonly string[] = [
 // settingsHTML 已拆至 settings/tpl-settings.ts，消费者直接 import 叶文件（P1-6）
 
 export function repositoryHTML(): string {
+  // 全部 tab 单点声明（含 desktopOnly）：隐藏收进 renderTabs(viewerMode) 单点，
+  // 「要不要藏」写在定义它的地方（ADR-259 同构精神），不再另写远处的选择器名单。
   // 查看器模式（Android/网页版 ADR-049）：回收站/查重/最旧模型依赖本地文件系统
-  // 操作（MoveToRecycle/FindDuplicateFiles 等 browser-adapter 未实现）——不再条件 push，
-  // 而是无条件声明 desktopOnly 由 renderTabs(viewerMode) 单点隐藏（声明处即真相）
+  // 操作（MoveToRecycle/FindDuplicateFiles 等 browser-adapter 未实现）——无条件声明
+  // desktopOnly，由 renderTabs(viewerMode) 统一隐藏（声明处即真相）。
   const tabs: TabSpec[] = [
     {
       id: "tree",
@@ -97,10 +99,6 @@ export function repositoryHTML(): string {
       // 「app-tree connect（发起扫描 RPC）→ 立即销毁」，模板默认值沦为死的第二真值源
       body: "",
     },
-  ];
-  // 桌面专属 tab（回收站/查重/最旧模型依赖 MoveToRecycle/FindDuplicateFiles 等，
-  // browser-adapter 未实现）现在也**无条件声明**：隐藏收进 renderTabs(viewerMode) 单点
-  tabs.push(
     {
       id: "recycle",
       desktopOnly: true,
@@ -125,7 +123,7 @@ export function repositoryHTML(): string {
       body: "",
       panelStyle: "overflow-y:auto;overflow-x:hidden",
     },
-  );
+  ];
   // tab 结构由 renderTabs 单点产出（ADR-259）：栏与面板**分产**，落位在此决定——
   // 面板组挂 .repo-left（与预览面板并列），故不与 tab 栏相邻
   const { bar, panels, notice } = renderTabs({

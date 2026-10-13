@@ -256,7 +256,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| initInstancesPage | `frontend/src/views/app-content/init-pages.ts` | 73 |
+| initInstancesPage | `frontend/src/views/app-content/init-pages.ts` | 72 |
 
 ### `repo:focus-search`
 
@@ -281,8 +281,8 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | useCurrentResourceType | `frontend/src/features/repo/repo-rtype.ts` | 21 |
-| initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 126 |
-| initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 292 |
+| initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 125 |
+| initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 291 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 211 |
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 113 |
 | _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 308 |

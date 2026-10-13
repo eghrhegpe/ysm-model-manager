@@ -19,6 +19,7 @@
 // 分层：views/config-write.ts → { backend-deps, settings-schema, utils/storage, theme-core }
 // 全为向下依赖或同层数据叶，不拉起任何 settings 页面模块（app-sidebar 分块不受污染）。
 
+import { bus } from "@/bus";
 import { THEME_DARK } from "@/theme-core";
 import { safeGet } from "@/utils/base/primitives/storage.ts";
 import { LINK_MODE_DEFAULT } from "@/views/app-content/settings/settings-schema.ts";
@@ -92,5 +93,9 @@ export async function writeAppConfig(patch: AppConfigPatch): Promise<{
     resolved.theme,
     resolved.themeAuto,
   );
+  // 2026-10 架构补件：落盘成功后广播（载荷 = 实际写入的六元组）。配置读取方由
+  // 「每次 reload 重拉 LoadAppConfig」改为订阅本事件——省 IPC，且设置页改完即刷新显示，
+  // 不必等下一次 reload。⚠️ 只在成功后发：失败时读取方保持旧值，比广播半份配置诚实。
+  bus.emit("config:changed", resolved);
   return resolved;
 }

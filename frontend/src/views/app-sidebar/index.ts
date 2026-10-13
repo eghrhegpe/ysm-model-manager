@@ -17,7 +17,7 @@ export { appSidebarStyle };
 
 import { bindPackCardDnD } from "@/features/dnd/pack-dnd.ts";
 import type { SidebarInstance } from "./data.ts";
-import { bindCardEvents, bindFooter } from "./events.ts";
+import { bindCardEvents, bindFooter, bindMcPathLabel } from "./events.ts";
 import { loadInstances } from "./loader.ts";
 import { renderVersionCards } from "./render.ts";
 import { bindSelectAll, bindSyncSelected, restoreCheckboxes } from "./sync-flow.ts";
@@ -122,6 +122,11 @@ class AppSidebar extends WebComponentBase {
     // 绑定全选 + 同步所选
     this._bindSelectAll();
     this._bindSyncSelected();
+
+    // MC 路径按钮：首帧拉一次 + 订阅 config:changed（2026-10 架构补件：原挂在每轮 _reload 的
+    // bindFooter 里 → 每轮操作白付一次 LoadAppConfig，未配置时还会连带扫盘；且设置页改完
+    // 目录要等下一次 reload 侧栏才更新）。订阅进 _unsubs 桶，随 disconnectedCallback 退订。
+    this._unsubs.push(bindMcPathLabel(this._root));
 
     clearTimeout(this._debounceTimer ?? undefined);
     this._debounceTimer = setTimeout(() => this._reload(), 50);

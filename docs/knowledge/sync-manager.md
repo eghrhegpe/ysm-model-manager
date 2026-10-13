@@ -26,6 +26,7 @@ auto_fields:
     - bindCardEvents
     - bindDelegatedEvents
     - bindFooter
+    - bindMcPathLabel
     - bindSelectAll
     - bindSyncSelected
     - cleanupSyncVirtualScroll

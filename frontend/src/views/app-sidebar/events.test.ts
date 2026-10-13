@@ -3,14 +3,35 @@
 // 旧 handler 闭包仍读到最新 instances（P2 数据陈旧回归）
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-const { emitMock, runMcSearchMock, runLauncherDetectMock, currentRepoTypeMock } = vi.hoisted(() => ({
-  emitMock: vi.fn(),
-  runMcSearchMock: vi.fn(),
-  runLauncherDetectMock: vi.fn(),
-  currentRepoTypeMock: vi.fn(() => "ysm"),
-}));
+const { emitMock, busHandlers, runMcSearchMock, runLauncherDetectMock, currentRepoTypeMock } =
+  vi.hoisted(() => {
+    // 2026-10：本 mock 从 `{ emit: vi.fn(), on: vi.fn() }` 升级为**可派发的最小总线**——
+    // 原 `on` 是裸 vi.fn（不登记 handler、返回 undefined），任何「订阅式」生产代码在本文件里
+    // 都收不到事件：新加的 config:changed 事件驱动路径会被静默跳过（测试假绿）。现 emit 仍
+    // 是同一个 emitMock（既有断言不变），额外**同步派发**给登记过的 handler，on 返回真退订。
+    const handlers = new Map<string, Set<(payload: unknown) => void>>();
+    return {
+      busHandlers: handlers,
+      emitMock: vi.fn((event: string, payload?: unknown) => {
+        handlers.get(event)?.forEach((fn) => fn(payload));
+      }),
+      runMcSearchMock: vi.fn(),
+      runLauncherDetectMock: vi.fn(),
+      currentRepoTypeMock: vi.fn(() => "ysm"),
+    };
+  });
 
-vi.mock("@/bus", () => ({ bus: { emit: emitMock, on: vi.fn() } }));
+vi.mock("@/bus", () => ({
+  bus: {
+    emit: emitMock,
+    on: (event: string, fn: (payload: unknown) => void) => {
+      const set = busHandlers.get(event) ?? new Set<(payload: unknown) => void>();
+      busHandlers.set(event, set);
+      set.add(fn);
+      return () => set.delete(fn);
+    },
+  },
+}));
 // 2026-08-29 覆盖率补强：mc-search / launcher-detect 按钮路径 + restore 兜底可注入
 vi.mock("./launcher-detect.ts", () => ({
   runMcSearch: runMcSearchMock,
@@ -28,7 +49,7 @@ vi.mock("../../../bindings/ysm-model-manager/internal/app/app.js", () => ({
   SaveAppConfig: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { bindCardEvents, bindFooter, type SidebarHost } from "./events.ts";
+import { bindCardEvents, bindFooter, bindMcPathLabel, type SidebarHost } from "./events.ts";
 import { renderVersionCards } from "./render.ts";
 import { waitFor } from "@/test-utils/wait.ts";
 import type { SidebarInstance } from "./data.ts";
@@ -76,6 +97,7 @@ function mount(instances: SidebarInstance[]) {
 
 beforeEach(() => {
   emitMock.mockClear();
+  busHandlers.clear(); // mock 总线是模块级 Map：不清会让上个用例的订阅在下个用例里继续收事件
   runMcSearchMock.mockClear();
   runLauncherDetectMock.mockClear();
   currentRepoTypeMock.mockReturnValue("ysm");
@@ -293,15 +315,17 @@ describe("bindCardEvents — 多实例并存互不干扰（模块级状态收敛
   });
 });
 
-// P4 补测（审核）：bindFooter（底部统计 + MC 根目录检测）此前零测试覆盖
-describe("bindFooter", () => {
+// P4 补测（审核）：底部两件（同步统计 / MC 根目录）此前零测试覆盖。
+// 2026-10 架构补件后两者分属不同绑定：`bindFooter` = 纯统计（每轮 _reload 调用，零 IPC）；
+// `bindMcPathLabel` = 路径按钮（首帧拉一次 + 订阅 config:changed，返回 unsub）。
+describe("bindFooter（底部统计，零 IPC）", () => {
   function mountFooter() {
     const host = document.createElement("div");
     const shadow = host.attachShadow({ mode: "open" });
     shadow.innerHTML =
       '<div class="footer-stats"><span class="stat-item" id="stat-sync">完全同步 -/-</span></div>' +
       '<button class="btn-mc-dir" id="btn-mc">未设置</button>';
-    // 2026-10：同 mount——必须挂进文档（bindFooter 的异步段现以 btn.isConnected 判卸载，
+    // 2026-10：同 mount——必须挂进文档（路径按钮的异步段以 btn.isConnected 判卸载，
     // 游离夹具会把「已卸载」当成常态，既跑不到真实分支、也测不出守卫）
     document.body.appendChild(host);
     return { root: shadow };
@@ -328,6 +352,29 @@ describe("bindFooter", () => {
     expect(root.getElementById("stat-sync")!.textContent).toBe("完全同步 -/-");
   });
 
+  // 2026-10 架构补件回归锁：统计绑定不得再碰配置（配置读取已迁 bindMcPathLabel 的事件驱动）。
+  // 原实现挂在 bindFooter 里 → 每轮 _reload（任何导入/同步/删除）都白付一次 LoadAppConfig。
+  it("bindFooter 不再拉配置（零 IPC）", async () => {
+    const app = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+    (app.LoadAppConfig as ReturnType<typeof vi.fn>).mockClear();
+    const { root } = mountFooter();
+    bindFooter(root, [instance("A")]);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(app.LoadAppConfig).not.toHaveBeenCalled();
+  });
+});
+
+describe("bindMcPathLabel（MC 路径按钮：首帧 + config:changed 事件驱动）", () => {
+  function mountFooter() {
+    const host = document.createElement("div");
+    const shadow = host.attachShadow({ mode: "open" });
+    shadow.innerHTML =
+      '<div class="footer-stats"><span class="stat-item" id="stat-sync">完全同步 -/-</span></div>' +
+      '<button class="btn-mc-dir" id="btn-mc">未设置</button>';
+    document.body.appendChild(host);
+    return { root: shadow };
+  }
+
   it("mcRoot 已配置 → 按钮显示路径", async () => {
     const app = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
     (app.LoadAppConfig as ReturnType<typeof vi.fn>).mockResolvedValue({
@@ -337,7 +384,7 @@ describe("bindFooter", () => {
       linkMode: "copy",
     });
     const { root } = mountFooter();
-    bindFooter(root, []);
+    bindMcPathLabel(root);
     await waitFor(() =>
       expect((root.getElementById("btn-mc") as HTMLElement).textContent).toBe(" /mc/root"),
     );
@@ -348,7 +395,7 @@ describe("bindFooter", () => {
     (app.LoadAppConfig as ReturnType<typeof vi.fn>).mockResolvedValue({ mcRoot: "" });
     (app.GetMinecraftPaths as ReturnType<typeof vi.fn>).mockResolvedValue([]);
     const { root } = mountFooter();
-    bindFooter(root, []);
+    bindMcPathLabel(root);
     await waitFor(() => expect(app.GetMinecraftPaths).toHaveBeenCalled());
     expect((root.getElementById("btn-mc") as HTMLElement).textContent).toBe(" 未设置");
   });
@@ -363,11 +410,55 @@ describe("bindFooter", () => {
     });
     (app.GetMinecraftPaths as ReturnType<typeof vi.fn>).mockResolvedValue(["/detected"]);
     const { root } = mountFooter();
-    bindFooter(root, []);
+    bindMcPathLabel(root);
     await waitFor(() =>
       expect((root.getElementById("btn-mc") as HTMLElement).textContent).toBe(" /detected"),
     );
     expect(app.SaveAppConfig).toHaveBeenCalled();
+  });
+
+  // 2026-10 架构补件的**核心收益**回归锁：配置变更后侧栏即时刷新，且**零额外 IPC**
+  //（载荷自带六元组）——原实现要等下一次 _reload 重拉 LoadAppConfig 才对上，设置页改完
+  // 游戏目录时侧栏会显示旧路径。
+  it("config:changed → 立即按载荷刷新（零 IPC，不等 reload）", async () => {
+    const app = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+    (app.LoadAppConfig as ReturnType<typeof vi.fn>).mockResolvedValue({ mcRoot: "/old" });
+    const { root } = mountFooter();
+    const unsub = bindMcPathLabel(root);
+    const btn = root.getElementById("btn-mc") as HTMLElement;
+    await waitFor(() => expect(btn.textContent).toBe(" /old"));
+
+    const callsBefore = (app.LoadAppConfig as ReturnType<typeof vi.fn>).mock.calls.length;
+    emitMock("config:changed", {
+      filesRoot: "/f",
+      rpRoot: "/r",
+      mcRoot: "/new-root",
+      linkMode: "copy",
+      theme: "cyber",
+      themeAuto: "",
+    });
+    expect(btn.textContent).toBe(" /new-root"); // 同步生效（无需 await）
+    expect((app.LoadAppConfig as ReturnType<typeof vi.fn>).mock.calls.length).toBe(callsBefore); // 零 IPC
+    unsub();
+  });
+
+  it("退订后 config:changed 不再改写按钮（订阅归 _unsubs 桶）", async () => {
+    const app = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+    (app.LoadAppConfig as ReturnType<typeof vi.fn>).mockResolvedValue({ mcRoot: "/old" });
+    const { root } = mountFooter();
+    const unsub = bindMcPathLabel(root);
+    const btn = root.getElementById("btn-mc") as HTMLElement;
+    await waitFor(() => expect(btn.textContent).toBe(" /old"));
+    unsub();
+    emitMock("config:changed", {
+      filesRoot: "/f",
+      rpRoot: "/r",
+      mcRoot: "/after-unsub",
+      linkMode: "copy",
+      theme: "cyber",
+      themeAuto: "",
+    });
+    expect(btn.textContent).toBe(" /old");
   });
 
   // 2026-10 回归锁：await 期间组件已卸载（host 脱离文档）→ 不得再写游离 DOM，更不得把
@@ -379,7 +470,7 @@ describe("bindFooter", () => {
     const { root } = mountFooter();
     const btn = root.getElementById("btn-mc") as HTMLElement;
     const before = btn.textContent;
-    bindFooter(root, []);
+    bindMcPathLabel(root);
     // 模拟卸载：宿主摘出文档（footer 的 await 尚未落地）
     document.body.innerHTML = "";
     expect(btn.isConnected).toBe(false);
@@ -390,8 +481,9 @@ describe("bindFooter", () => {
     expect(btn.textContent).toBe(before); // 游离 DOM 也不再改写
   });
 
-  it("btn-mc 点击 → nav:changed 跳设置页", () => {    const { root } = mountFooter();
-    bindFooter(root, []);
+  it("btn-mc 点击 → nav:changed 跳设置页", () => {
+    const { root } = mountFooter();
+    bindMcPathLabel(root);
     (root.getElementById("btn-mc") as HTMLElement).click();
     expect(emitMock).toHaveBeenCalledWith("nav:changed", { page: "settings" });
   });
@@ -401,7 +493,7 @@ describe("bindFooter", () => {
     const app = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
     (app.LoadAppConfig as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("cfg down"));
     const { root } = mountFooter();
-    bindFooter(root, []);
+    bindMcPathLabel(root);
     await waitFor(
       () => expect((root.getElementById("btn-mc") as HTMLElement).textContent).toBe(" 未设置"),
     );
@@ -420,7 +512,7 @@ describe("bindFooter", () => {
       linkMode: "copy",
     });
     const { root } = mountFooter();
-    bindFooter(root, []);
+    bindMcPathLabel(root);
     const btn = root.getElementById("btn-mc") as HTMLElement;
     await waitFor(() => expect(btn.textContent).toContain("/mc/"));
     expect(btn.querySelector("img")).toBeNull(); // img 被解析成元素 = 破口重开
@@ -438,7 +530,7 @@ describe("bindFooter", () => {
     });
     (app.GetMinecraftPaths as ReturnType<typeof vi.fn>).mockResolvedValue(["<b>x</b>/detected"]);
     const { root } = mountFooter();
-    bindFooter(root, []);
+    bindMcPathLabel(root);
     const btn = root.getElementById("btn-mc") as HTMLElement;
     await waitFor(() => expect(app.SaveAppConfig).toHaveBeenCalled());
     expect(btn.querySelector("b")).toBeNull(); // textContent 两态都含 /detected，元素查询才辨得出生成态

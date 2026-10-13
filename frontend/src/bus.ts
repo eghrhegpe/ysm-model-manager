@@ -138,6 +138,20 @@ export interface BusEvents {
   "dir:batch-rename": { dir: string };
   // 卡片密度偏好变更（设置页 → app-tree 重排虚拟滚动行高；与 ui-prefs.ts 同源）
   "ui:card-density": { density: "compact" | "normal" };
+  // 应用配置写入成功（2026-10 架构补件）：唯一写实参点 views/config-write.ts|writeAppConfig
+  // 落盘后广播，载荷 = **实际落盘的完整六元组**（与 SaveAppConfig 入参同源）。
+  // 立因：配置读取方（如 app-sidebar 底部 MC 路径按钮）原先只能靠「每次 _reload 重拉
+  // LoadAppConfig」感知变更——既白付 IPC，又只能在下次 reload 才对上（设置页改完目录，
+  // 侧栏要等下一次刷新才更新）。带载荷即「零 IPC 更新」：订阅方直接渲染，无需回读。
+  // 形状在此就地声明（bus 是零应用层依赖的叶：不 import views/config-write 的类型）。
+  "config:changed": {
+    filesRoot: string;
+    rpRoot: string;
+    mcRoot: string;
+    linkMode: string;
+    theme: string;
+    themeAuto: string;
+  };
 }
 
 export type BusEventName = keyof BusEvents;

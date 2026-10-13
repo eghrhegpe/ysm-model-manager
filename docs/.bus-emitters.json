@@ -9,6 +9,9 @@
   "community:clear-cache": [
     "frontend/src/features/community/download-queue.ts"
   ],
+  "config:changed": [
+    "frontend/src/views/config-write.ts"
+  ],
   "ctx:show": [
     "frontend/src/features/community/repo-events-bindings.ts",
     "frontend/src/features/context-menu/context-menus.setup.ts",

@@ -9,6 +9,7 @@ import { THEME_DARK } from "@/theme-core";
 const { getAppMock } = vi.hoisted(() => ({ getAppMock: vi.fn() }));
 vi.mock("@/backend/app.ts", () => ({ getApp: getAppMock }));
 
+import { bus } from "@/bus";
 import { writeAppConfig } from "./config-write.ts";
 
 function mockApp(over: Record<string, unknown> = {}) {
@@ -106,5 +107,36 @@ describe("writeAppConfig — views 级唯一实参点", () => {
       theme: THEME_DARK,
       themeAuto: "",
     });
+  });
+
+  // 2026-10 架构补件：落盘成功后广播 config:changed（载荷 = 实际写入的六元组）——
+  // 配置读取方（app-sidebar 底部 MC 路径）据此零 IPC 即时刷新，不再靠每轮 reload 重拉。
+  it("落盘成功 → 广播 config:changed，载荷 = 实际写入六元组", async () => {
+    mockApp();
+    const seen: unknown[] = [];
+    const off = bus.on("config:changed", (p) => seen.push(p));
+    const resolved = await writeAppConfig({ mcRoot: "/mc" });
+    off();
+    expect(seen).toEqual([resolved]);
+    expect(seen[0]).toEqual({
+      filesRoot: "/files",
+      rpRoot: "/rp",
+      mcRoot: "/mc",
+      linkMode: "copy",
+      theme: THEME_DARK,
+      themeAuto: "",
+    });
+  });
+
+  // 只在成功后发：失败时读取方保持旧显示值，比广播「半份配置」诚实
+  it("落盘失败 → 不广播（读取方保持旧值）", async () => {
+    mockApp({ SaveAppConfig: vi.fn().mockRejectedValue(new Error("save down")) });
+    let emitted = 0;
+    const off = bus.on("config:changed", () => {
+      emitted++;
+    });
+    await expect(writeAppConfig({ mcRoot: "/mc" })).rejects.toThrow("save down");
+    off();
+    expect(emitted).toBe(0);
   });
 });

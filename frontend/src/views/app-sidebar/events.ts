@@ -285,59 +285,81 @@ function restoreSelectedCard(
   }
 }
 
-// 绑定底部按钮 + 路径显示
-export function bindFooter(root: ShadowRoot, instances: SidebarInstance[]): void {
-  const btn = root.getElementById("btn-mc");
-  if (btn) {
-    // 点击跳转到设置页的游戏根目录配置（合并重复入口）
-    btn.onclick = () => {
-      bus.emit("nav:changed", { page: "settings" });
-    };
-    (async () => {
-      try {
-        const { LoadAppConfig, GetMinecraftPaths } = await backendGetApp();
-        const cfg = await LoadAppConfig();
-        // 2026-10 守卫：await 期间组件可能已卸载（侧栏随页面世代重建）。原实现无检查——
-        // 既写游离 DOM，还会在「未配置 + 检测到路径」分支把 mcRoot **落盘**：一个已卸载的
-        // 组件不该再改用户配置。`btn.isConnected` 是这里唯一可信的存活信号（按钮在 shadow 内，
-        // 宿主脱离文档即 false；与 restoreSelectedCard 的 rAF 守卫同口径）。
-        if (!btn.isConnected) return;
-        if (cfg.mcRoot) {
-          // 路径是外部数据（配置/磁盘枚举），文本槽必 esc——R8 模板插值卫生回归锁见 events.test.ts
-          // 展示用 shortenPath 保留末两段（…\Roaming\.minecraft），完整路径交 title——
-          // 原全量绝对路径在窄侧栏溢出/截断不可读；点击仍跳设置页（btn.onclick 上方）。
-          btn.innerHTML = `${UI_ICONS.game} ${esc(shortenPath(cfg.mcRoot))}`;
-          btn.title = cfg.mcRoot;
-          btn.setAttribute("aria-label", `${t("sidebar.configGameDir")}: ${cfg.mcRoot}`);
-        } else {
-          // 没设置时自动检测：用第一个有效路径
-          const paths = await GetMinecraftPaths();
-          // 二次守卫：GetMinecraftPaths 是慢路径（扫常见安装位），期间卸载概率更高
-          if (!btn.isConnected) return;
-          if (paths?.length) {
-            btn.innerHTML = `${UI_ICONS.game} ${esc(shortenPath(paths[0]))}`;
-            btn.title = paths[0];
-            btn.setAttribute("aria-label", `${t("sidebar.configGameDir")}: ${paths[0]}`);
-            // 配置落盘走 views 级唯一实参点（ADR-313）。原手抄六位置实参硬编码
-            // `"dark"`——不在 THEME_VALID 内，落盘后被 normalizeTheme 静默转成 system
-            await writeAppConfig({ mcRoot: paths[0] });
-          } else {
-            btn.innerHTML = `${UI_ICONS.game} ${t("sidebar.notSet")}`;
-            // 复位路径残留（按钮长生命周期，配置被清空后 title/aria 不再指旧路径）
-            btn.title = t("sidebar.configGameDir");
-            btn.removeAttribute("aria-label");
-          }
-        }
-      } catch (e) {
-        if (!btn.isConnected) return; // 卸载后不必再收拾游离 DOM
-        btn.innerHTML = `${UI_ICONS.game} ${t("sidebar.notSet")}`;
-        btn.title = t("sidebar.configGameDir");
-        btn.removeAttribute("aria-label");
-        logWarn("sidebar", "MC detection", e);
-      }
-    })();
+/** 渲染底部 MC 路径按钮（**纯展示，零 IPC**）。
+ *  路径是外部数据（配置/磁盘枚举），文本槽必 esc——R8 模板插值卫生回归锁见 events.test.ts；
+ *  展示用 shortenPath 保留末两段（…\Roaming\.minecraft），完整路径交 title——原全量绝对路径
+ *  在窄侧栏溢出/截断不可读。空值分支同时复位 title/aria（按钮长生命周期，配置被清空后
+ *  不得再指旧路径）。 */
+function renderMcPath(btn: HTMLElement, mcRoot: string): void {
+  if (mcRoot) {
+    btn.innerHTML = `${UI_ICONS.game} ${esc(shortenPath(mcRoot))}`;
+    btn.title = mcRoot;
+    btn.setAttribute("aria-label", `${t("sidebar.configGameDir")}: ${mcRoot}`);
+    return;
   }
+  btn.innerHTML = `${UI_ICONS.game} ${t("sidebar.notSet")}`;
+  btn.title = t("sidebar.configGameDir");
+  btn.removeAttribute("aria-label");
+}
 
+/** 首帧拉取并渲染 MC 路径；未配置时自动检测一次并落盘（落盘 → `config:changed` 回流重渲染）。
+ *  ⚠️ await 后必须验存活（`btn.isConnected`）——既防写游离 DOM，更防**已卸载的组件把 mcRoot
+ *  落盘**（改用户配置是最该禁的侧效果）。 */
+async function loadAndRenderMcPath(btn: HTMLElement): Promise<void> {
+  try {
+    const { LoadAppConfig, GetMinecraftPaths } = await backendGetApp();
+    const cfg = await LoadAppConfig();
+    if (!btn.isConnected) return;
+    if (cfg.mcRoot) {
+      renderMcPath(btn, cfg.mcRoot);
+      return;
+    }
+    // 没设置时自动检测：用第一个有效路径
+    const paths = await GetMinecraftPaths();
+    // 二次守卫：GetMinecraftPaths 是慢路径（扫常见安装位），期间卸载概率更高
+    if (!btn.isConnected) return;
+    if (paths?.length) {
+      renderMcPath(btn, paths[0]);
+      // 配置落盘走 views 级唯一实参点（ADR-313）。原手抄六位置实参硬编码 `"dark"`——
+      // 不在 THEME_VALID 内，落盘后被 normalizeTheme 静默转成 system
+      await writeAppConfig({ mcRoot: paths[0] });
+      return;
+    }
+    renderMcPath(btn, "");
+  } catch (e) {
+    if (!btn.isConnected) return; // 卸载后不必再收拾游离 DOM
+    renderMcPath(btn, "");
+    logWarn("sidebar", "MC detection", e);
+  }
+}
+
+/**
+ * 绑定底部 MC 路径按钮：**首帧主动拉一次 + 订阅 `config:changed`**，返回订阅 unsub。
+ *
+ * 2026-10 架构补件（原每轮 `_reload` 重拉一次 `LoadAppConfig`——未配置时还会连带扫盘）：
+ * 配置读取改为事件驱动，收益两条——① 每轮 reload 省一次 IPC（导入/同步/删除每次都会触发）；
+ * ② 设置页/启动器检测改完配置**立即**刷新侧栏显示，不再等下一次 reload。
+ * 载荷自带六元组，订阅分支**零 IPC** 直接渲染。
+ * 订阅归调用方 `_unsubs` 桶（随 disconnectedCallback 退订）；`bindFooter` 只管统计、
+ * 不再碰配置（该拆分同时消灭了「每次 reload 都重跑自动检测」的重复扫盘）。
+ */
+export function bindMcPathLabel(root: ShadowRoot): () => void {
+  const btn = root.getElementById("btn-mc");
+  if (!btn) return () => {};
+  // 点击跳转到设置页的游戏根目录配置（合并重复入口）
+  btn.onclick = () => {
+    bus.emit("nav:changed", { page: "settings" });
+  };
+  void loadAndRenderMcPath(btn);
+  return bus.on("config:changed", (cfg) => {
+    // 组件已卸载：订阅本该已被退订，此处守卫兜底（订阅桶清理与事件派发之间有窗口）
+    if (!btn.isConnected) return;
+    renderMcPath(btn, cfg.mcRoot);
+  });
+}
+
+/** 绑定底部同步统计（**纯实例数据，零 IPC**；由 `_reload` 每轮调用）。 */
+export function bindFooter(root: ShadowRoot, instances: SidebarInstance[]): void {
   const statSync = root.getElementById("stat-sync");
   // 2026-10 收口（锐评）：原为「零 await 的 async IIFE」——伪 async 会把同步抛错转成
   // 无人接管的 rejected promise（仓内 render 曾同病：错误提示整段变死码）。本段本就

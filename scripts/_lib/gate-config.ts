@@ -158,6 +158,11 @@ export const ALL_STATIC_TOOLS: GateTool[] = [
   { tool: "check-doc-markup.ts", blockPolicy: "hard" },
   { tool: "i18n-check.ts", args: ["--strict"], blockPolicy: "hard" },
   { tool: "i18n-ui-check.ts", blockPolicy: "hard" },
+  // i18n 模块级冻结 t()（2026-10-13 第五闸）：顶层 const 初始化区内求值的 t() 把译文焊死
+  // 在首查语言包上，lang:changed 不重建模块——既有 i18n 闸查「有没有包 t()」，全对
+  // 「包得太早」失明。hard 依据：确定性状态机（遮罩+深度跟踪），接闸日存量 15 处全清
+  // （无存量债冒充）；配套 tests/test_i18n_frozen_t_check.ts（纯核直测判别力 + 真仓恒绿反照）。
+  { tool: "i18n-frozen-t-check.ts", args: ["--strict"], blockPolicy: "hard" },
   { tool: "css-layer-check.ts", args: ["--strict"], blockPolicy: "hard" },
   // a11y 覆盖基线守卫（ADR-308 D3，2026-09-26 接线）：coverage 计数下限（aria-* 按属性名 /
   // role / tabindex / prefers-reduced-motion，只增不减）+ document 级 keydown 散点上限
@@ -331,6 +336,10 @@ export const FRONTEND_STATIC_TOOLS: GateTool[] = [
   // 防止有人摘掉本行后再顺手删了远端兜底（那就成了真关闸）。
   { tool: "i18n-check.ts", args: ["--strict"], blockPolicy: "hard" },
   { tool: "i18n-ui-check.ts", blockPolicy: "hard" },
+  // 冻结 t() 第五闸（立因与判据见 ALL_STATIC_TOOLS 同项注释）：判定虽只扫 frontend/src，
+  // 但**刻意不接 scopedFiles 增量裁剪**——复发面在全前端任意模块表，按变更文件裁剪会漏
+  // 「改 A 文件、把 B 文件的旧冻结点留在仓里」；全扫实测秒级，成本不构成理由。
+  { tool: "i18n-frozen-t-check.ts", args: ["--strict"], blockPolicy: "hard" },
   // i18n 未使用键（2026-09 接线）：补四个既有 i18n 闸的公共盲区——它们查「该有的有没有」
   // （缺失键 / 命名 / UI 硬编码中文 / 右键菜单键齐），**没有一个查「有的还有没有人要」**，
   // 故死键只增不减（实测 182/1459 = 12%，多为迁移后遗留）。

@@ -6,9 +6,9 @@ import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import type { executeCLI } from "@/services/cli-bridge.ts";
 import { logError } from "@/utils/base/primitives/log.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
+import type { EscFn } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { copyWithToast } from "./copy-toast.ts";
-import type { EscFn } from "./logs.ts";
 
 // ===== 基准门禁控件名单（双维门禁：模式 ∧ 目标集）=====
 

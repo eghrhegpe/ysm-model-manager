@@ -5,11 +5,11 @@
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import { stagger } from "@/utils/animation/stagger.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
+import type { EscFn } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { RESOURCE_TYPE_LABELS } from "@/utils/resource/types.ts";
 import type { FileConflict } from "@/utils/types-re-export.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
-import type { EscFn } from "./logs.ts";
 import { optionRows } from "./option-rows.ts";
 import { msgRowHTML } from "./status-row.ts";
 
@@ -30,10 +30,12 @@ const pendingRescans = new WeakMap<HTMLElement, ReturnType<typeof setTimeout>>()
 type DgCfFileConflict = FileConflict;
 
 function dgCfRenderRadarPlaceholder(list: HTMLElement): void {
+  // 2026-10-13 拆旁路：文案行原手写 `<div class="stat-row diag-msg …" style="text-align:center">`
+  // ——text-align 对 flex 行定位本就无效（知识卡判词「靠巧合」），随外壳单点一并退场；
+  // 雷达动画容器是结果区专属结构，非状态行，保留手写。
   list.innerHTML =
-    '<div class="scan-radar-wrap"><div class="scan-radar"></div><div class="scan-radar-dot"></div></div><div class="stat-row diag-msg diag-msg-muted" style="text-align:center">' +
-    t("diagnostics.scanningConflicts") +
-    "</div>";
+    '<div class="scan-radar-wrap"><div class="scan-radar"></div><div class="scan-radar-dot"></div></div>' +
+    msgRowHTML("muted", t("diagnostics.scanningConflicts"));
 }
 
 // ===== 常驻参数栏 + 扫描流程（ADR-288 D2/D3）=====
@@ -257,18 +259,17 @@ async function dgCfExecuteResolve(
       });
       return;
     }
-    // 内容仅 t() 文案 + 后端数字（可信），图标走 UI_ICONS SVG（ADR-238）——单次 innerHTML
-    // 赋值（非 +=）无注入面，也不触发「读改写」反模式
+    // 内容仅 t() 文案 + 后端数字（可信），图标走 UI_ICONS SVG（ADR-238）——外壳单点
+    // msgRowHTML 产行（2026-10-13 拆旁路：原 createElement + 手写 className + 行内
+    // marginTop 绕过外壳，间距由 CSS 相邻规则承接）。resultMsg 串首已含 success 图标
+    // 与计数分隔（可信直插，不传 esc），append 语义保留：结果区已有冲突列表与解决
+    // 面板，本行是追加的执行回执（非整替）。
     let resultMsg = `${UI_ICONS.success} ${t("diagnostics.resolvedCount", { n: result.resolved || 0 })}`;
     if (result.failed > 0)
       resultMsg += ` | ${UI_ICONS.error} ${t("diagnostics.failedCount", { n: result.failed })}`;
     if (result.manual > 0)
       resultMsg += ` | ${UI_ICONS.warning} ${t("diagnostics.manualCount", { n: result.manual })}`;
-    const okDiv = document.createElement("div");
-    okDiv.className = "stat-row diag-msg diag-msg-success";
-    okDiv.style.marginTop = "12px";
-    okDiv.innerHTML = resultMsg;
-    list.appendChild(okDiv);
+    list.insertAdjacentHTML("beforeend", msgRowHTML("success", resultMsg));
     // 稍后自动复扫（resolve 后刷新冲突态）。守卫：用户已离开诊断页（list 分离）
     // 则作废这次迟到的复扫——省一次后端 RPC，也避免向分离 DOM 写 innerHTML。
     // 复扫按**原目标**重跑（把当次扫描的 target 原样带回来），栏内新选中值不参与本次复扫。
@@ -283,11 +284,15 @@ async function dgCfExecuteResolve(
       }, RESOLVE_RESCAN_MS),
     );
   } catch (err) {
-    const errDiv = document.createElement("div");
-    errDiv.className = "stat-row diag-msg diag-msg-error";
-    errDiv.style.marginTop = "12px";
-    errDiv.innerHTML = `${UI_ICONS.error} ${esc(friendlyError(err, t("diagnostics.resolveFailed")))}`; // 图标走 SVG；低优先③：friendlyError 单源（Code→i18n/中文透传），esc 防注入
-    list.appendChild(errDiv);
+    // 2026-10-13 拆旁路：原 createElement + 手写 className + 行内 marginTop。外壳单点
+    // 双通道正好覆盖本形态：msg 传 esc（防注入单点），icon 走 opts（可信 SVG 不转义）。
+    // 低优先③口径不变：friendlyError 单源（Code→i18n/中文透传）。
+    list.insertAdjacentHTML(
+      "beforeend",
+      msgRowHTML("error", friendlyError(err, t("diagnostics.resolveFailed")), esc, {
+        icon: UI_ICONS.error,
+      }),
+    );
   }
 }
 

@@ -32,7 +32,6 @@ auto_fields:
     - DedupSession
     - DgCfScanTarget
     - dgLsResetCapsMemo
-    - EscFn
     - FindDuplicateFilesFn
     - formatSize
     - getDefaultKeepIdx
@@ -158,7 +157,7 @@ status: active
   - **`runSyncConflictScan(list, esc, target)`**：调 Go `DetectConflicts`（真比两端 SHA256，哈希不同→`ConflictContentModified`）→ 结果**只写结果区**；`DgCfScanTarget = { rtype, instance, scanBtn }` 把「本次扫描目标 + 按钮引用」带进解决流程，1.5s 自动复扫按**原目标**重跑（list 分离时作废迟到复扫；复扫 timer 按 list 收 WeakMap `pendingRescans` 合并——resolve 结果行为 append 不移除按钮，连点各排一次复扫会叠 RPC，合并后只留最后一次），扫描期按钮禁用。
   - ⚠️ **按钮不得住进结果容器（ADR-288 §1 实测 dead-end）**：旧实现把「引导空态 + 扫描按钮」放在 `#diag-sync-conflict-list` **内部**，点它才渲染参数面板、面板内再点一次才扫描（三次点击，首次零信息增量）；而结果渲染是 `list.innerHTML` 整块替换，配合 `app-content` 的**面板按页缓存**（`init` 仅 `isNew` 跑）⇒ 首次扫描后入口**会话内不可复活**，换实例 / 复扫只能重载应用。`health` 同形同病。现两者都是 `pane > (bar + 结果区)` 两段式，墓碑测试 = 「扫描后按钮仍在栏内且可再次触发」（`conflicts.test.ts` / `health.test.ts`，夹具用**真实父子/兄弟嵌套**；旧夹具把按钮与结果容器建成兄弟，比真相宽松，故一路绿灯）。
   - **冲突检测（跨实例同名扫描）退役**（2026-09-21，用户拍板「直接下线」）：原 conflict tab 的 `scanConflicts` 聚合各整合包 CustomDir 条目判定「同名 + 哈希不唯一」，退役理由三条——① 扫描成本全页最重（遍历所有实例）而输出**只读无后续动作**；② 判据覆盖面已被 sync-conflict tab（内容级 + 可解决）与仓库页去重 tab 挤压，其注释自陈的漏报场景（两实例同名且哈希均缺失）本就「由 sync-conflict tab 兜底」；③ 与 sync-conflict 在用户视角同叫「冲突」难以区分。曾有的护栏修正（2026-09-18：只按名聚合会把 PushResources 正常分发产物误报成冲突，改判「同名 + 哈希不唯一」）不回滚——那是判据正确性，与本次「要不要这个入口」是两回事。Go `DetectConflicts` 本体保留（`handleSyncConflicts` 同步链仍在用）；同批清理仅本 tab 消费的 i18n 死键（`diagnostics.conflict`/`startScan`/`scanningDot`/`webNoConflictScan`/`noModpacks`/`noNameConflict`/`conflictsFound`/`modpackCount`/`contentDiffers`/`moreCount`）、无主 CSS（`.btn-base.accent.scanning` + `@keyframes scanPulse`）与 `dgInHideDesktopOnly` 名单项；`scanHint` 文案改指「扫描同步冲突」按钮；若日后重建，参考 git 历史中 `scanConflicts` 的哈希判据版本。
-- `logs.ts` — 操作日志渲染：`OP_META` 七种中文标签+图标，状态图标优先读 `Level`（error→❌ / warn→⚠️ / debug→🔍 / fatal→💀 / info→✅），无 Level 按 `Status` 兜底；消费 Go `logs` 包（见知识卡 `go_logs`）
+- `logs.ts` — 操作日志渲染：`OP_META` 七种标签键+图标，状态图标优先读 `Level`（error→❌ / warn→⚠️ / debug→🔍 / fatal→💀 / info→✅），无 Level 按 `Status` 兜底；消费 Go `logs` 包（见知识卡 `go_logs`）。⚠️ `OP_META` **只存 LocaleKey、不在模块构建期求值 t()**（2026-10-13 冻结 t() 收口，见下方不变量条目）。
 - `channel-health.ts` — **日志通道健康常驻红条**（ADR-322 D1 观测面）：读 `GetLogChannelHealth` → `persistOK=false` 时在日志工具栏与列表之间渲染红色提示（主行「日志未落盘：本次会话的日志只存在于内存中，重启即失」+ 次行 `Reason` 机器码映射的中文原因；机器码见 `go/types|ChannelReason*` 与 `web-store|WEB_REASON_IDB`）。三条口径：**① 读健康位失败判「不健康」而非静默**（状态未知 ≠ 健康，宁可误报不可漏报，同 Go 侧零值 Logger 口径）；② 任何分支都**不 `logError`**（这是全仓唯一「明知通道可能已死还要往里写」的位置，报错即诊断页自证循环）；③ 能力不可用（`can("GetLogChannelHealth")` 假，如 android 黑名单）静默不渲染——报错同样要过那条通道。进程级 memo（Go 侧健康位锁存不回弹，故只问一次）。只陈述事实**不做修复**（不重试/不写日志/不弹 toast），否则观测面与修复面缝在一起会在通道再坏时自己刷自己
 - `perf.ts` — 性能面板 facade：事件接线 + re-export，业务逻辑拆至：
   - `perf-common.ts` — 共享工具层（sectionHeader / 复制按钮 / 守卫 / 错误辅助）
@@ -517,6 +516,18 @@ localPos: number[];
 - **护栏**：`content-diag-classes.test.ts` 的契约扫描从 `diag-log-`/`diag-sub-` 扩到 **`diag-pane` / `diag-bar` / `diag-result`**，并加 must 抽样防空转——退回去立刻红；`tpl-structure.test.ts` 当场抓到我局中漏的一个 `</div>`（与 ADR-259 同款吞并，护栏真值回票价）。
 - **⚠️ 改 CSS 裸值前先跑 `node scripts/css-token-check.ts`**：它有基线文件 `scripts/.css-token-baseline.txt`，**改数值即算新增裸值**（我 pill gap 2px→4px 就被报 WARN）。`gap:var(--sp-1)` 才是正解（既过闸又不新增 WARN）；别去 `--rebuild-baseline`（会顺手把并行会话的存量债一起重建）。
 - **验证记录**：模板+CSS 契约 43 tests、诊断页 15 files/255 tests 全绿；`vite build` 绿；typecheck **本次文件零错**（全仓 4 处红灯属并行会话的 `site/` + `tabs-shell` 域，非本次改动）；i18n 1518 键三语对齐（改 locale TS 后须重跑 `generate-locale-json.ts`，否则 `vite build` 直接拦）；css-layer-check 0 ERROR；css-token-check 本次 0 条新增。
+
+### 模块级冻结 t() 收口与状态行旁路拆净（2026-10-13，诊断页锐评 P0）
+
+**一句话**：`OP_META` / `VERDICT_BANDS` 这类**模块构建期**求值的 `t()` 把译文焊死在首查语言包上（`lang:changed` 只重建 DOM 不重建模块，en/ja 恒中文）——既有四道 i18n 闸查「有没有包 t()」，对「包得太早」全盲；本次治存量、立第五闸、并同批拆净状态行外壳的手写旁路。
+
+- **病机制**（非又一类硬编码，是四闸公共盲区）：`locale.ts|initI18n` 头注自证「组件渲染可能早于语言包就绪（customElements.define 在模块顶层同步执行，加载异步）」——顶层 `const X = t("k")` 的求值时刻语言包未必装载，`tOf` 回退链落 zh-CN 即定格。判据面：门禁 `scripts/i18n-frozen-t-check.ts`（确定性状态机：遮罩注释/字符串/类型索引 → 花括号深度 → 顶层声明初始化区相对深度 ≤1 内 `t(`/`tOf(` 即命中；豁免 `=> t(` 惰性箭头与 `// i18n-allow:` 台账）。已挂 gate-config（ALL + FRONTEND，**刻意不接 scopedFiles**：复发面在全前端任意模块表，按变更文件裁剪会漏「改 A 留 B」；全扫秒级）。行为墓碑：`i18n-frozen.test.ts`（vi.resetModules + doMock spy 断言 import 期 t() 调用数为 0——形状门禁的语法天花板由行为判据兜底；已变异验证：改回焊死即红）。
+- **修法两形态**（同页已有范本，非新发明）：① **表存 LocaleKey、消费点现调 t()**——`logs.ts|OP_META`（opMeta 调用期翻译，搜索命中域「标签即用户所见」在 en/ja 下恢复成立）、`health.ts|VERDICT_BANDS` 与 `features/maintenance/oldest-models.ts` 同族（`fetchRepoStats` 消费点 `t(band.labelKey)`）；② **顶层常量改惰性函数**——vrm 两处 `VRM_PLAY_NOTICE`（消费点本在 buildMenu 函数体内，调用期求值零语义变化）。
+- **状态行旁路拆净**（「单点建成了新出口、旧口没拆」的收债）：`dedup.ts` noDups 行与 `dedup-scan.ts` 扫描失败行——手写字符串 + 行内 `justify-content:center` hack，改 `statRowHTML`（`.diag-stat` 族 block+center 与 hack 视觉等价，fs-base vs fs-sm 是两族既有口径差）；`conflicts.ts` resolve 成功/失败行——`createElement` + 手写 className + 行内 marginTop 绕外壳，改 `insertAdjacentHTML("beforeend", msgRowHTML(…))`（转义/图标双通道恰是外壳的既定分工：msg 传 esc、icon 走 opts 不转义），原 12px 间距迁 CSS 相邻规则 `.diag-sync-resolve + .diag-msg`；雷达占位文案行的 `text-align:center`（对 flex 行无效的死样式，知识卡判词「靠巧合」）一并退场。
+- **`formatPct` 不再把算不出伪装成实测**：Go 漂移产物（NaN/Infinity）旧回退印「100.0%」——比率算不出显示成满分，违反本页「未测到不得包装成实测」红线（对齐 `cacheHitRateSuffix` 的「故障不能伪装成没纹理」）；现显式落「—」。
+- **EscFn 三源归一**：唯一声明迁 `utils/html/html.ts`（与 `escUnknown` 同处——该函数头注早自称「EscFn 形状」的出处却没声明类型）；`logs.ts` 本地别名删除、`utils/dom/status-row.ts` 改 import+转发、diagnostics 14 处 import 直引真源。此前「单一事实源 = utils/html/html.ts」的注释承诺在类型层落空（三份同形状、零机器连线）。
+- **验证记录**：门禁存量 15 处 → 0；契约测试 14 项全过（含两个开发期真漏报形态的判别力锁：TOP_DECL 缺 `\s*` 漏普通 const、注解禁分号漏泛型表）；diagnostics+maintenance+i18n+utils 82 files / 1271 tests 绿；vite build + typecheck + biome 全绿；`test_gate_config.ts` / `check-readme-index` 绿。
+- **未收口**（锐评在案、本次不动）：bench 门禁登记表（`PERF_UNREAD_*`）改 read* 声明派生——值得单开小 ADR；`logs.ts` 旧日志散文正则兼容层的退役时钟（随 Go 环形缓冲自然清零后再删）；`renderHealthReport` 拼串风格（机械但大版面，随下次触及再收）。
 
 ## 相关
 

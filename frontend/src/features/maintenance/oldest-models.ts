@@ -4,7 +4,7 @@
 // 同源），前端不再自算健康分——消灭「本地正则数 ban + Hash 分组算重复」的双轨口径。
 
 import { bus } from "@/bus";
-import { t } from "@/core/i18n/t.ts";
+import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import { useCurrentResourceType } from "@/features/repo/repo-rtype.ts";
 import { createLoadGuard } from "@/utils/async/load-guard.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
@@ -19,13 +19,16 @@ import { maintenanceGetApp } from "./maintenance-deps.ts";
 // 回退带：与 Go ScoreVerdict 阈值一致（good≥80 / ok≥60 / bad），仅当 verdict 不在值域
 //（旧后端直连/新值域）时兜底，正常链路不走（parseHealthReport 已强制 verdict 存在）。
 
-const VERDICT_BANDS: Record<string, { color: string; label: string; tagClass: string }> = {
-  good: { color: "var(--status-success)", label: t("oldest.health.good"), tagClass: "good" },
-  ok: { color: "var(--tag-amber)", label: t("oldest.health.ok"), tagClass: "ok" },
-  bad: { color: "var(--status-error)", label: t("oldest.health.bad"), tagClass: "bad" },
+// ⚠️ label 存 LocaleKey **不在构建期求值 t()**（模块级冻结译文病，2026-10-13 收口，
+// 门禁 scripts/i18n-frozen-t-check.ts）；与 health.ts|VERDICT_BANDS 同构。
+// 译文在 fetchRepoStats（运行期，lang:changed 重建后重取）现调。
+const VERDICT_BANDS: Record<string, { color: string; labelKey: LocaleKey; tagClass: string }> = {
+  good: { color: "var(--status-success)", labelKey: "oldest.health.good", tagClass: "good" },
+  ok: { color: "var(--tag-amber)", labelKey: "oldest.health.ok", tagClass: "ok" },
+  bad: { color: "var(--status-error)", labelKey: "oldest.health.bad", tagClass: "bad" },
 };
 
-function scoreBand(score: number): { color: string; label: string; tagClass: string } {
+function scoreBand(score: number): { color: string; labelKey: LocaleKey; tagClass: string } {
   return score >= 80 ? VERDICT_BANDS.good : score >= 60 ? VERDICT_BANDS.ok : VERDICT_BANDS.bad;
 }
 
@@ -84,7 +87,7 @@ async function fetchRepoStats(filesRoot: string): Promise<RepoStats> {
     dupGroups: report.dedup.groups,
     score,
     healthColor: band.color,
-    healthLabel: band.label,
+    healthLabel: t(band.labelKey),
     healthTagClass: band.tagClass,
   };
 }

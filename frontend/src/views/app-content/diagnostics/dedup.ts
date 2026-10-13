@@ -10,6 +10,7 @@
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
+import type { EscFn } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { resourceTypesById } from "@/utils/resource/schema.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
@@ -30,7 +31,6 @@ import type {
   ScanGroupResult,
 } from "./dedup-types.ts";
 import { DEDUP_DEFAULTS } from "./dedup-types.ts";
-import type { EscFn } from "./logs.ts";
 import { msgRowHTML, statRowHTML } from "./status-row.ts";
 
 export type { DedupConfigShape } from "./dedup-types.ts";
@@ -242,12 +242,12 @@ export function createDedupSession(): DedupSession {
 
     const totalGroups = allResults.reduce((s, r) => s + r.groups.length, 0);
     if (!totalGroups) {
-      list.innerHTML =
-        '<div class="stat-row diag-msg diag-msg-success" style="justify-content:center">' +
-        UI_ICONS.success +
-        " " +
-        t("diagnostics.noDups") +
-        "</div>";
+      // 状态行走外壳单点（2026-10-13 拆旁路）：此处曾是手写字符串 + 行内
+      // justify-content:center hack。居中语义归 statRowHTML（.diag-stat 族 block+center，
+      // 与原行内 hack 视觉等价）；fs-base vs fs-sm 属两族既有口径差，非新增变化。
+      list.innerHTML = statRowHTML("success", t("diagnostics.noDups"), undefined, {
+        icon: UI_ICONS.success,
+      });
       return;
     }
 

@@ -5,12 +5,12 @@
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { formatBytes } from "@/utils/format/format.ts";
+import type { EscFn } from "@/utils/html/html.ts";
 import { fileIcon } from "@/utils/icon/icon.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { renderDisplayName } from "@/utils/model-name/display.ts";
 import { getDefaultKeepIdx } from "./dedup-policy.ts";
 import type { DedupConfigShape, ScanFile, ScanGroupResult } from "./dedup-types.ts";
-import type { EscFn } from "./logs.ts";
 import { msgRowHTML } from "./status-row.ts";
 
 // ===== 结果渲染 =====

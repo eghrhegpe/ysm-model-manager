@@ -237,8 +237,9 @@ export const contentDiagCSS: string = `
    警告与其解释被迫跨屏对读。基类口径不动（14 处消费点多数被 stat-row-idle/行内样式覆盖），
    只在本族与 .diag-warn 两处「图标+文案」形态上纠正。
    ⚠️ 单 item（纯文案行）下 flex-start 与 space-between 表现相同，故本规则对扫描中提示行等
-   无视觉变化；deps 侧已有的 style="justify-content:center"（dedup.ts / dedup-scan.ts /
-   tpl-oldest.ts）行内优先级更高，行为不变，清理与否另议。 */
+   无视觉变化；曾有的行内 style="justify-content:center"（dedup.ts / dedup-scan.ts 旁路）
+   已于 2026-10-13 拆净——两处居中语义归 .diag-stat 族（block+center，视觉等价）；
+   tpl-oldest.ts 的居中行内样式（两栏数据行上的刻意覆盖）保留。 */
 .diag-msg { padding:var(--sp-3);font-size:var(--fs-sm);justify-content:flex-start;gap:var(--sp-1); }
 .diag-msg-error { color:var(--status-error); }
 .diag-msg-success { color:var(--status-success); }
@@ -286,6 +287,9 @@ export const contentDiagCSS: string = `
 /* .diag-sync-config 规则已随 ADR-288 删除：同步冲突的参数面板不再是「点按钮后渲染的卡片」，
    而是常驻 .diag-bar（选择器 + 按钮直接排在栏内）——旧卡片类失去生产者，规则一并退场。 */
 .diag-sync-resolve { margin-top:16px; padding:var(--sp-3); background:var(--surf); border-radius:var(--radius-lg); }
+/* 解决执行回执行（成功/失败）经外壳单点 msgRowHTML 追加在解决面板之后（2026-10-13 拆
+   createElement 旁路：原行内 marginTop:12px 迁到本规则——样式归样式、结构归结构）。 */
+.diag-sync-resolve + .diag-msg { margin-top:12px; }
 .diag-dedup-config { padding:var(--sp-vh-pane); }
 .diag-warn { color:var(--status-warning); font-weight:600;justify-content:flex-start;gap:var(--sp-1); } /* 审计 P2-6：删 --status-warning 冗余回退（6 主题已定义）；justify-content/gap 同 .diag-msg——体检警告行是「图标+整句」，会被基类 space-between 撕到两端 */
 

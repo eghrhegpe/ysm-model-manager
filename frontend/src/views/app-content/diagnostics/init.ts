@@ -7,13 +7,14 @@ import { t } from "@/core/i18n/t.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import type { EscFn } from "@/utils/html/html.ts";
 import { bindSubBar } from "@/views/app-content/tabs-shell.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import { __resetChannelHealthForTest, renderChannelHealth } from "./channel-health.ts";
 import { initSyncConflictPanel } from "./conflicts.ts";
 import { copyWithToast } from "./copy-toast.ts";
 import { initHealthPanel } from "./health.ts";
-import { type EscFn, loadDiagnosticsLogs, loadRuntimeLogs } from "./logs.ts";
+import { loadDiagnosticsLogs, loadRuntimeLogs } from "./logs.ts";
 import { applyPerfModeUI, initPerfPanel, renderLoadTraceSection } from "./perf.ts";
 
 // 对外 API 兼容：createDedupSession 已迁至 dedup.ts（外部仍从本文件 import，见 init-pages.ts / init.test.ts）

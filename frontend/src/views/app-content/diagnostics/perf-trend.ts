@@ -5,8 +5,8 @@
 
 import { t } from "@/core/i18n/t.ts";
 import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
+import type { EscFn } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
-import type { EscFn } from "./logs.ts";
 import { sectionHeader } from "./perf-common.ts";
 
 interface PerfRecord {

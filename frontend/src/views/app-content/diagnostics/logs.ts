@@ -6,6 +6,7 @@ import { stagger } from "@/utils/animation/stagger.ts";
 import { createLoadGuard } from "@/utils/async/load-guard.ts";
 import { logError } from "@/utils/base/primitives/log.ts";
 import { formatClock } from "@/utils/format/format.ts";
+import type { EscFn } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { renderDisplayName } from "@/utils/model-name/display.ts";
 // 锐评①：操作/运行时日志的类型契约直连绑定生成类型（经 types-re-export 垫层），
@@ -18,8 +19,9 @@ import type { ImportLog, RuntimeLog } from "@/utils/types-re-export.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import { statRowHTML } from "./status-row.ts";
 
-/** 转义函数签名（单一事实源 = utils/html/html.ts 的 esc；调用方以 (s) => esc(s == null ? "" : String(s)) 包装适配（勿退回 String(s || "")——数字 0/false 会被吞成空串）） */
-export type EscFn = (s: unknown) => string;
+// EscFn 唯一声明在 utils/html/html.ts（2026-10-13 三源归一：本文件曾自写同形状别名并被
+// 全页当 import 源——「单一事实源」的注释承诺在类型层落空。调用方以
+// (s) => esc(s == null ? "" : String(s)) 包装适配，勿退回 String(s || "")——数字 0/false 会被吞成空串）。
 
 // P3 修复（子代理审计，代际守卫；ADR-230 收口为全仓唯一守卫出口）：日志加载模块级守卫——
 // 刷新/筛选/tab 切换可并发触发 loadDiagnosticsLogs/loadRuntimeLogs，后端慢时旧响应后到会
@@ -55,20 +57,26 @@ export function dgLsResetCapsMemo(): void {
 
 // 锐评①：手写镜像 ImportLogLike / RuntimeLogLike 已删除——契约直连 Go 绑定类型（见顶部 import）。
 
-/** 操作类型 → 中文标签 + 图标（分组标题与行内徽标共用；图标走 UI_ICONS SVG，ADR-238） */
-const OP_META: Record<string, { label: string; icon: string }> = {
-  import: { label: t("diagnostics.opImport"), icon: UI_ICONS.import },
-  scan: { label: t("diagnostics.opScan"), icon: UI_ICONS.search },
-  download: { label: t("diagnostics.opDownload"), icon: UI_ICONS.download },
-  sync: { label: t("diagnostics.opSync"), icon: UI_ICONS.refresh },
-  rename: { label: t("diagnostics.opRename"), icon: UI_ICONS.edit },
-  delete: { label: t("diagnostics.opDelete"), icon: UI_ICONS.delete },
-  ui: { label: t("diagnostics.opUI"), icon: UI_ICONS.menu },
+/**
+ * 操作类型 → 标签键 + 图标（分组标题与行内徽标共用；图标走 UI_ICONS SVG，ADR-238）。
+ * ⚠️ 表只存 LocaleKey、**不在此求值 t()**：模块构建期调 t() 会把译文焊死在首查语言包上
+ * （initI18n 异步装载，顶层求值落 zh-CN；lang:changed 只重建 DOM 不重建模块）——
+ * en/ja 下标签恒中文即此病。消费点（opMeta）现调，门禁 scripts/i18n-frozen-t-check.ts 锁死。
+ */
+const OP_META: Record<string, { labelKey: LocaleKey; icon: string }> = {
+  import: { labelKey: "diagnostics.opImport", icon: UI_ICONS.import },
+  scan: { labelKey: "diagnostics.opScan", icon: UI_ICONS.search },
+  download: { labelKey: "diagnostics.opDownload", icon: UI_ICONS.download },
+  sync: { labelKey: "diagnostics.opSync", icon: UI_ICONS.refresh },
+  rename: { labelKey: "diagnostics.opRename", icon: UI_ICONS.edit },
+  delete: { labelKey: "diagnostics.opDelete", icon: UI_ICONS.delete },
+  ui: { labelKey: "diagnostics.opUI", icon: UI_ICONS.menu },
 };
 
-/** 未知 op 回退到通用标签，避免显示裸英文 */
+/** 未知 op 回退到通用标签，避免显示裸英文。label 在此**调用期**翻译（勿在表里焊死）。 */
 function opMeta(op: string | undefined): { label: string; icon: string } {
-  if (op && OP_META[op]) return OP_META[op];
+  const meta = op ? OP_META[op] : undefined;
+  if (meta) return { label: t(meta.labelKey), icon: meta.icon };
   return { label: op || t("diagnostics.opImportFallback"), icon: UI_ICONS.note };
 }
 

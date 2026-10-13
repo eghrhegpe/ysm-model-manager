@@ -4,14 +4,14 @@
 // 前端不再自算健康分，只做展示。刻意不用 RepoHealthAuditAll（合并报告泛泛且全扫耗时，
 // 该孤儿绑定已于 2026-09 对接锐评③连同 GetAllRepoRoots 一并删除）。
 
-import { t } from "@/core/i18n/t.ts";
+import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import { currentRepoType } from "@/features/repo/repo-rtype.ts";
 import { friendlyError, isCancelError } from "@/utils/dom/errors.ts";
 import { formatBytes } from "@/utils/format/format.ts";
 import { type HealthReport, parseHealthReport } from "@/utils/health-report.ts";
+import type { EscFn } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
-import type { EscFn } from "./logs.ts";
 import { msgRowHTML, scanRowWithCancelHTML } from "./status-row.ts";
 
 // 重入守卫：体检扫描大量 await（Walk 全目录 + SHA256），快速连点并发覆盖 innerHTML。
@@ -102,10 +102,12 @@ export async function runHealthAudit(
 
 // 锐评④：verdict→外观映射（verdict 值域 = Go go/repoaudit VerdictGood/Ok/Bad 常量，
 // 字面量在此出现一次；改 Go 值域会同时打红 Go 测试与本处回退注释）。
-const VERDICT_BANDS: Record<string, { color: string; label: string }> = {
-  good: { color: "var(--status-success)", label: t("diagnostics.healthGood") },
-  ok: { color: "var(--tag-amber)", label: t("diagnostics.healthOk") },
-  bad: { color: "var(--status-error)", label: t("diagnostics.healthBad") },
+// ⚠️ label 存 LocaleKey **不在构建期求值 t()**（模块级冻结译文病，2026-10-13 收口；
+// 门禁 scripts/i18n-frozen-t-check.ts）——消费点 renderHealthReport / scoreBandLabel 现调。
+const VERDICT_BANDS: Record<string, { color: string; labelKey: LocaleKey }> = {
+  good: { color: "var(--status-success)", labelKey: "diagnostics.healthGood" },
+  ok: { color: "var(--tag-amber)", labelKey: "diagnostics.healthOk" },
+  bad: { color: "var(--status-error)", labelKey: "diagnostics.healthBad" },
 };
 
 // 回退带：与 Go ScoreVerdict 阈值一致（good≥80 / ok≥60 / bad），仅当 verdict 缺失/
@@ -117,12 +119,12 @@ function scoreBandColor(score: number): string {
       ? "var(--tag-amber)"
       : "var(--status-error)";
 }
-function scoreBandLabel(score: number): string {
+function scoreBandLabel(score: number): LocaleKey {
   return score >= 80
-    ? t("diagnostics.healthGood")
+    ? "diagnostics.healthGood"
     : score >= 60
-      ? t("diagnostics.healthOk")
-      : t("diagnostics.healthBad");
+      ? "diagnostics.healthOk"
+      : "diagnostics.healthBad";
 }
 
 /** 渲染体检报告（分数环 + 完整性/缓存/资源/去重 + 警告），全部走 esc() 防注入 */
@@ -134,7 +136,8 @@ export function renderHealthReport(r: HealthReport, esc: EscFn): string {
   // 未知/缺失 verdict（旧后端直连或新值域）回退分数带，回退带与 Go 阈值一致并注释。
   const band = VERDICT_BANDS[r.verdict];
   const color = band?.color ?? scoreBandColor(score);
-  const label = band?.label ?? scoreBandLabel(score);
+  // 译文在消费点**调用期**求值（表存 key，防模块级冻结——2026-10-13 收口）
+  const label = t(band?.labelKey ?? scoreBandLabel(score));
 
   const warnings = (r.warnings ?? [])
     .map((w) => `<div class="stat-row diag-warn">${UI_ICONS.warning} ${esc(w)}</div>`)
@@ -265,9 +268,12 @@ function cacheHitRateSuffix(cache: HealthReport["cache"], esc_: EscFn): string {
   return esc_(s);
 }
 
-/** 百分比展示（带小数收敛） */
+/** 百分比展示（带小数收敛）。
+ * ⚠️ 非有限数（NaN/Infinity——Go 序列化漂移 / 除零产物）显式落「—」，**不回退 100%**：
+ * 2026-10-13 锐评收口——旧回退把算不出的比率显示成满分，正是本页反复清的「未测到不得
+ * 包装成实测」同族病灶（对齐 cacheHitRateSuffix 的「故障不能伪装成没纹理」口径）。 */
 function formatPct(pct: number, esc: EscFn): string {
-  return esc(Number.isFinite(pct) ? `${pct.toFixed(1)}%` : "100.0%");
+  return esc(Number.isFinite(pct) ? `${pct.toFixed(1)}%` : "—");
 }
 
 /** 字节大小人性化——委托至 formatBytes（单一事实来源，消灭多处实现口径漂移） */

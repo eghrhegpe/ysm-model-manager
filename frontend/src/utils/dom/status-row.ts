@@ -15,7 +15,10 @@
 //   · **是否转义由调用点决定**：传 `esc` 即转义（单点，不二次转义），否则按可信 HTML 直插。
 //   · **CSS 由诊断页既有的 content-diag 类族承载**（stat-row / diag-msg / diag-stat），本模块
 //     只产 class 串；这些规则已被 app-content 的 ShadowRoot adopt，recycle / oldest 同宿主、复用可达。
-export type EscFn = (s: unknown) => string;
+// EscFn 唯一声明在 utils/html/html.ts（2026-10-13 三源归一：本层曾自写同形状别名）。
+import type { EscFn } from "@/utils/html/html.ts";
+
+export type { EscFn };
 
 /** 两族共用的状态语义 —— 映射到 `diag-msg-<kind>` / `diag-stat-<kind>`。 */
 export type StatusRowKind = "error" | "success" | "warn" | "muted";

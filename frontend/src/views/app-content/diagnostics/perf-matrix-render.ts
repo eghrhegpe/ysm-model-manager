@@ -9,10 +9,10 @@
 
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import { formatBytes } from "@/utils/format/format.ts";
+import type { EscFn } from "@/utils/html/html.ts";
 import { esc } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { resourceTypesById } from "@/utils/resource/schema.ts";
-import type { EscFn } from "./logs.ts";
 import { type OptionRow, optionRows } from "./option-rows.ts";
 import { type PerfIdentity, sectionHeader } from "./perf-common.ts";
 

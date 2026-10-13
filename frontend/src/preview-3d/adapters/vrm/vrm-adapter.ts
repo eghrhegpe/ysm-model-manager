@@ -507,7 +507,7 @@ function Stage4MenuPanels(
               motion.motionAction.paused = !motion.motionPlaying;
             },
             animDir: null,
-            notice: VRM_PLAY_NOTICE,
+            notice: t("preview.playNotice"),
           }
         : null,
     perception: { state: perception.perceptionState, caps: perception.perceptionCaps },
@@ -575,8 +575,9 @@ function countSceneTextures(scene: THREE.Object3D): number {
   return texCount;
 }
 
-// [ADR-243 锐评对账 P1a] VMD 动作版权常驻提示（i18n preview.playNotice，与 vrm-menu.ts 空态同源）
-const VRM_PLAY_NOTICE = t("preview.playNotice");
+// [ADR-243 锐评对账 P1a] VMD 动作版权常驻提示（i18n preview.playNotice，与 vrm-menu.ts 空态同源）。
+// 原顶层常量 `const VRM_PLAY_NOTICE = t(…)` 在模块构建期焊死译文（lang:changed 不重建模块），
+// 2026-10-13 收口为消费点现调——唯一消费点 L~510 在 buildMenu 函数体内，本就是调用期求值。
 
 /** 构建 dispose 回调的状态依赖（Stage5 组装期一次性捕获） */
 interface VrmDisposeDeps {

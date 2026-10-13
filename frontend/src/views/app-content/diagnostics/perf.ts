@@ -11,7 +11,7 @@ import { bus, type ModelSelectPayload } from "@/bus";
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import { getLastModelPath } from "@/core/model-path-store.ts";
 import { toast } from "@/utils/dom/toast.ts";
-import type { EscFn } from "./logs.ts";
+import type { EscFn } from "@/utils/html/html.ts";
 import { BASELINE_CONTROL_IDS, bindPerfCopyHandlers, readActiveBenchMode } from "./perf-common.ts";
 import { runConcurrentBench } from "./perf-concurrent.ts";
 import {

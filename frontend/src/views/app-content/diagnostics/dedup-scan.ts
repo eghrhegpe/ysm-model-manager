@@ -4,6 +4,7 @@
 
 import { t } from "@/core/i18n/t.ts";
 import { isCancelError } from "@/utils/dom/errors.ts";
+import type { EscFn } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import type {
   DedupRegType,
@@ -12,8 +13,7 @@ import type {
   ScanGroupResult,
   ScanTarget,
 } from "./dedup-types.ts";
-import type { EscFn } from "./logs.ts";
-import { msgRowHTML, scanRowWithCancelHTML } from "./status-row.ts";
+import { msgRowHTML, scanRowWithCancelHTML, statRowHTML } from "./status-row.ts";
 
 /** ② targets收集(rtype单目录/全类型遍历)（依赖注入，无会话状态） */
 export async function collectTargets(
@@ -88,12 +88,11 @@ export async function scanEachDirectory(
       // 契约锁 internal/app TestFindDuplicateFiles_NoDupNilFree）——null 只可能是绑定层
       // 结构异常，按扫描失败显式报错。此前手拼的 {reason:"扫描返回空"} 既写死中文又被
       // t() 静默吞参（scanFailed 键无占位符），双重无意义。
-      list.innerHTML =
-        '<div class="stat-row diag-msg diag-msg-error" style="justify-content:center">' +
-        UI_ICONS.error +
-        " " +
-        t("diagnostics.scanFailed") +
-        "</div>";
+      // 2026-10-13 拆旁路：手写字符串行（+行内 justify hack）改走外壳单点 statRowHTML
+      // ——error 态居中语义在 .diag-stat 族本有（diag-stat-error），行内 hack 随之退场。
+      list.innerHTML = statRowHTML("error", t("diagnostics.scanFailed"), undefined, {
+        icon: UI_ICONS.error,
+      });
       return { allResults, earlyExit: true };
     }
     if (groups.length)

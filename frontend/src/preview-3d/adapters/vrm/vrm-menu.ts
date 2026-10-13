@@ -72,8 +72,12 @@ const VRM_PLAY_EMPTY_HINT =
  * [ADR-243 锐评对账 P1a] VMD 动作版权常驻提示：MMD 配布モーション条款常含「MMD 以外使用禁止」
  * 等限制，重定向播放属灰色地带——工具层不裁决合规性，但雷区立牌。走 i18n（`preview.playNotice`），
  * MmdPlayBridge.notice 缺省不渲染，MMD/YSM 桥零影响。
+ * ⚠️ 惰性函数而非顶层常量：`const X = t(…)` 在模块构建期求值，把译文焊死在首查语言包上
+ * （lang:changed 不重建模块，en/ja 恒中文——2026-10-13 收口，门禁 i18n-frozen-t-check）。
  */
-const VRM_PLAY_NOTICE = t("preview.playNotice");
+function vrmPlayNotice(): string {
+  return t("preview.playNotice");
+}
 
 /**
  * [ADR-242 后续] 无动作时的空播放桥：clips 空 → playNodes 走空态引导分支。
@@ -88,7 +92,7 @@ function emptyVrmPlayBridge(): MmdPlayBridge {
     select: () => {},
     animDir: null,
     emptyHint: VRM_PLAY_EMPTY_HINT,
-    notice: VRM_PLAY_NOTICE,
+    notice: vrmPlayNotice(),
   };
 }
 

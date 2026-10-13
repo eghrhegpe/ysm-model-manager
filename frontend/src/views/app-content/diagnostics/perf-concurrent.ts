@@ -13,8 +13,8 @@ import type { CLIArgs } from "@/services/cli-bridge.ts";
 import { executeCLI } from "@/services/cli-bridge.ts";
 import { createLoadGuard } from "@/utils/async/load-guard.ts";
 import { isNum } from "@/utils/base/pure/guards.ts";
+import type { EscFn } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
-import type { EscFn } from "./logs.ts";
 import {
   errorHTML,
   getOutBox,

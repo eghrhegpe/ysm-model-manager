@@ -12,8 +12,8 @@
 import { t } from "@/core/i18n/t.ts";
 import { getLoadTraces, type LoadTrace } from "@/preview-3d/infra/load-trace.ts";
 import { formatClock } from "@/utils/format/format.ts";
+import type { EscFn } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
-import type { EscFn } from "./logs.ts";
 import { sectionHeader } from "./perf-common.ts";
 
 /** 面板一次最多展开几条记录（store 上限 50，其余只报数——避免 50 张甘特图糊满屏）。 */

@@ -11,6 +11,14 @@ export function esc(s: string | null | undefined): string {
 }
 
 /**
+ * 转义函数签名——**全仓唯一声明**（2026-10-13 归一：原 logs.ts / utils/dom/status-row.ts
+ * 各写一份同形状别名，「单一事实源 = utils/html/html.ts」的注释承诺在类型层落空）。
+ * 生产接线 `(s) => esc(s == null ? "" : String(s))` 与 escUnknown 同义；消费方以本类型
+ * 标注注入函数，勿再新写第三份。
+ */
+export type EscFn = (s: unknown) => string;
+
+/**
  * 非字符串入参的转义适配（EscFn 形状 `(s: unknown) => string`）。
  *
  * 立因（2026-09 锐评收债）：诊断页的生产接线（`views/app-content/init-pages.ts` 的

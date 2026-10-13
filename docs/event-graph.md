@@ -218,7 +218,7 @@
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 334 |
 | atTeClickRowFolder | `frontend/src/views/app-tree/events.ts` | 142 |
 | atTeClickRowFile | `frontend/src/views/app-tree/events.ts` | 216 |
-| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 656 |
+| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 662 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |

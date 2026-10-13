@@ -420,6 +420,12 @@ export class AppTree extends WebComponentBase {
     this._unsubs?.forEach((fn) => {
       fn?.();
     });
+    // 代际失效（2026-10 锐评修复）：卸载只解订阅/定时器/监听，**不作废在途代数**——
+    // `_reloadAfterMountSwitch`（`await ClearScanCache()` + `await _load()`，都是慢 IPC）
+    // 或 `_load()` 的续体若在卸载后落地，`stale(gen)` 仍为 false（无人推进 gen），
+    // 会执行 `_renderTree()` 给**已卸载**的 shadow root 重渲染整棵树。同型先例：
+    // app-sidebar 同类漏接（`_guard.invalidate()`）；本调用是守卫生效的唯一前提。
+    this._guard.invalidate();
     if (this._searchTimer) {
       clearTimeout(this._searchTimer);
       this._searchTimer = null;

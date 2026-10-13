@@ -391,6 +391,31 @@ describe("app-tree index 入口生命周期（补位）", () => {
     expect(loader).toHaveBeenLastCalledWith("");
   });
 
+  // 2026-10 锐评修复回归锁：`disconnectedCallback` 漏接 `_guard.invalidate()`——卸载发生在
+  // `_reloadAfterMountSwitch` 的 await 期间（ClearScanCache / _load 都是慢 IPC）时，续体会
+  // 通过代际校验（`stale(gen)` 恒 false：没人推进过 gen）并执行 `_renderTree()`，给**已卸载**
+  // 的 shadow root 重渲染整棵树（幽灵写入）。同型先例：app-sidebar 的同类漏接（已修）。
+  it("在途补载期间卸载 → 迟到结果不重渲染（代际已失效）", async () => {
+    const el = await mountEl();
+    const renderSpy = vi.spyOn(el, "_renderTree");
+    const d = deferred<{ filesRoot: string; entries?: TreeEntry[] }>();
+    loaderImpl = () => d.promise; // 补载挂起
+
+    el.setAttribute("root", RESOURCE_TYPES.MMD); // 触发 _reloadAfterMountSwitch
+    await sleep0(); // 让 await 链进入挂起态
+    renderSpy.mockClear();
+
+    el.remove(); // 卸载发生在在途期间
+    expect(el.isConnected).toBe(false);
+
+    d.resolve({ filesRoot: "/repo", entries: entriesByType[RESOURCE_TYPES.MMD] });
+    await sleep0();
+    await sleep0();
+
+    // 病理（先红）：无 invalidate 时这里会被调用，给游离 root 重渲染
+    expect(renderSpy).not.toHaveBeenCalled();
+  });
+
   it("_entries 非数组（防御）→ 过滤为空渲染空态不崩溃", async () => {
     const el = await mountEl();
     el["_state"].entries = [];

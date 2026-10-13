@@ -36,6 +36,9 @@ auto_fields:
     - formatSize
     - getDefaultKeepIdx
     - GetRepoRootFn
+    - healthBand
+    - HealthBand
+    - healthBandLabel
     - HealthReport
     - initDiagnostics
     - initHealthPanel
@@ -94,6 +97,7 @@ auto_fields:
     - ScanGroup
     - ScanGroupResult
     - ScanTarget
+    - scoreBand
     - sectionHeader
     - singleBenchReadIterations
     - syncPerfBaselineControls

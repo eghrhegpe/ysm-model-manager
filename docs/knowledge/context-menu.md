@@ -5,6 +5,7 @@ tier: architecture
 category: ui
 source_files:
   - frontend/src/views/context-menu/index.ts
+  - frontend/src/views/context-menu/menu-css.ts
   - frontend/src/features/context-menu/context-menus.ts
   - frontend/src/features/context-menu/menu-defs.ts
   - frontend/src/features/context-menu/context-menu-dir-handlers.ts
@@ -31,6 +32,7 @@ auto_fields:
     - MenuCtx
     - MenuDef
     - MenuItemDef
+    - menuCSS
     - refreshUI
     - registerContextMenus
     - registerInstanceOps

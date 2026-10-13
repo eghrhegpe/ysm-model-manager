@@ -5,6 +5,7 @@ tier: leaf
 category: ui
 source_files:
   - frontend/src/views/app-toast/index.ts
+  - frontend/src/views/app-toast/toast-css.ts
   - frontend/src/utils/dom/feedback.ts
   - frontend/src/utils/dom/toast-ms.ts
 auto_fields:
@@ -14,6 +15,7 @@ auto_fields:
     - FlashOptions
     - TOAST_MS
     - ToastType
+    - toastCSS
     - VIEW_TESTIDS
 quick_groups:
   - UI 交互与弹窗

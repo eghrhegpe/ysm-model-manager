@@ -211,7 +211,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| handleContainerClick | `frontend/src/features/maintenance/oldest-models.ts` | 71 |
+| handleContainerClick | `frontend/src/features/maintenance/oldest-models.ts` | 60 |
 | onRecycleListClick | `frontend/src/features/maintenance/recycle-bin.ts` | 216 |
 | bindPreviewClicks | `frontend/src/views/app-content/diagnostics/dedup-render.ts` | 107 |
 | showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 247 |
@@ -408,15 +408,15 @@
 | eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 341 |
 | cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 172 |
 | cmBbBindStarBtns | `frontend/src/views/app-content/site/events.ts` | 326 |
-| show | `frontend/src/views/app-toast/index.ts` | 163 |
-| show | `frontend/src/views/app-toast/index.ts` | 182 |
-| show | `frontend/src/views/app-toast/index.ts` | 191 |
+| show | `frontend/src/views/app-toast/index.ts` | 130 |
+| show | `frontend/src/views/app-toast/index.ts` | 149 |
+| show | `frontend/src/views/app-toast/index.ts` | 158 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
 | registerErrorDiary | `frontend/src/core/error-diary.ts` | 136 |
-| connectedCallback | `frontend/src/views/app-toast/index.ts` | 95 |
+| connectedCallback | `frontend/src/views/app-toast/index.ts` | 62 |
 
 ### `tree:reload`
 

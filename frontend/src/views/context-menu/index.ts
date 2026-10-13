@@ -3,11 +3,11 @@
 // 监听：menu:show({ x, y, items: [{label, icon?, onClick}] })
 import { bus, type MenuItem } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
-import { noAnimationsCSS, wsIconCSS } from "@/utils/dom/css.ts";
 import { deepActiveElement } from "@/utils/dom/deep-active-element.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
 import { esc } from "@/utils/html/html.ts";
 import { resolveIcon } from "@/utils/icon/resolve.ts";
+import { menuCSS } from "./menu-css.ts";
 
 // ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
 // 删除/新增对应 data-testid 须同步本数组；契约测试运行期静态聚合本数组为注册表。
@@ -84,61 +84,11 @@ class ContextMenu extends WebComponentBase {
   }
 
   render(): void {
+    // 样式已迁出至 menu-css.ts（menuCSS）——含 :host / .menu / .item / .divider /
+    // menuPop / itemSlideIn 全部规则与注释，见该文件头。样式串自带 wsIconCSS +
+    // noAnimationsCSS（ADR-015/ADR-238）。
     this._shadow.innerHTML = `
-      <style>
-        :host {
-          position: fixed;
-          z-index: var(--z-popover);
-          display: none;
-          font-family: var(--font-ui);
-          font-size: var(--fs-base);
-        }
-        .menu {
-          background: var(--card);
-          border: 1px solid var(--bd);
-          border-radius:var(--radius-lg);
-          padding:var(--sp-1);
-          min-width: 160px;
-          box-shadow: 0 8px 24px rgba(0,0,0,.5);
-          animation: menuPop .2s cubic-bezier(.34,1.56,.64,1);
-        }
-        .item {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          padding:var(--sp-vh-btn);
-          border-radius: var(--radius-sm);
-          font-size: var(--fs-btn-secondary);
-          color: var(--txt);
-          cursor: pointer;
-          transition: background var(--tr-fast);
-        }
-        .item:hover { background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--accent); }
-        .item.danger:hover { background: var(--status-error); color: var(--bg); }
-        .item .icon { font-size: var(--fs-base); width: 16px; text-align: center; }
-        /* 标题行（header:true）：纯展示，不是可激活项。复用 .item 的排版（flex/gap/
-           padding）但抹掉一切「可点」信号——否则鼠标悬停会高亮、光标变手型，
-           用户点下去却什么也不发生（2026-09 锐评实测：instance/batch 首行、
-           workshop 四行信息全是这种假可点行）。选择器与 .item:hover 同特异度，
-           靠源序在后覆盖，勿上移。 */
-        .item-header { cursor: default; color: var(--muted); font-size: var(--fs-xs); }
-        .item-header:hover { background: none; color: var(--muted); }
-        .divider {
-          border: none;
-          border-top: 1px solid var(--bd);
-          margin: 3px 8px;
-        }
-        @keyframes menuPop { 0% { opacity: 0; transform: scale(.85) translateY(-6px); } 60% { opacity: 1; transform: scale(1.02) translateY(0); } 100% { transform: scale(1); } }
-        @keyframes itemSlideIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }
-        /* .no-animations 通配桥（ADR-015 §2.4 约束 1；规则本体 = @/utils/dom/css.ts）
-           覆盖 .menu（menuPop）与菜单项内联 style 的 itemSlideIn（!important 作者声明
-           压过普通内联声明）。 */
-        /* SVG 图标尺寸（ADR-238）：resolveIcon 喂入 .ws-icon SVG，须就地 adopt——
-           CSS 不穿透 shadow 边界，漏带则图标退回 24×24 viewBox 默认尺寸（实测坑，
-           同范式 app-nav/tpl.ts:126、content-layout.ts:120） */
-        ${wsIconCSS}
-        ${noAnimationsCSS}
-      </style>
+      <style>${menuCSS}</style>
       <div class="menu" id="menu" role="menu"></div>
     `;
   }

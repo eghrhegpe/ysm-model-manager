@@ -254,9 +254,12 @@ async function reload(vm: AppTree): Promise<void> {
   try {
     const App = await backendGetApp();
     if (App.ClearScanCache) await App.ClearScanCache();
-    import("@/features/community/community-data.ts")
-      .then((m) => m.clearAllCommunityCache())
-      .catch((e) => logWarn("app-tree", "clearAllCommunityCache:", e));
+    // 社区缓存失效走 bus（2026-10-13 解耦）：原动态 import community-data.ts 直调
+    // clearAllCommunityCache 是 61b6bbac8 时代的同步联动——订阅侧 app-content 已注册
+    // community:clear-cache 通道（download-queue 同款范式，ADR-039），本处直调既让 19 个
+    // reload 发射源（改设置/去重/同步等）陪绑清 30min 站点缓存，又构成 views → features
+    // 的越层 import。emit 无人订阅时无害（bus 单例，app-content 挂载即注册）。
+    bus.emit("community:clear-cache");
   } catch (e) {
     logWarn("app-tree", "ClearScanCache:", e);
   }

@@ -19,8 +19,6 @@ import type { AppTree } from "./index.ts";
 import type { TreeEntry } from "./loader.ts";
 import { getVsRows, type TreeRenderCtx } from "./render.ts";
 
-const ENABLE_MULTI_SELECT = true;
-
 // ===== 类型提级：AtTeCtx 收纳上下文 =====
 // 注：原 disposed 字段已删——ctx 为闭包局部变量，无处可置 true，5 处 `if (ctx.disposed)
 // return` 早退分支是死代码（P1.4 死字段清理）。
@@ -308,11 +306,7 @@ function atTeBindContextMenu(ctx: AtTeCtx): () => void {
       const selectedPaths = getVsRows(ctx.treeRenderCtx, container)
         .filter((r) => r.type === "file" && vm.selectState.keys.has(r.key))
         .map((r) => r.key);
-      if (
-        ENABLE_MULTI_SELECT &&
-        selectedPaths.length > 0 &&
-        selectedPaths.includes(fullPath || "")
-      ) {
+      if (selectedPaths.length > 0 && selectedPaths.includes(fullPath || "")) {
         bus.emit("ctx:show", {
           x: e.clientX,
           y: e.clientY,

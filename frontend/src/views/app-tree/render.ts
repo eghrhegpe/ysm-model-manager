@@ -629,42 +629,30 @@ export function renderTree(
   const rowH = mode === "list" ? rowHeightList() : rowHeightGrid();
   renderSlice(ctx, container, rows, rowH);
 
+  // 「从 vsStates 取最新 rows/mode → 算行高 → renderSlice」三处回调（rAF / scroll /
+  // ResizeObserver）同构，收成单一 redraw 闭包——原三份手抄即陷阱 #25「判据手抄复发」
+  // 的渲染版：改行高判定或取值口径时要记得改三处。
+  const redraw = (): void => {
+    const s2 = vsOf(ctx, container);
+    const r = s2.rows;
+    const m = s2.mode;
+    if (!r?.length) return;
+    renderSlice(ctx, container, r, m === "list" ? rowHeightList() : rowHeightGrid());
+  };
+
   // 首次渲染容器可能还没布局 → 等 layout 后重新计算可见范围
   if (container.clientHeight === 0) {
-    requestAnimationFrame(() => {
-      const s2 = vsOf(ctx, container);
-      if (s2.rows && s2.mode) {
-        const m = s2.mode;
-        const rh = m === "list" ? rowHeightList() : rowHeightGrid();
-        renderSlice(ctx, container, s2.rows, rh);
-      }
-    });
+    requestAnimationFrame(redraw);
   }
 
   // 安装滚动同步（只装一次）
   if (!st.cleanup) {
-    st.cleanup = installScrollSync(container, () => {
-      const s2 = vsOf(ctx, container);
-      const r = s2.rows;
-      const m = s2.mode;
-      if (r?.length) {
-        const rh = m === "list" ? rowHeightList() : rowHeightGrid();
-        renderSlice(ctx, container, r, rh);
-      }
-    });
+    st.cleanup = installScrollSync(container, redraw);
   }
 
   // 容器尺寸变化时重新计算可见范围（侧边栏折叠/窗口 resize）
   if (!st.resizeObserver) {
-    st.resizeObserver = new ResizeObserver(() => {
-      const s2 = vsOf(ctx, container);
-      const r = s2.rows;
-      const m = s2.mode;
-      if (r?.length) {
-        const rh = m === "list" ? rowHeightList() : rowHeightGrid();
-        renderSlice(ctx, container, r, rh);
-      }
-    });
+    st.resizeObserver = new ResizeObserver(redraw);
     st.resizeObserver.observe(container);
   }
 }

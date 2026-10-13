@@ -560,8 +560,15 @@ const KNOWN_DEAD_CSS_EXEMPT = new Set<string>([
   "preview-ic--rot",
   "preview-ic--panel-hide",
   "preview-ic--panel-show",
-  // cr-tag-*：site/render.ts `class="cr-tag cr-tag-${esc(kind)}"` 动态拼接（kind ∈ game/vup/oc…）
-  "cr-tag-game",
+  // cr-tag-*：site/render.ts|createCrCard `class="cr-tag cr-tag-${esc(tagRole)}"` 与
+  // site/events.ts|cmCrBuildDetailHtml 同款动态拼接，tagRole ∈ getTagFromRole(role) 返回值
+  // = role 枚举五种（creator/official/vup/oc/repo，见 site/workshop-data.ts）。静态语料里
+  // 必然搜不到字面量，故五者全部登记（creators/official/repo/vup/oc 缺一即会误报；
+  // cr-tag-game 为已退役的历史身份，规则已删故不需登记）。
+  "cr-tag-creator",
+  "cr-tag-official",
+  "cr-tag-repo",
+  "cr-tag-vup",
   "cr-tag-oc",
 ]);
 

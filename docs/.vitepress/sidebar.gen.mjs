@@ -254,6 +254,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-337：创作者 type 字段拆分：站点归属与本地资源类型分字段，消除幻影平台徽章与本地作者隐形",
+        "link": "/adr/architecture/ADR-337-creator-type-site-vs-rtype"
+      },
+      {
         "text": "ADR-336：仓库树内拖拽移动（tree 内部 move）替代右键弹窗整理",
         "link": "/adr/architecture/ADR-336-tree-internal-drag-move"
       },

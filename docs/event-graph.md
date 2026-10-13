@@ -100,9 +100,9 @@
 | cmReBindContextMenu | `frontend/src/features/community/repo-events-bindings.ts` | 126 |
 | showMenu | `frontend/src/features/context-menu/context-menus.setup.ts` | 164 |
 | bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 154 |
-| atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 289 |
-| atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 311 |
-| atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 323 |
+| atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 288 |
+| atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 310 |
+| atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 322 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -217,8 +217,8 @@
 | bindPreviewClicks | `frontend/src/views/app-content/diagnostics/dedup-render.ts` | 107 |
 | showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 298 |
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 386 |
-| atTeClickRowFolder | `frontend/src/views/app-tree/events.ts` | 171 |
-| atTeClickRowFile | `frontend/src/views/app-tree/events.ts` | 245 |
+| atTeClickRowFolder | `frontend/src/views/app-tree/events.ts` | 170 |
+| atTeClickRowFile | `frontend/src/views/app-tree/events.ts` | 244 |
 | _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 704 |
 
 **订阅方（on）：**
@@ -328,7 +328,7 @@
 | registerInstanceOps | `frontend/src/features/pack-ops/instance-ops.ts` | 135 |
 | registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 55 |
 | runDownloadMissing | `frontend/src/features/sync/sync.ts` | 102 |
-| runSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 212 |
+| runSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 183 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 188 |
 | relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 230 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 93 |
@@ -340,9 +340,9 @@
 | runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 94 |
 | atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 121 |
 | atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 182 |
-| atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 116 |
-| atTeBindRenameInput | `frontend/src/views/app-tree/events.ts` | 388 |
-| _executeTreeMove | `frontend/src/views/app-tree/index.ts` | 772 |
+| atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 115 |
+| atTeBindRenameInput | `frontend/src/views/app-tree/events.ts` | 387 |
+| _executeTreeMove | `frontend/src/views/app-tree/index.ts` | 771 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -374,7 +374,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| registerSync | `frontend/src/features/sync/sync.ts` | 249 |
+| registerSync | `frontend/src/features/sync/sync.ts` | 223 |
 
 ### `sync:toggle:status`
 
@@ -383,13 +383,13 @@
 |------|------|----|
 | runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 306 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 114 |
-| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 491 |
+| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 490 |
 | _executeTreeMove | `frontend/src/views/app-tree/index.ts` | 770 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| registerSync | `frontend/src/features/sync/sync.ts` | 251 |
+| registerSync | `frontend/src/features/sync/sync.ts` | 225 |
 
 ### `toast:show`
 
@@ -435,7 +435,7 @@
 | onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 201 |
 | registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 54 |
 | handleSyncDownloadMissing | `frontend/src/features/sync/sync.ts` | 133 |
-| handleSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 238 |
+| handleSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 212 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 189 |
 | applyFsaState | `frontend/src/views/app-content/settings/init.ts` | 389 |
 | onWebRepoAuthClick | `frontend/src/views/app-content/settings/init.ts` | 417 |

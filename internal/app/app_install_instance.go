@@ -239,6 +239,79 @@ func (a *App) SyncModelToggleStatus(instanceCustomDir, filesRoot string) (int, i
 	return n1, n2, err
 }
 
+// toggleSyncTargets 启禁同步要覆盖的 (rtype, subDir) 目标（ADR-339）：
+// rtype 空 = 所有 dirLevelSync 类型；非空 = 仅该类型（非 dirLevelSync 则为空）。
+// 排除 resourcepack/shaderpack/fbx（dirLevelSync:false——游戏用 config 列表启停、不认
+// .disabled，同步过去无意义）。单一事实源 = registry.IsDirLevelSync（resource_types.json 派生），
+// 不手写类型清单快照（清单随注册表演化）。
+func toggleSyncTargets(rtype string) []registry.SubDirEntry {
+	var out []registry.SubDirEntry
+	for _, d := range registry.AllSubDirs() {
+		if !registry.IsDirLevelSync(d.RType) {
+			continue
+		}
+		if rtype != "" && d.RType != rtype {
+			continue
+		}
+		out = append(out, d)
+	}
+	return out
+}
+
+// SyncModelToggleStatusForType 全类型 .disabled 启禁同步（ADR-339）：把「刚 toggle 的类型」的
+// repo↔pack 禁用态对齐，扩到所有 dirLevelSync 类型（ysm/mmd 各子目录/maid/blueprint/litematic）。
+// 类型枚举 + 实例目录解析全在 Go（守「前端只读不判」红线）；rtype 空 = 全部 dirLevelSync。
+// 复用 ysmsync.SyncToggleStatus（与 SyncModelToggleStatus 同一核心），全类型循环范式同源
+// RelinkAllInstanceResources（FindInstDir + GetRepoRoot + 无目录/无仓根即 skip），末统一失效缓存。
+// 返回累计（禁用数, 启用数）+ 首个错误（部分失败不中断，其余照常累加）。
+func (a *App) SyncModelToggleStatusForType(rtype string) (int, int, error) {
+	cfg := a.LoadAppConfig()
+	if err := requireMcRoot(cfg); err != nil {
+		return 0, 0, err
+	}
+	instances := a.ListVersionInstances(cfg.McRoot)
+	if len(instances) == 0 {
+		return 0, 0, nil
+	}
+	targets := toggleSyncTargets(rtype)
+	if len(targets) == 0 {
+		return 0, 0, nil // 指定了非 dirLevelSync 类型（如 resourcepack）→ 无目标
+	}
+	totalDisable, totalEnable := 0, 0
+	changed := false
+	var firstErr error
+	for _, ins := range instances {
+		if !ins.Exists {
+			continue
+		}
+		for _, d := range targets {
+			instDir := registry.FindInstDir(ins.VersionDir, d.SubDir, d.RType)
+			if _, err := os.Stat(instDir); os.IsNotExist(err) {
+				continue // 该实例无此类型目录 → 跳过（与 RelinkAllInstanceResources 同口径）
+			}
+			globalDir, _ := a.GetRepoRoot(d.RType)
+			if globalDir == "" {
+				continue
+			}
+			nd, ne, err := ysmsync.SyncToggleStatus(instDir, globalDir, a.ScanModelEntries)
+			totalDisable += nd
+			totalEnable += ne
+			if nd+ne > 0 {
+				changed = true
+			}
+			if err != nil && firstErr == nil {
+				firstErr = err
+			}
+		}
+	}
+	if changed {
+		// 启禁改了实例侧文件名，统一失效同步结果/扫盘缓存（与 SyncModelToggleStatus 同口径，防陈旧态复活）
+		instance.InvalidateSyncItemsCache()
+		ysmsync.InvalidateSyncScanCaches()
+	}
+	return totalDisable, totalEnable, firstErr
+}
+
 // relinkDir 重新应用链接模式到单个目录
 // rtype 用于需要文件夹级重新链接的类型（ysm/EntityPlayer 等）
 // relinkDir 按哈希比对重链接实例目录（执行逻辑下沉 go/sync）

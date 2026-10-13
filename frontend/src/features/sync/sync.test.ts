@@ -25,6 +25,7 @@ const mocks = {
   GetRepoRoot: appFn("GetRepoRoot"),
   InvalidateScanCache: appFn("InvalidateScanCache"),
   SyncModelToggleStatus: appFn("SyncModelToggleStatus"),
+  SyncModelToggleStatusForType: appFn("SyncModelToggleStatusForType"),
   AddImportLog: appFn("AddImportLog"),
 };
 
@@ -58,6 +59,7 @@ beforeEach(() => {
   mocks.InstallResourceToInstance.mockResolvedValue(undefined);
   mocks.InvalidateScanCache.mockResolvedValue(undefined);
   mocks.SyncModelToggleStatus.mockResolvedValue([2, 1]);
+  mocks.SyncModelToggleStatusForType.mockResolvedValue([4, 2]);
   mocks.AddImportLog.mockResolvedValue(undefined);
 });
 
@@ -255,19 +257,21 @@ describe("registerSync — sync:download:missing", () => {
 });
 
 describe("registerSync — sync:toggle:status", () => {
-  it("成功路径：聚合禁用/启用数，发 AddImportLog + stats:refresh", async () => {
+  // ADR-339：前端只读不判——类型枚举/实例目录解析下沉 Go（SyncModelToggleStatusForType），
+  // 前端只透传 rtype + 消费聚合结果（[禁用数, 启用数]）。
+  it("成功路径（带 rtype）：调 SyncModelToggleStatusForType，发 AddImportLog + stats:refresh", async () => {
     await register();
     const { toasts, refreshEvents } = spyEvents();
 
-    bus.emit("sync:toggle:status");
+    bus.emit("sync:toggle:status", { rtype: "ysm" });
     await flushPromises();
     await flushPromises();
 
-    expect(mocks.SyncModelToggleStatus).toHaveBeenCalledTimes(2); // 两个实例
+    expect(mocks.SyncModelToggleStatusForType).toHaveBeenCalledWith("ysm");
     expect(mocks.AddImportLog).toHaveBeenCalledWith(
       "sync-status",
       expect.stringContaining("同步状态"),
-      MOCK_DATA.GetRepoRoot,
+      "",
       0,
       "success",
       expect.stringContaining("禁用 4 启用 2"),
@@ -276,73 +280,58 @@ describe("registerSync — sync:toggle:status", () => {
     expect(refreshEvents.length).toBeGreaterThan(0);
   });
 
-  it("无实例 → info toast '没有找到整合包'", async () => {
-    mocks.ListVersionInstances.mockResolvedValue([]);
+  it("缺省 rtype → 传空串（Go 侧覆盖全部 dirLevelSync 类型）", async () => {
     await register();
-    const { toasts } = spyEvents();
+    const { refreshEvents } = spyEvents();
 
-    bus.emit("sync:toggle:status");
+    bus.emit("sync:toggle:status", {});
+    await flushPromises();
     await flushPromises();
 
-    expect(toasts.some((t) => t.msg === "没有找到整合包" && t.type === "info")).toBe(true);
-    expect(mocks.SyncModelToggleStatus).not.toHaveBeenCalled();
+    expect(mocks.SyncModelToggleStatusForType).toHaveBeenCalledWith("");
+    expect(refreshEvents.length).toBeGreaterThan(0);
   });
 
-  it("单个实例同步失败 → 聚合错误但不中断", async () => {
-    mocks.SyncModelToggleStatus
-      .mockResolvedValueOnce([1, 0])
-      .mockRejectedValueOnce(new Error("locked"));
+  it("同步失败（binding reject）→ 写「同步失败」日志 + error toast + tree:reload", async () => {
+    mocks.SyncModelToggleStatusForType.mockRejectedValueOnce(new Error("locked"));
     await register();
-    const { toasts } = spyEvents();
+    const { toasts, reloadEvents } = spyEvents();
 
-    bus.emit("sync:toggle:status");
+    bus.emit("sync:toggle:status", { rtype: "ysm" });
     await flushPromises();
     await flushPromises();
 
     expect(mocks.AddImportLog).toHaveBeenCalledWith(
       "sync-status",
-      expect.any(String),
-      MOCK_DATA.GetRepoRoot,
+      "同步失败",
+      "",
       0,
       "failed",
       expect.stringContaining("locked"),
     );
-    // P3 修复（审核发现）：有成功项（禁用 1 项）但存在错误 → toast 应为 warn，
-    // 与 AddImportLog 的 "failed" 一致（旧断言固化了「有错误仍报 success」的矛盾行为）
-    expect(toasts.some((t) => t.type === "warn" && t.msg.includes("同步完成"))).toBe(true);
-  });
-
-  it("repoRoot/mcRoot 未配置 → warn toast", async () => {
-    mocks.GetRepoRoot.mockResolvedValue("");
-    await register();
-    const { toasts } = spyEvents();
-
-    bus.emit("sync:toggle:status");
-    await flushPromises();
-
-    expect(toasts.some((t) => t.msg === "请先配置目录" && t.type === "warn")).toBe(true);
+    expect(toasts.some((t) => t.type === "error")).toBe(true);
+    expect(reloadEvents.length).toBeGreaterThan(0);
   });
 
   it("并发守卫：busy 命中时发 info toast 提示，不静默吞事件", async () => {
     await register();
     const { toasts } = spyEvents();
 
-    // 第一个请求挂起（SyncModelToggleStatus 未立即 resolve）
+    // 第一个请求挂起（SyncModelToggleStatusForType 未立即 resolve）
     let resolveToggle: () => void = () => {};
-    mocks.SyncModelToggleStatus.mockImplementationOnce(
+    mocks.SyncModelToggleStatusForType.mockImplementationOnce(
       () => new Promise<void>((r) => { resolveToggle = r; }),
     );
-    bus.emit("sync:toggle:status");
+    bus.emit("sync:toggle:status", { rtype: "ysm" });
     await flushPromises();
 
-    // 第二次触发（此时 busy=true）→ 应发提示 toast 而非静默 return
-    // 挂起的是第一个实例的调用，循环阻塞中；记录当前调用数，第二次 emit 不应新增
-    const callsBeforeSecond = mocks.SyncModelToggleStatus.mock.calls.length;
-    bus.emit("sync:toggle:status");
+    // 第二次触发（此时 busy=true）→ 应发提示 toast 而非静默 return；记录调用数不新增
+    const callsBeforeSecond = mocks.SyncModelToggleStatusForType.mock.calls.length;
+    bus.emit("sync:toggle:status", { rtype: "ysm" });
     await flushPromises();
 
     expect(toasts.some((t) => t.msg === "同步进行中，已跳过本次" && t.type === "info")).toBe(true);
-    expect(mocks.SyncModelToggleStatus.mock.calls.length).toBe(callsBeforeSecond);
+    expect(mocks.SyncModelToggleStatusForType.mock.calls.length).toBe(callsBeforeSecond);
 
     resolveToggle();
     await flushPromises();

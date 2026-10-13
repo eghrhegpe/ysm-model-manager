@@ -366,6 +366,7 @@ export const MOCK_DATA = {
   SetResourceRoot: undefined,
   SetSessionFilesRoot: undefined,
   SyncModelToggleStatus: undefined,
+  SyncModelToggleStatusForType: undefined,
   SyncResources: undefined,
   ValidateMinecraftDir: undefined,
   ValidateWorkshopSites: undefined,

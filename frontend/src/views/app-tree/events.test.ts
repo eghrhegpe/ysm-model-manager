@@ -395,19 +395,20 @@ describe("click 复选框（单文件 ToggleEnable）", () => {
     expect(ToggleEnableMock).toHaveBeenCalledWith("/repo/a.ysm");
     expect(h.vm._load).toHaveBeenCalledOnce();
     expect(h.vm._renderTree).toHaveBeenCalledOnce();
-    expect(emitted("sync:toggle:status").length).toBe(1); // rtype=ysm 才发
+    expect(emitted("sync:toggle:status")).toEqual([{ rtype: "ysm" }]); // ADR-339：带当前树类型发射
     expect(emitted("stats:refresh").length).toBe(1);
     expect(h.vm.toggleBusy).toBe(false);
   });
 
-  it("非 YSM rtype → 不发 sync:toggle:status", async () => {
+  it("非 YSM rtype → 仍发（带 rtype=mmd），Go 侧按 dirLevelSync 过滤", async () => {
+    // ADR-339：前端总是带当前树类型发射（守「前端只读不判」），是否真同步由 Go 决定
     const h = makeHarness();
     h.vm.rootAttr = "mmd";
     h.container.appendChild(fileRow("/repo/a.pmx", "a.pmx"));
     bindTreeEvents(h.container, h.vm);
     click(h.container.querySelector(".fl .ck") as Element);
     await flush();
-    expect(emitted("sync:toggle:status")).toEqual([]);
+    expect(emitted("sync:toggle:status")).toEqual([{ rtype: "mmd" }]);
     expect(emitted("stats:refresh").length).toBe(1);
   });
 

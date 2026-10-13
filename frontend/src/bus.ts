@@ -113,8 +113,10 @@ export interface BusEvents {
   "repo:search-creator": string;
   // biome-ignore lint/suspicious/noConfusingVoidType: 事件表 void 表「无 payload」,bus 契约测试依赖该语义;undefined 触发 missing_payload,2026-09 裁决保留
   "repo:focus-search": void; // 仓库搜索框焦点请求（ADR-223：nav→tree 跨视图替 DOM 穿透轮询）
-  // biome-ignore lint/suspicious/noConfusingVoidType: 事件表 void 表「无 payload」,bus 契约测试依赖该语义;undefined 触发 missing_payload,2026-09 裁决保留
-  "sync:toggle:status": void;
+  // ADR-339：载荷 = 刚 toggle 的资源类型（仅 dirLevelSync 类型有意义；缺省 = 全部）。
+  // 消费方 features/sync runSyncToggleStatus 据此调 SyncModelToggleStatusForType，只同步
+  // 该类型的 repo↔pack .disabled 态（避免一次 toggle 白扫全部类型 × 全部实例）。
+  "sync:toggle:status": { rtype?: string };
   "sync:download:missing": {
     instanceName?: string;
     /** 批量推送：一次事件覆盖多个整合包（替代逐包发事件，避免 O(包×类型) 次全量扫描） */
@@ -174,7 +176,6 @@ const VOID_EVENTS = [
   "stats:refresh",
   "tree:reload",
   "community:clear-cache",
-  "sync:toggle:status",
   "repo:focus-search",
 ] as const satisfies readonly VoidEventName[];
 

@@ -302,9 +302,8 @@ async function runBatchToggle(
     }
     if (r.fulfilled.length > 0) {
       await reload(vm);
-      if ((vm.snapshot.rootAttr || RESOURCE_TYPES.YSM) === RESOURCE_TYPES.YSM) {
-        bus.emit("sync:toggle:status");
-      }
+      // ADR-339：带当前树类型发射，Go 侧按 dirLevelSync 过滤同步（非 dirLevelSync 自动 no-op）
+      bus.emit("sync:toggle:status", { rtype: vm.snapshot.rootAttr || RESOURCE_TYPES.YSM });
     }
     toast(
       `${opts.label}: ${r.fulfilled.length} ${t("tree.success")}, ${r.rejected.length} ${t("tree.failed")}`,

@@ -1332,6 +1332,18 @@ export function SyncModelToggleStatus(instanceCustomDir: string, filesRoot: stri
 }
 
 /**
+ * SyncModelToggleStatusForType 全类型 .disabled 启禁同步（ADR-339）：把「刚 toggle 的类型」的
+ * repo↔pack 禁用态对齐，扩到所有 dirLevelSync 类型（ysm/mmd 各子目录/maid/blueprint/litematic）。
+ * 类型枚举 + 实例目录解析全在 Go（守「前端只读不判」红线）；rtype 空 = 全部 dirLevelSync。
+ * 复用 ysmsync.SyncToggleStatus（与 SyncModelToggleStatus 同一核心），全类型循环范式同源
+ * RelinkAllInstanceResources（FindInstDir + GetRepoRoot + 无目录/无仓根即 skip），末统一失效缓存。
+ * 返回累计（禁用数, 启用数）+ 首个错误（部分失败不中断，其余照常累加）。
+ */
+export function SyncModelToggleStatusForType(rtype: string): $CancellablePromise<[number, number]> {
+    return $Call.ByID(2454212466, rtype);
+}
+
+/**
  * SyncResources 获取全局 ↔ 整合包的资源同步状态
  */
 export function SyncResources(rtype: string, instanceName: string): $CancellablePromise<types$0.ResourceSyncResult> {

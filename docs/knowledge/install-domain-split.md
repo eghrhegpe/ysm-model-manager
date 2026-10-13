@@ -33,6 +33,7 @@ auto_fields:
     - App.RestoreFromRecycle
     - App.SyncCustomToRepo
     - App.SyncModelToggleStatus
+    - App.SyncModelToggleStatusForType
     - App.SyncResources
 use_when:
   - internal/app 再切分或迁移 App god-object 字段/方法时

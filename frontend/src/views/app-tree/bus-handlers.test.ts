@@ -168,7 +168,7 @@ function makeVM(entries: TreeEntry[] = []): VM {
 // bus 事件收集
 const toasts: Array<{ msg: string; type: string }> = [];
 const statsRefreshed: Array<boolean> = [];
-const syncToggles: Array<boolean> = [];
+const syncToggles: Array<{ rtype?: string }> = [];
 const offs: Array<() => void> = [];
 let unsubs: Array<() => void> = [];
 
@@ -180,7 +180,7 @@ beforeEach(() => {
   offs.length = 0;
   offs.push(bus.on("toast:show", (p) => toasts.push(p as { msg: string; type: string })));
   offs.push(bus.on("stats:refresh", () => statsRefreshed.push(true)));
-  offs.push(bus.on("sync:toggle:status", () => syncToggles.push(true)));
+  offs.push(bus.on("sync:toggle:status", (p) => syncToggles.push(p)));
 
   vi.clearAllMocks();
   SelectDirectoryMock.mockResolvedValue("/pick/x");
@@ -316,7 +316,7 @@ describe("batchToggleAll — 批量启用/禁用（ADR-298 D2：直调，不再�
     expect(peak, "波次超限/欠批（BATCH 常量回归）").toBe(8);
   });
 
-  it("YSM 树 batch toggle 成功 → 发 sync:toggle:status（YSM 同步链）", async () => {
+  it("YSM 树 batch toggle 成功 → 发 sync:toggle:status（带 rtype=ysm）", async () => {
     const vm = makeVM([makeEntry({ fullPath: "/repo/a.ysm", banned: true })]);
     vm.setRootAttr("ysm"); // YSM 树（默认）
     await bind(vm);
@@ -326,12 +326,13 @@ describe("batchToggleAll — 批量启用/禁用（ADR-298 D2：直调，不再�
 
     expect(ToggleEnableMock).toHaveBeenCalledTimes(1);
     expect(syncToggles.length).toBe(1);
+    expect(syncToggles[0]).toEqual({ rtype: "ysm" });
   });
 
-  it("非 YSM 树（resourcepack）batch toggle 成功 → 不发 sync:toggle:status", async () => {
-    // feef02b3 P3 审核回归：SyncModelToggleStatus 锁 YSM 仓库根（requireMcRoot +
-    // GetRepoRoot(YSM)），非 YSM 树 toggle 走 McRoot/CustomRoots，触发只会弹
-    // 「请先配置目录」或对 YSM 做无谓 WalkDir+Rename——必须按当前树类型门控。
+  it("非 YSM 树（resourcepack）batch toggle 成功 → 仍发（带 rtype=resourcepack），Go 侧按 dirLevelSync 过滤", async () => {
+    // ADR-339：前端不再按类型门控（守「前端只读不判」）——总是带当前树类型发射，
+    // 是否真正同步由 Go 的 SyncModelToggleStatusForType 按 IsDirLevelSync 决定
+    //（resourcepack 非 dirLevelSync → 目标集为空 → no-op）。原「非 YSM 不发」的门控已退役。
     const vm = makeVM([makeEntry({ fullPath: "/repo/pack.zip", banned: true })]);
     vm.setRootAttr("resourcepack");
     await bind(vm);
@@ -340,7 +341,8 @@ describe("batchToggleAll — 批量启用/禁用（ADR-298 D2：直调，不再�
     await new Promise((r) => setTimeout(r, 0));
 
     expect(ToggleEnableMock).toHaveBeenCalledTimes(1);
-    expect(syncToggles.length).toBe(0);
+    expect(syncToggles.length).toBe(1);
+    expect(syncToggles[0]).toEqual({ rtype: "resourcepack" });
   });
 });
 

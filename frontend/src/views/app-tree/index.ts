@@ -766,9 +766,8 @@ export class AppTree extends WebComponentBase {
       const gen = this._guard.current;
       await this._load();
       if (!this._guard.stale(gen)) this._renderTree();
-      if ((this._state.rootAttr || RESOURCE_TYPES.YSM) === RESOURCE_TYPES.YSM) {
-        bus.emit("sync:toggle:status");
-      }
+      // ADR-339：带当前树类型发射，Go 侧按 dirLevelSync 过滤同步（非 dirLevelSync 自动 no-op）
+      bus.emit("sync:toggle:status", { rtype: this._state.rootAttr || RESOURCE_TYPES.YSM });
       bus.emit("stats:refresh");
       // 选中态清空：移动后旧路径失效（与 rename/recycle 链同口径，防对已不存在路径批量误删）
       this._state.selectState.keys.clear();

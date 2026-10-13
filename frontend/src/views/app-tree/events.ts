@@ -110,9 +110,8 @@ function atTeBindSelCheckboxes(ctx: AtTeCtx, e: MouseEvent, target: HTMLElement)
         await vm._load();
         if (vm._guard.stale(gen)) return;
         vm._renderTree();
-        if (atTeGetRtype(vm) === RESOURCE_TYPES.YSM) {
-          bus.emit("sync:toggle:status");
-        }
+        // ADR-339：带当前树类型发射，Go 侧按 dirLevelSync 过滤同步（非 dirLevelSync 自动 no-op）
+        bus.emit("sync:toggle:status", { rtype: atTeGetRtype(vm) });
         bus.emit("stats:refresh");
       })
       .catch((err) => {
@@ -487,9 +486,8 @@ async function toggleFolderBatch(fhEl: HTMLElement, vm: AppTree): Promise<void> 
       // 命中（sync.ts 入口拦）时 YSM 也会断；本地重渲走 buildCache 快路径
       if (vm._guard.stale(gen)) return;
       vm._renderTree();
-      if ((vm.snapshot.rootAttr || RESOURCE_TYPES.YSM) === RESOURCE_TYPES.YSM) {
-        bus.emit("sync:toggle:status");
-      }
+      // ADR-339：带当前树类型发射，Go 侧按 dirLevelSync 过滤同步（非 dirLevelSync 自动 no-op）
+      bus.emit("sync:toggle:status", { rtype: vm.snapshot.rootAttr || RESOURCE_TYPES.YSM });
     }
     toast(
       t("tree.folderToggleResult", {

@@ -231,6 +231,10 @@ export const autoSidebar = [
         "link": "/audit-env-review"
       },
       {
+        "text": "模型仓库功能锐评（2026-10-13）",
+        "link": "/audit-repository-critique-2026-10-13"
+      },
+      {
         "text": "CLI 命令参考",
         "link": "/cli-commands"
       },
@@ -253,6 +257,10 @@ export const autoSidebar = [
     "link": "/adr/",
     "collapsed": true,
     "items": [
+      {
+        "text": "ADR-339：全类型 .disabled 启禁同步（大一统 repo↔pack 一致性）",
+        "link": "/adr/architecture/ADR-339-alltype-toggle-sync"
+      },
       {
         "text": "ADR-338：文档体系减负：分级连带 + 知识卡域合并 + ADR 增量门槛（62% 连带率的治理）",
         "link": "/adr/architecture/ADR-338-docs-burden-reduction"

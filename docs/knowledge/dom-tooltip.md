@@ -29,6 +29,15 @@ pitfalls:
   - 3D overlay 里用原生 title → 延迟 ~1s、样式不可控；预览控制层一律经 tooltip.ts
   - tooltip 不监听跨 Shadow DOM → FAB 按钮无法接 tooltip；必须经 document.body 挂载
   - 原生 title 的合法性看语义——动作说明型走本组件，值/状态说明型（截断全文、禁用原因）原生 title 正当，别机械地把所有 title 都改掉
+invariant_anchors:
+  # 入口与单例（2026-10 补）：正文的「动作说明型提示走本组件」「同一时刻至多一个可见」两条
+  # 契约此前**只散在散文、零机器锚**——本卡正文曾静默漂移（声称 9 处调用点，实测 0 处）
+  # 而 check-knowledge-drift 看不见正文。升格为锚后入口失名即 ERROR（判据见
+  # 知识卡 `redline_enforcement_grade` 的「正文断言锚化判据」节）。
+  - frontend/src/utils/dom/tooltip.ts|attachTooltip
+  - frontend/src/utils/dom/tooltip.ts|createTooltipManager
+  # 可达性契约：aria-label 承担语义、title 仅作视觉提示——tooltip.ts 摘除原生 title 的落点
+  - frontend/src/utils/dom/tooltip.ts|promoteTitle
 
 use_when:
   - tooltip

@@ -123,6 +123,25 @@ D | 184 | ui-components（无收口） | 否 | `glob frontend/src/**/ui-componen
 
 范围边界（如实登记，非执法漏洞）：R14 只圈 `preview-3d/menu/`——`infra/preview-shell.ts` 等域外裸串受 check-layering **R9 方向闸**保护性隔离（infra→menu 运行时 import 被禁，先例全为 `import type`，收编需契约下沉或 R9 拍板批）；全仓其余 15 处手写 role 属他域存量，扩闸前需分档。
 
+## 正文断言的「锚化」判据（2026-10 补：`invariant_anchors` 该何时加）
+
+本卡的 A/B/C/D 分档同样适用于**知识卡正文的行为断言**——它们与红线是同一物种：都是「有人据它做决策」的声明，区别只在**有没有机器锚**。已有两类实证漂移：
+
+- `preview-env-state.md`：正文声称「两个命名入口」含 `applyPostProcDefaults`，该符号已被 ADR-250 删除，**无锚故静默漂移 3 周**——升格为锚后入口失名即 ERROR 阻断。
+- `dom-tooltip.md`：正文声称 app-preview 有「9 处 `promoteTitleIfPresent`」，实测**全仓零命中**（调用者已随 ADR-253 D7 拆除）。`check-knowledge-drift` 只验 frontmatter 的符号/路径**存在性**，看不见正文明细，故同样静默。
+
+**判据（满足即应加锚，未满足则正文散文足够）**：
+
+| 正文断言形态 | 机器可验吗 | 处置 |
+|---|---|---|
+| 点名了具体**符号**（函数/类/常量）作为入口或承载点 | 可验（存在性） | **加 `invariant_anchors`**（`文件\|符号`）——失名即 ERROR |
+| 断言**计数/清单**（「N 处调用点」「共 M 个入口」） | 可验（可 grep 复核） | 加锚点名**代表性符号**，或改写为不变量口径（见下） |
+| 纯**策略/判据**（「禁止用 X」「Y 优先」） | 不可验 | 保持散文；**但必须写清适用边界**，勿写成全仓禁令 |
+
+**改口径优于加计数**：AGENTS.md 瘦身纪律同理——「9 处」必然腐（数字随代码演化），改写成「哪些场景必须走本组件 + 哪些不走」的不变量口径后，**不依赖数字也不会腐**。本轮 `dom-tooltip.md` 即按此改写（原「禁止原生 title」是 overstated 的全仓禁令 → 收窄为「动作说明型走 tooltip，值/状态说明型原生 title 正当」的判据 + 边界表）。
+
+⚠️ **别指望 `check-knowledge-drift` 覆盖正文**：它按 frontmatter 的 `source_files`/`symbols`/`invariant_anchors` 做存在性校验，**正文散文里的任何断言它都看不见**（这是刻意的分工——让机器校验叙述就要求叙述结构化，结构化即杀死可读性）。故「正文提到符号却没进 `invariant_anchors`」是本卡 D 级同类高危：纯自然语言、零机器兜底。**新写正文点名符号时，顺手把它加进 `invariant_anchors`，成本一行、收益是永久阻断。**
+
 ## 相关
 
 - `routes-quick.md`（索引，顶部物种分流注 + 列改名"主 ADR(如有)"）

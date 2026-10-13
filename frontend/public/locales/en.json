@@ -907,6 +907,7 @@
   "downloadQueue.cancelled": "Cancelled",
   "downloadQueue.downloadingRemain": "Downloading… {n} remaining",
   "downloadQueue.preparingTotal": "Preparing… {n} total",
+  "downloadQueue.busyDropped": "A download batch is already running — this batch ({n}) was not enqueued",
   "downloadQueue.failedCount": "{n} files failed to download",
   "downloadQueue.failedListTitle": "{n} files failed to download:",
   "downloadQueue.hint.failed": "Download failed",

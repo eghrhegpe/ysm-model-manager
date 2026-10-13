@@ -907,6 +907,7 @@
   "downloadQueue.cancelled": "キャンセルしました",
   "downloadQueue.downloadingRemain": "ダウンロード中… 残り {n} 個",
   "downloadQueue.preparingTotal": "ダウンロード準備中… 計 {n} 個",
+  "downloadQueue.busyDropped": "前のダウンロードが続いているため、今回の {n} 件はキューに入れませんでした",
   "downloadQueue.failedCount": "{n} 個のファイルのダウンロードに失敗",
   "downloadQueue.failedListTitle": "{n} 個のファイルのダウンロードに失敗：",
   "downloadQueue.hint.failed": "ダウンロードに失敗",

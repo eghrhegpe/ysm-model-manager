@@ -907,6 +907,7 @@
   "downloadQueue.cancelled": "已取消",
   "downloadQueue.downloadingRemain": "下载中… 剩余 {n} 个",
   "downloadQueue.preparingTotal": "准备下载… 共 {n} 个",
+  "downloadQueue.busyDropped": "上一批下载仍在进行，本批 {n} 个未入队",
   "downloadQueue.failedCount": "{n} 个文件下载失败",
   "downloadQueue.failedListTitle": "{n} 个文件下载失败：",
   "downloadQueue.hint.failed": "下载失败",

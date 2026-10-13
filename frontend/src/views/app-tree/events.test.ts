@@ -486,6 +486,41 @@ describe("click 复选框（文件夹批量 toggleFolderBatch）", () => {
     expect(toasts.some((t) => t.msg === "文件夹禁用: 2 成功, 0 失败")).toBe(true);
   });
 
+  // 契约锁（**不锁宿主接线**）：批量开关用 `_guard.current` 捕获代数（**不推进**）后 await
+  // `_load()`，其 `stale(gen)` 过期校验依赖「期间有人推进/作废代数」。本用例直调
+  // `_guard.invalidate()` 模拟该作废，锁住「作废后迟到续体不渲染、不发全局 sync:toggle:status」
+  // 这条契约本身（`sync:toggle:status` 是全局事件，从死组件发出比单纯重渲染更重）。
+  // ⚠️ 它**证明不了**宿主 `disconnectedCallback` 真的调了 `invalidate()`——那由
+  // `index.extra.test.ts|在途补载期间卸载` 锁（唯一在卸载路径上先红后绿的用例）。
+  it("代际作废后 → 批量开关的迟到续体不渲染、不发全局 sync:toggle:status", async () => {
+    const h = makeHarness();
+    h.vm.entriesState = [makeEntry("dirA/a.ysm", "/repo/dirA/a.ysm", true)];
+    // `_load` 挂起，构造「续体尚未落地时发生作废」
+    let releaseLoad!: () => void;
+    h.vm._load = vi.fn(
+      () =>
+        new Promise<void>((res) => {
+          releaseLoad = res;
+        }),
+    );
+    h.container.appendChild(folderRow("dirA", "目录A"));
+    bindTreeEvents(h.container, h.vm);
+    click(h.container.querySelector(".fh .ck") as Element);
+    await flush(); // ToggleEnable 批处理完成，_load 挂起中
+    expect(ToggleEnableMock).toHaveBeenCalledTimes(1);
+
+    const renderSpy = h.vm._renderTree as ReturnType<typeof vi.fn>;
+    renderSpy.mockClear();
+    h.vm._guard.invalidate(); // 模拟卸载/切换触发的代际作废
+
+    releaseLoad();
+    await flush();
+    await flush();
+
+    expect(renderSpy).not.toHaveBeenCalled();
+    expect(emitted("sync:toggle:status").length).toBe(0);
+  });
+
   it("部分失败 → toast warn 含失败计数；仅成功项翻转，失败项保持原状（回归：不再乐观全量翻转）", async () => {
     stubConsoleWarn(); // 静音生产 logWarn("tree","toggleFolderBatch 失败:")
     const h = makeHarness();

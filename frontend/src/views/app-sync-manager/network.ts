@@ -31,12 +31,9 @@ export async function performSingleOp(
   path: string,
   cb: NetworkCallbacks,
 ): Promise<void> {
-  // P2 修复：原全局 _singleBusy 布尔 → 按 path 粒度 Set——
-  // 不同行可并发 push/pull，同一行防重入（保原契约）。
+  // per-path 防重入：不同行可并发 push/pull，同一行串行（原全局布尔锁会让无关行一并锁死）
   if (self._singleBusy.has(path)) return;
   self._singleBusy.add(path);
-  // per-path 禁用：只锁本行。原全局 setButtonsBusy(true) 会把无关行一并锁死，
-  // 令「不同行可并发 push/pull」的 per-path 守卫在 UI 层形同虚设（并发化只做了一半）。
   setRowButtonsBusy(self, path, true);
   const rtype = self._selectedType;
   const targetInstance = self._instance;
@@ -60,9 +57,7 @@ export async function performSingleOp(
     toast(`${friendlyError(e)}`, TOAST_MS.normal, "error");
   } finally {
     self._singleBusy.delete(path);
-    // per-path 复位：只解禁本行，其他在途行的禁用态不受影响
-    // （原为全局 setButtonsBusy(self, size > 0)：先结束的 op 会把仍在途行提前解禁，
-    //  UI 假空闲 + 点击被 Set 静默吞——现两侧同为 per-path 口径，修复自相矛盾）
+    // per-path 复位：只解禁本行（原全局 size>0 口径会让先结束的 op 提前解禁仍在途行）
     setRowButtonsBusy(self, path, false);
   }
 }

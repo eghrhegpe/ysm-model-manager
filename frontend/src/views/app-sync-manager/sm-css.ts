@@ -66,6 +66,13 @@ export const SM_STYLE: string = `
 .sm-cur-type{display:inline-flex;align-items:center;gap:4px;padding:0 var(--sp-2);color:var(--accent);font-size:var(--fs-filter);white-space:nowrap;border-right:1px solid var(--bd);margin-right:6px}
 .sm-empty{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;height:100%;color:var(--muted);font-size:var(--fs-base);animation:sm-fade-in .2s ease}
 .sm-empty-icon{font-size:var(--fs-xl)}
+/* 摘要栏路径单元（2026-10 收编：原 renderer.renderScanDirs 内联 8 属性 style 串 ×2 处，
+   样式归样式表——含截断三件套，title 仍留动态值） */
+.sm-path-cell{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
+/* 过宽告警变体：同截断布局，仅颜色转错误语义 */
+.sm-path-cell--warn{color:var(--err)}
+/* 空实例态占位（2026-10 收编：原 _showNoInstance 内联 padding+color） */
+.sm-no-instance{padding:var(--sp-3);color:var(--err)}
 .sm-list{animation:sm-fade-in .15s ease}
 .sm-loading{display:flex;flex-direction:column;gap:8px;padding:var(--sp-3)}
 .sm-dir{cursor:pointer}

@@ -3,6 +3,7 @@
 // 纯函数，接收组件实例 self，通过 self 读写状态；无 DOM / 无 bus 副作用。
 // 依赖 DAG：index → store ← network（网络操作后调 loadData 刷新）
 
+import type { ResourceSyncItem } from "@/bindings/ysm-model-manager/go/types/models.ts";
 import { t } from "@/core/i18n/t.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
 import { toast } from "@/utils/dom/toast.ts";
@@ -13,6 +14,25 @@ import type { SyncManagerSelf } from "./self-type.ts";
 import type { SyncItem } from "./tpl.ts";
 
 export type SyncStoreSelf = SyncManagerSelf;
+
+/** Go 生成条目 → 前端 SyncItem 递归归一（结构同源，唯一差异：children 可 null → undefined）。
+ *  显式字段构造替代 `as unknown as` 双重断言——断言会静默吞掉未来字段漂移。
+ *  exactOptionalPropertyTypes 下可选字段不得显式赋 undefined，用条件展开（展开对象无该键）。 */
+function toSyncItem(it: ResourceSyncItem): SyncItem {
+  const children = it.children ? it.children.map(toSyncItem) : undefined;
+  const subdir = it.subdir;
+  return {
+    path: it.path,
+    name: it.name,
+    status: it.status,
+    type: it.type,
+    icon: it.icon,
+    size: it.size,
+    isDir: it.isDir,
+    ...(subdir !== undefined ? { subdir } : {}),
+    ...(children !== undefined ? { children } : {}),
+  };
+}
 
 /**
  * 加载资源类型配置（ADR-269 D3③：同步读 resource_types.json 派生视图，废 Go RPC 旁路）。
@@ -41,11 +61,7 @@ export async function loadData(self: SyncStoreSelf): Promise<void> {
       self._selectedType || "",
     );
     if (self._guard.stale(gen)) return;
-    // Go 生成类型 children 可 null → 前端 SyncItem 用 undefined（结构同源，仅空值形态差异）
-    self._allItems = (items || []).map((it) => ({
-      ...it,
-      children: it.children ?? undefined,
-    })) as unknown as SyncItem[];
+    self._allItems = (items || []).map(toSyncItem);
     if (self._selectedType) {
       // 目录可见性：顺带取实际扫描目录（非阻断，失败仅不显示摘要）
       try {
@@ -77,9 +93,7 @@ export async function loadData(self: SyncStoreSelf): Promise<void> {
   } catch {
     if (self._guard.stale(gen)) return;
     self._allItems = [];
-    // 2026-10 修复（锐评：失败态与摘要栏说两套话）——原只清 `_allItems`，摘要栏继续显示
-    // 上一任实例/类型残留的扫描目录对：列表已是失败态、路径却仍指旧目标，误导用户以为
-    // 失败的是那对目录。扫描目录与本次数据同源同命，失败时一并清空。
+    // 失败态与摘要栏同源同命：数据失败必须一并清空扫描目录对（否则失败列表配旧路径，误导排查）
     self._scanDirs = {};
     toast(t("syncManager.loadSyncStatusFailed"), TOAST_MS.normal, "warn");
   }

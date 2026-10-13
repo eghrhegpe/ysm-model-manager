@@ -126,9 +126,9 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
       return sum && sum.textContent!.includes("疑似过宽");
     }, 5000);
     const sum = el.querySelector(".sm-summary");
-    // ADR-267：告警去 ⚠️ emoji 前缀，改由 error 配色驱动语义
+    // ADR-267：告警去 ⚠️ emoji 前缀，改由 error 配色驱动语义（样式收编后由 .sm-path-cell--warn 类承载）
     expect(sum!.textContent).toContain("疑似过宽");
-    expect(sum!.innerHTML).toContain("var(--err)");
+    expect(sum!.innerHTML).toContain('class="sm-path-cell sm-path-cell--warn"');
     unmountElement(el);
   });
 

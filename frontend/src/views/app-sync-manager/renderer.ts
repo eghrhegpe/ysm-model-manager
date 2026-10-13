@@ -224,9 +224,7 @@ function renderScanDirs(self: SyncRenderSelf): void {
     return;
   }
   const cell = (label: string, dir: string): string =>
-    `<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)" title="${esc(
-      dir,
-    )}">${esc(label)}</span>`;
+    `<span class="sm-path-cell" title="${esc(dir)}">${esc(label)}</span>`;
   if (dirs.warningCode === "scan_dir_wide" && dirs.warningParams) {
     // 仓库基准疑似过宽：优先展示告警，避免静默混入（后端只给 code+参数，文案走 i18n 组装）
     const warnText = t("syncManager.scanDirWide", {
@@ -234,7 +232,7 @@ function renderScanDirs(self: SyncRenderSelf): void {
       dir: dirs.warningParams.dir,
       subDir: dirs.warningParams.subDir,
     });
-    summaryEl.innerHTML = `<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--err)" title="${esc(
+    summaryEl.innerHTML = `<span class="sm-path-cell sm-path-cell--warn" title="${esc(
       warnText,
     )}">${esc(warnText)}</span>`;
     return;

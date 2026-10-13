@@ -29,10 +29,8 @@ import { performSingleOp } from "./network.ts";
 import { cleanupSyncVirtualScroll, render } from "./renderer.ts";
 import { getLastSelectedType, setLastSelectedType } from "./state.ts";
 
-// P3 修复（子代理审计）：共享状态（LAST_TYPE_KEY / lastSelectedType / setLastSelectedType）
-// 已下沉至 state.ts，打破 index ↔ events 循环依赖
-// 2026-08-18：sm-tabs 移除后类型完全由全局 nav 下拉驱动——订阅 repo:rtype-changed 跟随，
-// 状态主键统一 repo_rtype（state.ts），LAST_TYPE_KEY 仅历史兼容。
+// 共享状态（LAST_TYPE_KEY / lastSelectedType / setLastSelectedType）下沉 state.ts，
+// 打破 index ↔ events 循环依赖；类型主键统一 repo_rtype（见知识卡 app-sync-manager.md）
 
 /** 本组件错误文案键（i18n 字面量联合：t() 只收已知键，裸 string 会被拒收） */
 type SyncErrorMsgKey = "sync.renderFailed" | "syncManager.loadSyncStatusFailed";
@@ -104,9 +102,7 @@ export class AppSyncManager extends WebComponentBase {
     if (name === "instance") {
       this._instance = newVal || "";
       if (this._instance) void this._init();
-      // 2026-10 修复（锐评：置空残留旧 UI）：原实现空值分支直接跳过——上一任实例的列表
-      // 原样留在屏上，且三条 bus 订阅继续以空实例名调 GetInstanceSyncStatus("") 并重渲染。
-      // 现统一走空实例态出口（与 connectedCallback 同源）。
+      // 置空统一走空实例态出口（与 connectedCallback 同源，见知识卡 app-sync-manager.md）
       else this._showNoInstance();
     } else if (name === "default-type") {
       this._defaultType = newVal || RESOURCE_TYPES.YSM;
@@ -128,7 +124,7 @@ export class AppSyncManager extends WebComponentBase {
     this._resetViewState();
     this._allItems = [];
     this._filteredItems = [];
-    this.innerHTML = `<div style="padding:var(--sp-3);color:var(--err)">${UI_ICONS.warning} ${t("sync.noInstance")}</div>`;
+    this.innerHTML = `<div class="sm-no-instance">${UI_ICONS.warning} ${t("sync.noInstance")}</div>`;
   }
 
   /**
@@ -164,9 +160,8 @@ export class AppSyncManager extends WebComponentBase {
     this._pruneSubs();
     this._bindDelegate(self);
 
-    // 加载段异常统一出口：原为浮动 Promise（connectedCallback / attributeChangedCallback
-    // 均未 catch），任一 await reject 即 unhandled rejection + 骨架 spinner 永久卡死、
-    // 用户零反馈。此处转错误 UI + toast 并早退（过期代际/已卸载则静默丢弃）。
+    // 加载段异常统一出口：转错误 UI + toast 并早退（过期代际/已卸载则静默丢弃；
+    // 历史叙述见知识卡 app-sync-manager.md「_init 加载失败」）
     try {
       await loadTypeConfig(self);
       await loadData(self);
@@ -225,8 +220,7 @@ export class AppSyncManager extends WebComponentBase {
    * 并发重入防护：仅首次 `_init` 绑定 click handler，后续 `_init` 仅更新回调引用。
    */
   private _bindDelegate(self: SyncManagerSelf): void {
-    // 回调契约单点构造（2026-10 收口：原首绑与重入分支各自抄一份同构字面量——
-    // 两份漂移会让「重入后行为变样」且无编译错误兜底）
+    // 回调契约单点构造（首绑与重入共用同一份；重复字面量会漂移，见知识卡 app-sync-manager.md）
     const cb = {
       doRender: () => this._doRender(),
       doPerformOp: (op: "push" | "pull", path: string) =>

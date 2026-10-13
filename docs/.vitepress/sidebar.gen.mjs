@@ -1609,6 +1609,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-338-d1：提交信息减负：commit-msg 闸与 trailer 出口",
+        "link": "/adr/decisions/ADR-338-d1-commit-message-hygiene"
+      },
+      {
         "text": "ADR-331-d1：ReadFileBytes 无 error 通道缺口：ReadFileMeta 结构化错误字段（切片 C）",
         "link": "/adr/decisions/ADR-331-d1-readfilebytes-error-readfilemeta-c"
       },

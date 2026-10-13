@@ -4,13 +4,13 @@ import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { loadOldestModel } from "@/features/maintenance/oldest-models.ts";
 import { initRecycleBin } from "@/features/maintenance/recycle-bin.ts";
+import { currentRepoType, useCurrentResourceType } from "@/features/repo/repo-rtype.ts";
 import { logError, logWarn } from "@/utils/base/primitives/log.ts";
 import { safeGet } from "@/utils/base/primitives/storage.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { esc, escUnknown } from "@/utils/html/html.ts";
-import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { createDedupSession } from "@/views/app-content/diagnostics/dedup.ts";
 import { initDiagnostics } from "@/views/app-content/diagnostics/init.ts";
 import { initSettings } from "@/views/app-content/settings/init.ts";
@@ -127,9 +127,10 @@ export function initRepositoryPage(host: AppContentHost): void {
     }),
   );
 
-  // 初始挂载：从 localStorage 恢复（app-nav 已在连接时初始化切换器并落盘）
-  const savedRtype = safeGet("repo_rtype") || RESOURCE_TYPES.YSM;
-  mountTree(savedRtype, safeGet("repo_subdir") || "");
+  // 初始挂载：从 localStorage 恢复（app-nav 已在连接时初始化切换器并落盘）。
+  // rtype 初值经 currentRepoType() 单一事实源读取（与 app-nav 切换器落盘同源，
+  // 不再手拼 safeGet("repo_rtype") || RESOURCE_TYPES.YSM——避免仓库页内第二份字面量真值）
+  mountTree(currentRepoType(), safeGet("repo_subdir") || "");
 }
 
 /**
@@ -275,7 +276,17 @@ async function initDedupTab(
 ): Promise<{ cleanup: () => void; onShow: () => void }> {
   // 每宿主一个去重会话：busy/exec 重入守卫与去重配置收进会话闭包，跨 tab 开关/类型切换复用同一配置
   const dedup = createDedupSession();
-  let dedupType = safeGet("repo_rtype") || RESOURCE_TYPES.YSM;
+  // 订阅全局资源类型切换，与 recycle/oldest 同款原语（useCurrentResourceType：初值 +
+  // 同值去重 + cleanup 入桶）。感知性绑定：面板隐藏时只记脏账不扫盘（go/dedup 无指纹
+  // 缓存，每次全库 SHA256 是零价值纯成本），切进面板时由 onShow 按需补扫
+  let dirty = false;
+  const { get: getCurrentType, cleanup: cleanupRtype } = useCurrentResourceType(() => {
+    if (container.hidden) {
+      dirty = true;
+      return;
+    }
+    doDedup();
+  });
   // ADR-190 D1a：面板 DOM 模板经动态导入的 tpl-dedup.ts 产出（与 recycle/oldest 同构，
   // 抽到叶模板使 Vite 按功能拆分 chunk，且消除易漏闭合标签的内联拼接）
   const { dedupPanelHTML } = await import("./tpl-dedup.ts");
@@ -284,24 +295,24 @@ async function initDedupTab(
   if (panel) dedup.initConfig(panel);
   const doDedup = (): void => {
     const listEl = container.querySelector("#dedup-result-list");
-    if (listEl) dedup.start(listEl as HTMLElement, escUnknown, dedupType);
+    if (listEl) dedup.start(listEl as HTMLElement, escUnknown, getCurrentType());
   };
   container.querySelector("#dedup-start-btn")?.addEventListener("click", doDedup);
-  // 全局类型切换时自动复扫——感知性绑定：仅面板可见时（bindTabs 以 hidden 属性翻转可见性）
-  const unsub = bus.on("repo:rtype-changed", (rt) => {
-    if (rt !== dedupType) {
-      dedupType = rt;
-      if (!container.hidden) doDedup();
-    }
-  });
   // 每次激活的补扫校验：面板里显示的结果必须属于当前类型。
   // 从未扫过（lastScannedType null）不自动开跑——维持现状「进入面板手动开始」的语义，
   // 只消除「扫过 A 后切到 B 再切回看到 A 的旧结果」的误导
   const onShow = (): void => {
+    if (!dirty) return;
+    dirty = false;
     const scanned = dedup.lastScannedType();
-    if (scanned !== null && dedupType !== scanned) doDedup();
+    if (scanned !== null && getCurrentType() !== scanned) doDedup();
   };
-  return { cleanup: unsub, onShow };
+  return {
+    cleanup: () => {
+      cleanupRtype();
+    },
+    onShow,
+  };
 }
 
 /**

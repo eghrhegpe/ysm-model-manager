@@ -119,6 +119,33 @@ describe("summaryCardHTML 徽章与转义", () => {
     expect(html).toMatch(/<svg class="ws-icon"[\s\S]*?<\/svg>\s*付费/);
   });
 
+  // 回归锁（2026-10）：徽标六属性骨架 + 差异项经 badgeSpanHTML() 收口后，生成串必须与
+  // 历史字面量字节等价——按完整 style 串断言，防辅助函数重构时意外改样式（改 class 名/换
+  // 令牌/改混合比例都会在此炸）。三族差异：free/paid 用 margin-left+600，tag 用 margin+500+nowrap。
+  it("回归锁：免费/付费徽标完整 style 串字节等价（badgeSpanHTML 收口不漂移）", () => {
+    const html = summaryCardHTML({ name: "x" }, { hasFree: true, isFree: true });
+    expect(html).toContain(
+      '<span style="display:inline-block;padding:var(--btn-padding-tool-lg);border-radius:var(--radius-xl);font-size:var(--fs-xs);background:color-mix(in srgb,var(--status-success,#1971C2) 18%,transparent);color:var(--status-success,#1971C2);margin-left:6px;font-weight:600">',
+    );
+    const paid = summaryCardHTML({ name: "x" }, { hasFree: true, isFree: false });
+    expect(paid).toContain(
+      '<span style="display:inline-block;padding:var(--btn-padding-tool-lg);border-radius:var(--radius-xl);font-size:var(--fs-xs);background:color-mix(in srgb,var(--status-error,#c62828) 18%,transparent);color:var(--status-error,#c62828);margin-left:6px;font-weight:600">',
+    );
+  });
+
+  it("回归锁：动画分组 tag 徽标完整 style 串字节等价（accent 14% + margin+500+nowrap）", () => {
+    const html = summaryCardHTML(
+      {
+        name: "x",
+        animGroups: [{ name: "g", items: ["tag-item"] }],
+      },
+      {},
+    );
+    expect(html).toContain(
+      '<span style="display:inline-block;padding:var(--btn-padding-tool-lg);border-radius:var(--radius-xl);font-size:var(--fs-xs);background:color-mix(in srgb,var(--accent,#66d9ef) 14%,transparent);color:var(--accent,#66d9ef);margin:2px 3px;font-weight:500;white-space:nowrap">tag-item</span>',
+    );
+  });
+
   it("名称含 HTML 字符被转义（防 XSS）", () => {
     const html = summaryCardHTML({ name: '<img src=x onerror=alert(1)>' }, {});
     expect(html).not.toContain("<img");

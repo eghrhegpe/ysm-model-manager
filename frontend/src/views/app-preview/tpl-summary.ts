@@ -88,6 +88,36 @@ export function safeUrl(url: string): string {
   return /^https?:\/\//i.test(trimmed) ? trimmed : "#";
 }
 
+/** 彩底圆角徽标（收敛 free/paid 标题徽标 ×4 + 动画分组 tag ×1 的六属性同构骨架）。
+ * 共同骨架：inline-block + btn-padding-tool-lg + radius-xl + fs-xs + color-mix 底色 + 前景同色。
+ * 差异项收为参数：color（var 引用，含回退）/ mixPct（底色混合比例）/ extra（尾部 CSS 声明串，
+ * free/paid 为 `margin-left:6px;font-weight:600`，tag 为 `margin:2px 3px;font-weight:500;white-space:nowrap`）。
+ * ⚠️ 生成串必须与历史字面量**字节等价**——summarize.test.ts「徽章 style 串」回归锁按完整串断言。
+ */
+function badgeSpanHTML(
+  content: string,
+  opts: { color: string; mixPct: string; extra: string },
+): string {
+  return `<span style="display:inline-block;padding:var(--btn-padding-tool-lg);border-radius:var(--radius-xl);font-size:var(--fs-xs);background:color-mix(in srgb,${opts.color} ${opts.mixPct},transparent);color:${opts.color};${opts.extra}">${content}</span>`;
+}
+
+/** 免费/付费标题徽标（两处同构三目：headerOnlyCardHTML 与 summaryCardHTML 各抄一份，收口共用）。
+ * header 无 hasFree → 空串；isFree → 免费徽标（tag 图标 + format.free），否则付费徽标（lock 图标 + format.paid）。 */
+function freeBadgeHTML(header?: YSMHeader | null): string {
+  if (!header?.hasFree) return "";
+  return header.isFree
+    ? badgeSpanHTML(`${UI_ICONS.tag} ${t("format.free")}`, {
+        color: "var(--status-success,#1971C2)",
+        mixPct: "18%",
+        extra: "margin-left:6px;font-weight:600",
+      })
+    : badgeSpanHTML(`${UI_ICONS.lock} ${t("format.paid")}`, {
+        color: "var(--status-error,#c62828)",
+        mixPct: "18%",
+        extra: "margin-left:6px;font-weight:600",
+      });
+}
+
 // ── 卡片渲染 ───────────────────────────────────────
 
 /** 仅基于头部信息渲染的简约卡片（加密/闭源模型） */
@@ -97,11 +127,7 @@ function headerOnlyCardHTML(header: YSMHeader, basename?: string): string {
   const name = p ? "" : cleanText(header.name || "-"); // 用 p 时 name 为空，下面走标签模板
   const tips = renderTips(header.tips);
   const licenseType = cleanText(header.license);
-  const freeBadge = header.hasFree
-    ? header.isFree
-      ? `<span style="display:inline-block;padding:var(--btn-padding-tool-lg);border-radius:var(--radius-xl);font-size:var(--fs-xs);background:color-mix(in srgb,var(--status-success,#1971C2) 18%,transparent);color:var(--status-success,#1971C2);margin-left:6px;font-weight:600">${UI_ICONS.tag} ${t("format.free")}</span>`
-      : `<span style="display:inline-block;padding:var(--btn-padding-tool-lg);border-radius:var(--radius-xl);font-size:var(--fs-xs);background:color-mix(in srgb,var(--status-error,#c62828) 18%,transparent);color:var(--status-error,#c62828);margin-left:6px;font-weight:600">${UI_ICONS.lock} ${t("format.paid")}</span>`
-    : "";
+  const freeBadge = freeBadgeHTML(header);
   let authorHtml = "";
   let workHtml = "";
   if (p) {
@@ -197,9 +223,12 @@ export function summaryCardHTML(
         const more = items.length > 8 ? ` +${items.length - 8}` : "";
         const badges =
           displayItems
-            .map(
-              (it) =>
-                `<span style="display:inline-block;padding:var(--btn-padding-tool-lg);border-radius:var(--radius-xl);font-size:var(--fs-xs);background:color-mix(in srgb,var(--accent,#66d9ef) 14%,transparent);color:var(--accent,#66d9ef);margin:2px 3px;font-weight:500;white-space:nowrap">${esc(it)}</span>`,
+            .map((it) =>
+              badgeSpanHTML(esc(it), {
+                color: "var(--accent,#66d9ef)",
+                mixPct: "14%",
+                extra: "margin:2px 3px;font-weight:500;white-space:nowrap",
+              }),
             )
             .join("") + more;
         return `<div style="margin-bottom:4px"><div style="font-size:var(--fs-xs);font-weight:600;color:var(--txt);margin-bottom:2px">${UI_ICONS.video} ${esc(name)}（${items.length}）</div><div>${badges}</div></div>`;
@@ -223,12 +252,8 @@ export function summaryCardHTML(
     }
   }
 
-  // 免费/付费标记
-  const freeBadge = header?.hasFree
-    ? header.isFree
-      ? `<span style="display:inline-block;padding:var(--btn-padding-tool-lg);border-radius:var(--radius-xl);font-size:var(--fs-xs);background:color-mix(in srgb,var(--status-success,#1971C2) 18%,transparent);color:var(--status-success,#1971C2);margin-left:6px;font-weight:600">${UI_ICONS.tag} ${t("format.free")}</span>`
-      : `<span style="display:inline-block;padding:var(--btn-padding-tool-lg);border-radius:var(--radius-xl);font-size:var(--fs-xs);background:color-mix(in srgb,var(--status-error,#c62828) 18%,transparent);color:var(--status-error,#c62828);margin-left:6px;font-weight:600">${UI_ICONS.lock} ${t("format.paid")}</span>`
-    : "";
+  // 免费/付费标记（freeBadgeHTML 收口：与 headerOnlyCardHTML 共用，两处同构三目不再各抄）
+  const freeBadge = freeBadgeHTML(header);
 
   return `<div class="content" id="preview-content" data-testid="preview-content">
 <h3>${esc(name)}${freeBadge}</h3>

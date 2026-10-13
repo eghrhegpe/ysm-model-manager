@@ -30,6 +30,7 @@ import type { WorkshopSite } from "@/bindings/ysm-model-manager/go/types/models.
 import type { LocalCreatorLike } from "./site-view.ts";
 
 import { escUnknown as esc } from "@/utils/html/html.ts";
+import { t } from "@/core/i18n/t.ts";
 
 /** 解析 buildSiteHtml 产物 */
 function renderHtml(ctx: BuildSiteHtmlCtx): HTMLElement {
@@ -335,8 +336,14 @@ describe("createCrCard 创作者卡片工厂（声明式字符串）", () => {
     expect(legend1).toBeTruthy();
     expect(legend1?.querySelector(".cr-tier-swatch--gold")).toBeTruthy();
     expect(legend1?.querySelector(".cr-tier-swatch--silver")).toBeTruthy();
-    expect(legend1?.textContent).toContain("Top 10%");
-    expect(legend1?.textContent).toContain("Top 25%");
+    // 断言 i18n 键产出的实际译文，而非硬编码字面量——译文字面随口径演进，
+    // 写死会在改文案时红；此处断言「两档各渲染了一段非空文案」。
+    expect(legend1?.querySelector(".cr-tier-legend-item")?.textContent?.trim()).toBe(
+      t("content.tierGold"),
+    );
+    expect(legend1?.querySelectorAll(".cr-tier-legend-item")[1]?.textContent?.trim()).toBe(
+      t("content.tierSilver"),
+    );
     // 缺陷 C 连带：无有效信号（榜首 count 也是 0）→ 全员无牌 → 图例是纯噪声，不渲染
     const c2 = [{ name: "甲" }, { name: "乙" }] as LocalCreatorLike[];
     const root2 = renderHtml(makeCtx({ creators: c2, authorCountMap: {} }));

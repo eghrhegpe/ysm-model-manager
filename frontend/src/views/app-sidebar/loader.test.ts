@@ -224,4 +224,38 @@ describe("loadInstances", () => {
     await Promise.all([p2, p3]);
     expect(GetResourceInstanceStatus).toHaveBeenCalledTimes(2);
   });
+
+  // 兜底淘汰回归锁：卡死请求（永不 settle）的登记项必须在 30s 后被清掉，否则后续普通读
+  // 会永久并入僵尸请求、不再重新发起 IPC（该定时器存在的唯一意义）。
+  // 2026-10 复查记录：曾怀疑「旧请求的 timer 会无条件删 `_inflightTimers[key]`，从而解除
+  // 新请求的兜底」——实测**不成立**：条目清除由「当前登记项自己的 timer」负责（`=== p` 守卫
+  // 正确），旧 timer 烧到时只会摘掉注册表里的句柄，不影响新 timer 自身的烧制。故本锁只锁
+  // 「兜底仍然生效」这一真行为，不为未证实的猜测加复杂度。
+  it("卡死请求 → 30s 兜底淘汰生效（后续普通读重新发起，不永久并入僵尸）", async () => {
+    vi.useFakeTimers();
+    try {
+      const { LoadAppConfig, ListVersionInstances, GetResourceInstanceStatus, GetRepoRoot } =
+        mockBindings();
+      LoadAppConfig.mockResolvedValue({ mcRoot: "/mc" });
+      ListVersionInstances.mockResolvedValue([{ Name: "A", VersionDir: "/v/a", Exists: true }]);
+      GetRepoRoot.mockResolvedValue("/repo");
+      // p1 永不 settle：只能靠 30s 兜底淘汰解套
+      GetResourceInstanceStatus.mockImplementation(() => new Promise(() => {}));
+
+      const p1 = loadInstances("ysm");
+      await vi.advanceTimersByTimeAsync(0);
+      expect(GetResourceInstanceStatus).toHaveBeenCalledTimes(1);
+
+      // 推过 30s：p1 尚未 settle，但兜底淘汰必须把条目清掉
+      await vi.advanceTimersByTimeAsync(30_001);
+
+      const p2 = loadInstances("ysm");
+      await vi.advanceTimersByTimeAsync(0);
+      // 条目已清 → 重新发起（总数 2）；兜底失效则永久并入 p1（仍是 1）
+      expect(GetResourceInstanceStatus).toHaveBeenCalledTimes(2);
+      expect(p2).not.toBe(p1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

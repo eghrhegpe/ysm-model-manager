@@ -277,6 +277,12 @@ class AppSidebar extends WebComponentBase {
     // 仅需复位标志解除新实例的卡死
     this._syncInProgress = false;
     this._reloadInFlight = false;
+    // 代际失效（2026-10 锐评修复）：单飞锁复位只解「同刻只跑一次」，**不作废在途代数**——
+    // `_reload` 若正挂在 `await loadInstances(...)` 上，卸载后那块续体仍会走 `_renderCards()`
+    // + `bindFooter()`，给已卸载的 shadow root 重渲染卡片、重绑 click/contextmenu 委托
+    // （幽灵写入）。原实现漏接 `invalidate()`，使 `stale(gen)` 恒 false、代际守卫形同虚设；
+    // 同仓 `app-tree` / `app-sync-manager` 的 cleanup 均已成对接上，唯本组件漏接。
+    this._guard.invalidate();
     // 清理防抖定时器，防止组件销毁后回调在已销毁实例上执行
     if (this._debounceTimer) {
       clearTimeout(this._debounceTimer);

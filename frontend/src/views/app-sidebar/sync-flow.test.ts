@@ -60,6 +60,18 @@ describe("nextPushToken（序号防同毫秒串台）", () => {
     expect(tokens.size).toBe(50);
   });
 
+  // P2 加固（2026-10 复核）：上方用例在真时钟下若退化回 Date.now()，紧循环跨越毫秒
+  // 边界仍常绿——概率性断言抓不住病。固定系统时间把同毫秒变成必然：50 连发唯一性
+  // 只能由单调序号保证，Date.now() 实现此处必红。
+  it("固定同一毫秒连续调用 → 仍互不相同（单调序号，非时间戳）", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-13T00:00:00Z"));
+    const tokens = new Set<string>();
+    for (let i = 0; i < 50; i++) tokens.add(nextPushToken("insA", "ysm"));
+    expect(tokens.size).toBe(50);
+    vi.useRealTimers();
+  });
+
   it("不同实例/类型的 token 也不同", () => {
     expect(nextPushToken("insA", "ysm")).not.toBe(nextPushToken("insB", "ysm"));
     expect(nextPushToken("insA", "ysm")).not.toBe(nextPushToken("insA", "vrm"));

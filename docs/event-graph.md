@@ -90,7 +90,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| bindMcPathLabel | `frontend/src/views/app-sidebar/events.ts` | 360 |
+| bindMcPathLabel | `frontend/src/views/app-sidebar/events.ts` | 363 |
 
 ### `ctx:show`
 
@@ -99,7 +99,7 @@
 |------|------|----|
 | cmReBindContextMenu | `frontend/src/features/community/repo-events-bindings.ts` | 126 |
 | showMenu | `frontend/src/features/context-menu/context-menus.setup.ts` | 152 |
-| bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 151 |
+| bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 154 |
 | atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 289 |
 | atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 311 |
 | atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 323 |
@@ -237,7 +237,7 @@
 | cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 231 |
 | anActivateNavPage | `frontend/src/views/app-nav/index.ts` | 51 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 219 |
-| bindMcPathLabel | `frontend/src/views/app-sidebar/events.ts` | 357 |
+| bindMcPathLabel | `frontend/src/views/app-sidebar/events.ts` | 360 |
 | atTlBindRepoSwitch | `frontend/src/views/app-tree/toolbar-events.ts` | 88 |
 
 **订阅方（on）：**
@@ -251,8 +251,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| bindCardClickHandler | `frontend/src/views/app-sidebar/events.ts` | 103 |
-| restoreSelectedCard | `frontend/src/views/app-sidebar/events.ts` | 286 |
+| bindCardClickHandler | `frontend/src/views/app-sidebar/events.ts` | 106 |
+| restoreSelectedCard | `frontend/src/views/app-sidebar/events.ts` | 289 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |

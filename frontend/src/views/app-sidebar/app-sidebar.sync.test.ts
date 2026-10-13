@@ -158,6 +158,30 @@ describe("app-sidebar — 全选/恢复勾选", () => {
     const restored = el.shadowRoot!.querySelector(".chk") as HTMLInputElement;
     expect(restored.checked).toBe(true);
   });
+
+  // P1 修复回归锁（2026-10 锐评）：勾选集合里的幽灵名——实例删除后名字原会永远留在
+  // 集合里，同名实例再现时被静默勾选（用户以为没选，实际已被拉进同步）。pruneCheckedSets
+  // 在 _renderCards 内**先于** restoreCheckboxes 修剪，故「再现实例不被勾选」是可测的
+  // 行为差异：把 prune 顺序颠倒或删掉，下面这个用例必须红。
+  it("实例删除后再现 → 不被静默勾选（幽灵名已被修剪，prune 先于 restore）", async () => {
+    const insA = makeInstances()[0];
+    const el = await mountSidebar([insA]);
+    checkFirst(el); // 勾选 insA → _checkedSets 写入 {insA}
+
+    // reload 1：列表只剩 insB（insA 已删）→ prune 应把幽灵名 insA 剪掉
+    loadInstancesMock.mockImplementation(async () => [{ ...insA, name: "insB" }]);
+    bus.emit("stats:refresh");
+    await waitFor(() => el.shadowRoot!.querySelectorAll(".chk").length === 1);
+    await sleep(400); // reload 300ms 防抖落定
+
+    // reload 2：insA 同名再现 → 若幽灵名未被剪，restoreCheckboxes 会把它恢复成勾选
+    loadInstancesMock.mockImplementation(async () => [insA]);
+    bus.emit("stats:refresh");
+    await waitFor(() => {
+      const c = el.shadowRoot!.querySelector(".chk") as HTMLInputElement | null;
+      return c !== null && !c.checked;
+    });
+  });
 });
 
 describe("app-sidebar — 推送所选", () => {

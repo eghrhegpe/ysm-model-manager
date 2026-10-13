@@ -87,12 +87,15 @@ function bindCardClickHandler(
     setTimeout(() => hdr.classList.remove("ripple"), 500);
     // 发送选中事件
     const idx = parseInt(card.dataset.idx || "", 10);
-    // P1 修复（2026-10 锐评）：视觉高亮/涟漪已落在被点卡，roving 键盘入口必须同步
-    // 跟随——原只有 `_renderCards` 与 `restoreSelectedCard` 校正，点击路径漏接：
-    // aria-selected / tabindex=0 停留旧卡，键盘用户 Enter/方向键操作的仍是旧选中项。
-    if (!Number.isNaN(idx)) host.syncRovingIndex?.(idx);
     const pkg = st.instances[idx];
     if (pkg) {
+      // P1 修复（2026-10 锐评）：roving 键盘入口同步跟随点击——原只有 `_renderCards`
+      // 与 `restoreSelectedCard` 校正，点击路径漏接：aria-selected / tabindex=0 停留
+      // 旧卡，键盘用户 Enter/方向键操作的仍是旧选中项。**必须在 `if (pkg)` 内**：
+      // 卡片在 DOM 而列表已更短的竞态下 pkg 为 undefined，此时并没有发生选中，
+      // 把锚点指到一张不存在的卡（layout 会 clamp 到最后一张）会让 aria 与
+      // 「本次点击未生效」的事实脱节。
+      if (!Number.isNaN(idx)) host.syncRovingIndex?.(idx);
       // P1 修复：与右键路径同构——空 rtype 拦截报错，不 emit。
       // 旧实现点击路径静默兜底成 YSM，MMD 实例 rtype 漏传时
       // 右侧同步面板 default-type 错成 YSM（handler-sync 同款病）。

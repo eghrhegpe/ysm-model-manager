@@ -682,7 +682,7 @@ export const zhCN = {
   "content.modeExternal": "外链",
   "content.modeEmbed": "内嵌",
   "content.modeWindow": "窗口",
-  "content.activeCreators": "活跃创作者",
+  "content.activeCreators": "创作者",
   "content.searchCreatorPlaceholder": "搜索创作者...",
   "content.fetchConfigTitle": "从 GitHub 拉取最新配置",
   "content.fetchConfig": "更新配置",

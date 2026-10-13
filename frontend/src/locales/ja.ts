@@ -698,7 +698,7 @@ export const ja: Record<string, string> = {
   "content.modeExternal": "外部",
   "content.modeEmbed": "埋め込み",
   "content.modeWindow": "ウィンドウ",
-  "content.activeCreators": "アクティブなクリエイター",
+  "content.activeCreators": "クリエイター",
   "content.searchCreatorPlaceholder": "クリエイターを検索...",
   "content.fetchConfigTitle": "GitHub から最新設定を取得",
   "content.fetchConfig": "設定を更新",

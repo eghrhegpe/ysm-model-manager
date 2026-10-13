@@ -703,7 +703,7 @@ export const en: Record<string, string> = {
   "content.modeExternal": "External",
   "content.modeEmbed": "Embedded",
   "content.modeWindow": "Window",
-  "content.activeCreators": "Active Creators",
+  "content.activeCreators": "Creators",
   "content.searchCreatorPlaceholder": "Search creators...",
   "content.fetchConfigTitle": "Fetch latest config from GitHub",
   "content.fetchConfig": "Update Config",

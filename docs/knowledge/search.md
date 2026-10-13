@@ -56,6 +56,7 @@ auto_fields:
     - Clear
     - consumeWebSearchDegraded
     - createTreeRenderCtx
+    - emptyStateForEmptyEntries
     - flattenVisible
     - Get
     - getRenderMode

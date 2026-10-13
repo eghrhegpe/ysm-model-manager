@@ -263,4 +263,26 @@ describe("扫描引擎对照面板（ADR-262 D3）", () => {
     expect(text).toContain("未取得引擎对照结果");
     expect(text).not.toContain("0.00ms");
   });
+
+  it("单引擎载荷（Rust 删除后 Go 的真实形状）：不渲染 parity 行——没发生过的比对不判「无法比对」", async () => {
+    // 病灶（锐评 2026-10-13 功能 A）：go/cli/scan_bench.go 现恒构造 Parity{} 零值
+    // （注释自陈「保留字段仅兼容前端契约，单引擎下恒 Comparable=false」），而前端无条件
+    // 渲染 parity ⇒ 每次扫描必吃一条「无法比对」黄警——「比不了」与「没比过」是两回事，
+    // 后者该零存在感。engines.length < 2 = 比对从未发生。
+    const single = {
+      ...DEFAULT_PAYLOAD,
+      engines: [GO_ENGINE],
+      parity: { comparable: false, match: false },
+    };
+    executeCLI.mockResolvedValue({ status: "success", command: "scan-bench", data: single });
+    const root = makeRoot();
+    initPerfPanel(root, esc);
+    await clickAndFlush(root);
+
+    const out = outRoot(root);
+    expect(out.querySelector(".perf-sb-parity")).toBeNull();
+    expect(out.textContent ?? "").not.toContain("无法比对");
+    // 引擎行本体照常（数值不丢）：go 实测中位数 1.73ms 仍上屏
+    expect(out.textContent ?? "").toContain("1.73ms");
+  });
 });

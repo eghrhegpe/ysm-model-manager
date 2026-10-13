@@ -13,6 +13,7 @@ auto_fields:
     - buildTree
     - cleanupVirtualScroll
     - createTreeRenderCtx
+    - emptyStateForEmptyEntries
     - flattenVisible
     - getRenderMode
     - getVsMode

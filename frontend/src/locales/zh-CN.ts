@@ -925,6 +925,9 @@ export const zhCN = {
   "diagnostics.opAll": "全部操作",
   "diagnostics.opImport": "导入",
   "diagnostics.opScan": "扫描",
+  // 锐评 2026-10-13 功能 B：drop/pack-drop 埋点（features/dnd）早已写 Operation，收编进 OP_META 标签表
+  "diagnostics.opDrop": "拖拽导入",
+  "diagnostics.opPackDrop": "拖入整合包",
   "diagnostics.opDownload": "下载",
   "diagnostics.opSync": "同步",
   "diagnostics.opRename": "重命名",

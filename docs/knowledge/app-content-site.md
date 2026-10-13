@@ -27,6 +27,7 @@ auto_fields:
     - buildSiteHtml
     - BuildSiteHtmlCtx
     - CleanupFn
+    - compareByAuthorCount
     - compareFavFirst
     - computeCreatorTiers
     - CrCardCtx

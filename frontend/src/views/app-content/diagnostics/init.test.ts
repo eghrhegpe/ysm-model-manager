@@ -597,6 +597,97 @@ describe("initDiagnostics — 日志通道健康条（ADR-322 D2）", () => {
     expect(barOf(root).innerHTML).toBe("");
   });
 });
+
+/**
+ * 锐评 2026-10-13 功能 B：操作类型下拉的「可筛集合」必须是事实而非镜像。
+ * 病灶：OP_META 是策展标签表（7 项），而生产埋点写入 Operation 的词汇还含 drop（仓库拖拽）/
+ * pack-drop（整合包拖拽）/ preview scope 名（内部诊断环打标）——静态 option 清单必然漂移，
+ * 新埋点 op 既不可筛、分组标题又裸显英文 token。修法两半：用户级 op 进 OP_META（本地化标签），
+ * 数据驱动下拉补齐兜住一切未策展值（未知 op 原样可筛、不假装翻译）。
+ */
+describe("操作类型下拉：数据补齐与未知值可筛（锐评功能B）", () => {
+  it("日志里真实出现的 pack-drop → 下拉自动补项且标签本地化", async () => {
+    mockApp({
+      GetImportLogs: vi.fn(() => [
+        {
+          Operation: "pack-drop",
+          ModelName: "整合包A.ysm",
+          Status: "success",
+          Timestamp: "2026-10-13T10:00:00Z",
+        },
+        {
+          Operation: "import",
+          ModelName: "x.ysm",
+          Status: "success",
+          Timestamp: "2026-10-13T10:01:00Z",
+        },
+      ]),
+    });
+    const { root } = makeRoot();
+    initDiagnostics(root, esc);
+    await flushPromises();
+
+    const sel = root.getElementById("diag-log-op-filter") as HTMLSelectElement;
+    const opt = Array.from(sel.options).find((o) => o.value === "pack-drop");
+    expect(opt).toBeTruthy();
+    expect(opt!.textContent).toBe("拖入整合包"); // 本地化标签（OP_META 已收编），非裸 token
+    // 分组标题同口径：不再裸显 "pack-drop"
+    const list = root.getElementById("diag-log-list") as HTMLElement;
+    expect(list.textContent).toContain("拖入整合包");
+  });
+
+  it("未策展 op（内部诊断环的 preview scope）→ 原样补项可筛、不假装翻译；筛选生效", async () => {
+    mockApp({
+      GetImportLogs: vi.fn(() => [
+        {
+          Operation: "mmd-preview",
+          ModelName: "a.pmx",
+          Status: "warn",
+          Timestamp: "2026-10-13T10:00:00Z",
+        },
+        {
+          Operation: "import",
+          ModelName: "x.ysm",
+          Status: "success",
+          Timestamp: "2026-10-13T10:01:00Z",
+        },
+      ]),
+    });
+    const { root } = makeRoot();
+    initDiagnostics(root, esc);
+    await flushPromises();
+
+    const sel = root.getElementById("diag-log-op-filter") as HTMLSelectElement;
+    const opt = Array.from(sel.options).find((o) => o.value === "mmd-preview");
+    expect(opt).toBeTruthy();
+    expect(opt!.textContent).toBe("mmd-preview"); // 未知 token：可筛 + 如实原样，不编标签
+    // 选中它 → 列表只剩该 op 的行（数据驱动补项必须真能筛）
+    sel.value = "mmd-preview";
+    sel.dispatchEvent(new Event("change"));
+    await flushPromises();
+    const list = root.getElementById("diag-log-list") as HTMLElement;
+    // renderDisplayName 会剥除扩展名，ModelName "a.pmx" 渲染为 "a"
+    expect(list.textContent).toContain("a");
+    expect(list.textContent).not.toContain("x.ysm");
+  });
+
+  it("重复加载不重复补项（幂等）", async () => {
+    mockApp({
+      GetImportLogs: vi.fn(() => [
+        { Operation: "drop", ModelName: "y.ysm", Status: "success", Timestamp: "2026-10-13T10:00:00Z" },
+      ]),
+    });
+    const { root } = makeRoot();
+    initDiagnostics(root, esc);
+    await flushPromises();
+    (root.getElementById("diag-refresh") as HTMLElement).click();
+    await flushPromises();
+    const sel = root.getElementById("diag-log-op-filter") as HTMLSelectElement;
+    const dropOpts = Array.from(sel.options).filter((o) => o.value === "drop");
+    expect(dropOpts).toHaveLength(1);
+  });
+});
+
 describe("startDedup（会话工厂 createDedupSession）", () => {
   const dedup = createDedupSession();
   const groupJson = [

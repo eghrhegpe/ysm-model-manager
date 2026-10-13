@@ -22,6 +22,7 @@ auto_fields:
     - buildTree
     - cleanupVirtualScroll
     - createTreeRenderCtx
+    - emptyStateForEmptyEntries
     - emptyStateHTML
     - entryKey
     - fileRowCommon

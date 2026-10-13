@@ -949,6 +949,9 @@ export const en: Record<string, string> = {
   "diagnostics.opAll": "All operations",
   "diagnostics.opImport": "Import",
   "diagnostics.opScan": "Scan",
+  // 锐评 2026-10-13 功能 B：drop/pack-drop 埋点（features/dnd）早已写 Operation，收编进 OP_META 标签表
+  "diagnostics.opDrop": "Drop import",
+  "diagnostics.opPackDrop": "Pack drop",
   "diagnostics.opDownload": "Download",
   "diagnostics.opSync": "Sync",
   "diagnostics.opRename": "Rename",

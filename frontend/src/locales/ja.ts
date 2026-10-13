@@ -948,6 +948,9 @@ export const ja: Record<string, string> = {
   "diagnostics.opAll": "すべての操作",
   "diagnostics.opImport": "インポート",
   "diagnostics.opScan": "スキャン",
+  // 锐评 2026-10-13 功能 B：drop/pack-drop 埋点（features/dnd）早已写 Operation，收编进 OP_META 标签表
+  "diagnostics.opDrop": "ドラッグ取り込み",
+  "diagnostics.opPackDrop": "パックへドロップ",
   "diagnostics.opDownload": "ダウンロード",
   "diagnostics.opSync": "同期",
   "diagnostics.opRename": "リネーム",

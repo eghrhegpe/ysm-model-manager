@@ -69,6 +69,10 @@ export function dgLsResetCapsMemo(): void {
 export const OP_META: Record<string, { labelKey: LocaleKey; icon: string }> = {
   import: { labelKey: "diagnostics.opImport", icon: UI_ICONS.import },
   scan: { labelKey: "diagnostics.opScan", icon: UI_ICONS.search },
+  // 用户级 op 收编（锐评 2026-10-13 功能 B）：这两枚埋点早已在生产写 Operation
+  // （features/dnd/import-dnd.ts / pack-dnd.ts），此前不在表里 ⇒ 下拉筛不到、分组标题裸显英文 token。
+  drop: { labelKey: "diagnostics.opDrop", icon: UI_ICONS.download },
+  "pack-drop": { labelKey: "diagnostics.opPackDrop", icon: UI_ICONS.package },
   download: { labelKey: "diagnostics.opDownload", icon: UI_ICONS.download },
   sync: { labelKey: "diagnostics.opSync", icon: UI_ICONS.refresh },
   rename: { labelKey: "diagnostics.opRename", icon: UI_ICONS.edit },
@@ -115,6 +119,30 @@ function dgLsReadSearch(root: ShadowRoot): string {
 function dgLsReadOpFilter(root: ShadowRoot): string {
   const sel = root.getElementById("diag-log-op-filter") as HTMLSelectElement | null;
   return sel?.value || "all";
+}
+
+/**
+ * 下拉补项：把「本窗口日志真实出现、但选项还没有」的 Operation 追加进筛选下拉
+ * （锐评 2026-10-13 功能 B）。立因：OP_META 是**策展标签表**而非值域——Operation 由全仓
+ * 各埋点自由写入（AddOpLog 第一参），新埋点（如 preview scope 的 mmd-preview/fbx-preview）
+ * 不会自动出现在下拉里，用户只能靠搜索撞见、分组标题裸显英文 token。本函数把「可筛集合」
+ * 从静态镜像降级为**由数据回答**：OP_META 已知项用本地化标签，未知项原样显示 token
+ * （可筛、不假装翻译——诚实口径同 scan-bench 未知 reason token）。幂等：按 option value 查重，
+ * 重复加载不翻倍；页面重建（lang:changed）后由下一次加载再补齐。
+ */
+function dgLsSyncOpFilter(root: ShadowRoot, logs: ImportLog[]): void {
+  const sel = root.getElementById("diag-log-op-filter") as HTMLSelectElement | null;
+  if (!sel) return;
+  const present = new Set(Array.from(sel.options, (o) => o.value));
+  const missing = [...new Set(logs.map((l) => l.Operation || "import"))]
+    .filter((op) => !present.has(op))
+    .sort();
+  for (const op of missing) {
+    const opt = document.createElement("option");
+    opt.value = op;
+    opt.textContent = opMeta(op).label;
+    sel.appendChild(opt);
+  }
 }
 
 /**
@@ -331,6 +359,9 @@ export async function loadDiagnosticsLogs(root: ShadowRoot, esc: EscFn): Promise
     const caps = await dgLsLogCaps();
     const logs: ImportLog[] = (await GetImportLogs()) || [];
     if (dgLsCheckStale(gen)) return;
+    // 下拉补项先于渲染：可筛集合 = 环内全部日志的 op 词汇（Go 环本身有容量上限，
+    // 词汇超窗时选中得「无匹配日志」——如实而非藏项）
+    dgLsSyncOpFilter(root, logs);
     if (!logs.length) return dgLsSetEmpty(list, "diagnostics.noLogs");
     const filtered = dgLsFilterDiagLogs(logs, root, caps.op);
     if (!filtered.length) return dgLsSetEmpty(list, "diagnostics.noMatchLogs");

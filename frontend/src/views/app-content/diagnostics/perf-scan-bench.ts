@@ -231,8 +231,12 @@ export function renderScanBench(payload: ScanBenchPayload, esc: EscFn, timingMs?
 </tr></thead>
 <tbody>${rows}</tbody>
 </table>`;
-
-  return `${head}${specLine}${table}${parityHTML(payload.parity, esc)}`;
+  // parity 行只在**比对真的可能发生**（≥2 引擎）时渲染（锐评 2026-10-13 功能 A）：
+  // Rust 后端已删（2026-10-06），Go 现恒发单引擎 + `Parity{}` 零值（注释自陈「保留字段
+  // 仅兼容前端契约」）。无条件渲染会把「比对从未发生」播报成「比对失败」——每次扫描
+  // 必吃一条「无法比对」黄警，正是本文件反复清的「拿缺席当结论」同族病。
+  const parity = payload.engines.length >= 2 ? parityHTML(payload.parity, esc) : "";
+  return `${head}${specLine}${table}${parity}`;
 }
 
 /**

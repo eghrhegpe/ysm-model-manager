@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"ysm-model-manager/internal/testutil"
 )
 
 // 容器扩展名判定（IsContainerExt / ContainerExts）：
@@ -61,9 +62,7 @@ func writeContainerRegistry(t *testing.T, payload string) {
 	t.Helper()
 	dir := t.TempDir()
 	path := filepath.Join(dir, "resource_types.json")
-	if err := os.WriteFile(path, []byte(payload), 0o644); err != nil {
-		t.Fatalf("write payload: %v", err)
-	}
+	testutil.NoError(t, os.WriteFile(path, []byte(payload), 0o644), "write payload")
 	SetRegistryPath(path)
 	t.Cleanup(func() { SetRegistryPath("") })
 }
@@ -115,9 +114,7 @@ func TestContainerExts_FallsBackToBaselineWhenFieldMissing(t *testing.T) {
 // （同 extensions_map_test.go 对 extSet 的防 sync.Once 永久缓存契约）。
 func TestContainerExts_CacheInvalidatesOnRegistrySwap(t *testing.T) {
 	writeContainerRegistry(t, `{"containerExts":[".aaa"],"resourceTypes":[{"id":"a","name":"a","icon":"x","group":"other","extensions":[".aaa"],"storageSubDir":"a","instanceDir":"a","instanceLevel":false,"preview":"none","detector":"extension"}]}`)
-	if !IsContainerExt(".aaa") {
-		t.Fatal("首个注册表应认 .aaa")
-	}
+	testutil.Equal(t, IsContainerExt(".aaa"), true, "首个注册表应认 .aaa")
 	// 换到另一 payload（.bbb）——旧实例缓存不得存活
 	writeContainerRegistry(t, `{"containerExts":[".bbb"],"resourceTypes":[{"id":"b","name":"b","icon":"x","group":"other","extensions":[".bbb"],"storageSubDir":"b","instanceDir":"b","instanceLevel":false,"preview":"none","detector":"extension"}]}`)
 	if !IsContainerExt(".bbb") {
@@ -132,13 +129,9 @@ func TestContainerExts_CacheInvalidatesOnRegistrySwap(t *testing.T) {
 func TestContainerExts_RootJSONDeclaresField(t *testing.T) {
 	t.Parallel()
 	raw, err := os.ReadFile(filepath.Join("..", "..", "..", "resource_types.json"))
-	if err != nil {
-		t.Fatalf("read root json: %v", err)
-	}
+	testutil.NoError(t, err, "read root json")
 	var reg ResourceTypeRegistry
-	if err := json.Unmarshal(raw, &reg); err != nil {
-		t.Fatalf("parse root json: %v", err)
-	}
+	testutil.NoError(t, json.Unmarshal(raw, &reg), "parse root json")
 	if !cmp.Equal(reg.ContainerExts, []string{".zip", ".7z"}) {
 		t.Errorf("根 resource_types.json 的 containerExts = %v, want [.zip .7z]", reg.ContainerExts)
 	}

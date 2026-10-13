@@ -167,6 +167,13 @@ HTML 转义、搜索高亮、全局 toast 时长语义常量、焦点记忆 / �
   - **2026-08-29 修复**：① `hasAriaHiddenAncestor` 固定 `el.getRootNode()` 会在 shadow 内元素上死循环（parentElement=null 后反复跳回同一 host，探针实证 200ms 320 万步）——改 `node.getRootNode()` 跟随当前节点逐层跳出；② trap 收拢从 `!inside` 改为 `tabbable.includes(active)`——`document.activeElement` 对 shadow 内聚焦元素 retargeting 到 host，旧 `active===last` 判不中导致 shadow 内 Tab 逃逸，收拢逻辑防焦点逃出 overlay；③ handler 内沿 `shadowRoot.activeElement` 深焦解析，shadow 内多元素 Tab 自然流动（中间元素可达，不退化 first/last 乒乓）；④ trap cleanup 加身份守卫只清自己那份（旧实现 A close 会误删 B 的监听）
   - **使用约束**：单例 trap，多个浮层叠加时只一个生效；duck-typing 容错 node 测试环境（无 `HTMLElement` 全局）
 
+- **深焦解析：跨 Shadow 取真实聚焦元素**（`utils/dom/deep-active-element.ts`，2026-10-13 新增）：
+  - `deepActiveElement(start?)` 沿 `shadowRoot.activeElement` 逐层下钻，返回**真实**获得焦点的元素；`deepActiveElementOf(items, start?)` 再收窄为「items 内当前项，未命中返回 null」
+  - **存在根因**：本仓 UI 几乎全是 Shadow DOM 组件，浏览器对 `document.activeElement` 施加 **retargeting**——shadow 树内元素聚焦时它返回的是 **shadow host**。于是「拿 `document.activeElement` 去 `indexOf(items)` / `classList.contains`」这类写法在 shadow 内**恒不命中**，下游逻辑全线早退
+  - **本模块是该范式的单源出口**：`trap-focus-across-shadow.ts`、`views/context-menu/index.ts`、`views/app-content/site/events.ts`（创作者卡片键盘导航）此前各抄一遍同样的下钻循环，各抄一份 = 迟早漂移；新增消费方一律引这里，**禁止新写第二遍**
+  - ⚠️ **测试口径（踩坑）**：happy-dom 与浏览器同为 retargeting 语义（shadow 内聚焦时 `document.activeElement` 停在 host，`root.activeElement` 才是内层元素）。故单测若把夹具挂在 `document.body`（light DOM），`document.activeElement === 元素` 恒成立——**会造出「测绿而生产全废」的假绿灯**（创作者卡片键盘导航曾长期如此）。涉及 shadow 内焦点的回归必须挂真 shadow root 并断言 `deepActiveElement()` 或 `root.activeElement`
+  - 无焦点时返回 `document.activeElement` 原值（DOM 规范下是 `<body>`，非 null）——判据写「焦点是否在我关心的集合内」而不是「是否为 null」
+
 ## 与其他子系统关系
 
 - 全项目消费最广的工具函数之一：`app-preview`（index / tpl / preview-detail / preview-skeleton / preview-litematic-3d / preview-litematic-meta）、`app-content/index.ts`、`app-tree/render.ts`（hl 高亮）、`dialogs/tag-editor.ts` 等

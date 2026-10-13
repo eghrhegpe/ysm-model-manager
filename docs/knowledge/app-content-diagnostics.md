@@ -10,7 +10,6 @@ auto_fields:
   symbols_with_lines:
     - __resetChannelHealthForTest
     - applyPerfModeUI
-    - BASELINE_CONTROL_IDS
     - bindCancelButton
     - bindKeepPolicyChange
     - bindPerfCopyHandlers

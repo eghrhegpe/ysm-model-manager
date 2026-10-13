@@ -1,5 +1,6 @@
 // ===== 作者标签模块 =====
 
+import { logWarn } from "@/utils/base/primitives/log.ts";
 import { withCached } from "@/utils/cache/with-cached.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 
@@ -23,7 +24,10 @@ export async function loadAuthors(): Promise<AuthorInfo[]> {
     return (
       (await withCached(AUTHORS_CACHE_KEY, AUTHORS_CACHE_TTL_MS, () => ListModelAuthors())) || []
     );
-  } catch {
+  } catch (e) {
+    // 与 app-tree._load 同款失败留痕：作者列表加载失败静默降级为空数组，
+    // 但须留痕便于排查（原 catch {} 双重静默，开发者无从感知作者标签为何空白）
+    logWarn("app-tree", "作者列表加载失败:", e);
     return [];
   }
 }

@@ -522,6 +522,7 @@ describe("app-tree index 入口生命周期（补位）", () => {
   });
 
   it("_loadAuthorsAsync 失败 → _authors 置空", async () => {
+    stubConsoleWarn(); // 静音 loadAuthors 失败留痕（authors.ts 现 logWarn）
     getAppMock.mockRejectedValueOnce(new Error("authors down"));
     const el = await mountEl();
     expect((el as unknown as { _authors: unknown[] })._authors).toEqual([]);

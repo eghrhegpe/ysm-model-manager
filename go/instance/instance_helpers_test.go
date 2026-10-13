@@ -8,6 +8,7 @@ package instance
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"ysm-model-manager/go/fsutil"
@@ -198,5 +199,123 @@ func TestNestDirLevelTree_SamePathSelfMarkerMerged(t *testing.T) {
 		if c.Path == out[0].Path {
 			t.Fatalf("容器子项 Path 不得等于容器 Path: %+v", c)
 		}
+	}
+}
+
+// ===== ADR-333：防御键移出段名命名空间 =====
+// nestDirLevelTree 两处防御分支曾用段名字面量 "__self" 作 children 键，与真实目录名共享
+// 命名空间：模型树里存在名为 __self 的真实子目录时，防御节点与真实节点互相覆盖 → 静默丢失
+// 一整棵真实子树（无报错）。修法 = 键取 NUL 前缀常量（NUL 被 OS 禁止出现在路径中，
+// 碰撞在数学上不成立）。以下两例分别钉住分支 B（叶子写入已存在的真实容器）与
+// 分支 A（真实容器先占位、防御分支再写），均要求真实 __self 子树完整存活。
+
+// 分支 B：先建真实容器 __self，且其内部已存在名为 __self 的**嵌套子夹**
+// （这是覆盖能发生的必要条件——防御键写入 existing.children["__self"] 时，
+// 该键必须已被真实嵌套子夹占用才会覆盖），再插叶子 __self（实例侧 Extra）。
+// 旧实现：防御叶子覆盖真实嵌套子夹节点 → real 子树整体消失。
+func TestNestDirLevelTree_SelfKeyNoCollisionWithRealDir_LeafOverContainer(t *testing.T) {
+	base := t.TempDir()
+	globalDir := filepath.Join(base, "global")
+	instDir := filepath.Join(base, "inst")
+	real := filepath.Join(globalDir, "__self")
+	nested := filepath.Join(real, "__self") // 真实嵌套子夹（关键：它占用 children["__self"] 键）
+	if err := os.MkdirAll(nested, 0755); err != nil {
+		testutil.NoError(t, err)
+	}
+	flat := []types.ResourceSyncItem{
+		// 先建真实容器 __self 及其嵌套子夹 __self（含存活文件 keep.ysm）
+		{Path: filepath.Join(nested, "keep.ysm"), Name: "keep.ysm", Status: types.SyncStatusSynced, Type: "ysm"},
+		// 再插叶子 __self（实例侧独有同名夹）——触发「同段名既是叶子又已是容器」分支
+		{Path: filepath.Join(instDir, "__self"), Name: "__self", Status: types.SyncStatusOptional, Type: "ysm"},
+	}
+	out := nestDirLevelTree(flat, globalDir, instDir, "ysm")
+
+	// 收集整棵树名字：真实嵌套子夹及其存活文件必须可见（被旧实现吃掉的就是它们）
+	seen := map[string]bool{}
+	var walk func(items []types.ResourceSyncItem)
+	walk = func(items []types.ResourceSyncItem) {
+		for _, it := range items {
+			seen[it.Name] = true
+			if strings.ContainsRune(it.Name, 0) {
+				t.Fatalf("防御键外显为段名（键不外显契约被破坏）: %+v", it)
+			}
+			walk(it.Children)
+		}
+	}
+	walk(out)
+	if !seen["keep.ysm"] {
+		t.Fatalf("真实嵌套 __self 子夹的子树被防御键覆盖丢失（ADR-333 回归）: %v", seen)
+	}
+	// 实例侧叶子 __self 同样不得丢（防御目的是保它，不是替真实目录挡路）
+	leafKept := false
+	var findLeaf func(items []types.ResourceSyncItem)
+	findLeaf = func(items []types.ResourceSyncItem) {
+		for _, it := range items {
+			if !it.IsDir && it.Path == filepath.Join(instDir, "__self") {
+				leafKept = true
+			}
+			findLeaf(it.Children)
+		}
+	}
+	findLeaf(out)
+	if !leafKept {
+		t.Fatalf("实例侧叶子 __self 应保留: %v", seen)
+	}
+}
+
+// 分支 A（`nxt.leaf != nil` 防御）经实证确认在旧键下本就安全，故本例是「行为不变」的记录锁
+// 而非缺陷回归锁：叶子节点进入该分支时 children 必为 nil（叶子没有子节点），防御写入的键
+// 不会覆盖任何既有键；该键随即在 treeChildren 的 leaf 分支被原样输出（键不外显）。
+// 保留价值：① 钉住分支 A 未被 ADR-333 改动波及；② 若将来防御节点形态变化（允许带 children），
+// 本例会因「防御键落到真实同名段上」而变红，届时需重新评估。
+func TestNestDirLevelTree_SelfKeyBranchA_UnaffectedByKeyChange(t *testing.T) {
+	base := t.TempDir()
+	globalDir := filepath.Join(base, "global")
+	instDir := filepath.Join(base, "inst")
+	real := filepath.Join(globalDir, "__self")
+	if err := os.MkdirAll(real, 0755); err != nil {
+		testutil.NoError(t, err)
+	}
+	flat := []types.ResourceSyncItem{
+		// 第 1 条：让 __self 作为叶子占位（末段，无 children）
+		{Path: real, Name: "__self", Status: types.SyncStatusOptional, Type: "ysm"},
+		// 第 2 条：同名段又作容器下钻 → 命中 `nxt.leaf != nil` 防御分支
+		{Path: filepath.Join(instDir, "__self", "x.ysm"), Name: "x.ysm", Status: types.SyncStatusSynced, Type: "ysm"},
+	}
+	out := nestDirLevelTree(flat, globalDir, instDir, "ysm")
+
+	leafKept, drilled := false, false
+	var walk func(items []types.ResourceSyncItem)
+	walk = func(items []types.ResourceSyncItem) {
+		for _, it := range items {
+			if strings.ContainsRune(it.Name, 0) {
+				t.Fatalf("防御键外显为段名（键不外显契约被破坏）: %+v", it)
+			}
+			if !it.IsDir && it.Path == real {
+				leafKept = true
+			}
+			if it.Name == "x.ysm" {
+				drilled = true
+			}
+			walk(it.Children)
+		}
+	}
+	walk(out)
+	if !leafKept {
+		t.Fatalf("分支 A 防御后叶子 __self 丢失: %+v", out)
+	}
+	if !drilled {
+		t.Fatalf("下钻出的 x.ysm 应可见: %+v", out)
+	}
+}
+
+// 契约级断言：selfLeafKey 取 NUL 前缀——NUL 被 OS 禁止出现在路径/目录名中，
+// 故与任何真实段名碰撞在数学上不成立。此例防「有人图省事改回段名字面量」。
+func TestSelfLeafKey_UsesNulPrefix(t *testing.T) {
+	if len(selfLeafKey) == 0 || selfLeafKey[0] != 0 {
+		t.Fatalf("selfLeafKey 必须以 NUL 前缀（真实段名数学上不可能等于它）: %q", selfLeafKey)
+	}
+	if strings.ContainsRune(selfLeafKey, filepath.Separator) {
+		t.Fatalf("selfLeafKey 不得含路径分隔符（会被误判为多段路径）: %q", selfLeafKey)
 	}
 }

@@ -254,6 +254,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-333：同步树防御键 __self 改内部常量（消除与真实段名碰撞）",
+        "link": "/adr/architecture/ADR-333-instance-nesttree-selfkey-namespace"
+      },
+      {
         "text": "ADR-332：诊断页信息架构与版式收口：四项拍板决策",
         "link": "/adr/architecture/ADR-332-diagnostics-ia-and-layout-consolidation"
       },

@@ -39,6 +39,18 @@ func BuildSyncItems(ins *types.VersionInstance, rtypes []registry.ResourceType, 
 
 // isResourcePackFolder 检查目录是否是资源包文件夹（内含 pack.mcmeta）——统一走 fsutil 收敛实现
 
+// selfLeafKey 是 nestDirLevelTree 两处防御分支的内部 map 键（ADR-333）。
+//
+// 取 NUL（\x00）前缀而非可读段名：NUL 被操作系统禁止出现在路径/目录名中，真实段名
+// **数学上不可能**等于本键，故防御节点与同名真实目录永不互相覆盖。改前用段名字面量
+// "__self"，模型树里存在同名真实目录时防御键会覆盖它 → 静默丢失整棵真实子树（无报错）。
+//
+// 键不外显契约（安全性依赖此条）：treeChildren 遍历时 c.leaf != nil 分支原样输出叶子自身
+// Name/Path，键 k 只在容器分支参与 joinRel 拼路径；防御节点恒为「只有 leaf、无 children」
+// 形态，故本键永不进入任何 Name / Path / childRel。改动前请先读本注释——若将来防御节点
+// 可能带 children，本键会以 NUL 出现在路径里被前端视为无效路径（失效而非静默错误）。
+const selfLeafKey = "\x00__self_leaf"
+
 // nestTreeNode 展示树节点：中间目录（容器）或叶子单元
 type nestTreeNode struct {
 	// 容器字段
@@ -94,24 +106,24 @@ func nestDirLevelTree(flat []types.ResourceSyncItem, globalDir, instDir, rtype s
 					cur.children[s] = nxt
 				} else if nxt.leaf != nil {
 					// 同段名已是叶子（如全局侧平铺模型夹），又作为容器段下钻（实例侧同级更深嵌套）：
-					// 防御——保留原叶子作为其下 `__self` 子项，避免覆盖/ nil map 写入 panic。
+					// 防御——保留原叶子作为其下 `selfLeafKey` 槽位，避免覆盖/ nil map 写入 panic。
 					// 现实中 SyncResourcesDirLevel 对模型夹 SkipDir 极少触发，属防御性降级。
 					carry := nxt.leaf
 					nxt.leaf = nil
 					if nxt.children == nil {
 						nxt.children = map[string]*nestTreeNode{}
 					}
-					nxt.children["__self"] = &nestTreeNode{leaf: carry}
+					nxt.children[selfLeafKey] = &nestTreeNode{leaf: carry}
 				}
 				cur = nxt
 			}
 			last := segs[len(segs)-1]
 			if existing, ok := cur.children[last]; ok && existing != nil && existing.isDir {
-				// 同段名既是叶子又是中间容器：把叶子收进 __self，防覆盖容器
+				// 同段名既是叶子又是中间容器：把叶子收进 selfLeafKey 槽位，防覆盖容器
 				if existing.children == nil {
 					existing.children = map[string]*nestTreeNode{}
 				}
-				existing.children["__self"] = &nestTreeNode{leaf: leaf}
+				existing.children[selfLeafKey] = &nestTreeNode{leaf: leaf}
 				return
 			}
 			cur.children[last] = &nestTreeNode{leaf: leaf}
@@ -192,7 +204,7 @@ func treeChildren(node *nestTreeNode, baseRel, globalDir, instDir, rtype string)
 // 聚合，否则 marker 子文件状态不参与容器状态），故不能经 dirLevelContainerPath 反推，改为
 // global/inst 两根各拼一次候选，命中即认。子夹下的叶子路径必然更深，不会误伤。
 // 另：marker 必须真有直挂子文件可并才吸收——Path 恰好等于候选根且无 Children 的行是
-// nestDirLevelTree 同段防御的 __self 叶子（真实文件条目），静默丢弃 = 显示数据丢失，原样保留。
+// nestDirLevelTree 同段防御的 selfLeafKey 叶子（真实文件条目），静默丢弃 = 显示数据丢失，原样保留。
 func absorbSelfMarker(children []types.ResourceSyncItem, childRel, globalDir, instDir string) []types.ResourceSyncItem {
 	sep := string(filepath.Separator)
 	relPath := strings.ReplaceAll(childRel, "/", sep)

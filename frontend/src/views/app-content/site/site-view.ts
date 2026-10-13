@@ -8,7 +8,7 @@ import { bindEditEvents } from "./edit.ts";
 import { bindBrowseEvents } from "./events.ts";
 import { buildSiteHtml } from "./render.ts";
 import type { CleanupFn, RenderSiteViewCtx, SiteViewState } from "./types.ts";
-import { loadFavs, parseSiteIds } from "./workshop-data.ts";
+import { compareByAuthorCount, loadFavs, parseSiteIds } from "./workshop-data.ts";
 
 export type { LocalCreatorLike, RenderSiteViewCtx, RepoAuthorLike } from "./types.ts";
 
@@ -45,8 +45,8 @@ export function renderSiteView(site: WorkshopSite, ctx: RenderSiteViewCtx): Clea
     });
   }
 
-  // 按仓库模型数降序排列（高产创作者优先）
-  creators.sort((a, b) => (authorCountMap[b.name] || 0) - (authorCountMap[a.name] || 0));
+  // 按仓库模型数降序排列（高产创作者优先）——编辑态卡片序，不含收藏置顶
+  creators.sort((a, b) => compareByAuthorCount(a, b, authorCountMap));
 
   // 构建 HTML（纯函数，实现在 site-view-render.ts）
   // 收藏名单整轮渲染只解析一次（P1-c 锐评：原 ctx.isFaved 谓词 = 每卡一次 localStorage 解析）

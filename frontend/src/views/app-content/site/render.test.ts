@@ -255,13 +255,20 @@ describe("buildSiteHtml 编辑态", () => {
     expect(chips[1]?.classList.contains("active")).toBe(false);
     const roleSel = card.querySelector('select[data-fld="role"]') as HTMLSelectElement;
     expect([...roleSel.options].find((o) => o.selected)?.value).toBe("official");
-    // 🟡4 锐评：五项身份 option 的展示文案全走单源（vup/oc 曾写裸字面量 "VUP"/"OC"，
-    // 与卡片/筛选行的 getTagDisplayLabel 口径分裂）。value 仍是原始 role id（数据语义）。
-    const opt = (v: string) => [...roleSel.options].find((o) => o.value === v);
-    expect(opt("vup")?.textContent).toBe(t("workshop.roleVup"));
-    expect(opt("vup")?.textContent).not.toBe("VUP");
-    expect(opt("oc")?.textContent).toBe(t("workshop.roleOc"));
-    expect(opt("oc")?.textContent).not.toBe("OC");
+    // 🟡4 锐评：五项身份 option 的展示文案统一走 getTagDisplayLabel 单源（与卡片 chip /
+    // 筛选行同词）。value 仍是原始 role id（数据语义）。
+    // 历史缺口：本用例此前只断言 vup/oc 两项，creator/official/repo 走的 content.role*
+    // 短文案（「创作者/官方/仓库」）与 chip 长文案并存却无人测——「单源」宣称只覆盖 2/5。
+    // 现五项全断言：任何一项回退到别的词族都会立刻转红。
+    // layout-assert: option 顺序 = role 权威枚举序（creator 为首 = 新建条目默认档），非快照噪声
+    const opts = [...roleSel.options].map((o) => [o.value, o.textContent]);
+    expect(opts).toEqual([
+      ["creator", t("workshop.roleCreator")],
+      ["official", t("workshop.roleOfficial")],
+      ["vup", t("workshop.roleVup")],
+      ["oc", t("workshop.roleOc")],
+      ["repo", t("workshop.roleRepo")],
+    ]);
   });
 });
 

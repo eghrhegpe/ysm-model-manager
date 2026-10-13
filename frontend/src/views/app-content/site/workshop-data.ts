@@ -192,6 +192,20 @@ export function compareFavFirst<E extends FavSortInput>(
   return (authorCountMap[b.name] || 0) - (authorCountMap[a.name] || 0);
 }
 
+/**
+ * 创作者列表排序比较器：**按本地模型产量降序**（单一事实源）。
+ *
+ * 与 compareFavFirst 的区别：本比较器不含收藏置顶逻辑，用于编辑态卡片排序
+ * （编辑时按产量降序更合理，不需要收藏置顶）。
+ */
+export function compareByAuthorCount<E extends FavSortInput>(
+  a: E,
+  b: E,
+  authorCountMap: Record<string, number>,
+): number {
+  return (authorCountMap[b.name] || 0) - (authorCountMap[a.name] || 0);
+}
+
 export function toggleFav(name: string): boolean {
   const favs = loadFavs();
   const idx = favs.indexOf(name);

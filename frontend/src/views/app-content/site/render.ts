@@ -186,7 +186,7 @@ export function createCrCard(cr: LocalCreatorLike, ctx: CrCardCtx): string {
       staggerIdx,
     )}ms" data-name="${esc(cr.name)}" data-tag="${esc(tagRole)}"${
       tierRank ? ` data-tier="${esc(tierRank)}"` : ""
-    } title="${esc(t("content.searchFor", { name: cr.name }))}">` +
+    } title="${esc(t("common.viewDetail", { name: cr.name }))}">` +
     tierBar +
     `<div class="cr-card-header"><div class="cr-avatar-container"><div class="cr-avatar-ring"></div>${avatarHtml}</div>` +
     `<div class="cr-card-name-row"><span class="cr-card-name">${esc(
@@ -517,17 +517,16 @@ export function buildCreatorEditCard(
           }" data-site-id="${esc(s.id)}" title="${esc(s.label)}">${esc(s.label)}</button>`,
       )
       .join("")}</div>` +
-    // 🟡4 锐评：vup/oc 两档曾写字面量 "VUP"/"OC"——同一下拉里三个身份走 t()、两个走
-    // 裸字面量，ja/en 用户看到的身份词与卡片/筛选行（getTagDisplayLabel 单源）口径分裂。
-    // 现五项全走单源：已知身份 → i18n label，未知 → 原样（编辑下拉 = role 权威枚举源，
-    // 与 getCreatorIdentity 的 switch 分支一一对应）。
-    `<select data-idx="${idx}" data-fld="role" class="cr-input-role">${roleOption(
-      "creator",
-      t("content.roleCreator"),
-    )}${roleOption("official", t("content.roleOfficial"))}${roleOption(
-      "vup",
-      getTagDisplayLabel("vup"),
-    )}${roleOption("oc", getTagDisplayLabel("oc"))}${roleOption("repo", t("content.roleRepo"))}</select></div></div></div>`
+    // 五项身份 option 的展示文案统一走 getTagDisplayLabel（与卡片 chip / 筛选行同一单源）。
+    // 历史①：vup/oc 曾是裸字面量 "VUP"/"OC"；历史②：creator/official/repo 曾走 content.role*
+    // 短文案（「创作者/官方/仓库」），与卡片 chip 的 workshop.role* 长文案（「YSM 创作者/
+    // 官方IP模型库/社区模型仓库」）构成同轴两套词——同一下拉里三短两长。现统一到单源，
+    // content.roleCreator/Official/Repo 三键随之删除（死键闸只拦新增，删消费点须同删键）。
+    `<select data-idx="${idx}" data-fld="role" class="cr-input-role">${(
+      ["creator", "official", "vup", "oc", "repo"] as const
+    )
+      .map((r) => roleOption(r, getTagDisplayLabel(r)))
+      .join("")}</select></div></div></div>`
   );
 }
 

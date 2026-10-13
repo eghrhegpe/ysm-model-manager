@@ -692,7 +692,6 @@ export const ja: Record<string, string> = {
   "content.siteMergeResult": "サイト: 追加 {added}、更新 {updated}",
   "content.refreshSitesFailed": "サイト統合は保存されましたが、サイト一覧の更新に失敗しました",
   "content.jsonUnrecognized": "認識できない JSON 構造です",
-  "content.searchFor": "検索: {name}",
   "content.webSearchTerms": "ウェブ検索語",
   "content.modeExternal": "外部",
   "content.modeEmbed": "埋め込み",
@@ -724,9 +723,6 @@ export const ja: Record<string, string> = {
   "content.labelDesc": "説明",
   "content.descPlaceholder": "短いキーワード、カンマ区切り（8 文字以内でタグ表示）",
   "content.labelPlatform": "プラットフォーム",
-  "content.roleCreator": "クリエイター",
-  "content.roleOfficial": "公式",
-  "content.roleRepo": "リポジトリ",
   "content.mcPathSet": "設定済み: {path}",
   "content.pickMcDirTitle": "🔍 ゲームディレクトリを選択",
   "content.pickMcDirDesc":

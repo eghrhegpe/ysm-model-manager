@@ -223,7 +223,7 @@
 | cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 267 |
 | anActivateNavPage | `frontend/src/views/app-nav/index.ts` | 51 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 219 |
-| bindFooter | `frontend/src/views/app-sidebar/events.ts` | 288 |
+| bindFooter | `frontend/src/views/app-sidebar/events.ts` | 294 |
 | atTlBindRepoSwitch | `frontend/src/views/app-tree/toolbar-events.ts` | 88 |
 
 **订阅方（on）：**
@@ -238,7 +238,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | bindCardClickHandler | `frontend/src/views/app-sidebar/events.ts` | 99 |
-| restoreSelectedCard | `frontend/src/views/app-sidebar/events.ts` | 274 |
+| restoreSelectedCard | `frontend/src/views/app-sidebar/events.ts` | 280 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |

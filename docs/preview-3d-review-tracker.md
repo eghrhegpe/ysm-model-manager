@@ -15,11 +15,7 @@
 
 | # | 名称 | 状态 | 指向源码 `文件\|符号` | last_verified |
 |---|---|---|---|---|
-| ADR-317 | P1 on-device 终测（CI build-android 仅打 APK，无真机步骤） | 记账观察 | `.github/workflows/release.yml\|build-android`；`scripts/android-build.ts`；`docs/knowledge/ysm-wasi.md` | 2026-10-12 |
-| CSP | `new Function` 执行 UMD（unsafe-eval）。**侦察纠错（2026-10-12）**：前端 `import()` 迁移无效——`basis_encoder.js`（Emscripten 预编译产物）内部 dynCall/embind 也用 `new Function`，转 `import()` 只消除我们这层，严格 CSP 下仍失败；真修法 = `-sDYNAMIC_EXECUTION=0` 重编译（参照 `basis_transcoder.js` 同参数已无 `new Function`），需 Basis Universal 源码 + Emscripten SDK 工具链 | 记账观察 | `preview-3d/decoder/mmd-ktx2-basis.ts\|loadBasisModule`；`frontend/public/basis/basis_encoder.js`（内部 `new Function`）；`frontend/public/basis/basis_transcoder.js`（无 `new Function`，参照） | 2026-10-12 |
-| 机器闸边界 | `write-surface-gate` 方法值链盲区（`r.Restore`/`r.Delete`/`h.Import` 类）。**侦察定性（2026-10-12）**：闸已 fail-closed 自动派生（`7fa6c3b55` 翻转，读包导出面 `^func [A-Z]\w*(` 派生候选写函数），剩余盲区是**正则扫 `pkg.X(` 的固有边界**（非 AST）；真修法 = 换 AST 解析（`go/ast`/tree-sitter）——**大改**。当前无活跃 bug（方法值绕过是潜在风险，`write-surface-gate.ts` 头注已诚实声明剩余边界） | 记账观察 | `scripts/_lib/write-surface-gate.ts` | 2026-10-12 |
-| 候选 | `check-env-schema-consumers` 补写方检测（写模式多态，误报高，不做） | 候选 | `scripts/check-env-schema-consumers.ts`；`preview-3d/caps/light-persist.ts\|FLATTEN_MAP` | 2026-10-12 |
-| 候选 | `applyModelDefaults` 调用方手写有序清单（有契约锁兜底，设计如此） | 候选 | `preview-3d/adapters/shared-infra.ts\|applyModelDefaults`；锁 `preview-3d/adapters/shared-infra.test.ts` | 2026-10-12 |
+| _（2026-10-13 全部关账） | 触发条件当前不满足，逐条移到下方已清偿段并注明「条件触发再排期」；活卡归零，只保留真·当前待做 | — | — | 2026-10-13 |
 
 ---
 
@@ -60,6 +56,11 @@
 - **cube UV parity / geometry 选择链 parity** — 见 `tests/fixtures/parity/cube-mesh.golden.json`、`tests/fixtures/parity/geometry-select.golden.json`。
 - **族②残余·mergeCubes / computeBoneLocalPos parity（2026-10-12，`1f7ac4811`+`9da6b00d8`）** — 补跨语言黄金语料（防御性补强；侦察确认 TS/Go 两版逐行一致、无分叉）。扩展现有 `tests/fixtures/parity/cube-mesh.golden.json`：加 `$semanticsBoneLocalPos`/`$semanticsMergeCubes` + `boneLocalPosCases`(7)/`mergeCubesCases`(11)，主源 = Go。regen 一条命令（`YSM_PARITY_REGEN=1 go test ./go/threejs -run TestCubeMeshParity`）幂等已验证。口径：`computeBoneLocalPos` 逐位精确（纯加减）；`mergeCubes` 重叠判据走 `cubeEpsilon=0.001` 容差、输出 cube 全字段逐位精确。见 `frontend/src/preview-3d/mesh/cube-mesh.ts\|mergeCubes`、`\|computeBoneLocalPos`、`go/threejs/spec.go\|mergeCubes`、`go/threejs/spec-bones.go\|buildBoneLocalData`、`frontend/src/preview-3d/mesh/cube-mesh-merge-parity.test.ts`。
 - **F1 decoder 取消闩锁 / F5 decoder 纹理键覆盖 revoke / GPU query 孤儿 / pack 纹理引用计数对称 / adapter dispose 隔离 / build 失败归还 / frustum 注册契约** — 逐轮已清偿，见 archive 快照 §各轮记录 + 对应契约测试。
+- **ADR-317 on-device 终测（2026-10-13 关账）** — **触发条件未满足，再排期**：CI `release.yml\|build-android` 仅打 APK，无真机步骤。触发 = 产品定「要出 Android 真机版」，届时需 CI 加真机跑 V3 样本 + 后台冻结 + 内存峰值。见 `.github/workflows/release.yml\|build-android`、`docs/knowledge/ysm-wasi.md`。
+- **CSP new Function（2026-10-13 关账）** — **触发条件未满足，再排期**：桌面 Wails 默认不下发 CSP 头，`unsafe-eval` 可用。触发 = 上严格 CSP 头（如 web 版生产严格 `script-src`）。真修法 = `-sDYNAMIC_EXECUTION=0` 重编译 basis_encoder（参照 `basis_transcoder.js` 已无 `new Function`），需 Basis 源码 + Emscripten SDK；前端 `import()` 迁移**无效**（Emscripten 内部 dynCall/embind 也用 `new Function`）。见 `frontend/public/basis/basis_encoder.js`、`frontend/public/basis/basis_transcoder.js`。
+- **机器闸边界（2026-10-13 关账）** — **触发条件未满足，再排期**：闸已 fail-closed 自动派生，剩余方法值盲区无活跃 bug。触发 = 有人正/准备换汇聚点绕过闸（活跃开发新写函数 + 方法值）。真修法 = 换 AST 解析（`go/ast`/tree-sitter）——大改。见 `scripts/_lib/write-surface-gate.ts`。
+- **候选·check-env-schema-consumers 补写方检测（2026-10-13 关账）** — 明确不做（写模式多态，误报高）。见 `scripts/check-env-schema-consumers.ts`、`preview-3d/caps/light-persist.ts\|FLATTEN_MAP`。
+- **候选·applyModelDefaults 调用方手写有序清单（2026-10-13 关账）** — 设计如此（有契约锁兜底，顺序为实现序、终态与序无关）。见 `preview-3d/adapters/shared-infra.ts\|applyModelDefaults`、`preview-3d/adapters/shared-infra.test.ts`。
 
 ---
 

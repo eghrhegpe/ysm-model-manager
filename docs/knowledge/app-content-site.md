@@ -16,6 +16,7 @@ source_files:
   - frontend/src/views/app-content/tpl-workshop.ts
 auto_fields:
   symbols_with_lines:
+    - AvatarVariant
     - bindBrowseEvents
     - bindDragEvents
     - bindDragSort
@@ -31,8 +32,12 @@ auto_fields:
     - CrCardCtx
     - createBrowseModeRef
     - createCrCard
+    - creatorAvatarHtml
     - CreatorIdentity
     - CreatorIdentityInput
+    - creatorPlatformBadgesHtml
+    - creatorStarBtnHtml
+    - creatorTagChipHtml
     - DragSortSpec
     - DragStateShell
     - FAV_CREATORS_KEY

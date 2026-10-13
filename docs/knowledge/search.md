@@ -78,6 +78,7 @@ auto_fields:
     - ROW_H_LIST_NORMAL
     - rowHeightGrid
     - rowHeightList
+    - SelectedKeys
     - setRenderMode
     - setVsRows
     - terminateStatsWorker

@@ -218,7 +218,7 @@
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 386 |
 | atTeClickRowFolder | `frontend/src/views/app-tree/events.ts` | 142 |
 | atTeClickRowFile | `frontend/src/views/app-tree/events.ts` | 216 |
-| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 665 |
+| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 657 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -233,7 +233,7 @@
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 71 |
 | _pageInitFailed | `frontend/src/views/app-content/index.ts` | 193 |
-| cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 273 |
+| cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 235 |
 | anActivateNavPage | `frontend/src/views/app-nav/index.ts` | 51 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 219 |
 | bindMcPathLabel | `frontend/src/views/app-sidebar/events.ts` | 351 |
@@ -291,8 +291,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 202 |
-| cmBbBindLocalBadges | `frontend/src/views/app-content/site/events.ts` | 395 |
+| cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 164 |
+| cmBbBindLocalBadges | `frontend/src/views/app-content/site/events.ts` | 357 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -405,8 +405,8 @@
 | eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 324 |
 | eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 331 |
 | eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 342 |
-| cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 173 |
-| cmBbBindStarBtns | `frontend/src/views/app-content/site/events.ts` | 327 |
+| cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 135 |
+| cmBbBindStarBtns | `frontend/src/views/app-content/site/events.ts` | 289 |
 | show | `frontend/src/views/app-toast/index.ts` | 130 |
 | show | `frontend/src/views/app-toast/index.ts` | 149 |
 | show | `frontend/src/views/app-toast/index.ts` | 158 |

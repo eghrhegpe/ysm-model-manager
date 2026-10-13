@@ -1655,6 +1655,10 @@ export const autoSidebar = [
       {
         "text": "ADR-091-d1：环境能力 cap 拆分：hdr-cache/background 先行，ibl 所有权段单独一刀",
         "link": "/adr/decisions/ADR-091-d1-cap-hdr-cache-background-ibl"
+      },
+      {
+        "text": "ADR-034-d1：创作者频道视图片段单源：抽共用渲染片段而非合并两视图",
+        "link": "/adr/decisions/ADR-034-d1-creator-view-fragments"
       }
     ]
   },

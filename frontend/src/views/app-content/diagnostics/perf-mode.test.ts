@@ -15,16 +15,35 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { bus } from "@/bus";
-// BASELINE_CONTROL_IDS 现居共享叶 perf-common.ts（2026-09-23 断环迁居）；其余门禁表仍归 perf.ts。
-import { BASELINE_CONTROL_IDS } from "./perf-common.ts";
+// ADR-278-d1：PERF_UNREAD_MODES / PERF_UNREAD_TARGETS / BASELINE_CONTROL_IDS 三张手工登记表
+// 退役——门禁改由 read* 的 collector 读路径派生。本文件护栏随之从「表登记面 == tpl 控件集」
+// 改为「apply 产出的 disabled == 读集快照」的等价对账 + 反孤儿（每个控件至少被某状态读到）。
+import { concReadIds } from "./perf-concurrent.ts";
 import {
   applyPerfModeUI,
   initPerfPanel,
   perfScopeHint,
   PERF_RUN_BUTTON_MODE_KEYS,
-  PERF_UNREAD_MODES,
-  PERF_UNREAD_TARGETS,
 } from "./perf.ts";
+import { scanBenchReadIds } from "./perf-scan-bench.ts";
+import { singleBenchReadIds } from "./perf-single-bench.ts";
+
+/** apply 的门禁枚举面 = 面板内**所有** diag-perf-* 的 input/select（与 perf.ts 同口径：
+ *  读点即真相，枚举不依赖 DOM 落位——行内行外、可见隐藏一律对账） */
+function visibleControls(root: ShadowRoot): (HTMLInputElement | HTMLSelectElement)[] {
+  return [
+    ...root.querySelectorAll<HTMLInputElement | HTMLSelectElement>(
+      'input[id^="diag-perf-"], select[id^="diag-perf-"]',
+    ),
+  ];
+}
+
+/** 某模式下 apply 应取用的读集快照（真相源 = read* 的 collector，与 perf.ts 同源） */
+function readIdsFor(root: ShadowRoot, mode: string): Set<string> {
+  if (mode === "conc") return concReadIds(root);
+  if (mode === "scan") return scanBenchReadIds(root);
+  return singleBenchReadIds(root);
+}
 
 const { executeCLI, isWebPlatform } = vi.hoisted(() => ({
   executeCLI: vi.fn(),
@@ -264,35 +283,53 @@ describe("基准模式接线（ADR-278）", () => {
   });
 
   // ===== ADR-262 D8 的半边账：「被禁用」比「勾了却没生效」诚实——但门禁只管到目标集维度，
-  // 没管到模式维度：基准三件套只登记在 single 行（tpl.ts data-perf-mode="single"），scan/conc
-  // 下整行被 .perf-mode-off 隐藏（不可交互，诚实）；真正要钉的是反向：**当前模式可见却不被
-  // 载荷读取**的控件必须 disabled——基准三件套在 conc/scan 下、并发控件在 single/scan 下。
-  it("非 single 模式下可见但载荷不读的控件必已禁用（隐藏的不用禁，可见的可改就必须拒）", () => {
-    // 按 data-perf-mode 可见性判定：整行被 .perf-mode-off 隐藏的无需禁（用户碰不到）；
-    const baselineIds = BASELINE_CONTROL_IDS;
+  // 门禁派生对账（ADR-278-d1，取代原「表驱动期望」）：**每个可见控件**的 disabled 必须严格
+  // 等于「该控件是否在当前模式的读集快照里」。读集由 read* 的 collector 现算（真相源 = DOM 现状），
+  // apply 也跑同一读路径——本对账锁的是「apply 确实按读集派生、且面覆盖每个可见控件」：
+  //  - apply 若漏纳某可见控件（controls 面窄于实际）→ 该控件 disabled 停在旧值、对账红；
+  //  - 若某模式的读集与真实 read* 分叉（改 read* 忘同步）→ 快照本身变，对账跟着红。
+  it("每模式可见控件的 disabled ≡ 读集快照（可见即可用的唯一判据 = 载荷真读它）", () => {
     for (const mode of ["single", "conc", "scan"]) {
-      // ADR-300 §2.1：scan 上轴为第三 pill——其下共享区整体退场，本判据对它空转，
-      // 但纳入循环防「未来给 scan 加可见共享控件却漏禁」的漂移
       const root = makeRoot(mode);
-      initPerfPanel(root, esc);
-      const visibleRows = [...root.querySelectorAll<HTMLElement>("[data-perf-mode]")].filter(
-        (el) => !el.classList.contains("perf-mode-off"),
+      initPerfPanel(root, esc); // initPerfPanel → initPerfMode → apply 已跑过一遍
+      const reads = readIdsFor(root, mode); // 现算同一读路径的读集（幂等：纯读零副作用）
+      const controls = visibleControls(root);
+      expect(controls.length, `mode=${mode} 门禁面对空（夹具/选择器失效，防空转假绿）`).toBeGreaterThan(
+        0,
       );
-      for (const id of [...baselineIds, "diag-perf-conc-workers", "diag-perf-conc-max"]) {
-        const el = root.getElementById(id) as HTMLInputElement | null;
-        if (!el) continue; // 夹具未放的控件不判（宽容旧 DOM）
-        const inVisibleRow = visibleRows.some((row) => row.contains(el));
-        if (!inVisibleRow) continue; // 整行已隐藏 → 不可交互，无需禁
-        // 基准三件套是双维门禁：模式=single **且**目标集=model 才可用（ADR-262 D8 × §2.6 四修，
-        // syncPerfBaselineControls 兼并两维、本表管 apply 路径的模式维）。夹具 rtype 默认 ""=单模型，
-        // single 下基准就该可用——期望值随「当前选中目标集」算，不写死。
-        const isModelTarget =
-          (root.getElementById("diag-perf-rtype") as HTMLSelectElement).value === "";
-        const live = id.startsWith("diag-perf-baseline-")
-          ? mode === "single" && isModelTarget
-          : !PERF_UNREAD_MODES[id]?.includes(mode); // 未登记 = 所有模式都读（如迭代框）
-        expect({ mode, id, disabled: el.disabled }).toEqual({ mode, id, disabled: !live });
+      for (const el of controls) {
+        expect(
+          el.disabled,
+          `mode=${mode} 控件 ${el.id}：disabled=${el.disabled} 应等于 !reads.has(id)=${!reads.has(el.id)}`,
+        ).toBe(!reads.has(el.id));
       }
+    }
+  });
+
+  // 反孤儿（每个 bench 控件至少被某一状态读到）：读路径永不触及的控件 = 无人消费的装饰，
+  // 正是 ADR-278 §2.6「可见可改不被读」要拒的——派生化后由「三态读集并集 == 全部可见控件」锁。
+  it("每个 bench 控件都被某种状态读到（无人消费的孤儿控件即红）", () => {
+    // 三模式 × 关键目标态的读集并集，须覆盖夹具里所有 diag-perf-* 可输入控件
+    const union = new Set<string>();
+    for (const mode of ["single", "conc", "scan"]) {
+      const r = makeRoot(mode);
+      initPerfPanel(r, esc);
+      for (const id of readIdsFor(r, mode)) union.add(id);
+    }
+    // single + 非单模型目标：max / order 走另一条读分支，补进并集
+    const rRepo = makeRoot("single");
+    initPerfPanel(rRepo, esc);
+    (rRepo.getElementById("diag-perf-rtype") as HTMLSelectElement).value = "__repo__";
+    for (const id of readIdsFor(rRepo, "single")) union.add(id);
+    // 并集面 = 夹具所有可见控件（任一模式下）；孤儿 = 任何模式都不读
+    const allIds = new Set<string>();
+    for (const mode of ["single", "conc", "scan"]) {
+      const r = makeRoot(mode);
+      initPerfPanel(r, esc);
+      for (const el of visibleControls(r)) allIds.add(el.id);
+    }
+    for (const id of allIds) {
+      expect(union, `${id} 是孤儿控件：没有任何状态会读它（可见可改不被读 = 欺骗）`).toContain(id);
     }
   });
 
@@ -341,21 +378,41 @@ describe("基准模式接线（ADR-278）", () => {
     expect(modelEl.title).toContain("单模型");
   });
 
-  it("目标集维不读表 PERF_UNREAD_TARGETS 登记 max / order（与模式维表对称，护栏可校验）", () => {
-    // 表存在且语义正确：这两控件在 target=model 下不进载荷（真相源 = perf-single-bench 的提前 return）
-    expect(PERF_UNREAD_TARGETS["diag-perf-max"]).toContain("model");
-    expect(PERF_UNREAD_TARGETS["diag-perf-order"]).toContain("model");
+  // 读集随目标集分叉（ADR-278-d1：取代原「PERF_UNREAD_TARGETS 登记」表断言——真相不再在表里，
+  // 在读取路径本身）：single + 单模型目标**根本不读** max / order（singleBenchReadMode 提前
+  // return 走 model 分支），换到非单模型即读。若未来有人给 model 分支加读 max 而 UI 语义未变，
+  // 此处快照当场可见。
+  it("读集随目标集分叉：single+model 不含 max/order，single+repo 含之（表断言退役为读路径断言）", () => {
+    const rModel = makeRoot("single");
+    initPerfPanel(rModel, esc);
+    const readsModel = singleBenchReadIds(rModel); // rtype="" → model 分支
+    expect(readsModel.has("diag-perf-max")).toBe(false);
+    expect(readsModel.has("diag-perf-order")).toBe(false);
+    expect(readsModel.has("diag-perf-model")).toBe(true);
+    expect(readsModel.has("diag-perf-baseline-th")).toBe(true); // 基准只在 model 分支被读
+    const rRepo = makeRoot("single");
+    initPerfPanel(rRepo, esc);
+    (rRepo.getElementById("diag-perf-rtype") as HTMLSelectElement).value = "__repo__";
+    const readsRepo = singleBenchReadIds(rRepo);
+    expect(readsRepo.has("diag-perf-max")).toBe(true);
+    expect(readsRepo.has("diag-perf-order")).toBe(true);
+    expect(readsRepo.has("diag-perf-model")).toBe(false); // model 框在非单模型分支不被读
+    expect(readsRepo.has("diag-perf-baseline-th")).toBe(false); // 双维门禁坍缩进读路径（ADR-262 D8）
   });
 
-  it("非 single 下拨目标集选择器不得把基准三件套解禁（双维门禁兼并判定）", () => {
-    // 回归钉：syncPerfBaselineControls 也被 rtype change / 选项填充回调独立触发，
-    // 若只判目标集维不读当前模式，conc 下动一下选择器就绕过 §2.6 反向半边。
+  it("非 single 下拨目标集选择器不得把基准三件套解禁（双维门禁坍缩为读集，回归钉保留）", () => {
+    // 四修同款回归：conc 下动选择器选回「单模型」——目标集维满足但模式仍是 conc，
+    // conc 的读路径（concReadParams）永不触及基准控件 → 派生 disabled 必须保持 true。
     const root = makeRoot("conc"); // scan 已退出模式轴，用 conc 验「非 single」这一半
     initPerfPanel(root, esc);
     const rtype = root.getElementById("diag-perf-rtype") as HTMLSelectElement;
     rtype.value = ""; // 选回「单模型」——目标集维满足，但模式仍是 conc
     rtype.dispatchEvent(new Event("change"));
-    for (const id of BASELINE_CONTROL_IDS) {
+    for (const id of [
+      "diag-perf-baseline-save",
+      "diag-perf-baseline-compare",
+      "diag-perf-baseline-th",
+    ]) {
       expect({ id, disabled: (root.getElementById(id) as HTMLInputElement).disabled }).toEqual({
         id,
         disabled: true,
@@ -363,29 +420,24 @@ describe("基准模式接线（ADR-278）", () => {
     }
   });
 
-  // ===== 大刀护栏：控件门禁登记面 = tpl 真实控件集（防「新控件哪边都没归宿」静默漏网）=====
-  it("tpl.ts bench 组的每个可输入控件都有门禁归宿（行归属或 PERF_UNREAD_MODES，二选一）", () => {
-    // happy-dom 下 import.meta.url 是 http://，new URL 不可用；process.cwd() = frontend/（vitest 工作目录）
+  // ===== 夹具 ↔ 真实 tpl 控件集对账（ADR-278-d1：取代原「表登记面 == tpl 控件集」大刀护栏）=====
+  // 原护栏拿 PERF_UNREAD_MODES/TARGETS/BASELINE 三表反查 tpl 行归属，表退役后那套机制整体塌缩。
+  // 但「运行期对账的控件宇宙必须等于真实控件集」这条不能丢——否则夹具漏放某控件时，上面的
+  // disabled≡读集对账会对真实缺失的控件**失明**（假绿）。故留一条最薄的：tpl 真实 input/select
+  // 控件集须全部落在夹具 makeRoot 里（夹具是真实面的**超集**即合格；真实面新增控件而夹具未跟上即红）。
+  it("tpl.ts bench 真实控件集 ⊆ 夹具控件集（运行期对账的宇宙等于现实，防夹具漏控件致盲）", () => {
+    // happy-dom 下 import.meta.url 是 http://，new URL 不可用；process.cwd() = frontend/
     const src = readFileSync(resolve(process.cwd(), "src/views/app-content/tpl.ts"), "utf8");
-    // 锚定 tab 数组项的 `id: "bench",`（带尾逗号：标签文案不含此字面量，不会误锚）；
-    // 终点锁 audit tab 声明处——不能用「下一行以 `{` 开头」判界（body 模板串里有 JSON 样例缩进块）。
-    // ⚠️ ADR-300 §2.1：scan 从独立 tab 退回 bench 组第三 pill、record 退回 logs 组 pill，
-    // 故 bench 与 scan 的控件如今**同居一个 body**——扫描域收成 `bench` 起、`audit` 止一段，
-    // 不再需要旧的 `bodyOf("bench","scan") + bodyOf("scan","record")` 两段拼接。
-    const bodyOf = (tabId: string, stopAt: string): string => {
-      const at = src.indexOf("body:", src.indexOf(`id: "${tabId}",`));
-      const s = src.indexOf("`", at) + 1;
-      const e = src.indexOf(`id: "${stopAt}",`);
-      expect(at, `找不到 tab ${tabId}`).toBeGreaterThan(-1);
-      expect(e, `找不到 tab ${tabId} 的终点 ${stopAt}`).toBeGreaterThan(s);
-      return src.slice(s, e);
-    };
-    const seg = bodyOf("bench", "audit");
-    // 只钉「用户能改值」的控件（input/select）；button/label/output 容器不进门禁账
-    const ids = [...seg.matchAll(/<(?:input|select)[^>]*id="(diag-perf-[a-z-]+)"/g)].map(
-      (m) => m[1],
+    const at = src.indexOf("body:", src.indexOf(`id: "bench",`));
+    const e = src.indexOf(`id: "audit",`);
+    expect(at, '找不到 bench tab body').toBeGreaterThan(-1);
+    expect(e, "找不到 audit 终点").toBeGreaterThan(at);
+    const seg = src.slice(src.indexOf("`", at) + 1, e);
+    // 只取「用户能改值」的控件（input/select），button/label/结果容器不进门禁账（与 apply 枚举面同口径）
+    const tplIds = new Set(
+      [...seg.matchAll(/<(?:input|select)[^>]*id="(diag-perf-[a-z-]+)"/g)].map((m) => m[1] as string),
     );
-    // 真相源抽样：共用旋钮 + 基准三件套必须在扫描结果里（防正则空转假绿）
+    // 抽样防正则空转：共用旋钮 + 基准三件套 + 并发/扫描控件必须在扫描结果里
     for (const mustSee of [
       "diag-perf-rtype",
       "diag-perf-order",
@@ -394,101 +446,31 @@ describe("基准模式接线（ADR-278）", () => {
       "diag-perf-max",
       "diag-perf-conc-workers",
       "diag-perf-conc-max",
-      ...BASELINE_CONTROL_IDS,
+      "diag-perf-baseline-save",
+      "diag-perf-baseline-compare",
+      "diag-perf-baseline-th",
+      "diag-perf-scan-iter",
     ]) {
-      expect(ids, `扫描面丢失 ${mustSee}`).toContain(mustSee);
+      expect(tplIds, `扫描面丢失 ${mustSee}（正则空转假绿）`).toContain(mustSee);
     }
-    // 行归属：控件**所属 diag-bar-row 开标签**的 data-perf-mode 列表（未写 = 所有模式都显示）。
-    // 不能用「向前最近一个 <div」——嵌套下（row > row-label）会抓到内层 div；
-    // 也不能拿控件自身所在行（tpl 里按钮与输入框同行，data-perf-mode 挂在行 div 上）。
-    // 做法：取控件前最后一个行开标签，再沿 <div/</div> 配平验证它仍开着（嵌套行不误抓）。
-    // ⚠️ 开标签字面量取常量、切片偏移取 `.length`：类名 2026-09 由 perf-row 泛化为
-    // diag-bar-row（ADR-288 D1），旧的硬编码 `i + 20` 会静默错位——长度不再手写。
-    const ROW_OPEN = '<div class="diag-bar-row"';
-    const rowOpenAt = (pos: number): string | null => {
-      let cursor = pos;
-      for (;;) {
-        const i = seg.lastIndexOf(ROW_OPEN, cursor);
-        if (i < 0) return null;
-        // 从该开标签到控件位置做深度扫描：回零 = 它已被闭合，继续向前找更早的行
-        let depth = 1;
-        for (const m of seg.slice(i + ROW_OPEN.length, pos).matchAll(/<div\b|<\/div>/g)) {
-          depth += m[0].startsWith("</") ? -1 : 1;
-          if (depth === 0) break;
-        }
-        if (depth > 0) return seg.slice(i, seg.indexOf("\n", i));
-        cursor = i - 1;
-      }
-    };
-    // 归宿 = 行归属 ∨ 不读表 ∨ 公共区，三维**至少其一**：
-    //  - 行写了 data-perf-mode → 缺席模式下整行隐藏（用户碰不到），诚实；
-    //  - 登记进 PERF_UNREAD_MODES/基准名单 → 三模式共用行里「可见但不被读」被置灰；
-    //  - 登记进 SHARED_CONTROLS（ADR-278 §2.7 公共区）→ **模式无关常驻**且两种模式都读它
-    //    （single/conc 在 Go 侧由同一个 registerPerfTargetFlags 注册），行上**故意不写** data-perf-mode。
-    // 三者都没有 = 新控件在某些模式下永远可见、可改、不被读——正是 §2.6 要拒的欺骗，当场红。
-    //
-    // ⚠️ 为何公共区要单独立名而不能滥用 PERF_UNREAD_MODES：把常驻控件写成「不读它的模式=<空>」
-    // 语法上能混进门禁，但那条表回答的是「哪个模式不读它」，回答不了「它为何不随模式显隐」。
-    // 名字错了，下一个人就会以为常驻与置灰是同一回事（六修到七修之间出现的正是这类语义混淆）。
-    const SHARED_CONTROLS = new Set<string>([
-      // ADR-300 §2.1：公共区（测什么/排序）如今落在 `data-perf-mode="single conc"` 行内，
-      // 已有行归属门 → 首环 hasRowGate 直接放行，无需再列进本桶（保留空桶只为第二维扫描的
-      // visibleInSingle 计算口径清晰：single 可见性现由 rowModes 判定，不再靠此旁路）。
-    ]);
-    // scan 控件（引擎对照）现为 bench 组第三 pill、在 `data-perf-mode="scan"` 行内 →
-    // 首环 hasRowGate 放行、二环因 rowModes 不含 single 跳过，无需 SCAN_TAB_CONTROLS 例外。
-    for (const id of ids) {
-      const idx = seg.indexOf(`id="${id}"`);
-      const rowOpen = rowOpenAt(idx);
-      const hasRowGate = rowOpen !== null && rowOpen.includes("data-perf-mode");
-      const hasUnreadGate = id in PERF_UNREAD_MODES || BASELINE_CONTROL_IDS.includes(id);
-      const hasSharedGate = SHARED_CONTROLS.has(id);
-      // 归宿是「或」：行归属 ∨ 不读表 ∨ 公共区，至少其一（都没 = 可见可改不被读，当场红）
+    // 夹具宇宙 = 三模式下 makeRoot 出现过的所有 diag-perf-* 可输入控件
+    const fixtureIds = new Set<string>();
+    for (const mode of ["single", "conc", "scan"]) {
+      const r = makeRoot(mode);
+      r.querySelectorAll<HTMLInputElement | HTMLSelectElement>("input,select").forEach((el) => {
+        if (el.id.startsWith("diag-perf-")) fixtureIds.add(el.id);
+      });
+    }
+    for (const id of tplIds) {
       expect(
-        hasRowGate || hasUnreadGate || hasSharedGate,
-        `${id} 无门禁归宿：既不在带 data-perf-mode 的行内，也不在 PERF_UNREAD_MODES/基准名单/公共区——新增控件忘登记即红`,
-      ).toBe(true);
-    }
-
-    // ===== 第三维（同日六修）：目标集维也得有归宿 =====
-    // 上面那道判据是「行归属 ∨ 不读表」，两者只要其一就放行，而 max / order 恰好"行归属 single"
-    // 合格却仍被 singleBenchReadMode 在 target==="model" 下提前 return 跳过——护栏把「可见」误当「被读」。
-    // 这里补第二道：**在 single 模式下可见的控件**，要么被 single 的 model 分支真读到（白名单，
-    // 真相源 = perf-single-bench 的 read*），要么必须在 PERF_UNREAD_TARGETS / 基准名单登记。
-    // 新增一个 single 可见控件时，必须显式回答「单模型目标下读不读它」——不许沉默。
-    const READ_IN_SINGLE_MODEL = new Set([
-      "diag-perf-rtype", // 目标集选择器自身：决定走哪条分支
-      "diag-perf-iter", // singleBenchReadIterations（model 分支也读）
-      "diag-perf-model", // model 分支的主角
-      "diag-perf-run", // 运行按钮（button 不进门禁账，此处防御性列出）
-    ]);
-    for (const id of ids) {
-      const rowOpen = rowOpenAt(seg.indexOf(`id="${id}"`));
-      const rowModes = (rowOpen?.match(/data-perf-mode="([^"]*)"/)?.[1] ?? "").split(/\s+/);
-      // scan 下公共区（single conc 行）与两模式行皆隐藏；仅 single 可见者才需目标集维归宿
-      const visibleInSingle =
-        rowOpen === null || rowModes.includes("single") || SHARED_CONTROLS.has(id);
-      if (!visibleInSingle) continue; // single 下整行隐藏 → 用户碰不到，不需目标集维归宿
-      const accountable =
-        READ_IN_SINGLE_MODEL.has(id) ||
-        id in PERF_UNREAD_TARGETS ||
-        BASELINE_CONTROL_IDS.includes(id);
-      expect(
-        accountable,
-        `${id} 在 single 下可见，但未声明「单模型目标下读不读它」：不是被 model 分支读到的控件，也不在 PERF_UNREAD_TARGETS/基准名单——六修同款漏判`,
-      ).toBe(true);
-    }
-    // 抽样防正则空转：这两条必须落在「可见 single 且已登记目标集维」上
-    expect(Object.keys(PERF_UNREAD_TARGETS)).toContain("diag-perf-max");
-    expect(Object.keys(PERF_UNREAD_TARGETS)).toContain("diag-perf-order");
-
-    // 反向闸（上轮锐评 F 的可锁子集）：不读登记表里的每个 id 必须是 tpl 里真实控件。
-    // 登记表漂出幽灵 id（控件已删/改名、表忘同步）时，apply 循环 getElementById 拿到 null 静默跳过，
-    // 「可见不被读」的欺骗复活而无人知。登记面自审：幽灵项即红。
-    for (const id of [...Object.keys(PERF_UNREAD_MODES), ...Object.keys(PERF_UNREAD_TARGETS)]) {
-      expect(ids, `不读登记表里的 ${id} 在 tpl 已不存在（幽灵条目，登记面自身漂移）`).toContain(id);
+        fixtureIds,
+        `真实 tpl 有控件 ${id}，但夹具 makeRoot 未放——运行期对账会对其失明（补进夹具）`,
+      ).toContain(id);
     }
   });
+
+  // S3 行级对账（pill 值域 ↔ data-perf-mode 值域）保留：它防的是**布局/子屏接线**问题
+  // （死行 / 空转 pill），与控件门禁正交，表退役不影响。见下一条 it。
 
   // ===== S3 对账护栏（ADR-300 §2.7）：pill 值域 ↔ data-perf-mode 门禁值域互为定义域 =====
   it("tpl.ts bench 组：每个门禁值有 pill 承接、每个 pill 有行引用（新子面板未登记即红）", () => {

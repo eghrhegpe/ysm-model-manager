@@ -235,6 +235,18 @@ export function renderScanBench(payload: ScanBenchPayload, esc: EscFn, timingMs?
   return `${head}${specLine}${table}${parityHTML(payload.parity, esc)}`;
 }
 
+/**
+ * ADR-278-d1：引擎对照（scan）的**控件读取集**纯读快照。scan 参数面只碰自己那一格迭代框
+ * （ADR-278 §2.7 内容判据：公共区在 scan 下整行退场，从不触碰 rtype/order/model/max/baseline）——
+ * 故此集合恒为 {diag-perf-scan-iter}，apply 据此把其余共享控件在 scan 下派生为「碰不到」（整行
+ * 已由 data-perf-mode 隐藏）+ 兜底 disabled。纯读、幂等。
+ */
+export function scanBenchReadIds(root: ShadowRoot): Set<string> {
+  const reads = new Set<string>();
+  singleBenchReadIterations(root, "diag-perf-scan-iter", reads);
+  return reads;
+}
+
 export async function runScanBench(root: ShadowRoot, esc: EscFn): Promise<void> {
   const gen = scanBenchGuard.next();
   const out = getOutBox(root, "diag-perf-scan-bench-out");

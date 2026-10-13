@@ -42,7 +42,6 @@ auto_fields:
     - bindSubBar
     - bindTabA11y
     - BindTabA11ySpec
-    - bindTabs
     - contentCreatorCSS
     - contentCSS
     - contentDiagCSS

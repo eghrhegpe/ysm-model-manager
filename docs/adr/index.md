@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **346** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **347** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > ADR 三区存放：根目录 = 存量（分级前）/ `architecture/` = 架构决策 / `decisions/` = 执行决策日志（ADR-320）。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -19,7 +19,7 @@ permalink: /adr/
 | [📝 提议中](#提议中) | 7 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 1 |
 | [🔄 部分采纳](#部分采纳) | 14 |
-| [✅ 已采纳](#已采纳) | 316 |
+| [✅ 已采纳](#已采纳) | 317 |
 | [❌ 已取代](#已取代) | 8 |
 | [🧊 已废弃](#已废弃) | 0 |
 | [❓ 未归类](#未归类) | 0 |
@@ -63,7 +63,7 @@ permalink: /adr/
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 | [ADR-050](./ADR-050-plaza-browser-window.md) | 模型广场 · 浏览器窗口（Wails 第二窗口） | 🔄 部分采纳 |
 
-### ✅ 已采纳（316）
+### ✅ 已采纳（317）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
@@ -118,6 +118,7 @@ permalink: /adr/
 | [ADR-280](./ADR-280-key-fill-rim-directional-point-spot.md) | 灯光类型切换：三灯统一实例（key/fill/rim 各可 directional/point/spot） | ✅ 已采纳 |
 | [ADR-279](./ADR-279-select-icon-migration.md) | 设置页下拉图标死代码处置与自定义下拉迁移 | ✅ 已采纳 |
 | [ADR-278](./ADR-278-diagnostics-perf-ia.md) | 诊断页按「动作 / 产物」重划性能分组 | ✅ 已采纳 |
+| [ADR-278-d1](./decisions/ADR-278-d1-bench-control-read-derivation.md) | bench 控件消费派生化：read* 声明读集，PERF_UNREAD 登记表退役 | ✅ 已采纳 |
 | [ADR-277](./ADR-277-preview-labelkey-localekey.md) | preview 菜单 labelKey 全链钉死为 LocaleKey | ✅ 已采纳 |
 | [ADR-276](./ADR-276-preview-menu-subscribe-tree.md) | Preview 菜单 schema 补跨域订阅与树形行抽象评估 | ✅ 已采纳 |
 | [ADR-275](./ADR-275-css-layer-check-6.md) | css-layer-check 检查 6：跨层存在性——收口命名空间盲区 | ✅ 已采纳 |
@@ -740,6 +741,7 @@ permalink: /adr/
 | ADR-311-d1 | 测试纪律：禁 mock 被断言谓词（自证）+ 判别样本 + 变异探针 | ✅ 已采纳 | 2026-10-09 |
 | ADR-293-d1 | 灯光首启默认分治：辅助线框关、浏览最小光照、环境光降档 | ✅ 已采纳 | 2026-10-04 |
 | ADR-292-d1 | envSource 迁移判据① 供血线单源化（不再跨槽读 sky 存档键形） | ✅ 已采纳 | 2026-10-07 |
+| ADR-278-d1 | bench 控件消费派生化：read* 声明读集，PERF_UNREAD 登记表退役 | ✅ 已采纳 | 2026-10-13 |
 | ADR-270-d1 | preview-3d 内部分层方向闸 R9（state/infra/decoder/shader-patches 禁运行时引 adapters/caps/menu，基线防回退） | ✅ 已采纳 | 2026-10-04 |
 | ADR-270-d2 | views→preview-3d 入口面白名单闸（R10）：斩 DECODE_SOURCE/keymap 绕行边，存量债入基线 | ✅ 已采纳 | 2026-10-05 |
 | ADR-270-d3 | bus 合法发射者登记表闸（刀 B）：发射端从自由裸 emit 收敛为在册登记 | ✅ 已采纳 | 2026-10-05 |

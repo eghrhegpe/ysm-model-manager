@@ -255,19 +255,29 @@ function concRender(payload: ConcPayload, banner: string, esc: EscFn, timingMs?:
  * 目标集控件与 single-bench **同一套填充与判定函数**（populatePerfTargetOptions /
  * parsePerfTargetValue）——跨命令同名同义，界面不另立第二套。
  * 默认 target=repo（与 Go 的 concurrent-bench 默认一致：全库扁平取前 N 个可分析模型）。
+ * ADR-278-d1 `reads`：登记每个读取点。**读集必须与校验早退无关**——workers/上限非法时
+ * 依然结构上消费 target/order（只是不提交），故三旋钮 id 先登记再校验，否则 apply 的
+ * 门禁快照会因「此刻数字框为空」漏登而错误置灰。纯读、零副作用。
  */
-function concReadParams(root: ShadowRoot): ConcParams | null {
+function concReadParams(root: ShadowRoot, reads?: Set<string>): ConcParams | null {
   const workersEl = root.getElementById("diag-perf-conc-workers") as HTMLInputElement | null;
   const maxEl = root.getElementById("diag-perf-conc-max") as HTMLInputElement | null;
   const workers = Number.parseInt(workersEl?.value ?? "", 10);
   const maxModels = Number.parseInt(maxEl?.value ?? "", 10);
+  reads?.add("diag-perf-conc-workers");
+  reads?.add("diag-perf-conc-max");
+  // 目标集 / 排序读**共用控件**（ADR-278 §2.2）：与 single-bench 是同一个 #diag-perf-rtype / #diag-perf-order
+  const targetEl = root.getElementById("diag-perf-rtype") as HTMLSelectElement | null;
+  reads?.add("diag-perf-rtype");
+  // order 在校验/回落早退之前显式登记（ADR-278-d1：读集与提交校验解耦——workers 非法、
+  // 或 target=model 竞态时 conc 不提交，但 order 控件本就该保持可用，不能因早退漏登而置灰）。
+  // 实读仍在下方 base 内联调 readPerfOrder（契约锚 `order: readPerfOrder` 锁的是「组装点真读它」）。
+  reads?.add("diag-perf-order");
+  // 控件缺席（旧 DOM / 测试夹具）按 Go 默认 repo 处理
+  const choice = parsePerfTargetValue(targetEl ? targetEl.value.trim() : PERF_TARGET_REPO);
   // 非法输入不提交给 Go（Go 侧还会再校验一次，但报错前就拦掉更省事）
   if (!Number.isFinite(workers) || workers < 1 || workers > 256) return null;
   if (!Number.isFinite(maxModels) || maxModels < 1) return null;
-  // 目标集 / 排序读**共用控件**（ADR-278 §2.2）：与 single-bench 是同一个 #diag-perf-rtype / #diag-perf-order
-  const targetEl = root.getElementById("diag-perf-rtype") as HTMLSelectElement | null;
-  // 控件缺席（旧 DOM / 测试夹具）按 Go 默认 repo 处理
-  const choice = parsePerfTargetValue(targetEl ? targetEl.value.trim() : PERF_TARGET_REPO);
   // 安全网（正常路径选不出来）：切到并发时目标集的「单模型」选项已被 initPerfMode 禁用；
   // 缺模型路径必然缺载荷参数，本地拦掉而不是换 Go 一句报错
   if (choice.target === "model") return null;
@@ -279,6 +289,16 @@ function concReadParams(root: ShadowRoot): ConcParams | null {
     format: "json" as const,
   };
   return choice.target === "rtype" ? { ...base, rtype: choice.rtype } : base;
+}
+
+/**
+ * ADR-278-d1：并发 bench 的**控件读取集**纯读快照（喂 collector、忽略返回值）。
+ * 消费方 perf.ts|initPerfMode 据此派生 disabled。纯读、零 RPC、幂等。
+ */
+export function concReadIds(root: ShadowRoot): Set<string> {
+  const reads = new Set<string>();
+  concReadParams(root, reads);
+  return reads;
 }
 
 export async function runConcurrentBench(root: ShadowRoot, esc: EscFn): Promise<void> {

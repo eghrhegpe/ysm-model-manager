@@ -12,15 +12,11 @@ import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import { getLastModelPath } from "@/core/model-path-store.ts";
 import { toast } from "@/utils/dom/toast.ts";
 import type { EscFn } from "@/utils/html/html.ts";
-import { BASELINE_CONTROL_IDS, bindPerfCopyHandlers, readActiveBenchMode } from "./perf-common.ts";
-import { runConcurrentBench } from "./perf-concurrent.ts";
-import {
-  PERF_TARGET_REPO,
-  parsePerfTargetValue,
-  populatePerfTargetOptions,
-} from "./perf-matrix-render.ts";
-import { runScanBench } from "./perf-scan-bench.ts";
-import { runSingleBench, syncPerfBaselineControls } from "./perf-single-bench.ts";
+import { bindPerfCopyHandlers, readActiveBenchMode } from "./perf-common.ts";
+import { concReadIds, runConcurrentBench } from "./perf-concurrent.ts";
+import { PERF_TARGET_REPO, populatePerfTargetOptions } from "./perf-matrix-render.ts";
+import { runScanBench, scanBenchReadIds } from "./perf-scan-bench.ts";
+import { runSingleBench, singleBenchReadIds } from "./perf-single-bench.ts";
 import { renderLoadTraceSection } from "./perf-trace.ts";
 
 export { renderLoadTraceSection } from "./perf-trace.ts";
@@ -42,39 +38,16 @@ const PERF_MODE_NAMES: Record<string, LocaleKey> = {
   conc: "diagnostics.perfModeNameConc",
 };
 
-/** 控件 id → **不读它**的模式集（真相源 = 各命令模块的 read*：perf-single-bench / perf-concurrent）。
- * 未登记 = 所有模式都读；登记了则在列出的模式下置 disabled——
- * 「可见但被忽略」与「同控件跨模式改义」是 §2.6 要清的同一笔账的两面。
- * ⚠️ 本表不设 scan 列：引擎对照（bench 组第三 pill，ADR-300 §2.1）的参数面根本不碰这些
- * 共享控件——公共区在 scan 下随 data-perf-mode 整行退场（ADR-278 §2.7 内容判据），
- * 「碰不到」比「可见但置灰」更诚实，无需登记。 */
-export const PERF_UNREAD_MODES: Record<string, readonly string[]> = {
-  "diag-perf-model": ["conc"],
-  "diag-perf-order": [], // 公共区常驻：两种模式都读排序（ADR-278 §2.7 前是 ["scan"]）
-  "diag-perf-max": ["conc"],
-  "diag-perf-baseline-save": ["conc"],
-  "diag-perf-baseline-compare": ["conc"],
-  "diag-perf-baseline-th": ["conc"],
-  "diag-perf-conc-workers": ["single"],
-  "diag-perf-conc-max": ["single"],
-};
-
-/** 控件 id → **不读它**的目标集集（第二维，与 PERF_UNREAD_MODES 对称）。
- *  真相源 = `perf-single-bench.ts|singleBenchReadMode`：`target==="model"` 时提前 return，
- *  只读 model / iterations / 基准三件套，`order` 与 `maxModels` 根本不进载荷。
- *  ⚠️ `diag-perf-model` **不在**本表：它是「除 model 外都不读」（rtype 动态不可枚举），
- *  由 apply 里显式 `!isModel` 判断 + title 说明（2026-09-20 收口，避免「单模型反被置灰」）。
- *  为什么必须成表而不是散在 apply 里：五修穷尽护栏判据是「行归属 ∨ 不读表」，而 max / order
- *  整行可见（行归属 single）却仍不被读——护栏把「可见」误当「被读」。登记成表后护栏可校验，
- *  且这是**默认路径**（新手进 tab 即 single+model），漏判代价最高。 */
-export const PERF_UNREAD_TARGETS: Record<string, readonly string[]> = {
-  "diag-perf-max": ["model"],
-  "diag-perf-order": ["model"],
-};
-
-// 基准三件套 id 名单已迁 perf-common.ts（2026-09-23 断环：perf ↔ perf-single-bench 环的
-// 唯一回边，见该文件 BASELINE_CONTROL_IDS 头注）。本文件 apply 循环与 syncPerfBaselineControls 同读。
-
+/**
+ * ADR-278-d1：原 PERF_UNREAD_MODES / PERF_UNREAD_TARGETS 两张手工登记表已退役——
+ * 「载荷实测读哪些控件」由 read* 的 collector 读路径自答（singleBenchReadIds /
+ * concReadIds / scanBenchReadIds），apply 据此派生 disabled。表是真相的镜像、
+ * 镜像必漂移；读点即真相。「控件行禁加 class 供字符串反查」的旧纪律亦随对账护栏取代
+ * （perf-mode.test 改验 apply 产出 === 读集快照）。
+ * 基准三件套的双维门禁（ADR-262 D8：模式∧目标集）由「当前状态的真实读路径」自动坍缩
+ * 为单维判定（single+model 才读 baseline → 其余态读集自然不含），BASELINE_CONTROL_IDS /
+ * syncPerfBaselineControls 一并退役。
+ */
 /** 运行按钮 id → 其所属模式（scope hint 随此派生，不另写第二份） */
 export const PERF_RUN_BUTTON_MODE_KEYS: Record<string, string> = {
   "diag-perf-run": "single",
@@ -127,8 +100,7 @@ function initPerfMode(root: ShadowRoot): () => void {
       const modes = (el.dataset.perfMode ?? "").split(/\s+/);
       el.classList.toggle("perf-mode-off", !modes.includes(mode));
     });
-    const targetEl = root.getElementById("diag-perf-rtype") as HTMLSelectElement | null;
-    // ===== ADR-278 §2.6 语义诚实层：同控件跨模式改义，当场说清 =====
+    // ===== ADR-278 §2.6 语义诚实层（显示维，ADR-278-d1 明令不动）：同控件跨模式改义，当场说清 =====
     const iterLabel = root.getElementById("diag-perf-iter-label");
     if (iterLabel) {
       iterLabel.textContent = t("diagnostics.perfIterations"); // 跑几次 = 重复跑几轮，不再按模式拼后缀（原 PERF_ITER_SUFFIX_KEYS 随改名退役）
@@ -145,27 +117,38 @@ function initPerfMode(root: ShadowRoot): () => void {
       const el = root.getElementById(id);
       if (el) el.title = perfScopeHint(modeKey);
     }
-    // 载荷不读的控件当场禁用（ADR-278 §2.6 反向半边）：整行隐藏的碰不到，三模式共用行里
-    // 「能改却不被读」（如 scan 下的排序）才是欺骗——按 PERF_UNREAD_MODES 单点表置灰。
-    // 基准三件套是双维门禁（ADR-262 D8：只在单模型目标集可用），而本函数只知模式维——
-    // 委托 syncPerfBaselineControls 兼并两维判定，不在这里另写一份「baseline ∉ 表 → 直接启用」
-    // （那会把四修刚拆的同一颗雷从 apply 路径重新埋回来）；其余控件按表置灰。
-    for (const [id, unread] of Object.entries(PERF_UNREAD_MODES)) {
-      if (BASELINE_CONTROL_IDS.includes(id)) continue;
-      const el = root.getElementById(id) as HTMLInputElement | HTMLSelectElement | null;
-      if (el) el.disabled = unread.includes(mode);
+    // ===== 控件门禁派生化（ADR-278-d1，取代原 §2.6 三修/六修的两张手工登记表）=====
+    // 「载荷实测读哪些控件」不再由 PERF_UNREAD_MODES / PERF_UNREAD_TARGETS / BASELINE_CONTROL_IDS
+    // 三份表转述，而是**跑当前状态的真实读路径**（纯读：零 RPC、零写 DOM、幂等）取读集快照。
+    // conc 回落必须先于读快照：值改回 repo 后读集自然不含 model——原「单模型选项在 conc 不可选」
+    // 由读取路径本身表达，不再是 apply 里的特判。
+    const targetEl = root.getElementById("diag-perf-rtype") as HTMLSelectElement | null;
+    if (mode === "conc" && targetEl && targetEl.value.trim() === "") {
+      targetEl.value = PERF_TARGET_REPO;
+      // 静默改用户的选择是欺骗：发生了什么要当场说（重放时值已回落，不重复弹）
+      toast(t("diagnostics.perfConcTargetFallback"));
     }
-    // ===== 目标集维（ADR-278 §2.6 六修）：模式维之外的第二维不读面 =====
-    // single 模式默认目标集 = 单模型，此时 singleBenchReadMode 提前 return 根本不读 max / order；
-    // 两控件整行可见（行归属 single，模式维护栏判它合格）却不被读 = 默认路径上的欺骗。
-    // 与 PERF_UNREAD_MODES 对称成表：真相源仍是 perf-single-bench 的 read*，表只是登记面。
-    const targetKey =
-      mode === "single" ? (parsePerfTargetValue(targetEl?.value ?? "")?.target ?? "") : "";
-    for (const [id, unreadTargets] of Object.entries(PERF_UNREAD_TARGETS)) {
-      const el = root.getElementById(id) as HTMLInputElement | HTMLSelectElement | null;
-      if (!el) continue;
-      // 两维**并集**：模式维已在上面的循环置过灰（如 scan 下的 order），这里只叠加、不覆盖
-      if (unreadTargets.includes(targetKey)) el.disabled = true;
+    const readIds =
+      mode === "conc"
+        ? concReadIds(root)
+        : mode === "scan"
+          ? scanBenchReadIds(root)
+          : singleBenchReadIds(root);
+    // 门禁枚举面 = 面板内**所有** `diag-perf-*` 的 input/select（运行按钮/label/结果容器
+    // 不进门禁账，与原大刀护栏同口径）。枚举**不依赖 DOM 落位**（不按 [data-perf-mode] 行筛）——
+    // 读点即真相，控件挂在行内还是行外都归门禁管：曾按行筛会漏掉不在任何 data-perf-mode 行里的
+    // 控件（perf.test 夹具的基准框即如此），那正是本刀要消灭的「门禁与 DOM 布局耦合」。
+    // disabled 是**赋值式**：从 true 回 false 也覆盖，读集就是全部真相。
+    const controls = new Set<HTMLInputElement | HTMLSelectElement>();
+    root
+      .querySelectorAll<HTMLInputElement | HTMLSelectElement>(
+        'input[id^="diag-perf-"], select[id^="diag-perf-"]',
+      )
+      .forEach((el) => {
+        controls.add(el);
+      });
+    for (const el of controls) {
+      el.disabled = !readIds.has(el.id);
     }
     // 「为什么禁」要当场说清，不能只留一个灰控件：title 随禁用原因切换
     const maxEl = root.getElementById("diag-perf-max") as HTMLInputElement | null;
@@ -174,27 +157,16 @@ function initPerfMode(root: ShadowRoot): () => void {
         ? t("diagnostics.perfMaxUnreadHint")
         : t("diagnostics.perfMaxModelsHint");
     }
-    // 模型路径框：只在「单模型」目标集才读（真相源 = singleBenchReadMode 的 model 分支）。
-    // ⚠️ 不能靠 PERF_UNREAD_TARGETS 表——那张表语义是「枚举不读它的目标集」，而 model 框恰恰相反，
-    // 是「除 model 外的所有目标集都不读」（rtype 是动态类型不可枚举）→ 显式 `!isModel` 判断，
-    // 与 syncPerfBaselineControls 同口径（2026-09-20 修正反逻辑）。
     const modelEl = root.getElementById("diag-perf-model") as HTMLInputElement | null;
     if (modelEl) {
-      const modelInputNeeded = mode === "single" && targetKey === "model";
-      modelEl.disabled = !modelInputNeeded;
+      const modelInputNeeded = readIds.has("diag-perf-model");
       modelEl.title = modelInputNeeded
         ? t("diagnostics.perfModelHintFromTree")
         : t("diagnostics.perfModelUnreadHint");
     }
-    syncPerfBaselineControls(root);
 
     const modelOpt = Array.from(targetEl?.options ?? []).find((o) => o.value === "");
     if (modelOpt) modelOpt.disabled = mode !== "single";
-    if (mode === "conc" && targetEl && targetEl.value.trim() === "") {
-      targetEl.value = PERF_TARGET_REPO;
-      // 静默改用户的选择是欺骗：发生了什么要当场说（重放时值已回落，不重复弹）
-      toast(t("diagnostics.perfConcTargetFallback"));
-    }
   };
   apply();
   return apply;
@@ -237,17 +209,15 @@ export function initPerfPanel(root: ShadowRoot, esc: EscFn): void {
   // 由 initPerfMode 在切到并发 / 引擎对照时禁用）。
   const applyPerfMode = initPerfMode(root);
   _perfModeApply.set(root, applyPerfMode); // bench pill 切换经 applyPerfModeUI 重放（ADR-300 §2.2）
+  // ADR-278-d1：基准控件可用性不再由 syncPerfBaselineControls 独立判定——apply 每次重放都会
+  // 跑当前状态的真实读路径、重算全部控件 disabled（含基准三件套），三处旧调用收敛为 applyPerfMode。
   void populatePerfTargetOptions(root, "diag-perf-rtype", true).then(() => {
-    syncPerfBaselineControls(root);
-    // 填充会重建 <option>，单模型选项的 disabled 随之丢失 → 重放一次模式态
+    // 填充会重建 <option>，单模型选项的 disabled 随之丢失 → 重放一次模式态（读集也随新 option 值重取）
     applyPerfMode();
   });
-  // 基准三件套只在单模型目标集可用（ADR-262 D8）：Go 对 target≠model 的基准参数是**明确拒绝**的
   root.getElementById("diag-perf-rtype")?.addEventListener("change", () => {
-    syncPerfBaselineControls(root);
-    applyPerfMode(); // 目标集维度变化需重放：单模型目标下禁用 max / order
+    applyPerfMode(); // 目标集维度变化：读路径分叉不同，必须重跑读快照（single+model vs 目标集）
   });
-  syncPerfBaselineControls(root);
   // 并发基准（ADR-262 D5）：加速比只有 Go 量得到，前端只提交参数 + 渲染结构化载荷
   root
     .getElementById("diag-perf-conc-run")

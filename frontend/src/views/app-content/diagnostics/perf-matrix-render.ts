@@ -137,8 +137,14 @@ export function parsePerfTargetValue(value: string): PerfTargetChoice {
   return { target: "rtype", rtype: value };
 }
 
-/** 读排序控件；取值域由 Go 冻结（path|size），未知/缺席一律回落 path（= Go 的默认值） */
-export function readPerfOrder(root: ShadowRoot, selectId = "diag-perf-order"): PerfOrder {
+/** 读排序控件；取值域由 Go 冻结（path|size），未知/缺席一律回落 path（= Go 的默认值）。
+ *  ADR-278-d1 `reads`：登记读到的 select id（与 singleBenchReadMode / concReadParams 同款读点即声明）。 */
+export function readPerfOrder(
+  root: ShadowRoot,
+  selectId = "diag-perf-order",
+  reads?: Set<string>,
+): PerfOrder {
+  reads?.add(selectId);
   const raw = (root.getElementById(selectId) as HTMLSelectElement | null)?.value;
   return raw === PERF_ORDER_SIZE ? PERF_ORDER_SIZE : PERF_ORDER_PATH;
 }

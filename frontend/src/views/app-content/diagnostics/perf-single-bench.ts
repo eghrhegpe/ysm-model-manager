@@ -14,17 +14,14 @@ import { executeCLI } from "@/services/cli-bridge.ts";
 import { createLoadGuard } from "@/utils/async/load-guard.ts";
 import type { EscFn } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
-// 基准三件套 id 表归 perf-common.ts（契约常量层，2026-09-23 断环迁居）：两处写 disabled 的
-// 消费链（perf.ts apply 循环 / 本文件 syncPerfBaselineControls）共用一张名单，不各抄字面量。
-// 原居 perf.ts 时本行 import 构成 perf ↔ perf-single-bench 模块环（靠 TDZ 注释走钢丝），
-// 迁至零回边共享叶后环消，顶层求值限制同步解除。
+// ADR-278-d1：BASELINE_CONTROL_IDS / readActiveBenchMode 随 syncPerfBaselineControls 一并退役——
+// 基准控件可用性现由 read* 读集派生（apply 跑真实读路径），不再有「第二处写 disabled」的消费链，
+// 当年为断 perf ↔ perf-single-bench 环而迁居 perf-common 的这张名单也随之失去生产者。
 import {
-  BASELINE_CONTROL_IDS,
   type CLIResp,
   errorHTML,
   getOutBox,
   type PerfIdentity,
-  readActiveBenchMode,
   renderLoadFailure,
   sectionHeader,
   setBusy,
@@ -162,12 +159,18 @@ type BenchMode =
 /** 读取面板的「迭代次数」（默认与 Go 的 3 对齐）。
  * ⚠️ ADR-278 §2.7：scan 独立成 tab 后有了自己的输入框——同一语义不再共用一个控件，
  * 故把 id 参数化（默认仍是 single 的 #diag-perf-iter），避免 scan 去读别人 tab 里的框。 */
-export function singleBenchReadIterations(root: ShadowRoot, id = "diag-perf-iter"): number {
+export function singleBenchReadIterations(
+  root: ShadowRoot,
+  id = "diag-perf-iter",
+  reads?: Set<string>,
+): number {
+  reads?.add(id);
   const raw = (root.getElementById(id) as HTMLInputElement | null)?.value ?? "3";
   return Math.max(1, parseInt(raw, 10) || 3);
 }
 
-function singleBenchReadMaxModels(root: ShadowRoot): number {
+function singleBenchReadMaxModels(root: ShadowRoot, reads?: Set<string>): number {
+  reads?.add("diag-perf-max");
   const raw = (root.getElementById("diag-perf-max") as HTMLInputElement | null)?.value ?? "5";
   return Math.max(1, parseInt(raw, 10) || 5);
 }
@@ -176,8 +179,9 @@ function singleBenchReadMaxModels(root: ShadowRoot): number {
  * 读取基准勾选状态（ADR-262 D8）。控件缺席时按「未启用」处理（旧版 DOM/测试夹具宽容）。
  * 阈值下限 1%——0 或负数会把任何抖动都判成退化（Go 侧虽然只判 `ratio > threshold`，
  * 前端仍应在入口拦住手输的 0，避免「一跑就红」的假失败）。
+ * ADR-278-d1 `reads`：登记三件套 id（读点即声明，见 singleBenchReadMode）。
  */
-function singleBenchReadBaseline(root: ShadowRoot): BenchBaselineOpts {
+function singleBenchReadBaseline(root: ShadowRoot, reads?: Set<string>): BenchBaselineOpts {
   const save =
     (root.getElementById("diag-perf-baseline-save") as HTMLInputElement | null)?.checked ?? false;
   const compare =
@@ -185,56 +189,59 @@ function singleBenchReadBaseline(root: ShadowRoot): BenchBaselineOpts {
     false;
   const raw =
     (root.getElementById("diag-perf-baseline-th") as HTMLInputElement | null)?.value ?? "50";
+  reads?.add("diag-perf-baseline-save");
+  reads?.add("diag-perf-baseline-compare");
+  reads?.add("diag-perf-baseline-th");
   return { save, compare, threshold: Math.max(1, parseInt(raw, 10) || 50) };
-}
-
-/**
- * 基准控件只在单模型目标集可用（ADR-262 D8）：Go 侧对 target≠model **明确拒绝**基准参数
- * （基准是单模型概念）。「被禁用」比「勾了却没生效」诚实（后者是被吞参数）。
- *
- * ⚠️ 这里**不再**顺带改上限控件的标签（旧 `syncPerfCountLabel` 已删）：标签文案一律叫「最多跑几个」（旋钮语义仍是取样上限），
- * 「单位随目标集变」只进 title 提示——「一个数字控件两种含义、标签跟着模式改义」正是本次要清的账。
- */
-export function syncPerfBaselineControls(root: ShadowRoot): void {
-  const raw =
-    (root.getElementById("diag-perf-rtype") as HTMLSelectElement | null)?.value.trim() ?? "";
-  const isModel = parsePerfTargetValue(raw)?.target === "model";
-  // 模式一次读好再进循环（ADR-300 §2.2 唯一读出口；原 #diag-perf-mode 下拉已退役）
-  const mode = readActiveBenchMode(root);
-  for (const id of BASELINE_CONTROL_IDS) {
-    // 双维门禁（ADR-262 D8 × ADR-278 §2.6）：基准只在「单模型目标集」有意义，而本函数
-    // 也被 rtype change / 选项填充回调独立触发——此时必须读当前模式兼并判定，否则
-    // scan/conc 下动一下选择器就把载荷不读的基准控件解禁了（§2.6 要清的同一笔账）。
-    const el = root.getElementById(id) as HTMLInputElement | null;
-    if (el) el.disabled = !isModel || mode !== "single";
-  }
 }
 
 /**
  * 读取运行模式（ADR-262 D3 修订的三旋钮）：selector 决定「选谁」，`--order` 决定排序，
  * 上限单位随 selector 变（由 Go 解释：rtype=该类型 N 条 / all=每类各 N 条 / repo=全库 N 条）。
  * 返回 null 表示参数不合法（调用方渲染提示），不在此处静默取默认值。
+ *
+ * ADR-278-d1 `reads`：可选的**控件读取集收集器**——每个 `getElementById` 读取点顺手登记自己的
+ * id。这不改变返回值的任何语义（apply 会以「纯读」调用它，忽略返回、只取 reads），却把
+ * 「这条命令在此状态下实测读了哪些控件」从**第二份手工登记表**（PERF_UNREAD_MODES /
+ * PERF_UNREAD_TARGETS）降为**由读取路径本身回答**。表与读点的真相分裂，正是本页 GetLogCaps
+ * 单源化干掉的同款病——「改 read* 忘改表」从此不可能发生（读点即真相）。
  */
-function singleBenchReadMode(root: ShadowRoot): BenchMode | null {
-  const iterations = singleBenchReadIterations(root);
+function singleBenchReadMode(root: ShadowRoot, reads?: Set<string>): BenchMode | null {
+  const iterations = singleBenchReadIterations(root, "diag-perf-iter", reads);
   const raw =
     (root.getElementById("diag-perf-rtype") as HTMLSelectElement | null)?.value.trim() ?? "";
+  reads?.add("diag-perf-rtype");
   const choice = parsePerfTargetValue(raw);
   if (choice.target === "model") {
+    // ⚠️ 先读基准三件套再判 model 空——空 model 会提前 return null，若把 baseline 读放其后，
+    // collector 快照就漏登三件套 id，门禁会因「此刻路径框还没填」而错误地把基准控件置灰
+    // （基准可用 = target∧mode 两维，与路径框当前是否为空无关）。纯读、不改返回值语义。
+    const baseline = singleBenchReadBaseline(root, reads);
     const model =
       (root.getElementById("diag-perf-model") as HTMLInputElement | null)?.value.trim() ?? "";
+    reads?.add("diag-perf-model");
     if (!model) return null;
-    return { kind: "model", model, iterations, baseline: singleBenchReadBaseline(root) };
+    return { kind: "model", model, iterations, baseline };
   }
   // 三种目标集共用同一组旋钮（order + 上限 + 迭代），差异只在 selector——参数绝不叠加互斥 flag
-  const base = {
-    order: readPerfOrder(root),
-    maxModels: singleBenchReadMaxModels(root),
-    iterations,
-  };
+  const order = readPerfOrder(root, "diag-perf-order", reads);
+  const maxModels = singleBenchReadMaxModels(root, reads);
+  const base = { order, maxModels, iterations };
   return choice.target === "rtype"
     ? { kind: "rtype", rtype: choice.rtype, ...base }
     : { kind: choice.target, ...base };
+}
+
+/**
+ * ADR-278-d1：单模型 bench 的**控件读取集**纯读快照（不取返回值、只喂 collector）。
+ * 消费方 perf.ts|initPerfMode 据此 `disabled = !reads.has(id)` 派生门禁——「载荷实测读什么」
+ * 由读取路径本身回答，取代 PERF_UNREAD_MODES / PERF_UNREAD_TARGETS / BASELINE_CONTROL_IDS 三份
+ * 手工登记表。纯读：只 `getElementById().value/checked`，零 RPC、零写 DOM、幂等。
+ */
+export function singleBenchReadIds(root: ShadowRoot): Set<string> {
+  const reads = new Set<string>();
+  singleBenchReadMode(root, reads);
+  return reads;
 }
 
 /**

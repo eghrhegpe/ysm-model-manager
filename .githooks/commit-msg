@@ -1,0 +1,45 @@
+#!/bin/sh
+# YMM commit-msg — 提交信息减负闸（ADR-338-d1 刀1：采集期）
+#
+# 职责：把 ADR-338-d1 D2 的判据跑在待提交的 message 上。判定与渲染全在
+#   scripts/_lib/commit-blocks/commit-message.ts（纯函数，可单测），本壳只做接线。
+#   此前仓内 42 个 check-*.ts + pre-commit 三段硬阻断，无一校验提交信息本身。
+#
+# 刀1 恒不阻断（ADR-338-d1 D3「warn 采集 → replay 校准 → hard」第一步）：
+#   提示信息走 stderr 直达终端（AI 必看通道，同 pre-commit 口径）。
+#   转 hard 时本文件唯一改动 = 加 --strict，规则一行不动（这是 D3 两步走的结构前提）。
+#
+# 安装：git config core.hooksPath .githooks（仓库已配置）
+# 逃生阀：YSM_SKIP_COMMIT_MSG=1 → 跳过判定，但复用 hook-audit.ts 写 SKIPPED_PRECOMMIT 留痕
+#         （ADR-232 D2「逃生必须留痕」；`--no-verify` 整钩不跑无痕迹，故另有 --range 双挂）
+exec 1>&2
+set -u
+
+ROOT="$(git rev-parse --show-toplevel 2>/dev/null || exit 0)"
+[ -z "${ROOT:-}" ] && exit 0
+MSG="${1:-}"
+[ -z "$MSG" ] && exit 0
+
+# node 定位（Windows 多 git/node 环境兼容，逐字同 pre-commit 段）
+NODE="$(command -v node 2>/dev/null)"
+if [ -z "${NODE:-}" ]; then
+  SYS_NODE="/c/Program Files/nodejs"
+  [ -d "$SYS_NODE" ] && PATH="$SYS_NODE:$PATH"
+  export PATH
+  NODE="$(command -v node 2>/dev/null)"
+fi
+if [ -z "${NODE:-}" ]; then
+  echo "⚠️  [commit-msg] node 不可用（PATH 异常），跳过提交信息判定"
+  exit 0
+fi
+
+if [ "${YSM_SKIP_COMMIT_MSG:-0}" = "1" ]; then
+  echo "[commit-msg] YSM_SKIP_COMMIT_MSG=1，跳过提交信息判定（已留痕 SKIPPED_PRECOMMIT）"
+  PARENT="$(git rev-parse HEAD 2>/dev/null || echo "")"
+  "$NODE" "$ROOT/scripts/_lib/hook-audit.ts" write "${PARENT:-}" YSM_SKIP_COMMIT_MSG || true
+  exit 0
+fi
+
+# 采集期：吃掉退出码（脚本自身 fail-closed 的 2 也降级为提示，不卡提交）
+"$NODE" "$ROOT/scripts/check-commit-message.ts" --file "$MSG" || true
+exit 0

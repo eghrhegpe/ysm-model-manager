@@ -600,6 +600,18 @@ export function cleanupVirtualScroll(ctx: TreeRenderCtx, container: HTMLElement)
   s.mode = null;
 }
 
+/**
+ * 空 entries 时的空态文案选择（2026-10-13 P2）：loadFailed=true → 「加载失败」
+ * （warning 图标，用户侧可区分「目录真空」与「扫描出错」）；缺省 → 「暂无模型文件」。
+ * 纯函数（i18n 取词 + 图标语义名），node 环境可测——抽出的立因即 renderTree 的
+ * 空态分支此前无法在 node 测试环境触达（container.innerHTML 需 DOM）。
+ */
+export function emptyStateForEmptyEntries(loadFailed: boolean): string {
+  return loadFailed
+    ? emptyStateHTML("warning", t("tree.treeLoadFailed"))
+    : emptyStateHTML("folder", t("tree.noModelFiles"));
+}
+
 export function renderTree(
   ctx: TreeRenderCtx,
   container: HTMLElement,
@@ -610,9 +622,10 @@ export function renderTree(
   filterPaths: Set<string> | null,
   mode: RenderMode = "grid",
   selectedKeys: SelectedKeys = undefined,
+  loadFailed = false,
 ): void {
   if (!entries.length) {
-    container.innerHTML = emptyStateHTML("folder", t("tree.noModelFiles"));
+    container.innerHTML = emptyStateForEmptyEntries(loadFailed);
     cleanupVirtualScroll(ctx, container);
     return;
   }

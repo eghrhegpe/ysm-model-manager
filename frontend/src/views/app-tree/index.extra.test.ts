@@ -521,6 +521,37 @@ describe("app-tree index 入口生命周期（补位）", () => {
     expect(el.shadowRoot!.getElementById("tree")).not.toBeNull();
   });
 
+  it("_load 抛错 → 空态显示「加载失败」而非「暂无模型文件」（P2 失败可区分）", async () => {
+    stubConsoleWarn();
+    loaderImpl = () => Promise.reject(new Error("scan boom"));
+    const el = await mountEl();
+    const tree = el.shadowRoot!.getElementById("tree");
+    expect(tree!.innerHTML).toContain("加载失败");
+    expect(tree!.innerHTML).not.toContain("暂无模型文件");
+    // 失败态对 reload 成功自愈：恢复真数据后空态消失、loadFailed 清位
+    loaderImpl = defaultLoaderImpl;
+    bus.emit("tree:reload");
+    await waitFor(() => queryAllByTestId(el.shadowRoot!, "tree-file").length >= 1);
+    expect(el.shadowRoot!.getElementById("tree")!.innerHTML).not.toContain("加载失败");
+  });
+
+  it("_load 真返回空列表 → 空态仍是「暂无模型文件」（成功加载清 loadFailed 位）", async () => {
+    stubConsoleWarn();
+    // 先制造一次失败，再让 loader 真返回空列表——验证成功路径清位
+    loaderImpl = () => Promise.reject(new Error("boom"));
+    const el = await mountEl();
+    expect(el.shadowRoot!.getElementById("tree")!.innerHTML).toContain("加载失败");
+    loaderImpl = () => Promise.resolve({ filesRoot: "/repo", entries: [] });
+    bus.emit("tree:reload");
+    // ⚠️ 不用 negate-waitFor（「不包含加载失败」谓词）：happy-dom 下连续两个 waitFor
+    // 的 rAF 轮询链会停摆（探针实证，wait.ts pollUntil 的 rAF 在第二段调度耗尽）——
+    // reload 链全微任务 + ClearScanCache mock 同步 resolve，一个宏任务足够落定
+    await sleep0();
+    const treeHtml = el.shadowRoot!.getElementById("tree")!.innerHTML;
+    expect(treeHtml).not.toContain("加载失败");
+    expect(treeHtml).toContain("暂无模型文件");
+  });
+
   it("_loadAuthorsAsync 失败 → _authors 置空", async () => {
     stubConsoleWarn(); // 静音 loadAuthors 失败留痕（authors.ts 现 logWarn）
     getAppMock.mockRejectedValueOnce(new Error("authors down"));

@@ -24,6 +24,10 @@ export interface TreeSnapshot {
 /** 可变状态容器 */
 export class TreeState {
   entries: TreeEntry[] = [];
+  /** 最近一次 _load 是否失败（2026-10-13 P2）：空 entries + loadFailed=true →
+   *  空态显示「加载失败」而非「暂无模型文件」，用户侧可区分真空目录与扫描出错。
+   *  成功加载（含真返回空列表）即清位；搜索无匹配空态不受影响。 */
+  loadFailed = false;
   search = "";
   sort = "name";
   dirOpen: Record<string, boolean> = {};

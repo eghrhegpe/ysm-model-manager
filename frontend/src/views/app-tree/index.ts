@@ -7,6 +7,7 @@ import { rememberModelPath } from "@/core/model-path-store.ts";
 import type { AppliedAdvFilter } from "@/features/dialogs/adv-filter-util.ts";
 import { bindTreeDnD } from "@/features/dnd/import-dnd.ts";
 import { isPreviewOverlayActive } from "@/preview-3d/infra/overlay-active.ts";
+import { batchAllSettled } from "@/utils/async/batch-all-settled.ts";
 import { createLoadGuard } from "@/utils/async/load-guard.ts";
 import { logError, logWarn } from "@/utils/base/primitives/log.ts";
 import { safeGetJSON, safeSet } from "@/utils/base/primitives/storage.ts";
@@ -475,10 +476,15 @@ export class AppTree extends WebComponentBase {
       } else {
         this._state.entries = [];
       }
+      // 成功加载（含真返回空列表）清位——loadFailed 只描述「最近一次加载」，不滞留旧错
+      this._state.loadFailed = false;
     } catch (e) {
-      // 目录加载失败降级为空树——用户侧「空目录」与「加载失败」不可区分，留痕供排查
+      // P2（2026-10-13）：失败置 loadFailed，空态显示「加载失败」而非「暂无模型文件」——
+      // 原静默降级让用户侧「空目录」与「加载失败」不可区分，排障只能翻日志。
+      // loader 侧另有节流 toast 即时提示；本标志管的是树面板内的驻留空态。
       logWarn("app-tree", "entries 加载失败:", e);
       this._state.entries = [];
+      this._state.loadFailed = true;
     }
   }
 
@@ -525,6 +531,8 @@ export class AppTree extends WebComponentBase {
       // .fl.selected 零生产者、aria-selected 恒 false，鼠标选中无视觉反馈；
       // _onKeyArrowNav 的手写 classList 双轨由本参数接管后拆除。
       this._state.selectState.keys,
+      // 加载失败空态区分（2026-10-13 P2）：空 entries + loadFailed → 「加载失败」空态
+      this._state.loadFailed,
     );
     // 有选中项时不更新 stat（由 updateSelectCount 维护），避免动画覆盖
     if (!this._state.selectState.keys.size) {
@@ -685,21 +693,10 @@ export class AppTree extends WebComponentBase {
     this._deleting = true;
     const gen = this._guard.current; // P2-1 代际捕获：删除期间 root 切换/新加载 → 丢弃过期渲染
     try {
-      let ok = 0,
-        fail = 0;
       const { DeleteResourcePack } = await backendGetApp();
-      // P2 修复：原串行 for...of await → 并发批处理（限并发 8）——
-      // 大批量删除时串行 IPC 阻塞主线程，并发 8 兼顾吞吐与后端压力。
-      // Promise.allSettled 保原语义：每项独立 try/catch，统计 ok/fail 不短路。
-      const BATCH = 8;
-      for (let i = 0; i < paths.length; i += BATCH) {
-        const batch = paths.slice(i, i + BATCH);
-        const results = await Promise.allSettled(batch.map((p) => DeleteResourcePack(p, rtype)));
-        for (const r of results) {
-          if (r.status === "fulfilled") ok++;
-          else fail++;
-        }
-      }
+      // 批处理收口（2026-10-13）：BATCH=8 手抄循环迁 utils/async/batch-all-settled
+      //（分批并发 + 逐项 ok/fail 不短路单一实现；2026-09 曾 P2 修复串行链）
+      const r = await batchAllSettled(paths.map((p) => () => DeleteResourcePack(p, rtype)));
       this._state.selectState.keys.clear();
       this._state.selectState.lastKey = null;
       // P2 修复（审核，缓存一致性）：删除后先清扫描缓存再加载——原 _load() 命中
@@ -715,7 +712,11 @@ export class AppTree extends WebComponentBase {
       await this._load();
       if (this._guard.stale(gen)) return; // P2-1 root 切换/新加载已发起 → 丢弃过期渲染
       this._renderTree();
-      toast(`${t("tree.deleted", { ok, fail: fail || 0 })}`, TOAST_MS.normal, "success");
+      toast(
+        `${t("tree.deleted", { ok: r.fulfilled.length, fail: r.rejected.length || 0 })}`,
+        TOAST_MS.normal,
+        "success",
+      );
     } catch (e) {
       // P2 修复：getApp/删除/刷新任一环节失败都要有出口，避免 unhandled rejection 静默
       toast(`${friendlyError(e)}`, TOAST_MS.long, "error");

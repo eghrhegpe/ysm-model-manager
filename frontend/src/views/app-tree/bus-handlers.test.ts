@@ -542,17 +542,15 @@ describe("bindBusEvents — 树刷新", () => {
     const vm = makeVM();
     vm.setRootAttr("EntityPlayer");
     vm.setSubdirAttr("EntityPlayer");
-    let loadedArgs: [string, string?] = ["EntityPlayer"];
-    loadEntriesMock.mockImplementation(async (...args: [string, string?]) => {
-      loadedArgs = args;
-      return { filesRoot: "/repo/mmd/EntityPlayer", entries: [] as TreeEntry[] };
-    });
+    // 加载段已收敛走 vm._load()（2026-10-13 reload 四胞胎收口）：subdir 透传语义上移
+    // 到 _load（index.ts 按 snapshot.subdirAttr 传 (rtype, subdir) 双参），本用例改为
+    // 断言 _load 被调（subdir 参数断言归 index.extra.test.ts 的 loader 观察点）
     await bind(vm);
 
     bus.emit("tree:reload");
     await new Promise((r) => setTimeout(r, 0));
 
-    expect(loadedArgs).toEqual(["EntityPlayer", "EntityPlayer"]);
+    expect(vm._load).toHaveBeenCalled();
   });
 });
 

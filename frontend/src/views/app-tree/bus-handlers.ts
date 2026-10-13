@@ -4,6 +4,7 @@ import { can } from "@/backend/capabilities.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { showBatchRenameDialog } from "@/features/dialogs/batch-rename.ts";
+import { batchAllSettled } from "@/utils/async/batch-all-settled.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
@@ -15,7 +16,6 @@ import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import type { AppTree } from "./index.ts";
-import { loadEntries } from "./loader.ts";
 import { batchRenameTpl } from "./tpl-batch-rename.ts";
 
 function atBeStale(vm: AppTree, gen: number): boolean {
@@ -82,30 +82,20 @@ async function runBatchRename(
   vm: AppTree,
   renames: Array<{ oldPath?: string | undefined; newName: string }>,
 ): Promise<void> {
-  let ok = 0,
-    fail = 0;
   const { RenameFile } = await backendGetApp();
-  // BATCH=8 + allSettled（对齐 runBatchToggle 范式，2026-09 收债）：原串行
-  // for...of await 逐条 IPC，大选中集阻塞主线程；allSettled 保逐项 ok/fail 不短路
-  const BATCH = 8;
-  for (let i = 0; i < renames.length; i += BATCH) {
-    const batch = renames.slice(i, i + BATCH);
-    const results = await Promise.allSettled(
-      batch.map((r) => RenameFile(r.oldPath || "", r.newName)),
-    );
-    for (const r of results) {
-      if (r.status === "fulfilled") ok++;
-      else fail++;
-    }
-  }
+  // 批处理收口（2026-10-13）：BATCH=8 手抄循环迁 utils/async/batch-all-settled
+  //（分批并发 + 逐项 ok/fail 不短路单一实现，原范式注释见该工具头）
+  const r = await batchAllSettled(
+    renames.map((rn) => () => RenameFile(rn.oldPath || "", rn.newName)),
+  );
   vm.selectState.keys.clear();
   vm.selectState.lastKey = null;
   await reload(vm);
   bus.emit("stats:refresh");
   toast(
-    `${t("tree.batchRenameDone", { ok, fail: fail || 0 })}`,
+    `${t("tree.batchRenameDone", { ok: r.fulfilled.length, fail: r.rejected.length || 0 })}`,
     TOAST_MS.normal,
-    fail > 0 ? "warn" : "success",
+    r.rejected.length > 0 ? "warn" : "success",
   );
 }
 
@@ -171,21 +161,15 @@ async function atBeHandleDirRecycle(vm: AppTree, dir: string): Promise<void> {
     const filesRoot = await GetRepoRoot(rtype);
     const absDir = filesRoot ? `${filesRoot}/${dir}` : dir;
     const allFiles = await ListAllFilePaths(absDir);
-    let count = 0;
     const errors: string[] = [];
-    // BATCH=8 + allSettled（对齐 runBatchToggle 范式，2026-09 收债）：原串行逐条
-    // MoveToRecycle，大目录 IPC 排队；errors 仍带文件名（results 与 batch 按下标配对）
+    // 批处理收口（2026-10-13）：BATCH=8 手抄循环迁 batch-all-settled；失败归因经
+    // rejected[].index 配对原 files 下标，errors 仍带文件名
+    // （对接锐评⑦：拒绝缘由走 friendlyError 单源——AppError Code→i18n、中文透传）
     const files = allFiles || [];
-    const BATCH = 8;
-    for (let i = 0; i < files.length; i += BATCH) {
-      const batch = files.slice(i, i + BATCH);
-      const results = await Promise.allSettled(batch.map((p) => MoveToRecycle(p)));
-      for (let j = 0; j < results.length; j++) {
-        const r = results[j];
-        if (r.status === "fulfilled") count++;
-        // 对接锐评⑦：拒绝缘由走 friendlyError 单源（AppError Code→i18n、中文透传）
-        else errors.push(`${batch[j].split(/[/\\]/).pop()}: ${friendlyError(r.reason)}`);
-      }
+    const r = await batchAllSettled(files.map((p) => () => MoveToRecycle(p)));
+    for (const x of r.rejected) {
+      const p = files[x.index] || "";
+      errors.push(`${p.split(/[/\\]/).pop()}: ${friendlyError(x.reason)}`);
     }
     try {
       await RemoveDir(absDir);
@@ -199,7 +183,11 @@ async function atBeHandleDirRecycle(vm: AppTree, dir: string): Promise<void> {
     const suffix = errors.length
       ? t("tree.recycledFailSuffix", { fail: errors.length, detail: errors.slice(0, 3).join("; ") })
       : "";
-    toast(`♻️ ${t("tree.recycled", { count })}${suffix}`, TOAST_MS.normal, "success");
+    toast(
+      `♻️ ${t("tree.recycled", { count: r.fulfilled.length })}${suffix}`,
+      TOAST_MS.normal,
+      "success",
+    );
   } catch (e) {
     toastError(e);
   }
@@ -267,23 +255,14 @@ async function reload(vm: AppTree): Promise<void> {
   // 推进代际——后发者使先发者在途扫描 stale 弃渲染，单飞收敛；current 捕获会让并发
   // 双方同代都过 stale 检查 → 双份清缓存 + 双份全量重扫 + 双渲染
   const gen = vm._guard.next();
+  // 加载段收敛走 vm._load()（2026-10-13）：原「手写 loadEntries + entries/filesRoot 赋值」
+  // 是 _load 的平行实现（reload 四胞胎第三处）——P2 引入 TreeState.loadFailed 后此分叉
+  // 立即致病：reload 成功不会清 loadFailed 位，失败态「加载失败」空态无法自愈。
+  // _load 无自有 toast（错误态上屏由空态承载），原 reload 的 catch toast 删除即等价。
   try {
-    const rtype = vm.snapshot.rootAttr || "";
-    const r = vm.snapshot.subdirAttr
-      ? await loadEntries(rtype, vm.snapshot.subdirAttr)
-      : await loadEntries(rtype);
-    if (atBeStale(vm, gen)) return;
-    if (r) {
-      vm.filesRoot = r.filesRoot;
-      vm.entries = r.entries;
-    } else {
-      vm.entries = [];
-    }
-  } catch (err) {
-    if (atBeStale(vm, gen)) return;
-    logWarn("bus", "reload 失败:", err);
-    vm.entries = [];
-    toast(`${friendlyError(err, t("tree.reloadFailed"))}`, TOAST_MS.long, "error");
+    await vm._load();
+  } catch {
+    /* _load 内部已 catch 全部错误并降级空 entries + loadFailed 标志，此处兜底不触达 */
   }
   if (atBeStale(vm, gen)) return;
   vm._renderTree();
@@ -314,36 +293,23 @@ async function runBatchToggle(
           (!prefix || e.path === prefix || e.path.startsWith(`${prefix}/`)),
       )
       .map((e) => e.fullPath);
-    let ok = 0,
-      fail = 0;
-    // code_review 3413288be 段 C #2/#3（P3）：对齐 toggleFolderBatch/_deleteSelected 的
-    // BATCH=8 + Promise.allSettled 并发批处理——原串行 for...of await 阻塞主线程
-    // （同 diff 已改兄弟循环「文件夹/批量删除」，独漏本入口「全部启用/禁用」；
-    // 大仓库全树条目时串行 IPC 问题依旧存在）。Promise.allSettled 保原语义：逐项
-    // 独立 ok/fail 统计不短路；失败日志保留 fullPath（results 与 batch 按下标配对）。
-    const BATCH = 8;
-    for (let i = 0; i < snapshot.length; i += BATCH) {
-      const batch = snapshot.slice(i, i + BATCH);
-      const results = await Promise.allSettled(batch.map((fullPath) => ToggleEnable(fullPath)));
-      for (let j = 0; j < results.length; j++) {
-        const r = results[j];
-        if (r.status === "fulfilled") ok++;
-        else {
-          fail++;
-          logWarn("bus", `${opts.label} 失败: ${batch[j]}`, r.reason);
-        }
-      }
+    // 批处理收口（2026-10-13）：BATCH=8 手抄循环迁 batch-all-settled（2026-09 曾
+    // code_review 3413288be 补齐本入口的并发化，现结构归一）；失败日志保留 fullPath
+    //（rejected[].index 配对 snapshot 下标）。
+    const r = await batchAllSettled(snapshot.map((fullPath) => () => ToggleEnable(fullPath)));
+    for (const x of r.rejected) {
+      logWarn("bus", `${opts.label} 失败: ${snapshot[x.index] || ""}`, x.reason);
     }
-    if (ok > 0) {
+    if (r.fulfilled.length > 0) {
       await reload(vm);
       if ((vm.snapshot.rootAttr || RESOURCE_TYPES.YSM) === RESOURCE_TYPES.YSM) {
         bus.emit("sync:toggle:status");
       }
     }
     toast(
-      `${opts.label}: ${ok} ${t("tree.success")}, ${fail} ${t("tree.failed")}`,
+      `${opts.label}: ${r.fulfilled.length} ${t("tree.success")}, ${r.rejected.length} ${t("tree.failed")}`,
       TOAST_MS.normal,
-      fail > 0 ? "warn" : "success",
+      r.rejected.length > 0 ? "warn" : "success",
     );
   } catch (err) {
     toastError(err);

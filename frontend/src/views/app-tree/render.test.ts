@@ -5,6 +5,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import {
   buildTree,
+  emptyStateForEmptyEntries,
   flattenVisible,
   getRenderMode,
   ROW_H_GRID_COMPACT,
@@ -637,6 +638,29 @@ describe("搜索态命中高亮（hl <mark>）", () => {
     const rows = flattenVisible(root, "", "hero", "name", {}, 0, "list");
     const file = rows.find((r) => r.type === "file")!;
     expect(file.html).toContain("<mark>hero</mark>");
+  });
+});
+
+// ===== 加载失败与空目录的空态区分（2026-10-13 P2）=====
+// _load 失败曾静默降级为「暂无模型文件」空态——用户侧无法区分「目录真空」与「扫描出错」，
+// 排障只能看日志。emptyStateForEmptyEntries 纯函数按 loadFailed 分叉空态文案；
+// 抽纯函数的立因 = render.test.ts 是 node 环境（@vitest-environment node），
+// renderTree 的空态分支（container.innerHTML）在此不可触达。
+describe("加载失败空态区分（emptyStateForEmptyEntries）", () => {
+  it("loadFailed=true → 加载失败文案（warning 图标语义名）", () => {
+    const html = emptyStateForEmptyEntries(true);
+    expect(html).toContain("加载失败");
+    expect(html).not.toContain("暂无模型文件");
+  });
+
+  it("loadFailed=false → 暂无模型文件（真空目录语义不变）", () => {
+    const html = emptyStateForEmptyEntries(false);
+    expect(html).toContain("暂无模型文件");
+    expect(html).not.toContain("加载失败");
+  });
+
+  it("失败态图标走 warning 语义名（resolveIcon 产物 SVG，非裸 emoji）", () => {
+    expect(emptyStateForEmptyEntries(true)).toContain("ws-icon");
   });
 });
 

@@ -5,6 +5,7 @@ import { isViewerMode } from "@/backend/platform.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { rememberModelPath } from "@/core/model-path-store.ts";
+import { batchAllSettled } from "@/utils/async/batch-all-settled.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { flashBtn } from "@/utils/dom/feedback.ts";
@@ -456,34 +457,27 @@ async function toggleFolderBatch(fhEl: HTMLElement, vm: AppTree): Promise<void> 
     let ok = 0,
       fail = 0;
     const flipped: TreeEntry[] = [];
-    // P2 修复：原串行 for...of await → 并发批处理（限并发 8）——
-    // 文件夹批量启用/禁用时串行 IPC 阻塞主线程。Promise.allSettled 保原语义：
-    // 每项独立 try/catch，统计 ok/fail 不短路；flipped 仅登记成功项（失败项不翻转）。
+    // P2 修复（2026-09）→ 收口（2026-10-13）：原 BATCH=8 手抄循环迁
+    // utils/async/batch-all-settled（分批并发 + 逐项不短路 + 失败下标归因单一实现）。
+    // flipped 仅登记成功项（失败项不翻转）。
     // 注：原 `if (e.banned === !enable) continue` 处理「banned 与目标态不一致」的项，
     // filter 取同集（banned !== !enable），勿写反。
     const targetsToToggle = targets.filter((e) => e.banned !== !enable);
-    const BATCH = 8;
-    for (let i = 0; i < targetsToToggle.length; i += BATCH) {
-      const batch = targetsToToggle.slice(i, i + BATCH);
-      const results = await Promise.allSettled(
-        batch.map((e) =>
-          ToggleEnable(e.fullPath)
-            .then(() => e)
-            .catch((err: unknown) => {
+    const r = await batchAllSettled(
+      targetsToToggle.map(
+        (e) => () =>
+          ToggleEnable(e.fullPath).then(
+            () => e,
+            (err: unknown) => {
               logWarn("tree", `toggleFolderBatch 失败: ${e.fullPath}`, err);
               throw err;
-            }),
-        ),
-      );
-      for (const r of results) {
-        if (r.status === "fulfilled") {
-          ok++;
-          flipped.push(r.value);
-        } else {
-          fail++;
-        }
-      }
-    }
+            },
+          ),
+      ),
+    );
+    ok = r.fulfilled.length;
+    fail = r.rejected.length;
+    flipped.push(...r.fulfilled.map((f) => f.value));
     if (ok > 0) {
       // ⚠️ 不直接 mutate Go 端原始 entry 对象，reload 取真值防幽灵状态
       const gen = vm._guard.current;

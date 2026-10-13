@@ -233,7 +233,9 @@ function concRender(payload: ConcPayload, banner: string, esc: EscFn, timingMs?:
     sectionHeader(
       UI_ICONS.performance,
       t("diagnostics.perfConcurrentResult"),
-      payload.output ?? "",
+      // rawText 与 single/matrix/scan 同口径（锐评 P2-1）：sidecar 缺席回落载荷 JSON，
+      // 不给复制按钮喂空串——复制空文本再弹「已复制」等于界面撒谎。
+      payload.output ?? JSON.stringify(payload, null, 2),
       timingMs,
     ) +
     banner +

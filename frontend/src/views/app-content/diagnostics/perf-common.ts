@@ -105,7 +105,12 @@ export interface PerfIdentity {
  */
 const perfCopyBoundEls = new WeakSet<Element>();
 export function bindPerfCopyHandlers(root: ShadowRoot): void {
-  for (const id of ["diag-perf-single", "diag-perf-scan-bench-out"]) {
+  // 名单与 sectionHeader 的产出方一一对应：三个整块渲染结果容器各一条委托。
+  // ⚠️ 历史病灶（锐评 2026-10-13 P2-1）：conc-out 从未进过名单（拆分初是 single+hist，
+  // hist 退役后位被 scan-bench-out 顶替），而 concRender 恒经 sectionHeader 渲染复制按钮
+  // ⇒「看得见却不能用」（ADR-332 D4 同型病）。新增整块渲染的结果容器必须同批进此名单，
+  // 回归锁 = perf-concurrent.test.ts「并发结果区复制按钮」。
+  for (const id of ["diag-perf-single", "diag-perf-conc-out", "diag-perf-scan-bench-out"]) {
     const el = root.getElementById(id);
     if (!el || perfCopyBoundEls.has(el)) continue;
     perfCopyBoundEls.add(el);

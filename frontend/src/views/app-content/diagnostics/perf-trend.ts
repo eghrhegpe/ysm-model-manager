@@ -52,6 +52,8 @@ export function renderPerfTrendSection(esc: EscFn): string {
     );
   }
   const pts = hist.slice(-MAX_TREND_POINTS); // 时间从旧到新
+  // 折线维度 = **最近一次**基准的阶段链（锐评 2026-10-13 P3-3 成文）：趋势 = 同类事物的连续
+  // 观测，换模型链/换引擎后更早记录的阶段混进本图会误导对比；不同链的历史各自留档不并线。
   const stageNames = Object.keys(pts[pts.length - 1].stages);
   let maxMs = 0;
   for (const p of pts) for (const v of Object.values(p.stages)) if (v > maxMs) maxMs = v;

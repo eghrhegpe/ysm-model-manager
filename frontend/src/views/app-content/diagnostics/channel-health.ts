@@ -87,7 +87,17 @@ export function renderChannelHealth(root: ShadowRoot): void {
   });
 }
 
+/**
+ * 失效健康位 memo，让下一次 renderChannelHealth 重新过桥取。
+ * ⚠️ 「锁存不回弹」有一个例外（go/logs|Logger.Clear 注释自陈：Clear 是进程内唯一复位点，
+ * 且仅落盘态复位）——清空日志成功后通道已恢复，红条若继续陈述清空前的快照就是谎报事实
+ * （本条自身口径「只陈述一个可查询的事实」，锐评 2026-10-13 P3-2）。故清空成功分支必须调它。
+ */
+export function invalidateChannelHealthMemo(): void {
+  healthPromise = null;
+}
+
 /** 测试专用：清空健康位 memo（健康位在进程内只读一次，测试间需复位） */
 export function __resetChannelHealthForTest(): void {
-  healthPromise = null;
+  invalidateChannelHealthMemo();
 }

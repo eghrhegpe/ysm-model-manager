@@ -10,7 +10,11 @@ import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import type { EscFn } from "@/utils/html/html.ts";
 import { bindSubBar } from "@/views/app-content/tabs-shell.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
-import { __resetChannelHealthForTest, renderChannelHealth } from "./channel-health.ts";
+import {
+  __resetChannelHealthForTest,
+  invalidateChannelHealthMemo,
+  renderChannelHealth,
+} from "./channel-health.ts";
 import { initSyncConflictPanel } from "./conflicts.ts";
 import { copyWithToast } from "./copy-toast.ts";
 import { initHealthPanel } from "./health.ts";
@@ -37,6 +41,11 @@ function dgInBindRefreshClear(root: ShadowRoot, esc: EscFn): void {
       const { ClearImportLogs } = await backendGetApp();
       await ClearImportLogs();
       loadDiagnosticsLogs(root, esc);
+      // 清空 = Go 侧健康锁存的唯一进程内复位点（go/logs|Logger.Clear，仅落盘态复位）：
+      // memo 必须作废并重取，否则红条把清空前的快照陈述成「日志未落盘」直到重启
+      // （通道健康条自身口径「只陈述事实」，锐评 2026-10-13 P3-2）。
+      invalidateChannelHealthMemo();
+      renderChannelHealth(root);
       toast(`🗑️ ${t("diagnostics.logsCleared")}`, TOAST_MS.success, "info");
     } catch (e) {
       toast(friendlyError(e, t("diagnostics.clearFailed")), TOAST_MS.verbose, "error");

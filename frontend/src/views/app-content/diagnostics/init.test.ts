@@ -574,6 +574,28 @@ describe("initDiagnostics — 日志通道健康条（ADR-322 D2）", () => {
     await flushPromises();
     expect(health).toHaveBeenCalledTimes(1);
   });
+
+  it("清空日志成功 → 健康位重取：Clear() 是锁存唯一进程内复位点，红条不得陈述旧事实（锐评 2026-10-13 P3-2）", async () => {
+    // 病灶：memo 的「锁存不回弹」前提有一个例外——go/logs|Logger.Clear 只在落盘态复位
+    // （logs.go Clear() 注释自陈「进程内唯一复位点」）。进页时不健康锁存 → 红条上屏；
+    // 用户清空成功 = 通道已恢复，但修复前 memo 永不作废，红条把清空前的快照陈述到重启，
+    // 违背本条自己的口径「只陈述一个可查询的事实」。
+    const health = vi
+      .fn()
+      .mockReturnValueOnce({ persistOK: false, reason: "write-failed" })
+      .mockReturnValue({ persistOK: true });
+    const clearFn = vi.fn();
+    mockApp({ GetLogChannelHealth: health, ClearImportLogs: clearFn });
+    const { root } = makeRoot();
+    initDiagnostics(root, esc);
+    await waitFor(() => expect(barOf(root).textContent).toContain("日志未落盘"));
+
+    (root.getElementById("diag-clear") as HTMLElement).click();
+    await waitFor(() => expect(clearFn).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(health).toHaveBeenCalledTimes(2));
+    expect(barOf(root).style.display).toBe("none");
+    expect(barOf(root).innerHTML).toBe("");
+  });
 });
 describe("startDedup（会话工厂 createDedupSession）", () => {
   const dedup = createDedupSession();

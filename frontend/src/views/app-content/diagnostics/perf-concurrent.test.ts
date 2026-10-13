@@ -267,3 +267,61 @@ describe("并发基准面板（ADR-262 D5）", () => {
     expect(text).not.toContain("测什么 ysm 类型");
   });
 });
+
+// ===== 并发结果区「复制原文」按钮接线（锐评 2026-10-13 P2-1）=====
+// 病灶：concRender 经 sectionHeader 恒渲染复制按钮（rawText 恒 !== undefined），但
+// perf-common|bindPerfCopyHandlers 的委托名单只有 diag-perf-single / diag-perf-scan-bench-out
+// 两个容器——diag-perf-conc-out 从未进过名单（拆分当初名单是 single+hist，hist 退役后位被
+// scan-bench-out 顶替，注释「三个结果容器」由此成为漂移的自供状）。按钮点了零反应 =
+// ADR-332 D4 刚判过的「看得见却不能用」同型病。
+describe("并发结果区复制按钮（P2-1 委托接线）", () => {
+  it("点复制写入 sidecar 原文（修复前：容器不在委托名单，writeText 恒 0 次）", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+
+    executeCLI.mockResolvedValue({
+      status: "success",
+      command: "concurrent-bench",
+      data: CONC_PAYLOAD,
+    });
+    const root = makeRoot();
+    initPerfPanel(root, esc);
+    await clickAndFlush(root);
+
+    const out = root.getElementById("diag-perf-conc-out") as HTMLElement;
+    const btn = out.querySelector<HTMLElement>("[data-perf-copy]");
+    expect(btn).toBeTruthy();
+    btn!.click();
+    await flushPromises();
+
+    expect(writeText).toHaveBeenCalledTimes(1);
+    expect(String(writeText.mock.calls[0][0])).toContain("并发能力基准测试");
+  });
+
+  it("sidecar 缺席 → 复制回落载荷 JSON 而非空串（空原文弹「已复制」= 界面撒谎）", async () => {
+    // 与 single-bench / 矩阵 / scan-bench 的 `payload.output ?? JSON.stringify(payload, null, 2)`
+    // 同口径：复制按钮存在 ⟺ 有真实原文可复制。
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+
+    executeCLI.mockResolvedValue({
+      status: "success",
+      command: "concurrent-bench",
+      data: { ...CONC_PAYLOAD, output: undefined },
+    });
+    const root = makeRoot();
+    initPerfPanel(root, esc);
+    await clickAndFlush(root);
+
+    const out = root.getElementById("diag-perf-conc-out") as HTMLElement;
+    const btn = out.querySelector<HTMLElement>("[data-perf-copy]");
+    expect(btn).toBeTruthy();
+    btn!.click();
+    await flushPromises();
+
+    expect(writeText).toHaveBeenCalledTimes(1);
+    const copied = String(writeText.mock.calls[0][0]);
+    expect(copied.length).toBeGreaterThan(0);
+    expect(copied).toContain("serial");
+  });
+});

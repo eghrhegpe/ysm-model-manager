@@ -44,6 +44,7 @@ auto_fields:
     - initHealthPanel
     - initPerfPanel
     - initSyncConflictPanel
+    - invalidateChannelHealthMemo
     - loadDiagnosticsLogs
     - loadRuntimeLogs
     - MoveToRecycleFn
@@ -542,6 +543,15 @@ localPos: number[];
 - **已治（同日续刀，ADR-269-d1）**：`CONTAINER_EXTS` 原为前端 `utils/resource/types.ts` ⇄ Go `extensions.go|ContainerExts/IsContainerExt` 的跨语言双写字面量（外加契约测试第三抄），`type-consistency` 闸不覆盖——现值集入 `resource_types.json` 顶层 `containerExts` 声明，三端派生（Go 字段级基线回退 + atomic 集合缓存热路径、前端 schema.ts fail-loud、契约测试判顶层必填）。细节与不变量见知识卡 `resource-registry`「容器扩展名单源」。
 - **探针排除项**（记此防重扫）：`_devtoolsFlag` / web-store 探针 / `diagCapsPromise`·`healthPromise` memo 是启动期定格或准静态**设计语义**非冻结病；`importable.ts` / `vrm-materials.ts` 的 `=> t(` 是惰性箭头（调用期求值，新闸正确豁免）；全前端 `matchMedia` 7 处全在函数体内；两份 `export interface ModelEntry`（`scene-registry` 场景记录 vs `oldest-models` 扫描条目）同名**异义**非双源。
 - **验证记录**：冻结闸 --strict 恒绿；i18n-check key parity / key-naming（新增 3 键通过）/ ui-check --strict 全绿；diagnostics+maintenance+i18n 389、app-content+features 1451、tpl 契约 291 三层 vitest 绿；typecheck 0 错 + vite build 绿；biome --write 后通过。注：`check-i18n-unused` 报 4 枚死键（`content.filter*` / `workshop.*`）属并行会话 community 重构删消费方未刷基线的存量债，非本次改动面（本次 locale diff 只 −6/+3 健康键）。
+
+### 复制委托补 conc 与清空后健康重取（2026-10-13 续，A 档源码锐评两修）
+
+**一句话**：两条都是「自己立的纪律咬自己」——诚实层纪律管住了数值，没管住「按钮存在 ⟺ 按钮可用」；锁存语义注释管住了「不回弹」，没管住注释自陈的唯一例外。
+
+- **并发基准复制按钮是死控件（P2-1，已修）**：`perf-concurrent.ts|concRender` 恒以非 undefined 的 rawText 走 `perf-common.ts|sectionHeader` ⇒ 结果区**永远渲染**「复制原文」按钮，而 `bindPerfCopyHandlers` 的委托名单只有 `diag-perf-single`/`diag-perf-scan-bench-out` 两容器——`diag-perf-conc-out` 从未进过名单（拆分初名单是 single+hist，hist 退役后位被 scan-bench-out 顶替，注释「三个结果容器」由此成漂移的自供状）。这正是 ADR-332 D4 刚判过的「看得见却不能用」。落地两半：① 名单补 `diag-perf-conc-out`；② conc rawText 从 `payload.output ?? ""` 改与 single/matrix/scan 同口径回落 `JSON.stringify(payload)`——sidecar 缺席时复制空串再弹「已复制」等于界面撒谎。**回归锁** = `perf-concurrent.test.ts`「并发结果区复制按钮」两例（修复前红：`writeText` 恒 0 次 = 变异实证）。纪律成文：**新增整块渲染的结果容器，必须同批进 bindPerfCopyHandlers 名单**。
+- **清空日志后通道健康红条陈述旧事实（P3-2，已修）**：`channel-health.ts` 的 memo 判据是「Go 锁存不回弹故只问一次」——但 `go/logs|Logger.Clear` 注释自陈 **Clear 是进程内唯一复位点**（仅落盘态复位）：用户点「清空日志」成功 = 通道已恢复，红条却把清空前快照陈述到重启，违背本条自身口径「只陈述一个可查询的事实」。落地：新增公开出口 `channel-health.ts|invalidateChannelHealthMemo`（`__resetChannelHealthForTest` 降为它的测试别名），`init.ts` 清空成功分支作废 memo ＋ 重渲。既有「锁存语义只问一次」用例不受影响（切子屏不触发复位路径，两者判据正交）。**回归锁** = `init.test.ts`「清空日志成功 → 健康位重取」（修复前红：health 恒 1 次超时）。
+- **趋势图阶段维取最近记录成文（P3-3，零行为改动）**：`perf-trend.ts` 折线维度 = `pts[最后一条].stages`——换模型链后更早记录不并线。语义可辩护（趋势 = 同类连续观测），原缺注释，已补判词成文防误判成丢数据 bug。
+- **验证记录**：diagnostics 全套 15 files / 269 tests 绿；vite build ＋ typecheck ＋ check-biome 点名 7 文件全绿；两条新用例均先红（红点恰在病灶：writeText 0 次 / health 1 次超时）后绿。
 
 ## 相关
 

@@ -101,7 +101,7 @@ ADR-039 §2.2 Events.On 豁免：模块顶层注册 4 组 Wails Events.On（`que
 - **`getStateSnapshot(): Readonly<DownloadState>`** — 当前状态只读快照（拉取模型，深拷贝：progress / _lastDone 新对象，errorList 数组壳与元素逐一拷贝，修改快照不污染 STATE）。
 - **`resume()`** — 页面切回时从 Go 端恢复当前队列状态（`QueueStatus` binding 调用）。
 - **`isActiveStatus(s)`** — 队列是否处于活跃下载（同时认 `downloading` 和 `enqueued`，P1 修复：Go 端入队后只发 `enqueued`，从不发 `downloading`）。
-- **`enqueueDownloads(tasks: DownloadTask[])`** — 模块级入队（纯 Go 调用，不涉及 DOM）；web 分支委托 `download-queue-web.ts`（IndexedDB 入库 + 50MB 超限回退浏览器直链 + 15s fetch 超时兜底，经 `markCurrentFile` / `decrementRemaining` / `addQueueError` / `rollbackToIdle` 写函数注入）；Go 分支调 `EnqueueDownloads`。
+- **`enqueueDownloads(tasks: DownloadTask[])`** — 模块级入队（纯 Go 调用，不涉及 DOM），返回 `Promise<boolean>` 受理回执（重入拒绝/空批 = false；受理后 web 分支委托 `download-queue-web.ts`（IndexedDB 入库 + 50MB 超限回退浏览器直链 + 15s fetch 超时兜底，经 `markCurrentFile` / `decrementRemaining` / `addQueueError` / `rollbackToIdle` 写函数注入）；Go 分支调 `EnqueueDownloads`。
 - **`cancelDownloads()`** — 模块级取消（`CancelQueue` binding 调用）。
 - **Wails 事件注册** — 4 组事件：`queue:status`（状态变更）、`queue:file-start`（文件开始）、`queue:file-done`（文件完成 + 增量提取创作者头像）、`download:progress`（进度回调）。
 - **创作者头像增量提取**（`queue:file-done` handler）：`.ysm` 成功时经 `_avatarChain` Promise 链限并发 1，串行执行 `DebugExtractCreatorAvatar`（作者去重防重复排队）。
@@ -116,7 +116,7 @@ ADR-039 §2.2 Events.On 豁免：模块顶层注册 4 组 Wails Events.On（`que
 - `getState(): DownloadState` — 兼容别名（deprecated）
 - `resume(): Promise<void>` — 页面切回恢复状态
 - `isActiveStatus(s: DownloadState): boolean` — 活跃下载判定
-- `enqueueDownloads(tasks: DownloadTask[]): Promise<void>` — 模块级入队
+- `enqueueDownloads(tasks: DownloadTask[]): Promise<boolean>` — 模块级入队；**返回受理回执**（P3①：守卫检查与状态置位同步完成=单线程原子的唯一真值，false=重入拒绝——UI 层据此显式提示且不装修；静默丢批次是历史病）
 - `cancelDownloads(): Promise<void>` — 模块级取消
 
 ## 与其他子系统关系

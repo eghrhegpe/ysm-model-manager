@@ -92,7 +92,7 @@ status: active
 - **`web-stats.ts`** — 主线程编排：
   - `batchStatsWebModels(paths)` — **池并发 = 批级单飞**（ADR-218 D1：`batchChain` 串行链，第二起调用排队等前批整体完成；`terminateStatsWorker` 升池代际，排队批弃置）；批内 chunk 分发到池内 worker **并行**统计（`Promise.all(ws.map(runWorkerQueue))`，每 worker 单在途——见不变量）；合并层按 path 对齐（Map 查表，回包序不承担契约，ADR-218 D2）
   - **细粒度降级契约（ADR-219 D2/D3）**：`statsOneChunk` 双计时器——静默窗 `STATS_SILENCE_MS`（30s，每条 `partial` 重置）判单 worker 挂死（同步 ccall 挂起不可抢占，唯一可靠侦测信号 = 逐模型流中断）→ `terminateWorker` **只杀该 worker**（不杀整池），专属 replacement 上重试**剩余未回包**模型（已回包不重放）；静默杀预算 `CHUNK_SILENCE_KILLS`（2，双保险）或 chunk 墙钟 `STATS_CHUNK_TIMEOUT_MS`（60s，跨重试共享）耗尽 → 剩余模型全标 `EMPTY_ERROR`（`hasError: true`），chunk 正常收尾、**整批不降级**
-  - **批级降级契约（仅系统级故障，ADR-219 D3 边界）**：Worker 不支持（`new Worker` 抛错）/ WASM 瞬态错误重试耗尽 / 主动取消（`terminateStatsWorker`）→ 返回 `null` 并置降级标记（`consumeWebSearchDegraded` 消费，供 toolbar-search 提示）；`web-fs.searchWebModels` 收到 `null` 走「数值 0 + `hasError: false`」降级路径。挂死类局部故障不经由此处（走上面的模型级 `hasError` 细粒度路径）
+  - **批级降级契约（仅系统级故障，ADR-219 D3 边界）**：Worker 不支持（`new Worker` 抛错）/ WASM 瞬态错误重试耗尽 / 主动取消（`terminateStatsWorker`）→ 返回 `null` 并置降级标记（`consumeWebSearchDegraded` 消费，供 toolbar-search 提示）；`web-fs.searchWebModels` 收到 `null` 走「数值 0 + `hasError: false`」降级路径。挂死类局部故障不经由此处（走上面的模型级 `hasError` 细粒度路径）。旗标语义=**本批**：`batchStatsWebModels` 调用入口同步清零（2026-10-13 收口——上一批取消/降级未被消费的残旗不漏进下一批误报；清零不得放 `batchChain` 排队回调内，会把「已降级但消费者尚未恢复读取」的前批误清成漏报）
   - **测试注入**：`__setStatsRunnerForTest` 替换 Worker 路径（`browser-adapter.test.ts` / `web-stats.test.ts` 用）
 
 ## 已知边界

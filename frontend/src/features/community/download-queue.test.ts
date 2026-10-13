@@ -74,7 +74,7 @@ let bus!: Bus;
 let getState!: () => DownloadState;
 let getStateSnapshot!: () => Readonly<DownloadState>;
 let subscribe!: (fn: (s: DownloadState) => void) => () => void;
-let enqueueDownloads!: (tasks: DownloadTask[]) => Promise<void>;
+let enqueueDownloads!: (tasks: DownloadTask[]) => Promise<boolean>;
 let cancelDownloads!: () => Promise<void>;
 let resume!: () => Promise<void>;
 
@@ -181,8 +181,9 @@ describe("getStateSnapshot 快照独立性（深拷贝，修改快照不污染 S
 });
 
 describe("enqueueDownloads", () => {
-  it("入队设置 downloading 状态并调用 Go 绑定", async () => {
-    await enqueueDownloads([{ url: "u", saveDir: "", name: "a", size: 1 }]);
+  it("入队设置 downloading 状态并调用 Go 绑定（受理返回 true）", async () => {
+    const accepted = await enqueueDownloads([{ url: "u", saveDir: "", name: "a", size: 1 }]);
+    expect(accepted).toBe(true);
     const s = getState();
     expect(s.status).toBe("downloading");
     expect(s.total).toBe(1);
@@ -190,21 +191,26 @@ describe("enqueueDownloads", () => {
     expect(enqueueMock).toHaveBeenCalledTimes(1);
   });
 
-  it("空数组直接返回，不调用 Go 绑定", async () => {
-    await enqueueDownloads([]);
+  it("空数组直接返回，不调用 Go 绑定（未受理 = false）", async () => {
+    expect(await enqueueDownloads([])).toBe(false);
     expect(enqueueMock).not.toHaveBeenCalled();
   });
 
-  it("下载中重复入队被忽略", async () => {
+  it("下载中重复入队被拒（P3① 回执：false = 守卫拒绝，UI 层据此提示而非静默）", async () => {
     await enqueueDownloads([{ url: "u", saveDir: "", name: "a", size: 1 }]);
     enqueueMock.mockClear();
-    await enqueueDownloads([{ url: "u2", saveDir: "", name: "b", size: 1 }]);
+    expect(await enqueueDownloads([{ url: "u2", saveDir: "", name: "b", size: 1 }])).toBe(false);
     expect(enqueueMock).not.toHaveBeenCalled();
   });
 
-  it("并发 3 次 enqueueDownloads 只入队一次（重入守卫：状态置位先于首个 await）", async () => {
+  it("并发 3 次 enqueueDownloads 只入队一次（重入守卫：状态置位先于首个 await；受理恰一个）", async () => {
     const tasks = [{ url: "u", saveDir: "", name: "a", size: 1 }];
-    await Promise.all([enqueueDownloads(tasks), enqueueDownloads(tasks), enqueueDownloads(tasks)]);
+    const results = await Promise.all([
+      enqueueDownloads(tasks),
+      enqueueDownloads(tasks),
+      enqueueDownloads(tasks),
+    ]);
+    expect(results.filter(Boolean)).toHaveLength(1);
     expect(enqueueMock).toHaveBeenCalledTimes(1);
     expect(getState().total).toBe(1); // 首次调用设置的批次参数不被后续忽略调用覆盖
   });

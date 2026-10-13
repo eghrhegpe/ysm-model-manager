@@ -220,14 +220,15 @@ export function isActiveStatus(s: DownloadState): boolean {
 
 /**
  * 模块级入队 — 纯粹的 Go 调用，不涉及 DOM。
- * UI 层应在此之前完成配置检查和 DOM 初始化。
+ * 返回值 = **是否受理**（P3①）：守卫检查与状态置位同步完成（单线程下原子，await 窗口骗不过），
+ * false = 被重入守卫拒绝——调用方（UI 层）必须给出提示且不再装修 UI，静默丢批次是历史病。
  * 网页版下载入库分支（fetch→IDB / 直链兜底）已拆至 ./download-queue-web.ts（ADR-208 D2），
  * 经 ctx 注入本模块写函数保持单一写入纪律 + 零运行时环。
  */
-export async function enqueueDownloads(tasks: DownloadTask[]): Promise<void> {
+export async function enqueueDownloads(tasks: DownloadTask[]): Promise<boolean> {
   dbg("enqueue:start", tasks.length);
-  if (isActiveStatus(STATE)) return;
-  if (!tasks?.length) return;
+  if (isActiveStatus(STATE)) return false;
+  if (!tasks?.length) return false;
 
   STATE.status = "downloading";
   STATE.total = tasks.length;
@@ -251,12 +252,13 @@ export async function enqueueDownloads(tasks: DownloadTask[]): Promise<void> {
       addQueueError,
       rollbackToIdle,
     });
-    return;
+    return true;
   }
   try {
     const { EnqueueDownloads } = await communityGetApp();
     await EnqueueDownloads(tasks);
     dbg("enqueue:done", STATE.status);
+    return true;
   } catch (e) {
     // P3 修复：模块级函数失败也回滚 idle，否则状态永久卡 downloading，
     // 后续所有入队被守卫静默拦截（UI 层 enqueue 另有 toast/按钮恢复兜底）

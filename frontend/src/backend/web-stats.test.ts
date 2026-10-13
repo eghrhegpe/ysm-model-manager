@@ -290,6 +290,26 @@ describe("web-stats Worker 池路径（FakeWorker 注入）", () => {
     expect(consumeWebSearchDegraded()).toBe(true);
   });
 
+  it("上一批降级未消费 → 残旗不漏进下一批：批调用入口同步清零（跨批误报修复）", async () => {
+    setupPool();
+    const p1 = batchStatsWebModels(["/web/ysm/a.ysm"]);
+    await flushMicrotasks();
+    const w0 = FakeWorker.instances[0];
+    w0.onmessage?.({ data: { type: "error", requestId: w0.posted[0].requestId, message: "wasm init failed" } });
+    await flushMicrotasks();
+    const w1 = FakeWorker.instances[1];
+    w1.onmessage?.({ data: { type: "error", requestId: w1.posted[0].requestId, message: "wasm init failed again" } });
+    await expect(p1).resolves.toBeNull();
+    // 故意不消费（模拟 error 早退路径跳过 advFilterWarnWebDegraded）——旧实现残旗会漏进下一批误报
+    const p2 = batchStatsWebModels(["/web/ysm/b.ysm"]);
+    await flushMicrotasks();
+    const w2 = FakeWorker.instances[2];
+    replayPartialStream(w2, 0, 5);
+    const res = await p2;
+    expect(res?.[0]?.boneCount).toBe(5);
+    expect(consumeWebSearchDegraded(), "入口清零：本批成功，前批残旗不得冒领").toBe(false);
+  });
+
   it("Worker onerror（瞬态）→ 换 worker 重试成功 → 不降级", async () => {
     setupPool();
     const p = batchStatsWebModels(["/web/ysm/a.ysm"]);

@@ -305,7 +305,7 @@ function cmDqHandleStateChange(ctx: CmDqCtx, s: DownloadState): void {
 async function cmDqEnqueue(ctx: CmDqCtx, tasks: DownloadTask[]): Promise<void> {
   if (isActiveStatus(getStateSnapshot())) return;
   if (!tasks.length) return;
-
+  let accepted = false;
   try {
     const { GetRepoRoot } = await communityGetApp();
     const filesRoot = await GetRepoRoot(currentRepoType());
@@ -316,22 +316,44 @@ async function cmDqEnqueue(ctx: CmDqCtx, tasks: DownloadTask[]): Promise<void> {
     // biome-ignore lint/suspicious/useIterableCallbackReturn: forEach 惯用副作用，返回值无需消费
     tasks.forEach((t) => (t.saveDir = filesRoot));
 
+    // P3① 收口：入口快照检查与 await GetRepoRoot 之间存在窗口（并发批次此时都见 idle），
+    // 受理与否以 store 的同步 check-and-set 回执为唯一真值。拒收批次不装修 UI、不 disable
+    // 按钮，并显式 warn（旧实现静默丢批次——用户以为已排队，实际文件从未下载）。
+    accepted = await enqueueDownloads(tasks);
+    if (!accepted) {
+      toast(t("downloadQueue.busyDropped", { n: tasks.length }), TOAST_MS.info, "warn");
+      return;
+    }
+    // 受理后装修的等价性防御（旧序是「先装修后入队」，新序事件可能抢跑）：
+    // ① web 同步路径/收口事件先跑完 → 已非 active，不得复启 UI（否则按钮永禁用卡死）；
+    // ② 装修门禁见下方 hasProgressRow（真进度行 > preparing 文案）；
+    // ③ prev.lastDoneSeq 对齐受理时刻现值，不得回零重放已处理的 file-done（幂等无害，但守单一真值）。
+    if (!isActiveStatus(getStateSnapshot())) return;
     const btn = cmDqDlBtn(ctx);
     if (btn) btn.disabled = true;
 
+    // 装修门精细到「有无真进度行」：store 受理时同步 notify，run 分支可能已抢渲染状态行
+    // （下载中…剩 N）——preparing 是权威初始态，可覆盖状态行；但 file-start 已渲染真进度行
+    // 时不得覆盖（事件流的实况 > 本批文案）。
     const qs = cmDqQsEl(ctx);
     if (qs) {
+      const hasProgressRow = !!qs.querySelector(".gh-progress-row");
       qs.classList.add("show");
-      cmDqSetStatusLine(qs, t("downloadQueue.preparingTotal", { n: tasks.length }));
+      if (!hasProgressRow) {
+        cmDqSetStatusLine(qs, t("downloadQueue.preparingTotal", { n: tasks.length }));
+      }
     }
 
-    ctx.prev.lastDoneSeq = 0;
+    ctx.prev.lastDoneSeq = getStateSnapshot()._lastDoneSeq;
     ctx.progressGuard.resetCompletionMutex();
-    await enqueueDownloads(tasks);
   } catch (e) {
-    rollbackToIdle();
+    // 只回滚「本批置位的 downloading」（受理后 store 抛错）；受理前失败（getApp/GetRepoRoot
+    // reject）本批从未碰过 STATE——无条件 rollback 会把竞态窗口内他批的运行态踩成 idle
+    if (accepted) {
+      rollbackToIdle();
+      cmDqCleanupProgressUI(ctx);
+    }
     toast(friendlyError(e, t("workshop.enqueueFailed")), TOAST_MS.verbose, "error");
-    cmDqCleanupProgressUI(ctx);
   }
 }
 

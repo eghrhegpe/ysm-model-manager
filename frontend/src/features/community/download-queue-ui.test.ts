@@ -321,6 +321,32 @@ describe("createDownloadQueue UI 层", () => {
     ctrl.destroy();
   });
 
+  it("并发两批 enqueue（入口检查同见 idle）→ 后批被 store 拒收：warn「未入队」+ 不装修 UI（P3① 竞态窗口）", async () => {
+    loadConfigMock.mockResolvedValue({});
+    repoRootMock.mockResolvedValue("/repo");
+    const { sr, ctrl } = createCtrl();
+    await Promise.resolve();
+    const toasts: ToastPayload[] = [];
+    const off = bus.on("toast:show", (p) => toasts.push(p));
+    // 双批并发启动：两批入口守卫都见 idle，受理真值由 store 同步 check-and-set 裁决
+    await Promise.all([
+      ctrl.enqueue([
+        { url: "u1", saveDir: "", name: "a.ysm", size: 1 },
+        { url: "u1b", saveDir: "", name: "a2.ysm", size: 1 },
+      ]),
+      ctrl.enqueue([{ url: "u2", saveDir: "", name: "b.ysm", size: 1 }]),
+    ]);
+    expect(enqueueMock).toHaveBeenCalledTimes(1); // 受理恰一批
+    expect(toasts.some((p) => p.type === "warn" && p.msg.includes("未入队"))).toBe(
+      true,
+    );
+    // 拒收批不装修 UI：状态行仍是受理批的「共 2 个」，未被本批「共 1 个」覆写
+    expect(sr.querySelector("#gh-queue-status")!.textContent).toContain("共 2 个");
+    expect(sr.querySelector("#gh-queue-status")!.textContent).not.toContain("共 1 个");
+    off();
+    ctrl.destroy();
+  });
+
   it("enqueue 入队失败 → 状态回 idle + error toast + 按钮恢复（陷阱 #3 失败回滚）", async () => {
     loadConfigMock.mockResolvedValue({});
     repoRootMock.mockResolvedValue("/repo");
@@ -552,20 +578,55 @@ describe("createDownloadQueue 99% 锁定状态机（陷阱 #6）", () => {
     ctrl.destroy();
   });
 
-  it("progress 达 100% → 3s completeTimer 后清理 UI + onAllDone + 按钮恢复（完成路径）", async () => {
+  it("progress 达 100% 且 file-done 已达 → 3s completeTimer 后清理 UI + onAllDone + 按钮恢复（完成路径）", async () => {
     const { sr, onAllDone, ctrl } = createCtrl();
     await Promise.resolve();
     const btn = sr.querySelector(".gh-dl-selected") as HTMLButtonElement;
     btn.disabled = true; // 模拟下载中按钮禁用
-    emit("queue:status", ["enqueued", 1, undefined]); // 置 active，completeTimer 回调才生效
+    emit("queue:status", ["downloading", 1, undefined]); // 置 downloading（完成路径的实况态）
     emit("queue:file-start", ["f.ysm", 1, 0]); // 单文件：Go 端剩余文件数 left=0（app_download.go:178）
     emit("download:progress", [50, 100]); // _lastPct=50
     emit("download:progress", [100, 100]); // pct=100（_lastPct≥10 不触发锁定）→ 3s completeTimer
+    emit("queue:file-done", ["f.ysm", "ok", ""]); // _lastDoneSeq=1=total → 落盘已定，快路径 3s 即收口
     expect(onAllDone).not.toHaveBeenCalled();
     vi.advanceTimersByTime(3000);
     expect(onAllDone).toHaveBeenCalledWith({ cancelled: false, errorList: [] });
     expect(sr.querySelector("#gh-queue-status")!.classList.contains("show")).toBe(false);
     expect(btn.disabled).toBe(false);
+    ctrl.destroy();
+  });
+
+  it("100% 但 file-done 未达（落盘在途）→ 3s 不提前拆台，有界 re-arm 至多 9s 兜底收口（P3③）", async () => {
+    const { sr, onAllDone, ctrl } = createCtrl();
+    await Promise.resolve();
+    const btn = sr.querySelector(".gh-dl-selected") as HTMLButtonElement;
+    btn.disabled = true;
+    emit("queue:status", ["downloading", 1, undefined]);
+    emit("queue:file-start", ["f.ysm", 1, 0]); // currentFile 在途、remaining=0
+    emit("download:progress", [50, 100]);
+    emit("download:progress", [100, 100]); // pct=100 → arm；_lastDoneSeq=0<total=1 → 落盘未完
+    vi.advanceTimersByTime(3000);
+    expect(onAllDone, "第 1 个 3s：file-done 未达不提前收口").not.toHaveBeenCalled();
+    vi.advanceTimersByTime(3000);
+    expect(onAllDone, "第 2 个 3s：续期预算内仍等待").not.toHaveBeenCalled();
+    vi.advanceTimersByTime(3000);
+    expect(onAllDone, "预算耗尽（3s×3）→ done 丢失兜底放行").toHaveBeenCalledTimes(1);
+    expect(btn.disabled).toBe(false);
+    ctrl.destroy();
+  });
+
+  it("re-arm 等待期内 file-done 到达 → 下一 3s 到点即收口（不必耗尽预算）", async () => {
+    const { onAllDone, ctrl } = createCtrl();
+    await Promise.resolve();
+    emit("queue:status", ["downloading", 1, undefined]);
+    emit("queue:file-start", ["f.ysm", 1, 0]);
+    emit("download:progress", [50, 100]); // _lastPct=50（≥10 不触发锁定，与完成路径同法）
+    emit("download:progress", [100, 100]); // pct=100 → arm；_lastDoneSeq=0<total=1 → 落盘未完
+    vi.advanceTimersByTime(3000); // 第 1 轮：落盘未完 → re-arm
+    expect(onAllDone).not.toHaveBeenCalled();
+    emit("queue:file-done", ["f.ysm", "ok", ""]); // 落盘完成（_lastDoneSeq=1=total）
+    vi.advanceTimersByTime(3000); // 第 2 轮：守卫放行 → 收口
+    expect(onAllDone).toHaveBeenCalledTimes(1);
     ctrl.destroy();
   });
 

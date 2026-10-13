@@ -64,7 +64,8 @@ type ChunkOutcome = "complete" | "error" | "silence" | "deadline" | "cancelled";
 /** 在途请求表（requestId → settle）：terminate 杀池时全部以 cancelled settle，防 Promise.all 永久挂起 */
 const inflight = new Map<number, (kind: ChunkOutcome) => void>();
 
-/** 降级标记：最近一次批量统计是否降级（一次消费，toolbar-search 读取后复位） */
+/** 降级标记：**本批**是否降级（批调用入口同步清零，toolbar-search 读取一次后复位）——
+ *  「最近一次标记」旧语义的长尾残旗不再跨批误报（见 batchStatsWebModels 入口注释） */
 let degradedFlag = false;
 
 /** 进度回调（batchStatsWebModels 逐批推进时调用；null 注销）。UI 角标证明多线程统计 */
@@ -302,6 +303,11 @@ function statsOneChunk(
  * batchChain 串行链排队等前批完成；等待期间 terminateStatsWorker 升代则本批弃置。
  */
 export function batchStatsWebModels(paths: string[]): Promise<WebModelStats[] | null> {
+  // P3 灰色收口：旗标语义从「最近一次标记」收紧为「本批」——批**调用入口同步清零**，
+  // 上一批取消/降级留下的长尾旗标不再让本批误报（历史病：error/cancel 早退路径无消费方，
+  // 残旗漏进下一次搜索）。清零必须放同步入口而非 batchChain 排队回调内：排队后清会把
+  // 前批「已降级但消费者尚未恢复读取」的旗标误清成漏报——漏报（静默吞故障）比误报恶性。
+  degradedFlag = false;
   if (injectedRunner) {
     // 测试 seam：不占串行链，立即执行
     return (async (): Promise<WebModelStats[] | null> => {

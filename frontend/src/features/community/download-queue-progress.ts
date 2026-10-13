@@ -20,6 +20,9 @@ const STUCK_LARGE_MS = 2000;
 const DOT_INTERVAL_MS = 400;
 /** 进度 100% 后收口 completeTimer 的延迟 */
 const COMPLETE_DELAY_MS = 3000;
+/** 落盘未完时收口的有界续期次数上限（P3③）：总窗口 3s×(1+2)=9s，超限按旧语义收口
+ *  ——兜底职责（done 事件丢失防 UI 永挂）保留，但慢落盘不再被提前拆台 */
+const COMPLETE_MAX_REARMS = 2;
 /** 进度锁定触发的起始阈值（_lastPct < 此值才触发） */
 const STUCK_PCT_THRESHOLD = 10;
 
@@ -61,6 +64,8 @@ interface CmPgCtx {
    * 状态藏 DOM 节点的恶习：重渲染换节点即丢帧、detached 节点吊住 timer，2026-09 锐评整改） */
   _dotTimer: ReturnType<typeof setInterval> | null;
   _dots: number;
+  /** completeTimer 因「落盘未完」续期的已用次数（随新批次/守卫复位清零） */
+  _completeRetries: number;
 }
 
 function cmPgClearCompleteTimer(ctx: CmPgCtx): void {
@@ -233,26 +238,45 @@ function cmPgRender(ctx: CmPgCtx, s: DownloadState): void {
   }
 
   if (pct >= 100 && !ctx._stuckLocked) {
-    cmPgClearCompleteTimer(ctx);
-    ctx.completeTimer = setTimeout(() => {
-      if (!isActiveStatus(s)) return;
-      if (s.remaining > 0) return;
-      if (s._lastDoneSeq > 0 && s.status !== "downloading") return;
-      if (ctx._doneNotified) return;
-      ctx._doneNotified = true;
-      // 错误摘要以 DOM 节点传递（对齐 controller 侧 cmDqCleanupProgressUI 的
-      // replaceChildren 收口，消除跨文件 HTML 字符串契约）
-      let summary: HTMLElement | null = null;
-      if (s.errorList.length > 0) {
-        summary = document.createElement("div");
-        summary.className = "gh-queue-error";
-        summary.innerHTML = `${UI_ICONS.error} ${t("downloadQueue.failedCount", { n: s.errorList.length })}`;
-      }
-      ctx.onTimedCompletion(summary);
-    }, COMPLETE_DELAY_MS);
+    armCompleteTimer(ctx, s);
   } else {
     cmPgClearCompleteTimer(ctx);
   }
+}
+
+/**
+ * 100% 收口定时器（3s）。s 为 STATE 活体引用（notify 传引用），回调读到的都是触发时刻现值。
+ * P3③ 落盘守卫：末文件 file-start 后 remaining=0（所有权归 Go，见 store 递减禁令），
+ * 传输 100% ≠ 落盘完成——file-done 未达（_lastDoneSeq < total 且有在处理文件）时收口，
+ * 会提前拆 UI 并触发 tree:reload 把未落盘文件渲染成「缺失」、fail 摘要被互斥吞掉。
+ * 正常事件流下 done 状态事件先到、beginQueueEnded 互斥令本定时器自然作废；
+ * 有界续期（≤COMPLETE_MAX_REARMS 次）只哄慢落盘；预算耗尽按旧语义放行收口
+ * ——那是 done/file-done 双丢的兜底场景，宁可提前也不允许 UI 永挂。
+ */
+function armCompleteTimer(ctx: CmPgCtx, s: DownloadState): void {
+  cmPgClearCompleteTimer(ctx);
+  ctx.completeTimer = setTimeout(() => {
+    ctx.completeTimer = null;
+    if (!isActiveStatus(s)) return;
+    if (s.remaining > 0) return;
+    if (s._lastDoneSeq > 0 && s.status !== "downloading") return;
+    if (ctx._doneNotified) return;
+    if (s.currentFile && s._lastDoneSeq < s.total && ctx._completeRetries < COMPLETE_MAX_REARMS) {
+      ctx._completeRetries++;
+      armCompleteTimer(ctx, s);
+      return;
+    }
+    ctx._doneNotified = true;
+    // 错误摘要以 DOM 节点传递（对齐 controller 侧 cmDqCleanupProgressUI 的
+    // replaceChildren 收口，消除跨文件 HTML 字符串契约）
+    let summary: HTMLElement | null = null;
+    if (s.errorList.length > 0) {
+      summary = document.createElement("div");
+      summary.className = "gh-queue-error";
+      summary.innerHTML = `${UI_ICONS.error} ${t("downloadQueue.failedCount", { n: s.errorList.length })}`;
+    }
+    ctx.onTimedCompletion(summary);
+  }, COMPLETE_DELAY_MS);
 }
 
 function cmPgForceFileDone(ctx: CmPgCtx, done: { status: string; errMsg: string }): void {
@@ -299,6 +323,8 @@ function cmPgBeginQueueEnded(ctx: CmPgCtx): boolean {
 
 function cmPgResetCompletionMutex(ctx: CmPgCtx): void {
   ctx._doneNotified = false;
+  // 新批次开闸：落盘续期预算一并复位（否则上一批耗尽的计数会让本批 completeTimer 失去 P3③ 保护）
+  ctx._completeRetries = 0;
 }
 
 export function createProgressGuard(hooks: ProgressGuardHooks): ProgressGuard {
@@ -313,6 +339,7 @@ export function createProgressGuard(hooks: ProgressGuardHooks): ProgressGuard {
     _doneNotified: false,
     _dotTimer: null,
     _dots: 0,
+    _completeRetries: 0,
   };
 
   const render = (s: DownloadState): void => cmPgRender(ctx, s);

@@ -217,13 +217,10 @@ function eeBindToolbarBtns(state: SiteViewState, refreshView: () => void, sig: A
         const siteCreators = creators.filter(
           (cr) => (cr.name || "").trim() && parseSiteIds(cr.type).includes(site.id),
         );
-        // 跨站点创作者「解除本站关联」（type 已去本站段）必须併入本次写回：Go 按站整存会先
-        // 移除磁盘上 type 含本站的全部旧条目，漏掉这些 detached 条目就会把他站的也连带抹掉。
+        // 跨站创作者「解除本站关联」以**名字**交给 Go（ADR-335）：Go 基于磁盘副本去本站段，
+        // 前端不再重建全量列表——旧契约漏併 detached 条目就会把他站的条目一并抹掉。
         const { SaveWorkshopCreatorsBySite } = await backendGetApp();
-        await SaveWorkshopCreatorsBySite(site.id, [
-          ...siteCreators,
-          ...state.detachedCreators.filter((cr) => (cr.name || "").trim()),
-        ]);
+        await SaveWorkshopCreatorsBySite(site.id, siteCreators, state.detachedNames);
         wsEditModeRef.v = false;
         // 保存成功即视为无 dirty（下次进编辑态重新取快照）
         state.editSnapshot = null;
@@ -395,14 +392,12 @@ function eeBindCreatorsEdit(state: SiteViewState, sig: AbortSignal): void {
         const idx = parseInt(btn.dataset.idx || "-1", 10);
         const cr = creators[idx];
         if (!cr) return;
-        // 多站点创作者在 A 站删除 = 「解除 A 关联」，不得从 allCreators 全删：Go 按站整存
-        //（移除 type 含本站旧条目 → 追加新列表）会把属于 B 站的也抹掉。多站：type 去本站段 +
-        // 推入 detached 待保存写回；单站（或 type 缺失/空）：全量删除（本就只属本站）。
-        const segs = parseSiteIds(cr.type);
-        const belongsToOtherSites = segs.some((s) => s !== site.id);
+        // 多站点创作者在 A 站删除 = 「解除 A 关联」：只把**名字**记入 detachedNames，交由 Go
+        // 基于磁盘副本去本站段（ADR-335）。不得从 allCreators 全删（会抹掉他站条目），
+        // 也不得就地改 cr.type——旧实现会污染 allCreators 的内存显示（跨站条目「少了一站」）。
+        const belongsToOtherSites = parseSiteIds(cr.type).some((s) => s !== site.id);
         if (belongsToOtherSites) {
-          cr.type = joinSiteIds(segs.filter((s) => s !== site.id));
-          state.detachedCreators.push(cr);
+          state.detachedNames.push(cr.name);
         } else {
           const realIdx = allCreators.indexOf(cr);
           if (realIdx >= 0) allCreators.splice(realIdx, 1);

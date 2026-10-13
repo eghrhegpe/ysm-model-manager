@@ -185,19 +185,54 @@ func inTypeSegments(typeStr, siteID string) bool {
 	return false
 }
 
-// SaveWorkshopCreatorsBySite 只替换指定站点的创作者，其他站点不动
-func (a *App) SaveWorkshopCreatorsBySite(siteID string, siteCreators []types.WorkshopCreator) error {
+// removeTypeSegment 从 typeStr 的分号段中移除等于 siteID 的段，返回重建的分号串。
+// 空段一并丢弃——与前端 parseSiteIds / joinSiteIds 的口径一致（空段本就不算站点）。
+func removeTypeSegment(typeStr, siteID string) string {
+	var kept []string
+	for _, seg := range strings.Split(typeStr, ";") {
+		if seg == "" || seg == siteID {
+			continue
+		}
+		kept = append(kept, seg)
+	}
+	return strings.Join(kept, ";")
+}
+
+// SaveWorkshopCreatorsBySite 只替换指定站点的创作者，其他站点不动。
+//
+// ADR-335 意图式契约：detachedNames = 用户在本站删除、但仍属他站的创作者名。
+// 对这些条目只**从磁盘副本**去掉本站段——段非空则保留（仍属他站），其余字段一字不动；
+// 段空则删除。前端因此不必重建全量列表，也不可能用陈旧副本覆盖条目的其余字段
+// （旧契约要前端把改过 Type 的整条对象传回，对象一陈旧就整条覆盖磁盘）。
+//
+// 优先级约定：同名同时出现在 siteCreators 与 detachedNames 时**以解除为准**。
+func (a *App) SaveWorkshopCreatorsBySite(siteID string, siteCreators []types.WorkshopCreator, detachedNames []string) error {
+	detached := make(map[string]bool, len(detachedNames))
+	for _, n := range detachedNames {
+		detached[n] = true
+	}
 	all := a.LoadWorkshopCreators()
-	// 移除该站点的旧条目（Type 分号分隔精确段匹配）
 	var kept []types.WorkshopCreator
 	for _, c := range all {
-		if inTypeSegments(c.Type, siteID) {
+		// 非本站条目：原样保留
+		if !inTypeSegments(c.Type, siteID) {
+			kept = append(kept, c)
 			continue
+		}
+		// 本站条目：解除名单内 → 只改 Type；不在名单内 → 丢弃（若仍属本站会由 siteCreators 重加）
+		if detached[c.Name] {
+			if rest := removeTypeSegment(c.Type, siteID); rest != "" {
+				c.Type = rest
+				kept = append(kept, c)
+			}
+		}
+	}
+	for _, c := range siteCreators {
+		if detached[c.Name] {
+			continue // 同名同现 → 以解除为准（ADR-335 优先级约定）
 		}
 		kept = append(kept, c)
 	}
-	// 追加新条目
-	kept = append(kept, siteCreators...)
 	return a.SaveWorkshopCreators(kept)
 }
 

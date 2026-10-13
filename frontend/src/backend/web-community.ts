@@ -440,17 +440,36 @@ export const webCommunityBindings = {
   // R3-P0（web-edition.md）：站点级编辑保存 + JSON 合并——与 Go 同语义，基于
   // localStorage 覆盖层（"编辑站点→保存"恢复可用；原 web 未桥接恒抛
   // WebUnsupportedError，community-data.ts 有对应门控，现已移除）
-  SaveWorkshopCreatorsBySite: (siteID: string, siteCreators: WorkshopCreator[]) => {
-    const all = loadWebCreators();
-    // 移除该站点旧条目（type 分号分隔精确段匹配，对齐 Go app_workshop.go
-    // inTypeSegments——原 includes(siteID + ";") 会把 "ba;c" 误配 siteID="a"）
-    const kept = all.filter((c) => {
+  SaveWorkshopCreatorsBySite: (
+    siteID: string,
+    siteCreators: WorkshopCreator[] | null,
+    detachedNames: string[] | null,
+  ) => {
+    // ADR-335 意图式契约（对齐 Go app_workshop.go|SaveWorkshopCreatorsBySite）：
+    // detachedNames = 在本站删除、但仍属他站的创作者名——只从**已有条目**去掉本站段，
+    // 其余字段一字不动；段空则整条删除。同名同现以解除为准（不得重新引入本站归属）。
+    const detached = new Set(detachedNames ?? []);
+    const kept: WorkshopCreator[] = [];
+    for (const c of loadWebCreators()) {
       // 勿命名为 t：本文件顶部 import 了 i18n 的 t()，遮蔽后回调里写 t("...") 会静默变成
       // 属性访问/崩溃（复核 P2-4）。
       const typeSeg = c.type || "";
-      return !typeSeg.split(";").includes(siteID);
-    });
-    saveWebCreators([...kept, ...siteCreators]);
+      if (!typeSeg.split(";").includes(siteID)) {
+        kept.push(c);
+        continue;
+      }
+      if (!detached.has(c.name)) continue; // 本站旧条目：丢弃，由 siteCreators 重加
+      const rest = typeSeg
+        .split(";")
+        .filter((s) => s && s !== siteID)
+        .join(";");
+      if (rest) kept.push({ ...c, type: rest });
+    }
+    for (const c of siteCreators ?? []) {
+      if (detached.has(c.name)) continue;
+      kept.push(c);
+    }
+    saveWebCreators(kept);
     return Promise.resolve();
   },
   SaveWorkshopPresetsBySite: (siteID: string, presets: WorkshopPresetSearch[]) => {

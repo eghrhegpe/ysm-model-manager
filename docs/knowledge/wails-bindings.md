@@ -395,7 +395,7 @@ status: active
 - `ResetWorkshopConfigs() → types.WorkshopSite[]` — 重置工坊配置为默认
 - `LoadWorkshopCreators() → types.WorkshopCreator[]` — 加载创作者列表（creators.json）
 - `SaveWorkshopCreators(list) → void` — 保存创作者列表（全量）
-- `SaveWorkshopCreatorsBySite(siteID, siteCreators) → void` — 只替换指定站点的创作者，其他站点不动
+- `SaveWorkshopCreatorsBySite(siteID, siteCreators, detachedNames) → void` — 只替换指定站点的创作者，其他站点不动；`detachedNames` 里的条目**只从磁盘副本去掉本站段**（仍属他站则保留且其余字段一字不动），同名同现以解除为准（ADR-335 意图式契约）
 - `SaveWorkshopPresetsBySite(siteID, presets) → void` — 只替换指定站点的搜索词预设
 - `LoadGitHubRepos() → types.WorkshopCreator[]` — 加载 GitHub 仓库创作者列表
 - `ExportWorkshopSitesCSV() → string` — 导出站点为 CSV

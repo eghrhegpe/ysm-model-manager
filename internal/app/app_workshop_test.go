@@ -235,7 +235,7 @@ func TestSaveWorkshopCreatorsBySite_TypeSegmentMatch(t *testing.T) {
 	if err := a.SaveWorkshopCreators(seed); err != nil {
 		testutil.NoError(t, err)
 	}
-	if err := a.SaveWorkshopCreatorsBySite("a", []types.WorkshopCreator{{Name: "a-new", Type: "a"}}); err != nil {
+	if err := a.SaveWorkshopCreatorsBySite("a", []types.WorkshopCreator{{Name: "a-new", Type: "a"}}, nil); err != nil {
 		testutil.NoError(t, err)
 	}
 	got := a.LoadWorkshopCreators()
@@ -255,6 +255,104 @@ func TestSaveWorkshopCreatorsBySite_TypeSegmentMatch(t *testing.T) {
 	}
 	if !names["a-new"] {
 		t.Error("新站点创作者应写入")
+	}
+}
+
+// ADR-335：意图式契约——detachedNames 里的跨站条目「只从磁盘副本去本站段」，其余字段一字不动；
+// 仅属本站的解除名整条删除（段空）；非本站条目不受影响；siteCreators 照常追加。
+func TestSaveWorkshopCreatorsBySite_DetachedNames(t *testing.T) {
+	orig := pathMgr
+	pathMgr = fakePathMgr{appData: t.TempDir()}
+	defer func() { pathMgr = orig }()
+
+	a := repoApp(t, types.AppConfig{})
+	seed := []types.WorkshopCreator{
+		{Name: "跨站", Type: "a;b", Desc: "keep-me", Role: "vup"},
+		{Name: "仅本站", Type: "a"},
+		{Name: "他站", Type: "b"},
+	}
+	if err := a.SaveWorkshopCreators(seed); err != nil {
+		testutil.NoError(t, err)
+	}
+	err := a.SaveWorkshopCreatorsBySite(
+		"a",
+		[]types.WorkshopCreator{{Name: "a-new", Type: "a"}},
+		[]string{"跨站", "仅本站"},
+	)
+	testutil.NoError(t, err)
+
+	byName := map[string]types.WorkshopCreator{}
+	for _, c := range a.LoadWorkshopCreators() {
+		byName[c.Name] = c
+	}
+	got, ok := byName["跨站"]
+	if !ok {
+		t.Fatal("跨站条目应保留（仍属 b 站）")
+	}
+	if got.Type != "b" {
+		t.Errorf("跨站条目 Type 应去掉本站段 → %q, got %q", "b", got.Type)
+	}
+	// 旧契约要前端传回改过 Type 的整条对象，对象一陈旧就整条覆盖磁盘——本条锁死该风险。
+	if got.Desc != "keep-me" || got.Role != "vup" {
+		t.Errorf("解除本站关联不得改动其余字段, got desc=%q role=%q", got.Desc, got.Role)
+	}
+	if _, still := byName["仅本站"]; still {
+		t.Error("仅属本站的解除名应整条删除（去段后为空）")
+	}
+	if _, still := byName["他站"]; !still {
+		t.Error("非本站条目不应受影响")
+	}
+	if _, added := byName["a-new"]; !added {
+		t.Error("siteCreators 的新增条目应落盘")
+	}
+}
+
+// ADR-335 优先级约定：同名同时出现在 siteCreators 与 detachedNames → **以解除为准**，
+// 且不得产生重复条目（若照旧「先丢弃本站条目、再追加 siteCreators」，本站归属会被重新引入）。
+func TestSaveWorkshopCreatorsBySite_DetachedWinsOverUpsert(t *testing.T) {
+	orig := pathMgr
+	pathMgr = fakePathMgr{appData: t.TempDir()}
+	defer func() { pathMgr = orig }()
+
+	a := repoApp(t, types.AppConfig{})
+	if err := a.SaveWorkshopCreators([]types.WorkshopCreator{{Name: "同名", Type: "a;b"}}); err != nil {
+		testutil.NoError(t, err)
+	}
+	err := a.SaveWorkshopCreatorsBySite(
+		"a",
+		[]types.WorkshopCreator{{Name: "同名", Type: "a"}},
+		[]string{"同名"},
+	)
+	testutil.NoError(t, err)
+
+	var hits []types.WorkshopCreator
+	for _, c := range a.LoadWorkshopCreators() {
+		if c.Name == "同名" {
+			hits = append(hits, c)
+		}
+	}
+	if len(hits) != 1 {
+		t.Fatalf("同名同现不得产生重复条目, got %d 条", len(hits))
+	}
+	if hits[0].Type != "b" {
+		t.Errorf("同名同现应以解除为准（Type 去掉本站段）→ %q, got %q", "b", hits[0].Type)
+	}
+}
+
+// removeTypeSegment：只去精确段（不误伤 "ba"），空段一并丢弃（与前端 joinSiteIds 口径一致）。
+func TestRemoveTypeSegment(t *testing.T) {
+	cases := []struct{ in, want string }{
+		{"a;b", "b"},
+		{"b;a", "b"},
+		{"a", ""},
+		{"a;a;b", "b"},
+		{"a;;b", "b"},
+		{"ba", "ba"},
+	}
+	for _, c := range cases {
+		if got := removeTypeSegment(c.in, "a"); got != c.want {
+			t.Errorf("removeTypeSegment(%q, \"a\") = %q, want %q", c.in, got, c.want)
+		}
 	}
 }
 

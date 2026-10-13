@@ -6,7 +6,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const backend = vi.hoisted(() => ({
   SaveWorkshopPresetsBySite: vi.fn(async (_siteId: string, _presets: unknown[]) => {}),
-  SaveWorkshopCreatorsBySite: vi.fn(async (_siteId: string, _creators: unknown[]) => {}),
+  SaveWorkshopCreatorsBySite: vi.fn(
+    async (_siteId: string, _creators: unknown[], _detachedNames: unknown[]) => {},
+  ),
   modalConfirm: vi.fn(async () => true),
 }));
 
@@ -61,7 +63,7 @@ function makeState(over: Partial<SiteViewState> = {}): {
     bus: { emit: vi.fn() } as unknown as SiteViewState["bus"],
     activeTag: "",
     searchKw: "",
-    detachedCreators: [],
+    detachedNames: [],
     editSnapshot: null,
     ...over,
   };
@@ -338,11 +340,10 @@ describe("编辑态增删", () => {
     cleanup!();
   });
 
-  it("7b. 跨站点创作者删除 → 仅解除本站关联，不删 allCreators 条目，type 去本站段并入 detached（P1-2 锐评）", () => {
+  it("7b. 跨站创作者删除 → 只记名字解除本站关联，不删 allCreators、不改内存 type（ADR-335）", () => {
     // type:"siteA;siteB" 的多站点创作者：在 A 站删除必须是「从 A 解除」——
     // 若整删，Go 按站整存会把 B 站的条目也抹掉（跨站越权）。
-    // 注意 makeState 的 over 只覆盖 state.* 字段，返回的独立变量是默认值——
-    // 断言必须读 state.creators / state.allCreators。
+    // ADR-335 起前端只传**名字**，段级维护由 Go 基于磁盘副本做，故不再就地改 cr.type。
     const multiSite = {
       id: 9,
       name: "跨站",
@@ -359,16 +360,17 @@ describe("编辑态增删", () => {
       '<button class="cr-del" data-idx="0"></button></div>';
     const cleanup = bindEditEvents(state, refresh);
     expect(state.allCreators).toHaveLength(1);
-    expect(state.detachedCreators).toHaveLength(0);
+    expect(state.detachedNames).toHaveLength(0);
 
     searchResults.querySelector(".cr-del")!.dispatchEvent(new Event("click", { bubbles: true }));
 
-    // 条目仍在 allCreators（他站保留），type 已去本站段，进入 detached 待保存写回；
-    // DOM 卡片移除（本站视图不再显示），不整树重建
+    // 条目仍在 allCreators（他站保留），名字进入解除名单；DOM 卡片移除、不整树重建。
+    // ⚠️ 内存 type 必须**保持原样**——旧实现就地改 type 会污染 allCreators 的显示。
     expect(state.allCreators).toHaveLength(1);
     expect(state.creators).toHaveLength(0);
     expect(state.creators[0]).toBeUndefined();
-    expect(state.detachedCreators.map((c) => c.name)).toEqual(["跨站"]);
+    expect(state.detachedNames).toEqual(["跨站"]);
+    expect(multiSite.type).toBe("siteA;siteB");
     expect(searchResults.querySelector(".cr-edit-card")).toBeNull();
     expect(refresh).not.toHaveBeenCalled();
     cleanup!();
@@ -452,17 +454,11 @@ describe("编辑态增删", () => {
     cleanup!();
   });
 
-  it("10. 保存併入 detached 写回：跨站解除关联条目随 siteCreators 落盘，type 已无本站段（P1-2 锐评）", async () => {
-    // 场景：多站点创作者在 A 站删除 → detached 待写回 → 保存时必须併入，
-    // 否则 Go 按站整存（移除 type 含本站旧条目→追加新列表）会把 B 站的条目也抹掉。
-    const detached = {
-      id: 9,
-      name: "跨站",
-      desc: "",
-      type: "siteB", // 已去本站段（siteA 删除时解除）
-      role: "creator",
-    } as unknown as LocalCreatorLike;
-    const { state, searchResults } = makeState({ detachedCreators: [detached] });
+  it("10. 保存把解除名单作为第三参交给 Go：前端不再重建全量列表（ADR-335）", async () => {
+    // 场景：多站点创作者在 A 站删除 → 名字进 detachedNames → 保存时作为**第三参**传出，
+    // 段级维护由 Go 基于磁盘副本完成。旧契约要把改过 type 的整条对象併进 siteCreators，
+    // 漏併即抹掉他站条目——现改为意图参数，前端不再有机会算错。
+    const { state, searchResults } = makeState({ detachedNames: ["跨站"] });
     searchResults.innerHTML =
       '<button class="btn-base sm cr-save-btn"></button>' +
       '<div class="cr-edit-card" data-edit-idx="0"><input data-idx="0" data-fld="name" value="Alice"></div>';
@@ -470,10 +466,12 @@ describe("编辑态增删", () => {
 
     searchResults.querySelector(".cr-save-btn")!.dispatchEvent(new Event("click", { bubbles: true }));
     await vi.waitFor(() => expect(backend.SaveWorkshopCreatorsBySite).toHaveBeenCalledTimes(1));
-    const saved = backend.SaveWorkshopCreatorsBySite.mock.calls[0][1] as LocalCreatorLike[];
-    // 本站 Alice+Bob + 解除关联的跨站条目（type=siteB）一并写回
-    expect(saved.map((c) => c.name)).toEqual(["Alice", "Bob", "跨站"]);
-    expect(saved[2]?.type).toBe("siteB");
+    const args = backend.SaveWorkshopCreatorsBySite.mock.calls[0];
+    expect(args[0]).toBe("siteA");
+    // 第二参只含本站条目（fixture Alice+Bob）；跨站解除走第三参的**名字**列表
+    const saved = args[1] as LocalCreatorLike[];
+    expect(saved.map((c) => c.name)).toEqual(["Alice", "Bob"]);
+    expect(args[2]).toEqual(["跨站"]);
     cleanup!();
   });
 

@@ -1143,10 +1143,17 @@ export function SaveWorkshopCreators(list: types$0.WorkshopCreator[] | null): $C
 }
 
 /**
- * SaveWorkshopCreatorsBySite 只替换指定站点的创作者，其他站点不动
+ * SaveWorkshopCreatorsBySite 只替换指定站点的创作者，其他站点不动。
+ * 
+ * ADR-335 意图式契约：detachedNames = 用户在本站删除、但仍属他站的创作者名。
+ * 对这些条目只**从磁盘副本**去掉本站段——段非空则保留（仍属他站），其余字段一字不动；
+ * 段空则删除。前端因此不必重建全量列表，也不可能用陈旧副本覆盖条目的其余字段
+ * （旧契约要前端把改过 Type 的整条对象传回，对象一陈旧就整条覆盖磁盘）。
+ * 
+ * 优先级约定：同名同时出现在 siteCreators 与 detachedNames 时**以解除为准**。
  */
-export function SaveWorkshopCreatorsBySite(siteID: string, siteCreators: types$0.WorkshopCreator[] | null): $CancellablePromise<void> {
-    return $Call.ByID(3867129300, siteID, siteCreators);
+export function SaveWorkshopCreatorsBySite(siteID: string, siteCreators: types$0.WorkshopCreator[] | null, detachedNames: string[] | null): $CancellablePromise<void> {
+    return $Call.ByID(3867129300, siteID, siteCreators, detachedNames);
 }
 
 /**

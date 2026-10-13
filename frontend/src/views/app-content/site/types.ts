@@ -68,11 +68,10 @@ export interface SiteViewState {
   activeTag: string;
   /** 创作者搜索关键词（localStorage 持久化） */
   searchKw: string;
-  /** 编辑态「解除本站关联」的跨站点创作者（P1-2 锐评：type:"A;B" 在 A 站删除=从 A 解除，
-   *  不得从 allCreators 全删——否则 Go 按站整存会把 B 站的条目也抹掉）。
-   *  删除时改 type 去本站段 + 推入本列表；保存时随 siteCreators 一并写回（type 已无本站段，
-   *  Go 追加后维持他站可见、本站不再命中）。取消编辑不落盘、列表随重渲染自然丢弃。 */
-  detachedCreators: LocalCreatorLike[];
+  /** 编辑态「解除本站关联」的跨站创作者**名字**（ADR-335 意图式契约：只传意图，
+   *  Go 基于**磁盘副本**去本站段，其余字段一字不动——旧契约要前端传回改过 type 的整条
+   *  对象，对象一陈旧就整条覆盖磁盘）。取消编辑不落盘、列表随重渲染自然丢弃。 */
+  detachedNames: string[];
   /** 编辑态基线快照（P1-3a 锐评 dirty 守卫）：进入编辑态时对本站创作者 + 预设搜索词的
    *  序列化快照；退出（取消）前比较 JSON 是否变更，非空则确认——防编辑 5 行后误丢。
    *  null = 尚未进入编辑态 / 已保存 / 已确认丢弃。 */

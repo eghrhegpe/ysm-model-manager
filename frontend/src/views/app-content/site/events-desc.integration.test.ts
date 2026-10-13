@@ -63,7 +63,7 @@ function makeState(creators: LocalCreatorLike[]): {
     bus: { emit: vi.fn() } as unknown as SiteViewState["bus"],
     activeTag: "",
     searchKw: "",
-    detachedCreators: [],
+    detachedNames: [],
     editSnapshot: null,
   };
   return { state, searchResults };

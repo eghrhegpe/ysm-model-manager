@@ -119,12 +119,34 @@ describe("B2 契约：站点级编辑保存（R3-P0 web 补齐，镜像 Go app_w
     await browserAdapter.SaveWorkshopCreatorsBySite(
       "siteA",
       [{ name: "A站新作者", desc: "a2", type: "siteA" }],
+      [],
     );
     const got = (await browserAdapter.LoadWorkshopCreators()) as Array<{ name: string; type: string }>;
     const names = got.map((c) => c.name);
     expect(names).toContain("A站新作者");
     expect(names).not.toContain("A站作者"); // 旧站点条目被替换
     expect(names).toContain("B站作者"); // 其他站点保留
+  });
+
+  it("SaveWorkshopCreatorsBySite 解除名单：只去本站段且保留其余字段，段空则删除（ADR-335）", async () => {
+    // 意图式契约：detachedNames 里的条目作用在**已有条目**上——只改 type 段，其余字段一字不动；
+    // 去段后为空则整条删除。旧契约要前端传回改过 type 的整条对象，对象一陈旧就整条覆盖磁盘。
+    await browserAdapter.SaveWorkshopCreators([
+      { name: "跨站", desc: "keep-me", type: "siteA;siteB" },
+      { name: "仅本站", desc: "", type: "siteA" },
+      { name: "他站", desc: "", type: "siteB" },
+    ]);
+    await browserAdapter.SaveWorkshopCreatorsBySite("siteA", [], ["跨站", "仅本站"]);
+    const got = (await browserAdapter.LoadWorkshopCreators()) as Array<{
+      name: string;
+      desc: string;
+      type: string;
+    }>;
+    const byName = new Map(got.map((c) => [c.name, c]));
+    expect(byName.get("跨站")?.type).toBe("siteB"); // 只去本站段
+    expect(byName.get("跨站")?.desc).toBe("keep-me"); // 其余字段一字不动
+    expect(byName.has("仅本站")).toBe(false); // 段空 → 整条删除
+    expect(byName.has("他站")).toBe(true); // 非本站条目不受影响
   });
 
   it("SaveWorkshopPresetsBySite 只改指定站点 presetSearches", async () => {
@@ -165,8 +187,16 @@ describe("B2 契约：站点级编辑保存（R3-P0 web 补齐，镜像 Go app_w
     // 逐站点 SaveWorkshopCreatorsBySite：每次 load 读到前次 save 结果（localStorage
     // 同步事务），后一次追加不覆盖前一次——多站点分号 type 拆组保存后各站点都在
     await browserAdapter.SaveWorkshopCreators([]); // 清空覆盖层
-    await browserAdapter.SaveWorkshopCreatorsBySite("siteA", [{ name: "A1", desc: "", type: "siteA" }]);
-    await browserAdapter.SaveWorkshopCreatorsBySite("siteB", [{ name: "B1", desc: "", type: "siteB" }]);
+    await browserAdapter.SaveWorkshopCreatorsBySite(
+      "siteA",
+      [{ name: "A1", desc: "", type: "siteA" }],
+      [],
+    );
+    await browserAdapter.SaveWorkshopCreatorsBySite(
+      "siteB",
+      [{ name: "B1", desc: "", type: "siteB" }],
+      [],
+    );
     const got = (await browserAdapter.LoadWorkshopCreators()) as Array<{ name: string }>;
     const names = got.map((c) => c.name);
     expect(names).toContain("A1");

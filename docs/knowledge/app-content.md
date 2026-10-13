@@ -87,7 +87,6 @@ auto_fields:
     - SubTabSpec
     - TabA11yHandle
     - TabInitFn
-    - TabInitResult
     - TabSpec
     - TabsShell
     - TabsShellSpec

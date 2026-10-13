@@ -160,7 +160,7 @@ export class AppSyncManager extends WebComponentBase {
     this._bindDelegate(self);
 
     // 加载段异常统一出口：转错误 UI + toast 并早退（过期代际/已卸载则静默丢弃；
-    // 历史叙述见知识卡 app-sync-manager.md「_init 加载失败」）
+    // 历史叙述见知识卡 app-sync-manager.md「不变量」段加载失败条）
     try {
       await loadTypeConfig(self);
       await loadData(self);

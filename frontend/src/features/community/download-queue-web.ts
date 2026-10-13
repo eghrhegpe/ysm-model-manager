@@ -16,8 +16,10 @@ import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import type { DownloadTask } from "./download-queue-store.ts";
 
-// ADR-123 P1：web 下载入库大小上限——超限回退浏览器直链（fetch 整文件进内存 +
-// base64 转换对大文件内存压力大，web-common 的 DetectContainerType 同款 50MB 量级守卫）
+// ADR-123 P1：web 下载入库大小上限——超限回退浏览器直链。fetch 整文件进内存再转
+// File/base64 落库，双份内存压力，故刻意取 **比导入上限 MAX_IMPORT_BYTES(100MB) 更低**
+// 的 50MB（两条独立守卫：探测路径 web-fs 曾把守卫从 50 抬到 100 对齐导入上限，
+// 本下载路径的 50 是 fetch+blob 内存考量使然，⚠️ 勿"对齐"回 100 或互相联动）。
 const WEB_DOWNLOAD_IDB_LIMIT = 50 * 1024 * 1024;
 /** 网页版单文件 fetch 超时（code_review P2）：挂起服务器不永久卡队列，超时走直链兜底 */
 const WEB_DOWNLOAD_FETCH_TIMEOUT_MS = 15_000;
@@ -74,7 +76,13 @@ export async function runWebEnqueue(tasks: DownloadTask[], ctx: WebEnqueueCtx): 
           const blob = await resp.blob();
           const r = await importWebFiles([new File([blob], task.name || "model")], webType);
           imported += r.imported;
-          failed += r.failed; // 导入层的扩展名/大小校验跳过属预期过滤，不回退直链
+          // 失败不回退直链是既有取舍：importWebFiles 的 failed 混装两类——
+          // ① 预期过滤（.7z/非支持扩展名/无主文件组：直链也救不了「模型库不收这个文件」）；
+          // ② 真写盘失败（quota 超限/IDB 异常，组级 catch console.error 回滚后计数：直链可救）。
+          // 两类计数不可分辨（契约 {imported, failed} 有 4 个生产消费者 + contract-b1/b3 钉死），
+          // 且 blob 已在手，逐文件「fetch→直链」双通道重下浪费带宽——用户重试即可经直链取回。
+          // 观察项（非必修）：若未来 importWebFiles 暴露写失败分类，② 类可改直链兜底。
+          failed += r.failed;
           handled = true;
         } catch (e) {
           dbg("enqueue:web-idb-fail", task.url, e); // 超时/CORS/网络失败 → 直链兜底

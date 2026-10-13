@@ -1,6 +1,6 @@
 # ADR-293-d1：灯光首启默认分治：辅助线框关、浏览最小光照、环境光降档
 
-- **状态**：✅ 已采纳（Implemented）
+- **状态**：❌ 已取代（被知识卡 preview-env-state 的「裁定记录」取代，2026-10-13 第三刀降格——单点执行裁定不再立 ADR）
 - **日期**：2026-10-04
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **关联主 ADR**：ADR-293（部分取代其 D2 的默认值取法）；相关：ADR-282（灯光与模型类别解耦）、ADR-084（个人灯光系统）、`frontend/src/preview-3d/state/env-state-schema.ts`（默认值唯一事实源）、`caps/light-controls.ts`、`caps/light-persist.ts`

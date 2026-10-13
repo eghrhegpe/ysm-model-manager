@@ -12,8 +12,12 @@ import { spawnSync } from "node:child_process";
  *
  * ADR-320 体系分级（两级目录，存量 docs/adr/ 根不迁移）：
  *   架构级  --tier architecture --reason "一句理由" → docs/adr/architecture/（主编号延续，全量模板）
- *   执行级  --tier decisions --parent NNN           → docs/adr/decisions/（子编号 ADR-NNN-dN，轻量模板）
+ *   执行级  --tier decisions --parent NNN --justify "一句准入凭据" → docs/adr/decisions/（子编号 ADR-NNN-dN，轻量模板）
  *   缺省不猜级：既无 --tier 也无 --parent/--reason 时报错给用法（fail-loud）。
+ *
+ * 第三刀（ADR 增量门槛，ADR-338 §2.3）：执行级 --justify 须命中准入三问（公共契约变更 /
+ * 跨域纪律政策 / 难逆转或跨域影响面）——三问全否即单点执行裁定，拒绝立 ADR 并提示降格
+ * 为知识卡「裁定记录」（_lib/adr-tier-gate.ts）。
  *
  * 用法：
  *   node scripts/new-adr.ts "标题" --tier architecture --reason "跨域且难逆转" [--slug ...] [--related ...] [--supersedes ADR-0XX,...] [--dry-run]
@@ -37,6 +41,7 @@ import {
   maxMainNum,
   nextSubForParent,
 } from "./_lib/adr-files.ts";
+import { passesAdmissionGate } from "./_lib/adr-tier-gate.ts";
 import { parseArgs } from "./_lib/parse-args.ts";
 import { ROOT } from "./_lib/scan-files.ts";
 
@@ -45,9 +50,11 @@ const REG_FILE = path.join(ADR_DIR, "index.md"); // 登记表已并入 index（A
 function usage() {
   console.error(
     '用法: node scripts/new-adr.ts "标题" --tier architecture --reason "一句理由" [--slug kebab-name] [--related 内容] [--supersedes ADR-0XX,...] [--dry-run]\n' +
-      '      node scripts/new-adr.ts "标题" --tier decisions --parent NNN [--slug kebab-name] [--dry-run]\n' +
+      '      node scripts/new-adr.ts "标题" --tier decisions --parent NNN --justify "一句准入凭据" [--slug kebab-name] [--dry-run]\n' +
       "  --tier        architecture（架构决策，主编号延续，须配 --reason 一句理由）|\n" +
       "                decisions（执行决策日志，子编号挂靠主 ADR，须配 --parent，ADR-320）\n" +
+      "  --justify     执行级准入凭据一句（第三刀 ADR 增量门槛：须命中准入三问——公共契约变更 /\n" +
+      "                跨域纪律政策 / 难逆转或跨域影响面；三问全否则本裁定降格为知识卡「裁定记录」，不立 ADR）\n" +
       "  --reason      架构级准入理由一句（方向性 + 难逆转 + 跨域影响面）\n" +
       "  --parent      执行级挂靠的主 ADR 编号（如 319 → 产出 ADR-319-dN）\n" +
       "  --slug        文件名 kebab-case（缺省从标题提取 ASCII，无 ASCII 则必填）\n" +
@@ -303,7 +310,7 @@ function main() {
   // title 取位置参数 `_`[0]（共享库把裸参数收进 _，与自带版 positional[0] 等价）
   const parsed = parseArgs(process.argv.slice(2), {
     bools: ["dry-run"],
-    strings: ["slug", "related", "supersedes", "tier", "parent", "reason"],
+    strings: ["slug", "related", "supersedes", "tier", "parent", "reason", "justify"],
   });
   const args = {
     help: parsed.help,
@@ -318,6 +325,7 @@ function main() {
     tier: parsed.tier as string | undefined,
     parent: parsed.parent ? parseInt(String(parsed.parent), 10) : null,
     reason: (parsed.reason ?? "") as string,
+    justify: ((parsed.justify ?? "") as string).trim(),
     title: parsed._[0] ?? null,
   };
 
@@ -364,6 +372,30 @@ function main() {
   if (tier === "decisions" && (args.parent === null || Number.isNaN(args.parent))) {
     console.error("[FAIL] 执行级须给 --parent NNN 挂靠主 ADR（产出 ADR-NNN-dN 子编号，ADR-320）");
     return 1;
+  }
+  // ── 第三刀：执行级准入三问（ADR 增量门槛）──────────────
+  // 单点执行裁定不立 ADR——须过准入三问（公共契约变更 / 跨域纪律政策 / 难逆转或跨域影响面）。
+  // 三问全否则拒绝并给出知识卡「裁定记录」降格指引（fail-loud，不静默降级也不静默放行）。
+  if (tier === "decisions") {
+    if (!args.justify) {
+      console.error('[FAIL] 执行级须给 --justify "一句准入凭据"（第三刀 ADR 增量门槛：准入三问）');
+      console.error(
+        "       未给凭据默认视为单点执行裁定——请改走 add-card-ruling.ts 写入知识卡「裁定记录」",
+      );
+      console.error("       确为 ADR 级则补凭据重试：", passesAdmissionGate("").hint);
+      return 1;
+    }
+    const gate = passesAdmissionGate(args.justify);
+    if (!gate.pass) {
+      console.error("[FAIL] --justify 未命中准入三问任一（第三刀 ADR 增量门槛）");
+      console.error(
+        `       三问（任一为「是」才可立 ADR）：${gate.missing.map((m) => `\n         ${m}`).join("")}`,
+      );
+      console.error(`       降格指引：${gate.hint}`);
+      console.error("       确为 ADR 级（公共契约 / 跨域纪律 / 难逆转跨域）请补一句命中凭据重试");
+      return 1;
+    }
+    console.log(`[准入] 执行级过准入三问，命中：${gate.hit.join("；")}`);
   }
 
   const slug = toSlug(args.title, args.slug as string);

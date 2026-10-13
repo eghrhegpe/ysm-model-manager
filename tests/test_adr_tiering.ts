@@ -139,6 +139,8 @@ r = runScript(
   "decisions",
   "--parent",
   "319",
+  "--justify",
+  "公共契约变更：跨端契约锁（第三刀准入凭据）",
   "--dry-run",
 );
 // 同上：不写死「ADR-319-d1」——按 nextSubForParent 动态推，避免仓里出现 319 子编号后即红

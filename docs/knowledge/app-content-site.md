@@ -153,6 +153,11 @@ status: active
 - **头像调试探针只在 `isDevMode()` 下绑 click**（2026-10-13 锐评修）：`site/events.ts|cmBbBindDebugAvatar` 对 `[data-debug-avatar]` **恒绑** error→字母 fallback（功能性降级，破图不留），而 `DebugExtractCreatorAvatar` 探针**非开发态根本不绑**。⚠️ **历史缺陷三重错位**：该探针无条件绑在用户手势上，Go 侧 `internal/app/app_avatar.go|DebugExtractCreatorAvatar` 每次调用都对整库跑 `ScanModelEntries(ysmRoot())` 全量扫描，结果只写 `dbg()` 环形缓冲（生产无控制台，用户看不见任何反应），且 handler 的 `stopPropagation` 还吞掉本应打开详情浮层的卡片点击——**最贵的手势 + 零可见反馈 + 吃掉正常行为**。⚠️ 门必须用 `utils/debug/dev-mode.ts|isDevMode()`（默认关），**不可用 `debug.ts|isDebugEnabled()`**（默认开，门等于没关）。回归锁在 `site/events.test.ts`：生产态断言桥调用零次 + 浮层正常打开（夹具须挂真 shadow root——浮层写 `searchResults.getRootNode()`，留在 light DOM 时该值是 Document，happy-dom 的 `document.appendChild` 直接抛「Only one element on document allowed」，那是夹具结构错不是生产缺陷）
 - **平台徽章 = 站点图标 + 站点 id，卡片与浮层同口径**（2026-10-13 锐评修）：`site/render.ts|createCrCard` 与 `site/events.ts|cmCrBuildDetailHtml` 两处都产出 `.cr-platform-badge`，均走 `getSiteIcon(platform)` + 站点 id；图标尺寸规则挂在共享类 `.cr-platform-badge .ws-icon`（`css/content-creator.ts`），**不再限定 `.cr-detail-platforms` 作用域**。⚠️ **历史缺陷**：`docs/guide/creators.md` 明写卡片显示「收录的平台图标」、CSS 基类 `.cr-platform-badge` 也早就按 `inline-flex + gap:2px` 的图标+文字形状设计，但 `createCrCard` 只拼裸站点 id——图标只在浮层出现，文档与代码互相矛盾且 CSS 约束对卡片无效。⚠️ **口径边界**：徽章文字用站点 id 而**不用** `workshop_sites.json` 的 `label`——`label` 是中文优先的捆绑内容（"B站"/"爱发电"），拿去 en/ja 界面属新增中文硬编码（与「创作者数据面禁写界面文案」不同性质但同样影响多语观感）；站点名多语化是独立产品决策（10+ 站点 × 3 语言包），不得顺手夹带。视觉侧量化取证：图标 10×10、徽章高 18px、无横向溢出
 
+
+## 裁定记录
+
+- `2026-10-13`：创作者卡片与详情浮层抽「片段级单源渲染器」（头像/星标/身份 tag/平台徽章）供两视图共用，不合并两视图｜两视图 DOM/a11y 语义不同（网格项 vs role=dialog），合并=布局耦合；片段单源止住「修一处漏一处」式口径漂移｜回退 = `site/events.ts|cmCrBuildDetailHtml`
+
 ## 相关
 
 - 主卡：`docs/knowledge/app-content.md`

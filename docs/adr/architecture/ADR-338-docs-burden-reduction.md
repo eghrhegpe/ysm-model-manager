@@ -61,9 +61,18 @@
 - **踩坑记录**：合并卡 source_files 若从目录级改精确文件，会引入两处连带——①`utils/resource/` 目录下其他文件（importable.ts 等）失去覆盖 → 盲区上升；②精确条目与 redline-enforcement-grade 等审计卡的 source_files 撞车。**处理**：保留目录级 `frontend/src/utils/resource/` + 补回原卡的两条精确文件（`types-re-export.ts` / `repo-rtype.ts`，在 `utils/` 根非目录下），目录符号 <100 阈值不膨胀。教训：**合并卡 source_files 形态（目录级 vs 精确）是独立决策点，不是跟正文走**
 - 既有 WARN 处置：`utils-dom` 目录级 source_files 收窄**已落**（2026-10-13）——`frontend/src/utils/dom/` 目录认领收窄为 18 个本卡独有文件（弹窗/toast/errors/css/tooltip/virtual-scroll/locale-host/editable-target/capabilities 已各有单卡登记，移除以消重复认领），派生符号 **107 → 57**，`auto_fields` 由 gen 脚本同步重生；实测 `check-knowledge-drift` **0 ERROR / 2 WARN**（盲区仍 1 个不变，零新增漂移、零重复认领回归），另顺带修正卡内 `capabilities.ts` 已迁 `backend/`（ADR-203）的过时路径断言。**教训**：目录级 source_files 是「同目录一堆模块」grab-bag 卡的膨胀根因，收窄须先查哪些文件已有单卡登记（避免制造盲区/撞重复认领）——与合并卡的 source_files 形态决策同源；`community-feature.md` 硬编码行号 WARN **已落**（2026-10-13：`web-fs.ts:358` → `backend/web-fs.ts|SearchModels`，ADR-162 文件|符号 化）——`check-knowledge-drift` 至此 **0 ERROR / 1 WARN**（仅剩 `tpl-dedup.ts` 覆盖盲区，属并行会话新文件，非本 ADR 域）
 
-### 2.3 第三刀：ADR 增量门槛（要拍板，未落）
+### 2.3 第三刀：ADR 增量门槛（已落，2026-10-13）
 
-ADR 回到「架构史」本位：**只有跨域 / 难逆转 / 改变公共契约的决策才立 ADR**；单点执行裁定（如「菜单 hover 展开 → click 展开」）降格为知识卡内「裁定记录」一行 + 提交信息，不再占主编号。预估可砍掉 decisions/ 目录约半数增量。**此刀影响 `new-adr.ts` 工作流与 AGENTS.md 约定，待用户拍板后另批执行**。
+ADR 回到「架构史」本位：**只有跨域 / 难逆转 / 改变公共契约的决策才立 ADR**；单点执行裁定（如「菜单 hover 展开 → click 展开」）降格为知识卡内「裁定记录」一行 + 提交信息，不再占 ADR 编号。**准入三问**（任一为「是」才可立 ADR）：① 公共契约变更（绑定签名 / 注册表 schema / 跨进程协议 / i18n key）② 跨域纪律政策（测试纪律 / 门禁口径 / 规范 / 红线）③ 难逆转或跨域影响面 ≥ 多模块；三问全否 = 单点执行裁定。
+
+落地面：
+
+- `new-adr.ts` 的 `--tier decisions` 新增 **`--justify` 准入凭据（必填）**——三问全否则拒绝立 ADR 并提示降格；判据机检在 `scripts/_lib/adr-tier-gate.ts`（关键词启发式）
+- 降格出口 = `scripts/add-card-ruling.ts <kind>` 写入知识卡正文「## 裁定记录」段（一条 = 日期 + 决策 + 理由 + 回退锚点；锚点走 `文件|符号`，禁「文件:行号」）
+- AGENTS.md ADR 节新增不变量：**单点执行裁定不立 ADR**
+- **批 1 试点（2026-10-13）**：`ADR-293-d1`（灯光首启默认分治）、`ADR-034-d1`（创作者视图片段单源）标 ❌ 已取代，裁定落入 `preview-env-state` / `app-content-site` 的「裁定记录」段
+
+**未做（已知边界）**：存量 decisions/ 卡未物理移入 `docs/archive/`——`adr-check.ts` 的登记表与磁盘一致性校验只扫三区（根存量 / architecture / decisions），移动会触发 `GHOST`；物理归档需先让 `adr-check` 认 archive 区（可作后续独立刀），本刀先以「标记取代」收敛**增量**，存量清理留批 2。
 
 ## 3. 后果（Consequences）
 
@@ -78,6 +87,7 @@ ADR 回到「架构史」本位：**只有跨域 / 难逆转 / 改变公共契�
 - **合并卡变长**（试点卡 ~130 行 vs 原 78+58+58）：AI 检索命中后要读更多无关段——以 `quick_intents` 关键词对位缓解（合并卡 5 条意图覆盖原 3 卡全部路由词），实测命中率待两周观察
 - **archive 卡的活指针靠自觉**：无人阻止新引用直接指 archive——`check-doc-drift` 已有对 archive 目录的 srcExclude 语义，若回流成患可升级为硬闸
 - 分级连带的「表层改动」判定需要判例积累，初期可能有误判（宽放 → 漏卡；严放 → 白跑闸）
+- **第三刀准入三问靠关键词启发式**：`--justify` 命中三问关键词即过闸，可能被「贴关键词」式滥用——靠 fail-loud 拒明显单点裁定兜底，拿不准时凭据写实即可过；判例需积累
 
 ### 3.3 度量与止损
 
@@ -88,3 +98,4 @@ ADR 回到「架构史」本位：**只有跨域 / 难逆转 / 改变公共契�
 
 - 来源：2026-10-13 锐评修复批收尾时用户问「这些的价值大吗」→ 主代理自评「治理仪式固定成本已接近功能开发本身」→ 用户拍板「要着手给文档体系降负担」「来吧」
 - 量化统计与试点合并同会话完成（试点 = §2.2 第一组）；§2.1 / §2.3 为方案待批状态
+- 2026-10-13 晚：§2.3 方案草案过审（准入三问判据 + 知识卡「裁定记录」落点 + 批 1 试点 2 张 + 观察期与 §2.2 推广合并共用两周）→ 同晚落地（准入闸 + 降格工具 + AGENTS.md + 批 1 标记取代）；§2.3 状态由「要拍板」转「已落」

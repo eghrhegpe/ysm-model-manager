@@ -2486,6 +2486,10 @@ export const autoSidebar = [
             "link": "/knowledge/ci-tuning"
           },
           {
+            "text": "提交信息减负闸",
+            "link": "/knowledge/commit-message-gate"
+          },
+          {
             "text": "技术债账本刷新与盘点方法论",
             "link": "/knowledge/debt_ledger_refresh"
           },

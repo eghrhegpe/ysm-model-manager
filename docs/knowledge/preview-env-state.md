@@ -401,6 +401,11 @@ invariant_anchors:
   - **测试注入点迁移**：`pmrem`/`renderTarget` 经 `bakeOf(cap)` 测试本地探针取。
   - **遗留**：刀①②③ 全线收官（ADR-329 已 ✅）；sky 剩余的真正复杂度在**材质/色调/tone 仲裁**面，那部分不适合整块搬走，若日后要治应另立 ADR。
 
+
+## 裁定记录
+
+- `2026-10-13`：灯光首启默认分治：helper 线框关、浏览最小光照（fill/rim 关）、ambient 0.5→0.15｜首启服务的是调参者而非浏览者；三副彩线+全开影棚让浏览者第一眼看到满配摄影棚，0.5 白环境光把三灯方向性填平｜回退 = `preview-3d/caps/light-params.ts|DEFAULT_LIGHT_PARAMS`
+
 ## 相关
 
 - ADR-196（预设三轴统一）、ADR-195（cap 控件单类型化）、**ADR-250（后处理门禁降参 / composer 常驻 / 曝光属主归 sky）**

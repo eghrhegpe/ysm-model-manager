@@ -94,6 +94,19 @@ export const ALL_STATIC_TOOLS: GateTool[] = [
   { tool: "check-adr-health.ts", blockPolicy: "hard" },
   { tool: "check-resource-manifest.ts", blockPolicy: "hard" },
   {
+    // 双挂第二重（仓内「只减不增型闸一律双挂」不变量）：commit-msg 钩子可被
+    // `git commit --no-verify` 一条命令整钩绕过（零痕迹），此处按**推送集**复验兜住。
+    // 采集期 debt：违规只记不拦——ADR-338-d1 D3「warn 采集 → replay 校准 → hard」，
+    // 转 hard 时只把本条 blockPolicy 改 "hard" 并给钩子加 --strict，规则一行不动。
+    tool: "check-commit-message.ts",
+    args: ["--range", "auto"],
+    blockPolicy: "debt",
+    debt: debt(
+      "提交信息减负刀1 采集期：hard 命中 57%/warn 22%（replay 300 实测），待校准定档后转 hard",
+      REVIEW_BY_OBSERVE,
+    ),
+  },
+  {
     tool: "check-boolean-naming.ts",
     blockPolicy: "debt",
     debt: debt("命名启发式命中：值语义需人工判断，规则本身非确定性"),

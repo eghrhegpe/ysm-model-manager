@@ -75,7 +75,7 @@ ysm-model-manager/
 [可选脚注]
 ```
 
-**常用 type**：
+**常用 type**（完整表见 `scripts/_lib/commit-blocks/commit-message.ts` 的 `CONVENTIONAL_TYPES`）：
 
 | type | 用途 |
 |------|------|
@@ -86,6 +86,29 @@ ysm-model-manager/
 | `docs` | 文档变更 |
 | `chore` | 构建 / 工具 / 配置 |
 | `perf` | 性能优化 |
+| `build` | 构建系统或外部依赖 |
+| `ci` | CI 配置 |
+| `style` | 仅格式化 |
+
+### 提交信息结构约束
+
+subject（首行）**四行判据**——以下四条同时违反任何一条即阻断提交（`git commit-msg` 钩子 + pre-push 双挂）：
+
+1. **subject 非空**，以 `<type>[(scope)][!]: ` 开头
+2. **subject ≤72 码点**（CJK 一字一码点；46 字符的中文 + 英文前缀即可写清一件事，中位 71）
+3. **单主题**：subject 中 ` + ` ≥2 次即判并联多主题 → 拆分提交或只留主不变量
+4. **正文单行 ≤120 码点**（git 折叠后不可读）
+
+**台账内容走 trailer，不入正文**——以下内容如果在正文出现会被提示，转档后也会阻断：
+
+| 正文内容 | 替换为 trailer |
+|---------|---------------|
+| 验证报告（全绿 / N 单测 / N e2e） | `Verification: 8358 unit + 6 e2e green` |
+| 决策出处（ADR 号 / 知识卡名） | `Refs: ADR-336, Knowledge: app-tree.md` |
+| 逃生阀理由（`YSM_SKIP_X`） | `Skip-Evidence: YSM_SKIP_DESIGN_TOKENS 存量位移` |
+| 并行会话归属声明 | `Parallel-Scope: context-menu 三文件属并行会话` |
+
+trailer 一行一个字段、白名单 key 可被 `git log` 和 CI 聚合——**"留痕"与"减负"在此不冲突，冲突的只是载体**。白名单见 ADR-338-d1 D5。`Merge`/`Revert`/`fixup!`/`squash!`/`amend!` 前缀免除全部约束。`git commit --no-verify` 绕过钩子，但推送时 pre-push 会按推送集复验。
 
 ### 路径限定提交
 

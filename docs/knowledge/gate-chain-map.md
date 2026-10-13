@@ -115,9 +115,10 @@ status: active
 四入口 × 委托链总览：
 
 ```
-git commit ─┬─ pre-commit（sh 薄壳，含逻辑）── sec 级 gen + stage + 提示 + 硬阻断×3
-            ├─ prepare-commit-msg ──────────── 纯提示（知识漂移/覆盖率），恒 exit 0
-            └─ post-commit ───────────────── 清「路径限定提交」的索引残留
+git commit ─┬─ pre-commit（sh 薄壳，含逻辑）────── sec 级 gen + stage + 提示 + 硬阻断×3
+            ├─ prepare-commit-msg ──────────────── 纯提示（知识漂移/覆盖率），恒 exit 0
+            ├─ commit-msg ─────────────────────── 提交信息减负闸（ADR-338-d1），刀1 采集期恒 exit 0
+            └─ post-commit ───────────────────── 清「路径限定提交」的索引残留
 
 git push ──── pre-push（41行薄壳）→ pre-push-gate.ts（调度器）→ gate-blocks/×6 → gate-config.ts（清单）
 

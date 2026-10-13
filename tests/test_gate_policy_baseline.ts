@@ -128,6 +128,10 @@ const EXPECTED_POLICY: Record<string, BlockPolicy> = {
   // 确定性规则（正则 + 索引比对）本可 hard，但上线策略与同族守卫一致：当前 0 命中
   // （已清账 7 处），debt 档纯防御——测试改名/删除后注释未跟即报告，不误伤推送热路径。
   "check-stale-test-refs.ts": "debt",
+  // check-commit-message（ADR-338-d1 刀1 采集期）：提交信息减负闸，replay 300
+  // 47% hard 命中、21% warn 命中待校准，记 debt 只记录不阻断——转 hard 后改 "hard"，
+  // 同时给 .githooks/commit-msg 加 --strict。
+  "check-commit-message.ts": "debt",
 
   // —— failClosed（仅 rg 等环境依赖工具；生成物漂移类恢复 hard——
   //    迁移时误降 failClosed 会让过期生成物静默过闸，code_review 03a6005ed 撤销）——

@@ -626,6 +626,8 @@
 
 | 用户意图 | 首选卡 | 红线警告 | 主 ADR(如有) |
 |----------|--------|----------|----------|
+| 提交信息的减负规则是什么 | [提交信息减负闸](./commit-message-gate.md) | "`--replay N` 只读历史不写库；`--file` 只在钩子内被调用；`--range auto` 在推送时双挂复验" | - |
+| 通用红线 | [提交信息减负闸](./commit-message-gate.md) | "`YSM_SKIP_COMMIT_MSG=1` 跳过钩子，但通过 hook-audit 写 SKIPPED_PRECOMMIT 留痕——`--no-verify` 整钩不跑，零痕迹（故 gate-config 另有 --range 第二重）" | - |
 | 我想下结论但还没验证 | [可复现结论纪律（结论必附验证证据）](./verify-before-conclude.md) | 结论一律附「命令 + 原始输出 + 日期」；注释与知识卡里的旧结论不构成证据，须复跑；静态结构不等于运行时路径；改了脚本要跑 scripts tsc，不只是 biome。 | - |
 | 这条注释说的还算数吗 | [可复现结论纪律（结论必附验证证据）](./verify-before-conclude.md) | - | - |
 | 子代理报的数字能信吗 | [可复现结论纪律（结论必附验证证据）](./verify-before-conclude.md) | - | - |
@@ -724,6 +726,9 @@
 | 治理闸与功能测试同 job 且顺序在前 ⇒ 治理失败 skipped 掉 tsc/vitest，功能正确性在 CI 上永不被回答 | - | - |
 | 前端手写分类 | - | 与 Go classify 判定不一致、last-wins 裁决丢失；必须交 Go 分类 |
 | 新增资源类型未更新 priority | - | 冲突时优先级错乱；必须经 classify.go 的 priority 表 |
+| "刀1（采集期）恒不阻断，仅 stderr 提示。转 hard 需先跑  出硬数据，且连续 ≥15 次真实提交无误伤" | `--replay 300` | - |
+| "47% 存量提交符合结构上的标准——闸只判新提交，不追溯历史（重写历史 commit message 是 ADR-080 禁令）" | `违规` | - |
+| "采集期 gate-config 条目 blockPolicy: 'debt'——不阻断但会在 CI/pre-push 留下记录。转档时只改两处：钩子加 --strict + gate-config 改 'hard'" | - | - |
 | 各组件各自发下载请求 | - | 并发冲突、进度丢失；必须经 download-queue 排队 |
 | 镜像源未走 gh-links | - | 下载慢、镜像不可用；必须经 gh-links 的 CDN 分流 |
 | 远程 JSON（GitHub API base64 content）用裸  解码 | `JSON.parse(atob(...))` | atob 产 Latin-1，UTF-8 字节被逐字节当码位，非 ASCII 名落盘成双重编码乱码（2026-09-21 曾把 197 条乱码当新作者入库，按 name 去重失效）；须 base64ToBytes → TextDecoder(UTF-8) |

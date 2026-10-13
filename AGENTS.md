@@ -99,6 +99,7 @@ git reset --soft HEAD~1             # 撤销最近提交，改动留在暂存区
 
 - **pre-commit**（非阻断，结果走 stderr）：跑 `GEN_CMDS` 循环同步生成物（**清单以 `.githooks/pre-commit` 为准**）→ `check-knowledge-drift --affected` → 智能 stage 同名测试文件 → gofmt → 输出本次 commit `diff --stat`。
 - **pre-push**：默认**轻量档**门禁（静态治理层 + `go build`/`go vet`），失败阻断；重型构建与测试交 CI（`YSM_FAST_PUSH=0` 恢复本地全量）。**prepare-commit-msg**：提示受影响知识卡 + 覆盖率。
+- **commit-msg**：提交信息减负闸（ADR-338-d1），刀1 采集期只 stderr 提示不阻断；转 hard 后 `YSM_SKIP_COMMIT_MSG=1` 逃生。详见知识卡 `commit-message-gate.md`（docs/knowledge/）。
 - 逃生阀：`git commit --no-verify` 只跳 commit 钩子；`YSM_SKIP_GATE=1 git push` 或 `git push --no-verify` 连 pre-push 一起跳（慎用，绕过不留审计）。doctor 输出 `[WARN]...skip` 时手动 `cd frontend && npm run typecheck` 补验。
 
 ## 场景路由（快速对号入座）

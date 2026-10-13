@@ -152,8 +152,8 @@ func TestComputeFileHash_Oversize(t *testing.T) {
 
 // ====== ScanLocalAuthors 分支全覆盖 ======
 
-// findCreatorByName 辅助：按名查找创作者（roots map 迭代序随机，不能按索引断言）
-func findCreatorByName(list []types.WorkshopCreator, name string) *types.WorkshopCreator {
+// findCreatorByName 辅助：按名查找本地作者（roots map 迭代序随机，不能按索引断言）
+func findCreatorByName(list []types.LocalAuthor, name string) *types.LocalAuthor {
 	for i := range list {
 		if list[i].Name == name {
 			return &list[i]
@@ -195,12 +195,19 @@ func TestScanLocalAuthors_Branches(t *testing.T) {
 	if e == nil {
 		t.Fatalf("缺少 作者E: %+v", creators)
 	}
-	// 跨类型合并：Type 须同时含 ysm 与 EntityPlayer（集合断言，不依赖拼接顺序——
-	// 源码已按 rtype 字典序保证确定性输出，顺序变化不应破坏本用例）
+	// 跨类型合并：RTypes 须同时含 ysm 与 EntityPlayer（**顺序无关**的集合断言——
+	// 源码已按 rtype 字典序保证确定性输出，顺序变化不应破坏本用例）；并断言去重后恰 2 项
+	rtSet := map[string]bool{}
+	for _, rt := range e.RTypes {
+		rtSet[rt] = true
+	}
 	for _, want := range []string{"ysm", "EntityPlayer"} {
-		if !strings.Contains(e.Type, want) {
-			t.Errorf("作者E Type = %q, 应包含 %q（跨类型合并）", e.Type, want)
+		if !rtSet[want] {
+			t.Errorf("作者E RTypes = %v, 应包含 %q（跨类型合并）", e.RTypes, want)
 		}
+	}
+	if len(e.RTypes) != 2 {
+		t.Errorf("作者E RTypes 应恰 2 项（同类型去重），got %v", e.RTypes)
 	}
 	// Desc 必须为空：界面文案不得进数据面（锐评 P0-2 治本；原本断言写死「来自本地仓库」，
 	// 结果把语言串钉进契约，en/ja 用户看到中文）
@@ -211,8 +218,8 @@ func TestScanLocalAuthors_Branches(t *testing.T) {
 	if fc == nil {
 		t.Fatalf("缺少 作者F: %+v", creators)
 	}
-	if fc.Type != "ysm" {
-		t.Errorf("作者F Type = %q, 期望 'ysm'", fc.Type)
+	if len(fc.RTypes) != 1 || fc.RTypes[0] != "ysm" {
+		t.Errorf("作者F RTypes = %v, 期望 ['ysm']", fc.RTypes)
 	}
 }
 

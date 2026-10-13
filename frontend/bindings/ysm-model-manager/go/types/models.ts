@@ -463,6 +463,19 @@ export enum LinkType {
 };
 
 /**
+ * LocalAuthor 本地扫描到的作者（从文件名的 [作者] 前缀提取）。
+ * 
+ * 刻意与 WorkshopCreator 分开：后者的 Type 是**站点/平台 id**（分号分隔，如 "bilibili;afdian"），
+ * 而 RTypes 是**资源类型**（ysm/litematic/…）——两套词汇表零交集。历史上复用 WorkshopCreator
+ * 导致 rtype 被前端并入创作者的站点段（幻影平台徽章 + 本地独有作者隐形），见 ADR-337。
+ */
+export interface LocalAuthor {
+    "name": string;
+    "desc": string;
+    "rTypes"?: string[] | null;
+}
+
+/**
  * LogCaps 两类日志环形缓冲的实时上限（GetLogCaps 返回）。
  * 2026-09 对接锐评⑤：诊断页检索窗口以此为准单源——Op 上限随 AppConfig.LogMaxEntries
  * 动态变化，前端手写镜像在用户调大缓冲时窗口失真，已退役。

@@ -72,7 +72,6 @@ auto_fields:
     - ListenerRef
     - loadCommunityData
     - loadLocalAuthors
-    - LocalAuthorLike
     - LocalCreator
     - markCurrentFile
     - measureGhRowH

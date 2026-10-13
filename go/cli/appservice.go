@@ -18,7 +18,7 @@ type AppService interface {
 	ScanModelEntries(dir string) []types.ModelEntry
 	SearchModels(filesRoot string, keyword string, minBones, maxBones, minCubes, maxCubes, minTex, maxTex int) []types.SearchResult
 	ListModelAuthors() []types.AuthorInfo
-	ScanLocalAuthors(rtype string) []types.WorkshopCreator
+	ScanLocalAuthors(rtype string) []types.LocalAuthor
 	AnalyzeYSMModel(path string) ysm.YSMModelMeta
 	AnalyzeBedrockModel(modelPath string) types.BedrockModel
 	ExportModelStructureJSON(modelPath string) string

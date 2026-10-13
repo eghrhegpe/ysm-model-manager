@@ -994,14 +994,18 @@ describe("browserAdapter — 作者扫描/仓库索引（ADR-049 Batch 3：基�
     expect(authors[1].Count).toBe(1);
   });
 
-  it("ScanLocalAuthors 提取 [作者] 并带 type 标签（desc 留空，文案归展示层）", async () => {
+  it("ScanLocalAuthors 提取 [作者] 并带 rTypes（desc 留空，文案归展示层；ADR-337）", async () => {
     await importWebFiles([new File([enc.encode("Y")], "[王五]角色.ysm")], "ysm");
-    const creators = (await browserAdapter.ScanLocalAuthors("")) as Array<{ name: string; type: string; desc: string }>;
-    expect(creators).toHaveLength(1);
-    expect(creators[0].name).toBe("王五");
-    expect(creators[0].type).toBe("ysm");
-    // 锐评 P0-2 治本：desc 不落界面文案（与 go/scanner/scanner.go 同口径）
-    expect(creators[0].desc).toBe("");
+    const authors = (await browserAdapter.ScanLocalAuthors("")) as Array<{
+      name: string;
+      rTypes: string[];
+      desc: string;
+    }>;
+    expect(authors).toHaveLength(1);
+    expect(authors[0].name).toBe("王五");
+    expect(authors[0].rTypes).toEqual(["ysm"]);
+    // 锐评 P0-2 治本：desc 不落界面文案（与 go/scanner 同口径）
+    expect(authors[0].desc).toBe("");
   });
 
   it("GenerateRepoIndex 返回 index.json 内容（相对路径正斜杠）", async () => {
@@ -1073,14 +1077,17 @@ describe("browserAdapter — 桥接增强边界/异常分支补全（审核补�
     expect(parsed[0].path).toBe("ysm/赵六/赵六.ysm"); // 相对 WEB_ROOT=/web
   });
 
-  it("ScanLocalAuthors 跨类型同作者 → type 用 ; 合并", async () => {
+  it("ScanLocalAuthors 跨类型同作者 → rTypes 两项（ADR-337）", async () => {
     await importWebFiles([new File([enc3.encode("Y")], "[王五]A.ysm")], "ysm");
     await importWebFiles([new File([enc3.encode("Y")], "[王五]B.ysm")], "litematic");
-    const creators = (await browserAdapter.ScanLocalAuthors("")) as Array<{ name: string; type: string }>;
-    expect(creators).toHaveLength(1);
-    expect(creators[0].name).toBe("王五");
-    expect(creators[0].type).toContain("ysm");
-    expect(creators[0].type).toContain("litematic");
+    const authors = (await browserAdapter.ScanLocalAuthors("")) as Array<{
+      name: string;
+      rTypes: string[];
+    }>;
+    expect(authors).toHaveLength(1);
+    expect(authors[0].name).toBe("王五");
+    expect(authors[0].rTypes).toContain("ysm");
+    expect(authors[0].rTypes).toContain("litematic");
   });
 
   it("ListModelAuthors 忽略无 [作者] 前缀的模型名（仅统计括号作者）", async () => {

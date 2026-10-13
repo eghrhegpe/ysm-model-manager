@@ -74,15 +74,17 @@ describe("loadCommunityData", () => {
     expect(data.creators).toEqual([]);
   });
 
-  it("本地作者 type 与现有 type 分段去重（子串不误判）", async () => {
-    mocks.ScanLocalAuthors.mockResolvedValue([{ name: "A", type: "bili" }]);
+  it("ADR-337：本地作者只打 _fromLocal 标记，绝不并入创作者的站点 type", async () => {
+    // rtype（资源类型）与创作者的 type（站点归属）是两套词汇表——并进去会让卡片
+    // 多出一个 👤「ysm」式幻影平台徽章（getSiteIcon 对未知 id 回退创作者图标）
+    mocks.ScanLocalAuthors.mockResolvedValue([{ name: "A", desc: "", rTypes: ["ysm"] }]);
     const localAuthors = await loadLocalAuthors();
     const merged = mergeLocalAuthorsInto(
       [{ name: "A", type: "bilibili" }] as LocalCreator[],
       localAuthors,
     );
     const a = merged.find((c) => c.name === "A");
-    expect(a?.type).toBe("bilibili;bili");
+    expect(a?.type).toBe("bilibili");
     expect(a?._fromLocal).toBe(true);
   });
 
@@ -91,31 +93,28 @@ describe("loadCommunityData", () => {
     await expect(loadLocalAuthors()).resolves.toEqual([]);
   });
 
-  it("已存在的 type 不重复追加", () => {
+  it("ADR-337：多站点段也不被本地作者改动", () => {
     const merged = mergeLocalAuthorsInto(
       [{ name: "A", type: "bilibili;x" }] as LocalCreator[],
-      [{ name: "A", type: "x" }],
+      [
+        { name: "A", desc: "", rTypes: ["x"] },
+        { name: "A", desc: "", rTypes: ["ysm"] },
+      ],
     );
     expect(merged.find((c) => c.name === "A")?.type).toBe("bilibili;x");
   });
 
-  it("本地独有作者追加为 _fromLocal 条目", () => {
+  it("ADR-337：本地独有作者不追加条目（匹配不到任何站点 tab，追加是纯死重）", () => {
     const merged = mergeLocalAuthorsInto(
-      [],
-      [{ name: "新作者", desc: "本地描述" }],
+      [{ name: "已知", type: "bilibili" }] as LocalCreator[],
+      [
+        { name: "新作者", desc: "", rTypes: ["ysm"] },
+        { name: "已知", desc: "", rTypes: ["ysm"] },
+      ],
     );
-    const c = merged.find((x) => x.name === "新作者");
-    expect(c?._fromLocal).toBe(true);
-    expect(c?.desc).toBe("本地描述");
-  });
-
-  it("本地作者 desc 为空串 → 原样透传（语言不污染数据面；源头 Go/web 已同口径，锐评 P0-2b + 复核 N5）", () => {
-    // 输入形状逐字段对齐真生产者：go/scanner/scanner.go 与 backend/web-community.ts 现均给 desc: ""
-    const merged = mergeLocalAuthorsInto([], [{ name: "无名作者", desc: "" }]);
-    const c = merged.find((x) => x.name === "无名作者");
-    expect(c?._fromLocal).toBe(true);
-    // 原实现写 t("community.fromLocal")——该 desc 会被 BySite 保存落盘
-    expect(c?.desc).toBe("");
+    expect(merged).toHaveLength(1);
+    expect(merged.find((x) => x.name === "新作者")).toBeUndefined();
+    expect(merged.find((x) => x.name === "已知")?._fromLocal).toBe(true);
   });
 
   it("Go 绑定失败 -> 降级为空数据不抛", async () => {

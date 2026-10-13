@@ -21,6 +21,7 @@ export type {
     ImportLog,
     InstanceStatus,
     LauncherInstance,
+    LocalAuthor,
     LogCaps,
     LogChannelHealth,
     ModelEntry,

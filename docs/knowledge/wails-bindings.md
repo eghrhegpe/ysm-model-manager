@@ -280,7 +280,7 @@ status: active
 - `ListAllFilePaths(dir) → string[]` — 递归列出目录下所有文件完整路径（不限扩展名）
 - `CheckFileExists(path) → boolean` — 检查文件是否存在
 - `ListModelAuthors() → types.AuthorInfo[]` — 汇总模型作者信息
-- `ScanLocalAuthors() → types.WorkshopCreator[]` — 扫描全部本地资源目录、从文件名提取作者（可直接合并进 creators.json）
+- `ScanLocalAuthors(rtype) → types.LocalAuthor[]` — 扫描全部本地资源目录、从文件名提取作者。⚠️ `rTypes` 是**资源类型**（ysm/litematic/…），**不等于**创作者的站点归属 `type`——前端只据此给同名创作者打 `_fromLocal` 标记，**不得**并入 `creators.json`（ADR-337）
 - `ListVersionInstances(mcRoot) → types.VersionInstance[]` — 列出 MC 目录下的版本实例
 - `GetGlobalCustomDir(mcRoot) → string` — 返回 MC 根目录下的全局自定义模型目录
 - `SearchModels(repoRoot, keyword, minBones, maxBones, minCubes, maxCubes, minTex, maxTex) → types.SearchResult[]` — 高级搜索（关键词 + 骨骼数/立方体数/纹理尺寸区间）

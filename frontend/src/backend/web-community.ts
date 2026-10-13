@@ -19,6 +19,7 @@ import workshopSitesJson from "../../../workshop_sites.json" with { type: "json"
 import workshopGithubJson from "../../../workshop-github.json" with { type: "json" };
 import type {
   AuthorInfo,
+  LocalAuthor,
   WorkshopCreator,
   WorkshopPresetSearch,
   WorkshopSite,
@@ -293,11 +294,12 @@ async function listWebAuthors(): Promise<AuthorInfo[]> {
   return result;
 }
 
-/** ScanLocalAuthors 网页版：按 [作者] 提取并合并类型标签，对齐 scanner.go:297 */
-async function scanWebLocalAuthors(): Promise<WorkshopCreator[]> {
+/** ScanLocalAuthors 网页版：按 [作者] 提取并合并资源类型，对齐 go/scanner/scanner_authors.go。
+ * ADR-337：返回 LocalAuthor（rtype 进 rTypes），**不得**写进任何 "type=站点归属" 语义的字段。 */
+async function scanWebLocalAuthors(): Promise<LocalAuthor[]> {
   const entries = await collectAllWebEntries();
   const seen = new Set<string>();
-  const result: WorkshopCreator[] = [];
+  const result: LocalAuthor[] = [];
   for (const e of entries) {
     const a = extractBracketAuthor(e.Name);
     if (!a) continue;
@@ -307,13 +309,13 @@ async function scanWebLocalAuthors(): Promise<WorkshopCreator[]> {
     seen.add(key);
     const existing = result.find((c) => c.name === a);
     if (existing) {
-      if (!existing.type?.includes(rtype)) {
-        existing.type = existing.type ? `${existing.type};${rtype}` : rtype;
+      if (!existing.rTypes?.includes(rtype)) {
+        existing.rTypes = existing.rTypes ? [...existing.rTypes, rtype] : [rtype];
       }
     } else {
-      // desc 留空：界面文案不进数据面（与 go/scanner/scanner.go 同口径，锐评 P0-2 治本），
+      // desc 留空：界面文案不进数据面（与 go/scanner 同口径，锐评 P0-2 治本），
       // 「来自本地仓库」由创作者频道展示层按 _fromLocal 取当前语言。
-      result.push({ name: a, desc: "", type: rtype });
+      result.push({ name: a, desc: "", rTypes: [rtype] });
     }
   }
   return result;

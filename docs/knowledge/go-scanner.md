@@ -103,7 +103,7 @@ status: active
 - **引擎归属记账（`scan_engine.go`，2026-10-06 精简）**：原为 Go/Rust 双引擎对照（ADR-262 D3）而设；Rust 扫描后端删除后只剩 Go walk 一个引擎，`ScanEngineStats()` 现只返回 `{GoWalk}`（`walkCount` 复用既有诊断计数），调用方取**前后差**判断「这一次扫描是否真的走了引擎」（区分「扫过」与「30s 缓存命中」——后者不算测量）。不做成返回值：`ScanEntries*` 有十几个调用方，为观测改签名是反向收益；计数器 + 前后差同样精确且零调用方改动。消费方 = `go/cli/scan_bench.go`（`scan-bench` 命令，已改为 Go-only 扫描基准）。
 - `ComputeFileHash(path)` — SHA256
 - `ScanEntriesLite(dir)` — 轻量遍历（2026-08-26，作者提取专用）：与 `ScanEntries` 同过滤口径（recycle/.github/禁用目录跳过、扩展名白名单、ysm.json 判定、`.ban` 恢复），但**不读文件信息（Size/ModTime/Hash 恒零值）、不读不写共享 scanCache**——无哈希条目入缓存会被同步系统当「哈希为空」静默跳过。实现为 `processScanDirEntry(wantMeta=false)`；测试 `scanner_lite_test.go`（过滤同口径 + 双向缓存隔离）。作者路径跳过逐文件 open+hash 后冷扫成本降为纯目录枚举
-- `ListModelAuthors` / `ScanLocalAuthors` — 作者统计：均走 `ScanEntriesLite` 轻量遍历（原走全量扫描陪绑 SHA256，大库下拖慢创作者频道首屏）。`ScanLocalAuthors` 的 `mergeOrAppendCreator` 用 `nameIndex map[string]int` 做 O(1) 同名 author 定位（2026-09-14 落地：原线性扫描导致大库首屏作者提取 O(作者数×文件数) 二次放大，加索引后纯行为保持重构）
+- `ListModelAuthors` / `ScanLocalAuthors` — 作者统计：均走 `ScanEntriesLite` 轻量遍历（原走全量扫描陪绑 SHA256，大库下拖慢创作者频道首屏）。`ScanLocalAuthors` **返回 `types.LocalAuthor`（Name + RTypes），与 `WorkshopCreator` 刻意分开**——后者 `Type` 是站点 id，这里的是资源类型 rtype，两套词表零交集（ADR-337；复用 WorkshopCreator 曾致 rtype 被并入创作者站段）。其 `mergeOrAppendLocalAuthor` 用 `nameIndex map[string]int` 做 O(1) 同名 author 定位（2026-09-14 落地：原线性扫描导致大库首屏作者提取 O(作者数×文件数) 二次放大，加索引后纯行为保持重构）
 - `GenerateRepoIndex(repoPath)` — 生成 `index.json`（GitHub Actions workflow 模板）
 
 ## 与其他子系统关系

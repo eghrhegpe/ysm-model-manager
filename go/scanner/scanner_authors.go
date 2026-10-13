@@ -62,13 +62,17 @@ func ListModelAuthors(entries []types.ModelEntry) []types.AuthorInfo {
 	return result
 }
 
-// ScanLocalAuthors 扫描各资源类型根目录，从文件名提取 [作者]（roots: rtype→root）
-func ScanLocalAuthors(roots map[string]string) []types.WorkshopCreator {
+// ScanLocalAuthors 扫描各资源类型根目录，从文件名提取 [作者]（roots: rtype→root）。
+//
+// 返回 LocalAuthor 而非 WorkshopCreator：后者的 Type 是**站点 id**（"bilibili;afdian"），
+// 而本处的 rtype 是**资源类型**（ysm/litematic/…），两套词汇表零交集——曾因复用
+// WorkshopCreator 让 rtype 被前端并入创作者站段（幻影平台徽章 + 本地作者隐形），见 ADR-337。
+func ScanLocalAuthors(roots map[string]string) []types.LocalAuthor {
 	seen := map[string]bool{}
-	// nameIndex 作者名 → result 下标，O(1) 定位同名 creator，避免 mergeOrAppendCreator
+	// nameIndex 作者名 → result 下标，O(1) 定位同名作者，避免 mergeOrAppendLocalAuthor
 	// 每次线性扫描（O(作者数×文件数) 随仓库规模二次放大，大库首屏作者提取热路径）。
 	nameIndex := map[string]int{}
-	var result []types.WorkshopCreator
+	var result []types.LocalAuthor
 
 	// roots 为 map，迭代序随机会导致跨类型合并的 Type 拼接顺序不稳定
 	// （同输入不同输出，flaky 测试/缓存/UI 展示均受影响）——按 rtype 字典序遍历保证确定性
@@ -86,7 +90,7 @@ func ScanLocalAuthors(roots map[string]string) []types.WorkshopCreator {
 			if author == "" {
 				continue
 			}
-			mergeOrAppendCreator(&result, author, rtype, seen, nameIndex)
+			mergeOrAppendLocalAuthor(&result, author, rtype, seen, nameIndex)
 		}
 	}
 	return result
@@ -103,37 +107,37 @@ func sortedRTypeKeys(roots map[string]string) []string {
 	return rtypes
 }
 
-// mergeOrAppendCreator 把 (author, rtype) 对合并进 result。seen 为 author@rtype 去重表，
-// 已见过直接跳过；未见过则在 result 中找同名 creator：找到则追加 rtype 标签（按 ";" 分段精确
-// 比较，防 rtype 子串关系误判），找不到则 append 新 WorkshopCreator。
-// nameIndex 作者名 → result 下标，O(1) 定位同名 creator（替代原线性扫描，避免大库首屏
+// mergeOrAppendLocalAuthor 把 (author, rtype) 对合并进 result。seen 为 author@rtype 去重表，
+// 已见过直接跳过；未见过则在 result 中找同名作者：找到则追加 rtype 到 RTypes（按值精确比较，
+// 防 rtype 子串关系误判），找不到则 append 新 LocalAuthor。
+// nameIndex 作者名 → result 下标，O(1) 定位同名作者（替代原线性扫描，避免大库首屏
 // 作者提取路径 O(作者数×文件数) 二次放大）。seen 已保证同 (author,rtype) 只到一次，
-// 故 nameIndex 命中即代表该 author 的首条 creator 已存在，直接复用其下标追加 type。
-func mergeOrAppendCreator(result *[]types.WorkshopCreator, author, rtype string, seen map[string]bool, nameIndex map[string]int) {
+// 故 nameIndex 命中即代表该 author 的首条已存在，直接复用其下标追加 RTypes。
+// ⚠️ rtype 只进 RTypes（资源类型），**不得**写进任何"站点归属"语义的字段（ADR-337）。
+func mergeOrAppendLocalAuthor(result *[]types.LocalAuthor, author, rtype string, seen map[string]bool, nameIndex map[string]int) {
 	key := author + "@" + rtype
 	if seen[key] {
 		return
 	}
 	seen[key] = true
-	// 合并已有的 type 标签（O(1) 定位同名 creator）
+	// 合并已有的 rtype（O(1) 定位同名作者）
 	if existing, ok := nameIndex[author]; ok {
-		// 追加类型标签（按 ";" 分段精确比较，防 rtype 子串关系误判，防御范式③）
-		for _, seg := range strings.Split((*result)[existing].Type, ";") {
-			if seg == rtype {
+		for _, t := range (*result)[existing].RTypes {
+			if t == rtype {
 				return
 			}
 		}
-		(*result)[existing].Type += ";" + rtype
+		(*result)[existing].RTypes = append((*result)[existing].RTypes, rtype)
 		return
 	}
 	idx := len(*result)
-	*result = append(*result, types.WorkshopCreator{
+	*result = append(*result, types.LocalAuthor{
 		Name: author,
-		// Desc 留空（不写「来自本地仓库」这类界面文案）：本结果会被前端并入创作者列表，
+		// Desc 留空（不写「来自本地仓库」这类界面文案）：本结果会被前端并入展示，
 		// 语言串进数据面即随 SaveWorkshopCreatorsBySite 落盘，且写死中文会让 en/ja 用户看到
-		// 中文。展示层按 _fromLocal 标记取当前语言（锐评 P0-2 治本，web 侧 web-community.ts 同口径）。
-		Desc: "",
-		Type: rtype,
+		// 中文。展示层按 _fromLocal 标记取当前语言（锐评 P0-2 治本，web 侧同口径）。
+		Desc:   "",
+		RTypes: []string{rtype},
 	})
 	nameIndex[author] = idx
 }

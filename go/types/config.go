@@ -79,6 +79,17 @@ type WorkshopCreator struct {
 	Role string `json:"role,omitempty"`
 }
 
+// LocalAuthor 本地扫描到的作者（从文件名的 [作者] 前缀提取）。
+//
+// 刻意与 WorkshopCreator 分开：后者的 Type 是**站点/平台 id**（分号分隔，如 "bilibili;afdian"），
+// 而 RTypes 是**资源类型**（ysm/litematic/…）——两套词汇表零交集。历史上复用 WorkshopCreator
+// 导致 rtype 被前端并入创作者的站点段（幻影平台徽章 + 本地独有作者隐形），见 ADR-337。
+type LocalAuthor struct {
+	Name   string   `json:"name"`
+	Desc   string   `json:"desc"`
+	RTypes []string `json:"rTypes,omitempty"`
+}
+
 // DedupConfig 去重功能配置。
 // 2026-09 对接锐评①收敛：Go 侧仅消费哈希策略（dedup.NewHashAlgorithm，值域契约锁
 // go/dedup/strategy_test.go TestNewHashAlgorithm_FrontendTokens）。保留策略/优先路径

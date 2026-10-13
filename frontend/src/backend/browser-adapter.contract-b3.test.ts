@@ -87,36 +87,35 @@ describe("B3 契约 — ListModelAuthors（对齐 go/scanner/scanner.go:265）",
 });
 
 // ===========================================================================
-// 契约 2：ScanLocalAuthors —— 对齐 go/scanner/scanner.go:297
-// Go WorkshopCreator json tag：name / desc / type（config.go:58-62，全小写）
-// Go 类型合并规则：existing.Type 不含 rtype 时 `Type += ";" + rtype`（分隔符 ;）
+// 契约 2：ScanLocalAuthors —— 对齐 go/scanner/scanner_authors.go（ADR-337）
+// Go LocalAuthor json tag：name / desc / rTypes（config.go，全小写）
+// ADR-337：rtype 进 RTypes **数组**（不是分号串，更不是站点归属的 type）
 // ===========================================================================
-describe("B3 契约 — ScanLocalAuthors（对齐 go/scanner/scanner.go:297）", () => {
-  it("提取 [作者] 并带 type 标签（desc 留空，字段名小写对齐 Go WorkshopCreator）", async () => {
+describe("B3 契约 — ScanLocalAuthors（对齐 go/scanner，ADR-337 LocalAuthor）", () => {
+  it("提取 [作者] 并带 rTypes（desc 留空，字段名小写对齐 Go LocalAuthor）", async () => {
     await putModel("[王五]角色.ysm");
-    const creators = (await browserAdapter.ScanLocalAuthors("")) as Array<{
+    const authors = (await browserAdapter.ScanLocalAuthors("")) as Array<{
       name: string;
-      type: string;
+      rTypes: string[];
       desc: string;
     }>;
-    expect(creators).toHaveLength(1);
-    expect(creators[0].name).toBe("王五");
-    expect(creators[0].type).toBe("ysm");
-    // desc 留空：界面文案不进数据面（Go 侧 scanner.go 同口径，锐评 P0-2 治本）
-    expect(creators[0].desc).toBe("");
+    expect(authors).toHaveLength(1);
+    expect(authors[0].name).toBe("王五");
+    expect(authors[0].rTypes).toEqual(["ysm"]);
+    // desc 留空：界面文案不进数据面（Go 侧同口径，锐评 P0-2 治本）
+    expect(authors[0].desc).toBe("");
   });
 
-  it("同作者跨不同类型 → Type 用 ; 合并（与 Go `;` 分隔符一致）", async () => {
+  it("同作者跨不同类型 → rTypes 合并两项（顺序无关集合断言）", async () => {
     await putModel("[王五]A.ysm", "ysm");
     await putModel("[王五]B.ysm", "litematic");
-    const creators = (await browserAdapter.ScanLocalAuthors("")) as Array<{
+    const authors = (await browserAdapter.ScanLocalAuthors("")) as Array<{
       name: string;
-      type: string;
+      rTypes: string[];
     }>;
-    expect(creators).toHaveLength(1);
-    expect(creators[0].name).toBe("王五");
-    // Go：Type += ";" + rtype —— 断言拼接符为 ;（不偏移到 , / | 等）
-    expect(creators[0].type).toBe("ysm;litematic");
+    expect(authors).toHaveLength(1);
+    expect(authors[0].name).toBe("王五");
+    expect([...authors[0].rTypes].sort()).toEqual(["litematic", "ysm"]);
   });
 
   it("空库 → 返回 []（非 null、不抛错）", async () => {

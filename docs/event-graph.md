@@ -219,7 +219,7 @@
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 386 |
 | atTeClickRowFolder | `frontend/src/views/app-tree/events.ts` | 171 |
 | atTeClickRowFile | `frontend/src/views/app-tree/events.ts` | 245 |
-| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 673 |
+| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 685 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -454,7 +454,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-tree/index.ts` | 310 |
+| connectedCallback | `frontend/src/views/app-tree/index.ts` | 322 |
 
 ### `ui:card-density`
 

@@ -170,8 +170,8 @@ func TestScanLocalAuthors(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(dir, "[作者C]模型.ysm"), []byte("x"), perm)
 	creators := ScanLocalAuthors(map[string]string{"ysm": dir, "EntityPlayer": ""})
 	testutil.Equal(t, len(creators), 1, "应 1 个创作者")
-	if creators[0].Name != "作者C" || creators[0].Type != "ysm" {
-		t.Fatalf("创作者解析失败: %+v", creators[0])
+	if creators[0].Name != "作者C" || strings.Join(creators[0].RTypes, ",") != "ysm" {
+		t.Fatalf("作者解析失败: %+v", creators[0])
 	}
 }
 

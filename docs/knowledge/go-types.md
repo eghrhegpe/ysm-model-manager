@@ -67,6 +67,7 @@ auto_fields:
     - LinkSym
     - LinkType
     - LinkUnknown
+    - LocalAuthor
     - LogCaps
     - LogChannelHealth
     - LogLevel

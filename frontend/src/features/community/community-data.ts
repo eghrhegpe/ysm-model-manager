@@ -1,6 +1,7 @@
 // ===== 创意工坊纯数据层 =====
 
 import type {
+  LocalAuthor,
   WorkshopCreator,
   WorkshopSite,
 } from "@/bindings/ysm-model-manager/go/types/models.ts";
@@ -35,13 +36,6 @@ export interface LocalCreator extends WorkshopCreator {
   type?: string;
   /** 行内编辑动态字段（fld 来自 dataset） */
   [key: string]: unknown;
-}
-
-/** 绑定 LocalAuthor（合并来源） */
-export interface LocalAuthorLike {
-  name?: string;
-  desc?: string;
-  type?: string;
 }
 
 /** 站点 + 创作者 + 作者 数据包 */
@@ -154,7 +148,7 @@ export async function loadCommunityData(): Promise<CommunityData> {
  * 不阻塞调用方；冷缓存时才真等扫描（Go 侧已轻量化为纯目录枚举）。
  * 失败降级空数组（与快路径 .catch 防御风格一致）。
  */
-export async function loadLocalAuthors(): Promise<LocalAuthorLike[]> {
+export async function loadLocalAuthors(): Promise<LocalAuthor[]> {
   const App = await communityGetApp();
   // 绑定签名允许 null（无数据）——与快路径 `results[i] || []` 同口径归一
   const authors = await withCached(
@@ -167,56 +161,30 @@ export async function loadLocalAuthors(): Promise<LocalAuthorLike[]> {
 }
 
 /**
- * 把本地扫描提取的作者合并进创作者列表（原地合并，返回同一引用）。
- * 幂等：重复调用不重复追加（同名去重 + type 分段精确比较防子串误判）。
+ * 把本地扫描到的作者合并进创作者列表（原地，返回同一引用）。
+ *
+ * ADR-337：本地作者**只用来给同名创作者打 `_fromLocal` 标记**（📁 本地徽章依据），
+ *  ① 不再把 `rTypes` 并进创作者的 `type`——`type` 是**站点归属**（"bilibili;afdian"），
+ *     而 rTypes 是**资源类型**（ysm/litematic/…），两套词汇表零交集；并进去会让卡片多出
+ *     一个 👤「ysm」式幻影平台徽章（getSiteIcon 对未知 id 回退创作者图标）；
+ *  ② 不再追加「本地独有作者」条目——它们匹配不到任何站点 tab（`parseSiteIds(type)` 过滤），
+ *     追加只会让 allCreators 无谓膨胀，永不渲染。
+ *
+ * 幂等：重复调用只重复置标记，无副作用。按 name 建 Map 一次，O(创作者+作者) 而非 O(n×m)。
  */
 export function mergeLocalAuthorsInto(
   creators: LocalCreator[],
-  localAuthors: LocalAuthorLike[],
+  localAuthors: LocalAuthor[],
 ): LocalCreator[] {
-  const existingNames = new Set(creators.map((c) => c.name));
-  for (const la of localAuthors || []) {
-    if (la?.name && existingNames.has(la.name)) {
-      const found = creators.find((c) => c.name === la.name);
-      if (found) {
-        mergeExistingLocalAuthor(found, la);
-      }
-    } else if (la?.name) {
-      appendLocalAuthor(creators, la.name, la, existingNames);
-    }
+  if (!localAuthors?.length) return creators;
+  const byName = new Map<string, LocalCreator>();
+  for (const c of creators) byName.set(c.name, c);
+  for (const la of localAuthors) {
+    if (!la?.name) continue;
+    const found = byName.get(la.name);
+    if (found) found._fromLocal = true;
   }
   return creators;
-}
-
-/** 已存在作者：type 分号段精确比较并入（防子串误判），并标记来源本地 */
-function mergeExistingLocalAuthor(found: LocalCreator, la: LocalAuthorLike): void {
-  // P4 修复：按分号分段比较 type，避免子串误判（"bilibili" 包含 "bili" 时丢类型）
-  if (la.type) {
-    const hasType = (found.type || "").split(";").some((t) => t.trim() === la.type);
-    if (!hasType) {
-      found.type = found.type ? `${found.type};${la.type}` : la.type;
-    }
-  }
-  found._fromLocal = true;
-}
-
-/** 本地独有作者：追加条目并登记名字（幂等去重）。name 由调用方保证非空（else-if 分支） */
-function appendLocalAuthor(
-  creators: LocalCreator[],
-  name: string,
-  la: LocalAuthorLike,
-  existingNames: Set<string>,
-): void {
-  creators.push({
-    name,
-    // 锐评 P0-2b：desc 不再落 i18n 语言串（原 t("community.fromLocal")）——
-    // 该字段会经 SaveWorkshopCreatorsBySite 落盘，把展示语言写进数据面；
-    // 「来自本地仓库」提示改由视图层按 _fromLocal 标记现取当前语言（render/events）。
-    desc: la.desc || "",
-    type: la.type || "",
-    _fromLocal: true,
-  });
-  existingNames.add(name);
 }
 
 /** 后台静默拉取社区索引并并入本地（withCached 6h TTL） */

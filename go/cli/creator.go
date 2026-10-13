@@ -50,17 +50,18 @@ func printCreatorUsage() {
 	fmt.Println("  app --cli --files-root ./models creator list")
 }
 
-// runCreatorScan 扫描本地作者
+// runCreatorScan 扫描本地作者（RTypes 见 ADR-337：资源类型，非站点归属）
 func runCreatorScan(ctx *CmdContext) error {
-	creators := ctx.App.ScanLocalAuthors("")
-	if len(creators) == 0 {
+	authors := ctx.App.ScanLocalAuthors("")
+	if len(authors) == 0 {
 		fmt.Println("📭 未扫描到本地作者")
 		return nil
 	}
-	fmt.Printf("👤 扫描到 %d 个本地作者:\n", len(creators))
-	for i, c := range creators {
-		name := truncateRunes(c.Name, 28)
-		fmt.Printf("  %d. %s\n", i+1, name)
+	fmt.Printf("👤 扫描到 %d 个本地作者:\n", len(authors))
+	for i, a := range authors {
+		name := truncateRunes(a.Name, 28)
+		rt := strings.Join(a.RTypes, ",")
+		fmt.Printf("  %d. %s (%s)\n", i+1, name, rt)
 	}
 	return nil
 }

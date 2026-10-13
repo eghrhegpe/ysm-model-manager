@@ -126,15 +126,15 @@ describe("tab 页：面板唯一范式 + 等深同层（抓兄弟吞并 / 范式
   }
 });
 
-describe("bindTabs 契约：不得再有第二份 id 白名单（ADR-259 运行期契约）", () => {
-  it("全部 bindTabs 调用点都是三参形态（无 id 数组）", () => {
-    // 复盘（2026-09，设置页新增「操作」tab）：`bindTabs` 曾要求手传 `ids` 白名单，
+describe("bindTabRuntime 契约：不得再有第二份 id 白名单（ADR-259 运行期契约）", () => {
+  it("全部 bindTabRuntime 调用点都不传 id 数组白名单", () => {
+    // 复盘（2026-09，设置页新增「操作」tab）：`bindTabs` 前身曾要求手传 `ids` 白名单，
     // 它与模板里的 data-tab 是**第二份手工真值**——漏同步则 `activate` 遍历不到新 tab 的面板，
     // 表现为「按钮在、点了没反应、内容区空白」且不报错。
-    // 现从 DOM 派生；本闸防止白名单以任何形式回流。
+    // 现从 DOM 派生；懒初始化表改为可选第 4 参（对象映射，非数组白名单），本闸防止白名单以任何形式回流。
     const src = readFileSync(join(SRC_ROOT, "views/app-content/init-pages.ts"), "utf8");
-    const calls = [...src.matchAll(/bindTabs\(host,[^;]*\)/g)].map((m) => m[0]);
-    expect(calls.length, "未匹配到 bindTabs 调用点（路径/正则漂移，闸会空转）").toBeGreaterThanOrEqual(4);
+    const calls = [...src.matchAll(/bindTabRuntime\(host,[^;]*\)/g)].map((m) => m[0]);
+    expect(calls.length, "未匹配到 bindTabRuntime 调用点（路径/正则漂移，闸会空转）").toBeGreaterThanOrEqual(4);
     for (const c of calls) {
       expect(c.includes("["), `调用点仍传数组白名单：${c}`).toBe(false);
     }

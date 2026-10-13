@@ -225,11 +225,11 @@
 | 数组排序、拖拽排序、moveItem | [数组工具 moveItem](./utils-array.md) | 数组移动必须走 array.ts 的 moveItem，禁止手写 splice 排序 | - |
 | 通用红线 | [国际化 i18n 模块](./i18n.md) | warnMissingKey 每 key 只告警一次（模块内私有 Set，不跨模块导出） | ADR-124, ADR-207, ADR-210 |
 | 同步缺失、清空整合包、导出清单 | [全局事件处理 global-handlers](./global-handlers.md) | - | - |
-| 图标、emoji、文件图标、fileIcon | [图标映射 icon](./utils-icon.md) | 文件图标必须走 icon.ts 的 fileIcon，禁止手写文件名→图标映射 | - |
+| 图标、emoji、文件图标、fileIcon | [文件名展示与着色链 display](./utils-display.md) | - | - |
 | 推送 / 拉取、同步状态、勾选 | [侧边栏 app-sidebar](./app-sidebar.md) | - | - |
 | 外部进程启动、跨平台 HideWindow | [进程隐藏窗口 go/executil](./go-executil.md) | - | - |
 | 文件大小、字节格式化、KB MB | [格式化工具 fmt](./utils-fmt.md) | 文件大小 / 日期必须走 format.ts 的格式化函数，禁止手写格式化 | - |
-| 文件名显示、美化文件名、renderDisplayName | [文件名显示 display](./utils-display.md) | 文件名展示必须走 display.ts 的 renderDisplayName，禁止手写文件名解析 | - |
+| 文件名显示、美化文件名、renderDisplayName | [文件名展示与着色链 display](./utils-display.md) | 文件名展示必须走 display.ts 的 renderDisplayName，禁止手写文件名解析 | - |
 | 新增翻译 key → 三语言同步 + i18n-check 完整性校验 | [国际化 i18n 模块](./i18n.md) | 参数值含 $&/$1 走函数型替换（防正则注入错译） | ADR-124, ADR-207, ADR-210 |
 | 新组件注册、import 组件、startup reveal | [组件入口 app-modules](./app-modules.md) | - | - |
 | 循环依赖、NewApp 组装 | [App↔子组件对象级环打破范式（回调注入）](./app-cycle-injection.md) | - | ADR-109 |
@@ -247,7 +247,6 @@
 | 资源树、tree、目录树 | [资源树 app-tree](./app-tree.md) | app-tree 的 bus 订阅必须经 _unsubs 收集，disconnectedCallback 必须清理全部订阅 | - |
 | 子进程隐藏控制台窗口、HideWindow | [进程隐藏窗口 go/executil](./go-executil.md) | 子进程隐藏控制台窗口必须走 go/executil 的 HideWindow，禁止直调 os/exec 不带隐藏标志 | - |
 | 组件入口、模块装配、启动流程 | [组件入口 app-modules](./app-modules.md) | 新增 JS 组件必须登记进 app-modules.ts 的 import 列表，致命陷阱 | - |
-| 作者标签、作品标签、文件名着色、搜索高亮 | [文件名显示 display](./utils-display.md) | - | - |
 | App↔子组件对象级环、回调注入 | [App↔子组件对象级环打破范式（回调注入）](./app-cycle-injection.md) | 子组件必须用回调注入替代 *App 反向指针，禁止在子组件 struct 里持 *App 字段 | ADR-109 |
 | DOM 工具、esc 转义、搜索高亮、XSS | [DOM 工具 dom](./utils-dom.md) | HTML 内容注入必须走 esc() 转义，禁止直接 innerHTML 拼接用户输入 | - |
 | emit 事件 / 跨组件通信 | [事件总线 bus.ts](./event-bus.md) | 所有跨组件异步通信必经 bus.ts，禁止组件间直耦 | - |
@@ -256,16 +255,15 @@
 | isFileExistsError | [错误处理 errors](./utils-errors.md) | - | - |
 | localStorage、隐私模式、safeGet / safeSet | [localStorage 安全读写 safeGet/safeSet](./dom-storage.md) | localStorage 读写必须走 safeGet/safeSet，禁止裸调 localStorage，防隐私模式中断启动 | - |
 | logWarn logError 透写日记 | [UI 报错落日记 error-diary](./core-error-diary.md) | - | - |
-| MC 格式、§ 颜色、MC 颜色码 | [MC 格式判定 mc-format](./utils-mc-format.md) | MC 文本格式化必须走 mc-format.ts 的 renderFormattedText，禁止手写 § 颜色解析 | - |
+| MC 格式、§ 颜色、MC 颜色码 | [文件名展示与着色链 display](./utils-display.md) | MC 文本格式化必须走 mc-format.ts 的 renderFormattedText，禁止手写 § 颜色解析 | - |
 | nav_page 恢复 | [顶部导航 app-nav](./app-nav.md) | - | - |
 | nav:changed 事件分发、全局 handler 注册 | [主内容页 app-content](./app-content.md) | - | - |
 | node 环境、happy-dom、测试切换 | [Vitest 环境切换规则](./vitest-env-switch.md) | - | - |
 | normalizeTheme、variables.css | [主题系统 theme](./theme.md) | - | ADR-146 |
-| pack_format、MC 版本、资源包版本 | [MC 格式判定 mc-format](./utils-mc-format.md) | - | - |
+| pack_format、MC 版本、资源包版本 | [文件名展示与着色链 display](./utils-display.md) | 文件图标必须走 icon.ts 的 fileIcon，禁止手写文件名→图标映射 | - |
 | pointerdown / pointermove / pointerup、触屏 + 桌面统一 | [Pointer Events 统一交互（触屏 + 桌面）](./pointer-events.md) | 所有交互必须用 pointerdown/pointermove/pointerup 统一处理，禁止混用 mousedown/touchstart | - |
 | PushSingleResource / PullSingleResource | [整合包同步管理器 sync-manager](./sync-manager.md) | - | - |
 | registerGlobalHandlers、instance-ops | [全局事件处理 global-handlers](./global-handlers.md) | - | - |
-| renderFormattedText / describeVersionRange | [MC 格式判定 mc-format](./utils-mc-format.md) | - | - |
 | resolveInitialPage / sanitizePage 启动初始页解析 | [页面状态管理 page-store.ts](./page-store.md) | - | - |
 | safeErrorMessage、异常提取 | [安全错误消息提取 utils](./safe-error-msg.md) | - | - |
 | setPointerCapture、touch-action、拖拽 | [Pointer Events 统一交互（触屏 + 桌面）](./pointer-events.md) | - | - |
@@ -1184,7 +1182,9 @@
 | 手写 splice 排序 | - | 与拖拽 drop 逻辑不一致、边界溢出；必须经 moveItem |
 | moveItem 未 clamp | - | 拖拽到首/尾位置时报错；必须在 moveItem 内做 clamp |
 | 手写文件名解析 | - | 与 parseModelName 判定不一致、作者 / 作品提取错位；必须经 renderDisplayName |
-| 搜索高亮未走 esc | - | XSS；必须在高亮前经 esc 转义 |
+| 手写 § 颜色解析 | - | 与 renderFormattedText 不一致、特殊字符未处理；必须经 renderFormattedText |
+| pack_format 未走 describeVersionRange | - | 版本显示不友好；必须经 describeVersionRange |
+| 手写文件名→图标映射 | - | 与 fileIcon 不一致、新类型缺图标；必须经 fileIcon |
 | 直拼 innerHTML | - | XSS 注入；必须经 esc() 转义 |
 | toast 时长内联魔法数字 | - | 与全应用不一致；必须用 toast-ms 的语义常量 |
 | 裸抛原始错误 | - | 用户看不懂、违反治理红线；必须经 friendlyError 翻译 |
@@ -1198,9 +1198,6 @@
 | 静态表未与 resource_types.json 对齐 | - | 三端不一致；必须由契约测试守护 |
 | 手写格式化 | - | 单位不一致、时区错乱；必须经 format.ts |
 | 日期未走友好日期 | - | 用户看不懂时间戳；必须经 friendlyDate |
-| 手写文件名→图标映射 | - | 与 fileIcon 不一致、新类型缺图标；必须经 fileIcon |
-| 手写 § 颜色解析 | - | 与 renderFormattedText 不一致、特殊字符未处理；必须经 renderFormattedText |
-| pack_format 未走 describeVersionRange | - | 版本显示不友好；必须经 describeVersionRange |
 | console.log 散落 | - | 无法按 tag 过滤、生产环境泄漏日志；必须经 dbg |
 | 环形缓冲区未限制大小 | - | 内存累积；必须经环形缓冲的 max 限制 |
 | 手写类型映射 | - | 与注册表不一致、分类错乱；必须派生自 resource_types.json（走 schema.ts 同步视图） |

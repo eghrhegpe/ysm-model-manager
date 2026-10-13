@@ -121,5 +121,5 @@ ADR-238 把 emoji 当 UI 图标迁移成 SVG（`UI_ICONS` + `.ws-icon`）。摸�
 
 ## 相关
 
-- [utils-icon](./utils-icon.md) — fileIcon 走 emoji（数据图标，不迁移）
+- [utils_display](./utils-display.md) — fileIcon 走 emoji（数据图标，不迁移；原 utils-icon 卡已并入）
 - `scripts/check-design-tokens.ts` / `docs/UI-Design.md` — emoji 图标禁用规范

@@ -254,6 +254,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-338：文档体系减负：分级连带 + 知识卡域合并 + ADR 增量门槛（62% 连带率的治理）",
+        "link": "/adr/architecture/ADR-338-docs-burden-reduction"
+      },
+      {
         "text": "ADR-337：创作者 type 字段拆分：站点归属与本地资源类型分字段，消除幻影平台徽章与本地作者隐形",
         "link": "/adr/architecture/ADR-337-creator-type-site-vs-rtype"
       },
@@ -2420,7 +2424,7 @@ export const autoSidebar = [
             "link": "/knowledge/utils-array"
           },
           {
-            "text": "文件名显示 display",
+            "text": "文件名展示与着色链 display",
             "link": "/knowledge/utils-display"
           },
           {
@@ -2442,14 +2446,6 @@ export const autoSidebar = [
           {
             "text": "格式化工具 fmt",
             "link": "/knowledge/utils-fmt"
-          },
-          {
-            "text": "图标映射 icon",
-            "link": "/knowledge/utils-icon"
-          },
-          {
-            "text": "MC 格式判定 mc-format",
-            "link": "/knowledge/utils-mc-format"
           },
           {
             "text": "常量与调试 constants/debug",

@@ -142,5 +142,5 @@ status: active
 
 - [resource_registry](./resource-registry.md) — `resource_types.json` 单一事实源 + Go 端加载（前端异步加载器 ADR-269 D3 已退役，统一走本卡 `schema.ts` 同步视图）
 - [utils_extensions](./utils-extensions.md) — 扩展名映射
-- [utils_icon](./utils-icon.md) — 文件图标（容器扩展名统一 📦，见 ADR-067 漂移修复）
+- [utils_display](./utils-display.md) — 文件图标 fileIcon（容器扩展名统一 📦，见 ADR-067 漂移修复；原 utils-icon 卡已并入）
 - [wails_bridge](./wails-bridge.md) — getApp() 桥接

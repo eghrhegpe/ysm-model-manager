@@ -1,3 +1,8 @@
+
+---
+> **⚠️ 已合并（2026-10-13，ADR-338 文档减负试点）**：本卡已并入 [utils_display](../knowledge/utils-display.md)（文件名展示与着色链——原 mc-format/icon/display 三卡一线）。现行维护在新卡，本文件为历史快照冻结。
+---
+
 ---
 kind: utils-icon
 name: 图标映射 icon

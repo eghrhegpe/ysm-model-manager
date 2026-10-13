@@ -1,6 +1,6 @@
 // ===== context-menu Shadow CSS =====
 // ADR-238：resolveIcon 喂入 .ws-icon SVG，须就地 adopt——CSS 不穿透 shadow 边界，
-// 漏带则图标退回 24×24 viewBox 默认尺寸（实测坑，同范式 app-nav/tpl.ts、
+// 漏带则图标退回 24×24 viewBox 默认尺寸（实测坑，同范式 app-nav/nav-css.ts、
 // app-content/css/content-layout.ts）。.no-animations 通配桥（ADR-015 §2.4 约束 1；
 // 规则本体 = @/utils/dom/css.ts）：覆盖 .menu（menuPop）与菜单项内联 style 的
 // itemSlideIn（!important 作者声明压过普通内联声明）。

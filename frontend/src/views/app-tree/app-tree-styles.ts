@@ -13,7 +13,7 @@ export const treeCSS: string = `
   flex-direction: column;
   flex: 1;
   overflow: hidden;
-  font-family: var(--font-ui); /* 审计 P2-3：与 sidebar-css.ts / app-nav/tpl.ts 同源，统一走 --font-ui 令牌 */
+  font-family: var(--font-ui); /* 审计 P2-3：与 sidebar-css.ts / app-nav/nav-css.ts 同源，统一走 --font-ui 令牌 */
 }
 .hdr { padding:var(--sp-vh-hdr); border-bottom: 1px solid var(--bd); }
 .hdr-row { display:flex; align-items:center; gap:4px; }

@@ -186,23 +186,23 @@ frontend/src/views/app-content/tpl-recycle.ts::__inline__::gap:2px
 frontend/src/views/app-content/tpl-recycle.ts::__inline__::gap:8px
 frontend/src/views/app-content/tpl-recycle.ts::__inline__::padding:5px 8px
 frontend/src/views/app-content/tpl.ts::__inline__::padding:12px 0
-frontend/src/views/app-nav/tpl.ts::.host::width:160px
-frontend/src/views/app-nav/tpl.ts::.icon::width:20px
-frontend/src/views/app-nav/tpl.ts::.icon::width:20px
-frontend/src/views/app-nav/tpl.ts::.logo::gap:8px
-frontend/src/views/app-nav/tpl.ts::.logo::padding:16px 0 12px
-frontend/src/views/app-nav/tpl.ts::.logo::padding:16px 14px 12px
-frontend/src/views/app-nav/tpl.ts::.menu-head::gap:4px
-frontend/src/views/app-nav/tpl.ts::.menu-label::padding:8px 10px 4px
-frontend/src/views/app-nav/tpl.ts::.nav-item::gap:8px
-frontend/src/views/app-nav/tpl.ts::.nav-item::padding:8px 0
-frontend/src/views/app-nav/tpl.ts::.nav-repo-sel::gap:3px
-frontend/src/views/app-nav/tpl.ts::.nav-repo-sel::padding:6px 8px 8px
-frontend/src/views/app-nav/tpl.ts::.nav-viewer-fab::gap:8px
-frontend/src/views/app-nav/tpl.ts::.nav-viewer-fab::margin:2px 6px 6px
-frontend/src/views/app-nav/tpl.ts::.nav-viewer-fab::margin:2px 8px 6px
-frontend/src/views/app-nav/tpl.ts::.nav-viewer-fab::padding:8px 0
-frontend/src/views/app-nav/tpl.ts::.version::padding:10px 14px
+frontend/src/views/app-nav/nav-css.ts::.host::width:160px
+frontend/src/views/app-nav/nav-css.ts::.icon::width:20px
+frontend/src/views/app-nav/nav-css.ts::.icon::width:20px
+frontend/src/views/app-nav/nav-css.ts::.logo::gap:8px
+frontend/src/views/app-nav/nav-css.ts::.logo::padding:16px 0 12px
+frontend/src/views/app-nav/nav-css.ts::.logo::padding:16px 14px 12px
+frontend/src/views/app-nav/nav-css.ts::.menu-head::gap:4px
+frontend/src/views/app-nav/nav-css.ts::.menu-label::padding:8px 10px 4px
+frontend/src/views/app-nav/nav-css.ts::.nav-item::gap:8px
+frontend/src/views/app-nav/nav-css.ts::.nav-item::padding:8px 0
+frontend/src/views/app-nav/nav-css.ts::.nav-repo-sel::gap:3px
+frontend/src/views/app-nav/nav-css.ts::.nav-repo-sel::padding:6px 8px 8px
+frontend/src/views/app-nav/nav-css.ts::.nav-viewer-fab::gap:8px
+frontend/src/views/app-nav/nav-css.ts::.nav-viewer-fab::margin:2px 6px 6px
+frontend/src/views/app-nav/nav-css.ts::.nav-viewer-fab::margin:2px 8px 6px
+frontend/src/views/app-nav/nav-css.ts::.nav-viewer-fab::padding:8px 0
+frontend/src/views/app-nav/nav-css.ts::.version::padding:10px 14px
 frontend/src/views/app-preview/css.ts::.dp-hints::gap:6px
 frontend/src/views/app-preview/css.ts::.dp-placeholder--head::padding:4px 0 8px
 frontend/src/views/app-preview/css.ts::.dp-placeholder::padding:24px 0

@@ -24,9 +24,9 @@ import {
   RESOURCE_TYPES,
 } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
+import { navCSS } from "./nav-css.ts";
 // 导航页清单单一事实源（拆叶 nav-items.ts：无组件副作用，破 app-content/settings → index 跨视图耦合）
 import { navItems } from "./nav-items.ts";
-import { navCSS } from "./tpl.ts";
 
 export { type NavItem, navItems } from "./nav-items.ts";
 

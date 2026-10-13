@@ -32,7 +32,7 @@ use_when:
   - 页面记忆
   - 版本号
 invariant_anchors:
-  - frontend/src/views/app-nav/tpl.ts|navCSS
+  - frontend/src/views/app-nav/nav-css.ts|navCSS
 status: active
 ---
 

@@ -1,4 +1,7 @@
-// ===== app-nav 样式与模板 =====
+// ===== app-nav Shadow CSS =====
+// 本文件承载 app-nav 全部样式（原 tpl.ts 改名 nav-css.ts——该文件无任何模板函数，
+// 通篇仅 navCSS 一个导出，按样式文件命名对齐 仓内先例 sidebar-css.ts / menu-css.ts / css.ts）。
+// 由 index.ts 以 `<style>${navCSS}</style>` 注入 shadow 根。
 import { noAnimationsCSS, wsIconCSS } from "@/utils/dom/css.ts";
 
 export const navCSS: string = `

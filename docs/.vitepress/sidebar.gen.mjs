@@ -1625,6 +1625,10 @@ export const autoSidebar = [
         "link": "/adr/decisions/ADR-270-d1-preview-3d-r9-state-infra-decoder-shader-patches-adapters-caps-menu"
       },
       {
+        "text": "ADR-269-d1：容器扩展名单源化：registry.containerExts 声明入 JSON，Go/前端/契约三端派生",
+        "link": "/adr/decisions/ADR-269-d1-container-exts-registry-declaration"
+      },
+      {
         "text": "ADR-266-d1：体积光锥进截图：离屏/预览输出设置同构（toneMapping + 曝光镜像）",
         "link": "/adr/decisions/ADR-266-d1-volumetric-cone-in-screenshot"
       },

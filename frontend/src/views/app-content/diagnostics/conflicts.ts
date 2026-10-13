@@ -280,6 +280,9 @@ async function dgCfExecuteResolve(
       setTimeout(() => {
         pendingRescans.delete(list);
         if (!list.isConnected) return;
+        // busy 竞态正名（子代理复核 P3）：若窗口内用户手动点扫描占住 diagSyncBusy，
+        // 本次迟到复扫被守卫丢弃且不再补排——**良性**：手动那次已完成列表刷新，
+        // 「resolve 后必刷新」的语义由它兑现，不产生信息丢失。
         void runSyncConflictScan(list, esc, target);
       }, RESOLVE_RESCAN_MS),
     );

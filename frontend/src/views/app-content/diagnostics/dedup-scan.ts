@@ -53,7 +53,9 @@ export async function scanEachDirectory(
     const target = targets[i];
     // 让出一帧再启动本目录扫描（确定性帧信号）：原 setTimeout(10) 是墙钟猜测——
     // 慢机器等不到上一行进度上屏、快机器纯白等 10ms；rAF 回调即下一帧已开始合成，
-    // 与机器速度解耦（vitest happy-dom 下 rAF 真实驱动，waitFor 轮询可正常排空）。
+    // 与机器速度解耦。【环境契约】rAF 无降级守卫=刻意不加死防御（对齐仓内
+    // 「不为不存在的场景写防御」判例）：本模块消费者全在 DOM 环境（诊断页 +
+    // happy-dom 测试实证 rAF 真驱动），node 环境接入须先补降级再调用。
     await new Promise<void>((resolve) => {
       requestAnimationFrame(() => resolve());
     });

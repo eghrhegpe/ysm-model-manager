@@ -3,6 +3,7 @@
 //       作者菜单填充、批量按钮、更多菜单（打开文件夹/导入/刷新/生成索引）
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { bus } from "@/bus";
+import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import type { AppliedAdvFilter } from "@/features/dialogs/adv-filter-util.ts";
 import { createLoadGuard, type LoadGuard } from "@/utils/async/load-guard.ts";
 import type { AppTree } from "./index.ts";
@@ -112,7 +113,7 @@ function makeRoot(): { root: ShadowRoot; get: (id: string) => HTMLElement | null
       <button class="dd-item" data-more="import-file" data-testid="tree-more-import-file">导入文件</button>
       <button class="dd-item" data-more="import-dir" data-testid="tree-more-import-dir">导入文件夹</button>
       <button class="dd-item" data-more="refresh" data-testid="tree-more-refresh">刷新</button>
-      <button class="dd-item" data-more="genindex" data-testid="tree-more-genindex">生成索引</button>
+      <button class="dd-item" data-more="genindex" data-testid="tree-more-genindex">${UI_ICONS.book} 生成索引</button>
     </div></div>
     <div id="tree"></div>
     <span id="ftr-stat" data-testid="tree-ftr-stat">共 0 项</span>
@@ -890,21 +891,26 @@ describe("bindToolbarEvents — 批量与更多菜单", () => {
     bindToolbarEvents(root, vm as unknown as AppTree);
 
     const btn = getByTestId("tree-more-genindex") as HTMLElement;
+    // ADR-238 正向不变量锚：原 book 图标节点的引用身份，恢复后必须原样存活
+    const origIcon = btn.querySelector("svg");
+    expect(origIcon, "fixture 须含 book 图标（对齐 renderDropdown 的 icon+text 产出）").not.toBeNull();
     btn.click();
     // busy 态同步可观察（命令在 click 内同步启动，首个 await 前已换图标/禁用）。
     // 断言用结构判据不比对 innerHTML 字符串：序列化器会把 <polyline/> 归一成
     // <polyline></polyline>，字节比对绑不过解析往返（这亦是字符串快照的罪证之一）。
     expect((btn as HTMLButtonElement).disabled).toBe(true);
     expect(btn.querySelector("svg")).not.toBeNull();
+    expect(btn.querySelector("svg")).not.toBe(origIcon); // busy 显示的是刷新图标
     expect(btn.textContent).toBe("");
     await new Promise((r) => setTimeout(r, 0));
 
     expect(GenerateRepoIndexMock).toHaveBeenCalledWith("/repo");
     expect(toasts.some((t) => t.msg.includes("index.json 已生成"))).toBe(true);
     expect((btn as HTMLButtonElement).disabled).toBe(false);
-    // 恢复契约：原节点（fixture 里的文本「生成索引」）原位搬回，图标不残留
-    expect(btn.textContent).toBe("生成索引");
-    expect(btn.querySelector("svg")).toBeNull();
+    // 恢复契约：原节点（文本「生成索引」+ book 图标）原位搬回——图标必须是**同一引用**
+    // （节点搬移而非字符串重解析的核心卖点；textContent 恢复法会抹掉它，ADR-238 伤疤正向锁）
+    expect(btn.textContent?.trim()).toBe("生成索引");
+    expect(btn.querySelector("svg")).toBe(origIcon);
   });
 
   it("menu-more genindex 未配置仓库 → warn toast 且不生成", async () => {
@@ -935,7 +941,8 @@ describe("bindToolbarEvents — 批量与更多菜单", () => {
     // ADR-051：裸 JS Error 无 AppError.Code → 走默认 fallback（不依赖具体文案）
     expect(toasts.some((t) => t.type === "error")).toBe(true);
     expect((btn as HTMLButtonElement).disabled).toBe(false);
-    // 失败路径同样走 finally：内容按原结构归位（ADR-238 伤疤不许复发）
-    expect(btn.textContent).toBe("生成索引");
+    // 失败路径同样走 finally：内容按原结构归位、原图标引用存活（ADR-238 伤疤不许复发）
+    expect(btn.textContent?.trim()).toBe("生成索引");
+    expect(btn.querySelector("svg")).not.toBeNull();
   });
 });

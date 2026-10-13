@@ -441,6 +441,9 @@ export class AppTree extends WebComponentBase {
       // 清理虚拟滚动：scroll 监听 + ResizeObserver + 缓存引用
       cleanupVirtualScroll(this.treeRenderCtx, treeEl);
     }
+    // statAnim 在途 animateNumber 尾帧【计时器红线豁免锚】（子代理复核 P3 正名，勿误判漏清）：
+    // ≤700ms 有界尾 + 落笔目标是随 ctx GC 的 detached footer（无害写）+ 重连后新一轮
+    // updateStat 的 prev() 先行取消旧句柄——不在此登记逐元素 cancel（WeakMap 不可枚举）。
   }
 
   async _loadAuthorsAsync(): Promise<void> {

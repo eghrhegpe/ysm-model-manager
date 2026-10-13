@@ -27,6 +27,13 @@ export const ICONS: Record<string, string> = {
     '<svg class="ws-icon" viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor" stroke="none"/></svg>',
   DEVIANTART:
     '<svg class="ws-icon" viewBox="0 0 24 24"><path d="M17 3a2.83 2.83 0 1 1 4 4L13.5 14.5a4 4 0 0 1-1.4.9L8 17l1.6-4.1a4 4 0 0 1 .9-1.4L18 4"/><path d="M7 14l-1 5 5-1"/></svg>',
+  // BOOTH 是交易市场 → 购物袋字形（与既有图标同风格：**语义字形，非商标**）
+  BOOTH:
+    '<svg class="ws-icon" viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>',
+  // CMS 蓝图站 → 网格版面字形
+  CMS: '<svg class="ws-icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="3" y1="9" x2="21" y2="9"/></svg>',
+  // 未知站点兜底字形（地球）——**不得**回退 CREATOR：那会让「未知平台」冒充创作者身份
+  SITE: '<svg class="ws-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
 
   // --- 通用操作图标 ---
   DOWNLOAD:
@@ -49,13 +56,16 @@ const SITE_ICON_MAP: Record<string, string> = {
   vroid: ICONS.VROID,
   nicovideo: ICONS.NICOVIDEO,
   deviantart: ICONS.DEVIANTART,
+  booth: ICONS.BOOTH,
+  "cms-blueprint": ICONS.CMS,
 };
 
 export function getSiteIcon(siteId: string): string {
   // 原型键穿透——`getSiteIcon("toString")`/`"constructor"`/
   // `"__proto__"` 会命中 Object.prototype 成员（truthy），绕过回退契约；消费方把
   // 返回值直接拼 innerHTML（当前 String() 结果无尖括号不构成 XSS，但回退语义失效）
-  if (!Object.hasOwn(SITE_ICON_MAP, siteId)) return ICONS.CREATOR;
+  // 兜底用 SITE（地球）而非 CREATOR：平台图标位不该显示创作者身份
+  if (!Object.hasOwn(SITE_ICON_MAP, siteId)) return ICONS.SITE;
   return SITE_ICON_MAP[siteId];
 }
 

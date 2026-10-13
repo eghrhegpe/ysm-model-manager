@@ -101,7 +101,6 @@ auto_fields:
     - sectionHeader
     - singleBenchReadIds
     - singleBenchReadIterations
-    - syncPerfBaselineControls
   tests:
     - frontend/src/views/app-content/diagnostics/conflicts.test.ts
     - frontend/src/views/app-content/diagnostics/health.test.ts

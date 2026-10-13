@@ -111,6 +111,42 @@ check("countCoverage：模板串 ${} 插值内注释正确恢复 code 帧", () =
   assert.equal(c["aria-hidden"], 1, `应为 1，实际 ${c["aria-hidden"]}`);
 });
 
+// ⚠️ 上面那条抓不住本缺陷：夹具写在**一行内**，串尾即文件尾——「回到 tpl 帧」与
+// 「卡在 code 帧」两种状态得到同一个计数结果，断言无判别力（假绿灯形状）。
+// 真实现漏掉 `}` 出帧后，多行模板之后的注释会被当字符串留着 → 噪音计数。
+check("countCoverage：多行模板的 ${} 结束后，其后行注释必须回到 code 帧被剥", () => {
+  // biome-ignore lint/suspicious/noTemplateCurlyInString: 夹具须保留字面 ${} 源码形态
+  const src = [
+    "const tpl = [",
+    '  `<button aria-label="1">`,',
+    '    `${esc("k")}`,',
+    "  `</button>`,",
+    '].join("");',
+    "// aria-label aria-label（模板结束后的行注释不得计数）",
+    "/* aria-label 块注释同样不得计数 */",
+  ].join("\n");
+  const c = countCoverage(src);
+  assert.equal(
+    c["aria-label"],
+    1,
+    `aria-label 应为 1（只有模板内那处真命中），实际 ${c["aria-label"]}——插值 \${} 未出帧，注释被当字符串留着`,
+  );
+});
+
+check("countCoverage：${} 内含对象字面量花括号不得提前出帧（嵌套深度须计数）", () => {
+  // biome-ignore lint/suspicious/noTemplateCurlyInString: 夹具须保留字面 ${} 源码形态
+  const src = [
+    "const tpl = `${ { ariaLabel: \"x\" }.ariaLabel }`;",
+    "// aria-hidden 注释不计",
+  ].join("\n");
+  const c = countCoverage(src);
+  assert.equal(
+    c["aria-hidden"],
+    undefined,
+    `插值内的对象字面量 } 不得被当作出帧点，否则注释行留在 code 帧外被计数：实际 ${c["aria-hidden"]}`,
+  );
+});
+
 check("countCoverage：ARIA_ATTR 常量引用形态计数（D12 收编不假跌）", () => {
   // 收编后渲染层写 setAttribute(ARIA_ATTR.label, …)——字面量在契约声明处、
   // 引用在消费处。两种形态都必须计入同一指标，否则「收编 = 覆盖率下降」假红。

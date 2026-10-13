@@ -92,16 +92,23 @@ interface ScanResult {
  */
 export function stripA11yNoise(text: string): string {
   const chars = text.split("");
-  type Frame = "code" | "sq" | "dq" | "tpl";
-  const stack: Frame[] = ["code"];
+  // code 帧带 braceDepth：`${` 推入的 code 帧，其配对的 `}`（深度 0 时）必须**出帧回 tpl**——
+  // 否则模板串一旦被误判为"仍在 code 帧"，后续所有注释都被当字符串留着，
+  // aria-* / document keydown 提及全数计入（实测曾在单文件漏遮 65 行注释）。
+  type Frame =
+    | { kind: "code"; braceDepth: number }
+    | { kind: "sq" }
+    | { kind: "dq" }
+    | { kind: "tpl" };
+  const stack: Frame[] = [{ kind: "code", braceDepth: 0 }];
   const n = text.length;
   let i = 0;
   while (i < n) {
-    // stack 底恒为 code（pop 只发生在非 code 帧），?? 兜底防病态输入
-    const top = stack[stack.length - 1] ?? "code";
+    // stack 底恒为 code（底帧 braceDepth 归 0 也不弹出，见 `}` 分支的 stack.length > 1 守卫）
+    const top = stack[stack.length - 1] ?? { kind: "code", braceDepth: 0 };
     const c = text.charAt(i);
     const next = i + 1 < n ? text.charAt(i + 1) : "";
-    if (top === "code") {
+    if (top.kind === "code") {
       if (c === "/" && next === "/") {
         while (i < n && text.charAt(i) !== "\n") chars[i++] = " ";
         continue;
@@ -119,13 +126,24 @@ export function stripA11yNoise(text: string): string {
         }
         continue;
       }
-      if (c === "'") stack.push("sq");
-      else if (c === '"') stack.push("dq");
-      else if (c === "`") stack.push("tpl");
+      if (c === "'") stack.push({ kind: "sq" });
+      else if (c === '"') stack.push({ kind: "dq" });
+      else if (c === "`") stack.push({ kind: "tpl" });
+      // 花括号深度：嵌套的 `{ … }`（对象字面量 / 块语句 / 模板内的模板）不得被当出帧点，
+      // 只有深度归零的那个 `}` 才是 `${` 的终点。字符串/注释内的花括号已由各自分支吞掉，
+      // 不参与计数（sq/dq/tpl 帧无 braceDepth 字段）。
+      else if (c === "{") top.braceDepth += 1;
+      else if (c === "}") {
+        if (top.braceDepth > 0) top.braceDepth -= 1;
+        else if (stack.length > 1) {
+          // 深度 0 且非底帧 ⇒ 这是 `${` 插值的终点，回到外层 tpl 帧
+          stack.pop();
+        }
+      }
       i++;
       continue;
     }
-    if (top === "sq" || top === "dq") {
+    if (top.kind === "sq" || top.kind === "dq") {
       if (c === "\\") {
         i += 2;
         continue;
@@ -136,7 +154,7 @@ export function stripA11yNoise(text: string): string {
         i++;
         continue;
       }
-      if ((top === "sq" && c === "'") || (top === "dq" && c === '"')) stack.pop();
+      if ((top.kind === "sq" && c === "'") || (top.kind === "dq" && c === '"')) stack.pop();
       i++;
       continue;
     }
@@ -151,7 +169,7 @@ export function stripA11yNoise(text: string): string {
       continue;
     }
     if (c === "$" && next === "{") {
-      stack.push("code");
+      stack.push({ kind: "code", braceDepth: 0 });
       i += 2;
       continue;
     }

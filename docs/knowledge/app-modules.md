@@ -100,6 +100,7 @@ status: active
 - 不引入 `window.__*` 全局变量（治理红线 §3.1）；唯一例外是显式声明类型的 `window.applyTheme`
 - 主题白名单外的值一律回落 `system`；动画全局开关经 `document.documentElement` 的 `.no-animations` 类控制，组件动画必须响应该类
 - **隐私模式 localStorage 读写全部走 safe 包装**（P3 修复：`initTheme` 的 try/catch 两分支、`applyUIPrefs` 四项、`_devtools` 标志——原裸调在存储禁用时抛错会中断启动 IIFE 或中止模块求值）；`?dev=1` 与 `_devtools` 均生效（`_devtools` 无写入方，实际仅 ?dev=1 可用，注释声明）
+- **开发态判据已提为单源**（2026-10-13）：`_devMode` 的表达式不再写在本文件顶层，改调 `utils/debug/dev-mode.ts|isDevMode()`。起因是视图层出现第二个消费者（创作者头像调试提取探针，见知识卡 `app-content-site`），两处各写一遍 URL/localStorage 判定就是第二个真值源、口径必漂移。⚠️ **两个开关语义相反，别混用**：`isDevMode()` **默认关**（管昂贵/侵入性调试动作要不要执行），`debug.ts|isDebugEnabled()` **默认开**（管 dbg 日志要不要输出）——拿后者当调试动作的门等于门没关
 
 ## 相关
 

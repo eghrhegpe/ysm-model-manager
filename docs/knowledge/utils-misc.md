@@ -5,15 +5,18 @@ tier: architecture
 category: utils
 source_files:
   - frontend/src/utils/debug/debug.ts
+  - frontend/src/utils/debug/dev-mode.ts
 auto_fields:
   symbols_with_lines:
     - dbg
     - isDebugEnabled
+    - isDevMode
     - safeStr
   tests:
     - frontend/src/preview-3d/infra/debug-render.test.ts
     - frontend/src/utils/debug/debug.ring.test.ts
     - frontend/src/utils/debug/debug.test.ts
+    - frontend/src/utils/debug/dev-mode.test.ts
 quick_groups:
   - 跨组件通信与页面
 quick_intents:
@@ -35,6 +38,7 @@ use_when:
 invariant_anchors:
   - frontend/src/utils/debug/debug.ts|dbg
   - frontend/src/utils/debug/debug.ts|safeStr
+  - frontend/src/utils/debug/dev-mode.ts|isDevMode
 status: active
 ---
 
@@ -56,6 +60,9 @@ status: active
 - `window._DBG_RING` — 最近 200 条日志复盘入口（含时间/tag/level/截断后的参数）
 - `window.debugGetSpec(path?)` — 控制台调试助手：动态 import `GetModel3DSpec` binding 取 Go 3D spec 骨骼数据
 
+`dev-mode.ts`：
+- `isDevMode(): boolean` — **开发态判据单源**（默认**关**）：URL 含 `dev` 参数（`?dev` / `?dev=1`）或 localStorage `_devtools === "1"`。消费方：`app-modules.ts`（F12 DevTools 接线 + debugGetSpec 挂载，原内联表达式已收拢于此）、`app-content/site/events.ts`（头像调试提取探针的门）。运行时求值，隐私模式经 safeGet 静默降级
+
 ## 与其他子系统关系
 
 - `dbg` 消费方众多：`app-tree`（index / toolbar-events / render）、`app-sidebar`（index / loader）、`app-sync-manager/index.ts`、`app-content/index.ts`、`features/community/community-data.ts`、`app-content/site/events.ts`、`features/community/download-queue.ts`、`core/handlers/sync.ts`、`utils/model2d.ts`
@@ -68,6 +75,7 @@ status: active
 - dbg 必须带 tag 便于过滤；参数经内部 safeStr 截断（200 字符）防大对象撑爆环形缓冲，**Error 分支同样截断**（P3 修复：原直接返回 v.message 可突破上限）；**`JSON.stringify` 返回 undefined（函数/symbol）时走 String 兜底**（P3 修复：原直接 `.length` 为 strict 下 TS2532，运行时靠 catch 兜底）
 - `window._DBG_RING` / `window.debugGetSpec` 属调试豁免接口，不是 `window.__*` 状态红线（不存页面状态）
 - 环形缓冲**一次性截断**到 200 条上限（P3 修复：原 `shift()` 单条收敛，外部预置超量时长期无法回归）
+- ⚠️ **两个调试开关语义相反，绝不可互换**（2026-10-13）：`debug.ts|isDebugEnabled()` **默认开**（`?nodebug=1` / `_debug=0` 才关），只管「dbg 日志要不要输出」；`dev-mode.ts|isDevMode()` **默认关**（须显式 `?dev` / `_devtools=1`），管「昂贵/侵入性调试**动作**要不要执行」。给昂贵探针装门必须用后者——用 `isDebugEnabled()` 等于门从来没关过（生产默认 true）。典型反例见知识卡 `app-content-site`：头像点击无条件调 Go 全库扫描
 - **`?nodebug=1` 开关语义**（P4 观察）：实现为 `URLSearchParams.has("nodebug")` 存在即关闭——`?nodebug=0` 也会关闭，与文档「=1」语义不符；`RingEntry.level` 为幽灵字段（声明存在但 dbg 永不写入）
 
 ## 相关

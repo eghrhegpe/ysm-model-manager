@@ -41,6 +41,14 @@ function assert(stdout, needle, label) {
   }
 }
 
+function assertNot(stdout, needle, label) {
+  if (stdout.includes(needle)) {
+    errors.push(`[${label}] 期望输出不含 "${needle}"，实际:\n${stdout.trim().slice(0, 200)}`);
+  } else {
+    console.log(`   ✓ ${label}`);
+  }
+}
+
 console.log("=== check-knowledge-drift --affected 契约 ===");
 
 // 1. 文件精确命中
@@ -63,6 +71,38 @@ assert(out4, "✅", "无关文件 → 无需复核");
 // 5. 无参数 → 用法提示（退出码仍 0）
 const out5 = runAffected();
 assert(out5, "用法", "无参数 → 打印用法提示");
+
+// ── 分级连带（ADR-338 刀 1）：表层改动白名单 ──
+// 纯样式 / i18n 文案数据 / 静态资产 属表层改动，默认跳过（收窄触发面，非弱化闸）。
+
+// 6. 纯样式 CSS（theme 卡覆盖 frontend/css/variables.css）→ 跳过，不提示复核
+const out6 = runAffected("frontend/css/variables.css");
+assertNot(out6, "建议复核", "纯样式 CSS → 不提示复核");
+assert(out6, "theme", "纯样式 CSS → 跳过 theme（白名单可观测）");
+
+// 7. i18n 文案（i18n 卡覆盖 frontend/src/locales/zh-CN.ts）→ 跳过，不提示复核
+const out7 = runAffected("frontend/src/locales/zh-CN.ts");
+assertNot(out7, "建议复核", "i18n 文案 → 不提示复核");
+assert(out7, "i18n", "i18n 文案 → 跳过 i18n");
+
+// 8. i18n 引擎逻辑（frontend/src/core/i18n/locale.ts，非数据目录）→ 白名单不误吞，仍提示
+const out8 = runAffected("frontend/src/core/i18n/locale.ts");
+assert(out8, "建议复核", "i18n 引擎逻辑 → 仍提示复核");
+assert(out8, "i18n", "i18n 引擎逻辑 → i18n 命中");
+
+// 9. 混合（逻辑 + 表层）→ 仍提示，表层卡标注跳过
+const out9 = runAffected("frontend/src/core/i18n/locale.ts", "frontend/css/variables.css");
+assert(out9, "建议复核", "混合（逻辑+表层）→ 仍提示");
+assert(out9, "theme", "混合 → 表层卡 theme 标注跳过");
+
+// 10. --no-surface-skip 关闭白名单 → 回到旧行为（两周观察期对照/回滚验证）
+const out10 = runAffected("--no-surface-skip", "frontend/css/variables.css");
+assert(out10, "建议复核", "--no-surface-skip → CSS 恢复提示");
+assert(out10, "theme", "--no-surface-skip → theme 命中");
+
+// 11. quiet 机读模式：仅表层改动 → 零输出（钩子可读性不被 skip 说明污染）
+const out11 = runAffected("--quiet", "frontend/css/variables.css");
+assertNot(out11, "theme", "quiet + 纯样式 → 不输出卡 stem");
 
 if (errors.length) {
   console.log(`FAILED: ${errors.length} issue(s)`);

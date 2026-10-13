@@ -48,6 +48,8 @@
 
 落地形态：`check-knowledge-drift --affected` 增加白名单（样式文件/纯测试路径不触发卡检查）——**不是弱化闸，是收窄触发面**。
 
+- **刀 1 已落**（2026-10-13）：白名单落地为脚本内 `SURFACE_CHANGE_PATTERNS`，分级规则——本次变更里存在 ≥1 个**非表层**命中文件的卡才提示复核；全部命中都是表层的卡静默跳过（`--no-surface-skip` 关闭白名单回旧行为，供两周观察期对照与回滚验证；`--quiet` 机读模式不输出 skip 说明，保持钩子可读性）。**判据路径锚定、不误吞逻辑**：白名单只含纯样式（`.css/.scss/.sass/.less/.pcss`）、i18n 文案数据（`frontend/src/locales/`、`frontend/public/locales/`）、静态资产（`.svg/位图/字体`）；`frontend/src/core/i18n/*`（t/locale/placeholder 引擎逻辑）明确**不**白名单。**实测摩擦消除**（改前 → 改后）：`frontend/css/variables.css` 改色 → 不再提示 `theme`；`frontend/src/locales/zh-CN.ts` 改译 → 不再提示 `i18n`；`frontend/src/core/i18n/locale.ts` 改逻辑 → **仍提示**（白名单不误吞）。契约测试 `tests/check-knowledge-drift-affected.ts` 新增 6 条断言守护（纯样式跳过 / 文案跳过 / 逻辑仍提示 / 混合分级 / escape 恢复 / quiet 零输出）。**门禁终态**：`check-knowledge-drift` 0 ERROR / 3 WARN（基线不变）、`check-adr-drift` 绿、scripts `tsc` 类型检查通过
+
 ### 2.2 第二刀：知识卡域合并（中风险，本次试点已落）
 
 粒度裁定：**一张卡 = 一条可独立讲述的链/域**，不是「一个文件一张卡」。判据：两卡正文互引 ≥2 处 + 消费场景重叠 → 合并候选。

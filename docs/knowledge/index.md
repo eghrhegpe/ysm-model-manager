@@ -409,7 +409,7 @@
 | 🏗 go-coverage-gate | 覆盖率门禁语句加权口径 | architecture | — | 覆盖率门禁, go 覆盖率, 包覆盖率 0%, 单函数拖垮整包, coverprofile 解析 |
 | 🍃 load-guard | 代际守卫唯一出口 createLoadGuard | leaf | — | 新增需要「丢弃过期一轮结果」的代际逻辑, 见到单文件目录想顺手收敛进 utils/base/, 判断全仓代际守卫是否还有手搓残留, 想给 LoadGuard 加并发限制之前 |
 | 🏗 mock-path-guard | mock 路径守卫 check-mock-paths | architecture | — | vi.mock 失效, mock 路径守卫, mock-path-ignore, ADR-224, 测试隔离静默丢失 |
-| 🏗 pre-commit-hook | 提交前钩子 pre-commit | architecture | — | pre-commit, 钩子, 文档同步, 自动 stage, 并发隔离, 逃生留痕 |
+| 🏗 pre-commit-hook | 提交前钩子 pre-commit | architecture | — | pre-commit, 钩子, 文档同步, 自动 stage, 并发隔离, 逃生留痕, 表层改动, 白名单 |
 | 🏗 pre-push-gate | 推送前门禁 pre-push-gate | architecture | — | 推送门禁, 质量门禁, 门禁阻断, 域级检查, go build, vite build, 契约测试, 工具输出解析 |
 | 🏗 safe-error-msg | 安全错误消息提取 utils | architecture | — | 错误消息, Worker 错误, catch, safeErrorMessage, 异常提取 |
 | 🏗 script-shared-cores | scripts 共享核演进（diff-coverage-core + cycles） | architecture | — | 覆盖率门禁, diff-coverage, 循环依赖, 共享核, _lib, check-circular, findCycles, 脚本去重 |

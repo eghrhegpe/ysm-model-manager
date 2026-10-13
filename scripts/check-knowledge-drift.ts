@@ -25,6 +25,8 @@
  *   node scripts/check-knowledge-drift.ts --affected <f>…  # 主动：源码变更即列出受影响知识卡（治未病）
  *     # 常与 git 联动：git diff --name-only | xargs -I{} node scripts/check-knowledge-drift.ts --affected {}
  *     # 卡 frontmatter 声明 affected: false（快照/报告型卡）→ 不参与匹配，source_files 只服务覆盖率统计
+ *     # 分级连带（ADR-338 刀 1）：默认跳过「仅表层改动」命中的卡（纯样式/i18n 文案/静态资产），
+ *     #    --no-surface-skip 关闭白名单回到旧行为（两周观察期对照用）。见 SURFACE_CHANGE_PATTERNS。
  *
  * 退出码：发现 ERROR → 1；否则 0（WARN 不阻断；--affected 恒为 0）。
  * 设计意图：知识卡漂移检查（与代码现实比对）+ 源码变更主动防御。
@@ -59,7 +61,7 @@ import { toPosix } from "./_lib/to-posix.ts";
 // 参数解析统一走 _lib/parse-args（positional 脚本契约：未知 flag 白名单拦截）
 // --kc-dir：隔离模式，指向临时知识卡目录（契约测试用，避免临时卡污染 docs/knowledge/ 生成物）
 const ARGS = parseArgs(process.argv.slice(2), {
-  bools: ["json", "verbose", "quiet", "affected"],
+  bools: ["json", "verbose", "quiet", "affected", "no-surface-skip"],
   strings: ["files", "kc-dir"],
 });
 if (ARGS.help) {
@@ -70,6 +72,7 @@ if (ARGS.help) {
   console.log("  --verbose   文本报告 + 未覆盖文件完整清单");
   console.log("  --affected <f>…  源码变更即列出受影响知识卡（配合 git diff --name-only）");
   console.log("  --quiet     仅 --affected 使用：只输出卡 stem，供钩子机读");
+  console.log("  --no-surface-skip  关闭表层改动白名单（--affected 分级连带：默认跳过仅 CSS/文案/资产的卡）");
   console.log("  --kc-dir <dir>  隔离模式：扫描指定目录而非 docs/knowledge/（契约测试打桩用）");
   process.exit(0);
 }
@@ -660,6 +663,34 @@ function checkKnowledgeCoverage(cards: any[]) {
   }
 }
 
+// ── 表层改动白名单（分级连带，ADR-338 刀 1）──────────
+// 「表层改动」= 改动不可能破坏知识卡记录的行为不变量 / 符号契约，只影响观感或文案：
+//   ① 纯样式（颜色/间距/层叠令牌）② i18n 文案数据 ③ 静态资产（图标/位图/字体）。
+// 判据以「路径锚定」而非文件名启发式：只白名单可实证的类别，避免误吞逻辑文件。
+// 明确不白名单（反例）：frontend/src/core/i18n/*（t.ts / locale.ts / placeholder.ts 是 i18n 引擎
+// 逻辑，不在 frontend/src/locales/ 数据目录下）；frontend/src/utils/resource/*.ts（符号/类型契约）。
+// 分级连带：--affected 只在本次变更里存在 ≥1 个「非表层」命中文件的卡才提示复核；
+// 全部命中都是表层的卡静默跳过（降日常摩擦，不弱化闸本身）。--no-surface-skip 关闭白名单
+// 回到旧行为（供 ADR-338 两周观察期对照与回滚验证）。
+const SURFACE_CHANGE_PATTERNS: { re: RegExp; why: string }[] = [
+  { re: /\.css$/i, why: "纯样式（颜色/间距/层叠令牌）" },
+  { re: /\.scss$/i, why: "纯样式（SCSS）" },
+  { re: /\.sass$/i, why: "纯样式（Sass）" },
+  { re: /\.less$/i, why: "纯样式（Less）" },
+  { re: /\.pcss$/i, why: "纯样式（PostCSS）" },
+  { re: /^frontend\/public\/locales\//i, why: "i18n 文案（locale JSON）" },
+  { re: /^frontend\/src\/locales\//i, why: "i18n 文案（locale TS 常量）" },
+  { re: /\.svg$/i, why: "图标资产" },
+  { re: /\.(?:png|jpe?g|webp|gif|avif)$/i, why: "位图资产" },
+  { re: /\.(?:woff2?|ttf|otf)$/i, why: "字体资产" },
+];
+
+/** 判断给定仓库相对路径是否为「表层改动」（判据见 SURFACE_CHANGE_PATTERNS 注释）。 */
+function isSurfaceChange(p: string): boolean {
+  const posix = toPosix(p);
+  return SURFACE_CHANGE_PATTERNS.some(({ re }) => re.test(posix));
+}
+
 // ── 主动防御：源码变更即标记受影响知识卡 ──────────────
 // 给定变更文件清单（仓库相对 POSIX 路径），输出引用了它们的知识卡。
 // 与 git 联动：git diff --name-only | xargs -I{} node scripts/check-knowledge-drift.ts --affected {}
@@ -688,30 +719,52 @@ function runAffected(changed: string[]) {
     const sources = parseSourceFiles(fm).map((s) => toPosix(s));
     if (sources.length) index.push({ card: cf.replace(/\.md$/, ""), sources });
   }
-  const hits = new Map();
+  const surfaceSkip = Boolean(ARGS["no-surface-skip"]) === false; // 默认启用白名单
+  const hits = new Map<string, Set<string>>(); // card → 非表层命中文件
+  const surfaceOnly = new Map<string, Set<string>>(); // card → 仅表层命中文件（白名单跳过）
   for (const ch of changed.map((c) => toPosix(c))) {
+    const surface = isSurfaceChange(ch);
     for (const { card, sources } of index) {
-      if (sources.some((entry) => covers(ch, entry))) {
+      if (!sources.some((entry) => covers(ch, entry))) continue;
+      if (surface && surfaceSkip) {
+        if (!surfaceOnly.has(card)) surfaceOnly.set(card, new Set());
+        surfaceOnly.get(card)!.add(ch);
+      } else {
         if (!hits.has(card)) hits.set(card, new Set());
-        hits.get(card).add(ch);
+        hits.get(card)!.add(ch);
       }
     }
   }
-  if (hits.size === 0) {
+  if (hits.size === 0 && surfaceOnly.size === 0) {
     if (!QUIET)
       console.log(`✅ 变更的 ${changed.length} 个文件未被任何知识卡 source_files 引用，无需复核。`);
     process.exit(0);
     return;
   }
   if (QUIET) {
-    // 机读模式：仅输出卡 stem，每行一个（供 prepare-commit-msg 钩子消费）
+    // 机读模式：仅输出「非表层命中」的卡 stem，每行一个（供 prepare-commit-msg 钩子消费）；
+    // 仅表层改动的卡不输出，保持机器可读性（stems 清单不被 skip 说明污染）。
     for (const card of [...hits.keys()].sort()) console.log(card);
+    process.exit(0);
+    return;
+  }
+  if (hits.size === 0) {
+    // 全部命中都是表层改动 → 白名单生效，不提示复核（分级连带：收窄触发面，非弱化闸）
+    console.log(
+      `✅ 本次 ${changed.length} 个变更文件对知识卡均为表层改动（样式/文案/资产），` +
+        `已跳过 ${surfaceOnly.size} 张卡: ${[...surfaceOnly.keys()].sort().join(", ")}`,
+    );
     process.exit(0);
     return;
   }
   console.log(`⚠ 以下 ${hits.size} 张知识卡引用了本次变更的文件，建议复核:`);
   for (const [card, files] of [...hits.entries()].sort()) {
     console.log(`  - ${card}  ←  ${[...files].join(", ")}`);
+  }
+  if (surfaceOnly.size) {
+    console.log(
+      `（另有 ${surfaceOnly.size} 张卡仅表层改动命中，已跳过: ${[...surfaceOnly.keys()].sort().join(", ")}）`,
+    );
   }
   process.exit(0);
 }

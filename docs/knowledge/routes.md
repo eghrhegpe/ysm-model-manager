@@ -95,7 +95,7 @@
 | 页面、当前页、状态管理、page store、currentPage | [页面状态管理 page-store.ts](./page-store.md) | — |
 | 自主动画、眨眼、节拍检测、模型感知 | [3D 感知系统 perception](./perception.md) | — |
 | pointerdown、pointermove、pointerup、触屏、拖拽、旋转 | [Pointer Events 统一交互（触屏 + 桌面）](./pointer-events.md) ⚠️歧义（另见 import-queue.md） | ADR-047 核心立项 A：全前端拖拽/缩放/旋转/hover 交互从 mouse 事件统一迁移 **Pointer Events**（`pointerdown/move/up` + `setPointerCapture` + CSS `… |
-| pre-commit、钩子、文档同步、自动 stage、并发隔离、逃生留痕 | [提交前钩子 pre-commit](./pre-commit-hook.md) | `.githooks/pre-commit` 在 commit 前跑秒级 gen 脚本同步文档/索引/知识卡机器生成区，并**仅 stage 本次 gen 实际 touch 的文件**（gen 前后快照 diff 对比，2026-08-17… |
+| pre-commit、钩子、文档同步、自动 stage、并发隔离、逃生留痕、表层改动、白名单 | [提交前钩子 pre-commit](./pre-commit-hook.md) | `.githooks/pre-commit` 在 commit 前跑秒级 gen 脚本同步文档/索引/知识卡机器生成区，并**仅 stage 本次 gen 实际 touch 的文件**（gen 前后快照 diff 对比，2026-08-17… |
 | 推送门禁、质量门禁、门禁阻断、域级检查、go build、vite build、契约测试、工具输出解析 | [推送前门禁 pre-push-gate](./pre-push-gate.md) | `.githooks/pre-push`（薄壳）→ `scripts/pre-push-gate.ts`（调度器）：本地质量门禁核心，**CI 红之前本地先红**。按变更域（Go / 前端 / 数据 / 文档）裁剪检查，硬错误（编译/测试/… |
 | 3D 控制器 / MMD 播放、截图按钮 / 相机控制、模型切换、3D 入口 / nav-fab、siblings / 容器内模型、资源包模型直达 | [3D 预览控制器（声明式菜单节点）](./preview-controls.md) | > ⚠️ **重要前提（ADR-076 v2 Phase 2 重构后）**：相机操作已收编进**核心声明式根菜单**（⚙️ 按钮 → `mountPreviewRootMenu` 的 `camera` 项），底部导航弹窗已删除。现存的 `m… |
 | 3D 预览、统一预览外壳、程序化天空 / sky / 背景 / scene.background、PreviewAdapter 适配器、全模型预览（YSM / VRM / MMD / Litematic）、mount3D | [统一 3D 预览核心 preview-core](./preview-core.md) ⚠️歧义（另见 app-preview.md、go-threejs.md） | `frontend/src/preview-3d/adapters/mount-preview-core.ts` 是**所有富格式 3D 预览的单一事实外壳**——持有单实例 renderer / scene / camera / Orbi… |

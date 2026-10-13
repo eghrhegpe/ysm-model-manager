@@ -335,7 +335,7 @@
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 311 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 76 |
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 141 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 359 |
+| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 360 |
 | _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 229 |
 | runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 94 |
 | atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 121 |
@@ -362,14 +362,14 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | pushOne | `frontend/src/views/app-sidebar/sync-flow.ts` | 185 |
-| waitBusQuiet | `frontend/src/views/app-sidebar/sync-flow.ts` | 231 |
+| waitBusQuiet | `frontend/src/views/app-sidebar/sync-flow.ts` | 232 |
 
 ### `sync:download:missing`
 
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| pushOne | `frontend/src/views/app-sidebar/sync-flow.ts` | 200 |
+| pushOne | `frontend/src/views/app-sidebar/sync-flow.ts` | 206 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -439,7 +439,7 @@
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 189 |
 | applyFsaState | `frontend/src/views/app-content/settings/init.ts` | 389 |
 | onWebRepoAuthClick | `frontend/src/views/app-content/settings/init.ts` | 417 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 360 |
+| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 361 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |

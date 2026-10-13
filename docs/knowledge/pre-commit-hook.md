@@ -60,6 +60,8 @@ use_when:
   - 自动 stage
   - 并发隔离
   - 逃生留痕
+  - 表层改动
+  - 白名单
 invariant_anchors:
   - .githooks/pre-commit|snap_docs
   - .githooks/pre-commit|GEN_SKIPPED
@@ -97,7 +99,7 @@ status: active
 - 精确 stage：diff 快照取 `>` 侧（新增/变化文件）逐一 `git add`，无 diff 无副作用；**并发下失效修复**（2026-09-01）：stage 判定下沉 `_lib/gen-stage.ts`（stage = 快照变化 ∩ 非并行 dirty，`??` 按 gen 前后存在性区分），契约测试 `tests/test_gen_stage.ts` 守护
 - **引用完整性闸（2026-10-09，锐评第三刀）**：ADR-151-d1 关掉的是「误收编他人**身份**」的门，没关「**引用**」这门——聚合生成物（`docs/adr/index.md` / `routes*.md` / `index.md`…）内容是全体输入的纯函数，会把**他人尚未入库**的新文件写进自己正文，被正常收编 ⇒ 提交里留下悬空引用（实证：未提交的 `ADR-235-d1-sky-cap-cap.md` 被重新生成的 `docs/adr/index.md` 登记，随本次提交一起走，本地全绿、**远端必红**）。现收编前过一道 `_lib/gen-ref-integrity.ts`：生成物若引用**不在索引**的仓库文件（`git ls-files` − 本次暂存删除），则**退出本次收编**并 stderr 点名缺失目标——与 ADR-151-d1 同向红线（漏收编无害／误收编有害）。保守边界：只认 `.md` 里的 markdown **相对链接**、跳过 scheme/绝对路径/纯锚点/代码围栏；判据不可得（`git ls-files` 失败）时**跳过检查并告警**而非按空集判定（空集会把所有含链接的产物集体滞留＝误判方向的伤害）。契约测试 `tests/test_gen_ref_integrity.ts`（含**真实临时 git 仓**端到端：幽灵 ADR → 拒收编 + 点名；目标入库 → 正常收编不误伤）
 - 兜底收窄（ADR-150）：`GEN_SNAP` 缺失时**不** `git add -u docs/`，仅置 `GEN_SKIPPED=1` 跳过并告警——防止吞并行会话未提交漂移（实证 `ebb921a5` 误吞 96 张知识卡）
-- drift `--affected` 秒级接入（ADR-087）：取本次 stage 文件查知识卡漂移，不自动 stage
+- drift `--affected` 秒级接入（ADR-087）：取本次 stage 文件查知识卡漂移，不自动 stage；**分级连带（ADR-338 刀 1，2026-10-13 落地）**：表层改动默认不触发卡提示——纯样式（`.css/.scss/.less`）、i18n 文案数据（`frontend/src/locales/`、`frontend/public/locales/`）、静态资产（`.svg/位图/字体`）只属观感或文案，改不动知识卡记录的行为不变量。分级规则：本次变更里存在 ≥1 个**非表层**命中文件的卡才提示复核；全部命中都是表层的卡静默跳过。判据在脚本 `SURFACE_CHANGE_PATTERNS`（**路径锚定**，非文件名启发式——故不误吞 `frontend/src/core/i18n/*` 引擎逻辑），`--no-surface-skip` 关闭白名单回旧行为（两周观察期对照/回滚验证用）；契约测试 `tests/check-knowledge-drift-affected.ts` 守护（纯样式→跳过、逻辑→仍提示、混合→分级、escape→恢复）
 - 智能 stage：改源码自动 stage 同名 `.test.ts`（防误 stage）；推导逻辑已下沉 `scripts/_lib/commit-blocks/smart-stage.ts`（ADR-323 阶段 2）——`stripSourceSuffix` 纯函数复刻旧 shell 最短后缀匹配、`deriveTestTargets` 注入式存在性判定，由 `tests/test_commit_smart_stage.ts` 守护。**已知缺陷刻意保留**：`foo.d.ts` → base `foo.d`（应为 `foo`），旧 shell `base="${f%.ts}"` 即如此，仓内有真实 `*.d.ts`（`three-glsl.d.ts` 等）故边界是活的；测试以「缺陷等价性锚点」锁死该行为，修复须是一次显式测试变更（ADR-323 §4：搬迁不夹带行为修复）
 - gofmt 自动修复 staged go 文件（失败仅提示）：经 `_lib/commit-blocks/clean-staged-filter.ts` 过滤后逐个 `gofmt -w` + `git add`
 - biome 自动修复 staged frontend TS/TSX（2026-09 接线，镜像 gofmt 范式）：只处理 `git diff --cached` 的 `frontend/*.ts/tsx`，跳过含未暂存编辑的文件（防混拼半成品），`check-biome.ts --write --files` 原地修复后重新 stage；失败仅提示不阻断（pre-push 只读校验兜底）。逃生阀 `YSM_SKIP_BIOME_FIX=1`。曾长期只有 pre-push 只读门禁、与 gofmt 不对称（头注释 "—write pre-commit 用" 空挂），2026-09 补齐

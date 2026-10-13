@@ -267,6 +267,19 @@ describe("app-sync-manager — instance 置空/移除（空实例态收口）", 
     unmountElement(el);
   });
 
+  // 回归锁：占位块整体覆盖 innerHTML 会连骨架里的 <style> 一并抹掉，
+  // 若占位块不自带样式表，.sm-no-instance 的 padding/color 无规则来源 → 视觉退化。
+  it("占位块自带样式表（.sm-no-instance 的样式规则在场，非裸 div）", async () => {
+    const { el } = mount();
+    await waitFor(() => renderMock.mock.calls.length > 0, 5000);
+    el.setAttribute("instance", "");
+    await waitFor(() => el.innerHTML.includes("未指定整合包"), 5000);
+    // 规则存在性（不逐条比对 CSS 值——值改动属 sm-css.ts 维护范畴）
+    expect(el.querySelector("style")?.textContent).toContain(".sm-no-instance");
+    expect(el.querySelector(".sm-no-instance")).not.toBeNull();
+    unmountElement(el);
+  });
+
   it("置空后再回填非空 instance → 重新加载渲染（订阅/委托可重挂）", async () => {
     const { el, self } = mount();
     await waitFor(() => renderMock.mock.calls.length > 0, 5000);

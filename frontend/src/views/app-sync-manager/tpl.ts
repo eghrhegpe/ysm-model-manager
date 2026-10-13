@@ -209,3 +209,15 @@ export function loadingHTML(): string {
     t("common.loading"),
   )}"><div class="sm-shimmer sm-shimmer-w80"></div><div class="sm-shimmer sm-shimmer-w60"></div><div class="sm-shimmer sm-shimmer-w70"></div></div>`;
 }
+
+/**
+ * 空实例态占位（无 instance 属性 / instance 被置空共用）。
+ * ⚠️ 自带 `<style>${SM_STYLE}</style>`：本块整体覆盖组件 innerHTML，会连骨架里的样式表
+ * 一并抹掉——`.sm-no-instance` 的 padding/color 无规则来源则视觉退化（裸 div 无内边距）。
+ * 与 containerHTML 同一注入出口，不新造第二套样式依赖。
+ * a11y：role=status（状态切换播报，非错误）
+ */
+export function noInstanceHTML(): string {
+  return `<style>${SM_STYLE}</style>
+<div class="sm-no-instance" role="status">${UI_ICONS.warning} ${esc(t("sync.noInstance"))}</div>`;
+}

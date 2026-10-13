@@ -19,11 +19,10 @@ import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import type { SyncManagerFields, SyncManagerSelf } from "./self-type.ts";
 import { loadData, loadTypeConfig } from "./store.ts";
 import type { SyncItem } from "./tpl.ts";
-import { containerHTML, loadingHTML } from "./tpl.ts";
+import { containerHTML, loadingHTML, noInstanceHTML } from "./tpl.ts";
 
 export type { SyncManagerFields, SyncManagerSelf } from "./self-type.ts";
 
-import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { bindDelegatedEvents } from "./events.ts";
 import { performSingleOp } from "./network.ts";
 import { cleanupSyncVirtualScroll, render } from "./renderer.ts";
@@ -124,7 +123,7 @@ export class AppSyncManager extends WebComponentBase {
     this._resetViewState();
     this._allItems = [];
     this._filteredItems = [];
-    this.innerHTML = `<div class="sm-no-instance">${UI_ICONS.warning} ${t("sync.noInstance")}</div>`;
+    this.innerHTML = noInstanceHTML();
   }
 
   /**

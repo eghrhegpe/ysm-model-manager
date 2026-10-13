@@ -43,6 +43,7 @@ auto_fields:
     - loadInstances
     - loadTypeConfig
     - NetworkSelf
+    - noInstanceHTML
     - performSingleOp
     - registerSync
     - render

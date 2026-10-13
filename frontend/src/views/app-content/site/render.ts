@@ -7,7 +7,7 @@ import type { LocaleKey } from "@/core/i18n/t.ts";
 import { t } from "@/core/i18n/t.ts";
 import { stagger } from "@/utils/animation/stagger.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
-import { getTagIconFromRole } from "@/utils/icon/workshop-icons.ts";
+import { getSiteIcon, getTagIconFromRole } from "@/utils/icon/workshop-icons.ts";
 import type { WorkshopSite } from "@/utils/types-re-export.ts";
 import type { LocalCreatorLike, RepoAuthorLike } from "./types.ts";
 import type { BrowseModeRef } from "./workshop-browse-mode.ts";
@@ -81,8 +81,15 @@ export function createCrCard(cr: LocalCreatorLike, ctx: CrCardCtx): string {
         )}" title="${t("content.viewLocalModels")}">${UI_ICONS.folder}</span>`
     : "";
 
+  // 平台徽章 = 站点图标 + 站点 id（与详情浮层同口径）。
+  // 图标是语言中立的，不引入多语债；文字暂用站点 id——`workshop_sites.json` 的 `label`
+  // 是中文优先的捆绑内容（"B站"/"爱发电"），拿去 en/ja 界面反而是新增中文硬编码，
+  // 站点名多语化属独立产品决策（10+ 站点 × 3 语言包），不在此顺手夹带。
   const platformBadges = parseSiteIds(cr.type)
-    .map((platform: string) => `<span class="cr-platform-badge">${esc(platform)}</span>`)
+    .map(
+      (platform: string) =>
+        `<span class="cr-platform-badge">${getSiteIcon(platform)}<span>${esc(platform)}</span></span>`,
+    )
     .join("");
 
   // 🔍 搜索快捷按钮（与星标对称）：有站点搜索能力才渲染，点击联网搜索创作者，免进详情

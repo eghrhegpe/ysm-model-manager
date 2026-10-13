@@ -284,7 +284,7 @@
 | initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 129 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 211 |
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 113 |
-| _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 308 |
+| _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 302 |
 
 ### `repo:search-creator`
 
@@ -309,7 +309,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 330 |
+| _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 324 |
 
 ### `stats:refresh`
 
@@ -335,7 +335,7 @@
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 76 |
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 141 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 319 |
-| _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 236 |
+| _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 230 |
 | runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 104 |
 | atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 131 |
 | atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 198 |
@@ -346,7 +346,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 104 |
-| _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 289 |
+| _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 283 |
 
 ### `sync:download:done`
 

@@ -331,6 +331,23 @@ describe("创作者身份标签配色（.cr-tag-*）", () => {
   });
 });
 
+// ===== 平台徽章图标尺寸单点（2026-10-13 锐评）=====
+// .cr-platform-badge 同时被两处产出：卡片（site/render.ts|createCrCard）与详情浮层
+// （site/events.ts|cmCrBuildDetailHtml）。历史缺陷：尺寸规则只写在
+// `.cr-detail-platforms .cr-platform-badge .ws-icon` 下 → 卡片侧一旦补上图标就没有尺寸约束
+// （SVG 无宽高时按固有尺寸/1em 外溢，撑破 line-height:12px 的小徽章）。
+describe("平台徽章图标尺寸（.cr-platform-badge 共享单点）", () => {
+  it("尺寸规则挂在共享类上，不再限定 .cr-detail-platforms 作用域", () => {
+    const rule =
+      contentCreatorCSS.match(/\.cr-platform-badge\s+\.ws-icon\s*\{([^}]*)\}/)?.[1] ?? "";
+    expect(rule, "缺少 .cr-platform-badge .ws-icon 尺寸规则（卡片图标无约束）").not.toBe("");
+    expect(rule).toMatch(/width:\s*10px/);
+    expect(rule).toMatch(/height:\s*10px/);
+    // 反向锁：规则不得再退回只覆盖浮层的写法（否则卡片侧再次失约束）
+    expect(contentCreatorCSS).not.toMatch(/\.cr-detail-platforms\s+\.cr-platform-badge\s+\.ws-icon/);
+  });
+});
+
 // ===== 创作者头像 hover 旋转回归锁（2026-09 锐评 P2-2 补完）=====
 // 背景：P2-2 删除了 .cr-creator-card--grid:hover 的头像 rotate(-8deg)，但创作者卡是
 // 双 class（gh-card + cr-creator-card--grid，render.ts createCrCard）——若有人在

@@ -279,6 +279,12 @@ describe("createCrCard 创作者卡片工厂（声明式字符串）", () => {
     expect(card.querySelector(".cr-card-name")?.textContent).toBe("张三");
     expect(card.querySelector(".cr-card-desc")?.textContent).toBe("好<模型");
     expect(card.querySelectorAll(".cr-platform-badge")).toHaveLength(2);
+    // 平台徽章必须带站点图标（docs/guide/creators.md 明写「收录的平台图标」，且 CSS 基类
+    // .cr-platform-badge 早就按 inline-flex + gap:2px 的「图标+文字」形状设计）——
+    // 历史缺陷：createCrCard 只拼裸站点 id、从不取 getSiteIcon，图标只在详情浮层出现。
+    const badge = card.querySelector(".cr-platform-badge") as HTMLElement;
+    expect(badge.textContent).toContain("🌐"); // 本文件 mock getSiteIcon → "🌐"
+    expect(badge.textContent).toContain("siteA"); // 文字仍是站点 id（label 无多语源，见注记）
     // ADR-238：星标走 UI_ICONS 语义 SVG（未收藏 = 空心 star，无 fill 属性），不再 "☆" 字符
     const star = card.querySelector(".cr-star-btn svg");
     expect(star).toBeTruthy();

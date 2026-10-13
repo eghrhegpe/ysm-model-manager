@@ -335,7 +335,10 @@ export const contentCreatorCSS: string = `
 /* Platform row */
 .cr-detail-platforms { display:flex;gap:4px;flex-wrap:wrap;margin-top:3px; }
 .cr-detail-platforms .cr-platform-badge { background:var(--surf);color:var(--muted);border:none;padding:1px 8px;border-radius:var(--radius-sm);font-size:var(--fs-xs); }
-.cr-detail-platforms .cr-platform-badge .ws-icon { width:10px;height:10px; }
+/* 徽章内图标尺寸单点：卡片（createCrCard）与详情浮层（cmCrBuildDetailHtml）共用
+   .cr-platform-badge，原规则只写在 .cr-detail-platforms 作用域下 → 卡片侧图标无尺寸约束。
+   提到共享一处，两路同口径（.cr-platform-badge 基类本就是 inline-flex + gap 的图标+文字形状）。 */
+.cr-platform-badge .ws-icon { width:10px;height:10px; }
 .cr-detail-actions button:hover { border-color:var(--accent);background:var(--hover); }
 .cr-detail-actions .primary { background:var(--accent);color:var(--bg);border-color:var(--accent); }
 .cr-detail-actions .primary:hover { opacity:.85; }

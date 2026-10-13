@@ -50,6 +50,7 @@ loadView("app-sync-manager", () => import("@/views/app-sync-manager/index.ts"));
 // ===== 全局主题控制 =====
 
 import { safeGet } from "@/utils/base/primitives/storage.ts";
+import { isDevMode } from "@/utils/debug/dev-mode.ts";
 import { localizeStaticA11yLabels } from "./static-a11y-labels.ts";
 // 2026-08-17 神桶拆分：normalizeTheme/applyTheme/initTheme 已移至 theme-core.ts
 // （纯逻辑无顶层副作用，测试可独立 import）；本文件保留启动装配 + window 桥接。
@@ -187,13 +188,10 @@ if (typeof window !== "undefined") {
 import { toast, toastError } from "@/utils/dom/toast.ts";
 
 // ===== F12 / Ctrl+Shift+I 打开 DevTools（仅开发/调试环境）=====
-// 通过查询参数 ?dev=1 或 localStorage 标志启用
-// P3 修复：localStorage 裸调在隐私模式抛错会中止模块求值——即使 ?dev=1 也无法启用
-const _devtoolsFlag = safeGet("_devtools") === "1";
-// node 测试环境无 window，短路跳过 devtools 判定（浏览器语义不变）
-const _devMode =
-  (typeof window !== "undefined" && new URLSearchParams(window.location.search).has("dev")) ||
-  _devtoolsFlag;
+// 开发态判据单源见 utils/debug/dev-mode.ts（?dev=1 或 _devtools=1，默认关）：
+// 该叶子同时被视图层消费（头像调试探针），故判定不再写在本文件顶层。
+// P3 修复保留：隐私模式下裸调 localStorage 抛错会中止模块求值，isDevMode 内部走 safeGet。
+const _devMode = isDevMode();
 // F12 / Ctrl+Shift+I 走全局快捷键注册表（key-router，ADR-308 D1 收编）：
 // 组合匹配由注册表单点分发；dispose 随注册表在末个 shortcut 摘除 document 监听，
 // 不再手搓 document.addEventListener 残留（测试反复求值时 vi.resetModules 清模块缓存

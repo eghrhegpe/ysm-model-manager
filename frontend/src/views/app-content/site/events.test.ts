@@ -21,6 +21,7 @@ const {
   getSiteIcon,
   getTagIconFromRole,
   getApp,
+  isDevMode,
 } = vi.hoisted(() => ({
   busEmit: vi.fn(),
   busOn: vi.fn(() => () => {}),
@@ -42,6 +43,8 @@ const {
   getSiteIcon: vi.fn(() => "🌐"),
   getTagIconFromRole: vi.fn(() => "🏷️"),
   getApp: vi.fn(),
+  // 头像调试探针的门（dev-mode 单源）：默认关——生产态不得触发 Go 全库扫描
+  isDevMode: vi.fn(() => false),
 }));
 
 vi.mock("@/bus", () => ({ bus: { emit: busEmit, on: busOn } }));
@@ -68,6 +71,8 @@ vi.mock("@/utils/icon/workshop-icons.ts", () => ({
   getTagIconFromRole,
 }));
 vi.mock("@/backend/app.ts", () => ({ getApp }));
+// 头像调试探针的门（默认关）：isDevMode 单源见 utils/debug/dev-mode.ts
+vi.mock("@/utils/debug/dev-mode.ts", () => ({ isDevMode }));
 
 import { bindBrowseEvents } from "./events.ts";
 import type { SiteViewState } from "./types.ts";
@@ -275,13 +280,46 @@ describe("bindBrowseEvents — 基础绑定", () => {
     expect(searchResults.querySelector(".cr-detail-overlay")).toBeNull();
   });
 
-  it("头像调试点击 → getApp DebugExtractCreatorAvatar + dbg", async () => {
+  it("开发态（isDevMode）点头像 → 调 DebugExtractCreatorAvatar + dbg", async () => {
+    isDevMode.mockReturnValue(true);
     const { state, searchResults } = makeState();
     trackedBind(state, () => {});
     (searchResults.querySelector("[data-debug-avatar]") as HTMLElement).click();
     await waitFor(() => dbg.mock.calls.length > 0);
     expect(dbg.mock.calls[0]![0]).toBe("avatar-debug");
     expect(dbg.mock.calls[0]![1]).toBe("A");
+  });
+
+  it("生产默认态（isDevMode=false）点头像 → 不触发 Go 扫描，且点击回归卡片行为开浮层", () => {
+    // 历史缺陷：头像 click 无条件调 DebugExtractCreatorAvatar（Go 侧对整库
+    // ScanModelEntries 全量扫描，见 internal/app/app_avatar.go|DebugExtractCreatorAvatar），
+    // 结果只进 dbg 环形缓冲——用户看不见任何反应；又因 stopPropagation 吞掉卡片点击，
+    // 连本该打开的详情浮层也不开。即「最贵的手势 + 零可见反馈 + 吞掉正常行为」。
+    // 现：探针门 = isDevMode()（默认关），非开发态根本不绑 click。
+    isDevMode.mockReturnValue(false);
+    const { state, searchResults } = makeState();
+    // 自建**生产形状**夹具：真实 createCrCard 把 `<img class="cr-avatar" data-debug-avatar>`
+    // 嵌在 .gh-card 内（makeState 的 img 是游离兄弟节点，测不出冒泡语义）。
+    searchResults.innerHTML =
+      '<div id="cr-creator-grid" class="cr-creator-grid">' +
+      '<div class="gh-card cr-creator-card" tabindex="0" data-name="A" data-tag="creator">' +
+      '<div class="cr-avatar-container"><div class="cr-avatar-ring"></div>' +
+      '<img class="cr-avatar" src="data:," data-debug-avatar="A" data-avatar-fallback="A">' +
+      "</div></div></div>";
+    // 挂进真实 shadow root：浮层写入 `searchResults.getRootNode()`，留在 light DOM 时该值
+    // 是 Document，happy-dom 的 document.appendChild 直接抛「Only one element on document
+    // allowed」——那是夹具结构错，不是生产缺陷（生产中容器恒在 app-content 的 shadow root 内）。
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const shadow = host.attachShadow({ mode: "open" });
+    shadow.appendChild(searchResults);
+    trackedBind(state, () => {});
+
+    const extract = (getApp as ReturnType<typeof vi.fn>).mock.results;
+    (searchResults.querySelector("[data-debug-avatar]") as HTMLElement).click();
+    expect(extract).toHaveLength(0); // 未发起任何桥调用（全库扫描的门确实关上了）
+    // 点击未被吞：冒泡到卡片 → 详情浮层打开（观测点同生产，在 shadow root 上）
+    expect(shadow.querySelector(".cr-detail-overlay")).toBeTruthy();
   });
 
   it("头像加载失败（error）→ 用 data-avatar-fallback 字母替换 img", () => {

@@ -3,6 +3,7 @@
 import type { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { dbg } from "@/utils/debug/debug.ts";
+import { isDevMode } from "@/utils/debug/dev-mode.ts";
 import { deepActiveElement, deepActiveElementOf } from "@/utils/dom/deep-active-element.ts";
 import { qs, qsa } from "@/utils/dom/qsa.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
@@ -396,12 +397,25 @@ function cmBbBindLocalBadges(searchResults: HTMLElement, busRef: typeof bus): vo
   });
 }
 
+/**
+ * 头像节点绑定：error→字母 fallback 恒绑（功能性降级，破图不留）；
+ * **调试提取探针只在 `isDevMode()` 下绑**。
+ *
+ * 为什么必须加门（2026-10-13 锐评）：探针点击调 `DebugExtractCreatorAvatar`，Go 侧对整库
+ * `ScanModelEntries(ysmRoot())` 全量扫描（`internal/app/app_avatar.go`）只为找出该作者的一处
+ * 头像路径，结果只写 `dbg()` 环形缓冲——生产环境既看不见输出，又要为一次误点付全库扫描的代价；
+ * 同时 handler 的 `stopPropagation` 还吞掉了本应打开详情浮层的卡片点击。三重错位：
+ * 最贵的手势、零可见反馈、吃掉正常行为。
+ * 非开发态**根本不绑 click**（而非绑了再判），于是点击自然冒泡到卡片 → 浮层正常打开。
+ * ⚠️ 不要用 `isDebugEnabled()` 当这道门：它默认 true（`?nodebug=1` 才关），门等于没关。
+ */
 function cmBbBindDebugAvatar(searchResults: HTMLElement, getDisposed: () => boolean): void {
   qsa<HTMLElement>(searchResults, "[data-debug-avatar]").forEach((img) => {
     // 头像加载失败 → 字母 fallback（声明式 data-avatar-fallback 属性；单点实现见 bindAvatarFallback）
     if (img instanceof HTMLImageElement && img.dataset.avatarFallback) {
       bindAvatarFallback(img, "cr-avatar cr-avatar-fallback", img.dataset.avatarFallback);
     }
+    if (!isDevMode()) return; // 生产态不绑 click：点击冒泡到卡片，正常打开详情浮层
     img.addEventListener("click", async (e) => {
       e.stopPropagation();
       const name = img.dataset.debugAvatar;

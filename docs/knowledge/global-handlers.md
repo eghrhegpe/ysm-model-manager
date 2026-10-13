@@ -42,6 +42,7 @@ quick_risk_lines:
 pitfalls:
   - 各页面各自注册全局事件 → 重复绑定、冲突处理；必须经 global-handlers 单点
   - 拖拽导入未进 import-dnd → 与全局拖拽状态冲突；必须经 features/import-dnd.ts
+  - 丢弃 cleanup 前先判危害——挂在目标元素自身无泄漏，挂在 document/window 或共享单例计数上才是真问题
 
 use_when:
   - 全局事件
@@ -94,6 +95,12 @@ status: active
 - DnD 收集必须走 `webkitGetAsEntry` 并在不支持时回退 `getAsFile`；`entry.file` 回调必须 Promise 化（致命陷阱 #10）
 - DnD 提示显隐由 `bindTreeDnD` 的 `dragover`/`dragleave`/`drop` 驱动：`dragover` 命中 Files 时显示 `#tree-drop-hint`，`drop`/真正离开容器时隐藏；不再依赖 `dragDepth` 深度计数器或 `#global-drop-overlay`（ADR-060）
 - **类型安全事件处理器模式**（审计发现）：存储 `EventListener` 时使用具体类型（`EventListener`）而非 `unknown as () => void`。`removeEventListener` 要求传入的函数与 `addEventListener` 时传入的函数是**同一个引用**，类型转换会破坏引用相等性导致无法移除（P3）。`error-diary.ts` 已修复：`_unsubError`/`_unsubRejection` 改为 `EventListener` 类型。
+- **「丢弃 cleanup 要不要修」的判据（2026-10 全量对账结论）**：监听挂在**谁**身上决定危害量级——
+  - **挂在目标元素自身**（如 `trapFocus` 挂 overlay、`attachTooltip` 挂 el 的三个监听）→ 元素被 GC 时监听随之消失，丢弃 cleanup **无泄漏**，不值得改。
+  - **挂在 `document`/`window`**（如 `key-router` 的 keydown、`dropdown` 的外点关闭、`tooltip` 的 scroll）→ 必须成对清理，否则常驻全局。
+  - **共享单例上的引用计数**（`tooltip` 的 `scrollRef`）→ 丢弃 cleanup 表现为「计数只增不减、全局监听挂一次后不摘」，**有界、非累积**（`scrollRef === 0` 门保证只挂一次），且 `dispose()` 的 `while (scrollRef > 0)` 可兜底归零。
+  对账结果（2026-10，覆盖 `bindRoving`/`initDropdown`/`registerShortcut`/`trapFocusAcrossShadow`/`attachTooltip`/`createBusyLock` 等全部 cleanup 型原语）：**唯一实际丢弃点**是 `attachTooltip` 的 3 处生产调用（fab/roles-views），危害 = 1 个常驻 scroll 监听，已判为不值得重构（详见 `dom_tooltip` 卡）。⚠️ **`attachTooltip` 的 per-element 监听会随元素消失，但 `scrollRef` 不会**——别把两类混为一谈。
+- **`createLoadGuard` 的代际作废必须在 cleanup 接上**（2026-10 全量对账）：`invalidate()` 不是可选的「锦上添花」——不调用时 `stale(gen)` 恒 false，整条代际守卫退化为装饰，卸载后仍在途的续体会给游离 root 重渲染（`app-sidebar`/`app-tree` 两处曾漏接，均已修 + 回归锁）。**审计口径**：凡在 `disconnectedCallback`（或等价 cleanup）里解订阅/定时器的组件，都要问一句「它的 `_guard.invalidate()` 呢」；替代方案（如 `app-sync-manager` 在每处 await 后配 `!this.isConnected`）同样成立，但**必须显式选择其一**，不能两不沾。
 
 ## 相关
 

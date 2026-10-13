@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **349** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **350** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > ADR 三区存放：根目录 = 存量（分级前）/ `architecture/` = 架构决策 / `decisions/` = 执行决策日志（ADR-320）。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -19,7 +19,7 @@ permalink: /adr/
 | [📝 提议中](#提议中) | 8 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 1 |
 | [🔄 部分采纳](#部分采纳) | 14 |
-| [✅ 已采纳](#已采纳) | 318 |
+| [✅ 已采纳](#已采纳) | 319 |
 | [❌ 已取代](#已取代) | 8 |
 | [🧊 已废弃](#已废弃) | 0 |
 | [❓ 未归类](#未归类) | 0 |
@@ -64,10 +64,11 @@ permalink: /adr/
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 | [ADR-050](./ADR-050-plaza-browser-window.md) | 模型广场 · 浏览器窗口（Wails 第二窗口） | 🔄 部分采纳 |
 
-### ✅ 已采纳（318）
+### ✅ 已采纳（319）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-334](./architecture/ADR-334-app-tree-null-proto-tree-keys.md) | app-tree 建树/展开态改 null 原型与 hasOwn 判存在（消除原型链吞键） | ✅ 已采纳 |
 | [ADR-333](./architecture/ADR-333-instance-nesttree-selfkey-namespace.md) | 同步树防御键 __self 改内部常量（消除与真实段名碰撞） | ✅ 已采纳 |
 | [ADR-332](./architecture/ADR-332-diagnostics-ia-and-layout-consolidation.md) | 诊断页信息架构与版式收口：四项拍板决策 | ✅ 已采纳 |
 | [ADR-331](./architecture/ADR-331-3d-friendlyerror-code-keys.md) | 3D 错误消息国际化：friendlyError 旁路收窄与 CODE_KEYS 单源 | ✅ 已采纳 |
@@ -404,6 +405,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
+| ADR-334 | app-tree 建树/展开态改 null 原型与 hasOwn 判存在（消除原型链吞键） | ✅ 已采纳 | 2026-10-13 |
 | ADR-333 | 同步树防御键 __self 改内部常量（消除与真实段名碰撞） | ✅ 已采纳 | 2026-10-13 |
 | ADR-332 | 诊断页信息架构与版式收口：四项拍板决策 | ✅ 已采纳 | 2026-10-12 |
 | ADR-331 | 3D 错误消息国际化：friendlyError 旁路收窄与 CODE_KEYS 单源 | ✅ 已采纳 | 2026-10-12 |

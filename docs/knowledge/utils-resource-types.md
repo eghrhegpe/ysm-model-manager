@@ -7,6 +7,9 @@ source_files:
   - frontend/src/utils/resource/
   - frontend/src/utils/types-re-export.ts
   - frontend/src/features/repo/repo-rtype.ts
+tests:
+  - frontend/src/features/repo/repo-rtype.test.ts
+  - frontend/src/utils/resource/repo-rtype.test.ts
 auto_fields:
   symbols_with_lines:
     - __resetShortLabelCacheForTest

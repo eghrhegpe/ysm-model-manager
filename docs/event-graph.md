@@ -4,9 +4,15 @@
 > 基于 `frontend/src/bus.ts` 的 `BusEvents` 接口校验所有调用方（含 html 内联、可选链调用）。
 > 合法发射者登记表闸（ADR-270-d3）：`docs/.bus-emitters.json` 之外新增发射文件 = 硬错误；表内未被命中条目 = 可收紧提示。
 
-## ✅ 无异常
+## ⚠️ 异常摘要
 
-所有调用均在 BusEvents 契约与合法发射者登记表内：无孤儿发射 / 鬼订阅 / 未声明事件 / 缺参 / 发射者表外新增。
+### 孤儿发射（emit 了但无 on/once 订阅方）
+
+- `config:changed` — emit×1
+
+### 发射者表外新增（硬错误——须改走收敛通道，或确认合法后 --update --force 登记）
+
+- `config:changed` @ `frontend/src/views/config-write.ts`
 
 ## 事件总览
 
@@ -15,6 +21,7 @@
 | `avatar:refresh` | 1 | 1 | 0 | 0 | ✅ |
 | `batch:rename` | 1 | 1 | 0 | 0 | ✅ |
 | `community:clear-cache` | 1 | 1 | 0 | 0 | ✅ |
+| `config:changed` | 1 | 0 | 0 | 0 | 🔇 孤儿发射 |
 | `ctx:show` | 6 | 1 | 0 | 0 | ✅ |
 | `dir:batch-rename` | 1 | 1 | 0 | 0 | ✅ |
 | `dir:mkdir` | 1 | 1 | 0 | 0 | ✅ |
@@ -77,6 +84,13 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 91 |
+
+### `config:changed`
+
+**发射方：**
+| 函数 | 文件 | 行 |
+|------|------|----|
+| writeAppConfig | `frontend/src/views/config-write.ts` | 99 |
 
 ### `ctx:show`
 
@@ -387,12 +401,12 @@
 | bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 96 |
 | bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 118 |
 | bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 127 |
-| eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 189 |
-| eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 227 |
-| eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 234 |
-| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 308 |
-| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 315 |
-| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 331 |
+| eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 190 |
+| eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 228 |
+| eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 235 |
+| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 309 |
+| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 316 |
+| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 334 |
 | cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 170 |
 | cmBbBindStarBtns | `frontend/src/views/app-content/site/events.ts` | 321 |
 | show | `frontend/src/views/app-toast/index.ts` | 163 |

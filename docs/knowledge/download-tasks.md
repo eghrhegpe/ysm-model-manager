@@ -8,6 +8,7 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - buildDownloadTasks
+    - buildModelDownloadUrl
     - classifyDownloadSize
     - DOWNLOAD_CONFIRM_BYTES
     - DOWNLOAD_REJECT_BYTES

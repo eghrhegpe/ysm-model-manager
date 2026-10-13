@@ -405,13 +405,11 @@ export const zhCN = {
   "diagnostics.perfMaxUnreadHint": "单模型目标下不生效（只在选了类型 / 全库时才用）",
   "diagnostics.perfModelUnreadHint":
     "填路径只对「单模型」这一目标集有效；选类型 / 全部 / 全库时不需要路径",
-  "diagnostics.webNoSyncConflictScan": "网页版不支持同步冲突扫描",
   "diagnostics.loadDedupConfigFailed": "加载去重配置失败",
   "diagnostics.webNoClearLogs": "网页版不支持清除日志",
   "diagnostics.noLogsToCopy": "当前无日志可复制",
   "diagnostics.perfCopied": "已复制原始输出到剪贴板",
   "diagnostics.copyFail": "复制失败，请手动框选复制",
-  "diagnostics.webNoPerf": "网页版不支持性能诊断",
   "diagnostics.opImportFallback": "导入",
   "diagnostics.perfModelRequired": "请先填入模型路径",
   "diagnostics.perfIterations": "跑几次",

@@ -14,6 +14,7 @@ auto_fields:
   symbols_with_lines:
     - addQueueError
     - buildDownloadTasks
+    - buildModelDownloadUrl
     - cancelDownloads
     - classifyDownloadSize
     - createDownloadQueue

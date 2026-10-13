@@ -12,6 +12,7 @@ auto_fields:
     - AvatarMap
     - bindRepoEvents
     - buildDownloadTasks
+    - buildModelDownloadUrl
     - buildModelRow
     - cancelDownloads
     - classifyDownloadSize

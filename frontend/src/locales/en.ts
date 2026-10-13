@@ -409,13 +409,11 @@ export const en: Record<string, string> = {
     "Not used for a single-model target (only applies once a type or the whole repo is selected)",
   "diagnostics.perfModelUnreadHint":
     "The path only applies to the single-model scope; not needed for type / all / the whole repo",
-  "diagnostics.webNoSyncConflictScan": "Sync conflict scanning is not supported on web",
   "diagnostics.loadDedupConfigFailed": "Failed to load dedup config",
   "diagnostics.webNoClearLogs": "Clearing logs is not supported on web",
   "diagnostics.noLogsToCopy": "No logs to copy",
   "diagnostics.perfCopied": "Raw output copied to clipboard",
   "diagnostics.copyFail": "Copy failed, please select and copy manually",
-  "diagnostics.webNoPerf": "Performance diagnostics are not supported on web",
   "diagnostics.opImportFallback": "Import",
   "diagnostics.perfModelRequired": "Please enter a model path",
   "diagnostics.perfIterations": "How many runs",

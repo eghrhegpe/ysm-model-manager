@@ -4,33 +4,22 @@
 // 同源），前端不再自算健康分——消灭「本地正则数 ban + Hash 分组算重复」的双轨口径。
 
 import { bus } from "@/bus";
-import { type LocaleKey, t } from "@/core/i18n/t.ts";
+import { t } from "@/core/i18n/t.ts";
 import { useCurrentResourceType } from "@/features/repo/repo-rtype.ts";
 import { createLoadGuard } from "@/utils/async/load-guard.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { statRowHTML } from "@/utils/dom/status-row.ts";
-import { parseHealthReport } from "@/utils/health-report.ts";
+import { healthBand, parseHealthReport } from "@/utils/health-report.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { maintenanceGetApp } from "./maintenance-deps.ts";
 
-// ===== 分档：verdict 单源（锐评④收尾——此前本地 80/60 阈值是与诊断页双轨的第二判定源，
-// Go 改带即分色漂移；现 verdict→外观映射 + 分数回退带，与 health.ts 同构）=====
-// 回退带：与 Go ScoreVerdict 阈值一致（good≥80 / ok≥60 / bad），仅当 verdict 不在值域
-//（旧后端直连/新值域）时兜底，正常链路不走（parseHealthReport 已强制 verdict 存在）。
-
-// ⚠️ label 存 LocaleKey **不在构建期求值 t()**（模块级冻结译文病，2026-10-13 收口，
-// 门禁 scripts/i18n-frozen-t-check.ts）；与 health.ts|VERDICT_BANDS 同构。
-// 译文在 fetchRepoStats（运行期，lang:changed 重建后重取）现调。
-const VERDICT_BANDS: Record<string, { color: string; labelKey: LocaleKey; tagClass: string }> = {
-  good: { color: "var(--status-success)", labelKey: "oldest.health.good", tagClass: "good" },
-  ok: { color: "var(--tag-amber)", labelKey: "oldest.health.ok", tagClass: "ok" },
-  bad: { color: "var(--status-error)", labelKey: "oldest.health.bad", tagClass: "bad" },
-};
-
-function scoreBand(score: number): { color: string; labelKey: LocaleKey; tagClass: string } {
-  return score >= 80 ? VERDICT_BANDS.good : score >= 60 ? VERDICT_BANDS.ok : VERDICT_BANDS.bad;
-}
+// ===== 分档：verdict 单源（锐评④收尾 + 2026-10-13 三查合并）=====
+// 本域与 diagnostics/health.ts 曾**各写一份** verdict→外观映射（本文件旧注释自陈
+// 「与 health.ts 同构」，即镜像的自供状），且各自持一份 locale 键族——同一「健康/
+// 亚健康/需要整理」三语文案存了两套键（6 枚逐字重复），改一处另一处不跟。
+// 现表 + 回退带 + 键族统一收进 utils/health-report.ts（与 parseHealthReport 同处：
+// 同一条数据管道不该前半共享后半双份），两域同消费 healthBand()。
 
 export interface ModelEntry {
   Name: string;
@@ -79,7 +68,7 @@ async function fetchRepoStats(filesRoot: string): Promise<RepoStats> {
   const report = parseHealthReport(await RepoHealthAudit(filesRoot));
   if (!report) throw new Error(t("diagnostics.healthParseFailed"));
   const score = report.score;
-  const band = VERDICT_BANDS[report.verdict] ?? scoreBand(score);
+  const band = healthBand(report.verdict, score);
   return {
     totalFiles: report.resources.total_files,
     totalSize: report.resources.total_size,

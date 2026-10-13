@@ -32,6 +32,13 @@
  * 修病口径：表只存 LocaleKey，消费点现调 t()（`diagnostics/conflicts.ts|RESOLVE_STRATEGIES` /
  * `copy-toast.ts` 范式）；或整表改惰性函数。
  *
+ * 设计意图（为何存在 / 适用场景）：既有四道 i18n 闸（key parity / 三段式命名 / UI 硬编码中文 /
+ * 死键）都建立在「文案是否被包进 t()」这一前提上，本闸守的是**包得太早**：模块构建期求值
+ * 的 t() 把译文焊死在首查语言包上，而那四道闸在语义上全部看不见这种写法。
+ * 适用场景 = 诊断页/元数据表这类「表驱动 + 模块级常量」的 UI（本次立因即诊断页锐评）；
+ * 消费面为前端源码（.ts 与 .tsx）的模块顶层初始化区。判定刻意做成确定性状态机而非
+ * 关键词 grep——`=> t(` 是合法惰性替代写法，纯 grep 必然误报。
+ *
  * 依赖：node:fs / node:path / node:url + scripts/_lib/scan-files.ts
  * 用法：
  *   node scripts/i18n-frozen-t-check.ts            # 文本报告（warning，恒 0）

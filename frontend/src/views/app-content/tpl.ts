@@ -3,6 +3,7 @@
 import { isViewerMode } from "@/backend/platform.ts";
 import { t } from "@/core/i18n/t.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
+import { OP_META } from "@/views/app-content/diagnostics/logs.ts";
 import { renderSubBar, renderTabs, type TabSpec } from "./tabs-shell.ts";
 
 // ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
@@ -244,13 +245,13 @@ export function diagnosticsHTML(): string {
                影响——ADR-289 已让它在 runtime 下按 Level 真正生效，筛选能力不丢。
                ⚠️ 本注释位于模板字符串内，反引号会提前闭合字符串（知识卡已记过同类坑）。 -->
           <option value="all">${t("diagnostics.opAll")}</option>
-          <option value="import">${t("diagnostics.opImport")}</option>
-          <option value="scan">${t("diagnostics.opScan")}</option>
-          <option value="download">${t("diagnostics.opDownload")}</option>
-          <option value="sync">${t("diagnostics.opSync")}</option>
-          <option value="rename">${t("diagnostics.opRename")}</option>
-          <option value="delete">${t("diagnostics.opDelete")}</option>
-          <option value="ui">${t("diagnostics.opUI")}</option>
+          ${
+            /* 选项集 = OP_META 键集派生（2026-10-13 收口：原七个 option 手写镜像，注释自称
+             「与 logs.ts|OP_META 同源」实为零机器连线；新增操作类型现只改 OP_META 一处） */
+            Object.entries(OP_META)
+              .map(([id, m]) => `<option value="${id}">${t(m.labelKey)}</option>`)
+              .join("")
+          }
         </select>
         </div>
       </div>

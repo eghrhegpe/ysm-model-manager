@@ -12,6 +12,7 @@ import {
 import { settingsHTML } from "./settings/tpl-settings.ts";
 import { recycleHTML, renderRecycleListHtml } from "./tpl-recycle.ts";
 import { TD_CAM_SPEED, TD_ROT_MODE } from "@/preview-3d/infra/settings-schema.ts";
+import { OP_META } from "@/views/app-content/diagnostics/logs.ts";
 import { LINK_MODES, MIRROR_SOURCES } from "@/views/app-content/settings/settings-schema.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import type { WailsAndroidBridge } from "@/backend/platform.ts";
@@ -518,13 +519,16 @@ describe("app-content 模板", () => {
       isViewerModeMock.mockReturnValue(false);
     }
   });
-  it("日志工具栏含「操作类型」纵向筛选下拉（选项集 = OP_META 七类 + 全部）", () => {
+  it("日志工具栏含「操作类型」纵向筛选下拉（选项集 = OP_META 键集 + 全部，派生非镜像）", () => {
     const html = diagnosticsHTML();
     expect(html).toContain('id="diag-log-op-filter"');
-    // 七个操作类型 + 「全部」——与 logs.ts|OP_META 同源（新增操作类型时此处须同步）
-    for (const op of ["all", "import", "scan", "download", "sync", "rename", "delete", "ui"]) {
-      expect(html).toContain(`<option value="${op}">`);
-    }
+    // 2026-10-13 收口：原逐 op 写死值集（OP_META 的第二份镜像）。现在望集**从 OP_META 派生**
+    // 再与成品 HTML 对账——新增操作类型只改 OP_META，本断言自动跟随；镜像漂移当场红。
+    // 锚定到本 select 的内层（perf 面板另有 path/size 等 option，不得混入比对）。
+    const inner = html.slice(html.indexOf('id="diag-log-op-filter"'), html.indexOf("</select>", html.indexOf('id="diag-log-op-filter"')));
+    const want = ["all", ...Object.keys(OP_META)].sort();
+    const got = [...inner.matchAll(/<option value="([^"]+)">/g)].map((m) => m[1]!).sort();
+    expect(got).toEqual(want);
   });
   it("recycleHTML 包含清空回收站按钮", () => {
     const html = recycleHTML();

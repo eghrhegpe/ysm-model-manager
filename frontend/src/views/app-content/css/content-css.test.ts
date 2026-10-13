@@ -306,6 +306,31 @@ describe("诊断页起跑线契约", () => {
   });
 });
 
+// ===== 创作者身份标签配色契约（tag 五身份全集）=====
+// tag 的 class 名由 role 拼出（site/render.ts: `cr-tag-${getTagFromRole(role)}`），
+// 而 role 的合法值只有 5 个——编辑下拉 roleOption 的五项
+// （creator/official/vup/oc/repo）与 workshop-data.ts getCreatorIdentity 的 switch 同源。
+// 历史缺陷：只给了 vup/oc 两条配色，却给并不存在的 game 身份留了一条，
+// 于是真正的 official/creator/repo 渲染成裸文字。下面两条用例锁死「五身份齐备 + 无死类」：
+// 正则精确到完整类名再跟 `{`，因此不会误伤同前缀的 .cr-tag-filter-btn / .cr-tag-filter-row。
+describe("创作者身份标签配色（.cr-tag-*）", () => {
+  it("五个合法身份各自有 background+color 一条规则（逐值同构）", () => {
+    for (const role of ["official", "creator", "repo", "vup", "oc"]) {
+      const rule =
+        contentCreatorCSS.match(new RegExp(`\\.cr-tag-${role}\\s*\\{([^}]*)\\}`))?.[1] ?? "";
+      expect(rule, `.cr-tag-${role} 没有配色规则（身份渲染成裸文字）`).not.toBe("");
+      expect(rule).toMatch(new RegExp(`background:\\s*var\\(--tag-${role}-bg\\)`));
+      expect(rule).toMatch(new RegExp(`color:\\s*var\\(--tag-${role}\\)`));
+    }
+  });
+
+  it("game 不在 role 枚举内，其死类规则不得回流（--tag-game 变量仍留 :host）", () => {
+    // game 不是合法 role，全仓零消费者。变量 --tag-game/--tag-game-bg 定义在
+    // content-layout 的 :host，被他域复用，删的只是这条永不生效的类规则。
+    expect(contentCreatorCSS).not.toMatch(/\.cr-tag-game\s*\{/);
+  });
+});
+
 // ===== 创作者头像 hover 旋转回归锁（2026-09 锐评 P2-2 补完）=====
 // 背景：P2-2 删除了 .cr-creator-card--grid:hover 的头像 rotate(-8deg)，但创作者卡是
 // 双 class（gh-card + cr-creator-card--grid，render.ts createCrCard）——若有人在

@@ -259,9 +259,9 @@ describe("createCrCard 创作者卡片工厂（声明式字符串）", () => {
     expect(card.querySelector(".cr-tag")).toBeTruthy();
   });
 
-  it("10. 已收藏 → starFilled；无 searchUrl → 无搜索按钮；单作者 pct=0 → gold 级 + 顶部条", () => {
+  it("10. 已收藏 → starFilled；无 searchUrl → 无搜索按钮；单作者站点不发牌 → 无 tier 属性/顶部条", () => {
     const cr = { name: "甲" } as LocalCreatorLike;
-    // 分档预计算（O(n log n) 一次）后传入卡片 ctx——单作者 pct=0 → gold
+    // 分档预计算（O(n log n) 一次）后传入卡片 ctx——单作者无比较对象 → 无牌（缺陷 B）
     const tiers = computeCreatorTiers([cr], {});
     const card = parseCardHtml(
       createCrCard(cr, cardCtx({ isFaved: () => true, avatarCache: {}, tier: tiers[cr.name] ?? "" })),
@@ -271,8 +271,8 @@ describe("createCrCard 创作者卡片工厂（声明式字符串）", () => {
     expect(starFav).toBeTruthy();
     expect(starFav?.hasAttribute("fill")).toBe(true);
     expect(card.querySelector(".cr-card-search")).toBeNull();
-    expect(card.dataset.tier).toBe("gold");
-    expect(card.querySelector(".cr-card-tier-bar")).toBeTruthy();
+    expect(card.dataset.tier).toBeUndefined();
+    expect(card.querySelector(".cr-card-tier-bar")).toBeNull();
     // P2-2 锐评：光环常转（data-spin + ring-spin hover）已删——avatar-ring 不再携带 data-spin
     expect(card.querySelector(".cr-avatar-ring")?.getAttribute("data-spin")).toBeNull();
   });
@@ -327,7 +327,7 @@ describe("createCrCard 创作者卡片工厂（声明式字符串）", () => {
     expect(c2.querySelector(".cr-card-tier-bar")).toBeNull();
   });
 
-  it("13b. tier 图例：有分档卡才渲染，含两档 swatch 与 i18n 文案；位次语义 = 相对排名（全 0 时首作者仍 gold，图例照渲）", () => {
+  it("13b. tier 图例：有分档卡才渲染，含两档 swatch 与 i18n 文案；无有效计数（count 全 0 / 缺 authorCountMap 条目）→ 图例不出现", () => {
     // 有分档：计数 {甲:10, 乙:9} → 甲 gold、乙 silver
     const c1 = [{ name: "甲" }, { name: "乙" }] as LocalCreatorLike[];
     const root1 = renderHtml(makeCtx({ creators: c1, authorCountMap: { 甲: 10, 乙: 9 } }));
@@ -337,28 +337,107 @@ describe("createCrCard 创作者卡片工厂（声明式字符串）", () => {
     expect(legend1?.querySelector(".cr-tier-swatch--silver")).toBeTruthy();
     expect(legend1?.textContent).toContain("Top 10%");
     expect(legend1?.textContent).toContain("Top 25%");
-    // computeCreatorTiers 按相对位次分档（全 0 时首作者 pct=0 → gold）——图例语义忠实于该位次规则
+    // 缺陷 C 连带：无有效信号（榜首 count 也是 0）→ 全员无牌 → 图例是纯噪声，不渲染
     const c2 = [{ name: "甲" }, { name: "乙" }] as LocalCreatorLike[];
     const root2 = renderHtml(makeCtx({ creators: c2, authorCountMap: {} }));
-    expect(root2.querySelector('[data-testid="cr-tier-legend"]')).toBeTruthy();
+    expect(root2.querySelector('[data-testid="cr-tier-legend"]')).toBeNull();
+    // 显式全 0 条目与缺条目同一口径：都属「无产量」→ 不发牌
+    const root3 = renderHtml(makeCtx({ creators: c2, authorCountMap: { 甲: 0, 乙: 0 } }));
+    expect(root3.querySelector('[data-testid="cr-tier-legend"]')).toBeNull();
   });
 
-  it("13c. computeCreatorTiers 边界（P2-9 锐评）：空表 / 单作者 / 全 0 并列位次稳定", () => {
+  it("13c. computeCreatorTiers 边界：空表 / 单作者不发牌 / 无信号不发牌 / 全 0 不发牌 / 输入不被就地排序", () => {
     // 空表 → 空对象
     expect(computeCreatorTiers([], {})).toEqual({});
-    // 单作者 pct=0 → gold（既有语义：唯一作者恒顶级）
-    expect(computeCreatorTiers([{ name: "独" }] as LocalCreatorLike[], {})["独"]).toBe("gold");
-    // 全 0 并列：两作者 count 均 0 → 首作者 gold、次作者无（相对位次，不因并列提升）
+    // 缺陷 B：单作者无比较对象 → ""，不挂顶级光环
+    expect(computeCreatorTiers([{ name: "独" }] as LocalCreatorLike[], {})["独"]).toBe("");
+    expect(computeCreatorTiers([{ name: "独" }] as LocalCreatorLike[], { 独: 8 })["独"]).toBe("");
+    // 缺陷 C：两作者 count 均 0（缺 authorCountMap 条目 / 显式 0 键）→ 全员 ""，榜首不因数组下标白拿 gold
     const allZero = computeCreatorTiers(
       [{ name: "甲" }, { name: "乙" }] as LocalCreatorLike[],
       {},
     );
-    expect(allZero["甲"]).toBe("gold");
+    expect(allZero["甲"]).toBe("");
     expect(allZero["乙"]).toBe("");
+    const zeroKeys = computeCreatorTiers(
+      [{ name: "甲" }, { name: "乙" }] as LocalCreatorLike[],
+      { 甲: 0, 乙: 0 },
+    );
+    expect(zeroKeys["甲"]).toBe("");
+    expect(zeroKeys["乙"]).toBe("");
     // 输入数组不被就地排序（P2-8 纯化精神延伸到分档函数）
     const input = [{ name: "甲" }, { name: "乙" }] as LocalCreatorLike[];
     computeCreatorTiers(input, { 甲: 1, 乙: 9 });
     expect(input.map((c) => c.name)).toEqual(["甲", "乙"]);
+  });
+
+  it("13d. 小规模不落空（缺陷 A）：n=5 递减 9/7/4/2/0 → gold 恰 1、silver 恰 1、其余无牌（含榜尾 count=0 不影响）", () => {
+    const creators = ["甲", "乙", "丙", "丁", "戊"].map(
+      (name) => ({ name }) as LocalCreatorLike,
+    );
+    const tiers = computeCreatorTiers(creators, { 甲: 9, 乙: 7, 丙: 4, 丁: 2, 戊: 0 });
+    expect(tiers["甲"]).toBe("gold");
+    expect(tiers["乙"]).toBe("silver");
+    expect(tiers["丙"]).toBe("");
+    expect(tiers["丁"]).toBe("");
+    expect(tiers["戊"]).toBe("");
+    // 两档都不落空：5 个创作者的站点里 gold/silver 各恰好 1 人
+    expect(Object.values(tiers).filter((v) => v === "gold")).toHaveLength(1);
+    expect(Object.values(tiers).filter((v) => v === "silver")).toHaveLength(1);
+    // 缺陷 A 反证：n=2~5 全区间 silver 恒 ≥ 1（不再出现「只有 1 个人拿牌」）
+    for (const n of [2, 3, 4, 5]) {
+      const small = Array.from({ length: n }, (_, i) => ({ name: `c${i}` }) as LocalCreatorLike);
+      const counts = Object.fromEntries(small.map((_, i) => [`c${i}`, n - i]));
+      const st = computeCreatorTiers(small, counts);
+      expect(Object.values(st).filter((v) => v === "gold")).toHaveLength(1);
+      expect(Object.values(st).filter((v) => v === "silver")).toHaveLength(1);
+    }
+  });
+
+  it("13e. 大规模回归：n=12 递减 → gold ≤ 2（不泛滥）、silver ≥ 1、榜尾无牌", () => {
+    const creators = Array.from({ length: 12 }, (_, i) => ({
+      name: `c${i}`,
+    })) as LocalCreatorLike[];
+    const counts = Object.fromEntries(creators.map((_, i) => [`c${i}`, 12 - i]));
+    const tiers = computeCreatorTiers(creators, counts);
+    const goldNames = creators.filter((c) => tiers[c.name] === "gold").map((c) => c.name);
+    const silverNames = creators.filter((c) => tiers[c.name] === "silver").map((c) => c.name);
+    // 前 10%：12 人 → pct<0.1 命中原 idx0（idx1 的 1/11≈0.0909 仍 < 0.1）→ gold 2 人，不泛滥
+    expect(goldNames).toEqual(["c0", "c1"]);
+    // 25%~10% 至少 1 人（银档不落空）
+    expect(silverNames.length).toBeGreaterThanOrEqual(1);
+    expect(silverNames).not.toContain("c0");
+    // 无牌者仍是无牌（rest 不受影响）
+    expect(tiers["c11"]).toBe("");
+  });
+
+  it("13f. 并列口径：并列同档。榜首并列 → 全员 gold（不按数组下标发牌）；榜尾并列 → 只有并列最高档那一圈发牌", () => {
+    // 榜首并列（两个 5）→ 同档，全员 gold：名次无法在并列间区分，按同档处理
+    const tieTop = computeCreatorTiers(
+      [{ name: "甲" }, { name: "乙" }, { name: "丙" }] as LocalCreatorLike[],
+      { 甲: 5, 乙: 5, 丙: 1 },
+    );
+    expect(tieTop["甲"]).toBe("gold");
+    expect(tieTop["乙"]).toBe("gold");
+    // 榜尾唯一者（丙 count=1）：n=3 无 silver → silver 底保把它提为 silver（并列组只有它自己）
+    expect(tieTop["丙"]).toBe("silver");
+    // 榜尾并列不影响该并列组整体升档：丙/丁（count 1/1）无牌
+    const tieTail = computeCreatorTiers(
+      [{ name: "甲" }, { name: "乙" }, { name: "丙" }, { name: "丁" }] as LocalCreatorLike[],
+      { 甲: 9, 乙: 7, 丙: 1, 丁: 1 },
+    );
+    expect(tieTail["甲"]).toBe("gold");
+    expect(tieTail["乙"]).toBe("silver");
+    expect(tieTail["丙"]).toBe("");
+    expect(tieTail["丁"]).toBe("");
+    // 纯并列（count 全同但 >0）→ 不靠数组下标区分，全员同一档（gold）
+    const flat = computeCreatorTiers(
+      [{ name: "甲" }, { name: "乙" }, { name: "丙" }] as LocalCreatorLike[],
+      { 甲: 3, 乙: 3, 丙: 3 },
+    );
+    expect(flat["甲"]).toBe("gold");
+    expect(flat["乙"]).toBe("gold");
+    expect(flat["丙"]).toBe("gold");
   });
 
   it("14. 本地条目空 desc → 卡片回退 i18n 提示（数据面不落语言串，锐评 P0-2b）", () => {

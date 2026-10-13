@@ -11,7 +11,13 @@ import { FADE_SLIDE_LEFT } from "@/views/css/keyframes.ts";
 export const contentLayoutCSS: string = `
 :host { display:flex; flex-direction:column; flex:1; overflow:hidden; font-family:var(--font-ui); font-size:var(--fs-base); line-height:1.4; background:var(--bg); }
 /* ===== CSS 变量（标签/标记色/host 尺寸） ===== */
-:host { --tag-game:#4a9eff; --tag-game-bg:rgba(74,158,255,.13); --tag-vup:#ff6bb5; --tag-vup-bg:rgba(255,107,181,.13); --tag-oc:#a78bfa; --tag-oc-bg:rgba(167,139,250,.13); --tag-amber:#f9a826; --tag-amber-bg:rgba(249,168,38,.2); --badge-jsd:#f9a826; --badge-jsd-bg:rgba(249,168,38,.12); --badge-api:#89b4fa; --badge-api-bg:rgba(137,180,250,.12); --badge-cdn:#94e2d5; --badge-cdn-bg:rgba(148,226,213,.12); --badge-ghapi:#cba6f7; --badge-ghapi-bg:rgba(203,166,247,.12); --sidebar-w:200px; --diag-left-w:120px; --touch-min:44px; }
+/* 五身份标签色与 role 枚举一一对应（creator/official/vup/oc/repo，权威源见 site/render.ts 编辑下拉
+   与 workshop-data.ts getCreatorIdentity）。语义取色：
+   official = 官方认证的金（呼应 tier 荣誉色 --tier-gold，比 --tag-amber 偏黄以与「健康/告警橙」区分）；
+   creator  = 个人创作者的中性靛（vup 粉 / oc 紫之外的第三方身份色，取蓝紫低饱和中性调）；
+   repo     = 仓库来源的青绿（工具/代码来源，与人的身份色系区隔）。
+   三色分别避开既有 --tag-game 蓝 / --tag-vup 粉 / --tag-oc 紫 / --tag-amber 橙，不撞色。 */
+:host { --tag-game:#4a9eff; --tag-game-bg:rgba(74,158,255,.13); --tag-official:#ecc94b; --tag-official-bg:rgba(236,201,75,.13); --tag-creator:#7d8cf0; --tag-creator-bg:rgba(125,140,240,.13); --tag-repo:#34d399; --tag-repo-bg:rgba(52,211,153,.13); --tag-vup:#ff6bb5; --tag-vup-bg:rgba(255,107,181,.13); --tag-oc:#a78bfa; --tag-oc-bg:rgba(167,139,250,.13); --tag-amber:#f9a826; --tag-amber-bg:rgba(249,168,38,.2); --badge-jsd:#f9a826; --badge-jsd-bg:rgba(249,168,38,.12); --badge-api:#89b4fa; --badge-api-bg:rgba(137,180,250,.12); --badge-cdn:#94e2d5; --badge-cdn-bg:rgba(148,226,213,.12); --badge-ghapi:#cba6f7; --badge-ghapi-bg:rgba(203,166,247,.12); --sidebar-w:200px; --diag-left-w:120px; --touch-min:44px; }
 
 /* ===== 通用 keyframes（跨域复用，集中在 layout 层，避免子域相互依赖） ===== */
 @keyframes dl-slide-up {

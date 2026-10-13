@@ -2,9 +2,15 @@
 export const contentCreatorCSS: string = `
 /* ===== 创作者标签 (cr-tag) ===== */
 .cr-tag { display:inline-flex;align-items:center;gap:2px;font-size:var(--fs-micro);padding:0 var(--sp-1);border-radius:var(--radius-xs);line-height:16px;font-weight:500;flex-shrink:0; }
-.cr-tag-game { background:var(--tag-game-bg);color:var(--tag-game); }
+/* class 名由 render.ts 拼成 cr-tag- + getTagFromRole(role)，role 枚举仅 creator/official/vup/oc/repo
+   五值（权威源：site/render.ts 编辑下拉 roleOption 五项 + workshop-data.ts getCreatorIdentity switch）——
+   故此族恰好五条，缺一条即该身份渲染成裸文字。原 .cr-tag-game 是给不存在的 game 身份准备的
+   死类（其 --tag-game/--tag-game-bg 变量在 content-layout :host 定义且被他域复用，变量保留）。 */
+.cr-tag-official { background:var(--tag-official-bg);color:var(--tag-official); }
+.cr-tag-creator { background:var(--tag-creator-bg);color:var(--tag-creator); }
 .cr-tag-vup { background:var(--tag-vup-bg);color:var(--tag-vup); }
 .cr-tag-oc { background:var(--tag-oc-bg);color:var(--tag-oc); }
+.cr-tag-repo { background:var(--tag-repo-bg);color:var(--tag-repo); }
 /* .cr-tag-filter-row 的容器度量定义在后段单处（2026-09 锐评 P1-7：原此处与后段各一份、
    属性互补，易误判为覆盖关系；已单点化——合并前后逐值等同，间距未改）。 */
 /* 多按钮筛选组统一范式（同 shadow 根共享：content-creator + content-diag）。

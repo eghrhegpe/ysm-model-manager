@@ -169,23 +169,81 @@ function sortCreatorsFavedFirst(
 }
 
 /**
- * 创作者排名分档（纯函数）：产量降序百分位——前 10% gold、前 25% silver，
+ * 创作者排名分档（纯函数）：按「本地仓库模型数」降序分档——前 10% gold、前 25% silver，
  * 单次 O(n log n)。调用方（buildSiteBrowseSection）预计算一次后按 name 取值，
  * 替代原「每张卡片内对全量列表重新排序」的 O(n² log n) 写法。
- * 单作者 → pct=0 → gold（与旧实现语义一致）。
+ *
+ * 三条发牌纪律（缺一即退化成噪声分档）：
+ * ① 无信号不发牌：全站产量为 0（authorCountMap 缺条目或显式 0）时所有 key 相等，排序退化
+ *    为保持原序——若照 pct 位次发牌，数组里第一个人会白拿 gold。榜首 count ≤ 0 即判定无
+ *    比较信号，全体返回 ""（图例 buildTierLegendRow 随之自然不渲染）。
+ * ② 单人站点不发牌：n=1 没有比较对象，"顶级创作者" 是自封的。
+ * ③ silver 底保：纯位次 pct<0.25 在 n=2~5 时命中空集（只有 idx0 落在 <0.1），小站点的
+ *    银档形同虚设——故 n≥2 且 ① 通过时，第 2 名兜底拿 silver。
+ *
+ * 并列口径（同 count 同档，不按数组下标发牌）：并列者产量完全相同、无可区分的名次依据，
+ * 按下标区分等于用展示顺序冒充排名（同 ① 的噪声）。故先对每个并列组（count 相同的连续
+ * 区间）取组内**最靠前**的位次作为该组共同位次，再按该位次定档：
+ *  - 榜首并列（例：两个 5）→ 全组 gold（同档，不因下标降级）；
+ *  - 榜尾并列（例：甲 9 / 乙 7 / 丙 1 / 丁 1）→ 最低并列组整体同档（这里整组无牌），
+ *    不会因「丙先丁后」造出一个假的第 2 名。
+ * ③ 底保只在纯位次无 silver 时兜底，且只认领最靠前的那个并列组（银档先于金档让位），
+ * 故 silver 位次恒 ≥ gold 位次，不会出现 silver 站在 gold 之上的倒挂。
  */
 export function computeCreatorTiers(
   creators: LocalCreatorLike[],
   authorCountMap: Record<string, number>,
 ): Record<string, "" | "gold" | "silver"> {
+  const out: Record<string, "" | "gold" | "silver"> = {};
   const sorted = [...creators].sort(
     (a, b) => (authorCountMap[b.name] || 0) - (authorCountMap[a.name] || 0),
   );
   const total = sorted.length;
-  const out: Record<string, "" | "gold" | "silver"> = {};
+  if (total === 0) return out;
+  const countOf = (cr: LocalCreatorLike) => authorCountMap[cr.name] || 0;
+  // 纪律 ① 无信号 / 纪律 ② 单人站点 → 全员无牌（逐人建 key，缺席者同样归入「无牌」）
+  if (total < 2 || countOf(sorted[0]) <= 0) {
+    sorted.forEach((cr) => {
+      out[cr.name] = "";
+    });
+    return out;
+  }
+
+  // 每个并列组的起始位次（组内并列者共享该位次，见上方并列口径）
+  const groupStart: number[] = [];
   sorted.forEach((cr, idx) => {
-    const pct = total > 1 ? idx / (total - 1) : 0;
-    out[cr.name] = pct < 0.1 ? "gold" : pct < 0.25 ? "silver" : "";
+    if (idx === 0 || countOf(cr) !== countOf(sorted[idx - 1])) {
+      groupStart.push(idx);
+    }
+  });
+  const tierOfRank = (rank: number): "" | "gold" | "silver" => {
+    const pct = rank / (total - 1);
+    return pct < 0.1 ? "gold" : pct < 0.25 ? "silver" : "";
+  };
+  // 组序裁断（组序 = 位次序，故天然递增）：gold = 榜首所在组；silver = 向后的 silver 组，
+  // 末尾按组裁断而非按位次切片——并列组绝不腰斩
+  let goldGroups = 0;
+  while (goldGroups < groupStart.length && tierOfRank(groupStart[goldGroups]) === "gold") {
+    goldGroups += 1;
+  }
+  let silverRanges: [number, number][] = [];
+  for (let g = goldGroups; g < groupStart.length; g += 1) {
+    if (tierOfRank(groupStart[g]) === "silver") silverRanges.push([groupStart[g], g]);
+  }
+  // 纪律 ③ 底保：纯位次银档落空（n=2..5 必现）→ 取排名第 2 的那位；若该位次在并列组内，
+  // 则该组整组 silver（组首 = 最靠前的第 2 名）
+  if (silverRanges.length === 0) {
+    const secondGroup = groupStart.findIndex((start) => start > 0);
+    silverRanges = [[Math.max(1, groupStart[Math.max(0, secondGroup)]), Math.max(0, secondGroup)]];
+  }
+  const silverFrom = silverRanges[0][0];
+  const silverTo = silverRanges[silverRanges.length - 1][1];
+  groupStart.forEach((start, g) => {
+    const tier = g < goldGroups ? "gold" : start >= silverFrom && g <= silverTo ? "silver" : "";
+    const end = groupStart[g + 1] ?? total;
+    for (let i = start; i < end; i += 1) {
+      out[sorted[i].name] = tier;
+    }
   });
   return out;
 }

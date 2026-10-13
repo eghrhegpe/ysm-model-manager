@@ -123,10 +123,10 @@ export const contentCreatorCSS: string = `
   align-items:center;
   gap:8px;
 }
+/* 变体：卡头头像放大到 32px 并去掉基类的 6px 外边距。
+   position/flex-shrink 与基类 .cr-avatar-container 同值，故不在此重复声明。 */
 .cr-card-header .cr-avatar-container {
-  position:relative;
   width:32px;height:32px;
-  flex-shrink:0;
   margin:0;
 }
 
@@ -305,8 +305,7 @@ export const contentCreatorCSS: string = `
 
 /* ===== 创作者详情浮层 (cr-detail) ===== */
 .cr-detail-overlay { position:fixed;inset:0;z-index:var(--z-modal);background:var(--overlay-scrim);display:flex;align-items:center;justify-content:center;animation:fade-in .15s ease; }
-.cr-detail-box { background:var(--bg);border:1px solid var(--bd);border-radius:var(--radius-xl);padding:var(--sp-4);max-width:var(--dlg-width-sm);width:90vw;box-shadow:var(--shadow-xl);display:flex;flex-direction:column;gap:12px;animation:detail-in .2s ease; } /* 审计 P1-1：宽收口 --dlg-width-sm，遮罩收口 --overlay-scrim，内边距走 --sp-4 */
-.cr-detail-box { position:relative; }
+.cr-detail-box { background:var(--bg);border:1px solid var(--bd);border-radius:var(--radius-xl);padding:var(--sp-4);max-width:var(--dlg-width-sm);width:90vw;box-shadow:var(--shadow-xl);display:flex;flex-direction:column;gap:12px;animation:detail-in .2s ease;position:relative; } /* 审计 P1-1：宽收口 --dlg-width-sm，遮罩收口 --overlay-scrim，内边距走 --sp-4。position:relative 是下方 .cr-star-btn 绝对定位的包含块 */
 .cr-detail-header { display:flex;align-items:center;gap:10px; }
     .cr-detail-name { font-size:calc(16px + var(--fs-scale));font-weight:700;color:var(--txt); }
 .cr-detail-desc { font-size:var(--fs-sm);color:var(--muted);line-height:1.5;display:flex;flex-wrap:wrap;gap:4px;padding:0;background:transparent; }

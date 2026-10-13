@@ -475,9 +475,9 @@ export function workshopHTML(): string {
     "</button>" +
     "</div>" +
     '<div class="tab-body" id="cr-tab-creators">' +
-    '<div class="cr-page" id="ws-page">' +
-    '<div class="cr-right ws-right" id="ws-right">' +
-    '<div class="cr-right-inner" id="ws-right-inner">' +
+    '<div class="cr-page">' +
+    '<div class="cr-right ws-right">' +
+    '<div class="cr-right-inner">' +
     '<div class="ws-search-view" id="ws-search-view" data-testid="ws-search-view">' +
     '<div class="ws-search-results" id="ws-search-results" data-testid="ws-search-results">' +
     '<div style="color:var(--muted);font-size:var(--fs-xs);padding:12px 0;text-align:center">' +

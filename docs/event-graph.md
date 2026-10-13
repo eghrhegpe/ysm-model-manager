@@ -29,7 +29,7 @@
 | `nav:changed` | 7 | 2 | 0 | 0 | ✅ |
 | `package:selected` | 2 | 1 | 0 | 0 | ✅ |
 | `repo:focus-search` | 1 | 1 | 0 | 0 | ✅ |
-| `repo:rtype-changed` | 1 | 6 | 0 | 0 | ✅ |
+| `repo:rtype-changed` | 1 | 5 | 0 | 0 | ✅ |
 | `repo:search-creator` | 2 | 1 | 0 | 0 | ✅ |
 | `repo:subdir-changed` | 1 | 1 | 0 | 0 | ✅ |
 | `stats:refresh` | 25 | 2 | 0 | 0 | ✅ |
@@ -214,8 +214,8 @@
 | handleContainerClick | `frontend/src/features/maintenance/oldest-models.ts` | 60 |
 | onRecycleListClick | `frontend/src/features/maintenance/recycle-bin.ts` | 216 |
 | bindPreviewClicks | `frontend/src/views/app-content/diagnostics/dedup-render.ts` | 107 |
-| showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 247 |
-| showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 334 |
+| showMorphPreview | `frontend/src/views/app-preview/detail-3d.ts` | 287 |
+| showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 374 |
 | atTeClickRowFolder | `frontend/src/views/app-tree/events.ts` | 142 |
 | atTeClickRowFile | `frontend/src/views/app-tree/events.ts` | 216 |
 | _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 665 |
@@ -223,7 +223,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| initPerfPanel | `frontend/src/views/app-content/diagnostics/perf.ts` | 222 |
+| initPerfPanel | `frontend/src/views/app-content/diagnostics/perf.ts` | 193 |
 | connectedCallback | `frontend/src/views/app-preview/index.ts` | 72 |
 
 ### `nav:changed`
@@ -256,7 +256,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| initInstancesPage | `frontend/src/views/app-content/init-pages.ts` | 72 |
+| initInstancesPage | `frontend/src/views/app-content/init-pages.ts` | 73 |
 
 ### `repo:focus-search`
 
@@ -281,8 +281,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | useCurrentResourceType | `frontend/src/features/repo/repo-rtype.ts` | 21 |
-| initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 125 |
-| initDedupTab | `frontend/src/views/app-content/init-pages.ts` | 291 |
+| initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 126 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 211 |
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 113 |
 | _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 308 |

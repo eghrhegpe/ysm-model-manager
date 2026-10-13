@@ -17,6 +17,26 @@ import { showCard } from "./card-shell.ts";
 import { resolveMorphSiblings, resolveStageSiblings } from "./siblings.ts";
 import type { DetailGenGuard, PreviewCtx } from "./utils.ts";
 
+// ===== 共享渲染辅助（样式骨架收口）=====
+
+/** 统计面板容器（2026-10 收口：VRM/MMD 统计行两连逐字抄的 10 属性 flex-wrap 骨架
+ *  归此单点——accent 8% 底 + muted fs-xs 字 + flex-wrap + gap:4px 10px + margin-top:6px
+ *  + padding:6px 8px + radius-md；标题行 accent 色 + chart 图标固定于容器首行，items 行
+ *  由调用方传入（\n 连接，flex 容器内空白文本节点无渲染影响）。
+ *  语义锁 = detail.test.ts「渲染实测」/「文件统计」+ 数值断言；结构锁 = 本文件新增的
+ *  「统计面板容器 style 串」回归例。 */
+function statsPanelHTML(title: string, items: string): string {
+  return `<div style="display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:6px;padding:6px 8px;border-radius:var(--radius-md);background:color-mix(in srgb,var(--accent) 8%,transparent);font-size:var(--fs-xs);color:var(--muted)">
+<span style="color:var(--accent)">${title}</span>
+${items}</div>`;
+}
+
+/** 统计面板单项 `icon label: <b>value</b>`（2026-10 收口：VRM 6 + MMD 5 共 11 行同构）。
+ * MMD 的 faces 行 icon 传 "◻️" 字面（历史 emoji，不经 UI_ICONS——收口不动图标，原样保留）。 */
+function statItemHTML(icon: string, label: string, value: string | number): string {
+  return `<span>${icon} ${label}: <b>${value}</b></span>`;
+}
+
 // ===== 六个 show 函数（统一为 CardShowConfig + showCard，壳见 ./card-shell.ts）=====
 
 /** 显示 VRM meta 卡（名称/作者/许可/版本/缩略图 + FAB 进 3D，对齐 YSM 模式） */
@@ -61,15 +81,21 @@ export async function showVrmMeta(
       const s = m.stats as Record<string, number> | undefined;
       const statsRow =
         s && (s.meshCount > 0 || s.boneCount > 0)
-          ? `<div style="display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:6px;padding:6px 8px;border-radius:var(--radius-md);background:color-mix(in srgb,var(--accent) 8%,transparent);font-size:var(--fs-xs);color:var(--muted)">
-            <span style="color:var(--accent)">${UI_ICONS.chart} ${t("preview.stats.panel")}</span>
-            <span>${UI_ICONS.bone} ${t("preview.stats.bones")}: <b>${s.boneCount}</b></span>
-            <span>${UI_ICONS.parser} ${t("preview.stats.meshes")}: <b>${s.meshCount}</b></span>
-            <span>${UI_ICONS.collision} ${t("preview.stats.triangles")}: <b>${s.triangleCount.toLocaleString()}</b></span>
-            <span>${UI_ICONS.appearance} ${t("preview.stats.materials")}: <b>${s.materialCount}</b></span>
-            <span>${UI_ICONS.image} ${t("preview.stats.textures")}: <b>${s.textureCount}</b></span>
-            <span>${UI_ICONS.avatar} ${t("preview.stats.morphs")}: <b>${s.morphCount}</b></span>
-          </div>`
+          ? statsPanelHTML(
+              `${UI_ICONS.chart} ${t("preview.stats.panel")}`,
+              [
+                statItemHTML(UI_ICONS.bone, t("preview.stats.bones"), s.boneCount),
+                statItemHTML(UI_ICONS.parser, t("preview.stats.meshes"), s.meshCount),
+                statItemHTML(
+                  UI_ICONS.collision,
+                  t("preview.stats.triangles"),
+                  s.triangleCount.toLocaleString(),
+                ),
+                statItemHTML(UI_ICONS.appearance, t("preview.stats.materials"), s.materialCount),
+                statItemHTML(UI_ICONS.image, t("preview.stats.textures"), s.textureCount),
+                statItemHTML(UI_ICONS.avatar, t("preview.stats.morphs"), s.morphCount),
+              ].join("\n"),
+            )
           : "";
       return `<div class="content" id="preview-content" data-testid="preview-content">
   <h3>${icon} ${label}</h3>
@@ -125,14 +151,28 @@ export async function showMmdPreview(
             const host = ctx.root.querySelector<HTMLElement>("#mmd-stats-row");
             if (!host) return;
             // 口径标注（审核建议 ②）：PMX 文件解析 vs 3D 渲染实测 vs YSM Go 口径三方区分
-            host.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:6px;padding:6px 8px;border-radius:var(--radius-md);background:color-mix(in srgb,var(--accent) 8%,transparent);font-size:var(--fs-xs);color:var(--muted)">
-              <span style="color:var(--accent)">${UI_ICONS.chart} ${t("preview.stats.file")}</span>
-              <span>${UI_ICONS.collision} ${t("preview.stats.vertices")}: <b>${stats.vertices.toLocaleString()}</b></span>
-              <span>◻️ ${t("preview.stats.faces")}: <b>${stats.faces.toLocaleString()}</b></span>
-              <span>${UI_ICONS.bone} ${t("preview.stats.bones")}: <b>${stats.bones.toLocaleString()}</b></span>
-              <span>${UI_ICONS.appearance} ${t("preview.stats.materials")}: <b>${stats.materials.toLocaleString()}</b></span>
-              <span>${UI_ICONS.avatar} ${t("preview.stats.morphs")}: <b>${stats.morphs.toLocaleString()}</b></span>
-            </div>`;
+            host.innerHTML = statsPanelHTML(
+              `${UI_ICONS.chart} ${t("preview.stats.file")}`,
+              [
+                statItemHTML(
+                  UI_ICONS.collision,
+                  t("preview.stats.vertices"),
+                  stats.vertices.toLocaleString(),
+                ),
+                statItemHTML("◻️", t("preview.stats.faces"), stats.faces.toLocaleString()),
+                statItemHTML(UI_ICONS.bone, t("preview.stats.bones"), stats.bones.toLocaleString()),
+                statItemHTML(
+                  UI_ICONS.appearance,
+                  t("preview.stats.materials"),
+                  stats.materials.toLocaleString(),
+                ),
+                statItemHTML(
+                  UI_ICONS.avatar,
+                  t("preview.stats.morphs"),
+                  stats.morphs.toLocaleString(),
+                ),
+              ].join("\n"),
+            );
           } catch {
             /* 统计读取失败静默：基础卡不受影响（详情卡降级约定） */
           }

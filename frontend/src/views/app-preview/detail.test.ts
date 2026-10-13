@@ -349,6 +349,47 @@ describe("showMmdPreview MMD 预览卡", () => {
 });
 
 // ===== 覆盖率补强：tab 切换 / gen 过期守卫 / shaderpack 详情 / 模型清单竞态 =====
+describe("统计面板容器 style 串回归锁（statsPanelHTML 收口，2026-10）", () => {
+  // VRM/MMD 统计行曾各手写一份 10 属性全同的容器字面量（flex-wrap + gap:4px 10px +
+  // accent 8% 底 + muted fs-xs 等），收口归 statsPanelHTML 单点后按完整 style 串锁结构——
+  // 日后改容器样式（类化/换令牌/改混合比例）在此炸出；语义断言（「渲染实测」/「文件统计」
+  // + 数值）见上方既有例。
+  const CONTAINER_STYLE =
+    '<div style="display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:6px;padding:6px 8px;border-radius:var(--radius-md);background:color-mix(in srgb,var(--accent) 8%,transparent);font-size:var(--fs-xs);color:var(--muted)">';
+
+  it("VRM 统计行走统一容器（accent 8% 底 + muted + flex-wrap）", async () => {
+    vrmMetaMock.mockResolvedValueOnce({
+      name: "s",
+      authors: [],
+      stats: {
+        boneCount: 52,
+        meshCount: 8,
+        triangleCount: 12000,
+        materialCount: 3,
+        textureCount: 1,
+        morphCount: 6,
+      },
+    });
+    const ctx = makeCtx();
+    await showVrmMeta(ctx, "/repo/lock.vrm");
+    expect(ctx.root.innerHTML).toContain(CONTAINER_STYLE);
+  });
+
+  it("MMD 统计行走同一统一容器", async () => {
+    readPmxStatsMock.mockResolvedValue({
+      vertices: 12500,
+      faces: 25000,
+      bones: 42,
+      materials: 5,
+      morphs: 8,
+    });
+    const ctx = makeCtx();
+    await showMmdPreview(ctx, "/repo/lock.pmx");
+    await vi.waitFor(() => {
+      expect(ctx.root.innerHTML).toContain(CONTAINER_STYLE);
+    });
+  });
+});
 describe("showModelDetail — tab 切换（switchTab）", () => {
   it("点击 skeleton tab → 落盘偏好 + 面板显隐切换", async () => {
     const ctx = makeCtx();

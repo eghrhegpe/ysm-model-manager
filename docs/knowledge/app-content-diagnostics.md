@@ -22,6 +22,7 @@ auto_fields:
     - CLIResp
     - collectTargets
     - concParsePayload
+    - concReadIds
     - copyWithToast
     - createDedupSession
     - DEDUP_DEFAULTS
@@ -57,8 +58,6 @@ auto_fields:
     - PERF_RUN_BUTTON_MODE_KEYS
     - PERF_TARGET_ALL
     - PERF_TARGET_REPO
-    - PERF_UNREAD_MODES
-    - PERF_UNREAD_TARGETS
     - PerfIdentity
     - PerfMatrixModel
     - PerfMatrixPayload
@@ -91,6 +90,7 @@ auto_fields:
     - ScanBenchParity
     - scanBenchParsePayload
     - ScanBenchPayload
+    - scanBenchReadIds
     - ScanBenchSpec
     - scanEachDirectory
     - ScanFile
@@ -99,6 +99,7 @@ auto_fields:
     - ScanTarget
     - scoreBand
     - sectionHeader
+    - singleBenchReadIds
     - singleBenchReadIterations
     - syncPerfBaselineControls
   tests:

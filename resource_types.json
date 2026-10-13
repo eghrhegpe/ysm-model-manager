@@ -1,4 +1,8 @@
 {
+  "containerExts": [
+    ".zip",
+    ".7z"
+  ],
   "resourceTypes": [
     {
       "id": "resourcepack",

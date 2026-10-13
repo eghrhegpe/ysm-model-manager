@@ -14,7 +14,8 @@ const VALID_PREVIEWS = new Set(["3d", "thumbnail", "none"]);
 // ADR-067：zipentry 为容器内容指纹 detector（裸文件按扩展名、.zip 容器按 zipEntries 匹配）
 const VALID_DETECTORS = new Set(["mcmeta", "shader", "ysm", "extension", "zipentry"]);
 const VALID_ZIP_MATCHES = new Set(["exact", "prefix", "suffix"]);
-const CONTAINER_EXTS = new Set([".zip", ".7z"]);
+// CONTAINER_EXTS 不再手抄（ADR-269-d1）：值集事实源 = 根 resource_types.json 顶层
+// containerExts 声明，validate() 内从已解析的 data 派生——与 Go registry、前端 schema.ts 三端同源。
 const VALID_ACTIONS = new Set(["import", "toggle", "delete", "openFolder", "view"]);
 // Go AppConfig 字段白名单（go/types/config.go）——configField 必须指向真实持久化字段
 const VALID_CONFIG_FIELDS = new Set([
@@ -58,6 +59,23 @@ function validate() {
   if (!("resourceTypes" in data)) {
     errors.push("SCHEMA: missing top-level 'resourceTypes' key");
     return errors;
+  }
+
+  // ADR-269-d1：containerExts 为顶层**必填**声明（容器值集的单一事实源；Go registry、
+  // 前端 schema.ts、本契约测试三端派生自它）。本测试是硬断言面（CI 拦在提交前），
+  // 缺失/非法即 SCHEMA 报错，不回落内置集合——「契约测试自己抄一份」正是本刀消灭的病。
+  let CONTAINER_EXTS: Set<string>;
+  const declaredContainer = data.containerExts;
+  if (!Array.isArray(declaredContainer) || declaredContainer.length === 0) {
+    errors.push("SCHEMA: missing/empty top-level 'containerExts' array (ADR-269-d1)");
+    CONTAINER_EXTS = new Set();
+  } else {
+    CONTAINER_EXTS = new Set(declaredContainer.map((e) => String(e).toLowerCase()));
+    for (const e of declaredContainer) {
+      if (typeof e !== "string" || !e.startsWith(".")) {
+        errors.push(`SCHEMA: containerExts entry must start with '.' (got '${e}')`);
+      }
+    }
   }
 
   // ADR-092：resourceGroups 顶层数组（可选；若存在须为含 id 的非空数组，id 合法且唯一）
@@ -197,7 +215,9 @@ function validate() {
         }
         const containerExts = exts.filter((e) => CONTAINER_EXTS.has(e.toLowerCase()));
         if (containerExts.length === 0) {
-          errors.push(`${prefix}: detector 'zipentry' requires '.zip' or '.7z' in 'extensions'`);
+          errors.push(
+            `${prefix}: detector 'zipentry' requires one of [${[...CONTAINER_EXTS].join(", ")}] in 'extensions'`,
+          );
         }
       }
     }

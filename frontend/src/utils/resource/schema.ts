@@ -44,6 +44,9 @@ export interface ResourceType {
 
 /** JSON 顶层形状 */
 interface ResourceTypeRegistryJson {
+  /** 全局容器扩展名声明（.zip/.7z，小写带点）——ADR-269-d1：值集事实源在本 JSON，
+   *  Go `registry.ContainerExts/IsContainerExt`、前端 types.ts、契约测试三端派生。 */
+  containerExts?: string[];
   resourceTypes?: ResourceType[];
 }
 
@@ -53,6 +56,26 @@ const registryJson = resourceTypesJson as ResourceTypeRegistryJson;
 
 /** 全部资源类型条目（types.ts / extensions.ts 共同消费，单一来源） */
 export const allResourceTypes: ResourceType[] = registryJson.resourceTypes ?? [];
+
+/**
+ * 全局容器扩展名（小写带点，单源 = resource_types.json 顶层 containerExts，ADR-269-d1）。
+ * 容器是可包裹任意资源类型的通用包装层，不是某类型的属性——故它是顶层字段而非类型字段。
+ * 缺声明即回落内置对账集合并告警（同 allResourceTypes 空表 fail-loud 口径，不静默变空集：
+ * 空集会让「.zip 是否容器」全线翻转）。
+ */
+function deriveContainerExts(declared: unknown): string[] {
+  if (Array.isArray(declared) && declared.length > 0) {
+    return declared.map((e) => String(e).toLowerCase());
+  }
+  // fail-loud（同 allResourceTypes 空表口径）：缺声明回落内置对账集合并告警，
+  // 不静默变空集——空集会让「.zip 是否容器」的判定全线翻转。
+  console.error(
+    "[resource] resource_types.json 缺 containerExts 顶层声明，回落内置对账集合（应与 Go/契约测试同源，勿长期靠回退）",
+  );
+  return [".zip", ".7z"];
+}
+
+export const containerExts: string[] = deriveContainerExts(registryJson.containerExts);
 
 /**
  * 按 id 键控的同步资源类型视图（ADR-269 D3）。

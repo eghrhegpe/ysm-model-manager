@@ -79,22 +79,28 @@ func AllExts() []string {
 	return result
 }
 
-// ContainerExts 全局容器扩展名集合（.zip/.7z）。
+// ContainerExts 全局容器扩展名集合（值集事实源 = 根 resource_types.json 顶层
+// containerExts 声明，ADR-269-d1；此处派生自注册表，不再持字面量）。
 // 容器是可包裹任意资源类型的通用包装层，不是资源类型的属性——本函数是 Go 侧
-// 容器判定的单一事实来源：识别链路（packs.DetectResourceType 的 isContainer）、
+// 容器判定的单一出口：识别链路（packs.DetectResourceType 的 isContainer）、
 // 整合包目录查找（FindInstDir 的容器弱证据）统一走 IsContainerExt，禁止魔法字符串。
-// 前端对应物：frontend/src/utils/resource/types.ts 的 CONTAINER_EXTS（歧义扩展名推导源）；
-// 契约对应物：tests/test_resource_schema.mjs 的 CONTAINER_EXTS。三端同源。
+// 同源消费方：frontend/src/utils/resource/types.ts|CONTAINER_EXTS（经 schema.ts 派生）、
+// tests/test_resource_schema.ts（契约对账）——三端读同一 JSON 字段。
+// 返回**拷贝**：注册表切片是包内可变状态，导出原引用等于开外部改写口子
+// （同 disableSuffixes 私有化的口径——防任意包改写全局容器集合）。
 func ContainerExts() []string {
-	return []string{".zip", ".7z"}
+	exts := LoadRegistry().ContainerExts
+	out := make([]string, len(exts))
+	copy(out, exts)
+	return out
 }
 
 // IsContainerExt 判断扩展名是否是容器扩展名（大小写不敏感）。
 // 容器文件（.zip/.7z）的类型归属不能靠扩展名判定（ADR-067：任何类型都可能被
 // 包裹），必须走 zipEntries 内容指纹（packs.DetectResourceType / importer.DetectContainerType）。
+// 热路径逐文件调用，查 loadExtCache 的集合缓存（随注册表实例指针失效）。
 func IsContainerExt(ext string) bool {
-	low := strings.ToLower(ext)
-	return low == ".zip" || low == ".7z"
+	return loadExtCache(LoadRegistry()).containerSet[strings.ToLower(ext)]
 }
 
 // ===== 扩展名集合 map 缓存 =====
@@ -104,9 +110,10 @@ func IsContainerExt(ext string) bool {
 // 语义与逐次遍历完全一致（行为锁定测试 extensions_map_test.go 防误用 sync.Once 永久缓存）。
 
 type extCacheEntry struct {
-	reg     *ResourceTypeRegistry
-	extSet  map[string]bool // 全部扩展名（小写）
-	hashSet map[string]bool // 仅 hashable 类型声明的扩展名（小写）
+	reg          *ResourceTypeRegistry
+	extSet       map[string]bool // 全部扩展名（小写）
+	hashSet      map[string]bool // 仅 hashable 类型声明的扩展名（小写）
+	containerSet map[string]bool // 容器扩展名（小写），ADR-269-d1 派生自 reg.ContainerExts
 }
 
 var extCache atomic.Value // *extCacheEntry
@@ -118,9 +125,13 @@ func loadExtCache(reg *ResourceTypeRegistry) *extCacheEntry {
 		return c
 	}
 	c := &extCacheEntry{
-		reg:     reg,
-		extSet:  make(map[string]bool),
-		hashSet: make(map[string]bool),
+		reg:          reg,
+		extSet:       make(map[string]bool),
+		hashSet:      make(map[string]bool),
+		containerSet: make(map[string]bool),
+	}
+	for _, e := range reg.ContainerExts { // ADR-269-d1：顶层声明，非类型属性
+		c.containerSet[strings.ToLower(e)] = true
 	}
 	for _, rt := range reg.ResourceTypes {
 		hashable := rt.Hashable

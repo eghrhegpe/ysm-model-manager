@@ -135,7 +135,7 @@ status: active
 
 ## 对外 API / 入口
 
-- `resource_types.json` — 单一事实源（顶层唯一键 `resourceTypes`），Go `go/types/` 与前端 `utils/resource/schema.ts` 各自同源读取
+- `resource_types.json` — 单一事实源（顶层 `resourceTypes` 数组 + **`containerExts` 顶层声明**，ADR-269-d1：容器扩展名值集 `.zip/.7z` 不再散落在 Go/前端/契约测试各抄一份，改由本字段单源，Go `registry.ContainerExts/IsContainerExt`、前端 `schema.ts|containerExts`、`tests/test_resource_schema.ts` 三端派生），Go `go/types/` 与前端 `utils/resource/schema.ts` 各自同源读取
 - `utils/resource/schema.ts`（前端唯一同步入口）— `allResourceTypes: ResourceType[]` + `resourceTypesById: Record<string, ResourceType>`；构建期 import 内联 JSON，无空表窗口
 - ⚠️ 历史：原前端 `services/resource-registry.ts` 提供 `loadResourceRegistry()`（异步 Go RPC + 模块级缓存），ADR-269 D3（2026-09）退役全部消费方后连模块删除——勿再引用
 - ⚠️ 历史：原 `services/registry.ts` **服务注册表**曾提供 `register/get/has/unregister/clear`（`ServiceName` 联合收窄 + `Map.has()` falsy 判定），2026-09 已删除——勿再引用
@@ -148,6 +148,7 @@ status: active
 ## 不变量
 
 - 新增资源类型必须在 `resource_types.json` 中添加，不可在 Go/Frontend 中手写新条目
+- **容器扩展名单源（ADR-269-d1）**：`.zip/.7z` 值集 = JSON 顶层 `containerExts`（与 `cliAnalyzable` 同路径入 JSON）。Go 侧三重锁：`LoadRegistry` 对缺字段做**字段级基线回退**（「未声明」≠「声明为空」——空集会让容器判定全线静默翻转，同 BUG-1/4 保守方向）；`IsContainerExt` 查 `loadExtCache` 集合缓存（逐文件热路径无锁，随注册表实例指针失效，`TestContainerExts_CacheInvalidatesOnRegistrySwap` 防 sync.Once 永久缓存）；`ContainerExts()` 返回拷贝（防外部 mutate 包内切片，同 disableSuffixes 私有化口径）。前端 `schema.ts|containerExts` 缺声明 fail-loud 回落对账集合；契约测试 `test_resource_schema.ts` 把该字段判为**顶层必填**（缺失即 SCHEMA 红，不默许「靠回退活着」——Go 运行时容错、CI 硬断言各守一面）。⚠️ `go/ysm/texsize.go` 的 `.ysm/.zip/.7z` 字面量是「ysm 模型候选集」不是容器集合（含 .ysm），不并本刀
 - 派生守卫（`type-consistency.ts`，ADR-204 收敛）：守护 extensions.ts 必须派生自 resource_types.json（禁手写 RESOURCE_EXTS 副本）；JSON↔JS 字面量比对已不可达废弃，dup id 等结构性校验移交 Go `resource_types_consistency_test.go`
 - **MMD 子类型 `instanceDir` 防回归（2026-08-23）**：游戏实际在整合包生成 6 个 `3d-skin/` 子目录——`SceneModel` / `EntityPlayer` / `CustomMorph` / `CustomAnim` / `DefaultMorph` / `DefaultAnim`，这些类型的 `instanceDir` **必须**精确为 `3d-skin/<子名>`（含子级），漏写一级（只写 `3d-skin`）会导致右键「打开文件夹」打开到错误父目录差一级。`StageAnim` / `mmd-shader` 游戏未实际生成独立子目录，`instanceDir` 保持 `3d-skin` 父目录兜底（打开到父级仍可定位，不报错）。`OpenInstanceFolder` → `resolveInstDirTarget` 只用 `rtype.instanceDir` 拼路径、`subdir` 参数已不参与路由（app_scan.go OpenInstanceFolder），所以「兜底」完全依赖 `instanceDir` 数据正确——**纯数据层契约，无代码猜测**。回归测试 `TestResolveInstDirTarget_MmdSubtype_3dSkinPrefix` 锁定这 6 个类型的子目录。
 

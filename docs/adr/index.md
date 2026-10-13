@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **345** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **346** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > ADR 三区存放：根目录 = 存量（分级前）/ `architecture/` = 架构决策 / `decisions/` = 执行决策日志（ADR-320）。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -19,7 +19,7 @@ permalink: /adr/
 | [📝 提议中](#提议中) | 7 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 1 |
 | [🔄 部分采纳](#部分采纳) | 14 |
-| [✅ 已采纳](#已采纳) | 315 |
+| [✅ 已采纳](#已采纳) | 316 |
 | [❌ 已取代](#已取代) | 8 |
 | [🧊 已废弃](#已废弃) | 0 |
 | [❓ 未归类](#未归类) | 0 |
@@ -63,7 +63,7 @@ permalink: /adr/
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 | [ADR-050](./ADR-050-plaza-browser-window.md) | 模型广场 · 浏览器窗口（Wails 第二窗口） | 🔄 部分采纳 |
 
-### ✅ 已采纳（315）
+### ✅ 已采纳（316）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
@@ -133,6 +133,7 @@ permalink: /adr/
 | [ADR-270-d5](./decisions/ADR-270-d5-r10-y-sm-preview-pipeline-ownership.md) | R10 穿透债归属纠正：YSM 预览数据装配流水线自 views 迁入 preview-3d/adapters（否决再导出面） | ✅ 已采纳 |
 | [ADR-270-d6](./decisions/ADR-270-d6-r10-screenshot-menu-adapter-domain-knowledge.md) | R10 收尾：截图多角度编排与菜单候选派生归属纠正（适配器域知识回迁 preview-3d/adapters） | ✅ 已采纳 |
 | [ADR-269](./ADR-269-resource-manifest-single-source.md) | 资源清单单一事实源化：mcmeta 四份手抄收敛 + pack 内容摘要喂同步判定 | ✅ 已采纳 |
+| [ADR-269-d1](./decisions/ADR-269-d1-container-exts-registry-declaration.md) | 容器扩展名单源化：registry.containerExts 声明入 JSON，Go/前端/契约三端派生 | ✅ 已采纳 |
 | [ADR-268](./ADR-268-env-cap-self-placement.md) | 环境面板 cap 自报归属（getEnvPlacement），退役 env.ts 硬编码成员清单 | ✅ 已采纳 |
 | [ADR-267](./ADR-267-toast-emoji-esc.md) | toast 消息载荷 emoji→类型驱动语义图标，去 esc 文本槽盲区 | ✅ 已采纳 |
 | [ADR-266](./ADR-266-volumetric-cone-true-geometry.md) | 体积光锥改真锥体几何 + Fresnel 边缘辉光；修 ACES 旁路与过度重建 | ✅ 已采纳 |
@@ -745,6 +746,7 @@ permalink: /adr/
 | ADR-270-d4 | toast:show 发射端收敛战役：162 绕行点迁入 utils/dom/toast.ts 原语，登记表逐条销账 | ✅ 已采纳 | 2026-10-05 |
 | ADR-270-d5 | R10 穿透债归属纠正：YSM 预览数据装配流水线自 views 迁入 preview-3d/adapters（否决再导出面） | ✅ 已采纳 | 2026-10-06 |
 | ADR-270-d6 | R10 收尾：截图多角度编排与菜单候选派生归属纠正（适配器域知识回迁 preview-3d/adapters） | ✅ 已采纳 | 2026-10-07 |
+| ADR-269-d1 | 容器扩展名单源化：registry.containerExts 声明入 JSON，Go/前端/契约三端派生 | ✅ 已采纳 | 2026-10-13 |
 | ADR-266-d1 | 体积光锥进截图：离屏/预览输出设置同构（toneMapping + 曝光镜像） | ✅ 已采纳 | 2026-10-04 |
 | ADR-256-d1 | 存量债到期制：debt 条目必须带 reason 与 reviewBy，到期由 doctor --all 硬处置 | ✅ 已采纳 | 2026-10-09（实施与 CI 验证同日完成，用户逐刀批准） |
 | ADR-235-d1 | sky cap 资产管线下沉（太阳位置计算 + 天空资产）——cap 变薄编排壳 | ✅ 已采纳 | 2026-10-09 |

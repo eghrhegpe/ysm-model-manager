@@ -10,7 +10,7 @@
 // maid-model 的中文全名为 "车万女仆模型"（JSON name 字段）；如需短标签 "车万女仆"，
 // 走 short-label.ts 的 i18n 短标签体系（t("rtype.maid")）。
 // ALL_RESOURCE_TYPES 等派生表统一消费 schema.ts 的 allResourceTypes（T2 单点解析）。
-import { allResourceTypes, type ZipEntryMatch } from "./schema.ts";
+import { allResourceTypes, containerExts, type ZipEntryMatch } from "./schema.ts";
 
 /** 资源类型 ID（键为类型标签，值为内部 ID） */
 export const RESOURCE_TYPES: Record<string, string> = {
@@ -282,8 +282,11 @@ function resolveTypeByExt(path: string): string | null {
   return hits.length === 1 ? hits[0].id : null;
 }
 
-/** 压缩容器扩展名：走 Go 解包提取，不由前端 WASM 直接预览 */
-const CONTAINER_EXTS = new Set([".zip", ".7z"]);
+/** 压缩容器扩展名：走 Go 解包提取，不由前端 WASM 直接预览。
+ *  ADR-269-d1：值集派生自 resource_types.json 顶层 containerExts（经 schema.ts 单源解析），
+ *  与 Go registry.ContainerExts / tests/test_resource_schema.ts 三端同源——新增容器格式
+ *  只改 JSON 一处，本处不再是第二份字面量。 */
+const CONTAINER_EXTS = new Set(containerExts);
 
 /** 是否为压缩容器扩展名（.zip/.7z；容器可包裹任意类型，类型判定仍以 Go 内容检测为准） */
 export function isContainerExt(pathOrExt: string): boolean {

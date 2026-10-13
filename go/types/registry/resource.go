@@ -28,6 +28,11 @@ func SetBundledRegistryJSON(b []byte) {
 
 // ResourceTypeRegistry 资源类型注册表
 type ResourceTypeRegistry struct {
+	// ContainerExts 全局容器扩展名声明（".zip"/".7z"，小写带点）。ADR-269-d1：
+	// 单一事实源 = 根 resource_types.json 顶层同名字段，Go/前端/契约测试三端派生。
+	// 「未声明（nil/空）」≠「声明为空」：LoadRegistry 对本字段做字段级基线回退
+	// （与整表空回退基线同一条保守方向），空集合会让容器判定静默翻转。
+	ContainerExts []string       `json:"containerExts,omitempty"`
 	ResourceTypes []ResourceType `json:"resourceTypes"`
 }
 
@@ -227,6 +232,17 @@ func LoadRegistry() *ResourceTypeRegistry {
 			reg.ResourceTypes = deduped
 		}
 	}
+	// ADR-269-d1 containerExts 字段级基线回退：payload 合法但不带（或声明为空）该字段时，
+	// 回退嵌入基线的容器集合，而不是留下空集合——空集合会让 importer/packs/findinst
+	// 的容器判定全线静默翻转（.zip 不再被当容器 → 走裸扩展名歧义路径），与整表空回退
+	// 基线（BUG-1/4）同一条保守方向。「声明为空数组」不提供合法表达：容器集合为空
+	// 是危险状态，不是可配置语义。
+	if len(reg.ContainerExts) == 0 && len(bundledRegistryJSON) > 0 {
+		var baseline ResourceTypeRegistry
+		if err := json.Unmarshal(bundledRegistryJSON, &baseline); err == nil && len(baseline.ContainerExts) > 0 {
+			reg.ContainerExts = baseline.ContainerExts
+		}
+	}
 	// P0 注册表 schema 守卫：字段唯一归属 + 引用完整性。
 	// 违反则逐条 log.Printf 告警、不阻断加载（避免生产环境因历史债直接瘫痪）。
 	for _, v := range validateRegistrySchema(&reg) {
@@ -244,7 +260,7 @@ func LoadRegistry() *ResourceTypeRegistry {
 // 返回违规描述列表（空 = 合规）。守卫本身不落日志、不改数据：
 // LoadRegistry 侧对每条违规 log.Printf 告警（WARN 级，不阻断——生产注册表可能
 // 含历史债，硬 fail 会让 IsSupportedExt 全线失效）；真实注册表的硬断言由 schema
-// 契约测试（tests/test_resource_schema.mjs）承担，CI 拦在提交前。
+// 契约测试（tests/test_resource_schema.ts）承担，CI 拦在提交前。
 //
 // 每个守卫是「独立遍历 reg → 追加违规」的封闭单元，彼此无共享可变状态，
 // 故各成一个具名函数；本函数只保留调用序列——追加顺序即对外可见的违规顺序契约。

@@ -21,11 +21,10 @@ import type { AppContentHost } from "./host.ts";
 import { bindTabA11y } from "./tabs-a11y.ts";
 
 /** 懒初始化函数返回值双形态：cleanup 函数（历史契约）或 { cleanup?, onShow? } 对象。
- *  onShow 是「每次激活」副作用句柄（与懒初始化「仅一次」正交），随初始化闭包落位、随面板世代消亡。 */
-export type TabInitResult =
-  | (() => void)
-  | null
-  | { cleanup?: (() => void) | null; onShow?: () => void };
+ *  onShow 是「每次激活」副作用句柄（与懒初始化「仅一次」正交），随初始化闭包落位、随面板世代消亡。
+ *  ⚠️ 刻意**不导出**：外部消费者的类型锚点是下面的 `TabInitFn`（写 init 函数只需标注它），
+ *  本联合类型无第二处引用，导出即 knip 死导出（2026-10-13 静态治理闸实证阻断）。 */
+type TabInitResult = (() => void) | null | { cleanup?: (() => void) | null; onShow?: () => void };
 /** 懒初始化函数签名：持有宿主与面板容器，返回 TabInitResult（可 async） */
 export type TabInitFn = (h: AppContentHost, c: HTMLElement) => Promise<TabInitResult>;
 

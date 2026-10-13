@@ -830,7 +830,9 @@ export function redlineCodeGapHits(): string[] {
     const fe = fs.readFileSync(path.join(ROOT, "frontend/src/utils/dom/errors.ts"), "utf-8");
     const block = fe.match(/const CODE_KEYS[^{]*\{([\s\S]*?)\n\};/);
     mappedKeys = new Set<string>();
-    for (const m of block ? block[1].matchAll(/^\s*([A-Z][A-Z0-9_]*)\s*:/gm) : []) {
+    // block[1] 是唯一捕获组，block 命中即必存在；?? "" 仅消 noUncheckedIndexedAccess 误报
+    // （ba6a713df 遗留 TS2532，运行语义不变——空串 matchAll 不产命中）。
+    for (const m of (block?.[1] ?? "").matchAll(/^\s*([A-Z][A-Z0-9_]*)\s*:/gm)) {
       mappedKeys.add(m[1] as string);
     }
   } catch {

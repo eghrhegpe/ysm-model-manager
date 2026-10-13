@@ -2506,16 +2506,6 @@ export const autoSidebar = [
             "link": "/knowledge/vitest-env-switch"
           }
         ]
-      },
-      {
-        "text": "其他",
-        "collapsed": true,
-        "items": [
-          {
-            "text": "zzz-fm-delimiter-tmp",
-            "link": "/knowledge/zzz-fm-delimiter-tmp"
-          }
-        ]
       }
     ]
   },

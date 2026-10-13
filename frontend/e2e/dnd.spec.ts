@@ -1,11 +1,12 @@
 // ===== E2E 测试：拖拽导入（DnD，ADR-037 动机之一）=====
 // jsdom 无法模拟 DragEvent/DataTransfer（ADR-037 引入 e2e 的理由），
 // 这里在真实浏览器构造 DataTransfer + File，走 app-tree shadow root 内
-// #tree 容器上的 dragover/drop 组件级监听（features/import-dnd.ts bindTreeDnD），
+// #tree 容器上的 dragover/drop 组件级监听（features/dnd/import-dnd.ts bindTreeDnD），
 // 断言：
-//   1. dragover 文件 → 组件级 tree-drop-hint 出现
-//   2. drop → tree-drop-hint 收起 + 导入链路触发（mock ImportModelFile 被调）
-//   3. 非文件 dataTransfer → tree-drop-hint 不出现
+//   1. dragover 文件 → 组件级 tree-drop-hint 出现 + #tree 加 .droppable 可放置态
+//   2. drop → tree-drop-hint 收起 + .droppable 摘除 + 导入链路触发（mock ImportModelFile 被调）
+//   3. 非文件 dataTransfer → tree-drop-hint 不出现、.droppable 不加
+//   4. dragout（dragleave relatedTarget 树外）→ .droppable 摘除（滞留回归锁）
 //
 // 注意（Chromium 陷阱）：`new DragEvent(type, { dataTransfer })` 构造器会忽略
 // dataTransfer（只读属性，构造后为 null）→ onDragOver 的 types 检查失败、
@@ -74,6 +75,16 @@ async function isTreeDropHintVisible(page: Page): Promise<boolean> {
   });
 }
 
+/** 查询 #tree 容器是否带 .droppable 可放置态（视觉反馈 P2 断言通道） */
+async function isTreeDroppable(page: Page): Promise<boolean> {
+  return page.evaluate(() => {
+    const content = document.querySelector("app-content");
+    const treeHost = content?.shadowRoot?.querySelector("app-tree");
+    const tree = treeHost?.shadowRoot?.querySelector<HTMLElement>('[data-testid="tree-root"]');
+    return Boolean(tree?.classList.contains("droppable"));
+  });
+}
+
 test.describe("拖拽导入（DnD）", () => {
   test.beforeEach(async ({ page }) => {
     await gotoApp(page);
@@ -85,17 +96,31 @@ test.describe("拖拽导入（DnD）", () => {
     expect(await isTreeDropHintVisible(page)).toBe(true);
   });
 
-  test("drop 文件 → tree-drop-hint 收起 + toast 反馈", async ({ page }) => {
+  test("dragover 文件 → #tree 加 .droppable 可放置态（视觉反馈）", async ({ page }) => {
+    await dispatchFileDragOnTree(page, "a.ysm", true);
+    expect(await isTreeDroppable(page)).toBe(true);
+    // CSS 侧同时验证：droppable 态带 accent 虚线 outline（样式接线不断）
+    const outline = await page.evaluate(() => {
+      const content = document.querySelector("app-content");
+      const treeHost = content?.shadowRoot?.querySelector("app-tree");
+      const tree = treeHost?.shadowRoot?.querySelector<HTMLElement>('[data-testid="tree-root"]');
+      return tree ? getComputedStyle(tree).outlineStyle : "";
+    });
+    expect(outline).toBe("dashed");
+  });
+
+  test("drop 文件 → tree-drop-hint 收起 + .droppable 摘除 + toast 反馈", async ({ page }) => {
     await dispatchFileDragOnTree(page, "model-a.ysm");
     // drop 后提示条应隐藏（bindTreeDnD 的 onDrop 隐藏 + 导入处理）
     expect(await isTreeDropHintVisible(page)).toBe(false);
+    expect(await isTreeDroppable(page)).toBe(false);
     // 导入链路触发 → toast 反馈：directImport 成功 toast 含文件名
     // （原「任一 toast 可见」会被 index.html 欢迎 toast 假绿）
     const toast = page.locator('[data-testid="toast"]').filter({ hasText: "model-a.ysm" });
     await expect(toast.first()).toBeVisible({ timeout: 5000 });
   });
 
-  test("无文件 dataTransfer → tree-drop-hint 不出现", async ({ page }) => {
+  test("无文件 dataTransfer → tree-drop-hint 不出现、.droppable 不加", async ({ page }) => {
     await page.evaluate(() => {
       const content = document.querySelector("app-content");
       const treeHost = content?.shadowRoot?.querySelector("app-tree");
@@ -114,6 +139,23 @@ test.describe("拖拽导入（DnD）", () => {
       });
       tree.dispatchEvent(ev);
     });
+    expect(await isTreeDropHintVisible(page)).toBe(false);
+    expect(await isTreeDroppable(page)).toBe(false);
+  });
+
+  test("dragleave 离开树 → .droppable 摘除（滞留回归锁：2026-09 收债同型）", async ({ page }) => {
+    await dispatchFileDragOnTree(page, "a.ysm", true);
+    expect(await isTreeDroppable(page)).toBe(true);
+    // relatedTarget=null（拖出窗口）→ hideHint 收口 → 类必须同步摘除
+    await page.evaluate(() => {
+      const content = document.querySelector("app-content");
+      const treeHost = content?.shadowRoot?.querySelector("app-tree");
+      const tree = treeHost?.shadowRoot?.querySelector('[data-testid="tree-root"]');
+      const ev = new DragEvent("dragleave", { bubbles: true, composed: true });
+      Object.defineProperty(ev, "relatedTarget", { value: null, configurable: true });
+      tree?.dispatchEvent(ev);
+    });
+    expect(await isTreeDroppable(page)).toBe(false);
     expect(await isTreeDropHintVisible(page)).toBe(false);
   });
 });

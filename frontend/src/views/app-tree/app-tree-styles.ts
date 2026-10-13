@@ -7,6 +7,7 @@ import {
   noAnimationsCSS,
   wsIconCSS,
 } from "@/utils/dom/css.ts";
+import { PULSE_DOT } from "@/views/css/keyframes.ts";
 export const treeCSS: string = `
 :host {
   display: flex;
@@ -43,6 +44,10 @@ ${dropdownBaseCSS}
 .sort-sel { padding: 5px 6px; border-radius: var(--radius-sm); border: 1px solid var(--bd); background: var(--surf); color: var(--txt); font-size: var(--fs-sm); outline: none; font-family: inherit; cursor: pointer; }
 .tag { font-size: var(--fs-xs); background: color-mix(in srgb, var(--sm-optional) 20%, transparent); color: var(--sm-optional); padding: 0 var(--sp-1); border-radius:var(--radius-xs); margin-left: 2px; }
 .list { flex: 1; overflow-y: auto; padding: 6px 0; position: relative; }
+/* 拖拽悬停可放置态（import-dnd.ts dragover 命中树容器时加 / hideHint 收口摘除）：
+   accent 细边框 + 轻微内发光——用户拖 OS 文件进窗口时「松手会落进哪里」的跟随信号。
+   提示条在底部、光标常在列表中央，hint 出现本身不够醒目（2026-10-13 锐评）。 */
+.list.droppable { outline: 1px dashed var(--accent); outline-offset: -3px; background: color-mix(in srgb, var(--accent) 5%, transparent); }
 /* 拖拽导入提示条（底部固定，始终可见） */
 .tree-drop-hint {
   display: none;
@@ -55,7 +60,10 @@ ${dropdownBaseCSS}
   background: color-mix(in srgb, var(--accent) 4%, transparent);
   user-select: none;
 }
-.tree-drop-hint .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); opacity: .4; flex-shrink: 0; }
+/* dot 呼吸脉冲（PULSE_DOT 单一事实源，shadow 本地注入——@keyframes 不穿透 shadow 边界）；
+   纯 opacity 动画，no-animations 通配桥（文件尾 noAnimationsCSS）自动关停，降级为静态 .4 圆点 */
+.tree-drop-hint .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); opacity: .4; flex-shrink: 0; animation: pulseDot 1.2s ease-in-out infinite; }
+${PULSE_DOT}
 /* 虚拟滚动外层容器 */
 .vs-wrap { box-sizing: border-box; }
 .empty { text-align: center; padding: 40px 16px; font-size:var(--fs-base); color: var(--muted); line-height: 1.8; }

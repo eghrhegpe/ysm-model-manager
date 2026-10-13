@@ -133,6 +133,14 @@ export function bindTreeDnD(
   const hintEl = (container.getRootNode() as ParentNode).querySelector<HTMLElement>(
     ".tree-drop-hint",
   );
+  // 可放置态信号（2026-10-13 锐评）：container 即 #tree（.list）本体——
+  // dragover 命中期间加 .droppable（accent 边框 + 轻微内发光，见 app-tree-styles），
+  // 摘除单点 = hideHint()（dragleave/dragend/drop 三处收口共用，2026-09 滞留债教训继承：
+  // 类切换若独立于 hideHint 必然复现同型滞留）。_renderLayout 重建 shadow 内容后
+  // container 引用随 connectedCallback 重绑，无需跨重渲保活。
+  const setDroppable = (on: boolean): void => {
+    container.classList.toggle("droppable", on);
+  };
 
   // 判断任意节点是否落在容器/hint 子树内（含 shadow 边界上溯）。
   // ⚠️ 必须用 parentNode 而非 parentElement：parentElement 遇 shadow 边界顶部
@@ -164,6 +172,7 @@ export function bindTreeDnD(
 
   const hideHint = (): void => {
     if (hintEl) hintEl.style.display = "none";
+    setDroppable(false); // 摘除时机单点：任何收口路径同步摘除可放置态
   };
 
   const onDragOver = (e: DragEvent): void => {
@@ -173,6 +182,7 @@ export function bindTreeDnD(
     e.preventDefault();
     e.dataTransfer.dropEffect = "copy";
     if (hintEl && !_dropBusy) hintEl.style.display = "flex";
+    setDroppable(true);
     dbg("dnd", "dragover OK", {
       types: [...(e.dataTransfer.types || [])],
       target: (e.target as HTMLElement)?.tagName,

@@ -201,6 +201,7 @@ status: active
 | P3 | 导航侧栏激活指示器滑动 | ✅ |
 | 新增 | 一级 Tab 淡入+微下移（`fadeSlideDown`） | ✅ |
 | 新增 | 二级菜单 淡入+微右移（`fadeSlideLeft`） | ✅ |
+| 新增 | 仓库页拖拽悬停 dot 呼吸（`pulseDot`，`views/css/keyframes.ts|PULSE_DOT` 单一事实源 + app-tree shadow 本地注入；纯 opacity 不触发布局，no-animations 通配桥自动关停） | ✅ |
 | 新增 | GitHub 仓库卡片 stagger + hover 上浮 + 图标旋转 | ✅ |
 | 新增 | 预设搜索词 / 筛选标签 stagger 入场 | ✅ |
 | 新增 | 设置页卡片 stagger 入场 | ✅ |

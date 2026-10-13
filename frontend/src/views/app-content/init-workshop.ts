@@ -123,15 +123,15 @@ export function initWorkshopPage(host: AppContentHost): void {
   // P1-8 锐评：渲染入口收进 refs（原 setShowSiteView 模块级单例已删），重建即新实例
   refs.showSiteViewRef.v = showSiteView;
 
-  // 初始化 Tab
+  // 初始化 Tab（返回完整重载入口——站点导入成功后复用同一链路刷新）
   // 定时器交回壳层持有（ADR-265）：清理点在 _render 开头（早于本 init），归属不变，
   // 只是 tabs 不再经 host.state 直达壳层字段。
-  initWorkshopTabs(root, refs, page, (t) => {
+  const reloadWorkshopTabs = initWorkshopTabs(root, refs, page, (t) => {
     host.state.workshopTimer = t;
   });
 
-  // 绑定站点打开事件
-  bindSiteEvents(root, page);
+  // 绑定站点打开事件（导入成功 → 注入 tabs 重载入口，刷新 tab 栏与创作者列表）
+  bindSiteEvents(root, page, () => reloadWorkshopTabs());
 
   // 下载完成后增量刷新创作者头像。幂等注册（ADR-261）：原靠 `state.avatarRefreshRegistered`
   // 布尔标志 + cleanupTransient 手工复位；现交给订阅桶的 addGlobalOnce——key 与全局订阅同寿命，

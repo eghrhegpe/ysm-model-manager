@@ -339,12 +339,13 @@ describe("bindSiteEvents — 站点导出/导入（web 降级 + 桥 + toast 分�
     expect(getApp).not.toHaveBeenCalled();
   });
 
-  it("桌面导入成功 → success toast 带站点数", async () => {
+  it("桌面导入成功 → success toast 带站点数 + 触发列表重载（旧 TODO 清偿：导入即所见）", async () => {
     const app = makeApp();
     (app as Record<string, unknown>).ValidateWorkshopSites = vi.fn(() => Promise.resolve(3));
     (getApp as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(app);
     const b = makeBindHost();
-    bindSiteEvents(b.root, b.page);
+    const onImported = vi.fn();
+    bindSiteEvents(b.root, b.page, onImported);
     b.btn("ws-import-btn").click();
     await flushPromises();
     expect(busEmit).toHaveBeenCalledWith("toast:show", {
@@ -352,6 +353,38 @@ describe("bindSiteEvents — 站点导出/导入（web 降级 + 桥 + toast 分�
       duration: TOAST_MS.success,
       type: "success",
     });
+    expect(onImported).toHaveBeenCalledWith(3);
+  });
+
+  it("导入 0 个 → 不触发重载（无变化不打扰）", async () => {
+    const app = makeApp();
+    (app as Record<string, unknown>).ValidateWorkshopSites = vi.fn(() => Promise.resolve(0));
+    (getApp as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(app);
+    const b = makeBindHost();
+    const onImported = vi.fn();
+    bindSiteEvents(b.root, b.page, onImported);
+    b.btn("ws-import-btn").click();
+    await flushPromises();
+    expect(onImported).not.toHaveBeenCalled();
+  });
+
+  it("重载抛错不反咬导入：success toast 仍在，错误留痕不外溢", async () => {
+    const app = makeApp();
+    (app as Record<string, unknown>).ValidateWorkshopSites = vi.fn(() => Promise.resolve(2));
+    (getApp as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(app);
+    const b = makeBindHost();
+    bindSiteEvents(b.root, b.page, () => Promise.reject(new Error("reload boom")));
+    b.btn("ws-import-btn").click();
+    await flushPromises();
+    const successToasts = busEmit.mock.calls.filter(
+      (c) => (c[1] as { type?: string })?.type === "success",
+    );
+    expect(successToasts.length).toBe(1);
+    // 无 error toast（重载失败不冒充导入失败）
+    const errorToasts = busEmit.mock.calls.filter(
+      (c) => (c[1] as { type?: string })?.type === "error",
+    );
+    expect(errorToasts.length).toBe(0);
   });
 
   it("桌面导入失败 → error toast（friendlyError + content.importFailed 兜底）", async () => {

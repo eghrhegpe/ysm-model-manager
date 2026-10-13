@@ -4,6 +4,7 @@ import { isWebPlatform } from "@/backend/platform-web.ts";
 import type { WorkshopSite } from "@/bindings/ysm-model-manager/go/types/models.ts";
 import { t } from "@/core/i18n/t.ts";
 import { swallowError } from "@/utils/base/primitives/async.ts";
+import { dbg } from "@/utils/debug/debug.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
@@ -84,8 +85,15 @@ function openEmbedded(root: ShadowRoot, _site: WorkshopSite, url: string): void 
 
 /**
  * 绑定站点打开相关事件
+ * @param onSitesImported 站点导入成功（n>0）后的重载入口（init-workshop 注入 tabs 的
+ *   `reloadWorkshopTabs`）——旧 TODO「重新加载创作者列表」的地雷：opener 拿不到 refs/tabs，
+ *   导入落盘后 tab 栏与创作者列表陈旧到下次进页才更新。经回调注入恢复「导入即所见」。
  */
-export function bindSiteEvents(root: ShadowRoot, page: WorkshopPageState): void {
+export function bindSiteEvents(
+  root: ShadowRoot,
+  page: WorkshopPageState,
+  onSitesImported?: (count: number) => void | Promise<void>,
+): void {
   // 返回按钮：abort 当前加载 timer + 隐藏浏览器面板
   root.getElementById("ws-back")?.addEventListener("click", () => {
     const iframe = root.getElementById("ws-iframe") as HTMLIFrameElement | null;
@@ -144,8 +152,16 @@ export function bindSiteEvents(root: ShadowRoot, page: WorkshopPageState): void 
     try {
       const { ValidateWorkshopSites } = await backendGetApp();
       const n = await ValidateWorkshopSites();
-      // TODO: 重新加载创作者列表
       toast(t("workshop.action.imported", { n }), TOAST_MS.success, "success");
+      // 导入改了磁盘上的站点配置 → 重载 tab 栏与创作者列表（旧 TODO 清偿）。
+      // 重载自身失败不反咬导入：toast 已落「已导入 n 个」，刷新失败留痕下次进页自愈。
+      if (n > 0 && onSitesImported) {
+        try {
+          await onSitesImported(n);
+        } catch (reloadErr) {
+          dbg("workshop-import", "导入成功但刷新列表失败:", (reloadErr as Error)?.message);
+        }
+      }
     } catch (e) {
       toast(friendlyError(e, t("content.importFailed")), TOAST_MS.verbose, "error");
     }

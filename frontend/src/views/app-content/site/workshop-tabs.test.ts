@@ -102,6 +102,33 @@ describe("initWorkshopTabs — 页作用域句柄（ADR-263）", () => {
     }
   });
 
+  it("返回的 reload 入口：手动重载不等定时器——重拉数据/重建 tab 栏/刷新 refs（导入刷新路径契约）", async () => {
+    vi.useFakeTimers();
+    try {
+      const siteB = { id: "afdian", label: "爱发电", url: "https://afdian.com" } as WorkshopSite;
+      loadCommunityData
+        .mockResolvedValueOnce({ sites: [site], creators: [], authors: [] })
+        .mockResolvedValueOnce({ sites: [site, siteB], creators: [], authors: [] });
+      const { root, el } = makeHost();
+      const page = createWorkshopPageState();
+      const { refs, calls } = makeRefsWithShowSpy();
+
+      const reload = initWorkshopTabs(root, refs, page, () => {});
+      await vi.advanceTimersByTimeAsync(0); // 初次加载走 0ms 定时器
+      await flushAsync();
+      expect(refs.allSitesRef.v).toHaveLength(1);
+
+      await reload(); // 导入成功后调用：与初载同链路，但即时执行
+      await flushAsync();
+      expect(loadCommunityData).toHaveBeenCalledTimes(2);
+      expect(refs.allSitesRef.v).toHaveLength(2);
+      expect(el.querySelector('#ws-tabs [data-tab="afdian"]')).not.toBeNull(); // 新站 tab 已重建出来
+      expect(calls.length).toBeGreaterThanOrEqual(2); // 当前站点重渲染
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("tab 点击 → 写页作用域并按新值重渲染（读实时值，非快照）", async () => {
     vi.useFakeTimers();
     try {

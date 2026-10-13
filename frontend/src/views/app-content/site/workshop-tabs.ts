@@ -52,14 +52,17 @@ export function createWorkshopRefs(): WorkshopRefs {
 }
 
 /**
- * 初始化创意工坊 Tab
+ * 初始化创意工坊 Tab。
+ * @returns `reloadWorkshopTabs()` — 完整重载入口（拉数据 → 重建 tab 栏 → 渲染初始站点）。
+ *   初次加载由内部 0ms 定时器发起（保留定时器仅为把在途加载交壳层清理槽，ADR-265）；
+ *   外部数据源变化（如站点导入成功）经返回的 reload 复用同一链路刷新，不再留「导入后列表陈旧」。
  */
 export function initWorkshopTabs(
   root: ShadowRoot,
   refs: WorkshopRefs,
   page: WorkshopPageState,
   registerDefaultSiteTimer: (t: ReturnType<typeof setTimeout>) => void,
-): void {
+): () => Promise<void> {
   // 本地扫描作者的后台补充：首屏渲染不依赖磁盘扫描（曾阻塞 tab 栏秒级~分钟级），
   // 扫描完成后再合并进 allCreatorsRef 并重渲染当前站点视图。
   // enrichPending 在途去重（防双渲染）；完成后置 null，下次数据替换（切 tab 重拉）可再补充；
@@ -106,67 +109,77 @@ export function initWorkshopTabs(
     }
   };
 
+  // 完整重载链路（初次加载 + 站点导入后刷新共用同一入口，杜绝「导入成功但列表陈旧」）：
+  // 拉社区数据 → 写 refs → 重建 tab 栏（复用 WS_LAST_TAB_KEY 恢复选中）→ 渲染初始站点。
+  const reloadWorkshopTabs = async (): Promise<void> => {
+    try {
+      const data = await loadCommunityData();
+      refs.allSitesRef.v = data.sites;
+      // 动态生成 Tab
+      const tabsEl = root.getElementById("ws-tabs");
+      if (tabsEl && data.sites.length) {
+        // 恢复上次选中的 tab（用于决定首个激活项，与 bindTabA11y 的 pre-seeded active 对齐）
+        const last = safeGet(WS_LAST_TAB_KEY);
+        const initial = data.sites.find((s) => s.id === last) || data.sites[0];
+        tabsEl.innerHTML = "";
+        data.sites.forEach((s) => {
+          const btn = document.createElement("button");
+          btn.className = `repo-tab tab-btn${s.id === initial.id ? " active" : ""}`;
+          btn.dataset.tab = s.id;
+          btn.innerHTML = `${getSiteIcon(s.id)} ${escUtil(s.label)}`;
+          tabsEl.appendChild(btn);
+        });
+        // 可访问性 + 点击/键盘分派交共享原语（与仓库/设置页同一份 ARIA/roving/键盘真值）：
+        // 站点 tab 是「动态生成 + 单一内容区」，套不进 bindTabs 的静态面板契约，但同样
+        // 需要 tablist/tab 语义、roving tabindex、方向键导航——原语只接管这些，内容切换走 onActivate。
+        // 选择器限定在 #ws-tabs 内，避免误伤同 shadow 下其他页的 .repo-tab。
+        bindTabA11y({
+          root,
+          tabSelector: "#ws-tabs .repo-tab",
+          panelId: () => "ws-search-results",
+          validate: true,
+          onActivate: (btn) => {
+            const id = btn.dataset.tab ?? "";
+            if (id) void showCreatorsBySite(id);
+          },
+        });
+        // 默认显示初始站点（复用本次已加载数据，避免 showCreatorsBySite 二次拉取）
+        if (initial) await showCreatorsBySite(initial.id, data);
+      } else if (tabsEl) {
+        // 空态提示（e2e 反推）：原实现 sites 为空时永久停留 loading 占位，
+        // 加载失败/无配置用户无感知——显示「暂无数据」并允许手动导入站点配置；
+        // 加载失败则提示「加载失败」（ADR-082 续：区分失败与真无数据，不再空白无感知）
+        // 锐评 P0-1 修复：原此处 import 图标配「导出站点」文案——恢复路径指反了门
+        //（空配置的正确解法是导入，不是导出空数据），图标与文案一并对齐 importSite。
+        const emptyText = data.failed ? t("common.loadFailed") : t("common.empty");
+        tabsEl.innerHTML =
+          '<span style="padding:var(--btn-padding-filter-lg);font-size:var(--fs-sm);color:var(--muted)">' +
+          emptyText +
+          " " +
+          UI_ICONS.import +
+          " " +
+          t("workshop.importSite") +
+          "</span>";
+      }
+    } catch (e) {
+      // P3 修复（审核）：定时器回调最外层 catch 出口——原 loadCommunityData 在 try 外，
+      // getApp 失败逸出 unhandled rejection（与 showCreatorsBySite 同出口）
+      toast((e as Error)?.message || t("workshop.loadCommunityFailed"), TOAST_MS.normal, "error");
+    }
+  };
+
   // 默认显示第一个站点——定时器经 registerDefaultSiteTimer 交回 app 壳层持有（ADR-265）：
   // 壳层在 _render 开头清它（清理点必须早于 page.init，覆盖「未 init 就被切走」的窗口），
-  // tabs 只负责创建，不再经 host.state 直达壳层字段。
+  // tabs 只负责创建，不再经 host.state 直达壳层字段。0ms = 当前任务结束后立即拉数据
+  // （loading 占位即首帧，原 100ms 人为延迟已删，定时器仅作壳层清理槽）。
   registerDefaultSiteTimer(
-    setTimeout(async () => {
-      try {
-        const data = await loadCommunityData();
-        refs.allSitesRef.v = data.sites;
-        // 动态生成 Tab
-        const tabsEl = root.getElementById("ws-tabs");
-        if (tabsEl && data.sites.length) {
-          // 恢复上次选中的 tab（用于决定首个激活项，与 bindTabA11y 的 pre-seeded active 对齐）
-          const last = safeGet(WS_LAST_TAB_KEY);
-          const initial = data.sites.find((s) => s.id === last) || data.sites[0];
-          tabsEl.innerHTML = "";
-          data.sites.forEach((s) => {
-            const btn = document.createElement("button");
-            btn.className = `repo-tab tab-btn${s.id === initial.id ? " active" : ""}`;
-            btn.dataset.tab = s.id;
-            btn.innerHTML = `${getSiteIcon(s.id)} ${escUtil(s.label)}`;
-            tabsEl.appendChild(btn);
-          });
-          // 可访问性 + 点击/键盘分派交共享原语（与仓库/设置页同一份 ARIA/roving/键盘真值）：
-          // 站点 tab 是「动态生成 + 单一内容区」，套不进 bindTabs 的静态面板契约，但同样
-          // 需要 tablist/tab 语义、roving tabindex、方向键导航——原语只接管这些，内容切换走 onActivate。
-          // 选择器限定在 #ws-tabs 内，避免误伤同 shadow 下其他页的 .repo-tab。
-          bindTabA11y({
-            root,
-            tabSelector: "#ws-tabs .repo-tab",
-            panelId: () => "ws-search-results",
-            validate: true,
-            onActivate: (btn) => {
-              const id = btn.dataset.tab ?? "";
-              if (id) void showCreatorsBySite(id);
-            },
-          });
-          // 默认显示初始站点（复用本次已加载数据，避免 showCreatorsBySite 二次拉取）
-          if (initial) await showCreatorsBySite(initial.id, data);
-        } else if (tabsEl) {
-          // 空态提示（e2e 反推）：原实现 sites 为空时永久停留 loading 占位，
-          // 加载失败/无配置用户无感知——显示「暂无数据」并允许手动导入站点配置；
-          // 加载失败则提示「加载失败」（ADR-082 续：区分失败与真无数据，不再空白无感知）
-          // 锐评 P0-1 修复：原此处 import 图标配「导出站点」文案——恢复路径指反了门
-          //（空配置的正确解法是导入，不是导出空数据），图标与文案一并对齐 importSite。
-          const emptyText = data.failed ? t("common.loadFailed") : t("common.empty");
-          tabsEl.innerHTML =
-            '<span style="padding:var(--btn-padding-filter-lg);font-size:var(--fs-sm);color:var(--muted)">' +
-            emptyText +
-            " " +
-            UI_ICONS.import +
-            " " +
-            t("workshop.importSite") +
-            "</span>";
-        }
-      } catch (e) {
-        // P3 修复（审核）：定时器回调最外层 catch 出口——原 loadCommunityData 在 try 外，
-        // getApp 失败逸出 unhandled rejection（与 showCreatorsBySite 同出口）
-        toast((e as Error)?.message || t("workshop.loadCommunityFailed"), TOAST_MS.normal, "error");
-      }
+    setTimeout(() => {
+      void reloadWorkshopTabs();
     }, WS_TAB_LOAD_DELAY_MS),
   );
+
+  // 导出重载入口给 init-workshop 注入 bindSiteEvents（站点导入成功后刷新列表，清旧 TODO）
+  return reloadWorkshopTabs;
 }
 // P1-8 锐评：渲染入口收进 refs.showSiteViewRef（init-workshop 注入），
 // 原模块级 setShowSiteView/_showSiteView 单例已删除——重建即新实例，

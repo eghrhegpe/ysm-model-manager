@@ -1,7 +1,7 @@
 # ADR-293：灯光能力总开关 schema 化、helper 可见性控件化与面板响应
 
 - **状态**：✅ 已采纳（Implemented；含复核 P0 修订，见 D3 重入安全前提）
-  - ⚠️ **D2 的默认值已被 [ADR-293-d1](./decisions/ADR-293-d1-light-first-run-defaults.md) 部分取代**（2026-10-04）：`lightHelperVisible` 默认由 `true` 翻转为 `false`（「默认 = 历史观感」被推翻）；本 ADR 其余决策不变。
+  - ⚠️ **D2 的默认值已被 [ADR-293-d1](../archive/ADR-293-d1-light-first-run-defaults.md) 部分取代**（2026-10-04；该卡已按 ADR-338 §2.3 归档，现行裁定见 [preview-env-state](../knowledge/preview-env-state.md) 的「裁定记录」）：`lightHelperVisible` 默认由 `true` 翻转为 `false`（「默认 = 历史观感」被推翻）；本 ADR 其余决策不变。
 - **日期**：2026-09-22
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`frontend/src/preview-3d/caps/light-capability.ts` / `light-controls.ts` / `light-persist.ts` / `state/env-state-schema.ts` / `menu/panels/settings.ts` / `screenshot/screenshot-lights.ts`；前例 ADR-250（ppEnabled）、ADR-196（fogEnabled 单一 gate）、ADR-290（渲染输入 schema 化）

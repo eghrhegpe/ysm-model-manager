@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **355** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **353** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > ADR 三区存放：根目录 = 存量（分级前）/ `architecture/` = 架构决策 / `decisions/` = 执行决策日志（ADR-320）。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -20,7 +20,7 @@ permalink: /adr/
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 1 |
 | [🔄 部分采纳](#部分采纳) | 15 |
 | [✅ 已采纳](#已采纳) | 322 |
-| [❌ 已取代](#已取代) | 10 |
+| [❌ 已取代](#已取代) | 8 |
 | [🧊 已废弃](#已废弃) | 0 |
 | [❓ 未归类](#未归类) | 0 |
 
@@ -391,11 +391,10 @@ permalink: /adr/
 | [ADR-002](./ADR-002-project-health-assessment.md) | 项目全面评估与改进方向 | ✅ 已采纳 |
 | [ADR-001](./ADR-001-wails3-migration.md) | 升级至 Wails 3 | ✅ 已采纳 |
 
-### ❌ 已取代（10）
+### ❌ 已取代（8）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
-| [ADR-293-d1](./decisions/ADR-293-d1-light-first-run-defaults.md) | 灯光首启默认分治：辅助线框关、浏览最小光照、环境光降档 | ❌ 已取代 |
 | [ADR-194](./ADR-194-menu-control-def-discriminated-union.md) | MenuControlDef 判别联合重构：kind 与配置块编译期配对 | ❌ 已取代 |
 | [ADR-138](./ADR-138-preview-3d-to-src.md) | preview-3d 上提 src/preview-3d（去 features 中间层） | ❌ 已取代 ⚠️ 被 [ADR-129] |
 | [ADR-137](./ADR-137-ysm-decoder-homecoming.md) | YSM 解码子系统归位（views/app-preview/decoder → features/preview-3d，第五刀） | ❌ 已取代 ⚠️ 被 [ADR-129] |
@@ -404,7 +403,6 @@ permalink: /adr/
 | [ADR-120](./ADR-120-go-rust-manifest-jwalk.md) | Go/Rust 共享已扫描状态：manifest 注入跳过 jwalk | ❌ 已取代 |
 | [ADR-081](./ADR-081-semantic-bone-layer.md) | 语义骨骼层——跨格式语义骨骼统一抽象 | ❌ 已取代 |
 | [ADR-077](./ADR-077-bottom-nav-shell-convergence.md) | 底部导航通用外壳收敛（D1+D3 落地） | ❌ 已取代 ⚠️ 被 [ADR-076] |
-| [ADR-034-d1](./decisions/ADR-034-d1-creator-view-fragments.md) | 创作者频道视图片段单源：抽共用渲染片段而非合并两视图 | ❌ 已取代 |
 
 ## 登记表（新→旧）
 
@@ -754,7 +752,6 @@ permalink: /adr/
 | ADR-338-d1 | 提交信息减负：commit-msg 闸与 trailer 出口 | ✅ 已采纳 | 2026-10-13 |
 | ADR-331-d1 | ReadFileBytes 无 error 通道缺口：ReadFileMeta 结构化错误字段（切片 C） | ✅ 已采纳 | 2026-10-12 |
 | ADR-311-d1 | 测试纪律：禁 mock 被断言谓词（自证）+ 判别样本 + 变异探针 | ✅ 已采纳 | 2026-10-09 |
-| ADR-293-d1 | 灯光首启默认分治：辅助线框关、浏览最小光照、环境光降档 | ❌ 已取代 | 2026-10-04 |
 | ADR-292-d1 | envSource 迁移判据① 供血线单源化（不再跨槽读 sky 存档键形） | ✅ 已采纳 | 2026-10-07 |
 | ADR-278-d1 | bench 控件消费派生化：read* 声明读集，PERF_UNREAD 登记表退役 | ✅ 已采纳 | 2026-10-13 |
 | ADR-270-d1 | preview-3d 内部分层方向闸 R9（state/infra/decoder/shader-patches 禁运行时引 adapters/caps/menu，基线防回退） | ✅ 已采纳 | 2026-10-04 |
@@ -769,7 +766,6 @@ permalink: /adr/
 | ADR-235-d1 | sky cap 资产管线下沉（太阳位置计算 + 天空资产）——cap 变薄编排壳 | ✅ 已采纳 | 2026-10-09 |
 | ADR-151-d1 | gen-stage 未知新建文件默认排除（并发卷带硬化） | 📝 提议中 | 2026-10-06 |
 | ADR-091-d1 | 环境能力 cap 拆分：hdr-cache/background 先行，ibl 所有权段单独一刀 | ✅ 已采纳 | 2026-10-08 |
-| ADR-034-d1 | 创作者频道视图片段单源：抽共用渲染片段而非合并两视图 | ❌ 已取代 | 2026-10-13 |
 
 ## 使用规则（硬约束）
 

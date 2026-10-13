@@ -1621,10 +1621,6 @@ export const autoSidebar = [
         "link": "/adr/decisions/ADR-311-d1-mock"
       },
       {
-        "text": "ADR-293-d1：灯光首启默认分治：辅助线框关、浏览最小光照、环境光降档",
-        "link": "/adr/decisions/ADR-293-d1-light-first-run-defaults"
-      },
-      {
         "text": "ADR-292-d1：envSource 迁移判据① 供血线单源化（不再跨槽读 sky 存档键形）",
         "link": "/adr/decisions/ADR-292-d1-envsource-criterion1-single-source"
       },
@@ -1679,10 +1675,6 @@ export const autoSidebar = [
       {
         "text": "ADR-091-d1：环境能力 cap 拆分：hdr-cache/background 先行，ibl 所有权段单独一刀",
         "link": "/adr/decisions/ADR-091-d1-cap-hdr-cache-background-ibl"
-      },
-      {
-        "text": "ADR-034-d1：创作者频道视图片段单源：抽共用渲染片段而非合并两视图",
-        "link": "/adr/decisions/ADR-034-d1-creator-view-fragments"
       }
     ]
   },

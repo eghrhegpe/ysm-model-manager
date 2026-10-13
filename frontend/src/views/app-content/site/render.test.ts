@@ -295,6 +295,17 @@ describe("createCrCard 创作者卡片工厂（声明式字符串）", () => {
     expect(card.querySelector(".cr-tag")).toBeTruthy();
   });
 
+  it("9b. role 含空白 → class 归一为 cr-tag-unknown，data-tag 仍留原值（class 白名单）", () => {
+    // role 取自 creators.json（用户数据）。原实现把 role 直接拼进 class，
+    // 含空白的值会把一个 class 劈成两个（`cr-tag-a b` → 命中 .b 这条无关规则）。
+    // 展示层必须消毒，数据语义（data-tag 过滤键）仍留原值。
+    const cr = { name: "甲", role: "a b", type: "siteA" } as LocalCreatorLike;
+    const card = parseCardHtml(createCrCard(cr, cardCtx()));
+    const tag = card.querySelector(".cr-tag") as HTMLElement;
+    expect(tag.className).toBe("cr-tag cr-tag-unknown");
+    expect(card.dataset.tag).toBe("a b");
+  });
+
   it("10. 已收藏 → starFilled；无 searchUrl → 无搜索按钮；单作者站点不发牌 → 无 tier 属性/顶部条", () => {
     const cr = { name: "甲" } as LocalCreatorLike;
     // 分档预计算（O(n log n) 一次）后传入卡片 ctx——单作者无比较对象 → 无牌（缺陷 B）

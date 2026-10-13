@@ -9,8 +9,14 @@ import { qs, qsa } from "@/utils/dom/qsa.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { trapFocusAcrossShadow } from "@/utils/dom/trap-focus-across-shadow.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
-import { getSiteIcon, getTagIconFromRole } from "@/utils/icon/workshop-icons.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
+// 视图片段单源（ADR-034-d1）：头像/星标/身份 tag/平台徽章与卡片共用同一份标记代码
+import {
+  creatorAvatarHtml,
+  creatorPlatformBadgesHtml,
+  creatorStarBtnHtml,
+  creatorTagChipHtml,
+} from "./render.ts";
 import type { CleanupFn, LocalCreatorLike, SiteViewState } from "./types.ts";
 import type { BrowseMode } from "./workshop-browse-mode.ts";
 import {
@@ -18,12 +24,10 @@ import {
   compareFavFirst,
   FAV_CREATORS_KEY,
   getCreatorIdentity,
-  getTagDisplayLabel,
   getTagFromRole,
   isFaved,
   loadFavs,
   parseDescTags,
-  parseSiteIds,
   toggleFav,
 } from "./workshop-data.ts";
 
@@ -40,6 +44,11 @@ const _overlayTrapReleases = new WeakMap<HTMLElement, () => void>();
 // cmCr* 共用包级函数：详情浮层创建 + 内部 4 子事件绑定
 // ============================================================
 
+/**
+ * 详情浮层 HTML（ADR-034-d1）：头像 / 星标 / 身份 tag / 平台徽章四段全部走 render.ts 的
+ * **片段单源**，浮层只保留自己的布局与变体 class——原 89 行 `+` 字符串接龙（与卡片的模板字面量
+ * 两种写法、两份标记）已退役；接龙期间漏掉的徽章闭合标签一并消失。
+ */
 function cmCrBuildDetailHtml(
   cr: LocalCreatorLike,
   esc: (s: unknown) => string,
@@ -52,100 +61,51 @@ function cmCrBuildDetailHtml(
   // → 同一浮层自相矛盾。既定原则是「不冒充别的身份」，故整行省略而非改成回退文案。
   const showIdentityRow = identity.tag === getTagFromRole(cr.role);
   const descTags = parseDescTags(cr.desc);
-  const isFav = isFaved(cr.name);
   const localCount = authorCountMap[cr.name] || 0;
-  const detailFallbackChar = esc(cr.name.charAt(0)).toUpperCase();
-  const detailFallbackDiv = `<div class="cr-avatar cr-detail-avatar-text">${detailFallbackChar}</div>`;
+  const { html: avatarHtml, fallbackChar } = creatorAvatarHtml(cr.name, avatarCache, esc, {
+    imgClass: "cr-avatar cr-detail-avatar-img",
+    fallbackClass: "cr-avatar cr-detail-avatar-text",
+    // 浮层自持 img 引用直接绑 error（见 cmCrCreateDetailOverlay），不走声明式属性
+    withFallbackAttr: false,
+  });
   const html =
-    '<div class="cr-detail-box">' +
-    '<div class="cr-detail-header">' +
-    '<div class="cr-avatar-container cr-detail-avatar-container">' +
-    (avatarCache?.[cr.name]
-      ? '<img class="cr-avatar cr-detail-avatar-img" src="' +
-        esc(avatarCache[cr.name]) +
-        '" data-debug-avatar="' +
-        esc(cr.name) +
-        '">'
-      : detailFallbackDiv) +
-    "</div>" +
-    '<div class="cr-detail-fill">' +
-    '<div class="cr-detail-name-row">' +
-    '<span class="cr-detail-name">' +
-    esc(cr.name) +
-    "</span>" +
-    (cr.role
-      ? '<span class="cr-tag cr-tag-' +
-        esc(getTagFromRole(cr.role)) +
-        '">' +
-        getTagIconFromRole(cr.role) +
-        " <span>" +
-        // 锐评 P0-4 / 复核 P1-3：展示文案走 i18n 单源（未知 tag 原样），与卡片/筛选行同口径；
-        // class 仍用原始 role id。
-        esc(getTagDisplayLabel(getTagFromRole(cr.role))) +
-        "</span>" +
-        "</span>"
-      : "") +
-    "</div>" +
+    `<div class="cr-detail-box">` +
+    `<div class="cr-detail-header">` +
+    `<div class="cr-avatar-container cr-detail-avatar-container">${avatarHtml}</div>` +
+    `<div class="cr-detail-fill">` +
+    `<div class="cr-detail-name-row"><span class="cr-detail-name">${esc(
+      cr.name,
+    )}</span>${cr.role ? creatorTagChipHtml(cr.role, esc) : ""}</div>` +
     (cr.type
-      ? '<div class="cr-detail-platforms">' +
-        parseSiteIds(cr.type)
-          .map(
-            (platform: string) =>
-              '<span class="cr-platform-badge">' +
-              getSiteIcon(platform) +
-              " <span>" +
-              esc(platform) +
-              "</span>",
-          )
-          .join("") +
-        "</div>"
+      ? `<div class="cr-detail-platforms">${creatorPlatformBadgesHtml(cr.type, esc)}</div>`
       : "") +
     (showIdentityRow
-      ? '<div class="cr-detail-identity">' +
-        identity.icon +
-        "<span>" +
-        esc(identity.label) +
-        "</span>" +
-        "</div>"
+      ? `<div class="cr-detail-identity">${identity.icon}<span>${esc(identity.label)}</span></div>`
       : "") +
-    "</div>" +
-    '<span class="cr-star-btn" data-star="' +
-    esc(cr.name) +
-    '">' +
-    (isFav ? UI_ICONS.starFilled : UI_ICONS.star) +
-    "</span>" +
-    "</div>" +
-    '<div class="cr-detail-desc">' +
-    (descTags.length
-      ? descTags.map((tag) => `<span class="cr-desc-tag">#${esc(tag)}</span>`).join("")
-      : // 锐评 P0-3：descTags 现仅在确为标签串时非空（单段/长句均回 []），此分支即全文兜底——
-        // 原逻辑对任意非空 desc 都只渲染 chips 且丢弃原文。
-        // 锐评 P0-2b：本地条目空 desc 在此现取当前语言提示，而非数据层落 i18n 串。
-        esc(cr.desc || (cr._fromLocal ? t("community.fromLocal") : ""))) +
-    "</div>" +
-    '<div class="cr-detail-row cr-local-card">' +
-    '<span class="cr-local-icon">' +
-    UI_ICONS.folderOpen +
-    "</span>" +
-    '<span class="cr-local-text">' +
-    t("content.downloadedModels", { n: localCount }) +
-    "</span>" +
-    '<button class="cr-local-btn" data-local>' +
-    t("content.viewArrow") +
-    "</button>" +
-    "</div>" +
-    '<div class="cr-detail-actions">' +
-    '<button class="secondary" data-search="' +
-    esc(cr.name) +
-    '">' +
-    t("content.searchMoreModels") +
-    "</button>" +
-    '<button class="secondary" data-close>' +
-    t("common.close") +
-    "</button>" +
-    "</div>" +
-    "</div>";
-  return { html, fallbackChar: detailFallbackChar };
+    `</div>` +
+    creatorStarBtnHtml(cr.name, isFaved(cr.name), esc) +
+    `</div>` +
+    `<div class="cr-detail-desc">${
+      descTags.length
+        ? descTags.map((tag) => `<span class="cr-desc-tag">#${esc(tag)}</span>`).join("")
+        : // 锐评 P0-3：descTags 现仅在确为标签串时非空（单段/长句均回 []），此分支即全文兜底——
+          // 原逻辑对任意非空 desc 都只渲染 chips 且丢弃原文。
+          // 锐评 P0-2b：本地条目空 desc 在此现取当前语言提示，而非数据层落 i18n 串。
+          esc(cr.desc || (cr._fromLocal ? t("community.fromLocal") : ""))
+    }</div>` +
+    `<div class="cr-detail-row cr-local-card">` +
+    `<span class="cr-local-icon">${UI_ICONS.folderOpen}</span>` +
+    `<span class="cr-local-text">${t("content.downloadedModels", { n: localCount })}</span>` +
+    `<button class="cr-local-btn" data-local>${t("content.viewArrow")}</button>` +
+    `</div>` +
+    `<div class="cr-detail-actions">` +
+    `<button class="secondary" data-search="${esc(cr.name)}">${t(
+      "content.searchMoreModels",
+    )}</button>` +
+    `<button class="secondary" data-close>${t("common.close")}</button>` +
+    `</div>` +
+    `</div>`;
+  return { html, fallbackChar };
 }
 
 function cmCrBindOverlayEvents(

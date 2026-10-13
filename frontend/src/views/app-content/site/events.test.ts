@@ -372,6 +372,24 @@ describe("bindBrowseEvents — 详情浮层", () => {
     expect(searchResults.querySelector(".cr-detail-overlay")).toBeNull();
   });
 
+  it("多平台创作者：浮层徽章是并列兄弟而非互相嵌套（片段单源回归，ADR-034-d1）", () => {
+    // 历史缺陷：浮层那份徽章字符串的**外层 `<span class="cr-platform-badge">` 从未闭合**
+    // （只关内层文案 span），HTML 解析器把第二个徽章嵌进第一个里面
+    //（嵌套 inline-flex + 双份 padding）。片段化后两视图共用同一份闭合正确的标记。
+    const { state, searchResults } = makeState({
+      creators: [{ name: "A", role: "creator", desc: "d", type: "github;afdian" }],
+    });
+    trackedBind(state, () => {});
+    (searchResults.querySelector(".gh-card") as HTMLElement).click();
+    const overlay = searchResults.querySelector(".cr-detail-overlay") as HTMLElement;
+    const badges = overlay.querySelectorAll(".cr-detail-platforms > .cr-platform-badge");
+    expect(badges).toHaveLength(2);
+    for (const b of Array.from(badges)) {
+      // 徽章内不得再套徽章（嵌套即闭合缺失的证据）
+      expect(b.querySelector(".cr-platform-badge")).toBeNull();
+    }
+  });
+
   it("本地条目空 desc → 浮层回退当前语言提示（锐评 P0-2b）", () => {
     const { state, searchResults } = makeState({
       creators: [{ name: "A", role: "modeler", desc: "", type: "github", _fromLocal: true }],

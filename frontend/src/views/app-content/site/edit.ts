@@ -146,7 +146,7 @@ function eeApplyFilters(
         "</button>";
       const grid = searchResults.querySelector("#cr-creator-grid");
       (grid || searchResults).appendChild(emptyEl);
-      // 清除按钮走事件委托已在 eeBindGithubFilter 里绑定（点击即复位筛选）
+      // 清除按钮走事件委托已在 eeBindCreatorFilter 里绑定（点击即复位筛选）
     }
   } else if (emptyEl) {
     emptyEl.remove();
@@ -583,7 +583,10 @@ function eeBindPresetsDrag(
   });
 }
 
-function eeBindGithubFilter(state: SiteViewState, fs: FilterStateShell, sig: AbortSignal): void {
+/** 创作者筛选接线（搜索框 / 标签按钮 / 清除出口）——原名 eeBindGithubFilter 系
+ *  workshop-site-view.js 时代的化石：它绑的是**创作者频道**的筛选，与 GitHub 无关
+ *  （GitHub 是另一个页面 id="github"），名实不符曾误导过一次锐评定位。 */
+function eeBindCreatorFilter(state: SiteViewState, fs: FilterStateShell, sig: AbortSignal): void {
   const { searchResults, creators, site } = state;
   // 筛选态按本站 id 分域存储（历史缺陷：全局单键 → 切站点后旧标签套到新站，网格空白）
   const siteId = site?.id || "";
@@ -661,7 +664,7 @@ export function bindEditEvents(state: SiteViewState, refreshView: () => void): C
   eeBindCreatorsDrag(state, refreshView, ds, sig);
   eeBindPresetsEdit(state, refreshView, sig);
   eeBindPresetsDrag(state, refreshView, ds, sig);
-  eeBindGithubFilter(state, fs, sig);
+  eeBindCreatorFilter(state, fs, sig);
 
   return () => ac.abort();
 }

@@ -18,6 +18,88 @@ import {
   parseSiteIds,
 } from "./workshop-data.ts";
 
+/**
+ * ===== 创作者视图片段单源（ADR-034-d1）=====
+ *
+ * 卡片（本文件 createCrCard）与详情浮层（events.ts|cmCrBuildDetailHtml）是**同一视图模型的
+ * 两种布局**（网格项 vs role=dialog 模态），视图不合并不假，但重复的标记必须单源。
+ * 下面这些片段此前在两处各写一份，已经漂过两次：
+ *   ① 平台徽章的站点图标只在浮层有、卡片没有（文档与 CSS 都承诺卡片该有，2026-10-13 修）；
+ *   ② 浮层那份徽章的**外层 `<span class="cr-platform-badge">` 从未闭合**——多平台创作者的
+ *      第二个徽章被 HTML 解析器嵌进第一个里面（嵌套 inline-flex + 双份 padding）。
+ * 片段化后这类「修一处漏一处」从结构上不可能再发生。
+ */
+
+/** class 名片段白名单：role 取自 creators.json（用户数据），含空白会把一个 class 劈成两个。 */
+function tagClassOf(role?: string): string {
+  const r = getTagFromRole(role);
+  return `cr-tag-${/^[A-Za-z0-9_-]+$/.test(r) ? r : "unknown"}`;
+}
+
+/** 身份 tag chip：图标 + 展示文案（`getTagDisplayLabel` 单源；未知 tag 原样，不冒充别的身份）。 */
+export function creatorTagChipHtml(role: string | undefined, esc: (s: unknown) => string): string {
+  return `<span class="cr-tag ${tagClassOf(role)}">${getTagIconFromRole(role)} <span>${esc(
+    getTagDisplayLabel(getTagFromRole(role)),
+  )}</span></span>`;
+}
+
+/**
+ * 平台徽章组：站点图标 + 站点 id。
+ * 刻意不用 `workshop_sites.json` 的 `label`——那是中文优先的捆绑内容（"B站"/"爱发电"），
+ * 塞进 en/ja 界面属新增中文硬编码；站点名多语化是独立产品决策（见知识卡 app-content-site）。
+ */
+export function creatorPlatformBadgesHtml(
+  type: string | undefined,
+  esc: (s: unknown) => string,
+): string {
+  return parseSiteIds(type)
+    .map(
+      (platform: string) =>
+        `<span class="cr-platform-badge">${getSiteIcon(platform)}<span>${esc(platform)}</span></span>`,
+    )
+    .join("");
+}
+
+/** 收藏星标按钮（双态 SVG 随主题 currentColor；`data-star` 是事件委托键）。 */
+export function creatorStarBtnHtml(
+  name: string,
+  faved: boolean,
+  esc: (s: unknown) => string,
+): string {
+  return `<span class="cr-star-btn" data-star="${esc(name)}">${
+    faved ? UI_ICONS.starFilled : UI_ICONS.star
+  }</span>`;
+}
+
+/** 头像变体：卡片与浮层的 class / 降级属性不同（结构差异，非口径差异）。 */
+export interface AvatarVariant {
+  imgClass: string;
+  fallbackClass: string;
+  /** 卡片走声明式 data-avatar-fallback + 单点 bindAvatarFallback；浮层由调用方持引用直接绑 */
+  withFallbackAttr: boolean;
+}
+
+/**
+ * 头像（含加载失败降级字符）。`fallbackChar` 一并返回供调用方绑 error。
+ * 空名兜底（"?"）也收在此处——浮层曾漏掉该守卫（空名渲染成空字母块）。
+ */
+export function creatorAvatarHtml(
+  name: string,
+  avatarCache: Record<string, string> | undefined,
+  esc: (s: unknown) => string,
+  variant: AvatarVariant,
+): { html: string; fallbackChar: string } {
+  const fallbackChar = name ? esc(name.charAt(0)).toUpperCase() : "?";
+  const fallbackDiv = `<div class="${variant.fallbackClass}">${fallbackChar}</div>`;
+  const uri = avatarCache?.[name];
+  const html = uri
+    ? `<img class="${variant.imgClass}" src="${esc(uri)}" data-debug-avatar="${esc(name)}"${
+        variant.withFallbackAttr ? ` data-avatar-fallback="${fallbackChar}"` : ""
+      }>`
+    : fallbackDiv;
+  return { html, fallbackChar };
+}
+
 /** 创作者卡片工厂上下文 */
 export interface CrCardCtx {
   esc: (s: unknown) => string;
@@ -61,15 +143,13 @@ export interface BuildSiteHtmlCtx {
 export function createCrCard(cr: LocalCreatorLike, ctx: CrCardCtx): string {
   const { esc, isFaved, authorCountMap, avatarCache, site, staggerIdx, tier: tierRank } = ctx;
   const authorCount = authorCountMap[cr.name] || 0;
-  const hasAvatar = avatarCache?.[cr.name];
 
-  const fallbackChar = cr.name ? esc(cr.name.charAt(0)).toUpperCase() : "?";
-  const fallbackDiv = `<div class="cr-avatar cr-avatar-fallback">${fallbackChar}</div>`;
-  const avatarHtml = hasAvatar
-    ? `<img class="cr-avatar" src="${esc(avatarCache[cr.name])}" data-debug-avatar="${esc(
-        cr.name,
-      )}" data-avatar-fallback="${fallbackChar}">`
-    : fallbackDiv;
+  // 头像 / 平台徽章 / 星标 / 身份 tag 全部走片段单源（ADR-034-d1），卡片只保留布局与差异变体
+  const { html: avatarHtml } = creatorAvatarHtml(cr.name, avatarCache ?? undefined, esc, {
+    imgClass: "cr-avatar",
+    fallbackClass: "cr-avatar cr-avatar-fallback",
+    withFallbackAttr: true,
+  });
 
   const localBadge = cr._fromLocal
     ? authorCount > 0
@@ -81,16 +161,7 @@ export function createCrCard(cr: LocalCreatorLike, ctx: CrCardCtx): string {
         )}" title="${t("content.viewLocalModels")}">${UI_ICONS.folder}</span>`
     : "";
 
-  // 平台徽章 = 站点图标 + 站点 id（与详情浮层同口径）。
-  // 图标是语言中立的，不引入多语债；文字暂用站点 id——`workshop_sites.json` 的 `label`
-  // 是中文优先的捆绑内容（"B站"/"爱发电"），拿去 en/ja 界面反而是新增中文硬编码，
-  // 站点名多语化属独立产品决策（10+ 站点 × 3 语言包），不在此顺手夹带。
-  const platformBadges = parseSiteIds(cr.type)
-    .map(
-      (platform: string) =>
-        `<span class="cr-platform-badge">${getSiteIcon(platform)}<span>${esc(platform)}</span></span>`,
-    )
-    .join("");
+  const platformBadges = creatorPlatformBadgesHtml(cr.type, esc);
 
   // 🔍 搜索快捷按钮（与星标对称）：有站点搜索能力才渲染，点击联网搜索创作者，免进详情
   const searchBtn = site.searchUrl
@@ -100,13 +171,10 @@ export function createCrCard(cr: LocalCreatorLike, ctx: CrCardCtx): string {
     : "";
 
   const tierBar = tierRank ? `<div class="cr-card-tier-bar"></div>` : "";
-  // 星标双态走 UI_ICONS 语义图标（ADR-238）：实心 .ws-icon[fill] 切换，空心描边，随主题 currentColor
-  const starIcon = isFaved(cr.name) ? UI_ICONS.starFilled : UI_ICONS.star;
+  const starBtn = creatorStarBtnHtml(cr.name, isFaved(cr.name), esc);
+  const tagChip = creatorTagChipHtml(cr.role, esc);
+  // data-tag 仍是原始 role id（过滤键 = 数据语义），与展示层的 class 白名单解耦
   const tagRole = getTagFromRole(cr.role);
-  const tagIcon = getTagIconFromRole(cr.role);
-  // 锐评 P0-4 / 复核 P1-3：tag 展示文案走 i18n 单源（未知 tag 原样），与筛选行同口径；
-  // class 仍用原始 id（`.cr-tag-<role>` 样式语义），data-tag 同为原始 id（过滤键）。
-  const tagLabel = getTagDisplayLabel(tagRole);
 
   // 锐评 P0-2b：desc 展示兜底从数据层上收视图层——mergeLocalAuthorsInto 不再把
   // t("community.fromLocal") 写进 desc（语言串落盘污染数据面），本地条目以
@@ -123,11 +191,9 @@ export function createCrCard(cr: LocalCreatorLike, ctx: CrCardCtx): string {
     `<div class="cr-card-header"><div class="cr-avatar-container"><div class="cr-avatar-ring"></div>${avatarHtml}</div>` +
     `<div class="cr-card-name-row"><span class="cr-card-name">${esc(
       cr.name,
-    )}</span>${localBadge}<span class="cr-star-btn" data-star="${esc(cr.name)}">${starIcon}</span>${searchBtn}</div></div>` +
+    )}</span>${localBadge}${starBtn}${searchBtn}</div></div>` +
     `<div class="cr-card-desc">${esc(descText)}</div>` +
-    `<div class="cr-card-footer">${platformBadges}<span class="cr-tag cr-tag-${esc(
-      tagRole,
-    )}">${tagIcon} <span>${esc(tagLabel)}</span></span></div></div>`
+    `<div class="cr-card-footer">${platformBadges}${tagChip}</div></div>`
   );
 }
 

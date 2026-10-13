@@ -16,17 +16,17 @@ permalink: /adr/
 
 | 状态 | 数量 |
 |------|------|
-| [📝 提议中](#提议中) | 8 |
+| [📝 提议中](#提议中) | 7 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 1 |
 | [🔄 部分采纳](#部分采纳) | 14 |
-| [✅ 已采纳](#已采纳) | 319 |
+| [✅ 已采纳](#已采纳) | 320 |
 | [❌ 已取代](#已取代) | 8 |
 | [🧊 已废弃](#已废弃) | 0 |
 | [❓ 未归类](#未归类) | 0 |
 
 ## 按状态分组导航
 
-### 📝 提议中（8）
+### 📝 提议中（7）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
@@ -37,7 +37,6 @@ permalink: /adr/
 | [ADR-292](./ADR-292-scene-environment-sky-ibl-env.md) | 环境贴图单一归属：scene.environment 所有权收口，sky IBL 降为 env 的数据源 | 📝 提议中 |
 | [ADR-284](./ADR-284-sky-reflector-shadow-decoupling-cleanup.md) | sky 散射参数与模型类别解耦 + reflector/shadow 清除 no-op 与噪声值 | 📝 提议中 |
 | [ADR-151-d1](./decisions/ADR-151-d1-gen-stage-unknown-newfile.md) | gen-stage 未知新建文件默认排除（并发卷带硬化） | 📝 提议中 |
-| [ADR-034-d1](./decisions/ADR-034-d1-creator-view-fragments.md) | 创作者频道视图片段单源：抽共用渲染片段而非合并两视图 | ✅ 已采纳 |
 
 ### ⚠️ 已采纳但遗留未修复（1）
 
@@ -64,7 +63,7 @@ permalink: /adr/
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 | [ADR-050](./ADR-050-plaza-browser-window.md) | 模型广场 · 浏览器窗口（Wails 第二窗口） | 🔄 部分采纳 |
 
-### ✅ 已采纳（319）
+### ✅ 已采纳（320）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
@@ -355,6 +354,7 @@ permalink: /adr/
 | [ADR-036](./ADR-036-3d-op-keymap.md) | 3D 预览操作键位与相机偏好可配置 | ✅ 已采纳 |
 | [ADR-035](./ADR-035-forward-governance-initiatives.md) | 远期治理立项：组件测试与 CI 门槛 | ✅ 已采纳 |
 | [ADR-034](./ADR-034-remaining-debt-after-12-round-audit.md) | 12 轮审计后的剩余技术债盘点与处置方向 | ✅ 已采纳 |
+| [ADR-034-d1](./decisions/ADR-034-d1-creator-view-fragments.md) | 创作者频道视图片段单源：抽共用渲染片段而非合并两视图 | ✅ 已采纳 |
 | [ADR-033](./ADR-033-updater-download-truncation-version-compare.md) | 更新包下载截断检测与版本比较加固 | ✅ 已采纳 |
 | [ADR-032](./ADR-032-sync-diff-detection-failure-visibility.md) | 同步差异检测与失败可见性加固 | ✅ 已采纳 |
 | [ADR-031](./ADR-031-watcher-lifecycle-sync-serialization.md) | 文件监听生命周期与同步串行化加固 | ✅ 已采纳 |

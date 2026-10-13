@@ -19,6 +19,7 @@ auto_fields:
     - asArray
     - asNumber
     - asString
+    - containerExts
     - currentRepoType
     - DataGlyph
     - DedupGroup

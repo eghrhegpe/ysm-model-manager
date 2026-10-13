@@ -35,6 +35,7 @@ perf:
 invariant_anchors:
   - go/instance/instance.go|ysmsync.SyncResources
 status: active
+last_verified: 2026-10-13
 ---
 
 # 整合包实例 go/instance
@@ -73,16 +74,16 @@ status: active
 - **同路径自引用 marker 必须并入容器（`absorbSelfMarker`，2026-09 修）**：混合夹（自身直接含平铺模型文件、又含子模型夹）在 `sync_dirlevel.go` 会被登记**两条**——除容器身份外还把自身登记成一条目录条目（目录 marker，用于与对侧同名叶子目录对齐键集，防幻影 Missing+Extra）。展示层若原样吐行就渲染成「同名目录嵌在自己里面」（实测 `2.大学学姐 > 2.大学学姐`）；更糟的是该 marker 的 `Path` 与容器 `Path` 相同，而前端 `dirOpen` 以 `data-path` 为 key —— 点一次容器会**连带展开影子行**。故 `treeChildren` 在算出 `containerPath` 后调 `absorbSelfMarker(children, containerPath)`：`Path == containerPath` 的子项不吐行，把它的**直接子文件**（`Name` 不含 `/`）并入容器（含 `/` 的属子夹，由子夹节点负责展示，上提会把同一批文件列两遍）。**判别式就是 Path 相等**：子夹下的叶子路径必然更深不会误伤；容器聚合为 optional 时 `containerPath` 取实例根、与实例侧同名叶子路径重合 → 同属「同一个夹」，也并入。跨侧同名但**路径不同**的（容器 `globalDir/a` + 实例独有 `instDir/a`）是真实两个对象，`__self` 行保留
 - **条目 `Size` 语义按 `IsDir` 区分（`entrySize`，2026-09 修）**：文件 = 自身字节数（`fsutil.FileSize`）；目录 = **子树内容总量**（子项 `Size` 求和）。目录**绝不能**取 `os.Stat(dir).Size()`——那是目录项自身占用（NTFS 通常 0/4096/8192），与内容无关：实测 600 字节的夹报 0、装着 206 MB 的模型夹在同步页显示 `4.0 KB`，纯属误导。总量**零额外 IO**（`buildDirLevelChildren` 已算出子项清单，`DiffFolderContents` 注释明确 synced 条目含在结果中）；空夹 / 夹在磁盘上不存在 → `Size=0`，由前端 `size > 0` 守卫留白。容器节点（`treeChildren`）不填 `Size`，故容器行本就不显示大小。消费面极窄：`Size` 全仓仅 `tpl.ts` 两处行模板消费，**无排序 / 合计 / 推送判定依赖**——改语义不牵连逻辑
 
-## 已知限制 / 待治理（2026-08-24 审计）
+## 已知限制 / 待治理（2026-08-24 审计；2026-10-13 按源码树复核）
 
 > 修复任一项时删除对应行并补回归测试；跨包 IO 放大问题见 [go_sync](./go-sync.md) 已知限制节。
+> **本节断言为 2026-08-24 快照，2026-10-13 逐条 grep 源码树复核过**：已治项标 ~~删除线~~ 并注明归宿，未治项注明最新实证。判断现状仍以源码树为准。
 
-- **appendItem 前缀检查无分隔符守卫**（instance.go appendItem）：`strings.HasPrefix(p, globalDir)` 未带 `basedir+sep` 守卫——同文件 `relOf` 特意加了守卫防 `D:\repo` vs `D:\repo-instance` 误归属，此处口径不一；当前 p 来自双侧 Walk 结果通常安全，但属防御范式漏网
+- ~~**appendItem 前缀检查无分隔符守卫**~~ **已治（R34 P2-13）**：`appendOneItem` 曾用裸 `HasPrefix(p, c.globalDir)`，全局根互为前缀（`D:\repo\a` vs `D:\repo\abc`）时算出错误实例侧路径。现 `instance.go` 用 `HasPrefix(p, c.globalDir+sep)` + `TrimPrefix`，与 `relOf` 同口径
 - **legacy 在容器层被抹平**：`aggregateStatus` 把 legacy（旧硬链接）归入 hasPull → 含 legacy 子项的容器聚合为 optional（📤 可拉取），legacy 语义丢失、legacy tab 下看不到该容器（与前端 applyFilter 不递归叠加，见 [app-sync-manager](./app-sync-manager.md)）
-- **`__self` 魔法段名边缘冲突**：真实子目录恰名 `__self` 时与防御性自引用子项同 key 相互覆盖（极低概率，记录在案即可）
-- **R34 P2-13 前缀守卫修复**（`go/instance/instance.go|appendOneItem`）：`appendOneItem` 中 `strings.HasPrefix(p, c.globalDir)` 用裸前缀匹配，全局根是另一全局根前缀（`D:\repo\a` vs `D:\repo\abc`）时算出错误实例侧路径。修复：`HasPrefix(p, c.globalDir+sep)` + `TrimPrefix` 同口径，与 `relOf` 一致。
-- **sizeOf 静默吞错**：条目尺寸 `os.Stat` 失败返回 0 无告警，显示失真不可察觉
-- **混合夹平铺文件重复列示（面板链既有，2026-09 ADR-310 审计实证）**：`absorbSelfMarker` 把目录 marker 的直接子文件并入容器，而同一文件又以「平铺文件叶」身份独立注册 → 容器 `children` 里同一路径出现两次（实测 `global/A/{flat.pmx, B/deep.pmx}` → 子项含 `flat.pmx` ×2），面板 UI 表现为同名两行。侧栏 `BuildInstanceStatusCounts` 已对清单去重（防重复安装），**面板树本身的重复行未治**——修它须动 `nestDirLevelTree`/`absorbSelfMarker` 并有对应面板回归
+- **`__self` 魔法段名边缘冲突**（2026-10-13 复核：仍未治）：真实子目录恰名 `__self` 时与 `instance_tree.go|nestDirLevelTree` 两处防御性自引用子项（`children["__self"]`）同 key 相互覆盖。**该键纯内部**——`treeChildren` 遍历时 `c.leaf != nil` 分支原样输出叶子自身 Name/Path（`instance_tree.go|treeChildren`），`__self` 从不外显为段名，故改键名零外部契约影响
+- ~~**sizeOf 静默吞错**~~ **已治**：`sizeOf` 全仓零命中，已被 `instance.go|entrySize` 取代——文件取 `fsutil.FileSize`；目录取子树 `children` 的 `Size` 求和，**子项清单取不到且夹真实存在时回退 `fsutil.DirSize` 递归求和**（仅 `os.Stat` 失败才返回 0），空夹/不存在 → 0 交前端 `size > 0` 守卫留白
+- **混合夹平铺文件重复列示（面板链，2026-10-13 复核：当前形态未复现）**：`absorbSelfMarker` 把目录 marker 的直接子文件并入容器，而同一文件又以「平铺文件叶」身份独立注册 → 容器 `children` 里同一路径可能出现两次。侧栏 `BuildInstanceStatusCounts` 已去重（防重复安装）；**面板树的去重仍未做**，但回归锁 `status_counts_test.go` 当前以 `t.Skipf` 形态变化自失效——真实目录形态变化时会重新显形，届时修它须动 `nestDirLevelTree`/`absorbSelfMarker` 并补面板回归
 - ~~**无可推送文件的单元只能由面板单行推送修**~~ **已收口（2026-09 审计后）**：改为整夹进 `MissingDirs`，一键安装走 folder-aware 的 `PushSingleResourceToInstance`，计数与可修性一致（见「对外 API」节）
 
 ## 相关

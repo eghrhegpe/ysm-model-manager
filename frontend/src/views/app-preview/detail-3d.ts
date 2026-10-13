@@ -15,6 +15,7 @@ import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import { showCard } from "./card-shell.ts";
 import { resolveMorphSiblings, resolveStageSiblings } from "./siblings.ts";
+import { pageShellHTML } from "./tpl.ts";
 import type { DetailGenGuard, PreviewCtx } from "./utils.ts";
 
 // ===== 共享渲染辅助（样式骨架收口）=====
@@ -37,6 +38,14 @@ function statItemHTML(icon: string, label: string, value: string | number): stri
   return `<span>${icon} ${label}: <b>${value}</b></span>`;
 }
 
+/** 3D 入口卡 body 容器（2026-10 收口：VRM 双分支/MMD/FBX/Scene/Morph/Stage 七份逐字抄的
+ * 卡体容器——padding:var(--sp-3) + flex column + gap:8px + fs-sm；外层壳（#preview-content
+ * + h3 标题行）统一走 pageShellHTML（tpl.ts 单一出口，ADR-253 同族）。
+ *  结构锁 = detail-3d.test.ts「入口卡壳统一骨架」回归例。 */
+function entryCardBodyHTML(inner: string): string {
+  return `<div style="padding:var(--sp-3);display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">${inner}</div>`;
+}
+
 // ===== 六个 show 函数（统一为 CardShowConfig + showCard，壳见 ./card-shell.ts）=====
 
 /** 显示 VRM meta 卡（名称/作者/许可/版本/缩略图 + FAB 进 3D，对齐 YSM 模式） */
@@ -56,12 +65,11 @@ export async function showVrmMeta(
       const m = meta as Record<string, unknown> | null;
       if (!m || (!m.name && !(m.authors as string[])?.length)) {
         // 无 meta（非标准 VRM 或解析失败）→ 仅名称
-        return `<div class="content" id="preview-content" data-testid="preview-content">
-  <h3>${icon} ${label}</h3>
-  <div style="padding:var(--sp-3);display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
-    <div><strong>${renderFormattedText(basename)}</strong></div>
-  </div>
-</div>`;
+        return pageShellHTML({
+          icon,
+          title: label,
+          body: entryCardBodyHTML(`<div><strong>${renderFormattedText(basename)}</strong></div>`),
+        });
       }
       const authors = (m.authors as string[] | undefined)?.filter(Boolean).join("、") ?? "";
       const thumb = (m.thumbnail as string | undefined)
@@ -97,20 +105,21 @@ export async function showVrmMeta(
               ].join("\n"),
             )
           : "";
-      return `<div class="content" id="preview-content" data-testid="preview-content">
-  <h3>${icon} ${label}</h3>
-  <div style="padding:var(--sp-3);display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
-    ${thumb}
-    <div><strong>${renderFormattedText((m.name as string) || basename)}</strong></div>
-    ${authors ? `<div style="color:var(--muted)">${UI_ICONS.author} ${esc(authors)}</div>` : ""}
-    ${(m.version as string) ? `<div style="color:var(--muted);font-size:var(--fs-xs)">${t("preview.versionLabel")}: ${esc(m.version as string)}</div>` : ""}
-    ${(m.contact as string) ? `<div style="color:var(--muted);font-size:var(--fs-xs)">${UI_ICONS.comment} ${esc(m.contact as string)}</div>` : ""}
-    ${(m.license as string) ? `<div style="color:var(--muted);font-size:var(--fs-xs)">${UI_ICONS.script} ${esc(m.license as string)}</div>` : ""}
-    ${refBadge}
-    ${r ? `<div style="display:flex;flex-wrap:wrap;align-items:center;margin-top:2px">${badge(t("preview.vrmCommercial"), r.commercial as boolean, UI_ICONS.payment)}${badge(t("preview.allowedUser"), r.allowedUser === "everyone", UI_ICONS.users)}${badge(t("preview.sexual"), r.sexual as boolean, UI_ICONS.violent)}${badge(t("preview.violent"), r.violent as boolean, UI_ICONS.violent)}</div>` : ""}
-    ${statsRow}
-  </div>
-</div>`;
+      return pageShellHTML({
+        icon,
+        title: label,
+        body: entryCardBodyHTML(
+          `${thumb}
+<div><strong>${renderFormattedText((m.name as string) || basename)}</strong></div>
+${authors ? `<div style="color:var(--muted)">${UI_ICONS.author} ${esc(authors)}</div>` : ""}
+${(m.version as string) ? `<div style="color:var(--muted);font-size:var(--fs-xs)">${t("preview.versionLabel")}: ${esc(m.version as string)}</div>` : ""}
+${(m.contact as string) ? `<div style="color:var(--muted);font-size:var(--fs-xs)">${UI_ICONS.comment} ${esc(m.contact as string)}</div>` : ""}
+${(m.license as string) ? `<div style="color:var(--muted);font-size:var(--fs-xs)">${UI_ICONS.script} ${esc(m.license as string)}</div>` : ""}
+${refBadge}
+${r ? `<div style="display:flex;flex-wrap:wrap;align-items:center;margin-top:2px">${badge(t("preview.vrmCommercial"), r.commercial as boolean, UI_ICONS.payment)}${badge(t("preview.allowedUser"), r.allowedUser === "everyone", UI_ICONS.users)}${badge(t("preview.sexual"), r.sexual as boolean, UI_ICONS.violent)}${badge(t("preview.violent"), r.violent as boolean, UI_ICONS.violent)}</div>` : ""}
+${statsRow}`,
+        ),
+      });
     },
     // ADR-253 D7：3D 入口 FAB 已删（统一走左下角 nav-fab）
     wireFab: () => {},
@@ -130,13 +139,14 @@ export async function showMmdPreview(
     label,
     renderCard: (_ctx, path) => {
       const basename = path.split(/[/\\]/).pop() || "";
-      return `<div class="content" id="preview-content" data-testid="preview-content">
-  <h3>${icon} ${label}</h3>
-  <div style="padding:var(--sp-3);display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
-    <div><strong>${renderFormattedText(basename)}</strong></div>
-    <div id="mmd-stats-row"></div>
-  </div>
-</div>`;
+      return pageShellHTML({
+        icon,
+        title: label,
+        body: entryCardBodyHTML(
+          `<div><strong>${renderFormattedText(basename)}</strong></div>
+<div id="mmd-stats-row"></div>`,
+        ),
+      });
     },
     // ADR-253 D7：3D 入口 FAB 已删（统一走左下角 nav-fab）
     wireFab: () => {},
@@ -195,12 +205,11 @@ export async function showFbxPreview(
     label,
     renderCard: (_ctx, path) => {
       const basename = path.split(/[/\\]/).pop() || "";
-      return `<div class="content" id="preview-content" data-testid="preview-content">
-  <h3>${icon} ${label}</h3>
-  <div style="padding:var(--sp-3);display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
-    <div><strong>${renderFormattedText(basename)}</strong></div>
-  </div>
-</div>`;
+      return pageShellHTML({
+        icon,
+        title: label,
+        body: entryCardBodyHTML(`<div><strong>${renderFormattedText(basename)}</strong></div>`),
+      });
     },
     // ADR-253 D7：3D 入口 FAB 已删（统一走左下角 nav-fab）
     wireFab: () => {},
@@ -217,16 +226,17 @@ export async function showScenePreview(
     label: t("preview.sceneModel"),
     renderCard: (_ctx, path) => {
       const basename = path.split(/[/\\]/).pop() || "";
-      return `<div class="content" id="preview-content" data-testid="preview-content">
-  <h3>${UI_ICONS.build} ${t("preview.sceneModel")}</h3>
-  <div style="padding:var(--sp-3);display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
-    <div><strong>${renderFormattedText(basename)}</strong></div>
-    <div style="font-size:var(--fs-sm);color:var(--muted);display:flex;gap:4px;align-items:center">
-      <span style="background:color-mix(in srgb,var(--accent) 20%,transparent);color:var(--accent);padding:1px 6px;border-radius:var(--radius-sm);font-weight:500">${esc(RESOURCE_TYPES.SCENE)}</span>
-      <span>${t("preview.sceneModelLabel")}</span>
-    </div>
-  </div>
-</div>`;
+      return pageShellHTML({
+        icon: UI_ICONS.build,
+        title: t("preview.sceneModel"),
+        body: entryCardBodyHTML(
+          `<div><strong>${renderFormattedText(basename)}</strong></div>
+<div style="font-size:var(--fs-sm);color:var(--muted);display:flex;gap:4px;align-items:center">
+<span style="background:color-mix(in srgb,var(--accent) 20%,transparent);color:var(--accent);padding:1px 6px;border-radius:var(--radius-sm);font-weight:500">${esc(RESOURCE_TYPES.SCENE)}</span>
+<span>${t("preview.sceneModelLabel")}</span>
+</div>`,
+        ),
+      });
     },
     // ADR-253 D7：3D 入口 FAB 已删（统一走左下角 nav-fab）
     wireFab: () => {},
@@ -243,18 +253,19 @@ export async function showMorphPreview(
     label: t("preview.customMorph"),
     renderCard: (_ctx, path) => {
       const basename = path.split(/[/\\]/).pop() || "";
-      return `<div class="content" id="preview-content" data-testid="preview-content">
-  <h3>${UI_ICONS.avatar} ${t("preview.customMorph")}</h3>
-  <div style="padding:var(--sp-3);display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
-    <div><strong>${renderFormattedText(basename)}</strong></div>
-    <div style="font-size:var(--fs-sm);color:var(--muted);display:flex;gap:4px;align-items:center;flex-wrap:wrap">
-      <span style="background:color-mix(in srgb,var(--muted) 18%,transparent);color:var(--muted);padding:1px 6px;border-radius:var(--radius-sm);font-weight:500">${esc(RESOURCE_TYPES.CUSTOM_MORPH)}</span>
-      <span>${t("preview.vpdPose")}</span>
-      <span style="background:color-mix(in srgb,var(--muted) 18%,transparent);color:var(--muted);padding:1px 6px;border-radius:var(--radius-sm)">${t("preview.singleFrameMorph")}</span>
-    </div>
-    <div id="morph-siblings" style="max-height:160px;overflow-y:auto;border:1px solid var(--bd);border-radius:var(--radius-md);padding:var(--pad-nav);margin-top:4px"></div>
-  </div>
-</div>`;
+      return pageShellHTML({
+        icon: UI_ICONS.avatar,
+        title: t("preview.customMorph"),
+        body: entryCardBodyHTML(
+          `<div><strong>${renderFormattedText(basename)}</strong></div>
+<div style="font-size:var(--fs-sm);color:var(--muted);display:flex;gap:4px;align-items:center;flex-wrap:wrap">
+<span style="background:color-mix(in srgb,var(--muted) 18%,transparent);color:var(--muted);padding:1px 6px;border-radius:var(--radius-sm);font-weight:500">${esc(RESOURCE_TYPES.CUSTOM_MORPH)}</span>
+<span>${t("preview.vpdPose")}</span>
+<span style="background:color-mix(in srgb,var(--muted) 18%,transparent);color:var(--muted);padding:1px 6px;border-radius:var(--radius-sm)">${t("preview.singleFrameMorph")}</span>
+</div>
+<div id="morph-siblings" style="max-height:160px;overflow-y:auto;border:1px solid var(--bd);border-radius:var(--radius-md);padding:var(--pad-nav);margin-top:4px"></div>`,
+        ),
+      });
     },
     // ADR-253 D7：原「应用 FAB」为零订阅假按钮（点击只弹一个成功 toast，实际不执行任何操作），
     // 已删除。兄弟列表点击切换（下方 postRender）保留——那是真实功能。
@@ -312,17 +323,18 @@ export async function showStagePreview(
     label: t("preview.stageAnim"),
     renderCard: (_ctx, path) => {
       const basename = path.split(/[/\\]/).pop() || "";
-      return `<div class="content" id="preview-content" data-testid="preview-content">
-  <h3>${UI_ICONS.voice} ${t("preview.stageAnim")}</h3>
-  <div style="padding:var(--sp-3);display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">
-    <div><strong>${renderFormattedText(basename)}</strong></div>
-    <div style="font-size:var(--fs-sm);color:var(--muted);display:flex;gap:4px;align-items:center;flex-wrap:wrap">
-      <span style="background:color-mix(in srgb,var(--status-warning,#ffa050) 18%,transparent);color:var(--status-warning,#ffa050);padding:1px 6px;border-radius:var(--radius-sm);font-weight:500">${esc(RESOURCE_TYPES.STAGE)}</span>
-      <span>${t("preview.stagePerformanceLabel")}</span>
-    </div>
-    <div id="stage-contents" style="max-height:200px;overflow-y:auto;border:1px solid var(--bd);border-radius:var(--radius-md);padding:var(--pad-nav);margin-top:4px"></div>
-  </div>
-</div>`;
+      return pageShellHTML({
+        icon: UI_ICONS.voice,
+        title: t("preview.stageAnim"),
+        body: entryCardBodyHTML(
+          `<div><strong>${renderFormattedText(basename)}</strong></div>
+<div style="font-size:var(--fs-sm);color:var(--muted);display:flex;gap:4px;align-items:center;flex-wrap:wrap">
+<span style="background:color-mix(in srgb,var(--status-warning,#ffa050) 18%,transparent);color:var(--status-warning,#ffa050);padding:1px 6px;border-radius:var(--radius-sm);font-weight:500">${esc(RESOURCE_TYPES.STAGE)}</span>
+<span>${t("preview.stagePerformanceLabel")}</span>
+</div>
+<div id="stage-contents" style="max-height:200px;overflow-y:auto;border:1px solid var(--bd);border-radius:var(--radius-md);padding:var(--pad-nav);margin-top:4px"></div>`,
+        ),
+      });
     },
     // ADR-253 D7：原「加载 FAB」为零订阅假按钮（点击只弹一个成功 toast，实际不执行任何操作），
     // 已删除。舞台内容列表（下方 postRender）保留——那是真实功能。

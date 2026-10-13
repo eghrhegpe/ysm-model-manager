@@ -339,3 +339,38 @@ describe("showStagePreview StageAnim 入口卡", () => {
     expect(ctx.root.querySelectorAll(".stage-item").length).toBe(0);
   });
 });
+
+// ===== 回归锁：入口卡壳统一骨架（2026-10 收口七份逐字抄的壳）=====
+// 七个入口卡（VRM 双分支 / MMD / FBX / Scene / Morph / Stage）曾各手写同一壳串
+// （`#preview-content` + h3 + 五属性 body 容器）——收口归 pageShellHTML（tpl.ts 统一出口）
+// + entryCardBodyHTML（detail-3d.ts body 容器）两个出口后，锁「全部入口卡带统一壳 + 统一
+// body 容器」：日后新增入口卡若手抄壳即第二来源，必须走这两个出口。
+describe("入口卡壳统一骨架（pageShellHTML + entryCardBodyHTML 收口）", () => {
+  const SHELL = '<div class="content" id="preview-content" data-testid="preview-content">';
+  const BODY_CONTAINER =
+    '<div style="padding:var(--sp-3);display:flex;flex-direction:column;gap:8px;font-size:var(--fs-sm)">';
+
+  async function shellOf(run: (ctx: PreviewCtx) => Promise<void>, label: string): Promise<void> {
+    const ctx = makeCtx();
+    await run(ctx);
+    const html = ctx.root.innerHTML;
+    expect(html, `${label}: 统一壳`).toContain(SHELL);
+    expect(html, `${label}: body 容器`).toContain(BODY_CONTAINER);
+    expect(html, `${label}: h3 标题行`).toContain("<h3>");
+  }
+
+  it("MMD / FBX / Scene / Morph / Stage 五卡全有统一壳 + body 容器", async () => {
+    await shellOf((c) => showMmdPreview(c, "/repo/a.pmx"), "MMD");
+    await shellOf((c) => showFbxPreview(c, "/repo/b.fbx"), "FBX");
+    await shellOf((c) => showScenePreview(c, "/repo/c/main.pmx"), "Scene");
+    await shellOf((c) => showMorphPreview(c, "/repo/d.vpd"), "Morph");
+    await shellOf((c) => showStagePreview(c, "/repo/stage"), "Stage");
+  });
+
+  it("VRM 双分支（无 meta / 有 meta）同骨架", async () => {
+    vrmMetaMock.mockResolvedValue(null);
+    await shellOf((c) => showVrmMeta(c, "/repo/x.vrm"), "VRM 无 meta");
+    vrmMetaMock.mockResolvedValue({ name: "s", authors: [] });
+    await shellOf((c) => showVrmMeta(c, "/repo/x.vrm"), "VRM 有 meta");
+  });
+});

@@ -21,13 +21,10 @@ import {
 /**
  * ===== 创作者视图片段单源（ADR-034-d1）=====
  *
- * 卡片（本文件 createCrCard）与详情浮层（events.ts|cmCrBuildDetailHtml）是**同一视图模型的
- * 两种布局**（网格项 vs role=dialog 模态），视图不合并不假，但重复的标记必须单源。
- * 下面这些片段此前在两处各写一份，已经漂过两次：
- *   ① 平台徽章的站点图标只在浮层有、卡片没有（文档与 CSS 都承诺卡片该有，2026-10-13 修）；
- *   ② 浮层那份徽章的**外层 `<span class="cr-platform-badge">` 从未闭合**——多平台创作者的
- *      第二个徽章被 HTML 解析器嵌进第一个里面（嵌套 inline-flex + 双份 padding）。
- * 片段化后这类「修一处漏一处」从结构上不可能再发生。
+ * 卡片（createCrCard）与详情浮层（events.ts|cmCrBuildDetailHtml）是同一视图模型的两种布局
+ * （网格项 vs role=dialog 模态），视图不合并不假，但重复的标记必须单源。
+ * 四个片段（头像/平台徽章/星标/身份 tag）各写一份时已漂过两次——卡片漏站点图标、浮层 span 未闭合。
+ * 改这里即同时改两处布局；不要在任一布局里重写标记。历史见知识卡 app-content-site.md §不变量。
  */
 
 /** class 名片段白名单：role 取自 creators.json（用户数据），含空白会把一个 class 劈成两个。 */
@@ -131,11 +128,8 @@ export interface BuildSiteHtmlCtx {
   searchKw: string;
   /** 查看器模式（网页版/Android ADR-049 能力门控）：隐藏桌面专属的创作者编辑入口（保存走未桥接 BySite 绑定） */
   viewerMode: boolean;
-  /**
-   * 收藏名单（2026-10-13 锐评 P1-c：由调用方一次性 loadFavs 后注入）。
-   * 渲染层是纯函数——不得在 N 张卡的循环里各调一次 isFaved/loadFavs
-   * （原写法每次渲染 = 收藏者数+1 次 localStorage.getItem + JSON.parse）。
-   */
+  /** 收藏名单：调用方每轮渲染注入一份。渲染层是纯函数——禁止在 N 张卡的循环里各调一次
+   *  isFaved/loadFavs（那是每轮 N+1 次 localStorage 解析）；可执行契约锁在 render.test.ts。 */
   favedNames: readonly string[];
 }
 
@@ -236,10 +230,9 @@ function buildSiteSearchSection(ctx: BuildSiteHtmlCtx): string {
   );
 }
 
-/** 收藏置顶排序（P2-8 锐评：不再就地改 ctx.creators——buildSiteHtml 保持纯函数无副作用。返回新数组）。
- *  比较器为 compareFavFirst（workshop-data.ts 单源），与收藏后 DOM 就地重排共用同一口径。
- *  P1-c 锐评：收藏名单由调用方注入（favedNames），排序层不再自取 loadFavs——
- *  原写法 + 卡内 isFaved 合成每渲染一轮 N+1 次 localStorage 解析。 */
+/** 收藏置顶排序：比较器 compareFavFirst（workshop-data.ts 单源），与收藏后 DOM 就地重排同口径。
+ *  返回新数组——buildSiteHtml 保持纯函数无副作用，不得就地改 ctx.creators。
+ *  收藏名单由调用方注入；在此自取 loadFavs 会放大成每轮 N+1 次解析。 */
 function sortCreatorsFavedFirst(
   creators: LocalCreatorLike[],
   authorCountMap: Record<string, number>,
@@ -250,25 +243,14 @@ function sortCreatorsFavedFirst(
 
 /**
  * 创作者排名分档（纯函数）：按「本地仓库模型数」降序分档——前 10% gold、前 25% silver，
- * 单次 O(n log n)。调用方（buildSiteBrowseSection）预计算一次后按 name 取值，
- * 替代原「每张卡片内对全量列表重新排序」的 O(n² log n) 写法。
+ * 单次 O(n log n)，调用方预计算一次后按 name 取值（卡内逐张全量重排的旧写法已废止）。
  *
  * 三条发牌纪律（缺一即退化成噪声分档）：
- * ① 无信号不发牌：全站产量为 0（authorCountMap 缺条目或显式 0）时所有 key 相等，排序退化
- *    为保持原序——若照 pct 位次发牌，数组里第一个人会白拿 gold。榜首 count ≤ 0 即判定无
- *    比较信号，全体返回 ""（图例 buildTierLegendRow 随之自然不渲染）。
- * ② 单人站点不发牌：n=1 没有比较对象，"顶级创作者" 是自封的。
- * ③ silver 底保：纯位次 pct<0.25 在 n=2~5 时命中空集（只有 idx0 落在 <0.1），小站点的
- *    银档形同虚设——故 n≥2 且 ① 通过时，第 2 名兜底拿 silver。
+ * ① 无信号不发牌：榜首 count ≤ 0 时全体返回 ""；② 单人站点（n=1）不发牌——无比较对象；
+ * ③ silver 底保：纯位次银档在 n=2~5 落空，故第 2 名兜底拿银。
+ * 并列组同档（组内取最靠前位次）、组序裁断不腰斩；silver 位次恒 ≥ gold，不倒挂。
  *
- * 并列口径（同 count 同档，不按数组下标发牌）：并列者产量完全相同、无可区分的名次依据，
- * 按下标区分等于用展示顺序冒充排名（同 ① 的噪声）。故先对每个并列组（count 相同的连续
- * 区间）取组内**最靠前**的位次作为该组共同位次，再按该位次定档：
- *  - 榜首并列（例：两个 5）→ 全组 gold（同档，不因下标降级）；
- *  - 榜尾并列（例：甲 9 / 乙 7 / 丙 1 / 丁 1）→ 最低并列组整体同档（这里整组无牌），
- *    不会因「丙先丁后」造出一个假的第 2 名。
- * ③ 底保只在纯位次无 silver 时兜底，且只认领最靠前的那个并列组（银档先于金档让位），
- * 故 silver 位次恒 ≥ gold 位次，不会出现 silver 站在 gold 之上的倒挂。
+ * 完整推导与历史缺陷见知识卡 app-content-site.md §不变量「排名分档预计算」。
  */
 export function computeCreatorTiers(
   creators: LocalCreatorLike[],
@@ -329,15 +311,10 @@ export function computeCreatorTiers(
 }
 
 /**
- * 分类标签过滤按钮行：**固定「全部」+ 按本站实际存在的身份派生**。
- *
- * 历史缺陷：本行曾硬编码三个按钮（全部 / 创作者 / 官方），与本站数据无关。
- * 对着 creators.json 实测 10 个站点：只有 mzhouse 有 official 条目，其余 9 站
- * 点了「官方」必然 0 结果（掉进空态）；另有多站全是 creator，「创作者」与「全部」
- * 结果集完全相同，是个纯死按钮。即「按钮不是数据算出来的，是猜出来的」。
- *
- * 现按 tagSet 派生：站内出现过的身份才给按钮（含 getTagFromRole 的 ""→creator 默认
- * 归类，故默认身份者仍归「创作者」档，不会漏）。「全部」恒在。
+ * 分类标签过滤按钮行：固定「全部」+ 按本站实际存在的身份派生（**按钮必须由数据算出**）。
+ * 曾硬编码「全部 / 创作者 / 官方」三按钮，与本站数据无关——多数站点的「官方」必得 0 结果（死按钮）。
+ * 含 getTagFromRole 的 ""→creator 默认归类，故默认身份者仍归「创作者」档，不会漏；「全部」恒在。
+ * 新增 role 时须同补 ORDERED_ROLES，否则按钮序不更新。详见知识卡 app-content-site.md §不变量。
  */
 function buildSiteTagFilterRow(ctx: BuildSiteHtmlCtx): string {
   const { esc, creators, activeTag } = ctx;
@@ -369,12 +346,10 @@ function buildSiteTagFilterRow(ctx: BuildSiteHtmlCtx): string {
 }
 
 /**
- * tier 图例行（P0-1/P2-1 锐评）：原 gold/silver 只有 2px 色条 + 光环，无任何文字
- * 说明其「按本地模型数排名」的语义——无图例时用户无法得知这两档凭什么区分。
- * 有任一 gold/silver 分档卡才渲染（纯展示，不参与过滤）。
- *
- * ⚠️ tiers 由调用方传入（已算好的分档表）：本函数只需「是否有分档卡」一个布尔，
- *   早期版本在此重新 computeCreatorTiers，等于每次渲染多跑一轮 O(n log n) 排序。
+ * tier 图例行：gold/silver 只有 2px 色条与光环，无文字则用户无从得知分档依据，故补此图例。
+ * 有任一分档卡才渲染（纯展示，不参与过滤）。
+ * ⚠️ tiers 由调用方传入已算好的表：本函数只需「是否有分档卡」一个布尔——在此重算
+ *   等于每轮渲染多跑一次 O(n log n) 排序。
  */
 function buildTierLegendRow(
   creators: LocalCreatorLike[],
@@ -417,20 +392,15 @@ function buildSiteBrowseSection(ctx: BuildSiteHtmlCtx): string {
     }</div>`,
   );
   if (creators.length) {
-    // P1-c 锐评：收藏名单 Set 化一次，供排序与 N 张卡共用——
-    // 原每卡各调 ctx.isFaved→loadFavs（localStorage.getItem + JSON.parse），
-    // 一轮渲染解析 N+1 次；现整轮零 localStorage 访问（favedNames 由调用方注入）。
+    // favedNames 由调用方注入 → 整轮零 localStorage 访问；Set 化一次供排序与 N 张卡共用
     const favSet = new Set(ctx.favedNames);
     const isFavedNow = (name: string): boolean => favSet.has(name);
-    // P2-8：sortCreatorsFavedFirst 返回新数组——不再就地改 ctx.creators（原数组保持 allCreators 过滤序）
+    // 返回新数组，不就地改 ctx.creators（原数组保持 allCreators 过滤序）
     const sortedCreators = sortCreatorsFavedFirst(creators, authorCountMap, ctx.favedNames);
     parts.push(buildSiteTagFilterRow(ctx));
-    // 声明式生成创作者卡片（不再留空 grid 给 events 填充）
-    // 分档预计算一次（O(n log n)）；stagger 延迟取展示位次——收藏置顶卡按视觉顺序入场
-    //（旧实现按产量名次计延迟，置顶卡入场乱序），且经 stagger() 带 300ms 封顶
+    // 卡片声明式生成（不留空 grid 给 events 填充）；分档预计算一次 O(n log n)
     const tiers = computeCreatorTiers(creators, authorCountMap);
-    // P0-1/P2-1 锐评：tier 无图例、排序依据不可见——有分档卡才渲染迷你图例行
-    // （复用上面已算好的 tiers，不重复跑第二轮排序）
+    // 图例复用上面已算好的 tiers，不重复跑第二轮排序
     parts.push(buildTierLegendRow(creators, tiers));
     const cardsHtml = sortedCreators
       .map((cr, i) =>
@@ -477,9 +447,8 @@ function buildSitePresetEditCards(ctx: BuildSiteHtmlCtx): string {
 }
 
 /**
- * 单张创作者编辑卡 HTML（P1-3b 抽离：buildSiteCreatorEditCards 循环体 → 纯函数，
- * 供编辑态「新增」走局部 DOM 渲染复用，避免整树重建丢焦点）。
- * 注意 idx 是**编辑视图索引**（creators 过滤后数组的下标），对应 data-edit-idx/data-idx。
+ * 单张创作者编辑卡 HTML（纯函数：编辑态「新增」走局部 DOM 追加时复用它，避免整树重建丢焦点）。
+ * 注意 idx 是**编辑视图索引**（creators 过滤后数组的下标），对应 data-edit-idx / data-idx。
  */
 export function buildCreatorEditCard(
   cr: LocalCreatorLike,
@@ -506,9 +475,8 @@ export function buildCreatorEditCard(
     `<div class="cr-edit-card-row"><span class="cr-edit-label">${t(
       "content.labelPlatform",
     )}</span>` +
-    // P1-5 锐评：平台字段原用 `<select multiple>`（Ctrl/Cmd 多选、移动端不可用、
-    // 50px 高小框滚动 5 个 option，与浏览态 badge 视觉完全脱节）——改为可点击 badge 组：
-    // 每个站点一个 chip，点击切换选中（toggle type 段），与浏览态 .cr-platform-badge 同语义。
+    // 平台字段走可点击 chip 组（与浏览态 .cr-platform-badge 同语义）——原 `<select multiple>`
+    // 需 Ctrl/Cmd 多选、移动端不可用、与浏览态视觉脱节。点 chip 即 toggle type 的站点段。
     `<div class="cr-site-chip-group" data-fld="type" data-idx="${idx}">${(allSites || [])
       .map(
         (s) =>
@@ -517,11 +485,8 @@ export function buildCreatorEditCard(
           }" data-site-id="${esc(s.id)}" title="${esc(s.label)}">${esc(s.label)}</button>`,
       )
       .join("")}</div>` +
-    // 五项身份 option 的展示文案统一走 getTagDisplayLabel（与卡片 chip / 筛选行同一单源）。
-    // 历史①：vup/oc 曾是裸字面量 "VUP"/"OC"；历史②：creator/official/repo 曾走 content.role*
-    // 短文案（「创作者/官方/仓库」），与卡片 chip 的 workshop.role* 长文案（「YSM 创作者/
-    // 官方IP模型库/社区模型仓库」）构成同轴两套词——同一下拉里三短两长。现统一到单源，
-    // content.roleCreator/Official/Repo 三键随之删除（死键闸只拦新增，删消费点须同删键）。
+    // 五项 role option 的展示文案统一走 getTagDisplayLabel（与卡片 chip / 筛选行同一单源），
+    // value 仍是原始 role id（数据语义）。曾三短两长两套词族，详见知识卡 §不变量。
     `<select data-idx="${idx}" data-fld="role" class="cr-input-role">${(
       ["creator", "official", "vup", "oc", "repo"] as const
     )

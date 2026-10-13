@@ -348,6 +348,8 @@
   "diagnostics.perfModelUnreadHint": "パスは「単一モデル」対象のみ有効；タイプ・全体・リポジトリ全体では不要です",
   "diagnostics.loadDedupConfigFailed": "重複排除設定の読み込みに失敗しました",
   "diagnostics.webNoClearLogs": "ウェブ版ではログの消去はサポートされていません",
+  "diagnostics.exportLog": "ログをエクスポート",
+  "diagnostics.exportLogSuccess": "ログをエクスポートしました",
   "diagnostics.noLogsToCopy": "コピーするログがありません",
   "diagnostics.perfCopied": "生の出力をクリップボードにコピーしました",
   "diagnostics.copyFail": "コピーに失敗しました。手動で範囲選択してコピーしてください",

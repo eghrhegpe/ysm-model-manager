@@ -20,10 +20,10 @@ interface FilterStateShell {
   activeTag: string;
 }
 
-// ===== P1-3a 锐评：编辑态 dirty 守卫 =====
+// ===== 编辑态 dirty 守卫 =====
 // 快照 = 本站创作者 + 预设搜索词的可编辑字段序列化；退出编辑前比较判定「未保存变更」。
-// 刻意序列化**可编辑子集**（name/desc/type/role + preset label），不整对象快照——
-// 运行时附加字段（_fromLocal/_fromCommunity）不属于用户可改数据，计入会造成假 dirty。
+// 刻意只序列化**可编辑子集**（name/desc/type/role + preset label）：运行时附加字段
+// （_fromLocal/_fromCommunity）非用户可改，计入会造成假 dirty。
 function takeEditSnapshot(creators: LocalCreatorLike[], site: SiteViewState["site"]): string {
   const creatorsView = creators.map((cr) => ({
     name: cr.name || "",
@@ -35,11 +35,9 @@ function takeEditSnapshot(creators: LocalCreatorLike[], site: SiteViewState["sit
   return JSON.stringify({ creatorsView, presets });
 }
 
-/** 单个输入控件 → creators[idx][fld] 回写。
- *  SELECT 多选拼 ";" 已退役（P1-5 锐评：platform 多选控件改 badge 组）；badge 组
- *  （.cr-site-chip-group[data-fld]）按组内 active chip 的 data-site-id 收拢为分号串；
- *  其余带 value 的控件 trim 后直写。2026-09 锐评 P0：原 SELECT/INPUT 分支在
- *  eeSyncAllEditInputs 与 eeBindCreatorsEdit 重复 2 处，抽此处收口。 */
+/** 单个输入控件 → creators[idx][fld] 回写（**唯一收口点**，勿在绑定点另抄一份分支）。
+ *  badge 组（.cr-site-chip-group[data-fld]）按组内 active chip 的 data-site-id 收拢为分号串；
+ *  其余带 value 的控件 trim 后直写。 */
 function syncFieldToCreator(
   inp: HTMLElement,
   creators: LocalCreatorLike[],
@@ -55,11 +53,9 @@ function syncFieldToCreator(
         .filter(Boolean),
     );
   } else if (inp instanceof HTMLSelectElement) {
-    // 单选 select（当前唯一消费者 = role 下拉）：直接取 value。
-    // 历史：此分支原走 joinSiteIds(selectedOptions)——那是**站点归属**的分号拼装器
-    // （P1-5 已退役 type 的 select multiple 形态，type 现走 chip 组）。role 单选时
-    // 二者巧合等价（单值恒等），但语义错配是埋雷：一旦有人给 role 加 multiple、
-    // 或新增任何非站点的 select，role 会被拼成 "official;vup" 式脏值直接落盘。
+    // 单选 select（唯一消费者 = role 下拉）**直取 value**，不得经 joinSiteIds——那是站点归属的
+    // 分号拼装器；role 单选时二者巧合等价，但一旦 role 加 multiple 或新增非站点 select，就会拼出
+    // "official;vup" 式脏值直接落盘。新 select 接入先判归属：多值走 chip 组，单值取 value。
     creators[idx][fld] = inp.value;
   } else if ("value" in inp && typeof inp.value === "string") {
     creators[idx][fld] = inp.value.trim();
@@ -100,15 +96,10 @@ function eeApplyFilters(
 ): void {
   const kw = (searchInput?.value || "").trim().toLowerCase();
   const cards = qsa<HTMLElement>(searchResults, ".gh-card[data-name]");
-  // 数据层化（2026-09 锐评 P2）：desc 判定改读 creators 数据层（按 name 匹配卡，
-  // 同 render.ts createCrCard 的 desc 口径——本地条目 _fromLocal 时现取 i18n 提示），
-  // 不再读 .cr-card-desc DOM 文案（文案经 esc()/i18n 渲染后与数据层可能不同）；
-  // 数据层查无（DOM 有卡但 creators 缺该 name，如测试 fixture）时兜底读 DOM，向后兼容。
-  //
-  // 索引表（2026-10 锐评）：原实现每张卡 `creators.find(c => c.name.toLowerCase() === name)`
-  // ——卡片数 × 创作者数的 O(n²)，且每次比较都重新小写化一次字符串；筛选挂在
-  // searchInput 的 input 事件上（无 debounce），每次按键放大一遍。现按小写 name 建
-  // Map 一次、每卡 O(1) 命中，与同文件已有的 authorCountMap 索引范式同构。
+  // desc 判定读 creators 数据层（口径同 render.ts|createCrCard，本地条目 _fromLocal 现取 i18n 提示），
+  // 不读 .cr-card-desc 的 DOM 文案（经 esc()/i18n 渲染后可能与数据层不同）；数据层查无时兜底读 DOM。
+  // 索引表：每卡 find() 是卡数×创作者数的 O(n²)，且筛选挂在无 debounce 的 input 事件上会逐键放大；
+  // 故按小写 name 建 Map 一次、每卡 O(1) 命中（与 authorCountMap 同范式）。
   const creatorByName = new Map<string, LocalCreatorLike>();
   creators.forEach((c) => {
     creatorByName.set((c.name || "").toLowerCase(), c);
@@ -128,8 +119,8 @@ function eeApplyFilters(
     if (matchName && matchTag) visible++;
   });
   const countEl = searchResults.querySelector("#ws-cr-count");
-  // P1-4 锐评：计数格式统一为 (visible/total)——原初始态 `(N)` 与筛选后 `(5/12)` 跳变；
-  // 筛选结果无可见卡时网格全折叠成空白，用户以为是页面坏了 → 显式空态 + 清除按钮出口。
+  // 计数统一 (visible/total)：初始态与筛选后格式一致，不跳变；零结果时另渲染显式空态 + 清除出口
+  //（否则网格全折叠成空白，用户以为页面坏了）。
   if (countEl) countEl.textContent = `(${visible}/${cards.length})`;
   // 空态容器：布局于网格之后（全折叠时 grid 高度收缩，空态紧贴标题栏），id 供切换复用
   let emptyEl = searchResults.querySelector<HTMLElement>("#cr-filter-empty");
@@ -211,10 +202,9 @@ function eeBindToolbarBtns(state: SiteViewState, refreshView: () => void, sig: A
           ).forEach((inp) => {
             const val = inp.value.trim();
             if (!val) return;
-            // q 字段必须从原数组回读、不得丢（历史缺陷：这里曾只 push { label }，
-            // q 被静默丢弃 → Go saveWorkshopPresetsBySite 整数组替换落盘，用户哪怕
-            // 一个字没改、点一次保存，就把「热门日系模型 → MMD」永久覆盖成 q=label）。
-            // 契约：编辑界面只有 label 一个输入位，q 不由用户改 → 恒取原值。
+            // q 必须从原数组回读、不得丢：Go 侧 SaveWorkshopPresetsBySite 是**整数组替换**，
+            // 而编辑界面只有 label 一个输入位（q 不由用户改）→ 恒取原值。漏掉 q 会让用户一个字
+            // 没改、点一次保存就把真实的「label→q」映射永久覆盖成 q=label。
             const idx = parseInt(inp.dataset.idx || "-1", 10);
             const original = site.presetSearches?.[idx];
             newPresets.push({ label: val, q: original?.q ?? "" });
@@ -223,22 +213,19 @@ function eeBindToolbarBtns(state: SiteViewState, refreshView: () => void, sig: A
           site.presetSearches = newPresets;
         }
         eeSyncAllEditInputs(searchResults, creators, site);
-        // 锐评 P0-2a 配套：空名条目（cr-add 新增后未改名）不落盘——防未填写的占位行
-        // 变垃圾数据；语言串不再当默认名（见 eeBindCreatorsEdit 的 cr-add）。
+        // 空名条目（cr-add 新增后未改名）不落盘——防未填写的占位行变垃圾数据
         const siteCreators = creators.filter(
           (cr) => (cr.name || "").trim() && parseSiteIds(cr.type).includes(site.id),
         );
-        // P1-2 锐评：跨站点创作者「解除本站关联」（type 去本站段）的写回——
-        // 若漏掉它们，Go 按站整存会移除磁盘上 type 含本站的所有旧条目（包括这些
-        // 仍属他站的创作者），导致他站条目被连带抹掉。保存时併入 siteCreators：
-        // type 已无本站段，Go 追加后本站不再命中、他站照常可见。
+        // 跨站点创作者「解除本站关联」（type 已去本站段）必须併入本次写回：Go 按站整存会先
+        // 移除磁盘上 type 含本站的全部旧条目，漏掉这些 detached 条目就会把他站的也连带抹掉。
         const { SaveWorkshopCreatorsBySite } = await backendGetApp();
         await SaveWorkshopCreatorsBySite(site.id, [
           ...siteCreators,
           ...state.detachedCreators.filter((cr) => (cr.name || "").trim()),
         ]);
         wsEditModeRef.v = false;
-        // P1-3a：保存成功即视为无 dirty（下次进入编辑态重新取快照）
+        // 保存成功即视为无 dirty（下次进编辑态重新取快照）
         state.editSnapshot = null;
         busRef.emit("toast:show", {
           msg: t("workshop.action.saved"),
@@ -279,11 +266,9 @@ function eeBindFetchBtn(state: SiteViewState, refreshView: () => void, sig: Abor
         let changed = false;
 
         if (community?.length) {
-          // ADR-172：落盘并入下沉 Go（Load 磁盘最新全量 → desc/role 空补 + type 分号段
-          // 并入 → 备份 → 单次 SaveWorkshopCreators 原子写），前端只传拉取结果、不重算。
-          // 原「TS mergeCommunityCreators + SaveWorkshopCreators(allCreators) 整存」用 UI
-          // 会话态覆盖磁盘——会连带持久化本地作者展示条目（_fromLocal，mergeLocalAuthorsInto
-          // 注入）且与磁盘并行修改互踩；现整存移除。计数以 Go 返回为准（权威）。
+          // 落盘并入下沉 Go（ADR-172：Load 磁盘全量 → 空补/段并入 → 备份 → 单次原子写），
+          // 前端只传拉取结果、不重算。**不得**改回「TS 合并 + 整存 allCreators」——那会用 UI
+          // 会话态覆盖磁盘（连带落盘 _fromLocal 展示条目，且与磁盘并行修改互踩）。计数以 Go 为准。
           let added = 0,
             updated = 0;
           // 落盘失败自然冒泡到外层 catch 走 toast 错误提示
@@ -298,9 +283,7 @@ function eeBindFetchBtn(state: SiteViewState, refreshView: () => void, sig: Abor
           }
         }
         if (sitesData?.length) {
-          // ADR-172 对称（站点侧双轨收口）：社区站点增量并入下沉 Go——原
-          // 「TS mergeCommunitySites + SaveWorkshopSites(allSites) 整存」用 UI 会话态
-          // 覆盖磁盘（与磁盘并行修改互踩）；现整存移除，计数以 Go 返回为准（权威）。
+          // 站点侧同理（ADR-172 对称）：并入下沉 Go，不得改回「TS 合并 + SaveWorkshopSites 整存」。
           const sa = await App.MergeCommunitySitesFromJSON(JSON.stringify(sitesData));
           const siteAdded = sa ?? 0;
           if (siteAdded > 0) {
@@ -314,7 +297,7 @@ function eeBindFetchBtn(state: SiteViewState, refreshView: () => void, sig: Abor
           logs.push(t("workshop.logGithub", { n: gitHubRepos.length }));
           changed = true;
         }
-        // ADR-269 D3⑤：资源类型计数同步读 resource_types.json（allResourceTypes），废 LoadResourceTypes RPC
+        // 资源类型计数同步读 resource_types.json（allResourceTypes），不再走 RPC（ADR-269 D3⑤）
         if (allResourceTypes.length) {
           logs.push(t("workshop.logTypes", { n: allResourceTypes.length }));
           changed = true;
@@ -322,7 +305,7 @@ function eeBindFetchBtn(state: SiteViewState, refreshView: () => void, sig: Abor
 
         if (changed) {
           busRef.emit("toast:show", {
-            msg: logs.join(" · "), // 成功态图标由 type=success 驱动，原文案 🌐 前缀属冗余装饰
+            msg: logs.join(" · "), // 图标由 type=success 驱动，文案不再缀装饰字符
             duration: TOAST_MS.verbose,
             type: "success",
           });
@@ -353,11 +336,11 @@ function eeBindFetchBtn(state: SiteViewState, refreshView: () => void, sig: Abor
   );
 }
 
-// ===== P1-3b 锐评：编辑态局部 DOM 操作 =====
-// 删除/新增不再整树 refreshView（整树重建会把用户正在输入的焦点归零，连续编辑体验断裂）。
-// 局部操作后**按 DOM 顺序重编号**创作家卡的 data-edit-idx 与其内全部 data-idx——
-// 数组已同步（splice/push），DOM 序号必须跟着变，否则后续保存的 syncFieldToCreator
-// 会把「第 N 张卡」的输入写进错误的数组槽。
+// ===== 编辑态局部 DOM 操作 =====
+// 删除/新增不整树 refreshView（整树重建会归零用户正在输入的焦点）。
+// ⚠️ 局部操作后必须**按 DOM 顺序重编号**每张卡的 data-edit-idx 与其内全部 data-idx——
+// 数组已 splice/push，DOM 序号必须跟着变，否则保存路径 syncFieldToCreator 会把「第 N 张卡」
+// 的输入写进错误的数组槽（静默写错创作者并落盘）。详见知识卡 §不变量。
 function reindexCreatorCards(searchResults: HTMLElement): void {
   qsa<HTMLElement>(searchResults, ".cr-edit-card:not([data-edit='preset'])").forEach((card, i) => {
     card.dataset.editIdx = String(i);
@@ -412,10 +395,9 @@ function eeBindCreatorsEdit(state: SiteViewState, sig: AbortSignal): void {
         const idx = parseInt(btn.dataset.idx || "-1", 10);
         const cr = creators[idx];
         if (!cr) return;
-        // P1-2 锐评：跨站点越权修复——type:"A;B" 的创作者在 A 站删除必须是「解除 A 关联」，
-        // 不得从 allCreators 全删：Go 按站整存（移除 type 含本站的旧条目→追加新列表）会把
-        // 属于 B 站的条目一并抹掉。多站条目：type 去本站段 + 移入 detached 待保存写回；
-        // 单站条目（或 type 缺失/空）：全量删除（本就只属本站，他站无依赖）。
+        // 多站点创作者在 A 站删除 = 「解除 A 关联」，不得从 allCreators 全删：Go 按站整存
+        //（移除 type 含本站旧条目 → 追加新列表）会把属于 B 站的也抹掉。多站：type 去本站段 +
+        // 推入 detached 待保存写回；单站（或 type 缺失/空）：全量删除（本就只属本站）。
         const segs = parseSiteIds(cr.type);
         const belongsToOtherSites = segs.some((s) => s !== site.id);
         if (belongsToOtherSites) {
@@ -425,7 +407,7 @@ function eeBindCreatorsEdit(state: SiteViewState, sig: AbortSignal): void {
           const realIdx = allCreators.indexOf(cr);
           if (realIdx >= 0) allCreators.splice(realIdx, 1);
         }
-        // P1-3b：局部 DOM 移除 + 数组 splice + 重编号，不整树重建（保焦点）
+        // 局部 DOM 移除 + 数组 splice + 重编号，不整树重建（保焦点）
         creators.splice(idx, 1);
         btn.closest(".cr-edit-card")?.remove();
         reindexCreatorCards(searchResults);
@@ -438,9 +420,8 @@ function eeBindCreatorsEdit(state: SiteViewState, sig: AbortSignal): void {
     "click",
     () => {
       eeSyncAllEditInputs(searchResults, creators, site);
-      // 锐评 P0-2a：新增条目不以 i18n 文案当默认 name/desc（原 t("workshop.newCreatorName")
-      // 会被保存路径落盘，语言串污染 creators.json）；空值交给编辑卡 placeholder 引导，
-      // 未填名的条目在保存时被挡在门外（见 eeBindToolbarBtns 的空名过滤）。
+      // 新增条目落空 name/desc——**不得**用 i18n 文案当默认值（会被保存路径落盘，语言串污染
+      // creators.json）；空值交编辑卡 placeholder 引导，未填名的条目在保存时被挡在门外。
       creators.push({
         name: "",
         desc: "",
@@ -450,7 +431,7 @@ function eeBindCreatorsEdit(state: SiteViewState, sig: AbortSignal): void {
       const newCr = creators.at(-1);
       if (!newCr) return; // push 后必然存在，守卫仅为类型收窄（biome 禁 ! 断言）
       allCreators.push(newCr);
-      // P1-3b：局部 DOM append 新卡（buildCreatorEditCard 纯函数），不整树重建（保焦点）
+      // 局部 DOM append 新卡（复用 buildCreatorEditCard 纯函数），不整树重建（保焦点）
       const newIdx = creators.length - 1;
       const newCardHtml = buildCreatorEditCard(newCr, newIdx, state.allSites, state.esc);
       const addArea = searchResults.querySelector(".cr-add-area");
@@ -477,8 +458,8 @@ function eeBindCreatorsDrag(
   sig: AbortSignal,
 ): void {
   const { searchResults, creators, allCreators } = state;
-  // 拖拽排序事件统一走 bindDragSort（原 ~90 行双胞胎块去重，2026-09）；
-  // creators 组经 allCreators 真实索引换算后移动（编辑过滤视图 → 全量列表的索引映射）
+  // 拖拽排序统一走 bindDragSort；creators 组须经 allCreators 真实索引换算后移动
+  //（编辑视图是过滤后的子集，索引不能直接拿来用）
   bindDragSort({
     root: searchResults,
     selector: ".cr-edit-card:not([data-edit='preset'])",
@@ -583,12 +564,12 @@ function eeBindPresetsDrag(
   });
 }
 
-/** 创作者筛选接线（搜索框 / 标签按钮 / 清除出口）——原名 eeBindGithubFilter 系
- *  workshop-site-view.js 时代的化石：它绑的是**创作者频道**的筛选，与 GitHub 无关
- *  （GitHub 是另一个页面 id="github"），名实不符曾误导过一次锐评定位。 */
+/** 创作者筛选接线（搜索框 / 标签按钮 / 清除出口）。
+ *  ⚠️ 旧名 eeBindGithubFilter 是化石：它绑的是**创作者频道**筛选，与 GitHub 页面无关，
+ *  名实不符曾误导定位——勿按旧名去找 GitHub 逻辑。 */
 function eeBindCreatorFilter(state: SiteViewState, fs: FilterStateShell, sig: AbortSignal): void {
   const { searchResults, creators, site } = state;
-  // 筛选态按本站 id 分域存储（历史缺陷：全局单键 → 切站点后旧标签套到新站，网格空白）
+  // 筛选态按本站 id 分域存储（全局单键会让旧站标签套到新站 → 网格空白）
   const siteId = site?.id || "";
 
   const searchInput = searchResults.querySelector("#ws-cr-search") as HTMLInputElement | null;
@@ -603,9 +584,8 @@ function eeBindCreatorFilter(state: SiteViewState, fs: FilterStateShell, sig: Ab
     );
   }
 
-  // P1-4 锐评：零结果空态的「清除筛选」出口——复位关键词 + 标签 + 计数 + 移除空态。
-  // 空态按钮在 eeApplyFilters 动态创建（#cr-filter-empty），此处用文档级事件委托
-  //（searchResults 容器），空态节点创建后可点击，重渲染后仍可命中。
+  // 零结果空态的「清除筛选」出口：复位关键词 + 标签 + 计数 + 移除空态。
+  // 空态节点由 eeApplyFilters 动态创建，故此处用容器级事件委托——节点新建后可点、重渲染后仍命中。
   searchResults.addEventListener(
     "click",
     (e) => {
@@ -646,11 +626,7 @@ function eeBindCreatorFilter(state: SiteViewState, fs: FilterStateShell, sig: Ab
   eeApplyFilters(searchResults, searchInput, fs, creators);
 }
 
-/**
- * 绑定编辑模式事件：编辑入口 / 拉取配置 / 取消 / 保存 / 行内编辑 /
- * 删除创作者 / 拖拽排序 / 增删搜索词 / 搜索过滤。
- * 拖拽排序属编辑模式强相关，一并迁此。
- */
+/** 绑定编辑模式事件：编辑入口 / 拉取配置 / 取消 / 保存 / 行内编辑 / 删除 / 拖拽排序 / 搜索词增删 / 筛选。 */
 export function bindEditEvents(state: SiteViewState, refreshView: () => void): CleanupFn {
   const ds: DragStateShell = { srcIdx: -1, presetSrcIdx: -1 };
   const fs: FilterStateShell = { activeTag: state.activeTag };

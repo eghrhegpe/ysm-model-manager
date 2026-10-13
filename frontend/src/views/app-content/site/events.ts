@@ -31,13 +31,12 @@ import {
   toggleFav,
 } from "./workshop-data.ts";
 
-// storage 监听器原先的模块级 let _storageSyncFn 是「假装单例」：bindBrowseEvents 每次覆盖它，
-// A 视图注册 → B 视图覆盖 → A 的 cleanup 会误删 B 的监听（removeEventListener 拿到的是 B 的引用）。
-// P1-8 锐评：监听器引用收进 bindBrowseEvents 闭包随 cleanup 返回，谁注册谁清理，互不干扰。
+// storage 监听器引用收进 bindBrowseEvents 闭包随 cleanup 返回——谁注册谁清理。
+// 模块级单例会被后一个视图覆盖，导致先注册者的 cleanup 误删后者的监听。
 
-// 浮层焦点陷阱释放函数的注册表（P0-3 锐评：aria-modal 声明了模态却无 trapFocus）。
-// WeakMap 随元素 GC 回收，不污染 HTMLElement 全局类型；所有浮层关闭路径统一释放
-// （data-close / data-search / Esc / 遮罩点击），防 doc keydown 监听残留。
+// 浮层焦点陷阱释放函数注册表：aria-modal 声明了模态就必须有 trapFocus，且**所有**关闭路径
+// （data-close / data-search / Esc / 遮罩点击）都要释放，否则 doc keydown 监听残留。
+// WeakMap 随元素 GC 回收，不污染 HTMLElement 全局类型。
 const _overlayTrapReleases = new WeakMap<HTMLElement, () => void>();
 
 // ============================================================
@@ -46,8 +45,7 @@ const _overlayTrapReleases = new WeakMap<HTMLElement, () => void>();
 
 /**
  * 详情浮层 HTML（ADR-034-d1）：头像 / 星标 / 身份 tag / 平台徽章四段全部走 render.ts 的
- * **片段单源**，浮层只保留自己的布局与变体 class——原 89 行 `+` 字符串接龙（与卡片的模板字面量
- * 两种写法、两份标记）已退役；接龙期间漏掉的徽章闭合标签一并消失。
+ * **片段单源**，浮层只保留自己的布局与变体 class——**不要在此重写标记**（详见知识卡 §不变量）。
  */
 function cmCrBuildDetailHtml(
   cr: LocalCreatorLike,
@@ -56,9 +54,10 @@ function cmCrBuildDetailHtml(
   authorCountMap: Record<string, number>,
 ): { html: string; fallbackChar: string } {
   const identity = getCreatorIdentity(cr as CreatorIdentityInput);
-  // 身份行与 tag chip 同口径（复核 N1）：role 能映射到真实身份才渲染该行。未知 role 时
-  // getCreatorIdentity 会回退「YSM 创作者」，而 chip 已按 getTagDisplayLabel 原样显示该 role
-  // → 同一浮层自相矛盾。既定原则是「不冒充别的身份」，故整行省略而非改成回退文案。
+  // 身份行只在 role 能映射到真实身份时渲染（否则 chip 显示原样 role、身份行显示「YSM 创作者」，
+  // 同一浮层自相矛盾）。本式是**往返校验**，不可「简化」成 identity.tag 的真值判断：
+  // 缺省 role → getTagFromRole 补 "creator" → 与 identity.tag 相等 → 已知身份（渲染该行）；
+  // 未知 role（如 "modeler"）→ 两侧不等 → 整行省略，而非改成回退文案（不冒充别的身份）。
   const showIdentityRow = identity.tag === getTagFromRole(cr.role);
   const descTags = parseDescTags(cr.desc);
   const localCount = authorCountMap[cr.name] || 0;
@@ -88,9 +87,8 @@ function cmCrBuildDetailHtml(
     `<div class="cr-detail-desc">${
       descTags.length
         ? descTags.map((tag) => `<span class="cr-desc-tag">#${esc(tag)}</span>`).join("")
-        : // 锐评 P0-3：descTags 现仅在确为标签串时非空（单段/长句均回 []），此分支即全文兜底——
-          // 原逻辑对任意非空 desc 都只渲染 chips 且丢弃原文。
-          // 锐评 P0-2b：本地条目空 desc 在此现取当前语言提示，而非数据层落 i18n 串。
+        : // descTags 仅在确为标签串时非空，此分支即**全文兜底**（不得只渲染 chips 而丢弃原文）；
+          // 本地条目空 desc 在此现取当前语言提示，而非数据层落 i18n 串（详见知识卡 §不变量）。
           esc(cr.desc || (cr._fromLocal ? t("community.fromLocal") : ""))
     }</div>` +
     `<div class="cr-detail-row cr-local-card">` +
@@ -295,14 +293,10 @@ function cmBbBindStarBtns(
 
 /**
  * 收藏状态变更后，就地把该卡片移动到**规则应处的位次**。
- *
- * 历史缺陷：本处曾手写「收藏 → insertBefore(firstChild) / 取消收藏 → appendChild 队尾」，
- * 与 render.ts|sortCreatorsFavedFirst 的排序规则（收藏置顶 + 组内产量降序）**反向**——
- * 产量最高的创作者取消收藏后被沉到队尾；且不触发重渲染，错乱持续到整树重建。
- *
- * 现改为就地按**同一比较器**（workshop-data.ts|compareFavFirst 单源）重排整张网格：
- * 只搬运被点的那一张卡（其余节点不动），故滚动位置与展开态不丢——不整树重渲染。
- * 用 insertBefore(anchor) 表达目标位次，避免 appendChild 盲插。
+ * 用同一比较器（workshop-data.ts|compareFavFirst 单源）重排，**不得手写「收藏插队首 /
+ * 取消收藏扔队尾」**——那与渲染期排序反向，高产创作者取消收藏会被沉到队尾。
+ * 只搬运被点的那一张卡（其余节点不动），保滚动位置与展开态；用 insertBefore(anchor)
+ * 表达目标位次，避免 appendChild 盲插。
  */
 function cmCrReorderCard(
   grid: HTMLElement,
@@ -359,15 +353,9 @@ function cmBbBindLocalBadges(searchResults: HTMLElement, busRef: typeof bus): vo
 
 /**
  * 头像节点绑定：error→字母 fallback 恒绑（功能性降级，破图不留）；
- * **调试提取探针只在 `isDevMode()` 下绑**。
- *
- * 为什么必须加门（2026-10-13 锐评）：探针点击调 `DebugExtractCreatorAvatar`，Go 侧对整库
- * `ScanModelEntries(ysmRoot())` 全量扫描（`internal/app/app_avatar.go`）只为找出该作者的一处
- * 头像路径，结果只写 `dbg()` 环形缓冲——生产环境既看不见输出，又要为一次误点付全库扫描的代价；
- * 同时 handler 的 `stopPropagation` 还吞掉了本应打开详情浮层的卡片点击。三重错位：
- * 最贵的手势、零可见反馈、吃掉正常行为。
- * 非开发态**根本不绑 click**（而非绑了再判），于是点击自然冒泡到卡片 → 浮层正常打开。
- * ⚠️ 不要用 `isDebugEnabled()` 当这道门：它默认 true（`?nodebug=1` 才关），门等于没关。
+ * **调试提取探针只在 `isDevMode()` 下绑**——非开发态根本不绑 click，让点击冒泡回卡片开浮层。
+ * 探针会触发 Go 侧整库 ScanModelEntries，生产态既无可见反馈又付全库扫描代价，其 stopPropagation
+ * 还会吞掉正常的卡片点击。⚠️ 门必须用 `isDevMode()`（默认关）；`isDebugEnabled()` 默认开，门等于没关。
  */
 function cmBbBindDebugAvatar(searchResults: HTMLElement, getDisposed: () => boolean): void {
   qsa<HTMLElement>(searchResults, "[data-debug-avatar]").forEach((img) => {
@@ -429,11 +417,9 @@ function cmBbBindKeyboardNav(searchResults: HTMLElement): void {
   if (crGrid) {
     crGrid.addEventListener("keydown", ((e: KeyboardEvent) => {
       const cards = qsa<HTMLElement>(crGrid, ".gh-card[tabindex]");
-      // 深焦解析：创作者网格位于 app-content 的 shadow root 内，按 DOM retargeting 规则
-      // `document.activeElement` 返回的是 **shadow host** 而非内层卡片 → 直接用它的
-      // cards.indexOf(cur) 恒 -1，↑↓←→ 与 Enter/Space 激活全线早退（曾长期 100% 失效，
-      // 且被把夹具挂 document.body 的 light-DOM 单测掩盖成「测绿」）。单源出口见
-      // utils/dom/deep-active-element.ts。
+      // 深焦解析：网格在 app-content 的 shadow root 内，DOM retargeting 下 document.activeElement
+      // 返回的是 **shadow host** 而非内层卡片 → cards.indexOf(cur) 恒 -1，方向键与 Enter/Space
+      // 全线早退。必须走 utils/dom/deep-active-element.ts（单源出口，勿直读 document.activeElement）。
       const cur = deepActiveElementOf(cards);
       const idx = cur ? cards.indexOf(cur) : -1;
       if (idx < 0) return;
@@ -523,8 +509,7 @@ export function bindBrowseEvents(state: SiteViewState, refreshView: () => void):
   );
   cmBbBindKeyboardNav(searchResults);
 
-  // P1-8 锐评：storage 监听器收进闭包——谁注册谁清理。原模块级单例在 A/B 视图快速切换时
-  // A 的 cleanup 会误删 B 的监听（模块变量已指向 B）。现引用私有化，互不干扰。
+  // storage 监听器收进闭包：谁注册谁清理（模块级单例会被后一个视图覆盖，见文件头）
   const storageSyncFn = cmSeMakeSyncFn(searchResults);
   window.addEventListener("storage", storageSyncFn);
 

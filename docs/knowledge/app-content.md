@@ -31,6 +31,7 @@ source_files:
   - frontend/src/utils/icon/workshop-icons.ts
   - frontend/src/views/app-content/tabs-a11y.ts
   - frontend/src/views/app-content/tabs-shell.ts
+  - frontend/src/views/app-content/tabs-runtime.ts
   - frontend/src/views/app-content/css/content-gh.ts
 auto_fields:
   symbols_with_lines:
@@ -42,6 +43,7 @@ auto_fields:
     - bindSubBar
     - bindTabA11y
     - BindTabA11ySpec
+    - bindTabRuntime
     - contentCreatorCSS
     - contentCSS
     - contentDiagCSS
@@ -84,6 +86,8 @@ auto_fields:
     - SubscriptionBucket
     - SubTabSpec
     - TabA11yHandle
+    - TabInitFn
+    - TabInitResult
     - TabSpec
     - TabsShell
     - TabsShellSpec
@@ -141,8 +145,8 @@ UI 文案统一走 i18n key（`workshop.*` / `diagnostics.*` / `settings.*` / `c
 
 - `index.ts` — `<app-content>` 生命周期编排：构造器 `resolveInitialPage()` 定初始页、`nav:changed` 切页、`_render()` 按 `_current` 选择模板并重渲染（**同页重放短路**：缓存面板 `isConnected` 时直接 return——见「监听 bus」说明；防线 `app-content.component.test.ts` 同页用例）、`_bindTabs` 懒初始化子 tab、预览面板拖拽调宽（**宽度真值单点在 `init-preview.ts`**：localStorage `preview-width` 恢复 + 拖拽共用 160/500/240 夹取常量，模板不再写死 width）。`<app-preview>` 改为顶部副作用静态导入 `import "../app-preview/index.ts"`（替代原动态 import 预加载）；`connectedCallback` 末尾直接注册四组全局 handler（`registerSync` / `registerContextMenus` / `registerInstanceOps` / `registerAndroidEvents`，见 `features/sync.ts` / `features/context-menu/context-menus.ts` / `features/pack-ops/instance-ops.ts` / `features/platform/android-events.ts`）
 - `tpl.ts` — 页面布局模板：`repositoryHTML` / `instancesHTML` / `settingsHTML` / `diagnosticsHTML` / `workshopHTML` / `githubHTML` / `downloadsHTML` / `recycleHTML`。**repository 的 tree tab `body` 留空**——初始挂载单点归 `init-pages.ts|initRepositoryPage.mountTree`（localStorage 恢复 rtype/subdir），模板硬编码 `<app-tree>` 会造成首挂双 mount（connect 发起扫描 RPC 后立即被替换销毁，2026-09 收债）。**rtype 变更复用实例改属性**（2026-09 收债，同 mountSyncManager 范式）：mountTree 对已存在的 app-tree 走 setAttribute/removeAttribute（app-tree 属性机制重载，视图状态跨切换存活），同值 emit 被 `oldVal === newVal` 拦下——「强制刷新树」语义归 `tree:reload`（settings/init.ts FSA 流已改发，勿再借同值 repo:rtype-changed 当刷新用）
-- `tabs-shell.ts` — **tab 栏 + 面板容器的单点产出**（ADR-259）：`renderTabs(spec) → { bar, panels }`，由声明数组产出「`.repo-tabs` + 每 tab 一个 `.tab-body`」。面板 id 一律 `${prefix}-tab-${id}`，与 `init-pages.ts|bindTabs` 的运行期查找**共享同一条规则**；首个面板不写 `display`（回落 `.tab-body`）、其余 `display:none`，与 `bindTabs.activate` 的翻转口径一致。差异项（`buttonClass` / `panelClass` / `barId` / `panelTestid` / `buttonTestid` / `panelStyle`）全走声明参数。**新增 tab 只填数组，结构由工厂保证**；`workshopHTML` 例外——其 tab 栏由 `initWorkshopPage` 运行期动态注入，非静态声明。结构性防线见 `tpl-structure.test.ts`。
-- `init-pages.ts|bindTabs(host, tabSelector, prefix)` — tab 壳的**运行期**绑定（ARIA tablist/roving tabindex/键盘/懒初始化/面板切换）。**真值源 = 按钮自身的 `data-tab`，不接受调用方手传 id 白名单**（ADR-259 §2.6）：白名单曾是第二份手工真值，新增 tab 漏同步即「按钮在、点了没反应、内容区空白」且不报错（2026-09 设置页新增「操作」tab 的真实事故）。新增 tab 只需改模板一处；契约违例（按钮缺 `data-tab` / 缺面板）走 `logWarn` 响亮告警。懒初始化仍须在 `TAB_INIT` 登记（当前 recycle/dedup/oldest）。防线：`init-pages.test.ts` + `tpl-structure.test.ts` 的「调用点不得出现数组白名单」静态闸。
+- `tabs-shell.ts` — **tab 栏 + 面板容器的单点产出**（ADR-259）：`renderTabs(spec) → { bar, panels }`，由声明数组产出「`.repo-tabs` + 每 tab 一个 `.tab-body`」。面板 id 一律 `${prefix}-tab-${id}`，与 `tabs-runtime.ts|bindTabRuntime` 的运行期查找**共享同一条规则**；首个面板不写 `display`（回落 `.tab-body`）、其余 `display:none`，与 `bindTabRuntime` 的翻转口径一致。差异项（`buttonClass` / `panelClass` / `barId` / `panelTestid` / `buttonTestid` / `panelStyle`）全走声明参数。**新增 tab 只填数组，结构由工厂保证**；`workshopHTML` 例外——其 tab 栏由 `initWorkshopPage` 运行期动态注入，非静态声明。结构性防线见 `tpl-structure.test.ts`。
+- `tabs-runtime.ts|bindTabRuntime(host, tabSelector, prefix, tabInit?)` — tab 壳的**运行期**引擎（与 `tabs-shell` 结构 / `tabs-a11y` 可访问性并列，合成 tabs 三件套）。持有面板显隐翻转 + 懒初始化分发 + 缺面板 `logWarn` 告警；可访问性半边委托 `tabs-a11y`。**真值源 = 按钮自身的 `data-tab`，不接受调用方手传 id 白名单**（ADR-259 §2.6）：白名单曾是第二份手工真值，新增 tab 漏同步即「按钮在、点了没反应、内容区空白」且不报错（2026-09 设置页新增「操作」tab 的真实事故）。新增 tab 只需改模板一处；契约违例（按钮缺 `data-tab` / 缺面板）走 `logWarn` 响亮告警。懒初始化表改为**可选第 4 参 `tabInit`（对象映射，非数组白名单）注入**——引擎不反向依赖页面；仓库页调用点把 recycle/dedup/oldest 三个 init 函数注入即可。防线：`tabs-runtime.test.ts` + `tpl-structure.test.ts` 的「调用点不得出现数组白名单」静态闸。
 - `css/content-css.ts` — 样式组合层：6 个域 CSS 文件（同在 `css/` 子目录）join 输出单一字符串，经 `adoptedStyleSheets` 注入 Shadow DOM，全走 CSS 变量。
 - `css/content-layout.ts` — 基础层：`::host` 变量 + 通用 keyframes + 骨架系统（`.page` / `.section-title` / `.placeholder-box` / `.repo-layout` / `.repo-left` / `.preview-resize-handle` / `.model-card-sm` / `.health-ring` / `.health-tag`）+ 工坊按钮类（`.ws-back` / `.ws-btn-txt` / `.ws-open-btn`）。**CSS 变量可穿 shadow，@keyframes 不可**——必须在 shadow 层本地重定义副本，且参数值与全局副本一致（机检 1c 硬校验，`scripts/css-layer-check.ts` 阻断 pre-push）。2026-10 ADR-312 死 CSS 反向闸清掉本文件里改版后遗留的旧族（`.stat-card` / `.model-card` / `.rec-card` / `.ptag` / `.stat-pill` / `.repo-layout-wrap` / `.btn-sm` / `.ws-btn*` 等）——本行旧举例的 `.stat-card` / `.model-card` / `.ws-*` 当时即已无消费者，留着只会被后来人当 API 抄。
 - **居中空态/加载态块 = `.placeholder-box` 唯一原语**（`content-layout`；`.big` 大图标槽 + `--roomy` 大面积留白变体）。消费方只放内容（图标/文案/操作），**不内联、不复刻**。2026-09 体检收纳三份同构实现：本类曾是**零消费者死 CSS**，实例页把配方内联照抄一份（还借了 app-preview 的 `.dp-placeholder` 类名——在 app-content 的 shadow 内无规则），工坊站点又复刻成 `.cr-empty-site`。**刻意不并**另两族（形状不同，硬并会造视觉回归）：居中提示行（`.gh-loading-placeholder` / `.perf-no-data` / `.gh-initial-hint`）与左对齐小提示（`.stg-hint` / `.stg-card-hint`）。机检：`content-css.test.ts`「竖排+双向居中+muted 配方只允许出现在 `.placeholder-box`」（签名含 muted 是刻意的——只用三个 flex 属性会误伤 `.health-ring-inner` 这类圆环内居中数字）。⚠️ 上句里的 `.stg-hint` / `.stg-card-hint` 已随 ADR-312 死 CSS 反向闸删除（设置页改版后零消费者）——「不并」的对象现在只剩居中提示行一族。

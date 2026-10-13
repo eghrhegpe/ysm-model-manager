@@ -88,6 +88,10 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   // i18n-ui-check 双通道判据闸（D3 补，2026-10-12）——扫描域为 frontend/src 生产 .ts
   // （判据射程即前端）；守卫核在 scripts 工具自身（tests 域），同 test_check_a11y 注记。
   "test_i18n_ui_check.ts": ["frontend", "tests"],
+  // i18n-frozen-t-check 模块级冻结 t() 第五闸（2026-10-13 诊断页锐评 P0 立）——扫描域为
+  // frontend/src 生产 .ts 的顶层初始化区（判据射程即前端）；守卫核在 scripts 工具自身
+  //（tests 域），同 test_i18n_ui_check 注记。
+  "test_i18n_frozen_t_check.ts": ["frontend", "tests"],
   "test_check_ctx_menu_i18n.ts": ["frontend"],
   "test_check_layering.ts": ["frontend"],
   "test_check_menu_health.ts": ["frontend"],
@@ -641,6 +645,9 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   // i18n-ui-check 双通道判据闸（D3 补）：判据内核（scanSourceText）、main 守卫、flag 白名单
   // 三者任一退化即红——尤其 main 守卫被摘回顶层时 import 会崩测试进程，此测试先撞。
   "test_i18n_ui_check.ts": ["scripts/i18n-ui-check.ts"],
+  // i18n-frozen-t-check 第五闸：契约测试直 import 判据内核 scanSourceText（正反例判别力），
+  // 并 execFileSync 跑 CLI 验 --strict/--json 接线——判据或 CLI 任一退化即红。
+  "test_i18n_frozen_t_check.ts": ["scripts/i18n-frozen-t-check.ts"],
   // i18n 未使用键：判定层（点分 token 抽取 + 三级判定）与 CLI 接线同属敏感源；
   // 三包键数对账（test 块 7 读 zh-CN/ja 断言 nZh===nEn、nJa===nEn），故三包全列——
   // 仅改 zh-CN.ts/ja.ts 也须触发（review bb94909f9 P3-7）。

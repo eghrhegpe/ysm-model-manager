@@ -4,85 +4,61 @@ name: DOM 工具 dom
 tier: leaf
 category: utils
 source_files:
-  - frontend/src/utils/dom/
   - frontend/src/utils/html/html.ts
+  - frontend/src/utils/dom/toast.ts
+  - frontend/src/utils/dom/clipboard.ts
+  - frontend/src/utils/dom/dropdown.ts
+  - frontend/src/utils/dom/bind-roving.ts
+  - frontend/src/utils/dom/deep-active-element.ts
+  - frontend/src/utils/dom/focus-restore.ts
+  - frontend/src/utils/dom/trap-focus-across-shadow.ts
+  - frontend/src/utils/dom/input-block-stack.ts
+  - frontend/src/utils/dom/key-router.ts
+  - frontend/src/utils/dom/download-text.ts
+  - frontend/src/utils/dom/focus-pending.ts
+  - frontend/src/utils/dom/search-pending.ts
+  - frontend/src/utils/dom/status-row.ts
+  - frontend/src/utils/dom/css-hmr.ts
+  - frontend/src/utils/dom/shadow-style.ts
+  - frontend/src/utils/dom/web-component-base.ts
+  - frontend/src/utils/dom/qsa.ts
 auto_fields:
   symbols_with_lines:
     - __getTriggerForTest
     - __resetInputBlockStackForTest
-    - __resetModalStateForTest
     - __resetShortcutsForTest
     - attachStyleSheetMarker
-    - attachTooltip
     - bindRoving
-    - btnBaseCSS
-    - calcVisibleRange
     - clearTrigger
-    - closeActiveDialog
-    - closeDlg
     - comboMatches
     - CopyResult
     - copyText
-    - createDialog
     - createFocusRestoreManager
     - createInputBlockStack
     - createShadowStyle
-    - createTooltipManager
     - deepActiveElement
     - deepActiveElementOf
-    - disposeTooltipCore
     - downloadTextFile
-    - dropdownBaseCSS
     - DropdownHandle
     - DropdownOptions
-    - ensureTooltipStyles
     - esc
     - EscFn
     - escUnknown
     - findCollisions
     - findTabbableAcrossShadow
-    - FLASH_DURATION_MS
-    - flashBtn
-    - FlashOptions
     - FocusRestoreManager
-    - focusVisibleCSS
-    - friendlyError
     - getStackDepth
     - hl
     - initDropdown
     - InputBlockStack
-    - installScrollSync
-    - isCancelError
-    - isEditableTarget
-    - isFileExistsError
     - isInputBlocked
     - listShortcuts
-    - makeLocaleHost
-    - metaTagCSS
-    - modalConfirm
-    - ModalConfirmOptions
-    - ModalLabels
-    - modalPicker
-    - ModalPickerItem
-    - ModalPickerOptions
-    - ModalPickerResult
-    - modalProgress
-    - ModalProgressHandle
-    - ModalProgressOptions
-    - modalPrompt
-    - ModalPromptOptions
-    - modalSelect
-    - ModalSelectOptions
     - msgRowHTML
-    - noAnimationsCSS
     - popInputBlock
-    - promoteTitle
-    - promoteTitleIfPresent
     - pushInputBlock
     - qs
     - qsa
     - refreshAdoptedStyleSheets
-    - registerDlg
     - registerShortcut
     - rememberTrigger
     - returnFocus
@@ -98,23 +74,13 @@ auto_fields:
     - statRowHTML
     - StatusRowKind
     - StatusRowOpts
-    - stripPathSegments
-    - tabBtnCSS
     - takePendingTreeSearch
     - takeRepoSearchFocusPending
     - toast
-    - TOAST_MS
     - toastEmptyRtype
     - toastError
-    - ToastType
-    - TooltipManager
-    - TooltipOptions
-    - trapFocus
     - trapFocusAcrossShadow
-    - VIEW_TESTIDS
     - WebComponentBase
-    - wsIconCSS
-    - YSW_TOOLTIP_CSS
 quick_groups:
   - 跨组件通信与页面
 quick_intents:
@@ -151,8 +117,8 @@ HTML 转义、搜索高亮、全局 toast 时长语义常量、焦点记忆 / �
 - HTML 特殊字符转义（innerHTML 拼接防注入）
 - 搜索关键词高亮（转义后返回 `<mark>` 包裹的安全 HTML）
 - 文件下载：`downloadTextFile(content, filename)`（Blob → ObjectURL → anchor download → revoke），供 `context-menu-handlers` 等 core 层调用，不再直接操作 `document/URL`（P2-2 DOM 职责下沉）
-- toast 时长语义化：`TOAST_MS` 8 档常量（quick=1500 / success=2000 / info=2500 / normal=3000 / verbose=4000 / long=5000 / persist=10000 / sticky=60000），全仓 toast 裸 `duration` 已收敛至该单一事实源（commit `b1508ac5`）；契约测试 `toast-ms.test.ts` 断言语档值与单调性；门禁 `scripts/check-toast-duration.ts` 扫描非测试 src 捕捉裸时长（非阻断 [WARN] 观察期），防回流
-- **能力门控 `capabilities.ts`**（同目录但非 DOM 工具——经 `backend/platform-web.ts` 的 `canBinding()` 三态矩阵判定，2026-08-27/30 收拢）：`can(binding)` 对外 API；`canWebAction(action)` 是**查看器/web 模式右键菜单可达性的单一判定**（2026-08-30 P2-3/P3 收敛）——纯前端动作 `VIEWER_PURE_ACTIONS`（batch.copy-paths / batch.export-list / file.copy-path；noop 假动作已退役）恒可达 + `VIEWER_WEB_ACTION_BINDINGS` 内 action 走 `can()` 探测；原 `context-menus.ts` 内嵌 `VIEWER_WEB_ACTION_BINDINGS` / `VIEWER_OK_ACTIONS` 均已迁此，新增右键 web binding 或纯前端动作只改这里
+- toast 时长语义化：`TOAST_MS` 8 档常量（quick=1500 / success=2000 / info=2500 / normal=3000 / verbose=4000 / long=5000 / persist=10000 / sticky=60000），全仓 toast 裸 `duration` 已收敛至该单一事实源（commit `b1508ac5`）；契约测试 `toast-ms.test.ts` 断言语档值与单调性；门禁 `scripts/check-toast-duration.ts` 扫描非测试 src 捕捉裸时长（非阻断 [WARN] 观察期），防回流。**toast-ms.ts 现由 [app-toast](./app-toast.md) 单卡登记（本卡只留契约语义）**
+- **能力门控 `backend/capabilities.ts`**（ADR-203 已自本目录迁入 `backend/`，非 DOM 工具——经 `backend/platform-web.ts` 的 `canBinding()` 三态矩阵判定，2026-08-27/30 收拢）：`can(binding)` 对外 API；`canWebAction(action)` 是**查看器/web 模式右键菜单可达性的单一判定**（2026-08-30 P2-3/P3 收敛）——纯前端动作 `VIEWER_PURE_ACTIONS`（batch.copy-paths / batch.export-list / file.copy-path；noop 假动作已退役）恒可达 + `VIEWER_WEB_ACTION_BINDINGS` 内 action 走 `can()` 探测；原 `context-menus.ts` 内嵌 `VIEWER_WEB_ACTION_BINDINGS` / `VIEWER_OK_ACTIONS` 均已迁此，新增右键 web binding 或纯前端动作只改这里；**本卡不覆盖，详见 [capabilities](./capabilities.md)**
 
 ## 对外 API / 入口
 
@@ -179,6 +145,7 @@ HTML 转义、搜索高亮、全局 toast 时长语义常量、焦点记忆 / �
 - 全项目消费最广的工具函数之一：`app-preview`（index / tpl / preview-detail / preview-skeleton / preview-litematic-3d / preview-litematic-meta）、`app-content/index.ts`、`app-tree/render.ts`（hl 高亮）、`dialogs/tag-editor.ts` 等
 - `utils/display.ts` / `utils/mc-format.ts` / `utils/summarize.ts` **均已 import 本模块的 `esc`**（无局部副本——早期声明「各有同行为局部副本」已过时）
 - `dialogs/`（弹窗基座，含 `modal.ts`）静态装饰样式已外提至独立 `css/dialogs.css`（ADR-149），详见 [dialog-modal](./dialog-modal.md)；本卡不覆盖弹窗样式细节
+- **同目录但各有单卡登记**（本卡 source_files 不重复认领，避免 5.15 全重复认领与派生符号膨胀——2026-10-13 收窄，107 派生符号降到 57）：弹窗族（`modal-*.ts`）→ [dialog-modal](./dialog-modal.md)；toast/反馈（`toast-ms.ts`/`feedback.ts`）→ [app-toast](./app-toast.md)；错误翻译（`errors.ts`）→ [utils-errors](./utils-errors.md)；共享样式（`css.ts`）→ [shared-styles](./shared-styles.md)；tooltip → [dom-tooltip](./dom-tooltip.md)；虚拟滚动 → [community-virtual-list](./community-virtual-list.md)；语言包宿主（`locale-host.ts`）→ [i18n](./i18n.md)；可编辑目标判定（`editable-target.ts`）→ [import-queue](./import-queue.md)；能力门控 → [capabilities](./capabilities.md)
 
 ## 不变量
 

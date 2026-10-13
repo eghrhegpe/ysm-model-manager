@@ -59,7 +59,7 @@
 - **推广中验证否决两组**（判据量化截图：互引计数）：`utils-array`+`utils-fmt`+`utils-misc` 互引 0↔0（数组移动/格式化/调试三个独立域，无互引无重叠——拟合并是「都小所以合」的伪判据）；`utils-errors` 并入 `utils-dom` 互引 0↔0（错误翻译 vs DOM 工具，不同域）。**结论：合并判据必须是可量化的互引 + 消费重叠，不是「文件小/同目录」这类形态相似**（pitfalls #27 同构判断原则的应用）
 - **推广净收益**：除合并本身外，顺带消除了 2 个既有覆盖盲区（`move-dnd.ts` / `batch-all-settled.ts` 补登进 app-tree 卡——合并前就在盲区）；`dnd-shared` 的 broad_claim 旗标随 extensions 主卡并入目录覆盖后条件不再满足，按门禁处方移除（5.15 全重复认领消除，恰是「一条注册表链一张卡」减少了重复认领面的证明）
 - **踩坑记录**：合并卡 source_files 若从目录级改精确文件，会引入两处连带——①`utils/resource/` 目录下其他文件（importable.ts 等）失去覆盖 → 盲区上升；②精确条目与 redline-enforcement-grade 等审计卡的 source_files 撞车。**处理**：保留目录级 `frontend/src/utils/resource/` + 补回原卡的两条精确文件（`types-re-export.ts` / `repo-rtype.ts`，在 `utils/` 根非目录下），目录符号 <100 阈值不膨胀。教训：**合并卡 source_files 形态（目录级 vs 精确）是独立决策点，不是跟正文走**
-- 顺带修的两条既有 WARN：`utils-dom` 目录级 source_files 收窄（107 个派生符号的膨胀根因）；`community-feature.md` 硬编码行号清理
+- 既有 WARN 处置：`utils-dom` 目录级 source_files 收窄**已落**（2026-10-13）——`frontend/src/utils/dom/` 目录认领收窄为 18 个本卡独有文件（弹窗/toast/errors/css/tooltip/virtual-scroll/locale-host/editable-target/capabilities 已各有单卡登记，移除以消重复认领），派生符号 **107 → 57**，`auto_fields` 由 gen 脚本同步重生；实测 `check-knowledge-drift` **0 ERROR / 2 WARN**（盲区仍 1 个不变，零新增漂移、零重复认领回归），另顺带修正卡内 `capabilities.ts` 已迁 `backend/`（ADR-203）的过时路径断言。**教训**：目录级 source_files 是「同目录一堆模块」grab-bag 卡的膨胀根因，收窄须先查哪些文件已有单卡登记（避免制造盲区/撞重复认领）——与合并卡的 source_files 形态决策同源；`community-feature.md` 硬编码行号 WARN **仍在**（未修，待排）
 
 ### 2.3 第三刀：ADR 增量门槛（要拍板，未落）
 

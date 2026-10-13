@@ -189,7 +189,7 @@
 | title 气泡、3D 按钮 | [悬浮提示 tooltip](./dom-tooltip.md) | - | - |
 | Toast 通知、提示、反馈、报错提示 | [Toast 通知 app-toast](./app-toast.md) | Toast 必须复用 utils/dom/toast-ms.ts 的毫秒级反馈，禁止手写浮层 | - |
 | toast emoji | [toast-emoji-svg](./adr.md) | toast 图标位只喂 resolveIcon 的语义 SVG，msg 载荷禁拼裸 emoji 前缀（esc 文本槽塞 SVG 会字面显示，ADR-267 盲区） | - |
-| tooltip、悬浮提示、hover 提示 | [悬浮提示 tooltip](./dom-tooltip.md) | 悬浮提示必须走 dom/tooltip.ts 的毛玻璃 tooltip，禁止用原生 title | - |
+| tooltip、悬浮提示、hover 提示 | [悬浮提示 tooltip](./dom-tooltip.md) | 3D 预览控制层（overlay/HUD/面板 FAB）按钮的「动作说明」型悬停提示走 dom/tooltip.ts 毛玻璃 tooltip，不用原生 title | - |
 | UI 组件、卡片组件、加载遮罩 | [UI 组件簇（原 ui 收容所，已归位）](./ui-components.md) | UI 组件必须复用既有 helper 函数，禁止手写重复 DOM 结构 | - |
 | UI_ICONS | [emoji/UI_ICONS 摸排方法论](./survey-emoji-icons.md) | - | - |
 
@@ -778,8 +778,9 @@
 | FAB 挂 document.body 但样式在 Shadow DOM | - | light DOM 按钮不继承；必须经 ensureFabStyles 注入 head 标签 |
 | 裸调 localStorage | - | 隐私模式抛异常、启动链中断；必须经 safeGet/safeSet |
 | safeSet 不带 fallback | - | 存储禁用时静默失败；必须在 safeSet 中设 fallback 或 try/catch |
-| 用原生 title | - | 延迟 ~1s、样式不可控；必须经 tooltip.ts |
+| 3D overlay 里用原生 title | - | 延迟 ~1s、样式不可控；预览控制层一律经 tooltip.ts |
 | tooltip 不监听跨 Shadow DOM | - | FAB 按钮无法接 tooltip；必须经 document.body 挂载 |
+| 原生 title 的合法性看语义——动作说明型走本组件，值/状态说明型（截断全文、禁用原因）原生 title 正当，别机械地把所有 title 都改掉 | - | - |
 | ADR-039 §2.2 Events.On 豁免：模块顶层注册 4 组 Wails Events.On 无对应 Off（app 级单例，_registered 守卫防重复注册） | - | - |
 | 非 app 级模块禁止复制此模式 | - | - |
 | isActiveStatus 必须同时认 "downloading" 和 "enqueued"（Go 端入队后只发 enqueued，从不发 downloading）；UI 控制器 run/ended 分支同样走 isActiveStatus，勿再裸比较单字符串（2026-09 修复：idle→enqueued 直跳曾跳过 run 分支致按钮不 disable） | - | - |

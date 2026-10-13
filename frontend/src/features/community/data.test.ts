@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { TextDecoder as NodeTextDecoder } from "node:util";
 import { stubFetch } from "@/test-utils/fetch.ts";
-import { showProgress, tryFetchModels } from "./data.ts";
+import { showProgress, tryFetchModels, FetchModelsFailureError, fetchModelsFailureKind } from "./data.ts";
 
 // TextDecoder 保留带守卫的 globalThis 永久形态：用例内 afterEach 的
 // unstubAllGlobals() 会撤销 vi.stubGlobal 设置，而 api 分支（data.ts L164）
@@ -241,6 +241,106 @@ describe("tryFetchModels 失败路径（全部源失败时的根因诊断）", (
     const assertion = expect(promise).rejects.toThrow("NoIndex");
     await vi.advanceTimersByTimeAsync(4500);
     await assertion;
+  });
+});
+
+describe("fetchModelsFailureKind — 竞速失败判别口（kind 信道单一事实源）", () => {
+  it("FetchModelsFailureError → 直读 kind（message 保留 token 兼容旧断言形态）", () => {
+    const err = new FetchModelsFailureError("NoIndex");
+    expect(err).toBeInstanceOf(Error);
+    expect(err.kind).toBe("NoIndex");
+    expect(err.message).toBe("NoIndex");
+    expect(fetchModelsFailureKind(err)).toBe("NoIndex");
+  });
+
+  it("纯 Error(message=token) → 兼容白名单命中（历史 throw 点不误断）", () => {
+    expect(fetchModelsFailureKind(new Error("NetworkOffline"))).toBe("NetworkOffline");
+    expect(fetchModelsFailureKind(new Error("RateLimited"))).toBe("RateLimited");
+  });
+
+  it("陌生错误/null → null（消费者落 friendlyError/通用文案兜底）", () => {
+    expect(fetchModelsFailureKind(new Error("boom"))).toBeNull();
+    expect(fetchModelsFailureKind(undefined)).toBeNull();
+    expect(fetchModelsFailureKind(null)).toBeNull();
+    // token 子串不算命中（精确白名单，防 "HTTP 403" 类消息误分类）
+    expect(fetchModelsFailureKind(new Error("got NoIndex somehow"))).toBeNull();
+  });
+
+  it("tryFetchModels 全败 reject 值 = FetchModelsFailureError（生产端类型化坐实）", async () => {
+    vi.useFakeTimers();
+    mockFetch(() => Promise.resolve(errResp(403)));
+    const promise = tryFetchModels("owner/repo", "");
+    const assertion = expect(promise).rejects.toBeInstanceOf(FetchModelsFailureError);
+    await vi.advanceTimersByTimeAsync(4500);
+    await assertion;
+    await promise.catch((e: unknown) => {
+      expect(fetchModelsFailureKind(e)).toBe("RateLimited");
+    });
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+});
+
+describe("tryFetchModels — body 读取阶段护栏（P2 收债：headers 后不拆护栏）", () => {
+  afterEach(() => {
+    vi.useFakeTimers();
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  /** 真实 fetch 语义：headers 秒回，body(json) 读取受 signal 控制——abort 即拒绝 */
+  function hangBody(urlFilter: (url: string) => boolean): FetchImpl {
+    return (url, init) =>
+      urlFilter(url)
+        ? Promise.resolve({
+            ok: true,
+            status: 200,
+            json: () =>
+              new Promise<unknown>((_, reject) => {
+                (init?.signal as AbortSignal | undefined)?.addEventListener("abort", () =>
+                  reject(new Error("AbortError")),
+                );
+              }),
+          })
+        : Promise.resolve(errResp(500));
+  }
+
+  it("源 headers 秒回但 body 永挂 → 8s 超时杀 body 流，记 timeout 落 NetworkOffline（旧实现 headers 后拆护栏 → 永不分类）", async () => {
+    vi.useFakeTimers();
+    mockFetch(hangBody((url) => url.includes("raw.githubusercontent.com")));
+    const promise = tryFetchModels("owner/repo", "");
+    const assertion = expect(promise).rejects.toThrow("NetworkOffline");
+    // 三路：raw(0s) body 挂到 8s 超时、jsd(2s)/api(4s) 未 hang 走 500；汇总按 timeout 归网络类
+    await vi.advanceTimersByTimeAsync(9000);
+    await assertion;
+  });
+
+  it("胜出者 abort 时，败者 body 在途读取被连带终止（护栏仍在，不误记本源失败）", async () => {
+    vi.useFakeTimers();
+    const models = [{ name: "jsd-ok" }];
+    let rawBodyRejected!: boolean;
+    mockFetch((url, init) => {
+      if (url.includes("jsdelivr.net")) return Promise.resolve(okJson(models));
+      if (url.includes("raw.githubusercontent.com")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            new Promise<unknown>((_res, rej) => {
+              (init?.signal as AbortSignal)?.addEventListener("abort", () => {
+                rawBodyRejected = true;
+                rej(new Error("AbortError"));
+              });
+            }),
+        });
+      }
+      return Promise.resolve(errResp(500));
+    });
+    const promise = tryFetchModels("owner/repo", "");
+    const assertion = expect(promise).resolves.toMatchObject({ source: "jsd" });
+    await vi.advanceTimersByTimeAsync(2500); // jsd 2s 发射并胜出 → ctrl abort
+    await assertion;
+    expect(rawBodyRejected, "jsd 胜出的 abort 应穿透到 raw 在途 body 读取").toBe(true);
   });
 });
 

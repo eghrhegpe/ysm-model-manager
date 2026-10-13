@@ -43,13 +43,14 @@ status: active
 ## 核心职责
 
 - **`classifyDownloadSize(size: number): DownloadSizeDecision`** — 下载大小策略：≤4MB 直接下；4–10MB 需确认；>10MB 拒绝。数值守卫：NaN / ±Infinity 一律 `reject`（防误判 `ok` 直接下载）。
-- **`buildDownloadTasks(models, selectedNames, dlPrefix): DownloadTask[]`** — 选中集 → 下载任务列表：路径统一转正斜杠；未匹配的选中项静默跳过；size 哨兵处理（Content-Length=-1 → 0）。
+- **`buildDownloadTasks(models, selectedNames, dlPrefix): DownloadTask[]`** — 选中集 → 下载任务列表：路径统一转正斜杠并经 `buildModelDownloadUrl` **逐段 encodeURIComponent**（`#`/`?`/`%` 保留字符不截断 URL，`/` 分隔符保留；`render.ts` 单行按钮 `data-url` 同走该助手，双出口口径单一）；未匹配的选中项静默跳过；size 哨兵处理（Content-Length=-1 → 0）。
 - **`DOWNLOAD_CONFIRM_BYTES` / `DOWNLOAD_REJECT_BYTES`** — 阈值常量（4MB / 10MB）。
 
 ## 对外 API / 入口
 
 - `classifyDownloadSize(size: number): "ok" | "confirm" | "reject"` — 下载大小策略判定
 - `buildDownloadTasks(models: DownloadCandidate[], selectedNames: Iterable<string>, dlPrefix: string): DownloadTask[]` — 选中集 → 下载任务列表
+- `buildModelDownloadUrl(dlPrefix: string, path: string): string` — 下载 URL 单一拼装口（反斜杠归一 + 逐段编码；`dlPrefix` 尾 `/` 属既定契约不重复补）
 - `DOWNLOAD_CONFIRM_BYTES: number`（4MB）
 - `DOWNLOAD_REJECT_BYTES: number`（10MB）
 - `DownloadCandidate` / `DownloadSizeDecision` 类型

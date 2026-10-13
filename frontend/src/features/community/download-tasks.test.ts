@@ -6,7 +6,32 @@ import {
   DOWNLOAD_REJECT_BYTES,
   classifyDownloadSize,
   buildDownloadTasks,
+  buildModelDownloadUrl,
 } from "./download-tasks.ts";
+
+describe("buildModelDownloadUrl — 逐段编码（P3④ 收口：路径含 URL 保留字符不得截断）", () => {
+  it("普通路径原样拼接（反斜杠转正斜杠）", () => {
+    expect(buildModelDownloadUrl("https://dl/", "mods\\a.ysm")).toBe("https://dl/mods/a.ysm");
+    expect(buildModelDownloadUrl("https://dl/", "mods/b.ysm")).toBe("https://dl/mods/b.ysm");
+  });
+
+  it("# ? % 逐段编码——不编码会落 fragment/query 或被当坏转义（原 P3 截断 bug）", () => {
+    expect(buildModelDownloadUrl("https://dl/", "mods/a#1.ysm")).toBe("https://dl/mods/a%231.ysm");
+    expect(buildModelDownloadUrl("https://dl/", "mods/a?b.ysm")).toBe("https://dl/mods/a%3Fb.ysm");
+    expect(buildModelDownloadUrl("https://dl/", "mods/100%.ysm")).toBe("https://dl/mods/100%25.ysm");
+  });
+
+  it("空格与非 ASCII 编码（CJK 走浏览器也发同一字节，显式编码防中间环节再解析）", () => {
+    expect(buildModelDownloadUrl("https://dl/", "my mods/a b.ysm")).toBe("https://dl/my%20mods/a%20b.ysm");
+    expect(buildModelDownloadUrl("https://dl/", "角色/雾雨.ysm")).toBe(
+      `https://dl/${encodeURIComponent("角色")}/${encodeURIComponent("雾雨.ysm")}`,
+    );
+  });
+
+  it("分隔符 / 保留不编码（逐段处理，非整串 encodeURIComponent）", () => {
+    expect(buildModelDownloadUrl("https://dl/", "a/b/c.ysm")).toBe("https://dl/a/b/c.ysm");
+  });
+});
 
 describe("classifyDownloadSize", () => {
   it("小文件（≤4MB）直接下载", () => {

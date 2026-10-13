@@ -82,7 +82,11 @@ vi.mock("@/features/maintenance/recycle-bin.ts", () => ({ initRecycleBin: vi.fn(
 vi.mock("@/features/maintenance/oldest-models.ts", () => ({
   loadOldestModel: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock("@/features/community/data.ts", () => ({ tryFetchModels: vi.fn() }));
+// 真模块透传（fetchModelsFailureKind 判别口可用），仅 tryFetchModels 替 spy
+vi.mock("@/features/community/data.ts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/features/community/data.ts")>()),
+  tryFetchModels: vi.fn(),
+}));
 vi.mock("./settings/init.ts", () => ({
   initSettings: vi.fn().mockResolvedValue(undefined),
 }));

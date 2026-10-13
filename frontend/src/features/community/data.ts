@@ -81,6 +81,42 @@ interface FetchRaceState {
 }
 
 /**
+ * 全部源失败的根因枚举（tryFetchModels reject 的错误种类）。
+ * 取代旧「Error.message 当枚举信道」：消费方经 fetchModelsFailureKind 判别，
+ * 不再散落 `err.message === "NoIndex"` 字符串对照（三处消费者改判别式收口）。
+ */
+export const FETCH_MODELS_FAILURES = [
+  "NoIndex",
+  "RateLimited",
+  "NetworkOffline",
+  "AllFailed",
+] as const;
+export type FetchModelsFailure = (typeof FETCH_MODELS_FAILURES)[number];
+
+/** tryFetchModels 全败时抛出的类型化错误（message 保留 kind token：兼容旧断言形态与人工调试） */
+export class FetchModelsFailureError extends Error {
+  readonly kind: FetchModelsFailure;
+  constructor(kind: FetchModelsFailure) {
+    super(kind);
+    this.name = "FetchModelsFailureError";
+    this.kind = kind;
+  }
+}
+
+/**
+ * 从抛出值提取失败种类；非竞速失败错误 → null（调用方落 friendlyError/通用文案）。
+ * 双形态识别：① FetchModelsFailureError（现行协议）；② 纯 Error 且 message 恰为 token
+ * （历史 throw 点与既有测试兼容——白名单集中在此单一判别口，不再散布消费端字面量）。
+ */
+export function fetchModelsFailureKind(err: unknown): FetchModelsFailure | null {
+  if (err instanceof FetchModelsFailureError) return err.kind;
+  const msg = (err as Error | null | undefined)?.message;
+  return typeof msg === "string" && (FETCH_MODELS_FAILURES as readonly string[]).includes(msg)
+    ? (msg as FetchModelsFailure)
+    : null;
+}
+
+/**
  * 构造三个镜像源 attempts 数组，并按 mirror 策略调整请求顺序
  * （仅影响最先被展示的顺序，并发竞速时无实质区别）
  */
@@ -110,6 +146,8 @@ function buildFetchModelsAttempts(repo: string, mirror: MirrorStrategy): FetchAt
 /**
  * 向单个镜像源发起 index.json 抓取：
  * - 双通道取消：本源超时（8s timer）+ 整体取消（raw404 早退 / 他人胜出，经 state.ctrl）；
+ *   **护栏覆盖 fetch 头 + body 读取全程**（timer/监听在 finally 统一摘——旧实现 headers
+ *   到达即拆护栏，`resp.json()` 阶段裸奔：body 卡流时超时与胜者 abort 都管不到，竞速永挂）；
  * - 失败按类型记录（http status / network TypeError / timeout），替代字符串嗅探；
  * - 404 判定：仅 raw 源 404 视为确定性证据（jsd/api 404 可能是 CDN 缓存未命中/限流），
  *   置 rawNoIndex 并 abort 整体终止在途与延时请求；其余源 404 仅记录、不误杀在途；
@@ -125,52 +163,68 @@ async function fetchModelsOne(
   const onOuterAbort = (): void => timeoutCtrl.abort();
   state.ctrl.signal.addEventListener("abort", onOuterAbort);
   const tmr = setTimeout((): void => timeoutCtrl.abort(), timeoutMs);
-  let resp: Response;
   try {
-    resp = await fetch(attempt.url, { signal: timeoutCtrl.signal });
-  } catch (err) {
-    // 整体取消（他人已胜出 / raw404 早退）引发的连带失败不计入本源的失败记录
-    if (state.ctrl.signal.aborted) throw err;
-    state.failures.push(
-      timeoutCtrl.signal.aborted
-        ? { kind: "timeout", status: null }
-        : { kind: "network", status: null },
-    );
-    throw err;
+    let resp: Response;
+    try {
+      resp = await fetch(attempt.url, { signal: timeoutCtrl.signal });
+    } catch (err) {
+      // 整体取消（他人已胜出 / raw404 早退）引发的连带失败不计入本源的失败记录
+      if (state.ctrl.signal.aborted) throw err;
+      state.failures.push(
+        timeoutCtrl.signal.aborted
+          ? { kind: "timeout", status: null }
+          : { kind: "network", status: null },
+      );
+      throw err;
+    }
+    if (!resp.ok) {
+      // 404 处理：仅 raw 源 404 视为确定性证据（仓库确实无 index.json）——
+      // jsd/api 404 可能是 CDN 缓存未命中/限流，误杀本可成功的在途请求
+      if (resp.status === 404 && attempt.name === "raw") {
+        state.rawNoIndex = true;
+        state.ctrl.abort();
+      } else {
+        state.failures.push({ kind: "http", status: resp.status });
+      }
+      throw new Error(`HTTP ${resp.status}`);
+    }
+    // body 读取同样在护栏内（真实 fetch 在 signal abort 时以 AbortError 拒绝进行中的
+    // json() 读取；本函数 catch 按「整体取消→不计 / 自身超时→timeout」分类）
+    let models: unknown;
+    try {
+      if (attempt.name === "api") {
+        const data = (await resp.json()) as {
+          encoding?: string;
+          content?: string;
+        };
+        if (data.encoding !== "base64" || data.content == null) throw new Error("no content");
+        // GitHub API base64 可能含 \r\n 换行——\r 残留令 atob 抛错 → 误判 AllFailed；统一去 [\r\n\s]
+        const binary = atob(data.content.replace(/[\r\n\s]/g, ""));
+        const bytes = Uint8Array.from(binary, (c): number => c.charCodeAt(0));
+        models = JSON.parse(new TextDecoder().decode(bytes));
+      } else {
+        models = await resp.json();
+      }
+    } catch (err) {
+      // 整体取消的连带拒绝不计入本源失败（与 fetch 头阶段同口径）
+      if (state.ctrl.signal.aborted) throw err;
+      // 自身 8s 超时杀 body 流 = 网络不可达强信号，记 timeout；
+      // SyntaxError 等载荷坏损与 invalid payload 同口径不分类记录（汇总自然落 AllFailed）
+      if (timeoutCtrl.signal.aborted) {
+        state.failures.push({ kind: "timeout", status: null });
+      }
+      throw err;
+    }
+    if (Array.isArray(models)) {
+      return { models, source: attempt.name };
+    }
+    // 无效载荷：本源失败（不 push 分类记录——汇总按 404/403/网络缺失自然落 AllFailed，与旧实现一致）
+    throw new Error("invalid payload");
   } finally {
+    // 护栏全程持有到载荷落定才拆（旧实现在 fetch 头返回即清 timer + 摘监听，body 阶段无保护）
     clearTimeout(tmr);
     state.ctrl.signal.removeEventListener("abort", onOuterAbort);
   }
-  if (!resp.ok) {
-    // 404 处理：仅 raw 源 404 视为确定性证据（仓库确实无 index.json）——
-    // jsd/api 404 可能是 CDN 缓存未命中/限流，误杀本可成功的在途请求
-    if (resp.status === 404 && attempt.name === "raw") {
-      state.rawNoIndex = true;
-      state.ctrl.abort();
-    } else {
-      state.failures.push({ kind: "http", status: resp.status });
-    }
-    throw new Error(`HTTP ${resp.status}`);
-  }
-  let models: unknown;
-  if (attempt.name === "api") {
-    const data = (await resp.json()) as {
-      encoding?: string;
-      content?: string;
-    };
-    if (data.encoding !== "base64" || data.content == null) throw new Error("no content");
-    // GitHub API base64 可能含 \r\n 换行——\r 残留令 atob 抛错 → 误判 AllFailed；统一去 [\r\n\s]
-    const binary = atob(data.content.replace(/[\r\n\s]/g, ""));
-    const bytes = Uint8Array.from(binary, (c): number => c.charCodeAt(0));
-    models = JSON.parse(new TextDecoder().decode(bytes));
-  } else {
-    models = await resp.json();
-  }
-  if (Array.isArray(models)) {
-    return { models, source: attempt.name };
-  }
-  // 无效载荷：本源失败（不 push 分类记录——汇总按 404/403/网络缺失自然落 AllFailed，与旧实现一致）
-  throw new Error("invalid payload");
 }
 
 /** 延时（可被整体 ctrl abort 提前唤醒：成功胜出 / raw404 早退后不再启动下一源，杜绝孤儿请求） */
@@ -198,14 +252,16 @@ function delayUntil(ms: number, signal: AbortSignal): Promise<void> {
  * 网络/超时 → NetworkOffline；其余（HTTP 500 / 无效载荷等）→ AllFailed。
  * 语义与旧实现对齐（404 优先于 403 优先于网络）；超时自「消息无关键词落 AllFailed」
  * 修正为网络类——嗅探缺陷：8s 无响应即网络不可达的强信号。
+ * 出口走 FetchModelsFailureError（kind 判别信道），消费方经 fetchModelsFailureKind 收口。
  */
 function summarizeFetchFailures(state: FetchRaceState): never {
-  if (state.rawNoIndex) throw new Error("NoIndex");
-  if (state.failures.some((f) => f.status === 404)) throw new Error("NoIndex");
-  if (state.failures.some((f) => f.status === 403)) throw new Error("RateLimited");
+  if (state.rawNoIndex) throw new FetchModelsFailureError("NoIndex");
+  if (state.failures.some((f) => f.status === 404)) throw new FetchModelsFailureError("NoIndex");
+  if (state.failures.some((f) => f.status === 403))
+    throw new FetchModelsFailureError("RateLimited");
   if (state.failures.some((f) => f.kind === "network" || f.kind === "timeout"))
-    throw new Error("NetworkOffline");
-  throw new Error("AllFailed");
+    throw new FetchModelsFailureError("NetworkOffline");
+  throw new FetchModelsFailureError("AllFailed");
 }
 
 /**

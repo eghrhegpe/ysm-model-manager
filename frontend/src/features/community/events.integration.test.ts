@@ -94,7 +94,8 @@ describe("community 仓库页事件编排（G-1 样板）", () => {
       list.querySelectorAll('[data-testid="gh-dl"]').length,
     ).toBe(3);
     expect(list.querySelector('[data-testid="gh-dl"]')?.getAttribute("data-url")).toBe(
-      "https://dl/repo/角色A.ysm",
+      // 逐段编码后 CJK 段落百分比化（浏览器发出字节不变，data-url 字面量为编码态）
+      `https://dl/repo/${encodeURIComponent("角色A.ysm")}`,
     );
   });
 
@@ -153,7 +154,7 @@ describe("community 仓库页事件编排（G-1 样板）", () => {
     fireClick(sr.querySelector('[data-testid="gh-dl-selected"]') as HTMLElement);
     await vi.waitFor(() => expect(queueMock.enqueue).toHaveBeenCalledTimes(1));
     expect(queueMock.enqueue).toHaveBeenCalledWith([
-      { url: "https://dl/repo/角色A.ysm", saveDir: "", name: "角色A.ysm", size: 1024 },
+      { url: `https://dl/repo/${encodeURIComponent("角色A.ysm")}`, saveDir: "", name: "角色A.ysm", size: 1024 },
     ]);
   });
 

@@ -58,7 +58,7 @@
 | 🏗 binding-json-cleanup | string-JSON 绑定铲债清单 | architecture | — | string-JSON, JSON.parse 断言, 绑定 struct 化, 铲债清单, 错误通道统一, ADR-143, 绑定返回 string |
 | 🍃 core-error-diary | UI 报错落日记 error-diary | leaf | — | error-diary, 报错日记, toast error warn 落盘, 运行时日志环, DiarySink |
 | 🍃 e2e-visual-feedback | E2E 视觉反馈（截图取证） | leaf | — | 看界面长什么样, 截图取证, 视觉异常定位, 界面回归验证, 假绿灯排查, 需要真 3D 会话 |
-| 🏗 event-bus | 事件总线 bus.ts | architecture | — | 事件, 事件总线, 通信, emit, 跨组件通信, bus |
+| 🏗 event-bus | 事件总线 bus.ts | architecture | — | 事件, 事件总线, 通信, emit, 跨组件通信, bus, 配置变更 |
 | 🍃 event-graph-guard | Bus 事件契约守卫 | leaf | — | 未传参, 缺参, bus 事件, 事件契约, 事件漂移, 内联脚本, 可选链, 跨行调用 |
 | 🍃 fe-layering-seams | 前端分层 seam 与 import 路径 | leaf | — | src/core 想新增文件或依赖前, features 模块需要拿到 backend 能力时, 写 import 犹豫用 @/ 还是 ../ 时, 门禁报 check-layering / check-path-hygiene 编号不知道查哪条 |
 | 🏗 frontend-parsers | 解析簇 parsers/ 自 backend 迁出 | architecture | — | 解析 YSM / NBT / 体素 / zip / pack.mcmeta / 颜色映射, voxel 管线（voxel-bits/pipeline/三视图）/ ysm-header / nbt-parse 定位 |

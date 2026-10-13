@@ -7,6 +7,7 @@ import { t } from "@/core/i18n/t.ts";
 import { formatBytes } from "@/utils/format/format.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { renderDisplayName } from "@/utils/model-name/display.ts";
+import { buildModelDownloadUrl } from "./download-tasks.ts";
 
 // ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
 // 删除/新增对应 data-testid 须同步本数组；契约测试运行期静态聚合本数组为注册表。
@@ -166,7 +167,7 @@ export function buildModelRow(m: WorkshopModel, ctx: ModelRowCtx): HTMLElement {
     const dlBtn = createIconBtn(UI_ICONS.download, "download");
     dlBtn.classList.add("gh-dl-btn");
     dlBtn.dataset.testid = "gh-dl";
-    dlBtn.dataset.url = dlPrefix + m.path.replace(/\\/g, "/");
+    dlBtn.dataset.url = buildModelDownloadUrl(dlPrefix, m.path);
     dlBtn.dataset.name = m.name;
     // P3（审核复核）：同 download-tasks.ts 的有限数守卫——-1（Content-Length=-1 哨兵）不得透传
     dlBtn.dataset.size = String(

@@ -2,6 +2,7 @@
 
 import { t } from "@/core/i18n/t.ts";
 import * as m from "@/features/community/community-data.ts";
+import { fetchModelsFailureKind } from "@/features/community/data.ts";
 import { safeSet } from "@/utils/base/primitives/storage.ts";
 import { moveItemMut } from "@/utils/base/pure/array.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
@@ -319,13 +320,15 @@ function eeBindFetchBtn(state: SiteViewState, refreshView: () => void, sig: Abor
           });
         }
       } catch (e) {
-        const err = e as Error;
+        // 竞速/回退失败的类型化判别（fetchModelsFailureKind 单一口，替代魔法串对照）；
+        // 其余错误落 friendlyError 通用兜底
+        const kind = fetchModelsFailureKind(e);
         const errMsg =
-          err.message === "NetworkOffline"
+          kind === "NetworkOffline"
             ? t("workshop.networkOffline")
-            : err.message === "NoIndex"
+            : kind === "NoIndex"
               ? t("workshop.indexMissing")
-              : err.message === "RateLimited"
+              : kind === "RateLimited"
                 ? t("workshop.rateLimited")
                 : friendlyError(e, t("workshop.fetchFailed"));
         busRef.emit("toast:show", {

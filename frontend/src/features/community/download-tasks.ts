@@ -27,7 +27,25 @@ export interface DownloadCandidate {
   size?: number;
 }
 
-/** 选中集 → 下载任务列表（路径统一转正斜杠；未匹配的选中项静默跳过） */
+/**
+ * 拼接单模型下载 URL：路径统一转正斜杠后**逐段** encodeURIComponent。
+ * dlPrefix 尾带 `/` 属既定契约（Go/前端两侧产出的 raw/jsdelivr 前缀均如此），
+ * 不重复补——补了会把 `@main/` 类形态拼成双斜杠变 404。
+ * P3 收口：原裸拼 `dlPrefix + path` 遇路径含 `#`/`?`/`%` 时静默截断或坏转义
+ * （`#` 落 fragment、`?` 起 query、裸 `%` 非合法转义）；仅空格/非 ASCII 属
+ * 浏览器 fetch 会自愈的字符，原写法侥幸能用——保留字符必须显式编码。
+ * 分隔符 `/` 保留不编码（故逐段处理，非整串 encodeURIComponent）。
+ */
+export function buildModelDownloadUrl(dlPrefix: string, path: string): string {
+  const norm = path.replace(/\\/g, "/");
+  const encoded = norm
+    .split("/")
+    .map((seg) => encodeURIComponent(seg))
+    .join("/");
+  return dlPrefix + encoded;
+}
+
+/** 选中集 → 下载任务列表（路径统一转正斜杠 + 逐段编码；未匹配的选中项静默跳过） */
 export function buildDownloadTasks(
   models: DownloadCandidate[],
   selectedNames: Iterable<string>,
@@ -37,7 +55,7 @@ export function buildDownloadTasks(
     .map((name) => models.find((m) => m.name === name))
     .filter((m): m is DownloadCandidate => Boolean(m))
     .map((m) => ({
-      url: dlPrefix + m.path.replace(/\\/g, "/"),
+      url: buildModelDownloadUrl(dlPrefix, m.path),
       saveDir: "",
       name: m.name,
       // P4（审核发现）：`m.size || 0` 会把 -1（Content-Length=-1 哨兵）当真值原样写入

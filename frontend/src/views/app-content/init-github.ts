@@ -1,7 +1,7 @@
 // ===== GitHub 页初始化（为 app-content/index.ts 减负，ADR-040）=====
 
 import { t } from "@/core/i18n/t.ts";
-import { tryFetchModels } from "@/features/community/data.ts";
+import { fetchModelsFailureKind, tryFetchModels } from "@/features/community/data.ts";
 import { bindRepoEvents } from "@/features/community/events.ts";
 import { countMissing, type WorkshopModel } from "@/features/community/render.ts";
 import { stagger } from "@/utils/animation/stagger.ts";
@@ -117,11 +117,13 @@ async function githubLoadRepos(ctx: GithubPageCtx): Promise<void> {
   }
 }
 
-/** 错误文案映射：NetworkOffline / NoIndex / RateLimited 专属提示，其余通用失败 */
+/** 错误文案映射：竞速失败经 fetchModelsFailureKind 判别（kind 信道单一判别口，
+ *  替代原 err.message === "NetworkOffline" 魔法串对照——生产者 data.ts 已类型化抛错） */
 function githubErrorMsg(err: Error): string {
-  if (err.message === "NetworkOffline") return t("workshop.networkOffline");
-  if (err.message === "NoIndex") return t("workshop.githubNoIndex");
-  if (err.message === "RateLimited") return t("workshop.rateLimitedGithub");
+  const kind = fetchModelsFailureKind(err);
+  if (kind === "NetworkOffline") return t("workshop.networkOffline");
+  if (kind === "NoIndex") return t("workshop.githubNoIndex");
+  if (kind === "RateLimited") return t("workshop.rateLimitedGithub");
   return t("workshop.githubLoadFailed");
 }
 

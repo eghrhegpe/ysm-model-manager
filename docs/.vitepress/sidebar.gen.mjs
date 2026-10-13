@@ -2440,10 +2440,6 @@ export const autoSidebar = [
             "link": "/knowledge/utils-export"
           },
           {
-            "text": "扩展名映射 extensions",
-            "link": "/knowledge/utils-extensions"
-          },
-          {
             "text": "格式化工具 fmt",
             "link": "/knowledge/utils-fmt"
           },
@@ -2452,7 +2448,7 @@ export const autoSidebar = [
             "link": "/knowledge/utils-misc"
           },
           {
-            "text": "资源类型工具 resource-types",
+            "text": "资源类型与扩展名派生层 resource-types",
             "link": "/knowledge/utils-resource-types"
           },
           {

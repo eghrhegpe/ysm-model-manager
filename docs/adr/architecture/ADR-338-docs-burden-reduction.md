@@ -53,7 +53,10 @@
 粒度裁定：**一张卡 = 一条可独立讲述的链/域**，不是「一个文件一张卡」。判据：两卡正文互引 ≥2 处 + 消费场景重叠 → 合并候选。
 
 - **试点已落**（2026-10-13）：`utils-mc-format` + `utils-icon` + `utils-display` 三卡 → 合并为 `utils-display.md`「文件名展示与着色链」（解析→§着色→图标是一条流水线，正文互引成环）。旧卡 `git mv docs/archive/` + 文首活指针，入链 6 处改指新卡，`gen-knowledge-index` / `gen-routes-quick` 重生成，**drift 检查回到基线（0 ERROR / 3 WARN 无新增），doctor --docs 23/23 绿**
-- 推广候选（按同判据，待拍板）：`utils-array`+`utils-fmt`+`utils-misc`（小纯函数域）；`utils-extensions`+`utils-resource-types`（同源注册表派生层）；`utils-errors` 并入 `utils-dom`（同目录）
+- **推广已落**（2026-10-13）：`utils-extensions` + `utils-resource-types` → 合并为 `utils-resource-types`「资源类型与扩展名派生层」（互引 1↔1 + 同源 `schema.ts` 派生层 + 消费重叠）。原卡 `git mv docs/archive/` + 活指针，入链 2 处改指，`gen-knowledge-index` / `gen-routes-quick` 重生成，**drift 回基线（0 ERROR / 3 WARN 无新增）、doctor --docs 23/23 绿**
+- **推广中验证否决两组**（判据量化截图：互引计数）：`utils-array`+`utils-fmt`+`utils-misc` 互引 0↔0（数组移动/格式化/调试三个独立域，无互引无重叠——拟合并是「都小所以合」的伪判据）；`utils-errors` 并入 `utils-dom` 互引 0↔0（错误翻译 vs DOM 工具，不同域）。**结论：合并判据必须是可量化的互引 + 消费重叠，不是「文件小/同目录」这类形态相似**（pitfalls #27 同构判断原则的应用）
+- **推广净收益**：除合并本身外，顺带消除了 2 个既有覆盖盲区（`move-dnd.ts` / `batch-all-settled.ts` 补登进 app-tree 卡——合并前就在盲区）；`dnd-shared` 的 broad_claim 旗标随 extensions 主卡并入目录覆盖后条件不再满足，按门禁处方移除（5.15 全重复认领消除，恰是「一条注册表链一张卡」减少了重复认领面的证明）
+- **踩坑记录**：合并卡 source_files 若从目录级改精确文件，会引入两处连带——①`utils/resource/` 目录下其他文件（importable.ts 等）失去覆盖 → 盲区上升；②精确条目与 redline-enforcement-grade 等审计卡的 source_files 撞车。**处理**：保留目录级 `frontend/src/utils/resource/` + 补回原卡的两条精确文件（`types-re-export.ts` / `repo-rtype.ts`，在 `utils/` 根非目录下），目录符号 <100 阈值不膨胀。教训：**合并卡 source_files 形态（目录级 vs 精确）是独立决策点，不是跟正文走**
 - 顺带修的两条既有 WARN：`utils-dom` 目录级 source_files 收窄（107 个派生符号的膨胀根因）；`community-feature.md` 硬编码行号清理
 
 ### 2.3 第三刀：ADR 增量门槛（要拍板，未落）

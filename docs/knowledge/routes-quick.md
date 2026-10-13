@@ -442,25 +442,25 @@
 | 用户意图 | 首选卡 | 红线警告 | 主 ADR(如有) |
 |----------|--------|----------|----------|
 | 版本号、版本检查、go-version | [版本号 go/version](./go-version.md) | 版本号必须走 go/version 的 LoadVersion，禁止在多处手写版本号读取 | - |
-| 存储子目录、storageSubDir、资源类型同步视图、schema.ts | [资源类型工具 resource-types](./utils-resource-types.md) | - | - |
+| 存储子目录、storageSubDir、schema.ts 同步视图、resourceTypesById | [资源类型与扩展名派生层 resource-types](./utils-resource-types.md) | 歧义扩展名（.zip/.7z）禁止用扩展名直判类型，必须经 resolveTypeSafe 回退 Go DetectResourceType | - |
 | 共享类型、AppConfig、配置 | [共享类型 go/types](./go-types.md) | 共享类型必须走 go/types 单点定义，禁止在业务代码里复制类型定义 | ADR-144, ADR-192 |
 | 检查更新、更新下载、update | [自动更新 go/updater](./go-updater.md) | 更新检查必须走 go/updater，前端禁止手写更新下载逻辑 | - |
 | 界面偏好、字号、worker-prefs | [设置页 settings](./app-content-settings.md) | 卡片型设置项必须走 `stgCard()` 构造器，禁止手写 `stg-card` div 或裸样式仿卡（2026-10 含动态渲染路径 initAdvancedGrid 全清零；执法闸 = check-redlines W9，新增即红） | - |
-| 扩展名、支持的文件类型、拖拽过滤 | [扩展名映射 extensions](./utils-extensions.md) | 扩展名判定必须走 extensions.ts 的 isSupportedExt，拖拽导入场景禁止等待异步注册表 | - |
+| 扩展名、支持的文件类型、拖拽过滤、RESOURCE_EXTS/ALL_EXTS | [资源类型与扩展名派生层 resource-types](./utils-resource-types.md) | 扩展名判定必须走 extensions.ts 的 isSupportedExt，拖拽导入场景禁止等待异步注册表 | - |
+| 歧义扩展名、resolveTypeSafe、预览路由 previewKey | [资源类型与扩展名派生层 resource-types](./utils-resource-types.md) | - | - |
 | 启动器检测、HMCL / PCL / Minecraft 识别 | [启动器实例发现 go/launcher](./go-launcher.md) | - | - |
 | 设置页、主题设置、键位、路径配置 | [设置页 settings](./app-content-settings.md) | 配置落盘一律走 `views/config-write.ts\|writeAppConfig(patch)`（跨视图唯一实参点，ADR-313）；设置域内部可走薄包装 `path-cards.ts\|saveCfg`（额外同步内存 cfg）。patch 语义 = 只覆盖显式传入字段、其余取保存前重读最新；偏好类读写一律 safeGet/safeSet，禁止裸 localStorage | - |
 | 实例目录解析、运行目录推导 | [启动器实例发现 go/launcher](./go-launcher.md) | - | - |
 | 通用红线 | [设置页 settings](./app-content-settings.md) | 「值→文案」多消费面共享映射表住 `ui-maps.ts`（MIRROR_UI / LINK_MODE_UI）；schema 加成员漏文案键编译期红，禁模板手写 option 裸列 | - |
 | 新增资源类型 / 修改 resource_types.json / 文件类型 | [资源注册表 registry](./resource-registry.md) | resource_types.json 是唯一事实来源；前端只读不判、禁本地重算 | - |
 | 注册表、扩展名、LinkType、BedrockModel | [共享类型 go/types](./go-types.md) | - | ADR-144, ADR-192 |
-| 资源类型、RESOURCE_TYPES、类型标签 | [资源类型工具 resource-types](./utils-resource-types.md) | 资源类型必须派生自 resource_types.json（前端唯一入口 = schema.ts 的同步视图 allResourceTypes/resourceTypesById），禁止手写类型映射、禁止异步 RPC 旁路 | - |
+| 资源类型、RESOURCE_TYPES、类型标签、注册表加载 | [资源类型与扩展名派生层 resource-types](./utils-resource-types.md) | 资源类型必须派生自 resource_types.json（前端唯一入口 = schema.ts 同步视图），禁止手写类型映射、禁止异步 RPC 旁路 | - |
 | AppConfig、配置加载、配置文件 | [Go 配置单持有点 go/config](./go-config.md) | 配置必须走 go/config 的 LoadAppConfig 单点加载，禁止在多处各自读配置文件 | - |
 | currentRepoType 当前资源类型 | [全局资源类型状态 repo-rtype](./repo-rtype.md) | - | - |
 | DetectLauncherInstances | [启动器实例发现 go/launcher](./go-launcher.md) | - | - |
 | go/config | [Go 配置单持有点 go/config](./go-config.md) | - | - |
 | LoadRegistry/DedupConfig | [共享类型 go/types](./go-types.md) | - | ADR-144, ADR-192 |
 | repo_rtype localStorage 权威源 | [全局资源类型状态 repo-rtype](./repo-rtype.md) | - | - |
-| RESOURCE_EXTS/ALL_EXTS、导入过滤、扩展名归属 | [扩展名映射 extensions](./utils-extensions.md) | - | - |
 | settings/init / keymap / store | [设置页 settings](./app-content-settings.md) | 异步操作防连点一律 `store.ts\|withBusy(task)`（返回是否获得锁，false 走拒绝分支如 UI 当场回退）；`isBusy/setBusy` 已退役，禁手写「检查+置忙+finally 复位」三段 | - |
 | useCurrentResourceType 订阅类型切换 | [全局资源类型状态 repo-rtype](./repo-rtype.md) | - | - |
 | version-check | [版本号 go/version](./go-version.md) | - | - |
@@ -1194,14 +1194,14 @@
 | WASM 解码 collect 阶段同名键覆盖（同名不同目录纹理/头像， / `collectJsonSpecTextures`）→ 被覆盖 blob URL 必须**覆盖时立即 revoke**（revokeTexAccumBlobs / pendingBlobUrls 只扫最终值，覆盖者逃逸即成功/失败路径都泄漏；2026-10-11 F5 修，测试 `wasm-decode-tex-collision.test.ts`） | `wasm-decode.ts\|collectTexturesAndAvatars` | - |
 | GetModel3DSpec / JSON.parse 失败直接 reject | - | 消费者无 catch → unhandled rejection；失败应统一返回 null（P2 修复） |
 | try 起点在角度循环而非场景构建段 | - | 场景构建抛错时 renderer 永不 dispose（P2 修复） |
-| 拖拽导入等待异步注册表 | - | 导入按钮短暂不可用；必须用 RESOURCE_EXTS 静态表 |
-| 静态表未与 resource_types.json 对齐 | - | 三端不一致；必须由契约测试守护 |
 | 手写格式化 | - | 单位不一致、时区错乱；必须经 format.ts |
 | 日期未走友好日期 | - | 用户看不懂时间戳；必须经 friendlyDate |
 | console.log 散落 | - | 无法按 tag 过滤、生产环境泄漏日志；必须经 dbg |
 | 环形缓冲区未限制大小 | - | 内存累积；必须经环形缓冲的 max 限制 |
 | 手写类型映射 | - | 与注册表不一致、分类错乱；必须派生自 resource_types.json（走 schema.ts 同步视图） |
 | 新增资源类型未注册 | - | 前端无法识别；必须在 resource_types.json 中注册 |
+| 拖拽导入等待异步注册表 | - | 导入按钮短暂不可用；必须用 RESOURCE_EXTS 静态表 |
+| 静态表未与 resource_types.json 对齐 | - | 三端不一致；必须由契约测试守护 |
 | 手写详情卡片 | - | 与 summaryCardHTML 样式不一致、作者信息重复；必须经 summaryCardHTML |
 | 加密模型未走安全提取路径 | - | 加密内容泄露；必须经 summaryCardHTML 渲染 |
 | 把当「知道运行时事实」——最贵的错法，静态结构与执行路径常不一致 | `读代码结构` | - |

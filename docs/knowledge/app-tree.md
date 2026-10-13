@@ -6,6 +6,8 @@ category: ui
 source_files:
   - frontend/src/views/app-tree/
   - frontend/src/core/model-path-store.ts
+  - frontend/src/features/dnd/move-dnd.ts
+  - frontend/src/utils/async/batch-all-settled.ts
 auto_fields:
   symbols_with_lines:
     - __resetLastModelPathForTest
@@ -14,19 +16,27 @@ auto_fields:
     - AppTree
     - appTreeStyle
     - AuthorInfo
+    - BATCH_ALL_SETTLED_DEFAULT_SIZE
+    - batchAllSettled
+    - BatchAllSettledResult
+    - BatchFulfilled
+    - BatchRejected
     - batchRenameTpl
     - batchToggleAll
     - bindBusEvents
     - bindToolbarEvents
     - bindTreeEvents
+    - bindTreeMoveDnD
     - buildTree
     - cleanupVirtualScroll
+    - computeMovedEntry
     - createTreeRenderCtx
     - emptyStateForEmptyEntries
     - emptyStateHTML
     - entryKey
     - fileRowCommon
     - fileRowHTML
+    - filterSelfReflection
     - flattenVisible
     - folderRowCommon
     - folderRowHTML
@@ -36,11 +46,14 @@ auto_fields:
     - getVsMode
     - getVsRows
     - headerHTML
+    - isTreeMoveDrag
     - listFileRowHTML
     - listFolderRowHTML
     - loadAuthors
     - loadEntries
+    - MoveDropTarget
     - openAdvFilterDialog
+    - parseTreeMovePayload
     - pickWebFilesAndImport
     - rememberModelPath
     - renameTpl
@@ -48,6 +61,7 @@ auto_fields:
     - RenderMode
     - renderRepoLabel
     - renderTree
+    - resolveFolderTarget
     - ROW_H_GRID_COMPACT
     - ROW_H_GRID_NORMAL
     - ROW_H_LIST_COMPACT
@@ -67,9 +81,12 @@ auto_fields:
     - ToolbarCommandCtx
     - ToolbarCommandId
     - toolbarMenuTestids
+    - TREE_MOVE_MIME
     - treeCSS
     - TreeEntry
     - treeLoadFailedHTML
+    - TreeMoveDeps
+    - TreeMovePayload
     - TreeNode
     - TreeRenderCtx
     - TreeRow

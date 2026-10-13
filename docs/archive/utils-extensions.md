@@ -1,3 +1,8 @@
+
+---
+> **⚠️ 已合并（2026-10-13，ADR-338 推广）**：本卡已并入 [utils_resource_types](../knowledge/utils-resource-types.md)（资源类型与扩展名派生层——扩展名表与类型常量同由 schema.ts 派生，一条注册表链一张卡）。现行维护在新卡，本文件为历史快照冻结。
+---
+
 ---
 kind: utils-extensions
 name: 扩展名映射 extensions

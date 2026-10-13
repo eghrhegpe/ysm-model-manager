@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 200 张知识卡
+> 总计: 199 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -392,7 +392,7 @@
 - **ui-components**（UI 组件簇（原 ui 收容所，已归位））：原 `frontend/src/ui/`（自称 "ui-helpers 组件库"）是 MikuMikuAR 迁移物的收容所，2026-09-10 **随 ADR-220 整体解散**：组件按唯一消费方归位——3D 菜单子系统进 `front…
 - **ui-slide-menu**（ADR 去桶化 slide-menu 外壳组件）：`frontend/src/preview-3d/menu/shell/slide-menu.ts` 是 ADR 去桶化（ADR-075/076）配套新增的**通用 slide-menu 卡片外壳组件**，复刻 MikuMikuAR 的 s…
 
-## utils（29 张）
+## utils（28 张）
 
 *工具函数（display、fmt、dom、animation）*
 
@@ -420,10 +420,9 @@
 | 🍃 utils-dom | DOM 工具 dom | leaf | — | esc, escUnknown, HTML 转义, innerHTML, 搜索高亮, mark, XSS |
 | 🏗 utils-errors | 错误处理 errors | architecture | — | 错误提示, 友好错误, friendlyError, toast 文案, 报错翻译, 网络错误, 文件被占用 |
 | 🏗 utils-export | 截图与导出 export | architecture | memory-heavy, gpu-bound | 截图, 导出 PNG, 多角度截图, 预览缓存淘汰, blob URL 释放 |
-| 🏗 utils-extensions | 扩展名映射 extensions | architecture | — | 扩展名, 支持的文件类型, 拖拽过滤, RESOURCE_EXTS, ALL_EXTS, 导入过滤, 扩展名归属 |
 | 🍃 utils-fmt | 格式化工具 fmt | leaf | — | 文件大小, 字节格式化, KB MB, 日期格式化, 友好日期, 文件大小颜色 |
 | 🏗 utils-misc | 常量与调试 constants/debug | architecture | — | 调试日志, dbg, 调试开关, 环形日志, debugGetSpec, 全局常量 |
-| 🏗 utils-resource-types | 资源类型工具 resource-types | architecture | — | 资源类型, RESOURCE_TYPES, 类型标签, 存储子目录, storageSubDir, resourceTypesById, 注册表加载 |
+| 🏗 utils-resource-types | 资源类型与扩展名派生层 resource-types | architecture | — | 资源类型、RESOURCE_TYPES、类型标签、存储子目录, 扩展名、支持的文件类型、拖拽过滤、RESOURCE_EXTS、ALL_EXTS、扩展名归属, resourceTypesById、schema.ts、注册表加载, 歧义扩展名、resolveTypeSafe、预览路由 |
 | 🏗 utils-summarize | 摘要生成 summarize | architecture | — | 模型详情, 摘要卡片, summaryCardHTML, 预览卡片, 加密模型, 作者信息, 动画分组, 免费付费 |
 | 🏗 ysm-anim-pipeline | YSM (Bedrock) 动画管线 | architecture | cpu-bound | YSM 动画, 基岩动画, molang, 动画管线 |
 | 🏗 ysm-wasm | WASM 解析器 ysm-parser | architecture | cpu-bound, single-thread | WASM / YSMParser, ysm 解码, wasm 加载、按需加载, MEMFS, callMain, crossOriginIsolated, stats.worker / worker.format, pthread |
@@ -451,10 +450,9 @@
 - **utils-dom**（DOM 工具 dom）：HTML 转义、搜索高亮、全局 toast 时长语义常量、焦点记忆 / 恢复（a11y）。`esc()` 是全前端 HTML 转义的统一入口，也是治理红线指定的转义函数；`toast-ms.ts` 是全应用 toast 时长的单一事实源（8…
 - **utils-errors**（错误处理 errors）：把 Go 端/运行时返回的原始错误转换为用户可读的中文提示，是异常路径 toast 文案的统一入口（治理红线：所有异常路径必须有 toast 反馈）。
 - **utils-export**（截图与导出 export）：预览产物的导出与缓存层：`screenshot-render.ts` 用离屏 Three.js 渲染器做透明背景多角度截图；`preview-3d/decoder/model-cache.ts` 是模型预览数据的模块级持久缓存（组件卸载/重…
-- **utils-extensions**（扩展名映射 extensions）：前端扩展名 → 资源类型映射的集中定义。拖拽导入等场景需要同步判断扩展名（无法等待异步注册表加载），故提供这份静态默认表；事实来源仍是 `resource_types.json`，三端一致性由契约测试守护。
 - **utils-fmt**（格式化工具 fmt）：字节数与时间戳的格式化纯函数集，服务于列表行的尺寸与日期展示。
 - **utils-misc**（常量与调试 constants/debug）：前端调试基础设施：`debug.ts` 提供带 tag 过滤与环形缓冲的调试日志工具。
-- **utils-resource-types**（资源类型工具 resource-types）：前端资源类型常量与派生工具。与 [resource_registry](./resource-registry.md) 卡互补：那张讲 `resource_types.json` 单一事实源与 Go 端加载；本卡讲 `utils/resou…
+- **utils-resource-types**（资源类型与扩展名派生层 resource-types）：前端资源类型与扩展名的**同步派生层**（全部从 `resource_types.json` 单一事实源派生，构建期 import 内联）。与 [resource_registry](./resource-registry.md) 卡互补：…
 - **utils-summarize**（摘要生成 summarize）：把 Go 端解析出的模型摘要（YsmSummary）与头部信息（YSMHeader）渲染为预览面板的「模型详情」卡片 HTML。
 - **ysm-wasm**（WASM 解析器 ysm-parser）：YSMParser WASM 的前端胶水层（算法口径与 YSMViewer 一致）：`ysm-parser.ts` 负责加载、初始化与解码调用；`ysm-wasm-data.js` / `ysm-glue-data.js` 是 base64…
 

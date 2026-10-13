@@ -77,7 +77,7 @@
 | 标签、tag、分类、tag-editor | [标签系统 go/tags](./go-tags.md) ⚠️歧义（另见 dialog-tag-editor.md等） | `go/tags/` 包提供模型标签的线程安全持久化存储，是前端 tag-editor 弹窗的后端。标签存放在配置目录的 `tags.json`，以文件绝对路径为 key、标签列表为 value，与模型文件本身解耦（移动/链接模型不污染文件… |
 | 3D 预览、骨骼、three.js、spec、顶点、UV、四元数、模型渲染 | [3D 骨骼 spec go/threejs](./go-threejs.md) ⚠️歧义（另见 app-preview.md、preview-core.md） | `go/threejs/` 包根据 YSMViewer 的 `ThreeJsPayloadBuilder.cs` 移植，把已解析的 `types.BedrockModel` 转换为 Three.js 可直接消费的 JSON spec：顶点、… |
 | 网页影子层（TS 平移 Go 的解析函数）与 Go 侧口径是否漂移、新增/修改 resource_types.json 的 zipEntries 指纹后是否影响 Go-TS 一致性、voxel-colors-data.json 生成物是否过期（Go 表变更未同步前端）、双端互锁契约 fixture 的更新口径 | [Go-TS 解析层 golden 对拍（ADR-154 双端互锁）](./go-ts-golden.md) | 网页版（无 Go 壳）把整层 Go 解析逻辑平移成 TS 影子层（ADR-049 web 豁免 + ADR-070/066/082「TS 镜像 Go」），双实现漂移是永久负债。ADR-154 以共享 fixture（`tests/parit… |
-| 共享类型、AppConfig、配置、注册表、扩展名、LinkType、BedrockModel | [共享类型 go/types](./go-types.md) ⚠️歧义（另见 resource-registry.md、utils-extensions.md） | `go/types/` 包是全应用的共享类型层：应用配置（AppConfig）、各子系统交换的数据结构（模型条目/实例状态/同步结果/日志/投影元数据等）、以及资源类型注册表的 Go 端加载与扩展名查询。与 [resource_regist… |
+| 共享类型、AppConfig、配置、注册表、扩展名、LinkType、BedrockModel | [共享类型 go/types](./go-types.md) ⚠️歧义（另见 resource-registry.md） | `go/types/` 包是全应用的共享类型层：应用配置（AppConfig）、各子系统交换的数据结构（模型条目/实例状态/同步结果/日志/投影元数据等）、以及资源类型注册表的 Go 端加载与扩展名查询。与 [resource_regist… |
 | 自动更新、版本升级、updater | [自动更新 go/updater](./go-updater.md) ⚠️歧义（另见 version-updater.md） | `go/updater/` 包负责 YSM 应用的自动更新机制。 |
 | 监听、文件变化、刷新、watcher | [文件监听 go/watcher](./go-watcher.md) | `go/watcher/` 包监听资源目录的文件系统变化，触发前端资源树刷新。 |
 | YSM、解析、摘要、ysm 文件、元数据 | [YSM 解析 go/ysm](./go-ysm-parser.md) | `go/ysm/` 包负责解析 YSM（Yuan's Sketch Model）格式文件，提取模型元数据并生成结构化摘要。 |
@@ -107,7 +107,7 @@
 | 回收站、恢复文件、清空回收站、软删除、recycle、还原 | [回收站界面 recycle-bin](./recycle-bin.md) ⚠️歧义（另见 go-recycle.md等） | `recycle-bin.ts` 实现仓库页「回收站」tab 的界面逻辑：列出 `.recycle` 中属于当前资源类型的已删除条目，提供单条恢复/永久删除、一键清空。由 app-content 首次切到 recycle tab 时懒加载调… |
 | 唯一入口、红线、绕过 redlines、W6 W9 R7 R11、资源类型魔法串、菜单 visibleWhen、审计等级、单一入口收口 | [唯一入口红线执法等级表（37 条审计）](./redline-enforcement-grade.md) | — |
 | 联邦渲染、shared renderer、rAF 复用、多 3D 场景 | [联邦渲染能力 (Render Federation)](./render-federation.md) | — |
-| 资源类型、注册表、resource_types、registry、文件类型 | [资源注册表 registry](./resource-registry.md) ⚠️歧义（另见 utils-resource-types.md、go-types.md） | `resource_types.json` 是 YSM 资源类型定义的单一事实来源（Single Source of Truth）。所有资源类型、子目录、扩展名的定义均以此处为准。 |
+| 资源类型、注册表、resource_types、registry、文件类型 | [资源注册表 registry](./resource-registry.md) ⚠️歧义（另见 go-types.md） | `resource_types.json` 是 YSM 资源类型定义的单一事实来源（Single Source of Truth）。所有资源类型、子目录、扩展名的定义均以此处为准。 |
 | 错误消息、Worker 错误、catch、safeErrorMessage、异常提取 | [安全错误消息提取 utils](./safe-error-msg.md) | `frontend/src/utils/base/pure/safe-error-msg.ts` 提供轻量级错误消息提取函数 `safeErrorMessage`，从任意错误对象中安全提取可读消息字符串。与 `errors.ts` 的 `f… |
 | 场景能力 / cap / registry / SceneCapability、3D 菜单控件声明式渲染（getMenuControls）、新增 3D 能力（雾/阴影/反射/环境/灯光/后处理）、3D 会话生命周期（createAll / loadAll / applyModelPreset / saveAll / dispose）、「光」指代消歧（light 是光源，fog/shadow/reflector 不是） | [场景能力注册表 scene-capability-registry](./scene-capability-registry.md) | — |
 | 覆盖率门禁、diff-coverage、循环依赖、共享核、_lib、check-circular、findCycles、脚本去重 | [scripts 共享核演进（diff-coverage-core + cycles）](./script-shared-cores.md) ⚠️歧义（另见 go-coverage-gate.md） | `scripts/_lib/` 承载跨脚本共享逻辑。2026-09 按「四脚本镜像嫌疑分析」实测后，新增两个共享核，消除两对镜像脚本的重复： |
@@ -125,9 +125,8 @@
 | 数组排序、拖拽排序、moveItem、列表 reorder | [数组工具 moveItem](./utils-array.md) | 纯函数层数组操作工具，从 `site/edit.ts` 的拖拽排序 drop 逻辑抽出，供单测覆盖（ADR-023 L3）。 |
 | 错误提示、友好错误、friendlyError、toast 文案、报错翻译、网络错误、文件被占用 | [错误处理 errors](./utils-errors.md) | 把 Go 端/运行时返回的原始错误转换为用户可读的中文提示，是异常路径 toast 文案的统一入口（治理红线：所有异常路径必须有 toast 反馈）。 |
 | 截图、导出 PNG、多角度截图、预览缓存淘汰、blob URL 释放 | [截图与导出 export](./utils-export.md) ⚠️歧义（另见 export.md等） | 预览产物的导出与缓存层：`screenshot-render.ts` 用离屏 Three.js 渲染器做透明背景多角度截图；`preview-3d/decoder/model-cache.ts` 是模型预览数据的模块级持久缓存（组件卸载/重… |
-| 扩展名、支持的文件类型、拖拽过滤、RESOURCE_EXTS、ALL_EXTS、导入过滤、扩展名归属 | [扩展名映射 extensions](./utils-extensions.md) ⚠️歧义（另见 go-types.md） | 前端扩展名 → 资源类型映射的集中定义。拖拽导入等场景需要同步判断扩展名（无法等待异步注册表加载），故提供这份静态默认表；事实来源仍是 `resource_types.json`，三端一致性由契约测试守护。 |
 | 调试日志、dbg、调试开关、环形日志、debugGetSpec、全局常量 | [常量与调试 constants/debug](./utils-misc.md) | 前端调试基础设施：`debug.ts` 提供带 tag 过滤与环形缓冲的调试日志工具。 |
-| 资源类型、RESOURCE_TYPES、类型标签、存储子目录、storageSubDir、resourceTypesById、注册表加载 | [资源类型工具 resource-types](./utils-resource-types.md) ⚠️歧义（另见 resource-registry.md） | 前端资源类型常量与派生工具。与 [resource_registry](./resource-registry.md) 卡互补：那张讲 `resource_types.json` 单一事实源与 Go 端加载；本卡讲 `utils/resou… |
+| 资源类型、RESOURCE_TYPES、类型标签、存储子目录、扩展名、支持的文件类型、拖拽过滤、RESOURCE_EXTS、ALL_EXTS、扩展名归属、resourceTypesById、schema.ts、注册表加载、歧义扩展名、resolveTypeSafe、预览路由 | [资源类型与扩展名派生层 resource-types](./utils-resource-types.md) | 前端资源类型与扩展名的**同步派生层**（全部从 `resource_types.json` 单一事实源派生，构建期 import 内联）。与 [resource_registry](./resource-registry.md) 卡互补：… |
 | 模型详情、摘要卡片、summaryCardHTML、预览卡片、加密模型、作者信息、动画分组、免费付费 | [摘要生成 summarize](./utils-summarize.md) | 把 Go 端解析出的模型摘要（YsmSummary）与头部信息（YSMHeader）渲染为预览面板的「模型详情」卡片 HTML。 |
 | 更新、升级、检查更新、新版本、静默检查、updater、版本 | [版本更新 version-updater](./version-updater.md) ⚠️歧义（另见 app-modules.md、go-updater.md） | `version-updater.ts` 是应用自更新的前端入口：启动时静默检查（受 6 小时频次限制）→ 发现新版本以可点击 toast 通知；设置页按钮手动检查 → 弹出带更新日志的 `modalConfirm` → 调 `DoUpda… |
 | vitest、测试环境、node 环境、happy-dom、测试切换 | [Vitest 环境切换规则](./vitest-env-switch.md) | — |

@@ -3,7 +3,6 @@ kind: dnd-shared
 name: 拖拽平台适配 dnd-shared
 tier: leaf
 category: feature
-broad_claim: true
 source_files:
   - frontend/src/features/import/shared.ts
   - frontend/src/features/import/collector.ts
@@ -51,7 +50,7 @@ status: active
 
 # 拖拽平台适配 dnd-shared
 
-> **source_files 覆盖声明**：本卡为跨切面视图（拖拽平台适配横跨 `features/import` 与 `utils/resource` 多张他卡主领文件），source_files 覆盖为有意为之，非重复登记。
+> **source_files 覆盖说明**：本卡为跨切面视图（拖拽平台适配横跨 `features/import` 与 `utils/resource`），`utils/resource/extensions.ts` / `importable.ts` 现由 [utils_resource_types](./utils-resource-types.md) 目录级认领为主卡，本卡显式列出为消费方视角——非重复登记（原 `broad_claim: true` 旗标已随 ADR-338 合并移除：extensions 独立主卡并入目录覆盖后，5.15 全重复认领条件不再满足）。
 
 ## 概览
 

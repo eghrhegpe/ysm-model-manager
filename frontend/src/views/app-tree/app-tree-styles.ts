@@ -80,7 +80,8 @@ ${dropdownBaseCSS}
 .fl-list.flash { background: color-mix(in srgb, var(--status-success) 13%, transparent); }
 .fl.selected { background: color-mix(in srgb, var(--accent) 28%, transparent); border-left: 3px solid var(--accent); padding-left: 1px; }
 .fl.selected:hover { background: color-mix(in srgb, var(--accent) 38%, transparent); }
-.fh.selected { background: color-mix(in srgb, var(--accent) 28%, transparent); border-left: 3px solid var(--accent); padding-left: 1px; }
+/* .fh.selected 已删除（2026-10-13）：文件夹不参与选中（无选中语义），folderRowHTML
+   无 rowCls 形参，该规则历史零生产者；file 行选中态由 renderTree 按数据渲染产出 */
 /* 紧凑列表模式行高（受卡片密度驱动：--tree-row-list，与 render.ts rowHeightList 同源）——
    与网格模式同理固定 height + border-box，保证 CSS 实际高度恒等于虚拟滚动假定行高 */
 .fl-list { display: flex; align-items: center; gap: 6px; height: var(--tree-row-list, 24px); padding: 0 var(--sp-1); box-sizing: border-box; border-radius:var(--radius-sm); font-size: var(--fs-sm); cursor: default; user-select: none; -webkit-user-select: none; transition: background var(--tr-fast); }

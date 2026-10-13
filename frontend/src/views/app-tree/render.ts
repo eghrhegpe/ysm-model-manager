@@ -4,6 +4,7 @@ import { animateNumber } from "@/utils/animation/animate.ts";
 import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
 import { calcVisibleRange, installScrollSync } from "@/utils/dom/virtual-scroll.ts";
 import { formatBytes } from "@/utils/format/format.ts";
+import { hl } from "@/utils/html/html.ts";
 import { renderDisplayName } from "@/utils/model-name/display.ts";
 import { entryKey } from "./entry-key.ts";
 import type { TreeEntry } from "./loader.ts";
@@ -59,6 +60,14 @@ export interface TreeRow {
   html: string;
   isOpen?: boolean;
 }
+
+/**
+ * 选中行键集合（可选项）。selectState.keys 同一对象直传（勿复制：数据渲染与
+ * 选中态同源是 ADR-222 契约，复制层只会引入第二真相源）。缺省/空集 = 全行无选中。
+ * 形参挂到 flattenVisible（而非逐行散传）——选中态是「本次渲染的全局上下文」，
+ * 与 search/sort/dirOpen 同列；row-tpl 的 rowCls 由 fileRowFromEntry 单点派生。
+ */
+export type SelectedKeys = ReadonlySet<string> | undefined;
 
 /** buildTree 嵌套节点（文件夹 = 子节点对象，文件 = { _e: entry }） */
 export interface TreeNode {
@@ -207,17 +216,31 @@ function annotateDirNodes(root: TreeNode): void {
 }
 
 // ——— 语义调用包装：树参数 → 行模板渲染参数 ———
-// flattenVisible 只持有 (entry/fullPath/depth) 语义信息，row-tpl 需要
+// flattenVisible 只持有 (entry/fullPath/depth/search) 语义信息，row-tpl 需要
 // (nmHtml, icon, dateStr, nmCls, indent, rowCls, ariaLevel) 渲染参数。
 // 两个包装函数负责桥接，让调用方类型合法、@ts-expect-error 不必存在。
+//
+// ⚠️ f4d590e12 教训（2026-10-13 P0-1 接线）：本函数曾因「消除未使用参数」连删
+// selCls 计算 + hl 搜索高亮，rowCls/mark 双双断链——行模板的 rowCls 形参注释
+// 明写「用于选中高亮」，删调用侧实参 = 删功能。现由 selectedKeys 驱动恢复；
+// 回归锁 render.test.ts「行选中态随数据渲染」组，勿再只看签名不看语义。
 
-/** 文件行包装：entry + depth → 完整 fileRowHTML / listFileRowHTML 调用 */
-function fileRowFromEntry(entry: TreeEntry, depth: number, mode: RenderMode): string {
-  const nmHtml = renderDisplayName(entry.name);
+/** 文件行包装：entry + depth + 选中态 + 搜索词 → 完整 fileRowHTML / listFileRowHTML 调用 */
+function fileRowFromEntry(
+  entry: TreeEntry,
+  depth: number,
+  mode: RenderMode,
+  opts: { selected: boolean; search: string },
+): string {
+  // 搜索态命中段 <mark> 高亮（guide/repository.md 承诺「匹配字符高亮」）；
+  // 代价 = 丢失 renderDisplayName 的 tag-work/tag-date/§ 着色（知识卡 P3 已记录的取舍，
+  // 与 hl 互斥——hl 自己做 esc，双转义会炸）
+  const nmHtml = opts.search ? hl(entry.name, opts.search.trim()) : renderDisplayName(entry.name);
   const indent = depth * INDENT_PER_LEVEL;
+  const rowCls = opts.selected ? " selected" : "";
   return mode === "list"
-    ? listFileRowHTML(entry, nmHtml, "📄", "", indent, "", depth + 1)
-    : fileRowHTML(entry, nmHtml, "📄", "", "", indent, "", depth + 1);
+    ? listFileRowHTML(entry, nmHtml, "📄", "", indent, rowCls, depth + 1)
+    : fileRowHTML(entry, nmHtml, "📄", "", "", indent, rowCls, depth + 1);
 }
 
 /** 文件夹行包装：name + depth + isOpen + flags → 完整 folderRowHTML / listFolderRowHTML 调用 */
@@ -310,6 +333,8 @@ function visibleFileRow(
   id: number,
   isSearch: boolean,
   searchLower: string,
+  selectedKeys: SelectedKeys,
+  search: string,
 ): TreeRow | null {
   if (isSearch && !entry.path.toLowerCase().includes(searchLower)) return null;
   return {
@@ -317,7 +342,10 @@ function visibleFileRow(
     type: "file",
     key: entryKey(entry),
     depth,
-    html: fileRowFromEntry(entry, depth, mode),
+    html: fileRowFromEntry(entry, depth, mode, {
+      selected: selectedKeys?.has(entryKey(entry)) === true,
+      search,
+    }),
   };
 }
 
@@ -349,6 +377,7 @@ export function flattenVisible(
   dirOpen: Record<string, boolean>,
   depth: number,
   mode: RenderMode,
+  selectedKeys: SelectedKeys = undefined,
 ): TreeRow[] {
   const rows: TreeRow[] = [];
   const searchTrimmed = search.trim();
@@ -386,6 +415,8 @@ export function flattenVisible(
         rows.length,
         isSearch,
         searchLower,
+        selectedKeys,
+        searchTrimmed,
       );
       if (fileRow) rows.push(fileRow);
       continue;
@@ -393,7 +424,9 @@ export function flattenVisible(
     if (!node) continue;
 
     // 目录行：isOpen 决定是否下探（搜索态恒展开，与原实现一致）
-    const isOpen = dirOpen[fullPath] || false;
+    // ⚠️ `Object.hasOwn` 判存在性（ADR-334）：键是磁盘目录名，名叫 `__proto__` 时
+    // `dirOpen[fullPath]` 会读到 Object.prototype（truthy）→ 该目录恒显示为已展开且点不开。
+    const isOpen = Object.hasOwn(dirOpen, fullPath) ? dirOpen[fullPath] === true : false;
     const flags = dirFlags.get(node as TreeNode) ?? { hasEnabled: false, hasDisabled: false };
     const row = folderTreeRow(name, fullPath, top.depth, isOpen, flags, mode, rows.length);
     rows.push(row);
@@ -416,7 +449,12 @@ export function buildTree(
   _sort: string,
   filterPaths: Set<string> | null,
 ): TreeNode {
-  const root: TreeNode = {};
+  // ⚠️ null 原型对象（ADR-334）：键来自磁盘目录名/文件名，与 `__proto__` / `constructor` /
+  // `toString` 等继承键同名时，普通对象会沿原型链读到继承属性（truthy）→ 跳过建节点并把
+  // 整棵子树写进 `Object.prototype`（全局原型污染 + 该目录及其子树在 UI 完全不显示）。
+  // null 原型下这些键退化为普通字符串键；遍历侧本就用 `Object.keys` + 显式 `_e` 过滤，
+  // 语义不变。
+  const root: TreeNode = Object.create(null) as TreeNode;
   // 白名单匹配与行键同源（ADR-222）：entryKey = fullPath || path——与 tag-editor 写入的
   // modelPath（ctx:show path = fullPath || path）对齐；原 e.fullPath 在 fullPath 空时对
   // 「标签筛选」静默失配（filterPaths 里的 path 永不命中）。锐评 2026-10-09 补齐 ④ 同源。
@@ -427,7 +465,7 @@ export function buildTree(
     for (let i = 0; i < parts.length - 1; i++) {
       const p = parts[i];
       if (!current[p] || (current[p] as TreeNode)._e) {
-        current[p] = {};
+        current[p] = Object.create(null) as TreeNode;
       }
       current = current[p] as TreeNode;
     }
@@ -571,6 +609,7 @@ export function renderTree(
   dirOpen: Record<string, boolean>,
   filterPaths: Set<string> | null,
   mode: RenderMode = "grid",
+  selectedKeys: SelectedKeys = undefined,
 ): void {
   if (!entries.length) {
     container.innerHTML = emptyStateHTML("folder", t("tree.noModelFiles"));
@@ -578,7 +617,7 @@ export function renderTree(
     return;
   }
   const root = getBuildTreeCached(ctx, entries, sort, filterPaths);
-  const rows = flattenVisible(root, "", search, sort, dirOpen, 0, mode);
+  const rows = flattenVisible(root, "", search, sort, dirOpen, 0, mode, selectedKeys);
   if (!rows.length) {
     container.innerHTML = emptyStateHTML("search", t("tree.noMatchFiles"));
     cleanupVirtualScroll(ctx, container);

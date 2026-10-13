@@ -14,6 +14,7 @@ import { parseModelName } from "@/utils/model-name/display.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import { selectSingle, toggleSelect } from "./data.ts";
+import { entryKey } from "./entry-key.ts";
 import type { AppTree } from "./index.ts";
 import type { TreeEntry } from "./loader.ts";
 import { getVsRows, type TreeRenderCtx } from "./render.ts";
@@ -85,9 +86,22 @@ function atTeBindSelCheckboxes(ctx: AtTeCtx, e: MouseEvent, target: HTMLElement)
     const fullPath = flCk.dataset.fullpath || flCk.dataset.path;
     const fl = flCk.closest<HTMLElement>(".fl, .fl-list");
     flashBtn(fl);
+    // P1-2 乐观更新（2026-10-13）：banned 是本地布尔位——先翻转 entries 内该条目并
+    // 局部重渲（行高随数据变化，.ck on/.ban 态即时反馈），IPC 落盘成功后后台 reload 校正
+    // 真值。替代原「IPC 成功 → _load() 全盘重扫 → 全量重渲」串行链：2000 模型仓库点一次
+    // 开关不再付一次全量扫描（Go InvalidatePath 会打掉 30s 缓存，重载必真扫盘）。
+    // 失败回滚：revert 本地位再重渲，防 UI 与磁盘状态假一致。
+    const flipLocal = (): boolean => {
+      const entry = vm.entries.find((e) => entryKey(e) === fullPath);
+      if (!entry) return false;
+      entry.banned = !entry.banned;
+      return true;
+    };
+    if (flipLocal()) vm._renderTree();
     backendGetApp()
       .then(({ ToggleEnable }) => ToggleEnable(fullPath || ""))
       .then(async () => {
+        // 后台校正取真值：Go 侧 InvalidatePath 已使本次扫描缓存失效，重载拿到磁盘真实态
         const gen = vm._guard.current;
         await vm._load();
         if (vm._guard.stale(gen)) return;
@@ -99,6 +113,8 @@ function atTeBindSelCheckboxes(ctx: AtTeCtx, e: MouseEvent, target: HTMLElement)
       })
       .catch((err) => {
         logWarn("tree", `ToggleEnable 失败: ${fullPath}`, err);
+        // 乐观位回滚（reload 拿真值也可，但失败路径走全量重扫太重——本地 revert 即可）
+        if (flipLocal()) vm._renderTree();
         toast(
           t("tree.toggleFail", {
             name: fullPath ? fullPath.split(/[/\\]/).pop() || "" : "",

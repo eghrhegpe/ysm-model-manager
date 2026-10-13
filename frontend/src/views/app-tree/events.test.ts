@@ -162,6 +162,11 @@ function makeHarness(): Harness {
       entriesState.length = 0;
       entriesState.push(...v);
     },
+    // P1-2 乐观更新消费 vm.entries（AppTree.get entries 真实形状）——夹具缺 getter 时
+    // flipLocal 会在 undefined.find 上炸，对齐组件契约
+    get entries() {
+      return entriesState;
+    },
   } as unknown as AppTree;
   return { container, vm, root, stat };
 }
@@ -445,6 +450,55 @@ describe("click 复选框（单文件 ToggleEnable）", () => {
     expect(
       toasts.some((t) => t.msg.includes("切换失败") && t.msg.includes("a.ysm") && t.type === "error"),
     ).toBe(true);
+    expect(h.vm.toggleBusy).toBe(false);
+  });
+
+  it("乐观更新：IPC 返回前本地翻转 banned（P1-2 判别性断言，_load 前已 renderTree）", async () => {
+    const h = makeHarness();
+    const entry = makeEntry("/repo/a.ysm", "/repo/a.ysm", false);
+    h.vm.entriesState = [entry];
+    // IPC 挂起：验证「本地翻转 + _renderTree」发生在 IPC resolve 之前
+    let resolveToggle!: () => void;
+    ToggleEnableMock.mockReturnValue(new Promise<void>((r) => (resolveToggle = r)));
+    h.container.appendChild(fileRow("/repo/a.ysm", "a.ysm"));
+    bindTreeEvents(h.container, h.vm);
+    click(h.container.querySelector(".fl .ck") as Element);
+    await flush();
+    // 本地位已翻（未等 IPC）：_renderTree 已被乐观重渲调用一次，IPC 侧仍挂起
+    expect((h.vm.entriesState[0] as TreeEntry).banned).toBe(true);
+    expect(h.vm._renderTree).toHaveBeenCalled();
+    expect(h.vm.toggleBusy).toBe(true);
+    resolveToggle();
+    await flush();
+    // 成功链完成：busy 复位，reload 校正链跑完
+    expect(h.vm.toggleBusy).toBe(false);
+    expect(h.vm._load).toHaveBeenCalledOnce();
+  });
+
+  it("乐观更新失败回滚：本地 banned 位翻回原值（防 UI 与磁盘假一致）", async () => {
+    stubConsoleWarn();
+    const h = makeHarness();
+    const entry = makeEntry("/repo/a.ysm", "/repo/a.ysm", false);
+    h.vm.entriesState = [entry];
+    ToggleEnableMock.mockRejectedValue(new Error("io"));
+    h.container.appendChild(fileRow("/repo/a.ysm", "a.ysm"));
+    bindTreeEvents(h.container, h.vm);
+    click(h.container.querySelector(".fl .ck") as Element);
+    await flush();
+    // IPC 失败 → catch 里 revert：本地回到 false（与磁盘一致），toast error
+    expect((h.vm.entriesState[0] as TreeEntry).banned).toBe(false);
+    const toasts = emitted("toast:show") as Array<{ msg: string; type: string }>;
+    expect(toasts.some((t) => t.msg.includes("切换失败") && t.type === "error")).toBe(true);
+  });
+
+  it("乐观更新找不到条目（entries 未含该路径）→ 跳过本地翻转，IPC 照发", async () => {
+    const h = makeHarness();
+    // entriesState 为空：flipLocal 返回 false，不应炸也不应重渲两次
+    h.container.appendChild(fileRow("/repo/a.ysm", "a.ysm"));
+    bindTreeEvents(h.container, h.vm);
+    click(h.container.querySelector(".fl .ck") as Element);
+    await flush();
+    expect(ToggleEnableMock).toHaveBeenCalledWith("/repo/a.ysm");
     expect(h.vm.toggleBusy).toBe(false);
   });
 });

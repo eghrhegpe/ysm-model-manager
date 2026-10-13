@@ -54,6 +54,7 @@ auto_fields:
     - rowHeightGrid
     - rowHeightList
     - runToolbarCommand
+    - SelectedKeys
     - selectSingle
     - SelectState
     - setRenderMode
@@ -171,10 +172,11 @@ status: active
 | 高级筛选弹窗 | `#btn-adv-filter` 点击 → `openAdvFilterDialog`（toolbar-search.ts） | 弹窗输入关键词/标签/骨骼/立方体/纹理数值范围，回填 inline 面板并调用后端 SearchModels |
 | 排序下拉 | `#sort` change | name/size/date 排序（name/目录恒按名称；文件 size/date **降序**，同键回退名称序——目录无独立 size/modTime 语义，子树聚合归 Go。⚠️ 2026-09 前比较器漏实现 size/date 档，`render.test.ts` 的 `treeKeys` 用 `Object.keys().sort()` 自排序致用例对任何实现通过，断言必须走 `flattenVisible` 行序且数据须使字典序 ≠ 期望序） |
 | 视图模式切换 | `#btn-view-mode` click | grid ⇄ list 切换，持久化到 localStorage |
-| 作者下拉菜单 | `#menu-authors` pointerenter/click → `fillAuthorMenu` | 点击作者名自动填入搜索框并触发搜索 |
+| 作者下拉菜单 | `#dd-authors`（`initDropdown` 控制器 click 展开，onOpen 钩子每次展开重填 `fillAuthorMenu`——ADR-238 hover 展开已退役） | 点击作者名自动填入搜索框并触发搜索 |
 | 全选 / 反选 | `#sel-all` click | 基于当前可见行切换 `selectState.keys` |
-| 导出骨骼名 | `#repo-export` click | 调用 Go `ExportBoneStructures`，Blob 下载 |
 | 生成仓库索引 | `data-more="genindex"` | 调用 Go `GenerateRepoIndex`，网页版触发下载，桌面端写盘 |
+
+> 2026-10-13 清理：原表中「导出骨骼名 | `#repo-export`」条目删除——grep 全前端无 `repo-export` 元素与 `ExportBoneStructures` 前端调用（Go 绑定仍在，wails-bindings.md 登记），是知识卡遗留的幽灵条目（ADR-053 时代的入口已整体消失）。
 
 `_loadAuthorsAsync` 在 `connectedCallback` 内延迟调用 `loadAuthors` 加载作者列表至 `_authors`，供 `fillAuthorMenu` 填充下拉。
 
@@ -187,12 +189,15 @@ status: active
 
 ## 不变量
 
+- **树键必须避开原型链（ADR-334，2026-10-13）**：建树键直接取自磁盘路径段（`entry.path.split("/")`，无净化），目录/文件恰名 `__proto__` 时，普通对象会沿原型链读到 `Object.prototype` → `= {}` 走**原型 setter**把整棵子树写进全局原型（**全进程污染**），且该目录及子树在 UI **完全不显示**（`Object.keys(root)` 恒不含它）。**故 `buildTree` 的 root 与每个中间目录一律 `Object.create(null)`**；展开态读侧（`index.ts|toggleDir`、`render.ts|flattenVisible`）一律 `Object.hasOwn(dirOpen, key) ? dirOpen[key] === true : false`（口径先例 `utils/icon/workshop-icons.ts`），`readScopedDirOpen` 返回 null 原型副本。遍历侧语义不变（全用 `Object.keys` + 显式 `_e` 过滤）。⚠️ **代价**：null 原型对象没有 `hasOwnProperty`/`toString`，将来若对 `TreeNode` 直接调这些方法须改 `Object.hasOwn(node, ...)`。回归锁 `render.test.ts`「buildTree 键与 Object.prototype 同名」4 例；**写该类测试时构造含 `__proto__` 键的输入必须用 `Object.fromEntries`——对象字面量 `{__proto__:true}` 设的是原型不是 own key**
 - **dirOpen 持久化按 rtype 命名空间（2026-09 收债）**：localStorage `dirOpenState` 值为 `{ [rtype]: { 相对目录: bool } }`（`index.ts` 的 `readScopedDirOpen`/`writeScopedDirOpen` 单点读写）——原平铺键不分类型，不同类型同名目录互相串展开态。旧平铺值无法判定来源，读侧直接忽略（重新展开一次即重建新形态）。
 - **tree:set-search 监听 + 冷启动 pending 消费（2026-09 收债）**：listener 填词后 `takePendingTreeSearch()` 清残；`connectedCallback` 挂载段对称 take 消费（`repo:search-creator` 在 app-tree chunk 未加载时 emit 落空的兜底，词槽在 `utils/dom/search-pending.ts`，写侧 app-content **先 set 再 emit**——bus 同步派发，顺序保证 listener 命中路径能 take 清残）。填词动作单点 `applySearchToInput`（value + input 事件派发，走统一防抖渲染入口）。
 - **文件行键空间契约（ADR-222，2026-09-10）**：file 行的 `TreeRow.key` = **磁盘完整路径**，统一经 `entry-key.ts` 的 `entryKey(e)`（= `e.fullPath || e.path`）取值；与 DOM `data-fullpath`（`row-common.ts` 的 `fp`）、`selectState.keys` / `lastKey`（选中态）**三者同源**。folder 行 key 仍为树内拼接路径（仅服务 `dirOpen` 展开态与 `data-dir` 自洽闭环，不参与选中/批量，**有意的非对称**）。历史病灶：file 行 key 曾用树内拼接路径 `${prefix}/${name}`，与选中态的磁盘路径分裂，致 6 处 `indexOf`/`has` 静默失配且不抛错——Shift 范围选择、右键菜单批量判定、键盘 ↑↓ 导航（`currentIdx` 恒 -1）、全选按钮（`allSelected` 恒 false 且把相对键**混入**选中集污染批量删除）、双击重命名行定位。修复须三处同源，**禁止任何一处另写 `fullPath || path` 表达式**。回归绊线：`render.test.ts`「文件行 key 用 fullPath」+ E2E `tree-multiselect.spec.ts`
 - **渲染层对 `loader.ts` 只许 type-only 依赖**：5 个组件测试 `vi.mock("./loader.ts")` 仅为替换 `loadEntries`，渲染层若值依赖 loader 会在 mock 下取到 `undefined` 并崩整树渲染（实施中已实际触发 20 条测试批量失败）。需被渲染层复用的 `TreeEntry` 派生函数放独立零依赖叶模块（如 `entry-key.ts`），勿并入 `loader.ts`
 - **Go 下发的扫描字段必须逐项透传 TreeEntry（2026-09 对接锐评①教训）**：`loader.ts` 的 map 是 Go `ModelEntry` → 渲染格式的**唯一 seam**，逐字段手抄漏一项就是「Go 白算、渲染白写、中间断」的静默截断——`HasTags` 曾被漏（Go `scanModelEntriesWithHit` 逐条读标签存储填充、`row-tpl` 的 tag-dot 标记与 `.tag-dot` 样式全链存活，唯独 seam 断了，标签圆点永不显示）。现 map 内 `HasTags: e.HasTags || false` 显式归一，回归锁见 `loader.test.ts`「HasTags 由 Go 下发并透传」用例；**给 ModelEntry 加字段时必须检查该 map**
 - 文件名显示统一走 `renderDisplayName()`（治理红线 4.3）；搜索态走 `hl(e.name, search)`（utils/dom/html.ts，同源转义但美化样式在搜索时丢失——P3 观察）
+- **行选中态唯一出口 = 数据渲染（2026-10-13 P0-1 接线，f4d590e12 病灶根治）**：`renderTree` 收 `selectedKeys`（AppTree 传 `state.selectState.keys`，同一 Set 直传勿复制）→ `flattenVisible` → `visibleFileRow` → `fileRowFromEntry` 派生 `rowCls`（命中 = `" selected"`）与搜索态 `hl()` 高亮——`.fl.selected` / `.fl-list.selected` CSS 与 `aria-selected` 由数据渲染单点驱动。**禁止**在渲染管线外手写 `classList.add("selected")` 补丁（原 `_onKeyArrowNav` 双轨已拆除：它会被下一次重渲的 `cloneNode` 冲掉，且鼠标路径完全无覆盖）。folder 行无选中语义（`folderRowHTML` 无 rowCls 形参），`.fh.selected` 死规则已删。回归锁：`render.test.ts`「行选中态随数据渲染」组 + E2E `tree-multiselect.spec.ts` 视觉断言（class + aria-selected——`data-count` 只证数据不证视觉，f4d590e12 断链时五处测试全绿的教训）
+- **单文件开关乐观更新（2026-10-13 P1-2）**：`events.ts` 的 `.ck` 单文件链 = 先本地翻转 `vm.entries` 内该条目的 `banned` 位 + `_renderTree()` 即时反馈，`ToggleEnable` IPC 落盘成功后后台 `_load()` reload 校正真值（Go `InvalidatePath` 已使本次扫描缓存失效，重载必真扫盘）；失败 catch 里本地 revert + error toast。`flipLocal` 按 `entryKey` 匹配，找不到条目（entries 未含该路径）跳过本地翻转、IPC 照发。批量链（`toggleFolderBatch` / `runBatchToggle`）仍是「IPC 全落盘后 reload 取真值」——多条目乐观翻转易与部分失败语义打架，勿轻改。回归锁：`events.test.ts`「乐观更新」三例（IPC 挂起期间本地位已翻 / 失败回滚 / 找不到条目不炸）
 - **「📂 打开文件夹」/「📁 导入文件夹」Android 双端桥（ADR-046）**：两按钮均不可调 Wails Dialog（`SelectDirectory`/`OpenFolder` 在 Android 由官方/Go 守卫报错）——Android 分支统一走 `resolveAndroidRepoDir()`（directory-picker.ts，授权引导 + 定位公共仓库目录 + toast 提示路径），桌面行为不变
 - 使用 Shadow DOM 隔离样式
 - 组件拆分遵循 app-xxx 规范（index/tpl/row-tpl/data/render/events）

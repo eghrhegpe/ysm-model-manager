@@ -80,7 +80,10 @@ function isScopedDirOpenStore(v: unknown): v is DirOpenStore {
 
 function readScopedDirOpen(rtype: string): Record<string, boolean> {
   const stored = safeGetJSON<unknown>("dirOpenState", {});
-  return isScopedDirOpenStore(stored) ? { ...(stored[rtype] || {}) } : {};
+  if (!isScopedDirOpenStore(stored)) return {};
+  // null 原型副本（ADR-334）：存盘数据里的 `__proto__` 键不得经展开落成继承属性，
+  // 否则读侧取到 Object.prototype；展开副本同时避免污染调用方的 stored 对象。
+  return Object.assign(Object.create(null) as Record<string, boolean>, stored[rtype] || {});
 }
 
 function writeScopedDirOpen(rtype: string, dirs: Record<string, boolean>): void {
@@ -151,7 +154,12 @@ export class AppTree extends WebComponentBase {
   }
 
   toggleDir(dir: string): void {
-    const isOpen = this._state.dirOpen[dir];
+    // ⚠️ `Object.hasOwn` 判存在性（ADR-334）：键是磁盘目录名，目录恰名 `__proto__` 时
+    // `this._state.dirOpen[dir]` 会读到 Object.prototype（truthy）→ 取反恒 false →
+    // 该目录永不可折叠。仓内同病先例与修法见 `utils/icon/workshop-icons.ts`。
+    const isOpen = Object.hasOwn(this._state.dirOpen, dir)
+      ? this._state.dirOpen[dir] === true
+      : false;
     this._state.dirOpen[dir] = !isOpen;
     if (isOpen) {
       const prefix = `${dir}/`.replace(/\\/g, "/");
@@ -513,6 +521,10 @@ export class AppTree extends WebComponentBase {
       this._state.dirOpen,
       this._state.filterPaths,
       this._state.renderMode,
+      // 选中态回归数据渲染唯一出口（2026-10-13 P0-1）：此前 rowCls 恒 ""，
+      // .fl.selected 零生产者、aria-selected 恒 false，鼠标选中无视觉反馈；
+      // _onKeyArrowNav 的手写 classList 双轨由本参数接管后拆除。
+      this._state.selectState.keys,
     );
     // 有选中项时不更新 stat（由 updateSelectCount 维护），避免动画覆盖
     if (!this._state.selectState.keys.size) {
@@ -642,25 +654,13 @@ export class AppTree extends WebComponentBase {
         ? Math.min(currentIdx + 1, fileRows.length - 1)
         : Math.max(currentIdx - 1, 0);
     const nextKey = fileRows[nextIdx].key;
-    // 在 selectSingle（内部会把 lastKey 改为 nextKey）之前捕获旧行 key，用它清除旧行
-    // 高亮——原代码在 selectSingle 后读 selectState.lastKey，拿到的已是新行，清除逻辑
-    // 误删新行自己，旧行 .selected 残留（连续 ArrowDown 多行同时高亮）。
-    const oldKey = ss.lastKey;
+    // 选中态唯一出口 = 数据渲染（2026-10-13 P0-1）：_renderTree 按 state.selectState.keys
+    // 产出 .selected / aria-selected——原手写 classList add/remove 双轨（含 selectSingle 前
+    // 捕获 oldKey 的时序补丁）随 rowCls 接线一并拆除，重渲冲掉高亮的根源（rowCls 恒 ""）已除。
     selectSingle(ss, nextKey);
+    this._renderTree();
 
-    if (oldKey && oldKey !== nextKey) {
-      const oldEl = container.querySelector(`[data-fullpath="${CSS.escape(oldKey)}"]`);
-      if (oldEl) {
-        oldEl.classList.remove("selected");
-        oldEl.setAttribute("aria-selected", "false");
-      }
-    }
-    const newEl = container.querySelector(`[data-fullpath="${CSS.escape(nextKey)}"]`);
-    if (newEl) {
-      newEl.classList.add("selected");
-      newEl.setAttribute("aria-selected", "true");
-    }
-
+    // _renderTree 重建行节点 → 滚动定位必须在新 rows 上重查（原引用已失效）
     updateSelectCount(this._root, ss);
     bus.emit("model:select", { path: nextKey, rtype: this._state.rootAttr || RESOURCE_TYPES.YSM });
     rememberModelPath(nextKey);

@@ -14,7 +14,7 @@
     "aria-checked": 7,
     "aria-labelledby": 4,
     "aria-atomic": 1,
-    "aria-selected": 10,
+    "aria-selected": 8,
     "aria-haspopup": 1,
     "aria-hidden": 7,
     "aria-describedby": 3,
@@ -26,7 +26,7 @@
   "coverageNeutral": {
     "prefers-reduced-motion": 2,
     "tabindex": 43,
-    "role": 26
+    "role": 27
   },
   "scatter": {
     "preview-3d/adapters/mount-preview-core.ts": 2,

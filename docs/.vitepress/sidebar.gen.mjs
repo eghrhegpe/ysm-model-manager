@@ -254,6 +254,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-334：app-tree 建树/展开态改 null 原型与 hasOwn 判存在（消除原型链吞键）",
+        "link": "/adr/architecture/ADR-334-app-tree-null-proto-tree-keys"
+      },
+      {
         "text": "ADR-333：同步树防御键 __self 改内部常量（消除与真实段名碰撞）",
         "link": "/adr/architecture/ADR-333-instance-nesttree-selfkey-namespace"
       },

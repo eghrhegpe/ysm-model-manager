@@ -559,3 +559,186 @@ describe("flattenVisible — 深链 + 搜索态栈溢出回归绊线（P2 修复
     15000,
   );
 });
+
+// ===== 行选中态随数据渲染（2026-10-13 P0-1 接线）=====
+// 历史：f4d590e12「消除未使用参数」误删 selCls 计算 → rowCls 恒 ""，.fl.selected CSS
+// 零生产者、aria-selected 恒 false（鼠标选中无视觉反馈）；唯键盘导航手写 classList
+// 补丁（_onKeyArrowNav）双轨存活。修复 = 选中态回归数据渲染唯一出口，本组断言即回归锁：
+// 再有人「消除参数」删掉 selected 通道，这里必红。
+describe("行选中态随数据渲染（rowCls / aria-selected）", () => {
+  it("selectedKeys 含行键 → grid 行含 selected 类且 aria-selected=true", () => {
+    const root = buildTree(
+      [entry("a.ysm", "a.ysm", 0, 0, "/repo/a.ysm"), entry("b.ysm", "b.ysm", 0, 0, "/repo/b.ysm")],
+      "name",
+      null,
+    );
+    const rows = flattenVisible(root, "", "", "name", {}, 0, "grid", new Set(["/repo/a.ysm"]));
+    const sel = rows.find((r) => r.type === "file" && r.key === "/repo/a.ysm")!;
+    expect(sel.html).toContain('class="fl selected"');
+    expect(sel.html).toContain('aria-selected="true"');
+    const unsel = rows.find((r) => r.type === "file" && r.key === "/repo/b.ysm")!;
+    expect(unsel.html).not.toContain('class="fl selected"');
+    expect(unsel.html).toContain('aria-selected="false"');
+  });
+
+  it("list 模式同样生效（fl-list selected）", () => {
+    const root = buildTree([entry("a.ysm", "a.ysm", 0, 0, "/repo/a.ysm")], "name", null);
+    const rows = flattenVisible(root, "", "", "name", {}, 0, "list", new Set(["/repo/a.ysm"]));
+    expect(rows.find((r) => r.type === "file")!.html).toContain('class="fl-list selected"');
+  });
+
+  it("selectedKeys 缺省 / 空集 → 全行无 selected 类（aria-selected=false，两形态都防误报）", () => {
+    const root = buildTree([entry("a.ysm", "a.ysm", 0, 0, "/repo/a.ysm")], "name", null);
+    const rowsNoArg = flattenVisible(root, "", "", "name", {}, 0, "grid");
+    expect(rowsNoArg[0].html).toContain('class="fl"');
+    expect(rowsNoArg[0].html).not.toContain('class="fl selected"');
+    expect(rowsNoArg[0].html).toContain('aria-selected="false"');
+    const rowsEmpty = flattenVisible(root, "", "", "name", {}, 0, "grid", new Set());
+    expect(rowsEmpty[0].html).not.toContain('class="fl selected"');
+  });
+
+  it("选中键空间 = entryKey（fullPath 优先）——Set 存磁盘路径命中", () => {
+    // path（相对）与 fullPath（磁盘）不同的条目：selectedKeys 按 selectState 同源口径存 fullPath
+    const root = buildTree([entry("a.ysm", "folder/a.ysm", 0, 0, "/repo/folder/a.ysm")], "name", null);
+    const rows = flattenVisible(
+      root,
+      "",
+      "",
+      "name",
+      { folder: true },
+      0,
+      "grid",
+      new Set(["/repo/folder/a.ysm"]),
+    );
+    expect(rows.find((r) => r.type === "file")!.html).toContain('class="fl selected"');
+  });
+});
+
+// ===== 搜索态命中高亮（hl <mark>，2026-10-13 P0-2 恢复接线）=====
+// 用户指南 repository.md「匹配字符高亮」+ 知识卡 utils-display.md「搜索态走 hl()」
+// 的承诺在此锁定：搜索态命中段包 <mark>，非搜索态走 renderDisplayName 无 mark。
+describe("搜索态命中高亮（hl <mark>）", () => {
+  it("搜索态文件名命中段包 <mark>", () => {
+    const root = buildTree([entry("hero.ysm", "hero.ysm")], "name", null);
+    const rows = flattenVisible(root, "", "hero", "name", {}, 0, "grid");
+    const file = rows.find((r) => r.type === "file")!;
+    expect(file.html).toContain("<mark>hero</mark>");
+  });
+
+  it("非搜索态走 renderDisplayName，无 mark", () => {
+    const root = buildTree([entry("hero.ysm", "hero.ysm")], "name", null);
+    const rows = flattenVisible(root, "", "", "name", {}, 0, "grid");
+    const file = rows.find((r) => r.type === "file")!;
+    expect(file.html).not.toContain("<mark>");
+  });
+
+  it("list 模式搜索态同样高亮", () => {
+    const root = buildTree([entry("hero.ysm", "hero.ysm")], "name", null);
+    const rows = flattenVisible(root, "", "hero", "name", {}, 0, "list");
+    const file = rows.find((r) => r.type === "file")!;
+    expect(file.html).toContain("<mark>hero</mark>");
+  });
+});
+
+// ===== ADR-334：buildTree 键与继承属性同名 → 全局原型污染 + 子树不显示 =====
+// 键来自磁盘目录名/文件名（无净化）。普通对象的 `current["__proto__"]` 读到继承的
+// Object.prototype（truthy）→ 跳过建节点并把整棵子树写进全局原型：① Object.prototype
+// 被污染（全进程）② 该目录及子树在 UI 完全不显示（Object.keys(root) 恒不含它）。
+// 修法 = 建节点用 Object.create(null)，此类键退化为普通字符串键。
+// 另附 dirOpen 侧同名读缺陷（`dirOpen["__proto__"]` 读到原型 → 目录永不可折叠）。
+//
+// ⚠️ 测试自身的坑：dirOpen 必须用 `Object.fromEntries` / `Object.create(null)` 构造，
+// 对象字面量 `{ __proto__: true }` 会设置**原型**而非 own key，测的就不是产品行为了。
+function dirOpenOf(pairs: Array<[string, boolean]>): Record<string, boolean> {
+  return Object.fromEntries(pairs);
+}
+
+describe("buildTree 键与 Object.prototype 同名（ADR-334）", () => {
+  // 捕获「写进了 Object.prototype」——污染后任意新对象都能读到该键
+  function protoPollutedKeys(): string[] {
+    return Object.keys(Object.prototype);
+  }
+
+  it("__proto__ 目录及其子树可见（不被原型链吞掉）", () => {
+    const before = protoPollutedKeys();
+    const root = buildTree(
+      [
+        entry("a.ysm", "__proto__/a.ysm"),
+        entry("b.ysm", "__proto__/deep/nested/b.ysm"),
+        entry("ok.ysm", "models/ok.ysm"),
+      ],
+      "name",
+      null,
+    );
+    expect(treeKeys(root)).toContain("__proto__");
+    expect(treeKeys(root)).toContain("models");
+    // 展开后子项必须递归可见（子树完整，非只剩壳）
+    const rows = flattenVisible(
+      root,
+      "",
+      "",
+      "name",
+      dirOpenOf([
+        ["__proto__", true],
+        ["__proto__/deep", true],
+        ["__proto__/deep/nested", true],
+        ["models", true],
+      ]),
+      0,
+      "grid",
+    );
+    const keys = rows.map((r) => r.key);
+    expect(keys).toContain("__proto__");
+    // 文件行 key 走 entryKey（磁盘路径，ADR-222 选中态同源），非树内拼接路径
+    expect(keys).toContain("__proto__/deep/nested/b.ysm");
+    expect(keys).toContain("models/ok.ysm");
+    expect(protoPollutedKeys()).toEqual(before);
+  });
+
+  it("名为 __proto__ 的文件（叶子位）同样安全", () => {
+    const before = protoPollutedKeys();
+    const root = buildTree([entry("__proto__", "__proto__")], "name", null);
+    expect(treeKeys(root)).toContain("__proto__");
+    expect(protoPollutedKeys()).toEqual(before);
+  });
+
+  it("constructor / toString 等继承键目录照常建树", () => {
+    const before = protoPollutedKeys();
+    const root = buildTree(
+      [
+        entry("a.ysm", "constructor/a.ysm"),
+        entry("b.ysm", "toString/b.ysm"),
+        entry("c.ysm", "hasOwnProperty/c.ysm"),
+      ],
+      "name",
+      null,
+    );
+    for (const k of ["constructor", "toString", "hasOwnProperty"]) {
+      expect(treeKeys(root), `${k} 目录应建出`).toContain(k);
+    }
+    const rows = flattenVisible(
+      root,
+      "",
+      "",
+      "name",
+      dirOpenOf([
+        ["constructor", true],
+        ["toString", true],
+        ["hasOwnProperty", true],
+      ]),
+      0,
+      "grid",
+    );
+    expect(rows.map((r) => r.key)).toContain("constructor/a.ysm");
+    expect(protoPollutedKeys()).toEqual(before);
+  });
+
+  it("目录行展开态：__proto__ 目录不被恒判为已展开（dirOpen 原型读缺陷）", () => {
+    const root = buildTree([entry("a.ysm", "__proto__/a.ysm")], "name", null);
+    // 空 dirOpen → __proto__ 目录必须是「未展开」，且不递归出子行
+    const rows = flattenVisible(root, "", "", "name", {}, 0, "grid");
+    const dirRow = rows.find((r) => r.type === "folder")!;
+    expect(dirRow.isOpen).toBe(false);
+    expect(rows).toHaveLength(1);
+  });
+});

@@ -1,7 +1,7 @@
 // ===== sidebar 卡片事件绑定测试 =====
 // 覆盖：list 复用（renderVersionCards 只清 innerHTML 不替换 #sidebar-instance-list）时，
 // 旧 handler 闭包仍读到最新 instances（P2 数据陈旧回归）
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const { emitMock, runMcSearchMock, runLauncherDetectMock, currentRepoTypeMock } = vi.hoisted(() => ({
   emitMock: vi.fn(),
@@ -62,12 +62,16 @@ function instance(name: string): SidebarInstance {
 
 function mount(instances: SidebarInstance[]) {
   const host = document.createElement("div");
-  const root = host.attachShadow({ mode: "open" });
-  root.innerHTML = '<div class="list" id="sidebar-instance-list"></div>';
-  const container = root.getElementById("sidebar-instance-list")!;
+  const shadow = host.attachShadow({ mode: "open" });
+  shadow.innerHTML = '<div class="list" id="sidebar-instance-list"></div>';
+  const container = shadow.getElementById("sidebar-instance-list")!;
+  // 2026-10：夹具必须挂进文档——生产里 <app-sidebar> 恒在文档树上，restore 路径的 rAF
+  // 回调现在以 `card.isConnected` 判「是否已被后续渲染替换/组件已卸载」（游离态=放弃高亮与
+  // emit）。此前夹具游离，等于在测一个生产不可能出现的状态，还会掩盖真实游离态的守卫。
+  document.body.appendChild(host);
   renderVersionCards(container, instances);
-  const cleanup = bindCardEvents(root, instances, mockHost);
-  return { root, container, cleanup };
+  const cleanup = bindCardEvents(shadow, instances, mockHost);
+  return { root: shadow, container, cleanup };
 }
 
 beforeEach(() => {
@@ -77,6 +81,11 @@ beforeEach(() => {
   currentRepoTypeMock.mockReturnValue("ysm");
   localStorage.clear();
   mockHost.resetSelectedEmit(); // 隔离去重状态机跨用例串扰
+});
+
+// mount 现在把 host 挂进 document（见其注释），须逐用例清场，防跨用例残留互扰
+afterEach(() => {
+  document.body.innerHTML = "";
 });
 
 describe("bindCardEvents — list 复用数据陈旧回归（P2）", () => {
@@ -204,15 +213,11 @@ describe("restoreSelectedCard 去重状态机（P2 复核修复回归护栏）",
     localStorage.setItem("sb_selectedName_resourcepack", "RP1");
     const rp = instance("RP1");
     rp.rtype = "resourcepack";
-    const host = document.createElement("div");
-    const root = host.attachShadow({ mode: "open" });
-    root.innerHTML = '<div class="list" id="sidebar-instance-list"></div>';
-    const container = root.getElementById("sidebar-instance-list")!;
-    renderVersionCards(container, [rp]);
-    bindCardEvents(root, [rp], mockHost);
+    // 走 mount（已挂进文档）：restore 的 rAF 现以 card.isConnected 判游离态，游离 host 会走
+    // 「已替换/已卸载」分支而放弃 emit（那是生产的正确行为，不该在夹具里制造）
+    mount([rp]);
     await flushRaf();
     expect(emitMock).toHaveBeenCalledTimes(2);
-    void container;
   });
 });
 
@@ -292,11 +297,14 @@ describe("bindCardEvents — 多实例并存互不干扰（模块级状态收敛
 describe("bindFooter", () => {
   function mountFooter() {
     const host = document.createElement("div");
-    const root = host.attachShadow({ mode: "open" });
-    root.innerHTML =
+    const shadow = host.attachShadow({ mode: "open" });
+    shadow.innerHTML =
       '<div class="footer-stats"><span class="stat-item" id="stat-sync">完全同步 -/-</span></div>' +
       '<button class="btn-mc-dir" id="btn-mc">未设置</button>';
-    return { root };
+    // 2026-10：同 mount——必须挂进文档（bindFooter 的异步段现以 btn.isConnected 判卸载，
+    // 游离夹具会把「已卸载」当成常态，既跑不到真实分支、也测不出守卫）
+    document.body.appendChild(host);
+    return { root: shadow };
   }
 
   it("部分同步 → stat-sync 显示 synced/total", () => {
@@ -362,8 +370,27 @@ describe("bindFooter", () => {
     expect(app.SaveAppConfig).toHaveBeenCalled();
   });
 
-  it("btn-mc 点击 → nav:changed 跳设置页", () => {
+  // 2026-10 回归锁：await 期间组件已卸载（host 脱离文档）→ 不得再写游离 DOM，更不得把
+  // mcRoot 落盘（原实现两条都干：一个已卸载的组件改用户配置，是最该禁的侧效果）。
+  it("检测 await 期间卸载 → 不落盘 mcRoot、不写游离按钮", async () => {
+    const app = await import("../../../bindings/ysm-model-manager/internal/app/app.js");
+    (app.LoadAppConfig as ReturnType<typeof vi.fn>).mockResolvedValue({ mcRoot: "" });
+    (app.GetMinecraftPaths as ReturnType<typeof vi.fn>).mockResolvedValue(["/detected"]);
     const { root } = mountFooter();
+    const btn = root.getElementById("btn-mc") as HTMLElement;
+    const before = btn.textContent;
+    bindFooter(root, []);
+    // 模拟卸载：宿主摘出文档（footer 的 await 尚未落地）
+    document.body.innerHTML = "";
+    expect(btn.isConnected).toBe(false);
+    // 排空异步链（getApp → LoadAppConfig → GetMinecraftPaths 三段 await）
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(app.SaveAppConfig).not.toHaveBeenCalled(); // 关键：卸载后不得落盘
+    expect(btn.textContent).toBe(before); // 游离 DOM 也不再改写
+  });
+
+  it("btn-mc 点击 → nav:changed 跳设置页", () => {    const { root } = mountFooter();
     bindFooter(root, []);
     (root.getElementById("btn-mc") as HTMLElement).click();
     expect(emitMock).toHaveBeenCalledWith("nav:changed", { page: "settings" });
@@ -638,6 +665,19 @@ describe("restoreSelectedCard 兜底分支", () => {
       '<div class="list" id="sidebar-instance-list">' +
       '<div class="instance-card" data-idx="0"></div></div>';
     bindCardEvents(root, [instance("A1")], mockHost);
+    await flushRaf();
+    expect(emitMock).not.toHaveBeenCalledWith("package:selected", expect.anything());
+  });
+
+  // 2026-10 回归锁：rAF 落地前卡片已游离（列表被后续 _reload 重渲染替换 / 组件卸载）——
+  // 原实现照样给游离节点打 .active 并 emit 全局 package:selected（组件已卸载后仍能「复活」
+  // 一个选中态）。现以 card.isConnected 判据放弃整段收尾。
+  it("rAF 落地前卡片已脱离文档（重渲染替换/卸载）→ 不高亮、不 emit", async () => {
+    localStorage.setItem("sb_selectedName_ysm", "A1");
+    const { container } = mount([instance("A1")]);
+    // 模拟组件卸载 / 列表被替换：把宿主整体摘出文档（restore 的 rAF 此时尚未落地）
+    document.body.innerHTML = "";
+    expect(container.querySelector(".instance-card")!.isConnected).toBe(false);
     await flushRaf();
     expect(emitMock).not.toHaveBeenCalledWith("package:selected", expect.anything());
   });

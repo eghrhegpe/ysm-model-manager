@@ -250,6 +250,12 @@ function restoreSelectedCard(
     if (!card) return;
     // 用 requestAnimationFrame 确保 DOM 渲染完成后再标记高亮
     requestAnimationFrame(() => {
+      // 2026-10 守卫：卡片在 rAF 落地前可能已**游离**——列表被后续 _reload 重渲染替换
+      // （该卡片节点被丢弃）或组件已卸载。原实现毫无检查：照样给游离节点打 .active
+      // （屏幕上看不见，白做），照样 `bus.emit("package:selected")`——组件已卸载后仍能在
+      // 全局「复活」一个选中态（app-content 会据此挂/改同步面板）。`isConnected` 一次判据
+      // 同时覆盖两种游离态，是这里唯一可信的「还在树上」信号。
+      if (!card.isConnected) return;
       const hdr = card.querySelector(".instance-card-header");
       if (!hdr) return;
       hdr.classList.add("active");
@@ -291,6 +297,11 @@ export function bindFooter(root: ShadowRoot, instances: SidebarInstance[]): void
       try {
         const { LoadAppConfig, GetMinecraftPaths } = await backendGetApp();
         const cfg = await LoadAppConfig();
+        // 2026-10 守卫：await 期间组件可能已卸载（侧栏随页面世代重建）。原实现无检查——
+        // 既写游离 DOM，还会在「未配置 + 检测到路径」分支把 mcRoot **落盘**：一个已卸载的
+        // 组件不该再改用户配置。`btn.isConnected` 是这里唯一可信的存活信号（按钮在 shadow 内，
+        // 宿主脱离文档即 false；与 restoreSelectedCard 的 rAF 守卫同口径）。
+        if (!btn.isConnected) return;
         if (cfg.mcRoot) {
           // 路径是外部数据（配置/磁盘枚举），文本槽必 esc——R8 模板插值卫生回归锁见 events.test.ts
           // 展示用 shortenPath 保留末两段（…\Roaming\.minecraft），完整路径交 title——
@@ -301,6 +312,8 @@ export function bindFooter(root: ShadowRoot, instances: SidebarInstance[]): void
         } else {
           // 没设置时自动检测：用第一个有效路径
           const paths = await GetMinecraftPaths();
+          // 二次守卫：GetMinecraftPaths 是慢路径（扫常见安装位），期间卸载概率更高
+          if (!btn.isConnected) return;
           if (paths?.length) {
             btn.innerHTML = `${UI_ICONS.game} ${esc(shortenPath(paths[0]))}`;
             btn.title = paths[0];
@@ -316,6 +329,7 @@ export function bindFooter(root: ShadowRoot, instances: SidebarInstance[]): void
           }
         }
       } catch (e) {
+        if (!btn.isConnected) return; // 卸载后不必再收拾游离 DOM
         btn.innerHTML = `${UI_ICONS.game} ${t("sidebar.notSet")}`;
         btn.title = t("sidebar.configGameDir");
         btn.removeAttribute("aria-label");

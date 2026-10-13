@@ -47,8 +47,12 @@ auto_fields:
     - DownloadState
     - DownloadTask
     - enqueueDownloads
+    - FETCH_MODELS_FAILURES
     - fetchCommunityCreators
     - fetchCommunitySites
+    - FetchModelsFailure
+    - FetchModelsFailureError
+    - fetchModelsFailureKind
     - FetchModelsResult
     - fillSearch
     - filterModels

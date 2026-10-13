@@ -14,7 +14,6 @@ import {
   getAvatarSnapshot,
   setAvatar,
 } from "@/features/community/creator-avatar-store.ts";
-import { safeGet } from "@/utils/base/primitives/storage.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { esc } from "@/utils/html/html.ts";
 import { type RenderSiteViewCtx, renderSiteView } from "@/views/app-content/site/site-view.ts";
@@ -26,7 +25,7 @@ import {
 } from "@/views/app-content/site/workshop-browse-mode.ts";
 import type { AppContentHost } from "./host.ts";
 import { extractAvatars } from "./site/workshop-avatar.ts";
-import { WS_ACTIVE_TAG_KEY, WS_SEARCH_KW_KEY } from "./site/workshop-data.ts";
+import { loadActiveTag, loadSearchKw } from "./site/workshop-data.ts";
 import { createWorkshopPageState } from "./site/workshop-page-state.ts";
 import { bindSiteEvents, openSite } from "./site/workshop-site-opener.ts";
 import { createWorkshopRefs, initWorkshopTabs } from "./site/workshop-tabs.ts";
@@ -107,8 +106,9 @@ export function initWorkshopPage(host: AppContentHost): void {
       avatarCache: getAvatarSnapshot(),
       browseMode: browseModeRef,
       setBrowseMode,
-      activeTag: safeGet(WS_ACTIVE_TAG_KEY) || "",
-      searchKw: safeGet(WS_SEARCH_KW_KEY) || "",
+      // 筛选态按本站 id 分域读取（历史缺陷：全局单键，切站点后旧标签套到新站 → 网格全空白）
+      activeTag: loadActiveTag(site.id),
+      searchKw: loadSearchKw(site.id),
       // 重渲染（编辑切换/保存/拖拽/搜索等）经同一 wrapper：先跑旧 cleanup 再存新
       // cleanup（见 runPrevSiteViewCleanup 注释），供 site-view 的 refreshView 调用。
       reRender: () => {

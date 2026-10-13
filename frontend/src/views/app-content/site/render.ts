@@ -11,7 +11,13 @@ import { getTagIconFromRole } from "@/utils/icon/workshop-icons.ts";
 import type { WorkshopSite } from "@/utils/types-re-export.ts";
 import type { LocalCreatorLike, RepoAuthorLike } from "./types.ts";
 import type { BrowseModeRef } from "./workshop-browse-mode.ts";
-import { getTagDisplayLabel, getTagFromRole, loadFavs, parseSiteIds } from "./workshop-data.ts";
+import {
+  compareFavFirst,
+  getTagDisplayLabel,
+  getTagFromRole,
+  loadFavs,
+  parseSiteIds,
+} from "./workshop-data.ts";
 
 /** 创作者卡片工厂上下文 */
 export interface CrCardCtx {
@@ -154,18 +160,14 @@ function buildSiteSearchSection(ctx: BuildSiteHtmlCtx): string {
   );
 }
 
-/** 收藏置顶排序（P2-8 锐评：不再就地改 ctx.creators——buildSiteHtml 保持纯函数无副作用。返回新数组）。 */
+/** 收藏置顶排序（P2-8 锐评：不再就地改 ctx.creators——buildSiteHtml 保持纯函数无副作用。返回新数组）。
+ *  比较器为 compareFavFirst（workshop-data.ts 单源），与收藏后 DOM 就地重排共用同一口径。 */
 function sortCreatorsFavedFirst(
   creators: LocalCreatorLike[],
   authorCountMap: Record<string, number>,
 ): LocalCreatorLike[] {
   const faved = loadFavs();
-  return [...creators].sort((a, b) => {
-    const af = faved.includes(a.name) ? 1 : 0;
-    const bf = faved.includes(b.name) ? 1 : 0;
-    if (af !== bf) return bf - af;
-    return (authorCountMap[b.name] || 0) - (authorCountMap[a.name] || 0);
-  });
+  return [...creators].sort((a, b) => compareFavFirst(a, b, faved, authorCountMap));
 }
 
 /**
@@ -248,7 +250,17 @@ export function computeCreatorTiers(
   return out;
 }
 
-/** 分类标签过滤按钮行：固定 全部/creator/official + 动态角色标签。 */
+/**
+ * 分类标签过滤按钮行：**固定「全部」+ 按本站实际存在的身份派生**。
+ *
+ * 历史缺陷：本行曾硬编码三个按钮（全部 / 创作者 / 官方），与本站数据无关。
+ * 对着 creators.json 实测 10 个站点：只有 mzhouse 有 official 条目，其余 9 站
+ * 点了「官方」必然 0 结果（掉进空态）；另有多站全是 creator，「创作者」与「全部」
+ * 结果集完全相同，是个纯死按钮。即「按钮不是数据算出来的，是猜出来的」。
+ *
+ * 现按 tagSet 派生：站内出现过的身份才给按钮（含 getTagFromRole 的 ""→creator 默认
+ * 归类，故默认身份者仍归「创作者」档，不会漏）。「全部」恒在。
+ */
 function buildSiteTagFilterRow(ctx: BuildSiteHtmlCtx): string {
   const { esc, creators, activeTag } = ctx;
   const tagSet = new Set<string>();
@@ -256,28 +268,24 @@ function buildSiteTagFilterRow(ctx: BuildSiteHtmlCtx): string {
     const tag = getTagFromRole(cr.role);
     if (tag) tagSet.add(tag);
   });
-  const tags = [...tagSet];
+  // 顺序稳定：creator → official → 其余按 role 枚举顺序，保证同数据多次渲染按钮序一致。
+  // 类型取 string[] 而非 as const 字面量联合——未知 role 需能 push 进同一数组。
+  const ORDERED_ROLES: readonly string[] = ["creator", "official", "vup", "oc", "repo"];
+  const tags: string[] = ORDERED_ROLES.filter((r) => tagSet.has(r));
+  // tagSet 中的未知 role（非枚举内）追加在后，保证未来新增身份不丢
+  for (const tag of tagSet) {
+    if (!tags.includes(tag)) tags.push(tag);
+  }
   const filterBtn = (tag: string, delay: number, inner: string) =>
     `<button class="cr-tag-filter-btn${
       activeTag === tag ? " active" : ""
     }" style="animation-delay:${delay}ms" data-tag="${esc(tag)}">${inner}</button>`;
+  const displayLabel = (tag: string) =>
+    `${getTagIconFromRole(tag)} <span>${esc(getTagDisplayLabel(tag))}</span>`;
   return (
     `<div class="cr-tag-filter-row">` +
     filterBtn("", 0, t("content.filterAll")) +
-    filterBtn("creator", 30, t("content.filterCreator")) +
-    filterBtn("official", 60, t("content.filterOfficial")) +
-    tags
-      .filter((tag) => tag !== "creator" && tag !== "official")
-      .map((tag, i) =>
-        filterBtn(
-          tag,
-          stagger(i + 3, 30, 300),
-          // 锐评 P0-4 / 复核 P1-3：展示文案走 getTagDisplayLabel 单源（已知身份 → i18n label；
-          // 未知 tag 原样显示，不冒充 YSM 创作者）；data-tag 仍用原始 id（过滤键 = 数据语义）。
-          `${getTagIconFromRole(tag)} <span>${esc(getTagDisplayLabel(tag))}</span>`,
-        ),
-      )
-      .join("") +
+    tags.map((tag, i) => filterBtn(tag, stagger(i + 1, 30, 300), displayLabel(tag))).join("") +
     `</div>`
   );
 }
@@ -286,12 +294,14 @@ function buildSiteTagFilterRow(ctx: BuildSiteHtmlCtx): string {
  * tier 图例行（P0-1/P2-1 锐评）：原 gold/silver 只有 2px 色条 + 光环，无任何文字
  * 说明其「按本地模型数排名」的语义——无图例时用户无法得知这两档凭什么区分。
  * 有任一 gold/silver 分档卡才渲染（纯展示，不参与过滤）。
+ *
+ * ⚠️ tiers 由调用方传入（已算好的分档表）：本函数只需「是否有分档卡」一个布尔，
+ *   早期版本在此重新 computeCreatorTiers，等于每次渲染多跑一轮 O(n log n) 排序。
  */
 function buildTierLegendRow(
   creators: LocalCreatorLike[],
-  authorCountMap: Record<string, number>,
+  tiers: Record<string, "" | "gold" | "silver">,
 ): string {
-  const tiers = computeCreatorTiers(creators, authorCountMap);
   const hasTierCard = creators.some((cr) => tiers[cr.name]);
   if (!hasTierCard) return "";
   return (
@@ -337,7 +347,8 @@ function buildSiteBrowseSection(ctx: BuildSiteHtmlCtx): string {
     //（旧实现按产量名次计延迟，置顶卡入场乱序），且经 stagger() 带 300ms 封顶
     const tiers = computeCreatorTiers(creators, authorCountMap);
     // P0-1/P2-1 锐评：tier 无图例、排序依据不可见——有分档卡才渲染迷你图例行
-    parts.push(buildTierLegendRow(creators, authorCountMap));
+    // （复用上面已算好的 tiers，不重复跑第二轮排序）
+    parts.push(buildTierLegendRow(creators, tiers));
     const cardsHtml = sortedCreators
       .map((cr, i) =>
         createCrCard(cr, {

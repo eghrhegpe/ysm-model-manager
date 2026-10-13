@@ -3,6 +3,7 @@
 import type { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { dbg } from "@/utils/debug/debug.ts";
+import { deepActiveElement, deepActiveElementOf } from "@/utils/dom/deep-active-element.ts";
 import { qs, qsa } from "@/utils/dom/qsa.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { trapFocusAcrossShadow } from "@/utils/dom/trap-focus-across-shadow.ts";
@@ -13,6 +14,7 @@ import type { CleanupFn, LocalCreatorLike, SiteViewState } from "./types.ts";
 import type { BrowseMode } from "./workshop-browse-mode.ts";
 import {
   type CreatorIdentityInput,
+  compareFavFirst,
   FAV_CREATORS_KEY,
   getCreatorIdentity,
   getTagDisplayLabel,
@@ -226,7 +228,10 @@ function cmCrCreateDetailOverlay(
   overlay.setAttribute("role", "dialog");
   overlay.setAttribute("aria-modal", "true");
   overlay.tabIndex = -1;
-  const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  // 深焦解析取触发元素：网格在 shadow root 内，document.activeElement 是 host，
+  // 直接取会让「关闭浮层后焦点归还触发卡片」失效（归还到 host = 用户视觉上丢失焦点）。
+  const openerEl = deepActiveElement();
+  const opener = openerEl instanceof HTMLElement ? openerEl : null;
   const close = () => {
     // P0-3 锐评：aria-modal 承诺了模态，必须 trapFocus（Tab 不许逃到页面背后）；
     // 关闭即释放，防 doc keydown 监听残留（WeakMap 注册表见模块头）
@@ -300,7 +305,11 @@ function cmBbBindModeToggle(
   });
 }
 
-function cmBbBindStarBtns(searchResults: HTMLElement, busRef: typeof bus): void {
+function cmBbBindStarBtns(
+  searchResults: HTMLElement,
+  authorCountMap: Record<string, number>,
+  busRef: typeof bus,
+): void {
   qsa<HTMLElement>(searchResults, ".cr-star-btn").forEach((btn) => {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -310,13 +319,9 @@ function cmBbBindStarBtns(searchResults: HTMLElement, busRef: typeof bus): void 
       const starHtml = now ? UI_ICONS.starFilled : UI_ICONS.star;
       btn.innerHTML = starHtml;
       const card = btn.closest(".gh-card");
-      if (card) {
-        const grid2 = card.closest(".cr-creator-grid");
-        if (now) {
-          grid2?.insertBefore(card, grid2.firstChild);
-        } else {
-          grid2?.appendChild(card);
-        }
+      const grid = card?.closest(".cr-creator-grid");
+      if (card instanceof HTMLElement && grid instanceof HTMLElement) {
+        cmCrReorderCard(grid, card, authorCountMap);
       }
       busRef.emit("toast:show", {
         msg: now ? t("content.favAddedName", { name }) : t("content.favRemovedName", { name }),
@@ -325,6 +330,41 @@ function cmBbBindStarBtns(searchResults: HTMLElement, busRef: typeof bus): void 
       });
     });
   });
+}
+
+/**
+ * 收藏状态变更后，就地把该卡片移动到**规则应处的位次**。
+ *
+ * 历史缺陷：本处曾手写「收藏 → insertBefore(firstChild) / 取消收藏 → appendChild 队尾」，
+ * 与 render.ts|sortCreatorsFavedFirst 的排序规则（收藏置顶 + 组内产量降序）**反向**——
+ * 产量最高的创作者取消收藏后被沉到队尾；且不触发重渲染，错乱持续到整树重建。
+ *
+ * 现改为就地按**同一比较器**（workshop-data.ts|compareFavFirst 单源）重排整张网格：
+ * 只搬运被点的那一张卡（其余节点不动），故滚动位置与展开态不丢——不整树重渲染。
+ * 用 insertBefore(anchor) 表达目标位次，避免 appendChild 盲插。
+ */
+function cmCrReorderCard(
+  grid: HTMLElement,
+  card: HTMLElement,
+  authorCountMap: Record<string, number>,
+): void {
+  const faved = loadFavs();
+  const cardName = card.dataset.name || "";
+  // 目标位次 = 在「其余卡 + 本卡」的全量序里，本卡应排第几。比较器与渲染期完全一致。
+  const rankOf = (el: HTMLElement): number => {
+    const elName = el.dataset.name || "";
+    const self = { name: elName };
+    const thisCard = { name: cardName };
+    return compareFavFirst(self, thisCard, faved, authorCountMap);
+  };
+  // 找到第一张「排在本卡之后」的卡，插到它前面；本卡应在最后则 appendChild。
+  const others = qsa<HTMLElement>(grid, ".gh-card").filter((el) => el !== card);
+  const anchor = others.find((el) => rankOf(el) > 0);
+  if (anchor) {
+    grid.insertBefore(card, anchor);
+  } else {
+    grid.appendChild(card);
+  }
 }
 
 function cmBbBindSearchBtns(
@@ -415,7 +455,12 @@ function cmBbBindKeyboardNav(searchResults: HTMLElement): void {
   if (crGrid) {
     crGrid.addEventListener("keydown", ((e: KeyboardEvent) => {
       const cards = qsa<HTMLElement>(crGrid, ".gh-card[tabindex]");
-      const cur = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      // 深焦解析：创作者网格位于 app-content 的 shadow root 内，按 DOM retargeting 规则
+      // `document.activeElement` 返回的是 **shadow host** 而非内层卡片 → 直接用它的
+      // cards.indexOf(cur) 恒 -1，↑↓←→ 与 Enter/Space 激活全线早退（曾长期 100% 失效，
+      // 且被把夹具挂 document.body 的 light-DOM 单测掩盖成「测绿」）。单源出口见
+      // utils/dom/deep-active-element.ts。
+      const cur = deepActiveElementOf(cards);
       const idx = cur ? cards.indexOf(cur) : -1;
       if (idx < 0) return;
       if (e.key === "ArrowDown" || e.key === "ArrowRight") {
@@ -487,7 +532,7 @@ export function bindBrowseEvents(state: SiteViewState, refreshView: () => void):
   cmBbBindEmptyLocalBtn(searchResults, busRef);
   cmBbBindPresetSearchBtns(searchResults, site, openUrl, fillSearch);
   cmBbBindModeToggle(searchResults, state, refreshView);
-  cmBbBindStarBtns(searchResults, busRef);
+  cmBbBindStarBtns(searchResults, authorCountMap, busRef);
   cmBbBindSearchBtns(searchResults, site, openUrl, fillSearch);
   cmBbBindLocalBadges(searchResults, busRef);
   cmBbBindDebugAvatar(searchResults, getDisposed);

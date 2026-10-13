@@ -26,6 +26,7 @@ auto_fields:
     - buildSiteHtml
     - BuildSiteHtmlCtx
     - CleanupFn
+    - compareFavFirst
     - computeCreatorTiers
     - CrCardCtx
     - createBrowseModeRef
@@ -35,20 +36,25 @@ auto_fields:
     - DragSortSpec
     - DragStateShell
     - FAV_CREATORS_KEY
+    - FavSortInput
     - getCreatorIdentity
     - getTagDisplayLabel
     - getTagFromRole
     - isFaved
     - joinSiteIds
+    - loadActiveTag
     - loadBrowseMode
     - loadFavs
+    - loadSearchKw
     - LocalCreatorLike
     - parseDescTags
     - parseSiteIds
     - renderSiteView
     - RenderSiteViewCtx
     - RepoAuthorLike
+    - saveActiveTag
     - saveBrowseMode
+    - saveSearchKw
     - SiteViewState
     - toggleFav
     - workshopTpl

@@ -3,7 +3,6 @@
 import { t } from "@/core/i18n/t.ts";
 import * as m from "@/features/community/community-data.ts";
 import { fetchModelsFailureKind } from "@/features/community/data.ts";
-import { safeSet } from "@/utils/base/primitives/storage.ts";
 import { moveItemMut } from "@/utils/base/pure/array.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { modalConfirm } from "@/utils/dom/modal-confirm.ts";
@@ -16,7 +15,7 @@ import { backendGetApp } from "@/views/backend-deps.ts";
 import { bindDragSort, type DragStateShell } from "./edit-drag.ts";
 import { buildCreatorEditCard } from "./render.ts";
 import type { CleanupFn, LocalCreatorLike, SiteViewState } from "./types.ts";
-import { joinSiteIds, parseSiteIds, WS_ACTIVE_TAG_KEY, WS_SEARCH_KW_KEY } from "./workshop-data.ts";
+import { joinSiteIds, parseSiteIds, saveActiveTag, saveSearchKw } from "./workshop-data.ts";
 
 interface FilterStateShell {
   activeTag: string;
@@ -105,10 +104,19 @@ function eeApplyFilters(
   // 同 render.ts createCrCard 的 desc 口径——本地条目 _fromLocal 时现取 i18n 提示），
   // 不再读 .cr-card-desc DOM 文案（文案经 esc()/i18n 渲染后与数据层可能不同）；
   // 数据层查无（DOM 有卡但 creators 缺该 name，如测试 fixture）时兜底读 DOM，向后兼容。
+  //
+  // 索引表（2026-10 锐评）：原实现每张卡 `creators.find(c => c.name.toLowerCase() === name)`
+  // ——卡片数 × 创作者数的 O(n²)，且每次比较都重新小写化一次字符串；筛选挂在
+  // searchInput 的 input 事件上（无 debounce），每次按键放大一遍。现按小写 name 建
+  // Map 一次、每卡 O(1) 命中，与同文件已有的 authorCountMap 索引范式同构。
+  const creatorByName = new Map<string, LocalCreatorLike>();
+  creators.forEach((c) => {
+    creatorByName.set((c.name || "").toLowerCase(), c);
+  });
   let visible = 0;
   cards.forEach((card) => {
     const name = (card.dataset.name || "").toLowerCase();
-    const creator = creators.find((c) => c.name.toLowerCase() === name);
+    const creator = creatorByName.get(name);
     const desc =
       creator !== undefined
         ? (creator.desc || (creator._fromLocal ? t("community.fromLocal") : "")).toLowerCase()
@@ -202,7 +210,14 @@ function eeBindToolbarBtns(state: SiteViewState, refreshView: () => void, sig: A
             ".cr-edit-card[data-edit='preset'] input[data-fld='label']",
           ).forEach((inp) => {
             const val = inp.value.trim();
-            if (val) newPresets.push({ label: val } as WorkshopPresetSearch);
+            if (!val) return;
+            // q 字段必须从原数组回读、不得丢（历史缺陷：这里曾只 push { label }，
+            // q 被静默丢弃 → Go saveWorkshopPresetsBySite 整数组替换落盘，用户哪怕
+            // 一个字没改、点一次保存，就把「热门日系模型 → MMD」永久覆盖成 q=label）。
+            // 契约：编辑界面只有 label 一个输入位，q 不由用户改 → 恒取原值。
+            const idx = parseInt(inp.dataset.idx || "-1", 10);
+            const original = site.presetSearches?.[idx];
+            newPresets.push({ label: val, q: original?.q ?? "" });
           });
           await SaveWorkshopPresetsBySite(site.id, newPresets);
           site.presetSearches = newPresets;
@@ -576,14 +591,16 @@ function eeBindPresetsDrag(
 }
 
 function eeBindGithubFilter(state: SiteViewState, fs: FilterStateShell, sig: AbortSignal): void {
-  const { searchResults, creators } = state;
+  const { searchResults, creators, site } = state;
+  // 筛选态按本站 id 分域存储（历史缺陷：全局单键 → 切站点后旧标签套到新站，网格空白）
+  const siteId = site?.id || "";
 
   const searchInput = searchResults.querySelector("#ws-cr-search") as HTMLInputElement | null;
   if (searchInput) {
     searchInput.addEventListener(
       "input",
       () => {
-        safeSet(WS_SEARCH_KW_KEY, searchInput.value);
+        saveSearchKw(siteId, searchInput.value);
         eeApplyFilters(searchResults, searchInput, fs, creators);
       },
       { signal: sig },
@@ -599,10 +616,10 @@ function eeBindGithubFilter(state: SiteViewState, fs: FilterStateShell, sig: Abo
       const target = e.target as HTMLElement | null;
       if (!target?.closest("[data-clear-filter]")) return;
       fs.activeTag = "";
-      safeSet(WS_ACTIVE_TAG_KEY, "");
+      saveActiveTag(siteId, "");
       if (searchInput) {
         searchInput.value = "";
-        safeSet(WS_SEARCH_KW_KEY, "");
+        saveSearchKw(siteId, "");
       }
       searchResults.querySelectorAll(".cr-tag-filter-btn").forEach((b) => {
         b.classList.toggle(
@@ -620,7 +637,7 @@ function eeBindGithubFilter(state: SiteViewState, fs: FilterStateShell, sig: Abo
       "click",
       () => {
         fs.activeTag = btn.dataset.tag || "";
-        safeSet(WS_ACTIVE_TAG_KEY, fs.activeTag);
+        saveActiveTag(siteId, fs.activeTag);
         searchResults.querySelectorAll(".cr-tag-filter-btn").forEach((b) => {
           b.classList.toggle("active", b === btn);
         });

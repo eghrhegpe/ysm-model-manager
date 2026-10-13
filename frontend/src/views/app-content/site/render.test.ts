@@ -117,14 +117,17 @@ describe("buildSiteHtml 浏览态", () => {
     expect(root.querySelector(".placeholder-box")).toBeNull();
   });
 
-  it("3. 标签过滤行：固定 全部/creator/official + 动态角色标签 + active 高亮", () => {
+  it("3. 标签过滤行：按本站实际身份派生 + active 高亮（不再硬编码三按钮）", () => {
     const creators = [
       { name: "甲", role: "vup" },
       { name: "乙", role: "official" },
     ] as LocalCreatorLike[];
     const root = renderHtml(makeCtx({ creators, activeTag: "official" }));
     const btns = [...root.querySelectorAll<HTMLElement>(".cr-tag-filter-btn")];
-    expect(btns.map((b) => b.dataset.tag)).toEqual(["", "creator", "official", "vup"]);
+    // 恒有「全部」+ 本站实际存在的身份（此处 vup + official）。顺序 = 固定身份序。
+    // 历史缺陷：曾硬编码 全部/creator/official 三项，与本站数据无关——实测 10 个站点
+    // 中 9 个没有 official，那 9 站点「官方」必得 0 结果（实测 creators.json）。
+    expect(btns.map((b) => b.dataset.tag)).toEqual(["", "official", "vup"]);
     // 锐评 P0-4：动态 tag 按钮的展示文案走真实 getTagDisplayLabel（i18n label 单源），
     // 不再是裸 role id（ja/en 用户曾直接看到 "vup"/"oc"）；data-tag 仍为过滤键原始 id。
     const vupBtn = root.querySelector<HTMLElement>('.cr-tag-filter-btn[data-tag="vup"]');
@@ -139,6 +142,21 @@ describe("buildSiteHtml 浏览态", () => {
     // activeTag 为空 → 「全部」按钮 active
     const root2 = renderHtml(makeCtx({ creators }));
     expect(root2.querySelector('.cr-tag-filter-btn[data-tag=""]')?.classList.contains("active")).toBe(true);
+  });
+
+  it("3a. 本站不存在的身份不出按钮（死按钮回归：点了必 0 结果）", () => {
+    // 全站 creator 场景（实测 bilibili/afdian/booth/deviantart 等 6 站如此）：
+    // 「官方」按钮不该出现，「创作者」不该与「全部」等价重复出现
+    const allCreator = [
+      { name: "甲", role: "creator" },
+      { name: "乙" }, // 无 role → getTagFromRole 归 creator
+    ] as LocalCreatorLike[];
+    const root = renderHtml(makeCtx({ creators: allCreator }));
+    const tags = [...root.querySelectorAll<HTMLElement>(".cr-tag-filter-btn")].map(
+      (b) => b.dataset.tag,
+    );
+    expect(tags).toEqual(["", "creator"]);
+    expect(root.querySelector('.cr-tag-filter-btn[data-tag="official"]')).toBeNull();
   });
 
   it("3b. 未知 tag → 原样显示（不冒充 YSM 创作者，否则文案与 data-tag 过滤语义不符）", () => {

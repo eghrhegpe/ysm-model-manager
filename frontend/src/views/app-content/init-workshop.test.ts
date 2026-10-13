@@ -249,9 +249,13 @@ describe("initWorkshopPage — showSiteView 与 ctx", () => {
     expect(ctx.esc("<b>&\"'")).toBe("&lt;b&gt;&amp;&quot;&#39;");
   });
 
-  it("ctx 读取 localStorage 预置的 activeTag / searchKw", () => {
-    localStorage.setItem("ysm-ws-active-tag", "tagA");
-    localStorage.setItem("ysm-ws-search-kw", "小红");
+  it("ctx 读取 localStorage 预置的 activeTag / searchKw（按站点 id 分域）", () => {
+    // 筛选态按站点分域（键 = 前缀:siteId）：历史缺陷是全局单键，切站点后旧标签
+    // 套到新站 → bindEditEvents 末尾立刻全量隐藏 → 网格空白而按钮仍高亮。
+    localStorage.setItem(`ysm-ws-active-tag:${site.id}`, "tagA");
+    localStorage.setItem(`ysm-ws-search-kw:${site.id}`, "小红");
+    // 他站的筛选态不得串到本站
+    localStorage.setItem("ysm-ws-active-tag:otherSite", "tagOTHER");
     const { host } = makeHost();
     initWorkshopPage(host);
     getShowSiteView()(site);

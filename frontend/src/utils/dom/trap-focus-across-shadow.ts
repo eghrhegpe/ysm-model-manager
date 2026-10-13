@@ -6,6 +6,8 @@
 // 也能拦截（防逃出 3D 全屏到背后树面板等）。单例模式：多次调用时清理旧的。
 // 消费方：preview-3d mount-preview-core 等。
 
+import { deepActiveElement } from "./deep-active-element.ts";
+
 /** 可聚焦元素选择器（与 dialog-modal.ts trapFocus 同源，排除 disabled 与 tabindex=-1） */
 const TABBABLE_SEL =
   "button:not([disabled]),input:not([disabled]),select:not([disabled])," +
@@ -106,10 +108,8 @@ export function trapFocusAcrossShadow(overlay: HTMLElement): () => void {
     // 深焦解析：document.activeElement 对 shadow 内聚焦元素做 retargeting，
     // 返回的是 host 而非内层元素——沿 shadowRoot.activeElement 下钻到真实聚焦元素，
     // 否则 Set.has(active) 对 shadow 恒为 false，Tab 退化成 first/last 乒乓。
-    let active: Element | null = document.activeElement as Element | null;
-    while (active?.shadowRoot?.activeElement) {
-      active = active.shadowRoot.activeElement;
-    }
+    // 单源出口见 utils/dom/deep-active-element.ts。
+    const active = deepActiveElement();
     // 焦点落在 tabbable 元素上（含 shadow 内，深焦解析后）才允许浏览器自然 Tab 循环；
     // 否则（overlay 背景 / overlay 外）一律收拢回 first/last——防焦点逃出 overlay。
     // 缓存未命中但焦点仍在 overlay 子树内 → 可能是 shadow 内部新增了可聚焦元素

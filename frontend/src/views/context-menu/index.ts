@@ -4,6 +4,7 @@
 import { bus, type MenuItem } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { noAnimationsCSS, wsIconCSS } from "@/utils/dom/css.ts";
+import { deepActiveElement } from "@/utils/dom/deep-active-element.ts";
 import { WebComponentBase } from "@/utils/dom/web-component-base.ts";
 import { esc } from "@/utils/html/html.ts";
 import { resolveIcon } from "@/utils/icon/resolve.ts";
@@ -34,13 +35,9 @@ class ContextMenu extends WebComponentBase {
       const menu = this.shadowRoot?.getElementById("menu");
       if (!menu || this.style.display === "none") return;
       // 深焦解析：document.activeElement 对 shadow 内聚焦元素 retarget 成 host——
-      // 沿 shadowRoot.activeElement 下钻到真实聚焦元素（范式见 utils/dom/focus-restore.ts
-      // trapFocusAcrossShadow），否则 indexOf/classList 对 host 恒 false，键盘导航整体失效
-      let active: Element | null = document.activeElement as Element | null;
-      while (active?.shadowRoot?.activeElement) {
-        active = active.shadowRoot.activeElement;
-      }
-      const activeEl = active as HTMLElement | null;
+      // 沿 shadowRoot.activeElement 下钻到真实聚焦元素，否则 indexOf/classList 对 host
+      // 恒 false，键盘导航整体失效。单源出口见 utils/dom/deep-active-element.ts。
+      const activeEl = deepActiveElement() as HTMLElement | null;
       // 焦点不在本菜单（Tab 逃逸 / 外部点击后菜单未关 / 空 items 未聚焦）→ 不接管
       // 方向键/Enter：防劫持页面滚动/光标、防误触发页面上恰好同 class 的元素
       if (!activeEl || !menu.contains(activeEl)) return;

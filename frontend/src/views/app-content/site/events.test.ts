@@ -188,6 +188,47 @@ describe("bindBrowseEvents — 基础绑定", () => {
     expect(open2).toHaveBeenCalledWith("https://s");
   });
 
+  it("取消收藏 → 卡片回到产量序的正确位次，而非队尾（排序规则单源回归）", () => {
+    // 历史缺陷：取消收藏一律 appendChild 扔队尾，与 render.ts 规则（收藏置顶 +
+    // 组内产量降序）反向——且不触发重渲染，错乱持续到整树重建。现就地按同一比较器重排。
+    //
+    // ⚠️ 夹具要件：被取消的收藏者 A 产量必须**低于**某个未收藏者（B）。
+    //    若 A 产量最高（10），取消后按规则仍居首，两版行为巧合一致 → 什么也锁不住。
+    const { state, searchResults } = makeState();
+    state.authorCountMap = { A: 5, B: 10, C: 1 };
+    searchResults.innerHTML =
+      '<div id="cr-creator-grid" class="cr-creator-grid">' +
+      '<div class="gh-card" data-name="A" tabindex="0"><span class="cr-star-btn" data-star="A"></span></div>' +
+      '<div class="gh-card" data-name="B" tabindex="0"><span class="cr-star-btn" data-star="B"></span></div>' +
+      '<div class="gh-card" data-name="C" tabindex="0"><span class="cr-star-btn" data-star="C"></span></div>' +
+      "</div>";
+    // 收藏名单状态机：A 初始已收藏，本次点击取消（toggleFav 返回 false 并移除 A）
+    let favList = ["A"];
+    (loadFavs as ReturnType<typeof vi.fn>).mockImplementation(() => favList);
+    (isFaved as ReturnType<typeof vi.fn>).mockImplementation((n: string) => favList.includes(n));
+    (toggleFav as ReturnType<typeof vi.fn>).mockImplementation((n: string) => {
+      if (favList.includes(n)) {
+        favList = favList.filter((x) => x !== n);
+        return false;
+      }
+      favList = [...favList, n];
+      return true;
+    });
+    trackedBind(state, () => {});
+
+    const grid = searchResults.querySelector("#cr-creator-grid") as HTMLElement;
+    const order = () =>
+      Array.from(grid.querySelectorAll<HTMLElement>(".gh-card")).map((c) => c.dataset.name);
+    // 收藏置顶 → A 领先 B(10)
+    expect(order()).toEqual(["A", "B", "C"]);
+
+    (searchResults.querySelector('[data-star="A"]') as HTMLElement).click();
+
+    // 取消收藏后按产量重排：B(10) → A(5) → C(1)
+    // 旧实现 appendChild → [B, C, A]（A 沉到队尾，与规则反向）
+    expect(order()).toEqual(["B", "A", "C"]);
+  });
+
   it("收藏点击 → toggleFav + toast + 卡片移到首部", () => {
     const { state, searchResults } = makeState();
     trackedBind(state, () => {});
@@ -340,23 +381,46 @@ describe("bindBrowseEvents — 键盘导航", () => {
     return [c1, c2];
   }
 
-  it("ArrowDown → focus 下一张；ArrowUp → 上一张；Enter → click", () => {
-    const { state, searchResults } = makeState();
-    document.body.appendChild(searchResults); // focus 需要元素挂载
+  /**
+   * 挂进真实 shadow host——**这是本组用例存在的全部意义**。
+   * 创作者网格在生产中位于 app-content 的 shadow root（init-workshop 的 root 来自
+   * attachShadow），此时 `document.activeElement` 按 DOM retargeting 规则返回 **host**
+   * 而非内层卡片。旧夹具把 searchResults 直接 appendChild 到 document.body（light DOM），
+   * 于是 document.activeElement === 卡片 恒成立，键盘导航「测绿」而生产 100% 失效。
+   * 本组用例改挂 shadow，断言一律读 root.activeElement（生产口径）。
+   */
+  function makeShadowState(): {
+    state: SiteViewState;
+    searchResults: HTMLElement;
+    root: ShadowRoot;
+  } {
+    const base = makeState();
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const root = host.attachShadow({ mode: "open" });
+    root.appendChild(base.searchResults);
+    return { state: base.state, searchResults: base.searchResults, root };
+  }
+
+  it("shadow 内：ArrowDown → focus 下一张；ArrowUp → 上一张；Enter → click", () => {
+    const { state, searchResults, root } = makeShadowState();
     trackedBind(state, () => {});
     const [c1, c2] = makeGridCards(searchResults);
     const grid = searchResults.querySelector(".cr-creator-grid") as HTMLElement;
     c1.focus();
+    // 生产口径前置断言：焦点确实在 shadow 树内（document 级只能看到 host）
+    expect(root.activeElement).toBe(c1);
+    expect(document.activeElement).not.toBe(c1);
 
     grid.dispatchEvent(
       new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }),
     );
-    expect(document.activeElement).toBe(c2);
+    expect(root.activeElement).toBe(c2);
 
     grid.dispatchEvent(
       new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true }),
     );
-    expect(document.activeElement).toBe(c1);
+    expect(root.activeElement).toBe(c1);
 
     const clickSpy = vi.spyOn(c1, "click").mockImplementation(() => {});
     grid.dispatchEvent(
@@ -364,6 +428,21 @@ describe("bindBrowseEvents — 键盘导航", () => {
     );
     expect(clickSpy).toHaveBeenCalled();
     clickSpy.mockRestore();
+  });
+
+  it("shadow 内：末项 ArrowDown 回绕到首项（末尾回绕）", () => {
+    const { state, searchResults, root } = makeShadowState();
+    trackedBind(state, () => {});
+    const [, c2] = makeGridCards(searchResults);
+    const grid = searchResults.querySelector(".cr-creator-grid") as HTMLElement;
+    const cards = Array.from(grid.querySelectorAll<HTMLElement>(".gh-card[tabindex]"));
+    // 夹具自带 1 张卡 + makeGridCards 追加 2 张 → 共 3 张，末项是 c2
+    expect(cards).toHaveLength(3);
+    c2.focus();
+    grid.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }),
+    );
+    expect(root.activeElement).toBe(cards[0]);
   });
 });
 

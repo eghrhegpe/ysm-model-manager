@@ -28,6 +28,8 @@ auto_fields:
     - createInputBlockStack
     - createShadowStyle
     - createTooltipManager
+    - deepActiveElement
+    - deepActiveElementOf
     - disposeTooltipCore
     - downloadTextFile
     - dropdownBaseCSS

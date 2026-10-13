@@ -197,7 +197,11 @@ describe("保存流程（eeSyncAllEditInputs 回写 + 落盘）", () => {
     searchResults.querySelector(".cr-save-btn")!.dispatchEvent(new Event("click", { bubbles: true }));
 
     await vi.waitFor(() => expect(backend.SaveWorkshopPresetsBySite).toHaveBeenCalledTimes(1));
-    expect(backend.SaveWorkshopPresetsBySite).toHaveBeenCalledWith(site.id, [{ label: "新词" }]);
+    // q 字段必须原样保留（Go 侧 types.WorkshopPresetSearch.Q 非 omitempty，
+    // app_workshop.go|saveWorkshopPresetsBySite 是整数组替换落盘）
+    expect(backend.SaveWorkshopPresetsBySite).toHaveBeenCalledWith(site.id, [
+      { label: "新词", q: "" },
+    ]);
     expect(backend.SaveWorkshopCreatorsBySite).toHaveBeenCalledTimes(1);
     const saved = backend.SaveWorkshopCreatorsBySite.mock.calls[0][1] as LocalCreatorLike[];
     expect(saved[0].name).toBe("Zed");
@@ -206,6 +210,31 @@ describe("保存流程（eeSyncAllEditInputs 回写 + 落盘）", () => {
     expect(refresh).toHaveBeenCalled();
     expect(state.wsEditModeRef.v).toBe(false);
     expect((state.bus.emit as ReturnType<typeof vi.fn>)).toHaveBeenCalled();
+    cleanup!();
+  });
+
+  it("5b. 保存不得把预设的 q 覆盖成 label（bowlroll 实数据回归：label≠q 时 q 须原样落盘）", async () => {
+    // 历史缺陷：保存时只构造 { label }，q 被静默丢弃 → Go 整数组替换落盘，
+    // 用户哪怕一个字没改，一次保存就把「热门日系模型 → MMD」永久覆盖成 q=label。
+    const { state, searchResults, site } = makeState();
+    site.presetSearches = [
+      { label: "热门日系模型", q: "MMD" },
+      { label: "东方 Project", q: "東方" },
+    ];
+    searchResults.innerHTML =
+      '<button class="btn-base sm cr-save-btn"></button>' +
+      '<div class="cr-edit-card" data-edit-idx="0"><input data-idx="0" data-fld="name" value="Alice"></div>' +
+      '<div class="cr-edit-card" data-edit="preset" data-edit-idx="0"><input data-idx="0" data-fld="label" value="热门日系模型"></div>' +
+      '<div class="cr-edit-card" data-edit="preset" data-edit-idx="1"><input data-idx="1" data-fld="label" value="东方 Project"></div>';
+    const cleanup = bindEditEvents(state, () => {});
+
+    // 用户未触碰任何预设输入，仅点保存
+    searchResults.querySelector(".cr-save-btn")!.dispatchEvent(new Event("click", { bubbles: true }));
+    await vi.waitFor(() => expect(backend.SaveWorkshopPresetsBySite).toHaveBeenCalledTimes(1));
+    expect(backend.SaveWorkshopPresetsBySite).toHaveBeenCalledWith(site.id, [
+      { label: "热门日系模型", q: "MMD" },
+      { label: "东方 Project", q: "東方" },
+    ]);
     cleanup!();
   });
 

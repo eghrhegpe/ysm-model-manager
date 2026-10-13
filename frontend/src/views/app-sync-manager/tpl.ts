@@ -6,6 +6,7 @@ import { esc } from "@/utils/html/html.ts";
 import { renderFormattedText } from "@/utils/html/mc-format.ts";
 import { resolveIcon } from "@/utils/icon/resolve.ts";
 import { UI_ICONS, type UiIconName } from "@/utils/icon/ui-icons.ts";
+import { SM_STYLE } from "./sm-css.ts";
 
 // ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
 // 删除/新增对应 data-testid 须同步本数组；契约测试运行期静态聚合本数组为注册表。
@@ -122,75 +123,11 @@ export function syncDirRowHTML(
 
 /**
  * 容器骨架。
- * ⚠️ 模板化迁移说明：原拼接段之间的 TS 注释已提升至本块（模板字符串内不可夹 JS 注释）。
- *
- * 定高行（原贴 .sm-item 处）：虚拟滚动要求同行等高，且行高必须随用户 --fs-scale
- * （设置页可调）缩放——故用 calc 从 --fs-sm 派生（12px 基准 → 25.8px），TS 侧首帧实测取整
- * （见 renderer 行高实测）。注意：这里是**静态** height，非 height 过渡——ADR-015 §2.4
- * 约束 3 禁的是虚拟滚动组件上的 height/max-height **transition**（与 innerHTML 替换冲突
- * 触发闪烁）；定高恰是窗口化的前提，且本行 transition 只列 background。另：行不再挂入场
- * 动画，理由同该 ADR「已知例外」（模型树子行淡入即因此禁用：animation-fill-mode:both
- * 叠加窗口化替换会滚动闪烁）。
- *
- * 状态筛选 tab 样式回归样式表（原为 statusTabHTML 里字符串拼接的行内 style=）——行内
- * 样式绕开样式表，主题切换 / 媒体查询 / 复用都够不着；且与既有 transition 规则分裂成
- * 两处。12px 横向内边距走 --btn-padding-filter（沿用 --btn-padding-* 既有简写约定）。
- *
- * 选中态用「accent 18% 淡化」而非实心 accent：本栏 6 个筛选并排（all/synced/missing/
- * disabled/optional/legacy），实心会成视觉噪音。与 .cr-tag-filter-btn.active 逐值同款——
- * 判据：**并排 4+ 个的筛选组用 18% 淡化**（.cr-tag-filter-btn / .diag-log-fbtn /
- * .diag-sub-tab / .sm-status-tab 逐值同款）；**2 个的切换组用实心 accent**（仅 .pv-tab，
- * 见 app-preview/css.ts .pv-tab-active）——实心底 + accent 字在「二选一」场景才是强反馈，
- * 在「多并排筛选」场景则成噪音。
- *
- * a11y（2026 复测补缺）：目录箭头 span→button 后的原生 button 复位（样式归样式表，
- * 行内 style 只留缩进等动态值）——继承行字号/行高，仅重置按钮自带外框。
- *
- * 筛选栏重构：.sm-status-tabs（flex 行）= 只读类型指示槽位 + radiogroup；指示器非 radio，
- * 不入 radiogroup 组（ARIA 规范：radiogroup 子节点应全为 radio）。
- *
- * 当前类型只读指示（原同样是行内 style=）。
- *
- * 空状态图标尺寸：原内联 20px（design-tokens 的 inline-style-font-size，属基线内已知债）。
- * 20px 无精确令牌 → 按既有「归最近档位」口径收为 --fs-xl(24px)：样式从内联回到样式表、
- * 硬编码字号消失，债真正还掉（非仅搬位置——闸对硬编码字号位置无关）。
- *
- * 状态筛选栏（类型选择已全局化到 nav 下拉，sm-cur-type 只读指示随本栏渲染）；
- * a11y：radiogroup 语义 + aria-label（i18n）；六个状态页签是互斥筛选而非页面 tab，
- * 走 radio 组（仓内先例 tabs-shell diag 子切换同族，且天然避开嵌套 tablist 红线）。
+ * ⚠️ 样式已迁出至 sm-css.ts（SM_STYLE）——含定高行 / 选中态淡化 / a11y 复位等
+ * 全部样式语义注释，见该文件头。本函数只保留结构与布局槽位。
  */
 export function containerHTML(): string {
-  return `<style>
-.sm-item{display:flex;align-items:center;gap:4px;padding:var(--btn-padding-std);height:calc(var(--fs-sm) * 1.4 + 9px);box-sizing:border-box;font-size:var(--fs-sm);border-bottom:1px solid var(--bd);cursor:default;transition:background var(--tr-fast)}
-.sm-item:hover{background:var(--hover)}
-.sm-item-btn{padding:var(--pad-btn-secondary) 8px;border-radius:var(--radius-sm);background:transparent;cursor:pointer;flex-shrink:0;font-size:var(--fs-btn-secondary);transition:background var(--tr-fast),border-color var(--tr-fast),color var(--tr-fast)}
-/* 在途单行按钮视觉（2026-10 收口：原 network.setRowButtonsBusy 与 renderer.restoreBusyState
-   各自内联写 style.opacity/cursor 两处重复——样式归样式表，两处只 toggle 类名） */
-.sm-item-btn--busy{opacity:.55;cursor:wait}
-.sm-item-btn:hover{background:var(--hover)}
-.sm-tab{transition:var(--tr-fast)}
-.sm-status-tab{padding:var(--btn-padding-filter);border-radius:var(--radius-sm);border:1px solid transparent;background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;font-size:var(--fs-filter);white-space:nowrap;transition:background var(--tr-fast),color var(--tr-fast),border-color var(--tr-fast)}
-.sm-status-tab.active{border-color:var(--accent);background:color-mix(in srgb, var(--accent) 18%, transparent);color:var(--accent)}
-.sm-dir-arrow{flex-shrink:0;width:14px;text-align:center;cursor:pointer;color:var(--muted);background:transparent;border:0;padding:0;font:inherit;line-height:1}
-.sm-cur-type-slot{display:contents}
-.sm-status-radios{display:flex;gap:var(--sp-1);flex:1;min-width:0}
-.sm-cur-type{display:inline-flex;align-items:center;gap:4px;padding:0 var(--sp-2);color:var(--accent);font-size:var(--fs-filter);white-space:nowrap;border-right:1px solid var(--bd);margin-right:6px}
-.sm-empty{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;height:100%;color:var(--muted);font-size:var(--fs-base);animation:sm-fade-in .2s ease}
-.sm-empty-icon{font-size:var(--fs-xl)}
-.sm-list{animation:sm-fade-in .15s ease}
-.sm-loading{display:flex;flex-direction:column;gap:8px;padding:var(--sp-3)}
-.sm-dir{cursor:pointer}
-.sm-dir .sm-dir-arrow{transition:color var(--tr-fast)}
-.sm-dir:hover{background:var(--hover)}
-.sm-file{cursor:default}
-.sm-file:hover{background:transparent}
-.sm-shimmer{height:12px;border-radius:var(--radius-md);background:linear-gradient(90deg,var(--bd) 25%,var(--hover) 50%,var(--bd) 75%);background-size:200% 100%;animation:sk-shimmer 1.5s infinite}
-.sm-shimmer-w80{width:80%}
-.sm-shimmer-w60{width:60%}
-.sm-shimmer-w70{width:70%}
-@keyframes sm-fade-in{from{opacity:0}to{opacity:1}}
-@keyframes sk-shimmer{from{background-position:-200% 0}to{background-position:200% 0}}
-</style>
+  return `<style>${SM_STYLE}</style>
 <div class="sm-wrap" style="display:flex;flex-direction:column;height:100%;overflow:hidden">
 <div class="sm-status-tabs" style="display:flex;align-items:center;gap:2px;padding:var(--btn-padding-tool-lg);flex-shrink:0;border-bottom:1px solid var(--bd);font-size:var(--fs-xs)">
 <span class="sm-cur-type-slot"></span>

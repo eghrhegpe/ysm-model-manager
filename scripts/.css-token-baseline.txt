@@ -265,11 +265,12 @@ frontend/src/views/app-sidebar/sidebar-css.ts::.list::padding:4px 6px
 frontend/src/views/app-sidebar/sidebar-css.ts::.sk-line::height:12px
 frontend/src/views/app-sidebar/tpl.ts::__inline__::gap:4px
 frontend/src/views/app-sidebar/tpl.ts::__inline__::gap:6px
-frontend/src/views/app-sync-manager/tpl.ts::.sm-cur-type::gap:4px
-frontend/src/views/app-sync-manager/tpl.ts::.sm-cur-type::padding:0 8px
-frontend/src/views/app-sync-manager/tpl.ts::.sm-empty::gap:6px
-frontend/src/views/app-sync-manager/tpl.ts::.sm-loading::gap:8px
-frontend/src/views/app-sync-manager/tpl.ts::.sm-shimmer::height:12px
+frontend/src/views/app-sync-manager/sm-css.ts::.sm-cur-type::gap:4px
+frontend/src/views/app-sync-manager/sm-css.ts::.sm-cur-type::padding:0 8px
+frontend/src/views/app-sync-manager/sm-css.ts::.sm-empty::gap:6px
+frontend/src/views/app-sync-manager/sm-css.ts::.sm-item::gap:4px
+frontend/src/views/app-sync-manager/sm-css.ts::.sm-loading::gap:8px
+frontend/src/views/app-sync-manager/sm-css.ts::.sm-shimmer::height:12px
 frontend/src/views/app-sync-manager/tpl.ts::__inline__::gap:2px
 frontend/src/views/app-sync-manager/tpl.ts::__inline__::gap:8px
 frontend/src/views/app-sync-manager/tpl.ts::__inline__::width:14px

@@ -261,10 +261,17 @@ export function bindPackCardDnD(
     if (!card) return;
     if (!root.contains(card) && card.getRootNode() !== root) return;
     clearHighlight();
-    const idx = parseInt(card.dataset.idx || "", 10);
-    const ins = getInstances()[idx];
-    if (!ins?.name) return;
-    dbg("pack-dnd", "drop on instance card", { idx, name: ins.name });
+    // P1 修复（2026-10 锐评）：目标实例按**名称**解析——原实现按 data-idx 数组下标
+    // 取 `getInstances()[idx]`，而卡片下标是渲染时的快照：sidebar 重载/实例增删后
+    // 下标静默指向另一个整合包（把模型推进错包，还报成功）。名称对不上（卡片已删、
+    // 陈旧渲染、缺属性）一律显式报错，不猜、不静默丢弃。
+    const name = card.dataset.name || "";
+    const ins = name ? getInstances().find((i) => i.name === name) : undefined;
+    if (!ins) {
+      toast(t("inst.packNotFound"), TOAST_MS.normal, "error");
+      return;
+    }
+    dbg("pack-dnd", "drop on instance card", { name: ins.name });
     void handleInstanceDrop(e, ins.name, busy).catch((err) => {
       logError("pack-dnd", "拖放处理失败", err);
       toast(`${t("import.processError")}: ${friendlyError(err)}`, TOAST_MS.verbose, "error");

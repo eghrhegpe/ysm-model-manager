@@ -34,7 +34,10 @@ describe("loadInstances", () => {
     return mocks;
   }
 
-  it("加载失败 → 空列表 + toast 提示（loading 孤儿已删除）", async () => {
+  // 2026-10 P0 修复回归锁：失败不再伪装成空列表——原 catch 吞错 return []，
+  // 调用方（_reload）无法区分「真没装整合包」与「读取失败」，把加载失败渲染成
+  // 空态 + 配目录按钮，误导用户。现契约：reject（toast 保留，供无调用方场景兜底）。
+  it("加载失败 → reject + toast 提示（不再 resolve 空列表伪装成功）", async () => {
     const { LoadAppConfig } = mockBindings();
     LoadAppConfig.mockRejectedValue(new Error("boom"));
     const toasts: Array<{ msg?: string }> = [];
@@ -42,8 +45,7 @@ describe("loadInstances", () => {
       bus.on("toast:show", (p) => toasts.push(p)),
     ];
     try {
-      const result = await loadInstances("ysm");
-      expect(result).toEqual([]);
+      await expect(loadInstances("ysm")).rejects.toThrow("boom");
       // 失败不静默：toast 提示；loading 孤儿已删除，不再配对
       expect(toasts.some((t) => (t.msg || "").includes("整合包列表加载失败"))).toBe(true);
     } finally {

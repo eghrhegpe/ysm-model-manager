@@ -54,6 +54,10 @@ import { renderVersionCards } from "./render.ts";
 import { waitFor } from "@/test-utils/wait.ts";
 import type { SidebarInstance } from "./data.ts";
 
+/** P1 修复探针：点击卡片应把 roving 键盘入口同步到该卡（原点击路径漏接，
+ *  aria-selected/tabindex=0 停留旧卡，读屏与视觉选中脱节） */
+const syncRovingIndexMock = vi.fn();
+
 const mockHost: SidebarHost = (() => {
   let lastEmitted: string | null = null;
   let busy = false;
@@ -63,6 +67,8 @@ const mockHost: SidebarHost = (() => {
     resetSelectedEmit() { lastEmitted = null; },
     getBusy() { return busy; },
     setBusy(v: boolean) { busy = v; },
+    // P1 修复：点击路径的 roving a11y 同步探针（ADR-308 D2 可选接口）
+    syncRovingIndex: syncRovingIndexMock,
   };
 })();
 
@@ -102,6 +108,7 @@ beforeEach(() => {
   runLauncherDetectMock.mockClear();
   currentRepoTypeMock.mockReturnValue("ysm");
   localStorage.clear();
+  syncRovingIndexMock.mockClear();
   mockHost.resetSelectedEmit(); // 隔离去重状态机跨用例串扰
 });
 
@@ -168,6 +175,20 @@ describe("bindCardEvents — list 复用数据陈旧回归（P2）", () => {
       "toast:show",
       expect.objectContaining({ type: "error" }),
     );
+  });
+
+  // P1 修复回归锁（2026-10 锐评）：点击卡片时视觉高亮/持久化会移动，但 roving
+  // 键盘入口（唯一 tabindex=0 / aria-selected）原来只由 _renderCards 与
+  // restoreSelectedCard 校正——点击路径漏接，键盘用户 Enter/方向键操作的仍是
+  // 旧选中卡。现点击路径同样调 syncRovingIndex，aria 与视觉选中一致。
+  it("点击卡片 → roving 键盘入口同步到该卡（syncRovingIndex 携带被点 idx）", () => {
+    const { container } = mount([instance("A1"), instance("A2")]);
+
+    (container.querySelectorAll(".instance-card-header")[0] as HTMLElement).click();
+    expect(syncRovingIndexMock).toHaveBeenLastCalledWith(0);
+
+    (container.querySelectorAll(".instance-card-header")[1] as HTMLElement).click();
+    expect(syncRovingIndexMock).toHaveBeenLastCalledWith(1);
   });
 });
 

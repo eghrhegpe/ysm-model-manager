@@ -192,12 +192,14 @@ describe("handleInstanceDrop 编排", () => {
 // ===== bindPackCardDnD 绑定 =====
 
 describe("bindPackCardDnD 绑定", () => {
-  function makeSidebar(): { root: ShadowRoot; card: HTMLElement; host: HTMLElement } {
+  function makeSidebar(opts?: { withName?: boolean; name?: string }): { root: ShadowRoot; card: HTMLElement; host: HTMLElement } {
     const host = document.createElement("app-sidebar");
     const root = host.attachShadow({ mode: "open" });
     const card = document.createElement("div");
     card.className = "instance-card";
     card.dataset.idx = "0";
+    // render.ts 真实产物同时带 data-idx 与 data-name；默认都带上（withName=false 造缺名场景）
+    if (opts?.withName !== false) card.dataset.name = opts?.name ?? "TestInst";
     root.appendChild(card);
     document.body.appendChild(host);
     return { root, card, host };
@@ -226,15 +228,51 @@ describe("bindPackCardDnD 绑定", () => {
     host.remove();
   });
 
-  it("drop 落到卡片：按 data-idx 解析实例名并执行推送", async () => {
+  // P1 修复回归锁（2026-10 锐评）：drop 目标原按 data-idx 数组下标解析
+  // （getInstances()[idx]）——sidebar 重载/实例增删后下标指向错误的包，静默写错。
+  // 现按卡片 data-name 在最新实例列表里按名称查找；对不上即显式报错，不猜。
+  it("drop 落到卡片：按 data-name 解析实例名并执行推送（不信任数组下标）", async () => {
     const { root, card, host } = makeSidebar();
-    const cleanup = bindPackCardDnD(root, () => [{ name: "TestInst" }]);
+    // 即使列表顺序与下标错位（第 0 张卡的名字不在第 0 位），也必须推给名字对应的实例
+    const instances = [{ name: "Other" }, { name: "TestInst" }];
+    const cleanup = bindPackCardDnD(root, () => instances);
 
     const drop = makeDragEvent("drop", { types: ["Files"], target: card, files: [makeFile("a.ysm", "content")] });
     document.dispatchEvent(drop);
     await flushAll();
 
     expect(mocks.importFilePush).toHaveBeenCalledWith("a.ysm", expect.any(String), "TestInst");
+
+    cleanup();
+    host.remove();
+  });
+
+  it("drop 目标名字已不在实例列表（重载/删除后 stale drop）→ 错误 toast 且不给 binding", async () => {
+    const { root, card, host } = makeSidebar({ name: "Ghost" });
+    const cleanup = bindPackCardDnD(root, () => [{ name: "Other" }]);
+
+    const drop = makeDragEvent("drop", { types: ["Files"], target: card, files: [makeFile("a.ysm", "content")] });
+    document.dispatchEvent(drop);
+    await flushAll();
+
+    expect(mocks.importFilePush).not.toHaveBeenCalled();
+    expect(mocks.importFolderPush).not.toHaveBeenCalled();
+    expect(toasts.some((t2) => t2.type === "error")).toBe(true);
+
+    cleanup();
+    host.remove();
+  });
+
+  it("卡片缺 data-name（旧渲染/非本渲染产物）→ 错误 toast 且不给 binding", async () => {
+    const { root, card, host } = makeSidebar({ withName: false });
+    const cleanup = bindPackCardDnD(root, () => [{ name: "TestInst" }]);
+
+    const drop = makeDragEvent("drop", { types: ["Files"], target: card, files: [makeFile("a.ysm", "content")] });
+    document.dispatchEvent(drop);
+    await flushAll();
+
+    expect(mocks.importFilePush).not.toHaveBeenCalled();
+    expect(toasts.some((t2) => t2.type === "error")).toBe(true);
 
     cleanup();
     host.remove();

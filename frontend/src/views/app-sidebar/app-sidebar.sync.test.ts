@@ -360,13 +360,25 @@ describe("app-sidebar — 下拉无障碍（ADR-298 D3 控制器接管）", () =
 });
 
 describe("app-sidebar — _reload 失败分支", () => {
-  it("loadInstances 抛错 → 实例清空且不抛", async () => {
+  // P0 修复回归锁（2026-10 锐评）：加载失败必须与空列表分流——原失败走
+  // _instances=[] + 空态渲染（「未找到匹配的整合包 + 配目录按钮」），用户误以为
+  // 没装包（真正原因可能只是一次 IPC 失败）。现失败走 renderLoadError：错误文案
+  // + role=alert + 重试按钮；重试触发 force reload（绕过在途去重拿最新数据）。
+  it("loadInstances 抛错 → 渲染失败态（非空态）+ 不抛 + 重试可再次加载", async () => {
     loadInstancesMock.mockImplementation(async () => {
       throw new Error("boom");
     });
     const el = mountCustomElement("app-sidebar");
-    // 不抛异常即通过；等渲染兜底完成
-    await waitFor(() => el.shadowRoot!.querySelector(".ws-empty"));
+    // 等失败态渲染完成（connectedCallback 50ms 防抖 + async _reload）
+    await waitFor(() => el.shadowRoot!.querySelector("[data-sidebar-retry]"));
+
+    // 失败态 ≠ 空态：不得出现空态文案与配目录按钮
+    expect(el.shadowRoot!.innerHTML).not.toContain("未找到匹配的整合包");
+    expect(el.shadowRoot!.querySelector("[role='alert']")).not.toBeNull();
+
+    // 重试按钮 → 再次发起加载（mock 仍抛错，但调用计数证明链路通了）
+    $<HTMLButtonElement>(el, "[data-sidebar-retry]").click();
+    await waitFor(() => loadInstancesMock.mock.calls.length >= 2);
     unmountElement(el);
   });
 });

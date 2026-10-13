@@ -87,6 +87,10 @@ function bindCardClickHandler(
     setTimeout(() => hdr.classList.remove("ripple"), 500);
     // 发送选中事件
     const idx = parseInt(card.dataset.idx || "", 10);
+    // P1 修复（2026-10 锐评）：视觉高亮/涟漪已落在被点卡，roving 键盘入口必须同步
+    // 跟随——原只有 `_renderCards` 与 `restoreSelectedCard` 校正，点击路径漏接：
+    // aria-selected / tabindex=0 停留旧卡，键盘用户 Enter/方向键操作的仍是旧选中项。
+    if (!Number.isNaN(idx)) host.syncRovingIndex?.(idx);
     const pkg = st.instances[idx];
     if (pkg) {
       // P1 修复：与右键路径同构——空 rtype 拦截报错，不 emit。
@@ -230,9 +234,11 @@ export interface EmitDedupe {
 export interface SidebarHost extends EmitDedupe {
   getBusy(): boolean;
   setBusy(v: boolean): void;
-  /** ADR-308 D2（可选）：恢复保存选中时把 roving 布局（唯一 tabindex 0 / aria-selected）
-   *  校正到恢复的卡片。restoreSelectedCard 的 rAF 内调用——不实现者（测试 mock）行为不变 */
-  syncRestoredIndex?(idx: number): void;
+  /** ADR-308 D2（可选）：把 roving 布局（唯一 tabindex 0 / aria-selected）校正到
+   *  指定卡片。**两条路径**都调——restoreSelectedCard 的 rAF（恢复持久化选中）
+   *  与卡片点击（P1 修复 2026-10：原点击路径漏接，aria 与视觉选中脱节）。
+   *  不实现者（测试 mock）行为不变 */
+  syncRovingIndex?(idx: number): void;
 }
 
 function restoreSelectedCard(
@@ -260,7 +266,7 @@ function restoreSelectedCard(
       if (!hdr) return;
       hdr.classList.add("active");
       // ADR-308 D2：roving 布局跟选中校正（可选接口，测试 mock 不实现则跳过）
-      host.syncRestoredIndex?.(idx);
+      host.syncRovingIndex?.(idx);
       // P2 修复：仅选中项实际变化时才 emit——原每次重载都重发。
       // 2026-09：app-content 已改为复用同一 <app-sync-manager> 实例（同值 setAttribute
       // 被组件 oldVal===newVal 拦下），重复 emit 不再有丢状态代价，此处仅省事件扩散。

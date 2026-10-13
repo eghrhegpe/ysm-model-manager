@@ -43,10 +43,13 @@ auto_fields:
     - loadInstances
     - loadTypeConfig
     - NetworkSelf
+    - nextPushToken
     - noInstanceHTML
     - performSingleOp
+    - pruneCheckedSets
     - registerSync
     - render
+    - renderLoadError
     - renderVersionCards
     - restoreCheckboxes
     - setLastSelectedType
@@ -161,7 +164,7 @@ getApp().GetInstanceSyncStatus(instance, subtype, rtype)
   → runPush
     → 顺序 for insName × for rtype
        → pushOne(insName, rt)
-         → token = `${insName}:${rt}:${Date.now()}`
+         → token = nextPushToken(insName, rt)  // `${ins}:${rt}:${单调序号}`——禁 Date.now()（同毫秒并发撞 token 致回执错配）
          → bus.emit("sync:download:missing", { instanceName, rtype, token })
          → Promise 等待 sync:download:done（匹配 token，30s 超时）
          → waitBusQuiet（防并发竞态：非 skipped done 或 2s 静默宽限即放行，不再干等 30s）

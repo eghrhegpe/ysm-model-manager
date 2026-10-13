@@ -18,7 +18,7 @@ beforeEach(() => {
   instanceCardHeaderHTMLMock.mockClear();
 });
 
-import { renderVersionCards } from "./render.ts";
+import { renderVersionCards, renderLoadError } from "./render.ts";
 import { instanceCardHeaderHTML } from "./tpl.ts";
 import type { SidebarInstance } from "./data.ts";
 
@@ -57,6 +57,10 @@ describe("renderVersionCards", () => {
     expect(cards).toHaveLength(2);
     expect(cards[0].dataset.idx).toBe("0");
     expect(cards[1].dataset.idx).toBe("1");
+    // P1 修复：卡片同时以 data-name 携带实例名——拖拽 drop 等跨渲染消费者按名称
+    // 解析目标（数组下标在 sidebar 重载/实例增删后会静默指向错误的包）
+    expect(cards[0].dataset.name).toBe("P1");
+    expect(cards[1].dataset.name).toBe("P2");
     expect(cards[0].style.animationDelay).toBe("0ms");
     expect(cards[1].style.animationDelay).toBe("40ms");
     expect(instanceCardHeaderHTML).toHaveBeenNthCalledWith(1, "P1", 3, 2, 1, 0, false, "pack");
@@ -167,5 +171,42 @@ describe("instanceCardHeaderHTML 徽章 chips（真实实现）", () => {
   it("data-idx 透传（卡片展开/安装按钮定位用）", () => {
     const html = instanceCardHeaderHTML("P", 0, 0, 0, 7);
     expect(html).toContain('data-idx="7"');
+  });
+});
+
+// P0 修复回归锁（2026-10）：加载失败态必须与空列表态**可区分**——原失败走
+// renderVersionCards([]) 渲染成「未找到匹配的整合包 + 配目录按钮」，用户以为
+// 真没装包。renderLoadError 只服务失败：错误文案 + role=alert + 重试入口。
+describe("renderLoadError（失败态与空态分流）", () => {
+  it("渲染加载失败文案（非空态文案）+ role=alert + 重试按钮", () => {
+    const container = document.createElement("div");
+    renderLoadError(container, () => {});
+
+    expect(container.querySelector("[role='alert']")).not.toBeNull();
+    expect(container.innerHTML).toContain("加载失败");
+    // 不得混入空态文案（误导用户「没装整合包」）
+    expect(container.innerHTML).not.toContain("未找到匹配的整合包");
+    expect(container.querySelector("[data-sidebar-retry]")).not.toBeNull();
+    // 失败态不是 option 列表：摘掉 listbox role（ADR-308 D2 同口径）
+    expect(container.hasAttribute("role")).toBe(false);
+  });
+
+  it("点击重试 → 回调 onRetry 被调用", () => {
+    const container = document.createElement("div");
+    const onRetry = vi.fn();
+    renderLoadError(container, onRetry);
+
+    (container.querySelector("[data-sidebar-retry]") as HTMLElement).click();
+    expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
+  it("cleanup 后点击重试不再触发回调", () => {
+    const container = document.createElement("div");
+    const onRetry = vi.fn();
+    const cleanup = renderLoadError(container, onRetry);
+    cleanup();
+
+    (container.querySelector("[data-sidebar-retry]") as HTMLElement).click();
+    expect(onRetry).not.toHaveBeenCalled();
   });
 });

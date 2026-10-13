@@ -61,6 +61,27 @@ export function bindSelectAll(
   });
 }
 
+// ---------- pruneCheckedSets ----------
+/** 修剪勾选集合里的**幽灵名**（P1 修复 2026-10 锐评）：集合按 rtype 存实例名，
+ *  实例被删除后名字永远留在集合里——同名实例再现时会被静默勾选，集合也只涨不消。
+ *  每次成功 reload 后按最新实例列表修剪。
+ *  ⚠️ 保守口径：空列表**不修剪**——`loadInstances` 在 mcRoot 未配置时也返回 []，
+ *  那不是「实例全被删了」，剪掉会丢用户的选择（失败态另有 renderLoadError 分流，
+ *  根本不走到这里）。 */
+export function pruneCheckedSets(
+  rtype: string,
+  instances: SidebarInstance[],
+  getCheckedSets: () => Map<string, Set<string>>,
+): void {
+  const set = getCheckedSets().get(rtype);
+  if (!set || set.size === 0) return;
+  if (!instances.length) return;
+  const live = new Set(instances.map((i) => i.name));
+  set.forEach((name) => {
+    if (!live.has(name)) set.delete(name);
+  });
+}
+
 // ---------- restoreCheckboxes ----------
 export function restoreCheckboxes(
   root: ShadowRoot,
@@ -143,9 +164,19 @@ function beginSync(
   return selected;
 }
 
+/** 推送 token 单调序号（P1 修复 2026-10 锐评）：原用 `${ins}:${rt}:${Date.now()}`
+ *  ——同毫秒并发的两次推送 token 完全相同，bus 回执匹配错位（两个 promise 都认第一
+ *  个 done），一个提前 resolve、另一个干等 30s 超时假报「超时」。序号单调递增，
+ *  同毫秒也不可能碰撞；前缀保留实例/类型，回执可读、诊断可定位。导出供直测。 */
+let _pushTokenSeq = 0;
+export function nextPushToken(insName: string, rt: string): string {
+  _pushTokenSeq += 1;
+  return `${insName}:${rt}:${_pushTokenSeq}`;
+}
+
 /** 单品推送：等待该 token 的下载完成事件；命中 skipped / 超时分别 reject 带 kind */
 async function pushOne(insName: string, rt: string): Promise<void> {
-  const token = `${insName}:${rt}:${Date.now()}`;
+  const token = nextPushToken(insName, rt);
   await new Promise<void>((resolve, reject) => {
     let timer: ReturnType<typeof setTimeout> | null = null;
     const unsub = bus.on("sync:download:done", (payload) => {

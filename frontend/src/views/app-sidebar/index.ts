@@ -19,8 +19,13 @@ import { bindPackCardDnD } from "@/features/dnd/pack-dnd.ts";
 import type { SidebarInstance } from "./data.ts";
 import { bindCardEvents, bindFooter, bindMcPathLabel } from "./events.ts";
 import { loadInstances } from "./loader.ts";
-import { renderVersionCards } from "./render.ts";
-import { bindSelectAll, bindSyncSelected, restoreCheckboxes } from "./sync-flow.ts";
+import { renderLoadError, renderVersionCards } from "./render.ts";
+import {
+  bindSelectAll,
+  bindSyncSelected,
+  pruneCheckedSets,
+  restoreCheckboxes,
+} from "./sync-flow.ts";
 import { footerHTML, headerHTML, listContainerHTML } from "./tpl.ts";
 
 // ---------- AppSidebar 类 ----------
@@ -56,6 +61,8 @@ class AppSidebar extends WebComponentBase {
   private _lastEmittedPkg: string | null = null;
   /** 启动器检测/搜索并发守卫（两类入口共享：都在改 mcRoot，不并发） */
   private _busy = false;
+  /** 失败态重试监听清理（P0 修复：失败态自带 retry 按钮，其监听不经卡片事件委托） */
+  private _errorCleanup: (() => void) | null = null;
 
   constructor() {
     super();
@@ -165,6 +172,10 @@ class AppSidebar extends WebComponentBase {
    * 原样保留**——不可改成置 null（会把仍挂在旧容器上的监听变成失联句柄、泄漏）。
    */
   private _renderCards(): void {
+    // 成功态渲染前摘掉失败态重试监听（renderVersionCards 会清空容器，旧按钮随节点
+    // 丢弃、监听本已失效；显式清理防句柄悬挂）
+    this._errorCleanup?.();
+    this._errorCleanup = null;
     const container = this._root.getElementById("sidebar-instance-list");
     if (container) {
       renderVersionCards(container, this._instances);
@@ -173,11 +184,14 @@ class AppSidebar extends WebComponentBase {
         this._cardCleanup = null;
       }
       this._cardCleanup = bindCardEvents(this._root, this._instances, this);
+      // P1 修复（2026-10 锐评）：先按最新实例列表修剪幽灵勾选名，再恢复勾选——
+      // 顺序不可倒置（先恢复会把幽灵名当有效状态渲染，勾选态与实际列表错位）
+      pruneCheckedSets(this._rtype, this._instances, () => this._checkedSets);
       restoreCheckboxes(this._root, this._rtype, this._instances, () => this._checkedSets);
     }
     // ADR-308 D2：重渲染后新卡片全为 tabindex=-1（render.ts 统一落点），键盘入口须由
     // 原语重新布局「恰一 tabindex 0」——落点 0；若有保存选中，restoreSelectedCard 的
-    // rAF（晚于本同步路径）经 syncRestoredIndex 校正到选中卡，最终态正确
+    // rAF（晚于本同步路径）经 syncRovingIndex 校正到选中卡，最终态正确
     this._roving?.syncIndex(0);
   }
 
@@ -198,10 +212,26 @@ class AppSidebar extends WebComponentBase {
     this._busy = v;
   }
 
-  /** SidebarHost（可选，ADR-308 D2）：恢复保存选中时把 roving 布局校正到选中卡
-   *  （restoreSelectedCard 的 rAF 调用；事件层不感知原语细节，句柄缺失则 no-op） */
-  syncRestoredIndex(idx: number): void {
+  /** SidebarHost（可选，ADR-308 D2）：把 roving 布局校正到指定卡——restoreSelectedCard
+   *  的 rAF 与卡片点击路径都调（事件层不感知原语细节，句柄缺失则 no-op） */
+  syncRovingIndex(idx: number): void {
     this._roving?.syncIndex(idx);
+  }
+
+  /** P0 修复（2026-10 锐评）：加载失败态渲染（与空列表态分流）。
+   *  `renderLoadError` 自挂重试监听并返回 cleanup（首帧即失败时 `bindCardEvents`
+   *  尚未绑定，不能靠它的列表委托）；footer 统计清空，防上一次成功的旧数字留在
+   *  失败态里被当成当前状态读。 */
+  private _renderLoadError(): void {
+    const container = this._root.getElementById("sidebar-instance-list");
+    const statSync = this._root.getElementById("stat-sync");
+    if (statSync) statSync.textContent = "";
+    if (!container) return;
+    this._errorCleanup?.();
+    this._errorCleanup = renderLoadError(container, () => {
+      // force=true：重试必须拿最新数据，不并入可能在途失败/陈旧的去重请求
+      void this._reload(true);
+    });
   }
 
   /** ADR-308 D2 键盘激活路径：在卡片 header 中心派发合成 click，完整复用点击委托路径的
@@ -231,6 +261,10 @@ class AppSidebar extends WebComponentBase {
     }
     this._reloadInFlight = true;
     const gen = this._guard.next();
+    // P0 修复（2026-10 锐评）：失败与空列表分流——原 catch 置 [] 后照走
+    // _renderCards()，把加载失败渲染成「未找到整合包」空态（误导用户以为没装包）。
+    // 现以 failed 标记在 finally 之后二选一：失败渲染失败态（含重试），成功才渲染卡片。
+    let failed = false;
     try {
       const instances = await loadInstances(this._rtype, force ? { force: true } : undefined);
       if (this._guard.stale(gen)) return; // 已被更新的重载取代，丢弃过期结果
@@ -254,12 +288,17 @@ class AppSidebar extends WebComponentBase {
       if (this._guard.stale(gen)) return;
       dbg("sidebar", "_reload 失败:", e);
       this._instances = [];
+      failed = true;
     } finally {
       this._reloadInFlight = false;
     }
     if (this._guard.stale(gen)) return;
-    this._renderCards();
-    bindFooter(this._root, this._instances);
+    if (failed) {
+      this._renderLoadError();
+    } else {
+      this._renderCards();
+      bindFooter(this._root, this._instances);
+    }
     if (this._reloadPending) {
       this._reloadPending = false;
       void this._reload();
@@ -295,6 +334,11 @@ class AppSidebar extends WebComponentBase {
     if (this._cardCleanup) {
       this._cardCleanup();
       this._cardCleanup = null;
+    }
+    // P0 修复：失败态重试监听随卸载摘除（防已卸载组件被点重试 → 幽灵 _reload）
+    if (this._errorCleanup) {
+      this._errorCleanup();
+      this._errorCleanup = null;
     }
     if (this._packDndCleanup) {
       this._packDndCleanup();

@@ -32,6 +32,8 @@ const _inflight = new Map<string, Promise<SidebarInstance[]>>();
 const _inflightTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 /** 从 Go 加载整合包实例列表，转换为 render 需要的格式（同 rtype 在途请求合并）
+ *  ⚠️ 契约（P0 修复）：读取失败 **reject**（附 toast），调用方据此渲染失败态；
+ *  仅真空列表（含 mcRoot 未配置/无实例）resolve []。
  *  @param opts.force 变异后刷新（sync 拉取/导入/启停完成）传 true，跳过在途去重——
  *  去重只服务「读并发」（多组件同时触发 reload），若变异完成的刷新并入变异前发起的
  *  在途请求，会拿到变更前的旧实例列表（缺/多余的状态卡住到下次触发）。 */
@@ -142,12 +144,16 @@ async function doLoadInstances(rtypeActual: string): Promise<SidebarInstance[]> 
     );
     return instances;
   } catch (err) {
-    // 失败不静默：显示空整合包列表会误导用户以为没装实例
+    // 失败不静默：toast 提示调用方缺席场景。同时 **reject** 而非吞错 return []——
+    // P0 修复（2026-10 锐评）：原实现把加载失败伪装成空列表，调用方（_reload）
+    // 无法区分「读取失败」与「真空列表」，把一次 IPC 失败渲染成「未找到整合包」
+    // 空态 + 配目录按钮，误导用户以为没装整合包。reject 后由 _reload 渲染失败态
+    // （错误文案 + role=alert + 重试），空态只服务真空列表。
     toast(
       `${t("sidebar.loadFailed")}: ${friendlyError(err, t("sidebar.loadFailedDetail"))}`,
       TOAST_MS.long,
       "error",
     );
-    return [];
+    throw err;
   }
 }

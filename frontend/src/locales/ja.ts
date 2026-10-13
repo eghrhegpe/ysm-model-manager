@@ -1127,6 +1127,8 @@ export const ja: Record<string, string> = {
   "tree.copyFailed": "コピーに失敗しました",
   "tree.selectFilesFirst": "削除するファイルを先に選択してください",
   "tree.deleted": "{ok} 件削除、{fail} 件失敗",
+  "tree.movedDone": "{ok} 件移動、{fail} 件失敗",
+  "tree.moveFail": "移動失敗",
   "tree.loadFailed": "ファイルツリーの読み込みに失敗しました",
   "tree.repoLoadFailed": "リポジトリの読み取りに失敗しました",
   "tree.hasTags": "タグあり",

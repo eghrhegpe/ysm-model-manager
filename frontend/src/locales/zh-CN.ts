@@ -1093,6 +1093,8 @@ export const zhCN = {
   "tree.copyFailed": "复制失败",
   "tree.selectFilesFirst": "请先选中要删除的文件",
   "tree.deleted": "已删除 {ok} 个，失败 {fail}",
+  "tree.movedDone": "已移动 {ok} 个，失败 {fail}",
+  "tree.moveFail": "移动失败",
   "tree.loadFailed": "文件树加载失败",
   "tree.repoLoadFailed": "读取仓库失败",
   "tree.hasTags": "有标签",

@@ -16,21 +16,20 @@ permalink: /adr/
 
 | 状态 | 数量 |
 |------|------|
-| [📝 提议中](#提议中) | 8 |
+| [📝 提议中](#提议中) | 7 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 1 |
 | [🔄 部分采纳](#部分采纳) | 14 |
-| [✅ 已采纳](#已采纳) | 322 |
+| [✅ 已采纳](#已采纳) | 323 |
 | [❌ 已取代](#已取代) | 8 |
 | [🧊 已废弃](#已废弃) | 0 |
 | [❓ 未归类](#未归类) | 0 |
 
 ## 按状态分组导航
 
-### 📝 提议中（8）
+### 📝 提议中（7）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
-| [ADR-336](./architecture/ADR-336-tree-internal-drag-move.md) | 仓库树内拖拽移动（tree 内部 move）替代右键弹窗整理 | 📝 提议中 |
 | [ADR-327](./architecture/ADR-327-hdr.md) | 自定义 HDR 路径持久化与重启恢复 | 📝 提议中 |
 | [ADR-325](./architecture/ADR-325-app-domain-sinking-over-multi-service.md) | App 瘦身走域下沉：拒绝 Wails 多 Service 外壳 | 📝 提议中 |
 | [ADR-321](./architecture/ADR-321-cap-persistence-restore-derivation.md) | cap 持久化读侧派生：restoreFields 还原表由 schema 键集统一驱动（跨 cap 一次拍全局） | 📝 提议中 |
@@ -64,11 +63,12 @@ permalink: /adr/
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 | [ADR-050](./ADR-050-plaza-browser-window.md) | 模型广场 · 浏览器窗口（Wails 第二窗口） | 🔄 部分采纳 |
 
-### ✅ 已采纳（322）
+### ✅ 已采纳（323）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
 | [ADR-337](./architecture/ADR-337-creator-type-site-vs-rtype.md) | 创作者 type 字段拆分：站点归属与本地资源类型分字段，消除幻影平台徽章与本地作者隐形 | ✅ 已采纳 |
+| [ADR-336](./architecture/ADR-336-tree-internal-drag-move.md) | 仓库树内拖拽移动（tree 内部 move）替代右键弹窗整理 | ✅ 已采纳 |
 | [ADR-335](./architecture/ADR-335-workshop-creators-intent-save.md) | 创作者按站保存改用意图式契约（siteCreators + detachedNames），消除整站替换的跨站连带删除 | ✅ 已采纳 |
 | [ADR-334](./architecture/ADR-334-app-tree-null-proto-tree-keys.md) | app-tree 建树/展开态改 null 原型与 hasOwn 判存在（消除原型链吞键） | ✅ 已采纳 |
 | [ADR-333](./architecture/ADR-333-instance-nesttree-selfkey-namespace.md) | 同步树防御键 __self 改内部常量（消除与真实段名碰撞） | ✅ 已采纳 |
@@ -409,7 +409,7 @@ permalink: /adr/
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
 | ADR-337 | 创作者 type 字段拆分：站点归属与本地资源类型分字段，消除幻影平台徽章与本地作者隐形 | ✅ 已采纳 | 2026-10-13 |
-| ADR-336 | 仓库树内拖拽移动（tree 内部 move）替代右键弹窗整理 | 📝 提议中 | 2026-10-13 |
+| ADR-336 | 仓库树内拖拽移动（tree 内部 move）替代右键弹窗整理 | ✅ 已采纳 | 2026-10-13 |
 | ADR-335 | 创作者按站保存改用意图式契约（siteCreators + detachedNames），消除整站替换的跨站连带删除 | ✅ 已采纳 | 2026-10-13 |
 | ADR-334 | app-tree 建树/展开态改 null 原型与 hasOwn 判存在（消除原型链吞键） | ✅ 已采纳 | 2026-10-13 |
 | ADR-333 | 同步树防御键 __self 改内部常量（消除与真实段名碰撞） | ✅ 已采纳 | 2026-10-13 |

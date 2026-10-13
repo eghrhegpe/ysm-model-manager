@@ -1127,6 +1127,8 @@ export const en: Record<string, string> = {
   "tree.copyFailed": "Copy failed",
   "tree.selectFilesFirst": "Please select files to delete first",
   "tree.deleted": "Deleted {ok}, {fail} failed",
+  "tree.movedDone": "Moved {ok}, {fail} failed",
+  "tree.moveFail": "Move failed",
   "tree.loadFailed": "File tree loading failed",
   "tree.repoLoadFailed": "Failed to read repository",
   "tree.hasTags": "Has tags",

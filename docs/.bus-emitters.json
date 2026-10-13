@@ -90,7 +90,8 @@
     "frontend/src/views/app-sidebar/sync-flow.ts",
     "frontend/src/views/app-sync-manager/index.ts",
     "frontend/src/views/app-tree/bus-handlers.ts",
-    "frontend/src/views/app-tree/events.ts"
+    "frontend/src/views/app-tree/events.ts",
+    "frontend/src/views/app-tree/index.ts"
   ],
   "sync:download:done": [
     "frontend/src/features/sync/sync.ts"
@@ -100,7 +101,8 @@
   ],
   "sync:toggle:status": [
     "frontend/src/views/app-tree/bus-handlers.ts",
-    "frontend/src/views/app-tree/events.ts"
+    "frontend/src/views/app-tree/events.ts",
+    "frontend/src/views/app-tree/index.ts"
   ],
   "toast:show": [
     "frontend/src/features/maintenance/version-updater.ts",

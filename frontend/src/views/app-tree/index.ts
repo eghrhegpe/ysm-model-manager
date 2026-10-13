@@ -6,6 +6,12 @@ import { t } from "@/core/i18n/t.ts";
 import { rememberModelPath } from "@/core/model-path-store.ts";
 import type { AppliedAdvFilter } from "@/features/dialogs/adv-filter-util.ts";
 import { bindTreeDnD } from "@/features/dnd/import-dnd.ts";
+import {
+  bindTreeMoveDnD,
+  computeMovedEntry,
+  filterSelfReflection,
+  type TreeMovePayload,
+} from "@/features/dnd/move-dnd.ts";
 import { isPreviewOverlayActive } from "@/preview-3d/infra/overlay-active.ts";
 import { batchAllSettled } from "@/utils/async/batch-all-settled.ts";
 import { createLoadGuard } from "@/utils/async/load-guard.ts";
@@ -119,6 +125,8 @@ export class AppTree extends WebComponentBase {
   private _shortcutOffs: Array<() => void> = [];
   /** 批量删除进行中（防连点 Delete 二次触发） */
   private _deleting = false;
+  /** 树内拖拽移动进行中（ADR-336，防 drop 重入） */
+  private _moving = false;
   /** 已完成 connectedCallback 初始化（用于区分首次挂载与后续属性变更；重连时为 true，
    *  connectedCallback 借它走「恢复」分支而非从零起步） */
   private _ready = false;
@@ -303,7 +311,18 @@ export class AppTree extends WebComponentBase {
       // 仓库页 DnD 绑定（组件级，ADR-060）；透传当前树类型作导入落盘上下文。
       // P2 审核修复：传 getter 而非按值——root 支持动态切换，闭包惰性解析防旧类型残留
       const treeDnDEl = this._root.getElementById("tree");
-      if (treeDnDEl) this._unsubs.push(bindTreeDnD(treeDnDEl, () => this._state.rootAttr));
+      if (treeDnDEl) {
+        this._unsubs.push(bindTreeDnD(treeDnDEl, () => this._state.rootAttr));
+        // 树内拖拽移动（ADR-336）：与导入链靠 dataTransfer.types 互斥分流，
+        // 拖源=文件行/目标=文件夹行或根；执行链走 _executeTreeMove（批量+乐观+代际守卫）
+        this._unsubs.push(
+          bindTreeMoveDnD(treeDnDEl, {
+            getPayload: (anchor) => this._treeMovePayload(anchor),
+            executeMove: (paths, targetDir) => this._executeTreeMove(paths, targetDir),
+            setDropTarget: () => {}, // drop-target 类由 move-dnd 直接操作行元素（瞬态视觉，同 droppable 范式）
+          }),
+        );
+      }
 
       // 监听创作者详情→搜索本地模型
       this._unsubs.push(
@@ -685,6 +704,77 @@ export class AppTree extends WebComponentBase {
       ) {
         container.scrollTop = targetScroll;
       }
+    }
+  }
+
+  /** 树内拖拽移动载荷（ADR-336）：锚行在选中集内 → 多选全集，否则单行。
+   *  busy 拒绝（导入链/批量链在途）返回 null = move-dnd 不起拖。 */
+  private _treeMovePayload(anchor: string): TreeMovePayload | null {
+    if (this._deleting || this._state.selectState.keys.size === 0) return null;
+    if (this._state.selectState.keys.has(anchor)) {
+      const paths = [...this._state.selectState.keys];
+      return { paths, anchor };
+    }
+    return { paths: [anchor], anchor };
+  }
+
+  /** 树内拖拽移动执行链（ADR-336 §2.4）：批量 MoveModelFile + 乐观更新 + 代际守卫回滚。
+   *  与单文件开关乐观同款范式；失败项本地不翻 + toast 明细（同 dirRecycle 格式）。 */
+  private async _executeTreeMove(paths: string[], targetDir: string): Promise<void> {
+    if (this._moving) return;
+    this._moving = true;
+    const rollbackGen = this._guard.current;
+    try {
+      const filesRoot = this._state.filesRoot;
+      // 步骤 1：自反过滤（条目已在目标目录 = no-op；含根目标 dstDir=filesRoot 语义）
+      const movePaths = filterSelfReflection(paths, targetDir, filesRoot);
+      if (!movePaths.length) return; // 全自反 → 静默 no-op（不 toast，拖错地方不是错误）
+      const { MoveModelFile } = await backendGetApp();
+      // 步骤 2：批量移动（batchAllSettled 逐项不短路，rejected[].index 归因原下标）
+      const r = await batchAllSettled(
+        movePaths.map(
+          (p) => () => MoveModelFile(p, `${filesRoot}/${targetDir}`.replace(/\/$/, "")),
+        ),
+      );
+      // 步骤 3：乐观更新——成功项本地重算 path/fullPath（key 空间归一正斜杠，与 reload 同形）
+      // 失败项不动；代际守卫：期间 root 切换/树已重载 → 放弃本地写（新树自洽）
+      if (!this._guard.stale(rollbackGen)) {
+        const byOldPath = new Map<string, number>();
+        for (let m = 0; m < movePaths.length; m++) byOldPath.set(movePaths[m], m);
+        for (let i = 0; i < this._state.entries.length; i++) {
+          const e = this._state.entries[i];
+          const key = e.fullPath || e.path;
+          const idx = byOldPath.get(key);
+          if (idx === undefined || r.rejected.some((x) => x.index === idx)) continue;
+          this._state.entries[i] = computeMovedEntry(e, targetDir, filesRoot);
+        }
+        this._renderTree();
+      }
+      // 步骤 4：后台 reload 校正真值（Go 侧 MoveModelFile 已 InvalidateCache）+ 联动
+      const gen = this._guard.current;
+      await this._load();
+      if (!this._guard.stale(gen)) this._renderTree();
+      if ((this._state.rootAttr || RESOURCE_TYPES.YSM) === RESOURCE_TYPES.YSM) {
+        bus.emit("sync:toggle:status");
+      }
+      bus.emit("stats:refresh");
+      // 选中态清空：移动后旧路径失效（与 rename/recycle 链同口径，防对已不存在路径批量误删）
+      this._state.selectState.keys.clear();
+      this._state.selectState.lastKey = null;
+      updateSelectCount(this._root, this._state.selectState);
+      const ok = r.fulfilled.length;
+      const fail = r.rejected.length;
+      if (ok > 0 || fail > 0) {
+        toast(
+          `${t("tree.movedDone", { ok, fail })}`,
+          TOAST_MS.normal,
+          fail > 0 ? "warn" : "success",
+        );
+      }
+    } catch (e) {
+      toast(`${friendlyError(e, t("tree.moveFail"))}`, TOAST_MS.long, "error");
+    } finally {
+      this._moving = false;
     }
   }
 

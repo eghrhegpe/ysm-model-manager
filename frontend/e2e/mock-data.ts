@@ -419,5 +419,23 @@ export function generateMockBridgeScript(overrides: Partial<MockData> = {}): str
   }
   lines.push("} } };");
   lines.push("window.runtime = { Events: { On: () => () => {}, Off: () => {}, Emit: () => {} } };");
+  // 调用记录器（e2e 断言通道）：把关键 binding 包一层 window.__e2eCalls 收集。
+  // 字符串/undefined 字面量形态的绑定不会被包（只包常用断言面，保持注入串轻量）；
+  // 消费方 tree-move.spec.ts 经 window.__e2eCalls[name] 读 [args...] 列表。
+  lines.push("window.__e2eCalls = {};");
+  for (const name of [
+    "MoveModelFile",
+    "ImportModelFile",
+    "ImportModelFolderTo",
+    "ToggleEnable",
+    "DeleteResourcePack",
+  ]) {
+    lines.push(
+      `window.__e2eCalls[${JSON.stringify(name)}] = [];` +
+        `const __orig_${name} = window.go.main.App[${JSON.stringify(name)}];` +
+        `window.go.main.App[${JSON.stringify(name)}] = async (...a) => {` +
+        `window.__e2eCalls[${JSON.stringify(name)}].push(a); return __orig_${name}(...a); };`,
+    );
+  }
   return lines.join("\n");
 }

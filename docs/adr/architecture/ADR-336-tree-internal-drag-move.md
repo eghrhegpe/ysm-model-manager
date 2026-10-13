@@ -1,10 +1,10 @@
 # ADR-336：仓库树内拖拽移动（tree 内部 move）替代右键弹窗整理
 
-- **状态**：📝 提议中（Proposed）
+- **状态**：✅ 已采纳（Accepted，2026-10-13 当日落地——双通道互斥/自反过滤/乐观更新/batchAllSettled 执行链/e2e 5 例全部交付）
 - **日期**：2026-10-13
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **准入理由**：模型仓库核心组织操作（按作者/作品归目录）现为右键弹窗手输路径的多步流，拖拽移动是行业默认心智；实现跨 DnD 基建复用、虚拟滚动行定位、乐观更新与 recycle/回收站四域，方向选定后不可低成本逆转
-- **相关**：`frontend/src/features/dnd/import-dnd.ts`、`frontend/src/features/dnd-collector.ts`、`frontend/src/views/app-tree/events.ts`、`frontend/src/views/app-tree/index.ts`、`frontend/src/views/app-tree/app-tree-styles.ts`、`frontend/src/views/app-tree/entry-key.ts`、`frontend/src/features/import/executor.ts`、`docs/knowledge/app-tree.md`、`docs/knowledge/global-handlers.md`
+- **相关**：`frontend/src/features/dnd/move-dnd.ts`、`frontend/src/features/dnd/import-dnd.ts`、`frontend/src/views/app-tree/index.ts|_treeMovePayload`、`frontend/src/views/app-tree/index.ts|_executeTreeMove`、`docs/knowledge/app-tree.md`、`docs/knowledge/global-handlers.md`
 
 ---
 
@@ -99,6 +99,15 @@
 - e2e：单行拖入文件夹 → 行位移 + toast；多选拖 → 批量计数；双通道互斥（拖 OS 文件仍导入、拖树行不触发导入链）；`no-animations` 下无动画但功能完整
 - 回归锁：键空间（drop 后 `selectState` 清空——移动后旧路径失效，与 rename 链同口径）、乐观位回滚、代际守卫
 - 知识卡：`app-tree.md` 不变量补「拖拽移动三态类（dragging/drop-target/droppable）唯一出口 = 数据渲染」
+
+### 3.4 落地实录（2026-10-13 当日，含两处偏离 §2 原文的实证修正）
+
+- **交付面**：`features/dnd/move-dnd.ts`（纯函数 4 个 + `bindTreeMoveDnD` 编排）、`index.ts|_treeMovePayload`（锚行 ∈ 选中集 → 全集）/`_executeTreeMove`（自反过滤 → batchAllSettled → 乐观重算 → 代际守卫 → reload 校正 → 选中清空 + toast）；i18n 三语言包 `tree.movedDone`/`tree.moveFail`
+- **偏离①（composedPath retargeting，§2 的「isInsideContainer(e.target)」原文错了）**：e2e 实证 composed 事件冒泡到 document 层时 **target 被 retarget 成 shadow host**（APP-CONTENT）——shadow 内行信息只在 `composedPath()[0]`。dragover/drop 的命中判定改 `innerTargetOf(e)`（composedPath 首元），closest/类切换同源。import-dnd 的 `isInTree` 用 composedPath 判命中即同因，此前未显式成文，本 ADR 补记为**跨双通道的公共契约**：document 层 shadow 拖拽判定一律 `composedPath()[0]`，禁裸 `e.target`
+- **偏离②（DataTransfer.Files 幻影）**：e2e 实证空 `new DataTransfer()` 的 `types` 为**空数组**——`Files` 类型仅在真 add File 后出现。双通道互斥 e2e 的 Files 拖源必须 `items.add(new File(...))` 构造（与 dnd.spec 同款）；单测桩的 dataTransfer 未必实现 `getData`，故 onDrop 的 types 守卫前置（非移动拖源零开销早退且不触碰 getData）
+- **执行链微调**：自反过滤判据改为**绝对父目录 == filesRoot + targetDir**（与 Go `MoveModelFile` dstDir 同构——拖到根 = dstDir 为 filesRoot 本身）；乐观重算 `computeMovedEntry` 归一正斜杠（ADR-222 key 空间同形，reload 后键匹配）；全自反 = 静默 no-op（拖错地方不是错误，不 toast）
+- **验证**：单测 8358 全绿（新增 move-dnd 纯函数 17 例）；e2e tree-move 5 例全绿（MoveModelFile 实参/双通道互斥双例/drop-target 视觉/自反 no-op）+ 相邻 dnd/tree-multiselect 9 例回归绿；typecheck/build/biome 绿
+- **遗留（原 §3.2 不变）**：auto-scroll 未做（用户可先滚后拖）；folders 不可拖（FAQ 文案待补）；`dragging` 拖源行降透明度未接（视觉三态之一起步版只有 drop-target——拖源行高亮走数据渲染需扩 `fileRowFromEntry` 形参，独立小刀）
 
 ## 4. 数据溯源
 

@@ -32,10 +32,10 @@
 | `repo:rtype-changed` | 1 | 5 | 0 | 0 | ✅ |
 | `repo:search-creator` | 2 | 1 | 0 | 0 | ✅ |
 | `repo:subdir-changed` | 1 | 1 | 0 | 0 | ✅ |
-| `stats:refresh` | 25 | 2 | 0 | 0 | ✅ |
+| `stats:refresh` | 26 | 2 | 0 | 0 | ✅ |
 | `sync:download:done` | 2 | 2 | 0 | 0 | ✅ |
 | `sync:download:missing` | 1 | 1 | 0 | 0 | ✅ |
-| `sync:toggle:status` | 3 | 1 | 0 | 0 | ✅ |
+| `sync:toggle:status` | 4 | 1 | 0 | 0 | ✅ |
 | `toast:show` | 17 | 2 | 0 | 0 | ✅ |
 | `tree:reload` | 15 | 1 | 0 | 0 | ✅ |
 | `tree:set-search` | 1 | 1 | 0 | 0 | ✅ |
@@ -219,7 +219,7 @@
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 386 |
 | atTeClickRowFolder | `frontend/src/views/app-tree/events.ts` | 171 |
 | atTeClickRowFile | `frontend/src/views/app-tree/events.ts` | 245 |
-| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 685 |
+| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 692 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -342,6 +342,7 @@
 | atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 182 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 116 |
 | atTeBindRenameInput | `frontend/src/views/app-tree/events.ts` | 388 |
+| _executeTreeMove | `frontend/src/views/app-tree/index.ts` | 760 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -383,6 +384,7 @@
 | runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 306 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 114 |
 | toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 491 |
+| _executeTreeMove | `frontend/src/views/app-tree/index.ts` | 758 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -454,7 +456,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-tree/index.ts` | 322 |
+| connectedCallback | `frontend/src/views/app-tree/index.ts` | 329 |
 
 ### `ui:card-density`
 

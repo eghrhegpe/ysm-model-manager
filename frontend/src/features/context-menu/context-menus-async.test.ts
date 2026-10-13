@@ -38,6 +38,7 @@ const {
   LoadAppConfigMock,
   ListVersionInstancesMock,
   InstallModelToMock,
+  InstallResourceToInstanceMock,
   RevealInExplorerMock,
 } = getMocks();
 
@@ -386,7 +387,7 @@ describe("异步 handler（batch / file 动态 import 分支）", () => {
     ]);
     modalSelectMock.mockResolvedValue("包A");
     InstallModelToMock.mockResolvedValue(undefined);
-    await clickAsync("file", "file.push-to-pack", { path: "/dir/a.ysm" });
+    await clickAsync("file", "file.push-to-pack", { path: "/dir/a.ysm", rtype: "ysm" });
     // P2 修复：InstallModelTo → installer.Install 按仓库内绝对路径校验（IsInside），
     // 必须传完整路径而非 basename，否则「源文件不在仓库目录内」
     expect(InstallModelToMock).toHaveBeenCalledWith("/dir/a.ysm", "/mc/versions/包A");
@@ -400,8 +401,21 @@ describe("异步 handler（batch / file 动态 import 分支）", () => {
     ]);
     modalSelectMock.mockResolvedValue("包A");
     InstallModelToMock.mockRejectedValue(new Error("disk full"));
-    await clickAsync("file", "file.push-to-pack", { path: "/dir/a.ysm" });
+    await clickAsync("file", "file.push-to-pack", { path: "/dir/a.ysm", rtype: "ysm" });
     expect(toasts().some((t) => t.type === "error" && t.msg.includes("推送失败"))).toBe(true);
+  });
+
+  it("file.push-to-pack MMD 类型 → InstallResourceToInstance + 正确参数", async () => {
+    // MMD 文件推送到整合包必须走 InstallResourceToInstance，而非 YSM 专用的 InstallModelTo
+    LoadAppConfigMock.mockResolvedValue({ mcRoot: "/mc" });
+    ListVersionInstancesMock.mockResolvedValue([{ Name: "包 A", CustomDir: "/mc/versions/包 A" }]);
+    InstallResourceToInstanceMock.mockClear();
+    InstallResourceToInstanceMock.mockResolvedValue(undefined);
+    modalSelectMock.mockResolvedValue("包 A");
+    await clickAsync("file", "file.push-to-pack", { path: "/dir/model.pmx", rtype: "mmd" });
+    // MMD 必须走 InstallResourceToInstance，不调用 InstallModelTo
+    expect(InstallResourceToInstanceMock).toHaveBeenCalledWith("mmd", "/dir/model.pmx", "包 A");
+    expect(InstallModelToMock).not.toHaveBeenCalled();
   });
 
   // ── file.edit-tags ──

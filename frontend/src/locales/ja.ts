@@ -854,6 +854,9 @@ export const ja: Record<string, string> = {
   "syncManager.pushed": "送信済み",
   "syncManager.pulled": "取得済み",
   "syncManager.statusFiltersAria": "同期状況フィルタ",
+  "syncManager.divergedWarnTitle": "競合：両方で変更されました",
+  "syncManager.divergedWarnMsg":
+    "「{name}」はリポジトリと統合パックの両方で変更されています。統合パックへプッシュすると、リポジトリ版で統合パック側の変更を上書きし、元に戻せません。続行しますか？",
   // P0 修正: 右クリックメニュー rtype ガード トースト（i18n 準拠）
   "ctx.emptyRtype": "パックにタイプ情報がありません、右クリック操作は無効です",
   "ctx.missingPath": "パックディレクトリが見つかりません",

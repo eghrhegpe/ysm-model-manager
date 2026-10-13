@@ -6,7 +6,9 @@
 // 依赖 DAG：index → events → network（单行按钮触发 push/pull）
 // events ←→ network 无循环：events 通过回调调用 network
 
+import { t } from "@/core/i18n/t.ts";
 import { bindRoving } from "@/utils/dom/bind-roving.ts";
+import { modalConfirm } from "@/utils/dom/modal-confirm.ts";
 import type { SyncManagerSelf } from "./self-type.ts";
 
 export type EventSelf = SyncManagerSelf;
@@ -31,9 +33,29 @@ function handleItemButton(e: Event, btn: Element, cbRef: SyncCbRef): void {
   e.stopPropagation();
   const row = btn.closest("[data-path]");
   if (!row) return;
-  const path = (row as HTMLElement).dataset.path || "";
+  const el = row as HTMLElement;
+  const path = el.dataset.path || "";
+  const name =
+    el.dataset.name || el.querySelector("span[style*='flex:1']")?.textContent?.trim() || "";
   const action = (btn as HTMLElement).dataset.action;
   if (action === "push") {
+    // ADR-310 安全闸（2026-10）：diverged 行推送 = 不可逆覆盖整合包侧修改，
+    // 与常规 missing 推送共用同一按钮却无确认——此处补确认，阻断盲覆盖。
+    const status = el.dataset.status || "";
+    if (status === "diverged") {
+      void (async (): Promise<void> => {
+        const ok = await modalConfirm({
+          title: t("syncManager.divergedWarnTitle"),
+          titleIcon: "warning",
+          message: t("syncManager.divergedWarnMsg", { name: name || path }),
+          okText: t("syncManager.push"),
+          okIcon: "upload",
+          danger: true,
+        });
+        if (ok) void cbRef.cb.doPerformOp("push", path);
+      })();
+      return;
+    }
     void cbRef.cb.doPerformOp("push", path);
     return;
   }

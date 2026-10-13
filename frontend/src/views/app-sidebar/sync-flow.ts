@@ -25,8 +25,10 @@ function checkedSetFor(rtype: string, getCheckedSets: () => Map<string, Set<stri
   return s;
 }
 
-/** 推送等待/兜底超时（陷阱 #3：任何 await 必须有兜底，按钮才不会永久卡死） */
-const SYNC_TIMEOUT_MS = 30_000;
+/** 推送等待/兜底超时（陷阱 #3：任何 await 必须有兜底，按钮才不会永久卡死）。
+ *  ADR-310 性能修复（2026-10）：批量模式一次事件装多包缺失，可能远超 30s；
+ *  上调至 120s，避免大批量时误报「超时」假阴性（done 真实到达即 resolve，超时仅兜底）。 */
+const SYNC_TIMEOUT_MS = 120_000;
 
 // ---------- bindSelectAll ----------
 /**
@@ -174,8 +176,9 @@ export function nextPushToken(insName: string, rt: string): string {
   return `${insName}:${rt}:${_pushTokenSeq}`;
 }
 
-/** 单品推送：等待该 token 的下载完成事件；命中 skipped / 超时分别 reject 带 kind */
-async function pushOne(insName: string, rt: string): Promise<void> {
+/** 单品推送：等待该 token 的下载完成事件；命中 skipped / 超时分别 reject 带 kind。
+ *  instanceNames 非空时一次事件覆盖多包（批量模式，O(类型) 次 RPC 而非 O(包×类型)）。 */
+async function pushOne(insName: string, rt: string, instanceNames?: string[]): Promise<void> {
   const token = nextPushToken(insName, rt);
   await new Promise<void>((resolve, reject) => {
     let timer: ReturnType<typeof setTimeout> | null = null;
@@ -194,7 +197,17 @@ async function pushOne(insName: string, rt: string): Promise<void> {
       unsub();
       reject(kindError(t("sidebar.pushTimeoutReason", { ins: insName, rt }), "timeout"));
     }, SYNC_TIMEOUT_MS);
-    bus.emit("sync:download:missing", { instanceName: insName, rtype: rt, token });
+    // exactOptionalPropertyTypes：条件字段须按是否存在择一构造，避免 `string | undefined` 落
+    // 到可选属性（会被判为必填 string）。批量模式走 instanceNames，单包兜底走 instanceName。
+    const payload: {
+      instanceName?: string;
+      instanceNames?: string[];
+      rtype: string;
+      token: string;
+    } = instanceNames?.length
+      ? { instanceNames, rtype: rt, token }
+      : { instanceName: insName, rtype: rt, token };
+    bus.emit("sync:download:missing", payload);
   });
 }
 
@@ -282,7 +295,9 @@ function handleSyncMenuClick(
   }
 }
 
-/** 推送主流程：顺序逐包逐类型推送，跳过的按类型计数 → 汇总 toast + 按钮复位统一收口 */
+/** 推送主流程：按类型循环，每类型一次批量事件覆盖所有选中包（instanceNames）。
+ *  原实现逐包×逐类型串行发事件，每事件触发一次全量状态扫描 → O(包×类型) 次 RPC；
+ *  现收敛为 O(类型) 次（ADR-310 性能修复 2026-10）。跳过的按类型计数 → 汇总 toast。 */
 async function runPush(
   selected: string[],
   types: string[],
@@ -292,16 +307,15 @@ async function runPush(
   let skipped = 0;
   let timedOut = 0;
   try {
-    for (const insName of selected) {
-      for (const rt of types) {
-        try {
-          await pushOne(insName, rt);
-        } catch (e) {
-          const kind = pushErrorKind(e);
-          if (kind === "skipped") skipped++;
-          else timedOut++;
-          if (kind !== "skipped") await waitBusQuiet();
-        }
+    for (const rt of types) {
+      try {
+        // 一次事件推所有选中包（instanceNames 批量模式）；token 仍单调唯一用于回执匹配
+        await pushOne(selected.join("+"), rt, selected);
+      } catch (e) {
+        const kind = pushErrorKind(e);
+        if (kind === "skipped") skipped++;
+        else timedOut++;
+        if (kind !== "skipped") await waitBusQuiet();
       }
     }
     if (skipped > 0 || timedOut > 0) {

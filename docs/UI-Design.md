@@ -479,7 +479,7 @@ views/app-xxx/
 **实际偏差（以源码为准）**：
 - `app-content/` 下含 `community/` 子目录（`site-view.ts` / `settings.ts` / `diagnostics.ts`），为 app-content 的子页面模块。
 - `app-tree` 的样式文件为 `views/app-tree/app-tree-styles.ts`（位于 `app-tree/` **子目录**），由 `app-tree/index.ts:64-65` 引用。
-- `app-sidebar` 比规范更细：除 `index.ts` / `events.ts` / `sidebar-css.ts` 外，还有 `loader.ts`（loading:start/end）、`actions.ts`（推送/拉取动作）。
+- `app-sidebar` 比规范更细：除 `index.ts` / `events.ts` / `sidebar-css.ts` 外，还有 `loader.ts`（loading:start/end）、`sync-flow.ts`（推送/拉取动作与勾选状态管理，2026-09-08 从 `index.ts` 拆出；旧 `actions.ts` 已并入此文件）。
 - `app-preview` 重构后子文件为 `preview-detail.ts` / `preview-litematic-*.ts` / `preview-skeleton.ts` / `preview-utils.ts` / `preview-wasm.ts`（旧 `events.ts`/`preview-actions.ts`/`preview-pack.ts` 已移除）。
 - `features/` 与 `core/` 是 bus 事件的主要生产/消费层（见 §14.2、§16），组件目录只是其消费者之一。
 
@@ -695,7 +695,7 @@ disconnectedCallback() {
 - **bus**：
   - 订阅 `stats:refresh`（:55，防抖重载）、`repo:rtype-changed`（:63）、`sync:download:done`（:181）。
   - 发射 `sync:download:missing`（:192，`{instanceName,rtype,token}`）、`toast:show`（多处）、`stats:refresh`（:244）、`tree:reload`（:245）。
-  - 辅助模块 `events.ts` 发射 `package:selected`；`loader.ts` 发射 `loading:start`/`loading:end`；`actions.ts` 发射 `toast:show`/`stats:refresh`。
+  - 辅助模块 `events.ts` 发射 `package:selected`；`loader.ts` 发射 `loading:start`/`loading:end`；`sync-flow.ts` 发射 `toast:show`/`stats:refresh`/`sync:download:missing`。
 - **DOM 事件**：无。**插槽/部件**：无。
 
 ### 15.4 `<app-tree>`

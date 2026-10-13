@@ -115,7 +115,13 @@ export interface BusEvents {
   "repo:focus-search": void; // 仓库搜索框焦点请求（ADR-223：nav→tree 跨视图替 DOM 穿透轮询）
   // biome-ignore lint/suspicious/noConfusingVoidType: 事件表 void 表「无 payload」,bus 契约测试依赖该语义;undefined 触发 missing_payload,2026-09 裁决保留
   "sync:toggle:status": void;
-  "sync:download:missing": { instanceName?: string; rtype: string; token?: string };
+  "sync:download:missing": {
+    instanceName?: string;
+    /** 批量推送：一次事件覆盖多个整合包（替代逐包发事件，避免 O(包×类型) 次全量扫描） */
+    instanceNames?: string[];
+    rtype: string;
+    token?: string;
+  };
   "sync:download:done": {
     token?: string | undefined;
     instanceName?: string | undefined;

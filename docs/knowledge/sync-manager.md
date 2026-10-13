@@ -134,13 +134,13 @@ status: active
 - **a11y 模板语义（2026 复测补缺）**：状态筛选栏 = `role="radiogroup"` + 六个 `role="radio"`（`aria-checked` + roving tabindex 由 `statusTabHTML` 模板随重渲染自动迁移）；目录行箭头为原生 `button` + `aria-expanded` + 名称标签；装饰图标 `aria-hidden`；加载态 `role="status"`；错误 div `role="alert"`。键盘半边 = `bindDelegatedEvents` 的单点 keydown 委托（方向键循环移动即激活、Home/End 只移焦点——仓内先例 `tabs-shell.ts` diag 子切换同口径），契约 `tpl.test.ts`（属性字符串）+ `a11y.dom.test.ts`（键盘行为）
 
 ### `app-sidebar`（整包级）
-- **`runPush`**：顺序 `for insName × for rtype` → `sync:download:missing` handler 后台安装缺失，等 `sync:download:done` token（30s 超时，skipped reject）；竞态静默由 `waitBusQuiet` 双轨收敛（非 skipped done 即醒 / 2s 宽限判空闲，2026-10 起不再干等 30s）
+- **`runPush`**：按类型循环，每类型一次 `sync:download:missing`（带 `instanceNames` 多包名单）→ handler 后台装全部选中包，等 `sync:download:done` token（批量超时放宽至 120s，skipped reject）；原 `for insName × for rtype` 逐包逐类型 N×T 次事件已收敛为 O(类型) 次（ADR-310 性能修复，2026-10）。竞态静默由 `waitBusQuiet` 双轨收敛（非 skipped done 即醒 / 2s 宽限判空闲，2026-10 起不再干等超时）
 - **`runPull`**：`Promise.allSettled` 并拉 `PullResourceFromInstance`
 - **`_syncInProgress`** 守卫：防止并发 sync 竞态
 - **同步流程层（`sync-flow.ts`，2026-09-08 从 `index.ts` 拆出）**：`runPush`/`runPull`/`bindSelectAll`/`bindSyncSelected`/`restoreCheckboxes` + `_checkedSets`（按 rtype 隔离的勾选状态 Map）全部迁至独立文件，`index.ts` 仅保留 Web Component 生命周期与渲染编排
 
 ### `features/sync.ts`（bus 调度）
-- **`sync:download:missing`**：`downloadFlag.busy` 守卫 → `runDownloadMissing`（`ListVersionInstances` → `GetResourceInstanceStatus` → 遍历 targets × Missing：`InstallModelTo`(YSM) / `InstallResourceToInstance`(other) → `InvalidateScanCache`）
+- **`sync:download:missing`**：`downloadFlag.busy` 守卫 → `runDownloadMissing`（`ListVersionInstances` → `GetResourceInstanceStatus` → 按 `instanceName`/`instanceNames` 过滤 targets × Missing：`InstallModelTo`(YSM) / `InstallResourceToInstance`(other) → `InvalidateScanCache`）；`instanceNames` 优先（批量一次覆盖多包），单次调用内只扫一次状态
 - **`sync:toggle:status`**：`.ban`/`.disabled` 启禁同步
 
 ## 数据流（后端 → store → 渲染）
@@ -157,17 +157,17 @@ getApp().GetInstanceSyncStatus(instance, subtype, rtype)
   → bindDelegatedEvents(...)  // 一次性委托（_init 单次绑定，render 重建 DOM 不影响）
 ```
 
-**sidebar 整包推送链**：
+**sidebar 整包推送链（ADR-310 批量收敛，2026-10）**：
 ```
 用户点击 push 菜单项
   → beginSync（取 selected + _syncInProgress + 按钮 loading）
-  → runPush
-    → 顺序 for insName × for rtype
-       → pushOne(insName, rt)
+  → runPush（按类型循环，非逐包×逐类型）
+    → for rt in types
+       → pushOne(selected.join("+"), rt, selected)  // 一次事件覆盖全部选中包
          → token = nextPushToken(insName, rt)  // `${ins}:${rt}:${单调序号}`——禁 Date.now()（同毫秒并发撞 token 致回执错配）
-         → bus.emit("sync:download:missing", { instanceName, rtype, token })
-         → Promise 等待 sync:download:done（匹配 token，30s 超时）
-         → waitBusQuiet（防并发竞态：非 skipped done 或 2s 静默宽限即放行，不再干等 30s）
+         → bus.emit("sync:download:missing", { instanceNames: selected, rtype, token })
+         → Promise 等待 sync:download:done（匹配 token，批量超时 120s）
+         → waitBusQuiet（防并发竞态：非 skipped done 或 2s 静默宽限即放行，不再干等超时）
     → 汇总 toast
   → finally：按钮复位 + _syncInProgress=false
 ```
@@ -181,7 +181,7 @@ getApp().GetInstanceSyncStatus(instance, subtype, rtype)
 | `package:selected` | sidebar → app-content | 携带 `{name, rtype}`（`bus.ts` 契约；无 `dir` 字段）→ `app-content` **复用**同一 `<app-sync-manager>` 实例并改 `instance`/`default-type` 属性（2026-09 起不再 `innerHTML` 重建） |
 | `repo:rtype-changed` | 全局 nav → 各处 | 切 rtype 重载 |
 | `repo:subdir-changed` | 全局 nav → sync-manager | MMD 子目录切换重载 |
-| `sync:download:missing` | sidebar → handler | 载荷 `{instanceName, rtype, token}` |
+| `sync:download:missing` | sidebar → handler | 载荷 `{instanceName?, instanceNames?, rtype, token}`；`instanceNames` 优先（批量一次覆盖多包），单包兜底走 `instanceName` |
 | `sync:download:done` | handler → sidebar | 载荷 `{token, instanceName, skipped, skipReason}`；skipped=true 触发 reject |
 | `sync:toggle:status` | app-tree → handler | 启禁同步 |
 | `ctx:show` | sidebar 右键 → 菜单 | 携带 `{instanceName, path, rtype, subdir}` |
@@ -243,6 +243,7 @@ sidebar 底部 push/pull 菜单（整包级，与 sync-manager 组件解耦）
 - **Storage**：一律用 `safeGet/safeSet/safeRemove`（ADR-044），防隐私模式 `localStorage` 禁用抛错
 - **Go 绑定**：统一 `getApp()` 入口，禁止直调 `window.go.main.App.*`
 - **⚠️ a11y 属性模板生成原则（2026 复测补缺）**：本视图全部 a11y 属性由 `tpl.ts` 模板单点产出（renderer/events 层零手写 aria）；键盘委托唯一出口 = `events.ts|bindDelegatedEvents` 的 keydown 单委托——新增可交互元素先扩模板，不逐处打属性
+- **diverged 行推送须先确认（ADR-310 安全闸，2026-10）**：`diverged` 与 `missing` 共用同一 push 按钮（`tpl.actionBtnHTML` 不区分），但 diverged = 仓库与整合包两侧都已修改，推送会用仓库版**不可逆覆盖**整合包侧编辑。故 `events.ts|handleItemButton` 在 `status === "diverged"` 且 action 为 push 时，先 `modalConfirm`（`syncManager.divergedWarnTitle`/`divergedWarnMsg`，`danger: true`）确认后才调 `cb.doPerformOp("push", path)`；取消则完全不推送。`missing` 行走原直接推送路径。`tpl.ts` 的 diverged 状态图标带 `title`（悬停提示冲突）。回归锁 `events.test.ts`「diverged 行 push → 先弹确认框」「diverged 行 push → 用户取消 → 不推送」「missing 行 push → 不弹确认框」
 
 ## 相关
 

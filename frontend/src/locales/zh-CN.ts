@@ -831,6 +831,9 @@ export const zhCN = {
   "syncManager.pushed": "已推送",
   "syncManager.pulled": "已拉取",
   "syncManager.statusFiltersAria": "同步状态筛选",
+  "syncManager.divergedWarnTitle": "冲突：两侧均已修改",
+  "syncManager.divergedWarnMsg":
+    "「{name}」在仓库与整合包中都改过。推送到整合包会用仓库版本覆盖整合包侧的修改，且不可撤销。是否继续？",
   // P0 修复：右键菜单 rtype 守卫 toast（i18n 合规）
   "ctx.emptyRtype": "整合包缺少类型信息，右键操作已禁用",
   "ctx.missingPath": "整合包目录未找到",

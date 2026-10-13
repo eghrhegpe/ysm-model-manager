@@ -12,10 +12,12 @@ const mocks = vi.hoisted(() => {
   return {
     dispose,
     bindRoving: vi.fn((_spec: Record<string, unknown>) => ({ dispose })),
+    modalConfirm: vi.fn().mockResolvedValue(true),
   };
 });
 
 vi.mock("@/utils/dom/bind-roving.ts", () => ({ bindRoving: mocks.bindRoving }));
+vi.mock("@/utils/dom/modal-confirm.ts", () => ({ modalConfirm: mocks.modalConfirm }));
 
 import { bindDelegatedEvents, type EventSelf } from "./events.ts";
 
@@ -139,6 +141,55 @@ describe("bindDelegatedEvents — 命中优先级与消费语义", () => {
     bindDelegatedEvents(self, cb);
     (host.querySelector('[data-action="pull"]') as HTMLElement).click();
     expect(cb.doPerformOp).toHaveBeenCalledWith("pull", "/repo/v");
+  });
+
+  // ADR-310 安全闸（2026-10）：diverged 行推送 = 不可逆覆盖整合包侧修改，
+  // 与 missing 共用同一 push 按钮却须先确认。
+  it("diverged 行 push → 先弹确认框，确认后才 doPerformOp(push)", async () => {
+    mocks.modalConfirm.mockResolvedValue(true);
+    const { self, host } = makeSelf(
+      '<div class="sm-item sm-file" data-path="/repo/v" data-status="diverged" data-name="model.ysm">' +
+        '<button class="sm-item-btn" data-action="push">P</button></div>',
+    );
+    const cb = makeCb();
+    bindDelegatedEvents(self, cb);
+    (host.querySelector('[data-action="push"]') as HTMLElement).click();
+    // 确认框必须先于任何 push 调用
+    expect(cb.doPerformOp).not.toHaveBeenCalled();
+    expect(mocks.modalConfirm).toHaveBeenCalledTimes(1);
+    // 确认框被触发：标题为冲突警告，文案含文件名（不可逆覆盖提示）
+    const arg = mocks.modalConfirm.mock.calls[0][0] as { message: string; title: string };
+    expect(arg.title).toBe("冲突：两侧均已修改");
+    expect(arg.message).toContain("model.ysm");
+    await new Promise((r) => setTimeout(r, 0));
+    expect(cb.doPerformOp).toHaveBeenCalledWith("push", "/repo/v");
+  });
+
+  it("diverged 行 push → 用户取消 → 不推送", async () => {
+    mocks.modalConfirm.mockResolvedValue(false);
+    const { self, host } = makeSelf(
+      '<div class="sm-item sm-file" data-path="/repo/v" data-status="diverged" data-name="model.ysm">' +
+        '<button class="sm-item-btn" data-action="push">P</button></div>',
+    );
+    const cb = makeCb();
+    bindDelegatedEvents(self, cb);
+    (host.querySelector('[data-action="push"]') as HTMLElement).click();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(mocks.modalConfirm).toHaveBeenCalledTimes(1);
+    expect(cb.doPerformOp).not.toHaveBeenCalled();
+  });
+
+  it("missing 行 push → 不弹确认框，直接 doPerformOp(push)", () => {
+    mocks.modalConfirm.mockResolvedValue(true);
+    const { self, host } = makeSelf(
+      '<div class="sm-item sm-file" data-path="/repo/v" data-status="missing" data-name="model.ysm">' +
+        '<button class="sm-item-btn" data-action="push">P</button></div>',
+    );
+    const cb = makeCb();
+    bindDelegatedEvents(self, cb);
+    (host.querySelector('[data-action="push"]') as HTMLElement).click();
+    expect(mocks.modalConfirm).not.toHaveBeenCalled();
+    expect(cb.doPerformOp).toHaveBeenCalledWith("push", "/repo/v");
   });
 
   it("未知 data-action → 不派发任何操作，但仍消费事件（不落到 dir 行翻转）", () => {

@@ -36,6 +36,7 @@ const mocks = {
   LoadAppConfigMock: vi.fn(),
   ListVersionInstancesMock: vi.fn(),
   InstallModelToMock: vi.fn(),
+  InstallResourceToInstanceMock: vi.fn(),
   RevealInExplorerMock: vi.fn(),
   // mock 查看器模式判定——默认桌面（false），查看器过滤用例 mockReturnValue(true)
   isViewerModeMock: vi.fn(() => false),
@@ -45,6 +46,15 @@ const mocks = {
 
 /** mock 访问器——唯一对外取 mock 句柄的入口（不可直接 export hoisted 变量） */
 export const getMocks = (): typeof mocks => mocks;
+
+// 显式导出关键 mock（供测试解构使用）
+export const {
+  LoadAppConfigMock,
+  ListVersionInstancesMock,
+  InstallModelToMock,
+  InstallResourceToInstanceMock,
+  modalSelectMock,
+} = mocks;
 
 vi.mock("@/utils/dom/modal-prompt.ts", () => ({
   modalPrompt: mocks.modalPromptMock,
@@ -69,6 +79,7 @@ vi.mock("@/backend/app.ts", () => ({
     LoadAppConfig: mocks.LoadAppConfigMock,
     ListVersionInstances: mocks.ListVersionInstancesMock,
     InstallModelTo: mocks.InstallModelToMock,
+    InstallResourceToInstance: mocks.InstallResourceToInstanceMock,
     RevealInExplorer: mocks.RevealInExplorerMock,
   }),
 }));
@@ -81,6 +92,7 @@ vi.mock("../../../bindings/ysm-model-manager/internal/app/app.ts", () => ({
   LoadAppConfig: mocks.LoadAppConfigMock,
   ListVersionInstances: mocks.ListVersionInstancesMock,
   InstallModelTo: mocks.InstallModelToMock,
+  InstallResourceToInstance: mocks.InstallResourceToInstanceMock,
   RevealInExplorer: mocks.RevealInExplorerMock,
 }));
 // mock 查看器模式（android-bridge）——context-menus.ts 的 viewer-mode 过滤分支测试依赖

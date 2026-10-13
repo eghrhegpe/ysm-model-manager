@@ -100,7 +100,7 @@ export function syncDirRowHTML(
   return (
     `<div class="sm-item sm-dir" data-path="${esc(opPath || path)}" data-status="${esc(
       syncItem.status,
-    )}" data-type="${esc(syncItem.type)}" style="padding-left:${indent}px">` +
+    )}" data-type="${esc(syncItem.type)}" data-name="${esc(syncItem.name)}" style="padding-left:${indent}px">` +
     // a11y（2026 复测补缺）：箭头由装饰 span 升为原生 button（键盘可达 + 原生 Enter/Space），
     // 展开态走 aria-expanded，可访问名 = 文件夹名（屏幕阅读器读「名称，已展开/折叠」）；
     // 点击冒泡到 ③ dir 行委托翻转（既有事件链不变，零新增 handler）
@@ -172,10 +172,12 @@ export function itemHTML(item: SyncItem, indent: number): string {
     // 展开后的子文件行无法被 .sm-file 选择器命中）
     `<div class="sm-item sm-file" data-path="${esc(item.path)}" data-status="${esc(
       item.status,
-    )}" data-type="${esc(item.type)}" style="padding-left:${indent}px">` +
+    )}" data-type="${esc(item.type)}" data-name="${esc(item.name)}" style="padding-left:${indent}px">` +
     // a11y（2026 复测补缺）：状态图标（SVG）与文件图标（emoji）均为装饰，aria-hidden 降噪——
     // 屏幕阅读器读「名称 + 大小」即可，行动语义由行内原生 button（push/pull）承担
-    `<span aria-hidden="true" style="flex-shrink:0;width:14px;text-align:center;color:${statusColor}">${statusIcon}</span>` +
+    `<span aria-hidden="true" style="flex-shrink:0;width:14px;text-align:center;color:${statusColor}"${
+      item.status === "diverged" ? ` title="${esc(t("syncManager.divergedWarnTitle"))}"` : ""
+    }>${statusIcon}</span>` +
     `<span aria-hidden="true" style="flex-shrink:0;font-size:var(--fs-base)">${
       item.icon || UI_ICONS.package
     }</span>` +

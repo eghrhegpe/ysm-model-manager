@@ -33,10 +33,10 @@ function makeDndEvent(
 describe("bindTreeMoveDnD — DOM 编排", () => {
   let container: HTMLElement;
   let calls: {
-    getPayload: ReturnType<typeof vi.fn>;
-    setDragging: ReturnType<typeof vi.fn>;
-    executeMove: ReturnType<typeof vi.fn>;
-    setDropTarget: ReturnType<typeof vi.fn>;
+    getPayload: ReturnType<typeof vi.fn<(anchorPath: string) => TreeMovePayload | null>>;
+    setDragging: ReturnType<typeof vi.fn<(paths: Set<string> | null) => void>>;
+    executeMove: ReturnType<typeof vi.fn<(paths: string[], targetDir: string) => Promise<void>>>;
+    setDropTarget: ReturnType<typeof vi.fn<(el: HTMLElement | null) => void>>;
   };
   let cleanup: () => void;
 
@@ -49,7 +49,7 @@ describe("bindTreeMoveDnD — DOM 编排", () => {
     `;
     document.body.appendChild(container);
     calls = {
-      getPayload: vi.fn(() => PAYLOAD),
+      getPayload: vi.fn((_anchorPath: string) => PAYLOAD),
       setDragging: vi.fn(),
       executeMove: vi.fn().mockResolvedValue(undefined),
       setDropTarget: vi.fn(),

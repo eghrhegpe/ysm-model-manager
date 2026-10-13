@@ -17,6 +17,7 @@ import { syncGetApp } from "./sync-deps.ts";
 /** sync:download:missing 事件载荷（镜像 bus.ts BusEvents 契约） */
 interface SyncDownloadPayload {
   instanceName?: string;
+  instanceNames?: string[];
   rtype: string;
   token?: string;
 }
@@ -24,9 +25,16 @@ interface SyncDownloadPayload {
 /** 逐个整合包安装缺失文件，返回是否整体成功（false = 配置缺失/异常） */
 async function runDownloadMissing(
   instanceName: string | undefined,
+  instanceNames: string[] | undefined,
   rtype: string,
 ): Promise<boolean> {
-  dbg("sync", "download-missing", instanceName || "all", "rtype:", rtype);
+  dbg(
+    "sync",
+    "download-missing",
+    instanceNames ? `[${instanceNames.join(", ")}]` : instanceName || "all",
+    "rtype:",
+    rtype,
+  );
   const {
     ListVersionInstances,
     GetResourceInstanceStatus,
@@ -45,7 +53,14 @@ async function runDownloadMissing(
     return false;
   }
 
-  const targets = instanceName ? instances.filter((i) => i.Name === instanceName) : instances;
+  // 目标实例解析：instanceNames 优先（批量一次覆盖多包），其次 instanceName 单值，再退化全部。
+  // 批量模式把 O(包×类型) 次全量扫描收敛为 O(类型) 次——单次事件内只扫一次状态。
+  const nameSet = instanceNames?.length
+    ? new Set(instanceNames)
+    : instanceName
+      ? new Set([instanceName])
+      : null;
+  const targets = nameSet ? instances.filter((i) => nameSet.has(i.Name)) : instances;
   const allStatuses = await GetResourceInstanceStatus(rtype, mcRoot, filesRoot);
   let totalOk = 0;
   let totalFail = 0;
@@ -98,7 +113,7 @@ async function runDownloadMissing(
 /** 导入缺失 handler：withLock 守卫 + 缺参显式失败；busy 命中回 done(skipped) 防调用方 30s 超时 */
 async function handleSyncDownloadMissing(
   lock: BusyLock,
-  { instanceName, rtype, token }: SyncDownloadPayload,
+  { instanceName, instanceNames, rtype, token }: SyncDownloadPayload,
 ): Promise<void> {
   const result = await withLock(lock, async () => {
     // rtype 契约已必填（bus.ts BusEvents），缺参显式失败而非静默降级 YSM——
@@ -111,7 +126,7 @@ async function handleSyncDownloadMissing(
       toast(t("sync.missingRtype"), TOAST_MS.long, "error");
     } else {
       try {
-        const ok = await runDownloadMissing(instanceName, rtype);
+        const ok = await runDownloadMissing(instanceName, instanceNames, rtype);
         if (!ok) failed = true;
         // 仅实际做过安装才广播全树重扫——配置缺失短路时无任何写操作，
         // tree:reload 会引发无意义全树重扫

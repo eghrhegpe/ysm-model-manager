@@ -10,6 +10,7 @@ import { modalConfirm } from "@/utils/dom/modal-confirm.ts";
 import { modalSelect } from "@/utils/dom/modal-select.ts";
 import { toast, toastError } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { contextMenuGetApp } from "./context-menu-deps.ts";
 import type { FileCtx } from "./context-menu-handlers.ts";
 import { refreshUI, runSingleOp } from "./context-menu-shared.ts";
@@ -75,7 +76,13 @@ export const FILE_HANDLERS = {
     }),
   "file.push-to-pack": async (ctx) => {
     try {
-      const { LoadAppConfig, ListVersionInstances, InstallModelTo } = await contextMenuGetApp();
+      // ADR-310 P0 修复（2026-10）：按 rtype 分流安装入口——原硬编码 InstallModelTo 会把
+      // 所有资源推入 YSM customDir，MMD/VRC/PACK/SHADER 等游戏不可见。Go 侧两入口：
+      //   • InstallModelTo(src, customDir) → YSM 单文件安装（customDir 即 ysm/custom）
+      //   • InstallResourceToInstance(rtype, srcPath, instanceName) → 多类型 folder-aware 推送
+      // 前端不重写 Go 逻辑，这里只做分发；后端对 rtype 与 filePath 的不匹配做路径守卫。
+      const { LoadAppConfig, ListVersionInstances, InstallModelTo, InstallResourceToInstance } =
+        await contextMenuGetApp();
       const cfg = await LoadAppConfig();
       const mcRoot = cfg.mcRoot || "";
       if (!mcRoot) {
@@ -99,7 +106,11 @@ export const FILE_HANDLERS = {
       const match = instances.find((i) => i.Name === chosen);
       if (!match) return;
       try {
-        await InstallModelTo(ctx.path || "", match.CustomDir);
+        if (ctx.rtype === RESOURCE_TYPES.YSM) {
+          await InstallModelTo(ctx.path || "", match.CustomDir);
+        } else {
+          await InstallResourceToInstance(ctx.rtype || "", ctx.path || "", chosen);
+        }
         toast(t("ctx.pushOk", { pack: chosen }), TOAST_MS.success);
       } catch (e) {
         toastError(e, t("ctx.pushFail"));

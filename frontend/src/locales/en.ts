@@ -855,6 +855,9 @@ export const en: Record<string, string> = {
   "syncManager.pushed": "Pushed",
   "syncManager.pulled": "Pulled",
   "syncManager.statusFiltersAria": "Sync status filters",
+  "syncManager.divergedWarnTitle": "Conflict: both sides modified",
+  "syncManager.divergedWarnMsg":
+    "「{name}」 has changes in both the repo and the modpack. Pushing to the modpack will overwrite the modpack side with the repo version, and cannot be undone. Continue?",
   // P0 fix: context menu rtype guard toast (i18n compliance)
   "ctx.emptyRtype": "Pack missing type info, right-click ops disabled",
   "ctx.missingPath": "Pack directory not found",

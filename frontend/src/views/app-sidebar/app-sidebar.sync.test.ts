@@ -22,6 +22,7 @@ import { loadInstances } from "./loader.ts";
 import "./index.ts"; // customElements.define("app-sidebar")
 import { waitFor, sleep } from "@/test-utils/wait.ts";
 import { mountCustomElement, unmountElement } from "@/test-utils/render.ts";
+import { ALL_RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import type { SidebarInstance } from "./data.ts";
 
 /** loader mock 句柄（各用例 mockImplementation 设假数据，beforeEach mockReset 防泄漏） */
@@ -228,6 +229,55 @@ describe("app-sidebar — 推送所选", () => {
     // ▾ 指示符已移交 dropdownBaseCSS 的 .dd-wrap > button::after 单源生成（ADR-238），
     // 不再进入按钮文本（jsdom 不渲染伪元素，故此处断言无箭头）
     expect(pushBtn.textContent).toBe(" 推送所选");
+  });
+
+  // ADR-310 性能回归锁（2026-10）：批量推送必须收敛为「每类型一次事件、带 instanceNames
+  // 多包名单」，而非「逐包×逐类型」N×T 个事件。3 包 + 全部类型 → 只发 ALL_RESOURCE_TYPES.length
+  // 个事件，每个载荷含全部 3 个包名；否则退化会发 3×N 个事件触发 N×T 次全量状态扫描。
+  it("批量推送 → 每类型一个事件、带 instanceNames 全包名单（O(类型) 而非 O(包×类型)）", async () => {
+    const packs = ["insA", "insB", "insC"] as const;
+    const el = await mountSidebar(
+      packs.map((n) => ({
+        name: n,
+        dir: `/mc/${n}`,
+        exists: true,
+        hasMod: true,
+        status: "complete" as const,
+        synced: 1,
+        missing: 0,
+        extra: 0,
+        disabled: 0,
+        rtype: uniqueRtype(),
+      })),
+    );
+    // 全选 3 个包
+    const cb = $<HTMLInputElement>(el, "#sb-select-all");
+    cb.checked = true;
+    cb.dispatchEvent(new Event("change", { bubbles: true }));
+
+    const pushBtn = $<HTMLButtonElement>(el, ".sidebar-push-selected");
+    pushBtn.click();
+    const menu = $<HTMLElement>(el, "#sidebar-push-menu");
+    menu.querySelector('.dd-item[data-sync-type="all"]')!.dispatchEvent(
+      new MouseEvent("click", { bubbles: true }),
+    );
+
+    // 串行逐类型推进：每收到一个 missing 即补 done，组件发下一类型，直至按钮恢复
+    await waitFor(() => {
+      for (const p of missingPayloads) {
+        bus.emit("sync:download:done", p.token !== undefined ? { token: p.token } : {});
+      }
+      return pushBtn.disabled === false;
+    });
+
+    // 不变量：事件数 = 类型数（每类型一次批量事件），且每个载荷携带全部 3 包名单
+    expect(missingPayloads).toHaveLength(ALL_RESOURCE_TYPES.length);
+    for (const p of missingPayloads) {
+      const names = (p as { instanceNames?: string[] }).instanceNames;
+      expect(names).toBeDefined();
+      expect([...names!].sort()).toEqual([...packs].sort());
+      expect((p as { instanceName?: string }).instanceName).toBeUndefined();
+    }
   });
 
   it("推送 skipped → warn toast（被吞请求不误报成功）", async () => {

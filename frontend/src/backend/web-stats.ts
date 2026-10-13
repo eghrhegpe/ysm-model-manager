@@ -89,7 +89,13 @@ export function __setStatsRunnerForTest(runner: StatsRunner | null): void {
   injectedRunner = runner;
 }
 
-/** 消费「最近一次批量统计是否降级」标记（读完复位，避免跨搜索串扰） */
+/**
+ * 消费「本批批量统计是否降级」标记（读完复位）。
+ * 已知边界（子代理复核 P2 记录，2026-10-13）：单槽旗标 + 串行批链，**并发批次的归属**
+ * 在「前批成功消费尚未走完后批即置位」的理论窗口可互踩（误报一次 + 真降级被同位吞掉）。
+ * 彻底解法是把降级位随批返回值走——但降级信号正是无法经 SearchModels 的 Go-parity
+ * 返回形状传递才立此全局旗标的（见 web-fs.ts 契约注释），随批化需先改三端契约，挂账待议。
+ */
 export function consumeWebSearchDegraded(): boolean {
   const d = degradedFlag;
   degradedFlag = false;
@@ -303,10 +309,11 @@ function statsOneChunk(
  * batchChain 串行链排队等前批完成；等待期间 terminateStatsWorker 升代则本批弃置。
  */
 export function batchStatsWebModels(paths: string[]): Promise<WebModelStats[] | null> {
-  // P3 灰色收口：旗标语义从「最近一次标记」收紧为「本批」——批**调用入口同步清零**，
-  // 上一批取消/降级留下的长尾旗标不再让本批误报（历史病：error/cancel 早退路径无消费方，
-  // 残旗漏进下一次搜索）。清零必须放同步入口而非 batchChain 排队回调内：排队后清会把
-  // 前批「已降级但消费者尚未恢复读取」的旗标误清成漏报——漏报（静默吞故障）比误报恶性。
+  // P3 灰色收口：批**调用入口同步清零**——上一批取消/降级留下的长尾残旗不再漏进下一批误报
+  // （历史病：error/cancel 早退路径无消费方）。清零必须放同步入口而非 batchChain 排队回调内：
+  // 排队后清会把前批「已降级但消费者尚未恢复读取」的旗标误清成漏报——漏报比误报恶性。
+  // 残留边界（子代理复核 P2 记录）：真并发批的微任务交错仍可互踩归属，彻底解需随批返回、
+  // 穿 Go-parity 契约——口径与现状见 consumeWebSearchDegraded jsdoc。
   degradedFlag = false;
   if (injectedRunner) {
     // 测试 seam：不占串行链，立即执行

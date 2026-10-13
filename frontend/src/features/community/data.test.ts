@@ -245,6 +245,11 @@ describe("tryFetchModels 失败路径（全部源失败时的根因诊断）", (
 });
 
 describe("fetchModelsFailureKind — 竞速失败判别口（kind 信道单一事实源）", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
   it("FetchModelsFailureError → 直读 kind（message 保留 token 兼容旧断言形态）", () => {
     const err = new FetchModelsFailureError("NoIndex");
     expect(err).toBeInstanceOf(Error);
@@ -276,19 +281,21 @@ describe("fetchModelsFailureKind — 竞速失败判别口（kind 信道单一�
     await promise.catch((e: unknown) => {
       expect(fetchModelsFailureKind(e)).toBe("RateLimited");
     });
-    vi.useRealTimers();
-    vi.unstubAllGlobals();
   });
 });
 
 describe("tryFetchModels — body 读取阶段护栏（P2 收债：headers 后不拆护栏）", () => {
   afterEach(() => {
-    vi.useFakeTimers();
-    vi.unstubAllGlobals();
     vi.useRealTimers();
+    vi.unstubAllGlobals();
   });
 
-  /** 真实 fetch 语义：headers 秒回，body(json) 读取受 signal 控制——abort 即拒绝 */
+  /**
+   * 真实 fetch 语义：headers 秒回，body(json) 读取受 signal 控制——abort 即拒绝。
+   * 边界注记：夹具用 `new Error("AbortError")`，真实 fetch 拒的是 `DOMException{name:"AbortError"}`——
+   * 生产分类看 `signal.aborted` 标志不看错误身份，故夹具形状安全；若日后改按 name/code 判别，
+   * 本夹具须同步换 DOMException。
+   */
   function hangBody(urlFilter: (url: string) => boolean): FetchImpl {
     return (url, init) =>
       urlFilter(url)
@@ -341,6 +348,70 @@ describe("tryFetchModels — body 读取阶段护栏（P2 收债：headers 后�
     await vi.advanceTimersByTimeAsync(2500); // jsd 2s 发射并胜出 → ctrl abort
     await assertion;
     expect(rawBodyRejected, "jsd 胜出的 abort 应穿透到 raw 在途 body 读取").toBe(true);
+  });
+
+  it("body 抛 SyntaxError（载荷坏损）→ 不记失败，汇总落 AllFailed（与 invalid payload 同口径）", async () => {
+    vi.useFakeTimers();
+    mockFetch((url) =>
+      url.includes("raw.githubusercontent.com")
+        ? Promise.resolve({
+            ok: true,
+            status: 200,
+            json: () => Promise.reject(new SyntaxError("bad json")),
+          })
+        : Promise.resolve(errResp(500)),
+    );
+    const promise = tryFetchModels("owner/repo", "");
+    // 若回归把 SyntaxError 误记 timeout/network，这里会从 AllFailed 漂成 NetworkOffline 而全绿——本用例即防漂锁
+    const assertion = expect(promise).rejects.toThrow("AllFailed");
+    await vi.advanceTimersByTimeAsync(5000);
+    await assertion;
+  });
+
+  it("body 中途断流（TypeError，非 AbortError）→ 记 network 落 NetworkOffline（与 headers 阶段同口径，子代理 P3-1 清偿锁）", async () => {
+    vi.useFakeTimers();
+    mockFetch((url) =>
+      url.includes("raw.githubusercontent.com")
+        ? Promise.resolve({
+            ok: true,
+            status: 200,
+            json: () => Promise.reject(new TypeError("network stream interrupted")),
+          })
+        : Promise.resolve(errResp(500)),
+    );
+    const promise = tryFetchModels("owner/repo", "");
+    const assertion = expect(promise).rejects.toThrow("NetworkOffline");
+    await vi.advanceTimersByTimeAsync(5000);
+    await assertion;
+  });
+
+  it("raw404 确定性早退 + 败者 body 在途 abort → 汇总仍 NoIndex 不被漂成 NetworkOffline（败者不计入的交叉验证）", async () => {
+    vi.useFakeTimers();
+    mockFetch((url, init) => {
+      if (url.includes("raw.githubusercontent.com")) {
+        // 延迟 2.5s 回 404：确保 jsd（2s 发射）已在途 body
+        return new Promise<FetchResp>((resolve) => {
+          setTimeout(() => resolve(errResp(404)), 2500);
+        });
+      }
+      if (url.includes("jsdelivr.net")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            new Promise<unknown>((_, reject) => {
+              (init?.signal as AbortSignal)?.addEventListener("abort", () =>
+                reject(new Error("AbortError")),
+              );
+            }),
+        });
+      }
+      return Promise.resolve(errResp(500));
+    });
+    const promise = tryFetchModels("owner/repo", "");
+    const assertion = expect(promise).rejects.toThrow("NoIndex");
+    await vi.advanceTimersByTimeAsync(6000);
+    await assertion;
   });
 });
 

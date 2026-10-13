@@ -9,6 +9,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { flushPromises, waitFor } from "@/test-utils/index.ts";
 import { t } from "@/core/i18n/t.ts";
+// 真类经 mock 透传（下方 importOriginal spread）——类实例腿的消费端覆盖用
+import { FetchModelsFailureError } from "@/features/community/data.ts";
 
 const { getApp, bindRepoEvents, renderList, repoCleanup, tryFetchModels } = vi.hoisted(() => {
   const renderList = vi.fn();
@@ -300,7 +302,12 @@ describe("githubShowRepo — 错误分支文案映射", () => {
     return { el, app };
   }
 
-  it("NetworkOffline → 无网络提示", async () => {
+  it("NetworkOffline（FetchModelsFailureError 类实例腿·现行协议）→ 无网络提示", async () => {
+    const { el } = await runWithError(new FetchModelsFailureError("NetworkOffline"));
+    expect(bodyOf(el).textContent).toContain("无网络连接，请检查网络后重试");
+  });
+
+  it("NetworkOffline（纯 Error message 兼容腿）→ 无网络提示", async () => {
     const { el } = await runWithError(new Error("NetworkOffline"));
     expect(bodyOf(el).textContent).toContain("无网络连接，请检查网络后重试");
   });

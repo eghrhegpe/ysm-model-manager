@@ -44,6 +44,7 @@ auto_fields:
     - loadDiagnosticsLogs
     - loadRuntimeLogs
     - MoveToRecycleFn
+    - OP_META
     - OptionRow
     - optionRows
     - parseHealthReport

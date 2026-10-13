@@ -82,8 +82,8 @@ interface FetchRaceState {
 
 /**
  * 全部源失败的根因枚举（tryFetchModels reject 的错误种类）。
- * 取代旧「Error.message 当枚举信道」：消费方经 fetchModelsFailureKind 判别，
- * 不再散落 `err.message === "NoIndex"` 字符串对照（三处消费者改判别式收口）。
+ * 取代旧「Error.message 当枚举信道」：消费者一律经 fetchModelsFailureKind 判别，
+ * 不得再写 `err.message === "NoIndex"` 字符串对照。
  */
 export const FETCH_MODELS_FAILURES = [
   "NoIndex",
@@ -186,6 +186,8 @@ async function fetchModelsOne(
       } else {
         state.failures.push({ kind: "http", status: resp.status });
       }
+      // 非 2xx 的响应体不消费——护栏延长后连接归还没那么自然，显式 cancel 防悬挂
+      void resp.body?.cancel().catch(() => {});
       throw new Error(`HTTP ${resp.status}`);
     }
     // body 读取同样在护栏内（真实 fetch 在 signal abort 时以 AbortError 拒绝进行中的
@@ -209,9 +211,13 @@ async function fetchModelsOne(
       // 整体取消的连带拒绝不计入本源失败（与 fetch 头阶段同口径）
       if (state.ctrl.signal.aborted) throw err;
       // 自身 8s 超时杀 body 流 = 网络不可达强信号，记 timeout；
-      // SyntaxError 等载荷坏损与 invalid payload 同口径不分类记录（汇总自然落 AllFailed）
+      // TypeError = body 中途断流（真实 fetch 对截断流以 TypeError 拒绝而非 AbortError），
+      // 与 headers 阶段同类故障同口径记 network；SyntaxError 等载荷坏损与 invalid payload
+      // 同口径不分类记录（汇总自然落 AllFailed）
       if (timeoutCtrl.signal.aborted) {
         state.failures.push({ kind: "timeout", status: null });
+      } else if (err instanceof TypeError) {
+        state.failures.push({ kind: "network", status: null });
       }
       throw err;
     }

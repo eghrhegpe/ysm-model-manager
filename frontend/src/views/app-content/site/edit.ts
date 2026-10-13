@@ -2,7 +2,6 @@
 
 import { t } from "@/core/i18n/t.ts";
 import * as m from "@/features/community/community-data.ts";
-import { fetchModelsFailureKind } from "@/features/community/data.ts";
 import { moveItemMut } from "@/utils/base/pure/array.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { modalConfirm } from "@/utils/dom/modal-confirm.ts";
@@ -335,17 +334,10 @@ function eeBindFetchBtn(state: SiteViewState, refreshView: () => void, sig: Abor
           });
         }
       } catch (e) {
-        // 竞速/回退失败的类型化判别（fetchModelsFailureKind 单一口，替代魔法串对照）；
-        // 其余错误落 friendlyError 通用兜底
-        const kind = fetchModelsFailureKind(e);
-        const errMsg =
-          kind === "NetworkOffline"
-            ? t("workshop.networkOffline")
-            : kind === "NoIndex"
-              ? t("workshop.indexMissing")
-              : kind === "RateLimited"
-                ? t("workshop.rateLimited")
-                : friendlyError(e, t("workshop.fetchFailed"));
+        // 本 catch 保护的是回退拉取（fetchCommunityCreators/Sites 全败返回 []，
+        // 从不抛竞速 token）与 Go 绑定——竞速分类 token 在此生产不可达，不写判别分支
+        // （子代理复核判 P3 死码，2026-10-13 删除）；错误展示统一走 friendlyError。
+        const errMsg = friendlyError(e, t("workshop.fetchFailed"));
         busRef.emit("toast:show", {
           msg: errMsg,
           duration: TOAST_MS.long,

@@ -337,12 +337,15 @@ describe("createDownloadQueue UI 层", () => {
       ctrl.enqueue([{ url: "u2", saveDir: "", name: "b.ysm", size: 1 }]),
     ]);
     expect(enqueueMock).toHaveBeenCalledTimes(1); // 受理恰一批
-    expect(toasts.some((p) => p.type === "warn" && p.msg.includes("未入队"))).toBe(
+    // 胜者无关判据（子代理复核 P3：不锁「哪批赢」的微任务序，锁归属一致性不变量）：
+    // 装修的状态行批数 = 受理批批数；warn toast 的「本批 N 个」= 未受理批批数；两者互补
+    const winN = (enqueueMock.mock.calls[0][0] as unknown[]).length;
+    const loseN = 3 - winN; // 两批合计 2+1=3
+    expect(toasts.some((p) => p.type === "warn" && p.msg.includes(`本批 ${loseN} 个`))).toBe(
       true,
     );
-    // 拒收批不装修 UI：状态行仍是受理批的「共 2 个」，未被本批「共 1 个」覆写
-    expect(sr.querySelector("#gh-queue-status")!.textContent).toContain("共 2 个");
-    expect(sr.querySelector("#gh-queue-status")!.textContent).not.toContain("共 1 个");
+    expect(sr.querySelector("#gh-queue-status")!.textContent).toContain(`共 ${winN} 个`);
+    expect(sr.querySelector("#gh-queue-status")!.textContent).not.toContain(`共 ${loseN} 个`);
     off();
     ctrl.destroy();
   });

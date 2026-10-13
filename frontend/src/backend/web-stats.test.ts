@@ -60,6 +60,14 @@ describe("web-stats 编排（可测部分）", () => {
     expect(consumeWebSearchDegraded()).toBe(false);
   });
 
+  it("残旗跨空批不漏进：前批降级未消费 → 空批调用入口同样清零（P3 收口锁）", async () => {
+    __setStatsRunnerForTest(async () => null);
+    await batchStatsWebModels(["/web/ysm/a.ysm"]); // 置旗，故意不消费（模拟 error 早退跳过 warn）
+    __setStatsRunnerForTest(null); // 恢复真实路径（空批走快路径不经注入 runner）
+    expect(await batchStatsWebModels([])).toEqual([]); // 入口清零发生在这里
+    expect(consumeWebSearchDegraded()).toBe(false);
+  });
+
   it("terminateStatsWorker 幂等（无 Worker 时不抛）", () => {
     expect(() => terminateStatsWorker()).not.toThrow();
     expect(() => terminateStatsWorker()).not.toThrow();

@@ -225,19 +225,21 @@ function annotateDirNodes(root: TreeNode): void {
 // 明写「用于选中高亮」，删调用侧实参 = 删功能。现由 selectedKeys 驱动恢复；
 // 回归锁 render.test.ts「行选中态随数据渲染」组，勿再只看签名不看语义。
 
-/** 文件行包装：entry + depth + 选中态 + 搜索词 → 完整 fileRowHTML / listFileRowHTML 调用 */
+/** 文件行包装：entry + depth + 选中态 + 拖源态 + 搜索词 → 完整 fileRowHTML / listFileRowHTML 调用 */
 function fileRowFromEntry(
   entry: TreeEntry,
   depth: number,
   mode: RenderMode,
-  opts: { selected: boolean; search: string },
+  opts: { selected: boolean; search: string; dragging?: boolean },
 ): string {
   // 搜索态命中段 <mark> 高亮（guide/repository.md 承诺「匹配字符高亮」）；
   // 代价 = 丢失 renderDisplayName 的 tag-work/tag-date/§ 着色（知识卡 P3 已记录的取舍，
   // 与 hl 互斥——hl 自己做 esc，双转义会炸）
   const nmHtml = opts.search ? hl(entry.name, opts.search.trim()) : renderDisplayName(entry.name);
   const indent = depth * INDENT_PER_LEVEL;
-  const rowCls = opts.selected ? " selected" : "";
+  // 视觉三态（ADR-336 §2.3）：selected（数据渲染唯一出口）+ dragging（拖源降透明，
+  // 2026-10-13 补齐第三态）；rowCls 单点拼接，调用侧禁止 classList 手写（pitfalls #28）
+  const rowCls = `${opts.selected ? " selected" : ""}${opts.dragging ? " dragging" : ""}`;
   return mode === "list"
     ? listFileRowHTML(entry, nmHtml, "📄", "", indent, rowCls, depth + 1)
     : fileRowHTML(entry, nmHtml, "📄", "", "", indent, rowCls, depth + 1);
@@ -335,6 +337,7 @@ function visibleFileRow(
   searchLower: string,
   selectedKeys: SelectedKeys,
   search: string,
+  draggingKeys: SelectedKeys = undefined,
 ): TreeRow | null {
   if (isSearch && !entry.path.toLowerCase().includes(searchLower)) return null;
   return {
@@ -345,6 +348,7 @@ function visibleFileRow(
     html: fileRowFromEntry(entry, depth, mode, {
       selected: selectedKeys?.has(entryKey(entry)) === true,
       search,
+      dragging: draggingKeys?.has(entryKey(entry)) === true,
     }),
   };
 }
@@ -378,6 +382,7 @@ export function flattenVisible(
   depth: number,
   mode: RenderMode,
   selectedKeys: SelectedKeys = undefined,
+  draggingKeys: SelectedKeys = undefined,
 ): TreeRow[] {
   const rows: TreeRow[] = [];
   const searchTrimmed = search.trim();
@@ -417,6 +422,7 @@ export function flattenVisible(
         searchLower,
         selectedKeys,
         searchTrimmed,
+        draggingKeys,
       );
       if (fileRow) rows.push(fileRow);
       continue;
@@ -623,6 +629,7 @@ export function renderTree(
   mode: RenderMode = "grid",
   selectedKeys: SelectedKeys = undefined,
   loadFailed = false,
+  draggingKeys: SelectedKeys = undefined,
 ): void {
   if (!entries.length) {
     container.innerHTML = emptyStateForEmptyEntries(loadFailed);
@@ -630,7 +637,7 @@ export function renderTree(
     return;
   }
   const root = getBuildTreeCached(ctx, entries, sort, filterPaths);
-  const rows = flattenVisible(root, "", search, sort, dirOpen, 0, mode, selectedKeys);
+  const rows = flattenVisible(root, "", search, sort, dirOpen, 0, mode, selectedKeys, draggingKeys);
   if (!rows.length) {
     container.innerHTML = emptyStateHTML("search", t("tree.noMatchFiles"));
     cleanupVirtualScroll(ctx, container);

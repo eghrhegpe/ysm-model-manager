@@ -125,6 +125,8 @@ export function resolveFolderTarget(target: EventTarget | null): MoveDropTarget 
 export interface TreeMoveDeps {
   /** 当前拖源路径集是否允许起拖（app-tree 侧判：锚行在选中集内 → 全集，否则单行） */
   getPayload: (anchorPath: string) => TreeMovePayload | null;
+  /** 拖源视觉态（dragging 降透明，数据渲染通道消费）：dragstart 置位、dragend/drop 清 */
+  setDragging: (paths: Set<string> | null) => void;
   /** 执行移动（返回移动前的 entries 引用供调用方乐观重算，或 null = 调用方自行 reload） */
   executeMove: (paths: string[], targetDir: string) => Promise<void>;
   /** 视觉态挂点：drop-target 类的加/摘（app-tree 传 #tree 容器 + 目标行管理闭包） */
@@ -190,6 +192,9 @@ export function bindTreeMoveDnD(container: HTMLElement, deps: TreeMoveDeps): () 
     if (!e.dataTransfer) return;
     e.dataTransfer.effectAllowed = "move";
     e.dataTransfer.setData(TREE_MOVE_MIME, JSON.stringify(payload));
+    // 拖源降透明（视觉三态之三）：数据渲染通道消费（_renderTree 带 draggingKeys），
+    // dragend/drop 清——非 classList 直写，避免与重渲冲掉（pitfalls #28 同族）
+    deps.setDragging(new Set(payload.paths));
     dbg("move-dnd", "dragstart", { anchor, count: payload.paths.length });
   };
 
@@ -226,6 +231,7 @@ export function bindTreeMoveDnD(container: HTMLElement, deps: TreeMoveDeps): () 
     const inner = innerTargetOf(e);
     const inside = isInsideContainer(inner, container);
     clearDropTarget(); // 无论落点是否有效都清视觉态（同 import-dnd onDrop 收口纪律）
+    deps.setDragging(null); // 拖拽会话结束 → 拖源降透明同步摘除（收口单点纪律）
     if (!payload || !inside) return;
     const hit = resolveFolderTarget(inner);
     const targetDir = hit ? hit.dir : "";
@@ -237,6 +243,7 @@ export function bindTreeMoveDnD(container: HTMLElement, deps: TreeMoveDeps): () 
 
   const onDragEnd = (): void => {
     clearDropTarget();
+    deps.setDragging(null); // dragend 兜底（drop 未触发的取消场景：拖出窗口/Esc）
   };
 
   container.addEventListener("dragstart", onDragStart);

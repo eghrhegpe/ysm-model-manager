@@ -48,6 +48,10 @@ ${dropdownBaseCSS}
    accent 细边框 + 轻微内发光——用户拖 OS 文件进窗口时「松手会落进哪里」的跟随信号。
    提示条在底部、光标常在列表中央，hint 出现本身不够醒目（2026-10-13 锐评）。 */
 .list.droppable { outline: 1px dashed var(--accent); outline-offset: -3px; background: color-mix(in srgb, var(--accent) 5%, transparent); }
+/* 拖源降透明（ADR-336 视觉三态之三，2026-10-13）：move-dnd dragstart 经数据渲染
+   加 dragging 类（renderTree draggingKeys 形参），dragend/drop 清——用户正拖着的
+   行半透明，与「留在原地」的行明确区分；grid/list 两形态同规则 */
+.fl.dragging, .fl-list.dragging { opacity: .45; }
 /* 拖拽导入提示条（底部固定，始终可见） */
 .tree-drop-hint {
   display: none;

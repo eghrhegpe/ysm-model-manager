@@ -127,6 +127,9 @@ export class AppTree extends WebComponentBase {
   private _deleting = false;
   /** 树内拖拽移动进行中（ADR-336，防 drop 重入） */
   private _moving = false;
+  /** 拖源降透明键集（ADR-336 视觉三态之三）：dragstart 置位、dragend/drop 清；
+   *  经 _renderTree(draggingKeys) 走数据渲染，非 classList 手写 */
+  private _draggingKeys: Set<string> | null = null;
   /** 已完成 connectedCallback 初始化（用于区分首次挂载与后续属性变更；重连时为 true，
    *  connectedCallback 借它走「恢复」分支而非从零起步） */
   private _ready = false;
@@ -318,6 +321,12 @@ export class AppTree extends WebComponentBase {
         this._unsubs.push(
           bindTreeMoveDnD(treeDnDEl, {
             getPayload: (anchor) => this._treeMovePayload(anchor),
+            // 拖源降透明（视觉三态之三）：置位即重渲（dragging 类走数据渲染），
+            // 清位同样——渲染管线唯一出口，禁 classList 手写（pitfalls #28）
+            setDragging: (paths) => {
+              this._draggingKeys = paths;
+              this._renderTree();
+            },
             executeMove: (paths, targetDir) => this._executeTreeMove(paths, targetDir),
             setDropTarget: () => {}, // drop-target 类由 move-dnd 直接操作行元素（瞬态视觉，同 droppable 范式）
           }),
@@ -552,6 +561,9 @@ export class AppTree extends WebComponentBase {
       this._state.selectState.keys,
       // 加载失败空态区分（2026-10-13 P2）：空 entries + loadFailed → 「加载失败」空态
       this._state.loadFailed,
+      // 拖源降透明（ADR-336 视觉三态之三，2026-10-13 补齐）：dragstart→setDragging
+      // 置位即整树重渲（dragging 类数据渲染），dragend/drop 清位恢复
+      this._draggingKeys ?? undefined,
     );
     // 有选中项时不更新 stat（由 updateSelectCount 维护），避免动画覆盖
     if (!this._state.selectState.keys.size) {

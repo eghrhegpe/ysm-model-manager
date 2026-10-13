@@ -613,6 +613,42 @@ describe("行选中态随数据渲染（rowCls / aria-selected）", () => {
     );
     expect(rows.find((r) => r.type === "file")!.html).toContain('class="fl selected"');
   });
+
+  // ===== dragging 拖源行降透明（ADR-336 视觉三态之三，2026-10-13 补齐）=====
+  it("draggingKeys 命中行 → fl dragging 类（拖源降透明视觉态）", () => {
+    const root = buildTree(
+      [entry("a.ysm", "a.ysm", 0, 0, "/repo/a.ysm"), entry("b.ysm", "b.ysm", 0, 0, "/repo/b.ysm")],
+      "name",
+      null,
+    );
+    const rows = flattenVisible(root, "", "", "name", {}, 0, "grid", undefined, new Set(["/repo/a.ysm"]));
+    const drag = rows.find((r) => r.type === "file" && r.key === "/repo/a.ysm")!;
+    expect(drag.html).toContain('class="fl dragging"');
+    const still = rows.find((r) => r.type === "file" && r.key === "/repo/b.ysm")!;
+    expect(still.html).not.toContain("dragging");
+  });
+
+  it("draggingKeys 缺省 → 全行无 dragging（向后兼容，既有调用零改动）", () => {
+    const root = buildTree([entry("a.ysm", "a.ysm", 0, 0, "/repo/a.ysm")], "name", null);
+    const rows = flattenVisible(root, "", "", "name", {}, 0, "grid");
+    expect(rows[0].html).not.toContain("dragging");
+  });
+
+  it("selected 与 dragging 并存 → 两类同挂（多选拖拽时锚行既选中又在拖）", () => {
+    const root = buildTree([entry("a.ysm", "a.ysm", 0, 0, "/repo/a.ysm")], "name", null);
+    const rows = flattenVisible(
+      root,
+      "",
+      "",
+      "name",
+      {},
+      0,
+      "grid",
+      new Set(["/repo/a.ysm"]),
+      new Set(["/repo/a.ysm"]),
+    );
+    expect(rows[0].html).toContain('class="fl selected dragging"');
+  });
 });
 
 // ===== 搜索态命中高亮（hl <mark>，2026-10-13 P0-2 恢复接线）=====

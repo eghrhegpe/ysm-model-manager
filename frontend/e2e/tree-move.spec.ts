@@ -199,6 +199,62 @@ test.describe("树内拖拽移动（ADR-336）", () => {
     expect(hasAfter).toBe(false);
   });
 
+  test("dragstart → 拖源行加 .dragging 降透明（数据渲染）/ dragend 摘除（视觉三态之三）", async ({
+    page,
+  }) => {
+    // dragstart 是行委托监听：从文件行元素派发（shadow 内），先选中建立键空间
+    await page.evaluate(() => {
+      const content = document.querySelector("app-content");
+      const treeHost = content?.shadowRoot?.querySelector("app-tree");
+      const root = treeHost?.shadowRoot;
+      const row = root?.querySelector<HTMLElement>('[data-testid="tree-file"]');
+      if (!row) throw new Error("tree-file 未就绪");
+      row.dispatchEvent(
+        new MouseEvent("click", { bubbles: true, cancelable: true, composed: true }),
+      );
+    });
+    // ⚠️ 断言必须**重新查询行节点**：setDragging → _renderTree 同步重渲会替换行元素，
+    // 旧引用（dragstart 派发者）指向已丢弃节点，其 classList 永远不含新类
+    // （探针实证：旧 row 引用恒 false、重新查询恒 "fl selected dragging"）
+    await page.evaluate(() => {
+      const content = document.querySelector("app-content");
+      const treeHost = content?.shadowRoot?.querySelector("app-tree");
+      const root = treeHost?.shadowRoot;
+      const row = root?.querySelector<HTMLElement>('[data-testid="tree-file"]');
+      if (!row) throw new Error("tree-file 未就绪");
+      const dt = new DataTransfer();
+      const ev = new DragEvent("dragstart", { bubbles: true, cancelable: true, composed: true });
+      Object.defineProperty(ev, "dataTransfer", { value: dt, configurable: true });
+      row.dispatchEvent(ev);
+    });
+    const dragResult = await page.evaluate(() => {
+      const content = document.querySelector("app-content");
+      const treeHost = content?.shadowRoot?.querySelector("app-tree");
+      const row = treeHost?.shadowRoot?.querySelector<HTMLElement>('[data-testid="tree-file"]');
+      return {
+        rowDragging: row?.classList.contains("dragging") ?? false,
+        rowCls: row?.className ?? "",
+      };
+    });
+    expect(dragResult.rowDragging).toBe(true);
+    expect(dragResult.rowCls).toContain("dragging");
+    // dragend → 摘除（会话结束兜底：drop 未触发的取消场景）
+    await page.evaluate(() => {
+      const content = document.querySelector("app-content");
+      const treeHost = content?.shadowRoot?.querySelector("app-tree");
+      treeHost?.shadowRoot
+        ?.querySelector('[data-testid="tree-file"]')
+        ?.dispatchEvent(new DragEvent("dragend", { bubbles: true, composed: true }));
+    });
+    const stillDragging = await page.evaluate(() => {
+      const content = document.querySelector("app-content");
+      const treeHost = content?.shadowRoot?.querySelector("app-tree");
+      const row = treeHost?.shadowRoot?.querySelector<HTMLElement>('[data-testid="tree-file"]');
+      return Boolean(row?.classList.contains("dragging"));
+    });
+    expect(stillDragging).toBe(false);
+  });
+
   test("自反过滤：拖文件到自己所在目录 → MoveModelFile 不被调（静默 no-op）", async ({ page }) => {
     // mock 里 subdir-model.ysm 在 subdir 内；把它拖到 subdir = 自反
     const payload = JSON.stringify({

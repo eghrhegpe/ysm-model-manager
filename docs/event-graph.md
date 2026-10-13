@@ -90,7 +90,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| bindMcPathLabel | `frontend/src/views/app-sidebar/events.ts` | 354 |
+| bindMcPathLabel | `frontend/src/views/app-sidebar/events.ts` | 360 |
 
 ### `ctx:show`
 
@@ -99,7 +99,7 @@
 |------|------|----|
 | cmReBindContextMenu | `frontend/src/features/community/repo-events-bindings.ts` | 126 |
 | showMenu | `frontend/src/features/context-menu/context-menus.setup.ts` | 152 |
-| bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 147 |
+| bindCardContextHandler | `frontend/src/views/app-sidebar/events.ts` | 151 |
 | atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 289 |
 | atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 311 |
 | atTeBindContextMenu | `frontend/src/views/app-tree/events.ts` | 323 |
@@ -237,7 +237,7 @@
 | cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 231 |
 | anActivateNavPage | `frontend/src/views/app-nav/index.ts` | 51 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 219 |
-| bindMcPathLabel | `frontend/src/views/app-sidebar/events.ts` | 351 |
+| bindMcPathLabel | `frontend/src/views/app-sidebar/events.ts` | 357 |
 | atTlBindRepoSwitch | `frontend/src/views/app-tree/toolbar-events.ts` | 88 |
 
 **订阅方（on）：**
@@ -251,8 +251,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| bindCardClickHandler | `frontend/src/views/app-sidebar/events.ts` | 99 |
-| restoreSelectedCard | `frontend/src/views/app-sidebar/events.ts` | 280 |
+| bindCardClickHandler | `frontend/src/views/app-sidebar/events.ts` | 103 |
+| restoreSelectedCard | `frontend/src/views/app-sidebar/events.ts` | 286 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -284,7 +284,7 @@
 | useCurrentResourceType | `frontend/src/features/repo/repo-rtype.ts` | 21 |
 | initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 129 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 211 |
-| connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 113 |
+| connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 120 |
 | _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 301 |
 
 ### `repo:search-creator`
@@ -335,7 +335,7 @@
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 311 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 76 |
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 141 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 319 |
+| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 350 |
 | _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 229 |
 | runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 94 |
 | atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 121 |
@@ -346,7 +346,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 104 |
+| connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 111 |
 | _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 282 |
 
 ### `sync:download:done`
@@ -360,15 +360,15 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| pushOne | `frontend/src/views/app-sidebar/sync-flow.ts` | 151 |
-| waitBusQuiet | `frontend/src/views/app-sidebar/sync-flow.ts` | 192 |
+| pushOne | `frontend/src/views/app-sidebar/sync-flow.ts` | 182 |
+| waitBusQuiet | `frontend/src/views/app-sidebar/sync-flow.ts` | 223 |
 
 ### `sync:download:missing`
 
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| pushOne | `frontend/src/views/app-sidebar/sync-flow.ts` | 166 |
+| pushOne | `frontend/src/views/app-sidebar/sync-flow.ts` | 197 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -437,7 +437,7 @@
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 189 |
 | applyFsaState | `frontend/src/views/app-content/settings/init.ts` | 389 |
 | onWebRepoAuthClick | `frontend/src/views/app-content/settings/init.ts` | 417 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 320 |
+| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 351 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |

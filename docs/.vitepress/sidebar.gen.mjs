@@ -254,6 +254,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-335：创作者按站保存改用意图式契约（siteCreators + detachedNames），消除整站替换的跨站连带删除",
+        "link": "/adr/architecture/ADR-335-workshop-creators-intent-save"
+      },
+      {
         "text": "ADR-334：app-tree 建树/展开态改 null 原型与 hasOwn 判存在（消除原型链吞键）",
         "link": "/adr/architecture/ADR-334-app-tree-null-proto-tree-keys"
       },

@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **351** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **352** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > ADR 三区存放：根目录 = 存量（分级前）/ `architecture/` = 架构决策 / `decisions/` = 执行决策日志（ADR-320）。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -16,7 +16,7 @@ permalink: /adr/
 
 | 状态 | 数量 |
 |------|------|
-| [📝 提议中](#提议中) | 7 |
+| [📝 提议中](#提议中) | 8 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 1 |
 | [🔄 部分采纳](#部分采纳) | 14 |
 | [✅ 已采纳](#已采纳) | 321 |
@@ -26,10 +26,11 @@ permalink: /adr/
 
 ## 按状态分组导航
 
-### 📝 提议中（7）
+### 📝 提议中（8）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-336](./architecture/ADR-336-tree-internal-drag-move.md) | 仓库树内拖拽移动（tree 内部 move）替代右键弹窗整理 | 📝 提议中 |
 | [ADR-327](./architecture/ADR-327-hdr.md) | 自定义 HDR 路径持久化与重启恢复 | 📝 提议中 |
 | [ADR-325](./architecture/ADR-325-app-domain-sinking-over-multi-service.md) | App 瘦身走域下沉：拒绝 Wails 多 Service 外壳 | 📝 提议中 |
 | [ADR-321](./architecture/ADR-321-cap-persistence-restore-derivation.md) | cap 持久化读侧派生：restoreFields 还原表由 schema 键集统一驱动（跨 cap 一次拍全局） | 📝 提议中 |
@@ -406,6 +407,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
+| ADR-336 | 仓库树内拖拽移动（tree 内部 move）替代右键弹窗整理 | 📝 提议中 | 2026-10-13 |
 | ADR-335 | 创作者按站保存改用意图式契约（siteCreators + detachedNames），消除整站替换的跨站连带删除 | ✅ 已采纳 | 2026-10-13 |
 | ADR-334 | app-tree 建树/展开态改 null 原型与 hasOwn 判存在（消除原型链吞键） | ✅ 已采纳 | 2026-10-13 |
 | ADR-333 | 同步树防御键 __self 改内部常量（消除与真实段名碰撞） | ✅ 已采纳 | 2026-10-13 |

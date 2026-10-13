@@ -254,6 +254,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-336：仓库树内拖拽移动（tree 内部 move）替代右键弹窗整理",
+        "link": "/adr/architecture/ADR-336-tree-internal-drag-move"
+      },
+      {
         "text": "ADR-335：创作者按站保存改用意图式契约（siteCreators + detachedNames），消除整站替换的跨站连带删除",
         "link": "/adr/architecture/ADR-335-workshop-creators-intent-save"
       },

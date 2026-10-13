@@ -26,6 +26,7 @@ export const VIEW_TESTIDS: readonly string[] = [
   "diag-log-op-filter",
   "diag-refresh",
   "diag-copy",
+  "diag-export",
   "diag-clear",
   // ADR-322 D1：日志通道健康红条（常驻显隐，初始 display:none，由 channel-health.ts
   // 按 GetLogChannelHealth 填充）。留 testid 供 e2e 断言「不健康时出现、健康时隐藏」——
@@ -224,6 +225,7 @@ export function diagnosticsHTML(): string {
         <span class="diag-bar-spacer"></span>
         <button class="btn-base sm" id="diag-refresh" data-testid="diag-refresh">${t("diagnostics.refresh")}</button>
         <button class="btn-base sm" id="diag-copy" data-testid="diag-copy" title="${t("diagnostics.copyLog")}">${t("diagnostics.copyLog")}</button>
+        <button class="btn-base sm" id="diag-export" data-testid="diag-export" title="${t("diagnostics.exportLog")}">${t("diagnostics.exportLog")}</button>
         <button class="btn-base sm" id="diag-clear" data-testid="diag-clear" data-sub-group="logs" data-sub-pane="op">${t("diagnostics.clearLog")}</button>
       </div>
       <div class="diag-bar-row">

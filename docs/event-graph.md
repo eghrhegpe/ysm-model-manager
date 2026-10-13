@@ -401,11 +401,11 @@
 | bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 118 |
 | bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 127 |
 | eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 189 |
-| eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 230 |
-| eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 237 |
-| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 307 |
-| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 314 |
-| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 325 |
+| eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 227 |
+| eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 234 |
+| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 304 |
+| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 311 |
+| eeBindFetchBtn | `frontend/src/views/app-content/site/edit.ts` | 322 |
 | cmCrBindOverlayEvents | `frontend/src/views/app-content/site/events.ts` | 131 |
 | cmBbBindStarBtns | `frontend/src/views/app-content/site/events.ts` | 285 |
 | show | `frontend/src/views/app-toast/index.ts` | 130 |

@@ -43,6 +43,7 @@ auto_fields:
     - MolangParser
     - parseAnimationControllerJSON
     - parseBedrockAnimationJSON
+    - PULSE_DOT
     - stagger
     - TimelineEvent
     - Vec3

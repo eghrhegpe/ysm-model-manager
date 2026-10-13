@@ -85,18 +85,22 @@ function dgInBindSubBars(root: ShadowRoot, esc: EscFn): void {
   bindSubBar(root, "audit");
 }
 
+/** 取当前激活日志列表的纯文本（op / runtime 二选一），供复制与导出共用。空态返回空串 */
+function dgInGetActiveLogText(root: ShadowRoot): string {
+  const listId = dgInIsRuntimeLog(root) ? "diag-runtime-list" : "diag-log-list";
+  const list = root.getElementById(listId);
+  const clone = list?.cloneNode(true) as HTMLElement | null;
+  for (const b of clone?.querySelectorAll(".log-copy") ?? []) b.remove();
+  // 空态/错误态（列表内没有任何 .log-row）不得被当成日志文本：占位文案（「暂无日志」/「无匹配日志」/「加载失败」）
+  // 照抄出去等于复制了一段假日志。实测：noLogsToCopy 兜底因占位文案非空而生产不可达
+  // （只有列表元素整个缺失才走到）。
+  const rows = clone?.querySelectorAll(".log-row");
+  return rows && rows.length > 0 ? (clone?.textContent ?? "").trim() : "";
+}
+
 /** 复制当前激活日志列表文本（op / runtime 二选一） */
 function dgInCopyActiveLog(root: ShadowRoot): void {
-  const list = root.getElementById(dgInIsRuntimeLog(root) ? "diag-runtime-list" : "diag-log-list");
-  const clone = list?.cloneNode(true) as HTMLElement | null;
-  clone?.querySelectorAll(".log-copy").forEach((b) => {
-    b.remove();
-  });
-  // 空态/错误态（列表内没有任何 .log-row）不得被当成日志复制：那行是占位文案
-  // （「暂无日志」/「无匹配日志」/「加载失败」），照抄并弹「已复制」= 复制了一段假日志。
-  // 2026-09 实测：noLogsToCopy 兜底因占位文案非空而生产不可达（只有列表元素整个缺失才走到）。
-  const rows = clone?.querySelectorAll(".log-row");
-  const text = rows && rows.length > 0 ? (clone?.textContent ?? "").trim() : "";
+  const text = dgInGetActiveLogText(root);
   if (!text) {
     toast(`📋 ${t("diagnostics.noLogsToCopy")}`, TOAST_MS.success, "info");
     return;
@@ -107,6 +111,33 @@ function dgInCopyActiveLog(root: ShadowRoot): void {
 }
 function dgInBindCopyPanel(root: ShadowRoot): void {
   root.getElementById("diag-copy")?.addEventListener("click", () => dgInCopyActiveLog(root));
+}
+
+/**
+ * 导出当前激活日志列表为 .txt 文件（锐评 2026-10-13 功能 C）。
+ * 复用 dgInCopyActiveLog 的文本获取逻辑，改走 Blob + <a download>，WebView2 与 web 模式通用。
+ */
+function dgInExportActiveLog(root: ShadowRoot): void {
+  const text = dgInGetActiveLogText(root);
+  if (!text) {
+    toast(`📋 ${t("diagnostics.noLogsToCopy")}`, TOAST_MS.success, "info");
+    return;
+  }
+  const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  const suffix = dgInIsRuntimeLog(root) ? "runtime" : "op";
+  a.download = `ysm-log-${suffix}-${new Date().toISOString().slice(0, 10)}.txt`;
+  a.style.display = "none";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast(t("diagnostics.exportLogSuccess"), TOAST_MS.success, "info");
+}
+function dgInBindExportPanel(root: ShadowRoot): void {
+  root.getElementById("diag-export")?.addEventListener("click", () => dgInExportActiveLog(root));
 }
 
 function dgInCopyRowLog(row: HTMLElement): void {
@@ -222,6 +253,7 @@ function dgInBindTraceTab(root: ShadowRoot, esc: EscFn): void {
 export function initDiagnostics(root: ShadowRoot, esc: EscFn): void {
   dgInBindRefreshClear(root, esc);
   dgInBindCopyPanel(root);
+  dgInBindExportPanel(root);
   dgInBindCopyRows(root);
   dgInInitScanPanels(root, esc);
   initPerfPanel(root, esc);

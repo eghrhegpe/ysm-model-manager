@@ -808,6 +808,8 @@ export const zhCN = {
   "sidebar.packTimedOutStopped": "{n} 个类型批次超时，已停止后续批次",
   // 锐评 P1-1 止血：done 回执带 handler 文件级计数，部分安装失败进汇总 toast
   "sidebar.pushInstallFail": "{fail} 个文件安装失败（成功 {ok}）",
+  // 锐评 P1-3 收口：包级归因——「失败 3」之外必须能指名道姓是哪个包（{names} 形如「狐妖(3)、MMD(1)」）
+  "sidebar.pushPackFailDetail": "失败集中在 {n} 个整合包：{names}",
   // P1-3：推送/拉取循环进度（按钮内显示，大批量不再只干等 spinner）
   "sidebar.pushProgress": "推送中 {i}/{n} 类…",
   "sidebar.pullProgress": "拉取中 {i}/{n} 包…",

@@ -21,8 +21,19 @@ export interface SyncDownloadPayload {
   rtype: string;
 }
 
+/** 单个整合包的安装归因（锐评 P1-3：文件级计数之上再下沉一级——用户看到「失败 3」时
+ *  必须能指名道姓说是哪个包，而不是去数 15 个包的徽章）。 */
+export interface PackOutcome {
+  name: string;
+  ok: number;
+  fail: number;
+  /** 本包失败明细（每包上限 MAX_PACK_ERRORS 条，friendlyError 归一，防多包批量无界增长） */
+  errors: string[];
+}
+
 /** downloadMissing 统一结果契约（ADR-340）：直调方据 skipped/skipReason 分类、
- *  据 ok/fail 汇总文件级计数。skipped=true 时 ok/fail 恒 0（未做或未完成安装）。 */
+ *  据 ok/fail 汇总文件级计数、据 packs 汇总包级归因。skipped=true 时 ok/fail 恒 0
+ *  （未做或未完成安装），packs 亦缺省。 */
 export interface DownloadOutcome {
   ok: number;
   fail: number;
@@ -34,15 +45,21 @@ export interface DownloadOutcome {
    * ，排障只能翻环形日志面板。现上抛前若干条 `friendlyError` 归一后的缘由（格式同 import 批量汇总）
    */
   errors?: string[];
+  /** 包级归因（锐评 P1-3，2026-10-14）：成功路径恒有（本次实际发起安装的包，含单包模式）；
+   *  无安装动作的包不占条目（「没有缺失」与「装了 0 个」语义不同，后者不存在）。 */
+  packs?: PackOutcome[];
 }
 
 /** runDownloadMissing 内部结果：null = 配置缺失/异常（未做或未完成安装）；
- *  ok/fail = 文件级安装计数（锐评 P1-1：经 DownloadOutcome 上抛给发起方汇总）。 */
+ *  ok/fail = 文件级安装计数（锐评 P1-1：经 DownloadOutcome 上抛给发起方汇总），
+ *  packs = 包级归因（锐评 P1-3）。 */
 interface InstallCounts {
   ok: number;
   fail: number;
   /** 失败明细（与 DownloadOutcome.errors 同源，止于本层便于 runDownloadMissing 内聚） */
   errors: string[];
+  /** 包级归因（与 DownloadOutcome.packs 同源） */
+  packs: PackOutcome[];
 }
 
 /** 逐个整合包安装缺失文件，返回文件级计数（null = 配置缺失/异常）。
@@ -98,9 +115,18 @@ async function runDownloadMissing(
   const pushError = (insName: string, item: string, e: unknown): void => {
     if (errors.length < MAX_ERRORS) errors.push(`${insName}/${item}: ${friendlyError(e)}`);
   };
+  // 包级归因（锐评 P1-3）：按包各记一份 ok/fail + 至多 2 条失败缘由，供发起方指名道姓。
+  const packs: PackOutcome[] = [];
+  const MAX_PACK_ERRORS = 2;
+  const pushPackError = (bucket: string[], insName: string, item: string, e: unknown): void => {
+    if (bucket.length < MAX_PACK_ERRORS) bucket.push(`${insName}/${item}: ${friendlyError(e)}`);
+  };
   for (const ins of targets) {
     const st = (allStatuses || []).find((s) => s.Name === ins.Name);
     if (!st?.Missing?.length && !st?.MissingDirs?.length) continue;
+    let packOk = 0;
+    let packFail = 0;
+    const packErrors: string[] = [];
     for (const srcPath of st.Missing ?? []) {
       try {
         if (rtype === RESOURCE_TYPES.YSM) {
@@ -109,9 +135,12 @@ async function runDownloadMissing(
           await InstallResourceToInstance(rtype, srcPath, ins.Name);
         }
         totalOk++;
+        packOk++;
       } catch (e) {
         totalFail++;
+        packFail++;
         pushError(ins.Name, srcPath, e);
+        pushPackError(packErrors, ins.Name, srcPath, e);
       }
     }
     // ADR-310：夹内没有可逐文件安装的受支持文件时，Go 把整个夹放进 MissingDirs——
@@ -121,11 +150,15 @@ async function runDownloadMissing(
       try {
         await PushSingleResourceToInstance(rtype, ins.Name, dirPath);
         totalOk++;
+        packOk++;
       } catch (e) {
         totalFail++;
+        packFail++;
         pushError(ins.Name, dirPath, e);
+        pushPackError(packErrors, ins.Name, dirPath, e);
       }
     }
+    packs.push({ name: ins.Name, ok: packOk, fail: packFail, errors: packErrors });
   }
   // 强制刷新扫描缓存
   try {
@@ -155,7 +188,7 @@ async function runDownloadMissing(
       totalFail > 0 || errors.length > 0 ? "warn" : "success",
     );
   }
-  return { ok: totalOk, fail: totalFail, errors };
+  return { ok: totalOk, fail: totalFail, errors, packs };
 }
 
 /** 导入缺失互斥锁（ADR-340 去总线化后升为模块级常驻）：原锁在 registerSync 内创建，
@@ -192,7 +225,13 @@ export async function downloadMissing({
       // 仅实际做过安装才广播全树重扫——配置缺失短路时无任何写操作，
       // tree:reload 会引发无意义全树重扫
       bus.emit("tree:reload");
-      return { ok: counts.ok, fail: counts.fail, skipped: false as const, errors: counts.errors };
+      return {
+        ok: counts.ok,
+        fail: counts.fail,
+        skipped: false as const,
+        errors: counts.errors,
+        packs: counts.packs, // 锐评 P1-3：包级归因随文件级计数一并上抛
+      };
     } catch (e) {
       toast(friendlyError(e), TOAST_MS.long, "error");
       return { ok: 0, fail: 0, skipped: true as const, skipReason: "error" as const };

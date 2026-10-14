@@ -825,6 +825,7 @@ export const en: Record<string, string> = {
   "sidebar.packBlocked": "{n} type batches did not complete",
   "sidebar.packTimedOutStopped": "{n} type batches timed out; remaining batches stopped",
   "sidebar.pushInstallFail": "{fail} files failed to install ({ok} succeeded)",
+  "sidebar.pushPackFailDetail": "Failures concentrated in {n} pack(s): {names}",
   // P1-3: push/pull loop progress (shown on the button; large batches no longer wait on a bare spinner)
   "sidebar.pushProgress": "Pushing {i}/{n}…",
   "sidebar.pullProgress": "Pulling {i}/{n}…",

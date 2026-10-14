@@ -231,6 +231,10 @@ async function runPush(
   // 跨类型再限一次防 15 类型累积成超长 toast）。
   const errorDetails: string[] = [];
   const MAX_TOTAL_ERRORS = 5;
+  // 包级归因（锐评 P1-3，2026-10-14）：跨类型累加每包成败——同一包在多个类型批次里各记一笔，
+  // 汇总是「这个包整体失败 N 个文件」。用户看到「失败 3」时能直接读到是哪个包。
+  const packTotals = new Map<string, { ok: number; fail: number }>();
+  const MAX_NAMED_PACKS = 3;
   try {
     for (let ti = 0; ti < types.length; ti++) {
       const rt = types[ti];
@@ -251,6 +255,12 @@ async function runPush(
         for (const msg of outcome.errors ?? []) {
           if (errorDetails.length < MAX_TOTAL_ERRORS) errorDetails.push(msg);
         }
+        for (const p of outcome.packs ?? []) {
+          const cur = packTotals.get(p.name) ?? { ok: 0, fail: 0 };
+          cur.ok += p.ok;
+          cur.fail += p.fail;
+          packTotals.set(p.name, cur);
+        }
         if (outcome.skipped) {
           // 归因分流：busy = 他页同时在推（直调串行下自撞锁不再可能，仅剩跨页防御位）；
           // config/error 各自有专门 toast（handler 已弹），汇总只如实计「未完成批次」，
@@ -267,10 +277,25 @@ async function runPush(
         throw e;
       }
     }
+    // 失败包点名（P1-3）：只点有失败的包，按失败数降序（多类型累积后差距可见），
+    // 超量截断——「A(3)、B(1) 等」比一长串更有指导性
+    const failedPacks = [...packTotals.entries()]
+      .filter(([, v]) => v.fail > 0)
+      .sort((a, b) => b[1].fail - a[1].fail);
     if (skipped > 0 || blocked > 0 || timedOut > 0 || installFail > 0) {
       const parts: string[] = [];
       if (installFail > 0)
         parts.push(t("sidebar.pushInstallFail", { fail: installFail, ok: installOk }));
+      if (failedPacks.length > 0) {
+        const named = failedPacks
+          .slice(0, MAX_NAMED_PACKS)
+          .map(([name, v]) => `${name}(${v.fail})`)
+          .join("、");
+        const more = failedPacks.length > MAX_NAMED_PACKS ? t("import.moreSuffix") : "";
+        parts.push(
+          t("sidebar.pushPackFailDetail", { n: failedPacks.length, names: `${named}${more}` }),
+        );
+      }
       if (skipped > 0) parts.push(t("sidebar.packSkipped", { n: skipped }));
       if (blocked > 0) parts.push(t("sidebar.packBlocked", { n: blocked }));
       if (timedOut > 0) parts.push(t("sidebar.packTimedOutStopped", { n: timedOut }));

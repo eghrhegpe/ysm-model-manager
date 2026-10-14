@@ -108,7 +108,13 @@ describe("downloadMissing — 导入缺失直调（ADR-340）", () => {
       "/mc/instances/PackA/custom",
     );
     expect(refreshEvents.length).toBeGreaterThan(0);
-    expect(outcome).toEqual({ ok: 1, fail: 0, skipped: false, errors: [] });
+    expect(outcome).toEqual({
+      ok: 1,
+      fail: 0,
+      skipped: false,
+      errors: [],
+      packs: [{ name: "PackA", ok: 1, fail: 0, errors: [] }],
+    });
     expect(reloadEvents.length).toBeGreaterThan(0);
     expect(toasts.some((t) => t.msg.includes("PackA: 导入 1 成功"))).toBe(true);
   });
@@ -136,7 +142,13 @@ describe("downloadMissing — 导入缺失直调（ADR-340）", () => {
     expect(mocks.InstallResourceToInstance).not.toHaveBeenCalled();
     expect(mocks.InstallModelTo).not.toHaveBeenCalled();
     // 整夹安装计入成功数（徽章有数 ⇒ 一键安装有动作）
-    expect(outcome).toEqual({ ok: 1, fail: 0, skipped: false, errors: [] });
+    expect(outcome).toEqual({
+      ok: 1,
+      fail: 0,
+      skipped: false,
+      errors: [],
+      packs: [{ name: "PackA", ok: 1, fail: 0, errors: [] }],
+    });
     expect(toasts.some((t) => t.msg.includes("PackA: 导入 1 成功"))).toBe(true);
   });
 
@@ -148,7 +160,13 @@ describe("downloadMissing — 导入缺失直调（ADR-340）", () => {
 
     // 只有 PackA 有 Missing，PackB 跳过
     expect(mocks.InstallModelTo).toHaveBeenCalledTimes(1);
-    expect(outcome).toEqual({ ok: 1, fail: 0, skipped: false, errors: [] });
+    expect(outcome).toEqual({
+      ok: 1,
+      fail: 0,
+      skipped: false,
+      errors: [],
+      packs: [{ name: "PackA", ok: 1, fail: 0, errors: [] }],
+    });
     expect(toasts.some((t) => t.msg.includes("全部导入完成: 1 成功"))).toBe(true);
   });
 
@@ -252,7 +270,13 @@ describe("downloadMissing — 导入缺失直调（ADR-340）", () => {
 
     const outcome = await downloadMissing({ instanceName: "PackA", rtype: "ysm" });
 
-    expect(outcome).toEqual({ ok: 2, fail: 1, skipped: false, errors: expect.any(Array) });
+    expect(outcome).toEqual({
+      ok: 2,
+      fail: 1,
+      skipped: false,
+      errors: expect.any(Array),
+      packs: [{ name: "PackA", ok: 2, fail: 1, errors: expect.any(Array) }],
+    });
     // 锐评 UX 高项收口（2026-10-14）：失败明细必点名——原 `catch { totalFail++ }` 吞错误
     expect(outcome.errors?.[0]).toContain("locked");
   });
@@ -306,8 +330,48 @@ describe("downloadMissing — 导入缺失直调（ADR-340）", () => {
 
     // 安装确实发生了（PackA 有 Missing），只是不弹结果 toast
     expect(mocks.InstallModelTo).toHaveBeenCalledTimes(1);
-    expect(outcome).toEqual({ ok: 1, fail: 0, skipped: false, errors: [] });
+    expect(outcome).toEqual({
+      ok: 1,
+      fail: 0,
+      skipped: false,
+      errors: [],
+      packs: [{ name: "PackA", ok: 1, fail: 0, errors: [] }],
+    });
     expect(toasts.some((t) => t.msg.includes("导入"))).toBe(false);
+  });
+
+  // 锐评 P1-3 回归锁：文件级计数之外必须有**包级归因**——用户看到「失败 4」时要能直接
+  // 读到是哪个包失败、各失败几个；每包缘由独立封顶（防「15 类型 × N 包」批量下无界增长）。
+  it("P1-3 包级归因：多包批量各自失败 → packs 按包计数，包内缘由独立封顶", async () => {
+    const repo = MOCK_DATA.GetRepoRoot;
+    mocks.GetResourceInstanceStatus.mockResolvedValue([
+      { Name: "PackA", Missing: [`${repo}/a1.ysm`] },
+      { Name: "PackB", Missing: [`${repo}/b1.ysm`, `${repo}/b2.ysm`, `${repo}/b3.ysm`] },
+    ]);
+    mocks.InstallModelTo.mockRejectedValue(new Error("disk full"));
+    const { downloadMissing } = await import("./sync.ts");
+    spyEvents();
+
+    const outcome = await downloadMissing({ instanceNames: ["PackA", "PackB"], rtype: "ysm" });
+
+    expect(outcome.ok).toBe(0);
+    expect(outcome.fail).toBe(4); // 1 + 3 文件级总计不变（向后兼容）
+    expect(outcome.packs).toEqual([
+      {
+        name: "PackA",
+        ok: 0,
+        fail: 1,
+        errors: [expect.stringContaining("PackA/")],
+      },
+      {
+        name: "PackB",
+        ok: 0,
+        fail: 3, // 计数如实（3 条），缘由封顶 2 条
+        errors: [expect.stringContaining("PackB/"), expect.stringContaining("PackB/")],
+      },
+    ]);
+    // 全局 errors 仍是原口径（封顶 3 条，向后兼容）
+    expect(outcome.errors).toHaveLength(3);
   });
 });
 

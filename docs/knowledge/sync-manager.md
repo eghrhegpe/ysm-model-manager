@@ -46,6 +46,7 @@ auto_fields:
     - loadTypeConfig
     - NetworkSelf
     - noInstanceHTML
+    - PackOutcome
     - performSingleOp
     - pruneCheckedSets
     - registerSync
@@ -136,13 +137,13 @@ status: active
 - **a11y 模板语义（2026 复测补缺）**：状态筛选栏 = `role="radiogroup"` + 六个 `role="radio"`（`aria-checked` + roving tabindex 由 `statusTabHTML` 模板随重渲染自动迁移）；目录行箭头为原生 `button` + `aria-expanded` + 名称标签；装饰图标 `aria-hidden`；加载态 `role="status"`；错误 div `role="alert"`。键盘半边 = `bindDelegatedEvents` 的单点 keydown 委托（方向键循环移动即激活、Home/End 只移焦点——仓内先例 `tabs-shell.ts` diag 子切换同口径），契约 `tpl.test.ts`（属性字符串）+ `a11y.dom.test.ts`（键盘行为）
 
 ### `app-sidebar`（整包级）
-- **`runPush`**：按类型循环 `await downloadMissing({instanceNames})` **直调**（ADR-340 去总线化，2026-10-14：原 `sync:download:missing` 事件 + token 回执 + `waitBusQuiet` 静默宽限四件套整体退役，Promise 返回值即 `{ok, fail, skipped, skipReason}`），累加计数汇总一条 toast；binding 挂起由 `withTimeout`(120s) 兜底且**超时即早停**（治锐评 P1-2 级联——原总线实现超时后续发只会撞 handler 持锁 busy 假跳过）。原 `for insName × for rtype` 逐包逐类型 N×T 次已收敛为 O(类型) 次（ADR-310 性能修复，2026-10）
+- **`runPush`**：按类型循环 `await downloadMissing({instanceNames})` **直调**（ADR-340 去总线化，2026-10-14：原 `sync:download:missing` 事件 + token 回执 + `waitBusQuiet` 静默宽限四件套整体退役，Promise 返回值即 `{ok, fail, skipped, skipReason, packs}`），累加计数汇总一条 toast；**包级归因（锐评 P1-3）**：跨类型把 `packs` 累加进 `Map<包名, {ok,fail}>`，有失败的包按失败数降序点名（`sidebar.pushPackFailDetail`「失败集中在 N 个整合包：狐妖(3)、MMD(1)」，超 3 个截断加 `import.moreSuffix`）——用户看到「失败 3」时直接读到是哪个包；binding 挂起由 `withTimeout`(120s) 兜底且**超时即早停**（治锐评 P1-2 级联——原总线实现超时后续发只会撞 handler 持锁 busy 假跳过）。原 `for insName × for rtype` 逐包逐类型 N×T 次已收敛为 O(类型) 次（ADR-310 性能修复，2026-10）
 - **`runPull`**：`Promise.allSettled` 并拉 `PullResourceFromInstance`
 - **`_syncLock`（`BusyLock`）** 守卫：防止并发 sync 竞态（ADR-341 归一，`beginSync` tryStart / `runPush`·`runPull` finally finish）
 - **同步流程层（`sync-flow.ts`，2026-09-08 从 `index.ts` 拆出）**：`runPush`/`runPull`/`bindSelectAll`/`bindSyncSelected`/`restoreCheckboxes` + `_checkedSets`（按 rtype 隔离的勾选状态 Map）全部迁至独立文件，`index.ts` 仅保留 Web Component 生命周期与渲染编排
 
 ### `features/sync.ts`（同步执行层）
-- **`downloadMissing(payload): Promise<DownloadOutcome>`**（ADR-340 唯一入口，直调非事件）：`withLock(downloadLock)` 互斥 → `runDownloadMissing`（`ListVersionInstances` → `GetResourceInstanceStatus` → 按 `instanceName`/`instanceNames` 过滤 targets × Missing：`InstallModelTo`(YSM) / `InstallResourceToInstance`(other) → `InvalidateScanCache`）；`instanceNames` 优先（批量一次覆盖多包），单次调用内只扫一次状态；恒 settle 返回 `{ok, fail, skipped, skipReason, errors}`，批量模式静默不弹结果 toast（`errors` 交发起方汇总，见「失败明细必点名」条）
+- **`downloadMissing(payload): Promise<DownloadOutcome>`**（ADR-340 唯一入口，直调非事件）：`withLock(downloadLock)` 互斥 → `runDownloadMissing`（`ListVersionInstances` → `GetResourceInstanceStatus` → 按 `instanceName`/`instanceNames` 过滤 targets × Missing：`InstallModelTo`(YSM) / `InstallResourceToInstance`(other) → `InvalidateScanCache`）；`instanceNames` 优先（批量一次覆盖多包），单次调用内只扫一次状态；恒 settle 返回 `{ok, fail, skipped, skipReason, errors, packs}`（`packs` = 锐评 P1-3 包级归因 `PackOutcome {name, ok, fail, errors}`，包内缘由封顶 2 条，仅本次真有安装动作的包占条目），批量模式静默不弹结果 toast（`errors`/`packs` 交发起方汇总，见「失败明细必点名」条）
 - **`sync:toggle:status`**（bus 事件，registerSync 注册）：`.ban`/`.disabled` 启禁同步
 
 ## 数据流（后端 → store → 渲染）
@@ -246,6 +247,11 @@ sidebar 底部 push/pull 菜单（整包级，与 sync-manager 组件解耦）
 - **Go 绑定**：统一 `getApp()` 入口，禁止直调 `window.go.main.App.*`
 - **⚠️ a11y 属性模板生成原则（2026 复测补缺）**：本视图全部 a11y 属性由 `tpl.ts` 模板单点产出（renderer/events 层零手写 aria）；键盘委托唯一出口 = `events.ts|bindDelegatedEvents` 的 keydown 单委托——新增可交互元素先扩模板，不逐处打属性
 - **diverged 行推送须先确认（ADR-310 安全闸，2026-10）**：`diverged` 与 `missing` 共用同一 push 按钮（`tpl.actionBtnHTML` 不区分），但 diverged = 仓库与整合包两侧都已修改，推送会用仓库版**不可逆覆盖**整合包侧编辑。故 `events.ts|handleItemButton` 在 `status === "diverged"` 且 action 为 push 时，先 `modalConfirm`（`syncManager.divergedWarnTitle`/`divergedWarnMsg`，`danger: true`）确认后才调 `cb.doPerformOp("push", path)`；取消则完全不推送。`missing` 行走原直接推送路径。`tpl.ts` 的 diverged 状态图标带 `title`（悬停提示冲突）。回归锁 `events.test.ts`「diverged 行 push → 先弹确认框」「diverged 行 push → 用户取消 → 不推送」「missing 行 push → 不弹确认框」
+
+
+## 裁定记录
+
+- `2026-10-14`：DownloadOutcome 扩展 packs?: PackOutcome[]（包级归因，成功路径恒有），文件级 ok/fail/errors 原口径不变｜锐评 P1-3：只报「失败 N 个文件」时用户无从知道是哪个包失败，包名归因须随计数一并上抛；纯加字段向后兼容｜回退 = `frontend/src/features/sync/sync.ts|DownloadOutcome`
 
 ## 相关
 

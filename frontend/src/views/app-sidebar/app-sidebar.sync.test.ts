@@ -324,6 +324,28 @@ describe("app-sidebar — 推送所选（ADR-340 直调）", () => {
     expect($<HTMLButtonElement>(el, ".sidebar-push-selected").disabled).toBe(false);
     unmountElement(el);
   });
+
+  // 锐评 P1-3 回归锁：包级归因——「失败 N 个文件」之外必须点名是哪个整合包。
+  // 多类型批次下同一包会被累加多次，断言「包名 + 括号内失败数」出现且计数正确。
+  it("P1-3 包级归因 → 汇总 toast 点名失败整合包与失败数", async () => {
+    downloadMissingMock.mockResolvedValue({
+      ok: 10,
+      fail: 2,
+      skipped: false,
+      packs: [{ name: "狐妖整合包", ok: 10, fail: 2, errors: [] }],
+    });
+    const el = await mountSidebar();
+    checkFirst(el);
+
+    clickPushAll(el);
+    await waitFor(() => toasts.some((t) => t.type === "warn" && t.msg.includes("失败集中在")));
+
+    const msg = toasts.find((t) => t.msg.includes("失败集中在"))?.msg ?? "";
+    expect(msg).toContain("狐妖整合包"); // 包名可见（用户能指名道姓）
+    // 多类型循环累加：失败数 = 2×类型数（断言「包名(数字)」形态而非具体数字）
+    expect(/狐妖整合包\(\d+\)/.test(msg)).toBe(true);
+    unmountElement(el);
+  });
 });
 
 describe("app-sidebar — 拉取所选", () => {

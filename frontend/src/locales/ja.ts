@@ -824,6 +824,7 @@ export const ja: Record<string, string> = {
   "sidebar.packBlocked": "{n} 種類のバッチが未完了",
   "sidebar.packTimedOutStopped": "{n} 種類のバッチがタイムアウト、後続バッチを停止しました",
   "sidebar.pushInstallFail": "{fail} 個のファイルのインストールに失敗（{ok} 個成功）",
+  "sidebar.pushPackFailDetail": "失敗は {n} 個のパックに集中：{names}",
   // P1-3：プッシュ/プルループ進捗（ボタン内表示；大量処理がスピンナー待ちだけにならない）
   "sidebar.pushProgress": "プッシュ中 {i}/{n}…",
   "sidebar.pullProgress": "プル中 {i}/{n}…",

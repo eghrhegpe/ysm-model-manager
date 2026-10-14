@@ -28,6 +28,133 @@ const FALLBACK_COLOR_GRAY = 0xcccccc;
  * @param texArr 全局纹理数组（perComponent 缺省时回退用）
  * @param modeOverride 面级拆分产出的碎片模式（ADR-118 Phase B），缺省按整纹理判定
  */
+/** 由 SpecMeshGroup3D 构建 BufferGeometry（三属性 + 索引 + 包围盒/球）。 */
+function buildGeometry(md: SpecMeshGroup3D): THREE.BufferGeometry {
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.Float32BufferAttribute(md.positions, 3));
+  geo.setAttribute("normal", new THREE.Float32BufferAttribute(md.normals, 3));
+  geo.setAttribute("uv", new THREE.Float32BufferAttribute(md.uvs, 2));
+  geo.setIndex(md.indices);
+  geo.computeBoundingBox();
+  geo.computeBoundingSphere();
+  return geo;
+}
+
+/**
+ * ADR-114 perComponent：优先组件级纹理，缺则回退全局 texArr；索引空间随来源切换。
+ * 混用两个索引空间会越界误报（如 arrow texSlot=6 对 compTexArr 长度 1），
+ * 多纹理组件还可能绑错。
+ */
+function resolveTextureIndex(
+  arr: (THREE.Texture | null)[],
+  compTexArr: (THREE.Texture | null)[],
+  multiModel: boolean,
+  md: SpecMeshGroup3D,
+  texIdx: number,
+): number {
+  return arr === compTexArr ? 0 : multiModel ? (md.texIdx ?? 0) : (texIdx ?? 0);
+}
+
+/**
+ * 纹理槽位解析：命中取图；槽位缺失**不再静默兜底贴错图**（坏文明根除）——
+ * 灰色占位 + 明确报错至少诚实暴露映射断裂，便于定位数据源问题。
+ */
+function resolveTexture(
+  arr: (THREE.Texture | null)[],
+  mti: number,
+  md: SpecMeshGroup3D,
+  multiModel: boolean,
+  texIdx: number,
+): THREE.Texture | null {
+  if (arr.length === 0) return null;
+  if (mti >= 0 && mti < arr.length && arr[mti]) return arr[mti];
+  console.error(
+    `[model3d] 纹理槽位缺失: 组件 ${md.boneId} 期望索引 ${mti}` +
+      `（可用纹理 ${arr.filter(Boolean).length}/${arr.length}），以灰色占位渲染`,
+    { multiModel, mdTexIdx: md.texIdx, callerTexIdx: texIdx },
+  );
+  return null;
+}
+
+/**
+ * ysmview 风格材质：glow 骨骼用 Standard（emissive 全亮），否则 Basic；
+ * 颜色/透明/深度写按 alphaMode 收敛（配置展开于 MATERIAL_OPTS 之后，同键覆盖语义不变）。
+ */
+function buildMaterial(
+  mt: THREE.Texture | null,
+  alphaMode: TextureAlphaMode,
+  glow: boolean,
+): THREE.Material {
+  const alphaOpts = {
+    transparent: alphaMode === "blend",
+    alphaTest: alphaMode === "cutout" ? 0.1 : 0,
+    depthWrite: alphaMode !== "blend",
+  };
+  if (glow) {
+    return new THREE.MeshStandardMaterial({
+      ...(mt ? { map: mt, emissiveMap: mt } : {}),
+      color: mt ? 0xffffff : FALLBACK_COLOR_GRAY,
+      emissive: new THREE.Color(0xffffff),
+      emissiveIntensity: 1.0,
+      ...MATERIAL_OPTS,
+      ...alphaOpts,
+    });
+  }
+  if (mt) {
+    return new THREE.MeshBasicMaterial({ map: mt, ...MATERIAL_OPTS, ...alphaOpts });
+  }
+  return new THREE.MeshBasicMaterial({ color: FALLBACK_COLOR_GRAY, ...MATERIAL_OPTS });
+}
+
+/** 设置网格位置（localPosition 三段 + 非单位旋转应用）。 */
+function applyMeshTransform(mesh: THREE.Object3D, md: SpecMeshGroup3D): void {
+  mesh.position.set(
+    md.localPosition?.[0] ?? 0,
+    md.localPosition?.[1] ?? 0,
+    md.localPosition?.[2] ?? 0,
+  );
+  applyRotationIfNonIdentity(mesh, md.localRotation);
+}
+
+/**
+ * 方案 E：blend 双 pass——BackSide 写深度 + FrontSide alpha 混合。
+ * 根除"部分方块不可见"：blend mesh 正背面排序错误导致帧间闪烁。
+ * Pass 1 (renderOrder=1)：BackSide + depthWrite=true，背面写入深度；
+ * Pass 2 (renderOrder=2)：FrontSide + depthWrite=false，正面混合。
+ * opaque/cutout 保持单 mesh（不调用本函数）。
+ */
+function addBlendDoublePass(
+  bg: THREE.Group,
+  geo: THREE.BufferGeometry,
+  mat: THREE.Material,
+  md: SpecMeshGroup3D,
+): void {
+  // Pass 1: BackSide depth pre-pass——alphaTest: 0.01 丢弃全透明片元，
+  // colorWrite: false 让预 pass 不贡献颜色，避免 glow blend 背面发暗
+  const depthGeo = geo.clone();
+  const depthMat = mat.clone();
+  depthMat.side = THREE.BackSide;
+  depthMat.depthWrite = true;
+  depthMat.alphaTest = 0.01;
+  depthMat.colorWrite = false;
+  const depthMesh = new THREE.Mesh(depthGeo, depthMat);
+  depthMesh.frustumCulled = false;
+  depthMesh.renderOrder = 1;
+  applyMeshTransform(depthMesh, md);
+  bg.add(depthMesh);
+
+  // Pass 2: FrontSide blend pass（原 mat 已设 depthWrite=false）
+  const blendMat = mat.clone();
+  blendMat.side = THREE.FrontSide;
+  const blendMesh = new THREE.Mesh(geo, blendMat);
+  blendMesh.frustumCulled = false;
+  blendMesh.renderOrder = 2;
+  applyMeshTransform(blendMesh, md);
+  bg.add(blendMesh);
+  // clone 后原 mat 不再被任何 mesh 持有，显式 dispose 止 GPU 材质泄漏
+  mat.dispose();
+}
+
 export function addMeshToBoneGroup(
   bg: THREE.Group,
   md: SpecMeshGroup3D,
@@ -38,112 +165,19 @@ export function addMeshToBoneGroup(
   modeOverride?: TextureAlphaMode,
   glow: boolean = false,
 ): void {
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute("position", new THREE.Float32BufferAttribute(md.positions, 3));
-  geo.setAttribute("normal", new THREE.Float32BufferAttribute(md.normals, 3));
-  geo.setAttribute("uv", new THREE.Float32BufferAttribute(md.uvs, 2));
-  geo.setIndex(md.indices);
-  geo.computeBoundingBox();
-  geo.computeBoundingSphere();
+  const geo = buildGeometry(md);
 
   // ADR-114 perComponent：优先组件级纹理，缺则回退全局 texArr
   const arr = compTexArr.length > 0 ? compTexArr : texArr;
-  // 索引空间（code review P3）：per-component 数组是组件自己的纹理（局部 0 基，
-  // ADR-114 cube.TexSlot=0 → compTexArr[0]）；只有回退到全局 texArr 时才用
-  // md.texIdx（Go 端全局槽位）/调用方 texIdx——混用两个索引空间会越界误报
-  // 品红 warning（如 arrow texSlot=6 对 compTexArr 长度 1），多纹理组件还可能绑错
-  const mti = arr === compTexArr ? 0 : multiModel ? (md.texIdx ?? 0) : (texIdx ?? 0);
+  const mti = resolveTextureIndex(arr, compTexArr, multiModel, md, texIdx);
+  const mt = resolveTexture(arr, mti, md, multiModel, texIdx);
 
-  // 纹理槽位缺失时**不再静默兜底贴错图**（坏文明根除）：旧行为「找第一张可用」
-  // 会把别的组件皮肤贴上还装没事（wine_fox 多组件渲染错乱的帮凶）；灰色占位 +
-  // 明确报错至少诚实暴露映射断裂，便于定位数据源问题。
-  let mt: THREE.Texture | null = null;
-  if (arr.length > 0) {
-    if (mti >= 0 && mti < arr.length && arr[mti]) {
-      mt = arr[mti];
-    } else {
-      console.error(
-        `[model3d] 纹理槽位缺失: 组件 ${md.boneId} 期望索引 ${mti}` +
-          `（可用纹理 ${arr.filter(Boolean).length}/${arr.length}），以灰色占位渲染`,
-        { multiModel, mdTexIdx: md.texIdx, callerTexIdx: texIdx },
-      );
-    }
-  }
-
-  // ysmview 风格材质：FrontSide + transparent + alphaTest 0.1 + depthWrite（配置收敛于 MATERIAL_OPTS）
   // ADR-118 Phase B：modeOverride 来自面级拆分（碎片级模式），优先于整纹理判定
   const alphaMode = modeOverride ?? (mt ? getTextureAlphaMode(mt) : "opaque");
-  // 发光骨骼（名前缀 "ysmGlow"，对齐上游 GeoBone.glow + NativeModelRenderer:152
-  // LightTexture.pack(15,15)）：改用 MeshStandardMaterial 设 emissive，
-  // 模拟上游全亮渲染；非 glow 保持 MeshBasicMaterial 不变（无光照开销）。
-  const mat = glow
-    ? new THREE.MeshStandardMaterial({
-        // map/emissiveMap 为 MaterialParameters 可选键（3rd-party）——仅 mt 存在时附带
-        ...(mt ? { map: mt, emissiveMap: mt } : {}),
-        color: mt ? 0xffffff : FALLBACK_COLOR_GRAY,
-        emissive: new THREE.Color(0xffffff),
-        emissiveIntensity: 1.0,
-        ...MATERIAL_OPTS,
-        transparent: alphaMode === "blend",
-        alphaTest: alphaMode === "cutout" ? 0.1 : 0,
-        depthWrite: alphaMode !== "blend",
-      })
-    : mt
-      ? new THREE.MeshBasicMaterial({
-          map: mt,
-          ...MATERIAL_OPTS,
-          transparent: alphaMode === "blend",
-          alphaTest: alphaMode === "cutout" ? 0.1 : 0,
-          depthWrite: alphaMode !== "blend",
-        })
-      : new THREE.MeshBasicMaterial({
-          color: FALLBACK_COLOR_GRAY,
-          ...MATERIAL_OPTS,
-        });
+  const mat = buildMaterial(mt, alphaMode, glow);
 
-  // 方案 E：blend 双 pass——BackSide 写深度 + FrontSide alpha 混合。
-  // 根除"部分方块不可见"：blend mesh 正背面排序错误导致帧间闪烁。
-  // 双 pass 利用深度缓冲自动处理正背面遮挡：
-  //   Pass 1 (renderOrder=1)：BackSide + depthWrite=true，背面写入深度
-  //   Pass 2 (renderOrder=2)：FrontSide + depthWrite=false，正面混合
-  //   正面 pass 的深度测试自动剔除被背面遮挡的像素 → 正背面排序正确
-  // opaque/cutout 保持单 mesh（depthWrite=true，深度测试自动处理遮挡）。
   if (alphaMode === "blend" && mt) {
-    // Pass 1: BackSide depth pre-pass——从 mat 派生，继承 glow/emissive 等配置
-    // alphaTest: 0.01 丢弃全透明片元，不写幽灵深度遮挡身后透明物体
-    // colorWrite: false 让预 pass 不贡献颜色，避免 glow blend 背面发暗
-    const depthGeo = geo.clone();
-    const depthMat = mat.clone();
-    depthMat.side = THREE.BackSide;
-    depthMat.depthWrite = true;
-    depthMat.alphaTest = 0.01;
-    depthMat.colorWrite = false;
-    const depthMesh = new THREE.Mesh(depthGeo, depthMat);
-    depthMesh.frustumCulled = false;
-    depthMesh.renderOrder = 1;
-    depthMesh.position.set(
-      md.localPosition?.[0] ?? 0,
-      md.localPosition?.[1] ?? 0,
-      md.localPosition?.[2] ?? 0,
-    );
-    applyRotationIfNonIdentity(depthMesh, md.localRotation);
-    bg.add(depthMesh);
-
-    // Pass 2: FrontSide blend pass（原 mat 已设 depthWrite=false）
-    const blendMat = mat.clone();
-    blendMat.side = THREE.FrontSide;
-    const blendMesh = new THREE.Mesh(geo, blendMat);
-    blendMesh.frustumCulled = false;
-    blendMesh.renderOrder = 2;
-    blendMesh.position.set(
-      md.localPosition?.[0] ?? 0,
-      md.localPosition?.[1] ?? 0,
-      md.localPosition?.[2] ?? 0,
-    );
-    applyRotationIfNonIdentity(blendMesh, md.localRotation);
-    bg.add(blendMesh);
-    // clone 后原 mat 不再被任何 mesh 持有，显式 dispose 止 GPU 材质泄漏
-    mat.dispose();
+    addBlendDoublePass(bg, geo, mat, md);
     return;
   }
 
@@ -153,11 +187,6 @@ export function addMeshToBoneGroup(
   // 视锥误判不可见而隐藏（转头脸消失），故关闭 mesh 级剔除，可见性交由外层
   // `cullModelGroups`（Group 级，单模型场景本就豁免）统一管理，性能不裸奔。
   mesh.frustumCulled = false;
-  mesh.position.set(
-    md.localPosition?.[0] ?? 0,
-    md.localPosition?.[1] ?? 0,
-    md.localPosition?.[2] ?? 0,
-  );
-  applyRotationIfNonIdentity(mesh, md.localRotation);
+  applyMeshTransform(mesh, md);
   bg.add(mesh);
 }

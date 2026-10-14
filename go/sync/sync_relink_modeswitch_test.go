@@ -176,9 +176,8 @@ func TestRelinkDir_DirLevelSnapshotMissingRefusesRename(t *testing.T) {
 				failedMsgs = append(failedMsgs, msg)
 			}
 		})
-	if err != nil {
-		t.Fatalf("RelinkDir 失败: %v", err)
-	}
+	// ADR-342 C1：零成功 + 有拒搬 → 抬成 ErrPartialSync（供上层弹失败而非「已重链 0 个」成功）
+	testutil.ErrorIs(t, err, ErrPartialSync, "零成功且有失败应报可分类错误")
 	if count != 0 {
 		t.Errorf("快照缺失应拒搬，count=%d want 0", count)
 	}
@@ -226,9 +225,8 @@ func TestRelinkDir_DirLevelSnapshotReplacedRefusesRename(t *testing.T) {
 				failedMsgs = append(failedMsgs, msg)
 			}
 		})
-	if err != nil {
-		t.Fatalf("RelinkDir 失败: %v", err)
-	}
+	// ADR-342 C1：零成功 + 有拒搬 → 抬成 ErrPartialSync（与上一条同规）
+	testutil.ErrorIs(t, err, ErrPartialSync, "零成功且有失败应报可分类错误")
 	if count != 0 {
 		t.Errorf("dstParent 非目录应拒搬，count=%d want 0", count)
 	}
@@ -236,9 +234,9 @@ func TestRelinkDir_DirLevelSnapshotReplacedRefusesRename(t *testing.T) {
 		t.Errorf("应走复验拒搬（快照复验失败/类型不符），而非旧路径 rename 噪点，实际 %v", failedMsgs)
 	}
 	// 文件占位物必须完好——复验在 rename **之前**，旧实现会把文件 rename 走变成备份目录
-	data, err := os.ReadFile(occupied)
-	if err != nil || string(data) != "x" {
-		t.Fatalf("占位文件应原样完好（未被动过）: err=%v data=%q", err, data)
+	data, readErr := os.ReadFile(occupied)
+	if readErr != nil || string(data) != "x" {
+		t.Fatalf("占位文件应原样完好（未被动过）: err=%v data=%q", readErr, data)
 	}
 }
 

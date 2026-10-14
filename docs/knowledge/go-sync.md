@@ -171,6 +171,7 @@ status: active
 
 ## 裁定记录
 
+- `2026-10-14`：relink 失败信号收口（对抗复核 C1）——`RelinkDir` 统计失败条目，**零成功且有失败**返回 `ErrPartialSync`（原只记日志返回 `(0, nil)` → 前端弹「已重新链接 0 个文件」成功 toast）；app 层 `RelinkAllInstanceResources` 遇 `ErrPartialSync` 不中断类型循环、仅在**整实例零成功**时上抛，有任何成功返回 `(total, nil)`（逐条失败在导入日志面板，不用「整实例失败」盖掉计数）｜契约变化同步改了两条特征用例与两条拒搬用例的 `NoError` → `ErrorIs`（行为断言原样）｜回退 = `go/sync/sync_relink.go|ErrPartialSync`、`internal/app/app_install_instance.go|RelinkAllInstanceResources`
 - `2026-10-14`：relink 加固第二刀（对抗复核 A1/A2/C3 收口）——「改名搬运只进空位」+ 去重键含仓库源夹与到位校验 + 身份复验错误分类（不存在 vs 无法读取）｜旧回滚无条件 `RemoveAll(dstBase/base(srcDir))` 在「仓库夹名≠实例夹名且目标已存在」时删掉用户既有活夹（变异检查实测 `keep.png` 被删）；旧去重只按实例夹 → 第二条目未重链却计成功（count=2、零日志）｜回退 = `go/sync/sync_relink.go|relinkLandingKey`、`go/sync/sync_relink.go|rollbackRelinkReplace`
 - `2026-10-14`：relink 整夹替换改为「保全实例独有文件 + 句柄态目录身份 + 同夹条目去重 + 备份尸体同步豁免」四件套（ADR-342）｜旧实现成功即 `RemoveAll` 备份 → 实例独有文件不可逆静默消失（探针实证 `count=1 err=nil logs=[]`）；ADR-296 D4 的 `os.SameFile` 在 Windows 上因惰性 `fileStat` 按名重开而恒真（探针实证同名重建仍判 same）｜回退 = `go/sync/sync_relink.go|collectInstanceOnlyFiles`、`go/sync/sync_relink.go|dirIdentity`、`go/sync/sync_relink.go|isRelinkBackupPath`
 - `2026-10-14`：contentDiffers 对 Oversize（>MaxImportSize 被跳过哈希）文件不再回退 Size 判 Synced，保守判 Missing（待推送）——P0-2 诚实化，消灭 >500MB 静默假绿｜超限文件因 bug-chronicle #36 刻意跳过哈希，同尺寸不足以证明内容一致；非 hashable / scanFn=nil 的空哈希仍走 Size 兜底（误判面窄、不回归），故只翻转 Oversize 一类｜回退 = `go/sync/sync_diff.go|DiffEntry.Oversize`

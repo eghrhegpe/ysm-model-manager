@@ -58,6 +58,10 @@ func RelinkDir(customDir, filesRoot, rtype, linkMode string, scanFn func(string)
 	defer InvalidateSyncScanCaches() // 重链接会改实例目录，清同步扫盘缓存防陈旧
 
 	count := 0
+	// failed 统计「计了失败的条目」（含整夹回滚、快照拒搬、去重未到位）——用于把
+	// 「一条都没成功」抬成错误返回（对抗复核 C1）：此前全失败也返回 (0, nil)，
+	// 前端只有「按实例计数」一条失败通路，看不到异常就弹成功 toast。
+	failed := 0
 	// replacedDirs 记录本轮已整夹替换过的「实例夹 → 仓库源夹」组合（键见 relinkLandingKey）：
 	// 同夹多条目（一个模型夹里两个目录型入口）共享一次替换结果，避免「刚建好又搬一次」+
 	// 多余备份。**只按实例夹去重是不够的**（对抗复核 A2）：同哈希源可能来自另一个仓库夹，
@@ -87,6 +91,7 @@ func RelinkDir(customDir, filesRoot, rtype, linkMode string, scanFn func(string)
 			// Install 内部对已存在的旧文件做原子替换（临时链接 + rename），失败不破坏原文件
 			if err := installer.InstallLocked(srcPath, customDir, filesRoot, linkMode); err != nil {
 				logRelinkFailure(ce, customDir, "relink 失败: "+err.Error(), logger)
+				failed++
 				continue
 			}
 			count++
@@ -104,6 +109,8 @@ func RelinkDir(customDir, filesRoot, rtype, linkMode string, scanFn func(string)
 		if strings.EqualFold(filepath.Clean(dstParent), filepath.Clean(customDir)) {
 			if relinkFlatEntry(ce, srcPath, customDir, logger) {
 				count++
+			} else {
+				failed++
 			}
 			continue
 		}
@@ -122,12 +129,21 @@ func RelinkDir(customDir, filesRoot, rtype, linkMode string, scanFn func(string)
 				}
 			}
 			logRelinkFailure(ce, landed, "同夹条目未随整夹替换到位（落位夹内无该文件），跳过重链", logger)
+			failed++
 			continue
 		}
 		if relinkReplaceDirTree(ce, filepath.Dir(srcPath), dstParent, dirSnaps, filesRoot, linkMode, rtype, logger) {
 			replacedDirs[dirKey] = filepath.Base(filepath.Dir(srcPath))
 			count++
+		} else {
+			failed++
 		}
+	}
+	// 一条都没成功但有失败 → 抬成错误返回（对抗复核 C1）：否则前端只看到「已重新链接 0 个文件」
+	// 的成功 toast，而唯一失败通路是按实例计的 Go error。部分成功仍返回计数（失败已逐条
+	// 经 logger 进导入日志面板，不丢信息）。
+	if count == 0 && failed > 0 {
+		return 0, fmt.Errorf("%w: 重链未成功（失败 %d 项）", ErrPartialSync, failed)
 	}
 	return count, nil
 }

@@ -3,6 +3,7 @@
 package app
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -335,6 +336,13 @@ func (a *App) RelinkAllInstanceResources(instanceName string) (int, error) {
 		return 0, err
 	}
 	total := 0
+	// firstPartial 记录首个「零成功但有拒搬/回滚」的类型错误（ADR-342 C1）。语义分流：
+	//   - 该类型零成功 → 不中断循环（各类型目录相互独立，其余类型照常重链），只留首个错误；
+	//   - 其它错误（配置/目录解析类）→ 立刻返回，与既有口径一致。
+	// 结束时若**整实例一条都没成功**才把错误上抛（前端按实例计失败会弹失败 toast）；
+	// 有任何成功则返回 (total, nil)——逐条失败已由 go/sync 经 logger 写进导入日志面板，
+	// 不再用「整实例失败」覆盖掉已成功的计数（那是对用户说谎的另一种形态）。
+	var firstPartial error
 	for _, d := range registry.AllSubDirs() {
 		// ADR-064 锚定：统一走 FindInstDir（标准目录无该类型文件时兜底扫描），
 		// 否则 Sable-Schematics 等非标准目录里的蓝图不会参与重链接
@@ -348,6 +356,13 @@ func (a *App) RelinkAllInstanceResources(instanceName string) (int, error) {
 		}
 		n, err := a.relinkDir(instanceDir, globalDir, d.RType)
 		if err != nil {
+			if errors.Is(err, ysmsync.ErrPartialSync) {
+				if firstPartial == nil {
+					firstPartial = fmt.Errorf("重链接 %s: %w", d.RType, err)
+				}
+				total += n
+				continue
+			}
 			// 部分目录已重链接——同样需失效缓存，防陈旧缓存"复活"
 			scanner.InvalidateCache()
 			return total, fmt.Errorf("重链接 %s 失败: %w", d.RType, err)
@@ -356,6 +371,9 @@ func (a *App) RelinkAllInstanceResources(instanceName string) (int, error) {
 	}
 	// 重链接会增删实例目录文件——失效扫描缓存（实例目录在扫描范围内，GetInstanceStatus 走扫描）
 	scanner.InvalidateCache()
+	if total == 0 && firstPartial != nil {
+		return 0, firstPartial
+	}
 	return total, nil
 }
 

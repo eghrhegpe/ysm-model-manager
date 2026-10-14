@@ -154,7 +154,8 @@ func TestChar_RelinkDir_FlatCopyFailureLogged(t *testing.T) {
 
 	sink := &charSink{}
 	count, err := RelinkDir(customDir, repoRoot, "ysm", "hardlink", scanFn, sink.logger())
-	testutil.NoError(t, err, "不应报错")
+	// ADR-342 C1：零成功 + 有失败 → ErrPartialSync（原先只记日志返回 nil，前端会弹「已重链 0 个」）
+	testutil.ErrorIs(t, err, ErrPartialSync, "零成功且有失败应报可分类错误")
 	if count != 0 {
 		t.Errorf("count = %d, want 0", count)
 	}
@@ -192,7 +193,8 @@ func TestChar_RelinkDir_DirReplaceFailureRollsBack(t *testing.T) {
 
 	sink := &charSink{}
 	count, err := RelinkDir(customDir, repoRoot, "ysm", "hardlink", scanFn, sink.logger())
-	testutil.NoError(t, err, "不应报错")
+	// ADR-342 C1：零成功 + 有失败 → ErrPartialSync（回滚成功也要如实上报，不能只记日志）
+	testutil.ErrorIs(t, err, ErrPartialSync, "零成功且有失败应报可分类错误")
 	if count != 0 {
 		t.Errorf("count = %d, want 0", count)
 	}

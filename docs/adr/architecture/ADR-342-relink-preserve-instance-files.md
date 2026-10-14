@@ -43,6 +43,8 @@
 **D4｜`.relink-bak-*` 备份尸体在同步 diff 全通道豁免。**
 失败 relink 留下的恢复点不得被判「实例独有（可拉取）」——否则面板显示「多余」，用户点一下就把整个恢复点复制进仓库（垃圾入库 + 恢复点被当模型）。统一复用既有谓词，覆盖四条 collect 通道：dirlevel Walk（`collectEntriesWalk`）、dirlevel scan 反推（`collectEntriesFromScan`，生产链走这里，只修 Walk 等于没修）、file-level Walk（`handleDir`）、夹内子文件（`collectFolderFiles` / `collectFolderFilesFromScan`）。
 
+**D7｜失败必须可分类上报，但不得用「整实例失败」覆盖已成功计数（对抗复核 C1 收口）。**
+`RelinkDir` 统计失败条目；**零成功且有失败**时返回 `ErrPartialSync`（原先只记日志、返回 `(0, nil)`，前端唯一失败通路是按实例计的 Go error → 弹「已重新链接 0 个文件」的成功 toast）。app 层 `RelinkAllInstanceResources` 相应分流：遇 `ErrPartialSync` **不中断**类型循环（各类型目录相互独立）继续累计，仅在**整实例零成功**时才把首个错误上抛；有任何成功则返回 `(total, nil)`——逐条失败已由 go/sync 经 logger 写进导入日志面板，用「整实例失败」覆盖成功计数是另一种对用户说谎。契约变化同步到既有回归：`sync_complexity_char_test.go` 的两条特征用例（平铺失败记账 / 目录替换回滚）与 `sync_relink_modeswitch_test.go` 的两条拒搬用例，其 `NoError` 断言改为 `ErrorIs(…, ErrPartialSync)`，行为断言（count 不增、日志点名、文件毫发无损、无备份残留）原样保留。
 **D6｜尸体谓词下沉 `go/fsutil`，扫描/去重/体检三处共用（对抗复核 A4 收口）。**
 `IsRelinkBackupPath` 原为 `go/sync` 包私有 → 下沉 `go/fsutil/relink_backup.go` 作单点事实源（`go/sync` 保留转发函数以缩小改动面），三处包外消费方接入：
 
@@ -68,6 +70,7 @@
 - `verifyDirSnapshot` 的残余窗口不变（内容漂移不威胁「搬对对象」、InstallLock 只互斥本进程）——D2 只修「按名重开导致恒真」，不放宽这两条已声明的接受项。
 - **实例独有「空目录」不保留**（`collectInstanceOnlyFiles` 只收文件）：无文件内容的空夹随替换消失，无日志。判为可接受（游戏侧不消费空目录），如需保全再扩到目录条目。
 - **断链/指向目录的软链作为独有文件**会让回填必然失败（`fsutil.CopyFile` 拒目录源 / Stat 失败）→ 该夹整夹回滚、本轮不重链（日志点名），用户需先处置该软链或删除它。
+- **部分失败只到「计数 + 日志面板」**（D7 的分流口径）：单实例部分成功仍返回 `(total, nil)`，前端弹「已重新链接 N 个文件」，M 项失败只在导入日志面板可见。要做成「N 成功 M 失败」的告警 toast，需把 `RelinkAllInstanceResources` 的返回改成结构化 `{OK, Failed, Errors}`（牵动绑定重生成 + 三语 i18n + 前端用例），留作后续刀。
 
 ## 4. 数据溯源
 
@@ -84,6 +87,7 @@
 | 对抗复核 B1：改名搬运零覆盖（既有测试两侧同名，走不到 `newDir≠dstParent`） | 补 `TestRelinkDir_RenameMoveIntoVacantLanding`（搬运正例）+ 上面两条反例 |
 | 对抗复核 C2：Go 1.26.8 stdlib 实读——`File.Stat()`→`statHandle`→`newFileStatFromGetFileInformationByHandle`（填 vol/idx、path 置空）vs `Lstat`→`GetFileAttributesEx`+`saveInfoFromPath`（惰性） | D2 机制由 stdlib 源码二次确认（不只在行为层） |
 | 对抗复核 A4 三处红测试：`go/scanner`（尸体进 ModelEntry）、`go/dedup`（分组 `Files[0]` 是尸体 → `clean` 保尸体删活模型）、`go/repoaudit`（TotalFiles=2） | 谓词下沉 `go/fsutil` + 三消费方接入 → D6（`dedup` 那条命中排序陷阱已实证） |
+| 对抗复核 C1：`RelinkDir` 零成功仍返回 `(0, nil)`，前端唯一失败通路是按实例计的 Go error | 失败计数 + 零成功上抛 `ErrPartialSync`；app 层不中断类型循环、仅整实例零成功才上抛 → D7（两条特征用例 + 两条拒搬用例的 `NoError` 断言随之改为 `ErrorIs`） |
 | 回归测试 `go/sync/sync_relink_preserve_test.go` / `sync_corpse_exempt_test.go`（7 例，改前全红、改后全绿 + `go/sync`·`go/instance`·`go/installer`·`go/watcher` 四包全绿） | 落地验证 |
 
 <!-- 文件名: relink-preserve-instance-files.md → 实际文件 architecture/ADR-342-relink-preserve-instance-files.md（ADR-320 architecture 全量模板） -->

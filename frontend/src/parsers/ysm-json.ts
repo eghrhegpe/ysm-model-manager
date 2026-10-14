@@ -51,105 +51,111 @@ function normalizePlayerFiles(decl: unknown): unknown[] {
   return [];
 }
 
-/** 直接解析纯 JSON 格式的 ysm.json（解压后的 YSM 模型文件） */
-export function parseYsmJsonDirect(json: unknown): DecodedYsm | null {
-  const obj = json as {
-    spec?: unknown;
-    files?: { player?: { model?: unknown; texture?: unknown } };
-    metadata?: { authors?: Array<{ name?: string; role?: string; avatar?: string }> };
-    properties?: {
-      texture_width?: number;
-      texture_height?: number;
-      default_texture?: string | null;
-    };
-    minecraft?: { geometry?: unknown[] };
-    geometry?: { model?: unknown };
+/** ysm.json 顶层声明形态（spec/files/metadata/properties） */
+type YsmJsonDoc = {
+  spec?: unknown;
+  files?: { player?: { model?: unknown; texture?: unknown } };
+  metadata?: { authors?: Array<{ name?: string; role?: string; avatar?: string }> };
+  properties?: {
+    texture_width?: number;
+    texture_height?: number;
+    default_texture?: string | null;
   };
-  // ysm.json 格式（spec/metadata/files）
-  if (obj?.spec !== undefined && obj?.files) {
-    // 从 files.player.model 提取 geometry 信息
-    const playerFiles = obj.files?.player;
-    if (!playerFiles) return null;
-    const modelFiles = normalizePlayerFiles(playerFiles.model);
-    const texFiles = normalizePlayerFiles(playerFiles.texture);
-    // R1 契约对齐（2026-08-10）：default_texture 置首（与 Go 端 orderTexByYSM / wasm.ts
-    // orderedTexKeys 一致），防「声明序 ≠ 包内文件序」的模型 main 组件贴错纹理
-    {
-      const defTex =
-        typeof obj?.properties?.default_texture === "string"
-          ? (obj.properties.default_texture.split("/").pop() ?? null)
-          : null;
-      if (defTex) {
-        const defBase = defTex.replace(/\.\w+$/, "").toLowerCase();
-        const texBase = (t: unknown): string => {
-          const raw =
-            typeof t === "string"
-              ? t
-              : t && typeof t === "object" && "uv" in t
-                ? String((t as { uv: unknown }).uv)
-                : "";
-          return (
-            raw
-              .split("/")
-              .pop()
-              ?.replace(/\.\w+$/, "")
-              .toLowerCase() ?? ""
-          );
-        };
-        const di = texFiles.findIndex((t) => texBase(t) === defBase);
-        if (di > 0) {
-          const [d] = texFiles.splice(di, 1);
-          texFiles.unshift(d);
-        }
-      }
-    }
-    // ysm.json 本身不含 geometry 数据（geometry 在 separate model json 中）
-    // 返回一个占位 geometry，让后续的 Go AnalyzeBedrockModel 处理
-    // 解析作者信息（用于头像显示）—— 与 WASM 通道共用 parseYsmAuthors，防双写分叉
-    const authors = parseYsmAuthors(obj?.metadata);
-    return {
-      texture: null,
-      geometry: {
-        bones: [],
-        boneCount: 0,
-        cubeCount: 0,
-        texWidth: finiteNum(obj.properties?.texture_width, 64),
-        texHeight: finiteNum(obj.properties?.texture_height, 64),
-        textures: [],
-        _ysmMeta: {
-          modelFiles,
-          texFiles,
-          defaultTexture: obj.properties?.default_texture || null,
-        },
-      },
-      animations: [],
-      authors,
-    };
-  }
+  minecraft?: { geometry?: unknown[] };
+  geometry?: { model?: unknown };
+};
 
-  // 标准 Bedrock geometry 格式（minecraft.geometry）
-  const root = (obj?.minecraft?.geometry?.[0] || obj?.geometry?.model || obj) as {
-    description?: { texture_width?: number; texture_height?: number };
-    bones?: Array<{
-      name?: string;
+/** 标准 Bedrock geometry 根（minecraft.geometry[0] / geometry.model / 裸对象） */
+type BedrockRoot = {
+  description?: { texture_width?: number; texture_height?: number };
+  bones?: Array<{
+    name?: string;
+    pivot?: number[];
+    parent?: string;
+    rotation?: number[];
+    cubes?: Array<{
+      origin?: number[];
+      size?: number[];
       pivot?: number[];
-      parent?: string;
       rotation?: number[];
-      cubes?: Array<{
-        origin?: number[];
-        size?: number[];
-        pivot?: number[];
-        rotation?: number[];
-        uv?: number[];
-        inflate?: number;
-        mirror?: boolean;
-      }>;
+      uv?: number[];
+      inflate?: number;
+      mirror?: boolean;
     }>;
+  }>;
+};
+
+/** 单个纹理声明取基名（去路径、去扩展名、小写），供 default_texture 匹配 */
+const texBase = (t: unknown): string => {
+  const raw =
+    typeof t === "string"
+      ? t
+      : t && typeof t === "object" && "uv" in t
+        ? String((t as { uv: unknown }).uv)
+        : "";
+  return (
+    raw
+      .split("/")
+      .pop()
+      ?.replace(/\.\w+$/, "")
+      .toLowerCase() ?? ""
+  );
+};
+
+/**
+ * R1 契约对齐（2026-08-10）：default_texture 置首（与 Go 端 orderTexByYSM / wasm.ts
+ * orderedTexKeys 一致），防「声明序 ≠ 包内文件序」的模型 main 组件贴错纹理。
+ * 原地 splice/unshift，texFiles 须为 normalizePlayerFiles 的拷贝。
+ */
+function reorderDefaultTexture(texFiles: unknown[], defTex: string | null): void {
+  if (!defTex) return;
+  const defBase = defTex.replace(/\.\w+$/, "").toLowerCase();
+  const di = texFiles.findIndex((t) => texBase(t) === defBase);
+  if (di > 0) {
+    const [d] = texFiles.splice(di, 1);
+    texFiles.unshift(d);
+  }
+}
+
+/** ysm.json 格式分支（spec/metadata/files）：返回占位 geometry + _ysmMeta，交 Go AnalyzeBedrockModel 续处理 */
+function parseYsmSpecJson(obj: YsmJsonDoc): DecodedYsm | null {
+  const playerFiles = obj.files?.player;
+  if (!playerFiles) return null;
+  const modelFiles = normalizePlayerFiles(playerFiles.model);
+  const texFiles = normalizePlayerFiles(playerFiles.texture);
+  const defTex =
+    typeof obj.properties?.default_texture === "string"
+      ? (obj.properties.default_texture.split("/").pop() ?? null)
+      : null;
+  reorderDefaultTexture(texFiles, defTex);
+  // 解析作者信息（用于头像显示）—— 与 WASM 通道共用 parseYsmAuthors，防双写分叉
+  const authors = parseYsmAuthors(obj.metadata);
+  return {
+    texture: null,
+    geometry: {
+      bones: [],
+      boneCount: 0,
+      cubeCount: 0,
+      texWidth: finiteNum(obj.properties?.texture_width, 64),
+      texHeight: finiteNum(obj.properties?.texture_height, 64),
+      textures: [],
+      _ysmMeta: {
+        modelFiles,
+        texFiles,
+        defaultTexture: obj.properties?.default_texture || null,
+      },
+    },
+    animations: [],
+    authors,
   };
-  const desc = root?.description || {};
+}
+
+/** 标准 Bedrock geometry 分支：bones 归一化，空 bones 判非此格式 */
+function parseBedrockGeometry(root: BedrockRoot): DecodedYsm | null {
+  const desc = root.description || {};
   const texW = finiteNum(desc.texture_width, 64);
   const texH = finiteNum(desc.texture_height, 64);
-  const bones = (root?.bones || []).map((b) => ({
+  const bones = (root.bones || []).map((b) => ({
     name: b.name || "",
     pivot: vec3(b.pivot, [0, 0, 0]),
     parent: b.parent || "",
@@ -179,4 +185,14 @@ export function parseYsmJsonDirect(json: unknown): DecodedYsm | null {
     },
     animations: [],
   };
+}
+
+/** 直接解析纯 JSON 格式的 ysm.json（解压后的 YSM 模型文件）：spec 分支 → Bedrock 分支，只做分派 */
+export function parseYsmJsonDirect(json: unknown): DecodedYsm | null {
+  const obj = json as YsmJsonDoc;
+  // ysm.json 格式（spec/metadata/files）
+  if (obj?.spec !== undefined && obj?.files) return parseYsmSpecJson(obj);
+  // 标准 Bedrock geometry 格式（minecraft.geometry）
+  const root = (obj?.minecraft?.geometry?.[0] || obj?.geometry?.model || obj) as BedrockRoot;
+  return parseBedrockGeometry(root);
 }

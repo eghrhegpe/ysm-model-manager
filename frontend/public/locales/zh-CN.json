@@ -1525,6 +1525,7 @@
   "tree.batchToggleFail": "批量启用/禁用失败",
   "tree.importFail": "导入失败: {msg}",
   "tree.advFilterFail": "高级筛选失败",
+  "tree.advFilterNumericUnsupported": "数值条件（骨骼/立方体/纹理）仅适用于有几何解析管线的模型类型；当前 {type} 类型不支持，数值区已禁用，请使用关键词/标签条件。",
   "tree.selectFileTitle": "选择{rtype}文件",
   "tree.importFileFilter": "{rtype} 文件",
   "tree.importOk": "导入成功",

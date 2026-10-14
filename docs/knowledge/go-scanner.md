@@ -54,6 +54,7 @@ pitfalls:
   - 容器指纹缓存失效需调 ClearScanCache——文件变更后不失效会导致缓存命中旧数据
   - resource_types.json 是唯一事实来源——修改类型定义后必须重新扫描
   - ScanEntries 排除 .recycle 目录——换用不排 .recycle 的 scanFn 会重新引入误判
+  - ScanEntries 排除 `.relink-bak-*` 备份尸体子树（ADR-342 D6，谓词单点在 `go/fsutil`）——否则尸体内模型（哈希恒等于仓库原件）以活跃条目进 ModelEntry，仓库树/搜索/作者提取出现幻影模型
   - ScanEntriesWithHit 缓存 30s TTL——频繁扫描会反复重算
   - 作者提取依赖模型文件中的 metadata.authors 字段——缺失则作者为空
   - 单文件 >500MB 跳过哈希计算——同步对空哈希跳过匹配
@@ -120,6 +121,7 @@ status: active
 - `.json` 只允许 `ysm.json` 与 Go importer / 前端 `isImportableFile` 三处口径一致（ADR-038 D2 纵深防御）
 - **目录级 `.ban` 整体跳过**（P2 修复：`fileops.ToggleModelEnable` 对文件夹模型整组禁用时把父目录改名 `modelA.ban`，ADR-038 D3.7——原实现只过滤文件级 `.ban`，目录级禁用模型会以活跃身份进入 sync 的 repoHash 被列为 Missing 或被 SyncToggleStatus 重新启用；源码按目录基名匹配 `strings.HasSuffix(strings.ToLower(d.Name()), ".ban")` 跳过）
 - **`.github` 目录跳过**：与 CI `genindex.go` 的 `strings.Contains(p, "/.github")` 口径对齐（ADR-011），避免生成仓库索引时把 GitHub Actions .workflow 误入 index
+- **`.relink-bak-*` 备份尸体子树跳过（ADR-342 D6，2026-10-14）**：`processScanDirEntry` 的目录分支在 recycle 之后追加 `fsutil.IsRelinkBackupPath(p)` → `SkipDir`（`ScanEntries` 与 `ScanEntriesLite` 共用本函数，一处修两处生效）。背景：失败 relink 留下的 `<夹名>.relink-bak-<ts>` 内模型哈希恒等于仓库原件，原实现让其作为活跃条目进 `ModelEntry` → 仓库树/搜索/作者提取显示**幻影模型**；谓词原先只在 `go/sync` 包内，现已下沉 `go/fsutil` 单点。回归测试 `scanner_corpse_test.go`（走盘 + 轻量两路）
 - **R31 修复链（2026-08-31）**：
   - P2-1 WalkDir error 忽略：根 lstat 失败时 WalkDir 不调 callback 直接返回 error，旧实现忽略返回值导致 walkFailed 恒 false，空结果照常缓存 30s。修复：`if werr := WalkDir(...); werr != nil { walkFailed = true }`。
   - P2-2 InvalidatePath 祖先脏读：`InvalidatePath("/a/b")` 时 `/a` 的版本不会递增，父缓存 30s TTL 命中返回陈旧数据。修复：同时递增所有祖先 key 的版本 + 删除祖先缓存条目 + 恢复 descendant keyVersion 递增（code_review P1-1）。

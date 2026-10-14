@@ -884,6 +884,7 @@
 | 移动/复制大文件夹时需进度回调——同步操作可能长时间阻塞 | - | - |
 | 业务代码直调 os.WriteFile | - | 并发写破坏文件、缺 BOM 处理；必须经 fsutil.AtomicWrite |
 | filepath.Walk 跟符号链接 | - | 目录遍历循环 / 越权；必须用 fsutil.walk 的 IsRecycleDir 守卫 |
+| 把 `IsRelinkBackupPath` 改写成（照抄 IsRecycleDir 形态）→ 备份目录**内部**文件漏判，各消费方重新把尸体当模型；它是**段级中缀**判定，不是段名等值判定 | `基名精确匹配` | - |
 | sortByTexOrder 与 buildSubModels 有隐式时序（纹理排序在前，L0 TexSlot 按排序后槽位换算），调换顺序会静默改行为 | - | - |
 | buildSubModels 的 L0 覆盖判定不对称（只看清单非空、不看 resolveL0.hit）是现状红线，勿 | `顺手统一` | - |
 | 合并路径 IsArmModelName 判定在 Open+Read 之后（保持原序），勿成先判再读 | `顺手优化` | - |
@@ -918,6 +919,7 @@
 | 容器指纹缓存失效需调 ClearScanCache——文件变更后不失效会导致缓存命中旧数据 | - | - |
 | resource_types.json 是唯一事实来源——修改类型定义后必须重新扫描 | - | - |
 | ScanEntries 排除 .recycle 目录——换用不排 .recycle 的 scanFn 会重新引入误判 | - | - |
+| ScanEntries 排除  备份尸体子树（ADR-342 D6，谓词单点在 `go/fsutil`）——否则尸体内模型（哈希恒等于仓库原件）以活跃条目进 ModelEntry，仓库树/搜索/作者提取出现幻影模型 | `.relink-bak-*` | - |
 | ScanEntriesWithHit 缓存 30s TTL——频繁扫描会反复重算 | - | - |
 | 作者提取依赖模型文件中的 metadata.authors 字段——缺失则作者为空 | - | - |
 | 单文件 >500MB 跳过哈希计算——同步对空哈希跳过匹配 | - | - |

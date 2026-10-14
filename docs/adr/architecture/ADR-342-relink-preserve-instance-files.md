@@ -41,7 +41,14 @@
 `newDir = dstBase/<仓库夹名>` 与 `dstParent` 不同名时，若 `newDir` 已被**另一个活夹**占用，一律拒绝（记日志、不动盘）。理由（对抗复核 A1，实测复现）：`installer.InstallDir` 遇已存在目标会复用并合并写入（`dstExisted=true` 时它自己不清树），而任何回滚的 `RemoveAll(newDir)` 都会把这个**不属于本次重建的活夹**整树删掉——用户既有模型 + 其独有文件全灭。这条守卫同时是 D1「整夹回滚」删除边界安全的前提：`newDir` 必为本次新建，`RemoveAll` 的内容 = 仓库版 + 本次回填副本。`rollbackRelinkReplace` 的签名随之从 `(dstBase, srcDir)` 改为显式 `newDir`，把删除边界写在调用点上。
 
 **D4｜`.relink-bak-*` 备份尸体在同步 diff 全通道豁免。**
-失败 relink 留下的恢复点不得被判「实例独有（可拉取）」——否则面板显示「多余」，用户点一下就把整个恢复点复制进仓库（垃圾入库 + 恢复点被当模型）。统一复用既有谓词 `isRelinkBackupPath`，覆盖四条 collect 通道：dirlevel Walk（`collectEntriesWalk`）、dirlevel scan 反推（`collectEntriesFromScan`，生产链走这里，只修 Walk 等于没修）、file-level Walk（`handleDir`）、夹内子文件（`collectFolderFiles` / `collectFolderFilesFromScan`）。
+失败 relink 留下的恢复点不得被判「实例独有（可拉取）」——否则面板显示「多余」，用户点一下就把整个恢复点复制进仓库（垃圾入库 + 恢复点被当模型）。统一复用既有谓词，覆盖四条 collect 通道：dirlevel Walk（`collectEntriesWalk`）、dirlevel scan 反推（`collectEntriesFromScan`，生产链走这里，只修 Walk 等于没修）、file-level Walk（`handleDir`）、夹内子文件（`collectFolderFiles` / `collectFolderFilesFromScan`）。
+
+**D6｜尸体谓词下沉 `go/fsutil`，扫描/去重/体检三处共用（对抗复核 A4 收口）。**
+`IsRelinkBackupPath` 原为 `go/sync` 包私有 → 下沉 `go/fsutil/relink_backup.go` 作单点事实源（`go/sync` 保留转发函数以缩小改动面），三处包外消费方接入：
+
+- **`go/scanner`**（`processScanDirEntry` 目录分支）：尸体内模型哈希恒等于仓库原件，不跳过就以**活跃条目**进 `ModelEntry` → 仓库树 / 搜索 / 作者提取出现幻影模型（`ScanEntries` 与 `ScanEntriesLite` 共用本函数，一处修两处生效）。
+- **`go/dedup`**（`collectFiles` 目录分支）：**无条件**跳过（与 `skipRecycle` 开关无关）。**这是数据丢失形状**：尸体与仓库原件同哈希 → 进同一重复组；`cli dedup clean` 保留 `Group.Files[0]`（按 Path 排序），而 `a.relink-bak-1\a.ysm` 的 `'.'`(0x2E) < `'\'`(0x5C) 使它排在活文件**之前** → 保尸体、把活模型 `recycle.Move` 进回收站。实证：修前分组 `Files[0]` 确为尸体路径。
+- **`go/repoaudit`**（`AuditCtx` 目录分支）：尸体计入会虚高 `TotalFiles`、扭曲命中率与评分；同时把该处的 `.recycle` 判定从 `d.Name() == ".recycle"`（大小写敏感，与同处注释自称的口径一致不符）改为 `fsutil.IsRecycleDir(path)`。
 
 ## 3. 后果（Consequences）
 
@@ -61,7 +68,6 @@
 - `verifyDirSnapshot` 的残余窗口不变（内容漂移不威胁「搬对对象」、InstallLock 只互斥本进程）——D2 只修「按名重开导致恒真」，不放宽这两条已声明的接受项。
 - **实例独有「空目录」不保留**（`collectInstanceOnlyFiles` 只收文件）：无文件内容的空夹随替换消失，无日志。判为可接受（游戏侧不消费空目录），如需保全再扩到目录条目。
 - **断链/指向目录的软链作为独有文件**会让回填必然失败（`fsutil.CopyFile` 拒目录源 / Stat 失败）→ 该夹整夹回滚、本轮不重链（日志点名），用户需先处置该软链或删除它。
-- **D4 豁免范围只到 go/sync 内的同步 diff**：`go/scanner`（仓库树/搜索结果）、`go/dedup`（`clean` 的分组排序）、`go/repoaudit`（体检统计）仍会把仓库侧存量 `.relink-bak-*` 当模型消费——谓词 `isRelinkBackupPath` 目前是 sync 包私有，跨包复用需先下沉到 `go/fsutil`（对抗复核 A4，未纳入本 ADR 范围）。
 
 ## 4. 数据溯源
 
@@ -77,6 +83,7 @@
 | 对抗复核 A2：`inst/packA/{x.ysm(h1),y.ysm(h2)}` + `repo/{modelB/x.ysm(h1), modelC/y.ysm(h2)}` | 旧去重键只含实例夹 → `count=2` 且零日志，而 y.ysm 从未重链 → D3 键含仓库源夹 + 到位校验，`TestRelinkDir_SameFolderDifferentRepoFolders`（count 必须为 1） |
 | 对抗复核 B1：改名搬运零覆盖（既有测试两侧同名，走不到 `newDir≠dstParent`） | 补 `TestRelinkDir_RenameMoveIntoVacantLanding`（搬运正例）+ 上面两条反例 |
 | 对抗复核 C2：Go 1.26.8 stdlib 实读——`File.Stat()`→`statHandle`→`newFileStatFromGetFileInformationByHandle`（填 vol/idx、path 置空）vs `Lstat`→`GetFileAttributesEx`+`saveInfoFromPath`（惰性） | D2 机制由 stdlib 源码二次确认（不只在行为层） |
+| 对抗复核 A4 三处红测试：`go/scanner`（尸体进 ModelEntry）、`go/dedup`（分组 `Files[0]` 是尸体 → `clean` 保尸体删活模型）、`go/repoaudit`（TotalFiles=2） | 谓词下沉 `go/fsutil` + 三消费方接入 → D6（`dedup` 那条命中排序陷阱已实证） |
 | 回归测试 `go/sync/sync_relink_preserve_test.go` / `sync_corpse_exempt_test.go`（7 例，改前全红、改后全绿 + `go/sync`·`go/instance`·`go/installer`·`go/watcher` 四包全绿） | 落地验证 |
 
 <!-- 文件名: relink-preserve-instance-files.md → 实际文件 architecture/ADR-342-relink-preserve-instance-files.md（ADR-320 architecture 全量模板） -->

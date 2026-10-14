@@ -98,6 +98,13 @@ func collectFiles(ctx context.Context, dir string, skipRecycle bool) ([]fileInfo
 			if skipRecycle && fsutil.IsRecycleDir(p) {
 				return filepath.SkipDir
 			}
+			// relink 备份尸体子树无条件跳过（ADR-342 D6，与 skipRecycle 无关）：尸体与仓库原件
+			// 同哈希，而 `cli dedup clean` 保留分组内 Path 排序**首个**——
+			// `a.relink-bak-1\a.ysm` 的 '.'(0x2E) < '\'(0x5C) 使它排在活文件之前，
+			// 不豁免就会保尸体、把活模型移进回收站（数据丢失）；在扫描源头豁免比事后挑稳。
+			if fsutil.IsRelinkBackupPath(p) {
+				return filepath.SkipDir
+			}
 			return nil
 		}
 

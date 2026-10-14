@@ -27,6 +27,7 @@ auto_fields:
     - ExtBelongsTo
     - ExtBelongsToBy
     - extOf
+    - GEOMETRY_SEARCHABLE_TYPES
     - getPreviewableTypeTabs
     - GROUP_META
     - GROUP_OF
@@ -43,6 +44,7 @@ auto_fields:
     - IsContainerExt
     - IsDirLevelSync
     - IsDisableSuffix
+    - isGeometrySearchableRtype
     - IsNestedModelDir
     - IsResourceAllowed
     - IsScanInstance

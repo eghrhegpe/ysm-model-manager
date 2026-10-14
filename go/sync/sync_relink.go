@@ -385,20 +385,10 @@ func logRelinkFailure(ce types.ModelEntry, dst, msg string, logger Logger) {
 	}
 }
 
-// isRelinkBackupPath 判断路径是否落在某次 relink 的备份目录（`<目录名>.relink-bak-<UnixNano>`）子树内。
-// 备份名是**后缀形态**（不是独立段），故不能照抄 sync.go hasRecycleSegment 的逐段精确 EqualFold——
-// 必须逐段判「是否含 .relink-bak-」。命中即从 relink/toggle 的扫描条目集中剔除：
-// 否则备份目录内的模型条目（Go WalkDir 与生产 Rust 快路径都会下钻并填哈希）哈希恒匹配仓库原件，
-// 触发对尸体的 rename→InstallDir→再生新备份，套娃增长（ADR-296 D3）。
-// 谓词判「任一段」而非只判 basename：备份目录**内部**的文件（Path 含 .relink-bak 段）同样要剔除。
-func isRelinkBackupPath(p string) bool {
-	for _, seg := range strings.Split(p, string(filepath.Separator)) {
-		if strings.Contains(strings.ToLower(seg), ".relink-bak-") {
-			return true
-		}
-	}
-	return false
-}
+// isRelinkBackupPath 转发 go/fsutil 的单点谓词（ADR-342 D6：已下沉共享给
+// scanner/dedup/repoaudit）。包内既有调用点保留本名以缩小改动面，
+// **判定逻辑只在 fsutil**——勿在此复制或改写口径。
+func isRelinkBackupPath(p string) bool { return fsutil.IsRelinkBackupPath(p) }
 
 // verifyDirSnapshot 锁内 rename 前复验 dstParent 仍是快照观察到的对象（ADR-296 D4）。
 // 身份由 dirIdentity 取（句柄态 stat，Windows 走 VolumeSerial+FileIndex、Unix 走 dev+ino）——

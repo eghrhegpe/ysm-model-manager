@@ -82,6 +82,7 @@ status: active
 - **入口校验（resolveScanRoot）**：NUL 字节与相对路径一律显式拒绝（`go/dedup/dedup.go|ErrRelativePath`，errors.Is 可分类）——调用方（CLI resolveDedupDir / GUI 绑定层 isPathInRootOrSelf）均传绝对路径，dedup 层是最后一道防线；相对路径按 CWD 解析会越出预期扫描根、且 FileEntry.Path 相对形态下游 recycle.Move 解析错位；NUL 字节 Linux 下 filepath.Abs 放行、静默 log-and-skip = 假绿，必须入口显式报错
 - **遍历中子树访问失败 log-and-skip，可能漏扫**（R21 审核 P3-1）：`collectFiles` 的 WalkDir 回调 err（权限拒绝/IO 失败）仅留日志、不向上报错——「无重复」结果可能漏掉整棵子树；与根 symlink 的 `ErrSymlinkRoot` 硬报错不对称（有意为之：日志留痕、诊断页可见，不阻断扫描）
 - **`.recycle` 判定大小写不敏感**（P3 修复：`strings.EqualFold`，与 fsutil.isRecycleDir 对齐——原大小写敏感，Windows `.RECYCLE` 目录会漏排）
+- **`.relink-bak-*` 备份尸体子树无条件跳过（ADR-342 D6，2026-10-14，数据丢失防线）**：`collectFiles` 的目录分支在 recycle 判定后追加 `fsutil.IsRelinkBackupPath(p)` → `SkipDir`，**与 `skipRecycle` 开关无关**（尸体永远不是合法去重候选）。背景：尸体与仓库原件同哈希 → 进同一重复组；`cli dedup clean` 保留 `Group.Files[0]`（按 Path 排序），而 `a.relink-bak-1\a.ysm` 的 `'.'`(0x2E) < `'\'`(0x5C) 使它排在活文件**之前** → 保尸体、把活模型 `recycle.Move` 进回收站。在扫描源头豁免比事后在 clean 里挑稳。实证：修前分组 `Files[0]` 确为尸体路径。回归测试 `dedup_corpse_test.go`（含「真实重复仍须检出」负向对照）
 - **`computeHash` 是包级可注入变量（测试承重点，删改须同步测试）**：`dedup_parallel_test.go` 通过替换它验证「并行管道确定性」「size 预分组跳过哈希」。49afd979 重构时曾将其内联删除，测试包 `undefined: computeHash` 编译失败（go vet 兜住）。重构此文件时保留该注入点；若确需移除，必须同步改写两个测试
 - **R27 修复链（2026-08-31）**：
   - `hashFilesParallel` worker panic 死锁（P3-1）：worker goroutine 加 `defer func() { if r := recover(); r != nil { log.Printf(...) } }()`。无缓冲 `jobs` channel 在 `jobs <- f` 处阻塞发送，worker panic 后 `wg` 永不 Done、`close(jobs)` 永不执行，主 goroutine 死锁。panic 的槽位 `results[idx]` 留零值（`ok=false`），调用方见 log-and-skip。

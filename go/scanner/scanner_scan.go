@@ -220,6 +220,12 @@ func processScanDirEntry(p string, d os.DirEntry, err error, dir string, wantMet
 		if fsutil.IsRecycleDir(p) {
 			return nil, filepath.SkipDir, false
 		}
+		// relink 备份尸体子树不得下钻（ADR-342 D6）：失败 relink 留下的
+		// `<夹名>.relink-bak-<ts>` 内模型哈希恒等于仓库原件，原实现会让它作为**活跃条目**
+		// 进 ModelEntry → 仓库树/搜索/作者提取显示幻影模型（谓词单点在 fsutil）
+		if fsutil.IsRelinkBackupPath(p) {
+			return nil, filepath.SkipDir, false
+		}
 		// .github 目录跳过——GenerateRepoIndex 内嵌 CI 脚本显式跳过 .github，此处
 		// 口径统一，避免 .github 内合法扩展名进入 index，Go 侧与 CI 重生成索引漂移
 		if d.Name() == ".github" {

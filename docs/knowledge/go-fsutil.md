@@ -68,6 +68,7 @@ quick_risk_lines:
 pitfalls:
   - 业务代码直调 os.WriteFile → 并发写破坏文件、缺 BOM 处理；必须经 fsutil.AtomicWrite
   - filepath.Walk 跟符号链接 → 目录遍历循环 / 越权；必须用 fsutil.walk 的 IsRecycleDir 守卫
+  - 把 `IsRelinkBackupPath` 改写成「基名精确匹配」（照抄 IsRecycleDir 形态）→ 备份目录**内部**文件漏判，各消费方重新把尸体当模型；它是**段级中缀**判定，不是段名等值判定
 
 use_when:
   - 遍历
@@ -80,6 +81,7 @@ perf:
   - io-bound
 invariant_anchors:
   - go/fsutil/walk.go|IsRecycleDir
+  - go/fsutil/relink_backup.go|IsRelinkBackupPath
   - go/fsutil/write.go|WriteFileAtomic
   - go/fsutil/b64.go|DecodeBase64Limited
 status: active
@@ -94,6 +96,7 @@ status: active
 ## 核心职责
 
 - `walk.go` — 文件/目录遍历、目录后序遍历、计数、空目录清理，内置 `.recycle` 回收站跳过开关
+- `relink_backup.go` — `IsRelinkBackupPath`（relink 备份目录 `<夹名>.relink-bak-<ts>` 的**唯一**识别谓词，ADR-342 D6 下沉自 go/sync 私有实现）：判「任一路径段含 `.relink-bak-`」而非基名精确匹配（备份目录内部文件同样要命中）、大小写不敏感；消费方 = go/sync（relink/toggle/同步 diff 四通道豁免）、go/scanner（不得把尸体内模型扫成活跃条目）、go/dedup（`clean` 保留 Path 排序首个，尸体排前会「保尸体删活模型」）、go/repoaudit（统计不计尸体）
 - `write.go` — `WriteFileAtomic`（tmp+rename 原子落地 + Sync 落盘检查 + `Chmod FilePerms`）；`ReadLimitedEntry`（limit+1 探测截断，ADR-033 修复）
 - `copy.go` — `CopyFile`（同目录 tmp+rename 原子复制 + Sync + `Chmod FilePerms` + MkdirAll + **目录源前置拒绝 + 读毕早关 src**）；`CopyDirRecursive`（参数化 symlink 策略 / 防覆盖 / 失败回滚，`AtomicRename` 分支通过 tmpDir → rename 原子替换）；`RecoverAtomicRename(dir)` 启动自愈扫描 `.bak-*` 备份目录（上次 AtomicRename 崩溃残留）；`StepError` 步骤类型化错误（中性步骤名 `StepStat/Open/CreateTmp/Copy/Sync/Close/Chmod/Rename/...`，经 `errors.As` 取步骤，`Error()` 透传内层、`errors.Is` 穿透——ADR-044 策略 A：机制归 fsutil、UX 文案归调用方如 installer.mapStepToAppError）
 - `perms.go` — `DirPerms`(0755) / `FilePerms`(0644) 全仓权限单点（os.MkdirAll/os.WriteFile 全仓 27 处手写字面量已收敛至此）

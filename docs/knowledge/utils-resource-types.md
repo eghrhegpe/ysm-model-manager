@@ -27,6 +27,7 @@ auto_fields:
     - extBelongsTo
     - extOf
     - FileConflict
+    - GEOMETRY_SEARCHABLE_TYPES
     - getCompound
     - getExts
     - getPreviewableTypeTabs
@@ -38,6 +39,7 @@ auto_fields:
     - GroupTypeOption
     - HealthReport
     - isContainerExt
+    - isGeometrySearchableRtype
     - isImportableFile
     - isObj
     - isSupportedExt

@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"ysm-model-manager/go/conc"
+	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/texture_cache"
 	"ysm-model-manager/go/types/registry"
 )
@@ -252,8 +253,15 @@ func AuditCtx(ctx context.Context, dirPath string) (DirAuditResult, error) { //n
 		if d.IsDir() {
 			// 排除回收站目录（code review P2 修复）：与 scanner/dedup/watcher/sync
 			// 口径一致——回收站文件不应计入 TotalFiles/Banned/LargestFile/命中率，
-			// 否则与 Dedup 维度（skipRecycle=true）报告内自相矛盾
-			if d.Name() == ".recycle" {
+			// 否则与 Dedup 维度（skipRecycle=true）报告内自相矛盾。
+			// ADR-342 D6 起走 fsutil 单点谓词（原 `d.Name() == ".recycle"` 大小写敏感，
+			// 与本注释声称的「口径一致」不符）
+			if fsutil.IsRecycleDir(path) {
+				return filepath.SkipDir
+			}
+			// relink 备份尸体子树同样排除（ADR-342 D6）：尸体内模型与仓库原件同哈希，
+			// 计入会虚高 TotalFiles/扭曲命中率与评分
+			if fsutil.IsRelinkBackupPath(path) {
 				return filepath.SkipDir
 			}
 			return nil

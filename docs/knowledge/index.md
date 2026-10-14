@@ -202,9 +202,9 @@
 | 🏗 go-ysm-parser | YSM 解析 go/ysm | architecture | io-bound | YSM, 解析, 摘要, ysm 文件, 元数据 |
 | 🏗 golangci-lint | golangci-lint（Go 静态分析真空面） | architecture | — | golangci-lint, Go 静态分析, errcheck, 未检查错误, lint 基线, new-from-rev, 增量 lint |
 | 🏗 install-domain-split | install 域切分经验：切纯域不硬切复合域（耦合度门槛判断） | architecture | — | internal/app 再切分或迁移 App god-object 字段/方法时, 评估某子域「迁出 internal/app 包」的收益与成本, 复述 ADR-179 实际收敛边界 |
-| 🏗 reference | win-filename-rules | architecture | — | 用户输入的文件/文件夹名落盘前校验（重命名、新建目录、移动/复制目标段）, 判断某字符串是否为 Windows 非法文件名（非法字符 / 保留设备名 / 尾随点空格） |
 | 🍃 texture-cache | 纹理缓存 texture_cache | leaf | — | 纹理缓存 / KTX2 缓存, 缓存清理 / 缓存状态 / 缓存校验, 缓存占用异常 / 磁盘膨胀 |
 | 🏗 wails-bindings | Wails Binding API 总览 internal/app | architecture | — | API, Binding, 调用后端, getApp, 方法签名, app.ts 绑定 |
+| 🏗 win-filename-rules | win-filename-rules | architecture | — | 用户输入的文件/文件夹名落盘前校验（重命名、新建目录、移动/复制目标段）, 判断某字符串是否为 Windows 非法文件名（非法字符 / 保留设备名 / 尾随点空格） |
 | 🍃 workspace-exe-write-denied | 仓内二进制写用户目录被静默拒绝（代理沙箱按镜像位置拦截） | leaf | — | 应用日志/配置出现「创建临时文件失败 ... Access is denied」，但浏览、读取全部正常, wails3 dev / 仓内 bin 下 exe 写失败；同一 exe 复制到仓外跑恢复正常 |
 | 🏗 ysm-wasi | WASI 解码器（wazero 内存直解，node 桥已退役） | architecture | — | WASI / wazero / 内存直解, node 子进程退役, .ysm 加密解码依赖 |
 
@@ -257,9 +257,9 @@
 - **go-ysm-parser**（YSM 解析 go/ysm）：`go/ysm/` 包负责解析 YSM（Yuan's Sketch Model）格式文件，提取模型元数据并生成结构化摘要。
 - **golangci-lint**（golangci-lint（Go 静态分析真空面））：Go 侧静态分析长期只有 `go vet` 一根独苗，与 TS 侧密集门禁网形成显著落差。ADR-205 决定引入
 - **install-domain-split**（install 域切分经验：切纯域不硬切复合域（耦合度门槛判断））：ADR-179 垂直切分 `internal/app` 的**实际收敛边界**（2026-09-04 实测确定）。切分前须先过「耦合度门槛」判断：**纯域（只依赖注入回调 + DTO）切分子包收益为正；复合域（直读 App 共享基础设施 /…
-- **reference**（win-filename-rules）：Windows 文件名合法性校验的单一事实源：`go/fsutil/perms.go` 的 `ContainsIllegalNameChar`。fileops.CreateDir / RenameDir / RenameFile / fol…
 - **texture-cache**（纹理缓存 texture_cache）：`go/texture_cache` 是模型纹理的磁盘缓存层：源纹理按内容哈希（`TextureHash`）落盘为 KTX2 缓存条目，二次加载直接读缓存，避免重复转码。容量与 TTL 双约束，写入路径自动触发裁剪（Prune）。
 - **wails-bindings**（Wails Binding API 总览 internal/app）：`internal/app/` 是 Go 端唯一的 Wails Binding 入口层：所有导出给前端的方法都定义在 `*App` 上，业务逻辑下沉到 `go/*` 包，本层只做参数转发与窗口/事件/对话框编排。前端统一经 `getApp(…
+- **win-filename-rules**（win-filename-rules）：Windows 文件名合法性校验的单一事实源：`go/fsutil/perms.go` 的 `ContainsIllegalNameChar`。fileops.CreateDir / RenameDir / RenameFile / fol…
 - **workspace-exe-write-denied**（仓内二进制写用户目录被静默拒绝（代理沙箱按镜像位置拦截））：2026-09-27 排查「wails3 dev 下所有临时文件创建失败（Access is denied），但浏览功能全部正常」：实锤为 **AI 代理沙箱按 exe 镜像位置拦截**——可执行文件位于代理工作区（C:\Users\...…
 - **ysm-wasi**（WASI 解码器（wazero 内存直解，node 桥已退役））：2026-09-27 最小验证完成：**把 YSMParser 重编成 emscripten standalone（非真 WASI 目标）+ wazero 纯 Go 运行时内存直解，node 子进程桥可整条退役**。12 个真实 .ysm（…
 

@@ -1,9 +1,10 @@
 ---
-kind: reference
+kind: win-filename-rules
 name: win-filename-rules
 tier: architecture
 category: go
-status: draft
+status: active
+last_verified: 2026-10-14
 source_files:
   - go/fsutil/perms.go
 auto_fields:
@@ -19,9 +20,10 @@ pitfalls:
   - 保留名判定是「首个点之前整段匹配」：con.tents 与 CON.txt 同拒（Windows 判定口径）；但 con.tents（子串中缀）类如 Console_Hud 放行
   - 尾随空格校验必须吃**未 trim 原串**：前端 dstDir 拼接用未 trim 的 folder，校验若先 trim 就漏检（Windows 落盘静默剥离 → 落点漂移）
 quick_groups:
-  - 校验入口：ContainsIllegalNameChar（单一事实源）
+  - 文件操作与标签
 quick_intents:
   - 「为什么这个名字被拒」→ 三层校验：非法字符 `\/:*?"<>|` ／ 保留设备名（CON/PRN/AUX/NUL/COM1-9/LPT1-9，大小写不敏感）／ 尾随点或空格
+  - 校验入口：ContainsIllegalNameChar（单一事实源）
 quick_risk_lines:
   - 扩展校验层时须同步前端 context-menu-shared.ts 的 WIN_RESERVED_NAMES 与本卡
 invariant_anchors:

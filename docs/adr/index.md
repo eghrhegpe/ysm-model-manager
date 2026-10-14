@@ -18,8 +18,8 @@ permalink: /adr/
 |------|------|
 | [📝 提议中](#提议中) | 8 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 1 |
-| [🔄 部分采纳](#部分采纳) | 15 |
-| [✅ 已采纳](#已采纳) | 324 |
+| [🔄 部分采纳](#部分采纳) | 14 |
+| [✅ 已采纳](#已采纳) | 325 |
 | [❌ 已取代](#已取代) | 8 |
 | [🧊 已废弃](#已废弃) | 0 |
 | [❓ 未归类](#未归类) | 0 |
@@ -45,11 +45,10 @@ permalink: /adr/
 |-----|------|------|
 | [ADR-129](./ADR-129-preview-3d-domain-root.md) | 3D 预览领域根升格（utils/3d → features/preview-3d，修依赖倒置） | ⚠️ 已采纳（违规或未修复） |
 
-### 🔄 部分采纳（15）
+### 🔄 部分采纳（14）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
-| [ADR-338](./architecture/ADR-338-docs-burden-reduction.md) | 文档体系减负：分级连带 + 知识卡域合并 + ADR 增量门槛（62% 连带率的治理） | 🔄 部分采纳 |
 | [ADR-323](./architecture/ADR-323-pre-commit-commit-blocks.md) | pre-commit 钩子逻辑下沉 commit-blocks 与薄壳化 | 🔄 部分采纳 |
 | [ADR-285](./ADR-285-bench-usability-copy-diff-plan.md) | 跑基准可用性收口：动作与参数同序、文案去重、术语本地化 | 🔄 部分采纳 |
 | [ADR-251](./ADR-251-ground-material-family-completion.md) | 地面材质家族补全：噪声材质与非几何图案分工 | 🔄 部分采纳 |
@@ -65,11 +64,12 @@ permalink: /adr/
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 | [ADR-050](./ADR-050-plaza-browser-window.md) | 模型广场 · 浏览器窗口（Wails 第二窗口） | 🔄 部分采纳 |
 
-### ✅ 已采纳（324）
+### ✅ 已采纳（325）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
 | [ADR-339](./architecture/ADR-339-alltype-toggle-sync.md) | 全类型 .disabled 启禁同步（大一统 repo↔pack 一致性） | ✅ 已采纳 |
+| [ADR-338](./architecture/ADR-338-docs-burden-reduction.md) | 文档体系减负：分级连带 + 知识卡域合并 + ADR 增量门槛（62% 连带率的治理） | ✅ 已采纳 |
 | [ADR-338-d1](./decisions/ADR-338-d1-commit-message-hygiene.md) | 提交信息减负：commit-msg 闸与 trailer 出口 | ✅ 已采纳 |
 | [ADR-338-d2](./decisions/ADR-338-d2-broad-claim-auto-fields.md) | broad_claim 巨兽卡符号封顶：auto_fields 死重止血与拆卡排期 | ✅ 已采纳 |
 | [ADR-337](./architecture/ADR-337-creator-type-site-vs-rtype.md) | 创作者 type 字段拆分：站点归属与本地资源类型分字段，消除幻影平台徽章与本地作者隐形 | ✅ 已采纳 |
@@ -412,7 +412,7 @@ permalink: /adr/
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
 | ADR-339 | 全类型 .disabled 启禁同步（大一统 repo↔pack 一致性） | ✅ 已采纳 | 2026-10-13 |
-| ADR-338 | 文档体系减负：分级连带 + 知识卡域合并 + ADR 增量门槛（62% 连带率的治理） | 🔄 部分采纳 | 2026-10-13 |
+| ADR-338 | 文档体系减负：分级连带 + 知识卡域合并 + ADR 增量门槛（62% 连带率的治理） | ✅ 已采纳 | 2026-10-13 |
 | ADR-337 | 创作者 type 字段拆分：站点归属与本地资源类型分字段，消除幻影平台徽章与本地作者隐形 | ✅ 已采纳 | 2026-10-13 |
 | ADR-336 | 仓库树内拖拽移动（tree 内部 move）替代右键弹窗整理 | ✅ 已采纳 | 2026-10-13 |
 | ADR-335 | 创作者按站保存改用意图式契约（siteCreators + detachedNames），消除整站替换的跨站连带删除 | ✅ 已采纳 | 2026-10-13 |

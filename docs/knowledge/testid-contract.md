@@ -3,7 +3,8 @@ kind: testid-contract
 name: testid 契约与 VIEW_TESTIDS 注册表
 tier: architecture
 category: ui
-status: draft
+status: active
+last_verified: 2026-10-14
 source_files:
   - tests/test_testid_contract.ts
   - frontend/src/views/app-content/tpl.ts
@@ -25,11 +26,11 @@ pitfalls:
   - 命中 KEY_PREFIXES 的 testid 必须进某视图的 VIEW_TESTIDS，否则判 ORPHAN
   - 注册了却不出现在任何源码字面量（data-testid / dataset.testid / buttonTestid / panelTestid）→ 判 MISSING（G-1 删钩子能红，靠 seen 集不包含 VIEW_TESTIDS 自身保证）
 quick_groups:
-  - frontend/src 内所有 data-testid 字面量
-  - 各视图 VIEW_TESTIDS 数组声明
+  - 测试与验证
 quick_intents:
   - 给页面顶层 tab 按钮加测试钩子
   - 给子 pill 行加稳定测试钩子（renderSubBar 已派生 data-testid）
+  - 登记面：frontend/src 内 data-testid 字面量 × 各视图 VIEW_TESTIDS 数组
 quick_risk_lines:
   - VIEW_TESTIDS 数组内注释出现 `]`
   - 新增 testid 忘记登记 VIEW_TESTIDS

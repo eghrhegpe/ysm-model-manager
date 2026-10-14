@@ -346,6 +346,7 @@
 
 | 用户意图 | 首选卡 | 红线警告 | 主 ADR(如有) |
 |----------|--------|----------|----------|
+| 「为什么这个名字被拒」→ 三层校验：非法字符 `\/:*?"<>\|` ／ 保留设备名（CON/PRN/AUX/NUL/COM1-9/LPT1-9，大小写不敏感）／ 尾随点或空格 | [win-filename-rules](./win-filename-rules.md) | 扩展校验层时须同步前端 context-menu-shared.ts 的 WIN_RESERVED_NAMES 与本卡 | - |
 | 创意工坊、社区下载、下载队列 | [社区下载 community](./community-feature.md) | 社区下载必须走 community download-queue 排队，禁止各组件各自发下载请求 | - |
 | 存储授权、requestStoragePermission | [跨平台目录选择器](./directory-picker.md) | - | - |
 | 打标签 / 标签存储 / 按标签筛选 | [标签系统 go/tags](./go-tags.md) | 标签以文件绝对路径为 key 存 tags.json；写入走 tmp + os.Rename 原子替换，禁止直写 | - |
@@ -366,6 +367,7 @@
 | 文件遍历 / walk、原子写、复制 | [文件基础设施 go/fsutil](./go-fsutil.md) | 文件系统操作必须走 go/fsutil 的 walk/write/copy 封装，禁止在业务代码里直接 os.Open/os.WriteFile | - |
 | 下载、下载进度、进度条 | [下载器 go/download](./go-download.md) | 下载必须走 go/download，必须带校验和校验防截断 / 部分响应 | - |
 | 校验和校验 | [下载器 go/download](./go-download.md) | - | - |
+| 校验入口：ContainsIllegalNameChar（单一事实源） | [win-filename-rules](./win-filename-rules.md) | - | - |
 | 选择目录、SelectDirectory、Wails 对话框 | [跨平台目录选择器](./directory-picker.md) | 需要目录路径的场景必须经 directory-picker 统一入口（pickDirectory / resolveAndroidRepoDir），禁止各调用方自行实现授权引导或裸调桌面对话框 | - |
 | 移动 / 复制 / 删除 / 重命名文件 / 文件夹导入 | [文件操作 go/fileops](./go-fileops.md) | 文件 CRUD 必须走 go/fileops，internal/app 薄壳仅转发 | - |
 | 应用临时文件创建全部失败但功能正常 | [仓内二进制写用户目录被静默拒绝（代理沙箱按镜像位置拦截）](./workspace-exe-write-denied.md) | go/fsutil/write.go\|createTempFile = os.CreateTemp（:44，无花样，排除代码嫌疑的锚点） | - |
@@ -605,7 +607,10 @@
 | 查拆轴/新增正交层的回归审核要点 | [AI 审查器偏差与查证方法论（10 轮实战沉淀）](./ai-review-pitfalls.md) | - | - |
 | 查审查器假阳性/假阴性模式 | [AI 审查器偏差与查证方法论（10 轮实战沉淀）](./ai-review-pitfalls.md) | 审查报告分级不等于实测结论——P1/P2 抽验后方可采信 | - |
 | 创建测试文件、构造内存 ZIP、跨包复用测试 helper | [测试辅助函数 go/internal/testutil](./go-testutil.md) | - | - |
+| 登记面：frontend/src 内 data-testid 字面量 × 各视图 VIEW_TESTIDS 数组 | [testid 契约与 VIEW_TESTIDS 注册表](./testid-contract.md) | - | - |
 | 等待 DOM 内容或 mock 调用出现 / 组件 init 链落定 | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) | 禁止用 waitFor 条件耦合组件内部实现细节 | - |
+| 给页面顶层 tab 按钮加测试钩子 | [testid 契约与 VIEW_TESTIDS 注册表](./testid-contract.md) | VIEW_TESTIDS 数组内注释出现 `]` | - |
+| 给子 pill 行加稳定测试钩子（renderSubBar 已派生 data-testid） | [testid 契约与 VIEW_TESTIDS 注册表](./testid-contract.md) | 新增 testid 忘记登记 VIEW_TESTIDS | - |
 | 挂载/卸载自定义元素 | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) | - | - |
 | 派发 click / input / keydown / drag & drop 等模拟事件 | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) | 禁止把负向定时器窗口断言换成短 sleep | - |
 | 评估子代理/审查报告可信度（分级不可采信） | [AI 审查器偏差与查证方法论（10 轮实战沉淀）](./ai-review-pitfalls.md) | 单一事实源矩阵被早退/局部 if 打破 = ADR-249 §2.4 红线 | - |
@@ -1174,6 +1179,9 @@
 | 将 init 落定硬凑成 waitFor 条件会与组件内部实现耦合，条件易碎 | - | - |
 | 将负向定时器窗口换成短 sleep 会导致防抖真坏了也漏报 | - | - |
 | testid 值禁止含空格或大小写混排（UI-Design.md §19.1），本层未做入口校验（P3） | - | - |
+| VIEW_TESTIDS 数组字面量（含其内部注释）禁止出现裸 ——契约测试用非贪婪正则 `export const VIEW_TESTIDS ... = [([\s\S]*?)]` 取数组体，遇到注释里的第一个 `]` 会提前截断，导致数组后半段全部失注册、集体被判 ORPHAN（2026-09-25 实证：tpl.ts 注释 `.repo-tab[data-tab=...]` 触发整页 diag-*/ws-* 失注册） | `]` | - |
+| 命中 KEY_PREFIXES 的 testid 必须进某视图的 VIEW_TESTIDS，否则判 ORPHAN | - | - |
+| 注册了却不出现在任何源码字面量（data-testid / dataset.testid / buttonTestid / panelTestid）→ 判 MISSING（G-1 删钩子能红，靠 seen 集不包含 VIEW_TESTIDS 自身保证） | - | - |
 | 缓存目录位置经 CacheDir 推导，清理一律走 cache-clear CLI，不手删目录 | - | - |
 | 脏主题值直写 | - | 无效 CSS 变量、页面错乱；必须经 normalizeTheme 过滤 |
 | 跟随系统主题未监听 prefers-color-scheme | - | 系统切换主题后页面未同步；必须挂 change 监听 |
@@ -1279,6 +1287,9 @@
 | rekeyWebModelGroup 两阶段「写全新 key | - | 删旧 key」，中途失败只回滚本次新建（rollbackWritten 按 store 分桶）——config store 的 ban/tags key 错删到 files store（no-op）即孤儿标记 |
 | ysm.json 单文件重命名禁改（游戏按目录名识别模型，主文件 rank 降级会让模型从列表消失）——对齐桌面 fileops ADR-038 D3 的守卫 | - | - |
 | 搜索降级契约：Worker 不可用 / 批量统计失败 | - | 返回「数值 0 + hasError:false」关键词匹配（toolbar-search 经 consumeWebSearchDegraded 提示），外 catch 是边界防御、不让数值过滤搜索 throw |
+| 前端 isUnsafeFolderName（context-menu-shared.ts）是 UX 预检，**终审在 Go**——两端口径必须同步演化，单边收紧会导致体验断层 | `前端放行、Go 报错` | - |
+| 保留名判定是：con.tents 与 CON.txt 同拒（Windows 判定口径）；但 con.tents（子串中缀）类如 Console_Hud 放行 | `首个点之前整段匹配` | - |
+| 尾随空格校验必须吃**未 trim 原串**：前端 dstDir 拼接用未 trim 的 folder，校验若先 trim 就漏检（Windows 落盘静默剥离 | - | 落点漂移） |
 | "**拦截键是 exe 镜像路径在 AI 代理工作区内，与文件名/哈希无关**（2026-09-27 四组对照实验实锤）：仓内 bin 的 exe 必失败，复制到 %TEMP% 原名跑零失败；从未被标记的探针复制进 bin 立即失败" | - | - |
 | 症状极具迷惑性：读全正常 + 目录 ACL/属主全正常 + 代码就是裸 os.CreateTemp（`go/fsutil/write.go\|createTempFile` = os.CreateTemp 无花样），会把排查引向死胡同 | `代码 bug / ACL / 目录锁 / 沙箱令牌` | - |
 | "**火绒（HipsDaemon 在跑）是被冤枉的红鲱鱼**：其防护记录无任何 YSM 条目（仅无关 ssh.exe）；不等于「是它干的」，先看它的防护记录有无条目再定罪" | `有安全软件在跑` | - |

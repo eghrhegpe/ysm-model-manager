@@ -122,6 +122,7 @@
 | 写或审 preview-3d 的 vi.mock 用例，判断是否自证、给核心纯函数 / 关键守卫补测试，需正反双侧、改关键守卫（所有权 / dispose 顺序 / 让权 / 通路裁决）后做变异实证 | [测试纪律：禁 mock 断言谓词 / 判别样本 / 变异探针](./test-discipline.md) | [ADR-311-d1] 收口的测试可信度三机制（锐评 2026-10-08，落地 2026-10-09）： |
 | 测试税、测试文件过大、mock 复印机、双胞胎测试、墓碑测试、stubBlobUrls、夹具沉淀 | [测试税减负三刀方法论](./test-tax-reduction.md) | 测试税 ≠ 测试太多，而是「mock 复印机」与「双胞胎测试」这两种结构病。 |
 | 测试工具、testid、getByTestId、waitFor、sleep、flaky、异步等待、组件测试 | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) | `frontend/src/test-utils/` 是组件测试统一工具层（ADR-035 G-1 / UI-Design.md §19.1）。查询走 `data-testid` 稳定钩子（不绑定 CSS 类/文案），等待走轮询（替代固定 … |
+| 在 frontend/src 任何位置新增 data-testid / dataset.testid / buttonTestid / panelTestid、修改某个视图的 VIEW_TESTIDS 数组、testid 契约测试报 ORPHAN 或 MISSING、想给诊断页/仓库页/工坊等顶层 tab 补测试钩子 | [testid 契约与 VIEW_TESTIDS 注册表](./testid-contract.md) | `tests/test_testid_contract.ts`（ADR-133 阶段 B）是前端测试钩子的红线门禁：所有 `data-testid` |
 | UI 组件、卡片组件、加载动画、滑块、幻灯片菜单 | [UI 组件簇（原 ui 收容所，已归位）](./ui-components.md) | 原 `frontend/src/ui/`（自称 "ui-helpers 组件库"）是 MikuMikuAR 迁移物的收容所，2026-09-10 **随 ADR-220 整体解散**：组件按唯一消费方归位——3D 菜单子系统进 `front… |
 | 数组排序、拖拽排序、moveItem、列表 reorder | [数组工具 moveItem](./utils-array.md) | 纯函数层数组操作工具，从 `site/edit.ts` 的拖拽排序 drop 逻辑抽出，供单测覆盖（ADR-023 L3）。 |
 | 错误提示、友好错误、friendlyError、toast 文案、报错翻译、网络错误、文件被占用 | [错误处理 errors](./utils-errors.md) | 把 Go 端/运行时返回的原始错误转换为用户可读的中文提示，是异常路径 toast 文案的统一入口（治理红线：所有异常路径必须有 toast 反馈）。 |
@@ -134,6 +135,7 @@
 | 体积光、光锥、聚光灯可见光柱、volumetric / cone、边缘辉光 / fresnel、截图光柱缺失或与预览不一致 | [体积光锥 VolumetricCone（真锥体网格 + Fresnel）](./volumetric-cone.md) | 聚光灯可见光柱的实现单文件（ADR-177 从 `LightCapability` 拆出的自包含单元：shader + 几何 + 材质 + 挂载状态机）。ADR-266（2026-09-18）把它从「两片交叉 `PlaneGeometry`… |
 | API、Binding、调用后端、getApp、方法签名、app.ts 绑定 | [Wails Binding API 总览 internal/app](./wails-bindings.md) ⚠️歧义（另见 wails-bridge.md等） | `internal/app/` 是 Go 端唯一的 Wails Binding 入口层：所有导出给前端的方法都定义在 `*App` 上，业务逻辑下沉到 `go/*` 包，本层只做参数转发与窗口/事件/对话框编排。前端统一经 `getApp(… |
 | Wails、桥接、getApp、Go 调用、Binding、window.go.main.App、网页版、browser adapter | [Wails 桥接 app.ts](./wails-bridge.md) ⚠️歧义（另见 wails-bindings.md、backend-idb.md、backend-web.md等） | — |
+| 用户输入的文件/文件夹名落盘前校验（重命名、新建目录、移动/复制目标段）、判断某字符串是否为 Windows 非法文件名（非法字符 / 保留设备名 / 尾随点空格） | [win-filename-rules](./win-filename-rules.md) | Windows 文件名合法性校验的单一事实源：`go/fsutil/perms.go` 的 `ContainsIllegalNameChar`。fileops.CreateDir / RenameDir / RenameFile / fol… |
 | YSM 动画、基岩动画、molang、动画管线 | [YSM (Bedrock) 动画管线](./ysm-anim-pipeline.md) | — |
 | 烘焙、几何反推、pivot、骨骼错位、模型错位、UV 对不上、贴图错位、RawYsmModel | [YSM 烘焙与几何反推](./ysm-baked.md) | YSM 作者导出模型时，**cube 的语义参数（origin/size/uv/rotation）在导出时被烘焙为纯顶点面**，`RawYsmModel.RawCube.faces` 只保留「每面 4 顶点 + 法线 + 4 组 u/v」。… |
 | WASI / wazero / 内存直解、node 子进程退役、.ysm 加密解码依赖 | [WASI 解码器（wazero 内存直解，node 桥已退役）](./ysm-wasi.md) | 2026-09-27 最小验证完成：**把 YSMParser 重编成 emscripten standalone（非真 WASI 目标）+ wazero 纯 Go 运行时内存直解，node 子进程桥可整条退役**。12 个真实 .ysm（… |

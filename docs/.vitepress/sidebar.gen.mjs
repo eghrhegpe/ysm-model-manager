@@ -2016,16 +2016,16 @@ export const autoSidebar = [
             "link": "/knowledge/install-domain-split"
           },
           {
-            "text": "win-filename-rules",
-            "link": "/knowledge/reference"
-          },
-          {
             "text": "纹理缓存 texture_cache",
             "link": "/knowledge/texture-cache"
           },
           {
             "text": "Wails Binding API 总览 internal/app",
             "link": "/knowledge/wails-bindings"
+          },
+          {
+            "text": "win-filename-rules",
+            "link": "/knowledge/win-filename-rules"
           },
           {
             "text": "仓内二进制写用户目录被静默拒绝（代理沙箱按镜像位置拦截）",

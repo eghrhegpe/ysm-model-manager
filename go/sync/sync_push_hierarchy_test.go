@@ -8,6 +8,7 @@
 package sync
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -46,17 +47,23 @@ func TestPushSingleResource_NestedDirKeepsRel(t *testing.T) {
 
 // TestPushSingleResource_YsmJSONKeepsRel ysm.json 分支（取 filePath 的父目录作源夹）
 // 同样保层级——三条分支共用同一段落位判定，防「修了目录分支漏了扩展名分支」。
+// 断言**配套纹理**同落：这是「ysm.json 分支真的触发了整夹安装」的唯一证据——
+// 若 `IsYsmEntryJSON` 又退回传全路径（恒 false → 单文件 Install），json 自身仍会按 rel
+// 落位、测试照样绿（复核 P3-4 实证的假绿缺口），纹理则必丢。
 func TestPushSingleResource_YsmJSONKeepsRel(t *testing.T) {
 	globalDir, customDir := ysmTestDirs(t)
-	testutil.WriteTestFile(t, filepath.Join(globalDir, "rpg", "weapons", "sword", "ysm.json"), "{}")
+	modelDir := filepath.Join(globalDir, "rpg", "weapons", "sword")
+	testutil.WriteTestFile(t, filepath.Join(modelDir, "ysm.json"), "{}")
+	testutil.WriteTestFile(t, filepath.Join(modelDir, "tex.png"), "png")
 
 	testutil.NoError(t,
-		PushSingleResource(filepath.Join(globalDir, "rpg", "weapons", "sword", "ysm.json"),
-			customDir, globalDir, "copy", "ysm"),
+		PushSingleResource(filepath.Join(modelDir, "ysm.json"), customDir, globalDir, "copy", "ysm"),
 		"推送 ysm.json 失败")
 
 	testutil.FileExists(t, filepath.Join(customDir, "rpg", "weapons", "sword", "ysm.json"),
 		"ysm.json 分支应按父目录的仓库层级落位（ADR-344 D3）")
+	testutil.FileExists(t, filepath.Join(customDir, "rpg", "weapons", "sword", "tex.png"),
+		"ysm.json 分支必须整夹安装（配套纹理同落）——否则说明该分支又变回死分支（ADR-344 D3b）")
 }
 
 // TestPushSingleResource_PmxKeepsRel .pmx 分支（MMD 文件夹级）同样保层级。
@@ -76,20 +83,46 @@ func TestPushSingleResource_PmxKeepsRel(t *testing.T) {
 		".pmx 分支应按父目录的仓库层级落位（ADR-344 D3）")
 }
 
-// TestPushSingleResource_RepoRoot_FallsBackBasename 守卫对照：源夹就是仓库根
-// （rel == "."，InstallDirRel 拒绝该形态）时回退 basename 语义，不静默丢推送。
-func TestPushSingleResource_RepoRoot_FallsBackBasename(t *testing.T) {
+// TestPushSingleResource_RepoRootDir_Refused 守卫对照：源夹就是仓库根时**显式拒绝**
+// （不得回退 basename 语义——那会把整座仓库装进 customDir/<仓库夹名>，ADR-344 D3c）。
+func TestPushSingleResource_RepoRootDir_Refused(t *testing.T) {
 	base := t.TempDir()
 	globalDir := filepath.Join(base, "ysm")
 	customDir := filepath.Join(base, "inst", ".minecraft", "config", "yes_steve_model", "custom")
 	testutil.WriteTestFile(t, filepath.Join(customDir, ".keep"), "")
 	testutil.WriteTestFile(t, filepath.Join(globalDir, "solo.ysm"), "solo")
 
-	testutil.NoError(t, PushSingleResource(globalDir, customDir, globalDir, "copy", "ysm"),
-		"仓库根作源夹时应回退 basename 落位（不得报错丢推送）")
+	err := PushSingleResource(globalDir, customDir, globalDir, "copy", "ysm")
+	testutil.NotNil(t, err, "源目录是仓库根时必须拒绝（整仓推送）")
+	testutil.ErrorContains(t, err, "根级", "错误文案须点名根级入口，前端据此给可执行建议")
 
-	testutil.FileExists(t, filepath.Join(customDir, "ysm", "solo.ysm"),
-		"rel==\".\" 回退 InstallDir 的 basename 语义")
+	// 拒绝即零落地：basename 回退的产物 customDir/ysm/ 不得存在
+	testutil.FileNotExists(t, filepath.Join(customDir, "ysm", "solo.ysm"),
+		"拒绝后不得留下整仓落地产物")
+}
+
+// TestPushSingleResource_RootYsmJSON_Refused 根级 ysm.json 的面板行内推送（ADR-344 D3c 回归锁）。
+// P0 实证（修复前）：仓库根放 ysm.json + 其他模型/，PushSingleResource(<repo>/ysm.json,…)
+// 返回 err=nil 且 customDir/ysm/其他模型/B.ysm 落地——整仓静默复制进整合包。
+// 触发链：根级 ysm.json 是 ysm 合法 dirLevel 文件单元 → 面板 missing 行有推送按钮 →
+// internal/app|PushSingleResourceToInstance 直进（该调用点没有导入链的根级兜底守）。
+func TestPushSingleResource_RootYsmJSON_Refused(t *testing.T) {
+	base := t.TempDir()
+	globalDir := filepath.Join(base, "ysm")
+	customDir := filepath.Join(base, "inst", ".minecraft", "config", "yes_steve_model", "custom")
+	testutil.WriteTestFile(t, filepath.Join(customDir, ".keep"), "")
+	testutil.WriteTestFile(t, filepath.Join(globalDir, "ysm.json"), "{}")
+	testutil.WriteTestFile(t, filepath.Join(globalDir, "其他模型", "B.ysm"), "other")
+
+	err := PushSingleResource(filepath.Join(globalDir, "ysm.json"), customDir, globalDir, "copy", "ysm")
+	testutil.NotNil(t, err, "根级 ysm.json 必须被拒绝（整仓推送会污染整合包）")
+	testutil.ErrorContains(t, err, "根级", "错误文案须点名根级入口")
+
+	testutil.FileNotExists(t, filepath.Join(customDir, "ysm", "其他模型", "B.ysm"),
+		"无关模型不得随根级 ysm.json 落地（P0：整仓复制）")
+	entries, readErr := os.ReadDir(customDir)
+	testutil.NoError(t, readErr, "读实例目录失败")
+	testutil.Equal(t, len(entries), 1, "拒绝后实例目录只应有占位文件，实际 %d 项", len(entries))
 }
 
 // mixedContainerRepo 造出「混合容器」仓库：容器 嵌套1 自身含平铺 .ysm（令其被判模型夹）

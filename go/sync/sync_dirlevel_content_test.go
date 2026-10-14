@@ -7,11 +7,13 @@
 package sync
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
 	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/scanner"
+	"ysm-model-manager/go/types/registry"
 )
 
 // TestSyncResourcesDirLevel_FlatFileContentDiffers_Missing（Walk 信道）：
@@ -106,4 +108,48 @@ func TestSyncResourcesDirLevel_WalkChannel_SameSizeDifferentContent_Synced(t *te
 
 	testutil.Equal(t, len(result.Synced), 1,
 		"Walk 信道无摘要 → 同 size 回退判 Synced（契约见 DiffEntry.Hash），got Missing=%v", result.Missing)
+}
+
+// TestDirLevelResult_OversizeSameSize_Missing 锁 P0-2 诚实化在 dirLevel 的移植（D1 的第三条腿）：
+// 两侧同尺寸但都因超 MaxImportSize 被刻意跳过哈希时，Size 相等**不能**作为内容一致的证据
+// → 保守判 Missing（与文件级 contentDiffers 同判据）；未超限的同尺寸无哈希仍回退 Size 判 Synced。
+func TestDirLevelResult_OversizeSameSize_Missing(t *testing.T) {
+	oversize := int64(registry.MaxImportSize) + 1
+	globalUnits := map[string]dirLevelUnit{
+		"b": {Path: filepath.Join("g", "B.ysm"), Rel: "b.ysm", Size: oversize, Oversize: true},
+	}
+	instanceUnits := map[string]dirLevelUnit{
+		"b": {Path: filepath.Join("i", "B.ysm"), Rel: "b.ysm", Size: oversize, Oversize: true},
+	}
+	res := dirLevelResult(globalUnits, instanceUnits)
+	testutil.Equal(t, len(res.Missing), 1,
+		"超限文件同尺寸应保守判 Missing（不谎报 Synced），got Missing=%v Synced=%v", res.Missing, res.Synced)
+	testutil.Equal(t, len(res.Synced), 0, "超限同尺寸不得判 Synced，got %v", res.Synced)
+
+	// 反向对照：同样同尺寸、同样无哈希，但未超限 → 回退 Size 判 Synced（不误伤绝大多数模型）
+	plainG := map[string]dirLevelUnit{"b": {Path: filepath.Join("g", "B.ysm"), Rel: "b.ysm", Size: 1024}}
+	plainI := map[string]dirLevelUnit{"b": {Path: filepath.Join("i", "B.ysm"), Rel: "b.ysm", Size: 1024}}
+	resPlain := dirLevelResult(plainG, plainI)
+	testutil.Equal(t, len(resPlain.Synced), 1, "未超限同尺寸应 Synced，got Missing=%v", resPlain.Missing)
+}
+
+// TestSyncResourcesDirLevel_OversizeFile_Missing 端到端 wiring：两条 collect 信道都要把
+// 「Size 超 MaxImportSize」翻成 Oversize（只在 diff 层判、collect 层不置位 = 白修）。
+// 用截断出的**稀疏文件**构造超限长度——不真写 500MB 数据（CI 磁盘安全）。
+func TestSyncResourcesDirLevel_OversizeFile_Missing(t *testing.T) {
+	globalDir := t.TempDir()
+	instDir := t.TempDir()
+	oversize := int64(registry.MaxImportSize) + 1
+	for _, dir := range []string{globalDir, instDir} {
+		p := testutil.WriteTestFile(t, filepath.Join(dir, "big.ysm"), "x")
+		testutil.NoError(t, os.Truncate(p, oversize), "截断为超限长度失败：%s", p)
+	}
+
+	walkRes := SyncResourcesDirLevel(globalDir, instDir, "ysm")
+	testutil.Equal(t, len(walkRes.Missing), 1,
+		"Walk 信道：超限文件同尺寸应判 Missing，got Missing=%v Synced=%v", walkRes.Missing, walkRes.Synced)
+
+	scanRes := SyncResourcesDirLevelScan(globalDir, instDir, "ysm", scanner.ScanEntriesWithHit)
+	testutil.Equal(t, len(scanRes.Missing), 1,
+		"scan 反推信道：超限文件同尺寸应判 Missing，got Missing=%v Synced=%v", scanRes.Missing, scanRes.Synced)
 }

@@ -297,15 +297,31 @@ func PushSingleResource(filePath, customDir, globalDir, linkMode, rtype string) 
 // installDirUnitLocked 把一个「目录单元」装到实例，保留它相对仓库根的层级（ADR-344 D3）。
 // 落位规则与 PushResources 的文件夹级分支**同一判定**（不另立第三套）：
 //   - 正常：InstallDirRelLocked(dir, customDir, rel(globalDir→dir)) → customDir/<仓库相对层级>
-//   - relErr（越界/跨卷）或 rel == "."（目录根本身就是模型夹）：回退 InstallDir 的
-//     basename 语义——InstallDirRel 对 rel=="." 会直接拒绝（installer|resolveFinalDst），
-//     静默失败等于丢推送。
+//   - rel == "."（dir 就是仓库根）→ **显式拒绝**（AppError，见下）
+//   - relErr（越界/跨卷）→ 回退 InstallDir 的 basename 语义（installer 自身的
+//     IsInside(filesRoot, srcDir) 守会把它挡下，不会静默落错位置）
+//
+// ⚠️ 为何 rel=="." 必须拒绝而不是回退 basename（ADR-344 D3c，P0 实证）：
+// basename 回退 = `InstallDirLocked(仓库根)` → finalDst = customDir/<仓库夹名> → **整座仓库**
+// 被复制进整合包（实测：仓库根放 ysm.json + 其他模型/ → customDir/ysm/其他模型/B.ysm 落地，
+// 且 err=nil 报成功）。触发链真实可达：根级 ysm.json 是 ysm 合法 dirLevel 文件单元
+// （packs|IsTypeModelFile 真）→ 面板 missing 行有推送按钮 → internal/app|PushSingleResourceToInstance
+// 直进本函数；该调用点**没有** app 层 pushRepoPathToInstance 的根级兜底守。
+// YSM/MMD 的模型夹入口（ysm.json/.pmx）落在仓库根时无「所属夹」可分，显式拒绝优于静默整仓复制
+// ——与 app 层根级兜底守同一裁决、同一错误码，前端按 AppError 字段渲染即可给出可执行建议。
 //
 // 调用方须持 installer.InstallLock（内部走 *Locked 变体，防重入死锁）。
 func installDirUnitLocked(dir, customDir, globalDir, linkMode, rtype string) error {
 	rel, relErr := paths.RelInside(globalDir, dir)
-	if relErr != nil || rel == "." {
+	if relErr != nil {
 		return installer.InstallDirLocked(dir, customDir, globalDir, linkMode, rtype)
+	}
+	if rel == "." {
+		return types.AppError{
+			Code: types.ErrInvalidPath, Operation: "推送资源", SourcePath: dir,
+			Reason:     "根级目录级安装入口被拒绝（源目录是仓库根，整仓推送会污染整合包）",
+			Suggestion: "请将模型放入仓库子文件夹后再推送",
+		}
 	}
 	return installer.InstallDirRelLocked(dir, customDir, filepath.ToSlash(rel), globalDir, linkMode, rtype)
 }

@@ -30,6 +30,12 @@ type dirLevelUnit struct {
 	// Hash 文件级 SHA256，scan 信道由 types.ModelEntry.Hash 旁挂、Walk 回退信道由
 	// 同一次 scanFn 结果旁挂；空=未知 → ResourceDiff 回退 Size 对比（同 DiffEntry.Hash 契约）。
 	Hash string
+	// Oversize 该文件因超 MaxImportSize（>500MB）被**刻意跳过哈希**（bug-chronicle #36）。
+	// 与「空 Hash 但设计上不哈希」区分开：超限文件的**同尺寸不足以证明内容一致**
+	// （改内容可保持同尺寸），故 contentDiffers 对其不回退 Size 谎报 Synced，而保守判
+	// 「可能不同」（P0-2 诚实化）。与文件级信道 DiffEntry.Oversize 同口径同判据——
+	// 不移植这条腿，ADR-344 宣称的「同一契约」就只搬了 Hash/Size 两条。
+	Oversize bool
 }
 
 // dirLevelCacheKey 构建文件夹级同步的缓存键（kind 恒为 dirlevel）。
@@ -91,7 +97,9 @@ func syncResourcesDirLevel(globalDir, instanceDir, rtype string, scanFn ScanEntr
 				// 直接返回，与 Walk 回退路径（collectEntriesWalkCached）对称复用缓存。
 				// 仅当 m != nil（无嵌套模式可反推）才存——nil 回退 Walk 不缓存，
 				// 否则会把「须走 Walk」误判为命中而永久跳过 Walk。
-				storeSyncScanCache(&syncDirLevelScanCache, dirLevelCacheKey(rootDir, rtype, true), m)
+				// hashed 用变量而非字面量 true：本分支今天只在 scanFn != nil 时可达（hashed 恒真），
+				// 但硬编码会让「读槽/写槽」在将来重构中悄悄分叉（复核 P3-6）。
+				storeSyncScanCache(&syncDirLevelScanCache, dirLevelCacheKey(rootDir, rtype, hashed), m)
 				return m
 			}
 		}
@@ -124,7 +132,7 @@ func dirLevelDiffEntries(units, others map[string]dirLevelUnit) map[string]DiffE
 	for key, u := range units {
 		e := DiffEntry{Path: u.Path, IsDir: u.IsDir}
 		if other, ok := others[key]; ok && u.Rel != "" && other.Rel == u.Rel {
-			e.Size, e.Hash = u.Size, u.Hash
+			e.Size, e.Hash, e.Oversize = u.Size, u.Hash, u.Oversize
 		}
 		out[key] = e
 	}
@@ -183,6 +191,8 @@ func collectEntriesWalk(rootDir string, rtype string, hashByPath map[string]stri
 					entries[key] = dirLevelUnit{
 						Path: path, Rel: dirLevelRel(rootDir, path),
 						Size: info.Size(), Hash: hashByPath[filepath.Clean(path)],
+						// P0-2 诚实化（与文件级 collect 同判据）：超限文件同尺寸不足以证明内容一致
+						Oversize: info.Size() > registry.MaxImportSize,
 					}
 				}
 			}
@@ -304,7 +314,11 @@ func collectEntriesFromScan(entries []types.ModelEntry, rootDir, rtype string) m
 	for _, e := range modelFiles {
 		p := e.Path
 		parent := filepath.Dir(p)
-		unit := dirLevelUnit{Path: p, Rel: dirLevelRel(rootDir, p), Size: e.Size, Hash: e.Hash}
+		unit := dirLevelUnit{
+			Path: p, Rel: dirLevelRel(rootDir, p), Size: e.Size, Hash: e.Hash,
+			// 与 Walk 信道同判据（scan 条目同样带 Size；>500MB 的哈希在 scanner 侧已跳过）
+			Oversize: e.Size > registry.MaxImportSize,
+		}
 		if parent == rootDir {
 			if key := relKeyDirLevel(rootDir, p, false); key != "" {
 				out[key] = unit

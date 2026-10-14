@@ -41,7 +41,9 @@ scan 信道无法产出目录折叠指纹：`types.ModelEntry` 只承载受支�
 
 ### D3 `PushSingleResource` 目录分支与 `PushResources` 同口径保层级
 
-目录 / `.pmx`/`.pmd` / `ysm.json` 三个分支改用 `paths.RelInside(globalDir, dir)` + `installer.InstallDirRelLocked`；`relErr != nil || rel == "."`（越界/目录根本身是模型夹）时回退 `InstallDirLocked` 的 basename 语义——与 `PushResources` 合流成同一段判定，不另立第三套。
+目录 / `.pmx`/`.pmd` / `ysm.json` 三个分支改用 `paths.RelInside(globalDir, dir)` + `installer.InstallDirRelLocked`；越界（`relErr != nil`）时回退 `InstallDirLocked` 的 basename 语义——与 `PushResources` 合流成同一段判定，不另立第三套。
+
+**D3c（复核抓出的 P0，必须拒绝而非回退）**：`rel == "."`（源夹就是仓库根）**不得**回退 basename。D3b 让 `ysm.json` 分支首次为真后，这条回退的落点是 `InstallDirLocked(仓库根)` → `finalDst = customDir/<仓库夹名>` → **整座仓库复制进整合包**。触发链真实可达：仓库根放一个 `ysm.json`（`packs|IsTypeModelFile` 判真 → 它是合法 dirLevel 文件单元）→ 面板 missing 行有推送按钮 → `internal/app|PushSingleResourceToInstance` 直进本函数（该调用点**没有**导入链 `pushRepoPathToInstance` 的根级兜底守）；修复前实测 `err=nil`（静默报成功）且 `customDir/ysm/其他模型/B.ysm` 落地。裁决：`rel == "."` 返回 `AppError{ErrInvalidPath, Operation:"推送资源", Reason:"根级目录级安装入口被拒绝…", Suggestion:"请将模型放入仓库子文件夹后再推送"}`——与 app 层根级兜底守**同一裁决、同一错误码**，前端按字段渲染即可给出可执行建议。YSM/MMD 的模型夹入口落在仓库根时本就无「所属夹」可分，显式拒绝优于静默整仓复制（`PushResources` 的 `rel=="."` 分支不可达：根目录自身算不出 `relKeyDirLevel`，故无此问题面）。
 
 **D3b（同刀修掉的死分支）**：其中 `ysm.json` 分支的判据 `registry.IsYsmEntryJSON(filePath)` 传的是**全路径**，而该函数做的是裸名全等比较 → 恒 false，该分支从未触发：推送一个 `ysm.json` 只落单个 json、同夹纹理全丢（YSM 模型夹 = `ysm.json` + 纹理）。改传 `filepath.Base`，与两处已有同口径调用点对齐（`internal/app|pushRepoPathToInstance` 的根级兜底守注释、`importModelFileWithSubpath`）——那处兜底守本就假定「ysm.json 触发 InstallDir(父目录)」，本修正让假定成真（根级 `ysm.json` 仍被守拦下，不会把整仓推进实例）。**变异证据**：未修 D3b 时 `TestPushSingleResource_YsmJSONKeepsRel` 在「退回 `InstallDirLocked`」的变异下**仍然通过**（假绿，因为走的是单文件 Install 路径）；修后同一变异立即转红——死分支的照妖镜。
 
@@ -61,11 +63,12 @@ dirLevel 推送/拉取的单元清单里，若某条目是另一条目的**严�
 
 - dirLevel 单元表从 `string` 变结构体，三条 collect 通道（Walk / scan 反推 / 缓存读写）与缓存 map 类型同步改动；缓存键新增 `hashed` 维度（缓存条目数略增，语义正确性优先）。
 - Walk 回退信道在 `scanFn == nil` 时无哈希：仅改内容不改 size 的文件在该信道仍判 `Synced`（生产链始终注入 `scanFn`，且注入时回退信道同样旁挂摘要，故此退化只影响测试/旧调用方）——已与文件级信道同款限制，非新增债务。
+- 超限（>500MB）文件同尺寸一律判 `Missing`（D1 第三条腿移植 `DiffEntry.Oversize` 的代价）：哈希被刻意跳过，`Size` 不足以证明内容一致，故**推完也不会转 Synced**（与文件级信道现存行为一致）。这是「不谎报」的代价，用户看到的是「可能不同、可推送」；>500MB 的平铺模型文件本身罕见，故未见放大。
 
 **已知遗留**
 
 - **目录单元专有纹理不可见**：非模型子文件在两信道的目录单元判定与展开层（`collectFolderFiles*` 只收模型文件）中都不参与，D2 未改变这一点。文件级信道的 `FoldDigest`（ADR-269 D2′-b）是另一条链，未移植到 dirLevel。
-- **容器层散文件不随推**：容器被 D4 剔除后，容器根下既非模型单元、又不属于任何子夹的文件（如 `tex/common.png`）不会被推送；面板 `pushTargets` 现状相同，本 ADR 只是把两路对齐。
+- **容器层散文件不随推**：容器被 D4 剔除后，容器根下既非模型单元、又不属于任何子夹的文件（如 `tex/common.png`）不会被推送。**口径边界要说准**：一键安装链（`pushTargets` 展开子文件）现状相同；但**面板行内推「容器行」仍是整夹安装**（`dirLevelContainerPath` 给出的容器路径 → `PushSingleResourceToInstance` → 本 ADR 的 `installDirUnitLocked` 正常保层级整夹装），那条路会把容器层散文件一起带上，也会顺带合并写入分叉子项（与批 D 的「批推静默覆盖」同族）。本 ADR 只把「批量推送」与「一键安装」两路对齐，容器行手推不入本刀范围。
 - `.disabled` / `.ban` 跨链语义（`relKeyDirLevel` 剥后缀 vs `collectFolderFiles` 保留后缀）仍是批 C 的裁决范围。
 - `PushResources`/`PullResources` 无前端消费者（UI 走 `PushSingleResourceToInstance` 与侧栏拉取），修正它们的收益在 CLI/未来调用方与口径统一，不在当前用户可见面。
 
@@ -80,8 +83,10 @@ dirLevel 推送/拉取的单元清单里，若某条目是另一条目的**严�
 | `scanner_scan.go|processScanDirEntry`（只产出受支持扩展名条目） | D2：目录折叠指纹在 scan 信道不可得 |
 | `sync_dirlevel_scan_test.go|TestSyncResourcesDirLevelScanMatchesWalk` | D2：不得让两信道劈裂 |
 | `instance|pushTargets`（只递归子单元）+ `types|InstanceStatus.MissingDirs` 注释 | D3/D4：单条推送保层级、祖先不整体推 |
-| `installer_dir.go|resolveFinalDst`（rel=="." 拒绝） | D3：rel=="." 回退 basename |
+| `installer_dir.go|resolveFinalDst`（rel=="." 拒绝） | D3：rel=="." 的形态必须显式处理 |
 | `internal/app|pushRepoPathToInstance` 根级兜底守注释（「原传全路径恒 false 防线失效」） | D3b：IsYsmEntryJSON 须传 Base |
+| 复核探针实证：根级 `ysm.json` 行内推送 → `err=nil` 且 `customDir/ysm/其他模型/B.ysm` 落地 | D3c：rel=="." 改显式拒绝（P0） |
+| `sync_resource.go|walkFn` 的 `Oversize: info.Size() > registry.MaxImportSize`（P0-2） | D1：第三条腿移植到 dirLevel |
 | `sync_push.go|PushResources` 既有 rel 保留分支 | D3：两条路合流 |
 
 <!-- 文件名: dirlevel.md → 实际文件 architecture/ADR-344-dirlevel.md（ADR-320 architecture 全量模板） -->

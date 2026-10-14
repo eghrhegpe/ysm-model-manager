@@ -63,6 +63,13 @@ func TestSearchModels_NoNumeric_IncludesUnparseable(t *testing.T) {
 	if got, ok := byName["hero"]; !ok || got.BoneCount != 0 {
 		t.Errorf("直通路径不分析，ysm 条目几何字段亦为零值（消费端 omitempty = 无几何数据），got %+v", got)
 	}
+	// 刀 3：Type 随结果下发——占位值原样透传（container = 内容未识别，不猜）
+	if got := byName["mystery.zip"].Type; got != "container" {
+		t.Errorf("未知内容 zip 的 Type 应为 container 占位（诚实透传），got %q", got)
+	}
+	if got := byName["hero"].Type; got != "ysm" {
+		t.Errorf("ysm 条目 Type 应为 ysm，got %q", got)
+	}
 }
 
 // TestSearchModels_Numeric_ExcludesNonGeometryType：数值条件 → 非几何系类型显式排除
@@ -101,5 +108,21 @@ func TestSearchModels_Numeric_ExcludesNonGeometryType(t *testing.T) {
 	}
 	if !maideHit {
 		t.Errorf("maid-model zip 应可被数值搜索命中（几何管线解析 L0 清单），结果 %v", names)
+	}
+	// 刀 3：Type 随结果下发——数值路径的结果必为几何系类型（分流保证，无占位值混入）
+	for _, r := range results {
+		if r.Type == "" {
+			t.Errorf("数值路径结果 %s 的 Type 不应为空（分流后均为几何系类型），got %+v", r.Name, r)
+		}
+	}
+	typeByName := make(map[string]string, len(results))
+	for _, r := range results {
+		typeByName[r.Name] = r.Type
+	}
+	if got := typeByName["maid_reimu.zip"]; got != "maid-model" {
+		t.Errorf("maid 包数值命中条目的 Type 应为 maid-model，got %q", got)
+	}
+	if got := typeByName["hero"]; got != "ysm" {
+		t.Errorf("ysm 条目 Type 应为 ysm，got %q", got)
 	}
 }

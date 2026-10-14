@@ -125,10 +125,12 @@ func (a *App) SearchModels(filesRoot string, keyword string, minBones, maxBones,
 // searchModelsUnanalyzed 无数值条件直通（ADR-343 刀 2）：候选全量入结果，几何字段全零
 // （SearchResult 零值，消费端 omitempty = 「无几何数据」）。Name 主键稳定排序与分析路径
 // 口径一致（消费端 buildTree 白名单是 Set，顺序无关；排序只为确定性契约）。
+// 刀 3：Type 随结果下发（占位值 container/other 原样透传——诚实语义，前端据此区分
+// 「无几何数据」与「未知类型」，不猜）。
 func searchModelsUnanalyzed(entries []types.ModelEntry) []types.SearchResult {
 	results := make([]types.SearchResult, 0, len(entries))
 	for _, e := range entries {
-		results = append(results, types.SearchResult{Name: e.Name, Path: e.Path})
+		results = append(results, types.SearchResult{Name: e.Name, Path: e.Path, Type: e.Type})
 	}
 	sort.SliceStable(results, func(i, j int) bool {
 		return results[i].Name < results[j].Name
@@ -148,6 +150,7 @@ func (a *App) searchModelsSequential(entries []types.ModelEntry, minBones, maxBo
 			Name: entry.Name, Path: entry.Path,
 			BoneCount: model.BoneCount, CubeCount: model.CubeCount,
 			TexWidth: model.TexWidth, TexHeight: model.TexHeight,
+			Type: entry.Type, // 刀 3：Type 收口（全量扫描派生，刀 1）——搜索结果自解释类型，前端可展示类型图标
 		})
 	}
 	// 与 searchModelsConcurrent 对齐：候选声明序已稳定，再按 Name 主键排序保证跨路径口径一致。
@@ -169,6 +172,7 @@ func (a *App) searchModelsConcurrent(entries []types.ModelEntry, minBones, maxBo
 			Name: entry.Name, Path: entry.Path,
 			BoneCount: model.BoneCount, CubeCount: model.CubeCount,
 			TexWidth: model.TexWidth, TexHeight: model.TexHeight,
+			Type: entry.Type, // 刀 3：Type 收口（同顺序路径）
 		}
 	})
 }

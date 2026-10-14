@@ -73,8 +73,10 @@ type Violation = { file: string; lines: number; maxLines: number; adr: string; w
  * ADR-234 D3 肥膘告警段（独立于 RULES 硬阻断，exit 0 + WARN）：
  * 规则为「目录 glob + 行数阈值 + 软告警」——扫描 scripts/ 与 scripts/_lib/ 顶层 .ts，
  * 超阈值仅 advisories（不阻断、不计入 violations）。设计意图：让「_lib 共享层胖到不可拆」
- * 可见化（当前 contract-tests 589 / check-knowledge-drift 923），驱动后续按告警排拆分，
- * 而非静默膨胀。后续若决定硬阻断，把 ADVISORY_RULES 并入 RULES 循环即可（语义切换）。
+ * 可见化，驱动后续按告警排拆分，而非静默膨胀。
+ * ⚠️ 本段**刻意不写「当前最胖是谁/多少行」**——数字随收债漂移且无人维护（ADR-162 去行号
+ * 精神 + AGENTS.md 瘦身纪律）。权威实况每次运行由本脚本自己的 WARN 列表打印。
+ * 后续若决定硬阻断，把 ADVISORY_RULES 并入 RULES 循环即可（语义切换）。
  * 与 RULES 区分：RULES = 精确文件 + 超限 exit 1（治理决策 ADR）；ADVISORY = glob + 超限 WARN（排期情报）。
  */
 const ADVISORY_RULES: { glob: (rel: string) => boolean; maxLines: number; label: string }[] = [
@@ -245,9 +247,11 @@ if (violations.length) {
 if (advisories.length) {
   console.error(
     `[check-file-lines] 肥膘排期情报（软告警不阻断）：
-   处理入口：按「_lib 共享层 / scripts 顶层」标签分组排期，优先拆「已超阈值最久」者
-   （_lib design-tokens.ts 1391 > 400 是当前最胖）；拆分沿真缝抽「纯表 / 纯函数簇 /
-   格式化输出」，原入口保留 re-export 垫片（同 ADR-315 口径）。
+   处理入口：按「_lib 共享层 / scripts 顶层」标签分组排期，优先拆「超阈值幅度最大」者
+   （超限实况见上方 WARN 列表，本处刻意不写死文件名与行数——数字必腐）。
+   入口源码沿真缝抽「纯表 / 纯函数簇 / 格式化输出」，原出口保留 re-export 垫片
+   （同 ADR-315 D3 口径）；⚠️ 逐段 verbatim 搬移，**禁止夹带行为改写**，
+   搬迁后跑 check-design-tokens 基线比对确认零行为变更。
    排期登记：拆分排期写入对应知识卡（check-knowledge-drift 自动检测），勿写 ADR
    （ADR 只记决策方向，不记实施进度——AGENTS.md 铁律）。`,
   );

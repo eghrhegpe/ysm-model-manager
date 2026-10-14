@@ -16,7 +16,7 @@ import (
 type AppService interface {
 	// ── 模型扫描 / 搜索 / 分析 ──
 	ScanModelEntries(dir string) []types.ModelEntry
-	SearchModels(filesRoot string, keyword string, minBones, maxBones, minCubes, maxCubes, minTex, maxTex int) []types.SearchResult
+	SearchModels(filesRoot string, filters types.SearchFilters) []types.SearchResult
 	ListModelAuthors() []types.AuthorInfo
 	ScanLocalAuthors(rtype string) []types.LocalAuthor
 	AnalyzeYSMModel(path string) ysm.YSMModelMeta

@@ -723,13 +723,13 @@ describe("SearchModels（关键词 + 数值范围）", () => {
   };
   it("关键词匹配 name OR path（大小写不敏感）；无数值条件快速路径", async () => {
     await seed();
-    const hit = await webFsBindings.SearchModels("/web/ysm", "狐狸");
+    const hit = await webFsBindings.SearchModels("/web/ysm", { keyword: "狐狸" });
     expect((hit as { name: string }[]).map((r) => r.name)).toEqual(["a.ysm"]);
-    const byPath = await webFsBindings.SearchModels("/web/ysm", "狼b");
+    const byPath = await webFsBindings.SearchModels("/web/ysm", { keyword: "狼b" });
     expect((byPath as { name: string }[]).map((r) => r.name)).toEqual(["b.ysm"]);
-    const all = await webFsBindings.SearchModels("/web/ysm", "");
+    const all = await webFsBindings.SearchModels("/web/ysm", { keyword: "" });
     expect((all as { boneCount: number }[]).every((r) => r.boneCount === 0)).toBe(true);
-    const miss = await webFsBindings.SearchModels("/web/ysm", "猫");
+    const miss = await webFsBindings.SearchModels("/web/ysm", { keyword: "猫" });
     expect(miss).toEqual([]);
   });
 
@@ -744,13 +744,13 @@ describe("SearchModels（关键词 + 数值范围）", () => {
         hasError: false,
       })),
     );
-    const min = (await webFsBindings.SearchModels("/web/ysm", "", 5, 0, 0, 0, 0, 0)) as { name: string }[];
+    const min = (await webFsBindings.SearchModels("/web/ysm", { keyword: "", minBones: 5, maxBones: 0, minCubes: 0, maxCubes: 0, minTex: 0, maxTex: 0 })) as { name: string }[];
     expect(min.map((r) => r.name)).toEqual(["a.ysm"]);
-    const max = (await webFsBindings.SearchModels("/web/ysm", "", 0, 5, 0, 0, 0, 0)) as { name: string }[];
+    const max = (await webFsBindings.SearchModels("/web/ysm", { keyword: "", minBones: 0, maxBones: 5, minCubes: 0, maxCubes: 0, minTex: 0, maxTex: 0 })) as { name: string }[];
     expect(max.map((r) => r.name)).toEqual(["b.ysm"]);
-    const cubes = (await webFsBindings.SearchModels("/web/ysm", "", 0, 0, 6, 0, 0, 0)) as unknown[];
+    const cubes = (await webFsBindings.SearchModels("/web/ysm", { keyword: "", minBones: 0, maxBones: 0, minCubes: 6, maxCubes: 0, minTex: 0, maxTex: 0 })) as unknown[];
     expect(cubes).toEqual([]);
-    const tex = (await webFsBindings.SearchModels("/web/ysm", "", 0, 0, 0, 0, 32, 128)) as { boneCount: number }[];
+    const tex = (await webFsBindings.SearchModels("/web/ysm", { keyword: "", minBones: 0, maxBones: 0, minCubes: 0, maxCubes: 0, minTex: 32, maxTex: 128 })) as { boneCount: number }[];
     expect(tex).toHaveLength(2);
     __setStatsRunnerForTest(async (paths: string[]) =>
       paths.map((p) => ({
@@ -761,14 +761,14 @@ describe("SearchModels（关键词 + 数值范围）", () => {
         hasError: p.includes("狐狸"),
       })),
     );
-    const errFiltered = (await webFsBindings.SearchModels("/web/ysm", "", 1, 0, 0, 0, 0, 0)) as { name: string }[];
+    const errFiltered = (await webFsBindings.SearchModels("/web/ysm", { keyword: "", minBones: 1, maxBones: 0, minCubes: 0, maxCubes: 0, minTex: 0, maxTex: 0 })) as { name: string }[];
     expect(errFiltered).toEqual([]);
   });
 
   it("Worker 不可用（runner 返回 null / 抛错）→ 降级关键词匹配（数值 0）", async () => {
     await seed();
     __setStatsRunnerForTest(async () => null);
-    const degraded = (await webFsBindings.SearchModels("/web/ysm", "狐狸", 1, 0, 0, 0, 0, 0)) as {
+    const degraded = (await webFsBindings.SearchModels("/web/ysm", { keyword: "狐狸", minBones: 1, maxBones: 0, minCubes: 0, maxCubes: 0, minTex: 0, maxTex: 0 })) as {
       name: string;
       boneCount: number;
       hasError: boolean;
@@ -779,7 +779,7 @@ describe("SearchModels（关键词 + 数值范围）", () => {
     __setStatsRunnerForTest(async () => {
       throw new Error("worker dead");
     });
-    const degraded2 = (await webFsBindings.SearchModels("/web/ysm", "狼", 1, 0, 0, 0, 0, 0)) as { name: string }[];
+    const degraded2 = (await webFsBindings.SearchModels("/web/ysm", { keyword: "狼", minBones: 1, maxBones: 0, minCubes: 0, maxCubes: 0, minTex: 0, maxTex: 0 })) as { name: string }[];
     expect(degraded2.map((r) => r.name)).toEqual(["b.ysm"]);
   });
 });
@@ -957,13 +957,13 @@ describe("防御分支补刀", () => {
     __setStatsRunnerForTest(async (paths: string[]) =>
       paths.map(() => ({ boneCount: 10, cubeCount: 5, texWidth: 64, texHeight: 64, hasError: false })),
     );
-    const noCubes = (await webFsBindings.SearchModels("/web/ysm", "", 0, 0, 0, 3, 0, 0)) as unknown[];
+    const noCubes = (await webFsBindings.SearchModels("/web/ysm", { keyword: "", minBones: 0, maxBones: 0, minCubes: 0, maxCubes: 3, minTex: 0, maxTex: 0 })) as unknown[];
     expect(noCubes).toEqual([]);
-    const noTex = (await webFsBindings.SearchModels("/web/ysm", "", 0, 0, 0, 0, 65, 0)) as unknown[];
+    const noTex = (await webFsBindings.SearchModels("/web/ysm", { keyword: "", minBones: 0, maxBones: 0, minCubes: 0, maxCubes: 0, minTex: 65, maxTex: 0 })) as unknown[];
     expect(noTex).toEqual([]);
-    const hiTex = (await webFsBindings.SearchModels("/web/ysm", "", 0, 0, 0, 0, 0, 32)) as unknown[];
+    const hiTex = (await webFsBindings.SearchModels("/web/ysm", { keyword: "", minBones: 0, maxBones: 0, minCubes: 0, maxCubes: 0, minTex: 0, maxTex: 32 })) as unknown[];
     expect(hiTex).toEqual([]);
-    const ok = (await webFsBindings.SearchModels("/web/ysm", "", 0, 0, 0, 5, 64, 64)) as unknown[];
+    const ok = (await webFsBindings.SearchModels("/web/ysm", { keyword: "", minBones: 0, maxBones: 0, minCubes: 0, maxCubes: 5, minTex: 64, maxTex: 64 })) as unknown[];
     expect(ok).toHaveLength(1);
   });
 

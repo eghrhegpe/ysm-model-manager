@@ -63,7 +63,9 @@ func (a *App) ExportModelStructureJSON(modelPath string) string {
 // ========== 高级搜索 ==========
 // SearchModels 扫描模型条目后按关键词、骨骼数、立方体数、纹理尺寸范围过滤。
 // 并发优化：关键词预过滤后，用 goroutine 池并行 AnalyzeBedrockModel（I/O + CPU 混合型）。
-// 参数固定 8 个，新增过滤维度走 types.SearchFilters struct（ADR-183 暂缓，ADR-343 刀 4）。
+// 过滤条件经 types.SearchFilters 结构体传入（ADR-343 刀 4 / ADR-183「下轮路径」执行——
+// 8 位置参数收编，新增过滤维度追加字段不再扩签名；Wails 绑定契约变更，前端
+// generate:bindings 重生成后调用点同步）。
 //
 // 分流语义（ADR-343 刀 2，2026-10-14 数据实证修正——4 条目实证库证明旧实现的
 // 「BoneCount==0 无条件排除」让关键词独占搜也静默丢掉无几何条目的半仓结果）：
@@ -74,7 +76,14 @@ func (a *App) ExportModelStructureJSON(modelPath string) string {
 //     声明，单点出口 typereg.IsGeometrySearchableID）——仅几何系条目进分析器 + 范围
 //     过滤；非几何系条目被数值条件显式排除且不跑分析器（不白解析、不触发 WASM
 //     失败日志），与 adv-filter 数值区展示门控（A 案）同口径。
-func (a *App) SearchModels(filesRoot string, keyword string, minBones, maxBones, minCubes, maxCubes, minTex, maxTex int) []types.SearchResult {
+func (a *App) SearchModels(filesRoot string, filters types.SearchFilters) []types.SearchResult {
+	// 结构体字段解包至局部变量（内部顺序/并发分析助手暂保持 8 参数形态，
+	// 对外契约只走 SearchFilters——刀 4 只改公共面，不扩散内部签名）
+	keyword := filters.Keyword
+	minBones, maxBones := filters.MinBones, filters.MaxBones
+	minCubes, maxCubes := filters.MinCubes, filters.MaxCubes
+	minTex, maxTex := filters.MinTex, filters.MaxTex
+
 	entries := a.ScanModelEntries(filesRoot)
 	if len(entries) == 0 {
 		return nil

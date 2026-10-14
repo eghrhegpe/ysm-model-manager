@@ -33,6 +33,7 @@ export type {
     ResourceSyncItem,
     ResourceSyncResult,
     RuntimeLog,
+    SearchFilters,
     SearchResult,
     ShaderpackLang,
     SubModel,

@@ -1,6 +1,6 @@
 # ADR-183：SearchModels 8 参数封装
 
-- **状态**：✅ 已采纳（决策 = 标记技术债 + 暂缓封装，非废弃；实施状态见正文 §2 与知识卡 go-design-critique）
+- **状态**：❌ 已取代（「下轮路径」由 [ADR-343](architecture/ADR-343-cross-type-search.md) 刀 4 执行：`SearchModels` 8 位置参数收编为 `types.SearchFilters`，Wails 绑定契约变更落地 2026-10-14——本 ADR 的历史技术债标记保留，决策本身被 343 收编）
 - **日期**：2026-09-05
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：`internal/app/app_scan.go:63`、`go/cli/appservice.go:19`、`go/cli/model.go:54/337/358`、`frontend/src/views/app-tree/toolbar-search.ts:195-204`、[go-design-critique](../archive/go-design-critique.md)

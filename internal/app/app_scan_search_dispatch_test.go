@@ -49,7 +49,7 @@ func TestSearchModels_NoNumeric_IncludesUnparseable(t *testing.T) {
 	writeTestZip(t, neutral, "mystery.zip", map[string]string{"readme.txt": "no geometry here"})
 
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
-	results := a.SearchModels(base, "", 0, 0, 0, 0, 0, 0)
+	results := a.SearchModels(base, types.SearchFilters{})
 	if len(results) != 2 {
 		t.Fatalf("无数值条件应返回全部 2 条（zip 不蒸发），got %d", len(results))
 	}
@@ -91,7 +91,7 @@ func TestSearchModels_Numeric_ExcludesNonGeometryType(t *testing.T) {
 	writeTestZip(t, neutral, "mystery.zip", map[string]string{"readme.txt": "no geometry here"})
 
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
-	results := a.SearchModels(base, "", 1, 0, 0, 0, 0, 0)
+	results := a.SearchModels(base, types.SearchFilters{MinBones: 1})
 	names := make([]string, 0, len(results))
 	maideHit := false
 	for _, r := range results {

@@ -717,7 +717,7 @@ func (f *benchCountingApp) ClearScanCache() { f.clears++ }
 func (f *benchCountingApp) ScanModelEntries(string) []types.ModelEntry {
 	return nil // 空仓库：B3（关键词搜索）依赖 sampleEntry 跳过，B4 因 len==0 跳过
 }
-func (f *benchCountingApp) SearchModels(string, string, int, int, int, int, int, int) []types.SearchResult {
+func (f *benchCountingApp) SearchModels(string, types.SearchFilters) []types.SearchResult {
 	return nil
 }
 func (f *benchCountingApp) AnalyzeBedrockModel(string) types.BedrockModel {

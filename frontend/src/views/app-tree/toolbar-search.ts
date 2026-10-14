@@ -226,16 +226,15 @@ async function advFilterSearchModelPaths(
   }
   try {
     const { SearchModels } = await backendGetApp();
-    const results = await SearchModels(
-      filesRoot,
-      kw,
-      advFilterToNum(rv.minBones),
-      advFilterToNum(rv.maxBones),
-      advFilterToNum(rv.minCubes),
-      advFilterToNum(rv.maxCubes),
-      advFilterToNum(rv.minTex),
-      advFilterToNum(rv.maxTex),
-    );
+    const results = await SearchModels(filesRoot, {
+      keyword: kw,
+      minBones: advFilterToNum(rv.minBones),
+      maxBones: advFilterToNum(rv.maxBones),
+      minCubes: advFilterToNum(rv.minCubes),
+      maxCubes: advFilterToNum(rv.maxCubes),
+      minTex: advFilterToNum(rv.minTex),
+      maxTex: advFilterToNum(rv.maxTex),
+    });
     return results?.length ? new Set(results.map((r) => r.path)) : new Set();
   } catch (e: unknown) {
     dbg("adv-filter", "search:error", { err: String(e) });

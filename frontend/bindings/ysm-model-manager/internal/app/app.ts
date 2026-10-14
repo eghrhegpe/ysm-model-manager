@@ -1218,10 +1218,22 @@ export function ScanModelEntriesWithLabel(dir: string, label: string): $Cancella
  * ========== 高级搜索 ==========
  * SearchModels 扫描模型条目后按关键词、骨骼数、立方体数、纹理尺寸范围过滤。
  * 并发优化：关键词预过滤后，用 goroutine 池并行 AnalyzeBedrockModel（I/O + CPU 混合型）。
- * 参数固定 8 个，新增过滤维度走 types.SearchFilters struct（技术债，后续 ADR 封装）。
+ * 过滤条件经 types.SearchFilters 结构体传入（ADR-343 刀 4 / ADR-183「下轮路径」执行——
+ * 8 位置参数收编，新增过滤维度追加字段不再扩签名；Wails 绑定契约变更，前端
+ * generate:bindings 重生成后调用点同步）。
+ * 
+ * 分流语义（ADR-343 刀 2，2026-10-14 数据实证修正——4 条目实证库证明旧实现的
+ * 「BoneCount==0 无条件排除」让关键词独占搜也静默丢掉无几何条目的半仓结果）：
+ *   - 数值条件未设置（6 范围全 0）：跳过几何分析、不做排除——关键词/标签匹配的全部
+ *     候选条目直接入结果（几何字段全零，omitempty 消费端 = 无几何数据）。无解析
+ *     能力条目（资源包/音效包/MMD 等）不再蒸发；
+ *   - 数值条件已设置：按 entry.Type 分流（刀 1 派生，registry GeometrySearchable
+ *     声明，单点出口 typereg.IsGeometrySearchableID）——仅几何系条目进分析器 + 范围
+ *     过滤；非几何系条目被数值条件显式排除且不跑分析器（不白解析、不触发 WASM
+ *     失败日志），与 adv-filter 数值区展示门控（A 案）同口径。
  */
-export function SearchModels(filesRoot: string, keyword: string, minBones: number, maxBones: number, minCubes: number, maxCubes: number, minTex: number, maxTex: number): $CancellablePromise<types$0.SearchResult[] | null> {
-    return $Call.ByID(652244789, filesRoot, keyword, minBones, maxBones, minCubes, maxCubes, minTex, maxTex);
+export function SearchModels(filesRoot: string, filters: types$0.SearchFilters): $CancellablePromise<types$0.SearchResult[] | null> {
+    return $Call.ByID(652244789, filesRoot, filters);
 }
 
 /**

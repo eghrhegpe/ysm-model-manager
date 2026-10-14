@@ -99,6 +99,21 @@ type SearchResult struct {
 	Type      string `json:"type,omitempty"` // 资源类型 ID（跨类型搜索时携带）
 }
 
+// SearchFilters 搜索过滤条件（ADR-343 刀 4 / ADR-183「下轮路径」执行）：
+// SearchModels 的 8 位置参数收编为单一结构体——新增过滤维度（跨类型目标集、
+// 骨骼名模糊等）追加字段即可，不再扩位置签名。
+// 口径：数值字段 0 = 未设置（不限）——与前端 parseFilterNumber「0 = 不限」、
+// modelMatchesFilters 的 min/max > 0 判定同源；Keyword 空串 = 不限。
+type SearchFilters struct {
+	Keyword  string `json:"keyword"`
+	MinBones int    `json:"minBones"`
+	MaxBones int    `json:"maxBones"`
+	MinCubes int    `json:"minCubes"`
+	MaxCubes int    `json:"maxCubes"`
+	MinTex   int    `json:"minTex"`
+	MaxTex   int    `json:"maxTex"`
+}
+
 // ImportLog 应用操作日志（导入、扫描、下载、同步等）
 type ImportLog struct {
 	ModelName  string `json:"ModelName"`

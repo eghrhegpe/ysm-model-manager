@@ -56,7 +56,7 @@ describe("契约 B1 — SearchModels 关键词口径对齐 Go app_scan.go:124", 
   it("关键词首尾空白应被 TrimSpace（Go: strings.TrimSpace(keyword)），web 已对齐", async () => {
     const p = await importOne("狐狸.ysm");
     // Go: kw = strings.ToLower(strings.TrimSpace(keyword))，空白被裁掉，' 狐狸 ' 命中 '狐狸.ysm'
-    const hit = (await browserAdapter.SearchModels("/web/ysm", " 狐狸 ", 0, 0, 0, 0, 0, 0)) as Array<{ name: string }>;
+    const hit = (await browserAdapter.SearchModels("/web/ysm", { keyword: " 狐狸 ", minBones: 0, maxBones: 0, minCubes: 0, maxCubes: 0, minTex: 0, maxTex: 0 })) as Array<{ name: string }>;
     expect(hit.map((h) => h.name)).toContain("狐狸.ysm"); // 契约守门：web 已实现 TrimSpace
     void p;
   });
@@ -64,10 +64,10 @@ describe("契约 B1 — SearchModels 关键词口径对齐 Go app_scan.go:124", 
   it("关键词大小写不敏感口径一致（Go: strings.ToLower 后 Contains；web 同口径）", async () => {
     await importOne("Fox.ysm");
     // 小写关键词应命中大写文件名（ToLower 折叠：'fox' 命中 'Fox.ysm'）
-    const hitLower = (await browserAdapter.SearchModels("/web/ysm", "fox", 0, 0, 0, 0, 0, 0)) as Array<{ name: string }>;
+    const hitLower = (await browserAdapter.SearchModels("/web/ysm", { keyword: "fox", minBones: 0, maxBones: 0, minCubes: 0, maxCubes: 0, minTex: 0, maxTex: 0 })) as Array<{ name: string }>;
     expect(hitLower.map((h) => h.name)).toContain("Fox.ysm");
     // 大写关键词同样命中（Go: strings.ToLower(keyword) 后比较，大小写均折叠）
-    const hitUpper = (await browserAdapter.SearchModels("/web/ysm", "FOX", 0, 0, 0, 0, 0, 0)) as Array<{ name: string }>;
+    const hitUpper = (await browserAdapter.SearchModels("/web/ysm", { keyword: "FOX", minBones: 0, maxBones: 0, minCubes: 0, maxCubes: 0, minTex: 0, maxTex: 0 })) as Array<{ name: string }>;
     expect(hitUpper.map((h) => h.name)).toContain("Fox.ysm");
   });
 });
@@ -83,7 +83,7 @@ describe("契约 B1 — SearchModels 关键词口径对齐 Go app_scan.go:124", 
 describe("契约 B1c — SearchModels kw 快路径降级 = web 契约（vs Go 恒分析 + BoneCount==0 排除）", () => {
   it("1 字节无效 stub（Go 侧 AnalyzeBedrockModel 必失败 → 排除）在 kw 快路径仍命中，行形状=降级全 0 + hasError:false", async () => {
     await importOne("stub.ysm"); // importOne 只写入 1 字节 "Y"，无任何可分析内容
-    const hit = (await browserAdapter.SearchModels("/web/ysm", "stub", 0, 0, 0, 0, 0, 0)) as Array<{
+    const hit = (await browserAdapter.SearchModels("/web/ysm", { keyword: "stub", minBones: 0, maxBones: 0, minCubes: 0, maxCubes: 0, minTex: 0, maxTex: 0 })) as Array<{
       name: string;
       boneCount: number;
       cubeCount: number;
@@ -133,38 +133,38 @@ describe("契约 B1d — SearchModels 六数值参数过滤对齐 Go modelMatche
 
   it("minBones/maxBones 边界（Go L137/L140：>=minBones 保留、<=maxBones 保留）", async () => {
     await seedTwo();
-    const minHit = (await browserAdapter.SearchModels("/web/ysm", "", 5, 0, 0, 0, 0, 0)) as Array<{ name: string }>;
+    const minHit = (await browserAdapter.SearchModels("/web/ysm", { keyword: "", minBones: 5, maxBones: 0, minCubes: 0, maxCubes: 0, minTex: 0, maxTex: 0 })) as Array<{ name: string }>;
     expect(minHit.map((r) => r.name)).toEqual(["狐狸.ysm"]); // 10>=5 保留；2<5 排除
-    const maxHit = (await browserAdapter.SearchModels("/web/ysm", "", 0, 5, 0, 0, 0, 0)) as Array<{ name: string }>;
+    const maxHit = (await browserAdapter.SearchModels("/web/ysm", { keyword: "", minBones: 0, maxBones: 5, minCubes: 0, maxCubes: 0, minTex: 0, maxTex: 0 })) as Array<{ name: string }>;
     expect(maxHit.map((r) => r.name)).toEqual(["狼.ysm"]); // 2<=5 保留；10>5 排除
     // 等值边界（Go 用 < / > 严格比较，等值不过滤）：boneCount 恰为边界值应保留
-    const eqMin = (await browserAdapter.SearchModels("/web/ysm", "", 10, 0, 0, 0, 0, 0)) as Array<{ name: string }>;
+    const eqMin = (await browserAdapter.SearchModels("/web/ysm", { keyword: "", minBones: 10, maxBones: 0, minCubes: 0, maxCubes: 0, minTex: 0, maxTex: 0 })) as Array<{ name: string }>;
     expect(eqMin.map((r) => r.name)).toEqual(["狐狸.ysm"]); // 10==minBones 保留（10<10 false）
-    const eqMax = (await browserAdapter.SearchModels("/web/ysm", "", 0, 2, 0, 0, 0, 0)) as Array<{ name: string }>;
+    const eqMax = (await browserAdapter.SearchModels("/web/ysm", { keyword: "", minBones: 0, maxBones: 2, minCubes: 0, maxCubes: 0, minTex: 0, maxTex: 0 })) as Array<{ name: string }>;
     expect(eqMax.map((r) => r.name)).toEqual(["狼.ysm"]); // 2==maxBones 保留（2>2 false）
   });
 
   it("minCubes/maxCubes 边界（Go L143/L146）", async () => {
     await seedTwo();
-    const minHit = (await browserAdapter.SearchModels("/web/ysm", "", 0, 0, 4, 0, 0, 0)) as Array<{ name: string }>;
+    const minHit = (await browserAdapter.SearchModels("/web/ysm", { keyword: "", minBones: 0, maxBones: 0, minCubes: 4, maxCubes: 0, minTex: 0, maxTex: 0 })) as Array<{ name: string }>;
     expect(minHit.map((r) => r.name)).toEqual(["狐狸.ysm"]); // 5>=4 保留；3<4 排除
-    const maxHit = (await browserAdapter.SearchModels("/web/ysm", "", 0, 0, 0, 4, 0, 0)) as Array<{ name: string }>;
+    const maxHit = (await browserAdapter.SearchModels("/web/ysm", { keyword: "", minBones: 0, maxBones: 0, minCubes: 0, maxCubes: 4, minTex: 0, maxTex: 0 })) as Array<{ name: string }>;
     expect(maxHit.map((r) => r.name)).toEqual(["狼.ysm"]); // 3<=4 保留；5>4 排除
   });
 
   it("minTex 任一维度低于下限即排除（Go L149：TexWidth<minTex || TexHeight<minTex）", async () => {
     await seedTwo();
     // minTex=32：狐狸宽高均 64>=32 保留；狼宽高均 16<32 排除
-    const hit = (await browserAdapter.SearchModels("/web/ysm", "", 0, 0, 0, 0, 32, 0)) as Array<{ name: string }>;
+    const hit = (await browserAdapter.SearchModels("/web/ysm", { keyword: "", minBones: 0, maxBones: 0, minCubes: 0, maxCubes: 0, minTex: 32, maxTex: 0 })) as Array<{ name: string }>;
     expect(hit.map((r) => r.name)).toEqual(["狐狸.ysm"]);
     // minTex=16：等值边界（16==16 不触发 < 排除）→ 两只都保留
-    const eq = (await browserAdapter.SearchModels("/web/ysm", "", 0, 0, 0, 0, 16, 0)) as Array<{ name: string }>;
+    const eq = (await browserAdapter.SearchModels("/web/ysm", { keyword: "", minBones: 0, maxBones: 0, minCubes: 0, maxCubes: 0, minTex: 16, maxTex: 0 })) as Array<{ name: string }>;
     expect(eq).toHaveLength(2);
   });
 
   it("maxTex 任一维度超上限即排除（Go L152：TexWidth>maxTex || TexHeight>maxTex）", async () => {
     await seedTwo();
-    const hit = (await browserAdapter.SearchModels("/web/ysm", "", 0, 0, 0, 0, 0, 32)) as Array<{ name: string }>;
+    const hit = (await browserAdapter.SearchModels("/web/ysm", { keyword: "", minBones: 0, maxBones: 0, minCubes: 0, maxCubes: 0, minTex: 0, maxTex: 32 })) as Array<{ name: string }>;
     expect(hit.map((r) => r.name)).toEqual(["狼.ysm"]); // 16<=32 保留；64>32 排除
   });
 
@@ -180,26 +180,26 @@ describe("契约 B1d — SearchModels 六数值参数过滤对齐 Go modelMatche
       })),
     );
     // 无数值条件 → kw 快路径（B1c 契约：hasError:false 降级行命中，不受影响）
-    const kw = (await browserAdapter.SearchModels("/web/ysm", "坏", 0, 0, 0, 0, 0, 0)) as Array<{ name: string }>;
+    const kw = (await browserAdapter.SearchModels("/web/ysm", { keyword: "坏", minBones: 0, maxBones: 0, minCubes: 0, maxCubes: 0, minTex: 0, maxTex: 0 })) as Array<{ name: string }>;
     expect(kw.map((r) => r.name)).toEqual(["坏.ysm"]);
     // 有数值条件（minBones=1）→ hasError=true 条目被排除（对齐 Go BoneCount==0 排除）
-    const num = (await browserAdapter.SearchModels("/web/ysm", "坏", 1, 0, 0, 0, 0, 0)) as Array<{ name: string }>;
+    const num = (await browserAdapter.SearchModels("/web/ysm", { keyword: "坏", minBones: 1, maxBones: 0, minCubes: 0, maxCubes: 0, minTex: 0, maxTex: 0 })) as Array<{ name: string }>;
     expect(num).toEqual([]);
   });
 
   it("六参数全 0（无数值条件）→ 不按 stats 过滤：快路径返回全量关键词命中（Go `>0` 守卫）", async () => {
     await seedTwo();
-    const all = (await browserAdapter.SearchModels("/web/ysm", "", 0, 0, 0, 0, 0, 0)) as Array<{ name: string }>;
+    const all = (await browserAdapter.SearchModels("/web/ysm", { keyword: "", minBones: 0, maxBones: 0, minCubes: 0, maxCubes: 0, minTex: 0, maxTex: 0 })) as Array<{ name: string }>;
     expect(all.map((r) => r.name).sort()).toEqual(["狐狸.ysm", "狼.ysm"]);
   });
 
   it("关键词 + 数值过滤组合（Go 先关键词预过滤再数值过滤）", async () => {
     await seedTwo();
     // kw="狐" 预过滤 → 仅狐狸候选；minBones=5 → 狐狸 10>=5 保留
-    const combo = (await browserAdapter.SearchModels("/web/ysm", "狐", 5, 0, 0, 0, 0, 0)) as Array<{ name: string }>;
+    const combo = (await browserAdapter.SearchModels("/web/ysm", { keyword: "狐", minBones: 5, maxBones: 0, minCubes: 0, maxCubes: 0, minTex: 0, maxTex: 0 })) as Array<{ name: string }>;
     expect(combo.map((r) => r.name)).toEqual(["狐狸.ysm"]);
     // 关键词命中但数值不满足 → 空（不是返回关键词结果）
-    const miss = (await browserAdapter.SearchModels("/web/ysm", "狐", 0, 3, 0, 0, 0, 0)) as Array<{ name: string }>;
+    const miss = (await browserAdapter.SearchModels("/web/ysm", { keyword: "狐", minBones: 0, maxBones: 3, minCubes: 0, maxCubes: 0, minTex: 0, maxTex: 0 })) as Array<{ name: string }>;
     expect(miss).toEqual([]); // 狐狸 10>maxBones=3 排除
   });
 });

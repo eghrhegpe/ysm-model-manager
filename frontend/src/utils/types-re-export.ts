@@ -22,6 +22,7 @@ export type {
   ImportLog,
   LogLevel,
   RuntimeLog,
+  SearchFilters,
   VersionInstance,
   WorkshopCreator,
   WorkshopPresetSearch,

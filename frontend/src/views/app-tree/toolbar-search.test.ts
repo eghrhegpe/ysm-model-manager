@@ -128,7 +128,7 @@ beforeEach(() => {
   isWebPlatformMock.mockReturnValue(false);
   consumeWebSearchDegradedMock.mockReturnValue(false);
   getAppMock.mockResolvedValue({
-    SearchModels: vi.fn(async (_root: string, _kw: string) => [
+    SearchModels: vi.fn(async (_root: string, _filters?: unknown) => [
       { path: "/repo/a.ysm" },
       { path: "/repo/b.ysm" },
     ]),

@@ -678,6 +678,23 @@ export interface RuntimeLog {
 }
 
 /**
+ * SearchFilters 搜索过滤条件（ADR-343 刀 4 / ADR-183「下轮路径」执行）：
+ * SearchModels 的 8 位置参数收编为单一结构体——新增过滤维度（跨类型目标集、
+ * 骨骼名模糊等）追加字段即可，不再扩位置签名。
+ * 口径：数值字段 0 = 未设置（不限）——与前端 parseFilterNumber「0 = 不限」、
+ * modelMatchesFilters 的 min/max > 0 判定同源；Keyword 空串 = 不限。
+ */
+export interface SearchFilters {
+    "keyword": string;
+    "minBones": number;
+    "maxBones": number;
+    "minCubes": number;
+    "maxCubes": number;
+    "minTex": number;
+    "maxTex": number;
+}
+
+/**
  * SearchResult 模型搜索结果
  */
 export interface SearchResult {

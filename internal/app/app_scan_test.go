@@ -633,7 +633,7 @@ func TestSearchModels_SequentialPath(t *testing.T) {
 	writeYsmModelFixture(t, ysmRoot, "tiny", 1)
 
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
-	results := a.SearchModels(base, "", 1, 0, 0, 0, 0, 0)
+	results := a.SearchModels(base, types.SearchFilters{MinBones: 1})
 	if len(results) < 2 {
 		t.Fatalf("至少应有 2 个结果，got %d", len(results))
 	}
@@ -655,7 +655,7 @@ func TestSearchModels_ConcurrentPath(t *testing.T) {
 	}
 
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
-	results := a.SearchModels(base, "", 0, 0, 0, 0, 0, 0)
+	results := a.SearchModels(base, types.SearchFilters{})
 	if len(results) != n {
 		t.Fatalf("期望 %d 个结果，got %d", n, len(results))
 	}
@@ -673,13 +673,13 @@ func TestSearchModels_KeywordFilter(t *testing.T) {
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
 
 	// 搜索 "warrior" → 只匹配 warrior
-	results := a.SearchModels(base, "warrior", 0, 0, 0, 0, 0, 0)
+	results := a.SearchModels(base, types.SearchFilters{Keyword: "warrior"})
 	if len(results) != 1 {
 		t.Fatalf("搜索 warrior 期望 1 个结果，got %d", len(results))
 	}
 
 	// 搜索不存在的关键词 → 空结果
-	results = a.SearchModels(base, "nonexistent", 0, 0, 0, 0, 0, 0)
+	results = a.SearchModels(base, types.SearchFilters{Keyword: "nonexistent"})
 	if len(results) != 0 {
 		t.Fatalf("搜索 nonexistent 期望 0 个结果，got %d", len(results))
 	}
@@ -696,13 +696,13 @@ func TestSearchModels_BoneFilter(t *testing.T) {
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
 
 	// 最少骨骼 5 → 只匹配 high
-	results := a.SearchModels(base, "", 5, 0, 0, 0, 0, 0)
+	results := a.SearchModels(base, types.SearchFilters{MinBones: 5})
 	if len(results) != 1 {
 		t.Fatalf("期望 1 个结果，got %d", len(results))
 	}
 
 	// 最多骨骼 3 → 只匹配 low
-	results = a.SearchModels(base, "", 0, 3, 0, 0, 0, 0)
+	results = a.SearchModels(base, types.SearchFilters{MaxBones: 3})
 	if len(results) != 1 {
 		t.Fatalf("期望 1 个结果，got %d", len(results))
 	}
@@ -721,7 +721,7 @@ func TestSearchModels_ConcurrentConsistency(t *testing.T) {
 
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
 
-	results := a.SearchModels(base, "", 1, 0, 0, 0, 0, 0)
+	results := a.SearchModels(base, types.SearchFilters{MinBones: 1})
 	if len(results) != n {
 		t.Fatalf("期望 %d 个结果，got %d", n, len(results))
 	}
@@ -737,7 +737,7 @@ func TestSearchModels_ConcurrentConsistency(t *testing.T) {
 func TestSearchModels_EmptyRepo(t *testing.T) {
 	base := t.TempDir()
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
-	results := a.SearchModels(base, "", 0, 0, 0, 0, 0, 0)
+	results := a.SearchModels(base, types.SearchFilters{})
 	if results != nil {
 		t.Fatalf("空仓库应返回 nil, got %v", results)
 	}
@@ -752,7 +752,7 @@ func TestSearchModels_Boundary2Sequential(t *testing.T) {
 	writeYsmModelFixture(t, ysmRoot, "b", 2)
 
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
-	results := a.SearchModels(base, "", 0, 0, 0, 0, 0, 0)
+	results := a.SearchModels(base, types.SearchFilters{})
 	if len(results) != 2 {
 		t.Fatalf("恰好 2 个模型应走顺序路径，got %d", len(results))
 	}
@@ -768,7 +768,7 @@ func TestSearchModels_Boundary3Concurrent(t *testing.T) {
 	writeYsmModelFixture(t, ysmRoot, "c", 3)
 
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
-	results := a.SearchModels(base, "", 0, 0, 0, 0, 0, 0)
+	results := a.SearchModels(base, types.SearchFilters{})
 	if len(results) != 3 {
 		t.Fatalf("恰好 3 个模型应走并发路径，got %d", len(results))
 	}
@@ -787,7 +787,7 @@ func TestSearchModels_CombinedFilter(t *testing.T) {
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
 
 	// 组合：关键词 "warrior" + 最少骨骼 5 → 只匹配 warrior_heavy
-	results := a.SearchModels(base, "warrior", 5, 0, 0, 0, 0, 0)
+	results := a.SearchModels(base, types.SearchFilters{Keyword: "warrior", MinBones: 5})
 	if len(results) != 1 {
 		t.Fatalf("warrior+骨骼>=5 应只匹配 1 个，got %d", len(results))
 	}
@@ -796,13 +796,13 @@ func TestSearchModels_CombinedFilter(t *testing.T) {
 	}
 
 	// 组合：关键词 "warrior" + 最多骨骼 5 → 只匹配 warrior_light
-	results = a.SearchModels(base, "warrior", 0, 5, 0, 0, 0, 0)
+	results = a.SearchModels(base, types.SearchFilters{Keyword: "warrior", MaxBones: 5})
 	if len(results) != 1 {
 		t.Fatalf("warrior+骨骼<=5 应只匹配 1 个，got %d", len(results))
 	}
 
 	// 搜索 "mage" → 只匹配 mage_heavy
-	results = a.SearchModels(base, "mage", 0, 0, 0, 0, 0, 0)
+	results = a.SearchModels(base, types.SearchFilters{Keyword: "mage"})
 	if len(results) != 1 {
 		t.Fatalf("搜索 mage 应只匹配 1 个，got %d", len(results))
 	}
@@ -822,7 +822,7 @@ func TestSearchModels_ResultOrder(t *testing.T) {
 	}
 
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
-	results := a.SearchModels(base, "", 0, 0, 0, 0, 0, 0)
+	results := a.SearchModels(base, types.SearchFilters{})
 	if len(results) != len(names) {
 		t.Fatalf("期望 %d 个结果，got %d", len(names), len(results))
 	}
@@ -878,7 +878,7 @@ func TestSearchModels_DeterministicOrder_SameName(t *testing.T) {
 	const runs = 50
 	var first []types.SearchResult
 	for i := range runs {
-		got := a.SearchModels(base, "", 0, 0, 0, 0, 0, 0)
+		got := a.SearchModels(base, types.SearchFilters{})
 		if i == 0 {
 			first = got
 			continue
@@ -928,7 +928,7 @@ func TestSearchModels_ZeroBoneFilter(t *testing.T) {
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
 
 	// 无数值条件：直通路径两个模型都返回（空几何零值，不蒸发）
-	results := a.SearchModels(base, "", 0, 0, 0, 0, 0, 0)
+	results := a.SearchModels(base, types.SearchFilters{})
 	if len(results) != 2 {
 		t.Fatalf("无数值条件应返回全部 2 条（空几何不蒸发），got %d", len(results))
 	}
@@ -939,7 +939,7 @@ func TestSearchModels_ZeroBoneFilter(t *testing.T) {
 	}
 
 	// 数值条件：空骨骼模型不满足 minBones=1，仍被过滤
-	results = a.SearchModels(base, "", 1, 0, 0, 0, 0, 0)
+	results = a.SearchModels(base, types.SearchFilters{MinBones: 1})
 	if len(results) != 1 {
 		t.Fatalf("minBones=1 应过滤空骨骼模型，仅 1 个有效结果，got %d", len(results))
 	}
@@ -963,7 +963,7 @@ func TestSearchModels_GeoCacheHit(t *testing.T) {
 
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
 
-	first := a.SearchModels(base, "", 1, 0, 0, 0, 0, 0)
+	first := a.SearchModels(base, types.SearchFilters{MinBones: 1})
 	if len(first) != 3 {
 		t.Fatalf("期望 3 个结果，got %d", len(first))
 	}
@@ -975,7 +975,7 @@ func TestSearchModels_GeoCacheHit(t *testing.T) {
 	}
 
 	// 二次搜索（仅换关键词，几何不变）：结果一致性 + 仍命中缓存
-	second := a.SearchModels(base, "war", 1, 0, 0, 0, 0, 0)
+	second := a.SearchModels(base, types.SearchFilters{Keyword: "war", MinBones: 1})
 	if len(second) != 1 || second[0].Name != "warrior" {
 		t.Fatalf("二次关键词搜索应只命中 warrior，got %+v", second)
 	}
@@ -1000,7 +1000,7 @@ func TestClearScanCache_InvalidatesGeoCache(t *testing.T) {
 
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
 	// 刀 2：几何缓存写入只发生在数值条件路径（分析器运行），故挂 minBones=1
-	results := a.SearchModels(base, "", 1, 0, 0, 0, 0, 0)
+	results := a.SearchModels(base, types.SearchFilters{MinBones: 1})
 	if len(results) != 1 {
 		t.Fatalf("搜索应产出 1 结果，got %d", len(results))
 	}
@@ -1016,7 +1016,7 @@ func TestClearScanCache_InvalidatesGeoCache(t *testing.T) {
 	}
 
 	// 失效后二次搜索应重新 compute 且结果一致
-	after := a.SearchModels(base, "", 1, 0, 0, 0, 0, 0)
+	after := a.SearchModels(base, types.SearchFilters{MinBones: 1})
 	if len(after) != 1 || after[0].BoneCount != 5 {
 		t.Errorf("失效后重新搜索应仍得 warrior(BoneCount=5)，got %+v", after)
 	}

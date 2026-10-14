@@ -51,7 +51,10 @@ func runSearch(ctx *CmdContext) error {
 		return err
 	}
 
-	results := ctx.App.SearchModels(ctx.FilesRoot, *keyword, *minBones, *maxBones, *minCubes, *maxCubes, *minTex, *maxTex)
+	results := ctx.App.SearchModels(ctx.FilesRoot, types.SearchFilters{
+		Keyword: *keyword, MinBones: *minBones, MaxBones: *maxBones,
+		MinCubes: *minCubes, MaxCubes: *maxCubes, MinTex: *minTex, MaxTex: *maxTex,
+	})
 
 	if len(results) == 0 {
 		fmt.Println("📭 未找到匹配的模型")
@@ -334,7 +337,7 @@ func runBenchmark(ctx *CmdContext) error {
 	for i := 0; i < *iterations; i++ {
 		ctx.App.ClearScanCache() // 测冷启动，见 Benchmark 1 说明
 		start := time.Now()
-		results := ctx.App.SearchModels(ctx.FilesRoot, "", 0, 0, 0, 0, 0, 0)
+		results := ctx.App.SearchModels(ctx.FilesRoot, types.SearchFilters{})
 		searchTimes[i] = time.Since(start)
 		fmt.Printf("   迭代 %d: %v (找到 %d 个结果)\n", i+1, searchTimes[i], len(results))
 	}
@@ -356,7 +359,7 @@ func runBenchmark(ctx *CmdContext) error {
 		for i := 0; i < *iterations; i++ {
 			ctx.App.ClearScanCache() // 测冷启动，见 Benchmark 1 说明
 			start := time.Now()
-			results := ctx.App.SearchModels(ctx.FilesRoot, keyword, 0, 0, 0, 0, 0, 0)
+			results := ctx.App.SearchModels(ctx.FilesRoot, types.SearchFilters{Keyword: keyword})
 			keywordTimes[i] = time.Since(start)
 			fmt.Printf("   迭代 %d: %v (找到 %d 个结果)\n", i+1, keywordTimes[i], len(results))
 		}

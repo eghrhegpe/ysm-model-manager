@@ -595,11 +595,11 @@ describe("browserAdapter — ADR-049 桥接增强 Batch 1（纯前端可复现�
   it("SearchModels：关键词匹配模型名，返回 SearchResult[]（无数值条件 → 快路径）", async () => {
     await importWebFiles([new File([enc2.encode("YSM")], "狐狸.ysm")], "ysm");
     await importWebFiles([new File([enc2.encode("YSM")], "小猫.ysm")], "ysm");
-    const hit = (await browserAdapter.SearchModels("/web/ysm", "狐狸", 0, 0, 0, 0, 0, 0)) as Array<{ name: string; path: string }>;
+    const hit = (await browserAdapter.SearchModels("/web/ysm", { keyword: "狐狸", minBones: 0, maxBones: 0, minCubes: 0, maxCubes: 0, minTex: 0, maxTex: 0 })) as Array<{ name: string; path: string }>;
     expect(hit).toHaveLength(1);
     expect(hit[0].name).toBe("狐狸.ysm");
     expect(hit[0].path).toBe("/web/ysm/狐狸/狐狸.ysm");
-    const miss = (await browserAdapter.SearchModels("/web/ysm", "龙", 0, 0, 0, 0, 0, 0)) as unknown[];
+    const miss = (await browserAdapter.SearchModels("/web/ysm", { keyword: "龙", minBones: 0, maxBones: 0, minCubes: 0, maxCubes: 0, minTex: 0, maxTex: 0 })) as unknown[];
     expect(miss).toHaveLength(0);
   });
 
@@ -1030,7 +1030,7 @@ describe("browserAdapter — 桥接增强边界/异常分支补全（审核补�
 
   it("SearchModels 数值条件降级（真实环境无 Worker）：数值 0 且非零数值不影响关键词匹配", async () => {
     await importWebFiles([new File([enc3.encode("YSM")], "狐狸.ysm")], "ysm");
-    const hit = (await browserAdapter.SearchModels("/web/ysm", "狐狸", 999, 999, 999, 999, 999, 999)) as Array<{
+    const hit = (await browserAdapter.SearchModels("/web/ysm", { keyword: "狐狸", minBones: 999, maxBones: 999, minCubes: 999, maxCubes: 999, minTex: 999, maxTex: 999 })) as Array<{
       name: string;
       boneCount: number;
       cubeCount: number;
@@ -1141,7 +1141,7 @@ describe("browserAdapter — SearchModels 数值过滤（ADR-071 #6 Worker 统�
     );
 
     // minBones=5 → 仅大狐狸（10 ≥ 5；小猫 4 < 5 排除）
-    const byMinBones = (await browserAdapter.SearchModels("/web/ysm", "", 5, 0, 0, 0, 0, 0)) as Array<{
+    const byMinBones = (await browserAdapter.SearchModels("/web/ysm", { keyword: "", minBones: 5, maxBones: 0, minCubes: 0, maxCubes: 0, minTex: 0, maxTex: 0 })) as Array<{
       name: string;
       boneCount: number;
       cubeCount: number;
@@ -1153,19 +1153,19 @@ describe("browserAdapter — SearchModels 数值过滤（ADR-071 #6 Worker 统�
     expect(byMinBones[0].texWidth).toBe(128);
 
     // maxBones=8 → 仅小猫（4 ≤ 8；大狐狸 10 > 8 排除）
-    const byMaxBones = (await browserAdapter.SearchModels("/web/ysm", "", 0, 8, 0, 0, 0, 0)) as Array<{
+    const byMaxBones = (await browserAdapter.SearchModels("/web/ysm", { keyword: "", minBones: 0, maxBones: 8, minCubes: 0, maxCubes: 0, minTex: 0, maxTex: 0 })) as Array<{
       name: string;
     }>;
     expect(byMaxBones.map((r) => r.name)).toEqual(["小猫.ysm"]);
 
     // minCubes=10 → 仅大狐狸（30 ≥ 10；小猫 8 < 10 排除）
-    const byMinCubes = (await browserAdapter.SearchModels("/web/ysm", "", 0, 0, 10, 0, 0, 0)) as Array<{
+    const byMinCubes = (await browserAdapter.SearchModels("/web/ysm", { keyword: "", minBones: 0, maxBones: 0, minCubes: 10, maxCubes: 0, minTex: 0, maxTex: 0 })) as Array<{
       name: string;
     }>;
     expect(byMinCubes.map((r) => r.name)).toEqual(["大狐狸.ysm"]);
 
     // minTex=64 → 仅大狐狸（宽高均 ≥ 64；小猫 32×16 排除——对齐 Go minTex 语义）
-    const byMinTex = (await browserAdapter.SearchModels("/web/ysm", "", 0, 0, 0, 0, 64, 0)) as Array<{
+    const byMinTex = (await browserAdapter.SearchModels("/web/ysm", { keyword: "", minBones: 0, maxBones: 0, minCubes: 0, maxCubes: 0, minTex: 64, maxTex: 0 })) as Array<{
       name: string;
       texWidth: number;
       texHeight: number;
@@ -1189,7 +1189,7 @@ describe("browserAdapter — SearchModels 数值过滤（ADR-071 #6 Worker 统�
       ),
     );
     // maxBones=100：坏模型若返回 0 骨也会通过 max 过滤，但 Go 语义要求 BoneCount==0 直接跳过
-    const hit = (await browserAdapter.SearchModels("/web/ysm", "", 0, 100, 0, 0, 0, 0)) as Array<{
+    const hit = (await browserAdapter.SearchModels("/web/ysm", { keyword: "", minBones: 0, maxBones: 100, minCubes: 0, maxCubes: 0, minTex: 0, maxTex: 0 })) as Array<{
       name: string;
       hasError: boolean;
     }>;
@@ -1201,7 +1201,7 @@ describe("browserAdapter — SearchModels 数值过滤（ADR-071 #6 Worker 统�
     await importWebFiles([new File([encN.encode("X")], "狐狸.ysm")], "ysm");
     await importWebFiles([new File([encN.encode("X")], "小猫.ysm")], "ysm");
     __setStatsRunnerForTest(async () => null);
-    const hit = (await browserAdapter.SearchModels("/web/ysm", "小", 999, 0, 0, 0, 0, 0)) as Array<{
+    const hit = (await browserAdapter.SearchModels("/web/ysm", { keyword: "小", minBones: 999, maxBones: 0, minCubes: 0, maxCubes: 0, minTex: 0, maxTex: 0 })) as Array<{
       name: string;
       boneCount: number;
       texWidth: number;
@@ -1222,7 +1222,7 @@ describe("browserAdapter — SearchModels 数值过滤（ADR-071 #6 Worker 统�
       paths.map(() => ({ boneCount: 1, cubeCount: 1, texWidth: 1, texHeight: 1, hasError: false })),
     );
     __setStatsRunnerForTest(runner as unknown as Parameters<typeof __setStatsRunnerForTest>[0]);
-    const hit = (await browserAdapter.SearchModels("/web/ysm", "狐狸", 0, 0, 0, 0, 0, 0)) as Array<{
+    const hit = (await browserAdapter.SearchModels("/web/ysm", { keyword: "狐狸", minBones: 0, maxBones: 0, minCubes: 0, maxCubes: 0, minTex: 0, maxTex: 0 })) as Array<{
       name: string;
       boneCount: number;
     }>;
@@ -1306,7 +1306,7 @@ describe("browserAdapter — 三向一致性/边界补测（审核补充）", ()
 
   it("空输入：SearchModels 空关键词 → 返回全部条目（对齐桌面 kw=='' 语义）", async () => {
     await importWebFiles([new File([e4.encode("Y")], "狐狸.ysm")], "ysm");
-    const hit = (await browserAdapter.SearchModels("/web/ysm", "", 0, 0, 0, 0, 0, 0)) as Array<{ name: string }>;
+    const hit = (await browserAdapter.SearchModels("/web/ysm", { keyword: "", minBones: 0, maxBones: 0, minCubes: 0, maxCubes: 0, minTex: 0, maxTex: 0 })) as Array<{ name: string }>;
     expect(hit).toHaveLength(1);
     expect(hit[0].name).toBe("狐狸.ysm");
   });

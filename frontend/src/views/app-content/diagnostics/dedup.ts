@@ -9,6 +9,7 @@
 
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
+import { safeGetJSON, safeSet } from "@/utils/base/primitives/storage.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import type { EscFn } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
@@ -32,6 +33,10 @@ import type {
 } from "./dedup-types.ts";
 import { DEDUP_DEFAULTS } from "./dedup-types.ts";
 import { msgRowHTML, statRowHTML } from "./status-row.ts";
+
+/** 锐评 UX #4 收口：去重配置持久化 storage key（`ysm-*` 命名契约，与 WS_LAST_TAB_KEY 同范式）。
+ *  值 = `DedupConfigShape` 的 JSON 字符串；隐私模式 safeSet/safeGetJSON 静默降级。 */
+export const DEDUP_CONFIG_KEY = "ysm-dedup-config";
 
 export type { DedupConfigShape } from "./dedup-types.ts";
 
@@ -128,10 +133,12 @@ function deriveDedupTypeMeta(
  * 三块纯逻辑提到模块顶层具名函数，外壳只留「状态机 + 编排」。
  */
 export function createDedupSession(): DedupSession {
+  // 锐评 UX #4 收口（2026-10-14）：config 持久化到 storage，应用重启不丢策略/保留规则/优先路径。
+  // safeGetJSON 解析失败/损坏回落 fallback（{}），展开后仍为 DEDUP_DEFAULTS（隐私模式静默降级）。
   const state = {
     busy: false, // startDedup 重入守卫：大量 await，快速连点并发扫描会互相覆盖并重复移入回收站
     execBusy: false, // exec 重入守卫：执行期间大量 MoveToRecycle await，重复点击并行二次删除
-    config: { ...DEDUP_DEFAULTS } as DedupConfigShape,
+    config: { ...DEDUP_DEFAULTS, ...safeGetJSON(DEDUP_CONFIG_KEY, {}) } as DedupConfigShape,
     /** 最近一次确定发起的扫描类型（start 内 busy 置位后记账；null = 从未扫过） */
     scannedType: null as string | null,
     /** 锐评 P2 收口（2026-10-14）：busy 拦截后等待补扫的最新类型（null = 无待补）。
@@ -152,12 +159,17 @@ export function createDedupSession(): DedupSession {
     });
   }
 
+  function persistConfig(): void {
+    safeSet(DEDUP_CONFIG_KEY, JSON.stringify(getConfig()));
+  }
+
   function resetConfig(): void {
     Object.assign(state.config, DEDUP_DEFAULTS);
+    persistConfig();
   }
 
   function initConfig(list: HTMLElement): void {
-    buildConfigPanel(list, state.config);
+    buildConfigPanel(list, state.config, persistConfig);
   }
 
   // ⑤ exec 按钮：逐组 MoveToRecycle + success/fail 统计 + treeReload

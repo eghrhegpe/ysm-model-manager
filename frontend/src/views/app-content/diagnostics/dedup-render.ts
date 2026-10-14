@@ -5,7 +5,7 @@
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { formatBytes } from "@/utils/format/format.ts";
-import type { EscFn } from "@/utils/html/html.ts";
+import { type EscFn, esc } from "@/utils/html/html.ts";
 import { fileIcon } from "@/utils/icon/icon.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { renderDisplayName } from "@/utils/model-name/display.ts";
@@ -139,21 +139,34 @@ export function renderConfigHtml(list: HTMLElement, config: DedupConfigShape): v
       </div>
       <div class="diag-config-item" id="priority-path-item" style="${config.keepPolicy === "path" ? "" : "display:none"}">
         <label for="priority-path">${UI_ICONS.folder} ${t("diagnostics.priorityPath")}:</label>
-        <input type="text" id="priority-path" class="diag-config-input" placeholder="/path/to/priority" value="">
+        <input type="text" id="priority-path" class="diag-config-input" placeholder="/path/to/priority" value="${esc(config.priorityPath)}">
       </div>
     </div>
   `;
 }
 
-export function bindStrategyChange(list: HTMLElement, config: DedupConfigShape): void {
+// 锐评 UX #4 收口（2026-10-14）：变更即持久化。原只写会话闭包，应用重启即回默认——
+// 策略/保留策略/优先路径全丢。persist 回调由会话层注入（持有 storage 写入 + key），
+// 本模块只声明「变更时通知」，不反向依赖 storage（render 纯产出 + 绑定）。
+export function bindStrategyChange(
+  list: HTMLElement,
+  config: DedupConfigShape,
+  persist: () => void,
+): void {
   list.querySelector("#dedup-strategy")?.addEventListener("change", (e) => {
     config.strategy = (e.target as HTMLSelectElement).value;
+    persist();
   });
 }
 
-export function bindKeepPolicyChange(list: HTMLElement, config: DedupConfigShape): void {
+export function bindKeepPolicyChange(
+  list: HTMLElement,
+  config: DedupConfigShape,
+  persist: () => void,
+): void {
   list.querySelector("#keep-policy")?.addEventListener("change", (e) => {
     config.keepPolicy = (e.target as HTMLSelectElement).value;
+    persist();
     const pathItem = list.querySelector("#priority-path-item") as HTMLElement;
     if (pathItem) {
       pathItem.style.display = config.keepPolicy === "path" ? "" : "none";
@@ -161,15 +174,24 @@ export function bindKeepPolicyChange(list: HTMLElement, config: DedupConfigShape
   });
 }
 
-export function bindPriorityPathInput(list: HTMLElement, config: DedupConfigShape): void {
+export function bindPriorityPathInput(
+  list: HTMLElement,
+  config: DedupConfigShape,
+  persist: () => void,
+): void {
   list.querySelector("#priority-path")?.addEventListener("input", (e) => {
     config.priorityPath = (e.target as HTMLInputElement).value;
+    persist();
   });
 }
 
-export function buildConfigPanel(list: HTMLElement, config: DedupConfigShape): void {
+export function buildConfigPanel(
+  list: HTMLElement,
+  config: DedupConfigShape,
+  persist: () => void,
+): void {
   renderConfigHtml(list, config);
-  bindStrategyChange(list, config);
-  bindKeepPolicyChange(list, config);
-  bindPriorityPathInput(list, config);
+  bindStrategyChange(list, config, persist);
+  bindKeepPolicyChange(list, config, persist);
+  bindPriorityPathInput(list, config, persist);
 }

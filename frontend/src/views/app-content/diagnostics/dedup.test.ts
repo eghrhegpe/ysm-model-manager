@@ -52,6 +52,9 @@ import { escUnknown as esc } from "@/utils/html/html.ts";
 
 beforeEach(() => {
   vi.resetAllMocks();
+  // 锐评 UX #4 收口：config 持久化到 localStorage——每测试需干净起点，否则前一测试
+  // 写入的 ysm-dedup-config 会污染后续会话（keepPolicy 默认值不同即让 keep-all 断言误判）。
+  localStorage.clear();
 });
 
 // 两文件组：A 更老（modTime 1000）、B 更新（modTime 2000），默认 oldest → 保留 A，删 B
@@ -220,10 +223,48 @@ describe("createDedupSession — 配置面板绑定", () => {
     dedup.resetConfig();
     expect(dedup.getConfig()).toEqual({ strategy: "deep_hash", keepPolicy: "oldest", priorityPath: "" });
 
-    // 隔离：另一会话不受本会话变更影响
+    // 锐评 UX #4 收口（2026-10-14）：config 持久化到 storage——原「会话隔离」断言在此反转，
+    // 新会话读到的是持久化配置而非默认（应用重启不丢策略）。resetConfig 已把默认写回，
+    // 故此处断言「新会话=默认」仍是 reset 后的正确行为。
     const other = createDedupSession();
     expect(other.getConfig().strategy).toBe("deep_hash");
     expect(other.getConfig().keepPolicy).toBe("oldest");
+  });
+
+  it("配置变更持久化到 storage，新会话读取（锐评 UX #4：重启不丢策略）", () => {
+    localStorage.clear();
+    const a = createDedupSession();
+    const panel = document.createElement("div");
+    a.initConfig(panel);
+
+    (panel.querySelector("#dedup-strategy") as HTMLSelectElement).value = "name_size";
+    (panel.querySelector("#dedup-strategy") as HTMLSelectElement).dispatchEvent(new Event("change"));
+    const keep = panel.querySelector("#keep-policy") as HTMLSelectElement;
+    keep.value = "path";
+    keep.dispatchEvent(new Event("change"));
+    const pathInput = panel.querySelector("#priority-path") as HTMLInputElement;
+    pathInput.value = "/x/proj";
+    pathInput.dispatchEvent(new Event("input"));
+
+    // 新会话应读到持久化配置（非默认）
+    const b = createDedupSession();
+    expect(b.getConfig()).toEqual({ strategy: "name_size", keepPolicy: "path", priorityPath: "/x/proj" });
+  });
+
+  it("priority-path 输入框回填 config.priorityPath（原恒写 value=\"\" 不回填）", () => {
+    localStorage.clear();
+    localStorage.setItem(
+      "ysm-dedup-config",
+      JSON.stringify({ strategy: "deep_hash", keepPolicy: "path", priorityPath: "/x/proj" }),
+    );
+    const dedup = createDedupSession();
+    const panel = document.createElement("div");
+    dedup.initConfig(panel);
+    const pathInput = panel.querySelector("#priority-path") as HTMLInputElement;
+    expect(pathInput.value).toBe("/x/proj");
+    // keepPolicy=path → priority-path-item 显形
+    const pathItem = panel.querySelector("#priority-path-item") as HTMLElement;
+    expect(pathItem.style.display).toBe("");
   });
 });
 

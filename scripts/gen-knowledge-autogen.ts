@@ -18,6 +18,9 @@
  * 冻结豁免（2026-09-03）：frontmatter `affected: false` 卡（整包/整目录审计快照，如
  * frontend-repo-audit）auto_fields 冻结——不随源码符号增删重写，--check/--full 同样豁免。
  *
+ * broad_claim 封顶（2026-10-14，ADR-338-d2）：`broad_claim: true` 卡全量符号 >99 时
+ * 只写前 99 条 + 块末标记 `- symbols_total: N`（死重止血，源头处方仍是收窄/拆卡）。
+ *
  * 零依赖（仅 node:fs / node:path）。
  * 设计意图：知识卡机器推导字段生成器（解法 B）
  * 退出码：1（check 模式发现漂移）
@@ -115,6 +118,7 @@ function stripFmBlock(fm: string, key: string): string {
 }
 
 // 用新 auto_fields 替换 frontmatter 中的 auto_fields: 块；若原本无该字段则插入到 source_files 后
+
 function withUpdatedAutoFields(fm: string, newFields: Record<string, string[]>): string | null {
   const lines = fm.split(/\r?\n/);
   let idx = -1;
@@ -343,6 +347,27 @@ function collectSymbolsWithLines(sourceFiles: string[]): Array<{ symbol: string;
 
 // ---------- 主流程 ----------
 
+// broad_claim 巨兽卡符号封顶（ADR-338-d2，2026-10-14）：
+// auto_fields.symbols_with_lines 全仓零信息消费者（5.14 头注实证），但目录级宽认领卡
+// （model3d 1134 条）每次检索命中都全价吞下 frontmatter。封顶 = 只写前 SYMBOLS_CAP_KEEP
+// 条 + 尾部标记 `- symbols_total: N`（全量计数）。标记行同时是「旗标仍必要」的机器信号：
+// 5.14/5.17 计数含标记行（99+1=100 ≥ 阈值）→ broad_claim 豁免不漂、旗标不自清理；
+// 卡真被收窄后 gen 写全量无标记、计数 <100 → 旗标失需由 5.17 提示移除——闭环自愈。
+// 只对 broad_claim: true 卡生效——普通大卡（99~300 无旗标）体量属自身认领的正常结果，不动。
+// 源头处方不变：5.14 WARN 仍指「收窄目录认领」，拆卡是终局（ADR-338-d2 排期 A 案）。
+// 字典序前缀有轮换噪音（新符号插进前 99 会挤出一条旧符号），但 pre-commit GEN_CMDS 自动
+// 跑 gen，噪音在提交周期内收敛；全量真相源 = 源码 grep，卡上标记只给总数。
+const SYMBOLS_CAP_KEEP = 99;
+
+/** 封顶标记伪条目：`symbols_total: N` = 封顶前全量数（非符号名，比对域排除）。 */
+const SYMBOLS_TOTAL_PREFIX = "symbols_total:";
+
+/** 按旗标与全量数决定是否封顶：返回写入卡片的条目数组（含标记行）。 */
+function applySymbolsCap(all: string[], broadClaim: boolean): string[] {
+  if (!broadClaim || all.length <= SYMBOLS_CAP_KEEP) return all;
+  return [...all.slice(0, SYMBOLS_CAP_KEEP), `${SYMBOLS_TOTAL_PREFIX} ${all.length}`];
+}
+
 function main() {
   const parsed = parseArgs(process.argv.slice(2), {
     bools: ["check", "full", "json"],
@@ -410,7 +435,11 @@ function main() {
     // --check 只报冻结卡的 removed 漂移（不报 added）；--full 同样只增量清理。
     if (getScalar(fm, "affected") === "false") {
       const frozenParsed = parseAutoFields(fm);
-      const frozenExisting = frozenParsed?.symbols_with_lines ?? [];
+      // 比对域剔除封顶标记伪条目（`symbols_total: N` 非符号，否则每轮被误判「已删残留」）；
+      // 冻结路径不重封顶（整表豁免语义）——快照卡的瘦身终局是归档迁出，不是重写。
+      const frozenExisting = (frozenParsed?.symbols_with_lines ?? []).filter(
+        (s) => !s.startsWith(SYMBOLS_TOTAL_PREFIX),
+      );
       // 共享 checkout 暂缺源守卫（2026-09-05 code_review P3）：并行会话切分支/检出中间态下
       // source_files 可能部分暂缺——collectSymbolsWithLines 对缺失路径静默跳过，若照常清理会
       // 把「暂缺源文件的符号」误判为「已删」从冻结卡永久删索引（冻结豁免 added，误删不自动恢复）。
@@ -462,6 +491,11 @@ function main() {
     const target = collectSymbolsWithLines(sources);
     // 格式化为纯符号名列表（行号已减噪，见 ADR-162：Symbol:NN 漂移会产生提交噪音）
     const targetSymbols = target.map((s) => s.symbol);
+    // broad_claim 巨兽卡封顶（ADR-338-d2）：比对与写入统一用「应写入态」——
+    // 全量前缀 + 标记行；全量数变化（哪怕 1 个超出前缀的符号增删）都体现在标记值上，
+    // --check 照样检出，不存在封顶遮蔽漂移的死角。
+    const broadClaim = getScalar(fm, "broad_claim") === "true";
+    const written = applySymbolsCap(targetSymbols, broadClaim);
 
     // 解析现有 auto_fields
     const existing = parseAutoFields(fm);
@@ -470,9 +504,9 @@ function main() {
     // 仅按符号名集合比对（顺序无关）。行号不进卡片（ADR-162 行号减噪）：
     // 行号漂移不再触发重写；只有符号真实增删（改名/新增/移除）才重写该卡。
     const existingSet = new Set(existingSymbols);
-    const targetSet = new Set(targetSymbols);
+    const targetSet = new Set(written);
 
-    const added = targetSymbols.filter((s) => !existingSet.has(s));
+    const added = written.filter((s) => !existingSet.has(s));
     const removed = existingSymbols.filter((s) => !targetSet.has(s));
 
     if (added.length === 0 && removed.length === 0 && !isFull) continue; // 一致且非 full 模式 → 跳过
@@ -484,8 +518,8 @@ function main() {
       continue;
     }
 
-    // 构建新的 auto_fields
-    const newFields: Record<string, string[]> = { symbols_with_lines: targetSymbols };
+    // 构建新的 auto_fields（写入态 = 封顶后的 written，非全量 targetSymbols，ADR-338-d2）
+    const newFields: Record<string, string[]> = { symbols_with_lines: written };
     // 保留已有其他子字段
     if (existing) {
       for (const [k, v] of Object.entries(existing)) {

@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **355** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **356** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > ADR 三区存放：根目录 = 存量（分级前）/ `architecture/` = 架构决策 / `decisions/` = 执行决策日志（ADR-320）。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -19,7 +19,7 @@ permalink: /adr/
 | [📝 提议中](#提议中) | 8 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 1 |
 | [🔄 部分采纳](#部分采纳) | 15 |
-| [✅ 已采纳](#已采纳) | 323 |
+| [✅ 已采纳](#已采纳) | 324 |
 | [❌ 已取代](#已取代) | 8 |
 | [🧊 已废弃](#已废弃) | 0 |
 | [❓ 未归类](#未归类) | 0 |
@@ -65,12 +65,13 @@ permalink: /adr/
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 | [ADR-050](./ADR-050-plaza-browser-window.md) | 模型广场 · 浏览器窗口（Wails 第二窗口） | 🔄 部分采纳 |
 
-### ✅ 已采纳（323）
+### ✅ 已采纳（324）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
 | [ADR-339](./architecture/ADR-339-alltype-toggle-sync.md) | 全类型 .disabled 启禁同步（大一统 repo↔pack 一致性） | ✅ 已采纳 |
 | [ADR-338-d1](./decisions/ADR-338-d1-commit-message-hygiene.md) | 提交信息减负：commit-msg 闸与 trailer 出口 | ✅ 已采纳 |
+| [ADR-338-d2](./decisions/ADR-338-d2-broad-claim-auto-fields.md) | broad_claim 巨兽卡符号封顶：auto_fields 死重止血与拆卡排期 | ✅ 已采纳 |
 | [ADR-337](./architecture/ADR-337-creator-type-site-vs-rtype.md) | 创作者 type 字段拆分：站点归属与本地资源类型分字段，消除幻影平台徽章与本地作者隐形 | ✅ 已采纳 |
 | [ADR-336](./architecture/ADR-336-tree-internal-drag-move.md) | 仓库树内拖拽移动（tree 内部 move）替代右键弹窗整理 | ✅ 已采纳 |
 | [ADR-335](./architecture/ADR-335-workshop-creators-intent-save.md) | 创作者按站保存改用意图式契约（siteCreators + detachedNames），消除整站替换的跨站连带删除 | ✅ 已采纳 |
@@ -753,6 +754,7 @@ permalink: /adr/
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
 | ADR-338-d1 | 提交信息减负：commit-msg 闸与 trailer 出口 | ✅ 已采纳 | 2026-10-13 |
+| ADR-338-d2 | broad_claim 巨兽卡符号封顶：auto_fields 死重止血与拆卡排期 | ✅ 已采纳 | 2026-10-14 |
 | ADR-331-d1 | ReadFileBytes 无 error 通道缺口：ReadFileMeta 结构化错误字段（切片 C） | ✅ 已采纳 | 2026-10-12 |
 | ADR-311-d1 | 测试纪律：禁 mock 被断言谓词（自证）+ 判别样本 + 变异探针 | ✅ 已采纳 | 2026-10-09 |
 | ADR-292-d1 | envSource 迁移判据① 供血线单源化（不再跨槽读 sky 存档键形） | ✅ 已采纳 | 2026-10-07 |

@@ -50,12 +50,13 @@ export const GEN_WHOLE_PREFIXES: readonly string[] = ["frontend/public/locales/"
  */
 const MACHINE_KEY_RE = /^\s*(auto_fields|symbols|symbols_with_lines)\s*:/;
 /**
- * 机器区列表项：≥2 空格缩进 + `- ` + 单个裸符号 token（如 `    - AllExts`）。
+ * 机器区列表项：≥2 空格缩进 + `- ` + 单个裸符号 token（如 `    - AllExts`），
+ * 或「符号: 数」封顶标记（如 `    - symbols_total: 1100`，ADR-338-d2 gen 独有形态）。
  * 刻意收窄：use_when/pitfalls/quick_intents 等人工策展列表项（2 空格缩进、
  * 自然语言文本）与正文嵌套 bullet 均不匹配——裸符号 token 是 gen 输出独有形态，
  * 缩进 + token 双约束把「人工 bullet 编辑」整体排除在机器区外（ADR-151 红线）。
  */
-const MACHINE_ITEM_RE = /^\s{2,}-\s+[A-Za-z_][A-Za-z0-9_.]*\s*$/;
+const MACHINE_ITEM_RE = /^\s{2,}-\s+[A-Za-z_][A-Za-z0-9_.]*(?::\s*\d+)?\s*$/;
 
 /** 路径是否命中生成物整文件清单（正斜杠归一）。 */
 export function isGenWholeOutput(p: string): boolean {

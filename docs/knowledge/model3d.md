@@ -251,4 +251,4 @@ perf:
 
 ## 符号索引
 
-> 符号列表见 frontmatter `auto_fields.symbols_with_lines`。
+> 本卡目录级宽认领（`frontend/src/preview-3d/` 全层）符号已按 [ADR-338-d2](../adr/decisions/ADR-338-d2-broad-claim-auto-fields.md) **封顶**：frontmatter 只保留前 99 条 + 块末 `symbols_total: N` 全量计数（单一事实源 = 源码 grep，本卡不重复存全量清单）。拆卡（infra/caps/mmd-adapter 三域）是终局，排期见 d2 §决策 3。

@@ -26,6 +26,7 @@ auto_fields:
     - emptyInstanceStateHTML
     - footerHTML
     - headerHTML
+    - InstanceCardHeaderData
     - instanceCardHeaderHTML
     - listContainerHTML
     - loadErrorStateHTML

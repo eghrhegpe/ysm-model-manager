@@ -381,6 +381,13 @@ export interface ImportLog {
  * `PushSingleResourceToInstance`（面板行内推送同一条路），不得喂给逐条 Install。
  * Extra/Disabled 是**单元**路径：Extra = 实例侧独有的单元；Disabled = 禁用单元，
  * 可能是实例侧 `.ban` 文件，也可能是仓库侧 `.ban` 单元（未展开、不推送）。
+ * 
+ * Overwrites（ADR-340-d2）是 **Missing ∪ MissingDirs 的子集**（同格、可直接拿去做集合
+ * 归属）：本次推送将**覆盖实例侧已修改副本**的那些推送目标。批量推送的策略仍是
+ * 「仓库为准，照旧覆盖」（用户裁定：无行为变化），本字段只负责事后如实——没有它，
+ * 用户只能从「推送完成」里读到自己没写过的一句话，而实例侧的手改已经没了。
+ * 只收录**自身即推送目标**的情形（叶子文件 diverged、整夹推送的分叉夹）；分叉夹被
+ * 展开成内层文件时无法逐文件归因，宁少报不谎报（见 status_counts.go|pushTargets）。
  */
 export interface InstanceStatus {
     "Name": string;
@@ -410,6 +417,11 @@ export interface InstanceStatus {
      * 仓库侧目录单元（须走 PushSingleResourceToInstance 整夹推送）
      */
     "MissingDirs": string[] | null;
+
+    /**
+     * 推送目标中会覆盖实例侧已修改副本的那部分（⊂ Missing ∪ MissingDirs）
+     */
+    "Overwrites": string[] | null;
 
     /**
      * 实例侧独有单元路径
@@ -670,12 +682,20 @@ export interface ResourceSyncItem {
 
 /**
  * ResourceSyncResult 资源同步结果
+ * 
+ * Diverged 是 Missing 的**子集**，不是第四桶（ADR-340-d2）：两侧同名同键、`contentDiffers`
+ * 为真的条目路径。这一维原本在归并时被丢掉——「内容已变化（待推送更新）」与「仅全局有」
+ * 同归 Missing（sync_diff.go 注释自陈），于是消费端无法回答「这次推送会覆盖几个实例侧
+ * 已修改的副本」：批量推送静默覆盖用户的实例侧改动，一句不提。
+ * 
+ * Missing 的归属**刻意不变**（仍是并集，旧消费者零影响）；Diverged 只把丢掉的那一维
+ * 补回来，供 `go/instance` 分状态、侧栏如实计数与点名。
  */
 export interface ResourceSyncResult {
     "synced": string[] | null;
 
     /**
-     * 全局有但整合包没有（可推送）
+     * 全局有但整合包没有（可推送）；含 Diverged
      */
     "missing": string[] | null;
 
@@ -683,6 +703,11 @@ export interface ResourceSyncResult {
      * 整合包有但全局没有（可拉取）
      */
     "extra": string[] | null;
+
+    /**
+     * ⊂ Missing：两侧均有但内容不同（推送即覆盖实例侧修改）
+     */
+    "diverged": string[] | null;
 }
 
 /**

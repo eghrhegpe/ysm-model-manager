@@ -331,8 +331,22 @@ func processOneResourceType(
 	for _, p := range result.Synced {
 		appendItem(p, types.SyncStatusSynced, nil)
 	}
+	// ADR-340-d2：把「两侧均有、内容已变化（待推送更新）」从「仅仓库有」里分辨出来。
+	// ResourceDiff 把两者同归 Missing（保持既有归属），若组装层不再分辨，则面板行与
+	// 侧栏一键推送都无法告知「这一次推送会覆盖实例侧已修改的副本」——面板侧表现为
+	// 分叉行冒充 missing（ADR-310 的 diverged 推送前确认闸对 fileLevel 类型形同虚设），
+	// 侧栏侧表现为静默覆盖。状态取既有语义 SyncStatusDiverged（前端继承 missing 的
+	// 可操作属性；计数/清单归属不变：foldUnit 把 missing|diverged 折同一桶）。
+	diverged := make(map[string]bool, len(result.Diverged))
+	for _, p := range result.Diverged {
+		diverged[p] = true
+	}
 	for _, p := range result.Missing {
-		appendItem(p, types.SyncStatusMissing, nil)
+		status := types.SyncStatusMissing
+		if diverged[p] {
+			status = types.SyncStatusDiverged
+		}
+		appendItem(p, status, nil)
 	}
 	for _, p := range result.Extra {
 		appendItem(p, types.SyncStatusOptional, func(p string) bool {

@@ -339,6 +339,34 @@ describe("app-sidebar — 推送所选（ADR-340 直调）", () => {
     unmountElement(el);
   });
 
+  // ADR-340-d2 回归锁：批量推送覆盖实例侧手改 → 汇总必须如实计数与点名，且**不得**落进
+  // 纯成功文案「推送完成：n 个整合包」——那正是锐评 P1-6 的病：用户被告知一切顺利，
+  // 而实例侧的手改已经没了。名字取路径末段，超 3 个截断为「等」。
+  it("覆盖实例侧已修改副本 → warn toast 如实计数与点名（非纯成功文案）", async () => {
+    downloadMissingMock.mockResolvedValue({
+      ok: 5,
+      fail: 0,
+      skipped: false,
+      overwrites: ["/repo/ysm/狐妖.pmx", "/repo/ysm/雷电.pmx", "/repo/ysm/c.pmx", "/repo/ysm/d.pmx"],
+    });
+    const el = await mountSidebar();
+    checkFirst(el);
+    const pushBtn = $<HTMLButtonElement>(el, ".sidebar-push-selected");
+
+    clickPushAll(el);
+    await waitFor(() => toasts.some((t) => t.msg.includes("覆盖了")));
+
+    const msg = toasts.find((t) => t.msg.includes("覆盖了"))?.msg ?? "";
+    // 覆盖是磁盘事实不是批次事实：4 个目标 × 类型数（每类型一次批量直调）按 Set 去重后仍是 4
+    expect(msg).toContain("覆盖了 4 处实例侧已修改内容");
+    expect(msg).toContain("狐妖.pmx、雷电.pmx、c.pmx");
+    expect(msg).toContain("等");
+    // 负向：绝不能落进纯成功文案（「推送完成：」只出现在 pushDoneAll）
+    expect(toasts.some((t) => t.msg.includes("推送完成："))).toBe(false);
+    expect(pushBtn.disabled).toBe(false);
+    unmountElement(el);
+  });
+
   // 锐评 P1-3 回归锁：包级归因——「失败 N 个文件」之外必须点名是哪个整合包。
   // 多类型批次下同一包会被累加多次，断言「包名 + 括号内失败数」出现且计数正确。
   it("P1-3 包级归因 → 汇总 toast 点名失败整合包与失败数", async () => {

@@ -813,6 +813,9 @@ export const zhCN = {
   "sidebar.pushInstallFail": "{fail} 个文件安装失败（成功 {ok}）",
   // 锐评 P1-3 收口：包级归因——「失败 3」之外必须能指名道姓是哪个包（{names} 形如「狐妖(3)、MMD(1)」）
   "sidebar.pushPackFailDetail": "失败集中在 {n} 个整合包：{names}",
+  // ADR-340-d2：推送**照旧覆盖**（策略未变），但覆盖了实例侧手改必须如实点名——
+  // 原实现把这件事整个隐去，用户只能看到一句「推送完成」。{names} 形如「狐妖.pmx、MMD 等」
+  "sidebar.pushOverwrote": "覆盖了 {n} 处实例侧已修改内容（{names}）",
   // P1-3：推送/拉取循环进度（按钮内显示，大批量不再只干等 spinner）
   "sidebar.pushProgress": "推送中 {i}/{n} 类…",
   "sidebar.pullProgress": "拉取中 {i}/{n} 包…",

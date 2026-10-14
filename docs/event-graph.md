@@ -325,15 +325,15 @@
 | onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 203 |
 | registerInstanceOps | `frontend/src/features/pack-ops/instance-ops.ts` | 135 |
 | registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 55 |
-| runDownloadMissing | `frontend/src/features/sync/sync.ts` | 277 |
-| runSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 362 |
+| runDownloadMissing | `frontend/src/features/sync/sync.ts` | 305 |
+| runSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 391 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 208 |
 | relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 230 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 93 |
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 311 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 73 |
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 137 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 433 |
+| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 459 |
 | _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 229 |
 | runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 94 |
 | atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 121 |
@@ -361,7 +361,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| registerSync | `frontend/src/features/sync/sync.ts` | 403 |
+| registerSync | `frontend/src/features/sync/sync.ts` | 432 |
 
 ### `toast:show`
 
@@ -406,12 +406,12 @@
 | setupRecycleActions | `frontend/src/features/maintenance/recycle-bin.ts` | 132 |
 | onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 204 |
 | registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 54 |
-| downloadMissing | `frontend/src/features/sync/sync.ts` | 315 |
-| handleSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 391 |
+| downloadMissing | `frontend/src/features/sync/sync.ts` | 343 |
+| handleSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 420 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 209 |
 | applyFsaState | `frontend/src/views/app-content/settings/init.ts` | 389 |
 | onWebRepoAuthClick | `frontend/src/views/app-content/settings/init.ts` | 417 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 434 |
+| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 460 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |

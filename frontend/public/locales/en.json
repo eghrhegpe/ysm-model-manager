@@ -697,6 +697,7 @@
   "sidebar.packTimedOutStopped": "{n} type batches timed out; remaining batches stopped",
   "sidebar.pushInstallFail": "{fail} files failed to install ({ok} succeeded)",
   "sidebar.pushPackFailDetail": "Failures concentrated in {n} pack(s): {names}",
+  "sidebar.pushOverwrote": "Overwrote {n} instance-side modification(s) ({names})",
   "sidebar.pushProgress": "Pushing {i}/{n}…",
   "sidebar.pullProgress": "Pulling {i}/{n}…",
   "resource.loadFailed": "Resource load failed",

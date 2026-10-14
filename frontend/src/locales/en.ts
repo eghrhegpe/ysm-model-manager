@@ -829,6 +829,9 @@ export const en: Record<string, string> = {
   "sidebar.packTimedOutStopped": "{n} type batches timed out; remaining batches stopped",
   "sidebar.pushInstallFail": "{fail} files failed to install ({ok} succeeded)",
   "sidebar.pushPackFailDetail": "Failures concentrated in {n} pack(s): {names}",
+  // ADR-340-d2: pushing still overwrites (policy unchanged) but overwriting instance-side
+  // edits must be reported honestly — previously the whole event was hidden behind "push done".
+  "sidebar.pushOverwrote": "Overwrote {n} instance-side modification(s) ({names})",
   // P1-3: push/pull loop progress (shown on the button; large batches no longer wait on a bare spinner)
   "sidebar.pushProgress": "Pushing {i}/{n}…",
   "sidebar.pullProgress": "Pulling {i}/{n}…",

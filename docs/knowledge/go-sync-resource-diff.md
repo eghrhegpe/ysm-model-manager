@@ -71,7 +71,7 @@ last_verified: 2026-10-14
 
 ## 对外 API / 入口
 
-- `SyncResources(globalDir, instanceDir string, rtype ...string) types.ResourceSyncResult` — 资源级 diff（空 rtype = 旧行为兼容，逻辑等价资源包类型）
+- `SyncResources(globalDir, instanceDir string, rtype ...string) types.ResourceSyncResult` — 资源级 diff（空 rtype = 旧行为兼容，逻辑等价资源包类型）。返回值自 ADR-340-d2 起多一维 `Diverged`（⊂ `Missing`：两侧同键而内容不同）——`Missing` 归属**刻意不变**（仍是并集，旧消费者零影响）
 - `SyncResourcesWithConfig(..., config *types.SyncConfig, scanFn ScanFunc, rtype ...)` — 带冲突策略 + 内容级哈希的完整入口；生产入口 `internal/app.App.SyncResources` 注入 scanner 缓存化的 scanFn
 - `SyncResourcesDirLevel(globalDir, instanceDir, rtype string)` / `SyncResourcesDirLevelScan(..., scanFn ScanEntriesFn)` — 文件夹级同步；Scan 版消除 8 个 MMD 子类型 ×(1+N 整合包) 对同一仓库树的重复 Walk（scanner 30s TTL + single-flight 之下实际只走盘一次）。单元带内容字段（ADR-344 D1）：文件单元按同格式哈希/Size 判待推送，目录单元存在性判
 - `DiffFolderContents` / `DiffFolderContentsScan` — 文件夹级同步单元内的子文件级内容 diff（前端子文件列表全量展示，差异判定按 Status 区分）

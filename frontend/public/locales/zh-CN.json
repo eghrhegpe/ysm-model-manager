@@ -697,6 +697,7 @@
   "sidebar.packTimedOutStopped": "{n} 个类型批次超时，已停止后续批次",
   "sidebar.pushInstallFail": "{fail} 个文件安装失败（成功 {ok}）",
   "sidebar.pushPackFailDetail": "失败集中在 {n} 个整合包：{names}",
+  "sidebar.pushOverwrote": "覆盖了 {n} 处实例侧已修改内容（{names}）",
   "sidebar.pushProgress": "推送中 {i}/{n} 类…",
   "sidebar.pullProgress": "拉取中 {i}/{n} 包…",
   "resource.loadFailed": "资源加载失败",

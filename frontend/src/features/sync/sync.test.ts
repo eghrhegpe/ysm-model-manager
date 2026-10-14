@@ -114,6 +114,7 @@ describe("downloadMissing — 导入缺失直调（ADR-340）", () => {
       skipped: false,
       errors: [],
       packs: [{ name: "PackA", ok: 1, fail: 0, errors: [] }],
+      overwrites: [],
     });
     expect(reloadEvents.length).toBeGreaterThan(0);
     expect(toasts.some((t) => t.msg.includes("PackA: 导入 1 成功"))).toBe(true);
@@ -148,8 +149,58 @@ describe("downloadMissing — 导入缺失直调（ADR-340）", () => {
       skipped: false,
       errors: [],
       packs: [{ name: "PackA", ok: 1, fail: 0, errors: [] }],
+      overwrites: [],
     });
     expect(toasts.some((t) => t.msg.includes("PackA: 导入 1 成功"))).toBe(true);
+  });
+
+  // ADR-340-d2 回归锁：批量推送覆盖实例侧手改 → 结果必须如实带出覆盖清单。
+  // Go 侧 `InstanceStatus.Overwrites` 是推送目标的子集（同格路径），前端只做集合命中；
+  // 只计**安装成功**的目标——失败的目标没覆盖任何东西，算进去就是虚报。
+  it("Overwrites 命中 → 结果带出覆盖清单（失败的不计）", async () => {
+    const repo = MOCK_DATA.GetRepoRoot;
+    mocks.GetResourceInstanceStatus.mockResolvedValue([
+      {
+        Name: "PackA",
+        Missing: [`${repo}/a.ysm`, `${repo}/b.ysm`, `${repo}/c.ysm`],
+        // Go 判定：a、c 两侧内容不同（推送即覆盖）；b 是「仅仓库有」的新建
+        Overwrites: [`${repo}/a.ysm`, `${repo}/c.ysm`],
+      },
+    ]);
+    // c 安装失败 → 没有覆盖任何东西，不得计入
+    mocks.InstallModelTo.mockImplementation((srcPath: string) =>
+      srcPath.endsWith("c.ysm") ? Promise.reject(new Error("locked")) : Promise.resolve(),
+    );
+    const { downloadMissing } = await import("./sync.ts");
+    spyEvents();
+
+    const outcome = await downloadMissing({ instanceName: "PackA", rtype: "ysm" });
+
+    expect(outcome.ok).toBe(2);
+    expect(outcome.fail).toBe(1);
+    expect(outcome.overwrites).toEqual([`${repo}/a.ysm`]);
+  });
+
+  // 整夹覆盖（MissingDirs 分支）同样要计入：分叉的资源包夹走 folder-aware 整夹推送，
+  // 盖掉的正是实例侧那份被改过的夹（第二条集合命中路径，漏了它就只报文件级覆盖）。
+  it("MissingDirs 命中 Overwrites → 整夹覆盖一并带出", async () => {
+    const repo = MOCK_DATA.GetRepoRoot;
+    mocks.GetResourceInstanceStatus.mockResolvedValue([
+      {
+        Name: "PackA",
+        Missing: [],
+        MissingDirs: [`${repo}/rpA`, `${repo}/rpB`],
+        Overwrites: [`${repo}/rpA`],
+      },
+    ]);
+    mocks.PushSingleResourceToInstance.mockResolvedValue(undefined);
+    const { downloadMissing } = await import("./sync.ts");
+    spyEvents();
+
+    const outcome = await downloadMissing({ instanceName: "PackA", rtype: "resourcepack" });
+
+    expect(outcome.ok).toBe(2);
+    expect(outcome.overwrites).toEqual([`${repo}/rpA`]);
   });
 
   it("instanceName 为空 → 遍历全部实例", async () => {
@@ -166,6 +217,7 @@ describe("downloadMissing — 导入缺失直调（ADR-340）", () => {
       skipped: false,
       errors: [],
       packs: [{ name: "PackA", ok: 1, fail: 0, errors: [] }],
+      overwrites: [],
     });
     expect(toasts.some((t) => t.msg.includes("全部导入完成: 1 成功"))).toBe(true);
   });
@@ -276,6 +328,7 @@ describe("downloadMissing — 导入缺失直调（ADR-340）", () => {
       skipped: false,
       errors: expect.any(Array),
       packs: [{ name: "PackA", ok: 2, fail: 1, errors: expect.any(Array) }],
+      overwrites: [],
     });
     // 锐评 UX 高项收口（2026-10-14）：失败明细必点名——原 `catch { totalFail++ }` 吞错误
     expect(outcome.errors?.[0]).toContain("locked");
@@ -336,6 +389,7 @@ describe("downloadMissing — 导入缺失直调（ADR-340）", () => {
       skipped: false,
       errors: [],
       packs: [{ name: "PackA", ok: 1, fail: 0, errors: [] }],
+      overwrites: [],
     });
     expect(toasts.some((t) => t.msg.includes("导入"))).toBe(false);
   });

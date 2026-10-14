@@ -98,6 +98,12 @@ func TestBuildInstanceStatusCounts_DirLevelFoldAndLists(t *testing.T) {
 	if !reflect.DeepEqual(sortedCopy(st.Missing), want) {
 		t.Fatalf("Missing 文件清单应为 %v，实际 %v", want, st.Missing)
 	}
+	// ADR-340-d2：两侧均有、内容不同的 m5/model.pmx 才是「推送即覆盖实例侧修改」；
+	// m2 的两条仅是「仓库有、实例没有」= 新建，绝不得混进 Overwrites（否则点名撒谎）。
+	if want := []string{filepath.Join(globalDir, "m5", "model.pmx")}; !reflect.DeepEqual(st.Overwrites, want) {
+		t.Fatalf("Overwrites 应恰为分叉文件 %v，实际 %v", want, st.Overwrites)
+	}
+	assertOverwritesSubset(t, st)
 	// 计数（单元）与清单（文件）粒度刻意不同：m2 一个单元 → 两条文件路径
 	if len(st.Missing) <= st.MissingCount {
 		t.Fatalf("整夹缺失应展开成多条文件路径（清单 %d > 计数 %d 才符合 §3 决策）", len(st.Missing), st.MissingCount)
@@ -124,8 +130,11 @@ func TestBuildInstanceStatusCounts_FileLevel(t *testing.T) {
 
 	writeFile(t, filepath.Join(globalDir, "a.fbx"), "x")
 	writeFile(t, filepath.Join(instDir, "a.fbx"), "x")   // synced
-	writeFile(t, filepath.Join(globalDir, "b.fbx"), "x") // missing
+	writeFile(t, filepath.Join(globalDir, "b.fbx"), "x") // missing（仅仓库有=新建）
 	writeFile(t, filepath.Join(instDir, "c.fbx"), "x")   // extra
+	// 分叉：两侧同名、内容不同（大小不同 → Size 兜底判定，不依赖哈希可得性）
+	writeFile(t, filepath.Join(globalDir, "d.fbx"), "x")
+	writeFile(t, filepath.Join(instDir, "d.fbx"), "xxx")
 
 	ins := types.VersionInstance{Name: "t", VersionDir: instRoot, CustomDir: instDir}
 	got := BuildInstanceStatusCounts(
@@ -137,14 +146,33 @@ func TestBuildInstanceStatusCounts_FileLevel(t *testing.T) {
 		t.Fatalf("应返回 1 个实例状态，实际 %d", len(got))
 	}
 	st := got[0]
-	if st.Synced != 1 || st.MissingCount != 1 {
-		t.Fatalf("Synced/MissingCount 应为 1/1，实际 %d/%d", st.Synced, st.MissingCount)
+	if st.Synced != 1 || st.MissingCount != 2 {
+		t.Fatalf("Synced/MissingCount 应为 1/2（b 缺失 + d 分叉折叠进红），实际 %d/%d", st.Synced, st.MissingCount)
 	}
-	if want := []string{filepath.Join(globalDir, "b.fbx")}; !reflect.DeepEqual(st.Missing, want) {
+	if want := []string{filepath.Join(globalDir, "b.fbx"), filepath.Join(globalDir, "d.fbx")}; !reflect.DeepEqual(sortedCopy(st.Missing), want) {
 		t.Fatalf("Missing 应为 %v，实际 %v", want, st.Missing)
 	}
 	if want := []string{filepath.Join(instDir, "c.fbx")}; !reflect.DeepEqual(st.Extra, want) {
 		t.Fatalf("Extra 应为 %v，实际 %v", want, st.Extra)
+	}
+	// ADR-340-d2：只有 d.fbx（两侧均有、内容不同）是覆盖；b.fbx 是新建
+	if want := []string{filepath.Join(globalDir, "d.fbx")}; !reflect.DeepEqual(st.Overwrites, want) {
+		t.Fatalf("Overwrites 应恰为分叉文件 %v，实际 %v", want, st.Overwrites)
+	}
+	assertOverwritesSubset(t, st)
+	// 面板侧同一维权：fileLevel 分叉行必须是 diverged（而非冒充 missing），
+	// 否则 ADR-310「分叉行推送先确认」的安全闸对文件级类型形同虚设。
+	items := BuildSyncItems(&ins, []registry.ResourceType{{ID: "fbx", Icon: "🦴"}},
+		map[string]string{"fbx": globalDir}, "")
+	statusByName := map[string]types.SyncStatus{}
+	for _, it := range items {
+		statusByName[it.Name] = it.Status
+	}
+	if statusByName["d.fbx"] != types.SyncStatusDiverged {
+		t.Fatalf("d.fbx 面板状态应为 diverged（分叉），实际 %q（全部 %+v）", statusByName["d.fbx"], statusByName)
+	}
+	if statusByName["b.fbx"] != types.SyncStatusMissing {
+		t.Fatalf("b.fbx 面板状态应为 missing（仅仓库有），实际 %q", statusByName["b.fbx"])
 	}
 	if st.Status != "missing" {
 		t.Fatalf("Status 应为 missing，实际 %q", st.Status)
@@ -299,6 +327,53 @@ func TestBuildInstanceStatusCounts_MissingListIsFileLevelOnly(t *testing.T) {
 	})
 }
 
+// TestBuildInstanceStatusCounts_OverwritesForDivergedPackFolder 整夹分叉的两侧形态：
+// 资源包夹（fileLevel 类型的目录单元）两侧内容均被改过 → 该夹是**整夹推送**目标（dirs 分支），
+// 夹自身即覆盖目标，必须进 Overwrites（ADR-340-d2）；仅仓库有的夹是新建，绝不进。
+func TestBuildInstanceStatusCounts_OverwritesForDivergedPackFolder(t *testing.T) {
+	sub := registry.SubDirMap("resourcepack")
+	if sub == "" {
+		t.Skip("resourcepack 无 instanceDir 配置，跳过")
+	}
+	base := t.TempDir()
+	globalDir := filepath.Join(base, "global")
+	instRoot := filepath.Join(base, "inst")
+	instDir := filepath.Join(instRoot, filepath.FromSlash(sub))
+	meta := `{"pack":{"pack_format":15}}`
+
+	// packA：两侧都有（pack.mcmeta 令其被识别为资源包夹），纹理大小不同 → 折叠指纹翻转 → 分叉
+	writeFile(t, filepath.Join(globalDir, "packA", "pack.mcmeta"), meta)
+	writeFile(t, filepath.Join(instDir, "packA", "pack.mcmeta"), meta)
+	writeFile(t, filepath.Join(globalDir, "packA", "assets", "t.png"), "AAAA")
+	writeFile(t, filepath.Join(instDir, "packA", "assets", "t.png"), "BBBBB")
+	// packB：仅仓库有 → 新建
+	writeFile(t, filepath.Join(globalDir, "packB", "pack.mcmeta"), meta)
+
+	ins := types.VersionInstance{Name: "t", VersionDir: instRoot, CustomDir: instDir}
+	st := BuildInstanceStatusCounts(
+		[]types.VersionInstance{ins},
+		[]registry.ResourceType{{ID: "resourcepack", Icon: "🎨"}},
+		map[string]string{"resourcepack": globalDir},
+	)[0]
+
+	if st.MissingCount != 2 {
+		t.Fatalf("两个夹单元都应待推送，实际 MissingCount=%d", st.MissingCount)
+	}
+	// 夹内无逐文件可装项（仅 pack.mcmeta/纹理）→ 一律整夹进 MissingDirs，不得塞 Missing
+	if len(st.Missing) != 0 {
+		t.Fatalf("两夹都应走整夹推送，Missing 应为空，实际 %v", st.Missing)
+	}
+	wantDirs := []string{filepath.Join(globalDir, "packA"), filepath.Join(globalDir, "packB")}
+	if !reflect.DeepEqual(sortedCopy(st.MissingDirs), wantDirs) {
+		t.Fatalf("MissingDirs 应为 %v，实际 %v", wantDirs, st.MissingDirs)
+	}
+	// 只有分叉的 packA 是覆盖（整夹安装会盖掉实例侧被改过的纹理）
+	if want := []string{filepath.Join(globalDir, "packA")}; !reflect.DeepEqual(st.Overwrites, want) {
+		t.Fatalf("Overwrites 应恰为分叉夹 %v，实际 %v", want, st.Overwrites)
+	}
+	assertOverwritesSubset(t, st)
+}
+
 // TestBuildInstanceStatusCounts_ListDeduped 混合夹（自身含平铺模型文件 + 子夹）在面板链里
 // 会把同一平铺文件重复列示两次（absorbSelfMarker 并入 + 独立叶子共存，见知识卡已知限制），
 // 清单必须去重——否则一键安装对同一文件装两遍、条数与实际待装数不符。
@@ -365,4 +440,24 @@ func sortedCopy(in []string) []string {
 	out := append([]string(nil), in...)
 	sort.Strings(out)
 	return out
+}
+
+// assertOverwritesSubset 钉死 ADR-340-d2 的位置契约：Overwrites 是 `Missing ∪ MissingDirs`
+// 的**子集**（同格路径，消费端可直接做集合归属匹配，无需重算映射）。
+// 这条不变量一破，前端「逐条安装时命中即计数」的口径就会漏计或错计。
+func assertOverwritesSubset(t *testing.T, st types.InstanceStatus) {
+	t.Helper()
+	targets := map[string]bool{}
+	for _, p := range st.Missing {
+		targets[p] = true
+	}
+	for _, p := range st.MissingDirs {
+		targets[p] = true
+	}
+	for _, p := range st.Overwrites {
+		if !targets[p] {
+			t.Fatalf("Overwrites 必须是推送目标的子集，%q 不在 Missing∪MissingDirs 中（Missing=%v MissingDirs=%v）",
+				p, st.Missing, st.MissingDirs)
+		}
+	}
 }

@@ -43,6 +43,16 @@ const MAX_TOTAL_ERRORS = 5;
 /** 失败包点名上限（P1-3）：「A(3)、B(1) 等」比一长串更有指导性 */
 const MAX_NAMED_PACKS = 3;
 
+/** 覆盖点名上限（ADR-340-d2）：与包点名同规——前几个足以让用户定位自己改过什么，
+ *  全列会把 toast 撑爆（批量推送可覆盖上百个目标）。 */
+const MAX_NAMED_OVERWRITES = 3;
+
+/** 路径末段（**只切显示名**，不参与任何归属/类型判定——前端只读不判的红线只管语义，
+ *  不管这点字符串处理；跨盘符/正反斜杠都切）。 */
+function baseName(p: string): string {
+  return p.split(/[\\/]/).pop() || p;
+}
+
 // ---------- bindSelectAll ----------
 /**
  * 全选勾选框绑定（**只在 connectedCallback 绑一次**，故两个随渲染变化的值必须以
@@ -224,7 +234,7 @@ function handleSyncMenuClick(
   }
 }
 
-/** 推送累计态：文件级计数 + 失败明细 + 包级归因 + skipped 分流 */
+/** 推送累计态：文件级计数 + 失败明细 + 包级归因 + 覆盖清单 + skipped 分流 */
 interface PushAccum {
   skipped: number;
   blocked: number;
@@ -233,9 +243,12 @@ interface PushAccum {
   installFail: number;
   errorDetails: string[];
   packTotals: Map<string, { ok: number; fail: number }>;
+  /** 本次推送**覆盖实例侧已修改副本**的目标路径（ADR-340-d2；Set 去重，
+   *  跨类型/跨包同路径只算一次——覆盖是磁盘事实，不是批次事实） */
+  overwrites: Set<string>;
 }
 
-/** 单类型批次结果归并：文件级计数 + 失败明细（限 MAX_TOTAL_ERRORS）+ 包级累加 + skipped 归因分流 */
+/** 单类型批次结果归并：文件级计数 + 失败明细（限 MAX_TOTAL_ERRORS）+ 包级累加 + 覆盖清单 + skipped 归因分流 */
 function absorbOutcome(outcome: DownloadOutcome, accum: PushAccum): void {
   accum.installOk += outcome.ok;
   accum.installFail += outcome.fail;
@@ -248,6 +261,7 @@ function absorbOutcome(outcome: DownloadOutcome, accum: PushAccum): void {
     cur.fail += p.fail;
     accum.packTotals.set(p.name, cur);
   }
+  for (const p of outcome.overwrites ?? []) accum.overwrites.add(p);
   if (outcome.skipped) {
     // 归因分流：busy = 他页同时在推（直调串行下自撞锁不再可能，仅剩跨页防御位）；
     // config/error 各自有专门 toast（handler 已弹），汇总只如实计「未完成批次」，
@@ -266,7 +280,7 @@ function buildFailedPacks(
     .sort((a, b) => b[1].fail - a[1].fail);
 }
 
-/** 汇总文案分段：安装失败 / 失败包点名（超 MAX_NAMED_PACKS 截断）/ 跳过阻塞超时 / 失败明细 */
+/** 汇总文案分段：安装失败 / 失败包点名（超 MAX_NAMED_PACKS 截断）/ 覆盖点名 / 跳过阻塞超时 / 失败明细 */
 function buildPushParts(
   accum: PushAccum,
   failedPacks: Array<[string, { ok: number; fail: number }]>,
@@ -285,6 +299,13 @@ function buildPushParts(
       t("sidebar.pushPackFailDetail", { n: failedPacks.length, names: `${named}${more}` }),
     );
   }
+  // ADR-340-d2：批量推送覆盖实例侧手改是**已完成且不可逆**的动作，必须点名——没有这一段，
+  // 用户只能从「推送完成」里读到一句自己没写过的话，而实例侧改了什么都无从知晓。
+  if (accum.overwrites.size > 0) {
+    const names = [...accum.overwrites].slice(0, MAX_NAMED_OVERWRITES).map(baseName).join("、");
+    const more = accum.overwrites.size > MAX_NAMED_OVERWRITES ? t("import.moreSuffix") : "";
+    parts.push(t("sidebar.pushOverwrote", { n: accum.overwrites.size, names: `${names}${more}` }));
+  }
   if (accum.skipped > 0) parts.push(t("sidebar.packSkipped", { n: accum.skipped }));
   if (accum.blocked > 0) parts.push(t("sidebar.packBlocked", { n: accum.blocked }));
   if (accum.timedOut > 0) parts.push(t("sidebar.packTimedOutStopped", { n: accum.timedOut }));
@@ -293,7 +314,7 @@ function buildPushParts(
   return parts;
 }
 
-/** 推送结果三分反馈：有异常项 → warn 汇总（MS.normal）；仅明细（缓存失效）→ warn（MS.verbose）；全成 → success */
+/** 推送结果三分反馈：有异常项 → warn 汇总（MS.normal）；仅覆盖/明细 → warn（MS.verbose）；全成 → success */
 function showPushToast(accum: PushAccum, selectedCount: number, parts: string[]): void {
   if (accum.skipped > 0 || accum.blocked > 0 || accum.timedOut > 0 || accum.installFail > 0) {
     toast(t("sidebar.pushDone", { detail: parts.join("，") }), TOAST_MS.normal, "warn");
@@ -304,6 +325,10 @@ function showPushToast(accum: PushAccum, selectedCount: number, parts: string[])
       TOAST_MS.verbose,
       "warn",
     );
+  } else if (accum.overwrites.size > 0) {
+    // 覆盖不是失败（推送确实按用户意图完成了），但**不可逆且伤到用户自己的改动**：
+    // 绝不能躲进「推送完成：n 个整合包」的纯成功文案里（那正是锐评 P1-6 的病）。
+    toast(t("sidebar.pushDone", { detail: parts.join("，") }), TOAST_MS.verbose, "warn");
   } else {
     toast(t("sidebar.pushDoneAll", { n: selectedCount }), TOAST_MS.info, "success");
   }
@@ -329,6 +354,7 @@ async function runPush(
     installFail: 0,
     errorDetails: [],
     packTotals: new Map(),
+    overwrites: new Set(),
   };
   try {
     for (let ti = 0; ti < types.length; ti++) {

@@ -1641,6 +1641,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-340-d2：批量推送覆盖知情口径：如实计数与点名（覆盖照旧）",
+        "link": "/adr/decisions/ADR-340-d2-push-overwrite-accounting"
+      },
+      {
         "text": "ADR-340-d1：拉取结果结构化：部分失败不再是 error（绑定层不吞成功计数）",
         "link": "/adr/decisions/ADR-340-d1-error"
       },

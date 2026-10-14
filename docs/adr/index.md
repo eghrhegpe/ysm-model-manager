@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **364** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **365** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > ADR 三区存放：根目录 = 存量（分级前）/ `architecture/` = 架构决策 / `decisions/` = 执行决策日志（ADR-320）。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -19,7 +19,7 @@ permalink: /adr/
 | [📝 提议中](#提议中) | 4 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 1 |
 | [🔄 部分采纳](#部分采纳) | 14 |
-| [✅ 已采纳](#已采纳) | 336 |
+| [✅ 已采纳](#已采纳) | 337 |
 | [❌ 已取代](#已取代) | 9 |
 | [🧊 已废弃](#已废弃) | 0 |
 | [❓ 未归类](#未归类) | 0 |
@@ -60,7 +60,7 @@ permalink: /adr/
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 | [ADR-050](./ADR-050-plaza-browser-window.md) | 模型广场 · 浏览器窗口（Wails 第二窗口） | 🔄 部分采纳 |
 
-### ✅ 已采纳（336）
+### ✅ 已采纳（337）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
@@ -72,6 +72,7 @@ permalink: /adr/
 | [ADR-341](./architecture/ADR-341-busy-lock-unification.md) | busy 语义归一——互斥锁唯一形态 BusyLock | ✅ 已采纳 |
 | [ADR-340](./architecture/ADR-340-sync-push-direct-call.md) | 推送链去总线化：请求-响应回归直调，token/回执/宽限期协议件退役 | ✅ 已采纳 |
 | [ADR-340-d1](./decisions/ADR-340-d1-error.md) | 拉取结果结构化：部分失败不再是 error（绑定层不吞成功计数） | ✅ 已采纳 |
+| [ADR-340-d2](./decisions/ADR-340-d2-push-overwrite-accounting.md) | 批量推送覆盖知情口径：如实计数与点名（覆盖照旧） | ✅ 已采纳 |
 | [ADR-339](./architecture/ADR-339-alltype-toggle-sync.md) | 全类型 .disabled 启禁同步（大一统 repo↔pack 一致性） | ✅ 已采纳 |
 | [ADR-338](./architecture/ADR-338-docs-burden-reduction.md) | 文档体系减负：分级连带 + 知识卡域合并 + ADR 增量门槛（62% 连带率的治理） | ✅ 已采纳 |
 | [ADR-338-d1](./decisions/ADR-338-d1-commit-message-hygiene.md) | 提交信息减负：commit-msg 闸与 trailer 出口 | ✅ 已采纳 |
@@ -769,6 +770,7 @@ permalink: /adr/
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
 | ADR-340-d1 | 拉取结果结构化：部分失败不再是 error（绑定层不吞成功计数） | ✅ 已采纳 | 2026-10-14 |
+| ADR-340-d2 | 批量推送覆盖知情口径：如实计数与点名（覆盖照旧） | ✅ 已采纳 | 2026-10-14 |
 | ADR-338-d1 | 提交信息减负：commit-msg 闸与 trailer 出口 | ✅ 已采纳 | 2026-10-13 |
 | ADR-338-d2 | broad_claim 巨兽卡符号封顶：auto_fields 死重止血与拆卡排期 | ✅ 已采纳 | 2026-10-14 |
 | ADR-331-d1 | ReadFileBytes 无 error 通道缺口：ReadFileMeta 结构化错误字段（切片 C） | ✅ 已采纳 | 2026-10-12 |

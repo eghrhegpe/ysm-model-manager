@@ -38,6 +38,9 @@ import (
 // 计数在**顶层单元**上做（不递归 children，避免面板父+子重复计数）；清单粒度见
 // types.InstanceStatus 注释：Missing 保持仓库侧文件级绝对路径（一键安装契约）。
 //
+// Overwrites（ADR-340-d2）与两路清单一并产出：`Missing ∪ MissingDirs` 中**会覆盖实例侧
+// 已修改副本**的那些推送目标（收录口径见 pushTargets 注释），供批量推送如实计数与点名。
+//
 // CustomDir 与旧链 resolveInstanceScanDir 对齐：单类型调用时 = FindInstDir 解析出的
 // 实例子目录（面板链 processOneResourceType 用的同一个目录）；多类型时退回 ins.CustomDir。
 func BuildInstanceStatusCounts(
@@ -53,6 +56,7 @@ func BuildInstanceStatusCounts(
 			CustomDir:   statusCustomDir(ins, rtypes),
 			Missing:     []string{},
 			MissingDirs: []string{},
+			Overwrites:  []string{},
 			Extra:       []string{},
 			Disabled:    []string{},
 		}
@@ -66,10 +70,12 @@ func BuildInstanceStatusCounts(
 		// 同一文件重复列示（见 go-instance 卡已知限制），导入一键安装清单会重复安装
 		sort.Strings(st.Missing)
 		sort.Strings(st.MissingDirs)
+		sort.Strings(st.Overwrites)
 		sort.Strings(st.Extra)
 		sort.Strings(st.Disabled)
 		st.Missing = dedupeSorted(st.Missing)
 		st.MissingDirs = dedupeSorted(st.MissingDirs)
+		st.Overwrites = dedupeSorted(st.Overwrites)
 		st.Extra = dedupeSorted(st.Extra)
 		st.Disabled = dedupeSorted(st.Disabled)
 		// Status 取「红优先」——与 loader.ts 自派生口径一致（有待推送差异就不再是绿/橙）
@@ -122,9 +128,10 @@ func foldUnit(st *types.InstanceStatus, it types.ResourceSyncItem) {
 		st.Synced++
 	case types.SyncStatusMissing, types.SyncStatusDiverged:
 		st.MissingCount++
-		files, dirs := pushTargets(it)
+		files, dirs, overwrites := pushTargets(it)
 		st.Missing = append(st.Missing, files...)
 		st.MissingDirs = append(st.MissingDirs, dirs...)
+		st.Overwrites = append(st.Overwrites, overwrites...)
 	case types.SyncStatusOptional, types.SyncStatusLegacy:
 		st.Extra = append(st.Extra, it.Path)
 	case types.SyncStatusDisabled:
@@ -133,12 +140,14 @@ func foldUnit(st *types.InstanceStatus, it types.ResourceSyncItem) {
 	}
 }
 
-// pushTargets 把一个「待推送」单元展开为两路安装目标（ADR-310 §3 落地形态）：
+// pushTargets 把一个「待推送」单元展开为三路安装目标（ADR-310 §3 落地形态，
+// 第三路 overwrites 见 ADR-340-d2）：
 //
-//	files —— 仓库侧**文件级**绝对路径，走逐条 Install（一键安装主路）；
-//	dirs  —— 仓库侧**目录单元**：夹内没有任何可逐文件安装的受支持文件时（如只含
-//	         pack.mcmeta 的资源包夹、内容全不被 IsTypeModelFile 命中的 maid-model 夹），
-//	         整夹交给 folder-aware 的 `PushSingleResourceToInstance`（面板行内推送同一条路）。
+//	files      —— 仓库侧**文件级**绝对路径，走逐条 Install（一键安装主路）；
+//	dirs       —— 仓库侧**目录单元**：夹内没有任何可逐文件安装的受支持文件时（如只含
+//	              pack.mcmeta 的资源包夹、内容全不被 IsTypeModelFile 命中的 maid-model 夹），
+//	              整夹交给 folder-aware 的 `PushSingleResourceToInstance`（面板行内推送同一条路）；
+//	overwrites —— 上述目标中**会覆盖实例侧已修改副本**的那部分（⊂ files ∪ dirs）。
 //
 // 两路必须分开：`Missing` 的消费端逐条 `Install`，目录路径在那里语义是错的——
 // `InstallResourceToInstance` 对 isDir 类型走 `InstallDir(filepath.Dir(src))`，传目录会把
@@ -153,17 +162,26 @@ func foldUnit(st *types.InstanceStatus, it types.ResourceSyncItem) {
 //   - 无 children 且 Path 是目录：先 `DiffFolderContents`（实例侧空串）展开夹内文件；
 //     展开为空则整夹进 dirs（**不退化成把目录塞进 Missing**）；
 //   - disabled 子项被排除（同 foldUnit：禁用内容不推送）。
-func pushTargets(it types.ResourceSyncItem) (files, dirs []string) {
+//
+// overwrites 的收录口径（ADR-340-d2，宁少报不谎报）：
+//   - 叶子文件 status==diverged → 其路径（仅仓库有 → missing，是新建不是覆盖）；
+//   - 整夹推送（dirs 分支）且单元 status==diverged → 夹路径本身（整夹安装即覆盖该夹）；
+//   - 已知盲区：单元 status==diverged 却展开成内层文件时（fileLevel 资源包夹内直接放 zip），
+//     逐文件归因需要实例侧对应夹路径做**真实两侧** diff，而本函数拿不到该上下文（现传空串
+//     = 全部按 missing 展开），故不逐文件声称覆盖。解药是给本函数注入实例侧对应夹路径
+//     （那一改会同时改变安装目标清单，属行为变更，须单独拍板——记在 ADR-340-d2 遗留项）。
+func pushTargets(it types.ResourceSyncItem) (files, dirs, overwrites []string) {
 	if len(it.Children) > 0 {
 		for i := range it.Children {
 			ch := it.Children[i]
 			if ch.Status == types.SyncStatusMissing || ch.Status == types.SyncStatusDiverged {
-				f, d := pushTargets(ch)
+				f, d, o := pushTargets(ch)
 				files = append(files, f...)
 				dirs = append(dirs, d...)
+				overwrites = append(overwrites, o...)
 			}
 		}
-		return files, dirs
+		return files, dirs, overwrites
 	}
 	if fi, err := os.Stat(it.Path); err == nil && fi.IsDir() {
 		// 实例侧传空串：该夹在实例侧不存在，全部文件按 missing 列出。
@@ -175,8 +193,14 @@ func pushTargets(it types.ResourceSyncItem) (files, dirs []string) {
 		}
 		if len(files) == 0 {
 			dirs = append(dirs, it.Path)
+			if it.Status == types.SyncStatusDiverged {
+				overwrites = append(overwrites, it.Path)
+			}
 		}
-		return files, dirs
+		return files, dirs, overwrites
 	}
-	return []string{it.Path}, nil
+	if it.Status == types.SyncStatusDiverged {
+		overwrites = append(overwrites, it.Path)
+	}
+	return append(files, it.Path), nil, overwrites
 }

@@ -3,6 +3,7 @@ package sync
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 
 	"ysm-model-manager/go/internal/testutil"
@@ -13,19 +14,24 @@ import (
 //   - 两侧均算出哈希 → 比哈希（异哈希即使同大小也 Missing，消除"改内容不改大小"假绿）；
 //   - 任一侧空哈希（大 zip / 非 hashable / 旧无 scanFn 调用）→ 回退比 Size（现状不回归）；
 //   - 目录型 pack 条目 → 恒 Synced（内容盲区属 D2′-b/c，本切片不动）。
+//
+// wantDiverged 是 ADR-340-d2 的新维度：两侧均有且内容不同 → 同时进 Missing 与 Diverged；
+// 「仅全局有」（missing 的第二支）**不得**进 Diverged（那是新建，不是覆盖）。
 func TestResourceDiff_HashComparison(t *testing.T) {
 	cases := []struct {
-		name        string
-		g, i        DiffEntry
-		wantSynced  bool
-		wantMissing bool
+		name         string
+		g, i         DiffEntry
+		wantSynced   bool
+		wantMissing  bool
+		wantDiverged bool
 	}{
 		{
-			name:        "异哈希_同大小→Missing（D2′-a 核心修复，盲区1）",
-			g:           DiffEntry{Path: "pack.zip", Size: 1024, Hash: "aaa"},
-			i:           DiffEntry{Path: "pack.zip", Size: 1024, Hash: "bbb"},
-			wantSynced:  false,
-			wantMissing: true,
+			name:         "异哈希_同大小→Missing（D2′-a 核心修复，盲区1）",
+			g:            DiffEntry{Path: "pack.zip", Size: 1024, Hash: "aaa"},
+			i:            DiffEntry{Path: "pack.zip", Size: 1024, Hash: "bbb"},
+			wantSynced:   false,
+			wantMissing:  true,
+			wantDiverged: true,
 		},
 		{
 			name:        "同哈希_同大小→Synced",
@@ -42,11 +48,12 @@ func TestResourceDiff_HashComparison(t *testing.T) {
 			wantMissing: false,
 		},
 		{
-			name:        "空哈希_异大小→Missing（回退 Size，现状语义）",
-			g:           DiffEntry{Path: "big.zip", Size: 1024},
-			i:           DiffEntry{Path: "big.zip", Size: 2048},
-			wantSynced:  false,
-			wantMissing: true,
+			name:         "空哈希_异大小→Missing（回退 Size，现状语义）",
+			g:            DiffEntry{Path: "big.zip", Size: 1024},
+			i:            DiffEntry{Path: "big.zip", Size: 2048},
+			wantSynced:   false,
+			wantMissing:  true,
+			wantDiverged: true,
 		},
 		{
 			name:        "一侧空哈希_同大小→Synced（非两侧均非空→回退，不误判 Missing）",
@@ -58,18 +65,20 @@ func TestResourceDiff_HashComparison(t *testing.T) {
 		{
 			// P0-2 诚实化：超限（>MaxImportSize）文件被刻意跳过哈希，同尺寸不能证明内容一致。
 			// 两侧均标记 Oversize → 不再回退 Size 谎报 Synced，保守判 Missing（待推送）。
-			name:        "Oversize_空哈希_同大小→Missing（P0-2：不静默假绿）",
-			g:           DiffEntry{Path: "big.zip", Size: 1024, Oversize: true},
-			i:           DiffEntry{Path: "big.zip", Size: 1024, Oversize: true},
-			wantSynced:  false,
-			wantMissing: true,
+			name:         "Oversize_空哈希_同大小→Missing（P0-2：不静默假绿）",
+			g:            DiffEntry{Path: "big.zip", Size: 1024, Oversize: true},
+			i:            DiffEntry{Path: "big.zip", Size: 1024, Oversize: true},
+			wantSynced:   false,
+			wantMissing:  true,
+			wantDiverged: true,
 		},
 		{
-			name:        "Oversize_仅一侧_同大小_对侧有哈希→Missing（任一侧未验即保守）",
-			g:           DiffEntry{Path: "big.zip", Size: 1024, Oversize: true},
-			i:           DiffEntry{Path: "big.zip", Size: 1024, Hash: "aaa"},
-			wantSynced:  false,
-			wantMissing: true,
+			name:         "Oversize_仅一侧_同大小_对侧有哈希→Missing（任一侧未验即保守）",
+			g:            DiffEntry{Path: "big.zip", Size: 1024, Oversize: true},
+			i:            DiffEntry{Path: "big.zip", Size: 1024, Hash: "aaa"},
+			wantSynced:   false,
+			wantMissing:  true,
+			wantDiverged: true,
 		},
 		{
 			name:        "目录条目_异大小→Synced（目录短路保留）",
@@ -92,7 +101,43 @@ func TestResourceDiff_HashComparison(t *testing.T) {
 			if got := containsPath(r.Missing, tc.g.Path); got != tc.wantMissing {
 				t.Errorf("Missing 含 %q = %v, want %v (result=%+v)", tc.g.Path, got, tc.wantMissing, r)
 			}
+			if got := containsPath(r.Diverged, tc.g.Path); got != tc.wantDiverged {
+				t.Errorf("Diverged 含 %q = %v, want %v (result=%+v)", tc.g.Path, got, tc.wantDiverged, r)
+			}
 		})
+	}
+}
+
+// TestResourceDiff_DivergedIsSubsetOfMissing 钉死 ADR-340-d2 的**子集契约**（不是第四桶）：
+// 单侧独有的两条路径（仅全局有 / 仅实例有）都不得进 Diverged；两侧均有而内容不同的是
+// Diverged 的唯一来源，且它必须**同时**留在 Missing（旧消费者零影响）。
+// 变异检查：把归并处的 Diverged 追加删掉 → 本用例红；把「仅全局有」也追加进 Diverged → 红。
+func TestResourceDiff_DivergedIsSubsetOfMissing(t *testing.T) {
+	global := map[string]DiffEntry{
+		"only-repo.ysm": {Path: "only-repo.ysm", Size: 1},
+		"both-diff.ysm": {Path: "both-diff.ysm", Size: 10},
+		"both-same.ysm": {Path: "both-same.ysm", Size: 20},
+	}
+	instance := map[string]DiffEntry{
+		"both-diff.ysm": {Path: "both-diff.ysm", Size: 99},
+		"both-same.ysm": {Path: "both-same.ysm", Size: 20},
+		"only-inst.ysm": {Path: "only-inst.ysm", Size: 1},
+	}
+	r := ResourceDiff(global, instance)
+
+	if want := []string{"both-diff.ysm"}; !reflect.DeepEqual(r.Diverged, want) {
+		t.Fatalf("Diverged 应恰为两侧均有的内容分叉条目 %v（不得含单侧独有），实际 %v", want, r.Diverged)
+	}
+	if want := []string{"both-diff.ysm", "only-repo.ysm"}; !reflect.DeepEqual(r.Missing, want) {
+		t.Fatalf("Missing 仍是并集 %v（Diverged 为子集、归属不变），实际 %v", want, r.Missing)
+	}
+	if want := []string{"only-inst.ysm"}; !reflect.DeepEqual(r.Extra, want) {
+		t.Fatalf("Extra 应为 %v，实际 %v", want, r.Extra)
+	}
+	for _, p := range r.Diverged {
+		if !containsPath(r.Missing, p) {
+			t.Fatalf("Diverged 必须是 Missing 的子集，%q 只在 Diverged 里（result=%+v）", p, r)
+		}
 	}
 }
 
@@ -226,19 +271,24 @@ func TestDiffFolderContentsScan_HashDetectsDivergence(t *testing.T) {
 //   - 两侧目录条目均带折叠指纹 → 比指纹（异→Missing，消除「目录恒 Synced」盲区②）；
 //   - 指纹同 → Synced；
 //   - 任一侧指纹空（未折叠/旧数据）→ 回退恒 Synced（现状不回归）。
+//
+// 异指纹同时进 Diverged（ADR-340-d2）：资源包类型是 fileLevel，pack 夹**自身**就是同步
+// 单元，两侧夹内容分叉 = 推送会整夹覆盖实例侧修改，故它也是「覆盖」口径的合法成员。
 func TestResourceDiff_DirFoldComparison(t *testing.T) {
 	cases := []struct {
-		name        string
-		g, i        DiffEntry
-		wantSynced  bool
-		wantMissing bool
+		name         string
+		g, i         DiffEntry
+		wantSynced   bool
+		wantMissing  bool
+		wantDiverged bool
 	}{
 		{
-			name:        "异指纹_同大小→Missing（D2′-b 核心，盲区②闭）",
-			g:           DiffEntry{Path: "packA", IsDir: true, FoldDigest: "ff:3"},
-			i:           DiffEntry{Path: "packA", IsDir: true, FoldDigest: "aa:3"},
-			wantSynced:  false,
-			wantMissing: true,
+			name:         "异指纹_同大小→Missing（D2′-b 核心，盲区②闭）",
+			g:            DiffEntry{Path: "packA", IsDir: true, FoldDigest: "ff:3"},
+			i:            DiffEntry{Path: "packA", IsDir: true, FoldDigest: "aa:3"},
+			wantSynced:   false,
+			wantMissing:  true,
+			wantDiverged: true,
 		},
 		{
 			name:        "同指纹→Synced",
@@ -266,6 +316,9 @@ func TestResourceDiff_DirFoldComparison(t *testing.T) {
 			}
 			if got := containsPath(r.Missing, tc.g.Path); got != tc.wantMissing {
 				t.Errorf("Missing 含 %q = %v, want %v (result=%+v)", tc.g.Path, got, tc.wantMissing, r)
+			}
+			if got := containsPath(r.Diverged, tc.g.Path); got != tc.wantDiverged {
+				t.Errorf("Diverged 含 %q = %v, want %v (result=%+v)", tc.g.Path, got, tc.wantDiverged, r)
 			}
 		})
 	}

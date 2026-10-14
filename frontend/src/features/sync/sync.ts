@@ -48,11 +48,19 @@ export interface DownloadOutcome {
   /** 包级归因（锐评 P1-3，2026-10-14）：成功路径恒有（本次实际发起安装的包，含单包模式）；
    *  无安装动作的包不占条目（「没有缺失」与「装了 0 个」语义不同，后者不存在）。 */
   packs?: PackOutcome[];
+  /**
+   * 本次推送**覆盖了实例侧已修改副本**的目标路径（ADR-340-d2，成功路径恒有）。
+   * 来源是 Go 侧 `InstanceStatus.Overwrites`（`Missing ∪ MissingDirs` 的子集，同格路径，
+   * 无需前端重算归属——只做集合命中，不碰磁盘、不判类型）。批量推送的策略仍是
+   * 「仓库为准，照旧覆盖」，本字段只让发起方据实计数与点名，不再让用户蒙在鼓里。
+   * 只计**安装成功**的那些：失败的目标没有覆盖任何东西。
+   */
+  overwrites?: string[];
 }
 
 /** runDownloadMissing 内部结果：null = 配置缺失/异常（未做或未完成安装）；
  *  ok/fail = 文件级安装计数（锐评 P1-1：经 DownloadOutcome 上抛给发起方汇总），
- *  packs = 包级归因（锐评 P1-3）。 */
+ *  packs = 包级归因（锐评 P1-3），overwrites = 覆盖了实例侧已修改副本的目标（ADR-340-d2）。 */
 interface InstallCounts {
   ok: number;
   fail: number;
@@ -60,6 +68,8 @@ interface InstallCounts {
   errors: string[];
   /** 包级归因（与 DownloadOutcome.packs 同源） */
   packs: PackOutcome[];
+  /** 覆盖了实例侧已修改副本的推送目标路径（与 DownloadOutcome.overwrites 同源） */
+  overwrites: string[];
 }
 
 /** 失败明细上限（防批量失败时 toast 过长） */
@@ -130,14 +140,20 @@ async function installMissingDir(
 
 /** 单包安装：逐条 Missing 文件 + MissingDirs 目录，返回包级归因（锐评 P1-3）。
  *  allErrors 为**未截断**失败明细——全局 errors 须按 MAX_ERRORS 统一封顶，
- *  不能被每包 MAX_PACK_ERRORS 提前砍掉（否则单包 5 失败时全局只剩 2 条）。 */
+ *  不能被每包 MAX_PACK_ERRORS 提前砍掉（否则单包 5 失败时全局只剩 2 条）。
+ *  overwrites 只收**安装成功**且命中 `st.Overwrites` 的目标（ADR-340-d2：失败的安装
+ *  没有覆盖任何东西，算进去就是虚报）。 */
 async function installInstanceMissing(
   ins: SyncInstance,
   st: InstanceStatus,
   rtype: string,
   app: SyncApp,
-): Promise<{ pack: PackOutcome; allErrors: string[] }> {
+): Promise<{ pack: PackOutcome; allErrors: string[]; overwrites: string[] }> {
   const allErrors: string[] = [];
+  const overwrites: string[] = [];
+  // Go 侧 Overwrites 是推送目标的子集（同格路径），前端只做集合命中——
+  // 不重算归属语义、不碰磁盘（职责红线：筛选/聚合归 Go）
+  const overwriteSet = new Set(st.Overwrites ?? []);
   const record = (item: string, err: unknown): void => {
     allErrors.push(`${ins.Name}/${item}: ${friendlyError(err)}`);
   };
@@ -145,16 +161,20 @@ async function installInstanceMissing(
   let packFail = 0;
   for (const srcPath of st.Missing ?? []) {
     const r = await installMissingFile(srcPath, ins, rtype, app);
-    if (r.ok) packOk++;
-    else {
+    if (r.ok) {
+      packOk++;
+      if (overwriteSet.has(srcPath)) overwrites.push(srcPath);
+    } else {
       packFail++;
       record(srcPath, r.err);
     }
   }
   for (const dirPath of st.MissingDirs ?? []) {
     const r = await installMissingDir(dirPath, ins, rtype, app);
-    if (r.ok) packOk++;
-    else {
+    if (r.ok) {
+      packOk++;
+      if (overwriteSet.has(dirPath)) overwrites.push(dirPath);
+    } else {
       packFail++;
       record(dirPath, r.err);
     }
@@ -167,6 +187,7 @@ async function installInstanceMissing(
       errors: allErrors.slice(0, MAX_PACK_ERRORS),
     },
     allErrors,
+    overwrites,
   };
 }
 
@@ -205,30 +226,37 @@ function showDownloadSummary(
   );
 }
 
-/** 逐目标实例安装缺失文件，汇总文件级计数 + 包级归因（失败明细并进 errors，止于 MAX_ERRORS） */
+/** 逐目标实例安装缺失文件，汇总文件级计数 + 包级归因 + 覆盖清单（失败明细并进 errors，止于 MAX_ERRORS） */
 async function installAllTargets(
   targets: SyncInstance[],
   allStatuses: InstanceStatus[] | null,
   rtype: string,
   app: SyncApp,
   errors: string[],
-): Promise<{ totalOk: number; totalFail: number; packs: PackOutcome[] }> {
+): Promise<{ totalOk: number; totalFail: number; packs: PackOutcome[]; overwrites: string[] }> {
   const pushError = (msg: string): void => {
     if (errors.length < MAX_ERRORS) errors.push(msg);
   };
   const packs: PackOutcome[] = [];
+  // 跨包去重（同一仓库侧路径理论只属一个实例，去重是防御位；面板链「混合夹」会重复列示同一文件）
+  const overwrites = new Set<string>();
   let totalOk = 0;
   let totalFail = 0;
   for (const ins of targets) {
     const st = (allStatuses || []).find((s) => s.Name === ins.Name);
     if (!st?.Missing?.length && !st?.MissingDirs?.length) continue;
-    const { pack, allErrors } = await installInstanceMissing(ins, st, rtype, app);
+    const {
+      pack,
+      allErrors,
+      overwrites: packOverwrites,
+    } = await installInstanceMissing(ins, st, rtype, app);
     totalOk += pack.ok;
     totalFail += pack.fail;
     for (const msg of allErrors) pushError(msg);
+    for (const p of packOverwrites) overwrites.add(p);
     packs.push(pack);
   }
-  return { totalOk, totalFail, packs };
+  return { totalOk, totalFail, packs, overwrites: [...overwrites] };
 }
 
 /** 逐个整合包安装缺失文件，返回文件级计数（null = 配置缺失/异常）。
@@ -265,7 +293,7 @@ async function runDownloadMissing(
   // 发起方只拿到一个数字，排障只能翻日志。保留前若干条（防批量失败时 toast 过长），
   // 格式含包名 + 文件相对名 + friendlyError 缘由，用户侧可自诊断。
   const errors: string[] = [];
-  const { totalOk, totalFail, packs } = await installAllTargets(
+  const { totalOk, totalFail, packs, overwrites } = await installAllTargets(
     targets,
     allStatuses,
     rtype,
@@ -276,7 +304,7 @@ async function runDownloadMissing(
   dbg("sync", "同步完成, 发出 stats:refresh, 成功:", totalOk, "失败:", totalFail);
   bus.emit("stats:refresh");
   showDownloadSummary(instanceName, instanceNames, totalOk, totalFail, errors);
-  return { ok: totalOk, fail: totalFail, errors, packs };
+  return { ok: totalOk, fail: totalFail, errors, packs, overwrites };
 }
 
 /** 导入缺失互斥锁（ADR-340 去总线化后升为模块级常驻）：原锁在 registerSync 内创建，
@@ -319,6 +347,7 @@ export async function downloadMissing({
         skipped: false as const,
         errors: counts.errors,
         packs: counts.packs, // 锐评 P1-3：包级归因随文件级计数一并上抛
+        overwrites: counts.overwrites, // ADR-340-d2：覆盖实例侧手改的清单一并上抛
       };
     } catch (e) {
       toast(friendlyError(e), TOAST_MS.long, "error");

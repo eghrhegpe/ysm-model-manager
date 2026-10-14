@@ -41,9 +41,14 @@ type DiffEntry struct {
 // ResourceDiff 按调用方提供的 key（文件名或相对路径，ADR-064 阶段二统一为
 // relKey 相对路径）对比两侧条目：
 //   - 内容一致（文件：比哈希、无哈希回退比大小；目录：两侧折叠指纹一致）→ Synced
-//   - 内容已变化（文件异哈希或无哈希时异大小 / 目录异折叠指纹）→ Missing（待推送更新）
+//   - 内容已变化（文件异哈希或无哈希时异大小 / 目录异折叠指纹）→ Missing + Diverged
 //   - 仅全局有 → Missing
 //   - 仅实例有 → Extra
+//
+// Diverged（ADR-340-d2）与 Missing 是**子集关系**而非互斥桶：前两者（两侧均有、内容不同）
+// 同时进 Missing（保持既有归属，旧消费者零影响）与 Diverged（补回「待推送更新」这一维）。
+// 消费端据此分辨「新建」与「覆盖实例侧已修改副本」——后者是用户侧不可逆的损失，
+// 合并成一个 Missing 就等于把这件事从数据里删掉了。
 //
 // 结果排序保证输出确定性（map 归并迭代序随机，同输入同输出防 flaky）。
 func ResourceDiff(global, instance map[string]DiffEntry) types.ResourceSyncResult {
@@ -51,6 +56,7 @@ func ResourceDiff(global, instance map[string]DiffEntry) types.ResourceSyncResul
 	for key, g := range global {
 		if i, exists := instance[key]; exists {
 			if contentDiffers(g, i) {
+				result.Diverged = append(result.Diverged, g.Path)
 				result.Missing = append(result.Missing, g.Path)
 			} else {
 				result.Synced = append(result.Synced, g.Path)
@@ -67,6 +73,7 @@ func ResourceDiff(global, instance map[string]DiffEntry) types.ResourceSyncResul
 	sort.Strings(result.Synced)
 	sort.Strings(result.Missing)
 	sort.Strings(result.Extra)
+	sort.Strings(result.Diverged)
 	return result
 }
 

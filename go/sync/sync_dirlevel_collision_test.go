@@ -6,7 +6,8 @@
 // 键表仍按模型身份归一（跨格式同身份匹配是设计语义，不动），但被覆盖方必须进
 // collect 返回的碰撞清单，并由 syncResourcesDirLevel 汇入 ResourceSyncResult.Warnings。
 //
-// 变异检查：把 upsertDirLevelUnit 的碰撞记录摘掉 → 本文件各用例立即红。
+// 变异检查（2026-10-14 已执行）：upsertDirLevelUnit 的碰撞记录摘除（append 替换为
+// 丢弃表达式，保持编译通过）→ 三个「期望 1 条」用例立即红（实测 3 FAIL），复原后回绿。
 package sync
 
 import (

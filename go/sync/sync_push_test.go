@@ -62,10 +62,9 @@ func TestPullResources(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 
-	count, err := PullResources("resourcepack", globalDir, targetDir,
+	res := PullResources("resourcepack", globalDir, targetDir,
 		func(name, src, dst string, size int64, status, msg string) {})
-	testutil.NoError(t, err, "Pull 失败")
-	testutil.Equal(t, count, 1, "应拉取 1 个")
+	testutil.Equal(t, res.OK, 1, "应拉取 1 个（首个失败: %s）", res.FirstError)
 	testutil.FileExists(t, filepath.Join(globalDir, "extra.zip"))
 }
 
@@ -271,10 +270,9 @@ func TestPullResources_FolderLevelDir(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 
-	count, err := PullResources("ysm", globalDir, targetDir,
+	res := PullResources("ysm", globalDir, targetDir,
 		func(name, src, dst string, size int64, status, msg string) {})
-	testutil.NoError(t, err, "Pull 文件夹级失败")
-	testutil.Equal(t, count, 2, "应拉取 2 个（文件夹+平铺）")
+	testutil.Equal(t, res.OK, 2, "应拉取 2 个（文件夹+平铺），首个失败: %s", res.FirstError)
 	testutil.FileExists(t, filepath.Join(globalDir, "extra-pack", "m.ysm"))
 	testutil.FileExists(t, filepath.Join(globalDir, "flat.ysm"))
 }
@@ -289,10 +287,10 @@ func TestPullResources_NoExtra(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 
-	count, err := PullResources("resourcepack", globalDir, targetDir,
+	res := PullResources("resourcepack", globalDir, targetDir,
 		func(name, src, dst string, size int64, status, msg string) {})
-	testutil.NoError(t, err, "无 extra 不应报错")
-	testutil.Equal(t, count, 0, "应拉取 0 个")
+	testutil.Equal(t, res.OK, 0, "应拉取 0 个")
+	testutil.Equal(t, res.Failed, 0, "无 extra 不应有失败（首个失败: %s）", res.FirstError)
 }
 
 func TestPullResources_MMDFolderLevel(t *testing.T) {
@@ -303,8 +301,7 @@ func TestPullResources_MMDFolderLevel(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 
-	count, err := PullResources("EntityPlayer", globalDir, targetDir,
+	res := PullResources("EntityPlayer", globalDir, targetDir,
 		func(name, src, dst string, size int64, status, msg string) {})
-	testutil.NoError(t, err, "Pull MMD 失败")
-	testutil.Equal(t, count, 1, "应拉取 1 个 MMD 文件夹")
+	testutil.Equal(t, res.OK, 1, "应拉取 1 个 MMD 文件夹（首个失败: %s）", res.FirstError)
 }

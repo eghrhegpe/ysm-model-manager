@@ -383,6 +383,7 @@ async function runPull(
   let totalPulled = 0;
   let failed = 0;
   let timedOut = 0;
+  let firstError = "";
   try {
     const { PullResourceFromInstance } = await backendGetApp();
     for (let ii = 0; ii < selected.length; ii++) {
@@ -398,9 +399,18 @@ async function runPull(
           SYNC_OP_TIMEOUT_MS,
           `拉取 ${insName}`,
         );
+        // 批D P1-5：绑定改结构化结果（`PullSyncResult`）——条目级失败不再走 reject，
+        // 成功计数不会在途中丢失；reject 只剩前置不满足（未配置 mcRoot / 目录解析失败），
+        // 如实按「一个类型批次失败」计入。
         for (const r of results) {
-          if (r.status === "fulfilled") totalPulled += r.value;
-          else failed++;
+          if (r.status === "fulfilled") {
+            totalPulled += r.value.ok;
+            failed += r.value.failed;
+            if (r.value.firstError && !firstError) firstError = r.value.firstError;
+          } else {
+            failed++;
+            if (!firstError) firstError = friendlyError(r.reason);
+          }
         }
       } catch (e) {
         if (e instanceof TimeoutError) {
@@ -412,6 +422,7 @@ async function runPull(
     }
     if (failed > 0 || timedOut > 0) {
       const parts = [t("sidebar.pullDone", { pulled: totalPulled, failed })];
+      if (firstError) parts.push(t("sidebar.pullFirstError", { msg: firstError }));
       if (timedOut > 0) parts.push(t("sidebar.pullTimedOutStopped", { n: timedOut }));
       toast(parts.join("，"), TOAST_MS.normal, "warn");
     } else if (totalPulled > 0) {

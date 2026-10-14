@@ -163,9 +163,9 @@ func TestPullResources_MixedContainer_NoAncestorDoubleInstall(t *testing.T) {
 	testutil.WriteTestFile(t, filepath.Join(globalDir, ".keep"), "")
 	mixedContainerRepo(t, targetDir)
 
-	count, err := PullResources("ysm", globalDir, targetDir, nil)
-	testutil.NoError(t, err, "PullResources 失败")
-	testutil.Equal(t, count, 2, "祖先容器键不得整体拉取（Extra 3 单元 → 实际 2 个）")
+	res := PullResources("ysm", globalDir, targetDir, nil)
+	testutil.Equal(t, res.OK, 2, "祖先容器键不得整体拉取（Extra 3 单元 → 实际 2 个）")
+	testutil.Equal(t, res.Failed, 0, "不应有失败条目（首个失败: %s）", res.FirstError)
 
 	testutil.FileExists(t, filepath.Join(globalDir, "嵌套1", "动力臂.ysm"), "容器内平铺 .ysm 应拉回容器层级")
 	testutil.FileExists(t, filepath.Join(globalDir, "嵌套1", "01_taisho_maid", "ysm.json"), "子模型夹应拉回容器层级")

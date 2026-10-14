@@ -14,7 +14,7 @@ vi.mock("../../../bindings/ysm-model-manager/internal/app/app.js", () => ({
   GetRepoRoot: vi.fn().mockResolvedValue(""),
   SaveAppConfig: vi.fn().mockResolvedValue(undefined),
   GetMinecraftPaths: vi.fn().mockResolvedValue([]),
-  PullResourceFromInstance: vi.fn().mockResolvedValue(0),
+  PullResourceFromInstance: vi.fn().mockResolvedValue({ ok: 0, failed: 0 }),
   ClearScanCache: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -90,7 +90,7 @@ beforeEach(async () => {
   const { PullResourceFromInstance } = await import(
     "../../../bindings/ysm-model-manager/internal/app/app.js"
   );
-  (PullResourceFromInstance as ReturnType<typeof vi.fn>).mockResolvedValue(0);
+  (PullResourceFromInstance as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: 0, failed: 0 });
 });
 
 afterEach(() => {
@@ -368,7 +368,7 @@ describe("app-sidebar — 拉取所选", () => {
       "../../../bindings/ysm-model-manager/internal/app/app.js"
     );
     // ALL_RESOURCE_TYPES × 每类型 1 个文件 = 全部拉取
-    (PullResourceFromInstance as ReturnType<typeof vi.fn>).mockResolvedValue(1);
+    (PullResourceFromInstance as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: 1, failed: 0 });
     const el = await mountSidebar();
     checkFirst(el);
 
@@ -396,6 +396,33 @@ describe("app-sidebar — 拉取所选", () => {
     );
 
     await waitFor(() => toasts.some((t) => t.msg.includes("没有可拉取的文件")));
+  });
+
+  it("拉取部分失败 → warn toast 如实分开「成功数/失败数」+ 首个失败原因（批D P1-5）", async () => {
+    const { PullResourceFromInstance } = await import(
+      "../../../bindings/ysm-model-manager/internal/app/app.js"
+    );
+    // 结构化结果：同一类型批次里 3 个成功 + 2 个失败。旧 (int, error) 体裁下这 2 个失败会让
+    // 整批以 reject 交付 → 成功计数（3）在途中丢失，用户看到「拉取 0 个文件，1 个失败」
+    // 而文件其实已经进仓库了。
+    (PullResourceFromInstance as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: 3,
+      failed: 2,
+      firstError: "目标被目录占据",
+    });
+
+    const el = await mountSidebar();
+    checkFirst(el);
+    clickPullAll(el);
+
+    await waitFor(() => toasts.some((t) => t.type === "warn" && t.msg.includes("拉取完成")));
+    const msg = toasts.find((t) => t.msg.includes("拉取完成"))?.msg ?? "";
+    // 计数是跨全部资源类型的累加（每个类型批次各 3 成功 / 2 失败），故按类型数算期望，
+    // 不硬编码数字——断言要点是「成功计数没有被吞掉」。
+    const types = ALL_RESOURCE_TYPES.length;
+    expect(msg).toContain(`${types * 3} 个文件`); // 旧体裁下这里会是 0（成功计数在 reject 中丢失）
+    expect(msg).toContain(`${types * 2} 个失败`);
+    expect(msg).toContain("首个失败原因");
   });
 
   it("拉取失败 → warn toast（部分失败计数）+ 按钮恢复", async () => {
@@ -444,7 +471,7 @@ describe("app-sidebar — 拉取所选", () => {
     const { PullResourceFromInstance } = await import(
       "../../../bindings/ysm-model-manager/internal/app/app.js"
     );
-    (PullResourceFromInstance as ReturnType<typeof vi.fn>).mockResolvedValue(2);
+    (PullResourceFromInstance as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: 2, failed: 0 });
     clickPullAll(el);
     await waitFor(() => toasts.some((t) => t.msg.includes("拉取完成，共")));
     expect(toasts.some((t) => t.msg.includes("上一次同步尚未结束"))).toBe(false);

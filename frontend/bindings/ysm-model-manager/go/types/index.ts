@@ -29,6 +29,7 @@ export type {
     PackMetaView,
     PackModelDetail,
     PackModelDetailList,
+    PullSyncResult,
     QueueStatusInfo,
     ResourceSyncItem,
     ResourceSyncResult,

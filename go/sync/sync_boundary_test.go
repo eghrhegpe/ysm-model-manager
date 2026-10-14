@@ -384,12 +384,12 @@ func TestPullResources_EmptyGlobalDir(t *testing.T) {
 	_ = os.MkdirAll(targetDir, 0755)
 	_ = os.WriteFile(filepath.Join(targetDir, "extra.zip"), []byte("x"), 0644)
 
-	c, e := PullResources("resourcepack", globalDir, targetDir, nilLogger)
-	if e != nil {
-		t.Logf("PullResources 空 globalDir 返回错误：%v", e)
+	res := PullResources("resourcepack", globalDir, targetDir, nilLogger)
+	if res.Failed != 0 {
+		t.Logf("PullResources 空 globalDir 首个失败：%s", res.FirstError)
 	}
-	if c != 1 {
-		t.Logf("提示：PullResources 空 globalDir count=%d，期望 1", c)
+	if res.OK != 1 {
+		t.Logf("提示：PullResources 空 globalDir ok=%d，期望 1", res.OK)
 	}
 }
 
@@ -548,7 +548,7 @@ func TestPullResources_NilLogger_NoPanicOnFailure(t *testing.T) {
 				panicked = true
 			}
 		}()
-		_, _ = PullResources("resourcepack", globalDir, targetDir, nil)
+		_ = PullResources("resourcepack", globalDir, targetDir, nil)
 	}()
 	if panicked {
 		t.Fatal("nil logger + 拉取失败不应 panic")

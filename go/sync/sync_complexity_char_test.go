@@ -10,7 +10,6 @@
 package sync
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -297,13 +296,16 @@ func TestChar_PullResources_DirLevelCopyFailure(t *testing.T) {
 	writeCharFile(t, filepath.Join(globalDir, "x.ysm", "readme.txt"), "r")
 
 	sink := &charSink{}
-	count, err := PullResources("ysm", globalDir, targetDir, sink.logger())
-	testutil.NotNil(t, err, "目标被目录占据时复制必失败，应返回 ErrPartialSync")
-	if !errors.Is(err, ErrPartialSync) {
-		t.Errorf("应为 ErrPartialSync，实际 %v", err)
+	// 批D P1-5：部分失败不再走 error（绑定层 reject 会丢成功计数），改结果字段承载
+	res := PullResources("ysm", globalDir, targetDir, sink.logger())
+	if res.Failed != 1 {
+		t.Errorf("Failed = %d, want 1（目标被目录占据，复制必失败）", res.Failed)
 	}
-	if count != 0 {
-		t.Errorf("count = %d, want 0", count)
+	if res.FirstError == "" {
+		t.Error("FirstError 应记录首个失败原因（供汇总 toast 点名）")
+	}
+	if res.OK != 0 {
+		t.Errorf("OK = %d, want 0", res.OK)
 	}
 	if got := sink.digest(); got != "x.ysm:failed" {
 		t.Errorf("logger 序列 = %q, want \"x.ysm:failed\"", got)

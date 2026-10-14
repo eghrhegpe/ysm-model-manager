@@ -23,6 +23,7 @@ auto_fields:
     - AdvFilterValue
     - App.AnalyzeBedrockModel
     - App.AnalyzeBedrockModelEntry
+    - App.AnalyzeMmdStats
     - App.AnalyzeYSMModel
     - App.Build3DSpecFromGeometryJSON
     - App.CheckFileExists

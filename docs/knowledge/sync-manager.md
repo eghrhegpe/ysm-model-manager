@@ -219,7 +219,7 @@ getApp().GetInstanceSyncStatus(instance, subtype, rtype)
 | `GetRepoRoot(rtype)` | features/sync.ts | 仓库根路径（sync-manager/index.ts 侧的 `_filesRoots` 死缓存消费已于 2026-10 锐评摘除——只写不读，勿回接） |
 | `PushSingleResourceToInstance(rtype, instance, path)` | sync-manager/network.ts | 单文件推送 |
 | `PullSingleResourceFromInstance(rtype, path, instance)` | sync-manager/network.ts | 单文件拉取 |
-| `PullResourceFromInstance(rtype, instance)` | sidebar/index.ts | 整包拉取 |
+| `PullResourceFromInstance(rtype, instance)` | sidebar/index.ts | 整包拉取（**返回 `PullSyncResult{ok, failed, firstError}`**，ADR-340-d1：error 只表示前置不满足——旧 `(int, error)` 体裁下部分失败会让整批 reject，成功计数在途中丢失） |
 | `InstallModelTo / InstallResourceToInstance` | features/sync.ts | 缺失安装（downloadMissing 直调） |
 | `ListVersionInstances / GetResourceInstanceStatus` | features/sync.ts、sidebar/loader.ts | 实例列表 + 缺失/多余 |
 | `SyncModelToggleStatus(ins.CustomDir, filesRoot)` | features/sync.ts | 启禁同步 |

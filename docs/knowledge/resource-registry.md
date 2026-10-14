@@ -83,6 +83,7 @@ auto_fields:
     - SetBundledRegistryJSON
     - SetRegistryPath
     - ShouldHashExt
+    - StatsParserFor
     - StorageSubDir
     - StripBanSuffix
     - StripDisableSuffix

@@ -820,6 +820,7 @@ export const en: Record<string, string> = {
     "Pull complete, {n} files (copied into the repo; now independent from the instances)",
   "sidebar.pullDone": "Pull complete: {pulled} files, {failed} failed",
   "sidebar.pullTimedOutStopped": "{n} pack(s) timed out; remaining pulls stopped",
+  "sidebar.pullFirstError": "First failure: {msg}",
   "sidebar.syncBusy": "A sync is still running; this {verb} was ignored — please retry shortly",
   "sidebar.pullNothing": "📭 Nothing to pull (no extra resources in instances)",
   "sidebar.pullFailed": "Pull failed: {msg}",

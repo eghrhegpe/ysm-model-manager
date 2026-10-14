@@ -23,6 +23,7 @@ auto_fields:
     - App.AllTags
     - App.AnalyzeBedrockModel
     - App.AnalyzeBedrockModelEntry
+    - App.AnalyzeMmdStats
     - App.AnalyzeYSMModel
     - App.BackupWorkshopCreators
     - App.BatchExtractCreatorAvatars
@@ -117,8 +118,7 @@ auto_fields:
     - App.SaveWorkshopPresetsBySite
     - App.SaveWorkshopSites
     - App.ScanLocalAuthors
-    - App.ScanModelEntries
-    - symbols_total: 118
+    - symbols_total: 119
 quick_groups:
   - 后端桥接与数据存储
 quick_intents:

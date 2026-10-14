@@ -906,8 +906,10 @@ export function PlazaZoomReset(): $CancellablePromise<void> {
 
 /**
  * PullResourceFromInstance 拉取整合包多余资源回仓库（执行循环下沉 go/sync）
+ * 返回结构化结果（批D P1-5）：条目级失败进 Failed/FirstError，不再以 error 交付——
+ * 绑定层 reject 会丢掉成功计数。error 仅表示前置不满足（未配置 mcRoot / 目录解析失败）。
  */
-export function PullResourceFromInstance(rtype: string, instanceName: string): $CancellablePromise<number> {
+export function PullResourceFromInstance(rtype: string, instanceName: string): $CancellablePromise<types$0.PullSyncResult> {
     return $Call.ByID(3336031775, rtype, instanceName);
 }
 

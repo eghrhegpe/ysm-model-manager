@@ -598,6 +598,36 @@ export interface PackModelDetailList {
 }
 
 /**
+ * PullSyncResult 拉取结果（批D P1-5 绑定体裁）：**部分失败不是 error，是结果的一部分**。
+ * 
+ * 为什么不能沿用 (int, error) 体裁：Wails 绑定在 error 非 nil 时以 reject 交付，第一个
+ * 返回值（成功计数）**在途中丢失**——侧栏拉取原先只能说「拉取 0 个文件, N 个失败」，
+ * 而文件其实已经搬进仓库（对用户说谎）。故约定：
+ *   - 前置不满足（未配置 mcRoot / 类型目录解析失败）仍走 error（调用方本当失败）；
+ *   - 条目级失败进 Failed + FirstError（供汇总 toast 点名首个原因）。
+ * 
+ * 对称性说明：`PushResources` 暂未改同款体裁——它的绑定 `PushResourceToInstance`
+ * **当前无 UI 消费者**（推送计数走 `features/sync|downloadMissing` 展开后的文件级结果），
+ * 且 `ErrPartialSync` 仍被 `RelinkDir`（零成功上抛）使用。若将来接线推送绑定，照本结构改。
+ */
+export interface PullSyncResult {
+    /**
+     * 成功拉取条目数
+     */
+    "ok": number;
+
+    /**
+     * 失败条目数
+     */
+    "failed": number;
+
+    /**
+     * 首个失败原因（Failed==0 时为空）
+     */
+    "firstError"?: string;
+}
+
+/**
  * QueueStatusInfo 下载队列状态（替代多返回值，Wails 自动映射为 JS object）。
  * 归属（ADR-145）：跨包契约 DTO 下沉至 types——go/cli 定义 AppService 接口时
  * 需引用本类型，若不随 DTO 下沉则 cli 得反向 import internal/app（死结）。

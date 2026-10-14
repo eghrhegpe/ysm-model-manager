@@ -1641,6 +1641,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-340-d1：拉取结果结构化：部分失败不再是 error（绑定层不吞成功计数）",
+        "link": "/adr/decisions/ADR-340-d1-error"
+      },
+      {
         "text": "ADR-338-d2：broad_claim 巨兽卡符号封顶：auto_fields 死重止血与拆卡排期",
         "link": "/adr/decisions/ADR-338-d2-broad-claim-auto-fields"
       },

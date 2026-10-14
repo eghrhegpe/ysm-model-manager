@@ -97,7 +97,11 @@ func PushResources(rtype, globalDir, targetDir, linkMode string, logger Logger) 
 // PullResources 拉取整合包多余资源回仓库
 // 持 InstallLock：从实例目录复制文件回仓库，与 SyncToggleStatus/RelinkDir
 // 等并发操作同一实例目录文件互斥（ADR-056 共享单锁）
-func PullResources(rtype, globalDir, targetDir string, logger Logger) (int, error) {
+//
+// 返回 `types.PullSyncResult`（批D P1-5：**不用 `(int, error)`**）——绑定层在 error 非 nil
+// 时以 reject 交付，成功计数会在途中丢失（侧栏拉取曾因此只能报「0 个文件，N 个失败」，
+// 而文件已搬进仓库）。本函数没有可前置失败的路径，条目级失败全部进结果字段。
+func PullResources(rtype, globalDir, targetDir string, logger Logger) types.PullSyncResult {
 	installer.InstallLocker.Lock()
 	defer installer.InstallLocker.Unlock()
 	defer InvalidateSyncScanCaches() // 拉取会改全局仓库目录，清同步扫盘缓存防陈旧
@@ -109,8 +113,7 @@ func PullResources(rtype, globalDir, targetDir string, logger Logger) (int, erro
 	} else {
 		result = SyncResources(globalDir, targetDir, rtype)
 	}
-	count := 0
-	failed := 0
+	out := types.PullSyncResult{}
 	// 文件夹级类型的 Extra 同样剔除祖先容器键（与推送侧对称，ADR-344 D4）；
 	// 文件级类型不适用（其条目语义由 ResourceDiff 决定，不在此收敛）。
 	extra := result.Extra
@@ -127,15 +130,15 @@ func PullResources(rtype, globalDir, targetDir string, logger Logger) (int, erro
 			err = pullFileLevelEntry(src, globalDir, targetDir, isDir, logger)
 		}
 		if err != nil {
-			failed++
+			out.Failed++
+			if out.FirstError == "" {
+				out.FirstError = err.Error() // 首个原因供汇总 toast 点名，不做文本分类
+			}
 			continue
 		}
-		count++
+		out.OK++
 	}
-	if failed > 0 {
-		return count, fmt.Errorf("%w: 成功 %d，失败 %d", ErrPartialSync, count, failed)
-	}
-	return count, nil
+	return out
 }
 
 // pullDirLevelEntry 把文件夹级类型的一条 extra 拉回仓库：相对 targetDir 映射到 globalDir

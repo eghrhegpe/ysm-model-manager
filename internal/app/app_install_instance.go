@@ -440,25 +440,28 @@ func (a *App) PushResourceToInstance(rtype, instanceName string) (int, error) {
 }
 
 // PullResourceFromInstance 拉取整合包多余资源回仓库（执行循环下沉 go/sync）
-func (a *App) PullResourceFromInstance(rtype, instanceName string) (int, error) {
+// 返回结构化结果（批D P1-5）：条目级失败进 Failed/FirstError，不再以 error 交付——
+// 绑定层 reject 会丢掉成功计数。error 仅表示前置不满足（未配置 mcRoot / 目录解析失败）。
+func (a *App) PullResourceFromInstance(rtype, instanceName string) (types.PullSyncResult, error) {
+	empty := types.PullSyncResult{}
 	cfg := a.LoadAppConfig()
 	if err := requireMcRoot(cfg); err != nil {
-		return 0, err
+		return empty, err
 	}
 	globalDir, _ := a.filesRootForSync(rtype)
 	if globalDir == "" {
-		return 0, fmt.Errorf("未设置%s目录", rtype)
+		return empty, fmt.Errorf("未设置%s目录", rtype)
 	}
 
 	targetDir, err := a.findInstanceDir(rtype, instanceName, cfg.McRoot)
 	if err != nil {
-		return 0, err
+		return empty, err
 	}
-	n, opErr := ysmsync.PullResources(rtype, globalDir, targetDir, a.logger.Add)
+	res := ysmsync.PullResources(rtype, globalDir, targetDir, a.logger.Add)
 	// 拉取会改全局仓库目录；该入口当前不走 scanner.InvalidateCache，显式清同步结果缓存。
 	instance.InvalidateSyncItemsCache()
 	ysmsync.InvalidateSyncScanCaches()
-	return n, opErr
+	return res, nil
 }
 
 // findInstanceDir 解析整合包实例的资源类型子目录（Push/Pull 共用）

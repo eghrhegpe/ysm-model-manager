@@ -225,13 +225,14 @@ func TestPullResources_DirCopyFailure(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(globalDir, "pack"), []byte("blocker"), 0644)
 
 	var logs []string
-	count, err := PullResources("ysm", globalDir, targetDir,
+	// 批D P1-5：失败改由结果字段承载（err 只表示前置不满足）
+	res := PullResources("ysm", globalDir, targetDir,
 		func(name, src, dst string, size int64, status, msg string) { logs = append(logs, status) })
-	if err == nil {
-		t.Fatal("目录复制失败应返回错误")
+	if res.Failed == 0 {
+		t.Fatal("目录复制失败应计入 Failed")
 	}
-	if count != 0 {
-		t.Fatalf("失败路径应计数 0，实际 %d", count)
+	if res.OK != 0 {
+		t.Fatalf("失败路径应计数 0，实际 %d", res.OK)
 	}
 	if len(logs) != 1 || logs[0] != "failed" {
 		t.Fatalf("应有 1 条 failed 日志: %v", logs)
@@ -247,10 +248,10 @@ func TestPullResources_FileCopyFailure(t *testing.T) {
 	_ = os.WriteFile(globalDir, []byte("blocker"), 0644)
 	_ = os.WriteFile(filepath.Join(targetDir, "flat.ysm"), []byte("f"), 0644)
 
-	_, err := PullResources("ysm", globalDir, targetDir,
+	res := PullResources("ysm", globalDir, targetDir,
 		func(name, src, dst string, size int64, status, msg string) {})
-	if err == nil {
-		t.Fatal("平铺文件复制失败应返回错误")
+	if res.Failed == 0 {
+		t.Fatal("平铺文件复制失败应计入 Failed")
 	}
 }
 
@@ -263,10 +264,10 @@ func TestPullResources_FileLevelMkdirFailure(t *testing.T) {
 	_ = os.WriteFile(globalDir, []byte("blocker"), 0644)
 	_ = os.WriteFile(filepath.Join(targetDir, "extra.zip"), []byte("e"), 0644)
 
-	_, err := PullResources("resourcepack", globalDir, targetDir,
+	res := PullResources("resourcepack", globalDir, targetDir,
 		func(name, src, dst string, size int64, status, msg string) {})
-	if err == nil {
-		t.Fatal("MkdirAll 失败应返回错误")
+	if res.Failed == 0 {
+		t.Fatal("MkdirAll 失败应计入 Failed")
 	}
 }
 
@@ -280,10 +281,10 @@ func TestPullResources_FileLevelCopyFailure(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(targetDir, "extra.zip"), []byte("e"), 0644)
 	_ = os.MkdirAll(filepath.Join(globalDir, "extra.zip"), 0755) // 目录占位
 
-	_, err := PullResources("resourcepack", globalDir, targetDir,
+	res := PullResources("resourcepack", globalDir, targetDir,
 		func(name, src, dst string, size int64, status, msg string) {})
-	if err == nil {
-		t.Fatal("复制失败应返回错误")
+	if res.Failed == 0 {
+		t.Fatal("复制失败应计入 Failed")
 	}
 }
 

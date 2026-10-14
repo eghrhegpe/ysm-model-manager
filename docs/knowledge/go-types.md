@@ -77,6 +77,7 @@ auto_fields:
     - PackMetaView
     - PackModelDetail
     - PackModelDetailList
+    - PullSyncResult
     - QueueStatusInfo
     - RenderableTextureExts
     - ResourceSyncItem

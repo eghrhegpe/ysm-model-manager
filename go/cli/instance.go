@@ -134,10 +134,15 @@ func runInstancePull(ctx *CmdContext) error {
 		return newParamErrf("instance pull: --instance 参数不能为空")
 	}
 
-	count, err := ctx.App.PullResourceFromInstance(*rtype, *instanceName)
+	// 批D P1-5：结果结构化——条目级失败不再是 error（绑定/接口层 reject 会丢成功计数），
+	// CLI 也要如实分开报告「拉了几个」与「几个失败」，而不是把已成功的也说成失败。
+	res, err := ctx.App.PullResourceFromInstance(*rtype, *instanceName)
 	if err != nil {
 		return newRuntimeErrf("拉取资源失败: %w", err)
 	}
-	fmt.Printf("✅ 已从 %s 拉取 %d 个资源\n", *instanceName, count)
+	fmt.Printf("✅ 已从 %s 拉取 %d 个资源\n", *instanceName, res.OK)
+	if res.Failed > 0 {
+		fmt.Printf("⚠️  %d 个资源拉取失败（首个原因: %s）\n", res.Failed, res.FirstError)
+	}
 	return nil
 }

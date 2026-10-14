@@ -49,7 +49,7 @@ type AppService interface {
 	ListVersionInstances(mcRoot string) []types.VersionInstance
 	SyncResources(rtype, instanceName string) (types.ResourceSyncResult, error)
 	PushResourceToInstance(rtype, instanceName string) (int, error)
-	PullResourceFromInstance(rtype, instanceName string) (int, error)
+	PullResourceFromInstance(rtype, instanceName string) (types.PullSyncResult, error)
 
 	// ── 回收站 ──
 	ListRecycleBin(recyclePath string) []types.ModelEntry

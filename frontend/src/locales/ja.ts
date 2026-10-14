@@ -819,6 +819,7 @@ export const ja: Record<string, string> = {
     "プル完了、合計 {n} ファイル（仓库にコピー済み；以降は統合パッケージと独立）",
   "sidebar.pullDone": "プル完了: {pulled} ファイル、{failed} 失敗",
   "sidebar.pullTimedOutStopped": "{n} 件のパックでタイムアウトしたため、以降のプルを中止しました",
+  "sidebar.pullFirstError": "最初の失敗理由: {msg}",
   "sidebar.syncBusy":
     "前回の同期がまだ実行中です。今回の{verb}は無視されました。しばらくしてから再試行してください",
   "sidebar.pullNothing": "📭 プルするファイルがありません（インスタンスに余分なリソースなし）",

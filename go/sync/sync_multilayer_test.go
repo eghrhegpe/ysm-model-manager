@@ -378,10 +378,9 @@ func TestPullResources_MultiLayerPreservesHierarchy(t *testing.T) {
 	os.MkdirAll(filepath.Join(targetDir, "community", "author1"), 0755)
 	os.WriteFile(filepath.Join(targetDir, "community", "author1", "model.ysm"), []byte("extra"), 0644)
 
-	count, err := PullResources("ysm", globalDir, targetDir, nil)
-	testutil.NoError(t, err, "PullResources 失败")
-	if count != 1 {
-		t.Fatalf("应拉取 1 个条目，实际 %d", count)
+	res := PullResources("ysm", globalDir, targetDir, nil)
+	if res.OK != 1 {
+		t.Fatalf("应拉取 1 个条目，实际 %d（首个失败: %s）", res.OK, res.FirstError)
 	}
 
 	// 验证拉取到 globalDir 的完整层级
@@ -403,10 +402,9 @@ func TestPullResources_MultiLayerMixed(t *testing.T) {
 	os.MkdirAll(filepath.Join(targetDir, "nested", "deep"), 0755)
 	os.WriteFile(filepath.Join(targetDir, "nested", "deep", "deep_extra.ysm"), []byte("deep"), 0644)
 
-	count, err := PullResources("ysm", globalDir, targetDir, nil)
-	testutil.NoError(t, err, "PullResources 失败")
-	if count != 2 {
-		t.Fatalf("应拉取 2 个条目，实际 %d", count)
+	res := PullResources("ysm", globalDir, targetDir, nil)
+	if res.OK != 2 {
+		t.Fatalf("应拉取 2 个条目，实际 %d（首个失败: %s）", res.OK, res.FirstError)
 	}
 
 	// 验证根层和嵌套层都正确拉取
@@ -451,10 +449,9 @@ func TestPushPull_MultiLayerRoundTrip(t *testing.T) {
 	os.RemoveAll(filepath.Join(globalDir, "vendor"))
 
 	// Pull 回来
-	count, err = PullResources("ysm", globalDir, targetDir, nil)
-	testutil.NoError(t, err, "Pull 失败")
-	if count != 1 {
-		t.Fatalf("Pull 应拉取 1 个，实际 %d", count)
+	res := PullResources("ysm", globalDir, targetDir, nil)
+	if res.OK != 1 {
+		t.Fatalf("Pull 应拉取 1 个，实际 %d（首个失败: %s）", res.OK, res.FirstError)
 	}
 
 	// 验证拉取后层级不变

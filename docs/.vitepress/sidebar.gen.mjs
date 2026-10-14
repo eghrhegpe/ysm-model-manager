@@ -254,6 +254,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-346：MMD 几何统计管线（数值搜索能力扩展）",
+        "link": "/adr/architecture/ADR-346-mmd-geometry-stats-pipeline"
+      },
+      {
         "text": "ADR-345：禁用态是一等公民：目录粒度启禁同步与实例侧禁用载体识别",
         "link": "/adr/architecture/ADR-345-disable-state-first-class"
       },

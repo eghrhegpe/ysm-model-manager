@@ -31,11 +31,11 @@
    - 容器扩展名（.zip/.7z）：`containerCache` 指纹（`packs.DetectResourceType`）——`ScanModelEntriesFiltered` 已有该口径，提到全量路径复用；
    - 歧义/未命中 → `Type = "other"`（诚实占位，不猜，同 `ClassifyResource` 的 `ClassOther` 口径）；
    - 成本面：全量扫描多一次「扩展名查表 + 容器指纹（带缓存）」，容器指纹未命中才开归档（已有 30s 失效 + 指纹复用，边际成本受控）。**基线数据（2026-10-14，4 条目混合类型实证库：TLM 女仆 zip 13.5MB + 真实 .ysm 123KB + 资源包/音效包 2 zip；`scan-bench` / `benchmark --iterations 3`）**：B1 扫描中位 ~13ms；B2 全量搜索冷 ~580–620ms / 热 ~170ms（WASM 首解 + TLM 归档解析占大头，热态印证 geoCache/containerCache 生效 ~3.5x）；B3 关键词搜索 ~155ms。刀 1 的回归门槛于本 ADR 拍板时设定（建议 B1 ≤20ms、B2 冷 ≤800ms 即冷启不劣化 25%），B1/B2 对照作硬门禁（`scan-bench` / `single-bench` 复跑）。
-2. **`SearchModels` 按 `Type` 分流分析器**：Bedrock 系（ysm / maid-model）走 `AnalyzeBedrockModel`（现状）；MMD 系数值语义按 `model-stats`（Web Worker 统计层，骨骼数有口径）接入，或先**只开放关键词 + 标签路**（数值区对 MMD 维持 A 案门控，直至 MMD 数值管线立项）；蓝图/资源包/光影包 = 关键词 + 标签（无数值语义）。**语义修正（§1 实证数据驱动）**：几何排除只在「数值条件已设置」时作用于无解析能力的条目——纯关键词/标签搜索不得让无几何类型条目消失（现状 `modelMatchesFilters` 首行无条件的 `BoneCount==0` 排除是病灶本体，本刀顺带修正，否则关键词搜索永远少半仓结果）。
+2. **`SearchModels` 按 `Type` 分流分析器**：Bedrock 系（ysm / maid-model）走 `AnalyzeBedrockModel`（现状）；MMD 系数值语义按 `model-stats`（Web Worker 统计层，骨骼数有口径）接入，或先**只开放关键词 + 标签路**（数值区对 MMD 维持 A 案门控；MMD 数值管线已由 [ADR-346](ADR-346-mmd-geometry-stats-pipeline.md) 立项——Go 侧统计级解析路线，本 ADR 只留分流接缝）；蓝图/资源包/光影包 = 关键词 + 标签（无数值语义）。**语义修正（§1 实证数据驱动）**：几何排除只在「数值条件已设置」时作用于无解析能力的条目——纯关键词/标签搜索不得让无几何类型条目消失（现状 `modelMatchesFilters` 首行无条件的 `BoneCount==0` 排除是病灶本体，本刀顺带修正，否则关键词搜索永远少半仓结果）。
 3. **`SearchResult.Type` 收口**：填充实际类型，前端可展示类型图标；跨类型搜索（全仓根）结果自解释。
 4. **`types.SearchFilters` 封装 8 参数**（ADR-183 留的后路）：`SearchModels(filesRoot, filters SearchFilters)`——Wails 绑定契约变更（`npm run generate:bindings` 重生成 + 前端调用点 + CLI 3 处 + 测试位同步）。**执行修订（2026-10-14 落地时）**：纯封装不带「目标 rtype 集合」字段——跨类型搜索语义（全仓根跨型检索）尚无消费方，带上即死参数制度化；`SearchFilters` 的字段可扩展性恰为后续跨类型契约预留了追加位。
 
-**非目标（Non-goals）**：不做全文搜索（几何/纹理内容不可搜）；不改 `ListByTag`；MMD 数值管线（骨骼数统计口径接入 SearchModels）单独立项，本 ADR 只留分流接缝。
+**非目标（Non-goals）**：不做全文搜索（几何/纹理内容不可搜）；不改 `ListByTag`；MMD 数值管线（骨骼数统计口径接入 SearchModels）已由 [ADR-346 MMD 几何统计管线](ADR-346-mmd-geometry-stats-pipeline.md) 单独立项，本 ADR 只留分流接缝。
 
 ## 3. 后果（Consequences）
 
@@ -48,7 +48,7 @@
 
 **已知遗留**：
 - `geometrySearchable` 的 maid-model 声明已由真实数据实证（2026-10-14）：`upstream` 区 TLM 女仆包（13.5MB zip）→ `ParseFromZip` L0 清单 143 条出几何，CLI 全链路 `search --min-bones 1` 实测 **12903 骨骼 / 13710 立方体**；永久守卫 `go/geometry/archive_maid_fixture_test.go`（fixture 在 gitignored 的 upstream 样本区，缺失即 skip，本地有样本时钉死「真实包出非空几何 + SubModels 派生」）。实证数据块见知识卡 `go-geometry-maid-l0`。
-- MMD（.pmx/.pmd/.vrm/.fbx）数值管线无任何解析链路（`AnalyzeBedrockModel` 无对应分支），刀 2 对 MMD 维持「只开放关键词 + 标签路」（数值语义单独立项）；本地样本区无 MMD 包，负对照以资源包/音效包 zip 代替（实证库同批）。
+- MMD（.pmx/.pmd/.vrm/.fbx）数值管线无任何解析链路（`AnalyzeBedrockModel` 无对应分支），刀 2 对 MMD 维持「只开放关键词 + 标签路」（数值语义已由 [ADR-346](ADR-346-mmd-geometry-stats-pipeline.md) 立项：Go 侧统计级解析 + flag 复用选案 A，本地样本区无 MMD 包的验收样本问题已写入其遗留项；负对照以资源包/音效包 zip 代替，实证库同批）。
 
 ## 4. 数据溯源
 

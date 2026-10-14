@@ -242,7 +242,7 @@
 | 一键安装、整合包拖拽导入 | [侧边栏 app-sidebar](./app-sidebar.md) | - | - |
 | 语言切换 / 检测系统语言 / 持久化 uiLang | [国际化 i18n 模块](./i18n.md) | 并发 setLang 靠 _langReqGen 代际计数防竞态 | ADR-124, ADR-207, ADR-210 |
 | 整合包列表、同步状态、勾选 | [整合包同步管理器 sync-manager](./sync-manager.md) | 状态筛选的 a11y 键盘语义只走 events.ts 单一 keydown 委托 + tpl.ts 模板出属性，禁止逐 tab 补 handler / 手搓 aria | - |
-| 整合包同步、推送 / 拉取 | [整合包同步管理器 sync-manager](./sync-manager.md) | 同步操作必须经 sync-manager 的 queue 排队，禁止 app-sidebar 直接调 PushSingleResource | - |
+| 整合包同步、推送 / 拉取 | [整合包同步管理器 sync-manager](./sync-manager.md) | 同步写操作并发守卫 = features/sync 的 BusyLock（handler 级互斥）+ sync-manager network.performSingleOp 的 per-path 防重入（同一行串行、异行并发）——历史上无「queue 队列」实体，勿去找它；app-sidebar 禁止绕开 sync:download:missing 事件链直调 PushSingleResource（2026-10-14 锐评 P2-3：红线措辞对齐真实机制） | - |
 | 主内容区、页面切换、仓库页 / 创作者页 / 社区页 | [主内容页 app-content](./app-content.md) | 主内容区页面切换必须经 nav:changed / app-nav 路由分发，禁止页面之间直接 init 对方 | - |
 | 主题、换肤、深色 / 浅色 / 跟随系统 | [主题系统 theme](./theme.md) | 主题值必须经 normalizeTheme 白名单过滤，白名单外回落 system，防脏值污染持久层 | ADR-146 |
 | 主题初始化、服务注册、检查更新 | [组件入口 app-modules](./app-modules.md) | - | - |
@@ -1163,7 +1163,7 @@
 | 零散 grep 每枚 emoji/每个 UI_ICONS 模式各发一次 | - | token 浪费（实测上一会话 28 分钟 / 5.6M tok 都在翻 emoji）：改用一次性脚本 |
 | "`check-design-tokens --kind emoji-icon` 只认，扫不到运行时 toast 载荷 / locale 值前缀 emoji；要全量需用 survey 脚本或 findToastEmojiPrefixViolations / findLocaleEmojiPrefixViolations" | `HTML 标签图标位 + 字面量 emoji` | - |
 | emoji 字符集必须含 U+2190-21FF / U+2300-23FF（含 ⏳/← 等），否则单字形槽整类逃逸 —— survey 脚本已**复用 design-tokens.ts 导出的 GRAPHIC_EMOJI**，不自抄副本（单一事实源，门禁改字符集 survey 自动跟随） | - | - |
-| app-sidebar 直接发 push/pull 请求 | - | 并发冲突 / 状态错乱；必须经 sync-manager 排队 |
+| app-sidebar 直接发 push/pull 请求 | - | 并发冲突 / 状态错乱；写链守卫 = features/sync BusyLock + performSingleOp per-path |
 | PullSingleResource 未完成前刷新侧边栏 | - | 半同步状态显示；必须等 store 状态收敛 |
 | mock 掉被断言行为的谓词 = 自证：断言的是替身不是真实现，测试无效 | - | - |
 | mock 不保真（null 输入 / 抛错输入 / 产物属性）：判别样本退化为假阳 | - | - |

@@ -16,17 +16,17 @@ permalink: /adr/
 
 | 状态 | 数量 |
 |------|------|
-| [📝 提议中](#提议中) | 8 |
+| [📝 提议中](#提议中) | 7 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 1 |
 | [🔄 部分采纳](#部分采纳) | 14 |
-| [✅ 已采纳](#已采纳) | 325 |
+| [✅ 已采纳](#已采纳) | 326 |
 | [❌ 已取代](#已取代) | 8 |
 | [🧊 已废弃](#已废弃) | 0 |
 | [❓ 未归类](#未归类) | 0 |
 
 ## 按状态分组导航
 
-### 📝 提议中（8）
+### 📝 提议中（7）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
@@ -36,7 +36,6 @@ permalink: /adr/
 | [ADR-301](./ADR-301-workshop-community-naming-convergence.md) | 创作者频道与创意工坊命名轴收敛 | 📝 提议中 |
 | [ADR-292](./ADR-292-scene-environment-sky-ibl-env.md) | 环境贴图单一归属：scene.environment 所有权收口，sky IBL 降为 env 的数据源 | 📝 提议中 |
 | [ADR-284](./ADR-284-sky-reflector-shadow-decoupling-cleanup.md) | sky 散射参数与模型类别解耦 + reflector/shadow 清除 no-op 与噪声值 | 📝 提议中 |
-| [ADR-151-d1](./decisions/ADR-151-d1-gen-stage-unknown-newfile.md) | gen-stage 未知新建文件默认排除（并发卷带硬化） | 📝 提议中 |
 | [ADR-096-d1](./decisions/ADR-096-d1-repo-subdir-channel-disposition.md) | repo_subdir 运行时通道去留裁定：保留为跨语言契约占位、禁新增消费者 | 📝 提议中 |
 
 ### ⚠️ 已采纳但遗留未修复（1）
@@ -64,7 +63,7 @@ permalink: /adr/
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 | [ADR-050](./ADR-050-plaza-browser-window.md) | 模型广场 · 浏览器窗口（Wails 第二窗口） | 🔄 部分采纳 |
 
-### ✅ 已采纳（325）
+### ✅ 已采纳（326）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
@@ -255,6 +254,7 @@ permalink: /adr/
 | [ADR-153](./ADR-153-stats-worker-mt-lazy-import.md) | stats.worker WASM 资产条件加载——base / mt 双向动态 import | ✅ 已采纳 |
 | [ADR-152](./ADR-152-gen-stage-concurrency-root.md) | gen-stage 并发卷带根除——快照变化 ∩ 非并行 dirty 判定（实证验收） | ✅ 已采纳 |
 | [ADR-151](./ADR-151-commit-temp-index-concurrency.md) | commit-with-check 临时索引白名单提交：并发隔离取代裸 git commit | ✅ 已采纳 |
+| [ADR-151-d1](./decisions/ADR-151-d1-gen-stage-unknown-newfile.md) | gen-stage 未知新建文件默认排除（并发卷带硬化） | ✅ 已采纳 |
 | [ADR-150](./ADR-150-pre-commit-git-add-u-docs-p2-2.md) | pre-commit 兜底收窄：禁用 git add -u docs/ 吞并发漂移 (P2-2 加固) | ✅ 已采纳 |
 | [ADR-149](./ADR-149-modal-ts-dialogs-css.md) | modal.ts 内联样式外提为弹窗类（dialogs.css） | ✅ 已采纳 |
 | [ADR-148](./ADR-148-container-preview-factory.md) | preview-3d 容器类适配器统一工厂(方案 C)决策方向 | ✅ 已采纳 |
@@ -769,7 +769,7 @@ permalink: /adr/
 | ADR-266-d1 | 体积光锥进截图：离屏/预览输出设置同构（toneMapping + 曝光镜像） | ✅ 已采纳 | 2026-10-04 |
 | ADR-256-d1 | 存量债到期制：debt 条目必须带 reason 与 reviewBy，到期由 doctor --all 硬处置 | ✅ 已采纳 | 2026-10-09（实施与 CI 验证同日完成，用户逐刀批准） |
 | ADR-235-d1 | sky cap 资产管线下沉（太阳位置计算 + 天空资产）——cap 变薄编排壳 | ✅ 已采纳 | 2026-10-09 |
-| ADR-151-d1 | gen-stage 未知新建文件默认排除（并发卷带硬化） | 📝 提议中 | 2026-10-06 |
+| ADR-151-d1 | gen-stage 未知新建文件默认排除（并发卷带硬化） | ✅ 已采纳 | 2026-10-06 |
 | ADR-096-d1 | repo_subdir 运行时通道去留裁定：保留为跨语言契约占位、禁新增消费者 | 📝 提议中 | 2026-10-14 |
 | ADR-091-d1 | 环境能力 cap 拆分：hdr-cache/background 先行，ibl 所有权段单独一刀 | ✅ 已采纳 | 2026-10-08 |
 

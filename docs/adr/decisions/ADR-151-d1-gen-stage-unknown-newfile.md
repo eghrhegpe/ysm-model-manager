@@ -1,6 +1,6 @@
 # ADR-151-d1：gen-stage 未知新建文件默认排除（并发卷带硬化）
 
-- **状态**：📝 提议中（Proposed）
+- **状态**：✅ 已采纳（Accepted——决策三行已随 `a60344ae7`（2026-10-06 当日）落地：`gen-stage.ts|computeStageList` 的 `unknownNewOut` 白名单门实证，代码注释回指本卡）
 - **日期**：2026-10-06
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **关联主 ADR**：ADR-151

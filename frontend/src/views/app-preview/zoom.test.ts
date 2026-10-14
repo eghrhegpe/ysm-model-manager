@@ -74,6 +74,46 @@ describe("openFullPreview", () => {
     expect(document.activeElement).toBe(opener);
   });
 
+  // 锐评（2026-10-14）：aria-modal 承诺了模态就必须有焦点陷阱。此前本 overlay 只做
+  // 「焦点移入 + 关闭归还」，Tab 能走到背后页面——同 site/events.ts P0-3 修的病，此处漏网。
+  // overlay 内无可聚焦元素，陷阱退化为「Tab / Shift+Tab 一律拉回自身」。
+  it("焦点陷阱：Tab / Shift+Tab 拉回 overlay 自身（Tab 不逃到背后页面）", async () => {
+    const src = document.createElement("canvas");
+    await openFullPreview(src, model, null, false);
+    const overlay = findOverlay()!;
+    // 模拟焦点逃到 body（点背景/程序移焦）
+    (document.activeElement as HTMLElement | null)?.blur?.();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true }));
+    expect(document.activeElement).toBe(overlay);
+    (document.activeElement as HTMLElement | null)?.blur?.();
+    document.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Tab", bubbles: true, shiftKey: true }),
+    );
+    expect(document.activeElement).toBe(overlay);
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+  });
+
+  it("关闭后释放焦点陷阱（spy 断言 cleanup 被调用）", async () => {
+    // 判别力说明：陷阱是 document 级**单例**，且「后开的 trapFocusAcrossShadow 会先清掉
+    // 先前的」——故「关闭后另一个浮层还能装上陷阱」这种黑盒断言**恒成立**（无论 zoom 是否
+    // 释放），是假绿。此处改用 spy 直接断言 releaseTrap 被执行：把 trapFocusAcrossShadow
+    // mock 成返回可观察的 cleanup 桩，验证 close 路径调用了它。
+    const { trapFocusAcrossShadow: realTrap } = await import("@/utils/dom/trap-focus-across-shadow.ts");
+    const releaseSpy = vi.fn();
+    const trapSpy = vi
+      .spyOn(await import("@/utils/dom/trap-focus-across-shadow.ts"), "trapFocusAcrossShadow")
+      .mockImplementation((o: HTMLElement) => {
+        realTrap(o);
+        return releaseSpy;
+      });
+    const src = document.createElement("canvas");
+    await openFullPreview(src, model, null, false);
+    expect(trapSpy).toHaveBeenCalledTimes(1);
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    expect(releaseSpy).toHaveBeenCalledTimes(1);
+    trapSpy.mockRestore();
+  });
+
   it("滚轮缩放：deltaY>0 缩小、deltaY<0 放大，并重新渲染", async () => {
     const src = document.createElement("canvas");
     await openFullPreview(src, model, null, false);

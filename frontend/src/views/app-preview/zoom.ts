@@ -2,6 +2,7 @@
 // 从 events.ts 拆分：openFullPreview
 import { t } from "@/core/i18n/t.ts";
 import type { BedrockGeometry } from "@/preview-3d/decoder/geometry.ts";
+import { trapFocusAcrossShadow } from "@/utils/dom/trap-focus-across-shadow.ts";
 import { renderModel2D } from "@/views/app-preview/model2d/model2d.ts";
 
 /** 全窗放大预览（独立函数，不依赖组件实例） */
@@ -106,6 +107,7 @@ export async function openFullPreview(
   window.addEventListener("pointerup", onWindowUp);
   window.addEventListener("pointercancel", onWindowCancel);
   let closed = false;
+  let releaseTrap: (() => void) | null = null;
   const close = (): void => {
     if (closed) return;
     closed = true;
@@ -116,6 +118,11 @@ export async function openFullPreview(
     document.removeEventListener("keydown", onKey);
     window.removeEventListener("popstate", onPopState);
     document.removeEventListener("visibilitychange", onVisibilityChange);
+    // a11y（2026-10-14 补齐）：aria-modal 承诺了模态就必须有焦点陷阱。此前本overlay
+    // 只做了「焦点移入+关闭归还」，Tab 仍能走到背后页面——与 site/events.ts P0-3
+    // 修的同一个病，此处漏网（注释却自称「与 modal 基座一致」，实为半套）。
+    // overlay 内无可聚焦元素（canvas + hint div），陷阱退化为「Tab 一律拉回自身」。
+    releaseTrap?.();
     if (overlay.parentNode) document.body.removeChild(overlay);
     // a11y：焦点归还触发元素（模态关闭后不得把焦点留在已移除节点上，WCAG 2.4.3）
     opener?.focus?.();
@@ -131,6 +138,8 @@ export async function openFullPreview(
   window.addEventListener("popstate", onPopState);
   document.addEventListener("visibilitychange", onVisibilityChange);
   document.body.appendChild(overlay);
-  // a11y：焦点移入对话框，读屏与键盘由此进入模态上下文（Esc 已挂在 document 级）
+  // a11y：焦点陷阱（Tab 不逃到背后）+ 焦点移入对话框，读屏与键盘由此进入模态上下文
+  // （Esc 已挂在 document 级）。陷阱为单例，close 时由 releaseTrap 释放。
+  releaseTrap = trapFocusAcrossShadow(overlay);
   overlay.focus();
 }

@@ -100,7 +100,20 @@ export function trapFocusAcrossShadow(overlay: HTMLElement): () => void {
   const handler = (e: KeyboardEvent): void => {
     if (e.key !== "Tab") return;
     const tabbable = cachedTabbable;
-    if (tabbable.length === 0) return;
+    // 空 tabbable 降级（2026-10-14）：overlay 内无任何可聚焦元素时（如全屏放大预览
+    // zoom.ts —— canvas + hint div + overlay tabIndex=-1），原实现直接 return，
+    // Tab 于是自由走到背后页面，而该overlay 声明了 role=dialog + aria-modal="true"
+    // ——承诺了困在内部却没困。降级策略：焦点不在 overlay 内时拉回 overlay 自身
+    // （tabIndex=-1 仍可被脚本 focus，Tab 不会因 preventDefault 而穿透）。
+    // overlay 本身不可聚焦且焦点已在内部 → 无从收拢，放行（无可救）。
+    if (tabbable.length === 0) {
+      const active0 = deepActiveElement();
+      const inside = active0 instanceof HTMLElement && overlay.contains(active0);
+      if (inside || !(overlay instanceof HTMLElement)) return;
+      e.preventDefault();
+      overlay.focus();
+      return;
+    }
     // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     const first = tabbable[0]!;
     // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)

@@ -533,7 +533,7 @@ export class AppTree extends WebComponentBase {
   _renderLayout(): void {
     this._root.innerHTML =
       headerHTML() +
-      '<div class="list" id="tree" data-testid="tree-root" role="tree" aria-label="' +
+      '<div class="list" id="tree" data-testid="tree-root" role="tree" tabindex="0" aria-label="' +
       t("tree.fileList") +
       '">' +
       spinnerHTML() +
@@ -628,13 +628,13 @@ export class AppTree extends WebComponentBase {
         id: "tree:nav-down",
         combo: "ArrowDown",
         when: yieldTo3D,
-        handler: (e) => this._onKeyArrowNav(e, e.target as HTMLElement | null),
+        handler: (e) => this._onKeyArrowNav(e, e.target),
       }),
       registerShortcut({
         id: "tree:nav-up",
         combo: "ArrowUp",
         when: yieldTo3D,
-        handler: (e) => this._onKeyArrowNav(e, e.target as HTMLElement | null),
+        handler: (e) => this._onKeyArrowNav(e, e.target),
       }),
     ];
   }
@@ -682,20 +682,24 @@ export class AppTree extends WebComponentBase {
     return true;
   }
 
-  private _onKeyArrowNav(e: KeyboardEvent, target: HTMLElement | null): void {
-    if (
-      (e.key !== "ArrowDown" && e.key !== "ArrowUp") ||
-      e.ctrlKey ||
-      e.metaKey ||
-      e.altKey ||
-      target?.tagName === "INPUT" ||
-      target?.tagName === "TEXTAREA" ||
-      !target ||
-      !this._root.contains(target)
-    )
+  private _onKeyArrowNav(e: KeyboardEvent, target: EventTarget | null): void {
+    // 焦点归树容器（锐评 UX #1，2026-10-14）：行无 tabindex 时浏览器焦点永不落在行上，
+    // 旧守卫 `this._root.contains(target)` 把 body 事件全拦下——箭头导航是死代码。
+    // 修法：容器 role="tree" 挂 tabindex="0" 作单点 tab 停靠（WAI-ARIA tree 的 roving focus
+    // 简化等价），每次导航显式 focus 容器。焦点不能交给行——renderTree 每次重渲重建行节点，
+    // 行上焦点会在下一次按键前丢失（连续按方向键第二下就哑）。
+    // 守卫放宽为「焦点不在输入区」：点击页面空白处（焦点落 body）后按方向键也能导航，
+    // 而输入框/文本域/contenteditable 内方向键归光标所有，不抢。
+    if ((e.key !== "ArrowDown" && e.key !== "ArrowUp") || e.ctrlKey || e.metaKey || e.altKey)
+      return;
+    // 焦点在输入区（input/textarea/select/contenteditable）时方向键归光标所有，树不抢。
+    // keydown 的 target 在 happy-dom/部分 WebView 下可能是 document（无 closest）——
+    // 此时按「焦点不在输入区」处理（等价 body 焦点态），故只对 Element 做 closest 判定。
+    if (target instanceof Element && target.closest("input,textarea,select,[contenteditable]"))
       return;
     const container = this._root.getElementById("tree");
     if (!container) return;
+    container.focus({ preventScroll: true });
     const fileRows = getVsRows(this.treeRenderCtx, container).filter((r) => r.type === "file");
     if (!fileRows.length) return;
     e.preventDefault();

@@ -211,6 +211,42 @@ describe("app-tree index 入口生命周期（补位）", () => {
     await waitFor(() => expect(el.shadowRoot!.activeElement).toBe(srch));
   });
 
+  // 锐评 UX #1（2026-10-14）：键盘可达性回归锁。病：role="tree" 容器与 role="treeitem" 行
+  // 全无 tabindex → 浏览器焦点永不落在树内 → _onKeyArrowNav 的 _root.contains(target) 守卫
+  // 恒拦下 body 事件，方向键导航是死代码（键盘用户完全无法在树里移动）。
+  it("树容器挂 tabindex=0 → 可作单点 tab 停靠（键盘可达性入口）", async () => {
+    const el = await mountEl();
+    const tree = el.shadowRoot!.getElementById("tree") as HTMLElement;
+    expect(tree.getAttribute("role")).toBe("tree");
+    expect(tree.getAttribute("tabindex")).toBe("0");
+  });
+
+  it("body 焦点下按 ArrowDown → 焦点归树容器 + 导航生效（旧守卫会拦成 no-op）", async () => {
+    const el = await mountEl();
+    await sleep0();
+    const tree = el.shadowRoot!.getElementById("tree") as HTMLElement;
+    expect(el.shadowRoot!.activeElement).not.toBe(tree);
+
+    // 焦点在 body（点击页面空白处的典型态）→ 方向键应被树接管并把焦点拉进树
+    dispatchKey("ArrowDown");
+    await sleep0();
+    await sleep0();
+    expect(el.shadowRoot!.activeElement).toBe(tree);
+  });
+
+  it("输入框内按方向键 → 不被树抢（光标移动归输入框所有）", async () => {
+    const el = await mountEl();
+    const srch = el.shadowRoot!.getElementById("srch") as HTMLInputElement;
+    srch.focus();
+    expect(el.shadowRoot!.activeElement).toBe(srch);
+
+    // 真实浏览器里 keydown 的 target = 获得焦点的元素；document 派发只能造 body 焦点态，
+    // 故此处向输入框自身派发冒泡事件，才走得出「焦点在输入区」分支
+    srch.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
+    await sleep0();
+    expect(el.shadowRoot!.activeElement).toBe(srch);
+  });
+
   it("方向键导航 → selectState 实例级隔离（多实例不串扰）", async () => {
     const el = await mountEl();
     await sleep0();

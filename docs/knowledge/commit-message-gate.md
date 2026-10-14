@@ -41,7 +41,7 @@ pitfalls:
   - "47% 存量提交符合结构上的「违规」标准——闸只判新提交，不追溯历史（重写历史 commit message 是 ADR-080 禁令）"
   - "采集期 gate-config 条目 blockPolicy: 'debt'——不阻断但会在 CI/pre-push 留下记录。转档时只改两处：钩子加 --strict + gate-config 改 'hard'"
 quick_groups:
-  - 提交信息
+  - 门禁与脚本
 quick_intents:
   - 提交信息的减负规则是什么
 quick_risk_lines:
@@ -61,7 +61,7 @@ quick_risk_lines:
 2. **CONTRIBUTING.md 只有 type 表**——长度、单主题、内容归属判据全部没有
 3. **诉求没有结构化出口**——验证报告、逃生理由、并行会话归属等"留痕"需求本应走 trailer，但没有字段就各自发明散文格式，导致 subject 47% 超 72 字符、最长 869 字符
 
-它与 [ADR-338 文档减负](./adr-docs-burden-reduction.md) 治的同一个病：**每一层都在写台账**。
+它与 [ADR-338 文档减负](../adr/architecture/ADR-338-docs-burden-reduction.md) 治的同一个病：**每一层都在写台账**。
 
 ## 核心职责
 

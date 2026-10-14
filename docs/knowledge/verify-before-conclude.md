@@ -24,7 +24,7 @@ pitfalls:
   - 凭印象报数（如「≈22」实际 66），不下命令复核
   - 只跑 biome/运行时冒烟就宣称改完——漏 scripts tsc 会放过 TS 类型漏洞
 quick_groups:
-  - 查证优先
+  - 测试与验证
 quick_intents:
   - 我想下结论但还没验证
   - 这条注释说的还算数吗

@@ -37,7 +37,7 @@ status: snapshot
 # 而 gen 会据 source_files 派生 tests 与 auto_fields.symbols_with_lines，
 # 曾把本卡 frontmatter 撑到近三百行、两百多个符号名，无人读也无人消费。
 affected: false
-last_verified: 2026-10-06
+last_verified: 2026-10-14
 invariant_anchors:
   - go/types/registry/extensions.go|ShouldHashExt
   - go/types/registry/resource.go|ResourceType
@@ -183,9 +183,9 @@ invariant_anchors:
 
 | 维度 | 入口（文件:行） | 机制 |
 |---|---|---|
-| 文件级同步 | `go/sync/sync.go`（`SyncResources`） | 扫描 `scanDir` 顶层文件，按文件名匹配 |
-| 相对路径对比 | `sync.go`（`ResourceDiff` 调用） | ADR-064：scanner 口径 + 单点对比 |
-| 文件夹级同步 | `go/sync/sync_dirlevel.go`（`SyncResourcesDirLevel`） | 按文件夹名对比，用于 YSM/MMD 的 `.json/.pmx/.pmd` 子目录 |
+| 文件级同步 | `go/sync/sync_resource.go`（`SyncResources`） | 扫描 `scanDir` 顶层文件，按文件名匹配 |
+| 相对路径对比 | `go/sync/sync_diff.go`（`ResourceDiff`） | ADR-064：scanner 口径 + 单点对比 |
+| 文件夹级同步 | `go/sync/sync_dirlevel_sync.go`（`SyncResourcesDirLevel`） | 按文件夹名对比，用于 YSM/MMD 的 `.json/.pmx/.pmd` 子目录 |
 | 推送执行 | `go/sync/sync_push.go`（`PushResources`） | `IsDirLevelSync` → 文件夹推送（`installer.InstallDir`）；否则文件级 |
 | 拉取执行 | `sync_push.go`（`PullResources`） | 同上，Extra 文件反向复制 |
 

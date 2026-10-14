@@ -7,6 +7,7 @@ source_files:
   - frontend/src/views/app-content/index.ts
   - frontend/src/views/app-content/tpl.ts
   - frontend/src/views/app-content/tpl-recycle.ts
+  - frontend/src/views/app-content/tpl-dedup.ts
   - frontend/src/views/app-content/settings/tpl-settings.ts
   - frontend/src/views/app-content/settings/tpl-settings-about.ts
   - frontend/src/views/app-content/css/content-css.ts
@@ -54,6 +55,7 @@ auto_fields:
     - contentUtilCSS
     - createWorkshopPageState
     - createWorkshopRefs
+    - dedupPanelHTML
     - diagnosticsHTML
     - extractAvatars
     - getSiteIcon

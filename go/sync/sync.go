@@ -48,18 +48,20 @@ type toggleRenameOp struct {
 }
 
 // SyncToggleStatus 同步启用/禁用状态
-// 持锁分段设计：阶段 1 与阶段 3+4 各为独立持锁段（段内 defer 释放），
-// 中间锁外算哈希。若锁外阶段 panic，不会出现「头部 defer Unlock 对已手动
-// 释放的锁二次 Unlock」而掩盖原错误的场景——每段锁的生命周期由段内 defer 保证。
-// 拆解后各阶段的锁归属不变：阶段 1 的锁在 collectToggleRepoIndex 内自持自放；
+// 锁范围：阶段 1（仓库索引 + 实例目录遍历，纯读）与阶段 2（哈希）均**锁外**执行，
+// 仅阶段 3+4（计划 + rename 操作段）持 InstallLock——与 RelinkDir 的「锁外扫描 + 锁内
+// 仅覆盖操作段」对齐，避免仓库全量扫描（scanner 缓存冷启动时整段走盘，watcher 触发的
+// syncAll 恰是冷启动路径：文件变更后 scanner 缓存刚失效，下一次 toggle 必冷扫）阻塞
+// 所有并发同步/安装/推送。锁外阶段的 TOCTOU 容忍理由见 collectToggleRepoIndex 注释；
+// 回归锁 TestSyncToggleStatus_ScanNotHeldLock 钉住本契约。
 // 阶段 3（planToggleRenames）与阶段 4（applyToggleRenames）由本函数下方同一段
-// Lock/defer Unlock 覆盖，两者之间不存在释放点。
+// Lock/defer Unlock 覆盖，两者之间不存在释放点——计划与执行期间目录结构保持稳定。
 func SyncToggleStatus(instanceCustomDir, filesRoot string, scanFn ScanFunc) (int, int, error) {
 	if scanFn == nil {
 		return 0, 0, fmt.Errorf("scanFn 为空")
 	}
 
-	// 阶段 1（持锁）：构建仓库禁启用索引 + 收集实例目录文件清单。
+	// 阶段 1（锁外，纯读）：构建仓库禁启用索引 + 收集实例目录文件清单。
 	repoHash, repoName, fileInfos, err := collectToggleRepoIndex(filesRoot, instanceCustomDir, scanFn)
 	if err != nil {
 		return 0, 0, err
@@ -72,7 +74,7 @@ func SyncToggleStatus(instanceCustomDir, filesRoot string, scanFn ScanFunc) (int
 	customDirClean := strings.ToLower(filepath.Clean(instanceCustomDir)) + string(filepath.Separator)
 	precomputedHashes := precomputeRelKeyMissHashes(fileInfos, customDirClean, repoName)
 
-	// 重新持锁，执行匹配 + rename（阶段 3+4 必须同段：计划与执行之间不得有并发改名）
+	// 持锁执行匹配 + rename（阶段 3+4 必须同段：计划与执行之间不得有并发改名）
 	installer.InstallLocker.Lock()
 	defer installer.InstallLocker.Unlock()
 	defer InvalidateSyncScanCaches() // 启禁会改实例目录名，清同步扫盘缓存防陈旧
@@ -86,13 +88,19 @@ func SyncToggleStatus(instanceCustomDir, filesRoot string, scanFn ScanFunc) (int
 	return disableCount, enableCount, nil
 }
 
-// collectToggleRepoIndex 是 SyncToggleStatus 阶段 1：在 InstallLock 内构建仓库
-// 禁用状态索引（hash → banned 与 relPath → banned 两路）并收集实例目录待判清单。
-// 锁由本函数自持自放（段内 defer）——调用方不得在此之后再假定锁仍被自己持有。
+// collectToggleRepoIndex 是 SyncToggleStatus 阶段 1：**锁外**构建仓库禁用状态索引
+// （hash → banned 与 relPath → banned 两路）并收集实例目录待判清单。
+// 锁外执行（镜像 RelinkDir 的锁外扫描，见 sync_relink.go|RelinkDir 注释）：本函数四步
+// 全是纯读操作——仓库全量扫描（含 SHA256 哈希）、内存索引构建、禁用载体 Walk、实例目录
+// Walk——持锁却不保护任何写操作。原实现在临界区内跑 scanFn，而 scanFn 在 scanner 缓存
+// 冷启动时整段走盘（watcher 触发 syncAll 恰是冷启动路径：文件变更后 scanner 缓存刚失效，
+// 下一次 toggle 必冷扫），期间会阻塞所有并发同步/安装/推送操作。
+// TOCTOU 容忍：索引快照与执行之间（阶段 2 锁外哈希 + 阶段 3+4 锁内）目录可能被外部
+// 改动，但 planToggleRenames 执行前对目标做 os.Stat 存在性预检、applyToggleRenames 的
+// os.Rename 失败即记入 failures 并随 error 返回——不会静默搬错对象（相对 RelinkDir 的
+// dstSnapshots 身份复验粒度更弱，但 rename 本身原子，同风险模型已被同包接受）。
+// 回归锁 TestSyncToggleStatus_ScanNotHeldLock 钉住「扫描不在锁内」契约。
 func collectToggleRepoIndex(filesRoot, instanceCustomDir string, scanFn ScanFunc) (map[string]bool, map[string]bool, []toggleFileInfo, error) {
-	installer.InstallLocker.Lock()
-	defer installer.InstallLocker.Unlock()
-
 	repoEntries := scanFn(filesRoot)
 	repoHash := make(map[string]bool) // hash → banned
 	repoName := make(map[string]bool) // relPath(去禁用后缀) → banned，用于同名不同文件夹的文件

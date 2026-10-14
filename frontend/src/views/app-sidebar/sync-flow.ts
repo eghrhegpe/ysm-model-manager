@@ -4,6 +4,8 @@
 
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
+import { downloadMissing } from "@/features/sync/sync.ts";
+import { TimeoutError, withTimeout } from "@/utils/base/primitives/async.ts";
 import { initDropdown } from "@/utils/dom/dropdown.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { toast } from "@/utils/dom/toast.ts";
@@ -25,9 +27,12 @@ function checkedSetFor(rtype: string, getCheckedSets: () => Map<string, Set<stri
   return s;
 }
 
-/** 推送等待/兜底超时（陷阱 #3：任何 await 必须有兜底，按钮才不会永久卡死）。
- *  ADR-310 性能修复（2026-10）：批量模式一次事件装多包缺失，可能远超 30s；
- *  上调至 120s，避免大批量时误报「超时」假阴性（done 真实到达即 resolve，超时仅兜底）。 */
+/** 单品推送兜底超时（陷阱 #3：任何 await 必须有兜底，按钮才不会永久卡死）。
+ *  ADR-340 语义重定义：直调下唯一可能的「不收口」是 binding 永久挂起（Go 侧锁/扫描
+ *  卡死）——超时**即终止类型循环**并如实报告（原总线实现超时后续发下一类型，handler
+ *  仍持锁 → 连锁 busy 假跳过，锐评 P1-2 级联；直调 await 天然串行，级联结构性消失，
+ *  真挂起时早停是唯一诚实处置）。晚到的 downloadMissing 结果无人消费（Promise 已
+ *  settle 后二次结算为 no-op），错误经 withTimeout 内 swallowError 兜底。 */
 const SYNC_TIMEOUT_MS = 120_000;
 
 // ---------- bindSelectAll ----------
@@ -166,97 +171,6 @@ function beginSync(
   return selected;
 }
 
-/** 推送 token 单调序号（P1 修复 2026-10 锐评）：原用 `${ins}:${rt}:${Date.now()}`
- *  ——同毫秒并发的两次推送 token 完全相同，bus 回执匹配错位（两个 promise 都认第一
- *  个 done），一个提前 resolve、另一个干等 30s 超时假报「超时」。序号单调递增，
- *  同毫秒也不可能碰撞；前缀保留实例/类型，回执可读、诊断可定位。导出供直测。 */
-let _pushTokenSeq = 0;
-export function nextPushToken(insName: string, rt: string): string {
-  _pushTokenSeq += 1;
-  return `${insName}:${rt}:${_pushTokenSeq}`;
-}
-
-/** 单品推送：等待该 token 的下载完成事件；命中 skipped / 超时分别 reject 带 kind。
- *  instanceNames 非空时一次事件覆盖多包（批量模式，O(类型) 次 RPC 而非 O(包×类型)）。
- *  resolve 携带 handler 回传的文件级计数（锐评 P1-1：done.ok/fail 上抛供 runPush 汇总，
- *  文件级失败不再消失在「推送完成」的成功 toast 里）。 */
-async function pushOne(
-  insName: string,
-  rt: string,
-  instanceNames?: string[],
-): Promise<{ ok: number; fail: number }> {
-  const token = nextPushToken(insName, rt);
-  return new Promise<{ ok: number; fail: number }>((resolve, reject) => {
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    const unsub = bus.on("sync:download:done", (payload) => {
-      if (payload?.token !== token) return;
-      unsub();
-      if (timer) clearTimeout(timer);
-      if (payload.skipped) {
-        // 诊断文案走 i18n（内部错误信息；被日志/面板消费时不注入中文硬编码）
-        reject(kindError(t("sidebar.pushSkippedReason", { ins: insName, rt }), "skipped"));
-      } else {
-        resolve({ ok: payload.ok ?? 0, fail: payload.fail ?? 0 });
-      }
-    });
-    timer = setTimeout(() => {
-      unsub();
-      reject(kindError(t("sidebar.pushTimeoutReason", { ins: insName, rt }), "timeout"));
-    }, SYNC_TIMEOUT_MS);
-    // exactOptionalPropertyTypes：条件字段须按是否存在择一构造，避免 `string | undefined` 落
-    // 到可选属性（会被判为必填 string）。批量模式走 instanceNames，单包兜底走 instanceName。
-    const payload: {
-      instanceName?: string;
-      instanceNames?: string[];
-      rtype: string;
-      token: string;
-    } = instanceNames?.length
-      ? { instanceNames, rtype: rt, token }
-      : { instanceName: insName, rtype: rt, token };
-    bus.emit("sync:download:missing", payload);
-  });
-}
-
-/** 静默宽限期：waitBusQuiet 若在此期间没等到任何非 skipped done，判定通道已空闲 */
-const BUS_QUIET_GRACE_MS = 2_000;
-
-/**
- * 等待当前同步活动归位（最后一次非 skipped done 后 resolve），防后续推送竞态。
- * 2026-10 修复「静默期 30s 干等」：done 事件先于本订阅发出即错过——原实现只剩
- * 30s 超时兜底，一条已死的在途能把整个多包循环卡死半分钟。现改双轨：①收到
- * 非 skipped done 即 resolve（原语义不变）；②宽限期内零 done 判定通道空闲，
- * resolve 放行下一条——真实生产者 sync.ts 对每个 missing 必回 done（含 busy
- * skipped），静默只可能是竞态错过，等待更多静默不会等到更多事件。
- * 导出供直测（store.tabStatus 同款「叶函数导出直测」先例）。
- */
-export async function waitBusQuiet(): Promise<void> {
-  await new Promise<void>((resolve) => {
-    let settled = false;
-    const finish = (): void => {
-      if (settled) return;
-      settled = true;
-      waitUnsub();
-      clearTimeout(graceTimer);
-      resolve();
-    };
-    const waitUnsub = bus.on("sync:download:done", (p) => {
-      if (p?.skipped) return;
-      finish();
-    });
-    const graceTimer = setTimeout(finish, BUS_QUIET_GRACE_MS);
-  });
-}
-
-function kindError(msg: string, kind: "skipped" | "timeout"): Error {
-  const err = new Error(msg) as Error & { kind?: "skipped" | "timeout" };
-  err.kind = kind;
-  return err;
-}
-
-function pushErrorKind(e: unknown): "skipped" | "timeout" | undefined {
-  return (e as Error & { kind?: "skipped" | "timeout" })?.kind;
-}
-
 // ---------- 公共类型 / 工具 ----------
 
 type SyncVerb = "push" | "pull";
@@ -301,11 +215,12 @@ function handleSyncMenuClick(
   }
 }
 
-/** 推送主流程：按类型循环，每类型一次批量事件覆盖所有选中包（instanceNames）。
+/** 推送主流程：按类型循环，每类型一次批量直调覆盖所有选中包（instanceNames）。
  *  原实现逐包×逐类型串行发事件，每事件触发一次全量状态扫描 → O(包×类型) 次 RPC；
- *  现收敛为 O(类型) 次（ADR-310 性能修复 2026-10）。跳过的按类型计数 → 汇总 toast。
- *  锐评 P1-1 止血：done 携带 handler 文件级计数（pushOne resolve），
- *  汇总进本条 toast——部分文件安装失败不再被「推送完成」成功文案掩盖。 */
+ *  收敛为 O(类型) 次（ADR-310 性能修复 2026-10）；总线回执协议随 ADR-340 退役，
+ *  结果 = downloadMissing 的 Promise 返回值（ok/fail 文件级计数、skipped 分类）。
+ *  ⚠️ 超时即早停（ADR-340 重定义，治锐评 P1-2 级联）：binding 挂起是唯一超时成因，
+ *  续发只会让剩余类型全部撞 busy 假跳过——break 终止循环并把超时如实计入。 */
 async function runPush(
   selected: string[],
   types: string[],
@@ -313,6 +228,7 @@ async function runPush(
   busy: SyncBusyFlag,
 ): Promise<void> {
   let skipped = 0;
+  let blocked = 0;
   let timedOut = 0;
   let installOk = 0;
   let installFail = 0;
@@ -325,23 +241,37 @@ async function runPush(
         n: types.length,
       })}`;
       try {
-        // 一次事件推所有选中包（instanceNames 批量模式）；token 仍单调唯一用于回执匹配
-        const outcome = await pushOne(selected.join("+"), rt, selected);
+        // 一次直调推所有选中包（instanceNames 批量模式，handler 侧静默不弹结果 toast）
+        const outcome = await withTimeout(
+          downloadMissing({ instanceNames: selected, rtype: rt }),
+          SYNC_TIMEOUT_MS,
+          `推送 ${rt}`,
+        );
         installOk += outcome.ok;
         installFail += outcome.fail;
+        if (outcome.skipped) {
+          // 归因分流：busy = 他页同时在推（直调串行下自撞锁不再可能，仅剩跨页防御位）；
+          // config/error 各自有专门 toast（handler 已弹），汇总只如实计「未完成批次」，
+          // 不并进「被跳过（上一批同步未结束）」的错误归因文案
+          if (outcome.skipReason === "busy") skipped++;
+          else blocked++;
+        }
       } catch (e) {
-        const kind = pushErrorKind(e);
-        if (kind === "skipped") skipped++;
-        else timedOut++;
-        if (kind !== "skipped") await waitBusQuiet();
+        if (e instanceof TimeoutError) {
+          timedOut++;
+          break; // 早停：真实计数保留，未跑类型既非成功也非跳过
+        }
+        // downloadMissing 恒 settle 不 reject；走到这里 = 调用编排自身异常
+        throw e;
       }
     }
-    if (skipped > 0 || timedOut > 0 || installFail > 0) {
+    if (skipped > 0 || blocked > 0 || timedOut > 0 || installFail > 0) {
       const parts: string[] = [];
       if (installFail > 0)
         parts.push(t("sidebar.pushInstallFail", { fail: installFail, ok: installOk }));
       if (skipped > 0) parts.push(t("sidebar.packSkipped", { n: skipped }));
-      if (timedOut > 0) parts.push(t("sidebar.packTimedOut", { n: timedOut }));
+      if (blocked > 0) parts.push(t("sidebar.packBlocked", { n: blocked }));
+      if (timedOut > 0) parts.push(t("sidebar.packTimedOutStopped", { n: timedOut }));
       toast(t("sidebar.pushDone", { detail: parts.join("，") }), TOAST_MS.normal, "warn");
     } else {
       toast(t("sidebar.pushDoneAll", { n: selected.length }), TOAST_MS.info, "success");

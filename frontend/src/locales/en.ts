@@ -821,15 +821,13 @@ export const en: Record<string, string> = {
   "sidebar.pullDone": "Pull complete: {pulled} files, {failed} failed",
   "sidebar.pullNothing": "📭 Nothing to pull (no extra resources in instances)",
   "sidebar.pullFailed": "Pull failed: {msg}",
-  "sidebar.packSkipped": "{n} type batches skipped (previous batch still syncing)",
-  "sidebar.packTimedOut": "{n} type batches timed out",
+  "sidebar.packSkipped": "{n} type batches skipped (another sync is in progress elsewhere)",
+  "sidebar.packBlocked": "{n} type batches did not complete",
+  "sidebar.packTimedOutStopped": "{n} type batches timed out; remaining batches stopped",
   "sidebar.pushInstallFail": "{fail} files failed to install ({ok} succeeded)",
   // P1-3: push/pull loop progress (shown on the button; large batches no longer wait on a bare spinner)
   "sidebar.pushProgress": "Pushing {i}/{n}…",
   "sidebar.pullProgress": "Pulling {i}/{n}…",
-  // sidebar push diagnostics (internal error messages in sync-flow.ts; i18n'd so future log/panel consumers don't get hardcoded Chinese)
-  "sidebar.pushSkippedReason": "Push skipped (a sync is already in progress): {ins}/{rt}",
-  "sidebar.pushTimeoutReason": "Push timed out: {ins}/{rt}",
 
   // ── Resource Manager ──
   "resource.loadFailed": "Resource load failed",

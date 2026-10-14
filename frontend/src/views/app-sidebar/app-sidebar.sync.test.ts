@@ -1,6 +1,10 @@
 // ===== app-sidebar 交互补充测试（sync/index 低覆盖分支）=====
-// 覆盖：全选/恢复勾选、推送（无勾选/成功/skipped）、
+// 覆盖：全选/恢复勾选、推送（无勾选/成功/skipped/计数汇总）、
 //       拉取（成功/无多余/失败）、_reload 失败分支
+// ADR-340 去总线化（2026-10-14）：推送段原「bus 往返夹具」（waitFor 循环补 done、
+// 错 token 负例）随协议退役，改为 mock downloadMissing 直调断言——调用次数/载荷/
+// 返回值汇总直接落在函数边界上，守护面更窄（原「错误 token 不解锁」用例守护的是
+// 回执匹配补丁，补丁退役即无用武之地，已删）。
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 vi.mock("../../../bindings/ysm-model-manager/internal/app/app.js", () => ({
@@ -17,7 +21,14 @@ vi.mock("../../../bindings/ysm-model-manager/internal/app/app.js", () => ({
 // registry.ts 已删（架构锐评 P1-2 修正版）：loader 假实现注入改标准 vi.mock
 vi.mock("./loader.ts", () => ({ loadInstances: vi.fn() }));
 
+// 直调入口 mock：推送链的唯一出口（sync-flow.runPush → downloadMissing）
+vi.mock("@/features/sync/sync.ts", () => ({
+  downloadMissing: vi.fn().mockResolvedValue({ ok: 0, fail: 0, skipped: false }),
+  registerSync: vi.fn(),
+}));
+
 import { bus } from "@/bus";
+import { downloadMissing } from "@/features/sync/sync.ts";
 import { loadInstances } from "./loader.ts";
 import "./index.ts"; // customElements.define("app-sidebar")
 import { waitFor, sleep } from "@/test-utils/wait.ts";
@@ -27,6 +38,8 @@ import type { SidebarInstance } from "./data.ts";
 
 /** loader mock 句柄（各用例 mockImplementation 设假数据，beforeEach mockReset 防泄漏） */
 const loadInstancesMock = vi.mocked(loadInstances);
+/** downloadMissing mock 句柄（推送用例设返回值，beforeEach mockReset 防泄漏） */
+const downloadMissingMock = vi.mocked(downloadMissing);
 
 function makeInstances(): SidebarInstance[] {
   return [
@@ -49,26 +62,23 @@ function makeInstances(): SidebarInstance[] {
 const toasts: Array<{ msg: string; type: string }> = [];
 const statsRefreshed: Array<boolean> = [];
 const treeReloads: Array<boolean> = [];
-const missingPayloads: Array<{ token?: string }> = [];
 const offs: Array<() => void> = [];
 
 beforeEach(async () => {
   loadInstancesMock.mockReset();
+  // downloadMissing 是 vi.mock 工厂里的共享 fn：mockReset 清实现，须重设默认成功值，
+  // 否则未显式打桩的用例拿到 undefined → runPush 读 outcome.ok 崩
+  downloadMissingMock.mockReset();
+  downloadMissingMock.mockResolvedValue({ ok: 0, fail: 0, skipped: false });
   document.body.innerHTML = "";
   toasts.length = 0;
   statsRefreshed.length = 0;
   treeReloads.length = 0;
-  missingPayloads.length = 0;
   offs.forEach((fn) => fn());
   offs.length = 0;
   offs.push(bus.on("toast:show", (p) => toasts.push(p as { msg: string; type: string })));
   offs.push(bus.on("stats:refresh", () => statsRefreshed.push(true)));
   offs.push(bus.on("tree:reload", () => treeReloads.push(true)));
-  offs.push(
-    bus.on("sync:download:missing", (p) => {
-      missingPayloads.push(p as { token?: string });
-    }),
-  );
   // vi.clearAllMocks 不清 mock 实现：显式重置拉取 mock，防跨测试泄漏
   const { PullResourceFromInstance } = await import(
     "../../../bindings/ysm-model-manager/internal/app/app.js"
@@ -185,56 +195,48 @@ describe("app-sidebar — 全选/恢复勾选", () => {
   });
 });
 
-describe("app-sidebar — 推送所选", () => {
-  it("未勾选 → info toast 提示先勾选", async () => {
-    const el = await mountSidebar();
+describe("app-sidebar — 推送所选（ADR-340 直调）", () => {
+  /** 点开推送菜单并选「全部类型」 */
+  function clickPushAll(el: HTMLElement): void {
     const pushBtn = $<HTMLButtonElement>(el, ".sidebar-push-selected");
     pushBtn.click();
     const menu = $<HTMLElement>(el, "#sidebar-push-menu");
-    menu.querySelector(".dd-item")!.dispatchEvent(
-      new MouseEvent("click", { bubbles: true }),
-    );
+    menu
+      .querySelector('.dd-item[data-sync-type="all"]')!
+      .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  }
+
+  it("未勾选 → info toast 提示先勾选", async () => {
+    const el = await mountSidebar();
+    clickPushAll(el);
 
     await waitFor(() => toasts.length > 0);
     expect(toasts.some((t) => t.msg.includes("请先勾选要推送的整合包"))).toBe(true);
+    expect(downloadMissingMock).not.toHaveBeenCalled();
   });
 
-  it("推送成功 → emit missing + done 配对 → 成功 toast + 按钮恢复", async () => {
+  it("推送成功 → downloadMissing 直调完成 → 成功 toast + 按钮恢复", async () => {
     const el = await mountSidebar();
     checkFirst(el);
-
     const pushBtn = $<HTMLButtonElement>(el, ".sidebar-push-selected");
-    pushBtn.click();
-    const menu = $<HTMLElement>(el, "#sidebar-push-menu");
-    menu.querySelector('.dd-item[data-sync-type="all"]')!.dispatchEvent(
-      new MouseEvent("click", { bubbles: true }),
-    );
-    // P1 修复（审核）：组件改为逐类型串行 emit+await（原并发 emit 全部类型只推第 1 类），
-    // 测试相应改为 waitFor 循环响应式补 done——每轮把已收集的 token 全部应答，
-    // 组件串行推进到全部类型完成，直至成功 toast 出现
-    await waitFor(() => {
-      for (const p of missingPayloads) {
-        bus.emit("sync:download:done", {
-          ...(p.token !== undefined ? { token: p.token } : {}),
-          instanceName: "insA",
-          // 不再带 rtype：BusEvents["sync:download:done"] 无该字段（TS2353），
-          // 真实生产者 sync.ts 也从不发，组件 handler 只匹配 token——删掉恢复类型门槛
-        });
-      }
-      return toasts.some((t) => t.msg.includes("推送完成"));
-    });
-    // 成功 toast 不带 type（默认 success），用 `!t.type || success` 精确锁定
-    expect(toasts.some((t) => (!t.type || t.type === "success") && t.msg.includes("推送完成：1 个整合包"))).toBe(true);
+
+    clickPushAll(el);
+    await waitFor(() => toasts.some((t) => t.msg.includes("推送完成")));
+
+    expect(
+      toasts.some((t) => (!t.type || t.type === "success") && t.msg.includes("推送完成：1 个整合包")),
+    ).toBe(true);
     expect(pushBtn.disabled).toBe(false);
     // ▾ 指示符已移交 dropdownBaseCSS 的 .dd-wrap > button::after 单源生成（ADR-238），
     // 不再进入按钮文本（jsdom 不渲染伪元素，故此处断言无箭头）
     expect(pushBtn.textContent).toBe(" 推送所选");
   });
 
-  // ADR-310 性能回归锁（2026-10）：批量推送必须收敛为「每类型一次事件、带 instanceNames
-  // 多包名单」，而非「逐包×逐类型」N×T 个事件。3 包 + 全部类型 → 只发 ALL_RESOURCE_TYPES.length
-  // 个事件，每个载荷含全部 3 个包名；否则退化会发 3×N 个事件触发 N×T 次全量状态扫描。
-  it("批量推送 → 每类型一个事件、带 instanceNames 全包名单（O(类型) 而非 O(包×类型)）", async () => {
+  // ADR-310 性能不变量（ADR-340 后落点从「事件载荷」迁到「直调入参」）：批量推送必须
+  // 收敛为「每类型一次直调、带 instanceNames 多包名单」，而非「逐包×逐类型」N×T 次。
+  // 3 包 + 全部类型 → 恰 ALL_RESOURCE_TYPES.length 次调用，每次带全部 3 包名单；
+  // 否则退化会发 3×N 次全量状态扫描。
+  it("批量推送 → 每类型一次直调、带 instanceNames 全包名单（O(类型) 而非 O(包×类型)）", async () => {
     const packs = ["insA", "insB", "insC"] as const;
     const el = await mountSidebar(
       packs.map((n) => ({
@@ -256,112 +258,70 @@ describe("app-sidebar — 推送所选", () => {
     cb.dispatchEvent(new Event("change", { bubbles: true }));
 
     const pushBtn = $<HTMLButtonElement>(el, ".sidebar-push-selected");
-    pushBtn.click();
-    const menu = $<HTMLElement>(el, "#sidebar-push-menu");
-    menu.querySelector('.dd-item[data-sync-type="all"]')!.dispatchEvent(
-      new MouseEvent("click", { bubbles: true }),
-    );
+    clickPushAll(el);
+    await waitFor(() => pushBtn.disabled === false);
 
-    // 串行逐类型推进：每收到一个 missing 即补 done，组件发下一类型，直至按钮恢复
-    await waitFor(() => {
-      for (const p of missingPayloads) {
-        bus.emit("sync:download:done", p.token !== undefined ? { token: p.token } : {});
-      }
-      return pushBtn.disabled === false;
-    });
-
-    // 不变量：事件数 = 类型数（每类型一次批量事件），且每个载荷携带全部 3 包名单
-    expect(missingPayloads).toHaveLength(ALL_RESOURCE_TYPES.length);
-    for (const p of missingPayloads) {
-      const names = (p as { instanceNames?: string[] }).instanceNames;
-      expect(names).toBeDefined();
-      expect([...names!].sort()).toEqual([...packs].sort());
-      expect((p as { instanceName?: string }).instanceName).toBeUndefined();
+    // 不变量：调用数 = 类型数（每类型一次批量直调），且每次携带全部 3 包名单
+    expect(downloadMissingMock).toHaveBeenCalledTimes(ALL_RESOURCE_TYPES.length);
+    for (const call of downloadMissingMock.mock.calls) {
+      const p = call[0] as { instanceName?: string; instanceNames?: string[] };
+      expect([...(p.instanceNames ?? [])].sort()).toEqual([...packs].sort());
+      expect(p.instanceName).toBeUndefined();
     }
   });
 
-  it("推送 skipped → warn toast（被吞请求不误报成功）", async () => {
+  it("推送被跳过（他页同步占用）→ warn toast（不误报成功）", async () => {
+    downloadMissingMock.mockResolvedValue({
+      ok: 0,
+      fail: 0,
+      skipped: true,
+      skipReason: "busy",
+    });
     const el = await mountSidebar();
     checkFirst(el);
-
     const pushBtn = $<HTMLButtonElement>(el, ".sidebar-push-selected");
-    pushBtn.click();
-    const menu = $<HTMLElement>(el, "#sidebar-push-menu");
-    menu.querySelector('.dd-item[data-sync-type="all"]')!.dispatchEvent(
-      new MouseEvent("click", { bubbles: true }),
-    );
-    // 同上：串行 emit 下 waitFor 循环响应式补 skipped done
-    await waitFor(() => {
-      for (const p of missingPayloads) {
-        bus.emit("sync:download:done", { ...(p.token !== undefined ? { token: p.token } : {}), skipped: true });
-      }
-      return toasts.some((t) => t.type === "warn" && t.msg.includes("推送完成"));
-    });
+
+    clickPushAll(el);
+    await waitFor(() => toasts.some((t) => t.type === "warn" && t.msg.includes("推送完成")));
+
     // P3 修复（审核发现）：skipped 与超时分别计数——文案为「被跳过」而非「超时」
     expect(toasts.some((t) => t.msg.includes("被跳过"))).toBe(true);
     expect(pushBtn.disabled).toBe(false);
-    // ▾ 指示符已移交 dropdownBaseCSS 的 .dd-wrap > button::after 单源生成（ADR-238），
-    // 不再进入按钮文本（jsdom 不渲染伪元素，故此处断言无箭头）
     expect(pushBtn.textContent).toBe(" 推送所选");
   });
 
-  it("错误 token 的 done 不解锁（P2 修复防线负向验证）", async () => {
+  it("推送目录未配置 → warn toast「未完成」归因（不误并入被跳过文案）", async () => {
+    downloadMissingMock.mockResolvedValue({
+      ok: 0,
+      fail: 0,
+      skipped: true,
+      skipReason: "config",
+    });
     const el = await mountSidebar();
     checkFirst(el);
 
-    const pushBtn = $<HTMLButtonElement>(el, ".sidebar-push-selected");
-    pushBtn.click();
-    const menu = $<HTMLElement>(el, "#sidebar-push-menu");
-    menu.querySelector('.dd-item[data-sync-type="all"]')!.dispatchEvent(
-      new MouseEvent("click", { bubbles: true }),
-    );
-    await waitFor(() => missingPayloads.length > 0);
+    clickPushAll(el);
+    await waitFor(() => toasts.some((t) => t.type === "warn" && t.msg.includes("推送完成")));
 
-    // 发错误 token + 匹配 instanceName——旧实现 `|| payload?.instanceName === insName`
-    // 会误判成功（P1 bug 回退防线）；负向验证：按钮保持锁定、无完成 toast
-    bus.emit("sync:download:done", { token: "WRONG-TOKEN", instanceName: "insA" });
-    await new Promise((r) => setTimeout(r, 50));
-    expect(pushBtn.disabled).toBe(true);
-    expect(toasts.some((t) => t.msg.includes("推送完成"))).toBe(false);
-
-    // 清理：waitFor 循环补发正确 token 让串行 promise 全部 settle，避免挂起 30s timer
-    await waitFor(() => {
-      for (const p of missingPayloads) {
-        bus.emit("sync:download:done", p.token !== undefined ? { token: p.token } : {});
-      }
-      return pushBtn.disabled === false;
-    });
+    expect(toasts.some((t) => t.msg.includes("未完成"))).toBe(true);
+    expect(toasts.some((t) => t.msg.includes("被跳过"))).toBe(false);
   });
 
-  // 锐评 P1-1 止血回归锁（2026-10-14）：done 回执带 handler 文件级失败计数（fail>0）时，
+  // 锐评 P1-1 回归锁（91e18f5ed 止血 → ADR-340 直调化）：文件级失败计数（fail>0）时
   // runPush 汇总必须进 warn toast「N 个文件安装失败」，不再报纯成功「推送完成：n 个整合包」。
-  // 把 pushOne 的 outcome 累加或汇总分支删掉，本用例必须红（原实现文件级失败对侧栏不可见）。
-  it("done 带 fail 计数 → 汇总 warn toast 点明安装失败（非纯成功文案）", async () => {
+  it("downloadMissing 返回 fail 计数 → 汇总 warn toast 点明安装失败（非纯成功文案）", async () => {
+    downloadMissingMock.mockResolvedValue({ ok: 40, fail: 3, skipped: false });
     const el = await mountSidebar();
     checkFirst(el);
 
-    const pushBtn = $<HTMLButtonElement>(el, ".sidebar-push-selected");
-    pushBtn.click();
-    const menu = $<HTMLElement>(el, "#sidebar-push-menu");
-    menu.querySelector('.dd-item[data-sync-type="all"]')!.dispatchEvent(
-      new MouseEvent("click", { bubbles: true }),
-    );
-    await waitFor(() => {
-      for (const p of missingPayloads) {
-        bus.emit("sync:download:done", {
-          ...(p.token !== undefined ? { token: p.token } : {}),
-          ok: 40,
-          fail: 3,
-        });
-      }
-      return toasts.some((t) => t.type === "warn" && t.msg.includes("安装失败"));
-    });
-    // 断言不带具体数字：每类型 done 均带 fail=3，ALL_RESOURCE_TYPES 轮循环后
-    // 累加值 = 3×类型数（随注册表演化），「warn + 出现安装失败字样」才是恒定判据
-    expect(toasts.some((t) => t.type === "warn" && t.msg.includes("安装失败"))).toBe(true);
+    clickPushAll(el);
+    await waitFor(() => toasts.some((t) => t.type === "warn" && t.msg.includes("安装失败")));
+
+    // 断言不带具体数字：每类型均带 fail=3，ALL_RESOURCE_TYPES 轮循环后累加值
+    // = 3×类型数（随注册表演化），「warn + 出现安装失败字样」才是恒定判据
     // 负向：不得再出现纯成功文案「推送完成：n 个整合包」
     expect(toasts.some((t) => t.msg.includes("个整合包"))).toBe(false);
-    expect(pushBtn.disabled).toBe(false);
+    expect($<HTMLButtonElement>(el, ".sidebar-push-selected").disabled).toBe(false);
     unmountElement(el);
   });
 });

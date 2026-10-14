@@ -68,19 +68,19 @@ status: active
 ## 核心职责
 
 - **注册编排（ADR-188）**：app-content `index.ts` 直接注册 4 组（registerContextMenus/registerSync/registerInstanceOps/registerAndroidEvents），unsub 统一收 `globalUnsubs`；core 不再设壳层；`registerResourceManagerGlobal` 由 app-content 单独编排（index.ts registerResourceManagerGlobal 调用点，文件头注释自述「features/views 层注册由 app-content 编排」）——功能单点注册不变量仍成立（app-content 单点注册/单点释放）
-- **`sync:download:missing` busy 命中必须回 `done` 带 `skipped: true`**（P1 修复：原 `_downloadBusy` 命中直接 return 不发 done，app-sidebar 推送多实例/全类型时后续请求 30s 超时或经 instanceName fallback 误判成功）
+- **推送链已去总线化（ADR-340，2026-10-14）**：`sync:download:missing`/`sync:download:done` 两事件退役，`features/sync|downloadMissing(payload): Promise<DownloadOutcome>` 是导入缺失唯一入口——原总线回执协议四件套（token 单调序号 / done(skipped) 回执 / waitBusQuiet 静默宽限 / 订阅竞态猜测）随实现删除，busy 命中由返回值 `{skipped:true, skipReason:"busy"}` 表达（`withLock` 模块级锁挡跨页并发写）
 - `import-dnd.ts`（bindTreeDnD，ADR-060）：**document 级监听**（WebView2 shadow drop 限制的同款绕道，`dragover`/`dragleave`/`drop`/`dragend` 四件套注册在 `document`，用 `composedPath` 判定是否命中容器，cleanup 成对移除）；`<app-tree>` 的 `connectedCallback` 对 `#tree` 容器调用 `bindTreeDnD(treeEl)`，监听并返回 cleanup；`dragover` 命中 Files 时显示 `#tree-drop-hint`（`.tree-drop-hint`）显式提示 + **`#tree` 加 `.droppable` 可放置态**（2026-10-13 锐评：accent 虚线 outline + 轻微内发光，给「松手落进哪里」的跟随信号；**摘除时机单点 = `hideHint()`**——dragleave/dragend/drop 三处收口共用，类切换若独立于 hideHint 必复现 2026-09 收债的提示滞留债），drop/dragleave 隐藏；dot 呼吸动画走 `views/css/keyframes.ts|PULSE_DOT`（shadow 本地注入，no-animations 桥自动关停）；drop 经 `features/dnd-collector.ts` 的 `collectFiles` 递归收集文件夹（`entry.file` Promise 化，深度上限 10；readEntries 带错误回调 + 3s 超时兜底，防 WebView2 目录读取挂起 onDrop；不支持 `webkitGetAsEntry` 时回退 `getAsFile`），单个文件 ≤100MB；收集到的文件经 `import-executor` 全局执行器（`directImport`）入仓，完成后广播 `import:history-changed` 驱动导入页刷新列表（致命陷阱 #10 的解法）。⚠️ **document 监听意味着「树内移动」与「拖拽导入」在 document 层并存**，两侧须共用 `move-dnd.ts|isTreeMoveDrag` 单一事实源分流（见 [app_tree](./app-tree.md) P0-1）
-- `sync.ts`（registerSync）：`sync:download:missing` — 按 `GetResourceInstanceStatus` 的 Missing 列表逐文件 `InstallModelTo`/`InstallResourceToInstance`，完成后 `InvalidateScanCache`，`finally` 必发 `sync:download:done`（带 token）；`tree:reload` 仅在实际完成安装时广播（P2 审核修复：配置缺失短路无写操作不触发全树重扫）；**ADR-310 后该清单语义不变**（仍是仓库侧文件级绝对路径、恒不含目录；侧栏徽章数改取 `MissingCount` 单元计数，两者粒度不同且已在 go-instance 卡钉死）；**第二路 `MissingDirs`**（夹内无可逐文件安装的受支持文件）改调 folder-aware 的 `PushSingleResourceToInstance`，成功/失败同样计入 `totalOk/totalFail`——两路合起来保证每个待推送单元都有安装动作；`sync:toggle:status` — 遍历整合包 `SyncModelToggleStatus` 同步启用/禁用并写 `AddImportLog`，`finally` 发 `tree:reload`（致命陷阱 #3 的解法；`_toggleBusy` 并发守卫防连点竞态）
+- `sync.ts`：`downloadMissing`（ADR-340 直调导出）— 按 `GetResourceInstanceStatus` 的 Missing 列表逐文件 `InstallModelTo`/`InstallResourceToInstance`，完成后 `InvalidateScanCache`，恒 settle 返回 `{ok, fail, skipped, skipReason}`；`tree:reload` 仅在实际完成安装时广播（P2 审核修复：配置缺失短路无写操作不触发全树重扫）；**ADR-310 后清单语义不变**（仍是仓库侧文件级绝对路径、恒不含目录；侧栏徽章数改取 `MissingCount` 单元计数）；**第二路 `MissingDirs`**（夹内无可逐文件安装的受支持文件）改调 folder-aware 的 `PushSingleResourceToInstance`，成功/失败同样计入 `ok/fail`——两路合起来保证每个待推送单元都有安装动作；批量模式（instanceNames）静默不弹结果 toast（反馈权归发起方汇总一条，锐评 P2-1）。`registerSync` 现仅注册 `sync:toggle:status` — 遍历整合包 `SyncModelToggleStatus` 同步启用/禁用并写 `AddImportLog`，`finally` 发 `tree:reload`（致命陷阱 #3 的解法；`_toggleBusy` 并发守卫防连点竞态）
 - `instance-ops.ts`（registerInstanceOps）：`instance:export-list` — `GetSubDirMap` + `ListFileNames` 汇总清单写剪贴板；`instance:clear` — `CountInstanceResources` 统计后 `modalConfirm` 二次确认，`ClearInstanceResources` 执行（走回收站可恢复）
 - `require-mcroot.ts`（`requireMcRoot()`）：读取游戏目录（`LoadAppConfig` 的 mcRoot），未配置时发 warn toast 并返回 null（配置守卫，去重 D-1）
 - `error-diary.ts`（`registerErrorDiary()` + `pushToDiary`）：`toast:show` 的 error/warn → `AddOpLog` 落日记；`window.onerror`/`unhandledrejection` 由 `utils/dom/global-error-listeners.ts` 经 `pushToDiary` 收口（core 不摸 window，ADR-189 D4）；注册在 app-modules 启动期，不属于 app-content 编排
 
 ## 对外 API / 入口
 
-- 导出：`registerSync(unsubs)`、`registerInstanceOps(unsubs)`、`registerAndroidEvents(unsubs)`、`registerContextMenus(unsubs)`；调用方均为 app-content `index.ts`（ADR-188 后无 registerGlobalHandlers 聚合壳）
+- 导出：`downloadMissing(payload): Promise<DownloadOutcome>`（ADR-340 直调唯一入口）、`registerSync(unsubs)`、`registerInstanceOps(unsubs)`、`registerAndroidEvents(unsubs)`、`registerContextMenus(unsubs)`；`registerSync` 调用方为 app-content `index.ts`（ADR-188 后无 registerGlobalHandlers 聚合壳）
 - DnD 导出：`features/import-dnd.ts` 的 `bindTreeDnD(container): () => void`，由 `<app-tree>` 内部绑定
-- 监听 bus：`sync:download:missing`、`sync:toggle:status`、`instance:export-list`、`instance:clear`
-- 派发 bus：`toast:show`、`stats:refresh`、`tree:reload`、`sync:download:done`
+- 监听 bus：`sync:toggle:status`、`instance:export-list`、`instance:clear`
+- 派发 bus：`toast:show`、`stats:refresh`、`tree:reload`
 - DOM 监听：仓库页 DnD 为 `document` 上的 `dragover`/`dragleave`/`drop`/`dragend`（`bindTreeDnD` 内注册，cleanup 配对完整），用 `composedPath` 判定命中容器；**与树内移动共用 document 层，必须 `isTreeMoveDrag` 分流**（P0-1）
 - getApp()/binding 调用：`ImportModelFile`（经 import-executor 的 directImport 间接调用）、`LoadAppConfig`、`ListVersionInstances`、`GetResourceInstanceStatus`、`InstallModelTo`、`InstallResourceToInstance`、`GetRepoRoot`、`InvalidateScanCache`、`SyncModelToggleStatus`、`AddImportLog`、`ListFileNames`、`GetSubDirMap`、`CountInstanceResources`、`ClearInstanceResources`
 
@@ -94,7 +94,7 @@ status: active
 ## 不变量
 
 - 全局 handler 只能在 app-content 单点编排注册一次（ADR-188：core 无壳层，app-content 直接调各 register*）；features/views 层事件（如仓库页 DnD）按 ADR-060 在组件内绑定，必须以 cleanup 函数交还清理权，禁止再注册 document 级全局 DnD/遮罩（致命陷阱 #2）
-- `sync:download:missing` 的完成事件必须放 `finally`（含 token），保证按钮方无论成败都能解锁（致命陷阱 #3）
+- ~~`sync:download:missing` 的完成事件必须放 `finally`（含 token）~~ 已由 **ADR-340 结构性消解**：直调 `await` 天然「无论成败都有结果」（恒 settle），按钮解锁不再依赖事件回执——致命陷阱 #3（忘发 done 永久卡死）从「纪律要求」降级为「不可能」
 - DnD 收集必须走 `webkitGetAsEntry` 并在不支持时回退 `getAsFile`；`entry.file` 回调必须 Promise 化（致命陷阱 #10）
 - DnD 提示显隐由 `bindTreeDnD` 的 `dragover`/`dragleave`/`drop` 驱动：`dragover` 命中 Files 时显示 `#tree-drop-hint`，`drop`/真正离开容器时隐藏；不再依赖 `dragDepth` 深度计数器或 `#global-drop-overlay`（ADR-060）
 - **类型安全事件处理器模式**（审计发现）：存储 `EventListener` 时使用具体类型（`EventListener`）而非 `unknown as () => void`。`removeEventListener` 要求传入的函数与 `addEventListener` 时传入的函数是**同一个引用**，类型转换会破坏引用相等性导致无法移除（P3）。`error-diary.ts` 已修复：`_unsubError`/`_unsubRejection` 改为 `EventListener` 类型。

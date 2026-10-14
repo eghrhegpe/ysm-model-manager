@@ -93,12 +93,6 @@
     "frontend/src/views/app-tree/events.ts",
     "frontend/src/views/app-tree/index.ts"
   ],
-  "sync:download:done": [
-    "frontend/src/features/sync/sync.ts"
-  ],
-  "sync:download:missing": [
-    "frontend/src/views/app-sidebar/sync-flow.ts"
-  ],
   "sync:toggle:status": [
     "frontend/src/views/app-tree/bus-handlers.ts",
     "frontend/src/views/app-tree/events.ts",

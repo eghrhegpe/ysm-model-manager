@@ -658,7 +658,7 @@ disconnectedCallback() {
 |------|------|------|--------------------|----------------------------|
 | `<app-nav>` | `views/app-nav/index.ts` | 主导航 + 主题切换 | 无 | 订阅 `nav:changed`；发射 `nav:change` |
 | `<app-content>` | `views/app-content/index.ts` | 主内容编排器 | 无 | 订阅 `nav:change`/`repo:*`/`package:selected`；发射 `nav:changed`/`repo:rtype-changed`/`toast:show` |
-| `<app-sidebar>` | `views/app-sidebar/index.ts` | 实例整合包侧栏 | `rtype` | 订阅 `stats:refresh`/`repo:rtype-changed`；发射 `sync:download:missing`/`toast:show`/`tree:reload` |
+| `<app-sidebar>` | `views/app-sidebar/index.ts` | 实例整合包侧栏 | `rtype` | 订阅 `stats:refresh`/`repo:rtype-changed`；发射 `toast:show`/`tree:reload`（推送改 `downloadMissing` 直调，ADR-340） |
 | `<app-tree>` | `views/app-tree/index.ts` | 资源/文件树 | 无（`root` 命令式读） | 订阅 `filter:results`/`tree:set-search`/`bus-handlers` 多事件；发射 `model:select`/`ctx:show`/`stats:refresh` |
 | `<app-preview>` | `views/app-preview/index.ts` | 模型/资源预览详情 | 无 | 仅订阅 `model:select` |
 | `<app-sync-manager>` | `views/app-sync-manager/index.ts` | 单实例同步管理 | `instance`,`default-type` | 订阅 `stats:refresh`；发射 `repo:rtype-changed`/`toast:show` |
@@ -693,9 +693,9 @@ disconnectedCallback() {
 - **公共属性**：`rtype`（反射属性）。内部 `_instances`/`_unsubs`/`_cardCleanup`。
 - **公共方法**：无对外。
 - **bus**：
-  - 订阅 `stats:refresh`（:55，防抖重载）、`repo:rtype-changed`（:63）、`sync:download:done`（:181）。
-  - 发射 `sync:download:missing`（:192，`{instanceName,rtype,token}`）、`toast:show`（多处）、`stats:refresh`（:244）、`tree:reload`（:245）。
-  - 辅助模块 `events.ts` 发射 `package:selected`；`loader.ts` 发射 `loading:start`/`loading:end`；`sync-flow.ts` 发射 `toast:show`/`stats:refresh`/`sync:download:missing`。
+  - 订阅 `stats:refresh`（防抖重载）、`repo:rtype-changed`（原订阅 `sync:download:done` 已随 ADR-340 退役——推送改 `features/sync|downloadMissing` 直调 await）。
+  - 发射 `toast:show`、`stats:refresh`、`tree:reload`（原发射 `sync:download:missing` 已随 ADR-340 退役）。
+  - 辅助模块 `events.ts` 发射 `package:selected`；`sync-flow.ts` 发射 `toast:show`/`stats:refresh`。
 - **DOM 事件**：无。**插槽/部件**：无。
 
 ### 15.4 `<app-tree>`
@@ -769,8 +769,6 @@ disconnectedCallback() {
 | `repo:rtype-changed` | `string` | 仓库/同步 |
 | `repo:search-creator` | `string` | 仓库/同步 |
 | `sync:toggle:status` | `void` | 仓库/同步 |
-| `sync:download:missing` | `{instanceName?:string; rtype?:string; token?:string}` | 仓库/同步 |
-| `sync:download:done` | `{token?:string; instanceName?:string}` | 仓库/同步 |
 | `instance:export-list` | `{name:string; rtype?:string}` | 实例操作 |
 | `instance:clear` | `{name:string; rtype?:string}` | 实例操作 |
 | `instance:install` | `{name:string; rtype?:string}` | 实例操作 |
@@ -802,7 +800,7 @@ disconnectedCallback() {
 
 - **页面切换**：`<app-nav>` `bus.emit("nav:change")` → `<app-content>` 订阅 → `bus.emit("nav:changed")` → `page-store`/`app-nav` 同步 + 重渲染。
 - **模型选中预览**：`<app-tree>` `bus.emit("model:select",{path})` → `<app-preview>` 订阅渲染详情。
-- **同步缺失文件**：`<app-sidebar>` `bus.emit("sync:download:missing")` → `handler-sync` 处理 → `bus.emit("sync:download:done")` → `<app-sidebar>` 局部刷新。
+- **同步缺失文件**：`<app-sidebar>` `await downloadMissing({instanceNames, rtype})`（`features/sync` 直调，ADR-340 去总线化——原 `sync:download:missing`/`sync:download:done` 事件往返已退役）→ 安装完成返回值 `{ok, fail, skipped}` → `<app-sidebar>` 汇总 toast + `stats:refresh`/`tree:reload` 局部刷新。
 - **资源类型变更**：settings 改 `config` → `bus.emit("config:resource-types-changed")`（`app-resource-manager` 已删除，当前无订阅方——该事件保留以备未来组件消费）。
 
 ---

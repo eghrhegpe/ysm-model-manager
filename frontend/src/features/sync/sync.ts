@@ -14,30 +14,38 @@ import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { syncGetApp } from "./sync-deps.ts";
 
-/** sync:download:missing 事件载荷（镜像 bus.ts BusEvents 契约） */
-interface SyncDownloadPayload {
+/** downloadMissing 入参（ADR-340 去总线化：原 bus 载荷直调化，token 随回执协议退役） */
+export interface SyncDownloadPayload {
   instanceName?: string;
   instanceNames?: string[];
   rtype: string;
-  token?: string;
 }
 
-/** runDownloadMissing 结果：null = 配置缺失/异常（未做或未完成安装）；
- *  ok/fail = 文件级安装计数（锐评 P1-1：随 done 回执上抛给发起方汇总）。 */
-interface DownloadOutcome {
+/** downloadMissing 统一结果契约（ADR-340）：直调方据 skipped/skipReason 分类、
+ *  据 ok/fail 汇总文件级计数。skipped=true 时 ok/fail 恒 0（未做或未完成安装）。 */
+export interface DownloadOutcome {
+  ok: number;
+  fail: number;
+  skipped?: boolean;
+  skipReason?: "busy" | "config" | "error";
+}
+
+/** runDownloadMissing 内部结果：null = 配置缺失/异常（未做或未完成安装）；
+ *  ok/fail = 文件级安装计数（锐评 P1-1：经 DownloadOutcome 上抛给发起方汇总）。 */
+interface InstallCounts {
   ok: number;
   fail: number;
 }
 
 /** 逐个整合包安装缺失文件，返回文件级计数（null = 配置缺失/异常）。
- *  批量模式（instanceNames 非空，发起方为 app-sidebar 循环收集计数）下
- *  handler 不弹 toast——防「全部类型 × N 包」连吃一串 0 成功 0 失败轰炸，
+ *  批量模式（instanceNames 非空，发起方 app-sidebar 逐类型直调收集计数）下
+ *  不弹 toast——防「全部类型 × N 包」连吃一串 0 成功 0 失败轰炸，
  *  反馈权归发起方汇总为一条（锐评 P2-1）。 */
 async function runDownloadMissing(
   instanceName: string | undefined,
   instanceNames: string[] | undefined,
   rtype: string,
-): Promise<DownloadOutcome | null> {
+): Promise<InstallCounts | null> {
   dbg(
     "sync",
     "download-missing",
@@ -125,51 +133,52 @@ async function runDownloadMissing(
   return { ok: totalOk, fail: totalFail };
 }
 
-/** 导入缺失 handler：withLock 守卫 + 缺参显式失败；busy 命中回 done(skipped) 防调用方干等超时 */
-async function handleSyncDownloadMissing(
-  lock: BusyLock,
-  { instanceName, instanceNames, rtype, token }: SyncDownloadPayload,
-): Promise<void> {
-  const result = await withLock(lock, async () => {
-    // rtype 契约已必填（bus.ts BusEvents），缺参显式失败而非静默降级 YSM——
+/** 导入缺失互斥锁（ADR-340 去总线化后升为模块级常驻）：原锁在 registerSync 内创建，
+ *  直调方（app-sidebar）与 registerSync 生命周期无关，锁必须比注册面活得久——跨页
+ *  并发（sidebar 批量 × app-tree 触发等）由同一把 withLock 挡下，杜绝忘释放锁死。 */
+const downloadLock = createBusyLock();
+
+/**
+ * 导入缺失（单包 / 批量）——ADR-340 去总线化的**唯一入口**：调用方 `await` 结果即全部
+ * 事实。原 bus 通道（`sync:download:missing` 请求 + `sync:download:done` 回执）上
+ * 长出的四件套协议补丁——token 单调序号 / skipped 回执 / waitBusQuiet 静默宽限 /
+ * 订阅时序竞态猜测——整体退役：Promise 天然提供请求-响应匹配、错误传播与超时定位。
+ *
+ * 恒 settle（不 reject）：busy / config / error 归入 `skipped + skipReason` 并附
+ * 对应 toast，ok/fail 为文件级安装计数（锐评 P1-1 契约：失败计数必达发起方）。
+ * 单包模式（无 instanceNames）自弹结果 toast（右键等直调方无汇总链）；批量模式
+ * 静默，反馈权归发起方一条汇总（锐评 P2-1）。
+ */
+export async function downloadMissing({
+  instanceName,
+  instanceNames,
+  rtype,
+}: SyncDownloadPayload): Promise<DownloadOutcome> {
+  const result = await withLock(downloadLock, async () => {
+    // rtype 必填守卫（原 bus.ts 契约的 runtime 防线随直调保留）：
     // 错误类型装错仓库文件比直接报错危害大
-    let failed = false;
-    let skipReason: "config" | "error" | undefined;
-    let outcome: DownloadOutcome | null = null;
     if (!rtype) {
-      failed = true;
-      skipReason = "config";
       toast(t("sync.missingRtype"), TOAST_MS.long, "error");
-    } else {
-      try {
-        outcome = await runDownloadMissing(instanceName, instanceNames, rtype);
-        if (!outcome) failed = true;
-        // 仅实际做过安装才广播全树重扫——配置缺失短路时无任何写操作，
-        // tree:reload 会引发无意义全树重扫
-        else bus.emit("tree:reload");
-      } catch (e) {
-        failed = true;
-        skipReason = "error";
-        toast(friendlyError(e), TOAST_MS.long, "error");
-      }
+      return { ok: 0, fail: 0, skipped: true as const, skipReason: "config" as const };
     }
-    return { failed, skipReason, outcome };
+    try {
+      const counts = await runDownloadMissing(instanceName, instanceNames, rtype);
+      if (!counts) return { ok: 0, fail: 0, skipped: true as const, skipReason: "config" as const };
+      // 仅实际做过安装才广播全树重扫——配置缺失短路时无任何写操作，
+      // tree:reload 会引发无意义全树重扫
+      bus.emit("tree:reload");
+      return { ok: counts.ok, fail: counts.fail, skipped: false as const };
+    } catch (e) {
+      toast(friendlyError(e), TOAST_MS.long, "error");
+      return { ok: 0, fail: 0, skipped: true as const, skipReason: "error" as const };
+    }
   });
-  // 锁释放后统一结算 done（含 busy 命中）：调用方（app-sidebar 推送）因
-  // token/instanceName 永远等不到 done 而超时，或经 instanceName fallback
-  // 误判成功；skipped 标记让调用方立即解锁并识别「被跳过」；
-  // ok/fail 让发起方看到文件级失败计数（锐评 P1-1：失败不再消失在回执里）
   if (result === null) {
-    bus.emit("sync:download:done", { token, instanceName, skipped: true, skipReason: "busy" });
-    return;
+    // busy 命中如实回报（原 done(skipped:busy) 同语义）：直调串行下自撞锁不再可能
+    // （runPush await 上一批 settle 才发下一批），仅剩跨页并发的防御位
+    return { ok: 0, fail: 0, skipped: true, skipReason: "busy" };
   }
-  bus.emit("sync:download:done", {
-    token,
-    instanceName,
-    skipped: result.failed,
-    skipReason: result.skipReason,
-    ...(result.outcome ? { ok: result.outcome.ok, fail: result.outcome.fail } : { ok: 0, fail: 0 }),
-  });
+  return result;
 }
 
 /** 同步启用/禁用状态到所有整合包（ADR-339：全 dirLevelSync 类型），失败明细经 friendlyError 显式化 */
@@ -230,15 +239,14 @@ async function handleSyncToggleStatus(
   bus.emit("tree:reload");
 }
 
-/** 注册同步 handler，push 返回的取消订阅函数到 unsubs */
+/** 注册同步 handler，push 返回的取消订阅函数到 unsubs。
+ *  ADR-340：`sync:download:missing` 订阅已摘除（去总线化，调用方直调 `downloadMissing`），
+ *  本注册只剩 `sync:toggle:status`——该事件确有多生产者（app-tree 批量/单文件），
+ *  广播语义名实相符。 */
 export function registerSync(unsubs: Array<() => void>): void {
-  // 并发守卫：sync:download:missing / sync:toggle:status 各有多生产者（app-sidebar、
-  // app-content、app-tree）连点会并发跑同一批文件写操作（竞态）——共享忙锁
-  // createBusyLock + withLock（utils/base/lock.ts）：finally 自动释放，杜绝忘释放锁死
-  const downloadLock = createBusyLock();
+  // 并发守卫：sync:toggle:status 多生产者连点会并发跑同一批文件写操作（竞态）——
+  // 共享忙锁 createBusyLock + withLock（utils/base/lock.ts）：finally 自动释放
   const toggleLock = createBusyLock();
-  // 导入仓库模型到整合包
-  unsubs.push(bus.on("sync:download:missing", (p) => handleSyncDownloadMissing(downloadLock, p)));
   // 同步启用/禁用状态到所有整合包（ADR-339：透传 rtype，Go 侧按类型对齐 repo↔pack）
   unsubs.push(bus.on("sync:toggle:status", (p) => handleSyncToggleStatus(toggleLock, p)));
 }

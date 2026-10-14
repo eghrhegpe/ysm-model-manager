@@ -86,9 +86,9 @@ quick_intents:
   - 整合包同步、推送 / 拉取
   - 整合包列表、同步状态、勾选
   - PushSingleResource / PullSingleResource
-  - sync:download:missing 缺包回拉
+  - sync:download:missing 缺包回拉（已退役，ADR-340 直调 downloadMissing）
 quick_risk_lines:
-  - 同步写操作并发守卫 = features/sync 的 BusyLock（handler 级互斥）+ sync-manager network.performSingleOp 的 per-path 防重入（同一行串行、异行并发）——历史上无「queue 队列」实体，勿去找它；app-sidebar 禁止绕开 sync:download:missing 事件链直调 PushSingleResource（2026-10-14 锐评 P2-3：红线措辞对齐真实机制）
+  - 同步写操作并发守卫 = features/sync 的模块级 BusyLock（downloadMissing withLock）+ sync-manager network.performSingleOp 的 per-path 防重入（同一行串行、异行并发）——历史上无「queue 队列」实体，勿去找它；整包推送唯一入口 = features/sync|downloadMissing 直调（ADR-340 去总线化，原 sync:download:missing 事件链已退役），app-tree 逐文件走 performSingleOp、禁止各自另写安装循环（2026-10-14 锐评 P2-3 + ADR-340）
   - 状态筛选的 a11y 键盘语义只走 events.ts 单一 keydown 委托 + tpl.ts 模板出属性，禁止逐 tab 补 handler / 手搓 aria
 pitfalls:
   - app-sidebar 直接发 push/pull 请求 → 并发冲突 / 状态错乱；写链守卫 = features/sync BusyLock + performSingleOp per-path
@@ -100,7 +100,7 @@ use_when:
   - 跨组件同步编排
   - 缺包回拉
   - PullSingleResource
-  - sync:download:missing
+  - downloadMissing
 invariant_anchors:
   - frontend/src/views/app-sidebar/sync-flow.ts|runPush
   - frontend/src/views/app-sidebar/sync-flow.ts|runPull
@@ -109,6 +109,7 @@ invariant_anchors:
   - frontend/src/views/app-sync-manager/index.ts|_guard
   - frontend/src/views/app-sync-manager/events.ts|bindDelegatedEvents
   - frontend/src/features/sync/sync.ts|runDownloadMissing
+  - frontend/src/features/sync/sync.ts|downloadMissing
 status: active
 ---
 
@@ -121,7 +122,7 @@ status: active
 - **单实例视角**：一次只展示一个 `instance`（如 `1.20.1-Fabric`）下的同步状态
 - **层级渲染**：通过 `GetInstanceSyncStatus` 拉取该实例下该 rtype 的全部条目（`SyncItem[]`），逐节点递归渲染，`isDir` 支持目录级展开/折叠
 - **逐文件 push/pull**：单行内嵌按钮，由 `network.ts` 的 `performSingleOp` 顺序守卫执行
-- **整包同步在 sidebar**：`app-sidebar` 底部菜单走 `sync:download:missing` handler 编排后台安装，与本组件的**逐文件操作**分工解耦
+- **整包同步在 sidebar**：`app-sidebar` 底部菜单走 `downloadMissing` 直调（ADR-340）编排后台安装，与本组件的**逐文件操作**分工解耦
 - **计数口径统一（ADR-310，2026-09）**：sidebar 徽章已换线到本面板链（`go/instance.BuildInstanceStatusCounts` 折 `BuildSyncItems`），红 = `missing ∪ diverged`、橙 = `optional ∪ legacy`、`disabled` 单独计；但**一键安装读的 `Missing` 仍是仓库侧文件级清单**（一个缺夹展开多条文件路径，`len(Missing)` 与计数无固定关系；夹内无可逐文件安装的文件时整夹落在 `MissingDirs`，一键安装同样调用本卡 `PushSingleResourceToInstance` 这条 folder-aware 路径，故计数单元全都有安装动作）——徽章数只看 Go 的计数字段，别再用数组长度
 
 > **差异化定位**：`go-sync.md` 描述 Go 端同步算法（哈希对比/冲突/重链接），`app-sidebar.md` 描述侧边栏 UI，`app-sync-manager.md` 描述同步面板；本 feature 卡专注**跨组件端到端同步编排视角**——用户从 sidebar 选整合包 → sync-manager 展示状态 → 逐文件/整包 push/pull 的全链路。
@@ -135,14 +136,14 @@ status: active
 - **a11y 模板语义（2026 复测补缺）**：状态筛选栏 = `role="radiogroup"` + 六个 `role="radio"`（`aria-checked` + roving tabindex 由 `statusTabHTML` 模板随重渲染自动迁移）；目录行箭头为原生 `button` + `aria-expanded` + 名称标签；装饰图标 `aria-hidden`；加载态 `role="status"`；错误 div `role="alert"`。键盘半边 = `bindDelegatedEvents` 的单点 keydown 委托（方向键循环移动即激活、Home/End 只移焦点——仓内先例 `tabs-shell.ts` diag 子切换同口径），契约 `tpl.test.ts`（属性字符串）+ `a11y.dom.test.ts`（键盘行为）
 
 ### `app-sidebar`（整包级）
-- **`runPush`**：按类型循环，每类型一次 `sync:download:missing`（带 `instanceNames` 多包名单）→ handler 后台装全部选中包，等 `sync:download:done` token（批量超时放宽至 120s，skipped reject）；原 `for insName × for rtype` 逐包逐类型 N×T 次事件已收敛为 O(类型) 次（ADR-310 性能修复，2026-10）。竞态静默由 `waitBusQuiet` 双轨收敛（非 skipped done 即醒 / 2s 宽限判空闲，2026-10 起不再干等超时）
+- **`runPush`**：按类型循环 `await downloadMissing({instanceNames})` **直调**（ADR-340 去总线化，2026-10-14：原 `sync:download:missing` 事件 + token 回执 + `waitBusQuiet` 静默宽限四件套整体退役，Promise 返回值即 `{ok, fail, skipped, skipReason}`），累加计数汇总一条 toast；binding 挂起由 `withTimeout`(120s) 兜底且**超时即早停**（治锐评 P1-2 级联——原总线实现超时后续发只会撞 handler 持锁 busy 假跳过）。原 `for insName × for rtype` 逐包逐类型 N×T 次已收敛为 O(类型) 次（ADR-310 性能修复，2026-10）
 - **`runPull`**：`Promise.allSettled` 并拉 `PullResourceFromInstance`
 - **`_syncInProgress`** 守卫：防止并发 sync 竞态
 - **同步流程层（`sync-flow.ts`，2026-09-08 从 `index.ts` 拆出）**：`runPush`/`runPull`/`bindSelectAll`/`bindSyncSelected`/`restoreCheckboxes` + `_checkedSets`（按 rtype 隔离的勾选状态 Map）全部迁至独立文件，`index.ts` 仅保留 Web Component 生命周期与渲染编排
 
-### `features/sync.ts`（bus 调度）
-- **`sync:download:missing`**：`downloadFlag.busy` 守卫 → `runDownloadMissing`（`ListVersionInstances` → `GetResourceInstanceStatus` → 按 `instanceName`/`instanceNames` 过滤 targets × Missing：`InstallModelTo`(YSM) / `InstallResourceToInstance`(other) → `InvalidateScanCache`）；`instanceNames` 优先（批量一次覆盖多包），单次调用内只扫一次状态
-- **`sync:toggle:status`**：`.ban`/`.disabled` 启禁同步
+### `features/sync.ts`（同步执行层）
+- **`downloadMissing(payload): Promise<DownloadOutcome>`**（ADR-340 唯一入口，直调非事件）：`withLock(downloadLock)` 互斥 → `runDownloadMissing`（`ListVersionInstances` → `GetResourceInstanceStatus` → 按 `instanceName`/`instanceNames` 过滤 targets × Missing：`InstallModelTo`(YSM) / `InstallResourceToInstance`(other) → `InvalidateScanCache`）；`instanceNames` 优先（批量一次覆盖多包），单次调用内只扫一次状态；恒 settle 返回 `{ok, fail, skipped, skipReason}`，批量模式静默不弹结果 toast
+- **`sync:toggle:status`**（bus 事件，registerSync 注册）：`.ban`/`.disabled` 启禁同步
 
 ## 数据流（后端 → store → 渲染）
 
@@ -158,18 +159,20 @@ getApp().GetInstanceSyncStatus(instance, subtype, rtype)
   → bindDelegatedEvents(...)  // 一次性委托（_init 单次绑定，render 重建 DOM 不影响）
 ```
 
-**sidebar 整包推送链（ADR-310 批量收敛，2026-10）**：
+**sidebar 整包推送链（ADR-340 去总线化 + ADR-310 批量收敛，2026-10-14）**：
 ```
 用户点击 push 菜单项
   → beginSync（取 selected + _syncInProgress + 按钮 loading）
   → runPush（按类型循环，非逐包×逐类型）
     → for rt in types
-       → pushOne(selected.join("+"), rt, selected)  // 一次事件覆盖全部选中包
-         → token = nextPushToken(insName, rt)  // `${ins}:${rt}:${单调序号}`——禁 Date.now()（同毫秒并发撞 token 致回执错配）
-         → bus.emit("sync:download:missing", { instanceNames: selected, rtype, token })
-         → Promise 等待 sync:download:done（匹配 token，批量超时 120s）
-         → waitBusQuiet（防并发竞态：非 skipped done 或 2s 静默宽限即放行，不再干等超时）
-    → 汇总 toast
+       → await withTimeout(downloadMissing({ instanceNames: selected, rtype: rt }), 120s)
+         // 直调即请求-响应：Promise settle 值 = {ok, fail, skipped, skipReason}
+         // 原总线四件套已删——token/nextPushToken（回执匹配）、done(skipped)（busy
+         // 解锁）、waitBusQuiet/2s 宽限（竞态猜测）皆 Promise 免费提供
+       → 累加 installOk/installFail；skipped 按 skipReason 分流（busy=被跳过 /
+         config,error=未完成）
+       → 超时（binding 挂起是唯一成因）→ 计入 timedOut 并 break **早停**
+    → 汇总一条 toast（失败计数可见，锐评 P1-1 契约）
   → finally：按钮复位 + _syncInProgress=false
 ```
 
@@ -178,12 +181,10 @@ getApp().GetInstanceSyncStatus(instance, subtype, rtype)
 | 事件 | 方向 | 说明 |
 |------|------|------|
 | `stats:refresh` | 广播 → 订阅 | 变异完成 → sidebar 300ms 防抖 `_reload(true)` + sync-manager 重拉 |
-| `tree:reload` | 广播 → 订阅 | 整棵树重扫（sync:download:missing 成功后、sync:toggle:status finally） |
+| `tree:reload` | 广播 → 订阅 | 整棵树重扫（downloadMissing 实际安装后、sync:toggle:status finally） |
 | `package:selected` | sidebar → app-content | 携带 `{name, rtype}`（`bus.ts` 契约；无 `dir` 字段）→ `app-content` **复用**同一 `<app-sync-manager>` 实例并改 `instance`/`default-type` 属性（2026-09 起不再 `innerHTML` 重建） |
 | `repo:rtype-changed` | 全局 nav → 各处 | 切 rtype 重载 |
 | `repo:subdir-changed` | 全局 nav → sync-manager | MMD 子目录切换重载 |
-| `sync:download:missing` | sidebar → handler | 载荷 `{instanceName?, instanceNames?, rtype, token}`；`instanceNames` 优先（批量一次覆盖多包），单包兜底走 `instanceName` |
-| `sync:download:done` | handler → sidebar | 载荷 `{token, instanceName, skipped, skipReason, ok, fail}`；skipped=true 触发 reject；**ok/fail = handler 文件级安装计数（2026-10-14 锐评 P1-1 止血：runPush 累加进汇总 toast，文件级失败不再消失在「推送完成」成功文案里）**；批量模式（instanceNames）handler 静默不弹 toast，反馈权归发起方汇总一条（P2-1 止血，防每类型 × 0/0 连珠炮） |
 | `sync:toggle:status` | app-tree → handler | 启禁同步 |
 | `ctx:show` | sidebar 右键 → 菜单 | 携带 `{instanceName, path, rtype, subdir}` |
 
@@ -198,12 +199,11 @@ getApp().GetInstanceSyncStatus(instance, subtype, rtype)
 | `PushSingleResourceToInstance(rtype, instance, path)` | sync-manager/network.ts | 单文件推送 |
 | `PullSingleResourceFromInstance(rtype, path, instance)` | sync-manager/network.ts | 单文件拉取 |
 | `PullResourceFromInstance(rtype, instance)` | sidebar/index.ts | 整包拉取 |
-| `InstallModelTo / InstallResourceToInstance` | features/sync.ts | 缺失安装 |
+| `InstallModelTo / InstallResourceToInstance` | features/sync.ts | 缺失安装（downloadMissing 直调） |
 | `ListVersionInstances / GetResourceInstanceStatus` | features/sync.ts、sidebar/loader.ts | 实例列表 + 缺失/多余 |
 | `SyncModelToggleStatus(ins.CustomDir, filesRoot)` | features/sync.ts | 启禁同步 |
 | `InvalidateScanCache()` | features/sync.ts | 强制刷新 30s 缓存 |
 | `AddImportLog` | features/sync.ts | 同步日志 |
-
 ## 与其他子系统关系
 
 ```
@@ -217,13 +217,13 @@ sidebar 卡片点击
           卸载：disconnectedCallback 清理 unsubs + 复位状态
 
 sidebar 底部 push/pull 菜单（整包级，与 sync-manager 组件解耦）
-  → runPush → sync:download:missing handler → 后台安装缺失
+  → runPush → downloadMissing 直调（ADR-340）→ 安装缺失并 await 结果
   → runPull → PullResourceFromInstance 后台整包拉取
 ```
 
 **`features/sync.ts`** 是**整包级**调度，与 `app-sync-manager` 组件的**逐文件级**操作分工明确：
 - 组件内单行按钮 → `getApp().PushSingleResourceToInstance` / `PullSingleResourceFromInstance`
-- sidebar 底部 push 菜单 → bus `sync:download:missing` → handler `runDownloadMissing` → `InstallModelTo`/`InstallResourceToInstance`
+- sidebar 底部 push 菜单 → 直调 `downloadMissing` → `runDownloadMissing` → `InstallModelTo`/`InstallResourceToInstance`（ADR-340：原 bus 通道退役）
 
 ## 不变量
 
@@ -236,7 +236,7 @@ sidebar 底部 push/pull 菜单（整包级，与 sync-manager 组件解耦）
 - **筛选口径一致性**（store.ts `applyFilter`）：`tabStatus` 把 `diverged` 折叠进 `missing` tab，renderer 计数与递归 `filterNode` 复用同一 `tabStatus`，保证"徽标数 = 列表可见行数"
 - **空 rtype 拦截**（sidebar/events.ts + init-pages.ts）：点击路径允许 fallback YSM（预览无害），右键拒绝（操作危险）
 - **busy 语义对称**：download/toggle 两个 handler 的 busy 命中都显式反馈，不静默吞事件
-- **`sync:download:missing` 载荷 rtype 必填**：缺参显式失败（P2 修复）
+- **`downloadMissing` 入参 rtype 必填**：缺参返回 `{skipped:true, skipReason:"config"}` 显式失败（P2 修复；ADR-340 后落点从事件载荷改为直调入参）
 - **`tree:reload` 仅在真正做过安装时广播**（handler P2）：配置缺失短路时无任何写操作
 - **`SidebarHost`/`EmitDedupe` 去重**：同组件 reload 不复位，宿主持有状态。2026-09 定位降级——app-content 已复用面板实例（同值 `setAttribute` 被组件 `oldVal===newVal` 拦下），重复 emit 不再有丢状态代价，本状态机退化为省事件扩散的优化，**不再是防回归的救命稻草**
 - **⚠️ 面板复用而非重建**（2026-09 修复）：`init-pages.mountSyncManager` 首次注入元素、后续仅 `setAttribute`，实例跨整合包存活；切包时由组件 `_init` 内的 `_resetViewState()` 复位视图状态（展开态/筛选/子类型）。**改回 `innerHTML` 重建会被 `init-pages.test.ts` 的「复用同一实例」用例拦下**

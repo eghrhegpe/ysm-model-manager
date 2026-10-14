@@ -81,35 +81,26 @@ async function register(): Promise<void> {
 /** 监听 toast / 事件并登记清理 */
 function spyEvents() {
   const toasts: Array<{ msg: string; type: string }> = [];
-  // P1 修复（code_review）：doneEvents 元素类型补 skipped——原 { token?: string }
-  // 缺该字段，新断言 d.skipped 在 tsc --noEmit（strict）下 TS2353 报错
-  // exactOptional：token 从总线载荷解构可 undefined，与 bus.ts 事件类型对齐
-  // 2026-10-14 锐评 P1-1 止血：补 ok/fail（done 回执文件级计数断言用），与 bus.ts 同步
-  const doneEvents: Array<{
-    token?: string | undefined;
-    skipped?: boolean;
-    ok?: number | undefined;
-    fail?: number | undefined;
-  }> = [];
   const refreshEvents: string[] = [];
   const reloadEvents: string[] = [];
   cleanups.push(
     bus.on("toast:show", (t) => toasts.push(t as { msg: string; type: string })),
-    bus.on("sync:download:done", (e) => doneEvents.push(e)),
     bus.on("stats:refresh", () => refreshEvents.push("stats:refresh")),
     bus.on("tree:reload", () => reloadEvents.push("tree:reload")),
   );
-  return { toasts, doneEvents, refreshEvents, reloadEvents };
+  return { toasts, refreshEvents, reloadEvents };
 }
 
-describe("registerSync — sync:download:missing", () => {
-  it("成功路径：安装缺失文件，发 stats:refresh + done + tree:reload", async () => {
-    await register();
-    const { toasts, doneEvents, refreshEvents, reloadEvents } = spyEvents();
+// ADR-340 去总线化：原 describe("registerSync — sync:download:missing") 的 bus 往返
+// （emit missing → 等 done 回执）整段退役为 downloadMissing 直调——结果断言直接落在
+// Promise 返回值上（ok/fail/skipped/skipReason），token/skipped 回执/静默宽限等
+// 总线协议补丁的回归锁随实现退役（它们守护的是补丁本身）。
+describe("downloadMissing — 导入缺失直调（ADR-340）", () => {
+  it("成功路径：安装缺失文件，返回计数 + stats:refresh + tree:reload + 单包 toast", async () => {
+    const { downloadMissing } = await import("./sync.ts");
+    const { toasts, refreshEvents, reloadEvents } = spyEvents();
 
-    bus.emit("sync:download:missing", { instanceName: "PackA", rtype: "ysm", token: "t1" });
-    await flushPromises();
-    await flushPromises();
+    const outcome = await downloadMissing({ instanceName: "PackA", rtype: "ysm" });
 
     expect(mocks.GetRepoRoot).toHaveBeenCalledWith("ysm");
     expect(mocks.InstallModelTo).toHaveBeenCalledWith(
@@ -117,8 +108,7 @@ describe("registerSync — sync:download:missing", () => {
       "/mc/instances/PackA/custom",
     );
     expect(refreshEvents.length).toBeGreaterThan(0);
-    expect(doneEvents.length).toBe(1);
-    expect(doneEvents[0].token).toBe("t1");
+    expect(outcome).toEqual({ ok: 1, fail: 0, skipped: false });
     expect(reloadEvents.length).toBeGreaterThan(0);
     expect(toasts.some((t) => t.msg.includes("PackA: 导入 1 成功"))).toBe(true);
   });
@@ -131,12 +121,10 @@ describe("registerSync — sync:download:missing", () => {
       { Name: "PackB", Missing: [], MissingDirs: [] },
     ]);
     mocks.PushSingleResourceToInstance.mockResolvedValue(undefined);
-    await register();
+    const { downloadMissing } = await import("./sync.ts");
     const { toasts } = spyEvents();
 
-    bus.emit("sync:download:missing", { instanceName: "PackA", rtype: "resourcepack", token: "t9" });
-    await flushPromises();
-    await flushPromises();
+    const outcome = await downloadMissing({ instanceName: "PackA", rtype: "resourcepack" });
 
     // 关键：目录必须走整夹推送（对目录走 InstallDir 装该夹本身），
     // 喂给 InstallResourceToInstance 会装成它的父目录（过度安装，ADR-310 §3）
@@ -148,110 +136,97 @@ describe("registerSync — sync:download:missing", () => {
     expect(mocks.InstallResourceToInstance).not.toHaveBeenCalled();
     expect(mocks.InstallModelTo).not.toHaveBeenCalled();
     // 整夹安装计入成功数（徽章有数 ⇒ 一键安装有动作）
+    expect(outcome).toEqual({ ok: 1, fail: 0, skipped: false });
     expect(toasts.some((t) => t.msg.includes("PackA: 导入 1 成功"))).toBe(true);
   });
 
   it("instanceName 为空 → 遍历全部实例", async () => {
-    await register();
+    const { downloadMissing } = await import("./sync.ts");
     const { toasts } = spyEvents();
 
-    bus.emit("sync:download:missing", { instanceName: "", rtype: "ysm", token: "t2" });
-    await flushPromises();
-    await flushPromises();
+    const outcome = await downloadMissing({ rtype: "ysm" });
 
     // 只有 PackA 有 Missing，PackB 跳过
     expect(mocks.InstallModelTo).toHaveBeenCalledTimes(1);
+    expect(outcome).toEqual({ ok: 1, fail: 0, skipped: false });
     expect(toasts.some((t) => t.msg.includes("全部导入完成: 1 成功"))).toBe(true);
   });
 
-  it("repoRoot 未配置 → warn toast，不安装，不触发 tree:reload", async () => {
+  it("repoRoot 未配置 → skipped config（warn toast，不安装，不触发 tree:reload）", async () => {
     mocks.GetRepoRoot.mockResolvedValue("");
-    await register();
-    const { toasts, doneEvents, reloadEvents } = spyEvents();
+    const { downloadMissing } = await import("./sync.ts");
+    const { toasts, reloadEvents } = spyEvents();
 
-    bus.emit("sync:download:missing", { instanceName: "", rtype: "ysm", token: "t3" });
-    await flushPromises();
-    await flushPromises();
+    const outcome = await downloadMissing({ rtype: "ysm" });
 
     expect(toasts.some((t) => t.msg === "请先配置该资源类型目录" && t.type === "warn")).toBe(true);
     expect(mocks.InstallModelTo).not.toHaveBeenCalled();
-    // finally 仍然执行
-    expect(doneEvents.length).toBe(1);
+    expect(outcome).toEqual({ ok: 0, fail: 0, skipped: true, skipReason: "config" });
     // 配置缺失未做任何写操作 → 不广播全树重扫（P2 审核修复）
     expect(reloadEvents.length).toBe(0);
   });
 
-  it("并发守卫：连点两次只执行一次安装", async () => {
-    await register();
-    const { doneEvents } = spyEvents();
+  it("互斥守卫：首批在途时第二批并发 → skipped busy（模块级锁挡跨页并发写）", async () => {
+    const { downloadMissing } = await import("./sync.ts");
+    spyEvents();
 
-    // 第一个请求挂起（InstallModelTo 未立即 resolve）
+    // 第一个请求挂起（InstallModelTo 未立即 resolve，锁保持占用）
     let resolveInstall: () => void = () => {};
     mocks.InstallModelTo.mockImplementationOnce(
       () => new Promise<void>((r) => { resolveInstall = r; }),
     );
-    bus.emit("sync:download:missing", { instanceName: "PackA", rtype: "ysm", token: "t4" });
+    const first = downloadMissing({ instanceName: "PackA", rtype: "ysm" });
+    await flushPromises();
     await flushPromises();
 
-    // 第二次触发（此时 busy=true）
-    bus.emit("sync:download:missing", { instanceName: "PackA", rtype: "ysm", token: "t5" });
-    await flushPromises();
+    // 第二个并发调用（锁占用中）——原总线实现回 done(skipped:busy)，直调即返回值
+    const second = await downloadMissing({ instanceName: "PackB", rtype: "ysm" });
+    expect(second).toEqual({ ok: 0, fail: 0, skipped: true, skipReason: "busy" });
+    // 只有第一批执行了安装
+    expect(mocks.InstallModelTo).toHaveBeenCalledTimes(1);
 
     resolveInstall();
-    await flushPromises();
-    await flushPromises();
-
-    // 只有第一次执行了安装
-    expect(mocks.InstallModelTo).toHaveBeenCalledTimes(1);
-    // P1 修复后契约：busy 命中的第二个请求也回 done（带 skipped）——调用方（app-sidebar）
-    // 得以立即解锁而非 30s 超时；断言 2 个 done（1 正常 + 1 skipped）
-    expect(doneEvents.length).toBe(2);
-    expect(doneEvents.filter((d) => d.skipped).length).toBe(1);
+    const firstOutcome = await first;
+    expect(firstOutcome.skipped).toBe(false);
   });
 
-  it("requireMcRoot 为空 → 直接返回但 finally 解锁", async () => {
+  it("requireMcRoot 为空 → skipped config（mcRoot 守卫 toast 已弹，立即返回不安装）", async () => {
     const { requireMcRoot } = await import("@/features/require-mcroot.ts");
     (requireMcRoot as ReturnType<typeof vi.fn>).mockResolvedValueOnce("");
-    await register();
-    const { doneEvents } = spyEvents();
+    const { downloadMissing } = await import("./sync.ts");
+    const { toasts } = spyEvents();
 
-    bus.emit("sync:download:missing", { instanceName: "", rtype: "ysm", token: "t6" });
-    await flushPromises();
+    const outcome = await downloadMissing({ rtype: "ysm" });
 
-    expect(doneEvents.length).toBe(1);
+    expect(outcome).toEqual({ ok: 0, fail: 0, skipped: true, skipReason: "config" });
+    expect(toasts.some((t) => t.msg === "请先配置该资源类型目录")).toBe(false); // 未到 repoRoot 步
+    expect(mocks.InstallModelTo).not.toHaveBeenCalled();
   });
 
-  it("缺 rtype → 显式失败（error toast + done skipped），不静默降级 YSM", async () => {
-    await register();
-    const { toasts, doneEvents } = spyEvents();
+  it("缺 rtype → 显式失败（error toast + skipped config），不静默降级 YSM", async () => {
+    const { downloadMissing } = await import("./sync.ts");
+    const { toasts } = spyEvents();
 
-    // 故意违反契约（bus.ts 已声明 rtype 必填）：runtime 守卫应显式失败而非降级
-    bus.emit("sync:download:missing", { instanceName: "PackA", token: "t8" } as unknown as { instanceName?: string; rtype: string; token?: string });
-    await flushPromises();
-    await flushPromises();
+    // 故意违反契约（参数 rtype 必填）：runtime 守卫应显式失败而非降级
+    const outcome = await downloadMissing({ instanceName: "PackA", rtype: "" });
 
     expect(mocks.GetRepoRoot).not.toHaveBeenCalled();
     expect(mocks.InstallModelTo).not.toHaveBeenCalled();
-    // i18n 合规（P2 修复）：toast 文案必须走 t("sync.missingRtype")，
-    // 不得硬编码、不得向用户暴露内部事件名 "sync:download:missing"
+    // i18n 合规（P2 修复）：toast 文案必须走 t("sync.missingRtype")，不得硬编码
     const errToast = toasts.find((t) => t.type === "error")!;
     expect(errToast).toBeTruthy();
     expect(errToast.msg).toBe(t("sync.missingRtype"));
-    expect(errToast.msg).not.toContain("sync:download:missing");
-    expect(doneEvents.length).toBe(1);
-    expect(doneEvents[0].skipped).toBe(true);
+    expect(outcome).toEqual({ ok: 0, fail: 0, skipped: true, skipReason: "config" });
   });
 
   it("非 YSM rtype → 走 InstallResourceToInstance", async () => {
-    await register();
+    const { downloadMissing } = await import("./sync.ts");
     spyEvents();
     mocks.GetResourceInstanceStatus.mockResolvedValue([
       { Name: "PackA", Missing: [`${MOCK_DATA.GetRepoRoot}/rp.zip`] },
     ]);
 
-    bus.emit("sync:download:missing", { instanceName: "PackA", rtype: "pack", token: "t7" });
-    await flushPromises();
-    await flushPromises();
+    await downloadMissing({ instanceName: "PackA", rtype: "pack" });
 
     expect(mocks.InstallResourceToInstance).toHaveBeenCalledWith(
       "pack",
@@ -261,10 +236,9 @@ describe("registerSync — sync:download:missing", () => {
     expect(mocks.InstallModelTo).not.toHaveBeenCalled();
   });
 
-  // 锐评 P1-1 止血回归锁（2026-10-14）：handler 文件级失败计数必须随 done 回执上抛。
-  // 原 done 只有 skipped——totalFail 在 handler 里算出来却到不了发起方，侧栏拿不到
-  // 失败数只能报「推送完成」。把 done 载荷的 ok/fail 删掉，本用例必须红。
-  it("done 回执携带 ok/fail 文件级计数（部分安装失败对发起方可见）", async () => {
+  // 锐评 P1-1 回归锁（止血 91e18f5ed → ADR-340 直调化）：文件级失败计数必达发起方。
+  // 原总线时代计数走 done 载荷，直调后走 Promise 返回值——语义等价，断言面收窄。
+  it("返回值携带 ok/fail 文件级计数（部分安装失败对发起方可见）", async () => {
     const repo = MOCK_DATA.GetRepoRoot;
     mocks.GetResourceInstanceStatus.mockResolvedValue([
       { Name: "PackA", Missing: [`${repo}/a.ysm`, `${repo}/b.ysm`, `${repo}/c.ysm`] },
@@ -273,37 +247,26 @@ describe("registerSync — sync:download:missing", () => {
     mocks.InstallModelTo.mockImplementation((srcPath: string) =>
       srcPath.endsWith("b.ysm") ? Promise.reject(new Error("locked")) : Promise.resolve(),
     );
-    await register();
-    const { doneEvents } = spyEvents();
+    const { downloadMissing } = await import("./sync.ts");
+    spyEvents();
 
-    bus.emit("sync:download:missing", { instanceName: "PackA", rtype: "ysm", token: "tc1" });
-    await flushPromises();
-    await flushPromises();
+    const outcome = await downloadMissing({ instanceName: "PackA", rtype: "ysm" });
 
-    expect(doneEvents.length).toBe(1);
-    expect(doneEvents[0].token).toBe("tc1");
-    expect(doneEvents[0].skipped).toBe(false);
-    expect(doneEvents[0].ok).toBe(2);
-    expect(doneEvents[0].fail).toBe(1);
+    expect(outcome).toEqual({ ok: 2, fail: 1, skipped: false });
   });
 
-  // 锐评 P2-1 止血回归锁：批量模式（instanceNames）handler 静默——「全部类型」推送
-  // 每类型一次事件，逐类型 toast 会连珠炮（含 0 成功 0 失败）淹没发起方汇总。
-  // 反馈权归发起方（runPush 一条汇总）；单包/全遍历模式（无 instanceNames）照旧弹。
-  it("批量模式（instanceNames）→ handler 不弹结果 toast（静默交发起方汇总）", async () => {
-    await register();
+  // 锐评 P2-1 回归锁：批量模式（instanceNames）静默——「全部类型」推送每类型一次
+  // 直调，逐类型 toast 会连珠炮（含 0 成功 0 失败）淹没发起方汇总。反馈权归发起方
+  // （runPush 一条汇总）；单包/全遍历模式（无 instanceNames）照旧弹。
+  it("批量模式（instanceNames）→ 不弹结果 toast（静默交发起方汇总）", async () => {
+    const { downloadMissing } = await import("./sync.ts");
     const { toasts } = spyEvents();
 
-    bus.emit("sync:download:missing", {
-      instanceNames: ["PackA", "PackB"],
-      rtype: "ysm",
-      token: "tc2",
-    });
-    await flushPromises();
-    await flushPromises();
+    const outcome = await downloadMissing({ instanceNames: ["PackA", "PackB"], rtype: "ysm" });
 
     // 安装确实发生了（PackA 有 Missing），只是不弹结果 toast
     expect(mocks.InstallModelTo).toHaveBeenCalledTimes(1);
+    expect(outcome).toEqual({ ok: 1, fail: 0, skipped: false });
     expect(toasts.some((t) => t.msg.includes("导入"))).toBe(false);
   });
 });

@@ -117,25 +117,9 @@ export interface BusEvents {
   // 消费方 features/sync runSyncToggleStatus 据此调 SyncModelToggleStatusForType，只同步
   // 该类型的 repo↔pack .disabled 态（避免一次 toggle 白扫全部类型 × 全部实例）。
   "sync:toggle:status": { rtype?: string };
-  "sync:download:missing": {
-    instanceName?: string;
-    /** 批量推送：一次事件覆盖多个整合包（替代逐包发事件，避免 O(包×类型) 次全量扫描） */
-    instanceNames?: string[];
-    rtype: string;
-    token?: string;
-  };
-  "sync:download:done": {
-    token?: string | undefined;
-    instanceName?: string | undefined;
-    skipped?: boolean;
-    skipReason?: "busy" | "config" | "error" | undefined;
-    // 锐评 P1-1 止血（2026-10-14）：handler 逐文件安装的成功/失败计数随回执上抛。
-    // 原 done 只有 skipped/skipReason，文件级失败（totalFail）在 handler 里算出来
-    // 却到不了发起方——侧栏拿不到失败数，只能报「推送完成」误导用户。
-    // 缺省 0（旧生产者/测试夹具不发即刻视为无失败）。
-    ok?: number | undefined;
-    fail?: number | undefined;
-  };
+  // sync:download:missing / sync:download:done 已退役（ADR-340 推送链去总线化）：
+  // 1:1 请求-响应走 features/sync|downloadMissing 直调（Promise 天然完成 token 匹配、
+  // 错误传播与结果类型化），总线回执协议四件套（token/skipped 回执/静默宽限/竞态猜测）随之删除。
   // 实例 / 导入
   // rtype 必填（P0 修复后收紧契约）：消费方（instance-ops）已有 !rtype 显式失败
   // 守卫，发射点编译期强制提供非空 rtype，堵漏「漏传 → 导出/清空全部类型」回归。

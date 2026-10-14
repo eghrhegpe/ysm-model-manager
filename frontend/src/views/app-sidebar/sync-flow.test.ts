@@ -1,82 +1,11 @@
-// ===== sync-flow 静默等待（waitBusQuiet）直测 =====
-// 背景（2026-10 锐评修复）：原实现静默期只剩 30s 超时兜底——done 先于订阅发出
-// 即错过，一条已死在途能把多包推送循环卡满半分钟。修复后双轨：非 skipped done
-// 即 resolve；宽限期（2s）内零 done 判定通道空闲放行。
-// 本文件用真实定时器验语义分支（断言窗口与 30s 旧超时量级可分，2s 宽限不拖慢套件）。
-import { describe, it, expect, vi, afterEach } from "vitest";
+// ===== sync-flow 叶函数直测 =====
+// ADR-340 去总线化（2026-10-14）：原 waitBusQuiet（总线静默宽限）与 nextPushToken
+// （回执 token 单调序号）两段直测随协议补丁实现退役——Promise 直调天然具备
+// 请求-响应匹配与错误传播，它们守护的是补丁本身。现留守：pruneCheckedSets。
+import { describe, it, expect } from "vitest";
 
-// 隔离 backend 桥（launcher-detect.test.ts 同款）：sync-flow 模块图经
-// directory-picker / backend-deps 触到 Wails 绑定，本文件只锁 bus 静默等待逻辑
-vi.mock("@/backend/app.ts", () => ({ getApp: vi.fn() }));
-vi.mock("@/backend/directory-picker.ts", () => ({ pickDirectory: vi.fn() }));
-
-import { bus } from "@/bus";
-import { nextPushToken, pruneCheckedSets, waitBusQuiet } from "./sync-flow.ts";
+import { pruneCheckedSets } from "./sync-flow.ts";
 import type { SidebarInstance } from "./data.ts";
-
-afterEach(() => {
-  vi.useRealTimers();
-});
-
-describe("waitBusQuiet", () => {
-  it("收到非 skipped done → 立即 resolve", async () => {
-    const p = waitBusQuiet();
-    bus.emit("sync:download:done", { token: "t1" });
-    await expect(p).resolves.toBeUndefined();
-  });
-
-  it("skipped done 不解除等待，后续非 skipped done 才 resolve", async () => {
-    const p = waitBusQuiet();
-    bus.emit("sync:download:done", { token: "t2", skipped: true });
-    let settled = false;
-    void p.then(() => {
-      settled = true;
-    });
-    await new Promise((r) => setTimeout(r, 300));
-    expect(settled).toBe(false); // skipped 被忽略且宽限（2s）未到
-    bus.emit("sync:download:done", { token: "t3" });
-    await expect(p).resolves.toBeUndefined();
-  });
-
-  it("静默（done 竞态错过）→ 宽限期放行，不干等 30s 旧超时", async () => {
-    const start = Date.now();
-    await waitBusQuiet(); // 无任何 done 事件 → 只能走宽限期分支
-    const elapsed = Date.now() - start;
-    expect(elapsed).toBeLessThan(5_000); // 远小于旧 SYNC_TIMEOUT_MS=30s（2s 宽限 + 调度余量）
-  });
-});
-
-// P1 修复回归锁（2026-10 锐评）：pushOne 的回执 token 原用 `${ins}:${rt}:${Date.now()}`
-// ——同毫秒并发的两次推送 token 相同，bus 回执匹配错位致一个 promise 提前 resolve、
-// 另一个干等 30s 超时。现改模块单调序号：格式仍带实例/类型前缀，序号永不碰撞。
-describe("nextPushToken（序号防同毫秒串台）", () => {
-  it("携带实例名与 rtype 前缀（回执可读、诊断可定位）", () => {
-    expect(nextPushToken("insA", "ysm")).toMatch(/^insA:ysm:\d+$/);
-  });
-
-  it("同一实例同一类型连续调用 → token 互不相同（同毫秒也不碰撞）", () => {
-    const tokens = new Set<string>();
-    for (let i = 0; i < 50; i++) tokens.add(nextPushToken("insA", "ysm"));
-    expect(tokens.size).toBe(50);
-  });
-
-  // P2 加固（2026-10 复核）：上方用例在真时钟下若退化回 Date.now()，紧循环跨越毫秒
-  // 边界仍常绿——概率性断言抓不住病。固定系统时间把同毫秒变成必然：50 连发唯一性
-  // 只能由单调序号保证，Date.now() 实现此处必红。
-  it("固定同一毫秒连续调用 → 仍互不相同（单调序号，非时间戳）", () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-10-13T00:00:00Z"));
-    const tokens = new Set<string>();
-    for (let i = 0; i < 50; i++) tokens.add(nextPushToken("insA", "ysm"));
-    expect(tokens.size).toBe(50);
-    vi.useRealTimers();
-  });
-
-  it("不同实例/类型的 token 也不同", () => {
-    expect(nextPushToken("insA", "ysm")).not.toBe(nextPushToken("insB", "ysm"));
-    expect(nextPushToken("insA", "ysm")).not.toBe(nextPushToken("insA", "vrm"));
-  });
-});
 
 // P1 修复回归锁（2026-10 锐评）：勾选集合按 rtype 存实例名，实例被删除后名字
 // 永远留在集合里（幽灵名）——重名实例再现时会被静默勾选，集合也只涨不消。

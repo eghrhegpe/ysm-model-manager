@@ -820,15 +820,13 @@ export const ja: Record<string, string> = {
   "sidebar.pullDone": "プル完了: {pulled} ファイル、{failed} 失敗",
   "sidebar.pullNothing": "📭 プルするファイルがありません（インスタンスに余分なリソースなし）",
   "sidebar.pullFailed": "プルに失敗: {msg}",
-  "sidebar.packSkipped": "{n} 種類のバッチがスキップ（前バッチの同期未完了）",
-  "sidebar.packTimedOut": "{n} 種類のバッチがタイムアウト",
+  "sidebar.packSkipped": "{n} 種類のバッチがスキップ（他場所で同期進行中）",
+  "sidebar.packBlocked": "{n} 種類のバッチが未完了",
+  "sidebar.packTimedOutStopped": "{n} 種類のバッチがタイムアウト、後続バッチを停止しました",
   "sidebar.pushInstallFail": "{fail} 個のファイルのインストールに失敗（{ok} 個成功）",
   // P1-3：プッシュ/プルループ進捗（ボタン内表示；大量処理がスピンナー待ちだけにならない）
   "sidebar.pushProgress": "プッシュ中 {i}/{n}…",
   "sidebar.pullProgress": "プル中 {i}/{n}…",
-  // sidebar プッシュ診断文言（sync-flow.ts 内部エラー；将来ログ/パネルで消費されても中国語ハードコードを注入しない）
-  "sidebar.pushSkippedReason": "プッシュがスキップされました（同期が進行中）：{ins}/{rt}",
-  "sidebar.pushTimeoutReason": "プッシュがタイムアウトしました：{ins}/{rt}",
 
   // ── Resource Manager ──
   "resource.loadFailed": "リソース読み込み失敗",

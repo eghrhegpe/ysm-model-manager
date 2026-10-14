@@ -1,5 +1,7 @@
 # YSM 模型管理器 — 界面一致性落地改动方案
 
+> **⚠️ 活指针（2026-10-14 归档，落实 10-05 文档实用性审计 §2.5）**：方案主批已执行——P0×4 + P1×6 + P2 打磨 + 立 `css-token-check` 门禁（`a586946d2`），门禁接入 pre-push（`9904fd63b`，执行记录 §8 在案）；存量债（§8.3 盘点）是人工渐进收敛项，不属本方案欠账。§1–§7 冻结为历史快照；现行门禁态以知识卡 [css-token-check](../knowledge/css-token-check.md) 与台账 `scripts/.css-token-baseline.txt` 为准。
+
 > 配套报告：`docs/archive/UI-Design-Audit-2026-09.md`
 > 性质：**只读改动方案**（本文件不改任何代码，只给出 文件:行号 + diff 思路，供逐条拍板/审查）
 > 审查基准：`docs/UI-Design.md` + `frontend/css/variables.css`

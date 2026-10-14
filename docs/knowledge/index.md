@@ -125,7 +125,7 @@
 | 🍃 repo-rtype | 全局资源类型状态 repo-rtype | leaf | — | 当前资源类型, 类型切换订阅, 仓库类型权威源, repo_rtype 状态 |
 | 🏗 resource-packs | 资源包功能 resource-packs（已归档） | architecture | — | 资源包, 光影包, resourcepack, shaderpack |
 | 🏗 search | 搜索筛选编排 search | architecture | — | 搜索, 筛选, 三路交集, adv-filter, SearchModels, 网页版降级 |
-| 🏗 sync-manager | 整合包同步管理器 sync-manager | architecture | — | 整合包同步, 推送, 拉取, 跨组件同步编排, 缺包回拉, PullSingleResource, sync:download:missing |
+| 🏗 sync-manager | 整合包同步管理器 sync-manager | architecture | — | 整合包同步, 推送, 拉取, 跨组件同步编排, 缺包回拉, PullSingleResource, downloadMissing |
 | 🏗 version-updater | 版本更新 version-updater | architecture | io-bound | 更新, 升级, 检查更新, 新版本, 静默检查, updater, 版本 |
 
 ### 摘要

@@ -1,5 +1,7 @@
 # 灯光-体积光简化方案（待拍板）
 
+> **⚠️ 活指针（2026-10-14 归档，落实 10-05 文档实用性审计 §2.5）**：本方案三刀均已落码——刀1 空壳引擎删（ADR-246 D1，`light-persist.ts` 头注「原 volumetricEngine 维度已删」）/ 刀2 体积光 5→3 语义滑块（`light-controls.ts` 挂 `preview.volumetricDensity/Falloff/EdgeFade`）/ 刀3 可视化（`light-instances.ts` SpotLightHelper + 折叠卡）；ADR-246 状态行 2026-10-11 复核「无开放切片」。正文（当时的待拍板提案）冻结为历史快照，现行机制以 [ADR-246](../adr/ADR-246-light-volumetric-simplify.md) / [ADR-247](../adr/ADR-247-postproc-linkage-gate.md) 与源码为准。
+
 > 设定前提：**体积光是聚光灯的附属效果，必须开启聚光灯才有效**。
 > 目标：砍掉不存在的抽象、把参数从 5 个收成 3 个语义滑块、补真正的可视化（helper 线框）、修「顶光」译名。
 > 用户裁定：**不做条件显隐**（聚光灯与体积光合并进一个折叠卡即可）。

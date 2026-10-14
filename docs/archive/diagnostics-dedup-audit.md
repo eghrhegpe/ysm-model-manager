@@ -1,5 +1,7 @@
 # 诊断页「同语义多处实现」收敛清单（只读审计）
 
+> **⚠️ 活指针（2026-10-14 归档）**：C1–C13 已全部闭环（§六 落地状态回填：2026-09-18 终态，C7 豁免降级「不动」），待确认 1/2/4/5/6 已关闭，仅剩 #3 可选文案微调（非债）。审计正文冻结为历史快照；诊断页现收敛态以知识卡 [app-content-diagnostics](../knowledge/app-content-diagnostics.md) 与源码为准。
+
 > 范围：`frontend/src/views/app-content/diagnostics/**`（19 个生产 .ts，约 3,700 行）。Go 侧仅只读参照，不做评价。
 > 判据纪律：**真同语义 = 输入/输出契约可逐字互换且互换后行为不变（含错误分支、空值、顺序）**。契约不同者一律降级为「同用途不同口径」或列入必要差异。
 > 反向前提（已核实，故本清单很短）：本页的共享层基本被遵守——`createLoadGuard()` 6 个模块全覆盖（logs / perf-single / perf-concurrent / perf-gui-flow / perf-scan-bench / perf-log）、`EscFn` 单点托管于 `logs.ts:13` 并被全页 import、`sectionHeader / setBusy / getOutBox / respHasOutput` 由 `perf-common.ts` 统一出口、`UI_ICONS` 无一处 emoji 硬编码图标、`formatBytes` 在 health / perf-matrix 均已委托、`perfOrderOptionsHTML()`（tpl.ts:136）被 single / conc 共用、`parsePerfTargetValue / readPerfOrder / populatePerfTargetOptions / perfTargetEchoHTML` 被 single / conc 共用。**下面的清单是扣掉这些之后剩下的债。**

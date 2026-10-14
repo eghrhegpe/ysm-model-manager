@@ -2,7 +2,7 @@
 
 > 范围：诊断页日志面板（`diagnostics/logs.ts` + `init.ts` 子 tab 分派 + `tpl.ts` 工具栏 + Go `logs` / `internal/app`）。
 > 性质：**只读分析**，不动代码。源于 2026-09-28 日志面板改版（搜索框上移行1 + 状态筛选补 warn 档）后的复盘。
-> 相关：`docs/plans/diagnostics-dedup-audit.md` 的 D4（两路日志源必要差异论）是本文的展开；决策红线见根 AGENTS「职责归属」。
+> 相关：`docs/archive/diagnostics-dedup-audit.md` 的 D4（两路日志源必要差异论）是本文的展开；决策红线见根 AGENTS「职责归属」。
 
 ## 一、两条日志流的真实拓扑（单一事实源）
 

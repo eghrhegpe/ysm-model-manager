@@ -2,7 +2,7 @@
 //
 // 立因：conflicts 的 `#sync-rtype` 与 perf 目标集下拉各自有一段「id→label → <option>」构造，
 // 前者手写 `.map(...)` 拼串，后者在 `populatePerfTargetOptions` 里 DOM 手拼。
-// 审计结论（docs/plans/diagnostics-dedup-audit.md 待确认 1）它们**不是数据归属分叉**——
+// 审计结论（docs/archive/diagnostics-dedup-audit.md 待确认 1）它们**不是数据归属分叉**——
 // 两源最终都派生自 `resource_types.json`（本仓类型唯一事实源），前端不自行判定类型；
 // 只是**展示层派生分叉**（顺序声明序 vs 字典序、能力有 tooltip/异步重填 vs 无）。
 // 故本模块只收掉「手写 <option>」这份重复，**顺序与选中逻辑由调用方决定后传入**——

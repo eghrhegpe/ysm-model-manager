@@ -118,7 +118,7 @@
 | README、脚本索引、登记处、check-readme-index、脚本漂移、脚本对账、重复登记、幽灵引用 | [README 登记处对账 check-readme-index.ts](./scripts-readme-index.md) | `scripts/README.md` 自称「所有 Node 工具脚本的索引」「治理检查（check-* 系列；唯一登记处）」，但历史上没有任何机器对账——新增/改名脚本后忘记登记 README 不会被任何门禁拦下。2026-08-31 审… |
 | 搜索、筛选、三路交集、adv-filter、SearchModels、网页版降级 | [搜索筛选编排 search](./search.md) ⚠️歧义（另见 dialog-adv-filter.md、model-stats.md） | 搜索筛选的**跨层端到端编排层**：前端工具栏搜索输入 → 关键词 + 标签 + 数值三路交集 → 后端 Go 一次性过滤 → 白名单回填 `buildTree` 精确匹配。 |
 | 符号提取、导出符号、顶层声明、api-break、audit-split、rollback-impact、bloat-history、依赖图 | [源码符号提取共享层 source-graph.ts](./source-graph.md) ⚠️歧义（另见 auto-import-split.md） | — |
-| 整合包同步、推送、拉取、跨组件同步编排、缺包回拉、PullSingleResource、sync:download:missing | [整合包同步管理器 sync-manager](./sync-manager.md) ⚠️歧义（另见 app-sync-manager.md、app-sidebar.md等） | `app-sync-manager` 是一个 Web Component 视图组件（`<app-sync-manager>`），承担**单个整合包（instance）内「仓库 ↔ 实例」双向同步状态展示与逐文件推送/拉取编排**： |
+| 整合包同步、推送、拉取、跨组件同步编排、缺包回拉、PullSingleResource、downloadMissing | [整合包同步管理器 sync-manager](./sync-manager.md) ⚠️歧义（另见 app-sync-manager.md、app-sidebar.md等） | `app-sync-manager` 是一个 Web Component 视图组件（`<app-sync-manager>`），承担**单个整合包（instance）内「仓库 ↔ 实例」双向同步状态展示与逐文件推送/拉取编排**： |
 | 写或审 preview-3d 的 vi.mock 用例，判断是否自证、给核心纯函数 / 关键守卫补测试，需正反双侧、改关键守卫（所有权 / dispose 顺序 / 让权 / 通路裁决）后做变异实证 | [测试纪律：禁 mock 断言谓词 / 判别样本 / 变异探针](./test-discipline.md) | [ADR-311-d1] 收口的测试可信度三机制（锐评 2026-10-08，落地 2026-10-09）： |
 | 测试税、测试文件过大、mock 复印机、双胞胎测试、墓碑测试、stubBlobUrls、夹具沉淀 | [测试税减负三刀方法论](./test-tax-reduction.md) | 测试税 ≠ 测试太多，而是「mock 复印机」与「双胞胎测试」这两种结构病。 |
 | 测试工具、testid、getByTestId、waitFor、sleep、flaky、异步等待、组件测试 | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) | `frontend/src/test-utils/` 是组件测试统一工具层（ADR-035 G-1 / UI-Design.md §19.1）。查询走 `data-testid` 稳定钩子（不绑定 CSS 类/文案），等待走轮询（替代固定 … |

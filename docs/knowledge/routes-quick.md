@@ -242,7 +242,7 @@
 | 一键安装、整合包拖拽导入 | [侧边栏 app-sidebar](./app-sidebar.md) | - | - |
 | 语言切换 / 检测系统语言 / 持久化 uiLang | [国际化 i18n 模块](./i18n.md) | 并发 setLang 靠 _langReqGen 代际计数防竞态 | ADR-124, ADR-207, ADR-210 |
 | 整合包列表、同步状态、勾选 | [整合包同步管理器 sync-manager](./sync-manager.md) | 状态筛选的 a11y 键盘语义只走 events.ts 单一 keydown 委托 + tpl.ts 模板出属性，禁止逐 tab 补 handler / 手搓 aria | - |
-| 整合包同步、推送 / 拉取 | [整合包同步管理器 sync-manager](./sync-manager.md) | 同步写操作并发守卫 = features/sync 的 BusyLock（handler 级互斥）+ sync-manager network.performSingleOp 的 per-path 防重入（同一行串行、异行并发）——历史上无「queue 队列」实体，勿去找它；app-sidebar 禁止绕开 sync:download:missing 事件链直调 PushSingleResource（2026-10-14 锐评 P2-3：红线措辞对齐真实机制） | - |
+| 整合包同步、推送 / 拉取 | [整合包同步管理器 sync-manager](./sync-manager.md) | 同步写操作并发守卫 = features/sync 的模块级 BusyLock（downloadMissing withLock）+ sync-manager network.performSingleOp 的 per-path 防重入（同一行串行、异行并发）——历史上无「queue 队列」实体，勿去找它；整包推送唯一入口 = features/sync\|downloadMissing 直调（ADR-340 去总线化，原 sync:download:missing 事件链已退役），app-tree 逐文件走 performSingleOp、禁止各自另写安装循环（2026-10-14 锐评 P2-3 + ADR-340） | - |
 | 主内容区、页面切换、仓库页 / 创作者页 / 社区页 | [主内容页 app-content](./app-content.md) | 主内容区页面切换必须经 nav:changed / app-nav 路由分发，禁止页面之间直接 init 对方 | - |
 | 主题、换肤、深色 / 浅色 / 跟随系统 | [主题系统 theme](./theme.md) | 主题值必须经 normalizeTheme 白名单过滤，白名单外回落 system，防脏值污染持久层 | ADR-146 |
 | 主题初始化、服务注册、检查更新 | [组件入口 app-modules](./app-modules.md) | - | - |
@@ -270,7 +270,7 @@
 | safeErrorMessage、异常提取 | [安全错误消息提取 utils](./safe-error-msg.md) | - | - |
 | setPointerCapture、touch-action、拖拽 | [Pointer Events 统一交互（触屏 + 桌面）](./pointer-events.md) | - | - |
 | swallowError（fire-and-forget 错误兜底） | [核心工具函数 core-utils](./core-utils.md) | - | - |
-| sync:download:missing 缺包回拉 | [整合包同步管理器 sync-manager](./sync-manager.md) | - | - |
+| sync:download:missing 缺包回拉（已退役，ADR-340 直调 downloadMissing） | [整合包同步管理器 sync-manager](./sync-manager.md) | - | - |
 | toast 文案、报错翻译、网络错误 | [错误处理 errors](./utils-errors.md) | - | - |
 | toast-ms / focus-restore | [DOM 工具 dom](./utils-dom.md) | - | - |
 | tree 样式、Shadow DOM 样式、CSS 变量 | [共享样式 shared-styles](./shared-styles.md) | - | - |

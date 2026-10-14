@@ -4,12 +4,9 @@
 > 基于 `frontend/src/bus.ts` 的 `BusEvents` 接口校验所有调用方（含 html 内联、可选链调用）。
 > 合法发射者登记表闸（ADR-270-d3）：`docs/.bus-emitters.json` 之外新增发射文件 = 硬错误；表内未被命中条目 = 可收紧提示。
 
-## ⚠️ 异常摘要
+## ✅ 无异常
 
-### 登记表可收紧（发射已收敛，`--update` 自动收表销账）
-
-- `sync:download:done` @ `frontend/src/features/sync/sync.ts`
-- `sync:download:missing` @ `frontend/src/views/app-sidebar/sync-flow.ts`
+所有调用均在 BusEvents 契约与合法发射者登记表内：无孤儿发射 / 鬼订阅 / 未声明事件 / 缺参 / 发射者表外新增。
 
 ## 事件总览
 
@@ -54,7 +51,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| initWorkshopPage | `frontend/src/views/app-content/init-workshop.ts` | 138 |
+| initWorkshopPage | `frontend/src/views/app-content/init-workshop.ts` | 143 |
 
 ### `batch:rename`
 
@@ -220,7 +217,7 @@
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 386 |
 | atTeClickRowFolder | `frontend/src/views/app-tree/events.ts` | 170 |
 | atTeClickRowFile | `frontend/src/views/app-tree/events.ts` | 244 |
-| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 722 |
+| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 726 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -336,14 +333,14 @@
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 311 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 76 |
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 141 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 304 |
+| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 320 |
 | _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 229 |
 | runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 94 |
 | atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 121 |
 | atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 182 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 115 |
 | atTeBindRenameInput | `frontend/src/views/app-tree/events.ts` | 387 |
-| _executeTreeMove | `frontend/src/views/app-tree/index.ts` | 789 |
+| _executeTreeMove | `frontend/src/views/app-tree/index.ts` | 793 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -359,7 +356,7 @@
 | runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 306 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 114 |
 | toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 490 |
-| _executeTreeMove | `frontend/src/views/app-tree/index.ts` | 788 |
+| _executeTreeMove | `frontend/src/views/app-tree/index.ts` | 792 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -414,7 +411,7 @@
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 209 |
 | applyFsaState | `frontend/src/views/app-content/settings/init.ts` | 389 |
 | onWebRepoAuthClick | `frontend/src/views/app-content/settings/init.ts` | 417 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 305 |
+| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 321 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |

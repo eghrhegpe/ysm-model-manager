@@ -1,6 +1,6 @@
 // ===== 复制并如实回执（诊断页所有复制入口的唯一出口）=====
 //
-// 立因（2026-09-18 诊断页重复实现审计 C5，见 docs/plans/diagnostics-dedup-audit.md）：
+// 立因（2026-09-18 诊断页重复实现审计 C5，见 docs/archive/diagnostics-dedup-audit.md）：
 // 本页曾绕开既有单点 `utils/dom/clipboard.ts|copyText` 自写 textarea 降级——那份实现返回 void，
 // 失败不可见，于是调用方**无条件**弹「已复制」：剪贴板被拒且 execCommand 也失败时，界面在撒谎。
 // 全仓既有范式早已写在 `features/pack-ops/instance-ops.ts:73-80` 的注释里：

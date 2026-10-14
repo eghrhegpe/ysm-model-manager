@@ -267,36 +267,48 @@ function cmDqHandleEnded(ctx: CmDqCtx): void {
   if (qs) qs.classList.remove("show");
 }
 
+/** file-done 分支：lastDoneSeq 前进时处理该文件完成（幂等） */
+function cmDqOnFileDone(ctx: CmDqCtx, s: DownloadState): void {
+  // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
+  cmDqHandleFileDone(ctx, s._lastDone!);
+  ctx.prev.lastDoneSeq = s._lastDoneSeq;
+}
+
+/** file-start 分支：currentFile 变化时处理文件开始 */
+function cmDqOnFileStart(ctx: CmDqCtx, s: DownloadState): void {
+  cmDqHandleFileStart(ctx, s);
+}
+
+/** progress 分支：dl/total 有值时渲染进度 */
+function cmDqOnProgress(ctx: CmDqCtx, s: DownloadState): void {
+  ctx.progressGuard.render(s);
+}
+
+/** status 迁移分支：done/cancelled → 收尾；active → run；idle ← active → ended */
+function cmDqOnStatusChange(ctx: CmDqCtx, s: DownloadState): void {
+  if (s.status === "done" || s.status === "cancelled") {
+    cmDqHandleCancel(ctx, s);
+  } else if (isActiveStatus(s)) {
+    // 认 downloading 与 enqueued 双态（2026-09 锐评修复）：Go 入队后只发 "enqueued"，
+    // 原只认 "downloading" 依赖「前端直设态恰好先于事件」的脆弱时序——事件序
+    // idle→enqueued 曾跳过 run 分支导致按钮不 disable、进度行不初始化
+    cmDqHandleRun(ctx, s);
+  } else if (
+    s.status === "idle" &&
+    (ctx.prev.status === "downloading" || ctx.prev.status === "enqueued")
+  ) {
+    cmDqHandleEnded(ctx);
+  }
+}
+
 function cmDqHandleStateChange(ctx: CmDqCtx, s: DownloadState): void {
-  if (s._lastDoneSeq > ctx.prev.lastDoneSeq) {
-    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-    cmDqHandleFileDone(ctx, s._lastDone!);
-    ctx.prev.lastDoneSeq = s._lastDoneSeq;
-  }
+  if (s._lastDoneSeq > ctx.prev.lastDoneSeq) cmDqOnFileDone(ctx, s);
 
-  if (s.currentFile && s.currentFile !== ctx.prev.file) {
-    cmDqHandleFileStart(ctx, s);
-  }
+  if (s.currentFile && s.currentFile !== ctx.prev.file) cmDqOnFileStart(ctx, s);
 
-  if (s.progress && (s.progress.dl > 0 || s.progress.total > 0)) {
-    ctx.progressGuard.render(s);
-  }
+  if (s.progress && (s.progress.dl > 0 || s.progress.total > 0)) cmDqOnProgress(ctx, s);
 
-  if (s.status !== ctx.prev.status) {
-    if (s.status === "done" || s.status === "cancelled") {
-      cmDqHandleCancel(ctx, s);
-    } else if (isActiveStatus(s)) {
-      // 认 downloading 与 enqueued 双态（2026-09 锐评修复）：Go 入队后只发 "enqueued"，
-      // 原只认 "downloading" 依赖「前端直设态恰好先于事件」的脆弱时序——事件序
-      // idle→enqueued 曾跳过 run 分支导致按钮不 disable、进度行不初始化
-      cmDqHandleRun(ctx, s);
-    } else if (
-      s.status === "idle" &&
-      (ctx.prev.status === "downloading" || ctx.prev.status === "enqueued")
-    ) {
-      cmDqHandleEnded(ctx);
-    }
-  }
+  if (s.status !== ctx.prev.status) cmDqOnStatusChange(ctx, s);
 
   ctx.prev.file = s.status === "done" || s.status === "cancelled" ? "" : s.currentFile;
   ctx.prev.status = s.status;

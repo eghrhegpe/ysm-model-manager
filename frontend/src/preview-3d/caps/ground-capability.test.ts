@@ -16,6 +16,13 @@ import {
 } from "./ground-surface-spec.ts";
 import { GROUND_MATERIAL_PRESET_KEYS } from "./ground-capability.ts";
 import { restoreState } from "./scene-capability.ts";
+// P1（2026-10-14 全量验证）：本文件 81 用例 + GroundCapability 全局 env 回调（ADR-196，
+// 泄漏后 setEnvState 触发 O(N²) 纹理重建，afterEach clearEnvCallbacks 已在扛）是全量里
+// 唯一断崖离群点（全量 53s / 单跑 28s，其余文件 per-test 均 <300ms）——满载 worker 下
+// 个别用例会拖过全局 5s testTimeout（vitest.config.ts:40）→ 偶发假红（单跑 3/3 绿坐实非逻辑 bug）。
+// 非掩盖：只给重文件合理 per-test 调度余量（对齐 app-modules.boot.test.ts 先例 + coverage 档 30s），
+// 真死锁（>30s）仍会失败，不遮真缺陷。
+vi.setConfig({ testTimeout: 30000 });
 // ADR-196：每个构造注册全局 env 回调，且仅 dispose 时注销——
 // 不显式 dispose 的用例会泄漏回调，使后续 setEnvState 触发 O(N²) 纹理重建超时。
 // 与 environment/sky/postprocessing/water 同侪一致：afterEach 清空防止 cap 泄漏跨测试。

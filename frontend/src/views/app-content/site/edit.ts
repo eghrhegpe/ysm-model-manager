@@ -378,7 +378,26 @@ function eeBindCreatorsEdit(state: SiteViewState, sig: AbortSignal): void {
         if (!chip) return;
         chip.classList.toggle("active");
         const idx = parseInt(group.dataset.idx || "-1", 10);
+        const siteId = chip.dataset.siteId || "";
         syncFieldToCreator(group, creators, idx, "type");
+        // 取消本站归属必须登记 detachedNames（锐评高危修复，2026-10-14：静默数据丢失）。
+        // 病：保存路径 `siteCreators = creators.filter(cr => parseSiteIds(cr.type).includes(site.id))`
+        // 把「type 已不含本站」的条目整条滤出，而 Go 侧 SaveWorkshopCreatorsBySite
+        // （internal/app/app_workshop.go）对「不在 siteCreators 也不在 detachedNames」的
+        // 本站条目**直接丢弃**（:222 注释原文）——取消 chip 既不进 list 也不进名单，
+        // 于是多站创作者在别站的条目**一并消失**，单站创作者整条蒸发，
+        // 且无 toast 无确认（旧契约的 `.cr-del` 路径有 detachedNames，chip 路径漏了）。
+        // 修法与 .cr-del 对称：还属他站 → 记名走 Go 段级解除；不属他站（type 变空）→ 整条删。
+        if (!chip.classList.contains("active") && siteId === site.id) {
+          const cr = creators[idx];
+          if (!cr) return;
+          if (parseSiteIds(cr.type).some((s) => s !== site.id)) {
+            if (!state.detachedNames.includes(cr.name)) state.detachedNames.push(cr.name);
+          } else {
+            const realIdx = allCreators.indexOf(cr);
+            if (realIdx >= 0) allCreators.splice(realIdx, 1);
+          }
+        }
       },
       { signal: sig },
     );

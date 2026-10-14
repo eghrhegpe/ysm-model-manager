@@ -433,6 +433,98 @@ describe("编辑态增删", () => {
     cleanup!();
   });
 
+  // 锐评高危修复（2026-10-14，静默数据丢失）：取消本站 chip 必须登记 detachedNames。
+  // 保存路径 siteCreators 只收 `parseSiteIds(cr.type).includes(site.id)` 的条目，而 Go 侧
+  // SaveWorkshopCreatorsBySite（internal/app/app_workshop.go:222）对「不在 siteCreators
+  // 也不在 detachedNames」的本站条目**整条丢弃**——取消 chip 两边都不落= 多站创作者
+  // 在别站的条目一并消失，无 toast 无确认。旧 `.cr-del` 路径有登记，chip 路径漏了。
+  it("取消本站 chip 且仍属他站 → 登记 detachedNames（防保存时整条丢弃）", () => {
+    const site = { id: "siteA" } as WorkshopSite;
+    const { state, searchResults } = makeState({
+      site,
+      creators: [
+        { id: 1, name: "Alice", desc: "", type: "siteA;siteB", role: "creator" } as unknown as LocalCreatorLike,
+      ],
+      allCreators: [
+        { id: 1, name: "Alice", desc: "", type: "siteA;siteB", role: "creator" } as unknown as LocalCreatorLike,
+      ],
+    });
+    searchResults.innerHTML =
+      '<div class="cr-edit-card" data-edit-idx="0">' +
+      '<div class="cr-site-chip-group" data-idx="0" data-fld="type">' +
+      '<button class="cr-site-chip active" data-site-id="siteA">A</button>' +
+      '<button class="cr-site-chip active" data-site-id="siteB">B</button>' +
+      "</div></div>";
+    const cleanup = bindEditEvents(state, () => {});
+
+    // 取消 siteA 勾选 → type 只剩 siteB（仍属他站）
+    (searchResults.querySelector('[data-site-id="siteA"]') as HTMLElement).click();
+    expect(state.creators[0]!.type).toBe("siteB");
+    // 必须登记：Go 靠它做「只去本站段」的段级解除，而不是把 Alice 整条丢弃
+    expect(state.detachedNames).toContain("Alice");
+    // 且不重复登记（反复点击不刷重）
+    const before = state.detachedNames.length;
+    (searchResults.querySelector('[data-site-id="siteA"]') as HTMLElement).click();
+    (searchResults.querySelector('[data-site-id="siteA"]') as HTMLElement).click();
+    expect(state.detachedNames).toContain("Alice");
+    expect(state.detachedNames.length).toBe(before);
+    cleanup!();
+  });
+
+  it("取消本站 chip 且不属他站（type 变空）→ 从 allCreators 整条移除", () => {
+    const site = { id: "siteA" } as WorkshopSite;
+    const shared = {
+      id: 1,
+      name: "Solo",
+      desc: "",
+      type: "siteA",
+      role: "creator",
+    } as unknown as LocalCreatorLike;
+    const { state, searchResults } = makeState({
+      site,
+      creators: [shared],
+      allCreators: [shared],
+    });
+    searchResults.innerHTML =
+      '<div class="cr-edit-card" data-edit-idx="0">' +
+      '<div class="cr-site-chip-group" data-idx="0" data-fld="type">' +
+      '<button class="cr-site-chip active" data-site-id="siteA">A</button>' +
+      "</div></div>";
+    const cleanup = bindEditEvents(state, () => {});
+
+    (searchResults.querySelector('[data-site-id="siteA"]') as HTMLElement).click();
+    expect(state.creators[0]!.type).toBe("");
+    // 不属他站 → 走整条删除（与 .cr-del 对称），不登记 detachedNames
+    expect(state.detachedNames).not.toContain("Solo");
+    expect(state.allCreators).toHaveLength(0);
+    cleanup!();
+  });
+
+  it("勾选他站 chip 不登记 detachedNames（加入 ≠ 解除）", () => {
+    const site = { id: "siteA" } as WorkshopSite;
+    const { state, searchResults } = makeState({
+      site,
+      creators: [
+        { id: 1, name: "Alice", desc: "", type: "siteA", role: "creator" } as unknown as LocalCreatorLike,
+      ],
+      allCreators: [
+        { id: 1, name: "Alice", desc: "", type: "siteA", role: "creator" } as unknown as LocalCreatorLike,
+      ],
+    });
+    searchResults.innerHTML =
+      '<div class="cr-edit-card" data-edit-idx="0">' +
+      '<div class="cr-site-chip-group" data-idx="0" data-fld="type">' +
+      '<button class="cr-site-chip active" data-site-id="siteA">A</button>' +
+      '<button class="cr-site-chip" data-site-id="siteB">B</button>' +
+      "</div></div>";
+    const cleanup = bindEditEvents(state, () => {});
+
+    (searchResults.querySelector('[data-site-id="siteB"]') as HTMLElement).click();
+    expect(state.creators[0]!.type).toBe("siteA;siteB");
+    expect(state.detachedNames).toHaveLength(0);
+    cleanup!();
+  });
+
   it("9. 保存挡掉空名条目（新增未命名行不落盘，锐评 P0-2a）", async () => {
     const { state, searchResults } = makeState();
     // DOM 与 creators 一一对应（Alice idx0 + Bob idx1）——真实编辑态由

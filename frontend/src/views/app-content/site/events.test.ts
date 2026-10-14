@@ -347,12 +347,85 @@ describe("bindBrowseEvents — 基础绑定", () => {
     window.dispatchEvent(new StorageEvent("storage", { key: "ysm-fav-creators" }));
     // 已在 cleanup 时移除监听，手动再触发不应有变化（事件已解绑）
     (loadFavs as ReturnType<typeof vi.fn>).mockReturnValue([]);
+    const callsAtCleanup = (loadFavs as ReturnType<typeof vi.fn>).mock.calls.length;
     window.dispatchEvent(new StorageEvent("storage", { key: "ysm-fav-creators" }));
-    expect(loadFavs).toHaveBeenCalledTimes(1); // 仅第一次触发时被调
+    // ⚠️ 计数断言须取 cleanup 时的基线而非硬编码 1（锐评 2026-10-14）：跨标签同步现还会
+    // 就地重排（cmCrReorderCard 内部要读最新 favs 算目标位次），单次同步事件里
+    // loadFavs 会被调多次，「仅第一次触发时被调」的硬编码口径已不成立。
+    // 真正的判别点是**cleanup 后调用数不再增长**。
+    expect((loadFavs as ReturnType<typeof vi.fn>).mock.calls.length).toBe(callsAtCleanup);
+  });
+
+  // 锐评中危修复（2026-10-14）：跨标签 storage 同步必须**就地重排**，不能只改星标。
+  // 病：原实现只写 innerHTML，与同标签 cmBbBindStarBtns 的「改星标 + cmCrReorderCard」
+  // 行为不对称——窗口 A 收藏后窗口 B 星标变实心但卡片不动，用户视角「收藏没生效」。
+  // 违反知识卡 app-content-site.md「渲染排序与就地重排同口径」不变量。
+  it("storage 同步 → 收藏变动卡片就地重排（与同标签路径同口径）", () => {
+    const { state, searchResults } = makeState();
+    // ⚠️ 判别力前提：**必须双卡**。单卡夹具下重排无位移（序恒等），
+    // 该断言无论是否重排恒成立——是假绿（初次写单卡版时变异测试未能转红即为此）。
+    const grid = searchResults.querySelector(".cr-creator-grid") as HTMLElement;
+    const cardA = grid.querySelector(".gh-card") as HTMLElement;
+    const cardB = cardA.cloneNode(true) as HTMLElement;
+    cardB.dataset.name = "B";
+    (cardB.querySelector(".cr-card-name") as HTMLElement).textContent = "B";
+    const starB = cardB.querySelector(".cr-star-btn") as HTMLElement;
+    starB.dataset.star = "B";
+    grid.appendChild(cardB);
+    state.authorCountMap.B = 1;
+
+    trackedBind(state, () => {});
+    expect(Array.from(grid.querySelectorAll(".gh-card")).map((c) => (c as HTMLElement).dataset.name)).toEqual(["A", "B"]);
+
+    // 另一标签页把 B 加入收藏 → 本页收到 storage 事件
+    (loadFavs as ReturnType<typeof vi.fn>).mockReturnValue(["B"]);
+    window.dispatchEvent(new StorageEvent("storage", { key: "ysm-fav-creators" }));
+
+    // B 必须排到 A 之前（compareFavFirst：收藏优先）
+    const order = Array.from(grid.querySelectorAll(".gh-card")).map((c) =>
+      (c as HTMLElement).dataset.name,
+    );
+    expect(order).toEqual(["B", "A"]);
   });
 });
 
 describe("bindBrowseEvents — 详情浮层", () => {
+  // 锐评高危修复（2026-10-14）：浮层内点星标必须**就地重排**卡片。
+  // 病：cmCrBindOverlayEvents 的星标handler 只改两处星标 innerHTML、不调
+  // cmCrReorderCard，而卡片星标路径（cmBbBindStarBtns）调了——同仓两条收藏路径
+  // 行为不对称。用户点开详情 → 浮层内点星标 → toast 说成功 → 关浮层，卡片仍在原位
+  // 而非跳到收藏区首位：星标实心但位置未置顶，UI 自相矛盾。
+  // ⚠️ 此处此前**零覆盖**（没有任何用例点浮层里的 [data-star]），是该缺陷长期潜伏的直接原因。
+  it("浮层内点星标 → 卡片就地重排（与卡片星标路径同口径）", () => {
+    const { state, searchResults } = makeState();
+    // 扩成双卡：A 在前、B 在后（均未收藏）
+    const grid = searchResults.querySelector(".cr-creator-grid") as HTMLElement;
+    const cardA = grid.querySelector(".gh-card") as HTMLElement;
+    const cardB = cardA.cloneNode(true) as HTMLElement;
+    cardB.dataset.name = "B";
+    (cardB.querySelector(".cr-card-name") as HTMLElement).textContent = "B";
+    const starB = cardB.querySelector(".cr-star-btn") as HTMLElement;
+    starB.dataset.star = "B";
+    grid.appendChild(cardB);
+    state.creators.push({ name: "B", role: "modeler", desc: "", type: "github" } as never);
+    state.authorCountMap.B = 1;
+    // 收藏态：B 在收藏名单里（点击后变成已收藏 → 应插到 A 之前）
+    (loadFavs as ReturnType<typeof vi.fn>).mockReturnValue(["B"]);
+
+    trackedBind(state, () => {});
+    // 点 B 的卡片打开浮层，再在浮层内点星标
+    cardB.click();
+    const overlay = searchResults.querySelector(".cr-detail-overlay") as HTMLElement;
+    expect(overlay).toBeTruthy();
+    (overlay.querySelector("[data-star]") as HTMLElement).click();
+
+    // B 已收藏 → 必须排到未收藏的 A 之前
+    const order = Array.from(grid.querySelectorAll(".gh-card")).map((c) =>
+      (c as HTMLElement).dataset.name,
+    );
+    expect(order.indexOf("B")).toBeLessThan(order.indexOf("A"));
+  });
+
   it("点击创作者卡片 → 浮层含名称/收藏/本地模型/操作按钮", () => {
     const { state, searchResults } = makeState();
     trackedBind(state, () => {});

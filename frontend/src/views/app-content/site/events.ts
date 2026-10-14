@@ -114,6 +114,7 @@ function cmCrBindOverlayEvents(
   openUrl: ((url: string) => void) | undefined,
   fillSearch: (tpl: string, q: string) => string,
   busRef: typeof bus,
+  authorCountMap: Record<string, number>,
 ): void {
   const overlayStar = qs<HTMLElement>(overlay, "[data-star]");
   overlayStar?.addEventListener("click", (ev) => {
@@ -128,6 +129,17 @@ function cmCrBindOverlayEvents(
       `.cr-star-btn[data-star="${CSS.escape(cr.name)}"]`,
     );
     if (cardStar) cardStar.innerHTML = starHtml;
+    // 收藏序就地重排（锐评高危修复，2026-10-14）。病：本handler 只改两处星标图标、
+    // **不调 cmCrReorderCard**，而卡片星标路径（cmBbBindStarBtns）调了——同仓两条收藏
+    // 路径行为不对称。用户点开详情浮层 → 浮层内点星标 → toast 说成功 → 关浮层，
+    // 卡片仍留在原位而非跳到收藏区首位：星标实心但位置未置顶，UI 自相矛盾，
+    // 且错乱持续到下一次整树重渲染（切tab / 进编辑态）才自愈。
+    // 违反知识卡 app-content-site.md「渲染排序与就地重排同口径」不变量。
+    const card = cardStar?.closest(".gh-card");
+    const grid = card?.closest(".cr-creator-grid");
+    if (card instanceof HTMLElement && grid instanceof HTMLElement) {
+      cmCrReorderCard(grid, card, authorCountMap);
+    }
     busRef.emit("toast:show", {
       msg: now ? t("content.favAdded") : t("content.favRemoved"),
       duration: TOAST_MS.quick,
@@ -407,7 +419,16 @@ function cmBbBindCardClicks(
       const overlay = cmCrCreateDetailOverlay(cr, esc, avatarCache, authorCountMap);
       (searchResults.getRootNode() as Node).appendChild(overlay);
       overlay.focus();
-      cmCrBindOverlayEvents(overlay, cr, searchResults, site, openUrl, fillSearch, busRef);
+      cmCrBindOverlayEvents(
+        overlay,
+        cr,
+        searchResults,
+        site,
+        openUrl,
+        fillSearch,
+        busRef,
+        authorCountMap,
+      );
     });
   });
 }
@@ -443,23 +464,44 @@ function cmBbBindKeyboardNav(searchResults: HTMLElement): void {
 // cmSe* 包级函数：_storageSyncFn 子函数（跨标签同步处理）
 // ============================================================
 
-function cmSeSyncFavButtons(searchResults: HTMLElement): void {
+function cmSeSyncFavButtons(
+  searchResults: HTMLElement,
+  authorCountMap: Record<string, number>,
+): void {
   const favs = loadFavs();
+  // 收藏态变动的卡片收集：跨标签同步后需就地重排（锐评中危修复，2026-10-14）。
+  // 病：原实现只写星标 innerHTML，与同标签的 cmBbBindStarBtns 路径**行为不对称**——
+  // 用户在窗口 A 收藏，窗口 B 收到 storage 事件 → 星标变实心但卡片不动，
+  // 用户视角「收藏没生效」，直到切 tab 才重排。同违反 app-content-site.md
+  // 「渲染排序与就地重排同口径」不变量。
+  const moved = new Set<HTMLElement>();
   qsa<HTMLElement>(searchResults, ".cr-star-btn").forEach((btn) => {
     // 预构建 SVG 常量先取到局部变量（R8 豁免：RHS=裸变量）
     const starHtml = favs.includes(btn.dataset.star || "") ? UI_ICONS.starFilled : UI_ICONS.star;
     btn.innerHTML = starHtml;
+    const card = btn.closest(".gh-card");
+    if (card instanceof HTMLElement) moved.add(card);
   });
+  const grid = searchResults.querySelector(".cr-creator-grid");
+  if (grid instanceof HTMLElement) {
+    // 逐张就地重排（比较器与渲染期同源，见 cmCrReorderCard）；moved 去重防同一卡多个星标按钮
+    for (const card of moved) {
+      cmCrReorderCard(grid, card, authorCountMap);
+    }
+  }
 }
 
 // ============================================================
 // 主函数 A：_storageSyncFn（跨标签 storage 同步分派）
 // ============================================================
 
-function cmSeMakeSyncFn(searchResults: HTMLElement): (e: StorageEvent) => void {
+function cmSeMakeSyncFn(
+  searchResults: HTMLElement,
+  authorCountMap: Record<string, number>,
+): (e: StorageEvent) => void {
   return (e: StorageEvent) => {
     if (e.key === FAV_CREATORS_KEY) {
-      cmSeSyncFavButtons(searchResults);
+      cmSeSyncFavButtons(searchResults, authorCountMap);
     }
   };
 }
@@ -510,7 +552,7 @@ export function bindBrowseEvents(state: SiteViewState, refreshView: () => void):
   cmBbBindKeyboardNav(searchResults);
 
   // storage 监听器收进闭包：谁注册谁清理（模块级单例会被后一个视图覆盖，见文件头）
-  const storageSyncFn = cmSeMakeSyncFn(searchResults);
+  const storageSyncFn = cmSeMakeSyncFn(searchResults, authorCountMap);
   window.addEventListener("storage", storageSyncFn);
 
   return () => {

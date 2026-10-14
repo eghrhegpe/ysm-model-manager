@@ -307,13 +307,20 @@ func processOneResourceType(
 	instDir := registry.FindInstDir(insVersionDir, subDir, rt.ID)
 	isDirLevel := registry.IsDirLevelSync(rt.ID)
 
-	// ADR-064 分流：dirLevel 走 SyncResourcesDirLevelScan（注入 scanner 缓存复用），
-	// fileLevel 走 SyncResources（相对路径成对对比，不会丢同名不同目录文件）
+	// ADR-064 分流：dirLevel 走 SyncResourcesDirLevelScan、fileLevel 走 SyncResourcesWithConfig，
+	// 两分支注入**同款** scanner 缓存化 scanFn（30s TTL + single-flight，哈希在 scanner 侧
+	// 并行预算内现算，不触 hashlock 红线）：
+	//   - dirLevel 注入系 ADR-344 D1（修「平铺模型文件改内容恒判 Synced」）；
+	//   - fileLevel 注入系 2026-10-15 锐评（补漏网）：原直调 SyncResources（scanFn=nil →
+	//     恒无哈希 → Size 兜底），同大小异内容的 pack.zip 恒判 Synced——而同目录对的
+	//     internal/app|App.SyncResources（CLI instances list / 推送清单）早已注入
+	//     a.scanModelEntries 走哈希判定（D2′-a），两路对同一事实答案相反。scanFn 旁挂后
+	//     contentDiffers 走哈希腿，异内容 → Missing+Diverged，resolveItemMeta 按清单标行。
 	var result types.ResourceSyncResult
 	if isDirLevel {
 		result = ysmsync.SyncResourcesDirLevelScan(globalDir, instDir, rt.ID, scanner.ScanEntriesWithHit)
 	} else {
-		result = ysmsync.SyncResources(globalDir, instDir, rt.ID)
+		result = ysmsync.SyncResourcesWithConfig(globalDir, instDir, nil, scanner.ScanEntries, rt.ID)
 	}
 
 	var typeItems []types.ResourceSyncItem

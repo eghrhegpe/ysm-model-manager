@@ -100,6 +100,11 @@ function buildZipExpandedFiles(
   return expanded;
 }
 
+/** 解压结果是否包含可用主文件（否则保留原 zip 整体当主文件） */
+function expandedHasMainFile(expanded: File[]): boolean {
+  return expanded.length > 0 && expanded.some((wf) => mainFileRank(wf.name) >= MAIN_FILE_RANK_TYPE);
+}
+
 /** GBK 中文名降级提示：gpf 未设时 fflateKey 为 Latin-1 乱码 */
 function warnNonUtf8ZipNames(metas: ZipEntryMeta[]): void {
   if (metas.length > 0 && metas.some((m) => !m.gpfUtf8)) {
@@ -142,9 +147,7 @@ async function expandZipFiles(files: File[]): Promise<File[]> {
       const prefix = topLevelDir ? "" : f.name.replace(/\.zip$/i, "");
       const expanded = buildZipExpandedFiles(entries, sanitizedMetas, prefix);
       // 解压空/无有效文件，或解压后无主文件（资源包/光影包 zip）→ 保留原 zip 整体当主文件
-      const keepAsWhole =
-        expanded.length === 0 ||
-        !expanded.some((wf) => mainFileRank(wf.name) >= MAIN_FILE_RANK_TYPE);
+      const keepAsWhole = !expandedHasMainFile(expanded);
       if (keepAsWhole) {
         out.push(f);
       } else {
@@ -202,6 +205,39 @@ function buildRoughGroups(expanded: File[]): { rough: Map<string, File[]>; faile
   return { rough, failed };
 }
 
+/** 收集主文件目录集合（rank>=TYPE 且未超限；超限主文件不参与定组） */
+function collectMainDirs(rg: File[]): Set<string> {
+  const mainDirs = new Set<string>();
+  for (const f of rg) {
+    if (mainFileRank(f.name) >= MAIN_FILE_RANK_TYPE && f.size <= MAX_IMPORT_BYTES) {
+      const d = fsaDirOf(f);
+      if (d) mainDirs.add(d);
+    }
+  }
+  return mainDirs;
+}
+
+/** 无目录主文件时退化单文件分组（纯 basename 拖入 / 顶层文件） */
+function fallbackSingleGroups(rg: File[], groups: Map<string, File[]>): void {
+  for (const f of rg) {
+    const stem = basenameStem(f);
+    const arr = groups.get(stem);
+    if (arr) arr.push(f);
+    else groups.set(stem, [f]);
+  }
+}
+
+/** 按 assignMainDir 归属精分组 */
+function assignGroupFiles(rg: File[], groups: Map<string, File[]>, mainDirs: Set<string>): void {
+  for (const f of rg) {
+    const d = assignMainDir(f, mainDirs);
+    const stem = d ?? roughStemOf(f);
+    const arr = groups.get(stem);
+    if (arr) arr.push(f);
+    else groups.set(stem, [f]);
+  }
+}
+
 /**
  * [子函数 3/6] 阶段2 细分组：粗组 → 主文件目录集合 → 按 assignMainDir 归属精分组。
  * 无目录主文件时回退「basenameStem 单文件分组」。
@@ -209,31 +245,13 @@ function buildRoughGroups(expanded: File[]): { rough: Map<string, File[]>; faile
 function buildFinalGroups(rough: Map<string, File[]>): Map<string, File[]> {
   const groups = new Map<string, File[]>();
   for (const [, rg] of rough) {
-    // 主文件目录集合（rank>=TYPE 且未超限，超限主文件不参与定组）
-    const mainDirs = new Set<string>();
-    for (const f of rg) {
-      if (mainFileRank(f.name) >= MAIN_FILE_RANK_TYPE && f.size <= MAX_IMPORT_BYTES) {
-        const d = fsaDirOf(f);
-        if (d) mainDirs.add(d);
-      }
-    }
+    const mainDirs = collectMainDirs(rg);
     if (mainDirs.size === 0) {
       // 无目录主文件（纯 basename 拖入 / 顶层文件）：退化单文件分组
-      for (const f of rg) {
-        const stem = basenameStem(f);
-        const arr = groups.get(stem);
-        if (arr) arr.push(f);
-        else groups.set(stem, [f]);
-      }
+      fallbackSingleGroups(rg, groups);
       continue;
     }
-    for (const f of rg) {
-      const d = assignMainDir(f, mainDirs);
-      const stem = d ?? roughStemOf(f);
-      const arr = groups.get(stem);
-      if (arr) arr.push(f);
-      else groups.set(stem, [f]);
-    }
+    assignGroupFiles(rg, groups, mainDirs);
   }
   return groups;
 }

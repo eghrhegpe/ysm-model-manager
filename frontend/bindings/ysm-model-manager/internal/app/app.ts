@@ -74,6 +74,17 @@ export function AnalyzeBedrockModelEntry(modelPath: string, subPath: string): $C
     return $Call.ByID(3264818422, modelPath, subPath);
 }
 
+/**
+ * AnalyzeMmdStats MMD 统计级解析（ADR-346 刀 2）：PMX/PMD 骨骼数 + 纹理尺寸
+ * （cube 无 MMD 语义，BedrockModel.CubeCount 恒 0 诚实零值——数值条件 cube 过滤
+ * 天然筛掉 MMD 条目，UI 提示层说明）。与 AnalyzeBedrockModel 同构：路径守卫
+ * （剥禁用后缀 + isPathInRootOrSelf，Wails 绑定面可传任意路径）+ geoCache 同键复用
+ * （文件指纹变则重算；两类统计结果共享一个 path→BedrockModel 缓存，互不污染）。
+ */
+export function AnalyzeMmdStats(modelPath: string): $CancellablePromise<types$0.BedrockModel> {
+    return $Call.ByID(3941534436, modelPath);
+}
+
 export function AnalyzeYSMModel(path: string): $CancellablePromise<ysm$0.YSMModelMeta> {
     return $Call.ByID(87919393, path);
 }

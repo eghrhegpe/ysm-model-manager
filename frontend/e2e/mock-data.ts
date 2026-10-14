@@ -250,6 +250,7 @@ export const MOCK_DATA = {
   AnalyzeYSMModel: undefined,
   AnalyzeBedrockModel: undefined,
   AnalyzeBedrockModelEntry: undefined,
+  AnalyzeMmdStats: undefined,
   AllTags: undefined,
   BackupWorkshopCreators: undefined,
   BatchExtractCreatorAvatars: undefined,

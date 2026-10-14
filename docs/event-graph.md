@@ -315,7 +315,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| runWebEnqueue | `frontend/src/features/community/download-queue-web.ts` | 115 |
+| showEnqueueResult | `frontend/src/features/community/download-queue-web.ts` | 96 |
 | cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 124 |
 | refreshUI | `frontend/src/features/context-menu/context-menu-shared.ts` | 19 |
 | reportPackDropResult | `frontend/src/features/dnd/pack-dnd.ts` | 150 |
@@ -397,7 +397,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| runWebEnqueue | `frontend/src/features/community/download-queue-web.ts` | 114 |
+| showEnqueueResult | `frontend/src/features/community/download-queue-web.ts` | 95 |
 | cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 123 |
 | refreshUI | `frontend/src/features/context-menu/context-menu-shared.ts` | 18 |
 | reportPackDropResult | `frontend/src/features/dnd/pack-dnd.ts` | 151 |

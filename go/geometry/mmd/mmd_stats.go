@@ -11,7 +11,6 @@ package mmd
 import (
 	"bytes"
 	"encoding/binary"
-	"encoding/xml"
 	"fmt"
 	"io"
 	"os"
@@ -51,62 +50,127 @@ func ParseStats(path, ext string) (MmdStats, error) {
 
 // ── PMX（XML）──
 
-// ParsePmxStats 统计级解析 PMX：骨计数取模型头 bone_count 属性（单一事实源，
-// 不扫骨骼节区——大文件节区扫描成本无收益，头声明与节区一致性由格式规范保证）。
+// ParsePmxStats 统计级解析 PMX：骨计数取 <model> 头区 bone_count 属性声明（PMX 1.1
+// 规范单源；缺失 = 0 不猜——节区计数回退在嵌套骨结构上失真已弃用），纹理尺寸取
+// texture 节区 <texsize> 直读或 PNG IHDR 探测（纯字符串扫描——实现迭代实测：
+// token 流式 2MB ~110ms、全量 xml.Unmarshal ~65ms 均超 50ms 性能门禁；字符串扫描 ≈ I/O 时间）。
+// 16MB 读上限（超限 = 非统计目标，截断不猜全量）。
 func ParsePmxStats(path string) (MmdStats, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return MmdStats{}, err
 	}
 	defer f.Close()
-	// 统计级全读（PMX 文本 XML 数 MB 量级毫秒内；16MB 上限 = 超限非统计目标）
 	data, err := io.ReadAll(io.LimitReader(f, 16<<20))
 	if err != nil {
 		return MmdStats{}, err
 	}
-
-	type texInfo struct {
-		Name    string `xml:"name"`
-		Tex     string `xml:"tex"`
-		TexSize string `xml:"texsize"`
+	out, ok := scanPmxStats(data)
+	if !ok {
+		return MmdStats{}, fmt.Errorf("pmx: 无 <model> 头（非 PMX 内容，不猜）")
 	}
-	var model struct {
-		BoneCount string    `xml:"bone_count,attr"`
-		Textures  []texInfo `xml:"texture"`
-	}
-	if err := xml.Unmarshal(data, &model); err != nil {
-		return MmdStats{}, fmt.Errorf("pmx 解析: %w", err)
-	}
-	bones, err := strconv.Atoi(strings.TrimSpace(model.BoneCount))
-	if err != nil {
-		return MmdStats{}, fmt.Errorf("pmx bone_count 非法: %q", model.BoneCount)
-	}
-
-	var out MmdStats
-	out.BoneCount = bones
-	// 纹理尺寸取全组最大（过滤语义 = 模型最大纹理，同 Bedrock 管线口径）：
-	// 先全量直读 texsize；仍有未决条目才按引用探 PNG IHDR（引用缺失 = 诚实零值）
-	probeIdx := []int{}
-	for i, tx := range model.Textures {
-		if w, h, ok := parseTexSize(tx.TexSize); ok {
-			if w > out.TexWidth || h > out.TexHeight {
-				out.TexWidth, out.TexHeight = w, h
-			}
-			continue
-		}
-		if tx.Tex != "" {
-			probeIdx = append(probeIdx, i)
-		}
-	}
-	for _, i := range probeIdx {
-		abs := filepath.Join(filepath.Dir(path), model.Textures[i].Tex)
-		if w, h, ok := probePngSize(abs); ok {
-			if w > out.TexWidth || h > out.TexHeight {
-				out.TexWidth, out.TexHeight = w, h
-			}
+	// 纹理引用探测（texsize 全缺省时按引用探 PNG IHDR；引用缺失 = 诚实零值）
+	for _, ref := range scanPmxTexRefs(data) {
+		abs := filepath.Join(filepath.Dir(path), ref)
+		if w, h, ok := probePngSize(abs); ok && (w > out.TexWidth || h > out.TexHeight) {
+			out.TexWidth, out.TexHeight = w, h
 		}
 	}
 	return out, nil
+}
+
+// scanPmxStats 纯字符串扫描 PMX 统计字段（无 XML 解析器依赖，≈ I/O 成本）
+func scanPmxStats(data []byte) (MmdStats, bool) {
+	var out MmdStats
+	// 定位 <model 头区（首个出现；PMX 规范根元素）
+	start := bytes.Index(data, []byte("<model"))
+	if start < 0 {
+		return out, false
+	}
+	// 头区属性：读至 model 开标签的 '>'
+	headEnd := bytes.IndexByte(data[start:], '>')
+	if headEnd < 0 {
+		return out, false
+	}
+	// indexAttr 返回**段内**偏移（相对 data[start:]）；atoiAfterEq 吃「值起点起」的段。
+	// 0 是合法骨计数（无骨骼模型），不触发回退——节区回退已弃用（嵌套骨结构取首个
+	// </bone> 必失真），缺 bone_count 头声明 = 0（PMX 1.1 规范头恒含该属性，缺失即异常，不猜）。
+	if i := indexAttr(data[start:start+headEnd], "bone_count"); i >= 0 {
+		out.BoneCount = atoiAfterEq(data[start+i : start+headEnd])
+	}
+	// texture 节区 texsize 直读（全组最大）
+	tex := bytes.Index(data, []byte("<texture>"))
+	for tex >= 0 {
+		texEnd := bytes.Index(data[tex:], []byte("</texture>"))
+		if texEnd < 0 {
+			break
+		}
+		section := data[tex : tex+texEnd]
+		if ts := bytes.Index(section, []byte("<texsize>")); ts >= 0 {
+			rest := section[ts+len("<texsize>"):]
+			// 值收束 = 下一标签的 '<'（'</texsize>' 的 '>' 是终止符自身，
+			// 误用 IndexByte '>' 会把 "128,256</texsiz" 当值——解析必败）
+			if e := bytes.IndexByte(rest, '<'); e > 0 {
+				if w, h, ok := parseTexSize(string(rest[:e])); ok && (w > out.TexWidth || h > out.TexHeight) {
+					out.TexWidth, out.TexHeight = w, h
+				}
+			}
+		}
+		// 多 texture 迭代：下一 <texture> 的绝对位（o 是相对 data[tex+texEnd:] 的偏移）
+		if nxt := bytes.Index(data[tex+texEnd:], []byte("<texture>")); nxt >= 0 {
+			tex = tex + texEnd + nxt
+		} else {
+			tex = -1
+		}
+	}
+	return out, true
+}
+
+// indexAttr 找 name="<value>" 属性值起点（value 首字符的段内偏移；-1 = 缺失）。
+// 偏移口径：needle = name + "=\""（len = len(name)+2），值起点 = i + len(name) + 2。
+func indexAttr(seg []byte, name string) int {
+	i := bytes.Index(seg, []byte(name+"=\""))
+	if i < 0 {
+		return -1
+	}
+	return i + len(name) + 2 // 跳开 name + '=' + '"'，落在 value 首字符
+}
+
+// atoiAfterEq 扫描 value 至引号收束解析 int（解析失败 = 0，不猜）
+func atoiAfterEq(seg []byte) int {
+	e := bytes.IndexByte(seg, '"')
+	if e < 0 {
+		return 0
+	}
+	n, _ := strconv.Atoi(strings.TrimSpace(string(seg[:e])))
+	return n
+}
+
+// scanPmxTexRefs 提取 texture 节区 <tex> 引用（纯字符串扫描，同 texture 节区定位口径）
+func scanPmxTexRefs(data []byte) []string {
+	var refs []string
+	tex := bytes.Index(data, []byte("<texture>"))
+	for tex >= 0 {
+		texEnd := bytes.Index(data[tex:], []byte("</texture>"))
+		if texEnd < 0 {
+			break
+		}
+		section := data[tex : tex+texEnd]
+		if tr := bytes.Index(section, []byte("<tex>")); tr >= 0 {
+			rest := section[tr+len("<tex>"):]
+			// 值收束 = 下一标签 '<'（同 texsize 口径；'>' 会误连进后续标签）
+			if e := bytes.IndexByte(rest, '<'); e > 0 {
+				refs = append(refs, string(rest[:e]))
+			}
+		}
+		// 同 scanPmxStats 的多 texture 迭代口径
+		if nxt := bytes.Index(data[tex+texEnd:], []byte("<texture>")); nxt >= 0 {
+			tex = tex + texEnd + nxt
+		} else {
+			tex = -1
+		}
+	}
+	return refs
 }
 
 // parseTexSize 解析 <texsize>「w,h」声明

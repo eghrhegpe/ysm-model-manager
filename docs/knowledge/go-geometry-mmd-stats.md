@@ -20,7 +20,7 @@ use_when:
   - 统计级 vs 全几何解析
   - 纹理尺寸探测口径
 pitfalls:
-  - 骨计数只认 <model> 头声明 bone_count（PMX 1.1 规范单源）；节区回退已撤销——嵌套骨结构取首个 </bone> 必失真，缺头声明 = 0 不猜
+  - 骨计数只认 PMX model 头区声明的 bone_count（PMX 1.1 规范单源）；节区回退已撤销——嵌套骨结构取首个 bone 收尾标签必失真，缺头声明 = 0 不猜
   - 字符串值收束符是下一标签的 '<' 而非 '>'（误用 '>' 会把 "128,256</texsiz" 当值，Atoi 必败）
   - 多 texture 迭代的绝对位换算曾 off-by-one（相对偏移 + 基准错位），修法是 nxt 相对 data[tex+texEnd:] 起算后整体加回
   - 仓库条目 Type 派生锚在**存储布局**（mmd/PMX → EntityPlayer），实例目录（3d-skin/EntityPlayer）不是 location 消歧锚——测试 fixture 放错目录会静默拿到空 Type

@@ -293,10 +293,13 @@
 | 每日推荐、月度活动、热力图、仓库健康 | [资历最深模型 oldest-models](./oldest-models.md) | - | - |
 | 模型解析、zip / 7z / 纹理 / 动画 | [Geometry 存档 go/geometry](./go-geometry.md) | - | ADR-068 |
 | 模型统计、骨骼数/立方体数/纹理尺寸 | [Web Worker 模型统计层 model-stats](./model-stats.md) | 模型统计必须走 Web Worker 批量统计层，主线程禁止同步跑统计，防 UI 卡顿 | ADR-218, ADR-219 |
+| 目录级禁用 载体识别 | [启禁状态同步 go/sync SyncToggleStatus（ADR-345 载体识别）](./go-sync-toggle.md) | - | - |
+| 目录身份快照 dirIdentity | [重链接 go/sync RelinkDir（ADR-342 四件套）](./go-sync-relink.md) | - | - |
 | 去重、重复检测、dedup | [去重 go/dedup](./go-dedup.md) | 去重必须走 go/dedup，禁止在业务代码里手写文件指纹比较 | - |
 | 日志查看、性能分析 | [诊断页 diagnostics](./app-content-diagnostics.md) | - | - |
 | 容器解析、container_entries | [统一容器桥接层 go/container](./go-container.md) | 容器内多模型枚举必须走 go/container，前端禁止手写 zip 内文件枚举 | ADR-068, ADR-069 |
 | 扫描模型、ScanModelEntries | [扫描核心 go/scanner](./go-scanner.md) | 容器指纹缓存失效需调 ClearScanCache | - |
+| 实例独有文件保全 | [重链接 go/sync RelinkDir（ADR-342 四件套）](./go-sync-relink.md) | - | - |
 | 数值范围搜索、标签过滤 | [工具栏搜索编排 toolbar-search](./toolbar-search.md) | - | - |
 | 搜索、筛选、关键词 / 标签 / 数值三路交集 | [搜索筛选编排 search](./search.md) | 搜索筛选必须经 toolbar-search 编排 + adv-filter 弹窗 + SearchModels 后端，前端只做 UI 不做筛选逻辑 | - |
 | 搜索编排、高级筛选、关键词搜索 | [工具栏搜索编排 toolbar-search](./toolbar-search.md) | toolbar-search 编排必须单点分发搜索链路（弹窗 → 后端 → 标签交集 → 降级 → 渲染），禁止各层各自调 SearchModels | - |
@@ -309,6 +312,7 @@
 | 整合包实例、版本实例、VersionInstance | [整合包实例 go/instance](./go-instance.md) | 整合包实例同步必须走 go/instance 的 ysmsync.SyncResources，禁止在 app 层手写同步逻辑 | - |
 | 整合包同步、推送 / 拉取 | [整合包同步 go/sync](./go-sync.md) | 整合包同步必须走 go/sync 的 diff+hash 双阶段，禁止在 app 层手写同步逻辑 | ADR-064, ADR-296, ADR-342, ADR-344 |
 | 整合包同步页、推送 / 拉取资源 | [整合包同步页 app-sync-manager](./app-sync-manager.md) | app-sync-manager 的同步状态渲染必须经 _gen 单点生成，禁止各列各自查询状态 | - |
+| 重链接 RelinkDir 整夹替换 | [重链接 go/sync RelinkDir（ADR-342 四件套）](./go-sync-relink.md) | - | - |
 | 资历最深、老模型、仓库评分 | [资历最深模型 oldest-models](./oldest-models.md) | 资历排行必须经 oldest-models.ts 统一计算，禁止各页面各自实现评分逻辑 | - |
 | 资源包 / 光影包、mcmeta、pack_format | [资源包 mcmeta go/packs](./go-packs.md) | 资源包元数据必须走 go/packs 的 mcmeta 解析，前端禁止手写 mcmeta.json 解析 | - |
 | 资源类型识别、rtype 判定 | [扫描核心 go/scanner](./go-scanner.md) | resource_types.json 是唯一事实来源 | - |
@@ -320,6 +324,7 @@
 | collectMergedFiles 合并收集 / 物化封顶 | [Geometry 存档解析流水线（archive 分片）](./go-geometry-archive-pipeline.md) | - | - |
 | DiffFolderContents / DiffFolderContentsScan 夹级内容判定 | [资源/文件夹级同步 diff（go/sync 拆分）](./go-sync-resource-diff.md) | - | - |
 | dirLevel 文件单元内容级判定与祖先键去重 | [资源/文件夹级同步 diff（go/sync 拆分）](./go-sync-resource-diff.md) | - | - |
+| DisabledTwinForms 双形态探测 | [启禁状态同步 go/sync SyncToggleStatus（ADR-345 载体识别）](./go-sync-toggle.md) | - | - |
 | filepath.WalkDir 路径安全 | [去重 go/dedup](./go-dedup.md) | - | - |
 | Geometry 存档、基岩版 bedrock | [Geometry 存档 go/geometry](./go-geometry.md) | Geometry 存档解析必须走 go/geometry 的 parse/archive 封装，禁止在业务代码里直接 unzip | ADR-068 |
 | initDiagnostics、createDedupSession | [诊断页 diagnostics](./app-content-diagnostics.md) | - | - |
@@ -333,12 +338,14 @@
 | parse.go / archive.go | [Geometry 存档 go/geometry](./go-geometry.md) | - | ADR-068 |
 | ParseFromZip / ParseFrom7z / ParseFrom*Entry 存档流水线 | [Geometry 存档解析流水线（archive 分片）](./go-geometry-archive-pipeline.md) | zip/7z 六入口必须走 openArchiveBytes + parseModelFromArchive / parseFromArchiveEntry / parseComponentsFromArchive 共享实现，勿退回双份路径 | - |
 | PMX 统计解析 | [MMD 几何统计解析](./go-geometry-mmd-stats.md) | 16MB 读上限：超限 PMX 报「非统计目标」错误，数值搜索中该条零值被排除 | - |
+| relink 备份尸体 | [重链接 go/sync RelinkDir（ADR-342 四件套）](./go-sync-relink.md) | - | - |
 | runSearch | [CLI 搜索命令 search](./go-cli-search.md) | - | - |
 | SearchModels 数值筛选 | [Web Worker 模型统计层 model-stats](./model-stats.md) | - | ADR-218, ADR-219 |
 | SearchModels、adv-filter、网页版降级 | [搜索筛选编排 search](./search.md) | - | - |
 | sync_diff / sync_hash / sync_push / sync_relink | [整合包同步 go/sync](./go-sync.md) | - | ADR-064, ADR-296, ADR-342, ADR-344 |
 | SyncResources / SyncResourcesWithConfig 资源级 diff | [资源/文件夹级同步 diff（go/sync 拆分）](./go-sync-resource-diff.md) | 同步判定必须经 go/sync 的 diff+hash 双阶段，app 层禁手写同步逻辑 | - |
 | SyncResourcesDirLevel / DirLevelScan 文件夹级同步 | [资源/文件夹级同步 diff（go/sync 拆分）](./go-sync-resource-diff.md) | - | - |
+| SyncToggleStatus 启禁同步 | [启禁状态同步 go/sync SyncToggleStatus（ADR-345 载体识别）](./go-sync-toggle.md) | 启禁状态同步必须走 go/sync SyncToggleStatus，app 层禁止手写 rename 循环 | - |
 | watcher、Events / errs / done | [文件监听 go/watcher](./go-watcher.md) | - | - |
 | Web Worker、批量统计 | [Web Worker 模型统计层 model-stats](./model-stats.md) | - | ADR-218, ADR-219 |
 | YSM 解析、摘要 ExtractYsmSummary | [YSM 解析 go/ysm](./go-ysm-parser.md) | YSM 解析必须走 go/ysm 的 AnalyzeYSMModel，前端禁止手写 YSM 解析逻辑 | - |
@@ -894,7 +901,7 @@
 | 合并路径 IsArmModelName 判定在 Open+Read 之后（保持原序），勿成先判再读 | `顺手优化` | - |
 | resolveL0 命中判定以为准（零命中 = 清单与 zip 内容脱节，回退全量枚举兜底），勿按清单非空判 hit | `清单至少命中 1 个模型` | - |
 | resolveL0Model / resolveL0Texture 返回值必须是小写 zip 内绝对路径（entryByPath 键全小写），返回 e.Name() 原始大小写会让主循环重查 miss、大写条目纹理静默丢弃 | - | - |
-| 骨计数只认 <model> 头声明 bone_count（PMX 1.1 规范单源）；节区回退已撤销——嵌套骨结构取首个 </bone> 必失真，缺头声明 = 0 不猜 | - | - |
+| 骨计数只认 PMX model 头区声明的 bone_count（PMX 1.1 规范单源）；节区回退已撤销——嵌套骨结构取首个 bone 收尾标签必失真，缺头声明 = 0 不猜 | - | - |
 | 字符串值收束符是下一标签的 '<' 而非 '>'（误用 '>' 会把 "128,256</texsiz" 当值，Atoi 必败） | - | - |
 | 多 texture 迭代的绝对位换算曾 off-by-one（相对偏移 + 基准错位），修法是 nxt 相对 data[tex+texEnd:] 起算后整体加回 | - | - |
 | 仓库条目 Type 派生锚在**存储布局**（mmd/PMX | - | EntityPlayer），实例目录（3d-skin/EntityPlayer）不是 location 消歧锚——测试 fixture 放错目录会静默拿到空 Type |
@@ -933,10 +940,18 @@
 | 作者提取依赖模型文件中的 metadata.authors 字段——缺失则作者为空 | - | - |
 | 单文件 >500MB 跳过哈希计算——同步对空哈希跳过匹配 | - | - |
 | Go 单引擎扫描口径须自洽——Rust 后端已删除（2026-10-06），不再有跨引擎对照 | - | - |
+| 整夹替换成功后直接 RemoveAll 备份 | - | 实例侧自制贴图/独有子目录不可逆消失且日志为空、计数报全成功（2026-10-14 探针实证 count=1 err=nil logs=[]） |
+| 回滚用绝对源路径记账 | - | os.Rename 掉旧夹后路径当场失效（首版即 100% 回填失败），必须记相对路径 |
+| 目标夹已被活夹占用时 RemoveAll(newDir) 会删掉不属于本次重建的活夹（用户既有模型全灭），必须拒绝 | `改名搬运` | - |
+| Windows 的 os.Lstat 产出惰性 fileStat（只存路径不存 FileId），os.SameFile 按名重开恒真——目录身份快照必须走句柄态 dirIdentity | - | - |
 | pack 目录折叠指纹（D2′-b）累积须在 IsResourceAllowed 过滤之前——被过滤的纹理/mcmeta 子文件也要计入所属 pack 目录 | - | - |
 | 缓存只收完整 Walk 结果：rootFailed/partialFail 的残缺 entries 不入 30s 扫描缓存，否则残缺结果在 TTL 内当权威 | - | - |
 | resources kind 缓存键的 hashed 维度隔离与「Size-only collect」，nil 版先 populate 会污染带 scanFn 版的内容级判定；dirlevel kind 同款（ADR-344 D1） | `带哈希 collect` | - |
 | dirLevel 单元内容判定只在两侧原始相对路径相等时生效：跨格式（B.zip vs B.ysm）同身份键而比字节恒不相等，照比会造出的假待推送 | `点了推送也不收敛` | - |
+| 目录级禁用载体（模型夹 X ↔ X.disabled）在两条边都不可见：scanner 对禁用夹 SkipDir | - | 仓库索引根本没有禁用夹；实例侧原只收文件且 IsDisableSuffix 只看尾段（X.disabled/ysm.json 尾段是 ysm.json）→ 两方向均 0/0/nil 静默失效（ADR-345 前探针 P1/P2 实证） |
+| 禁用/启用载体并存时借活跃短路判载体 | - | 走进「应活跃」分支把用户既有禁用载体强制启用（复核 P1-1 实证 禁用 0 启用 1）——并存必须真 no-op |
+| 实例侧整夹或其祖先容器夹改名后，子项盲 join 实例路径 | - | 误判待推送 → 推送另建活跃副本 = 模型复活 + 同模型两份；必须经 DisabledAncestorPath 以载体为基准 diff |
+| 载体可在任意祖先层级：relKeyDirLevel 只剥尾段会让 X.disabled/sub/ 与 x/sub/ 成两个键，产生幻影 Missing+Extra（Extra 一拉就把 .disabled 载体名复制进仓库） | - | - |
 | app 层手写同步 | - | 与 go/sync 判定不一致、冲突未处理；必须经 go/sync |
 | 同步不做 hash 校验 | - | 文件变更未检测；必须经 sync_hash 校验 |
 | 标签以文件绝对路径为 key——改名/移动/复制后旧 key 会成孤儿（**已修 2026-10-10**：app 层四绑定接线 Store.RelocateKeys 迁移，对齐 web rekey；详见不变量条） | `键迁移` | - |

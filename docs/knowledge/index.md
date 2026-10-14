@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 201 张知识卡
+> 总计: 204 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -148,7 +148,7 @@
 - **sync-manager**（整合包同步管理器 sync-manager）：`app-sync-manager` 是一个 Web Component 视图组件（`<app-sync-manager>`），承担**单个整合包（instance）内「仓库 ↔ 实例」双向同步状态展示与逐文件推送/拉取编排**：
 - **version-updater**（版本更新 version-updater）：`version-updater.ts` 是应用自更新的前端入口：启动时静默检查（受 6 小时频次限制）→ 发现新版本以可点击 toast 通知；设置页按钮手动检查 → 弹出带更新日志的 `modalConfirm` → 调 `DoUpda…
 
-## go（54 张）
+## go（57 张）
 
 *Go 后端包（安装、下载、回收站、YSM 解析等）*
 
@@ -190,7 +190,10 @@
 | 🏗 go-recycle | 回收站 go/recycle | architecture | io-bound | 回收站, 删除, 恢复, recycle, 软删除 |
 | 🏗 go-repoaudit | 仓库审计 go/repoaudit | architecture | io-bound, memory-heavy | 仓库审计, 健康分数, 完整性检查, 缓存命中率, repoaudit, health-report, 去重 |
 | 🏗 go-scanner | 扫描核心 go/scanner | architecture | io-bound, concurrent | 扫描, 文件树, 哈希, 缓存, 作者提取, ScanEntries, ScanEntriesCtx 取消扫描, 索引生成 |
+| 🍃 go-sync-cache-pairing | 同步缓存失效配对契约（go/sync × go/instance × 写面派生闸） | leaf | — | TODO |
+| 🍃 go-sync-relink | 重链接 go/sync RelinkDir（ADR-342 四件套） | leaf | — | RelinkDir, 重链接, relink, 整夹替换, 链接模式切换, ADR-342 |
 | 🍃 go-sync-resource-diff | 资源/文件夹级同步 diff（go/sync 拆分） | leaf | — | SyncResources, SyncResourcesWithConfig, SyncResourcesDirLevel, DiffFolderContents, 折叠指纹 FoldDigest, 资源包文件夹, dirLevel 单元内容判定, 推送保层级 |
+| 🍃 go-sync-toggle | 启禁状态同步 go/sync SyncToggleStatus（ADR-345 载体识别） | leaf | — | SyncToggleStatus, 启用禁用同步, .disabled, .ban, 载体, ADR-345 |
 | 🏗 go-sync | 整合包同步 go/sync | architecture | io-bound | 整合包, 同步, 硬链接, 缺失, 多余 |
 | 🏗 go-tags | 标签系统 go/tags | architecture | io-bound | 标签, tag, 分类, tag-editor |
 | 🍃 go-testutil | 测试辅助函数 go/internal/testutil | leaf | — | 跨包复用测试 helper, 创建测试文件, 构造内存 ZIP, go/internal/testutil 包在哪 |
@@ -246,7 +249,10 @@
 - **go-recycle**（回收站 go/recycle）：`go/recycle/` 包实现模型的软删除机制，通过硬链接/符号链接判定 + `.recycle` 目录实现可恢复删除。核心是 `TrashManager` 结构体（`New(root)` → `root/.recycle`）。
 - **go-repoaudit**（仓库审计 go/repoaudit）：`go/repoaudit/` 包提供仓库健康审计核心逻辑——资源扫描、完整性校验、缓存状态、健康分数、警告生成、去重汇总。从 `go/cli`（原 `resource.go` 的 `collectRepoHealth`）提取为独立包，CL…
 - **go-scanner**（扫描核心 go/scanner）：`go/scanner/` 包实现仓库文件扫描、哈希计算、缓存失效、作者提取、索引生成（ADR-003 P2 下沉，薄壳 `internal/app/app_scan.go` 仅保留依赖 App 的方法）。
+- **go-sync-cache-pairing**（同步缓存失效配对契约（go/sync × go/instance × 写面派生闸））：TODO
+- **go-sync-relink**（重链接 go/sync RelinkDir（ADR-342 四件套））：`sync_relink.go|RelinkDir` 按 SHA256 哈希把整合包实例目录内的模型重新指向仓库版本（设置页「重新应用链接模式 / 切换链接模式」的消费入口，copy 模式同样跑）。文件夹级类型走「备份→重建→回填实例独有文…
 - **go-sync-resource-diff**（资源/文件夹级同步 diff（go/sync 拆分））：`go/sync` 资源级/文件夹级同步 diff 主流程的三个分片文件，系 2026-10 文件行数治理拆出：`sync_resource.go`（原 sync.go）持资源级 diff + 冲突处理 + 链接类型判定入口；`sync_d…
+- **go-sync-toggle**（启禁状态同步 go/sync SyncToggleStatus（ADR-345 载体识别））：`sync.go|SyncToggleStatus` 把仓库的启用/禁用状态同步到整合包实例（文件级：哈希 → 相对路径 → 纯文件名三级匹配，重命名加/去 `.disabled`；目录级见下）。载体是**文件系统上的目录改名**（`X/`…
 - **go-sync**（整合包同步 go/sync）：`go/sync/` 包负责模型库（全局仓库）与 Minecraft 整合包实例之间的同步：发现实例（原版 / PrismLauncher 布局）、按 SHA256 哈希对比出缺失/多余/禁用文件、按文件名或文件夹对比资源包差异、检测目标文…
 - **go-tags**（标签系统 go/tags）：`go/tags/` 包提供模型标签的线程安全持久化存储，是前端 tag-editor 弹窗的后端。标签存放在配置目录的 `tags.json`，以文件绝对路径为 key、标签列表为 value，与模型文件本身解耦（移动/链接模型不污染文件…
 - **go-testutil**（测试辅助函数 go/internal/testutil）：`go/internal/testutil/` 包提供跨包复用的 Go 单元测试辅助函数，解决原先各包各自实现同名 helper 导致的重复维护问题。

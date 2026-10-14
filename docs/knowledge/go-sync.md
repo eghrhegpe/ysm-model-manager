@@ -184,6 +184,15 @@ status: active
 - `2026-10-14`：contentDiffers 对 Oversize（>MaxImportSize 被跳过哈希）文件不再回退 Size 判 Synced，保守判 Missing（待推送）——P0-2 诚实化，消灭 >500MB 静默假绿｜超限文件因 bug-chronicle #36 刻意跳过哈希，同尺寸不足以证明内容一致；非 hashable / scanFn=nil 的空哈希仍走 Size 兜底（误判面窄、不回归），故只翻转 Oversize 一类｜回退 = `go/sync/sync_diff.go|DiffEntry.Oversize`
 - `2026-10-14`：dirLevel 同键纯文件/文件碰撞（同级同身份不同扩展名共存）治理为 fail-loud：collect 层 upsertDirLevelUnit 记录 last-write-wins 覆盖事件（两侧 Rel 点名）→ syncResourcesDirLevel 汇入 ResourceSyncResult.Warnings（omitempty 诊断信道，不影响四桶判定）并分侧落日志；匹配语义（跨格式同身份归一）不动｜原实现在覆盖方静默消失——同步面板从此看不见被丢的物理模型；用户裁定方向为可见性而非改键语义（跨格式同身份是设计语义）｜回退 = `go/sync/sync_dirlevel_sync.go|upsertDirLevelUnit`
 
+## 深挖拆分索引（2026-10-14 P1a）
+
+本卡为 go/sync 包级枢纽（职责 + 入口 + 不变量索引）。三块子机制的深挖已拆 leaf 卡，改对应源码优先查 leaf 卡：
+
+- [go-sync-relink](./go-sync-relink.md) — `RelinkDir` 整夹原子替换 + ADR-342 四件套（保全实例独有文件 / 句柄态目录身份 / 同夹去重 / 备份尸体豁免）
+- [go-sync-toggle](./go-sync-toggle.md) — `SyncToggleStatus` 启禁同步 + ADR-345 目录级禁用载体识别三件套（`DisabledTwinForms`/`DisabledDirCounterpart`/`DisabledAncestorPath`）
+- [go-sync-cache-pairing](./go-sync-cache-pairing.md) — 双缓存失效配对契约 + 写面派生 fail-closed 闸（`write-surface-gate.ts`）
+- [go-sync-resource-diff](./go-sync-resource-diff.md) — 资源/文件夹级 diff 与 dirLevel 内容判定（既有 leaf 卡）
+
 ## 相关
 
 - [go_installer](./go-installer.md) — 按 LinkMode 实际落地复制/硬链接/符号链接

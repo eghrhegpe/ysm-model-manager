@@ -2008,8 +2008,20 @@ export const autoSidebar = [
             "link": "/knowledge/go-scanner"
           },
           {
+            "text": "同步缓存失效配对契约（go/sync × go/instance × 写面派生闸）",
+            "link": "/knowledge/go-sync-cache-pairing"
+          },
+          {
+            "text": "重链接 go/sync RelinkDir（ADR-342 四件套）",
+            "link": "/knowledge/go-sync-relink"
+          },
+          {
             "text": "资源/文件夹级同步 diff（go/sync 拆分）",
             "link": "/knowledge/go-sync-resource-diff"
+          },
+          {
+            "text": "启禁状态同步 go/sync SyncToggleStatus（ADR-345 载体识别）",
+            "link": "/knowledge/go-sync-toggle"
           },
           {
             "text": "整合包同步 go/sync",

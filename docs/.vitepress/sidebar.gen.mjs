@@ -254,6 +254,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-341：busy 语义归一——互斥锁唯一形态 BusyLock",
+        "link": "/adr/architecture/ADR-341-busy-lock-unification"
+      },
+      {
         "text": "ADR-340：推送链去总线化：请求-响应回归直调，token/回执/宽限期协议件退役",
         "link": "/adr/architecture/ADR-340-sync-push-direct-call"
       },

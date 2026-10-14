@@ -1,6 +1,6 @@
 # ADR-284：sky 散射参数与模型类别解耦 + reflector/shadow 清除 no-op 与噪声值
 
-- **状态**：📝 提议中（Proposed）
+- **状态**：✅ 已采纳（Accepted——决策已全落：`model-defaults.ts` 的 [ADR-284] 注释三段在案——sky 大气段摘除 / reflector 噪声键删 / shadow no-op 删，`applyModelPreset` 已解耦，测试同锁）
 - **日期**：2026-09-20
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：

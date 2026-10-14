@@ -1,6 +1,6 @@
 # ADR-292：环境贴图单一归属：scene.environment 所有权收口，sky IBL 降为 env 的数据源
 
-- **状态**：📝 提议中（Proposed）
+- **状态**：✅ 已采纳（Accepted——14 个 D 项全部落地：D1/D2 槽位所有权收口（`env-ibl.ts` D1 红线注释 + D-1 红线测试）、D3/D5 envSource 三值（schema + `envSourceNode` 单选穷尽守卫）、D4 sky-env 退场（`sky-menu.ts`）、D9 `bakeEnvironmentTexture(force)`、D10/D11 `requestEnvironmentRefresh` 路由器 + envSource 唯一权威、D12/D13 custom 回落判据——代码注释逐条回指 [ADR-292 Dx]）
 - **日期**：2026-09-21
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：

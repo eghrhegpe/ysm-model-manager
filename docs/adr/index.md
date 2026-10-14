@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **356** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **357** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > ADR 三区存放：根目录 = 存量（分级前）/ `architecture/` = 架构决策 / `decisions/` = 执行决策日志（ADR-320）。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -16,26 +16,23 @@ permalink: /adr/
 
 | 状态 | 数量 |
 |------|------|
-| [📝 提议中](#提议中) | 7 |
+| [📝 提议中](#提议中) | 4 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 1 |
 | [🔄 部分采纳](#部分采纳) | 14 |
-| [✅ 已采纳](#已采纳) | 326 |
+| [✅ 已采纳](#已采纳) | 330 |
 | [❌ 已取代](#已取代) | 8 |
 | [🧊 已废弃](#已废弃) | 0 |
 | [❓ 未归类](#未归类) | 0 |
 
 ## 按状态分组导航
 
-### 📝 提议中（7）
+### 📝 提议中（4）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
 | [ADR-327](./architecture/ADR-327-hdr.md) | 自定义 HDR 路径持久化与重启恢复 | 📝 提议中 |
 | [ADR-325](./architecture/ADR-325-app-domain-sinking-over-multi-service.md) | App 瘦身走域下沉：拒绝 Wails 多 Service 外壳 | 📝 提议中 |
 | [ADR-321](./architecture/ADR-321-cap-persistence-restore-derivation.md) | cap 持久化读侧派生：restoreFields 还原表由 schema 键集统一驱动（跨 cap 一次拍全局） | 📝 提议中 |
-| [ADR-301](./ADR-301-workshop-community-naming-convergence.md) | 创作者频道与创意工坊命名轴收敛 | 📝 提议中 |
-| [ADR-292](./ADR-292-scene-environment-sky-ibl-env.md) | 环境贴图单一归属：scene.environment 所有权收口，sky IBL 降为 env 的数据源 | 📝 提议中 |
-| [ADR-284](./ADR-284-sky-reflector-shadow-decoupling-cleanup.md) | sky 散射参数与模型类别解耦 + reflector/shadow 清除 no-op 与噪声值 | 📝 提议中 |
 | [ADR-096-d1](./decisions/ADR-096-d1-repo-subdir-channel-disposition.md) | repo_subdir 运行时通道去留裁定：保留为跨语言契约占位、禁新增消费者 | 📝 提议中 |
 
 ### ⚠️ 已采纳但遗留未修复（1）
@@ -63,10 +60,11 @@ permalink: /adr/
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 | [ADR-050](./ADR-050-plaza-browser-window.md) | 模型广场 · 浏览器窗口（Wails 第二窗口） | 🔄 部分采纳 |
 
-### ✅ 已采纳（326）
+### ✅ 已采纳（330）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-340](./architecture/ADR-340-sync-push-direct-call.md) | 推送链去总线化：请求-响应回归直调，token/回执/宽限期协议件退役 | ✅ 已采纳 |
 | [ADR-339](./architecture/ADR-339-alltype-toggle-sync.md) | 全类型 .disabled 启禁同步（大一统 repo↔pack 一致性） | ✅ 已采纳 |
 | [ADR-338](./architecture/ADR-338-docs-burden-reduction.md) | 文档体系减负：分级连带 + 知识卡域合并 + ADR 增量门槛（62% 连带率的治理） | ✅ 已采纳 |
 | [ADR-338-d1](./decisions/ADR-338-d1-commit-message-hygiene.md) | 提交信息减负：commit-msg 闸与 trailer 出口 | ✅ 已采纳 |
@@ -105,6 +103,7 @@ permalink: /adr/
 | [ADR-304](./ADR-304-3d-prefs-machine-local-boundary.md) | 3D 预览设置持久化边界：机器本地 localStorage，不入 Go config 重置/迁移范围 | ✅ 已采纳 |
 | [ADR-303](./ADR-303-preview-persist-spec-single-source.md) | 3D 预览持久化偏好规格单一源 | ✅ 已采纳 |
 | [ADR-302](./ADR-302-menu-node-kind-field-single-source.md) | 菜单节点类型不做一次性判别联合——以运行期字段表为单一事实源（类型层派生） | ✅ 已采纳 |
+| [ADR-301](./ADR-301-workshop-community-naming-convergence.md) | 创作者频道与创意工坊命名轴收敛 | ✅ 已采纳 |
 | [ADR-300](./ADR-300-diagnostics-nav-axis-convergence.md) | 诊断页标签导航单轴收口：看/测/诊三组与二级导航语法统一 | ✅ 已采纳 |
 | [ADR-299](./ADR-299-postproc-composer-lazy-residency.md) | 后处理 composer 惰性常驻——生命周期与每帧参与解耦（修订 ADR-250 §2.2） | ✅ 已采纳 |
 | [ADR-298](./ADR-298-toolbar-command-registry.md) | 工具栏命令注册表与下拉无障碍统一 | ✅ 已采纳 |
@@ -113,6 +112,7 @@ permalink: /adr/
 | [ADR-295](./ADR-295-combo-spacing-tokens.md) | 组合间距档 --sp-vh-*：为高频「垂直+横向」组合值补标准化令牌（承接 ADR-294 D3 存量收敛） | ✅ 已采纳 |
 | [ADR-294](./ADR-294-spacing-five-tier-tokens.md) | 间距五档令牌体系 --sp-*：为 UI-Design.md §5 间距系统补 CSS 变量（承接刀㉝ 架构断层） | ✅ 已采纳 |
 | [ADR-293](./ADR-293-schema-helper.md) | 灯光能力总开关 schema 化、helper 可见性控件化与面板响应 | ✅ 已采纳 |
+| [ADR-292](./ADR-292-scene-environment-sky-ibl-env.md) | 环境贴图单一归属：scene.environment 所有权收口，sky IBL 降为 env 的数据源 | ✅ 已采纳 |
 | [ADR-292-d1](./decisions/ADR-292-d1-envsource-criterion1-single-source.md) | envSource 迁移判据① 供血线单源化（不再跨槽读 sky 存档键形） | ✅ 已采纳 |
 | [ADR-291](./ADR-291-preview-snapshot-probe-threshold.md) | B 轨快照探针入册门槛（双轨状态镜像的治理边界） | ✅ 已采纳 |
 | [ADR-290](./ADR-290-volumetric-cone-driver.md) | 体积光锥驱动源 schema 化（lightVolumetricDriver） | ✅ 已采纳 |
@@ -120,6 +120,7 @@ permalink: /adr/
 | [ADR-288](./ADR-288-diagnostics-scan-bar-persistent.md) | 诊断页布局词汇统一与扫描类参数栏常驻化 | ✅ 已采纳 |
 | [ADR-287](./ADR-287-water-ground.md) | water 菜单 ground- 化石前缀重命名 | ✅ 已采纳 |
 | [ADR-286](./ADR-286-water-applychangedparams.md) | water applyChangedParams 声明式分派表 | ✅ 已采纳 |
+| [ADR-284](./ADR-284-sky-reflector-shadow-decoupling-cleanup.md) | sky 散射参数与模型类别解耦 + reflector/shadow 清除 no-op 与噪声值 | ✅ 已采纳 |
 | [ADR-283](./ADR-283-env-param-range-descriptor.md) | 参数值域描述符：schema 承载 range/uiRange，钳制收口 setEnvState 唯一写入口 | ✅ 已采纳 |
 | [ADR-282](./ADR-282-applymodelpreset-default-light-params.md) | 灯光与模型类别解耦：退役 applyModelPreset，重置锚定单一 DEFAULT_LIGHT_PARAMS | ✅ 已采纳 |
 | [ADR-281](./ADR-281-flatten-map.md) | 灯光字段全集单一真相源：FLATTEN_MAP 派生读/变更集/预设挑参/持久化 | ✅ 已采纳 |
@@ -411,6 +412,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
+| ADR-340 | 推送链去总线化：请求-响应回归直调，token/回执/宽限期协议件退役 | ✅ 已采纳 | 2026-10-14 |
 | ADR-339 | 全类型 .disabled 启禁同步（大一统 repo↔pack 一致性） | ✅ 已采纳 | 2026-10-13 |
 | ADR-338 | 文档体系减负：分级连带 + 知识卡域合并 + ADR 增量门槛（62% 连带率的治理） | ✅ 已采纳 | 2026-10-13 |
 | ADR-337 | 创作者 type 字段拆分：站点归属与本地资源类型分字段，消除幻影平台徽章与本地作者隐形 | ✅ 已采纳 | 2026-10-13 |
@@ -449,7 +451,7 @@ permalink: /adr/
 | ADR-304 | 3D 预览设置持久化边界：机器本地 localStorage，不入 Go config 重置/迁移范围 | ✅ 已采纳 | 2026-09-24 |
 | ADR-303 | 3D 预览持久化偏好规格单一源 | ✅ 已采纳 | 2026-09-24 |
 | ADR-302 | 菜单节点类型不做一次性判别联合——以运行期字段表为单一事实源（类型层派生） | ✅ 已采纳 | 2026-09-24 |
-| ADR-301 | 创作者频道与创意工坊命名轴收敛 | 📝 提议中 | 2026-09-24 |
+| ADR-301 | 创作者频道与创意工坊命名轴收敛 | ✅ 已采纳 | 2026-09-24 |
 | ADR-300 | 诊断页标签导航单轴收口：看/测/诊三组与二级导航语法统一 | ✅ 已采纳 | 2026-09-24 |
 | ADR-299 | 后处理 composer 惰性常驻——生命周期与每帧参与解耦（修订 ADR-250 §2.2） | ✅ 已采纳 | 2026-09-24 |
 | ADR-298 | 工具栏命令注册表与下拉无障碍统一 | ✅ 已采纳 | 2026-09-23 |
@@ -458,7 +460,7 @@ permalink: /adr/
 | ADR-295 | 组合间距档 --sp-vh-*：为高频「垂直+横向」组合值补标准化令牌（承接 ADR-294 D3 存量收敛） | ✅ 已采纳 | 2026-09-22 |
 | ADR-294 | 间距五档令牌体系 --sp-*：为 UI-Design.md §5 间距系统补 CSS 变量（承接刀㉝ 架构断层） | ✅ 已采纳 | 2026-09-22 |
 | ADR-293 | 灯光能力总开关 schema 化、helper 可见性控件化与面板响应 | ✅ 已采纳 | 2026-09-22 |
-| ADR-292 | 环境贴图单一归属：scene.environment 所有权收口，sky IBL 降为 env 的数据源 | 📝 提议中 | 2026-09-21 |
+| ADR-292 | 环境贴图单一归属：scene.environment 所有权收口，sky IBL 降为 env 的数据源 | ✅ 已采纳 | 2026-09-21 |
 | ADR-291 | B 轨快照探针入册门槛（双轨状态镜像的治理边界） | ✅ 已采纳 | 2026-09-21 |
 | ADR-290 | 体积光锥驱动源 schema 化（lightVolumetricDriver） | ✅ 已采纳 | 2026-09-20 |
 | ADR-289 | 运行时日志结构化：tag 提取与级别推断 | ✅ 已采纳 | 2026-09-20 |
@@ -466,7 +468,7 @@ permalink: /adr/
 | ADR-287 | water 菜单 ground- 化石前缀重命名 | ✅ 已采纳 | 2026-09-20 |
 | ADR-286 | water applyChangedParams 声明式分派表 | ✅ 已采纳 | 2026-09-20 |
 | ADR-285 | 跑基准可用性收口：动作与参数同序、文案去重、术语本地化 | 🔄 部分采纳 | 2026-09-20 |
-| ADR-284 | sky 散射参数与模型类别解耦 + reflector/shadow 清除 no-op 与噪声值 | 📝 提议中 | 2026-09-20 |
+| ADR-284 | sky 散射参数与模型类别解耦 + reflector/shadow 清除 no-op 与噪声值 | ✅ 已采纳 | 2026-09-20 |
 | ADR-283 | 参数值域描述符：schema 承载 range/uiRange，钳制收口 setEnvState 唯一写入口 | ✅ 已采纳 | 2026-09-20 |
 | ADR-282 | 灯光与模型类别解耦：退役 applyModelPreset，重置锚定单一 DEFAULT_LIGHT_PARAMS | ✅ 已采纳 | 2026-09-20 |
 | ADR-281 | 灯光字段全集单一真相源：FLATTEN_MAP 派生读/变更集/预设挑参/持久化 | ✅ 已采纳 | 2026-09-20 |

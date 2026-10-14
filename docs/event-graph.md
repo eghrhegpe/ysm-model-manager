@@ -321,8 +321,8 @@
 | cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 124 |
 | refreshUI | `frontend/src/features/context-menu/context-menu-shared.ts` | 19 |
 | handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 182 |
-| (顶层) | `frontend/src/features/import/executor.ts` | 77 |
-| importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 231 |
+| (顶层) | `frontend/src/features/import/executor.ts` | 82 |
+| importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 236 |
 | setupRecycleActions | `frontend/src/features/maintenance/recycle-bin.ts` | 130 |
 | onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 200 |
 | registerInstanceOps | `frontend/src/features/pack-ops/instance-ops.ts` | 135 |
@@ -429,8 +429,8 @@
 | cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 123 |
 | refreshUI | `frontend/src/features/context-menu/context-menu-shared.ts` | 18 |
 | handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 183 |
-| (顶层) | `frontend/src/features/import/executor.ts` | 78 |
-| importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 230 |
+| (顶层) | `frontend/src/features/import/executor.ts` | 83 |
+| importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 235 |
 | setupRecycleActions | `frontend/src/features/maintenance/recycle-bin.ts` | 131 |
 | onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 201 |
 | registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 54 |

@@ -6,29 +6,28 @@
 // pullDirLevelEntry 把整个恢复点复制进仓库（数 GB 垃圾入库，且恢复点被当成模型）。
 //
 // 覆盖四条 collect 通道：dirlevel Walk / dirlevel scan 反推 / file-level Walk / 夹内子文件。
+// 断言统一走 testutil（ADR-202 刀5 裸断言债）。
 package sync
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
-func mkdirAllT(t *testing.T, path string) {
-	t.Helper()
-	if err := os.MkdirAll(path, 0755); err != nil {
-		t.Fatalf("建目录失败 %s: %v", path, err)
+// corpsesIn 从若干列表里捞出被判成同步条目的备份尸体路径（供集合式断言）。
+func corpsesIn(lists ...[]string) []string {
+	var hit []string
+	for _, list := range lists {
+		for _, p := range list {
+			if isRelinkBackupPath(p) {
+				hit = append(hit, p)
+			}
+		}
 	}
-}
-
-func writeT(t *testing.T, path, body string) {
-	t.Helper()
-	mkdirAllT(t, filepath.Dir(path))
-	if err := os.WriteFile(path, []byte(body), 0644); err != nil {
-		t.Fatalf("写文件失败 %s: %v", path, err)
-	}
+	return hit
 }
 
 // TestSyncResourcesDirLevel_SkipsRelinkBackupCorpse dirlevel Walk 通道：
@@ -36,22 +35,16 @@ func writeT(t *testing.T, path, body string) {
 func TestSyncResourcesDirLevel_SkipsRelinkBackupCorpse(t *testing.T) {
 	globalDir := t.TempDir()
 	instDir := t.TempDir()
-	writeT(t, filepath.Join(instDir, "packA.relink-bak-1700000000000000000", "x.ysm"), "old")
-	writeT(t, filepath.Join(instDir, "live.ysm"), "live")
+	testutil.WriteTestFile(t, filepath.Join(instDir, "packA.relink-bak-1700000000000000000", "x.ysm"), "old")
+	testutil.WriteTestFile(t, filepath.Join(instDir, "live.ysm"), "live")
 
 	res := SyncResourcesDirLevel(globalDir, instDir, "ysm")
-	for _, list := range [][]string{res.Extra, res.Missing, res.Synced} {
-		for _, p := range list {
-			if isRelinkBackupPath(p) {
-				t.Fatalf("relink 备份尸体不应进入同步 diff：%v（Extra=%v Missing=%v Synced=%v）",
-					p, res.Extra, res.Missing, res.Synced)
-			}
-		}
-	}
+	corpses := corpsesIn(res.Extra, res.Missing, res.Synced)
+	testutil.Equal(t, len(corpses), 0,
+		"relink 备份尸体不应进入同步 diff（Extra=%v Missing=%v Synced=%v）", res.Extra, res.Missing, res.Synced)
 	// 负向对照：活的实例独有条目必须仍被判 Extra（防「顺手全跳过」式假修复）
-	if len(res.Extra) != 1 || filepath.Base(res.Extra[0]) != "live.ysm" {
-		t.Fatalf("活条目应判 Extra=[live.ysm]，实际 %v", res.Extra)
-	}
+	testutil.Equal(t, len(res.Extra), 1, "只应有一个实例独有条目，实际 %v", res.Extra)
+	testutil.Equal(t, filepath.Base(res.Extra[0]), "live.ysm", "活条目应判 Extra=[live.ysm]，实际 %v", res.Extra)
 }
 
 // TestSyncResourcesDirLevelScan_SkipsRelinkBackupCorpse dirlevel scan 反推通道：
@@ -72,16 +65,11 @@ func TestSyncResourcesDirLevelScan_SkipsRelinkBackupCorpse(t *testing.T) {
 		}, true
 	}
 	res := SyncResourcesDirLevelScan(globalDir, instDir, "ysm", scanFn)
-	for _, list := range [][]string{res.Extra, res.Missing, res.Synced} {
-		for _, p := range list {
-			if isRelinkBackupPath(p) {
-				t.Fatalf("scan 反推通道仍把备份尸体当条目：%v（Extra=%v Missing=%v）", p, res.Extra, res.Missing)
-			}
-		}
-	}
-	if len(res.Extra) != 1 || filepath.Base(res.Extra[0]) != "live.ysm" {
-		t.Fatalf("活条目应判 Extra=[live.ysm]，实际 %v", res.Extra)
-	}
+	corpses := corpsesIn(res.Extra, res.Missing, res.Synced)
+	testutil.Equal(t, len(corpses), 0,
+		"scan 反推通道不应把备份尸体当条目（Extra=%v Missing=%v）", res.Extra, res.Missing)
+	testutil.Equal(t, len(res.Extra), 1, "只应有一个实例独有条目，实际 %v", res.Extra)
+	testutil.Equal(t, filepath.Base(res.Extra[0]), "live.ysm", "活条目应判 Extra=[live.ysm]，实际 %v", res.Extra)
 }
 
 // TestSyncResources_SkipsRelinkBackupCorpse file-level Walk 通道（resourcepack 等）：
@@ -89,34 +77,25 @@ func TestSyncResourcesDirLevelScan_SkipsRelinkBackupCorpse(t *testing.T) {
 func TestSyncResources_SkipsRelinkBackupCorpse(t *testing.T) {
 	globalDir := t.TempDir()
 	instDir := t.TempDir()
-	writeT(t, filepath.Join(instDir, "m.zip.relink-bak-7", "other.zip"), "stale")
-	writeT(t, filepath.Join(instDir, "live.zip"), "live")
+	testutil.WriteTestFile(t, filepath.Join(instDir, "m.zip.relink-bak-7", "other.zip"), "stale")
+	testutil.WriteTestFile(t, filepath.Join(instDir, "live.zip"), "live")
 
 	res := SyncResources(globalDir, instDir, "resourcepack")
-	for _, p := range res.Extra {
-		if isRelinkBackupPath(p) {
-			t.Fatalf("file-level 通道仍把备份尸体当条目：%v（Extra=%v）", p, res.Extra)
-		}
-	}
-	if len(res.Extra) != 1 || filepath.Base(res.Extra[0]) != "live.zip" {
-		t.Fatalf("活条目应判 Extra=[live.zip]，实际 %v", res.Extra)
-	}
+	corpses := corpsesIn(res.Extra)
+	testutil.Equal(t, len(corpses), 0, "file-level 通道不应把备份尸体当条目（Extra=%v）", res.Extra)
+	testutil.Equal(t, len(res.Extra), 1, "只应有一个实例独有条目，实际 %v", res.Extra)
+	testutil.Equal(t, filepath.Base(res.Extra[0]), "live.zip", "活条目应判 Extra=[live.zip]，实际 %v", res.Extra)
 }
 
 // TestCollectFolderFiles_IgnoresRelinkBackupCorpse 夹内子文件通道（防御纵深）：
 // 模型夹内若残留尸体子树（嵌套 relink 的极端形态），子文件清单不得收录。
 func TestCollectFolderFiles_IgnoresRelinkBackupCorpse(t *testing.T) {
 	folder := t.TempDir()
-	writeT(t, filepath.Join(folder, "ysm.json"), "{}")
-	writeT(t, filepath.Join(folder, "sub.relink-bak-3", "x.ysm"), "old")
+	testutil.WriteTestFile(t, filepath.Join(folder, "ysm.json"), "{}")
+	testutil.WriteTestFile(t, filepath.Join(folder, "sub.relink-bak-3", "x.ysm"), "old")
 
 	files := collectFolderFiles(folder, "ysm")
-	for k := range files {
-		if isRelinkBackupPath(k) {
-			t.Fatalf("夹内子文件清单不应收录备份尸体：%v（keys=%v）", k, files)
-		}
-	}
-	if len(files) != 1 {
-		t.Fatalf("只应收录活文件 ysm.json，实际 %v", files)
-	}
+	corpses := corpsesIn(testutil.SortedKeys(files))
+	testutil.Equal(t, len(corpses), 0, "夹内子文件清单不应收录备份尸体（keys=%v）", files)
+	testutil.Equal(t, len(files), 1, "只应收录活文件 ysm.json，实际 %v", files)
 }

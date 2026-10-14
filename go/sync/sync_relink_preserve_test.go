@@ -11,7 +11,7 @@
 //	   恒真。ADR-296 D4 想拦的「锁内搬的不是扫描时那个对象」在主力平台拦不住。
 //	   副作用：同夹多条目时第二条目会白做一次整夹替换（本应被复验拦下/去重）。
 //
-// 本文件是上述两条的回归锁。先写断言（红）再改实现。
+// 本文件是上述两条的回归锁；断言统一走 testutil（ADR-202 刀5 裸断言债）。
 package sync
 
 import (
@@ -20,6 +20,7 @@ import (
 	"strings"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -30,12 +31,8 @@ func relinkProbeEnv(t *testing.T) (string, string, *[]string) {
 	base := t.TempDir()
 	repoRoot := filepath.Join(base, "repo")
 	customDir := filepath.Join(base, "inst", ".minecraft", "ysm")
-	if err := os.MkdirAll(filepath.Join(repoRoot, "packA"), 0755); err != nil {
-		t.Fatalf("建仓库夹失败: %v", err)
-	}
-	if err := os.MkdirAll(filepath.Join(customDir, "packA"), 0755); err != nil {
-		t.Fatalf("建实例夹失败: %v", err)
-	}
+	testutil.NoError(t, os.MkdirAll(filepath.Join(repoRoot, "packA"), 0755), "建仓库夹")
+	testutil.NoError(t, os.MkdirAll(filepath.Join(customDir, "packA"), 0755), "建实例夹")
 	logs := &[]string{}
 	return repoRoot, customDir, logs
 }
@@ -46,21 +43,11 @@ func relinkLogger(logs *[]string) Logger {
 	}
 }
 
-func mustWrite(t *testing.T, path, body string) {
+func readBody(t *testing.T, path string) string {
 	t.Helper()
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-		t.Fatalf("建目录失败 %s: %v", path, err)
-	}
-	if err := os.WriteFile(path, []byte(body), 0644); err != nil {
-		t.Fatalf("写文件失败 %s: %v", path, err)
-	}
-}
-
-func mustExist(t *testing.T, path string, why string) {
-	t.Helper()
-	if _, err := os.Stat(path); err != nil {
-		t.Fatalf("%s：%s 应存在，实际 %v", why, path, err)
-	}
+	b, err := os.ReadFile(path)
+	testutil.NoError(t, err, "读文件 "+path)
+	return string(b)
 }
 
 // TestRelinkDir_KeepsInstanceOnlyFiles 【A1 红】整夹替换必须保住实例独有文件。
@@ -69,40 +56,29 @@ func TestRelinkDir_KeepsInstanceOnlyFiles(t *testing.T) {
 	repoRoot, customDir, logs := relinkProbeEnv(t)
 	instPack := filepath.Join(customDir, "packA")
 	// 两侧同名模型（哈希匹配 → 走整夹替换）
-	mustWrite(t, filepath.Join(repoRoot, "packA", "x.ysm"), "repo-body")
-	mustWrite(t, filepath.Join(instPack, "x.ysm"), "repo-body")
+	testutil.WriteTestFile(t, filepath.Join(repoRoot, "packA", "x.ysm"), "repo-body")
+	testutil.WriteTestFile(t, filepath.Join(instPack, "x.ysm"), "repo-body")
 	// 实例独有：一张自制贴图 + 一个额外子目录（仓库侧都没有）
 	ownTex := filepath.Join(instPack, "my-own-texture.png")
 	ownDeep := filepath.Join(instPack, "extra", "deep.png")
-	mustWrite(t, ownTex, "mine")
-	mustWrite(t, ownDeep, "mine-deep")
+	testutil.WriteTestFile(t, ownTex, "mine")
+	testutil.WriteTestFile(t, ownDeep, "mine-deep")
 
 	scanFn := func(dir string) []types.ModelEntry {
 		return []types.ModelEntry{{Name: "x.ysm", Path: filepath.Join(dir, "packA", "x.ysm"), Hash: "h1"}}
 	}
 	count, err := RelinkDir(customDir, repoRoot, "ysm", "copy", scanFn, relinkLogger(logs))
-	if err != nil {
-		t.Fatalf("RelinkDir 失败: %v", err)
-	}
-	if count != 1 {
-		t.Fatalf("应重链接 1 个，实际 %d（日志 %v）", count, *logs)
-	}
+	testutil.NoError(t, err, "RelinkDir 不应报错")
+	testutil.Equal(t, count, 1, "应重链接 1 个（日志 %v）", *logs)
 	// 核心断言：实例独有文件必须存活（原实现随备份 RemoveAll 静默消失）
-	mustExist(t, ownTex, "实例独有贴图")
-	mustExist(t, ownDeep, "实例独有子目录内文件")
+	testutil.FileExists(t, ownTex, "实例独有贴图必须存活")
+	testutil.FileExists(t, ownDeep, "实例独有子目录内文件必须存活")
 	// 模型本身仍被换成仓库版本（不因保全而漏做重链）
-	body, err := os.ReadFile(filepath.Join(instPack, "x.ysm"))
-	if err != nil {
-		t.Fatalf("模型应存在: %v", err)
-	}
-	if string(body) != "repo-body" {
-		t.Fatalf("模型应为仓库版本，实际 %q", string(body))
-	}
+	testutil.Equal(t, readBody(t, filepath.Join(instPack, "x.ysm")), "repo-body", "模型应为仓库版本")
 	// 成功且全部回填 → 不留备份残留
-	matches, _ := filepath.Glob(filepath.Join(customDir, "*.relink-bak-*"))
-	if len(matches) != 0 {
-		t.Fatalf("不应有 .relink-bak 残留: %v", matches)
-	}
+	matches, globErr := filepath.Glob(filepath.Join(customDir, "*.relink-bak-*"))
+	testutil.NoError(t, globErr, "glob 备份残留")
+	testutil.Equal(t, len(matches), 0, "不应有 .relink-bak 残留: %v", matches)
 }
 
 // TestDirIdentity_RejectsReplacedDir 【A2 红】目录身份复验必须在「同名重建」时判否。
@@ -112,34 +88,19 @@ func TestDirIdentity_RejectsReplacedDir(t *testing.T) {
 	base := t.TempDir()
 	dir := filepath.Join(base, "packA")
 	bak := filepath.Join(base, "packA.bak")
-	if err := os.Mkdir(dir, 0755); err != nil {
-		t.Fatalf("建目录失败: %v", err)
-	}
+	testutil.NoError(t, os.Mkdir(dir, 0755), "建目录")
 	snap, err := dirIdentity(dir)
-	if err != nil {
-		t.Fatalf("取快照身份失败: %v", err)
-	}
-	if err := os.Rename(dir, bak); err != nil {
-		t.Fatalf("rename 失败: %v", err)
-	}
-	if err := os.Mkdir(dir, 0755); err != nil {
-		t.Fatalf("同名新建失败: %v", err)
-	}
+	testutil.NoError(t, err, "取快照身份")
+	testutil.NoError(t, os.Rename(dir, bak), "rename 走")
+	testutil.NoError(t, os.Mkdir(dir, 0755), "同名新建")
 	cur, err := dirIdentity(dir)
-	if err != nil {
-		t.Fatalf("取现身份失败: %v", err)
-	}
-	if os.SameFile(snap, cur) {
-		t.Fatal("同名重建后仍判同一对象：目录身份复验在 Windows 上失效（ADR-296 D4 防护形同虚设）")
-	}
+	testutil.NoError(t, err, "取现身份")
+	testutil.Equal(t, os.SameFile(snap, cur), false,
+		"同名重建后仍判同一对象：目录身份复验在 Windows 上失效（ADR-296 D4 防护形同虚设）")
 	// 反向对照
 	again, err := dirIdentity(dir)
-	if err != nil {
-		t.Fatalf("二次取身份失败: %v", err)
-	}
-	if !os.SameFile(cur, again) {
-		t.Fatal("同一未改动目录两次取身份应相等（防恒不等假修复）")
-	}
+	testutil.NoError(t, err, "二次取身份")
+	testutil.Equal(t, os.SameFile(cur, again), true, "同一未改动目录两次取身份应相等（防恒不等假修复）")
 }
 
 // TestRelinkDir_SameFolderTwoEntries 【A2+A3 锁】同夹两条目录型入口：
@@ -147,12 +108,12 @@ func TestDirIdentity_RejectsReplacedDir(t *testing.T) {
 // 也不得再白做一次替换。修好身份复验后若忘了去重，这条即红（子代理预言的误报会显形）。
 func TestRelinkDir_SameFolderTwoEntries(t *testing.T) {
 	repoRoot, customDir, logs := relinkProbeEnv(t)
-	mustWrite(t, filepath.Join(repoRoot, "packA", "x.ysm"), "repo-x")
-	mustWrite(t, filepath.Join(repoRoot, "packA", "y.ysm"), "repo-y")
-	mustWrite(t, filepath.Join(customDir, "packA", "x.ysm"), "old-x")
-	mustWrite(t, filepath.Join(customDir, "packA", "y.ysm"), "old-y")
+	testutil.WriteTestFile(t, filepath.Join(repoRoot, "packA", "x.ysm"), "repo-x")
+	testutil.WriteTestFile(t, filepath.Join(repoRoot, "packA", "y.ysm"), "repo-y")
+	testutil.WriteTestFile(t, filepath.Join(customDir, "packA", "x.ysm"), "old-x")
+	testutil.WriteTestFile(t, filepath.Join(customDir, "packA", "y.ysm"), "old-y")
 	own := filepath.Join(customDir, "packA", "own.png")
-	mustWrite(t, own, "mine")
+	testutil.WriteTestFile(t, own, "mine")
 
 	scanFn := func(dir string) []types.ModelEntry {
 		return []types.ModelEntry{
@@ -161,25 +122,25 @@ func TestRelinkDir_SameFolderTwoEntries(t *testing.T) {
 		}
 	}
 	count, err := RelinkDir(customDir, repoRoot, "ysm", "copy", scanFn, relinkLogger(logs))
-	if err != nil {
-		t.Fatalf("RelinkDir 失败: %v", err)
-	}
-	if count != 2 {
-		t.Fatalf("同夹两条目都应计成功，实际 count=%d（日志 %v）", count, *logs)
-	}
-	for _, l := range *logs {
-		if strings.Contains(l, "已被替换为另一对象") || strings.Contains(l, "快照缺失") {
-			t.Fatalf("同夹第二条目不应报快照类失败（自己刚搬过）: %v", *logs)
+	testutil.NoError(t, err, "RelinkDir 不应报错")
+	testutil.Equal(t, count, 2, "同夹两条目都应计成功（日志 %v）", *logs)
+	snapshotFailures := filterLogs(*logs, "已被替换为另一对象", "快照缺失")
+	testutil.Equal(t, len(snapshotFailures), 0, "同夹第二条目不应报快照类失败（自己刚搬过）: %v", snapshotFailures)
+	testutil.FileExists(t, own, "实例独有文件必须存活")
+	testutil.Equal(t, readBody(t, filepath.Join(customDir, "packA", "x.ysm")), "repo-x", "x.ysm 应为仓库版本")
+	testutil.Equal(t, readBody(t, filepath.Join(customDir, "packA", "y.ysm")), "repo-y", "y.ysm 应为仓库版本")
+}
+
+// filterLogs 捞出含任一关键词的日志行（供集合式断言，避免逐条裸断言）。
+func filterLogs(logs []string, subs ...string) []string {
+	var hit []string
+	for _, l := range logs {
+		for _, s := range subs {
+			if strings.Contains(l, s) {
+				hit = append(hit, l)
+				break
+			}
 		}
 	}
-	mustExist(t, own, "实例独有文件")
-	for f, want := range map[string]string{"x.ysm": "repo-x", "y.ysm": "repo-y"} {
-		body, err := os.ReadFile(filepath.Join(customDir, "packA", f))
-		if err != nil {
-			t.Fatalf("%s 应存在: %v", f, err)
-		}
-		if string(body) != want {
-			t.Fatalf("%s 应为仓库版本 %q，实际 %q", f, want, string(body))
-		}
-	}
+	return hit
 }

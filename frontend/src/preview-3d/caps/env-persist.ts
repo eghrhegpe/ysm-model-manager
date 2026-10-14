@@ -49,6 +49,29 @@ export function saveEnvState(override?: Record<string, unknown>): Record<string,
   return out;
 }
 
+/** 按 `ENV_STATE_SCHEMA[key].type` 分派恢复单键值；类型不匹配（脏存档 / 旧方言缺省）返回 undefined
+ *  = 跳过该键，保持 schema 默认。其他类型（tuple3/nullable-*）environment 组现无，同跳过。 */
+function restoreEnvKey(
+  state: Record<string, unknown>,
+  key: EnvStateKey,
+): EnvState[keyof EnvState] | undefined {
+  const v = state[getArchiveKey(key)];
+  const def = ENV_STATE_SCHEMA[key] as { type?: string; values?: readonly string[] };
+  if (def.type === "number") {
+    return typeof v === "number" ? (v as EnvState[keyof EnvState]) : undefined;
+  }
+  if (def.type === "boolean") {
+    return typeof v === "boolean" ? (v as EnvState[keyof EnvState]) : undefined;
+  }
+  if (def.type === "enum") {
+    // enum 白名单（ADR-283 枚举收敛）：脏存档非法枚举直漏 cap setter 会建成错误 Three 对象
+    return typeof v === "string" && def.values?.includes(v)
+      ? (v as EnvState[keyof EnvState])
+      : undefined;
+  }
+  return undefined;
+}
+
 /**
  * 从 environment 存档对象派生 `Partial<EnvState>`（ADR-326，读侧对称派生）。
  *
@@ -66,17 +89,8 @@ export function restoreEnvPartial(
   const partial: Partial<EnvState> = {};
   for (const key of ENV_KEYS) {
     if (!(getArchiveKey(key) in state)) continue;
-    const v = state[getArchiveKey(key)];
-    const def = ENV_STATE_SCHEMA[key] as { type?: string; values?: readonly string[] };
-    if (def.type === "number") {
-      if (typeof v === "number") partial[key] = v as never;
-    } else if (def.type === "boolean") {
-      if (typeof v === "boolean") partial[key] = v as never;
-    } else if (def.type === "enum") {
-      // enum 白名单（ADR-283 枚举收敛）：脏存档非法枚举直漏 cap setter 会建成错误 Three 对象
-      if (typeof v === "string" && def.values?.includes(v)) partial[key] = v as never;
-    }
-    // 其他类型（tuple3/nullable-*）environment 组现无，跳过（与 restoreWaterSchemaKeys 同边界）
+    const v = restoreEnvKey(state, key);
+    if (v !== undefined) partial[key] = v as never;
   }
   return partial;
 }

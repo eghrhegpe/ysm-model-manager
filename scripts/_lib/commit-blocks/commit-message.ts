@@ -168,6 +168,36 @@ function countNeedle(hay: string, needle: string): number {
   return n;
 }
 
+/**
+ * 数 subject 里的「编号项」——台账式并联的高精度信号。
+ *
+ * 为什么需要（2026-10-14 补洞）：`subject-multi-topic` 原只认 ` + ` 并联，而实测
+ * `fix(repository): …四项修复落地——P0-1 拖拽双通道…、P1-1 切类型…、P1-2 回收站…、P1-3 …`
+ * 用的是**顿号枚举 + 编号**，` + ` 一次不出现 → 只被判「超长」，多主题性质漏判。
+ * 只认长度会放过「70 字符的四项并联」（不超限但仍是台账）。
+ *
+ * 判据取**编号式**（`P0-1` / `P1-2` / `S1` / `①②③`）而非顿号计数——顿号在中文里
+ * 是正常并列（「治满载偶发假红、非掩盖」只有一个主题），按顿号计数会大面积误伤。
+ * 编号项则是「有一份清单要逐条对账」的强信号，误报率低。
+ */
+function countTickets(subject: string): number {
+  // 先剔除「引用既有编号」的合法写法：ADR-338-d1 / RFC-2119 / ADR-339 等**单编号引用**
+  // 不是台账并联（实测假阳性：一句「落实 ADR-338-d1 与 ADR-339 的裁定」被算成 2 个编号项）。
+  // 做法：去掉 `ADR-…` / `RFC-…` 形态后再数——它们出现在 subject 里恒是引用而非待办项。
+  const scrubbed = subject.replace(/\b(?:ADR|RFC|ISO|IEEE)-\d+(?:-d\d+)?\b/gi, "");
+  const patterns = [
+    /\bP\d+-\d+\b/g, // P0-1 / P1-2（仓内锐评项编号——待办项形态）
+    /\bS\d+-\d+\b/g, // S1-2（同族）
+    /[①②③④⑤⑥⑦⑧⑨⑩]/g, // 圈码枚举
+  ];
+  let n = 0;
+  for (const re of patterns) {
+    const m = scrubbed.match(re);
+    if (m) n += m.length;
+  }
+  return n;
+}
+
 function clip(s: string, max = 60): string {
   const t = s.trim();
   return Array.from(t).length <= max ? t : `${Array.from(t).slice(0, max).join("")}…`;
@@ -311,12 +341,13 @@ export function evaluate(
   }
 
   const plus = countNeedle(subject, " + ");
-  if (plus >= 2) {
+  const tickets = countTickets(subject);
+  if (plus >= 2 || tickets >= 2) {
     out.push({
       rule: "subject-multi-topic",
       severity: "hard",
-      found: `${plus} 处 " + "`,
-      hint: "一句话一件事：` + ` 并联 ≥2 = 多主题台账塞进一行，按主题拆提交或只留主不变量",
+      found: plus >= 2 ? `${plus} 处 " + "` : `${tickets} 个编号项`,
+      hint: "一句话一件事：并联 ≥2 个待办/主题 = 多主题台账塞进一行，按主题拆提交或只留主不变量",
     });
   }
 

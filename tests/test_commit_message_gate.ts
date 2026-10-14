@@ -103,6 +103,20 @@ check("subject-multi-topic：` + ` ≥2 命中；单个不命中（单主题两�
   has("fix(a): 甲 + 乙 + 丙三修", "subject-multi-topic");
   lacks("fix(a): 甲 + 乙（同一不变量的两面）", "subject-multi-topic");
 });
+check("subject-multi-topic：编号项罗列 ≥2 命中（台账式并联，2026-10-14 补洞）", () => {
+  // 实测漏判样本：四个锐评编号用顿号枚举，` + ` 一次不出现
+  has("fix(a): 四项修复落地——P0-1 甲、P1-1 乙、P1-2 丙、P1-3 丁", "subject-multi-topic");
+  has("fix(a): 两处收口①甲②乙", "subject-multi-topic");
+});
+check("subject-multi-topic：ADR 引用不误判（假阳性回归锁）", () => {
+  // 「落实 ADR-338-d1 与 ADR-339 的裁定」是引用既有决策，不是待办并联
+  lacks("fix(a): 落实 ADR-338-d1 与 ADR-339 的裁定", "subject-multi-topic");
+  lacks("fix(a): 按 RFC-2119 措辞", "subject-multi-topic");
+});
+check("subject-multi-topic：中文顿号不误判（单主题并列是正常表达）", () => {
+  // 「治满载偶发假红、非掩盖」只有一个主题——按顿号计数会大面积误伤，故判据只认编号项
+  lacks("test(a): 补 30s 余量、治满载偶发假红、非掩盖", "subject-multi-topic");
+});
 check("body-line-length：>120 命中且不重复计数（每提交至多一条）", () => {
   const vs = evaluate(parseCommitMessage("fix(a): 一句话\n\n" + "长".repeat(140) + "\n短行\n"));
   assert(vs.filter((v) => v.rule === "body-line-length").length === 1, JSON.stringify(vs));

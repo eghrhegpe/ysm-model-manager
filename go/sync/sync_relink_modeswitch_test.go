@@ -53,7 +53,7 @@ func modeSwitchFixture(t *testing.T, content string) (repoRoot, customDir, repoF
 
 func relinkQuiet(t *testing.T, customDir, repoRoot, linkMode string, scanFn func(string) []types.ModelEntry) int {
 	t.Helper()
-	count, err := RelinkDir(customDir, repoRoot, "resourcepack", linkMode, scanFn,
+	res, err := RelinkDir(customDir, repoRoot, "resourcepack", linkMode, scanFn,
 		func(name, src, dst string, size int64, status, msg string) {
 			if status == "failed" {
 				t.Errorf("relink 失败: %s %s: %s", name, src, msg)
@@ -62,7 +62,7 @@ func relinkQuiet(t *testing.T, customDir, repoRoot, linkMode string, scanFn func
 	if err != nil {
 		t.Fatalf("RelinkDir(%s) 失败: %v", linkMode, err)
 	}
-	return count
+	return res.OK
 }
 
 // hardlink→copy：实例与仓库共享 inode（哈希恒相等）→ 重链后必须断链为独立副本，
@@ -170,16 +170,19 @@ func TestRelinkDir_DirLevelSnapshotMissingRefusesRename(t *testing.T) {
 		return []types.ModelEntry{{Name: "ysm.json", Path: filepath.Join(customDir, "sub", "ysm.json"), Hash: "h1"}}
 	}
 	var failedMsgs []string
-	count, err := RelinkDir(customDir, repoRoot, "ysm", "hardlink", scanFn,
+	res, err := RelinkDir(customDir, repoRoot, "ysm", "hardlink", scanFn,
 		func(name, src, dst string, size int64, status, msg string) {
 			if status == "failed" {
 				failedMsgs = append(failedMsgs, msg)
 			}
 		})
-	// ADR-342 C1：零成功 + 有拒搬 → 抬成 ErrPartialSync（供上层弹失败而非「已重链 0 个」成功）
-	testutil.ErrorIs(t, err, ErrPartialSync, "零成功且有失败应报可分类错误")
-	if count != 0 {
-		t.Errorf("快照缺失应拒搬，count=%d want 0", count)
+	// ADR-342 D7：零成功 + 有拒搬 → 结构化结果 res.Failed=1（供上层弹「N 成功 M 失败」而非「已重链 0 个」）
+	testutil.NoError(t, err, "部分失败由结构化结果承载，不应是 error")
+	if res.OK != 0 || res.Failed != 1 {
+		t.Errorf("快照缺失应拒搬，res=%+v want OK=0 Failed=1", res)
+	}
+	if res.FirstError == "" {
+		t.Errorf("失败应点名首个原因，FirstError 为空")
 	}
 	if len(failedMsgs) == 0 || !strings.Contains(failedMsgs[0], "快照缺失") {
 		t.Errorf("应记 logger failed 含「快照缺失」，实际 %v", failedMsgs)
@@ -219,16 +222,16 @@ func TestRelinkDir_DirLevelSnapshotReplacedRefusesRename(t *testing.T) {
 		return []types.ModelEntry{{Name: "ysm.json", Path: filepath.Join(occupied, "ysm.json"), Hash: "h1"}}
 	}
 	var failedMsgs []string
-	count, err := RelinkDir(customDir, repoRoot, "ysm", "hardlink", scanFn,
+	res, err := RelinkDir(customDir, repoRoot, "ysm", "hardlink", scanFn,
 		func(name, src, dst string, size int64, status, msg string) {
 			if status == "failed" {
 				failedMsgs = append(failedMsgs, msg)
 			}
 		})
-	// ADR-342 C1：零成功 + 有拒搬 → 抬成 ErrPartialSync（与上一条同规）
-	testutil.ErrorIs(t, err, ErrPartialSync, "零成功且有失败应报可分类错误")
-	if count != 0 {
-		t.Errorf("dstParent 非目录应拒搬，count=%d want 0", count)
+	// ADR-342 D7：零成功 + 有拒搬 → 结构化结果（与上一条同规）
+	testutil.NoError(t, err, "部分失败由结构化结果承载，不应是 error")
+	if res.OK != 0 || res.Failed != 1 {
+		t.Errorf("dstParent 非目录应拒搬，res=%+v want OK=0 Failed=1", res)
 	}
 	if strings.Contains(strings.Join(failedMsgs, ";"), "relink 备份目录失败") {
 		t.Errorf("应走复验拒搬（快照复验失败/类型不符），而非旧路径 rename 噪点，实际 %v", failedMsgs)
@@ -263,7 +266,7 @@ func TestRelinkDir_NoHashOrBanned_Untouched(t *testing.T) {
 		}
 	}
 	for _, mode := range []string{"copy", "hardlink", "symlink"} {
-		count, err := RelinkDir(customDir, repoRoot, "resourcepack", mode, scanFn,
+		res, err := RelinkDir(customDir, repoRoot, "resourcepack", mode, scanFn,
 			func(name, src, dst string, size int64, status, msg string) {
 				if status == "failed" {
 					t.Errorf("mode=%s 不应有失败: %s %s: %s", mode, name, src, msg)
@@ -272,8 +275,8 @@ func TestRelinkDir_NoHashOrBanned_Untouched(t *testing.T) {
 		if err != nil {
 			t.Fatalf("mode=%s: %v", mode, err)
 		}
-		if count != 0 {
-			t.Errorf("mode=%s: 空哈希/禁用条目不应被重链，count=%d", mode, count)
+		if res.OK != 0 {
+			t.Errorf("mode=%s: 空哈希/禁用条目不应被重链，count=%d", mode, res.OK)
 		}
 		for _, p := range []string{noHash, banned} {
 			data, err := os.ReadFile(p)

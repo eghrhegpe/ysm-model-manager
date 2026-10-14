@@ -24,13 +24,13 @@ func TestRelinkDir_NilScanFn_ReturnsError(t *testing.T) {
 	_ = os.MkdirAll(repoRoot, 0755)
 	_ = os.MkdirAll(customDir, 0755)
 
-	c, err := RelinkDir(customDir, repoRoot, "ysm", "copy", nil,
+	res, err := RelinkDir(customDir, repoRoot, "ysm", "copy", nil,
 		func(name, src, dst string, size int64, status, msg string) {})
 	if err == nil {
 		t.Fatal("nil scanFn 应返回错误，实际 nil")
 	}
-	if c != 0 {
-		t.Logf("nil scanFn 计数应 = 0，实际 %d", c)
+	if res.OK != 0 {
+		t.Logf("nil scanFn 计数应 = 0，实际 %d", res.OK)
 	}
 	t.Logf("nil scanFn 返回错误: %v", err)
 }
@@ -50,12 +50,12 @@ func TestRelinkDir_NilLogger_NoPanicOnFailure(t *testing.T) {
 		}
 	}
 	// 不应 panic——nil logger 应被保护。
-	c, err := RelinkDir(customDir, repoRoot, "ysm", "copy", scanFn, nil)
+	res, err := RelinkDir(customDir, repoRoot, "ysm", "copy", scanFn, nil)
 	if err != nil {
 		t.Logf("nil logger 返回错误（可接受）: %v", err)
 	}
-	if c != 0 {
-		t.Logf("nil logger 无匹配条目，计数应 = 0，实际 %d", c)
+	if res.OK != 0 {
+		t.Logf("nil logger 无匹配条目，计数应 = 0，实际 %d", res.OK)
 	}
 }
 
@@ -170,13 +170,13 @@ func TestRelinkDir_DuplicateHash_FirstWins(t *testing.T) {
 		}
 		return []types.ModelEntry{{Name: "m.ysm", Path: filepath.Join(dir, "v1", "m.ysm"), Hash: "h1"}}
 	}
-	count, err := RelinkDir(customDir, repoRoot, "resourcepack", "copy", scanFn,
+	res, err := RelinkDir(customDir, repoRoot, "resourcepack", "copy", scanFn,
 		func(name, src, dst string, size int64, status, msg string) {})
 	if err != nil {
 		t.Fatalf("RelinkDir 失败: %v", err)
 	}
-	if count != 1 {
-		t.Fatalf("应重链接 1 个，实际 %d", count)
+	if res.OK != 1 {
+		t.Fatalf("应重链接 1 个，实际 %d", res.OK)
 	}
 	data, err := os.ReadFile(filepath.Join(customDir, "v1", "m.ysm"))
 	if err != nil {
@@ -211,13 +211,13 @@ func TestRelinkDir_DuplicateHash_DirLevel_FirstWins(t *testing.T) {
 		}
 		return []types.ModelEntry{{Name: "ysm.json", Path: filepath.Join(dir, "old-pack", "ysm.json"), Hash: "h1"}}
 	}
-	count, err := RelinkDir(customDir, repoRoot, "ysm", "copy", scanFn,
+	res, err := RelinkDir(customDir, repoRoot, "ysm", "copy", scanFn,
 		func(name, src, dst string, size int64, status, msg string) {})
 	if err != nil {
 		t.Fatalf("RelinkDir 失败: %v", err)
 	}
-	if count != 1 {
-		t.Fatalf("应重链接 1 个，实际 %d", count)
+	if res.OK != 1 {
+		t.Fatalf("应重链接 1 个，实际 %d", res.OK)
 	}
 	data, err := os.ReadFile(filepath.Join(customDir, "v1-pack", "ysm.json"))
 	if err != nil {
@@ -253,13 +253,13 @@ func TestRelinkDir_RepoBan_NotUsedAsSource(t *testing.T) {
 		}
 		return []types.ModelEntry{{Name: "m.ysm", Path: filepath.Join(dir, "v1", "m.ysm"), Hash: "h1"}}
 	}
-	count, err := RelinkDir(customDir, repoRoot, "resourcepack", "copy", scanFn,
+	res, err := RelinkDir(customDir, repoRoot, "resourcepack", "copy", scanFn,
 		func(name, src, dst string, size int64, status, msg string) {})
 	if err != nil {
 		t.Fatalf("RelinkDir 失败: %v", err)
 	}
-	if count != 1 {
-		t.Fatalf("应跳过仓库 .ban 并重链接 1 个，实际 %d", count)
+	if res.OK != 1 {
+		t.Fatalf("应跳过仓库 .ban 并重链接 1 个，实际 %d", res.OK)
 	}
 	data, err := os.ReadFile(filepath.Join(customDir, "v1", "m.ysm"))
 	if err != nil {
@@ -289,12 +289,12 @@ func TestRelinkDir_FileLevel_Idempotent(t *testing.T) {
 	scanFn := func(dir string) []types.ModelEntry {
 		return []types.ModelEntry{{Name: "m.ysm", Path: filepath.Join(dir, "m.ysm"), Hash: "h1"}}
 	}
-	c1, err := RelinkDir(customDir, repoRoot, "resourcepack", "copy", scanFn, nilLogger)
+	r1, err := RelinkDir(customDir, repoRoot, "resourcepack", "copy", scanFn, nilLogger)
 	testutil.NoError(t, err, "第一次 RelinkDir 失败")
-	c2, err := RelinkDir(customDir, repoRoot, "resourcepack", "copy", scanFn, nilLogger)
+	r2, err := RelinkDir(customDir, repoRoot, "resourcepack", "copy", scanFn, nilLogger)
 	testutil.NoError(t, err, "第二次 RelinkDir 失败")
-	if c1 != c2 {
-		t.Logf("提示：两次 RelinkDir 计数不同 c1=%d c2=%d", c1, c2)
+	if r1.OK != r2.OK {
+		t.Logf("提示：两次 RelinkDir 计数不同 c1=%d c2=%d", r1.OK, r2.OK)
 	}
 	data, _ := os.ReadFile(filepath.Join(customDir, "m.ysm"))
 	if string(data) != "same" {
@@ -469,9 +469,8 @@ func TestRelinkDir_EmptyRType(t *testing.T) {
 	scanFn := func(dir string) []types.ModelEntry {
 		return []types.ModelEntry{{Name: "m.ysm", Path: filepath.Join(dir, "m.ysm"), Hash: "h1"}}
 	}
-	c, e := RelinkDir(customDir, repoRoot, "", "copy", scanFn, nilLogger)
+	_, e := RelinkDir(customDir, repoRoot, "", "copy", scanFn, nilLogger)
 	testutil.NoError(t, e, "空 rtype 不应报错")
-	_ = c
 }
 
 func TestRelinkDir_CustomDirNonExistent(t *testing.T) {

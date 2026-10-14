@@ -3,7 +3,6 @@
 package app
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -318,31 +317,28 @@ func (a *App) SyncModelToggleStatusForType(rtype string) (int, int, error) {
 // relinkDir 按哈希比对重链接实例目录（执行逻辑下沉 go/sync）
 // 与其余写入口同口径自带双缓存配对失效（锐评 2026-10-10 配对审计）：helper 自持
 // 契约，不依赖调用方经 scanner 级联兜底——调用方怎么变都不会漏。
-func (a *App) relinkDir(customDir, filesRoot, rtype string) (int, error) {
-	n, err := ysmsync.RelinkDir(customDir, filesRoot, rtype, a.getLinkMode(), a.ScanModelEntries, a.logger.Add)
+func (a *App) relinkDir(customDir, filesRoot, rtype string) (types.RelinkResult, error) {
+	res, err := ysmsync.RelinkDir(customDir, filesRoot, rtype, a.getLinkMode(), a.ScanModelEntries, a.logger.Add)
 	instance.InvalidateSyncItemsCache()
 	ysmsync.InvalidateSyncScanCaches()
-	return n, err
+	return res, err
 }
 
-// RelinkAllInstanceResources 重新应用链接模式到整合包所有资源类型目录
-func (a *App) RelinkAllInstanceResources(instanceName string) (int, error) {
+// RelinkAllInstanceResources 重新应用链接模式到整合包所有资源类型目录。
+// 返回聚合 RelinkResult（ADR-342 D7）：error 仅前置不满足（mcRoot / 实例不存在 / 类型目录
+// 解析类硬错误）；**单类型的部分失败不再中断**（各类型目录相互独立，其余类型照常重链），
+// 失败计数与首个原因并入返回值——前端据此弹「已重新链接 N 个文件（M 个失败）」。
+// 原 (int, error) 体裁下失败计数被扔掉，`settings.relinkDonePartial` 三语 key 因此长期不可达。
+func (a *App) RelinkAllInstanceResources(instanceName string) (types.RelinkResult, error) {
+	res := types.RelinkResult{}
 	cfg := a.LoadAppConfig()
 	if err := requireMcRoot(cfg); err != nil {
-		return 0, err
+		return res, err
 	}
 	target, err := a.findInstance(cfg.McRoot, instanceName)
 	if err != nil {
-		return 0, err
+		return res, err
 	}
-	total := 0
-	// firstPartial 记录首个「零成功但有拒搬/回滚」的类型错误（ADR-342 C1）。语义分流：
-	//   - 该类型零成功 → 不中断循环（各类型目录相互独立，其余类型照常重链），只留首个错误；
-	//   - 其它错误（配置/目录解析类）→ 立刻返回，与既有口径一致。
-	// 结束时若**整实例一条都没成功**才把错误上抛（前端按实例计失败会弹失败 toast）；
-	// 有任何成功则返回 (total, nil)——逐条失败已由 go/sync 经 logger 写进导入日志面板，
-	// 不再用「整实例失败」覆盖掉已成功的计数（那是对用户说谎的另一种形态）。
-	var firstPartial error
 	for _, d := range registry.AllSubDirs() {
 		// ADR-064 锚定：统一走 FindInstDir（标准目录无该类型文件时兜底扫描），
 		// 否则 Sable-Schematics 等非标准目录里的蓝图不会参与重链接
@@ -354,27 +350,22 @@ func (a *App) RelinkAllInstanceResources(instanceName string) (int, error) {
 		if globalDir == "" {
 			continue
 		}
-		n, err := a.relinkDir(instanceDir, globalDir, d.RType)
+		sub, err := a.relinkDir(instanceDir, globalDir, d.RType)
+		// 该类型部分失败（含整夹回滚、快照拒搬）→ 聚合后继续下一类型，不中断循环；
+		// 只有前置/解析类硬错误才立刻返回（与既有口径一致）。
 		if err != nil {
-			if errors.Is(err, ysmsync.ErrPartialSync) {
-				if firstPartial == nil {
-					firstPartial = fmt.Errorf("重链接 %s: %w", d.RType, err)
-				}
-				total += n
-				continue
-			}
-			// 部分目录已重链接——同样需失效缓存，防陈旧缓存"复活"
 			scanner.InvalidateCache()
-			return total, fmt.Errorf("重链接 %s 失败: %w", d.RType, err)
+			return res, fmt.Errorf("重链接 %s 失败: %w", d.RType, err)
 		}
-		total += n
+		res.OK += sub.OK
+		res.Failed += sub.Failed
+		if res.FirstError == "" {
+			res.FirstError = sub.FirstError
+		}
 	}
 	// 重链接会增删实例目录文件——失效扫描缓存（实例目录在扫描范围内，GetInstanceStatus 走扫描）
 	scanner.InvalidateCache()
-	if total == 0 && firstPartial != nil {
-		return 0, firstPartial
-	}
-	return total, nil
+	return res, nil
 }
 
 // ========== 资源同步 ==========

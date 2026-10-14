@@ -43,8 +43,10 @@
 **D4｜`.relink-bak-*` 备份尸体在同步 diff 全通道豁免。**
 失败 relink 留下的恢复点不得被判「实例独有（可拉取）」——否则面板显示「多余」，用户点一下就把整个恢复点复制进仓库（垃圾入库 + 恢复点被当模型）。统一复用既有谓词，覆盖四条 collect 通道：dirlevel Walk（`collectEntriesWalk`）、dirlevel scan 反推（`collectEntriesFromScan`，生产链走这里，只修 Walk 等于没修）、file-level Walk（`handleDir`）、夹内子文件（`collectFolderFiles` / `collectFolderFilesFromScan`）。
 
-**D7｜失败必须可分类上报，但不得用「整实例失败」覆盖已成功计数（对抗复核 C1 收口）。**
+**D7｜失败必须可分类上报，但不得用「整实例失败」覆盖已成功计数（对抗复核 C1 收口，2026-10-14 D7→D7′）。**
 `RelinkDir` 统计失败条目；**零成功且有失败**时返回 `ErrPartialSync`（原先只记日志、返回 `(0, nil)`，前端唯一失败通路是按实例计的 Go error → 弹「已重新链接 0 个文件」的成功 toast）。app 层 `RelinkAllInstanceResources` 相应分流：遇 `ErrPartialSync` **不中断**类型循环（各类型目录相互独立）继续累计，仅在**整实例零成功**时才把首个错误上抛；有任何成功则返回 `(total, nil)`——逐条失败已由 go/sync 经 logger 写进导入日志面板，用「整实例失败」覆盖成功计数是另一种对用户说谎。契约变化同步到既有回归：`sync_complexity_char_test.go` 的两条特征用例（平铺失败记账 / 目录替换回滚）与 `sync_relink_modeswitch_test.go` 的两条拒搬用例，其 `NoError` 断言改为 `ErrorIs(…, ErrPartialSync)`，行为断言（count 不增、日志点名、文件毫发无损、无备份残留）原样保留。
+**D7′｜`ErrPartialSync` 被结构化 `types.RelinkResult{OK,Failed,FirstError}` 取代（锐评批 D ①，ADR-340-d1 同体裁）。**
+D7 的 `(int, error)` 体裁仍有半截问题：`RelinkDir` 只把「零成功」抬成 error，**部分成功时失败计数被丢掉**（`RelinkAllInstanceResources` 返回 `(total, nil)`），设置页 toast 只能弹「已重新链接 N 个文件」——而 `settings.relinkDonePartial`（N 成功 M 失败）三语 key 因此长期不可达，前端 `failed` 恒为 0/1。改法：`RelinkDir(...) (types.RelinkResult, error)`——error 仅前置不满足（参数/scanFn 空）；条目级失败进 `res.Failed` + `res.FirstError`（经 Logger 包装闭包归集首个原因），**零成功不是 error**。`RelinkAllInstanceResources` 聚合各类型 `RelinkResult`，前端据此弹「已重新链接 N 个文件（M 个失败；首个失败原因：…）」。既有 D7 用例的 `ErrorIs(…, ErrPartialSync)` 断言改为 `NoError` + `res.OK`/`res.Failed`/`res.FirstError` 断言（行为等价，仅承载体裁变了）。`ErrPartialSync` 仍保留给 `PushResources` 使用。
 **D6｜尸体谓词下沉 `go/fsutil`，扫描/去重/体检三处共用（对抗复核 A4 收口）。**
 `IsRelinkBackupPath` 原为 `go/sync` 包私有 → 下沉 `go/fsutil/relink_backup.go` 作单点事实源（`go/sync` 保留转发函数以缩小改动面），三处包外消费方接入：
 
@@ -70,7 +72,7 @@
 - `verifyDirSnapshot` 的残余窗口不变（内容漂移不威胁「搬对对象」、InstallLock 只互斥本进程）——D2 只修「按名重开导致恒真」，不放宽这两条已声明的接受项。
 - **实例独有「空目录」不保留**（`collectInstanceOnlyFiles` 只收文件）：无文件内容的空夹随替换消失，无日志。判为可接受（游戏侧不消费空目录），如需保全再扩到目录条目。
 - **断链/指向目录的软链作为独有文件**会让回填必然失败（`fsutil.CopyFile` 拒目录源 / Stat 失败）→ 该夹整夹回滚、本轮不重链（日志点名），用户需先处置该软链或删除它。
-- **部分失败只到「计数 + 日志面板」**（D7 的分流口径）：单实例部分成功仍返回 `(total, nil)`，前端弹「已重新链接 N 个文件」，M 项失败只在导入日志面板可见。要做成「N 成功 M 失败」的告警 toast，需把 `RelinkAllInstanceResources` 的返回改成结构化 `{OK, Failed, Errors}`（牵动绑定重生成 + 三语 i18n + 前端用例），留作后续刀。
+- ~~**部分失败只到「计数 + 日志面板」**~~（已收口，见 D7′）：单实例部分失败已由结构化 `types.RelinkResult{OK,Failed,FirstError}` 如实下发，设置页 toast 报出「N 成功 M 失败 + 首个原因」，不再只进导入日志面板。
 
 ## 4. 数据溯源
 

@@ -620,7 +620,8 @@ export interface PackModelDetailList {
  * 
  * 对称性说明：`PushResources` 暂未改同款体裁——它的绑定 `PushResourceToInstance`
  * **当前无 UI 消费者**（推送计数走 `features/sync|downloadMissing` 展开后的文件级结果），
- * 且 `ErrPartialSync` 仍被 `RelinkDir`（零成功上抛）使用。若将来接线推送绑定，照本结构改。
+ * 且 `ErrPartialSync` 仍被 `PushResources` 使用。若将来接线推送绑定，照本结构改。
+ * `RelinkDir` 已改同款体裁（见 RelinkResult / ADR-342 D7）。
  */
 export interface PullSyncResult {
     /**
@@ -647,6 +648,38 @@ export interface PullSyncResult {
 export interface QueueStatusInfo {
     "remaining": number;
     "running": boolean;
+}
+
+/**
+ * RelinkResult 重链接结果（ADR-342 D7 收口，与 PullSyncResult 同体裁）。
+ * 
+ * 为什么沿用 (int, error) 体裁是坏的：Wails 绑定在 error 非 nil 时以 reject 交付，第一个
+ * 返回值**在途中丢失**；于是 `RelinkAllInstanceResources` 只能在「整实例零成功」时抛 error，
+ * 部分成功一律返回 (total, nil)——**单实例内的 M 项失败计数被扔掉**，设置页 toast 只能弹
+ * 「已重新链接 N 个文件」，而这「M 个失败」恰好就是用户最该知道的事（某夹回滚、快照拒搬）。
+ * `settings.relinkDonePartial` 三语 key 因此长期不可达（前端 failed 恒为 0/1，不是真实计数）。
+ * 
+ * 约定（同 PullSyncResult）：
+ *   - 前置不满足（参数为空 / scanFn nil / 未配置 mcRoot / 实例不存在）仍走 error；
+ *   - 条目级失败进 Failed + FirstError（供汇总 toast 点名首个原因），**零成功不是 error**——
+ *     结构化结果已能区分「全失败」与「成功但有失败」，无需再用 ErrPartialSync 抬升。
+ *     （`ErrPartialSync` 仍保留给 `PushResources` 使用，见 sync_push.go。）
+ */
+export interface RelinkResult {
+    /**
+     * 成功重链接条目数
+     */
+    "ok": number;
+
+    /**
+     * 失败条目数
+     */
+    "failed": number;
+
+    /**
+     * 首个失败原因（Failed==0 时为空）
+     */
+    "firstError"?: string;
 }
 
 /**

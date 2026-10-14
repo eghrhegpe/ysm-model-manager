@@ -155,38 +155,50 @@ interface RelinkInstance {
   Exists: boolean;
 }
 
-/** 单整合包重链接；成功返回其资源数，失败 logWarn 第三参直传 error 并返回 {count:0,failed:1} */
+/** 单整合包重链接结果（RelinkResult 的结构化子集）：ADR-342 D7 起失败计数随绑定下发，
+ * 前端据此弹「N 成功 M 失败」而非只弹「已重新链接 N 个文件」。 */
+interface RelinkOutcome {
+  ok: number;
+  failed: number;
+  firstError?: string;
+}
+
+/** 单整合包重链接；成功返回其资源数与失败数，失败 logWarn 第三参直传 error 并返回 {ok:0,failed:1} */
 async function relinkOneInstance(
   ins: RelinkInstance,
-  relink: (name: string) => Promise<number>,
-): Promise<{ count: number; failed: number }> {
+  relink: (name: string) => Promise<RelinkOutcome>,
+): Promise<RelinkOutcome> {
   try {
-    return { count: await relink(ins.Name), failed: 0 };
+    return await relink(ins.Name);
   } catch (e) {
     // code_review 3413288be 段 B #2（P3）：第三参直传 error（同文件 L217/237
     // 约定形状）——原 { name, err } 对象包装绕过 log 层错误格式化/栈保留，
     // name 并入 message
     logWarn("community", `重新链接失败: ${ins.Name}`, e);
-    return { count: 0, failed: 1 };
+    return { ok: 0, failed: 1, firstError: friendlyError(e) };
   }
 }
 
-/** 按 total/failed 汇总 relink 结果 toast（成功 / 部分失败 / 空列表） */
-function emitRelinkToast(total: number, failed: number): void {
+/** 按 total/failed/firstErr 汇总 relink 结果 toast（成功 / 部分失败 / 空列表 / 全失败）。
+ * failed>0 且已知首个失败原因时追加 reason 后缀——「N 成功 M 失败」必须说出失败是什么，
+ * 不能只给一句「部分失败」让用户去日志面板翻。 */
+function emitRelinkToast(total: number, failed: number, firstErr: string): void {
+  const reasonSuffix =
+    failed > 0 && firstErr ? t("settings.relinkFailureReason", { reason: firstErr }) : "";
   if (total === 0) {
     toast(
-      failed > 0 ? t("settings.relinkFailed", { failed }) : t("settings.relinkNone"),
-      TOAST_MS.normal,
+      failed > 0 ? t("settings.relinkFailed", { failed }) + reasonSuffix : t("settings.relinkNone"),
+      failed > 0 ? TOAST_MS.long : TOAST_MS.normal,
       failed > 0 ? "error" : "info",
     );
     return;
   }
   toast(
-    failed > 0
+    (failed > 0
       ? t("settings.relinkDonePartial", { total, failed })
-      : t("settings.relinkDone", { total }),
-    TOAST_MS.normal,
-    "success",
+      : t("settings.relinkDone", { total })) + reasonSuffix,
+    failed > 0 ? TOAST_MS.long : TOAST_MS.normal,
+    failed > 0 ? "warn" : "success",
   );
 }
 
@@ -210,12 +222,17 @@ async function relinkAllInstancesInner(): Promise<void> {
     (ins) => ins.Exists && ins.Name,
   );
   let total = 0;
+  let firstErr = "";
   const n = instances.length;
   let done = 0;
   for (const ins of instances) {
     const res = await relinkOneInstance(ins, RelinkAllInstanceResources);
-    total += res.count;
+    total += res.ok;
     failed += res.failed;
+    // 首个失败原因留作汇总 toast 点名（ADR-342 D7：部分失败不再只进日志面板）
+    if (!firstErr && res.firstError) {
+      firstErr = res.firstError;
+    }
     // ADR-296 D5：增量覆盖式进度（末个实例让位给紧随其后的终态汇总 toast，
     // 不闪重复条；单实例时天然跳过中间进度）
     done += 1;
@@ -228,7 +245,7 @@ async function relinkAllInstancesInner(): Promise<void> {
     }
   }
   bus.emit("stats:refresh");
-  emitRelinkToast(total, failed);
+  emitRelinkToast(total, failed, firstErr);
 }
 
 /**

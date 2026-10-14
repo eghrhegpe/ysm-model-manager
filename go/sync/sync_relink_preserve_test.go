@@ -67,9 +67,9 @@ func TestRelinkDir_KeepsInstanceOnlyFiles(t *testing.T) {
 	scanFn := func(dir string) []types.ModelEntry {
 		return []types.ModelEntry{{Name: "x.ysm", Path: filepath.Join(dir, "packA", "x.ysm"), Hash: "h1"}}
 	}
-	count, err := RelinkDir(customDir, repoRoot, "ysm", "copy", scanFn, relinkLogger(logs))
+	res, err := RelinkDir(customDir, repoRoot, "ysm", "copy", scanFn, relinkLogger(logs))
 	testutil.NoError(t, err, "RelinkDir 不应报错")
-	testutil.Equal(t, count, 1, "应重链接 1 个（日志 %v）", *logs)
+	testutil.Equal(t, res.OK, 1, "应重链接 1 个（日志 %v）", *logs)
 	// 核心断言：实例独有文件必须存活（原实现随备份 RemoveAll 静默消失）
 	testutil.FileExists(t, ownTex, "实例独有贴图必须存活")
 	testutil.FileExists(t, ownDeep, "实例独有子目录内文件必须存活")
@@ -121,9 +121,9 @@ func TestRelinkDir_SameFolderTwoEntries(t *testing.T) {
 			{Name: "y.ysm", Path: filepath.Join(dir, "packA", "y.ysm"), Hash: "h2"},
 		}
 	}
-	count, err := RelinkDir(customDir, repoRoot, "ysm", "copy", scanFn, relinkLogger(logs))
+	res, err := RelinkDir(customDir, repoRoot, "ysm", "copy", scanFn, relinkLogger(logs))
 	testutil.NoError(t, err, "RelinkDir 不应报错")
-	testutil.Equal(t, count, 2, "同夹两条目都应计成功（日志 %v）", *logs)
+	testutil.Equal(t, res.OK, 2, "同夹两条目都应计成功（日志 %v）", *logs)
 	snapshotFailures := filterLogs(*logs, "已被替换为另一对象", "快照缺失")
 	testutil.Equal(t, len(snapshotFailures), 0, "同夹第二条目不应报快照类失败（自己刚搬过）: %v", snapshotFailures)
 	testutil.FileExists(t, own, "实例独有文件必须存活")
@@ -147,10 +147,13 @@ func TestRelinkDir_RestoreFailureRollsBackWholeDir(t *testing.T) {
 	scanFn := func(dir string) []types.ModelEntry {
 		return []types.ModelEntry{{Name: "x.ysm", Path: filepath.Join(dir, "packA", "x.ysm"), Hash: "h1"}}
 	}
-	count, err := RelinkDir(customDir, repoRoot, "ysm", "copy", scanFn, relinkLogger(logs))
-	// ADR-342 C1：整夹回滚后零成功 → 抬成 ErrPartialSync（否则前端弹「已重新链接 0 个文件」成功）
-	testutil.ErrorIs(t, err, ErrPartialSync, "零成功且有回滚应报可分类错误")
-	testutil.Equal(t, count, 0, "回填失败应整夹回滚且不计成功（日志 %v）", *logs)
+	res, err := RelinkDir(customDir, repoRoot, "ysm", "copy", scanFn, relinkLogger(logs))
+	// ADR-342 D7：整夹回滚后零成功 → 结构化结果 res.Failed=1 + FirstError 点名
+	//（原 ErrPartialSync 抬升会把失败计数挡在绑定层外，前端只能弹「已重新链接 0 个文件」成功）
+	testutil.NoError(t, err, "部分失败由结构化结果承载，不应是 error")
+	testutil.Equal(t, res.OK, 0, "回填失败应整夹回滚且不计成功（日志 %v）", *logs)
+	testutil.Equal(t, res.Failed, 1, "应记 1 个失败（日志 %v）", *logs)
+	testutil.Equal(t, res.FirstError != "", true, "失败应点名首个原因")
 	testutil.Equal(t, readBody(t, filepath.Join(instPack, "x.ysm")), "old-body", "回滚后模型应保持旧内容")
 	testutil.FileExists(t, filepath.Join(instPack, "y.ysm", "inner.png"), "回滚后实例独有文件应原位")
 	testutil.Equal(t, len(filterLogs(*logs, "回填失败")), 1, "应点名回填失败（日志 %v）", *logs)
@@ -181,10 +184,11 @@ func TestRelinkDir_RenameMoveRefusesOccupiedLanding(t *testing.T) {
 		}
 		return []types.ModelEntry{{Name: "x.ysm", Path: filepath.Join(dir, "packA", "x.ysm"), Hash: "h1"}}
 	}
-	count, err := RelinkDir(customDir, repoRoot, "ysm", "copy", scanFn, relinkLogger(logs))
-	// ADR-342 C1：拒绝发生在动盘之前（零成功）+ 有拒搬 → 抬成可分类错误，供上层弹失败
-	testutil.ErrorIs(t, err, ErrPartialSync, "零成功且有拒搬应报可分类错误")
-	testutil.Equal(t, count, 0, "落位目标被活夹占用应拒绝重链（日志 %v）", *logs)
+	res, err := RelinkDir(customDir, repoRoot, "ysm", "copy", scanFn, relinkLogger(logs))
+	// ADR-342 D7：拒绝发生在动盘之前（零成功）+ 有拒搬 → 结构化结果 res.Failed=1 + 点名
+	testutil.NoError(t, err, "部分失败由结构化结果承载，不应是 error")
+	testutil.Equal(t, res.OK, 0, "落位目标被活夹占用应拒绝重链（日志 %v）", *logs)
+	testutil.Equal(t, res.Failed, 1, "应记 1 个失败（日志 %v）", *logs)
 	// 核心：被占用的既有活夹必须完好（旧实现在回滚时会整树删掉它）
 	testutil.FileExists(t, keep, "被占用的既有活夹不得被删")
 	testutil.Equal(t, readBody(t, filepath.Join(customDir, "packA", "x.ysm")), "old-body", "拒绝应发生在动盘之前（实例夹原样）")
@@ -210,9 +214,9 @@ func TestRelinkDir_RenameMoveIntoVacantLanding(t *testing.T) {
 		}
 		return []types.ModelEntry{{Name: "x.ysm", Path: filepath.Join(dir, "oldName", "x.ysm"), Hash: "h1"}}
 	}
-	count, err := RelinkDir(customDir, repoRoot, "ysm", "copy", scanFn, relinkLogger(logs))
+	res, err := RelinkDir(customDir, repoRoot, "ysm", "copy", scanFn, relinkLogger(logs))
 	testutil.NoError(t, err, "RelinkDir 不应报错（日志 %v）", *logs)
-	testutil.Equal(t, count, 1, "改名搬运应成功（日志 %v）", *logs)
+	testutil.Equal(t, res.OK, 1, "改名搬运应成功（日志 %v）", *logs)
 	testutil.Equal(t, readBody(t, filepath.Join(customDir, "newName", "x.ysm")), "repo-body", "新夹应为仓库版本")
 	testutil.FileExists(t, filepath.Join(customDir, "newName", "own.png"), "实例独有文件应随行到新夹")
 	testutil.FileNotExists(t, filepath.Join(customDir, "oldName"), "旧夹应被搬走")
@@ -243,11 +247,12 @@ func TestRelinkDir_SameFolderDifferentRepoFolders(t *testing.T) {
 			{Name: "y.ysm", Path: filepath.Join(dir, "packA", "y.ysm"), Hash: "h2"},
 		}
 	}
-	count, err := RelinkDir(customDir, repoRoot, "ysm", "copy", scanFn, relinkLogger(logs))
-	// 部分成功（1 成功 + 1 未到位）→ 仍返回计数 + nil：逐条失败已进日志面板，
-	// 不用「整实例失败」覆盖掉已成功计数（ADR-342 C1 的分流口径）
+	res, err := RelinkDir(customDir, repoRoot, "ysm", "copy", scanFn, relinkLogger(logs))
+	// 部分成功（1 成功 + 1 未到位）→ 结构化结果 res.OK=1 / res.Failed=1 分别如实上报：
+	// 逐条失败不再只进日志面板（ADR-342 D7，替代 C1 的「部分成功返回计数 + nil」口径）
 	testutil.NoError(t, err, "部分成功不应报错")
-	testutil.Equal(t, count, 1, "只有第一条目真正重链，第二条不得计成功（日志 %v）", *logs)
+	testutil.Equal(t, res.OK, 1, "只有第一条目真正重链，第二条不得计成功（日志 %v）", *logs)
+	testutil.Equal(t, res.Failed, 1, "未到位的条目应计入失败（日志 %v）", *logs)
 	// 数据保全：y.ysm 作为实例独有文件被回填（旧内容）——不消失
 	testutil.Equal(t, readBody(t, filepath.Join(customDir, "modelB", "y.ysm")), "old-y",
 		"y.ysm 应作为独有文件回填（旧内容），实际内容见上")

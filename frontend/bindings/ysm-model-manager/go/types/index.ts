@@ -31,6 +31,7 @@ export type {
     PackModelDetailList,
     PullSyncResult,
     QueueStatusInfo,
+    RelinkResult,
     ResourceSyncItem,
     ResourceSyncResult,
     RuntimeLog,

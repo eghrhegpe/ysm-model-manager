@@ -324,7 +324,7 @@ status: active
 - `CountInstanceResources(insName, rtype) → number` — 统计整合包中可清空的资源文件数（rtype 空=全部类型）
 - `ClearInstanceResources(insName, rtype) → number` — 清空整合包中已同步文件（走回收站），返回数量
 - `RelinkCustomDir(customDir, repoRoot) → number` — 重新应用链接模式到指定目录（兼容旧版）
-- `RelinkAllInstanceResources(instanceName) → number` — 重新应用链接模式到整合包所有资源类型目录
+- `RelinkAllInstanceResources(instanceName) → RelinkResult` — 重新应用链接模式到整合包所有资源类型目录；返回结构化 `{ok, failed, firstError}`（ADR-342 D7′，原 `→ number` 会因 Wails reject 丢计数）
 - `InstallResourceToInstance(rtype, srcPath, instanceName) → void` — 将资源文件安装到指定整合包（rtype 如 resourcepack/shaderpack）
 - `SetLinkMode(mode) → void` — 设置链接模式（符号链接/硬链接/复制）
 - `GetLinkMode() → string` — 获取当前链接模式

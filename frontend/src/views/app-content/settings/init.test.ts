@@ -175,7 +175,7 @@ function mockApp(overrides: Record<string, unknown> = {}) {
     CurrentVersion: vi.fn(() => "v1.2.3"),
     OpenInBrowser: vi.fn(),
     ListVersionInstances: vi.fn(() => []),
-    RelinkAllInstanceResources: vi.fn(() => 0),
+    RelinkAllInstanceResources: vi.fn(() => ({ ok: 0, failed: 0, firstError: "" })),
     SetDownloadMirror: vi.fn(),
     ...overrides,
   };
@@ -281,7 +281,7 @@ describe("initSettings — 链接模式与重链接", () => {
   it("链接模式 change → 确认框（含新值与实例数）→ SaveAppConfig + SetLinkMode + toast + 自动 relink", async () => {
     const setLinkFn = vi.fn();
     const saveFn = vi.fn();
-    const relinkFn = vi.fn(() => 3);
+    const relinkFn = vi.fn(() => ({ ok: 3, failed: 0, firstError: "" }));
     mockApp({
       SetLinkMode: setLinkFn,
       SaveAppConfig: saveFn,
@@ -330,7 +330,7 @@ describe("initSettings — 链接模式与重链接", () => {
   it("链接模式确认框取消 → select 回退旧值、不发 RPC、不弹切换 toast（ADR-296 D5）", async () => {
     const setLinkFn = vi.fn();
     const saveFn = vi.fn();
-    const relinkFn = vi.fn(() => 3);
+    const relinkFn = vi.fn(() => ({ ok: 3, failed: 0, firstError: "" }));
     mockApp({
       SetLinkMode: setLinkFn,
       SaveAppConfig: saveFn,
@@ -377,7 +377,7 @@ describe("initSettings — 链接模式与重链接", () => {
   });
 
   it("relink 有实例 → RelinkAllInstanceResources + 成功 toast", async () => {
-    const relinkFn = vi.fn(() => 5);
+    const relinkFn = vi.fn(() => ({ ok: 5, failed: 0, firstError: "" }));
     mockApp({
       LoadAppConfig: vi.fn(() => ({
         filesRoot: "/repo",
@@ -405,7 +405,7 @@ describe("initSettings — 链接模式与重链接", () => {
   });
 
   it("relink 多实例 → 逐实例增量进度 toast（末个不重发，ADR-296 D5）", async () => {
-    const relinkFn = vi.fn(() => 2);
+    const relinkFn = vi.fn(() => ({ ok: 2, failed: 0, firstError: "" }));
     mockApp({
       LoadAppConfig: vi.fn(() => ({
         filesRoot: "/repo",
@@ -830,7 +830,42 @@ describe("initSettings — 错误路径与降级", () => {
     );
   });
 
-  it("relink 实例部分失败 → 失败数提示", async () => {
+  it("relink 实例部分失败 → 成功 toast 报出真实失败数与首个原因（ADR-342 D7）", async () => {
+    stubConsoleWarn(); // 屏蔽 [community] 重新链接失败 预期噪声（每失败实例一条）
+    mockApp({
+      LoadAppConfig: vi.fn(() => ({
+        filesRoot: "/repo",
+        resourcepackRoot: "",
+        mcRoot: "/mc",
+        linkMode: "copy",
+      })),
+      ListVersionInstances: vi.fn(() => [
+        { Name: "insA", Exists: true },
+        { Name: "insB", Exists: true },
+      ]),
+      // insA 成功 3 条、insB 抛错 → relinkOneInstance 兜底 {ok:0, failed:1, firstError}
+      RelinkAllInstanceResources: vi.fn(async (name: string) => {
+        if (name === "insA") return { ok: 3, failed: 0, firstError: "" };
+        throw new Error("relink boom");
+      }),
+    });
+    const { root } = makeRoot();
+    await initSettings(root);
+    (root.getElementById("set-relink") as HTMLElement).click();
+    await waitFor(() =>
+      busEmit.mock.calls.some(
+        (c) => c[0] === "toast:show" && String(c[1]?.msg ?? "").includes("已重新链接 3 个文件（1 个失败）"),
+      ),
+    );
+    // 必须点名首个失败原因，不能只给一句「部分失败」
+    await waitFor(() =>
+      busEmit.mock.calls.some(
+        (c) => c[0] === "toast:show" && String(c[1]?.msg ?? "").includes("首个失败原因"),
+      ),
+    );
+  });
+
+  it("relink 全失败 → 失败 toast 报出失败数", async () => {
     stubConsoleWarn(); // 屏蔽 [community] 重新链接失败 预期噪声（每失败实例一条）
     mockApp({
       LoadAppConfig: vi.fn(() => ({
@@ -852,7 +887,7 @@ describe("initSettings — 错误路径与降级", () => {
     (root.getElementById("set-relink") as HTMLElement).click();
     await waitFor(() =>
       busEmit.mock.calls.some(
-        (c) => c[0] === "toast:show" && String(c[1]?.msg ?? "").includes("2 个整合包重新链接失败"),
+        (c) => c[0] === "toast:show" && String(c[1]?.msg ?? "").includes("2 个文件重新链接失败"),
       ),
     );
   });
@@ -1045,7 +1080,7 @@ describe("initSettings — relink 收尾分支（busy / 全跳过 / 外层失败
   });
 
   it("实例全被跳过（无 Exists / 无 Name）→ 「没有需要重新链接」toast 且不调 Relink", async () => {
-    const relinkFn = vi.fn(() => 5);
+    const relinkFn = vi.fn(() => ({ ok: 5, failed: 0, firstError: "" }));
     mockApp({
       LoadAppConfig: vi.fn(() => ({
         filesRoot: "/repo",

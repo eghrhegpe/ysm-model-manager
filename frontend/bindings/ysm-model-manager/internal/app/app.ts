@@ -1034,9 +1034,13 @@ export function ReadShaderpackLang(path: string): $CancellablePromise<types$0.Sh
 }
 
 /**
- * RelinkAllInstanceResources 重新应用链接模式到整合包所有资源类型目录
+ * RelinkAllInstanceResources 重新应用链接模式到整合包所有资源类型目录。
+ * 返回聚合 RelinkResult（ADR-342 D7）：error 仅前置不满足（mcRoot / 实例不存在 / 类型目录
+ * 解析类硬错误）；**单类型的部分失败不再中断**（各类型目录相互独立，其余类型照常重链），
+ * 失败计数与首个原因并入返回值——前端据此弹「已重新链接 N 个文件（M 个失败）」。
+ * 原 (int, error) 体裁下失败计数被扔掉，`settings.relinkDonePartial` 三语 key 因此长期不可达。
  */
-export function RelinkAllInstanceResources(instanceName: string): $CancellablePromise<number> {
+export function RelinkAllInstanceResources(instanceName: string): $CancellablePromise<types$0.RelinkResult> {
     return $Call.ByID(3612469403, instanceName);
 }
 

@@ -115,10 +115,10 @@ func TestChar_RelinkDir_RepoIndexSkipsCorpsesAndHashless(t *testing.T) {
 	}
 
 	sink := &charSink{}
-	count, err := RelinkDir(customDir, repoRoot, "ysm", "hardlink", scanFn, sink.logger())
+	res, err := RelinkDir(customDir, repoRoot, "ysm", "hardlink", scanFn, sink.logger())
 	testutil.NoError(t, err, "不应报错")
-	if count != 1 {
-		t.Errorf("count = %d, want 1（仅 ysm.json 一条走平铺重链）", count)
+	if res.OK != 1 {
+		t.Errorf("count = %d, want 1（仅 ysm.json 一条走平铺重链）", res.OK)
 	}
 	if got := sink.digest(); got != "" {
 		t.Errorf("重链成功不记 logger，实际 %q", got)
@@ -152,11 +152,15 @@ func TestChar_RelinkDir_FlatCopyFailureLogged(t *testing.T) {
 	}
 
 	sink := &charSink{}
-	count, err := RelinkDir(customDir, repoRoot, "ysm", "hardlink", scanFn, sink.logger())
-	// ADR-342 C1：零成功 + 有失败 → ErrPartialSync（原先只记日志返回 nil，前端会弹「已重链 0 个」）
-	testutil.ErrorIs(t, err, ErrPartialSync, "零成功且有失败应报可分类错误")
-	if count != 0 {
-		t.Errorf("count = %d, want 0", count)
+	res, err := RelinkDir(customDir, repoRoot, "ysm", "hardlink", scanFn, sink.logger())
+	// ADR-342 D7：零成功 + 有失败 → 结构化结果 res.Failed=1 + FirstError 点名，不再是 error
+	//（原 ErrPartialSync 抬升会把失败计数挡在绑定层外，前端只能弹「已重链 0 个」的成功文案）。
+	testutil.NoError(t, err, "部分失败由结构化结果承载，不应是 error")
+	if res.OK != 0 || res.Failed != 1 {
+		t.Errorf("res = %+v, want OK=0 Failed=1", res)
+	}
+	if res.FirstError == "" {
+		t.Errorf("失败应点名首个原因，FirstError 为空")
 	}
 	if got := sink.digest(); got != "ysm.json:failed" {
 		t.Errorf("logger 序列 = %q, want \"ysm.json:failed\"", got)
@@ -191,11 +195,14 @@ func TestChar_RelinkDir_DirReplaceFailureRollsBack(t *testing.T) {
 	}
 
 	sink := &charSink{}
-	count, err := RelinkDir(customDir, repoRoot, "ysm", "hardlink", scanFn, sink.logger())
-	// ADR-342 C1：零成功 + 有失败 → ErrPartialSync（回滚成功也要如实上报，不能只记日志）
-	testutil.ErrorIs(t, err, ErrPartialSync, "零成功且有失败应报可分类错误")
-	if count != 0 {
-		t.Errorf("count = %d, want 0", count)
+	res, err := RelinkDir(customDir, repoRoot, "ysm", "hardlink", scanFn, sink.logger())
+	// ADR-342 D7：零成功 + 有失败 → 结构化结果（回滚成功也要如实上报，不能只记日志）
+	testutil.NoError(t, err, "部分失败由结构化结果承载，不应是 error")
+	if res.OK != 0 || res.Failed != 1 {
+		t.Errorf("res = %+v, want OK=0 Failed=1", res)
+	}
+	if res.FirstError == "" {
+		t.Errorf("失败应点名首个原因，FirstError 为空")
 	}
 	if got := sink.digest(); got != "ysm.json:failed" {
 		t.Errorf("logger 序列 = %q, want \"ysm.json:failed\"", got)

@@ -29,13 +29,13 @@ func TestRelinkDir_MatchesByHash(t *testing.T) {
 	scanFn := func(dir string) []types.ModelEntry {
 		return []types.ModelEntry{{Name: "m.ysm", Path: filepath.Join(dir, "m.ysm"), Hash: "samehash"}}
 	}
-	count, err := RelinkDir(customDir, repoRoot, "resourcepack", "copy", scanFn,
+	res, err := RelinkDir(customDir, repoRoot, "resourcepack", "copy", scanFn,
 		func(name, src, dst string, size int64, status, msg string) {})
 	if err != nil {
 		t.Fatalf("RelinkDir 失败: %v", err)
 	}
-	if count != 1 {
-		t.Fatalf("应重链接 1 个，实际 %d", count)
+	if res.OK != 1 {
+		t.Fatalf("应重链接 1 个，实际 %d", res.OK)
 	}
 	// customDir 的文件应被重装（copy 模式保留内容）
 	if _, err := os.Stat(filepath.Join(customDir, "m.ysm")); err != nil {
@@ -125,13 +125,13 @@ func TestRelinkDir_FlatEntryAtCustomDirRoot(t *testing.T) {
 		}
 		return []types.ModelEntry{{Name: "ysm.json", Path: filepath.Join(dir, "ysm.json"), Hash: "h1"}}
 	}
-	count, err := RelinkDir(customDir, repoRoot, "ysm", "copy", scanFn,
+	res, err := RelinkDir(customDir, repoRoot, "ysm", "copy", scanFn,
 		func(name, src, dst string, size int64, status, msg string) {})
 	if err != nil {
 		t.Fatalf("RelinkDir 失败: %v", err)
 	}
-	if count != 1 {
-		t.Fatalf("应重链接 1 个，实际 %d", count)
+	if res.OK != 1 {
+		t.Fatalf("应重链接 1 个，实际 %d", res.OK)
 	}
 	// 平铺文件被替换为仓库版本（copy 模式）
 	data, err := os.ReadFile(filepath.Join(customDir, "ysm.json"))
@@ -176,13 +176,13 @@ func TestRelinkDir_BanEntrySkipped(t *testing.T) {
 		}
 		return []types.ModelEntry{{Name: "m.ysm.ban", Path: filepath.Join(dir, "m.ysm.ban"), Hash: "h1"}}
 	}
-	count, err := RelinkDir(customDir, repoRoot, "resourcepack", "copy", scanFn,
+	res, err := RelinkDir(customDir, repoRoot, "resourcepack", "copy", scanFn,
 		func(name, src, dst string, size int64, status, msg string) {})
 	if err != nil {
 		t.Fatalf("RelinkDir 失败: %v", err)
 	}
-	if count != 0 {
-		t.Fatalf(".ban 条目不应被重链接，实际 count=%d", count)
+	if res.OK != 0 {
+		t.Fatalf(".ban 条目不应被重链接，实际 count=%d", res.OK)
 	}
 	// .ban 文件保留（内容不变，未被替换为仓库活跃版）
 	data, err := os.ReadFile(banFile)
@@ -215,13 +215,13 @@ func TestRelinkDir_DirLevelReplacesOldDir(t *testing.T) {
 		}
 		return []types.ModelEntry{{Name: "ysm.json", Path: filepath.Join(dir, "custom-sub", "ysm.json"), Hash: "h1"}}
 	}
-	count, err := RelinkDir(customDir, repoRoot, "ysm", "copy", scanFn,
+	res, err := RelinkDir(customDir, repoRoot, "ysm", "copy", scanFn,
 		func(name, src, dst string, size int64, status, msg string) {})
 	if err != nil {
 		t.Fatalf("RelinkDir 失败: %v", err)
 	}
-	if count != 1 {
-		t.Fatalf("应重链接 1 个，实际 %d", count)
+	if res.OK != 1 {
+		t.Fatalf("应重链接 1 个，实际 %d", res.OK)
 	}
 	// 旧目录被替换：custom-sub 不再存在
 	if _, err := os.Stat(filepath.Join(customDir, "custom-sub")); !os.IsNotExist(err) {
@@ -275,15 +275,15 @@ func TestRelinkDir_RelinkBackupCorpsesSkipped(t *testing.T) {
 			{Name: "m.ysm", Path: corpse, Hash: "h1"},
 		}
 	}
-	count, err := RelinkDir(customDir, repoRoot, "resourcepack", "copy", scanFn,
+	res, err := RelinkDir(customDir, repoRoot, "resourcepack", "copy", scanFn,
 		func(name, src, dst string, size int64, status, msg string) {
 			t.Logf("logger: %s %s %s %s", name, src, status, msg)
 		})
 	if err != nil {
 		t.Fatalf("RelinkDir 失败: %v", err)
 	}
-	if count != 1 {
-		t.Fatalf("尸体不参与重链，只应重链平铺 1 个，实际 %d", count)
+	if res.OK != 1 {
+		t.Fatalf("尸体不参与重链，只应重链平铺 1 个，实际 %d", res.OK)
 	}
 	// 尸体文件应原样保留（未被 rename 搬走 / 重建）
 	if _, err := os.Stat(corpse); err != nil {

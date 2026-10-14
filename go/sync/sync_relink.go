@@ -19,15 +19,20 @@ import (
 	"ysm-model-manager/go/types/registry"
 )
 
-// RelinkDir 按哈希比对重链接实例目录与仓库（原子替换，失败回滚）
-func RelinkDir(customDir, filesRoot, rtype, linkMode string, scanFn func(string) []types.ModelEntry, logger Logger) (int, error) {
+// RelinkDir 按哈希比对重链接实例目录与仓库（原子替换，失败回滚）。
+// 返回结构化 RelinkResult（ADR-342 D7）：error 仅表达前置不满足（参数/scanFn 空），
+// 条目级失败进 res.Failed + res.FirstError——「全失败」与「成功但有失败」由结构区分，
+// 不再依赖 ErrPartialSync 抬升（原 (int, error) 体裁下，M 项失败被扔掉，设置页 toast
+// 只能弹「已重新链接 N 个文件」）。
+func RelinkDir(customDir, filesRoot, rtype, linkMode string, scanFn func(string) []types.ModelEntry, logger Logger) (types.RelinkResult, error) {
+	res := types.RelinkResult{}
 	customDir = strings.TrimSpace(customDir)
 	filesRoot = strings.TrimSpace(filesRoot)
 	if customDir == "" || filesRoot == "" {
-		return 0, fmt.Errorf("参数为空")
+		return res, fmt.Errorf("参数为空")
 	}
 	if scanFn == nil {
-		return 0, fmt.Errorf("scanFn 为空")
+		return res, fmt.Errorf("scanFn 为空")
 	}
 
 	// 锁外扫描（镜像 SyncToggleStatus 的「锁外哈希」自我修正：relink 的 repo/custom
@@ -57,11 +62,18 @@ func RelinkDir(customDir, filesRoot, rtype, linkMode string, scanFn func(string)
 	defer installer.InstallLocker.Unlock()
 	defer InvalidateSyncScanCaches() // 重链接会改实例目录，清同步扫盘缓存防陈旧
 
-	count := 0
-	// failed 统计「计了失败的条目」（含整夹回滚、快照拒搬、去重未到位）——用于把
-	// 「一条都没成功」抬成错误返回（对抗复核 C1）：此前全失败也返回 (0, nil)，
-	// 前端只有「按实例计数」一条失败通路，看不到异常就弹成功 toast。
-	failed := 0
+	// sink 是透传给 helper 的 Logger 包装：既转发到底层 logger（导入日志面板），又归集
+	// 首个失败原因供 res.FirstError 点名。**不改任何 helper 签名**——它接收 Logger 参数，
+	// 主循环把 sink 传进去，helper 内原有的 logRelinkFailure 就自动进归集。
+	var firstErr string
+	sink := func(name, src, dst string, size int64, status, msg string) {
+		if status == string(types.StatusFailed) && firstErr == "" {
+			firstErr = msg
+		}
+		if logger != nil {
+			logger(name, src, dst, size, status, msg)
+		}
+	}
 	// replacedDirs 记录本轮已整夹替换过的「实例夹 → 仓库源夹」组合（键见 relinkLandingKey）：
 	// 同夹多条目（一个模型夹里两个目录型入口）共享一次替换结果，避免「刚建好又搬一次」+
 	// 多余备份。**只按实例夹去重是不够的**（对抗复核 A2）：同哈希源可能来自另一个仓库夹，
@@ -90,11 +102,11 @@ func RelinkDir(customDir, filesRoot, rtype, linkMode string, scanFn func(string)
 			// 传入基础 customDir，让 installer.Install 自行计算相对路径。
 			// Install 内部对已存在的旧文件做原子替换（临时链接 + rename），失败不破坏原文件
 			if err := installer.InstallLocked(srcPath, customDir, filesRoot, linkMode); err != nil {
-				logRelinkFailure(ce, customDir, "relink 失败: "+err.Error(), logger)
-				failed++
+				logRelinkFailure(ce, customDir, "relink 失败: "+err.Error(), sink)
+				res.Failed++
 				continue
 			}
-			count++
+			res.OK++
 			continue
 		}
 		dstParent := filepath.Dir(ce.Path)
@@ -107,10 +119,10 @@ func RelinkDir(customDir, filesRoot, rtype, linkMode string, scanFn func(string)
 		// 大小写与 customDir 不一致时落入 dir 分支，把整个 customDir 当模型目录
 		// rename 走（数据丢失复现）。对齐 ADR-044③ 用 EqualFold。
 		if strings.EqualFold(filepath.Clean(dstParent), filepath.Clean(customDir)) {
-			if relinkFlatEntry(ce, srcPath, customDir, logger) {
-				count++
+			if relinkFlatEntry(ce, srcPath, customDir, sink) {
+				res.OK++
 			} else {
-				failed++
+				res.Failed++
 			}
 			continue
 		}
@@ -124,28 +136,26 @@ func RelinkDir(customDir, filesRoot, rtype, linkMode string, scanFn func(string)
 			landed := filepath.Join(filepath.Dir(dstParent), landing, rel)
 			if relErr == nil {
 				if _, statErr := os.Stat(landed); statErr == nil {
-					count++
+					res.OK++
 					continue
 				}
 			}
-			logRelinkFailure(ce, landed, "同夹条目未随整夹替换到位（落位夹内无该文件），跳过重链", logger)
-			failed++
+			logRelinkFailure(ce, landed, "同夹条目未随整夹替换到位（落位夹内无该文件），跳过重链", sink)
+			res.Failed++
 			continue
 		}
-		if relinkReplaceDirTree(ce, filepath.Dir(srcPath), dstParent, dirSnaps, filesRoot, linkMode, rtype, logger) {
+		if relinkReplaceDirTree(ce, filepath.Dir(srcPath), dstParent, dirSnaps, filesRoot, linkMode, rtype, sink) {
 			replacedDirs[dirKey] = filepath.Base(filepath.Dir(srcPath))
-			count++
+			res.OK++
 		} else {
-			failed++
+			res.Failed++
 		}
 	}
-	// 一条都没成功但有失败 → 抬成错误返回（对抗复核 C1）：否则前端只看到「已重新链接 0 个文件」
-	// 的成功 toast，而唯一失败通路是按实例计的 Go error。部分成功仍返回计数（失败已逐条
-	// 经 logger 进导入日志面板，不丢信息）。
-	if count == 0 && failed > 0 {
-		return 0, fmt.Errorf("%w: 重链未成功（失败 %d 项）", ErrPartialSync, failed)
-	}
-	return count, nil
+	// 失败计数与首个原因随结构化结果返回（ADR-342 D7）：部分失败对用户可见，不再只进
+	// 导入日志面板。「零成功且有失败」此前抬成 ErrPartialSync 才能让前端失败 toast 弹对；
+	// 现在 res.Failed>0 本身就是答案，无需 error 通道（error 仅留前置不满足）。
+	res.FirstError = firstErr
+	return res, nil
 }
 
 // isRelinkEntrySkippable 报告扫描条目是否必须剔出重链（索引构建与主循环共用同一谓词）。

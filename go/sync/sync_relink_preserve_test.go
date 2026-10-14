@@ -158,6 +158,99 @@ func TestRelinkDir_RestoreFailureRollsBackWholeDir(t *testing.T) {
 	testutil.Equal(t, len(matches), 0, "回滚应把备份 rename 回原位，不留残留: %v", matches)
 }
 
+// TestRelinkDir_RenameMoveRefusesOccupiedLanding 【A1 锁·对抗复核】改名搬运只进空位：
+// 仓库夹名(modelB) ≠ 实例夹名(packA) 且落位目标已被**用户的既有活夹**占用时必须拒绝——
+// InstallDir 会复用并合并写入那个夹，而回滚的 RemoveAll 会把它整树删掉（数据丢失）。
+func TestRelinkDir_RenameMoveRefusesOccupiedLanding(t *testing.T) {
+	repoRoot, customDir, logs := relinkProbeEnv(t)
+	// 仓库夹 modelB 里额外放一个**文件** y.ysm —— 与实例侧 packA/y.ysm/**目录**同名，
+	// 回填 y.ysm/inner.png 时 MkdirAll 撞文件必失败 → 触发回滚路径（旧回滚会 RemoveAll 掉
+	// 被占用的既有活夹 modelB，正是本条要防的数据丢失）
+	testutil.WriteTestFile(t, filepath.Join(repoRoot, "modelB", "x.ysm"), "repo-body")
+	testutil.WriteTestFile(t, filepath.Join(repoRoot, "modelB", "y.ysm"), "repo-file")
+	// 实例侧：packA/x.ysm（待重链）+ modelB/keep.png（用户的既有活夹）+ 一个让回填必失败的同名冲突
+	testutil.WriteTestFile(t, filepath.Join(customDir, "packA", "x.ysm"), "old-body")
+	keep := filepath.Join(customDir, "modelB", "keep.png")
+	testutil.WriteTestFile(t, keep, "user-data")
+	testutil.WriteTestFile(t, filepath.Join(customDir, "packA", "y.ysm", "inner.png"), "mine")
+
+	scanFn := func(dir string) []types.ModelEntry {
+		if dir == repoRoot {
+			return []types.ModelEntry{{Name: "x.ysm", Path: filepath.Join(dir, "modelB", "x.ysm"), Hash: "h1"}}
+		}
+		return []types.ModelEntry{{Name: "x.ysm", Path: filepath.Join(dir, "packA", "x.ysm"), Hash: "h1"}}
+	}
+	count, err := RelinkDir(customDir, repoRoot, "ysm", "copy", scanFn, relinkLogger(logs))
+	testutil.NoError(t, err, "RelinkDir 不应报错")
+	testutil.Equal(t, count, 0, "落位目标被活夹占用应拒绝重链（日志 %v）", *logs)
+	// 核心：被占用的既有活夹必须完好（旧实现在回滚时会整树删掉它）
+	testutil.FileExists(t, keep, "被占用的既有活夹不得被删")
+	testutil.Equal(t, readBody(t, filepath.Join(customDir, "packA", "x.ysm")), "old-body", "拒绝应发生在动盘之前（实例夹原样）")
+	testutil.FileExists(t, filepath.Join(customDir, "packA", "y.ysm", "inner.png"), "实例独有文件应原位")
+	testutil.Equal(t, len(filterLogs(*logs, "已被同名活夹占用")), 1, "应点名拒绝原因（日志 %v）", *logs)
+	matches, globErr := filepath.Glob(filepath.Join(customDir, "*.relink-bak-*"))
+	testutil.NoError(t, globErr, "glob 备份")
+	testutil.Equal(t, len(matches), 0, "拒绝发生在动盘之前，不应留备份: %v", matches)
+}
+
+// TestRelinkDir_RenameMoveIntoVacantLanding 改名搬运正例（对抗复核 B1 指出的零覆盖缝隙）：
+// 实例夹 oldName/ 与仓库夹 newName/ 同名模型不同夹名、且落位是空位 → 搬运成功，
+// 实例独有文件随行到新夹、旧夹移除、无备份残留。
+func TestRelinkDir_RenameMoveIntoVacantLanding(t *testing.T) {
+	repoRoot, customDir, logs := relinkProbeEnv(t)
+	testutil.WriteTestFile(t, filepath.Join(repoRoot, "newName", "x.ysm"), "repo-body")
+	testutil.WriteTestFile(t, filepath.Join(customDir, "oldName", "x.ysm"), "old-body")
+	testutil.WriteTestFile(t, filepath.Join(customDir, "oldName", "own.png"), "mine")
+
+	scanFn := func(dir string) []types.ModelEntry {
+		if dir == repoRoot {
+			return []types.ModelEntry{{Name: "x.ysm", Path: filepath.Join(dir, "newName", "x.ysm"), Hash: "h1"}}
+		}
+		return []types.ModelEntry{{Name: "x.ysm", Path: filepath.Join(dir, "oldName", "x.ysm"), Hash: "h1"}}
+	}
+	count, err := RelinkDir(customDir, repoRoot, "ysm", "copy", scanFn, relinkLogger(logs))
+	testutil.NoError(t, err, "RelinkDir 不应报错（日志 %v）", *logs)
+	testutil.Equal(t, count, 1, "改名搬运应成功（日志 %v）", *logs)
+	testutil.Equal(t, readBody(t, filepath.Join(customDir, "newName", "x.ysm")), "repo-body", "新夹应为仓库版本")
+	testutil.FileExists(t, filepath.Join(customDir, "newName", "own.png"), "实例独有文件应随行到新夹")
+	testutil.FileNotExists(t, filepath.Join(customDir, "oldName"), "旧夹应被搬走")
+	matches, globErr := filepath.Glob(filepath.Join(customDir, "*.relink-bak-*"))
+	testutil.NoError(t, globErr, "glob 备份")
+	testutil.Equal(t, len(matches), 0, "不应有备份残留: %v", matches)
+}
+
+// TestRelinkDir_SameFolderDifferentRepoFolders 【A2 锁·对抗复核】同夹两条目、哈希源分属
+// 不同仓库夹：第一条整夹替换后，第二条既没被安装、也不在新夹里（只在回填里留了旧内容），
+// **不得**被计成功。旧实现只按实例夹去重 → count=2 且日志为空 = 对用户说谎。
+func TestRelinkDir_SameFolderDifferentRepoFolders(t *testing.T) {
+	repoRoot, customDir, logs := relinkProbeEnv(t)
+	testutil.WriteTestFile(t, filepath.Join(repoRoot, "modelB", "x.ysm"), "repo-x")
+	testutil.WriteTestFile(t, filepath.Join(repoRoot, "modelC", "y.ysm"), "repo-y")
+	testutil.WriteTestFile(t, filepath.Join(customDir, "packA", "x.ysm"), "old-x")
+	testutil.WriteTestFile(t, filepath.Join(customDir, "packA", "y.ysm"), "old-y")
+
+	scanFn := func(dir string) []types.ModelEntry {
+		if dir == repoRoot {
+			return []types.ModelEntry{
+				{Name: "x.ysm", Path: filepath.Join(dir, "modelB", "x.ysm"), Hash: "h1"},
+				{Name: "y.ysm", Path: filepath.Join(dir, "modelC", "y.ysm"), Hash: "h2"},
+			}
+		}
+		return []types.ModelEntry{
+			{Name: "x.ysm", Path: filepath.Join(dir, "packA", "x.ysm"), Hash: "h1"},
+			{Name: "y.ysm", Path: filepath.Join(dir, "packA", "y.ysm"), Hash: "h2"},
+		}
+	}
+	count, err := RelinkDir(customDir, repoRoot, "ysm", "copy", scanFn, relinkLogger(logs))
+	testutil.NoError(t, err, "RelinkDir 不应报错")
+	testutil.Equal(t, count, 1, "只有第一条目真正重链，第二条不得计成功（日志 %v）", *logs)
+	// 数据保全：y.ysm 作为实例独有文件被回填（旧内容）——不消失
+	testutil.Equal(t, readBody(t, filepath.Join(customDir, "modelB", "y.ysm")), "old-y",
+		"y.ysm 应作为独有文件回填（旧内容），实际内容见上")
+	testutil.Equal(t, len(filterLogs(*logs, "未随整夹替换到位", "已被替换为另一对象", "已不存在")), 1,
+		"应恰好一条说明第二条目未到位（日志 %v）", *logs)
+}
+
 // filterLogs 捞出含任一关键词的日志行（供集合式断言，避免逐条裸断言）。
 func filterLogs(logs []string, subs ...string) []string {
 	var hit []string

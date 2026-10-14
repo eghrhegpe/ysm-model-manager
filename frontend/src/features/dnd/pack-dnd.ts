@@ -4,7 +4,6 @@
 // 职责归属：前端只收集/分组/编排，类型判定与落点全在 Go 侧 binding；
 // 收集口径与仓库页拖拽共用 dnd-shared.collectDropFiles。
 
-import { MAX_IMPORT_BYTES } from "@/backend/browser-adapter.ts";
 import { isWebPlatform } from "@/backend/platform-web.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
@@ -12,6 +11,7 @@ import type { CollectedEntry } from "@/features/import/collector.ts";
 import {
   buildFolderItems,
   collectDropFiles,
+  dropOversized,
   fileToBase64,
   groupCollected,
 } from "@/features/import/shared.ts";
@@ -76,21 +76,8 @@ export async function handleInstanceDrop(
       toast(t("import.noSupportedFiles"), TOAST_MS.normal, "info");
       return;
     }
-    // oversize 逐文件过滤（与仓库页拖拽同口径）
-    const oversized = collected0.filter((c) => c.file.size > MAX_IMPORT_BYTES);
-    if (oversized.length > 0) {
-      toast(
-        t("import.oversizeSkipped", {
-          n: oversized.length,
-          mb: Math.round(MAX_IMPORT_BYTES / 1024 / 1024),
-          name: oversized[0].file.name,
-          more: oversized.length > 1 ? t("import.moreSuffix") : "",
-        }),
-        TOAST_MS.long,
-        "warn",
-      );
-    }
-    const collected = collected0.filter((c) => c.file.size <= MAX_IMPORT_BYTES);
+    // oversize 逐文件过滤（与仓库页拖拽共用 dropOversized 单源）
+    const collected = dropOversized(collected0);
     if (collected.length === 0) return; // 全被 oversize 滤除：超限提示已足够
 
     const { folders, singles: allSingles } = groupCollected(collected);

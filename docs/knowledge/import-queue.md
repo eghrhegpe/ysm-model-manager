@@ -21,6 +21,7 @@ auto_fields:
     - collectFiles
     - createImportSession
     - directImport
+    - dropOversized
     - executeCollected
     - fileToBase64
     - FolderGroup

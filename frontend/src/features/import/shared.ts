@@ -3,7 +3,10 @@
 // utils/resource/importable.ts（backend/web-fs-auth 直引同口径，消除 backend →
 // features 反向依赖）；本文件仅内部依赖 getExt / isImportableFile，不再 re-export。
 // CollectedEntry 事实源在 ./collector.ts——消费方请直引该文件，勿经本文件中转。
+import { MAX_IMPORT_BYTES } from "@/backend/browser-adapter.ts";
 import { t } from "@/core/i18n/t.ts";
+import { toast } from "@/utils/dom/toast.ts";
+import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { isImportableFile } from "@/utils/resource/importable.ts";
 import { extOf } from "@/utils/resource/types.ts";
 import { type CollectedEntry, collectFiles } from "./collector.ts";
@@ -103,6 +106,30 @@ export const buildFolderItems = async (
     }
   }
   return { items, skipped };
+};
+
+// ===== oversize 过滤（仓库页 / 整合包卡片拖入共用）=====
+
+/**
+ * 逐文件剔除超过 MAX_IMPORT_BYTES 的条目：有超限者先弹「跳过 N 个」warn toast，
+ * 返回剔除后的集合（全被滤除时为空集，调用方直接返回——超限提示已足够，
+ * 不再叠「收集 0」误导提示）。handleTreeDrop / handleInstanceDrop 共用（锐评重复）。
+ */
+export const dropOversized = (collected0: CollectedEntry[]): CollectedEntry[] => {
+  const oversized = collected0.filter((c) => c.file.size > MAX_IMPORT_BYTES);
+  if (oversized.length > 0) {
+    toast(
+      t("import.oversizeSkipped", {
+        n: oversized.length,
+        mb: Math.round(MAX_IMPORT_BYTES / 1024 / 1024),
+        name: oversized[0].file.name,
+        more: oversized.length > 1 ? t("import.moreSuffix") : "",
+      }),
+      TOAST_MS.long,
+      "warn",
+    );
+  }
+  return collected0.filter((c) => c.file.size <= MAX_IMPORT_BYTES);
 };
 
 // ===== drop 事件文件收集（仓库页 / 整合包卡片共用收集口径）=====

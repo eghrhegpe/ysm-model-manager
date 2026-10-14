@@ -15,6 +15,7 @@ auto_fields:
     - collectDropFiles
     - CollectedEntry
     - collectFiles
+    - dropOversized
     - extBelongsTo
     - fileToBase64
     - FolderGroup

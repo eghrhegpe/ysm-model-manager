@@ -318,7 +318,7 @@
 | runWebEnqueue | `frontend/src/features/community/download-queue-web.ts` | 115 |
 | cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 124 |
 | refreshUI | `frontend/src/features/context-menu/context-menu-shared.ts` | 19 |
-| handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 182 |
+| handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 169 |
 | (顶层) | `frontend/src/features/import/executor.ts` | 82 |
 | importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 236 |
 | setupRecycleActions | `frontend/src/features/maintenance/recycle-bin.ts` | 130 |
@@ -400,7 +400,7 @@
 | runWebEnqueue | `frontend/src/features/community/download-queue-web.ts` | 114 |
 | cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 123 |
 | refreshUI | `frontend/src/features/context-menu/context-menu-shared.ts` | 18 |
-| handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 183 |
+| handleInstanceDrop | `frontend/src/features/dnd/pack-dnd.ts` | 170 |
 | (顶层) | `frontend/src/features/import/executor.ts` | 83 |
 | importWebFilesWithToast | `frontend/src/features/import/executor.ts` | 235 |
 | setupRecycleActions | `frontend/src/features/maintenance/recycle-bin.ts` | 131 |

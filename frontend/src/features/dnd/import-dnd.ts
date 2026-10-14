@@ -2,13 +2,12 @@
 // 从 document 级 registerDnD 收敛为 <app-tree> 容器内绑定，去掉全局遮罩。
 // 收集器统一走 features/dnd-collector.ts，与导入页收集器一致。
 
-import { MAX_IMPORT_BYTES } from "@/backend/browser-adapter.ts";
 import { isWebPlatform } from "@/backend/platform-web.ts";
 import { t } from "@/core/i18n/t.ts";
 import type { CollectedEntry } from "@/features/import/collector.ts";
 import type { ImportBatchResult } from "@/features/import/executor.ts";
 import { executeCollected, importWebFilesWithToast } from "@/features/import/executor.ts";
-import { collectDropFiles } from "@/features/import/shared.ts";
+import { collectDropFiles, dropOversized } from "@/features/import/shared.ts";
 import { swallowError } from "@/utils/base/primitives/async.ts";
 import { logError } from "@/utils/base/primitives/log.ts";
 import { dbg } from "@/utils/debug/debug.ts";
@@ -99,28 +98,6 @@ async function importViaWebPlatform(
   await importWebFilesWithToast(files);
   logDrop(`网页版导入 ${files.length} 个文件`);
   return true;
-}
-
-/**
- * oversize 逐文件过滤（与整合包卡片拖入共用 import.oversizeSkipped 单源）。
- * 有超限者先弹「跳过 N 个」warn toast，返回剔除后的集合（全被滤除时为空集，
- * 调用方直接返回——超限提示已足够，不再叠「收集 0」误导提示）。
- */
-function dropOversized(collected0: CollectedEntry[]): CollectedEntry[] {
-  const oversized = collected0.filter((c) => c.file.size > MAX_IMPORT_BYTES);
-  if (oversized.length > 0) {
-    toast(
-      t("import.oversizeSkipped", {
-        n: oversized.length,
-        mb: Math.round(MAX_IMPORT_BYTES / 1024 / 1024),
-        name: oversized[0].file.name,
-        more: oversized.length > 1 ? t("import.moreSuffix") : "",
-      }),
-      TOAST_MS.long,
-      "warn",
-    );
-  }
-  return collected0.filter((c) => c.file.size <= MAX_IMPORT_BYTES);
 }
 
 /** 结果各计数 → 「成功 N，失败 M，跳过 K」文案片段（0 计数项不进文案）。 */

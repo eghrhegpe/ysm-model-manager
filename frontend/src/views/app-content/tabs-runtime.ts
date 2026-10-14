@@ -30,6 +30,121 @@ type TabInitResult = (() => void) | null | { cleanup?: (() => void) | null; onSh
 export type TabInitFn = (h: AppContentHost, c: HTMLElement) => Promise<TabInitResult>;
 
 /**
+ * onBound 逐按钮：补面板侧静态语义——按钮 id（供 aria-labelledby）、panel role、
+ * 非首个面板初始 hidden；缺面板响亮告警（按钮在但内容区必空白）。
+ */
+function preparePanelSemantics(
+  root: ShadowRoot,
+  prefix: string,
+  panelId: (id: string) => string,
+  btn: HTMLElement,
+): void {
+  const id = btn.dataset.tab ?? "";
+  btn.id = `${prefix}-tab-btn-${id}`;
+  const panel = root.getElementById(panelId(id));
+  if (!panel) {
+    logWarn("tabs", `${prefix}: 缺面板 #${panelId(id)}（按钮在但内容区将空白）`);
+    return;
+  }
+  panel.setAttribute("role", "tabpanel");
+  panel.setAttribute("aria-labelledby", btn.id);
+  // 锐评 P2 #5 收口：尊重 renderTabs 已标定的激活项（按钮的 `.active` 类）。原 `i !== 0`
+  // 硬隐藏非首面板，会覆盖 initialActiveId（语言热切换恢复）标记的 tab，把它也藏起来。
+  if (!btn.classList.contains("active")) {
+    panel.style.display = "none";
+    panel.setAttribute("hidden", "");
+  }
+}
+
+/** onActivate ①：翻转全部面板 display/hidden——激活项显示，其余隐藏 */
+function activateTabPanels(
+  root: ShadowRoot,
+  panelId: (id: string) => string,
+  tab: string,
+  ids: string[],
+): void {
+  ids.forEach((id) => {
+    const el = root.getElementById(panelId(id));
+    if (!el) return;
+    if (id === tab) {
+      el.style.display = "";
+      el.removeAttribute("hidden");
+    } else {
+      el.style.display = "none";
+      el.setAttribute("hidden", "");
+    }
+  });
+}
+
+/** 应用懒初始化返回值：cleanup 函数（历史契约）或 { cleanup?, onShow? } 对象 */
+function applyInitResult(
+  host: AppContentHost,
+  result: TabInitResult,
+  showFns: Record<string, () => void>,
+  tab: string,
+): void {
+  if (typeof result === "function") {
+    host.subs.addPage(result as () => void);
+  } else if (result && typeof result === "object") {
+    if (typeof result.cleanup === "function") host.subs.addPage(result.cleanup);
+    if (typeof result.onShow === "function") showFns[tab] = result.onShow;
+  }
+}
+
+/**
+ * 执行一次懒初始化（仅 once）：先置 inited 防并发重复初始化，catch 复位允许重试并 toast。
+ * onShow 是「每次激活」副作用（与懒初始化「仅一次」正交），随初始化闭包落位。
+ */
+function runTabInitOnce(opts: {
+  host: AppContentHost;
+  container: HTMLElement;
+  tabInit: Record<string, TabInitFn>;
+  inited: Record<string, boolean>;
+  showFns: Record<string, () => void>;
+  tab: string;
+}): void {
+  const { host, container, tabInit, inited, showFns, tab } = opts;
+  inited[tab] = true;
+  void (async (): Promise<void> => {
+    try {
+      const initFn = tabInit[tab];
+      if (initFn) {
+        const result = await initFn(host, container);
+        applyInitResult(host, result, showFns, tab);
+      }
+    } catch (e) {
+      inited[tab] = false;
+      toast(friendlyError(e, t("common.loadFailed")), TOAST_MS.verbose, "error");
+    }
+  })();
+  // 注意：resourcepacks/shaderpacks/blueprint/MMD/VRC/LITEMATIC 六个
+  // initResourcePacks 分支已删除（P2 审计：tpl 无对应 repo-tab 按钮与容器 id，
+  // 双重复死不可达；资源类型切换改由 app-nav 资源切换器重渲染 <app-tree>）。
+}
+
+/** onActivate ③：首次切到非默认 tab 时懒初始化（仅一次）。 */
+function lazyInitIfNeeded(opts: {
+  host: AppContentHost;
+  root: ShadowRoot;
+  panelId: (id: string) => string;
+  tabInit: Record<string, TabInitFn>;
+  inited: Record<string, boolean>;
+  showFns: Record<string, () => void>;
+  tab: string;
+  ids: string[];
+}): void {
+  const { host, root, panelId, tabInit, inited, showFns, tab, ids } = opts;
+  // 已初始化 tab 的每次激活副作用（onShow）由 runTabInitOnce 落位，首次激活不触发
+  if (inited[tab] || tab === ids[0]) return;
+  const container = root.getElementById(panelId(tab));
+  if (!container) return;
+  // P3 修复（审核，陷阱 #3）：懒初始化是 async 链（动态 import / 业务 init），
+  // 原在 await 前就置 inited=true 且无 try/catch——动态导入失败或 init 抛错时
+  // tab 永久卡死（重试被 inited 拦截）且无用户反馈（ADR-044 ①：async 最外层必有 catch）。
+  runTabInitOnce({ host, container, tabInit, inited, showFns, tab });
+}
+
+/**
  * 绑定一页的 tab 壳：ARIA（tablist/tab/tabpanel）+ roving tabindex + 键盘导航 + 懒初始化 + 面板切换。
  * 按钮选择器与内容卡前缀解耦（样式类可复用，语义前缀独立）：
  *   bindTabRuntime(host, { tabSelector: ".repo-tab", prefix: "ins" }) —— 按钮用 repo-tab 样式类，内容卡 id 为 ins-tab-<data-tab>
@@ -67,26 +182,11 @@ export function bindTabRuntime(
     tabSelector,
     panelId,
     validate: true,
-    // 每次绑定后为「去重后的按钮集合」补面板侧静态语义：按钮 id（供 aria-labelledby）、
-    // panel role、非首个面板初始 hidden；缺面板响亮告警（按钮在但内容区必空白）。
+    // 每次绑定后为「去重后的按钮集合」补面板侧静态语义
     onBound: (nav, boundIds) => {
       ids = boundIds;
       nav.forEach((btn) => {
-        const id = btn.dataset.tab ?? "";
-        btn.id = `${prefix}-tab-btn-${id}`;
-        const panel = root.getElementById(panelId(id));
-        if (!panel) {
-          logWarn("tabs", `${prefix}: 缺面板 #${panelId(id)}（按钮在但内容区将空白）`);
-          return;
-        }
-        panel.setAttribute("role", "tabpanel");
-        panel.setAttribute("aria-labelledby", btn.id);
-        // 锐评 P2 #5 收口：尊重 renderTabs 已标定的激活项（按钮的 `.active` 类）。原 `i !== 0`
-        // 硬隐藏非首面板，会覆盖 initialActiveId（语言热切换恢复）标记的 tab，把它也藏起来。
-        if (!btn.classList.contains("active")) {
-          panel.style.display = "none";
-          panel.setAttribute("hidden", "");
-        }
+        preparePanelSemantics(root, prefix, panelId, btn);
       });
     },
     // 激活副作用：翻面板 display/hidden + 首次切到非默认 tab 时懒初始化（原 activate 的 ②③）。
@@ -95,49 +195,9 @@ export function bindTabRuntime(
       // 锐评 P2 #5 收口：激活即持久化，语言热切换全量重建（clearPanels + _render）后由
       // renderTabs 读回 initialActiveId 恢复。safeSet 隐私模式静默降级（safe* 契约）。
       safeSet(`ysm-tabs-last-${prefix}`, tab);
-      ids.forEach((id) => {
-        const el = root.getElementById(panelId(id));
-        if (!el) return;
-        if (id === tab) {
-          el.style.display = "";
-          el.removeAttribute("hidden");
-        } else {
-          el.style.display = "none";
-          el.setAttribute("hidden", "");
-        }
-      });
-      // 已初始化 tab 的每次激活副作用（onShow）：与「仅一次」的懒初始化正交——
-      // 激活是重复事件，showFns 随初始化落位，首次激活（懒初始化路径）不触发
+      activateTabPanels(root, panelId, tab, ids);
       if (inited[tab]) showFns[tab]?.();
-      if (!inited[tab] && tab !== ids[0]) {
-        const container = root.getElementById(panelId(tab));
-        if (!container) return;
-        // P3 修复（审核，陷阱 #3）：懒初始化是 async 链（动态 import / 业务 init），
-        // 原在 await 前就置 inited=true 且无 try/catch——动态导入失败或 init 抛错时
-        // tab 永久卡死（重试被 inited 拦截）且无用户反馈。先置位防并发重复初始化，
-        // catch 中复位以允许重试并 toast 提示（ADR-044 ①：async handler 最外层必有 catch）。
-        inited[tab] = true;
-        void (async (): Promise<void> => {
-          try {
-            const initFn = tabInit[tab];
-            if (initFn) {
-              const result = await initFn(host, container);
-              if (typeof result === "function") {
-                host.subs.addPage(result as () => void);
-              } else if (result && typeof result === "object") {
-                if (typeof result.cleanup === "function") host.subs.addPage(result.cleanup);
-                if (typeof result.onShow === "function") showFns[tab] = result.onShow;
-              }
-            }
-          } catch (e) {
-            inited[tab] = false;
-            toast(friendlyError(e, t("common.loadFailed")), TOAST_MS.verbose, "error");
-          }
-        })();
-        // 注意：resourcepacks/shaderpacks/blueprint/MMD/VRC/LITEMATIC 六个
-        // initResourcePacks 分支已删除（P2 审计：tpl 无对应 repo-tab 按钮与容器 id，
-        // 双重复死不可达；资源类型切换改由 app-nav 资源切换器重渲染 <app-tree>）。
-      }
+      lazyInitIfNeeded({ host, root, panelId, tabInit, inited, showFns, tab, ids });
     },
   });
 }

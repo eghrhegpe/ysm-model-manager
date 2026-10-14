@@ -254,6 +254,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-343：跨类型搜索收口（Type 派生 + 分析器分流 + SearchFilters）",
+        "link": "/adr/architecture/ADR-343-cross-type-search"
+      },
+      {
         "text": "ADR-342：整合包重链接的实例数据保全与目录身份复验",
         "link": "/adr/architecture/ADR-342-relink-preserve-instance-files"
       },

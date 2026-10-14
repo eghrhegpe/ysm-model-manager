@@ -36,6 +36,63 @@ export interface BoundsOpts {
  * 与 drawView 的 mdDvApplyBoneAnim/mdDvApplyCubeRot 数学对称（前者算 cube 中心矩形，
  * 此处算 8 顶点包围盒——语义不同，故不共用，但旋转口径必须一致）。
  */
+/** 应用骨骼 position 偏移（btx.position 三维相加，缺项按 0） */
+function applyBonePos(
+  btx: BoneTransform,
+  cx: number,
+  cy: number,
+  cz: number,
+): [number, number, number] {
+  if (!btx.position) return [cx, cy, cz];
+  return [cx + (btx.position[0] || 0), cy + (btx.position[1] || 0), cz + (btx.position[2] || 0)];
+}
+
+/** 应用骨骼 rotation（Z 轴 rz + X 轴 rx 旋转，pivot 为旋转中心） */
+function applyBoneRot(
+  btx: BoneTransform,
+  pivot: number[],
+  cx: number,
+  cy: number,
+): [number, number] {
+  const rzRad = ((btx.rotation?.[2] || 0) * Math.PI) / 180;
+  if (rzRad !== 0) {
+    const cRz = Math.cos(rzRad);
+    const sRz = Math.sin(rzRad);
+    const dxx = cx - pivot[0];
+    const dyy = cy - pivot[1];
+    cx = pivot[0] + dxx * cRz - dyy * sRz;
+    cy = pivot[1] + dxx * sRz + dyy * cRz;
+  }
+  const rxRad = ((btx.rotation?.[0] || 0) * Math.PI) / 180;
+  if (rxRad !== 0) {
+    cy = pivot[1] + (cy - pivot[1]) * Math.cos(rxRad);
+  }
+  return [cx, cy];
+}
+
+/** 应用 cube 级旋转（X 轴 rx + Z 轴 rz） */
+function applyCubeRotation(
+  cubeRot: number[],
+  pivot: number[],
+  cx: number,
+  cy: number,
+): [number, number] {
+  const rxRad = (cubeRot[0] * Math.PI) / 180;
+  if (rxRad !== 0) {
+    cy = pivot[1] + (cy - pivot[1]) * Math.cos(rxRad);
+  }
+  const rzRad = (cubeRot[2] * Math.PI) / 180;
+  if (rzRad !== 0) {
+    const cRz = Math.cos(rzRad);
+    const sRz = Math.sin(rzRad);
+    const dxx = cx - pivot[0];
+    const dyy = cy - pivot[1];
+    cx = pivot[0] + dxx * cRz - dyy * sRz;
+    cy = pivot[1] + dxx * sRz + dyy * cRz;
+  }
+  return [cx, cy];
+}
+
 function projectVertex(
   cx: number,
   cy: number,
@@ -50,38 +107,10 @@ function projectVertex(
   isFront: boolean,
 ): { px: number; py: number } {
   if (btx) {
-    if (btx.position) {
-      cx += btx.position[0] || 0;
-      cy += btx.position[1] || 0;
-      cz += btx.position[2] || 0;
-    }
-    const rzRad = ((btx.rotation?.[2] || 0) * Math.PI) / 180;
-    if (rzRad !== 0) {
-      const cRz = Math.cos(rzRad);
-      const sRz = Math.sin(rzRad);
-      const dxx = cx - pivot[0];
-      const dyy = cy - pivot[1];
-      cx = pivot[0] + dxx * cRz - dyy * sRz;
-      cy = pivot[1] + dxx * sRz + dyy * cRz;
-    }
-    const rxRad = ((btx.rotation?.[0] || 0) * Math.PI) / 180;
-    if (rxRad !== 0) {
-      cy = pivot[1] + (cy - pivot[1]) * Math.cos(rxRad);
-    }
+    [cx, cy, cz] = applyBonePos(btx, cx, cy, cz);
+    [cx, cy] = applyBoneRot(btx, pivot, cx, cy);
   } else if (applyCubeRot && cubeHasRot) {
-    const rxRad = (cubeRot[0] * Math.PI) / 180;
-    if (rxRad !== 0) {
-      cy = pivot[1] + (cy - pivot[1]) * Math.cos(rxRad);
-    }
-    const rzRad = (cubeRot[2] * Math.PI) / 180;
-    if (rzRad !== 0) {
-      const cRz = Math.cos(rzRad);
-      const sRz = Math.sin(rzRad);
-      const dxx = cx - pivot[0];
-      const dyy = cy - pivot[1];
-      cx = pivot[0] + dxx * cRz - dyy * sRz;
-      cy = pivot[1] + dxx * sRz + dyy * cRz;
-    }
+    [cx, cy] = applyCubeRotation(cubeRot, pivot, cx, cy);
   }
   const px = cx * cosA - cz * sinA;
   const py = isFront ? cy : cx * sinA + cz * cosA;

@@ -4,10 +4,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/views/backend-deps.ts", () => ({ backendGetApp: vi.fn() }));
 vi.mock("@/bus", () => ({ bus: { emit: vi.fn() } }));
+// 批D：超时用例需把同步兜底超时打桩（否则要真等 120s）；其余用例透传真实实现，
+// TimeoutError 保持真实类（断言分支用 instanceof 判定）。
+vi.mock("@/utils/async/sync-op-timeout.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/utils/async/sync-op-timeout.ts")>();
+  return { ...actual, withSyncOpTimeout: vi.fn(actual.withSyncOpTimeout) };
+});
 
 import { bus } from "@/bus";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import { createLoadGuard } from "@/utils/async/load-guard.ts";
+import { withSyncOpTimeout } from "@/utils/async/sync-op-timeout.ts";
+import { TimeoutError } from "@/utils/base/primitives/async.ts";
 import { performSingleOp } from "./network.ts";
 import type { SyncManagerSelf } from "./self-type.ts";
 
@@ -87,5 +95,35 @@ describe("network.performSingleOp", () => {
     await performSingleOp(self, "push", "a.zip", cb);
     expect(busEmit).not.toHaveBeenCalled();
     expect(cb.doRender).not.toHaveBeenCalled();
+  });
+
+  // 批D：binding 挂起（Go 侧锁/慢盘不收口）原会永久占住该行——必须超时收口 + 解锁 + 专属文案。
+  it("binding 挂起 → 超时收口 + 该行解锁 + 专属超时文案", async () => {
+    const push = vi.fn(() => new Promise(() => {})); // 永不 settle
+    getAppMock.mockResolvedValue({ PushSingleResourceToInstance: push } as never);
+    vi.mocked(withSyncOpTimeout).mockRejectedValueOnce(new TimeoutError("推送 a.zip", 120_000));
+
+    const self = makeSelf();
+    const cb = { ...noopCb };
+    await performSingleOp(self, "push", "a.zip", cb);
+
+    // 收口：忽略悬空 binding 的结果，不进成功路径
+    expect(cb.doRender).not.toHaveBeenCalled();
+    expect(self._singleBusy.size).toBe(0); // 该行已解锁（原实现永不删除 → 永久禁用）
+    const payload = busEmit.mock.calls[0][1] as { type?: string; msg?: string };
+    expect(payload.type).toBe("error");
+    expect(payload.msg).toContain("操作超时");
+  });
+
+  it("push 走同步兜底超时收口（label 含动作与路径，便于定位）", async () => {
+    const push = vi.fn().mockResolvedValue(undefined);
+    getAppMock.mockResolvedValue({ PushSingleResourceToInstance: push } as never);
+    const timeoutMock = vi.mocked(withSyncOpTimeout);
+    timeoutMock.mockClear();
+
+    await performSingleOp(makeSelf(), "push", "a.zip", { ...noopCb });
+
+    expect(timeoutMock).toHaveBeenCalledTimes(1);
+    expect(timeoutMock.mock.calls[0][1]).toBe("推送 a.zip");
   });
 });

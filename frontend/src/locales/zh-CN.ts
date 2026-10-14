@@ -870,6 +870,7 @@ export const zhCN = {
   // P1.2 修复：sync-manager 内中文硬编码全量 i18n
   "syncManager.loadSyncStatusFailed": "同步状态加载失败",
   "syncManager.pushed": "已推送",
+  "syncManager.opTimedOut": "操作超时（后端可能正被其他同步/安装占用），请稍候重试",
   "syncManager.pulled": "已拉取",
   "syncManager.statusFiltersAria": "同步状态筛选",
   "syncManager.divergedWarnTitle": "冲突：两侧均已修改",

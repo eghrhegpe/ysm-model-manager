@@ -5,6 +5,7 @@
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { type DownloadOutcome, downloadMissing } from "@/features/sync/sync.ts";
+import { SYNC_OP_TIMEOUT_MS } from "@/utils/async/sync-op-timeout.ts";
 import { TimeoutError, withTimeout } from "@/utils/base/primitives/async.ts";
 import type { BusyLock } from "@/utils/base/primitives/lock.ts";
 import { initDropdown } from "@/utils/dom/dropdown.ts";
@@ -28,13 +29,12 @@ function checkedSetFor(rtype: string, getCheckedSets: () => Map<string, Set<stri
   return s;
 }
 
-/** 单品推送兜底超时（陷阱 #3：任何 await 必须有兜底，按钮才不会永久卡死）。
- *  ADR-340 语义重定义：直调下唯一可能的「不收口」是 binding 永久挂起（Go 侧锁/扫描
- *  卡死）——超时**即终止类型循环**并如实报告（原总线实现超时后续发下一类型，handler
+/** 同步 binding 兜底超时（唯一事实源在 `@/utils/async/sync-op-timeout.ts`，批D 起与
+ *  面板行内链共用）：直调下唯一可能的「不收口」是 binding 永久挂起（Go 侧锁/扫描卡死）
+ *  ——超时**即终止循环**并如实报告（ADR-340：原总线实现超时后续发下一类型，handler
  *  仍持锁 → 连锁 busy 假跳过，锐评 P1-2 级联；直调 await 天然串行，级联结构性消失，
- *  真挂起时早停是唯一诚实处置）。晚到的 downloadMissing 结果无人消费（Promise 已
- *  settle 后二次结算为 no-op），错误经 withTimeout 内 swallowError 兜底。 */
-const SYNC_TIMEOUT_MS = 120_000;
+ *  真挂起时早停是唯一诚实处置）。晚到的结果无人消费（Promise 已 settle 后二次结算为
+ *  no-op），错误经 withTimeout 内 swallowError 兜底。 */
 
 /** 失败明细汇总上限（锐评 UX 高项收口，2026-10-14）：各类型内部已限 3 条，
  *  跨类型再限一次防 15 类型累积成超长 toast。 */
@@ -342,7 +342,7 @@ async function runPush(
         // 一次直调推所有选中包（instanceNames 批量模式，handler 侧静默不弹结果 toast）
         const outcome = await withTimeout(
           downloadMissing({ instanceNames: selected, rtype: rt }),
-          SYNC_TIMEOUT_MS,
+          SYNC_OP_TIMEOUT_MS,
           `推送 ${rt}`,
         );
         absorbOutcome(outcome, accum);
@@ -395,7 +395,7 @@ async function runPull(
       try {
         const results = await withTimeout(
           Promise.allSettled(types.map((rt) => PullResourceFromInstance(rt, insName))),
-          SYNC_TIMEOUT_MS,
+          SYNC_OP_TIMEOUT_MS,
           `拉取 ${insName}`,
         );
         for (const r of results) {

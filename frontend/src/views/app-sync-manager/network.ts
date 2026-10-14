@@ -5,6 +5,8 @@
 // network → store（push/pull 后调 loadData 刷新数据）
 
 import { t } from "@/core/i18n/t.ts";
+import { withSyncOpTimeout } from "@/utils/async/sync-op-timeout.ts";
+import { TimeoutError } from "@/utils/base/primitives/async.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
@@ -24,6 +26,10 @@ interface NetworkCallbacks {
  * 统一推送 / 拉取单文件操作。
  * 入口同步捕获 instance + rtype（防 await 期间 attributeChangedCallback 切换实例）；
  * 在途守卫防连点；finally 复位按钮视觉。
+ *
+ * ⚠️ 批D：binding 必须包兜底超时。原实现裸 await——Go 侧 InstallLock 竞争/慢盘上不收口时
+ * `_singleBusy` 永不删除、该行按钮永久 disabled（半径是 per-path 一行，比侧栏全局锁小，
+ * 但仍是「点了永远没反应」）。超时后按 TimeoutError 单独提示，不混进业务错误文案。
  */
 export async function performSingleOp(
   self: NetworkSelf,
@@ -39,10 +45,14 @@ export async function performSingleOp(
   const targetInstance = self._instance;
   try {
     const app = await backendGetApp();
+    const label = `${op === "push" ? "推送" : "拉取"} ${path}`;
     if (op === "push") {
-      await app.PushSingleResourceToInstance(rtype, targetInstance, path);
+      await withSyncOpTimeout(app.PushSingleResourceToInstance(rtype, targetInstance, path), label);
     } else {
-      await app.PullSingleResourceFromInstance(rtype, path, targetInstance);
+      await withSyncOpTimeout(
+        app.PullSingleResourceFromInstance(rtype, path, targetInstance),
+        label,
+      );
     }
     if (!self.isConnected) return;
     const msg = op === "push" ? t("syncManager.pushed") : t("syncManager.pulled");
@@ -54,7 +64,9 @@ export async function performSingleOp(
     cb.doEmitStats();
   } catch (e) {
     if (!self.isConnected) return;
-    toast(`${friendlyError(e)}`, TOAST_MS.normal, "error");
+    // 超时成因是 binding 挂起（Go 侧仍在跑），文案要给出可执行动作而不是裸错误串
+    const msg = e instanceof TimeoutError ? t("syncManager.opTimedOut") : `${friendlyError(e)}`;
+    toast(msg, TOAST_MS.normal, "error");
   } finally {
     self._singleBusy.delete(path);
     // per-path 复位：只解禁本行（原全局 size>0 口径会让先结束的 op 提前解禁仍在途行）

@@ -742,6 +742,7 @@
   "syncManager.scanDirWide": "{label} repo base dir {dir} looks too broad (contains mods/config/schematics subdirs); sync may mix in other resources — point the type root to a dedicated {subDir} subdir",
   "syncManager.loadSyncStatusFailed": "Failed to load sync status",
   "syncManager.pushed": "Pushed",
+  "syncManager.opTimedOut": "Operation timed out (the backend may be busy with another sync/install); please retry shortly",
   "syncManager.pulled": "Pulled",
   "syncManager.statusFiltersAria": "Sync status filters",
   "syncManager.divergedWarnTitle": "Conflict: both sides modified",

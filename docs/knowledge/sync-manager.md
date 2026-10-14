@@ -16,6 +16,7 @@ source_files:
   - frontend/src/views/app-sidebar/events.ts
   - frontend/src/views/app-sidebar/render.ts
   - frontend/src/views/app-sidebar/sync-flow.ts
+  - frontend/src/utils/async/sync-op-timeout.ts
   - frontend/src/features/sync/sync.ts
 auto_fields:
   symbols_with_lines:
@@ -61,6 +62,7 @@ auto_fields:
     - statusColorOf
     - statusIconOf
     - statusTabHTML
+    - SYNC_OP_TIMEOUT_MS
     - syncDirRowHTML
     - SyncDownloadPayload
     - SyncItem
@@ -70,6 +72,7 @@ auto_fields:
     - SyncStoreSelf
     - tabStatus
     - VIEW_TESTIDS
+    - withSyncOpTimeout
   tests:
     - frontend/src/views/app-sync-manager/index.test.ts
     - frontend/src/views/app-sync-manager/index.branches.test.ts
@@ -122,7 +125,7 @@ status: active
 
 - **单实例视角**：一次只展示一个 `instance`（如 `1.20.1-Fabric`）下的同步状态
 - **层级渲染**：通过 `GetInstanceSyncStatus` 拉取该实例下该 rtype 的全部条目（`SyncItem[]`），逐节点递归渲染，`isDir` 支持目录级展开/折叠
-- **逐文件 push/pull**：单行内嵌按钮，由 `network.ts` 的 `performSingleOp` 顺序守卫执行
+- **逐文件 push/pull**：单行内嵌按钮，由 `network.ts` 的 `performSingleOp` 顺序守卫执行（并包同步兜底超时，见不变量）
 - **整包同步在 sidebar**：`app-sidebar` 底部菜单走 `downloadMissing` 直调（ADR-340）编排后台安装，与本组件的**逐文件操作**分工解耦
 - **计数口径统一（ADR-310，2026-09）**：sidebar 徽章已换线到本面板链（`go/instance.BuildInstanceStatusCounts` 折 `BuildSyncItems`），红 = `missing ∪ diverged`、橙 = `optional ∪ legacy`、`disabled` 单独计；但**一键安装读的 `Missing` 仍是仓库侧文件级清单**（一个缺夹展开多条文件路径，`len(Missing)` 与计数无固定关系；夹内无可逐文件安装的文件时整夹落在 `MissingDirs`，一键安装同样调用本卡 `PushSingleResourceToInstance` 这条 folder-aware 路径，故计数单元全都有安装动作）——徽章数只看 Go 的计数字段，别再用数组长度
 
@@ -248,6 +251,7 @@ sidebar 底部 push/pull 菜单（整包级，与 sync-manager 组件解耦）
 - **依赖 DAG 无循环**（index.ts 顶部注释）：`index → store/renderer/events/network/state`；leaf 模块互不反向依赖；共享状态下沉至 `state.ts` 打破 `index↔events` 循环
 - **组件实例单注册**：`customElements.get("app-sync-manager")` 守卫；`registerSync` 顶层调一次
 - **`_singleBusy` 按 path 粒度防重入**（network.ts）：`Set<string>` 而非全局布尔——不同行可并发 push/pull，同一行防重入
+- **行内 op 必须包同步兜底超时（批D）**：`performSingleOp` 原先裸 `await` binding——Go 侧 `InstallLock` 竞争/慢盘上不收口时 `_singleBusy` 永不删除、该行按钮永久 `disabled`（半径是 per-path 一行，小于侧栏全局锁，但仍是「点了永远没反应」）。现两个 binding 都经 `@/utils/async/sync-op-timeout.ts|withSyncOpTimeout`（120s 单点事实源，与侧栏批量链共用；label 写「推送/拉取 <path>」），超时按 `TimeoutError` 分流到专属文案 `syncManager.opTimedOut`（不混进业务错误串），`finally` 保证解锁。回归锁 `network.test.ts`「binding 挂起 → 超时收口 + 该行解锁 + 专属超时文案」「push 走同步兜底超时收口（label 含动作与路径）」
 - **⚠️ busy 视觉两侧同为 per-path 口径**（2026-09 修复「只做一半」）：`setRowButtonsBusy(self, path, busy)` 只锁/只解禁本行——原进入时 `setButtonsBusy(true)` 全局禁用把无关行一并锁死，令 per-path 并发在 UI 层形同虚设；原 finally 用 `size > 0` 全局派生，先结束的 op 会提前解禁仍在途行（守卫按 path、复位按全局，两半自相矛盾）。配套：窗口化每帧 `replaceChildren` 会冲掉禁用态，由 `renderer.restoreBusyState` 按 `st.busy`（引用同一 `_singleBusy`）贴回，否则用户重复点击同 path 被 Set 静默吞（"点了没反应"）
 - **代际守卫走 `createLoadGuard()`（ADR-230 唯一出口）**：所有异步加载函数用 `_guard.next()/stale(gen)` 丢弃过期结果，防 `await` 期间 attribute 切换导致脏写入。2026-09 已删除并存的手搓 `_initGen`（语义不等价：`_guard.invalidate()` 打不进早期 bail）；同批 `app-sidebar:_reloadGen` 与 `preview-3d/session-ledger:_gen` 亦并入（见 ADR-230 D4）
 - **`_dirOpen` 显式折叠优先于 `_forceOpenPaths` 强制展开**（renderer.ts）：`??` 而非 `||`——用户点过折叠即尊重；只有 undefined 才允许 status 筛选强制展开

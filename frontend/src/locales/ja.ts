@@ -884,6 +884,8 @@ export const ja: Record<string, string> = {
   // P1.2 修正: sync-manager ハードコード中国語 → 全量 i18n
   "syncManager.loadSyncStatusFailed": "同期状況の読み込みに失敗",
   "syncManager.pushed": "送信済み",
+  "syncManager.opTimedOut":
+    "操作がタイムアウトしました（バックエンドが他の同期/インストールで混み合っている可能性があります）。しばらくしてから再試行してください",
   "syncManager.pulled": "取得済み",
   "syncManager.statusFiltersAria": "同期状況フィルタ",
   "syncManager.divergedWarnTitle": "競合：両方で変更されました",

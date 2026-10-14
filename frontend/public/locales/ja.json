@@ -742,6 +742,7 @@
   "syncManager.scanDirWide": "{label} リポジトリ基準ディレクトリ {dir} が広すぎます（mods/config/schematics サブディレクトリを含む）。同期に他のリソースが混入する可能性があります。専用の {subDir} サブディレクトリを指定してください",
   "syncManager.loadSyncStatusFailed": "同期状況の読み込みに失敗",
   "syncManager.pushed": "送信済み",
+  "syncManager.opTimedOut": "操作がタイムアウトしました（バックエンドが他の同期/インストールで混み合っている可能性があります）。しばらくしてから再試行してください",
   "syncManager.pulled": "取得済み",
   "syncManager.statusFiltersAria": "同期状況フィルタ",
   "syncManager.divergedWarnTitle": "競合：両方で変更されました",

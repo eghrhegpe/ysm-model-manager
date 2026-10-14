@@ -16,21 +16,20 @@ permalink: /adr/
 
 | 状态 | 数量 |
 |------|------|
-| [📝 提议中](#提议中) | 5 |
+| [📝 提议中](#提议中) | 4 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 1 |
 | [🔄 部分采纳](#部分采纳) | 14 |
-| [✅ 已采纳](#已采纳) | 334 |
+| [✅ 已采纳](#已采纳) | 335 |
 | [❌ 已取代](#已取代) | 9 |
 | [🧊 已废弃](#已废弃) | 0 |
 | [❓ 未归类](#未归类) | 0 |
 
 ## 按状态分组导航
 
-### 📝 提议中（5）
+### 📝 提议中（4）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
-| [ADR-346](./architecture/ADR-346-mmd-geometry-stats-pipeline.md) | MMD 几何统计管线（数值搜索能力扩展） | 📝 提议中 |
 | [ADR-327](./architecture/ADR-327-hdr.md) | 自定义 HDR 路径持久化与重启恢复 | 📝 提议中 |
 | [ADR-325](./architecture/ADR-325-app-domain-sinking-over-multi-service.md) | App 瘦身走域下沉：拒绝 Wails 多 Service 外壳 | 📝 提议中 |
 | [ADR-321](./architecture/ADR-321-cap-persistence-restore-derivation.md) | cap 持久化读侧派生：restoreFields 还原表由 schema 键集统一驱动（跨 cap 一次拍全局） | 📝 提议中 |
@@ -61,10 +60,11 @@ permalink: /adr/
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 | [ADR-050](./ADR-050-plaza-browser-window.md) | 模型广场 · 浏览器窗口（Wails 第二窗口） | 🔄 部分采纳 |
 
-### ✅ 已采纳（334）
+### ✅ 已采纳（335）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-346](./architecture/ADR-346-mmd-geometry-stats-pipeline.md) | MMD 几何统计管线（数值搜索能力扩展） | ✅ 已采纳 |
 | [ADR-345](./architecture/ADR-345-disable-state-first-class.md) | 禁用态是一等公民：目录粒度启禁同步与实例侧禁用载体识别 | ✅ 已采纳 |
 | [ADR-344](./architecture/ADR-344-pack-sync-unit-honesty.md) | 整合包同步单元级诚实化：dirLevel 内容判定、单条推送保层级、祖先单元去重 | ✅ 已采纳 |
 | [ADR-343](./architecture/ADR-343-cross-type-search.md) | 跨类型搜索收口（Type 派生 + 分析器分流 + SearchFilters） | ✅ 已采纳 |
@@ -418,7 +418,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
-| ADR-346 | MMD 几何统计管线（数值搜索能力扩展） | 📝 提议中 | 2026-10-14 |
+| ADR-346 | MMD 几何统计管线（数值搜索能力扩展） | ✅ 已采纳 | 2026-10-14 |
 | ADR-345 | 禁用态是一等公民：目录粒度启禁同步与实例侧禁用载体识别 | ✅ 已采纳 | 2026-10-14 |
 | ADR-344 | 整合包同步单元级诚实化：dirLevel 内容判定、单条推送保层级、祖先单元去重 | ✅ 已采纳 | 2026-10-14 |
 | ADR-343 | 跨类型搜索收口（Type 派生 + 分析器分流 + SearchFilters） | ✅ 已采纳 | 2026-10-14 |

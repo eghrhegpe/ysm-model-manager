@@ -884,6 +884,8 @@ export const en: Record<string, string> = {
   // P1.2 fix: sync-manager hardcoded Chinese → full i18n
   "syncManager.loadSyncStatusFailed": "Failed to load sync status",
   "syncManager.pushed": "Pushed",
+  "syncManager.opTimedOut":
+    "Operation timed out (the backend may be busy with another sync/install); please retry shortly",
   "syncManager.pulled": "Pulled",
   "syncManager.statusFiltersAria": "Sync status filters",
   "syncManager.divergedWarnTitle": "Conflict: both sides modified",

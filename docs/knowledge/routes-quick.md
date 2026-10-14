@@ -284,7 +284,7 @@
 | 用户意图 | 首选卡 | 红线警告 | 主 ADR(如有) |
 |----------|--------|----------|----------|
 | 仓库审计、健康分 | [扫描核心 go/scanner](./go-scanner.md) | - | - |
-| 冲突处理 conflict.go | [整合包同步 go/sync](./go-sync.md) | - | ADR-064, ADR-296, ADR-342, ADR-344 |
+| 冲突处理 conflict.go | [整合包同步 go/sync](./go-sync.md) | - | ADR-064, ADR-296, ADR-340, ADR-342, ADR-344, ADR-345 |
 | 待推送 / 可拉取 / 已禁用 / 实例资源 | [整合包同步页 app-sync-manager](./app-sync-manager.md) | - | - |
 | 多线程统计角标、网页版导入 | [工具栏搜索编排 toolbar-search](./toolbar-search.md) | - | - |
 | 骨骼数怎么来的 | [MMD 几何统计解析](./go-geometry-mmd-stats.md) | .vrm/.zip 在 MMD 族下无统计链路（CanParse 只认 .pmx/.pmd） | - |
@@ -301,16 +301,18 @@
 | 扫描模型、ScanModelEntries | [扫描核心 go/scanner](./go-scanner.md) | 容器指纹缓存失效需调 ClearScanCache | - |
 | 实例独有文件保全 | [重链接 go/sync RelinkDir（ADR-342 四件套）](./go-sync-relink.md) | - | - |
 | 数值范围搜索、标签过滤 | [工具栏搜索编排 toolbar-search](./toolbar-search.md) | - | - |
+| 双缓存失效配对、写入口漏清缓存 | [同步缓存失效配对契约（go/sync × go/instance × 写面派生闸）](./go-sync-cache-pairing.md) | app 层每条写入口必须成对调 instance.InvalidateSyncItemsCache + ysmsync.InvalidateSyncScanCaches（或等价的 a.ClearScanCache 三层清）——新写点漏归类，tests/test_sync_write_cache_pairing.ts 派生闸当场红 | ADR-269 |
 | 搜索、筛选、关键词 / 标签 / 数值三路交集 | [搜索筛选编排 search](./search.md) | 搜索筛选必须经 toolbar-search 编排 + adv-filter 弹窗 + SearchModels 后端，前端只做 UI 不做筛选逻辑 | - |
 | 搜索编排、高级筛选、关键词搜索 | [工具栏搜索编排 toolbar-search](./toolbar-search.md) | toolbar-search 编排必须单点分发搜索链路（弹窗 → 后端 → 标签交集 → 降级 → 渲染），禁止各层各自调 SearchModels | - |
 | 缩略图、类型检测 | [资源包 mcmeta go/packs](./go-packs.md) | - | - |
 | 同步项、BuildSyncItems、资源同步 | [整合包实例 go/instance](./go-instance.md) | - | - |
 | 同步状态、app-sync-manager | [整合包同步页 app-sync-manager](./app-sync-manager.md) | - | - |
 | 文件监听、文件变化、刷新 | [文件监听 go/watcher](./go-watcher.md) | 文件变更监听必须走 go/watcher 的事件流，禁止轮询文件系统 | - |
+| 写面派生 fail-closed 闸（write-surface-gate） | [同步缓存失效配对契约（go/sync × go/instance × 写面派生闸）](./go-sync-cache-pairing.md) | - | ADR-269 |
 | 诊断页、仓库体检、冲突 / 去重 | [诊断页 diagnostics](./app-content-diagnostics.md) | 去重 / 体检必须经 diagnostics 页发起，禁止在其他页直接调 doDedup | - |
 | 整合包分类、路由、location 路由 | [分类路由与回归护栏](./classify-routing.md) | 资源整合包分类必须走 go/packs/classify.go 的 ClassifyResource，前端禁止手写分类逻辑 | ADR-093 |
 | 整合包实例、版本实例、VersionInstance | [整合包实例 go/instance](./go-instance.md) | 整合包实例同步必须走 go/instance 的 ysmsync.SyncResources，禁止在 app 层手写同步逻辑 | - |
-| 整合包同步、推送 / 拉取 | [整合包同步 go/sync](./go-sync.md) | 整合包同步必须走 go/sync 的 diff+hash 双阶段，禁止在 app 层手写同步逻辑 | ADR-064, ADR-296, ADR-342, ADR-344 |
+| 整合包同步、推送 / 拉取 | [整合包同步 go/sync](./go-sync.md) | 整合包同步必须走 go/sync 的 diff+hash 双阶段，禁止在 app 层手写同步逻辑 | ADR-064, ADR-296, ADR-340, ADR-342, ADR-344, ADR-345 |
 | 整合包同步页、推送 / 拉取资源 | [整合包同步页 app-sync-manager](./app-sync-manager.md) | app-sync-manager 的同步状态渲染必须经 _gen 单点生成，禁止各列各自查询状态 | - |
 | 重链接 RelinkDir 整夹替换 | [重链接 go/sync RelinkDir（ADR-342 四件套）](./go-sync-relink.md) | - | - |
 | 资历最深、老模型、仓库评分 | [资历最深模型 oldest-models](./oldest-models.md) | 资历排行必须经 oldest-models.ts 统一计算，禁止各页面各自实现评分逻辑 | - |
@@ -342,7 +344,8 @@
 | runSearch | [CLI 搜索命令 search](./go-cli-search.md) | - | - |
 | SearchModels 数值筛选 | [Web Worker 模型统计层 model-stats](./model-stats.md) | - | ADR-218, ADR-219 |
 | SearchModels、adv-filter、网页版降级 | [搜索筛选编排 search](./search.md) | - | - |
-| sync_diff / sync_hash / sync_push / sync_relink | [整合包同步 go/sync](./go-sync.md) | - | ADR-064, ADR-296, ADR-342, ADR-344 |
+| sync 扫盘缓存 hashed 维度 | [同步缓存失效配对契约（go/sync × go/instance × 写面派生闸）](./go-sync-cache-pairing.md) | - | ADR-269 |
+| sync_diff / sync_hash / sync_push / sync_relink | [整合包同步 go/sync](./go-sync.md) | - | ADR-064, ADR-296, ADR-340, ADR-342, ADR-344, ADR-345 |
 | SyncResources / SyncResourcesWithConfig 资源级 diff | [资源/文件夹级同步 diff（go/sync 拆分）](./go-sync-resource-diff.md) | 同步判定必须经 go/sync 的 diff+hash 双阶段，app 层禁手写同步逻辑 | - |
 | SyncResourcesDirLevel / DirLevelScan 文件夹级同步 | [资源/文件夹级同步 diff（go/sync 拆分）](./go-sync-resource-diff.md) | - | - |
 | SyncToggleStatus 启禁同步 | [启禁状态同步 go/sync SyncToggleStatus（ADR-345 载体识别）](./go-sync-toggle.md) | 启禁状态同步必须走 go/sync SyncToggleStatus，app 层禁止手写 rename 循环 | - |
@@ -940,6 +943,9 @@
 | 作者提取依赖模型文件中的 metadata.authors 字段——缺失则作者为空 | - | - |
 | 单文件 >500MB 跳过哈希计算——同步对空哈希跳过匹配 | - | - |
 | Go 单引擎扫描口径须自洽——Rust 后端已删除（2026-10-06），不再有跨引擎对照 | - | - |
+| go/sync 写操作只清 sync 一侧不够——instance 结果缓存一侧 go/sync 不能清（go/instance 导入 go/sync，反向即成环），必须归 app 层写入口配对 | - | - |
+| 人工枚举写清单 fail-open（清单漏列即隐身）——勿退回旧版；候选写面只从三包导出面自动派生 | - | - |
+| 缓存返回值是共享对象，消费方禁止写（loadSyncScanCache 契约）——向返回 map 写虚拟条目会跨调用串数据 | - | - |
 | 整夹替换成功后直接 RemoveAll 备份 | - | 实例侧自制贴图/独有子目录不可逆消失且日志为空、计数报全成功（2026-10-14 探针实证 count=1 err=nil logs=[]） |
 | 回滚用绝对源路径记账 | - | os.Rename 掉旧夹后路径当场失效（首版即 100% 回填失败），必须记相对路径 |
 | 目标夹已被活夹占用时 RemoveAll(newDir) 会删掉不属于本次重建的活夹（用户既有模型全灭），必须拒绝 | `改名搬运` | - |

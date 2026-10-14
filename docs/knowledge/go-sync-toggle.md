@@ -101,7 +101,7 @@ invariant_anchors:
 - **实例侧禁用载体识别三件套（ADR-345 D2/D3/D4）**：`fsutil|DisabledTwinForms`（双形态探测）/ `DisabledDirCounterpart`（活跃↔载体互算）/ `DisabledAncestorPath`（祖先链载体探测；目录限定，后缀表走 `registry|DisableSuffixes` 副本）。`go/instance|appendOneItem` 的实例侧路径（原为**盲 join** `instDir/<rel>`）过 `DisabledAncestorPath`：实例把整夹或其祖先容器夹改名后，子项以载体为基准 diff、单元标 ⛔ 进中立桶（不进待推送/一键清单），斩断「误判待推送 → 推送另建活跃副本 = 模型复活 + 同模型两份」；`installDirUnitLocked` 在落位前对**目标链**做同一探测，命中即**拒绝**（宁可报错也不静默复制第二份）
 - **`relKeyDirLevel` 逐段去禁用后缀（`registry|StripDisableSuffixSegments`，ADR-345 复核 P1-2）**：载体可在任意祖先层级，只剥尾段会让 `x.disabled/sub/` 与 `x/sub/` 成两个键
 - **信道口径劈裂（ADR-345 D3）**：生产 scan 信道里 scanner 已 SkipDir 掉载体 → 单元 raw status 是 `missing`；Walk 信道因键归一判 `synced`——面板显示经 D3 统一为 ⛔，但断言 raw status 的测试必须分信道写
-- **`.ban` 剥离/判断现状分布（2026-08-23 审计，勿擅自归一）**：sync.go 内 5 处——3 处已委托 `types.StripBanSuffix` + 2 处内联判断 + 1 处内联剥离（`strings.TrimSuffix(strings.ToLower(e.Name), ".ban")`，repoName 匹配 key 供「同名不同文件夹」消费）。内联剥离与 `types.NormalizeResourceName` **语义不等价**（后者额外剥 `.disabled`）——直接替换会改变 repoName key 与 banned 匹配行为；若要归一，先加单测锁定 repoName key 语义（含 `.disabled` 文件的 banned 记录行为）再动
+- **`.ban` / `.disabled` 后缀判断与剥离全部委托 registry 单点**（`registry|IsDisableSuffix` / `StripDisableSuffix`；dirLevel 信道逐段版 `StripDisableSuffixSegments` 见下条）——sync.go 内无内联 `HasSuffix/TrimSuffix(".ban")` 残留（2026-08-23 审计记录的 5 处内联已收编，现状口径与历史见 [go-sync](./go-sync.md) 不变量「禁用后缀判断/剥离全仓委托 registry 单点」）
 - **文件被占用（如 Minecraft 锁定）时 `isFileLocked` 识别后静默跳过不阻塞**
 
 ## 与其他子系统关系

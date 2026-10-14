@@ -190,7 +190,7 @@
 | 🏗 go-recycle | 回收站 go/recycle | architecture | io-bound | 回收站, 删除, 恢复, recycle, 软删除 |
 | 🏗 go-repoaudit | 仓库审计 go/repoaudit | architecture | io-bound, memory-heavy | 仓库审计, 健康分数, 完整性检查, 缓存命中率, repoaudit, health-report, 去重 |
 | 🏗 go-scanner | 扫描核心 go/scanner | architecture | io-bound, concurrent | 扫描, 文件树, 哈希, 缓存, 作者提取, ScanEntries, ScanEntriesCtx 取消扫描, 索引生成 |
-| 🍃 go-sync-cache-pairing | 同步缓存失效配对契约（go/sync × go/instance × 写面派生闸） | leaf | — | TODO |
+| 🍃 go-sync-cache-pairing | 同步缓存失效配对契约（go/sync × go/instance × 写面派生闸） | leaf | io-bound | 缓存失效, 配对, InvalidateSyncItemsCache, InvalidateSyncScanCaches, write-surface-gate, hashed, 假同步状态 |
 | 🍃 go-sync-relink | 重链接 go/sync RelinkDir（ADR-342 四件套） | leaf | — | RelinkDir, 重链接, relink, 整夹替换, 链接模式切换, ADR-342 |
 | 🍃 go-sync-resource-diff | 资源/文件夹级同步 diff（go/sync 拆分） | leaf | — | SyncResources, SyncResourcesWithConfig, SyncResourcesDirLevel, DiffFolderContents, 折叠指纹 FoldDigest, 资源包文件夹, dirLevel 单元内容判定, 推送保层级 |
 | 🍃 go-sync-toggle | 启禁状态同步 go/sync SyncToggleStatus（ADR-345 载体识别） | leaf | — | SyncToggleStatus, 启用禁用同步, .disabled, .ban, 载体, ADR-345 |
@@ -249,7 +249,7 @@
 - **go-recycle**（回收站 go/recycle）：`go/recycle/` 包实现模型的软删除机制，通过硬链接/符号链接判定 + `.recycle` 目录实现可恢复删除。核心是 `TrashManager` 结构体（`New(root)` → `root/.recycle`）。
 - **go-repoaudit**（仓库审计 go/repoaudit）：`go/repoaudit/` 包提供仓库健康审计核心逻辑——资源扫描、完整性校验、缓存状态、健康分数、警告生成、去重汇总。从 `go/cli`（原 `resource.go` 的 `collectRepoHealth`）提取为独立包，CL…
 - **go-scanner**（扫描核心 go/scanner）：`go/scanner/` 包实现仓库文件扫描、哈希计算、缓存失效、作者提取、索引生成（ADR-003 P2 下沉，薄壳 `internal/app/app_scan.go` 仅保留依赖 App 的方法）。
-- **go-sync-cache-pairing**（同步缓存失效配对契约（go/sync × go/instance × 写面派生闸））：TODO
+- **go-sync-cache-pairing**（同步缓存失效配对契约（go/sync × go/instance × 写面派生闸））：整合包展示链叠了两层 30s TTL 派生缓存：**go/sync 扫盘结果缓存**（`sync_cache.go`，三类 kind）与 **go/instance 同步结果缓存**（`sync_items_cache.go`，`Build…
 - **go-sync-relink**（重链接 go/sync RelinkDir（ADR-342 四件套））：`sync_relink.go|RelinkDir` 按 SHA256 哈希把整合包实例目录内的模型重新指向仓库版本（设置页「重新应用链接模式 / 切换链接模式」的消费入口，copy 模式同样跑）。文件夹级类型走「备份→重建→回填实例独有文…
 - **go-sync-resource-diff**（资源/文件夹级同步 diff（go/sync 拆分））：`go/sync` 资源级/文件夹级同步 diff 主流程的三个分片文件，系 2026-10 文件行数治理拆出：`sync_resource.go`（原 sync.go）持资源级 diff + 冲突处理 + 链接类型判定入口；`sync_d…
 - **go-sync-toggle**（启禁状态同步 go/sync SyncToggleStatus（ADR-345 载体识别））：`sync.go|SyncToggleStatus` 把仓库的启用/禁用状态同步到整合包实例（文件级：哈希 → 相对路径 → 纯文件名三级匹配，重命名加/去 `.disabled`；目录级见下）。载体是**文件系统上的目录改名**（`X/`…
@@ -473,7 +473,7 @@
 
 | 标签 | 含义 | 卡片 |
 |------|------|------|
-| io-bound | IO 密集（批量读写/RPC/网络） | app-modules, app-sync-manager, backend-idb, community-feature, community-virtual-list, go-avatar, go-avatar-decode, go-dedup, go-download, go-fileops, go-fsutil, go-geometry, go-geometry-mmd-stats, go-importer, go-installer, go-instance, go-logs, go-packs, go-recycle, go-repoaudit, go-scanner, go-sync, go-tags, go-updater, go-watcher, go-ysm-parser, import-queue, oldest-models, recycle-bin, version-updater |
+| io-bound | IO 密集（批量读写/RPC/网络） | app-modules, app-sync-manager, backend-idb, community-feature, community-virtual-list, go-avatar, go-avatar-decode, go-dedup, go-download, go-fileops, go-fsutil, go-geometry, go-geometry-mmd-stats, go-importer, go-installer, go-instance, go-logs, go-packs, go-recycle, go-repoaudit, go-scanner, go-sync, go-sync-cache-pairing, go-tags, go-updater, go-watcher, go-ysm-parser, import-queue, oldest-models, recycle-bin, version-updater |
 | cpu-bound | CPU 密集（解析/编译/解算/编码） | animation-system, app-content-diagnostics, bone-tools, community-virtual-list, go-threejs, ground-cap-materialgroup-factories, ground-surface-spec, ik-solver, mc-ao-tint, model-stats, model2d, perception, ysm-anim-pipeline, ysm-wasm |
 | gpu-bound | GPU/显存敏感（纹理/3D 渲染） | app-content-diagnostics, model3d, mount3d-584-giant, multi-model-select, preview-core, preview-env-state, preview-panel-declarative, render-federation, scene-capability-registry, utils-export |
 | concurrent | 多核并行（goroutine 池/Worker 池/pthread/Promise 竞速） | app-content-diagnostics, go-scanner, go-threejs, model-stats |

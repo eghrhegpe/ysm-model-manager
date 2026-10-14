@@ -124,6 +124,120 @@ async function fetchSpecViaWasmFallback(model: ModelLike): Promise<Model3DSpec |
   }
 }
 
+/** 纹理清单解析：多组件走数组、单组件走单一 texture；名索引优先显式 textureNames，
+ *  缺失时从 URL 基名派生（R1 契约比对用） */
+function resolveTextureLists(model: ModelLike): { urls: string[]; names: string[] } {
+  const urls =
+    model.textures && model.textures.length > 0
+      ? model.textures
+      : model.texture
+        ? [model.texture]
+        : [];
+  const names =
+    (model as { textureNames?: string[] }).textureNames ??
+    urls.map((u) =>
+      typeof u === "string"
+        ? (u
+            .split("/")
+            .pop()
+            ?.replace(/\.\w+$/, "")
+            .toLowerCase() ?? "")
+        : "",
+    );
+  return { urls, names };
+}
+
+/** perComponent 纹理加载：数据源统一（spec 注入优先），按组件逐个 loadTextures 并记录 URL 清单。
+ *  多组件 spec 缺 componentTextures = 契约断裂（回归 936169b1 防再犯），显式告警而非静默跳过。 */
+async function loadComponentTextures(
+  spec: Model3DSpec,
+  model: ModelLike,
+  onAcquireFailure: () => void,
+  componentTexMap: Map<string, (THREE.Texture | null)[]>,
+  componentTexUrls: Map<string, string[]>,
+): Promise<void> {
+  // 绑定类型自带 componentTextures（Record<string, string[]|null>|null），直读无需松断言
+  const compTex = spec.componentTextures ?? model.componentTextures;
+  if ((spec.models?.length ?? 0) > 1 && !compTex) {
+    logWarn(
+      "model3d",
+      `契约预警: spec 含 ${spec.models?.length} 个组件但无 componentTextures —— perComponent 专属纹理缺失，组件将回落全局纹理槽（检查 Go 端 Model3DSpec 字段/注入链）`,
+    );
+  }
+  if (!compTex) return;
+  try {
+    for (const [compName, texBase64Arr] of Object.entries(compTex)) {
+      const compUrls = texBase64Arr ?? [];
+      // 先记录再 load——loadTextures 内部 acquire 是同步的，
+      // 若 acquire 抛错，catch 的 releaseTextures() 仍能释放已 acquire 的 URL（code review #1/#4/#5 修复）
+      componentTexUrls.set(compName, compUrls);
+      const compTexArr = await loadTextures(compUrls);
+      componentTexMap.set(compName, compTexArr);
+    }
+  } catch (e) {
+    // 组件纹理加载中断：主 texArr 已完成 acquire，一并归还后上抛
+    onAcquireFailure();
+    throw e;
+  }
+}
+
+/** R1 契约校验：每个期望贴图名必须存在于实际清单——缺失才 warn 不阻断。
+ *  存在性比对而非索引比对（共享槽位下组件序 ≠ texArr 序，会误报）；WASM 路径 texArrOrder nil 跳过。 */
+function verifyTexArrContract(order: string[] | undefined, actualNames: string[]): void {
+  if (!order?.length || !actualNames.length) return;
+  const present = new Set(
+    actualNames.map((n) =>
+      String(n ?? "")
+        .trim()
+        .toLowerCase(),
+    ),
+  );
+  for (const expRaw of order) {
+    const exp = String(expRaw ?? "")
+      .trim()
+      .toLowerCase();
+    if (!exp) continue; // 空值跳过：未命名纹理（P2）
+    if (!present.has(exp)) {
+      logWarn(
+        "model3d",
+        `R1 纹理缺失: 组件期望贴图 ${expRaw} 不在已加载纹理清单 [${actualNames.join(", ")}]（可能越界/缺纹理）`,
+      );
+      break;
+    }
+  }
+}
+
+/** 加载剖析记录：perf 面板甘特图消费（读取 → 解析 → 纹理加载 → 构建，构建段由 adapter 补）；失败不影响加载 */
+function recordLoadTraceSafe(
+  model: ModelLike,
+  tStart: number,
+  tParseStart: number,
+  tParseEnd: number,
+  texArr: (THREE.Texture | null)[],
+): void {
+  try {
+    const tLoadEnd = performance.now();
+    recordLoadTrace({
+      ts: Date.now(),
+      format: TRACE_FORMAT_OTHER,
+      path: model._modelPath ?? "",
+      stages: [
+        { name: "读取", ms: Math.round(tParseStart - tStart), status: "ok" },
+        { name: "解析", ms: Math.round(tParseEnd - tParseStart), status: "ok" },
+        { name: "纹理加载", ms: Math.round(tLoadEnd - tParseEnd), status: "ok" },
+      ],
+      assets: {
+        files: 1,
+        textures: texArr.filter(Boolean).length,
+        animations: 0,
+      },
+      ok: true,
+    });
+  } catch {
+    /* perf trace 失败不影响加载 */
+  }
+}
+
 /**
  * 预加载：spec 先行，纹理按全量清单加载（texArr 槽位 = cube texSlot 下标）
  *
@@ -146,31 +260,12 @@ export async function preloadModel(model: ModelLike): Promise<{
   const tParseStart = performance.now();
   const spec = await fetchSpec(model);
   const tParseEnd = performance.now();
-  // 实际纹理清单（URL + 名）；多组件走数组，单组件走单一 texture
-  const actualUrls =
-    model.textures && model.textures.length > 0
-      ? model.textures
-      : model.texture
-        ? [model.texture]
-        : [];
-  // name 索引：优先显式 textureNames；缺失时从 URL 基名派生（R1 契约比对用）
-  const actualNames =
-    (model as { textureNames?: string[] }).textureNames ??
-    actualUrls.map((u) =>
-      typeof u === "string"
-        ? (u
-            .split("/")
-            .pop()
-            ?.replace(/\.\w+$/, "")
-            .toLowerCase() ?? "")
-        : "",
-    );
   // texArr 必须以全量纹理清单 actualUrls 为槽位（cube texSlot 即其下标）——
   // 组件 texSlot = 声明序位置（未声明组件 = len(声明) + 按名段序号），与 Go 端
   // 纹理收集序（声明序 + 未声明按名）对齐。spec.texArrOrder 是「组件序期望纹理名」
   // （长度 = 组件数，R1 契约校验专用），不可当 texArr 槽位清单：魔法酒狐等模型用它
   // 会把 6 张声明纹理截断成 3 张（面板「纹理 (3)」），且 arrow texSlot=6 越界品红。
-  const urls = actualUrls;
+  const { urls, names: actualNames } = resolveTextureLists(model);
   const componentTexMap = new Map<string, (THREE.Texture | null)[]>();
   // 组件纹理 URL 清单（与 componentTexMap 同序同键）：释放器按此归还引用
   const componentTexUrls = new Map<string, string[]>();
@@ -192,86 +287,9 @@ export async function preloadModel(model: ModelLike): Promise<{
     releaseTextures();
     throw e;
   }
-  // ADR-114 perComponent：每组件独立纹理对象，不再依赖全局 texArr 槽位顺序。
-  // 数据源统一（spec 注入优先）：GetModel3DSpec 把 ComponentTextures 注入
-  // spec.componentTextures（zip/7z/解压目录三路同源）；model.componentTextures
-  // 保留兼容（旧数据链）。
-  // 绑定类型自带 componentTextures（Record<string, string[]|null>|null），直读无需松断言
-  const compTex = spec.componentTextures ?? model.componentTextures;
-  // 契约哨兵（回归 936169b1 防再犯）：多组件 spec 缺 componentTextures = perComponent
-  // 契约断裂（此前是 typed 序列化静默丢字段），全体组件会回落全局 texArr[texIdx] 错贴纹理。
-  // 缺失时渲染仍继续（.ysm WASM 路径本就无该字段），但必须显式告警而非静默跳过。
-  if ((spec.models?.length ?? 0) > 1 && !compTex) {
-    logWarn(
-      "model3d",
-      `契约预警: spec 含 ${spec.models?.length} 个组件但无 componentTextures —— perComponent 专属纹理缺失，组件将回落全局纹理槽（检查 Go 端 Model3DSpec 字段/注入链）`,
-    );
-  }
-  if (compTex) {
-    try {
-      for (const [compName, texBase64Arr] of Object.entries(compTex)) {
-        const compUrls = texBase64Arr ?? [];
-        // 先记录再 load——loadTextures 内部 acquire 是同步的，
-        // 若 acquire 抛错，catch 的 releaseTextures() 仍能释放已 acquire 的 URL（code review #1/#4/#5 修复）
-        componentTexUrls.set(compName, compUrls);
-        const compTexArr = await loadTextures(compUrls);
-        componentTexMap.set(compName, compTexArr);
-      }
-    } catch (e) {
-      // 组件纹理加载中断：主 texArr 已完成 acquire，一并归还后上抛
-      releaseTextures();
-      throw e;
-    }
-  }
-  const order = spec.texArrOrder as string[] | undefined;
-  // R1 契约校验：texArrOrder[i] = 组件 i 实际贴图名（Go 端按 texSlot 分配，多组件可**共享**
-  // 同一张声明纹理，如 arm 与 main 共享 skin；未声明组件用 basename）。故改为**存在性**比对：
-  // 每个期望名必须存在于 texArr 实际清单 actualNames——缺失（未加载/越界）才 warn 不阻断。
-  // 不再逐一按索引比对（共享槽位下组件序 ≠ texArr 序，会误报）。WASM 路径 texArrOrder nil 跳过。
-  if (order?.length && actualNames.length) {
-    const present = new Set(
-      actualNames.map((n) =>
-        String(n ?? "")
-          .trim()
-          .toLowerCase(),
-      ),
-    );
-    for (const expRaw of order) {
-      const exp = String(expRaw ?? "")
-        .trim()
-        .toLowerCase();
-      if (!exp) continue; // 空值跳过：未命名纹理（P2）
-      if (!present.has(exp)) {
-        logWarn(
-          "model3d",
-          `R1 纹理缺失: 组件期望贴图 ${expRaw} 不在已加载纹理清单 [${actualNames.join(", ")}]（可能越界/缺纹理）`,
-        );
-        break;
-      }
-    }
-  }
-  // 加载剖析：perf 面板甘特图消费（读取 → 解析 → 纹理加载 → 构建，构建段由 adapter 补）
-  try {
-    const tLoadEnd = performance.now();
-    recordLoadTrace({
-      ts: Date.now(),
-      format: TRACE_FORMAT_OTHER,
-      path: model._modelPath ?? "",
-      stages: [
-        { name: "读取", ms: Math.round(tParseStart - tStart), status: "ok" },
-        { name: "解析", ms: Math.round(tParseEnd - tParseStart), status: "ok" },
-        { name: "纹理加载", ms: Math.round(tLoadEnd - tParseEnd), status: "ok" },
-      ],
-      assets: {
-        files: 1,
-        textures: texArr.filter(Boolean).length,
-        animations: 0,
-      },
-      ok: true,
-    });
-  } catch {
-    /* perf trace 失败不影响加载 */
-  }
+  await loadComponentTextures(spec, model, releaseTextures, componentTexMap, componentTexUrls);
+  verifyTexArrContract(spec.texArrOrder as string[] | undefined, actualNames);
+  recordLoadTraceSafe(model, tStart, tParseStart, tParseEnd, texArr);
 
   return { texArr, spec, componentTexMap, releaseTextures };
 }

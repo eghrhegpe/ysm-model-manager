@@ -82,6 +82,7 @@ auto_fields:
     - ResourceSyncItem
     - ResourceSyncResult
     - RuntimeLog
+    - SearchFilters
     - SearchResult
     - ShaderpackLang
     - StatusFailed

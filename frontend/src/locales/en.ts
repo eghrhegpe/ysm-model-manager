@@ -296,6 +296,7 @@ export const en: Record<string, string> = {
   "import.date": "Year/Month",
   "import.queue": "Queue",
   "import.noSupportedFiles": "No supported model files detected",
+  "import.skippedCount": "{n} skipped",
   "import.busyImporting": "Import in progress, please wait…",
   "import.fileTooLargeSkipped": "{name} exceeds the {mb} MB limit and was skipped",
   "import.processError": "Import processing error, please retry",

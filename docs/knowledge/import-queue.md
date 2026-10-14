@@ -87,11 +87,12 @@ status: active
 
 ### import-executor.ts（全局执行器）
 
-- `directImport(file)`：`FileReader` 读 base64 → `ImportModelFile(name, base64)` 直导（保留原文件名，类型路由/冲突判定全在 Go 端）→ toast 成功/失败；`ysm.json` 单文件拦截引导拖整个文件夹
-- `importFolder(dir, files, rtype)`：按顶层目录名为模型名、`dir` 前缀为 `subpath`，逐个文件转 base64；**上下文路由**（2026-08-24）：`rtype` 非空走 `ImportModelFolderTo(folderName, subpath, rtype, items)` 按页面类型仓库根落盘，空串回退 `ImportModelFolder` 内容推断；逐文件读取失败跳过不拖垮整组
-- `executeCollected(collected, rtype)`：`groupCollected` 分组后先整组文件夹、后散落单文件，返回 `{ folders, singles }` 计数
+- `directImport(file, opts?)`：`FileReader` 读 base64 → `ImportModelFile(name, base64)` 直导（保留原文件名，类型路由/冲突判定全在 Go 端）→ 返回 `ImportResult { outcome: imported|skipped|failed, error? }`；`ysm.json` 单文件拦截引导拖整个文件夹（判为 `skipped` 非 `failed`）
+- `importFolder(dir, files, rtype, opts?)`：按顶层目录名为模型名、`dir` 前缀为 `subpath`，逐个文件转 base64；**上下文路由**（2026-08-24）：`rtype` 非空走 `ImportModelFolderTo(folderName, subpath, rtype, items)` 按页面类型仓库根落盘，空串回退 `ImportModelFolder` 内容推断；逐文件读取失败跳过不拖垮整组；同样返回 `ImportResult`
+- `executeCollected(collected, rtype, opts?)`：`groupCollected` 分组后先整组文件夹、后散落单文件，返回 `{ folders, singles, imported, failed, skipped, errors[] }` 汇总（`errors[]` 取前 3 条失败缘由，对齐 dedup `runExecDelete` 的 errors[] 范式）
 - `importWebFilesWithToast(files, onFinally)`：网页版导入，经 `importWebFiles` 直写 IndexedDB
 - `_inFlight: Set<string>`：per-file/folder 在途去重，键含 `name+size+lastModified` 防同名不同源误判
+- **quiet 批量（锐评 UX #2，2026-10-14）**：`ImportOpts { quiet }` 关闭逐条 toast，批导入由调用方出「N 成功 M 失败 X 跳过」一条汇总（拖 50 文件原本 = 50 条连珠炮）。`import-dnd.ts` 的 `handleTreeDrop` 是唯一 quiet 消费方；三态区分「跳过」（ysm.json 引导/超限/inFlight 拦截）vs「失败」，跳过不计入 `failed`
 
 ### import-dnd.ts（仓库页拖拽）
 
@@ -128,7 +129,7 @@ status: active
 
 ## 对外 API / 入口
 
-- import-executor 导出：`directImport`、`importFolder`、`executeCollected`、`importWebFilesWithToast`
+- import-executor 导出：`directImport`、`importFolder`、`executeCollected`、`importWebFilesWithToast`、`createImportSession`、类型 `ImportResult`/`ImportBatchResult`/`ImportOutcome`/`ImportOpts`
 - import-dnd 导出：`handleTreeDrop`、`bindTreeDnD`
 - dnd-shared 导出：`shouldEnterForm`、`groupCollected`、`collectDropFiles`、`fileToBase64`、`buildFolderItems`、类型 `CollectedEntry`/`FolderGroup`；`isSupportedFile`/`isImportableFile`/`getExt` 在 `utils/resource/importable.ts`、`isEditableTarget` 在 `utils/dom/editable-target.ts`
 - dnd-collector 导出：`collectFiles`、类型 `CollectedFile`

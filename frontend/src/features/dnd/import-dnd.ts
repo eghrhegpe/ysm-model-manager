@@ -97,11 +97,25 @@ export async function handleTreeDrop(
     );
 
     const total = collected.length;
-    const r = await executeCollected(collected, rtype);
-    logDrop(`drop: 导入完成 folders=${r.folders} singles=${r.singles}`);
+    // quiet 批量：逐条 toast 收拢为「N 成功 M 失败」一条汇总（对接锐评 UX #2 收口，
+    // 2026-10-14）——拖 50 文件不该 50 条连珠炮，失败要能点名（前 3 条缘由）
+    const r = await executeCollected(collected, rtype, { quiet: true });
+    logDrop(
+      `drop: 导入完成 folders=${r.folders} singles=${r.singles} imported=${r.imported} failed=${r.failed} skipped=${r.skipped}`,
+    );
     if (r.folders === 0 && r.singles === 0 && total > 0) {
       logDrop("drop: execute 返回 0 成功但 total>0（全部被 filter 过滤）");
       toast(`📂 ${t("import.noSupportedFiles")}（${DROP_EXTS_STR}）`, TOAST_MS.normal, "info");
+    } else if (r.imported > 0 || r.failed > 0 || r.skipped > 0) {
+      const parts: string[] = [`${t("import.success")}: ${r.imported}`];
+      if (r.failed > 0) parts.push(`${t("import.failed")}: ${r.failed}`);
+      if (r.skipped > 0) parts.push(t("import.skippedCount", { n: r.skipped }));
+      const errorsHint = r.errors.length > 0 ? `（${r.errors.join("；")}）` : "";
+      toast(
+        `📂 ${parts.join("，")}${errorsHint}`,
+        r.failed > 0 ? TOAST_MS.verbose : TOAST_MS.info,
+        r.failed > 0 ? "warn" : "success",
+      );
     }
   } finally {
     setBusy(false);

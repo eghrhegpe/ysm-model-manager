@@ -182,6 +182,49 @@ describe("executeCollected — 静默导入入口", () => {
     expect(mocks.ImportModelFile).not.toHaveBeenCalled();
     off();
   });
+
+  // 锐评 UX #2（2026-10-14）：批导入汇总返回 imported/failed/skipped + 前 3 条失败缘由，
+  // 供调用方出「N 成功 M 失败」一条 toast（避免拖 50 文件 = 50 条连珠炮）
+  it("汇总：3 单文件 2 成功 1 失败 → imported=2 failed=1 errors 含 IO_ERROR", async () => {
+    mocks.ImportModelFile.mockImplementation(async (name: string) => {
+      if (name === "坏.ysm") throw new Error("IO_ERROR");
+    });
+    const r = await executeCollected(
+      [
+        { file: mkFile("好1.ysm"), relPath: "好1.ysm" },
+        { file: mkFile("好2.ysm"), relPath: "好2.ysm" },
+        { file: mkFile("坏.ysm"), relPath: "坏.ysm" },
+      ],
+      "",
+      { quiet: true },
+    );
+    expect(r.imported).toBe(2);
+    expect(r.failed).toBe(1);
+    expect(r.skipped).toBe(0);
+    expect(r.errors).toEqual([expect.stringContaining("IO_ERROR")]);
+  });
+
+  it("汇总：ysm.json 单文件 → skipped（非失败，不计入 failed）", async () => {
+    const r = await executeCollected(
+      [{ file: mkFile("ysm.json"), relPath: "ysm.json" }],
+      "",
+      { quiet: true },
+    );
+    expect(r.imported).toBe(0);
+    expect(r.failed).toBe(0);
+    expect(r.skipped).toBe(1);
+    expect(mocks.ImportModelFile).not.toHaveBeenCalled();
+  });
+
+  it("quiet 模式不弹逐条 toast（批导入由调用方出汇总）", async () => {
+    const toasts: Array<{ msg: unknown; type?: unknown }> = [];
+    const off = bus.on("toast:show", (p) => toasts.push(p));
+    await executeCollected([{ file: mkFile("模型.ysm"), relPath: "模型.ysm" }], "", {
+      quiet: true,
+    });
+    expect(toasts).toHaveLength(0);
+    off();
+  });
 });
 
 describe("directImport — 在途去重 / 失败释放（陷阱 #3）", () => {

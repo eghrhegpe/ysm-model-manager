@@ -298,6 +298,7 @@ export const ja: Record<string, string> = {
   "import.date": "日付",
   "import.queue": "キュー",
   "import.noSupportedFiles": "対応するモデルファイルが見つかりません",
+  "import.skippedCount": "{n} 件スキップ",
   "import.busyImporting": "インポート中です。しばらくお待ちください",
   "import.fileTooLargeSkipped": "「{name}」は{mb}MB上限を超えているためスキップしました",
   "import.processError": "インポート処理エラー。再試行してください",

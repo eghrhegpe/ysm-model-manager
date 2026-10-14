@@ -26,6 +26,35 @@ function assertNever(x: never): never {
   throw new Error(`Unexpected value: ${String(x)}`);
 }
 
+/** terminate 单个 worker（幂等：已终止不抛） */
+function safeTerminateWorker(w: Worker): void {
+  try {
+    w.terminate();
+  } catch {
+    /* 已终止 */
+  }
+}
+
+/** 重建第 i 位死实例并重新接线（onmessage/onerror 委托回桥），重建后清记账 */
+function rebuildOneWorker<Resp>(
+  createWorker: () => Worker,
+  workers: Worker[],
+  deadWorkers: Set<Worker>,
+  i: number,
+  onMessage: (resp: Resp) => void,
+  onError: (w?: Worker) => void,
+): void {
+  const dead = workers[i];
+  safeTerminateWorker(dead);
+  const replacement = createWorker();
+  replacement.onmessage = (e: MessageEvent<Resp>) => onMessage(e.data);
+  // 替补的 onerror 接线在**这里**（createWorker 返回裸实例）——
+  // 须传实例：不传则替补二次崩溃走无参分支「全体标记 → 全池连坐」，把池语义修复绕开。
+  replacement.onerror = () => onError(replacement);
+  workers[i] = replacement;
+  deadWorkers.delete(dead);
+}
+
 export interface WorkerBridge<Req extends { id: number }, Resp, Ok> {
   /** 发请求（内部注入 id 并 round-robin 选 worker），返回结算 Promise */
   request: (reqWithoutId: Omit<Req, "id">, transfer?: Transferable[]) => Promise<Ok>;
@@ -133,13 +162,7 @@ export function createWorkerBridge<Req extends { id: number }, Resp, Ok>(
   }
 
   function terminatePool(): void {
-    for (const w of workers) {
-      try {
-        w.terminate();
-      } catch {
-        /* 已终止 */
-      }
-    }
+    for (const w of workers) safeTerminateWorker(w);
     for (const [id] of pending) {
       settleError(id, onWorkerError === "terminatePool" ? "KTX2 worker 终止" : "Worker 已终止");
     }
@@ -183,19 +206,14 @@ export function createWorkerBridge<Req extends { id: number }, Resp, Ok>(
     if (!opts.createWorker) return;
     for (let i = 0; i < workers.length; i++) {
       if (!deadWorkers.has(workers[i])) continue; // 健康实例不动（故障隔离）
-      const dead = workers[i];
-      try {
-        dead.terminate();
-      } catch {
-        /* 已崩溃 */
-      }
-      const replacement = opts.createWorker();
-      replacement.onmessage = (e: MessageEvent<Resp>) => handleMessage(e.data);
-      // [2026-10-12 同族变体收口] 替补的 onerror 接线在**这里**（createWorker 返回裸实例）——
-      // 须传实例：不传则替补二次崩溃走无参分支「全体标记 → 全池连坐」，把池语义修复绕开。
-      replacement.onerror = () => handleWorkerError(replacement);
-      workers[i] = replacement;
-      deadWorkers.delete(dead);
+      rebuildOneWorker(
+        opts.createWorker,
+        workers,
+        deadWorkers,
+        i,
+        handleMessage,
+        handleWorkerError,
+      );
     }
   }
 

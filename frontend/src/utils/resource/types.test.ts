@@ -120,14 +120,16 @@ describe("GEOMETRY_SEARCHABLE_TYPES 派生集（JSON geometrySearchable 声明 �
     expect([...GEOMETRY_SEARCHABLE_TYPES].sort()).toEqual([...declared].sort());
   });
 
-  it("ysm / maid-model 在列（几何载体：.ysm WASM 解码 + 归档 Bedrock-JSON 管线）", () => {
+  it("ysm / maid-model / EntityPlayer / SceneModel 在列（全形态 = .ysm WASM + 归档 Bedrock-JSON 管线；MMD 弱形态 = 统计级骨骼+纹理，ADR-346 起 cube 诚实零值）", () => {
     expect(GEOMETRY_SEARCHABLE_TYPES.has("ysm")).toBe(true);
     expect(GEOMETRY_SEARCHABLE_TYPES.has("maid-model")).toBe(true);
+    expect(GEOMETRY_SEARCHABLE_TYPES.has("EntityPlayer")).toBe(true);
+    expect(GEOMETRY_SEARCHABLE_TYPES.has("SceneModel")).toBe(true);
   });
 
-  it("无几何管线的 MMD 类型不入列（门控目标；门控判据同源 JSON，前端不判定）", () => {
-    expect(GEOMETRY_SEARCHABLE_TYPES.has("EntityPlayer")).toBe(false);
-    expect(isGeometrySearchableRtype("EntityPlayer")).toBe(false);
+  it("无 geometrySearchable 声明的类型不入列（门控目标；门控判据同源 JSON，前端不判定）", () => {
+    expect(GEOMETRY_SEARCHABLE_TYPES.has("resourcepack")).toBe(false);
+    expect(isGeometrySearchableRtype("resourcepack")).toBe(false);
     expect(isGeometrySearchableRtype("ysm")).toBe(true);
   });
 });

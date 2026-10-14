@@ -235,6 +235,8 @@
       "instanceLevel": false,
       "preview": "3d",
       "detector": "zipentry",
+      "geometrySearchable": true,
+      "statsParser": "mmd",
       "zipEntries": [
         {
           "name": ".pmx",
@@ -289,6 +291,8 @@
       "instanceLevel": false,
       "preview": "3d",
       "detector": "zipentry",
+      "geometrySearchable": true,
+      "statsParser": "mmd",
       "zipEntries": [
         {
           "name": ".pmx",

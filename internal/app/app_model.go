@@ -19,6 +19,7 @@ import (
 	"ysm-model-manager/go/conc"
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/geometry"
+	"ysm-model-manager/go/geometry/mmd"
 	"ysm-model-manager/go/threejs"
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/types/registry"
@@ -281,6 +282,44 @@ func (a *App) analyzeBedrockModelUncached(modelPath string) types.BedrockModel {
 		geoJSON.Animations = animJSONs
 	}
 	return *geoJSON
+}
+
+// AnalyzeMmdStats MMD 统计级解析（ADR-346 刀 2）：PMX/PMD 骨骼数 + 纹理尺寸
+// （cube 无 MMD 语义，BedrockModel.CubeCount 恒 0 诚实零值——数值条件 cube 过滤
+// 天然筛掉 MMD 条目，UI 提示层说明）。与 AnalyzeBedrockModel 同构：路径守卫
+// （剥禁用后缀 + isPathInRootOrSelf，Wails 绑定面可传任意路径）+ geoCache 同键复用
+// （文件指纹变则重算；两类统计结果共享一个 path→BedrockModel 缓存，互不污染）。
+func (a *App) AnalyzeMmdStats(modelPath string) types.BedrockModel {
+	modelPath = registry.StripDisableSuffix(modelPath)
+	if !a.isPathInRootOrSelf(modelPath) {
+		return types.BedrockModel{}
+	}
+	return a.ensureGeoCache().Get(modelPath, func() types.BedrockModel {
+		ext := strings.ToLower(filepath.Ext(modelPath))
+		stats, err := mmd.ParseStats(modelPath, ext)
+		if err != nil {
+			// 解析失败 = 零值（数值条件下被排除，与 Bedrock 管线「未解析出几何」同语义）
+			log.Printf("[mmd-stats] 统计解析失败 %s: %v", modelPath, err)
+			return types.BedrockModel{}
+		}
+		return types.BedrockModel{
+			BoneCount: stats.BoneCount,
+			TexWidth:  stats.TexWidth,
+			TexHeight: stats.TexHeight,
+		}
+	})
+}
+
+// analyzeEntryForSearch SearchModels 分析阶段按类型分流（ADR-343 刀 2 + ADR-346）：
+// 类型声明 statsParser=mmd 且扩展名在 MMD 统计器能力内 → 统计级解析；
+// 其余几何系条目（ysm/maid-model 默认 Bedrock 管线）走 AnalyzeBedrockModel。
+// 未声明 statsParser 的条目不会进数值路径（IsGeometrySearchableID 门控在上游），
+// 此函数只服务已通过分流的候选。
+func (a *App) analyzeEntryForSearch(entry types.ModelEntry) types.BedrockModel {
+	if registry.StatsParserFor(entry.Type) == "mmd" && mmd.CanParse(entry.Ext) {
+		return a.AnalyzeMmdStats(entry.Path)
+	}
+	return a.AnalyzeBedrockModel(entry.Path)
 }
 
 // AnalyzeBedrockModelEntry 按 SubModel.SourcePath 只解析归档内单模型 geometry（多角色包角色切换用）。

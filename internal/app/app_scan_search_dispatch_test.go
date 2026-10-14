@@ -126,3 +126,86 @@ func TestSearchModels_Numeric_ExcludesNonGeometryType(t *testing.T) {
 		t.Errorf("ysm 条目 Type 应为 ysm，got %q", got)
 	}
 }
+
+// ===== MMD 数值搜索端到端（ADR-346 刀 2：统计级解析接进 SearchModels 数值路径）=====
+
+// writePmxStatsFixture 造一个统计级可解析的 PMX（bone_count 头声明 + texsize 直读）
+func writePmxStatsFixture(t *testing.T, dir, name string, bones int) string {
+	t.Helper()
+	doc := `<?xml version="1.0" encoding="utf-8"?>` +
+		`<model bone_count="` + itoaPmx(bones) + `" vertex_count="1">` +
+		`<name>` + name + `</name><meta></meta>` +
+		`<bone></bone><material><name>m</name></material>` +
+		`<texture><name>t0</name><texsize>64,64</texsize></texture>` +
+		`</model>`
+	p := filepath.Join(dir, name+".pmx")
+	if err := os.WriteFile(p, []byte(doc), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return p
+}
+
+func itoaPmx(n int) string {
+	if n == 0 {
+		return "0"
+	}
+	s := ""
+	for n > 0 {
+		s = string(rune('0'+n%10)) + s
+		n /= 10
+	}
+	return s
+}
+
+// TestSearchModels_MmdStatsNumeric：MMD 族条目进数值路径（统计级：骨骼+纹理可用，
+// cube 恒 0 诚实值——cube 条件天然筛掉 MMD；无数值条件时全量直通不解析）
+func TestSearchModels_MmdStatsNumeric(t *testing.T) {
+	base := t.TempDir()
+	epDir := filepath.Join(base, "3d-skin", "EntityPlayer")
+	if err := os.MkdirAll(epDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	ysmRoot := filepath.Join(base, "ysm", "models")
+	if err := os.MkdirAll(ysmRoot, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writePmxStatsFixture(t, epDir, "miku", 4)
+	writeYsmModelFixture(t, ysmRoot, "hero", 5)
+
+	a := scanApp(t, types.AppConfig{FilesRoot: base})
+
+	// 无数值条件：直通（MMD 零值几何，不解析不蒸发）
+	results := a.SearchModels(base, types.SearchFilters{})
+	if len(results) != 2 {
+		t.Fatalf("无过滤应返回 2 条，got %d", len(results))
+	}
+	for _, r := range results {
+		if r.Name == "miku.pmx" && (r.BoneCount != 0 || r.Type != "EntityPlayer") {
+			t.Errorf("直通路径 MMD 条目应零值 + Type=EntityPlayer，got %+v", r)
+		}
+	}
+
+	// minBones=2：MMD 统计级解析命中（bone=4 ≥ 2）+ ysm 命中（bone=5）
+	results = a.SearchModels(base, types.SearchFilters{MinBones: 2})
+	if len(results) != 2 {
+		t.Fatalf("minBones=2 应命中 2 条（mmd 4 骨 + ysm 5 骨），got %+v", results)
+	}
+	var miku *types.SearchResult
+	for i := range results {
+		if results[i].Name == "miku.pmx" {
+			miku = &results[i]
+		}
+	}
+	if miku == nil {
+		t.Fatalf("minBones=2 结果缺 miku（MMD 统计级解析未生效），got %+v", results)
+	}
+	if miku.BoneCount != 4 || miku.TexWidth != 64 || miku.CubeCount != 0 {
+		t.Errorf("MMD 统计结果 = %+v，期望 bone=4 tex=64 cube=0（cube 诚实零值）", miku)
+	}
+
+	// minCubes=1：MMD cube=0 被筛（诚实排除），ysm（cube=5）留
+	results = a.SearchModels(base, types.SearchFilters{MinCubes: 1})
+	if len(results) != 1 || results[0].Name != "hero" {
+		t.Fatalf("minCubes=1 应只留 ysm（MMD cube 零值诚实排除），got %+v", results)
+	}
+}

@@ -209,10 +209,10 @@ describe("modalAdvFilter — Enter 提交", () => {
 });
 
 describe("modalAdvFilter — 数值条件门控（geometrySearchable，2026-10-14 锐评 P1 A 案）", () => {
-  it("无几何管线的 rtype → 6 数值输入禁用 + 提示行 + 预填数值剥离 + 提交归 null", async () => {
+  it("无几何管线的 rtype → 6 数值输入禁用 + 提示行 + 预填数值剥离 + 提交归 null（ADR-346 起 MMD 族弱形态入列，门控用例改用 resourcepack）", async () => {
     const { overlay, minBones, pending } = await open({
       value: { keyword: "a", minBones: 3 },
-      rtype: "EntityPlayer",
+      rtype: "resourcepack",
     });
     const hint = overlay.querySelector("#afv-numeric-hint") as HTMLElement;
     expect(hint.hidden).toBe(false);

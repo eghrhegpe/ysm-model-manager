@@ -76,6 +76,19 @@ func IsGeometrySearchableID(id string) bool {
 	return rt != nil && rt.GeometrySearchable
 }
 
+// StatsParserFor 返回某资源类型声明的数值统计解析器（StatsParser 声明的 Go 侧单点出口，
+// ADR-346）："" = 默认 Bedrock 管线（ysm/maid-model）；"mmd" = go/geometry/mmd
+// 统计级解析（PMX/PMD 骨骼数 + 纹理尺寸，cube 诚实零值）。
+// 消费方：SearchModels 分析阶段按 entry.Type 分流（internal/app/app_model.go）。
+// id 大小写变体经 resolveRegistryType 归一。
+func StatsParserFor(id string) string {
+	rt := resolveRegistryType(id)
+	if rt == nil {
+		return ""
+	}
+	return rt.StatsParser
+}
+
 // ModKeywordsFor 从注册表查询资源类型的 mod 文件名关键词（ADR-110）：
 //   - 类型自身有 mod.jarKeywords → 返回
 //   - 类型无声明但所属组有 → 返回组的关键词（组级回退）

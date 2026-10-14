@@ -151,7 +151,7 @@ func searchModelsUnanalyzed(entries []types.ModelEntry) []types.SearchResult {
 func (a *App) searchModelsSequential(entries []types.ModelEntry, minBones, maxBones, minCubes, maxCubes, minTex, maxTex int) []types.SearchResult {
 	var results []types.SearchResult
 	for _, entry := range entries {
-		model := a.AnalyzeBedrockModel(entry.Path)
+		model := a.analyzeEntryForSearch(entry)
 		if !modelMatchesFilters(model, minBones, maxBones, minCubes, maxCubes, minTex, maxTex) {
 			continue
 		}
@@ -173,7 +173,7 @@ func (a *App) searchModelsSequential(entries []types.ModelEntry, minBones, maxBo
 func (a *App) searchModelsConcurrent(entries []types.ModelEntry, minBones, maxBones, minCubes, maxCubes, minTex, maxTex int) []types.SearchResult {
 	return runConcurrentAnalyze(a.ctxOrBackground(), len(entries), func(i int) *types.SearchResult {
 		entry := entries[i]
-		model := a.AnalyzeBedrockModel(entry.Path)
+		model := a.analyzeEntryForSearch(entry)
 		if !modelMatchesFilters(model, minBones, maxBones, minCubes, maxCubes, minTex, maxTex) {
 			return nil
 		}

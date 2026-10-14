@@ -52,6 +52,7 @@ type ResourceType struct {
 	Detector           string          `json:"detector"`                     // "ysm" / "mcmeta" / "shader" / "zipentry" / "extension"
 	CliAnalyzable      bool            `json:"cliAnalyzable"`                // CLI（go/cli benchmark 等）是否有该类型的解析链路；单一事实源=本 JSON，2026-09 起 perfTypeManifest 不再持有（前端目标集选择器同源消费）
 	GeometrySearchable bool            `json:"geometrySearchable,omitempty"` // 几何分析管线（AnalyzeBedrockModel/geoCache，SearchModels 数值条件）可解析该类型条目；单一事实源=本 JSON（2026-10-14 锐评 P1 修复：前端 adv-filter 数值区按此声明展示门控；未来跨类型搜索分流判据同源）
+	StatsParser        string          `json:"statsParser,omitempty"`        // 数值统计解析器（ADR-346）："" = 默认 Bedrock 管线（ysm/maid-model）；"mmd" = go/geometry/mmd 统计级（PMX/PMD 骨骼+纹理，cube 诚实零值）；消费方 = SearchModels 分析阶段分流
 	ConfigField        string          `json:"configField"`                  // AppConfig 字段名（如 YsmRoot）
 	ConfigFallback     string          `json:"configFallback"`               // AppConfig 回退字段名（如 VrcRoot→MmdRoot）
 	IsDir              bool            `json:"isDir"`                        // 目录型资源（删除/同步整目录）

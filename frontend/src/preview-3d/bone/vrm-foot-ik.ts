@@ -31,7 +31,7 @@
 import * as THREE from "three";
 import type { BoneTree } from "./bone-tools.ts";
 import { type IKConfig, solveIK } from "./ik-solver.ts";
-import { extractLegChains } from "./leg-chain.ts";
+import { extractLegChains, type LegChain } from "./leg-chain.ts";
 import type { SemanticBoneMap } from "./semantic-bones.ts";
 
 /**
@@ -109,6 +109,64 @@ interface Leg {
   toeRestWorld: THREE.Vector3 | null;
 }
 
+/** 从 LegChain 构建 Leg 配置（含脚尖链与静止世界快照） */
+function buildLegConfig(
+  leg: LegChain,
+  boneTree: BoneTree | null,
+  semanticBones: SemanticBoneMap | undefined,
+): Leg {
+  const restWorld = new THREE.Vector3();
+  leg.endEffector.getWorldPosition(restWorld);
+  // 脚尖链：踝 → toes 语义骨（模型缺 toes / 父子关系不符 → null，v1 行为不变）。
+  // solveIK 遍历 j>=1 跳过链根 ⇒ 链根取踝，旋转全部落在脚尖关节（踝锚定）。
+  const toesEntry = semanticBones?.[leg.side === "left" ? "leftToes" : "rightToes"];
+  let toeChain: THREE.Object3D[] | null = null;
+  let toeRestWorld: THREE.Vector3 | null = null;
+  if (toesEntry?.object) {
+    const toesNode = boneTree?.byId.get(toesEntry.id);
+    // 防乱挂：toes 的 parent 必须就是踝（MMD/VRM 通例），否则跳过不猜
+    const ankleNode = boneTree?.byId.get(leg.endEffectorId ?? "");
+    if (toesNode?.object && ankleNode && toesNode.parentId === ankleNode.id) {
+      toeChain = [leg.endEffector, toesNode.object];
+      toeRestWorld = new THREE.Vector3();
+      toesNode.object.getWorldPosition(toeRestWorld);
+    }
+  }
+  return {
+    side: leg.side,
+    chain: leg.chain,
+    restWorld,
+    // Leg 契约要求 toeChain/toeRestWorld 必在（可为 null）——缺脚趾链的腿填 null，
+    // 不用条件 spread（产物类型变 optional 字段，赋给 Leg 报类型错）
+    toeChain,
+    toeRestWorld,
+  };
+}
+
+/** 对单条腿求解 FK + 脚尖 IK */
+function solveLeg(
+  leg: Leg,
+  timeSeconds: number,
+  targets: FootIKSamplers,
+  offset: THREE.Vector3,
+  target: THREE.Vector3,
+): void {
+  const sampler = targets[leg.side];
+  if (!sampler) return;
+  // ADR-309 D4（锐评 P4）：IK 开关时间轴——MMD 侧该骨 IK 关闭的段落，
+  // CCD 跳过该侧（足回到 FK 自然位，与 MMD 关 IK 时表现一致）
+  if (sampler.isEnabled && !sampler.isEnabled(timeSeconds)) return;
+  if (!sampler.sample(timeSeconds, offset)) return;
+  target.copy(leg.restWorld).add(offset);
+  solveIK(leg.chain, target, IK_CONFIG);
+  // 脚尖链：目标 = 脚尖静止世界 + 同一偏移（つま先ＩＫ 与 足ＩＫ 共享同一 IK 目标，
+  // MMD 源模型里 つま先ＩＫ 也是足ＩＫ 的子关节，位移源一致）
+  if (leg.toeChain && leg.toeRestWorld) {
+    target.copy(leg.toeRestWorld).add(offset);
+    solveIK(leg.toeChain, target, TOE_IK_CONFIG);
+  }
+}
+
 /**
  * 创建足 IK 控制器。
  *
@@ -122,32 +180,7 @@ export function createVrmFootIKController(
 ): VrmFootIKController {
   const legs: Leg[] = [];
   for (const leg of extractLegChains(boneTree, semanticBones)) {
-    const restWorld = new THREE.Vector3();
-    leg.endEffector.getWorldPosition(restWorld);
-    // 脚尖链：踝 → toes 语义骨（模型缺 toes / 父子关系不符 → null，v1 行为不变）。
-    // solveIK 遍历 j>=1 跳过链根 ⇒ 链根取踝，旋转全部落在脚尖关节（踝锚定）。
-    const toesEntry = semanticBones?.[leg.side === "left" ? "leftToes" : "rightToes"];
-    let toeChain: THREE.Object3D[] | null = null;
-    let toeRestWorld: THREE.Vector3 | null = null;
-    if (toesEntry?.object) {
-      const toesNode = boneTree?.byId.get(toesEntry.id);
-      // 防乱挂：toes 的 parent 必须就是踝（MMD/VRM 通例），否则跳过不猜
-      const ankleNode = boneTree?.byId.get(leg.endEffectorId ?? "");
-      if (toesNode?.object && ankleNode && toesNode.parentId === ankleNode.id) {
-        toeChain = [leg.endEffector, toesNode.object];
-        toeRestWorld = new THREE.Vector3();
-        toesNode.object.getWorldPosition(toeRestWorld);
-      }
-    }
-    legs.push({
-      side: leg.side,
-      chain: leg.chain,
-      restWorld,
-      // Leg 契约要求 toeChain/toeRestWorld 必在（可为 null）——缺脚趾链的腿填 null，
-      // 不用条件 spread（产物类型变 optional 字段，赋给 Leg 报类型错）
-      toeChain,
-      toeRestWorld,
-    });
+    legs.push(buildLegConfig(leg, boneTree, semanticBones));
   }
   if (legs.length === 0) return NOOP_CONTROLLER;
 
@@ -158,22 +191,7 @@ export function createVrmFootIKController(
   return {
     apply(timeSeconds: number, targets: FootIKSamplers | null): void {
       if (!targets) return;
-      for (const leg of legs) {
-        const sampler = targets[leg.side];
-        if (!sampler) continue;
-        // ADR-309 D4（锐评 P4）：IK 开关时间轴——MMD 侧该骨 IK 关闭的段落，
-        // CCD 跳过该侧（足回到 FK 自然位，与 MMD 关 IK 时表现一致）
-        if (sampler.isEnabled && !sampler.isEnabled(timeSeconds)) continue;
-        if (!sampler.sample(timeSeconds, offset)) continue;
-        target.copy(leg.restWorld).add(offset);
-        solveIK(leg.chain, target, IK_CONFIG);
-        // 脚尖链：目标 = 脚尖静止世界 + 同一偏移（つま先ＩＫ 与 足ＩＫ 共享同一 IK 目标，
-        // MMD 源模型里 つま先ＩＫ 也是足ＩＫ 的子关节，位移源一致）
-        if (leg.toeChain && leg.toeRestWorld) {
-          target.copy(leg.toeRestWorld).add(offset);
-          solveIK(leg.toeChain, target, TOE_IK_CONFIG);
-        }
-      }
+      for (const leg of legs) solveLeg(leg, timeSeconds, targets, offset, target);
     },
     dispose(): void {
       legs.length = 0;

@@ -171,6 +171,41 @@ func TestPullResources_MixedContainer_NoAncestorDoubleInstall(t *testing.T) {
 	testutil.FileExists(t, filepath.Join(globalDir, "嵌套1", "01_taisho_maid", "ysm.json"), "子模型夹应拉回容器层级")
 }
 
+// TestPushSingleResource_DstDisabled_Refused 目标侧已禁用（customDir/X.disabled 存在、
+// customDir/X 不存在）时不得推送：整夹安装会另建同名活跃副本 → 模型复活 + 同一模型两份
+// （ADR-345 D4）。拒绝优于静默复制，且禁用载体必须毫发无损。
+func TestPushSingleResource_DstDisabled_Refused(t *testing.T) {
+	globalDir, customDir := ysmTestDirs(t)
+	testutil.WriteTestFile(t, filepath.Join(globalDir, "X", "ysm.json"), "{}")
+	testutil.WriteTestFile(t, filepath.Join(customDir, "X.disabled", "ysm.json"), "{}")
+
+	err := PushSingleResource(filepath.Join(globalDir, "X"), customDir, globalDir, "copy", "ysm")
+	testutil.NotNil(t, err, "目标侧处于禁用态时必须拒绝推送（否则另建活跃副本）")
+
+	testutil.FileNotExists(t, filepath.Join(customDir, "X", "ysm.json"), "不得新建活跃副本")
+	testutil.FileExists(t, filepath.Join(customDir, "X.disabled", "ysm.json"), "禁用载体不得被触碰")
+}
+
+// TestPushResources_DstDisabled_NoRevival 批量推送遇「实例侧整夹禁用」时**不得复活**：
+// 单元级解法是禁用载体在 dirLevel 键里与活跃夹同键（relKeyDirLevel 剥尾段后缀）→ 判 Synced
+// → 批量清单里没有它，压根不会去装。故此处断言的是**结果**（不新建活跃副本、不报错），
+// 而非 ErrPartialSync。install 级的 D4 守卫是第二道防线（面板/拖拽/CLI 直接指定路径时命中），
+// 由 TestPushSingleResource_DstDisabled_Refused 覆盖。
+func TestPushResources_DstDisabled_NoRevival(t *testing.T) {
+	base := t.TempDir()
+	globalDir := filepath.Join(base, "ysm")
+	targetDir := filepath.Join(base, "inst", ".minecraft", "config", "yes_steve_model", "custom")
+	testutil.WriteTestFile(t, filepath.Join(targetDir, "X.disabled", "ysm.json"), "{}")
+	testutil.WriteTestFile(t, filepath.Join(globalDir, "X", "ysm.json"), "{}")
+
+	count, err := PushResources("ysm", globalDir, targetDir, "copy", nil)
+	testutil.NoError(t, err, "禁用载体与活跃夹同键 → 无待推送项，不应报错")
+	testutil.Equal(t, count, 0, "不应有安装动作，实际 %d", count)
+
+	testutil.FileNotExists(t, filepath.Join(targetDir, "X", "ysm.json"), "不得新建活跃副本（模型复活）")
+	testutil.FileExists(t, filepath.Join(targetDir, "X.disabled", "ysm.json"), "禁用载体不得被触碰")
+}
+
 // TestDropAncestorUnits 判据单测：仅「其下有更深条目」的祖先被剔除；
 // 兄弟、根层文件、非前缀同名（a 与 ab）必须原样保留。
 func TestDropAncestorUnits(t *testing.T) {

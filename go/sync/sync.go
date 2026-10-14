@@ -18,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/installer"
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/types/registry"
@@ -29,11 +30,14 @@ import (
 // ScanFunc 扫描模型（函数类型，由 app.go 注入）
 type ScanFunc func(dir string) []types.ModelEntry
 
-// toggleFileInfo 实例目录待判文件清单条目（SyncToggleStatus 阶段 1 收集）
+// toggleFileInfo 实例目录待判条目清单（SyncToggleStatus 阶段 1 收集）。
+// isDir（ADR-345 D1）：目录粒度禁用（模型夹 X/ ↔ X.disabled/）的载体是**目录**，
+// 只收文件会让整条目录启禁链在实例侧不可见（探针实证两方向均 0/0/nil 静默失效）。
 type toggleFileInfo struct {
 	path              string
 	isCurrentlyBanned bool
 	actualPath        string
+	isDir             bool
 }
 
 // toggleRenameOp 一条待执行的启禁改名（阶段 3 计划 → 阶段 4 执行）。
@@ -73,7 +77,7 @@ func SyncToggleStatus(instanceCustomDir, filesRoot string, scanFn ScanFunc) (int
 	defer installer.InstallLocker.Unlock()
 	defer InvalidateSyncScanCaches() // 启禁会改实例目录名，清同步扫盘缓存防陈旧
 
-	ops := planToggleRenames(fileInfos, customDirClean, repoName, repoHash, precomputedHashes)
+	ops := planToggleRenames(fileInfos, customDirClean, repoName, repoHash, precomputedHashes, filesRoot)
 	disableCount, enableCount, failures := applyToggleRenames(ops)
 	if len(failures) > 0 {
 		return disableCount, enableCount, fmt.Errorf("同步完成: 成功禁用 %d 启用 %d，失败 %d: %s",
@@ -117,7 +121,11 @@ func collectToggleRepoIndex(filesRoot, instanceCustomDir string, scanFn ScanFunc
 	return repoHash, repoName, collectToggleFileInfos(instanceCustomDir), nil
 }
 
-// collectToggleFileInfos 遍历实例目录收集待判文件路径（不计算哈希）。
+// collectToggleFileInfos 遍历实例目录收集待判条目（不计算哈希）。
+// 除文件外**还收目录**（ADR-345 D1）：目录级禁用载体（`X.disabled/`）必须成为候选，
+// 否则仓库侧禁用/启用整夹时实例侧永远匹配不上（探针实证 0/0/nil）。载体登记后
+// `SkipDir` 不再下钻——改的是这个目录本身，改名会搬走整棵子树，下钻产生的文件候选
+// 路径在改名后立即失效。
 // WalkDir 仅用于遍历，遍历中途错误已在回调内逐条 log 并跳过；
 // 返回值仅反映「回调是否主动中断」，本处回调恒返回 nil，故 best-effort 丢弃。
 func collectToggleFileInfos(instanceCustomDir string) []toggleFileInfo {
@@ -127,16 +135,41 @@ func collectToggleFileInfos(instanceCustomDir string) []toggleFileInfo {
 			log.Printf("[sync] WalkDir 错误 %s: %v", p, err)
 			return nil
 		}
-		if d.IsDir() {
-			return nil
-		}
 		// 逐段判定（对齐 fsutil.IsRecycleDir/download.stripRecycleSegments 口径）：
 		if hasRecycleSegment(p) {
+			if d.IsDir() {
+				return filepath.SkipDir
+			}
 			return nil
 		}
 		// relink 备份尸体同样剔除（ADR-296 D3）：尸体哈希匹配仓库原件，
 		// 不跳则对备份目录内的模型做 .disabled 改名，污染恢复点
 		if isRelinkBackupPath(p) {
+			if d.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if d.IsDir() {
+			if p == instanceCustomDir {
+				return nil // 根目录自身不是单元
+			}
+			isBanned := registry.IsDisableSuffix(d.Name())
+			actualPath := p
+			if isBanned {
+				actualPath = registry.StripDisableSuffix(p)
+			}
+			// 目录粒度候选：活跃目录与禁用载体都发出（活跃目录可能"应该"被禁用），
+			// 真值由阶段 3 探测仓库侧同路径的活跃/载体形态决定。
+			fileInfos = append(fileInfos, toggleFileInfo{
+				path:              p,
+				isCurrentlyBanned: isBanned,
+				actualPath:        actualPath,
+				isDir:             true,
+			})
+			if isBanned {
+				return filepath.SkipDir
+			}
 			return nil
 		}
 		actualPath := p
@@ -183,33 +216,45 @@ func precomputeRelKeyMissHashes(fileInfos []toggleFileInfo, customDirClean strin
 }
 
 // planToggleRenames 是 SyncToggleStatus 阶段 3：按 relKey（路径对应）→ 哈希（内容对应）
-// → 纯文件名兜底 的顺序判定每个实例文件的目标启禁态，产出待执行改名计划。
+// → 纯文件名兜底 的顺序判定每个实例**文件**的目标启禁态；**目录**候选另走仓库文件系统探测
+// （ADR-345 D1：scanner 按 ADR-038 D3.7 对禁用目录 SkipDir，仓库索引里根本没有禁用夹，
+// 故目录粒度不能用索引判真值——改为探测 repoRoot/<rel> 与 repoRoot/<rel>+后缀，
+// 恰好一侧存在才判 matched）。产出待执行改名计划。
 // 只读盘（os.Stat 目标存在性预检）不改名——阶段 4 才动盘，使目录结构在执行期内稳定。
 // 调用方须持 installer.InstallLock（本函数不自行加锁，避免 sync.Mutex 重入死锁）。
 func planToggleRenames(fileInfos []toggleFileInfo, customDirClean string,
-	repoName, repoHash map[string]bool, precomputedHashes map[string]string) []toggleRenameOp {
+	repoName, repoHash map[string]bool, precomputedHashes map[string]string, repoRoot string) []toggleRenameOp {
 	var ops []toggleRenameOp
 	for _, fi := range fileInfos {
 		p := fi.path
 		var shouldBeBanned bool
 		var matched bool
 		pLower := strings.ToLower(p)
-		if strings.HasPrefix(pLower, customDirClean) {
-			// relKey 匹配（带文件夹限定）
-			rel := strings.TrimPrefix(pLower, customDirClean)
-			rel = registry.StripDisableSuffix(rel)
-			shouldBeBanned, matched = repoName[rel]
-		}
-		if !matched {
-			hash := precomputedHashes[p]
-			if hash != "" {
-				shouldBeBanned, matched = repoHash[hash]
+		if fi.isDir {
+			// 目录粒度：rel 的尾段就是载体名（载体不下钻，不会出现「祖先带后缀」的 rel）
+			rel := strings.ToLower(filepath.Base(fi.actualPath))
+			if strings.HasPrefix(pLower, customDirClean) {
+				rel = registry.StripDisableSuffix(strings.TrimPrefix(pLower, customDirClean))
 			}
-		}
-		if !matched {
-			// fallback：纯文件名（旧仓库或同名不同路径的特例）
-			baseName := strings.ToLower(filepath.Base(fi.actualPath))
-			shouldBeBanned, matched = repoName[baseName]
+			shouldBeBanned, matched = dirToggleDecision(repoRoot, rel)
+		} else {
+			if strings.HasPrefix(pLower, customDirClean) {
+				// relKey 匹配（带文件夹限定）
+				rel := strings.TrimPrefix(pLower, customDirClean)
+				rel = registry.StripDisableSuffix(rel)
+				shouldBeBanned, matched = repoName[rel]
+			}
+			if !matched {
+				hash := precomputedHashes[p]
+				if hash != "" {
+					shouldBeBanned, matched = repoHash[hash]
+				}
+			}
+			if !matched {
+				// fallback：纯文件名（旧仓库或同名不同路径的特例）
+				baseName := strings.ToLower(filepath.Base(fi.actualPath))
+				shouldBeBanned, matched = repoName[baseName]
+			}
 		}
 		if !matched || shouldBeBanned == fi.isCurrentlyBanned {
 			continue
@@ -231,6 +276,30 @@ func planToggleRenames(fileInfos []toggleFileInfo, customDirClean string,
 		ops = append(ops, toggleRenameOp{src: p, dst: newPath})
 	}
 	return ops
+}
+
+// dirToggleDecision 探测仓库侧某相对路径的启禁真值（ADR-345 D1）：
+//   - 活跃形态存在、禁用载体不存在 → (false, true)：实例侧该目录应为活跃
+//   - 活跃形态不存在、禁用载体存在 → (true, true)：实例侧该目录应为禁用
+//   - 两者并存 / 都不存在 → (false, false)：**保守不动作**（并存是用户残留，猜错就是数据事故；
+//     不存在说明仓库没有这个单元，无权改实例）
+//
+// 载体后缀走 fsutil.DisabledCounterpart（后缀表归 registry，含历史 .ban 兼容）。
+func dirToggleDecision(repoRoot, rel string) (banned bool, matched bool) {
+	if repoRoot == "" || rel == "" {
+		return false, false
+	}
+	active := filepath.Join(repoRoot, filepath.FromSlash(rel))
+	_, activeErr := os.Stat(active)
+	carrier, carrierOK := fsutil.DisabledCounterpart(active)
+	if activeErr == nil && !carrierOK {
+		return false, true
+	}
+	if activeErr != nil && carrierOK {
+		_ = carrier
+		return true, true
+	}
+	return false, false
 }
 
 // applyToggleRenames 是 SyncToggleStatus 阶段 4：统一执行改名（目录结构已稳定，无竞态）。

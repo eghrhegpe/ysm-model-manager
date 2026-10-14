@@ -54,18 +54,10 @@ func PushResources(rtype, globalDir, targetDir, linkMode string, logger Logger) 
 			if stErr == nil && !fi.IsDir() {
 				err = installer.InstallLocked(missing, targetDir, globalDir, linkMode)
 			} else {
-				// 多层物理路径：用 InstallDirRel 保留仓库层级结构
-				// 例如 missing=globalDir/vendor/character/modelA → targetDir/vendor/character/modelA
-				rel, relErr := paths.RelInside(globalDir, missing)
-				// rel == "."（missing == globalDir——目录根本身是模型文件夹）
-				// 也回退 InstallDir（InstallDirRel 的 rel=="." 拒绝会静默推送失败——与旧
-				// 行为一致：basename 落位）；relErr 覆盖 Rel 失败与 ".." 越界（收敛 #19）
-				if relErr != nil || rel == "." {
-					// 越界/等值回退到 InstallDir 原语义（basename 落位）
-					err = installer.InstallDirLocked(missing, targetDir, globalDir, linkMode, rtype)
-				} else {
-					err = installer.InstallDirRelLocked(missing, targetDir, filepath.ToSlash(rel), globalDir, linkMode, rtype)
-				}
+				// 多层物理路径 + 根级拒绝 + 目标禁用孪生拒绝：落位判定全仓单点
+				// （installDirUnitLocked，ADR-344 D3 + ADR-345 D4）——此前这里自带第三份
+				// 「rel 计算 + basename 回退」，与本函数外的单条推送路径判定漂移。
+				err = installDirUnitLocked(missing, targetDir, globalDir, linkMode, rtype)
 			}
 			if err == nil {
 				count++
@@ -321,6 +313,17 @@ func installDirUnitLocked(dir, customDir, globalDir, linkMode, rtype string) err
 			Code: types.ErrInvalidPath, Operation: "推送资源", SourcePath: dir,
 			Reason:     "根级目录级安装入口被拒绝（源目录是仓库根，整仓推送会污染整合包）",
 			Suggestion: "请将模型放入仓库子文件夹后再推送",
+		}
+	}
+	// 目标侧禁用孪生拒绝（ADR-345 D4）：实例把该模型整夹禁用了（customDir/X.disabled），
+	// 此时整夹安装会另建同名活跃副本（模型复活 + 同一模型两份），且用户禁用意图被静默推翻。
+	// 拒绝并给可执行建议——启用该单元走 toggle（ADR-345 D1 已支持目录粒度）。
+	dst := filepath.Join(customDir, filepath.FromSlash(rel))
+	if alt, ok := fsutil.DisabledCounterpart(dst); ok {
+		return types.AppError{
+			Code: types.ErrInvalidPath, Operation: "推送资源", SourcePath: dir,
+			Reason:     "整合包中该模型处于禁用态（" + filepath.Base(alt) + "），推送会另建同名活跃副本",
+			Suggestion: "请在仓库侧调整该模型的启禁状态以同步到整合包，或手动改名后再推送",
 		}
 	}
 	return installer.InstallDirRelLocked(dir, customDir, filepath.ToSlash(rel), globalDir, linkMode, rtype)

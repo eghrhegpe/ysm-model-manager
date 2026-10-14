@@ -168,6 +168,14 @@ var disableSuffixes = []string{".disabled", ".ban"}
 // DisabledSuffix 返回新标准禁用后缀（列表首位，如 ".disabled"）。
 func DisabledSuffix() string { return disableSuffixes[0] }
 
+// DisableSuffixes 返回全部禁用后缀的**副本**（新标准在前、历史后缀在后）。
+// 2026-09-14 起 disableSuffixes 已私有化（防任意包改写全局后缀表），故此处返回拷贝；
+// 需要「按后缀表逐个探测孪生路径」的消费方（如 fsutil.DisabledCounterpart）走本函数，
+// 不在自己包里内联拼字面量——后缀表增删只改一处。
+func DisableSuffixes() []string {
+	return append([]string(nil), disableSuffixes...)
+}
+
 // StripDisableSuffix 剥离禁用后缀（大小写不敏感，依次尝试 .disabled/.ban）。
 // 单一事实来源——sync/scanner/ysm/installer/fileops 的禁用后缀剥离均委托本函数，
 // 防多处内联 `name[:len(name)-N]` 口径漂移。

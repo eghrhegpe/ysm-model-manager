@@ -6,6 +6,7 @@ import { MAX_IMPORT_BYTES } from "@/backend/browser-adapter.ts";
 import { isWebPlatform } from "@/backend/platform-web.ts";
 import { t } from "@/core/i18n/t.ts";
 import type { CollectedEntry } from "@/features/import/collector.ts";
+import type { ImportBatchResult } from "@/features/import/executor.ts";
 import { executeCollected, importWebFilesWithToast } from "@/features/import/executor.ts";
 import { collectDropFiles } from "@/features/import/shared.ts";
 import { swallowError } from "@/utils/base/primitives/async.ts";
@@ -24,10 +25,91 @@ const DROP_EXTS_STR = ALL_EXTS.join(" ");
 
 const isEditable = isEditableTarget;
 
+/** 环形日志面板写入器（Go AddOpLog）——非阻塞，失败经 swallowError 记录。 */
+function makeDropLogger(): (msg: string) => void {
+  return (msg: string) =>
+    swallowError(dndGetApp().then((app) => app.AddOpLog?.("drop", msg, "", "", 0, "ok", "")));
+}
+
+/**
+ * 网页版分支：无本地文件系统 → 拖入文件直接写入 IndexedDB 模型库。
+ * @returns true = 本分支已处理（调用方必须收口返回，与原 if(isWebPlatform) 语义逐字一致）
+ */
+async function importViaWebPlatform(
+  e: DragEvent,
+  logDrop: (msg: string) => void,
+): Promise<boolean> {
+  if (!isWebPlatform()) return false;
+  const files = Array.from(e.dataTransfer?.files || []);
+  if (files.length === 0) {
+    toast(t("import.webFolderDropUnsupported"), TOAST_MS.verbose, "warn");
+    return true;
+  }
+  await importWebFilesWithToast(files);
+  logDrop(`网页版导入 ${files.length} 个文件`);
+  return true;
+}
+
+/**
+ * oversize 逐文件过滤（与整合包卡片拖入共用 import.oversizeSkipped 单源）。
+ * 有超限者先弹「跳过 N 个」warn toast，返回剔除后的集合（全被滤除时为空集，
+ * 调用方直接返回——超限提示已足够，不再叠「收集 0」误导提示）。
+ */
+function dropOversized(collected0: CollectedEntry[]): CollectedEntry[] {
+  const oversized = collected0.filter((c) => c.file.size > MAX_IMPORT_BYTES);
+  if (oversized.length > 0) {
+    toast(
+      t("import.oversizeSkipped", {
+        n: oversized.length,
+        mb: Math.round(MAX_IMPORT_BYTES / 1024 / 1024),
+        name: oversized[0].file.name,
+        more: oversized.length > 1 ? t("import.moreSuffix") : "",
+      }),
+      TOAST_MS.long,
+      "warn",
+    );
+  }
+  return collected0.filter((c) => c.file.size <= MAX_IMPORT_BYTES);
+}
+
+/** 结果各计数 → 「成功 N，失败 M，跳过 K」文案片段（0 计数项不进文案）。 */
+function buildResultParts(r: ImportBatchResult): string[] {
+  const parts: string[] = [`${t("import.success")}: ${r.imported}`];
+  if (r.failed > 0) parts.push(`${t("import.failed")}: ${r.failed}`);
+  if (r.skipped > 0) parts.push(t("import.skippedCount", { n: r.skipped }));
+  return parts;
+}
+
+/**
+ * quiet 批量结果汇总：逐条 toast 收拢为「N 成功 M 失败」一条（对接锐评 UX #2 收口，
+ * 2026-10-14）——拖 50 文件不该 50 条连珠炮，失败要能点名（前 3 条缘由）。
+ */
+function reportDropResult(
+  r: ImportBatchResult,
+  total: number,
+  logDrop: (msg: string) => void,
+): void {
+  if (r.folders === 0 && r.singles === 0 && total > 0) {
+    logDrop("drop: execute 返回 0 成功但 total>0（全部被 filter 过滤）");
+    toast(`📂 ${t("import.noSupportedFiles")}（${DROP_EXTS_STR}）`, TOAST_MS.normal, "info");
+    return;
+  }
+  if (r.imported > 0 || r.failed > 0 || r.skipped > 0) {
+    const errorsHint = r.errors.length > 0 ? `（${r.errors.join("；")}）` : "";
+    toast(
+      `📂 ${buildResultParts(r).join("，")}${errorsHint}`,
+      r.failed > 0 ? TOAST_MS.verbose : TOAST_MS.info,
+      r.failed > 0 ? "warn" : "success",
+    );
+  }
+}
+
 /**
  * 处理 drop 事件：收集文件 → 过滤 → 执行导入。
  * busy 状态由调用方（bindTreeDnD 闭包）传入，避免模块级状态跨实例污染。
  * rtype：页面上下文类型（当前树根属性）——非空时文件夹整组按该类型仓库根落盘。
+ * 三段可独立收口的逻辑（网页版分支 / oversize 过滤 / 结果汇总）各成模块级助手，
+ * 本体只留「守卫 → 收集 → 执行 → 汇总」的编排骨架（认知复杂度 41 → yellow 以下）。
  */
 export async function handleTreeDrop(
   e: DragEvent,
@@ -49,21 +131,10 @@ export async function handleTreeDrop(
   setBusy(true);
 
   // 写环形日志面板（Go AddOpLog）——非阻塞，失败经 swallowError 记录
-  const logDrop = (msg: string) =>
-    swallowError(dndGetApp().then((app) => app.AddOpLog?.("drop", msg, "", "", 0, "ok", "")));
+  const logDrop = makeDropLogger();
 
   try {
-    // 网页版：无本地文件系统 → 拖入文件直接写入 IndexedDB 模型库
-    if (isWebPlatform()) {
-      const files = Array.from(e.dataTransfer?.files || []);
-      if (files.length === 0) {
-        toast(t("import.webFolderDropUnsupported"), TOAST_MS.verbose, "warn");
-        return;
-      }
-      await importWebFilesWithToast(files);
-      logDrop(`网页版导入 ${files.length} 个文件`);
-      return;
-    }
+    if (await importViaWebPlatform(e, logDrop)) return;
 
     // 桌面版：收集口径收敛到 dnd-shared.collectDropFiles（files 优先 +
     // webkitGetAsEntry 补充目录 + 去重合并），与整合包卡片拖入共用
@@ -75,21 +146,7 @@ export async function handleTreeDrop(
       toast(`📂 ${t("import.noSupportedFiles")}（${DROP_EXTS_STR}）`, TOAST_MS.normal, "info");
       return;
     }
-    // oversize 逐文件过滤（与整合包卡片拖入共用 import.oversizeSkipped 单源）
-    const oversized = collected0.filter((c) => c.file.size > MAX_IMPORT_BYTES);
-    if (oversized.length > 0) {
-      toast(
-        t("import.oversizeSkipped", {
-          n: oversized.length,
-          mb: Math.round(MAX_IMPORT_BYTES / 1024 / 1024),
-          name: oversized[0].file.name,
-          more: oversized.length > 1 ? t("import.moreSuffix") : "",
-        }),
-        TOAST_MS.long,
-        "warn",
-      );
-    }
-    const collected = collected0.filter((c) => c.file.size <= MAX_IMPORT_BYTES);
+    const collected = dropOversized(collected0);
     if (collected.length === 0) return; // 全被 oversize 滤除：超限提示已足够
     const importableStr = (name: string) => (isImportableFile(name) ? "Y" : "N");
     logDrop(
@@ -97,26 +154,11 @@ export async function handleTreeDrop(
     );
 
     const total = collected.length;
-    // quiet 批量：逐条 toast 收拢为「N 成功 M 失败」一条汇总（对接锐评 UX #2 收口，
-    // 2026-10-14）——拖 50 文件不该 50 条连珠炮，失败要能点名（前 3 条缘由）
     const r = await executeCollected(collected, rtype, { quiet: true });
     logDrop(
       `drop: 导入完成 folders=${r.folders} singles=${r.singles} imported=${r.imported} failed=${r.failed} skipped=${r.skipped}`,
     );
-    if (r.folders === 0 && r.singles === 0 && total > 0) {
-      logDrop("drop: execute 返回 0 成功但 total>0（全部被 filter 过滤）");
-      toast(`📂 ${t("import.noSupportedFiles")}（${DROP_EXTS_STR}）`, TOAST_MS.normal, "info");
-    } else if (r.imported > 0 || r.failed > 0 || r.skipped > 0) {
-      const parts: string[] = [`${t("import.success")}: ${r.imported}`];
-      if (r.failed > 0) parts.push(`${t("import.failed")}: ${r.failed}`);
-      if (r.skipped > 0) parts.push(t("import.skippedCount", { n: r.skipped }));
-      const errorsHint = r.errors.length > 0 ? `（${r.errors.join("；")}）` : "";
-      toast(
-        `📂 ${parts.join("，")}${errorsHint}`,
-        r.failed > 0 ? TOAST_MS.verbose : TOAST_MS.info,
-        r.failed > 0 ? "warn" : "success",
-      );
-    }
+    reportDropResult(r, total, logDrop);
   } finally {
     setBusy(false);
   }

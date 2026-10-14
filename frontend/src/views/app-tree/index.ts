@@ -547,8 +547,12 @@ export class AppTree extends WebComponentBase {
 
   _renderTree(): void {
     const c = this._root.getElementById("tree");
-    // 清理旧的虚拟滚动监听（cleanupVirtualScroll：断开 cleanup/resizeObserver + 复位状态）
-    if (c) cleanupVirtualScroll(this.treeRenderCtx, c);
+    // ⚠️ 此处曾先调 cleanupVirtualScroll 再 renderTree（锐评性能 #5 后续，2026-10-14 移除）：
+    // 虚拟滚动的 scroll 监听与 ResizeObserver 是**按需安装一次**的（renderTree 内
+    // `if (!st.cleanup)` / `if (!st.resizeObserver)` 守卫），但每次交互（选中/方向键/
+    // 拖源态切换）都经本方法 → 拆了再装，搜索击键 150ms 重建一次监听 + Observer。
+    // 监听器是容器级、无状态（redraw 闭包每次从 vsStates 取最新 rows/mode），
+    // 跨渲染复用无需重建；真正的销毁点在 disconnectedCallback（_disconnected）。
     const filtered: TreeEntry[] = Array.isArray(this._state.entries) ? this._state.entries : [];
     // [DBG] 诊断：_renderTree 入参（entries 数 / filterPaths 大小）
     dbg(

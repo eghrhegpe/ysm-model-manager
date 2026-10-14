@@ -647,6 +647,75 @@ describe("app-tree index 入口生命周期（补位）", () => {
     expect(modalConfirmMock).not.toHaveBeenCalled();
     expect(bindings.DeleteResourcePack).not.toHaveBeenCalled();
   });
+
+  // 锐评性能 #5 后续（2026-10-14）：_renderTree 曾先 cleanupVirtualScroll 再 renderTree，
+  // 而 scroll 同步 / ResizeObserver 是按需安装一次的（renderTree 内 !st.cleanup 守卫）——
+  // 每次交互（选中/方向键/拖源态）都拆了再装，搜索击键每次重建监听 + Observer。
+  // 修法：_renderTree 不再预cleanup，销毁点归 disconnectedCallback。
+  it("_renderTree 重入不重装scroll 监听（虚拟滚动监听跨渲染复用）", async () => {
+    const el = await mountEl();
+    const tree = el.shadowRoot!.getElementById("tree") as HTMLElement;
+    await sleep0();
+
+    const addSpy = vi.spyOn(tree, "addEventListener");
+    // 连续三次重渲（等价三次交互：选行 / 方向键 / 拖源态切换）
+    el.selectState.keys.add("/repo/a.ysm");
+    (el as unknown as { _renderTree: () => void })._renderTree();
+    (el as unknown as { _renderTree: () => void })._renderTree();
+    (el as unknown as { _renderTree: () => void })._renderTree();
+    await sleep0();
+
+    const scrollAdds = addSpy.mock.calls.filter((c) => c[0] === "scroll");
+    expect(scrollAdds).toHaveLength(0);
+    addSpy.mockRestore();
+  });
+
+  it("disconnected 后 scroll 监听确实拆除（监听复用不泄漏）", async () => {
+    const el = await mountEl();
+    const tree = el.shadowRoot!.getElementById("tree") as HTMLElement;
+    await sleep0();
+    const removeSpy = vi.spyOn(tree, "removeEventListener");
+    el.remove();
+    await sleep0();
+    expect(removeSpy.mock.calls.some((c) => c[0] === "scroll")).toBe(true);
+    removeSpy.mockRestore();
+  });
+
+  // 锐评性能 #5 后续（2026-10-14）：renderSlice 原实现每帧 cloneNode 重建全部可见行——
+  // 滚动 1px 也把窗口内约 40 行重新克隆一遍（持续 GC 压力）。改为 VsState.liveNodes
+  // 按 key + row 对象身份复用节点：滚动只有首尾进出窗口，中间行直接搬动。
+  it("滚动重绘复用行节点（中间行 DOM 实例不变，不逐帧重建）", async () => {
+    const el = await mountEl();
+    await sleep0();
+    const tree = el.shadowRoot!.getElementById("tree") as HTMLElement;
+    const wrap = tree.firstElementChild as HTMLElement;
+    // 强制 container 有 clientHeight（否则 calcVisibleRange 走「全量渲染」旁路）
+    Object.defineProperty(tree, "clientHeight", { value: 400, configurable: true });
+    Object.defineProperty(tree, "scrollTop", { value: 0, writable: true, configurable: true });
+
+    const before = new Map<string, Element>();
+    for (const row of Array.from(wrap.children)) {
+      before.set((row as HTMLElement).dataset.fullpath ?? (row as HTMLElement).dataset.dir ?? "", row);
+    }
+    expect(before.size).toBeGreaterThan(0);
+
+    // 滚动 40px（仍在同一批可见行内）→ 触发 redraw
+    tree.scrollTop = 40;
+    tree.dispatchEvent(new Event("scroll"));
+    await sleep0();
+    await sleep0();
+
+    const after = new Map<string, Element>();
+    for (const row of Array.from(wrap.children)) {
+      after.set((row as HTMLElement).dataset.fullpath ?? (row as HTMLElement).dataset.dir ?? "", row);
+    }
+    // 仍然可见的 key 集合中，重叠部分的 DOM 实例必须保持同一（复用而非重建）
+    let reused = 0;
+    for (const [k, node] of after) {
+      if (before.has(k) && before.get(k) === node) reused++;
+    }
+    expect(reused).toBeGreaterThan(0);
+  });
 });
 
 /** 测试内小工具：等一个宏任务（让微任务链跑完） */

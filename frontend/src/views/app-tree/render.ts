@@ -584,8 +584,26 @@ function renderSlice(
     container.appendChild(wrap);
   }
   const frag = document.createDocumentFragment();
+  const live = vsOf(ctx, container).liveNodes;
+  // 节点池复用（锐评性能 #5 后续，2026-10-14）：滚动只有首尾进出窗口，中间行直接搬动，
+  // 每帧新增/销毁从「窗口大小」降到「滚动跨越的行数」。node 实例不变（cloned:false）。
+  const keep = new Set<string>();
   for (let i = range.startIdx; i < range.endIdx; i++) {
-    frag.appendChild(rowElOf(ctx, rows[i]));
+    const row = rows[i];
+    keep.add(row.key);
+    const hit = live.get(row.key);
+    // row 对象身份一致 = 内容未变（搜索/排序/选中新数据产生新 row 对象 → 身份必变→ 重建）
+    if (hit && hit.row === row) {
+      frag.appendChild(hit.el);
+      continue;
+    }
+    const el = rowElOf(ctx, row);
+    live.set(row.key, { row, el });
+    frag.appendChild(el);
+  }
+  // 滚出窗口的key 从池中剔除（否则池随滚动无界增长 = 内存泄漏）
+  for (const k of live.keys()) {
+    if (!keep.has(k)) live.delete(k);
   }
   wrap.replaceChildren(frag);
   (wrap as HTMLElement).style.paddingTop = `${range.startIdx * rowH}px`;
@@ -600,13 +618,24 @@ interface VsState {
   rows: TreeRow[];
   mode: RenderMode | null;
   resizeObserver: ResizeObserver | null;
+  /**
+   * 在DOM 中的行节点池（键 = row.key → 节点；锐评性能 #5 后续，2026-10-14）。
+   * 原实现每帧 `cloneNode` 重建全部可见行：滚动 1px 也要把窗口内约 40 行重新克隆一遍
+   * （持续 GC 压力）。改为按 key 复用——滚动只有首尾进出窗口，中间行直接搬动，
+   * 每帧新增/销毁的节点从「窗口大小」降到「滚动跨越的行数」（典型 1-2 个）。
+   * 安全性：树事件全为容器级委托（closest 查询），行节点无独立监听器；节点身份与
+   * row 对象一一对应，跨帧复用不串行（key 是磁盘全路径 / 树内路径，同一可见集内唯一）。
+   * 数据变更（搜索/排序/展开）产生全新 row 对象但 key 可能相同——此时节点内容是旧的，
+   * 故按 row 对象身份比对（`rowTplCache` 同款 WeakMap 语义），不一致则重建该行。
+   */
+  liveNodes: Map<string, { row: TreeRow; el: HTMLElement }>;
 }
 
 /** 取容器虚拟滚动状态（无则初始化空态；渲染/清理共用同一实例） */
 function vsOf(ctx: TreeRenderCtx, container: HTMLElement): VsState {
   let s = ctx.vsStates.get(container);
   if (!s) {
-    s = { cleanup: null, rows: [], mode: null, resizeObserver: null };
+    s = { cleanup: null, rows: [], mode: null, resizeObserver: null, liveNodes: new Map() };
     ctx.vsStates.set(container, s);
   }
   return s;
@@ -637,6 +666,7 @@ export function cleanupVirtualScroll(ctx: TreeRenderCtx, container: HTMLElement)
   s.resizeObserver = null;
   s.rows = [];
   s.mode = null;
+  s.liveNodes.clear(); // 节点池随容器一起弃（否则 WeakMap 值里的 DOM 节点被池强持有）
 }
 
 /**

@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 200 张知识卡
+> 总计: 201 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -148,7 +148,7 @@
 - **sync-manager**（整合包同步管理器 sync-manager）：`app-sync-manager` 是一个 Web Component 视图组件（`<app-sync-manager>`），承担**单个整合包（instance）内「仓库 ↔ 实例」双向同步状态展示与逐文件推送/拉取编排**：
 - **version-updater**（版本更新 version-updater）：`version-updater.ts` 是应用自更新的前端入口：启动时静默检查（受 6 小时频次限制）→ 发现新版本以可点击 toast 通知；设置页按钮手动检查 → 弹出带更新日志的 `modalConfirm` → 调 `DoUpda…
 
-## go（53 张）
+## go（54 张）
 
 *Go 后端包（安装、下载、回收站、YSM 解析等）*
 
@@ -177,6 +177,7 @@
 | 🍃 go-fsutil | 文件基础设施 go/fsutil | leaf | io-bound | 遍历, walk, 原子写, 复制, 硬链接, 跨设备 |
 | 🍃 go-geometry-archive-pipeline | Geometry 存档解析流水线（archive 分片） | leaf | — | 存档解析流水线, ParseFromZip / ParseFrom7z, ParseFromZipEntry / ParseFrom7zEntry, 多组件解析 buildComponents, 纹理槽位绑定 texIdxMap, SubModels 清单 |
 | 🍃 go-geometry-maid-l0 | 女仆包 L0 清单收集与解析（maid_l0 分片） | leaf | — | maid-model, maid_model.json, L0 清单, model_id, 多命名空间 |
+| 🍃 go-geometry-mmd-stats | MMD 几何统计解析 | leaf | io-bound | MMD 数值搜索（骨骼/纹理）, PMX/PMD 解析性能问题, SearchModels 分流机制, 统计级 vs 全几何解析, 纹理尺寸探测口径 |
 | 🏗 go-geometry | Geometry 存档 go/geometry | architecture | io-bound, memory-heavy | geometry, 基岩版, bedrock, 模型解析, zip, 7z, 纹理, 动画 |
 | 🏗 go-importer | 导入策略 go/importer | architecture | io-bound | 导入, 策略, 导入队列, importer |
 | 🏗 go-installer | 模型安装 go/installer | architecture | io-bound | 安装, installer, 模型导入, 下载模型 |
@@ -232,6 +233,7 @@
 - **go-fsutil**（文件基础设施 go/fsutil）：`go/fsutil/` 是 Go 侧文件系统基础设施包，按 ADR-044 策略 A 收敛自多包重复实现。覆盖 7 大职能：文件/目录遍历、原子写入、原子复制、权限常量、硬链接判定、跨设备错误判定、UTF-8 BOM 剥离、zip/7z …
 - **go-geometry-archive-pipeline**（Geometry 存档解析流水线（archive 分片））：`go/geometry` 存档解析流水线的四个分片实现文件，系 2026-10 文件行数治理自 archive.go 拆出：`archive_parse.go` 主入口与 zip/7z 双份路径收敛，`archive_collect.go…
 - **go-geometry-maid-l0**（女仆包 L0 清单收集与解析（maid_l0 分片））：`go/geometry` 女仆包（TLM maid-model）L0 清单子域的两个分片文件，系 2026-10 文件行数治理自 maid_l0.go 拆出：`maid_l0_manifest.go` 负责「清单收集与候选选择」（命名空间…
+- **go-geometry-mmd-stats**（MMD 几何统计解析）：ADR-346 刀 1 交付的 Go 侧 MMD 统计级解析包（`go/geometry/mmd`）：从 PMX（XML）/PMD（二进制）提取**统计级**数据——骨骼数 + 纹理尺寸——供 `SearchModels` 数值条件路径消费…
 - **go-geometry**（Geometry 存档 go/geometry）：`go/geometry/` 包解析 Bedrock（基岩版）`minecraft:geometry` 模型：既支持单个 geometry JSON，也支持从 ZIP/7z 存档中按 `ysm.json` 清单合并多个模型文件、提取纹理与动…
 - **go-importer**（导入策略 go/importer）：`go/importer/` 包分两块：`importer.go` 的**按资源类型注册的复制策略表**（`Handler` 接口，供本地路径导入/安装复用），以及 `importer_file.go` 的 **base64 单文件导入核心…
 - **go-installer**（模型安装 go/installer）：`go/installer/`（`installer.go` + `lock_tracker.go`，非单文件）负责把仓库中的模型/资源文件**落地**到 Minecraft 整合包实例目录：按 `LinkMode`（`copy` / `h…
@@ -465,7 +467,7 @@
 
 | 标签 | 含义 | 卡片 |
 |------|------|------|
-| io-bound | IO 密集（批量读写/RPC/网络） | app-modules, app-sync-manager, backend-idb, community-feature, community-virtual-list, go-avatar, go-avatar-decode, go-dedup, go-download, go-fileops, go-fsutil, go-geometry, go-importer, go-installer, go-instance, go-logs, go-packs, go-recycle, go-repoaudit, go-scanner, go-sync, go-tags, go-updater, go-watcher, go-ysm-parser, import-queue, oldest-models, recycle-bin, version-updater |
+| io-bound | IO 密集（批量读写/RPC/网络） | app-modules, app-sync-manager, backend-idb, community-feature, community-virtual-list, go-avatar, go-avatar-decode, go-dedup, go-download, go-fileops, go-fsutil, go-geometry, go-geometry-mmd-stats, go-importer, go-installer, go-instance, go-logs, go-packs, go-recycle, go-repoaudit, go-scanner, go-sync, go-tags, go-updater, go-watcher, go-ysm-parser, import-queue, oldest-models, recycle-bin, version-updater |
 | cpu-bound | CPU 密集（解析/编译/解算/编码） | animation-system, app-content-diagnostics, bone-tools, community-virtual-list, go-threejs, ground-cap-materialgroup-factories, ground-surface-spec, ik-solver, mc-ao-tint, model-stats, model2d, perception, ysm-anim-pipeline, ysm-wasm |
 | gpu-bound | GPU/显存敏感（纹理/3D 渲染） | app-content-diagnostics, model3d, mount3d-584-giant, multi-model-select, preview-core, preview-env-state, preview-panel-declarative, render-federation, scene-capability-registry, utils-export |
 | concurrent | 多核并行（goroutine 池/Worker 池/pthread/Promise 竞速） | app-content-diagnostics, go-scanner, go-threejs, model-stats |

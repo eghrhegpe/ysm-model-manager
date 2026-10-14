@@ -49,6 +49,53 @@ function triggerAnchorDownload(url: string, name: string): void {
   a.remove();
 }
 
+/** 通过 IDB 导入单个任务（fetch→blob→importWebFiles），超时走直链兜底 */
+async function processTaskViaIDB(
+  task: DownloadTask,
+  webType: string,
+): Promise<{ imported: number; failed: number } | null> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), WEB_DOWNLOAD_FETCH_TIMEOUT_MS);
+  try {
+    const resp = await fetch(task.url, { signal: ctrl.signal });
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    const blob = await resp.blob();
+    const r = await importWebFiles([new File([blob], task.name || "model")], webType);
+    return { imported: r.imported, failed: r.failed };
+  } catch (e) {
+    dbg("enqueue:web-idb-fail", task.url, e);
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** 通过直链兜底下载单个任务 */
+function processTaskViaFallback(task: DownloadTask, ctx: WebEnqueueCtx): "fallback" | "failed" {
+  try {
+    triggerAnchorDownload(task.url, task.name);
+    return "fallback";
+  } catch (e) {
+    ctx.addQueueError(task.name, String((e as Error)?.message || e));
+    return "failed";
+  }
+}
+
+/** 汇总反馈（toast + 刷新广播） */
+function showEnqueueResult(imported: number, failed: number, fallback: number): void {
+  toast(
+    failed > 0
+      ? t("community.downloadQueue.webDlFailed", { imported, fallback, failed })
+      : fallback > 0
+        ? t("community.downloadQueue.webDlFallback", { imported, fallback })
+        : t("community.downloadQueue.webDlOk", { imported }),
+    TOAST_MS.verbose,
+    failed > 0 ? "warn" : "success",
+  );
+  bus.emit("tree:reload");
+  bus.emit("stats:refresh");
+}
+
 /**
  * 网页版入队分支：逐任务 fetch→IDB 入库 / 直链兜底，汇总反馈与刷新广播。
  * 由 download-queue-store.enqueueDownloads 在 isWebPlatform() 时委托调用。
@@ -68,51 +115,22 @@ export async function runWebEnqueue(tasks: DownloadTask[], ctx: WebEnqueueCtx): 
       ctx.markCurrentFile(task.name);
       let handled = false;
       if (/^https?:\/\//i.test(task.url || "") && (task.size || 0) <= WEB_DOWNLOAD_IDB_LIMIT) {
-        const ctrl = new AbortController();
-        const timer = setTimeout(() => ctrl.abort(), WEB_DOWNLOAD_FETCH_TIMEOUT_MS);
-        try {
-          const resp = await fetch(task.url, { signal: ctrl.signal });
-          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-          const blob = await resp.blob();
-          const r = await importWebFiles([new File([blob], task.name || "model")], webType);
+        const r = await processTaskViaIDB(task, webType);
+        if (r) {
           imported += r.imported;
-          // 失败不回退直链是既有取舍：importWebFiles 的 failed 混装两类——
-          // ① 预期过滤（.7z/非支持扩展名/无主文件组：直链也救不了「模型库不收这个文件」）；
-          // ② 真写盘失败（quota 超限/IDB 异常，组级 catch console.error 回滚后计数：直链可救）。
-          // 两类计数不可分辨（契约 {imported, failed} 有 4 个生产消费者 + contract-b1/b3 钉死），
-          // 且 blob 已在手，逐文件「fetch→直链」双通道重下浪费带宽——用户重试即可经直链取回。
-          // 观察项（非必修）：若未来 importWebFiles 暴露写失败分类，② 类可改直链兜底。
           failed += r.failed;
           handled = true;
-        } catch (e) {
-          dbg("enqueue:web-idb-fail", task.url, e); // 超时/CORS/网络失败 → 直链兜底
-        } finally {
-          clearTimeout(timer);
         }
       }
       if (!handled) {
-        try {
-          triggerAnchorDownload(task.url, task.name);
-          fallback++;
-        } catch (e) {
-          failed++;
-          ctx.addQueueError(task.name, String((e as Error)?.message || e));
-        }
+        const result = processTaskViaFallback(task, ctx);
+        if (result === "fallback") fallback++;
+        else failed++;
       }
       ctx.decrementRemaining();
     }
     // 汇总反馈对齐导入链路语义（importWebFilesWithToast 同款 toast + 刷新广播）
-    toast(
-      failed > 0
-        ? t("community.downloadQueue.webDlFailed", { imported, fallback, failed })
-        : fallback > 0
-          ? t("community.downloadQueue.webDlFallback", { imported, fallback })
-          : t("community.downloadQueue.webDlOk", { imported }),
-      TOAST_MS.verbose,
-      failed > 0 ? "warn" : "success",
-    );
-    bus.emit("tree:reload");
-    bus.emit("stats:refresh");
+    showEnqueueResult(imported, failed, fallback);
   } catch (e) {
     dbg("enqueue:web-branch-fail", e); // 意外异常不留 downloading 残态
   } finally {

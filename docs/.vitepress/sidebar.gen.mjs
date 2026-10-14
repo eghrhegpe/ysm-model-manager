@@ -1952,6 +1952,10 @@ export const autoSidebar = [
             "link": "/knowledge/go-geometry-maid-l0"
           },
           {
+            "text": "MMD 几何统计解析",
+            "link": "/knowledge/go-geometry-mmd-stats"
+          },
+          {
             "text": "Geometry 存档 go/geometry",
             "link": "/knowledge/go-geometry"
           },

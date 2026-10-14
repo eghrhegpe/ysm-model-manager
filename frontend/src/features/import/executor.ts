@@ -14,6 +14,9 @@
 //
 // P0 整改：_inFlight 移入 createImportSession() 工厂闭包，消除模块级可变全局。
 // 模块级 defaultImportSession 保持既有消费者零改动。
+//
+// 结构：业务体提为模块级纯参数函数（inFlight 以 Set 传参，消除嵌套罚分），
+// createImportSession 只做「状态装配 + 接口适配」，认知复杂度保持个位数。
 
 import { importWebFiles, MAX_IMPORT_BYTES } from "@/backend/browser-adapter.ts";
 import { bus } from "@/bus";
@@ -83,6 +86,202 @@ const refreshRepo = (): void => {
   bus.emit("tree:reload");
 };
 
+/** 环形日志面板写入器（非阻塞，失败经 swallowError 记录）。 */
+const logImport = (msg: string): void => {
+  swallowError(importGetApp().then((app) => app.AddOpLog?.("import", msg, "", "", 0, "ok", "")));
+};
+
+/** buildFolderItems 产出的推送载荷形状。 */
+type FolderItems = Awaited<ReturnType<typeof buildFolderItems>>["items"];
+
+/** 后端 App 绑定形状。 */
+type ImportApp = Awaited<ReturnType<typeof importGetApp>>;
+
+/**
+ * 单文件直导前守卫：ysm.json / 超限 / 在途 三者任一命中即拦截。
+ * @returns 字符串 = 通过守卫并已入在途的 key；ImportResult = 已被拦截的跳过结局。
+ */
+function directImportGuard(
+  file: File,
+  opts: ImportOpts,
+  inFlight: Set<string>,
+): string | ImportResult {
+  if (file.name.toLowerCase() === "ysm.json") {
+    if (!opts.quiet) toast(t("import.ysmJsonHint"), 4000, "warn");
+    return { outcome: "skipped" };
+  }
+  if (file.size > MAX_IMPORT_BYTES) {
+    if (!opts.quiet)
+      toast(
+        t("import.fileTooLargeSkipped", {
+          name: file.name,
+          mb: Math.round(MAX_IMPORT_BYTES / 1024 / 1024),
+        }),
+        TOAST_MS.long,
+        "warn",
+      );
+    return { outcome: "skipped" };
+  }
+  const key = `${file.name}:${file.size}:${file.lastModified}`;
+  if (inFlight.has(key)) {
+    if (!opts.quiet) toast(t("import.busyImporting"), TOAST_MS.success, "warn");
+    return { outcome: "skipped" };
+  }
+  inFlight.add(key);
+  return key;
+}
+
+/** 单文件直接导入（保留原文件名，后端自动路由类型 + 冲突覆盖确认）。 */
+async function importSingleFile(
+  file: File,
+  opts: ImportOpts,
+  inFlight: Set<string>,
+): Promise<ImportResult> {
+  const key = directImportGuard(file, opts, inFlight);
+  if (typeof key !== "string") return key;
+  try {
+    const base64 = await fileToBase64(file);
+    const { ImportModelFile } = await importGetApp();
+    await ImportModelFile(file.name, base64);
+    refreshRepo();
+    if (!opts.quiet) toast(`${t("import.success")}: ${file.name}`, TOAST_MS.success, "success");
+    return { outcome: "imported" };
+  } catch (e) {
+    const msg = `${t("import.failed")}: ${friendlyError(e)}`;
+    if (!opts.quiet) toast(msg, TOAST_MS.verbose, "error");
+    return { outcome: "failed", error: msg };
+  } finally {
+    inFlight.delete(key);
+  }
+}
+
+/**
+ * 文件夹整组推送：rtype 非空且桥支持 ImportModelFolderTo 时按类型路由落盘，
+ * 否则降级 ImportModelFolder（内容推断）；rtype 有值而桥不支持时显式告警不静默。
+ */
+async function pushFolderToBackend(
+  App: ImportApp,
+  folderName: string,
+  subpath: string,
+  rtype: string,
+  items: FolderItems,
+  opts: ImportOpts,
+): Promise<void> {
+  if (rtype && typeof App.ImportModelFolderTo === "function") {
+    await App.ImportModelFolderTo(folderName, subpath, rtype, items);
+    return;
+  }
+  if (rtype) {
+    console.warn(
+      `[import] ImportModelFolderTo 不可用（旧桥/Android 时序），降级为内容推断：rtype=${rtype}`,
+    );
+    if (!opts.quiet) toast(t("import.contextRouteUnavailable"), TOAST_MS.verbose, "warn");
+  }
+  await App.ImportModelFolder(folderName, subpath, items);
+}
+
+/** 文件夹导入失败文案：已存在走专属措辞，否则 friendlyError 单源。 */
+function folderFailureMsg(e: unknown, folderName: string): string {
+  if (isFileExistsError(e)) return `${folderName} ${t("import.alreadyExists")}`;
+  return `${t("import.failed")}: ${friendlyError(e)}`;
+}
+
+/** 文件夹整组导入。 */
+async function importFolderGroup(
+  dir: string,
+  files: CollectedEntry[],
+  rtype: string,
+  opts: ImportOpts,
+  inFlight: Set<string>,
+): Promise<ImportResult> {
+  const firstFile = files.length > 0 ? files[0].file : null;
+  const dirKey = `${dir}:${firstFile ? `${firstFile.name}:${firstFile.size}:${firstFile.lastModified}` : ""}`;
+  if (inFlight.has(dirKey)) {
+    if (!opts.quiet) toast(t("import.busyImporting"), TOAST_MS.success, "warn");
+    return { outcome: "skipped" };
+  }
+  inFlight.add(dirKey);
+  const parts = dir.split("/");
+  const folderName = parts[parts.length - 1] || "模型";
+  const subpath = parts.slice(0, -1).join("/");
+  try {
+    const { items, skipped } = await buildFolderItems(dir, files);
+    if (!items.length) {
+      const msg = t("import.emptyFolder");
+      if (!opts.quiet) toast(msg, TOAST_MS.verbose, "error");
+      return { outcome: "failed", error: msg };
+    }
+    const App = await importGetApp();
+    await pushFolderToBackend(App, folderName, subpath, rtype, items, opts);
+    refreshRepo();
+    const skipHint = skipped > 0 ? `（${skipped} 个文件读取失败已跳过）` : "";
+    if (!opts.quiet)
+      toast(`${t("import.success")}: ${folderName}${skipHint}`, TOAST_MS.info, "success");
+    return { outcome: "imported" };
+  } catch (e) {
+    const msg = folderFailureMsg(e, folderName);
+    if (!opts.quiet) toast(msg, TOAST_MS.verbose, "error");
+    return { outcome: "failed", error: msg };
+  } finally {
+    inFlight.delete(dirKey);
+  }
+}
+
+/** 执行一组拖拽收集的条目。 */
+async function executeBatch(
+  collected: CollectedEntry[],
+  rtype: string,
+  opts: ImportOpts,
+  inFlight: Set<string>,
+): Promise<ImportBatchResult> {
+  logImport(`执行导入 ${collected.length} 个条目`);
+  const { folders, singles } = groupCollected(collected);
+  logImport(`分组: folders=${folders.length} singles=${singles.length}`);
+  const imported: ImportResult[] = [];
+  for (const g of folders) {
+    imported.push(await importFolderGroup(g.dir, g.files, rtype, opts, inFlight));
+  }
+  for (const c of singles) {
+    imported.push(await importSingleFile(c.file, opts, inFlight));
+  }
+  // 汇总（对接锐评 UX #2 收口）：调用方据 imported/failed/skipped 出「N 成功 M 失败」一条 toast
+  const failed = imported.filter((r) => r.outcome === "failed");
+  return {
+    folders: folders.length,
+    singles: singles.length,
+    imported: imported.filter((r) => r.outcome === "imported").length,
+    failed: failed.length,
+    skipped: imported.filter((r) => r.outcome === "skipped").length,
+    errors: failed.slice(0, 3).map((r) => r.error ?? ""),
+  };
+}
+
+/** 网页版导入执行。 */
+async function importWebBatch(
+  files: File[],
+  onFinally?: () => void,
+): Promise<{ imported: number; failed: number }> {
+  try {
+    const r = await importWebFiles(files, currentRepoType());
+    toast(
+      r.failed > 0
+        ? `${r.imported} 个导入成功，${r.failed} 个失败`
+        : `${r.imported} 个模型已导入浏览器模型库`,
+      TOAST_MS.verbose,
+      r.failed > 0 ? "warn" : "success",
+    );
+    bus.emit("tree:reload");
+    bus.emit("stats:refresh");
+    return r;
+  } catch (e) {
+    console.error("[import-web] importWebFiles 失败:", e);
+    toast(`${t("import.processError")}: ${friendlyError(e)}`, TOAST_MS.verbose, "error");
+    return { imported: 0, failed: files.length };
+  } finally {
+    onFinally?.();
+  }
+}
+
 /**
  * 创建独立的导入会话（_inFlight 状态隔离，测试可注入）。
  * 生产代码使用模块级 defaultImportSession，无需手动创建。
@@ -91,160 +290,14 @@ export function createImportSession(): ImportSession {
   /** per-file 在途集合：仅阻止同一文件并发/重复提交，不同文件可并行 */
   const inFlight = new Set<string>();
 
-  /** 单文件直接导入（保留原文件名，后端自动路由类型 + 冲突覆盖确认） */
-  async function directImport(file: File, opts: ImportOpts = {}): Promise<ImportResult> {
-    if (file.name.toLowerCase() === "ysm.json") {
-      if (!opts.quiet) toast(t("import.ysmJsonHint"), 4000, "warn");
-      return { outcome: "skipped" };
-    }
-    if (file.size > MAX_IMPORT_BYTES) {
-      if (!opts.quiet)
-        toast(
-          t("import.fileTooLargeSkipped", {
-            name: file.name,
-            mb: Math.round(MAX_IMPORT_BYTES / 1024 / 1024),
-          }),
-          TOAST_MS.long,
-          "warn",
-        );
-      return { outcome: "skipped" };
-    }
-    const key = `${file.name}:${file.size}:${file.lastModified}`;
-    if (inFlight.has(key)) {
-      if (!opts.quiet) toast(t("import.busyImporting"), TOAST_MS.success, "warn");
-      return { outcome: "skipped" };
-    }
-    inFlight.add(key);
-    try {
-      const base64 = await fileToBase64(file);
-      const { ImportModelFile } = await importGetApp();
-      await ImportModelFile(file.name, base64);
-      refreshRepo();
-      if (!opts.quiet) toast(`${t("import.success")}: ${file.name}`, TOAST_MS.success, "success");
-      return { outcome: "imported" };
-    } catch (e) {
-      const msg = `${t("import.failed")}: ${friendlyError(e)}`;
-      if (!opts.quiet) toast(msg, TOAST_MS.verbose, "error");
-      return { outcome: "failed", error: msg };
-    } finally {
-      inFlight.delete(key);
-    }
-  }
-
-  /** 文件夹整组导入 */
-  async function importFolder(
-    dir: string,
-    files: CollectedEntry[],
-    rtype = "",
-    opts: ImportOpts = {},
-  ): Promise<ImportResult> {
-    const firstFile = files.length > 0 ? files[0].file : null;
-    const dirKey = `${dir}:${firstFile ? `${firstFile.name}:${firstFile.size}:${firstFile.lastModified}` : ""}`;
-    if (inFlight.has(dirKey)) {
-      if (!opts.quiet) toast(t("import.busyImporting"), TOAST_MS.success, "warn");
-      return { outcome: "skipped" };
-    }
-    inFlight.add(dirKey);
-    const parts = dir.split("/");
-    const folderName = parts[parts.length - 1] || "模型";
-    const subpath = parts.slice(0, -1).join("/");
-    try {
-      const { items, skipped } = await buildFolderItems(dir, files);
-      if (!items.length) {
-        const msg = t("import.emptyFolder");
-        if (!opts.quiet) toast(msg, TOAST_MS.verbose, "error");
-        return { outcome: "failed", error: msg };
-      }
-      const App = await importGetApp();
-      if (rtype && typeof App.ImportModelFolderTo === "function") {
-        await App.ImportModelFolderTo(folderName, subpath, rtype, items);
-      } else {
-        if (rtype) {
-          console.warn(
-            `[import] ImportModelFolderTo 不可用（旧桥/Android 时序），降级为内容推断：rtype=${rtype}`,
-          );
-          if (!opts.quiet) toast(t("import.contextRouteUnavailable"), TOAST_MS.verbose, "warn");
-        }
-        await App.ImportModelFolder(folderName, subpath, items);
-      }
-      refreshRepo();
-      const skipHint = skipped > 0 ? `（${skipped} 个文件读取失败已跳过）` : "";
-      if (!opts.quiet)
-        toast(`${t("import.success")}: ${folderName}${skipHint}`, TOAST_MS.info, "success");
-      return { outcome: "imported" };
-    } catch (e) {
-      let msg: string;
-      if (isFileExistsError(e)) {
-        msg = `${folderName} ${t("import.alreadyExists")}`;
-      } else {
-        msg = `${t("import.failed")}: ${friendlyError(e)}`;
-      }
-      if (!opts.quiet) toast(msg, TOAST_MS.verbose, "error");
-      return { outcome: "failed", error: msg };
-    } finally {
-      inFlight.delete(dirKey);
-    }
-  }
-
-  /** 执行一组拖拽收集的条目 */
-  async function executeCollected(
-    collected: CollectedEntry[],
-    rtype = "",
-    opts: ImportOpts = {},
-  ): Promise<ImportBatchResult> {
-    const log = (msg: string) =>
-      swallowError(
-        importGetApp().then((app) => app.AddOpLog?.("import", msg, "", "", 0, "ok", "")),
-      );
-    log(`执行导入 ${collected.length} 个条目`);
-    const { folders, singles } = groupCollected(collected);
-    log(`分组: folders=${folders.length} singles=${singles.length}`);
-    const imported: ImportResult[] = [];
-    for (const g of folders) {
-      imported.push(await importFolder(g.dir, g.files, rtype, opts));
-    }
-    for (const c of singles) {
-      imported.push(await directImport(c.file, opts));
-    }
-    // 汇总（对接锐评 UX #2 收口）：调用方据 imported/failed/skipped 出「N 成功 M 失败」一条 toast
-    const failed = imported.filter((r) => r.outcome === "failed");
-    return {
-      folders: folders.length,
-      singles: singles.length,
-      imported: imported.filter((r) => r.outcome === "imported").length,
-      failed: failed.length,
-      skipped: imported.filter((r) => r.outcome === "skipped").length,
-      errors: failed.slice(0, 3).map((r) => r.error ?? ""),
-    };
-  }
-
-  /** 网页版导入执行 */
-  async function importWebFilesWithToast(
-    files: File[],
-    onFinally?: () => void,
-  ): Promise<{ imported: number; failed: number }> {
-    try {
-      const r = await importWebFiles(files, currentRepoType());
-      toast(
-        r.failed > 0
-          ? `${r.imported} 个导入成功，${r.failed} 个失败`
-          : `${r.imported} 个模型已导入浏览器模型库`,
-        TOAST_MS.verbose,
-        r.failed > 0 ? "warn" : "success",
-      );
-      bus.emit("tree:reload");
-      bus.emit("stats:refresh");
-      return r;
-    } catch (e) {
-      console.error("[import-web] importWebFiles 失败:", e);
-      toast(`${t("import.processError")}: ${friendlyError(e)}`, TOAST_MS.verbose, "error");
-      return { imported: 0, failed: files.length };
-    } finally {
-      onFinally?.();
-    }
-  }
-
-  return { directImport, importFolder, executeCollected, importWebFilesWithToast };
+  return {
+    directImport: (file, opts) => importSingleFile(file, opts ?? {}, inFlight),
+    importFolder: (dir, files, rtype, opts) =>
+      importFolderGroup(dir, files, rtype ?? "", opts ?? {}, inFlight),
+    executeCollected: (collected, rtype, opts) =>
+      executeBatch(collected, rtype ?? "", opts ?? {}, inFlight),
+    importWebFilesWithToast: importWebBatch,
+  };
 }
 
 /** 模块级默认导入会话（生产代码消费方零改动） */

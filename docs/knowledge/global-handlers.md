@@ -21,6 +21,7 @@ auto_fields:
     - downloadMissing
     - DownloadOutcome
     - handleTreeDrop
+    - PackOutcome
     - pushToDiary
     - registerErrorDiary
     - registerInstanceOps

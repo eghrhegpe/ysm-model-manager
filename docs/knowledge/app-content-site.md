@@ -162,6 +162,6 @@ status: active
 ## 相关
 
 - 主卡：`docs/knowledge/app-content.md`
-- 知识卡：`app-content`、`community-feature`
+- 知识卡：`app-content`、`community-feature`、`mutable-ref-discipline`（`{v:T}` 拆留判据）
 - `frontend/src/views/app-content/css/content-creator.ts` / `css/content-layout.ts` — 站点样式层（主卡持有）
 - `frontend/src/views/app-content/workshop-site-opener.ts` — 站点打开器（主卡装配，经 `init-workshop.ts` 接线）

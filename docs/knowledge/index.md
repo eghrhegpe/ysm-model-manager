@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 199 张知识卡
+> 总计: 200 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -44,7 +44,7 @@
 - **scripts-lib-adoption**（_lib 共享层采用率闸门）：`scripts/check-lib-adoption.ts` 把 `check-proc-adoption` 的成功经验（非直调占比 100% 全收敛）推广为**规则驱动的通用闸门**：RULES 表声明「某 `_lib` 模块 → 手搓…
 - **scripts-readme-index**（README 登记处对账 check-readme-index.ts）：`scripts/README.md` 自称「所有 Node 工具脚本的索引」「治理检查（check-* 系列；唯一登记处）」，但历史上没有任何机器对账——新增/改名脚本后忘记登记 README 不会被任何门禁拦下。2026-08-31 审…
 
-## core（27 张）
+## core（28 张）
 
 *核心基础设施（事件总线、页面状态、Wails 桥接）*
 
@@ -67,6 +67,7 @@
 | 🏗 i18n | 国际化 i18n 模块 | architecture | — | 翻译, 多语言, i18n, t(), 语言切换, lang:changed |
 | 🍃 ik-solver | CCD IK 求解器 ik-solver / 足部锚地 mmd-foot-ik | leaf | cpu-bound | IK 求解, 骨骼 IK, 足部锚地, foot IK, 极向量 / pole, CCD, 腿链提取 |
 | 🏗 model-stats | Web Worker 模型统计层 model-stats | architecture | cpu-bound, concurrent | 模型统计, 骨骼数, 立方体数, 纹理尺寸, SearchModels, 数值筛选, Web Worker, 批量统计 |
+| 🍃 mutable-ref-discipline | 可变引用判据（{v:T} 何时该用） | leaf | — | 写了 { v: T } 包装器但不确定是否必要, 想拆掉别人的 { v: T }，不确定会不会引入 stale 闭包 bug, 跨组件共享可变状态，不知道该用引用语义还是值语义 |
 | 🏗 page-store | 页面状态管理 page-store.ts | architecture | — | 页面, 当前页, 状态管理, page store, currentPage |
 | 🏗 pointer-events | Pointer Events 统一交互（触屏 + 桌面） | architecture | — | pointerdown, pointermove, pointerup, 触屏, 拖拽, 旋转 |
 | 🏗 redline-enforcement-grade | 唯一入口红线执法等级表（37 条审计） | architecture | — | 唯一入口, 红线, 绕过 redlines, W6 W9 R7 R11, 资源类型魔法串, 菜单 visibleWhen, 审计等级, 单一入口收口 |
@@ -95,6 +96,7 @@
 - **i18n**（国际化 i18n 模块）：`i18n` 模块是 YSM 前端的唯一翻译层，基于 ADR-045 设计。`t.ts` 提供纯函数式翻译（按 key 查表），`locale.ts` 管理语言状态、持久化与异步加载。支持简体中文（基准）、英语、日语三种语言，语言偏好持久化…
 - **ik-solver**（CCD IK 求解器 ik-solver / 足部锚地 mmd-foot-ik）：自写精简版 CCD（Cyclic Coordinate Descent）IK 求解器（ADR-072 工具层纯净、零 DOM / 零 backend），
 - **model-stats**（Web Worker 模型统计层 model-stats）：`frontend/src/workers/` + `frontend/src/backend/web-stats.ts` 是 ADR-071 审计增强 #7 新增的**Web Worker 批量模型统计层**，为网页版 `SearchMo…
+- **mutable-ref-discipline**（可变引用判据（{v:T} 何时该用））：前端跨组件共享可变状态时，仓内存在两种手法：**直接持有引用**（`refs.allSites`）与 **`{ v: T }` 包装器**（`refs.wsEditModeRef.v`）。两者都不是错的——**用错场景才是错的**，而且两种…
 - **pointer-events**（Pointer Events 统一交互（触屏 + 桌面））：ADR-047 核心立项 A：全前端拖拽/缩放/旋转/hover 交互从 mouse 事件统一迁移 **Pointer Events**（`pointerdown/move/up` + `setPointerCapture` + CSS `…
 - **test-discipline**（测试纪律：禁 mock 断言谓词 / 判别样本 / 变异探针）：[ADR-311-d1] 收口的测试可信度三机制（锐评 2026-10-08，落地 2026-10-09）：
 - **theme**（主题系统 theme）：主题系统的纯逻辑实现在 `frontend/src/theme-core.ts`（2026-08-17 神桶拆分自 `app-modules.ts`；`app-modules.ts` 仅 re-export `applyTheme/init…

@@ -1770,6 +1770,10 @@ export const autoSidebar = [
             "link": "/knowledge/model-stats"
           },
           {
+            "text": "可变引用判据（{v:T} 何时该用）",
+            "link": "/knowledge/mutable-ref-discipline"
+          },
+          {
             "text": "页面状态管理 page-store.ts",
             "link": "/knowledge/page-store"
           },

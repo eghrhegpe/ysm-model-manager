@@ -197,6 +197,7 @@
 
 | 用户意图 | 首选卡 | 红线警告 | 主 ADR(如有) |
 |----------|--------|----------|----------|
+| "{v:T} 包装器什么时候才需要" | [可变引用判据（{v:T} 何时该用）](./mutable-ref-discipline.md) | "拆 {v:T} 前先判断是引用语义还是值语义——引用语义（数组/对象/函数整体替换）持有 refs 的闭包天然可见，包装层是多余的；值语义（boolean/number 跨 async 边界）必须保留包装，拆了就读不到新值" | - |
 | 报错落日记、error toast 落盘、运行时日志环 | [UI 报错落日记 error-diary](./core-error-diary.md) | error/warn toast、未捕获异常、未处理拒绝、logWarn/logError 四路都经 error-diary 落日记（注入式 DiarySink，不直连 backend） | - |
 | 侧边栏、整合包列表、版本卡片 | [侧边栏 app-sidebar](./app-sidebar.md) | 侧边栏的 push/pull 必须经 events.ts 的 runPush/runPull 转发到 sync-manager，禁止直接调 API | - |
 | 创意工坊、站点 / 创作者频道 | [创意工坊站点视图 site](./app-content-site.md) | 浏览 / 编辑模式切换必须经 workshop-browse-mode 统一切换，禁止视图层各自判断 | - |
@@ -224,6 +225,7 @@
 | 日期格式化、友好日期、文件大小颜色 | [格式化工具 fmt](./utils-fmt.md) | - | - |
 | 数组排序、拖拽排序、moveItem | [数组工具 moveItem](./utils-array.md) | 数组移动必须走 array.ts 的 moveItem，禁止手写 splice 排序 | - |
 | 通用红线 | [国际化 i18n 模块](./i18n.md) | warnMissingKey 每 key 只告警一次（模块内私有 Set，不跨模块导出） | ADR-124, ADR-207, ADR-210 |
+| 通用红线 | [可变引用判据（{v:T} 何时该用）](./mutable-ref-discipline.md) | "别为「统一风格」无差别清扫：仓内 24 处里过半在 3D 生命周期族，那些 {v} 有真实理由（跨 async 边界共享中止标志）" | - |
 | 同步缺失、清空整合包、导出清单 | [全局事件处理 global-handlers](./global-handlers.md) | - | - |
 | 图标、emoji、文件图标、fileIcon | [文件名展示与着色链 display](./utils-display.md) | - | - |
 | 推送 / 拉取、同步状态、勾选 | [侧边栏 app-sidebar](./app-sidebar.md) | - | - |
@@ -1015,6 +1017,9 @@
 | safeDispose 未复用 | - | 重复写释放逻辑、资源泄漏；必须经 safeDispose 原语 |
 | adapter 直接遍历 entry 数组 | - | 容器内多模型顺序不稳定、缺用户选择点；必须走 multiModelSelectNode |
 | litematic zip 多 nbt 未走 select | - | 默认取第一个，用户无法换选；必须复用 multiModelSelectNode |
+| "拆包装层是**零行为变更重构**，验收判据是原测试全绿——不是看代码更短。刀A 拆 WorkshopRefs 时 38 个测试全绿才算数" | - | - |
+| "反向陷阱：给引用语义字段**补**包装层同样错——多一层间接不解决任何问题，只让调用点从  变成 `refs.allSitesRef.v`" | `refs.allSites` | - |
+| "判据只看，不看「字段是数组还是布尔」" | `闭包捕获了什么` | - |
 | 各页面各自实现评分 | - | 结果不一致、排名错乱；必须经 oldest-models 单点 |
 | bus.emit 未带 payload | - | 下游无法渲染推荐卡；必须经 bus.emit 携带完整 payload |
 | ❌ 曾漏检三类消费形态，导致活代码被误报孤儿并倒逼出遮蔽性豁免规则（僵尸规则） | - | - |

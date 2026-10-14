@@ -258,6 +258,24 @@ export const NO_3D_TYPES: ReadonlySet<string> = new Set(
 );
 
 /**
+ * 几何分析管线可解析的「SearchModels 数值条件」资源类型集合（2026-10-14 锐评 P1 修复 A 案）。
+ * 从 resource_types.json 的 geometrySearchable 声明派生（单一事实源；Go registry 同字段）：
+ * adv-filter 数值条件区（骨骼/立方体/纹理 6 范围）的展示门控——后端 SearchModels 对全部
+ * 候选条目跑 AnalyzeBedrockModel，无几何管线的类型（MMD/蓝图/资源包等）解析恒空 →
+ * modelMatchesFilters 的 BoneCount==0 硬排除整类条目且无任何提示（用户视角「模型蒸发」）。
+ * 门控后：集合外类型禁用数值区 + 一行提示，数值条件不再静默失效。
+ * 新增类型只改 JSON 声明，本集合自动跟随；未来跨类型搜索收口（按 Type 分流分析器）复用同一声明。
+ */
+export const GEOMETRY_SEARCHABLE_TYPES: ReadonlySet<string> = new Set(
+  allResourceTypes.filter((t) => t.geometrySearchable === true).map((t) => t.id),
+);
+
+/** 高级筛选数值条件是否可被该资源类型的几何管线解析（展示端门控；判据同源注册表 JSON，前端不判定） */
+export function isGeometrySearchableRtype(rtype: string): boolean {
+  return GEOMETRY_SEARCHABLE_TYPES.has(rtype);
+}
+
+/**
  * 3D 切换面板类型 tab 的单一事实来源（ADR-111 收口）。
  * 此前 preview-switch-tabs 由 `Object.keys(_openers)` 副作用派生——opener 注册 key 混用
  * preview key（"mmd"/"vrm"/"mmd-scene"）与真实 rtype ID（"ysm"/"fbx"），导致 tab 语义

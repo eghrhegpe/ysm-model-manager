@@ -282,6 +282,12 @@
   color: var(--muted);
   white-space: nowrap;
 }
+/* 数值条件不可用提示（geometrySearchable 门控；与 tag-hint 同款弱化视觉，长句允许换行） */
+.afv-numeric-hint {
+  font-size:var(--fs-xs);
+  color: var(--muted);
+  white-space: normal;
+}
 .afv-footer {
   padding: 0;
   display: flex;

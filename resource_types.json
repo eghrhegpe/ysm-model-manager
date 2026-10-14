@@ -75,6 +75,7 @@
       "preview": "3d",
       "detector": "ysm",
       "cliAnalyzable": true,
+      "geometrySearchable": true,
       "hashable": true,
       "dirLevelSync": true,
       "installExts": [
@@ -116,6 +117,7 @@
       "preview": "3d",
       "detector": "zipentry",
       "cliAnalyzable": true,
+      "geometrySearchable": true,
       "zipEntries": [
         {
           "name": "maid_model.json",

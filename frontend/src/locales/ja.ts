@@ -1742,6 +1742,8 @@ export const ja: Record<string, string> = {
   "tree.batchToggleFail": "一括有効化/無効化に失敗しました",
   "tree.importFail": "インポートに失敗: {msg}",
   "tree.advFilterFail": "高度なフィルターに失敗しました",
+  "tree.advFilterNumericUnsupported":
+    "数値条件（ボーン／キューブ／テクスチャ）はジオメトリ解析パイプラインがあるモデルタイプにのみ適用されます。{type} タイプは非対応のため数値セクションは無効化されています。キーワード／タグ条件をご利用ください。",
   "tree.selectFileTitle": "{rtype} ファイルを選択",
   "tree.importFileFilter": "{rtype} ファイル",
   "tree.importOk": "インポートに成功しました",

@@ -38,33 +38,34 @@ type ResourceTypeRegistry struct {
 
 // ResourceType 一种受支持的资源类型定义
 type ResourceType struct {
-	ID             string          `json:"id"`
-	Name           string          `json:"name"`
-	Icon           string          `json:"icon"`
-	Group          string          `json:"group"`                // 所属分组（ADR-092）：minecraft / minecraft-mod / mmd / vrm / other
-	GroupLabel     string          `json:"groupLabel,omitempty"` // 分组显示名，仅该组首个类型携带（消除双写）
-	GroupIcon      string          `json:"groupIcon,omitempty"`  // 分组图标，同上
-	Extensions     []string        `json:"extensions"`
-	StorageSubDir  string          `json:"storageSubDir"`
-	InstanceDir    string          `json:"instanceDir"` // 整合包内实际存放目录（安装+扫描统一路径）
-	InstanceLevel  bool            `json:"instanceLevel"`
-	Preview        string          `json:"preview"`                  // "3d" / "thumbnail" / "none"
-	Detector       string          `json:"detector"`                 // "ysm" / "mcmeta" / "shader" / "zipentry" / "extension"
-	CliAnalyzable  bool            `json:"cliAnalyzable"`            // CLI（go/cli benchmark 等）是否有该类型的解析链路；单一事实源=本 JSON，2026-09 起 perfTypeManifest 不再持有（前端目标集选择器同源消费）
-	ConfigField    string          `json:"configField"`              // AppConfig 字段名（如 YsmRoot）
-	ConfigFallback string          `json:"configFallback"`           // AppConfig 回退字段名（如 VrcRoot→MmdRoot）
-	IsDir          bool            `json:"isDir"`                    // 目录型资源（删除/同步整目录）
-	Hashable       bool            `json:"hashable"`                 // 扩展名参与 SHA256 哈希（ShouldHashExt 注册表驱动）
-	DirLevelSync   bool            `json:"dirLevelSync"`             // 文件夹级资源同步（sync.SyncResourcesDirLevel）
-	ScanInstance   bool            `json:"scanInstance"`             // instance 视图额外扫描整合包目录（非模型类型兜底）
-	FallbackDir    string          `json:"fallbackDir,omitempty"`    // 兜底扫描只认此目录名（空=不限定，ScanInstance=true 时生效）
-	InstallExts    []string        `json:"installExts"`              // 安装白名单扩展名（空=全部放行，仅可执行文件黑名单除外）
-	ZipEntries     []ZipEntryMatch `json:"zipEntries"`               // ZIP 内容特征条目（importer.DetectContainerType 注册表驱动）
-	NestedModelDir bool            `json:"nestedModelDir"`           // 嵌套模型目录（无独立 ADR，特性登记见 extensions.go 注释 + 知识卡 go-types-registry；原注释误引 ADR-095）：模型入口在 assets/<namespace>/ 下（如 maid-model 的 maid_model.json）
-	NestedPatterns []NestedPattern `json:"nestedPatterns,omitempty"` // 嵌套模式配置（无独立 ADR）：支持任意深度的嵌套路径检测
-	Priority       int             `json:"priority,omitempty"`       // 检测优先级（同指纹计数打平时高者胜：专用指纹类型 > 通用指纹类型，如 maid-model > resourcepack）
-	Mod            *ModRequirement `json:"mod,omitempty"`            // mod 依赖声明（ADR-110：mod 下沉注册表）
-	Variants       []Variant       `json:"variants,omitempty"`       // 格式变体（ADR-111：variants 解耦，按扩展名分发预览器）
+	ID                 string          `json:"id"`
+	Name               string          `json:"name"`
+	Icon               string          `json:"icon"`
+	Group              string          `json:"group"`                // 所属分组（ADR-092）：minecraft / minecraft-mod / mmd / vrm / other
+	GroupLabel         string          `json:"groupLabel,omitempty"` // 分组显示名，仅该组首个类型携带（消除双写）
+	GroupIcon          string          `json:"groupIcon,omitempty"`  // 分组图标，同上
+	Extensions         []string        `json:"extensions"`
+	StorageSubDir      string          `json:"storageSubDir"`
+	InstanceDir        string          `json:"instanceDir"` // 整合包内实际存放目录（安装+扫描统一路径）
+	InstanceLevel      bool            `json:"instanceLevel"`
+	Preview            string          `json:"preview"`                      // "3d" / "thumbnail" / "none"
+	Detector           string          `json:"detector"`                     // "ysm" / "mcmeta" / "shader" / "zipentry" / "extension"
+	CliAnalyzable      bool            `json:"cliAnalyzable"`                // CLI（go/cli benchmark 等）是否有该类型的解析链路；单一事实源=本 JSON，2026-09 起 perfTypeManifest 不再持有（前端目标集选择器同源消费）
+	GeometrySearchable bool            `json:"geometrySearchable,omitempty"` // 几何分析管线（AnalyzeBedrockModel/geoCache，SearchModels 数值条件）可解析该类型条目；单一事实源=本 JSON（2026-10-14 锐评 P1 修复：前端 adv-filter 数值区按此声明展示门控；未来跨类型搜索分流判据同源）
+	ConfigField        string          `json:"configField"`                  // AppConfig 字段名（如 YsmRoot）
+	ConfigFallback     string          `json:"configFallback"`               // AppConfig 回退字段名（如 VrcRoot→MmdRoot）
+	IsDir              bool            `json:"isDir"`                        // 目录型资源（删除/同步整目录）
+	Hashable           bool            `json:"hashable"`                     // 扩展名参与 SHA256 哈希（ShouldHashExt 注册表驱动）
+	DirLevelSync       bool            `json:"dirLevelSync"`                 // 文件夹级资源同步（sync.SyncResourcesDirLevel）
+	ScanInstance       bool            `json:"scanInstance"`                 // instance 视图额外扫描整合包目录（非模型类型兜底）
+	FallbackDir        string          `json:"fallbackDir,omitempty"`        // 兜底扫描只认此目录名（空=不限定，ScanInstance=true 时生效）
+	InstallExts        []string        `json:"installExts"`                  // 安装白名单扩展名（空=全部放行，仅可执行文件黑名单除外）
+	ZipEntries         []ZipEntryMatch `json:"zipEntries"`                   // ZIP 内容特征条目（importer.DetectContainerType 注册表驱动）
+	NestedModelDir     bool            `json:"nestedModelDir"`               // 嵌套模型目录（无独立 ADR，特性登记见 extensions.go 注释 + 知识卡 go-types-registry；原注释误引 ADR-095）：模型入口在 assets/<namespace>/ 下（如 maid-model 的 maid_model.json）
+	NestedPatterns     []NestedPattern `json:"nestedPatterns,omitempty"`     // 嵌套模式配置（无独立 ADR）：支持任意深度的嵌套路径检测
+	Priority           int             `json:"priority,omitempty"`           // 检测优先级（同指纹计数打平时高者胜：专用指纹类型 > 通用指纹类型，如 maid-model > resourcepack）
+	Mod                *ModRequirement `json:"mod,omitempty"`                // mod 依赖声明（ADR-110：mod 下沉注册表）
+	Variants           []Variant       `json:"variants,omitempty"`           // 格式变体（ADR-111：variants 解耦，按扩展名分发预览器）
 }
 
 // ModRequirement mod 依赖声明（ADR-110）：

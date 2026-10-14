@@ -38,6 +38,12 @@ export interface ResourceType {
    * cliAnalyzable 声明（Go 侧 cliAnalyzable() 读同一字段）。前端只消费：目标集选择器据此
    * 只列可分析类型，不再自己判「哪些模型能跑 benchmark」（ADR-262 D3 / ADR-269 D3 同步通路）。 */
   cliAnalyzable?: boolean;
+  /** 该类型条目是否可被几何分析管线（Go SearchModels 数值条件：AnalyzeBedrockModel + geoCache）
+   * 解析。事实源 = resource_types.json 的 geometrySearchable 声明（Go registry 同字段）。
+   * 前端消费：adv-filter 数值条件区展示门控（types.ts GEOMETRY_SEARCHABLE_TYPES）——
+   * 无管线的类型禁用数值区 + 提示，避免「无几何可解析的条目被 BoneCount==0 硬排除」的静默蒸发
+   * （2026-10-14 锐评 P1 修复 A 案）。 */
+  geometrySearchable?: boolean;
   variants?: ResourceTypeVariant[];
   zipEntries?: ZipEntryMatch[];
 }

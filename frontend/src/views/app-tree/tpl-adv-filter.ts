@@ -46,6 +46,8 @@ function buildAdvFilterFormHTML(v: Partial<AdvFilterValue>): string {
           </div>
         </div>
 
+        <div id="afv-numeric-hint" class="afv-numeric-hint" hidden></div>
+
         <div>
           <label for="afv-tag" class="afv-label">${UI_ICONS.tag} ${t("dialog.tags")}</label>
           <div class="afv-range-row">

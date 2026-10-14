@@ -9,6 +9,7 @@
 
 import { t } from "@/core/i18n/t.ts";
 import { createDialog } from "@/utils/dom/modal-core.ts";
+import { isGeometrySearchableRtype, rtypeLabelOf } from "@/utils/resource/types.ts";
 import { type AdvFilterValue, parseFilterNumber, validateAdvFilter } from "./adv-filter-util.ts";
 import { dialogsGetApp } from "./dialogs-deps.ts";
 
@@ -18,30 +19,53 @@ export type { AdvFilterValue } from "./adv-filter-util.ts";
 
 export type AdvFilterResult = AdvFilterValue | { cleared: true } | null;
 
-/** 收集弹窗输入 → AdvFilterValue（骨骼/立方体/纹理 数字解析 + 关键字/标签去空格） */
+/** 数值条件 6 输入框 id（geometrySearchable 门控的禁用/归零目标；与模板 #afv-* 编号同源） */
+const NUMERIC_INPUT_IDS = [
+  "#afv-minBones",
+  "#afv-maxBones",
+  "#afv-minCubes",
+  "#afv-maxCubes",
+  "#afv-minTex",
+  "#afv-maxTex",
+] as const;
+
+/** 收集弹窗输入 → AdvFilterValue（骨骼/立方体/纹理 数字解析 + 关键字/标签去空格）
+ * @param ignoreNumeric 数值区被门控禁用时传 true——数值字段一律归 null（「用不了就不带走」：
+ *  旧数值若带进 SearchModels 会被 BoneCount==0 静默排除整类条目，归 null 才是可见语义） */
 function advFilterCollect(
   box: HTMLDivElement,
   kwInput: HTMLInputElement,
   tagInput: HTMLInputElement,
+  ignoreNumeric = false,
 ): AdvFilterValue {
+  const num = (id: string): number | null =>
+    ignoreNumeric
+      ? null
+      : parseFilterNumber((box.querySelector(id) as HTMLInputElement)?.value ?? "");
   return {
     keyword: kwInput.value.trim(),
-    minBones: parseFilterNumber(
-      (box.querySelector("#afv-minBones") as HTMLInputElement)?.value ?? "",
-    ),
-    maxBones: parseFilterNumber(
-      (box.querySelector("#afv-maxBones") as HTMLInputElement)?.value ?? "",
-    ),
-    minCubes: parseFilterNumber(
-      (box.querySelector("#afv-minCubes") as HTMLInputElement)?.value ?? "",
-    ),
-    maxCubes: parseFilterNumber(
-      (box.querySelector("#afv-maxCubes") as HTMLInputElement)?.value ?? "",
-    ),
-    minTex: parseFilterNumber((box.querySelector("#afv-minTex") as HTMLInputElement)?.value ?? ""),
-    maxTex: parseFilterNumber((box.querySelector("#afv-maxTex") as HTMLInputElement)?.value ?? ""),
+    minBones: num("#afv-minBones"),
+    maxBones: num("#afv-maxBones"),
+    minCubes: num("#afv-minCubes"),
+    maxCubes: num("#afv-maxCubes"),
+    minTex: num("#afv-minTex"),
+    maxTex: num("#afv-maxTex"),
     tag: tagInput.value.trim(),
   };
+}
+
+/** 数值区门控（2026-10-14 锐评 P1 修复 A 案）：当前 rtype 无几何分析管线（registry
+ *  geometrySearchable 声明）时——禁用 6 数值输入 + 显示提示行。展示端门控，判据同源注册表。 */
+function gateNumericSection(box: HTMLElement, rtype: string): void {
+  for (const id of NUMERIC_INPUT_IDS) {
+    const inp = box.querySelector(id) as HTMLInputElement | null;
+    if (inp) inp.disabled = true;
+  }
+  const hint = box.querySelector("#afv-numeric-hint") as HTMLElement | null;
+  if (hint) {
+    hint.textContent = t("tree.advFilterNumericUnsupported", { type: rtypeLabelOf(rtype) });
+    hint.hidden = false;
+  }
 }
 
 /**
@@ -120,6 +144,8 @@ function bindAdvFilterEvents(
  * 弹出高级筛选弹窗
  * @param opts.value 初始值（预填 vm 已应用态）
  * @param opts.tpl DOM 模板（ADR-190 D1a，组合根注入 advFilterTpl）
+ * @param opts.rtype 当前树资源类型——无几何管线的类型（registry geometrySearchable 声明）
+ *  数值区禁用 + 提示 + 数值字段归零（2026-10-14 锐评 P1 修复 A 案）；缺省（旧调用方）行为不变
  * @returns 筛选条件对象，取消返回 null；清除时返回 { cleared: true }
  */
 export function modalAdvFilter(opts: {
@@ -128,9 +154,26 @@ export function modalAdvFilter(opts: {
   tpl: AdvFilterTpl;
   /** 依赖注入（ADR-190 D2）：测试可注入 getApp 替身，缺省走生产实现 */
   getApp?: GetAppFn;
+  /** 当前树资源类型（数值区展示门控；缺省 = 不门控，兼容旧调用方） */
+  rtype?: string;
 }): Promise<AdvFilterResult> {
   return new Promise((resolve) => {
-    const v = opts.value || {};
+    const rawV = opts.value || {};
+    const rtype = opts.rtype;
+    // 数值区门控判定：无几何管线的类型——预填数值一并剥掉（禁用态下展示陈旧数值徒增困惑，
+    // 且 collect 会归零，展示与提交口径保持同一真相）
+    const numericGated = !!rtype && !isGeometrySearchableRtype(rtype);
+    const v: Partial<AdvFilterValue> = numericGated
+      ? {
+          ...rawV,
+          minBones: null,
+          maxBones: null,
+          minCubes: null,
+          maxCubes: null,
+          minTex: null,
+          maxTex: null,
+        }
+      : rawV;
     const { overlay, box, close } = createDialog<AdvFilterResult>({
       title: t("dialog.advFilter"),
       titleIcon: "settings",
@@ -142,6 +185,8 @@ export function modalAdvFilter(opts: {
       resolve,
       buildBox: (el) => {
         el.innerHTML = opts.tpl.formHTML(v);
+        // numericGated 蕴含 rtype 非空（窄化守卫，免非空断言）
+        if (numericGated && rtype) gateNumericSection(el, rtype);
       },
     });
 
@@ -151,7 +196,7 @@ export function modalAdvFilter(opts: {
       overlay,
       box,
       close,
-      () => advFilterCollect(box, kwInput, tagInput),
+      () => advFilterCollect(box, kwInput, tagInput, numericGated),
       opts.getApp || dialogsGetApp,
     );
   });

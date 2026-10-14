@@ -8,6 +8,8 @@ import {
   ALL_RESOURCE_TYPES,
   NO_3D_TYPES,
   AMBIGUOUS_EXTS,
+  GEOMETRY_SEARCHABLE_TYPES,
+  isGeometrySearchableRtype,
   resolveTypeSafe,
   VOXEL_RPC_BY_EXT,
   GROUP_META,
@@ -104,6 +106,29 @@ describe("RESOURCE_TYPES ↔ allResourceTypes 双向对账（防双源漂移）"
     for (const id of schemaIds) {
       expect(valueSet.has(id), `RESOURCE_TYPES 缺少 JSON 类型: ${id}`).toBe(true);
     }
+  });
+});
+
+// ===== geometrySearchable 派生集（2026-10-14 锐评 P1 修复 A 案：adv-filter 数值区展示门控）=====
+describe("GEOMETRY_SEARCHABLE_TYPES 派生集（JSON geometrySearchable 声明 → 数值区门控）", () => {
+  it("与 JSON geometrySearchable 声明全量一致（防派生集漂移）", () => {
+    const declared = new Set(
+      resourceTypesJson.resourceTypes
+        .filter((t) => (t as { geometrySearchable?: boolean }).geometrySearchable === true)
+        .map((t) => t.id),
+    );
+    expect([...GEOMETRY_SEARCHABLE_TYPES].sort()).toEqual([...declared].sort());
+  });
+
+  it("ysm / maid-model 在列（几何载体：.ysm WASM 解码 + 归档 Bedrock-JSON 管线）", () => {
+    expect(GEOMETRY_SEARCHABLE_TYPES.has("ysm")).toBe(true);
+    expect(GEOMETRY_SEARCHABLE_TYPES.has("maid-model")).toBe(true);
+  });
+
+  it("无几何管线的 MMD 类型不入列（门控目标；门控判据同源 JSON，前端不判定）", () => {
+    expect(GEOMETRY_SEARCHABLE_TYPES.has("EntityPlayer")).toBe(false);
+    expect(isGeometrySearchableRtype("EntityPlayer")).toBe(false);
+    expect(isGeometrySearchableRtype("ysm")).toBe(true);
   });
 });
 

@@ -1744,6 +1744,8 @@ export const en: Record<string, string> = {
   "tree.batchToggleFail": "Batch enable/disable failed",
   "tree.importFail": "Import failed: {msg}",
   "tree.advFilterFail": "Advanced filter failed",
+  "tree.advFilterNumericUnsupported":
+    "Numeric filters (bones / cubes / texture) only apply to types with a parseable geometry pipeline. The {type} type is not supported, so numeric fields are disabled — use keyword / tag conditions instead.",
   "tree.selectFileTitle": "Select {rtype} file",
   "tree.importFileFilter": "{rtype} files",
   "tree.importOk": "Import successful",

@@ -18,7 +18,7 @@ import { __resetModalStateForTest, closeActiveDialog } from "@/utils/dom/modal-c
 // 静默「标签提示加载失败」的预期告警噪声（boom 用例故意触发降级路径）
 import { stubConsoleWarn } from "@/test-utils/mock-log.ts";
 
-async function open(opts: { value?: Record<string, unknown> } = {}) {
+async function open(opts: { value?: Record<string, unknown>; rtype?: string } = {}) {
   const pending = modalAdvFilter({
     tpl: advFilterTpl,
     ...opts,
@@ -205,5 +205,39 @@ describe("modalAdvFilter — Enter 提交", () => {
     await expect(
       Promise.race([pending, Promise.resolve("pending")]),
     ).resolves.toBe("pending");
+  });
+});
+
+describe("modalAdvFilter — 数值条件门控（geometrySearchable，2026-10-14 锐评 P1 A 案）", () => {
+  it("无几何管线的 rtype → 6 数值输入禁用 + 提示行 + 预填数值剥离 + 提交归 null", async () => {
+    const { overlay, minBones, pending } = await open({
+      value: { keyword: "a", minBones: 3 },
+      rtype: "EntityPlayer",
+    });
+    const hint = overlay.querySelector("#afv-numeric-hint") as HTMLElement;
+    expect(hint.hidden).toBe(false);
+    expect(hint.textContent).toContain("不支持");
+    // 6 数值输入全禁用（含未取引用的 cubes/tex）
+    for (const id of ["minBones", "maxBones", "minCubes", "maxCubes", "minTex", "maxTex"]) {
+      expect((overlay.querySelector(`#afv-${id}`) as HTMLInputElement).disabled).toBe(true);
+    }
+    // 预填剥离：禁用态不展示陈旧数值
+    expect(minBones.value).toBe("");
+    // 提交归 null（关键词保留）——旧数值不再带进 SearchModels 静默排除整类条目
+    (overlay.querySelector("#afv-ok") as HTMLButtonElement).click();
+    await expect(pending).resolves.toMatchObject({ keyword: "a", minBones: null, maxBones: null });
+  });
+
+  it("有几何管线的 rtype（ysm）→ 数值区启用、无提示、预填保留", async () => {
+    const { overlay, minBones } = await open({ value: { minBones: 3 }, rtype: "ysm" });
+    expect(minBones.disabled).toBe(false);
+    expect(minBones.value).toBe("3");
+    expect((overlay.querySelector("#afv-numeric-hint") as HTMLElement).hidden).toBe(true);
+  });
+
+  it("未传 rtype（旧调用方）→ 行为不变（数值区启用）", async () => {
+    const { minBones } = await open({ value: { minBones: 5 } });
+    expect(minBones.disabled).toBe(false);
+    expect(minBones.value).toBe("5");
   });
 });

@@ -123,7 +123,14 @@ async function advFilterReadCurAndOpenDialog(vm: AppTree): Promise<AdvFilterResu
     tag: adv.tag,
   };
   dbg("adv-filter", "dialog:open", { cur });
-  const result = await modalAdvFilter({ value: cur, tpl: advFilterTpl });
+  // 数值区展示门控（2026-10-14 锐评 P1 修复 A 案）：传当前树 rtype——无几何管线的类型
+  // （registry geometrySearchable 声明）在弹窗内禁用数值区并提示；rootAttr 缺省（""）= 不门控
+  // （exactOptionalPropertyTypes：缺省时整个键缺席，不显式传 undefined）
+  const result = await modalAdvFilter({
+    value: cur,
+    tpl: advFilterTpl,
+    ...(vm.rootAttr ? { rtype: vm.rootAttr } : {}),
+  });
   dbg("adv-filter", "dialog:return", { result });
   if (!result) {
     dbg("adv-filter", "dialog:cancelled-or-null");

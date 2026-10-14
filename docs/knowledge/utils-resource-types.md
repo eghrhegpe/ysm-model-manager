@@ -122,7 +122,7 @@ status: active
 `schema.ts`（同步单一解析点，ADR-269 D3 起取代异步加载器）：
 - `allResourceTypes: ResourceType[]` — 全类型条目数组（插入序 = JSON 序），`types.ts`/`extensions.ts`/`web-fs.ts`/`site-edit.ts` 等消费
 - `resourceTypesById: Record<string, ResourceType>` — 按 id 键控视图（`Object.fromEntries` 保序），取代原 `loadResourceRegistry()` 的 keyed-map：设置/诊断/同步管理等键控消费方直读此处，与 `allResourceTypes` 同源、无空表窗口
-- `ResourceType` 接口（前端消费字段子集，完整 schema 事实源仍是 Go `go/types/resource.go` + 根 `resource_types.json`）：`id/name/icon/group/groupLabel/groupIcon/extensions/storageSubDir/configField/instanceDir/preview/detector/variants/zipEntries`；Go 新增未被前端消费的字段不要求补声明
+- `ResourceType` 接口（前端消费字段子集，完整 schema 事实源仍是 Go `go/types/resource.go` + 根 `resource_types.json`）：`id/name/icon/group/groupLabel/groupIcon/extensions/storageSubDir/configField/instanceDir/preview/detector/geometrySearchable/variants/zipEntries`；Go 新增未被前端消费的字段不要求补声明
 - ⚠️ 历史：原 `services/resource-registry.ts` 提供 `loadResourceRegistry()`（走 `getApp().LoadResourceTypes()` 异步 RPC + 模块级 `_registry` 缓存），ADR-269 D3（2026-09）删除全部消费方后连模块一并退役——勿再引用
 
 `types.ts`（同步常量）：
@@ -138,6 +138,7 @@ status: active
   - `resolveTypeSafe(path)` — **安全解析入口（ADR-067 S4）**：单归属扩展名直接命中；歧义扩展名返回 `null` 强制调用方回退 Go `DetectResourceType` 内容检测；新分发器（P1 VRM / P2 MMD 适配器）统一使用
   - `resolvePreviewKey(filePath, rtype)` / `resolvePreviewKeyToRtype(previewKey)` / `resolvePreviewKeyByExt(filePath)` / `resolveDefaultPreviewKey(rtype)` — 预览路由 key 派生链（ADR-111；`resolvePreviewKeyByExt` 是歧义扩展名预览路由兜底，只做「预览适配器路由」派生、不参与类型判定）
   - `isContainerExt(pathOrExt)` — 压缩容器扩展名判定（值集派生自 `schema.ts|containerExts` ← JSON 顶层 `containerExts`）
+  - `GEOMETRY_SEARCHABLE_TYPES` / `isGeometrySearchableRtype(rtype)` — 几何分析管线（Go SearchModels 数值条件：AnalyzeBedrockModel + geoCache）可解析类型集，派生自 JSON `geometrySearchable` 声明（当前 ysm / maid-model）；adv-filter 数值区展示门控消费（见 dialog-adv-filter 卡）+ 未来跨类型搜索分流判据（ADR-343）；测试 `types.test.ts`「GEOMETRY_SEARCHABLE_TYPES 派生集」与 JSON 对账防漂移
   - 内部实现（非导出）：`RESOURCE_CAPS`（派生能力表）/`resolveTypeByExt`（反查）——外部统一走 `resolveTypeSafe`/`matchTypeByExt` 等安全入口
 
 `extensions.ts`（类型 ↔ 扩展名静态映射）：

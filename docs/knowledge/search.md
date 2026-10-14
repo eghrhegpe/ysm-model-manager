@@ -205,7 +205,8 @@ status: active
 
 **与前端 `SearchResult.Type` 字段的关系（查证根因，非「补一行即可」的死路待办）**：`types.go` 的 `SearchResult.Type` 标了 `omitempty`，`SearchModels` 从不填；而 `ModelEntry.Type` **只在 `ScanModelEntriesFiltered`（带 rtype 过滤）路径填**（`app_scan.go` 的 `e.Type = rtype`，`go/types/types.go|ModelEntry` 的 `Type` 字段注释也写明"未指定 rtype 时为 ''"）。`SearchModels` 走的是全量 `ScanModelEntries`（`app_scan.go`），该路径只填 `HasTags`、不填 `Type`。
 
-→ **关键结论**：在 `SearchModels` 里填 `entry.Type` 会恒取空值、零收益——这是架构路径决定的死字段，不是"漏填一行"。要让搜索结果带类型，必须**先让全量 `ScanModelEntries` 给 entry 推导 `Type`**（依赖 `resource_types.json` 单一事实源 + registry 推导，属回归红线范畴，不可顺手做）。当前阶段 `SearchResult.Type` 应视为预留位（跨类型搜索语义未接上），不要误判为"补一行 `entry.Type` 即可"，也暂不应删除（待「跨类型搜索」收口 ADR 立项时再决定——注意 ADR-183 是 8 参数封装的暂缓决策、不覆盖 Type 语义，原句误挂 ADR-183，2026-10-14 修正）。
+→ **关键结论**：在 `SearchModels` 里填 `entry.Type` 会恒取空值、零收益——这是架构路径决定的死字段，不是"漏填一行"。要让搜索结果带类型，必须**先让全量 `ScanModelEntries` 给 entry 推导 `Type`**（依赖 `resource_types.json` 单一事实源 + registry 推导，属回归红线范畴，不可顺手做）。当前阶段 `SearchResult.Type` 应视为预留位（跨类型搜索语义未接上），不要误判为"补一行 `entry.Type` 即可"，也暂不应删除（收口方案已立项 [ADR-343 跨类型搜索收口](../adr/architecture/ADR-343-cross-type-search.md)：全量扫描派生 Type + 分析器分流 + SearchFilters 封装 + Type 字段收口四刀；注意 ADR-183 是 8 参数封装的暂缓决策、不覆盖 Type 语义，原句误挂 ADR-183，2026-10-14 修正）。
+**过渡态（A 案已落地）**：`resource_types.json` 的 `geometrySearchable` 声明（ysm / maid-model）驱动前端 adv-filter 数值区展示端门控——无几何管线类型禁用数值条件并提示，数值条件不再静默蒸发整类条目（能力面收口归 ADR-343，展示端门控见知识卡 dialog-adv-filter）。
 
 ## 与其他子系统关系
 

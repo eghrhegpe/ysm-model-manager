@@ -188,7 +188,7 @@ status: active
 
 | 功能 | 触发元素 | 说明 |
 |------|----------|------|
-| 高级筛选弹窗 | `#btn-adv-filter` 点击 → `openAdvFilterDialog`（toolbar-search.ts） | 弹窗输入关键词/标签/骨骼/立方体/纹理数值范围，回填 inline 面板并调用后端 SearchModels |
+| 高级筛选弹窗 | `#btn-adv-filter` 点击 → `openAdvFilterDialog`（toolbar-search.ts） | 弹窗输入关键词/标签/骨骼/立方体/纹理数值范围（当前 rtype 无几何管线时数值区禁用 + 提示，`geometrySearchable` 门控见 dialog-adv-filter 卡），回填 inline 面板并调用后端 SearchModels |
 | 排序下拉 | `#sort` change | name/size/date 排序（name/目录恒按名称；文件 size/date **降序**，同键回退名称序——目录无独立 size/modTime 语义，子树聚合归 Go。⚠️ 2026-09 前比较器漏实现 size/date 档，`render.test.ts` 的 `treeKeys` 用 `Object.keys().sort()` 自排序致用例对任何实现通过，断言必须走 `flattenVisible` 行序且数据须使字典序 ≠ 期望序） |
 | 视图模式切换 | `#btn-view-mode` click | grid ⇄ list 切换，持久化到 localStorage |
 | 作者下拉菜单 | `#dd-authors`（`initDropdown` 控制器 click 展开，onOpen 钩子每次展开重填 `fillAuthorMenu`——ADR-238 hover 展开已退役） | 点击作者名自动填入搜索框并触发搜索 |

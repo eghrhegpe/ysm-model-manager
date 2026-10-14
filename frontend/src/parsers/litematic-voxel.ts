@@ -142,39 +142,31 @@ function readRegionBlockBody(
   return { kind: "ok", longs, bpe };
 }
 
-/**
- * 对齐 voxel.go:92-171 BuildVoxelData：.litematic 体素视图。
- * 无 Regions → 仅返回 Size（maxBlocks: 0、groups: null，对齐 Go 快捷返回）；
- * 所有 region 数据损坏 → null（→ "{}"）。
- */
-export function litematicVoxelView(
-  root: Record<string, unknown>,
-  maxBlocks: number,
-): VoxelData | null {
+/** 读 Metadata.EnclosingSize 三元组；非有限值归零（encSize 合理性校验，负值/零值无有效包围盒） */
+function readEnclosingSize(root: Record<string, unknown>): number[] {
   const encSize: number[] = [0, 0, 0];
   const metadata = getCompound(root, "Metadata");
-  if (metadata) {
-    const es = getCompound(metadata, "EnclosingSize");
-    if (es) {
-      const x = asNumber(es.x);
-      if (x !== undefined) encSize[0] = x;
-      const y = asNumber(es.y);
-      if (y !== undefined) encSize[1] = y;
-      const z = asNumber(es.z);
-      if (z !== undefined) encSize[2] = z;
-    }
+  const es = metadata ? getCompound(metadata, "EnclosingSize") : null;
+  if (es) {
+    const x = asNumber(es.x);
+    if (x !== undefined) encSize[0] = x;
+    const y = asNumber(es.y);
+    if (y !== undefined) encSize[1] = y;
+    const z = asNumber(es.z);
+    if (z !== undefined) encSize[2] = z;
   }
-  // encSize 合理性校验（负值/零值 = 无有效包围盒，但仍输出 size 供降级显示）
   for (let i = 0; i < 3; i++) {
     if (!Number.isFinite(encSize[i])) encSize[i] = 0;
   }
+  return encSize;
+}
 
-  const regions = getCompound(root, "Regions");
-  if (!regions) {
-    return { size: encSize, groups: null, truncated: false, maxBlocks: 0 };
-  }
-
-  const regionInfos: RegionInfo[] = [];
+/** 遍历 Regions 收集可用 RegionInfo；返回首条解析错误（用于「全损坏」判定） */
+function collectRegionInfos(regions: Record<string, unknown>): {
+  infos: RegionInfo[];
+  firstErr: string | null;
+} {
+  const infos: RegionInfo[] = [];
   let firstErr: string | null = null;
   for (const regionTag of Object.values(regions)) {
     if (!isObj(regionTag)) continue;
@@ -184,15 +176,16 @@ export function litematicVoxelView(
       continue;
     }
     if (!info) continue;
-    regionInfos.push(info);
+    infos.push(info);
   }
-  // 所有 region 均损坏 → 显式报错（对齐 voxel.go:139-141）
-  if (regionInfos.length === 0 && Object.keys(regions).length > 0 && firstErr) return null;
+  return { infos, firstErr };
+}
 
-  // 方块生成器：跨 region 顺序推进，跳过 air/invalid（对齐 voxel.go:144-168）
+/** 方块生成器：跨 region 顺序推进，跳过 air/invalid（对齐 voxel.go:144-168） */
+function nextBlockGenerator(regionInfos: RegionInfo[]): () => VoxelBlock | null {
   let ri = 0;
   let i = 0;
-  const next = (): VoxelBlock | null => {
+  return (): VoxelBlock | null => {
     for (; ri < regionInfos.length; ) {
       const info = regionInfos[ri];
       const totalInRegion = info.sizeX * info.sizeY * info.sizeZ;
@@ -216,7 +209,27 @@ export function litematicVoxelView(
     }
     return null;
   };
+}
 
-  const { colorGroups, truncated } = groupVoxelStream(next, maxBlocks);
+/**
+ * 对齐 voxel.go:92-171 BuildVoxelData：.litematic 体素视图。
+ * 无 Regions → 仅返回 Size（maxBlocks: 0、groups: null，对齐 Go 快捷返回）；
+ * 所有 region 数据损坏 → null（→ "{}"）。
+ */
+export function litematicVoxelView(
+  root: Record<string, unknown>,
+  maxBlocks: number,
+): VoxelData | null {
+  const encSize = readEnclosingSize(root);
+  const regions = getCompound(root, "Regions");
+  if (!regions) {
+    return { size: encSize, groups: null, truncated: false, maxBlocks: 0 };
+  }
+
+  const { infos: regionInfos, firstErr } = collectRegionInfos(regions);
+  // 所有 region 均损坏 → 显式报错（对齐 voxel.go:139-141）
+  if (regionInfos.length === 0 && Object.keys(regions).length > 0 && firstErr) return null;
+
+  const { colorGroups, truncated } = groupVoxelStream(nextBlockGenerator(regionInfos), maxBlocks);
   return finalizeVoxelData(encSize, colorGroups, truncated, maxBlocks);
 }

@@ -31,13 +31,6 @@ import { bindSiteEvents, openSite } from "./site/workshop-site-opener.ts";
 import { createWorkshopRefs, initWorkshopTabs } from "./site/workshop-tabs.ts";
 
 /**
- * 创建创意工坊页的共享 ref 对象——单一入口，tabs / showSiteView / edit 等全部从此处取。
- * 修复「initWorkshopTabs 写 .v 的对象 ≠ showSiteView 读 .v 的对象」这类实例错位 bug：
- * 以前是 4 个独立的 `{ v: ... }`，调用方必须在 initWorkshopTabs(...) 处手动对齐；
- * 现在统一封装成一个 WorkshopRefs 对象，工厂只生成一份，所有消费者拿同一个实例。
- */
-
-/**
  * 初始化创意工坊页（编排入口）
  */
 export function initWorkshopPage(host: AppContentHost): void {
@@ -48,8 +41,7 @@ export function initWorkshopPage(host: AppContentHost): void {
   // 单一入口创建一份实例，tabs（写）/ opener（读）/ 本文件的注入链（读写）共享同一份，
   // 与 refs 同构：杜绝「形状相同、实例不同」的 stale 错位 bug。
   const page = createWorkshopPageState();
-  // 单一入口：所有可变 ref 由 createWorkshopRefs() 生成一份；tabs 写入、showSiteView 读取，
-  // 永远是同一实例——杜绝「形状相同、实例不同」的错位 bug。
+  // 单一入口：tabs 写入、showSiteView 读取，共享同一实例（杜绝「形状相同、实例不同」错位）
   const refs = createWorkshopRefs();
 
   // 浏览模式：单源 ref（{ v }）＋ setter——setBrowseMode 改 .v 即让
@@ -96,9 +88,9 @@ export function initWorkshopPage(host: AppContentHost): void {
     const ctx: RenderSiteViewCtx = {
       esc: (s) => esc(s == null ? "" : String(s)),
       searchResults,
-      allSites: refs.allSitesRef.v,
-      allCreators: refs.allCreatorsRef.v,
-      repoAuthors: refs.repoAuthorsRef.v,
+      allSites: refs.allSites,
+      allCreators: refs.allCreators,
+      repoAuthors: refs.repoAuthors,
       wsEditModeRef: refs.wsEditModeRef,
       fillSearch,
       openUrl,
@@ -120,8 +112,8 @@ export function initWorkshopPage(host: AppContentHost): void {
   };
 
   // 注册 showSiteView 给 tabs 模块使用（必须在 initWorkshopTabs 之前）
-  // P1-8 锐评：渲染入口收进 refs（原 setShowSiteView 模块级单例已删），重建即新实例
-  refs.showSiteViewRef.v = showSiteView;
+  // P1-8：渲染入口收进 refs（原 setShowSiteView 模块级单例已删），重建即新实例
+  refs.showSiteView = showSiteView;
 
   // 初始化 Tab（返回完整重载入口——站点导入成功后复用同一链路刷新）
   // 定时器交回壳层持有（ADR-265）：清理点在 _render 开头（早于本 init），归属不变，

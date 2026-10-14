@@ -52,14 +52,14 @@ function makeHost() {
   return { root, el };
 }
 
-/** 造带 showSiteView 收集器的 refs（P1-8：渲染入口收进 refs.showSiteViewRef，不再有全局 setShowSiteView） */
+/** 造带 showSiteView 收集器的 refs（P1-8：渲染入口收进 refs.showSiteView，不再有全局 setShowSiteView） */
 function makeRefsWithShowSpy(): {
   refs: WorkshopRefs;
   calls: Array<WorkshopSite | null>;
 } {
   const calls: Array<WorkshopSite | null> = [];
   const refs = createWorkshopRefs();
-  refs.showSiteViewRef.v = (s) => calls.push(s);
+  refs.showSiteView = (s) => calls.push(s);
   return { refs, calls };
 }
 
@@ -116,12 +116,12 @@ describe("initWorkshopTabs — 页作用域句柄（ADR-263）", () => {
       const reload = initWorkshopTabs(root, refs, page, () => {});
       await vi.advanceTimersByTimeAsync(0); // 初次加载走 0ms 定时器
       await flushAsync();
-      expect(refs.allSitesRef.v).toHaveLength(1);
+      expect(refs.allSites).toHaveLength(1);
 
       await reload(); // 导入成功后调用：与初载同链路，但即时执行
       await flushAsync();
       expect(loadCommunityData).toHaveBeenCalledTimes(2);
-      expect(refs.allSitesRef.v).toHaveLength(2);
+      expect(refs.allSites).toHaveLength(2);
       expect(el.querySelector('#ws-tabs [data-tab="afdian"]')).not.toBeNull(); // 新站 tab 已重建出来
       expect(calls.length).toBeGreaterThanOrEqual(2); // 当前站点重渲染
     } finally {

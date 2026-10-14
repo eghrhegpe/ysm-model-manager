@@ -25,28 +25,34 @@ import type { WorkshopPageState } from "./workshop-page-state.ts";
 const WS_TAB_LOAD_DELAY_MS = 0;
 
 /**
- * 创意工坊页的共享 ref 集合——单一事实来源。
- * 所有可变状态（sites/creators/repoAuthors/editMode）由 `createWorkshopRefs()` 生成一份，
- * tabs 写入 `.v`，showSiteView 读取 `.v`——杜绝「形状相同、实例不同」的 stale-closure 错位 bug。
+ * 创意工坊页的共享状态集合——单一事实来源。
+ * 所有可变状态由 `createWorkshopRefs()` 生成一份，tabs 写入、showSiteView 读取同一实例，
+ * 杜绝「形状相同、实例不同」的 stale-closure 错位。
+ *
+ * 为什么不套 `{ v: T }` 包装器（原写法）：数组与函数**整体替换**由持有 refs 的闭包
+ * 天然可见（闭包捕获的是 refs 对象本身），无需再包一层间接层——那层只在
+ * 「需要重绑原语/值语义」时才有意义，此处全是引用语义。
+ * `wsEditModeRef` 仍保留 `{ v: boolean }`：它被 render/edit/site-view 等 7 处按
+ * 「可变布尔句柄」消费（值语义传递，闭包捕获的是值的拷贝），拆它属另一维度改造。
  */
 export interface WorkshopRefs {
-  allSitesRef: { v: WorkshopSite[] };
-  allCreatorsRef: { v: LocalCreator[] };
-  repoAuthorsRef: { v: RepoAuthorLike[] };
+  allSites: WorkshopSite[];
+  allCreators: LocalCreator[];
+  repoAuthors: RepoAuthorLike[];
   wsEditModeRef: { v: boolean };
-  /** 站点视图渲染入口，由 init-workshop 注入。收进 refs（与 allSitesRef 同构，重建即新实例）——
-   *  模块级单例会让旧实例的迟到回调读到新注入闭包，造成跨实例串扰。 */
-  showSiteViewRef: { v: (site: WorkshopSite | null) => void };
+  /** 站点视图渲染入口，由 init-workshop 注入（重建即新实例——模块级单例会让旧实例
+   *  的迟到回调读到新注入闭包，造成跨实例串扰）。 */
+  showSiteView: (site: WorkshopSite | null) => void;
 }
 
-/** 创建创意工坊页的共享 ref 对象（单一入口，所有消费者共享同一实例） */
+/** 创建创意工坊页的共享状态对象（单一入口，所有消费者共享同一实例） */
 export function createWorkshopRefs(): WorkshopRefs {
   return {
-    allSitesRef: { v: [] as WorkshopSite[] },
-    allCreatorsRef: { v: [] as LocalCreator[] },
-    repoAuthorsRef: { v: [] as RepoAuthorLike[] },
+    allSites: [] as WorkshopSite[],
+    allCreators: [] as LocalCreator[],
+    repoAuthors: [] as RepoAuthorLike[],
     wsEditModeRef: { v: false },
-    showSiteViewRef: { v: () => {} },
+    showSiteView: () => {},
   };
 }
 
@@ -62,9 +68,9 @@ export function initWorkshopTabs(
   page: WorkshopPageState,
   registerDefaultSiteTimer: (t: ReturnType<typeof setTimeout>) => void,
 ): () => Promise<void> {
-  // 本地扫描作者的后台补充：首屏不依赖磁盘扫描，扫完再合并进 allCreatorsRef 并重渲染当前站点。
+  // 本地扫描作者的后台补充：首屏不依赖磁盘扫描，扫完再合并进 allCreators 并重渲染当前站点。
   // enrichPending 在途去重（防双渲染），完成置 null 以便下次数据替换后再补；
-  // 合并前重读 refs.allCreatorsRef.v——在途期间用户切 tab 换了新数组也能补到最新数据上。
+  // 合并前重读 refs.allCreators——在途期间用户切 tab 换了新数组也能补到最新数据上。
   let enrichPending: Promise<void> | null = null;
   const maybeEnrich = (): void => {
     if (enrichPending) return;
@@ -72,8 +78,8 @@ export function initWorkshopTabs(
       try {
         const localAuthors = await loadLocalAuthors();
         if (localAuthors.length) {
-          refs.allCreatorsRef.v = mergeLocalAuthorsInto(refs.allCreatorsRef.v, localAuthors);
-          refs.showSiteViewRef.v(page.getCurrentSite());
+          refs.allCreators = mergeLocalAuthorsInto(refs.allCreators, localAuthors);
+          refs.showSiteView(page.getCurrentSite());
         }
       } catch {
         // 补充失败不影响首屏（首屏已可用），静默降级
@@ -88,15 +94,15 @@ export function initWorkshopTabs(
   const showCreatorsBySite = async (siteType: string, data?: CommunityData): Promise<void> => {
     try {
       const { sites, creators, authors } = data ?? (await loadCommunityData());
-      refs.allSitesRef.v = sites;
-      refs.allCreatorsRef.v = creators;
-      refs.repoAuthorsRef.v = (authors || []) as RepoAuthorLike[];
+      refs.allSites = sites;
+      refs.allCreators = creators;
+      refs.repoAuthors = (authors || []) as RepoAuthorLike[];
       const site = sites.find((s) => s.id === siteType);
       if (!site) return;
       page.setCurrentSite(site);
       safeSet(WS_LAST_TAB_KEY, site.id);
       // tab 高亮 / roving tabindex / aria-selected 由 tabs-a11y 原语统一切换，此处只负责内容区重渲染
-      refs.showSiteViewRef.v(page.getCurrentSite());
+      refs.showSiteView(page.getCurrentSite());
       // 首屏已渲染，后台补充本地扫描作者（STALE 缓存，通常立即返回）
       maybeEnrich();
     } catch (e) {
@@ -109,7 +115,7 @@ export function initWorkshopTabs(
   const reloadWorkshopTabs = async (): Promise<void> => {
     try {
       const data = await loadCommunityData();
-      refs.allSitesRef.v = data.sites;
+      refs.allSites = data.sites;
       // 动态生成 Tab
       const tabsEl = root.getElementById("ws-tabs");
       if (tabsEl && data.sites.length) {
@@ -169,5 +175,5 @@ export function initWorkshopTabs(
   // 导出重载入口给 init-workshop 注入 bindSiteEvents（站点导入成功后刷新列表，清旧 TODO）
   return reloadWorkshopTabs;
 }
-// 渲染入口收进 refs.showSiteViewRef（init-workshop 注入），重建即新实例——
+// 渲染入口收进 refs.showSiteView（init-workshop 注入），重建即新实例——
 // 模块级单例会让旧实例迟到回调读到新闭包，造成跨实例串扰。

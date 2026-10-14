@@ -22,11 +22,11 @@ const {
 } = vi.hoisted(() => {
   const wsRefs: {
     v: {
-      allSitesRef: { v: unknown[] };
-      allCreatorsRef: { v: unknown[] };
-      repoAuthorsRef: { v: unknown[] };
+      allSites: unknown[];
+      allCreators: unknown[];
+      repoAuthors: unknown[];
       wsEditModeRef: { v: boolean };
-      showSiteViewRef: { v: unknown };
+      showSiteView: unknown;
     } | null;
   } = { v: null };
   return {
@@ -39,12 +39,12 @@ const {
     initWorkshopTabs: vi.fn(),
     createWorkshopRefs: vi.fn(() => {
       const refs = {
-        allSitesRef: { v: [] as unknown[] },
-        allCreatorsRef: { v: [] as unknown[] },
-        repoAuthorsRef: { v: [] as unknown[] },
+        allSites: [] as unknown[],
+        allCreators: [] as unknown[],
+        repoAuthors: [] as unknown[],
         wsEditModeRef: { v: false },
-        // P1-8：渲染入口收进 refs.showSiteViewRef，测试经 wsRefs 容器取最新实例
-        showSiteViewRef: { v: null },
+        // P1-8：渲染入口收进 refs.showSiteView，测试经 wsRefs 容器取最新实例
+        showSiteView: null as unknown,
       };
       wsRefs.v = refs;
       return refs;
@@ -113,11 +113,11 @@ function makeHost(cardsHTML = "") {
   return { host: raw as unknown as AppContentHost, raw, el };
 }
 
-/** 取 initWorkshopPage 注入 refs.showSiteViewRef 的 showSiteView 闭包（P1-8：原 setShowSiteView 已删） */
+/** 取 initWorkshopPage 注入 refs.showSiteView 的渲染闭包（P1-8：原 setShowSiteView 已删） */
 function getShowSiteView(): (site: unknown) => void {
   if (!wsRefs.v) throw new Error("createWorkshopRefs 未被调用");
-  const fn = wsRefs.v.showSiteViewRef.v;
-  if (typeof fn !== "function") throw new Error("showSiteViewRef 尚未注入");
+  const fn = wsRefs.v.showSiteView;
+  if (typeof fn !== "function") throw new Error("showSiteView 尚未注入");
   return fn as (site: unknown) => void;
 }
 
@@ -170,7 +170,7 @@ describe("initWorkshopPage — 初始化装配", () => {
     expect(initWorkshopTabs).toHaveBeenCalledTimes(1);
     // ADR-265：site 子模块收 root（ShadowRoot），不再收整个 host
     expect(callArgs(initWorkshopTabs, 0)[0]).toBe(raw.state.root);
-    // createWorkshopRefs 生成的单源 ref 原样传给 tabs（同实例约定）
+    // createWorkshopRefs 生成的单源状态对象原样传给 tabs（同实例约定）
     expect(callArgs(initWorkshopTabs, 0)[1]).toBe(createWorkshopRefs.mock.results[0]!.value);
     // 同一个页作用域句柄也必须原样传给 tabs 与 opener（同实例约定，ADR-263）；
     // 定时器登记函数是第 4 参（ADR-265：timer 归壳层持有，tabs 只创建）
@@ -179,8 +179,8 @@ describe("initWorkshopPage — 初始化装配", () => {
     expect(page).toBe(getPageState());
     expect(callArgs(bindSiteEvents, 0)[0]).toBe(raw.state.root);
     expect(callArgs(bindSiteEvents, 0)[1]).toBe(page);
-    // P1-8：showSiteView 渲染入口收进 refs.showSiteViewRef（原 setShowSiteView 模块级单例已删）
-    expect(typeof wsRefs.v?.showSiteViewRef.v).toBe("function");
+    // P1-8：showSiteView 渲染入口收进 refs.showSiteView（原 setShowSiteView 模块级单例已删）
+    expect(typeof wsRefs.v?.showSiteView).toBe("function");
     // ADR-265：tabs 创建的延迟加载定时器必须经登记函数交回壳层持有——
     // 模拟登记：捕获 initWorkshopTabs 实参里的登记函数并实际执行，验证 timer 落到 host.state.workshopTimer
     const registrar = callArgs(initWorkshopTabs, 0)[3] as (t: ReturnType<typeof setTimeout>) => void;
@@ -243,7 +243,7 @@ describe("initWorkshopPage — showSiteView 与 ctx", () => {
     const ctx = args0[1] as any;
     expect(calledSite).toBe(site);
     expect(ctx.searchResults).toBe(el.querySelector("#ws-search-results"));
-    expect(ctx.allSites).toEqual([]); // refs.allSitesRef.v
+    expect(ctx.allSites).toEqual([]); // refs.allSites
     expect(ctx.wsEditModeRef).toEqual({ v: false });
     expect(ctx.fillSearch).toBe(fillSearch);
     expect(ctx.esc("<b>&\"'")).toBe("&lt;b&gt;&amp;&quot;&#39;");

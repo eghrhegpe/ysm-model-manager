@@ -131,6 +131,33 @@ func TestRelinkDir_SameFolderTwoEntries(t *testing.T) {
 	testutil.Equal(t, readBody(t, filepath.Join(customDir, "packA", "y.ysm")), "repo-y", "y.ysm 应为仓库版本")
 }
 
+// TestRelinkDir_RestoreFailureRollsBackWholeDir 【A1 原子性锁】回填失败必须整夹回滚：
+// 注入手法——实例侧 `y.ysm` 是**目录**（内含 inner.png），仓库侧 `y.ysm` 是**同名文件**；
+// 替换后新夹里 y.ysm 是文件，回填 y.ysm/inner.png 时 MkdirAll 撞同名文件必失败。
+// 期望「原子替换」语义：实例夹原地不动（x.ysm 仍是旧内容、独有文件原位）、该条目不计成功、
+// 日志点名回填失败、不留备份残留（回滚已把备份 rename 回原位）。
+func TestRelinkDir_RestoreFailureRollsBackWholeDir(t *testing.T) {
+	repoRoot, customDir, logs := relinkProbeEnv(t)
+	instPack := filepath.Join(customDir, "packA")
+	testutil.WriteTestFile(t, filepath.Join(repoRoot, "packA", "x.ysm"), "repo-body")
+	testutil.WriteTestFile(t, filepath.Join(repoRoot, "packA", "y.ysm"), "repo-file") // 仓库侧同名文件
+	testutil.WriteTestFile(t, filepath.Join(instPack, "x.ysm"), "old-body")
+	testutil.WriteTestFile(t, filepath.Join(instPack, "y.ysm", "inner.png"), "mine") // 实例侧同名目录
+
+	scanFn := func(dir string) []types.ModelEntry {
+		return []types.ModelEntry{{Name: "x.ysm", Path: filepath.Join(dir, "packA", "x.ysm"), Hash: "h1"}}
+	}
+	count, err := RelinkDir(customDir, repoRoot, "ysm", "copy", scanFn, relinkLogger(logs))
+	testutil.NoError(t, err, "RelinkDir 不应报错（失败经 logger 点名）")
+	testutil.Equal(t, count, 0, "回填失败应整夹回滚且不计成功（日志 %v）", *logs)
+	testutil.Equal(t, readBody(t, filepath.Join(instPack, "x.ysm")), "old-body", "回滚后模型应保持旧内容")
+	testutil.FileExists(t, filepath.Join(instPack, "y.ysm", "inner.png"), "回滚后实例独有文件应原位")
+	testutil.Equal(t, len(filterLogs(*logs, "回填失败")), 1, "应点名回填失败（日志 %v）", *logs)
+	matches, globErr := filepath.Glob(filepath.Join(customDir, "*.relink-bak-*"))
+	testutil.NoError(t, globErr, "glob 备份残留")
+	testutil.Equal(t, len(matches), 0, "回滚应把备份 rename 回原位，不留残留: %v", matches)
+}
+
 // filterLogs 捞出含任一关键词的日志行（供集合式断言，避免逐条裸断言）。
 func filterLogs(logs []string, subs ...string) []string {
 	var hit []string

@@ -26,8 +26,7 @@
 替换前用 `collectInstanceOnlyFiles(instDir, repoDir)` 记账「实例侧有、仓库侧同相对路径没有」的文件**相对路径**（正斜杠；递归收集使实例独有子目录整体存活；跳过回收站与 `.relink-bak` 子树）；替换成功后由 `restoreInstanceOnlyFiles(backupDir, rels, newDir)` 从**备份目录**回填到重建夹。
 
 - **必须只记相对路径，不得记绝对路径**：调用方紧接着 rename 掉 `instDir`，绝对源路径当场失效（首版实现即踩此坑，回填 100% 失败）。回填源 = 备份目录 + 相对路径。
-- **回填失败不得静默**：保留备份目录（恢复点）并在 logger 点名未回填的相对路径；宁留一个 `<夹名>.relink-bak-<ts>`，不无声丢数据。
-- 重建夹不存在（异常形态）同样保留备份并记日志。
+- **回填失败必须整夹回滚（原子替换语义）**：本函数承诺的就是「整目录原子替换」，半成品态（新夹 + 独有文件滞留备份）会让用户在游戏里看到残缺模型且事后无人知道怎么补。故回填失败或重建夹缺失时调 `rollbackRelinkReplace` 回滚（新夹删除 + 备份 rename 回原位）、记日志点名未回填的相对路径、该条目**不计成功**；回滚自身失败时按既有口径保留备份并记日志（恢复点仍在）。
 
 **D2｜目录身份必须用「句柄态 stat」立即固化，不得用 `os.Lstat` 的快照当身份。**
 新增 `dirIdentity(path)`：`os.Open` → `f.Stat()`。句柄态 stat 由 `GetFileInformationByHandle` 直接填 vol/FileId 并清掉延迟路径，身份在调用瞬间固化，后续 rename/replace 不会把它改写成别的对象；Unix 侧等价（`fstat` 取 dev/ino）。`snapshotRelinkDirTargets` 与 `verifyDirSnapshot` 一律改走它。
@@ -41,7 +40,8 @@
 ## 3. 后果（Consequences）
 
 **正面**
-- 不可逆数据丢失路径关闭：改链接模式不再吃掉实例独有文件；回填失败也留下可手工取回的恢复点（实证：`count=1 err=nil` 且自制贴图/子目录存活、无备份残留、无日志）。
+- 不可逆数据丢失路径关闭：改链接模式不再吃掉实例独有文件；回填失败则整夹回滚（实例夹原地不动，原子性成立），实证 `count=1 err=nil` 且自制贴图/子目录存活、无备份残留、无日志。
+- 原子性有回归锁：`TestRelinkDir_RestoreFailureRollsBackWholeDir`（注入「实例侧同名目录 vs 仓库侧同名文件」使回填必失败 → 断言整夹未被替换、旧内容原位、日志点名、无残留）。
 - ADR-296 D4 的防护在主力平台**真生效**（`TestDirIdentity_RejectsReplacedDir`：同名重建判否；反向对照「同一目录两次取身份相等」防恒不等假修复）。
 - 同夹多条目不再白搬一次、不再误报；relink 计数值与实际落盘一致。
 - 恢复点不再污染同步面板，也不会被「一键拉取」搬进仓库。
@@ -63,6 +63,7 @@
 | Go stdlib `os/types_windows.go:287-336` `loadFileId`（按路径名 `CreateFile`）+ `:353-363` `sameFile` | 恒真机制坐实：比的是「P 现在是谁」对「P 现在是谁」 |
 | 探针 `SyncResourcesDirLevel`（inst 侧 `packA.relink-bak-1700…/x.ysm`） | `Extra=[…packA.relink-bak-…]` → D4 |
 | 一过 `RelinkDir` 日志「实例独有文件回填失败 2 个（extra/deep.png、my-own-texture.png），已保留备份 …」 | 首版用绝对源路径必失败 → D1「只记相对路径」条 |
+| 注入「实例侧 `y.ysm` 是目录 / 仓库侧 `y.ysm` 是文件」→ 回填必撞同名文件失败 | 半成品态（新夹 + 独有文件滞留备份）不可接受 → D1 改整夹回滚，`TestRelinkDir_RestoreFailureRollsBackWholeDir` 锁死 |
 | 回归测试 `go/sync/sync_relink_preserve_test.go` / `sync_corpse_exempt_test.go`（7 例，改前全红、改后全绿 + `go/sync`·`go/instance`·`go/installer`·`go/watcher` 四包全绿） | 落地验证 |
 
 <!-- 文件名: relink-preserve-instance-files.md → 实际文件 architecture/ADR-342-relink-preserve-instance-files.md（ADR-320 architecture 全量模板） -->

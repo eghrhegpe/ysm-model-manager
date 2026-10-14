@@ -308,16 +308,21 @@ func relinkReplaceDirTree(ce types.ModelEntry, srcDir, dstParent string, dirSnap
 	// 回填实例独有文件到新夹（InstallDir 落位 = dstBase/<仓库夹名>，与 resolveFinalDst 同规）
 	newDir := filepath.Join(dstBase, filepath.Base(srcDir))
 	if _, statErr := os.Stat(newDir); statErr != nil {
-		logRelinkFailure(ce, dstParent, "重链后未找到重建目录 "+newDir+"，已保留备份 "+
-			filepath.Base(backup)+" 供手工取回: "+statErr.Error(), logger)
-		return true
+		rollbackRelinkReplace(ce, dstParent, dstBase, srcDir, backup, logger)
+		logRelinkFailure(ce, dstParent, "重链后未找到重建目录 "+newDir+"，已整体回滚该夹（未重链）: "+
+			statErr.Error(), logger)
+		return false
 	}
 	if failed := restoreInstanceOnlyFiles(backup, extras, newDir); len(failed) > 0 {
-		// 回填失败 → **保留备份**并点名：恢复点比「干净」重要
+		// 回填失败 → **整夹回滚**（本函数承诺「原子替换」：要么按仓库版重建且用户独有文件
+		// 全部到位，要么原地不动）。半成品态（新夹 + 独有文件滞留备份）会让用户在游戏里
+		// 看到残缺模型，且事后没人知道该怎么补——回滚是可解释的终态。
+		// 回滚本身失败时 rollbackRelinkReplace 会保留备份并记日志（恢复点仍在）。
+		rollbackRelinkReplace(ce, dstParent, dstBase, srcDir, backup, logger)
 		logRelinkFailure(ce, dstParent, fmt.Sprintf(
-			"实例独有文件回填失败 %d 个（%s），已保留备份 %s 供手工取回",
-			len(failed), strings.Join(failed, "、"), filepath.Base(backup)), logger)
-		return true
+			"实例独有文件回填失败 %d 个（%s），已整体回滚该夹（未重链）",
+			len(failed), strings.Join(failed, "、")), logger)
+		return false
 	}
 	removeRelinkBackup(backup, ce, dstParent, logger)
 	return true

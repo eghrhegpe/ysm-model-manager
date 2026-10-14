@@ -4,6 +4,7 @@
 - **日期**：2026-09-22
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **相关**：ADR-028（先删后建原子替换）、ADR-038 D3.4（IsHardLink 目录排除）、ADR-044③（路径边界对称）、ADR-056（共享安装锁）、ADR-064（dirLevelSync 锚定）；代码 `go/sync/sync_relink.go`、`go/installer/installer.go`、`frontend/src/views/app-content/settings/init.ts`
+- **后续修正**：D4 的目录身份复验机制被 [ADR-342](./architecture/ADR-342-relink-preserve-instance-files.md) 修正（原 `os.SameFile` 在 Windows 上因 `os.Lstat` 惰性解析而恒真，改用句柄态 `dirIdentity`）；D3 的豁免面同步扩到同步 diff 全通道，并新增「整夹替换保全实例独有文件」纪律
 
 ---
 

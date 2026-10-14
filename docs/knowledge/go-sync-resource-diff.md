@@ -86,6 +86,7 @@ last_verified: 2026-10-09
 - `collectEntriesFromScan` 与 `collectEntriesWalk` 必须语义等价（回归测试 `sync_dirlevel_scan_test.go` 锁定逐夹对比）；含嵌套模式类型不可反推，调用方须先判 `NestedPatternsFor` 为空
 - `diffFolderContentsCore` 判定口径：哈希优先、Size 兜底（与 `ResourceDiff` 的 `contentDiffers` 同口径）；两侧无哈希（Walk 版 `DiffFolderContents`）时 Size 相等即 Synced，与旧「存在即 Synced」相比收紧了大小口径但无回归
 - `.recycle` 排除与 scanner 对齐：Walk 侧 `SkipDir`（带 `path != rootDir` 守卫），scan 反推侧 `IsRecycleDir(filepath.Dir(p))` 逐文件剔除（回收站目录内文件跳过，与 Walk 的 SkipDir 对齐）
+- **`.relink-bak-*` 备份尸体同样要排除，且必须**双通道**都排**（ADR-342 D4）：Walk 侧 `SkipDir`（`collectEntriesWalk` / `handleDir` / `collectFolderFiles`），scan 反推侧逐条 `isRelinkBackupPath` 剔除（`collectEntriesFromScan` / `collectFolderFilesFromScan`）——生产链走 scanner 命中，只修 Walk 通道等于没修；不豁免则恢复点被判「实例独有（可拉取）」，一键拉取把整个恢复点复制进仓库（回归测试 `sync_corpse_exempt_test.go` 四条通道各一例）
 - 容器夹下钻时注册自身键（目录 marker）——与对侧（pre-fix 安装）同名叶子目录键集一致，避免键集不相交产生幻影 Missing+Extra；marker 的展示层合并（`absorbSelfMarker`）归 `go/instance`
 
 ## 相关

@@ -132,6 +132,10 @@ func collectEntriesWalk(rootDir string, rtype string) (map[string]string, bool) 
 		if fsutil.IsRecycleDir(path) {
 			return filepath.SkipDir
 		}
+		// relink 备份尸体子树剔除（ADR-342）：恢复点不是模型，不得进同步 diff
+		if isRelinkBackupPath(path) {
+			return filepath.SkipDir
+		}
 		// 模型文件夹：在任意深度收集（不再限定一级子目录）
 		// 使用 memo 变体消除 patternFind 重复子树扫描（patternFind 已知残余 IO）
 		if isDirTypeModelFolderMemo(path, rtype, memo) {
@@ -199,6 +203,11 @@ func collectEntriesFromScan(entries []types.ModelEntry, rootDir, rtype string) m
 	var modelFiles []types.ModelEntry
 	for _, e := range entries {
 		p := e.Path
+		if isRelinkBackupPath(p) {
+			// 备份尸体剔除（ADR-342）：生产链走 scanner 命中时到这里，scanner 会下钻
+			// 尸体内文件并照常填哈希——只修 Walk 通道等于没修
+			continue
+		}
 		if p != rootDir && !strings.HasPrefix(p, rootDir+sep) {
 			continue // 不在 rootDir 下的条目忽略（防御）
 		}

@@ -79,6 +79,12 @@ func (s *walkEntryState) handleDir(path string) error {
 	if path != s.rootDir && fsutil.IsRecycleDir(path) {
 		return filepath.SkipDir
 	}
+	// relink 备份尸体同理剔除（ADR-342 / isRelinkBackupPath）：失败 relink 留下的
+	// `<夹名>.relink-bak-<ts>` 恢复点若不跳过，会被判「实例独有（可拉取）」，
+	// 一键拉取就把整个恢复点复制进仓库（垃圾入库 + 恢复点被当模型）
+	if path != s.rootDir && isRelinkBackupPath(path) {
+		return filepath.SkipDir
+	}
 	// 资源包文件夹：扫描其本身但不递归（仅资源包类型收集）
 	if path != s.rootDir && s.isPackFolderType && fsutil.IsResourcePackFolder(path) {
 		if key := relKey(s.rootDir, path); key != "" {

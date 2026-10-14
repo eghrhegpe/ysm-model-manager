@@ -168,6 +168,10 @@ func collectFolderFilesFromScan(folder, rtype string, entries []types.ModelEntry
 		if fsutil.IsRecycleDir(filepath.Dir(p)) {
 			continue
 		}
+		// relink 备份尸体子树内的文件同样跳过（ADR-342，与 Walk 通道同口径）
+		if isRelinkBackupPath(p) {
+			continue
+		}
 		if !packs.IsTypeModelFile(p, rtype) {
 			continue
 		}
@@ -210,6 +214,10 @@ func collectFolderFiles(folder, rtype string) map[string]string {
 		if info.IsDir() {
 			// 跳过回收站目录
 			if path != folder && fsutil.IsRecycleDir(path) {
+				return filepath.SkipDir
+			}
+			// 跳过 relink 备份尸体子树（ADR-342 防御纵深；谓词与三处 collect 同源）
+			if path != folder && isRelinkBackupPath(path) {
 				return filepath.SkipDir
 			}
 			return nil

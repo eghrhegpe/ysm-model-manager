@@ -8,9 +8,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
+	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/installer"
 	"ysm-model-manager/go/packs"
 	"ysm-model-manager/go/types"
@@ -56,6 +58,13 @@ func RelinkDir(customDir, filesRoot, rtype, linkMode string, scanFn func(string)
 	defer InvalidateSyncScanCaches() // 重链接会改实例目录，清同步扫盘缓存防陈旧
 
 	count := 0
+	// replacedDirs 记录本轮已整夹替换过的实例目录（小写规范化路径）——同夹多条目
+	// （一个模型夹里两个目录型入口，如 ysm.json + model.ysm）**共享一次替换结果**：
+	// 首次替换后该夹已是仓库版本，后续条目直接计成功，不得再搬一次。
+	// 必要性由 ADR-342 的身份复验根治换来：复验修好之前 os.SameFile 恒真（比的是路径
+	// 对自己），第二条目「通过」并白做一次替换；修好后第二条目会**正确地**发现
+	// 「目录已被替换」——若不在此承接，就会把自己刚做的事报成失败（误报）。
+	replacedDirs := make(map[string]bool)
 	for _, ce := range customEntries {
 		// 重链备份目录尸体不参与重链（斩断 rename→InstallDir→新备份 套娃，ADR-296 D3）；
 		// 无哈希无法做内容关联；禁用条目跳过——禁用文件保持禁用，否则 Install 会把仓库
@@ -100,7 +109,15 @@ func RelinkDir(customDir, filesRoot, rtype, linkMode string, scanFn func(string)
 			}
 			continue
 		}
+		dirKey := strings.ToLower(filepath.Clean(dstParent))
+		if replacedDirs[dirKey] {
+			// 该夹本轮已整夹替换（仓库版本已落盘），本条目的入口文件随之一并到位：
+			// 计成功但不重复搬动，避免「刚建好又搬一次」与多余备份
+			count++
+			continue
+		}
 		if relinkReplaceDirTree(ce, filepath.Dir(srcPath), dstParent, dirSnaps, filesRoot, linkMode, rtype, logger) {
+			replacedDirs[dirKey] = true
 			count++
 		}
 	}
@@ -130,10 +147,27 @@ func buildRelinkRepoIndex(repoEntries []types.ModelEntry) map[string][]types.Mod
 	return repoByHash
 }
 
-// snapshotRelinkDirTargets 锁外 Lstat 将走整目录替换的条目的 dstParent（ADR-296 D4），
+// dirIdentity 取「目录身份」快照——复验的输入必须是**立刻固化**的对象身份。
+//
+// ⚠️ 不可用 os.Lstat 直接当身份（ADR-342 根治）：Windows 上 os.Lstat 产出惰性
+// fileStat（只存路径不存文件 ID），os.SameFile 时才按路径名 CreateFile 取 ID
+// （Go stdlib os/types_windows.go loadFileId）→ 快照与现取都解析到「P 现在是谁」，
+// 比的是自己对自己，恒真。故本函数把路径**打开成句柄**再 Stat：句柄态 stat 由
+// GetFileInformationByHandle 直接填 vol/idx 并清掉延迟路径，身份在调用瞬间固化，
+// 之后的 rename/replace 不会把它改写成别的对象。
+func dirIdentity(path string) (os.FileInfo, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = f.Close() }()
+	return f.Stat()
+}
+
+// snapshotRelinkDirTargets 锁外取将走整目录替换的条目的 dstParent 身份（ADR-296 D4），
 // 供锁内 verifyDirSnapshot 复验「锁内搬的就是扫描时观察到的那个目录」。
 // 仅收目录级同步类型下的模型文件条目；dstParent 即 customDir 根层的平铺条目不做整目录
-// rename，无需快照。Lstat 失败（目录不存在/竞态中消失）→ 无快照 → 由 verifyDirSnapshot
+// rename，无需快照。取身份失败（目录不存在/竞态中消失）→ 无快照 → 由 verifyDirSnapshot
 // 的调用方拒绝搬运并记 logger（行为与加固前一致）。
 func snapshotRelinkDirTargets(customEntries []types.ModelEntry, rtype, customDir string) map[string]os.FileInfo {
 	dirSnaps := make(map[string]os.FileInfo)
@@ -149,7 +183,7 @@ func snapshotRelinkDirTargets(customEntries []types.ModelEntry, rtype, customDir
 		if strings.EqualFold(filepath.Clean(dstParent), filepath.Clean(customDir)) {
 			continue // 平铺分支不做整目录 rename，无需复验
 		}
-		if info, err := os.Lstat(dstParent); err == nil {
+		if info, err := dirIdentity(dstParent); err == nil {
 			dirSnaps[ce.Path] = info
 		}
 	}
@@ -181,6 +215,61 @@ func relinkFlatEntry(ce types.ModelEntry, srcPath, customDir string, logger Logg
 	return true
 }
 
+// collectInstanceOnlyFiles 收集实例夹内「仓库侧没有」的文件**相对路径**（正斜杠）。
+// 用途（ADR-342）：整夹替换前先记账、替换成功后回填。替换的语义是「把实例夹换成仓库
+// 版本」，**不是**「删掉用户放在这个夹里的东西」——原实现把旧夹 rename 成备份后
+// RemoveAll，自制贴图/额外子目录就此永久消失（且日志为空、count 报全成功）。
+//
+// ⚠️ 只记相对路径，**不记绝对路径**：调用方紧接着会 os.Rename 掉 instDir，
+// 绝对路径当场失效（回填必失败）。回填的源 = 备份目录 + 相对路径。
+// 递归收集使「实例独有子目录」整体存活；跳过回收站与备份尸体子树（非用户数据）。
+func collectInstanceOnlyFiles(instDir, repoDir string) []string {
+	var extras []string
+	_ = filepath.WalkDir(instDir, func(p string, d os.DirEntry, err error) error {
+		if err != nil {
+			return nil // 尽力而为：读不了的子树跳过（不可读条目不属于可保全范围）
+		}
+		if d.IsDir() {
+			if p != instDir && (fsutil.IsRecycleDir(p) || isRelinkBackupPath(p)) {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		rel, relErr := filepath.Rel(instDir, p)
+		if relErr != nil {
+			return nil
+		}
+		relSlash := filepath.ToSlash(rel)
+		// 仓库侧同相对路径存在 → 非独有（替换会以仓库版覆盖它，正是 relink 本意）
+		if _, statErr := os.Stat(filepath.Join(repoDir, filepath.FromSlash(relSlash))); statErr == nil {
+			return nil
+		}
+		extras = append(extras, relSlash)
+		return nil
+	})
+	sort.Strings(extras)
+	return extras
+}
+
+// restoreInstanceOnlyFiles 从备份目录把实例独有文件回填到替换后的新夹，
+// 返回未成功的相对路径。失败不静默（调用方据此保留备份 + 记日志）：
+// 宁留一个恢复点，不无声丢数据。
+func restoreInstanceOnlyFiles(backupDir string, rels []string, newDir string) []string {
+	var failed []string
+	for _, rel := range rels {
+		src := filepath.Join(backupDir, filepath.FromSlash(rel))
+		dst := filepath.Join(newDir, filepath.FromSlash(rel))
+		if err := os.MkdirAll(filepath.Dir(dst), fsutil.DirPerms); err != nil {
+			failed = append(failed, rel)
+			continue
+		}
+		if err := fsutil.CopyFile(src, dst); err != nil {
+			failed = append(failed, rel)
+		}
+	}
+	return failed
+}
+
 // relinkReplaceDirTree 整目录原子替换：rename 旧目录为带时间戳备份 → InstallDir 重建 →
 // 成功清理备份 / 失败回滚（删半成品 + 备份 rename 回原位）。返回是否计入成功数。
 // 时间戳备份名（P2-4）与 conflict.go 的 .bak-<ts> 口径对齐，避免上一次失败遗留的恢复点
@@ -204,6 +293,8 @@ func relinkReplaceDirTree(ce types.ModelEntry, srcDir, dstParent string, dirSnap
 		logRelinkFailure(ce, dstParent, "relink 跳过: "+reason, logger)
 		return false
 	}
+	// ADR-342：替换前记账实例独有文件（用户数据），成功后从备份回填——替换不等于删除
+	extras := collectInstanceOnlyFiles(dstParent, srcDir)
 	backup := fmt.Sprintf("%s.relink-bak-%d", dstParent, time.Now().UnixNano())
 	if err := os.Rename(dstParent, backup); err != nil {
 		logRelinkFailure(ce, dstParent, "relink 备份目录失败: "+err.Error(), logger)
@@ -213,6 +304,20 @@ func relinkReplaceDirTree(ce types.ModelEntry, srcDir, dstParent string, dirSnap
 		rollbackRelinkReplace(ce, dstParent, dstBase, srcDir, backup, logger)
 		logRelinkFailure(ce, dstParent, "relink 失败: "+err.Error(), logger)
 		return false
+	}
+	// 回填实例独有文件到新夹（InstallDir 落位 = dstBase/<仓库夹名>，与 resolveFinalDst 同规）
+	newDir := filepath.Join(dstBase, filepath.Base(srcDir))
+	if _, statErr := os.Stat(newDir); statErr != nil {
+		logRelinkFailure(ce, dstParent, "重链后未找到重建目录 "+newDir+"，已保留备份 "+
+			filepath.Base(backup)+" 供手工取回: "+statErr.Error(), logger)
+		return true
+	}
+	if failed := restoreInstanceOnlyFiles(backup, extras, newDir); len(failed) > 0 {
+		// 回填失败 → **保留备份**并点名：恢复点比「干净」重要
+		logRelinkFailure(ce, dstParent, fmt.Sprintf(
+			"实例独有文件回填失败 %d 个（%s），已保留备份 %s 供手工取回",
+			len(failed), strings.Join(failed, "、"), filepath.Base(backup)), logger)
+		return true
 	}
 	removeRelinkBackup(backup, ce, dstParent, logger)
 	return true
@@ -265,7 +370,7 @@ func isRelinkBackupPath(p string) bool {
 //   - InstallLock 只互斥本进程，复验 Lstat 与 Rename 之间外部进程仍可改动——窗口已从
 //     「扫描→rename 全程」收窄为「两条相邻 syscall 之间」。
 func verifyDirSnapshot(snap os.FileInfo, dstParent string) (bool, string) {
-	cur, err := os.Lstat(dstParent)
+	cur, err := dirIdentity(dstParent)
 	if err != nil {
 		return false, "目标目录已不存在: " + err.Error()
 	}

@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **358** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **359** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > ADR 三区存放：根目录 = 存量（分级前）/ `architecture/` = 架构决策 / `decisions/` = 执行决策日志（ADR-320）。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -19,7 +19,7 @@ permalink: /adr/
 | [📝 提议中](#提议中) | 4 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 1 |
 | [🔄 部分采纳](#部分采纳) | 14 |
-| [✅ 已采纳](#已采纳) | 331 |
+| [✅ 已采纳](#已采纳) | 332 |
 | [❌ 已取代](#已取代) | 8 |
 | [🧊 已废弃](#已废弃) | 0 |
 | [❓ 未归类](#未归类) | 0 |
@@ -60,10 +60,11 @@ permalink: /adr/
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 | [ADR-050](./ADR-050-plaza-browser-window.md) | 模型广场 · 浏览器窗口（Wails 第二窗口） | 🔄 部分采纳 |
 
-### ✅ 已采纳（331）
+### ✅ 已采纳（332）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-342](./architecture/ADR-342-relink-preserve-instance-files.md) | 整合包重链接的实例数据保全与目录身份复验 | ✅ 已采纳 |
 | [ADR-341](./architecture/ADR-341-busy-lock-unification.md) | busy 语义归一——互斥锁唯一形态 BusyLock | ✅ 已采纳 |
 | [ADR-340](./architecture/ADR-340-sync-push-direct-call.md) | 推送链去总线化：请求-响应回归直调，token/回执/宽限期协议件退役 | ✅ 已采纳 |
 | [ADR-339](./architecture/ADR-339-alltype-toggle-sync.md) | 全类型 .disabled 启禁同步（大一统 repo↔pack 一致性） | ✅ 已采纳 |
@@ -413,6 +414,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
+| ADR-342 | 整合包重链接的实例数据保全与目录身份复验 | ✅ 已采纳 | 2026-10-14 |
 | ADR-341 | busy 语义归一——互斥锁唯一形态 BusyLock | ✅ 已采纳 | 2026-10-14 |
 | ADR-340 | 推送链去总线化：请求-响应回归直调，token/回执/宽限期协议件退役 | ✅ 已采纳 | 2026-10-14 |
 | ADR-339 | 全类型 .disabled 启禁同步（大一统 repo↔pack 一致性） | ✅ 已采纳 | 2026-10-13 |

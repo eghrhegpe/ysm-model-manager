@@ -2,8 +2,11 @@
 kind: go-sync
 name: 整合包同步 go/sync
 tier: architecture
+last_verified: 2026-10-14
 adr:
   - ADR-064
+  - ADR-296
+  - ADR-342
 category: go
 source_files:
   - go/sync/sync.go
@@ -86,7 +89,7 @@ status: active
 
 - `sync.go` — 实例枚举、哈希差异对比、启禁状态同步、资源差异对比、链接类型判定
 - `sync_push.go` — 推送/拉取执行循环（`PushResources` / `PullResources` 及单条变体、`SyncCustomToRepo`），失败逐条经注入的 `Logger` 记账、聚合成一条错误返回
-- `sync_relink.go` — 重链接执行（`RelinkDir`）：按哈希把实例文件重新指向仓库版本，文件夹级类型用「备份→重建→失败回滚」保证不丢目录
+- `sync_relink.go` — 重链接执行（`RelinkDir`）：按哈希把实例文件重新指向仓库版本，文件夹级类型用「备份→重建→回填实例独有文件→失败回滚」保证不丢目录，也不丢夹内用户文件（ADR-342）
 - `conflict.go` — 冲突检测与解决（`DetectConflicts` 比较本地/远端同名文件 SHA256，哈希不同→内容冲突；`ResolveConflict` 单文件 + `ResolveConflicts` 批量，三种策略 force_remote/force_local/manual；`suggestStrategy` 按修改时间推荐策略）
 - `go/fsutil/hardlink_windows.go` — Windows 硬链接检测（`syscall.GetFileInformationByHandle` → `NumberOfLinks`，收敛自原 link_windows.go）
 - `go/fsutil/hardlink_other.go` — Unix/macOS 硬链接检测（`syscall.Stat_t.Nlink`，含目录排除 ADR-038，收敛自原 link_unix.go）
@@ -138,8 +141,10 @@ status: active
 - `RelinkDir` / `PushSingleResource` 整段持 `InstallLock`，内部对 `installer.Install/InstallDir/CopyFile` 改用 `*Locked` 变体，避免同 goroutine 重入非重入 mutex 死锁；`SyncToggleStatus` 采分段持锁（阶段 1 收集与阶段 3+4 执行各为独立持锁段，中间锁外算哈希）——锁生命周期由段内 defer 保证，锁外 panic 不会触发对已释放锁的二次 Unlock
 - 文件被占用（如 Minecraft 锁定）时 `isFileLocked` 识别后静默跳过不阻塞
 - `RelinkDir` 处理文件夹级类型时先把旧目录 rename 成 `<目录名>.relink-bak-<UnixNano>` 备份（时间戳防覆盖恢复点，与 conflict.go 的 `.bak-<ts>` 同族），重建成功才删备份、失败则回滚；根层平铺的 ysm.json/.pmx 退化为 `installer.CopyFile` 单文件路径
-- **目录级 rename 前锁内身份复验（ADR-296 D4）**：`sync_relink.go|verifyDirSnapshot`——锁外对将搬的 `dstParent` 逐条 Lstat 存快照（非全量扫描，不违 `TestRelinkDir_ScanNotHeldLock` 契约），锁内 rename 前用 `os.SameFile` 复验「搬的仍是快照观察到的那个对象」（Windows 比 VolumeSerial+FileIndex / Unix 比 dev+ino，`installer.sameDir` 同口径）；快照缺失（锁外 Lstat 即失败）一律拒搬。检出「rename 走/删除后换成异体目录」类竞态；诚实残余：NTFS FileId 回收复用的理论巧合、InstallLock 不互斥外部进程（窗口已收窄为两条相邻 syscall 之间）。回归测试 `TestRelinkDir_DirLevelSnapshotMissingRefusesRename`（快照缺失拒搬）/ `TestRelinkDir_DirLevelSnapshotReplacedRefusesRename`（非目录占位拒搬 + 占位物零触碰）
-- **`.relink-bak-*` 备份尸体不参与扫描消费（ADR-296 D3）**：Go walk（`rust_backend` tag 已随 ADR-324 删除，现只有 Go 一个后端）会下钻备份目录并照常填哈希 → 尸体内条目哈希恒匹配仓库原件。`go/sync/sync_relink.go|isRelinkBackupPath`（逐段判「含 `.relink-bak-`」，后缀形态不能照抄 `hasRecycleSegment` 的精确段匹配）在三处剔除：`RelinkDir` custom 主循环、repoByHash 构建循环、`SyncToggleStatus` WalkDir——斩断「对尸体 rename→InstallDir→再生新备份」的套娃增长与尸体被 `.disabled` 改名的污染。展示层（`GetInstanceStatus` 走 scanner 源头）尚未过滤，属已知残余（回归测试 `TestRelinkDir_RelinkBackupCorpsesSkipped` / `TestSyncToggleStatus_RelinkBackupCorpsesSkipped`）
+- **整夹替换必须保全实例独有文件（ADR-342 D1）**：替换前 `sync_relink.go|collectInstanceOnlyFiles` 记账「实例侧有、仓库侧同相对路径没有」的文件**相对路径**（递归收集使实例独有子目录整体存活；跳过回收站与 `.relink-bak` 子树），替换成功后 `sync_relink.go|restoreInstanceOnlyFiles` **从备份目录**回填到重建夹。两条踩过的坑：① 只能记相对路径——紧接着 `os.Rename` 掉旧夹，绝对源路径当场失效（首版即因此 100% 回填失败）；② 回填失败**不得静默**——保留备份目录并在 logger 点名未回填路径，宁留恢复点不无声丢数据。触发场景是设置页「重新应用链接模式/切换链接模式」（copy 模式同样跑），旧实现成功即 `RemoveAll` 备份 → 自制贴图/额外子目录永久消失且日志为空、count 报全成功。实例侧 `.disabled/.ban` 副本按「独有文件」被保留（不静默删除也不静默转正）——禁用态跨链统一不在本 ADR 范围
+- **同夹多条目共享一次替换结果（ADR-342 D3）**：`RelinkDir` 主循环按小写规范化 `dstParent` 记 `replacedDirs`，该夹本轮已整夹替换过则后续条目直接计成功、不再搬动。这是身份复验修好后的**必需配套**——复验现在会正确地发现「目录已被替换」，若不承接，relink 会把自己刚做的事报成失败（误报）
+- **目录级 rename 前锁内身份复验（ADR-296 D4，机制已被 ADR-342 D2 修正）**：`sync_relink.go|verifyDirSnapshot`——锁外对将搬的 `dstParent` 逐条取身份快照（非全量扫描，不违 `TestRelinkDir_ScanNotHeldLock` 契约），锁内 rename 前复验「搬的仍是快照观察到的那个对象」；快照缺失（锁外取身份即失败）一律拒搬。**⚠️ 原实现直接用 `os.Lstat` 产物当快照是失效的**：Windows 的 `os.Lstat` 产出惰性 `fileStat`（只存路径不存 FileId），`os.SameFile` 才由 `loadFileId` 按路径名 `CreateFile` 取 ID（Go stdlib `os/types_windows.go`）→ 两侧都解析成「P 现在是谁」，恒真；现统一走 `sync_relink.go|dirIdentity`（`os.Open` + `f.Stat()` 句柄态，身份调用瞬间固化；Unix 等价于 fstat dev/ino）。诚实残余：内容漂移不威胁「搬对对象」、InstallLock 不互斥外部进程（窗口已收窄为两条相邻 syscall 之间）。回归测试 `TestRelinkDir_DirLevelSnapshotMissingRefusesRename`（快照缺失拒搬）/ `TestRelinkDir_DirLevelSnapshotReplacedRefusesRename`（非目录占位拒搬 + 占位物零触碰）/ `TestDirIdentity_RejectsReplacedDir`（同名重建判否 + 同一目录两次取身份相等的反向对照）
+- **`.relink-bak-*` 备份尸体不参与扫描消费（ADR-296 D3，豁免面已按 ADR-342 D4 扩到同步 diff 全通道）**：Go walk（`rust_backend` tag 已随 ADR-324 删除，现只有 Go 一个后端）会下钻备份目录并照常填哈希 → 尸体内条目哈希恒匹配仓库原件。`go/sync/sync_relink.go|isRelinkBackupPath`（逐段判「含 `.relink-bak-`」，后缀形态不能照抄 `hasRecycleSegment` 的精确段匹配）剔除面：`RelinkDir` custom 主循环、repoByHash 构建循环、`SyncToggleStatus` WalkDir（原三处，斩断「对尸体 rename→InstallDir→再生新备份」套娃与尸体被 `.disabled` 改名），加 `collectEntriesWalk` / `collectEntriesFromScan`（生产链走 scan 反推，只修 Walk 等于没修）/ `handleDir`（file-level）/ `collectFolderFiles` + `collectFolderFilesFromScan`（夹内子文件）。不豁免则尸体被判「实例独有（可拉取）」，一键拉取会把整个恢复点复制进仓库。回归测试 `TestRelinkDir_RelinkBackupCorpsesSkipped` / `TestSyncToggleStatus_RelinkBackupCorpsesSkipped` / `sync_corpse_exempt_test.go`（四条 collect 通道各一例）
 - 硬链接检测跨平台分实现，系统调用失败一律降级 `LinkCopy`；`GetLinkType` 必须先 `os.Lstat` 判 `os.ModeSymlink`
 - 链接类型是删除策略依据：硬链接(nlink>1)/符号链接直接删，普通文件才移回收站
 - 拉取侧 `copyFile` 已修复为 **tmp+rename 原子落地**；`copyDirRecursive` 保留符号链接语义
@@ -165,6 +170,7 @@ status: active
 
 ## 裁定记录
 
+- `2026-10-14`：relink 整夹替换改为「保全实例独有文件 + 句柄态目录身份 + 同夹条目去重 + 备份尸体同步豁免」四件套（ADR-342）｜旧实现成功即 `RemoveAll` 备份 → 实例独有文件不可逆静默消失（探针实证 `count=1 err=nil logs=[]`）；ADR-296 D4 的 `os.SameFile` 在 Windows 上因惰性 `fileStat` 按名重开而恒真（探针实证同名重建仍判 same）｜回退 = `go/sync/sync_relink.go|collectInstanceOnlyFiles`、`go/sync/sync_relink.go|dirIdentity`、`go/sync/sync_relink.go|isRelinkBackupPath`
 - `2026-10-14`：contentDiffers 对 Oversize（>MaxImportSize 被跳过哈希）文件不再回退 Size 判 Synced，保守判 Missing（待推送）——P0-2 诚实化，消灭 >500MB 静默假绿｜超限文件因 bug-chronicle #36 刻意跳过哈希，同尺寸不足以证明内容一致；非 hashable / scanFn=nil 的空哈希仍走 Size 兜底（误判面窄、不回归），故只翻转 Oversize 一类｜回退 = `go/sync/sync_diff.go|DiffEntry.Oversize`
 
 ## 相关

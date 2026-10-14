@@ -120,53 +120,171 @@ function freeBadgeHTML(header?: YSMHeader | null): string {
 
 // ── 卡片渲染 ───────────────────────────────────────
 
+/** 键值行：valueHtml 为空则整行不渲染（收敛各卡里成串的 `? <div class="md-row">…</div> : ""` 三目）。 */
+function rowHTML(labelKey: Parameters<typeof t>[0], valueHtml: string): string {
+  if (!valueHtml) return "";
+  return `<div class="md-row"><span class="md-label">${t(labelKey)}</span><span class="md-value">${valueHtml}</span></div>`;
+}
+
+/** 外链锚点（同款 style 三属性）。 */
+function anchorHTML(url: string, text: string): string {
+  return `<a href="${esc(safeUrl(url))}" target="_blank" style="color:var(--accent);text-decoration:none">${text}</a>`;
+}
+
+/** 外链展示文本：去 scheme + 去路径，只留 host（linkHome 行专用）。 */
+function hostText(url: string): string {
+  return esc(url.replace(/^https?:\/\//, "").replace(/\/.*$/, ""));
+}
+
+/** headerOnly 卡片 tips 块（带底色/圆角/左边框，与 summary 卡不同结构）。 */
+function tipsHeaderBlockHTML(tips: string): string {
+  return tips
+    ? `<div style="font-size:var(--fs-sm);color:var(--txt);margin-bottom:10px;line-height:1.6;padding:var(--sp-vh-btn);background:var(--surf);border-radius:var(--radius-md);border-left:3px solid var(--accent)">${tips}</div>`
+    : "";
+}
+
+/** summary 卡片 tips 块（无底色，仅字号/行高）。 */
+function tipsSummaryBlockHTML(tips: string): string {
+  return tips
+    ? `<div style="font-size:var(--fs-sm);color:var(--txt);margin-bottom:10px;line-height:1.6">${tips}</div>`
+    : "";
+}
+
+/** header 字段路径的作者行：作者名 + bilibili 外链（含 title 提示）+ 角色。 */
+function headerAuthorHTML(header: YSMHeader): string {
+  if (!header.authorName) return "";
+  const bili = header.authorBilibili
+    ? `<a href="${esc(safeUrl(header.authorBilibili))}" target="_blank" style="color:var(--accent);text-decoration:none" title="${esc(header.authorBilibili)}">${UI_ICONS.media}</a>`
+    : "";
+  const role = header.authorRole ? cleanText(header.authorRole) : "";
+  return `${esc(cleanText(header.authorName))}${bili}${role ? `（${esc(role)}）` : ""}`;
+}
+
+/** headerOnly 卡元信息区：链接行×2 + 指纹行 + 加密提示 + 版本号行（整段拼接）。 */
+function headerOnlyMetaRowsHTML(header: YSMHeader): string {
+  const homeRow = header.linkHome
+    ? rowHTML("format.homepage", anchorHTML(header.linkHome, hostText(header.linkHome)))
+    : "";
+  const updateRow = header.linkUpdate
+    ? rowHTML("format.update", anchorHTML(header.linkUpdate, t("format.viewUpdate")))
+    : "";
+  const hashRow = header.hash
+    ? `<div class="md-row" style="font-size:var(--fs-xs);color:var(--muted)"><span class="md-label">${t("format.fingerprint")}</span><span class="md-value" style="font-family:monospace;font-size:var(--fs-xs);word-break:break-all">${esc(header.hash)}</span></div>`
+    : "";
+  const versionLine =
+    (header.format ?? 0) > 0 || (header.crypto ?? 0) > 0
+      ? `<div style="font-size:var(--fs-xs);color:var(--muted);margin-top:4px;text-align:right">${t("format.versionLine", { format: header.format ?? 0, crypto: header.crypto ?? 0 })}</div>`
+      : "";
+  return `${homeRow}
+${updateRow}
+${hashRow}
+<div class="md-divider"></div>
+<div class="md-row" style="color:var(--muted);font-size:var(--fs-xs)"><span>${UI_ICONS.lock} ${t("format.encryptedNotice")}</span></div>
+${versionLine}`;
+}
+
+/** 摘要卡空态：未选择模型时的占位块。 */
+function emptyStateHTML(): string {
+  return `<div class="content" id="preview-content" data-testid="preview-content">
+<h3>${UI_ICONS.file} ${t("preview.modelInfo")}</h3>
+<div class="dp-placeholder">
+  <div class="big-icon">${UI_ICONS.file}</div>
+  <div class="dp-hint">${t("preview.clickFileHint")}</div>
+</div>
+</div>`;
+}
+
+/** 内部标识符判定（下划线小写 / 常见控件类型）。 */
+function isInternalId(n: string): boolean {
+  return /^[a-z_]+$/.test(n) || /^(range|checkbox|radio|slider|toggle)$/i.test(n);
+}
+
+/** 动画分组块：只显示有效项（非内部标识符），标题带计数，最多显示前 8 个徽章。 */
+function animGroupsHTML(groups?: SummaryAnimGroup[] | null): string {
+  if (!groups || groups.length === 0) return "";
+  return groups.map(animGroupRowHTML).filter(Boolean).join("");
+}
+
+/** 单组行：内部标识符条目全部过滤，空组跳过，>8 条折叠计数。 */
+function animGroupRowHTML(g: SummaryAnimGroup): string {
+  const name = cleanText(g.name || g.id || "");
+  // items 先过 cleanText 再判内部标识符：含 § 码前缀的条目清洗后不再误判为外部标识符；
+  // 清洗后为空的条目（纯 § 码/控制字符）直接排除，避免渲染空徽章
+  const items = (g.items || []).map((it) => cleanText(it)).filter((it) => it && !isInternalId(it));
+  if (!items.length) return "";
+  const displayItems = items.slice(0, 8);
+  const more = items.length > 8 ? ` +${items.length - 8}` : "";
+  const badges =
+    displayItems
+      .map((it) =>
+        badgeSpanHTML(esc(it), {
+          color: "var(--accent,#66d9ef)",
+          mixPct: "14%",
+          extra: "margin:2px 3px;font-weight:500;white-space:nowrap",
+        }),
+      )
+      .join("") + more;
+  return `<div style="margin-bottom:4px"><div style="font-size:var(--fs-xs);font-weight:600;color:var(--txt);margin-bottom:2px">${UI_ICONS.video} ${esc(name)}（${items.length}）</div><div>${badges}</div></div>`;
+}
+
+/**
+ * 配置菜单块：全部渲染（纯标识符经 cleanText 去 § 码后照常显示——P3 注释修正：
+ * 原注释「只显示前5项，纯标识符的不显示」与实现不符，测试已锁定纯标识符也渲染）。
+ */
+function configMenusHTML(menus?: SummaryConfigMenu[] | null): string {
+  if (!menus || menus.length === 0) return "";
+  const rows = menus
+    .map((m) => {
+      const name = cleanText(m.name || m.id || "");
+      return `<div style="margin-bottom:2px;font-size:var(--fs-xs);color:var(--muted)">${UI_ICONS.settings} ${esc(name)}</div>`;
+    })
+    .join("");
+  if (!rows) return "";
+  return `<div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:2px">${t("format.configItems")}</div>${rows}`;
+}
+
+/** 外链行（首页 + 赞助，`·` 连接）：无首页则整行不渲染。 */
+function linksRowHTML(links?: YsmSummary["links"]): string {
+  if (!links?.home) return "";
+  const donate = links.donate ? ` · ${anchorHTML(links.donate, t("format.donate"))}` : "";
+  const value = `${anchorHTML(links.home, t("format.homepage"))}${donate}`;
+  return `<div class="md-row"><span class="md-label">${UI_ICONS.link} ${t("format.links")}</span><span class="md-value">${value}</span></div>`;
+}
+
+/** 带分隔线的可选块：块为空则整段（含分隔线）不渲染。 */
+function withDivider(block: string): string {
+  return block ? `<div class="md-divider"></div>${block}` : "";
+}
+
 /** 仅基于头部信息渲染的简约卡片（加密/闭源模型） */
 function headerOnlyCardHTML(header: YSMHeader, basename?: string): string {
   // 头部无名称时从文件名回退解析
   const p = basename && !header.name ? parseModelName(basename) : null;
   const name = p ? "" : cleanText(header.name || "-"); // 用 p 时 name 为空，下面走标签模板
   const tips = renderTips(header.tips);
-  const licenseType = cleanText(header.license);
+  const licenseValue = esc(cleanText(header.license)) || t("format.unlabeled");
   const freeBadge = freeBadgeHTML(header);
-  let authorHtml = "";
-  let workHtml = "";
-  if (p) {
-    // 从文件名解析到作者/作品/角色，用 renderDisplayName 渲染标题。
-    // P3 修复：作者与作品分开成行——原 authorHtml 混装 p.work，p.author 为空时
-    // 作品被标注为作者（且标题行重复显示作品 tag）
-    if (p.author) {
-      authorHtml = `<span class="tag-author">${esc(p.author)}</span>`;
-    }
-    if (p.work) {
-      workHtml = `<span class="tag-work">${esc(p.work)}</span>`;
-    }
-  } else {
-    if (header.authorName) {
-      const bili = header.authorBilibili
-        ? `<a href="${esc(safeUrl(header.authorBilibili))}" target="_blank" style="color:var(--accent);text-decoration:none" title="${esc(header.authorBilibili)}">${UI_ICONS.media}</a>`
-        : "";
-      const role = header.authorRole ? cleanText(header.authorRole) : "";
-      authorHtml = `${esc(cleanText(header.authorName))}${bili}${role ? `（${esc(role)}）` : ""}`;
-    }
-  }
+
+  // 文件名解析路径：作者/作品分开成行；字段路径：作者 + bilibili + 角色合并
+  // P3 修复：作者与作品分开成行——原 authorHtml 混装 p.work，p.author 为空时
+  // 作品被标注为作者（且标题行重复显示作品 tag）
+  const parsedAuthor = p?.author ? `<span class="tag-author">${esc(p.author)}</span>` : "";
+  const parsedWork = p?.work ? `<span class="tag-work">${esc(p.work)}</span>` : "";
+  const fieldAuthor = p ? "" : headerAuthorHTML(header);
+  const authorValue = parsedAuthor || fieldAuthor;
 
   // 标题行：优先用文件名解析的标签，其次 header.name
   const titleHtml = p
-    ? `<h3>${authorHtml ? `${authorHtml} ` : ""}<span style="color:var(--txt)">${esc(p.chara || p.raw.replace(/\.[^.]*$/, ""))}</span>${freeBadge}</h3>`
+    ? `<h3>${parsedAuthor ? `${parsedAuthor} ` : ""}<span style="color:var(--txt)">${esc(p.chara || p.raw.replace(/\.[^.]*$/, ""))}</span>${freeBadge}</h3>`
     : `<h3>${esc(name)}${freeBadge}</h3>`;
 
   return `<div class="content" id="preview-content" data-testid="preview-content">
 ${titleHtml}
-${workHtml ? `<div class="md-row"><span class="md-label">${t("dialog.work")}</span><span class="md-value">${workHtml}</span></div>` : ""}
-${tips ? `<div style="font-size:var(--fs-sm);color:var(--txt);margin-bottom:10px;line-height:1.6;padding:var(--sp-vh-btn);background:var(--surf);border-radius:var(--radius-md);border-left:3px solid var(--accent)">${tips}</div>` : ""}
-<div class="md-row"><span class="md-label">${t("format.license")}</span><span class="md-value">${esc(licenseType) || t("format.unlabeled")}</span></div>
-${p?.author ? `<div class="md-row"><span class="md-label">${t("preview.authorLabel")}</span><span class="md-value"><span class="tag-author">${esc(p.author)}</span></span></div>` : authorHtml ? `<div class="md-row"><span class="md-label">${t("preview.authorLabel")}</span><span class="md-value">${authorHtml}</span></div>` : ""}
-${header.linkHome ? `<div class="md-row"><span class="md-label">${t("format.homepage")}</span><span class="md-value"><a href="${esc(safeUrl(header.linkHome))}" target="_blank" style="color:var(--accent);text-decoration:none">${esc(header.linkHome.replace(/^https?:\/\//, "").replace(/\/.*$/, ""))}</a></span></div>` : ""}
-${header.linkUpdate ? `<div class="md-row"><span class="md-label">${t("format.update")}</span><span class="md-value"><a href="${esc(safeUrl(header.linkUpdate))}" target="_blank" style="color:var(--accent);text-decoration:none">${t("format.viewUpdate")}</a></span></div>` : ""}
-${header.hash ? `<div class="md-row" style="font-size:var(--fs-xs);color:var(--muted)"><span class="md-label">${t("format.fingerprint")}</span><span class="md-value" style="font-family:monospace;font-size:var(--fs-xs);word-break:break-all">${esc(header.hash)}</span></div>` : ""}
-<div class="md-divider"></div>
-<div class="md-row" style="color:var(--muted);font-size:var(--fs-xs)"><span>${UI_ICONS.lock} ${t("format.encryptedNotice")}</span></div>
-${(header.format ?? 0) > 0 || (header.crypto ?? 0) > 0 ? `<div style="font-size:var(--fs-xs);color:var(--muted);margin-top:4px;text-align:right">${t("format.versionLine", { format: header.format ?? 0, crypto: header.crypto ?? 0 })}</div>` : ""}
+${parsedWork ? rowHTML("dialog.work", parsedWork) : ""}
+${tipsHeaderBlockHTML(tips)}
+<div class="md-row"><span class="md-label">${t("format.license")}</span><span class="md-value">${licenseValue}</span></div>
+${authorValue ? rowHTML("preview.authorLabel", authorValue) : ""}
+${headerOnlyMetaRowsHTML(header)}
 </div>`;
 }
 
@@ -181,15 +299,7 @@ export function summaryCardHTML(
   header: YSMHeader | null | undefined,
   basename?: string,
 ): string {
-  if (!summary && !header) {
-    return `<div class="content" id="preview-content" data-testid="preview-content">
-<h3>${UI_ICONS.file} ${t("preview.modelInfo")}</h3>
-<div class="dp-placeholder">
-  <div class="big-icon">${UI_ICONS.file}</div>
-  <div class="dp-hint">${t("preview.clickFileHint")}</div>
-</div>
-</div>`;
-  }
+  if (!summary && !header) return emptyStateHTML();
   // 无 summary 但有 header → 加密/闭源模型，走头部简约卡片
   if (!summary && header?.isYsm) {
     return headerOnlyCardHTML(header, basename);
@@ -197,74 +307,20 @@ export function summaryCardHTML(
 
   const name = cleanText(summary?.name || summary?.source || "-");
   const tips = renderTips(summary?.tips);
-  const licenseType = cleanText(summary?.license);
+  const licenseValue = esc(cleanText(summary?.license)) || t("format.unlabeled");
   // 作者行不再由详情摘要卡渲染（方案 A 去重 2026-08-28）：统计卡（buildStatsCard
   // → skeleton-render.ts）统一承载「头像 + 作者 + 角色」列表，且挂详情卡底部，
   // 摘要卡保留唯一性——作者信息不重复出现。WASM 解码失败（统计卡不渲染）时
   // 骨架 tab 会显示加载失败态，作者缺失属该降级路径的可接受损失。
-
-  // 动画分组（内部标识符只显示计数，有中文名的显示标签）
-  // 2026-08-28：标题带有效项计数（如「其他动画（7）」）——资源行「贴图/模型/动画」已删
-  // （贴图/模型与统计卡重叠且 Go 侧只数清单条目不准确），动画计数并入分组标题承载
-  let animGroupHtml = "";
-  const isInternalId = (n: string): boolean =>
-    /^[a-z_]+$/.test(n) || /^(range|checkbox|radio|slider|toggle)$/i.test(n);
-  if (summary?.animGroups && summary.animGroups.length > 0) {
-    animGroupHtml = summary.animGroups
-      .map((g) => {
-        const name = cleanText(g.name || g.id || "");
-        // items 先过 cleanText 再判内部标识符：含 § 码前缀的条目清洗后不再误判为外部标识符
-        // 清洗后为空的条目（纯 § 码/控制字符）直接排除，避免渲染空徽章
-        const items = (g.items || [])
-          .map((it) => cleanText(it))
-          .filter((it) => it && !isInternalId(it));
-        if (!items.length) return ""; // 全是内部标识符，跳过
-        const displayItems = items.slice(0, 8);
-        const more = items.length > 8 ? ` +${items.length - 8}` : "";
-        const badges =
-          displayItems
-            .map((it) =>
-              badgeSpanHTML(esc(it), {
-                color: "var(--accent,#66d9ef)",
-                mixPct: "14%",
-                extra: "margin:2px 3px;font-weight:500;white-space:nowrap",
-              }),
-            )
-            .join("") + more;
-        return `<div style="margin-bottom:4px"><div style="font-size:var(--fs-xs);font-weight:600;color:var(--txt);margin-bottom:2px">${UI_ICONS.video} ${esc(name)}（${items.length}）</div><div>${badges}</div></div>`;
-      })
-      .filter(Boolean)
-      .join("");
-  }
-
-  // 配置菜单（全部渲染，纯标识符的经 cleanText 去 § 码后照常显示——P3 注释修正：
-  // 原注释「只显示前5项，纯标识符的不显示」与实现不符，测试已锁定纯标识符也渲染）
-  let configHtml = "";
-  if (summary?.configMenus && summary.configMenus.length > 0) {
-    configHtml = summary.configMenus
-      .map((m) => {
-        const name = cleanText(m.name || m.id || "");
-        return `<div style="margin-bottom:2px;font-size:var(--fs-xs);color:var(--muted)">${UI_ICONS.settings} ${esc(name)}</div>`;
-      })
-      .join("");
-    if (configHtml) {
-      configHtml = `<div style="font-size:var(--fs-xs);color:var(--muted);margin-bottom:2px">${t("format.configItems")}</div>${configHtml}`;
-    }
-  }
-
-  // 免费/付费标记（freeBadgeHTML 收口：与 headerOnlyCardHTML 共用，两处同构三目不再各抄）
   const freeBadge = freeBadgeHTML(header);
+  const animGroupHtml = animGroupsHTML(summary?.animGroups);
+  const configHtml = configMenusHTML(summary?.configMenus);
+  const linksHtml = linksRowHTML(summary?.links);
 
   return `<div class="content" id="preview-content" data-testid="preview-content">
 <h3>${esc(name)}${freeBadge}</h3>
-
-${tips ? `<div style="font-size:var(--fs-sm);color:var(--txt);margin-bottom:10px;line-height:1.6">${tips}</div>` : ""}
-
-<div class="md-row"><span class="md-label">${t("format.license")}</span><span class="md-value">${esc(licenseType) || t("format.unlabeled")}</span></div>
-
-${animGroupHtml ? `<div class="md-divider"></div>${animGroupHtml}` : ""}
-${configHtml ? `<div class="md-divider"></div>${configHtml}` : ""}
-
-${summary?.links?.home ? `<div class="md-divider"></div><div class="md-row"><span class="md-label">${UI_ICONS.link} ${t("format.links")}</span><span class="md-value"><a href="${esc(safeUrl(summary.links.home))}" target="_blank" style="color:var(--accent);text-decoration:none">${t("format.homepage")}</a>${summary.links.donate ? ` · <a href="${esc(safeUrl(summary.links.donate))}" target="_blank" style="color:var(--accent);text-decoration:none">${t("format.donate")}</a>` : ""}</span></div>` : ""}
+${tipsSummaryBlockHTML(tips)}
+<div class="md-row"><span class="md-label">${t("format.license")}</span><span class="md-value">${licenseValue}</span></div>
+${withDivider(animGroupHtml)}${withDivider(configHtml)}${withDivider(linksHtml)}
 </div>`;
 }

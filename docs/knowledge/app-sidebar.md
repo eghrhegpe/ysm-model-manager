@@ -21,7 +21,6 @@ auto_fields:
     - bindMcPathLabel
     - bindSelectAll
     - bindSyncSelected
-    - BusyGuard
     - EmitDedupe
     - emptyInstanceStateHTML
     - footerHTML

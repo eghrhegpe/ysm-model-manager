@@ -44,6 +44,7 @@ auto_fields:
     - DragSortSpec
     - DragStateShell
     - EditFocusAnchor
+    - EditSession
     - FAV_CREATORS_KEY
     - FavSortInput
     - getCreatorIdentity

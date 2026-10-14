@@ -47,7 +47,8 @@ func PushResources(rtype, globalDir, targetDir, linkMode string, logger Logger) 
 	// 多层物理路径：行内计算 rel(globalDir, missing) 保留中间目录层级
 	if registry.IsDirLevelSync(rtype) {
 		dirResult := SyncResourcesDirLevel(globalDir, targetDir, rtype)
-		for _, missing := range dirResult.Missing {
+		// 祖先单元（容器键）不整体安装：见 dropAncestorUnits 注释（ADR-344 D4）
+		for _, missing := range dropAncestorUnits(dirResult.Missing) {
 			fi, stErr := os.Stat(missing)
 			var err error
 			if stErr == nil && !fi.IsDir() {
@@ -118,7 +119,13 @@ func PullResources(rtype, globalDir, targetDir string, logger Logger) (int, erro
 	}
 	count := 0
 	failed := 0
-	for _, src := range result.Extra {
+	// 文件夹级类型的 Extra 同样剔除祖先容器键（与推送侧对称，ADR-344 D4）；
+	// 文件级类型不适用（其条目语义由 ResourceDiff 决定，不在此收敛）。
+	extra := result.Extra
+	if registry.IsDirLevelSync(rtype) {
+		extra = dropAncestorUnits(extra)
+	}
+	for _, src := range extra {
 		fi, stErr := os.Stat(src)
 		isDir := stErr == nil && fi.IsDir()
 		var err error
@@ -240,8 +247,9 @@ func PullSingleResource(globalDir, targetDir, srcPath string) error {
 }
 
 // PushSingleResource 推送单个资源到整合包：
-// 文件夹 / .json/.pmx/.pmd（文件夹级类型）走 InstallDir，其余 Install。
-// 子类内部模型（EntityPlayer/角色A）落位到 customDir/<子类>，保留层级。
+// 文件夹 / .json/.pmx/.pmd（文件夹级类型）走目录单元安装（保层级，见 installDirUnitLocked），
+// 其余走 Install（文件级，installer 内部自行按 rel 保层级）。
+// 子类内部模型（EntityPlayer/角色A）落位到 customDir/<仓库相对层级>，保留层级。
 // 整段持 installer.InstallLock（ADR-056）：与 PushResources/PullResources 口径一致，
 // 避免两次文件操作之间被并发同步插队；内部改用 *Locked 变体防重入死锁。
 //
@@ -252,6 +260,16 @@ func PullSingleResource(globalDir, targetDir, srcPath string) error {
 //
 // ⚠️ 毒舌审核：原硬编码 ext == ".json" 会误判普通 readme.json 为 YSM 文件夹级安装。
 // 改为 IsYsmEntryJSON 精确匹配 ysm.json，避免非 YSM 场景的 .json 误触发。
+//
+// ⚠️ ADR-344 D3：三个目录分支原走 InstallDirLocked → 落位 customDir/<basename>，
+// 嵌套单元（嵌套1/01_taisho_maid）被拍平到实例根。本函数是面板行内推送与一键安装
+// MissingDirs 的消费端（internal/app|PushSingleResourceToInstance），必须保层级。
+//
+// ⚠️ ADR-344 D3b：IsYsmEntryJSON 做的是**裸名全等比较**，上面传全路径恒 false →
+// ysm.json 的文件夹级分支从未触发（单文件 Install 只落 ysm.json，同夹纹理全丢）。
+// 改传 filepath.Base，与两处已有同口径调用点对齐（internal/app|pushRepoPathToInstance
+// 的根级兜底守注释、|importModelFileWithSubpath）；该守注释本就假定「ysm.json 触发
+// InstallDir(父目录)」，本修正让假定成真（根级 ysm.json 仍被守拦下，不会整仓推进实例）。
 func PushSingleResource(filePath, customDir, globalDir, linkMode, rtype string) error {
 	// stat 移到锁外：os.Stat 是磁盘 I/O（慢盘/杀毒扫描下可达数百 ms），纳入全局
 	// InstallLock 临界区会放大锁争用（并发 Push/Pull/Relink 串行等待被拉长）。
@@ -262,20 +280,69 @@ func PushSingleResource(filePath, customDir, globalDir, linkMode, rtype string) 
 	defer installer.InstallLocker.Unlock()
 	defer InvalidateSyncScanCaches() // 推送会改实例目录，清同步扫盘缓存防陈旧
 	if stErr == nil && fi.IsDir() {
-		return installer.InstallDirLocked(filePath, customDir, globalDir, linkMode, rtype)
+		return installDirUnitLocked(filePath, customDir, globalDir, linkMode, rtype)
 	}
 	ext := strings.ToLower(filepath.Ext(filePath))
 	// .pmx/.pmd 一律视为 MMD 文件夹级安装（整个父目录）
 	if ext == ".pmx" || ext == ".pmd" {
-		dir := filepath.Dir(filePath)
-		return installer.InstallDirLocked(dir, customDir, globalDir, linkMode, rtype)
+		return installDirUnitLocked(filepath.Dir(filePath), customDir, globalDir, linkMode, rtype)
 	}
 	// .json 仅 ysm.json 视为 YSM 文件夹级入口（防 readme.json 等误判）
-	if ext == ".json" && registry.IsYsmEntryJSON(filePath) {
-		dir := filepath.Dir(filePath)
-		return installer.InstallDirLocked(dir, customDir, globalDir, linkMode, rtype)
+	if ext == ".json" && registry.IsYsmEntryJSON(filepath.Base(filePath)) {
+		return installDirUnitLocked(filepath.Dir(filePath), customDir, globalDir, linkMode, rtype)
 	}
 	return installer.InstallLocked(filePath, customDir, globalDir, linkMode)
+}
+
+// installDirUnitLocked 把一个「目录单元」装到实例，保留它相对仓库根的层级（ADR-344 D3）。
+// 落位规则与 PushResources 的文件夹级分支**同一判定**（不另立第三套）：
+//   - 正常：InstallDirRelLocked(dir, customDir, rel(globalDir→dir)) → customDir/<仓库相对层级>
+//   - relErr（越界/跨卷）或 rel == "."（目录根本身就是模型夹）：回退 InstallDir 的
+//     basename 语义——InstallDirRel 对 rel=="." 会直接拒绝（installer|resolveFinalDst），
+//     静默失败等于丢推送。
+//
+// 调用方须持 installer.InstallLock（内部走 *Locked 变体，防重入死锁）。
+func installDirUnitLocked(dir, customDir, globalDir, linkMode, rtype string) error {
+	rel, relErr := paths.RelInside(globalDir, dir)
+	if relErr != nil || rel == "." {
+		return installer.InstallDirLocked(dir, customDir, globalDir, linkMode, rtype)
+	}
+	return installer.InstallDirRelLocked(dir, customDir, filepath.ToSlash(rel), globalDir, linkMode, rtype)
+}
+
+// dropAncestorUnits 剔除「其下还有更深单元」的祖先目录条目（ADR-344 D4）。
+//
+// 混合容器（自身含平铺模型文件 + 子模型夹）在键集里同时登记容器键、容器内平铺文件键与
+// 子夹键；容器键只是**键对齐 marker**（与对侧同名叶子目录对齐键集，防幻影 Missing+Extra），
+// 不是模型单元。整体安装容器会与其子单元重复拷贝同一批文件（计数膨胀 + 双倍 IO），
+// 且与面板链 instance|pushTargets「只递归子单元、从不整体推容器」的口径相反。
+// 剔除后容器目录由其子单元的落位自然创建。
+//
+// 判据：存在另一条目 q 严格位于候选 p 之下（前缀 + 分隔符边界——防 `/repo/a` 误杀
+// `/repo/ab`）。大小写不敏感（Windows 路径语义）。保留输入顺序。
+func dropAncestorUnits(list []string) []string {
+	if len(list) < 2 {
+		return list
+	}
+	cleaned := make([]string, len(list))
+	for i, p := range list {
+		cleaned[i] = strings.ToLower(filepath.Clean(p))
+	}
+	sep := string(filepath.Separator)
+	out := make([]string, 0, len(list))
+	for i, p := range list {
+		nested := false
+		for j, q := range cleaned {
+			if i != j && strings.HasPrefix(q, cleaned[i]+sep) {
+				nested = true
+				break
+			}
+		}
+		if !nested {
+			out = append(out, p)
+		}
+	}
+	return out
 }
 
 // SyncCustomToRepo 同步整合包自定义目录的模型到仓库（哈希/名称去重）

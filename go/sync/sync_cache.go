@@ -36,7 +36,8 @@ func RegisterInvalidationHook() {
 // syncDirectoryScanKey 标识一次同步扫描结果。
 // kind 用于区分三类结果：
 //   - "resources":  map[string]DiffEntry（SyncResources 全树文件 + 资源包文件夹）
-//   - "dirlevel":   map[string]string（SyncResourcesDirLevel 的同步单元集合）
+//   - "dirlevel":   map[string]dirLevelUnit（SyncResourcesDirLevel 的同步单元集合，
+//     单元带 Size/Hash 供内容级判定；hashed 维度区分带摘要/纯 Size 两种单元表，ADR-344 D1）
 //   - "folder":     map[string]string（DiffFolderContents 的文件夹内文件集合）
 type syncDirectoryScanKey struct {
 	kind  string
@@ -61,7 +62,7 @@ var (
 	// Range+Delete（InvalidateSyncScanCaches）由单一失效入口触发，无细粒度锁竞争。
 	// 若未来出现高频「部分 key 写入校验」场景再评估切 RWMutex。
 	syncResourcesScanCache sync.Map // syncDirectoryScanKey -> *syncDirectoryScanEntry (map[string]DiffEntry)
-	syncDirLevelScanCache  sync.Map // syncDirectoryScanKey -> *syncDirectoryScanEntry (map[string]string)
+	syncDirLevelScanCache  sync.Map // syncDirectoryScanKey -> *syncDirectoryScanEntry (map[string]dirLevelUnit)
 	syncFolderScanCache    sync.Map // syncDirectoryScanKey -> *syncDirectoryScanEntry (map[string]string)
 )
 

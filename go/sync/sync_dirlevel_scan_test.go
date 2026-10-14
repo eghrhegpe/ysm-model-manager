@@ -32,7 +32,7 @@ func TestCollectEntriesFromScanEqualsWalk(t *testing.T) {
 
 	rtype := "EntityPlayer" // 无嵌套模式，走 scan 反推路径
 
-	walkMap, _ := collectEntriesWalk(root, rtype)
+	walkMap, _ := collectEntriesWalk(root, rtype, nil)
 	if len(walkMap) == 0 {
 		t.Fatalf("walkMap 为空：测试树未产生任何模型条目，请检查 rtype=%s 的扩展名配置", rtype)
 	}
@@ -40,6 +40,13 @@ func TestCollectEntriesFromScanEqualsWalk(t *testing.T) {
 	scanMap := collectEntriesFromScan(scanEntries, root, rtype)
 	if scanMap == nil {
 		t.Fatalf("collectEntriesFromScan 返回 nil（rtype=%s 不应回退 Walk）", rtype)
+	}
+	// Hash 是 scan 信道的旁挂增强（Walk 信道此处未注入摘要 → ResourceDiff 回退 Size，
+	// 同 DiffEntry.Hash 契约 / ADR-344 D1），不参与「反推与 Walk 等价」判定；
+	// 其余字段（key / Path / Rel / IsDir / Size）必须逐字段一致——反推漂移就出在这里。
+	for k, u := range scanMap {
+		u.Hash = ""
+		scanMap[k] = u
 	}
 	if !cmp.Equal(walkMap, scanMap) {
 		t.Errorf("collectEntriesFromScan 与 Walk 结果不一致\nWalk: %v\nScan: %v", walkMap, scanMap)

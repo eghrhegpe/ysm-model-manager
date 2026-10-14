@@ -5,6 +5,7 @@ package app
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -173,5 +174,113 @@ func TestEnsureGeoCache_RepoAppLazyInit(t *testing.T) {
 	}
 	if got := a.ensureGeoCache(); got == nil {
 		t.Fatal("ensureGeoCache 兜底应惰性初始化")
+	}
+}
+
+// ===== 字节预算封顶（2026-10-14 锐评 P2：原实现无界 map，base64 纹理驻留无上限）=====
+
+// geoTestFile 造一个可 stat 的假几何文件（Get 需先 Stat 成功才走缓存写入路径）
+func geoTestFile(t *testing.T, d, name string) string {
+	t.Helper()
+	p := filepath.Join(d, name)
+	if err := os.WriteFile(p, []byte("geo"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return p
+}
+
+// texturedModel 带 base64 纹理的假几何结果（成本 = 纹理字节数，Bones/Animations 为空）
+func texturedModel(bones int, tex string) types.BedrockModel {
+	m := fakeModel(bones)
+	m.Texture = tex
+	return m
+}
+
+// TestGeoCache_BudgetEvictsFIFO: 超预算逐出最旧条目；预算内条目保留
+func TestGeoCache_BudgetEvictsFIFO(t *testing.T) {
+	c := newGeoCacheWithMax(100)
+	d := t.TempDir()
+	pa := geoTestFile(t, d, "a.ysm")
+	pb := geoTestFile(t, d, "b.ysm")
+	pc := geoTestFile(t, d, "c.ysm")
+
+	c.Get(pa, func() types.BedrockModel { return texturedModel(1, strings.Repeat("a", 50)) })
+	c.Get(pb, func() types.BedrockModel { return texturedModel(2, strings.Repeat("b", 50)) })
+	if _, ok := c.Load(pa); !ok {
+		t.Fatalf("预算内（50+50=100）不应逐出")
+	}
+	c.Get(pc, func() types.BedrockModel { return texturedModel(3, strings.Repeat("c", 50)) })
+
+	if _, ok := c.Load(pa); ok {
+		t.Errorf("超预算（150>100）应逐出最旧条目 a")
+	}
+	if _, ok := c.Load(pb); !ok {
+		t.Errorf("b 应保留")
+	}
+	if _, ok := c.Load(pc); !ok {
+		t.Errorf("c（新写入）应保留")
+	}
+	if c.totalBytes != 100 {
+		t.Errorf("逐出后成本账应为 100，实际 %d", c.totalBytes)
+	}
+}
+
+// TestGeoCache_OverBudgetSingleEntryKept: 单条超预算 → 逐出其余、只保留该条（不逐出到 0）
+func TestGeoCache_OverBudgetSingleEntryKept(t *testing.T) {
+	c := newGeoCacheWithMax(10)
+	d := t.TempDir()
+	pa := geoTestFile(t, d, "a.ysm")
+	pb := geoTestFile(t, d, "b.ysm")
+
+	c.Get(pa, func() types.BedrockModel { return texturedModel(1, strings.Repeat("a", 50)) })
+	c.Get(pb, func() types.BedrockModel { return texturedModel(2, strings.Repeat("b", 50)) })
+
+	if _, ok := c.Load(pa); ok {
+		t.Errorf("a 应被逐出（b 单条已超预算）")
+	}
+	if _, ok := c.Load(pb); !ok {
+		t.Errorf("单条超预算时该条自身仍保留（不逐出到 0）")
+	}
+}
+
+// TestGeoCache_OverwriteRebooksCost: 同键覆盖（文件指纹变化重算）先扣旧成本再账新成本
+func TestGeoCache_OverwriteRebooksCost(t *testing.T) {
+	c := newGeoCacheWithMax(100)
+	d := t.TempDir()
+	p := filepath.Join(d, "m.ysm")
+	if err := os.WriteFile(p, []byte("v1"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	c.Get(p, func() types.BedrockModel { return texturedModel(1, strings.Repeat("a", 50)) })
+
+	// 文件内容变（size 变 → 指纹失效）→ 重算出 80 字节纹理：成本账应为 80 而非 50+80
+	if err := os.WriteFile(p, []byte("v2-longer"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	c.Get(p, func() types.BedrockModel { return texturedModel(2, strings.Repeat("a", 80)) })
+	if c.totalBytes != 80 {
+		t.Fatalf("覆盖后成本账应为 80（先扣旧 50 再账新 80），实际 %d", c.totalBytes)
+	}
+
+	// 再来一条 50 字节 → 总 130 > 100 → 逐出 m（槽 0，按当前值 80 扣账）
+	q := geoTestFile(t, d, "q.ysm")
+	c.Get(q, func() types.BedrockModel { return texturedModel(3, strings.Repeat("q", 50)) })
+	if _, ok := c.Load(p); ok {
+		t.Errorf("超预算应逐出 m")
+	}
+	if c.totalBytes != 50 {
+		t.Errorf("逐出后成本账应为 50（q），实际 %d", c.totalBytes)
+	}
+}
+
+// TestGeoCache_ClearResetsBookkeeping: Clear 复位逐出记账（order/head/totalBytes）
+func TestGeoCache_ClearResetsBookkeeping(t *testing.T) {
+	c := newGeoCacheWithMax(100)
+	p := geoTestFile(t, t.TempDir(), "m.ysm")
+	c.Get(p, func() types.BedrockModel { return texturedModel(1, strings.Repeat("a", 50)) })
+
+	c.Clear()
+	if c.totalBytes != 0 || c.head != 0 || len(c.order) != 0 {
+		t.Errorf("Clear 后记账字段应全复位，实际 total=%d head=%d order=%d", c.totalBytes, c.head, len(c.order))
 	}
 }

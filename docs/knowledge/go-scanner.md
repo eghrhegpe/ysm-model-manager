@@ -129,6 +129,7 @@ status: active
   - **维持进程单例（决策）**：`scanCache/cacheGen/keyVersions/inFlight` 是进程固有唯一态，**不做 struct 化**；`InstallLock` 为跨 installer/sync/conflict/app 的串行契约，保持。理由：struct 化只换句柄、单例语义不变，样板与跨调用破裂风险不成比例。
   - **测试注入收敛（实施）**：`SetWalkStartHook`/`SetRustScanHook` 降为**未导出** `setWalkStartHook`/`setRustScanHook`（仅同包测试 seam），生产/绑定 API 不再暴露可写函数指针。`dedup.computeHash` / `fileops.renameForMove` 仍为包级注入——与「维持单例」决策一致，不强改字段注入。
   - **构建门禁（实施）**：Go 验证改 `go build ./...`（覆盖仓库根 `internal/app` 绑定入口与根 `cli.go`，`./go/...` 会漏主体）。
+- **hashEntriesParallel 逐条目 panic 守卫（2026-10-14 锐评 P2，对齐去重侧 R27 修复链）**：单条哈希 panic 不打死 worker（jobs 缓冲后续 job 仍被处理）；该条 Hash 留空走「空哈希跳过匹配」同口径，panic 经 `emitScanError` 进日志面板留痕（裸 panic 栈只进 stderr、GUI 下不可见），措辞与「读错误/超限」区分归因。`hashFn` 为包级注入点（默认 `ComputeFileHash`，`hashFnMu` RWMutex 保护：生产侧 `getHashFn` 按批快照、测试侧 `setHashFn` 互换——scanner 包有 `t.Parallel` 测试走哈希路径，裸互换会 race；与 `walkStartHookFn` 的 `hookMu` 同款范式）。删改须同步 `scanner_hash_panic_test.go`。
 
 ## 相关
 

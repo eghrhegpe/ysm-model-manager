@@ -308,10 +308,40 @@ func ComputeFileHash(path string) string {
 	return hash
 }
 
+// hashFn 哈希函数注入点（测试承重点，与 dedup 的 computeHash 同范式；ADR-176 维持包级注入）：
+// 默认 ComputeFileHash。scanner 包有 t.Parallel 测试（TestScanEntries_FilterAndHash 走哈希路径）
+// 与串行测试时序交错，裸变量互换会 race——读写一律经 hashFnMu（与 walkStartHookFn 的 hookMu
+// 同款 RWMutex 范式）：生产侧 hashEntriesParallel 入口快照一次（worker 共享同一快照，保证同一
+// 批处理中途注入不劈裂语义），测试侧经 setHashFn 互换。删改须同步 scanner_hash_panic_test.go。
+var (
+	hashFnMu sync.RWMutex
+	hashFn   = ComputeFileHash
+)
+
+// setHashFn 互换哈希函数（仅同包测试 seam；传 nil 恢复 ComputeFileHash）。
+func setHashFn(fn func(string) string) {
+	hashFnMu.Lock()
+	if fn == nil {
+		fn = ComputeFileHash
+	}
+	hashFn = fn
+	hashFnMu.Unlock()
+}
+
+// getHashFn 快照读取哈希函数（hashEntriesParallel 入口取一次，worker 池共享）。
+func getHashFn() func(string) string {
+	hashFnMu.RLock()
+	defer hashFnMu.RUnlock()
+	return hashFn
+}
+
 // hashEntriesParallel 并行计算 entries 的 SHA256 并按下标回填（旧实现哈希在 WalkDir 回调内串行全量读盘，大库冷扫被逐文件同步 IO 拖慢）。
 // 语义与旧内联路径逐字节一致：仅 ShouldHashExt 条目参与、超 MaxImportSize 由
 // ComputeFileHash 内部跳过、空哈希补 emitScanError（同旧回调内口径）；worker 数 =
 // min(runtime.NumCPU, 待哈希数)，条目顺序不变（按下标回填）。
+// 逐条目 panic 守卫（2026-10-14 锐评 P2，对齐去重侧 R27 修复链）：单条 panic 不打死 worker
+// （jobs 缓冲中还有后续 job，且裸 panic 栈只进 stderr、GUI 下不可见）；该条 Hash 留空走
+// 「空哈希跳过匹配」同口径，panic 经 emitScanError 留痕（与「读错误/超限」措辞区分归因）。
 // 为何不收敛到 conc：本实现按下标原地写 entries[i].Hash 并保留全部结果（失败置空
 // 由调用方 emitScanError 决定），conc 的 []R 值返回 + 仅返回 ok=true 契约不契合。
 func hashEntriesParallel(entries []types.ModelEntry) {
@@ -324,6 +354,7 @@ func hashEntriesParallel(entries []types.ModelEntry) {
 	if len(jobs) == 0 {
 		return
 	}
+	fn := getHashFn()
 	n := runtime.NumCPU()
 	if n > len(jobs) {
 		n = len(jobs)
@@ -338,8 +369,20 @@ func hashEntriesParallel(entries []types.ModelEntry) {
 		go func() {
 			defer wg.Done()
 			for i := range ch {
-				entries[i].Hash = ComputeFileHash(entries[i].Path)
-				if entries[i].Hash == "" {
+				// 逐条目 recover（R27 对齐）：panic 捕获后该条 Hash 留空 + 单独留痕，继续处理后续 job。
+				// didPanic 置位后不再 emit「读错误或超限」措辞——panic 已单独留痕，避免误导归因。
+				didPanic := false
+				func() {
+					defer func() {
+						if r := recover(); r != nil {
+							didPanic = true
+							emitScanError("[scanner] 哈希 worker panic %s: %v（Hash 留空，log-and-skip）", entries[i].Path, r)
+						}
+					}()
+					entries[i].Hash = fn(entries[i].Path)
+				}()
+				if entries[i].Hash == "" && !didPanic {
+					// 哈希失败留痕——静默置空会让同步把该文件当「无哈希」跳过（用户不知为何不同步）
 					emitScanError("[scanner] 哈希计算失败/跳过 %s（读错误或超 %d 字节上限）", entries[i].Path, registry.MaxImportSize)
 				}
 			}

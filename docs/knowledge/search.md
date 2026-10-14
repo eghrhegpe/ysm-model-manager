@@ -193,6 +193,11 @@ status: active
   `BedrockModel{}`（`.ysm` WASM 解码挂起 / 越权等）；原实现**无条件缓存空结果**，会把**临时失败固化**——
   模型在后续搜索里「永久消失」直到 `ClearScanCache`（假绿）。现 `geoCache.Get` 对 `BoneCount==0` 不写缓存、
   下次重试（失败模型数量有限，代价可接受）；对齐 contract-b1「`BoneCount==0` = 无内容」语义。
+- **字节预算封顶（2026-10-14 锐评 P2 补齐）**：`BedrockModel` 含 base64 纹理，原无界 map 在万级模型库
+  一轮全量搜索后可驻留数百 MB 直到下次导入 `Clear`（桌面应用长驻进程，内存只进不出）。现 `geoCache`
+  带 `geoCacheMaxBytes`（128MB）字节预算：条目成本按 `geoCacheEntryBytes` 估算（纹理占绝对大头，单调
+  稳定即可）；覆盖既有键先扣旧成本再账新值；超预算按 FIFO（首次插入序）逐出最旧条目，单条超预算时
+  保留该条（不逐出到 0）；`Clear` 复位逐出记账。测试 seam `newGeoCacheWithMax`（未导出，同包测试）。
 
 **边界取舍（下次会话勿误判为 bug）**：缓存键按"剥离后缀后的 path"计算，因此同一文件在 `.ban` ↔ 正常之间切换会产生**两条独立键**各自命中（而非共享）。属可接受代价——`.ban`/`.disabled` 切换本就改变 scannable 归属语义，且 `ClearScanCache` 在导入/下载后统一清掉，不会长期分裂。
 
@@ -200,7 +205,7 @@ status: active
 
 **与前端 `SearchResult.Type` 字段的关系（查证根因，非「补一行即可」的死路待办）**：`types.go` 的 `SearchResult.Type` 标了 `omitempty`，`SearchModels` 从不填；而 `ModelEntry.Type` **只在 `ScanModelEntriesFiltered`（带 rtype 过滤）路径填**（`app_scan.go` 的 `e.Type = rtype`，`go/types/types.go|ModelEntry` 的 `Type` 字段注释也写明"未指定 rtype 时为 ''"）。`SearchModels` 走的是全量 `ScanModelEntries`（`app_scan.go`），该路径只填 `HasTags`、不填 `Type`。
 
-→ **关键结论**：在 `SearchModels` 里填 `entry.Type` 会恒取空值、零收益——这是架构路径决定的死字段，不是"漏填一行"。要让搜索结果带类型，必须**先让全量 `ScanModelEntries` 给 entry 推导 `Type`**（依赖 `resource_types.json` 单一事实源 + registry 推导，属回归红线范畴，不可顺手做）。当前阶段 `SearchResult.Type` 应视为预留位（跨类型搜索语义未接上），不要误判为"补一行 `entry.Type` 即可"，也暂不应删除（待 ADR-183 收口时再决定）。
+→ **关键结论**：在 `SearchModels` 里填 `entry.Type` 会恒取空值、零收益——这是架构路径决定的死字段，不是"漏填一行"。要让搜索结果带类型，必须**先让全量 `ScanModelEntries` 给 entry 推导 `Type`**（依赖 `resource_types.json` 单一事实源 + registry 推导，属回归红线范畴，不可顺手做）。当前阶段 `SearchResult.Type` 应视为预留位（跨类型搜索语义未接上），不要误判为"补一行 `entry.Type` 即可"，也暂不应删除（待「跨类型搜索」收口 ADR 立项时再决定——注意 ADR-183 是 8 参数封装的暂缓决策、不覆盖 Type 语义，原句误挂 ADR-183，2026-10-14 修正）。
 
 ## 与其他子系统关系
 

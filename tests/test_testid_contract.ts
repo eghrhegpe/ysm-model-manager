@@ -64,8 +64,13 @@ const seen = new Set(); // 真实源码钩子字面量（仅非测试源码）
     if (!/\.(ts|tsx|js|jsx)$/.test(e.name) || isTestFile(e.name)) continue;
     const c = fs.readFileSync(p, "utf8");
     // 1. VIEW_TESTIDS 声明 → 注册表（首个声明为准）
+    // ⚠️ 闭合锚定 `];`（数组右括号 + 语句分号），不用裸 `]`：数组体内注释可含 `]`
+    // 字符（2026-10-14 实测引爆：app-content/tpl.ts 注释 `.repo-tab[data-tab=...]` 让
+    // 非贪婪匹配在注释处截断 → 截到的「体」是纯注释、零字面量 id → 该文件声明全体
+    // 蒸发 → 满屏 ORPHAN 误报，而钩子与声明俱在，纯属扫描器失明）。
+    // 不能锚 `\n];`：存在单行式声明 `= ["a","b"];`（app-sync-manager/tpl.ts 等）。
     const m = c.match(
-      /export\s+const\s+VIEW_TESTIDS\s*:\s*readonly\s+string\[\]\s*=\s*\[([\s\S]*?)\]/,
+      /export\s+const\s+VIEW_TESTIDS\s*:\s*readonly\s+string\[\]\s*=\s*\[([\s\S]*?)\]\s*;/,
     );
     if (m) {
       const rel = path.relative(FE, p).replace(/\\/g, "/");

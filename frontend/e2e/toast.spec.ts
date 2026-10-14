@@ -48,14 +48,17 @@ test.describe("Toast 通知", () => {
     });
     await page.evaluate(() => {
       window.bus?.emit("toast:show", {
-        msg: "可撤销",
+        // mock 文案取测试自注入风格（对齐同文件 "E2E 测试消息"）：原值「可撤销」
+        // 是 i18n syncManager.divergedWarnMsg（…且不可撤销…）的子串，会被 e2e 定位
+        // 通道契约 ④ text 通道子串匹配误判成「用产品文案定位」（2026-10-14 实测）。
+        msg: "E2E 撤销消息",
         duration: 5000,
         undo: () => {
           (window as unknown as { e2eUndoCallback: () => void }).e2eUndoCallback();
         },
       });
     });
-    const toast = page.locator('[data-testid="toast"]').filter({ hasText: "可撤销" });
+    const toast = page.locator('[data-testid="toast"]').filter({ hasText: "E2E 撤销消息" });
     await expect(toast).toBeVisible({ timeout: 3000 });
 
     // 点击撤销按钮（poll 等待异步回调，替代固定 300ms）

@@ -22,12 +22,22 @@ interface SyncDownloadPayload {
   token?: string;
 }
 
-/** 逐个整合包安装缺失文件，返回是否整体成功（false = 配置缺失/异常） */
+/** runDownloadMissing 结果：null = 配置缺失/异常（未做或未完成安装）；
+ *  ok/fail = 文件级安装计数（锐评 P1-1：随 done 回执上抛给发起方汇总）。 */
+interface DownloadOutcome {
+  ok: number;
+  fail: number;
+}
+
+/** 逐个整合包安装缺失文件，返回文件级计数（null = 配置缺失/异常）。
+ *  批量模式（instanceNames 非空，发起方为 app-sidebar 循环收集计数）下
+ *  handler 不弹 toast——防「全部类型 × N 包」连吃一串 0 成功 0 失败轰炸，
+ *  反馈权归发起方汇总为一条（锐评 P2-1）。 */
 async function runDownloadMissing(
   instanceName: string | undefined,
   instanceNames: string[] | undefined,
   rtype: string,
-): Promise<boolean> {
+): Promise<DownloadOutcome | null> {
   dbg(
     "sync",
     "download-missing",
@@ -45,12 +55,12 @@ async function runDownloadMissing(
     InvalidateScanCache,
   } = await syncGetApp();
   const mcRoot = await requireMcRoot();
-  if (!mcRoot) return false;
+  if (!mcRoot) return null;
   const instances = (await ListVersionInstances(mcRoot)) ?? [];
   const filesRoot = await GetRepoRoot(rtype);
   if (!filesRoot) {
     toast(t("sync.configureResourceTypeDir"), TOAST_MS.normal, "warn");
-    return false;
+    return null;
   }
 
   // 目标实例解析：instanceNames 优先（批量一次覆盖多包），其次 instanceName 单值，再退化全部。
@@ -100,17 +110,22 @@ async function runDownloadMissing(
   }
   dbg("sync", "同步完成, 发出 stats:refresh, 成功:", totalOk, "失败:", totalFail);
   bus.emit("stats:refresh");
-  toast(
-    instanceName
-      ? t("sync.downloadDone", { name: instanceName, ok: totalOk, fail: totalFail })
-      : t("sync.downloadAllDone", { ok: totalOk, fail: totalFail }),
-    TOAST_MS.verbose,
-    totalFail > 0 ? "warn" : "success",
-  );
-  return true;
+  // 单包模式反馈归 handler（右键/工具栏等直发事件的生产者没有自己的汇总链）；
+  // 批量模式（app-sidebar 逐类型收集 done.ok/fail 后汇总一条 toast）此处静默，
+  // 否则 15 类型 × 每类型一条（含 0 成功 0 失败）连珠炮淹没发起方汇总（锐评 P2-1）。
+  if (!instanceNames?.length) {
+    toast(
+      instanceName
+        ? t("sync.downloadDone", { name: instanceName, ok: totalOk, fail: totalFail })
+        : t("sync.downloadAllDone", { ok: totalOk, fail: totalFail }),
+      TOAST_MS.verbose,
+      totalFail > 0 ? "warn" : "success",
+    );
+  }
+  return { ok: totalOk, fail: totalFail };
 }
 
-/** 导入缺失 handler：withLock 守卫 + 缺参显式失败；busy 命中回 done(skipped) 防调用方 30s 超时 */
+/** 导入缺失 handler：withLock 守卫 + 缺参显式失败；busy 命中回 done(skipped) 防调用方干等超时 */
 async function handleSyncDownloadMissing(
   lock: BusyLock,
   { instanceName, instanceNames, rtype, token }: SyncDownloadPayload,
@@ -120,14 +135,15 @@ async function handleSyncDownloadMissing(
     // 错误类型装错仓库文件比直接报错危害大
     let failed = false;
     let skipReason: "config" | "error" | undefined;
+    let outcome: DownloadOutcome | null = null;
     if (!rtype) {
       failed = true;
       skipReason = "config";
       toast(t("sync.missingRtype"), TOAST_MS.long, "error");
     } else {
       try {
-        const ok = await runDownloadMissing(instanceName, instanceNames, rtype);
-        if (!ok) failed = true;
+        outcome = await runDownloadMissing(instanceName, instanceNames, rtype);
+        if (!outcome) failed = true;
         // 仅实际做过安装才广播全树重扫——配置缺失短路时无任何写操作，
         // tree:reload 会引发无意义全树重扫
         else bus.emit("tree:reload");
@@ -137,11 +153,12 @@ async function handleSyncDownloadMissing(
         toast(friendlyError(e), TOAST_MS.long, "error");
       }
     }
-    return { failed, skipReason };
+    return { failed, skipReason, outcome };
   });
   // 锁释放后统一结算 done（含 busy 命中）：调用方（app-sidebar 推送）因
-  // token/instanceName 永远等不到 done 而 30s 超时，或经 instanceName fallback
-  // 误判成功；skipped 标记让调用方立即解锁并识别「被跳过」
+  // token/instanceName 永远等不到 done 而超时，或经 instanceName fallback
+  // 误判成功；skipped 标记让调用方立即解锁并识别「被跳过」；
+  // ok/fail 让发起方看到文件级失败计数（锐评 P1-1：失败不再消失在回执里）
   if (result === null) {
     bus.emit("sync:download:done", { token, instanceName, skipped: true, skipReason: "busy" });
     return;
@@ -151,6 +168,7 @@ async function handleSyncDownloadMissing(
     instanceName,
     skipped: result.failed,
     skipReason: result.skipReason,
+    ...(result.outcome ? { ok: result.outcome.ok, fail: result.outcome.fail } : { ok: 0, fail: 0 }),
   });
 }
 

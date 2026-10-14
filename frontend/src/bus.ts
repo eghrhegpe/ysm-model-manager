@@ -129,6 +129,12 @@ export interface BusEvents {
     instanceName?: string | undefined;
     skipped?: boolean;
     skipReason?: "busy" | "config" | "error" | undefined;
+    // 锐评 P1-1 止血（2026-10-14）：handler 逐文件安装的成功/失败计数随回执上抛。
+    // 原 done 只有 skipped/skipReason，文件级失败（totalFail）在 handler 里算出来
+    // 却到不了发起方——侧栏拿不到失败数，只能报「推送完成」误导用户。
+    // 缺省 0（旧生产者/测试夹具不发即刻视为无失败）。
+    ok?: number | undefined;
+    fail?: number | undefined;
   };
   // 实例 / 导入
   // rtype 必填（P0 修复后收紧契约）：消费方（instance-ops）已有 !rtype 显式失败

@@ -795,8 +795,13 @@ export const zhCN = {
   "sidebar.pullDone": "拉取完成: {pulled} 个文件, {failed} 个失败",
   "sidebar.pullNothing": "📭 没有可拉取的文件（实例中无多余资源）",
   "sidebar.pullFailed": "拉取失败: {msg}",
-  "sidebar.packSkipped": "{n} 个被跳过（同步进行中）",
-  "sidebar.packTimedOut": "{n} 个超时",
+  // 锐评 P3 止血（2026-10-14）：skipped/timeout 的计数单位是**类型批次**（runPush 按
+  // 类型循环），不是整合包数——文案点明单位，防「1 个被跳过」被读成「1 个包被跳过」。
+  // skip 的真实归因是「上一批 handler 还持锁」，措辞如实。
+  "sidebar.packSkipped": "{n} 个类型批次被跳过（上一批同步未结束）",
+  "sidebar.packTimedOut": "{n} 个类型批次超时",
+  // 锐评 P1-1 止血：done 回执带 handler 文件级计数，部分安装失败进汇总 toast
+  "sidebar.pushInstallFail": "{fail} 个文件安装失败（成功 {ok}）",
   // P1-3：推送/拉取循环进度（按钮内显示，大批量不再只干等 spinner）
   "sidebar.pushProgress": "推送中 {i}/{n} 类…",
   "sidebar.pullProgress": "拉取中 {i}/{n} 包…",

@@ -819,8 +819,9 @@ export const ja: Record<string, string> = {
   "sidebar.pullDone": "プル完了: {pulled} ファイル、{failed} 失敗",
   "sidebar.pullNothing": "📭 プルするファイルがありません（インスタンスに余分なリソースなし）",
   "sidebar.pullFailed": "プルに失敗: {msg}",
-  "sidebar.packSkipped": "{n} スキップ（同期中）",
-  "sidebar.packTimedOut": "{n} タイムアウト",
+  "sidebar.packSkipped": "{n} 種類のバッチがスキップ（前バッチの同期未完了）",
+  "sidebar.packTimedOut": "{n} 種類のバッチがタイムアウト",
+  "sidebar.pushInstallFail": "{fail} 個のファイルのインストールに失敗（{ok} 個成功）",
   // P1-3：プッシュ/プルループ進捗（ボタン内表示；大量処理がスピンナー待ちだけにならない）
   "sidebar.pushProgress": "プッシュ中 {i}/{n}…",
   "sidebar.pullProgress": "プル中 {i}/{n}…",

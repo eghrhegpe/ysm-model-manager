@@ -332,6 +332,38 @@ describe("app-sidebar — 推送所选", () => {
       return pushBtn.disabled === false;
     });
   });
+
+  // 锐评 P1-1 止血回归锁（2026-10-14）：done 回执带 handler 文件级失败计数（fail>0）时，
+  // runPush 汇总必须进 warn toast「N 个文件安装失败」，不再报纯成功「推送完成：n 个整合包」。
+  // 把 pushOne 的 outcome 累加或汇总分支删掉，本用例必须红（原实现文件级失败对侧栏不可见）。
+  it("done 带 fail 计数 → 汇总 warn toast 点明安装失败（非纯成功文案）", async () => {
+    const el = await mountSidebar();
+    checkFirst(el);
+
+    const pushBtn = $<HTMLButtonElement>(el, ".sidebar-push-selected");
+    pushBtn.click();
+    const menu = $<HTMLElement>(el, "#sidebar-push-menu");
+    menu.querySelector('.dd-item[data-sync-type="all"]')!.dispatchEvent(
+      new MouseEvent("click", { bubbles: true }),
+    );
+    await waitFor(() => {
+      for (const p of missingPayloads) {
+        bus.emit("sync:download:done", {
+          ...(p.token !== undefined ? { token: p.token } : {}),
+          ok: 40,
+          fail: 3,
+        });
+      }
+      return toasts.some((t) => t.type === "warn" && t.msg.includes("安装失败"));
+    });
+    // 断言不带具体数字：每类型 done 均带 fail=3，ALL_RESOURCE_TYPES 轮循环后
+    // 累加值 = 3×类型数（随注册表演化），「warn + 出现安装失败字样」才是恒定判据
+    expect(toasts.some((t) => t.type === "warn" && t.msg.includes("安装失败"))).toBe(true);
+    // 负向：不得再出现纯成功文案「推送完成：n 个整合包」
+    expect(toasts.some((t) => t.msg.includes("个整合包"))).toBe(false);
+    expect(pushBtn.disabled).toBe(false);
+    unmountElement(el);
+  });
 });
 
 describe("app-sidebar — 拉取所选", () => {

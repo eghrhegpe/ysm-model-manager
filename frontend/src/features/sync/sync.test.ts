@@ -82,9 +82,15 @@ async function register(): Promise<void> {
 function spyEvents() {
   const toasts: Array<{ msg: string; type: string }> = [];
   // P1 修复（code_review）：doneEvents 元素类型补 skipped——原 { token?: string }
-  // 缺该字段，新断言 d.skipped 在 tsc --noEmit（strict）下 TS2339 报错
+  // 缺该字段，新断言 d.skipped 在 tsc --noEmit（strict）下 TS2353 报错
   // exactOptional：token 从总线载荷解构可 undefined，与 bus.ts 事件类型对齐
-  const doneEvents: Array<{ token?: string | undefined; skipped?: boolean }> = [];
+  // 2026-10-14 锐评 P1-1 止血：补 ok/fail（done 回执文件级计数断言用），与 bus.ts 同步
+  const doneEvents: Array<{
+    token?: string | undefined;
+    skipped?: boolean;
+    ok?: number | undefined;
+    fail?: number | undefined;
+  }> = [];
   const refreshEvents: string[] = [];
   const reloadEvents: string[] = [];
   cleanups.push(
@@ -253,6 +259,52 @@ describe("registerSync — sync:download:missing", () => {
       "PackA",
     );
     expect(mocks.InstallModelTo).not.toHaveBeenCalled();
+  });
+
+  // 锐评 P1-1 止血回归锁（2026-10-14）：handler 文件级失败计数必须随 done 回执上抛。
+  // 原 done 只有 skipped——totalFail 在 handler 里算出来却到不了发起方，侧栏拿不到
+  // 失败数只能报「推送完成」。把 done 载荷的 ok/fail 删掉，本用例必须红。
+  it("done 回执携带 ok/fail 文件级计数（部分安装失败对发起方可见）", async () => {
+    const repo = MOCK_DATA.GetRepoRoot;
+    mocks.GetResourceInstanceStatus.mockResolvedValue([
+      { Name: "PackA", Missing: [`${repo}/a.ysm`, `${repo}/b.ysm`, `${repo}/c.ysm`] },
+    ]);
+    // a 成功、b 失败、c 成功 → ok=2 fail=1
+    mocks.InstallModelTo.mockImplementation((srcPath: string) =>
+      srcPath.endsWith("b.ysm") ? Promise.reject(new Error("locked")) : Promise.resolve(),
+    );
+    await register();
+    const { doneEvents } = spyEvents();
+
+    bus.emit("sync:download:missing", { instanceName: "PackA", rtype: "ysm", token: "tc1" });
+    await flushPromises();
+    await flushPromises();
+
+    expect(doneEvents.length).toBe(1);
+    expect(doneEvents[0].token).toBe("tc1");
+    expect(doneEvents[0].skipped).toBe(false);
+    expect(doneEvents[0].ok).toBe(2);
+    expect(doneEvents[0].fail).toBe(1);
+  });
+
+  // 锐评 P2-1 止血回归锁：批量模式（instanceNames）handler 静默——「全部类型」推送
+  // 每类型一次事件，逐类型 toast 会连珠炮（含 0 成功 0 失败）淹没发起方汇总。
+  // 反馈权归发起方（runPush 一条汇总）；单包/全遍历模式（无 instanceNames）照旧弹。
+  it("批量模式（instanceNames）→ handler 不弹结果 toast（静默交发起方汇总）", async () => {
+    await register();
+    const { toasts } = spyEvents();
+
+    bus.emit("sync:download:missing", {
+      instanceNames: ["PackA", "PackB"],
+      rtype: "ysm",
+      token: "tc2",
+    });
+    await flushPromises();
+    await flushPromises();
+
+    // 安装确实发生了（PackA 有 Missing），只是不弹结果 toast
+    expect(mocks.InstallModelTo).toHaveBeenCalledTimes(1);
+    expect(toasts.some((t) => t.msg.includes("导入"))).toBe(false);
   });
 });
 

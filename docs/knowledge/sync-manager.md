@@ -87,10 +87,10 @@ quick_intents:
   - PushSingleResource / PullSingleResource
   - sync:download:missing 缺包回拉
 quick_risk_lines:
-  - 同步操作必须经 sync-manager 的 queue 排队，禁止 app-sidebar 直接调 PushSingleResource
+  - 同步写操作并发守卫 = features/sync 的 BusyLock（handler 级互斥）+ sync-manager network.performSingleOp 的 per-path 防重入（同一行串行、异行并发）——历史上无「queue 队列」实体，勿去找它；app-sidebar 禁止绕开 sync:download:missing 事件链直调 PushSingleResource（2026-10-14 锐评 P2-3：红线措辞对齐真实机制）
   - 状态筛选的 a11y 键盘语义只走 events.ts 单一 keydown 委托 + tpl.ts 模板出属性，禁止逐 tab 补 handler / 手搓 aria
 pitfalls:
-  - app-sidebar 直接发 push/pull 请求 → 并发冲突 / 状态错乱；必须经 sync-manager 排队
+  - app-sidebar 直接发 push/pull 请求 → 并发冲突 / 状态错乱；写链守卫 = features/sync BusyLock + performSingleOp per-path
   - PullSingleResource 未完成前刷新侧边栏 → 半同步状态显示；必须等 store 状态收敛
 use_when:
   - 整合包同步
@@ -182,7 +182,7 @@ getApp().GetInstanceSyncStatus(instance, subtype, rtype)
 | `repo:rtype-changed` | 全局 nav → 各处 | 切 rtype 重载 |
 | `repo:subdir-changed` | 全局 nav → sync-manager | MMD 子目录切换重载 |
 | `sync:download:missing` | sidebar → handler | 载荷 `{instanceName?, instanceNames?, rtype, token}`；`instanceNames` 优先（批量一次覆盖多包），单包兜底走 `instanceName` |
-| `sync:download:done` | handler → sidebar | 载荷 `{token, instanceName, skipped, skipReason}`；skipped=true 触发 reject |
+| `sync:download:done` | handler → sidebar | 载荷 `{token, instanceName, skipped, skipReason, ok, fail}`；skipped=true 触发 reject；**ok/fail = handler 文件级安装计数（2026-10-14 锐评 P1-1 止血：runPush 累加进汇总 toast，文件级失败不再消失在「推送完成」成功文案里）**；批量模式（instanceNames）handler 静默不弹 toast，反馈权归发起方汇总一条（P2-1 止血，防每类型 × 0/0 连珠炮） |
 | `sync:toggle:status` | app-tree → handler | 启禁同步 |
 | `ctx:show` | sidebar 右键 → 菜单 | 携带 `{instanceName, path, rtype, subdir}` |
 

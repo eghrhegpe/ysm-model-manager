@@ -177,10 +177,16 @@ export function nextPushToken(insName: string, rt: string): string {
 }
 
 /** 单品推送：等待该 token 的下载完成事件；命中 skipped / 超时分别 reject 带 kind。
- *  instanceNames 非空时一次事件覆盖多包（批量模式，O(类型) 次 RPC 而非 O(包×类型)）。 */
-async function pushOne(insName: string, rt: string, instanceNames?: string[]): Promise<void> {
+ *  instanceNames 非空时一次事件覆盖多包（批量模式，O(类型) 次 RPC 而非 O(包×类型)）。
+ *  resolve 携带 handler 回传的文件级计数（锐评 P1-1：done.ok/fail 上抛供 runPush 汇总，
+ *  文件级失败不再消失在「推送完成」的成功 toast 里）。 */
+async function pushOne(
+  insName: string,
+  rt: string,
+  instanceNames?: string[],
+): Promise<{ ok: number; fail: number }> {
   const token = nextPushToken(insName, rt);
-  await new Promise<void>((resolve, reject) => {
+  return new Promise<{ ok: number; fail: number }>((resolve, reject) => {
     let timer: ReturnType<typeof setTimeout> | null = null;
     const unsub = bus.on("sync:download:done", (payload) => {
       if (payload?.token !== token) return;
@@ -190,7 +196,7 @@ async function pushOne(insName: string, rt: string, instanceNames?: string[]): P
         // 诊断文案走 i18n（内部错误信息；被日志/面板消费时不注入中文硬编码）
         reject(kindError(t("sidebar.pushSkippedReason", { ins: insName, rt }), "skipped"));
       } else {
-        resolve();
+        resolve({ ok: payload.ok ?? 0, fail: payload.fail ?? 0 });
       }
     });
     timer = setTimeout(() => {
@@ -297,7 +303,9 @@ function handleSyncMenuClick(
 
 /** 推送主流程：按类型循环，每类型一次批量事件覆盖所有选中包（instanceNames）。
  *  原实现逐包×逐类型串行发事件，每事件触发一次全量状态扫描 → O(包×类型) 次 RPC；
- *  现收敛为 O(类型) 次（ADR-310 性能修复 2026-10）。跳过的按类型计数 → 汇总 toast。 */
+ *  现收敛为 O(类型) 次（ADR-310 性能修复 2026-10）。跳过的按类型计数 → 汇总 toast。
+ *  锐评 P1-1 止血：done 携带 handler 文件级计数（pushOne resolve），
+ *  汇总进本条 toast——部分文件安装失败不再被「推送完成」成功文案掩盖。 */
 async function runPush(
   selected: string[],
   types: string[],
@@ -306,6 +314,8 @@ async function runPush(
 ): Promise<void> {
   let skipped = 0;
   let timedOut = 0;
+  let installOk = 0;
+  let installFail = 0;
   try {
     for (let ti = 0; ti < types.length; ti++) {
       const rt = types[ti];
@@ -316,7 +326,9 @@ async function runPush(
       })}`;
       try {
         // 一次事件推所有选中包（instanceNames 批量模式）；token 仍单调唯一用于回执匹配
-        await pushOne(selected.join("+"), rt, selected);
+        const outcome = await pushOne(selected.join("+"), rt, selected);
+        installOk += outcome.ok;
+        installFail += outcome.fail;
       } catch (e) {
         const kind = pushErrorKind(e);
         if (kind === "skipped") skipped++;
@@ -324,8 +336,10 @@ async function runPush(
         if (kind !== "skipped") await waitBusQuiet();
       }
     }
-    if (skipped > 0 || timedOut > 0) {
+    if (skipped > 0 || timedOut > 0 || installFail > 0) {
       const parts: string[] = [];
+      if (installFail > 0)
+        parts.push(t("sidebar.pushInstallFail", { fail: installFail, ok: installOk }));
       if (skipped > 0) parts.push(t("sidebar.packSkipped", { n: skipped }));
       if (timedOut > 0) parts.push(t("sidebar.packTimedOut", { n: timedOut }));
       toast(t("sidebar.pushDone", { detail: parts.join("，") }), TOAST_MS.normal, "warn");

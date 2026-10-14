@@ -820,8 +820,9 @@ export const en: Record<string, string> = {
   "sidebar.pullDone": "Pull complete: {pulled} files, {failed} failed",
   "sidebar.pullNothing": "📭 Nothing to pull (no extra resources in instances)",
   "sidebar.pullFailed": "Pull failed: {msg}",
-  "sidebar.packSkipped": "{n} skipped (sync in progress)",
-  "sidebar.packTimedOut": "{n} timed out",
+  "sidebar.packSkipped": "{n} type batches skipped (previous batch still syncing)",
+  "sidebar.packTimedOut": "{n} type batches timed out",
+  "sidebar.pushInstallFail": "{fail} files failed to install ({ok} succeeded)",
   // P1-3: push/pull loop progress (shown on the button; large batches no longer wait on a bare spinner)
   "sidebar.pushProgress": "Pushing {i}/{n}…",
   "sidebar.pullProgress": "Pulling {i}/{n}…",

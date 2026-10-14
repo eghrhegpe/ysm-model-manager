@@ -6,6 +6,8 @@
 // 勿直接依赖本文件内部 API；createDialog 为内部脚手架（供同目录 builder 使用），
 // 导出仅为兄弟文件协作，非对外契约。
 
+import { rememberTrigger, returnFocus } from "@/utils/dom/focus-restore.ts";
+import { trapFocusAcrossShadow } from "@/utils/dom/trap-focus-across-shadow.ts";
 import { resolveIcon } from "@/utils/icon/resolve.ts";
 import type { UiIconName } from "@/utils/icon/ui-icons.ts";
 
@@ -41,34 +43,27 @@ const _closingOverlays = new WeakSet<HTMLElement>();
 /** 退场动画待结算定时器（WeakMap 随元素 GC 回收；测试重置钩子取消，防幽灵 resolve 泄入后续用例） */
 const _closingTimers = new WeakMap<HTMLElement, ReturnType<typeof setTimeout>>();
 
-/** 可聚焦元素选择器（裸 `tabindex` 无 = 匹配的是元素名 tabindex，全仓无此元素 → 死选择器，已移除；带值属性走 [tabindex] 分支） */
-const FOCUSABLE_SEL =
-  'button,input,select,textarea,[tabindex]:not([tabindex="-1"]),a[href],summary';
-
 /**
  * 焦点陷阱：Tab 键在弹窗内可聚焦元素间循环，防止焦点逃逸到背后页面
  * @param overlay 弹窗 overlay 元素
  * @returns cleanup 函数（移除 keydown 监听器）
+ *
+ * ⚠️ 2026-10-14 收敛：本函数曾是手写的**残缺版**（只循环 first↔last 两个分支，
+ * 读 `document.activeElement` 判当前焦点），与仓内既有的
+ * `trap-focus-across-shadow.ts|trapFocusAcrossShadow`（深焦解析 + 焦点在overlay 外
+ * 一律收拢 + tabbable 缓存 + MutationObserver 刷新）**并存成两套**，而模态家族的
+ * 全部弹窗走的都是这份残缺版：
+ * ① 读 `document.activeElement` 对 **shadow 内**元素恒失效（retargeting 返回 host），
+ *    Set/等值比对恒假 → Tab 退化成 first/last 乒乓，陷阱在跨 shadow 场景**完全失效**；
+ * ② 焦点在 overlay **之外**（body/背景页）时两个分支都不命中 → Tab 自由走到背后页面，
+ *    正是焦点陷阱要防的逃逸。`site/events.ts` 的浮层（P0-3 修复）当年正是因此
+ *    才另接 trapFocusAcrossShadow，本文件却一直没跟上——同仓两套陷阱原语、
+ *    强弱两份能力。
+ * 现统一委派 `trapFocusAcrossShadow`：导出名与签名不变（batch-rename.ts /
+ * modal.test.ts 等消费方零改动），强弱两份能力合一。
  */
 export function trapFocus(overlay: HTMLElement): () => void {
-  const handler = (e: KeyboardEvent): void => {
-    if (e.key !== "Tab") return;
-    const focusable = overlay.querySelectorAll<HTMLElement>(FOCUSABLE_SEL);
-    if (!focusable.length) return;
-    const arr = Array.from(focusable);
-    const first = arr[0];
-    const last = arr[arr.length - 1];
-    const active = document.activeElement;
-    if (e.shiftKey && (active === first || active === overlay)) {
-      e.preventDefault();
-      last.focus();
-    } else if (!e.shiftKey && (active === last || active === overlay)) {
-      e.preventDefault();
-      first.focus();
-    }
-  };
-  overlay.addEventListener("keydown", handler);
-  return () => overlay.removeEventListener("keydown", handler);
+  return trapFocusAcrossShadow(overlay);
 }
 
 /**
@@ -89,6 +84,9 @@ export function closeDlg<T>(
   overlay.classList.add("dlg-closing");
   const timer = setTimeout(() => {
     overlay.remove();
+    // 焦点归还信号（2026-10-14）：退场动画结算= 节点真正移除的时刻，此刻把焦点还给
+    // 触发元素。派发在remove 之后（触发元素可能已被宿主同步重绘/替换，跳过已离文档者）。
+    overlay.dispatchEvent(new CustomEvent("dlg:closed"));
     if (_slot.overlay === overlay) {
       _slot.overlay = null;
       _slot.closeActive = null;
@@ -232,8 +230,22 @@ function registerDialogLife<T>(
   close: (value: T) => void,
 ): void {
   registerDlg(overlay, () => close(cancelValue), closable);
+  // 焦点归还（2026-10-14）：弹窗把焦点抢进 overlay，关闭时若不还，键盘用户每开一次
+  // 弹窗就永久失去原位置（焦点落 body，下一次 Tab 从页面顶部重来）。preview-3d 的
+  // mount/finishSession 早已用 rememberTrigger/returnFocus 配对，本模态家族却一直没有
+  // ——同一仓两处「模态要归还焦点」一半有实现一半没有。
+  // 记在 closeDlg 的退场动画结算点（真正移除节点的时刻）而非调用处：任何关闭路径
+  //（按钮/Esc/遮罩/closeActiveDialog）都经close → closeDlg，单点覆盖不漏路径。
+  rememberTrigger();
   overlay.focus();
   trapFocus(overlay);
+  overlay.addEventListener(
+    "dlg:closed",
+    () => {
+      returnFocus();
+    },
+    { once: true },
+  );
 }
 
 /**

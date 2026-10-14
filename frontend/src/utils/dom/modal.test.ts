@@ -181,6 +181,43 @@ describe("modalConfirm — 确认框", () => {
     await expect(promise).resolves.toBe(false);
   });
 
+  // 锐评（2026-10-14）：弹窗关闭必须把焦点还给触发元素。原实现只 focus 进overlay、
+  // 关闭时节点一remove 焦点落 body —— 键盘用户每开一次弹窗就永久失去原位置
+  //（下一次 Tab 从页面顶部重来）。preview-3d 的 mount/finishSession 早已
+  // rememberTrigger/returnFocus 配对，模态家族却是另一半没实现。
+  it("关闭后焦点归还触发元素（Esc 路径，键盘用户不失位）", async () => {
+    const trigger = document.createElement("button");
+    trigger.id = "dlg-trigger-btn";
+    document.body.appendChild(trigger);
+    trigger.focus();
+    expect(document.activeElement).toBe(trigger);
+
+    const promise = modalConfirm({ title: "确认?", message: "继续?" });
+    // 弹窗打开时焦点被抢进 overlay
+    expect(document.activeElement).not.toBe(trigger);
+
+    const overlay = document.querySelector(".dlg-overlay") as HTMLElement;
+    overlay.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    await expect(promise).resolves.toBe(false);
+    // closeDlg 有 120ms 退场动画，焦点归还在动画结算点派发
+    await new Promise((r) => setTimeout(r, 200));
+    expect(document.activeElement).toBe(trigger);
+    trigger.remove();
+  });
+
+  it("关闭后焦点归还触发元素（取消按钮路径）", async () => {
+    const trigger = document.createElement("button");
+    document.body.appendChild(trigger);
+    trigger.focus();
+    const promise = modalConfirm({ title: "确认?", message: "继续?" });
+    const cancel = document.querySelector('[data-testid="dlg-cancel"]') as HTMLElement;
+    cancel.click();
+    await expect(promise).resolves.toBe(false);
+    await new Promise((r) => setTimeout(r, 200));
+    expect(document.activeElement).toBe(trigger);
+    trigger.remove();
+  });
+
   it("titleIcon 语义名渲染内联 SVG；标题文本免疫 XSS", async () => {
     modalConfirm({
       title: "<img src=x onerror=\"alert(1)\">",
@@ -371,8 +408,39 @@ describe("trapFocus — 焦点陷阱", () => {
     const cleanup = trapFocus(overlay);
     cleanup();
     btn1.focus();
-    overlay.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true, shiftKey: true }));
+    // ⚠️ 2026-10-14 改强：trapFocus 已委派 trapFocusAcrossShadow，监听挂在 **document**
+    // （跨 shadow 边界才能捕获 Tab）；故断言也须从 document 派发。原实现从 overlay 派发，
+    // cleanup 后事件根本到不了 document，该用例对「监听是否真移除」零判别力（假绿）。
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true, shiftKey: true }));
     expect(document.activeElement).toBe(btn1);
+    overlay.remove();
+  });
+
+  // 锐评（2026-10-14）：焦点在 overlay **之外**时按 Tab → 必须被拉回首元素。
+  // 旧手写版只在 first/last 两分支兜，焦点在 body/背景页时两分支皆不命中 → Tab 自由
+  // 走到背后页面，正是焦点陷阱要防的逃逸（ARIA dialog + aria-modal 承诺的失效点）。
+  it("焦点逃到 overlay 外（body）→ Tab 拉回首元素（旧实现会放行逃逸）", () => {
+    const { overlay, btn1, btn2 } = makeOverlay();
+    const cleanup = trapFocus(overlay);
+    // 焦点在 body（overlay 之外）：模拟用户点背景/程序移焦后按 Tab
+    btn2.blur();
+    (document.activeElement as HTMLElement | null)?.blur?.();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Tab", bubbles: true }));
+    expect(document.activeElement).toBe(btn1);
+    cleanup();
+    overlay.remove();
+  });
+
+  // 同款：Shift+Tab 在 overlay 外 → 拉回末元素
+  it("焦点在 overlay 外 + Shift+Tab → 拉回末元素", () => {
+    const { overlay, btn1, btn2 } = makeOverlay();
+    const cleanup = trapFocus(overlay);
+    btn1.blur();
+    document.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Tab", bubbles: true, shiftKey: true }),
+    );
+    expect(document.activeElement).toBe(btn2);
+    cleanup();
     overlay.remove();
   });
 });

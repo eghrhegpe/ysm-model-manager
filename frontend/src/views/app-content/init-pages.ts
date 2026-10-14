@@ -138,20 +138,23 @@ export function initRepositoryPage(host: AppContentHost): void {
 }
 
 /**
- * 初始化回收站 tab（懒加载 tpl-recycle + 绑定回收站逻辑），返回清理函数
+ * 初始化回收站 tab（懒加载 tpl-recycle + 绑定回收站逻辑），返回清理函数 + onShow
+ * 感知性绑定（锐评 2026-10-13 P1-2）：与 dedup/oldest 对齐，面板隐藏时的类型切换
+ * 只记脏账不发 Go RPC，切进面板时由 onShow 补扫。
  */
 async function initRecycleTab(
   host: AppContentHost,
   container: HTMLElement,
-): Promise<(() => void) | null> {
+): Promise<{ cleanup: () => void; onShow: () => void }> {
   const { recycleHTML, renderRecycleListHtml } = await import("./tpl-recycle.ts");
   container.innerHTML = recycleHTML();
   // ADR-190 D1a：列表条目渲染属 views 职责，经 deps 注入 features 编排层
-  const recycleCleanup = initRecycleBin(
+  const recycleHandle = initRecycleBin(
     { _root: host.state.root },
     { renderListHtml: renderRecycleListHtml },
+    container,
   );
-  return recycleCleanup;
+  return { cleanup: recycleHandle.cleanup, onShow: recycleHandle.onShow };
 }
 
 /**

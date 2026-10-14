@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { stubConsoleError } from "@/test-utils/mock-log.ts";
 import { bus, type ToastPayload } from "@/bus";
 import { handleTreeDrop, bindTreeDnD } from "./import-dnd.ts";
+import { TREE_MOVE_MIME } from "./move-dnd.ts";
 import { fireDrop } from "@/test-utils/events.ts";
 import { MAX_IMPORT_BYTES } from "@/backend/browser-adapter.ts";
 
@@ -368,6 +369,59 @@ describe("handleTreeDrop — oversize 过滤", () => {
     bindTreeDnD(container);
     fireDrop(container, { items: [], files: [], types: ["Files"] });
     await flush();
+    await flush();
+    await flush();
+    expect(toasts.some((t2) => t2.type === "info")).toBe(true);
+    unsub();
+  });
+});
+
+// ===== 双通道分流（ADR-336 §2.1 补齐 + 锐评 2026-10-13 P0-1）=====
+// 病灶：move-dnd 的 dragover/drop/dragend 三处都按 TREE_MOVE_MIME 早退（分流完备），
+// 而 import-dnd 的 onDrop 只有 isInTree 判定、无 MIME 早退。两个监听器都在 document
+// 层注册（move-dnd.ts:252 / import-dnd.ts:226），addEventListener 不阻止同一事件的
+// 其它监听器执行 ⇒ 树内每次移动都并排弹出「未检测到支持文件」，用户误以为移动失败。
+// 本组锁「早退只认 MIME 判据」且不误伤真实 OS 文件导入（两侧判别样本缺一即假绿）。
+describe("双通道分流：树内移动不触发导入", () => {
+  it("drop 带 TREE_MOVE_MIME（树内移动）→ 不导入、不提示、busy 恒不置位", async () => {
+    const toasts: ToastPayload[] = [];
+    const unsub = bus.on("toast:show", (p) => toasts.push(p));
+    let busyDuring = false;
+    bindTreeDnD(container, () => {
+      busyDuring = true; // onDrop 若走到 handleTreeDrop，setBusy(true) 先于任何 await
+      return "ysm";
+    });
+    // 应用内拖源：无 files、无 items，仅带自定义 MIME
+    fireDrop(container, { items: [], files: [], types: [TREE_MOVE_MIME] });
+    await flush();
+    await flush();
+    expect(busyDuring).toBe(false);
+    expect(toasts).toEqual([]);
+    expect(importWebFilesMock).not.toHaveBeenCalled();
+    unsub();
+  });
+
+  it("对照：Files 拖源（无移动 MIME）→ 导入照常走（早退不误伤）", async () => {
+    const toasts: ToastPayload[] = [];
+    const unsub = bus.on("toast:show", (p) => toasts.push(p));
+    const file = new File(["x"], "ok.ysm");
+    bindTreeDnD(container);
+    fireDrop(container, { items: [], files: [file], types: ["Files"] });
+    await flush();
+    await flush();
+    await flush();
+    // 判据取「无未检测到支持文件提示」：空收集才会弹该 info，
+    // 文件真被导入则收集非空、无此提示（与 oversize 组同款 toast 口径断言）
+    expect(toasts.some((t2) => t2.type === "info")).toBe(false);
+    unsub();
+  });
+
+  it("MIME 前缀相近的自定义 type（-v2 等）不算树内移动，仍走导入", async () => {
+    // isTreeMoveDrag 精确匹配语义的对侧样本：防有人把 includes 改成 startsWith
+    const toasts: ToastPayload[] = [];
+    const unsub = bus.on("toast:show", (p) => toasts.push(p));
+    bindTreeDnD(container);
+    fireDrop(container, { items: [], files: [], types: [`${TREE_MOVE_MIME}-v2`, "Files"] });
     await flush();
     await flush();
     expect(toasts.some((t2) => t2.type === "info")).toBe(true);

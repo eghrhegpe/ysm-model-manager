@@ -10,6 +10,7 @@
 // maid-model 的中文全名为 "车万女仆模型"（JSON name 字段）；如需短标签 "车万女仆"，
 // 走 short-label.ts 的 i18n 短标签体系（t("rtype.maid")）。
 // ALL_RESOURCE_TYPES 等派生表统一消费 schema.ts 的 allResourceTypes（T2 单点解析）。
+import { tOf } from "@/core/i18n/t.ts";
 import { allResourceTypes, containerExts, type ZipEntryMatch } from "./schema.ts";
 
 /** 资源类型 ID（键为类型标签，值为内部 ID） */
@@ -142,6 +143,40 @@ for (const t of allResourceTypes) {
 /** 分组 id → 显示名 */
 export function groupLabelOf(group: string): string {
   return GROUP_META[group]?.name || "";
+}
+
+/**
+ * 资源类型 / 大类的 i18n 显示名（锐评 2026-10-13 P1-3）。
+ *
+ * 病因：导航资源类型切换器（双下拉）直读 GROUP_META.name 与
+ * RESOURCE_TYPE_LABELS——二者都派生自 resource_types.json 的中文字段，
+ * en/ja 界面下主控件整体显示中文，而配套的 rtype.* i18n 体系就在旁边没人用。
+ *
+ * 解法：键走 `rtype.label.<id>` / `rtype.group.<group>`（三段式，ADR-124），
+ * **查不到即回落注册表中文名**——注册表是单一事实源且覆盖全部类型，故新增类型
+ * 未补 i18n 键时退化为「中文」而非「裸 id」（t() 缺失也会回落 key 字面，
+ * 那种回落会让界面出现 "rtype.label.foo" 原文，更糟）。
+ *
+ * ⚠️ 调用期求值（不在模块加载期烘焙）：语言热切换须立即生效，禁写成顶层 const 表。
+ */
+export function rtypeLabelOf(rtype: string): string {
+  const key = `rtype.label.${camelToKey(rtype)}`;
+  // tOf 缺键回落「裸 key 原文」（而非空串），故须显式比对 key 本身——
+  // 直接 `hit || 回落` 会把 "rtype.label.foo" 当有效译文印进界面。
+  const hit = tOf(key);
+  return hit === key ? RESOURCE_TYPE_LABELS[rtype] || rtype : hit;
+}
+
+/** 大类 id 的 i18n 显示名（回落 GROUP_META.name，同样不吐裸 key） */
+export function rtypeGroupLabelOf(group: string): string {
+  const key = `rtype.group.${camelToKey(group)}`;
+  const hit = tOf(key);
+  return hit === key ? GROUP_META[group]?.name || group : hit;
+}
+
+/** EntityPlayer → entityPlayer；minecraft-mod → minecraftMod（键名对齐键族字面） */
+function camelToKey(raw: string): string {
+  return raw.replace(/-([a-z])/g, (_m, c: string) => c.toUpperCase());
 }
 
 /**

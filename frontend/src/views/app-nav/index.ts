@@ -22,6 +22,8 @@ import {
   GROUP_TYPE_OPTIONS,
   type GroupTypeOption,
   RESOURCE_TYPES,
+  rtypeGroupLabelOf,
+  rtypeLabelOf,
 } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import { navCSS } from "./nav-css.ts";
@@ -89,14 +91,16 @@ function anBindDualSelects(shadowRoot: ShadowRoot): void {
   if (groupSel && subtypeSel) {
     const groups = Object.entries(GROUP_META)
       .sort((a, b) => a[1].order - b[1].order)
-      .map(([gid, meta]) => ({ gid, label: `${meta.icon} ${meta.name}` }));
+      .map(([gid, meta]) => ({ gid, label: `${meta.icon} ${rtypeGroupLabelOf(gid)}` }));
     groupSel.innerHTML = groups
       .map((g) => `<option value="${esc(g.gid)}">${esc(g.label)}</option>`)
       .join("");
 
     const buildSubtypeOptions = (group: string): GroupTypeOption[] =>
       (GROUP_TYPE_OPTIONS[group] || []).map((o) => ({
-        label: o.label,
+        // i18n 显示名单点出口（锐评 2026-10-13 P1-3）：原直取 o.label（派生自
+        // RESOURCE_TYPE_LABELS 硬编码中文），en/ja 下整个类型下拉中文。
+        label: rtypeLabelOf(o.rtype),
         rtype: o.rtype,
         subdir: o.subdir,
       }));

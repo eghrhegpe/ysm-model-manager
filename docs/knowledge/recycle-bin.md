@@ -25,7 +25,7 @@ quick_risk_lines:
   - 删除必须走 .recycle 软删除（go/recycle 实现），前端禁止直接 os.Remove
 pitfalls:
   - 前端直调 os.Remove → 无法恢复、跳过 ADR-038 合并规则；必须经 go/recycle
-  - initRecycleBin 不返回清理函数 → 监听泄漏；必须在 app-content 切换页时调用返回的清理函数
+  - initRecycleBin 的清理函数必须由 app-content 在切页/tab 时调用 → 监听泄漏；返回值是函数兼 handle（解构取 `onShow` 供补扫），两种形态都要消费
 
 use_when:
   - 回收站
@@ -46,7 +46,7 @@ status: active
 
 ## 概览
 
-`recycle-bin.ts` 实现仓库页「回收站」tab 的界面逻辑：列出 `.recycle` 中属于当前资源类型的已删除条目，提供单条恢复/永久删除、一键清空。由 app-content 首次切到 recycle tab 时懒加载调用 `initRecycleBin(this)`，返回清理函数。后端删除/恢复策略（符号链接/硬链接直接删、普通文件优先 `rename` 移入 `.recycle`、仅跨设备 EXDEV 时复制后删）在 Go 端 go/recycle 实现，本文件只做展示与调用。
+`recycle-bin.ts` 实现仓库页「回收站」tab 的界面逻辑：列出 `.recycle` 中属于当前资源类型的已删除条目，提供单条恢复/永久删除、一键清空。由 app-content 首次切到 recycle tab 时懒加载调用 `initRecycleBin(this, undefined, container)`，返回**函数兼 handle**（可直接当清理函数调，也可解构取 `onShow`）。后端删除/恢复策略（符号链接/硬链接直接删、普通文件优先 `rename` 移入 `.recycle`、仅跨设备 EXDEV 时复制后删）在 Go 端 go/recycle 实现，本文件只做展示与调用。
 
 条目粒度按 ADR-038 D3.4：**文件夹型模型（含 `ysm.json` 的目录）在后端 `List` 已整组合并为单一条目**（`Path` 指向目录、`Ext` 为空、`Size` 为目录递归总和），前端无需再做合并，恢复/删除按钮直接作用于整个目录。
 
@@ -57,12 +57,13 @@ status: active
 - 单条恢复：按钮 `disabled` 自锁 + `leaving` 离场动画（150ms）后 `RestoreFromRecycle(path, currentRoot)`，成功后重载列表并广播刷新；失败回滚 `leaving` 类并解锁按钮。**filesRoot 传当前类型真实根（2026-09 对接锐评③）**：该参数是 Go 端 allRecycleRoots 全部未命中时的兜底恢复根，恒传空串会让 fallback 沦为 CWD 相对 `.recycle` 的死救援分支；CLI 侧同参传 `--files-root`
 - 单条删除：`modalConfirm` 二次确认后同样自锁 + 动画 → `DeleteFromRecycle(path)`
 - 清空回收站：`modalConfirm`（danger）确认后 `EmptyRecycleBin()`（无参，2026-09 对接锐评③退役原 src 占位死参数——GUI/CLI 两端均不消费），toast 回报数量
-- 监听 `repo:rtype-changed`：资源类型切换时更新 `currentType` 并重载列表
+- 监听 `repo:rtype-changed`：资源类型切换时更新 `currentType` 并重载列表——**但面板不可见时不跑**（感知性绑定，见不变量）
 - 条目名称区点击 → `bus.emit("model:select", { path })` 查看详情：**在 init 阶段对列表容器做一次事件委托**（`onRecycleListClick`，命中 `.recy-restore`/`.recy-del` 时短路），不在每次渲染时逐元素绑定，避免监听泄漏
 
 ## 对外 API / 入口
 
-- 导出：`initRecycleBin(app: RecycleHost): () => void`、`interface RecycleHost`（依赖宿主 `_root`/`_esc`/`_fmtSize`）
+- 导出：`initRecycleBin(app: RecycleHost, depsOverrides?: Partial<RecycleDeps>, container?: HTMLElement): RecycleBinHandle`、`interface RecycleHost`（依赖宿主 `_root`/`_esc`/`_fmtSize`）
+- **返回值 `RecycleBinHandle = (() => void) & { cleanup; onShow }`（2026-10-13 P1-2 起）**：函数体本身即 cleanup（旧调用点/测试直调不变），字段型 `onShow` 供 bindTabs 懒初始化每次激活时补扫；旧契约「只返回清理函数」已失效
 - 清理函数：unsub `repo:rtype-changed` + 成对 `removeEventListener` 列表委托 `onRecycleListClick`、`recy-refresh` 的 `onRefreshClick`、`recy-empty` 的 `onEmptyClick`
 - 监听 bus：`repo:rtype-changed`
 - 派发 bus：`toast:show`、`stats:refresh`、`tree:reload`、`model:select`
@@ -80,6 +81,7 @@ status: active
 ## 不变量
 
 - load-guard generation 守卫：`createLoadGuard()` 每个 `await` 后比对代数，过期即弃，防止快速切换资源类型时旧结果覆盖新列表（首个守卫在 GetRepoRoot/ListRecycleBin await 后；getApp await 前无守卫，语义成立）
+- **感知性绑定（2026-10-13 P1-2，与 dedup/oldest 同款原语）**：`container.hidden` 时 `repo:rtype-changed` 只置 `dirty` 不扫盘（隐藏面板的 `GetRepoRoot`+`ListRecycleBin` 是零价值成本，且占 `guard` 世代让用户切进来看到的不是自己触发的那次结果）；补扫由 `onShow` 在切进面板时按「已呈现类型 ≠ 当前类型」发起。`container` 缺省视为可见（守卫只在能确知隐藏时生效，不拦首屏加载）。回归锁：`recycle-bin.integration.test.ts`「感知性绑定：隐藏面板切类型只记脏账」组
 - 清空回收站与单条永久删除必须先过 `modalConfirm`（danger 样式）二次确认，不可直接执行
 - 列表仅显示路径前缀匹配当前类型 `GetRepoRoot` 根目录的条目（**带路径分隔符边界**：`path === root || path.startsWith(root + "/")`，防 `ysm2/` 误入 `ysm/`，P3 修复），路径分隔符统一转 `/` 再比较；`GetRepoRoot` 返回空时回退显示全量条目（回退语义属设计取舍）；**空 `Path` 条目一律排除**（P3 修复：防回退全量时渲染 `data-path=""` 点击发 `model:select {path:""}`）
 - 显示名需剥离 `.ban` 后缀（`replace(/\.(ysm|zip|7z)\.ban$/i, ".$1")`）后走 `renderDisplayName`

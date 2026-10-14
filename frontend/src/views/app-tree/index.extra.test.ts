@@ -271,6 +271,37 @@ describe("app-tree index 入口生命周期（补位）", () => {
     expect(bindings.DeleteResourcePack).toHaveBeenCalledWith("/repo/a.ysm", RESOURCE_TYPES.MMD);
   });
 
+  // 锐评 2026-10-13 P1-1：切资源类型不清选中态 → 底部仍报「已选 N 个」而新树 0 行高亮，
+  // 按 Delete 会拿「新类型 + 旧路径」拼参（确认框文案说 3 个，实为上类型的文件）。
+  // 后端 root 包含守卫会拦（fileops.go:557-570）故删不掉，但虚假危险确认框本身就该修。
+  it("切资源类型 → 选中态清空（不复用上类型的路径与计数）", async () => {
+    const el = await mountEl();
+    el.selectState.keys.add("/repo/a.ysm");
+    el.selectState.keys.add("/repo/b.ysm");
+    el.selectState.lastKey = "/repo/b.ysm";
+    expect(el.selectState.keys.size).toBe(2);
+    const callsBefore = (loader as ReturnType<typeof vi.fn>).mock.calls.length;
+
+    el.setAttribute("root", "resourcepack");
+    await waitFor(() => (loader as ReturnType<typeof vi.fn>).mock.calls.length > callsBefore);
+
+    expect(el.selectState.keys.size).toBe(0);
+    expect(el.selectState.lastKey).toBeNull();
+  });
+
+  it("切资源类型后按 Delete → 无路径可删（不拿旧路径配新 rtype）", async () => {
+    const el = await mountEl();
+    el.selectState.keys.add("/repo/a.ysm");
+    el.setAttribute("root", "resourcepack");
+    await waitFor(() => el.selectState.keys.size === 0);
+
+    dispatchKey("Delete");
+    await waitFor(() => toastCalls().some(([ev]) => ev === "toast:show"));
+    expect(bindings.DeleteResourcePack).not.toHaveBeenCalled();
+    expect(modalConfirmMock).not.toHaveBeenCalled();
+    expect(getToast()).toMatchObject({ type: "warn" });
+  });
+
   it("Delete 部分删除失败 → ok/fail 计数进 toast", async () => {
     const el = await mountEl();
     el.selectState.keys.add("/repo/a.ysm");

@@ -46,6 +46,7 @@ status: active
 
 - `app-nav.ts` — `<app-nav>` 组件：渲染导航项并绑定点击派发 `nav:changed`（写 localStorage `nav_page` + `bus.emit("nav:changed")`）；监听 `nav:changed` 更新高亮；启动时读 `localStorage.getItem("nav_page")` 恢复页面（旧值 `resources` 兼容映射为 `repository`，默认 `repository`）；经 `getApp()` 调 `GetAppVersion` 异步填充版本号
 - **折叠/展开（`_collapsed` + `data-collapsed`）**：折叠收成 48px 常驻窄条（仅图标 + 展开按钮，`nav-toggle` 常驻可见防意外找不回导航）；折叠态持久化 localStorage `nav_collapsed`（`safeGet`/`safeSet`）；触发区是整行 `.menu-head`（label + 箭头统一响应，`cursor:pointer`，扩大点击范围）；`setCollapsed(collapsed, persist=true)` 公开接口——`persist=false` 不落盘，原留给创作者频道页（`community`，旧 id `workshop`，ADR-301）自动折叠，现无调用方（2026-08-12 移除自动折叠后仅手动路径）
+- **资源类型切换器（双下拉：大类 + 类型）的文案走 i18n 出口（2026-10-13 P1-3）**：`anBindDualSelects` 的大类 option 用 `types.ts|rtypeGroupLabelOf`、类型 option 用 `types.ts|rtypeLabelOf`（`lang:changed` 时随 `render()` 重刷）。**禁止直取 `GROUP_META.name` / `GROUP_TYPE_OPTIONS[].label`**（后者派生自中文全名，en/ja 界面下整个下拉中文——正是被修的病）。缺键回落注册表名而非裸 key，见 [utils_resource_types](./utils-resource-types.md)。回归锁：`app-nav/index.test.ts`「资源类型切换器 i18n」3 例
 
 ## 对外 API / 入口
 

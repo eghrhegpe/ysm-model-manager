@@ -447,11 +447,25 @@ export class AppTree extends WebComponentBase {
       if (App.ClearScanCache) await App.ClearScanCache();
       await this._load();
       if (this._guard.stale(gen)) return;
+      // 切资源类型清选中态（锐评 2026-10-13 P1-1）：选中键是**上一类型的磁盘路径**，
+      // 与新类型条目键空间不同源，留着会出现「底部仍报已选 N 个、新树 0 行高亮」，
+      // 按 Delete 则拿「新类型 rtype + 旧路径」拼参。后端 root 包含守卫会拦（删不掉），
+      // 但确认框文案说 N 个而实为上类型的文件 = 虚假危险确认，与移动/改名链同口径清空。
+      // ⚠️ 落点必须在切类型链而非 _load()：_load() 也是删除后的重载入口，而
+      // 「删除失败不清空选中」是刻意行为（events.test.ts 有回归锁），放那儿会误伤。
+      this._clearSelection();
       this._renderTree();
     } catch (e) {
       logError("app-tree", "root change Error", e);
       toast(`${friendlyError(e)}`, TOAST_MS.verbose, "error");
     }
+  }
+
+  /** 清空选中态 + 同步底部计数（移动/改名/删除/切类型四条链共用的同一动作） */
+  private _clearSelection(): void {
+    this._state.selectState.keys.clear();
+    this._state.selectState.lastKey = null;
+    updateSelectCount(this._root, this._state.selectState);
   }
   disconnectedCallback(): void {
     this._unsubs?.forEach((fn) => {
@@ -769,10 +783,9 @@ export class AppTree extends WebComponentBase {
       // ADR-339：带当前树类型发射，Go 侧按 dirLevelSync 过滤同步（非 dirLevelSync 自动 no-op）
       bus.emit("sync:toggle:status", { rtype: this._state.rootAttr || RESOURCE_TYPES.YSM });
       bus.emit("stats:refresh");
-      // 选中态清空：移动后旧路径失效（与 rename/recycle 链同口径，防对已不存在路径批量误删）
-      this._state.selectState.keys.clear();
-      this._state.selectState.lastKey = null;
-      updateSelectCount(this._root, this._state.selectState);
+      // 选中态清空：移动后旧路径失效（与 rename/recycle/切类型链同口径，防对已不存在路径批量误删）
+
+      this._clearSelection();
       const ok = r.fulfilled.length;
       const fail = r.rejected.length;
       if (ok > 0 || fail > 0) {
@@ -798,8 +811,8 @@ export class AppTree extends WebComponentBase {
       // 批处理收口（2026-10-13）：BATCH=8 手抄循环迁 utils/async/batch-all-settled
       //（分批并发 + 逐项 ok/fail 不短路单一实现；2026-09 曾 P2 修复串行链）
       const r = await batchAllSettled(paths.map((p) => () => DeleteResourcePack(p, rtype)));
-      this._state.selectState.keys.clear();
-      this._state.selectState.lastKey = null;
+
+      this._clearSelection();
       // P2 修复（审核，缓存一致性）：删除后先清扫描缓存再加载——原 _load() 命中
       // 30s scanCache（Go 侧 DeleteModelFile 无 InvalidateCache，watcher 清缓存异步），
       // 刚删除的文件会立即"复活"显示。与 bus-handlers.reload() 的 ClearScanCache 链对齐。

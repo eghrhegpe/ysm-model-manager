@@ -532,3 +532,81 @@ describe("依赖注入（ADR-190 D2 注入真化）", () => {
     cleanup2();
   });
 });
+
+// ===== 感知性绑定（锐评 2026-10-13 P1-2，对齐 dedup/oldest 同款原语）=====
+// 病灶：三个随类型联动的面板里只有回收站缺「隐藏时不干活」守卫——面板隐藏时仍发
+// GetRepoRoot + ListRecycleBin 两次 RPC 并写进用户没看的面板，且 guard 世代被占用，
+// 用户切进来看到的不是自己触发的那次结果（同操作因 tab 先后顺序呈现两种心智模型）。
+// 镜像 oldest-models.test.ts:315 的既有模板（正反两例：隐藏记账 / 可见照常）。
+describe("感知性绑定：隐藏面板切类型只记脏账", () => {
+  /** 带 container 的独立挂载（beforeEach 的全局 cleanup 不带 container，需自建） */
+  async function mountWithContainer(): Promise<{
+    container: HTMLElement;
+    handle: ReturnType<typeof initRecycleBin>;
+  }> {
+    // 先拆掉 beforeEach 挂的全局实例：它同样订阅 repo:rtype-changed 且不带 container
+    // （守卫视为可见）——两个实例并存时 emit 会让「非本例」的实例也发 RPC，
+    // 断言 ListRecycleBin 调用次数即被污染。
+    cleanup?.();
+    const shadow = document.createElement("div").attachShadow({ mode: "open" });
+    shadow.innerHTML = `
+      <span id="recy-count"></span>
+      <button id="recy-refresh"></button>
+      <button id="recy-empty"></button>
+      <div id="recy-list"></div>`;
+    const container = document.createElement("div");
+    document.body.appendChild(container);
+    const handle = initRecycleBin({ _root: shadow } as RecycleHost, {
+      renderListHtml: renderRecycleListHtml,
+    }, container);
+    await flushPromises();
+    return { container, handle };
+  }
+
+  it("隐藏面板类型切换 → 不发 ListRecycleBin，onShow 补扫新类型", async () => {
+    mocks.ListRecycleBin.mockResolvedValue([{ Name: "a.ysm", Path: "/mc/a.ysm", Size: 10 }]);
+    const { container, handle } = await mountWithContainer();
+    const callsAfterInit = mocks.ListRecycleBin.mock.calls.length;
+
+    container.hidden = true;
+    bus.emit("repo:rtype-changed", "mmd");
+    await flushPromises();
+    await flushPromises();
+    expect(mocks.ListRecycleBin.mock.calls.length).toBe(callsAfterInit);
+
+    container.hidden = false;
+    handle.onShow();
+    await flushPromises();
+    await flushPromises();
+    expect(mocks.GetRepoRoot).toHaveBeenLastCalledWith("mmd");
+    expect(mocks.ListRecycleBin.mock.calls.length).toBe(callsAfterInit + 1);
+    handle.cleanup();
+    container.remove();
+  });
+
+  it("可见面板类型切换 → 照常重扫（隐藏守卫不改变可见路径）", async () => {
+    mocks.ListRecycleBin.mockResolvedValue([{ Name: "a.ysm", Path: "/mc/a.ysm", Size: 10 }]);
+    const { container, handle } = await mountWithContainer();
+    const callsAfterInit = mocks.ListRecycleBin.mock.calls.length;
+
+    container.hidden = false;
+    bus.emit("repo:rtype-changed", "mmd");
+    await flushPromises();
+    await flushPromises();
+    expect(mocks.ListRecycleBin.mock.calls.length).toBe(callsAfterInit + 1);
+    handle.cleanup();
+    container.remove();
+  });
+
+  it("返回体仍是可直接调用的 cleanup（旧契约兼容）", async () => {
+    mocks.ListRecycleBin.mockResolvedValue([]);
+    const shadow = document.createElement("div").attachShadow({ mode: "open" });
+    shadow.innerHTML = '<span id="recy-count"></span><button id="recy-refresh"></button><button id="recy-empty"></button><div id="recy-list"></div>';
+    const handle = initRecycleBin({ _root: shadow } as RecycleHost, {
+      renderListHtml: renderRecycleListHtml,
+    });
+    await flushPromises();
+    expect(typeof handle).toBe("function");
+    handle(); // 直接调用不抛 = 旧消费形态仍成立
+  });
+});

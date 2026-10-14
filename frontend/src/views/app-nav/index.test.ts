@@ -14,9 +14,23 @@ const { canMock } = vi.hoisted(() => ({
   canMock: vi.fn().mockReturnValue(true), // 默认桌面：ListVersionInstances 可用
 }));
 
+// i18n t/tOf 的文件级 mock（覆盖 test-setup.ts 的全局 zhCN 查表）：
+// 「资源类型切换器 i18n」组要观察译文命中/缺失两条分支，而全局 mock 恒返中文
+// 使切语言在组件层不可观测。tOfMock 由各用例 setImplementation 驱动。
+const { tOfMock } = vi.hoisted(() => ({
+  tOfMock: vi.fn<(k: string) => string>((k: string) => k),
+}));
+
 vi.mock("@/backend/capabilities.ts", () => ({
   can: canMock,
 }));
+
+vi.mock("@/core/i18n/t.ts", async () => {
+  const actual = await vi.importActual<typeof import("@/core/i18n/t.ts")>(
+    "@/core/i18n/t.ts",
+  );
+  return { ...actual, t: tOfMock, tOf: tOfMock };
+});
 
 // getApp 仅在 version 加载时调用，mock 阻断
 vi.mock("@/backend/app.ts", () => ({
@@ -481,6 +495,96 @@ describe("app-nav 增量（键盘 / FAB / 版本失败 / 焦点重试 / logo）"
     // 正等结果：写入 nav_page=community（初值 null → community 真过渡）
     await waitFor(() => localStorage.getItem("nav_page") === "community");
     expect(localStorage.getItem("nav_page")).toBe("community");
+    unmountElement(el);
+  });
+});
+
+// ===== 资源类型切换器 i18n（锐评 2026-10-13 P1-3）=====
+// 病灶：双下拉（大类 + 类型）label 直取 GROUP_META.name / RESOURCE_TYPE_LABELS——
+// 两者都派生自 resource_types.json 的中文字段，en/ja 界面下整个主控件中文，
+// 而配套 rtype.* i18n 体系就在同一组件的 logo 处已被使用（shortLabelOf）。
+// 断言口径用「无 CJK 残留」而非逐字英文：文案会随措辞调整，硬编码字面会变脆。
+// 断言口径：受控 tOf（而非 setLang 切真语言包）——test-setup.ts:114 全局 mock 了
+// t.ts 令 t/tOf 恒查 zhCN 源表，组件层切语言在此环境**不可观测**（实测 getLang()
+// 已是 en 而 DOM 仍是中文）。故本组改为直接控制 tOf 的返回值，验证的正是
+// 修复所依赖的机制：label 是否经 i18n 出口、缺键是否回落注册表而非裸 key。
+describe("资源类型切换器 i18n", () => {
+  /** 读两个下拉的当前文案（大类 + 类型） */
+  function readSel(root: ShadowRoot): { groups: string[]; types: string[] } {
+    const groupSel = root.querySelector<HTMLSelectElement>("#nav-group-select")!;
+    const subtypeSel = root.querySelector<HTMLSelectElement>("#nav-subtype-select")!;
+    return {
+      groups: Array.from(groupSel.options).map((o) => o.textContent ?? ""),
+      types: Array.from(subtypeSel.options).map((o) => o.textContent ?? ""),
+    };
+  }
+
+  it("译文命中 → 两个下拉都用译文，不吐注册表中文（en 场景）", async () => {
+    // 模拟「en 语言包已加载」：rtype.group.* / rtype.label.* 全部命中
+    tOfMock.mockImplementation((k: string) =>
+      k.startsWith("rtype.") ? "TRANSLATED::" + k : k,
+    );
+    const el = mountCustomElement("app-nav");
+    const root = el.shadowRoot!;
+    await waitFor(() => getAllByTestId(root, "nav-item").length >= 6);
+
+    const { groups } = readSel(root);
+    expect(groups.length).toBeGreaterThan(0);
+    // 大类文案 = icon + 译文（icon 是 emoji，CJK 判据只拦中文残留）
+    expect(groups.some((g) => g.includes("TRANSLATED::rtype.group."))).toBe(true);
+    expect(groups.filter((g) => /[一-鿿]/.test(g))).toEqual([]);
+
+    const groupSel = root.querySelector<HTMLSelectElement>("#nav-group-select")!;
+    for (const g of Array.from(groupSel.options)) {
+      groupSel.value = g.value;
+      groupSel.dispatchEvent(new Event("change"));
+      const { types } = readSel(root);
+      expect(types.length).toBeGreaterThan(0);
+      expect(types.some((x) => x.startsWith("TRANSLATED::rtype.label."))).toBe(true);
+      expect(types.filter((x) => /[一-鿿]/.test(x))).toEqual([]);
+    }
+    unmountElement(el);
+  });
+
+  it("译文缺失（tOf 回落裸 key）→ 退注册表中文名，绝不显示 'rtype.*' 原文", async () => {
+    // tOf 缺键返回 key 自身（生产语义），修复须识别该形态并回落注册表名
+    tOfMock.mockImplementation((k: string) => k);
+    const el = mountCustomElement("app-nav");
+    const root = el.shadowRoot!;
+    await waitFor(() => getAllByTestId(root, "nav-item").length >= 6);
+
+    const { groups } = readSel(root);
+    const groupSel = root.querySelector<HTMLSelectElement>("#nav-group-select")!;
+    const all = [...groups];
+    for (const g of Array.from(groupSel.options)) {
+      groupSel.value = g.value;
+      groupSel.dispatchEvent(new Event("change"));
+      all.push(...readSel(root).types);
+    }
+    expect(all.length).toBeGreaterThan(0);
+    expect(all.some((s) => s.includes("rtype."))).toBe(false);
+    // 回落值来自注册表：至少含中文（minecraft 原版 / YSM 模型 …）
+    expect(all.some((s) => /[一-鿿]/.test(s))).toBe(true);
+    unmountElement(el);
+  });
+
+  it("译文命中时 label 只查 rtype.label.* / rtype.group.* 两族键", async () => {
+    const seen: string[] = [];
+    tOfMock.mockImplementation((k: string) => {
+      seen.push(k);
+      return k.startsWith("rtype.") ? "X" : k;
+    });
+    const el = mountCustomElement("app-nav");
+    const root = el.shadowRoot!;
+    await waitFor(() => getAllByTestId(root, "nav-item").length >= 6);
+    const rtypeKeys = seen.filter((k) => k.startsWith("rtype."));
+    expect(rtypeKeys.length).toBeGreaterThan(0);
+    // 键名族封闭：只有两类前缀，防止将来另起一族绕过 i18n 单点出口
+    expect(rtypeKeys.every((k) => /^rtype\.(label|group)\./.test(k))).toBe(true);
+    // camelCase 归一：键名第二段为 rtype id 的 camel 形态（ResourcePack → resourcePack
+    // 型），不得原样塞入 kebab/UPPER——实体名经 camelToKey 归一后才配得上键
+    expect(rtypeKeys.some((k) => /^rtype\.label\.[a-z][A-Za-z0-9]*$/.test(k))).toBe(true);
+    expect(seen.some((k) => k === "rtype.group.minecraftMod")).toBe(true);
     unmountElement(el);
   });
 });

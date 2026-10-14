@@ -112,7 +112,7 @@ status: active
 
 - **单一解析点**：`schema.ts` 内联解析 `resource_types.json` → `allResourceTypes`（插入序 = JSON 序）/ `resourceTypesById`（键控视图）
 - **ID 常量与标签**：`RESOURCE_TYPES`（15 个 ID）/ `RESOURCE_TYPE_LABELS`（中文标签，派生自 JSON `name` 字段）/ `ALL_RESOURCE_TYPES`
-- **能力元数据派生层**（ADR-066 P0 + ADR-067 S4）：扩展名归属 / 歧义判定 / 类型安全解析 / 预览路由 key / 体素 RPC 映射，全部从注册表派生
+- **⚠️ 中文标签（`RESOURCE_TYPE_LABELS` / `GROUP_META.name`）只能当 i18n 缺键回退，禁止直取上屏（锐评 2026-10-13 P1-3 收口）**：二者都派生自 `resource_types.json` 的中文字段，`app-nav` 资源类型切换器（大类下拉 + 类型下拉）原样 `o.label`/`meta.name` 直取——en/ja 界面下整个主控件中文，而 i18n 体系就在同一组件的 logo 处已在使用。上屏一律走 `types.ts|rtypeLabelOf` / `types.ts|rtypeGroupLabelOf`：键为三段式 `rtype.label.<id>` / `rtype.group.<group>`（**ADR-124 合规**：`rtype.<id>` 两段式只有 pack/shader 等词形不判「角色」才合法，新增 `customAnim` 等会被启发式误判，必须三段式），第二段经 `camelToKey` 归一（`EntityPlayer→entityPlayer`、`minecraft-mod→minecraftMod`）；**缺键回落注册表中文名而非裸 key**——`tOf` 缺键返回 key 原文，直接 `hit || 回落` 会把 `"rtype.label.foo"` 印进界面，必须 `hit === key ? 回落 : hit`。⚠️ 调用期求值（语言热切换须立即生效），禁写成顶层 const 表。三语 locale 必须同步补齐（`locales-consistency.test.ts` 守 1:1）。**新增「按类型/按分组」的展示文案一律走这两个出口**。回归锁：`app-nav/index.test.ts`「资源类型切换器 i18n」3 例——受控 tOf 验证译文命中 / 缺键回落 / 键名族封闭（**不写 `setLang` 断言**：`test-setup.ts` 全局 mock 了 `t.ts` 令 t/tOf 恒查 zhCN，切语言在组件层不可观测，须用 `vi.mock("@/core/i18n/t.ts")` 覆写 tOfMock），均经变异验证
 - **扩展名静态映射**：类型 → 扩展名列表（`RESOURCE_EXTS`）/ 全量去重（`ALL_EXTS`）/ 反查（`extBelongsTo`）——拖拽导入等场景需同步判断，不能等异步注册表
 
 ## 对外 API / 入口

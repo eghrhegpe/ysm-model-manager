@@ -254,12 +254,12 @@ function renderRecycleError(
 
 function buildLoadRecycleBin(
   root: ShadowRoot,
-  loadCtx: { getCurrentType: GetCurrentTypeFn; guard: LoadGuard },
+  loadCtx: { getCurrentType: GetCurrentTypeFn; guard: LoadGuard; onScanned?: () => void },
   shell: RecycleShell,
   onShowToast: ToastFn,
   deps: RecycleDeps,
 ): () => Promise<void> {
-  const { getCurrentType, guard } = loadCtx;
+  const { getCurrentType, guard, onScanned } = loadCtx;
   const { getApp, t } = deps;
   return async function loadRecycleBin(): Promise<void> {
     const gen = guard.next();
@@ -272,6 +272,9 @@ function buildLoadRecycleBin(
       // 作用域交由 Go 端过滤（ListRecycleBin 的 recyclePath 参数），前端不再自建路径前缀匹配
       const allEntries = (await ListRecycleBin(currentRoot || "")) || [];
       if (guard.stale(gen)) return;
+      // 记账点：结果确实上屏（成功与空列表都是「已呈现该类型的列表」）才记，
+      // 供 onShow 判定「面板里的结果是否属于当前类型」
+      onScanned?.();
       const entries = (allEntries as RecycleBinEntry[]).filter((e) => e.Path);
       if (!entries.length) {
         clearCleanup(shell);
@@ -301,7 +304,20 @@ function buildLoadRecycleBin(
   };
 }
 
-export function initRecycleBin(app: RecycleHost, depsOverrides?: Partial<RecycleDeps>): () => void {
+/** initRecycleBin 返回值（bindTabs 懒初始化双形态契约）。
+ *  cleanup 卸载清理；onShow 每次激活副作用——补渲染隐藏期间被脏账记账跳过的类型切换。
+ *  ⚠️ 兼容旧契约：返回体本身即 cleanup（既有调用点/测试直接当函数调用），
+ *  故用 Object.assign 把两个字段挂到函数上，解构与直调两种消费形态并存。 */
+export type RecycleBinHandle = (() => void) & {
+  cleanup: () => void;
+  onShow: () => void;
+};
+
+export function initRecycleBin(
+  app: RecycleHost,
+  depsOverrides?: Partial<RecycleDeps>,
+  container?: HTMLElement,
+): RecycleBinHandle {
   const deps = resolveDeps(depsOverrides);
   const root = app._root;
   let _emptyBusy = false;
@@ -314,9 +330,22 @@ export function initRecycleBin(app: RecycleHost, depsOverrides?: Partial<Recycle
   };
 
   const shell: RecycleShell = { loadRecycleBin: () => {}, cleanupActions: { current: null } };
-  const { get: getCurrentType, cleanup: cleanupRtype } = useCurrentResourceType(() =>
-    shell.loadRecycleBin(),
-  );
+  // 感知性绑定（锐评 2026-10-13 P1-2）：面板隐藏时不跑 Go RPC——列表作用域绑当前类型
+  // （ListRecycleBin(currentRoot)），隐藏时刷新的结果写进用户没看的面板；且 guard 世代被
+  // 占用后，用户切进来看到的不是自己触发的那次结果。与 dedup/oldest 同款原语对齐，
+  // 三类随类型联动的面板此前只有本面板缺守卫（两种心智模型）。
+  let dirty = false;
+  let lastScannedType: string | null = null;
+  // 面板可见性：container 由 init-pages 传入（tab-body 本体）。缺省（测试直调、
+  // 旧调用点）时视为可见——守卫只应在能确知隐藏时生效，不得把首屏加载也拦掉。
+  const isPanelHidden = (): boolean => container?.hidden === true;
+  const { get: getCurrentType, cleanup: cleanupRtype } = useCurrentResourceType(() => {
+    if (isPanelHidden()) {
+      dirty = true;
+      return;
+    }
+    shell.loadRecycleBin();
+  });
   const guard = createLoadGuard();
 
   const listEl = root.getElementById("recy-list");
@@ -324,7 +353,13 @@ export function initRecycleBin(app: RecycleHost, depsOverrides?: Partial<Recycle
 
   shell.loadRecycleBin = buildLoadRecycleBin(
     root,
-    { getCurrentType, guard },
+    {
+      getCurrentType,
+      guard,
+      onScanned: () => {
+        lastScannedType = getCurrentType();
+      },
+    },
     shell,
     onShowToast,
     deps,
@@ -346,7 +381,17 @@ export function initRecycleBin(app: RecycleHost, depsOverrides?: Partial<Recycle
 
   shell.loadRecycleBin();
 
-  return () => {
+  // 每次激活面板时的补扫校验（bindTabs showFns 落位，激活是重复事件）：
+  // 面板里显示的列表必须属于当前类型。从未扫过（lastScannedType null）不自动开跑
+  // ——维持「进入面板自动加载一次」的现状语义，只消除「隐藏时切了类型、
+  // 切进来看到旧类型残留列表」的误导（与 dedup tab 同款口径）。
+  const onShow = (): void => {
+    if (!dirty) return;
+    dirty = false;
+    if (lastScannedType !== null && getCurrentType() !== lastScannedType) shell.loadRecycleBin();
+  };
+
+  const cleanup = (): void => {
     guard.invalidate();
     cleanupRtype();
     if (shell.cleanupActions.current) shell.cleanupActions.current();
@@ -355,4 +400,7 @@ export function initRecycleBin(app: RecycleHost, depsOverrides?: Partial<Recycle
     root.getElementById("recy-empty")?.removeEventListener("click", onEmptyClick);
     if (listEl) listEl.innerHTML = "";
   };
+  // 兼容两种消费形态：直接当清理函数调用（旧契约，测试与既有调用点），
+  // 或解构取 onShow（tabs-runtime 的 showFns 通道）。函数本身即 cleanup。
+  return Object.assign(cleanup, { cleanup, onShow });
 }

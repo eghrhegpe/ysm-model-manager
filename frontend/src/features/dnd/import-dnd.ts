@@ -18,6 +18,7 @@ import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { ALL_EXTS } from "@/utils/resource/extensions.ts";
 import { isImportableFile } from "@/utils/resource/importable.ts";
 import { dndGetApp } from "./dnd-deps.ts";
+import { isTreeMoveDrag } from "./move-dnd.ts";
 
 const DROP_EXTS_STR = ALL_EXTS.join(" ");
 
@@ -178,6 +179,7 @@ export function bindTreeDnD(
   const onDragOver = (e: DragEvent): void => {
     if (!isInTree(e)) return;
     if (isEditable(e.target)) return;
+    if (isTreeMoveDrag(e.dataTransfer?.types)) return; // ADR-336 双通道：树内移动不归导入
     if (!e.dataTransfer?.types?.includes("Files")) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = "copy";
@@ -208,6 +210,12 @@ export function bindTreeDnD(
   const onDrop = (e: DragEvent): void => {
     hideHint(); // 无论落点是否在树内都收提示（树外 drop 旧实现早退滞留）
     if (!isInTree(e)) return;
+    // ADR-336 双通道分流（锐评 2026-10-13 P0-1）：本链与 move-dnd 的 onDrop 都注册在
+    // document 上（WebView2 shadow drop 限制的同款绕道），addEventListener 不阻止同一
+    // 事件的其它监听器执行 —— 树内移动的 dataTransfer 不带任何文件，必被下方 collect-0
+    // 分支判成「收集 0」并弹「未检测到支持文件」，与「移动成功」toast 并排出双提示。
+    // 判据与 move-dnd 共用 isTreeMoveDrag（单一事实源，两侧判据必须同源，勿只改一处）。
+    if (isTreeMoveDrag(e.dataTransfer?.types)) return;
     dbg("dnd", "drop fired", {
       files: e.dataTransfer?.files?.length ?? 0,
       items: e.dataTransfer?.items?.length ?? 0,

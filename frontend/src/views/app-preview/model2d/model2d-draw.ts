@@ -363,6 +363,58 @@ function drawView(
   }
 }
 
+/** 计算模型 cube 包围盒 */
+function computeBounds(model: BedrockModel): {
+  minX: number;
+  maxX: number;
+  minZ: number;
+  maxZ: number;
+} {
+  let minX = Infinity,
+    maxX = -Infinity,
+    minZ = Infinity,
+    maxZ = -Infinity;
+  for (const bone of model.bones || []) {
+    for (const c of bone.cubes || []) {
+      const [ox, oz] = cubeVec(c.origin);
+      const [sx, sz] = cubeVec(c.size);
+      if (ox < minX) minX = ox;
+      if (ox + sx > maxX) maxX = ox + sx;
+      if (oz < minZ) minZ = oz;
+      if (oz + sz > maxZ) maxZ = oz + sz;
+    }
+  }
+  return { minX, maxX, minZ, maxZ };
+}
+
+/** 绘制小地图中的全部 cube 包围盒（旋转俯视投影） */
+function drawMiniViewCubes(
+  ctx: CanvasRenderingContext2D,
+  model: BedrockModel,
+  ox2: number,
+  oy2: number,
+  s: number,
+  cosA: number,
+  sinA: number,
+): void {
+  for (const bone of model.bones || []) {
+    for (const c of bone.cubes || []) {
+      const [x, z] = cubeVec(c.origin);
+      const [sx, sz] = cubeVec(c.size);
+      // 俯视图也用旋转坐标
+      const rx = x * cosA - z * sinA;
+      const rz = x * sinA + z * cosA;
+      const drawX = ox2 + rx * s;
+      const drawY = oy2 - (rz + sz) * s;
+      ctx.fillStyle = themeRgba("--accent", 0.45);
+      ctx.fillRect(drawX, drawY, sx * s, sz * s);
+      ctx.strokeStyle = themeRgba("--txt", 0.7);
+      ctx.lineWidth = 0.5;
+      ctx.strokeRect(drawX, drawY, sx * s, sz * s);
+    }
+  }
+}
+
 /** 小地图：俯视图投影全部 cube 包围盒 */
 function drawMiniView(
   ctx: CanvasRenderingContext2D,
@@ -384,42 +436,14 @@ function drawMiniView(
   ctx.fillStyle = themeRgba("--bg", 0.35);
   ctx.fillRect(mx - 2, my - 2, size + 4, size + 4);
 
-  let minX = Infinity;
-  let maxX = -Infinity;
-  let minZ = Infinity;
-  let maxZ = -Infinity;
-  for (const bone of model.bones || []) {
-    for (const c of bone.cubes || []) {
-      const [ox, oz] = cubeVec(c.origin);
-      const [sx, sz] = cubeVec(c.size);
-      if (ox < minX) minX = ox;
-      if (ox + sx > maxX) maxX = ox + sx;
-      if (oz < minZ) minZ = oz;
-      if (oz + sz > maxZ) maxZ = oz + sz;
-    }
-  }
+  const { minX, maxX, minZ, maxZ } = computeBounds(model);
   const rangeX = maxX - minX || 1;
   const rangeZ = maxZ - minZ || 1;
   const s = Math.min(size / rangeX, size / rangeZ, 2);
   const ox2 = mx + size / 2 - (minX + rangeX / 2) * s;
   const oy2 = my + size / 2 + (minZ + rangeZ / 2) * s;
 
-  for (const bone of model.bones || []) {
-    for (const c of bone.cubes || []) {
-      const [x, z] = cubeVec(c.origin);
-      const [sx, sz] = cubeVec(c.size);
-      // 俯视图也用旋转坐标
-      const rx = x * cosA - z * sinA;
-      const rz = x * sinA + z * cosA;
-      const drawX = ox2 + rx * s;
-      const drawY = oy2 - (rz + sz) * s;
-      ctx.fillStyle = themeRgba("--accent", 0.45);
-      ctx.fillRect(drawX, drawY, sx * s, sz * s);
-      ctx.strokeStyle = themeRgba("--txt", 0.7);
-      ctx.lineWidth = 0.5;
-      ctx.strokeRect(drawX, drawY, sx * s, sz * s);
-    }
-  }
+  drawMiniViewCubes(ctx, model, ox2, oy2, s, cosA, sinA);
 }
 
 // 导出给 model2d.ts 主入口与测试（calcBoneHitZones 在 model2d-hit-zones.ts）

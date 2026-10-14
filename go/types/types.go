@@ -358,6 +358,10 @@ type ResourceSyncResult struct {
 	Missing  []string `json:"missing"`  // 全局有但整合包没有（可推送）；含 Diverged
 	Extra    []string `json:"extra"`    // 整合包有但全局没有（可拉取）
 	Diverged []string `json:"diverged"` // ⊂ Missing：两侧均有但内容不同（推送即覆盖实例侧修改）
+	// Warnings 诊断信道（不影响四桶判定）：dirLevel 键碰撞（同级同身份不同扩展名文件
+	// 共存，last-write-wins 保留其一，被覆盖方在此点名）。omitempty——零碰撞的旧载荷
+	// 保持字节洁净，既有 JSON 消费者无感知。
+	Warnings []string `json:"warnings,omitempty"`
 }
 
 // PullSyncResult 拉取结果（批D P1-5 绑定体裁）：**部分失败不是 error，是结果的一部分**。

@@ -4,6 +4,7 @@
 package sync
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -80,9 +81,12 @@ func syncResourcesDirLevel(globalDir, instanceDir, rtype string, scanFn ScanEntr
 	// 使 maid-model 等嵌套类型的回退 Walk 在 TTL 内也只真正走一次）。
 	// 回退 Walk 时把同一次 scanFn 结果的摘要旁挂进来——Walk 信道因此也有内容级判定，
 	// 两条信道判定强度一致（否则 hashed 键会把弱判定结果当强判定复用）。
-	collectEntries := func(rootDir string) map[string]dirLevelUnit {
+	// 返回值第二项 = 键碰撞警告（同键不同 Rel 的 last-write-wins 覆盖事件）；
+	// 缓存命中时为 nil——碰撞在首次计算（真实走盘）时已记录并落日志，TTL 窗口内
+	// 树未变，重发只会刷屏（诊断信道，非用户载荷——如需常驻可见再扩缓存值型）。
+	collectEntries := func(rootDir string) (map[string]dirLevelUnit, []string) {
 		if cached, ok := loadDirLevelScanCache(rootDir, rtype, hashed); ok {
-			return cached
+			return cached, nil
 		}
 		var entries []types.ModelEntry
 		scanHit := false
@@ -90,7 +94,7 @@ func syncResourcesDirLevel(globalDir, instanceDir, rtype string, scanFn ScanEntr
 			entries, scanHit = scanFn(rootDir)
 		}
 		if scanHit && len(entries) > 0 {
-			if m := collectEntriesFromScan(entries, rootDir, rtype); m != nil {
+			if m, collisions := collectEntriesFromScan(entries, rootDir, rtype); m != nil {
 				// scan-hit 衍生结果叠同款 syncDirLevelScanCache：BuildSyncItems 周期内
 				// 8 个 MMD 子类型 × N 个实例反复对同一个全局仓库根 (rootDir, rtype)
 				// 重算 O(entries) 衍生 map——命中 scanner 30s TTL+single-flight 窗口内
@@ -100,13 +104,27 @@ func syncResourcesDirLevel(globalDir, instanceDir, rtype string, scanFn ScanEntr
 				// hashed 用变量而非字面量 true：本分支今天只在 scanFn != nil 时可达（hashed 恒真），
 				// 但硬编码会让「读槽/写槽」在将来重构中悄悄分叉（复核 P3-6）。
 				storeSyncScanCache(&syncDirLevelScanCache, dirLevelCacheKey(rootDir, rtype, hashed), m)
-				return m
+				return m, collisions
 			}
 		}
-		return collectEntriesWalkCached(rootDir, rtype, hashed, dirLevelHashByPath(entries))
+		m, collisions := collectEntriesWalkCached(rootDir, rtype, hashed, dirLevelHashByPath(entries))
+		return m, collisions
 	}
 
-	return dirLevelResult(collectEntries(globalDir), collectEntries(instanceDir))
+	globalUnits, globalCollisions := collectEntries(globalDir)
+	instanceUnits, instanceCollisions := collectEntries(instanceDir)
+	result := dirLevelResult(globalUnits, instanceUnits)
+	// 碰撞 fail-loud：两侧收集（全局/实例）的键碰撞汇入结果诊断信道 + 日志留痕
+	//（同「Walk 错误」本地惯用法；CLI 侧 stderr 可见，GUI 侧日志面板可见）。
+	for _, w := range globalCollisions {
+		log.Printf("[sync] 全局侧 %s", w)
+	}
+	for _, w := range instanceCollisions {
+		log.Printf("[sync] 实例侧 %s", w)
+	}
+	result.Warnings = append(result.Warnings, globalCollisions...)
+	result.Warnings = append(result.Warnings, instanceCollisions...)
+	return result
 }
 
 // dirLevelResult 归并两侧单元表出同步结果：内容级判定**复用 ResourceDiff**
@@ -166,14 +184,30 @@ func dirLevelRel(rootDir, path string) string {
 	return strings.ToLower(filepath.ToSlash(rel))
 }
 
+// upsertDirLevelUnit 把一个同步单元登记进单元表；同键已存在且**原始相对路径不同**
+// （同级同身份不同扩展名的两个物理文件，如 model_a.pmx + model_a.pmd）时记录一条
+// 碰撞警告——覆盖方与被覆盖方都点名。覆盖行为（last-write-wins）本身是既有语义
+// （目录 vs 文件同名碰撞已按尾随 "/" 修复，纯文件/文件碰撞见 sync_dirlevel.go 头注释
+// 已知限制项）：本 helper 只把「静默丢一个」升级为「丢得可见」，不改键表内容。
+func upsertDirLevelUnit(m map[string]dirLevelUnit, collisions *[]string, key string, unit dirLevelUnit) {
+	if old, ok := m[key]; ok && old.Rel != unit.Rel {
+		*collisions = append(*collisions, fmt.Sprintf(
+			"dirLevel 键碰撞 %q：既有 %q 被 %q 覆盖（last-write-wins，被覆盖方不再进同步列表）",
+			key, old.Rel, unit.Rel))
+	}
+	m[key] = unit
+}
+
 // collectEntriesWalk 原 filepath.Walk 实现（scanFn 未命中时回退，语义权威基准）。
-// 返回 (entries, partialFail)：partialFail 表示 Walk 中途遇错（子树读失败/目录消失），
-// 调用方据此决定残缺结果不入缓存——与 sync.go 的 rootFailed/partialFail 双守卫同口径。
+// 返回 (units, collisions, partialFail)：partialFail 表示 Walk 中途遇错（子树读失败/目录消失），
+// 调用方据此决定残缺结果不入缓存——与 sync.go 的 rootFailed/partialFail 双守卫同口径；
+// collisions 为同键不同 Rel 的 last-write-wins 覆盖事件（见 upsertDirLevelUnit），空=无碰撞。
 // 以下所有分支逻辑（isDirTypeModelFolder / containsModelSubfolder / 容器下钻注册自身键）
 // 均继承自原 SyncResourcesDirLevel 的 Walk 实现，保持与旧行为完全一致——
 // collectEntriesFromScan 的反推结果须与之等价（见 sync_dirlevel_scan_test.go）。
-func collectEntriesWalk(rootDir string, rtype string, hashByPath map[string]string) (map[string]dirLevelUnit, bool) {
+func collectEntriesWalk(rootDir string, rtype string, hashByPath map[string]string) (map[string]dirLevelUnit, []string, bool) {
 	entries := make(map[string]dirLevelUnit)
+	var collisions []string
 	partialFail := false
 	memo := make(nestedDirMemo)
 	// Walk 外层返回仅承接回调错误，而回调恒返回 nil（含 root 不存在首回调 err→partialFail，
@@ -188,12 +222,12 @@ func collectEntriesWalk(rootDir string, rtype string, hashByPath map[string]stri
 			// 平铺模型文件：在任意深度收集（不再限定 rootDir 顶层）
 			if packs.IsTypeModelFile(path, rtype) {
 				if key := relKeyDirLevel(rootDir, path, false); key != "" {
-					entries[key] = dirLevelUnit{
+					upsertDirLevelUnit(entries, &collisions, key, dirLevelUnit{
 						Path: path, Rel: dirLevelRel(rootDir, path),
 						Size: info.Size(), Hash: hashByPath[filepath.Clean(path)],
 						// P0-2 诚实化（与文件级 collect 同判据）：超限文件同尺寸不足以证明内容一致
 						Oversize: info.Size() > registry.MaxImportSize,
-					}
+					})
 				}
 			}
 			return nil
@@ -221,19 +255,19 @@ func collectEntriesWalk(rootDir string, rtype string, hashByPath map[string]stri
 				// 叶子目录（仅平铺文件——pre-fix 安装）键一致，避免键集不相交产生
 				// 幻影 Missing+Extra（内容相同却显示分歧）
 				if key := relKeyDirLevel(rootDir, path, true); key != "" {
-					entries[key] = dirLevelUnit{Path: path, Rel: dirLevelRel(rootDir, path), IsDir: true}
+					upsertDirLevelUnit(entries, &collisions, key, dirLevelUnit{Path: path, Rel: dirLevelRel(rootDir, path), IsDir: true})
 				}
 				return nil
 			}
 			if key := relKeyDirLevel(rootDir, path, true); key != "" {
-				entries[key] = dirLevelUnit{Path: path, Rel: dirLevelRel(rootDir, path), IsDir: true}
+				upsertDirLevelUnit(entries, &collisions, key, dirLevelUnit{Path: path, Rel: dirLevelRel(rootDir, path), IsDir: true})
 			}
 			return filepath.SkipDir
 		}
 		// 非模型子目录：继续递归（可能包含深层嵌套的模型文件夹/文件）
 		return nil
 	})
-	return entries, partialFail
+	return entries, collisions, partialFail
 }
 
 // collectEntriesWalkCached 与 collectEntriesWalk 语义一致，但结果叠 30s
@@ -241,18 +275,18 @@ func collectEntriesWalk(rootDir string, rtype string, hashByPath map[string]stri
 // 精确反推、必须回退 Walk 的路径。
 // hashed 与调用方（collectEntries 闭包）的缓存键口径一致：命中与写入必须同槽，
 // 否则强/弱判定结果会互相复用（见 dirLevelCacheKey）。
-func collectEntriesWalkCached(rootDir, rtype string, hashed bool, hashByPath map[string]string) map[string]dirLevelUnit {
+func collectEntriesWalkCached(rootDir, rtype string, hashed bool, hashByPath map[string]string) (map[string]dirLevelUnit, []string) {
 	if cached, ok := loadDirLevelScanCache(rootDir, rtype, hashed); ok {
-		return cached
+		return cached, nil // 碰撞在首次走盘时已记录（见 collectEntries 闭包注释）
 	}
-	entries, partialFail := collectEntriesWalk(rootDir, rtype, hashByPath)
+	entries, collisions, partialFail := collectEntriesWalk(rootDir, rtype, hashByPath)
 	// 完整 Walk 才入缓存（对齐 sync.go 的 rootFailed/partialFail 双守卫）：
 	// 根目录存在 ≠ 子树扫完整——原 os.Stat 守卫与完整性无关，子目录读失败时
 	// 残缺 entries 仍会被缓存 30s 当权威。partialFail 已覆盖 root 不存在（首回调即 err）。
 	if !partialFail {
 		storeSyncScanCache(&syncDirLevelScanCache, dirLevelCacheKey(rootDir, rtype, hashed), entries)
 	}
-	return entries
+	return entries, collisions
 }
 
 // collectEntriesFromScan 从 scanner 已扫描的模型文件列表反推目录级同步条目，
@@ -267,10 +301,11 @@ func collectEntriesWalkCached(rootDir, rtype string, hashed bool, hashByPath map
 //   - 模型文件夹：所有直接含模型文件的目录（含容器）均登记为目录键。
 //
 // 单元附带 Size/Hash（ADR-344 D1）：scan 条目自带摘要，是 dirLevel 内容级判定的哈希来源。
-func collectEntriesFromScan(entries []types.ModelEntry, rootDir, rtype string) map[string]dirLevelUnit {
+// 返回 (units, collisions)：collisions 同 collectEntriesWalk 口径（同键不同 Rel 覆盖事件）。
+func collectEntriesFromScan(entries []types.ModelEntry, rootDir, rtype string) (map[string]dirLevelUnit, []string) {
 	// 含嵌套模式无法精确重建，回退 nil → 调用方走 Walk
 	if len(registry.NestedPatternsFor(rtype)) > 0 {
-		return nil
+		return nil, nil
 	}
 	sep := string(filepath.Separator)
 	rootDir = filepath.Clean(rootDir)
@@ -310,6 +345,7 @@ func collectEntriesFromScan(entries []types.ModelEntry, rootDir, rtype string) m
 	}
 
 	out := make(map[string]dirLevelUnit)
+	var collisions []string
 	// 1) 平铺模型文件：父为 rootDir 或父非叶子模型文件夹时登记
 	for _, e := range modelFiles {
 		p := e.Path
@@ -321,14 +357,14 @@ func collectEntriesFromScan(entries []types.ModelEntry, rootDir, rtype string) m
 		}
 		if parent == rootDir {
 			if key := relKeyDirLevel(rootDir, p, false); key != "" {
-				out[key] = unit
+				upsertDirLevelUnit(out, &collisions, key, unit)
 			}
 			continue
 		}
 		isLeafFolder := dirHasModelFile[parent] && !directChildModelFolder(parent)
 		if !isLeafFolder {
 			if key := relKeyDirLevel(rootDir, p, false); key != "" {
-				out[key] = unit
+				upsertDirLevelUnit(out, &collisions, key, unit)
 			}
 		}
 	}
@@ -341,8 +377,8 @@ func collectEntriesFromScan(entries []types.ModelEntry, rootDir, rtype string) m
 			continue
 		}
 		if key := relKeyDirLevel(rootDir, d, true); key != "" {
-			out[key] = dirLevelUnit{Path: d, Rel: dirLevelRel(rootDir, d), IsDir: true}
+			upsertDirLevelUnit(out, &collisions, key, dirLevelUnit{Path: d, Rel: dirLevelRel(rootDir, d), IsDir: true})
 		}
 	}
-	return out
+	return out, collisions
 }

@@ -22,8 +22,11 @@
 //
 // 已知限制（非本次回归，待治理）：
 //   - 同级「不同扩展名同名文件」的 key 归一为同一相对路径（relKeyDirLevel 一律剥扩展名）：
-//     如 `模型包.zip` 与 `模型包.ysm` 同键 `<parent>/模型包` → map last-write-wins 静默丢一个。
-//     （目录与文件同名碰撞已由尾随 "/" 修复——见 relKeyDirLevel；本项为纯文件/文件碰撞，仍待治）
+//     如 `模型包.pmx` 与 `模型包.pmd` 同键 `<parent>/模型包` → map last-write-wins 覆盖一个。
+//     键语义不动（跨格式同身份匹配是设计语义），碰撞已 fail-loud（2026-10-14）：collect 层
+//     upsertDirLevelUnit 记录覆盖事件 → syncResourcesDirLevel 汇入 ResourceSyncResult.Warnings
+//     并落日志——被覆盖方不再静默消失（回归锁 sync_dirlevel_collision_test.go）。
+//     （目录与文件同名碰撞已由尾随 "/" 修复——见 relKeyDirLevel）
 //   - patternFind 重复子树扫描已治理（2026-08-24）：collectEntriesWalk 内建
 //     nestedDirMemo，一次 Walk 内同一目录+pattern 只递归一次，O(N²) 降为 O(N)。
 //

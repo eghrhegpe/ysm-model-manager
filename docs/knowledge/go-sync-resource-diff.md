@@ -62,7 +62,7 @@ last_verified: 2026-10-14
 - `sync_dirlevel_sync.go` — 文件夹级同步主流程：
   - `SyncResourcesDirLevel`（Walk 版，行为不变供测试/旧调用）/ `SyncResourcesDirLevelScan`（注入 scanFn 复用扫描缓存）→ `syncResourcesDirLevel`：collectEntries（sync 缓存 → scanFn 反推 → Walk 回退叠缓存，两者都产出带 `Size/Hash` 的 `map[string]dirLevelUnit`）→ `dirLevelResult`（归成 `map[string]DiffEntry` 后委托 `ResourceDiff`，relKeyDirLevel key 保留完整目录层级）→ synced/missing/extra 三列表排序（ADR-344 D1 换掉原先的「键存在即 Synced」手写判定）
   - `dirLevelDiffEntries` / `dirLevelRel` / `dirLevelHashByPath`：单元 → `DiffEntry` 投影（跨格式清内容字段）、原始相对路径（保留扩展名/禁用后缀，专用于格式同一性）、scanner 摘要按绝对路径索引（供 Walk 回退信道旁挂）
-  - `collectEntriesWalk`（语义权威基准：平铺模型文件任意深度收集；叶子模型夹 SkipDir 整体收编；容器夹——既含平铺模型文件又含子模型夹——下钻保留层级并注册自身目录 marker 键；`nestedDirMemo` 消除 `patternFind` 重复子树扫描）；`collectEntriesWalkCached`（完整 Walk 才入缓存）
+  - `collectEntriesWalk`（语义权威基准：平铺模型文件任意深度收集；叶子模型夹 SkipDir 整体收编；容器夹——既含平铺模型文件又含子模型夹——下钻保留层级并注册自身目录 marker 键；`nestedDirMemo` 消除 `patternFind` 重复子树扫描）；`collectEntriesWalkCached`（完整 Walk 才入缓存）；collect 族额外返回**键碰撞清单**（同键不同 Rel 的 last-write-wins 覆盖事件，`upsertDirLevelUnit` 单点记录，2026-10-14 fail-loud）
   - `collectEntriesFromScan` 从 scanner 已扫描的扁平文件列表反推目录级同步条目（仅「无嵌套模式」类型 MMD/YSM 可精确重建；含嵌套模式如 maid-model 返回 nil 回退 Walk；`directChildModelDirs` 反向索引使父目录查询 O(1)；单元直接带 `e.Size` / `e.Hash`）
 - `sync_dirlevel_diff.go` — 文件夹内容 diff：
   - `diffFolderContentsCore` 两侧文件映射 → `[]FileDiffEntry`（synced/missing/optional/diverged）：两侧均命中哈希比哈希（异哈希 → Diverged，消除「改内容不改大小」假绿，D2′-c），任一侧缺哈希回退比 Size；nil,nil 退化为纯 Size 对比
@@ -89,7 +89,7 @@ last_verified: 2026-10-14
 - 缓存准入双守卫：`rootFailed` / `partialFail`（Walk 中途子树读失败/目录消失）的残缺结果**不入** 30s 扫描缓存——根目录存在 ≠ 子树扫完整；`collectEntriesFromScan` 返回 nil（须走 Walk）时同样不缓存，否则会把「须走 Walk」误判为命中而永久跳过 Walk
 - `resources` kind 缓存键的 `hashed` 维度（D2′-a）：`{kind,root,rtype,hashed}`，`hashed = scanFn != nil`——隔离「带哈希版 collect」与「Size-only 版 collect」两种结果，否则 nil 版先 populate 缓存后，带 scanFn 入口命中它会让内容级判定静默失效 30s；`dirlevel` kind 同款（ADR-344 D1 起 `hashed = scanFn != nil`，两条信道都带摘要故读写信道同槽），`folder` kind 恒 false
 - **dirLevel 单元判定两层**（ADR-344 D1/D2）：文件单元比内容（`dirLevelDiffEntries` 填 Size/Hash/Oversize → `contentDiffers` 哈希优先 / 无哈希 Size 兜底 / 任一侧超限保守判 Missing）；目录单元**不**比内容——scan 条目只含受支持扩展名的模型文件，目录折叠指纹无从累积，只在 Walk 侧加指纹会让两条信道劈裂（违反推等价契约），故目录单元保持存在性语义、夹内分叉由展开层（`diffFolderContentsCore`）承担。内容字段仅在两侧**原始相对路径相等**时填（`dirLevelRel` 不剥扩展名/禁用后缀）：跨格式同身份键比字节恒不相等，照比会造出永不收敛的假待推送
-- `collectEntriesFromScan` 与 `collectEntriesWalk` 必须语义等价（回归测试 `sync_dirlevel_scan_test.go` 锁定逐夹对比，比较前抹掉 scan 侧独有的 `Hash` 旁挂字段）；含嵌套模式类型不可反推，调用方须先判 `NestedPatternsFor` 为空
+- `collectEntriesFromScan` 与 `collectEntriesWalk` 必须语义等价（回归测试 `sync_dirlevel_scan_test.go` 锁定逐夹对比，比较前抹掉 scan 侧独有的 `Hash` 旁挂字段）；含嵌套模式类型不可反推，调用方须先判 `NestedPatternsFor` 为空。**碰撞清单不参与等价比较**（诊断输出，非单元表内容），但两信道碰撞记录口径必须一致（回归锁 `sync_dirlevel_collision_test.go`：Walk / scan 各一例 + 零碰撞负例）；碰撞经 `syncResourcesDirLevel` 汇入 `ResourceSyncResult.Warnings`（omitempty 诊断信道，缓存命中不重产——首次走盘已落日志，防刷屏）
 - `diffFolderContentsCore` 判定口径：哈希优先、Size 兜底（与 `ResourceDiff` 的 `contentDiffers` 同口径）；两侧无哈希（Walk 版 `DiffFolderContents`）时 Size 相等即 Synced，与旧「存在即 Synced」相比收紧了大小口径但无回归
 - `.recycle` 排除与 scanner 对齐：Walk 侧 `SkipDir`（带 `path != rootDir` 守卫），scan 反推侧 `IsRecycleDir(filepath.Dir(p))` 逐文件剔除（回收站目录内文件跳过，与 Walk 的 SkipDir 对齐）
 - **`.relink-bak-*` 备份尸体同样要排除，且必须**双通道**都排**（ADR-342 D4）：Walk 侧 `SkipDir`（`collectEntriesWalk` / `handleDir` / `collectFolderFiles`），scan 反推侧逐条 `isRelinkBackupPath` 剔除（`collectEntriesFromScan` / `collectFolderFilesFromScan`）——生产链走 scanner 命中，只修 Walk 通道等于没修；不豁免则恢复点被判「实例独有（可拉取）」，一键拉取把整个恢复点复制进仓库（回归测试 `sync_corpse_exempt_test.go` 四条通道各一例）

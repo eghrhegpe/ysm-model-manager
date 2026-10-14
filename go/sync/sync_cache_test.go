@@ -81,7 +81,7 @@ func TestSyncResources_UsesSyncResourcesCacheAndInvalidate(t *testing.T) {
 // 对目录不生效，故以 root 不存在钉住同一判定分支。
 func TestCollectEntriesWalkCached_FailedWalkNotCached(t *testing.T) {
 	nonexistent := filepath.Join(t.TempDir(), "no-such-dir")
-	_ = collectEntriesWalkCached(nonexistent, "ysm", false, nil)
+	_, _ = collectEntriesWalkCached(nonexistent, "ysm", false, nil)
 	key := syncDirectoryScanKey{kind: "dirlevel", root: nonexistent, rtype: "ysm"}
 	if _, ok := syncDirLevelScanCache.Load(key); ok {
 		t.Fatal("Walk 失败的目录不应入缓存（残缺结果被当权威）")

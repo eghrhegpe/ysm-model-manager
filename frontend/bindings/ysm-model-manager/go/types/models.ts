@@ -741,6 +741,13 @@ export interface ResourceSyncResult {
      * ⊂ Missing：两侧均有但内容不同（推送即覆盖实例侧修改）
      */
     "diverged": string[] | null;
+
+    /**
+     * Warnings 诊断信道（不影响四桶判定）：dirLevel 键碰撞（同级同身份不同扩展名文件
+     * 共存，last-write-wins 保留其一，被覆盖方在此点名）。omitempty——零碰撞的旧载荷
+     * 保持字节洁净，既有 JSON 消费者无感知。
+     */
+    "warnings"?: string[] | null;
 }
 
 /**

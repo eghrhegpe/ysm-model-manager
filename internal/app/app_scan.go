@@ -15,6 +15,7 @@ import (
 	"ysm-model-manager/go/conc"
 	"ysm-model-manager/go/fileops"
 	"ysm-model-manager/go/fsutil"
+	"ysm-model-manager/go/packs"
 	"ysm-model-manager/go/paths"
 	"ysm-model-manager/go/scanner"
 	ysmsync "ysm-model-manager/go/sync"
@@ -215,7 +216,37 @@ func (a *App) scanModelEntriesWithHit(dir string) ([]types.ModelEntry, bool) {
 			}
 		}
 	}
+	// 全量扫描派生 Type（ADR-343 刀 1）：单一事实源 = registry + 内容指纹（判定归 Go，
+	// 前端只读不判）——裸扩展名/位置/嵌套走纯路径判定，容器走指纹缓存避免逐扫重开归档
+	a.fillEntryTypes(entries)
 	return entries, hit
+}
+
+// fillEntryTypes 为全量扫描条目填充 ModelEntry.Type（ADR-343 刀 1）。
+// 口径复用既有分类器（不新写判定逻辑）：
+//   - 裸扩展名：packs.DetectResourceType（ClassifyResource 三段——嵌套模式 / location
+//     消歧 / 扩展名裁决，零 I/O；多声明者按 (priority desc, id asc) 确定性裁决，
+//     与导入/扫描 classifyForScan 同口径）；
+//   - 容器扩展名（.zip/.7z）：经 containerCache 指纹缓存（modtime/size 变即重核验；
+//     未命中才跑真实探测并写回——B2 全量搜索热路径的同款复用，避免逐条重开归档）；
+//     内容未识别返回 "container" 诚实占位（ClassifyResource 的 ClassContainer，不猜）。
+//
+// 结果直接写回条目（调用方拿到的是扫描缓存克隆，不污染 scanCache 本体）；
+// 过滤路径（ScanModelEntriesFiltered）在其后按 rtype 覆盖，本函数不破坏该语义。
+func (a *App) fillEntryTypes(entries []types.ModelEntry) {
+	if len(entries) == 0 {
+		return
+	}
+	a.ensureContainerCache()
+	reg := typereg.LoadRegistry()
+	for i := range entries {
+		e := &entries[i]
+		if typereg.IsContainerExt(e.Ext) {
+			e.Type = a.containerCache.Get(e.Path, reg)
+			continue
+		}
+		e.Type = packs.DetectResourceType(e.Path, reg)
+	}
 }
 
 // ScanModelEntries 用户可见的扫描入口（Wails 绑定），记录操作日志。

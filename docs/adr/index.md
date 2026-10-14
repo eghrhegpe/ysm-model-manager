@@ -16,9 +16,9 @@ permalink: /adr/
 
 | 状态 | 数量 |
 |------|------|
-| [📝 提议中](#提议中) | 5 |
+| [📝 提议中](#提议中) | 4 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 1 |
-| [🔄 部分采纳](#部分采纳) | 14 |
+| [🔄 部分采纳](#部分采纳) | 15 |
 | [✅ 已采纳](#已采纳) | 333 |
 | [❌ 已取代](#已取代) | 8 |
 | [🧊 已废弃](#已废弃) | 0 |
@@ -26,11 +26,10 @@ permalink: /adr/
 
 ## 按状态分组导航
 
-### 📝 提议中（5）
+### 📝 提议中（4）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
-| [ADR-343](./architecture/ADR-343-cross-type-search.md) | 跨类型搜索收口（Type 派生 + 分析器分流 + SearchFilters） | 📝 提议中 |
 | [ADR-327](./architecture/ADR-327-hdr.md) | 自定义 HDR 路径持久化与重启恢复 | 📝 提议中 |
 | [ADR-325](./architecture/ADR-325-app-domain-sinking-over-multi-service.md) | App 瘦身走域下沉：拒绝 Wails 多 Service 外壳 | 📝 提议中 |
 | [ADR-321](./architecture/ADR-321-cap-persistence-restore-derivation.md) | cap 持久化读侧派生：restoreFields 还原表由 schema 键集统一驱动（跨 cap 一次拍全局） | 📝 提议中 |
@@ -42,10 +41,11 @@ permalink: /adr/
 |-----|------|------|
 | [ADR-129](./ADR-129-preview-3d-domain-root.md) | 3D 预览领域根升格（utils/3d → features/preview-3d，修依赖倒置） | ⚠️ 已采纳（违规或未修复） |
 
-### 🔄 部分采纳（14）
+### 🔄 部分采纳（15）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-343](./architecture/ADR-343-cross-type-search.md) | 跨类型搜索收口（Type 派生 + 分析器分流 + SearchFilters） | 🔄 部分采纳 |
 | [ADR-323](./architecture/ADR-323-pre-commit-commit-blocks.md) | pre-commit 钩子逻辑下沉 commit-blocks 与薄壳化 | 🔄 部分采纳 |
 | [ADR-285](./ADR-285-bench-usability-copy-diff-plan.md) | 跑基准可用性收口：动作与参数同序、文案去重、术语本地化 | 🔄 部分采纳 |
 | [ADR-251](./ADR-251-ground-material-family-completion.md) | 地面材质家族补全：噪声材质与非几何图案分工 | 🔄 部分采纳 |
@@ -417,7 +417,7 @@ permalink: /adr/
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
 | ADR-344 | 整合包同步单元级诚实化：dirLevel 内容判定、单条推送保层级、祖先单元去重 | ✅ 已采纳 | 2026-10-14 |
-| ADR-343 | 跨类型搜索收口（Type 派生 + 分析器分流 + SearchFilters） | 📝 提议中 | 2026-10-14 |
+| ADR-343 | 跨类型搜索收口（Type 派生 + 分析器分流 + SearchFilters） | 🔄 部分采纳 | 2026-10-14 |
 | ADR-342 | 整合包重链接的实例数据保全与目录身份复验 | ✅ 已采纳 | 2026-10-14 |
 | ADR-341 | busy 语义归一——互斥锁唯一形态 BusyLock | ✅ 已采纳 | 2026-10-14 |
 | ADR-340 | 推送链去总线化：请求-响应回归直调，token/回执/宽限期协议件退役 | ✅ 已采纳 | 2026-10-14 |

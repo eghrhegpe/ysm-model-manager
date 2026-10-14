@@ -318,15 +318,15 @@
 | runWebEnqueue | `frontend/src/features/community/download-queue-web.ts` | 115 |
 | cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 124 |
 | refreshUI | `frontend/src/features/context-menu/context-menu-shared.ts` | 19 |
-| reportPackDropResult | `frontend/src/features/dnd/pack-dnd.ts` | 146 |
+| reportPackDropResult | `frontend/src/features/dnd/pack-dnd.ts` | 150 |
 | (顶层) | `frontend/src/features/import/executor.ts` | 85 |
 | importWebBatch | `frontend/src/features/import/executor.ts` | 274 |
 | setupRecycleActions | `frontend/src/features/maintenance/recycle-bin.ts` | 131 |
 | onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 203 |
 | registerInstanceOps | `frontend/src/features/pack-ops/instance-ops.ts` | 135 |
 | registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 55 |
-| runDownloadMissing | `frontend/src/features/sync/sync.ts` | 247 |
-| runSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 332 |
+| runDownloadMissing | `frontend/src/features/sync/sync.ts` | 277 |
+| runSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 362 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 208 |
 | relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 230 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 93 |
@@ -361,7 +361,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| registerSync | `frontend/src/features/sync/sync.ts` | 373 |
+| registerSync | `frontend/src/features/sync/sync.ts` | 403 |
 
 ### `toast:show`
 
@@ -400,14 +400,14 @@
 | runWebEnqueue | `frontend/src/features/community/download-queue-web.ts` | 114 |
 | cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 123 |
 | refreshUI | `frontend/src/features/context-menu/context-menu-shared.ts` | 18 |
-| reportPackDropResult | `frontend/src/features/dnd/pack-dnd.ts` | 147 |
+| reportPackDropResult | `frontend/src/features/dnd/pack-dnd.ts` | 151 |
 | (顶层) | `frontend/src/features/import/executor.ts` | 86 |
 | importWebBatch | `frontend/src/features/import/executor.ts` | 273 |
 | setupRecycleActions | `frontend/src/features/maintenance/recycle-bin.ts` | 132 |
 | onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 204 |
 | registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 54 |
-| downloadMissing | `frontend/src/features/sync/sync.ts` | 285 |
-| handleSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 361 |
+| downloadMissing | `frontend/src/features/sync/sync.ts` | 315 |
+| handleSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 391 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 209 |
 | applyFsaState | `frontend/src/views/app-content/settings/init.ts` | 389 |
 | onWebRepoAuthClick | `frontend/src/views/app-content/settings/init.ts` | 417 |

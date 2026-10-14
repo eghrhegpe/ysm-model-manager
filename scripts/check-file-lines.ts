@@ -50,7 +50,58 @@ const RULES: { file: string; maxLines: number; adr: string; why: string }[] = [
     adr: "ADR-315 D2/D3",
     why: "1401 行巨型文件沿真缝拆三刀（动作 vrm-motion / 感知 vrm-perception / 菜单 vrm-menu）降至 767；红线锁死再膨胀，超限须沿真缝拆分或发新 ADR",
   },
+  {
+    // `_lib` 升硬红线时的**祖父条款**（2026-10-14）：升硬前实测 920 行，超 `_lib` glob 红线
+    // 400 逾 2 倍。此处按实测 +2% 冻结（防继续膨胀），待沿真缝拆分后下调红线并从
+    // LIB_GRANDFATHERED 除名——**存量冻结，不是永久许可**。
+    file: "scripts/_lib/contract-tests.ts",
+    maxLines: 939,
+    adr: "ADR-234 D3（_lib 硬红线祖父条款，2026-10-14）",
+    why: "契约测试执行器，实测 920 行超 _lib 红线 400；冻结于此防继续膨胀，拆分后下调红线并除名",
+  },
+  {
+    // 同上：`_lib` 硬红线的祖父条款。gate-config 是门禁清单单一事实源，条目随接入增长，
+    // 2026-10-14 实测 493 行。冻结待拆分（清单表 / 类型 / 域子集可沿缝分家）。
+    file: "scripts/_lib/gate-config.ts",
+    maxLines: 503,
+    adr: "ADR-234 D3（_lib 硬红线祖父条款，2026-10-14）",
+    why: "门禁清单表，实测 493 行超 _lib 红线 400；冻结于此防继续膨胀，拆分后下调红线并除名",
+  },
+  {
+    // 同上：`_lib` 最胖者（_lib 硬红线的最大受益目标）。2026-10-14 实测 1391 行。
+    // 该文件混着四簇关注点（令牌值表+建议器 / 实时反馈判据 / doc 漂移+style 扫描 /
+    // emoji-glyph 扫描），真缝存在但**簇间有交错依赖**（如 suggestTransitionToken 依赖
+    // 后段的 isRealtimeFeedbackTransition），拆分须逐段 verbatim 搬移 + 基线比对，
+    // 属独立一轮的活儿（勿在顺手改动里夹带）。此前一次尝试因夹带行为改写已回滚。
+    file: "scripts/_lib/design-tokens.ts",
+    maxLines: 1419,
+    adr: "ADR-234 D3（_lib 硬红线祖父条款，2026-10-14）",
+    why: "设计令牌判定层，实测 1391 行超 _lib 红线 400 逾 3 倍；冻结防继续膨胀，须专项一轮沿真缝拆（注意簇间交错依赖）",
+  },
 ];
+
+/**
+ * `_lib` 共享层 glob 硬红线（400 行）+ **祖父条款**豁免集。
+ *
+ * 设计意图（2026-10-14 补网）：`ADVISORY_RULES` 的 `_lib ≤400` 是**软告警**，实测 15 条
+ * 告警长期共存、无人拆——「情报驱动排期」被证明不驱动。故本规则把它升为**硬阻断**，
+ * 但只对新文件与未豁免者生效：存量超限者进 `LIB_GRANDFATHERED`（各自按实测锁进 RULES），
+ * **不回溯追责**（一次性把 63 个文件全红只会逼出 `--no-verify`）。
+ *
+ * 为什么是 400：`_lib` 是共享层，超 400 即失去「薄」特性、难沿缝拆（原软告警口径）。
+ * 为什么必须带祖父条款：直接硬断会把存量三巨头变成红灯，与「只减不增」原则冲突——
+ * 存量冻结在新红线、新文件受限，才是不给肥胖发执照又不炸当场的正确口径。
+ *
+ * ⚠️ 退出条件：`LIB_GRANDFATHERED` 只减不增。拆分某文件至 ≤400 后，从集合删名
+ * （并在 RULES 里删对应条目）——集合清空之日，本规则即为无豁免的纯 glob 红线。
+ */
+const LIB_GRANDFATHERED: ReadonlySet<string> = new Set([
+  "scripts/_lib/contract-tests.ts",
+  "scripts/_lib/gate-config.ts",
+  "scripts/_lib/design-tokens.ts",
+]);
+/** `_lib` 共享层行数上限（glob 硬红线；祖父条款见上）。 */
+const LIB_MAX_LINES = 400;
 
 const flags = parseArgs(process.argv.slice(2), { bools: ["json"] });
 if (flags.unknown?.length) {
@@ -78,15 +129,10 @@ type Violation = { file: string; lines: number; maxLines: number; adr: string; w
  * 精神 + AGENTS.md 瘦身纪律）。权威实况每次运行由本脚本自己的 WARN 列表打印。
  * 后续若决定硬阻断，把 ADVISORY_RULES 并入 RULES 循环即可（语义切换）。
  * 与 RULES 区分：RULES = 精确文件 + 超限 exit 1（治理决策 ADR）；ADVISORY = glob + 超限 WARN（排期情报）。
+ * ⚠️ `_lib 共享层` 曾在本表（软告警 ≤400），2026-10-14 已**升为硬红线**并移出本表
+ * （见上方 LIB_GRANDFATHERED / LIB_MAX_LINES）——同一事实不留两个真相源。
  */
 const ADVISORY_RULES: { glob: (rel: string) => boolean; maxLines: number; label: string }[] = [
-  {
-    // _lib 共享层 > 400 → 失去「薄」特性，须沿真缝拆分
-    glob: (rel) =>
-      rel.startsWith("scripts/_lib/") && rel.endsWith(".ts") && !rel.endsWith(".test.ts"),
-    maxLines: 400,
-    label: "_lib 共享层",
-  },
   {
     // scripts 顶层 > 700 → 单体脚本肥膘，须拆分或抽 _lib
     glob: (rel) =>
@@ -105,7 +151,7 @@ const ADVISORY_RULES: { glob: (rel: string) => boolean; maxLines: number; label:
     // 红线值 1045 却无人拦截，属「拆 A 长 B」打地鼠）。此规则把前端生产层纳入软告警，
     // 让 >900 行大文件可见化、驱动拆分排期。阈值 900 取 mount-preview-core 红线 1045 的
     // 「预警水位」—— 未到硬红线但已进入拆分视野，避免「到 1045 才猛然硬断」。
-    // 硬红线（RULES）逐文件登记见 check-file-lines.md 知识卡；拆到 ≤900 后本条不再告警。
+    // 硬红线（RULES）逐文件登记见本文件规则表自身（单一事实源）；拆到 ≤900 后本条不再告警。
     glob: (rel) =>
       (rel.startsWith("frontend/src/preview-3d/") || rel.startsWith("frontend/src/backend/")) &&
       rel.endsWith(".ts") &&
@@ -129,6 +175,25 @@ for (const r of RULES) {
   checked.push(r.file);
   if (lines > r.maxLines)
     violations.push({ file: r.file, lines, maxLines: r.maxLines, adr: r.adr, why: r.why });
+}
+
+// ── `_lib` 共享层 glob 硬红线（2026-10-14 补网：软告警升硬，带祖父条款） ──
+// 见上方 LIB_GRANDFATHERED / LIB_MAX_LINES 的设计注释。此处只做扫描与登记：
+// 非测试 .ts + 前缀 scripts/_lib/ + 未在祖父条款内 + 超 LIB_MAX_LINES → violation。
+for (const rel of listTsFiles("scripts/_lib")) {
+  if (rel.endsWith(".test.ts")) continue;
+  if (LIB_GRANDFATHERED.has(rel)) continue;
+  const lines = countLines(rel);
+  if (lines === null) continue;
+  if (lines > LIB_MAX_LINES) {
+    violations.push({
+      file: rel,
+      lines,
+      maxLines: LIB_MAX_LINES,
+      adr: "ADR-234 D3（_lib 共享层硬红线，2026-10-14 补网）",
+      why: `_lib 是共享薄层，超 ${LIB_MAX_LINES} 行即难沿缝拆；新写大文件请拆多文件或下沉到 scripts/ 顶层。若确属存量超限，按祖父条款流程登记（RULES 冻结条目 + LIB_GRANDFATHERED 除名清单同步）`,
+    });
+  }
 }
 
 // ── ADVISORY_RULES（glob 扫描，超限软告警，不阻断） ──
@@ -219,8 +284,9 @@ if (advisories.length) {
   for (const a of advisories)
     console.warn(`   ${a.label} ${a.file}: ${a.lines} 行 > 阈值 ${a.maxLines}`);
 } else {
+ // 阈值不写死：从规则表实时派生（硬写「_lib ≤400」这类数字必腐，且 _lib 已升硬红线移出本表）
   console.log(
-    `[check-file-lines] ✅ 肥膘扫描无超限（scripts/_lib ≤400、scripts 顶层 ≤700、前端生产层 ≤900）`,
+    `[check-file-lines] ✅ 肥膘扫描无超限（${ADVISORY_RULES.map((r) => `${r.label} ≤${r.maxLines}`).join("、")}）`,
   );
 }
 

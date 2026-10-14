@@ -490,77 +490,106 @@ async function initAndDecodeWasm(modelPath: string, bytes: Uint8Array): Promise<
 
 // ===== 阶段④ 元数据/纹理/模型/动画 流水线 =====
 
+function hasImageExt(path: string): boolean {
+  return path.endsWith(".png") || path.endsWith(".jpg");
+}
+
+function isGuiPath(path: string): boolean {
+  return path.toLowerCase().includes("gui/") || path.toLowerCase().includes("gui\\");
+}
+
+function isAvatarPath(path: string): boolean {
+  return path.startsWith("avatar/") || path.startsWith("avatar\\");
+}
+
+/** 去扩展名文件名（avatar 与纹理共用作键）。 */
+function stemOf(path: string): string {
+  return (
+    path
+      .split(/[/\\]/)
+      .pop()
+      ?.replace(/\.\w+$/, "") || ""
+  );
+}
+
+/**
+ * 头像条目：按去扩展名文件名为键写入 acc.avatars。
+ * F5（2026-10-11 修）：同名不同目录头像以去扩展名文件名为键互相覆盖——
+ * 被覆盖者立即 revoke（revokeTexAccumBlobs 只扫最终值，覆盖者逃逸即泄漏）；
+ * 交付者（最后覆盖者）仍按既有归属走（进 authors[].avatarUrl，由缓存 evict 释放）。
+ */
+function collectAvatarAsset(f: DecodedFile, acc: TexAccum): void {
+  const mime =
+    f.path.toLowerCase().endsWith(".jpg") || f.path.toLowerCase().endsWith(".jpeg")
+      ? "image/jpeg"
+      : "image/png";
+  // 用 `viewAsBlobPart(f.data)`（视图语义）而非 `f.data.buffer`：Blob 只取视图
+  // 区间，不依赖「数组恰好占满底层缓冲」的隐性契约（详见该 helper 注释）。
+  const blob = new Blob([viewAsBlobPart(f.data)], { type: mime });
+  const name = stemOf(f.path);
+  const avatarUrl = URL.createObjectURL(blob);
+  const prevAvatar = acc.avatars[name];
+  if (prevAvatar) URL.revokeObjectURL(prevAvatar);
+  acc.avatars[name] = avatarUrl;
+}
+
+/**
+ * 纹理条目：blob URL + 三个查找映射 + 尺寸嗅探 + maxW/H 收敛 + 调试日志。
+ * [2026-10-11 收敛] 原先用 `f.data.buffer` 整体构造 Blob，正确性依赖一条
+ * **隐性契约**：`FS.readFile` 必须返回「恰好占满底层 ArrayBuffer」的数组
+ * （byteOffset=0 且 byteLength === buffer.byteLength）。一旦上游把
+ * `collectOutputFiles` 改成返回 subarray 视图做零拷贝，`.buffer` 会指向更大的
+ * 底层缓冲 → 静默把多余字节塞进 Blob（纹理损坏/花屏，且不报错）。
+ * 现经 `viewAsBlobPart` 只取视图区间——无论上游返回独立数组还是 subarray，
+ * 结果都精确（整视图零拷贝，偏移视图 slice 收窄）。
+ */
+function collectTextureAsset(f: DecodedFile, acc: TexAccum): void {
+  const blob = new Blob([viewAsBlobPart(f.data)]);
+  const key = stemOf(f.path);
+  const url = URL.createObjectURL(blob);
+  // F5（2026-10-11 修）：同名不同目录纹理以去扩展名文件名为键互相覆盖——
+  // 被覆盖者立即 revoke（revokeTexAccumBlobs 只扫最终值，覆盖者逃逸即泄漏；
+  // collectJsonSpecTextures 同族已一并修，见 handleYsmJsonSpec 路径）。
+  // 交付者（最后覆盖者）仍由 revokeTexAccumBlobs / 移交 geometry 按既有归属走。
+  const prevTex = acc.textures[key];
+  if (prevTex) URL.revokeObjectURL(prevTex);
+  acc.textures[key] = url;
+  acc.texNameMap[key] = f.path;
+  acc.texLowerMap[key.toLowerCase()] = key;
+  // 直接复用 f.data（`FS.readFile` 产出的独立 Uint8Array），不再 `new Uint8Array(f.data)`
+  // ——后者是每张纹理一份整拷贝，而 `sniffTexSize` 是只读纯函数（审查 C-1：N_tex 级收益）。
+  const sniffed = sniffTexSize(f.data);
+  if (sniffed) {
+    acc.texDimensions[key] = sniffed;
+    if (sniffed.w > acc.maxTexW) acc.maxTexW = sniffed.w;
+    if (sniffed.h > acc.maxTexH) acc.maxTexH = sniffed.h;
+  }
+  const td = acc.texDimensions[key];
+  devLog(`[YSM] 纹理: ${f.path} → key="${key}"${td ? ` (${td.w}×${td.h})` : ""}`);
+}
+
 function collectTexturesAndAvatars(files: DecodedFile[]): TexAccum {
-  const textures: Record<string, string> = {};
-  const texNameMap: Record<string, string> = {};
-  const texLowerMap: Record<string, string> = {};
-  const texDimensions: Record<string, TexDim> = {};
-  const avatars: Record<string, string> = {};
-  let maxTexW = 0,
-    maxTexH = 0;
+  const acc: TexAccum = {
+    textures: {},
+    texNameMap: {},
+    texLowerMap: {},
+    texDimensions: {},
+    maxTexW: 0,
+    maxTexH: 0,
+    avatars: {},
+  };
 
   for (const f of files) {
-    if (!(f.path.endsWith(".png") || f.path.endsWith(".jpg"))) continue;
-    if (f.path.toLowerCase().includes("gui/") || f.path.toLowerCase().includes("gui\\")) continue;
-    if (f.path.startsWith("avatar/") || f.path.startsWith("avatar\\")) {
-      const mime =
-        f.path.toLowerCase().endsWith(".jpg") || f.path.toLowerCase().endsWith(".jpeg")
-          ? "image/jpeg"
-          : "image/png";
-      // 用 `viewAsBlobPart(f.data)`（视图语义）而非 `f.data.buffer`：Blob 只取视图
-      // 区间，不依赖「数组恰好占满底层缓冲」的隐性契约（详见该 helper 注释）。
-      const blob = new Blob([viewAsBlobPart(f.data)], { type: mime });
-      const name =
-        f.path
-          .split(/[/\\]/)
-          .pop()
-          ?.replace(/\.\w+$/, "") || "";
-      const avatarUrl = URL.createObjectURL(blob);
-      // F5（2026-10-11 修）：同名不同目录头像以去扩展名文件名为键互相覆盖——
-      // 被覆盖者立即 revoke（revokeTexAccumBlobs 只扫最终值，覆盖者逃逸即泄漏）；
-      // 交付者（最后覆盖者）仍按既有归属走（进 authors[].avatarUrl，由缓存 evict 释放）。
-      const prevAvatar = avatars[name];
-      if (prevAvatar) URL.revokeObjectURL(prevAvatar);
-      avatars[name] = avatarUrl;
+    if (!hasImageExt(f.path)) continue;
+    if (isGuiPath(f.path)) continue;
+    if (isAvatarPath(f.path)) {
+      collectAvatarAsset(f, acc);
       continue;
     }
-    // [2026-10-11 收敛] 原先用 `f.data.buffer` 整体构造 Blob，正确性依赖一条
-    // **隐性契约**：`FS.readFile` 必须返回「恰好占满底层 ArrayBuffer」的数组
-    // （byteOffset=0 且 byteLength === buffer.byteLength）。一旦上游把
-    // `collectOutputFiles` 改成返回 subarray 视图做零拷贝，`.buffer` 会指向更大的
-    // 底层缓冲 → 静默把多余字节塞进 Blob（纹理损坏/花屏，且不报错）。
-    // 现经 `viewAsBlobPart` 只取视图区间——无论上游返回独立数组还是 subarray，
-    // 结果都精确（整视图零拷贝，偏移视图 slice 收窄）。
-    const blob = new Blob([viewAsBlobPart(f.data)]);
-    const key =
-      f.path
-        .split(/[/\\]/)
-        .pop()
-        ?.replace(/\.\w+$/, "") || "";
-    const url = URL.createObjectURL(blob);
-    // F5（2026-10-11 修）：同名不同目录纹理以去扩展名文件名为键互相覆盖——
-    // 被覆盖者立即 revoke（revokeTexAccumBlobs 只扫最终值，覆盖者逃逸即泄漏；
-    // collectJsonSpecTextures 同族已一并修，见 handleYsmJsonSpec 路径）。
-    // 交付者（最后覆盖者）仍由 revokeTexAccumBlobs / 移交 geometry 按既有归属走。
-    const prevTex = textures[key];
-    if (prevTex) URL.revokeObjectURL(prevTex);
-    textures[key] = url;
-    texNameMap[key] = f.path;
-    texLowerMap[key.toLowerCase()] = key;
-    const arr = f.data;
-    // 直接复用 f.data（`FS.readFile` 产出的独立 Uint8Array），不再 `new Uint8Array(f.data)`
-    // ——后者是每张纹理一份整拷贝，而 `sniffTexSize` 是只读纯函数（审查 C-1：N_tex 级收益）。
-    const sniffed = sniffTexSize(arr);
-    if (sniffed) {
-      texDimensions[key] = sniffed;
-      if (sniffed.w > maxTexW) maxTexW = sniffed.w;
-      if (sniffed.h > maxTexH) maxTexH = sniffed.h;
-    }
-    const td = texDimensions[key];
-    devLog(`[YSM] 纹理: ${f.path} → key="${key}"${td ? ` (${td.w}×${td.h})` : ""}`);
+    collectTextureAsset(f, acc);
   }
 
-  return { textures, texNameMap, texLowerMap, texDimensions, maxTexW, maxTexH, avatars };
+  return acc;
 }
 
 function processModelFile(f: DecodedFile, ctx: ProcessModelCtx, forcedTexIdx?: number): void {

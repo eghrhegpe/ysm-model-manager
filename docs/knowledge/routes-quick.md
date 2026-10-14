@@ -560,6 +560,8 @@
 | 判定违规是「真残留」还是「误报」 | [_lib 共享层采用率闸门](./scripts-lib-adoption.md) | - | - |
 | 判断某个检查项归属哪一层 | [门禁委托链全景图（四入口横向拼图）](./gate-chain-map.md) | - | - |
 | 提交前文档自动同步 | [提交前钩子 pre-commit](./pre-commit-hook.md) | 禁止在 pre-commit 用 git add -u docs/ 兜底（会吞他人未提交半成品，违反 P2-2） | - |
+| 提交信息的减负规则是什么 | [提交信息减负闸](./commit-message-gate.md) | "`--replay N` 只读历史不写库；`--file` 只在钩子内被调用；`--range auto` 在推送时双挂复验" | - |
+| 通用红线 | [提交信息减负闸](./commit-message-gate.md) | "`YSM_SKIP_COMMIT_MSG=1` 跳过钩子，但通过 hook-audit 写 SKIPPED_PRECOMMIT 留痕——`--no-verify` 整钩不跑，零痕迹（故 gate-config 另有 --range 第二重）" | - |
 | 通用红线 | [推送前门禁 pre-push-gate](./pre-push-gate.md) | 判定字段必须写进 _summary（用 buildScanVerdict），写顶层 ok 会被解析器短路 | - |
 | 推送被门禁阻断怎么办 | [推送前门禁 pre-push-gate](./pre-push-gate.md) | 门禁并行 async IIFE 必须带调用括号，漏 () 会静默跳过整域检查 | - |
 | 往测试加 vi.mock 需要注意什么 | [mock 路径守卫 check-mock-paths](./mock-path-guard.md) | 用 // mock-path-ignore: <理由> 或 docs/.mock-path-exempt.json 豁免，禁止直接 --no-verify 绕过 | - |
@@ -609,8 +611,11 @@
 | 确认 Go-TS 解析层是否漂移 → 跑 go test ./go/types ./go/litematic + vitest src/backend/*.parity.test.ts | [Go-TS 解析层 golden 对拍（ADR-154 双端互锁）](./go-ts-golden.md) | Go MatchZipEntry 与 TS matchZipEntryTS 的首命中序依赖 resource_types.json 顺序——重排类型定义即两端漂移 | - |
 | 审查 finding 的基线新鲜度核对（audit-freshness） | [AI 审查器偏差与查证方法论（10 轮实战沉淀）](./ai-review-pitfalls.md) | - | - |
 | 视觉异常说不清来源时，做单变量开关对照实验 | [E2E 视觉反馈（截图取证）](./e2e-visual-feedback.md) | 断言写成 if (count() > 0) 或 .catch(() => {}) 会让未生效的流程报绿 | - |
+| 我想下结论但还没验证 | [可复现结论纪律（结论必附验证证据）](./verify-before-conclude.md) | 结论一律附「命令 + 原始输出 + 日期」；注释与知识卡里的旧结论不构成证据，须复跑；静态结构不等于运行时路径；改了脚本要跑 scripts tsc，不只是 biome。 | - |
 | 想知道界面长什么样，用截图取证而非断言计数 | [E2E 视觉反馈（截图取证）](./e2e-visual-feedback.md) | 元素在 Shadow DOM 内，页面内 querySelector 查不到而截图里明明有 | - |
 | 修改识别层指纹后自检 → 重跑两端 parity 测试（fixture 期望值以 Go 输出为准） | [Go-TS 解析层 golden 对拍（ADR-154 双端互锁）](./go-ts-golden.md) | voxel-colors-data.json 无复跑生成器（gen/main.go 只生成 block_ids_data.go），靠 parity_voxel_test.go 兜底 | - |
+| 这条注释说的还算数吗 | [可复现结论纪律（结论必附验证证据）](./verify-before-conclude.md) | - | - |
+| 子代理报的数字能信吗 | [可复现结论纪律（结论必附验证证据）](./verify-before-conclude.md) | - | - |
 | sleep 替换为 waitFor / 负向定时器窗口断言 | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) | - | - |
 
 ## 🎯 能力门控与平台判定
@@ -621,16 +626,6 @@
 | canWebAction viewer 模式右键菜单 | [能力门控 capabilities](./capabilities.md) | - | - |
 | VIEWER_PURE_ACTIONS 纯前端动作 | [能力门控 capabilities](./capabilities.md) | - | - |
 | VIEWER_WEB_ACTION_BINDINGS web 可达 action | [能力门控 capabilities](./capabilities.md) | - | - |
-
-## 🎯 未归类
-
-| 用户意图 | 首选卡 | 红线警告 | 主 ADR(如有) |
-|----------|--------|----------|----------|
-| 提交信息的减负规则是什么 | [提交信息减负闸](./commit-message-gate.md) | "`--replay N` 只读历史不写库；`--file` 只在钩子内被调用；`--range auto` 在推送时双挂复验" | - |
-| 通用红线 | [提交信息减负闸](./commit-message-gate.md) | "`YSM_SKIP_COMMIT_MSG=1` 跳过钩子，但通过 hook-audit 写 SKIPPED_PRECOMMIT 留痕——`--no-verify` 整钩不跑，零痕迹（故 gate-config 另有 --range 第二重）" | - |
-| 我想下结论但还没验证 | [可复现结论纪律（结论必附验证证据）](./verify-before-conclude.md) | 结论一律附「命令 + 原始输出 + 日期」；注释与知识卡里的旧结论不构成证据，须复跑；静态结构不等于运行时路径；改了脚本要跑 scripts tsc，不只是 biome。 | - |
-| 这条注释说的还算数吗 | [可复现结论纪律（结论必附验证证据）](./verify-before-conclude.md) | - | - |
-| 子代理报的数字能信吗 | [可复现结论纪律（结论必附验证证据）](./verify-before-conclude.md) | - | - |
 
 ## 🚨 高频陷阱速查
 

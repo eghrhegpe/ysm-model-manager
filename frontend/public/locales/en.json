@@ -684,7 +684,7 @@
   "sidebar.pushDoneAll": "Push complete: {n} packs",
   "sidebar.pushDone": "Push complete, {detail}",
   "sidebar.pushFailed": "Push failed: {msg}",
-  "sidebar.pullDoneAll": "Pull complete, {n} files total",
+  "sidebar.pullDoneAll": "Pull complete, {n} files (copied into the repo; now independent from the instances)",
   "sidebar.pullDone": "Pull complete: {pulled} files, {failed} failed",
   "sidebar.pullNothing": "📭 Nothing to pull (no extra resources in instances)",
   "sidebar.pullFailed": "Pull failed: {msg}",

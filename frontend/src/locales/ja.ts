@@ -814,7 +814,8 @@ export const ja: Record<string, string> = {
   "sidebar.pushDoneAll": "プッシュ完了：{n} パック",
   "sidebar.pushDone": "プッシュ完了、{detail}",
   "sidebar.pushFailed": "プッシュに失敗: {msg}",
-  "sidebar.pullDoneAll": "プル完了、合計 {n} ファイル",
+  "sidebar.pullDoneAll":
+    "プル完了、合計 {n} ファイル（仓库にコピー済み；以降は統合パッケージと独立）",
   "sidebar.pullDone": "プル完了: {pulled} ファイル、{failed} 失敗",
   "sidebar.pullNothing": "📭 プルするファイルがありません（インスタンスに余分なリソースなし）",
   "sidebar.pullFailed": "プルに失敗: {msg}",

@@ -791,7 +791,7 @@ export const zhCN = {
   "sidebar.pushDoneAll": "推送完成：{n} 个整合包",
   "sidebar.pushDone": "推送完成，{detail}",
   "sidebar.pushFailed": "推送失败: {msg}",
-  "sidebar.pullDoneAll": "拉取完成，共 {n} 个文件",
+  "sidebar.pullDoneAll": "拉取完成，共 {n} 个文件（已复制到仓库，此后与整合包各自独立）",
   "sidebar.pullDone": "拉取完成: {pulled} 个文件, {failed} 个失败",
   "sidebar.pullNothing": "📭 没有可拉取的文件（实例中无多余资源）",
   "sidebar.pullFailed": "拉取失败: {msg}",

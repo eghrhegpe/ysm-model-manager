@@ -14,6 +14,7 @@
 import * as THREE from "three";
 import {
   getSemanticBone,
+  type SemanticBoneEntry,
   type SemanticBoneId,
   type SemanticBoneMap,
 } from "@/preview-3d/bone/semantic-bones.ts";
@@ -84,6 +85,104 @@ const DANCE_BONES: Array<{
 /** 左右臂骨骼集合（帧循环半拍错位判定用，避免每帧重复字符串比较） */
 const RIGHT_ARM_IDS = new Set<SemanticBoneId>(["rightUpperArm", "rightLowerArm", "rightShoulder"]);
 
+/** 计算节拍相位、呼吸相位与幅度调制 */
+function computePhases(
+  beatDetector: BeatDetectorLike | undefined,
+  internalTime: number,
+  beatPeriod: number,
+  breathPeriod: number,
+): { beatPhase: number; breathMod: number; bounce: number } {
+  const beatPhase = beatDetector ? beatDetector.getPhase() : (internalTime / beatPeriod) % 1;
+  const breathPhase = beatDetector
+    ? (beatDetector.getPhase() / 4) % 1
+    : (internalTime / breathPeriod) % 1;
+  // 幅度调制：4 拍呼吸让律动有"起伏感"
+  const breathMod = 0.6 + 0.4 * Math.sin(breathPhase * Math.PI * 2);
+  // beatBounce 包络：拍头 0 → 拍中峰值 1 → 拍尾 0，制造踩点感
+  const bounce = Math.sin(beatPhase * Math.PI);
+  return { beatPhase, breathMod, bounce };
+}
+
+/** 对单根骨骼应用律动旋转与平移 */
+function applyBoneMotion(
+  entry: SemanticBoneEntry | null,
+  snap: { rot: THREE.Quaternion; pos: THREE.Vector3 } | undefined,
+  combined: number,
+  xAmp: number,
+  yAmp: number,
+  zAmp: number,
+  rxAmp: number,
+  ryAmp: number,
+  rzAmp: number,
+  _targetRot: THREE.Quaternion,
+  _offset: THREE.Quaternion,
+  _euler: THREE.Euler,
+): void {
+  if (!entry?.object || !snap) return;
+  // 主律动：正弦摇摆
+  _targetRot.setFromEuler(
+    _euler.set(
+      rxAmp ? combined * rxAmp : 0,
+      ryAmp ? combined * ryAmp : 0,
+      rzAmp ? combined * rzAmp : 0,
+      "XYZ",
+    ),
+  );
+  // 平滑 slerp 到目标
+  // 乘序修正（P2 静默 bug）：quaternion.multiply 右操作数先应用。
+  // 原 targetRot.multiply(restQuat) = dance*rest——摇摆作用于父空间轴，
+  // 静止姿态非恒等时骨骼局部轴被带偏（实测局部Y混入X分量、夹角差 21°）。
+  // 正确 rest*dance：先摇摆（局部轴）再叠静止姿态；restQuat 是 warmup 快照，
+  // 不能就地改 → 写入 scratch _offset（slerp 目标参数只读，复用安全）。
+  _offset.copy(snap.rot).multiply(_targetRot);
+  entry.object.quaternion.slerp(_offset, 0.15);
+  // 应用平移（仅 hips/spine 有 X 位移）
+  if (xAmp || yAmp || zAmp) {
+    entry.object.position.set(
+      snap.pos.x + combined * xAmp,
+      snap.pos.y + combined * yAmp,
+      snap.pos.z + combined * zAmp,
+    );
+  }
+}
+
+/** 遍历所有舞蹈骨骼，逐根应用律动 */
+function applyAllBones(
+  state: DanceState,
+  map: SemanticBoneMap,
+  beatPhase: number,
+  effectiveIntensity: number,
+  _targetRot: THREE.Quaternion,
+  _offset: THREE.Quaternion,
+  _euler: THREE.Euler,
+): void {
+  for (const { id, xAmp, yAmp, zAmp, rxAmp, ryAmp, rzAmp } of DANCE_BONES) {
+    const entry = getSemanticBone(map, id);
+    const snap = state.rests.get(id);
+    // 左右臂半拍错位（打破对称）——左臂相位 0，右臂 0.5，其余同左臂
+    const armOffset = RIGHT_ARM_IDS.has(id) ? 0.5 : 0;
+    // 主律动：正弦摇摆
+    const main = Math.sin(beatPhase * Math.PI * 2 + armOffset * Math.PI);
+    // 次拍点缀：高频微动
+    const micro = Math.sin(beatPhase * Math.PI * 4) * 0.3;
+    const combined = (main + micro) * effectiveIntensity;
+    applyBoneMotion(
+      entry,
+      snap,
+      combined,
+      xAmp,
+      yAmp,
+      zAmp,
+      rxAmp,
+      ryAmp,
+      rzAmp,
+      _targetRot,
+      _offset,
+      _euler,
+    );
+  }
+}
+
 export function createAutoDanceController(opts: AutoDanceOptions) {
   const bpm = opts.bpm ?? DEFAULT_BPM;
   const intensity = opts.intensity ?? DEFAULT_INTENSITY;
@@ -128,69 +227,16 @@ export function createAutoDanceController(opts: AutoDanceOptions) {
     if (disposed || !enabled || _pauseRef.paused) return; // 动画激活时感知静默
     warmup(map);
     if (!state) return;
-
     // 更新内部计时（无外部 detector 时）
-    if (!beatDetector) {
-      internalTime += dt;
-    }
-
-    // 节拍相位来源：外部 detector 或内部计时
-    const beatPhase = beatDetector ? beatDetector.getPhase() : (internalTime / beatPeriod) % 1;
-
-    // 呼吸相位（0..1 循环，4 拍周期）
-    const breathPhase = beatDetector
-      ? (beatDetector.getPhase() / 4) % 1
-      : (internalTime / breathPeriod) % 1;
-
-    // 幅度调制：4 拍呼吸让律动有"起伏感"
-    const breathMod = 0.6 + 0.4 * Math.sin(breathPhase * Math.PI * 2);
-    // beatBounce 包络：拍头 0 → 拍中峰值 1 → 拍尾 0，制造踩点感
-    const bounce = Math.sin(beatPhase * Math.PI);
+    if (!beatDetector) internalTime += dt;
+    const { beatPhase, breathMod, bounce } = computePhases(
+      beatDetector,
+      internalTime,
+      beatPeriod,
+      breathPeriod,
+    );
     const effectiveIntensity = intensity * breathMod * (0.7 + 0.3 * bounce);
-
-    for (const { id, xAmp, yAmp, zAmp, rxAmp, ryAmp, rzAmp } of DANCE_BONES) {
-      const entry = getSemanticBone(map, id);
-      const snap = state.rests.get(id);
-      if (!entry?.object || !snap) continue;
-
-      // 左右臂半拍错位（打破对称）——左臂相位 0，右臂 0.5，其余同左臂
-      const armOffset = RIGHT_ARM_IDS.has(id) ? 0.5 : 0;
-
-      // 主律动：正弦摇摆
-      const main = Math.sin(beatPhase * Math.PI * 2 + armOffset * Math.PI);
-      // 次拍点缀：高频微动
-      const micro = Math.sin(beatPhase * Math.PI * 4) * 0.3;
-      const combined = (main + micro) * effectiveIntensity;
-
-      // 应用旋转（在 resting 基础上叠加）
-      _targetRot.setFromEuler(
-        _euler.set(
-          rxAmp ? combined * rxAmp : 0,
-          ryAmp ? combined * ryAmp : 0,
-          rzAmp ? combined * rzAmp : 0,
-          "XYZ",
-        ),
-      );
-
-      // 平滑 slerp 到目标
-      const restQuat = snap.rot;
-      // 乘序修正（P2 静默 bug）：quaternion.multiply 右操作数先应用。
-      // 原 targetRot.multiply(restQuat) = dance*rest——摇摆作用于父空间轴，
-      // 静止姿态非恒等时骨骼局部轴被带偏（实测局部Y混入X分量、夹角差 21°）。
-      // 正确 rest*dance：先摇摆（局部轴）再叠静止姿态；restQuat 是 warmup 快照，
-      // 不能就地改 → 写入 scratch _offset（slerp 目标参数只读，复用安全）。
-      _offset.copy(restQuat).multiply(_targetRot);
-      entry.object.quaternion.slerp(_offset, 0.15);
-
-      // 应用平移（仅 hips/spine 有 X 位移）
-      if (xAmp || yAmp || zAmp) {
-        entry.object.position.set(
-          snap.pos.x + combined * xAmp,
-          snap.pos.y + combined * yAmp,
-          snap.pos.z + combined * zAmp,
-        );
-      }
-    }
+    applyAllBones(state, map, beatPhase, effectiveIntensity, _targetRot, _offset, _euler);
   }
 
   function reset(): void {

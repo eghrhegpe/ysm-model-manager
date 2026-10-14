@@ -15,6 +15,7 @@ vi.mock("./edit.ts", () => ({ bindEditEvents: binds.bindEditEvents }));
 vi.mock("./drag.ts", () => ({ bindDragEvents: binds.bindDragEvents }));
 
 import { renderSiteView, type RenderSiteViewCtx, type LocalCreatorLike } from "./site-view.ts";
+import type { SiteViewState } from "./types.ts";
 import type { WorkshopSite } from "@/bindings/ysm-model-manager/go/types/models.ts";
 
 function makeCtx(over: Partial<RenderSiteViewCtx> = {}): {
@@ -137,5 +138,37 @@ describe("renderSiteView 编排壳", () => {
     const refreshView = binds.bindEditEvents.mock.calls[0][1];
     refreshView();
     expect(ctx.reRender).toHaveBeenCalledTimes(1);
+  });
+
+  // 锐评高危修复（2026-10-14）：编辑期状态必须跨重渲存活。
+  // 病：renderSiteView 每次重建 state（detachedNames:[] / editSnapshot:null），而编辑态
+  // 下 enrich 补渲 + preset 增删排序（edit.ts 四处 refreshView）都会整站重渲 → 用户
+  // 「删跨站创作者（记名）→ 点 preset 上移」后名单归零 → 保存时该条目既不在 siteCreators
+  // 也不在 detachedNames → Go 侧 SaveWorkshopCreatorsBySite **整条丢弃**（别站归属一并
+  // 消失，无 toast 无确认）。editSnapshot 同理会丢 dirty 守卫基线。
+  it("10. detachedNames / editSnapshot 透明代理到 ctx.editSession（写入即落到会话对象）", () => {
+    const session = { detachedNames: [] as string[], editSnapshot: null as string | null };
+    const { ctx } = makeCtx({ editSession: session });
+    renderSiteView(site, ctx);
+    const state = binds.bindEditEvents.mock.calls[0][0] as SiteViewState;
+
+    state.detachedNames.push("跨站丁");
+    state.editSnapshot = "snap-1";
+
+    // 写入必须落到 session（而非 state 自有副本）——这是「跨重渲存活」的充要条件
+    expect(session.detachedNames).toEqual(["跨站丁"]);
+    expect(session.editSnapshot).toBe("snap-1");
+  });
+
+  it("11. 重渲（新 state）仍读到会话里的编辑期状态（不清空）", () => {
+    // 模拟「编辑态下一次整站重渲」：同一 editSession，renderSiteView 被再调一次
+    const session = { detachedNames: ["跨站丁"], editSnapshot: "snap-1" };
+    const { ctx } = makeCtx({ editSession: session });
+    renderSiteView(site, ctx);
+    const state = binds.bindEditEvents.mock.calls[0][0] as SiteViewState;
+
+    // 修复前此处恒为 [] / null（每次 renderSiteView 都重建）——变异改回字面量即转红
+    expect(state.detachedNames).toEqual(["跨站丁"]);
+    expect(state.editSnapshot).toBe("snap-1");
   });
 });

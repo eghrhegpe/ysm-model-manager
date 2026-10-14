@@ -7,10 +7,10 @@ import { bindDragEvents } from "./drag.ts";
 import { bindEditEvents } from "./edit.ts";
 import { bindBrowseEvents } from "./events.ts";
 import { buildSiteHtml } from "./render.ts";
-import type { CleanupFn, RenderSiteViewCtx, SiteViewState } from "./types.ts";
+import type { CleanupFn, EditSession, RenderSiteViewCtx, SiteViewState } from "./types.ts";
 import { compareByAuthorCount, loadFavs, parseSiteIds } from "./workshop-data.ts";
 
-export type { LocalCreatorLike, RenderSiteViewCtx, RepoAuthorLike } from "./types.ts";
+export type { EditSession, LocalCreatorLike, RenderSiteViewCtx, RepoAuthorLike } from "./types.ts";
 
 /**
  * 站点视图渲染主入口 — 编排壳：构造数据 → 构 HTML → 绑事件 → 聚 cleanup。
@@ -73,6 +73,11 @@ export function renderSiteView(site: WorkshopSite, ctx: RenderSiteViewCtx): Clea
   const refreshView = (): void => {
     ctx.reRender();
   };
+  // 编辑期跨重渲会话状态（锐评高危修复，2026-10-14）：renderSiteView 每次调用重建
+  // SiteViewState，但这两份状态必须跨重渲存活（否则编辑态下一次重渲就清空 detachedNames
+  // → 保存时 Go 整条丢弃跨站条目；editSnapshot 清空 → dirty 守卫失效）。
+  // 缺 ctx.editSession 时自建一份（测试/独立渲染路径：行为退回「本次渲染内有效」）。
+  const editSession: EditSession = ctx.editSession ?? { detachedNames: [], editSnapshot: null };
   const state: SiteViewState = {
     esc,
     searchResults,
@@ -90,10 +95,22 @@ export function renderSiteView(site: WorkshopSite, ctx: RenderSiteViewCtx): Clea
     bus,
     activeTag,
     searchKw,
-    // ADR-335：跨站创作者「解除本站关联」只暂存**名字**（交 Go 基于磁盘副本去本站段）
-    detachedNames: [],
-    // P1-3a 锐评：编辑态 dirty 守卫基线（进入编辑态时取，null=无未保存变更）
-    editSnapshot: null,
+    // ADR-335：跨站创作者「解除本站关联」只暂存**名字**（交 Go 基于磁盘副本去本站段）。
+    // getter/setter 透明代理到 editSession——消费方（edit.ts 的 push/read）与测试的
+    // 字段访问语法零改动，但重渲不再清空。
+    get detachedNames(): string[] {
+      return editSession.detachedNames;
+    },
+    set detachedNames(v: string[]) {
+      editSession.detachedNames = v;
+    },
+    // P1-3a 锐评：编辑态 dirty 守卫基线（进入编辑态时取，null=无未保存变更）。同样代理。
+    get editSnapshot(): string | null {
+      return editSession.editSnapshot;
+    },
+    set editSnapshot(v: string | null) {
+      editSession.editSnapshot = v;
+    },
   };
   const unsubs: CleanupFn[] = [];
   unsubs.push(bindBrowseEvents(state, refreshView));

@@ -30,6 +30,9 @@ export interface RenderSiteViewCtx {
   searchKw: string;
   /** 重渲染入口：由调用方（init-workshop）提供，先跑旧 cleanup 再存新 cleanup */
   reRender: () => void;
+  /** 编辑期跨重渲会话状态（可选：未注入时 renderSiteView 自建一份，供测试/独立渲染）。
+   *  生产由 init-workshop 注入 `refs.editSessionRef`——缺失会退回「每次重渲清空」的旧病。 */
+  editSession?: EditSession | undefined;
 }
 
 /** 本地创作者（绑定 + 运行时附加字段） */
@@ -70,11 +73,34 @@ export interface SiteViewState {
   searchKw: string;
   /** 编辑态「解除本站关联」的跨站创作者**名字**（ADR-335 意图式契约：只传意图，
    *  Go 基于**磁盘副本**去本站段，其余字段一字不动——旧契约要前端传回改过 type 的整条
-   *  对象，对象一陈旧就整条覆盖磁盘）。取消编辑不落盘、列表随重渲染自然丢弃。 */
+   *  对象，对象一陈旧就整条覆盖磁盘）。取消编辑不落盘、列表随重渲染自然丢弃。
+   *  ⚠️ 本字段与 `editSnapshot` 均为**跨重渲会话状态**的透明代理（见 EditSession 注释）：
+   *  赋值/读取都直接落到 `ctx.editSession`，renderSiteView 重建 state 不会清空它们。 */
   detachedNames: string[];
   /** 编辑态基线快照（P1-3a 锐评 dirty 守卫）：进入编辑态时对本站创作者 + 预设搜索词的
    *  序列化快照；退出（取消）前比较 JSON 是否变更，非空则确认——防编辑 5 行后误丢。
-   *  null = 尚未进入编辑态 / 已保存 / 已确认丢弃。 */
+   *  null = 尚未进入编辑态 / 已保存 / 已确认丢弃。同样代理到 EditSession。 */
+  editSnapshot: string | null;
+}
+
+/**
+ * 编辑期跨重渲会话状态（锐评高危修复，2026-10-14）。
+ *
+ * 病：`renderSiteView` 每次调用都**重建 SiteViewState**（`detachedNames: []`、
+ * `editSnapshot: null`），而编辑态下有多条路径会触发整站重渲——enrich 完成后补渲、
+ * preset 增删/上移/下移（`edit.ts` 四处 refreshView）。于是：
+ *  · `detachedNames` 被清空：用户先删跨站创作者（记名），再点一次 preset 上移 → 重渲 → 名单归零
+ *    → 保存时该条目既不在 `siteCreators` 也不在 `detachedNames` → Go 侧
+ *    `SaveWorkshopCreatorsBySite` **整条丢弃**（别站归属一并消失，无 toast 无确认）；
+ *  · `editSnapshot` 被清空：dirty 守卫基线丢失 → 此后点「取消」不再弹「放弃修改」确认。
+ *
+ * 修法：把这两份状态移出 state、交给与 `wsEditModeRef` 同生命周期的会话引用持有；
+ * `SiteViewState` 的这两个字段以 getter/setter 透明代理过去（消费方与测试的字段访问
+ * 语法零改动）。持有者 = `WorkshopRefs.editSessionRef`（跨站点切换也存活——`wsEditModeRef`
+ * 本就跨站存活，同一编辑会话的两份状态不该在切站时分裂）。
+ */
+export interface EditSession {
+  detachedNames: string[];
   editSnapshot: string | null;
 }
 

@@ -204,6 +204,35 @@ describe("initWorkshopTabs — 页作用域句柄（ADR-263）", () => {
     }
   });
 
+  // 锐评高危修复（2026-10-14，与 chip/detachedNames 同族病）：编辑态抑制 enrich 重渲。
+  // 病：renderSiteView 每次调用都**重建 SiteViewState**——其中 detachedNames:[] 会清空
+  // 用户按 .cr-del 累积的「解除本站关联」名单（保存时 Go 因「不在 list 也不在名单」
+  // 整条丢弃该条目，别站归属一并消失）、editSnapshot:null 会让 dirty 守卫失效
+  // （此后点取消不再弹「放弃修改」确认）。enrich 完成即整站重渲而 wsEditModeRef.v 仍 true
+  // → 视图回到编辑态，但两份编辑期状态已被静默重置。
+  // ⚠️ 本条与上面那条构成对照：同夹具、同 loadLocalAuthors，唯一变量是编辑态开关，
+  // 故能证明「抑制」是编辑态**有条件**触发，而非把 enrich 重渲整体砍掉。
+  it("编辑态 → enrich 完成不重渲（保住 detachedNames/editSnapshot，退出编辑态再补）", async () => {
+    vi.useFakeTimers();
+    try {
+      loadCommunityData.mockResolvedValue({ sites: [site], creators: [], authors: [] });
+      loadLocalAuthors.mockResolvedValue([{ name: "本地作者", desc: "", type: "bilibili" }]);
+      const { root } = makeHost();
+      const page = createWorkshopPageState();
+      const { refs, calls } = makeRefsWithShowSpy();
+      refs.wsEditModeRef.v = true; // 用户已在编辑态
+
+      initWorkshopTabs(root, refs, page, () => {});
+      await vi.advanceTimersByTimeAsync(150);
+      await flushAsync();
+
+      // 编辑态下 enrich 不追加渲染（首屏那次仍在）
+      expect(calls.length).toBe(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("无站点（配置为空）→ 空态提示指向导入，不再引导「导出站点」（锐评 P0-1）", async () => {
     vi.useFakeTimers();
     try {

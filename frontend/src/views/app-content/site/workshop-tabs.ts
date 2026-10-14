@@ -16,7 +16,7 @@ import { esc as escUtil } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { getSiteIcon } from "@/utils/icon/workshop-icons.ts";
 import { bindTabA11y } from "@/views/app-content/tabs-a11y.ts";
-import type { RepoAuthorLike } from "./site-view.ts";
+import type { EditSession, RepoAuthorLike } from "./site-view.ts";
 import { WS_LAST_TAB_KEY } from "./workshop-data.ts";
 import type { WorkshopPageState } from "./workshop-page-state.ts";
 
@@ -40,6 +40,13 @@ export interface WorkshopRefs {
   allCreators: LocalCreator[];
   repoAuthors: RepoAuthorLike[];
   wsEditModeRef: { v: boolean };
+  /**
+   * 编辑期跨重渲会话状态（锐评高危修复，2026-10-14）：与 `wsEditModeRef` 同生命周期
+   * ——编辑态下 enrich 补渲 / preset 增删排序等都会整站重渲，而 renderSiteView 每次
+   * 重建 state；这两份状态（detachedNames / editSnapshot）必须由外层持有，
+   * 否则重渲即清空（前者致保存时 Go 整条丢弃跨站条目 = 静默数据丢失，后者致 dirty 守卫失效）。
+   */
+  editSessionRef: EditSession;
   /** 站点视图渲染入口，由 init-workshop 注入（重建即新实例——模块级单例会让旧实例
    *  的迟到回调读到新注入闭包，造成跨实例串扰）。 */
   showSiteView: (site: WorkshopSite | null) => void;
@@ -52,6 +59,7 @@ export function createWorkshopRefs(): WorkshopRefs {
     allCreators: [] as LocalCreator[],
     repoAuthors: [] as RepoAuthorLike[],
     wsEditModeRef: { v: false },
+    editSessionRef: { detachedNames: [], editSnapshot: null },
     showSiteView: () => {},
   };
 }
@@ -125,8 +133,16 @@ export function initWorkshopTabs(
       try {
         const localAuthors = await loadLocalAuthors();
         if (localAuthors.length) {
+          // mergeLocalAuthorsInto 是**原地**改（给命中条目置 _fromLocal），返回同一数组引用
+          // ——对象身份保留，故行内输入的编辑值本身不会被这一步丢弃。
           refs.allCreators = mergeLocalAuthorsInto(refs.allCreators, localAuthors);
-          refs.showSiteView(page.getCurrentSite());
+          // ⚠️ 编辑态不补渲（锐评 2026-10-14）。
+          // 数据安全已由 `refs.editSessionRef` 治本（detachedNames/editSnapshot 跨重渲存活，
+          // 覆盖 enrich 与 preset 增删排序等**所有**重渲路径，见 types.ts|EditSession 注释）；
+          // 此处抑制是第二层：编辑态重渲会冲掉输入焦点与滚动位置，而 enrich 只是后台补充
+          // 本地作者标记（`_fromLocal`，弱提示），不值得打断正在输入的用户。
+          // 视觉生效推迟到退出编辑态的 refreshView（save/cancel 两条路径都已调，见 edit.ts）。
+          if (!refs.wsEditModeRef.v) refs.showSiteView(page.getCurrentSite());
         }
       } catch {
         // 补充失败不影响首屏（首屏已可用），静默降级

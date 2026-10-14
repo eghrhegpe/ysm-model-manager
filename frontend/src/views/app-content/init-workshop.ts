@@ -93,6 +93,10 @@ export function initWorkshopPage(host: AppContentHost): void {
       allCreators: refs.allCreators,
       repoAuthors: refs.repoAuthors,
       wsEditModeRef: refs.wsEditModeRef,
+      // 编辑期跨重渲会话状态（锐评高危修复，2026-10-14）：必须由 refs 持有并在每次
+      // showSiteView 时注入——renderSiteView 每次重建 state，不注入就会退回
+      // 「编辑态下次重渲即清空 detachedNames/editSnapshot」的旧病。
+      editSession: refs.editSessionRef,
       fillSearch,
       openUrl,
       // 头像表直接取 store 活体引用（ADR-264）：增量写是原地改写，已渲染 ctx 能立即看到新值

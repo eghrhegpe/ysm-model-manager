@@ -23,10 +23,12 @@ auto_fields:
     - bindSyncSelected
     - BusyGuard
     - EmitDedupe
+    - emptyInstanceStateHTML
     - footerHTML
     - headerHTML
     - instanceCardHeaderHTML
     - listContainerHTML
+    - loadErrorStateHTML
     - loadInstances
     - nextPushToken
     - pruneCheckedSets

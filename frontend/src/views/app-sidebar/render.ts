@@ -1,25 +1,16 @@
 // ===== sidebar 渲染层 =====
 
-import { t } from "@/core/i18n/t.ts";
 import { currentRepoType } from "@/features/repo/repo-rtype.ts";
 import { stagger } from "@/utils/animation/stagger.ts";
-import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import type { SidebarInstance } from "./data.ts";
-import { instanceCardHeaderHTML } from "./tpl.ts";
+import { emptyInstanceStateHTML, instanceCardHeaderHTML, loadErrorStateHTML } from "./tpl.ts";
 
 // 渲染所有整合包卡片到容器
 export function renderVersionCards(container: HTMLElement, instances: SidebarInstance[]): void {
   container.innerHTML = "";
   if (!instances.length) {
-    // 空态就地配 mcRoot：自动搜索覆盖标准布局，HMCL/PCL 检测覆盖分离实例目录
-    // （原设置页「🎮 HMCL / PCL」按钮搬家至此，用户在哪遇到问题就在哪解决）
-    container.innerHTML = `
-      <div class="ws-empty" style="padding:var(--sp-5);text-align:center">${UI_ICONS.inboxEmpty} ${t("sidebar.noMatchInstances")}
-        <div style="margin-top:12px;display:flex;gap:6px;justify-content:center">
-          <button class="btn-base sm" data-sidebar-mc-search>${UI_ICONS.search} ${t("settings.paths.autoSearch")}</button>
-          <button class="btn-base sm" data-sidebar-launcher-detect>${UI_ICONS.game} HMCL / PCL</button>
-        </div>
-      </div>`;
+    // ADR-190 D1a：HTML 模板归 tpl.ts（本文件只做 DOM 组装与状态分流）
+    container.innerHTML = emptyInstanceStateHTML();
     // ADR-308 D2：空态不是 option 列表——摘掉 listbox role（tpl 初始声明），
     // 避免读屏把「无匹配整合包 + 配置按钮」念成空 listbox；有实例时恢复
     container.removeAttribute("role");
@@ -72,13 +63,7 @@ export function renderVersionCards(container: HTMLElement, instances: SidebarIns
  *  重试监听自挂自摘（返回 cleanup）：首帧即失败时 `bindCardEvents` 尚未绑定，
  *  不能依赖其列表事件委托。 */
 export function renderLoadError(container: HTMLElement, onRetry: () => void): () => void {
-  container.innerHTML = `
-    <div class="ws-empty" style="padding:var(--sp-5);text-align:center" role="alert">
-      ${UI_ICONS.error} ${t("sidebar.loadFailed")}
-      <div style="margin-top:12px;display:flex;gap:6px;justify-content:center">
-        <button class="btn-base sm" data-sidebar-retry>${UI_ICONS.refresh} ${t("common.refresh")}</button>
-      </div>
-    </div>`;
+  container.innerHTML = loadErrorStateHTML();
   // ADR-308 D2 同口径：失败态不是 option 列表——摘掉 listbox role，别让读屏把
   // 「加载失败 + 重试」念成空 listbox
   container.removeAttribute("role");

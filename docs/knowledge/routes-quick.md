@@ -1104,7 +1104,7 @@
 | 直接改 preview-state 里的未注册键 | - | 切页 / 换模后状态回滚；必须经 KNOWN_PATHS 注册 |
 | 把状态放 sceneRegistry / SlideMenu / 节点字段而非 previewState | - | 状态无法在 cap 切换时保留；状态通道需集中 |
 | 前端直调 os.Remove | - | 无法恢复、跳过 ADR-038 合并规则；必须经 go/recycle |
-| initRecycleBin 不返回清理函数 | - | 监听泄漏；必须在 app-content 切换页时调用返回的清理函数 |
+| initRecycleBin 的清理函数必须由 app-content 在切页/tab 时调用 | - | 监听泄漏；返回值是函数兼 handle（解构取 `onShow` 供补扫），两种形态都要消费 |
 | 各自创建 renderer | - | 多 rAF 循环、GPU 资源浪费；必须经 render-federation 共享 |
 | rAF 未统一节流 | - | 帧率不统一；必须经 federation 的 rAF 调度 |
 | 权威源 = localStorage （由 app-nav 切换器写入），禁止各模块自行落盘 | `repo_rtype` | - |

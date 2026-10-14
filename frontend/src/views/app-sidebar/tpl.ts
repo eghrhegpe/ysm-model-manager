@@ -157,6 +157,32 @@ export function listContainerHTML(): string {
   )}">${skeletonHTML()}</div>`;
 }
 
+/** 空列表态：无匹配整合包 + 就地配置入口（自动搜索 / HMCL·PCL 检测）。
+ *  配置入口原在设置页，2026-10 搬家至此——用户在哪遇到问题就在哪解决。
+ *  注意 role 不在此声明：调用方按状态摘/挂 listbox role（本态非 option 列表）。 */
+export function emptyInstanceStateHTML(): string {
+  return `<div class="ws-empty" style="padding:var(--sp-5);text-align:center">${UI_ICONS.inboxEmpty} ${t(
+    "sidebar.noMatchInstances",
+  )}
+<div style="margin-top:12px;display:flex;gap:6px;justify-content:center">
+<button class="btn-base sm" data-sidebar-mc-search>${UI_ICONS.search} ${t("settings.paths.autoSearch")}</button>
+<button class="btn-base sm" data-sidebar-launcher-detect>${UI_ICONS.game} HMCL / PCL</button>
+</div>
+</div>`;
+}
+
+/** 加载失败态：与空态**分流**（读取失败≠没装整合包，混用会误导用户去查不存在的配置问题）。
+ *  role=alert + 重试入口；重试监听由调用方自挂自摘（首帧即失败时 bindCardEvents 尚未绑定，
+ *  不能依赖列表事件委托）——模板不绑事件，与 footerHTML / listContainerHTML 同形。 */
+export function loadErrorStateHTML(): string {
+  return `<div class="ws-empty" style="padding:var(--sp-5);text-align:center" role="alert">
+${UI_ICONS.error} ${t("sidebar.loadFailed")}
+<div style="margin-top:12px;display:flex;gap:6px;justify-content:center">
+<button class="btn-base sm" data-sidebar-retry>${UI_ICONS.refresh} ${t("common.refresh")}</button>
+</div>
+</div>`;
+}
+
 /** 加载骨架屏 */
 /** 加载骨架屏（内部被 listContainerHTML 引用，无需导出）。
  *  aria-hidden：装饰性占位不是 option，不进 listbox 的 accessibility 结构（读屏跳过） */

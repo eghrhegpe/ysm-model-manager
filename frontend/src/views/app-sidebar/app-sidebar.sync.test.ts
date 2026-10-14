@@ -27,6 +27,13 @@ vi.mock("@/features/sync/sync.ts", () => ({
   registerSync: vi.fn(),
 }));
 
+// 批D：拉取超时用例需把 withTimeout 打桩（否则要真等 120s）；其余用例透传真实实现，
+// 故其它推送/拉取用例行为不变。TimeoutError 保持真实类（runPull 用 instanceof 分流）。
+vi.mock("@/utils/base/primitives/async.ts", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/utils/base/primitives/async.ts")>();
+  return { ...actual, withTimeout: vi.fn(actual.withTimeout) };
+});
+
 import { bus } from "@/bus";
 import { downloadMissing } from "@/features/sync/sync.ts";
 import { loadInstances } from "./loader.ts";
@@ -121,6 +128,23 @@ function checkFirst(el: HTMLElement): void {
   chk0.dispatchEvent(new Event("change", { bubbles: true }));
 }
 
+/** 点开推送/拉取菜单并选「全部类型」（推送块与拉取块共用；批D 起提到模块级） */
+function clickPushAll(el: HTMLElement): void {
+  clickMenuAll(el, ".sidebar-push-selected", "#sidebar-push-menu");
+}
+
+function clickPullAll(el: HTMLElement): void {
+  clickMenuAll(el, ".sidebar-pull-selected", "#sidebar-pull-menu");
+}
+
+function clickMenuAll(el: HTMLElement, btnSel: string, menuId: string): void {
+  $<HTMLButtonElement>(el, btnSel).click();
+  const menu = $<HTMLElement>(el, menuId);
+  menu
+    .querySelector('.dd-item[data-sync-type="all"]')!
+    .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+}
+
 describe("app-sidebar — 全选/恢复勾选", () => {
   it("勾选全选 → 所有 .chk 被选中并写入持久化集合", async () => {
     const el = await mountSidebar();
@@ -196,16 +220,6 @@ describe("app-sidebar — 全选/恢复勾选", () => {
 });
 
 describe("app-sidebar — 推送所选（ADR-340 直调）", () => {
-  /** 点开推送菜单并选「全部类型」 */
-  function clickPushAll(el: HTMLElement): void {
-    const pushBtn = $<HTMLButtonElement>(el, ".sidebar-push-selected");
-    pushBtn.click();
-    const menu = $<HTMLElement>(el, "#sidebar-push-menu");
-    menu
-      .querySelector('.dd-item[data-sync-type="all"]')!
-      .dispatchEvent(new MouseEvent("click", { bubbles: true }));
-  }
-
   it("未勾选 → info toast 提示先勾选", async () => {
     const el = await mountSidebar();
     clickPushAll(el);
@@ -408,6 +422,50 @@ describe("app-sidebar — 拉取所选", () => {
     expect(pullBtn.disabled).toBe(false);
     // 同上：▾ 单源在 CSS 伪元素
     expect(pullBtn.textContent).toBe(" 拉取所选");
+  });
+
+  it("拉取 binding 挂起 → 超时早停 + 锁释放 + 如实计入（批D：原实现无超时，锁被永久占住）", async () => {
+    // 超时成因即 binding 永久挂起：把 withTimeout 打桩成抛 TimeoutError，既避开 120s
+    // 真实等待，又直接钉住「拉取链必须经 withTimeout 收口」这一契约（原实现完全没有它）。
+    const asyncMod = await import("@/utils/base/primitives/async.ts");
+    const withTimeoutMock = vi.mocked(asyncMod.withTimeout);
+    withTimeoutMock.mockRejectedValueOnce(new asyncMod.TimeoutError("拉取 insA", 120_000));
+
+    const el = await mountSidebar();
+    checkFirst(el);
+    clickPullAll(el);
+
+    await waitFor(() => toasts.some((t) => t.msg.includes("拉取超时")));
+    expect(withTimeoutMock).toHaveBeenCalled();
+    expect(toasts.find((t) => t.msg.includes("拉取超时"))?.msg).toContain("拉取完成: 0 个文件, 0 个失败");
+
+    // 锁必须已释放：紧接着再拉一次要能真正跑起来（成功 toast），而不是被 busy 拒收
+    toasts.length = 0;
+    const { PullResourceFromInstance } = await import(
+      "../../../bindings/ysm-model-manager/internal/app/app.js"
+    );
+    (PullResourceFromInstance as ReturnType<typeof vi.fn>).mockResolvedValue(2);
+    clickPullAll(el);
+    await waitFor(() => toasts.some((t) => t.msg.includes("拉取完成，共")));
+    expect(toasts.some((t) => t.msg.includes("上一次同步尚未结束"))).toBe(false);
+  });
+
+  it("busy 拒收必须可见（批D：原实现静默 return，点另一个按钮零反馈）", async () => {
+    const { PullResourceFromInstance } = await import(
+      "../../../bindings/ysm-model-manager/internal/app/app.js"
+    );
+    // 拉取挂起 → 共用的 _syncLock 被占住（本用例只需它保持占用，故永不移交）
+    (PullResourceFromInstance as ReturnType<typeof vi.fn>).mockImplementation(
+      () => new Promise(() => {}),
+    );
+    const el = await mountSidebar();
+    checkFirst(el);
+    clickPullAll(el);
+    await sleep(0); // 让入闸与首个 await 落地（锁在 beginSync 内同步抢到）
+
+    // 共用锁被占 → 点推送应给出「上一次同步尚未结束」提示，而非静默无反应
+    clickPushAll(el);
+    await waitFor(() => toasts.some((t) => t.msg.includes("上一次同步尚未结束")));
   });
 });
 

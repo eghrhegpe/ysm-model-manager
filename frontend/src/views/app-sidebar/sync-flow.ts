@@ -164,8 +164,16 @@ function beginSync(
     return null;
   }
   // ADR-341 归一：tryStart 原子抢锁（判空提示在前——顺序语义与原实现一致：
-  // 空选择在先、busy 拒收在后），拒收即静默 return（按钮 loading 态就是可见反馈）
-  if (!lock.tryStart()) return null;
+  // 空选择在先、busy 拒收在后）。
+  // 批D 修正：原实现 busy 时静默 return，注释称「按钮 loading 态就是可见反馈」——
+  // 但 loading 赋值发生在本 return **之后**，且锁是 push/pull **共用**的：点另一个按钮
+  // 时那个按钮根本不会进 loading，用户只看到「点了没反应」。更糟的是拉取侧原先没有
+  // 超时（binding 挂起会把锁永久占住），静默拒收会让整个同步入口看起来彻底坏掉。
+  // 故改为如实提示（toast 是唯一能覆盖「两个按钮 + 共用锁」的反馈面）。
+  if (!lock.tryStart()) {
+    toast(t("sidebar.syncBusy", { verb }), TOAST_MS.normal, "info");
+    return null;
+  }
   closeAllMenus();
   btn.innerHTML = UI_ICONS.refresh;
   btn.disabled = true;
@@ -360,7 +368,12 @@ async function runPush(
   }
 }
 
-/** 拉取主流程：并行拉取各类型资源，计数成功/失败 → 汇总 toast + 刷新统计与树 */
+/** 拉取主流程：并行拉取各类型资源，计数成功/失败 → 汇总 toast + 刷新统计与树。
+ *  ⚠️ 每个整合包一次 withTimeout（批D：原实现**完全无超时**）——binding 挂起会让
+ *  `Promise.allSettled` 永不 settle → await 不返回 → finally 不执行 → `_syncLock` 被
+ *  **永久占住**，此后所有推送/拉取都被 beginSync 拒收（那条路此前还是静默的）。
+ *  超时语义与推送**同口径**（ADR-340：直调下唯一的不收口成因就是 binding 挂起，
+ *  续发只会让后续整合包全撞挂起）：早停循环 + 如实计入 timedOut。 */
 async function runPull(
   selected: string[],
   types: string[],
@@ -369,6 +382,7 @@ async function runPull(
 ): Promise<void> {
   let totalPulled = 0;
   let failed = 0;
+  let timedOut = 0;
   try {
     const { PullResourceFromInstance } = await backendGetApp();
     for (let ii = 0; ii < selected.length; ii++) {
@@ -378,16 +392,28 @@ async function runPull(
         i: ii + 1,
         n: selected.length,
       })}`;
-      const results = await Promise.allSettled(
-        types.map((rt) => PullResourceFromInstance(rt, insName)),
-      );
-      for (const r of results) {
-        if (r.status === "fulfilled") totalPulled += r.value;
-        else failed++;
+      try {
+        const results = await withTimeout(
+          Promise.allSettled(types.map((rt) => PullResourceFromInstance(rt, insName))),
+          SYNC_TIMEOUT_MS,
+          `拉取 ${insName}`,
+        );
+        for (const r of results) {
+          if (r.status === "fulfilled") totalPulled += r.value;
+          else failed++;
+        }
+      } catch (e) {
+        if (e instanceof TimeoutError) {
+          timedOut++;
+          break; // 早停：真实计数保留，未跑整合包既非成功也非失败
+        }
+        throw e;
       }
     }
-    if (failed > 0) {
-      toast(t("sidebar.pullDone", { pulled: totalPulled, failed }), TOAST_MS.normal, "warn");
+    if (failed > 0 || timedOut > 0) {
+      const parts = [t("sidebar.pullDone", { pulled: totalPulled, failed })];
+      if (timedOut > 0) parts.push(t("sidebar.pullTimedOutStopped", { n: timedOut }));
+      toast(parts.join("，"), TOAST_MS.normal, "warn");
     } else if (totalPulled > 0) {
       toast(t("sidebar.pullDoneAll", { n: totalPulled }), TOAST_MS.info, "success");
     } else {
@@ -399,7 +425,7 @@ async function runPull(
     toast(t("sidebar.pullFailed", { msg: friendlyError(err) }), TOAST_MS.normal, "error");
   } finally {
     resetButton(pullBtn, "pull");
-    lock.finish();
+    lock.finish(); // 批D：超时也必须走到这里（原无超时时 binding 挂起 = 锁永久占用）
   }
 }
 

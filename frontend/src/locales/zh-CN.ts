@@ -794,6 +794,8 @@ export const zhCN = {
   "sidebar.pushFailed": "推送失败: {msg}",
   "sidebar.pullDoneAll": "拉取完成，共 {n} 个文件（已复制到仓库，此后与整合包各自独立）",
   "sidebar.pullDone": "拉取完成: {pulled} 个文件, {failed} 个失败",
+  "sidebar.pullTimedOutStopped": "{n} 个整合包拉取超时，已停止后续拉取",
+  "sidebar.syncBusy": "上一次同步尚未结束，已忽略本次{verb}，请稍候再试",
   "sidebar.pullNothing": "📭 没有可拉取的文件（实例中无多余资源）",
   "sidebar.pullFailed": "拉取失败: {msg}",
   // 锐评 P3 止血（2026-10-14）：skipped/timeout 的计数单位是**类型批次**（runPush 按

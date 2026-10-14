@@ -177,6 +177,23 @@ getApp().GetInstanceSyncStatus(instance, subtype, rtype)
   → finally：按钮复位 + _syncLock.finish()
 ```
 
+**sidebar 整包拉取链（批D 与推送对齐，2026-10-14 锐评）**：
+```
+用户点击 pull 菜单项
+  → beginSync（同上：取 selected + _syncLock.tryStart + 按钮 loading）
+  → runPull（按整合包循环）
+    → for ins in selected
+       → await withTimeout(Promise.allSettled(types.map(rt => PullResourceFromInstance(rt, ins))), 120s)
+         // ⚠️ 原实现**完全没有** withTimeout：binding 挂起 → allSettled 永不 settle
+         // → await 不返回 → finally 不执行 → _syncLock 被**永久占住**，此后所有
+         // 推送/拉取都被拒收（而那条拒收此前还是静默的）
+       → fulfilled 累加 pulled、rejected 计 failed；超时计 timedOut 并 **break 早停**
+    → 汇总一条 toast（超时段追加「N 个整合包拉取超时，已停止后续拉取」）
+  → finally：按钮复位 + _syncLock.finish()（超时也必须走到这里）
+```
+
+**busy 拒收必须可见（批D）**：`beginSync` 在 `lock.tryStart()` 失败时弹 `sidebar.syncBusy` 提示，不再静默 return——原注释称「按钮 loading 态就是可见反馈」不成立：loading 赋值发生在本 return **之后**，且锁是 push/pull **共用**的，点另一个按钮时那个按钮根本不会进 loading（叠加「拉取无超时可永久占锁」，用户会以为同步入口彻底坏了）。回归锁 `app-sidebar.sync.test.ts`「拉取 binding 挂起 → 超时早停 + 锁释放 + 如实计入」与「busy 拒收必须可见」
+
 ## 关键 bus 事件
 
 | 事件 | 方向 | 说明 |

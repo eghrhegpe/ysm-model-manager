@@ -14,7 +14,7 @@
 
 // R2 导入增强：ZIP 解压（extractZip 解出文件；文件名以 fflateKey 入库——
 // 前端无 GBK 码表，非 UTF-8 中文名降级透传 fflateKey，数据访问不受影响）
-import { extractZip } from "@/parsers/extract.ts";
+import { extractZip, type ZipEntryMeta } from "@/parsers/extract.ts";
 import { type IdbOp, idbDel, idbGet, idbTx } from "./idb.ts";
 import { MAX_IMPORT_BYTES } from "./web-common.ts";
 import { dirKey, fileKey, MAIN_FILE_RANK_TYPE, mainFileRank } from "./web-fs-shared.ts";
@@ -61,6 +61,64 @@ function sanitizeZipEntryPath(name: string): string | null {
  *   均非主文件扩展名）→ 保留原 zip 整体当主文件（救回 resourcepack/shaderpack 导入，
  *   原实现整组 failed imported=0）
  */
+/** 清洗后条目：fflateKey 已 sanitize，_meta 保留原 meta 供后续读取 */
+type SanitizedZipMeta = { fflateKey: string; _meta: ZipEntryMeta };
+
+/** 清洗 zip 内条目路径并过滤空键（恶意 `..` 段先清洗再判公共前缀） */
+function sanitizeZipMetas(metas: ZipEntryMeta[]): SanitizedZipMeta[] {
+  return metas
+    .map((m) => {
+      // 文件名以 fflateKey 原值入库（前端无 GBK 码表，非 UTF-8 中文名降级透传）
+      return { fflateKey: sanitizeZipEntryPath(m.fflateKey) ?? "", _meta: m };
+    })
+    .filter((m) => m.fflateKey !== "");
+}
+
+/** 把 zip entries 展开为带 webkitRelativePath 的 File[] */
+function buildZipExpandedFiles(
+  entries: Record<string, Uint8Array>,
+  sanitizedMetas: SanitizedZipMeta[],
+  prefix: string,
+): File[] {
+  const expanded: File[] = [];
+  for (const sm of sanitizedMetas) {
+    const m = sm._meta;
+    const raw = entries[m.fflateKey];
+    if (!raw) continue;
+    const sanitized = sm.fflateKey; // 已清洗路径
+    // webkitRelativePath：有公共前缀则保留原样；扁平 zip 用 zipStem 作公共前缀
+    // slice() 两用：① TS 泛型 Uint8Array<ArrayBufferLike>→Uint8Array<ArrayBuffer> 过 BlobPart 类型关；
+    // ② 隔离 entries[m.fflateKey] 底层 buffer，防 File 与 entries 共享后被改写（内容竞态）
+    const wf = new File([raw.slice()], sanitized.split("/").pop() || sanitized, {
+      type: "application/octet-stream",
+    });
+    Object.defineProperty(wf, "webkitRelativePath", {
+      value: prefix ? `${prefix}/${sanitized}` : sanitized,
+    });
+    expanded.push(wf);
+  }
+  return expanded;
+}
+
+/** GBK 中文名降级提示：gpf 未设时 fflateKey 为 Latin-1 乱码 */
+function warnNonUtf8ZipNames(metas: ZipEntryMeta[]): void {
+  if (metas.length > 0 && metas.some((m) => !m.gpfUtf8)) {
+    console.warn(
+      "[web] ZIP 含非 UTF-8 文件名（可能为 GBK），解压后文件名以 fflateKey 原值入库（中文可能乱码）",
+    );
+  }
+}
+
+/**
+ * R2 导入增强：把输入里的 .zip 文件解压展平成目录文件，返回新的 File[]。
+ * - .zip → extractZip 解出 entries（带相对路径），转成带 webkitRelativePath 的 File[]，
+ *   复用文件夹拖入的「同 stem 分组 + 主文件目录收敛」语义，rel 保留子目录层级
+ * - 非 .zip / .ysm → 原样透传（.ysm 保持整体，WASM 解码器直接处理）
+ * - 解压失败（非标准 zip / 超限）→ 保留原 zip 单个文件（走「zip 当主文件」兜底），不阻断
+ * - ADR-066 审计缺口 #3：解压后**无主文件**（如资源包 zip 解出 pack.mcmeta + data/，
+ *   均非主文件扩展名）→ 保留原 zip 整体当主文件（救回 resourcepack/shaderpack 导入，
+ *   原实现整组 failed imported=0）
+ */
 async function expandZipFiles(files: File[]): Promise<File[]> {
   const out: File[] = [];
   for (const f of files) {
@@ -77,49 +135,22 @@ async function expandZipFiles(files: File[]): Promise<File[]> {
       }
       // 安全审计：先用 sanitizeZipEntryPath 清洗路径，再判断公共前缀
       // 避免恶意 zip 的 `..` 段干扰 findCommonTopDir（CodeReview 第五轮发现）
-      const sanitizedMetas = metas
-        .map((m) => {
-          // 文件名以 fflateKey 原值入库（前端无 GBK 码表，非 UTF-8 中文名降级透传）
-          return { fflateKey: sanitizeZipEntryPath(m.fflateKey) ?? "", _meta: m };
-        })
-        .filter((m) => m.fflateKey !== "");
+      const sanitizedMetas = sanitizeZipMetas(metas);
       // 检测 zip 内是否有公共顶层目录（如 "狐狸/ysm.json" → 公共前缀 "狐狸/"）
       // 扁平 zip（"ysm.json" + "models/main.json"）无公共前缀 → 用 zipStem 防碎片化
       const topLevelDir = findCommonTopDir(sanitizedMetas);
       const prefix = topLevelDir ? "" : f.name.replace(/\.zip$/i, "");
-      const expanded: File[] = [];
-      for (const sm of sanitizedMetas) {
-        const m = sm._meta;
-        const raw = entries[m.fflateKey];
-        if (!raw) continue;
-        const sanitized = sm.fflateKey; // 已清洗路径
-        // webkitRelativePath：有公共前缀则保留原样；扁平 zip 用 zipStem 作公共前缀
-        // slice() 两用：① TS 泛型 Uint8Array<ArrayBufferLike>→Uint8Array<ArrayBuffer> 过 BlobPart 类型关；
-        // ② 隔离 entries[m.fflateKey] 底层 buffer，防 File 与 entries 共享后被改写（内容竞态）
-        const wf = new File([raw.slice()], sanitized.split("/").pop() || sanitized, {
-          type: "application/octet-stream",
-        });
-        Object.defineProperty(wf, "webkitRelativePath", {
-          value: prefix ? `${prefix}/${sanitized}` : sanitized,
-        });
-        expanded.push(wf);
-      }
+      const expanded = buildZipExpandedFiles(entries, sanitizedMetas, prefix);
       // 解压空/无有效文件，或解压后无主文件（资源包/光影包 zip）→ 保留原 zip 整体当主文件
-      if (
+      const keepAsWhole =
         expanded.length === 0 ||
-        !expanded.some((wf) => mainFileRank(wf.name) >= MAIN_FILE_RANK_TYPE)
-      ) {
+        !expanded.some((wf) => mainFileRank(wf.name) >= MAIN_FILE_RANK_TYPE);
+      if (keepAsWhole) {
         out.push(f);
       } else {
         out.push(...expanded);
       }
-      // GBK 中文名降级提示：gpf 未设时 fflateKey 为 Latin-1 乱码，
-      // 前端无 GBK 码表无法解码真名——仅提示，用户端用 modelPath 不影响预览
-      if (metas.length > 0 && metas.some((m) => !m.gpfUtf8)) {
-        console.warn(
-          "[web] ZIP 含非 UTF-8 文件名（可能为 GBK），解压后文件名以 fflateKey 原值入库（中文可能乱码）",
-        );
-      }
+      warnNonUtf8ZipNames(metas);
     } catch {
       out.push(f); // 解压失败 → 降级为整体入库，不阻断
     }

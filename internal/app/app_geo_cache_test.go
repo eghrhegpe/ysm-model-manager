@@ -284,3 +284,22 @@ func TestGeoCache_ClearResetsBookkeeping(t *testing.T) {
 		t.Errorf("Clear 后记账字段应全复位，实际 total=%d head=%d order=%d", c.totalBytes, c.head, len(c.order))
 	}
 }
+
+// TestGeoCacheEntryBytes_CountsAllBuckets: 成本估算计全部 base64 纹理桶 + 骨骼/动画条目粗计
+// （单调性契约：预算是量级控制，成本函数只要求单调稳定；本测试锁定各桶都计入）
+func TestGeoCacheEntryBytes_CountsAllBuckets(t *testing.T) {
+	m := types.BedrockModel{
+		Texture:           strings.Repeat("t", 10),
+		Textures:          []string{strings.Repeat("a", 20), strings.Repeat("b", 30)},
+		ComponentTextures: map[string][]string{"arm": {strings.Repeat("c", 40)}},
+		Bones:             make([]types.Bone2D, 2),
+		Animations:        []string{"anim"},
+	}
+	want := 10 + 20 + 30 + 40 + 2*256 + 1*1024 // 纹理精确 + 骨骼/动画粗计
+	if got := geoCacheEntryBytes(m); got != want {
+		t.Errorf("成本应计入全部纹理桶与骨骼/动画粗计，want=%d got=%d", want, got)
+	}
+	if got := geoCacheEntryBytes(fakeModel(1)); got != 0 {
+		t.Errorf("无纹理的空几何结果成本应为 0，got=%d", got)
+	}
+}

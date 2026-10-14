@@ -32,6 +32,15 @@ export function createVirtualList<T>(opts: VirtualListOpts<T>): VirtualList<T> {
   const { scrollEl, listEl, rowH, renderItem, renderEmpty } = opts;
   let items: T[] = [];
   let cleanupScroll: (() => void) | null = null;
+  /** 零高度兜底的在途 rAF 重试句柄（见 refresh 注释；destroy/正常分支须取消防幽灵渲染） */
+  let retryPending: number | null = null;
+
+  const cancelPendingRetry = (): void => {
+    if (retryPending !== null) {
+      cancelAnimationFrame(retryPending);
+      retryPending = null;
+    }
+  };
 
   /** 列表在滚动内容中的顶部偏移（列表上方有 header/队列状态等区块时） */
   const listTopOffset = (): number =>
@@ -58,9 +67,15 @@ export function createVirtualList<T>(opts: VirtualListOpts<T>): VirtualList<T> {
 
   const refresh = (next: T[]): void => {
     items = next;
-    // 零高度（jsdom/首帧）或数据量小 → 全量渲染，跳过虚拟化
+    // 零高度（jsdom/首帧/面板尚未布局）→ 全量渲染兜底（锐评修复，2026-10-14：补 rAF 重试）。
+    // 病：原实现只降级、不重试——零高度时全量渲染**且不装滚动同步**，此后该视图的虚拟化
+    // 永久失效（直到下一次 refresh 才可能恢复）。面板在隐藏状态被创建/首次进页布局未完成
+    // 时命中此分支，2000 级列表就整体进 DOM，抹掉本模块存在的意义。
+    // 与 app-tree/render.ts 对齐：那一侧早有 `if (container.clientHeight === 0) requestAnimationFrame(redraw)`
+    // ——同一「定高虚拟列表」前提下的两个消费方，行为不该一边有一边无。
     if (scrollEl.clientHeight === 0 || items.length <= FULL_RENDER_THRESHOLD) {
       disposeScroll();
+      cancelPendingRetry();
       listEl.style.paddingTop = "";
       listEl.style.paddingBottom = "";
       if (!items.length) {
@@ -70,14 +85,25 @@ export function createVirtualList<T>(opts: VirtualListOpts<T>): VirtualList<T> {
         for (const item of items) frag.appendChild(renderItem(item));
         listEl.replaceChildren(frag);
       }
+      // 仅「零高度」值得赌下一帧（低行数分支是终态，重试无意义）；
+      // 重试时若高度仍为 0（jsdom 恒 0）再走一次同分支、不再递归排队——
+      // 由 retryPending 守卫保证至多一次在途重试，jsdom 下不会空转。
+      if (scrollEl.clientHeight === 0 && items.length > FULL_RENDER_THRESHOLD) {
+        retryPending = requestAnimationFrame(() => {
+          retryPending = null;
+          refresh(items);
+        });
+      }
       return;
     }
+    cancelPendingRetry();
     if (!cleanupScroll) cleanupScroll = installScrollSync(scrollEl, renderSlice);
     renderSlice();
   };
 
   const destroy = (): void => {
     disposeScroll();
+    cancelPendingRetry(); // 防销毁后 rAF 迟到回调重填 DOM（幽灵渲染）
     listEl.replaceChildren();
   };
 

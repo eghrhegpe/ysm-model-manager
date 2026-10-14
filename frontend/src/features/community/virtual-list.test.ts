@@ -22,7 +22,9 @@ const HEADER = 0;
 function makeScroll(scrollTop: number, clientHeight: number) {
   const scrollEl = document.createElement("div");
   Object.defineProperty(scrollEl, "scrollTop", { value: scrollTop, writable: true });
-  Object.defineProperty(scrollEl, "clientHeight", { value: clientHeight });
+  // configurable: true —— 供「零高度 → 下一帧布局就绪」用例改写高度
+  //（模拟首帧 clientHeight=0、下一帧变 560 的真实时序）
+  Object.defineProperty(scrollEl, "clientHeight", { value: clientHeight, configurable: true });
   const listEl = document.createElement("div");
   const mockRect = (top: number): DOMRect =>
     ({ top, bottom: top, left: 0, right: 0, width: 0, height: 0, x: 0, y: 0, toJSON: () => ({}) }) as DOMRect;
@@ -59,6 +61,43 @@ describe("createVirtualList", () => {
     expect(listEl.childElementCount).toBe(100);
     expect(listEl.style.paddingTop).toBe("");
     expect(listEl.style.paddingBottom).toBe("");
+  });
+
+  // 锐评修复（2026-10-14）：零高度必须 rAF 重试，不能只降级。
+  // 病：原实现零高度时全量渲染**且不装滚动同步**——此后该视图虚拟化永久失效
+  //（直到下一次 refresh 才可能恢复）。面板在隐藏态被创建/首帧布局未完成时命中此分支，
+  // 2000 级列表整体进 DOM，抹掉本模块存在的意义。
+  // 与 app-tree/render.ts 对齐：那一侧早有 `if (container.clientHeight === 0) requestAnimationFrame(redraw)`。
+  it("零高度 → 下一帧高度就绪后自动切回虚拟化（补 rAF 重试）", async () => {
+    const rows = items(1000);
+    const { scrollEl, listEl, vlist } = setup(0, 0, rows);
+    // 首帧零高度：全量兜底
+    vlist.refresh(rows);
+    expect(listEl.childElementCount).toBe(1000);
+
+    // 模拟布局就绪：下一帧高度变为 560
+    Object.defineProperty(scrollEl, "clientHeight", { value: 560, configurable: true });
+    await new Promise((r) => requestAnimationFrame(() => r(null)));
+    await new Promise((r) => requestAnimationFrame(() => r(null)));
+
+    // 必须已切回虚拟化：DOM 行数骤降 + padding 撑高
+    expect(listEl.childElementCount).toBeLessThan(60);
+    expect(listEl.style.paddingBottom).toMatch(/^\d+px$/);
+  });
+
+  it("destroy 取消在途 rAF 重试（不留幽灵渲染）", async () => {
+    const rows = items(1000);
+    const { scrollEl, listEl, vlist } = setup(0, 0, rows);
+    vlist.refresh(rows);
+    expect(listEl.childElementCount).toBe(1000);
+
+    vlist.destroy();
+    expect(listEl.childElementCount).toBe(0);
+    // 高度就绪 + 帧推进：已销毁的列表不得再被重试回调填充
+    Object.defineProperty(scrollEl, "clientHeight", { value: 560, configurable: true });
+    await new Promise((r) => requestAnimationFrame(() => r(null)));
+    await new Promise((r) => requestAnimationFrame(() => r(null)));
+    expect(listEl.childElementCount).toBe(0);
   });
 
   it("数据量小（≤阈值）→ 全量渲染", () => {

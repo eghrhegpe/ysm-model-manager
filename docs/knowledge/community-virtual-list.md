@@ -65,7 +65,7 @@ status: active
 ## 不变量
 
 - **定高前提**：`rowH` 固定（含 padding / margin）；不等高布局不适用。
-- **零高度降级**：`scrollEl.clientHeight === 0`（jsdom / 首帧）→ 全量渲染，跳过虚拟化。
+- **零高度降级 + rAF 重试**（锐评修复，2026-10-14）：`scrollEl.clientHeight === 0`（jsdom / 首帧 / 面板在隐藏态创建）→ 全量渲染跳过虚拟化，**并排一次 `requestAnimationFrame` 重试**——下一帧布局就绪即自动切回虚拟化。⚠️ **历史缺陷**：原实现只降级不重试，零高度时全量渲染**且不装滚动同步**，此后该视图虚拟化**永久失效**（直到下一次 `refresh` 才可能恢复）——2000 级列表整体进 DOM，抹掉本模块存在的意义。**与 `views/app-tree/render.ts` 对齐**：那一侧早有 `if (container.clientHeight === 0) requestAnimationFrame(redraw)`，同一「定高虚拟列表」前提下的两个消费方不该一边有一边无。重试有 `retryPending` 在途守卫（至多一次，jsdom 恒 0 高度下不空转），`destroy()` 必 `cancelPendingRetry()`（防销毁后 rAF 迟到回调重填 DOM = 幽灵渲染）。回归锁：`virtual-list.test.ts`「零高度 → 下一帧高度就绪后自动切回虚拟化」+「destroy 取消在途 rAF 重试」，均变异验证；测试夹具 `clientHeight` 须 `configurable: true` 才能改写（模拟首帧 0 → 次帧 560 的真实时序）
 - **小数据集阈值**：`FULL_RENDER_THRESHOLD`（定值）；低于此值不值得虚拟化，直接全量渲染。
 - **占位式窗口化**：`paddingTop = startIdx * rowH`，`paddingBottom = (total - endIdx) * rowH`；DOM 常驻仅可见切片。
 - **listTopOffset 补偿**：列表上方有 header / 队列状态等区块时自动补偿偏移（`getBoundingClientRect` 差值 + scrollTop）。

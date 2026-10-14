@@ -32,37 +32,138 @@ export interface YsmModelStats {
 
 /** 统计聚合（纯函数，供 schema builder 消费） */
 export function ysmModelStats(spec: Spec3D, rawIdx: number): YsmModelStats {
+  const { bones, cubes } = rawIdx < 0 ? aggregateAllModels(spec) : aggregateModel(spec, rawIdx);
+  return { bones, cubes, compName: modelNameAt(spec, rawIdx < 0 ? 0 : rawIdx) };
+}
+
+/** All（-1）分支：跨全部模型累加骨骼/立方体 */
+function aggregateAllModels(spec: Spec3D): { bones: number; cubes: number } {
   let bones = 0;
   let cubes = 0;
-  if (rawIdx < 0) {
-    for (const m of spec.models || []) {
-      const mm = m as { bones?: Array<{ _cubeCount?: number }> };
-      bones += mm.bones?.length || 0;
-      for (const b of mm.bones || []) cubes += b._cubeCount || 0;
-    }
-  } else {
-    const mm = spec.models?.[rawIdx] as { bones?: Array<{ _cubeCount?: number }> } | undefined;
-    bones = mm?.bones?.length || 0;
-    for (const b of mm?.bones || []) cubes += b._cubeCount || 0;
+  for (const m of spec.models || []) {
+    const mm = m as { bones?: Array<{ _cubeCount?: number }> };
+    bones += mm.bones?.length || 0;
+    for (const b of mm.bones || []) cubes += b._cubeCount || 0;
   }
-  const eff = rawIdx < 0 ? 0 : rawIdx;
+  return { bones, cubes };
+}
+
+/** 单组件分支：仅聚合 rawIdx 指向的模型 */
+function aggregateModel(spec: Spec3D, rawIdx: number): { bones: number; cubes: number } {
+  const mm = spec.models?.[rawIdx] as { bones?: Array<{ _cubeCount?: number }> } | undefined;
+  let cubes = 0;
+  for (const b of mm?.bones || []) cubes += b._cubeCount || 0;
+  return { bones: mm?.bones?.length || 0, cubes };
+}
+
+/** 组件名（缺省 "main"） */
+function modelNameAt(spec: Spec3D, eff: number): string {
   const mg = spec.models?.[eff] as { name?: string; id?: string } | undefined;
-  return { bones, cubes, compName: mg?.name || mg?.id || "main" };
+  return mg?.name || mg?.id || "main";
 }
 
 /** 当前组件纹理槽位（meshGroups.texIdx 去重；缺省回退全部声明纹理） */
 export function ysmModelTextureSlots(spec: Spec3D, rawIdx: number, texCount: number): number[] {
   const eff = rawIdx < 0 ? 0 : rawIdx;
   const mg = spec.models?.[eff] as { meshGroups?: Array<{ texIdx?: number }> } | undefined;
+  const slots = collectUsedSlots(mg, texCount);
+  if (mg && slots.length === 0 && texCount > 0) return fillAllSlots(texCount);
+  return slots;
+}
+
+/** meshGroups.texIdx 在声明范围内的去重槽位 */
+function collectUsedSlots(
+  mg: { meshGroups?: Array<{ texIdx?: number }> } | undefined,
+  texCount: number,
+): number[] {
   const slots: number[] = [];
   for (const msh of mg?.meshGroups || []) {
     const s = msh.texIdx;
     if (typeof s === "number" && s >= 0 && s < texCount && !slots.includes(s)) slots.push(s);
   }
-  if (mg && slots.length === 0 && texCount > 0) {
-    for (let i = 0; i < texCount; i++) slots.push(i);
-  }
   return slots;
+}
+
+/** 缺省回退：全部声明槽位 */
+function fillAllSlots(texCount: number): number[] {
+  const slots: number[] = [];
+  for (let i = 0; i < texCount; i++) slots.push(i);
+  return slots;
+}
+
+/** schema builder 上下文（model/spec/texArr） */
+type BuildCtx = {
+  model: PanelModel;
+  spec: Spec3D;
+  texArr: import("three").Texture[];
+};
+
+/** 纹理声明尺寸文案（未声明 → "?"） */
+function declText(spec: Spec3D, rawIdx: number): string {
+  const declM = spec.models?.[rawIdx < 0 ? 0 : rawIdx] as
+    | { textureWidth?: number; textureHeight?: number }
+    | undefined;
+  return typeof declM?.textureWidth === "number" && typeof declM?.textureHeight === "number"
+    ? `${declM.textureWidth}×${declM.textureHeight}`
+    : "?";
+}
+
+/** 纹理行名：声明名 → 路径基名 → 兜底「纹理 N」 */
+function textureRowName(model: PanelModel, s: number): string {
+  return (
+    model.textureNames?.[s] ||
+    model.textures?.[s]
+      ?.split(/[/\\]/)
+      .pop()
+      ?.replace(/\.[^.]+$/, "") ||
+    t("preview.texture.fallback", { n: s + 1 }) // [D2 i18n] 硬编码兜底名「纹理 N」→翻译键
+  );
+}
+
+/** 已加载纹理尺寸文案（无 userData → "?"） */
+function textureLoadedSize(tex: import("three").Texture): string {
+  const ud = (tex as unknown as { userData?: { imgWidth?: unknown; imgHeight?: unknown } })
+    ?.userData;
+  const w = typeof ud?.imgWidth === "number" ? ud.imgWidth : null;
+  const h = typeof ud?.imgHeight === "number" ? ud.imgHeight : null;
+  return w !== null && h !== null ? `${w}×${h}` : "?";
+}
+
+/** 专属纹理行（componentTextures[compName] 命中，ADR-114 回归语义） */
+function buildExclusiveRows(
+  nodes: PreviewMenuNode[],
+  compName: string,
+  exclusive: string[],
+  decl: string,
+): void {
+  exclusive.forEach((_uri, k) => {
+    nodes.push({
+      id: `ysm-tex-ex-${k}`,
+      kind: "row",
+      label: `${compName}${exclusive.length > 1 ? ` #${k + 1}` : ""}`,
+      value: `${t("preview.pack.textures")} ${t("preview.texture.declaration", { decl })}`, // [D2 i18n] 硬编码「专属纹理 声明 X」→双翻译键
+    });
+  });
+}
+
+/** 全局槽位纹理行（meshGroups.texIdx 去重槽） */
+function buildSlotRows(
+  nodes: PreviewMenuNode[],
+  ctx: BuildCtx,
+  slots: number[],
+  decl: string,
+): void {
+  for (const s of slots) {
+    const name = textureRowName(ctx.model, s);
+    const cat = ctx.model.textureCategories?.[s] || "";
+    nodes.push({
+      id: `ysm-tex-${s}`,
+      kind: "row",
+      label: name,
+      // [D2 i18n] 硬编码「声明 X · 加载 Y」→双翻译键（cat 为数据值原样保留）
+      value: `${cat ? `${cat} · ` : ""}${t("preview.texture.declaration", { decl })} · ${t("preview.texture.loaded", { size: textureLoadedSize(ctx.texArr[s]) })}`,
+    });
+  }
 }
 
 /**
@@ -73,11 +174,7 @@ export function ysmModelTextureSlots(spec: Spec3D, rawIdx: number, texCount: num
  *   组件切换副作用（showModelGroup）由 views 层 registerModelSchema 闭包驱动（本函数只产出节点）。
  */
 export function buildYsmModelSchema(
-  ctx: {
-    model: PanelModel;
-    spec: Spec3D;
-    texArr: import("three").Texture[];
-  },
+  ctx: BuildCtx,
   _snapshot: Partial<PreviewSnapshot>,
   sessionActiveComponent?: { get: () => number; set: (n: number) => void },
 ): PreviewMenuNode[] {
@@ -120,48 +217,13 @@ export function buildYsmModelSchema(
   // 纹理行（当前组件绑定）
   // [doc:adr-126-p5] ADR-114 专属纹理回归（P5-A review P2）：componentTextures[compName] 命中
   // → 渲染专属纹理行（对齐旧 fillPanelComponent 语义），否则走全局槽（meshGroups.texIdx 去重）
+  const decl = declText(ctx.spec, rawIdx);
   const compTex = (ctx.spec as { componentTextures?: Record<string, string[]> }).componentTextures;
-  const declM = ctx.spec.models?.[rawIdx < 0 ? 0 : rawIdx] as
-    | { textureWidth?: number; textureHeight?: number }
-    | undefined;
-  const decl =
-    typeof declM?.textureWidth === "number" && typeof declM?.textureHeight === "number"
-      ? `${declM.textureWidth}×${declM.textureHeight}`
-      : "?";
   const exclusive = rawIdx >= 0 && rawIdx < mgCount ? compTex?.[compName] : undefined;
   if (exclusive?.length) {
-    exclusive.forEach((_uri, k) => {
-      nodes.push({
-        id: `ysm-tex-ex-${k}`,
-        kind: "row",
-        label: `${compName}${exclusive.length > 1 ? ` #${k + 1}` : ""}`,
-        value: `${t("preview.pack.textures")} ${t("preview.texture.declaration", { decl })}`, // [D2 i18n] 硬编码「专属纹理 声明 X」→双翻译键
-      });
-    });
+    buildExclusiveRows(nodes, compName, exclusive, decl);
   } else {
-    for (const s of slots) {
-      const tex = ctx.texArr[s];
-      const name =
-        ctx.model.textureNames?.[s] ||
-        ctx.model.textures?.[s]
-          ?.split(/[/\\]/)
-          .pop()
-          ?.replace(/\.[^.]+$/, "") ||
-        t("preview.texture.fallback", { n: s + 1 }); // [D2 i18n] 硬编码兜底名「纹理 N」→翻译键
-      const cat = ctx.model.textureCategories?.[s] || "";
-      const ud = (tex as unknown as { userData?: { imgWidth?: unknown; imgHeight?: unknown } })
-        ?.userData;
-      const w = typeof ud?.imgWidth === "number" ? ud.imgWidth : null;
-      const h = typeof ud?.imgHeight === "number" ? ud.imgHeight : null;
-      const size = w !== null && h !== null ? `${w}×${h}` : "?";
-      nodes.push({
-        id: `ysm-tex-${s}`,
-        kind: "row",
-        label: name,
-        // [D2 i18n] 硬编码「声明 X · 加载 Y」→双翻译键（cat 为数据值原样保留）
-        value: `${cat ? `${cat} · ` : ""}${t("preview.texture.declaration", { decl })} · ${t("preview.texture.loaded", { size })}`,
-      });
-    }
+    buildSlotRows(nodes, ctx, slots, decl);
   }
 
   return nodes;

@@ -4,7 +4,7 @@
 
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
-import { downloadMissing } from "@/features/sync/sync.ts";
+import { type DownloadOutcome, downloadMissing } from "@/features/sync/sync.ts";
 import { TimeoutError, withTimeout } from "@/utils/base/primitives/async.ts";
 import type { BusyLock } from "@/utils/base/primitives/lock.ts";
 import { initDropdown } from "@/utils/dom/dropdown.ts";
@@ -35,6 +35,13 @@ function checkedSetFor(rtype: string, getCheckedSets: () => Map<string, Set<stri
  *  真挂起时早停是唯一诚实处置）。晚到的 downloadMissing 结果无人消费（Promise 已
  *  settle 后二次结算为 no-op），错误经 withTimeout 内 swallowError 兜底。 */
 const SYNC_TIMEOUT_MS = 120_000;
+
+/** 失败明细汇总上限（锐评 UX 高项收口，2026-10-14）：各类型内部已限 3 条，
+ *  跨类型再限一次防 15 类型累积成超长 toast。 */
+const MAX_TOTAL_ERRORS = 5;
+
+/** 失败包点名上限（P1-3）：「A(3)、B(1) 等」比一长串更有指导性 */
+const MAX_NAMED_PACKS = 3;
 
 // ---------- bindSelectAll ----------
 /**
@@ -209,6 +216,91 @@ function handleSyncMenuClick(
   }
 }
 
+/** 推送累计态：文件级计数 + 失败明细 + 包级归因 + skipped 分流 */
+interface PushAccum {
+  skipped: number;
+  blocked: number;
+  timedOut: number;
+  installOk: number;
+  installFail: number;
+  errorDetails: string[];
+  packTotals: Map<string, { ok: number; fail: number }>;
+}
+
+/** 单类型批次结果归并：文件级计数 + 失败明细（限 MAX_TOTAL_ERRORS）+ 包级累加 + skipped 归因分流 */
+function absorbOutcome(outcome: DownloadOutcome, accum: PushAccum): void {
+  accum.installOk += outcome.ok;
+  accum.installFail += outcome.fail;
+  for (const msg of outcome.errors ?? []) {
+    if (accum.errorDetails.length < MAX_TOTAL_ERRORS) accum.errorDetails.push(msg);
+  }
+  for (const p of outcome.packs ?? []) {
+    const cur = accum.packTotals.get(p.name) ?? { ok: 0, fail: 0 };
+    cur.ok += p.ok;
+    cur.fail += p.fail;
+    accum.packTotals.set(p.name, cur);
+  }
+  if (outcome.skipped) {
+    // 归因分流：busy = 他页同时在推（直调串行下自撞锁不再可能，仅剩跨页防御位）；
+    // config/error 各自有专门 toast（handler 已弹），汇总只如实计「未完成批次」，
+    // 不并进「被跳过（上一批同步未结束）」的错误归因文案
+    if (outcome.skipReason === "busy") accum.skipped++;
+    else accum.blocked++;
+  }
+}
+
+/** 失败包点名（P1-3）：只点有失败的包，按失败数降序（多类型累积后差距可见） */
+function buildFailedPacks(
+  packTotals: Map<string, { ok: number; fail: number }>,
+): Array<[string, { ok: number; fail: number }]> {
+  return [...packTotals.entries()]
+    .filter(([, v]) => v.fail > 0)
+    .sort((a, b) => b[1].fail - a[1].fail);
+}
+
+/** 汇总文案分段：安装失败 / 失败包点名（超 MAX_NAMED_PACKS 截断）/ 跳过阻塞超时 / 失败明细 */
+function buildPushParts(
+  accum: PushAccum,
+  failedPacks: Array<[string, { ok: number; fail: number }]>,
+): string[] {
+  const parts: string[] = [];
+  if (accum.installFail > 0) {
+    parts.push(t("sidebar.pushInstallFail", { fail: accum.installFail, ok: accum.installOk }));
+  }
+  if (failedPacks.length > 0) {
+    const named = failedPacks
+      .slice(0, MAX_NAMED_PACKS)
+      .map(([name, v]) => `${name}(${v.fail})`)
+      .join("、");
+    const more = failedPacks.length > MAX_NAMED_PACKS ? t("import.moreSuffix") : "";
+    parts.push(
+      t("sidebar.pushPackFailDetail", { n: failedPacks.length, names: `${named}${more}` }),
+    );
+  }
+  if (accum.skipped > 0) parts.push(t("sidebar.packSkipped", { n: accum.skipped }));
+  if (accum.blocked > 0) parts.push(t("sidebar.packBlocked", { n: accum.blocked }));
+  if (accum.timedOut > 0) parts.push(t("sidebar.packTimedOutStopped", { n: accum.timedOut }));
+  // 失败明细点名（锐评 UX 高项收口）：光有「失败 3」用户无从下手，附前若干条缘由
+  if (accum.errorDetails.length > 0) parts.push(accum.errorDetails.join("；"));
+  return parts;
+}
+
+/** 推送结果三分反馈：有异常项 → warn 汇总（MS.normal）；仅明细（缓存失效）→ warn（MS.verbose）；全成 → success */
+function showPushToast(accum: PushAccum, selectedCount: number, parts: string[]): void {
+  if (accum.skipped > 0 || accum.blocked > 0 || accum.timedOut > 0 || accum.installFail > 0) {
+    toast(t("sidebar.pushDone", { detail: parts.join("，") }), TOAST_MS.normal, "warn");
+  } else if (accum.errorDetails.length > 0) {
+    // 安装全成功但扫描缓存失效失败——用户仍需知情（装成功却等不到新模型是最困惑的反馈）
+    toast(
+      t("sidebar.pushDone", { detail: accum.errorDetails.join("；") }),
+      TOAST_MS.verbose,
+      "warn",
+    );
+  } else {
+    toast(t("sidebar.pushDoneAll", { n: selectedCount }), TOAST_MS.info, "success");
+  }
+}
+
 /** 推送主流程：按类型循环，每类型一次批量直调覆盖所有选中包（instanceNames）。
  *  原实现逐包×逐类型串行发事件，每事件触发一次全量状态扫描 → O(包×类型) 次 RPC；
  *  收敛为 O(类型) 次（ADR-310 性能修复 2026-10）；总线回执协议随 ADR-340 退役，
@@ -221,20 +313,15 @@ async function runPush(
   pushBtn: HTMLButtonElement,
   lock: BusyLock,
 ): Promise<void> {
-  let skipped = 0;
-  let blocked = 0;
-  let timedOut = 0;
-  let installOk = 0;
-  let installFail = 0;
-  // 失败明细汇总（锐评 UX 高项收口，2026-10-14）：原仅得「失败 N」一个数字，
-  // 用户无从知道是哪几个包/文件失败。现收集各类型返回的 errors[]（各类型内部已限 3 条，
-  // 跨类型再限一次防 15 类型累积成超长 toast）。
-  const errorDetails: string[] = [];
-  const MAX_TOTAL_ERRORS = 5;
-  // 包级归因（锐评 P1-3，2026-10-14）：跨类型累加每包成败——同一包在多个类型批次里各记一笔，
-  // 汇总是「这个包整体失败 N 个文件」。用户看到「失败 3」时能直接读到是哪个包。
-  const packTotals = new Map<string, { ok: number; fail: number }>();
-  const MAX_NAMED_PACKS = 3;
+  const accum: PushAccum = {
+    skipped: 0,
+    blocked: 0,
+    timedOut: 0,
+    installOk: 0,
+    installFail: 0,
+    errorDetails: [],
+    packTotals: new Map(),
+  };
   try {
     for (let ti = 0; ti < types.length; ti++) {
       const rt = types[ti];
@@ -250,64 +337,21 @@ async function runPush(
           SYNC_TIMEOUT_MS,
           `推送 ${rt}`,
         );
-        installOk += outcome.ok;
-        installFail += outcome.fail;
-        for (const msg of outcome.errors ?? []) {
-          if (errorDetails.length < MAX_TOTAL_ERRORS) errorDetails.push(msg);
-        }
-        for (const p of outcome.packs ?? []) {
-          const cur = packTotals.get(p.name) ?? { ok: 0, fail: 0 };
-          cur.ok += p.ok;
-          cur.fail += p.fail;
-          packTotals.set(p.name, cur);
-        }
-        if (outcome.skipped) {
-          // 归因分流：busy = 他页同时在推（直调串行下自撞锁不再可能，仅剩跨页防御位）；
-          // config/error 各自有专门 toast（handler 已弹），汇总只如实计「未完成批次」，
-          // 不并进「被跳过（上一批同步未结束）」的错误归因文案
-          if (outcome.skipReason === "busy") skipped++;
-          else blocked++;
-        }
+        absorbOutcome(outcome, accum);
       } catch (e) {
         if (e instanceof TimeoutError) {
-          timedOut++;
+          accum.timedOut++;
           break; // 早停：真实计数保留，未跑类型既非成功也非跳过
         }
         // downloadMissing 恒 settle 不 reject；走到这里 = 调用编排自身异常
         throw e;
       }
     }
-    // 失败包点名（P1-3）：只点有失败的包，按失败数降序（多类型累积后差距可见），
-    // 超量截断——「A(3)、B(1) 等」比一长串更有指导性
-    const failedPacks = [...packTotals.entries()]
-      .filter(([, v]) => v.fail > 0)
-      .sort((a, b) => b[1].fail - a[1].fail);
-    if (skipped > 0 || blocked > 0 || timedOut > 0 || installFail > 0) {
-      const parts: string[] = [];
-      if (installFail > 0)
-        parts.push(t("sidebar.pushInstallFail", { fail: installFail, ok: installOk }));
-      if (failedPacks.length > 0) {
-        const named = failedPacks
-          .slice(0, MAX_NAMED_PACKS)
-          .map(([name, v]) => `${name}(${v.fail})`)
-          .join("、");
-        const more = failedPacks.length > MAX_NAMED_PACKS ? t("import.moreSuffix") : "";
-        parts.push(
-          t("sidebar.pushPackFailDetail", { n: failedPacks.length, names: `${named}${more}` }),
-        );
-      }
-      if (skipped > 0) parts.push(t("sidebar.packSkipped", { n: skipped }));
-      if (blocked > 0) parts.push(t("sidebar.packBlocked", { n: blocked }));
-      if (timedOut > 0) parts.push(t("sidebar.packTimedOutStopped", { n: timedOut }));
-      // 失败明细点名（锐评 UX 高项收口）：光有「失败 3」用户无从下手，附前若干条缘由
-      if (errorDetails.length > 0) parts.push(errorDetails.join("；"));
-      toast(t("sidebar.pushDone", { detail: parts.join("，") }), TOAST_MS.normal, "warn");
-    } else if (errorDetails.length > 0) {
-      // 安装全成功但扫描缓存失效失败——用户仍需知情（装成功却等不到新模型是最困惑的反馈）
-      toast(t("sidebar.pushDone", { detail: errorDetails.join("；") }), TOAST_MS.verbose, "warn");
-    } else {
-      toast(t("sidebar.pushDoneAll", { n: selected.length }), TOAST_MS.info, "success");
-    }
+    showPushToast(
+      accum,
+      selected.length,
+      buildPushParts(accum, buildFailedPacks(accum.packTotals)),
+    );
   } catch (err) {
     toast(t("sidebar.pushFailed", { msg: friendlyError(err) }), TOAST_MS.normal, "error");
   } finally {

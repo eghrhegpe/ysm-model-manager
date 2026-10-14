@@ -56,6 +56,22 @@ func TestResourceDiff_HashComparison(t *testing.T) {
 			wantMissing: false,
 		},
 		{
+			// P0-2 诚实化：超限（>MaxImportSize）文件被刻意跳过哈希，同尺寸不能证明内容一致。
+			// 两侧均标记 Oversize → 不再回退 Size 谎报 Synced，保守判 Missing（待推送）。
+			name:        "Oversize_空哈希_同大小→Missing（P0-2：不静默假绿）",
+			g:           DiffEntry{Path: "big.zip", Size: 1024, Oversize: true},
+			i:           DiffEntry{Path: "big.zip", Size: 1024, Oversize: true},
+			wantSynced:  false,
+			wantMissing: true,
+		},
+		{
+			name:        "Oversize_仅一侧_同大小_对侧有哈希→Missing（任一侧未验即保守）",
+			g:           DiffEntry{Path: "big.zip", Size: 1024, Oversize: true},
+			i:           DiffEntry{Path: "big.zip", Size: 1024, Hash: "aaa"},
+			wantSynced:  false,
+			wantMissing: true,
+		},
+		{
 			name:        "目录条目_异大小→Synced（目录短路保留）",
 			g:           DiffEntry{Path: "packdir", IsDir: true},
 			i:           DiffEntry{Path: "packdir", IsDir: true},

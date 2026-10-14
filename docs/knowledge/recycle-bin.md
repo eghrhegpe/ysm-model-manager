@@ -9,6 +9,7 @@ auto_fields:
   symbols_with_lines:
     - initRecycleBin
     - RecycleBinEntry
+    - RecycleBinHandle
     - RecycleDeps
     - RecycleHost
     - VIEW_TESTIDS

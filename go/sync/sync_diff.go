@@ -22,6 +22,11 @@ type DiffEntry struct {
 	// 空=未知（>500MB 跳过大 zip、非 hashable、无 scanFn 旧调用），ResourceDiff 回退 Size 对比。
 	// 目录型 pack 条目恒空（scanner 不逐条目哈希；其内容级判定见 FoldDigest）。
 	Hash string
+	// Oversize 该文件因超 MaxImportSize（>500MB）被**刻意跳过哈希**（bug-chronicle #36）。
+	// 与 Hash 空但「设计上不哈希/无 scanFn」区分开：超限文件的同尺寸**不能**作为内容一致
+	// 的证据（改内容可保持同尺寸），故 contentDiffers 对其不再回退 Size 判 Synced，而是
+	// 保守判「可能不同」（P0-2 诚实化，消灭 >500MB 静默假绿）。collect 按 info.Size() 设位。
+	Oversize bool
 	// FoldDigest 目录条目的「结构折叠指纹」（D2′-b / ADR-269，闭盲区②）：
 	// collect 在 Walk 内对该 pack 文件夹下的全部子文件（含被 IsResourceAllowed 过滤、
 	// 不成独立条目的 .png/.mcmeta 等）以「相对路径 + 大小」做顺序无关的 FNV 累积，
@@ -79,6 +84,13 @@ func contentDiffers(g, i DiffEntry) bool {
 	}
 	if g.Hash != "" && i.Hash != "" {
 		return g.Hash != i.Hash
+	}
+	// P0-2（诚实化）：任一侧因超限（>MaxImportSize）被跳过哈希 → 同尺寸不足以验证内容
+	// （改内容可保持同尺寸），不再回退 Size 谎报 Synced，保守判「可能不同」（待推送）。
+	// 仅对 collect 明确标记 Oversize 的条目生效；非 hashable / 无 scanFn 的空哈希维持
+	// 下方 Size 兜底（其语义本就按大小判，非静默假绿）。
+	if g.Oversize || i.Oversize {
+		return true
 	}
 	return g.Size != i.Size
 }

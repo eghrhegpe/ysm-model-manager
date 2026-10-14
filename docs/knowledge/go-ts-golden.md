@@ -72,6 +72,8 @@ auto_fields:
     - resolveTypeSafe
     - RESOURCE_TYPE_LABELS
     - RESOURCE_TYPES
+    - rtypeGroupLabelOf
+    - rtypeLabelOf
     - ShouldHashExt
     - StorageSubDir
     - StripBanSuffix

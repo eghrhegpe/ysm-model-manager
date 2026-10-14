@@ -130,7 +130,7 @@ status: active
 - **所有扫描路径都必须排除 `.recycle`**，与 `scanner.ScanEntries` 口径对齐：`SyncResources` 的 collect（`sync.go`，统一 collect 闭包内 `fsutil.IsRecycleDir` SkipDir）、`SyncResourcesDirLevel` 的 `collectEntries`（sync_dirlevel.go）均跳过；`SyncToggleStatus` 用 `strings.Contains(strings.ToLower(p), ".recycle")` 检查整个路径（sync.go），非路径前缀匹配——漏排会把回收站里的模型当成仓库活跃模型，同步管理器显示 missing 且可被推送回实例（回归测试 `TestSyncResources_IgnoresRecycleDir`）
 - 跳过回收站时带 `path != 根目录` 守卫：若用户把仓库根/实例根本身命名为 `.recycle` 则不跳过，否则整次扫描会直接空掉
 - 实例状态对比类入口现居 `go/instance.BuildInstanceStatusCounts`（面板链 fold），本包不再自带实例级集合运算；`.recycle` 的排除仍由注入的 scanFn（`scanner.ScanEntries*`）与被面板链复用的 `SyncResources*` 承担——换用不排 `.recycle` 的 scanFn 会重新引入误判
-- `SyncResources` 对比 key 为**相对路径**（`relKey`：小写 + 正斜杠 + 去 `.disabled`/`.ban`，ADR-064 阶段二）；同名文件**内容判定走哈希优先、Size 兜底**（D2′-a / ADR-269，归一在 `contentDiffers`，sync_diff.go）：两侧均带 scanner 哈希时比哈希——捕获「同大小但内容已变」的资源包文件（旧盲区1，纯 Size 会漏判 Synced），任一侧无哈希（文件 >`MaxImportSize` 超限跳过哈希 / `scanFn=nil` 的 push/pull/旧调用）则回退比大小（复制会改 mtime 不可靠，故不用 mtime）。目录条目走**结构折叠指纹对比**（D2′-b / ADR-269，见下「pack 目录折叠指纹」条）：两侧均带 `FoldDigest` 则比指纹、异指纹→Missing，任一侧无指纹（未折叠/旧数据）回退恒一致（不回归）。三个结果列表返回前均 `sort.Strings` 排序
+- `SyncResources` 对比 key 为**相对路径**（`relKey`：小写 + 正斜杠 + 去 `.disabled`/`.ban`，ADR-064 阶段二）；同名文件**内容判定走哈希优先、Size 兜底**（D2′-a / ADR-269，归一在 `contentDiffers`，sync_diff.go）：两侧均带 scanner 哈希时比哈希——捕获「同大小但内容已变」的资源包文件（旧盲区1，纯 Size 会漏判 Synced），任一侧无哈希分两种——`DiffEntry.Oversize`（collect 按 `info.Size() > MaxImportSize` 置位，即 >500MB 被刻意跳过哈希）保守判「可能不同」→ Missing（P0-2 诚实化：同尺寸不足以证明内容一致，不再谎报 Synced）；其余空哈希（非 hashable 扩展 / `scanFn=nil` 的 push/pull/旧调用）仍回退比大小（复制会改 mtime 不可靠，故不用 mtime）。目录条目走**结构折叠指纹对比**（D2′-b / ADR-269，见下「pack 目录折叠指纹」条）：两侧均带 `FoldDigest` 则比指纹、异指纹→Missing，任一侧无指纹（未折叠/旧数据）回退恒一致（不回归）。三个结果列表返回前均 `sort.Strings` 排序
 - 扩展名过滤统一走 `types.IsResourceAllowed`（`types.AllExts()` + `.json` 仅 `ysm.json`）与 `packs.IsTypeModelFile`（单类型扩展集 + `ysm.json`，ADR-144 下沉），原 `isSyncAllowed` / `isModelFile` / `instance.extMatch` 三处同义实现已收敛（ADR-064 阶段一）
 - **`SyncResourcesDirLevel` 容器 vs 叶子模型夹判定**（`collectEntries`，sync_dirlevel.go）：目录被 `isDirTypeModelFolder` 判真（直接含 .ysm/.ysm.json）后，若还直接含子模型文件夹（`containsModelSubfolder` 为真），则是「容器」而非「叶子模型夹」——**不下钻整体收编 SkipDir**，而继续下钻保留各子夹层级，由 `go/instance` 的 `nestDirLevelTree` 重建容器树。收发场景：`嵌套1/` 内含直接平铺 `动力臂.ysm` + `01_taisho_maid/` + `嵌套2/` 深层子夹，若被整体收编会把子夹层级吞掉，前端退化成摊平的 `01_taisho_maid/ysm.json` 文件行（违背仓库层级镜像）；只有「叶子模型夹」（含模型文件但无子模型夹）才 SkipDir 收编为单同步单元。**注意：容器下钻时还会把「自身」也登记成一条目录条目**（`entries[relKeyDirLevel(rootDir, path, true)] = path`，即**目录 marker**）——目的是与对侧（pre-fix 安装）同名叶子目录的键集一致，避免键集不相交产生幻影 Missing+Extra。这条 marker 落到展示层会渲染成「同名目录嵌在自己里面」（实测 `2.大学学姐 > 2.大学学姐`），须由 `go/instance` 的 `absorbSelfMarker` 按 Path 相等合并掉（见 [go-instance](./go-instance.md)）
 - **两阶段遍历-执行模式**（`SyncToggleStatus`，sync.go）：`filepath.WalkDir` 回调中**不直接执行** `os.Rename`，而是先收集 `[]renameOp`，遍历完成后再批量执行。在 WalkDir 过程中修改目录结构会导致后续条目被跳过或重复处理。
@@ -161,6 +161,11 @@ status: active
   - **scan-hit 衍生结果也复用 syncDirLevelScanCache（2026-09-14 落地）**：`syncResourcesDirLevel` 的 `collectEntries` 闭包对 scan-hit 路径（注入 scanFn 命中）此前每次把 scanner 已缓存的 `entries` O(entries) 重算成同步 map，而 Walk 回退路径早已叠缓存——`BuildSyncItems` 周期内 8 个 MMD 子类型 × N 个实例反复对同一全局仓库根 `(rootDir, rtype)` 重算衍生 map。现 scan-hit 与 Walk 对称复用同一 `syncDirLevelScanCache`（key=`syncDirectoryScanKey{kind:"dirlevel", root, rtype}`，命中即返回；仅 `collectEntriesFromScan` 非 nil 才存，nil 回退 Walk 不缓存防误命中）。纯缓存层、无语义变更，回归测试 `sync_dirlevel_scan_cache_test.go` 锁「二次同步 scanFn 调用不增长」。
   - **残余 IO（失效后首次重算）**：`containsModelSubfolder`/`isDirTypeModelFolder` 逐层 ReadDir 仍会发生（实例侧文件量远小于全局，非大头）；refresh 全量 `InvalidateScanCache` 会使 30s 缓存冷掉触发一次组根重扫（单次，非 8×(N+1) 遍）。
 - **SyncToggleStatus 三级匹配的兜底误伤面**（观察项）：哈希 → 相对路径 → 纯文件名三级匹配的最后一级是 basename——同名不同路径的不同模型会被互相匹配启禁状态（sync.go fallback 注释自认「旧仓库特例」）；新仓库数据齐全时该兜底应可收紧
+
+
+## 裁定记录
+
+- `2026-10-14`：contentDiffers 对 Oversize（>MaxImportSize 被跳过哈希）文件不再回退 Size 判 Synced，保守判 Missing（待推送）——P0-2 诚实化，消灭 >500MB 静默假绿｜超限文件因 bug-chronicle #36 刻意跳过哈希，同尺寸不足以证明内容一致；非 hashable / scanFn=nil 的空哈希仍走 Size 兜底（误判面窄、不回归），故只翻转 Oversize 一类｜回退 = `go/sync/sync_diff.go|DiffEntry.Oversize`
 
 ## 相关
 

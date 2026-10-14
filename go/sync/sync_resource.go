@@ -111,7 +111,14 @@ func (s *walkEntryState) walkFn(path string, info os.FileInfo, err error) error 
 		return nil
 	}
 	if key := relKey(s.rootDir, path); key != "" {
-		s.entries[key] = DiffEntry{Path: path, Size: info.Size(), Hash: s.hashByKey[key]}
+		// P0-2：超限（>MaxImportSize）文件被刻意跳过哈希（bug-chronicle #36），其同尺寸
+		// 不能证明内容一致——置 Oversize 令 contentDiffers 保守判「可能不同」，不谎报 Synced。
+		s.entries[key] = DiffEntry{
+			Path:     path,
+			Size:     info.Size(),
+			Hash:     s.hashByKey[key],
+			Oversize: info.Size() > registry.MaxImportSize,
+		}
 	}
 	return nil
 }

@@ -193,7 +193,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 83 |
-| connectedCallback | `frontend/src/views/app-nav/index.ts` | 209 |
+| connectedCallback | `frontend/src/views/app-nav/index.ts` | 213 |
 
 ### `menu:show`
 
@@ -219,7 +219,7 @@
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 386 |
 | atTeClickRowFolder | `frontend/src/views/app-tree/events.ts` | 170 |
 | atTeClickRowFile | `frontend/src/views/app-tree/events.ts` | 244 |
-| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 704 |
+| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 718 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -235,8 +235,8 @@
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 71 |
 | _pageInitFailed | `frontend/src/views/app-content/index.ts` | 193 |
 | cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 231 |
-| anActivateNavPage | `frontend/src/views/app-nav/index.ts` | 51 |
-| connectedCallback | `frontend/src/views/app-nav/index.ts` | 219 |
+| anActivateNavPage | `frontend/src/views/app-nav/index.ts` | 53 |
+| connectedCallback | `frontend/src/views/app-nav/index.ts` | 223 |
 | bindMcPathLabel | `frontend/src/views/app-sidebar/events.ts` | 360 |
 | atTlBindRepoSwitch | `frontend/src/views/app-tree/toolbar-events.ts` | 88 |
 
@@ -244,7 +244,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 58 |
-| connectedCallback | `frontend/src/views/app-nav/index.ts` | 189 |
+| connectedCallback | `frontend/src/views/app-nav/index.ts` | 193 |
 
 ### `package:selected`
 
@@ -264,7 +264,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| anActivateNavPage | `frontend/src/views/app-nav/index.ts` | 57 |
+| anActivateNavPage | `frontend/src/views/app-nav/index.ts` | 59 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -276,14 +276,14 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| anBindDualSelects | `frontend/src/views/app-nav/index.ts` | 127 |
+| anBindDualSelects | `frontend/src/views/app-nav/index.ts` | 131 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
 | useCurrentResourceType | `frontend/src/features/repo/repo-rtype.ts` | 21 |
 | initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 129 |
-| connectedCallback | `frontend/src/views/app-nav/index.ts` | 211 |
+| connectedCallback | `frontend/src/views/app-nav/index.ts` | 215 |
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 120 |
 | _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 301 |
 
@@ -305,7 +305,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| anBindDualSelects | `frontend/src/views/app-nav/index.ts` | 128 |
+| anBindDualSelects | `frontend/src/views/app-nav/index.ts` | 132 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -342,7 +342,7 @@
 | atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 182 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 115 |
 | atTeBindRenameInput | `frontend/src/views/app-tree/events.ts` | 387 |
-| _executeTreeMove | `frontend/src/views/app-tree/index.ts` | 771 |
+| _executeTreeMove | `frontend/src/views/app-tree/index.ts` | 785 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -384,7 +384,7 @@
 | runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 306 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 114 |
 | toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 490 |
-| _executeTreeMove | `frontend/src/views/app-tree/index.ts` | 770 |
+| _executeTreeMove | `frontend/src/views/app-tree/index.ts` | 784 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |

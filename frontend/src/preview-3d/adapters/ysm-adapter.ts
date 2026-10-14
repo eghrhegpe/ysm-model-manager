@@ -368,72 +368,101 @@ async function scanAnimFiles(sc: YsmSceneCtx): Promise<{
   return { clips: allClips, controllers: allControllers };
 }
 
-/** 阶段③：骨骼面板树 + 动画/感知系统（ADR-100 L1+L2+L3） */
-async function buildBonePanelAndAnim(sc: YsmSceneCtx, core: YsmBuildCore): Promise<YsmPanelAnim> {
-  const { ctx, opts } = sc;
-  const { obj, spec, model } = core;
-
-  const bonePanelRef: BonePanelCleanupRef = { current: null };
+/** 从 spec 扁平化收集骨骼并建树（object 从 boneGroupMap 取，缺映射为 undefined） */
+function buildBoneTreeFromSpec(core: YsmBuildCore): { tree: BoneTree; nodes: BoneNode[] } {
+  const { spec, obj } = core;
   const specBones = spec.models?.flatMap((m) => m.bones ?? []) ?? [];
-  const boneNodes: BoneNode[] = specBones.map((b) => ({
+  const nodes: BoneNode[] = specBones.map((b) => ({
     id: b.id,
     name: b.name,
     parentId: b.parentId ?? null,
     object: obj.boneGroupMap.get(b.id),
   }));
-  const boneTree = buildBoneTree(boneNodes);
+  return { tree: buildBoneTree(nodes), nodes };
+}
+
+/** 动画 + 感知系统（非 generic 模式）：语义映射 + 呼吸 + clip 收集 + 播放器。
+ *  失败静默降级（模型可渲染但无动画）。 */
+async function buildAnimSystem(
+  sc: YsmSceneCtx,
+  core: YsmBuildCore,
+  boneNodes: BoneNode[],
+  perceptionPauseRef: PerceptionPauseRef,
+): Promise<{
+  animPlayer: YsmAnimPlayer | null;
+  animBridge: MmdPlayBridge | null;
+  semanticBones: import("@/preview-3d/bone/semantic-bones.ts").SemanticBoneMap | null;
+  breath: ReturnType<typeof createBreathController> | null;
+}> {
+  const { spec, model, obj } = core;
+  try {
+    // boneNodes（上方已携带 object）直接喂语义映射——object 必填不变量见 semantic-bones.ts
+    const semanticBones = ysmSemanticBoneMap(boneNodes);
+    const breath = createBreathController({ pauseRef: perceptionPauseRef });
+
+    const allClips: Array<{ label: string; clip: AnimationClip }> = [];
+    const allControllers: AnimationController[] = [];
+    const embedded = model._animClips ?? [];
+    if (embedded.length > 0) {
+      embedded.forEach((clip, i) => {
+        allClips.push({ label: clip.name || `Clip ${i + 1}`, clip });
+      });
+    } else {
+      const scanned = await scanAnimFiles(sc);
+      allClips.push(...scanned.clips);
+      allControllers.push(...scanned.controllers);
+    }
+    let animPlayer: YsmAnimPlayer | null = null;
+    let animBridge: MmdPlayBridge | null = null;
+    if (allClips.length > 0) {
+      const boneByName = new Map<string, THREE.Object3D>();
+      for (const sbi of spec.models?.flatMap((m) => m.bones ?? []) ?? []) {
+        const group = obj.boneGroupMap.get(sbi.id);
+        if (group) boneByName.set(sbi.name, group);
+      }
+      const labels = allClips.map((c) => c.label);
+      const clips = allClips.map((c) => c.clip);
+      animPlayer = createYsmAnimPlayer(boneByName, clips, labels);
+      if (allControllers.length > 0) animPlayer.setController(allControllers[0]);
+      animBridge = {
+        clips: allClips.map((c) => ({ label: c.label })),
+        isPlaying: () => animPlayer?.isPlaying() ?? false,
+        toggle: () => animPlayer?.toggle(),
+        currentIndex: () => animPlayer?.currentIndex() ?? 0,
+        select: (i: number) => animPlayer?.selectClip(i),
+        animDir: null,
+      };
+    }
+    return { animPlayer, animBridge, semanticBones, breath };
+  } catch (e) {
+    logWarn(
+      "preview-3d",
+      `动画扫描失败，静默降级（模型可渲染但无动画）: ${e instanceof Error ? e.message : e}`,
+    );
+    return { animPlayer: null, animBridge: null, semanticBones: null, breath: null };
+  }
+}
+
+/** 阶段③：骨骼面板树 + 动画/感知系统（ADR-100 L1+L2+L3） */
+async function buildBonePanelAndAnim(sc: YsmSceneCtx, core: YsmBuildCore): Promise<YsmPanelAnim> {
+  const { ctx, opts } = sc;
+
+  const bonePanelRef: BonePanelCleanupRef = { current: null };
+  const { tree: boneTree, nodes: boneNodes } = buildBoneTreeFromSpec(core);
   ctx.loadingEl.remove();
 
-  const isGenericMode = opts.mode === "generic";
   const perceptionPauseRef = createPerceptionPauseRef();
   let animPlayer: YsmAnimPlayer | null = null;
   let animBridge: MmdPlayBridge | null = null;
   let semanticBones: import("@/preview-3d/bone/semantic-bones.ts").SemanticBoneMap | null = null;
   let breath: ReturnType<typeof createBreathController> | null = null;
 
-  if (!isGenericMode) {
-    try {
-      // boneNodes（上方已携带 object）直接喂语义映射——object 必填不变量见 semantic-bones.ts
-      semanticBones = ysmSemanticBoneMap(boneNodes);
-      breath = createBreathController({ pauseRef: perceptionPauseRef });
-
-      const allClips: Array<{ label: string; clip: AnimationClip }> = [];
-      const allControllers: AnimationController[] = [];
-      const embedded = model._animClips ?? [];
-      if (embedded.length > 0) {
-        embedded.forEach((clip, i) => {
-          allClips.push({ label: clip.name || `Clip ${i + 1}`, clip });
-        });
-      } else {
-        const scanned = await scanAnimFiles(sc);
-        allClips.push(...scanned.clips);
-        allControllers.push(...scanned.controllers);
-      }
-      if (allClips.length > 0) {
-        const boneByName = new Map<string, THREE.Object3D>();
-        for (const sbi of specBones) {
-          const group = obj.boneGroupMap.get(sbi.id);
-          if (group) boneByName.set(sbi.name, group);
-        }
-        const labels = allClips.map((c) => c.label);
-        const clips = allClips.map((c) => c.clip);
-        animPlayer = createYsmAnimPlayer(boneByName, clips, labels);
-        if (allControllers.length > 0) animPlayer.setController(allControllers[0]);
-        animBridge = {
-          clips: allClips.map((c) => ({ label: c.label })),
-          isPlaying: () => animPlayer?.isPlaying() ?? false,
-          toggle: () => animPlayer?.toggle(),
-          currentIndex: () => animPlayer?.currentIndex() ?? 0,
-          select: (i: number) => animPlayer?.selectClip(i),
-          animDir: null,
-        };
-      }
-    } catch (e) {
-      logWarn(
-        "preview-3d",
-        `动画扫描失败，静默降级（模型可渲染但无动画）: ${e instanceof Error ? e.message : e}`,
-      );
-    }
+  if (opts.mode !== "generic") {
+    const anim = await buildAnimSystem(sc, core, boneNodes, perceptionPauseRef);
+    animPlayer = anim.animPlayer;
+    animBridge = anim.animBridge;
+    semanticBones = anim.semanticBones;
+    breath = anim.breath;
   }
   return {
     bonePanelRef,

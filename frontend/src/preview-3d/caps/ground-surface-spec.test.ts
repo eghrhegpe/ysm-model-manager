@@ -26,6 +26,7 @@ import {
   surfaceTextureToken,
   type GroundMaterialParams,
   type GroundSurfaceMode,
+  type GroundSurfaceStructuralSpec,
 } from "./ground-surface-spec.ts";
 
 const baseParams = (): GroundMaterialParams => ({
@@ -617,5 +618,32 @@ describe("Suite 10 — surfaceTextureToken 纹理身份 token", () => {
     expect(surfaceTextureToken("a.png", img(512, 512))).not.toBe(
       surfaceTextureToken("b.png", img(512, 512)),
     );
+  });
+});
+
+// ===== 2026-10-14 性能：generateSurfacePixels memo（同 (spec,size) 命中缓存跳过 512² 噪声填充）=====
+describe("generateSurfacePixels memo", () => {
+  const mk = (density: number): GroundSurfaceStructuralSpec => ({
+    mode: "marble",
+    color: [200, 180, 160],
+    gridSize: 8,
+    textureToken: "",
+    color2: [90, 70, 50],
+    density,
+    angleRad: 0.3,
+    microNoise: 0,
+  });
+
+  it("同 (spec,size) 命中缓存：两次调用内容一致", () => {
+    const first = generateSurfacePixels(mk(4), 16);
+    const hit = generateSurfacePixels(mk(4), 16);
+    expect(new Uint8Array(hit)).toEqual(new Uint8Array(first));
+  });
+
+  it("FIFO 逐旧后重算仍确定（不腐化）：灌 > 上限个 distinct spec 再取早先 spec 内容不变", () => {
+    const base = generateSurfacePixels(mk(4), 16);
+    for (let d = 0; d < 40; d++) generateSurfacePixels(mk(d), 16); // 触发 FIFO 逐旧（> MAX=32）
+    const afterEvict = generateSurfacePixels(mk(4), 16);
+    expect(new Uint8Array(afterEvict)).toEqual(new Uint8Array(base));
   });
 });

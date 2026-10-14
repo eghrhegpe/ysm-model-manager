@@ -551,15 +551,30 @@ export function textureRepeat(meshSize: number, scale: number): number {
 // 本函数退化为「取 structural → 查表分发」，spec/key/apply 逻辑不变。
 // 设计：surface-pixels/* 零 three 运行时依赖、零 DOM，保留 node 单测能力（对齐原约束）。
 
+// 程序化像素 memo（2026-10-14 性能）：generateSurfacePixels 是 (spec, sizePx) 的纯确定性函数
+// （seed 噪声、无 Math.random——本文件「同参可复现」测试钉死）。同一 spec 反复调用（rebuild
+// 来回切同一材质、测试里 N 个同 spec cap 各建一次 512²×4-octave 噪声填充）会重复填充。
+// 按 spec 键 memo，命中即跳过填充（1MB 字节体 vs 数十 ms 的 512² 生成——稳赚）。
+// 缓存的是字节数组本体：下游 `makeGeneratedTexture` 只把它喂给 `new DataTexture`（只读引用，
+// `needsUpdate` 仅标志上传、从不写 px），跨 cap 共享安全。上限 FIFO 逐最旧，防无界增长。
+const _SURFACE_GEN_CACHE_MAX = 32;
+const _surfaceGenCache = new Map<string, Uint8Array>();
+
+function surfaceGenCacheKey(st: GroundSurfaceStructuralSpec, sizePx: number): string {
+  return `${st.mode}|${st.color.join(",")}|${st.gridSize}|${st.textureToken}|${st.color2.join(",")}|${st.density}|${st.angleRad}|${st.microNoise}|${sizePx}`;
+}
+
 export function generateSurfacePixels(st: GroundSurfaceStructuralSpec, sizePx: number): Uint8Array {
-  // ADR-249 §2.2："none" = 真的关闭地面表面层——不产出任何像素（空数组）。
-  if (st.mode === "none") return new Uint8Array(0);
+  // ADR-249 §2.2："none" = 真的关闭地面表面层；"texture" = 表面来自用户上传贴图——
+  // 二者均不产程序化像素（空数组，廉价且每次新建，不入缓存）。
+  if (st.mode === "none" || st.mode === "texture") return new Uint8Array(0);
 
-  // ADR-249："texture" 同样不产程序化像素——表面来自用户上传的贴图。
-  if (st.mode === "texture") return new Uint8Array(0);
+  const key = surfaceGenCacheKey(st, sizePx);
+  const hit = _surfaceGenCache.get(key);
+  if (hit) return hit;
 
+  let px: Uint8Array;
   // "plain"（素面）与 "solid" 同为**纯色**语义（刀⑳ 修复：漏 plain 会画出格线）。
-  // 二者走纯色生成器，不进噪声材质表。
   // [P1 批 2026-10-04] microNoise 一并下发（plain 系生成器消费；marble/sand/grass 不读该字段）。
   if (st.mode === "solid" || st.mode === "plain") {
     const input: SurfacePixelInput = {
@@ -570,19 +585,26 @@ export function generateSurfacePixels(st: GroundSurfaceStructuralSpec, sizePx: n
       angleRad: st.angleRad,
       microNoise: st.microNoise,
     };
-    return generatePlainPixels(input, sizePx);
+    px = generatePlainPixels(input, sizePx);
+  } else {
+    // 剩余为噪声材质（marble / sand / grass），查表分发到 surface-pixels/ 各生成器。
+    // 形状建模（大理石域扭曲、草各向异性）集中在各材质文件，本函数不再含像素算法。
+    const input: SurfacePixelInput = {
+      color: st.color,
+      color2: st.color2,
+      gridSize: st.gridSize,
+      density: st.density,
+      angleRad: st.angleRad,
+    };
+    px = SURFACE_PIXEL_GENERATORS[st.mode as SurfaceCanvasStyle](input, sizePx);
   }
 
-  // 剩余为噪声材质（marble / sand / grass），查表分发到 surface-pixels/ 各生成器。
-  // 形状建模（大理石域扭曲、草各向异性）集中在各材质文件，本函数不再含像素算法。
-  const input: SurfacePixelInput = {
-    color: st.color,
-    color2: st.color2,
-    gridSize: st.gridSize,
-    density: st.density,
-    angleRad: st.angleRad,
-  };
-  return SURFACE_PIXEL_GENERATORS[st.mode as SurfaceCanvasStyle](input, sizePx);
+  _surfaceGenCache.set(key, px);
+  if (_surfaceGenCache.size > _SURFACE_GEN_CACHE_MAX) {
+    const oldest = _surfaceGenCache.keys().next().value;
+    if (oldest !== undefined) _surfaceGenCache.delete(oldest);
+  }
+  return px;
 }
 
 /* ============ 落地函数（两条路径共用，禁止绕过）============ */

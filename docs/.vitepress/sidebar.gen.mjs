@@ -1613,6 +1613,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-338-d2：broad_claim 巨兽卡符号封顶：auto_fields 死重止血与拆卡排期",
+        "link": "/adr/decisions/ADR-338-d2-broad-claim-auto-fields"
+      },
+      {
         "text": "ADR-338-d1：提交信息减负：commit-msg 闸与 trailer 出口",
         "link": "/adr/decisions/ADR-338-d1-commit-message-hygiene"
       },

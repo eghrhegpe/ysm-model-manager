@@ -186,6 +186,112 @@ async function buildFbxTexUrlMap(
   return map;
 }
 
+/** FBX group 类型（animations 挂载在 group 上） */
+type FbxGroup = THREE.Group & { animations: THREE.AnimationClip[] };
+
+/** 加载 group：fbx-worker=1 走 worker（官方 FBXLoader，零解析改动），失败/未开启降级主线程 blob 路径 */
+async function resolveFbxGroup(
+  port: FbxDataPort,
+  blobUrl: string,
+  path: string,
+  bytes: ArrayBuffer,
+): Promise<{ group: FbxGroup; texBlobUrls: string[] }> {
+  const useFbxWorker = safeGet("fbx-worker") === "1";
+  if (useFbxWorker) {
+    await fbxDiag(port, "fbx-parse-dispatch", "FBX 派发 worker 解析", "ok");
+    const parser = createFbxParser();
+    // parser.dispose（Worker terminate）放 finally：parse reject 时此前永不触达 → Worker 泄漏
+    let resp: Awaited<ReturnType<typeof parser.parse>>;
+    try {
+      resp = await parser.parse(bytes);
+    } finally {
+      parser.dispose();
+    }
+    if (resp.ok && resp.data) {
+      // texUrlMap：worker 只登记纹理文件名，主线程读真实字节建 blob URL 挂贴图
+      // （发现1 P2：此前从不构建 → worker 路径纹理恒缺失，静默回归）
+      const texUrlMap = await buildFbxTexUrlMap(resp.data, path, port);
+      const group = buildFbxSceneFromData(resp.data, { texUrlMap }) as FbxGroup;
+      const { meshCount } = countFbxStats(group);
+      await fbxDiag(
+        port,
+        "fbx-worker-build",
+        `worker 解析完成：${meshCount} mesh / ${group.animations?.length ?? 0} 动画`,
+        "ok",
+      );
+      return { group, texBlobUrls: [...texUrlMap.values()] };
+    }
+    await fbxDiag(
+      port,
+      "fbx-worker-build",
+      `worker 解析失败，降级主线程：${resp.error ?? "未知错误"}`,
+      "warn",
+    );
+  }
+  return { group: await loadFbxViaBlob(blobUrl), texBlobUrls: [] };
+}
+
+/** 加载剖析：记录 load trace（stages 单段「加载」，与 screenshot/anim 分阶段一致） */
+function recordFbxLoadTrace(
+  ctx: PreviewBuildCtx,
+  path: string,
+  tStart: number,
+  tLoadEnd: number,
+  group: FbxGroup,
+): void {
+  const { texCount } = countFbxStats(group);
+  recordLoadTrace({
+    ts: Date.now(),
+    format: ctx.adapterId ?? TRACE_FORMAT_OTHER,
+    path,
+    stages: [{ name: "加载", ms: Math.round(tLoadEnd - tStart), status: "ok" }],
+    assets: {
+      files: 1,
+      textures: texCount,
+      materials: texCount,
+      animations: group.animations?.length ?? 0,
+      fbxAnimations: group.animations?.length ?? 0,
+    },
+    ok: true,
+  });
+}
+
+/** 播全部内嵌 clip（FBX 通常为单段角色动画） */
+async function setupFbxAnimation(
+  group: FbxGroup,
+  port: FbxDataPort,
+): Promise<THREE.AnimationMixer | null> {
+  if (!group.animations || group.animations.length === 0) return null;
+  const mixer = new THREE.AnimationMixer(group);
+  for (const clip of group.animations) mixer.clipAction(clip).play();
+  await fbxDiag(port, "fbx-anim", `内嵌动画 ${group.animations.length} 段`, "ok");
+  return mixer;
+}
+
+/** 骨骼面板菜单（ADR-074 S2 通用骨骼面板复用，ADR-112 扩展）：收拢 SkinnedMesh 骨骼；
+ *  有骨骼才注入 🦴 菜单项，复用 makeBonePanelRenderer（列表/详情/拾取联动） */
+function buildFbxBoneMenu(
+  group: FbxGroup,
+  ctx: PreviewBuildCtx,
+): { menuItems: PreviewMenuNode[]; bonePanelRef: BonePanelCleanupRef } {
+  const boneTree = buildBoneTree(fbxBonesToBoneNodes(group));
+  const bonePanelRef: BonePanelCleanupRef = { current: null };
+  const menuItems: PreviewMenuNode[] = [];
+  if (boneTree.roots.length > 0) {
+    // 工厂统一空守卫 + cleanupRef 重入清理（消除原 4 段 ~15 行重复；fbx 持 bonePanelRef）
+    menuItems.push(
+      makeBonesPanelItem({
+        tree: boneTree,
+        cleanupRef: bonePanelRef,
+        viewContainer: ctx.viewContainer,
+        camera: ctx.camera,
+        scene: ctx.scene,
+      }),
+    );
+  }
+  return { menuItems, bonePanelRef };
+}
+
 /**
  * 构建 FBX 内容场景（ADR-112 地基）。
  * @param ctx   统一预览上下文（核心提供 scene/camera/controls/renderer）
@@ -208,52 +314,15 @@ export async function buildFbxScene(
   const bytes = bytesToArrayBuffer(base64ToBytes(b64) as Uint8Array);
   const blobUrl = URL.createObjectURL(new Blob([bytes], { type: "application/octet-stream" }));
 
-  // 2) 加载：fbx-worker=1 走 worker —— 官方 FBXLoader（three/addons，零解析改动），
-  //    场景经 fbxSceneToData 纯数据回主线程重建；未开启/worker 解析失败 → 降级主线程 blob 路径
-  //    （开关模式镜像 mmd-adapter.ts:mmd-pmx-worker，ADR-044 安全读写）
-  let group: THREE.Group & { animations: THREE.AnimationClip[] };
+  // 2) 加载：worker 优先、失败降级主线程 blob 路径（开关模式镜像 mmd-adapter）
+  let group: FbxGroup;
   try {
-    const useFbxWorker = safeGet("fbx-worker") === "1";
-    if (useFbxWorker) {
-      await fbxDiag(port, "fbx-parse-dispatch", "FBX 派发 worker 解析", "ok");
-      const parser = createFbxParser();
-      // parser.dispose（Worker terminate）放 finally：parse reject 时此前永不触达 → Worker 泄漏
-      let resp: Awaited<ReturnType<typeof parser.parse>>;
-      try {
-        resp = await parser.parse(bytes);
-      } finally {
-        parser.dispose();
-      }
-      if (resp.ok && resp.data) {
-        // texUrlMap：worker 只登记纹理文件名，主线程读真实字节建 blob URL 挂贴图
-        // （发现1 P2：此前从不构建 → worker 路径纹理恒缺失，静默回归）
-        const texUrlMap = await buildFbxTexUrlMap(resp.data, path, port);
-        texBlobUrls = [...texUrlMap.values()];
-        group = buildFbxSceneFromData(resp.data, { texUrlMap }) as THREE.Group & {
-          animations: THREE.AnimationClip[];
-        };
-        const { meshCount } = countFbxStats(group);
-        await fbxDiag(
-          port,
-          "fbx-worker-build",
-          `worker 解析完成：${meshCount} mesh / ${group.animations?.length ?? 0} 动画`,
-          "ok",
-        );
-      } else {
-        await fbxDiag(
-          port,
-          "fbx-worker-build",
-          `worker 解析失败，降级主线程：${resp.error ?? "未知错误"}`,
-          "warn",
-        );
-        group = await loadFbxViaBlob(blobUrl);
-      }
-    } else {
-      group = await loadFbxViaBlob(blobUrl);
-    }
+    const resolved = await resolveFbxGroup(port, blobUrl, path, bytes);
+    group = resolved.group;
+    texBlobUrls = resolved.texBlobUrls;
     await fbxDiag(port, "fbx-load", `已加载 ${path}`, "ok");
   } catch (e) {
-    // buildFbxSceneFromData 抛错时 texBlobUrls 已产出（texUrlMap 赋值在前）→ revoke 防 blob 泄漏
+    // buildFbxSceneFromData 抛错时 texBlobUrls 已产出 → revoke 防 blob 泄漏
     for (const u of texBlobUrls) URL.revokeObjectURL(u);
     texBlobUrls = [];
     await fbxDiag(port, "fbx-load", "FBX 解析失败", "fail", safeErrorMessage(e));
@@ -262,25 +331,9 @@ export async function buildFbxScene(
     URL.revokeObjectURL(blobUrl);
   }
   const tLoadEnd = performance.now();
-  // 加载剖析
-  const { texCount } = countFbxStats(group);
-  recordLoadTrace({
-    ts: Date.now(),
-    format: ctx.adapterId ?? TRACE_FORMAT_OTHER,
-    path,
-    stages: [{ name: "加载", ms: Math.round(tLoadEnd - tStart), status: "ok" }],
-    assets: {
-      files: 1,
-      textures: texCount,
-      materials: texCount,
-      animations: group.animations?.length ?? 0,
-      fbxAnimations: group.animations?.length ?? 0,
-    },
-    ok: true,
-  });
+  recordFbxLoadTrace(ctx, path, tStart, tLoadEnd, group);
 
-  // ADR-112 P1 尺度归一：DCC 导出单位混乱（cm/m 差 100×）→ 包围盒最长边归一至 FBX_TARGET_MAX_DIM。
-  // 否则小模型穿近平面（near=0.05 恒值）看不见、大模型顶爆场景能力（雾距 50-800 厘米尺度）。
+  // ADR-112 P1 尺度归一：DCC 导出单位混乱（cm/m 差 100×）→ 包围盒最长边归一至 FBX_TARGET_MAX_DIM
   const scaleInfo = normalizeFbxScale(group);
   if (scaleInfo.factor !== 1) {
     await fbxDiag(port, "fbx-scale", `尺度归一 ×${scaleInfo.factor.toFixed(3)}`, "warn");
@@ -292,37 +345,17 @@ export async function buildFbxScene(
   }
 
   // 3) 动画：播全部内嵌 clip（FBX 通常为单段角色动画）
-  let mixer: THREE.AnimationMixer | null = null;
-  if (group.animations && group.animations.length > 0) {
-    mixer = new THREE.AnimationMixer(group);
-    for (const clip of group.animations) mixer.clipAction(clip).play();
-    await fbxDiag(port, "fbx-anim", `内嵌动画 ${group.animations.length} 段`, "ok");
-  }
+  const mixer = await setupFbxAnimation(group, port);
 
   // 4) 相机取景（镜像 vrm-adapter / pack-model-adapter，侧上方取景 + controls 约束）
   frameCameraSide(ctx, group);
 
-  // 5) 骨骼面板（ADR-074 S2 通用骨骼面板复用，ADR-112 扩展）：收拢 SkinnedMesh 骨骼
-  //    构建通用骨骼树；有骨骼才注入 🦴 菜单项，复用 makeBonePanelRenderer（列表/详情/拾取联动）
-  const boneTree = buildBoneTree(fbxBonesToBoneNodes(group));
-  const bonePanelRef: BonePanelCleanupRef = { current: null };
-  const menuItems: PreviewMenuNode[] = [];
-  if (boneTree.roots.length > 0) {
-    // 工厂统一空守卫 + cleanupRef 重入清理（消除原 4 段 ~15 行重复；fbx 持 bonePanelRef）
-    menuItems.push(
-      makeBonesPanelItem({
-        tree: boneTree,
-        cleanupRef: bonePanelRef,
-        viewContainer: ctx.viewContainer,
-        camera: ctx.camera,
-        scene: ctx.scene,
-      }),
-    );
-  }
+  // 5) 骨骼面板（ADR-074 S2 通用骨骼面板复用，ADR-112 扩展）
+  const { menuItems, bonePanelRef } = buildFbxBoneMenu(group, ctx);
 
   return {
     menuItems,
-    // [ADR-330] 模型根身份：frustum-cull 逐根置脏消费（与 L290 registerModelRoot 同一 group）
+    // [ADR-330] 模型根身份：frustum-cull 逐根置脏消费（与 registerModelRoot 同一 group）
     root: group,
     update: (dt: number) => {
       mixer?.update(dt);
@@ -339,10 +372,7 @@ export async function buildFbxScene(
         const scene = ctx.scene;
         safeCall(() => scene.remove(group), "fbx dispose scene.remove");
       }
-      // 几何/材质/贴图释放走 disposeObject3D：uuid 去重（共享 geometry/material 只释放一次）。
-      // 逐段容错（对齐旧版独立 try/catch）：disposeObject3D 抛错不得跳过 skeleton/blob 清理
-      //（GPU boneTexture + blob URL 泄漏，c1f4e4adb 把旧版 geometry/material 段的 try/catch 拆成
-      //  disposeObject3D + 裸 skeleton traverse 时丢失了这段隔离，本次随锐评收口补回）
+      // 几何/材质/贴图释放走 disposeObject3D：uuid 去重（共享 geometry/material 只释放一次）
       safeCall(() => disposeObject3D(group, { disposeMaterial }), "fbx dispose disposeObject3D");
       // SkinnedMesh.skeleton 持有 boneTexture（GPU 资源），disposeObject3D 不覆盖，单独释放
       safeCall(() => {

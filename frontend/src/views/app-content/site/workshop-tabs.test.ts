@@ -212,8 +212,7 @@ describe("initWorkshopTabs — 页作用域句柄（ADR-263）", () => {
   // → 视图回到编辑态，但两份编辑期状态已被静默重置。
   // ⚠️ 本条与上面那条构成对照：同夹具、同 loadLocalAuthors，唯一变量是编辑态开关，
   // 故能证明「抑制」是编辑态**有条件**触发，而非把 enrich 重渲整体砍掉。
-  it("编辑态 → enrich 完成不重渲（保住 detachedNames/editSnapshot，退出编辑态再补）", async () => {
-    vi.useFakeTimers();
+  it("编辑态 → enrich 完成不重渲（保住 detachedNames/editSnapshot，退出编辑态再补）", async () => {    vi.useFakeTimers();
     try {
       loadCommunityData.mockResolvedValue({ sites: [site], creators: [], authors: [] });
       loadLocalAuthors.mockResolvedValue([{ name: "本地作者", desc: "", type: "bilibili" }]);
@@ -228,6 +227,41 @@ describe("initWorkshopTabs — 页作用域句柄（ADR-263）", () => {
 
       // 编辑态下 enrich 不追加渲染（首屏那次仍在）
       expect(calls.length).toBe(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // 锐评修复（2026-10-14）：站点从新配置消失时，tab 栏与内容区不得脱节。
+  // 病：后台 tryAutoMergeCommunity / 站点同步删站后，tab 栏仍是上一份 sites 建的——a11y
+  // 原语已把高亮切到被点的「幽灵 tab」，而 showCreatorsBySite 因 sites.find 未命中早退，
+  // 内容区不动 → 用户看到「点了没反应」。
+  it("站点从配置消失 → tab 栏重建并落到首个合法站点（不留在幽灵 tab）", async () => {
+    vi.useFakeTimers();
+    try {
+      const siteB = { id: "afdian", label: "爱发电", url: "https://afdian.com" } as WorkshopSite;
+      loadCommunityData.mockResolvedValue({ sites: [site, siteB], creators: [], authors: [] });
+      const { root, el } = makeHost();
+      const page = createWorkshopPageState();
+      const { refs, calls } = makeRefsWithShowSpy();
+
+      initWorkshopTabs(root, refs, page, () => {});
+      await vi.advanceTimersByTimeAsync(150);
+      await flushAsync();
+      expect(calls.at(-1)).toBe(site);
+      expect(el.querySelector('#ws-tabs [data-tab="afdian"]')).not.toBeNull();
+
+      // 后台删站：下一次 loadCommunityData 只剩 site
+      loadCommunityData.mockResolvedValue({ sites: [site], creators: [], authors: [] });
+      calls.length = 0;
+      // 点陈旧 tab 栏里的 B（此时它已不在新配置中）
+      (el.querySelector('#ws-tabs [data-tab="afdian"]') as HTMLElement).click();
+      await flushAsync();
+
+      // 必须落到合法站点 A，且 tab 栏不再含已消失的 B
+      expect(calls.at(-1)).toBe(site);
+      expect(el.querySelector('#ws-tabs [data-tab="afdian"]')).toBeNull();
+      expect(el.querySelector('#ws-tabs [data-tab="bilibili"]')).not.toBeNull();
     } finally {
       vi.useRealTimers();
     }

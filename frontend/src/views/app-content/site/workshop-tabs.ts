@@ -161,7 +161,23 @@ export function initWorkshopTabs(
       refs.allCreators = creators;
       refs.repoAuthors = (authors || []) as RepoAuthorLike[];
       const site = sites.find((s) => s.id === siteType);
-      if (!site) return;
+      // 站点已从新配置中消失（锐评修复，2026-10-14）：后台 tryAutoMergeCommunity /
+      // 站点同步可能删站，而 tab 栏是上一份 sites 建的——此时 a11y 原语已把高亮切到被点的
+      // 那颗「幽灵 tab」，内容区却因本分支早退而不动 → 用户看到「点了没反应」，
+      // 且 tab 栏与 refs.allSites 脱节。修：按新 sites 重建 tab 栏并落到首个合法站点
+      //（与 reloadWorkshopTabs 的 initial 回退同口径）。
+      if (!site) {
+        const tabsEl = root.getElementById("ws-tabs");
+        const fallback = sites[0];
+        // sites 为空 → 无合法落点，交给 reloadWorkshopTabs 的空态分支（下次重载时建空态）
+        if (!tabsEl || !fallback) return;
+        rebuildSiteTabBar(root, tabsEl, sites, fallback, (id) => void showCreatorsBySite(id));
+        page.setCurrentSite(fallback);
+        safeSet(WS_LAST_TAB_KEY, fallback.id);
+        refs.showSiteView(page.getCurrentSite());
+        maybeEnrich();
+        return;
+      }
       page.setCurrentSite(site);
       safeSet(WS_LAST_TAB_KEY, site.id);
       // tab 高亮 / roving tabindex / aria-selected 由 tabs-a11y 原语统一切换，此处只负责内容区重渲染

@@ -187,10 +187,31 @@ interface CollectedTextures {
 }
 
 /**
+ * 单条 modelFile：补 `models/` 前缀读，失败回退原始相对路径，两条都读不到 → null。
+ * 解析结果无骨骼 → null（与 Go 端「无骨骼组件丢弃」同口径）。
+ */
+async function readModelFileGeometry(
+  ctx: InflightCtx,
+  mfStr: string,
+): Promise<{ jsonStr: string; parsed: BedrockGeometry } | null> {
+  let modelRel = mfStr;
+  if (!modelRel.startsWith("models/") && !modelRel.startsWith("models\\")) {
+    modelRel = `models/${mfStr}`;
+  }
+  let modelBytes = await ctx.ReadBytes(`${ctx.baseDir}/${modelRel}`);
+  if (!modelBytes) {
+    modelBytes = await ctx.ReadBytes(`${ctx.baseDir}/${mfStr}`);
+    if (!modelBytes) return null;
+  }
+  const jsonStr = new TextDecoder().decode(modelBytes);
+  const parsed = parseBedrockGeometryFromJSON(jsonStr);
+  if (!parsed?.bones?.length) return null;
+  return { jsonStr, parsed };
+}
+
+/**
  * modelFiles 逐条读取 + 几何合并（ysm.json spec 的 models 声明）。
- * 缺 `models/` 前缀 → 补前缀读，失败再回退原始相对路径；两条都读不到 → 跳过该条（不阻断其余）。
  * processed 去重：同一声明重复出现只解一次，骨骼/cube 计数不翻倍。
- * 解析结果无骨骼 → 不计入合并（与 Go 端「无骨骼组件丢弃」同口径）。
  */
 async function mergeModelFilesGeometry(
   ctx: InflightCtx,
@@ -202,31 +223,64 @@ async function mergeModelFilesGeometry(
     const mfStr = entryPathOf(mf, "path");
     if (!mfStr || processed.has(mfStr)) continue;
     processed.add(mfStr);
-
-    let modelRel = mfStr;
-    if (!modelRel.startsWith("models/") && !modelRel.startsWith("models\\")) {
-      modelRel = `models/${mfStr}`;
-    }
-    let modelBytes = await ctx.ReadBytes(`${ctx.baseDir}/${modelRel}`);
-    if (!modelBytes) {
-      modelBytes = await ctx.ReadBytes(`${ctx.baseDir}/${mfStr}`);
-      if (!modelBytes) continue;
-    }
-    const jsonStr = new TextDecoder().decode(modelBytes);
-    const parsed = parseBedrockGeometryFromJSON(jsonStr);
-    if (parsed?.bones?.length) {
-      if (!merged.firstGeoRaw) merged.firstGeoRaw = jsonStr;
-      merged.allBones.push(...parsed.bones);
-      merged.boneCount += parsed.boneCount;
-      merged.cubeCount += parsed.cubeCount;
-    }
+    const geo = await readModelFileGeometry(ctx, mfStr);
+    if (!geo) continue;
+    if (!merged.firstGeoRaw) merged.firstGeoRaw = geo.jsonStr;
+    merged.allBones.push(...geo.parsed.bones);
+    merged.boneCount += geo.parsed.boneCount;
+    merged.cubeCount += geo.parsed.cubeCount;
   }
   return merged;
 }
 
 /**
+ * 单条 texFile：读字节 → blob URL 登记（键 = 文件名去扩展名）。
+ * 路径为空/读不到 → 跳过；同名覆盖者立即 revoke（F5 同族 2026-10-11 修）。
+ */
+async function collectJsonSpecTexture(
+  ctx: InflightCtx,
+  tf: unknown,
+  pendingBlobUrls: Set<string>,
+  acc: CollectedTextures,
+): Promise<void> {
+  const tfStr = entryPathOf(tf, "uv");
+  if (!tfStr) return;
+  const texRel =
+    tfStr.startsWith("textures/") || tfStr.startsWith("textures\\") ? tfStr : `textures/${tfStr}`;
+  const texBytes = await ctx.ReadBytes(`${ctx.baseDir}/${texRel}`);
+  if (!texBytes) return;
+
+  const lower = tfStr.toLowerCase();
+  // 同 loadAvatarsForJson：传视图而非 `.buffer`，消除「必须恰好占满底层缓冲」
+  // 的隐性契约（ReadBytes 零拷贝视图路径下 `.buffer` 会多吞字节致纹理花屏）。
+  const blob = new Blob([viewAsBlobPart(texBytes)], {
+    type: lower.endsWith(".jpg") || lower.endsWith(".jpeg") ? "image/jpeg" : "image/png",
+  });
+  const key =
+    tfStr
+      .split(/[/\\]/)
+      .pop()
+      ?.replace(/\.\w+$/, "") || "";
+  const url = URL.createObjectURL(blob);
+  // F5 同族（2026-10-11 修）：spec 声明同名纹理互相覆盖——被覆盖者立即 revoke。
+  // 它仍在 pendingBlobUrls（覆盖者也登记），失败路径二次 revoke 为 no-op 安全；
+  // 成功路径 pendingBlobUrls.clear() 只清 Set 不移交，被覆盖者已在此释放。
+  const prevTex = acc.textures[key];
+  if (prevTex) URL.revokeObjectURL(prevTex);
+  acc.textures[key] = url;
+  pendingBlobUrls.add(url);
+  acc.texKeys.push(key);
+
+  const sniffed = sniffTexSize(texBytes);
+  if (sniffed) {
+    acc.texDimensions[key] = sniffed;
+    if (sniffed.w > acc.maxTexW) acc.maxTexW = sniffed.w;
+    if (sniffed.h > acc.maxTexH) acc.maxTexH = sniffed.h;
+  }
+}
+
+/**
  * texFiles 逐条读取 + blob URL 登记（ysm.json spec 的 textures 声明）。
- * 路径为空/读不到 → 跳过。键 = 文件名去扩展名（后段纹理槽序与 default_texture 置首口径依赖它）。
  * 产出的 URL 全部进 pendingBlobUrls：成功路径由调用方 clear（移交 geometry），失败路径统一回收。
  */
 async function collectJsonSpecTextures(
@@ -242,40 +296,7 @@ async function collectJsonSpecTextures(
     maxTexH: 0,
   };
   for (const tf of texFiles) {
-    const tfStr = entryPathOf(tf, "uv");
-    if (!tfStr) continue;
-    const texRel =
-      tfStr.startsWith("textures/") || tfStr.startsWith("textures\\") ? tfStr : `textures/${tfStr}`;
-    const texBytes = await ctx.ReadBytes(`${ctx.baseDir}/${texRel}`);
-    if (!texBytes) continue;
-
-    const lower = tfStr.toLowerCase();
-    // 同 loadAvatarsForJson：传视图而非 `.buffer`，消除「必须恰好占满底层缓冲」
-    // 的隐性契约（ReadBytes 零拷贝视图路径下 `.buffer` 会多吞字节致纹理花屏）。
-    const blob = new Blob([viewAsBlobPart(texBytes)], {
-      type: lower.endsWith(".jpg") || lower.endsWith(".jpeg") ? "image/jpeg" : "image/png",
-    });
-    const key =
-      tfStr
-        .split(/[/\\]/)
-        .pop()
-        ?.replace(/\.\w+$/, "") || "";
-    const url = URL.createObjectURL(blob);
-    // F5 同族（2026-10-11 修）：spec 声明同名纹理互相覆盖——被覆盖者立即 revoke。
-    // 它仍在 pendingBlobUrls（覆盖者也登记），失败路径二次 revoke 为 no-op 安全；
-    // 成功路径 pendingBlobUrls.clear() 只清 Set 不移交，被覆盖者已在此释放。
-    const prevTex = acc.textures[key];
-    if (prevTex) URL.revokeObjectURL(prevTex);
-    acc.textures[key] = url;
-    pendingBlobUrls.add(url);
-    acc.texKeys.push(key);
-
-    const sniffed = sniffTexSize(texBytes);
-    if (sniffed) {
-      acc.texDimensions[key] = sniffed;
-      if (sniffed.w > acc.maxTexW) acc.maxTexW = sniffed.w;
-      if (sniffed.h > acc.maxTexH) acc.maxTexH = sniffed.h;
-    }
+    await collectJsonSpecTexture(ctx, tf, pendingBlobUrls, acc);
   }
   return acc;
 }
@@ -592,6 +613,73 @@ function collectTexturesAndAvatars(files: DecodedFile[]): TexAccum {
   return acc;
 }
 
+/** 纹理槽解析：forcedTexIdx 优先，越界回退首个键，空表 → null */
+function resolveTextureForFile(
+  ctx: ProcessModelCtx,
+  forcedTexIdx?: number,
+): { texIdx: number; texKey: string | null; texUrl: string | null } {
+  const texIdx = forcedTexIdx ?? 0;
+  const texKey =
+    ctx.orderedTexKeys.length > texIdx ? ctx.orderedTexKeys[texIdx] : ctx.orderedTexKeys[0] || null;
+  const texUrl = texKey ? ctx.textures[texKey] : null;
+  return { texIdx, texKey, texUrl };
+}
+
+/** 骨骼最终纹理尺寸 = max(实际纹理、几何声明、uv 包围盒)，兜底 64 */
+function computeBoneTexDims(
+  parsed: BedrockGeometry,
+  texKey: string | null,
+  ctx: ProcessModelCtx,
+  uvMaxW: number,
+  uvMaxH: number,
+): { actualTexW: number; actualTexH: number; boneTexW: number; boneTexH: number } {
+  const texDim = texKey ? ctx.texDimensions[texKey] : null;
+  const actualTexW = texDim ? texDim.w : 0;
+  const actualTexH = texDim ? texDim.h : 0;
+  const boneTexW = Math.max(actualTexW, parsed.texWidth, uvMaxW) || 64;
+  const boneTexH = Math.max(actualTexH, parsed.texHeight, uvMaxH) || 64;
+  return { actualTexW, actualTexH, boneTexW, boneTexH };
+}
+
+/** 纹理映射日志行（调试面板消费） */
+function texMappingRow(
+  f: DecodedFile,
+  texIdx: number,
+  texKey: string | null,
+  dims: { actualTexW: number; actualTexH: number; boneTexW: number; boneTexH: number },
+  parsed: BedrockGeometry,
+  uvMaxW: number,
+  uvMaxH: number,
+): Record<string, string | number> {
+  return {
+    file: f.path.split(/[/\\]/).pop() || "",
+    texKey: texKey || "—",
+    texIdx,
+    pngSize: dims.actualTexW > 0 ? `${dims.actualTexW}×${dims.actualTexH}` : "—",
+    geoSize: parsed.texWidth > 0 ? `${parsed.texWidth}×${parsed.texHeight}` : "—",
+    uvSize: `${uvMaxW}×${uvMaxH}`,
+    finalSize: `${dims.boneTexW}×${dims.boneTexH}`,
+  };
+}
+
+/** 几何并入累加器：firstGeometryRaw 落位 + allBones 追加 + geometryRef 计数/尺寸归并 */
+function appendToGeometry(ctx: ProcessModelCtx, parsed: BedrockGeometry, jsonStr: string): void {
+  if (!ctx.firstGeometryRawRef.current) ctx.firstGeometryRawRef.current = jsonStr;
+  ctx.allBones.push(...parsed.bones);
+  if (!ctx.geometryRef.current) {
+    ctx.geometryRef.current = parsed;
+  } else {
+    ctx.geometryRef.current.boneCount += parsed.boneCount;
+    ctx.geometryRef.current.cubeCount += parsed.cubeCount;
+    if (parsed.texWidth > ctx.geometryRef.current.texWidth) {
+      ctx.geometryRef.current.texWidth = parsed.texWidth;
+    }
+    if (parsed.texHeight > ctx.geometryRef.current.texHeight) {
+      ctx.geometryRef.current.texHeight = parsed.texHeight;
+    }
+  }
+}
+
 function processModelFile(f: DecodedFile, ctx: ProcessModelCtx, forcedTexIdx?: number): void {
   if (!f || ctx.processedModels.has(f.path)) return;
   ctx.processedModels.add(f.path);
@@ -601,54 +689,37 @@ function processModelFile(f: DecodedFile, ctx: ProcessModelCtx, forcedTexIdx?: n
     const parsed = parseBedrockGeometryFromJSON(jsonStr);
     if (!parsed?.bones?.length) return;
     devLog(`[YSM] ✅ ${f.path}: ${parsed.bones.length}骨 ${parsed.cubeCount}方`);
-    if (!ctx.firstGeometryRawRef.current) ctx.firstGeometryRawRef.current = jsonStr;
-
-    const texIdx = forcedTexIdx ?? 0;
-    const texKey =
-      ctx.orderedTexKeys.length > texIdx
-        ? ctx.orderedTexKeys[texIdx]
-        : ctx.orderedTexKeys[0] || null;
-    const texUrl = texKey ? ctx.textures[texKey] : null;
-
+    const { texIdx, texKey, texUrl } = resolveTextureForFile(ctx, forcedTexIdx);
     const { uvMaxW, uvMaxH } = computeBoneTexRange(parsed.bones);
-
-    const texDim = texKey ? ctx.texDimensions[texKey] : null;
-    const actualTexW = texDim ? texDim.w : 0;
-    const actualTexH = texDim ? texDim.h : 0;
-    const boneTexW = Math.max(actualTexW, parsed.texWidth, uvMaxW) || 64;
-    const boneTexH = Math.max(actualTexH, parsed.texHeight, uvMaxH) || 64;
-
-    ctx.texMappingLog.push({
-      file: f.path.split(/[/\\]/).pop() || "",
-      texKey: texKey || "—",
-      texIdx,
-      pngSize: actualTexW > 0 ? `${actualTexW}×${actualTexH}` : "—",
-      geoSize: parsed.texWidth > 0 ? `${parsed.texWidth}×${parsed.texHeight}` : "—",
-      uvSize: `${uvMaxW}×${uvMaxH}`,
-      finalSize: `${boneTexW}×${boneTexH}`,
-    });
+    const dims = computeBoneTexDims(parsed, texKey, ctx, uvMaxW, uvMaxH);
+    ctx.texMappingLog.push(texMappingRow(f, texIdx, texKey, dims, parsed, uvMaxW, uvMaxH));
     for (const b of parsed.bones) {
       b._texIdx = texIdx;
       b._texUrl = texUrl;
-      b._texWidth = boneTexW;
-      b._texHeight = boneTexH;
+      b._texWidth = dims.boneTexW;
+      b._texHeight = dims.boneTexH;
     }
-    ctx.allBones.push(...parsed.bones);
-    if (!ctx.geometryRef.current) {
-      ctx.geometryRef.current = parsed;
-    } else {
-      ctx.geometryRef.current.boneCount += parsed.boneCount;
-      ctx.geometryRef.current.cubeCount += parsed.cubeCount;
-      if (parsed.texWidth > ctx.geometryRef.current.texWidth) {
-        ctx.geometryRef.current.texWidth = parsed.texWidth;
-      }
-      if (parsed.texHeight > ctx.geometryRef.current.texHeight) {
-        ctx.geometryRef.current.texHeight = parsed.texHeight;
-      }
-    }
+    appendToGeometry(ctx, parsed, jsonStr);
   } catch (e) {
     devLog(`[YSM] ❌ ${f.path}: ${safeErrorMessage(e)}`);
   }
+}
+
+/** 文件名（去 .json 后缀、小写）与纹理键的双向包含匹配 */
+function findMatchingTexKey(texKeyToIdx: Record<string, number>, lowerBase: string): string | null {
+  for (const k of Object.keys(texKeyToIdx)) {
+    if (k.toLowerCase().includes(lowerBase) || lowerBase.includes(k.toLowerCase())) {
+      return k;
+    }
+  }
+  return null;
+}
+
+/** 按完整路径 / 反斜杠 / 裸名三种形态找模型文件 */
+function findModelFile(files: DecodedFile[], mn: string): DecodedFile | undefined {
+  return files.find(
+    (ff) => ff.path.endsWith(`/${mn}`) || ff.path.endsWith(`\\${mn}`) || ff.path === mn,
+  );
 }
 
 function matchModelFilesByOrder(
@@ -666,17 +737,9 @@ function matchModelFilesByOrder(
     const mn = getModelName(mp);
     if (!mn) continue;
     const lowerBase = mn.replace(/\.json$/i, "").toLowerCase();
-    let matchedKey: string | null = null;
-    for (const k of Object.keys(texKeyToIdx)) {
-      if (k.toLowerCase().includes(lowerBase) || lowerBase.includes(k.toLowerCase())) {
-        matchedKey = k;
-        break;
-      }
-    }
+    const matchedKey = findMatchingTexKey(texKeyToIdx, lowerBase);
     const texIdx = matchedKey != null ? (texKeyToIdx[matchedKey] ?? 0) : 0;
-    const f = files.find(
-      (ff) => ff.path.endsWith(`/${mn}`) || ff.path.endsWith(`\\${mn}`) || ff.path === mn,
-    );
+    const f = findModelFile(files, mn);
     if (f) processModelFile(f, ctx, texIdx);
   }
 }
@@ -828,38 +891,68 @@ async function handleWasmDecode(modelPath: string, bytes: Uint8Array): Promise<D
 
 // ===== 主流程：分派 + LRU 守卫（≤70 行） =====
 
+/** 瞬时读失败哨兵：桥 reject（无 cause.Code）→ 不缓存 _wasmFailed（P3 契约：可重试） */
+const TRANSIENT_READ_FAILURE = Symbol("transient-read-failure");
+
+/** 确定性失败判据：cause 上**存在 Code 键**（非真值——空串 Code 不得分裂，ADR-331-d1 切片 C） */
+function isDeterministicReadError(e: unknown): boolean {
+  const cause = (e as { cause?: unknown })?.cause;
+  return cause !== null && typeof cause === "object" && "Code" in cause;
+}
+
+/**
+ * 字节读取：确定性失败（cause 带 Code 键）重新 throw 冒泡 i18n 译文；
+ * 桥 reject（无 Code 键）= 瞬时错误 → 返回哨兵，调用方据此 return null 不缓存（可重试）。
+ */
+async function tryReadModelBytes(
+  modelPath: string,
+): Promise<Uint8Array | null | typeof TRANSIENT_READ_FAILURE> {
+  try {
+    // ADR-228：字节直读 seam——网页版走 IndexedDB ArrayBuffer 直出（零 base64 往返，
+    // 省 ≈4.3N 峰值）；桌面/Android 仍在 seam 内部包掉 Wails 的 base64 往返。
+    // 本层不再接触 base64 中间串（原 `Base64ToBytes` 链已下沉到 seam）。
+    return await readModelBytes(modelPath);
+  } catch (e) {
+    devLog(`[YSM] ❌ ${safeErrorMessage(e)}`);
+    if (isDeterministicReadError(e)) throw e;
+    return TRANSIENT_READ_FAILURE;
+  }
+}
+
+/** JSON / 明文 ZIP 分派（非 YSGP 魔数通道）：命中返回结果，未命中 null 走 WASM 解码 */
+async function tryDispatchYsm(
+  ctx: InflightCtx,
+  modelPath: string,
+  bytes: Uint8Array,
+): Promise<DecodedYsm | null> {
+  if (/\.json$/i.test(modelPath)) {
+    return await tryJsonDispatch(ctx, bytes);
+  }
+  // 明文 ZIP（非 YSGP 魔数）→ 走解压 → ysm.json → JSON 分派。
+  // YSMParser WASM 只认 YSGP V1/V2/V3（magic "YSGP"），开源 wine_fox 等
+  // 解压目录被 zip 回 .ysm/.zip 时无该魔数，四条策略全 miss → geometryRaw 缺失
+  // → web 3D spec 恒空。此处补上 web/Android 缺的「plain zip」通道，
+  // 与 Go 端 geometry.ParseComponentsFromZip（.zip ext）对齐。
+  if (isPlainZipMagic(bytes)) {
+    const zipped = await tryZipDispatch(ctx, bytes);
+    if (zipped) return zipped;
+  }
+  return null;
+}
+
 async function doDecodeYsmViaWasm(modelPath: string): Promise<DecodedYsm | null> {
   const cached = cacheGet(modelPath);
   const cachedGeo = cached?.geometry as BedrockGeometry | undefined;
   if (cachedGeo?.bones?.length) return cached as DecodedYsm;
   if (cached?._wasmFailed) return null;
 
-  let bytes: Uint8Array | null;
-  try {
-    // ADR-228：字节直读 seam——网页版走 IndexedDB ArrayBuffer 直出（零 base64 往返，
-    // 省 ≈4.3N 峰值）；桌面/Android 仍在 seam 内部包掉 Wails 的 base64 往返。
-    // 本层不再接触 base64 中间串（原 `Base64ToBytes` 链已下沉到 seam）。
-    bytes = await readModelBytes(modelPath);
-  } catch (e) {
-    // 切片 C 消费端（ADR-331-d1）：readModelBytes 对确定性失败（FILE_TOO_LARGE /
-    // INVALID_PATH）throw 带 cause.Code 的 AppError 形状 Error，此处**重新 throw** 让错误
-    // 冒泡到 mount-preview-core catch → showLoadFailure → friendlyError 出 i18n 译文。
-    // 桥 reject（无 cause.Code 键）= 瞬时后端错误 → return null 回退 Go，不缓存 _wasmFailed
-    // （原 P3 修复契约：读失败可重试）。IO_ERROR 不 throw（返回 null 走原回退）。
-    //
-    // 判据 = cause 上**存在 Code 键**，而非 `cause.Code` 真值：来源按字面量
-    // (`errorCode === "FILE_TOO_LARGE"` 等) 决定 throw，两侧口径必须同源。若此处用真值判，
-    // 空串 Code 会出现「来源 throw、本层吞掉」的分裂——用户既看不到 i18n 译文、又拿不到
-    // Go 兜底（AnalyzeBedrockModelUncached 对确定性失败静默返回空 BedrockModel）。
-    devLog(`[YSM] ❌ ${safeErrorMessage(e)}`);
-    const cause = (e as { cause?: unknown })?.cause;
-    if (cause !== null && typeof cause === "object" && "Code" in cause) throw e;
-    return null;
-  }
+  const bytes = await tryReadModelBytes(modelPath);
+  // 瞬时读失败（桥 reject）→ return null 不缓存（P3 契约：下次重试读文件）
+  if (bytes === TRANSIENT_READ_FAILURE) return null;
   devLog(`[YSM] 读取 ${bytes?.length || 0} bytes`);
 
   // 空字节/IO_ERROR（readModelBytes 返回 null）→ 缓存 _wasmFailed 避免重复解码空文件。
-  // 桥 reject 不缓存（被 catch 拦截 return null，可重试）；FILE_TOO_LARGE/INVALID_PATH 已 throw。
+  // FILE_TOO_LARGE/INVALID_PATH 已由 isDeterministicReadError throw 冒泡。
   if (!bytes?.length) return handleEmptyBytes(modelPath);
 
   // 受限平台大文件内存风险前置告知：峰值 ≈4.33× 文件大小（拷贝链实测，ADR-228），
@@ -873,18 +966,8 @@ async function doDecodeYsmViaWasm(modelPath: string): Promise<DecodedYsm | null>
   };
 
   try {
-    if (/\.json$/i.test(modelPath)) {
-      return await tryJsonDispatch(ctx, bytes);
-    }
-    // 明文 ZIP（非 YSGP 魔数）→ 走解压 → ysm.json → JSON 分派。
-    // YSMParser WASM 只认 YSGP V1/V2/V3（magic "YSGP"），开源 wine_fox 等
-    // 解压目录被 zip 回 .ysm/.zip 时无该魔数，四条策略全 miss → geometryRaw 缺失
-    // → web 3D spec 恒空。此处补上 web/Android 缺的「plain zip」通道，
-    // 与 Go 端 geometry.ParseComponentsFromZip（.zip ext）对齐。
-    if (isPlainZipMagic(bytes)) {
-      const zipped = await tryZipDispatch(ctx, bytes);
-      if (zipped) return zipped;
-    }
+    const dispatched = await tryDispatchYsm(ctx, modelPath, bytes);
+    if (dispatched) return dispatched;
   } catch (e) {
     devLog(`[YSM] ❌ ${safeErrorMessage(e)}`);
     cacheSet(modelPath, { _wasmFailed: true });

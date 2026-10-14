@@ -129,11 +129,11 @@ func TestSearchModels_Numeric_ExcludesNonGeometryType(t *testing.T) {
 
 // ===== MMD 数值搜索端到端（ADR-346 刀 2：统计级解析接进 SearchModels 数值路径）=====
 
-// writePmxStatsFixture 造一个统计级可解析的 PMX（bone_count 头声明 + texsize 直读）
+// writePmxStatsFixture 造一个统计级可解析的 PMX（bone_count 头声明 = PMX 规范单源 + texsize 直读）
 func writePmxStatsFixture(t *testing.T, dir, name string, bones int) string {
 	t.Helper()
 	doc := `<?xml version="1.0" encoding="utf-8"?>` +
-		`<model bone_count="` + itoaPmx(bones) + `" vertex_count="1">` +
+		`<model texcoord_count="1" vertex_count="1" bone_count="` + itoaPmx(bones) + `">` +
 		`<name>` + name + `</name><meta></meta>` +
 		`<bone></bone><material><name>m</name></material>` +
 		`<texture><name>t0</name><texsize>64,64</texsize></texture>` +
@@ -159,9 +159,12 @@ func itoaPmx(n int) string {
 
 // TestSearchModels_MmdStatsNumeric：MMD 族条目进数值路径（统计级：骨骼+纹理可用，
 // cube 恒 0 诚实值——cube 条件天然筛掉 MMD；无数值条件时全量直通不解析）
+// 目录口径 = 真实存储布局 mmd/PMX（location 消歧锚；3d-skin/EntityPlayer 是实例侧
+// 目录，不产生仓库条目 Type 派生——bench_internal_test「mmd/PMX/角色包.zip →
+// EntityPlayer」同口径）
 func TestSearchModels_MmdStatsNumeric(t *testing.T) {
 	base := t.TempDir()
-	epDir := filepath.Join(base, "3d-skin", "EntityPlayer")
+	epDir := filepath.Join(base, "mmd", "PMX")
 	if err := os.MkdirAll(epDir, 0o755); err != nil {
 		t.Fatal(err)
 	}

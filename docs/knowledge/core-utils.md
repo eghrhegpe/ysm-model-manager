@@ -50,10 +50,12 @@ auto_fields:
     - startMainThreadWatch
     - stripAppErrorPaths
     - swallowError
+    - TimeoutError
     - toInt
     - u8ToBase64
     - webDirType
     - withLock
+    - withTimeout
 quick_groups:
   - 跨组件通信与页面
 quick_intents:

@@ -56,6 +56,53 @@ export function createWorkshopRefs(): WorkshopRefs {
   };
 }
 
+/** 重建站点 tab 栏：清容器 → 逐站建按钮（initial 带 active）→ 交共享 a11y 原语接管语义与导航。
+ *  自 reloadWorkshopTabs 抽出（认知复杂度收口）：本段是纯 DOM 装配，无 refs 写、无异步，
+ *  分拆后 initWorkshopTabs 只剩「拉数 → 装配 → 渲染」的编排骨架。 */
+function rebuildSiteTabBar(
+  root: ShadowRoot,
+  tabsEl: HTMLElement,
+  sites: WorkshopSite[],
+  initial: WorkshopSite,
+  onActivate: (id: string) => void,
+): void {
+  tabsEl.innerHTML = "";
+  for (const s of sites) {
+    const btn = document.createElement("button");
+    btn.className = `repo-tab tab-btn${s.id === initial.id ? " active" : ""}`;
+    btn.dataset.tab = s.id;
+    btn.innerHTML = `${getSiteIcon(s.id)} ${escUtil(s.label)}`;
+    tabsEl.appendChild(btn);
+  }
+  // a11y + 点击/键盘分派交共享原语（与仓库/设置页同一份 ARIA/roving 真值）：站点 tab 是
+  // 「动态生成 + 单一内容区」，套不进 bindTabs 的静态面板契约，故原语只接管语义与导航、
+  // 内容切换走 onActivate。选择器限定 #ws-tabs 内，避免误伤同 shadow 下其他页的 .repo-tab。
+  bindTabA11y({
+    root,
+    tabSelector: "#ws-tabs .repo-tab",
+    panelId: () => "ws-search-results",
+    validate: true,
+    onActivate: (btn) => {
+      const id = btn.dataset.tab ?? "";
+      if (id) onActivate(id);
+    },
+  });
+}
+
+/** tab 栏空态：区分「加载失败」与「真无数据」（ADR-082 续），二者都不再永久停留 loading 占位。
+ *  引导指向 importSite（空配置的正确解法是导入，不是导出空数据）。 */
+function renderTabsEmptyState(tabsEl: HTMLElement, failed: boolean): void {
+  const emptyText = failed ? t("common.loadFailed") : t("common.empty");
+  tabsEl.innerHTML =
+    '<span style="padding:var(--btn-padding-filter-lg);font-size:var(--fs-sm);color:var(--muted)">' +
+    emptyText +
+    " " +
+    UI_ICONS.import +
+    " " +
+    t("workshop.importSite") +
+    "</span>";
+}
+
 /**
  * 初始化创意工坊 Tab。
  * @returns `reloadWorkshopTabs()` — 完整重载入口（拉数据 → 重建 tab 栏 → 渲染初始站点），
@@ -116,48 +163,20 @@ export function initWorkshopTabs(
     try {
       const data = await loadCommunityData();
       refs.allSites = data.sites;
-      // 动态生成 Tab
       const tabsEl = root.getElementById("ws-tabs");
-      if (tabsEl && data.sites.length) {
-        // 恢复上次选中的 tab（用于决定首个激活项，与 bindTabA11y 的 pre-seeded active 对齐）
-        const last = safeGet(WS_LAST_TAB_KEY);
-        const initial = data.sites.find((s) => s.id === last) || data.sites[0];
-        tabsEl.innerHTML = "";
-        data.sites.forEach((s) => {
-          const btn = document.createElement("button");
-          btn.className = `repo-tab tab-btn${s.id === initial.id ? " active" : ""}`;
-          btn.dataset.tab = s.id;
-          btn.innerHTML = `${getSiteIcon(s.id)} ${escUtil(s.label)}`;
-          tabsEl.appendChild(btn);
-        });
-        // a11y + 点击/键盘分派交共享原语（与仓库/设置页同一份 ARIA/roving 真值）：站点 tab 是
-        // 「动态生成 + 单一内容区」，套不进 bindTabs 的静态面板契约，故原语只接管语义与导航、
-        // 内容切换走 onActivate。选择器限定 #ws-tabs 内，避免误伤同 shadow 下其他页的 .repo-tab。
-        bindTabA11y({
-          root,
-          tabSelector: "#ws-tabs .repo-tab",
-          panelId: () => "ws-search-results",
-          validate: true,
-          onActivate: (btn) => {
-            const id = btn.dataset.tab ?? "";
-            if (id) void showCreatorsBySite(id);
-          },
-        });
-        // 默认显示初始站点（复用本次已加载数据，避免 showCreatorsBySite 二次拉取）
-        if (initial) await showCreatorsBySite(initial.id, data);
-      } else if (tabsEl) {
-        // 空态：区分「加载失败」与「真无数据」（ADR-082 续），二者都不再永久停留 loading 占位。
-        // 引导指向 importSite（空配置的正确解法是导入，不是导出空数据）。
-        const emptyText = data.failed ? t("common.loadFailed") : t("common.empty");
-        tabsEl.innerHTML =
-          '<span style="padding:var(--btn-padding-filter-lg);font-size:var(--fs-sm);color:var(--muted)">' +
-          emptyText +
-          " " +
-          UI_ICONS.import +
-          " " +
-          t("workshop.importSite") +
-          "</span>";
+      if (!tabsEl) return; // 骨架缺失即页面残废，早退（与调用方 searchResults 同判据）
+      // 空态优先短路：无站点不建按钮、不绑 a11y
+      if (!data.sites.length) {
+        renderTabsEmptyState(tabsEl, Boolean(data.failed));
+        return;
       }
+      // 恢复上次选中的 tab（用于决定首个激活项，与 bindTabA11y 的 pre-seeded active 对齐）
+      const last = safeGet(WS_LAST_TAB_KEY);
+      const initial = data.sites.find((s) => s.id === last) ?? data.sites[0];
+      if (!initial) return; // sites 非空时不可达；防御下标越界（noUncheckedIndexedAccess）
+      rebuildSiteTabBar(root, tabsEl, data.sites, initial, (id) => void showCreatorsBySite(id));
+      // 默认显示初始站点（复用本次已加载数据，避免 showCreatorsBySite 二次拉取）
+      await showCreatorsBySite(initial.id, data);
     } catch (e) {
       // 定时器回调最外层 catch 出口——与 showCreatorsBySite 同出口，不逸出 unhandled rejection
       toast((e as Error)?.message || t("workshop.loadCommunityFailed"), TOAST_MS.normal, "error");

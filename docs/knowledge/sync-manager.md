@@ -32,6 +32,8 @@ auto_fields:
     - cleanupSyncVirtualScroll
     - collectCounts
     - containerHTML
+    - downloadMissing
+    - DownloadOutcome
     - EmitDedupe
     - emptyHintHTML
     - EventSelf
@@ -43,7 +45,6 @@ auto_fields:
     - loadInstances
     - loadTypeConfig
     - NetworkSelf
-    - nextPushToken
     - noInstanceHTML
     - performSingleOp
     - pruneCheckedSets
@@ -60,6 +61,7 @@ auto_fields:
     - statusIconOf
     - statusTabHTML
     - syncDirRowHTML
+    - SyncDownloadPayload
     - SyncItem
     - SyncManagerFields
     - SyncManagerSelf
@@ -67,7 +69,6 @@ auto_fields:
     - SyncStoreSelf
     - tabStatus
     - VIEW_TESTIDS
-    - waitBusQuiet
   tests:
     - frontend/src/views/app-sync-manager/index.test.ts
     - frontend/src/views/app-sync-manager/index.branches.test.ts

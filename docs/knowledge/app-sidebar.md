@@ -31,7 +31,6 @@ auto_fields:
     - listContainerHTML
     - loadErrorStateHTML
     - loadInstances
-    - nextPushToken
     - pruneCheckedSets
     - renderLoadError
     - renderVersionCards
@@ -43,7 +42,6 @@ auto_fields:
     - SidebarInstance
     - SYNC_TYPE_ALL
     - VIEW_TESTIDS
-    - waitBusQuiet
   tests:
     - frontend/src/features/community/data.test.ts
     - frontend/src/views/app-nav/index.test.ts

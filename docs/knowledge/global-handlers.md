@@ -18,12 +18,15 @@ auto_fields:
     - DiaryHandle
     - DiarySink
     - DiaryStatus
+    - downloadMissing
+    - DownloadOutcome
     - handleTreeDrop
     - pushToDiary
     - registerErrorDiary
     - registerInstanceOps
     - registerSync
     - requireMcRoot
+    - SyncDownloadPayload
     - unregisterErrorDiary
   tests:
     - frontend/src/core/error-diary.test.ts

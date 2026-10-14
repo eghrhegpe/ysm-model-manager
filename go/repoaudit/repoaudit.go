@@ -226,6 +226,20 @@ func AuditCtx(ctx context.Context, dirPath string) (DirAuditResult, error) { //n
 	// 每文件 LoadRegistry（mutex + 解析开销——大仓库线性放大）
 	reg := registry.LoadRegistry()
 
+	// 大小写孪生累积（同父目录 + 同小写键 → 多个不同原名）：walk 已逐条目访问，
+	// 顺手记账零额外 I/O。根自身不参与兄弟比较（它没有「同父」可比）。
+	caseSib := map[string]map[string]struct{}{}
+	noteCase := func(p string, name string) {
+		if p == filepath.Clean(dirPath) {
+			return
+		}
+		key := caseSibKey(filepath.Dir(p), strings.ToLower(name))
+		if caseSib[key] == nil {
+			caseSib[key] = map[string]struct{}{}
+		}
+		caseSib[key][name] = struct{}{}
+	}
+
 	// ADR-314 取消检查点：ctx.Err() 内部带锁，降频至每 64 项一查（回调内其余工作
 	// 均含文件系统调用，检查开销相对可忽略）。
 	walked := 0
@@ -264,6 +278,7 @@ func AuditCtx(ctx context.Context, dirPath string) (DirAuditResult, error) { //n
 			if fsutil.IsRelinkBackupPath(path) {
 				return filepath.SkipDir
 			}
+			noteCase(path, d.Name())
 			return nil
 		}
 		info, ierr := d.Info()
@@ -273,6 +288,7 @@ func AuditCtx(ctx context.Context, dirPath string) (DirAuditResult, error) { //n
 		ext := strings.ToLower(filepath.Ext(path))
 		size := info.Size()
 		result.Resources.TotalFiles++
+		noteCase(path, d.Name())
 		totalSize += size
 
 		// 收集纹理路径供命中率统计（延后到 walk 外并发执行，见 measureCacheHitRateCtx）。
@@ -327,6 +343,9 @@ func AuditCtx(ctx context.Context, dirPath string) (DirAuditResult, error) { //n
 	result.Resources.ByType = resources
 	result.Resources.LargestFile = largestFile
 	result.Resources.LargestSize = largestSize
+
+	// 大小写孪生路径告警（诊断信道，不影响评分——见 caseSiblingWarnings 注释）
+	result.Warnings = append(result.Warnings, caseSiblingWarnings(caseSib)...)
 
 	// 完整性百分比
 	if result.Completeness.Checked > 0 {

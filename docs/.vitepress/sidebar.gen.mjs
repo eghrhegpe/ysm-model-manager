@@ -1641,6 +1641,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-342-d1：重链接失败结构化下发（RelinkResult 取代 ErrPartialSync 抬升）",
+        "link": "/adr/decisions/ADR-342-d1-relink-result-structured"
+      },
+      {
         "text": "ADR-340-d2：批量推送覆盖知情口径：如实计数与点名（覆盖照旧）",
         "link": "/adr/decisions/ADR-340-d2-push-overwrite-accounting"
       },

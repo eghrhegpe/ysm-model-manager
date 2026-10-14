@@ -306,6 +306,57 @@ export function buildNote(report: Omit<PostprocProbeReport, "note">): string {
   return `关闭后处理时，composer 常驻每帧多耗 ${per.toFixed(2)}ms GPU（约 ${(report.extraPct ?? 0).toFixed(1)}%），另常驻 ${(report.rtBytesBoth / 1048576).toFixed(1)}MB 读写缓冲。`;
 }
 
+/** 组装探针报告：GPU 差量推导 + canvas 元数据 + 一次 logWarn */
+function buildProbeReport(input: {
+  ppEnabled: boolean;
+  bufferW: number;
+  bufferH: number;
+  pixelRatio: number;
+  msaaSamples: number;
+  composer: ReturnType<typeof summarizeArm>;
+  direct: ReturnType<typeof summarizeArm>;
+  composerArmFrames: number;
+  rtBytesSingle: number;
+}): PostprocProbeReport {
+  const { ppEnabled, bufferW, bufferH, pixelRatio, msaaSamples, composer, direct } = input;
+  const composerArmFrames = input.composerArmFrames;
+  const rtBytesSingle = input.rtBytesSingle;
+  const hasGpu = composer.gpuMedianMs !== null && direct.gpuMedianMs !== null;
+  const extraGpuMsPerFrame = hasGpu
+    ? (composer.gpuMedianMs as number) - (direct.gpuMedianMs as number)
+    : null;
+  const extraPct =
+    hasGpu && (direct.gpuMedianMs as number) > 0
+      ? ((extraGpuMsPerFrame as number) / (direct.gpuMedianMs as number)) * 100
+      : null;
+
+  const base: Omit<PostprocProbeReport, "note"> = {
+    ppEnabled,
+    taxMeaningful: !ppEnabled,
+    canvas: {
+      logicalW: Math.round(bufferW / (pixelRatio || 1)),
+      logicalH: Math.round(bufferH / (pixelRatio || 1)),
+      pixelRatio,
+      bufferW,
+      bufferH,
+    },
+    msaaSamples,
+    rtBytesSingle,
+    rtBytesBoth: rtBytesSingle * 2,
+    gpuTimingAvailable: hasGpu,
+    arms: { composer, direct },
+    composerArmFrames,
+    extraGpuMsPerFrame,
+    extraPct,
+  };
+  const report: PostprocProbeReport = { ...base, note: buildNote(base) };
+  logWarn(
+    "postproc-probe",
+    `[composer vs direct] gpu ${composer.gpuMedianMs?.toFixed(2) ?? "n/a"} vs ${direct.gpuMedianMs?.toFixed(2) ?? "n/a"} ms | submit ${composer.submitMedianMs.toFixed(2)} vs ${direct.submitMedianMs.toFixed(2)} ms | rt ${(report.rtBytesBoth / 1048576).toFixed(1)}MB | ${report.note}`,
+  );
+  return report;
+}
+
 /**
  * 跑一次 A/B 成本探针。
  *
@@ -383,39 +434,16 @@ export async function runPostprocCostProbe(
 
   const composer = summarizeArm("composer", submits.composer, gpus.composer);
   const direct = summarizeArm("direct", submits.direct, gpus.direct);
-  const hasGpu = composer.gpuMedianMs !== null && direct.gpuMedianMs !== null;
-  const extraGpuMsPerFrame = hasGpu
-    ? (composer.gpuMedianMs as number) - (direct.gpuMedianMs as number)
-    : null;
-  const extraPct =
-    hasGpu && (direct.gpuMedianMs as number) > 0
-      ? ((extraGpuMsPerFrame as number) / (direct.gpuMedianMs as number)) * 100
-      : null;
   const rtBytesSingle = estimateComposerRtBytes({ bufferW, bufferH, samples: msaaSamples });
-
-  const base: Omit<PostprocProbeReport, "note"> = {
+  return buildProbeReport({
     ppEnabled,
-    taxMeaningful: !ppEnabled,
-    canvas: {
-      logicalW: Math.round(bufferW / (pixelRatio || 1)),
-      logicalH: Math.round(bufferH / (pixelRatio || 1)),
-      pixelRatio,
-      bufferW,
-      bufferH,
-    },
+    bufferW,
+    bufferH,
+    pixelRatio,
     msaaSamples,
-    rtBytesSingle,
-    rtBytesBoth: rtBytesSingle * 2,
-    gpuTimingAvailable: hasGpu,
-    arms: { composer, direct },
+    composer,
+    direct,
     composerArmFrames,
-    extraGpuMsPerFrame,
-    extraPct,
-  };
-  const report: PostprocProbeReport = { ...base, note: buildNote(base) };
-  logWarn(
-    "postproc-probe",
-    `[composer vs direct] gpu ${composer.gpuMedianMs?.toFixed(2) ?? "n/a"} vs ${direct.gpuMedianMs?.toFixed(2) ?? "n/a"} ms | submit ${composer.submitMedianMs.toFixed(2)} vs ${direct.submitMedianMs.toFixed(2)} ms | rt ${(report.rtBytesBoth / 1048576).toFixed(1)}MB | ${report.note}`,
-  );
-  return report;
+    rtBytesSingle,
+  });
 }

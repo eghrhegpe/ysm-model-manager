@@ -75,7 +75,7 @@ invariant_anchors:
 
 ## 对外 API / 入口
 
-- `generateSurfacePixels(st, sizePx)`：在 `ground-surface-spec.ts`，退化为 dispatcher，spec/key/apply 不动。
+- `generateSurfacePixels(st, sizePx)`：在 `ground-surface-spec.ts`，dispatcher（spec 投影 → 查 `SURFACE_PIXEL_GENERATORS`）。**2026-10-14 性能**：dispatcher 前加了一层按 spec 键的**确定性字节 memo**（`ground-surface-spec.ts|_surfaceGenCache`，FIFO 上限 32）——同 (spec,sizePx) 命中即跳过 512²×4-octave 噪声填充（rebuild 来回切同 spec / 测试 N 个同 spec cap 坍缩成 1 次填充；下游 `DataTexture` 只读引用该字节数组，跨 cap 共享安全）。
 - `SURFACE_PIXEL_GENERATORS`：`Record<SurfaceCanvasStyle, SurfacePixelGenerator>` 调度表（`index.ts`）。
 - 调用方：`ground-capability.ts` 的 `makeGeneratedTexture` 把产物包成 `DataTexture`（`RepeatWrapping`）。
 
@@ -112,6 +112,11 @@ invariant_anchors:
 - 量化：`repetitionScore` = 相邻子块平均归一化 MAD（0=完全重复，越大去重复越强）；`maxSeamDiscontinuity` 验证未引入新缝。单测见 `anti-repeat.test.ts`（14 用例）。
 - 单张 tile 想造「近似变体 B」可用 `makeDecorrelatedVariant`（旋转+通道微偏移），但**最佳效果请传两份真实不同种子的程序化结果**。
 - 固有残差缝：4D 环面噪声在固定分辨率下，最高频 octave 在边界像素间有亚像素相位差（S=512 实际可忽略）；anti-repeat 契约是「不引入新缝」（输出缝 ≤ 源缝 max），不消除该固有残差。
+
+
+## 裁定记录
+
+- `2026-10-14`：generateSurfacePixels 前置确定性字节 memo（按 spec 键，FIFO 上限 32）：同 (spec,sizePx) 命中跳过 512²×4-octave 噪声填充｜该函数是 (spec,sizePx) 纯确定性函数（seed 噪声非 Math.random，本卡确定性测试钉死）；rebuild 来回切同 spec 与测试 N 个同 spec cap 各重复 512² 填充是 ground-capability 53s 的主因，memo 后单跑 28s→7.9s。下游 DataTexture 只读引用字节数组，跨 cap 共享安全｜回退 = `frontend/src/preview-3d/caps/ground-surface-spec.ts|_surfaceGenCache`
 
 ## 相关
 

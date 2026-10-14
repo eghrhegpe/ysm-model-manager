@@ -16,9 +16,55 @@ use_when:
 auto_fields:
   symbols_with_lines:
     - allIconNames
+    - checkLayoutDocDrift
+    - COMBINING_MARKS
+    - COMBO_EXPANSION
+    - COMBO_PADDING_TOKENS
+    - DesignViolation
+    - DesignViolationKind
+    - DocDrift
     - EMOJI_TO_ICON
+    - findEmojiIconViolations
+    - findLocaleEmojiPrefixViolations
+    - findStyleAttrViolations
+    - findToastEmojiPrefixViolations
+    - findToastEmojiPrefixWindowViolations
+    - findViolationsOnLines
+    - FixEdit
+    - fixLineTokens
+    - GLYPH_CLUSTER
     - glyphOfIconName
+    - GRAPHIC_EMOJI
+    - hasCustomEasing
+    - hasGraphicEmoji
+    - isCommentLine
+    - isNeutralColor
+    - isRealtimeFeedbackTransition
+    - nearestPadToken
+    - normalizeShadowValue
+    - PAD_TOKEN_VERTICAL
+    - parseTokenMap
+    - propDeclRe
+    - propValueRe
+    - REALTIME_FEEDBACK_MAX_SECS
+    - REALTIME_FEEDBACK_PROPS
+    - SHADOW_TOKEN_VALUES
+    - SP_FLOOR_PX
+    - SP_TOKEN_VERTICAL
+    - splitTopLevelCommas
+    - STATUS_ICON_NAMES
     - suggestIconName
+    - suggestPaddingToken
+    - suggestShadowToken
+    - suggestToken
+    - suggestTransitionToken
+    - suggestTransitionTokenExact
+    - TOKEN_PX_BASELINE
+    - TokenPxMap
+    - TokenRawMap
+    - TR_EXEMPT_MARKER
+    - TRANSITION_TOKEN_DURATIONS
+    - TRANSITION_TOKEN_VALUES
 quick_groups:
   - UI 交互与弹窗
 quick_intents:

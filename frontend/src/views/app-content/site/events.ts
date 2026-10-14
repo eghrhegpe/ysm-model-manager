@@ -433,30 +433,35 @@ function cmBbBindCardClicks(
   });
 }
 
+/** 网格方向键 + Enter/Space 键导航 handler（深焦解析 + 循环焦点） */
+function makeGridKeydownHandler(crGrid: HTMLElement): (e: KeyboardEvent) => void {
+  return (e: KeyboardEvent) => {
+    const cards = qsa<HTMLElement>(crGrid, ".gh-card[tabindex]");
+    // 深焦解析：网格在 app-content 的 shadow root 内，DOM retargeting 下 document.activeElement
+    // 返回的是 **shadow host** 而非内层卡片 → cards.indexOf(cur) 恒 -1，方向键与 Enter/Space
+    // 全线早退。必须走 utils/dom/deep-active-element.ts（单源出口，勿直读 document.activeElement）。
+    const cur = deepActiveElementOf(cards);
+    const idx = cur ? cards.indexOf(cur) : -1;
+    if (idx < 0) return;
+    if (e.key === "ArrowDown" || e.key === "ArrowRight") {
+      e.preventDefault();
+      const next = cards[idx + 1] || cards[0];
+      next.focus();
+    } else if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
+      e.preventDefault();
+      const prev = cards[idx - 1] || cards[cards.length - 1];
+      prev.focus();
+    } else if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      cur?.click();
+    }
+  };
+}
+
 function cmBbBindKeyboardNav(searchResults: HTMLElement): void {
-  const crGrid = searchResults.querySelector(".cr-creator-grid");
+  const crGrid = searchResults.querySelector<HTMLElement>(".cr-creator-grid");
   if (crGrid) {
-    crGrid.addEventListener("keydown", ((e: KeyboardEvent) => {
-      const cards = qsa<HTMLElement>(crGrid, ".gh-card[tabindex]");
-      // 深焦解析：网格在 app-content 的 shadow root 内，DOM retargeting 下 document.activeElement
-      // 返回的是 **shadow host** 而非内层卡片 → cards.indexOf(cur) 恒 -1，方向键与 Enter/Space
-      // 全线早退。必须走 utils/dom/deep-active-element.ts（单源出口，勿直读 document.activeElement）。
-      const cur = deepActiveElementOf(cards);
-      const idx = cur ? cards.indexOf(cur) : -1;
-      if (idx < 0) return;
-      if (e.key === "ArrowDown" || e.key === "ArrowRight") {
-        e.preventDefault();
-        const next = cards[idx + 1] || cards[0];
-        next.focus();
-      } else if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
-        e.preventDefault();
-        const prev = cards[idx - 1] || cards[cards.length - 1];
-        prev.focus();
-      } else if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        cur?.click();
-      }
-    }) as EventListener);
+    crGrid.addEventListener("keydown", makeGridKeydownHandler(crGrid) as EventListener);
   }
 }
 

@@ -14,6 +14,27 @@ const JPEG_SOF_EXCLUDE = [0xc4, 0xc8, 0xcc];
 /** JPEG 头部扫描上限（足够覆盖 SOI 后首个 SOF，与 Go 端一致） */
 const JPEG_HEADER_SCAN_LIMIT = 4096;
 
+/** 嗅探 PNG 尺寸（8 字签名 + IHDR 后 4+4 字节大端） */
+function sniffPngSize(arr: Uint8Array): { w: number; h: number } | null {
+  if (arr.length < 24) return null;
+  const w = (arr[16] << 24) | (arr[17] << 16) | (arr[18] << 8) | arr[19];
+  const h = (arr[20] << 24) | (arr[21] << 16) | (arr[22] << 8) | arr[23];
+  return w > 0 && h > 0 ? { w, h } : null;
+}
+
+/** 嗅探 JPEG 尺寸（SOI 后首个 SOF 段） */
+function sniffJpegSize(arr: Uint8Array): { w: number; h: number } | null {
+  for (let i = 2; i < Math.min(arr.length - 8, JPEG_HEADER_SCAN_LIMIT); i++) {
+    const m = arr[i + 1];
+    if (arr[i] === JPEG_MARKER && (m & 0xf0) === JPEG_SOF_MASK && !JPEG_SOF_EXCLUDE.includes(m)) {
+      const h = (arr[i + 5] << 8) | arr[i + 6];
+      const w = (arr[i + 7] << 8) | arr[i + 8];
+      return w > 0 && h > 0 ? { w, h } : null;
+    }
+  }
+  return null;
+}
+
 /**
  * 从纹理字节嗅探像素尺寸（PNG：8 字签名 + IHDR 后 4 字节宽/4 字节高大端；
  * JPEG：SOI 后首个 SOF 段高度/宽度）。失败返回 null。
@@ -22,20 +43,10 @@ const JPEG_HEADER_SCAN_LIMIT = 4096;
 export function sniffTexSize(arr: Uint8Array): { w: number; h: number } | null {
   if (!arr?.length) return null;
   if (arr[0] === PNG_SIG[0] && arr[1] === PNG_SIG[1] && arr[2] === PNG_SIG[2]) {
-    if (arr.length < 24) return null;
-    const w = (arr[16] << 24) | (arr[17] << 16) | (arr[18] << 8) | arr[19];
-    const h = (arr[20] << 24) | (arr[21] << 16) | (arr[22] << 8) | arr[23];
-    return w > 0 && h > 0 ? { w, h } : null;
+    return sniffPngSize(arr);
   }
   if (arr[0] === JPEG_MARKER && arr[1] === 0xd8) {
-    for (let i = 2; i < Math.min(arr.length - 8, JPEG_HEADER_SCAN_LIMIT); i++) {
-      const m = arr[i + 1];
-      if (arr[i] === JPEG_MARKER && (m & 0xf0) === JPEG_SOF_MASK && !JPEG_SOF_EXCLUDE.includes(m)) {
-        const h = (arr[i + 5] << 8) | arr[i + 6];
-        const w = (arr[i + 7] << 8) | arr[i + 8];
-        return w > 0 && h > 0 ? { w, h } : null;
-      }
-    }
+    return sniffJpegSize(arr);
   }
   return null;
 }

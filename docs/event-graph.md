@@ -328,7 +328,7 @@
 | runDownloadMissing | `frontend/src/features/sync/sync.ts` | 305 |
 | runSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 391 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 208 |
-| relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 230 |
+| relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 249 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 93 |
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 311 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 73 |
@@ -409,8 +409,8 @@
 | downloadMissing | `frontend/src/features/sync/sync.ts` | 343 |
 | handleSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 420 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 209 |
-| applyFsaState | `frontend/src/views/app-content/settings/init.ts` | 389 |
-| onWebRepoAuthClick | `frontend/src/views/app-content/settings/init.ts` | 417 |
+| applyFsaState | `frontend/src/views/app-content/settings/init.ts` | 408 |
+| onWebRepoAuthClick | `frontend/src/views/app-content/settings/init.ts` | 436 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 460 |
 
 **订阅方（on）：**

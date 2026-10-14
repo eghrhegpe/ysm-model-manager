@@ -279,40 +279,35 @@ function armCompleteTimer(ctx: CmPgCtx, s: DownloadState): void {
   }, COMPLETE_DELAY_MS);
 }
 
-function cmPgForceFileDone(ctx: CmPgCtx, done: { status: string; errMsg: string }): void {
-  if (done.status === "ok") {
-    const { pctEl, fillEl } = cmPgResetProgressUI(ctx);
-    if (pctEl && (ctx._stuckLocked || pctEl.textContent === "99%")) {
-      pctEl.textContent = "100%";
-      ctx._stuckLocked = false;
-      if (ctx._dotTimer) {
-        clearInterval(ctx._dotTimer);
-        ctx._dotTimer = null;
-      }
-      if (fillEl) fillEl.style.width = "100%";
-    }
-    if (ctx._stuckTimer) {
-      clearTimeout(ctx._stuckTimer);
-      ctx._stuckTimer = null;
-    }
-  } else if (done.status === "fail") {
-    const { pctEl, fillEl } = cmPgResetProgressUI(ctx);
-    if (pctEl) {
-      pctEl.innerHTML = UI_ICONS.error;
-      pctEl.classList.add("gh-progress-error");
-      pctEl.title = done.errMsg || t("downloadQueue.hint.failed");
-    }
+/** 成功分支：进度 UI 推到 100%，清理 stuck/dot timer（复用 L79/86 集中清理） */
+function cmPgForceOk(ctx: CmPgCtx): void {
+  const { pctEl, fillEl } = cmPgResetProgressUI(ctx);
+  if (pctEl && (ctx._stuckLocked || pctEl.textContent === "99%")) {
+    pctEl.textContent = "100%";
     ctx._stuckLocked = false;
-    if (ctx._stuckTimer) {
-      clearTimeout(ctx._stuckTimer);
-      ctx._stuckTimer = null;
-    }
-    if (ctx._dotTimer) {
-      clearInterval(ctx._dotTimer);
-      ctx._dotTimer = null;
-    }
-    if (fillEl) fillEl.classList.add("gh-progress-fill-error");
+    cmPgClearDotTimer(ctx);
+    if (fillEl) fillEl.style.width = "100%";
   }
+  cmPgClearStuckTimer(ctx);
+}
+
+/** 失败分支：标记错误图标，清理 stuck/dot timer */
+function cmPgForceFail(ctx: CmPgCtx, done: { status: string; errMsg: string }): void {
+  const { pctEl, fillEl } = cmPgResetProgressUI(ctx);
+  if (pctEl) {
+    pctEl.innerHTML = UI_ICONS.error;
+    pctEl.classList.add("gh-progress-error");
+    pctEl.title = done.errMsg || t("downloadQueue.hint.failed");
+  }
+  ctx._stuckLocked = false;
+  cmPgClearStuckTimer(ctx);
+  cmPgClearDotTimer(ctx);
+  if (fillEl) fillEl.classList.add("gh-progress-fill-error");
+}
+
+function cmPgForceFileDone(ctx: CmPgCtx, done: { status: string; errMsg: string }): void {
+  if (done.status === "ok") cmPgForceOk(ctx);
+  else if (done.status === "fail") cmPgForceFail(ctx, done);
 }
 
 function cmPgBeginQueueEnded(ctx: CmPgCtx): boolean {

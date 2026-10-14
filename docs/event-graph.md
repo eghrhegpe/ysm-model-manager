@@ -325,8 +325,8 @@
 | onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 203 |
 | registerInstanceOps | `frontend/src/features/pack-ops/instance-ops.ts` | 135 |
 | registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 55 |
-| runDownloadMissing | `frontend/src/features/sync/sync.ts` | 175 |
-| runSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 274 |
+| runDownloadMissing | `frontend/src/features/sync/sync.ts` | 247 |
+| runSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 332 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 208 |
 | relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 230 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 93 |
@@ -361,7 +361,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| registerSync | `frontend/src/features/sync/sync.ts` | 315 |
+| registerSync | `frontend/src/features/sync/sync.ts` | 373 |
 
 ### `toast:show`
 
@@ -406,8 +406,8 @@
 | setupRecycleActions | `frontend/src/features/maintenance/recycle-bin.ts` | 132 |
 | onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 204 |
 | registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 54 |
-| downloadMissing | `frontend/src/features/sync/sync.ts` | 227 |
-| handleSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 303 |
+| downloadMissing | `frontend/src/features/sync/sync.ts` | 285 |
+| handleSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 361 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 209 |
 | applyFsaState | `frontend/src/views/app-content/settings/init.ts` | 389 |
 | onWebRepoAuthClick | `frontend/src/views/app-content/settings/init.ts` | 417 |

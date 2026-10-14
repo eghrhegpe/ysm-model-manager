@@ -57,6 +57,9 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "check-knowledge-topkeys.ts": ["docs", "tests"], // P1 顶层键白名单（fail-closed）：schema 外键 ERROR
   "check-knowledge-rename-migration.ts": ["docs", "tests"],
   "check-gen-autogen-stale-cleanup.ts": ["docs", "tests"], // gen-knowledge-autogen：source_files 消失时回收 tests/auto_fields 派生块
+  "check-gen-autogen-symbols-cap.ts": ["docs", "tests"], // gen-knowledge-autogen：broad_claim 巨兽卡符号封顶（ADR-338-d2）
+  "test_adr_ruling_gate.ts": ["docs", "tests"], // 执行级裁定三问 + add-card-ruling 增量门槛
+  "test_commit_message_gate.ts": ["tests"], // ADR-338-d1 刀1：提交信息减负闸（commit-msg 采集期不阻断）
   "check-knowledge-derived-symbol-count.ts": ["docs", "tests"], // 5.14 派生元数据体量护栏（≥100 符号 WARN）
   "check-knowledge-claim-overlap.ts": ["docs", "tests"], // 5.15 跨卡认领重复（≥3 条认领且 0 条独占 WARN）
   "check-knowledge-source-containment.ts": ["docs", "tests"], // 5.16 卡内 source_files 包含冗余（目录吞掉同卡文件条目 WARN）
@@ -559,6 +562,9 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   ],
   "check-knowledge-rename-migration.ts": ["scripts/check-knowledge-drift.ts"],
   "check-gen-autogen-stale-cleanup.ts": ["scripts/gen-knowledge-autogen.ts"],
+  "check-gen-autogen-symbols-cap.ts": ["scripts/gen-knowledge-autogen.ts"],
+  "test_adr_ruling_gate.ts": ["scripts/_lib/adr-tier-gate.ts", "scripts/add-card-ruling.ts"],
+  "test_commit_message_gate.ts": ["scripts/_lib/commit-blocks/commit-message.ts"],
   "check-knowledge-derived-symbol-count.ts": ["scripts/check-knowledge-drift.ts"],
   "check-knowledge-claim-overlap.ts": ["scripts/check-knowledge-drift.ts"],
   "check-knowledge-source-containment.ts": ["scripts/check-knowledge-drift.ts"],

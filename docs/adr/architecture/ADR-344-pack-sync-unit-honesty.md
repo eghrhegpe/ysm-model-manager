@@ -29,7 +29,7 @@
 
 `syncResourcesDirLevel` 的单元表由 `map[string]string` 升为携带 `Path/Rel/Size/Hash/IsDir` 的单元结构，两侧归集成 `map[string]DiffEntry` 后**委托 `ResourceDiff`**（`contentDiffers`：两侧均有哈希比哈希，否则比 Size），不再手写存在性判定。
 
-- 哈希来源：scan 信道取 `types.ModelEntry.Hash`（scanner 30s 缓存 + 并行哈希，非同步热路径现算，不触 hashlock 红线）；Walk 回退信道无哈希 → `DiffEntry.Hash` 留空 → Size 兜底。与文件级信道**同一契约**（`DiffEntry.Hash` 注释：空=未知，回退 Size）。
+- 哈希来源：scan 反推信道取 `types.ModelEntry.Hash`；Walk 回退信道由**同一次 `scanFn` 结果**按绝对路径旁挂（`dirLevelHashByPath`）——两条信道判定强度一致，`hashed` 维度才名副其实。仅 `scanFn == nil`（测试/旧调用方）时 `DiffEntry.Hash` 留空 → Size 兜底；与文件级信道**同一契约**（`DiffEntry.Hash` 注释：空=未知，回退 Size）。scanner 哈希在其 30s 缓存 + 并行预算内产生，非同步热路径现算，不触 hashlock 红线。
 - 缓存键补 `hashed: scanFn != nil`：同一 `(root, rtype)` 在 30s TTL 内可能先被「带哈希的 scan 结果」填充、再被「无哈希的 Walk 结果」命中（或反之），两种值的判定强度不同，必须分槽——照抄文件级信道 `resources` 的既有先例（`sync_cache.go|syncDirectoryScanKey.hashed` 注释里那条「互相污染」教训）。
 - **跨格式不比内容**：`relKeyDirLevel` 按模型身份剥扩展名/禁用后缀（`B.zip` 与 `B.ysm` 同键），故仅当两侧单元的**原始相对路径（小写、slash）相等**时才比较内容字段；不等则清空内容字段退化为 `Synced`。理由：跨格式比字节**恒不相等**，会造出「点了推送还是红」的永不收敛假阳性（推送落 `B.ysm` 后实例里 `B.zip` 仍在，键与内容都不变），而旧语义「同身份即已同步」是刻意的格式宽容。此规则同时把 `.disabled` 与活跃文件的路径差异挡在内容比较之外，**不抢批 C 对 `.disabled` 语义的裁决**。
 
@@ -60,7 +60,7 @@ dirLevel 推送/拉取的单元清单里，若某条目是另一条目的**严�
 **负面 / 代价**
 
 - dirLevel 单元表从 `string` 变结构体，三条 collect 通道（Walk / scan 反推 / 缓存读写）与缓存 map 类型同步改动；缓存键新增 `hashed` 维度（缓存条目数略增，语义正确性优先）。
-- Walk 回退信道无哈希：仅改内容不改 size 的文件在该信道仍判 `Synced`（生产链始终注入 `scanFn`，故此退化只影响测试/旧调用方）——已与文件级信道同款限制，非新增债务。
+- Walk 回退信道在 `scanFn == nil` 时无哈希：仅改内容不改 size 的文件在该信道仍判 `Synced`（生产链始终注入 `scanFn`，且注入时回退信道同样旁挂摘要，故此退化只影响测试/旧调用方）——已与文件级信道同款限制，非新增债务。
 
 **已知遗留**
 

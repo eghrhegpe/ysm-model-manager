@@ -16,11 +16,12 @@ import (
 	"ysm-model-manager/go/types/registry"
 )
 
-// caseSibKey 把「父目录 + 小写键」拼成单一 map 键（\x00 分隔，杜绝与路径分隔符碰撞）。
-func caseSibKey(parent, low string) string { return parent + "\x00" + low }
-
-// caseSiblingWarnings 由 walk 累积的分组（caseSibKey(parent,low) → 该组下多个不同原名）
-// 生成**确定性排序**的大小写孪生告警（同目录出现仅大小写不同的文件/目录名）。
+// caseSiblingWarnings 由 walk 累积的分组（**小写相对路径** → 该折叠键下多个不同原路径）
+// 生成**确定性排序**的大小写孪生告警。
+//
+// 折叠面 = 小写相对路径而非 (父目录, 基名)：sync key（relKey/relKeyDirLevel）小写的是
+// 整条相对路径——祖先目录大小写分叉（A/x vs a/x）与同级大小写差异（Pack/ vs pack/）
+// 是同一个错配面，按基名分组会漏前者。
 //
 // 为何只告警不扣分：Windows（主战场）NTFS 大小写不敏感，同目录物理上**无法**并存
 // Pack/ 与 pack/；此孪生只在大小写敏感文件系统（Linux 服务器仓库 / 从 Linux 拷贝）出现。
@@ -28,40 +29,22 @@ func caseSibKey(parent, low string) string { return parent + "\x00" + low }
 // 操作、各走各路 → 大小写敏感盘上可能错配（已知限制，见 go-sync 卡）。故做成诊断告警
 // 进 Warnings，不改同步行为（修行为会引入 Windows 主战场风险，得不偿失）。
 func caseSiblingWarnings(groups map[string]map[string]struct{}) []string {
-	type coll struct {
-		parent string
-		low    string
-		names  []string
-	}
-	var colls []coll
-	for key, names := range groups {
+	keys := make([]string, 0, len(groups))
+	for k, names := range groups {
 		if len(names) < 2 {
 			continue
 		}
-		parent, low, found := strings.Cut(key, "\x00")
-		if !found {
-			continue
-		}
-		colls = append(colls, coll{parent, low, mapKeys(names)})
+		keys = append(keys, k)
 	}
-	sort.Slice(colls, func(i, j int) bool {
-		if colls[i].parent != colls[j].parent {
-			return colls[i].parent < colls[j].parent
-		}
-		return colls[i].low < colls[j].low
-	})
-	out := make([]string, 0, len(colls))
-	for _, c := range colls {
-		sort.Strings(c.names)
-		out = append(out, fmt.Sprintf("大小写孪生路径 %s（%s 下 %s 与 %s 小写归一同键）：sync 键视为同一模型，大小写敏感文件系统上推送/拉取各走各路，建议统一大小写",
-			c.parent, shortName(c.parent), c.names[0], c.names[len(c.names)-1]))
+	sort.Strings(keys)
+	out := make([]string, 0, len(keys))
+	for _, low := range keys {
+		origs := mapKeys(groups[low])
+		sort.Strings(origs)
+		out = append(out, fmt.Sprintf("大小写孪生路径（%s 与 %s 小写归一同键）：sync 键视为同一模型，大小写敏感文件系统上推送/拉取各走各路，可能错配——建议统一大小写",
+			origs[0], origs[len(origs)-1]))
 	}
 	return out
-}
-
-// shortName 取路径末段（告警里只展示目录名，不刷屏全路径）。
-func shortName(p string) string {
-	return p[strings.LastIndexAny(p, `/\`):len(p)]
 }
 
 // mapKeys 把 set 转切片。

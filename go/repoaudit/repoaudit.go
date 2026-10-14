@@ -226,18 +226,22 @@ func AuditCtx(ctx context.Context, dirPath string) (DirAuditResult, error) { //n
 	// 每文件 LoadRegistry（mutex + 解析开销——大仓库线性放大）
 	reg := registry.LoadRegistry()
 
-	// 大小写孪生累积（同父目录 + 同小写键 → 多个不同原名）：walk 已逐条目访问，
-	// 顺手记账零额外 I/O。根自身不参与兄弟比较（它没有「同父」可比）。
+	// 大小写孪生累积（**小写相对路径**折叠面 → 多个不同原路径）：walk 已逐条目访问，
+	// 顺手记账零额外 I/O。折叠面必须取整条相对路径而非 (父目录, 基名)——sync key
+	// （relKey/relKeyDirLevel）小写的是整条相对路径，祖先目录大小写分叉（A/x vs a/x）
+	// 同键错配面与同级大小写差异（Pack/ vs pack/）等价，按基名分组会漏前者。
+	// 根自身不参与（Rel = "." 无折叠对手）。
 	caseSib := map[string]map[string]struct{}{}
-	noteCase := func(p string, name string) {
-		if p == filepath.Clean(dirPath) {
+	noteCase := func(p string) {
+		rel, rerr := filepath.Rel(dirPath, p)
+		if rerr != nil || rel == "." {
 			return
 		}
-		key := caseSibKey(filepath.Dir(p), strings.ToLower(name))
+		key := strings.ToLower(rel)
 		if caseSib[key] == nil {
 			caseSib[key] = map[string]struct{}{}
 		}
-		caseSib[key][name] = struct{}{}
+		caseSib[key][rel] = struct{}{}
 	}
 
 	// ADR-314 取消检查点：ctx.Err() 内部带锁，降频至每 64 项一查（回调内其余工作
@@ -278,7 +282,7 @@ func AuditCtx(ctx context.Context, dirPath string) (DirAuditResult, error) { //n
 			if fsutil.IsRelinkBackupPath(path) {
 				return filepath.SkipDir
 			}
-			noteCase(path, d.Name())
+			noteCase(path)
 			return nil
 		}
 		info, ierr := d.Info()
@@ -288,7 +292,7 @@ func AuditCtx(ctx context.Context, dirPath string) (DirAuditResult, error) { //n
 		ext := strings.ToLower(filepath.Ext(path))
 		size := info.Size()
 		result.Resources.TotalFiles++
-		noteCase(path, d.Name())
+		noteCase(path)
 		totalSize += size
 
 		// 收集纹理路径供命中率统计（延后到 walk 外并发执行，见 measureCacheHitRateCtx）。

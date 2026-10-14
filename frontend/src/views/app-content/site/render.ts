@@ -432,7 +432,7 @@ function buildSitePresetEditCards(ctx: BuildSiteHtmlCtx): string {
   let html = `<div class="cr-section"><span class="cr-section-title-lg">${t("content.searchTerms")}</span></div>`;
   (site.presetSearches || []).forEach((ps, idx) => {
     html +=
-      `<div class="cr-edit-card" draggable="false" data-edit="preset" data-edit-idx="${idx}">` +
+      `<div class="cr-edit-card" draggable="false" data-edit="preset" data-edit-idx="${idx}" data-preset-q="${esc(ps.q || ps.label)}">` +
       `<div class="cr-edit-card-head"><span class="cr-drag-handle">${UI_ICONS.dragHandle}</span><span class="cr-preset-icon">${UI_ICONS.search}</span>` +
       `<input data-idx="${idx}" data-fld="label" value="${esc(ps.label)}" class="cr-input cr-input-name" placeholder="${t(
         "content.searchKeywordPlaceholder",

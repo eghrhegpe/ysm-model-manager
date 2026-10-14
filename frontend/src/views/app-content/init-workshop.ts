@@ -24,6 +24,7 @@ import {
   saveBrowseMode,
 } from "@/views/app-content/site/workshop-browse-mode.ts";
 import type { AppContentHost } from "./host.ts";
+import { captureEditFocus, restoreEditFocus } from "./site/focus-restore.ts";
 import { extractAvatars } from "./site/workshop-avatar.ts";
 import { loadActiveTag, loadSearchKw } from "./site/workshop-data.ts";
 import { createWorkshopPageState } from "./site/workshop-page-state.ts";
@@ -104,8 +105,12 @@ export function initWorkshopPage(host: AppContentHost): void {
       // 重渲染（编辑切换/保存/拖拽/搜索等）经同一 wrapper：先跑旧 cleanup 再存新
       // cleanup（见 runPrevSiteViewCleanup 注释），供 site-view 的 refreshView 调用。
       reRender: () => {
+        // 锐评 Perf #3（2026-10-14）：整站重渲会销毁重建 preset 编辑按钮，键盘/连点
+        // 排序时第二次操作落回body。渲染前记锚点、渲染后按 preset 稳定身份恢复焦点。
+        const focusAnchor = captureEditFocus(searchResults);
         runPrevSiteViewCleanup();
         _prevSiteViewCleanup = renderSiteView(site, ctx);
+        restoreEditFocus(searchResults, focusAnchor);
       },
     };
     _prevSiteViewCleanup = renderSiteView(site, ctx);

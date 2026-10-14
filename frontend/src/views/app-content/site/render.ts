@@ -430,9 +430,18 @@ function buildSiteBrowseSection(ctx: BuildSiteHtmlCtx): string {
 function buildSitePresetEditCards(ctx: BuildSiteHtmlCtx): string {
   const { esc, site } = ctx;
   let html = `<div class="cr-section"><span class="cr-section-title-lg">${t("content.searchTerms")}</span></div>`;
+  // 同 q 出现序号（锐评修复，2026-10-14）：`data-preset-q` 用 `ps.q || ps.label` 作
+  // focus-restore 的稳定身份，但**多个 preset 共享同一 q 是常见配置**（bowroll 站实测
+  // 「热门日系模型」/「日系模型」可同为 q=MMD，知识卡 app-content-site 有记）——q 重复时
+  // 身份不唯一，按 q 恢复焦点会跳到错误行。故追加「同一 q 内的第几次出现」作消歧位：
+  // 重排/增删都不改变某个 preset 的 (q, occ)（除非重排两个 q 相同的 preset，那本就不可区分）。
+  const occOf = new Map<string, number>();
   (site.presetSearches || []).forEach((ps, idx) => {
+    const q = ps.q || ps.label;
+    const occ = occOf.get(q) ?? 0;
+    occOf.set(q, occ + 1);
     html +=
-      `<div class="cr-edit-card" draggable="false" data-edit="preset" data-edit-idx="${idx}" data-preset-q="${esc(ps.q || ps.label)}">` +
+      `<div class="cr-edit-card" draggable="false" data-edit="preset" data-edit-idx="${idx}" data-preset-q="${esc(q)}" data-preset-occ="${occ}">` +
       `<div class="cr-edit-card-head"><span class="cr-drag-handle">${UI_ICONS.dragHandle}</span><span class="cr-preset-icon">${UI_ICONS.search}</span>` +
       `<input data-idx="${idx}" data-fld="label" value="${esc(ps.label)}" class="cr-input cr-input-name" placeholder="${t(
         "content.searchKeywordPlaceholder",

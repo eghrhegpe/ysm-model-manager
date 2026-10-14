@@ -15,8 +15,16 @@ const EDIT_BTN_CLASSES = ["cr-order-up", "cr-order-down", "cr-del-preset"] as co
 export interface EditFocusAnchor {
   /** 触发按钮的类名（cr-order-up 等） */
   cls: string;
-  /** preset 稳定身份（搜索词） */
+  /** preset 稳定身份（搜索词 `ps.q || ps.label`） */
   q: string;
+  /**
+   * 同一 q 内的出现序号（锐评修复，2026-10-14）。
+   * ⚠️ 为什么必需：多个 preset **共享同一 q 是常见配置**（bowroll 站实测「热门日系模型」
+   * 与「日系模型」可同为 q=MMD，见知识卡 app-content-site）——单靠 q 身份不唯一，
+   * 按 q 恢复焦点会跳到错误行。`(q, occ)` 在重排/增删下都是该 preset 的不变量
+   *（除非重排两个 q 完全相同的 preset，那二者本就在语义上不可区分）。
+   */
+  occ: string;
 }
 
 /** 取当前焦点所在行按钮的锚点（非编辑区按钮/无焦点 → null） */
@@ -26,10 +34,11 @@ export function captureEditFocus(root: ParentNode | null): EditFocusAnchor | nul
   if (!active || !(active instanceof HTMLElement)) return null;
   const cls = EDIT_BTN_CLASSES.find((c) => active.classList.contains(c));
   if (!cls) return null;
-  // 按钮挂在对应 preset 卡片上；preset 身份从卡内的数据或兄弟输入框取值
+  // 按钮挂在对应 preset 卡片上；身份取卡上的 data-preset-q + data-preset-occ
   const card = active.closest("[data-preset-q]");
   const q = card?.getAttribute("data-preset-q") ?? "";
-  return { cls, q };
+  const occ = card?.getAttribute("data-preset-occ") ?? "0";
+  return { cls, q, occ };
 }
 
 /**
@@ -40,8 +49,10 @@ export function captureEditFocus(root: ParentNode | null): EditFocusAnchor | nul
  */
 export function restoreEditFocus(root: ParentNode | null, anchor: EditFocusAnchor | null): boolean {
   if (!root || !anchor) return false;
-  // 同身份 + 同操作类的按钮即为原焦点目标
-  const sel = `[data-preset-q="${cssEscape(anchor.q)}"] .${anchor.cls}`;
+  // 同身份（q + 出现序号）+ 同操作类的按钮即为原焦点目标
+  const sel =
+    `[data-preset-q="${cssEscape(anchor.q)}"]` +
+    `[data-preset-occ="${cssEscape(anchor.occ)}"] .${anchor.cls}`;
   const hit = root.querySelector<HTMLElement>(sel);
   if (!hit) return false;
   hit.focus({ preventScroll: true });

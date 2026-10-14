@@ -182,6 +182,78 @@ export function rmAppendButton(
   container.appendChild(row);
 }
 
+/** 行内副标签（slide-sublabel） */
+function appendSubLabel(row: HTMLElement, text: string): void {
+  const meta = document.createElement("span");
+  meta.className = "slide-sublabel";
+  meta.textContent = text;
+  row.appendChild(meta);
+}
+
+/** 填充 label 行 + value 副标签（labelKey 决定取径） */
+function fillRowLabel(row: HTMLElement, lb: HTMLElement, node: NodeFor<"row">): void {
+  if (node.labelKey) {
+    lb.textContent = rmLabel(node, node.value || node.id);
+    if (node.value && typeof node.value === "string") appendSubLabel(row, node.value);
+    return;
+  }
+  // 无 labelKey（动态内容如角色名/候选文件名）→ resolveLabel ③级 plain 回退（node.label ?? node.id）；
+  // 显式明文行（动态名）+ value = 附加信息 → 副标签照旧展示（「名称 + 声明/面数」类行：
+  // 纹理短名 + 引用面数、组件名 + 纹理声明）；value 与行文案相同则不加，避免重复
+  lb.textContent = rmLabel(node);
+  if (typeof node.value === "string" && node.value && node.value !== lb.textContent) {
+    appendSubLabel(row, node.value);
+  }
+}
+
+/** 行首 radio（焦点钮）槽：语义名图标 + active 行标记 */
+function appendRowRadio(row: HTMLElement, node: NodeFor<"row">): void {
+  if (!node.radio) return;
+  const radio = document.createElement("button");
+  radio.type = "button";
+  radio.dataset.testid = "row-radio";
+  // 语义名图标（ADR-238：UI chrome 走 SVG，不靠字形）：off 单环 / on 环+圆心
+  applyIcon(radio, node.radio.active ? "radioOn" : "radioOff");
+  radio.title = node.radio.title;
+  // [D9②] icon-only 按钮：title 仅视觉 tooltip，可达名由 aria-label 承担（仓内口径 dom-fab.md）
+  radio.setAttribute(ARIA_ATTR.label, node.radio.title);
+  radio.className = `rm-radio-btn${node.radio.active ? " row-radio-active" : ""}`;
+  radio.onclick = (ev): void => {
+    ev.stopPropagation();
+    node.radio?.onClick();
+  };
+  row.prepend(radio);
+  if (node.radio.active) row.classList.add("rm-row-active");
+}
+
+/** 行尾 badge（次级动作钮）槽 */
+function appendRowBadge(row: HTMLElement, node: NodeFor<"row">): void {
+  if (!node.badge) return;
+  const badge = document.createElement("button");
+  badge.type = "button";
+  badge.dataset.testid = "row-badge";
+  applyIcon(badge, node.badge.icon);
+  badge.title = node.badge.title;
+  // [D9②] icon-only 按钮：title 仅视觉 tooltip，可达名由 aria-label 承担
+  badge.setAttribute(ARIA_ATTR.label, node.badge.title);
+  badge.className = "cc-btn cc-btn-ghost rm-inline-btn rm-ml-auto";
+  badge.onclick = (ev): void => {
+    ev.stopPropagation();
+    node.badge?.onClick();
+  };
+  row.appendChild(badge);
+}
+
+/** 行尾 chevron（有 action 且无 badge 时显示） */
+function appendRowChevron(row: HTMLElement, node: NodeFor<"row">): void {
+  if (!node.action || node.badge) return;
+  const chev = document.createElement("span");
+  chev.textContent = ">";
+  chev.dataset.testid = "row-chevron";
+  chev.className = "cm-row-chev rm-ml-auto";
+  row.appendChild(chev);
+}
+
 /** [子函数 4/6] row：动态列表行（纹理/材质/bone 等动态列表；ADR-193 第四刀起支持
  *  行首 radio（焦点钮）与行尾 badge（次级动作钮）槽位——roles 角色行/switch 候选行；
  *  环境面板 cap 行复用：headerToggle（能力开关）+ 行尾 chevron（无 badge 且有 action 时显示，
@@ -193,45 +265,8 @@ export function rmAppendDynamicRow(
 ): void {
   const { row, lb } = rmMakeRowBase(node);
   lb.classList.add("rm-label-sm");
-  // 无 labelKey（动态内容如角色名/候选文件名）→ fallback 直出行文案，meta 不重复显示；
-  // 有 labelKey → 旧行为（tr 求值 + value 作 sublabel meta）
-  if (node.labelKey) {
-    lb.textContent = rmLabel(node, node.value || node.id);
-    if (node.value && typeof node.value === "string") {
-      const meta = document.createElement("span");
-      meta.className = "slide-sublabel";
-      meta.textContent = node.value;
-      row.appendChild(meta);
-    }
-  } else {
-    // 无 labelKey（动态内容如角色名/候选文件名）→ resolveLabel ③级 plain 回退（node.label ?? node.id）；
-    // 显式明文行（动态名）+ value = 附加信息 → 副标签照旧展示（「名称 + 声明/面数」类行：
-    // 纹理短名 + 引用面数、组件名 + 纹理声明）；value 与行文案相同则不加，避免重复
-    lb.textContent = rmLabel(node);
-    if (typeof node.value === "string" && node.value && node.value !== lb.textContent) {
-      const meta = document.createElement("span");
-      meta.className = "slide-sublabel";
-      meta.textContent = node.value;
-      row.appendChild(meta);
-    }
-  }
-  if (node.radio) {
-    const radio = document.createElement("button");
-    radio.type = "button";
-    radio.dataset.testid = "row-radio";
-    // 语义名图标（ADR-238：UI chrome 走 SVG，不靠字形）：off 单环 / on 环+圆心
-    applyIcon(radio, node.radio.active ? "radioOn" : "radioOff");
-    radio.title = node.radio.title;
-    // [D9②] icon-only 按钮：title 仅视觉 tooltip，可达名由 aria-label 承担（仓内口径 dom-fab.md）
-    radio.setAttribute(ARIA_ATTR.label, node.radio.title);
-    radio.className = `rm-radio-btn${node.radio.active ? " row-radio-active" : ""}`;
-    radio.onclick = (ev): void => {
-      ev.stopPropagation();
-      node.radio?.onClick();
-    };
-    row.prepend(radio);
-  }
-  if (node.radio?.active) row.classList.add("rm-row-active");
+  fillRowLabel(row, lb, node);
+  appendRowRadio(row, node);
   if (node.headerToggle) {
     // 行内能力开关（对齐 MikuMikuAR PopupRow.headerToggle / folder headerToggle）：
     // createHeaderToggle 内置 stopPropagation，开关点击不触发整行 action（下钻）。
@@ -245,31 +280,11 @@ export function rmAppendDynamicRow(
     if (!node.badge && !node.action) tg.classList.add("rm-ml-auto");
     row.appendChild(tg);
   }
-  if (node.badge) {
-    const badge = document.createElement("button");
-    badge.type = "button";
-    badge.dataset.testid = "row-badge";
-    applyIcon(badge, node.badge.icon);
-    badge.title = node.badge.title;
-    // [D9②] icon-only 按钮：title 仅视觉 tooltip，可达名由 aria-label 承担
-    badge.setAttribute(ARIA_ATTR.label, node.badge.title);
-    badge.className = "cc-btn cc-btn-ghost rm-inline-btn rm-ml-auto";
-    badge.onclick = (ev): void => {
-      ev.stopPropagation();
-      node.badge?.onClick();
-    };
-    row.appendChild(badge);
-  }
-  if (node.action && !node.badge) {
-    // 行尾 chevron：有 action（下钻/执行）且无 badge → 显示 › 提示可点（env cap 行 /
-    // roles 无 badge 行）。headerToggle 与 chevron 可同存（MikuMikuAR folder 行同款：
-    // 开关在 label 右、箭头行尾）。badge 是行尾次级钮，有它则不叠加箭头。
-    const chev = document.createElement("span");
-    chev.textContent = ">";
-    chev.dataset.testid = "row-chevron";
-    chev.className = "cm-row-chev rm-ml-auto";
-    row.appendChild(chev);
-  }
+  appendRowBadge(row, node);
+  // 行尾 chevron：有 action（下钻/执行）且无 badge → 显示 › 提示可点（env cap 行 /
+  // roles 无 badge 行）。headerToggle 与 chevron 可同存（MikuMikuAR folder 行同款：
+  // 开关在 label 右、箭头行尾）。badge 是行尾次级钮，有它则不叠加箭头。
+  appendRowChevron(row, node);
   rmBindActionClick(row, node.action, actionCtx);
   container.appendChild(row);
 }

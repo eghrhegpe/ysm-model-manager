@@ -6,6 +6,7 @@ import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { downloadMissing } from "@/features/sync/sync.ts";
 import { TimeoutError, withTimeout } from "@/utils/base/primitives/async.ts";
+import type { BusyLock } from "@/utils/base/primitives/lock.ts";
 import { initDropdown } from "@/utils/dom/dropdown.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { toast } from "@/utils/dom/toast.ts";
@@ -137,16 +138,8 @@ function resolveTypes(rt: string): string[] {
   return rt === SYNC_TYPE_ALL ? ALL_RESOURCE_TYPES : [rt];
 }
 
-/** 同步在途标志访问器：替代原 `{ val: boolean }` 可变盒子（2026-10 锐评收口——
- *  该字面量曾在 bindSyncSelected 两处同构重抄，且盒子只映射组件的 _syncInProgress 单布尔）。
- *  读写语义与 `_syncInProgress` 一一对应，装配处直接传组件访问器对，零适配层。 */
-interface SyncBusyFlag {
-  get: () => boolean;
-  set: (v: boolean) => void;
-}
-
 /**
- * beginSync：推送/拉取入闸流程（判空 toast → 置 inprogress → 关菜单 → 按钮 loading）。
+ * beginSync：推送/拉取入闸流程（判空 toast → 原子抢锁 → 关菜单 → 按钮 loading）。
  * `.dd-item` 的定位与 `data-sync-type` 读取都由调用方完成（2026-10 锐评收口：原先本函数与
  * handleSyncMenuClick 各自 `closest(".dd-item")` 一次，同一 target 查两遍）。
  */
@@ -154,7 +147,7 @@ function beginSync(
   verb: string,
   root: ShadowRoot,
   instances: SidebarInstance[],
-  busy: SyncBusyFlag,
+  lock: BusyLock,
   closeAllMenus: () => void,
   btn: HTMLButtonElement,
 ): string[] | null {
@@ -163,8 +156,9 @@ function beginSync(
     toast(t("sidebar.selectPackFirst", { verb }), TOAST_MS.success, "info");
     return null;
   }
-  if (busy.get()) return null;
-  busy.set(true);
+  // ADR-341 归一：tryStart 原子抢锁（判空提示在前——顺序语义与原实现一致：
+  // 空选择在先、busy 拒收在后），拒收即静默 return（按钮 loading 态就是可见反馈）
+  if (!lock.tryStart()) return null;
   closeAllMenus();
   btn.innerHTML = UI_ICONS.refresh;
   btn.disabled = true;
@@ -193,7 +187,7 @@ function handleSyncMenuClick(
   closeAll: () => void,
   root: ShadowRoot,
   getInstances: () => SidebarInstance[],
-  busy: SyncBusyFlag,
+  lock: BusyLock,
 ): void {
   // 命中判定与 syncType 读取都只需要一次 closest（原实现 beginSync 内一次、此处又一次）
   const ddItem = (e.target as HTMLElement | null)?.closest(".dd-item");
@@ -202,16 +196,16 @@ function handleSyncMenuClick(
     verb === "push" ? t("sidebar.verbPush") : t("sidebar.verbPull"),
     root,
     getInstances(),
-    busy,
+    lock,
     closeAll,
     btn,
   );
   if (!selected) return;
   const types = resolveTypes((ddItem as HTMLElement).dataset.syncType || SYNC_TYPE_ALL);
   if (verb === "push") {
-    void runPush(selected, types, btn, busy);
+    void runPush(selected, types, btn, lock);
   } else {
-    void runPull(selected, types, btn, busy);
+    void runPull(selected, types, btn, lock);
   }
 }
 
@@ -225,7 +219,7 @@ async function runPush(
   selected: string[],
   types: string[],
   pushBtn: HTMLButtonElement,
-  busy: SyncBusyFlag,
+  lock: BusyLock,
 ): Promise<void> {
   let skipped = 0;
   let blocked = 0;
@@ -293,7 +287,7 @@ async function runPush(
     toast(t("sidebar.pushFailed", { msg: friendlyError(err) }), TOAST_MS.normal, "error");
   } finally {
     resetButton(pushBtn, "push");
-    busy.set(false);
+    lock.finish(); // ADR-341：beginSync 抢的锁在此释放（push/pull 共用 _syncLock）
   }
 }
 
@@ -302,7 +296,7 @@ async function runPull(
   selected: string[],
   types: string[],
   pullBtn: HTMLButtonElement,
-  busy: SyncBusyFlag,
+  lock: BusyLock,
 ): Promise<void> {
   let totalPulled = 0;
   let failed = 0;
@@ -336,7 +330,7 @@ async function runPull(
     toast(t("sidebar.pullFailed", { msg: friendlyError(err) }), TOAST_MS.normal, "error");
   } finally {
     resetButton(pullBtn, "pull");
-    busy.set(false);
+    lock.finish();
   }
 }
 
@@ -346,8 +340,8 @@ export function bindSyncSelected(
   getInstances: () => SidebarInstance[],
   /** 下拉控制器 dispose 的归集口（替代原 docClick 单槽存取器对，ADR-298 D3） */
   setDropdownCleanup: (fn: () => void) => void,
-  getSyncInProgress: () => boolean,
-  setSyncInProgress: (v: boolean) => void,
+  /** 同步在途互斥锁（ADR-341 归一：原 `{ get, set }` 访问器对退役，组件直传 BusyLock） */
+  syncLock: BusyLock,
 ): void {
   const pushBtn = root.querySelector(".sidebar-push-selected") as HTMLButtonElement | null;
   const pushMenu = root.getElementById("sidebar-push-menu");
@@ -369,14 +363,10 @@ export function bindSyncSelected(
   // 程序化收起统一走控制器句柄（closeAllMenus 见上方）：不再手改 display / aria-expanded
   const closeAllMenusBoth = (): void => closeAllMenus(disposePush.close, disposePull.close);
 
-  // 在途标志访问器对（2026-10 锐评收口：原 push/pull 各写一份 `{ get val(){...}, set val(v){...} }`
-  // 同构字面量，现单例直通组件访问器——语义不变，装配处两处合一）
-  const busyFlag: SyncBusyFlag = { get: getSyncInProgress, set: setSyncInProgress };
-
   pushMenu.addEventListener("click", (e) =>
-    handleSyncMenuClick("push", e, pushBtn, closeAllMenusBoth, root, getInstances, busyFlag),
+    handleSyncMenuClick("push", e, pushBtn, closeAllMenusBoth, root, getInstances, syncLock),
   );
   pullMenu.addEventListener("click", (e) =>
-    handleSyncMenuClick("pull", e, pullBtn, closeAllMenusBoth, root, getInstances, busyFlag),
+    handleSyncMenuClick("pull", e, pullBtn, closeAllMenusBoth, root, getInstances, syncLock),
   );
 }

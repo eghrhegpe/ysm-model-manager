@@ -9,6 +9,7 @@ import type { ImportBatchResult } from "@/features/import/executor.ts";
 import { executeCollected, importWebFilesWithToast } from "@/features/import/executor.ts";
 import { collectDropFiles, dropOversized } from "@/features/import/shared.ts";
 import { swallowError } from "@/utils/base/primitives/async.ts";
+import { type BusyLock, createBusyLock } from "@/utils/base/primitives/lock.ts";
 import { logError } from "@/utils/base/primitives/log.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { isEditableTarget } from "@/utils/dom/editable-target.ts";
@@ -139,29 +140,25 @@ function reportDropResult(
 
 /**
  * 处理 drop 事件：收集文件 → 过滤 → 执行导入。
- * busy 状态由调用方（bindTreeDnD 闭包）传入，避免模块级状态跨实例污染。
+ * busy 锁由调用方（bindTreeDnD 闭包）传入，避免模块级状态跨实例污染。
  * rtype：页面上下文类型（当前树根属性）——非空时文件夹整组按该类型仓库根落盘。
  * 三段可独立收口的逻辑（网页版分支 / oversize 过滤 / 结果汇总）各成模块级助手，
  * 本体只留「守卫 → 收集 → 执行 → 汇总」的编排骨架（认知复杂度 41 → yellow 以下）。
  */
-export async function handleTreeDrop(
-  e: DragEvent,
-  isBusy: () => boolean,
-  setBusy: (v: boolean) => void,
-  rtype = "",
-): Promise<void> {
+export async function handleTreeDrop(e: DragEvent, lock: BusyLock, rtype = ""): Promise<void> {
   e.preventDefault();
   dbg("dnd", "handleTreeDrop called", {
-    busy: isBusy(),
+    busy: lock.isBusy(),
     targetTag: (e.target as HTMLElement)?.tagName,
   });
   if (isEditable(e.target)) return;
 
-  if (isBusy()) {
+  // ADR-341 归一：tryStart 检查+置位单步原子（原「isBusy 查询 → setBusy(true)」两段式
+  // 在此处本是同帧同步无窗口，但形态归一后新入口无从再抄两段式）
+  if (!lock.tryStart()) {
     toast(`⏳ ${t("import.busyImporting")}`, TOAST_MS.success, "info");
     return;
   }
-  setBusy(true);
 
   // 写环形日志面板（Go AddOpLog）——非阻塞，失败经 swallowError 记录
   const logDrop = makeDropLogger();
@@ -193,14 +190,14 @@ export async function handleTreeDrop(
     );
     reportDropResult(r, total, logDrop);
   } finally {
-    setBusy(false);
+    lock.finish();
   }
 }
 
 /**
  * 在目标容器上注册仓库页 DnD 事件。
  * 由 <app-tree> connectedCallback 调用，返回 cleanup 函数。
- * busy 状态随闭包隔离，每个 <app-tree> 实例独立守卫。
+ * busy 锁随闭包隔离，每个 <app-tree> 实例独立守卫（ADR-341：形态归一 BusyLock）。
  * rtype：当前树根属性（本就派生自 Go 路由配置，前端只透传）——文件夹导入
  * 按该类型仓库根落盘，空串回退后端内容推断。
  * 支持传 getter（P2 审核修复）：root 属性支持动态切换（attributeChangedCallback），
@@ -211,11 +208,7 @@ export function bindTreeDnD(
   container: HTMLElement,
   rtype: string | (() => string) = "",
 ): () => void {
-  let _dropBusy = false;
-  const isBusy = () => _dropBusy;
-  const setBusy = (v: boolean) => {
-    _dropBusy = v;
-  };
+  const lock = createBusyLock();
 
   // hint 与 #tree 同为 <app-tree> shadow root 的直接子节点：parentElement 对
   // shadow root 子节点返回 null（ShadowRoot 非 Element），必须从 getRootNode()
@@ -251,7 +244,7 @@ export function bindTreeDnD(
     if (!isImportDropTarget(e, container, hintEl as Node | null)) return;
     e.preventDefault();
     if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
-    if (hintEl && !_dropBusy) hintEl.style.display = "flex";
+    if (hintEl && !lock.isBusy()) hintEl.style.display = "flex";
     setDroppable(true);
     dbg("dnd", "dragover OK", {
       types: [...(e.dataTransfer?.types || [])],
@@ -285,7 +278,7 @@ export function bindTreeDnD(
     // 判据与 move-dnd 共用 isTreeMoveDrag（单一事实源，两侧判据必须同源，勿只改一处）。
     if (isTreeMoveDrag(e.dataTransfer?.types)) return;
     dbg("dnd", "drop fired", dropDebugInfo(e));
-    void handleTreeDrop(e, isBusy, setBusy, resolveRtype(rtype)).catch((err) => {
+    void handleTreeDrop(e, lock, resolveRtype(rtype)).catch((err) => {
       logError("tree-dnd", "拖放处理失败", err);
       toast(`${t("import.processError")}: ${friendlyError(err)}`, TOAST_MS.verbose, "error");
     });

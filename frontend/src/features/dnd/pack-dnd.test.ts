@@ -24,6 +24,7 @@ vi.mock("@/backend/browser-adapter.ts", () => ({
 
 import { bus } from "@/bus";
 import { getApp } from "@/backend/app.ts";
+import { createBusyLock } from "@/utils/base/primitives/lock.ts";
 import { handleInstanceDrop, bindPackCardDnD } from "./pack-dnd.ts";
 
 const flush = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
@@ -77,7 +78,7 @@ beforeEach(() => {
   unsubTree = bus.on("tree:reload", () => events.push("tree:reload"));
 });
 
-const busyIdle = { isBusy: () => false, setBusy: () => {} };
+const busyIdle = createBusyLock();
 
 // ===== handleInstanceDrop 编排 =====
 
@@ -164,8 +165,7 @@ describe("handleInstanceDrop 编排", () => {
   });
 
   it("busy 在途：第二次 drop 仅提示不执行", async () => {
-    let busy = false;
-    const b = { isBusy: () => busy, setBusy: (v: boolean) => { busy = v; } };
+    const b = createBusyLock();
     const ev1 = makeDragEvent("drop", { files: [makeFile("a.ysm", "content")] });
     const p1 = handleInstanceDrop(ev1, "TestInst", b);
     const ev2 = makeDragEvent("drop", { files: [makeFile("b.ysm", "content")] });
@@ -173,7 +173,7 @@ describe("handleInstanceDrop 编排", () => {
     await p1;
     await flush();
 
-    // 第一个 drop 正常执行，第二个被 busy 拦截
+    // 第一个 drop 正常执行，第二个被锁拦截
     expect(mocks.importFilePush).toHaveBeenCalledTimes(1);
     expect(toasts.some((t2) => t2.msg.includes("导入") || t2.type === "info")).toBe(true);
   });

@@ -49,7 +49,7 @@ pitfalls:
   - 模块级状态收敛前先查测试隔离策略——用 vi.resetModules 重载的模块（locale.ts）收敛无测试收益，只有代码组织价值
   - 引用相等分派（ring === webImportLogs）是隐式建模信号——收敛成显式对象能消灭，但改动面大需评估 ROI
   - 收敛只改内部表示不动导出函数签名（modal 范式）——外部/测试零改动是「试点成功」判据
-  - 模块级 let busy 锁必须有 reset 路径或注释豁免理由（dedup.ts 案例：tab 卸载后 busy 卡 true → 再进永久卡死）
+  - 模块级互斥守卫一律用 `BusyLock`（ADR-341 唯一形态，tryStart/finish 自带释放）；残留的手写 `let busy` 须有 reset 路径或注释豁免理由（dedup.ts 案例：tab 卸载后 busy 卡 true → 再进永久卡死）
 quick_groups:
   - 前端分层与边界
 quick_intents:

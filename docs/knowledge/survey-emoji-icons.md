@@ -115,9 +115,9 @@ ADR-238 把 emoji 当 UI 图标迁移成 SVG（`UI_ICONS` + `.ws-icon`）。摸�
 
 ## diagnostics 三个扫描按钮状态机（上一会话重点翻的）
 
-- 冲突扫描 `conflicts.ts`：`dgCfSetScanBtnState(scanBtn, scanning, esc)` 统一管态——扫描中 `classList.add("scanning")` + `textContent = t("diagnostics.scanningDot")`；结束 `innerHTML` 重建 `UI_ICONS.performance + esc(t("diagnostics.startScan"))`（因 textContent 覆写会抹掉 SVG）。并发守卫模块级 `diagScanning` / `diagSyncBusy`，`busy` 命中直接 return，`try/finally` 复位。
-- 仓库体检 `health.ts`：`_healthBusy` 守卫，扫描中 `statRowHTML(..., {icon: UI_ICONS.refresh})`（SVG 转圈，不覆写 textContent），`try/finally` 复位。
-- 范式：纯并发守卫用模块级 busy 即可（ADR 注释明确「改造会话工厂 ROI 低，不立项」）——**不要**为此引入状态机框架。
+- 冲突扫描 `conflicts.ts`：`dgCfSetScanBtnState(scanBtn, scanning, esc)` 统一管态——扫描中 `classList.add("scanning")` + `textContent = t("diagnostics.scanningDot")`；结束 `innerHTML` 重建 `UI_ICONS.performance + esc(t("diagnostics.startScan"))`（因 textContent 覆写会抹掉 SVG）。并发守卫为模块级 `BusyLock`（`diagSyncLock`，ADR-341），`tryStart` 命中失败直接 return，`try/finally` 释放。
+- 仓库体检 `health.ts`：`healthLock`（`BusyLock`，ADR-341）守卫，扫描中 `statRowHTML(..., {icon: UI_ICONS.refresh})`（SVG 转圈，不覆写 textContent），`try/finally` 释放。
+- 范式：纯并发守卫用**模块级 `BusyLock`** 即可（ADR-341 唯一互斥形态；会话工厂改造仍判 ROI 低不立项）——**不要**为此引入状态机框架。
 
 ## 相关
 

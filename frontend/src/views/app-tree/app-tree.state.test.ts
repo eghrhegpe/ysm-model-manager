@@ -125,8 +125,8 @@ describe("app-tree 组件（testid 钩子 + 交互路径）", () => {
     // 使用点接线：toggle 触发行 flash（审核回归锁，flashBtn 同步添加、渲染异步重建）
     const row = toggle.closest(".fl, .fl-list") as HTMLElement | null;
     expect(row?.classList.contains("flash")).toBe(true);
-    // 第一次点击同步置位 _toggleBusy（events.ts:136），第二次点击在同步阶段被拦截
-    (toggle as HTMLElement).click(); // 第二次被 _toggleBusy 拦截（events.ts:135）
+    // 第一次点击同步 tryStart 抢锁（ADR-341 归一，events.ts），第二次点击在同步阶段被拒
+    (toggle as HTMLElement).click(); // 第二次被启停链锁拒绝（events.ts）
     // ToggleEnable 经 getApp().then 异步链触发（events.ts:141-142），需等待断言
     await waitFor(() => (ToggleEnable as unknown as { mock: { calls: unknown[] } }).mock.calls.length === 1);
   });

@@ -51,7 +51,7 @@
 - 跨模块直调使「将来第三方监听推送完成」不再有免费通道——若真出现，届时应加显式回调参数或结果订阅原语，而非复活总线回执；这是本决策有意收紧的方向（YAGNI）。
 - `sync.test.ts` 大改（emit → 直调），回归网在重写期间有短暂裸露，以「先改测试钉旧行为、再迁实现」顺序压缩窗口。
 
-**已知遗留（不在本刀范围）**：`_syncInProgress`/`_singleBusy`/`_dropBusy` 等多套 busy 语义归一（锐评 P2-2）另立执行级；per-pack 计数粒度（P1-3）待 `DownloadOutcome` 扩展。
+**已知遗留（不在本刀范围）**：`_syncInProgress`/`_singleBusy`/`_dropBusy` 等多套 busy 语义归一（锐评 P2-2）已由 [ADR-341](./ADR-341-busy-lock-unification.md) 落地（`_singleBusy` 属 per-key 豁免族）；per-pack 计数粒度（P1-3）待 `DownloadOutcome` 扩展。
 
 ## 4. 数据溯源
 

@@ -8,6 +8,7 @@
 import { pickDirectory } from "@/backend/directory-picker.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
+import type { BusyLock } from "@/utils/base/primitives/lock.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { modalPicker } from "@/utils/dom/modal-picker.ts";
 import { modalSelect } from "@/utils/dom/modal-select.ts";
@@ -33,11 +34,8 @@ interface LauncherSelection {
   useAsYsmRoot: boolean;
 }
 
-/** 并发守卫访问器（由 AppSidebar 实例实现，每实例独立守卫） */
-export interface BusyGuard {
-  getBusy(): boolean;
-  setBusy(v: boolean): void;
-}
+/** 并发守卫锁（ADR-341 归一：原 BusyGuard getBusy/setBusy 访问器对退役，直接吃 BusyLock；
+ *  由 AppSidebar 实例持有，每实例独立） */
 
 const toastError = (error: unknown): void => {
   toast(`${friendlyError(error)}`, TOAST_MS.verbose, "error");
@@ -52,9 +50,8 @@ async function saveMcRoot(mcRoot: string): Promise<void> {
 }
 
 /** 🔍 自动搜索常见 MC 安装位置（多结果弹选择器） */
-export async function runMcSearch(guard: BusyGuard): Promise<void> {
-  if (guard.getBusy()) return;
-  guard.setBusy(true);
+export async function runMcSearch(lock: BusyLock): Promise<void> {
+  if (!lock.tryStart()) return;
   try {
     const App = await backendGetApp();
     const paths = await App.GetMinecraftPaths();
@@ -78,7 +75,7 @@ export async function runMcSearch(guard: BusyGuard): Promise<void> {
   } catch (error) {
     toastError(error);
   } finally {
-    guard.setBusy(false);
+    lock.finish();
   }
 }
 
@@ -112,9 +109,8 @@ function showLauncherInstancePicker(
 }
 
 /** 🎮 HMCL / PCL 启动器实例检测：选启动器目录 → 选实例 → 写 mcRoot（可选并设 YSM 资源根） */
-export async function runLauncherDetect(guard: BusyGuard): Promise<void> {
-  if (guard.getBusy()) return;
-  guard.setBusy(true);
+export async function runLauncherDetect(lock: BusyLock): Promise<void> {
+  if (!lock.tryStart()) return;
   try {
     const launcherDir = await pickDirectory();
     if (!launcherDir.ok) return;
@@ -150,6 +146,6 @@ export async function runLauncherDetect(guard: BusyGuard): Promise<void> {
   } catch (error) {
     toastError(error);
   } finally {
-    guard.setBusy(false);
+    lock.finish();
   }
 }

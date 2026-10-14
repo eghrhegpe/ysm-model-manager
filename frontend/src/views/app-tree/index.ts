@@ -15,6 +15,7 @@ import {
 import { isPreviewOverlayActive } from "@/preview-3d/infra/overlay-active.ts";
 import { batchAllSettled } from "@/utils/async/batch-all-settled.ts";
 import { createLoadGuard } from "@/utils/async/load-guard.ts";
+import { type BusyLock, createBusyLock } from "@/utils/base/primitives/lock.ts";
 import { logError, logWarn } from "@/utils/base/primitives/log.ts";
 import { safeGetJSON, safeSet } from "@/utils/base/primitives/storage.ts";
 import { dbg } from "@/utils/debug/debug.ts";
@@ -115,18 +116,18 @@ export class AppTree extends WebComponentBase {
   _root: ShadowRoot;
   _authors: Array<AuthorInfo | string> = [];
   _unsubs: Array<() => void> = [];
-  /** 批量启用/禁用进行中（防连点菜单重叠循环二次 Toggle 把状态打回原形） */
-  _batchBusy = false;
-  /** 单文件开关进行中（防连点翻转状态） */
-  _toggleBusy = false;
+  /** 启停链互斥锁（ADR-341 归一并单锁：原 _batchBusy/_toggleBusy 双布尔互查——
+   *  两条链的「A 在途拦 B、B 在途拦 A」在互斥语义下本是一把锁两个名字。
+   *  防连点菜单重叠循环二次 Toggle 把状态打回原形 / 单文件开关翻转竞态） */
+  private _toggleLock = createBusyLock();
   /** 搜索防抖 timer（实例级，HMR 重入时可被 disconnectedCallback 清理） */
   _searchTimer: ReturnType<typeof setTimeout> | null = null;
   /** 全局快捷键注册表 dispose 句柄（key-router，ADR-308 D1；随 disconnectedCallback 逐个解除） */
   private _shortcutOffs: Array<() => void> = [];
-  /** 批量删除进行中（防连点 Delete 二次触发） */
-  private _deleting = false;
-  /** 树内拖拽移动进行中（ADR-336，防 drop 重入） */
-  private _moving = false;
+  /** 批量删除进行中（防连点 Delete 二次触发；ADR-341 归一 BusyLock） */
+  private _deleteLock = createBusyLock();
+  /** 树内拖拽移动进行中（ADR-336，防 drop 重入；ADR-341 归一 BusyLock） */
+  private _moveLock = createBusyLock();
   /** 拖源降透明键集（ADR-336 视觉三态之三）：dragstart 置位、dragend/drop 清；
    *  经 _renderTree(draggingKeys) 走数据渲染，非 classList 手写 */
   private _draggingKeys: Set<string> | null = null;
@@ -210,7 +211,7 @@ export class AppTree extends WebComponentBase {
     return this._ready;
   }
   get deleting(): boolean {
-    return this._deleting;
+    return this._deleteLock.isBusy();
   }
   get entries(): TreeEntry[] {
     return this._state.entries;
@@ -238,17 +239,9 @@ export class AppTree extends WebComponentBase {
   get dirOpen(): Record<string, boolean> {
     return this._state.dirOpen;
   }
-  get toggleBusy(): boolean {
-    return this._toggleBusy;
-  }
-  set toggleBusy(v: boolean) {
-    this._toggleBusy = v;
-  }
-  get batchBusy(): boolean {
-    return this._batchBusy;
-  }
-  set batchBusy(v: boolean) {
-    this._batchBusy = v;
+  /** 启停链互斥锁（events / bus-handlers 抢锁-释放的唯一句柄，ADR-341） */
+  get toggleLock(): BusyLock {
+    return this._toggleLock;
   }
 
   /** 响应式属性：root（资源类型根，Design.md §15 契约）+ subdir（ADR-094 子类型子目录） */
@@ -744,7 +737,7 @@ export class AppTree extends WebComponentBase {
   /** 树内拖拽移动载荷（ADR-336）：锚行在选中集内 → 多选全集，否则单行。
    *  busy 拒绝（导入链/批量链在途）返回 null = move-dnd 不起拖。 */
   private _treeMovePayload(anchor: string): TreeMovePayload | null {
-    if (this._deleting || this._state.selectState.keys.size === 0) return null;
+    if (this._deleteLock.isBusy() || this._state.selectState.keys.size === 0) return null;
     if (this._state.selectState.keys.has(anchor)) {
       const paths = [...this._state.selectState.keys];
       return { paths, anchor };
@@ -755,8 +748,7 @@ export class AppTree extends WebComponentBase {
   /** 树内拖拽移动执行链（ADR-336 §2.4）：批量 MoveModelFile + 乐观更新 + 代际守卫回滚。
    *  与单文件开关乐观同款范式；失败项本地不翻 + toast 明细（同 dirRecycle 格式）。 */
   private async _executeTreeMove(paths: string[], targetDir: string): Promise<void> {
-    if (this._moving) return;
-    this._moving = true;
+    if (!this._moveLock.tryStart()) return;
     const rollbackGen = this._guard.current;
     try {
       const filesRoot = this._state.filesRoot;
@@ -806,13 +798,12 @@ export class AppTree extends WebComponentBase {
     } catch (e) {
       toast(`${friendlyError(e, t("tree.moveFail"))}`, TOAST_MS.long, "error");
     } finally {
-      this._moving = false;
+      this._moveLock.finish();
     }
   }
 
   async _deleteSelected(paths: string[], rtype: string): Promise<void> {
-    if (this._deleting) return; // 并发守卫：连点 Delete 只执行第一次
-    this._deleting = true;
+    if (!this._deleteLock.tryStart()) return; // 并发守卫：连点 Delete 只执行第一次
     const gen = this._guard.current; // P2-1 代际捕获：删除期间 root 切换/新加载 → 丢弃过期渲染
     try {
       const { DeleteResourcePack } = await backendGetApp();
@@ -843,7 +834,7 @@ export class AppTree extends WebComponentBase {
       // P2 修复：getApp/删除/刷新任一环节失败都要有出口，避免 unhandled rejection 静默
       toast(`${friendlyError(e)}`, TOAST_MS.long, "error");
     } finally {
-      this._deleting = false;
+      this._deleteLock.finish();
     }
   }
 }

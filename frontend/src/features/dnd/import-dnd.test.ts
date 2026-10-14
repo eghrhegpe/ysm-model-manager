@@ -3,6 +3,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { stubConsoleError } from "@/test-utils/mock-log.ts";
 import { bus, type ToastPayload } from "@/bus";
+import { createBusyLock } from "@/utils/base/primitives/lock.ts";
 import { handleTreeDrop, bindTreeDnD } from "./import-dnd.ts";
 import { TREE_MOVE_MIME } from "./move-dnd.ts";
 import { fireDrop } from "@/test-utils/events.ts";
@@ -179,11 +180,7 @@ describe("dragover 事件", () => {
   });
 });
 
-// 为 handleTreeDrop 提供 busy 闭包（与 bindTreeDnD 同结构）
-function makeBusyPair(): [() => boolean, (v: boolean) => void] {
-  let busy = false;
-  return [() => busy, (v) => { busy = v; }];
-}
+// handleTreeDrop 的互斥锁（ADR-341：原 isBusy/setBusy 闭包对退役，直接吃 BusyLock）
 
 // ===== handleTreeDrop：网页版分支 =====
 
@@ -195,8 +192,8 @@ describe("handleTreeDrop — 网页版（ADR-049）", () => {
     const unsubReload = bus.on("tree:reload", () => reloadSpy());
     const unsubStats = bus.on("stats:refresh", () => statsSpy());
     const file = new File(["ysm"], "m.ysm", { type: "application/octet-stream" });
-    const [isBusy, setBusy] = makeBusyPair();
-    await handleTreeDrop(makeDragEvent("drop", { files: [file], types: ["Files"] }), isBusy, setBusy);
+    const lock = createBusyLock();
+    await handleTreeDrop(makeDragEvent("drop", { files: [file], types: ["Files"] }), lock);
     expect(importWebFiles).toHaveBeenCalledTimes(1);
     expect(reloadSpy).toHaveBeenCalled();
     expect(statsSpy).toHaveBeenCalled();
@@ -208,8 +205,8 @@ describe("handleTreeDrop — 网页版（ADR-049）", () => {
     vi.stubGlobal("__YSM_BACKEND__", "browser");
     const toastSpy = vi.fn();
     const unsub = bus.on("toast:show", (p) => toastSpy(p.msg));
-    const [isBusy, setBusy] = makeBusyPair();
-    await handleTreeDrop(makeDragEvent("drop", { files: [], types: ["Files"] }), isBusy, setBusy);
+    const lock = createBusyLock();
+    await handleTreeDrop(makeDragEvent("drop", { files: [], types: ["Files"] }), lock);
     expect(importWebFiles).not.toHaveBeenCalled();
     expect(toastSpy).toHaveBeenCalled();
     expect(String(toastSpy.mock.calls[0][0])).toContain("暂不支持文件夹");
@@ -242,11 +239,11 @@ describe("handleTreeDrop — busy 互斥守卫", () => {
     const toastSpy = vi.fn();
     const unsub = bus.on("toast:show", (p) => toastSpy(p.msg));
     const file = new File(["ysm"], "m.ysm");
-    const [isBusy, setBusy] = makeBusyPair();
-    // 第一次 drop：同步触发 handleTreeDrop，setBusy(true)，executeCollected 异步执行
-    const p1 = handleTreeDrop(makeDragEvent("drop", { files: [file], types: ["Files"] }), isBusy, setBusy);
-    // 第二次 drop：isBusy() 仍为 true
-    handleTreeDrop(makeDragEvent("drop", { files: [file], types: ["Files"] }), isBusy, setBusy);
+    const lock = createBusyLock();
+    // 第一次 drop：同步触发 handleTreeDrop，tryStart 抢锁，executeCollected 异步执行
+    const p1 = handleTreeDrop(makeDragEvent("drop", { files: [file], types: ["Files"] }), lock);
+    // 第二次 drop：锁仍被占用 → tryStart 拒绝
+    handleTreeDrop(makeDragEvent("drop", { files: [file], types: ["Files"] }), lock);
     await p1;
     await flush();
     await flush();
@@ -265,8 +262,8 @@ describe("handleTreeDrop — 错误兜底", () => {
     const unsub = bus.on("toast:show", (p) => toastSpy(p.msg));
     // items 含 null 触发 collectFiles 的 null 守卫（不再崩溃）
     const ev = makeDragEvent("drop", { items: [null as unknown as DataTransferItem], files: [], types: ["Files"] });
-    const [isBusy, setBusy] = makeBusyPair();
-    await handleTreeDrop(ev, isBusy, setBusy);
+    const lock = createBusyLock();
+    await handleTreeDrop(ev, lock);
     await flush();
     // 无异常即成功（null 守卫让 collectFiles 安全跳过 null 项）
     errSpy.mockRestore();
@@ -280,8 +277,8 @@ describe("handleTreeDrop — 空 drop / 可编辑目标", () => {
   it("无 items 无 files 的桌面版 drop → 无支持文件 toast，不调 execute", async () => {
     const toastSpy = vi.fn();
     const unsub = bus.on("toast:show", (p) => toastSpy(p.msg));
-    const [isBusy, setBusy] = makeBusyPair();
-    await handleTreeDrop(makeDragEvent("drop", { types: ["Files"] }), isBusy, setBusy);
+    const lock = createBusyLock();
+    await handleTreeDrop(makeDragEvent("drop", { types: ["Files"] }), lock);
     expect(toastSpy.mock.calls.some((c) => String(c[0]).includes("未检测到"))).toBe(true);
     unsub();
   });
@@ -292,10 +289,10 @@ describe("handleTreeDrop — 空 drop / 可编辑目标", () => {
     const unsub = bus.on("toast:show", (p) => toastSpy(p.msg));
     const input = document.createElement("input");
     container.appendChild(input);
-    const [isBusy, setBusy] = makeBusyPair();
+    const lock = createBusyLock();
     const ev = makeDragEvent("drop", { files: [new File(["x"], "m.ysm")], types: ["Files"] });
     Object.defineProperty(ev, "target", { value: input, configurable: true });
-    await handleTreeDrop(ev, isBusy, setBusy);
+    await handleTreeDrop(ev, lock);
     expect(importWebFiles).not.toHaveBeenCalled();
     expect(toastSpy).not.toHaveBeenCalled();
     input.remove();

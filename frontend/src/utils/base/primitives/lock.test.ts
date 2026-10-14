@@ -30,6 +30,15 @@ describe("createBusyLock — 抢锁/释放", () => {
     expect(b.tryStart()).toBe(true); // b 不受 a 占用影响
     expect(a.tryStart()).toBe(false);
   });
+
+  it("isBusy 如实反映占用态（ADR-341 读面，供 UI 查询如 dnd hint 显隐）", () => {
+    const lock = createBusyLock();
+    expect(lock.isBusy()).toBe(false);
+    lock.tryStart();
+    expect(lock.isBusy()).toBe(true);
+    lock.finish();
+    expect(lock.isBusy()).toBe(false);
+  });
 });
 
 describe("withLock — 组合子自动释放", () => {

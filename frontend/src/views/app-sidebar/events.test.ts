@@ -51,6 +51,7 @@ vi.mock("../../../bindings/ysm-model-manager/internal/app/app.js", () => ({
 
 import { bindCardEvents, bindFooter, bindMcPathLabel, type SidebarHost } from "./events.ts";
 import { renderVersionCards } from "./render.ts";
+import { createBusyLock } from "@/utils/base/primitives/lock.ts";
 import { waitFor } from "@/test-utils/wait.ts";
 import type { SidebarInstance } from "./data.ts";
 
@@ -60,13 +61,12 @@ const syncRovingIndexMock = vi.fn();
 
 const mockHost: SidebarHost = (() => {
   let lastEmitted: string | null = null;
-  let busy = false;
   return {
     getLastEmittedPkg() { return lastEmitted; },
     setLastEmittedPkg(v: string | null) { lastEmitted = v; },
     resetSelectedEmit() { lastEmitted = null; },
-    getBusy() { return busy; },
-    setBusy(v: boolean) { busy = v; },
+    // ADR-341 归一：原 getBusy/setBusy 访问器对退役，宿主暴露 BusyLock
+    launcherLock: createBusyLock(),
     // P1 修复：点击路径的 roving a11y 同步探针（ADR-308 D2 可选接口）
     syncRovingIndex: syncRovingIndexMock,
   };

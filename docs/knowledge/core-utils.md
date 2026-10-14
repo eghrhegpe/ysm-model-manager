@@ -76,6 +76,7 @@ use_when:
   - 异步
 invariant_anchors:
   - frontend/src/utils/base/primitives/async.ts|swallowError
+  - frontend/src/utils/base/primitives/lock.ts|createBusyLock
 status: active
 ---
 
@@ -110,6 +111,12 @@ import { swallowError } from './utils/base/primitives/async';
 - 所有函数为纯函数，无副作用
 - 零外部依赖（不依赖 Three.js、Wails、DOM）
 - 全局唯一实现（ADR-044 策略 A 收敛），禁止各模块自行实现同功能
+
+## 忙锁语义边界（`primitives/lock.ts`，ADR-341 唯一互斥形态）
+
+`BusyLock { tryStart / finish / isBusy }` + `withLock` 是全仓「单临界区互斥」的**唯一形态**（ADR-341 归一，前身六族 busy 并存已被收编）：手写「检查 → 置忙 → finally 复位」三段一律改 `if (!lock.tryStart()) {...}`（检查+置位单步原子，杜绝「查了再抢」竞态窗口，recycle-bin 连点双确认框即该疾实证），能整体包住的走 `withLock`。`isBusy()` 只服务 UI 查询（drop hint 显隐之类），业务守卫禁写「查了再抢」回潮。
+
+**豁免边界（判据「挡的是不是同一个临界区」）**：per-key 在途集合（`features/import/executor.ts` 的 `inFlight` 指纹集、`views/app-sync-manager/network.ts` 的 `_singleBusy` 按 path）挡的是「每个 key 各自一份在途」，异键须并发；代际/状态机字段（`preview-3d` 的 `switching` 态、`diagnostics/dedup.ts` 的 `state.busy`+`pendingType` 补扫记账）是会话状态机的分体——两族均不归本原语。
 
 ## 相关
 

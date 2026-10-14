@@ -14,15 +14,7 @@ vi.mock("@/backend/app.ts", () => ({ getApp: getAppMock }));
 vi.mock("@/backend/directory-picker.ts", () => ({ pickDirectory: pickDirMock }));
 
 import { runLauncherDetect, runMcSearch } from "./launcher-detect.ts";
-import type { BusyGuard } from "./launcher-detect.ts";
-
-const mockGuard: BusyGuard = (() => {
-  let busy = false;
-  return {
-    getBusy() { return busy; },
-    setBusy(v: boolean) { busy = v; },
-  };
-})();
+import { createBusyLock } from "@/utils/base/primitives/lock.ts";
 
 type MockFn = ReturnType<typeof vi.fn>;
 
@@ -89,7 +81,7 @@ describe("runLauncherDetect", () => {
     pickDirMock.mockResolvedValue({ ok: false, reason: "cancelled" });
     const { events: toasts, off } = watchBus("toast:show");
     try {
-      await runLauncherDetect(mockGuard);
+      await runLauncherDetect(createBusyLock());
       expect(app.DetectLauncherInstances).not.toHaveBeenCalled();
       expect(app.SaveAppConfig).not.toHaveBeenCalled();
       expect(toasts).toHaveLength(0);
@@ -103,7 +95,7 @@ describe("runLauncherDetect", () => {
     pickDirMock.mockResolvedValue({ ok: true, dir: "/picked" });
     const { events: toasts, off } = watchBus("toast:show");
     try {
-      await runLauncherDetect(mockGuard);
+      await runLauncherDetect(createBusyLock());
       expect(app.DetectLauncherInstances).toHaveBeenCalledWith("/picked");
       expect(app.SaveAppConfig).not.toHaveBeenCalled();
       expect(toasts).toEqual([
@@ -122,7 +114,7 @@ describe("runLauncherDetect", () => {
     pickDirMock.mockResolvedValue({ ok: true, dir: "/picked" });
     const { events: toasts, off } = watchBus("toast:show");
     try {
-      await runLauncherDetect(mockGuard);
+      await runLauncherDetect(createBusyLock());
       expect(app.SaveAppConfig).not.toHaveBeenCalled();
       expect(toasts).toHaveLength(1);
       expect(toasts[0].type).toBe("error");
@@ -139,7 +131,7 @@ describe("runLauncherDetect", () => {
     pickDirMock.mockResolvedValue({ ok: true, dir: "/picked" });
     const { events: toasts, off } = watchBus("toast:show");
     try {
-      const p = runLauncherDetect(mockGuard);
+      const p = runLauncherDetect(createBusyLock());
       const picker = await openPicker();
       (picker.querySelector("[data-testid='dlg-cancel']") as HTMLElement).click();
       await p;
@@ -163,7 +155,7 @@ describe("runLauncherDetect", () => {
     const { events: toasts, off: offToast } = watchBus("toast:show");
     const { events: stats, off: offStats } = watchBus("stats:refresh");
     try {
-      const p = runLauncherDetect(mockGuard);
+      const p = runLauncherDetect(createBusyLock());
       const picker = await openPicker();
       // esc 转义：实例名中的 HTML 注入片段被转义后才进入弹层
       expect(picker.innerHTML).toContain("Fab&lt;b&gt;ulous");
@@ -196,7 +188,7 @@ describe("runLauncherDetect", () => {
       DetectLauncherInstances: vi.fn().mockResolvedValue([makeInstance()]),
     });
     pickDirMock.mockResolvedValue({ ok: true, dir: "/picked" });
-    const p = runLauncherDetect(mockGuard);
+    const p = runLauncherDetect(createBusyLock());
     const picker = await openPicker();
     (picker.querySelector("[data-launcher-default]") as HTMLInputElement).checked = false;
     (picker.querySelector('[data-idx="0"]') as HTMLElement).click();
@@ -214,7 +206,7 @@ describe("runLauncherDetect", () => {
     pickDirMock.mockResolvedValue({ ok: true, dir: "/picked" });
     const { events: toasts, off } = watchBus("toast:show");
     try {
-      const p = runLauncherDetect(mockGuard);
+      const p = runLauncherDetect(createBusyLock());
       const picker = await openPicker();
       (picker.querySelector('[data-idx="0"]') as HTMLElement).click();
       await p;
@@ -235,7 +227,7 @@ describe("runMcSearch", () => {
     const app = mockApp(); // GetMinecraftPaths → []
     const { events: toasts, off } = watchBus("toast:show");
     try {
-      await runMcSearch(mockGuard);
+      await runMcSearch(createBusyLock());
       expect(app.SaveAppConfig).not.toHaveBeenCalled();
       expect(toasts).toHaveLength(1);
       expect(toasts[0].type).toBe("warn");
@@ -251,7 +243,7 @@ describe("runMcSearch", () => {
     const { events: toasts, off: offToast } = watchBus("toast:show");
     const { events: stats, off: offStats } = watchBus("stats:refresh");
     try {
-      await runMcSearch(mockGuard);
+      await runMcSearch(createBusyLock());
       expect(app.SaveAppConfig).toHaveBeenCalledWith("/files", "/rp", "/auto/minecraft", "copy", "cyber", "");
       expect(stats).toHaveLength(1);
       expect(toasts).toHaveLength(1);

@@ -16,6 +16,7 @@ import {
   groupCollected,
 } from "@/features/import/shared.ts";
 import { swallowError } from "@/utils/base/primitives/async.ts";
+import { type BusyLock, createBusyLock } from "@/utils/base/primitives/lock.ts";
 import { logError } from "@/utils/base/primitives/log.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { isEditableTarget } from "@/utils/dom/editable-target.ts";
@@ -23,12 +24,6 @@ import { friendlyError } from "@/utils/dom/errors.ts";
 import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { dndGetApp } from "./dnd-deps.ts";
-
-/** drop 处理期间的 busy 守卫（由绑定闭包持有，每组件实例独立） */
-export interface PackDndBusy {
-  isBusy: () => boolean;
-  setBusy: (v: boolean) => void;
-}
 
 /** 卡片实例的最小形状（SidebarInstance 结构子集） */
 export interface PackDndInstance {
@@ -45,17 +40,17 @@ export interface PackDndInstance {
 export async function handleInstanceDrop(
   e: DragEvent,
   instanceName: string,
-  busy: PackDndBusy,
+  lock: BusyLock,
 ): Promise<void> {
   e.preventDefault();
-  dbg("pack-dnd", "handleInstanceDrop called", { instanceName, busy: busy.isBusy() });
+  dbg("pack-dnd", "handleInstanceDrop called", { instanceName, busy: lock.isBusy() });
   if (isEditableTarget(e.target)) return;
 
-  if (busy.isBusy()) {
+  // ADR-341 归一：tryStart 单步原子抢锁（原 isBusy/setBusy 两段式退役）
+  if (!lock.tryStart()) {
     toast(t("import.busyImporting"), TOAST_MS.success, "info");
     return;
   }
-  busy.setBusy(true);
 
   // 写环形日志面板（Go AddOpLog）——非阻塞，失败经 swallowError 记录
   const logDrop = (msg: string) =>
@@ -173,7 +168,7 @@ export async function handleInstanceDrop(
     logError("pack-dnd", "拖放处理失败", err);
     toast(`${t("import.processError")}: ${friendlyError(err)}`, TOAST_MS.verbose, "error");
   } finally {
-    busy.setBusy(false);
+    lock.finish();
   }
 }
 
@@ -187,13 +182,8 @@ export function bindPackCardDnD(
   root: ShadowRoot,
   getInstances: () => PackDndInstance[],
 ): () => void {
-  let _dropBusy = false;
-  const busy: PackDndBusy = {
-    isBusy: () => _dropBusy,
-    setBusy: (v: boolean) => {
-      _dropBusy = v;
-    },
-  };
+  // ADR-341 归一：drop 处理期间的互斥锁由绑定闭包持有，每组件实例独立
+  const lock = createBusyLock();
   let _lastCard: Element | null = null;
 
   const clearHighlight = (): void => {
@@ -259,7 +249,7 @@ export function bindPackCardDnD(
       return;
     }
     dbg("pack-dnd", "drop on instance card", { name: ins.name });
-    void handleInstanceDrop(e, ins.name, busy).catch((err) => {
+    void handleInstanceDrop(e, ins.name, lock).catch((err) => {
       logError("pack-dnd", "拖放处理失败", err);
       toast(`${t("import.processError")}: ${friendlyError(err)}`, TOAST_MS.verbose, "error");
     });

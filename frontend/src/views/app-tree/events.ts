@@ -77,11 +77,10 @@ function atTeBindSelCheckboxes(ctx: AtTeCtx, e: MouseEvent, target: HTMLElement)
       toast(t("tree.webNoToggle"), TOAST_MS.normal, "warn");
       return true;
     }
-    if (vm.toggleBusy || vm.batchBusy) {
+    if (!vm.toggleLock.tryStart()) {
       toast(t("ctx.busyWait"), TOAST_MS.quick, "info");
       return true;
     }
-    vm.toggleBusy = true;
     const fullPath = flCk.dataset.fullpath || flCk.dataset.path;
     // P1-2 乐观更新（2026-10-13）：banned 是本地布尔位——先翻转 entries 内该条目并
     // 局部重渲（行高随数据变化，.ck on/.ban 态即时反馈），IPC 落盘成功后后台 reload 校正
@@ -136,7 +135,7 @@ function atTeBindSelCheckboxes(ctx: AtTeCtx, e: MouseEvent, target: HTMLElement)
         );
       })
       .finally(() => {
-        vm.toggleBusy = false;
+        vm.toggleLock.finish();
       });
     return true;
   }
@@ -433,15 +432,16 @@ function collectDirEntries(entries: TreeEntry[], prefix: string): TreeEntry[] {
 
 // ===== 文件夹批量启用/禁用 =====
 async function toggleFolderBatch(fhEl: HTMLElement, vm: AppTree): Promise<void> {
-  if (vm.batchBusy || vm.toggleBusy) {
-    toast(t("ctx.busyWait"), TOAST_MS.quick, "info");
-    return;
-  }
+  // ADR-341 归一：tryStart 原子抢锁（原「batchBusy||toggleBusy 互查再置位」三段式退役，
+  // 单临界区单锁——单文件开关与文件夹批量共用 vm.toggleLock，互斥语义不变）
   if (!can("ToggleEnable")) {
     toast(t("tree.webNoToggle"), TOAST_MS.normal, "warn");
     return;
   }
-  vm.batchBusy = true;
+  if (!vm.toggleLock.tryStart()) {
+    toast(t("ctx.busyWait"), TOAST_MS.quick, "info");
+    return;
+  }
   try {
     const { ToggleEnable } = await backendGetApp();
     const ck = fhEl.querySelector(".ck");
@@ -501,7 +501,7 @@ async function toggleFolderBatch(fhEl: HTMLElement, vm: AppTree): Promise<void> 
   } catch (err) {
     toast(`${friendlyError(err, t("tree.batchToggleFail"))}`, TOAST_MS.long, "error");
   } finally {
-    vm.batchBusy = false;
+    vm.toggleLock.finish(); // ADR-341：单文件开关/文件夹批量共用的同一把锁
   }
 }
 

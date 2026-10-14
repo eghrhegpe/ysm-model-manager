@@ -277,11 +277,11 @@ async function runBatchToggle(
     toast(t("tree.webNoToggle"), TOAST_MS.normal, "warn");
     return;
   }
-  if (vm.batchBusy || vm.toggleBusy) {
+  // ADR-341 归一：启停链单临界区单锁（原 batchBusy||toggleBusy 互查再置位三段式退役）
+  if (!vm.toggleLock.tryStart()) {
     toast(t("tree.batchBusyWait"), TOAST_MS.quick, "info");
     return;
   }
-  vm.batchBusy = true;
   try {
     const { ToggleEnable } = await backendGetApp();
     const prefix = opts.prefix?.replace(/\\/g, "/");
@@ -313,7 +313,7 @@ async function runBatchToggle(
   } catch (err) {
     toastError(err);
   } finally {
-    vm.batchBusy = false;
+    vm.toggleLock.finish();
   }
 }
 

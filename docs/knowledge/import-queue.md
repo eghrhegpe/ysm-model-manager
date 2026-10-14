@@ -39,7 +39,6 @@ auto_fields:
     - isEditableTarget
     - isImportableFile
     - isSupportedFile
-    - PackDndBusy
     - PackDndInstance
     - shouldEnterForm
   tests:
@@ -97,11 +96,11 @@ status: active
 
 ### import-dnd.ts（仓库页拖拽）
 
-- `handleTreeDrop(e, isBusy, setBusy, rtype)`：`<app-tree>` 容器内 drop 处理
+- `handleTreeDrop(e, lock, rtype)`：`<app-tree>` 容器内 drop 处理（ADR-341：互斥锁直接吃 `BusyLock`，原 `isBusy/setBusy` 闭包对退役）
   - 网页版：`resolveWebMode()` → `importWebFilesWithToast`
   - 桌面版：`dataTransfer.files` + `webkitGetAsEntry` 补充收集 → `executeCollected`
 - `bindTreeDnD(container, rtype)`：注册 `dragover`/`dragleave`/`drop` 到 document 层，通过 `composedPath` 判定是否命中容器；**rtype 支持 getter**（动态切换树根类型，drop 时才取值防闭包残留）
-- 含 100MB 超量逐文件过滤 + busy 状态守卫
+- 含 100MB 超量逐文件过滤 + `tryStart` 原子抢锁互斥（`lock.isBusy()` 供 drop hint 显隐查询）
 
 ### dnd-shared.ts（共享判定）
 
@@ -117,7 +116,7 @@ status: active
 
 ### pack-dnd.ts（整合包卡片拖拽导入，2026-08-29）
 
-- `handleInstanceDrop(e, instanceName, busy)`：拖文件到实例卡片 = **先入仓库再推送**（数据流与「下载→安装」同构，仓库是单一事实源，硬链接模式由此成立）——收集（`collectDropFiles`）→ oversize 过滤 → `groupCollected` 分组 → 文件夹组逐个 `ImportFolderAndPushToInstance(folderName, subpath, items, instanceName)`、散落单文件 `ImportFileAndPushToInstance(name, base64, instanceName)`（类型判定/仓库落点/实例推送全在 Go，前端不判型）；光杆 `ysm.json` 散文件拦截（与 `directImport` 同款提示，防推送侧整仓落地）；只要有 binding 调用即发 `stats:refresh` + `tree:reload`（导入可能已落仓库，防陈旧）；环形日志走 `AddOpLog("pack-drop", ...)`。**UI toast 全量 i18n（2026-10 锐评收口）**：本文件曾残留四处裸中文（网页版拒绝 / oversize 跳过 / 全成功 / 部分失败），现走 `import.packDropWebUnsupported` / `packPushedAll` / `packPushedPartial` / `packPushFailedAll` + 通用 `import.oversizeSkipped`（**与仓库页拖入共用同一 key**，2026-10 上提为共享文案）与 `import.moreSuffix`（「 等」后缀单源），三语言包同步。同族 `import-dnd.ts` 的两处裸中文（网页版文件夹拒绝 / oversize）亦同批收口（`import.webFolderDropUnsupported` + 共享 `import.oversizeSkipped`），拖拽域不再有硬编码 UI 文案
+- `handleInstanceDrop(e, instanceName, lock)`：拖文件到实例卡片 = **先入仓库再推送**（数据流与「下载→安装」同构，仓库是单一事实源，硬链接模式由此成立）——收集（`collectDropFiles`）→ oversize 过滤 → `groupCollected` 分组 → 文件夹组逐个 `ImportFolderAndPushToInstance(folderName, subpath, items, instanceName)`、散落单文件 `ImportFileAndPushToInstance(name, base64, instanceName)`（类型判定/仓库落点/实例推送全在 Go，前端不判型）；光杆 `ysm.json` 散文件拦截（与 `directImport` 同款提示，防推送侧整仓落地）；只要有 binding 调用即发 `stats:refresh` + `tree:reload`（导入可能已落仓库，防陈旧）；环形日志走 `AddOpLog("pack-drop", ...)`。**UI toast 全量 i18n（2026-10 锐评收口）**：本文件曾残留四处裸中文（网页版拒绝 / oversize 跳过 / 全成功 / 部分失败），现走 `import.packDropWebUnsupported` / `packPushedAll` / `packPushedPartial` / `packPushFailedAll` + 通用 `import.oversizeSkipped`（**与仓库页拖入共用同一 key**，2026-10 上提为共享文案）与 `import.moreSuffix`（「 等」后缀单源），三语言包同步。同族 `import-dnd.ts` 的两处裸中文（网页版文件夹拒绝 / oversize）亦同批收口（`import.webFolderDropUnsupported` + 共享 `import.oversizeSkipped`），拖拽域不再有硬编码 UI 文案
 - `bindPackCardDnD(root, getInstances)`：document 层监听（WebView2 ShadowRoot drop 限制，与 `bindTreeDnD` 同款 `composedPath`/parentNode 跨界范式），`dragover` 命中卡片加 `.dnd-over` 高亮、drop **按卡片 `data-name` 在 `getInstances()` 最新列表里按名查找**解析实例（2026-10 P1 修复：原按 `data-idx` 数组下标取 `getInstances()[idx]`，下标是渲染时快照，sidebar 重载/实例增删后静默指向别的整合包——把模型推进错包还报成功；名字缺失或对不上一律 toast 报错，不猜也不静默丢）；由 `<app-sidebar>` `connectedCallback` 调用（cleanup 存 `_packDndCleanup`）
 - Go 侧配套 binding 见 `internal/app/app_install_import.go`（`ImportFileAndPushToInstance` / `ImportFolderAndPushToInstance` / `pushRepoPathToInstance`），推送复用 `ysmsync.PushSingleResource` 管线（见知识卡 `go_installer` / `go_sync`）
 
@@ -134,7 +133,7 @@ status: active
 - import-dnd 导出：`handleTreeDrop`、`bindTreeDnD`
 - dnd-shared 导出：`shouldEnterForm`、`groupCollected`、`collectDropFiles`、`fileToBase64`、`buildFolderItems`、类型 `CollectedEntry`/`FolderGroup`；`isSupportedFile`/`isImportableFile`/`getExt` 在 `utils/resource/importable.ts`、`isEditableTarget` 在 `utils/dom/editable-target.ts`
 - dnd-collector 导出：`collectFiles`、类型 `CollectedFile`
-- pack-dnd 导出：`handleInstanceDrop`、`bindPackCardDnD`、类型 `PackDndBusy`/`PackDndInstance`
+- pack-dnd 导出：`handleInstanceDrop`、`bindPackCardDnD`、类型 `PackDndInstance`（互斥守卫直接吃 `BusyLock`，原 `PackDndBusy` 接口已随 ADR-341 退役）
 - 派发 bus：`toast:show`、`stats:refresh`、`tree:reload`
 - getApp() 调用：`ImportModelFile`、`ImportModelFolder`、`ImportModelFolderTo`、`ImportFileAndPushToInstance`、`ImportFolderAndPushToInstance`、`AddOpLog`
 
@@ -142,7 +141,7 @@ status: active
 
 - **静默直导**：完成后 `stats:refresh` + `tree:reload` 双事件联动，无导入 tab 依赖
 - **串行发起 + Go 天然并行**：`executeCollected` 对 folders/singles 用 `for...await` 串行发起请求（前端 base64 编码毫秒级，不是瓶颈）；Go 侧 `ImportModelFile` 各自独立 goroutine 落盘/解压/清缓存，实际并行执行。前端不加 `Promise.all` 并发 base64 编码，Go 侧也不加队列——两边各管各的并发层，互不越界
-- **并发/重复守卫**：`_inFlight` 持 per-file 指纹（name+size+lastModified），同名不同源文件不误判；busy 命中 toast 反馈（不静默）
+- **并发/重复守卫**：`_inFlight` 持 per-file 指纹（name+size+lastModified），同名不同源文件不误判；busy 命中 toast 反馈（不静默）。**该族按 ADR-341 豁免**（键粒度在途集合 ≠ 单临界区互斥锁，异键须并发）
 - **逐文件容错**：文件夹导入中单个文件读取失败跳过（warn 日志），不拖垮整组
 - **上下文路由守卫**：`ImportModelFolderTo` 不可用时（旧桥/Android 时序）降级为内容推断 + warn toast，不静默错位
 - **ysm.json 拦截**：`directImport` 遇 `ysm.json` 单文件 toast 引导拖整个文件夹走整组路径

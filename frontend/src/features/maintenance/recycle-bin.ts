@@ -7,6 +7,7 @@ import { bus } from "@/bus";
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import { useCurrentResourceType } from "@/features/repo/repo-rtype.ts";
 import { createLoadGuard, type LoadGuard } from "@/utils/async/load-guard.ts";
+import { type BusyLock, createBusyLock } from "@/utils/base/primitives/lock.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { modalConfirm } from "@/utils/dom/modal-confirm.ts";
 import { msgRowHTML } from "@/utils/dom/status-row.ts";
@@ -172,8 +173,7 @@ function onRecycleRefreshClick(loadRecycleBin: () => void): () => void {
 }
 
 function onRecycleEmptyClick(opts: {
-  getEmptyBusy: () => boolean;
-  setEmptyBusy: (b: boolean) => void;
+  lock: BusyLock;
   getApp: GetAppFn;
   loadRecycleBin: () => void;
   onShowToast: ToastFn;
@@ -181,18 +181,21 @@ function onRecycleEmptyClick(opts: {
   t: TFn;
 }): () => Promise<void> {
   return async (): Promise<void> => {
-    if (opts.getEmptyBusy()) return;
-    const confirmed = await opts.modalConfirm({
-      title: opts.t("recycle.empty"),
-      titleIcon: "recycle",
-      message: opts.t("recycle.emptyConfirm"),
-      okText: opts.t("recycle.emptyOk"),
-      okIcon: "recycle",
-      danger: true,
-    });
-    if (!confirmed) return;
-    opts.setEmptyBusy(true);
+    // ADR-341 归一：tryStart 原子抢锁提前到确认框**之前**——原查询式两段（getEmptyBusy
+    // 检查在弹框前、setBusy(true) 在确认后）存在竞态窗口：确认框打开期间的连点全部
+    // 通过检查，多个确认框叠挂、双双放行清空 RPC。锁生命周期现覆盖「确认 + 执行」全程，
+    // 取消/失败路径统一 finally 释放。
+    if (!opts.lock.tryStart()) return;
     try {
+      const confirmed = await opts.modalConfirm({
+        title: opts.t("recycle.empty"),
+        titleIcon: "recycle",
+        message: opts.t("recycle.emptyConfirm"),
+        okText: opts.t("recycle.emptyOk"),
+        okIcon: "recycle",
+        danger: true,
+      });
+      if (!confirmed) return;
       const { EmptyRecycleBin } = await opts.getApp();
       const n = Number(await EmptyRecycleBin()) || 0; // 旧桥可能返回 undefined，兜底防「undefined 个文件」
       opts.onShowToast(opts.t("recycle.cleared", { n }), TOAST_EMPTY_OK_MS, "success");
@@ -202,7 +205,7 @@ function onRecycleEmptyClick(opts: {
     } catch (e) {
       opts.onShowToast(friendlyError(e), TOAST_EMPTY_ERR_MS, "error");
     } finally {
-      opts.setEmptyBusy(false);
+      opts.lock.finish();
     }
   };
 }
@@ -320,11 +323,8 @@ export function initRecycleBin(
 ): RecycleBinHandle {
   const deps = resolveDeps(depsOverrides);
   const root = app._root;
-  let _emptyBusy = false;
-  const getEmptyBusy = () => _emptyBusy;
-  const setEmptyBusy = (b: boolean) => {
-    _emptyBusy = b;
-  };
+  // ADR-341 归一：清空按钮互斥锁（BusyLock 实例级，随会话 GC；覆盖确认框全程）
+  const emptyLock = createBusyLock();
   const onShowToast: ToastFn = (msg, duration, type) => {
     toast(msg, duration, type);
   };
@@ -369,8 +369,7 @@ export function initRecycleBin(
   root.getElementById("recy-refresh")?.addEventListener("click", onRefreshClick);
 
   const onEmptyClick = onRecycleEmptyClick({
-    getEmptyBusy,
-    setEmptyBusy,
+    lock: emptyLock,
     getApp: deps.getApp,
     loadRecycleBin: () => shell.loadRecycleBin(),
     onShowToast,

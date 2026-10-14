@@ -465,7 +465,7 @@
 | go/config | [Go 配置单持有点 go/config](./go-config.md) | - | - |
 | LoadRegistry/DedupConfig | [共享类型 go/types](./go-types.md) | - | ADR-144, ADR-192 |
 | repo_rtype localStorage 权威源 | [全局资源类型状态 repo-rtype](./repo-rtype.md) | - | - |
-| settings/init / keymap / store | [设置页 settings](./app-content-settings.md) | 异步操作防连点一律 `store.ts\|withBusy(task)`（返回是否获得锁，false 走拒绝分支如 UI 当场回退）；`isBusy/setBusy` 已退役，禁手写「检查+置忙+finally 复位」三段 | - |
+| settings/init / keymap / store | [设置页 settings](./app-content-settings.md) | 异步操作防连点一律 `store.ts\|withBusy(task)`（返回是否获得锁，false 走拒绝分支如 UI 当场回退；内核即 `BusyLock`，ADR-341 归一）；`isBusy/setBusy` 已退役，禁手写「检查+置忙+finally 复位」三段 | - |
 | useCurrentResourceType 订阅类型切换 | [全局资源类型状态 repo-rtype](./repo-rtype.md) | - | - |
 | version-check | [版本号 go/version](./go-version.md) | - | - |
 | version-updater | [自动更新 go/updater](./go-updater.md) | - | - |
@@ -1017,7 +1017,7 @@
 | 模块级状态收敛前先查测试隔离策略——用 vi.resetModules 重载的模块（locale.ts）收敛无测试收益，只有代码组织价值 | - | - |
 | 引用相等分派（ring === webImportLogs）是隐式建模信号——收敛成显式对象能消灭，但改动面大需评估 ROI | - | - |
 | 收敛只改内部表示不动导出函数签名（modal 范式）——外部/测试零改动是判据 | `试点成功` | - |
-| 模块级 let busy 锁必须有 reset 路径或注释豁免理由（dedup.ts 案例：tab 卸载后 busy 卡 true | - | 再进永久卡死） |
+| 模块级互斥守卫一律用 （ADR-341 唯一形态，tryStart/finish 自带释放）；残留的手写 `let busy` 须有 reset 路径或注释豁免理由（dedup.ts 案例：tab 卸载后 busy 卡 true | `BusyLock` | 再进永久卡死） |
 | mount3D 本体仍超 100 行红线 | - | 每加逻辑都会进一步膨胀；新逻辑应先拆为模块级函数（mount-session.ts / shared-infra.ts）再调用 |
 | safeDispose 未复用 | - | 重复写释放逻辑、资源泄漏；必须经 safeDispose 原语 |
 | adapter 直接遍历 entry 数组 | - | 容器内多模型顺序不稳定、缺用户选择点；必须走 multiModelSelectNode |

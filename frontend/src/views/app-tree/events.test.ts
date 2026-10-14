@@ -7,6 +7,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import type { MockInstance } from "vitest";
 import { bus } from "@/bus";
 import { createLoadGuard } from "@/utils/async/load-guard.ts";
+import { createBusyLock } from "@/utils/base/primitives/lock.ts";
 import { selectSingle } from "./data.ts";
 import type { AppTree } from "./index.ts";
 import type { TreeEntry } from "./loader.ts";
@@ -102,8 +103,6 @@ function makeHarness(): Harness {
   const dirOpenState: Record<string, boolean> = {};
   const entriesState: TreeEntry[] = [];
   let rootAttrVal: string | null = null;
-  let toggleBusyState = false;
-  let batchBusyState = false;
   const vm = {
     get rootAttr() { return rootAttrVal; },
     set rootAttr(v: string | null) { rootAttrVal = v; },
@@ -111,10 +110,8 @@ function makeHarness(): Harness {
     _load: vi.fn().mockResolvedValue(undefined),
     _renderTree: vi.fn(),
     _root: root,
-    get toggleBusy() { return toggleBusyState; },
-    set toggleBusy(v: boolean) { toggleBusyState = v; },
-    get batchBusy() { return batchBusyState; },
-    set batchBusy(v: boolean) { batchBusyState = v; },
+    // ADR-341 归一：原 toggleBusy/batchBusy 双布尔访问器退役，替身直接持有 BusyLock
+    toggleLock: createBusyLock(),
     selectState: { keys: new Set<string>(), lastKey: null as string | null },
     treeRenderCtx,
     toggleDir(dir: string) {
@@ -397,7 +394,7 @@ describe("click 复选框（单文件 ToggleEnable）", () => {
     expect(h.vm._renderTree).toHaveBeenCalledOnce();
     expect(emitted("sync:toggle:status")).toEqual([{ rtype: "ysm" }]); // ADR-339：带当前树类型发射
     expect(emitted("stats:refresh").length).toBe(1);
-    expect(h.vm.toggleBusy).toBe(false);
+    expect(h.vm.toggleLock.isBusy()).toBe(false);
   });
 
   it("非 YSM rtype → 仍发（带 rtype=mmd），Go 侧按 dirLevelSync 过滤", async () => {
@@ -414,7 +411,7 @@ describe("click 复选框（单文件 ToggleEnable）", () => {
 
   it("toggle 进行中 → toast「⏳ 操作进行中」，不重复调用", async () => {
     const h = makeHarness();
-    (h.vm as unknown as { toggleBusy: boolean }).toggleBusy = true;
+    h.vm.toggleLock.tryStart(); // 模拟在途：锁被占（ADR-341 替身直持 BusyLock）
     h.container.appendChild(fileRow("/repo/a.ysm", "a.ysm"));
     bindTreeEvents(h.container, h.vm);
     click(h.container.querySelector(".fl .ck") as Element);
@@ -451,7 +448,7 @@ describe("click 复选框（单文件 ToggleEnable）", () => {
     expect(
       toasts.some((t) => t.msg.includes("切换失败") && t.msg.includes("a.ysm") && t.type === "error"),
     ).toBe(true);
-    expect(h.vm.toggleBusy).toBe(false);
+    expect(h.vm.toggleLock.isBusy()).toBe(false);
   });
 
   it("乐观更新：IPC 返回前本地翻转 banned（P1-2 判别性断言，_load 前已 renderTree）", async () => {
@@ -468,11 +465,11 @@ describe("click 复选框（单文件 ToggleEnable）", () => {
     // 本地位已翻（未等 IPC）：_renderTree 已被乐观重渲调用一次，IPC 侧仍挂起
     expect((h.vm.entriesState[0] as TreeEntry).banned).toBe(true);
     expect(h.vm._renderTree).toHaveBeenCalled();
-    expect(h.vm.toggleBusy).toBe(true);
+    expect(h.vm.toggleLock.isBusy()).toBe(true);
     resolveToggle();
     await flush();
     // 成功链完成：busy 复位，reload 校正链跑完
-    expect(h.vm.toggleBusy).toBe(false);
+    expect(h.vm.toggleLock.isBusy()).toBe(false);
     expect(h.vm._load).toHaveBeenCalledOnce();
   });
 
@@ -500,7 +497,7 @@ describe("click 复选框（单文件 ToggleEnable）", () => {
     click(h.container.querySelector(".fl .ck") as Element);
     await flush();
     expect(ToggleEnableMock).toHaveBeenCalledWith("/repo/a.ysm");
-    expect(h.vm.toggleBusy).toBe(false);
+    expect(h.vm.toggleLock.isBusy()).toBe(false);
   });
 
   it("乐观时序：flash 加在重渲后的新行上（旧行已被 _renderTree 重建，flash 不落空）", async () => {
@@ -555,7 +552,7 @@ describe("click 复选框（文件夹批量 toggleFolderBatch）", () => {
     expect(
       toasts.some((t) => t.msg === "文件夹启用: 1 成功, 0 失败" && t.type === "success"),
     ).toBe(true);
-    expect(h.vm.batchBusy).toBe(false);
+    expect(h.vm.toggleLock.isBusy()).toBe(false);
   });
 
   it("全部已启用 → 禁用：逐项 ToggleEnable 并置 banned=true，toast「文件夹禁用」", async () => {
@@ -647,7 +644,7 @@ describe("click 复选框（文件夹批量 toggleFolderBatch）", () => {
 
   it("批量进行中 → toast「⏳ 操作进行中」，不调 getApp", async () => {
     const h = makeHarness();
-    (h.vm as unknown as { batchBusy: boolean }).batchBusy = true;
+    h.vm.toggleLock.tryStart(); // 模拟在途：启停链共用的锁被占
     h.container.appendChild(folderRow("dirA", "目录A"));
     bindTreeEvents(h.container, h.vm);
     click(h.container.querySelector(".fh .ck") as Element);
@@ -655,7 +652,7 @@ describe("click 复选框（文件夹批量 toggleFolderBatch）", () => {
     const toasts = emitted("toast:show") as Array<{ msg: string; type: string }>;
     expect(toasts.some((t) => t.msg.includes("操作进行中"))).toBe(true);
     expect(getAppMock).not.toHaveBeenCalled();
-    (h.vm as unknown as { batchBusy: boolean }).batchBusy = false;
+    h.vm.toggleLock.finish();
   });
 
   it("can=false → warn toast，不进批量流程", async () => {
@@ -682,7 +679,7 @@ describe("click 复选框（文件夹批量 toggleFolderBatch）", () => {
     expect(
       toasts.some((t) => t.msg.includes("批量启用/禁用失败") && t.type === "error"),
     ).toBe(true);
-    expect(h.vm.batchBusy).toBe(false);
+    expect(h.vm.toggleLock.isBusy()).toBe(false);
     getAppMock.mockResolvedValue({
       ToggleEnable: ToggleEnableMock,
       RenameFile: RenameFileMock,

@@ -138,7 +138,7 @@ status: active
 ### `app-sidebar`（整包级）
 - **`runPush`**：按类型循环 `await downloadMissing({instanceNames})` **直调**（ADR-340 去总线化，2026-10-14：原 `sync:download:missing` 事件 + token 回执 + `waitBusQuiet` 静默宽限四件套整体退役，Promise 返回值即 `{ok, fail, skipped, skipReason}`），累加计数汇总一条 toast；binding 挂起由 `withTimeout`(120s) 兜底且**超时即早停**（治锐评 P1-2 级联——原总线实现超时后续发只会撞 handler 持锁 busy 假跳过）。原 `for insName × for rtype` 逐包逐类型 N×T 次已收敛为 O(类型) 次（ADR-310 性能修复，2026-10）
 - **`runPull`**：`Promise.allSettled` 并拉 `PullResourceFromInstance`
-- **`_syncInProgress`** 守卫：防止并发 sync 竞态
+- **`_syncLock`（`BusyLock`）** 守卫：防止并发 sync 竞态（ADR-341 归一，`beginSync` tryStart / `runPush`·`runPull` finally finish）
 - **同步流程层（`sync-flow.ts`，2026-09-08 从 `index.ts` 拆出）**：`runPush`/`runPull`/`bindSelectAll`/`bindSyncSelected`/`restoreCheckboxes` + `_checkedSets`（按 rtype 隔离的勾选状态 Map）全部迁至独立文件，`index.ts` 仅保留 Web Component 生命周期与渲染编排
 
 ### `features/sync.ts`（同步执行层）
@@ -162,7 +162,7 @@ getApp().GetInstanceSyncStatus(instance, subtype, rtype)
 **sidebar 整包推送链（ADR-340 去总线化 + ADR-310 批量收敛，2026-10-14）**：
 ```
 用户点击 push 菜单项
-  → beginSync（取 selected + _syncInProgress + 按钮 loading）
+  → beginSync（取 selected + _syncLock.tryStart + 按钮 loading）
   → runPush（按类型循环，非逐包×逐类型）
     → for rt in types
        → await withTimeout(downloadMissing({ instanceNames: selected, rtype: rt }), 120s)
@@ -173,7 +173,7 @@ getApp().GetInstanceSyncStatus(instance, subtype, rtype)
          config,error=未完成）
        → 超时（binding 挂起是唯一成因）→ 计入 timedOut 并 break **早停**
     → 汇总一条 toast（失败计数可见，锐评 P1-1 契约）
-  → finally：按钮复位 + _syncInProgress=false
+  → finally：按钮复位 + _syncLock.finish()
 ```
 
 ## 关键 bus 事件
@@ -241,7 +241,7 @@ sidebar 底部 push/pull 菜单（整包级，与 sync-manager 组件解耦）
 - **`tree:reload` 仅在真正做过安装时广播**（handler P2）：配置缺失短路时无任何写操作
 - **`SidebarHost`/`EmitDedupe` 去重**：同组件 reload 不复位，宿主持有状态。2026-09 定位降级——app-content 已复用面板实例（同值 `setAttribute` 被组件 `oldVal===newVal` 拦下），重复 emit 不再有丢状态代价，本状态机退化为省事件扩散的优化，**不再是防回归的救命稻草**
 - **⚠️ 面板复用而非重建**（2026-09 修复）：`init-pages.mountSyncManager` 首次注入元素、后续仅 `setAttribute`，实例跨整合包存活；切包时由组件 `_init` 内的 `_resetViewState()` 复位视图状态（展开态/筛选/子类型）。**改回 `innerHTML` 重建会被 `init-pages.test.ts` 的「复用同一实例」用例拦下**
-- **`_syncInProgress/_loading` 卸载时复位**：否则重挂载后按钮点击被静默 return
+- **`_syncLock`（BusyLock）/`_reloadInFlight` 卸载时释放**：否则重挂载后按钮点击被静默 return（ADR-341）
 - **Storage**：一律用 `safeGet/safeSet/safeRemove`（ADR-044），防隐私模式 `localStorage` 禁用抛错
 - **Go 绑定**：统一 `getApp()` 入口，禁止直调 `window.go.main.App.*`
 - **⚠️ a11y 属性模板生成原则（2026 复测补缺）**：本视图全部 a11y 属性由 `tpl.ts` 模板单点产出（renderer/events 层零手写 aria）；键盘委托唯一出口 = `events.ts|bindDelegatedEvents` 的 keydown 单委托——新增可交互元素先扩模板，不逐处打属性

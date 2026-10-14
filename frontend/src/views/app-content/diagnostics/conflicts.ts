@@ -4,6 +4,7 @@
 
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import { stagger } from "@/utils/animation/stagger.ts";
+import { createBusyLock } from "@/utils/base/primitives/lock.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import type { EscFn } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
@@ -13,9 +14,9 @@ import { backendGetApp } from "@/views/backend-deps.ts";
 import { optionRows } from "./option-rows.ts";
 import { msgRowHTML } from "./status-row.ts";
 
-// 同步冲突扫描并发标志（纯并发守卫，无跨调用配置状态——【范式豁免】同 dedup 会话工厂
-// 改造 ROI 低，不立项；try/finally 兜底复位）
-let diagSyncBusy = false;
+// 同步冲突扫描并发锁（ADR-341 归一：纯并发守卫统一 BusyLock——tryStart 检查+置位
+// 单步原子，finish 走 finally；无跨调用配置状态，会话工厂豁免同 dedup 卡口径）
+const diagSyncLock = createBusyLock();
 
 /** resolve 成功后自动复扫延迟：给用户留读「已解决 N」结果消息的窗口 */
 const RESOLVE_RESCAN_MS = 1500;
@@ -149,8 +150,7 @@ export async function runSyncConflictScan(
   esc: EscFn,
   target: DgCfScanTarget,
 ): Promise<void> {
-  if (diagSyncBusy) return;
-  diagSyncBusy = true;
+  if (!diagSyncLock.tryStart()) return;
   dgCfSetScanEnabled(target.scanBtn, false);
   try {
     await dgCfRunSyncDetection(list, esc, target);
@@ -158,7 +158,7 @@ export async function runSyncConflictScan(
     // 低优先③：同上——friendlyError 单源，不再手拼「译文前缀 + 裸 Go 文案」
     list.innerHTML = msgRowHTML("error", friendlyError(err, t("diagnostics.scanFailed")), esc);
   } finally {
-    diagSyncBusy = false;
+    diagSyncLock.finish();
     dgCfSetScanEnabled(target.scanBtn, true);
   }
 }

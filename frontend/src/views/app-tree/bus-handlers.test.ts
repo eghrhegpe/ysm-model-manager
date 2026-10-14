@@ -6,6 +6,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { bus } from "@/bus";
 import { createLoadGuard } from "@/utils/async/load-guard.ts";
 import type { LoadGuard } from "@/utils/async/load-guard.ts";
+import { type BusyLock, createBusyLock } from "@/utils/base/primitives/lock.ts";
 import type { TreeEntry } from "./loader.ts";
 import { stubConsoleWarn } from "@/test-utils/mock-log.ts";
 
@@ -100,8 +101,7 @@ function makeEntry(over: Partial<TreeEntry> = {}): TreeEntry {
 }
 
 interface VM {
-  batchBusy: boolean;
-  _toggleBusy: boolean;
+  toggleLock: BusyLock;
   entries: TreeEntry[];
   _guard: LoadGuard;
   _renderTree: ReturnType<typeof vi.fn>;
@@ -131,8 +131,7 @@ function makeVM(entries: TreeEntry[] = []): VM {
   let subdirAttrVal = "";
   let filesRootVal: string | null = null;
   const vm: VM = {
-    batchBusy: false,
-    _toggleBusy: false,
+    toggleLock: createBusyLock(),
     entries: entries,
     _guard: createLoadGuard(),
     _renderTree: vi.fn(),
@@ -266,10 +265,10 @@ describe("batchToggleAll — 批量启用/禁用（ADR-298 D2：直调，不再�
     expect(toasts.some((t) => t.msg.includes("全部启用: 1 成功, 1 失败"))).toBe(true);
   });
 
-  it("并发守卫：_batchBusy 在途 → 后续批量操作忽略", async () => {
+  it("并发守卫：启停链锁在途 → 后续批量操作忽略", async () => {
     const vm = makeVM([makeEntry({ banned: true })]);
     await bind(vm);
-    vm.batchBusy = true;
+    vm.toggleLock.tryStart(); // ADR-341：替身直持 BusyLock 模拟在途
 
     await batchToggleAll(vm as unknown as Parameters<typeof batchToggleAll>[0], true);
     await new Promise((r) => setTimeout(r, 0));

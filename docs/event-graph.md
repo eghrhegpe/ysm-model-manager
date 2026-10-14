@@ -51,7 +51,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| initWorkshopPage | `frontend/src/views/app-content/init-workshop.ts` | 143 |
+| initWorkshopPage | `frontend/src/views/app-content/init-workshop.ts` | 147 |
 
 ### `batch:rename`
 

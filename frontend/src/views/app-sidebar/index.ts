@@ -3,6 +3,7 @@
 import { bus } from "@/bus";
 import { currentRepoType } from "@/features/repo/repo-rtype.ts";
 import { createLoadGuard } from "@/utils/async/load-guard.ts";
+import { type BusyLock, createBusyLock } from "@/utils/base/primitives/lock.ts";
 import { dbg } from "@/utils/debug/debug.ts";
 import { bindRoving, type RovingHandle } from "@/utils/dom/bind-roving.ts";
 import { createShadowStyle } from "@/utils/dom/shadow-style.ts";
@@ -44,7 +45,7 @@ class AppSidebar extends WebComponentBase {
   private _dropdownCleanup: (() => void) | null = null;
   /** ADR-308 D2：整合包卡片 roving 键盘导航句柄（原语 = utils/dom/bind-roving.ts） */
   private _roving: RovingHandle | null = null;
-  private _syncInProgress = false; // 防止并发推送/拉取
+  private _syncLock = createBusyLock(); // 防止并发推送/拉取（ADR-341 归一 BusyLock）
   private _debounceTimer: ReturnType<typeof setTimeout> | null = null;
   /** 重载在途锁（并发控制·单飞）：在途时新请求不并发，仅记补跑标记。
    *  ⚠️ 职责与代际守卫 `_guard` 不同——本锁管「同一时刻只跑一次」，`_guard` 管「丢弃过期结果」，
@@ -59,8 +60,8 @@ class AppSidebar extends WebComponentBase {
   private _checkedSets = new Map<string, Set<string>>();
   /** 去重状态机：仅选中项实际变化时才 emit package:selected */
   private _lastEmittedPkg: string | null = null;
-  /** 启动器检测/搜索并发守卫（两类入口共享：都在改 mcRoot，不并发） */
-  private _busy = false;
+  /** 启动器检测/搜索并发守卫锁（两类入口共享：都在改 mcRoot，不并发；ADR-341 归一 BusyLock） */
+  private _launcherLock = createBusyLock();
   /** 失败态重试监听清理（P0 修复：失败态自带 retry 按钮，其监听不经卡片事件委托） */
   private _errorCleanup: (() => void) | null = null;
 
@@ -157,10 +158,7 @@ class AppSidebar extends WebComponentBase {
       (fn) => {
         this._dropdownCleanup = fn;
       },
-      () => this._syncInProgress,
-      (v) => {
-        this._syncInProgress = v;
-      },
+      this._syncLock,
     );
   }
 
@@ -205,11 +203,8 @@ class AppSidebar extends WebComponentBase {
   resetSelectedEmit(): void {
     this._lastEmittedPkg = null;
   }
-  getBusy(): boolean {
-    return this._busy;
-  }
-  setBusy(v: boolean): void {
-    this._busy = v;
+  get launcherLock(): BusyLock {
+    return this._launcherLock;
   }
 
   /** SidebarHost（可选，ADR-308 D2）：把 roving 布局校正到指定卡——restoreSelectedCard
@@ -310,11 +305,11 @@ class AppSidebar extends WebComponentBase {
       fn();
     });
     // P3 修复（子代理审计）：卸载时复位在途同步标志——推送/拉取 IIFE 的 finally
-    // 只在本组件存活期间执行，卸载后 _syncInProgress/_loading 若保持 true，重挂载时
-    // 新按钮点击被 L188/L269/L322 静默 return（按钮"死了"最多 30s 直到 timer 超时）。
+    // 只在本组件存活期间执行，卸载后 _syncLock/_loading 若保持占用，重挂载时
+    // 新按钮点击被入闸静默 return（按钮"死了"最多 30s 直到 timer 超时）。
     // 在途 bus.on 订阅与 30s timer 由各自 unsub 兜底（超时/完成后自行清理），此处
-    // 仅需复位标志解除新实例的卡死
-    this._syncInProgress = false;
+    // 仅需释放锁解除新实例的卡死（ADR-341：BusyLock.finish 复位）
+    this._syncLock.finish();
     this._reloadInFlight = false;
     // 代际失效（2026-10 锐评修复）：单飞锁复位只解「同刻只跑一次」，**不作废在途代数**——
     // `_reload` 若正挂在 `await loadInstances(...)` 上，卸载后那块续体仍会走 `_renderCards()`
@@ -353,7 +348,7 @@ class AppSidebar extends WebComponentBase {
       this._roving.dispose();
       this._roving = null;
     }
-    // _checkedSets / _lastEmittedPkg / _busy 均为实例属性，随组件 GC 自然回收
+    // _checkedSets / _lastEmittedPkg / _launcherLock 均为实例属性，随组件 GC 自然回收
   }
 
   private _renderLayout(): void {

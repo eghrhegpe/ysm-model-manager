@@ -616,13 +616,13 @@ disconnectedCallback() {
 
 | 范式 | 适用场景 | 模板代码 | 出处 |
 |------|----------|----------|------|
-| **`_busy` + `try/finally`** | 按钮点击类异步操作，防止连点重叠触发 | `if (this._busy) return; this._busy = true; try { ... } finally { this._busy = false; }` | app-tree / app-sidebar / import-queue / app-preview |
+| **`BusyLock`（tryStart/finish）** | 按钮点击类异步操作，防止连点重叠触发（**ADR-341 唯一互斥形态**：手写 `_busy` 三段已全仓收编，检查+置位单步原子） | `if (!lock.tryStart()) return; try { ... } finally { lock.finish(); }`（能整体包住的走 `withLock`） | app-tree（`toggleLock`/`_deleteLock`/`_moveLock`）/ app-sidebar（`_syncLock`/`_launcherLock`）/ features-sync / context-menu / dnd / diagnostics |
 | **generation counter** | 多个 await 后写共享 DOM 的初始化/刷新，丢弃过期响应 | `const gen = ++this._loadGen;` + await 后 `if (gen !== this._loadGen) return;` | recycle-bin / oldest-models / preview-detail（`_detailGen`） |
 | **单例槽位** | 弹窗类，防止连点叠加/双执行 | `registerDlg(overlay, cancelClose)` — 先结算旧弹窗再登记新的 | modal.ts（`_activeOverlay` / `_closeActive`） |
 | **先移除再绑定** | window/document 级监听，防止切页累积 | `if (this._prevHandler) window.removeEventListener(...);` 再绑新 handler | preview-skeleton 拖拽 / app-content preview resize / handler-dnd document 监听 |
 
 **判断原则**：
-- 按钮/导入/推送等"用户点一次执行一次"的操作 → `_busy` + `finally`
+- 按钮/导入/推送等"用户点一次执行一次"的操作 → `BusyLock`（`utils/base/primitives/lock.ts`，ADR-341）；per-key 在途（同一资源一份）与状态机/代际字段属豁免族，见该原语头注
 - 多个 await 后写共享 DOM 的初始化 → generation counter
 - 弹窗/对话框 → `registerDlg` 单例槽位
 - 全局监听（window/document） → 先移除再绑定 + disconnectedCallback 清理

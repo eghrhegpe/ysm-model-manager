@@ -6,6 +6,7 @@
 
 import { t } from "@/core/i18n/t.ts";
 import { currentRepoType } from "@/features/repo/repo-rtype.ts";
+import { createBusyLock } from "@/utils/base/primitives/lock.ts";
 import { friendlyError, isCancelError } from "@/utils/dom/errors.ts";
 import { formatBytes } from "@/utils/format/format.ts";
 import { type HealthReport, healthBand, parseHealthReport } from "@/utils/health-report.ts";
@@ -15,9 +16,10 @@ import { backendGetApp } from "@/views/backend-deps.ts";
 import { msgRowHTML, scanRowWithCancelHTML } from "./status-row.ts";
 
 // 重入守卫：体检扫描大量 await（Walk 全目录 + SHA256），快速连点并发覆盖 innerHTML。
-// 【范式豁免】本模块无跨调用配置状态（不像 dedup.ts 的 keepPolicy/priorityPath 需跨调用保持），
-// 纯并发守卫故保留模块级 busy；try/finally 兜底复位（见 :51）。改造会话工厂 ROI 低，不立项。
-let _healthBusy = false;
+// ADR-341 归一：纯并发守卫统一 BusyLock（tryStart 原子抢锁 + finally finish）。
+// 会话工厂豁免不变——本模块无跨调用配置状态（不像 dedup.ts 的 keepPolicy/priorityPath
+// 需跨调用保持），改造 ROI 低，不立项。
+const healthLock = createBusyLock();
 
 /**
  * 初始化常驻体检栏（**页面挂载时一次**，ADR-288 D2/D3）：
@@ -51,8 +53,7 @@ export async function runHealthAudit(
   esc: EscFn,
   btn?: HTMLButtonElement | null,
 ): Promise<void> {
-  if (_healthBusy) return;
-  _healthBusy = true;
+  if (!healthLock.tryStart()) return;
   if (btn) btn.disabled = true;
   try {
     const { RepoHealthAudit, GetRepoRoot } = await backendGetApp();
@@ -95,7 +96,7 @@ export async function runHealthAudit(
     const msg = friendlyError(e, t("diagnostics.healthFailed"));
     list.innerHTML = msgRowHTML("error", msg, esc, { icon: UI_ICONS.error });
   } finally {
-    _healthBusy = false;
+    healthLock.finish();
     if (btn) btn.disabled = false;
   }
 }

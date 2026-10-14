@@ -4,6 +4,7 @@ import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { currentRepoType } from "@/features/repo/repo-rtype.ts";
 import { animateNumber } from "@/utils/animation/animate.ts";
+import type { BusyLock } from "@/utils/base/primitives/lock.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
 import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
 import { toast, toastEmptyRtype } from "@/utils/dom/toast.ts";
@@ -63,11 +64,11 @@ function bindCardClickHandler(
     if (!target) return;
     // 空态就地配置入口（render.ts ws-empty 内按钮，走列表事件委托）
     if (target.closest("[data-sidebar-mc-search]")) {
-      void runMcSearch(host);
+      void runMcSearch(host.launcherLock);
       return;
     }
     if (target.closest("[data-sidebar-launcher-detect]")) {
-      void runLauncherDetect(host);
+      void runLauncherDetect(host.launcherLock);
       return;
     }
     if (target.closest("button") || target.closest(".chk")) return;
@@ -233,10 +234,10 @@ export interface EmitDedupe {
   resetSelectedEmit(): void;
 }
 
-/** 并发守卫 + 去重状态机聚合接口（AppSidebar 实现，bindCardEvents 透传） */
+/** 并发守卫锁 + 去重状态机聚合接口（AppSidebar 实现，bindCardEvents 透传；
+ *  launcherLock 为 ADR-341 归一后的 BusyLock，供空态两入口 runMcSearch/runLauncherDetect 共享） */
 export interface SidebarHost extends EmitDedupe {
-  getBusy(): boolean;
-  setBusy(v: boolean): void;
+  readonly launcherLock: BusyLock;
   /** ADR-308 D2（可选）：把 roving 布局（唯一 tabindex 0 / aria-selected）校正到
    *  指定卡片。**两条路径**都调——restoreSelectedCard 的 rAF（恢复持久化选中）
    *  与卡片点击（P1 修复 2026-10：原点击路径漏接，aria 与视觉选中脱节）。

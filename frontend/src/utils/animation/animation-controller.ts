@@ -105,9 +105,61 @@ export function parseAnimationControllerJSON(jsonStr: string): {
   return { controllers, errors };
 }
 
-/** 解析单个控制器状态：动画名 + on_exit 动作 + 转换条件 + 混合过渡时间。
- *  容错：on_exit 支持单字符串与数组形态（与 transitions 一致）；
- *  条件编译失败上报错误但运行期跳过（不 fail-open）。 */
+/** 解析 on_exit 动作（容错：单字符串与数组形态均支持） */
+function parseOnExit(stateObj: { on_exit?: string[] }, localParser: MolangParser): MolangFn[] {
+  const onExit: MolangFn[] = [];
+  const rawExit = stateObj.on_exit;
+  const exitExprs = Array.isArray(rawExit) ? rawExit : typeof rawExit === "string" ? [rawExit] : [];
+  for (const expr of exitExprs) {
+    if (typeof expr === "string") {
+      const fn = localParser.compileMolang(expr);
+      if (fn) onExit.push(fn);
+    }
+  }
+  return onExit;
+}
+
+/** 解析单个转换条目 { targetState: conditionExpression } → ControllerTransition[] */
+function parseTransitionEntry(
+  transRaw: Record<string, unknown>,
+  localParser: MolangParser,
+  controllerName: string,
+  stateName: string,
+  errors: string[],
+): ControllerTransition[] {
+  const transitions: ControllerTransition[] = [];
+  for (const [target, condExpr] of Object.entries(transRaw)) {
+    if (typeof condExpr !== "string") continue;
+    const unconditional = condExpr.trim() === "";
+    const condition = localParser.compileMolang(condExpr);
+    if (!unconditional && !condition) {
+      errors.push(`[${controllerName}.${stateName}] 转换条件编译失败: ${target} → ${condExpr}`);
+    }
+    transitions.push({ target, condition, raw: condExpr, unconditional });
+  }
+  return transitions;
+}
+
+/** 解析转换条件：空表达式 = 无条件触发；非空但编译失败 = 上报错误且运行期跳过（不 fail-open） */
+function parseTransitions(
+  stateObj: { transitions?: Array<Record<string, string>> },
+  localParser: MolangParser,
+  controllerName: string,
+  stateName: string,
+  errors: string[],
+): ControllerTransition[] {
+  if (!Array.isArray(stateObj.transitions)) return [];
+  const transitions: ControllerTransition[] = [];
+  for (const transRaw of stateObj.transitions) {
+    if (!transRaw || typeof transRaw !== "object") continue;
+    transitions.push(
+      ...parseTransitionEntry(transRaw, localParser, controllerName, stateName, errors),
+    );
+  }
+  return transitions;
+}
+
+/** 解析单个控制器状态：动画名 + on_exit 动作 + 转换条件 + 混合过渡时间 */
 function parseControllerState(
   stateRaw: unknown,
   localParser: MolangParser,
@@ -122,41 +174,11 @@ function parseControllerState(
     transitions?: Array<Record<string, string>>;
     blend_transition?: number;
   };
-
   const animations = Array.isArray(stateObj.animations) ? stateObj.animations : [];
-
-  // on_exit 动作（容错：单字符串与数组形态均支持）
-  const onExit: MolangFn[] = [];
-  const rawExit = stateObj.on_exit;
-  const exitExprs = Array.isArray(rawExit) ? rawExit : typeof rawExit === "string" ? [rawExit] : [];
-  for (const expr of exitExprs) {
-    if (typeof expr === "string") {
-      const fn = localParser.compileMolang(expr);
-      if (fn) onExit.push(fn);
-    }
-  }
-
-  // 转换条件：空表达式 = 无条件触发；非空但编译失败 = 上报错误且运行期跳过（不 fail-open）
-  const transitions: ControllerTransition[] = [];
-  if (Array.isArray(stateObj.transitions)) {
-    for (const transRaw of stateObj.transitions) {
-      if (!transRaw || typeof transRaw !== "object") continue;
-      // 转换格式: { "targetState": "conditionExpression" }
-      for (const [target, condExpr] of Object.entries(transRaw)) {
-        if (typeof condExpr !== "string") continue;
-        const unconditional = condExpr.trim() === "";
-        const condition = localParser.compileMolang(condExpr);
-        if (!unconditional && !condition) {
-          errors.push(`[${controllerName}.${stateName}] 转换条件编译失败: ${target} → ${condExpr}`);
-        }
-        transitions.push({ target, condition, raw: condExpr, unconditional });
-      }
-    }
-  }
-
+  const onExit = parseOnExit(stateObj, localParser);
+  const transitions = parseTransitions(stateObj, localParser, controllerName, stateName, errors);
   const blendTransition =
     typeof stateObj.blend_transition === "number" ? stateObj.blend_transition : 0.2; // 默认 0.2s
-
   return { name: stateName, animations, onExit, transitions, blendTransition };
 }
 

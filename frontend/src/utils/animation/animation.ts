@@ -298,22 +298,37 @@ function parseChannel(channelData: unknown, parser: MolangParser): Keyframe[] {
   );
 }
 
+/** 值是否为字符串（直接 Molang 表达式） */
+function isStringValue(v: unknown): boolean {
+  return typeof v === "string";
+}
+
+/** 值是否含字符串元素（数组含字符串 = 含 Molang） */
+function arrayHasString(v: unknown): boolean {
+  return Array.isArray(v) && v.some(isStringValue);
+}
+
+/** keyframe 对象 post/pre 是否含 Molang */
+function keyframeHasMolang(obj: RawKeyframeObject): boolean {
+  for (const key of ["post", "pre"] as const) {
+    const v = obj[key];
+    if (isStringValue(v)) return true;
+    if (arrayHasString(v)) return true;
+  }
+  return false;
+}
+
 /** 检测 channel 原始数据中是否含 Molang 表达式（字符串值） */
 function hasMolangInChannelData(data: unknown): boolean {
   if (!data || typeof data !== "object") return false;
   for (const val of Object.values(data)) {
     // 直接字符串: "q.life_time * 10"
-    if (typeof val === "string") return true;
+    if (isStringValue(val)) return true;
     // 数组: ["q.life_time * 10", 0, 0]
-    if (Array.isArray(val) && val.some((v) => typeof v === "string")) return true;
+    if (arrayHasString(val)) return true;
     // 对象: { post: [...], pre: [...], lerp_mode: "linear" }
-    if (typeof val === "object" && val !== null) {
-      const obj = val as RawKeyframeObject;
-      for (const key of ["post", "pre"] as const) {
-        const v = obj[key];
-        if (typeof v === "string") return true;
-        if (Array.isArray(v) && v.some((x) => typeof x === "string")) return true;
-      }
+    if (typeof val === "object" && val !== null && keyframeHasMolang(val as RawKeyframeObject)) {
+      return true;
     }
   }
   return false;

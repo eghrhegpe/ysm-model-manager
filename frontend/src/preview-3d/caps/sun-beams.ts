@@ -147,6 +147,44 @@ export class SunBeams {
    * 注：本方法已无 enabled 语义——intensity=0（夜间/正午）时的卸载分支保留，
    * 那是**太阳角度**事实而非开关意图（关光由宿主 detach 承担）。
    */
+  /** 光束挂载/卸载决策（intensity>0 挂、=0 卸；挂载时初始化颜色为 sunset 预设的 sunColor） */
+  private syncBeamMount(intensity: number): void {
+    if (!this.group) return; // 跨方法不窄化：已 dispose 时本调用无意义
+    if (intensity > 0 && !this.group.parent) {
+      const mat = this.group.children[0] as THREE.Mesh;
+      if (mat.material instanceof THREE.ShaderMaterial) {
+        mat.material.uniforms.uColor.value.copy(this.godRaysColor());
+      }
+      this.scene.add(this.group);
+      this.group.visible = true;
+    } else if (intensity === 0 && this.group.parent) {
+      this.group.parent.remove(this.group);
+      this.group.visible = false;
+    }
+  }
+
+  /** tint overlay 挂载/卸载决策（与光束同决策：intensity>0 挂、=0 卸） */
+  private syncTintMount(intensity: number): void {
+    if (intensity > 0 && this.tintMesh && !this.tintMesh.parent) {
+      this.scene.add(this.tintMesh);
+      this.tintMesh.visible = true;
+    } else if (this.tintMesh && intensity === 0 && this.tintMesh.parent) {
+      this.tintMesh.parent.remove(this.tintMesh);
+      this.tintMesh.visible = false;
+    }
+  }
+
+  /** 刷新 tint overlay uniform（原 updateSunsetTint：强度 + 太阳方向） */
+  private syncTintUniform(elevation: number, azimuth: number, intensity: number): void {
+    if (this.tintMesh) {
+      const mat = this.tintMesh.material as THREE.ShaderMaterial;
+      if (mat.uniforms) {
+        mat.uniforms.uIntensity.value = intensity;
+        mat.uniforms.uSunPosition.value.copy(sunDirFromAngles(elevation, azimuth));
+      }
+    }
+  }
+
   sync(elevation: number, azimuth: number): void {
     if (!this.group) {
       // 已 dispose：仅剩 tint 清理语义（防御性，与旧实现等价）
@@ -167,36 +205,10 @@ export class SunBeams {
     if (mesh0.material instanceof THREE.ShaderMaterial && mesh0.material.uniforms?.uIntensity) {
       mesh0.material.uniforms.uIntensity.value = intensity;
     }
-    // 光束锥组挂载决策
-    if (intensity > 0 && !this.group.parent) {
-      // 挂载时初始化颜色为 sunset 预设的 sunColor
-      const mat = this.group.children[0] as THREE.Mesh;
-      if (mat.material instanceof THREE.ShaderMaterial) {
-        mat.material.uniforms.uColor.value.copy(this.godRaysColor());
-      }
-      this.scene.add(this.group);
-      this.group.visible = true;
-    } else if (intensity === 0 && this.group.parent) {
-      this.group.parent.remove(this.group);
-      this.group.visible = false;
-    }
-
-    // tint overlay 挂载决策（与光束同决策：intensity>0 挂、=0 卸）
-    if (intensity > 0 && this.tintMesh && !this.tintMesh.parent) {
-      this.scene.add(this.tintMesh);
-      this.tintMesh.visible = true;
-    } else if (this.tintMesh && intensity === 0 && this.tintMesh.parent) {
-      this.tintMesh.parent.remove(this.tintMesh);
-      this.tintMesh.visible = false;
-    }
-    // 刷新 tint overlay uniform（原 updateSunsetTint：强度 + 太阳方向）
-    if (this.tintMesh) {
-      const mat = this.tintMesh.material as THREE.ShaderMaterial;
-      if (mat.uniforms) {
-        mat.uniforms.uIntensity.value = intensity;
-        mat.uniforms.uSunPosition.value.copy(sunDirFromAngles(elevation, azimuth));
-      }
-    }
+    // 光束锥组 + tint overlay 同决策挂载/卸载 + tint uniform 刷新
+    this.syncBeamMount(intensity);
+    this.syncTintMount(intensity);
+    this.syncTintUniform(elevation, azimuth, intensity);
   }
 
   /** 推进光束 shimmer 动画时钟（宿主 update(dt) 每帧调用，独立于昼夜循环活着） */

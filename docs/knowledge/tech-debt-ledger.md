@@ -82,6 +82,8 @@ quick_risk_lines:
 - **A1 · `check-adr-health` 无进度化石正则、无 emoji 前缀检查**：grep `化石|进度|排期` = 0 命中。213/333 ADR 含化石字样、**126/304 已采纳缺 emoji 前缀**全靠人肉巡检；6 个 📝 提议中 ADR（284/292/301/321/325/151-d1）滞留 2 周+，10-06 为 3 个 → **恶化**。**✅ 已落地 + 部分升 hard（2026-10-08 晚间）**：① 加 `--suggest` 非阻断观察模式（debt 级、不进 gate）摊开三类数据——①-a 决策态缺 emoji 4 条、①-b 已采纳缺 ✅ 126 条（与审计精确吻合）、② 决策未定 ADR 含进度化石 21 条（含审计点名 6 个 📝 滞留）；② 把 **①-a 决策态（proposed/partial/deprecated/superseded）缺 emoji 前缀升为默认全量 WARN**（数量可控、真格式不一致、不阻断），ADR-218 真 partial 缺 🔄 现被自动守护。③ 升 WARN 时暴露并修复 `normalizeState` 的否定词误判（`非废弃` 里的「废弃」子串被 `_RE_DEPRECATED` 误抢为 deprecated，ADR-181/182/183 被错归 deprecated）——加 `非废弃|不废弃|未废弃|并非废弃` 豁免后归位 accepted，并联动 `gen-docs-index` 重生成校正这 3 个 ADR 登记表 drift（🧊 已废弃→✅ 已采纳），`check-adr-health` 默认全量 ERROR 0。①-b（126 条已采纳缺 ✅）与 ②（21 条进度化石）维持 `--suggest` 观察，升 hard 待团队拍板 emoji 强制范围。
 - **T3′ · `file-tree.spec.ts:51-53` 残留条件 skip**：`if (dirCount === 0) { test.skip(true, ...); return; }`，而同文件 `:55` 断言 mock 恒含 `subdir/subdir-model.ysm` → `dirCount===0` 意味着加载链回归，应硬红。全 27 个 e2e spec 仅此 1 处活 skip（其余 3 处命中是「已移除 skip」的说明性注释）。
 - **T5 · caps 族未纳入 `check-file-lines` 硬红线**（10-06 P1 遗留）：`sky-capability.ts` 1068 行已超 `mount-preview-core.ts` 的红线值 1045，仍只软告警。**✅ 已解决（2026-10-06 补登，本卡遗漏同步 → drift）**：`check-file-lines.ts` 的 `ADVISORY_RULES` 第三条（前端生产层 preview-3d/backend >900 行软告警）正是为消解「caps 900+ 脱管」而加；实测当前 caps 最大 **sky 967** 仍 < mount-preview-core 红线 **1045**（且 mount 本身已被拆到 814），caps 经 ADR-315 锐评持续瘦身，无超硬红线项。非真债，是台账未同步 10-06 补登。
+- **T5′ · `_lib` 共享层只有软告警、无硬红线**（2026-10-14 补网）：`ADVISORY_RULES` 的 `_lib ≤400` 是**软告警**，实测长期多条告警共存、无人拆——「情报驱动排期」被证明不驱动（同一阈值下的文件静静停着，没人动）。**✅ 已解决（2026-10-14）**：升为 **glob 硬红线 + 祖父条款**双段式——①`LIB_GRANDFATHERED` 冻结存量超限者（各自按实测 +2% 进 `RULES`，**只减不增**，拆到 ≤400 后除名）；②其余 `_lib` 文件超 400 即硬阻断。修法要旨：**不给肥胖发执照，又不炸当场**——一次性把 63 个文件全红只会逼出 `--no-verify`；存量冻结 + 新文件受限才是可执行口径。回归验证：420 行探针文件实测 exit 1（带修法指引），存量 63 文件零误红。同批清理：`_lib ≤400` 从 `ADVISORY_RULES` 移出（同一事实不留两个真相源）、排期指引与告警尾行里会腐的硬编码计数/文件名改口径（"超阈值幅度最大者，实况见 WARN 列表"）、`check-file-lines.md` 幽灵卡引用改指本文件规则表。
+  - ⚠️ **尚未做的**：`design-tokens.ts`（1391）/ `contract-tests.ts`（920）/ `gate-config.ts`（493）三个存量仅**冻结**未拆。`design-tokens.ts` 的拆分经一次失败尝试后确认**比骨架看起来难**——四簇关注点（令牌值表+建议器 / 实时反馈判据 / doc 漂移+style 扫描 / emoji-glyph 扫描）**存在交错依赖**（`suggestTransitionToken` 依赖后段的 `isRealtimeFeedbackTransition`），须逐段 verbatim 搬移 + 基线比对，属独立一轮（那次尝试因夹带行为改写而回滚，正是 ADR-315「搬迁不夹带」的教训）。
 
 ### 🟢 低 / 已修确认
 - **T6 · 硬编码本机路径 4 处未修**：`frontend/e2e/perf-fixtures.ts:460,578,724,842`（`C:\Users\zhujieling11\...`）。⚠️ **JS 双反斜杠字面量陷阱**，`grep 'C:\Users'` 与 `git grep` 都漏，须匹配 `C:\\Users` 或读原文（本轮主模型连判两次「已修」，实为陷阱）。另 `scripts/android-build.ts:78-84` 的 `C:\Android\Sdk` **已改**为 `LOCALAPPDATA` 探测 + `ANDROID_HOME` 单一事实源 → 10-06 该项半修。
@@ -108,6 +110,11 @@ quick_risk_lines:
 | 死代码基线 | knip 183 / jscpd 118 · ERROR 0 | **knip 185 / jscpd 118 · ERROR 0**（基线内放行） | ✅ |
 | 覆盖率门禁（P1-b） | ccheck 0%→83.9% 已修 | **全包达标、总体 79.0% 全绿**（新鲜产物） | ✅ 修复生效 |
 | 文件行数红线 | 18 个超阈值（软告警） | **18 个一致** | ✅ |
+
+> ⚠️ 上表是 **2026-10-08 时点的历史快照，勿当现状**（元规则：卡正文数字是写下时的状态）。
+> 现状口径（2026-10-14 起）：`_lib` 已升**硬红线**（全局 ≤400 + 祖父条款，见 T5′），
+> 软告警只剩「scripts 顶层 ≤700 / 前端生产层 ≤900」两族。**每次想知道实况，跑
+> `node scripts/check-file-lines.ts`**，不要去数卡里的数字——那正是会被腐坏的东西。
 
 附带：`go build ./...` 0、`golangci-lint` 全量 0 errcheck、`binding-check` 0 issues、`check-knowledge-drift` errors 0、`check-complexity` 最新认知复杂度 41（警告列表全 37–41）均守住。唯一一次 vitest 失败经双跑确认为 **flaky**（download-queue 定时器用例），非真回归。
 

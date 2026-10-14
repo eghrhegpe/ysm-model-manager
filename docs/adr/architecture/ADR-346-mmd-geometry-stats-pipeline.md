@@ -1,6 +1,6 @@
 # ADR-346：MMD 几何统计管线（数值搜索能力扩展）
 
-- **状态**：📝 提议中（Proposed）
+- **状态**：✅ 已采纳（2026-10-14 当日拍板执行：选案 A flag 复用 / 合成 fixtures TDD / 性能门禁 ≤50ms 量级 / 桌面 Go 管线范围；数据溯源见 §4）
 - **日期**：2026-10-14
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **准入理由**：公共契约变更：resource_types.json capability 声明消费面扩展 + SearchModels 数值分流扩 MMD 族，跨 Go/前端/注册表三域

@@ -23,6 +23,49 @@ export interface OrderedTexInput {
   matchTexKey: (tn: string) => string | null;
 }
 
+/** 从 ysmTexOrder 构建 rank map（后声明覆盖 + 天然去重） */
+function buildRankMap(
+  ysmTexOrder: NonNullable<OrderedTexInput["ysmTexOrder"]>,
+  matchTexKey: OrderedTexInput["matchTexKey"],
+): Map<string, number> {
+  // rank[matched] = 声明中的**最后**位置（后声明覆盖，对齐 Go rank map 后写 + 天然去重）。
+  // 旧实现按声明序 push 不去重 → 重复声明产出重复项、且前位胜出，与 Go 分叉。
+  const rank = new Map<string, number>();
+  ysmTexOrder.forEach((t, i) => {
+    const path =
+      typeof t === "string"
+        ? t
+        : (t as { uv?: string; path?: string })?.uv || (t as { path?: string })?.path || "";
+    const tn =
+      path
+        .split("/")
+        .pop()
+        ?.replace(/\.\w+$/, "") || "";
+    const matched = matchTexKey(tn);
+    if (matched) rank.set(matched, i);
+  });
+  return rank;
+}
+
+/** 把 default_texture 置首（仅当命中集含它且不在首位） */
+function defaultToFront(
+  ordered: string[],
+  ysmDefaultTex: OrderedTexInput["ysmDefaultTex"],
+  matchTexKey: OrderedTexInput["matchTexKey"],
+): string[] {
+  if (!ysmDefaultTex) return ordered;
+  const defKey = matchTexKey(
+    ysmDefaultTex
+      .split("/")
+      .pop()
+      ?.replace(/\.\w+$/, "") || "",
+  );
+  if (defKey && ordered.includes(defKey) && ordered[0] !== defKey) {
+    return [defKey, ...ordered.filter((k) => k !== defKey)];
+  }
+  return ordered;
+}
+
 /** 计算 3D 渲染/纹理选择器用的有序纹理名列表
  *  与 Go orderTexByYSM 逐语义对称（跨语言对账锁 tests/fixtures/parity/texture-order.golden.json）：
  *  声明序去重、后声明位胜出（Go rank map 后写覆盖 + SliceStable）、只保留命中纹理、
@@ -30,36 +73,10 @@ export interface OrderedTexInput {
 export function buildOrderedTexKeys(input: OrderedTexInput): string[] {
   const { texKeys, areaOf, ysmTexOrder, ysmDefaultTex, matchTexKey } = input;
   if (ysmTexOrder?.length) {
-    // rank[matched] = 声明中的**最后**位置（后声明覆盖，对齐 Go rank map 后写 + 天然去重）。
-    // 旧实现按声明序 push 不去重 → 重复声明产出重复项、且前位胜出，与 Go 分叉。
-    const rank = new Map<string, number>();
-    ysmTexOrder.forEach((t, i) => {
-      const path =
-        typeof t === "string"
-          ? t
-          : (t as { uv?: string; path?: string })?.uv || (t as { path?: string })?.path || "";
-      const tn =
-        path
-          .split("/")
-          .pop()
-          ?.replace(/\.\w+$/, "") || "";
-      const matched = matchTexKey(tn);
-      if (matched) rank.set(matched, i);
-    });
+    const rank = buildRankMap(ysmTexOrder, matchTexKey);
     // 命中纹理按 rank（最后声明位）升序，对齐 Go「按收集序过滤命中 → SliceStable by rank」。
     let ordered = [...rank.keys()].sort((a, b) => (rank.get(a) ?? 0) - (rank.get(b) ?? 0));
-    // default_texture 置首（仅当命中集含它）
-    if (ysmDefaultTex) {
-      const defKey = matchTexKey(
-        ysmDefaultTex
-          .split("/")
-          .pop()
-          ?.replace(/\.\w+$/, "") || "",
-      );
-      if (defKey && ordered.includes(defKey) && ordered[0] !== defKey) {
-        ordered = [defKey, ...ordered.filter((k) => k !== defKey)];
-      }
-    }
+    ordered = defaultToFront(ordered, ysmDefaultTex, matchTexKey);
     // 命中集非空才用声明序；全不命中与「无声明序」同走尺寸降序——逐分支对齐 Go
     // orderTexItems（`if len(on) > 0 { return on }` 后落 orderTexBySize）。旧实现此处
     // 直接 return ordered（可能为 []），使 WASM 主路径退化成灰模、Go 兜底却走尺寸序

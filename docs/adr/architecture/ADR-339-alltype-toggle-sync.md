@@ -1,10 +1,10 @@
 # ADR-339：全类型 .disabled 启禁同步（大一统 repo↔pack 一致性）
 
-- **状态**：📝 提议中（Proposed）
+- **状态**：✅ 已采纳（Accepted，2026-10-13 当轮随 `c3f9cd7ed` 落地——新绑定 `SyncModelToggleStatusForType` + bus 契约 `{rtype?}` + 三发射点去 YSM 门，实证见知识卡 `install-domain-split.md`；§3 负面① watcher 自动链仍 YSM-only，属本 ADR 明示遗留）
 - **日期**：2026-10-13
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **准入理由**：把焊接在 YSM 的启禁→整合包同步链扩到所有 dirLevelSync 类型，需 Go 新绑定 + bus 契约变更 + 前端发射面，跨 Go/前端两域且难逆转
-- **相关**：待补（`docs/adr/` / 关联代码路径）
+- **相关**：`go/sync/sync.go`（`SyncToggleStatus` 复用面）、`internal/app/app_install_instance.go`（新绑定）、`frontend/src/features/sync/sync.ts`（`runSyncToggleStatus`）、`frontend/src/views/app-tree/bus-handlers.ts`（发射点）、知识卡 `install-domain-split.md` / `sync-manager.md`
 
 ---
 

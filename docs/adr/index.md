@@ -16,21 +16,20 @@ permalink: /adr/
 
 | 状态 | 数量 |
 |------|------|
-| [📝 提议中](#提议中) | 8 |
+| [📝 提议中](#提议中) | 7 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 1 |
 | [🔄 部分采纳](#部分采纳) | 15 |
-| [✅ 已采纳](#已采纳) | 322 |
+| [✅ 已采纳](#已采纳) | 323 |
 | [❌ 已取代](#已取代) | 8 |
 | [🧊 已废弃](#已废弃) | 0 |
 | [❓ 未归类](#未归类) | 0 |
 
 ## 按状态分组导航
 
-### 📝 提议中（8）
+### 📝 提议中（7）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
-| [ADR-339](./architecture/ADR-339-alltype-toggle-sync.md) | 全类型 .disabled 启禁同步（大一统 repo↔pack 一致性） | 📝 提议中 |
 | [ADR-327](./architecture/ADR-327-hdr.md) | 自定义 HDR 路径持久化与重启恢复 | 📝 提议中 |
 | [ADR-325](./architecture/ADR-325-app-domain-sinking-over-multi-service.md) | App 瘦身走域下沉：拒绝 Wails 多 Service 外壳 | 📝 提议中 |
 | [ADR-321](./architecture/ADR-321-cap-persistence-restore-derivation.md) | cap 持久化读侧派生：restoreFields 还原表由 schema 键集统一驱动（跨 cap 一次拍全局） | 📝 提议中 |
@@ -65,10 +64,11 @@ permalink: /adr/
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 | [ADR-050](./ADR-050-plaza-browser-window.md) | 模型广场 · 浏览器窗口（Wails 第二窗口） | 🔄 部分采纳 |
 
-### ✅ 已采纳（322）
+### ✅ 已采纳（323）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-339](./architecture/ADR-339-alltype-toggle-sync.md) | 全类型 .disabled 启禁同步（大一统 repo↔pack 一致性） | ✅ 已采纳 |
 | [ADR-338-d1](./decisions/ADR-338-d1-commit-message-hygiene.md) | 提交信息减负：commit-msg 闸与 trailer 出口 | ✅ 已采纳 |
 | [ADR-337](./architecture/ADR-337-creator-type-site-vs-rtype.md) | 创作者 type 字段拆分：站点归属与本地资源类型分字段，消除幻影平台徽章与本地作者隐形 | ✅ 已采纳 |
 | [ADR-336](./architecture/ADR-336-tree-internal-drag-move.md) | 仓库树内拖拽移动（tree 内部 move）替代右键弹窗整理 | ✅ 已采纳 |
@@ -409,7 +409,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
-| ADR-339 | 全类型 .disabled 启禁同步（大一统 repo↔pack 一致性） | 📝 提议中 | 2026-10-13 |
+| ADR-339 | 全类型 .disabled 启禁同步（大一统 repo↔pack 一致性） | ✅ 已采纳 | 2026-10-13 |
 | ADR-338 | 文档体系减负：分级连带 + 知识卡域合并 + ADR 增量门槛（62% 连带率的治理） | 🔄 部分采纳 | 2026-10-13 |
 | ADR-337 | 创作者 type 字段拆分：站点归属与本地资源类型分字段，消除幻影平台徽章与本地作者隐形 | ✅ 已采纳 | 2026-10-13 |
 | ADR-336 | 仓库树内拖拽移动（tree 内部 move）替代右键弹窗整理 | ✅ 已采纳 | 2026-10-13 |

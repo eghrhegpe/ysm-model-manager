@@ -19,7 +19,8 @@ function lastTabOf(prefix: string): string | undefined {
 // ADR-133 阶段 C+：e2e 定位通道收敛——原用 #id 定位的元素改配同名 data-testid
 // （id 保留给 handler / CSS 锚点，testid 独占测试通道，二者同名以消除认知负担）。
 export const VIEW_TESTIDS: readonly string[] = [
-  "content-tab",
+  // 锐评 P2 收口（2026-10-14）：`content-tab` 原是仓库页四个顶层 tab 的退化 testid
+  // （4 tab 共用、正向消费者为零），已删——顶层 tab 用 `data-tab` 定位（.repo-tab[data-tab=...]）。
   // 诊断页顶层 tab 按钮（三个 tab 共用，与仓库页 content-tab 同形；此前诊断页是唯一
   // 没给顶层 tab 留钩子的页，测试只能靠 .repo-tab 的 data-tab 属性去抓 class）
   "diag-tab",
@@ -101,7 +102,6 @@ export function repositoryHTML(): string {
   const tabs: TabSpec[] = [
     {
       id: "tree",
-      buttonTestid: "content-tab",
       label: `${UI_ICONS.folder} ${t("repo.tab.tree")}`,
       // body 留空：初始挂载全权归 initRepositoryPage.mountTree（localStorage 恢复 rtype/subdir）。
       // 此前模板硬编码 <app-tree root="YSM">，而 init 必然无条件替换 innerHTML——首挂必经历
@@ -111,7 +111,6 @@ export function repositoryHTML(): string {
     {
       id: "recycle",
       desktopOnly: true,
-      buttonTestid: "content-tab",
       label: `${UI_ICONS.recycle} ${t("recycle.tab")}`,
       body: "",
       panelStyle: "overflow-y:auto",
@@ -119,7 +118,6 @@ export function repositoryHTML(): string {
     {
       id: "dedup",
       desktopOnly: true,
-      buttonTestid: "content-tab",
       label: `${UI_ICONS.link} ${t("repo.tab.dedup")}`,
       body: "",
       panelStyle: "overflow-y:auto;padding:var(--sp-3)",
@@ -127,7 +125,6 @@ export function repositoryHTML(): string {
     {
       id: "oldest",
       desktopOnly: true,
-      buttonTestid: "content-tab",
       label: `${UI_ICONS.oldest} ${t("repo.tab.oldest")}`,
       body: "",
       panelStyle: "overflow-y:auto;overflow-x:hidden",

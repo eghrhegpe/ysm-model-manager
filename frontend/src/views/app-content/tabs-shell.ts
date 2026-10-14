@@ -29,7 +29,7 @@ export interface TabSpec<Id extends string = string> {
   id: Id;
   /** 按钮 inner HTML（图标 + 文案由调用方拼 UI_ICONS / t()） */
   label: string;
-  /** 按钮 data-testid（如仓库页四个 tab 共用 content-tab） */
+  /** 按钮 data-testid（如诊断页三个 tab 共用 diag-tab；仓库页顶层 tab 走 data-tab 定位） */
   buttonTestid?: string;
   /** 面板 inner HTML */
   body: string;

@@ -73,7 +73,8 @@ function depthBefore(html: string, needle: string): number {
 
 /** 页面里全部 tab 按钮的 data-tab（按出现顺序） */
 function buttonTabs(html: string): string[] {
-  // 允许 class 与 data-tab 之间存在其它属性（如仓库页四个 tab 共用 data-testid="content-tab"）
+  // 允许 class 与 data-tab 之间存在其它属性（如诊断页三 tab 共用 data-testid="diag-tab"；
+  // 仓库页顶层 tab 2026-10-14 已删退化 testid，仅余 data-tab）
   return [...html.matchAll(/<button class="(?:repo-tab|stg-tab)[^"]*"[^>]*data-tab="([^"]+)"/g)].map((m) => m[1] as string);
 }
 

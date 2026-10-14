@@ -11,7 +11,9 @@ import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { renderDisplayName } from "@/utils/model-name/display.ts";
 
 export function recycleHTML(): string {
-  return `<div class="recy-page" style="flex:1;display:flex;flex-direction:column;overflow:hidden;padding:var(--sp-3)">
+  // 锐评 P2 收口（2026-10-14）：`.recy-page` 布局已由 `css/content-util.ts` 声明（逐字节同款），
+  // 内联 style 恒压制样式表那份（内联优先级）——删内联，布局真值单点归 CSS。
+  return `<div class="recy-page">
 <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
 <span id="recy-count" style="font-size:var(--fs-sm);color:var(--txt)">${t("common.loading")}</span>
 <button class="btn-base sm" id="recy-refresh" data-testid="recy-refresh" style="margin-left:auto">${UI_ICONS.refresh} ${t("common.refresh")}</button>

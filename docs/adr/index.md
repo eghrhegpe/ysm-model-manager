@@ -18,9 +18,9 @@ permalink: /adr/
 |------|------|
 | [📝 提议中](#提议中) | 4 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 1 |
-| [🔄 部分采纳](#部分采纳) | 15 |
+| [🔄 部分采纳](#部分采纳) | 14 |
 | [✅ 已采纳](#已采纳) | 334 |
-| [❌ 已取代](#已取代) | 8 |
+| [❌ 已取代](#已取代) | 9 |
 | [🧊 已废弃](#已废弃) | 0 |
 | [❓ 未归类](#未归类) | 0 |
 
@@ -41,11 +41,10 @@ permalink: /adr/
 |-----|------|------|
 | [ADR-129](./ADR-129-preview-3d-domain-root.md) | 3D 预览领域根升格（utils/3d → features/preview-3d，修依赖倒置） | ⚠️ 已采纳（违规或未修复） |
 
-### 🔄 部分采纳（15）
+### 🔄 部分采纳（14）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
-| [ADR-343](./architecture/ADR-343-cross-type-search.md) | 跨类型搜索收口（Type 派生 + 分析器分流 + SearchFilters） | 🔄 部分采纳 |
 | [ADR-323](./architecture/ADR-323-pre-commit-commit-blocks.md) | pre-commit 钩子逻辑下沉 commit-blocks 与薄壳化 | 🔄 部分采纳 |
 | [ADR-285](./ADR-285-bench-usability-copy-diff-plan.md) | 跑基准可用性收口：动作与参数同序、文案去重、术语本地化 | 🔄 部分采纳 |
 | [ADR-251](./ADR-251-ground-material-family-completion.md) | 地面材质家族补全：噪声材质与非几何图案分工 | 🔄 部分采纳 |
@@ -67,6 +66,7 @@ permalink: /adr/
 |-----|------|------|
 | [ADR-345](./architecture/ADR-345-disable-state-first-class.md) | 禁用态是一等公民：目录粒度启禁同步与实例侧禁用载体识别 | ✅ 已采纳 |
 | [ADR-344](./architecture/ADR-344-pack-sync-unit-honesty.md) | 整合包同步单元级诚实化：dirLevel 内容判定、单条推送保层级、祖先单元去重 | ✅ 已采纳 |
+| [ADR-343](./architecture/ADR-343-cross-type-search.md) | 跨类型搜索收口（Type 派生 + 分析器分流 + SearchFilters） | ✅ 已采纳 |
 | [ADR-342](./architecture/ADR-342-relink-preserve-instance-files.md) | 整合包重链接的实例数据保全与目录身份复验 | ✅ 已采纳 |
 | [ADR-341](./architecture/ADR-341-busy-lock-unification.md) | busy 语义归一——互斥锁唯一形态 BusyLock | ✅ 已采纳 |
 | [ADR-340](./architecture/ADR-340-sync-push-direct-call.md) | 推送链去总线化：请求-响应回归直调，token/回执/宽限期协议件退役 | ✅ 已采纳 |
@@ -227,7 +227,6 @@ permalink: /adr/
 | [ADR-187](./ADR-187-features-modal-ts.md) | features/ 目录归位与 modal.ts 拆分收敛 | ✅ 已采纳 |
 | [ADR-185](./ADR-185-core-features-core-features.md) | core 分层治理——特性文件整体迁移至 features，消除 core⇄features 包级环 | ✅ 已采纳 |
 | [ADR-184](./ADR-184-diff-gen-stage-stage.md) | 滞留机器区 diff 自动收编：gen-stage 按行内容判定追回 stage，人工策展区保持并发隔离 | ✅ 已采纳 |
-| [ADR-183](./ADR-183-searchmodels-8.md) | SearchModels 8 参数封装 | ✅ 已采纳 |
 | [ADR-182](./ADR-182-togglemodelenable-toggleenable.md) | ToggleModelEnable 合并到 ToggleEnable | ✅ 已采纳 |
 | [ADR-181](./ADR-181-processforepoch.md) | processForEpoch 枚举化——竞态测试先行 | ✅ 已采纳 |
 | [ADR-180](./ADR-180-preview-materials-shared.md) | preview-3d 材质工具层通用化收编（mmd/vrm materials 骨架合并） | ✅ 已采纳 |
@@ -400,11 +399,12 @@ permalink: /adr/
 | [ADR-002](./ADR-002-project-health-assessment.md) | 项目全面评估与改进方向 | ✅ 已采纳 |
 | [ADR-001](./ADR-001-wails3-migration.md) | 升级至 Wails 3 | ✅ 已采纳 |
 
-### ❌ 已取代（8）
+### ❌ 已取代（9）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
 | [ADR-194](./ADR-194-menu-control-def-discriminated-union.md) | MenuControlDef 判别联合重构：kind 与配置块编译期配对 | ❌ 已取代 |
+| [ADR-183](./ADR-183-searchmodels-8.md) | SearchModels 8 参数封装 | ❌ 已取代 |
 | [ADR-138](./ADR-138-preview-3d-to-src.md) | preview-3d 上提 src/preview-3d（去 features 中间层） | ❌ 已取代 ⚠️ 被 [ADR-129] |
 | [ADR-137](./ADR-137-ysm-decoder-homecoming.md) | YSM 解码子系统归位（views/app-preview/decoder → features/preview-3d，第五刀） | ❌ 已取代 ⚠️ 被 [ADR-129] |
 | [ADR-136](./ADR-136-screenshot-domain-homecoming.md) | 截图/离屏渲染领域归位（views/app-preview → features/preview-3d，第四刀） | ❌ 已取代 ⚠️ 被 [ADR-129] |
@@ -419,7 +419,7 @@ permalink: /adr/
 |------|------|------|------|
 | ADR-345 | 禁用态是一等公民：目录粒度启禁同步与实例侧禁用载体识别 | ✅ 已采纳 | 2026-10-14 |
 | ADR-344 | 整合包同步单元级诚实化：dirLevel 内容判定、单条推送保层级、祖先单元去重 | ✅ 已采纳 | 2026-10-14 |
-| ADR-343 | 跨类型搜索收口（Type 派生 + 分析器分流 + SearchFilters） | 🔄 部分采纳 | 2026-10-14 |
+| ADR-343 | 跨类型搜索收口（Type 派生 + 分析器分流 + SearchFilters） | ✅ 已采纳 | 2026-10-14 |
 | ADR-342 | 整合包重链接的实例数据保全与目录身份复验 | ✅ 已采纳 | 2026-10-14 |
 | ADR-341 | busy 语义归一——互斥锁唯一形态 BusyLock | ✅ 已采纳 | 2026-10-14 |
 | ADR-340 | 推送链去总线化：请求-响应回归直调，token/回执/宽限期协议件退役 | ✅ 已采纳 | 2026-10-14 |
@@ -579,7 +579,7 @@ permalink: /adr/
 | ADR-186 | i18n 治理：tr 单轨收敛 + 影子包卡口 + locale 数据外移 core | 🔄 部分采纳 ⚠️ 被 [ADR-210] | 2026-09-05 |
 | ADR-185 | core 分层治理——特性文件整体迁移至 features，消除 core⇄features 包级环 | ✅ 已采纳 | 2026-09-05 |
 | ADR-184 | 滞留机器区 diff 自动收编：gen-stage 按行内容判定追回 stage，人工策展区保持并发隔离 | ✅ 已采纳 | 2026-09-05 |
-| ADR-183 | SearchModels 8 参数封装 | ✅ 已采纳 | 2026-09-05 |
+| ADR-183 | SearchModels 8 参数封装 | ❌ 已取代 | 2026-09-05 |
 | ADR-182 | ToggleModelEnable 合并到 ToggleEnable | ✅ 已采纳 | 2026-09-05 |
 | ADR-181 | processForEpoch 枚举化——竞态测试先行 | ✅ 已采纳 | 2026-09-05 |
 | ADR-180 | preview-3d 材质工具层通用化收编（mmd/vrm materials 骨架合并） | ✅ 已采纳 | 2026-09-05 |

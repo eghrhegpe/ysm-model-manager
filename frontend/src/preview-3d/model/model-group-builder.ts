@@ -251,42 +251,58 @@ function buildMeshesFromCubes(model: BedrockModel, ctx: BonesCtx): MeshData[] {
   return meshes;
 }
 
+/** 收集模型中所有骨名（含纯 parent 引用） */
+function collectAllBoneNames(model: BedrockModel): Set<string> {
+  const all = new Set<string>();
+  for (const b of model.bones) {
+    all.add(b.name);
+    if (b.parent !== "") all.add(b.parent);
+  }
+  return all;
+}
+
+/** 解析补全骨骼的父名与局部位置：有定义走 pivot 相对，纯 parent 引用走自身 pivot */
+function resolveBonePlacement(
+  model: BedrockModel,
+  name: string,
+  bp: Vec3 | undefined,
+  pivots: Map<string, Vec3>,
+): { parentName: string; localPos: [number, number, number] } {
+  let parentName = "";
+  let localPos: [number, number, number] = [0, 0, 0];
+  let found = false;
+  for (const b of model.bones) {
+    if (b.name === name) {
+      found = true;
+      parentName = b.parent;
+      const parentPivot2 = b.parent !== "" ? (pivots.get(b.parent) ?? null) : null;
+      localPos =
+        parentPivot2 && bp
+          ? computeBoneLocalPos(bp, parentPivot2)
+          : bp
+            ? computeBoneLocalPos(bp, null)
+            : [0, 0, 0];
+      break;
+    }
+  }
+  if (!found) {
+    if (!bp) {
+      console.warn(`[spec-builder] 骨骼 ${name} 无 pivot（纯 parent 引用）`);
+    }
+    localPos = bp ? computeBoneLocalPos(bp, null) : [0, 0, 0];
+    parentName = "";
+  }
+  return { parentName, localPos };
+}
+
 /**
  * 阶段③-2：补全无 cube 的中间骨骼到 bones 列表
  */
 function ensureAllBonesPresent(model: BedrockModel, ctx: BonesCtx): void {
-  const allBoneNames = new Set<string>();
-  for (const b of model.bones) {
-    allBoneNames.add(b.name);
-    if (b.parent !== "") allBoneNames.add(b.parent);
-  }
-  for (const name of allBoneNames) {
+  for (const name of collectAllBoneNames(model)) {
     if (ctx.boneIdx.has(name)) continue;
     const bp = ctx.pivots.get(name);
-    let parentName = "";
-    let localPos: [number, number, number] = [0, 0, 0];
-    let found = false;
-    for (const b of model.bones) {
-      if (b.name === name) {
-        found = true;
-        parentName = b.parent;
-        const parentPivot2 = b.parent !== "" ? (ctx.pivots.get(b.parent) ?? null) : null;
-        localPos =
-          parentPivot2 && bp
-            ? computeBoneLocalPos(bp, parentPivot2)
-            : bp
-              ? computeBoneLocalPos(bp, null)
-              : [0, 0, 0];
-        break;
-      }
-    }
-    if (!found) {
-      if (!bp) {
-        console.warn(`[spec-builder] 骨骼 ${name} 无 pivot（纯 parent 引用）`);
-      }
-      localPos = bp ? computeBoneLocalPos(bp, null) : [0, 0, 0];
-      parentName = "";
-    }
+    const { parentName, localPos } = resolveBonePlacement(model, name, bp, ctx.pivots);
     const parentID: string | null = parentName !== "" ? parentName : null;
     ctx.boneIdx.set(name, ctx.bones.length);
     ctx.bones.push({

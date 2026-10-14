@@ -81,6 +81,7 @@ auto_fields:
     - StorageSubDir
     - StripBanSuffix
     - StripDisableSuffix
+    - StripDisableSuffixSegments
     - SubDirAll
     - SubDirEntry
     - SubDirMap

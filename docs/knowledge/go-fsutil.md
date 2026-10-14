@@ -16,7 +16,9 @@ auto_fields:
     - DecodeBase64Limited
     - DirPerms
     - DirSize
-    - DisabledCounterpart
+    - DisabledAncestorPath
+    - DisabledDirCounterpart
+    - DisabledTwinForms
     - ErrB64TooLarge
     - ErrChmodFailed
     - ErrCloseFailed

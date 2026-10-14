@@ -28,17 +28,27 @@
 - **判定**（`sync.go|planToggleRenames` 目录分支）：对候选的相对路径 `rel`，探测仓库侧 `repoRoot/rel`（活跃形态）与 `repoRoot/rel+后缀`（载体形态，`.disabled` 优先、`.ban` 兼容）——**恰好一侧存在**才判 `matched`，据此决定整目录改名方向；两侧都存在或都不存在 → 不动（保守，宁可不动作也不猜）。`SyncToggleStatus` 因此把 `filesRoot` 透传给阶段 3。
 - 代价：每个实例目录 2 次 `os.Stat`（无仓库 walk、无哈希）。收益：不依赖任何缓存口径，禁用载体是文件系统事实。
 
-### D2 实例侧禁用载体的单点识别：`fsutil|DisabledCounterpart`
+### D2 禁用载体的单点谓词：`fsutil|DisabledTwinForms` / `DisabledDirCounterpart` / `DisabledAncestorPath`
 
-新增 `fsutil.DisabledCounterpart(path) (string, bool)`：`path` 本身不存在、而 `path+.disabled`/`path+.ban` 存在时返回后者。与 `fsutil|IsRelinkBackupPath` 同族——把「路径 → 孪生形态」的判定收在 `fsutil`，`go/instance` 与 `go/sync` 共用，禁止各自内联拼后缀（后缀表归 `registry`，无环：`registry` 不依赖 `fsutil`）。
+`fsutil` 持三个同族谓词（后缀表经 `registry|DisableSuffixes()` 取副本，禁止各包内联拼 `.disabled`/`.ban`）：
 
-### D3 面板认载体：实例侧路径解析走 D2，禁用单元不进待推送
+- `DisabledTwinForms(path)` — 一次报告两种**目录**形态：活跃是否存在、禁用孪生是否存在。两个布尔**互相独立**——这是复核 P1-1 的教训：把「活跃存在」短路进载体探测，会让「活跃与载体并存」不可见，调用方于是把并存当成「应活跃」，**强制启用用户既有的禁用载体**（探针实证 禁用 0 启用 1）。
+- `DisabledDirCounterpart(path)` — 单答案场景（「这个位置当前是不是一个禁用载体」）：活跃存在则 false，**并存也 false**；需要区分并存的调用方必须用 `DisabledTwinForms`。
+- `DisabledAncestorPath(root, target)` — 沿 `root→target` 逐段探测，命中即返回「载体 + 剩余段」的**实际路径**。为什么必须上溯祖先（复核 P1-2）：实例把**容器夹**整体禁用（`X.disabled/`，模型夹在其下 `X/sub`）时，只查单元自身路径（`X/sub` 与其孪生）全落空 → 面板判待推送、推送新建活跃副本。这三个谓词都**限定目录**：同名杂散**文件**（恰好叫 `X.disabled`）不构成「整夹被禁用」的意图，按它把活跃夹整夹改名/拒绝推送是数据事故（复核 P2-1）。
 
-`instance.go|appendOneItem` 计算实例侧路径后过一遍 `DisabledCounterpart`：命中则子项 diff 以**载体路径**为基准（内容一致 → 子项 synced，不再全 missing），且该单元标 `SyncStatusDisabled`（⛔）。语义：面板的 ⛔ 从此表示「该单元在实例侧是禁用态」，与 `foldUnit` 的中立规则一致——禁用内容**绝不进待推送/一键安装清单**（否则就是静默复活）。
+### D3 面板认载体：实例侧路径解析走 D2（含祖先），禁用单元不进待推送
 
-### D4 推送不得复活：目标侧禁用孪生存在即拒绝
+`instance.go|appendOneItem` 计算实例侧路径后过 `DisabledAncestorPath(c.instDir, instPath)`：命中则子项 diff 以**载体路径**为基准（内容一致 → 子项 synced，不再全 missing），且该单元标 `SyncStatusDisabled`（⛔）。语义：面板的 ⛔ 从此表示「该单元在实例侧是禁用态」，与 `foldUnit` 的中立规则一致——禁用内容**绝不进待推送/一键安装清单**（否则就是静默复活）。
 
-`sync_push.go|installDirUnitLocked` 在落位前检查目标 `customDir/<rel>`：目标不存在而其禁用孪生存在时**拒绝**（`AppError{ErrInvalidPath}`，文案指向「先在仓库侧启用以便同步禁用态，或手动改名后重推」）。同时把 `PushResources` 的目录分支改为调用同一函数——此前它自带第三份「rel 计算 + basename 回退」判定（ADR-344 D3 已收敛一半），现在落位判定全仓单点。
+配套：**dirLevel 单元键逐段去禁用后缀**（`registry|StripDisableSuffixSegments`）。禁用载体可出现在任意祖先层级，只剥尾段会把 `X.disabled/sub/` 与 `x/sub/` 算成两个键 → 同一模型被判「幻影 Missing + Extra」（Extra 还带可拉取按钮，一拉就把 `.disabled` 载体名复制进仓库）。
+
+### D4 推送不得复活：目标侧（含祖先）禁用孪生存在即拒绝
+
+`sync_push.go|installDirUnitLocked` 在落位前用 `DisabledAncestorPath(customDir, dst)` 探测目标链：命中即**拒绝**（`AppError{ErrInvalidPath}`，建议文案为「先在仓库侧触发一次启禁同步把实例侧启用状态同步过来，或手动改名后再推送」——⛔ 行本身没有动作按钮，措辞不得暗示面板可一键启用）。同时把 `PushResources` 的目录分支改为调用同一函数——此前它自带第三份「rel 计算 + basename 回退」判定（ADR-344 D3 已收敛一半），现在落位判定全仓单点。
+
+### D5 空索引不再无条件早退
+
+`collectToggleRepoIndex` 原在「仓库索引为空」时直接报「仓库中未找到模型文件」。scanner 对禁用目录 `SkipDir` → **仓库里只有禁用夹时索引必空**，早退会让禁用方向依旧静默失效（复核 P2-2 探针实证）。现补 `sync.go|hasDisabledDirCarrier`（命中即短路的目录名探测）：只有禁用载体的仓库照常走目录候选，真正空的仓库仍报错。
 
 ## 3. 后果（Consequences）
 

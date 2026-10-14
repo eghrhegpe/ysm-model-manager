@@ -25,8 +25,8 @@
 `SyncToggleStatus` 的目录候选与判定不走仓库索引（scanner 看不见禁用目录，无法修），改为：
 
 - **实例侧**（`sync.go|collectToggleFileInfos`）：walk 时把**目录**也作为候选发出（`toggleFileInfo.isDir`）。目录名带禁用后缀者标记 `isCurrentlyBanned=true` 并 `SkipDir`（改名会搬走整棵子树，下钻产生的文件候选路径在改名后立即失效）；其余目录 `isCurrentlyBanned=false`。回收站/relink 备份守卫对目录同样生效（原先只对文件）。
-- **判定**（`sync.go|planToggleRenames` 目录分支）：对候选的相对路径 `rel`，探测仓库侧 `repoRoot/rel`（活跃形态）与 `repoRoot/rel+后缀`（载体形态，`.disabled` 优先、`.ban` 兼容）——**恰好一侧存在**才判 `matched`，据此决定整目录改名方向；两侧都存在或都不存在 → 不动（保守，宁可不动作也不猜）。`SyncToggleStatus` 因此把 `filesRoot` 透传给阶段 3。
-- 代价：每个实例目录 2 次 `os.Stat`（无仓库 walk、无哈希）。收益：不依赖任何缓存口径，禁用载体是文件系统事实。
+- **判定**（`sync.go|planToggleRenames` 目录分支）：对候选的相对路径 `rel`，用 `fsutil|DisabledTwinForms` 探仓库侧同一路径的活跃/载体**两种目录形态**——**恰好一侧存在**才判 `matched`，据此决定整目录改名方向；两侧并存或都不存在 → 不动（保守，宁可不动作也不猜）。`SyncToggleStatus` 因此把 `filesRoot` 透传给阶段 3。
+- 代价：每个实例目录 2 次 `os.Stat`（无仓库 walk、无哈希），外加「索引为空」时一次短路目录名探测（D5）。收益：不依赖任何缓存口径，禁用载体是文件系统事实。
 
 ### D2 禁用载体的单点谓词：`fsutil|DisabledTwinForms` / `DisabledDirCounterpart` / `DisabledAncestorPath`
 
@@ -66,7 +66,9 @@
 **已知遗留**
 
 - **仓库侧禁用夹仍不进模型列表/搜索**（ADR-038 D3.7 不变）：本 ADR 只让*同步链*看得见载体，不让*展示链*把它当活跃模型。想要「禁用也显示」需另立 ADR（属展示口径，牵动树/搜索/统计）。
+- **两条 dirLevel 信道对禁用载体的 raw status 仍不同**：生产链（scan 反推，`BuildSyncItems`）里 scanner 已 `SkipDir` 掉禁用载体，故单元 raw status 是 `missing`；Walk 回退信道因键逐段归一（D3 配套）判 `synced`。**面板显示经 D3 统一为 ⛔**（两条信道都过 `appendOneItem`），故用户可见面一致；但断言 raw status 的测试必须分信道写，别把两者当同一口径。
 - 目录载体与活跃目录**同时存在**（`X/` 与 `X.disabled/` 并存）时保守不动作，且面板只会显示其中一个（键同）——残留副本需用户手动清理；本 ADR 只保证「不再新造副本」。
+- **⛔ 行没有启用动作**（`frontend` 的 `actionBtnHTML("disabled")` 返回空）：实例侧禁用的单元，用户侧出口是「在仓库树对同一模型切换启禁触发一次同步」或手动改名；`resourcepack`/`shaderpack` 等**非 dirLevelSync** 类型连 toggle 链路都不覆盖（`toggleSyncTargets` 只遍历 dirLevel 类型），只剩手动改名。给 ⛔ 行加「仅实例启用」按钮属产品决策，另立条目。
 - `.ban`（历史后缀）在目录级同样兼容，但统一收敛到 `.disabled` 的方向不变（`planToggleRenames` 改名恒用 `registry.DisabledSuffix()`）。
 
 ## 4. 数据溯源
@@ -74,13 +76,17 @@
 | 来源（病灶/观察） | 结论（本 ADR 的哪个决策） |
 |------------------|--------------------------|
 | 探针 P5：仓库 `X.disabled/ysm.json` 经 `scanner.ScanEntriesWithHit` **零条目** | D1：目录真值不能取 scanner 索引 |
-| 探针 P1/P2：两个方向均 `0/0/nil`（仓库只有禁用夹时报「未找到模型文件」） | D1：目录候选缺失是根因 |
+| 探针 P1/P2：两个方向均 `0/0/nil`（仓库只有禁用夹时报「未找到模型文件」） | D1/D5：目录候选缺失 + 空索引早退 |
 | 探针 P3：文件级 `a.pmx.ban` → 启用 1 个（正常） | 划定范围：只补目录粒度，不动文件级链路 |
 | `sync.go|collectToggleFileInfos` 只收文件 + `IsDisableSuffix` 只看尾段 | D1：实例侧目录候选 + `SkipDir` |
 | `sync.go|planToggleRenames` 三处静默 `continue` | D1：目录分支 + 明确的 matched 判据 |
-| `instance.go|appendOneItem` 盲 join `instDir/<rel>` | D3：走 `fsutil|DisabledCounterpart` |
-| `instance.go|buildDirLevelChildren` 空实例侧 → 全 missing → 父夹升 diverged | D3：子项以载体为基准 diff |
-| `sync_push.go|installDirUnitLocked` + `PushResources` 目录分支两份落位判定 | D4：单点 + 目标禁用孪生拒绝 |
-| `fsutil|IsRelinkBackupPath`（路径形态谓词收在 fsutil 的先例） | D2：DisabledCounterpart 同族 |
+| 复核 P1-1：`DisabledCounterpart` 活跃存在即短路 → 「并存」不可达，实例被强制启用（禁用 0 启用 1） | D2：`DisabledTwinForms` 两布尔独立 |
+| 复核 P1-2：容器夹被整体禁用时 `X/sub` 自身孪生不存在 → 面板 diverged + 推送复活（探针实证） | D2/D3/D4：`DisabledAncestorPath` 上溯祖先 |
+| 复核 P2-1：仓库侧杂散**文件** `X.disabled` → 活跃模型夹被整夹改名禁用 | D2：谓词限定目录 |
+| 复核 P2-2：仓库只有禁用夹 → 空索引早退，禁用方向仍失效 | D5：`hasDisabledDirCarrier` |
+| 复核 P3-1：目录候选进阶段 2 → `computeHash(目录)` 恒空串、白付一次 open | D1：目录跳过哈希预计算 |
+| 复核 P1-2 的键面：`X.disabled/sub/` 与 `x/sub/` 不同键 → 幻影 Missing+Extra（Extra 可拉取会把载体名复制进仓库） | D3 配套：`StripDisableSuffixSegments` |
+| `fsutil|IsRelinkBackupPath`（路径形态谓词收在 fsutil 的先例） | D2：同族谓词 |
+| `registry|DisabledSuffix` 私有化先例（2026-09-14 防改写） | D2：`DisableSuffixes()` 返回副本 |
 
 <!-- 文件名: disable-state-first-class.md → 实际文件 architecture/ADR-345-disable-state-first-class.md（ADR-320 architecture 全量模板） -->

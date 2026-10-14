@@ -115,10 +115,33 @@ func collectToggleRepoIndex(filesRoot, instanceCustomDir string, scanFn ScanFunc
 			repoHash[e.Hash] = banned
 		}
 	}
-	if len(repoHash) == 0 && len(repoName) == 0 {
+	if len(repoHash) == 0 && len(repoName) == 0 && !hasDisabledDirCarrier(filesRoot) {
 		return nil, nil, nil, fmt.Errorf("仓库中未找到模型文件")
 	}
 	return repoHash, repoName, collectToggleFileInfos(instanceCustomDir), nil
+}
+
+// hasDisabledDirCarrier 扫仓库里是否存在「禁用载体目录」（名字带禁用后缀的目录）。
+// 为什么需要（复核 P2-2）：scanner 对禁用目录 SkipDir → 仓库索引里没有任何条目，
+// 若此时仍按「索引为空 = 仓库没有模型」早退，则「仓库侧只有禁用夹」这一场景的
+// 禁用方向依旧静默失效（探针实证：禁用 0 启用 0 err=仓库中未找到模型文件）。
+// 代价只在索引为空的罕见路径上付：命中即短路，不遍历完。
+func hasDisabledDirCarrier(repoRoot string) bool {
+	found := false
+	_ = filepath.WalkDir(repoRoot, func(p string, d os.DirEntry, err error) error {
+		if err != nil || !d.IsDir() || p == repoRoot {
+			return nil
+		}
+		if hasRecycleSegment(p) || isRelinkBackupPath(p) {
+			return filepath.SkipDir
+		}
+		if registry.IsDisableSuffix(d.Name()) {
+			found = true
+			return filepath.SkipAll
+		}
+		return nil
+	})
+	return found
 }
 
 // collectToggleFileInfos 遍历实例目录收集待判条目（不计算哈希）。
@@ -197,6 +220,11 @@ func collectToggleFileInfos(instanceCustomDir string) []toggleFileInfo {
 func precomputeRelKeyMissHashes(fileInfos []toggleFileInfo, customDirClean string, repoName map[string]bool) map[string]string {
 	relKeyMissPaths := make([]string, 0, len(fileInfos))
 	for _, fi := range fileInfos {
+		// 目录候选不需要内容哈希（阶段 3 的目录分支只看仓库侧形态），
+		// 排除掉可省下每目录一次 os.Open——computeHash(目录) 必然返回空串（复核 P3-1）。
+		if fi.isDir {
+			continue
+		}
 		pLower := strings.ToLower(fi.path)
 		var matched bool
 		if strings.HasPrefix(pLower, customDirClean) {
@@ -279,27 +307,31 @@ func planToggleRenames(fileInfos []toggleFileInfo, customDirClean string,
 }
 
 // dirToggleDecision 探测仓库侧某相对路径的启禁真值（ADR-345 D1）：
-//   - 活跃形态存在、禁用载体不存在 → (false, true)：实例侧该目录应为活跃
-//   - 活跃形态不存在、禁用载体存在 → (true, true)：实例侧该目录应为禁用
-//   - 两者并存 / 都不存在 → (false, false)：**保守不动作**（并存是用户残留，猜错就是数据事故；
-//     不存在说明仓库没有这个单元，无权改实例）
+//   - 活跃形态是目录、无禁用载体 → (false, true)：实例侧该目录应为活跃
+//   - 活跃形态不存在、禁用载体是目录 → (true, true)：实例侧该目录应为禁用
+//   - 两者并存 / 都不存在 → (false, false)：**保守不动作**
 //
-// 载体后缀走 fsutil.DisabledCounterpart（后缀表归 registry，含历史 .ban 兼容）。
+// ⚠️ 并存必须真判成 no-op（复核 P1-1）：早前借 fsutil 谓词判载体，而该谓词在活跃存在时
+// 恒不命中 → 「并存」永远落进「应活跃」分支，把用户既有的禁用载体**强制启用**（探针实证
+// 禁用 0 启用 1）。故两个形态各自独立 stat，并存就是并存——仓库里同时留着活跃与载体
+// 说明状态不明，猜错即数据事故。
+//
+// 载体判定走 fsutil.DisabledDirCounterpart（**限定目录**：同名杂散文件不是禁用意图，
+// 复核 P2-1；后缀表归 registry，含历史 .ban）。
 func dirToggleDecision(repoRoot, rel string) (banned bool, matched bool) {
 	if repoRoot == "" || rel == "" {
 		return false, false
 	}
 	active := filepath.Join(repoRoot, filepath.FromSlash(rel))
-	_, activeErr := os.Stat(active)
-	carrier, carrierOK := fsutil.DisabledCounterpart(active)
-	if activeErr == nil && !carrierOK {
+	activeOK, _, carrierOK := fsutil.DisabledTwinForms(active)
+	switch {
+	case activeOK && !carrierOK:
 		return false, true
-	}
-	if activeErr != nil && carrierOK {
-		_ = carrier
+	case !activeOK && carrierOK:
 		return true, true
+	default:
+		return false, false // 并存（状态不明）或都不存在（仓库没有该单元）
 	}
-	return false, false
 }
 
 // applyToggleRenames 是 SyncToggleStatus 阶段 4：统一执行改名（目录结构已稳定，无竞态）。

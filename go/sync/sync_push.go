@@ -317,13 +317,14 @@ func installDirUnitLocked(dir, customDir, globalDir, linkMode, rtype string) err
 	}
 	// 目标侧禁用孪生拒绝（ADR-345 D4）：实例把该模型整夹禁用了（customDir/X.disabled），
 	// 此时整夹安装会另建同名活跃副本（模型复活 + 同一模型两份），且用户禁用意图被静默推翻。
-	// 拒绝并给可执行建议——启用该单元走 toggle（ADR-345 D1 已支持目录粒度）。
+	// 必须**探测到祖先**（复核 P1-2）：容器夹被整体禁用（`X.disabled/`，模型夹在其下 `X/sub`）
+	// 时只查目标自身的孪生会落空 → 推送照样复活。
 	dst := filepath.Join(customDir, filepath.FromSlash(rel))
-	if alt, ok := fsutil.DisabledCounterpart(dst); ok {
+	if alt, ok := fsutil.DisabledAncestorPath(customDir, dst); ok {
 		return types.AppError{
 			Code: types.ErrInvalidPath, Operation: "推送资源", SourcePath: dir,
 			Reason:     "整合包中该模型处于禁用态（" + filepath.Base(alt) + "），推送会另建同名活跃副本",
-			Suggestion: "请在仓库侧调整该模型的启禁状态以同步到整合包，或手动改名后再推送",
+			Suggestion: "请先在仓库侧触发一次启禁同步（把实例侧启用状态同步过来），或手动改名后再推送",
 		}
 	}
 	return installer.InstallDirRelLocked(dir, customDir, filepath.ToSlash(rel), globalDir, linkMode, rtype)

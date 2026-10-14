@@ -110,6 +110,22 @@ func TestSyncResourcesDirLevel_WalkChannel_SameSizeDifferentContent_Synced(t *te
 		"Walk 信道无摘要 → 同 size 回退判 Synced（契约见 DiffEntry.Hash），got Missing=%v", result.Missing)
 }
 
+// TestSyncResourcesDirLevel_DisabledAncestorSameUnit 祖先载体下的同一模型必须仍是同一个单元键
+// （ADR-345，复核 P1-2）：只剥尾段会把 `X.disabled/sub/` 与 `x/sub/` 判成两个键 → 幻影
+// Missing + Extra（Extra 带可拉取按钮，一拉就把 `.disabled` 载体名复制进仓库）。
+func TestSyncResourcesDirLevel_DisabledAncestorSameUnit(t *testing.T) {
+	globalDir := t.TempDir()
+	instDir := t.TempDir()
+	testutil.WriteTestFile(t, filepath.Join(globalDir, "X", "sub", "ysm.json"), "{}")
+	testutil.WriteTestFile(t, filepath.Join(instDir, "X.disabled", "sub", "ysm.json"), "{}")
+
+	result := SyncResourcesDirLevel(globalDir, instDir, "ysm")
+
+	testutil.Equal(t, len(result.Synced), 1, "祖先载体下的同一模型应判 Synced，got Synced=%v", result.Synced)
+	testutil.Equal(t, len(result.Extra), 0, "不得产生幻影 Extra（会把载体名拉进仓库），got %v", result.Extra)
+	testutil.Equal(t, len(result.Missing), 0, "不得产生幻影 Missing，got %v", result.Missing)
+}
+
 // TestDirLevelResult_OversizeSameSize_Missing 锁 P0-2 诚实化在 dirLevel 的移植（D1 的第三条腿）：
 // 两侧同尺寸但都因超 MaxImportSize 被刻意跳过哈希时，Size 相等**不能**作为内容一致的证据
 // → 保守判 Missing（与文件级 contentDiffers 同判据）；未超限的同尺寸无哈希仍回退 Size 判 Synced。

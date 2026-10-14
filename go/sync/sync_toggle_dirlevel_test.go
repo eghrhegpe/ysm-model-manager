@@ -6,7 +6,9 @@
 package sync
 
 import (
+	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"ysm-model-manager/go/internal/testutil"
@@ -57,18 +59,70 @@ func TestSyncToggleStatus_DirLevelEnable(t *testing.T) {
 }
 
 // TestSyncToggleStatus_DirLevelAmbiguousNoOp 仓库侧活跃与载体并存 → 保守不动作（不猜）。
+// 夹具关键：实例侧放的是**禁用载体**——若实现把「并存」判成「应活跃」（早前的死分支 bug，
+// 复核 P1-1 实证 禁用 0 启用 1），这里就会被强制启用；实例侧若是活跃夹则两种实现都不动作，
+// 测试将失去区分力（这正是旧版假绿的原因）。
 func TestSyncToggleStatus_DirLevelAmbiguousNoOp(t *testing.T) {
 	repo, inst := toggleFixture(t)
 	testutil.WriteTestFile(t, filepath.Join(repo, "X", "ysm.json"), "{}")
 	testutil.WriteTestFile(t, filepath.Join(repo, "X.disabled", "ysm.json"), "{}")
 	testutil.WriteTestFile(t, filepath.Join(repo, "Y", "ysm.json"), "{}")
-	testutil.WriteTestFile(t, filepath.Join(inst, "X", "ysm.json"), "{}")
+	testutil.WriteTestFile(t, filepath.Join(inst, "X.disabled", "ysm.json"), "{}")
 
 	disabled, enabled, err := SyncToggleStatus(inst, repo, scanFnFor)
 	testutil.NoError(t, err, "歧义场景不应报错")
 	testutil.Equal(t, disabled+enabled, 0, "两侧并存时不得动作（保守），got 禁用=%d 启用=%d", disabled, enabled)
-	testutil.FileExists(t, filepath.Join(inst, "X", "ysm.json"), "实例应原样不动")
-	testutil.FileNotExists(t, filepath.Join(inst, "X.disabled"), "不得凭空造出禁用载体")
+	testutil.FileExists(t, filepath.Join(inst, "X.disabled", "ysm.json"), "实例应原样不动（不得被强制启用）")
+	testutil.FileNotExists(t, filepath.Join(inst, "X", "ysm.json"), "不得凭空造出活跃副本")
+}
+
+// TestSyncToggleStatus_DirCarrierIsFileIgnored 仓库侧只有**同名杂散文件** `X.disabled`
+// （不是目录载体）时，不得把实例的活跃模型夹整夹改名禁用（复核 P2-1）。
+func TestSyncToggleStatus_DirCarrierIsFileIgnored(t *testing.T) {
+	repo, inst := toggleFixture(t)
+	testutil.WriteTestFile(t, filepath.Join(repo, "X.disabled"), "stray")
+	testutil.WriteTestFile(t, filepath.Join(repo, "Y", "ysm.json"), "{}")
+	testutil.WriteTestFile(t, filepath.Join(inst, "X", "ysm.json"), "{}")
+
+	disabled, enabled, err := SyncToggleStatus(inst, repo, scanFnFor)
+	testutil.NoError(t, err, "杂散文件场景不应报错")
+	testutil.Equal(t, disabled+enabled, 0, "杂散文件不是禁用意图，不得改名，got 禁用=%d 启用=%d", disabled, enabled)
+	testutil.FileExists(t, filepath.Join(inst, "X", "ysm.json"), "活跃模型夹不得被整夹改名")
+}
+
+// TestSyncToggleStatus_RepoOnlyDisabledDir 仓库里**只有禁用夹**（索引为空）时，
+// 禁用方向仍须生效——早前的空索引早退会直接报「仓库中未找到模型文件」（复核 P2-2）。
+func TestSyncToggleStatus_RepoOnlyDisabledDir(t *testing.T) {
+	repo, inst := toggleFixture(t)
+	testutil.WriteTestFile(t, filepath.Join(repo, "X.disabled", "ysm.json"), "{}")
+	testutil.WriteTestFile(t, filepath.Join(inst, "X", "ysm.json"), "{}")
+
+	disabled, enabled, err := SyncToggleStatus(inst, repo, scanFnFor)
+	testutil.NoError(t, err, "仓库只有禁用夹时不应报「未找到模型文件」（空索引早退须让位于目录载体）")
+	testutil.Equal(t, disabled, 1, "禁用方向应生效，got 禁用=%d 启用=%d", disabled, enabled)
+	testutil.FileExists(t, filepath.Join(inst, "X.disabled", "ysm.json"), "实例应整夹改名禁用")
+}
+
+// TestPrecomputeRelKeyMissHashes_SkipsDirs 目录候选不进阶段 2 哈希（复核 P3-1：
+// computeHash(目录) 恒空串、纯浪费一次 os.Open；目录分支也不读哈希）。
+func TestPrecomputeRelKeyMissHashes_SkipsDirs(t *testing.T) {
+	inst := t.TempDir()
+	testutil.WriteTestFile(t, filepath.Join(inst, "X", "a.ysm"), "a")
+	infos := collectToggleFileInfos(inst)
+	sawDir := false
+	for _, fi := range infos {
+		if fi.isDir {
+			sawDir = true
+		}
+	}
+	testutil.Equal(t, sawDir, true, "目录候选应存在（前置条件）")
+
+	hashes := precomputeRelKeyMissHashes(infos, strings.ToLower(filepath.Clean(inst))+string(filepath.Separator), map[string]bool{})
+	for p := range hashes {
+		fi, statErr := os.Stat(p)
+		testutil.NoError(t, statErr, "哈希表 key 应指向真实路径: %s", p)
+		testutil.Equal(t, fi.IsDir(), false, "哈希表不得含目录：%s", p)
+	}
 }
 
 // TestSyncToggleStatus_DirLevelUnknownNoOp 仓库侧完全没有该单元 → 不动作（不越权改实例）。

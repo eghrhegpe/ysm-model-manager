@@ -100,7 +100,7 @@ status: active
 
 - `walk.go` — 文件/目录遍历、目录后序遍历、计数、空目录清理，内置 `.recycle` 回收站跳过开关
 - `relink_backup.go` — `IsRelinkBackupPath`（relink 备份目录 `<夹名>.relink-bak-<ts>` 的**唯一**识别谓词，ADR-342 D6 下沉自 go/sync 私有实现）：判「任一路径段含 `.relink-bak-`」而非基名精确匹配（备份目录内部文件同样要命中）、大小写不敏感；消费方 = go/sync（relink/toggle/同步 diff 四通道豁免）、go/scanner（不得把尸体内模型扫成活跃条目）、go/dedup（`clean` 保留 Path 排序首个，尸体排前会「保尸体删活模型」）、go/repoaudit（统计不计尸体）
-- `disabled_counterpart.go` — `DisabledCounterpart(path)`（ADR-345 D2）：「活跃形态不存在、而禁用孪生存在」的**唯一**谓词——`path` 存在时恒不命中（活跃是当前真值），否则按 `registry|DisableSuffixes` 的副本逐个试 `.disabled`（新标准优先）/`.ban`（历史兼容），命中返回孪生路径。与 `relink_backup.go` 同族（路径形态判定收在 fsutil，两包共用禁内联拼后缀）。消费方 = `go/instance|appendOneItem`（dirLevel 单元的实例侧路径解析：盲 join 会把「实例已禁用」误判成「缺失待推送」→ 推送复活并残留）、`go/sync|planToggleRenames`+`dirToggleDecision`（目录粒度启禁的仓库侧真值探测）、`go/sync|installDirUnitLocked`（目标侧禁用孪生存在即拒绝推送）
+- `disabled_counterpart.go` — 禁用载体谓词三件套（ADR-345 D2）：`DisabledTwinForms(path)` 一次报告**活跃目录**与**禁用孪生目录**两种形态（两布尔独立——`DisabledDirCounterpart` 的活跃短路会把「并存」判成「应活跃」，复核 P1-1 实证会强制启用用户既有的禁用载体）；`DisabledDirCounterpart(path)` 单答案版（活跃存在或并存 → false）；`DisabledAncestorPath(root, target)` 沿路径逐段探测、命中返回「载体 + 剩余段」的实际路径（容器夹被整体禁用时只查单元自身会全落空，复核 P1-2）。三者都**限定目录**（同名杂散文件不是禁用意图，复核 P2-1），后缀表走 `registry|DisableSuffixes` 副本。消费方 = `go/instance|appendOneItem`（实例侧路径解析）、`go/sync|dirToggleDecision`（目录粒度真值探测）、`go/sync|installDirUnitLocked`（目标链禁用即拒绝推送）
 - `copy.go` — `CopyFile`（同目录 tmp+rename 原子复制 + Sync + `Chmod FilePerms` + MkdirAll + **目录源前置拒绝 + 读毕早关 src**）；`CopyDirRecursive`（参数化 symlink 策略 / 防覆盖 / 失败回滚，`AtomicRename` 分支通过 tmpDir → rename 原子替换）；`RecoverAtomicRename(dir)` 启动自愈扫描 `.bak-*` 备份目录（上次 AtomicRename 崩溃残留）；`StepError` 步骤类型化错误（中性步骤名 `StepStat/Open/CreateTmp/Copy/Sync/Close/Chmod/Rename/...`，经 `errors.As` 取步骤，`Error()` 透传内层、`errors.Is` 穿透——ADR-044 策略 A：机制归 fsutil、UX 文案归调用方如 installer.mapStepToAppError）
 - `perms.go` — `DirPerms`(0755) / `FilePerms`(0644) 全仓权限单点（os.MkdirAll/os.WriteFile 全仓 27 处手写字面量已收敛至此）
 - `bom.go` — `UTF8BOM` / `StripBOM`（PowerShell 等工具写出的 JSON/文本 BOM 剥离单点，ysm/fileops/packs/internal-app 共 7 处已收敛）
@@ -112,7 +112,7 @@ status: active
 - `WalkAllFiles(dir, skipRecycle) []string` / `WalkAllDirs(dir, skipRecycle) []string` — 递归遍历（后序：子在前父在后）
 - `CountFiles(dir, skipRecycle) int` / `CleanEmptyDirs(dir, skipRecycle) int` — 计数与空目录清理
 - `WriteFileAtomic(destPath, data) error` — tmp+rename 原子写
-- `DisabledCounterpart(path) (string, bool)` — 活跃路径不存在时的禁用孪生路径（后缀表走 registry；供实例侧单元解析与目录粒度启禁探测）
+- `DisabledTwinForms(path) (activeOK bool, twin string, twinOK bool)` / `DisabledDirCounterpart(path) (string, bool)` / `DisabledAncestorPath(root, target) (string, bool)` — 禁用载体谓词三件套（目录限定；后缀表走 registry）
 - `ReadLimitedEntry(rc, limit) []byte` — zip/7z 单条目 limit+1 探测截断读取
 - `CopyFile(src, dst) error` / `CopyDirRecursive(src, dst, opts) error` — 原子单文件/目录复制
 - `RecoverAtomicRename(dir) (int, error)` — 启动自愈：扫描 `.bak-*` 备份目录，恢复未完成的 AtomicRename（返回恢复数量）

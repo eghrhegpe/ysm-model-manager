@@ -261,12 +261,17 @@ func containsModelSubfolderMemo(path string, rtype string, memo nestedDirMemo) b
 	return false
 }
 
-// relKeyDirLevel 计算目录级同步条目的规范化 key：相对路径 + 小写 + 去禁用后缀。
+// relKeyDirLevel 计算目录级同步条目的规范化 key：相对路径 + 小写 + **逐段**去禁用后缀。
 // 与 relKey 的区别：relKey 保留扩展名（供 ResourceDiff 按大小对比），
 // 而目录级同步的 key 按「模型身份」去扩展名（模型 A 的 zip 无论版本为何，
 // 身份相同；扩展名不是模型身份的一部分）。
 // 多层物理路径支持：返回的 key 包含完整相对路径层级，如 "vendor/character/pack"
 // 而非扁平化的 "pack"。
+//
+// ⚠️ 去禁用后缀必须**逐段**（ADR-345，复核 P1-2）：实例把**容器夹**整体禁用时，模型夹
+// 落在 `X.disabled/sub/` 下——只剥尾段会算出 `x.disabled/sub/`，与仓库侧 `x/sub/` 不同键，
+// 于是同一个模型被判成「幻影 Missing + Extra」（Extra 还带可拉取按钮，一拉就把载体名
+// `.disabled` 复制进仓库）。身份与「是哪个祖先带了后缀」无关，故逐段归一。
 func relKeyDirLevel(root, path string, isDir bool) string {
 	rel, err := filepath.Rel(root, path)
 	if err != nil {
@@ -274,7 +279,7 @@ func relKeyDirLevel(root, path string, isDir bool) string {
 	}
 	rel = filepath.ToSlash(rel)
 	rel = strings.ToLower(rel)
-	rel = registry.StripDisableSuffix(rel)
+	rel = registry.StripDisableSuffixSegments(rel)
 	// 剥离扩展名——模型身份不以扩展名区分
 	if ext := filepath.Ext(rel); ext != "" {
 		rel = strings.TrimSuffix(rel, ext)

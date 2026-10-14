@@ -210,12 +210,14 @@ func (c *rtypeCtx) appendOneItem(typeItems *[]types.ResourceSyncItem, p string, 
 			rel := strings.TrimPrefix(p, c.globalDir+string(filepath.Separator))
 			instPath = filepath.Join(c.instDir, rel)
 		}
-		// 实例侧禁用载体识别（ADR-345 D3）：上面是**盲 join**，实例把整夹改名成
-		// `X.disabled/` 后该路径不存在 → 子项全判 missing → 父夹提升 diverged「待推送」
+		// 实例侧禁用载体识别（ADR-345 D3）：上面是**盲 join**，实例把整夹（或**其祖先容器夹**）
+		// 改名成 `X.disabled/` 后该路径不存在 → 子项全判 missing → 父夹提升 diverged「待推送」
 		// → 一键/行内推送另建活跃 `X/`，`X.disabled/` 残留 = 模型静默复活 + 同一模型两份副本。
+		// 必须**沿 rel 上溯祖先**（复核 P1-2）：容器夹被整体禁用（`X.disabled/`，其下才是模型夹
+		// `X/sub`）时，只查单元自身路径与其孪生会双双落空。
 		// 认出载体后：子项以载体为基准 diff（同内容即 synced），单元标 ⛔（disabled 在中立桶，
 		// 绝不进待推送/一键清单）。
-		if alt, ok := fsutil.DisabledCounterpart(instPath); ok {
+		if alt, ok := fsutil.DisabledAncestorPath(c.instDir, instPath); ok {
 			instPath = alt
 			meta.status = types.SyncStatusDisabled
 			meta.icon = "⛔"

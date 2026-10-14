@@ -194,6 +194,26 @@ func StripBanSuffix(name string) string {
 	return StripDisableSuffix(name)
 }
 
+// StripDisableSuffixSegments 逐**路径段**剥离禁用后缀（正斜杠或反斜杠分隔皆可）。
+// 与 StripDisableSuffix（只剥尾段）的分工：尾段版用于「文件名/最后一级」判定；
+// 本版用于**路径身份归一**——禁用载体可出现在任意祖先层级（实例把容器夹整体改名为
+// `X.disabled/`，模型夹在其下 `X.disabled/sub/`），此时模型身份不应因某一级的后缀而改变，
+// 否则同一个模型在两侧算出两个键（ADR-345：幻影 Missing+Extra，拉取还会把载体名复制进仓库）。
+// 非后缀段原样保留（段尾必须是完整后缀，故 `my.disabled.folder` 不命中）。
+func StripDisableSuffixSegments(rel string) string {
+	if rel == "" {
+		return rel
+	}
+	if !strings.ContainsAny(rel, `/\`) {
+		return StripDisableSuffix(rel)
+	}
+	segs := strings.FieldsFunc(rel, func(r rune) bool { return r == '/' || r == '\\' })
+	for i, s := range segs {
+		segs[i] = StripDisableSuffix(s)
+	}
+	return strings.Join(segs, "/")
+}
+
 // IsDisableSuffix 判断文件名是否带禁用后缀（.disabled/.ban，大小写不敏感）。
 func IsDisableSuffix(name string) bool {
 	lower := strings.ToLower(name)

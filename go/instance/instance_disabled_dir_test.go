@@ -50,6 +50,51 @@ func TestBuildSyncItems_InstanceDisabledDir_DisabledNotDiverged(t *testing.T) {
 	}
 }
 
+// TestBuildSyncItems_InstanceDisabledContainer_NotDiverged 复核 P1-2 回归锁：
+// 实例把**容器夹**整体禁用（`X.disabled/`，X 自身非模型夹、模型夹在其下 `X/sub`）时，
+// 嵌套单元 `X/sub` 的实例侧路径 `instDir/X/sub` 不存在、其自身孪生也不存在——
+// 只查单元自身会把它判成待推送（探针实证 status=diverged / MissingCount=1），
+// 一键安装随即新建活跃副本 = 复活。必须沿 rel 上溯祖先载体。
+func TestBuildSyncItems_InstanceDisabledContainer_NotDiverged(t *testing.T) {
+	sub := registry.SubDirMap("ysm")
+	if sub == "" {
+		t.Skip("ysm 无 InstanceDir 配置，跳过")
+	}
+	base := t.TempDir()
+	globalDir := filepath.Join(base, "global")
+	instDir := filepath.Join(base, "inst", sub)
+	// 仓库：容器 X 下嵌套模型夹 X/sub（X 自身无平铺模型文件 → 它是容器键）
+	testutil.WriteTestFile(t, filepath.Join(globalDir, "X", "sub", "ysm.json"), "{}")
+	testutil.WriteTestFile(t, filepath.Join(globalDir, "X", "sub", "model.ysm"), "m")
+	// 实例：容器被整体禁用
+	testutil.WriteTestFile(t, filepath.Join(instDir, "X.disabled", "sub", "ysm.json"), "{}")
+	testutil.WriteTestFile(t, filepath.Join(instDir, "X.disabled", "sub", "model.ysm"), "m")
+
+	ins := &types.VersionInstance{Name: "t", VersionDir: filepath.Join(base, "inst")}
+	items := BuildSyncItems(ins, []registry.ResourceType{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": globalDir}, "")
+
+	// 该单元可能是顶层容器 X 的子节点，故递归找名为 sub 的条目
+	var unit *types.ResourceSyncItem
+	var walk func(list []types.ResourceSyncItem)
+	walk = func(list []types.ResourceSyncItem) {
+		for i := range list {
+			if list[i].Name == "sub" {
+				unit = &list[i]
+				return
+			}
+			walk(list[i].Children)
+		}
+	}
+	walk(items)
+	testutil.NotNil(t, unit, "未找到嵌套单元 sub，items=%+v", items)
+	testutil.Equal(t, unit.Status, types.SyncStatusDisabled,
+		"祖先容器被禁用时嵌套单元应标 ⛔（不得判待推送），实际 %q", unit.Status)
+	for _, ch := range unit.Children {
+		testutil.Equal(t, ch.Status, types.SyncStatusSynced,
+			"子项应 Synced（以载体为基准 diff），子项 %s 实际 %q", ch.Name, ch.Status)
+	}
+}
+
 // 反向对照：实例侧活跃时不得误判 ⛔，也不得因为载体探测把正常同步判坏。
 func TestBuildSyncItems_InstanceActiveDir_Synced(t *testing.T) {
 	sub := registry.SubDirMap("ysm")

@@ -206,6 +206,33 @@ func TestPushResources_DstDisabled_NoRevival(t *testing.T) {
 	testutil.FileExists(t, filepath.Join(targetDir, "X.disabled", "ysm.json"), "禁用载体不得被触碰")
 }
 
+// TestPushSingleResource_DisabledAncestor_Refused 复核 P1-2 回归锁：实例把**容器夹**整体禁用
+// （`custom/X.disabled/`，模型夹在其下 `X/sub`）时，推 `X/sub` 不得新建活跃副本——
+// 只查目标自身孪生会落空（探针实证 err=nil 且复活）。必须上溯祖先载体。
+func TestPushSingleResource_DisabledAncestor_Refused(t *testing.T) {
+	globalDir, customDir := ysmTestDirs(t)
+	testutil.WriteTestFile(t, filepath.Join(globalDir, "X", "sub", "ysm.json"), "{}")
+	testutil.WriteTestFile(t, filepath.Join(customDir, "X.disabled", "sub", "ysm.json"), "{}")
+
+	err := PushSingleResource(filepath.Join(globalDir, "X", "sub"), customDir, globalDir, "copy", "ysm")
+	testutil.NotNil(t, err, "祖先容器处于禁用态时必须拒绝推送（否则另建活跃副本）")
+
+	testutil.FileNotExists(t, filepath.Join(customDir, "X", "sub", "ysm.json"), "不得新建活跃副本")
+	testutil.FileExists(t, filepath.Join(customDir, "X.disabled", "sub", "ysm.json"), "禁用载体不得被触碰")
+}
+
+// TestPushSingleResource_StrayFileTwinNotRefused 同名杂散**文件** `X.disabled` 不是禁用载体，
+// 不得据此拒绝正常推送（复核 P2-1：类型不敏感会误拒）。
+func TestPushSingleResource_StrayFileTwinNotRefused(t *testing.T) {
+	globalDir, customDir := ysmTestDirs(t)
+	testutil.WriteTestFile(t, filepath.Join(globalDir, "X", "ysm.json"), "{}")
+	testutil.WriteTestFile(t, filepath.Join(customDir, "X.disabled"), "stray")
+
+	testutil.NoError(t, PushSingleResource(filepath.Join(globalDir, "X"), customDir, globalDir, "copy", "ysm"),
+		"杂散同名文件不是禁用意图，不应拒绝推送")
+	testutil.FileExists(t, filepath.Join(customDir, "X", "ysm.json"), "正常推送应落位")
+}
+
 // TestDropAncestorUnits 判据单测：仅「其下有更深条目」的祖先被剔除；
 // 兄弟、根层文件、非前缀同名（a 与 ab）必须原样保留。
 func TestDropAncestorUnits(t *testing.T) {

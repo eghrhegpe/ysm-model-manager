@@ -39,47 +39,13 @@ export interface WaterShaderCtx {
   reflectionActive: () => boolean;
 }
 
-/** 波浪材质（film 顶 / pool 顶共用，避免技术分叉）。
- *  @param opts.forPool 是否为池体顶面（决定 transmission/thickness/clearcoat 与 film 的
- *    alpha 单源 = 浓度 × FILM_WETNESS_ALPHA_BASE，刻意不读 waterOpacity——解耦理由见 water-state.ts）
- *  @param opts.hasWallCeiling 形态是否有池壁顶（决定浪高上钳是否生效，见 ADR-319 D1 P2-2） */
-export function buildWaveWaterMaterial(opts: {
-  forPool: boolean;
-  hasWallCeiling: boolean;
-  ctx: WaterShaderCtx;
-}): THREE.MeshPhysicalMaterial {
+/** 装配波浪 shader：返回 onBeforeCompile 回调（uniforms 设置 + 六处锚点注入 + 落地检测） */
+function assembleWaveShader(
+  mat: THREE.MeshPhysicalMaterial,
+  opts: { forPool: boolean; hasWallCeiling: boolean; ctx: WaterShaderCtx },
+): (shader: THREE.WebGLProgramParametersWithUniforms) => void {
   const { forPool, hasWallCeiling, ctx } = opts;
-  // [shader-patch 守卫] REVISION 断言：water 锚点是渲染管线稳定 chunk 标记，给宽松范围
-  // [185,190)，升级审计后再收窄。失配即 throw → registry 工厂兜底使本 cap 缺失，拒绝静默降级。
-  // [锐评 2026-10-04 第三轮 五笔账⑤] 失败哲学（刻意不对称，勿"统一"）：
-  //  · REVISION 失配 = **前提崩塌**（渲染管线 chunk 结构未知，注入串全部可能错位）——此时
-  //    warn+兜底渲染等于输出一坨无法归因的坏画面，故 **throw → cap 缺失 → 显式可发现**；
-  //  · 六锚点失配 = **局部漂移**（REVISION 改写范围仍吻合，仅个别 chunk 标记动了）——水面
-  //    退化为"波浪在摆但细节/倒影缺位"，画面仍可用，故 warn 保现场供诊断，不升级为 throw。
-  //  两个失败模式代价不同（整 cap 不可渲染 vs 单项特效缺失），处理强度随之不同。
-  assertRevisionRange({
-    module: "water-patch",
-    allowed: ["185", "186", "187", "188", "189"],
-  });
-  // 升级到 MeshPhysicalMaterial：pool 模式用 transmission/thickness 体现「水体厚度感」，film 仍降级为原视觉
-  const mat = new THREE.MeshPhysicalMaterial({
-    color: envState.waterColor,
-    transparent: true,
-    // [锐评回归 2026-10-04] film 的 alpha **单源** = 浓度 × 基准常量（刻意不读 waterOpacity；
-    // 解耦理由见 water-state.ts|FILM_WETNESS_ALPHA_BASE：否则 pool 调过不透明度再切 film，同一浓度值浓淡会变）
-    opacity: forPool ? envState.waterOpacity : FILM_WETNESS_ALPHA_BASE * envState.waterWetness,
-    roughness: 0.15,
-    metalness: forPool ? 0.0 : 0.3,
-    depthWrite: false,
-    transmission: forPool ? envState.waterClarity : 0,
-    // ADR-257：语义重述为「容器内水的光程」——由容器深度派生，随 poolHeight 变化、
-    // 不随 waterLevel 变化（它是容器属性，不描述水面位置）。
-    thickness: forPool ? Math.max(0.01, envState.waterPoolHeight * 0.5) : 0,
-    clearcoat: forPool ? 0.8 : 0,
-    clearcoatRoughness: 0.1,
-  });
-
-  mat.onBeforeCompile = (shader: THREE.WebGLProgramParametersWithUniforms): void => {
+  return (shader) => {
     mat.userData.shader = shader;
     shader.uniforms.uTime = ctx.waterTime;
     shader.uniforms.uRoundness = {
@@ -333,6 +299,49 @@ export function buildWaveWaterMaterial(opts: {
       );
     }
   };
+}
+
+/** 波浪材质（film 顶 / pool 顶共用，避免技术分叉）。
+ *  @param opts.forPool 是否为池体顶面（决定 transmission/thickness/clearcoat 与 film 的
+ *    alpha 单源 = 浓度 × FILM_WETNESS_ALPHA_BASE，刻意不读 waterOpacity——解耦理由见 water-state.ts）
+ *  @param opts.hasWallCeiling 形态是否有池壁顶（决定浪高上钳是否生效，见 ADR-319 D1 P2-2） */
+export function buildWaveWaterMaterial(opts: {
+  forPool: boolean;
+  hasWallCeiling: boolean;
+  ctx: WaterShaderCtx;
+}): THREE.MeshPhysicalMaterial {
+  const { forPool, hasWallCeiling, ctx } = opts;
+  // [shader-patch 守卫] REVISION 断言：water 锚点是渲染管线稳定 chunk 标记，给宽松范围
+  // [185,190)，升级审计后再收窄。失配即 throw → registry 工厂兜底使本 cap 缺失，拒绝静默降级。
+  // [锐评 2026-10-04 第三轮 五笔账⑤] 失败哲学（刻意不对称，勿"统一"）：
+  //  · REVISION 失配 = **前提崩塌**（渲染管线 chunk 结构未知，注入串全部可能错位）——此时
+  //    warn+兜底渲染等于输出一坨无法归因的坏画面，故 **throw → cap 缺失 → 显式可发现**；
+  //  · 六锚点失配 = **局部漂移**（REVISION 改写范围仍吻合，仅个别 chunk 标记动了）——水面
+  //    退化为"波浪在摆但细节/倒影缺位"，画面仍可用，故 warn 保现场供诊断，不升级为 throw。
+  //  两个失败模式代价不同（整 cap 不可渲染 vs 单项特效缺失），处理强度随之不同。
+  assertRevisionRange({
+    module: "water-patch",
+    allowed: ["185", "186", "187", "188", "189"],
+  });
+  // 升级到 MeshPhysicalMaterial：pool 模式用 transmission/thickness 体现「水体厚度感」，film 仍降级为原视觉
+  const mat = new THREE.MeshPhysicalMaterial({
+    color: envState.waterColor,
+    transparent: true,
+    // [锐评回归 2026-10-04] film 的 alpha **单源** = 浓度 × 基准常量（刻意不读 waterOpacity；
+    // 解耦理由见 water-state.ts|FILM_WETNESS_ALPHA_BASE：否则 pool 调过不透明度再切 film，同一浓度值浓淡会变）
+    opacity: forPool ? envState.waterOpacity : FILM_WETNESS_ALPHA_BASE * envState.waterWetness,
+    roughness: 0.15,
+    metalness: forPool ? 0.0 : 0.3,
+    depthWrite: false,
+    transmission: forPool ? envState.waterClarity : 0,
+    // ADR-257：语义重述为「容器内水的光程」——由容器深度派生，随 poolHeight 变化、
+    // 不随 waterLevel 变化（它是容器属性，不描述水面位置）。
+    thickness: forPool ? Math.max(0.01, envState.waterPoolHeight * 0.5) : 0,
+    clearcoat: forPool ? 0.8 : 0,
+    clearcoatRoughness: 0.1,
+  });
+
+  mat.onBeforeCompile = assembleWaveShader(mat, { forPool, hasWallCeiling, ctx });
   mat.needsUpdate = true;
   return mat;
 }

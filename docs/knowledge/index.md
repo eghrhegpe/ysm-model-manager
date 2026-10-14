@@ -2,11 +2,11 @@
 
 # 知识卡索引
 
-> 总计: 200 张知识卡
+> 总计: 199 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
-## config（16 张）
+## config（15 张）
 
 *配置与注册表（resource_types、AppConfig）*
 
@@ -18,7 +18,6 @@
 | 🏗 commit-message-gate | 提交信息减负闸 | architecture | — | 提交信息超长或主体跑偏的规则不清楚, 想了解提交信息减负闸的判据和豁免条件, 需要在 message 里放验证报告/逃生记录/决策出处，但不知道用哪个 trailer 字段 |
 | 🍃 debt_ledger_refresh | 技术债账本刷新与盘点方法论 | leaf | — | 想知道仓里现在还能发现多少技术债, 刷新 / 收紧 7 本债务账本（redlines / deadcode / design-tokens / i18n-unused / doc-drift / jscpd-go / layering）到今日实数, 多 AI 并行会话期改动被 worktree reset 冲掉 |
 | 🍃 experience | 发版冒烟组——CI 同口径预演（ADR-318） | leaf | — | 发版前预演 CI（tag 推送前）, lockfile 与 package.json 是否同步存疑, Go 文件 import OS 专属包要确认 build 标签, 发版 CI 连红要本地快速定位口径差 |
-| 🏗 extensibility-index | 可拓展点发掘索引（extensibility inventory） | architecture | — | 可拓展点, 扩展入口, 硬编码, 重复实现, 插件化 |
 | 🏗 extensibility-round2 | 拓展点 / 扩展入口 探索报告（Round 2） | architecture | — | 新增资源类型, 新增文件格式, 新增网页桥接, 新增同步逻辑, 残留手改清单, 拓展点探索 |
 | 🏗 gate-chain-map | 门禁委托链全景图（四入口横向拼图） | architecture | — | 门禁委托链, 找门禁流程, 钩子在哪拦, 为什么还能提交, 哪个入口阻断, 门禁总览, 门禁块写法, 新块怎么写 |
 | 🍃 orphan-export-scanner | 孤儿导出检测器（扫描盲区） | leaf | — | 修改 check-orphan-exports.ts 扫描逻辑, 门禁报孤儿导出，判定是真死代码还是扫描漏检, 新增 export * 转发壳 / 测试包装函数后复核孤儿读数 |

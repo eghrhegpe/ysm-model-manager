@@ -3,7 +3,7 @@
 - **状态**：✅ 已采纳
 - **日期**：2026-08-15
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`docs/knowledge/extensibility-index.md 6.9b`、`go/updater/updater.go:503-531`（`isNewer`/`splitVer`）、`go/updater/updater_test.go`
+- **相关**：`docs/archive/extensibility-index.md 6.9b`、`go/updater/updater.go:503-531`（`isNewer`/`splitVer`）、`go/updater/updater_test.go`
 
 ---
 
@@ -48,6 +48,6 @@
 
 ## 4. 数据溯源
 
-来源：`docs/knowledge/extensibility-index.md` 6.9b（updater 手写 semver，索引自评「接入库/预发布语义属行为变更另议」）→ 结果：ADR-063 立项，编码按 §2 分阶段（库接入 → 语义对齐 → 测试钉住 → 行为门控确认）。
+来源：`docs/archive/extensibility-index.md` 6.9b（updater 手写 semver，索引自评「接入库/预发布语义属行为变更另议」）→ 结果：ADR-063 立项，编码按 §2 分阶段（库接入 → 语义对齐 → 测试钉住 → 行为门控确认）。
 
 <!-- 文件名: updater-semver-semantics.md → 实际文件 ADR-063-updater-semver-semantics.md -->

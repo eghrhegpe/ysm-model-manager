@@ -2494,10 +2494,6 @@ export const autoSidebar = [
             "link": "/knowledge/experience"
           },
           {
-            "text": "可拓展点发掘索引（extensibility inventory）",
-            "link": "/knowledge/extensibility-index"
-          },
-          {
             "text": "拓展点 / 扩展入口 探索报告（Round 2）",
             "link": "/knowledge/extensibility-round2"
           },

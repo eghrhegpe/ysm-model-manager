@@ -3,7 +3,7 @@
 - **状态**：✅ 已采纳
 - **日期**：2026-08-15
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`docs/knowledge/extensibility-index.md 6.7/4.4/1.9a`、`go/types/config.go`、`go/scanner/scanner.go:46`、`go/download/download.go:26`、`go/logs/logs.go:18,21,27`、`go/logs/runtime.go:11`、`go/fileops/fileops.go:20`、`frontend/src/features/version-updater.ts:24,26`、`frontend/src/backend/web-store.ts:33-34`、`internal/app/app.go`（启动注入 `LoadAppConfig`）
+- **相关**：`docs/archive/extensibility-index.md 6.7/4.4/1.9a`、`go/types/config.go`、`go/scanner/scanner.go:46`、`go/download/download.go:26`、`go/logs/logs.go:18,21,27`、`go/logs/runtime.go:11`、`go/fileops/fileops.go:20`、`frontend/src/features/version-updater.ts:24,26`、`frontend/src/backend/web-store.ts:33-34`、`internal/app/app.go`（启动注入 `LoadAppConfig`）
 
 ---
 
@@ -65,6 +65,6 @@
 
 ## 4. 数据溯源
 
-来源：`docs/knowledge/extensibility-index.md` 6.7（阈值下沉 AppConfig）、4.4（检查间隔进设置）、1.9a（日志容量参数化）→ 结果：ADR-062 立项，编码按 §2 分阶段落地（Go 字段先行 → 各包注入点 → 前端设置页）。
+来源：`docs/archive/extensibility-index.md` 6.7（阈值下沉 AppConfig）、4.4（检查间隔进设置）、1.9a（日志容量参数化）→ 结果：ADR-062 立项，编码按 §2 分阶段落地（Go 字段先行 → 各包注入点 → 前端设置页）。
 
 <!-- 文件名: appconfig-configurable-thresholds.md → 实际文件 ADR-062-appconfig-configurable-thresholds.md -->

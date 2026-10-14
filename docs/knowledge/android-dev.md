@@ -1,3 +1,37 @@
+---
+kind: android-dev
+name: Android 开发手册（ADR-046 P2）
+tier: architecture
+category: config
+status: active
+last_verified: 2026-10-14
+source_files:
+  - scripts/android-build.ts
+  - scripts/android-install.ts
+  - scripts/_lib/android-sdk.ts
+invariant_anchors:
+  - scripts/_lib/android-sdk.ts|findSdkRoot
+  - scripts/_lib/android-sdk.ts|compareNdkVersion
+  - scripts/android-build.ts|hostTag
+use_when:
+  - Android 打包 / 安装 APK / NDK 交叉编译链路不清
+  - Android 端按钮行为与桌面差异要查（目录选择器 / 文件选择 / 返回键）
+  - 存储授权闭环、Java→JS 事件通道怎么接
+  - 新脚本要定位 SDK/NDK/adb（禁止另抄探测链）
+quick_groups:
+  - 门禁与脚本
+quick_intents:
+  - android 打包
+  - APK 构建
+  - NDK SDK 定位
+  - 安卓适配按钮清单
+pitfalls:
+  - Java→JS 事件必须走 emitEvent（CustomEvent），emitSystemEvent 仅达 Go 侧永不到前端
+  - SDK 定位单一事实源 = scripts/_lib/android-sdk.ts 三级探测链，各脚本抄一份必分叉（2026-10-10 锐评收编）
+quick_risk_lines:
+  - Android 采用「授权 + 自动定位公共目录」查看器模式，目录选择器被有意放弃（Wails 官方拒绝 SAF 目录选择），勿"顺手"补目录选择器
+---
+
 # Android 开发手册（ADR-046 P2）
 
 > 面向在 ysm-model-manager 上做 Android 适配的开发者（人类 + AI）。本手册是 Android 开发的**枢纽总览**：
@@ -18,9 +52,9 @@ Android 端模型仓库 = **公共目录固定路径**（`internal/app/pathmgr_a
 | 方向 | 通道 | 实现 |
 |------|------|------|
 | JS → Java | `window.wails.*`（`addJavascriptInterface` 注册） | `WailsJSBridge.java`；前端唯一入口 `getAndroidBridge()`（`frontend/src/backend/platform.ts`，ADR-203 D2 并入；桌面无桥返回 null） |
-| Java → JS | `bridge.emitEvent` → JNI `nativeEmitEvent` → Wails **CustomEvent** 通道（**勿用 `emitSystemEvent`，后者仅达 Go 侧、永不到前端**） | 前端 `Events.On(...)`（`@wailsio/runtime`），集中消费在 `frontend/src/core/handlers/android-events.ts` |
+| Java → JS | `bridge.emitEvent` → JNI `nativeEmitEvent` → Wails **CustomEvent** 通道（**勿用 `emitSystemEvent`，后者仅达 Go 侧、永不到前端**） | 前端 `Events.On(...)`（`@wailsio/runtime`），集中消费在 `frontend/src/features/platform/android-events.ts` |
 
-「目录/路径类」按钮的 Android 分支**统一复用** `resolveAndroidRepoDir()`（`frontend/src/utils/dom/directory-picker.ts`）——
+「目录/路径类」按钮的 Android 分支**统一复用** `resolveAndroidRepoDir()`（`frontend/src/backend/directory-picker.ts`）——
 授权引导 + 定位公共仓库目录 + toast 提示路径，禁止各调用方自行复制该逻辑。
 
 ## 按钮级适配清单
@@ -103,14 +137,12 @@ Wails v3 官方 `dialogs_android.go` **明确拒绝 Android 目录选择**（SAF
 | `FileChooserParams.MODE_OPEN_DIRECTORY` **不存在** | android-34 API 仅 `MODE_OPEN` / `MODE_OPEN_MULTIPLE` / `MODE_SAVE`，引用即编译失败 |
 | 平台数据根缺失时 `configDir()`/`configPath()` 退化相对路径 | **已修**：`appDataRoot()` 为空 → 返回空串 + `saveConfig` fail-fast（曾导致 `mkdir YSM-Model-Manager: read-only file system`——CWD=/ 只读）；守卫见 `TestConfigDir_NoRelativeFallback` |
 | 设置页游戏根目录/链接模式卡片 | **已修**：Android（`getAndroidBridge()` 存在）`settingsHTML` 隐藏两卡片（无 Minecraft Java 版/无整合包概念，查看器模式）；相关绑定均有 null 守卫 |
-| 平台数据根缺失时 `configDir()`/`configPath()` 退化相对路径 | **已修**：`appDataRoot()` 为空 → 返回空串 + `saveConfig` fail-fast（曾导致 `mkdir YSM-Model-Manager: read-only file system`——CWD=/ 只读）；守卫见 `TestConfigDir_NoRelativeFallback` |
-| 设置页游戏根目录/链接模式卡片 | **已修**：Android（`getAndroidBridge()` 存在）`settingsHTML` 隐藏两卡片（无 Minecraft Java 版/无整合包概念，查看器模式）；相关绑定均有 null 守卫 |
 | WebView 默认无 `onShowFileChooser` | `<input type="file">` 点击静默无反应（已修：MainActivity 自制，`onActivityResult` 单例回调防悬挂） |
 | `webkitdirectory` 不生效 | Android WebView 不支持目录选择；`dl-folder-input` 在触屏不可达（Ctrl+点击），无需处理 |
 | 外链导航被 WebView 吞掉 | 已修：`shouldOverrideUrlLoading` → 非 wails.localhost 抛系统浏览器 `ACTION_VIEW` |
 | Android 13+ 返回键弃用 `onBackPressed` | 预测性返回：manifest `enableOnBackInvokedCallback="true"` + `OnBackInvokedDispatcher`（低版本仍走 `onBackPressed` 覆写） |
 | 配置/标签落盘 | `AppDataRoot` 优先沙盒私有目录（Android 上唯一可靠落点），禁止退化为文件系统根 `/` |
-| Java→JS 系统事件必须走 `emitEvent`（CustomEvent）而非 `emitSystemEvent`（ApplicationEvent） | wails v3.0.0-alpha2.105 中 `emitSystemEvent` 仅投 Go 侧 `applicationEvents` 通道、永不到达 WebView；白名单 `androidSystemEventTypes` 也不含 `android:back`/`storage:permissionGranted`（命中即被丢弃）。**后果（P1-1，已修）**：返回键提示/存储授权重扫/断网提示全部失效。修复：`MainActivity.java` 9 处 `emitSystemEvent` 全改 `emitEvent`；回归测试 `frontend/src/core/handlers/android-events.test.ts` |
+| Java→JS 系统事件必须走 `emitEvent`（CustomEvent）而非 `emitSystemEvent`（ApplicationEvent） | wails v3.0.0-alpha2.105 中 `emitSystemEvent` 仅投 Go 侧 `applicationEvents` 通道、永不到达 WebView；白名单 `androidSystemEventTypes` 也不含 `android:back`/`storage:permissionGranted`（命中即被丢弃）。**后果（P1-1，已修）**：返回键提示/存储授权重扫/断网提示全部失效。修复：`MainActivity.java` 9 处 `emitSystemEvent` 全改 `emitEvent`；回归测试 `frontend/src/features/platform/android-events.test.ts` |
 
 ## 相关
 

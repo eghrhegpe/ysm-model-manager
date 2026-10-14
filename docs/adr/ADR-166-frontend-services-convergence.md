@@ -14,7 +14,7 @@
 - `registry.ts → services/resource-registry.ts` 是纯前端 services 层搬迁（零行为变更），但它是 **dedup 会话工厂** 与 **path-cards** 的直接 import 源：
   - `frontend/src/views/app-content/diagnostics/dedup.ts`（`createDedupSession` 会话工厂）读 `utils/resource/registry.ts` + Go 绑定（`docs/knowledge/app-content-diagnostics.md:112`）。
   - `frontend/src/views/app-content/settings/path-cards.ts` 用 `utils/resource/registry`（`docs/knowledge/app-content-settings.md:94`）。
-- `recycle-bin` 为前端 UI 收敛：消费 Go `go/recycle` 绑定（`ListRecycleBin`/`RestoreFromRecycle`/`EmptyRecycleBin`，`docs/knowledge/context-menu.md:123`），**不触及 `go/fsutil`/`IsRecycleDir`**；与 `oldest-models.ts` 存在 `useCurrentResourceType` 重复实现（`docs/knowledge/extensibility-index.md:223`）。
+- `recycle-bin` 为前端 UI 收敛：消费 Go `go/recycle` 绑定（`ListRecycleBin`/`RestoreFromRecycle`/`EmptyRecycleBin`，`docs/knowledge/context-menu.md:123`），**不触及 `go/fsutil`/`IsRecycleDir`**；与 `oldest-models.ts` 存在 `useCurrentResourceType` 重复实现（`docs/archive/extensibility-index.md:223`）。
 
 既有痛点：`utils/resource/registry.ts` 路径漂移、recycle-bin / path-cards 各自重复 `useCurrentResourceType`、path-cards 主题 `|| "dark"` 非法默认值（`extensibility-index.md:337`）、recycle-bin 高交互路径零 e2e（`frontend-test-audit.md:94`）。
 
@@ -50,7 +50,7 @@
 - registry 消费者实证（grep）：`app-content-diagnostics.md:112`、`app-content-settings.md:94`、`frontend/src/app-modules.boot.test.ts`、`views/app-tree/bus-handlers.ts`、`views/app-sidebar`、`preview-3d/state/preview-state.ts`、`backend/web-common.ts`
 - dedup 红线：`docs/knowledge/app-content-diagnostics.md:51/82`；Go 契约 `ADR-119` P1 + `docs/knowledge/go-dedup.md:33`
 - recycle-bin 绑定契约：`docs/knowledge/context-menu.md:123`；重复实现 `extensibility-index.md:223`；e2e 缺口 `frontend-test-audit.md:94`
-- path-cards 主题漂移：`docs/knowledge/extensibility-index.md:337`、`app-content-settings.md:152`
+- path-cards 主题漂移：`docs/archive/extensibility-index.md:337`、`app-content-settings.md:152`
 - 治理基线：`AGENTS.md` 收敛闭环（子代理审核 → CodeReview → pre-commit 自动检测）；`ADR-044` 策略 C 机制锚核对；`ADR-109` 三份 Checklist
 
 <!-- 文件名: frontend-services-convergence.md → 实际文件 ADR-166-frontend-services-convergence.md -->

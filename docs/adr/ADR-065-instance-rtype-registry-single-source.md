@@ -3,7 +3,7 @@
 - **状态**：✅ 已采纳
 - **日期**：2026-08-15
 - **决策人**：Jieling（人类首席架构师）、AI 代理
-- **相关**：`docs/knowledge/extensibility-index.md`、`go/sync/sync_push.go:79`、`go/sync/sync.go:286`、`go/instance/instance.go:41`、`go/sync/sync_relink.go:78`、`go/importer/importer_file.go:71`、`go/ysm/ysm.go:102,135`、ADR-064（同步层对比收敛，互补）
+- **相关**：`docs/archive/extensibility-index.md`、`go/sync/sync_push.go:79`、`go/sync/sync.go:286`、`go/instance/instance.go:41`、`go/sync/sync_relink.go:78`、`go/importer/importer_file.go:71`、`go/ysm/ysm.go:102,135`、ADR-064（同步层对比收敛，互补）
 
 ---
 
@@ -58,6 +58,6 @@
 
 ## 4. 数据溯源
 
-来源：用户反馈「资源文件已映射整合包配置文件，但哈希/扫描/识别逻辑独立折腾，修好蓝图 MMD 识别不出来」+ `docs/knowledge/extensibility-index.md`（多模块 rtype 硬编码）→ 探索定位 6 处硬编码分支与同函数双标准（sync_push.go:69 vs 79）→ 结果：ADR-065 立项，编码按 §2 分阶段落地（先 sync 两处 → ysm.json 特判三处 → 审计闸门）。
+来源：用户反馈「资源文件已映射整合包配置文件，但哈希/扫描/识别逻辑独立折腾，修好蓝图 MMD 识别不出来」+ `docs/archive/extensibility-index.md`（多模块 rtype 硬编码）→ 探索定位 6 处硬编码分支与同函数双标准（sync_push.go:69 vs 79）→ 结果：ADR-065 立项，编码按 §2 分阶段落地（先 sync 两处 → ysm.json 特判三处 → 审计闸门）。
 
 <!-- 文件名: instance-rtype-registry-single-source.md → 实际文件 ADR-065-instance-rtype-registry-single-source.md -->

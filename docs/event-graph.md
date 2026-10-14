@@ -370,10 +370,10 @@
 |------|------|----|
 | checkUpdateSilent | `frontend/src/features/maintenance/version-updater.ts` | 187 |
 | toast | `frontend/src/utils/dom/toast.ts` | 18 |
-| bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 60 |
-| bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 96 |
-| bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 118 |
-| bindDragEvents | `frontend/src/views/app-content/site/drag.ts` | 127 |
+| handleCreatorJson | `frontend/src/views/app-content/site/drag.ts` | 47 |
+| handleSiteJson | `frontend/src/views/app-content/site/drag.ts` | 73 |
+| handleDropJson | `frontend/src/views/app-content/site/drag.ts` | 113 |
+| handleDropJson | `frontend/src/views/app-content/site/drag.ts` | 124 |
 | eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 189 |
 | eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 227 |
 | eeBindToolbarBtns | `frontend/src/views/app-content/site/edit.ts` | 234 |

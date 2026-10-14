@@ -254,6 +254,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-342：整合包重链接的实例数据保全与目录身份复验",
+        "link": "/adr/architecture/ADR-342-relink-preserve-instance-files"
+      },
+      {
         "text": "ADR-341：busy 语义归一——互斥锁唯一形态 BusyLock",
         "link": "/adr/architecture/ADR-341-busy-lock-unification"
       },

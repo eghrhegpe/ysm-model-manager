@@ -63,7 +63,17 @@ func (a *App) ExportModelStructureJSON(modelPath string) string {
 // ========== 高级搜索 ==========
 // SearchModels 扫描模型条目后按关键词、骨骼数、立方体数、纹理尺寸范围过滤。
 // 并发优化：关键词预过滤后，用 goroutine 池并行 AnalyzeBedrockModel（I/O + CPU 混合型）。
-// 参数固定 8 个，新增过滤维度走 types.SearchFilters struct（技术债，后续 ADR 封装）。
+// 参数固定 8 个，新增过滤维度走 types.SearchFilters struct（ADR-183 暂缓，ADR-343 刀 4）。
+//
+// 分流语义（ADR-343 刀 2，2026-10-14 数据实证修正——4 条目实证库证明旧实现的
+// 「BoneCount==0 无条件排除」让关键词独占搜也静默丢掉无几何条目的半仓结果）：
+//   - 数值条件未设置（6 范围全 0）：跳过几何分析、不做排除——关键词/标签匹配的全部
+//     候选条目直接入结果（几何字段全零，omitempty 消费端 = 无几何数据）。无解析
+//     能力条目（资源包/音效包/MMD 等）不再蒸发；
+//   - 数值条件已设置：按 entry.Type 分流（刀 1 派生，registry GeometrySearchable
+//     声明，单点出口 typereg.IsGeometrySearchableID）——仅几何系条目进分析器 + 范围
+//     过滤；非几何系条目被数值条件显式排除且不跑分析器（不白解析、不触发 WASM
+//     失败日志），与 adv-filter 数值区展示门控（A 案）同口径。
 func (a *App) SearchModels(filesRoot string, keyword string, minBones, maxBones, minCubes, maxCubes, minTex, maxTex int) []types.SearchResult {
 	entries := a.ScanModelEntries(filesRoot)
 	if len(entries) == 0 {
@@ -87,11 +97,43 @@ func (a *App) SearchModels(filesRoot string, keyword string, minBones, maxBones,
 		return nil
 	}
 
-	// Phase 2：并发分析 + 过滤
-	if len(candidates) <= 2 {
-		return a.searchModelsSequential(candidates, minBones, maxBones, minCubes, maxCubes, minTex, maxTex)
+	// Phase 2 分流（ADR-343 刀 2）：0 = 未设置（与前端 parseFilterNumber 的「0 = 不限」同口径）
+	hasNumeric := minBones > 0 || maxBones > 0 || minCubes > 0 || maxCubes > 0 || minTex > 0 || maxTex > 0
+	if !hasNumeric {
+		// 无数值条件：几何分析无意义（且旧实现的首行排除在此场景属误伤）——
+		// 候选全量直通，几何字段全零
+		return searchModelsUnanalyzed(candidates)
 	}
-	return a.searchModelsConcurrent(candidates, minBones, maxBones, minCubes, maxCubes, minTex, maxTex)
+	// 数值条件：仅几何系条目（registry 声明）进分析器
+	var geoCandidates []types.ModelEntry
+	for _, c := range candidates {
+		if typereg.IsGeometrySearchableID(c.Type) {
+			geoCandidates = append(geoCandidates, c)
+		}
+	}
+	if len(geoCandidates) == 0 {
+		return nil
+	}
+
+	// 并发优化：候选 > 2 用 goroutine 池并行 AnalyzeBedrockModel（I/O + CPU 混合型）
+	if len(geoCandidates) <= 2 {
+		return a.searchModelsSequential(geoCandidates, minBones, maxBones, minCubes, maxCubes, minTex, maxTex)
+	}
+	return a.searchModelsConcurrent(geoCandidates, minBones, maxBones, minCubes, maxCubes, minTex, maxTex)
+}
+
+// searchModelsUnanalyzed 无数值条件直通（ADR-343 刀 2）：候选全量入结果，几何字段全零
+// （SearchResult 零值，消费端 omitempty = 「无几何数据」）。Name 主键稳定排序与分析路径
+// 口径一致（消费端 buildTree 白名单是 Set，顺序无关；排序只为确定性契约）。
+func searchModelsUnanalyzed(entries []types.ModelEntry) []types.SearchResult {
+	results := make([]types.SearchResult, 0, len(entries))
+	for _, e := range entries {
+		results = append(results, types.SearchResult{Name: e.Name, Path: e.Path})
+	}
+	sort.SliceStable(results, func(i, j int) bool {
+		return results[i].Name < results[j].Name
+	})
+	return results
 }
 
 // searchModelsSequential 顺序分析（候选 <= 2 时，goroutine 开销不划算）

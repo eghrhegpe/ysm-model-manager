@@ -201,7 +201,7 @@ status: active
 
 **边界取舍（下次会话勿误判为 bug）**：缓存键按"剥离后缀后的 path"计算，因此同一文件在 `.ban` ↔ 正常之间切换会产生**两条独立键**各自命中（而非共享）。属可接受代价——`.ban`/`.disabled` 切换本就改变 scannable 归属语义，且 `ClearScanCache` 在导入/下载后统一清掉，不会长期分裂。
 
-**`benchmark` 命令每迭代清缓存测冷启动**（锐评 2026-10-09）：`go/cli/model.go|runBenchmark` 的 B1 扫描 / B2 全量搜索 / B3 关键词搜索**每迭代首行调 `ClearScanCache`**——原实现 `AppService` 未声明 `ClearScanCache`（`go/cli/appservice.go`），迭代 2 起命中 `ScanModelEntries` 30s 缓存 + `geoCache`，扫描/搜索基准**计时失真**（测的是缓存命中后的热性能，非冷启动）。代价是每次迭代真实扫盘，正是基准要测的。`single-bench`（`perf_snapshot.go|runBenchIterations`）是单模型 N 轮基准，与本命令无关。
+**`benchmark` 命令每迭代清缓存测冷启动**（锐评 2026-10-09）：`go/cli/model.go|runBenchmark` 的 B1 扫描 / B2 全量搜索 / B3 关键词搜索**每迭代首行调 `ClearScanCache`**——原实现 `AppService` 未声明 `ClearScanCache`（`go/cli/appservice.go`），迭代 2 起命中 `ScanModelEntries` 30s 缓存 + `geoCache`，扫描/搜索基准**计时失真**（测的是缓存命中后的热性能，非冷启动）。代价是每次迭代真实扫盘，正是基准要测的。`single-bench`（`perf_snapshot.go|runBenchIterations`）是单模型 N 轮基准，与本命令无关。**⚠️ 刀 2 后语义位移（2026-10-14）**：B2/B3 不带数值条件 → 走直通路径**不再触发几何分析**——B2 已收敛为「扫描 + 直通」成本（~18ms 量级），全量几何分析成本改由 B4 单模型分析 / `single-bench` 度量；读旧基准数据（B2 冷 ~580ms）时注意那是刀 2 前的「搜索隐式全库解析」口径。
 
 **全量扫描 Type 派生（ADR-343 刀 1 已落地，2026-10-14）**：`app_scan.go|fillEntryTypes` 在 `scanModelEntriesWithHit` 末尾为全量扫描条目填 `ModelEntry.Type`——判定单一事实源 = registry + 内容指纹（复用既有分类器，不新写判定逻辑）：裸扩展名走 `packs.DetectResourceType`（嵌套/location/扩展名三段，零 I/O，多声明者 (priority desc, id asc) 确定性裁决，与导入 classifyForScan 同口径）；容器扩展名（.zip/.7z）经 `containerCache` 指纹缓存（modtime/size 变即重核验，避免逐扫重开归档），内容未识别回 `container` 诚实占位（ClassifyResource 的 ClassContainer，不猜）。性能门禁实测（混合类型实证库，`scan-bench`/`benchmark` 前后对照）：B1 扫描 ~13ms→~17ms（+5ms = 容器指纹冷开档，热态归零）、B2 全量搜索冷 ~580→620ms（+40ms，≤800ms 门槛内）、B3 关键词搜索不变——成本面受控。测试 `app_scan_typefill_test.go`（7 条目表驱动：单声明者 / location 消歧 / 多声明者确定性裁决 / 容器指纹 / container 占位 + Filtered 路径 rtype 覆盖不受破坏）。
 **与前端 `SearchResult.Type` 字段的关系（查证根因，非「补一行即可」的死路待办）**：`types.go` 的 `SearchResult.Type` 标了 `omitempty`，`SearchModels` 从不填——搜索结果（SearchResult）与扫描条目（ModelEntry）是两个结构体，刀 1 填的是**条目**侧；搜索结果带类型属刀 3（`SearchResult.Type` 收口，经 `SearchFilters` 契约变更落地）。当前 `SearchResult.Type` 仍为预留位，不要误判为"补一行 `entry.Type` 即可"，也暂不应删除（收口方案 [ADR-343 跨类型搜索收口](../adr/architecture/ADR-343-cross-type-search.md)：四刀中刀 1 已落地，刀 2–4 未动；注意 ADR-183 是 8 参数封装的暂缓决策、不覆盖 Type 语义，原句误挂 ADR-183，2026-10-14 修正）。
@@ -217,7 +217,10 @@ status: active
 ## 不变量
 
 - **前端不重算**：搜索过滤在 Go 执行，前端只负责参数组装与白名单回填（AGENTS 红线）
-- **`BoneCount==0` 硬排除是无条件的（2026-10-14 实证，数据入 ADR-343 §1）**：`modelMatchesFilters` 首行排除与「是否设数值条件」无关——**纯关键词搜索**（6 范围全 0）同样静默排除无几何管线条目（4 条目实证库：无过滤搜索仅回 2 条，资源包/音效包 2 条 zip 蒸发无告警；WASM 解码失败日志 `[ysm-wasi] 解码失败` 是唯一线索）。A 案门控只覆盖「弹窗数值区」；「无解析类型条目在任何 SearchModels 调用中不得被几何排除」归 ADR-343 刀 2 语义修正
+- **`BoneCount==0` 排除已改数值条件化（ADR-343 刀 2 落地，2026-10-14）**：旧实现 `modelMatchesFilters` 首行无条件排除，让「不带任何过滤的关键词独占搜」也静默丢掉无几何条目的半仓结果（4 条目实证库蒸发 2 条 zip，数据在案）。现 `SearchModels` 双路径：
+  - **无数值条件（6 范围全 0）→ `searchModelsUnanalyzed` 直通**：候选全量零值几何返回（不跑分析器、不蒸发；消费端 omitempty = 无几何数据）；
+  - **数值条件已设置 → 按 entry.Type 分流**（刀 1 派生 + 单点出口 `registry.IsGeometrySearchableID`，ysm/maid-model 进分析器，非几何系显式排除且不白解析）。
+  实测：同一实证库无过滤搜索 2/4 → **4/4** 条；B2 全量搜索冷 ~580ms → ~18ms（32x，几何分析成本移出搜索、归位显式分析路径），B3 关键词搜索 ~155ms → ~17ms。测试 `app_scan_search_dispatch_test.go`（未知 zip 不蒸发 / 数值排除 container 占位 / maid 端到端命中）+ `TestSearchModels_ZeroBoneFilter` 双语义拆断言
 - **三路任一失败不阻塞**：tag 失败取消该路、SearchModels 抛错清空过滤——保证降级可用而非假绿
 - **Worker 系统级降级必须可见**：toast + ⚠️ 角标 3s 提示用户数值条件已被忽略（仅系统级故障；挂死类局部故障走模型级 `hasError` 细粒度降级，无 toast，ADR-219 D3）
 - **debounce 150ms**：inline 搜索防高频触发，仅做文本匹配不触后端

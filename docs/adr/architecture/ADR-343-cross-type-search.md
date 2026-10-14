@@ -1,6 +1,6 @@
 # ADR-343：跨类型搜索收口（Type 派生 + 分析器分流 + SearchFilters）
 
-- **状态**：🔄 部分采纳（刀 1 全量扫描 Type 派生已落地 2026-10-14，性能门禁实测在案；刀 2–4 未动工——实施进度见知识卡 `search.md`）
+- **状态**：🔄 部分采纳（刀 1 全量扫描 Type 派生 + 刀 2 分流与无条件排除修正已落地 2026-10-14，性能门禁与蒸发修复数据在案；刀 3–4 未动工——实施进度见知识卡 `search.md`）
 - **日期**：2026-10-14
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **准入理由**：公共契约变更（Wails 绑定 + SearchResult 语义）且跨域影响面大、难逆转
@@ -48,7 +48,7 @@
 
 **已知遗留**：
 - `geometrySearchable` 的 maid-model 声明已由真实数据实证（2026-10-14）：`upstream` 区 TLM 女仆包（13.5MB zip）→ `ParseFromZip` L0 清单 143 条出几何，CLI 全链路 `search --min-bones 1` 实测 **12903 骨骼 / 13710 立方体**；永久守卫 `go/geometry/archive_maid_fixture_test.go`（fixture 在 gitignored 的 upstream 样本区，缺失即 skip，本地有样本时钉死「真实包出非空几何 + SubModels 派生」）。实证数据块见知识卡 `go-geometry-maid-l0`。
-- MMD（.pmx/.pmd/.vrm/.fbx）数值管线无任何解析链路（`AnalyzeBedrockModel` 无对应分支），数值语义待刀 2 立项；本地样本区无 MMD 包，负对照以资源包/音效包 zip 代替（实证库同批）。
+- MMD（.pmx/.pmd/.vrm/.fbx）数值管线无任何解析链路（`AnalyzeBedrockModel` 无对应分支），刀 2 对 MMD 维持「只开放关键词 + 标签路」（数值语义单独立项）；本地样本区无 MMD 包，负对照以资源包/音效包 zip 代替（实证库同批）。
 
 ## 4. 数据溯源
 
@@ -57,5 +57,6 @@
 - ADR-183：8 参数封装暂缓决策（本 ADR 第 4 刀取代其「下轮路径」）
 - 知识卡 `search.md`「查证根因」段：Type 死字段是架构路径决定的，须先做全量 Type 派生——本 ADR 第 1 刀即该前置
 - 性能基线（刀 1 成本门禁）：2026-10-14 混合类型实证库（`upstream` 真实样本构造）`scan-bench` + `benchmark --iterations 3` 实测：扫描中位 13ms / 全量搜索冷 580–620ms 热 ~170ms / 关键词搜索 ~155ms（复现：取 1 个 TLM 女仆 zip + 1 个真实 .ysm + 2 个无几何 zip 作 files-root）
+- 刀 2 实测（2026-10-14 同批，CLI 端到端 + 基准对照）：无过滤搜索 2/4 → **4/4 条**（蒸发修复）；数值搜索维持 2/4 且命中真实几何（maid 12903 骨骼）；基准位移 B2 冷 ~580ms → ~18ms（32x，分析成本归位显式路径）、B3 ~155ms → ~17ms。测试 `internal/app/app_scan_search_dispatch_test.go`（未知 zip 不蒸发 / container 占位数值排除 / maid 端到端命中）钉死语义
 
 <!-- 文件名: cross-type-search.md → 实际文件 architecture/ADR-343-cross-type-search.md（ADR-320 architecture 全量模板） -->

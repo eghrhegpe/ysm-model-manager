@@ -623,7 +623,8 @@ func TestSearchModels_ModelMatchesFilters(t *testing.T) {
 	}
 }
 
-// TestSearchModels_SequentialPath: 候选 <= 2 走顺序路径
+// TestSearchModels_SequentialPath: 数值条件 + 候选 <= 2 走顺序分析路径
+// （ADR-343 刀 2 后：无数值条件走直通不分析，本测试改挂 minBones=1 保持「分析 + 顺序路径」意图）
 func TestSearchModels_SequentialPath(t *testing.T) {
 	base := t.TempDir()
 	ysmRoot := filepath.Join(base, "ysm", "models")
@@ -632,7 +633,7 @@ func TestSearchModels_SequentialPath(t *testing.T) {
 	writeYsmModelFixture(t, ysmRoot, "tiny", 1)
 
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
-	results := a.SearchModels(base, "", 0, 0, 0, 0, 0, 0)
+	results := a.SearchModels(base, "", 1, 0, 0, 0, 0, 0)
 	if len(results) < 2 {
 		t.Fatalf("至少应有 2 个结果，got %d", len(results))
 	}
@@ -707,7 +708,8 @@ func TestSearchModels_BoneFilter(t *testing.T) {
 	}
 }
 
-// TestSearchModels_ConcurrentConsistency: 并发路径全量搜索有效
+// TestSearchModels_ConcurrentConsistency: 数值条件 + 候选 > 2 走并发分析路径
+// （刀 2：无数值条件走直通，本测试挂 minBones=1 保持「并发分析 + 几何非零」意图）
 func TestSearchModels_ConcurrentConsistency(t *testing.T) {
 	base := t.TempDir()
 	ysmRoot := filepath.Join(base, "ysm", "models")
@@ -719,7 +721,7 @@ func TestSearchModels_ConcurrentConsistency(t *testing.T) {
 
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
 
-	results := a.SearchModels(base, "", 0, 0, 0, 0, 0, 0)
+	results := a.SearchModels(base, "", 1, 0, 0, 0, 0, 0)
 	if len(results) != n {
 		t.Fatalf("期望 %d 个结果，got %d", n, len(results))
 	}
@@ -907,7 +909,9 @@ func TestSearchModels_DeterministicOrder_SameName(t *testing.T) {
 	}
 }
 
-// TestSearchModels_ZeroBoneFilter: 零骨骼模型被过滤
+// TestSearchModels_ZeroBoneFilter: 零骨骼模型的双语义（ADR-343 刀 2）
+// - 无数值条件：直通路径零骨骼模型照返（旧「无条件排除」的误伤面已修——空几何 ≠ 坏模型）
+// - 数值条件（minBones=1）：零骨骼不满足范围，仍被过滤
 func TestSearchModels_ZeroBoneFilter(t *testing.T) {
 	base := t.TempDir()
 	ysmRoot := filepath.Join(base, "ysm", "models")
@@ -922,18 +926,31 @@ func TestSearchModels_ZeroBoneFilter(t *testing.T) {
 	writeYsmModelFixture(t, ysmRoot, "valid_model", 5)
 
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
+
+	// 无数值条件：直通路径两个模型都返回（空几何零值，不蒸发）
 	results := a.SearchModels(base, "", 0, 0, 0, 0, 0, 0)
-	// 空骨骼模型应被过滤（BoneCount=0，modelMatchesFilters 返回 false）
+	if len(results) != 2 {
+		t.Fatalf("无数值条件应返回全部 2 条（空几何不蒸发），got %d", len(results))
+	}
+	for _, r := range results {
+		if strings.Contains(r.Path, "empty_model") && r.BoneCount != 0 {
+			t.Errorf("空几何模型 BoneCount 应为 0（零值直通），got %d", r.BoneCount)
+		}
+	}
+
+	// 数值条件：空骨骼模型不满足 minBones=1，仍被过滤
+	results = a.SearchModels(base, "", 1, 0, 0, 0, 0, 0)
 	if len(results) != 1 {
-		t.Fatalf("空骨骼模型应被过滤，仅 1 个有效结果，got %d", len(results))
+		t.Fatalf("minBones=1 应过滤空骨骼模型，仅 1 个有效结果，got %d", len(results))
 	}
 	if !strings.Contains(results[0].Path, "valid_model") {
 		t.Errorf("唯一有效结果应为 valid_model, got path %s", results[0].Path)
 	}
 }
 
-// TestSearchModels_GeoCacheHit: 二次搜索复用几何缓存（不重算）+ 结果一致。
+// TestSearchModels_GeoCacheHit: 数值条件搜索复用几何缓存（不重算）+ 结果一致。
 // 证明 geoCache 接入 AnalyzeBedrockModel 后对搜索正确性零影响、且第二次命中缓存。
+// （刀 2：挂 minBones=1 触发分析路径——无数值条件走直通不产生缓存写入，本测试意图保持）
 func TestSearchModels_GeoCacheHit(t *testing.T) {
 	base := t.TempDir()
 	ysmRoot := filepath.Join(base, "ysm", "models")
@@ -946,7 +963,7 @@ func TestSearchModels_GeoCacheHit(t *testing.T) {
 
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
 
-	first := a.SearchModels(base, "", 0, 0, 0, 0, 0, 0)
+	first := a.SearchModels(base, "", 1, 0, 0, 0, 0, 0)
 	if len(first) != 3 {
 		t.Fatalf("期望 3 个结果，got %d", len(first))
 	}
@@ -958,7 +975,7 @@ func TestSearchModels_GeoCacheHit(t *testing.T) {
 	}
 
 	// 二次搜索（仅换关键词，几何不变）：结果一致性 + 仍命中缓存
-	second := a.SearchModels(base, "war", 0, 0, 0, 0, 0, 0)
+	second := a.SearchModels(base, "war", 1, 0, 0, 0, 0, 0)
 	if len(second) != 1 || second[0].Name != "warrior" {
 		t.Fatalf("二次关键词搜索应只命中 warrior，got %+v", second)
 	}
@@ -982,7 +999,8 @@ func TestClearScanCache_InvalidatesGeoCache(t *testing.T) {
 	writeYsmModelFixture(t, ysmRoot, "warrior", 5)
 
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
-	results := a.SearchModels(base, "", 0, 0, 0, 0, 0, 0)
+	// 刀 2：几何缓存写入只发生在数值条件路径（分析器运行），故挂 minBones=1
+	results := a.SearchModels(base, "", 1, 0, 0, 0, 0, 0)
 	if len(results) != 1 {
 		t.Fatalf("搜索应产出 1 结果，got %d", len(results))
 	}
@@ -998,7 +1016,7 @@ func TestClearScanCache_InvalidatesGeoCache(t *testing.T) {
 	}
 
 	// 失效后二次搜索应重新 compute 且结果一致
-	after := a.SearchModels(base, "", 0, 0, 0, 0, 0, 0)
+	after := a.SearchModels(base, "", 1, 0, 0, 0, 0, 0)
 	if len(after) != 1 || after[0].BoneCount != 5 {
 		t.Errorf("失效后重新搜索应仍得 warrior(BoneCount=5)，got %+v", after)
 	}

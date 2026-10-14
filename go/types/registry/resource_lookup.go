@@ -65,6 +65,17 @@ func (reg *ResourceTypeRegistry) FindByID(id string) *ResourceType {
 	return nil
 }
 
+// IsGeometrySearchableID 判定某资源类型是否有几何分析管线（GeometrySearchable 声明的
+// Go 侧单点出口；事实源 = 本 JSON 同名字段，与前端 types.ts GEOMETRY_SEARCHABLE_TYPES
+// 派生集同源——消费口径见 go-types 卡「跨界字段」段）。
+// 消费方：SearchModels 数值条件分流（ADR-343 刀 2）——仅几何系类型条目参与
+// AnalyzeBedrockModel + 数值过滤；非几何系条目不进分析器（不白解析、不静默蒸发，
+// 展示端门控同口径）。id 大小写变体经 resolveRegistryType 归一。
+func IsGeometrySearchableID(id string) bool {
+	rt := resolveRegistryType(id)
+	return rt != nil && rt.GeometrySearchable
+}
+
 // ModKeywordsFor 从注册表查询资源类型的 mod 文件名关键词（ADR-110）：
 //   - 类型自身有 mod.jarKeywords → 返回
 //   - 类型无声明但所属组有 → 返回组的关键词（组级回退）

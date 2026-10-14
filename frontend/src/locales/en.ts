@@ -821,6 +821,9 @@ export const en: Record<string, string> = {
   "sidebar.pullFailed": "Pull failed: {msg}",
   "sidebar.packSkipped": "{n} skipped (sync in progress)",
   "sidebar.packTimedOut": "{n} timed out",
+  // P1-3: push/pull loop progress (shown on the button; large batches no longer wait on a bare spinner)
+  "sidebar.pushProgress": "Pushing {i}/{n}…",
+  "sidebar.pullProgress": "Pulling {i}/{n}…",
   // sidebar push diagnostics (internal error messages in sync-flow.ts; i18n'd so future log/panel consumers don't get hardcoded Chinese)
   "sidebar.pushSkippedReason": "Push skipped (a sync is already in progress): {ins}/{rt}",
   "sidebar.pushTimeoutReason": "Push timed out: {ins}/{rt}",
@@ -832,6 +835,30 @@ export const en: Record<string, string> = {
   "rtype.blueprint": "Blueprint",
   "rtype.litematic": "Litematic",
   "rtype.maid": "Maid",
+
+  // ── Resource type / group display names (review 2026-10-13 P1-3) ──
+  // The nav type switcher read hardcoded Chinese from resource_types.json /
+  // RESOURCE_TYPE_LABELS, leaving the primary control Chinese in en/ja.
+  // Three-segment keys (rtype.label.* / rtype.group.*) per ADR-124.
+  "rtype.label.ysm": "YSM Model",
+  "rtype.label.entityPlayer": "Character Model",
+  "rtype.label.sceneModel": "Scene Model",
+  "rtype.label.customAnim": "Custom Animation",
+  "rtype.label.customMorph": "Custom Morph",
+  "rtype.label.stageAnim": "Stage Animation",
+  "rtype.label.defaultAnim": "Default Animation",
+  "rtype.label.defaultMorph": "Default Morph",
+  "rtype.label.fbx": "FBX Model",
+  "rtype.label.vrm": "VRM Model",
+  "rtype.label.mmdShader": "MMD Shader",
+  "rtype.label.maid": "Maid Model",
+  "rtype.label.pack": "Resource Pack",
+  "rtype.label.shader": "Shader Pack",
+  "rtype.label.blueprint": "Blueprint",
+  "rtype.label.litematic": "Litematic",
+  "rtype.group.minecraft": "Vanilla Minecraft",
+  "rtype.group.minecraftMod": "Minecraft Mods",
+  "rtype.group.mmd": "MMD",
   "sync.noInstance": "No modpack specified",
   "sync.renderFailed": "Render failed",
   "syncManager.push": "Push",

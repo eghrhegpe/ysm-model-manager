@@ -820,6 +820,9 @@ export const ja: Record<string, string> = {
   "sidebar.pullFailed": "プルに失敗: {msg}",
   "sidebar.packSkipped": "{n} スキップ（同期中）",
   "sidebar.packTimedOut": "{n} タイムアウト",
+  // P1-3：プッシュ/プルループ進捗（ボタン内表示；大量処理がスピンナー待ちだけにならない）
+  "sidebar.pushProgress": "プッシュ中 {i}/{n}…",
+  "sidebar.pullProgress": "プル中 {i}/{n}…",
   // sidebar プッシュ診断文言（sync-flow.ts 内部エラー；将来ログ/パネルで消費されても中国語ハードコードを注入しない）
   "sidebar.pushSkippedReason": "プッシュがスキップされました（同期が進行中）：{ins}/{rt}",
   "sidebar.pushTimeoutReason": "プッシュがタイムアウトしました：{ins}/{rt}",
@@ -831,6 +834,30 @@ export const ja: Record<string, string> = {
   "rtype.blueprint": "ブループリント",
   "rtype.litematic": "リテマティック",
   "rtype.maid": "メイド",
+
+  // ── リソース種別 / グループの表示名（レビュー 2026-10-13 P1-3）──
+  // ナビゲーションの種別スイッチャーが resource_types.json / RESOURCE_TYPE_LABELS の
+  // ハードコード中国語を直読みし、en/ja で主控件が中国語のままだった。
+  // ADR-124 に従い三段構成キー（rtype.label.* / rtype.group.*）。
+  "rtype.label.ysm": "YSMモデル",
+  "rtype.label.entityPlayer": "キャラクターモデル",
+  "rtype.label.sceneModel": "シーンモデル",
+  "rtype.label.customAnim": "カスタムモーション",
+  "rtype.label.customMorph": "モーフ",
+  "rtype.label.stageAnim": "ステージモーション",
+  "rtype.label.defaultAnim": "デフォルトモーション",
+  "rtype.label.defaultMorph": "デフォルトモーフ",
+  "rtype.label.fbx": "FBXモデル",
+  "rtype.label.vrm": "VRMモデル",
+  "rtype.label.mmdShader": "MMDシェーダー",
+  "rtype.label.maid": "メイドモデル",
+  "rtype.label.pack": "リソースパック",
+  "rtype.label.shader": "シェーダーパック",
+  "rtype.label.blueprint": "ブループリント",
+  "rtype.label.litematic": "リテマティック",
+  "rtype.group.minecraft": "バニラMinecraft",
+  "rtype.group.minecraftMod": "Minecraft MOD",
+  "rtype.group.mmd": "MMD",
   "sync.noInstance": "統合パックが指定されていません",
   "sync.renderFailed": "描画に失敗しました",
   "syncManager.push": "プッシュ",

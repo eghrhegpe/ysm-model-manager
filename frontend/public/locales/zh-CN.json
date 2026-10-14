@@ -690,6 +690,8 @@
   "sidebar.pullFailed": "拉取失败: {msg}",
   "sidebar.packSkipped": "{n} 个被跳过（同步进行中）",
   "sidebar.packTimedOut": "{n} 个超时",
+  "sidebar.pushProgress": "推送中 {i}/{n} 类…",
+  "sidebar.pullProgress": "拉取中 {i}/{n} 包…",
   "sidebar.pushSkippedReason": "推送被跳过（已有同步进行中）：{ins}/{rt}",
   "sidebar.pushTimeoutReason": "推送超时：{ins}/{rt}",
   "resource.loadFailed": "资源加载失败",

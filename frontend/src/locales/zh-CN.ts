@@ -797,6 +797,9 @@ export const zhCN = {
   "sidebar.pullFailed": "拉取失败: {msg}",
   "sidebar.packSkipped": "{n} 个被跳过（同步进行中）",
   "sidebar.packTimedOut": "{n} 个超时",
+  // P1-3：推送/拉取循环进度（按钮内显示，大批量不再只干等 spinner）
+  "sidebar.pushProgress": "推送中 {i}/{n} 类…",
+  "sidebar.pullProgress": "拉取中 {i}/{n} 包…",
   // sidebar 推送诊断文案（sync-flow.ts 内部错误信息；被未来日志/面板消费时不注入中文硬编码）
   "sidebar.pushSkippedReason": "推送被跳过（已有同步进行中）：{ins}/{rt}",
   "sidebar.pushTimeoutReason": "推送超时：{ins}/{rt}",
@@ -808,6 +811,32 @@ export const zhCN = {
   "rtype.blueprint": "蓝图",
   "rtype.litematic": "投影",
   "rtype.maid": "女仆",
+
+  // ── 资源类型/大类显示名（锐评 2026-10-13 P1-3）──
+  // 导航资源类型切换器（双下拉）此前直读 resource_types.json 的 name/groupLabel
+  // 与 RESOURCE_TYPE_LABELS 的硬编码中文，2/3 语言下主控件全中文。键用三段式
+  // （rtype.label.* / rtype.group.*）以符合 ADR-124：rtype.<id> 两段式仅当第二段
+  // 不被判定为「角色」才合法（pack/shader 等词形碰巧合法，新增 customAnim 等
+  // 会被启发式误判），三段式无此歧义。
+  "rtype.label.ysm": "YSM 模型",
+  "rtype.label.entityPlayer": "人物模型",
+  "rtype.label.sceneModel": "场景模型",
+  "rtype.label.customAnim": "自定义动作",
+  "rtype.label.customMorph": "自定义表情",
+  "rtype.label.stageAnim": "场景动作",
+  "rtype.label.defaultAnim": "默认动作",
+  "rtype.label.defaultMorph": "默认表情",
+  "rtype.label.fbx": "FBX 模型",
+  "rtype.label.vrm": "VRM 模型",
+  "rtype.label.mmdShader": "MMD 光影",
+  "rtype.label.maid": "车万女仆模型",
+  "rtype.label.pack": "资源包",
+  "rtype.label.shader": "光影包",
+  "rtype.label.blueprint": "蓝图",
+  "rtype.label.litematic": "投影",
+  "rtype.group.minecraft": "Minecraft 原版",
+  "rtype.group.minecraftMod": "Minecraft 模组",
+  "rtype.group.mmd": "MMD",
   "sync.noInstance": "未指定整合包",
   "sync.renderFailed": "渲染失败",
   "syncManager.push": "推送",

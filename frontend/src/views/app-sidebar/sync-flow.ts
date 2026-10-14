@@ -307,7 +307,13 @@ async function runPush(
   let skipped = 0;
   let timedOut = 0;
   try {
-    for (const rt of types) {
+    for (let ti = 0; ti < types.length; ti++) {
+      const rt = types[ti];
+      // P1-3：按类型显示进度（大批量推送不再只干等一个 spinner；按钮 disabled 态保持）
+      pushBtn.innerHTML = `${UI_ICONS.refresh} ${t("sidebar.pushProgress", {
+        i: ti + 1,
+        n: types.length,
+      })}`;
       try {
         // 一次事件推所有选中包（instanceNames 批量模式）；token 仍单调唯一用于回执匹配
         await pushOne(selected.join("+"), rt, selected);
@@ -345,7 +351,13 @@ async function runPull(
   let failed = 0;
   try {
     const { PullResourceFromInstance } = await backendGetApp();
-    for (const insName of selected) {
+    for (let ii = 0; ii < selected.length; ii++) {
+      const insName = selected[ii];
+      // P1-3：按整合包显示拉取进度（大批量不再只干等 spinner）
+      pullBtn.innerHTML = `${UI_ICONS.refresh} ${t("sidebar.pullProgress", {
+        i: ii + 1,
+        n: selected.length,
+      })}`;
       const results = await Promise.allSettled(
         types.map((rt) => PullResourceFromInstance(rt, insName)),
       );

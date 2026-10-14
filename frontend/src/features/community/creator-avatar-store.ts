@@ -64,8 +64,12 @@ export function getAvatar(author: string): string | undefined {
 /**
  * 整表替换（批量提取路径）。
  *
- * ⚠️ 空表**不覆盖**：`BatchExtractCreatorAvatars` 在「无 .ysm 文件 / 无 avatar 目录」时
- * 返回空表，代表「这次没提取到」而非「头像都没了」。若照单全收会把上一轮已知头像抹掉，
+ * ⚠️ 空表**不覆盖**：本函数是「调用方无从判断时不得抹掉」的**兜底安全网**——判断权归
+ * 有信息的调用方。Go 侧 `BatchExtractCreatorAvatars` 在「仓库根未配置」与「确实没有头像」
+ * 两种情况下**都返回空表**，只有调用方能区分（判据 = `GetRepoRoot("ysm")` 是否为空，
+ * 2026-10-14 落在 `views/app-content/site/workshop-avatar.ts|extractAvatars`：已配置时
+ * 它改调 `clearAvatars()` 显式清，因为那才是「确实没有头像」的权威结论）。
+ * 若照单全收空表，会把上一轮已知头像（含下载期间经 `avatar:refresh` 累积的增量）抹掉，
  * 切回工坊页时卡片全变 "?" 且需等下次提取才自愈。
  */
 export function setAvatars(avatars: AvatarMap): void {
@@ -74,13 +78,20 @@ export function setAvatars(avatars: AvatarMap): void {
   notify();
 }
 
-/** 单作者增量写（下载完成 `avatar:refresh` 路径）。**原地改写，不换对象**——见文件头。 */
+/**
+ * 单作者增量写（下载完成 `avatar:refresh` 路径）。**原地改写，不换对象**——见文件头。
+ */
 export function setAvatar(author: string, dataUri: string): void {
   STATE[author] = dataUri;
   notify();
 }
 
-/** 清空（组件销毁 / 测试隔离）。 */
+/**
+ * 清空（组件销毁 / 测试隔离 / **权威空表判定后的显式清理**）。
+ * ⚠️ 第三个用途是 2026-10-14 新增：`workshop-avatar.ts|extractAvatars` 在「仓库根已配置
+ * 但提取结果为空」时调本函数——语义是「确实没有头像」，与 `setAvatars({})` 被守卫拦下的
+ * 「无法判断」明确区分。勿把本函数改成带守卫（会让该判定失效，陈旧头像不再自愈）。
+ */
 export function clearAvatars(): void {
   STATE = {};
   notify();

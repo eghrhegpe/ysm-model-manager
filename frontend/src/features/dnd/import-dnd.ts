@@ -25,6 +25,57 @@ const DROP_EXTS_STR = ALL_EXTS.join(" ");
 
 const isEditable = isEditableTarget;
 
+/**
+ * 任意节点是否落在 container/extraRoot 子树内（含 shadow 边界上溯）。
+ * ⚠️ 必须用 parentNode 而非 parentElement：parentElement 遇 shadow 边界顶部
+ * 返回 null（ShadowRoot 非 Element）；parentNode 会经 host 跨出 shadow root。
+ */
+function isNodeWithinSubtree(node: Node | null, container: Node, extraRoot: Node | null): boolean {
+  let current: Node | null = node;
+  while (current) {
+    if (current === container || current === extraRoot) return true;
+    if (current.parentNode) {
+      current = current.parentNode;
+      continue;
+    }
+    // ShadowRoot.parentNode is null in real browsers; cross the boundary via host.
+    current = current instanceof ShadowRoot ? current.host : null;
+  }
+  return false;
+}
+
+/** 事件是否命中容器子树：composedPath 直达优先，target 上溯兜底。 */
+function eventInSubtree(event: Event, container: Node, extraRoot: Node | null): boolean {
+  if (event.composedPath().some((node) => node === container || node === extraRoot)) {
+    return true;
+  }
+  return isNodeWithinSubtree(event.target as Node | null, container, extraRoot);
+}
+
+/** dragover 是否命中「可导入落点」：树内 + 非编辑目标 + 非树内移动 + 携带文件（ADR-336 双通道四判据）。 */
+function isImportDropTarget(e: DragEvent, container: Node, extraRoot: Node | null): boolean {
+  if (!eventInSubtree(e, container, extraRoot)) return false;
+  if (isEditable(e.target)) return false;
+  if (isTreeMoveDrag(e.dataTransfer?.types)) return false;
+  return !!e.dataTransfer?.types?.includes("Files");
+}
+
+/** drop 事件的环形日志载荷（可观测性，与处理逻辑无关）。 */
+function dropDebugInfo(e: DragEvent): Record<string, unknown> {
+  const dt = e.dataTransfer;
+  return {
+    files: dt?.files?.length ?? 0,
+    items: dt?.items?.length ?? 0,
+    types: dt?.types ? [...dt.types] : [],
+    hasFiles: !!(dt?.files && dt.files.length > 0),
+  };
+}
+
+/** 惰性解析页面类型（P2 审核修复：按值捕获会切根后残留旧类型）。 */
+function resolveRtype(rtype: string | (() => string)): string {
+  return typeof rtype === "function" ? rtype() : rtype;
+}
+
 /** 环形日志面板写入器（Go AddOpLog）——非阻塞，失败经 swallowError 记录。 */
 function makeDropLogger(): (msg: string) => void {
   return (msg: string) =>
@@ -199,33 +250,14 @@ export function bindTreeDnD(
     container.classList.toggle("droppable", on);
   };
 
-  // 判断任意节点是否落在容器/hint 子树内（含 shadow 边界上溯）。
-  // ⚠️ 必须用 parentNode 而非 parentElement：parentElement 遇 shadow 边界顶部
-  // 返回 null（ShadowRoot 非 Element）；parentNode 会经 host 跨出 shadow root。
-  const isNodeInTree = (node: Node | null): boolean => {
-    if (!node) return false;
-    let current: Node | null = node;
-    while (current) {
-      if (current === container || current === hintEl) return true;
-      if (current.parentNode) {
-        current = current.parentNode;
-        continue;
-      }
-      // ShadowRoot.parentNode is null in real browsers; cross the boundary via host.
-      current = current instanceof ShadowRoot ? current.host : null;
-    }
-    return false;
-  };
-
-  // WebView2 在 Shadow DOM 内的 drop 事件存在已知限制（overflow:auto 容器吞 drop），
-  // 因此在 document 层监听，通过 e.target 判断是否命中 app-tree 子树。
-  // 这样 drop 事件不受 ShadowRoot 边界影响，始终能触发。
-  const isInTree = (event: Event): boolean => {
-    if (event.composedPath().some((node) => node === container || node === hintEl)) {
-      return true;
-    }
-    return isNodeInTree(event.target as Node | null);
-  };
+  // 落点判定走模块级 isNodeWithinSubtree/eventInSubtree（hintEl 作 extraRoot 传入，
+  // 语义与原闭包逐字一致）。WebView2 在 Shadow DOM 内的 drop 事件存在已知限制
+  // （overflow:auto 容器吞 drop），因此在 document 层监听，通过 e.target 判断是否
+  // 命中 app-tree 子树——drop 事件不受 ShadowRoot 边界影响，始终能触发。
+  const isInTree = (event: Event): boolean =>
+    eventInSubtree(event, container, hintEl as Node | null);
+  const isNodeInTree = (node: Node | null): boolean =>
+    isNodeWithinSubtree(node, container, hintEl as Node | null);
 
   const hideHint = (): void => {
     if (hintEl) hintEl.style.display = "none";
@@ -233,16 +265,14 @@ export function bindTreeDnD(
   };
 
   const onDragOver = (e: DragEvent): void => {
-    if (!isInTree(e)) return;
-    if (isEditable(e.target)) return;
-    if (isTreeMoveDrag(e.dataTransfer?.types)) return; // ADR-336 双通道：树内移动不归导入
-    if (!e.dataTransfer?.types?.includes("Files")) return;
+    // 判据收口到 isImportDropTarget 后此处无窄化，沿用 ?. 空安全（命中判据已保证非空）
+    if (!isImportDropTarget(e, container, hintEl as Node | null)) return;
     e.preventDefault();
-    e.dataTransfer.dropEffect = "copy";
+    if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
     if (hintEl && !_dropBusy) hintEl.style.display = "flex";
     setDroppable(true);
     dbg("dnd", "dragover OK", {
-      types: [...(e.dataTransfer.types || [])],
+      types: [...(e.dataTransfer?.types || [])],
       target: (e.target as HTMLElement)?.tagName,
       isEditable: isEditable(e.target),
     });
@@ -272,14 +302,8 @@ export function bindTreeDnD(
     // 分支判成「收集 0」并弹「未检测到支持文件」，与「移动成功」toast 并排出双提示。
     // 判据与 move-dnd 共用 isTreeMoveDrag（单一事实源，两侧判据必须同源，勿只改一处）。
     if (isTreeMoveDrag(e.dataTransfer?.types)) return;
-    dbg("dnd", "drop fired", {
-      files: e.dataTransfer?.files?.length ?? 0,
-      items: e.dataTransfer?.items?.length ?? 0,
-      types: e.dataTransfer?.types ? [...e.dataTransfer.types] : [],
-      hasFiles: !!(e.dataTransfer?.files && e.dataTransfer.files.length > 0),
-    });
-    const rt = typeof rtype === "function" ? rtype() : rtype;
-    void handleTreeDrop(e, isBusy, setBusy, rt).catch((err) => {
+    dbg("dnd", "drop fired", dropDebugInfo(e));
+    void handleTreeDrop(e, isBusy, setBusy, resolveRtype(rtype)).catch((err) => {
       logError("tree-dnd", "拖放处理失败", err);
       toast(`${t("import.processError")}: ${friendlyError(err)}`, TOAST_MS.verbose, "error");
     });

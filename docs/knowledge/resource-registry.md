@@ -35,6 +35,7 @@ auto_fields:
     - BundledRegistryJSON
     - ContainerExts
     - DisabledSuffix
+    - DisableSuffixes
     - ExtBelongsTo
     - ExtBelongsToBy
     - FindInstDir
@@ -48,6 +49,7 @@ auto_fields:
     - IsContainerExt
     - IsDirLevelSync
     - IsDisableSuffix
+    - IsGeometrySearchableID
     - IsNestedModelDir
     - IsRenderableTextureExt
     - IsResourceAllowed

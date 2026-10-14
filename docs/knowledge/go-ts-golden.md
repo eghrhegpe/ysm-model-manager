@@ -24,6 +24,7 @@ auto_fields:
     - ContainerExts
     - DataGlyph
     - DisabledSuffix
+    - DisableSuffixes
     - ExtBelongsTo
     - ExtBelongsToBy
     - extOf

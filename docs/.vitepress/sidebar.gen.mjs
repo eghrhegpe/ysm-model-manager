@@ -254,6 +254,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-345：禁用态是一等公民：目录粒度启禁同步与实例侧禁用载体识别",
+        "link": "/adr/architecture/ADR-345-disable-state-first-class"
+      },
+      {
         "text": "ADR-344：整合包同步单元级诚实化：dirLevel 内容判定、单条推送保层级、祖先单元去重",
         "link": "/adr/architecture/ADR-344-pack-sync-unit-honesty"
       },

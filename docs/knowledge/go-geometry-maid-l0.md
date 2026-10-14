@@ -64,6 +64,11 @@ last_verified: 2026-10-09
 - 日志口径分叉：manifest 条目 Open 失败（真 I/O 故障）补日志——静默吞掉会让损坏包难排障；条目缺席（entryByPath miss，清单路径缺失属正常可预期落空）保持静默——逐条 log 会刷屏，两者勿混
 - `selectBestMaidCandidate` 空切片保护（返回零值不 panic）；`applyL0ManifestItem` 物化行为逐字节保持原循环（Open 失败静默跳、空 buf 跳、ARM 排除、texNameByItem 小写）
 
+## 实证验证（2026-10-14，ADR-343 遗留项数据）
+
+- 真实 TLM 女仆包（`upstream/[maid-model]多合一女仆包/touhou_little_maid-1.0.0.zip`，13.5MB，gitignored 本地样本区）经 `ParseFromZip` 全链路解析成功：L0 清单 143 条 / 候选 5 个 → 命名空间 `assets/touhou_little_maid/`；CLI 全链路（`search --min-bones 1`）实测 **12903 骨骼 / 13710 立方体 / 256×256**——maid 条目可被 SearchModels 数值管线命中，`geometrySearchable` 声明的数据依据。
+- 永久守卫：`archive_maid_fixture_test.go|TestParseFromZip_RealMaidFixture`（fixture 缺失即 skip——CI 无样本不红；本地有样本时钉死「真实 TLM 包出非空几何 + SubModels 派生」，不钉具体数值防样本换版误红）。
+
 ## 相关
 
 - [go-geometry](./go-geometry.md) — 包级 L0 清单分层文档与大小写口径红线

@@ -254,6 +254,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-344：整合包同步单元级诚实化：dirLevel 内容判定、单条推送保层级、祖先单元去重",
+        "link": "/adr/architecture/ADR-344-pack-sync-unit-honesty"
+      },
+      {
         "text": "ADR-343：跨类型搜索收口（Type 派生 + 分析器分流 + SearchFilters）",
         "link": "/adr/architecture/ADR-343-cross-type-search"
       },

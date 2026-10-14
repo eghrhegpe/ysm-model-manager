@@ -400,16 +400,54 @@ async function runPush(
  *  **永久占住**，此后所有推送/拉取都被 beginSync 拒收（那条路此前还是静默的）。
  *  超时语义与推送**同口径**（ADR-340：直调下唯一的不收口成因就是 binding 挂起，
  *  续发只会让后续整合包全撞挂起）：早停循环 + 如实计入 timedOut。 */
+/** 拉取计数累积器 */
+interface PullCounters {
+  totalPulled: number;
+  failed: number;
+  timedOut: number;
+  firstError: string;
+}
+
+/** 汇总一批整合包的结果（批D P1-5：绑定改结构化 `PullSyncResult`——条目级失败不再走 reject，
+ *  成功计数不会在途中丢失；reject 只剩前置不满足，如实按「一个类型批次失败」计入） */
+function accumulatePullResults(
+  results: PromiseSettledResult<{ ok: number; failed: number; firstError?: string | null }>[],
+  counters: PullCounters,
+): void {
+  for (const r of results) {
+    if (r.status === "fulfilled") {
+      counters.totalPulled += r.value.ok;
+      counters.failed += r.value.failed;
+      if (r.value.firstError && !counters.firstError) counters.firstError = r.value.firstError;
+    } else {
+      counters.failed++;
+      if (!counters.firstError) counters.firstError = friendlyError(r.reason);
+    }
+  }
+}
+
+/** 拉取收尾 toast 分派（failed/timedOut → warn，全成功 → success，无内容 → info） */
+function notifyPullOutcome(counters: PullCounters): void {
+  const { totalPulled, failed, timedOut, firstError } = counters;
+  if (failed > 0 || timedOut > 0) {
+    const parts = [t("sidebar.pullDone", { pulled: totalPulled, failed })];
+    if (firstError) parts.push(t("sidebar.pullFirstError", { msg: firstError }));
+    if (timedOut > 0) parts.push(t("sidebar.pullTimedOutStopped", { n: timedOut }));
+    toast(parts.join("，"), TOAST_MS.normal, "warn");
+  } else if (totalPulled > 0) {
+    toast(t("sidebar.pullDoneAll", { n: totalPulled }), TOAST_MS.info, "success");
+  } else {
+    toast(t("sidebar.pullNothing"), TOAST_MS.info, "info");
+  }
+}
+
 async function runPull(
   selected: string[],
   types: string[],
   pullBtn: HTMLButtonElement,
   lock: BusyLock,
 ): Promise<void> {
-  let totalPulled = 0;
-  let failed = 0;
-  let timedOut = 0;
-  let firstError = "";
+  const counters: PullCounters = { totalPulled: 0, failed: 0, timedOut: 0, firstError: "" };
   try {
     const { PullResourceFromInstance } = await backendGetApp();
     for (let ii = 0; ii < selected.length; ii++) {
@@ -425,37 +463,16 @@ async function runPull(
           SYNC_OP_TIMEOUT_MS,
           `拉取 ${insName}`,
         );
-        // 批D P1-5：绑定改结构化结果（`PullSyncResult`）——条目级失败不再走 reject，
-        // 成功计数不会在途中丢失；reject 只剩前置不满足（未配置 mcRoot / 目录解析失败），
-        // 如实按「一个类型批次失败」计入。
-        for (const r of results) {
-          if (r.status === "fulfilled") {
-            totalPulled += r.value.ok;
-            failed += r.value.failed;
-            if (r.value.firstError && !firstError) firstError = r.value.firstError;
-          } else {
-            failed++;
-            if (!firstError) firstError = friendlyError(r.reason);
-          }
-        }
+        accumulatePullResults(results, counters);
       } catch (e) {
         if (e instanceof TimeoutError) {
-          timedOut++;
+          counters.timedOut++;
           break; // 早停：真实计数保留，未跑整合包既非成功也非失败
         }
         throw e;
       }
     }
-    if (failed > 0 || timedOut > 0) {
-      const parts = [t("sidebar.pullDone", { pulled: totalPulled, failed })];
-      if (firstError) parts.push(t("sidebar.pullFirstError", { msg: firstError }));
-      if (timedOut > 0) parts.push(t("sidebar.pullTimedOutStopped", { n: timedOut }));
-      toast(parts.join("，"), TOAST_MS.normal, "warn");
-    } else if (totalPulled > 0) {
-      toast(t("sidebar.pullDoneAll", { n: totalPulled }), TOAST_MS.info, "success");
-    } else {
-      toast(t("sidebar.pullNothing"), TOAST_MS.info, "info");
-    }
+    notifyPullOutcome(counters);
     bus.emit("stats:refresh");
     bus.emit("tree:reload");
   } catch (err) {

@@ -232,6 +232,11 @@ async function runPush(
   let timedOut = 0;
   let installOk = 0;
   let installFail = 0;
+  // 失败明细汇总（锐评 UX 高项收口，2026-10-14）：原仅得「失败 N」一个数字，
+  // 用户无从知道是哪几个包/文件失败。现收集各类型返回的 errors[]（各类型内部已限 3 条，
+  // 跨类型再限一次防 15 类型累积成超长 toast）。
+  const errorDetails: string[] = [];
+  const MAX_TOTAL_ERRORS = 5;
   try {
     for (let ti = 0; ti < types.length; ti++) {
       const rt = types[ti];
@@ -249,6 +254,9 @@ async function runPush(
         );
         installOk += outcome.ok;
         installFail += outcome.fail;
+        for (const msg of outcome.errors ?? []) {
+          if (errorDetails.length < MAX_TOTAL_ERRORS) errorDetails.push(msg);
+        }
         if (outcome.skipped) {
           // 归因分流：busy = 他页同时在推（直调串行下自撞锁不再可能，仅剩跨页防御位）；
           // config/error 各自有专门 toast（handler 已弹），汇总只如实计「未完成批次」，
@@ -272,7 +280,12 @@ async function runPush(
       if (skipped > 0) parts.push(t("sidebar.packSkipped", { n: skipped }));
       if (blocked > 0) parts.push(t("sidebar.packBlocked", { n: blocked }));
       if (timedOut > 0) parts.push(t("sidebar.packTimedOutStopped", { n: timedOut }));
+      // 失败明细点名（锐评 UX 高项收口）：光有「失败 3」用户无从下手，附前若干条缘由
+      if (errorDetails.length > 0) parts.push(errorDetails.join("；"));
       toast(t("sidebar.pushDone", { detail: parts.join("，") }), TOAST_MS.normal, "warn");
+    } else if (errorDetails.length > 0) {
+      // 安装全成功但扫描缓存失效失败——用户仍需知情（装成功却等不到新模型是最困惑的反馈）
+      toast(t("sidebar.pushDone", { detail: errorDetails.join("；") }), TOAST_MS.verbose, "warn");
     } else {
       toast(t("sidebar.pushDoneAll", { n: selected.length }), TOAST_MS.info, "success");
     }

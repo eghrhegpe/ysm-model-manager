@@ -944,6 +944,8 @@ export const ja: Record<string, string> = {
   "sync.configureDir": "ディレクトリを先に設定してください",
   "sync.noPacks": "統合パックが見つかりません",
   "sync.missingRtype": "リソースタイプのパラメータがありません",
+  "sync.cacheInvalidateFailed":
+    "スキャンキャッシュの更新に失敗しました。新規モデルが表示されるまで遅延する場合があります：{msg}",
   "sync.downloadDone": "📥 {name}: 正常 {ok}、失敗 {fail}",
   "sync.downloadAllDone": "📥 全部インポート完了: 正常 {ok}、失敗 {fail}",
   "sync.disableN": "無効化 {n} 項",

@@ -142,7 +142,7 @@ status: active
 - **同步流程层（`sync-flow.ts`，2026-09-08 从 `index.ts` 拆出）**：`runPush`/`runPull`/`bindSelectAll`/`bindSyncSelected`/`restoreCheckboxes` + `_checkedSets`（按 rtype 隔离的勾选状态 Map）全部迁至独立文件，`index.ts` 仅保留 Web Component 生命周期与渲染编排
 
 ### `features/sync.ts`（同步执行层）
-- **`downloadMissing(payload): Promise<DownloadOutcome>`**（ADR-340 唯一入口，直调非事件）：`withLock(downloadLock)` 互斥 → `runDownloadMissing`（`ListVersionInstances` → `GetResourceInstanceStatus` → 按 `instanceName`/`instanceNames` 过滤 targets × Missing：`InstallModelTo`(YSM) / `InstallResourceToInstance`(other) → `InvalidateScanCache`）；`instanceNames` 优先（批量一次覆盖多包），单次调用内只扫一次状态；恒 settle 返回 `{ok, fail, skipped, skipReason}`，批量模式静默不弹结果 toast
+- **`downloadMissing(payload): Promise<DownloadOutcome>`**（ADR-340 唯一入口，直调非事件）：`withLock(downloadLock)` 互斥 → `runDownloadMissing`（`ListVersionInstances` → `GetResourceInstanceStatus` → 按 `instanceName`/`instanceNames` 过滤 targets × Missing：`InstallModelTo`(YSM) / `InstallResourceToInstance`(other) → `InvalidateScanCache`）；`instanceNames` 优先（批量一次覆盖多包），单次调用内只扫一次状态；恒 settle 返回 `{ok, fail, skipped, skipReason, errors}`，批量模式静默不弹结果 toast（`errors` 交发起方汇总，见「失败明细必点名」条）
 - **`sync:toggle:status`**（bus 事件，registerSync 注册）：`.ban`/`.disabled` 启禁同步
 
 ## 数据流（后端 → store → 渲染）
@@ -237,6 +237,7 @@ sidebar 底部 push/pull 菜单（整包级，与 sync-manager 组件解耦）
 - **空 rtype 拦截**（sidebar/events.ts + init-pages.ts）：点击路径允许 fallback YSM（预览无害），右键拒绝（操作危险）
 - **busy 语义对称**：download/toggle 两个 handler 的 busy 命中都显式反馈，不静默吞事件
 - **`downloadMissing` 入参 rtype 必填**：缺参返回 `{skipped:true, skipReason:"config"}` 显式失败（P2 修复；ADR-340 后落点从事件载荷改为直调入参）
+- **失败明细必点名（锐评 UX 高项收口，2026-10-14）**：`runDownloadMissing` 原 `catch { totalFail++ }` 吞掉错误对象、`InvalidateScanCache` 失败只 `dbg()`——用户看到「失败 3」却不知道是哪几个包/文件、为何失败；装成功却等不到新模型（缓存失效）也无从察觉（会反复重试/怀疑安装失败）。现两处都产出 `errors[]`（`包名/文件路径: friendlyError 缘由`，上限 3 条），经 `DownloadOutcome.errors` 上抛：单包模式并入结果 toast 括号内；批量模式由 `runPush` 跨类型汇总（再限 5 条防 15 类型累积成超长 toast），**安装全成功但缓存失效失败也出warn toast**（独立分支，非静默）。新增 i18n 键 `sync.cacheInvalidateFailed`。回归锁：`features/sync/sync.test.ts`「失败明细带包名与文件路径，上限 3 条」+「InvalidateScanCache 失败 → errors 携带可读缘由且 toast 可见」两例，均变异验证
 - **`tree:reload` 仅在真正做过安装时广播**（handler P2）：配置缺失短路时无任何写操作
 - **`SidebarHost`/`EmitDedupe` 去重**：同组件 reload 不复位，宿主持有状态。2026-09 定位降级——app-content 已复用面板实例（同值 `setAttribute` 被组件 `oldVal===newVal` 拦下），重复 emit 不再有丢状态代价，本状态机退化为省事件扩散的优化，**不再是防回归的救命稻草**
 - **⚠️ 面板复用而非重建**（2026-09 修复）：`init-pages.mountSyncManager` 首次注入元素、后续仅 `setAttribute`，实例跨整合包存活；切包时由组件 `_init` 内的 `_resetViewState()` 复位视图状态（展开态/筛选/子类型）。**改回 `innerHTML` 重建会被 `init-pages.test.ts` 的「复用同一实例」用例拦下**

@@ -945,6 +945,8 @@ export const en: Record<string, string> = {
   "sync.configureDir": "Configure directories first",
   "sync.noPacks": "No modpacks found",
   "sync.missingRtype": "Missing resource type parameter",
+  "sync.cacheInvalidateFailed":
+    "Scan cache refresh failed, new models may appear with delay: {msg}",
   "sync.downloadDone": "📥 {name}: imported {ok} ok, {fail} failed",
   "sync.downloadAllDone": "📥 Import complete: {ok} ok, {fail} failed",
   "sync.disableN": "Disabled {n} item(s)",

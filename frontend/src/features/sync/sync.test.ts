@@ -108,7 +108,7 @@ describe("downloadMissing — 导入缺失直调（ADR-340）", () => {
       "/mc/instances/PackA/custom",
     );
     expect(refreshEvents.length).toBeGreaterThan(0);
-    expect(outcome).toEqual({ ok: 1, fail: 0, skipped: false });
+    expect(outcome).toEqual({ ok: 1, fail: 0, skipped: false, errors: [] });
     expect(reloadEvents.length).toBeGreaterThan(0);
     expect(toasts.some((t) => t.msg.includes("PackA: 导入 1 成功"))).toBe(true);
   });
@@ -136,7 +136,7 @@ describe("downloadMissing — 导入缺失直调（ADR-340）", () => {
     expect(mocks.InstallResourceToInstance).not.toHaveBeenCalled();
     expect(mocks.InstallModelTo).not.toHaveBeenCalled();
     // 整夹安装计入成功数（徽章有数 ⇒ 一键安装有动作）
-    expect(outcome).toEqual({ ok: 1, fail: 0, skipped: false });
+    expect(outcome).toEqual({ ok: 1, fail: 0, skipped: false, errors: [] });
     expect(toasts.some((t) => t.msg.includes("PackA: 导入 1 成功"))).toBe(true);
   });
 
@@ -148,7 +148,7 @@ describe("downloadMissing — 导入缺失直调（ADR-340）", () => {
 
     // 只有 PackA 有 Missing，PackB 跳过
     expect(mocks.InstallModelTo).toHaveBeenCalledTimes(1);
-    expect(outcome).toEqual({ ok: 1, fail: 0, skipped: false });
+    expect(outcome).toEqual({ ok: 1, fail: 0, skipped: false, errors: [] });
     expect(toasts.some((t) => t.msg.includes("全部导入完成: 1 成功"))).toBe(true);
   });
 
@@ -252,7 +252,47 @@ describe("downloadMissing — 导入缺失直调（ADR-340）", () => {
 
     const outcome = await downloadMissing({ instanceName: "PackA", rtype: "ysm" });
 
-    expect(outcome).toEqual({ ok: 2, fail: 1, skipped: false });
+    expect(outcome).toEqual({ ok: 2, fail: 1, skipped: false, errors: expect.any(Array) });
+    // 锐评 UX 高项收口（2026-10-14）：失败明细必点名——原 `catch { totalFail++ }` 吞错误
+    expect(outcome.errors?.[0]).toContain("locked");
+  });
+
+  // 锐评 UX 高项收口（2026-10-14）：失败明细含包名 + 文件路径 + 友好缘由；上限 3 条
+  it("失败明细带包名与文件路径，上限 3 条（防批量失败 toast 过长）", async () => {
+    const repo = MOCK_DATA.GetRepoRoot;
+    mocks.GetResourceInstanceStatus.mockResolvedValue([
+      {
+        Name: "PackA",
+        Missing: [`${repo}/a.ysm`, `${repo}/b.ysm`, `${repo}/c.ysm`, `${repo}/d.ysm`, `${repo}/e.ysm`],
+      },
+    ]);
+    mocks.InstallModelTo.mockRejectedValue(new Error("disk full"));
+    const { downloadMissing } = await import("./sync.ts");
+    spyEvents();
+
+    const outcome = await downloadMissing({ instanceName: "PackA", rtype: "ysm" });
+
+    expect(outcome.fail).toBe(5);
+    expect(outcome.errors).toHaveLength(3); // 上限 3 条
+    expect(outcome.errors?.[0]).toContain("PackA");
+    expect(outcome.errors?.[0]).toContain("disk full");
+  });
+
+  // 锐评 UX 高项收口（2026-10-14）：InvalidateScanCache 失败不再只 dbg——
+  // 「装成功却等不到新模型」是最困惑的反馈（用户会反复重试/怀疑安装失败），须用户可见。
+  it("InvalidateScanCache 失败 → errors 携带可读缘由（装成功也须知情）", async () => {
+    mocks.InvalidateScanCache.mockRejectedValueOnce(new Error("cache locked"));
+    const { downloadMissing } = await import("./sync.ts");
+    const { toasts } = spyEvents();
+
+    const outcome = await downloadMissing({ instanceName: "PackA", rtype: "ysm" });
+
+    // 安装本身成功（ok=1），但缓存失效失败必须点名
+    expect(outcome.ok).toBe(1);
+    expect(outcome.fail).toBe(0);
+    expect(outcome.errors?.join(" ")).toContain("cache locked");
+    // 单包模式 toast 必含该缘由（用户可见，非仅 dbg）
+    expect(toasts.some((x) => String(x.msg).includes("cache locked"))).toBe(true);
   });
 
   // 锐评 P2-1 回归锁：批量模式（instanceNames）静默——「全部类型」推送每类型一次
@@ -266,7 +306,7 @@ describe("downloadMissing — 导入缺失直调（ADR-340）", () => {
 
     // 安装确实发生了（PackA 有 Missing），只是不弹结果 toast
     expect(mocks.InstallModelTo).toHaveBeenCalledTimes(1);
-    expect(outcome).toEqual({ ok: 1, fail: 0, skipped: false });
+    expect(outcome).toEqual({ ok: 1, fail: 0, skipped: false, errors: [] });
     expect(toasts.some((t) => t.msg.includes("导入"))).toBe(false);
   });
 });

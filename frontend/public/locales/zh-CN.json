@@ -798,6 +798,7 @@
   "sync.configureDir": "请先配置目录",
   "sync.noPacks": "没有找到整合包",
   "sync.missingRtype": "缺少资源类型参数",
+  "sync.cacheInvalidateFailed": "扫描缓存刷新失败，新模型可能延迟出现：{msg}",
   "sync.downloadDone": "📥 {name}: 导入 {ok} 成功, {fail} 失败",
   "sync.downloadAllDone": "📥 全部导入完成: {ok} 成功, {fail} 失败",
   "sync.disableN": "禁用 {n} 项",

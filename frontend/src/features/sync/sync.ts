@@ -28,6 +28,12 @@ export interface DownloadOutcome {
   fail: number;
   skipped?: boolean;
   skipReason?: "busy" | "config" | "error";
+  /**
+   * 失败明细（锐评 UX 高项收口，2026-10-14）：原实现 `catch { totalFail++ }` 吞掉错误对象，
+   * 发起方只拿到一个数字——用户看到「失败 3」却不知道是哪 3 个文件、为何失败（磁盘满？权限？路径越界？）
+   * ，排障只能翻环形日志面板。现上抛前若干条 `friendlyError` 归一后的缘由（格式同 import 批量汇总）
+   */
+  errors?: string[];
 }
 
 /** runDownloadMissing 内部结果：null = 配置缺失/异常（未做或未完成安装）；
@@ -35,6 +41,8 @@ export interface DownloadOutcome {
 interface InstallCounts {
   ok: number;
   fail: number;
+  /** 失败明细（与 DownloadOutcome.errors 同源，止于本层便于 runDownloadMissing 内聚） */
+  errors: string[];
 }
 
 /** 逐个整合包安装缺失文件，返回文件级计数（null = 配置缺失/异常）。
@@ -82,6 +90,14 @@ async function runDownloadMissing(
   const allStatuses = await GetResourceInstanceStatus(rtype, mcRoot, filesRoot);
   let totalOk = 0;
   let totalFail = 0;
+  // 失败明细（锐评 UX 高项收口，2026-10-14）：原 `catch { totalFail++ }` 吞错误对象，
+  // 发起方只拿到一个数字，排障只能翻日志。保留前若干条（防批量失败时 toast 过长），
+  // 格式含包名 + 文件相对名 + friendlyError 缘由，用户侧可自诊断。
+  const errors: string[] = [];
+  const MAX_ERRORS = 3;
+  const pushError = (insName: string, item: string, e: unknown): void => {
+    if (errors.length < MAX_ERRORS) errors.push(`${insName}/${item}: ${friendlyError(e)}`);
+  };
   for (const ins of targets) {
     const st = (allStatuses || []).find((s) => s.Name === ins.Name);
     if (!st?.Missing?.length && !st?.MissingDirs?.length) continue;
@@ -93,19 +109,21 @@ async function runDownloadMissing(
           await InstallResourceToInstance(rtype, srcPath, ins.Name);
         }
         totalOk++;
-      } catch {
+      } catch (e) {
         totalFail++;
+        pushError(ins.Name, srcPath, e);
       }
     }
     // ADR-310：夹内没有可逐文件安装的受支持文件时，Go 把整个夹放进 MissingDirs——
-    // 必须走 folder-aware 的 PushSingleResourceToInstance（面板行内推送同一条路，
+    // 必须走 folder-aware 的PushSingleResourceToInstance（面板行内推送同一条路，
     // 对目录走 InstallDir 装该夹本身）；喂给上面的逐条 Install 会装成它的父目录。
     for (const dirPath of st.MissingDirs ?? []) {
       try {
         await PushSingleResourceToInstance(rtype, ins.Name, dirPath);
         totalOk++;
-      } catch {
+      } catch (e) {
         totalFail++;
+        pushError(ins.Name, dirPath, e);
       }
     }
   }
@@ -113,8 +131,12 @@ async function runDownloadMissing(
   try {
     await InvalidateScanCache();
   } catch (e) {
-    // P3（审核发现）：不静默吞错——缓存失效失败会让新导入最长 30s 不出现
+    // P3（审核发现）：不静默吞错——缓存失效失败会让新导入最长 30s 不出现。
+    // 锐评 UX 高项收口（2026-10-14）：不止 dbg，须让用户可见——装成功却等不到新模型
+    // 是最困惑的一类反馈（用户会反复重试/怀疑安装失败）。归入 errors 并在汇总 toast 点名。
     dbg("sync", "InvalidateScanCache 失败:", e);
+    if (errors.length < MAX_ERRORS)
+      errors.push(t("sync.cacheInvalidateFailed", { msg: friendlyError(e) }));
   }
   dbg("sync", "同步完成, 发出 stats:refresh, 成功:", totalOk, "失败:", totalFail);
   bus.emit("stats:refresh");
@@ -122,15 +144,18 @@ async function runDownloadMissing(
   // 批量模式（app-sidebar 逐类型收集 done.ok/fail 后汇总一条 toast）此处静默，
   // 否则 15 类型 × 每类型一条（含 0 成功 0 失败）连珠炮淹没发起方汇总（锐评 P2-1）。
   if (!instanceNames?.length) {
+    const base = instanceName
+      ? t("sync.downloadDone", { name: instanceName, ok: totalOk, fail: totalFail })
+      : t("sync.downloadAllDone", { ok: totalOk, fail: totalFail });
+    // 失败明细追加在括号里（无失败则不加）；缓存失效失败同样点名
+    const detail = errors.length > 0 ? `（${errors.join("；")}）` : "";
     toast(
-      instanceName
-        ? t("sync.downloadDone", { name: instanceName, ok: totalOk, fail: totalFail })
-        : t("sync.downloadAllDone", { ok: totalOk, fail: totalFail }),
+      `${base}${detail}`,
       TOAST_MS.verbose,
-      totalFail > 0 ? "warn" : "success",
+      totalFail > 0 || errors.length > 0 ? "warn" : "success",
     );
   }
-  return { ok: totalOk, fail: totalFail };
+  return { ok: totalOk, fail: totalFail, errors };
 }
 
 /** 导入缺失互斥锁（ADR-340 去总线化后升为模块级常驻）：原锁在 registerSync 内创建，
@@ -167,7 +192,7 @@ export async function downloadMissing({
       // 仅实际做过安装才广播全树重扫——配置缺失短路时无任何写操作，
       // tree:reload 会引发无意义全树重扫
       bus.emit("tree:reload");
-      return { ok: counts.ok, fail: counts.fail, skipped: false as const };
+      return { ok: counts.ok, fail: counts.fail, skipped: false as const, errors: counts.errors };
     } catch (e) {
       toast(friendlyError(e), TOAST_MS.long, "error");
       return { ok: 0, fail: 0, skipped: true as const, skipReason: "error" as const };

@@ -43,6 +43,114 @@ export interface Model2DOptions {
   boneTransforms?: Map<string, BoneTransform>;
 }
 
+/** 点 [x,z] 绕 Y 轴旋转（前视图 2D 投影用），返回 {x, z}。 */
+function rotAroundY(x: number, z: number, cosA: number, sinA: number): { x: number; z: number } {
+  return { x: x * cosA - z * sinA, z: x * sinA + z * cosA };
+}
+
+interface BoundsAcc {
+  minX: number;
+  maxX: number;
+  minY: number;
+  maxY: number;
+}
+
+/** 单 cube 4 个水平角绕 Y 旋转后的 X 极值。 */
+function cubeXRange(c: BedrockCube, cosA: number, sinA: number): { minX: number; maxX: number } {
+  const [ox, , oz] = cubeVec(c.origin);
+  const [sx, , sz] = cubeVec(c.size);
+  const corners: Array<[number, number]> = [
+    [ox, oz],
+    [ox + sx, oz],
+    [ox, oz + sz],
+    [ox + sx, oz + sz],
+  ];
+  let minX = Infinity;
+  let maxX = -Infinity;
+  for (const [cx, cz] of corners) {
+    const r = rotAroundY(cx, cz, cosA, sinA);
+    if (r.x < minX) minX = r.x;
+    if (r.x > maxX) maxX = r.x;
+  }
+  return { minX, maxX };
+}
+
+/** 单 cube 的 Y 极值（前视图不旋转 Y，直接取 origin/size）。 */
+function cubeYRange(c: BedrockCube): { minY: number; maxY: number } {
+  const [, oy] = cubeVec(c.origin);
+  const [, sy] = cubeVec(c.size);
+  return { minY: oy, maxY: oy + sy };
+}
+
+/** 把单个 cube 的极值并入累加器（原地更新）。 */
+function growBounds(
+  acc: BoundsAcc,
+  xr: { minX: number; maxX: number },
+  yr: { minY: number; maxY: number },
+): void {
+  if (xr.minX < acc.minX) acc.minX = xr.minX;
+  if (xr.maxX > acc.maxX) acc.maxX = xr.maxX;
+  if (yr.minY < acc.minY) acc.minY = yr.minY;
+  if (yr.maxY > acc.maxY) acc.maxY = yr.maxY;
+}
+
+/** 计算旋转后的 bounding box：8 角取旋转后 X 极值 + 原始 Y 极值。 */
+function computeBounds(model: BedrockModel, cosA: number, sinA: number): BoundsAcc {
+  const acc: BoundsAcc = {
+    minX: Infinity,
+    maxX: -Infinity,
+    minY: Infinity,
+    maxY: -Infinity,
+  };
+  for (const bone of model.bones || []) {
+    for (const c of bone.cubes || []) {
+      growBounds(acc, cubeXRange(c, cosA, sinA), cubeYRange(c));
+    }
+  }
+  return acc;
+}
+
+/** 命中判定：屏幕点落在哪个骨骼热区（onMove 拾取用）。 */
+function hitZoneAt(
+  hitZones: ReturnType<typeof calcBoneHitZones>,
+  mx: number,
+  my: number,
+): ReturnType<typeof calcBoneHitZones>[number] | undefined {
+  return hitZones.find((b) => mx >= b.x && mx <= b.x + b.w && my >= b.y && my <= b.y + b.h);
+}
+
+/** 全量重绘：clear + 主视图 + 小视图（初始与 hover 高亮共用同一路径）。 */
+function redrawModel2D(
+  ctx: CanvasRenderingContext2D,
+  canvas: HTMLCanvasElement,
+  model: BedrockModel,
+  scale: number,
+  cx: number,
+  cy: number,
+  textureImg: HTMLImageElement | null,
+  highlight: string | null,
+  showLabels: boolean,
+  cosA: number,
+  sinA: number,
+  boneTransforms: Parameters<typeof drawView>[10],
+): void {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawView(
+    ctx,
+    model,
+    scale,
+    cx,
+    cy,
+    textureImg,
+    highlight,
+    showLabels,
+    cosA,
+    sinA,
+    boneTransforms,
+  );
+  drawMiniView(ctx, model, scale, textureImg, cosA, sinA);
+}
+
 /**
  * 在 Canvas 上绘制模型骨骼的 2D 正交投影（前视图，支持 Y 轴旋转）
  * @param canvas 目标 canvas
@@ -73,38 +181,7 @@ export function renderModel2D(
   const H = canvas.height;
   ctx.clearRect(0, 0, W, H);
 
-  // 旋转点 [x,y,z] 绕 Y 轴，返回 {x, z}
-  const rot = (x: number, z: number): { x: number; z: number } => ({
-    x: x * cosA - z * sinA,
-    z: x * sinA + z * cosA,
-  });
-
-  // 计算旋转后的 bounding box
-  let minX = Infinity;
-  let maxX = -Infinity;
-  let minY = Infinity;
-  let maxY = -Infinity;
-  for (const bone of model.bones) {
-    for (const c of bone.cubes || []) {
-      const [ox, oy, oz] = cubeVec(c.origin);
-      const [sx, sy, sz] = cubeVec(c.size);
-      // 8 个角中取旋转后 X 最左/最右、Y 最上/最下
-      const corners: Array<[number, number]> = [
-        [ox, oz],
-        [ox + sx, oz],
-        [ox, oz + sz],
-        [ox + sx, oz + sz],
-      ];
-      for (const [cx, cz] of corners) {
-        const r = rot(cx, cz);
-        if (r.x < minX) minX = r.x;
-        if (r.x > maxX) maxX = r.x;
-      }
-      if (oy < minY) minY = oy;
-      if (oy + sy > maxY) maxY = oy + sy;
-    }
-  }
-
+  const { minX, maxX, minY, maxY } = computeBounds(model, cosA, sinA);
   const rangeX = maxX - minX || 1;
   const rangeY = maxY - minY || 1;
   const baseScale = Math.min((W - 20) / rangeX, (H - 20) / rangeY, 4);
@@ -115,9 +192,22 @@ export function renderModel2D(
   // 计算骨骼屏幕坐标热区，供鼠标拾取
   const boneHitZones = calcBoneHitZones(model, scale, cx, cy, true, cosA, sinA, boneTransforms);
 
-  // 绘制
-  drawView(ctx, model, scale, cx, cy, textureImg, null, showLabels, cosA, sinA, boneTransforms);
-  drawMiniView(ctx, model, scale, textureImg, cosA, sinA);
+  const redraw = (highlight: string | null): void =>
+    redrawModel2D(
+      ctx,
+      canvas,
+      model,
+      scale,
+      cx,
+      cy,
+      textureImg,
+      highlight,
+      showLabels,
+      cosA,
+      sinA,
+      boneTransforms,
+    );
+  redraw(null);
 
   // ---- 鼠标交互高亮 ----
   let _highlightBone: string | null = null;
@@ -125,34 +215,16 @@ export function renderModel2D(
     const rect = canvas.getBoundingClientRect();
     const mx = (e.clientX - rect.left) * (canvas.width / rect.width);
     const my = (e.clientY - rect.top) * (canvas.height / rect.height);
-    const hit = boneHitZones.find(
-      (b) => mx >= b.x && mx <= b.x + b.w && my >= b.y && my <= b.y + b.h,
-    );
+    const hit = hitZoneAt(boneHitZones, mx, my);
     if (hit?.name !== _highlightBone) {
       _highlightBone = hit?.name || null;
-      ctx.clearRect(0, 0, W, H);
-      drawView(
-        ctx,
-        model,
-        scale,
-        cx,
-        cy,
-        textureImg,
-        _highlightBone,
-        showLabels,
-        cosA,
-        sinA,
-        boneTransforms,
-      );
-      drawMiniView(ctx, model, scale, textureImg, cosA, sinA);
+      redraw(_highlightBone);
     }
   };
   const onLeave = (): void => {
     if (_highlightBone) {
       _highlightBone = null;
-      ctx.clearRect(0, 0, W, H);
-      drawView(ctx, model, scale, cx, cy, textureImg, null, showLabels, cosA, sinA, boneTransforms);
-      drawMiniView(ctx, model, scale, textureImg, cosA, sinA);
+      redraw(null);
     }
   };
   const ac = new AbortController();

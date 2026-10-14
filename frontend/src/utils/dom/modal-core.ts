@@ -6,10 +6,10 @@
 // 勿直接依赖本文件内部 API；createDialog 为内部脚手架（供同目录 builder 使用），
 // 导出仅为兄弟文件协作，非对外契约。
 
-import { rememberTrigger, returnFocus } from "@/utils/dom/focus-restore.ts";
-import { trapFocusAcrossShadow } from "@/utils/dom/trap-focus-across-shadow.ts";
 import { resolveIcon } from "@/utils/icon/resolve.ts";
 import type { UiIconName } from "@/utils/icon/ui-icons.ts";
+import { rememberTrigger, returnFocus } from "./focus-restore.ts";
+import { trapFocusAcrossShadow } from "./trap-focus-across-shadow.ts";
 
 /**
  * modal 家族文案覆盖（可选注入；未提供时由各 builder 回退 @/core/i18n 默认文案）。

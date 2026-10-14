@@ -5,6 +5,7 @@ import { bus } from "@/bus";
 import { flushPromises } from "@/test-utils/index.ts";
 import { renderOldestPage } from "@/views/app-content/tpl-oldest.ts";
 import type { OldestModelHandle } from "./oldest-models.ts";
+import { clearRepoStatsCache } from "./oldest-models.ts";
 
 const { mocks } = vi.hoisted(() => {
   const mocks = {
@@ -31,6 +32,9 @@ let randomSpy: ReturnType<typeof vi.spyOn> | null = null;
 let unsubModelSelect: (() => void) | null = null;
 beforeEach(() => {
   vi.clearAllMocks();
+  // 锐评性能 #5 收口：RepoHealthAudit 结果缓存是模块级（TTL 30s），跨测试留存会让
+  // 「mock 改返回值但缓存仍旧」的用例误判——每测试清空缓存，保证断言可测
+  clearRepoStatsCache();
   randomSpy = vi.spyOn(Math, "random").mockReturnValue(0.1);
   mocks.GetRepoRoot.mockResolvedValue("/repo");
   mocks.RepoHealthAudit.mockResolvedValue(auditReport());
@@ -336,6 +340,33 @@ describe("loadOldestModel", () => {
     expect(mocks.GetRepoRoot).toHaveBeenLastCalledWith("mmd");
     expect(mocks.ScanModelEntries.mock.calls.length).toBe(callsAfterInit + 1);
     cleanup();
+  });
+
+  // 锐评性能 #5（2026-10-14）：RepoHealthAudit 是全库 SHA256 级重活，面板切换资源类型
+  // 会为每个类型触发一次完整 render → 无条件 RepoHealthAudit。缓存按 filesRoot 键，TTL 内
+  // 命中即不重复扫盘。clearRepoStatsCache 清空模块级缓存，保证断言次数可测。
+  it("RepoHealthAudit 结果缓存：同 filesRoot 30s 内不重复扫盘", async () => {
+    mocks.ScanModelEntries.mockResolvedValue(sampleEntries);
+    clearRepoStatsCache();
+    const { loadOldestModel } = await import("./oldest-models.ts");
+
+    const c1 = document.createElement("div");
+    const h1 = await loadOldestModel(c1, (s) => s, { renderPage: renderOldestPage });
+    await flushPromises();
+    await flushPromises();
+    expect(mocks.RepoHealthAudit).toHaveBeenCalledTimes(1);
+
+    // 第二次加载同 filesRoot：命中缓存，不再 RepoHealthAudit
+    const c2 = document.createElement("div");
+    const h2 = await loadOldestModel(c2, (s) => s, { renderPage: renderOldestPage });
+    await flushPromises();
+    await flushPromises();
+    expect(mocks.RepoHealthAudit).toHaveBeenCalledTimes(1);
+
+    // 必须 cleanup：useCurrentResourceType 订阅残留会让后续测试的 repo:rtype-changed
+    // emit 触发本测试的陈旧回调（如「rtype 相同」用例误判 ScanModelEntries 被多调）
+    h1.cleanup();
+    h2.cleanup();
   });
 
   it("可见面板类型切换 → 照常重渲染（隐藏守卫不改变可见路径）", async () => {

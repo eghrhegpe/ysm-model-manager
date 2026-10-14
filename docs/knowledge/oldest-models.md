@@ -58,6 +58,7 @@ status: active
 - 每日推荐：Fisher-Yates 洗牌取前 3 渲染卡片（卡片模板亦在 tpl-oldest.ts）
 - 交互：卡片事件委托（命名函数 `handleContainerClick`，重绑前先 remove），点击 `bus.emit("model:select", { path })`；经 `useCurrentResourceType` 订阅类型切换（`repo:rtype-changed` 事件由 repo-rtype.ts 统一消费）后重渲染
 - **感知性绑定（2026-09 对接锐评②，对齐 dedup tab P2-2 范式）**：RepoHealthAudit 每次全库读盘+SHA256（go/dedup 无指纹缓存），**隐藏面板的类型切换只记脏账（`dirty` 标志）不扫盘**；补渲染由 `onShow` 在用户切进面板时按需发起——首次激活走懒初始化路径不经 onShow，初始渲染由入口处 `await render()` 承担
+- **RepoHealthAudit 结果缓存（锐评性能 #5，2026-10-14）**：`cachedRepoStats` 按 filesRoot 键做模块级 Map 缓存，TTL 30s（对齐 `community-data.ts` 的 `SCAN_LITE_AUTHORS_TTL_MS`）；只缓存不随语言变的字段（score/verdict/计数），`healthLabel` 每次现算（语言热切换不缓存旧文案）。filesRoot 随类型切换变化，天然分键。`stats:refresh`/`tree:reload` 触发 render，TTL 兜底陈旧度。**测试钩子 `clearRepoStatsCache`**（对齐 go/dedup.computeHash 的包级注入范式）清空模块级缓存供用例隔离；测试须在 beforeEach 清缓存 + 每个 `loadOldestModel` 用例 `cleanup()`——`useCurrentResourceType` 订阅残留会让后续 `repo:rtype-changed` emit 触发陈旧回调
 
 ## 对外 API / 入口
 

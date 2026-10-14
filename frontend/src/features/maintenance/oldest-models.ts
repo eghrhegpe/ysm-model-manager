@@ -69,7 +69,7 @@ async function fetchRepoStats(filesRoot: string): Promise<RepoStats> {
   if (!report) throw new Error(t("diagnostics.healthParseFailed"));
   const score = report.score;
   const band = healthBand(report.verdict, score);
-  return {
+  const stats: RepoStats = {
     totalFiles: report.resources.total_files,
     totalSize: report.resources.total_size,
     banned: report.resources.banned ?? 0,
@@ -79,6 +79,62 @@ async function fetchRepoStats(filesRoot: string): Promise<RepoStats> {
     healthLabel: t(band.labelKey),
     healthTagClass: band.tagClass,
   };
+  // 锐评性能 #5（2026-10-14）：命中缓存即写——本函数只被 cachedRepoStats 调用，
+  // 每轮真实扫描后把不随语言变的字段（score/verdict/计数）落缓存
+  repoStatsCache.set(filesRoot, {
+    at: Date.now(),
+    score,
+    verdict: report.verdict,
+    totalFiles: stats.totalFiles,
+    totalSize: stats.totalSize,
+    banned: stats.banned,
+    dupGroups: stats.dupGroups,
+  });
+  return stats;
+}
+
+// ===== RepoHealthAudit 结果缓存（锐评性能 #5，2026-10-14）=====
+// 病：RepoHealthAudit 是全库 SHA256 级重活（go/dedup 无指纹缓存），而面板 tab 通常处于
+// inactive 状态，切换资源类型（ysm ↔ litematic ↔ scene 等）会为每个类型触发一次完整 render，
+// render 内无条件 fetchRepoStats → SHA256 整个资源目录，连续切类型 3 次 = 3 次全库哈希。
+// 修：按 filesRoot 键做模块级 Map 缓存，TTL 30s（对齐 community-data.ts 的 SCAN_LITE_AUTHORS_TTL_MS）。
+// 只缓存不随语言变的字段（score/verdict/计数），healthLabel 每次现算（healthBandLabel 语义：
+// 语言热切换不缓存旧文案）；filesRoot 随类型切换变化，天然分键。stats:refresh/tree:reload
+// 触发 render，TTL 兜底陈旧度（导入后最长 30s 内旧统计可接受，同 community-data 口径）。
+const REPO_STATS_TTL_MS = 30_000;
+interface RepoStatsCacheEntry {
+  at: number;
+  score: number;
+  verdict: string | undefined;
+  totalFiles: number;
+  totalSize: number;
+  banned: number;
+  dupGroups: number;
+}
+const repoStatsCache = new Map<string, RepoStatsCacheEntry>();
+
+/** 测试钩子（对齐 go/dedup.computeHash 的包级注入范式）：清空缓存，供测试在用例间隔离。
+ *  生产不调用——缓存随 TTL 自动过期，无需手动清。 */
+export function clearRepoStatsCache(): void {
+  repoStatsCache.clear();
+}
+
+async function cachedRepoStats(filesRoot: string): Promise<RepoStats> {
+  const hit = repoStatsCache.get(filesRoot);
+  if (hit && Date.now() - hit.at < REPO_STATS_TTL_MS) {
+    const band = healthBand(hit.verdict, hit.score);
+    return {
+      totalFiles: hit.totalFiles,
+      totalSize: hit.totalSize,
+      banned: hit.banned,
+      dupGroups: hit.dupGroups,
+      score: hit.score,
+      healthColor: band.color,
+      healthLabel: t(band.labelKey),
+      healthTagClass: band.tagClass,
+    };
+  }
+  return fetchRepoStats(filesRoot);
 }
 
 /** 可注入依赖（ADR-190 D1a/D2）：整页 DOM 模板由 views 组合根注入（tpl-oldest.ts）。
@@ -134,7 +190,7 @@ export async function loadOldestModel(
       let stats: RepoStats | null = null;
       let statsError: string | undefined;
       try {
-        stats = await fetchRepoStats(filesRoot);
+        stats = await cachedRepoStats(filesRoot);
       } catch (e) {
         statsError = friendlyError(e, t("oldest.statsFailed"));
       }

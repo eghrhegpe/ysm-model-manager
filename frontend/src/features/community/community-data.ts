@@ -189,13 +189,22 @@ export function mergeLocalAuthorsInto(
 
 /** 后台静默拉取社区索引并并入本地（withCached 6h TTL） */
 async function tryAutoMergeCommunity(): Promise<void> {
+  // ⚠️ 策略必须是 NORMAL 不能是 STALE（锐评修正，2026-10-14）。
+  // 病：STALE 在 TTL 过期时**立即返回 6 小时前的旧值** + 后台刷新，于是本函数拿着旧数组
+  // 就去调 MergeCommunityCreatorsFromJSON 落盘——用户看到「进了工坊页但内容没变」，
+  // 真正的新配置要等**下一次**进页（此时缓存已被后台刷新成新值）才并入。
+  // 为什么改 NORMAL 无代价：本函数是**即发即忘**的（唯一调用点
+  // `tryAutoMergeCommunity().catch(...)` 不 await，loadCommunityData 立即 return），
+  // 故 STALE「不阻塞调用方」的收益在此处为零——NORMAL 只是在后台多等一次网络，
+  // 换来「本次就并入真值」。NORMAL 同样有并发去重（with-cached.ts），无重复请求；
+  // 缓存未过期时两者都直接命中，无额外开销。
   const community = await withCached(
     COMMUNITY_MERGE_KEY,
     COMMUNITY_MERGE_TTL_MS,
     async () => {
       return fetchCommunityCreators(DEFAULT_COMMUNITY_URL);
     },
-    "STALE",
+    "NORMAL",
   );
   if (!community.length) return;
   try {

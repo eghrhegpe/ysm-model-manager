@@ -168,4 +168,47 @@ describe("loadCommunityData", () => {
     await vi.waitFor(() => expect(mocks.MergeCommunityCreatorsFromJSON).toHaveBeenCalledTimes(2), { timeout: 3000 });
     expect(fetchMock).toHaveBeenCalled();
   });
+
+  // 锐评修正（2026-10-14）：TTL 过期后必须并入**新值**而非 6h 旧值。
+  // 病：tryAutoMergeCommunity 原用 withCached STALE——过期时立即返回旧值 + 后台刷新，
+  // 于是本函数拿着 6 小时前的社区索引就去调 MergeCommunityCreatorsFromJSON 落盘，
+  // 用户「进了工坊页但内容没变」，真值要等下一次进页（届时缓存已被后台刷成新值）才并入。
+  // 为何改 NORMAL 无代价：本函数是**即发即忘**的（调用点不 await），STALE「不阻塞调用方」
+  // 的收益为零，NORMAL 只是在后台多等一次网络换来「本次就并入真值」。
+  // ⚠️ 本条与上一条（forceRefresh 清缓存）**判别力不同**：清缓存后 STALE 也走 miss 拉新，
+  // 上条对 STALE/NORMAL 无区分度；本条用假定时器把时间推过 TTL **但保留过期条目**，
+  // 才真正区分两种策略——STALE 会拿旧值，NORMAL 拿新值。
+  it("TTL 过期（条目仍在）-> 并入的是新拉取值，不是 6h 旧值", async () => {
+    vi.useFakeTimers();
+    try {
+      // 第一次：旧值进缓存并合并
+      stubFetch(() =>
+        Promise.resolve({ ok: true, json: async () => [{ name: "旧作者", type: "bilibili" }] }),
+      );
+      await loadCommunityData();
+      await vi.waitFor(() => expect(mocks.MergeCommunityCreatorsFromJSON).toHaveBeenCalledTimes(1));
+      const firstPayload = JSON.parse(
+        mocks.MergeCommunityCreatorsFromJSON.mock.calls[0][0],
+      ) as Array<{ name: string }>;
+      expect(firstPayload.map((c) => c.name)).toContain("旧作者");
+
+      // 换新值 + 把系统时间推过 6h TTL（条目仍在缓存里，只是过期）
+      mocks.MergeCommunityCreatorsFromJSON.mockClear();
+      stubFetch(() =>
+        Promise.resolve({ ok: true, json: async () => [{ name: "新作者", type: "bilibili" }] }),
+      );
+      vi.setSystemTime(Date.now() + 7 * 3600 * 1000);
+
+      await loadCommunityData();
+      await vi.waitFor(() => expect(mocks.MergeCommunityCreatorsFromJSON).toHaveBeenCalledTimes(1));
+      const payload = JSON.parse(
+        mocks.MergeCommunityCreatorsFromJSON.mock.calls[0][0],
+      ) as Array<{ name: string }>;
+      // STALE 实现下此处会拿到「旧作者」（过期条目被直接返回）→ 本条转红即策略回退
+      expect(payload.map((c) => c.name)).toContain("新作者");
+      expect(payload.map((c) => c.name)).not.toContain("旧作者");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

@@ -148,11 +148,42 @@ describe("createDedupSession — 感知性记账 lastScannedType（P2-2 收债�
     const first = dedup.start(list, esc, "ysm");
     await waitFor(() => releaseFns.length > 0); // busy 已置位、扫描挂起中
     expect(dedup.lastScannedType()).toBe("ysm");
-    await dedup.start(list, esc, "mmd"); // busy 命中 → 静默早退，账不动
+    await dedup.start(list, esc, "mmd"); // busy 命中 → 记 pending、账不动
     expect(dedup.lastScannedType()).toBe("ysm");
     releaseFns.shift()?.();
     await first;
-    expect(dedup.lastScannedType()).toBe("ysm");
+    // 锐评 P2 收口（2026-10-14）：A 完成后按 pending 补扫 B——可见面板快速连切类型，
+    // 去重结果不得定格上一类型。账最终落到 B。
+    await waitFor(() => dedup.lastScannedType() === "mmd");
+    // 补扫已发起（scanEachDirectory 先让一帧 rAF 才调 FindDuplicateFiles，须等它落）
+    await waitFor(() => releaseFns.length > 0);
+    releaseFns.shift()?.(); // 释放 B，让会话安静收尾
+    await waitFor(() => releaseFns.length === 0);
+  });
+
+  it("可见面板三连切（A→B→C）：pending 只留最新，补扫按 C", async () => {
+    const releaseFns: Array<() => void> = [];
+    getApp.mockResolvedValue({
+      GetRepoRoot: vi.fn(() => "/repo"),
+      FindDuplicateFiles: vi.fn(
+        () =>
+          new Promise((res) => {
+            releaseFns.push(() => res(groupJson));
+          }),
+      ),
+      MoveToRecycle: vi.fn(async () => {}),
+    });
+    const dedup = createDedupSession();
+    const list = document.createElement("div");
+    const first = dedup.start(list, esc, "ysm");
+    await waitFor(() => releaseFns.length > 0);
+    await dedup.start(list, esc, "mmd"); // pending = mmd
+    await dedup.start(list, esc, "EntityPlayer"); // pending 覆盖为 EntityPlayer
+    releaseFns.shift()?.(); // 释放 A
+    await first;
+    await waitFor(() => dedup.lastScannedType() === "EntityPlayer");
+    releaseFns.shift()?.(); // 释放最终补扫
+    await waitFor(() => releaseFns.length === 0);
   });
 });
 

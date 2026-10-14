@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **354** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **355** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > ADR 三区存放：根目录 = 存量（分级前）/ `architecture/` = 架构决策 / `decisions/` = 执行决策日志（ADR-320）。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -16,7 +16,7 @@ permalink: /adr/
 
 | 状态 | 数量 |
 |------|------|
-| [📝 提议中](#提议中) | 7 |
+| [📝 提议中](#提议中) | 8 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 1 |
 | [🔄 部分采纳](#部分采纳) | 15 |
 | [✅ 已采纳](#已采纳) | 323 |
@@ -26,7 +26,7 @@ permalink: /adr/
 
 ## 按状态分组导航
 
-### 📝 提议中（7）
+### 📝 提议中（8）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
@@ -37,6 +37,7 @@ permalink: /adr/
 | [ADR-292](./ADR-292-scene-environment-sky-ibl-env.md) | 环境贴图单一归属：scene.environment 所有权收口，sky IBL 降为 env 的数据源 | 📝 提议中 |
 | [ADR-284](./ADR-284-sky-reflector-shadow-decoupling-cleanup.md) | sky 散射参数与模型类别解耦 + reflector/shadow 清除 no-op 与噪声值 | 📝 提议中 |
 | [ADR-151-d1](./decisions/ADR-151-d1-gen-stage-unknown-newfile.md) | gen-stage 未知新建文件默认排除（并发卷带硬化） | 📝 提议中 |
+| [ADR-096-d1](./decisions/ADR-096-d1-repo-subdir-channel-disposition.md) | repo_subdir 运行时通道去留裁定：保留为跨语言契约占位、禁新增消费者 | 📝 提议中 |
 
 ### ⚠️ 已采纳但遗留未修复（1）
 
@@ -767,6 +768,7 @@ permalink: /adr/
 | ADR-256-d1 | 存量债到期制：debt 条目必须带 reason 与 reviewBy，到期由 doctor --all 硬处置 | ✅ 已采纳 | 2026-10-09（实施与 CI 验证同日完成，用户逐刀批准） |
 | ADR-235-d1 | sky cap 资产管线下沉（太阳位置计算 + 天空资产）——cap 变薄编排壳 | ✅ 已采纳 | 2026-10-09 |
 | ADR-151-d1 | gen-stage 未知新建文件默认排除（并发卷带硬化） | 📝 提议中 | 2026-10-06 |
+| ADR-096-d1 | repo_subdir 运行时通道去留裁定：保留为跨语言契约占位、禁新增消费者 | 📝 提议中 | 2026-10-14 |
 | ADR-091-d1 | 环境能力 cap 拆分：hdr-cache/background 先行，ibl 所有权段单独一刀 | ✅ 已采纳 | 2026-10-08 |
 
 ## 使用规则（硬约束）

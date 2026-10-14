@@ -118,25 +118,7 @@ auto_fields:
     - App.SaveWorkshopSites
     - App.ScanLocalAuthors
     - App.ScanModelEntries
-    - App.ScanModelEntriesFiltered
-    - App.ScanModelEntriesWithLabel
-    - App.SearchModels
-    - App.SelectDirectory
-    - App.SelectImportFile
-    - App.ServiceShutdown
-    - App.ServiceStartup
-    - App.SetApp
-    - App.SetDownloadMirror
-    - App.SetMainWindow
-    - App.SetModelTags
-    - App.SetResourceRoot
-    - App.SetSessionFilesRoot
-    - App.ToggleEnable
-    - App.ToggleModelEnable
-    - App.ValidateMinecraftDir
-    - App.ValidateWorkshopSites
-    - NewApp
-    - ReadFileMeta
+    - symbols_total: 118
 quick_groups:
   - 后端桥接与数据存储
 quick_intents:

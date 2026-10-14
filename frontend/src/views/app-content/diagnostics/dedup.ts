@@ -134,6 +134,14 @@ export function createDedupSession(): DedupSession {
     config: { ...DEDUP_DEFAULTS } as DedupConfigShape,
     /** 最近一次确定发起的扫描类型（start 内 busy 置位后记账；null = 从未扫过） */
     scannedType: null as string | null,
+    /** 锐评 P2 收口（2026-10-14）：busy 拦截后等待补扫的最新类型（null = 无待补）。
+     *  可见面板快速连切类型时，被 busy 拦截的那次 start 不得静默丢弃——否则扫描完成后
+     *  面板定格上一类型的结果（§三 元观察：init-pages 注释声称「由下次激活兜底」但
+     *  dirty 只在隐藏分支置位，可见面板下 onShow 不兜底）。 */
+    pendingType: null as string | null,
+    /** 最近一次扫描的渲染参数（补扫需复用；与 pendingType 同批引入） */
+    lastList: null as HTMLElement | null,
+    lastEsc: null as EscFn | null,
   };
 
   function getConfig(): Readonly<DedupConfigShape> {
@@ -295,11 +303,18 @@ export function createDedupSession(): DedupSession {
    */
   async function start(list: HTMLElement, esc: EscFn, rtype?: string): Promise<void> {
     // ① 重入守卫：busy 命中直接返回；整段包 try/finally，busy 仅在此单点复位
-    if (state.busy) return;
+    if (state.busy) {
+      // 锐评 P2 收口（2026-10-14）：不再静默丢弃——记 pending 待补扫。可见面板快速连切
+      // 类型时，若此处裸 return，扫描完成后去重结果定格上一类型，无恢复路径。
+      state.pendingType = rtype ?? "";
+      return;
+    }
     state.busy = true;
     // 感知性记账（2026-09 P2-2 收债）：busy 置位 = 本次扫描确定发起，此刻记类型最准——
     // 记账若放调用方「调 start 前」，busy 拦截的重入会把账记错（类型已新、扫描仍旧）
     state.scannedType = rtype ?? "";
+    state.lastList = list;
+    state.lastEsc = esc;
     try {
       // ① 类型元数据同步派生自 resource_types.json（ADR-269 D3④：废 loadResourceRegistry RPC 旁路，
       // 无异步加载 → 原 try/catch 降级路径随之退役）
@@ -333,6 +348,13 @@ export function createDedupSession(): DedupSession {
       }
     } finally {
       state.busy = false;
+      // 补扫：pending 与刚完成的类型不同 → 用最新类型重跑（复用 lastList/lastEsc）。
+      // 多连切时 pending 只留最新（busy 分支覆盖赋值），A→B→C 只补扫 C。
+      const pending = state.pendingType;
+      state.pendingType = null;
+      if (pending !== null && pending !== state.scannedType && state.lastList && state.lastEsc) {
+        void start(state.lastList, state.lastEsc, pending);
+      }
     }
   }
 

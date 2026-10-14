@@ -164,8 +164,11 @@ async function initRecycleTab(
  * P3 修复：配置面板独立容器，扫描结果只写 result-list，不被 innerHTML 覆盖销毁。
  * P2-2 收债（感知性绑定）：自动复扫只在面板**可见**时触发——隐藏面板的全价 SHA256
  * 扫描（go/dedup 无指纹缓存，每次全库读盘+哈希）是零价值纯成本；不可见时只更新
- * dedupType，补扫由 onShow 在用户切进面板时按需发起（看得见进度）。快速连切被 busy
- * 拦截的扫描由下次激活兜底（lastScannedType 记账在 start 内部，拦截不覆盖）。
+ * dedupType，补扫由 onShow 在用户切进面板时按需发起（看得见进度）。
+ * 锐评 P2 收口（2026-10-14）：**可见**面板下快速连切类型（被 dedup.start 的 busy 守卫
+ * 拦截）的补扫不再靠「下次激活」兜底——那路径在可见面板下不触发（dirty 只在隐藏分支
+ * 置位）。改由 dedup 会话内部的 pending 机制自愈：busy 拦截记最新类型，扫描结束后按
+ * pending 重跑（见 diagnostics/dedup.ts|createDedupSession）。此处 onShow 只管隐藏分支。
  */
 async function initDedupTab(
   _host: AppContentHost,

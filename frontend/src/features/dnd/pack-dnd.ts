@@ -30,6 +30,128 @@ export interface PackDndInstance {
   name: string;
 }
 
+type Grouped = ReturnType<typeof groupCollected>;
+type FolderGroup = Grouped["folders"][number];
+type SingleEntry = Grouped["singles"][number];
+type DndApp = Awaited<ReturnType<typeof dndGetApp>>;
+
+/** 推送统计：成功单元数 / 尝试数 / 失败明细 */
+interface PushStats {
+  okUnits: number;
+  attempted: number;
+  failures: string[];
+}
+
+/** 光杆 ysm.json 散文件拦截（与 directImport 同款：提示改走文件夹路由，整组内不受影响） */
+function filterYsmJsonSingles(allSingles: SingleEntry[]): SingleEntry[] {
+  let hinted = false;
+  return allSingles.filter((c) => {
+    if (c.file.name.toLowerCase() !== "ysm.json") return true;
+    if (!hinted) {
+      hinted = true;
+      toast(t("import.ysmJsonHint"), 4000, "warn");
+    }
+    return false;
+  });
+}
+
+/** 文件夹组逐个「入仓库 + 推送」 */
+async function pushFolderGroups(
+  folders: FolderGroup[],
+  instanceName: string,
+  app: DndApp,
+  logDrop: (msg: string) => void,
+): Promise<PushStats> {
+  let okUnits = 0;
+  let attempted = 0;
+  const failures: string[] = [];
+  for (const g of folders) {
+    attempted++;
+    // g.dir 恒为单段（groupCollected 契约：取 relPath 第一段目录），subpath 恒空；
+    // split 为防御性预留——若未来 groupCollected 支持多级 dir，此处无需改动即成立
+    const parts = g.dir.split("/");
+    const folderName = parts[parts.length - 1] || "模型";
+    const subpath = parts.slice(0, -1).join("/");
+    // 共享构建（dnd-shared.buildFolderItems）：relPath 切片 + per-file base64，读取失败跳过
+    const { items } = await buildFolderItems(g.dir, g.files);
+    if (!items.length) {
+      failures.push(`${folderName}: ${t("import.emptyFolder")}`);
+      continue;
+    }
+    try {
+      await app.ImportFolderAndPushToInstance(folderName, subpath, items, instanceName);
+      okUnits++;
+      logDrop(`pack-drop: ${folderName} → ${instanceName} 成功`);
+    } catch (err) {
+      failures.push(`${folderName}: ${friendlyError(err)}`);
+      logDrop(`pack-drop: ${folderName} → ${instanceName} 失败: ${String(err)}`);
+    }
+  }
+  return { okUnits, attempted, failures };
+}
+
+/** 单文件逐个「入仓库 + 推送」（importer 类型路由） */
+async function pushSingleFiles(
+  singles: SingleEntry[],
+  instanceName: string,
+  app: DndApp,
+  logDrop: (msg: string) => void,
+): Promise<PushStats> {
+  let okUnits = 0;
+  let attempted = 0;
+  const failures: string[] = [];
+  for (const s of singles) {
+    attempted++;
+    try {
+      const b64 = await fileToBase64(s.file);
+      await app.ImportFileAndPushToInstance(s.file.name, b64, instanceName);
+      okUnits++;
+      logDrop(`pack-drop: ${s.file.name} → ${instanceName} 成功`);
+    } catch (err) {
+      failures.push(`${s.file.name}: ${friendlyError(err)}`);
+      logDrop(`pack-drop: ${s.file.name} → ${instanceName} 失败: ${String(err)}`);
+    }
+  }
+  return { okUnits, attempted, failures };
+}
+
+/** 反馈三分（全成 / 部分失败 / 全失败）+ 统计刷新（有调用即刷，导入可能已落仓库） */
+function reportPackDropResult(stats: PushStats, instanceName: string): void {
+  const { okUnits, attempted, failures } = stats;
+  if (okUnits > 0 && failures.length === 0) {
+    toast(
+      t("import.packPushedAll", { inst: instanceName, n: okUnits }),
+      TOAST_MS.success,
+      "success",
+    );
+  } else if (okUnits > 0 && failures.length > 0) {
+    toast(
+      t("import.packPushedPartial", {
+        n: okUnits,
+        failed: failures.length,
+        first: failures[0],
+        more: failures.length > 1 ? t("import.moreSuffix") : "",
+      }),
+      TOAST_MS.verbose,
+      "warn",
+    );
+  } else if (failures.length > 0) {
+    toast(
+      t("import.packPushFailedAll", {
+        inst: instanceName,
+        first: failures[0],
+        more: failures.length > 1 ? t("import.moreSuffix") : "",
+      }),
+      TOAST_MS.verbose,
+      "error",
+    );
+  }
+  if (attempted > 0) {
+    bus.emit("stats:refresh");
+    bus.emit("tree:reload");
+  }
+}
+
 /**
  * 处理整合包卡片 drop：收集 → oversize 过滤 → 分组 → 逐组「入仓库+推送」。
  * 组名拆分与 importFolder 同口径；当前收集链路中 g.dir 恒为首段目录
@@ -76,100 +198,52 @@ export async function handleInstanceDrop(
     if (collected.length === 0) return; // 全被 oversize 滤除：超限提示已足够
 
     const { folders, singles: allSingles } = groupCollected(collected);
-    // 光杆 ysm.json 散文件与 directImport 同款拦截（整组内 ysm.json 走文件夹路由不受影响）
-    let ysmJsonHinted = false;
-    const singles = allSingles.filter((c) => {
-      if (c.file.name.toLowerCase() === "ysm.json") {
-        if (!ysmJsonHinted) {
-          ysmJsonHinted = true;
-          toast(t("import.ysmJsonHint"), 4000, "warn");
-        }
-        return false;
-      }
-      return true;
-    });
+    const singles = filterYsmJsonSingles(allSingles);
     logDrop(`pack-drop: 分组 folders=${folders.length} singles=${singles.length}`);
 
     const App = await dndGetApp();
-    let okUnits = 0;
-    let attempted = 0;
-    const failures: string[] = [];
-
-    for (const g of folders) {
-      attempted++;
-      // g.dir 恒为单段（groupCollected 契约：取 relPath 第一段目录），subpath 恒空；
-      // split 为防御性预留——若未来 groupCollected 支持多级 dir，此处无需改动即成立
-      const parts = g.dir.split("/");
-      const folderName = parts[parts.length - 1] || "模型";
-      const subpath = parts.slice(0, -1).join("/");
-      // 共享构建（dnd-shared.buildFolderItems）：relPath 切片 + per-file base64，读取失败跳过
-      const { items } = await buildFolderItems(g.dir, g.files);
-      if (!items.length) {
-        failures.push(`${folderName}: ${t("import.emptyFolder")}`);
-        continue;
-      }
-      try {
-        await App.ImportFolderAndPushToInstance(folderName, subpath, items, instanceName);
-        okUnits++;
-        logDrop(`pack-drop: ${folderName} → ${instanceName} 成功`);
-      } catch (err) {
-        failures.push(`${folderName}: ${friendlyError(err)}`);
-        logDrop(`pack-drop: ${folderName} → ${instanceName} 失败: ${String(err)}`);
-      }
-    }
-
-    for (const s of singles) {
-      attempted++;
-      try {
-        const b64 = await fileToBase64(s.file);
-        await App.ImportFileAndPushToInstance(s.file.name, b64, instanceName);
-        okUnits++;
-        logDrop(`pack-drop: ${s.file.name} → ${instanceName} 成功`);
-      } catch (err) {
-        failures.push(`${s.file.name}: ${friendlyError(err)}`);
-        logDrop(`pack-drop: ${s.file.name} → ${instanceName} 失败: ${String(err)}`);
-      }
-    }
-
-    // 反馈：成功/部分失败/全失败三分；只要有调用即刷新（导入可能已落仓库，防陈旧）
-    if (okUnits > 0 && failures.length === 0) {
-      toast(
-        t("import.packPushedAll", { inst: instanceName, n: okUnits }),
-        TOAST_MS.success,
-        "success",
-      );
-    } else if (okUnits > 0 && failures.length > 0) {
-      toast(
-        t("import.packPushedPartial", {
-          n: okUnits,
-          failed: failures.length,
-          first: failures[0],
-          more: failures.length > 1 ? t("import.moreSuffix") : "",
-        }),
-        TOAST_MS.verbose,
-        "warn",
-      );
-    } else if (failures.length > 0) {
-      toast(
-        t("import.packPushFailedAll", {
-          inst: instanceName,
-          first: failures[0],
-          more: failures.length > 1 ? t("import.moreSuffix") : "",
-        }),
-        TOAST_MS.verbose,
-        "error",
-      );
-    }
-    if (attempted > 0) {
-      bus.emit("stats:refresh");
-      bus.emit("tree:reload");
-    }
+    const folderStats = await pushFolderGroups(folders, instanceName, App, logDrop);
+    const singleStats = await pushSingleFiles(singles, instanceName, App, logDrop);
+    reportPackDropResult(
+      {
+        okUnits: folderStats.okUnits + singleStats.okUnits,
+        attempted: folderStats.attempted + singleStats.attempted,
+        failures: [...folderStats.failures, ...singleStats.failures],
+      },
+      instanceName,
+    );
   } catch (err) {
     logError("pack-dnd", "拖放处理失败", err);
     toast(`${t("import.processError")}: ${friendlyError(err)}`, TOAST_MS.verbose, "error");
   } finally {
     lock.finish();
   }
+}
+
+/**
+ * 从事件定位实例卡片：composedPath 扫描优先（外部监听可见 shadow 内部路径），
+ * target 沿 parentNode 上溯兜底（跨 shadow 边界经 host，bindTreeDnD 同款范式）。
+ */
+function cardFromEvent(e: Event): HTMLElement | null {
+  for (const node of e.composedPath()) {
+    if (node instanceof Element && node.classList?.contains("instance-card")) {
+      return node as HTMLElement;
+    }
+  }
+  let current: Node | null = e.target as Node | null;
+  while (current) {
+    if (current instanceof Element) {
+      const card = current.closest(".instance-card") as HTMLElement | null;
+      if (card) return card;
+    }
+    current = current.parentNode ?? (current instanceof ShadowRoot ? current.host : null);
+  }
+  return null;
+}
+
+/** 卡片是否属于本组件 shadow 树（多实例并存防串扰） */
+function cardInRoot(card: HTMLElement, root: ShadowRoot): boolean {
+  return root.contains(card) || card.getRootNode() === root;
 }
 
 /**
@@ -193,32 +267,11 @@ export function bindPackCardDnD(
     }
   };
 
-  // composedPath 扫描优先（外部监听可见 shadow 内部路径），target 沿
-  // parentNode 上溯兜底（跨 shadow 边界经 host，bindTreeDnD 同款范式）
-  const cardFromEvent = (e: Event): HTMLElement | null => {
-    for (const node of e.composedPath()) {
-      if (node instanceof Element && node.classList?.contains("instance-card")) {
-        return node as HTMLElement;
-      }
-    }
-    let current: Node | null = e.target as Node | null;
-    while (current) {
-      if (current instanceof Element) {
-        const card = current.closest(".instance-card") as HTMLElement | null;
-        if (card) return card;
-      }
-      current = current.parentNode ?? (current instanceof ShadowRoot ? current.host : null);
-    }
-    return null;
-  };
-
   const onDragOver = (e: DragEvent): void => {
     if (!e.dataTransfer?.types?.includes("Files")) return;
     if (isEditableTarget(e.target)) return;
     const card = cardFromEvent(e);
-    if (!card) return;
-    // 只响应本组件 shadow 内的卡片（多实例并存防串扰）
-    if (!root.contains(card) && card.getRootNode() !== root) return;
+    if (!card || !cardInRoot(card, root)) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = "copy";
     if (_lastCard !== card) {
@@ -235,8 +288,7 @@ export function bindPackCardDnD(
 
   const onDrop = (e: DragEvent): void => {
     const card = cardFromEvent(e);
-    if (!card) return;
-    if (!root.contains(card) && card.getRootNode() !== root) return;
+    if (!card || !cardInRoot(card, root)) return;
     clearHighlight();
     // P1 修复（2026-10 锐评）：目标实例按**名称**解析——原实现按 data-idx 数组下标
     // 取 `getInstances()[idx]`，而卡片下标是渲染时的快照：sidebar 重载/实例增删后

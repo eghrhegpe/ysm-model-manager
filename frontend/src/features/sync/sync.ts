@@ -62,6 +62,175 @@ interface InstallCounts {
   packs: PackOutcome[];
 }
 
+/** 失败明细上限（防批量失败时 toast 过长） */
+const MAX_ERRORS = 3;
+/** 单包失败明细上限（锐评 P1-3：包级归因每包至多 2 条，防多包批量无界增长） */
+const MAX_PACK_ERRORS = 2;
+
+/** sync 后端绑定类型（由 syncGetApp 反推，不硬编码签名） */
+type SyncApp = Awaited<ReturnType<typeof syncGetApp>>;
+type SyncInstance = NonNullable<Awaited<ReturnType<SyncApp["ListVersionInstances"]>>>[number];
+type InstanceStatus = NonNullable<
+  Awaited<ReturnType<SyncApp["GetResourceInstanceStatus"]>>
+>[number];
+
+/** 单文件/目录安装结果：ok + 失败缘由（成功时 err 为 null） */
+interface InstallResult {
+  ok: boolean;
+  err: unknown;
+}
+
+/** 目标实例解析：instanceNames 优先（批量一次覆盖多包），其次 instanceName 单值，再退化全部 */
+function resolveTargets(
+  instances: SyncInstance[],
+  instanceName: string | undefined,
+  instanceNames: string[] | undefined,
+): SyncInstance[] {
+  const nameSet = instanceNames?.length
+    ? new Set(instanceNames)
+    : instanceName
+      ? new Set([instanceName])
+      : null;
+  return nameSet ? instances.filter((i) => nameSet.has(i.Name)) : instances;
+}
+
+/** 单缺失文件安装：YSM 走 InstallModelTo，其余走 InstallResourceToInstance */
+async function installMissingFile(
+  srcPath: string,
+  ins: SyncInstance,
+  rtype: string,
+  app: SyncApp,
+): Promise<InstallResult> {
+  try {
+    if (rtype === RESOURCE_TYPES.YSM) {
+      await app.InstallModelTo(srcPath, ins.CustomDir);
+    } else {
+      await app.InstallResourceToInstance(rtype, srcPath, ins.Name);
+    }
+    return { ok: true, err: null };
+  } catch (e) {
+    return { ok: false, err: e };
+  }
+}
+
+/** 单缺失目录安装：夹内无受支持文件时 Go 整体归入 MissingDirs，须走 folder-aware 推送（ADR-310） */
+async function installMissingDir(
+  dirPath: string,
+  ins: SyncInstance,
+  rtype: string,
+  app: SyncApp,
+): Promise<InstallResult> {
+  try {
+    await app.PushSingleResourceToInstance(rtype, ins.Name, dirPath);
+    return { ok: true, err: null };
+  } catch (e) {
+    return { ok: false, err: e };
+  }
+}
+
+/** 单包安装：逐条 Missing 文件 + MissingDirs 目录，返回包级归因（锐评 P1-3）。
+ *  allErrors 为**未截断**失败明细——全局 errors 须按 MAX_ERRORS 统一封顶，
+ *  不能被每包 MAX_PACK_ERRORS 提前砍掉（否则单包 5 失败时全局只剩 2 条）。 */
+async function installInstanceMissing(
+  ins: SyncInstance,
+  st: InstanceStatus,
+  rtype: string,
+  app: SyncApp,
+): Promise<{ pack: PackOutcome; allErrors: string[] }> {
+  const allErrors: string[] = [];
+  const record = (item: string, err: unknown): void => {
+    allErrors.push(`${ins.Name}/${item}: ${friendlyError(err)}`);
+  };
+  let packOk = 0;
+  let packFail = 0;
+  for (const srcPath of st.Missing ?? []) {
+    const r = await installMissingFile(srcPath, ins, rtype, app);
+    if (r.ok) packOk++;
+    else {
+      packFail++;
+      record(srcPath, r.err);
+    }
+  }
+  for (const dirPath of st.MissingDirs ?? []) {
+    const r = await installMissingDir(dirPath, ins, rtype, app);
+    if (r.ok) packOk++;
+    else {
+      packFail++;
+      record(dirPath, r.err);
+    }
+  }
+  return {
+    pack: {
+      name: ins.Name,
+      ok: packOk,
+      fail: packFail,
+      errors: allErrors.slice(0, MAX_PACK_ERRORS),
+    },
+    allErrors,
+  };
+}
+
+/** 强制刷新扫描缓存：失败不上抛，但归入 errors 让用户可见（装成功却等不到新模型是最困惑的一类反馈） */
+async function refreshScanCache(app: SyncApp, errors: string[]): Promise<void> {
+  try {
+    await app.InvalidateScanCache();
+  } catch (e) {
+    // P3（审核发现）：不静默吞错——缓存失效失败会让新导入最长 30s 不出现。
+    // 锐评 UX 高项收口（2026-10-14）：不止 dbg，须让用户可见。归入 errors 并在汇总 toast 点名。
+    dbg("sync", "InvalidateScanCache 失败:", e);
+    if (errors.length < MAX_ERRORS) {
+      errors.push(t("sync.cacheInvalidateFailed", { msg: friendlyError(e) }));
+    }
+  }
+}
+
+/** 单包模式汇总 toast（批量模式静默——反馈权归发起方一条汇总，锐评 P2-1） */
+function showDownloadSummary(
+  instanceName: string | undefined,
+  instanceNames: string[] | undefined,
+  totalOk: number,
+  totalFail: number,
+  errors: string[],
+): void {
+  if (instanceNames?.length) return;
+  const base = instanceName
+    ? t("sync.downloadDone", { name: instanceName, ok: totalOk, fail: totalFail })
+    : t("sync.downloadAllDone", { ok: totalOk, fail: totalFail });
+  // 失败明细追加在括号里（无失败则不加）；缓存失效失败同样点名
+  const detail = errors.length > 0 ? `（${errors.join("；")}）` : "";
+  toast(
+    `${base}${detail}`,
+    TOAST_MS.verbose,
+    totalFail > 0 || errors.length > 0 ? "warn" : "success",
+  );
+}
+
+/** 逐目标实例安装缺失文件，汇总文件级计数 + 包级归因（失败明细并进 errors，止于 MAX_ERRORS） */
+async function installAllTargets(
+  targets: SyncInstance[],
+  allStatuses: InstanceStatus[] | null,
+  rtype: string,
+  app: SyncApp,
+  errors: string[],
+): Promise<{ totalOk: number; totalFail: number; packs: PackOutcome[] }> {
+  const pushError = (msg: string): void => {
+    if (errors.length < MAX_ERRORS) errors.push(msg);
+  };
+  const packs: PackOutcome[] = [];
+  let totalOk = 0;
+  let totalFail = 0;
+  for (const ins of targets) {
+    const st = (allStatuses || []).find((s) => s.Name === ins.Name);
+    if (!st?.Missing?.length && !st?.MissingDirs?.length) continue;
+    const { pack, allErrors } = await installInstanceMissing(ins, st, rtype, app);
+    totalOk += pack.ok;
+    totalFail += pack.fail;
+    for (const msg of allErrors) pushError(msg);
+    packs.push(pack);
+  }
+  return { totalOk, totalFail, packs };
+}
+
 /** 逐个整合包安装缺失文件，返回文件级计数（null = 配置缺失/异常）。
  *  批量模式（instanceNames 非空，发起方 app-sidebar 逐类型直调收集计数）下
  *  不弹 toast——防「全部类型 × N 包」连吃一串 0 成功 0 失败轰炸，
@@ -78,116 +247,35 @@ async function runDownloadMissing(
     "rtype:",
     rtype,
   );
-  const {
-    ListVersionInstances,
-    GetResourceInstanceStatus,
-    InstallModelTo,
-    InstallResourceToInstance,
-    PushSingleResourceToInstance,
-    GetRepoRoot,
-    InvalidateScanCache,
-  } = await syncGetApp();
+  const app = await syncGetApp();
   const mcRoot = await requireMcRoot();
   if (!mcRoot) return null;
-  const instances = (await ListVersionInstances(mcRoot)) ?? [];
-  const filesRoot = await GetRepoRoot(rtype);
+  const instances = (await app.ListVersionInstances(mcRoot)) ?? [];
+  const filesRoot = await app.GetRepoRoot(rtype);
   if (!filesRoot) {
     toast(t("sync.configureResourceTypeDir"), TOAST_MS.normal, "warn");
     return null;
   }
 
-  // 目标实例解析：instanceNames 优先（批量一次覆盖多包），其次 instanceName 单值，再退化全部。
   // 批量模式把 O(包×类型) 次全量扫描收敛为 O(类型) 次——单次事件内只扫一次状态。
-  const nameSet = instanceNames?.length
-    ? new Set(instanceNames)
-    : instanceName
-      ? new Set([instanceName])
-      : null;
-  const targets = nameSet ? instances.filter((i) => nameSet.has(i.Name)) : instances;
-  const allStatuses = await GetResourceInstanceStatus(rtype, mcRoot, filesRoot);
-  let totalOk = 0;
-  let totalFail = 0;
+  const targets = resolveTargets(instances, instanceName, instanceNames);
+  const allStatuses = await app.GetResourceInstanceStatus(rtype, mcRoot, filesRoot);
+
   // 失败明细（锐评 UX 高项收口，2026-10-14）：原 `catch { totalFail++ }` 吞错误对象，
   // 发起方只拿到一个数字，排障只能翻日志。保留前若干条（防批量失败时 toast 过长），
   // 格式含包名 + 文件相对名 + friendlyError 缘由，用户侧可自诊断。
   const errors: string[] = [];
-  const MAX_ERRORS = 3;
-  const pushError = (insName: string, item: string, e: unknown): void => {
-    if (errors.length < MAX_ERRORS) errors.push(`${insName}/${item}: ${friendlyError(e)}`);
-  };
-  // 包级归因（锐评 P1-3）：按包各记一份 ok/fail + 至多 2 条失败缘由，供发起方指名道姓。
-  const packs: PackOutcome[] = [];
-  const MAX_PACK_ERRORS = 2;
-  const pushPackError = (bucket: string[], insName: string, item: string, e: unknown): void => {
-    if (bucket.length < MAX_PACK_ERRORS) bucket.push(`${insName}/${item}: ${friendlyError(e)}`);
-  };
-  for (const ins of targets) {
-    const st = (allStatuses || []).find((s) => s.Name === ins.Name);
-    if (!st?.Missing?.length && !st?.MissingDirs?.length) continue;
-    let packOk = 0;
-    let packFail = 0;
-    const packErrors: string[] = [];
-    for (const srcPath of st.Missing ?? []) {
-      try {
-        if (rtype === RESOURCE_TYPES.YSM) {
-          await InstallModelTo(srcPath, ins.CustomDir);
-        } else {
-          await InstallResourceToInstance(rtype, srcPath, ins.Name);
-        }
-        totalOk++;
-        packOk++;
-      } catch (e) {
-        totalFail++;
-        packFail++;
-        pushError(ins.Name, srcPath, e);
-        pushPackError(packErrors, ins.Name, srcPath, e);
-      }
-    }
-    // ADR-310：夹内没有可逐文件安装的受支持文件时，Go 把整个夹放进 MissingDirs——
-    // 必须走 folder-aware 的PushSingleResourceToInstance（面板行内推送同一条路，
-    // 对目录走 InstallDir 装该夹本身）；喂给上面的逐条 Install 会装成它的父目录。
-    for (const dirPath of st.MissingDirs ?? []) {
-      try {
-        await PushSingleResourceToInstance(rtype, ins.Name, dirPath);
-        totalOk++;
-        packOk++;
-      } catch (e) {
-        totalFail++;
-        packFail++;
-        pushError(ins.Name, dirPath, e);
-        pushPackError(packErrors, ins.Name, dirPath, e);
-      }
-    }
-    packs.push({ name: ins.Name, ok: packOk, fail: packFail, errors: packErrors });
-  }
-  // 强制刷新扫描缓存
-  try {
-    await InvalidateScanCache();
-  } catch (e) {
-    // P3（审核发现）：不静默吞错——缓存失效失败会让新导入最长 30s 不出现。
-    // 锐评 UX 高项收口（2026-10-14）：不止 dbg，须让用户可见——装成功却等不到新模型
-    // 是最困惑的一类反馈（用户会反复重试/怀疑安装失败）。归入 errors 并在汇总 toast 点名。
-    dbg("sync", "InvalidateScanCache 失败:", e);
-    if (errors.length < MAX_ERRORS)
-      errors.push(t("sync.cacheInvalidateFailed", { msg: friendlyError(e) }));
-  }
+  const { totalOk, totalFail, packs } = await installAllTargets(
+    targets,
+    allStatuses,
+    rtype,
+    app,
+    errors,
+  );
+  await refreshScanCache(app, errors);
   dbg("sync", "同步完成, 发出 stats:refresh, 成功:", totalOk, "失败:", totalFail);
   bus.emit("stats:refresh");
-  // 单包模式反馈归 handler（右键/工具栏等直发事件的生产者没有自己的汇总链）；
-  // 批量模式（app-sidebar 逐类型收集 done.ok/fail 后汇总一条 toast）此处静默，
-  // 否则 15 类型 × 每类型一条（含 0 成功 0 失败）连珠炮淹没发起方汇总（锐评 P2-1）。
-  if (!instanceNames?.length) {
-    const base = instanceName
-      ? t("sync.downloadDone", { name: instanceName, ok: totalOk, fail: totalFail })
-      : t("sync.downloadAllDone", { ok: totalOk, fail: totalFail });
-    // 失败明细追加在括号里（无失败则不加）；缓存失效失败同样点名
-    const detail = errors.length > 0 ? `（${errors.join("；")}）` : "";
-    toast(
-      `${base}${detail}`,
-      TOAST_MS.verbose,
-      totalFail > 0 || errors.length > 0 ? "warn" : "success",
-    );
-  }
+  showDownloadSummary(instanceName, instanceNames, totalOk, totalFail, errors);
   return { ok: totalOk, fail: totalFail, errors, packs };
 }
 

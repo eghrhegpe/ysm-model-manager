@@ -42,15 +42,15 @@ export function renderVersionCards(container: HTMLElement, instances: SidebarIns
     // 一秒以上才出现，且每次 stats:refresh 整列表重建都会重演一次 = 「卡卡」直因；
     // 站点卡片（app-content/site/render.ts）早已用同口径封顶。
     card.style.animationDelay = `${stagger(idx, 40)}ms`;
-    card.innerHTML = instanceCardHeaderHTML(
-      ins.name,
-      ins.synced,
-      ins.missing,
-      ins.extra,
+    card.innerHTML = instanceCardHeaderHTML({
+      name: ins.name,
+      synced: ins.synced,
+      missing: ins.missing,
+      extra: ins.extra,
       idx,
-      ins.hasMod,
-      ins.rtype || currentRepoType(),
-    );
+      hasMod: ins.hasMod,
+      rtype: ins.rtype || currentRepoType(),
+    });
     frag.appendChild(card);
   });
   container.appendChild(frag);

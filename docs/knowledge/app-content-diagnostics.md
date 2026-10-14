@@ -24,6 +24,7 @@ auto_fields:
     - concReadIds
     - copyWithToast
     - createDedupSession
+    - DEDUP_CONFIG_KEY
     - DEDUP_DEFAULTS
     - DedupConfigShape
     - DedupFileLike

@@ -8,6 +8,7 @@ source_files:
   - frontend/src/views/app-content/tpl-oldest.ts
 auto_fields:
   symbols_with_lines:
+    - clearRepoStatsCache
     - loadOldestModel
     - ModelEntry
     - OldestDeps

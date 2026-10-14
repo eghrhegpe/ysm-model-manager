@@ -254,6 +254,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-340：推送链去总线化：请求-响应回归直调，token/回执/宽限期协议件退役",
+        "link": "/adr/architecture/ADR-340-sync-push-direct-call"
+      },
+      {
         "text": "ADR-339：全类型 .disabled 启禁同步（大一统 repo↔pack 一致性）",
         "link": "/adr/architecture/ADR-339-alltype-toggle-sync"
       },

@@ -208,19 +208,30 @@ function noModLabelOf(rtype: string): string {
   return shortLabelOf(rtype) || rtype;
 }
 
+/** 单个整合包卡片头的入参。
+ *  收成对象而非 7 个位置参数（2026-10-14，`check-params` 参数闸 7≥6 报警）：
+ *  位置参数是「陪跑参数」温床——本函数已删过一个零消费的 `_status`（第 5 位），
+ *  因为按位置传参时「多一个少一个」不会被类型系统指出，全靠人核对调用点。
+ *  对象入参让每个字段自带名，且调用点即文档。 */
+export interface InstanceCardHeaderData {
+  name: string;
+  synced: number;
+  missing: number;
+  extra: number;
+  idx?: number;
+  hasMod?: boolean;
+  rtype?: string;
+}
+
 /** 单个整合包卡片头部。
- *  idx 用于绑定安装缺失按钮的 data-idx。
+ *  `idx` 用于绑定安装缺失按钮的 data-idx（缺省 -1）。
  *  ⚠️ 原第 5 位 `_status` 陪跑参数已删（2026-10 锐评收口：函数体零消费——徽章展示
- *  全由三计数 + hasMod 驱动；该参数只是调用方按 loader 派生字段顺位递进来的「陪跑」。 */
-export function instanceCardHeaderHTML(
-  name: string,
-  synced: number,
-  missing: number,
-  extra: number,
-  idx = -1,
-  hasMod = true,
-  rtype = RESOURCE_TYPES.YSM,
-): string {
+ *  全由三计数 + hasMod 驱动；该参数只是调用方按 loader 派生字段顺位递进来的「陪跑」）。 */
+export function instanceCardHeaderHTML(d: InstanceCardHeaderData): string {
+  const { name, synced, missing, extra } = d;
+  const idx = d.idx ?? -1;
+  const hasMod = d.hasMod ?? true;
+  const rtype = d.rtype ?? RESOURCE_TYPES.YSM;
   const allZero = synced === 0 && missing === 0 && extra === 0;
   // 徽章补 title 语义锚点（颜色码不自解释——绿/红/橙三色图例此前只存在于文档）：
   // 文案复用同步面板既有 key（已同步/待推送/可拉取），零新增 i18n；侧栏 extra 的

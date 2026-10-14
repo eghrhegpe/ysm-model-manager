@@ -27,8 +27,12 @@ auto_fields:
     - groupCollected
     - handleInstanceDrop
     - handleTreeDrop
+    - ImportBatchResult
     - ImportFile
     - importFolder
+    - ImportOpts
+    - ImportOutcome
+    - ImportResult
     - ImportSession
     - importWebFilesWithToast
     - isEditableTarget

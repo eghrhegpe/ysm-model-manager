@@ -30,6 +30,7 @@ auto_fields:
     - IsCrossDeviceErr
     - IsHardLink
     - IsRecycleDir
+    - IsRelinkBackupPath
     - IsResourcePackFolder
     - ReadFileLimited
     - ReadLimitedEntry

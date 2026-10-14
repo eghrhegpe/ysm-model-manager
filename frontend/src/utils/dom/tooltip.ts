@@ -62,165 +62,175 @@ const EDGE_MARGIN = 8;
 const GAP = 6;
 
 /**
+ * 共享运行时状态（打破闭包：模块级助手经 ops 读写，避免 createTooltipManager
+ * 内互相捕获 observer/scroll 引用导致认知爆炸）。隔离实例各持一份 ops。
+ */
+interface TooltipOps {
+  st: TooltipState;
+  observer: { current: MutationObserver | null };
+  scroll: { handler: (() => void) | null; ref: number };
+}
+
+function cancelTimer(st: TooltipState): void {
+  if (st.timer !== null) {
+    clearTimeout(st.timer);
+    st.timer = null;
+  }
+}
+
+function ensureTooltipEl(st: TooltipState): HTMLDivElement {
+  if (!st.el?.isConnected) {
+    st.el = document.createElement("div");
+    st.el.className = "ysw-tooltip";
+    st.el.setAttribute("role", "tooltip");
+    document.body.appendChild(st.el);
+  }
+  // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
+  return st.el!;
+}
+
+/** 目标元素脱离 DOM 时兜底隐藏（菜单整体重建时 mouseleave 不触发） */
+function ensureObserver(ops: TooltipOps): MutationObserver | null {
+  if (typeof MutationObserver === "undefined") return null;
+  if (!ops.observer.current) {
+    ops.observer.current = new MutationObserver(() => {
+      if (ops.st.target && !ops.st.target.isConnected) hideTooltip(ops);
+    });
+  }
+  return ops.observer.current;
+}
+
+/** 页面滚动时提示会飘离锚点，捕获阶段统一隐藏（原生 title 同行为）。 */
+function ensureScrollHandler(ops: TooltipOps): void {
+  if (typeof document === "undefined") return;
+  if (ops.scroll.ref === 0) {
+    ops.scroll.handler = () => {
+      if (ops.st.timer !== null || ops.st.target) hideTooltip(ops);
+    };
+    document.addEventListener("scroll", ops.scroll.handler, true);
+  }
+  ops.scroll.ref++;
+}
+
+function decrementScrollRef(ops: TooltipOps): void {
+  if (ops.scroll.ref > 0) ops.scroll.ref--;
+  if (ops.scroll.ref === 0 && ops.scroll.handler && typeof document !== "undefined") {
+    document.removeEventListener("scroll", ops.scroll.handler, true);
+    ops.scroll.handler = null;
+  }
+}
+
+/** 定位：目标上方水平居中，上方放不下翻到下方；水平夹在视口内 */
+function placeTooltip(st: TooltipState, target: HTMLElement): void {
+  // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
+  const tip = st.el!;
+  const r = target.getBoundingClientRect();
+  const tw = tip.offsetWidth;
+  const th = tip.offsetHeight;
+  let x = r.left + r.width / 2 - tw / 2;
+  x = Math.max(EDGE_MARGIN, Math.min(x, window.innerWidth - tw - EDGE_MARGIN));
+  const below = r.top < th + GAP + 4;
+  const y = below ? r.bottom + GAP : r.top - th - GAP;
+  tip.style.left = `${Math.round(Math.max(0, x))}px`;
+  tip.style.top = `${Math.round(y)}px`;
+}
+
+function showTooltip(ops: TooltipOps, target: HTMLElement, text: string): void {
+  ensureTooltipStyles();
+  const tip = ensureTooltipEl(ops.st);
+  tip.textContent = text;
+  tip.classList.add("ysw-tooltip--show");
+  placeTooltip(ops.st, target);
+  ops.st.target = target;
+  // 仅观察目标父节点的子列表变化（目标被移除时触发），避免全量观察 document.body
+  const parent = target.parentElement;
+  if (parent) {
+    ensureObserver(ops)?.observe(parent, { childList: true, subtree: false });
+  }
+}
+
+function hideTooltip(ops: TooltipOps): void {
+  cancelTimer(ops.st);
+  if (ops.st.el) ops.st.el.classList.remove("ysw-tooltip--show");
+  ops.st.target = null;
+  ops.observer.current?.disconnect();
+}
+
+function attachTooltipTo(
+  ops: TooltipOps,
+  el: HTMLElement,
+  getText: string | (() => string),
+  opts: TooltipOptions = {},
+): () => void {
+  const delayMs = opts.delayMs ?? 350;
+  const onEnter = (): void => {
+    cancelTimer(ops.st);
+    ops.st.timer = setTimeout(() => {
+      ops.st.timer = null;
+      if (!el.isConnected) return;
+      const text = typeof getText === "function" ? getText() : getText;
+      if (!text) return;
+      showTooltip(ops, el, text);
+    }, delayMs);
+  };
+  const onLeave = (): void => {
+    cancelTimer(ops.st);
+    if (ops.st.target === el || ops.st.timer !== null) hideTooltip(ops);
+  };
+  el.addEventListener("mouseenter", onEnter); // pointer-allow: tooltip 仅 hover 设备触发（触屏无 hover 语义本就不该弹，pointer-events.md 已裁决豁免）
+  el.addEventListener("mouseleave", onLeave); // pointer-allow: 配对 leave 兼作 blur 兜底（同上豁免）
+  el.addEventListener("blur", onLeave);
+  ensureScrollHandler(ops);
+  return () => {
+    cancelTimer(ops.st);
+    if (ops.st.target === el) hideTooltip(ops);
+    el.removeEventListener("mouseenter", onEnter);
+    el.removeEventListener("mouseleave", onLeave);
+    el.removeEventListener("blur", onLeave);
+    decrementScrollRef(ops);
+  };
+}
+
+function promoteTitleOn(ops: TooltipOps, el: HTMLElement): () => void {
+  const title = el.getAttribute("title");
+  if (!title) return () => {};
+  el.removeAttribute("title");
+  if (!el.getAttribute("aria-label")) el.setAttribute("aria-label", title);
+  return attachTooltipTo(ops, el, title);
+}
+
+function disposeTooltip(ops: TooltipOps): void {
+  cancelTimer(ops.st);
+  hideTooltip(ops);
+  ops.observer.current = null;
+  // 清理 scroll handler（ref 归零）
+  while (ops.scroll.ref > 0) {
+    decrementScrollRef(ops);
+  }
+  // 移除 tooltip DOM 节点（隔离实例互不干扰）
+  if (ops.st.el?.isConnected) {
+    ops.st.el.remove();
+  }
+  ops.st.el = null;
+}
+
+/**
  * 创建独立的 Tooltip 管理器实例。
  * 生产环境应只使用默认实例（defaultManager），保证「同一时刻至多一个 tooltip 可见」。
  * 测试/HMR 场景可创建隔离实例。
  */
 export function createTooltipManager(): TooltipManager {
-  const st: TooltipState = { el: null, target: null, timer: null };
-  let observer: MutationObserver | null = null;
-  let scrollHandler: (() => void) | null = null;
-  let scrollRef = 0;
-
-  function ensureTooltipEl(): HTMLDivElement {
-    if (!st.el?.isConnected) {
-      st.el = document.createElement("div");
-      st.el.className = "ysw-tooltip";
-      st.el.setAttribute("role", "tooltip");
-      document.body.appendChild(st.el);
-    }
-    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-    return st.el!;
-  }
-
-  /** 目标元素脱离 DOM 时兜底隐藏（菜单整体重建时 mouseleave 不触发） */
-  function ensureObserver(): MutationObserver | null {
-    if (typeof MutationObserver === "undefined") return null;
-    if (!observer) {
-      observer = new MutationObserver(() => {
-        if (st.target && !st.target.isConnected) hide();
-      });
-    }
-    return observer;
-  }
-
-  /** 页面滚动时提示会飘离锚点，捕获阶段统一隐藏（原生 title 同行为）。 */
-  function ensureScrollHandler(): void {
-    if (typeof document === "undefined") return;
-    if (scrollRef === 0) {
-      scrollHandler = () => {
-        if (st.timer !== null || st.target) hide();
-      };
-      document.addEventListener("scroll", scrollHandler, true);
-    }
-    scrollRef++;
-  }
-
-  function decrementScrollRef(): void {
-    if (scrollRef > 0) scrollRef--;
-    if (scrollRef === 0 && scrollHandler && typeof document !== "undefined") {
-      document.removeEventListener("scroll", scrollHandler, true);
-      scrollHandler = null;
-    }
-  }
-
-  function cancelTimer(): void {
-    if (st.timer !== null) {
-      clearTimeout(st.timer);
-      st.timer = null;
-    }
-  }
-
-  /** 定位：目标上方水平居中，上方放不下翻到下方；水平夹在视口内 */
-  function place(target: HTMLElement): void {
-    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-    const tip = st.el!;
-    const r = target.getBoundingClientRect();
-    const tw = tip.offsetWidth;
-    const th = tip.offsetHeight;
-    let x = r.left + r.width / 2 - tw / 2;
-    x = Math.max(EDGE_MARGIN, Math.min(x, window.innerWidth - tw - EDGE_MARGIN));
-    const below = r.top < th + GAP + 4;
-    const y = below ? r.bottom + GAP : r.top - th - GAP;
-    tip.style.left = `${Math.round(Math.max(0, x))}px`;
-    tip.style.top = `${Math.round(y)}px`;
-  }
-
-  function show(target: HTMLElement, text: string): void {
-    ensureTooltipStyles();
-    const tip = ensureTooltipEl();
-    tip.textContent = text;
-    tip.classList.add("ysw-tooltip--show");
-    place(target);
-    st.target = target;
-    // 仅观察目标父节点的子列表变化（目标被移除时触发），避免全量观察 document.body
-    const parent = target.parentElement;
-    if (parent) {
-      ensureObserver()?.observe(parent, { childList: true, subtree: false });
-    }
-  }
-
-  function hide(): void {
-    cancelTimer();
-    if (st.el) st.el.classList.remove("ysw-tooltip--show");
-    st.target = null;
-    observer?.disconnect();
-  }
-
-  function attachTooltip(
-    el: HTMLElement,
-    getText: string | (() => string),
-    opts: TooltipOptions = {},
-  ): () => void {
-    const delayMs = opts.delayMs ?? 350;
-    const onEnter = (): void => {
-      cancelTimer();
-      st.timer = setTimeout(() => {
-        st.timer = null;
-        if (!el.isConnected) return;
-        const text = typeof getText === "function" ? getText() : getText;
-        if (!text) return;
-        show(el, text);
-      }, delayMs);
-    };
-    const onLeave = (): void => {
-      cancelTimer();
-      if (st.target === el || st.timer !== null) hide();
-    };
-    el.addEventListener("mouseenter", onEnter); // pointer-allow: tooltip 仅 hover 设备触发（触屏无 hover 语义本就不该弹，pointer-events.md 已裁决豁免）
-    el.addEventListener("mouseleave", onLeave); // pointer-allow: 配对 leave 兼作 blur 兜底（同上豁免）
-    el.addEventListener("blur", onLeave);
-    ensureScrollHandler();
-    return () => {
-      cancelTimer();
-      if (st.target === el) hide();
-      el.removeEventListener("mouseenter", onEnter);
-      el.removeEventListener("mouseleave", onLeave);
-      el.removeEventListener("blur", onLeave);
-      decrementScrollRef();
-    };
-  }
-
-  function promoteTitle(el: HTMLElement): () => void {
-    const title = el.getAttribute("title");
-    if (!title) return () => {};
-    el.removeAttribute("title");
-    if (!el.getAttribute("aria-label")) el.setAttribute("aria-label", title);
-    return attachTooltip(el, title);
-  }
-
-  function promoteTitleIfPresent(el: HTMLElement | null): () => void {
-    if (!el) return () => {};
-    return promoteTitle(el);
-  }
-
-  function dispose(): void {
-    cancelTimer();
-    hide();
-    observer?.disconnect();
-    observer = null;
-    // 清理 scroll handler（ref 归零）
-    while (scrollRef > 0) {
-      decrementScrollRef();
-    }
-    // 移除 tooltip DOM 节点（隔离实例互不干扰）
-    if (st.el?.isConnected) {
-      st.el.remove();
-    }
-    st.el = null;
-  }
-
-  return { attachTooltip, promoteTitle, promoteTitleIfPresent, dispose };
+  const ops: TooltipOps = {
+    st: { el: null, target: null, timer: null },
+    observer: { current: null },
+    scroll: { handler: null, ref: 0 },
+  };
+  return {
+    attachTooltip: (el, getText, opts) => attachTooltipTo(ops, el, getText, opts),
+    promoteTitle: (el) => promoteTitleOn(ops, el),
+    promoteTitleIfPresent: (el) => (el ? promoteTitleOn(ops, el) : () => {}),
+    dispose: () => disposeTooltip(ops),
+  };
 }
 
 // ── 默认实例（生产环境唯一）──────────────────────────

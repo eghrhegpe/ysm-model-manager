@@ -163,6 +163,10 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   // 仓库文件写绑定的标签键跟随+清理（锐评 2026-10-11 收口）：扫 internal/app 生产文件的
   // fileops 写调用点，改名/移动/复制须 relocateTags、删除须 pruneTags——go 侧文件绑定变更即须复核
   "test_fileops_tag_sync.ts": ["go", "tests"],
+  // 随 rtype 联动面板的感知性绑定（2026-10-14 P1b）：扫 frontend/src 生产文件的
+  // useCurrentResourceType 调用点，候选面板须含 hidden 守卫 + onShow 句柄（派生 fail-closed，
+  // 同 write-surface-gate 范式）——frontend 面板层变更即须复核
+  "test_rtype_panel_perceptual_binding.ts": ["frontend", "tests"],
   "test_api_break.ts": ["tests"],
   "test_auto_import.ts": ["tests"],
   // 守卫跨三端：scripts 工具自身 + Go 侧 ADR-047 守卫信号（internal/app）+ 前端黑名单/bindings
@@ -406,6 +410,14 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
     "go/fileops/",
     "scripts/_lib/write-surface-gate.ts",
     "tests/test_fileops_tag_sync.ts",
+  ],
+  // 随 rtype 联动面板的感知性绑定（2026-10-14 P1b）：frontend/src 全量在扫（目录哨兵）
+  // + hook 定义文件（API 面变更 = 候选面重算）+ 派生引擎本体 + 测试自身
+  "test_rtype_panel_perceptual_binding.ts": [
+    "frontend/src/",
+    "frontend/src/features/repo/repo-rtype.ts",
+    "scripts/_lib/rtype-panel-gate.ts",
+    "tests/test_rtype_panel_perceptual_binding.ts",
   ],
   "test_api_break.ts": ["scripts/api-break.ts"],
   "test_auto_import.ts": [

@@ -105,6 +105,27 @@ function createIconBtn(iconHTML: string, action: string, title?: string): HTMLBu
   return btn;
 }
 
+/** B 站搜索按钮（按模型名解析作者后外链搜索）——从 buildModelRow 抽出，与下载按钮同族 */
+function ghSearchBtn(): HTMLButtonElement {
+  const btn = createIconBtn(UI_ICONS.search, "search-bili", t("workshop.bilibiliSearch"));
+  btn.dataset.testid = "gh-search-bili";
+  return btn;
+}
+
+/** 单行下载按钮：url 由 dlPrefix + path 拼，size 走有限数守卫（见下方注释） */
+function ghDlBtn(dlPrefix: string, m: WorkshopModel): HTMLButtonElement {
+  const btn = createIconBtn(UI_ICONS.download, "download");
+  btn.classList.add("gh-dl-btn");
+  btn.dataset.testid = "gh-dl";
+  btn.dataset.url = buildModelDownloadUrl(dlPrefix, m.path);
+  btn.dataset.name = m.name;
+  // 同 download-tasks.ts 的有限数守卫——-1（Content-Length=-1 哨兵）不得透传
+  btn.dataset.size = String(
+    typeof m.size === "number" && Number.isFinite(m.size) && m.size > 0 ? m.size : 0,
+  );
+  return btn;
+}
+
 /** 单行构建上下文（buildModelRow 用；renderModelList 已删除，esc/showAll 字段暂为兼容 events.ts 调用点保留） */
 export interface ModelRowCtx {
   dlPrefix: string;
@@ -150,9 +171,7 @@ export function buildModelRow(m: WorkshopModel, ctx: ModelRowCtx): HTMLElement {
   // P4（审核发现）：`m.size || 0` 属 truthiness 数值判断，按数值守卫范式用 ?? 0
   sizeSpan.textContent = formatBytes(m.size ?? 0);
   metaCell.appendChild(sizeSpan);
-  const searchBtn = createIconBtn(UI_ICONS.search, "search-bili", t("workshop.bilibiliSearch"));
-  searchBtn.dataset.testid = "gh-search-bili";
-  metaCell.appendChild(searchBtn);
+  metaCell.appendChild(ghSearchBtn());
   row.appendChild(metaCell);
 
   // 列3: 下载按钮或已有徽章
@@ -164,16 +183,7 @@ export function buildModelRow(m: WorkshopModel, ctx: ModelRowCtx): HTMLElement {
     badge.innerHTML = `${UI_ICONS.success} ${t("workshop.exists")}`;
     actionsCell.appendChild(badge);
   } else {
-    const dlBtn = createIconBtn(UI_ICONS.download, "download");
-    dlBtn.classList.add("gh-dl-btn");
-    dlBtn.dataset.testid = "gh-dl";
-    dlBtn.dataset.url = buildModelDownloadUrl(dlPrefix, m.path);
-    dlBtn.dataset.name = m.name;
-    // P3（审核复核）：同 download-tasks.ts 的有限数守卫——-1（Content-Length=-1 哨兵）不得透传
-    dlBtn.dataset.size = String(
-      typeof m.size === "number" && Number.isFinite(m.size) && m.size > 0 ? m.size : 0,
-    );
-    actionsCell.appendChild(dlBtn);
+    actionsCell.appendChild(ghDlBtn(dlPrefix, m));
   }
   row.appendChild(actionsCell);
 

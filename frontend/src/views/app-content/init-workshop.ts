@@ -147,6 +147,16 @@ export function initWorkshopPage(host: AppContentHost): void {
       bus.on("avatar:refresh", ({ author, dataUri }) => {
         if (getAvatar(author) === dataUri) return;
         setAvatar(author, dataUri);
+        // ⚠️ 数据写永远执行（上面两行）——store 是跨页状态，正是 ADR-264 的目的；
+        // 但 **DOM 补丁与重渲只在工坊页可见时做**（锐评修复，2026-10-14）。
+        // 病：本订阅住 global 桶（下载队列跨页存活，事件在任意页面派发），而回调闭包
+        // 捕获的是**整个 app-content shadow root**——用户已离开工坊页时，这里仍会对
+        // 离屏 DOM 跑 querySelectorAll(".cr-creator-card") 全量扫描；更重的是未命中时
+        // 走 `showSiteView(cur)` 触发**离屏整站重渲**（重建 HTML + 重绑事件），纯白烧 CPU，
+        // 与文件头注释宣称的治理目标（「替页面写数据的错位已消除」）不符。
+        // 修：非工坊页直接返回，DOM 补丁留给下次进页——`renderSiteView` 每轮渲染都调
+        // `getAvatarSnapshot()` 取 store 活体引用，头像不会丢，只是延后到用户真正看得见时才画。
+        if (host.state.current !== "community") return;
         let found = false;
         root.querySelectorAll(".cr-creator-card").forEach((c) => {
           if ((c as HTMLElement).dataset.name === author) {

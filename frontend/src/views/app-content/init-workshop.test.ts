@@ -83,6 +83,8 @@ function lastCallArgs(mock: unknown): unknown[] {
 interface MockHost {
   state: {
     root: HTMLElement;
+    /** 当前页名（avatar:refresh 的离屏守卫读它；工坊页 = page-registry 的 community） */
+    current: string;
     githubCache: unknown;
     workshopTimer: ReturnType<typeof setTimeout> | null;
   };
@@ -103,6 +105,10 @@ function makeHost(cardsHTML = "") {
   const raw: MockHost = {
     state: {
       root: el,
+      // 当前页名（锐评修复 2026-10-14）：avatar:refresh 的 DOM 补丁/重渲加了这个守卫
+      // ——工坊页 = page-registry 的 `community`，夹具默认即为「正在看工坊页」。
+      // 离屏场景的锁见「非工坊页 → 不扫 DOM 不重渲」用例。
+      current: "community",
       githubCache: null,
       workshopTimer: null,
     },
@@ -347,6 +353,30 @@ describe("initWorkshopPage — avatar:refresh 订阅", () => {
     bus.emit("avatar:refresh", { author: "nobody", dataUri: "Z" });
     expect(renderSiteView).toHaveBeenCalledTimes(1);
     expect(callArgs(renderSiteView, 0)[0]).toBe(site);
+  });
+
+  // 锐评修复（2026-10-14）：本订阅住 global 桶（下载队列跨页存活，事件在任意页派发），
+  // 回调闭包捕获**整个 shadow root**——用户已离开工坊页时仍会对离屏 DOM 跑全量
+  // querySelectorAll，未命中还会 showSiteView 触发**离屏整站重渲**（重建 HTML + 重绑事件）。
+  // 修：非 community 页直接返回，DOM 补丁延后到下次进页（renderSiteView 每轮都读
+  // getAvatarSnapshot()，头像不丢）。⚠️ 数据写必须仍执行——store 是跨页状态，正是 ADR-264 的目的。
+  it("非工坊页 → 不扫 DOM 不重渲，但 store 仍写入（数据与绘制分离）", () => {
+    const { host, el } = makeHost(cardHTML);
+    host.state.current = "settings"; // 用户已离开工坊页
+    initWorkshopPage(host);
+    getPageState().setCurrentSite(site);
+    getShowSiteView()(site);
+    renderSiteView.mockClear();
+    const qsa = vi.spyOn(el, "querySelectorAll");
+
+    bus.emit("avatar:refresh", { author: "alice", dataUri: "data:image/png;base64,BBB" });
+
+    // 数据必须已落 store（下次进页渲染即取到）
+    expect(getAvatar("alice")).toBe("data:image/png;base64,BBB");
+    // 但绝不扫离屏 DOM、绝不重渲
+    expect(qsa).not.toHaveBeenCalled();
+    expect(renderSiteView).not.toHaveBeenCalled();
+    qsa.mockRestore();
   });
 
   it("注册守卫按 host 生效：新 host 仍会注册自己的订阅", () => {

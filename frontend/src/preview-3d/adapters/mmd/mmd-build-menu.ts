@@ -36,21 +36,9 @@ import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import { screenshotFromRenderer } from "@/preview-3d/screenshot/screenshot.ts";
 import type { MmdMenuItemsOpts, Stage5Ctx } from "./mmd-types.ts";
 
-export function Stage5Menu(c: Stage5Ctx): {
-  semanticBones: ReturnType<typeof mmdSemanticBoneMap> | undefined;
-  semanticMorphs: ReturnType<typeof mmdSemanticMorphMap>;
-  breath: ReturnType<typeof createBreathController>;
-  perceptionPauseRef: PerceptionPauseRef;
-  gaze: ReturnType<typeof createGazeController>;
-  blink: ReturnType<typeof createBlinkController>;
-  lipSync: ReturnType<typeof createLipSyncController>;
-  lipSyncTime: number;
-  lipIndices: ReturnType<typeof buildLipMorphIndices> | undefined;
-  autoDance: ReturnType<typeof createAutoDanceController>;
-  footIK: ReturnType<typeof createFootIKController>;
-  items: PreviewMenuNode[];
-} {
-  const navCtx: MmdBottomNavCtx = {
+/** 构建底部导航上下文 */
+function buildNavCtx(c: Stage5Ctx): MmdBottomNavCtx {
+  return {
     // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
     mmd: c.mmd!,
     mesh: c.mesh,
@@ -61,34 +49,33 @@ export function Stage5Menu(c: Stage5Ctx): {
     // [doc:adr-132] zip 多 pmx 候选（模型面板切换 select 用）
     zipModelCandidates: c.zipModelCandidates,
   };
-  const mats = c.mesh.material as unknown as THREE.Material[];
-  c.bonePanelRef = { current: null };
-  c.boneTree =
-    c.mmd?.pmx?.bones && c.mesh.skeleton
-      ? buildBoneTree(mmdBonesToBoneNodes(c.mmd?.pmx.bones, c.mesh.skeleton.bones))
-      : null;
-  c.perceptionState = { breath: true, gaze: true, blink: true, lipSync: true, autoDance: true };
-  // 语义层提前解析（caps 派生 + 下方控制器构造共用同一份）；perceptionCaps 仅本函数
-  // 使用（菜单注入）——局部 const，不占用 ctx。
-  const semanticBones = c.boneTree ? mmdSemanticBoneMap(c.boneTree) : undefined;
-  const semanticMorphs = mmdSemanticMorphMap(c.mmd?.pmx?.morphs ?? []);
-  // 能力声明：caps 从真实构造派生（非硬编码清单）——骨骼驱动模块（呼吸/注视/律动）
-  // 需语义骨骼、morph 驱动模块（眨眼/口型）需语义 morph，缺失时不显示死开关（菜单不谎报）。
-  // 按语义族分别门控——语义 morph 表按族分键，聚合布尔
-  // `Object.keys().length > 0` 会在「仅 lip 系」模型上显示无驱动的死 blink 开关
-  // （反之仅 blink 显示死 lipSync）；与 mmd-build-result.ts 应用分支口径一致
-  // （blink 应用要求 semanticMorphs.blink、lipSync 应用要求 lipIndices 非空）
+}
+
+/** 派生感知能力声明（caps 从真实构造派生，缺失时不显示死开关） */
+function buildPerceptionCaps(
+  semanticBones: ReturnType<typeof mmdSemanticBoneMap> | undefined,
+  semanticMorphs: ReturnType<typeof mmdSemanticMorphMap>,
+): ReturnType<typeof pickPerceptionCaps> {
   const hasSemanticBones = !!semanticBones && Object.keys(semanticBones).length > 0;
   const morphs = semanticMorphs as Partial<Record<string, { index?: number } | undefined>>;
   const hasBlinkMorph = !!morphs.blink;
   const hasLipMorph =
     !!morphs.lipOpen || !!morphs.lipClose || !!morphs.lipPucker || !!morphs.lipSmile;
-  const perceptionCaps = pickPerceptionCaps([
+  return pickPerceptionCaps([
     ...(hasSemanticBones ? (["breath", "gaze", "autoDance"] as const) : []),
     ...(hasBlinkMorph ? (["blink"] as const) : []),
     ...(hasLipMorph ? (["lipSync"] as const) : []),
   ]);
-  const items = mmdMenuItems({
+}
+
+/** 构建 MMD 菜单项（含播放/材质/骨骼面板全部回调） */
+function buildMmdMenuItems(
+  c: Stage5Ctx,
+  navCtx: MmdBottomNavCtx,
+  perceptionCaps: ReturnType<typeof pickPerceptionCaps>,
+): PreviewMenuNode[] {
+  const mats = c.mesh.material as unknown as THREE.Material[];
+  return mmdMenuItems({
     navCtx,
     panels: c.panels,
     screenshot: () =>
@@ -151,6 +138,34 @@ export function Stage5Menu(c: Stage5Ctx): {
       : null,
     perception: { state: c.perceptionState, caps: perceptionCaps },
   });
+}
+
+export function Stage5Menu(c: Stage5Ctx): {
+  semanticBones: ReturnType<typeof mmdSemanticBoneMap> | undefined;
+  semanticMorphs: ReturnType<typeof mmdSemanticMorphMap>;
+  breath: ReturnType<typeof createBreathController>;
+  perceptionPauseRef: PerceptionPauseRef;
+  gaze: ReturnType<typeof createGazeController>;
+  blink: ReturnType<typeof createBlinkController>;
+  lipSync: ReturnType<typeof createLipSyncController>;
+  lipSyncTime: number;
+  lipIndices: ReturnType<typeof buildLipMorphIndices> | undefined;
+  autoDance: ReturnType<typeof createAutoDanceController>;
+  footIK: ReturnType<typeof createFootIKController>;
+  items: PreviewMenuNode[];
+} {
+  const navCtx = buildNavCtx(c);
+  c.bonePanelRef = { current: null };
+  c.boneTree =
+    c.mmd?.pmx?.bones && c.mesh.skeleton
+      ? buildBoneTree(mmdBonesToBoneNodes(c.mmd?.pmx.bones, c.mesh.skeleton.bones))
+      : null;
+  c.perceptionState = { breath: true, gaze: true, blink: true, lipSync: true, autoDance: true };
+  // 语义层提前解析（caps 派生 + 下方控制器构造共用同一份）
+  const semanticBones = c.boneTree ? mmdSemanticBoneMap(c.boneTree) : undefined;
+  const semanticMorphs = mmdSemanticMorphMap(c.mmd?.pmx?.morphs ?? []);
+  const perceptionCaps = buildPerceptionCaps(semanticBones, semanticMorphs);
+  const items = buildMmdMenuItems(c, navCtx, perceptionCaps);
   const perceptionPauseRef = createPerceptionPauseRef();
   const breath = createBreathController({ pauseRef: perceptionPauseRef });
   const gaze = createGazeController();

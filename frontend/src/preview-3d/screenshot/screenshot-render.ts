@@ -133,6 +133,161 @@ export interface RenderMultiAngleOptions {
   decodeYsm?: DecodeYsmFn;
 }
 
+/** 解析 Spec3D：Go binding 优先，失败走前端 WASM 解码 + buildSpecFromGeometryJSON 兜底（ADR-071） */
+async function resolveShotSpec(modelPath: string, decodeYsm?: DecodeYsmFn): Promise<Spec3D | null> {
+  let spec: Spec3D | null = null;
+  try {
+    const { GetModel3DSpec } = await getApp();
+    const modelSpec = await GetModel3DSpec(modelPath);
+    // Model3DSpec → Spec3D 类型转换（Go binding null→undefined 兼容）
+    spec = modelSpec ? (modelSpec as unknown as Spec3D) : null;
+  } catch {
+    console.warn("[screenshot] spec 获取失败");
+  }
+  // ADR-071：web 端 spec 桩无效 → 前端 WASM 解码 + buildSpecFromGeometryJSON 兜底（同 model3d-loader）
+  if (!spec?.models?.length) {
+    try {
+      const decoded = decodeYsm ? await decodeYsm(modelPath) : null;
+      if (decoded?.geometryRaw) {
+        spec = JSON.parse(buildSpecFromGeometryJSON(decoded.geometryRaw)) as Spec3D;
+      }
+    } catch {
+      console.warn("[screenshot] WASM 兜底失败");
+      return null;
+    }
+  }
+  return spec?.models?.length ? spec : null;
+}
+
+/** 组件纹理并行加载（Promise.all，Map 在 task 内填充） */
+async function loadComponentTextures(
+  componentTextures: Record<string, string[]>,
+): Promise<Map<string, (THREE.Texture | null)[]>> {
+  const map = new Map<string, (THREE.Texture | null)[]>();
+  await Promise.all(
+    Object.entries(componentTextures).map(async ([componentName, componentUrls]) => {
+      map.set(componentName, await loadTextures(componentUrls));
+    }),
+  );
+  return map;
+}
+
+/** 构建截图 renderer 并镜像预览输出设置（[ADR-266-d1 D2]） */
+function createShotRenderer(
+  size: number,
+  output?: ScreenshotLights["output"],
+): THREE.WebGLRenderer {
+  const renderer = new THREE.WebGLRenderer({
+    preserveDrawingBuffer: true,
+    antialias: true,
+    alpha: true,
+  });
+  renderer.setClearColor(0x000000, 0);
+  renderer.setSize(size, size);
+  renderer.setPixelRatio(1);
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  // [ADR-266-d1 D2] 输出设置同构：镜像活跃预览 renderer 的现值。光柱 shader 的
+  // `<tonemapping_fragment>` / `<colorspace_fragment>` 与模型材质同受这三项支配——
+  // 不镜像即「预览 ACES×0.5 对 离屏 NoToneMapping×1.0」的亮度静默分叉（既有债，
+  // 光柱入镜会把它放大成显性穿帮）。读现值、不重推 sky/pp 属主链：推导即手抄，手抄即分叉。
+  if (output) {
+    renderer.toneMapping = output.toneMapping;
+    renderer.toneMappingExposure = output.exposure;
+    renderer.outputColorSpace = output.outputColorSpace;
+  }
+  return renderer;
+}
+
+/** [F1 落地] 阴影接线：renderer 级开关 + mesh 级 cast/receive。
+ *  [锐评 2026-10-08 P1-1 已知差异声明] 离屏 Scene **刻意不镜像** 预览的 `scene.environment`
+ *  （IBL/环境贴图 PMREM 纹理）：环境贴图跨 WebGL context 不可共享，离屏侧无法直接复用预览
+ *  的 PMREM 纹理；PBR 反射 lobe 与 IBL 环境光在截图里缺失，模型会比预览略暗。 */
+function applyShotShadows(
+  renderer: THREE.WebGLRenderer,
+  rootGroup: THREE.Object3D,
+  shadowSpec: ScreenshotLights["shadow"],
+): void {
+  if (!shadowSpec?.enabled) return;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = shadowSpec.type;
+  renderer.shadowMap.needsUpdate = true;
+  rootGroup.traverse((obj) => {
+    const m = obj as THREE.Mesh;
+    if (!m.isMesh) return;
+    m.castShadow = true;
+    m.receiveShadow = true;
+  });
+}
+
+/** 计算截图相机与距离（fov 45 缩略图固定取景，near/far 按包围盒夹逼） */
+function computeShotCamera(maxDim: number): { camera: THREE.PerspectiveCamera; dist: number } {
+  // [锐评 screenshot 轮 2026-10-11] 近/远裁剪面按包围盒**夹逼**（不搬预览的
+  // camera-setup 常量——其 near=0.05 只因预览 dist 带 +2 地板才安全，截图 dist
+  // =1.7×maxDim 无地板，小模型会整模型落入近平面之后）。旧实现 far 硬编码 1000：
+  // maxDim 超过约 588 时背侧最远点（≈dist+maxDim）越过 far → 远端静默裁切；
+  // fixed 0.1/1000 对角色尺度只有约 10000:1 深度精度，远劣于夹逼。
+  // fov 45 是有意与预览 50 不同的缩略图固定取景（多角度导出需跨模型一致），不动。
+  const dist = (maxDim / (2 * Math.tan((45 * Math.PI) / 360)) / 0.85) * 1.2;
+  const camNear = Math.max(maxDim * 0.05, 1e-4);
+  const camFar = dist + maxDim * 2;
+  return { camera: new THREE.PerspectiveCamera(45, 1, camNear, camFar), dist };
+}
+
+/** 多角度截图循环（screenshotFromRenderer 复用截图纯函数，preserveDrawingBuffer 已开启） */
+function captureShotAngles(
+  renderer: THREE.WebGLRenderer,
+  scene: THREE.Scene,
+  camera: THREE.PerspectiveCamera,
+  center: THREE.Vector3,
+  dist: number,
+  size: number,
+): AngleShot[] {
+  const angles: Array<{ name: string; theta: number }> = [
+    { name: "front", theta: 0 },
+    { name: "45", theta: Math.PI / 4 },
+    { name: "side", theta: Math.PI / 2 },
+    { name: "back45", theta: -Math.PI / 4 },
+  ];
+  const results: AngleShot[] = [];
+  for (const { name, theta } of angles) {
+    camera.position.set(
+      center.x + Math.sin(theta) * dist,
+      center.y,
+      center.z - Math.cos(theta) * dist,
+    );
+    camera.lookAt(center);
+    const b64 =
+      screenshotFromRenderer(renderer, scene, camera, { width: size, height: size }) || "";
+    // 空 base64（GPU 异常）不入结果集，避免空内容写成 PNG 文件
+    if (b64) results.push({ name, base64: b64 });
+  }
+  return results;
+}
+
+/** finally 出口：释放纹理引用 + 光柱 + renderer 上下文（防 GPU 累积，陷阱 #8） */
+function releaseShotResources(ctx: {
+  texUrls: string[];
+  componentTextures: Record<string, string[]> | undefined;
+  cone: ReturnType<typeof applyVolumetricCone>;
+  renderer: THREE.WebGLRenderer | null;
+  scene: THREE.Scene | null;
+  ysmObject: YsmObjectHandle | null;
+}): void {
+  releaseTextureUrls(ctx.texUrls);
+  if (ctx.componentTextures) {
+    for (const urls of Object.values(ctx.componentTextures)) releaseTextureUrls(urls);
+  }
+  // [ADR-266-d1] 光柱先释放（几何/材质/贴图槽位 + 从场景摘除），与纹理 release 同纪律——
+  // 离屏会话不依赖 GC 回收 GPU 资源
+  ctx.cone?.dispose();
+  if (ctx.renderer) {
+    if (ctx.scene && ctx.ysmObject) ctx.ysmObject.removeFromScene(ctx.scene);
+    ctx.renderer.dispose();
+    // dispose 后强制释放上下文，避免延迟到 GC
+    ctx.renderer.forceContextLoss?.();
+  }
+}
+
 // renderMultiAngle 透明背景多角度截图
 export async function renderMultiAngle(
   modelPath: string,
@@ -146,92 +301,20 @@ export async function renderMultiAngle(
   // [ADR-266-d1] 离屏光柱句柄（finally 释放 GPU 资源）
   let cone: ReturnType<typeof applyVolumetricCone> = null;
   try {
-    let spec: Spec3D | null = null;
-    try {
-      const { GetModel3DSpec } = await getApp();
-      const modelSpec = await GetModel3DSpec(modelPath);
-      // Model3DSpec → Spec3D 类型转换（Go binding null→undefined 兼容）
-      spec = modelSpec ? (modelSpec as unknown as Spec3D) : null;
-    } catch {
-      console.warn("[screenshot] spec 获取失败");
-    }
-    // ADR-071：web 端 spec 桩无效 → 前端 WASM 解码 + buildSpecFromGeometryJSON 兜底（同 model3d-loader）
-    if (!spec?.models?.length) {
-      try {
-        const decoded = opts.decodeYsm ? await opts.decodeYsm(modelPath) : null;
-        if (decoded?.geometryRaw) {
-          spec = JSON.parse(buildSpecFromGeometryJSON(decoded.geometryRaw)) as Spec3D;
-        }
-      } catch {
-        console.warn("[screenshot] WASM 兜底失败");
-        return null;
-      }
-    }
-    if (!spec?.models?.length) return null;
+    const spec = await resolveShotSpec(modelPath, opts.decodeYsm);
+    if (!spec) return null;
     const texArr = await loadTextures(texUrls);
-    // code review P3：组件纹理并行加载（原 for...of 逐个 await——N 个组件串行
-    // 往返——Promise.all 并行，Map 在 task 内填充）
-    const componentTexMap = new Map<string, (THREE.Texture | null)[]>();
-    await Promise.all(
-      Object.entries(opts.componentTextures ?? {}).map(async ([componentName, componentUrls]) => {
-        componentTexMap.set(componentName, await loadTextures(componentUrls));
-      }),
-    );
-
-    renderer = new THREE.WebGLRenderer({
-      preserveDrawingBuffer: true,
-      antialias: true,
-      alpha: true,
-    });
-    renderer.setClearColor(0x000000, 0);
-    renderer.setSize(size, size);
-    renderer.setPixelRatio(1);
-    renderer.outputColorSpace = THREE.SRGBColorSpace;
-    // [ADR-266-d1 D2] 输出设置同构：镜像活跃预览 renderer 的现值。光柱 shader 的
-    // `<tonemapping_fragment>` / `<colorspace_fragment>` 与模型材质同受这三项支配——
-    // 不镜像即「预览 ACES×0.5 对 离屏 NoToneMapping×1.0」的亮度静默分叉（既有债，
-    // 光柱入镜会把它放大成显性穿帮）。读现值、不重推 sky/pp 属主链：推导即手抄，手抄即分叉。
-    if (opts.lights?.output) {
-      renderer.toneMapping = opts.lights.output.toneMapping;
-      renderer.toneMappingExposure = opts.lights.output.exposure;
-      renderer.outputColorSpace = opts.lights.output.outputColorSpace;
-    }
-
+    const componentTexMap = await loadComponentTextures(opts.componentTextures ?? {});
+    renderer = createShotRenderer(size, opts.lights?.output);
     scene = new THREE.Scene();
-    // [锐评 2026-10-08 P1-1 已知差异声明] 离屏 Scene **刻意不镜像** 预览的 `scene.environment`
-    // （IBL/环境贴图 PMREM 纹理）：环境贴图跨 WebGL context 不可共享，离屏侧无法直接复用预览
-    // 的 PMREM 纹理；PBR 反射 lobe 与 IBL 环境光在截图里缺失，模型会比预览略暗。
-    // ambient 已由 screenshot-lights.ts|attenuateAmbientForSky 近似补偿（见 export.md「IBL 反射
-    // 不参与截图」已知差异条）。若「IBL 进截图」成为产品需求，须在此处按 preview renderer 现值
-    // 重建 PMREM（isIblActive 门控）并移除本声明——本注释与 export.md 条互为镜像，改动需同步。
-    //
-    // [巡检 2026-10-11 F1 声明 → 2026-10-12 落地] 第四条 WYSIWYG 缝已补：**阴影入多角度
-    // 截图**。原声明「阴影不入截图」属未做的产品决策（与 IBL 不同，阴影无跨 context 借口），
-    // 经拍板后按 export.md 指定的最小实现落地：离屏 renderer `shadowMap.enabled` +
-    // applyLights 对 dir/spot 灯置 `castShadow`（参数逐项镜像预览现值）+ 模型 mesh 置
-    // cast/receiveShadow。镜像源 = `ScreenshotLights.shadow`（由 toScreenshotLights 从
-    // envState 单源读出，cap 缺席/总闸关时为 null → 不接线，与灯/锥同契）。
-    // 声明与双向锁已同步翻转：export.md「阴影参与多角度截图」条 + test「阴影边界」两例。
-
     ysmObject = buildYsmObject(spec, texArr, componentTexMap, 0);
     const { rootGroup } = ysmObject;
     scene.add(rootGroup);
 
-    // [F1 落地] 阴影接线：renderer 级开关 + mesh 级 cast/receive。
-    // 顺序在 applyLights 之前——灯建好时 shadowMap 已启用，首帧即正确（不留一帧无影）。
-    // mesh 遍历在 rootGroup 建好后（与 shadow-capability|applyMeshes 同式：全量 mesh 置真）。
+    // [F1 落地] 阴影接线：顺序在 applyLights 之前——灯建好时 shadowMap 已启用，
+    // 首帧即正确（不留一帧无影）。mesh 遍历在 rootGroup 建好后（与 shadow-capability|applyMeshes 同式）。
     const shadowSpec = opts.lights?.shadow ?? null;
-    if (shadowSpec?.enabled) {
-      renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = shadowSpec.type;
-      renderer.shadowMap.needsUpdate = true;
-      rootGroup.traverse((obj) => {
-        const m = obj as THREE.Mesh;
-        if (!m.isMesh) return;
-        m.castShadow = true;
-        m.receiveShadow = true;
-      });
-    }
+    applyShotShadows(renderer, rootGroup, shadowSpec);
 
     scene.updateMatrixWorld();
     const box = new THREE.Box3().setFromObject(rootGroup);
@@ -245,66 +328,20 @@ export async function renderMultiAngle(
     // NaN/0，maxDim 非有限或 ≤0，相机 position 落入 NaN → 截图脏数据甚至渲染异常。
     // 防御性提前返回（调用方按 null 处理，不写脏 PNG）。
     if (!Number.isFinite(maxDim) || maxDim <= 0) return null;
-
-    // [锐评 screenshot 轮 2026-10-11] 近/远裁剪面按包围盒**夹逼**（不搬预览的
-    // camera-setup 常量——其 near=0.05 只因预览 dist 带 +2 地板才安全，截图 dist
-    // =1.7×maxDim 无地板，小模型会整模型落入近平面之后）。旧实现 far 硬编码 1000：
-    // maxDim 超过约 588 时背侧最远点（≈dist+maxDim）越过 far → 远端静默裁切；
-    // fixed 0.1/1000 对角色尺度只有约 10000:1 深度精度，远劣于夹逼。
-    // fov 45 是有意与预览 50 不同的缩略图固定取景（多角度导出需跨模型一致），不动。
-    const dist = (maxDim / (2 * Math.tan((45 * Math.PI) / 360)) / 0.85) * 1.2;
-    const camNear = Math.max(maxDim * 0.05, 1e-4);
-    const camFar = dist + maxDim * 2;
-    const camera = new THREE.PerspectiveCamera(45, 1, camNear, camFar);
-
-    const angles: Array<{ name: string; theta: number }> = [
-      { name: "front", theta: 0 },
-      { name: "45", theta: Math.PI / 4 },
-      { name: "side", theta: Math.PI / 2 },
-      { name: "back45", theta: -Math.PI / 4 },
-    ];
-
-    const results: AngleShot[] = [];
-    for (const { name, theta } of angles) {
-      camera.position.set(
-        center.x + Math.sin(theta) * dist,
-        center.y,
-        center.z - Math.cos(theta) * dist,
-      );
-      camera.lookAt(center);
-      // ADR-052 P3：复用截图纯函数（preserveDrawingBuffer 已开启，toDataURL 安全）
-      const b64 =
-        screenshotFromRenderer(renderer, scene, camera, { width: size, height: size }) || "";
-      // 空 base64（GPU 异常）不入结果集，避免空内容写成 PNG 文件
-      if (b64) {
-        results.push({ name, base64: b64 });
-      }
-    }
-    return results;
+    const { camera, dist } = computeShotCamera(maxDim);
+    return captureShotAngles(renderer, scene, camera, center, dist, size);
   } catch (e) {
     // 场景构建段（buildYsmObject/Box3）抛错也要返回 null 而非 reject
     console.warn("[screenshot] 渲染失败:", e);
     return null;
   } finally {
-    // 统一清理：无论成功/失败/异常都必须释放 WebGL 资源，防上下文累积（陷阱 #8）
-    // loadTextures 内部对每个 url 调 textureCache.acquire（refs+1），
-    // 但 finally 从不 release → 引用计数永久泄漏，截图纹理永不淘汰。每次多角度截图
-    // 累积泄漏所有 texUrls + componentTextures 的纹理引用。
-    // 收编：归引用一律走 releaseTextureUrls（与 model3d-loader 同一释放器，语义见其注释）。
-    releaseTextureUrls(texUrls);
-    if (opts.componentTextures) {
-      for (const urls of Object.values(opts.componentTextures)) {
-        releaseTextureUrls(urls);
-      }
-    }
-    // [ADR-266-d1] 光柱先释放（几何/材质/贴图槽位 + 从场景摘除），与纹理 release 同纪律——
-    // 离屏会话不依赖 GC 回收 GPU 资源
-    cone?.dispose();
-    if (renderer) {
-      if (scene && ysmObject) ysmObject.removeFromScene(scene);
-      renderer.dispose();
-      // dispose 后强制释放上下文，避免延迟到 GC
-      renderer.forceContextLoss?.();
-    }
+    releaseShotResources({
+      texUrls,
+      componentTextures: opts.componentTextures,
+      cone,
+      renderer,
+      scene,
+      ysmObject,
+    });
   }
 }

@@ -95,6 +95,39 @@ describe("bindTabRuntime：按钮 data-tab 即唯一真值（ADR-259 运行期�
     expect(root.getElementById("x-tab-gamma")?.getAttribute("role")).toBe("tabpanel");
   });
 
+  // ===== 锐评 P2 #5 收口：激活即持久化，语言热切换恢复上次 tab =====
+  it("激活 tab 写入 ysm-tabs-last-<prefix>（供 renderTabs 下次重建恢复）", async () => {
+    localStorage.clear();
+    const { host, root } = makeHost();
+    root.innerHTML = SHELL;
+    bindTabRuntime(host, ".repo-tab", "x");
+
+    expect(localStorage.getItem("ysm-tabs-last-x")).toBeNull(); // 未激活前不写
+    await clickTab(root, "beta");
+    expect(localStorage.getItem("ysm-tabs-last-x")).toBe("beta");
+  });
+
+  it("onBound 尊重按钮 .active 类（initialActiveId 恢复的 tab 不被 i!==0 硬隐藏）", () => {
+    const { host, root } = makeHost();
+    // 模拟 renderTabs 已把 gamma 标为激活（语言热切换恢复）
+    root.innerHTML = `
+  <div class="repo-tabs">
+    <button class="repo-tab" data-tab="alpha">A</button>
+    <button class="repo-tab" data-tab="beta">B</button>
+    <button class="repo-tab tab-btn active" data-tab="gamma">G</button>
+  </div>
+  <div class="tab-body" id="x-tab-alpha" style="display:none">AAA</div>
+  <div class="tab-body" id="x-tab-beta" style="display:none">BBB</div>
+  <div class="tab-body" id="x-tab-gamma">GGG</div>`;
+    bindTabRuntime(host, ".repo-tab", "x");
+
+    const gamma = root.getElementById("x-tab-gamma") as HTMLElement;
+    expect(gamma.hasAttribute("hidden"), "激活项面板不得被隐藏").toBe(false);
+    expect(gamma.style.display).not.toBe("none");
+    const alpha = root.getElementById("x-tab-alpha") as HTMLElement;
+    expect(alpha.hasAttribute("hidden")).toBe(true);
+  });
+
   it("按钮缺 data-tab → 响亮告警（不静默留下不可切换的 tab）", () => {
     const { host, root } = makeHost();
     root.innerHTML = `

@@ -14,6 +14,7 @@
 
 import { t } from "@/core/i18n/t.ts";
 import { logWarn } from "@/utils/base/primitives/log.ts";
+import { safeSet } from "@/utils/base/primitives/storage.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
@@ -70,7 +71,7 @@ export function bindTabRuntime(
     // panel role、非首个面板初始 hidden；缺面板响亮告警（按钮在但内容区必空白）。
     onBound: (nav, boundIds) => {
       ids = boundIds;
-      nav.forEach((btn, i) => {
+      nav.forEach((btn) => {
         const id = btn.dataset.tab ?? "";
         btn.id = `${prefix}-tab-btn-${id}`;
         const panel = root.getElementById(panelId(id));
@@ -80,7 +81,9 @@ export function bindTabRuntime(
         }
         panel.setAttribute("role", "tabpanel");
         panel.setAttribute("aria-labelledby", btn.id);
-        if (i !== 0) {
+        // 锐评 P2 #5 收口：尊重 renderTabs 已标定的激活项（按钮的 `.active` 类）。原 `i !== 0`
+        // 硬隐藏非首面板，会覆盖 initialActiveId（语言热切换恢复）标记的 tab，把它也藏起来。
+        if (!btn.classList.contains("active")) {
           panel.style.display = "none";
           panel.setAttribute("hidden", "");
         }
@@ -89,6 +92,9 @@ export function bindTabRuntime(
     // 激活副作用：翻面板 display/hidden + 首次切到非默认 tab 时懒初始化（原 activate 的 ②③）。
     // 按钮 active 类 / aria-selected / roving tabindex 的互斥迁移已由原语在 activate 前统一处理。
     onActivate: (_btn, tab) => {
+      // 锐评 P2 #5 收口：激活即持久化，语言热切换全量重建（clearPanels + _render）后由
+      // renderTabs 读回 initialActiveId 恢复。safeSet 隐私模式静默降级（safe* 契约）。
+      safeSet(`ysm-tabs-last-${prefix}`, tab);
       ids.forEach((id) => {
         const el = root.getElementById(panelId(id));
         if (!el) return;

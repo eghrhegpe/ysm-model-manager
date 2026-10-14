@@ -2,9 +2,17 @@
 
 import { isViewerMode } from "@/backend/platform.ts";
 import { t } from "@/core/i18n/t.ts";
+import { safeGet } from "@/utils/base/primitives/storage.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { OP_META } from "@/views/app-content/diagnostics/logs.ts";
 import { renderSubBar, renderTabs, type TabSpec } from "./tabs-shell.ts";
+
+/** 锐评 P2 #5 收口：读回上次激活的 tab id（tabs-runtime 激活时 safeSet 写入）。
+ *  语言热切换全量重建（clearPanels + _render）后由 renderTabs(initialActiveId) 恢复，
+ *  不再把用户弹回第一个 tab。与 site/workshop-tabs.ts 的 WS_LAST_TAB_KEY 同范式。 */
+function lastTabOf(prefix: string): string | undefined {
+  return safeGet(`ysm-tabs-last-${prefix}`) ?? undefined;
+}
 
 // ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
 // 删除/新增对应 data-testid 须同步本数组；契约测试运行期静态聚合本数组为注册表。
@@ -131,6 +139,8 @@ export function repositoryHTML(): string {
     prefix: "repo",
     tabs,
     viewerMode: isViewerMode(),
+    // 锐评 P2 #5 收口：恢复上次激活的 tab（语言热切换不再弹回首 tab）
+    initialActiveId: lastTabOf("repo"),
     // ADR-300 §2.5：查看器「可见缺席」——desktopOnly tab 被隐藏时在 tablist 外告知
     //（与诊断页同构；此前仓库页缺席此告知，网页版三个 tab 静默消失且 tab 栏整块退化缺席）
     viewerNotice: t("repo.viewerDesktopOnlyNotice"),
@@ -156,6 +166,7 @@ export function repositoryHTML(): string {
 export function instancesHTML(): string {
   const { bar, panels } = renderTabs({
     prefix: "ins",
+    initialActiveId: lastTabOf("ins"),
     tabs: [
       {
         id: "versions",
@@ -196,6 +207,7 @@ export function diagnosticsHTML(): string {
     prefix: "diag",
     panelClass: "diag-panel",
     viewerMode: isViewerMode(),
+    initialActiveId: lastTabOf("diag"),
     // ADR-300 §2.5（D3）：网页版从「沉默消失」变「可见缺席」
     viewerNotice: t("diagnostics.viewerDesktopOnlyNotice"),
     tabs: [

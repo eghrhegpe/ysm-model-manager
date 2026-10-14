@@ -78,6 +78,47 @@ describe("renderTabs 产出契约（ADR-259 §2）", () => {
     expect(html).toContain('<button class="repo-tab tab-btn" data-tab="gamma">');
   });
 
+  // ===== initialActiveId（锐评 P2 #5 收口：语言热切换恢复上次 tab）=====
+  // renderTabs 原硬编码 `i === 0` 为激活项——lang:changed → clearPanels + _render 全量重建后
+  // 用户被弹回第一个 tab。现允许调用方传 initialActiveId（读 storage 恢复），缺省仍回落首个。
+  it("传 initialActiveId 时该按钮带 active、其面板可见（其余隐藏）", () => {
+    const shell = renderTabs({ ...SPEC, initialActiveId: "gamma" });
+    const html = flat(shell);
+    expect(html).toContain('<button class="repo-tab tab-btn active" data-tab="gamma">');
+    expect(html).toContain('<button class="repo-tab tab-btn" data-tab="alpha">');
+    expect(html).toContain('<button class="repo-tab tab-btn" data-tab="beta">');
+    // gamma 面板不写 display（可见），alpha/beta display:none
+    const gammaTag = html.slice(
+      html.indexOf('id="demo-tab-gamma"'),
+      html.indexOf(">", html.indexOf('id="demo-tab-gamma"')),
+    );
+    expect(gammaTag).not.toContain("display");
+    expect(html).toContain('id="demo-tab-alpha" style="display:none"');
+    expect(html).toContain('id="demo-tab-beta" style="display:none;overflow-y:auto"');
+  });
+
+  it("initialActiveId 不在可见列表（viewerMode 藏 desktopOnly）时回落首个可见 tab", () => {
+    const shell = renderTabs({
+      prefix: "demo",
+      viewerMode: true,
+      tabs: [
+        { id: "a", label: "A", body: "AA" },
+        { id: "hidden", label: "H", body: "HH", desktopOnly: true },
+        { id: "c", label: "C", body: "CC" },
+      ],
+      initialActiveId: "hidden",
+    });
+    const html = flat(shell);
+    // hidden 被 viewerMode 整 tab 隐藏，不能成为激活项；回落首个可见 a
+    expect(html).toContain('<button class="repo-tab tab-btn active" data-tab="a">');
+    expect(html).not.toContain("data-tab=\"hidden\"");
+  });
+
+  it("不传 initialActiveId 行为不变（首个 tab 激活）—— 向后兼容", () => {
+    const html = flat(renderTabs(SPEC));
+    expect(html).toContain('<button class="repo-tab tab-btn active" data-tab="alpha">');
+  });
+
   it("div 开合配平，且全部面板等深同层（未被彼此吞并）", () => {
     const html = flat(renderTabs(SPEC));
     const { opens, closes } = divTally(html);

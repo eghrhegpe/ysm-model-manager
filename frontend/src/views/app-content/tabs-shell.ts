@@ -48,6 +48,9 @@ export interface TabsShellSpec<Id extends string = string> {
   prefix: string;
   /** tab 列表；首个即默认激活项。调用方须保证非空 */
   tabs: readonly TabSpec<Id>[];
+  /** 初始激活项 id（锐评 P2 #5 收口）：语言热切换全量重建后恢复上次 tab。
+   * 调用方从 storage 读回传入；不传/不在可见列表则回落首个（原行为）。 */
+  initialActiveId?: Id | undefined;
   /** tab 栏（`.repo-tabs`）的 id */
   barId?: string;
   /** tab 栏的 data-testid */
@@ -101,6 +104,13 @@ export function renderTabs<Id extends string = string>(spec: TabsShellSpec<Id>):
   // desktopOnly 只在 viewerMode 下生效；首个**可见** tab 才是默认激活项（原语义不变）
   const visible = tabs.filter((t) => !(viewerMode && t.desktopOnly));
 
+  // 初始激活项（锐评 P2 #5 收口）：调用方传 initialActiveId（语言热切换从 storage 恢复上次
+  // tab）时按它激活；不在可见列表（viewerMode 藏 desktopOnly 等）或未传则回落首个可见。
+  const activeIdx = Math.max(
+    0,
+    visible.findIndex((t) => t.id === spec.initialActiveId),
+  );
+
   // 退化态单点收口（2026-09 拍板落地）：「声明 >1 个 tab、viewerMode 下可见只剩 1 个」时
   // tab 栏整块缺席——单选项的 tablist 是噪音（tab 的价值在相对选择，只有一项时点按无意义）。
   // 判据 degrade-only（要求 `tabs.length > 1`）：常驻单 tab 页（github 1 个、instances 1 个）
@@ -115,7 +125,7 @@ export function renderTabs<Id extends string = string>(spec: TabsShellSpec<Id>):
     ? `<div class="repo-tabs"${barAttrs}>${visible
         .map(
           (tab, i) =>
-            `<button class="${buttonClass} tab-btn${i === 0 ? " active" : ""}"${tab.buttonTestid ? ` data-testid="${tab.buttonTestid}"` : ""} data-tab="${tab.id}">${tab.label}</button>`,
+            `<button class="${buttonClass} tab-btn${i === activeIdx ? " active" : ""}"${tab.buttonTestid ? ` data-testid="${tab.buttonTestid}"` : ""} data-tab="${tab.id}">${tab.label}</button>`,
         )
         .join("")}</div>`
     : "";
@@ -123,8 +133,10 @@ export function renderTabs<Id extends string = string>(spec: TabsShellSpec<Id>):
   const panelCls = panelClass ? `tab-body ${panelClass}` : "tab-body";
   const panels = visible
     .map((tab, i) => {
-      // 首个可见：不写 display，回落 `.tab-body{display:flex}`；其余 display:none
-      const style = [i === 0 ? "" : "display:none", tab.panelStyle ?? ""].filter(Boolean).join(";");
+      // 激活项：不写 display，回落 `.tab-body{display:flex}`；其余 display:none
+      const style = [i === activeIdx ? "" : "display:none", tab.panelStyle ?? ""]
+        .filter(Boolean)
+        .join(";");
       const styleAttr = style ? ` style="${style}"` : "";
       const testidAttr = tab.panelTestid ? ` data-testid="${tab.panelTestid}"` : "";
       return `<div class="${panelCls}" id="${prefix}-tab-${tab.id}"${testidAttr}${styleAttr}>${tab.body}</div>`;

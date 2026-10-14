@@ -239,39 +239,48 @@ export async function webExtractPreviewTexture(modelPath: string): Promise<strin
   return "";
 }
 
-/** 从 zip entries 挑第一个含 minecraft:geometry 的 JSON key */
-function findGeometryEntryKey(entries: Record<string, Uint8Array>): string | null {
-  const keys = Object.keys(entries);
+/** 构建候选 JSON key 队列（preferred → geoJson → 全部 .json） */
+function buildCandidateKeys(keys: string[]): string[] {
   // 优先文件名含 geometry 的条目（Bedrock 命名惯例：geometry.xxx.json）
   const preferredKeys = keys.filter((k) => /geometry/i.test(k));
   // 其次 .geo.json 后缀（Bedrock 压缩 geometry 命名）
   const geoJsonKeys = keys.filter((k) => /\.geo\.json$/i.test(k));
-  // 合并优先级队列（preferred → geoJson → 全部 .json）
-  const candidates = [
+  return [
     ...preferredKeys,
     ...geoJsonKeys.filter((k) => !preferredKeys.includes(k)),
     ...keys.filter(
       (k) => /\.json$/i.test(k) && !preferredKeys.includes(k) && !geoJsonKeys.includes(k),
     ),
   ];
+}
+
+/** 探测 entry 数据是否为 minecraft:geometry JSON（跳过 UTF-8 BOM 与前导空白再判首字节）。
+ *  code_review 64749809 #12：须跳过 UTF-8 BOM（EF BB BF，Windows 工具/导出器常见）
+ *  与前导空白（20/09/0A/0D）再判首字节——否则合法 BOM/空行前缀 JSON 被静默跳过，
+ *  geometry 解析失败 fallthrough geo=null（此前按 "minecraft:geometry" 标记全量匹配不受影响） */
+function entryHasGeometry(data: Uint8Array): boolean {
+  let i = 0;
+  if (data.length >= 3 && data[0] === 0xef && data[1] === 0xbb && data[2] === 0xbf) i = 3;
+  while (
+    i < data.length &&
+    (data[i] === 0x20 || data[i] === 0x09 || data[i] === 0x0a || data[i] === 0x0d)
+  ) {
+    i++;
+  }
+  if (data[i] !== 0x7b) return false;
+  return new TextDecoder().decode(data).includes('"minecraft:geometry"');
+}
+
+/** 从 zip entries 挑第一个含 minecraft:geometry 的 JSON key */
+function findGeometryEntryKey(entries: Record<string, Uint8Array>): string | null {
+  const keys = Object.keys(entries);
+  const candidates = buildCandidateKeys(keys);
   const maxProbe = 1 << 20; // 1MB 探测上限，避免超大 JSON 全量解码
   for (const key of candidates) {
     const data = entries[key].subarray(0, maxProbe);
     try {
-      // 快速首字节过滤：Bedrock geometry JSON 以 "{" 开头，先排除明显非 JSON 的二进制。
-      // code_review 64749809 #12：须跳过 UTF-8 BOM（EF BB BF，Windows 工具/导出器常见）
-      // 与前导空白（20/09/0A/0D）再判首字节——否则合法 BOM/空行前缀 JSON 被静默跳过，
-      // geometry 解析失败 fallthrough geo=null（此前按 "minecraft:geometry" 标记全量匹配不受影响）
-      let i = 0;
-      if (data.length >= 3 && data[0] === 0xef && data[1] === 0xbb && data[2] === 0xbf) i = 3;
-      while (
-        i < data.length &&
-        (data[i] === 0x20 || data[i] === 0x09 || data[i] === 0x0a || data[i] === 0x0d)
-      ) {
-        i++;
-      }
-      if (data[i] !== 0x7b) continue;
-      if (new TextDecoder().decode(data).includes('"minecraft:geometry"')) return key;
+      // 快速首字节过滤：Bedrock geometry JSON 以 "{" 开头，先排除明显非 JSON 的二进制
+      if (entryHasGeometry(data)) return key;
     } catch {}
   }
   return null;

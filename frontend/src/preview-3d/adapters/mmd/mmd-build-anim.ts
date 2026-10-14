@@ -9,33 +9,38 @@ import { filterAnimFiles, getCustomAnimPath } from "./mmd-anim-library.ts";
 import { mmdDiag } from "./mmd-shared.ts";
 import type { Stage4Ctx } from "./mmd-types.ts";
 
-export async function Stage4Anim(c: Stage4Ctx): Promise<void> {
-  c.mixer = new THREE.AnimationMixer(c.mesh);
-  c.clips = [];
-  c.customAnimPath = await getCustomAnimPath();
-  if (c.customAnimPath) {
-    try {
-      const animFiles = (await c.effectivePort.listAllFilePaths(c.customAnimPath)) || [];
-      const extraAnims = filterAnimFiles(animFiles);
-      if (extraAnims.length > 0) {
-        c.vmdPaths.push(...extraAnims.filter((p) => p.toLowerCase().endsWith(".vmd")));
-        c.vpdPaths.push(...extraAnims.filter((p) => p.toLowerCase().endsWith(".vpd")));
-        void mmdDiag(
-          c.effectivePort,
-          "anim-lib-scan",
-          c.customAnimPath,
-          "ok",
-          `found=${extraAnims.length} (vmd=${extraAnims.filter((p) => p.toLowerCase().endsWith(".vmd")).length})`,
-        );
-      }
-    } catch (e) {
-      void mmdDiag(c.effectivePort, "anim-lib-scan", c.customAnimPath, "fail", safeErrorMessage(e));
+/** 扫描自定义动画库目录，VMD/VPD 分别追加到路径清单 */
+async function scanCustomAnimLib(c: Stage4Ctx): Promise<void> {
+  if (!c.customAnimPath) return;
+  try {
+    const animFiles = (await c.effectivePort.listAllFilePaths(c.customAnimPath)) || [];
+    const extraAnims = filterAnimFiles(animFiles);
+    if (extraAnims.length > 0) {
+      c.vmdPaths.push(...extraAnims.filter((p) => p.toLowerCase().endsWith(".vmd")));
+      c.vpdPaths.push(...extraAnims.filter((p) => p.toLowerCase().endsWith(".vpd")));
+      void mmdDiag(
+        c.effectivePort,
+        "anim-lib-scan",
+        c.customAnimPath,
+        "ok",
+        `found=${extraAnims.length} (vmd=${extraAnims.filter((p) => p.toLowerCase().endsWith(".vmd")).length})`,
+      );
     }
+  } catch (e) {
+    void mmdDiag(c.effectivePort, "anim-lib-scan", c.customAnimPath, "fail", safeErrorMessage(e));
   }
-  const allAnimPaths = [...c.vmdPaths, ...c.vpdPaths];
-  const animBatch =
-    allAnimPaths.length > 0 ? await c.effectivePort.readFileBytesBatch(allAnimPaths) : {};
-  c.cameraClips = [];
+}
+
+/** 从路径提取标签（去扩展名，空则用兜底） */
+function labelFromPath(v: string, ext: string, fallback: string): string {
+  return (v.split(/[/\\]/).pop() || "").replace(new RegExp(`\\.${ext}\\$`, "i"), "") || fallback;
+}
+
+/** 解析 VMD 动作为 clips（批量读取后逐个 parse） */
+async function parseVmdClips(
+  c: Stage4Ctx,
+  animBatch: Record<string, string | null>,
+): Promise<void> {
   for (const v of c.vmdPaths) {
     try {
       const vmdB64 = animBatch[v] ?? null;
@@ -44,7 +49,7 @@ export async function Stage4Anim(c: Stage4Ctx): Promise<void> {
         bytesToArrayBuffer(base64ToBytes(vmdB64) as Uint8Array),
       );
       c.clips.push({
-        label: (v.split(/[/\\]/).pop() || "").replace(/\.vmd$/i, "") || "motion",
+        label: labelFromPath(v, "vmd", "motion"),
         clip: buildAnimation(vmd, c.mesh),
       });
       if (vmd.cameraKeyFrames && vmd.cameraKeyFrames.length > 0) {
@@ -56,14 +61,20 @@ export async function Stage4Anim(c: Stage4Ctx): Promise<void> {
       dbg("mmd", { op: "parse-vmd-fail", path: v, err: safeErrorMessage(e) });
     }
   }
-  c.vpdPoses = [];
+}
+
+/** 解析 VPD 姿态到 vpdPoses（Blob URL 加载） */
+async function parseVpdPoses(
+  c: Stage4Ctx,
+  animBatch: Record<string, string | null>,
+): Promise<void> {
   for (const v of c.vpdPaths) {
     try {
       const vpdB64 = animBatch[v] ?? null;
       if (!vpdB64) continue;
       const vpdBytes = base64ToBytes(vpdB64) as Uint8Array;
       // [2026-10-12 同族收敛] 原为 `new Blob([vpdBytes.buffer as ArrayBuffer])`——与本文件
-      // L44（VMD 路径）及 mmd-build-load/mmd-build-scene 的全部入口**不一致**：那些都走
+      // VMD 路径及 mmd-build-load/mmd-build-scene 的全部入口**不一致**：那些都走
       // `bytesToArrayBuffer`（整视图零拷贝 / 偏移视图 slice 收窄），唯独此处直取 `.buffer`。
       // `.buffer` 是**底层整块**：`base64ToBytes` 目前恰好返回精确数组（新分配、占满），故当前
       // 无 bug；但这是**跨模块隐性契约**——`utils/base/primitives/base64.ts|bytesToArrayBuffer`
@@ -73,13 +84,17 @@ export async function Stage4Anim(c: Stage4Ctx): Promise<void> {
       c.blobUrls.push(vpdBlobUrl);
       const vpd = await new VPDLoader().loadAsync(vpdBlobUrl);
       c.vpdPoses.push({
-        label: (v.split(/[/\\]/).pop() || "").replace(/\.vpd$/i, "") || "pose",
+        label: labelFromPath(v, "vpd", "pose"),
         vpd,
       });
     } catch (e) {
       dbg("mmd", { op: "parse-vpd-fail", path: v, err: safeErrorMessage(e) });
     }
   }
+}
+
+/** 初始化动画播放状态与相机动画轨道 */
+function initPlaybackAndCamera(c: Stage4Ctx): void {
   c.playing = true;
   c.curIdx = 0;
   c.action = null;
@@ -99,6 +114,10 @@ export async function Stage4Anim(c: Stage4Ctx): Promise<void> {
     c.cameraAction = c.cameraMixer.clipAction(c.firstCameraClip);
     c.cameraAction.play();
   }
+}
+
+/** 按模型包围盒适配相机与控制器 */
+function fitCameraToModel(c: Stage4Ctx): void {
   const box = new THREE.Box3().setFromObject(c.mesh);
   const size = box.getSize(new THREE.Vector3());
   const center = box.getCenter(new THREE.Vector3());
@@ -119,4 +138,20 @@ export async function Stage4Anim(c: Stage4Ctx): Promise<void> {
     controls.maxDistance = maxDim * 12;
     controls.update();
   }
+}
+
+export async function Stage4Anim(c: Stage4Ctx): Promise<void> {
+  c.mixer = new THREE.AnimationMixer(c.mesh);
+  c.clips = [];
+  c.customAnimPath = await getCustomAnimPath();
+  await scanCustomAnimLib(c);
+  const allAnimPaths = [...c.vmdPaths, ...c.vpdPaths];
+  const animBatch =
+    allAnimPaths.length > 0 ? await c.effectivePort.readFileBytesBatch(allAnimPaths) : {};
+  c.cameraClips = [];
+  await parseVmdClips(c, animBatch);
+  c.vpdPoses = [];
+  await parseVpdPoses(c, animBatch);
+  initPlaybackAndCamera(c);
+  fitCameraToModel(c);
 }

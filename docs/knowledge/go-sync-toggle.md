@@ -92,7 +92,7 @@ invariant_anchors:
 ## 核心职责
 
 - **`SyncToggleStatus(instanceCustomDir, repoRoot string, scanFn ScanFunc) (int, int, error)`**：返回禁用数、启用数。两阶段遍历-执行：WalkDir 回调**不直接** `os.Rename`，先收集 `[]renameOp`，遍历完成后批量执行（遍历中改目录结构会让后续条目被跳过或重复处理）。与 `go/installer` 共用包级 `installer.InstallLock`（防与安装并发写同一文件）——**锁范围仅阶段 3+4（计划 + rename 操作段）**，阶段 1（仓库索引 + 实例目录遍历，纯读）与阶段 2（哈希）均锁外执行，与 `RelinkDir` 的「锁外扫描 + 锁内仅覆盖操作段」对齐：阶段 1 原在临界区内跑 scanFn，而 scanFn 在 scanner 缓存冷启动时整段走盘（watcher 触发的 syncAll 恰是冷启动路径：文件变更后 scanner 缓存刚失效，下一次 toggle 必冷扫），持锁期间阻塞所有并发同步/安装/推送（2026-10-14 锐评 ②，见 [go-sync](./go-sync.md) 裁定记录）｜TOCTOU 容忍：索引快照到执行之间目录可能被外部改动，但 `planToggleRenames` 执行前 os.Stat 预检、`applyToggleRenames` 的 rename 失败即计入 failures 随 error 返回——不会静默搬错对象｜回归锁 `sync_toggle_lockscope_test.go|TestSyncToggleStatus_ScanNotHeldLock`（探针 `IsLocked()`；同构 `sync_relink_test.go|TestRelinkDir_ScanNotHeldLock`）
-- **文件级三级匹配**：哈希（SHA256 内容）→ 相对路径 → 纯文件名 basename（最后一级同名不同路径互匹配，「旧仓库特例」兜底，观察项：新仓库数据齐全时该兜底应可收紧）
+- **文件级三级匹配**：relKey（相对路径）→ hash（SHA256 内容）→ 纯文件名 basename。basename 查 `repoName[纯文件名]`，而 `collectToggleRepoIndex` 只在仓库条目 Path **越出 filesRoot 前缀**时才写纯文件名键——正常布局下恒 miss，它是异构 scanFn 注入越界条目的专用关联通道（即注释的「旧仓库特例」），**不是误伤面**。误伤面裁定与实证见 [go-sync](./go-sync.md) 不变量「basename 兜底不可达」+ `sync_toggle_basename_reach_test.go`
 - **目录级真值取文件系统，不取 scanner 索引（ADR-345 D1）**：`collectToggleFileInfos` 把**目录**也作为候选（载体标 banned 并 `SkipDir`，不下钻——改名搬走整棵子树，下钻候选路径当场失效；目录候选不进阶段 2 哈希预算）；`planToggleRenames` 的目录分支走 `sync.go|dirToggleDecision`，用 `fsutil|DisabledTwinForms` 探仓库侧同一路径的活跃/载体**两种目录形态**——**恰好一侧存在**才判 matched 据此整目录改名；两侧**并存**或都不存在 → 保守不动
 
 ## 不变量

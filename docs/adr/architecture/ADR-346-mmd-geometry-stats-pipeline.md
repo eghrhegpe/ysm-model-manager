@@ -48,4 +48,7 @@ MMD 族（EntityPlayer / SceneModel 的 .pmx/.pmd）当前**无任何数值语�
 
 - ADR-343 遗留挂账（「MMD 数值语义单独立项」）→ 本 ADR 立项；ADR-343 §2 刀 2 与「非目标」两条指针已改指本 ADR
 - 链路核实（2026-10-14 grep/读码）：`go/cli/cli_analyze_mmd.go`（资产盘点无解析）/ `go/cli/bench_concurrent.go` 与 `go/cli/flow_phases.go`（「解析器只在前端 3D adapter」声明）/ `docs/knowledge/model-stats.md`（Worker = YSM-only）
-- 冒烟实证（同日，`tmp/verify-repo` 加 MMD 布局 `3d-skin/EntityPlayer/*.pmx`）：无过滤搜索 5/5 条（pmx 零值直通）、`--min-bones 1` 仍 2/2（MMD 显式排除于数值路径）——证实 A 案门控在搜索侧闭环，能力缺口定位准确
+- 冒烟实证（同日，`tmp/verify-repo` 加 MMD 布局）：无过滤搜索 5/5 条、`--min-bones 1` 前 2/2（MMD 未接管线）——证实门控闭环、能力缺口定位准确
+- 落地实测（同日）：CLI 端到端 `--min-bones 1` = **3/3**（maid 12903 / pmx 42 / ysm 217 骨全命中）、`--min-cubes 1` = 2/2（MMD cube 零值被诚实筛除）；性能门禁：2.1MB/15000 骨 PMX 统计解析 **1.6–2.3ms**（字符串扫描，门槛 50ms 内 20x 余量）——实现迭代三版数据：全量 `xml.Unmarshal` ~65ms、token 流式 ~110ms（bone 节区逐 token 成本）均超门槛后收敛
+- 实现迭代踩坑（当日）：① `indexAttr` 偏移 off-by-one（漏算引号，值起点错位 1 字符）；② 字符串值收束符应为下一标签 `<`（误用 `>` 连进闭合标签前缀）；③ 骨计数节区回退在嵌套骨结构上取首个 `</bone>`（子元素闭合）必失真——撤销，缺头声明 = 0 不猜；④ 仓库条目 Type 派生锚在**存储布局**（`mmd/PMX` → EntityPlayer），实例目录（`3d-skin/EntityPlayer`）非 location 消歧锚——app 测试 fixture 放错目录静默拿空 Type
+- 测试锁面：`go/geometry/mmd`（PMX 五场景 / PMD 双版本 / 非法魔数 / 非 XML 拒绝）+ `registry_statsparser_test.go`（声明消费面）+ `app_scan_search_dispatch_test.go|TestSearchModels_MmdStatsNumeric`（端到端：直通 / minBones 命中 / minCubes 筛除三态）

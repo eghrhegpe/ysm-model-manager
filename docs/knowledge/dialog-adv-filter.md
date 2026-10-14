@@ -54,7 +54,7 @@ status: active
 
 - `modalAdvFilter(opts)`：Promise 化弹窗，`opts.value` 回填上次条件
 - 条件采集：`collect()` 输出 `AdvFilterValue`（keyword/minBones/maxBones/minCubes/maxCubes/minTex/maxTex/tag），空输入归一为 `null`（表示不限），负数/NaN 同样归 null
-- **数值区展示门控（2026-10-14 锐评 P1 修复 A 案）**：`opts.rtype`（当前树资源类型，`toolbar-search` 传 `vm.rootAttr`）无几何分析管线时（registry `geometrySearchable` 声明，前端派生集 `GEOMETRY_SEARCHABLE_TYPES` 同源）——禁用 6 数值输入 + `#afv-numeric-hint` 提示行 + 预填数值剥离 + collect 数值归 null（「用不了就不带走」：旧数值带进 SearchModels 会被 `BoneCount==0` 静默排除整类条目，归 null 才是可见语义）。`rtype` 缺省（旧调用方）行为不变
+- **数值区展示门控（2026-10-14 锐评 P1 修复 A 案）**：`opts.rtype`（当前树资源类型，`toolbar-search` 传 `vm.rootAttr`）无几何分析管线时（registry `geometrySearchable` 声明，前端派生集 `GEOMETRY_SEARCHABLE_TYPES` 同源）——禁用 6 数值输入 + `#afv-numeric-hint` 提示行 + 预填数值剥离 + collect 数值归 null（「用不了就不带走」：旧数值带进 SearchModels 会被 `BoneCount==0` 静默排除整类条目，归 null 才是可见语义）。`rtype` 缺省（旧调用方）行为不变。**ADR-346 起 MMD 族（EntityPlayer/SceneModel）入派生集（统计级弱形态）→ MMD 树数值区自动解锁**（骨骼/纹理可用，cube 恒 0 诚实值——cube 输入仍可填但 MMD 条目必被筛除，`resource_types.json` 驱动，前端零判定改动）
 - 范围校验：`validate()` 仅在两端都填写时检查 min ≤ max，错误显示 `#afv-err` 并阻止提交
 - 标签提示：打开后异步 `AllTags()` 在输入框旁展示「已有标签: …」
 - 三种结果：应用 → resolve(条件对象)；「🧹 清除全部」→ resolve(`{ cleared: true }`)；取消/Esc/点遮罩 → resolve(null)

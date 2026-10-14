@@ -287,6 +287,7 @@
 | 冲突处理 conflict.go | [整合包同步 go/sync](./go-sync.md) | - | ADR-064, ADR-296, ADR-342, ADR-344 |
 | 待推送 / 可拉取 / 已禁用 / 实例资源 | [整合包同步页 app-sync-manager](./app-sync-manager.md) | - | - |
 | 多线程统计角标、网页版导入 | [工具栏搜索编排 toolbar-search](./toolbar-search.md) | - | - |
+| 骨骼数怎么来的 | [MMD 几何统计解析](./go-geometry-mmd-stats.md) | .vrm/.zip 在 MMD 族下无统计链路（CanParse 只认 .pmx/.pmd） | - |
 | 关键词搜索、数值范围搜索 | [CLI 搜索命令 search](./go-cli-search.md) | - | - |
 | 降级提示、consumeWebSearchDegraded | [工具栏搜索编排 toolbar-search](./toolbar-search.md) | - | - |
 | 每日推荐、月度活动、热力图、仓库健康 | [资历最深模型 oldest-models](./oldest-models.md) | - | - |
@@ -326,10 +327,12 @@
 | last-wins / priority 裁决 | [分类路由与回归护栏](./classify-routing.md) | - | ADR-093 |
 | maid-model 包 L0 清单与命名空间选择 | [女仆包 L0 清单收集与解析（maid_l0 分片）](./go-geometry-maid-l0.md) | 「最长清单即主包」启发式与 L0 未命中回退全量枚举兜底是互相锁定的口径，勿松动命中判定 | - |
 | mergeGeoFiles 骨骼合并 / texIdxMap 槽位绑定 | [Geometry 存档解析流水线（archive 分片）](./go-geometry-archive-pipeline.md) | - | - |
+| MMD 模型搜索数值条件 | [MMD 几何统计解析](./go-geometry-mmd-stats.md) | cube 条件对 MMD 条目恒筛除（CubeCount 诚实 0），属设计语义非 bug | - |
 | model_id 推断 / 候选路径字典 | [女仆包 L0 清单收集与解析（maid_l0 分片）](./go-geometry-maid-l0.md) | - | - |
 | oldest 资历排行 | [诊断页 diagnostics](./app-content-diagnostics.md) | - | - |
 | parse.go / archive.go | [Geometry 存档 go/geometry](./go-geometry.md) | - | ADR-068 |
 | ParseFromZip / ParseFrom7z / ParseFrom*Entry 存档流水线 | [Geometry 存档解析流水线（archive 分片）](./go-geometry-archive-pipeline.md) | zip/7z 六入口必须走 openArchiveBytes + parseModelFromArchive / parseFromArchiveEntry / parseComponentsFromArchive 共享实现，勿退回双份路径 | - |
+| PMX 统计解析 | [MMD 几何统计解析](./go-geometry-mmd-stats.md) | 16MB 读上限：超限 PMX 报「非统计目标」错误，数值搜索中该条零值被排除 | - |
 | runSearch | [CLI 搜索命令 search](./go-cli-search.md) | - | - |
 | SearchModels 数值筛选 | [Web Worker 模型统计层 model-stats](./model-stats.md) | - | ADR-218, ADR-219 |
 | SearchModels、adv-filter、网页版降级 | [搜索筛选编排 search](./search.md) | - | - |
@@ -891,6 +894,11 @@
 | 合并路径 IsArmModelName 判定在 Open+Read 之后（保持原序），勿成先判再读 | `顺手优化` | - |
 | resolveL0 命中判定以为准（零命中 = 清单与 zip 内容脱节，回退全量枚举兜底），勿按清单非空判 hit | `清单至少命中 1 个模型` | - |
 | resolveL0Model / resolveL0Texture 返回值必须是小写 zip 内绝对路径（entryByPath 键全小写），返回 e.Name() 原始大小写会让主循环重查 miss、大写条目纹理静默丢弃 | - | - |
+| 骨计数只认 <model> 头声明 bone_count（PMX 1.1 规范单源）；节区回退已撤销——嵌套骨结构取首个 </bone> 必失真，缺头声明 = 0 不猜 | - | - |
+| 字符串值收束符是下一标签的 '<' 而非 '>'（误用 '>' 会把 "128,256</texsiz" 当值，Atoi 必败） | - | - |
+| 多 texture 迭代的绝对位换算曾 off-by-one（相对偏移 + 基准错位），修法是 nxt 相对 data[tex+texEnd:] 起算后整体加回 | - | - |
+| 仓库条目 Type 派生锚在**存储布局**（mmd/PMX | - | EntityPlayer），实例目录（3d-skin/EntityPlayer）不是 location 消歧锚——测试 fixture 放错目录会静默拿到空 Type |
+| PMD 只出骨骼数（布局跳节至 bone_count 定长字段），纹理尺寸诚实零值（PMT 尾块探测 = 扩展项） | - | - |
 | 直接 unzip | - | 7z 未支持、纹理提取缺路径安全；必须经 go/geometry |
 | 未走 ysm_parser.go | - | .ysm 解析不一致；必须经 go/ysm 兜底 |
 | 直写目标文件 | - | 中断留下半文件；必须经 WriteFileAtomic 的 tmp+rename |

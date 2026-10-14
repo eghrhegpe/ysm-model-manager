@@ -46,7 +46,16 @@ export function rowHeightList(): number {
   return cardDensity() === "normal" ? ROW_H_LIST_NORMAL : ROW_H_LIST_COMPACT;
 }
 
-/** 扁平化行（虚拟滚动数据单元） */
+/**
+ * 扁平化行（虚拟滚动数据单元）。
+ *
+ * ⚠️ `html` 是 **惰性 getter**（锐评性能 #5 后续，2026-10-14）：虚拟滚动只渲染可见
+ * 窗口，但 eager 实现为**全部**行拼 HTML 字符串——搜索击键一次 O(n) 次模板拼接
+ * （n = 全部可见行，仓库上万模型时每次击键都在拼几万个字符串，而其中 ~30 行会进 DOM）。
+ * 改 getter 后：只有真正被 `rowElOf` 读到（或测试/调试直读 .html）的行才付构造成本，
+ * 且首次读取后记忆化，重复读零成本。字段名与字符串语义完全不变（测试 `.html` 断言
+ * 与所有消费方零改动），只是把「构造时机」从 flatten 推迟到读取。
+ */
 export interface TreeRow {
   id: number;
   type: "file" | "folder";
@@ -59,6 +68,24 @@ export interface TreeRow {
   depth: number;
   html: string;
   isOpen?: boolean;
+}
+
+/**
+ * 惰性行工厂：build 首次读取时求值并缓存（memoize-once）。
+ * 键是 build 闭包——row 对象可被 WeakMap 缓存复用（rowTplCache），缓存命中时
+ * cloneNode 不再读 html，无需重复求值。
+ */
+function lazyRow(base: Omit<TreeRow, "html">, build: () => string): TreeRow {
+  let memo: string | undefined;
+  Object.defineProperty(base, "html", {
+    get() {
+      if (memo === undefined) memo = build();
+      return memo;
+    },
+    enumerable: true,
+    configurable: true,
+  });
+  return base as TreeRow;
 }
 
 /**
@@ -340,17 +367,21 @@ function visibleFileRow(
   draggingKeys: SelectedKeys = undefined,
 ): TreeRow | null {
   if (isSearch && !entry.path.toLowerCase().includes(searchLower)) return null;
-  return {
-    id,
-    type: "file",
-    key: entryKey(entry),
-    depth,
-    html: fileRowFromEntry(entry, depth, mode, {
-      selected: selectedKeys?.has(entryKey(entry)) === true,
-      search,
-      dragging: draggingKeys?.has(entryKey(entry)) === true,
-    }),
-  };
+  const key = entryKey(entry);
+  return lazyRow(
+    {
+      id,
+      type: "file",
+      key,
+      depth,
+    },
+    () =>
+      fileRowFromEntry(entry, depth, mode, {
+        selected: selectedKeys?.has(key) === true,
+        search,
+        dragging: draggingKeys?.has(key) === true,
+      }),
+  );
 }
 
 /** 文件夹行（含展开态；flags 缺记录时由调用方给兜底对象） */
@@ -363,14 +394,16 @@ function folderTreeRow(
   mode: RenderMode,
   id: number,
 ): TreeRow {
-  return {
-    id,
-    type: "folder",
-    key: fullPath,
-    depth,
-    html: folderRowFromNode(name, fullPath, depth, isOpen, flags, mode),
-    isOpen,
-  };
+  return lazyRow(
+    {
+      id,
+      type: "folder",
+      key: fullPath,
+      depth,
+      isOpen,
+    },
+    () => folderRowFromNode(name, fullPath, depth, isOpen, flags, mode),
+  );
 }
 
 export function flattenVisible(

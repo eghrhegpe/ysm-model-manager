@@ -146,6 +146,37 @@ describe("buildTree 过滤", () => {
 });
 
 describe("flattenVisible", () => {
+  // 锐评性能 #5 后续（2026-10-14）：虚拟滚动只渲染可见窗口，但 eager 实现为全部行拼 HTML
+  // ——搜索击键一次 O(n) 次模板拼接（n 万级仓库 = 每次击键拼几万个字符串，DOM 里只进 ~30 行）。
+  // html 改惰性 getter（memoize-once）：字段名与字符串语义不变，25 处既有 .html 断言零改动。
+  it("html 是惰性 getter：flattenVisible 阶段不构造模板字符串（虚拟滚动关键路径）", () => {
+    const root = buildTree(
+      [entry("a.ysm", "a.ysm"), entry("b.ysm", "b.ysm"), entry("c.ysm", "c.ysm")],
+      "name",
+      null,
+    );
+    const rows = flattenVisible(root, "", "", "name", {}, 0, "grid");
+    expect(rows).toHaveLength(3);
+    // 全部行都带 getter（不是 data 属性 eager 值）
+    for (const r of rows) {
+      const d = Object.getOwnPropertyDescriptor(r, "html");
+      expect(typeof d?.get).toBe("function");
+      // 惰性：getter 存在但尚未求值（无 value）
+      expect(d?.value).toBeUndefined();
+    }
+  });
+
+  it("惰性 getter 语义等价：首次读取构造、重复读取记忆化（同一字符串）", () => {
+    const root = buildTree([entry("a.ysm", "a.ysm")], "name", null);
+    const rows = flattenVisible(root, "", "", "name", {}, 0, "grid");
+    const first = rows[0].html;
+    expect(first).toContain("a");
+    expect(rows[0].html).toBe(first); // 重复读同值（memoize-once）
+    // 数据仍完整可读（惰性不等于丢字段）
+    expect(first).toContain('data-testid="tree-file"');
+    expect(first).toContain('aria-selected="false"');
+  });
+
   it("折叠的目录只输出文件夹行（不递归）", () => {
     const root = buildTree(
       [entry("a.ysm", "folder/a.ysm")],

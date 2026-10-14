@@ -722,7 +722,7 @@
 | 前端手写分类 | - | 与 Go classify 判定不一致、last-wins 裁决丢失；必须交 Go 分类 |
 | 新增资源类型未更新 priority | - | 冲突时优先级错乱；必须经 classify.go 的 priority 表 |
 | "刀1（采集期）恒不阻断，仅 stderr 提示。转 hard 需先跑  出硬数据，且连续 ≥15 次真实提交无误伤" | `--replay 300` | - |
-| "47% 存量提交符合结构上的标准——闸只判新提交，不追溯历史（重写历史 commit message 是 ADR-080 禁令）" | `违规` | - |
+| "存量（闸上线前 300 条窗口）约 47% 提交不符合结构判据——闸只判新提交，不追溯历史（重写历史 commit message 是 ADR-080 禁令）。闸上线后新提交合规率已升至 81%，两组数字的对照见正文节" | `闸上线后的对照` | - |
 | "采集期 gate-config 条目 blockPolicy: 'debt'——不阻断但会在 CI/pre-push 留下记录。转档时只改两处：钩子加 --strict + gate-config 改 'hard'" | - | - |
 | 各组件各自发下载请求 | - | 并发冲突、进度丢失；必须经 download-queue 排队 |
 | 镜像源未走 gh-links | - | 下载慢、镜像不可用；必须经 gh-links 的 CDN 分流 |

@@ -1677,6 +1677,10 @@ export const autoSidebar = [
         "link": "/adr/decisions/ADR-151-d1-gen-stage-unknown-newfile"
       },
       {
+        "text": "ADR-096-d1：repo_subdir 运行时通道去留裁定：保留为跨语言契约占位、禁新增消费者",
+        "link": "/adr/decisions/ADR-096-d1-repo-subdir-channel-disposition"
+      },
+      {
         "text": "ADR-091-d1：环境能力 cap 拆分：hdr-cache/background 先行，ibl 所有权段单独一刀",
         "link": "/adr/decisions/ADR-091-d1-cap-hdr-cache-background-ibl"
       }

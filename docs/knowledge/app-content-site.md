@@ -13,6 +13,7 @@ source_files:
   - frontend/src/views/app-content/site/workshop-data.ts
   - frontend/src/views/app-content/site/workshop-browse-mode.ts
   - frontend/src/views/app-content/site/edit-drag.ts
+  - frontend/src/views/app-content/site/focus-restore.ts
   - frontend/src/views/app-content/tpl-workshop.ts
 auto_fields:
   symbols_with_lines:
@@ -26,6 +27,7 @@ auto_fields:
     - buildCreatorEditCard
     - buildSiteHtml
     - BuildSiteHtmlCtx
+    - captureEditFocus
     - CleanupFn
     - compareByAuthorCount
     - compareFavFirst
@@ -41,6 +43,7 @@ auto_fields:
     - creatorTagChipHtml
     - DragSortSpec
     - DragStateShell
+    - EditFocusAnchor
     - FAV_CREATORS_KEY
     - FavSortInput
     - getCreatorIdentity
@@ -58,6 +61,7 @@ auto_fields:
     - renderSiteView
     - RenderSiteViewCtx
     - RepoAuthorLike
+    - restoreEditFocus
     - saveActiveTag
     - saveBrowseMode
     - saveSearchKw

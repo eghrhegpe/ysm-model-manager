@@ -94,10 +94,11 @@ func syncResourcesDirLevel(globalDir, instanceDir, rtype string, scanFn ScanEntr
 	// 回退 Walk 时把同一次 scanFn 结果的摘要旁挂进来——Walk 信道因此也有内容级判定，
 	// 两条信道判定强度一致（否则 hashed 键会把弱判定结果当强判定复用）。
 	// 返回值第二项 = 键碰撞警告（同键不同 Rel 的 last-write-wins 覆盖事件）；
-	// 缓存命中时随缓存值返回（碰撞与单元表同存，诊断信道跨 30s TTL 稳定）。
-	collectEntries := func(rootDir string) (map[string]dirLevelUnit, []string) {
+	// 第三项 fresh = 本调用是否新计算（false = 缓存命中，碰撞随缓存值返回但不再重打日志，
+	// 防 30s TTL 窗口内反复刷新刷屏——日志只在首次走盘产出时打一次）。
+	collectEntries := func(rootDir string) (map[string]dirLevelUnit, []string, bool) {
 		if cached, cols, ok := loadDirLevelScanCache(rootDir, rtype, hashed); ok {
-			return cached, cols
+			return cached, cols, false
 		}
 		var entries []types.ModelEntry
 		scanHit := false
@@ -115,23 +116,28 @@ func syncResourcesDirLevel(globalDir, instanceDir, rtype string, scanFn ScanEntr
 				// hashed 用变量而非字面量 true：本分支今天只在 scanFn != nil 时可达（hashed 恒真），
 				// 但硬编码会让「读槽/写槽」在将来重构中悄悄分叉（复核 P3-6）。
 				storeSyncScanCache(&syncDirLevelScanCache, dirLevelCacheKey(rootDir, rtype, hashed), dirLevelCacheValue{Units: m, Collisions: collisions})
-				return m, collisions
+				return m, collisions, true
 			}
 		}
+		// 外层缓存已 miss 才走到这里，故本调用为新计算（fresh=true）
 		m, collisions := collectEntriesWalkCached(rootDir, rtype, hashed, dirLevelHashByPath(entries))
-		return m, collisions
+		return m, collisions, true
 	}
 
-	globalUnits, globalCollisions := collectEntries(globalDir)
-	instanceUnits, instanceCollisions := collectEntries(instanceDir)
+	globalUnits, globalCollisions, globalFresh := collectEntries(globalDir)
+	instanceUnits, instanceCollisions, instanceFresh := collectEntries(instanceDir)
 	result := dirLevelResult(globalUnits, instanceUnits)
-	// 碰撞 fail-loud：两侧收集（全局/实例）的键碰撞汇入结果诊断信道 + 日志留痕
+	// 碰撞 fail-loud：汇入结果诊断信道（两种情况都挂）+ 日志留痕（仅新计算时打，缓存命中不重打）
 	//（同「Walk 错误」本地惯用法；CLI 侧 stderr 可见，GUI 侧日志面板可见）。
-	for _, w := range globalCollisions {
-		log.Printf("[sync] 全局侧 %s", w)
+	if globalFresh {
+		for _, w := range globalCollisions {
+			log.Printf("[sync] 全局侧 %s", w)
+		}
 	}
-	for _, w := range instanceCollisions {
-		log.Printf("[sync] 实例侧 %s", w)
+	if instanceFresh {
+		for _, w := range instanceCollisions {
+			log.Printf("[sync] 实例侧 %s", w)
+		}
 	}
 	result.Warnings = append(result.Warnings, globalCollisions...)
 	result.Warnings = append(result.Warnings, instanceCollisions...)

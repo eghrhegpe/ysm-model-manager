@@ -340,7 +340,7 @@
 | atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 182 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 115 |
 | atTeBindRenameInput | `frontend/src/views/app-tree/events.ts` | 389 |
-| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 523 |
+| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 522 |
 | _executeTreeMove | `frontend/src/views/app-tree/index.ts` | 822 |
 
 **订阅方（on）：**
@@ -356,7 +356,7 @@
 |------|------|----|
 | runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 306 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 114 |
-| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 518 |
+| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 517 |
 | _executeTreeMove | `frontend/src/views/app-tree/index.ts` | 821 |
 
 **订阅方（on）：**

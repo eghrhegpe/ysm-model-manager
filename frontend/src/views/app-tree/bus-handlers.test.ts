@@ -1,6 +1,6 @@
 // @vitest-environment node
 // ===== app-tree bus 事件处理测试（bindBusEvents）=====
-// 覆盖：选仓库 / 去重占位 / 回收站占位 / 批量启用禁用（前缀过滤+并发守卫）/
+// 覆盖：选仓库 / 去重占位 / 回收站占位 / 批量启用禁用（直调 batchToggleAll + 并发守卫 + 乐观与进度）/
 //       文件夹重命名/新建/回收 / 批量重命名（空目录/成功/部分失败）/ tree:reload
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { bus } from "@/bus";
@@ -343,7 +343,97 @@ describe("batchToggleAll — 批量启用/禁用（ADR-298 D2：直调，不再�
     expect(syncToggles.length).toBe(1);
     expect(syncToggles[0]).toEqual({ rtype: "resourcepack" });
   });
+
+  // 2026-10-15 P1-C 第二处：整库批量是全仓最长批量链（数千 IPC），原实现等全部落定才动
+  // UI（几十秒假死）+ 零进度。本组锁「乐观即时反馈 + 页脚可见进度 + 失败回滚 + 全失败不重扫」。
+  it("乐观即时反馈 + 可见进度：IPC 挂起期条目已翻、进度已显示，结束隐藏", async () => {
+    const vm = makeVM([
+      makeEntry({ name: "a.ysm", fullPath: "/repo/a.ysm", banned: true }),
+      makeEntry({ name: "b.ysm", fullPath: "/repo/b.ysm", banned: true }),
+    ]);
+    const probe = progressProbe();
+    (vm as unknown as Record<string, unknown>)["_root"] = probe.root;
+    await bind(vm);
+    const gates: Array<() => void> = [];
+    ToggleEnableMock.mockImplementation(
+      () =>
+        new Promise<void>((r) => {
+          gates.push(() => r());
+        }),
+    );
+
+    const done = batchToggleAll(vm as unknown as Parameters<typeof batchToggleAll>[0], true);
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(gates).toHaveLength(2); // 两个 IPC 都没落定
+    expect(vm.entries.every((e) => e.banned === false)).toBe(true); // 乐观已翻
+    expect(vm._renderTree).toHaveBeenCalled();
+    expect(probe.el.hidden).toBe(false);
+    expect(probe.el.textContent).toBe("⏳ 启用中 0/2");
+
+    gates.splice(0).forEach((g) => g());
+    await done;
+    expect(probe.el.hidden).toBe(true); // 四条出口都经 finally 清槽
+  });
+
+  it("部分失败 → 成功项保持翻转、失败项回滚原位", async () => {
+    stubConsoleWarn(); // 静音生产 logWarn("bus","全部启用 失败: …")
+    const vm = makeVM([
+      makeEntry({ name: "a.ysm", fullPath: "/repo/a.ysm", banned: true }),
+      makeEntry({ name: "b.ysm", fullPath: "/repo/b.ysm", banned: true }),
+    ]);
+    await bind(vm);
+    ToggleEnableMock.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error("EACCES"));
+
+    await batchToggleAll(vm as unknown as Parameters<typeof batchToggleAll>[0], true);
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(vm.entries[0]!.banned).toBe(false); // 成功 → 已启用
+    expect(vm.entries[1]!.banned).toBe(true); // 失败 → 回滚回禁用
+    expect(toasts.some((t) => t.msg.includes("全部启用: 1 成功, 1 失败"))).toBe(true);
+  });
+
+  it("全失败 → 回滚且不付全库重扫（_load 不调）", async () => {
+    stubConsoleWarn();
+    const vm = makeVM([makeEntry({ name: "a.ysm", fullPath: "/repo/a.ysm", banned: true })]);
+    await bind(vm);
+    ToggleEnableMock.mockRejectedValue(new Error("EACCES"));
+
+    await batchToggleAll(vm as unknown as Parameters<typeof batchToggleAll>[0], true);
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(vm._load).not.toHaveBeenCalled(); // 磁盘无变化 → 本地回滚即真值
+    expect(vm.entries[0]!.banned).toBe(true);
+    expect(vm._renderTree).toHaveBeenCalled(); // 判别性：旧实现此处 0 次
+    expect(syncToggles.length).toBe(0);
+  });
+  it("空集（无待翻项）→ 不产 IPC、不写 0/0 进度，沿用旧文案", async () => {
+    const vm = makeVM([makeEntry({ name: "a.ysm", fullPath: "/repo/a.ysm", banned: false })]);
+    const probe = progressProbe();
+    (vm as unknown as Record<string, unknown>)["_root"] = probe.root;
+    await bind(vm);
+
+    // enable=true 而唯一项已启用 → targets 为空
+    await batchToggleAll(vm as unknown as Parameters<typeof batchToggleAll>[0], true);
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(ToggleEnableMock).not.toHaveBeenCalled();
+    expect(probe.el.hidden).toBe(true); // 从未显示过（0/0 闪烁窗口已堵）
+    expect(toasts.some((t) => t.msg.includes("全部启用: 0 成功, 0 失败"))).toBe(true);
+  });
 });
+
+/** 页脚进度槽替身（本文件是 node 环境，无 ShadowRoot）：只需 hidden/textContent 两字段 */
+function progressProbe(): {
+  root: { getElementById: (id: string) => unknown };
+  el: { hidden: boolean; textContent: string };
+} {
+  const el = { hidden: true, textContent: "" };
+  return {
+    root: { getElementById: (id: string) => (id === "ftr-progress" ? el : null) },
+    el,
+  };
+}
 
 describe("bindBusEvents — 文件夹操作", () => {
   it("dir:rename 确认 → RenameDir + 清空选中态 + reload", async () => {

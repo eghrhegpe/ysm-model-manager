@@ -15,6 +15,7 @@ import { toast, toastError } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
+import { setFooterProgress } from "./footer-progress.ts";
 import type { AppTree } from "./index.ts";
 import { batchRenameTpl } from "./tpl-batch-rename.ts";
 
@@ -268,10 +269,16 @@ async function reload(vm: AppTree): Promise<void> {
   vm._renderTree();
 }
 
+// 整库批量启停（工具栏「✅ 全部启用 / 全部禁用」，命令表直调）。
+// 2026-10-15 P1-C 第二处：本链是全仓**最长的批量链**（数千次串行 IPC、可达分钟级），原实现
+// 与文件夹链同病——持锁全程零反馈、无乐观，期间任何单文件开关只撞「请稍候」。现与
+// `events.ts|toggleFolderBatch` 同款范式：乐观翻转 + 页脚进度 + 逐项失败回滚 + 有成功项才
+// reload 校正真值。原 `opts.prefix` 形参随收口删除——全仓无调用方传入（唯一入口
+// `batchToggleAll` 只给 label），留着会让人以为存在「只翻某前缀子树」的路径。
 async function runBatchToggle(
   vm: AppTree,
   enable: boolean,
-  opts: { prefix?: string; label: string },
+  opts: { label: string },
 ): Promise<void> {
   if (!can("ToggleEnable")) {
     toast(t("tree.webNoToggle"), TOAST_MS.normal, "warn");
@@ -284,32 +291,58 @@ async function runBatchToggle(
   }
   try {
     const { ToggleEnable } = await backendGetApp();
-    const prefix = opts.prefix?.replace(/\\/g, "/");
-    const snapshot = vm.snapshot.entries
-      .filter(
-        (e) =>
-          e.path &&
-          e.banned === enable &&
-          (!prefix || e.path === prefix || e.path.startsWith(`${prefix}/`)),
-      )
-      .map((e) => e.fullPath);
-    // 批处理收口（2026-10-13）：BATCH=8 手抄循环迁 batch-all-settled（2026-09 曾
-    // code_review 3413288be 补齐本入口的并发化，现结构归一）；失败日志保留 fullPath
-    //（rejected[].index 配对 snapshot 下标）。
-    const r = await batchAllSettled(snapshot.map((fullPath) => () => ToggleEnable(fullPath)));
-    for (const x of r.rejected) {
-      logWarn("bus", `${opts.label} 失败: ${snapshot[x.index] || ""}`, x.reason);
+    // 待翻条目 = 与目标态不一致者（enable=true 取当前被禁的，false 取当前启用的）。
+    // 保留条目引用（原实现只留 fullPath）：乐观翻转与失败回滚都要写回**同一批对象**。
+    const targets = vm.snapshot.entries.filter((e) => e.path && e.banned === enable);
+    const action = enable ? t("tree.enable") : t("tree.disable");
+    // ① 乐观翻转：整库批量动辄数千项，等全部 IPC 落定才动 UI（旧行为）等于几十秒假死
+    for (const e of targets) e.banned = !e.banned;
+    if (targets.length) vm._renderTree();
+    // ② 可见进度（批边界由 batchAllSettled 回调给出）
+    const progressText = (done: number): string =>
+      t("tree.batchProgress", { action, done, total: targets.length });
+    // ② 可见进度（批边界由 batchAllSettled 回调给出）。空集（「全部启用」而全已启用）不写
+    // 0/0——那是一次无意义的 0/0 闪烁窗口，且下面本就沿用旧的「0 成功, 0 失败」文案。
+    if (targets.length) setFooterProgress(vm._root, progressText(0));
+    // 回滚守卫代数须在 await 前捕获（`stale(gen)` = `gen !== current`，await 后取恒 false）
+    const rollbackGen = vm._guard.current;
+    try {
+      // 批处理收口（2026-10-13）：BATCH=8 手抄循环迁 batch-all-settled（2026-09 曾
+      // code_review 3413288be 补齐本入口的并发化，现结构归一）；失败日志保留 fullPath
+      //（rejected[].index 配对 targets 下标）。
+      const r = await batchAllSettled(
+        targets.map((e) => () => ToggleEnable(e.fullPath)),
+        undefined, // 缺省批大小（8）——与其余四条批量链同源
+        (done) => setFooterProgress(vm._root, progressText(done)),
+      );
+      for (const x of r.rejected) {
+        logWarn("bus", `${opts.label} 失败: ${targets[x.index]?.fullPath || ""}`, x.reason);
+      }
+      // ③ 失败项回滚（代际过期则不写：旧 entries 上的写是过期写，新树自会以新数据自洽）
+      if (r.rejected.length > 0 && !vm._guard.stale(rollbackGen)) {
+        for (const x of r.rejected) {
+          const e = targets[x.index];
+          if (e) e.banned = !e.banned;
+        }
+      }
+      if (r.fulfilled.length > 0) {
+        await reload(vm);
+        // ADR-339：带当前树类型发射，Go 侧按 dirLevelSync 过滤同步（非 dirLevelSync 自动 no-op）
+        bus.emit("sync:toggle:status", { rtype: vm.snapshot.rootAttr || RESOURCE_TYPES.YSM });
+      } else if (targets.length) {
+        // 全失败：磁盘什么都没变，回滚后的本地态即真值——不为「没变化」付一次全库重扫
+        vm._renderTree();
+      }
+      bus.emit("stats:refresh"); // 启用数变化，统计面同步（与文件夹链同口径）
+      toast(
+        `${opts.label}: ${r.fulfilled.length} ${t("tree.success")}, ${r.rejected.length} ${t("tree.failed")}`,
+        TOAST_MS.normal,
+        r.rejected.length > 0 ? "warn" : "success",
+      );
+    } finally {
+      // 进度槽必清（成功/失败/异常/代际丢弃四条出口都经此）
+      setFooterProgress(vm._root, null);
     }
-    if (r.fulfilled.length > 0) {
-      await reload(vm);
-      // ADR-339：带当前树类型发射，Go 侧按 dirLevelSync 过滤同步（非 dirLevelSync 自动 no-op）
-      bus.emit("sync:toggle:status", { rtype: vm.snapshot.rootAttr || RESOURCE_TYPES.YSM });
-    }
-    toast(
-      `${opts.label}: ${r.fulfilled.length} ${t("tree.success")}, ${r.rejected.length} ${t("tree.failed")}`,
-      TOAST_MS.normal,
-      r.rejected.length > 0 ? "warn" : "success",
-    );
   } catch (err) {
     toastError(err);
   } finally {

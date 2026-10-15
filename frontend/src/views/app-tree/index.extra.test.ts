@@ -298,6 +298,34 @@ describe("app-tree index 入口生命周期（补位）", () => {
     expect(queryAllByTestId(el.shadowRoot!, "tree-file").length).toBe(2);
   });
 
+  // 2026-10-15 P1-C：批量删除可达数百数千项，补页脚进度。本用例走**真实页脚模板**
+  // （mountEl → _renderLayout → footerHTML 产出 #ftr-progress），故同时锁「模板真有该槽」
+  // 与「结束必清槽」两端——夹具手抄槽位是另一路测试（bus-handlers）的盲点。
+  it("批量删除在途 → 页脚进度可见；结束后清槽", async () => {
+    const el = await mountEl("ysm");
+    el.selectState.keys.add("/repo/a.ysm");
+    const gates: Array<() => void> = [];
+    // ⚠️ 必须 Once：`clearAllMocks` 只清调用记录、**不重置 implementation**，
+    // 用 mockImplementation 会把「永挂起」泄漏给后续 Delete 用例（实测把
+    // 「删除期间推进代际」那条打成超时/误判）
+    (bindings.DeleteResourcePack as ReturnType<typeof vi.fn>).mockImplementationOnce(
+      () =>
+        new Promise<void>((res) => {
+          gates.push(() => res());
+        }),
+    );
+
+    dispatchKey("Delete");
+    await waitFor(() => gates.length === 1);
+    const progress = el.shadowRoot!.getElementById("ftr-progress") as HTMLElement;
+    expect(progress.hidden).toBe(false);
+    expect(progress.textContent).toBe("⏳ 删除中 0/1");
+
+    gates.splice(0).forEach((g) => g());
+    await waitFor(() => progress.hidden === true);
+    expect(progress.textContent).toBe("");
+  });
+
   it("Delete 统一走 DeleteResourcePack 并传 rtype", async () => {
     const el = await mountEl();
     el.setAttribute("root", RESOURCE_TYPES.MMD);

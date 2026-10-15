@@ -71,7 +71,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 117 |
-| reload | `frontend/src/views/app-tree/bus-handlers.ts` | 275 |
+| reload | `frontend/src/views/app-tree/bus-handlers.ts` | 279 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -83,7 +83,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| writeAppConfig | `frontend/src/views/config-write.ts` | 99 |
+| writeAppConfig | `frontend/src/views/config-write.ts` | 103 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -330,15 +330,15 @@
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 211 |
 | relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 247 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 93 |
-| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 338 |
+| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 335 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 73 |
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 137 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 581 |
 | _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 229 |
 | runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 107 |
 | atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 134 |
-| atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 207 |
-| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 360 |
+| atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 211 |
+| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 364 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 115 |
 | atTeBindRenameInput | `frontend/src/views/app-tree/events.ts` | 389 |
 | toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 523 |
@@ -355,7 +355,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 355 |
+| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 359 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 114 |
 | toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 518 |
 | _executeTreeMove | `frontend/src/views/app-tree/index.ts` | 822 |

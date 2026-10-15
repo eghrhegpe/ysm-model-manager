@@ -15,7 +15,7 @@ import { toast, toastError } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
-import { setFooterProgress } from "./footer-progress.ts";
+import { withFooterProgress } from "./footer-progress.ts";
 import type { AppTree } from "./index.ts";
 import { batchRenameTpl } from "./tpl-batch-rename.ts";
 
@@ -85,9 +85,21 @@ async function runBatchRename(
 ): Promise<void> {
   const { RenameFile } = await backendGetApp();
   // 批处理收口（2026-10-13）：BATCH=8 手抄循环迁 utils/async/batch-all-settled
-  //（分批并发 + 逐项 ok/fail 不短路单一实现，原范式注释见该工具头）
-  const r = await batchAllSettled(
-    renames.map((rn) => () => RenameFile(rn.oldPath || "", rn.newName)),
+  //（分批并发 + 逐项 ok/fail 不短路单一实现，原范式注释见该工具头）；
+  // 2026-10-15：批量重命名可达数百项，补页脚进度（withFooterProgress 保证必清槽）
+  const r = await withFooterProgress(
+    vm._root,
+    // 动作词复用既有键（本仓对通用动作词的惯例，如 ctx.busyWait/ctx.renameFail 被树复用）：
+    // 新造 `tree.renameAction` 会被 i18n 命名闸按 ADR-124 判违规（尾段 Action 是已知角色词，
+    // 两段式违规 → 要求三段 tree.section.renameAction，语义反而更差）。
+    (done, total) => t("tree.batchProgress", { action: t("diagnostics.opRename"), done, total }),
+    renames.length,
+    (onProgress) =>
+      batchAllSettled(
+        renames.map((rn) => () => RenameFile(rn.oldPath || "", rn.newName)),
+        undefined,
+        onProgress,
+      ),
   );
   vm.selectState.keys.clear();
   vm.selectState.lastKey = null;
@@ -167,7 +179,23 @@ async function atBeHandleDirRecycle(vm: AppTree, dir: string): Promise<void> {
     // rejected[].index 配对原 files 下标，errors 仍带文件名
     // （对接锐评⑦：拒绝缘由走 friendlyError 单源——AppError Code→i18n、中文透传）
     const files = allFiles || [];
-    const r = await batchAllSettled(files.map((p) => () => MoveToRecycle(p)));
+    // 2026-10-15：整目录入回收站是**最长的破坏性链**（成千上万文件逐个 MoveToRecycle），
+    // 最需要「还在跑」的可见证据——补页脚进度（withFooterProgress 保证四条出口都清槽）
+    const r = await withFooterProgress(
+      vm._root,
+      // 动作词复用既有键（本仓对通用动作词的惯例，如 ctx.busyWait/ctx.renameFail 被树复用）。
+      // 回收链用 `menu.recycle` 而非 `tree.dirRecycleOk`：后者 ja 是「ゴミ箱へ」，拼进
+      //「{action}中」成「ゴミ箱へ中」（不成句）；`menu.recycle` 三语皆通（移入回收站／
+      // Move to Recycle Bin／ゴミ箱に移動）。
+      (done, total) => t("tree.batchProgress", { action: t("menu.recycle"), done, total }),
+      files.length,
+      (onProgress) =>
+        batchAllSettled(
+          files.map((p) => () => MoveToRecycle(p)),
+          undefined,
+          onProgress,
+        ),
+    );
     for (const x of r.rejected) {
       const p = files[x.index] || "";
       errors.push(`${p.split(/[/\\]/).pop()}: ${friendlyError(x.reason)}`);
@@ -298,51 +326,47 @@ async function runBatchToggle(
     // ① 乐观翻转：整库批量动辄数千项，等全部 IPC 落定才动 UI（旧行为）等于几十秒假死
     for (const e of targets) e.banned = !e.banned;
     if (targets.length) vm._renderTree();
-    // ② 可见进度（批边界由 batchAllSettled 回调给出）
-    const progressText = (done: number): string =>
-      t("tree.batchProgress", { action, done, total: targets.length });
-    // ② 可见进度（批边界由 batchAllSettled 回调给出）。空集（「全部启用」而全已启用）不写
-    // 0/0——那是一次无意义的 0/0 闪烁窗口，且下面本就沿用旧的「0 成功, 0 失败」文案。
-    if (targets.length) setFooterProgress(vm._root, progressText(0));
-    // 回滚守卫代数须在 await 前捕获（`stale(gen)` = `gen !== current`，await 后取恒 false）
+    // ② 进度 + 回滚守卫代数（须在 await 前捕获：`stale(gen)` = `gen !== current`，await 后取恒 false）
     const rollbackGen = vm._guard.current;
-    try {
-      // 批处理收口（2026-10-13）：BATCH=8 手抄循环迁 batch-all-settled（2026-09 曾
-      // code_review 3413288be 补齐本入口的并发化，现结构归一）；失败日志保留 fullPath
-      //（rejected[].index 配对 targets 下标）。
-      const r = await batchAllSettled(
-        targets.map((e) => () => ToggleEnable(e.fullPath)),
-        undefined, // 缺省批大小（8）——与其余四条批量链同源
-        (done) => setFooterProgress(vm._root, progressText(done)),
-      );
-      for (const x of r.rejected) {
-        logWarn("bus", `${opts.label} 失败: ${targets[x.index]?.fullPath || ""}`, x.reason);
-      }
-      // ③ 失败项回滚（代际过期则不写：旧 entries 上的写是过期写，新树自会以新数据自洽）
-      if (r.rejected.length > 0 && !vm._guard.stale(rollbackGen)) {
-        for (const x of r.rejected) {
-          const e = targets[x.index];
-          if (e) e.banned = !e.banned;
-        }
-      }
-      if (r.fulfilled.length > 0) {
-        await reload(vm);
-        // ADR-339：带当前树类型发射，Go 侧按 dirLevelSync 过滤同步（非 dirLevelSync 自动 no-op）
-        bus.emit("sync:toggle:status", { rtype: vm.snapshot.rootAttr || RESOURCE_TYPES.YSM });
-      } else if (targets.length) {
-        // 全失败：磁盘什么都没变，回滚后的本地态即真值——不为「没变化」付一次全库重扫
-        vm._renderTree();
-      }
-      bus.emit("stats:refresh"); // 启用数变化，统计面同步（与文件夹链同口径）
-      toast(
-        `${opts.label}: ${r.fulfilled.length} ${t("tree.success")}, ${r.rejected.length} ${t("tree.failed")}`,
-        TOAST_MS.normal,
-        r.rejected.length > 0 ? "warn" : "success",
-      );
-    } finally {
-      // 进度槽必清（成功/失败/异常/代际丢弃四条出口都经此）
-      setFooterProgress(vm._root, null);
+    // 批处理收口（2026-10-13）：BATCH=8 手抄循环迁 batch-all-settled（2026-09 曾
+    // code_review 3413288be 补齐本入口的并发化，现结构归一）；失败日志保留 fullPath
+    //（rejected[].index 配对 targets 下标）。进度走 withFooterProgress（必清槽；空集不写
+    // 0/0——那是一次无意义的 0/0 闪烁窗口，且下面本就沿用旧的「0 成功, 0 失败」文案）。
+    const r = await withFooterProgress(
+      vm._root,
+      (done, total) => t("tree.batchProgress", { action, done, total }),
+      targets.length,
+      (onProgress) =>
+        batchAllSettled(
+          targets.map((e) => () => ToggleEnable(e.fullPath)),
+          undefined, // 缺省批大小（8）——与其余四条批量链同源
+          onProgress,
+        ),
+    );
+    for (const x of r.rejected) {
+      logWarn("bus", `${opts.label} 失败: ${targets[x.index]?.fullPath || ""}`, x.reason);
     }
+    // ③ 失败项回滚（代际过期则不写：旧 entries 上的写是过期写，新树自会以新数据自洽）
+    if (r.rejected.length > 0 && !vm._guard.stale(rollbackGen)) {
+      for (const x of r.rejected) {
+        const e = targets[x.index];
+        if (e) e.banned = !e.banned;
+      }
+    }
+    if (r.fulfilled.length > 0) {
+      await reload(vm);
+      // ADR-339：带当前树类型发射，Go 侧按 dirLevelSync 过滤同步（非 dirLevelSync 自动 no-op）
+      bus.emit("sync:toggle:status", { rtype: vm.snapshot.rootAttr || RESOURCE_TYPES.YSM });
+    } else if (targets.length) {
+      // 全失败：磁盘什么都没变，回滚后的本地态即真值——不为「没变化」付一次全库重扫
+      vm._renderTree();
+    }
+    bus.emit("stats:refresh"); // 启用数变化，统计面同步（与文件夹链同口径）
+    toast(
+      `${opts.label}: ${r.fulfilled.length} ${t("tree.success")}, ${r.rejected.length} ${t("tree.failed")}`,
+      TOAST_MS.normal,
+      r.rejected.length > 0 ? "warn" : "success",
+    );
   } catch (err) {
     toastError(err);
   } finally {

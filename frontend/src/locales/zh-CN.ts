@@ -862,14 +862,14 @@ export const zhCN = {
   // 不被判定为「角色」才合法（pack/shader 等词形碰巧合法，新增 customAnim 等
   // 会被启发式误判），三段式无此歧义。
   "rtype.label.ysm": "YSM 模型",
-  "rtype.label.entityPlayer": "人物模型",
+  "rtype.label.entityPlayer": "角色模型",
   "rtype.label.sceneModel": "场景模型",
   "rtype.label.customAnim": "自定义动作",
   "rtype.label.customMorph": "自定义表情",
   "rtype.label.stageAnim": "场景动作",
   "rtype.label.defaultAnim": "默认动作",
   "rtype.label.defaultMorph": "默认表情",
-  "rtype.label.fbx": "FBX 模型",
+  "rtype.label.fbx": "FBX 模型/动画",
   "rtype.label.mmdShader": "MMD 光影",
   // 键名 = resource_types.json 的 id 经 camelToKey 归一（maid-model → maidModel）。
   // 2026-10-15 锐评 P0：旧键名（pack/shader/maid）与这三个 id 不同形，派生键三语全落空

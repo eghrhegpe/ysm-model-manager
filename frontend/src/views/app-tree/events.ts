@@ -16,7 +16,7 @@ import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import { selectSingle, toggleSelect } from "./data.ts";
 import { entryKey } from "./entry-key.ts";
-import { setFooterProgress } from "./footer-progress.ts";
+import { withFooterProgress } from "./footer-progress.ts";
 import type { AppTree } from "./index.ts";
 import type { TreeEntry } from "./loader.ts";
 import { getVsRows, type TreeRenderCtx } from "./render.ts";
@@ -471,64 +471,61 @@ async function toggleFolderBatch(fhEl: HTMLElement, vm: AppTree): Promise<void> 
     //    `.ck` 的 on/partial/空三态由 dirFlags 数据渲染派生，故重渲即得到正确视觉。
     for (const e of targetsToToggle) e.banned = !e.banned;
     vm._renderTree();
-    // ② 进度可见（批大小由 batchAllSettled 掌握，回调即批边界）
-    const progressText = (done: number): string =>
-      t("tree.batchProgress", { action, done, total: targetsToToggle.length });
-    setFooterProgress(vm._root, progressText(0));
-    // 回滚守卫代数必须在 **await 之前**捕获：`stale(gen)` 判据是 `gen !== current`
-    // （load-guard.ts 语义），拿 await 之后的 `current` 去问恒为 false——那是个死判据
-    // （单文件开关链同律，`rollbackGen` 先取）。
+    // ② 进度可见 + ③ 失败回滚 + 收尾（withFooterProgress 保证四条出口都清槽；
+    //    回滚守卫代数必须在 **await 之前**捕获：`stale(gen)` 判据是 `gen !== current`，
+    //    拿 await 之后的 `current` 去问恒为 false——那是个死判据，单文件开关链同律）
     const rollbackGen = vm._guard.current;
-    try {
-      const r = await batchAllSettled(
-        targetsToToggle.map(
-          (e) => () =>
-            ToggleEnable(e.fullPath).then(
-              () => e,
-              (err: unknown) => {
-                logWarn("tree", `toggleFolderBatch 失败: ${e.fullPath}`, err);
-                throw err;
-              },
-            ),
+    const r = await withFooterProgress(
+      vm._root,
+      (done, total) => t("tree.batchProgress", { action, done, total }),
+      targetsToToggle.length,
+      (onProgress) =>
+        batchAllSettled(
+          targetsToToggle.map(
+            (e) => () =>
+              ToggleEnable(e.fullPath).then(
+                () => e,
+                (err: unknown) => {
+                  logWarn("tree", `toggleFolderBatch 失败: ${e.fullPath}`, err);
+                  throw err;
+                },
+              ),
+          ),
+          undefined, // 缺省批大小（8）——保持与其余四条批量链同源
+          onProgress,
         ),
-        undefined, // 缺省批大小（8）——保持与其余四条批量链同源
-        (done) => setFooterProgress(vm._root, progressText(done)),
-      );
-      const ok = r.fulfilled.length;
-      const fail = r.rejected.length;
-      // ③ 失败项本地回滚（代际守卫：期间切类型/重载 → 旧 entries 引用上的写是过期写，
-      //    新树自会由新数据渲染自洽）。成功项不回滚：下面用 _load 取磁盘真值校正。
-      if (fail > 0 && !vm._guard.stale(rollbackGen)) {
-        for (const rej of r.rejected) {
-          const e = targetsToToggle[rej.index];
-          if (e) e.banned = !e.banned;
-        }
+    );
+    const ok = r.fulfilled.length;
+    const fail = r.rejected.length;
+    // 失败项本地回滚（代际守卫：期间切类型/重载 → 旧 entries 引用上的写是过期写，
+    // 新树自会由新数据渲染自洽）。成功项不回滚：下面用 _load 取磁盘真值校正。
+    if (fail > 0 && !vm._guard.stale(rollbackGen)) {
+      for (const rej of r.rejected) {
+        const e = targetsToToggle[rej.index];
+        if (e) e.banned = !e.banned;
       }
-      if (ok > 0) {
-        // ⚠️ 不直接信本地翻转，reload 取真值防幽灵状态（单文件链同律）
-        const gen = vm._guard.current;
-        await vm._load();
-        // 渲染补齐 + 守卫（2026-09 收债）：原依赖 YSM 链 sync:toggle:status 的
-        // tree:reload 兜底刷新——非 YSM 类型勾选态陈旧到下次任意重渲，sync 忙锁
-        // 命中（sync.ts 入口拦）时 YSM 也会断；本地重渲走 buildCache 快路径
-        if (vm._guard.stale(gen)) return;
-        vm._renderTree();
-        // ADR-339：带当前树类型发射，Go 侧按 dirLevelSync 过滤同步（非 dirLevelSync 自动 no-op）
-        bus.emit("sync:toggle:status", { rtype: vm.snapshot.rootAttr || RESOURCE_TYPES.YSM });
-      } else {
-        // 全失败：上述回滚后的本地态即真值，无需为「什么都没变」付一次全量重扫
-        vm._renderTree();
-      }
-      bus.emit("stats:refresh");
-      toast(
-        t("tree.folderToggleResult", { action, ok, fail }),
-        TOAST_MS.long,
-        fail > 0 ? "warn" : "success",
-      );
-    } finally {
-      // 进度槽必清（成功/失败/异常/代际丢弃四条出口都经此；hidden 槽不占布局）
-      setFooterProgress(vm._root, null);
     }
+    if (ok > 0) {
+      // ⚠️ 不直接信本地翻转，reload 取真值防幽灵状态（单文件链同律）
+      const gen = vm._guard.current;
+      await vm._load();
+      // 渲染补齐 + 守卫（2026-09 收债）：原依赖 YSM 链 sync:toggle:status 的
+      // tree:reload 兜底刷新——非 YSM 类型勾选态陈旧到下次任意重渲，sync 忙锁
+      // 命中（sync.ts 入口拦）时 YSM 也会断；本地重渲走 buildCache 快路径
+      if (vm._guard.stale(gen)) return;
+      vm._renderTree();
+      // ADR-339：带当前树类型发射，Go 侧按 dirLevelSync 过滤同步（非 dirLevelSync 自动 no-op）
+      bus.emit("sync:toggle:status", { rtype: vm.snapshot.rootAttr || RESOURCE_TYPES.YSM });
+    } else {
+      // 全失败：上述回滚后的本地态即真值，无需为「什么都没变」付一次全量重扫
+      vm._renderTree();
+    }
+    bus.emit("stats:refresh");
+    toast(
+      t("tree.folderToggleResult", { action, ok, fail }),
+      TOAST_MS.long,
+      fail > 0 ? "warn" : "success",
+    );
   } catch (err) {
     toast(`${friendlyError(err, t("tree.batchToggleFail"))}`, TOAST_MS.long, "error");
   } finally {

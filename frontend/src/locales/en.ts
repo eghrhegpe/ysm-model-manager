@@ -886,7 +886,7 @@ export const en: Record<string, string> = {
   "rtype.label.stageAnim": "Stage Animation",
   "rtype.label.defaultAnim": "Default Animation",
   "rtype.label.defaultMorph": "Default Morph",
-  "rtype.label.fbx": "FBX Model",
+  "rtype.label.fbx": "FBX Model/Animation",
   "rtype.label.mmdShader": "MMD Shader",
   // Key = resource_types.json id normalized by camelToKey (resourcepack/shaderpack/maid-model→maidModel)
   // 2026-10-15 critique P0: these ids never matched the old key names (pack/shader/maid), so the derived

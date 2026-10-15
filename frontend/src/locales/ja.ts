@@ -884,7 +884,7 @@ export const ja: Record<string, string> = {
   "rtype.label.stageAnim": "ステージモーション",
   "rtype.label.defaultAnim": "デフォルトモーション",
   "rtype.label.defaultMorph": "デフォルトモーフ",
-  "rtype.label.fbx": "FBXモデル",
+  "rtype.label.fbx": "FBX モデル/アニメーション",
   "rtype.label.mmdShader": "MMDシェーダー",
   // キー名 = resource_types.json の id を camelToKey で正規化（maid-model → maidModel）。
   // 2026-10-15 レビュー P0：id と別形式の旧キー名（pack/shader/maid）は派生キーが三言語すべてで

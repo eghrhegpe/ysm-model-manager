@@ -516,6 +516,35 @@ describe("bindBusEvents — 文件夹操作", () => {
     expect(toasts.some((t) => t.msg.includes("已回收 1 个文件") && t.msg.includes("失败 1 个"))).toBe(true);
   });
 
+  // 2026-10-15：整目录入回收站是最长的破坏性链，补可见进度——
+  // 「移动在途可见 → 结束清槽」两端都要成立，否则用户面对的是无反馈的假死。
+  it("dir:recycle 移动在途 → 页脚显示进度；结束后清槽", async () => {
+    const vm = makeVM();
+    const probe = progressProbe();
+    (vm as unknown as Record<string, unknown>)["_root"] = probe.root;
+    await bind(vm);
+    modalConfirmMock.mockResolvedValue(true);
+    const gates: Array<() => void> = [];
+    MoveToRecycleMock.mockImplementation(
+      () =>
+        new Promise<void>((r) => {
+          gates.push(() => r());
+        }),
+    );
+
+    bus.emit("dir:recycle", { dir: "旧目录" });
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(gates).toHaveLength(2); // 两个移动都还挂起
+    expect(probe.el.hidden).toBe(false);
+    expect(probe.el.textContent).toBe("⏳ 移入回收站中 0/2");
+
+    gates.splice(0).forEach((g) => g());
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(probe.el.hidden).toBe(true);
+  });
+
   it("dir:recycle 取消 → 不调后端", async () => {
     const vm = makeVM();
     await bind(vm);

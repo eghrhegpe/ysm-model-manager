@@ -35,6 +35,7 @@ import { type AuthorInfo, loadAuthors } from "./authors.ts";
 import { bindBusEvents } from "./bus-handlers.ts";
 import { type SelectState, selectSingle } from "./data.ts";
 import { bindTreeEvents, updateSelectCount } from "./events.ts";
+import { withFooterProgress } from "./footer-progress.ts";
 import { loadEntries, type TreeEntry } from "./loader.ts";
 import {
   cleanupVirtualScroll,
@@ -845,8 +846,21 @@ export class AppTree extends WebComponentBase {
     try {
       const { DeleteResourcePack } = await backendGetApp();
       // 批处理收口（2026-10-13）：BATCH=8 手抄循环迁 utils/async/batch-all-settled
-      //（分批并发 + 逐项 ok/fail 不短路单一实现；2026-09 曾 P2 修复串行链）
-      const r = await batchAllSettled(paths.map((p) => () => DeleteResourcePack(p, rtype)));
+      //（分批并发 + 逐项 ok/fail 不短路单一实现；2026-09 曾 P2 修复串行链）。
+      // 2026-10-15：批量删除是可选中数百数千项的破坏性操作，补页脚进度——它是「还在跑」
+      // 的可见证据（withFooterProgress 保证四条出口都清槽）。删除链刻意**不做乐观更新**：
+      // 条目移除会让树行消失，误删无法本地回滚，真值一律等 _load 取。
+      const r = await withFooterProgress(
+        this._root,
+        (done, total) => t("tree.batchProgress", { action: t("tree.deleteOk"), done, total }),
+        paths.length,
+        (onProgress) =>
+          batchAllSettled(
+            paths.map((p) => () => DeleteResourcePack(p, rtype)),
+            undefined,
+            onProgress,
+          ),
+      );
 
       this._clearSelection();
       // P2 修复（审核，缓存一致性）：删除后先清扫描缓存再加载——原 _load() 命中

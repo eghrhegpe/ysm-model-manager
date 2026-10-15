@@ -191,7 +191,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 83 |
-| connectedCallback | `frontend/src/views/app-nav/index.ts` | 213 |
+| connectedCallback | `frontend/src/views/app-nav/index.ts` | 223 |
 
 ### `menu:show`
 
@@ -234,7 +234,7 @@
 | _pageInitFailed | `frontend/src/views/app-content/index.ts` | 193 |
 | cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 243 |
 | anActivateNavPage | `frontend/src/views/app-nav/index.ts` | 53 |
-| connectedCallback | `frontend/src/views/app-nav/index.ts` | 223 |
+| connectedCallback | `frontend/src/views/app-nav/index.ts` | 233 |
 | bindMcPathLabel | `frontend/src/views/app-sidebar/events.ts` | 361 |
 | atTlBindRepoSwitch | `frontend/src/views/app-tree/toolbar-events.ts` | 88 |
 
@@ -242,7 +242,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 58 |
-| connectedCallback | `frontend/src/views/app-nav/index.ts` | 193 |
+| connectedCallback | `frontend/src/views/app-nav/index.ts` | 203 |
 
 ### `package:selected`
 
@@ -274,14 +274,14 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| anBindDualSelects | `frontend/src/views/app-nav/index.ts` | 131 |
+| applyDualSelections | `frontend/src/views/app-nav/index.ts` | 131 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
 | useCurrentResourceType | `frontend/src/features/repo/repo-rtype.ts` | 21 |
 | initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 129 |
-| connectedCallback | `frontend/src/views/app-nav/index.ts` | 215 |
+| connectedCallback | `frontend/src/views/app-nav/index.ts` | 225 |
 | connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 121 |
 | _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 301 |
 
@@ -303,7 +303,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| anBindDualSelects | `frontend/src/views/app-nav/index.ts` | 132 |
+| applyDualSelections | `frontend/src/views/app-nav/index.ts` | 132 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |

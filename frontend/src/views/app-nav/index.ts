@@ -85,63 +85,73 @@ function anBindNavItems(shadowRoot: ShadowRoot): void {
   }
 }
 
+/** 组选项（按 order 排序） */
+function buildGroupOptions(): Array<{ gid: string; label: string }> {
+  return Object.entries(GROUP_META)
+    .sort((a, b) => a[1].order - b[1].order)
+    .map(([gid, meta]) => ({ gid, label: `${meta.icon} ${rtypeGroupLabelOf(gid)}` }));
+}
+
+/** 组类型选项（i18n 显示名单点出口——原直取 o.label 派生自硬编码中文，en/ja 下整个下拉中文） */
+function buildSubtypeOptions(group: string): GroupTypeOption[] {
+  return (GROUP_TYPE_OPTIONS[group] || []).map((o) => ({
+    label: rtypeLabelOf(o.rtype),
+    rtype: o.rtype,
+    subdir: o.subdir,
+  }));
+}
+
+/** 填充 subtype 下拉并按存档恢复选中索引 */
+function fillSubtypes(subtypeSel: HTMLSelectElement, group: string): void {
+  const opts = buildSubtypeOptions(group);
+  subtypeSel.innerHTML = opts
+    .map(
+      (o, i) =>
+        `<option value="${i}" data-rtype="${esc(o.rtype)}" data-subdir="${esc(o.subdir)}">${esc(o.label)}</option>`,
+    )
+    .join("");
+  const savedRtype = safeGet("repo_rtype") || RESOURCE_TYPES.YSM;
+  const savedSubdir = safeGet("repo_subdir") || "";
+  let idx = opts.findIndex((o) => o.rtype === savedRtype && o.subdir === savedSubdir);
+  if (idx < 0) idx = 0;
+  subtypeSel.selectedIndex = idx;
+}
+
+/** 读取当前选择并持久化 + 广播变更（非关键路径：safeSet 抛错静默） */
+function applyDualSelections(groupSel: HTMLSelectElement, subtypeSel: HTMLSelectElement): void {
+  const opts = buildSubtypeOptions(groupSel.value);
+  const sel = opts[Number(subtypeSel.value)] || opts[0];
+  if (!sel) return;
+  try {
+    safeSet("repo_rtype", sel.rtype);
+    safeSet("repo_subdir", sel.subdir);
+  } catch {
+    /* 非关键路径 */
+  }
+  bus.emit("repo:rtype-changed", sel.rtype);
+  bus.emit("repo:subdir-changed", sel.subdir);
+}
+
 function anBindDualSelects(shadowRoot: ShadowRoot): void {
   const groupSel = shadowRoot.querySelector<HTMLSelectElement>("#nav-group-select");
   const subtypeSel = shadowRoot.querySelector<HTMLSelectElement>("#nav-subtype-select");
-  if (groupSel && subtypeSel) {
-    const groups = Object.entries(GROUP_META)
-      .sort((a, b) => a[1].order - b[1].order)
-      .map(([gid, meta]) => ({ gid, label: `${meta.icon} ${rtypeGroupLabelOf(gid)}` }));
-    groupSel.innerHTML = groups
-      .map((g) => `<option value="${esc(g.gid)}">${esc(g.label)}</option>`)
-      .join("");
+  if (!groupSel || !subtypeSel) return;
 
-    const buildSubtypeOptions = (group: string): GroupTypeOption[] =>
-      (GROUP_TYPE_OPTIONS[group] || []).map((o) => ({
-        // i18n 显示名单点出口（锐评 2026-10-13 P1-3）：原直取 o.label（派生自
-        // RESOURCE_TYPE_LABELS 硬编码中文），en/ja 下整个类型下拉中文。
-        label: rtypeLabelOf(o.rtype),
-        rtype: o.rtype,
-        subdir: o.subdir,
-      }));
-    const fillSubtypes = (group: string): void => {
-      const opts = buildSubtypeOptions(group);
-      subtypeSel.innerHTML = opts
-        .map(
-          (o, i) =>
-            `<option value="${i}" data-rtype="${esc(o.rtype)}" data-subdir="${esc(o.subdir)}">${esc(o.label)}</option>`,
-        )
-        .join("");
-      const savedRtype = safeGet("repo_rtype") || RESOURCE_TYPES.YSM;
-      const savedSubdir = safeGet("repo_subdir") || "";
-      let idx = opts.findIndex((o) => o.rtype === savedRtype && o.subdir === savedSubdir);
-      if (idx < 0) idx = 0;
-      subtypeSel.selectedIndex = idx;
-    };
-    const apply = (): void => {
-      const opts = buildSubtypeOptions(groupSel.value);
-      const sel = opts[Number(subtypeSel.value)] || opts[0];
-      if (!sel) return;
-      try {
-        safeSet("repo_rtype", sel.rtype);
-        safeSet("repo_subdir", sel.subdir);
-      } catch {
-        /* 非关键路径 */
-      }
-      bus.emit("repo:rtype-changed", sel.rtype);
-      bus.emit("repo:subdir-changed", sel.subdir);
-    };
-    groupSel.addEventListener("change", () => {
-      fillSubtypes(groupSel.value);
-      apply();
-    });
-    subtypeSel.addEventListener("change", apply);
+  const groups = buildGroupOptions();
+  groupSel.innerHTML = groups
+    .map((g) => `<option value="${esc(g.gid)}">${esc(g.label)}</option>`)
+    .join("");
 
-    const savedRtype = safeGet("repo_rtype") || RESOURCE_TYPES.YSM;
-    const savedGroup = GROUP_OF[savedRtype] || groups[0]?.gid || "";
-    groupSel.value = groups.some((g) => g.gid === savedGroup) ? savedGroup : groups[0]?.gid || "";
-    fillSubtypes(groupSel.value);
-  }
+  groupSel.addEventListener("change", () => {
+    fillSubtypes(subtypeSel, groupSel.value);
+    applyDualSelections(groupSel, subtypeSel);
+  });
+  subtypeSel.addEventListener("change", () => applyDualSelections(groupSel, subtypeSel));
+
+  const savedRtype = safeGet("repo_rtype") || RESOURCE_TYPES.YSM;
+  const savedGroup = GROUP_OF[savedRtype] || groups[0]?.gid || "";
+  groupSel.value = groups.some((g) => g.gid === savedGroup) ? savedGroup : groups[0]?.gid || "";
+  fillSubtypes(subtypeSel, groupSel.value);
 }
 
 function anBindViewerFab(shadowRoot: ShadowRoot, viewerFabClick: () => Promise<void>): void {

@@ -1560,6 +1560,7 @@
   "tree.batchBusyWait": "⏳ 批量操作进行中，请稍候",
   "tree.toggleFail": "切换失败: {name}",
   "tree.selectedCount": "已选 {n} 个文件",
+  "tree.shiftRangeTooLarge": "选择范围过大（{n} 项，上限 {max}）——请改用「全选」或分次选择",
   "tree.folderToggleResult": "文件夹{action}: {ok} 成功, {fail} 失败",
   "tree.batchProgress": "⏳ {action}中 {done}/{total}",
   "tree.batchToggleFail": "批量启用/禁用失败",

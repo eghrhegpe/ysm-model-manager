@@ -1560,6 +1560,7 @@
   "tree.batchBusyWait": "⏳ Batch operation in progress, please wait",
   "tree.toggleFail": "Toggle failed: {name}",
   "tree.selectedCount": "{n} files selected",
+  "tree.shiftRangeTooLarge": "Selection range too large ({n} items, limit {max}) — use \"Select all\" or select in smaller batches",
   "tree.folderToggleResult": "Folder {action}: {ok} ok, {fail} failed",
   "tree.batchProgress": "⏳ {action} {done}/{total}",
   "tree.batchToggleFail": "Batch enable/disable failed",

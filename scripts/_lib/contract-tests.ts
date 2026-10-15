@@ -154,6 +154,10 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   // 应用配置写唯一实参点（ADR-313）：扫 frontend/src 生产文件的 SaveAppConfig 调点 +
   // import 绑定 + 出口主题字面量——frontend 生产代码变更即须复核
   "test_config_write_single_exit.ts": ["frontend", "tests"],
+  // 设置键台账双向对账（锐评 2026-10-15 P1 ②）：扫 frontend/src 全部生产文件的 localStorage
+  // 键字面量 + go/types AppConfig 的 json 字段，与 settings-keys.ts 台账两向比对——
+  // 新增设置键（前端新增键 / Go 新增配置字段）即须复核，漏登记转红
+  "test_settings_key_ledger.ts": ["frontend", "go", "tests"],
   // 整合包同步写入口双缓存配对（锐评 2026-10-10）：扫 internal/app 生产文件的
   // ysmsync 写调用点，函数体须配对清 instance+sync 两派生缓存——go 侧同步入口变更即须复核
   "test_sync_write_cache_pairing.ts": ["go", "tests"],
@@ -163,6 +167,9 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   // 仓库文件写绑定的标签键跟随+清理（锐评 2026-10-11 收口）：扫 internal/app 生产文件的
   // fileops 写调用点，改名/移动/复制须 relocateTags、删除须 pruneTags——go 侧文件绑定变更即须复核
   "test_fileops_tag_sync.ts": ["go", "tests"],
+  // bindings 产物形态 fail-closed 断言（ADR-001 §2）：binding-check 拦「bindings 目录混入
+  // .js/.mjs/.cjs」——go 侧绑定面/生成物变更即须复核（绑定面源改动会重跑 generate:bindings）
+  "test_binding_check_shape.ts": ["go", "tests"],
   // 随 rtype 联动面板的感知性绑定（2026-10-14 P1b）：扫 frontend/src 生产文件的
   // useCurrentResourceType 调用点，候选面板须含 hidden 守卫 + onShow 句柄（派生 fail-closed，
   // 同 write-surface-gate 范式）——frontend 面板层变更即须复核
@@ -345,6 +352,7 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   ],
   "go-coverage-hint.ts": ["scripts/hooks/go-coverage-hint.ts"],
   "bindings-sync-hint.ts": ["scripts/hooks/bindings-sync-hint.ts"],
+  "test_binding_check_shape.ts": ["scripts/binding-check.ts"],
   "vitest-env-switch.ts": ["scripts/perf/vitest-env-switch.ts"],
   "test_alias-resolve.ts": ["scripts/_lib/alias-resolve.ts", "scripts/_lib/scan-files.ts"],
   // R8 模板闸扫描核：仅改纯函数核（或本测试自身）才需重跑
@@ -385,6 +393,13 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   ],
   // 应用配置写唯一实参点（ADR-313）：出口文件即不变量本体，改它须触发本锁
   "test_config_write_single_exit.ts": ["frontend/src/views/config-write.ts"],
+  // 设置键台账对账：台账本体（不变量本体）+ Go 配置字段定义（磁盘轨对账对象）是
+  // 判定集的锚；frontend/src 生产文件是扫描面（目录哨兵），任一新增键即命中
+  "test_settings_key_ledger.ts": [
+    "frontend/src/settings-keys.ts",
+    "go/types/config.go",
+    "frontend/src/",
+  ],
   // 整合包同步写入口双缓存配对：internal/app 全部生产文件都是扫描对象（目录哨兵），
   // 写入口本体 app_sync.go / app_install_instance.go / app_install_import.go 变更必触发
   // 派生 fail-closed 闸：internal/app 生产文件全量在扫（目录哨兵）+ 被监视包导出面

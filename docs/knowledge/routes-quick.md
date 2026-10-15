@@ -464,15 +464,19 @@
 | 版本号、版本检查、go-version | [版本号 go/version](./go-version.md) | 版本号必须走 go/version 的 LoadVersion，禁止在多处手写版本号读取 | - |
 | 存储子目录、storageSubDir、schema.ts 同步视图、resourceTypesById | [资源类型与扩展名派生层 resource-types](./utils-resource-types.md) | 歧义扩展名（.zip/.7z）禁止用扩展名直判类型，必须经 resolveTypeSafe 回退 Go DetectResourceType | - |
 | 共享类型、AppConfig、配置 | [共享类型 go/types](./go-types.md) | 共享类型必须走 go/types 单点定义，禁止在业务代码里复制类型定义 | ADR-144, ADR-192 |
+| 换机迁移 / 备份会保住哪些设置、丢哪些 | [设置持久化双轨与键台账](./settings-persistence.md) | 把 localStorage 键当成会随 ysm_config.json 迁移——不会 | - |
 | 检查更新、更新下载、update | [自动更新 go/updater](./go-updater.md) | 更新检查必须走 go/updater，前端禁止手写更新下载逻辑 | - |
 | 界面偏好、字号、worker-prefs | [设置页 settings](./app-content-settings.md) | 资源类型**自定义根**事实源 = `cfg.customRoots[rtype]`（ADR-095），**禁读 `configField` 小写化出的 ysmRoot/mmdRoot 等废弃字段**（Go 侧 migrateLegacyConfigFields 迁移后由 clearDeprecatedFields 清零 → 读到 undefined → 覆写徽章与「恢复默认」按钮永不渲染，用户失去清除自定义根的唯一 UI 入口，且卡片显示默认路径与 Go 实际生效路径分叉）。回退键 `configFallback` 须与 Go `resource_bindings.go\|specificRoot` 同链 | - |
 | 扩展名、支持的文件类型、拖拽过滤、RESOURCE_EXTS/ALL_EXTS | [资源类型与扩展名派生层 resource-types](./utils-resource-types.md) | 扩展名判定必须走 extensions.ts 的 isSupportedExt，拖拽导入场景禁止等待异步注册表 | - |
+| 某键的权威方是磁盘还是 localStorage | [设置持久化双轨与键台账](./settings-persistence.md) | 读写两侧对「谁是权威」各持一词（theme 的历史病灶：initTheme 与 writeAppConfig 曾反向） | - |
+| 配置写入路径为何要经 config-write.ts 唯一实参点 | [设置持久化双轨与键台账](./settings-persistence.md) | - | - |
 | 歧义扩展名、resolveTypeSafe、预览路由 previewKey | [资源类型与扩展名派生层 resource-types](./utils-resource-types.md) | - | - |
 | 启动器检测、HMCL / PCL / Minecraft 识别 | [启动器实例发现 go/launcher](./go-launcher.md) | - | - |
 | 设置页、主题设置、键位、路径配置 | [设置页 settings](./app-content-settings.md) | 配置落盘一律走 `views/config-write.ts\|writeAppConfig(patch)`（跨视图唯一实参点，ADR-313）；设置域内部可走薄包装 `path-cards.ts\|saveCfg`（额外同步内存 cfg）。patch 语义 = 只覆盖显式传入字段、其余取保存前重读的**磁盘**值（**全字段含 theme/themeAuto 成立**——不再读 localStorage 兜底，锐评 2026-10-15 P1）；偏好类读写一律 safeGet/safeSet，禁止裸 localStorage | - |
 | 实例目录解析、运行目录推导 | [启动器实例发现 go/launcher](./go-launcher.md) | - | - |
 | 通用红线 | [设置页 settings](./app-content-settings.md) | 异步操作防连点一律 `store.ts\|withBusy(task)`（返回是否获得锁，false 走拒绝分支如 UI 当场回退；内核即 `BusyLock`，ADR-341 归一）；`isBusy/setBusy` 已退役，禁手写「检查+置忙+finally 复位」三段 | - |
 | 通用红线 | [设置页 settings](./app-content-settings.md) | 「值→文案」多消费面共享映射表住 `ui-maps.ts`（MIRROR_UI / LINK_MODE_UI）；schema 加成员漏文案键编译期红，禁模板手写 option 裸列 | - |
+| 新增一个设置项，该落哪一轨、要不要登记台账 | [设置持久化双轨与键台账](./settings-persistence.md) | 新增设置键忘了登记 settings-keys.ts 台账（契约测试会红，但只有跑了才知道） | - |
 | 新增资源类型 / 修改 resource_types.json / 文件类型 | [资源注册表 registry](./resource-registry.md) | resource_types.json 是唯一事实来源；前端只读不判、禁本地重算 | - |
 | 注册表、扩展名、LinkType、BedrockModel | [共享类型 go/types](./go-types.md) | - | ADR-144, ADR-192 |
 | 资源类型、RESOURCE_TYPES、类型标签、注册表加载 | [资源类型与扩展名派生层 resource-types](./utils-resource-types.md) | 资源类型必须派生自 resource_types.json（前端唯一入口 = schema.ts 同步视图），禁止手写类型映射、禁止异步 RPC 旁路 | - |
@@ -1189,6 +1193,11 @@
 | 已删脚本名仍在区块之外被引用 | `已删除` | ghostReferences 报幽灵引用（event-audit 曾残留于检查类定义与一致性校验表） |
 | 前端本地重算筛选逻辑 | - | 与后端 SearchModels 能力脱节、结果不一致；必须交后端执行 |
 | adv-filter 条件未走三路交集（关键词 + 数值 + 标签）→ 结果不精确；必须经 advFilterIntersectPaths | - | - |
+| 只备份 ysm_config.json 带不走 localStorage 轨的几十项设置——官方迁移叙事曾长期漏掉这一档 | - | - |
+| theme / themeAuto 跨双轨同名，台账用 disk: 前缀分列；无前缀即撞名，撞名会逼两轨塞进一行 | - | - |
+| 新增 localStorage 键必须同步登记 settings-keys.ts，漏登记则契约测试转红 | - | - |
+| 网页模式的是 localStorage 的 ysm:config 键，别把它当桌面磁盘轨 | `磁盘替身` | - |
+| disk-authority 与 browser-authority 混用会产生双权威：读写两侧口径必须一致 | - | - |
 | 主题图标/文案表必须保持 Record<ThemeCard, …> 形态——theme-core 加主题漏键即编译期报错，勿回退 Record<string, …> + 运行时 ?? 兜底 | - | - |
 | 入场步长一律由 stgUnits 注入（startMs/cardStep 参数），分片内硬编码 step 会造成双源 | `单元表声明 + 内部步长` | - |
 | 平台能力矩阵 PATH_CARD_PLATFORMS 是的单一事实源，渲染函数与测试只消费它，勿各搓 flag | `哪张卡在哪些平台真能用` | - |

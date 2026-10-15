@@ -137,6 +137,12 @@ func PullResources(rtype, globalDir, targetDir string, logger Logger) types.Pull
 			continue
 		}
 		out.OK++
+		// 成功拉取清单：相对实例目录的路径（保留层级，友好展示「拉回了什么」）
+		if rel, relErr := paths.RelInside(targetDir, src); relErr == nil {
+			out.Files = append(out.Files, rel)
+		} else {
+			out.Files = append(out.Files, filepath.Base(src))
+		}
 	}
 	return out
 }

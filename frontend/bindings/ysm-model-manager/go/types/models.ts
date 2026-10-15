@@ -638,6 +638,14 @@ export interface PullSyncResult {
      * 首个失败原因（Failed==0 时为空）
      */
     "firstError"?: string;
+
+    /**
+     * Files 成功拉取的文件/目录相对路径清单（相对实例目录，保留子目录层级，
+     * 如 "mmd/EntityPlayer/角色A"），供前端「同步变更明细」逐条点名——
+     * 用户拉取后只看计数不知拉回了什么（UX 盲区，2026-10-15 补）。
+     * 仅记成功条目（失败未产生副本，不计入）；量大时前端截断展示。
+     */
+    "files"?: string[] | null;
 }
 
 /**
@@ -716,8 +724,8 @@ export interface ResourceSyncItem {
 /**
  * ResourceSyncResult 资源同步结果
  * 
- * Diverged 是 Missing 的**子集**，不是第四桶（ADR-340-d2）：两侧同名同键、`contentDiffers`
- * 为真的条目路径。这一维原本在归并时被丢掉——「内容已变化（待推送更新）」与「仅全局有」
+ * Diverged 是 Missing 的**子集**，不是第四桶（ADR-340-d2）：两侧同名同键、
+ * `ContentVerdict`（verdict.go 判定表，ADR-347；原 contentDiffers）为真的条目路径。这一维原本在归并时被丢掉——「内容已变化（待推送更新）」与「仅全局有」
  * 同归 Missing（sync_diff.go 注释自陈），于是消费端无法回答「这次推送会覆盖几个实例侧
  * 已修改的副本」：批量推送静默覆盖用户的实例侧改动，一句不提。
  * 

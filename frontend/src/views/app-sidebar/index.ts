@@ -27,7 +27,7 @@ import {
   pruneCheckedSets,
   restoreCheckboxes,
 } from "./sync-flow.ts";
-import { footerHTML, headerHTML, listContainerHTML } from "./tpl.ts";
+import { footerHTML, headerHTML, listContainerHTML, syncResultPanelHTML } from "./tpl.ts";
 
 // ---------- AppSidebar 类 ----------
 class AppSidebar extends WebComponentBase {
@@ -352,7 +352,9 @@ class AppSidebar extends WebComponentBase {
   }
 
   private _renderLayout(): void {
-    this._root.innerHTML = headerHTML() + listContainerHTML() + footerHTML();
+    // 同步变更明细浮层容器同步重建：重渲染后回归 hidden 态（内容由 sync-flow 重新触发）
+    this._root.innerHTML =
+      headerHTML() + listContainerHTML() + footerHTML() + syncResultPanelHTML();
   }
 }
 // 注册组件（防 HMR/重复 import 时重复 define）

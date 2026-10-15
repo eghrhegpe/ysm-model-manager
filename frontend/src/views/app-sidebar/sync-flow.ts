@@ -16,6 +16,7 @@ import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { ALL_RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import { type SidebarInstance, SYNC_TYPE_ALL } from "./data.ts";
+import { type SyncResultData, syncResultContentHTML } from "./tpl.ts";
 
 // 持久化勾选状态（跨重新渲染保持），按 rtype 隔离避免类型切换串扰
 // 通过 getter 注入实例属性，生命周期随组件（见 sync.test.ts）
@@ -228,9 +229,9 @@ function handleSyncMenuClick(
   if (!selected) return;
   const types = resolveTypes((ddItem as HTMLElement).dataset.syncType || SYNC_TYPE_ALL);
   if (verb === "push") {
-    void runPush(selected, types, btn, lock);
+    void runPush(selected, types, btn, lock, root);
   } else {
-    void runPull(selected, types, btn, lock);
+    void runPull(selected, types, btn, lock, root);
   }
 }
 
@@ -345,6 +346,7 @@ async function runPush(
   types: string[],
   pushBtn: HTMLButtonElement,
   lock: BusyLock,
+  root: ShadowRoot,
 ): Promise<void> {
   const accum: PushAccum = {
     skipped: 0,
@@ -386,6 +388,24 @@ async function runPush(
       selected.length,
       buildPushParts(accum, buildFailedPacks(accum.packTotals)),
     );
+    // 变更明细浮层：把被 toast 截断的明细（覆盖清单/失败包/错误缘由）逐条点名，
+    // 用户推送后能看到「到底改了哪些实例的哪些副本」，而非只剩一句计数摘要。
+    const packOkLines = [...accum.packTotals.entries()]
+      .filter(([, v]) => v.ok > 0)
+      .map(([name, v]) => `${name}: +${v.ok}`);
+    const notices: string[] = [];
+    if (accum.skipped > 0) notices.push(t("sidebar.packSkipped", { n: accum.skipped }));
+    if (accum.blocked > 0) notices.push(t("sidebar.packBlocked", { n: accum.blocked }));
+    if (accum.timedOut > 0) notices.push(t("sidebar.packTimedOutStopped", { n: accum.timedOut }));
+    renderSyncResultPanel(root, {
+      verb: "push",
+      okCount: accum.installOk,
+      failCount: accum.installFail,
+      okFiles: packOkLines,
+      failLines: accum.errorDetails,
+      overwriteLines: [...accum.overwrites].map(baseName),
+      notices,
+    });
   } catch (err) {
     toast(t("sidebar.pushFailed", { msg: friendlyError(err) }), TOAST_MS.normal, "error");
   } finally {
@@ -406,18 +426,26 @@ interface PullCounters {
   failed: number;
   timedOut: number;
   firstError: string;
+  /** 成功拉取的文件/目录相对路径清单（逐实例逐类型聚合，供浮层点名） */
+  files: string[];
 }
 
 /** 汇总一批整合包的结果（批D P1-5：绑定改结构化 `PullSyncResult`——条目级失败不再走 reject，
  *  成功计数不会在途中丢失；reject 只剩前置不满足，如实按「一个类型批次失败」计入） */
 function accumulatePullResults(
-  results: PromiseSettledResult<{ ok: number; failed: number; firstError?: string | null }>[],
+  results: PromiseSettledResult<{
+    ok: number;
+    failed: number;
+    firstError?: string | null;
+    files?: string[] | null;
+  }>[],
   counters: PullCounters,
 ): void {
   for (const r of results) {
     if (r.status === "fulfilled") {
       counters.totalPulled += r.value.ok;
       counters.failed += r.value.failed;
+      if (r.value.files) counters.files.push(...r.value.files);
       if (r.value.firstError && !counters.firstError) counters.firstError = r.value.firstError;
     } else {
       counters.failed++;
@@ -441,13 +469,43 @@ function notifyPullOutcome(counters: PullCounters): void {
   }
 }
 
+// ---------- 同步变更明细浮层（2026-10-15 UX 补） ----------
+// 设计：toast 只给计数摘要；明细走 sidebar shadow 内持久浮层，可滚动、可关闭、
+// 点击外部/ESC 关闭。内容由 runPush/runPull 收尾注入。重渲染（_renderLayout）
+// 会重建容器回 hidden 态，故无需在 disconnectedCallback 单独清理。
+
+/** 注入并展示同步变更明细浮层 */
+function renderSyncResultPanel(root: ShadowRoot, data: SyncResultData): void {
+  const panel = root.getElementById("sync-result-panel");
+  if (!panel) return;
+  panel.innerHTML = syncResultContentHTML(data);
+  panel.hidden = false;
+  const closeBtn = panel.querySelector<HTMLButtonElement>("[data-sync-result-close]");
+  closeBtn?.addEventListener("click", () => closeSyncResultPanel(root), { once: true });
+}
+
+/** 关闭浮层（保留容器，下次 push/pull 复用） */
+function closeSyncResultPanel(root: ShadowRoot): void {
+  const panel = root.getElementById("sync-result-panel");
+  if (!panel) return;
+  panel.hidden = true;
+  panel.innerHTML = "";
+}
+
 async function runPull(
   selected: string[],
   types: string[],
   pullBtn: HTMLButtonElement,
   lock: BusyLock,
+  root: ShadowRoot,
 ): Promise<void> {
-  const counters: PullCounters = { totalPulled: 0, failed: 0, timedOut: 0, firstError: "" };
+  const counters: PullCounters = {
+    totalPulled: 0,
+    failed: 0,
+    timedOut: 0,
+    firstError: "",
+    files: [],
+  };
   try {
     const { PullResourceFromInstance } = await backendGetApp();
     for (let ii = 0; ii < selected.length; ii++) {
@@ -473,6 +531,19 @@ async function runPull(
       }
     }
     notifyPullOutcome(counters);
+    // 变更明细浮层：拉取后用户能看到「从各整合包拉回了哪些文件」，而非只剩计数摘要。
+    const notices: string[] = [];
+    if (counters.timedOut > 0)
+      notices.push(t("sidebar.pullTimedOutStopped", { n: counters.timedOut }));
+    renderSyncResultPanel(root, {
+      verb: "pull",
+      okCount: counters.totalPulled,
+      failCount: counters.failed,
+      okFiles: counters.files,
+      failLines: counters.firstError ? [counters.firstError] : [],
+      overwriteLines: [],
+      notices,
+    });
     bus.emit("stats:refresh");
     bus.emit("tree:reload");
   } catch (err) {

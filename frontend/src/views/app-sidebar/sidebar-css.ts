@@ -16,6 +16,7 @@ export const sidebarCSS: string = `
   min-width: 0;
   font-family: var(--font-ui);
   font-size: var(--fs-base);
+  position: relative; /* 同步变更明细浮层绝对定位锚点 */
 }
 .list { flex: 1; overflow-y: auto; padding: 4px 6px; }
 .instance-card {
@@ -107,4 +108,38 @@ ${dropdownBaseCSS}
 /* 键盘可达（ADR-308 D2）：shadow 内剩余 focusable（.chk 复选框等）统一 :focus-visible 描边；
    卡片级描边见上方 .instance-card:focus-visible（单独落规则，非表单控件） */
 ${focusVisibleCSS}
+
+/* ===== 同步变更明细浮层（2026-10-15 UX 补） ===== */
+/* 覆盖在 sidebar 区域内（:host position:relative 锚点），不挡主内容区；
+   绝对铺满侧栏、半透明遮罩 + 底部卡片，可滚动明细 + 关闭按钮。 */
+.sync-result[hidden] { display: none; }
+.sync-result {
+  position: absolute; inset: 0; z-index: 20;
+  display: flex; flex-direction: column; justify-content: flex-end;
+  background: color-mix(in srgb, var(--surf) 55%, transparent);
+  padding:var(--sp-2);
+}
+.sync-result .sr-head {
+  display: flex; align-items: center; gap: 6px;
+  padding: var(--sp-1) var(--sp-2); border-bottom: 1px solid var(--bd);
+}
+.sync-result .sr-title { flex: 1; font-weight: var(--fw-semibold); color: var(--txt); font-size: var(--fs-sm); }
+.sync-result .sr-close {
+  padding:var(--btn-padding-sm); font-size: var(--fs-sm); line-height: 1;
+  border: 1px solid var(--bd); background: transparent; color: var(--muted); cursor: pointer;
+}
+.sync-result .sr-close:hover { background: var(--hover); color: var(--txt); }
+.sync-result .sr-list {
+  list-style: none; margin: 0; padding: var(--sp-1) var(--sp-2); max-height: 60%;
+  overflow-y: auto; background: var(--surf); border-radius: var(--radius-md);
+  border: 1px solid var(--bd);
+}
+.sync-result .sr-row { display: flex; align-items: flex-start; gap: 6px; padding: var(--sp-1); font-size: var(--fs-xs); }
+.sync-result .sr-dot { flex-shrink: 0; width: 6px; height: 6px; border-radius: 50%; margin-top: 5px; }
+.sync-result .sr-ok .sr-dot { background: var(--status-success); }
+.sync-result .sr-fail .sr-dot { background: var(--status-error); }
+.sync-result .sr-overwrite .sr-dot { background: var(--sm-optional); }
+.sync-result .sr-notice .sr-dot { background: var(--muted); }
+.sync-result .sr-text { flex: 1; min-width: 0; word-break: break-all; color: var(--txt); }
+.sync-result .sr-more { color: var(--muted); font-style: italic; padding: var(--sp-1); }
 `;

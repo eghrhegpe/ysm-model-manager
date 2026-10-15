@@ -380,6 +380,11 @@ type PullSyncResult struct {
 	OK         int    `json:"ok"`                   // 成功拉取条目数
 	Failed     int    `json:"failed"`               // 失败条目数
 	FirstError string `json:"firstError,omitempty"` // 首个失败原因（Failed==0 时为空）
+	// Files 成功拉取的文件/目录相对路径清单（相对实例目录，保留子目录层级，
+	// 如 "mmd/EntityPlayer/角色A"），供前端「同步变更明细」逐条点名——
+	// 用户拉取后只看计数不知拉回了什么（UX 盲区，2026-10-15 补）。
+	// 仅记成功条目（失败未产生副本，不计入）；量大时前端截断展示。
+	Files []string `json:"files,omitempty"`
 }
 
 // RelinkResult 重链接结果（ADR-342 D7 收口，与 PullSyncResult 同体裁）。

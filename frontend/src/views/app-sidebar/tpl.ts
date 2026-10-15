@@ -157,6 +157,65 @@ export function listContainerHTML(): string {
   )}">${skeletonHTML()}</div>`;
 }
 
+/** 同步变更明细浮层容器（2026-10-15 UX 补）：独立于 .list，挂在 sidebar shadow 根下，
+ *  push/pull 完成后由 sync-flow 注入内容并显示；默认 hidden，重渲染（index.ts innerHTML
+ *  重建）后自动复位为隐藏态（容器本身被重建，内容需由调用方重新触发）。 */
+export function syncResultPanelHTML(): string {
+  return `<div class="sync-result" id="sync-result-panel" role="dialog" aria-modal="false" aria-label="${esc(
+    t("sidebar.syncResultTitle"),
+  )}" hidden></div>`;
+}
+
+/** 浮层内容渲染：成功/失败/覆盖三类明细逐条点名（量大时前端截断防过长）。
+ *  verb 决定标题措辞（push=推送 / pull=拉取）；data 字段见 sync-flow.ts|SyncResultData。 */
+export interface SyncResultData {
+  verb: "push" | "pull";
+  okCount: number;
+  failCount: number;
+  /** 成功明细（push=各包 ok 汇总文本；pull=拉回的文件相对路径清单） */
+  okFiles: string[];
+  /** 失败明细（push=错误缘由；pull=首个错误原因） */
+  failLines: string[];
+  /** 覆盖明细（仅 push：被覆盖的实例侧手改副本路径） */
+  overwriteLines: string[];
+  /** 文本型异常（skipped/blocked/timeout 等无法逐文件点名的归类） */
+  notices: string[];
+}
+
+/** 浮层单项行（带语义色标：ok 绿 / fail 红 / overwrite 橙 / notice 灰） */
+function syncResultRow(kind: "ok" | "fail" | "overwrite" | "notice", text: string): string {
+  return `<li class="sr-row sr-${kind}"><span class="sr-dot" aria-hidden="true"></span><span class="sr-text">${esc(
+    text,
+  )}</span></li>`;
+}
+
+const SYNC_RESULT_MAX_FILES = 100;
+
+export function syncResultContentHTML(data: SyncResultData): string {
+  const titleKey = data.verb === "push" ? "sidebar.syncResultPush" : "sidebar.syncResultPull";
+  const rows: string[] = [];
+  for (const f of data.okFiles.slice(0, SYNC_RESULT_MAX_FILES)) rows.push(syncResultRow("ok", f));
+  for (const f of data.failLines.slice(0, SYNC_RESULT_MAX_FILES))
+    rows.push(syncResultRow("fail", f));
+  for (const f of data.overwriteLines.slice(0, SYNC_RESULT_MAX_FILES))
+    rows.push(syncResultRow("overwrite", f));
+  for (const n of data.notices) rows.push(syncResultRow("notice", n));
+  const listedTotal = data.okFiles.length + data.failLines.length + data.overwriteLines.length;
+  const omitted = listedTotal - rows.length;
+  const more =
+    omitted > 0
+      ? `<li class="sr-row sr-more">${esc(t("import.moreSuffix"))}（${omitted}）</li>`
+      : "";
+  const summary = t(titleKey, { ok: data.okCount, fail: data.failCount });
+  return (
+    `<div class="sr-head"><span class="sr-title">${esc(summary)}</span>` +
+    `<button class="btn-base sr-close" data-sync-result-close aria-label="${esc(
+      t("common.close"),
+    )}">${UI_ICONS.close}</button></div>` +
+    `<ul class="sr-list">${rows.join("")}${more}</ul>`
+  );
+}
+
 /** 空列表态：无匹配整合包 + 就地配置入口（自动搜索 / HMCL·PCL 检测）。
  *  配置入口原在设置页，2026-10 搬家至此——用户在哪遇到问题就在哪解决。
  *  注意 role 不在此声明：调用方按状态摘/挂 listbox role（本态非 option 列表）。 */

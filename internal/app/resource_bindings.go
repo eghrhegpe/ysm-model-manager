@@ -370,7 +370,9 @@ func (a *App) ImportByType(rtype, srcPath string) error {
 //	isDir=false: src 为 ysm.json 时整组删除父目录，否则删除单文件（ysm 等）
 //
 // 守卫根传类型特定仓库根：防根级 ysm.json 清空整个仓库；
-// 路径守卫拒绝 rel=="." 或 rel 含 ".." 前缀的越权路径。
+// 路径守卫拒绝 rel=="." 或 rel==".."/"..<分隔符>" 的越权路径（精确段比较，"..foo" 合法目录放行）。
+// 两个分支在「仓库根解析全空」时一律 fail-fast 拒绝——root 为空时下游守卫整体失效
+// （fileops.DeleteModelFile 的守卫以 `root != ""` 为前提），不得进入任何删盘路径。
 func (a *App) DeleteResourcePack(path, rtype string) error {
 	rt := typereg.RegistryType(rtype)
 	if rt != nil && rt.IsDir {
@@ -381,6 +383,13 @@ func (a *App) DeleteResourcePack(path, rtype string) error {
 		root, _ := a.GetRepoRoot(rtype)
 		if root == "" {
 			root = a.ysmRoot()
+		}
+		// fail-fast（与 MoveToRecycle 同律）：两级根解析全空（未配 FilesRoot、平台默认根也不可达）
+		// 时不得落到 filepath.Rel("")——那条路径虽以 err 兜底拦住删除，但报的是
+		// "Rel: can't make ... relative to ." 这类文件系统内部措辞，用户看不出真实成因
+		// （未配置仓库根），且守卫的正确性依赖 Rel 对空串的实现细节（2026-10 锐评复盘）。
+		if root == "" {
+			return types.AppError{Code: types.ErrInvalidPath, Operation: "删除资源包", SourcePath: path, Reason: "未配置资源根目录，拒绝删除"}
 		}
 		clean := filepath.Clean(filepath.Dir(path))
 		// 符号链接解析后校验——防精心构造的链接绕过路径守卫删除仓库外目录
@@ -394,7 +403,10 @@ func (a *App) DeleteResourcePack(path, rtype string) error {
 			realRoot = root
 		}
 		rel, err := filepath.Rel(realRoot, realClean)
-		if err != nil || rel == "." || strings.HasPrefix(rel, "..") {
+		// 精确段比较（AGENTS.md 仓内标准口径，样例 app_install_recycle.go|findRecycleRoot、
+		// go/paths/safe.go）：裸 HasPrefix(rel, "..") 会把合法的 "..foo" 目录判成越权
+		// （存量 P2 误拒，2026-10 锐评复盘），而 ".." 与 "..<sep>" 才是真正的越权形态。
+		if err != nil || rel == "." || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 			return types.AppError{Code: types.ErrInvalidPath, Operation: "删除资源包", SourcePath: clean, Reason: "路径超出仓库目录"}
 		}
 		if err := os.RemoveAll(realClean); err != nil {
@@ -414,6 +426,13 @@ func (a *App) DeleteResourcePack(path, rtype string) error {
 		filesRoot, _ := a.GetRepoRoot(rtype)
 		if filesRoot == "" {
 			filesRoot = a.ysmRoot()
+		}
+		// fail-fast（P1，2026-10 锐评复盘）：fileops.DeleteModelFile 的两道守卫都被
+		// `if root != ""` 整体包住，root 为空字符串时守卫形同不存在——路径为 ysm.json
+		// 时直达 `os.RemoveAll(filepath.Dir(path))`，仓库外（甚至盘外）的 ysm.json
+		// 父目录被裸删。此处两级根解析全空即拒绝，保证「root 为空绝不落到无守卫删盘路径」。
+		if filesRoot == "" {
+			return types.AppError{Code: types.ErrInvalidPath, Operation: "删除资源包", SourcePath: path, Reason: "未配置资源根目录，拒绝删除"}
 		}
 		if err := fileops.DeleteModelFile(filesRoot, path); err != nil {
 			return err

@@ -42,7 +42,7 @@ func runPinyinTable(ctx *CmdContext) error {
 	// 生成物文件头（仓规：生成物必须带「生成器命令 + 输入版本」头注释）
 	b.WriteString("// 生成物 —— 勿手改（ADR-343-d1 C1 搜索拼音面单源派生表）。\n")
 	b.WriteString("// 生成器: go run . --cli --files-root <仓库根> pinyin-table\n")
-	b.WriteString(fmt.Sprintf("// 输入版本: github.com/mozillazg/go-pinyin v%s（默认读音集，多音字取默认音；升级依赖后重跑本命令提交）\n", gopinyin.Version))
+	fmt.Fprintf(&b, "// 输入版本: github.com/mozillazg/go-pinyin v%s（默认读音集，多音字取默认音；升级依赖后重跑本命令提交）\n", gopinyin.Version)
 	b.WriteString("// 语义: 码点 → 无声调小写全拼；go/pinyin|FullPinyin 与 utils/search/match.ts 同表同源。\n")
 	fmt.Fprintf(&b, "export const PINYIN_BY_CODE: Record<number, string> = {\n")
 	for _, e := range tab {

@@ -80,7 +80,7 @@ func isLatins(s string) bool {
 		return true
 	}
 	for _, r := range s {
-		if !(unicode.IsLetter(r) || unicode.IsNumber(r)) || r > unicode.MaxASCII {
+		if (!unicode.IsLetter(r) && !unicode.IsNumber(r)) || r > unicode.MaxASCII {
 			return false
 		}
 	}
@@ -95,7 +95,7 @@ func isLatins(s string) bool {
 //
 // relPath = 仓库根相对路径（'/' 分隔；绝对路径匹配废止——「2024 撞作者文件夹墙」
 // 的一半噪音面）。TS 侧 utils/search/match.ts 用同源表实现同语义，
-// 金样例 tests/fixtures/search-golden.json 双读对账。
+// 金样例 tests/fixtures/parity/search-golden.json 双读对账。
 func MatchKeyword(name, relPath, keyword string) bool {
 	kw := strings.ToLower(strings.TrimSpace(keyword))
 	if kw == "" {

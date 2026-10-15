@@ -34,7 +34,7 @@ func TestHashIndex_FingerprintMismatchMisses(t *testing.T) {
 	v, ok := h.Lookup("/repo/a.ysm", 101, 1000)
 	testutil.Equal(t, v, "", "size 变指纹")
 	testutil.Equal(t, ok, false, "size 变指纹 miss")
-	v, ok = h.Lookup("/repo/a.ysm", 100, 1001)
+	_, ok = h.Lookup("/repo/a.ysm", 100, 1001)
 	testutil.Equal(t, ok, false, "mtime 变指纹 miss")
 	v, ok = h.Lookup("/repo/a.ysm", 100, 1000)
 	testutil.Equal(t, v, "h-a", "双指纹一致命中")
@@ -89,6 +89,8 @@ func TestHashIndex_SaveDirtyGating(t *testing.T) {
 
 func TestHashIndexFor_SameInstancePerRoot(t *testing.T) {
 	dir := t.TempDir()
-	testutil.Equal(t, HashIndexFor(dir) == HashIndexFor(dir), true, "同根同实例")
+	sameA := HashIndexFor(dir)
+	sameB := HashIndexFor(dir)
+	testutil.Equal(t, sameA == sameB, true, "同根同实例")
 	testutil.Equal(t, HashIndexFor(dir) != HashIndexFor(t.TempDir()), true, "异根异实例")
 }

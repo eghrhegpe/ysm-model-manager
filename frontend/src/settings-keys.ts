@@ -550,7 +550,7 @@ export const SETTINGS_KEYS: readonly SettingsKeyEntry[] = [
     authority: "browser-authority",
     migrates: false,
     owner: "preview-3d/caps/scene-capability.ts",
-    note: "键族：localStorage 实际键为 STORAGE_PREFIX + capId（ysm-scene-cap-<capId>），JSON 序列化；另有动态成员键 ysm-scene-cap-<cap>-<field> 形态",
+    note: "键族：localStorage 实际键为 STORAGE_PREFIX + capId（ysm-scene-cap- 前缀接 capId），JSON 序列化；另有动态成员键 ysm-scene-cap-「cap」-「field」 形态",
   },
   {
     key: "vmd.positionScale",
@@ -679,7 +679,7 @@ export const SETTINGS_KEYS: readonly SettingsKeyEntry[] = [
     authority: "browser-authority",
     migrates: false,
     owner: "views/app-content/site/workshop-data.ts",
-    note: "实际键带站点 id 后缀（ysm-ws-active-tag-<siteId>），禁止再裸打无后缀键",
+    note: "实际键带站点 id 后缀（ysm-ws-active-tag-「siteId」），禁止再裸打无后缀键",
   },
   {
     key: "ysm-ws-search-kw",

@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **372** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **374** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > ADR 三区存放：根目录 = 存量（分级前）/ `architecture/` = 架构决策 / `decisions/` = 执行决策日志（ADR-320）。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -16,20 +16,21 @@ permalink: /adr/
 
 | 状态 | 数量 |
 |------|------|
-| [📝 提议中](#提议中) | 5 |
+| [📝 提议中](#提议中) | 6 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 1 |
 | [🔄 部分采纳](#部分采纳) | 14 |
-| [✅ 已采纳](#已采纳) | 343 |
+| [✅ 已采纳](#已采纳) | 344 |
 | [❌ 已取代](#已取代) | 9 |
 | [🧊 已废弃](#已废弃) | 0 |
 | [❓ 未归类](#未归类) | 0 |
 
 ## 按状态分组导航
 
-### 📝 提议中（5）
+### 📝 提议中（6）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-351](./architecture/ADR-351-sync-domain-review-consolidation.md) | 整合包同步域锐评收口：收集层收口与判定单点化 | 📝 提议中 |
 | [ADR-349](./architecture/ADR-349-config-write-atomic-patch.md) | 配置写入原子化：Go 侧 patch 绑定替代前端读-改-写 | 📝 提议中 |
 | [ADR-327](./architecture/ADR-327-hdr.md) | 自定义 HDR 路径持久化与重启恢复 | 📝 提议中 |
 | [ADR-325](./architecture/ADR-325-app-domain-sinking-over-multi-service.md) | App 瘦身走域下沉：拒绝 Wails 多 Service 外壳 | 📝 提议中 |
@@ -61,7 +62,7 @@ permalink: /adr/
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 | [ADR-050](./ADR-050-plaza-browser-window.md) | 模型广场 · 浏览器窗口（Wails 第二窗口） | 🔄 部分采纳 |
 
-### ✅ 已采纳（343）
+### ✅ 已采纳（344）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
@@ -71,6 +72,7 @@ permalink: /adr/
 | [ADR-346](./architecture/ADR-346-mmd-geometry-stats-pipeline.md) | MMD 几何统计管线（数值搜索能力扩展） | ✅ 已采纳 |
 | [ADR-345](./architecture/ADR-345-disable-state-first-class.md) | 禁用态是一等公民：目录粒度启禁同步与实例侧禁用载体识别 | ✅ 已采纳 |
 | [ADR-344](./architecture/ADR-344-pack-sync-unit-honesty.md) | 整合包同步单元级诚实化：dirLevel 内容判定、单条推送保层级、祖先单元去重 | ✅ 已采纳 |
+| [ADR-344-d1](./decisions/ADR-344-d1-settings-export-import.md) | 设置导出/导入（桌面端 v1）——双轨收拢成单个 JSON，换机不再手抄偏好 | ✅ 已采纳 |
 | [ADR-343](./architecture/ADR-343-cross-type-search.md) | 跨类型搜索收口（Type 派生 + 分析器分流 + SearchFilters） | ✅ 已采纳 |
 | [ADR-343-d1](./decisions/ADR-343-d1-c1.md) | 搜索语义收敛C1：关键词匹配单口径（名/相对路径/拼音三路）+ 拼音表单源派生 | ✅ 已采纳 |
 | [ADR-342](./architecture/ADR-342-relink-preserve-instance-files.md) | 整合包重链接的实例数据保全与目录身份复验 | ✅ 已采纳 |
@@ -427,6 +429,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
+| ADR-351 | 整合包同步域锐评收口：收集层收口与判定单点化 | 📝 提议中 | 2026-10-16 |
 | ADR-350 | app-tree状态骨架D1：重载入口收敛单函数+决策表、条目突变单一出口 | ✅ 已采纳 | 2026-10-15 |
 | ADR-349 | 配置写入原子化：Go 侧 patch 绑定替代前端读-改-写 | 📝 提议中 | 2026-10-15 |
 | ADR-348 | 两阶段扫描投影B1：持久哈希索引（size+mtime 双指纹免重读 SHA256） | ✅ 已采纳 | 2026-10-15 |
@@ -780,6 +783,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
+| ADR-344-d1 | 设置导出/导入（桌面端 v1）——双轨收拢成单个 JSON，换机不再手抄偏好 | ✅ 已采纳 | 2026-10-16 |
 | ADR-343-d1 | 搜索语义收敛C1：关键词匹配单口径（名/相对路径/拼音三路）+ 拼音表单源派生 | ✅ 已采纳 | 2026-10-15 |
 | ADR-342-d1 | 重链接失败结构化下发（RelinkResult 取代 ErrPartialSync 抬升） | ✅ 已采纳 | 2026-10-14 |
 | ADR-340-d1 | 拉取结果结构化：部分失败不再是 error（绑定层不吞成功计数） | ✅ 已采纳 | 2026-10-14 |

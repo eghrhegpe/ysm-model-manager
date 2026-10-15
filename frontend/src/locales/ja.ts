@@ -503,6 +503,13 @@ export const ja: Record<string, string> = {
   "diagnostics.perfScanBenchColP95": "p95",
   "diagnostics.perfScanBenchColEntries": "件数",
   "diagnostics.perfScanBenchColStatus": "状態",
+  // 見出し用語の説明（2026-10-15）：これらは計測基準の語——「未計測」と「0」を読み違えないため
+  "diagnostics.perfScanBenchColMedianHint":
+    "実測サンプルの中央値（最近秩法、実サンプル値のみ採用）。未計測エンジンは「—」表示で、0ms ではありません",
+  "diagnostics.perfScanBenchColP95Hint":
+    "95パーセンタイル（最近秩法、補完しない＝常に実サンプルのいずれか）。中央値以上は常に成立。未計測は「—」",
+  "diagnostics.perfScanBenchColEntriesHint":
+    "このエンジンが処理したスキャン件数。「—」＝一度も実行されていません。「0件スキャンした」ではありません",
   "diagnostics.perfScanBenchMeasured": "実測",
   "diagnostics.perfScanBenchNotMeasured": "未計測",
   "diagnostics.perfScanBenchSamplesHint": "各回サンプル（{n} 回）：{runs}",
@@ -559,6 +566,15 @@ export const ja: Record<string, string> = {
   "diagnostics.perfMatrixEmpty": "リポジトリに該当タイプのモデルがありません",
   "diagnostics.perfMatrixColUnsupported": "未収集",
   "diagnostics.perfMatrixColStages": "段階数",
+  // 見出し用語の説明（2026-10-15）：4 列とも計測基準語——読み違えると同じ列を全部誤読する
+  "diagnostics.perfMatrixColFoundHint":
+    "リポジトリ内のこのタイプの総件数（切り捨てなし、サンプル上限の影響を受けません）。「収集済み」が小さいのは先頭 N 件のみ取得したためで、走査漏れではありません",
+  "diagnostics.perfMatrixColAnalyzedHint":
+    "今回の実行で段階所要時間が実際に取得された件数（サンプル上限と解析可否の制約を受けます）",
+  "diagnostics.perfMatrixColUnsupportedHint":
+    "CLI にパーサがなく、識別のみで実測されなかった件数。0 以外でも「遅い」ではなく「計測なし」です",
+  "diagnostics.perfMatrixColStagesHint":
+    "このタイプのマニフェストが宣言する期待段階数。「マニフェストと不一致」＝実際の段階列の長さが宣言と異なる（例：MMD の geometry/texture 段階欠落）",
   "diagnostics.perfSizeSourceSuffix": "サイズ基準 {source}（{desc}）",
   "diagnostics.perfSizeSourceDirTotal": "ディレクトリ型は中身の合計、それ以外はファイルサイズ",
   "diagnostics.perfSizeSourceUnknown": "このサイズ基準は UI に未登録",
@@ -863,11 +879,13 @@ export const ja: Record<string, string> = {
   "rtype.label.defaultAnim": "デフォルトモーション",
   "rtype.label.defaultMorph": "デフォルトモーフ",
   "rtype.label.fbx": "FBXモデル",
-  "rtype.label.vrm": "VRMモデル",
   "rtype.label.mmdShader": "MMDシェーダー",
-  "rtype.label.maid": "メイドモデル",
-  "rtype.label.pack": "リソースパック",
-  "rtype.label.shader": "シェーダーパック",
+  // キー名 = resource_types.json の id を camelToKey で正規化（maid-model → maidModel）。
+  // 2026-10-15 レビュー P0：id と別形式の旧キー名（pack/shader/maid）は派生キーが三言語すべてで
+  // ミスし、en/ja がレジストリの中国語に転落していた。消費者のいない旧キーは同時に退役。
+  "rtype.label.resourcepack": "リソースパック",
+  "rtype.label.shaderpack": "シェーダーパック",
+  "rtype.label.maidModel": "メイドモデル",
   "rtype.label.blueprint": "ブループリント",
   "rtype.label.litematic": "リテマティック",
   "rtype.group.minecraft": "バニラMinecraft",

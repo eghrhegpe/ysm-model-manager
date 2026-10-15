@@ -13,8 +13,9 @@ import type { EscFn } from "@/utils/html/html.ts";
 import { esc } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { resourceTypesById } from "@/utils/resource/schema.ts";
+import { rtypeLabelOf } from "@/utils/resource/types.ts";
 import { type OptionRow, optionRows } from "./option-rows.ts";
-import { type PerfIdentity, sectionHeader } from "./perf-common.ts";
+import { type PerfIdentity, perfTableHead, sectionHeader } from "./perf-common.ts";
 
 /** 单类型汇总（字段与 Go `perfTypeSummary` 逐字对齐） */
 export interface PerfTypeSummary {
@@ -296,14 +297,28 @@ export function renderPerfMatrix(
     return `${head}${specEcho}<div class="diag-stat diag-stat-muted">${UI_ICONS.search} ${t("diagnostics.perfMatrixEmpty")}</div>`;
   }
   const rows = payload.spec.types.map((s) => typeRow(s, esc)).join("");
+  // 表头带判据解释（perfTableHead 单点）：「已采集/未采集/阶段数」是口径词不是列名——
+  // 未采集不得读成 0，阶段数不等长意味着阶段链漂移（perfTypeManifest.expected_stages）。
   const table = `<table class="perf-matrix">
-<thead><tr>
-<th>${t("diagnostics.perfMatrixColType")}</th>
-<th>${t("diagnostics.perfMatrixColFound")}</th>
-<th>${t("diagnostics.perfMatrixColAnalyzed")}</th>
-<th>${t("diagnostics.perfMatrixColUnsupported")}</th>
-<th>${t("diagnostics.perfMatrixColStages")}</th>
-</tr></thead>
+${perfTableHead([
+  { key: "diagnostics.perfMatrixColType" },
+  {
+    key: "diagnostics.perfMatrixColFound",
+    helpKey: "diagnostics.perfMatrixColFoundHint",
+  },
+  {
+    key: "diagnostics.perfMatrixColAnalyzed",
+    helpKey: "diagnostics.perfMatrixColAnalyzedHint",
+  },
+  {
+    key: "diagnostics.perfMatrixColUnsupported",
+    helpKey: "diagnostics.perfMatrixColUnsupportedHint",
+  },
+  {
+    key: "diagnostics.perfMatrixColStages",
+    helpKey: "diagnostics.perfMatrixColStagesHint",
+  },
+])}
 <tbody>${rows}</tbody>
 </table>`;
   const models = payload.models.map((m) => modelRow(m, esc)).join("");
@@ -356,8 +371,11 @@ export async function populatePerfTargetOptions(
   const typeRows: OptionRow[] = [];
   for (const ty of types) {
     const icon = typeof ty.icon === "string" ? ty.icon : "";
-    // 顺序 = 注册表按 id 字典序（localeCompare），逐字保持现状；label 带图标与 name 兜底 id
-    typeRows.push({ value: String(ty.id), label: `${icon} ${String(ty.name ?? ty.id)}`.trim() });
+    // 顺序 = 注册表按 id 字典序（localeCompare），逐字保持现状；label 带图标。
+    // **显示名走 i18n 单点出口**（知识卡 P1-3：`ty.name` 派生自 resource_types.json 的中文
+    // name 字段，直取上屏 = en/ja 界面中文裸奔）；rtypeLabelOf 缺键自回落注册表名再回落 id，
+    // 与旧的 `ty.name ?? ty.id` 语义等价，故 zh-CN 下逐字不变。
+    typeRows.push({ value: String(ty.id), label: `${icon} ${rtypeLabelOf(String(ty.id))}`.trim() });
   }
   // 组 2：按模型类型（同类型内横向比）——必须在 typeRows 填满后拼，否则组空
   if (typeRows.length) {

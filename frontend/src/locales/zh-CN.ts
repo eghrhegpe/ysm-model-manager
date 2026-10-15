@@ -489,6 +489,13 @@ export const zhCN = {
   "diagnostics.perfScanBenchColP95": "p95 分位",
   "diagnostics.perfScanBenchColEntries": "条目",
   "diagnostics.perfScanBenchColStatus": "状态",
+  // 表头术语解释（2026-10-15 锐评改进 P1）：口径词不得当普通列名读——缺席不是 0
+  "diagnostics.perfScanBenchColMedianHint":
+    "多次实测样本的中位数（最近秩法，取真实样本值）；未采集显示「—」，不是 0ms",
+  "diagnostics.perfScanBenchColP95Hint":
+    "95% 分位（最近秩法，必为某次真实样本，非插值）；恒 ≥ 中位数；未采集显示「—」",
+  "diagnostics.perfScanBenchColEntriesHint":
+    "归该引擎处理的扫描条目数；「—」= 没扫过，读成「扫到 0 条」即为误读",
   "diagnostics.perfScanBenchMeasured": "实测",
   "diagnostics.perfScanBenchNotMeasured": "未采集",
   "diagnostics.perfScanBenchSamplesHint": "逐次样本（{n} 次）：{runs}",
@@ -546,6 +553,14 @@ export const zhCN = {
   "diagnostics.perfMatrixEmpty": "仓库中未找到该类型的模型",
   "diagnostics.perfMatrixColUnsupported": "未采集",
   "diagnostics.perfMatrixColStages": "阶段数",
+  // 表头术语解释（2026-10-15 锐评改进 P1）：这四列都是口径词，读错即读错整张表
+  "diagnostics.perfMatrixColFoundHint":
+    "仓库中该类型的条目总数（未截断，不受取样上限影响）；「已采集」小于它是因为只取了前 N 条，不是漏扫",
+  "diagnostics.perfMatrixColAnalyzedHint": "本次真正跑出阶段耗时的条数（受取样上限与可分析性约束）",
+  "diagnostics.perfMatrixColUnsupportedHint":
+    "CLI 无解析器、只出身份不实测的条数；非 0 时它不是慢，是没测",
+  "diagnostics.perfMatrixColStagesHint":
+    "该类型清单声明的期望阶段数；标「与清单不符」= 实到阶段链长度与声明不同（如 MMD 缺几何/纹理段）",
   "diagnostics.perfSizeSourceSuffix": "体量口径 {source}（{desc}）",
   "diagnostics.perfSizeSourceDirTotal": "目录式按目录内容合计，其余按文件大小",
   "diagnostics.perfSizeSourceUnknown": "该体量口径未在界面登记",
@@ -849,11 +864,13 @@ export const zhCN = {
   "rtype.label.defaultAnim": "默认动作",
   "rtype.label.defaultMorph": "默认表情",
   "rtype.label.fbx": "FBX 模型",
-  "rtype.label.vrm": "VRM 模型",
   "rtype.label.mmdShader": "MMD 光影",
-  "rtype.label.maid": "车万女仆模型",
-  "rtype.label.pack": "资源包",
-  "rtype.label.shader": "光影包",
+  // 键名 = resource_types.json 的 id 经 camelToKey 归一（maid-model → maidModel）。
+  // 2026-10-15 锐评 P0：旧键名（pack/shader/maid）与这三个 id 不同形，派生键三语全落空
+  // → en/ja 界面回落注册表中文；旧键无消费者，一并退场（防「两套键名」再次漂移）。
+  "rtype.label.resourcepack": "资源包",
+  "rtype.label.shaderpack": "光影包",
+  "rtype.label.maidModel": "车万女仆模型",
   "rtype.label.blueprint": "蓝图",
   "rtype.label.litematic": "投影",
   "rtype.group.minecraft": "Minecraft 原版",

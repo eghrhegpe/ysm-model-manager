@@ -7,6 +7,7 @@ import type { executeCLI } from "@/services/cli-bridge.ts";
 import { logError } from "@/utils/base/primitives/log.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import type { EscFn } from "@/utils/html/html.ts";
+import { esc } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { copyWithToast } from "./copy-toast.ts";
 
@@ -56,6 +57,32 @@ export function sectionHeader(
   const wrapper = rawText !== undefined ? ` data-perf-raw="${encodeURIComponent(rawText)}"` : "";
   return `<div class="perf-section" style="margin-top:10px;font-size:var(--fs-sm);font-weight:600;color:var(--txt);display:flex;align-items:center;gap:var(--sp-icon-text)"${wrapper}>
 <span>${icon}</span><span>${label}</span>${timingTag}${copyBtn}</div>`;
+}
+
+// ===== 表头（带术语解释）=====
+
+/**
+ * 性能表格表头单点（矩阵 / 引擎对照共用；2026-10-15 锐评改进 P1「术语无解释」）。
+ *
+ * 立因：`perf-matrix-render.ts` 与 `perf-scan-bench.ts` 两张表的表头是本页**唯一一批裸奔黑话**——
+ * 「命中 / 已采集 / 未采集 / 阶段数 / 中位 / p95 分位 / 条目」全部只有一层字面、悬停无解释。
+ * 而这些词恰恰是**判据口径**：「未采集」不是 0、「p95」是最近秩真实样本不是插值、「条目」在
+ * 未采集时是「没扫」而不是「扫到 0 条」——把它们当普通列名读，会把缺席读成结论，正是本卡
+ * 反复清的「拿缺席当结论」同族病。同页其余测量值（阶段柱的 p95 徽标、基准判决行、并发档位）
+ * 早已各自带 title，唯独表头这一批没有。
+ *
+ * `helpKey` 缺省 = 该列字面自解释（如「类型」「引擎」），**不硬凑文案**——
+ * 给一个不需要解释的词配一句废话，等于稀释真正需要解释的那几个。
+ * 解释走 `title` 不走正文：版面是窄栏，术语本身要留在表头。
+ */
+export function perfTableHead(cols: readonly { key: LocaleKey; helpKey?: LocaleKey }[]): string {
+  const ths = cols
+    .map((c) => {
+      const help = c.helpKey ? ` title="${esc(t(c.helpKey))}"` : "";
+      return `<th${help}>${esc(t(c.key))}</th>`;
+    })
+    .join("");
+  return `<thead><tr>${ths}</tr></thead>`;
 }
 
 // ===== 契约类型：Go 载荷的身份块 =====

@@ -385,7 +385,18 @@ test.describe("诊断页", () => {
     expect(info.values).toContain("__all__");
     expect(info.values).toContain("ysm");
     expect(info.values).not.toContain("resourcepack"); // 不可分析类型不进选择器
-    expect(info.text).toContain("YSM 模型");
+    // ⚠️ 本行原断言 `toContain("YSM 模型")`——**把 P0 缺陷固化成了契约**（2026-10-15 锐评改进）：
+    // 选项 label 此前直取注册表中文 name，而 playwright.config 把 e2e 钉在 en-US，于是
+    // en 界面真的显示中文、旧断言恰好绿。改走 `rtypeLabelOf` i18n 出口后 en 下产出译文，
+    // 旧断言当场转红——红得正确，故改判 en 包关键词（同本文件 §2.6「文案断言用 en 包」纪律）。
+    expect(info.text).toContain("YSM Model");
+    // 更强的 locale 诚实判据：整个选择器不得出现 CJK——这同时锁死 P0 的另一半
+    // （maid-model 的派生键曾因 camelToKey 不降首字母而落空，en 下回落「车万女仆模型」）。
+    // ⚠️ 必须带 `u` 旗标并用转义写区间：选项 label 带 emoji（图标），无 u 旗标时字符类按
+    // **UTF-16 code unit** 匹配，代理项区间 U+D800-U+DFFF 会落进宽区间（曾误写 U+8C48-U+FAFF
+    // 把 emoji 半区全部罩入 → 全英文文本照样判红，2026-10-15 实测踩到）；u 旗标下按码点判，
+    // emoji 码点（>U+1F000）天然在汉字区外。区间 = CJK 基本区 + 兼容表意区（覆盖简繁与日文汉字）。
+    expect(info.text).not.toMatch(/[\u3400-\u9fff\uf900-\ufaff]/u);
   });
 
   test("bench 组 · 单模型 pill：基准三件套就位，且切到矩阵模式即禁用（ADR-262 D8）", async ({

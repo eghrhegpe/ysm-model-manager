@@ -9,8 +9,52 @@ vi.mock("@/bus", () => ({
   bus: { emit: vi.fn(), on: vi.fn(), off: vi.fn() },
 }));
 
-import { sectionHeader, bindPerfCopyHandlers, getOutBox, setBusy, setErrorMsg, setErrorResp, setErrorCatch, respHasOutput, renderLoadFailure } from "./perf-common.ts";
+import { sectionHeader, perfTableHead, bindPerfCopyHandlers, getOutBox, setBusy, setErrorMsg, setErrorResp, setErrorCatch, respHasOutput, renderLoadFailure } from "./perf-common.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
+
+// ===== 表头术语解释单点（2026-10-15 锐评改进 P1）=====
+// 判据：helpKey 给了必有 title、没给必不硬凑（废话文案 = 稀释真正需要解释的列）。
+describe("perfTableHead", () => {
+  it("给 helpKey → 该 <th> 带 title 解释", () => {
+    const html = perfTableHead([
+      { key: "diagnostics.perfMatrixColFound", helpKey: "diagnostics.perfMatrixColFoundHint" },
+    ]);
+    expect(html).toMatch(/^<thead><tr><th title="[^"]+">/);
+    expect(html).toContain("</th></tr></thead>");
+  });
+
+  it("不给 helpKey → 不渲染 title（字面自解释的列不硬凑文案）", () => {
+    const html = perfTableHead([{ key: "diagnostics.perfMatrixColType" }]);
+    expect(html).not.toContain("title=");
+    expect(html).toContain("<th>");
+  });
+
+  it("多列顺序保持、混合有/无解释各归各", () => {
+    const html = perfTableHead([
+      { key: "diagnostics.perfScanBenchColEngine" },
+      { key: "diagnostics.perfScanBenchColMedian", helpKey: "diagnostics.perfScanBenchColMedianHint" },
+    ]);
+    // `<th` 后必须是空格或 `>`——否则 `<thead>` 会被这个正则一起吞掉（首版即踩到）
+    const ths = html.match(/<th(?: [^>]*)?>/g) ?? [];
+    expect(ths.length).toBe(2);
+    expect(ths[0]).toBe("<th>");
+    expect(ths[1]?.startsWith('<th title="')).toBe(true);
+  });
+
+  it("译文含引号/尖括号 → 被转义，不得闭合 title 属性", () => {
+    // 解释文案里有「"—"」这类形态（ja/en 均有），未转义会把 title 掐断并注入 HTML
+    const html = perfTableHead([
+      { key: "diagnostics.perfScanBenchColEntries", helpKey: "diagnostics.perfScanBenchColEntriesHint" },
+    ]);
+    const titleAttr = html.match(/title="([^"]*)"/)?.[1] ?? "";
+    expect(titleAttr).not.toContain("<");
+    expect(titleAttr).not.toContain(">");
+  });
+
+  it("空列表 → 产出空表头骨架，不抛错", () => {
+    expect(perfTableHead([])).toBe("<thead><tr></tr></thead>");
+  });
+});
 
 describe("sectionHeader", () => {
   it("icon + label → 带 icon 和 label 的 HTML", () => {

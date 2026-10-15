@@ -581,9 +581,13 @@ describe("资源类型切换器 i18n", () => {
     expect(rtypeKeys.length).toBeGreaterThan(0);
     // 键名族封闭：只有两类前缀，防止将来另起一族绕过 i18n 单点出口
     expect(rtypeKeys.every((k) => /^rtype\.(label|group)\./.test(k))).toBe(true);
-    // camelCase 归一：键名第二段为 rtype id 的 camel 形态（ResourcePack → resourcePack
-    // 型），不得原样塞入 kebab/UPPER——实体名经 camelToKey 归一后才配得上键
-    expect(rtypeKeys.some((k) => /^rtype\.label\.[a-z][A-Za-z0-9]*$/.test(k))).toBe(true);
+    // camelCase 归一（判据 = every，不是 some）：键名第二段必须是 rtype id 的 camel 形态
+    // （EntityPlayer → entityPlayer、maid-model → maidModel），不得原样塞入 kebab/PascalCase。
+    // ⚠️ 2026-10-15 锐评 P0 的共犯正是本行的旧判据 `some()`：7 个 PascalCase id 的派生键
+    // 全部落空、界面回落中文，而「只要有一类命中就绿」的断言一路绿灯（全覆盖判据在
+    // utils/resource/types.test.ts「rtype.label 键族全覆盖」闸，那里走生产派生函数逐类型验）。
+    const camelSeg = /^rtype\.(label|group)\.[a-z][A-Za-z0-9]*$/;
+    expect(rtypeKeys.filter((k) => !camelSeg.test(k))).toEqual([]);
     expect(seen.some((k) => k === "rtype.group.minecraftMod")).toBe(true);
     unmountElement(el);
   });

@@ -506,6 +506,14 @@ export const en: Record<string, string> = {
   "diagnostics.perfScanBenchColP95": "p95",
   "diagnostics.perfScanBenchColEntries": "Entries",
   "diagnostics.perfScanBenchColStatus": "Status",
+  // Header term help (2026-10-15): these are measurement-vocabulary columns, not plain labels —
+  // an em-dash means "not measured", never 0.
+  "diagnostics.perfScanBenchColMedianHint":
+    'Median of the measured samples (nearest-rank method, always a real sample value); an unmeasured engine shows "—", not 0ms',
+  "diagnostics.perfScanBenchColP95Hint":
+    '95th percentile (nearest-rank, always one of the real samples, never interpolated); always >= median; unmeasured shows "—"',
+  "diagnostics.perfScanBenchColEntriesHint":
+    'Scan entries handled by this engine; "—" means it never ran — reading it as "0 entries scanned" is a misread',
   "diagnostics.perfScanBenchMeasured": "Measured",
   "diagnostics.perfScanBenchNotMeasured": "Not measured",
   "diagnostics.perfScanBenchSamplesHint": "Per-run samples ({n} runs): {runs}",
@@ -563,6 +571,16 @@ export const en: Record<string, string> = {
   "diagnostics.perfMatrixEmpty": "No model of this type found in the repo",
   "diagnostics.perfMatrixColUnsupported": "Not collected",
   "diagnostics.perfMatrixColStages": "Stages",
+  // Header term help (2026-10-15): all four are measurement vocabulary — misreading one
+  // misreads the whole table.
+  "diagnostics.perfMatrixColFoundHint":
+    'Total entries of this type in the repo (untruncated, unaffected by the sample cap); "Collected" being smaller means only the first N were taken, not that the scan missed entries',
+  "diagnostics.perfMatrixColAnalyzedHint":
+    "Entries that actually produced stage timings this run (bounded by the sample cap and CLI analyzability)",
+  "diagnostics.perfMatrixColUnsupportedHint":
+    'Entries with no CLI parser — identity only, never measured; non-zero here means "not measured", not "slow"',
+  "diagnostics.perfMatrixColStagesHint":
+    'Expected stage count declared by this type\'s manifest; flagged "differs from manifest" = the observed chain length disagrees (e.g. MMD missing geometry/texture stages)',
   "diagnostics.perfSizeSourceSuffix": "size basis {source} ({desc})",
   "diagnostics.perfSizeSourceDirTotal":
     "directory models summed over directory content, others by file size",
@@ -863,11 +881,13 @@ export const en: Record<string, string> = {
   "rtype.label.defaultAnim": "Default Animation",
   "rtype.label.defaultMorph": "Default Morph",
   "rtype.label.fbx": "FBX Model",
-  "rtype.label.vrm": "VRM Model",
   "rtype.label.mmdShader": "MMD Shader",
-  "rtype.label.maid": "Maid Model",
-  "rtype.label.pack": "Resource Pack",
-  "rtype.label.shader": "Shader Pack",
+  // Key = resource_types.json id normalized by camelToKey (resourcepack/shaderpack/maid-model→maidModel)
+  // 2026-10-15 critique P0: these ids never matched the old key names (pack/shader/maid), so the derived
+  // key missed in all three locales and en/ja fell back to the registry's Chinese name.
+  "rtype.label.resourcepack": "Resource Pack",
+  "rtype.label.shaderpack": "Shader Pack",
+  "rtype.label.maidModel": "Maid Model",
   "rtype.label.blueprint": "Blueprint",
   "rtype.label.litematic": "Litematic",
   "rtype.group.minecraft": "Vanilla Minecraft",

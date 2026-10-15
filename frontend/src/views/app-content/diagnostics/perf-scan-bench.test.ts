@@ -180,6 +180,25 @@ describe("扫描引擎对照面板（ADR-262 D3）", () => {
     expect(text).toContain("另有 2 次未计入样本");
   });
 
+  it("表头术语列带 title 解释；自解释列不硬凑（2026-10-15 锐评改进 P1）", async () => {
+    executeCLI.mockResolvedValue({ status: "success", command: "scan-bench", data: DEFAULT_PAYLOAD });
+    const root = makeRoot();
+    initPerfPanel(root, esc);
+    await clickAndFlush(root);
+
+    const ths = [...outRoot(root).querySelectorAll("thead th")];
+    const byName = (label: string) => ths.find((th) => (th.textContent ?? "").trim() === label);
+    // test-setup 全局 mock t.ts 恒查 zh-CN（见 app-nav 测试同注），故按中文列名定位。
+    // 判据按「列名 → 有无解释」的集合关系，不按位置索引——列顺序属版式，挪列不该红。
+    expect(ths.length).toBe(5);
+    for (const label of ["中位", "p95 分位", "条目"]) {
+      expect(byName(label)?.getAttribute("title"), `${label} 列缺术语解释`).toBeTruthy();
+    }
+    for (const label of ["引擎", "状态"]) {
+      expect(byName(label)?.hasAttribute("title"), `${label} 列不该硬凑废话`).toBe(false);
+    }
+  });
+
   it("两端都实测 + parity.match=true：两行数值都在，一致性给 ✅", async () => {
     executeCLI.mockResolvedValue({ status: "success", command: "scan-bench", data: BOTH_PAYLOAD });
     const root = makeRoot();

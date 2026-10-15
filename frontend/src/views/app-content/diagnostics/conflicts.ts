@@ -8,7 +8,7 @@ import { createBusyLock } from "@/utils/base/primitives/lock.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import type { EscFn } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
-import { RESOURCE_TYPE_LABELS } from "@/utils/resource/types.ts";
+import { RESOURCE_TYPE_LABELS, rtypeLabelOf } from "@/utils/resource/types.ts";
 import type { FileConflict } from "@/utils/types-re-export.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import { optionRows } from "./option-rows.ts";
@@ -95,9 +95,10 @@ export async function initSyncConflictPanel(
   if (!list || !rtypeSel || !insSel || !scanBtn) return;
 
   rtypeSel.innerHTML = optionRows(
-    // RESOURCE_TYPE_LABELS 已在模块构建期过滤掉无 name 的类型（见 utils/resource/types.ts:35-38），
-    // 故这里不会产出空标签选项；顺序 = JSON 声明序，逐字保持旧面板口径
-    Object.entries(RESOURCE_TYPE_LABELS).map(([id, label]) => ({ value: id, label })),
+    // 顺序 = JSON 声明序，逐字保持旧面板口径；**label 走 i18n 单点出口**（知识卡 P1-3）：
+    // RESOURCE_TYPE_LABELS 派生自 resource_types.json 的中文 name，直取上屏 = en/ja 界面中文裸奔。
+    // 不再另写 `|| 中文` 兜底——rtypeLabelOf 缺键时自己回落注册表名、再回落 id，恒非空。
+    Object.keys(RESOURCE_TYPE_LABELS).map((id) => ({ value: id, label: rtypeLabelOf(id) })),
     esc,
   );
 

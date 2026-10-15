@@ -23,6 +23,7 @@ import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import {
   errorHTML,
   getOutBox,
+  perfTableHead,
   renderLoadFailure,
   sectionHeader,
   setBusy,
@@ -221,14 +222,25 @@ export function renderScanBench(payload: ScanBenchPayload, esc: EscFn, timingMs?
   )}</div>`;
 
   const rows = payload.engines.map((e) => engineRowHTML(e, esc)).join("");
+  // 表头带判据解释（perfTableHead 单点，同矩阵表）：中位/p95 是 Go 给的最近秩真实样本，
+  // 「条目」在未采集行是「没扫」不是「扫到 0 条」——这两族词都不得当普通数字列读。
   const table = `<table class="perf-matrix perf-sb-table">
-<thead><tr>
-<th>${t("diagnostics.perfScanBenchColEngine")}</th>
-<th>${t("diagnostics.perfScanBenchColMedian")}</th>
-<th>${t("diagnostics.perfScanBenchColP95")}</th>
-<th>${t("diagnostics.perfScanBenchColEntries")}</th>
-<th>${t("diagnostics.perfScanBenchColStatus")}</th>
-</tr></thead>
+${perfTableHead([
+  { key: "diagnostics.perfScanBenchColEngine" },
+  {
+    key: "diagnostics.perfScanBenchColMedian",
+    helpKey: "diagnostics.perfScanBenchColMedianHint",
+  },
+  {
+    key: "diagnostics.perfScanBenchColP95",
+    helpKey: "diagnostics.perfScanBenchColP95Hint",
+  },
+  {
+    key: "diagnostics.perfScanBenchColEntries",
+    helpKey: "diagnostics.perfScanBenchColEntriesHint",
+  },
+  { key: "diagnostics.perfScanBenchColStatus" },
+])}
 <tbody>${rows}</tbody>
 </table>`;
   // parity 行只在**比对真的可能发生**（≥2 引擎）时渲染（锐评 2026-10-13 功能 A）：

@@ -19,8 +19,12 @@ import {
   groupStorageRootOf,
   getPreviewableTypeTabs,
   previewCandidateExtsOf,
+  rtypeLabelKeyOf,
 } from "./types.ts";
 import { allResourceTypes } from "./schema.ts";
+import { zhCN } from "@/locales/zh-CN.ts";
+import { en } from "@/locales/en.ts";
+import { ja } from "@/locales/ja.ts";
 import resourceTypesJson from "#root/resource_types.json";
 
 /** JSON 中全部资源类型 ID */
@@ -85,6 +89,73 @@ describe("与 resource_types.json 对账（单一事实来源）", () => {
 
   it("无重复 ID", () => {
     expect(new Set(ALL_RESOURCE_TYPES).size).toBe(ALL_RESOURCE_TYPES.length);
+  });
+});
+
+// ===== rtype.label 键族全覆盖闸（2026-10-15 锐评 P0 的根治线）=====
+// 病根实证：`camelToKey` 只归一连字符、不降首字母，而注册表有 7 个 PascalCase 类型 id
+// （EntityPlayer/SceneModel/…）——派生键 `rtype.label.EntityPlayer` 在三语 locale 里全部
+// 落空（键族按 camelCase 书写），于是 rtypeLabelOf 静默回落注册表中文名：**10/15 个类型
+// 在 en/ja 界面显示中文**，e2e 每次刷 `[i18n] 缺失 key: rtype.label.maidModel`。
+// 而当时的回归锁（app-nav「键名族封闭」例）用的是 `some()` ——只证「有一类命中」，
+// 恰好看不见「另一类全落空」。故此闸的判据必须是 **every（全覆盖）**，反向再锁无孤儿键。
+// 键名一律走生产 `rtypeLabelKeyOf` 派生，不在测试里复刻归一规则（复刻 = 第二份真相，
+// 规则一改本闸即失明，与 P0 同源）。
+describe("rtype.label 键族全覆盖（防派生键漂移）", () => {
+  const labelKeys = (bundle: Record<string, string>): string[] =>
+    Object.keys(bundle).filter((k) => k.startsWith("rtype.label."));
+
+  it("每个资源类型 id 的派生键，在三个语言包里都存在（every，非 some）", () => {
+    const missing: string[] = [];
+    for (const id of ALL_RESOURCE_TYPES) {
+      const key = rtypeLabelKeyOf(id);
+      for (const [lang, bundle] of [
+        ["zh-CN", zhCN],
+        ["en", en],
+        ["ja", ja],
+      ] as const) {
+        if (!(key in bundle)) missing.push(`${lang} ← ${key} (id=${id})`);
+      }
+    }
+    expect(missing, "派生键落空 → en/ja 回落注册表中文：\n" + missing.join("\n")).toEqual([]);
+  });
+
+  it("派生键第二段是 camelCase（首字母小写归一不可回退）", () => {
+    // 逐个点名 PascalCase id：它们正是本次 P0 的落点，写死判据防「归一又被改回只处理连字符」
+    for (const id of [
+      "EntityPlayer",
+      "SceneModel",
+      "CustomAnim",
+      "CustomMorph",
+      "StageAnim",
+      "DefaultAnim",
+      "DefaultMorph",
+    ]) {
+      expect(rtypeLabelKeyOf(id), id).toBe(`rtype.label.${id.charAt(0).toLowerCase()}${id.slice(1)}`);
+    }
+    expect(rtypeLabelKeyOf("maid-model")).toBe("rtype.label.maidModel");
+    expect(rtypeLabelKeyOf("minecraft-mod")).toBe("rtype.label.minecraftMod");
+  });
+
+  it("语言包内 rtype.label.* 键全部有对应的注册类型 id（反向无孤儿）", () => {
+    // 孤儿键 = 上一轮 pack/shader/maid/vrm 那批：与 id 不同形、永不被读到，
+    // 留着只会诱导下一个作者照抄错形。
+    const derived = new Set(ALL_RESOURCE_TYPES.map((id) => rtypeLabelKeyOf(id)));
+    for (const [lang, bundle] of [
+      ["zh-CN", zhCN],
+      ["en", en],
+      ["ja", ja],
+    ] as const) {
+      const orphans = labelKeys(bundle).filter((k) => !derived.has(k));
+      expect(orphans, `${lang} 存在无消费者的 rtype.label 键`).toEqual([]);
+    }
+  });
+
+  it("三包 rtype.label.* 键集合逐字一致", () => {
+    const sorted = labelKeys(zhCN).sort();
+    expect(sorted.length).toBeGreaterThan(0);
+    expect(labelKeys(en).sort()).toEqual(sorted);
+    expect(labelKeys(ja).sort()).toEqual(sorted);
   });
 });
 

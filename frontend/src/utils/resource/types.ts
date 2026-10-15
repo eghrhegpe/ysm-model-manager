@@ -160,11 +160,20 @@ export function groupLabelOf(group: string): string {
  * ⚠️ 调用期求值（不在模块加载期烘焙）：语言热切换须立即生效，禁写成顶层 const 表。
  */
 export function rtypeLabelOf(rtype: string): string {
-  const key = `rtype.label.${camelToKey(rtype)}`;
+  const key = rtypeLabelKeyOf(rtype);
   // tOf 缺键回落「裸 key 原文」（而非空串），故须显式比对 key 本身——
   // 直接 `hit || 回落` 会把 "rtype.label.foo" 当有效译文印进界面。
   const hit = tOf(key);
   return hit === key ? RESOURCE_TYPE_LABELS[rtype] || rtype : hit;
+}
+
+/**
+ * 类型 id → 其 i18n 键字面（单点导出，**供防漂移闸遍历**：闸若自己复刻归一规则
+ * 就是第二份真相，规则一改闸即失明——2026-10-15 P0 的成因正是「实现与键族失配而闸看不见」。
+ * rtypeLabelOf 与本函数共用同一条派生路径。
+ */
+export function rtypeLabelKeyOf(rtype: string): string {
+  return `rtype.label.${camelToKey(rtype)}`;
 }
 
 /** 大类 id 的 i18n 显示名（回落 GROUP_META.name，同样不吐裸 key） */
@@ -174,9 +183,19 @@ export function rtypeGroupLabelOf(group: string): string {
   return hit === key ? GROUP_META[group]?.name || group : hit;
 }
 
-/** EntityPlayer → entityPlayer；minecraft-mod → minecraftMod（键名对齐键族字面） */
+/**
+ * 类型 / 分组 id → i18n 键第二段：连字符合并 + **首字母小写**。
+ * `minecraft-mod → minecraftMod`、`EntityPlayer → entityPlayer`、`maid-model → maidModel`。
+ * ⚠️ 首字母小写不可省：注册表里有 7 个 PascalCase 类型 id（EntityPlayer/SceneModel/
+ *   CustomAnim/CustomMorph/StageAnim/DefaultAnim/DefaultMorph），而 locale 键族按 camelCase
+ *   书写（`rtype.label.entityPlayer`）——只归一连字符会让这些类型的派生键**全部落空**，
+ *   en/ja 界面回落注册表中文（2026-10-15 锐评 P0 实测：10/15 类型受影响，e2e 每次刷
+ *   `缺失 key: rtype.label.maidModel`）。归一规则与键族的对应关系由
+ *   `types.test.ts`「rtype.label 键族全覆盖」闸锁死，不靠注释。
+ */
 function camelToKey(raw: string): string {
-  return raw.replace(/-([a-z])/g, (_m, c: string) => c.toUpperCase());
+  const joined = raw.replace(/-([a-z])/g, (_m, c: string) => c.toUpperCase());
+  return joined.charAt(0).toLowerCase() + joined.slice(1);
 }
 
 /**

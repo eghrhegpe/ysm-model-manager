@@ -350,6 +350,23 @@ describe("类型矩阵 — 渲染", () => {
     expect(out.textContent).toContain("12.50ms");
   });
 
+  it("表头四列口径词带 title 解释，「类型」列不硬凑（2026-10-15 锐评改进 P1）", async () => {
+    executeCLI.mockResolvedValue({ status: "success", command: "single-bench", data: MATRIX_JSON });
+    const root = makeRoot();
+    initPerfPanel(root, esc);
+    setTarget(root, "ysm");
+    const out = await run(root);
+
+    const ths = [...out.querySelectorAll("thead th")];
+    const byName = (label: string) => ths.find((th) => (th.textContent ?? "").trim() === label);
+    // 判据按「列名 → 有无解释」的集合关系，不按位置索引（列序属版式）
+    expect(ths.length).toBe(5);
+    for (const label of ["命中", "已采集", "未采集", "阶段数"]) {
+      expect(byName(label)?.getAttribute("title"), `${label} 列缺术语解释`).toBeTruthy();
+    }
+    expect(byName("类型")?.hasAttribute("title")).toBe(false);
+  });
+
   it("CLI 无解析器的类型显示「未采集」，绝不显示 0.00ms", async () => {
     executeCLI.mockResolvedValue({
       status: "success",

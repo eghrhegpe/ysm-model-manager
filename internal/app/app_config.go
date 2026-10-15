@@ -152,6 +152,12 @@ func washLinkMode(cfg *types.AppConfig) {
 }
 
 func (a *App) SaveAppConfig(filesRoot, rpRoot, mcRoot, linkMode, theme, themeAuto string) error {
+	// 串行化整段读-改-写（configWriteMu，锐评 2026-10-15 P2）：下方 oldCfg 来自
+	// LoadAppConfig 的快照，若与另一写并发，二者会各自把「改前的快照」整份落盘，
+	// 后写者静默覆盖前写者的字段。
+	a.configWriteMu.Lock()
+	defer a.configWriteMu.Unlock()
+
 	oldCfg := a.LoadAppConfig()
 	// 校验失败时 validated 置空 → 下方 orDefault 回退 oldCfg.McRoot——
 	// 原实现校验失败 errMsg 被丢弃、未校验的 mcRoot 原样写入（配置损坏路径静默生效）。
@@ -206,6 +212,12 @@ func (a *App) SaveAppConfig(filesRoot, rpRoot, mcRoot, linkMode, theme, themeAut
 }
 
 func (a *App) SetDownloadMirror(mirror string) error {
+	// 读-改-写事务串行化（configWriteMu，锐评 2026-10-15 P2）：与 SaveAppConfig /
+	// SaveThresholds / SetResourceRoot 共享同一把锁，避免镜像源切换把并发写入的
+	// 其他字段改前快照冲回旧值。
+	a.configWriteMu.Lock()
+	defer a.configWriteMu.Unlock()
+
 	cfg := a.LoadAppConfig()
 	cfg.Mirror = mirror
 	return a.saveConfig(cfg)
@@ -215,6 +227,10 @@ func (a *App) SetDownloadMirror(mirror string) error {
 // 仅更新传入的阈值字段，其余字段从旧配置保留（与 SaveAppConfig 的 orDefault 语义一致）。
 // checkIntervalMs / logMaxEntries 传 0 = 重置为各包默认常量（scanner/logs 读取 0=默认）。
 func (a *App) SaveThresholds(checkIntervalMs int, logMaxEntries int) error {
+	// 读-改-写事务串行化（configWriteMu，锐评 2026-10-15 P2）：同 SetDownloadMirror。
+	a.configWriteMu.Lock()
+	defer a.configWriteMu.Unlock()
+
 	cfg := a.LoadAppConfig()
 	cfg.UpdateCheckIntervalMs = checkIntervalMs
 	cfg.LogMaxEntries = logMaxEntries

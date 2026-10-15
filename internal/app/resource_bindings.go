@@ -281,6 +281,12 @@ func (a *App) SelectImportFile(filter, title string) string {
 // ADR-095：写入 cfg.CustomRoots[rtype]；删除则清空该 key。
 // 不再反射结构体字段，新增资源类型只改 resource_types.json 即可生效。
 func (a *App) SetResourceRoot(rtype, path string) error {
+	// 读-改-写事务串行化（configWriteMu，锐评 2026-10-15 P2）：与 SaveAppConfig 等
+	// 共享同一把锁。自定义根写的是 CustomRoots map，与其余字段同处一份 JSON，
+	// 无锁则并发写会以改前快照覆盖彼此。
+	a.configWriteMu.Lock()
+	defer a.configWriteMu.Unlock()
+
 	cfg := a.LoadAppConfig()
 	if typereg.RegistryType(rtype) == nil {
 		return fmt.Errorf("未知的资源类型: %s", rtype)

@@ -463,12 +463,13 @@
 | 存储子目录、storageSubDir、schema.ts 同步视图、resourceTypesById | [资源类型与扩展名派生层 resource-types](./utils-resource-types.md) | 歧义扩展名（.zip/.7z）禁止用扩展名直判类型，必须经 resolveTypeSafe 回退 Go DetectResourceType | - |
 | 共享类型、AppConfig、配置 | [共享类型 go/types](./go-types.md) | 共享类型必须走 go/types 单点定义，禁止在业务代码里复制类型定义 | ADR-144, ADR-192 |
 | 检查更新、更新下载、update | [自动更新 go/updater](./go-updater.md) | 更新检查必须走 go/updater，前端禁止手写更新下载逻辑 | - |
-| 界面偏好、字号、worker-prefs | [设置页 settings](./app-content-settings.md) | 卡片型设置项必须走 `stgCard()` 构造器，禁止手写 `stg-card` div 或裸样式仿卡（2026-10 含动态渲染路径 initAdvancedGrid 全清零；执法闸 = check-redlines W9，新增即红） | - |
+| 界面偏好、字号、worker-prefs | [设置页 settings](./app-content-settings.md) | 资源类型**自定义根**事实源 = `cfg.customRoots[rtype]`（ADR-095），**禁读 `configField` 小写化出的 ysmRoot/mmdRoot 等废弃字段**（Go 侧 migrateLegacyConfigFields 迁移后由 clearDeprecatedFields 清零 → 读到 undefined → 覆写徽章与「恢复默认」按钮永不渲染，用户失去清除自定义根的唯一 UI 入口，且卡片显示默认路径与 Go 实际生效路径分叉）。回退键 `configFallback` 须与 Go `resource_bindings.go\|specificRoot` 同链 | - |
 | 扩展名、支持的文件类型、拖拽过滤、RESOURCE_EXTS/ALL_EXTS | [资源类型与扩展名派生层 resource-types](./utils-resource-types.md) | 扩展名判定必须走 extensions.ts 的 isSupportedExt，拖拽导入场景禁止等待异步注册表 | - |
 | 歧义扩展名、resolveTypeSafe、预览路由 previewKey | [资源类型与扩展名派生层 resource-types](./utils-resource-types.md) | - | - |
 | 启动器检测、HMCL / PCL / Minecraft 识别 | [启动器实例发现 go/launcher](./go-launcher.md) | - | - |
-| 设置页、主题设置、键位、路径配置 | [设置页 settings](./app-content-settings.md) | 配置落盘一律走 `views/config-write.ts\|writeAppConfig(patch)`（跨视图唯一实参点，ADR-313）；设置域内部可走薄包装 `path-cards.ts\|saveCfg`（额外同步内存 cfg）。patch 语义 = 只覆盖显式传入字段、其余取保存前重读最新；偏好类读写一律 safeGet/safeSet，禁止裸 localStorage | - |
+| 设置页、主题设置、键位、路径配置 | [设置页 settings](./app-content-settings.md) | 配置落盘一律走 `views/config-write.ts\|writeAppConfig(patch)`（跨视图唯一实参点，ADR-313）；设置域内部可走薄包装 `path-cards.ts\|saveCfg`（额外同步内存 cfg）。patch 语义 = 只覆盖显式传入字段、其余取保存前重读的**磁盘**值（**全字段含 theme/themeAuto 成立**——不再读 localStorage 兜底，锐评 2026-10-15 P1）；偏好类读写一律 safeGet/safeSet，禁止裸 localStorage | - |
 | 实例目录解析、运行目录推导 | [启动器实例发现 go/launcher](./go-launcher.md) | - | - |
+| 通用红线 | [设置页 settings](./app-content-settings.md) | 异步操作防连点一律 `store.ts\|withBusy(task)`（返回是否获得锁，false 走拒绝分支如 UI 当场回退；内核即 `BusyLock`，ADR-341 归一）；`isBusy/setBusy` 已退役，禁手写「检查+置忙+finally 复位」三段 | - |
 | 通用红线 | [设置页 settings](./app-content-settings.md) | 「值→文案」多消费面共享映射表住 `ui-maps.ts`（MIRROR_UI / LINK_MODE_UI）；schema 加成员漏文案键编译期红，禁模板手写 option 裸列 | - |
 | 新增资源类型 / 修改 resource_types.json / 文件类型 | [资源注册表 registry](./resource-registry.md) | resource_types.json 是唯一事实来源；前端只读不判、禁本地重算 | - |
 | 注册表、扩展名、LinkType、BedrockModel | [共享类型 go/types](./go-types.md) | - | ADR-144, ADR-192 |
@@ -479,7 +480,7 @@
 | go/config | [Go 配置单持有点 go/config](./go-config.md) | - | - |
 | LoadRegistry/DedupConfig | [共享类型 go/types](./go-types.md) | - | ADR-144, ADR-192 |
 | repo_rtype localStorage 权威源 | [全局资源类型状态 repo-rtype](./repo-rtype.md) | - | - |
-| settings/init / keymap / store | [设置页 settings](./app-content-settings.md) | 异步操作防连点一律 `store.ts\|withBusy(task)`（返回是否获得锁，false 走拒绝分支如 UI 当场回退；内核即 `BusyLock`，ADR-341 归一）；`isBusy/setBusy` 已退役，禁手写「检查+置忙+finally 复位」三段 | - |
+| settings/init / keymap / store | [设置页 settings](./app-content-settings.md) | 卡片型设置项必须走 `stgCard()` 构造器，禁止手写 `stg-card` div 或裸样式仿卡（2026-10 含动态渲染路径 initAdvancedGrid 全清零；执法闸 = check-redlines W9，新增即红） | - |
 | useCurrentResourceType 订阅类型切换 | [全局资源类型状态 repo-rtype](./repo-rtype.md) | - | - |
 | version-check | [版本号 go/version](./go-version.md) | - | - |
 | version-updater | [自动更新 go/updater](./go-updater.md) | - | - |
@@ -678,7 +679,7 @@
 | 各组件各自读写 localStorage | - | 值不同步、设置页显示与页面行为不一致；必须经 store 单点 |
 | 键位未持久化 | - | 重启恢复默认；必须经 store 的 safeSet 落盘 |
 | label-for 合规（WCAG 4.1.2）：tpl-settings.ts 14+ 处 `<span class="label">` 全部改为 `<label for="...">` 关联对应 select/input，屏幕阅读器可正确读出关联 | `标签→控件` | - |
-| "卡片唯一造法 = `stgCard()`：新增/重构设置项（hdr 图标+标题 / body 值或控件 / `stg-card-desc` 说明 / `actions` 按钮四区）一律走 `frontend/src/views/app-content/settings/stg-card.ts` 的 `stgCard()` 构造器，禁止手写 `<div class=\"stg-card\">` 或裸 `style=\"background:var(--surf);border:...\"` 仿卡——后者三处间距/圆角/动画各自为政，迟早漂移（见样式范式契约）。**执法闸 = check-redlines W9**（扫 settings 生产文件的 stg-card/-hdr/-body 结构字面量，豁免 stg-card.ts 本体与测试）——「清零」宣称曾因无闸兜底在动态渲染路径（path-cards\|initAdvancedGrid）上失真，2026-10 收编后真清零，新增即机器回退" | `卡片型` | - |
+| "卡片唯一造法 = `stgCard()`：新增/重构设置项（hdr 图标+标题 / body 值或控件 / `stg-card-desc` 说明 / `actions` 按钮四区）一律走 `frontend/src/views/app-content/settings/stg-card.ts` 的 `stgCard()` 构造器，禁止手写 `<div class=\"stg-card\">` 或裸 `style=\"background:var(--surf);border:...\"` 仿卡——后者三处间距/圆角/动画各自为政，迟早漂移（见样式范式契约）。**执法闸 = check-redlines W9**（扫 settings 生产文件的 stg-card/-hdr/-body 结构字面量，豁免 stg-card.ts 本体与测试）——「清零」宣称曾因无闸兜底在动态渲染路径（path-cards\|initAdvancedGrid）上失真，2026-10 收编后真清零，新增即机器回退。⚠️ 同款「宣称与现实脱节」在**数据层**同样发生过一次：2026-10-15 发现该路径读的是 Go 已清零的废弃字段（见不变量「高级面板覆写根读 CustomRoots」），卡片渲染得再正典、数据也是空的——**结构合规不等于数据正确**" | `卡片型` | - |
 | "三范式各有边界，禁止混搭：卡片=（含 `stg-grid` 平铺的同族小卡，如路径/字体/鸣谢）；选择器瓦片=`theme-card`（主题六选一，已在 `.theme-picker` 内）；紧凑单控件=`settings-group`+`setting-row`（滑块/下拉/开关，以及键位动作行）。键位是快捷键单值，不得为每个动作嵌套一张 `stg-card`" | `stgCard()` | - |
 | 各视图层自己判断模式 | - | 状态分裂、拖拽行为不一致；必须经 workshop-browse-mode 单点 |
 | site 拖拽排序未回写 workshop-data | - | 刷新丢失；必须经 events.ts 的 drag 事件统一落盘 |

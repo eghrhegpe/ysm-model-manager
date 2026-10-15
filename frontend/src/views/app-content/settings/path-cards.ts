@@ -181,21 +181,36 @@ export function initAdvancedGrid(
     rtype: string;
     icon: string;
     name: string;
-    cfgKey: string;
+    /** 覆写根回退键（configFallback，如 vrc → EntityPlayer 侧类型），无则空串 */
+    fallbackKey: string;
   }
   const advancedTypes: AdvancedType[] = Object.values(reg).map((entry: ResourceType) => ({
     rtype: entry.id,
     icon: entry.icon ?? "📦",
     name: entry.name || entry.id,
-    cfgKey: entry.configField
-      ? String(entry.configField).charAt(0).toLowerCase() + String(entry.configField).slice(1)
-      : "",
+    fallbackKey: entry.configFallback || "",
   }));
 
-  // cfg 动态索引辅助（cfgKey 来自配置字段，类型收窄为字符串索引）
-  const cfgAny = getCfg() as unknown as Record<string, unknown>;
-  const cfgStr = (key: string): string =>
-    typeof cfgAny[key] === "string" ? (cfgAny[key] as string) : "";
+  // 覆写根表（AppConfig.CustomRoots[rtype]，ADR-095 唯一事实源）。
+  // null（Go nil map → JSON null）归一为空表——直接索引会 TypeError。
+  const rootsOf = (): Record<string, string> => {
+    const roots = (getCfg() as unknown as { customRoots?: unknown }).customRoots;
+    return roots && typeof roots === "object" ? (roots as Record<string, string>) : {};
+  };
+
+  /** 该类型的自定义根；未覆写返回空串。
+   *
+   * 镜像 Go `internal/app|resource_bindings.go|specificRoot`：先查 rtype 自身 key，
+   * 再查 configFallback 链（vrc → 其回退类型），都无则空串 = 未覆写。
+   * ⚠️ 历史缺陷：本函数原按注册表 `configField`（"YsmRoot"）小写化推 `cfgKey` 去读
+   * cfg.ysmRoot/mmdRoot 等废弃字段——Go 侧两条读路径都跑 migrateLegacyConfigFields，
+   * 末尾 clearDeprecatedFields 已把它们清零 → overridePath 恒空 → 「已自定义」徽章与
+   * 「恢复默认」按钮永不渲染，用户失去清除自定义根的唯一 UI 入口，且卡片显示的默认路径
+   * 与 Go 实际生效的自定义根分叉。改读 CustomRoots 即根治。 */
+  const overrideRootOf = (at: AdvancedType): string => {
+    const roots = rootsOf();
+    return roots[at.rtype] || (at.fallbackKey ? roots[at.fallbackKey] || "" : "") || "";
+  };
 
   const refreshAdvanced = async (): Promise<void> => {
     const grid = root.getElementById("set-advanced-grid");
@@ -207,8 +222,7 @@ export function initAdvancedGrid(
     //（沿用 .stg-card-hdr 基类 fs-sm）；name/rtype 补 esc（注册表数据此前裸插，防御性加强）。
     grid.innerHTML = advancedTypes
       .map((at) => {
-        const canOverride = !!at.cfgKey;
-        const overridePath = canOverride ? cfgStr(at.cfgKey) : "";
+        const overridePath = overrideRootOf(at);
         const defaultPath = getCfg().filesRoot
           ? `${getCfg().filesRoot}/${groupStorageRootOf(at.rtype) || at.rtype || ""}`
           : t("settings.path.notSetStorage");
@@ -242,8 +256,14 @@ export function initAdvancedGrid(
           if (!pickResult.ok) return;
           const { SetResourceRoot } = await backendGetApp();
           await SetResourceRoot(rtype, pickResult.dir);
-          const found = advancedTypes.find((a) => a.rtype === rtype);
-          if (found?.cfgKey) cfgAny[found.cfgKey] = pickResult.dir;
+          // 内存 cfg 同步：写入 CustomRoots[rtype]（与 Go saveConfig 落盘的键同一处）。
+          // 原代码写 cfgAny[cfgKey]（废弃字段名）——既写不进 Go 真正读取的表，
+          // 又在下一轮 refreshAdvanced 被 overrideRootOf 从 customRoots 读出「未覆写」，
+          // 两处指向不同键，等于自己把自己的显示改没。
+          const cfgRoots = (getCfg() as unknown as { customRoots?: unknown }).customRoots;
+          if (cfgRoots && typeof cfgRoots === "object") {
+            (cfgRoots as Record<string, string>)[rtype] = pickResult.dir;
+          }
           refreshAdvanced();
           toast(t("settings.path.set"), TOAST_MS.success, "success");
         } catch (e) {
@@ -263,8 +283,12 @@ export function initAdvancedGrid(
         try {
           const { ResetResourceRoot } = await backendGetApp();
           await ResetResourceRoot(rtype);
-          const found = advancedTypes.find((a) => a.rtype === rtype);
-          if (found?.cfgKey) cfgAny[found.cfgKey] = "";
+          const cfgRoots = (getCfg() as unknown as { customRoots?: unknown }).customRoots;
+          if (cfgRoots && typeof cfgRoots === "object") {
+            // Go 侧 SetResourceRoot(rtype, "") 是置空串而非删 key，故此处同口径置空
+            //（delete 也能落回 FilesRoot，但置空与磁盘态一致，避免下次读回出现分歧）
+            (cfgRoots as Record<string, string>)[rtype] = "";
+          }
           refreshAdvanced();
           cardRefreshers.forEach((fn) => {
             fn();

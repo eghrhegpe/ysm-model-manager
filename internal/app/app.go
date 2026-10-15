@@ -63,9 +63,26 @@ type App struct {
 	configCache           types.AppConfig
 	configLoaded          bool
 	configMu              sync.RWMutex
-	watcherMu             sync.Mutex
-	app                   *application.App
-	mainWindow            *application.WebviewWindow
+	// configWriteMu 串行化「读-改-写」事务（锐评 2026-10-15 P2）。
+	//
+	// 为什么 configMu 不够：configMu 只护 configCache 这份**内存副本**的读写，
+	// 而配置写入的形态是 LoadAppConfig() → 改若干字段 → saveConfig(cfg)，
+	// 事务整体跨在锁之外。两个写并发时两者读到同一份快照，各自改不同字段，
+	// 后写者把自己的快照整份落盘 = 前写者的改动被静默覆盖。
+	//
+	// 例（真实可达路径）：用户在设置页改链接模式（前端连点两下主题，两次
+	// writeAppConfig 互不 await），同时侧栏自动检测完成写 mcRoot ——
+	// 后者用改 mcRoot 前的快照落盘，把前者的 theme/linkMode 冲回旧值。
+	//
+	// ADR-313 把「实参点单点」收在 JS 侧，但磁盘写入面是 5 宽的
+	// （SaveAppConfig / SetDownloadMirror / SaveThresholds / SetResourceRoot /
+	// ResetResourceRoot），且前端各调用点独立 void 不串行 —— 止血只能落在
+	// 这一层。**持锁范围 = 整个 Load→modify→save**，不是 saveConfig 本身
+	// （saveConfig 内已自取 configMu 写缓存，二者不构成嵌套反序）。
+	configWriteMu sync.Mutex
+	watcherMu     sync.Mutex
+	app           *application.App
+	mainWindow    *application.WebviewWindow
 
 	// Plaza browser window (ADR-050)
 	plazaWin           *application.WebviewWindow

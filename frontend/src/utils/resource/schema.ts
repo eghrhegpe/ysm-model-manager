@@ -30,7 +30,16 @@ export interface ResourceType {
   groupIcon?: string;
   extensions?: string[];
   storageSubDir?: string;
+  /** 历史废弃字段名（YsmRoot/MmdRoot…）。Go 侧自 ADR-095 起唯一事实源是
+   *  AppConfig.CustomRoots[rtype]，这些字段经 migrateLegacyConfigFields 迁移后由
+   *  clearDeprecatedFields 清零 → **前端消费它恒读到 undefined**。
+   *  ⚠️ 保留声明仅为迁移期对账，消费「自定义根」一律读 customRoots[rtype]；
+   *  误用此字段的典型症状 = 覆写状态恒不显示（历史缺陷，见 path-cards|initAdvancedGrid）。 */
   configField?: string;
+  /** 覆写根回退键（Go registry 语义：如 vrc → MmdRoot 侧类型）。镜像 Go
+   *  internal/app|resource_bindings.go|specificRoot 的回退链时需要，故同步声明——
+   *  Go 有、前端无 → 加条目时两边回退行为分叉且无人察觉。 */
+  configFallback?: string;
   instanceDir?: string;
   preview?: string;
   detector?: string;

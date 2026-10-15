@@ -11,6 +11,7 @@ import { waitFor } from "@/test-utils/index.ts";
 import { initSettings } from "./init.ts";
 import { saveCfg } from "./path-cards.ts";
 import { t } from "@/core/i18n/t.ts";
+import { resourceTypesById } from "@/utils/resource/schema.ts";
 // 降级路径预期告警静音：CurrentVersion 失败 / relink 失败 / 语言包加载跳过
 import { stubConsoleWarn } from "@/test-utils/mock-log.ts";
 
@@ -157,21 +158,37 @@ function makeRoot(): { root: ShadowRoot; el: HTMLDivElement } {
 
 let appObj: Record<string, ReturnType<typeof vi.fn>>;
 
+/** 本次 mock 的配置快照（LoadAppConfig 返回它，Set/ResetResourceRoot 回写它）。
+ *  刻意做成**单一可变对象**并让 Set/ResetResourceRoot 按 Go 语义改 CustomRoots：
+ *  原 mock 把 SetResourceRoot 写成空函数，前端遂在自己内存里另存一份镜像，
+ *  于是「显示覆写状态」测的是这份镜像而非 Go 真正读取的 customRoots
+ *  ——生产里两者不同键，该假绿灯正是历史缺陷能长期存活的土壤。 */
+let cfgObj: Record<string, unknown>;
+
 function mockApp(overrides: Record<string, unknown> = {}) {
+  // 形状对齐 Go migrateLegacyConfigFields + clearDeprecatedFields 之后的真实产物：
+  // 旧字段（ysmRoot/mmdRoot…）已清零 = undefined，唯一覆写事实源是 customRoots。
+  cfgObj = {
+    filesRoot: "/repo",
+    resourcepackRoot: "",
+    mcRoot: "",
+    linkMode: "copy",
+    mirror: "",
+    customRoots: {},
+  };
   appObj = {
-    LoadAppConfig: vi.fn(() => ({
-      filesRoot: "/repo",
-      resourcepackRoot: "",
-      mcRoot: "",
-      linkMode: "copy",
-      mirror: "",
-    })),
+    LoadAppConfig: vi.fn(() => cfgObj),
     SaveAppConfig: vi.fn(),
     SelectDirectory: vi.fn(() => "/pick"),
     GetMinecraftPaths: vi.fn(() => []),
     SetLinkMode: vi.fn(),
-    SetResourceRoot: vi.fn(),
-    ResetResourceRoot: vi.fn(),
+    // 镜像 Go SetResourceRoot：写 CustomRoots[rtype] 并经 saveConfig 回写内存缓存
+    SetResourceRoot: vi.fn((rtype: string, path: string) => {
+      (cfgObj.customRoots as Record<string, string>)[rtype] = path;
+    }),
+    ResetResourceRoot: vi.fn((rtype: string) => {
+      (cfgObj.customRoots as Record<string, string>)[rtype] = "";
+    }),
     CurrentVersion: vi.fn(() => "v1.2.3"),
     OpenInBrowser: vi.fn(),
     ListVersionInstances: vi.fn(() => []),
@@ -925,8 +942,10 @@ describe("initSettings — 高级面板路径设置/重置", () => {
   });
 
   it("重置 → ResetResourceRoot + 卡片刷新 + toast", async () => {
-    const resetFn = vi.fn();
-    mockApp({ SetResourceRoot: vi.fn(), ResetResourceRoot: resetFn });
+    const resetFn = vi.fn((rtype: string) => {
+      (cfgObj.customRoots as Record<string, string>)[rtype] = "";
+    });
+    mockApp({ SetResourceRoot: appObj.SetResourceRoot, ResetResourceRoot: resetFn });
     const { root } = makeRoot();
     await initSettings(root);
     const grid = root.getElementById("set-advanced-grid") as HTMLElement;
@@ -939,6 +958,84 @@ describe("initSettings — 高级面板路径设置/重置", () => {
       "toast:show",
       expect.objectContaining({ msg: expect.stringContaining("已恢复默认") }),
     );
+  });
+});
+
+// P0 回归（锐评 2026-10-15）：覆写状态读的是 **CustomRoots[rtype]**（ADR-095 唯一事实源），
+// 不是注册表 configField 小写化出的废弃字段名。Go 侧 migrateLegacyConfigFields 已把
+// ysmRoot/mmdRoot 等旧字段迁移后由 clearDeprecatedFields 清零 → 读旧字段恒 undefined
+// → 「已自定义」徽章与「恢复默认」按钮永不渲染，且卡片显示的默认路径与 Go 实际生效的
+// 自定义根分叉（用户失去清除自定义根的唯一 UI 入口）。
+describe("initSettings — 高级面板覆写根读 CustomRoots（ADR-095）", () => {
+  /** 从**零构造**的 cfg 预置覆写（不依赖任何前端写回路径）——
+   *  这是与历史假绿灯的根本区别：彼时徽章是靠前端自己补写的镜像出现的。 */
+  async function gridWithPreExistingOverride(rtype: string, override: string) {
+    mockApp({
+      LoadAppConfig: vi.fn(() => ({
+        filesRoot: "/repo",
+        mcRoot: "",
+        linkMode: "copy",
+        customRoots: { [rtype]: override },
+      })),
+    });
+    const { root } = makeRoot();
+    await initSettings(root);
+    return root.getElementById("set-advanced-grid") as HTMLElement;
+  }
+
+  it("cfg.customRoots 预置覆写 → 卡片显示覆写路径（不是 filesRoot 默认路径）", async () => {
+    const grid = await gridWithPreExistingOverride("ysm", "/custom/ysm-root");
+    const picker = grid.querySelector('.stg-path-picker[data-rtype="ysm"]') as HTMLElement;
+    expect(picker.textContent).toContain("/custom/ysm-root");
+    expect(picker.textContent).not.toContain("/repo");
+  });
+
+  it("cfg.customRoots 预置覆写 → 「已自定义」徽章与恢复默认按钮都在（清除入口不丢）", async () => {
+    const grid = await gridWithPreExistingOverride("ysm", "/custom/ysm-root");
+    expect(grid.querySelector(".stg-custom-badge")).toBeTruthy();
+    expect(grid.querySelector('.stg-adv-reset[data-rtype="ysm"]')).toBeTruthy();
+  });
+
+  it("未覆写的类型不显示徽章/重置钮（回退默认路径口径不变）", async () => {
+    const grid = await gridWithPreExistingOverride("ysm", "/custom/ysm-root");
+    // 覆写只作用于 ysm；其余类型仍走 filesRoot 默认路径且无清除入口
+    expect(grid.querySelector('.stg-adv-reset[data-rtype="schematic"]')).toBeNull();
+  });
+
+  // 回退链镜像 Go internal/app|resource_bindings.go|specificRoot：
+  // vrc 无自身覆写但回退类型有 → 仍属「已覆写」，否则显示与 Go 实际生效路径分叉。
+  it("configFallback 回退链：自身无覆写但回退类型有 → 判为已覆写", async () => {
+    // 找一个声明了 configFallback 的类型，构造「只有回退键有值」的 cfg
+    const withFallback = Object.values(resourceTypesById).find(
+      (t) => t.configFallback && (t.configFallback as string) !== t.id,
+    );
+    if (!withFallback) return; // 注册表未声明回退键 → 无此语义可验（非失败）
+    const grid = await gridWithPreExistingOverride(
+      withFallback.configFallback as string,
+      "/custom/fallback-root",
+    );
+    expect(grid.querySelector(`.stg-path-picker[data-rtype="${withFallback.id}"]`)!.textContent).toContain(
+      "/custom/fallback-root",
+    );
+    expect(
+      grid.querySelector(`.stg-adv-reset[data-rtype="${withFallback.id}"]`),
+    ).toBeTruthy();
+  });
+
+  it("customRoots 为 null（Go nil map → JSON null）→ 按未覆写处理，不抛错", async () => {
+    mockApp({
+      LoadAppConfig: vi.fn(() => ({
+        filesRoot: "/repo",
+        mcRoot: "",
+        linkMode: "copy",
+        customRoots: null,
+      })),
+    });
+    const { root } = makeRoot();
+    await initSettings(root);
+    const grid = root.getElementById("set-advanced-grid") as HTMLElement;
+    expect(grid.querySelector(".stg-custom-badge")).toBeNull();
+    expect(grid.querySelector('.stg-path-picker[data-rtype="ysm"]')!.textContent).toContain("/repo");
   });
 });
 
@@ -1289,8 +1386,18 @@ describe("saveCfg — 设置域唯一配置出口（patch 语义，锐评第八�
     await initSettings(root);
     localStorage.setItem("theme", "ocean");
     await saveCfg({ mcRoot: "/new-mc" });
-    // filesRoot/rpRoot/linkMode 取重读值（非 initSettings 快照），仅 mcRoot 被 patch
-    expect(saveFn).toHaveBeenCalledWith("/latest", "/latest-rp", "/new-mc", "hardlink", "ocean", "");
+    // filesRoot/rpRoot/linkMode 取重读值（非 initSettings 快照），仅 mcRoot 被 patch；
+    // theme 缺省亦取磁盘重读值（此处磁盘无 theme → 回落 THEME_DARK），
+    // localStorage 的 "ocean" 不参与决策——否则它会被无关保存写进磁盘备份
+    const { THEME_DARK } = await import("@/theme-core");
+    expect(saveFn).toHaveBeenCalledWith(
+      "/latest",
+      "/latest-rp",
+      "/new-mc",
+      "hardlink",
+      THEME_DARK,
+      "",
+    );
   });
 
   it("theme / themeAuto 可经 patch 覆盖（主题段与链接模式段共用的出口字段）", async () => {

@@ -16,12 +16,11 @@
 // 与 path-cards.ts|saveCfg 的关系：本文件是**唯一实参点**，saveCfg 降级为薄包装
 // （补 settings 域的模块级 cfg 内存同步）。app-sidebar 两处直接调本模块，不再手抄配方。
 //
-// 分层：views/config-write.ts → { backend-deps, settings-schema, utils/storage, theme-core }
+// 分层：views/config-write.ts → { backend-deps, settings-schema, theme-core }
 // 全为向下依赖或同层数据叶，不拉起任何 settings 页面模块（app-sidebar 分块不受污染）。
 
 import { bus } from "@/bus";
 import { THEME_DARK } from "@/theme-core";
-import { safeGet } from "@/utils/base/primitives/storage.ts";
 import { LINK_MODE_DEFAULT } from "@/views/app-content/settings/settings-schema.ts";
 // 精确同目录（views/ 根）：写 `./` 而非别名（check-path-hygiene R5）；且 R5 白名单
 // 只认 `*-deps.ts`，故本文件不得直连 backend/app.ts，只能经此转发。
@@ -39,7 +38,7 @@ export interface AppConfigPatch {
   rpRoot?: string;
   mcRoot?: string;
   linkMode?: string;
-  /** 缺省取 localStorage 当前值（各写入方均先 safeSet 再保存，语义与显式传入等价） */
+  /** 未传 = 重读磁盘当前值（与其余字段同口径，ADR-313 patch 契约对全字段成立） */
   theme?: string;
   themeAuto?: string;
 }
@@ -50,7 +49,8 @@ export interface AppConfigPatch {
  * 语义（与 Go 端 `orDefault` / `SanitizeLinkMode` 对齐）：
  * - 未 patch 的字段取**重读**的最新落盘值，重读失败退化为上次读到的值；
  * - 空串是「未传该参」的合法表示，Go 端 orDefault 会保留旧值；
- * - theme/themeAuto 缺省取 localStorage（非法值由主题层 normalizeTheme 兜底）；
+ * - 全字段（含 theme/themeAuto）一律以磁盘重读值为缺省——**不读 localStorage**：
+ *   localStorage 缺席时若回落默认，会把磁盘备份冲掉（锐评 2026-10-15 P1，详见 resolved 处注释）；
  * - **不**在本函数内更新任何模块级内存快照——内存一致性归调用方（settings 域的
  *   saveCfg 包装负责同步 getCfg()），本模块保持无状态、可供任意 view 复用。
  *
@@ -73,17 +73,21 @@ export async function writeAppConfig(patch: AppConfigPatch): Promise<{
   } catch {
     /* 重读失败退化为空对象（各字段回落到空串 → Go 端 orDefault 保留旧值，尽力而为） */
   }
-  // theme/themeAuto 缺省自 localStorage：与设置页第八轮 saveCfg 同口径
-  // （各调用方均先 safeSet("theme", …) 再保存；theme-auto 无值即 off 语义）
-  const theme = patch.theme !== undefined ? patch.theme : safeGet("theme") || THEME_DARK;
-  const themeAuto = patch.themeAuto !== undefined ? patch.themeAuto : safeGet("theme-auto") || "";
   const resolved = {
     filesRoot: patch.filesRoot !== undefined ? patch.filesRoot : latest.filesRoot || "",
     rpRoot: patch.rpRoot !== undefined ? patch.rpRoot : latest.resourcepackRoot || "",
     mcRoot: patch.mcRoot !== undefined ? patch.mcRoot : latest.mcRoot || "",
     linkMode: patch.linkMode !== undefined ? patch.linkMode : latest.linkMode || LINK_MODE_DEFAULT,
-    theme,
-    themeAuto,
+    // theme/themeAuto 与其余四字段同口径：未 patch = 重读磁盘（ADR-313 patch 契约对全字段成立）。
+    //
+    // 锐评 2026-10-15 P1 修复：原实现读 localStorage 兜底（`safeGet("theme") || THEME_DARK`），
+    // 平时与写入方「先 safeSet 再保存」同值看不出问题，但 localStorage 一旦为空（WebView2
+    // profile 被重置 / 用户清站点数据）——此时任何一次无关保存（例：侧栏自动检测游戏目录后
+    // 写 { mcRoot }）都会把磁盘上的主题**备份**冲成 THEME_DARK，即用户只改了路径、主题却
+    // 被改成默认。而 initTheme 的优先级恰是反的（localStorage 优先、Go 配置兜底），
+    // 两边对「谁是权威」各持一词。现统一为：磁盘是备份权威，localStorage 不是。
+    theme: patch.theme !== undefined ? patch.theme : latest.theme || THEME_DARK,
+    themeAuto: patch.themeAuto !== undefined ? patch.themeAuto : latest.themeAuto || "",
   };
   await SaveAppConfig(
     resolved.filesRoot,

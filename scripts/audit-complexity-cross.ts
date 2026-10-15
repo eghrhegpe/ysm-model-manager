@@ -27,6 +27,12 @@
  *
  * 免责：**不做自动判定**「该拆/不该拆」——声明式瀑布拆成「每节点一函数」反而分散，
  * 该决策留给治理方人工判断。本脚本只把盲区候选**摆上台面**。
+ *
+ * 依赖:node:child_process / node:fs / ./_lib/(parse-args.ts、scan-files.ts)（零外部包，
+ * 复用仓内既有的行数与复杂度口径实现，不引第三方）。
+ * 设计意图:补 line-counter 与 check-complexity 两工具的交叉盲区——「行数红但认知绿」
+ *   的函数前者照单全收、后者判绿，这类单函数承担过多职责的债正落在两者之间；
+ *   情报型不挂门禁，故退出码恒 0，命中与否交人判而非机器拦。
  */
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";

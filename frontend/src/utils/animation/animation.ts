@@ -433,6 +433,39 @@ function parseClipBones(
   }
 }
 
+/** 收集 Molang 表达式（action 为字符串或字符串数组） */
+function collectMolangExprs(actionRaw: unknown): string[] {
+  const exprs: string[] = [];
+  if (typeof actionRaw === "string") {
+    exprs.push(actionRaw);
+  } else if (Array.isArray(actionRaw)) {
+    for (const item of actionRaw) {
+      if (typeof item === "string") exprs.push(item);
+    }
+  }
+  return exprs;
+}
+
+/** 编译所有表达式（编译失败的写入 errors，对齐 Molang 零占位降级口径） */
+function compileTimelineActions(
+  clip: AnimationClip,
+  t: number,
+  exprs: string[],
+  errors: string[],
+  parser: MolangParser,
+): MolangFn[] {
+  const actions: MolangFn[] = [];
+  for (const expr of exprs) {
+    const fn = parser.compileMolang(expr);
+    if (fn) {
+      actions.push(fn);
+    } else {
+      errors.push(`[${clip.name}] timeline 编译失败: ${expr} (t=${t})`);
+    }
+  }
+  return actions;
+}
+
 /**
  * [子函数 4/5] 解析 timeline 事件：时间戳 → Molang 表达式收集 → 编译 → 排序。
  * 发现任一合法事件时写入 clip.timeline 并标记 clip.hasMolang。
@@ -453,27 +486,10 @@ function parseClipTimeline(
     const t = Number(timeStr);
     if (!Number.isFinite(t)) continue;
 
-    // 收集 Molang 表达式（字符串或字符串数组）
-    const exprs: string[] = [];
-    if (typeof actionRaw === "string") {
-      exprs.push(actionRaw);
-    } else if (Array.isArray(actionRaw)) {
-      for (const item of actionRaw) {
-        if (typeof item === "string") exprs.push(item);
-      }
-    }
+    const exprs = collectMolangExprs(actionRaw);
     if (exprs.length === 0) continue;
 
-    // 编译所有表达式（编译失败的写入 errors，对齐 Molang 零占位降级口径）
-    const actions: MolangFn[] = [];
-    for (const expr of exprs) {
-      const fn = parser.compileMolang(expr);
-      if (fn) {
-        actions.push(fn);
-      } else {
-        errors.push(`[${clip.name}] timeline 编译失败: ${expr} (t=${t})`);
-      }
-    }
+    const actions = compileTimelineActions(clip, t, exprs, errors, parser);
     if (actions.length > 0) {
       events.push({ time: t, actions, raw: exprs });
       clip.hasMolang = true;

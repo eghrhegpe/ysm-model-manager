@@ -1,11 +1,27 @@
 package types
 
+// SchemaVersion 是当前磁盘配置文件的迁移版本。
+//
+// 版本门控的由来：本仓配置迁移历史上反复踩"启发式判据失灵"——2936d7da6（白名单漏字段、
+// 新增字段被零值覆盖）、8c858c54a（启动路径漏跑字段迁移）、3b87efdca（theme 缺省口径）
+// 都是靠"字段是否为空/是否被拷贝"猜要不要迁移。版本号把「迁移是否要跑」从字段状态
+// 换成显式数字，使每次结构性迁移一次到位、且未来版本可精确追溯（何时加的字段、
+// 哪些文件需要它）。
+const SchemaVersion = 1
+
 // AppConfig 应用持久化配置
 // 独立路径下沉为 CustomRoots map（ADR-095）：以资源类型 id 为 key（如 "ysm"→"D:/.../ysm"），
 // 取代过去 YsmRoot/ResourcepackRoot/... 7 个独立字段，避免资源类型膨胀时结构体硬编码。
 // configField 语义：存储的是资源类型 id（非结构体字段名），具体路由逻辑在 internal/app/resource_bindings.go
 // 统一查 CustomRoots map，检索 "customRoots" 即可抓到全貌。
 type AppConfig struct {
+	// SchemaVersion 磁盘配置文件的迁移版本（缺失/0 = 无版本的遗留文件）。
+	// 结构性迁移（migrateLegacyConfigFields）按本字段门控：文件版本 < SchemaVersion
+	// 才跑迁移并盖当前版本章；≥ 当前版本不再重跑启发式——历史多次配置迁移 bug
+	// 同根于「无版本 + 字段空不空」的启发式判据（见 internal/app 的 applyConfigMigrations）。
+	// 字段放首位：版本是描述"这份文件怎么解释"的元数据，与业务字段分开读。
+	SchemaVersion int `json:"schemaVersion,omitempty"`
+
 	FilesRoot   string            `json:"filesRoot"`   // 统一文件存储根目录，各类型默认存 {filesRoot}/{subDir}/
 	CustomRoots map[string]string `json:"customRoots"` // 资源类型 id → 自定义根路径（留空则回退 FilesRoot）
 

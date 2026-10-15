@@ -134,7 +134,8 @@ func (a *App) loadAppConfig() {
 	// 用户在设置页任意一次保存（哪怕只改主题）就会把它清零且不回填 → specificRoot("ysm")
 	// 返回空 → GetRepoRoot 静默回退 FilesRoot 派生路径，用户独立路径彻底丢失。
 	// ADR-296 D6 审查② 当时只对称化了 washLinkMode，字段迁移被漏。
-	migrateLegacyConfigFields(&cfg)
+	// 现统一走版本门控的 applyConfigMigrations（两路对称，见该函数注释）。
+	applyConfigMigrations(&cfg)
 	// 加载侧软校验：见 washLinkMode（ADR-296 D6）
 	washLinkMode(&cfg)
 	if cfg.LinkMode != "" {
@@ -156,6 +157,26 @@ func washLinkMode(cfg *types.AppConfig) {
 	if cfg.LinkMode != "" && !install.IsValidLinkMode(cfg.LinkMode) {
 		log.Printf("[config] 链接模式非法: %q ——洗为默认（copy），磁盘保留原值", cfg.LinkMode)
 		cfg.LinkMode = ""
+	}
+}
+
+// applyConfigMigrations 对读出的配置执行**版本门控**的结构性迁移。
+// loadAppConfig 与 LoadAppConfig 惰性路径**必须共用本函数**——两路都直填 configCache，
+// 任一路漏跑即复现 8c858c54a 的病灶（旧字段未被搬进 CustomRoots 却被 clearDeprecatedFields 清零，
+// 用户存量独立路径在下次任意保存时静默丢失）。
+//
+// 门控规则（取代旧的"每次读盘都跑 migrateLegacyConfigFields"）：
+//   - SchemaVersion < types.SchemaVersion（含 0/缺失的遗留文件）→ 跑字段迁移 + 盖当前版本章。
+//   - SchemaVersion >= types.SchemaVersion → 结构已迁移，不再重跑启发式。旧实现每次读盘都
+//     重跑，等价于"永远假设文件是旧的"，版本号一旦存在就失去意义。
+//
+// 与 washLinkMode 的分工：washLinkMode 是**值软校验**（幂等，每读必跑，非法 linkMode 进内存即脏）；
+// 本函数是**结构迁移**（一次，盖章后不再重复）。二者不可合并——值校验必须每读跑，
+// 结构迁移必须只跑一次。
+func applyConfigMigrations(cfg *types.AppConfig) {
+	if cfg.SchemaVersion < types.SchemaVersion {
+		migrateLegacyConfigFields(cfg)
+		cfg.SchemaVersion = types.SchemaVersion
 	}
 }
 
@@ -401,7 +422,8 @@ func (a *App) LoadAppConfig() types.AppConfig {
 		return a.configCache
 	}
 	// ADR-095: 将废弃的独立配置字段（YsmRoot/MmdRoot 等）迁移到 CustomRoots map
-	migrateLegacyConfigFields(&a.configCache)
+	// 版本门控：与 loadAppConfig 共用 applyConfigMigrations（两路对称，8c858c54a 病灶）
+	applyConfigMigrations(&a.configCache)
 	// 惰性路径与 loadAppConfig 同洗脏值（ADR-296 D6 审查 ②：启动 IO 失败后首次调用
 	// 走本路径直填 configCache，不洗则脏 linkMode 从旁路漏进前端下拉——两路对称）
 	washLinkMode(&a.configCache)

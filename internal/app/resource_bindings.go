@@ -312,6 +312,11 @@ func (a *App) ResetResourceRoot(rtype string) error {
 
 // saveConfig 写入配置到文件
 func (a *App) saveConfig(cfg types.AppConfig) error {
+	// ⚠️ 不在本处盖 schema 版本章：版本是「迁移已执行」的提交标记，只能由
+	// applyConfigMigrations 在真正跑完迁移后写入。若在写盘时无脑盖章，
+	// 一份**未迁移**的配置（如程序化构造的 AppConfig，未经 LoadAppConfig）会被
+	// 盖上「已迁移」的假章，下次读取跳过迁移 → 复现 8c858c54a 的静默数据丢失。
+	// 正确的流转：遗留文件(无版本) → 读取时迁移 + 盖章 → 下次保存写出带版本章的文件。
 	// roots（FilesRoot/CustomRoots 等）可能变更：失效 isPathInRootOrSelf 的
 	// root 解析缓存，防止扫描守卫用过期的根真实路径做 symlink 复核
 	// （组件化 ADR-134 同构，见 app_resolved_root_cache.go）

@@ -85,6 +85,7 @@ auto_fields:
     - ResourceSyncItem
     - ResourceSyncResult
     - RuntimeLog
+    - SchemaVersion
     - SearchFilters
     - SearchResult
     - ShaderpackLang

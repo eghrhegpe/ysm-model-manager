@@ -90,6 +90,16 @@ export function diskFieldName(key: string): string {
 export const SETTINGS_KEYS: readonly SettingsKeyEntry[] = [
   // ─── Go 磁盘轨（ysm_config.json，随标准迁移流程保住）───────────────────
   {
+    key: "disk:schemaVersion",
+    setting: "配置文件 schema 版本（迁移门控）",
+    tier: "go-disk",
+    authority: "disk-authority",
+    migrates: true,
+    goField: "SchemaVersion",
+    owner: "internal/app/app_config.go",
+    note: "结构性迁移（旧独立路径 → CustomRoots）按本字段门控：文件版本 < 当前版本才迁移并盖版本章，≥ 则跳过（幂等）。取代旧「字段空不空」的启发式判据——历史多次迁移 bug（白名单漏字段/启动路径漏跑迁移）同根于此。版本章只能由 applyConfigMigrations 在迁移完成后盖，写盘不越权盖章",
+  },
+  {
     key: "disk:filesRoot",
     setting: "文件存储根目录",
     tier: "go-disk",

@@ -8,8 +8,26 @@ source_files:
   - frontend/src/settings-keys.ts
   - tests/test_settings_key_ledger.ts
   - go/types/config.go
+  - internal/app/app_config.go
 auto_fields:
   symbols_with_lines:
+    - App.CheckUpdate
+    - App.CurrentVersion
+    - App.DoUpdate
+    - App.GetConfigPath
+    - App.GetMinecraftPaths
+    - App.GetSubDirMap
+    - App.GetWindowPosition
+    - App.LoadAppConfig
+    - App.RestartApplication
+    - App.SaveAppConfig
+    - App.SaveAppConfigPatch
+    - App.SaveThresholds
+    - App.SaveWindowPosition
+    - App.SelectDirectory
+    - App.SetDownloadMirror
+    - App.SetSessionFilesRoot
+    - App.ValidateMinecraftDir
     - AppConfig
     - AppConfigPatch
     - DedupConfig
@@ -23,6 +41,7 @@ auto_fields:
     - PackMetaView
     - PackModelDetail
     - PackModelDetailList
+    - SchemaVersion
     - SETTINGS_KEYS
     - SettingsAuthority
     - SettingsKeyEntry
@@ -34,7 +53,7 @@ auto_fields:
     - WorkshopCreator
     - WorkshopPresetSearch
     - WorkshopSite
-last_verified: 2026-10-15
+last_verified: 2026-10-16
 use_when:
   - 新增或修改任何会被用户感知的设置项（判断它落在哪一轨、是否随迁移保住）
   - 改配置写入/读取路径（writeAppConfig / SaveAppConfigPatch / safeGet / safeSet）
@@ -111,6 +130,7 @@ quick_risk_lines:
 4. **写侧与读侧对「谁是权威」口径一致**。历史病灶：`initTheme` 曾 localStorage 优先、`writeAppConfig` 曾 localStorage 兜底，两边反向 → 磁盘备份被 localStorage 冲掉。现在写入侧未传字段由 Go 锁内重读决定（P1 ③ 前是前端重读）、读取侧 `cfg.theme || safeGet("theme")` 磁盘优先。
 5. **台账不参与运行时读写**。它是让漂移暴露的声明，不是权威——不要为了「走台账」把 safeGet 改成查表。
 6. **网页版 `ysm:config`（localStorage）是磁盘轨的网页替身**，不是桌面磁盘轨；桌面端不消费它。
+7. **结构性迁移按 `AppConfig|SchemaVersion` 门控，且只有 `applyConfigMigrations` 有权盖章**。文件版本 < 当前版本才跑迁移（旧独立路径 → `CustomRoots`）并盖版本章；≥ 则跳过（幂等）。写盘路径（`saveConfig`）**不得**越权盖章——把「未迁移」的配置标成「已迁移」会令下次读取跳过迁移，复现「启动路径漏跑迁移」的静默数据丢失。此门控取代旧「字段空不空」的启发式判据：历史多次迁移 bug（`go/types` 新增字段被白名单漏拷贝、启动路径漏跑 `migrateLegacyConfigFields`）同根于此。
 
 ## 相关
 

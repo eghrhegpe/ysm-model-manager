@@ -1645,6 +1645,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-343-d1：搜索语义收敛C1：关键词匹配单口径（名/相对路径/拼音三路）+ 拼音表单源派生",
+        "link": "/adr/decisions/ADR-343-d1-c1"
+      },
+      {
         "text": "ADR-342-d1：重链接失败结构化下发（RelinkResult 取代 ErrPartialSync 抬升）",
         "link": "/adr/decisions/ADR-342-d1-relink-result-structured"
       },

@@ -62,21 +62,17 @@ func (a *App) MoveToRecycle(src string) error {
 	return nil
 }
 
-// recycleRoots 返回参与回收站归属判定的资源根集合（唯一枚举点）：
-// ysmRoot + CustomRoots（CustomRoots 是唯一事实源，废弃字段已清空，不再读取）。
-// findRecycleRoot（归属命中）与 MoveToRecycle（根级守卫）共用本枚举——各自拼 roots 会漂移，
+// recycleRoots 返回参与回收站归属判定的资源根集合（唯一枚举点）。
+// findRecycleRoot（归属命中）与 MoveToRecycle（根级自卫）共用本枚举——各自拼 roots 会漂移，
 // 而漂移的后果正是「守卫看的根集合」≠「归属判定看的根集合」（2026-10-15 那次绕过即此类）。
-// map 以 range 展开而非 append(roots, cfg.CustomRoots...)：Go 不支持 map 展开进 append
-// （编译期报 cannot use map as []string），且 range 与拆分前的逐条 append 语义逐字一致。
+//
+// 2026-10-15 锐评收敛：本函数原是与 allRecycleRoots 逐字相近的第二份枚举（差异仅「是否过滤
+// 空串」），注释自己写着「各自拼 roots 会漂移」却仍留了两份——下一次只改其中一处时，根级
+// 自卫与归属/列举就会再次分叉（正是 bf3c8a2e2 修的那类 bug 的复发通道）。
+// 现直接委托 allRecycleRoots，一处枚举两处消费；空串由它统一过滤，
+// 与调用方（findRecycleRoot 的 `r == ""` 跳过、MoveToRecycle 的 `r != ""` 判定）语义一致。
 func (a *App) recycleRoots() []string {
-	cfg := a.LoadAppConfig()
-	roots := []string{
-		a.ysmRoot(),
-	}
-	for _, r := range cfg.CustomRoots {
-		roots = append(roots, r)
-	}
-	return roots
+	return a.allRecycleRoots(a.LoadAppConfig())
 }
 
 // findRecycleRoot 查找包含 src 路径的资源根目录（用于多类型回收）。

@@ -39,7 +39,13 @@ func WriteModelFolder(filesRoot, subpath, folderName string, files []types.Impor
 	subpath = strings.Trim(subpath, `\/`)
 	if subpath != "" {
 		clean := filepath.Clean(filepath.FromSlash(subpath))
-		if paths.HasTraversal(clean) || filepath.IsAbs(clean) {
+		// 盘符前缀须与 installer.resolveFinalDst 同口径拒绝（2026-10-15 对齐）：
+		// `C:foo` 在 Windows 上 filepath.IsAbs 返回 false、paths.HasTraversal 也不命中 →
+		// 原判定放行，一路走到 MkdirAll 才炸在文件系统层（实测报「The directory name is
+		// invalid」——冒号在 Windows 文件名非法）。⚠️ **不构成逃逸，也不产生「怪目录」**
+		// （初版锐评的「会在仓库里造出 C:foo 目录」推断已被回归用例证伪：该输入在守卫缺失时
+		// 同样失败，只是错误来自 mkdir 底层）。故本刀的真实收益 = 错误清晰度 + 两侧同答。
+		if paths.HasTraversal(clean) || filepath.IsAbs(clean) || filepath.VolumeName(clean) != "" {
 			return fmt.Errorf("子路径非法: %s", subpath)
 		}
 	}

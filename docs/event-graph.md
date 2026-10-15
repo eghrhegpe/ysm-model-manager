@@ -72,7 +72,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 117 |
-| reload | `frontend/src/views/app-tree/bus-handlers.ts` | 312 |
+| reload | `frontend/src/views/app-tree/bus-handlers.ts` | 325 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -218,7 +218,7 @@
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 386 |
 | atTeClickRowFolder | `frontend/src/views/app-tree/events.ts` | 184 |
 | atTeClickRowFile | `frontend/src/views/app-tree/events.ts` | 271 |
-| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 767 |
+| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 790 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -350,12 +350,12 @@
 | _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 229 |
 | runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 139 |
 | atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 166 |
-| atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 243 |
-| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 397 |
+| atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 256 |
+| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 410 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 129 |
 | atTeBindRenameInput | `frontend/src/views/app-tree/events.ts` | 416 |
 | toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 550 |
-| _executeTreeMove | `frontend/src/views/app-tree/index.ts` | 833 |
+| _executeTreeMove | `frontend/src/views/app-tree/index.ts` | 856 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -368,10 +368,10 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 392 |
+| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 405 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 128 |
 | toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 545 |
-| _executeTreeMove | `frontend/src/views/app-tree/index.ts` | 832 |
+| _executeTreeMove | `frontend/src/views/app-tree/index.ts` | 855 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |

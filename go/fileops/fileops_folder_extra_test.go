@@ -8,6 +8,7 @@ package fileops
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"ysm-model-manager/go/internal/testutil"
@@ -164,5 +165,35 @@ func TestWriteModelFolder_SymlinkSubpathRejected(t *testing.T) {
 	// 仓库外不应有穿透写入
 	if _, err := os.Stat(filepath.Join(outside, "sub", "模型A", "ysm.json")); !os.IsNotExist(err) {
 		t.Fatalf("仓库外不应有穿透写入: %v", err)
+	}
+}
+
+// WriteModelFolder 子路径带盘符前缀（`C:foo` 形态）→ 由**路径守卫**拒绝（2026-10-15 对齐 installer 口径）。
+//
+// 病灶：`C:foo` 在 Windows 上 filepath.IsAbs 返回 false、paths.HasTraversal 也不命中 → 原判定放行，
+// 一路走到 MkdirAll 才炸在文件系统层（实测报「The directory name is invalid」——冒号在 Windows
+// 文件名里非法）。⚠️ **不构成逃逸、也不造出「怪目录」**：初版锐评的「仓库里留下 C:foo 目录」推断
+// 已被本用例证伪——该输入在守卫缺失时同样失败，只是错误来自 mkdir 底层。故本刀收益 = 错误清晰度
+// + 与 installer.resolveFinalDst 的 VolumeName 口径同答。
+//
+// 判别力（防假绿灯）：断言错误来自**路径守卫**（含「子路径非法」）。撤掉 VolumeName 判定后，同一输入
+// 仍会 err != nil，但错误变成 mkdir 底层报错 → 只有这条消息断言能抓住它。
+// 非 Windows 平台 VolumeName 对 `C:foo` 返回空 → 用例按平台跳过（与 installer 侧同判）。
+func TestWriteModelFolder_DrivePrefixSubpathRejected(t *testing.T) {
+	if filepath.VolumeName("C:foo") == "" {
+		t.Skip("本平台 VolumeName 不识别盘符前缀，该分支不可达")
+	}
+	repo := t.TempDir()
+	files := []types.ImportFileItem{{RelPath: "ysm.json", Base64: b64(`{}`)}}
+	err := WriteModelFolder(repo, "C:foo", "模型A", files)
+	if err == nil {
+		t.Fatal("子路径带盘符前缀应拒绝（与 installer.resolveFinalDst 同口径）")
+	}
+	if !strings.Contains(err.Error(), "子路径非法") {
+		t.Fatalf("应由路径守卫拒绝（错误应含「子路径非法」），实得: %v", err)
+	}
+	// 终态：不得在仓库内造出 C:foo 目录
+	if _, serr := os.Stat(filepath.Join(repo, "C:foo")); !os.IsNotExist(serr) {
+		t.Fatalf("拒绝后不得留下 C:foo 目录: %v", serr)
 	}
 }

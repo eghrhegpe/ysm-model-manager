@@ -199,15 +199,22 @@ func (tm *TrashManager) Empty() (int, error) {
 		return 0, nil
 	}
 	// Lstat 不跟随 symlink，能识别 .recycle 本身被换 symlink 的篡改场景。
-	if info, err := os.Lstat(tm.recycleDir); err == nil {
-		if info.Mode()&os.ModeSymlink != 0 {
-			return 0, fmt.Errorf("清空回收站失败: 回收站目录是符号链接, 可能被篡改: %s", tm.recycleDir)
+	// 存在性复核与 symlink 判定合并为**同一次 Lstat**（2026-10-15 锐评加固）：原实现先 Lstat
+	// 守卫、再用 os.Stat 复核存在性，两次系统调用之间留有「换成 symlink」的窗口——该窗口内
+	// os.Stat 会跟随链接放行，随后才走到 RemoveAll。
+	// ⚠️ 诚实边界：实测 Go 的 RemoveAll **不跟随**末段 symlink（只删链接本身、外部目录树完好），
+	// 故该窗口**当前不可被利用造成数据丢失**；且所有**非竞态**路径两边语义完全一致（含断链
+	// symlink——它在旧代码的第一道 Lstat 就被拒了，并非本刀新增行为）。本刀只为把窗口归零并把
+	// 两次判定收成一次，**无法用单测判别**（差异只在竞态窗口内可达），故不写入自证式用例。
+	info, lerr := os.Lstat(tm.recycleDir)
+	if lerr != nil {
+		if os.IsNotExist(lerr) {
+			return 0, nil
 		}
-	} else if !os.IsNotExist(err) {
-		return 0, fmt.Errorf("清空回收站失败: %w", err)
+		return 0, fmt.Errorf("清空回收站失败: %w", lerr)
 	}
-	if _, err := os.Stat(tm.recycleDir); os.IsNotExist(err) {
-		return 0, nil
+	if info.Mode()&os.ModeSymlink != 0 {
+		return 0, fmt.Errorf("清空回收站失败: 回收站目录是符号链接, 可能被篡改: %s", tm.recycleDir)
 	}
 	// 先统计文件数（最佳努力）：复用 List() 的过滤口径（含 ysm.json 的文件夹模型
 	// 整组算 1 条、被禁用/受支持扩展名过滤后的文件条目）但只计数——不构造 []ModelEntry

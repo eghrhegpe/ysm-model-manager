@@ -5,6 +5,7 @@ package app
 import (
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 
@@ -116,6 +117,35 @@ func TestFindRecycleRoot_EmptyCustomRoots(t *testing.T) {
 	roots := a.allRecycleRoots(cfg)
 	if len(roots) != 1 || roots[0] != ysm {
 		t.Fatalf("空 CustomRoots 应只返回默认根 %q, got %v", ysm, roots)
+	}
+}
+
+// TestRecycleRoots_SameAsAllRecycleRoots（2026-10-15 锐评收敛）：
+// 「根级自卫 / 归属判定」看的根集合与「列表 / 清空」看的根集合**必须同答**——两者分叉正是
+// bf3c8a2e2 修的那类绕过的复发通道（守卫看的根集合 ≠ 归属判定看的根集合）。
+// 原实现是两份逐字相近的枚举，注释自己写着「各自拼 roots 会漂移」；现 recycleRoots 直接
+// 委托 allRecycleRoots，本用例把「同答」钉成不变量：任何一侧单独加派生根即当场转红。
+func TestRecycleRoots_SameAsAllRecycleRoots(t *testing.T) {
+	base := t.TempDir()
+	a := repoApp(t, types.AppConfig{
+		FilesRoot:   base,
+		CustomRoots: map[string]string{"mmd": filepath.Join(base, "mmd"), "vrc": filepath.Join(base, "vrc")},
+	})
+	got := append([]string(nil), a.recycleRoots()...)
+	want := a.allRecycleRoots(a.LoadAppConfig())
+	sort.Strings(got)
+	sort.Strings(want)
+	if len(got) != len(want) {
+		t.Fatalf("两份根枚举集合不一致（分叉即绕过复发通道）: recycleRoots=%v allRecycleRoots=%v", got, want)
+	}
+	for i := range got {
+		if got[i] != want[i] {
+			t.Fatalf("两份根枚举集合不一致: recycleRoots=%v allRecycleRoots=%v", got, want)
+		}
+	}
+	// 非空自检：枚举确实覆盖默认根 + 两个 CustomRoot，防「两边都空」的假绿
+	if len(got) != 3 {
+		t.Fatalf("根枚举应含默认根 + 2 个 CustomRoot（共 3）, got %v", got)
 	}
 }
 

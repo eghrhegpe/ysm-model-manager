@@ -167,6 +167,13 @@ func TestRestore_SymlinkInside(t *testing.T) {
 
 // Empty 守卫：.recycle 被替换为指向外部的 symlink 时应拒绝清空（防 R26 P2-1 误删外部树）。
 // 覆盖 Empty 入口 Lstat 符号链接拒绝分支。
+//
+// ⚠️ 2026-10-15 锐评补强（原用例只断言「返回 err」，漏掉真正的用户可见保证）：
+// ① 外部目录树必须**逐文件存活**——原来无任何断言，等于数据安全保证无人守；
+// ② 被篡改的链接本身必须**保持原样**（拒绝发生在删除之前，不静默把链接归一成空目录）。
+// 说明：本机实测 `os.RemoveAll` 对**末段是 symlink** 的路径**不跟随**（只删链接本身、外部树完好），
+// 故本守卫的准确价值是「对结构异常**响亮拒绝**」而非「阻止一次必然的外部删除」；
+// 但断言①②与机制无关——只要守卫在，两者恒成立（守卫被撤则 Empty 返回 nil，①处的 err 断言即转红）。
 func TestEmpty_SymlinkRejected(t *testing.T) {
 	dir := t.TempDir()
 	tm := New(dir)
@@ -175,11 +182,27 @@ func TestEmpty_SymlinkRejected(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	ext := t.TempDir()
+	sentinel := filepath.Join(ext, "sentinel.txt")
+	if err := os.WriteFile(sentinel, []byte("keep"), 0o644); err != nil {
+		testutil.NoError(t, err)
+	}
 	if err := os.Symlink(ext, tm.RecycleDir()); err != nil {
 		t.Skipf("Symlink 不可用: %v", err)
 	}
 	if _, err := tm.Empty(); err == nil {
 		t.Fatal("清空被 symlink 替换的回收站应拒绝")
+	}
+	// ① 外部数据逐文件存活（用户可见保证）
+	if _, err := os.Stat(sentinel); err != nil {
+		t.Fatalf("拒绝清空后外部数据必须完好: %v", err)
+	}
+	// ② 被篡改的链接本身不得被动（拒绝发生在任何删除之前）
+	info, lerr := os.Lstat(tm.RecycleDir())
+	if lerr != nil {
+		t.Fatalf("被篡改的回收站链接不应被改动: %v", lerr)
+	}
+	if info.Mode()&os.ModeSymlink == 0 {
+		t.Fatal("拒绝后 .recycle 应仍是那个被篡改的 symlink（不得静默归一成空目录）")
 	}
 }
 

@@ -33,6 +33,7 @@ export const ja: Record<string, string> = {
   // ── Common ──
   "common.loading": "読み込み中…",
   "common.loadFailed": "読み込みに失敗しました",
+  "common.componentLoadFailed": "コンポーネントの読み込みに失敗しました",
   "common.refresh": "更新",
   "common.cancel": "キャンセル",
   "common.search": "検索",
@@ -245,6 +246,8 @@ export const ja: Record<string, string> = {
   "settings.theme.autoSystem": "システムに追従",
   "settings.theme.autoTime": "時間帯（昼は暖色/夜は寒色）",
   "settings.theme.select": "テーマを選択",
+  "theme.followedDark": "システムに合わせてダークテーマに切り替えました",
+  "theme.followedLight": "システムに合わせてライトテーマに切り替えました",
   "settings.font.title": "フォントとレイアウト",
   "settings.font.creatorFont": "クリエイターフォント",
   "settings.font.kaiti": "楷書（アート風）",
@@ -1235,6 +1238,8 @@ export const ja: Record<string, string> = {
   "preview.capStage.load": "環境設定の復元",
   // 3D パネル描画エラー境界 + マテリアル表示 eye ボタン（preview-menu core/render/roles）
   "preview.renderFail": "パネル描画に失敗",
+  "preview.unsupportedFormat": "3Dプレビューはこの種類に未対応です（{reason}）",
+  "preview.shotSaveFailed": "スクリーンショットの保存に失敗しました：{msg}",
   "preview.eyeHide": "非表示",
   "preview.eyeShow": "表示",
   // ── 3D 統計パネル（ADR-131 P1: preview.stats.* 三段式）──

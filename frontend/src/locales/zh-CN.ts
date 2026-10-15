@@ -40,6 +40,7 @@ export const zhCN = {
   // ── 通用 ──
   "common.loading": "加载中…",
   "common.loadFailed": "加载失败",
+  "common.componentLoadFailed": "组件加载失败",
   "common.refresh": "刷新",
   "common.cancel": "取消",
   "common.search": "搜索",
@@ -247,6 +248,8 @@ export const zhCN = {
   "settings.theme.autoSystem": "跟随系统亮暗",
   "settings.theme.autoTime": "按时间段（白天暖色/夜晚冷色）",
   "settings.theme.select": "选择主题",
+  "theme.followedDark": "已跟随系统切换至深色主题",
+  "theme.followedLight": "已跟随系统切换至浅色主题",
   "settings.font.title": "字体与布局",
   "settings.font.creatorFont": "创作者字体",
   "settings.font.kaiti": "楷体（更文艺）",
@@ -1205,6 +1208,8 @@ export const zhCN = {
   "preview.capStage.load": "恢复环境设置",
   // 3D 面板渲染错误边界 + 材质显隐 eye 按钮（preview-menu core/render/roles）
   "preview.renderFail": "面板渲染失败",
+  "preview.unsupportedFormat": "3D 预览暂不支持该类型（{reason}）",
+  "preview.shotSaveFailed": "截图保存失败：{msg}",
   "preview.eyeHide": "隐藏",
   "preview.eyeShow": "显示",
   // ── 3D 统计面板（ADR-131 P1：preview.stats.* 三段式）──

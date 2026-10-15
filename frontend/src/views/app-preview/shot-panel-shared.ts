@@ -6,6 +6,7 @@
 //   - YSM：screenshot 是 ctx 可选字段（undefined = 走 renderMultiAngle fallback，面板常驻）
 // 本共享层兼容两者：screenshotFn 允许 null | undefined，saveScreenshot 第四参语义一致。
 
+import { t } from "@/core/i18n/t.ts";
 import type { PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import { logError } from "@/utils/base/primitives/log.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
@@ -46,7 +47,7 @@ function makeShotAction(
       await saveScreenshot(modelForSave, key, () => {}, screenshotFn ?? undefined);
     } catch (e) {
       logError("3D 截图", "截图保存失败", e);
-      toast(`截图保存失败：${friendlyError(e)}`, TOAST_MS.verbose, "error");
+      toast(t("preview.shotSaveFailed", { msg: friendlyError(e) }), TOAST_MS.verbose, "error");
     } finally {
       saving = false;
     }

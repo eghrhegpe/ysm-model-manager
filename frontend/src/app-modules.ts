@@ -7,6 +7,7 @@ import { Window } from "@/backend/runtime.ts";
 import { installYsmDecodeBridge } from "@/backend/ysm-decode-bridge.ts";
 import { registerErrorDiary } from "@/core/error-diary.ts";
 import { initI18n, setLocaleHost } from "@/core/i18n/locale.ts";
+import { t } from "@/core/i18n/t.ts";
 import { checkUpdateSilent } from "@/features/maintenance/version-updater.ts";
 import { registerShortcut } from "@/utils/dom/key-router.ts";
 import { makeLocaleHost } from "@/utils/dom/locale-host.ts";
@@ -26,7 +27,7 @@ export const loadView = (name: string, importer: () => Promise<unknown>): Promis
     .then(() => undefined)
     .catch((e) => {
       console.warn(`[module] 组件加载失败: ${name}`, e);
-      toastError(e, "组件加载失败");
+      toastError(e, t("common.componentLoadFailed"));
     });
 };
 
@@ -173,7 +174,7 @@ if (typeof window !== "undefined") {
     const theme = safeGet("theme") || "system";
     if (theme === "system") {
       applyTheme("system");
-      toast(`已跟随系统切换至${e.matches ? "深色" : "浅色"}主题`, TOAST_MS.success, "info");
+      toast(t(e.matches ? "theme.followedDark" : "theme.followedLight"), TOAST_MS.success, "info");
     }
   });
   // [D9⑥] OS 动画偏好热更：reduce 切换时重跑 applyUIPrefs 刷新 .no-animations

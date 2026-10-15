@@ -31,6 +31,7 @@ export const en: Record<string, string> = {
   // ── Common ──
   "common.loading": "Loading…",
   "common.loadFailed": "Failed to load",
+  "common.componentLoadFailed": "Component failed to load",
   "common.refresh": "Refresh",
   "common.cancel": "Cancel",
   "common.search": "Search",
@@ -243,6 +244,8 @@ export const en: Record<string, string> = {
   "settings.theme.autoSystem": "Follow System",
   "settings.theme.autoTime": "By Time (warm day / cool night)",
   "settings.theme.select": "Select Theme",
+  "theme.followedDark": "Switched to dark theme (system)",
+  "theme.followedLight": "Switched to light theme (system)",
   "settings.font.title": "Font & Layout",
   "settings.font.creatorFont": "Creator Font",
   "settings.font.kaiti": "Kaiti (Artistic)",
@@ -1235,6 +1238,8 @@ export const en: Record<string, string> = {
   "preview.capStage.load": "Restoring environment settings",
   // 3D panel render error boundary + material visibility eye button
   "preview.renderFail": "Panel render failed",
+  "preview.unsupportedFormat": "3D preview does not support this type yet ({reason})",
+  "preview.shotSaveFailed": "Failed to save screenshot: {msg}",
   "preview.eyeHide": "Hide",
   "preview.eyeShow": "Show",
   // ── 3D stats panel (ADR-131 P1: preview.stats.* three-segment) ──

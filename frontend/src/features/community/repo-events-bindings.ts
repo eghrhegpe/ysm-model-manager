@@ -75,7 +75,7 @@ export function cmReBindDlSelected(ctx: CmReCtx, listeners: ListenerRef[]): void
         const tasks = buildDownloadTasks(models, selectedSet, dlPrefix);
         await queue.enqueue(tasks);
       } catch (e) {
-        toast(friendlyError(e, "下载失败"), TOAST_MS.normal, "error");
+        toast(friendlyError(e, t("downloadQueue.hint.failed")), TOAST_MS.normal, "error");
       }
     });
   }
@@ -221,7 +221,7 @@ export function cmReBindRowClick(ctx: CmReCtx, listeners: ListenerRef[]): void {
           return;
         }
       } catch (e) {
-        toast(friendlyError(e, "操作失败"), TOAST_MS.normal, "error");
+        toast(friendlyError(e, t("error.fallback")), TOAST_MS.normal, "error");
       }
     });
   }

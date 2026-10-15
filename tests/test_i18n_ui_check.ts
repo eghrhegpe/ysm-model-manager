@@ -11,9 +11,10 @@
  * 覆盖：
  *   1. 纯核直测 scanSourceText：通道一（HTML 信号）回归不劣化；通道二（UI 值字段上下文）
  *      各形态（同行对象/缩进多行/模板串）；通道三（throw/reject/TypeError 中文 + t() 豁免 +
- *      i18n-allow 内部诊断豁免）；豁免族（t() 包裹/label 判净#5/语言选择器/注释遮罩）；
- *      i18n-allow 行级台账（命中行/上一行/相隔两行不逃逸）
- *   2. 真仓 CLI：--json 合法 + 通道三生效（throw/reject 中文被捕获）；--stric 拼错退 1（flag 白名单回归）
+ *      i18n-allow 内部诊断豁免）；通道四（toast/toastError 载荷，2026-10-15 补，ADR-331-d2）；
+ *      豁免族（t() 包裹/label 判净#5/语言选择器/注释遮罩）；i18n-allow 行级台账（命中行/上一行/
+ *      相隔两行不逃逸）
+ *   2. 真仓 CLI：--json 合法 + 通道三/四生效（真仓 drift 归零）；--stric 拼错退 1（flag 白名单回归）
  *
  * 零依赖（node:assert / node:child_process / node:path / node:url）。
  * 运行：node tests/test_i18n_ui_check.ts
@@ -107,8 +108,31 @@ check("通道二豁免族：不属 value 侧的中文不得命中", () => {
   );
 });
 
-check("通道二判据为窄口径：字面量之前的行内前缀恰为 value:/text:/tooltip: 赋值头", () => {
-  // 契约固化（2026-10-12 仲裁）：DOM 属性赋值 `el.value = "中文"`、`el.textContent = "中文"`
+check("通道四（2026-10-15 补）：toast / toastError 载荷入册", () => {
+  // 立因：这两个函数的效果就是「把文案推上屏」，但该串无 HTML 信号、非值字段赋值、
+  // 非错误构造头 → 前三通道全线失明（锐评 2026-10-13 记录的「门禁覆盖缺口」）。
+  // 补闸前探针实测该盲区下藏着 6 处 en/ja 用户可见硬编码中文。
+  assert.equal(hitCount('toast("下载失败", TOAST_MS.normal, "error");'), 1, "toast 双引号载荷");
+  assert.equal(hitCount("toast(`截图保存失败：${e}`, TOAST_MS.verbose, 'error');"), 1, "toast 模板串（剥插值后仍有中文）");
+  assert.equal(hitCount('toastError(e, "组件加载失败");'), 1, "toastError 第二参载荷");
+  // 真实病灶形态：中文藏在 toast 行内的 friendlyError(e, "…") 兜底参数里
+  assert.equal(
+    hitCount('toast(friendlyError(e, "操作失败"), TOAST_MS.normal, "error");'),
+    1,
+    "toast 行内 friendlyError 兜底串（存量病灶形态）",
+  );
+  // 豁免族：t() 直参 / i18n-allow 台账 / 非本闸射程的日志与别名调用
+  assert.equal(hitCount('toast(t("downloadQueue.hint.failed"), TOAST_MS.normal, "error");'), 0, "t() 直参已翻译");
+  assert.equal(
+    hitCount('toast("刻意中文", TOAST_MS.normal, "info"); // i18n-allow: 产品拍板保留\nvoid 0;'),
+    0,
+    "i18n-allow 台账对通道四同样生效",
+  );
+  assert.equal(hitCount('console.warn("内部诊断中文");'), 0, "日志不是 toast，不入射程（内部诊断）");
+  assert.equal(hitCount('foo.toast("中文");'), 0, "带点号前缀的别名调用不认（只认裸 toast/toastError helper）");
+});
+
+check("通道二判据为窄口径：字面量之前的行内前缀恰为 value:/text:/tooltip: 赋值头", () => {  // 契约固化（2026-10-12 仲裁）：DOM 属性赋值 `el.value = "中文"`、`el.textContent = "中文"`
   // **不入本闸射程**——判据只认对象字面量/声明式的值字段（MenuNode schema 病灶形态）。
   // DOM 赋值族属另一债面（运行时写入），扩判据前须分档防误报（D3 原文「须先分档再立闸」）。
   assert.equal(hitCount('el.value = "中文赋值"; void el;'), 0, "DOM .value 赋值不查（窄口径契约）");

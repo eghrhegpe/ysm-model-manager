@@ -25,6 +25,10 @@
  *               friendlyError/showLoadFailure 上屏，属用户可见硬编码）。内部诊断走台账豁免：
  *               `// i18n-allow: 内部诊断` 行注（命中行或上一行）即跳过（ADR-331 §2.4）。
  *               label 侧不查：判净#5 裁决「label: 静态中文 = 键缺失合法回退」。
+ *      通道四 · 字面量含 [汉字] 且行内前缀是 toast 调用头（`toast(` / `toastError(`）→ 候选
+ *               （2026-10-15 补，锐评 2026-10-13 记录的「门禁覆盖缺口」）：这两个函数的效果就是
+ *               把文案推上屏，却前三通道全不覆盖。补闸前探针实测该盲区下藏着 6 处 en/ja
+ *               用户可见硬编码中文，已一并 i18n 化。射程边界：同行内判据，跨行 toast 载荷不覆盖。
  *   4. 若该字面量是 `t("...")` 直接参数（前缀 `\bt(\s*`）→ 已翻译，跳过；
  *   5. 排除：语言选择器原生名（value="zh-CN"/"en"/"ja" 的 option 文本，标准 UX 刻意不翻）、
  *      行级豁免尾注 `// i18n-allow: <理由>`（同 r8-allow/pointer-allow 先例，命中行或上一行）。
@@ -66,6 +70,14 @@ const UI_VALUE_ASSIGN =
 // 上屏，属用户可见硬编码中文。判据取「行首到字面量之间的错误构造头」。
 const THROW_REJECT =
   /(?:throw\s+new\s+Error|reject\s*\(\s*new\s+Error|throw\s+new\s+TypeError)\s*\(/;
+// 通道四（2026-10-15 补，锐评 2026-10-13 记录的「门禁覆盖缺口」）：toast / toastError 载荷。
+// 这两个函数的效果就是**把文案推上屏**，但该串既无 HTML 信号（纯文本）、不是 value/text/tooltip
+// 赋值、也不是错误构造头 → 前三通道全线失明。缺口不是理论：探针实测该盲区下藏着 6 处 en/ja
+// 用户可见硬编码中文（组件加载失败 / 系统主题跟随 / 下载失败 / 操作失败 / 3D 预览不支持该类型 /
+// 截图保存失败），已一并 i18n 化。判据取「行首到字面量之间的 toast 调用头」。
+// 已知射程边界：与三条既有通道同为**行内**判据——跨行书写的 toast 载荷（`toast(\n  "中文"`）不在此列；
+// 命中行或上一行的 `// i18n-allow: <理由>` 台账对四通道一律生效（同一 else 分支内判定）。
+const TOAST_CALL = /(?:^|[^\w.])(?:toast|toastError)\s*\(/;
 // 语言选择器原生名（刻意不翻，标准 UX）
 const LANG_PICKER = /value="(zh-CN|en|ja)"/;
 
@@ -169,9 +181,14 @@ export function scanSourceText(raw: string) {
     if (HTML_SIGNAL.test(lit)) {
       // 通道一（原判据）：字面量自带 HTML 标记 → 渲染模板，直接入册。
     } else {
-      // 通道二 / 三（新补）：字面量之前的行内前缀匹配 UI 值字段 / 错误构造头。
+      // 通道二 / 三 / 四：字面量之前的行内前缀匹配 UI 值字段 / 错误构造头 / toast 载荷头。
       const linePrefix = maskedLines[lineIdx]!.slice(0, start - lineStarts[lineIdx]!);
-      if (!UI_VALUE_ASSIGN.test(linePrefix) && !THROW_REJECT.test(linePrefix)) continue;
+      if (
+        !UI_VALUE_ASSIGN.test(linePrefix) &&
+        !THROW_REJECT.test(linePrefix) &&
+        !TOAST_CALL.test(linePrefix)
+      )
+        continue;
       // 行级豁免台账（同 pointer-allow 先例）：`// i18n-allow: <理由>` 命中行或上一行
       // ——用 raw 原文行判（masked 把注释遮成空格，豁免注必须看得见原文才生效）。
       // 通道三特例：内部诊断 throw/reject 中文靠 `// i18n-allow: 内部诊断` 豁免（ADR-331 §2.4）。
@@ -240,7 +257,7 @@ function main(): void {
 
   console.log("i18n UI 漂移检查 (i18n-ui-check)");
   console.log(
-    "规则: 中文 +（HTML 信号 ∪ UI 值字段上下文 ∪ throw/reject 错误构造）+ 未包 t() → 漂移（已排除语言包/测试/语言选择器原生名/i18n-allow 台账）",
+    "规则: 中文 +（HTML 信号 ∪ UI 值字段上下文 ∪ throw/reject 错误构造 ∪ toast 载荷）+ 未包 t() → 漂移（已排除语言包/测试/语言选择器原生名/i18n-allow 台账）",
   );
   console.log(`扫描: ${files.length} 个 .ts`);
   console.log("─".repeat(60));

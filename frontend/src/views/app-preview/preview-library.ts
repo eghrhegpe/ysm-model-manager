@@ -233,7 +233,7 @@ export async function openModel3DFullscreen(
   // 失败诊断（2026-08-28 加固）：toast + 环形日志都带探测现场，不再是无因「暂不支持」
   const ext = extOf(path) || "(无扩展名)";
   const reason = `探测类型=${rtype || "(空)"} 路由key=${routeKey || "(空)"} 扩展名=${ext}`;
-  toast(`3D 预览暂不支持该类型（${reason}）`, TOAST_MS.normal, "warn");
+  toast(t("preview.unsupportedFormat", { reason }), TOAST_MS.normal, "warn");
   // 环形日志面板留痕（AGENTS.md：排查往环形日志塞日志而非死盯 console）；失败静默不阻断
   try {
     const { AddOpLog } = await backendGetApp();

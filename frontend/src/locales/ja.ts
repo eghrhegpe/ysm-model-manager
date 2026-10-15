@@ -1803,6 +1803,8 @@ export const ja: Record<string, string> = {
   "tree.batchBusyWait": "⏳ バッチ処理中です。お待ちください",
   "tree.toggleFail": "切替に失敗: {name}",
   "tree.selectedCount": "{n} 個のファイルを選択中",
+  "tree.shiftRangeTooLarge":
+    "選択範囲が大きすぎます（{n} 件、上限 {max}）——「すべて選択」を使うか、分割して選択してください",
   "tree.folderToggleResult": "フォルダ{action}: {ok} 成功, {fail} 失敗",
   "tree.batchProgress": "⏳ {action}中 {done}/{total}",
   "tree.batchToggleFail": "一括有効化/無効化に失敗しました",

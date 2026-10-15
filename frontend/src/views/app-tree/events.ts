@@ -31,6 +31,20 @@ interface AtTeCtx {
   treeRenderCtx: TreeRenderCtx;
 }
 
+/**
+ * Shift 区间选的单次跨度上限（锐评 2026-10-15）。
+ *
+ * 病灶：区间按**当前可见行序**（getVsRows）取 lastKey→目标行之间的一切文件，而
+ * `lastKey` 与选中集是跨搜索/排序存活的。用户在搜索态 Shift 选一小段（此时可见行只有
+ * 几条命中）→ 清除搜索词 → 再 Shift 点远处一行：allPaths 已换成**全树行序**，
+ * 同一个手势从「选 3 行」变成「选几千行」——一次 Shift 吞掉整个仓库，随后任何批量
+ * 操作（批量删除/回收/重命名）的作用域都失控。
+ *
+ * 阈值只拦「异常大的单次跨度」，不影响正常区间选择；命中时**不选中**并提示改用全选，
+ * 让用户明确知道手势被拒（静默截断到 N 项会更糟：选中的集合与视觉区间不一致）。
+ */
+const SHIFT_RANGE_MAX = 500;
+
 // ===== 闭包升格：辅助函数（atTe* 前缀） =====
 function atTeFindRow(ctx: AtTeCtx, path: string): HTMLElement | null {
   const rows = getVsRows(ctx.treeRenderCtx, ctx.container);
@@ -222,6 +236,19 @@ function atTeClickRowFile(ctx: AtTeCtx, e: MouseEvent, fl: HTMLElement): boolean
     const endIdx = allPaths.indexOf(fullPath);
     if (startIdx !== -1 && endIdx !== -1) {
       const [min, max] = [Math.min(startIdx, endIdx), Math.max(startIdx, endIdx)];
+      // 跨度守卫（锐评 2026-10-15）：锚点（lastKey）与选中集跨搜索/排序存活，而区间按
+      // **当前**可见行序取——搜索态选一小段后清除搜索词再 Shift，同一手势的作用域会从
+      // 几行变成全树。超阈值即拒选并引导改用全选（不静默截断：截断会让选中集合与视觉
+      // 区间不一致，比拒绝更坏）。
+      const span = max - min + 1;
+      if (span > SHIFT_RANGE_MAX) {
+        toast(
+          t("tree.shiftRangeTooLarge", { n: span, max: SHIFT_RANGE_MAX }),
+          TOAST_MS.normal,
+          "warn",
+        );
+        return true;
+      }
       for (let i = min; i <= max; i++) {
         state.keys.add(allPaths[i]);
       }

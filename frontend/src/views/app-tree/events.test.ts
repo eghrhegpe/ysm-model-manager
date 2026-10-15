@@ -329,6 +329,47 @@ describe("click 行分派（文件选中）", () => {
     expect(h.vm._renderTree).not.toHaveBeenCalled();
     expect(emitted("model:select")).toEqual([]);
   });
+
+  // 跨度守卫（锐评 2026-10-15）：锚点与选中集跨搜索/排序存活，而区间按**当前**可见行序取
+  // ——搜索态 Shift 选一小段后清除搜索词再 Shift，同一手势会从几行变成「吞掉整个仓库」。
+  // 三条用例锁死阈值语义：>500 拒选并提示；恰为 500 放行（边界不误拒）；拒选时锚点不被改写。
+  function vsAllFileRows(h: ReturnType<typeof makeHarness>, keys: string[]): void {
+    setVsRows(
+      h.vm.treeRenderCtx,
+      h.container,
+      keys.map((k) => ({ key: k, type: "file" })) as unknown as Parameters<typeof setVsRows>[2],
+    );
+  }
+
+  it("Shift 跨度超上限（501）→ 拒选 + warn toast，选中集与锚点均不变", () => {
+    const h = makeHarness();
+    const keys = Array.from({ length: 501 }, (_, i) => `/repo/m${i}.ysm`);
+    vsAllFileRows(h, keys);
+    h.container.appendChild(fileRow(keys[500], "m500.ysm"));
+    bindTreeEvents(h.container, h.vm);
+    selectSingle(h.vm.selectState, keys[0]); // 锚点
+    click(h.container.querySelector(".fl") as Element, { shiftKey: true });
+    // 未吞并全树：仅锚点一项
+    expect(h.vm.selectState.keys.size).toBe(1);
+    expect(h.vm.selectState.keys.has(keys[500])).toBe(false);
+    // 锚点未被改写（用户可重新定点后再小范围 Shift）
+    expect(h.vm.selectState.lastKey).toBe(keys[0]);
+    const toasts = emitted("toast:show") as Array<{ msg: string; type: string }>;
+    expect(toasts.some((t) => t.msg.includes("选择范围过大") && t.type === "warn")).toBe(true);
+  });
+
+  it("Shift 跨度恰为上限（500）→ 照常选中，不误拒", () => {
+    const h = makeHarness();
+    const keys = Array.from({ length: 500 }, (_, i) => `/repo/m${i}.ysm`);
+    vsAllFileRows(h, keys);
+    h.container.appendChild(fileRow(keys[499], "m499.ysm"));
+    bindTreeEvents(h.container, h.vm);
+    selectSingle(h.vm.selectState, keys[0]);
+    click(h.container.querySelector(".fl") as Element, { shiftKey: true });
+    expect(h.vm.selectState.keys.size).toBe(500);
+    const toasts = emitted("toast:show") as Array<{ msg: string }>;
+    expect(toasts.some((t) => t.msg.includes("选择范围过大"))).toBe(false);
+  });
 });
 
 describe("click 行分派（悬停操作）", () => {

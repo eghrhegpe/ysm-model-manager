@@ -32,7 +32,8 @@ func TestHashEntriesParallel_WorkerPanicRecover(t *testing.T) {
 	})
 	t.Cleanup(func() { setHashFn(nil) }) // nil 恢复 ComputeFileHash
 
-	hashEntriesParallel(entries)
+	// B1（ADR-348）：哈希段带持久索引参数——传临时目录根（索引文件落自己地盘，不写 CWD）
+	hashEntriesParallel(entries, t.TempDir())
 
 	if entries[1].Hash != "" {
 		t.Errorf("panic 条目 Hash 应留空，got %q", entries[1].Hash)

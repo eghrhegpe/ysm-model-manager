@@ -10,6 +10,7 @@ export {
 
 export type {
     AppConfig,
+    AppConfigPatch,
     AuthorInfo,
     BedrockModel,
     Bone2D,

@@ -15,6 +15,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"ysm-model-manager/go/config"
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/types/registry"
@@ -138,7 +139,7 @@ retry:
 	// SHA256 并行哈希回填：旧实现哈希在 WalkDir 回调内串行
 	// 全量读盘（大库冷扫逐文件同步 IO）；walk 期间 deferHash 跳过计算，收集完条目后
 	// 按 worker 池并行回填——条目序/错误口径不变（见 hashEntriesParallel）。
-	hashEntriesParallel(entries)
+	hashEntriesParallel(entries, dir)
 	// 克隆 slice 后 Store，避免 sync.Map.Load 读到 WalkDir 中途
 	// append 的部分写入（单线程 Wails 场景安全，但并发扫描无 race）
 	stored := append([]types.ModelEntry(nil), entries...)
@@ -342,6 +343,9 @@ func getHashFn() func(string) string {
 }
 
 // hashEntriesParallel 并行计算 entries 的 SHA256 并按下标回填（旧实现哈希在 WalkDir 回调内串行全量读盘，大库冷扫被逐文件同步 IO 拖慢）。
+// B1（ADR-348）：入口先试持久哈希索引（hashindex.go）——(size, mtime) 双指纹命中 → 直接取
+// 存哈希免读盘（hashIndexHits++）；未命中真算（hashComputations++）+ 非空回写索引；
+// 收尾按本次路径集 Prune + Save（move/delete 自愈，dirty 门控稳态近零写）。
 // 语义与旧内联路径逐字节一致：仅 ShouldHashExt 条目参与、超 MaxImportSize 由
 // ComputeFileHash 内部跳过、空哈希补 emitScanError（同旧回调内口径）；worker 数 =
 // min(runtime.NumCPU, 待哈希数)，条目顺序不变（按下标回填）。
@@ -350,7 +354,7 @@ func getHashFn() func(string) string {
 // 「空哈希跳过匹配」同口径，panic 经 emitScanError 留痕（与「读错误/超限」措辞区分归因）。
 // 为何不收敛到 conc：本实现按下标原地写 entries[i].Hash 并保留全部结果（失败置空
 // 由调用方 emitScanError 决定），conc 的 []R 值返回 + 仅返回 ok=true 契约不契合。
-func hashEntriesParallel(entries []types.ModelEntry) {
+func hashEntriesParallel(entries []types.ModelEntry, rootDir string) {
 	var jobs []int
 	for i := range entries {
 		if registry.ShouldHashExt(entries[i].Ext) {
@@ -361,6 +365,12 @@ func hashEntriesParallel(entries []types.ModelEntry) {
 		return
 	}
 	fn := getHashFn()
+	// B1：索引开关 = 配置单源活读（types.AppConfig.HashIndexDisabled，同 ScanCacheTTLMs 的
+	// go/config 先例）；入口快照 + 实例懒开（worker 池共享，同 getHashFn 范式），禁用 = 旧全真算行为
+	var idx *HashIndex
+	if !config.Get().HashIndexDisabled {
+		idx = HashIndexFor(rootDir)
+	}
 	n := runtime.NumCPU()
 	if n > len(jobs) {
 		n = len(jobs)
@@ -375,6 +385,14 @@ func hashEntriesParallel(entries []types.ModelEntry) {
 		go func() {
 			defer wg.Done()
 			for i := range ch {
+				// B1 指纹快路径：size+mtime 双指纹命中 → 存哈希免读盘
+				if idx != nil {
+					if h, ok := idx.Lookup(entries[i].Path, entries[i].Size, entries[i].ModTime); ok {
+						entries[i].Hash = h
+						hashIndexHits.Add(1)
+						continue
+					}
+				}
 				// 逐条目 recover（R27 对齐）：panic 捕获后该条 Hash 留空 + 单独留痕，继续处理后续 job。
 				// didPanic 置位后不再 emit「读错误或超限」措辞——panic 已单独留痕，避免误导归因。
 				didPanic := false
@@ -391,6 +409,11 @@ func hashEntriesParallel(entries []types.ModelEntry) {
 					// 哈希失败留痕——静默置空会让同步把该文件当「无哈希」跳过（用户不知为何不同步）
 					emitScanError("[scanner] 哈希计算失败/跳过 %s（读错误或超 %d 字节上限）", entries[i].Path, registry.MaxImportSize)
 				}
+				hashComputations.Add(1)
+				// B1 回写（仅非空哈希；超限/读错条目下次扫描重试）
+				if idx != nil && entries[i].Hash != "" {
+					idx.Record(entries[i].Path, entries[i].Size, entries[i].ModTime, entries[i].Hash)
+				}
 			}
 		}()
 	}
@@ -399,4 +422,15 @@ func hashEntriesParallel(entries []types.ModelEntry) {
 	}
 	close(ch)
 	wg.Wait()
+	// B1 收尾：按本次扫描路径集剪枝（消失路径自愈）+ 原子落盘（dirty 门控）
+	if idx != nil {
+		current := make(map[string]struct{}, len(entries))
+		for i := range entries {
+			if registry.ShouldHashExt(entries[i].Ext) {
+				current[entries[i].Path] = struct{}{}
+			}
+		}
+		idx.Prune(current)
+		idx.Save()
+	}
 }

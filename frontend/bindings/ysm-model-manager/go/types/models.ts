@@ -86,6 +86,11 @@ export interface AppConfig {
     "updateCheckTimeoutMs": number;
 
     /**
+     * B1（ADR-348）：禁用持久哈希索引（scanner.HashIndexFor 快路径），true=全真算 SHA256 旧行为
+     */
+    "hashIndexDisabled": boolean;
+
+    /**
      * 窗口状态（合并到主配置，避免 window_state.json 散落）
      */
     "winX": number;
@@ -96,6 +101,38 @@ export interface AppConfig {
     "winRelY": number;
     "winScrW": number;
     "winScrH": number;
+}
+
+/**
+ * AppConfigPatch 应用配置的**部分更新**载荷（锐评 2026-10-15 P1 ③）。
+ * 
+ * 为什么需要它：前端 `views/config-write.ts|writeAppConfig` 的 patch 语义原由两次
+ * IPC 拼成——先 `LoadAppConfig()` 取快照，再在 JS 侧拼出完整六元组交给
+ * `SaveAppConfig(...)`。两个 await 之间让出事件循环，期间另一写入口
+ * （SaveThresholds / SetDownloadMirror / 另一处 writeAppConfig）改的字段不在本次
+ * 快照里，会被整份回写静默冲掉（前端 read-then-write 的 TOCTOU）。本类型让整段
+ * 读-改-写发生在 Go 侧一次调用内，由 configWriteMu 串行化、锁内重读。
+ * 
+ * 字段为何是 `*string` 而非 `string`：本仓既有 patch 入口（SaveAppConfig 的
+ * orDefault / SanitizeLinkMode）用「空串 = 未传」编码未设置，但这与「用户把某个
+ * 字段显式置空」不可区分——配置全是 string，无 bool 三态陷阱之外的先例可循，
+ * 指针是 Go 表达「未设置 vs 空值」的无歧义手段（见下方 nil 契约）。
+ * 
+ * nil 契约（绑定层零值 = 零成本「什么都不改」）：
+ *   - nil  → 该字段取锁内重读的磁盘现值（未传）
+ *   - 非 nil → 写入该值；空串对 FilesRoot/Theme/ThemeAuto 等即「清空为默认值」，
+ *     对 McRoot 仍走 ValidateMinecraftDir、对 LinkMode 仍走 SanitizeLinkMode
+ *     （校验失败返回错误，不落盘）
+ * 
+ * ⚠️ 键集刻意不含 rpRoot：它是 SaveAppConfig 的废弃入参（CustomRoots 已承载，
+ * 该参数在 Go 侧从不被读取）。新绑定不复制这个历史包袱。
+ */
+export interface AppConfigPatch {
+    "filesRoot"?: string | null;
+    "mcRoot"?: string | null;
+    "linkMode"?: string | null;
+    "theme"?: string | null;
+    "themeAuto"?: string | null;
 }
 
 /**

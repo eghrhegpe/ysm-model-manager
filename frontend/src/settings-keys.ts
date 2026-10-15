@@ -155,8 +155,8 @@ export const SETTINGS_KEYS: readonly SettingsKeyEntry[] = [
     authority: "disk-authority",
     migrates: true,
     goField: "HashIndexDisabled",
-    owner: "go/scanner",
-    note: "ADR-348 B1：true=全真算 SHA256 的旧行为（绕过 hashIndex 快路径），排查扫描结果差异时用",
+    owner: "go/scanner/hashindex.go",
+    note: "ADR-348 B1：缺省 false = 启用持久哈希索引（冷扫经 size+mtime 双指纹免重读 SHA256）；true = 全真算 SHA256 的旧行为（绕过 hashIndex 快路径），排查扫描结果差异时用。非 UI 暴露（开发/逃生开关），SaveAppConfig「以旧为基」自动保全",
   },
   {
     key: "disk:mirror",

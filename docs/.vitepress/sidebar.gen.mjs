@@ -254,6 +254,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-349：配置写入原子化：Go 侧 patch 绑定替代前端读-改-写",
+        "link": "/adr/architecture/ADR-349-config-write-atomic-patch"
+      },
+      {
         "text": "ADR-348：两阶段扫描投影B1：持久哈希索引（size+mtime 双指纹免重读 SHA256）",
         "link": "/adr/architecture/ADR-348-b1-size-mtime-sha256"
       },

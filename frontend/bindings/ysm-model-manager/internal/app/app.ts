@@ -1157,6 +1157,28 @@ export function SaveAppConfig(filesRoot: string, rpRoot: string, mcRoot: string,
 }
 
 /**
+ * SaveAppConfigPatch 部分更新应用配置（锐评 2026-10-15 P1 ③）——**前端唯一推荐入口**。
+ * 
+ * 与 SaveAppConfig 的分工：SaveAppConfig 保留给六个位置实参的旧调用形态（含 web 端
+ * 适配器与既有测试），本绑定提供 patch 语义。两者共用同一把 configWriteMu，锁的范围
+ * 都是「锁内重读 → 改 → 落盘」，故两者互相之间也不会丢字段。
+ * 
+ * 为什么值得多一个绑定：writeAppConfig 原先在 JS 侧「先 await LoadAppConfig() 再
+ * await SaveAppConfig(拼好的六元组)」——两个 await 之间让出事件循环，期间任何其它
+ * 写入口（SaveThresholds / SetDownloadMirror / 另一处 writeAppConfig）改的字段都不在
+ * 本次快照里，会被这次整份回写静默覆盖（用户改的设置重启后回到旧值，且无任何报错）。
+ * 把整段搬进一次调用后，TOCTOU 窗口从「两次 IPC 之间的任意长事件循环」收窄为「不存在」。
+ * 
+ * nil 字段 = 未传，取锁内重读的现值（见 types.AppConfigPatch 的 nil 契约）。
+ * 校验语义与 SaveAppConfig 同口径：mcRoot 非空必过 ValidateMinecraftDir，
+ * linkMode 走 SanitizeLinkMode 软校验（非法值回落旧值，不 reject 整个保存——
+ * 「只想改主题、原样回写 linkMode」是多数调用方，别误伤）。
+ */
+export function SaveAppConfigPatch(patch: types$0.AppConfigPatch): $CancellablePromise<void> {
+    return $Call.ByID(442064487, patch);
+}
+
+/**
  * SaveCachedTexture 保存前端 WASM 编码后的 KTX2 数据到缓存。
  * hash 是 GetCachedTexture 返回的 Hash 值，data 是 KTX2 字节的 base64。
  * hash 来自 Wails 绑定（前端可传任意字符串），须校验为 SHA256 hex：

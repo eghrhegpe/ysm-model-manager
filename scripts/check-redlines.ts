@@ -931,9 +931,16 @@ function resolveChangedSet() {
   return files.length ? new Set(files) : null;
 }
 
-function collectViolationKeys(results: any[]) {
+// 导出供 tests/test_check_redlines.ts 直测：基线键的构造是「漂移不误报 / 真新增不漏放」
+// 这对契约的唯一实现点，不导出就只能靠改工作区文件做探针（易残留、且污染现场）。
+export function collectViolationKeys(results: any[]) {
   const blocking: string[] = [];
   const advisory: string[] = [];
+  // 内容键 → 同文件同规则下已出现的次数（多重集保序，见下）。
+  // 去掉行号后「同一行内容出现 N 次」会塌成一个键，导致基线少登记、真新增被漏——
+  // 故补一个出现序号：第 1 次记 :1、第 2 次记 :2。插入行只移动位置、不改变同一内容
+  // 在其文件内的相对次序，故序号在纯插入场景下稳定；只有增删同类内容行才变动。
+  const contentSeq = new Map<string, number>();
   for (const r of results) {
     for (const v of r.violations) {
       // toPosix 归一化跨平台路径（Windows 反斜杠 → 正斜杠）
@@ -943,16 +950,23 @@ function collectViolationKeys(results: any[]) {
       // // @vitest-environment node 触发 91 条存量违规"假新增"阻断推送）；
       // 只有行内容真正变化或出现新行才算新增。行号仍保留在 violations 中供定位。
       const content = (v.snippet || "").trim();
-      // 阻断规则禁用内容去重：重复行也计入（基线比对时新增重复行仍按新键处理）
-      const key = WARN_RULES.has(r.rule_id)
-        ? `${f}:${r.rule_id}:${content}:${v.line}`
-        : `${f}:${r.rule_id}:${v.line}`;
+      // 2026-10-15 根治（锐评推送阻断）：原实现对**阻断规则**退回纯行号键
+      // （`文件:规则:行号`），理由是「重复行也计入」——但这让任何行插入都产生假新增：
+      // 实测 internal/app/resource_bindings.go 的 W7 违规因相邻函数加 6 行锁，
+      // 由 400 行漂到 418 行，基线按精确行号匹配即判「新增红线违规」阻断推送。
+      // 该缺陷会反复咬每一个做插入修改的人（基线 97/97 条全以行号为键），
+      // 故阻断规则同样纳入行内容，并以来现序号保多重集（不去重）。
+      const seqKey = `${f}:${r.rule_id}:${content}`;
+      const seq = (contentSeq.get(seqKey) ?? 0) + 1;
+      contentSeq.set(seqKey, seq);
+      const key = `${seqKey}:${seq}`;
       (WARN_RULES.has(r.rule_id) ? advisory : blocking).push(key);
     }
   }
   return {
-    blocking: [...new Set(blocking)].sort(),
-    advisory: [...new Set(advisory)].sort(),
+    // 序号已在键内保证唯一，无需再 Set 去重（去重会抹掉多重集语义）
+    blocking: [...blocking].sort(),
+    advisory: [...advisory].sort(),
   };
 }
 

@@ -381,16 +381,18 @@ describe("bindToolbarEvents — 高级筛选弹窗", () => {
     expect(vm.advFilter.maxBones).toBe(10);
     expect(vm.advFilter.tag).toBe("近代");
     expect(ListByTagMock).toHaveBeenCalledWith("近代");
-    expect(SearchModelsMock).toHaveBeenCalledWith(
-      "/repo",
-      "Alex",
-      2,
-      10,
-      0,
-      0,
-      0,
-      0,
-    );
+    // ADR-343 刀 4：SearchModels 的 8 个位置参数已收编为 SearchFilters 结构体
+    // （3ceede398 落地时前排 44 处改了、此处漏改 → 该断言在 HEAD 上恒红）。
+    // 未设置的数值条件按「0 = 不限制」落位（advFilterToNum 语义），勿写成 null。
+    expect(SearchModelsMock).toHaveBeenCalledWith("/repo", {
+      keyword: "Alex",
+      minBones: 2,
+      maxBones: 10,
+      minCubes: 0,
+      maxCubes: 0,
+      minTex: 0,
+      maxTex: 0,
+    });
     expect(toasts.some((t) => t.msg.includes("找到 1 个匹配"))).toBe(true);
     expect(vm._renderTree).toHaveBeenCalled();
   });

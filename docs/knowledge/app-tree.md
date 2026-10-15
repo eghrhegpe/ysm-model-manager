@@ -72,6 +72,7 @@ auto_fields:
     - SelectedKeys
     - selectSingle
     - SelectState
+    - setFooterProgress
     - setRenderMode
     - setVsRows
     - spinnerHTML

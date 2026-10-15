@@ -412,6 +412,53 @@ describe("app-sidebar — 拉取所选", () => {
     expect(treeReloads.length).toBeGreaterThan(0);
   });
 
+  it("同步变更明细浮层：拉取后出现，可经 ESC / 点击遮罩 / 关闭按钮关闭", async () => {
+    const { PullResourceFromInstance } = await import(
+      "../../../bindings/ysm-model-manager/internal/app/app.js"
+    );
+    (PullResourceFromInstance as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: 2,
+      failed: 0,
+      files: ["models/a.pmx", "tex/b.png"],
+    });
+    const el = await mountSidebar();
+    checkFirst(el);
+
+    // waitFor 以「回调返回 truthy」为通过条件（非 expect 断言），故显式返回布尔
+    const waitPanelOpen = () =>
+      waitFor(() => {
+        const p = el.shadowRoot!.getElementById("sync-result-panel");
+        return p !== null && !p.hidden;
+      });
+    const getPanel = () => el.shadowRoot!.getElementById("sync-result-panel")!;
+
+    // 首次拉取 → 浮层出现且逐条点名了拉回文件：1 个实例 × ALL_RESOURCE_TYPES 类型 × 每类型 2 个文件
+    clickPullAll(el);
+    await waitPanelOpen();
+    const panel = getPanel();
+    expect(panel.querySelectorAll(".sr-row.sr-ok").length).toBe(ALL_RESOURCE_TYPES.length * 2);
+
+    // ESC 关闭（document 级监听）
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(getPanel().hidden).toBe(true);
+
+    // 再次拉取 → 点击遮罩空白区（target 即 panel 自身）关闭
+    clickPullAll(el);
+    await waitPanelOpen();
+    getPanel().dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(getPanel().hidden).toBe(true);
+
+    // 第三次拉取 → 点击关闭按钮关闭
+    clickPullAll(el);
+    await waitPanelOpen();
+    getPanel()
+      .querySelector("[data-sync-result-close]")!
+      .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(getPanel().hidden).toBe(true);
+
+    unmountElement(el);
+  });
+
   it("拉取无多余文件 → info toast", async () => {
     const el = await mountSidebar();
     checkFirst(el);

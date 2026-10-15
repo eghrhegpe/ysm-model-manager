@@ -1542,6 +1542,7 @@
   "tree.toggleFail": "切换失败: {name}",
   "tree.selectedCount": "已选 {n} 个文件",
   "tree.folderToggleResult": "文件夹{action}: {ok} 成功, {fail} 失败",
+  "tree.batchProgress": "⏳ {action}中 {done}/{total}",
   "tree.batchToggleFail": "批量启用/禁用失败",
   "tree.importFail": "导入失败: {msg}",
   "tree.advFilterFail": "高级筛选失败",

@@ -18,21 +18,35 @@ import {
  * state 须为整型且落在 palette 内、颜色非空（air 按 MapColor 返回 "" 判定，非 `state == 0`）；
  * pos 须为三元素整型且落在 int16 内。
  */
-function readStructureBlock(elem: unknown, paletteColors: string[]): VoxelBlock | null {
-  if (!isObj(elem)) return null;
-  const posList = asArray(elem.pos);
-  const stateTag = elem.state;
-  if (!posList || stateTag === undefined || posList.length !== 3) return null;
-  if (typeof stateTag !== "number" || !Number.isInteger(stateTag)) return null;
-  if (stateTag < 0 || stateTag >= paletteColors.length || paletteColors[stateTag] === "")
-    return null;
+/** 校验 state 是否可映射：整型、落在 palette 内、颜色非空（air 按 "" 判定） */
+function resolvePaletteColor(stateTag: number, paletteColors: string[]): string | null {
+  if (stateTag < 0 || stateTag >= paletteColors.length) return null;
+  const color = paletteColors[stateTag];
+  return color === "" ? null : color;
+}
+
+/** 解析 pos 三元组：三元素整型且落在 int16 范围内 */
+function resolvePos(posList: unknown[]): [number, number, number] | null {
   const px = asNumber(posList[0]);
   const py = asNumber(posList[1]);
   const pz = asNumber(posList[2]);
   if (px === undefined || py === undefined || pz === undefined) return null;
   if (!Number.isInteger(px) || !Number.isInteger(py) || !Number.isInteger(pz)) return null;
   if (!inInt16Range(px) || !inInt16Range(py) || !inInt16Range(pz)) return null;
-  return { color: paletteColors[stateTag], x: px, y: py, z: pz };
+  return [px, py, pz];
+}
+
+function readStructureBlock(elem: unknown, paletteColors: string[]): VoxelBlock | null {
+  if (!isObj(elem)) return null;
+  const posList = asArray(elem.pos);
+  const stateTag = elem.state;
+  if (!posList || stateTag === undefined || posList.length !== 3) return null;
+  if (typeof stateTag !== "number" || !Number.isInteger(stateTag)) return null;
+  const color = resolvePaletteColor(stateTag, paletteColors);
+  if (!color) return null;
+  const pos = resolvePos(posList);
+  if (!pos) return null;
+  return { color, x: pos[0], y: pos[1], z: pos[2] };
 }
 
 /**

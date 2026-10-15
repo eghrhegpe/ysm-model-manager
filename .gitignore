@@ -99,6 +99,10 @@ upstream/
 tests/ysm-reference/
 .cov-hint-e2e.txt
 
+# B1 持久哈希索引（ADR-348）：扫描器在测试 fixture 目录跑全量扫描时产出的缓存文件——
+# 测试产物不入库（用户真实仓库里的同名文件是便携缓存，该留则留）
+.ysm-hash-index.json
+
 # Android 构建产物（NDK .so / gradle 输出 / wails 前端资源打包，不入库）
 build/android/app/src/main/jniLibs/
 build/android/app/src/main/assets/

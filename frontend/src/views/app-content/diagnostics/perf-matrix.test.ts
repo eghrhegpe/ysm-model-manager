@@ -615,6 +615,61 @@ describe("目标集选择器选项来自 registry（前端不写死类型表）"
   });
 });
 
+// ===== 类型显示名收口（2026-10-15 拍板「locale 为权威源，Go 通道降兜底」）=====
+// 病灶：结果表直读载荷 `rtype_label`（注册表中文派生），而下拉选项走 `rtypeLabelOf`——
+// 同屏两名（「人物模型」/「角色模型」曾长期并存）。收口后两条渲染线共用
+// `perfTypeDisplayName`：locale 命中优先，Go label 只兜 container/other 这类**永远不在
+// registry** 的诚实兜底 token（Go 侧 perf_manifest_registry_test 立的闸的前端配对）。
+describe("类型显示名 — locale 权威、Go label 只兜未登记 token", () => {
+  const mkPayload = (rtype: string, goLabel: string): unknown => ({
+    spec: {
+      target: "rtype",
+      order: "path",
+      max_models: 1,
+      iterations: 1,
+      analyzed: 0,
+      unsupported: 0,
+      cli_analyzable: false,
+      types: [
+        {
+          rtype,
+          rtype_label: goLabel,
+          cli_analyzable: false,
+          found: 1,
+          analyzed: 0,
+          unsupported: 0,
+          expected_stages: 0,
+          stages_declared: false,
+        },
+      ],
+    },
+    models: [{ model: "/x", identity: { rtype, rtype_label: goLabel, rtype_source: "extension", relPath: "x/a" }, stages: [] }],
+  });
+
+  it("登记类型：Go label 与 locale 不同词时，表行与身份行都取 locale（弃 Go label）", () => {
+    // test-setup 钉 zh-CN：EntityPlayer 的 locale 值是「角色模型」；夹具故意把 Go label
+    // 写成另一个词「MMD 模型」——若渲染仍读载荷通道，「MMD 模型」会漏出来，此断言即红。
+    const html = renderPerfMatrix(mkPayload("EntityPlayer", "MMD 模型") as never, esc);
+    expect(html).toContain("角色模型");
+    expect(html).not.toContain("MMD 模型");
+  });
+
+  it("兜底 token（container/other）：locale 无键 → 采信 Go 的人话，绝不再复述 id", () => {
+    // 「container container」回归线：这两个 token 永远不在 registry/locale（诚实兜底的
+    // 定义即「不猜任意类型」），rtypeLabelOf 原样吐回 id，必须落到载荷 label 上。
+    const html = renderPerfMatrix(mkPayload("container", "容器（未定类型）") as never, esc);
+    expect(html).toContain("容器（未定类型）");
+    // 表行的 id span 保留原始 token 是**设计**（审计线索），但显示名与 id 必须异词
+    const nameLine = html.match(/<td>([^<]*)<span class="perf-matrix-id"/)?.[1] ?? "";
+    expect(nameLine.trim()).not.toBe("container");
+  });
+
+  it("未登记且无 Go label 的怪 token → 原样回显 id（宁露 token，不冒充译文）", () => {
+    const html = renderPerfMatrix(mkPayload("no-such-type-xyz", "") as never, esc);
+    expect(html).toContain("no-such-type-xyz");
+  });
+});
+
 // 本次要清的账（ADR-262 D3 修订）：同一个 `#diag-perf-max` 承载三种目标集的取样上限，
 // 但**标签文案一律叫「最多跑几个」**（旋钮语义是取样上限）——单位随目标集变这件事只进 title 提示。
 // 旧实现按模式换标签（`syncPerfCountLabel`）修的是症状：标签改义 = 控件在骗人。

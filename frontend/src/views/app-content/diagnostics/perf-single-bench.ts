@@ -22,6 +22,7 @@ import {
   errorHTML,
   getOutBox,
   type PerfIdentity,
+  perfTypeDisplayName,
   renderLoadFailure,
   sectionHeader,
   setBusy,
@@ -444,9 +445,11 @@ function singleBenchRenderBars(payload: SingleBenchPayload, esc: EscFn): string 
   savePerfRecord(stages.map((s) => ({ name: s.name, ms: s.ms })));
 
   const rawOutput = payload.output ?? JSON.stringify(payload, null, 2);
-  // 身份优先（ADR-262 D2）：registry 类型显示名 + 相对路径；format 仅作旧载荷回落
+  // 身份优先（ADR-262 D2）：类型显示名 + 相对路径；format 仅作旧载荷回落。
+  // 显示名走 perfTypeDisplayName（2026-10-15 拍板 locale 权威）：载荷 rtype_label 只兜
+  // container/other 这类未登记 token，登记类型一律取 locale——en/ja 不再中文裸奔。
   const id = payload.identity;
-  const typeText = id?.rtype_label || id?.rtype || payload.format;
+  const typeText = id ? perfTypeDisplayName(id.rtype, id.rtype_label) : payload.format;
   const labelParts = [t("diagnostics.perfSingleResult")];
   if (typeText) labelParts.push(typeText);
   if (id?.relPath) labelParts.push(id.relPath);

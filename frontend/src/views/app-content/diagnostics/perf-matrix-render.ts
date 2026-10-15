@@ -15,7 +15,12 @@ import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { resourceTypesById } from "@/utils/resource/schema.ts";
 import { rtypeLabelOf } from "@/utils/resource/types.ts";
 import { type OptionRow, optionRows } from "./option-rows.ts";
-import { type PerfIdentity, perfTableHead, sectionHeader } from "./perf-common.ts";
+import {
+  type PerfIdentity,
+  perfTableHead,
+  perfTypeDisplayName,
+  sectionHeader,
+} from "./perf-common.ts";
 
 /** 单类型汇总（字段与 Go `perfTypeSummary` 逐字对齐） */
 export interface PerfTypeSummary {
@@ -181,7 +186,9 @@ const ORDER_KEYS: Record<string, LocaleKey> = {
 };
 
 function typeLabel(s: PerfTypeSummary, esc: EscFn): string {
-  const label = s.rtype_label ? esc(s.rtype_label) : esc(s.rtype);
+  // locale 权威（2026-10-15 拍板）：结果表与目标集下拉同一出口取词，同屏必同名；
+  // Go 的 rtype_label 只兜「未登记兜底 token」（container / other）那两个人话名。
+  const label = esc(perfTypeDisplayName(s.rtype, s.rtype_label));
   return `${label} <span class="perf-matrix-id">${esc(s.rtype)}</span>`;
 }
 
@@ -205,7 +212,9 @@ function typeRow(s: PerfTypeSummary, esc: EscFn): string {
 
 function modelRow(m: PerfMatrixModel, esc: EscFn): string {
   const id = m.identity;
-  const name = id ? `${esc(id.rtype_label ?? id.rtype)} · ${esc(id.relPath)}` : esc(m.model);
+  const name = id
+    ? `${esc(perfTypeDisplayName(id.rtype, id.rtype_label))} · ${esc(id.relPath)}`
+    : esc(m.model);
   const formTag = id?.form === "dir" ? ` <span class="perf-matrix-tag">dir</span>` : "";
   // 体量回显（ADR-262 D3）：前 N 大模式要能看出「它凭什么排第一」的数值；
   // 0/缺席渲染空串——其他模式没这个字段，且 0 在 Go 口径里是「未知」不是「零字节」

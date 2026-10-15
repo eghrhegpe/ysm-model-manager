@@ -9,7 +9,28 @@ import { friendlyError } from "@/utils/dom/errors.ts";
 import type { EscFn } from "@/utils/html/html.ts";
 import { esc } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
+import { rtypeLabelOf } from "@/utils/resource/types.ts";
 import { copyWithToast } from "./copy-toast.ts";
+
+// ===== 类型显示名（2026-10-15 拍板：locale 为权威源，Go 载荷通道降为兜底）=====
+
+/**
+ * 性能载荷的类型显示名：`rtype`（registry id）→ 人话。
+ *
+ * 取值次序 **locale → Go `rtype_label` → 原始 id**，两条线各有立因：
+ * 1. **locale 优先**（用户 2026-10-15 终审「以 locale 为准，收口 Go 通道」）：载荷的
+ *    `rtype_label` 派生自注册表中文 name，en/ja 界面直读它 = 中文裸奔——矩阵结果表曾
+ *    与目标集下拉同屏两名（下拉「人物模型」/ 表格「角色模型」即此病）。
+ * 2. **Go label 兜底**：`classifyForScan` 的诚实兜底 token（`container` / `other`）
+ *    永远不在 registry / locale 里，`rtypeLabelOf` 对它们原样吐回 id——若就此渲染，
+ *    表格里印「container container」（同一 token 两遍）。Go 侧
+ *    `perf_targets.go|rtypeDisplayName` 专门给这两个 token 编了人话并经载荷送达，
+ *    此处必须采信（`go/cli/perf_manifest_registry_test.go` 立的闸的前端配对）。
+ */
+export function perfTypeDisplayName(rtype: string, goLabel?: string): string {
+  const name = rtypeLabelOf(rtype);
+  return name !== rtype ? name : goLabel || rtype;
+}
 
 // ADR-278-d1：原 BASELINE_CONTROL_IDS 名单退役——基准控件可用性现由 read* 读集在 perf.ts|apply
 // 单点派生（跑真实读取路径），不再有「按名单跳过 + 委托 syncPerfBaselineControls 兼并双维」的
@@ -102,7 +123,11 @@ export function perfTableHead(cols: readonly { key: LocaleKey; helpKey?: LocaleK
 export interface PerfIdentity {
   /** registry 类型 id（ysm / EntityPlayer / resourcepack / …）；容器兜底为 container */
   rtype: string;
-  /** registry 显示名（如「YSM 模型」）；由 Go 给出，前端不建类型映射 */
+  /**
+   * registry 显示名（Go `rtypeDisplayName`，派生自注册表中文 name）。
+   * 2026-10-15 起**降为兜底通道**：界面显示名走 `perfTypeDisplayName`（locale 权威），
+   * 本字段只在 `rtype` 是未登记兜底 token（container / other）时被采信。
+   */
   rtype_label?: string;
   /**
    * 判定来源：location（祖先目录归属）| extension（扩展名消歧）| container（容器兜底）。

@@ -39,8 +39,9 @@ describe("shortLabelOf — 运行时翻译", () => {
   it("未命中短名表 → 走 rtypeLabelOf 出口（locale 全名）→ 原始 id → YSM 兜底", () => {
     // ⚠️ 旧断言写 "FBX 模型/动画"（注册表 name），那是**中文回落被固化成契约**的形态：
     // 短名表没有 fbx，此前直取 RESOURCE_TYPE_LABELS 故落中文全名。改走出口后 en/ja 得译文，
-    // zh 得 locale 键值 "FBX 模型"（与注册表 name 不同形，见知识卡「6/15 漂移」条）。
-    expect(shortLabelOf("fbx")).toBe("FBX 模型");
+    // zh 得 locale 键值。2026-10-15 命名终审把 fbx 定名「FBX 模型/动画」（该类型覆盖模型+动画
+    // 两义），locale 与注册表对齐同词——出口值与注册表一致是终审结果，非中文回落。
+    expect(shortLabelOf("fbx")).toBe("FBX 模型/动画");
     expect(shortLabelOf("unknown-type")).toBe("unknown-type");
     expect(shortLabelOf("")).toBe("ysm"); // 空串兜底 YSM
   });

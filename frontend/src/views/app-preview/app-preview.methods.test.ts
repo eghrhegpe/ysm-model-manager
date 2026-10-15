@@ -189,7 +189,7 @@ describe("_showModelDetail — 类型分流", () => {
     expect(detailSpies.showMmdPreview).toHaveBeenCalledWith(
       el,
       "/repo/m.pmx",
-      expect.objectContaining({ icon: "🧍", label: "人物模型" }),
+      expect.objectContaining({ icon: "🧍", label: "角色模型" }),
     );
     expect(detailSpies.showSimplePreview).not.toHaveBeenCalled();
     unmountElement(el);
@@ -203,7 +203,7 @@ describe("_showModelDetail — 类型分流", () => {
     expect(detailSpies.showVrmMeta).toHaveBeenCalledWith(
       el,
       "/repo/avatar.vrm",
-      expect.objectContaining({ icon: "🧍", label: "人物模型" }),
+      expect.objectContaining({ icon: "🧍", label: "角色模型" }),
     );
     expect(detailSpies.showSimplePreview).not.toHaveBeenCalled();
     unmountElement(el);

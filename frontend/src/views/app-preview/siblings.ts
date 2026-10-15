@@ -108,7 +108,14 @@ export async function resolveStageSiblings(): Promise<
     const App = await backendGetApp();
     const stageRoot = await App.GetRepoRoot("StageAnim");
     if (!stageRoot) return [];
-    const raw = await App.ScanModelEntriesFiltered(stageRoot, "StageAnim", "", "舞台动画");
+    const raw = await App.ScanModelEntriesFiltered(
+      stageRoot,
+      RESOURCE_TYPES.STAGE,
+      "",
+      // 日志标签取注册表派生名（与 resolveSiblingsByType 同口径），不写字面量：
+      // 2026-10-15 命名终审把 StageAnim 定名「场景动作」，写死的「舞台动画」当时即漂。
+      RESOURCE_TYPE_LABELS[RESOURCE_TYPES.STAGE] || RESOURCE_TYPES.STAGE,
+    );
     const results: Array<{ path: string; kind: "vmd" | "audio" | "config" | "other" }> = [];
     for (const e of raw || []) {
       const p = e.Path || "";

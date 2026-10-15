@@ -1,6 +1,6 @@
 // @vitest-environment node
 // ===== stage-siblings 舞台包资源扫描测试 =====
-// 覆盖：resolveStageSiblings（GetRepoRoot(StageAnim) → ScanModelEntriesFiltered(root, 'StageAnim', '', '舞台动画')，
+// 覆盖：resolveStageSiblings（GetRepoRoot(StageAnim) → ScanModelEntriesFiltered(root, 'StageAnim', '', 注册表名)，
 // 按扩展名分档 vmd / audio / config，其余跳过；根为空 / 扫描失败 / getApp 拒绝 → []）。
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -22,16 +22,18 @@ beforeEach(() => {
 });
 
 describe("resolveStageSiblings", () => {
-  it("GetRepoRoot(StageAnim) → ScanModelEntriesFiltered(root, 'StageAnim', '', '舞台动画')", async () => {
+  it("GetRepoRoot(StageAnim) → ScanModelEntriesFiltered(root, 'StageAnim', '', 注册表名)", async () => {
     getRepoRootMock.mockResolvedValue("/repo/mmd/StageAnim");
     scanFilteredMock.mockResolvedValue([{ Path: "/repo/mmd/StageAnim/包A/dance.vmd" }]);
     await resolveStageSiblings();
     expect(getRepoRootMock).toHaveBeenCalledWith("StageAnim");
+    // 日志标签派生自注册表 name（2026-10-15 命名终审定「场景动作」）：实现不再写字面量，
+    // 此处若仍钉旧词「舞台动画」即红——那正是写死字面量会漂的证明。
     expect(scanFilteredMock).toHaveBeenCalledWith(
       "/repo/mmd/StageAnim",
       "StageAnim",
       "",
-      "舞台动画",
+      "场景动作",
     );
   });
 

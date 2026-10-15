@@ -157,6 +157,21 @@ describe("rtype.label 键族全覆盖（防派生键漂移）", () => {
     expect(labelKeys(en).sort()).toEqual(sorted);
     expect(labelKeys(ja).sort()).toEqual(sorted);
   });
+
+  it("zh 键值 == 注册表 name（2026-10-15 命名终审：源头对齐归零，防再漂移）", () => {
+    // 终审表（用户拍板）：EntityPlayer=角色模型、CustomAnim=自定义动作、StageAnim=场景动作、
+    // DefaultAnim=默认动作、mmd-shader=MMD 光影、fbx=FBX 模型/动画——六处漂移逐词对齐后，
+    // zh 键值与 RESOURCE_TYPE_LABELS（注册表 name 派生）**逐字相等**是全类型不变量。
+    // 谁再改注册表 name 或 zh 键值而不改另一侧，此闸即红（en/ja 是译文，不参与对齐）。
+    const mismatch: string[] = [];
+    const zhBundle = zhCN as Record<string, string>;
+    for (const id of ALL_RESOURCE_TYPES) {
+      const zhVal = zhBundle[rtypeLabelKeyOf(id)];
+      const regVal = RESOURCE_TYPE_LABELS[id];
+      if (zhVal !== regVal) mismatch.push(`${id}: zh「${zhVal}」≠ 注册表「${regVal}」`);
+    }
+    expect(mismatch, "zh 键值与注册表 name 漂移（源头对齐被破坏）：\n" + mismatch.join("\n")).toEqual([]);
+  });
 });
 
 // ===== RESOURCE_TYPES ↔ allResourceTypes 双向对账（防双源漂移）=====
@@ -561,11 +576,10 @@ describe("getPreviewableTypeTabs 3D 切换面板 tab 派生", () => {
     expect(mmdTabs.length).toBe(1);
     // vrm 是 EntityPlayer 与 SceneModel 共享预览格式，按 key 去重后只保留首个命中（EntityPlayer），
     // 故 vrm 恰好 1 个 tab、且标签归属该类型显示名（而非 SceneModel 的「场景模型」）。
-    // ⚠️ 2026-10-15 起标签走 rtypeLabelOf 出口（locale 权威源），zh 值为「人物模型」——
-    // 旧断言「角色模型」读的是注册表 name，属中文回落被固化成契约（见本卡「6/15 漂移」条）。
+    // 2026-10-15 命名终审：EntityPlayer 定名「角色模型」（遵 ADR-111），locale 与注册表同源同词。
     expect(vrmTabs.length).toBe(1);
-    expect(vrmTabs[0]?.label).toBe("人物模型");
-    expect(mmdTabs[0]?.label).toBe("人物模型");
+    expect(vrmTabs[0]?.label).toBe("角色模型");
+    expect(mmdTabs[0]?.label).toBe("角色模型");
   });
 
   it("tab 的 preview key 全局唯一（共享 preview key 跨类型去重，不出现重复 tab）", () => {

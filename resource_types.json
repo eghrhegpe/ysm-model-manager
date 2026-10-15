@@ -326,7 +326,7 @@
     },
     {
       "id": "CustomAnim",
-      "name": "自定义动画",
+      "name": "自定义动作",
       "icon": "🎬",
       "group": "mmd",
       "extensions": [
@@ -374,7 +374,7 @@
     },
     {
       "id": "StageAnim",
-      "name": "舞台动画",
+      "name": "场景动作",
       "icon": "🎭",
       "group": "mmd",
       "extensions": [
@@ -401,7 +401,7 @@
     },
     {
       "id": "mmd-shader",
-      "name": "MMD 着色器",
+      "name": "MMD 光影",
       "icon": "🎨",
       "group": "mmd",
       "extensions": [
@@ -427,7 +427,7 @@
     },
     {
       "id": "DefaultAnim",
-      "name": "默认动画",
+      "name": "默认动作",
       "icon": "🎞️",
       "group": "mmd",
       "extensions": [

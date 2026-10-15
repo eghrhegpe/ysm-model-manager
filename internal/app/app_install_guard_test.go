@@ -118,3 +118,71 @@ func TestFindRecycleRoot_EmptyCustomRoots(t *testing.T) {
 		t.Fatalf("空 CustomRoots 应只返回默认根 %q, got %v", ysm, roots)
 	}
 }
+
+// TestMoveToRecycle_OuterCustomRootCannotAdoptInnerRoot 核心回归锁（2026-10-15 复核实测复现）：
+// 守卫若只比「findRecycleRoot 返回的那一个根」，外层 CustomRoot 严格包含 ysmRoot 时即被绕过——
+// findRecycleRoot 对 rel=="." 是 continue（不判命中），于是跳过内层根、返回外层根，src（内层根）
+// 与外层根不相等 → 整个 ysmRoot 被 rename 进外层根的 .recycle（可恢复，但属整仓库级误动）。
+// 判据改为「src 不得等于任一已知根」后必须拒绝，且磁盘上分毫未动。
+// 与 TestMoveToRecycle_RootRejected 的分工：那条只覆盖「无外层根本时 src==ysmRoot」，
+// 构不出本绕过条件（见前置断言）。
+func TestMoveToRecycle_OuterCustomRootCannotAdoptInnerRoot(t *testing.T) {
+	base := t.TempDir()
+	// FilesRoot=base，且另一个类型的 CustomRoot 也指向 base → 外层根严格包含 ysmRoot
+	a := repoApp(t, types.AppConfig{FilesRoot: base, CustomRoots: map[string]string{"maid-model": base}})
+	ysm := filepath.Join(base, registry.GroupStorageRoot("ysm"))
+	if err := os.MkdirAll(filepath.Join(ysm, "Group", "sub"), 0o755); err != nil {
+		testutil.NoError(t, err)
+	}
+	payload := filepath.Join(ysm, "Group", "sub", "a.ysm")
+	if err := os.WriteFile(payload, []byte("payload"), 0o644); err != nil {
+		testutil.NoError(t, err)
+	}
+	if err := os.WriteFile(filepath.Join(ysm, "ysm.json"), []byte("{}"), 0o644); err != nil {
+		testutil.NoError(t, err)
+	}
+
+	// 前置断言：夹具确实构成绕过条件（归属判定跳过内层根、选中外层根）。
+	// 少了这条，夹具没搭出场景时会「假绿」——守卫压根没被考验。
+	if got := a.findRecycleRoot(ysm); got != base {
+		t.Fatalf("夹具异常：findRecycleRoot(ysmRoot) 应返回外层根 %q 才构成绕过条件, got %q", base, got)
+	}
+
+	err := a.MoveToRecycle(ysm)
+	testutil.NotNil(t, err, "外层 CustomRoot 不得让内层仓库根被整体移入回收站")
+	if !strings.Contains(err.Error(), "资源根目录整体移入回收站") {
+		t.Fatalf("应提示根级拒绝, got %v", err)
+	}
+	// 内层根仍在原位、内容完整
+	testutil.FileExists(t, filepath.Join(ysm, "ysm.json"), "拒绝后 ysmRoot 入口文件必须仍在")
+	testutil.FileExists(t, payload, "拒绝后 ysmRoot 内文件必须仍在")
+	// 外层根的 .recycle 下不得出现被收编的仓库根（落点 = <外层根>/.recycle/<Rel(base,ysm)>）
+	adopted := filepath.Join(base, ".recycle", registry.GroupStorageRoot("ysm"))
+	if _, serr := os.Stat(adopted); !os.IsNotExist(serr) {
+		t.Errorf("外层根 .recycle 不得收编内层仓库根 %s: %v", adopted, serr)
+	}
+}
+
+// TestMoveToRecycle_NormalFileStillWorks 防误伤：新增的「src 不得等于任一已知根」循环不得把
+// 普通路径误判成根（尤其外层 CustomRoot 存在、根集合有多条时）。顺带锁「归属语义未变」：
+// 内层根内的文件仍落进**内层根**的 .recycle——本次修复只堵绕过，不动归属。
+// （既有 TestMoveToRecycle_Success 只用单根配置且未断言 .recycle 落点，故另立本例而非改它。）
+func TestMoveToRecycle_NormalFileStillWorks(t *testing.T) {
+	base := t.TempDir()
+	a := repoApp(t, types.AppConfig{FilesRoot: base, CustomRoots: map[string]string{"maid-model": base}})
+	root := repoRootFor(t, a, "ysm")
+	src := filepath.Join(root, "Group", "model.ysm")
+	if err := os.MkdirAll(filepath.Dir(src), 0o755); err != nil {
+		testutil.NoError(t, err)
+	}
+	if err := os.WriteFile(src, []byte("payload"), 0o644); err != nil {
+		testutil.NoError(t, err)
+	}
+
+	testutil.NoError(t, a.MoveToRecycle(src), "普通文件仍应能移入回收站")
+	if _, serr := os.Stat(src); !os.IsNotExist(serr) {
+		t.Errorf("回收后源文件应已移走, got %v", serr)
+	}
+	testutil.FileExists(t, filepath.Join(root, ".recycle", "Group", "model.ysm"),
+		"回收后文件应落在内层根 .recycle（归属语义未变）")
+}

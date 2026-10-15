@@ -1665,6 +1665,10 @@ export const autoSidebar = [
         "link": "/adr/decisions/ADR-338-d1-commit-message-hygiene"
       },
       {
+        "text": "ADR-331-d2：i18n-ui-check 补第四通道：toast 载荷",
+        "link": "/adr/decisions/ADR-331-d2-i18n-ui-check-toast-channel"
+      },
+      {
         "text": "ADR-331-d1：ReadFileBytes 无 error 通道缺口：ReadFileMeta 结构化错误字段（切片 C）",
         "link": "/adr/decisions/ADR-331-d1-readfilebytes-error-readfilemeta-c"
       },

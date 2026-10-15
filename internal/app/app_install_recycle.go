@@ -31,13 +31,29 @@ func (a *App) MoveToRecycle(src string) error {
 	if root == "" {
 		return fmt.Errorf("找不到包含该文件的资源根目录，无法移入回收站")
 	}
-	// src 等于资源根本身时拒绝——findRecycleRoot 对 rel=="."
-	// 判命中 + recycle.IsInside 对 path==root 放行 → 整仓库移入 .recycle（可恢复但误操作面大）；
-	// fallback 到 ysmRoot 后 Clean 相等同样拒绝。
+	// 根级自卫：src 等于**任一**已知资源根时拒绝——否则整仓库根会被 rename 进 `.recycle`
+	// （可恢复，但属整仓库级误动）。
+	//
+	// ⚠️ 为什么判据是「任一」而不是「findRecycleRoot 返回的那一个」：`findRecycleRoot` 对
+	// rel=="." 是 continue（**不**判命中），故当存在**严格包含 ysmRoot 的外层 CustomRoot** 时
+	// 它会跳过内层根、返回外层根；此时拿 `src(内层根)` 与外层根比不相等 → 守卫整体失效。
+	// 2026-10-15 复核实测复现：FilesRoot=base + CustomRoots={"maid-model": base} 时
+	// MoveToRecycle(ysmRoot) 返回 nil、base/minecraft-mod/ysm 落进 base/.recycle/。
+	// recycle.prepareMoveSource 的第二道守卫只比「传入的 root」，同样是外层根，帮不上忙。
+	// 故两道并用：先与归属根比（原判据，语义不弱化），再与已知根全集比（补绕过口）。
+	//
+	// ⚠️ 不得反向改成「让 findRecycleRoot 对 rel=="." 判命中」——那会把归属变成内层根，
+	// 改变 .recycle 落在哪个根下（产品裁定，不在本修复范围）。
 	// EqualFold 大小写不敏感比较（对齐 paths.IsInside 的 Windows 语义，
 	// 防大小写不同的根输入绕过守卫）
-	if strings.EqualFold(filepath.Clean(src), filepath.Clean(root)) {
+	cleanSrc := filepath.Clean(src)
+	if strings.EqualFold(cleanSrc, filepath.Clean(root)) {
 		return fmt.Errorf("不能把资源根目录整体移入回收站")
+	}
+	for _, r := range a.recycleRoots() {
+		if r != "" && strings.EqualFold(cleanSrc, filepath.Clean(r)) {
+			return fmt.Errorf("不能把资源根目录整体移入回收站")
+		}
 	}
 	if err := recycle.Move(src, root); err != nil {
 		return err
@@ -46,19 +62,26 @@ func (a *App) MoveToRecycle(src string) error {
 	return nil
 }
 
-// findRecycleRoot 查找包含 src 路径的资源根目录（用于多类型回收）
-func (a *App) findRecycleRoot(src string) string {
+// recycleRoots 返回参与回收站归属判定的资源根集合（唯一枚举点）：
+// ysmRoot + CustomRoots（CustomRoots 是唯一事实源，废弃字段已清空，不再读取）。
+// findRecycleRoot（归属命中）与 MoveToRecycle（根级守卫）共用本枚举——各自拼 roots 会漂移，
+// 而漂移的后果正是「守卫看的根集合」≠「归属判定看的根集合」（2026-10-15 那次绕过即此类）。
+// map 以 range 展开而非 append(roots, cfg.CustomRoots...)：Go 不支持 map 展开进 append
+// （编译期报 cannot use map as []string），且 range 与拆分前的逐条 append 语义逐字一致。
+func (a *App) recycleRoots() []string {
 	cfg := a.LoadAppConfig()
 	roots := []string{
 		a.ysmRoot(),
 	}
-	// CustomRoots 是唯一事实源（废弃字段已清空，不再读取）
-	if cfg.CustomRoots != nil {
-		for _, r := range cfg.CustomRoots {
-			roots = append(roots, r)
-		}
+	for _, r := range cfg.CustomRoots {
+		roots = append(roots, r)
 	}
-	for _, r := range roots {
+	return roots
+}
+
+// findRecycleRoot 查找包含 src 路径的资源根目录（用于多类型回收）
+func (a *App) findRecycleRoot(src string) string {
+	for _, r := range a.recycleRoots() {
 		if r == "" {
 			continue
 		}

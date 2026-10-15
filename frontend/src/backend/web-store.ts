@@ -347,7 +347,15 @@ export const webStoreBindings = {
     themeAuto: string,
   ) => {
     // 字段名对齐 AppConfig（消费方读 resourcepackRoot，非 rpRoot）；spread 旧配置避免
-    // 整体覆盖丢失 ysmRoot/shaderpackRoot 等；空串保留旧值（对齐桌面 orDefault 语义）
+    // 整体覆盖丢失本函数未管理的键（customRoots / updateCheckIntervalMs / logMaxEntries /
+    // 各阈值等——这些由 SetResourceRoot/SaveThresholds 等其它 binding 写入，见下方片段）。
+    // ⚠️ 不复制桌面 migrateLegacyConfigFields/clearDeprecatedFields：Web 端自诞生只写本六字段
+    // + SetDownloadMirror/SaveThresholds，**从未产出 ysmRoot/shaderpackRoot 等废弃字段**
+    // （桌面那些是 ADR-095 前的历史残留，Web 无此历史），故 Web 端无需「迁移 + 清零双源」。
+    // 空串保留旧值（对齐桌面 orDefault 语义）。
+    // 并发：localStorage 同步读写、本函数无 await 让出 → 单次写原子；真正交错只发生在调用方
+    // writeAppConfig 的 `await LoadAppConfig()` 边界之间（Web async 让出），但设置页保存均为
+    // 用户触发、窗口极窄，且桌面侧已由 Go configWriteMu 护事务——Web 端无需在此再加串行锁。
     const prev = loadWebConfig();
     saveWebConfig({
       ...prev,

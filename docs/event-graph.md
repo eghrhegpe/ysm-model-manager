@@ -72,7 +72,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 117 |
-| reload | `frontend/src/views/app-tree/bus-handlers.ts` | 311 |
+| reload | `frontend/src/views/app-tree/bus-handlers.ts` | 312 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -351,7 +351,7 @@
 | runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 139 |
 | atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 166 |
 | atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 243 |
-| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 396 |
+| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 397 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 129 |
 | atTeBindRenameInput | `frontend/src/views/app-tree/events.ts` | 416 |
 | toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 550 |
@@ -368,7 +368,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 391 |
+| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 392 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 128 |
 | toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 545 |
 | _executeTreeMove | `frontend/src/views/app-tree/index.ts` | 832 |

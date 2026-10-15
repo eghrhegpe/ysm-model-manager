@@ -30,6 +30,7 @@ auto_fields:
     - FilePerms
     - FileSize
     - FormatSize
+    - HasRecycleSegment
     - IsCrossDeviceErr
     - IsHardLink
     - IsRecycleDir

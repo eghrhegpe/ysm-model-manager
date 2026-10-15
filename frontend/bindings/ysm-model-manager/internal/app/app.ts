@@ -328,6 +328,19 @@ export function ExportModelStructureJSON(modelPath: string): $CancellablePromise
     return $Call.ByID(2285469521, modelPath);
 }
 
+/**
+ * ExportSettingsJSON 导出全部设置为单个 JSON 文件（ADR-344-d1）。
+ * 
+ * localStorageJSON：前端按设置键台账采集的偏好类键值（JSON object 序列化串）。
+ * Go 侧不解释具体键语义——键的集合与归属由 `tests/test_settings_key_ledger.ts`
+ * 对账的台账守护，本函数只做「收拢 + 落盘」。
+ * 
+ * 返回导出文件完整路径（供 UI 显示与复制）。
+ */
+export function ExportSettingsJSON(localStorageJSON: string): $CancellablePromise<string> {
+    return $Call.ByID(1837639450, localStorageJSON);
+}
+
 export function ExportWorkshopCreatorsJSONFile(): $CancellablePromise<string> {
     return $Call.ByID(3313564853);
 }
@@ -667,6 +680,19 @@ export function ImportModelFolder(folderName: string, subpath: string, files: ty
  */
 export function ImportModelFolderTo(folderName: string, subpath: string, rtype: string, files: types$0.ImportFileItem[] | null): $CancellablePromise<void> {
     return $Call.ByID(435971586, folderName, subpath, rtype, files);
+}
+
+/**
+ * ImportSettingsFromFile 导入设置导出文件（ADR-344-d1）。
+ * 
+ * 流程：锁内重读当前配置 → 备份当前 ysm_config.json → 以导入配置为基 → 版本门控迁移 +
+ * 洗脏 linkMode + 废弃字段清零 → saveConfig → 复用 applyPostSaveSideEffects（SyncLinkMode +
+ * 根路径变更时重启 watcher）。localStorage 的写入由前端完成（浏览器侧键值，Go 无能力写）。
+ * 
+ * 返回结果含备份文件路径（导入失败/后悔可回滚）与将应用的浏览器偏好条数。
+ */
+export function ImportSettingsFromFile(path: string): $CancellablePromise<types$0.ImportSettingsResult> {
+    return $Call.ByID(3507488769, path);
 }
 
 /**
@@ -1038,6 +1064,14 @@ export function ReadPackMeta(path: string): $CancellablePromise<types$0.PackMeta
  */
 export function ReadSchematic(path: string): $CancellablePromise<{ [_ in string]?: any } | null> {
     return $Call.ByID(2285677248, path);
+}
+
+/**
+ * ReadSettingsExport 只读解析 + 校验设置导出文件（无任何副作用）。
+ * 前端先调本绑定拿到内容做导入前确认（含「导入后将应用 N 项浏览器偏好」计数）。
+ */
+export function ReadSettingsExport(path: string): $CancellablePromise<types$0.SettingsExport> {
+    return $Call.ByID(258164060, path);
 }
 
 /**

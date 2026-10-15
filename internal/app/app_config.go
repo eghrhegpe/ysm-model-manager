@@ -180,6 +180,26 @@ func applyConfigMigrations(cfg *types.AppConfig) {
 	}
 }
 
+// applyPostSaveSideEffects 配置**落盘成功后**的副作用（SaveAppConfig / SaveAppConfigPatch /
+// ImportSettingsFromFile 三处共用）。抽成一处的原因：这三段尾部代码曾是逐份手抄的
+// 「SyncLinkMode + 根路径变更时 rebuildWatcherAndDirs」，而每加一个写入口就多一份副本、
+// 漏一份就复现「设置页已显示新模式、实际链接仍按旧模式直到重启」的陷阱。
+//
+// 调用方必须在 configWriteMu 锁内、且已 saveConfig 成功后调用（副作用不可逆）。
+func (a *App) applyPostSaveSideEffects(oldCfg types.AppConfig, cfg *types.AppConfig) error {
+	// 保存成功后同步内存 LinkMode（与 SetLinkMode 同模式）——
+	// 原实现写盘后 installer 安装仍用旧链接模式直到重启（GetLinkMode 读 a.LinkMode）
+	a.install.SyncLinkMode(cfg.LinkMode)
+	// FilesRoot/McRoot 变化后重启 watcher：
+	// - 原 restartWatcher 是无调用点死代码，保存后 watcher 仍监听旧目录
+	// - 仅当实际变化才重启（防 theme-only/link-mode-only 保存触发全仓 WalkDir）
+	// - Start 失败返回 error（原 println 静默会导致 watcher 永久丢失）
+	if cfg.FilesRoot != oldCfg.FilesRoot || cfg.McRoot != oldCfg.McRoot {
+		return a.rebuildWatcherAndDirs(cfg)
+	}
+	return nil
+}
+
 func (a *App) SaveAppConfig(filesRoot, rpRoot, mcRoot, linkMode, theme, themeAuto string) error {
 	// 串行化整段读-改-写（configWriteMu，锐评 2026-10-15 P2）：下方 oldCfg 来自
 	// LoadAppConfig 的快照，若与另一写并发，二者会各自把「改前的快照」整份落盘，
@@ -225,19 +245,9 @@ func (a *App) SaveAppConfig(filesRoot, rpRoot, mcRoot, linkMode, theme, themeAut
 	if err := a.saveConfig(cfg); err != nil {
 		return err
 	}
-	// 保存成功后同步内存 LinkMode（与 SetLinkMode 同模式）——
-	// 原实现写盘后 installer 安装仍用旧链接模式直到重启（GetLinkMode 读 a.LinkMode）
-	a.install.SyncLinkMode(cfg.LinkMode)
-	// FilesRoot/McRoot 变化后重启 watcher：
-	// - 原 restartWatcher 是无调用点死代码，保存后 watcher 仍监听旧目录
-	// - 仅当实际变化才重启（防 theme-only/link-mode-only 保存触发全仓 WalkDir）
-	// - Start 失败返回 error（原 println 静默会导致 watcher 永久丢失）
-	if cfg.FilesRoot != oldCfg.FilesRoot || cfg.McRoot != oldCfg.McRoot {
-		if err := a.rebuildWatcherAndDirs(&cfg); err != nil {
-			return err
-		}
-	}
-	return nil
+	// 落盘后的副作用（SyncLinkMode + 根路径变更时重启 watcher）收拢到
+	// applyPostSaveSideEffects，避免每新增一个写入口就手抄一份（ADR-344-d1）
+	return a.applyPostSaveSideEffects(oldCfg, &cfg)
 }
 
 // SaveAppConfigPatch 部分更新应用配置（锐评 2026-10-15 P1 ③）——**前端唯一推荐入口**。
@@ -297,16 +307,7 @@ func (a *App) SaveAppConfigPatch(patch types.AppConfigPatch) error {
 	if err := a.saveConfig(cfg); err != nil {
 		return err
 	}
-	// 链接模式落盘后同步 installer 内存态（否则设置页已显示新模式，实际链接仍按旧模式，
-	// 要到重启才生效——与 SaveAppConfig 同款陷阱）
-	a.install.SyncLinkMode(cfg.LinkMode)
-	// 根路径变化后重启 watcher（仅实际变化才重启，防 theme-only 保存触发全仓 WalkDir）
-	if cfg.FilesRoot != oldCfg.FilesRoot || cfg.McRoot != oldCfg.McRoot {
-		if err := a.rebuildWatcherAndDirs(&cfg); err != nil {
-			return err
-		}
-	}
-	return nil
+	return a.applyPostSaveSideEffects(oldCfg, &cfg)
 }
 
 func (a *App) SetDownloadMirror(mirror string) error {

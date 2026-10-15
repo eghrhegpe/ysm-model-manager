@@ -6,19 +6,24 @@ category: config
 status: active
 source_files:
   - frontend/src/settings-keys.ts
+  - frontend/src/views/app-content/settings/settings-backup.ts
   - tests/test_settings_key_ledger.ts
   - go/types/config.go
   - internal/app/app_config.go
+  - internal/app/app_settings_export.go
 auto_fields:
   symbols_with_lines:
     - App.CheckUpdate
     - App.CurrentVersion
     - App.DoUpdate
+    - App.ExportSettingsJSON
     - App.GetConfigPath
     - App.GetMinecraftPaths
     - App.GetSubDirMap
     - App.GetWindowPosition
+    - App.ImportSettingsFromFile
     - App.LoadAppConfig
+    - App.ReadSettingsExport
     - App.RestartApplication
     - App.SaveAppConfig
     - App.SaveAppConfigPatch
@@ -30,11 +35,14 @@ auto_fields:
     - App.ValidateMinecraftDir
     - AppConfig
     - AppConfigPatch
+    - applyImportedLocalStorage
+    - collectExportableLocalStorage
     - DedupConfig
     - DISK_KEY_PREFIX
     - diskFieldName
     - findSettingsKey
     - ImportSettingsResult
+    - initSettingsBackup
     - LocalAuthor
     - migratingSettingsKeys
     - nonMigratingSettingsKeys
@@ -63,7 +71,8 @@ use_when:
   - 排查「设置重启后没保住」「换机后设置丢了」类问题
   - 怀疑某个键有双权威（磁盘 vs localStorage 口径不一致）
 pitfalls:
-  - 只备份 ysm_config.json 带不走 localStorage 轨的几十项设置——官方迁移叙事曾长期漏掉这一档
+  - 只备份 ysm_config.json 带不走 localStorage 轨的几十项设置——官方迁移叙事曾长期漏掉这一档（`b1116645c` 有文档无实现，2026-10-16 起由 ADR-344-d1 导出/导入收拢）
+  - 设置导出/导入的采集与回写**必须按台账白名单**（tier=local-storage && authority=browser-authority），禁手写第二份键名清单——手抄必漂移，新键漏登记即漏备份
   - theme / themeAuto 跨双轨同名，台账用 disk: 前缀分列；无前缀即撞名，撞名会逼两轨塞进一行
   - 新增 localStorage 键必须同步登记 settings-keys.ts，漏登记则契约测试转红
   - 网页模式的「磁盘替身」是 localStorage 的 ysm:config 键，别把它当桌面磁盘轨
@@ -90,7 +99,7 @@ quick_risk_lines:
 | 轨 | 落点 | 覆盖 | 换机是否保住 |
 |----|------|------|------------|
 | Go 磁盘轨 | `%APPDATA%\YSM-Model-Manager\ysm_config.json` | 路径、链接模式、主题、镜像源、运行阈值、窗口 | ✅ 复制配置文件即恢复 |
-| 浏览器 localStorage 轨 | WebView 用户 profile 内 | 字号/字体/密度/动画、语言、默认页、3D 偏好、键位、收藏、会话态 | ❌ 换机/重装即丢 |
+| 浏览器 localStorage 轨 | WebView 用户 profile 内 | 字号/字体/密度/动画、语言、默认页、3D 偏好、键位、收藏、会话态 | ❌ 单独复制配置文件不恢复；「设置 → 环境 → 备份与迁移」导出/导入可整体带走 |
 | IndexedDB 轨（仅网页版） | 浏览器 IDB | 日志环、健康锁存位、FS 授权句柄 | ❌ 同上 |
 
 字段单一事实源 = `go/types/config.go|AppConfig`（磁盘轨）与 `frontend/src/settings-keys.ts|SETTINGS_KEYS`（全轨台账）。
@@ -115,6 +124,7 @@ quick_risk_lines:
 - 磁盘轨写入唯一入口：`views/config-write.ts|writeAppConfig(patch)` → Go `SaveAppConfigPatch`（原子 patch，ADR-349；实参点单点化始于 ADR-313），执法 `tests/test_config_write_single_exit.ts`
 - 主题读写两侧口径：`theme-core.ts|initTheme`（读）与 `views/config-write.ts|writeAppConfig`（写）——两侧都必须「磁盘优先」
 - 备份迁移用户叙事：`docs/guide/backup-migration.md`「哪些设置会跟着迁移」一节
+- 设置导出/导入（ADR-344-d1，桌面端）：前端 `views/app-content/settings/settings-backup.ts`（采集/回写浏览器偏好，白名单以台账为准）→ Go `internal/app/app_settings_export.go|ExportSettingsJSON` / `ReadSettingsExport` / `ImportSettingsFromFile`（磁盘合并、版本门控迁移、导入前备份 `ysm_config.json.bak-时间戳`，导入后前端 emit `settings:imported` 触发面板全量重建）
 
 ## 与其他子系统关系
 
@@ -133,6 +143,7 @@ quick_risk_lines:
 5. **台账不参与运行时读写**。它是让漂移暴露的声明，不是权威——不要为了「走台账」把 safeGet 改成查表。
 6. **网页版 `ysm:config`（localStorage）是磁盘轨的网页替身**，不是桌面磁盘轨；桌面端不消费它。
 7. **结构性迁移按 `AppConfig|SchemaVersion` 门控，且只有 `applyConfigMigrations` 有权盖章**。文件版本 < 当前版本才跑迁移（旧独立路径 → `CustomRoots`）并盖版本章；≥ 则跳过（幂等）。写盘路径（`saveConfig`）**不得**越权盖章——把「未迁移」的配置标成「已迁移」会令下次读取跳过迁移，复现「启动路径漏跑迁移」的静默数据丢失。此门控取代旧「字段空不空」的启发式判据：历史多次迁移 bug（`go/types` 新增字段被白名单漏拷贝、启动路径漏跑 `migrateLegacyConfigFields`）同根于此。
+8. **设置导出/导入的键面以台账为单一事实源**。采集取 `tier=local-storage && authority=browser-authority`（go-disk 随 appConfig 走、session/non-persistent 不备份、dual-write 镜像不备份——备份镜像反而制造两处不一致）；回写白名单 = 同一集合，导出文件里未登记的键一律忽略。导入后必须 emit `settings:imported` 重建面板（theme/语言/路径可能已变，只刷 store 会留下 UI 与真相分叉）。
 
 ## 相关
 
@@ -140,6 +151,7 @@ quick_risk_lines:
 - 对账守卫：`tests/test_settings_key_ledger.ts`
 - 磁盘轨字段：`go/types/config.go|AppConfig`
 - 用户迁移叙事：`docs/guide/backup-migration.md`
+- 设置导出/导入决策：`docs/adr/decisions/ADR-344-d1-settings-export-import.md`；前端采集/回写 `frontend/src/views/app-content/settings/settings-backup.ts`、磁盘侧 `internal/app/app_settings_export.go`
 - 写入唯一出口（ADR-313 → ADR-349 原子化）：`views/config-write.ts|writeAppConfig` → Go `SaveAppConfigPatch`、执法 `tests/test_config_write_single_exit.ts`（已改锁新绑定）
 - 主题双写口径：知识卡 `theme`
 - localStorage 安全包装：知识卡 `dom-storage`

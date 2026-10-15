@@ -90,6 +90,15 @@ class AppContent extends WebComponentBase {
     // 社区缓存统一失效（原社区-data.ts 模块级 bus.on 迁移至生命周期桶，
     // 组件 disconnectedCallback 经 SubscriptionBucket.cleanupAll 自动退订，防泄漏）
     this.subs.addGlobal(bus.on("community:clear-cache", clearAllCommunityCache));
+    // 设置导入完成（ADR-344-d1）：磁盘配置与浏览器偏好均已变更，清缓存重建当前面板，
+    // 让 theme/paths/locale 一致生效——只刷 settings store 会留下 UI 与真相分叉
+    this.subs.addGlobal(
+      bus.on("settings:imported", () => {
+        this.subs.cleanupPage();
+        this.state.clearPanels();
+        this._render();
+      }),
+    );
     this._render();
     // core 内核 + features 全局 handler（ADR-188：core/handlers/global 汇编壳已删，
     // app-content 直接注册各 features 全局 handler——core 不设壳层）

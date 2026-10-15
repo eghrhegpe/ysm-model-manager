@@ -185,6 +185,21 @@ export const zhCN = {
   "settings.webRepo.desc":
     "网页版无本地文件系统，授权一个本地目录后，其下 .ysm 模型会导入到内置模型库（IndexedDB）作为文件来源。",
   "settings.webRepo.authorize": "授权本地仓库目录",
+  // 设置备份与迁移（ADR-344-d1）
+  "settings.backup.title": "设置备份与迁移",
+  "settings.backup.desc":
+    "一键把「磁盘配置 + 浏览器偏好」导出为单个 JSON 文件；在新电脑导入即可恢复，不用手重设字号/键位/3D 偏好等几十项。",
+  "settings.backup.exportBtn": "导出设置",
+  "settings.backup.importBtn": "导入设置",
+  "settings.backup.exportedTo": "已导出到：{path}",
+  "settings.backup.exportDone": "设置已导出",
+  "settings.backup.copyPath": "复制路径",
+  "settings.backup.copied": "路径已复制",
+  "settings.backup.copyFailed": "复制失败，请手动复制上方路径",
+  "settings.backup.importPickerTitle": "选择设置导出文件",
+  "settings.backup.importedTo": "已导入 {n} 项浏览器偏好；导入前的配置已备份到：{backup}",
+  "settings.backup.importDone":
+    "设置导入完成，已应用 {n} 项浏览器偏好；若导入的路径在本机无效，请在「环境」页重新设置目录",
   // 设置页动作 toast（app-content/settings）
   "settings.mirror.switched": "下载源已切换为 {name}",
   "settings.mirror.nameDirect": "直连",

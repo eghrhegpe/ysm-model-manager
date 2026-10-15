@@ -181,6 +181,22 @@ export const ja: Record<string, string> = {
   "settings.webRepo.desc":
     "ウェブ版にはローカルファイルシステムがありません。ローカルフォルダを認可すると、配下の .ysm モデルが内蔵モデルライブラリ（IndexedDB）に取り込まれファイルソースとなります。",
   "settings.webRepo.authorize": "ローカルリポジトリフォルダを認可",
+  // 設定のバックアップと移行（ADR-344-d1）
+  "settings.backup.title": "設定のバックアップと移行",
+  "settings.backup.desc":
+    "ディスク設定とブラウザ設定を1つのJSONファイルに書き出します。新しいPCでインポートすれば、文字サイズやキーバインドなどの数十項目を手動で設定し直す必要がありません。",
+  "settings.backup.exportBtn": "設定を書き出す",
+  "settings.backup.importBtn": "設定を読み込む",
+  "settings.backup.exportedTo": "書き出し先：{path}",
+  "settings.backup.exportDone": "設定を書き出しました",
+  "settings.backup.copyPath": "パスをコピー",
+  "settings.backup.copied": "パスをコピーしました",
+  "settings.backup.copyFailed": "コピーできませんでした。上記パスを手動でコピーしてください",
+  "settings.backup.importPickerTitle": "設定ファイルを選択",
+  "settings.backup.importedTo":
+    "{n} 項目のブラウザ設定を読み込みました。読み込み前の設定は {backup} にバックアップされています",
+  "settings.backup.importDone":
+    "設定の読み込みが完了し、{n} 項目のブラウザ設定を適用しました。読み込んだパスがこのマシンで無効な場合は「環境」ページでディレクトリを再設定してください",
   // 設定ページ動作トースト（app-content/settings）
   "settings.mirror.switched": "ダウンロード元を {name} に切り替えました",
   "settings.mirror.nameDirect": "直結",

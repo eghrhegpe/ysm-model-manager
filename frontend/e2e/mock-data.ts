@@ -313,6 +313,10 @@ export const MOCK_DATA = {
   ExportModelStructureJSON: undefined,
   ExportWorkshopCreatorsJSONFile: undefined,
   ExportWorkshopSitesJSONFile: undefined,
+  // 设置备份与迁移（ADR-344-d1）：e2e 未触达，补 undefined 最安全（导出返回空路径、导入空结果，走异常态）
+  ExportSettingsJSON: undefined,
+  ReadSettingsExport: undefined,
+  ImportSettingsFromFile: undefined,
   ExtractPreviewTexture: undefined,
   ExtractYSMHeader: undefined,
   ExtractYSMHeaderFromBase64: undefined,

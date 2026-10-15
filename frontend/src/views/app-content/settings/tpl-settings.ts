@@ -36,7 +36,7 @@ import { isWebPlatform } from "@/backend/platform-web.ts";
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { renderTabs, type TabSpec } from "@/views/app-content/tabs-shell.ts";
-import { stgUnits } from "./stg-card.ts";
+import { type StgUnitSpec, stgUnits } from "./stg-card.ts";
 import { aboutPageBody } from "./tpl-settings-about.ts";
 import {
   renderStgAnimationSection,
@@ -46,6 +46,7 @@ import {
   renderStgThemeAuto,
   renderStgThemePicker,
 } from "./tpl-settings-appearance.ts";
+import { renderStgBackupSection } from "./tpl-settings-backup.ts";
 import {
   BASIC_PATH_CARD_SPECS,
   cardSupportedOn,
@@ -125,15 +126,21 @@ export function settingsHTML(): string {
   // 环境 tab：路径卡组（桌面三卡 0/60/120；安卓仅 mc-path 一卡；网页零卡）→ 存储卡 → 启动默认页
   // 卡组槽数随平台派生（PATH_CARD_PLATFORMS 过滤后实卡数）——stgUnits 据此推进后续档位
   const pathCardCount = BASIC_PATH_CARD_SPECS.filter((it) => cardSupportedOn(it.id, p)).length;
-  const envBody = stgUnits([
+  const envUnits: StgUnitSpec[] = [
     {
       cardCount: pathCardCount,
       cardStep: 60,
       render: (startMs, cardStep) => renderStgBasicPaths(p, startMs, cardStep),
     },
     { render: (startMs) => renderStgStorageCard(p, startMs) },
-    { render: (startMs) => renderStgDefaultPageSection(startMs) },
-  ]);
+  ];
+  // 备份与迁移仅桌面端（ADR-344-d1）：网页版浏览器偏好走 IndexedDB、磁盘轨不可达，
+  // 导出/导入语义不同，后续 ADR 单独立项——此处不给半截入口
+  if (p === "desktop") {
+    envUnits.push({ render: (startMs) => renderStgBackupSection(startMs) });
+  }
+  envUnits.push({ render: (startMs) => renderStgDefaultPageSection(startMs) });
+  const envBody = stgUnits(envUnits);
 
   // 语言卡归「外观」（显示偏好），排在字体与布局之后、行为与动画之前
   // 外观 tab：主题选择器（行组）→ 主题自动（行组）→ 字体三卡（卡组 cardCount 3）→ 语言 → 动画

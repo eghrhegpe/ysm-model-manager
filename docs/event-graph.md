@@ -4,9 +4,11 @@
 > 基于 `frontend/src/bus.ts` 的 `BusEvents` 接口校验所有调用方（含 html 内联、可选链调用）。
 > 合法发射者登记表闸（ADR-270-d3）：`docs/.bus-emitters.json` 之外新增发射文件 = 硬错误；表内未被命中条目 = 可收紧提示。
 
-## ✅ 无异常
+## ⚠️ 异常摘要
 
-所有调用均在 BusEvents 契约与合法发射者登记表内：无孤儿发射 / 鬼订阅 / 未声明事件 / 缺参 / 发射者表外新增。
+### 发射者表外新增（硬错误——须改走收敛通道，或确认合法后 --update --force 登记）
+
+- `settings:imported` @ `frontend/src/views/app-content/settings/settings-backup.ts`
 
 ## 事件总览
 
@@ -33,6 +35,7 @@
 | `repo:rtype-changed` | 1 | 5 | 0 | 0 | ✅ |
 | `repo:search-creator` | 2 | 1 | 0 | 0 | ✅ |
 | `repo:subdir-changed` | 1 | 1 | 0 | 0 | ✅ |
+| `settings:imported` | 1 | 1 | 0 | 0 | ✅ |
 | `stats:refresh` | 28 | 2 | 0 | 0 | ✅ |
 | `sync:toggle:status` | 4 | 1 | 0 | 0 | ✅ |
 | `toast:show` | 17 | 2 | 0 | 0 | ✅ |
@@ -232,7 +235,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | connectedCallback | `frontend/src/views/app-content/index.ts` | 72 |
-| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 197 |
+| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 206 |
 | cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 243 |
 | anActivateNavPage | `frontend/src/views/app-nav/index.ts` | 53 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 237 |
@@ -323,6 +326,18 @@
 |------|------|----|
 | _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 323 |
 
+### `settings:imported`
+
+**发射方：**
+| 函数 | 文件 | 行 |
+|------|------|----|
+| initSettingsBackup | `frontend/src/views/app-content/settings/settings-backup.ts` | 114 |
+
+**订阅方（on）：**
+| 函数 | 文件 | 行 |
+|------|------|----|
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 96 |
+
 ### `stats:refresh`
 
 **发射方：**
@@ -341,7 +356,7 @@
 | runDownloadMissing | `frontend/src/features/sync/sync.ts` | 312 |
 | runSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 398 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 230 |
-| relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 247 |
+| relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 248 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 85 |
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 327 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 73 |
@@ -424,8 +439,8 @@
 | downloadMissing | `frontend/src/features/sync/sync.ts` | 350 |
 | handleSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 427 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 231 |
-| applyFsaState | `frontend/src/views/app-content/settings/init.ts` | 406 |
-| onWebRepoAuthClick | `frontend/src/views/app-content/settings/init.ts` | 434 |
+| applyFsaState | `frontend/src/views/app-content/settings/init.ts` | 407 |
+| onWebRepoAuthClick | `frontend/src/views/app-content/settings/init.ts` | 435 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 582 |
 
 **订阅方（on）：**

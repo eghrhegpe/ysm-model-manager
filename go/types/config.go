@@ -62,6 +62,26 @@ type AppConfig struct {
 	WinScrH int `json:"winScrH"`
 }
 
+// SettingsExport 设置导出文件（ADR-344-d1）。
+//
+// 把双轨设置（Go 磁盘 AppConfig + 前端 localStorage 偏好）收拢成单个 JSON，
+// 供换机迁移。字段带版本与标识以便导入时校验——历史教训是把 JSON 当配置解析
+// 前不做格式校验，用户选错文件即静默产生一份"看起来正常的"空配置。
+type SettingsExport struct {
+	Format        string            `json:"format"`        // 恒为 "ysm-settings-export"（导入门控）
+	ExportVersion int               `json:"exportVersion"` // 导出格式版本（导入时拒绝更高版本）
+	ExportedAt    string            `json:"exportedAt"`    // 导出时间 RFC3339（展示用）
+	AppVersion    string            `json:"appVersion"`    // 导出时的程序版本（诊断用）
+	AppConfig     AppConfig         `json:"appConfig"`     // Go 磁盘轨完整配置
+	LocalStorage  map[string]string `json:"localStorage"`  // 浏览器本地存储偏好类键值（非缓存/会话/调试）
+}
+
+// ImportSettingsResult 设置导入结果（前端据此提示后续动作）。
+type ImportSettingsResult struct {
+	BackupPath      string `json:"backupPath"`      // 导入前对当前 ysm_config.json 的备份路径（空=无需备份）
+	AppliedKeyCount int    `json:"appliedKeyCount"` // 将写入浏览器本地存储的偏好条数
+}
+
 // AppConfigPatch 应用配置的**部分更新**载荷（锐评 2026-10-15 P1 ③）。
 //
 // 为什么需要它：前端 `views/config-write.ts|writeAppConfig` 的 patch 语义原由两次

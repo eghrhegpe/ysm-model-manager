@@ -26,8 +26,10 @@ auto_fields:
     - copyWithToast
     - createDedupSession
     - DEDUP_CONFIG_KEY
+    - DEDUP_CONFIRM_MS
     - DEDUP_DEFAULTS
     - DedupConfigShape
+    - dedupDeletionPlan
     - DedupFileLike
     - DedupRegType
     - dedupSelectedIndex

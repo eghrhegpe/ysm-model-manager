@@ -79,8 +79,18 @@ func (a *App) recycleRoots() []string {
 	return roots
 }
 
-// findRecycleRoot 查找包含 src 路径的资源根目录（用于多类型回收）
+// findRecycleRoot 查找包含 src 路径的资源根目录（用于多类型回收）。
+//
+// 归属规则 = **最具体（最深）匹配根**，与 `app_files.go|toggleRootFor` 同一条规则——同一个
+// 概念（谁拥有这个路径）不允许两套口径。原实现取「首个命中」：`recycleRoots()` 的
+// CustomRoots 段是 Go map、**遍历序随机**，故当两个 CustomRoots 互相嵌套时，同一文件的
+// 回收站落点会在内层/外层之间随机漂移（列表能合并显示，但物理落点与 RestoreFromRecycle 的
+// 根遍历顺序都随之变）。现按 `len(r) > len(best)` 取最深，并对**等长**情形按字典序收敛
+// （等长且都包含 src 的两根必为同一目录的大小写变体，字典序给出全序）——结论与遍历序彻底解耦。
+// `rel=="."`（src 即根）仍**不判命中**：交给调用方的根级自卫拒绝，归属语义不变。
+// 2026-10-15 落地；与用户指南「每个资源根目录下各有一个 .recycle」的既有 UX 一致。
 func (a *App) findRecycleRoot(src string) string {
+	best := ""
 	for _, r := range a.recycleRoots() {
 		if r == "" {
 			continue
@@ -98,9 +108,11 @@ func (a *App) findRecycleRoot(src string) string {
 		if strings.HasPrefix(rel, ".."+sep) {
 			continue
 		}
-		return r
+		if best == "" || len(r) > len(best) || (len(r) == len(best) && r < best) {
+			best = r
+		}
 	}
-	return ""
+	return best
 }
 
 // ListRecycleBin 列出回收站条目。recyclePath 非空时只遍历与之相关的资源根

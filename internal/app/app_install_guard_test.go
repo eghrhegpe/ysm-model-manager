@@ -119,6 +119,36 @@ func TestFindRecycleRoot_EmptyCustomRoots(t *testing.T) {
 	}
 }
 
+// TestFindRecycleRoot_MostSpecificRootWins（2026-10-15 归属规则收敛）：
+// 归属 = **最具体（最深）匹配根**，与 app_files.go|toggleRootFor 同一条规则。原「首个命中」
+// 实现在两个互相嵌套的 CustomRoots 下结论随 Go map 遍历序**随机漂移**（同一文件的回收站
+// 落点在内层/外层之间不定），故本用例反复求值 50 次——旧实现被抓住的概率 ≈ 1-2⁻⁵⁰。
+func TestFindRecycleRoot_MostSpecificRootWins(t *testing.T) {
+	base := t.TempDir()
+	outer := filepath.Join(base, "mmd")
+	inner := filepath.Join(outer, "entity")
+	a := repoApp(t, types.AppConfig{
+		FilesRoot:   base,
+		CustomRoots: map[string]string{"mmd": outer, "entityplayer": inner},
+	})
+
+	src := filepath.Join(inner, "char.pmx")
+	for i := 0; i < 50; i++ {
+		if got := a.findRecycleRoot(src); got != inner {
+			t.Fatalf("第 %d 次：应稳定命中最深根 %q，实得 %q（「首个命中」实现随 map 遍历序漂移）", i, inner, got)
+		}
+	}
+	// 防「一律取最内层」的误读：外层根直属文件仍归外层根
+	if got := a.findRecycleRoot(filepath.Join(outer, "loose.pmx")); got != outer {
+		t.Fatalf("外层根直属文件应归外层根 %q，实得 %q", outer, got)
+	}
+	// 一概念一规则：同一路径在启禁链（toggleRootFor）与回收链（findRecycleRoot）必须同答，
+	// 否则又是「同概念两套口径」。两函数根集合不同，但**规则**必须一致。
+	if got, want := a.findRecycleRoot(src), a.toggleRootFor(src); got != want {
+		t.Fatalf("回收链归属 %q 与启禁链归属 %q 不一致（最具体根规则漂移）", got, want)
+	}
+}
+
 // TestMoveToRecycle_OuterCustomRootCannotAdoptInnerRoot 核心回归锁（2026-10-15 复核实测复现）：
 // 守卫若只比「findRecycleRoot 返回的那一个根」，外层 CustomRoot 严格包含 ysmRoot 时即被绕过——
 // findRecycleRoot 对 rel=="." 是 continue（不判命中），于是跳过内层根、返回外层根，src（内层根）

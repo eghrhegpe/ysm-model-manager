@@ -310,6 +310,8 @@ status: active
 - `DeleteFromRecycle(src) → void` — 从回收站彻底删除
 - `EmptyRecycleBin(保留参数) → number` — 清空回收站，返回删除数量（Go 端忽略该参数）
 
+> **归属与根级自卫（2026-10-15 收敛）**：`app_install_recycle.go|findRecycleRoot` 的归属规则 = **最具体（最深）匹配根**，与 `app_files.go|toggleRootFor`（启禁链）**同一条规则**——同概念不允许两套口径。此前取「首个命中」，而 `recycleRoots()` 的 CustomRoots 段是 Go map、遍历序随机，两个互相嵌套的自定义根下同一文件的回收站落点会**随机漂移**；现取最深 + 等长按字典序收敛，与遍历序彻底解耦（回归锁 `TestFindRecycleRoot_MostSpecificRootWins`，含「外层根直属文件仍归外层根」与「与 toggleRootFor 同答」两向）。`MoveToRecycle` 另有**根级自卫**：`src` 等于**任一**已知根（`recycleRoots()`，与归属判定同源枚举）即拒绝——只比「findRecycleRoot 返回的那一个根」会被外层 CustomRoot 绕过（`rel=="."` 不判命中 → 返回外层根 → 内层根被整体收养），实测复现见 `TestMoveToRecycle_OuterCustomRootCannotAdoptInnerRoot`。回收站根集合（`allRecycleRoots`）与归属根集合同源 = `ysmRoot + CustomRoots`，UI 按当前类型根过滤后**合并列出**所有相关根的 `.recycle`（`ListRecycleBin`）。
+
 ### 整合包同步与链接模式（app_install.go / resource_bindings.go）
 
 - `GetInstanceStatus(mcRoot, repoDir, rtype) → types.InstanceStatus[]` — 获取整合包同步状态（rtype 限定实例侧扫描子目录；**ADR-310 后 rtype 空串直接返回空**——旧的「空时用 ins.CustomDir 全类型扫描」模式随旧链退役，生产调用点为 0）

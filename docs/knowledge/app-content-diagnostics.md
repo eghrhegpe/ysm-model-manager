@@ -592,6 +592,8 @@ localPos: number[];
   - 测试：`perf-trend.test.ts` 5 条（按类型过滤不混线 / 不足 2 条明确提示不画图 / 旧记录不猜进类型 / 全库混合回落保持现状 / 基线标注写清类型与条数）+ `perf.test.ts` 现有趋势用例增强「当前基线」断言（证明写历史与读基线同链）。⚠️ 全库混合用例的断言曾**错**过一次：混画视图的折线维度 = 最近一次阶段链，故图例只含最后一条的阶段名（不是「所有阶段的并集」）——修法改断「折线点数 = 记录数」。
   - **变异已验证 2 类**：去掉 `rtype` 过滤（恒全库）→ 2 红（不足 2 条 / 旧记录不猜进）；把「该类型不足」提示改回全库文案 → 恰 1 红（不足 2 条用例，其余 4 绿——单一变异只红对应用例为理想变异），全部还原。
   - 符号：`perf-trend.ts|PerfRecord|savePerfRecord|renderPerfTrendSection`、`perf-single-bench.ts`（写历史/读基线传 `identity.rtype`）、i18n 三语 `diagnostics.perfTrendBaseline|perfTrendBaselineHint|perfTrendNoDataForType`、CSS `.perf-trend-baseline`。
+- **「跨模块联动：健康分→缓存配置」改判为不可做（2026-10-15 勘察，防重扫）**：曾列 P2 待办，勘察后判定**目标不成立**——① 仓库不存在「缓存配置」UI 面板（`docs` 无表述、`settings` 面板无 cache 项，缓存只在 CLI：`cache-status`/`cache-verify`/`cache-clear`）；② 即便要「验证缓存」，`go/cli/cache.go` 的 `cache-verify` **必填 `--dir`**（缺 `--dir` 报参数错），而 `health.ts` 健康报告是**仓库级**、无单模型上下文——没有可喂的路径。故「跳转到缓存配置」无处可跳、「从健康报告发起验证」无可喂参数。**结论：不虚构跳转目标、不强行接线，标记不可做**。真实缺口（健康报告 cache 段只报命中率/探测失败数、无「下一步」动作）如实留在 `health.ts|cacheHitRateSuffix` 注释的口径里（与 `cache-verify` 同口径、探测失败可见），需另立需求（如按模型逐个体检的入口）才值得动。
+- **`GroupTypeOption.label` 死字段已确认零消费者**（`utils/resource/types.ts|GROUP_TYPE_OPTIONS` 构造处 line「label,」+ `GroupTypeOption` 接口的 `label` 声明）：`views/app-nav/index.ts|buildSubtypeOptions` 注释明写「原直取 `o.label` 派生自硬编码中文，en/ja 下整个下拉中文」，现已改走 `rtypeLabelOf(o.rtype)`——即接口的 `label` 已无人读。删除代价：动 `types.ts` + `app-nav/index.ts`（其返回类型不能再带 `label`）+ nav 测试，**零用户可见收益**（纯死代码收尾），优先级 P3 最低；nav 自己造的 `label`（i18n 显示名，供 `<option>` 渲染）**不是**死字段、不可删。
 - **验证记录**：diagnostics 全套 15 files / 269 tests 绿；vite build ＋ typecheck ＋ check-biome 点名 7 文件全绿；两条新用例均先红（红点恰在病灶：writeText 0 次 / health 1 次超时）后绿。
 
 ## 相关

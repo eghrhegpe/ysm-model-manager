@@ -302,7 +302,9 @@ export function isGeometrySearchableRtype(rtype: string): boolean {
  *
  * 本函数统一从 resource_types.json 派生：筛选顶层 `preview === "3d"` 的类型，按 variants
  * 展开为适配器 key（EntityPlayer → ["mmd","vrm"]），无 variant 的类型用自己的 id（如 "ysm"）。
- * 标签统一走 RESOURCE_TYPE_LABELS，杜绝手写 HTML / opener 副作用两套口径。
+ * 标签统一走 `rtypeLabelOf` 出口（2026-10-15 拍板「类型文案权威源 = locale」；此前直取
+ * RESOURCE_TYPE_LABELS 中文 name，而该 label 经 menu/shell/switch.ts 写进 3D 切换面板的
+ * select option，进 3D 即中文裸奔），杜绝手写 HTML / opener 副作用两套口径。
  *
  * 返回顺序即 tab 展示顺序，由 resource_types.json 条目顺序决定（新增类型自动尾部追加）。
  */
@@ -322,7 +324,7 @@ export function getPreviewableTypeTabs(): PreviewTab[] {
     if (cap?.preview !== "3d") continue;
     const variants = t.variants?.map((v) => v.preview).filter((p): p is string => !!p) ?? [];
     const keys = variants.length > 0 ? Array.from(new Set(variants)) : [t.id];
-    const label = RESOURCE_TYPE_LABELS[t.id] || t.id;
+    const label = rtypeLabelOf(t.id);
     for (const key of keys) {
       // preview key 跨类型共享（如 vrm 同时归属 EntityPlayer / SceneModel），
       // 按 key 去重保留首个命中类型（JSON 顺序：EntityPlayer 在前 → vrm 标「角色模型」），

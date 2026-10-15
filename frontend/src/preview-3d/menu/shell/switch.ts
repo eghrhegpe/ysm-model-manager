@@ -10,20 +10,18 @@ import { t } from "@/core/i18n/t.ts";
 import type { PreviewMenuCtx, PreviewMenuNode } from "@/preview-3d/menu/schema/node-types.ts";
 import { swallowError } from "@/utils/base/primitives/async.ts";
 import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
-import {
-  getPreviewableTypeTabs,
-  RESOURCE_TYPE_LABELS,
-  resolveTypeSafe,
-} from "@/utils/resource/types.ts";
+import { getPreviewableTypeTabs, resolveTypeSafe, rtypeLabelOf } from "@/utils/resource/types.ts";
 import type { SlideMenuHandle } from "./slide-menu.ts";
 
 /** 上次选中的类型 tab 持久化键（全局记忆，跨模型/跨会话）："" = 当前目录 */
 const PREVIEW_LAST_RTYPE_KEY = "ysm.preview.lastRtype";
 
-/** ADR-111：tab 标签统一从 getPreviewableTypeTabs 派生，preview key 兜底 RESOURCE_TYPE_LABELS */
+/** ADR-111：tab 标签统一从 getPreviewableTypeTabs 派生；preview key（mmd/vrm 等非注册 id）
+ *  兜底走 `rtypeLabelOf` 出口（2026-10-15 拍板「类型文案权威源 = locale」；此前兜底直取
+ *  RESOURCE_TYPE_LABELS 中文 name，而本函数的输出喂进切换面板 select option → 进 3D 即中文裸奔） */
 function switchTabLabelOf(key: string): string {
   const hit = getPreviewableTypeTabs().find((t) => t.key === key);
-  return hit?.label ?? RESOURCE_TYPE_LABELS[key] ?? key;
+  return hit?.label ?? rtypeLabelOf(key);
 }
 
 /** 路径归一化：统一正斜杠 + 小写（跨平台分隔符比较一致，P2-5）。

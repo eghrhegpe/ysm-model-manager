@@ -1,15 +1,20 @@
 // @vitest-environment node
 // ===== short-label.ts 运行时翻译回归测试 =====
-// 验证 t() 在 shortLabelOf 调用期求值（非常量表烘焙），切语言后返回新语言标签。
+// 验证 t()  在 shortLabelOf 调用期求值（非常量表烘焙），切语言后返回新语言标签。
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { tOfChain } from "@/test-utils/i18n-chain.ts";
 
 // vi.hoisted 让 mockT / mockGetLang 在 vi.mock 工厂之前初始化（vi.mock 被提升到文件顶）
-const { mockT, mockGetLang } = vi.hoisted(() => ({
+const { mockT, mockTOf, mockGetLang } = vi.hoisted(() => ({
   mockT: vi.fn((key: string) => `translated:${key}`),
+  // 回落段 2026-10-15 起走 `types.ts|rtypeLabelOf`（其内部用 **tOf**）：工厂必须同时
+  // 提供 tOf，否则 types.ts 拿到 undefined、回落一调即 TypeError。
+  // 与 mockT **分开**计数——「短名表命中时 t() 不重复调用」的不变量才不被回落污染。
+  mockTOf: vi.fn((key: string, p?: Record<string, string>) => tOfChain({ mode: "real" })(key, p)),
   mockGetLang: vi.fn(() => "zh-CN"),
 }));
 
-vi.mock("@/core/i18n/t.ts", () => ({ t: mockT }));
+vi.mock("@/core/i18n/t.ts", () => ({ t: mockT, tOf: mockTOf }));
 vi.mock("@/core/i18n/locale.ts", () => ({ getLang: mockGetLang }));
 
 import { shortLabelOf, __resetShortLabelCacheForTest } from "./short-label.ts";
@@ -31,8 +36,11 @@ describe("shortLabelOf — 运行时翻译", () => {
     expect(mockT).toHaveBeenCalledWith("rtype.pack");
   });
 
-  it("未命中 map → 回退全名 → 原始 id", () => {
-    expect(shortLabelOf("fbx")).toBe("FBX 模型/动画"); // RESOURCE_TYPE_LABELS["fbx"] 全名
+  it("未命中短名表 → 走 rtypeLabelOf 出口（locale 全名）→ 原始 id → YSM 兜底", () => {
+    // ⚠️ 旧断言写 "FBX 模型/动画"（注册表 name），那是**中文回落被固化成契约**的形态：
+    // 短名表没有 fbx，此前直取 RESOURCE_TYPE_LABELS 故落中文全名。改走出口后 en/ja 得译文，
+    // zh 得 locale 键值 "FBX 模型"（与注册表 name 不同形，见知识卡「6/15 漂移」条）。
+    expect(shortLabelOf("fbx")).toBe("FBX 模型");
     expect(shortLabelOf("unknown-type")).toBe("unknown-type");
     expect(shortLabelOf("")).toBe("ysm"); // 空串兜底 YSM
   });

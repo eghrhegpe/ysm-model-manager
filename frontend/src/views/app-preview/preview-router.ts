@@ -15,9 +15,9 @@ import { esc } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import {
   extOf,
-  RESOURCE_TYPE_LABELS,
   RESOURCE_TYPES,
   resolvePreviewKey,
+  rtypeLabelOf,
   typeIconOf,
 } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
@@ -132,11 +132,14 @@ ${pack.description ? `<div style="font-size:var(--fs-sm);color:var(--txt);margin
 }
 
 /**
- * 类型元数据查找：同步读 resource_types.json 派生视图（typeIconOf /
- * RESOURCE_TYPE_LABELS），无 ctx、无异步预载窗口。
+ * 类型元数据查找：图标同步读 resource_types.json 派生视图（typeIconOf），无 ctx、无异步预载窗口。
+ * **显示名走 `types.ts|rtypeLabelOf` 出口**（2026-10-15 拍板「类型文案权威源 = locale」）：
+ * 此处原直取 `RESOURCE_TYPE_LABELS[rtype]`＝注册表中文 name，而本 label 经 preview-registry →
+ * detail-3d 的 `pageShellHTML.title` 直写 DOM——点任意模型进预览面板即中文裸奔，属泄漏面最高的一处。
+ * 出口内含「缺译文 → 注册表名 → id」两级回落，故原 `|| rtype` 不再需要。
  * ADR-269 D3 步骤①：原从 ctx.typeCache（LoadResourceTypes 异步预载）建表，
  * 首帧空表 → 已知类型返回兜底 📦（闪帧）。现折进同步派生，同一事实源、等价兜底。
  */
 export function routeTypeMeta(rtype: string): { icon: string; label: string } {
-  return { icon: typeIconOf(rtype), label: RESOURCE_TYPE_LABELS[rtype] || rtype };
+  return { icon: typeIconOf(rtype), label: rtypeLabelOf(rtype) };
 }

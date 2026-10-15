@@ -217,7 +217,7 @@
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 386 |
 | atTeClickRowFolder | `frontend/src/views/app-tree/events.ts` | 169 |
 | atTeClickRowFile | `frontend/src/views/app-tree/events.ts` | 243 |
-| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 751 |
+| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 756 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -333,14 +333,14 @@
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 311 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 73 |
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 137 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 547 |
+| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 567 |
 | _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 229 |
 | runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 94 |
 | atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 121 |
 | atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 182 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 114 |
 | atTeBindRenameInput | `frontend/src/views/app-tree/events.ts` | 388 |
-| _executeTreeMove | `frontend/src/views/app-tree/index.ts` | 817 |
+| _executeTreeMove | `frontend/src/views/app-tree/index.ts` | 822 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -356,7 +356,7 @@
 | runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 306 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 113 |
 | toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 492 |
-| _executeTreeMove | `frontend/src/views/app-tree/index.ts` | 816 |
+| _executeTreeMove | `frontend/src/views/app-tree/index.ts` | 821 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -411,7 +411,7 @@
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 212 |
 | applyFsaState | `frontend/src/views/app-content/settings/init.ts` | 406 |
 | onWebRepoAuthClick | `frontend/src/views/app-content/settings/init.ts` | 434 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 548 |
+| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 568 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |

@@ -1,12 +1,15 @@
 // ===== 资源类型短标签（消除 app-nav / sync-manager 双份重复映射）=====
 // 短标签用于紧凑展示（logo、当前类型指示）：YSM/MMD 用英文短名，
 // 其余走 i18n rtype.* key（资源包/光影包/蓝图/投影，含 en/ja 翻译）。
-// 与 RESOURCE_TYPE_LABELS（全名，硬编码中文）互补——短标签优先，
-// 未命中回退全名（兜底覆盖 maid-model 等新类型，无需改本文件）。
+// ⚠️ 短名表是**刻意的另一维度**（紧凑形态，与 `rtypeLabelOf` 全名体系不同规，勿硬并）；
+// 但**回落段必须走 `rtypeLabelOf`**（2026-10-15 拍板「类型文案权威源 = locale」）：
+// 原直取 `RESOURCE_TYPE_LABELS`（中文全名）会让 8 个无短名类型（SceneModel/CustomAnim/
+// CustomMorph/StageAnim/DefaultAnim/DefaultMorph/mmd-shader/fbx）在 en/ja 的 logo、侧栏
+// 兜底项、同步管理当前类型指示、右键菜单里落中文——本函数是这些位置的上屏出口。
 
 import { getLang } from "@/core/i18n/locale.ts";
 import { t } from "@/core/i18n/t.ts";
-import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from "./types.ts";
+import { RESOURCE_TYPES, rtypeLabelOf } from "./types.ts";
 
 /**
  * 构建资源类型短标签映射（调用期求值——t() 在每次 shortLabelOf 调用时执行，
@@ -36,12 +39,12 @@ export function __resetShortLabelCacheForTest(): void {
   cachedMap = undefined;
 }
 
-/** 资源类型短标签：map 命中 → 短名；否则全名（RESOURCE_TYPE_LABELS）→ 原始 id（兜底） */
+/** 资源类型短标签：map 命中 → 短名；否则走 `rtypeLabelOf` 出口（locale 全名 → 注册表名 → 原始 id） */
 export function shortLabelOf(rtype: string): string {
   const lang = getLang();
   if (cachedLang !== lang || !cachedMap) {
     cachedLang = lang;
     cachedMap = buildShortLabelMap();
   }
-  return cachedMap[rtype] || RESOURCE_TYPE_LABELS[rtype] || rtype || RESOURCE_TYPES.YSM;
+  return cachedMap[rtype] || rtypeLabelOf(rtype) || RESOURCE_TYPES.YSM;
 }

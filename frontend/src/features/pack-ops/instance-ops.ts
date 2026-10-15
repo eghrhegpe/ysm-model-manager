@@ -8,7 +8,7 @@ import { copyText } from "@/utils/dom/clipboard.ts";
 import { modalConfirm } from "@/utils/dom/modal-confirm.ts";
 import { toast, toastEmptyRtype, toastError } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
-import { RESOURCE_TYPE_LABELS } from "@/utils/resource/types.ts";
+import { rtypeLabelOf } from "@/utils/resource/types.ts";
 import { packOpsGetApp } from "./pack-ops-deps.ts";
 
 /** 注册整合包操作 handler，push 返回的取消订阅函数到 unsubs */
@@ -117,7 +117,10 @@ export function registerInstanceOps(unsubs: Array<() => void>): void {
           toast(t("inst.nothingToClear"), TOAST_MS.info, "info");
           return;
         }
-        const typeLabel = RESOURCE_TYPE_LABELS[rtype] || rtype;
+        // 弹窗体的类型名同样走 i18n 出口（2026-10-15 拍板「权威源 = locale」；子代理审计
+        // 指出同链反差：发起动作的右键菜单行早已用 shortLabelOf 并注释点名勿用本表，
+        // 而确认弹窗体直取中文全名 = 同一菜单里两套叫法、en/ja 弹窗中文裸奔）
+        const typeLabel = rtypeLabelOf(rtype);
         const confirmed = await modalConfirm({
           title: t("inst.clearTitle"),
           titleIcon: "delete",

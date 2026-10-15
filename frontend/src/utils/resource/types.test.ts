@@ -560,10 +560,12 @@ describe("getPreviewableTypeTabs 3D 切换面板 tab 派生", () => {
     const vrmTabs = tabs.filter((t) => t.key === "vrm");
     expect(mmdTabs.length).toBe(1);
     // vrm 是 EntityPlayer 与 SceneModel 共享预览格式，按 key 去重后只保留首个命中（EntityPlayer），
-    // 故 vrm 恰好 1 个 tab、且标签归属「角色模型」（而非 SceneModel 的「场景模型」）。
+    // 故 vrm 恰好 1 个 tab、且标签归属该类型显示名（而非 SceneModel 的「场景模型」）。
+    // ⚠️ 2026-10-15 起标签走 rtypeLabelOf 出口（locale 权威源），zh 值为「人物模型」——
+    // 旧断言「角色模型」读的是注册表 name，属中文回落被固化成契约（见本卡「6/15 漂移」条）。
     expect(vrmTabs.length).toBe(1);
-    expect(vrmTabs[0].label).toBe("角色模型");
-    expect(mmdTabs[0].label).toBe("角色模型");
+    expect(vrmTabs[0]?.label).toBe("人物模型");
+    expect(mmdTabs[0]?.label).toBe("人物模型");
   });
 
   it("tab 的 preview key 全局唯一（共享 preview key 跨类型去重，不出现重复 tab）", () => {

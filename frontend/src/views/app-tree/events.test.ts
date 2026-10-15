@@ -98,7 +98,7 @@ function makeHarness(): Harness {
   setVsRows(treeRenderCtx, container, []);
   const host = document.createElement("div");
   const root = host.attachShadow({ mode: "open" });
-  root.innerHTML = `<div id="ftr-stat"></div>`;
+  root.innerHTML = `<div id="ftr-stat"></div><span id="ftr-progress" hidden></span>`;
   const stat = root.getElementById("ftr-stat") as HTMLElement;
   const dirOpenState: Record<string, boolean> = {};
   const entriesState: TreeEntry[] = [];
@@ -605,7 +605,7 @@ describe("click 复选框（文件夹批量 toggleFolderBatch）", () => {
     expect(emitted("sync:toggle:status").length).toBe(0);
   });
 
-  it("部分失败 → toast warn 含失败计数；仅成功项翻转，失败项保持原状（回归：不再乐观全量翻转）", async () => {
+  it("部分失败 → 成功项保持翻转、失败项回滚原位（乐观 + 回滚，非「不翻转」）", async () => {
     stubConsoleWarn(); // 静音生产 logWarn("tree","toggleFolderBatch 失败:")
     const h = makeHarness();
     ToggleEnableMock
@@ -621,9 +621,14 @@ describe("click 复选框（文件夹批量 toggleFolderBatch）", () => {
     await flush();
     const toasts = emitted("toast:show") as Array<{ msg: string; type: string }>;
     expect(toasts.some((t) => t.msg === "文件夹禁用: 1 成功, 1 失败" && t.type === "warn")).toBe(true);
+    // 终态（2026-10-15 P1-C 改口径）：批量已乐观化——a 失败须回滚回「已启用」，
+    // b 成功保持「已禁用」。原用例只锁 toast，锁不住「失败项是否真的回滚」。
+    const byPath = new Map(h.vm.entriesState.map((e: TreeEntry) => [e.fullPath, e.banned]));
+    expect(byPath.get("/repo/dirA/a.ysm")).toBe(false);
+    expect(byPath.get("/repo/dirA/b.ysm")).toBe(true);
   });
 
-  it("全部失败 → toast warn 含失败计数；不翻转 banned、不 renderTree、不发 sync（ok=0 短路）", async () => {
+  it("全部失败 → 回滚到原态、不付全量重扫（_load 不调）、不广播 sync、进度槽清空", async () => {
     stubConsoleWarn(); // 静音生产 logWarn("tree","toggleFolderBatch 失败:")
     const h = makeHarness();
     ToggleEnableMock.mockRejectedValue(new Error("lock"));
@@ -631,15 +636,90 @@ describe("click 复选框（文件夹批量 toggleFolderBatch）", () => {
       makeEntry("dirA/a.ysm", "/repo/dirA/a.ysm", false),
       makeEntry("dirA/b.ysm", "/repo/dirA/b.ysm", false),
     ];
+    h.vm._load = vi.fn().mockResolvedValue(undefined);
     h.container.appendChild(folderRow("dirA", "目录A"));
     bindTreeEvents(h.container, h.vm);
     click(h.container.querySelector(".fh .ck") as Element);
     await flush();
     const toasts = emitted("toast:show") as Array<{ msg: string; type: string }>;
     expect(toasts.some((t) => t.msg === "文件夹禁用: 0 成功, 2 失败" && t.type === "warn")).toBe(true);
-    // ok=0 → 不进 if (ok>0)：失败项全部保持原状，不重绘不广播
-    expect(h.vm._renderTree).not.toHaveBeenCalled();
+    // 全失败 = 磁盘什么都没变 → 用本地回滚收尾即可，不该为「没变化」付一次全量扫盘
+    expect(h.vm._load).not.toHaveBeenCalled();
+    // 判别性断言（复核 2026-10-15 补）：新实现必走乐观重渲（起点一次）、旧实现 0 次——
+    // 只断言「标志回到原值」两种实现都绿，等于锁不住本次改动
+    expect(h.vm._renderTree).toHaveBeenCalled();
     expect(emitted("sync:toggle:status").length).toBe(0);
+    const byPath = new Map(h.vm.entriesState.map((e: TreeEntry) => [e.fullPath, e.banned]));
+    expect(byPath.get("/repo/dirA/a.ysm")).toBe(false);
+    expect(byPath.get("/repo/dirA/b.ysm")).toBe(false);
+    expect((h.root.getElementById("ftr-progress") as HTMLElement).hidden).toBe(true);
+  });
+
+  // 2026-10-15 P1-C：长批量（持锁串行 IPC，数百项可达数十秒）原实现零反馈——点下去
+  // UI 无变化、期间单文件开关只撞「请稍候」。本组锁「乐观即时反馈 + 页脚可见进度 +
+  // 进度必清」三条，防退回「等全部 IPC 落定才动 UI」。
+  it("乐观即时反馈：IPC 尚未落定时条目标志已翻转、树已重渲、进度槽已显示", async () => {
+    const h = makeHarness();
+    const pending: Array<() => void> = [];
+    ToggleEnableMock.mockImplementation(
+      () =>
+        new Promise<void>((res) => {
+          pending.push(() => res());
+        }),
+    );
+    h.vm.entriesState = [
+      makeEntry("dirA/a.ysm", "/repo/dirA/a.ysm", false),
+      makeEntry("dirA/b.ysm", "/repo/dirA/b.ysm", false),
+    ];
+    h.container.appendChild(folderRow("dirA", "目录A"));
+    bindTreeEvents(h.container, h.vm);
+    click(h.container.querySelector(".fh .ck") as Element);
+    await flush(); // 仅让 getApp / 乐观段跑完，IPC 仍挂起
+    expect(ToggleEnableMock).toHaveBeenCalledTimes(2);
+    expect(pending).toHaveLength(2); // 两个 IPC 都还没落定
+    expect(h.vm.entriesState.every((e: TreeEntry) => e.banned === true)).toBe(true);
+    expect(h.vm._renderTree).toHaveBeenCalled();
+    const progress = h.root.getElementById("ftr-progress") as HTMLElement;
+    expect(progress.hidden).toBe(false);
+    expect(progress.textContent).toBe("⏳ 禁用中 0/2"); // 起始 0/N（批未落定）
+    pending.forEach((done) => done());
+    await flush();
+    await flush();
+    expect(progress.hidden).toBe(true); // 结束即清
+  });
+
+  it("进度随批次落定推进（批 8 / 共 9 项 → 0/9 → 8/9），结束后隐藏", async () => {
+    const h = makeHarness();
+    const pending: Array<() => void> = [];
+    ToggleEnableMock.mockImplementation(
+      () =>
+        new Promise<void>((res) => {
+          pending.push(() => res());
+        }),
+    );
+    h.vm.entriesState = Array.from({ length: 9 }, (_, i) =>
+      makeEntry(`dirA/m${i}.ysm`, `/repo/dirA/m${i}.ysm`, false),
+    );
+    h.vm._load = vi.fn().mockResolvedValue(undefined);
+    h.container.appendChild(folderRow("dirA", "目录A"));
+    bindTreeEvents(h.container, h.vm);
+    const progress = h.root.getElementById("ftr-progress") as HTMLElement;
+
+    click(h.container.querySelector(".fh .ck") as Element);
+    await flush();
+    // 第一批只放行批大小 8 个（批间串行），进度停在起始 0/9
+    expect(pending).toHaveLength(8);
+    expect(progress.textContent).toBe("⏳ 禁用中 0/9");
+
+    pending.splice(0).forEach((done) => done());
+    await flush();
+    expect(pending).toHaveLength(1); // 第二批开跑
+    expect(progress.textContent).toBe("⏳ 禁用中 8/9");
+
+    pending.splice(0).forEach((done) => done());
+    await flush();
+    await flush();
+    expect(progress.hidden).toBe(true); // 结束即清（hidden 槽不占布局）
   });
 
   it("批量进行中 → toast「⏳ 操作进行中」，不调 getApp", async () => {

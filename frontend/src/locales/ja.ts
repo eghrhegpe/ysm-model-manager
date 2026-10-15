@@ -1778,6 +1778,7 @@ export const ja: Record<string, string> = {
   "tree.toggleFail": "切替に失敗: {name}",
   "tree.selectedCount": "{n} 個のファイルを選択中",
   "tree.folderToggleResult": "フォルダ{action}: {ok} 成功, {fail} 失敗",
+  "tree.batchProgress": "⏳ {action}中 {done}/{total}",
   "tree.batchToggleFail": "一括有効化/無効化に失敗しました",
   "tree.importFail": "インポートに失敗: {msg}",
   "tree.advFilterFail": "高度なフィルターに失敗しました",

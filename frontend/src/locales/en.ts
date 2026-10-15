@@ -1781,6 +1781,7 @@ export const en: Record<string, string> = {
   "tree.toggleFail": "Toggle failed: {name}",
   "tree.selectedCount": "{n} files selected",
   "tree.folderToggleResult": "Folder {action}: {ok} ok, {fail} failed",
+  "tree.batchProgress": "⏳ {action} {done}/{total}",
   "tree.batchToggleFail": "Batch enable/disable failed",
   "tree.importFail": "Import failed: {msg}",
   "tree.advFilterFail": "Advanced filter failed",

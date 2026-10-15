@@ -20,6 +20,7 @@ export const VIEW_TESTIDS: readonly string[] = [
   "tree-view-mode",
   "tree-repo",
   "tree-ftr-stat",
+  "tree-progress",
 ];
 
 export function headerHTML(): string {
@@ -42,6 +43,7 @@ export function headerHTML(): string {
 export function footerHTML(): string {
   return `<div class="ftr">
 <span class="stat" id="ftr-stat" data-testid="tree-ftr-stat">${t("tree.statInitial")}</span>
+<span class="ftr-progress" id="ftr-progress" data-testid="tree-progress" hidden></span>
 <div style="flex:1"></div>
 <button class="btn-base sm" id="btn-repo" data-testid="tree-repo" style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${t("tree.repoConfigTitle")}">${UI_ICONS.folder} ${t("tree.repoNotSet")}</button>
 </div>`;

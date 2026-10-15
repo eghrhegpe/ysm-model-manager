@@ -16,6 +16,7 @@ import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import { selectSingle, toggleSelect } from "./data.ts";
 import { entryKey } from "./entry-key.ts";
+import { setFooterProgress } from "./footer-progress.ts";
 import type { AppTree } from "./index.ts";
 import type { TreeEntry } from "./loader.ts";
 import { getVsRows, type TreeRenderCtx } from "./render.ts";
@@ -433,6 +434,10 @@ function collectDirEntries(entries: TreeEntry[], prefix: string): TreeEntry[] {
 }
 
 // ===== 文件夹批量启用/禁用 =====
+// 2026-10-15 P1-C 收口：本链是**持锁的串行 IPC 长操作**（数百项 = 数十秒），原实现全程零
+// 反馈——点下去 UI 毫无变化，期间单文件开关只会撞「请稍候」；而同一页面的单文件开关早已
+// 是「乐观翻转 + 失败回滚 + 后台校正」范式。本次把单文件那套范式推广到批量链，并补可见
+// 进度（页脚槽，见 footer-progress.ts），与单文件开关共用同一把 toggleLock（ADR-341）。
 async function toggleFolderBatch(fhEl: HTMLElement, vm: AppTree): Promise<void> {
   // ADR-341 归一：tryStart 原子抢锁（原「batchBusy||toggleBusy 互查再置位」三段式退役，
   // 单临界区单锁——单文件开关与文件夹批量共用 vm.toggleLock，互斥语义不变）
@@ -455,51 +460,75 @@ async function toggleFolderBatch(fhEl: HTMLElement, vm: AppTree): Promise<void> 
     if (!targets.length) return;
     const allEnabled = targets.every((e) => !e.banned);
     const enable = !allEnabled;
-    let ok = 0,
-      fail = 0;
-    const flipped: TreeEntry[] = [];
-    // P2 修复（2026-09）→ 收口（2026-10-13）：原 BATCH=8 手抄循环迁
-    // utils/async/batch-all-settled（分批并发 + 逐项不短路 + 失败下标归因单一实现）。
-    // flipped 仅登记成功项（失败项不翻转）。
+    const action = enable ? t("tree.enable") : t("tree.disable");
     // 注：原 `if (e.banned === !enable) continue` 处理「banned 与目标态不一致」的项，
     // filter 取同集（banned !== !enable），勿写反。
     const targetsToToggle = targets.filter((e) => e.banned !== !enable);
-    const r = await batchAllSettled(
-      targetsToToggle.map(
-        (e) => () =>
-          ToggleEnable(e.fullPath).then(
-            () => e,
-            (err: unknown) => {
-              logWarn("tree", `toggleFolderBatch 失败: ${e.fullPath}`, err);
-              throw err;
-            },
-          ),
-      ),
-    );
-    ok = r.fulfilled.length;
-    fail = r.rejected.length;
-    flipped.push(...r.fulfilled.map((f) => f.value));
-    if (ok > 0) {
-      // ⚠️ 不直接 mutate Go 端原始 entry 对象，reload 取真值防幽灵状态
-      const gen = vm._guard.current;
-      await vm._load();
-      // 渲染补齐 + 守卫（2026-09 收债）：原依赖 YSM 链 sync:toggle:status 的
-      // tree:reload 兜底刷新——非 YSM 类型勾选态陈旧到下次任意重渲，sync 忙锁
-      // 命中（sync.ts 入口拦）时 YSM 也会断；本地重渲走 buildCache 快路径
-      if (vm._guard.stale(gen)) return;
-      vm._renderTree();
-      // ADR-339：带当前树类型发射，Go 侧按 dirLevelSync 过滤同步（非 dirLevelSync 自动 no-op）
-      bus.emit("sync:toggle:status", { rtype: vm.snapshot.rootAttr || RESOURCE_TYPES.YSM });
+    // 注：`targetsToToggle` 恒非空（`enable` 由「是否全启用」派生，故 filter 必取到至少
+    // 一项），无需空集早退分支——写了也是死代码。
+
+    // ① 乐观翻转（单文件开关同款）：本地先翻 banned 位再重渲，IPC 在途即见结果。
+    //    `.ck` 的 on/partial/空三态由 dirFlags 数据渲染派生，故重渲即得到正确视觉。
+    for (const e of targetsToToggle) e.banned = !e.banned;
+    vm._renderTree();
+    // ② 进度可见（批大小由 batchAllSettled 掌握，回调即批边界）
+    const progressText = (done: number): string =>
+      t("tree.batchProgress", { action, done, total: targetsToToggle.length });
+    setFooterProgress(vm._root, progressText(0));
+    // 回滚守卫代数必须在 **await 之前**捕获：`stale(gen)` 判据是 `gen !== current`
+    // （load-guard.ts 语义），拿 await 之后的 `current` 去问恒为 false——那是个死判据
+    // （单文件开关链同律，`rollbackGen` 先取）。
+    const rollbackGen = vm._guard.current;
+    try {
+      const r = await batchAllSettled(
+        targetsToToggle.map(
+          (e) => () =>
+            ToggleEnable(e.fullPath).then(
+              () => e,
+              (err: unknown) => {
+                logWarn("tree", `toggleFolderBatch 失败: ${e.fullPath}`, err);
+                throw err;
+              },
+            ),
+        ),
+        undefined, // 缺省批大小（8）——保持与其余四条批量链同源
+        (done) => setFooterProgress(vm._root, progressText(done)),
+      );
+      const ok = r.fulfilled.length;
+      const fail = r.rejected.length;
+      // ③ 失败项本地回滚（代际守卫：期间切类型/重载 → 旧 entries 引用上的写是过期写，
+      //    新树自会由新数据渲染自洽）。成功项不回滚：下面用 _load 取磁盘真值校正。
+      if (fail > 0 && !vm._guard.stale(rollbackGen)) {
+        for (const rej of r.rejected) {
+          const e = targetsToToggle[rej.index];
+          if (e) e.banned = !e.banned;
+        }
+      }
+      if (ok > 0) {
+        // ⚠️ 不直接信本地翻转，reload 取真值防幽灵状态（单文件链同律）
+        const gen = vm._guard.current;
+        await vm._load();
+        // 渲染补齐 + 守卫（2026-09 收债）：原依赖 YSM 链 sync:toggle:status 的
+        // tree:reload 兜底刷新——非 YSM 类型勾选态陈旧到下次任意重渲，sync 忙锁
+        // 命中（sync.ts 入口拦）时 YSM 也会断；本地重渲走 buildCache 快路径
+        if (vm._guard.stale(gen)) return;
+        vm._renderTree();
+        // ADR-339：带当前树类型发射，Go 侧按 dirLevelSync 过滤同步（非 dirLevelSync 自动 no-op）
+        bus.emit("sync:toggle:status", { rtype: vm.snapshot.rootAttr || RESOURCE_TYPES.YSM });
+      } else {
+        // 全失败：上述回滚后的本地态即真值，无需为「什么都没变」付一次全量重扫
+        vm._renderTree();
+      }
+      bus.emit("stats:refresh");
+      toast(
+        t("tree.folderToggleResult", { action, ok, fail }),
+        TOAST_MS.long,
+        fail > 0 ? "warn" : "success",
+      );
+    } finally {
+      // 进度槽必清（成功/失败/异常/代际丢弃四条出口都经此；hidden 槽不占布局）
+      setFooterProgress(vm._root, null);
     }
-    toast(
-      t("tree.folderToggleResult", {
-        action: enable ? t("tree.enable") : t("tree.disable"),
-        ok,
-        fail,
-      }),
-      TOAST_MS.long,
-      fail > 0 ? "warn" : "success",
-    );
   } catch (err) {
     toast(`${friendlyError(err, t("tree.batchToggleFail"))}`, TOAST_MS.long, "error");
   } finally {

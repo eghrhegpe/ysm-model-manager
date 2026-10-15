@@ -376,6 +376,18 @@ describe("app-tree index 入口生命周期（补位）", () => {
     expect(stored.ysm?.["[作者A]"]).toBe(true);
   });
 
+  // 承重假设（复核 2026-10-15 指出「无红测」）：批量启禁的乐观翻转与失败回滚直接写
+  // `snapshot.entries` 里的条目对象，前提是 snapshot **不复印**数组。若哪天 getSnapshot
+  // 改成浅拷贝，乐观会静默失效（界面不翻）、回滚会写进副本（标志永不还原），而现有
+  // 用例可能全绿——故把这条假设本身钉住。
+  it("snapshot.entries 与 entries 同源（乐观/回滚的承重假设：非副本）", async () => {
+    const el = await mountEl("ysm");
+    expect(el.snapshot.entries).toBe(el.entries);
+    expect(el.snapshot.entries.length).toBeGreaterThan(0);
+    el.snapshot.entries[0].banned = true;
+    expect(el.entries[0].banned).toBe(true);
+  });
+
   // 复核 2026-10-15（P1-A 时序竞态）：水化若押在 `await ClearScanCache/_load` **之后**，扫盘
   // 在途窗口内 DOM 仍是旧类型可点行——用户点任一文件夹即以 `writeScopedDirOpen(新rtype, 旧dirOpen)`
   // 落盘，把旧类型目录整包写进新类型槽位；更糟的是随后的水化 `readScopedDirOpen(新rtype)`

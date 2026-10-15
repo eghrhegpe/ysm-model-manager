@@ -94,6 +94,57 @@ describe("batchAllSettled — 逐项不短路 + 失败归因", () => {
   });
 });
 
+describe("batchAllSettled — 进度钩子（2026-10-15 长批量可见进度）", () => {
+  it("每批落定后回调一次，done 累计递增至 total（批边界与批大小同源）", async () => {
+    const seen: Array<[number, number]> = [];
+    const tasks = Array.from({ length: 20 }, (_, i) => async () => i);
+    await batchAllSettled(tasks, 8, (done, total) => seen.push([done, total]));
+    // 20 项 / 批 8 → 3 批 → 3 次回调：8、16、20
+    expect(seen).toEqual([
+      [8, 20],
+      [16, 20],
+      [20, 20],
+    ]);
+  });
+
+  it("失败项同样计入 done（进度描述「已落定」而非「已成功」）", async () => {
+    const seen: number[] = [];
+    const tasks = [0, 1, 2].map((i) =>
+      i === 1
+        ? async () => {
+            throw new Error("boom");
+          }
+        : async () => i,
+    );
+    const r = await batchAllSettled(tasks, 2, (done) => seen.push(done));
+    expect(seen).toEqual([2, 3]);
+    expect(r.rejected).toHaveLength(1);
+  });
+
+  it("空任务列表 → 不回调（无批次落定，调用方不该看到 0/0 进度）", async () => {
+    const spy = vi.fn();
+    const r = await batchAllSettled([], 8, spy);
+    expect(spy).not.toHaveBeenCalled();
+    expect(r.fulfilled).toHaveLength(0);
+  });
+
+  it("不传钩子 → 行为与旧签名完全一致（纯增量，无副作用）", async () => {
+    const r = await batchAllSettled([async () => "a"], 8);
+    expect(r.fulfilled.map((f) => f.value)).toEqual(["a"]);
+  });
+
+  it("钩子抛错 → 批处理照常跑完（进度是旁路，不为显示数字买单）", async () => {
+    const fn = vi.fn(async (i: number) => i);
+    const tasks = [0, 1, 2].map((i) => () => fn(i));
+    const r = await batchAllSettled(tasks, 2, () => {
+      throw new Error("UI 渲染崩了");
+    });
+    expect(r.fulfilled).toHaveLength(3);
+    expect(r.rejected).toHaveLength(0);
+    expect(fn).toHaveBeenCalledTimes(3); // 余批未被连坐中断
+  });
+});
+
 describe("batchAllSettled — 缺省与防误用", () => {
   it("batchSize 缺省 8（与 app-tree 五处原值一致）", async () => {
     let inFlight = 0;

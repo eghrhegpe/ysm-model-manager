@@ -143,7 +143,12 @@ ${PULSE_DOT}
 .ficon { font-size: var(--fs-sm); }
 .tag-dot { font-size:var(--fs-micro); margin-right: 2px; opacity: .7; vertical-align: middle; }
 .ftr { padding:var(--sp-vh-pane); border-top: 1px solid var(--bd); display: flex; gap: 6px; align-items: center; }
-.ftr .stat { font-size: var(--fs-sm); color: var(--muted); margin-right: auto; }
+/* 右推由 .ftr 内 flex:1 占位承担。原 .stat 另挂 margin-right:auto 是**空操作**（flex-grow
+   先吃完全部自由空间，auto 边距只剩 0，正/负自由空间皆然）——2026-10-15 复核纠正，移除它
+   视觉逐值不变，只是把「谁在推」的理由写清楚 */
+.ftr .stat { font-size: var(--fs-sm); color: var(--muted); }
+/* 进度文案不可缩（nowrap），窄窗下须允许自己截断而非把仓库路径按钮挤出页脚 */
+.ftr .ftr-progress { font-size: var(--fs-sm); color: var(--accent); white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 
 /* SVG 图标尺寸/着色（ADR-238 单一出处，跨 shadow 共享） */
 ${wsIconCSS}

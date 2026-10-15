@@ -33,11 +33,16 @@ export const BATCH_ALL_SETTLED_DEFAULT_SIZE = 8;
  *
  * @param tasks 异步任务工厂列表（调用时才执行，未执行的失败任务无副作用）
  * @param batchSize 每批并发上限；缺省 8，非法值（非有限正数）回落缺省
+ * @param onProgress 每批**落定后**回调一次（累计已落定数 / 总数）。长批量操作（文件夹
+ *   批量启禁可达数百次 IPC、数十秒）需要可见进度，而分批边界只有本函数知道；让调用方
+ *   自己切片重写一遍分批逻辑正是「判据手抄复发」（pitfalls #25）的并发版，故进度以
+ *   可选钩子收在此处——批大小与进度口径天然同源。空任务列表不回调（无批次落定）。
  * @returns 成功/失败分桶（`index` = 原任务列表下标），结果按任务顺序
  */
 export async function batchAllSettled<T>(
   tasks: ReadonlyArray<() => Promise<T>>,
   batchSize: number = BATCH_ALL_SETTLED_DEFAULT_SIZE,
+  onProgress?: (done: number, total: number) => void,
 ): Promise<BatchAllSettledResult<T>> {
   const size =
     typeof batchSize === "number" && Number.isFinite(batchSize) && batchSize > 0
@@ -45,6 +50,8 @@ export async function batchAllSettled<T>(
       : BATCH_ALL_SETTLED_DEFAULT_SIZE;
   const fulfilled: BatchFulfilled<T>[] = [];
   const rejected: BatchRejected[] = [];
+  const total = tasks.length;
+  let settled = 0;
   for (let i = 0; i < tasks.length; i += size) {
     const batch = tasks.slice(i, i + size);
     const results = await Promise.allSettled(batch.map((fn) => fn()));
@@ -52,6 +59,15 @@ export async function batchAllSettled<T>(
       const r = results[j];
       if (r.status === "fulfilled") fulfilled.push({ index: i + j, value: r.value });
       else rejected.push({ index: i + j, reason: r.reason });
+    }
+    settled += results.length;
+    // 进度回调是**旁路观察者**：它抛错不得把整批业务连坐（已落定批次不回滚、余批不跑）。
+    // 静默吞掉是刻意的——进度是纯 UI 关注点，调用方（页脚文案）本就不会抛；真抛了也不该
+    // 让「数据操作」为「显示数字」买单。故此处不冒泡、不留痕。
+    try {
+      onProgress?.(settled, total);
+    } catch {
+      /* 进度旁路，失败不影响批处理结果 */
     }
   }
   return { fulfilled, rejected };

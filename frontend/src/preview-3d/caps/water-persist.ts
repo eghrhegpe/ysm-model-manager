@@ -48,36 +48,52 @@ export function writeOpts(opts?: WriteOpts): { source: WriteSource; skipMiddlewa
  *
  * @returns `null` = 无可恢复存档（调用方直接 return，不进恢复段）。
  */
+/** 从 ground legacy 存档兜底：优先嵌套 water 对象，其次四标量直拼；无 legacy 返回 null */
+function resolveLegacyWater(): {
+  state: Record<string, unknown>;
+  fromNestedLegacy: boolean;
+} | null {
+  const legacy = restoreState("ground");
+  if (!legacy) return null;
+  const lw = legacy.water;
+  if (lw && typeof lw === "object") {
+    return { state: lw as Record<string, unknown>, fromNestedLegacy: true };
+  }
+  if (
+    typeof legacy.wetness === "number" ||
+    typeof legacy.waterColor === "number" ||
+    typeof legacy.waterOpacity === "number" ||
+    typeof legacy.normalStrength === "number"
+  ) {
+    return {
+      state: {
+        wetness: legacy.wetness,
+        waterColor: legacy.waterColor,
+        waterOpacity: legacy.waterOpacity,
+        normalStrength: legacy.normalStrength,
+      },
+      fromNestedLegacy: false,
+    };
+  }
+  return null;
+}
+
+/**
+ * 解析水面恢复态：优先 water 自身存档，其次 ground legacy 嵌套 water / 四标量兜底。
+ *
+ * @returns `null` = 无可恢复存档（调用方直接 return，不进恢复段）。
+ */
 export function resolveWaterRestoreState(): {
   state: Record<string, unknown>;
   fromNestedLegacy: boolean;
 } | null {
-  let state = restoreState("water");
-  let fromNestedLegacy = false;
+  const state = restoreState("water");
   if (!state) {
-    const legacy = restoreState("ground");
-    if (legacy) {
-      const lw = legacy.water;
-      if (lw && typeof lw === "object") {
-        state = lw as Record<string, unknown>;
-        fromNestedLegacy = true;
-      } else if (
-        typeof legacy.wetness === "number" ||
-        typeof legacy.waterColor === "number" ||
-        typeof legacy.waterOpacity === "number" ||
-        typeof legacy.normalStrength === "number"
-      ) {
-        state = {
-          wetness: legacy.wetness,
-          waterColor: legacy.waterColor,
-          waterOpacity: legacy.waterOpacity,
-          normalStrength: legacy.normalStrength,
-        };
-      }
-    }
+    const legacy = resolveLegacyWater();
+    if (legacy) return legacy;
   }
   if (!state) return null;
-  return { state, fromNestedLegacy };
+  return { state, fromNestedLegacy: false };
 }
 
 /**

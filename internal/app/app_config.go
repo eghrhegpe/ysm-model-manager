@@ -491,7 +491,19 @@ func safePct(val, total int) int {
 	return p
 }
 
+// SaveWindowPosition 持久化窗口位置/尺寸与双屏相对坐标（退出时由 app.go|shutdown 调）。
+//
+// 持 configWriteMu（锐评 2026-10-15 P2 补刀）：本函数是**第 6 个配置写入面**，形态与
+// 同族五个一样是「Load→modify→save」，此前唯独它没持锁——退出保存若与任何一次设置
+// 保存并发，两边读到同一份快照、整份互冲（用户刚设好的阈值/镜像源被窗口坐标覆盖掉，
+// 且本函数只 log 不返回错误 = 双重静默）。持锁范围与同族一致 = 整个 Load→modify→save。
+//
+// 锁外只做纯计算（getVirtualScreen / safePct）：无配置读写，不必占锁。
+// 回归锁 app_window_position_test.go（跨写入面并发 -race + 单线程字段保全）。
 func (a *App) SaveWindowPosition(x, y, width, height int) {
+	a.configWriteMu.Lock()
+	defer a.configWriteMu.Unlock()
+
 	vx, vy, vw, vh := getVirtualScreen()
 	cfg := a.LoadAppConfig()
 	cfg.WinX = x

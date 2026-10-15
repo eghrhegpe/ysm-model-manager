@@ -76,13 +76,17 @@ type App struct {
 	//
 	// ADR-313 把「实参点单点」收在 JS 侧，但磁盘写入面是多宽的
 	// （SaveAppConfig / SaveAppConfigPatch / SetDownloadMirror / SaveThresholds /
-	// SetResourceRoot / ResetResourceRoot），且前端各调用点独立 void 不串行 ——
-	// 止血只能落在这一层。**持锁范围 = 整个 Load→modify→save**，不是 saveConfig 本身
-	// （saveConfig 内已自取 configMu 写缓存，二者不构成嵌套反序）。
+	// SetResourceRoot / ResetResourceRoot / SaveWindowPosition），且前端各调用点独立
+	// void 不串行 —— 止血只能落在这一层。**持锁范围 = 整个 Load→modify→save**，
+	// 不是 saveConfig 本身（saveConfig 内已自取 configMu 写缓存，二者不构成嵌套反序）。
 	//
 	// 锁只能管「锁内」：SaveAppConfigPatch（锐评 2026-10-15 P1 ③）正是为此把前端
 	// 的「预读 + 写」两次 IPC 收进一次锁内调用——**新增任何写入面都必须持本锁，
 	// 且读盘必须发生在锁内**，否则又开一个 TOCTOU 窗口。
+	// ⚠️ 上面的列表是枚举注释、天然会腐：`check-knowledge-drift` 只验 frontmatter 符号
+	// 存在性、看不见正文断言。补写入面时须同步本段——SaveWindowPosition 就曾漏持锁，
+	// 退出保存与设置保存并发即整份互冲（且它只 log 不返错误 = 双重静默），
+	// 由 app_window_position_test.go 兜住。
 	configWriteMu sync.Mutex
 	watcherMu     sync.Mutex
 	app           *application.App

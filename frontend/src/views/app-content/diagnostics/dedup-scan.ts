@@ -6,6 +6,7 @@ import { t } from "@/core/i18n/t.ts";
 import { isCancelError } from "@/utils/dom/errors.ts";
 import type { EscFn } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
+import { rtypeLabelOf } from "@/utils/resource/types.ts";
 import type {
   DedupRegType,
   FindDuplicateFilesFn,
@@ -31,9 +32,10 @@ export async function collectTargets(
     for (const rt of Object.values(reg)) {
       const dir = await GetRepoRoot(rt.id);
       if (dir) {
-        const rtName = typeof rt.name === "string" ? rt.name : rt.id;
         const rtIcon = typeof rt.icon === "string" ? rt.icon : "📦";
-        targets.push({ id: rt.id, icon: rtIcon, label: rtName, dir });
+        // label 走 i18n 单点出口（同 dedup.ts|deriveDedupTypeMeta 口径）：直取注册表中文
+        // name 会让「全类型」扫描在 en/ja 界面逐行中文裸奔；出口已含缺译文→中文→id 两级回落。
+        targets.push({ id: rt.id, icon: rtIcon, label: rtypeLabelOf(rt.id), dir });
       }
     }
   }

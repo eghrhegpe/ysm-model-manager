@@ -14,6 +14,7 @@ import { friendlyError } from "@/utils/dom/errors.ts";
 import type { EscFn } from "@/utils/html/html.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { resourceTypesById } from "@/utils/resource/schema.ts";
+import { rtypeLabelOf } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import {
   bindCancelButton,
@@ -115,10 +116,12 @@ function deriveDedupTypeMeta(
   reg: DedupRegType,
 ): { typeLabel: string; typeIcon: string } {
   const entry = rtype ? reg[rtype] : undefined;
-  const entryName = entry && typeof entry.name === "string" ? entry.name : "";
   const entryIcon = entry && typeof entry.icon === "string" ? entry.icon : "";
   return {
-    typeLabel: rtype ? entryName || rtype : t("diagnostics.all"),
+    // ⚠️ 标签走 `types.ts|rtypeLabelOf` 出口——本函数注释此前自称「标签走 i18n」而实现直取
+    // 注册表中文 `entry.name`（声明跑在实现前面的现场，2026-10-15 锐评改进拆净）：
+    // 出口内部已含「缺译文 → 回落注册表中文名 → 回落 id」两级兜底，故不再写 `|| entry.name`。
+    typeLabel: rtype ? rtypeLabelOf(rtype) : t("diagnostics.all"),
     typeIcon: rtype ? entryIcon || "📦" : "📦",
   };
 }

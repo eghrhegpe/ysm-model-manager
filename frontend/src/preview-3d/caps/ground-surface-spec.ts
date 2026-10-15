@@ -307,6 +307,51 @@ export function overlayNeedsRebuild(
   return prev === null || overlaySpecKey(prev) !== overlaySpecKey(next);
 }
 
+/** 样式判定：该像素是否为叠加线（透明底 + 彩色线） */
+function isOverlayLine(
+  style: GroundOverlayStyle,
+  x: number,
+  y: number,
+  sizePx: number,
+  n: number,
+  cellSize: number,
+  lineWidth: number,
+): boolean {
+  if (style === "grid") return x % cellSize < lineWidth || y % cellSize < lineWidth;
+  if (style === "checker") return (Math.floor(x / cellSize) + Math.floor(y / cellSize)) % 2 === 1;
+  // 竖向条带（与 surface stripes 同构，但无角度参数 → 轴对齐）
+  if (style === "stripes") return Math.floor(x / cellSize) % 2 === 1;
+  if (style === "diamond") {
+    // 菱形等距线：|u|+|v| = k·t（与 surface diamond 同口径，归一化坐标）
+    const ux = (x / sizePx) * 2 - 1;
+    const uy = (y / sizePx) * 2 - 1;
+    const d = Math.abs(ux) + Math.abs(uy);
+    const t = 2 / n;
+    const localD = ((d % t) + t) % t;
+    return localD < (0.9 / sizePx) * 2;
+  }
+  return false;
+}
+
+/** 写像素：isLine 时写线色，否则透明 */
+function writeOverlayPixel(
+  px: Uint8Array,
+  idx: number,
+  isLine: boolean,
+  r: number,
+  g: number,
+  b: number,
+): void {
+  if (isLine) {
+    px[idx] = r;
+    px[idx + 1] = g;
+    px[idx + 2] = b;
+    px[idx + 3] = 255;
+  } else {
+    px[idx + 3] = 0; // 透明
+  }
+}
+
 /**
  * 生成叠加层像素：透明底色 + 彩色格线/棋盘。
  * - grid：首行首列画线（与 surface grid 一致）
@@ -331,31 +376,8 @@ export function generateOverlayPixels(
   for (let y = 0; y < sizePx; y++) {
     for (let x = 0; x < sizePx; x++) {
       const idx = (y * sizePx + x) * 4;
-      let isLine = false;
-      if (style === "grid") {
-        isLine = x % cellSize < lineWidth || y % cellSize < lineWidth;
-      } else if (style === "checker") {
-        isLine = (Math.floor(x / cellSize) + Math.floor(y / cellSize)) % 2 === 1;
-      } else if (style === "stripes") {
-        // 竖向条带（与 surface stripes 同构，但无角度参数 → 轴对齐）
-        isLine = Math.floor(x / cellSize) % 2 === 1;
-      } else if (style === "diamond") {
-        // 菱形等距线：|u|+|v| = k·t（与 surface diamond 同口径，归一化坐标）
-        const ux = (x / sizePx) * 2 - 1;
-        const uy = (y / sizePx) * 2 - 1;
-        const d = Math.abs(ux) + Math.abs(uy);
-        const t = 2 / n;
-        const localD = ((d % t) + t) % t;
-        isLine = localD < (0.9 / sizePx) * 2;
-      }
-      if (isLine) {
-        px[idx] = r;
-        px[idx + 1] = g;
-        px[idx + 2] = b;
-        px[idx + 3] = 255;
-      } else {
-        px[idx + 3] = 0; // 透明
-      }
+      const isLine = isOverlayLine(style, x, y, sizePx, n, cellSize, lineWidth);
+      writeOverlayPixel(px, idx, isLine, r, g, b);
     }
   }
   return px;

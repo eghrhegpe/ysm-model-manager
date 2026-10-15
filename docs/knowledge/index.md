@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 204 张知识卡
+> 总计: 205 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -148,7 +148,7 @@
 - **sync-manager**（整合包同步管理器 sync-manager）：`app-sync-manager` 是一个 Web Component 视图组件（`<app-sync-manager>`），承担**单个整合包（instance）内「仓库 ↔ 实例」双向同步状态展示与逐文件推送/拉取编排**：
 - **version-updater**（版本更新 version-updater）：`version-updater.ts` 是应用自更新的前端入口：启动时静默检查（受 6 小时频次限制）→ 发现新版本以可点击 toast 通知；设置页按钮手动检查 → 弹出带更新日志的 `modalConfirm` → 调 `DoUpda…
 
-## go（57 张）
+## go（58 张）
 
 *Go 后端包（安装、下载、回收站、YSM 解析等）*
 
@@ -187,6 +187,7 @@
 | 🏗 go-logs | 导入日志 go/logs | architecture | io-bound | 导入日志, 操作记录, 操作日志, import log, 历史 |
 | 🏗 go-packs | 资源包 mcmeta go/packs | architecture | io-bound | 资源包, 光影包, mcmeta, pack_format, 包封面缩略图, 类型检测 |
 | 🏗 go-paths | 路径安全 go/paths | architecture | — | 路径, 安全, path, 路径校验 |
+| 🍃 go-pinyin | 拼音搜索匹配 go/pinyin | leaf | single-thread | 拼音搜索, 首字母搜索, 关键词匹配口径, pinyin-table 生成, 中文模型名搜索 |
 | 🏗 go-recycle | 回收站 go/recycle | architecture | io-bound | 回收站, 删除, 恢复, recycle, 软删除 |
 | 🏗 go-repoaudit | 仓库审计 go/repoaudit | architecture | io-bound, memory-heavy | 仓库审计, 健康分数, 完整性检查, 缓存命中率, repoaudit, health-report, 去重 |
 | 🏗 go-scanner | 扫描核心 go/scanner | architecture | io-bound, concurrent | 扫描, 文件树, 哈希, 缓存, 作者提取, ScanEntries, ScanEntriesCtx 取消扫描, 索引生成 |
@@ -246,6 +247,7 @@
 - **go-logs**（导入日志 go/logs）：`go/logs/` 包提供两套互不相干的日志设施：**操作日志**（`Logger`，持久化）把导入/扫描/下载/同步/重命名/删除/UI 报错等操作的成败结果写入用户配置目录下的 `ysm-import-logs.json`；**运行时…
 - **go-packs**（资源包 mcmeta go/packs）：`go/packs/` 包解析 Minecraft 资源包/光影包的 `pack.mcmeta`（目录或 ZIP 两种形态），提取 pack_format 版本信息与 pack.png 缩略图，并承担「一个文件到底属于哪种资源类型」的内容级…
 - **go-paths**（路径安全 go/paths）：`go/paths/` 包提供路径安全校验，防止路径穿越攻击和非法路径访问。
+- **go-pinyin**（拼音搜索匹配 go/pinyin）：`go/pinyin/` 是搜索关键词匹配的**单点判据包**（ADR-343-d1 C1 搜索语义收敛）：`MatchKeyword(name, relPath, keyword)` 统一「名/相对路径子串面 + 纯拉丁关键词全拼/首字母…
 - **go-recycle**（回收站 go/recycle）：`go/recycle/` 包实现模型的软删除机制，通过硬链接/符号链接判定 + `.recycle` 目录实现可恢复删除。核心是 `TrashManager` 结构体（`New(root)` → `root/.recycle`）。
 - **go-repoaudit**（仓库审计 go/repoaudit）：`go/repoaudit/` 包提供仓库健康审计核心逻辑——资源扫描、完整性校验、缓存状态、健康分数、警告生成、去重汇总。从 `go/cli`（原 `resource.go` 的 `collectRepoHealth`）提取为独立包，CL…
 - **go-scanner**（扫描核心 go/scanner）：`go/scanner/` 包实现仓库文件扫描、哈希计算、缓存失效、作者提取、索引生成（ADR-003 P2 下沉，薄壳 `internal/app/app_scan.go` 仅保留依赖 App 的方法）。
@@ -476,8 +478,8 @@
 | io-bound | IO 密集（批量读写/RPC/网络） | app-modules, app-sync-manager, backend-idb, community-feature, community-virtual-list, go-avatar, go-avatar-decode, go-dedup, go-download, go-fileops, go-fsutil, go-geometry, go-geometry-mmd-stats, go-importer, go-installer, go-instance, go-logs, go-packs, go-recycle, go-repoaudit, go-scanner, go-sync, go-sync-cache-pairing, go-tags, go-updater, go-watcher, go-ysm-parser, import-queue, oldest-models, recycle-bin, version-updater |
 | cpu-bound | CPU 密集（解析/编译/解算/编码） | animation-system, app-content-diagnostics, bone-tools, community-virtual-list, go-threejs, ground-cap-materialgroup-factories, ground-surface-spec, ik-solver, mc-ao-tint, model-stats, model2d, perception, ysm-anim-pipeline, ysm-wasm |
 | gpu-bound | GPU/显存敏感（纹理/3D 渲染） | app-content-diagnostics, model3d, mount3d-584-giant, multi-model-select, preview-core, preview-env-state, preview-panel-declarative, render-federation, scene-capability-registry, utils-export |
+| single-thread | 单线程顺序执行（顺序流水线/串行队列） | go-avatar-decode, go-download, go-pinyin, scripts-readme-index, ysm-wasm |
 | concurrent | 多核并行（goroutine 池/Worker 池/pthread/Promise 竞速） | app-content-diagnostics, go-scanner, go-threejs, model-stats |
-| single-thread | 单线程顺序执行（顺序流水线/串行队列） | go-avatar-decode, go-download, scripts-readme-index, ysm-wasm |
 | memory-heavy | 内存/显存大户（大缓冲/长驻缓存） | go-geometry, go-repoaudit, model3d, utils-export |
 
 ---

@@ -304,7 +304,9 @@
 | 双缓存失效配对、写入口漏清缓存 | [同步缓存失效配对契约（go/sync × go/instance × 写面派生闸）](./go-sync-cache-pairing.md) | app 层每条写入口必须成对调 instance.InvalidateSyncItemsCache + ysmsync.InvalidateSyncScanCaches（或等价的 a.ClearScanCache 三层清）——新写点漏归类，tests/test_sync_write_cache_pairing.ts 派生闸当场红 | ADR-269 |
 | 搜索、筛选、关键词 / 标签 / 数值三路交集 | [搜索筛选编排 search](./search.md) | 搜索筛选必须经 toolbar-search 编排 + adv-filter 弹窗 + SearchModels 后端，前端只做 UI 不做筛选逻辑 | - |
 | 搜索编排、高级筛选、关键词搜索 | [工具栏搜索编排 toolbar-search](./toolbar-search.md) | toolbar-search 编排必须单点分发搜索链路（弹窗 → 后端 → 标签交集 → 降级 → 渲染），禁止各层各自调 SearchModels | - |
+| 搜索关键词匹配、拼音/首字母、SearchModels 关键词面 | [拼音搜索匹配 go/pinyin](./go-pinyin.md) | 拼音表生成物 pinyin-table.ts 与 Go 判据必须同源（CLI pinyin-table 重生成 + 金样例对账），跨语言手抄即漂移 | - |
 | 缩略图、类型检测 | [资源包 mcmeta go/packs](./go-packs.md) | - | - |
+| 通用红线 | [拼音搜索匹配 go/pinyin](./go-pinyin.md) | 升级 go-pinyin 依赖 = 拼音判据变更，须重跑 pinyin-table 并补金样例 | - |
 | 同步项、BuildSyncItems、资源同步 | [整合包实例 go/instance](./go-instance.md) | - | - |
 | 同步状态、app-sync-manager | [整合包同步页 app-sync-manager](./app-sync-manager.md) | - | - |
 | 文件监听、文件变化、刷新 | [文件监听 go/watcher](./go-watcher.md) | 文件变更监听必须走 go/watcher 的事件流，禁止轮询文件系统 | - |
@@ -928,6 +930,10 @@
 | 未限制 LimitReader/maxLangSize | - | 大语言文件 OOM；必须用 LimitReader 截断 |
 | 手写路径安全检查 | - | 越权路径穿越、符号链接绕过；必须经 IsInside |
 | 符号链接未解析 | - | 路径穿越绕过 IsInside；必须用 IsInsideResolved 处理符号链接 |
+| PinyinDict 直读带声调符（xiǎo）——Table 必须经 PinyinOf（NewArgs Normal 风格，无声调）派生，否则 TS 面全拼匹配恒失 | - | - |
+| 混合关键词（CJK+拉丁，如）拼音面语义未定义——只走 CJK 直接面，宁漏勿误（isLatins 门槛） | `狐li` | - |
+| 绝对路径匹配面已废止（ADR-343-d1 ①）：relPath 入参必须是仓库根相对路径，根前缀不得参与匹配 | - | - |
+| TS 表裁切 CJK 基本区（U+4E00..U+9FFF）——Go 面（全 PinyinDict）对扩展区生僻字是超集，只会多命中不会少，金样例只锁基本区 | - | - |
 | 符号链接/硬链接直接删除（deleted_link）而非移入回收站——手搓删除逻辑会破坏链接语义 | - | - |
 | 回收站清理必须保留原路径结构（相对路径扁平化会导致恢复时路径冲突） | - | - |
 | 软删除 vs 硬删除：.recycle 目录下的文件仍可被扫描到——需排除 .recycle 目录 | - | - |

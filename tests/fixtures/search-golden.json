@@ -1,0 +1,32 @@
+{
+  "_comment": "搜索关键词匹配金样例（ADR-343-d1 C1）：Go（go/pinyin|TestMatchKeyword_Golden）与 TS（utils/search/match.test.ts）双读同判据对账——跨语言「靠测试对账而非共享代码」范式（genindex 双工先例）。字段：name = 模型文件基名；relPath = 仓库根相对路径（'/' 分隔，根下文件 = ''）；keyword = 用户输入；hit = 期望匹配结果。",
+  "cases": [
+    { "name": "狐狸.ysm", "relPath": "组A/狐狸.ysm", "keyword": "狐狸", "hit": true },
+    { "name": "狐狸.ysm", "relPath": "组A/狐狸.ysm", "keyword": "组A", "hit": true },
+    { "name": "狐狸.ysm", "relPath": "组A/狐狸.ysm", "keyword": "组B", "hit": false },
+    { "name": "狐狸.ysm", "relPath": "组A/狐狸.ysm", "keyword": "狐li", "hit": false },
+    { "name": "狐狸.ysm", "relPath": "组A/狐狸.ysm", "keyword": "xh", "hit": false },
+    { "name": "小红书模型.ysm", "relPath": "mmd/小红书模型.ysm", "keyword": "xhsm", "hit": true },
+    { "name": "小红书模型.ysm", "relPath": "mmd/小红书模型.ysm", "keyword": "xiaohong", "hit": true },
+    { "name": "小红书模型.ysm", "relPath": "mmd/小红书模型.ysm", "keyword": "hongshu", "hit": true },
+    { "name": "小红书模型.ysm", "relPath": "mmd/小红书模型.ysm", "keyword": "xslm", "hit": false },
+    { "name": "小红书模型.ysm", "relPath": "mmd/小红书模型.ysm", "keyword": "moxing", "hit": true },
+    { "name": "模型.ysm", "relPath": "", "keyword": "模", "hit": true },
+    { "name": "模型.ysm", "relPath": "", "keyword": "moxing", "hit": true },
+    { "name": "模型.ysm", "relPath": "", "keyword": "mx", "hit": true },
+    { "name": "模型.ysm", "relPath": "", "keyword": "xx", "hit": false },
+    { "name": "模型.ysm", "relPath": "", "keyword": "", "hit": true },
+    { "name": "狐LI.ysm", "relPath": "组A/狐LI.ysm", "keyword": "huli", "hit": true },
+    { "name": "狐LI.ysm", "relPath": "组A/狐LI.ysm", "keyword": "HUli", "hit": true },
+    { "name": "狐LI.ysm", "relPath": "组A/狐LI.ysm", "keyword": " 胡li ", "hit": false },
+    { "name": "fox.ysm", "relPath": "组B/fox.ysm", "keyword": "fox", "hit": true },
+    { "name": "fox.ysm", "relPath": "组B/fox.ysm", "keyword": "FOX", "hit": true },
+    { "name": "fox.ysm", "relPath": "组B/fox.ysm", "keyword": "组b", "hit": true },
+    { "name": "fox.ysm", "relPath": "组B/fox.ysm", "keyword": "huli", "hit": false },
+    { "name": "fox.ysm", "relPath": "组B/fox.ysm", "keyword": "xx", "hit": false },
+    { "name": "warrior.ysm", "relPath": "mmd/warrior.ysm", "keyword": "war", "hit": true },
+    { "name": "warrior.ysm", "relPath": "mmd/warrior.ysm", "keyword": "mmd", "hit": true },
+    { "name": "中二病.ysm", "relPath": "misc/中二病.ysm", "keyword": "zhong", "hit": true },
+    { "name": "中二病.ysm", "relPath": "misc/中二病.ysm", "keyword": "zre", "hit": false }
+  ]
+}

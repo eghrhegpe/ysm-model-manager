@@ -55,7 +55,7 @@ status: active
 1. **收集当前值**：从 vm 态读取预填（keyword = `snapshot.search`，数值六范围 + 标签 = `snapshot.advFilter`；状态真相源 = TreeState，原 `#adv-filter` 隐藏 input 僵尸面板已退役）
 2. **打开弹窗**：调用 `modalAdvFilter`（`dialog-adv-filter.md`；传当前树 rtype `vm.rootAttr` 供**数值区展示门控**——无几何管线的类型禁用数值条件并提示，见 dialog-adv-filter 卡）；用户确认后结果写回 vm 态（`vm.setAdvFilter` + keyword → `vm.setSearch`），清除回执（`{cleared:true}`）走 `advFilterClearAll` 全清
 3. **标签搜索**：如果有标签条件，调 `ListByTag(tag)` 获取标签路径集合
-4. **数值/关键词搜索**：如果有关键词或数值范围条件，调 `SearchModels(filesRoot, kw, minBones, ..., maxTex)` 获取后端结果
+4. **数值/关键词搜索**：如果有关键词或数值范围条件，调 `SearchModels(filesRoot, filters types.SearchFilters)`（ADR-343 刀 4 结构体契约）获取后端结果；关键词面 = 单口径 `go/pinyin.MatchKeyword`（name/相对路径 + 全拼/首字母拼音面，ADR-343-d1 C1）
 5. **多线程统计角标**（网页版专用）：数值条件搜索时显示 `🧵×N ⚙️ x/y` 浮动角标证明 Worker 并行统计；完成后隐藏
 6. **降级消费**：网页版 Worker 不可用时，`consumeWebSearchDegraded()` 返回 true → toast 提示"数值条件已忽略"
 7. **取交集**：标签 ∩ 搜索条件（如果两者都有），存到 `vm._filterPaths`

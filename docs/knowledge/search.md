@@ -66,6 +66,7 @@ auto_fields:
     - getStatsPoolSize
     - getVsMode
     - getVsRows
+    - invalidateBuildCache
     - Load
     - modalAdvFilter
     - onStatsProgress
@@ -155,8 +156,8 @@ status: active
 
 ## 核心职责
 
-- **三路交集语义**：`SearchModels`（关键词 + 6 数值范围一次性过滤）+ `ListByTag`（标签路径集）+ 客户端 `Set` 交集 → `_filterPaths` 白名单 → `buildTree` 精确匹配
-- **两路搜索**：inline `#srch` debounce 150ms 仅做前端 `_search` 文本匹配（轻量路径）；高级筛选走 Go 后端 + 白名单（全量路径），两者叠加生效
+- **三路交集语义**：`SearchModels`（关键词 + 6 数值范围一次性过滤；关键词 = 单口径 `go/pinyin.MatchKeyword`，ADR-343-d1 C1）+ `ListByTag`（标签路径集）+ 客户端 `Set` 交集 → `_filterPaths` 白名单 → `buildTree` 精确匹配
+- **两路搜索同判据（ADR-343-d1 C1 收敛）**：inline `#srch` debounce 150ms 走前端 `_search` 匹配（`utils/search/match.ts|keywordMatches` 单口径：name/相对路径子串面 + 纯拉丁关键词全拼/首字母拼音面）；高级筛选走 Go 后端（`go/pinyin.MatchKeyword`）+ 白名单——两条路**同判据**（拼音表 `utils/search/pinyin-table.ts` 由 Go 侧 CLI `pinyin-table` 命令经同一依赖 `github.com/mozillazg/go-pinyin` 派生，金样例 `tests/fixtures/search-golden.json` 双读对账），叠加生效
 - **编排入口唯一**：`openAdvFilterDialog($, vm)`（`toolbar-search.ts`），12 段 `advFilter*` 私有子函数串成线性流水线
 
 ## 错误 / 降级分支（三路）
@@ -178,7 +179,7 @@ status: active
 
 | 绑定 | 文件 | 用途 |
 |------|------|------|
-| `SearchModels` | `app_scan.go` | 关键词 + 6 数值范围一次性过滤 |
+| `SearchModels` | `app_scan.go` | 关键词（单口径 `go/pinyin.MatchKeyword`：name/相对路径 + 拼音面，ADR-343-d1）+ 6 数值范围一次性过滤 |
 | `ListByTag` | `app_tags.go` | 按标签反查路径集 |
 | `AllTags` | `app_tags.go` | 全量标签候选 |
 

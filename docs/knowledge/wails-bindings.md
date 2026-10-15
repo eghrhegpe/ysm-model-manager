@@ -268,7 +268,7 @@ status: active
 - `ScanLocalAuthors(rtype) → types.LocalAuthor[]` — 扫描全部本地资源目录、从文件名提取作者。⚠️ `rTypes` 是**资源类型**（ysm/litematic/…），**不等于**创作者的站点归属 `type`——前端只据此给同名创作者打 `_fromLocal` 标记，**不得**并入 `creators.json`（ADR-337）
 - `ListVersionInstances(mcRoot) → types.VersionInstance[]` — 列出 MC 目录下的版本实例
 - `GetGlobalCustomDir(mcRoot) → string` — 返回 MC 根目录下的全局自定义模型目录
-- `SearchModels(repoRoot, keyword, minBones, maxBones, minCubes, maxCubes, minTex, maxTex) → types.SearchResult[]` — 高级搜索（关键词 + 骨骼数/立方体数/纹理尺寸区间）
+- `SearchModels(repoRoot, filters types.SearchFilters) → types.SearchResult[]` — 高级搜索（关键词 + 骨骼数/立方体数/纹理尺寸区间；8 位置参数收编 `SearchFilters` 结构体 = ADR-343 刀 4，生成契约见 bindings/models.ts 的 `SearchFilters`）。**关键词面 = 单口径 `go/pinyin.MatchKeyword`（ADR-343-d1 C1）**：name / 仓库根相对路径子串面 + 纯拉丁关键词的全拼/首字母拼音面（`go/pinyin` 包，依赖 `github.com/mozillazg/go-pinyin` 默认读音集；绝对路径匹配面已废止；TS 侧 `utils/search/match.ts` 同判据 + 同源拼音表 CLI `pinyin-table` 生成 + 金样例对账）
 - `ExportBoneStructures(repoRoot) → string` — 批量导出仓库骨骼结构
 - `ExportModelStructureJSON(modelPath) → string` — 导出单模型骨骼结构 JSON
 - `GenerateRepoIndex(repoPath) → string` — 扫描仓库目录生成 index.json

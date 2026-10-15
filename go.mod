@@ -17,6 +17,8 @@ require (
 	golang.org/x/text v0.42.0
 )
 
+require github.com/mozillazg/go-pinyin v0.20.0 // indirect
+
 require (
 	github.com/adrg/xdg v0.5.3 // indirect
 	github.com/andybalholm/brotli v1.2.2 // indirect

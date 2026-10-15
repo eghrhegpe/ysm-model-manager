@@ -57,7 +57,7 @@ go run . --cli --files-root <仓库根目录> search --keyword <关键词> [选�
 
 | 参数 | 类型 | 默认 | 说明 |
 |------|------|------|------|
-| `--keyword` | string | "" | 搜索关键词（匹配模型名或路径，trim + tolower） |
+| `--keyword` | string | "" | 搜索关键词（单口径 `go/pinyin.MatchKeyword`：模型名/仓库根相对路径子串 + 纯拉丁关键词的全拼/首字母拼音面，ADR-343-d1 C1；trim + tolower） |
 | `--min-bones` | int | 0 | 最小骨骼数（>0 才参与过滤） |
 | `--max-bones` | int | 0 | 最大骨骼数 |
 | `--min-cubes` | int | 0 | 最小立方块数 |
@@ -83,7 +83,7 @@ go run . --cli --files-root <仓库根目录> search --keyword <关键词> [选�
 ### 后台搜索能力
 
 `SearchModels` 由 Go 后端 `internal/app/app_scan.go` 实现：
-- 关键词：`strings.ToLower(strings.TrimSpace(keyword))`，匹配 name OR path
+- 关键词：单口径 `go/pinyin.MatchKeyword`（ADR-343-d1 C1）——`strings.ToLower(strings.TrimSpace(keyword))` 后：name / **仓库根相对路径**子串面 + 纯拉丁关键词的全拼/首字母拼音面（`go/pinyin` 包，依赖 `github.com/mozillazg/go-pinyin`；**绝对路径匹配面已废止**——原 name OR 绝对 path 的「文件夹墙」误中面）；TS 侧 `frontend/src/utils/search/match.ts` 同判据（拼音表经 CLI `pinyin-table` 命令由同一依赖派生，金样例对账）
 - 数值范围：>0 才参与过滤，min/max 闭区间
 - 返回 `types.SearchResult`（name, path, boneCount, cubeCount, texWidth, texHeight, hasError）
 

@@ -57,7 +57,7 @@ last_verified: 2026-10-09
   - `scanWebModels`：仓库根 → `scanWebModelGroups`（两次前缀批量操作收敛——`idbGetAll` 全 dir key + `idbGetAllMetadata` 全 file 元数据，总 IDB 事务数 O(1)，内存按组名收敛；非根目录 → `scanWebModelFilesInDir` 递归列该目录主文件，避免批量重命名等消费方拿到全库条目）
   - `buildGroupEntry` 主文件竞争：嵌套 rel（含 `/`，如 tex/face.png）不参与竞争（主文件须在模型组根层，对齐桌面目录模型）；仅 `.ysm` / ysm.json 可作主文件（`mainRank < MAIN_FILE_RANK_TYPE` 的组整组跳过——孤儿 dir key、文件被删也跳过，避免 Path 以 `/` 结尾）；`groupFilesByDir` 组名按长度降序排，首次 startsWith 命中即最长匹配
   - `scanAllWebModels`：全部资源类型递归列主文件（标签聚合 / 子目录映射等全库操作消费）
-  - `searchWebModels`（对齐桌面 `app_scan.go|SearchModels`）：关键词匹配 name OR path（可命中目录名/作者路径段）；数值条件（minBones/maxBones/minCubes/maxCubes/minTex/maxTex，`>0` 才参与过滤，`passesNumericFilters` 六条短路 OR 合并）；无数值条件走快路径不做批量解码；数值统计经 `web-stats.ts|batchStatsWebModels` Worker 批量分析（大库后台跑不卡 UI）；Worker 不可用/失败 → 降级关键词匹配（数值 0 + `hasError:false`，`emitWebSearchHit` 保持排除/写入顺序语义：先排除 hasError 条目，再过数值条件，最后映射入结果）
+  - `searchWebModels`（对齐桌面 `app_scan.go|SearchModels`）：关键词单口径 `utils/search/match.ts|keywordMatches`（ADR-343-d1 C1：name / 虚拟根相对路径子串面 + 纯拉丁关键词全拼/首字母拼音面，与 Go `go/pinyin.MatchKeyword` 同判据，金样例 `tests/fixtures/search-golden.json` 双读对账；原「kw 匹配 name OR 绝对 path」面废止）；数值条件（minBones/maxBones/minCubes/maxCubes/minTex/maxTex，`>0` 才参与过滤，`passesNumericFilters` 六条短路 OR 合并）；无数值条件走快路径不做批量解码；数值统计经 `web-stats.ts|batchStatsWebModels` Worker 批量分析（大库后台跑不卡 UI）；Worker 不可用/失败 → 降级关键词匹配（数值 0 + `hasError:false`，`emitWebSearchHit` 保持排除/写入顺序语义：先排除 hasError 条目，再过数值条件，最后映射入结果）
 
 ## 对外 API / 入口
 

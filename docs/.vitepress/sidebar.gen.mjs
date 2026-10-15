@@ -2008,6 +2008,10 @@ export const autoSidebar = [
             "link": "/knowledge/go-paths"
           },
           {
+            "text": "拼音搜索匹配 go/pinyin",
+            "link": "/knowledge/go-pinyin"
+          },
+          {
             "text": "回收站 go/recycle",
             "link": "/knowledge/go-recycle"
           },

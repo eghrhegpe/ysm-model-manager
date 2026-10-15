@@ -11,6 +11,7 @@
 
 import { allResourceTypes } from "@/utils/resource/schema.ts";
 import { RESOURCE_TYPES } from "@/utils/resource/types.ts";
+import { keywordMatches } from "@/utils/search/match.ts";
 import type { ModelEntry } from "../../bindings/ysm-model-manager/go/types/models.ts";
 import { idbGet, idbGetAll, idbGetAllMetadata } from "./idb.ts";
 import { WEB_ROOT, webDirType } from "./web-common.ts";
@@ -207,7 +208,9 @@ export async function scanAllWebModels(): Promise<
 
 // ===== §10 搜索（关键词 + 数值范围，Worker 批量统计）=====
 // --- 搜索（关键词匹配 + 数值范围条件，数值统计走 Web Worker 批量分析）---
-// 对齐桌面 internal/app/app_scan.go SearchModels：kw 匹配 name OR path；
+// 关键词面 = 单口径 keywordMatches（ADR-343-d1 C1，与 Go go/pinyin.MatchKeyword 同判据：
+// name / 仓库根相对路径子串面 + 纯拉丁关键词全拼/首字母拼音面；原「kw 匹配 name OR path」
+// 绝对路径面已废止）；
 // 数值参数 [minBones,maxBones,minCubes,maxCubes,minTex,maxTex]，>0 才参与过滤：
 //   minBones>0 && BoneCount<minBones → 排除（骨骼 ≥ N）
 //   maxBones>0 && BoneCount>maxBones → 排除
@@ -318,12 +321,14 @@ export async function searchWebModels(
   } = filters ?? {};
   const type = typeFromWebDir(filesRoot);
   const entries = await scanWebModels(`${WEB_ROOT}/${type}`);
-  // 对齐桌面 app_scan.go SearchModels：kw = strings.ToLower(strings.TrimSpace(keyword))
-  const kw = (keyword || "").trim().toLowerCase();
-  // 对齐桌面 app_scan.go SearchModels：匹配 name OR path（搜索目录名/作者路径段可命中）
-  const matched = entries.filter(
-    (e) => !kw || e.Name.toLowerCase().includes(kw) || e.Path.toLowerCase().includes(kw),
-  );
+  // 单口径（ADR-343-d1 C1）：与桌面 app_scan.go SearchModels / go/pinyin.MatchKeyword
+  // 同判据——name / 仓库根相对路径子串面 + 纯拉丁关键词的全拼/首字母拼音面
+  // （pinyin-table.ts 由 Go 侧生成，跨语言同表；金样例 tests/fixtures/search-golden.json 对账）
+  const scanRoot = `${WEB_ROOT}/${type}`;
+  const matched = entries.filter((e) => {
+    const rel = e.Path.startsWith(`${scanRoot}/`) ? e.Path.slice(scanRoot.length + 1) : e.Name; // 根下文件（TrimPrefix 不生效兜底，与 Go 面同形）
+    return keywordMatches(e.Name, rel, keyword);
+  });
   const hasNumeric =
     minBones > 0 || maxBones > 0 || minCubes > 0 || maxCubes > 0 || minTex > 0 || maxTex > 0;
   // 无数值条件 → 快路径：关键词匹配即可（保持既有行为，不做批量解码）

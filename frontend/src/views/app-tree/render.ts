@@ -6,6 +6,7 @@ import { calcVisibleRange, installScrollSync } from "@/utils/dom/virtual-scroll.
 import { formatBytes } from "@/utils/format/format.ts";
 import { hl } from "@/utils/html/html.ts";
 import { renderDisplayName } from "@/utils/model-name/display.ts";
+import { keywordMatches } from "@/utils/search/match.ts";
 import { entryKey } from "./entry-key.ts";
 import type { TreeEntry } from "./loader.ts";
 import { fileRowHTML, folderRowHTML } from "./row-tpl.ts";
@@ -114,6 +115,8 @@ interface BuildCacheEntry {
   entries?: TreeEntry[];
   sort?: string;
   filterRef?: Set<string> | null;
+  /** 内容修订号快照：乐观更新原地翻 banned 不改变 entries 引用，靠本号让快速路径失效 */
+  rev?: number;
 }
 
 /** 绑定到 TreeRenderCtx 实例的缓存（WeakMap —— ctx GC 自动回收） */
@@ -137,14 +140,21 @@ function getBuildTreeCached(
   // 改为内容派生：全路径 + banned 位拼串（O(n) 远廉于其守卫的 buildTree）+
   // filterPaths 排序全量序列化；dirOpen 项删除——buildTree 不消费它，留着只会
   // 造成折叠/展开时的无谓 miss + 误导性地宣称依赖
-  // O(1) 快速路径：entries 引用 + sort + filterPaths 引用均未变 → 复用上次指纹，
+  // O(1) 快速路径：entries 引用 + sort + filterPaths 引用 + 内容修订号均未变 → 复用上次指纹，
   // 跳过 O(n) 拼接（搜索键入/筛选不替换 entries 时命中）
+  // ⚠️ rev 是必需的：乐观更新原地翻 `entry.banned`（events.ts / bus-handlers.ts 共 6 处）
+  // **不替换 entries 数组引用**，只看引用会命中快速路径 → 复用旧 root，而 dirFlags
+  // （WeakMap<TreeNode, hasEnabled/hasDisabled>）只在 buildTree 内 annotateDirNodes 重算 →
+  // 文件行自身勾选态正确（惰性 html 读 e.banned），父文件夹行的 ck on/partial/off **停在旧值**，
+  // 直到后续 _load() 换数组引用才纠（窗口期 = IPC + Go 侧 InvalidatePath 真实扫盘）。
   const cached = buildCache.get(ctx);
+  const rev = ctx.buildRev ?? 0;
   if (
     cached &&
     cached.entries === entries &&
     cached.sort === sort &&
-    cached.filterRef === filterPaths
+    cached.filterRef === filterPaths &&
+    cached.rev === rev
   ) {
     return cached.root;
   }
@@ -159,8 +169,21 @@ function getBuildTreeCached(
   }
 
   const root = buildTree(entries, sort, filterPaths);
-  buildCache.set(ctx, { key: cacheKey, root, entries, sort, filterRef: filterPaths });
+  buildCache.set(ctx, { key: cacheKey, root, entries, sort, filterRef: filterPaths, rev });
   return root;
+}
+
+/**
+ * 使 buildTree 缓存失效（原地改动 entries 内容后调用）。
+ * 乐观更新直接写 `entry.banned = !entry.banned` 而不替换数组引用——快速路径只看引用
+ * 会误判内容未变。本函数让下次 renderTree 走全量指纹 + 重建（含 annotateDirNodes），
+ * 恢复父文件夹行的 ck on/partial/off 一致态。**每次原地改动必须调**，漏调即复发
+ * 「文件夹勾选态停在旧值直到 _load 回来」的缺陷。
+ */
+export function invalidateBuildCache(ctx: TreeRenderCtx): void {
+  // 防御：ctx 缺省即无缓存实例（部分测试替身只实现状态面）→ 无副作用早退
+  if (!ctx) return;
+  ctx.buildRev = (ctx.buildRev ?? 0) + 1;
 }
 
 // localStorage key for render mode
@@ -350,6 +373,9 @@ function sortedChildKeys(node: TreeNode, sort: string): string[] {
 
 /**
  * 文件行（搜索未命中 → null，即该行不产出）。
+ * 判据（ADR-343-d1 C1 单口径）：`keywordMatches(entry.name, entry.path, 关键词)`——
+ * name/相对路径子串面 + 纯拉丁关键词的全拼/首字母拼音面（与 Go go/pinyin|MatchKeyword
+ * 同判据，金样例 tests/fixtures/search-golden.json 双读对账）。
  * 原语义：`if (isSearch && !entry.path.toLowerCase().includes(searchLower)) continue;`
  *
  * key 走 entryKey（磁盘路径），非树内拼接路径——与 DOM data-fullpath /
@@ -366,7 +392,7 @@ function visibleFileRow(
   search: string,
   draggingKeys: SelectedKeys = undefined,
 ): TreeRow | null {
-  if (isSearch && !entry.path.toLowerCase().includes(searchLower)) return null;
+  if (isSearch && !keywordMatches(entry.name, entry.path, searchLower)) return null;
   const key = entryKey(entry);
   return lazyRow(
     {
@@ -565,6 +591,12 @@ export interface TreeRenderCtx {
   /** 在途统计动画句柄（WeakMap——DOM 元素为 key，值为取消函数；终值写回由
    *  animateNumber 的 onFinish 完成事件驱动，调用方无独立墙钟 timer，条目随落定自清） */
   statAnim: WeakMap<HTMLElement, () => void>;
+  /**
+   * entries 内容修订号。buildTree 缓存快速路径的守卫之一（与 entries/sort/filterPaths
+   * 引用并列）：原地改动 entries（乐观更新翻 banned）后由 invalidateBuildCache 递增，
+   * 使「数组引用未变但内容已变」不再误命中缓存。
+   */
+  buildRev?: number;
 }
 
 /** 创建渲染上下文（AppTree 实例化时调用） */
@@ -573,6 +605,7 @@ export function createTreeRenderCtx(): TreeRenderCtx {
     rowTplCache: new WeakMap(),
     vsStates: new WeakMap(),
     statAnim: new WeakMap(),
+    buildRev: 0,
   };
 }
 

@@ -18,6 +18,7 @@ auto_fields:
     - getRenderMode
     - getVsMode
     - getVsRows
+    - invalidateBuildCache
     - makeSwitchState
     - RenderMode
     - renderTree

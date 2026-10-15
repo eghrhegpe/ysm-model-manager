@@ -8,7 +8,7 @@ permalink: /adr/
 
 # 决策记录（ADR）
 
-> 架构决策日志，共 **368** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
+> 架构决策日志，共 **369** 篇。决策真相源 = 各 ADR 文件首部「状态」行；本页为登记表 + 规范索引（单文件承载全部）。
 
 > ADR 三区存放：根目录 = 存量（分级前）/ `architecture/` = 架构决策 / `decisions/` = 执行决策日志（ADR-320）。**写新 ADR 前必读本节**——防撞号靠登记，不靠自觉。
 
@@ -19,7 +19,7 @@ permalink: /adr/
 | [📝 提议中](#提议中) | 4 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 1 |
 | [🔄 部分采纳](#部分采纳) | 14 |
-| [✅ 已采纳](#已采纳) | 340 |
+| [✅ 已采纳](#已采纳) | 341 |
 | [❌ 已取代](#已取代) | 9 |
 | [🧊 已废弃](#已废弃) | 0 |
 | [❓ 未归类](#未归类) | 0 |
@@ -60,7 +60,7 @@ permalink: /adr/
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 | [ADR-050](./ADR-050-plaza-browser-window.md) | 模型广场 · 浏览器窗口（Wails 第二窗口） | 🔄 部分采纳 |
 
-### ✅ 已采纳（340）
+### ✅ 已采纳（341）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
@@ -69,6 +69,7 @@ permalink: /adr/
 | [ADR-345](./architecture/ADR-345-disable-state-first-class.md) | 禁用态是一等公民：目录粒度启禁同步与实例侧禁用载体识别 | ✅ 已采纳 |
 | [ADR-344](./architecture/ADR-344-pack-sync-unit-honesty.md) | 整合包同步单元级诚实化：dirLevel 内容判定、单条推送保层级、祖先单元去重 | ✅ 已采纳 |
 | [ADR-343](./architecture/ADR-343-cross-type-search.md) | 跨类型搜索收口（Type 派生 + 分析器分流 + SearchFilters） | ✅ 已采纳 |
+| [ADR-343-d1](./decisions/ADR-343-d1-c1.md) | 搜索语义收敛C1：关键词匹配单口径（名/相对路径/拼音三路）+ 拼音表单源派生 | ✅ 已采纳 |
 | [ADR-342](./architecture/ADR-342-relink-preserve-instance-files.md) | 整合包重链接的实例数据保全与目录身份复验 | ✅ 已采纳 |
 | [ADR-342-d1](./decisions/ADR-342-d1-relink-result-structured.md) | 重链接失败结构化下发（RelinkResult 取代 ErrPartialSync 抬升） | ✅ 已采纳 |
 | [ADR-341](./architecture/ADR-341-busy-lock-unification.md) | busy 语义归一——互斥锁唯一形态 BusyLock | ✅ 已采纳 |
@@ -773,6 +774,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
+| ADR-343-d1 | 搜索语义收敛C1：关键词匹配单口径（名/相对路径/拼音三路）+ 拼音表单源派生 | ✅ 已采纳 | 2026-10-15 |
 | ADR-342-d1 | 重链接失败结构化下发（RelinkResult 取代 ErrPartialSync 抬升） | ✅ 已采纳 | 2026-10-14 |
 | ADR-340-d1 | 拉取结果结构化：部分失败不再是 error（绑定层不吞成功计数） | ✅ 已采纳 | 2026-10-14 |
 | ADR-340-d2 | 批量推送覆盖知情口径：如实计数与点名（覆盖照旧） | ✅ 已采纳 | 2026-10-14 |

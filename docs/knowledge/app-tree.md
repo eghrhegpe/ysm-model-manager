@@ -46,6 +46,7 @@ auto_fields:
     - getVsMode
     - getVsRows
     - headerHTML
+    - invalidateBuildCache
     - isTreeMoveDrag
     - listFileRowHTML
     - listFolderRowHTML
@@ -128,6 +129,7 @@ use_when:
 invariant_anchors:
   - frontend/src/views/app-tree/index.ts|selectState
 status: active
+last_verified: "2026-10-15"
 ---
 
 # 资源树 app-tree
@@ -155,7 +157,7 @@ status: active
 
 搜索过滤在 `render.ts` 的 `buildTree` 函数中实现，两条过滤路径为 **AND 关系**：
 
-1. **`_search`（关键词匹配）**：`trim().toLowerCase()` 后按 `relPath.includes(query)` 匹配模型路径（非仅文件名），匹配结果目录自动展开
+1. **`_search`（关键词匹配，单口径 ADR-343-d1 C1）**：`render.ts|visibleFileRow` 经 `utils/search/match.ts|keywordMatches(name, relPath, 关键词)` 判定——name / 相对路径子串面 + 纯拉丁关键词的全拼/首字母拼音面（拼音表 `utils/search/pinyin-table.ts` 生成物，与 Go `go/pinyin.MatchKeyword` 同判据同表，金样例 `tests/fixtures/search-golden.json` 双读对账）；匹配结果目录自动展开
 2. **`_filterPaths`（精确路径交集）**：`buildTree` 用 `entry-key.ts|entryKey`（= `fullPath || path`）匹配 Set，
    来自高级筛选弹窗的标签 ∩ 搜索条件交集；与 tag-editor 写入的 `modelPath`（ctx:show path = `fullPath || path`）
    **同源**——原 `render.ts|buildTree` 写 `filterPaths.has(e.fullPath)` 不回落 path，fullPath 空条目对
@@ -245,6 +247,10 @@ status: active
 - **选中态在数据变更链路（回收/重命名）成功后必须清空**（P2 修复：`selectState` 是模块级单例，bus-handlers 的 dir:recycle / batch:rename / dir:batch-rename 成功后清 keys+lastKey；2026-09 补漏 `events.ts` 内联重命名成功链——原漏清导致旧路径滞留显示「已选 N 个文件」并对已不存在路径误删）。全部链路：bus-handlers 三条 + events.ts 内联重命名 + index.ts _deleteSelected
 - **重命名 Escape 取消不得误保存（P1 修复 2026-09）**：`events.ts` rename keydown Escape 分支原直接 `_renderTree()`——聚焦的 `.rename-inp` 被 DOM 移除时 Chromium 同步派发 focusout（冒泡到 container）→ 走保存链，用户按 Esc 想放弃却把改动写盘。修复：Escape 先置 `inp.dataset.cancelRename="1"` + `value=""`（双保险），focusout 分支查标记跳过保存。回归测试在 `events.test.ts`（模拟真实 DOM 重建 + 手动派发 focusout 断言 RenameFile 不被调用）——原测试 mock `_renderTree` 不重建 DOM 故假绿，勿回退到裸 `_renderTree()`
 - **instance-actions 契约口径（2026-08-09 收敛）**：① 同步键口径 = Go `sync_push.go` `SyncCustomToRepo` 的去重规则（Hash 优先 + 原始 Name 兜底、复制保留相对路径）——前端**不**自行按 `.ban` 剥离裸名 Set 计数，`uploaded` 直接信任 Go 返回值（单一事实来源，防「📤 N」撒谎/漏同步）；② `AddImportLog` 调用源在 `features/sync.ts`（`registerSync` 内，原 `instance-actions.ts` 模块已删除，知识卡保留此标注供追溯）；sourcePath=源、targetDir=目标，调用方不得装反/漏传
+- **整目录回收 `RemoveDir` 必须 gate 在「全部入回收站成功」上（P0 修复，审核 2026-10-15）**：`bus-handlers.ts|atBeHandleDirRecycle` 逐文件 `MoveToRecycle` 后**无条件** `os.RemoveAll` 整目录是数据丢失——回收失败（回收站根不可判定／无写权限／磁盘满）时残留文件仍在目录内，`RemoveDir` 把本该可恢复的文件变成**永久删除**（不进回收站），而 toast 仍报「已回收 N 个」误导用户以为文件还在磁盘可重试。现 `r.rejected.length === 0` 才清壳；`RemoveDir` 自身失败升 warn toast（原本只 `dbg`，静默会让人误判为「回收彻底失败」而实际可恢复）。有残留 → 留壳等用户重试。回归锁：`bus-handlers.test.ts`「全部失败 → 不调 RemoveDir」+「部分失败 → 不调 RemoveDir」+「RemoveDir 失败 → warn toast」
+- **乐观翻转原地改 `entry.banned` 必须 bump buildCache 修订号（P2 修复，审核 2026-10-15）**：`render.ts|getBuildTreeCached` 的 O(1) 快速路径原判据是 `entries 引用 + sort + filterPaths 引用` 均未变 → 复用上次指纹跳过 `buildTree`。但乐观更新（events.ts 4 处 + bus-handlers.ts 2 处，共 6 处）**直接原地写 `e.banned` 而不替换数组引用** → 只看引用会误命中缓存 → 复用旧 `TreeNode`，而 `dirFlags`（`WeakMap<TreeNode, hasEnabled/hasDisabled>`）只在 `buildTree` 内 `annotateDirNodes` 重算 → 文件行自身勾选态正确（惰性 html 读 `e.banned`），**父文件夹行的 ck on/partial/off 停在旧值**，直到后续 `_load()` 换数组引用才纠（窗口期 = IPC + Go 侧 `InvalidatePath` 真实扫盘，批量禁用 500 文件时全程可见）。现 `TreeRenderCtx.buildRev` 单调递增，快速路径判据并入 `cached.rev === ctx.buildRev`，每次原地改动调 `invalidateBuildCache(ctx)`。⚠️ **新增原地改 entries 的调用点必须同调**，漏调即复发。回归锁：`render-cache.test.ts`（单独成卡：render.test.ts 是 node 环境无 DOM，而 renderTree 需真实容器）三例——不 bump 即复用旧 root（缺陷本体断言）／bump 后双向跟随 on→off→on／仅搜索词变化不递增修订号（防误伤搜索击键热路径）
+- **搜索/高级筛选生效时必须剪掉不可见选中项（P2 修复，审核 2026-10-15）**：`setSearch`/`setFilterPaths` 只改可见行、不动 `selectState.keys`（全量集合）→ 底部报「已选 3 个」而树里 0 行高亮；键盘 Delete（`_onKeyDelete` 直取 `keys` 全量）+ 确认框文案就作用在**用户看不见的文件**上——与切 rtype 同族的「虚假危险确认」（已在 `_attrChangeReloadAsync` 修掉，搜索路径漏修）。剪枝落在 `_renderTree`：`(search || filterPaths) && keys.size` 时按 `getVsRows` 可见 file 行集合删键，`lastKey` 指向不可见项即置空，有删改则补 `updateSelectCount`。**⚠️ 折叠不剪**——判据是 `search`/`filterPaths` 而非「行是否可见」，与 Windows Explorer 同语义（收起文件夹不清选中，重开仍能接着删；折叠只影响可见性、不影响作用域）。剪掉的选中**不可复活**（作用域已失效，静默复活才是陷阱）。回归锁：`app-tree.component.test.ts` 两例（搜索剪空 + lastKey 置空 + 底部计数回落；折叠不剪选中）
+- **批量操作反馈类型随结果走，失败不得报「成功」（P2 修复，审核 2026-10-15）**：`index.ts|_deleteSelected` 原无条件 `toast(..., "success")`——全部删除失败也弹绿色「已删除 0 个，失败 2 个」。现 `r.rejected.length > 0 → "warn"`，对齐 `_executeTreeMove` 与 `toggleFolderBatch` 的口径。同批修「全失败不清选中」：`r.fulfilled.length === 0` 时跳过 `_clearSelection`（失败意味着路径都在磁盘上，清空选中只会让用户失去重试起点）；**部分失败仍清**（成功项已从磁盘移除，残留选中指向已不存在的路径才是真危险）。回归锁：`index.extra.test.ts` 两例（部分失败 → warn；全部失败 → warn + 选中保留）
 
 ## 相关
 

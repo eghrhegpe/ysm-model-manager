@@ -17,6 +17,7 @@ import (
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/packs"
 	"ysm-model-manager/go/paths"
+	"ysm-model-manager/go/pinyin"
 	"ysm-model-manager/go/scanner"
 	ysmsync "ysm-model-manager/go/sync"
 	"ysm-model-manager/go/types"
@@ -91,11 +92,17 @@ func (a *App) SearchModels(filesRoot string, filters types.SearchFilters) []type
 	kw := strings.ToLower(strings.TrimSpace(keyword))
 
 	// Phase 1：关键词预过滤（纯内存操作，快速缩小候选集）
+	// 单口径 = go/pinyin.MatchKeyword（ADR-343-d1 C1）：name/相对路径子串面 + 纯拉丁关键词的
+	// 全拼/首字母拼音面。绝对路径匹配废止（原 strings.Contains(entry.Path, kw) 会让根前缀
+	// 与作者文件夹墙全量误中）；TS 侧 utils/search/match.ts 同源同判据，金样例对账。
 	var candidates []types.ModelEntry
 	if kw != "" {
 		for _, entry := range entries {
-			name := strings.ToLower(entry.Name)
-			if strings.Contains(name, kw) || strings.Contains(strings.ToLower(entry.Path), kw) {
+			rel := strings.TrimPrefix(entry.Path, filesRoot+string(filepath.Separator))
+			if !strings.HasPrefix(entry.Path, filesRoot+string(filepath.Separator)) {
+				rel = entry.Name // 根下文件（rel 即基名，TrimPrefix 不生效时兜底）
+			}
+			if pinyin.MatchKeyword(entry.Name, rel, kw) {
 				candidates = append(candidates, entry)
 			}
 		}

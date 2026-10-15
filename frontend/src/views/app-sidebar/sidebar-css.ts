@@ -109,15 +109,20 @@ ${dropdownBaseCSS}
    卡片级描边见上方 .instance-card:focus-visible（单独落规则，非表单控件） */
 ${focusVisibleCSS}
 
-/* ===== 同步变更明细浮层（2026-10-15 UX 补） ===== */
-/* 覆盖在 sidebar 区域内（:host position:relative 锚点），不挡主内容区；
-   绝对铺满侧栏、半透明遮罩 + 底部卡片，可滚动明细 + 关闭按钮。 */
+/* ===== 同步变更明细浮层（2026-10-15 UX 补；同日定形 bottom-sheet） ===== */
+/* 底部卡片贴 sidebar 底（:host position:relative 锚点），**无全屏遮罩**——
+   侧栏上半（实例列表/footer）保持可操作，不挡 e2e 与用户常规操作；
+   关闭三路 = ESC / 关闭按钮 / 点面板自身空白。 */
 .sync-result[hidden] { display: none; }
 .sync-result {
-  position: absolute; inset: 0; z-index: 20;
-  display: flex; flex-direction: column; justify-content: flex-end;
-  background: color-mix(in srgb, var(--surf) 55%, transparent);
-  padding:var(--sp-2);
+  position: absolute; left: 0; right: 0; bottom: 0;
+  z-index: 20;
+  display: flex; flex-direction: column;
+  max-height: 60%;
+  background: var(--surf);
+  border-top: 1px solid var(--bd);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  box-shadow: var(--shadow-md);
 }
 .sync-result .sr-head {
   display: flex; align-items: center; gap: 6px;
@@ -125,14 +130,13 @@ ${focusVisibleCSS}
 }
 .sync-result .sr-title { flex: 1; font-weight: var(--fw-semibold); color: var(--txt); font-size: var(--fs-sm); }
 .sync-result .sr-close {
-  padding:var(--btn-padding-sm); font-size: var(--fs-sm); line-height: 1;
+  padding: var(--btn-padding-sm); font-size: var(--fs-sm); line-height: 1;
   border: 1px solid var(--bd); background: transparent; color: var(--muted); cursor: pointer;
 }
 .sync-result .sr-close:hover { background: var(--hover); color: var(--txt); }
 .sync-result .sr-list {
-  list-style: none; margin: 0; padding: var(--sp-1) var(--sp-2); max-height: 60%;
-  overflow-y: auto; background: var(--surf); border-radius: var(--radius-md);
-  border: 1px solid var(--bd);
+  list-style: none; margin: 0; padding: var(--sp-1) var(--sp-2);
+  flex: 1; min-height: 0; overflow-y: auto;
 }
 .sync-result .sr-row { display: flex; align-items: flex-start; gap: 6px; padding: var(--sp-1); font-size: var(--fs-xs); }
 .sync-result .sr-dot { flex-shrink: 0; width: 6px; height: 6px; border-radius: 50%; margin-top: 5px; }

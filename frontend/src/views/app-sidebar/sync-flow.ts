@@ -486,7 +486,9 @@ function renderSyncResultPanel(root: ShadowRoot, data: SyncResultData): void {
   if (!panel) return;
   panel.innerHTML = syncResultContentHTML(data);
   panel.hidden = false;
-  // 事件委托：点关闭按钮或点遮罩空白区（target 即 panel 自身）即关闭；点明细列表不关
+  // 打开即把焦点移到关闭按钮（键盘可达性：焦点落在界面上，Enter/Tab 可继续操作）
+  panel.querySelector<HTMLButtonElement>("[data-sync-result-close]")?.focus();
+  // 事件委托：点关闭按钮或点面板自身空白（target 即 panel，bottom-sheet 无全屏遮罩）即关闭；点明细列表不关
   panel.onclick = (e: MouseEvent) => {
     const tgt = e.target as HTMLElement;
     if (tgt.closest("[data-sync-result-close]") || tgt === panel) {

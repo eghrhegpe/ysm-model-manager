@@ -437,12 +437,17 @@ describe("app-sidebar — 拉取所选", () => {
     await waitPanelOpen();
     const panel = getPanel();
     expect(panel.querySelectorAll(".sr-row.sr-ok").length).toBe(ALL_RESOURCE_TYPES.length * 2);
+    // 打开即把焦点移到关闭按钮（键盘可达性）
+    expect(el.shadowRoot!.activeElement).toBe(panel.querySelector("[data-sync-result-close]"));
+    // 点明细列表不关（panel 事件委托不误伤列表区）
+    panel.querySelector(".sr-row")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(getPanel().hidden).toBe(false);
 
     // ESC 关闭（document 级监听）
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     expect(getPanel().hidden).toBe(true);
 
-    // 再次拉取 → 点击遮罩空白区（target 即 panel 自身）关闭
+    // 再次拉取 → 点击面板自身空白（target 即 panel，bottom-sheet 的兜底关闭支路）
     clickPullAll(el);
     await waitPanelOpen();
     getPanel().dispatchEvent(new MouseEvent("click", { bubbles: true }));

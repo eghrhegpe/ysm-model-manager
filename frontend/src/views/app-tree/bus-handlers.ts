@@ -256,12 +256,13 @@ async function atBeHandleDirRecycle(vm: AppTree, dir: string): Promise<void> {
 
 async function atBeHandleDirBatchRename(vm: AppTree, dir: string): Promise<void> {
   try {
-    const { ScanModelEntriesFiltered, GetRepoRoot } = await backendGetApp();
+    // 对话框只消费 Name/Path（不读 Hash）——浏览投影快路径（止血 2026-10-15 复核 P2-1）
+    const { ScanModelEntriesForBrowse, GetRepoRoot } = await backendGetApp();
     const rtype = vm.snapshot.rootAttr || RESOURCE_TYPES.YSM;
     const filesRoot = await GetRepoRoot(rtype);
     const absDir = filesRoot ? `${filesRoot}/${dir}` : dir;
     const label = RESOURCE_TYPE_LABELS[rtype] || rtype;
-    const entries = (await ScanModelEntriesFiltered(absDir, rtype, "", label)) || [];
+    const entries = (await ScanModelEntriesForBrowse(absDir, rtype, "", label)) || [];
     if (!entries?.length) {
       toast(`📂 ${t("tree.dirEmpty")}`, TOAST_MS.success, "warn");
       return;

@@ -62,6 +62,7 @@ vi.mock("@/backend/app.ts", () => ({
     RemoveDir: RemoveDirMock,
     ScanModelEntries: ScanModelEntriesMock,
     ScanModelEntriesFiltered: ScanModelEntriesMock,
+    ScanModelEntriesForBrowse: ScanModelEntriesMock,
     RenameFile: RenameFileMock,
     ClearScanCache: ClearScanCacheMock,
     InvalidateScanPath: InvalidateScanPathMock,

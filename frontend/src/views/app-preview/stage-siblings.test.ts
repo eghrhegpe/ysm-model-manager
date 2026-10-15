@@ -1,6 +1,6 @@
 // @vitest-environment node
 // ===== stage-siblings 舞台包资源扫描测试 =====
-// 覆盖：resolveStageSiblings（GetRepoRoot(StageAnim) → ScanModelEntriesFiltered(root, 'StageAnim', '', 注册表名)，
+// 覆盖：resolveStageSiblings（GetRepoRoot(StageAnim) → ScanModelEntriesForBrowse(root, 'StageAnim', '', 注册表名)，
 // 按扩展名分档 vmd / audio / config，其余跳过；根为空 / 扫描失败 / getApp 拒绝 → []）。
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -17,12 +17,12 @@ beforeEach(() => {
   vi.clearAllMocks();
   getAppMock.mockResolvedValue({
     GetRepoRoot: getRepoRootMock,
-    ScanModelEntriesFiltered: scanFilteredMock,
+    ScanModelEntriesForBrowse: scanFilteredMock,
   });
 });
 
 describe("resolveStageSiblings", () => {
-  it("GetRepoRoot(StageAnim) → ScanModelEntriesFiltered(root, 'StageAnim', '', 注册表名)", async () => {
+  it("GetRepoRoot(StageAnim) → ScanModelEntriesForBrowse(root, 'StageAnim', '', 注册表名)", async () => {
     getRepoRootMock.mockResolvedValue("/repo/mmd/StageAnim");
     scanFilteredMock.mockResolvedValue([{ Path: "/repo/mmd/StageAnim/包A/dance.vmd" }]);
     await resolveStageSiblings();

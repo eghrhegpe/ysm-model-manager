@@ -1,6 +1,6 @@
 // @vitest-environment node
 // ===== scene-siblings 视图壳数据准备测试 =====
-// 覆盖：resolveSceneSiblings（GetRepoRoot(SceneModel) → ScanModelEntriesFiltered(root, 'SceneModel', '', '场景模型')，
+// 覆盖：resolveSceneSiblings（GetRepoRoot(SceneModel) → ScanModelEntriesForBrowse(root, 'SceneModel', '', '场景模型')，
 // 预览候选白名单 = SceneModel variants 的 mmd-scene 组（.pmx/.pmd，previewCandidateExtsOf 派生，
 // 锐评 G2 收口——替代原手写 /\.(pmx|pmd)$/i 正则）；根为空 / 扫描失败 / getApp 拒绝 → []，下拉不渲染）。
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -18,12 +18,12 @@ beforeEach(() => {
   vi.clearAllMocks();
   getAppMock.mockResolvedValue({
     GetRepoRoot: getRepoRootMock,
-    ScanModelEntriesFiltered: scanFilteredMock,
+    ScanModelEntriesForBrowse: scanFilteredMock,
   });
 });
 
 describe("resolveSceneSiblings", () => {
-  it("GetRepoRoot(SceneModel) → ScanModelEntriesFiltered(root, 'SceneModel', '', '场景模型')，只保留 .pmx/.pmd（大小写不敏感）", async () => {
+  it("GetRepoRoot(SceneModel) → ScanModelEntriesForBrowse(root, 'SceneModel', '', '场景模型')，只保留 .pmx/.pmd（大小写不敏感）", async () => {
     getRepoRootMock.mockResolvedValue("/repo/mmd/SceneModel");
     scanFilteredMock.mockResolvedValue([
       { Path: "/repo/mmd/SceneModel/舞台A/stage.pmx" },

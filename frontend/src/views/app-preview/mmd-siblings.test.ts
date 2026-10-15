@@ -1,7 +1,7 @@
 // @vitest-environment node
 // ===== mmd-siblings 视图壳数据准备测试 =====
 // 覆盖：resolveMmdSiblings（委托共享底座 resolveSiblingsByType：
-// GetRepoRoot(EntityPlayer) → ScanModelEntriesFiltered(root, rtype, '', label)；
+// GetRepoRoot(EntityPlayer) → ScanModelEntriesForBrowse(root, rtype, '', label)；
 // 根为空/扫描失败 → []，下拉不渲染）。
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -22,12 +22,12 @@ beforeEach(() => {
   vi.clearAllMocks();
   getAppMock.mockResolvedValue({
     GetRepoRoot: getRepoRootMock,
-    ScanModelEntriesFiltered: scanFilteredMock,
+    ScanModelEntriesForBrowse: scanFilteredMock,
   });
 });
 
 describe("resolveMmdSiblings", () => {
-  it("委托共享底座：GetRepoRoot(EntityPlayer) → ScanModelEntriesFiltered(root, rtype, '', label)", async () => {
+  it("委托共享底座：GetRepoRoot(EntityPlayer) → ScanModelEntriesForBrowse(root, rtype, '', label)", async () => {
     getRepoRootMock.mockResolvedValue("/mmd-root");
     scanFilteredMock.mockResolvedValue([
       { Name: "a.pmx", Path: "/mmd-root/模型A/a.pmx" },

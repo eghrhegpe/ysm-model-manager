@@ -262,3 +262,55 @@ func TestScanEntriesWithHit_WaiterInvalidatedDuringFlight_Rescans(t *testing.T) 
 		t.Fatalf("扫描结束后在途航班应清空，剩余 %d", inflightLen())
 	}
 }
+
+// InvalidatePath 在途窗口（复核 P2-3 补锁，与上方 InvalidateCache 版 Rescans 对仗）：
+// 子目录扫描在途期间失效**父目录**——子孙 keyVersions bump 臂（HasPrefix(kstr, key+sep)）
+// 递增子目录版本 → 该在途子扫的 Store 被版本守卫丢弃（在途脏读不得入缓存），
+// 下次调用必 miss 重扫。InvalidateCache 版只锁了「同目录航班内等待方」，
+// 「父目录失效 × 子目录在途」交叉场景此前无回归锁。
+func TestInvalidatePath_DuringInFlightDescendantScan(t *testing.T) {
+	InvalidateCache()
+	walkCount.Store(0)
+
+	base := t.TempDir()
+	sub := filepath.Join(base, "sub")
+	if err := os.MkdirAll(sub, 0o755); err != nil {
+		testutil.NoError(t, err)
+	}
+	if err := os.WriteFile(filepath.Join(sub, "a.ysm"), []byte("x"), perm); err != nil {
+		testutil.NoError(t, err)
+	}
+
+	// 钩子挂住子目录扫描的在途航班（walk 起点阻塞，版本戳已在进入时捕获）
+	ownerStarted := make(chan struct{}, 1)
+	release := make(chan struct{})
+	setWalkStartHook(func() {
+		select {
+		case ownerStarted <- struct{}{}:
+		default:
+		}
+		<-release
+	})
+	defer setWalkStartHook(nil)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		_, _ = ScanEntriesWithHit(sub)
+	}()
+	<-ownerStarted
+
+	// 子扫在途期间失效父目录：子孙 bump 臂递增 sub 的 keyVersions
+	InvalidatePath(base)
+	close(release)
+	wg.Wait()
+
+	// 被失效的在途结果不得入缓存：下次调用必 miss 重扫（新增文件可见，非陈旧读）
+	if err := os.WriteFile(filepath.Join(sub, "b.ysm"), []byte("x"), perm); err != nil {
+		testutil.NoError(t, err)
+	}
+	entries, hit := ScanEntriesWithHit(sub)
+	testutil.Equal(t, hit, false, "InvalidatePath 失效的在途子扫结果不得入缓存（下次调用应 miss）")
+	testutil.Equal(t, len(entries), 2, "重扫应见新文件（丢弃在途结果而非陈旧读）")
+}

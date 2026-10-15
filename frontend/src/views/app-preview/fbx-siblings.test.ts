@@ -21,7 +21,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   getAppMock.mockResolvedValue({
     GetRepoRoot: getRepoRootMock,
-    ScanModelEntriesFiltered: scanFilteredMock,
+    ScanModelEntriesForBrowse: scanFilteredMock,
   });
 });
 

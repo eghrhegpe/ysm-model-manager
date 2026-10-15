@@ -1,5 +1,7 @@
 // ===== 预览候选列表（同目录兄弟模型 / 场景 / 表情动画 / 舞台包）=====
-// 视图壳数据准备：GetRepoRoot → ScanModelEntriesFiltered（ADR-044③ 对称范式）。
+// 视图壳数据准备：GetRepoRoot → ScanModelEntriesForBrowse（ADR-044③ 对称范式；
+// 止血 2026-10-15 复核 P1-1：候选列表只消费 Path，走无哈希浏览投影——
+// 树加载切 ForBrowse 后不再预热全量哈希缓存，开预览下拉不该再冷付全库 SHA256）。
 // 归位 views 层（ADR-072 根治：依赖 getApp 读仓库根，属视图壳数据能力，
 // 不该被 preview-3d/adapters 反向 import —— 那会与 adapter → controls 形成循环依赖环）。
 // 各格式（mmd / fbx / scene / morph / stage）共享同一底座，薄壳已合并回本文件
@@ -15,7 +17,7 @@ import { backendGetApp } from "@/views/backend-deps.ts";
 
 /**
  * 解析某资源类型的同目录候选主文件路径列表。
- * @param rtype  资源类型 id（RESOURCE_TYPES.*），传给 Go `GetRepoRoot` + `ScanModelEntriesFiltered`
+ * @param rtype  资源类型 id（RESOURCE_TYPES.*），传给 Go `GetRepoRoot` + `ScanModelEntriesForBrowse`
  * @param filterExts  预览候选 ext 白名单（previewCandidateExtsOf 派生；缺省 = 不过滤）。
  *   Go 白名单语义 = 类型归属全 extensions；此处白名单表达「本预览适配器可加载的裸文件」子集
  *   （锐评 G2 收口：ext 数组由 resource_types.json 派生，替代原手写正则）。
@@ -30,7 +32,8 @@ export async function resolveSiblingsByType(
     const root = await app.GetRepoRoot(rtype);
     if (!root) return [];
     const label = RESOURCE_TYPE_LABELS[rtype] || rtype;
-    const entries = await app.ScanModelEntriesFiltered(root, rtype, "", label);
+    // 只消费 Path，不读 Hash——浏览投影（无 SHA256，止血 2026-10-15 P1-1 复核补切）
+    const entries = await app.ScanModelEntriesForBrowse(root, rtype, "", label);
     const paths = (entries || []).map((e) => e.Path || "");
     return filterExts ? paths.filter((p) => filterExts.includes(extOf(p))) : paths;
   } catch {
@@ -61,7 +64,7 @@ export async function resolveMmdSiblings(): Promise<string[]> {
   return resolveSiblingsByType(RESOURCE_TYPES.MMD);
 }
 
-/** 同类型 FBX 模型候选（GetRepoRoot(fbx) → ScanModelEntriesFiltered 主文件 Path 列表）；失败返回 []（下拉不渲染） */
+/** 同类型 FBX 模型候选（GetRepoRoot(fbx) → ScanModelEntriesForBrowse 主文件 Path 列表）；失败返回 []（下拉不渲染） */
 export async function resolveFbxSiblings(): Promise<string[]> {
   return resolveSiblingsByType(RESOURCE_TYPES.FBX);
 }
@@ -108,7 +111,7 @@ export async function resolveStageSiblings(): Promise<
     const App = await backendGetApp();
     const stageRoot = await App.GetRepoRoot("StageAnim");
     if (!stageRoot) return [];
-    const raw = await App.ScanModelEntriesFiltered(
+    const raw = await App.ScanModelEntriesForBrowse(
       stageRoot,
       RESOURCE_TYPES.STAGE,
       "",

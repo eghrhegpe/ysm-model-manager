@@ -1,6 +1,6 @@
 // @vitest-environment node
 // ===== morph-siblings 视图壳数据准备测试 =====
-// 覆盖：resolveMorphSiblings（GetRepoRoot(CustomMorph) → ScanModelEntriesFiltered(root, 'CustomMorph', '', '自定义表情')，
+// 覆盖：resolveMorphSiblings（GetRepoRoot(CustomMorph) → ScanModelEntriesForBrowse(root, 'CustomMorph', '', '自定义表情')，
 // 预览候选白名单 = CustomMorph extensions 剔容器（.vpd，previewCandidateExtsOf 派生，
 // 锐评 G2 收口——替代原手写 /\.vpd$/i 正则）；根为空 / 扫描失败 / getApp 拒绝 → []，下拉不渲染）。
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -18,12 +18,12 @@ beforeEach(() => {
   vi.clearAllMocks();
   getAppMock.mockResolvedValue({
     GetRepoRoot: getRepoRootMock,
-    ScanModelEntriesFiltered: scanFilteredMock,
+    ScanModelEntriesForBrowse: scanFilteredMock,
   });
 });
 
 describe("resolveMorphSiblings", () => {
-  it("GetRepoRoot(CustomMorph) → ScanModelEntriesFiltered(root, 'CustomMorph', '', '自定义表情')，只保留 .vpd（大小写不敏感）", async () => {
+  it("GetRepoRoot(CustomMorph) → ScanModelEntriesForBrowse(root, 'CustomMorph', '', '自定义表情')，只保留 .vpd（大小写不敏感）", async () => {
     getRepoRootMock.mockResolvedValue("/repo/mmd/CustomMorph");
     scanFilteredMock.mockResolvedValue([
       { Path: "/repo/mmd/CustomMorph/喜.a.vpd" },

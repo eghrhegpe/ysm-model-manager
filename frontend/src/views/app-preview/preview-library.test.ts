@@ -89,7 +89,7 @@ describe("scanModelsByType — 预览键反解后到达 Go 绑定（批次6 P3�
   function mockBindings() {
     const mocks = {
       GetRepoRoot: vi.fn().mockResolvedValue("/repo"),
-      ScanModelEntriesFiltered: vi.fn().mockResolvedValue([
+      ScanModelEntriesForBrowse: vi.fn().mockResolvedValue([
         { Path: "/repo/a.pmx" },
         { Path: "/repo/b.pmx" },
       ]),
@@ -98,21 +98,21 @@ describe("scanModelsByType — 预览键反解后到达 Go 绑定（批次6 P3�
     return mocks;
   }
 
-  it("mmd 预览键 → 反解为 EntityPlayer 再调用 GetRepoRoot/ScanModelEntriesFiltered", async () => {
-    const { GetRepoRoot, ScanModelEntriesFiltered } = mockBindings();
+  it("mmd 预览键 → 反解为 EntityPlayer 再调用 GetRepoRoot/ScanModelEntriesForBrowse", async () => {
+    const { GetRepoRoot, ScanModelEntriesForBrowse } = mockBindings();
     const paths = await scanModelsByType("mmd");
     // 反解后的真实 rtype 到达 Go 绑定（扩展名白名单过滤的关键——不反解会查空仓库）
     expect(GetRepoRoot).toHaveBeenCalledWith("EntityPlayer");
-    expect(ScanModelEntriesFiltered).toHaveBeenCalledWith("/repo", "EntityPlayer", "", "角色模型");
+    expect(ScanModelEntriesForBrowse).toHaveBeenCalledWith("/repo", "EntityPlayer", "", "角色模型");
     expect(paths).toEqual(["/repo/a.pmx", "/repo/b.pmx"]);
   });
 
   it("已是真实 rtype 的键（fbx）原样透传，不误反解", async () => {
-    const { GetRepoRoot, ScanModelEntriesFiltered } = mockBindings();
+    const { GetRepoRoot, ScanModelEntriesForBrowse } = mockBindings();
     await scanModelsByType("fbx");
     expect(GetRepoRoot).toHaveBeenCalledWith("fbx");
     // label 取 RESOURCE_TYPE_LABELS["fbx"] 的真实值（注册表驱动，勿硬编码简写）
-    expect(ScanModelEntriesFiltered).toHaveBeenCalledWith(
+    expect(ScanModelEntriesForBrowse).toHaveBeenCalledWith(
       "/repo",
       "fbx",
       "",
@@ -121,17 +121,17 @@ describe("scanModelsByType — 预览键反解后到达 Go 绑定（批次6 P3�
   });
 
   it("根目录为空 → 提前返回空列表，不调扫描", async () => {
-    const { GetRepoRoot, ScanModelEntriesFiltered } = mockBindings();
+    const { GetRepoRoot, ScanModelEntriesForBrowse } = mockBindings();
     GetRepoRoot.mockResolvedValue("");
     const paths = await scanModelsByType("mmd");
     expect(paths).toEqual([]);
-    expect(ScanModelEntriesFiltered).not.toHaveBeenCalled();
+    expect(ScanModelEntriesForBrowse).not.toHaveBeenCalled();
   });
 
   it("绑定抛错 → 静默返回空列表（不抛给 3D 预览）", async () => {
     getAppMock.mockResolvedValue({
       GetRepoRoot: vi.fn().mockRejectedValue(new Error("boom")),
-      ScanModelEntriesFiltered: vi.fn(),
+      ScanModelEntriesForBrowse: vi.fn(),
     });
     const paths = await scanModelsByType("mmd");
     expect(paths).toEqual([]);

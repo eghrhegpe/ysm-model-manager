@@ -259,25 +259,27 @@ interface PreviewExtras extends Mount3DOptions {
   ) => Promise<void>;
 }
 
-/** 按资源类型（+可选子类型）扫描候选模型路径（轻量：GetRepoRoot + ScanModelEntriesFiltered，
- * 复用文件树扫描缓存，不逐文件解析）。供 3D 内切换模型的类型 tab 点击时懒加载。
+/** 按资源类型（+可选子类型）扫描候选模型路径（轻量：GetRepoRoot + ScanModelEntriesForBrowse，
+ * 复用文件树浏览投影缓存——无哈希快路径，不逐文件解析；止血 2026-10-15 P1-1 复核补切：
+ * 候选只消费 Path，树切 ForBrowse 后该不该冷付全库 SHA256）。供 3D 内切换模型的类型 tab 点击时懒加载。
  * export 供测试断言「预览键反解后的真实 rtype」到达 Go 绑定（批次6 P3）。
  *
- * 扩展名过滤由后端 ScanModelEntriesFiltered 完成——按 rtype+subtype 的 extensions 白名单
- * 过滤，排除非模型文件（如 EntityPlayer 类型自动排除 .vmd/.vpd 动作文件）。
+ * 扩展名过滤由后端 ScanModelEntriesForBrowse 完成——按 rtype+subtype 的 extensions 白名单
+ * 过滤（与 Filtered 共享 finalizeScanEntries 单点，口径一致），排除非模型文件
+ * （如 EntityPlayer 类型自动排除 .vmd/.vpd 动作文件）。
  * @param rtype 资源类型 id（如 "EntityPlayer"）
  * @param subtype 可选子类型 id（如 "EntityPlayer"），为空时用父类型扩展名
  */
 export async function scanModelsByType(rtype: string, subtype = ""): Promise<string[]> {
   try {
     // 预览键反解为真实资源类型 ID（"mmd" → "EntityPlayer"），
-    // 使 Go 侧 ScanModelEntriesFiltered 命中扩展名白名单过滤
+    // 使 Go 侧 ScanModelEntriesForBrowse 命中扩展名白名单过滤
     const realRtype = resolvePreviewKeyToRtype(rtype);
-    const { GetRepoRoot, ScanModelEntriesFiltered } = await backendGetApp();
+    const { GetRepoRoot, ScanModelEntriesForBrowse } = await backendGetApp();
     const root = await GetRepoRoot(realRtype);
     if (!root) return [];
     const label = RESOURCE_TYPE_LABELS[realRtype] || realRtype;
-    const raw = (await ScanModelEntriesFiltered(root, realRtype, subtype, label)) as Array<{
+    const raw = (await ScanModelEntriesForBrowse(root, realRtype, subtype, label)) as Array<{
       Path?: string;
     }>;
     return (raw || []).map((e) => e.Path).filter((p): p is string => !!p);

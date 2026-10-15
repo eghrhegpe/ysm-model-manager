@@ -1,7 +1,7 @@
 // @vitest-environment node
 // ===== 同类型候选列表通用底座测试 =====
-// 覆盖：resolveSiblingsByType（GetRepoRoot(rtype) → ScanModelEntriesFiltered(root, rtype, "", label)；
-// Go 按注册表过滤；根为空 / 扫描失败 → []，下拉不渲染）。
+// 覆盖：resolveSiblingsByType（GetRepoRoot(rtype) → ScanModelEntriesForBrowse(root, rtype, "", label)；
+// Go 按注册表过滤（无哈希浏览投影，止血 2026-10-15 复核 P1-1）；根为空 / 扫描失败 → []，下拉不渲染）。
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const { getAppMock, getRepoRootMock, scanFilteredMock } = vi.hoisted(() => ({
@@ -23,12 +23,12 @@ beforeEach(() => {
   vi.clearAllMocks();
   getAppMock.mockResolvedValue({
     GetRepoRoot: getRepoRootMock,
-    ScanModelEntriesFiltered: scanFilteredMock,
+    ScanModelEntriesForBrowse: scanFilteredMock,
   });
 });
 
 describe("resolveSiblingsByType", () => {
-  it("GetRepoRoot(rtype) → ScanModelEntriesFiltered(root, rtype, '', label)（Go 过滤）", async () => {
+  it("GetRepoRoot(rtype) → ScanModelEntriesForBrowse(root, rtype, '', label)（Go 过滤，无哈希投影）", async () => {
     getRepoRootMock.mockResolvedValue("/root");
     scanFilteredMock.mockResolvedValue([
       { Path: "/root/a.fbx" },

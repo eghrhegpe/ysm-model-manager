@@ -217,7 +217,7 @@
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 386 |
 | atTeClickRowFolder | `frontend/src/views/app-tree/events.ts` | 169 |
 | atTeClickRowFile | `frontend/src/views/app-tree/events.ts` | 243 |
-| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 727 |
+| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 751 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -323,7 +323,7 @@
 | importWebBatch | `frontend/src/features/import/executor.ts` | 274 |
 | setupRecycleActions | `frontend/src/features/maintenance/recycle-bin.ts` | 131 |
 | onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 203 |
-| registerInstanceOps | `frontend/src/features/pack-ops/instance-ops.ts` | 135 |
+| registerInstanceOps | `frontend/src/features/pack-ops/instance-ops.ts` | 138 |
 | registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 55 |
 | runDownloadMissing | `frontend/src/features/sync/sync.ts` | 305 |
 | runSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 391 |
@@ -340,7 +340,7 @@
 | atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 182 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 114 |
 | atTeBindRenameInput | `frontend/src/views/app-tree/events.ts` | 388 |
-| _executeTreeMove | `frontend/src/views/app-tree/index.ts` | 793 |
+| _executeTreeMove | `frontend/src/views/app-tree/index.ts` | 817 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -356,7 +356,7 @@
 | runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 306 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 113 |
 | toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 492 |
-| _executeTreeMove | `frontend/src/views/app-tree/index.ts` | 792 |
+| _executeTreeMove | `frontend/src/views/app-tree/index.ts` | 816 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -428,7 +428,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-tree/index.ts` | 330 |
+| connectedCallback | `frontend/src/views/app-tree/index.ts` | 335 |
 
 ### `ui:card-density`
 

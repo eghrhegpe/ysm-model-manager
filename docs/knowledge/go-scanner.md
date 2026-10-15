@@ -87,7 +87,9 @@ status: active
 | `.ban` / `.disabled` 后缀 | 还原原始扩展名后按上述判断 |
 
 > **注意**：CI workflow 模板（`generateIndexWorkflow`）的 `paths:` 触发条件仅列 `**.ysm` / `**.zip` / `**.7z`，与扫描侧 `.json` 白名单口径分工不同——扫描负责全量发现，CI 只感知 YSM/压缩包变更。
-> `ensureRepoWorkflow` 用 `fsutil.WriteFileAtomic` 原子写 workflow（ADR-109 §4），不裸 `os.WriteFile`——防止中途崩溃留残缺文件被上方 `os.Stat` 误判为「已存在」而永久静默失效；已存在则不覆盖，保留用户自定义 workflow。
+> `ensureRepoWorkflow` 用 `fsutil.WriteFileAtomic` 原子写 workflow（ADR-109 §4），不裸 `os.WriteFile`——防止中途崩溃留残缺文件被上方 `os.Stat` 误判为「已存在」而永久静默失效；已存在则不覆盖，保留用户自定义 workflow。⚠️ **该「不覆盖」语义决定修复生效边界**：存量仓库里若已有 `generate-index.yml`，模板修好了也不会自动落到该仓库——需用户手动删掉该文件才会重新生成（2026-10-15 修复批的实际边界，写文档/答疑时勿承诺「升级即生效」）。
+>
+> **CI 内嵌 genindex.go 与应用内 `ScanEntries` 的同步口径（锐评 2026-10-15 修复批）**：模板是独立 `package main`（跑在 GitHub Actions，无法 import 本包），故两侧口径**靠测试对账**而非靠共享代码，改任一侧都要跑 `workflow_test.go|TestGenerateIndexWorkflow_MatchesScanEntries`（真 `go run` 模板脚本，与 `buildRepoIndexEntries(ScanEntries())` 逐条对账）。该批修掉的四个封锁点：① heredoc 里 import 单行并列（`"crypto/sha256" "encoding/json" …`）是**语法错误** → CI 该步骤自 `f7609e70a` 起恒失败、index.json 从不由 CI 产出；② ysm.json 白名单基准误用 `restored`（普通 ysm.json 无禁用后缀时为空串 → `filepath.Base("") == "."`）→ **全部普通 ysm.json 组条目被丢**；③ `.json` 被扩展名否定链二次拦截（`buildGenerateIndexWorkflow` 生成否定链时**刻意跳过 `.json`**，故模板侧必须写成 `ext != ".json" && …` 才不误杀）——只修 ② 不修 ③ 照样全丢；④ 目录级跳过补 `.recycle` / `.relink-bak-<ts>` / 目录级 `.disabled|.ban` / `.github` 四项与 `ScanEntries` 对齐（否则回收站副本与 relink 尸体被当活跃条目收进索引）。另：`entry.Name` 必须与 `buildRepoIndexEntries` 同口径（ysm.json 组条目取**父目录名**而非 `"ysm.json"`），否则用户本地生成→CI 重生成会来回互改同一文件。
 
 ## 对外 API / 入口
 

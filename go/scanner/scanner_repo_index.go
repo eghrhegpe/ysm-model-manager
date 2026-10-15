@@ -122,8 +122,18 @@ jobs:
         run: |
           cat > genindex.go << 'GOEOF'
           package main
+          // 每行一个 import：原为单行并列（"crypto/sha256" "encoding/json" …，把已退役的
+          // cmd/genindex/main.go 压进 heredoc 时压掉了换行）——Go 的 ImportSpec 之间必须有
+          // 分号或换行，单行并列是语法错误，CI 该步骤 go run genindex.go 恒失败、
+          // index.json 永不由 CI 更新（与「CI 索引缺 ysm.json 条目」互为表里）。
           import (
-            "crypto/sha256" "encoding/json" "fmt" "io" "os" "path/filepath" "strings"
+            "crypto/sha256"
+            "encoding/json"
+            "fmt"
+            "io"
+            "os"
+            "path/filepath"
+            "strings"
           )
           type entry struct {
             Name string ` + "`json:\"name\"`" + `
@@ -134,7 +144,17 @@ jobs:
           func main() {
             var list []entry
             filepath.WalkDir(".", func(p string, d os.DirEntry, err error) error {
-              if err != nil || d.IsDir() { return nil }
+              if err != nil { return nil }
+              // 目录级跳过口径与 Go 侧 scanner.ScanEntries 同步（fsutil.IsRecycleDir 的
+              // .recycle / fsutil.IsRelinkBackupPath 的 .relink-bak-<ts> 尸体子树 /
+              // registry.IsDisableSuffix 的目录级禁用载体 / .github）——CI 若下钻这些子树，
+              // 回收站副本、relink 尸体与目录级禁用模型会被当**活跃条目**写进 index.json，
+              // 与应用内「生成索引」的产出互相漂移。
+              if d.IsDir() {
+                lowerName := strings.ToLower(d.Name())
+                if lowerName == ".recycle" || d.Name() == ".github" || strings.Contains(lowerName, ".relink-bak-") || strings.HasSuffix(lowerName, ".disabled") || strings.HasSuffix(lowerName, ".ban") { return filepath.SkipDir }
+                return nil
+              }
               // 扩展名口径与 Go 侧 scanner.ScanEntries 对齐（含 .disabled/.ban 恢复、
               // .json 仅收 ysm.json）；扩展清单与 go/types 注册表（resource_types.json）同步
               lower := strings.ToLower(p)
@@ -143,15 +163,39 @@ jobs:
               ext := strings.ToLower(filepath.Ext(p))
               if restored != "" { ext = strings.ToLower(filepath.Ext(restored)) }
               if ext == ".json" {
-                base := strings.ToLower(filepath.Base(restored))
-                base = strings.TrimSuffix(base, ".ban")
+                // 判定基准必须是**原路径 p**，不是 restored：普通 ysm.json 无禁用后缀时
+                // restored 为空串 → filepath.Base("") == "." → 恒不等于 ysm.json → 所有普通
+                // ysm.json 组条目被静默丢弃（存量 bug：应用内 GenerateRepoIndex 含它们，
+                // 用户点「生成索引」提交后 CI 重生成的 index.json 反而缺条目）。
+                // 后缀剥离顺序与 registry.NormalizeResourceName 一致（先 .disabled 后 .ban）。
+                base := strings.ToLower(filepath.Base(p))
                 base = strings.TrimSuffix(base, ".disabled")
+                base = strings.TrimSuffix(base, ".ban")
                 if base != "ysm.json" { return nil }
               }
-              if __EXT_CONDITION__ { return nil }
+              // 走到这里的 .json 必是 ysm.json（上一段白名单已滤掉其余 .json）；扩展名否定链
+              // 由 buildGenerateIndexWorkflow 从注册表生成时**刻意不含 .json**（注释：.json 走
+              // 白名单单独判定）——若此处照常套用否定链，ext=".json" 与链上每一项都不等 →
+              // 恒真 → 刚放行的 ysm.json 又被丢回门外（同一缺陷的第二道门，2026-10 锐评复盘）。
+              if ext != ".json" && __EXT_CONDITION__ { return nil }
               if strings.Contains(p, "/.github") { return nil }
               rel, _ := filepath.Rel(".", p)
               rel = filepath.ToSlash(rel)
+              // 条目 name 口径与应用内 scanner_scan.go|processScanDirEntry → buildRepoIndexEntries
+              // **同源，防两侧互改**：ysm.json 组条目取父目录名（工坊列表按模型夹展示组），
+              // 其余取盘上文件名——含 X.ysm.disabled 这类禁用态全名（应用侧判定用的是
+              // filepath.Base(p) 原文，不做后缀剥离）。
+              // 根级退化：应用侧 p 是绝对路径，filepath.Base(Dir(p)) 得**仓库夹名**；
+              // CI 侧 p 相对（Dir("ysm.json") == "."），故取 CWD 基名对齐同一语义，不落 "."。
+              // 不齐的后果：用户「生成索引」提交后 CI 重生成并回写一份 name 不同的
+              // index.json → 两侧反复互改（提交抖动），工坊列表把组条目显示成 "ysm.json"。
+              name := d.Name()
+              if strings.EqualFold(strings.TrimSpace(name), "ysm.json") {
+                name = filepath.Base(filepath.Dir(p))
+                if name == "." {
+                  if wd, err := os.Getwd(); err == nil { name = filepath.Base(wd) }
+                }
+              }
               fi, _ := d.Info()
               size := int64(0)
               if fi != nil { size = fi.Size() }
@@ -159,7 +203,7 @@ jobs:
               if f, err := os.Open(p); err == nil {
                 h := sha256.New(); io.Copy(h, f); hashStr = fmt.Sprintf("%x", h.Sum(nil)); f.Close()
               }
-              list = append(list, entry{Name: d.Name(), Path: rel, Size: size, Hash: hashStr})
+              list = append(list, entry{Name: name, Path: rel, Size: size, Hash: hashStr})
               return nil
             })
             data, _ := json.MarshalIndent(list, "", "  ")

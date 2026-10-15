@@ -22,6 +22,9 @@
 //   - utils/dom/trap-focus-across-shadow.ts（Tab）：焦点陷阱循环管理，非 combo 语义
 //   - views/app-content/settings/keymap.ts：键位改绑一次性捕获（capture），D1 边界明文
 //   - views/app-preview/zoom.ts（Esc）：浮层随开关挂摘，收编收益待议
+//   - views/app-sidebar/sync-flow.ts（Esc）：同步结果浮层的 Esc 关闭，随浮层开关
+//     挂摘（同 zoom.ts 形态）。登记于 2026-10-15：随 c30f659bd「推送侧逐文件点名」
+//     引入浮层时漏登基线，被 check-a11y scatter 上限判为新增散点
 //   - views/context-menu/index.ts（Esc/导航）：实例生命周期随菜单开关挂摘，注册表静态
 //     注册模型不合（动态挂摘语义）
 

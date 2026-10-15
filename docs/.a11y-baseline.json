@@ -1,10 +1,10 @@
 {
   "_comment": "a11y 覆盖基线（ADR-308 D3）：coverage=aria-* 覆盖度出现次数下限（只增不减，hard），coverageNeutral=role/tabindex/prefers-reduced-motion 中性指标（只记录、不守基线，fail-open——删冗余/非法 role=button 嵌套或冗余 tabindex 是合理的 a11y 收敛，不该被误判退化），scatter=document 级 keydown 散点文件→次数上限（只减不增；utils/dom/key-router.ts 为唯一合法出口已豁免不入册，在册文件=有意维持现状的已知散点，豁免理由见 key-router.ts 头注）。收紧: node scripts/check-a11y.ts --update；放松需 --force 并在提交说明附理由。",
-  "generatedAt": "2026-10-13",
+  "generatedAt": "2026-10-15",
   "coverage": {
-    "aria-modal": 6,
+    "aria-modal": 7,
     "aria-live": 3,
-    "aria-label": 33,
+    "aria-label": 40,
     "aria-disabled": 6,
     "aria-valuemin": 2,
     "aria-valuemax": 2,
@@ -16,17 +16,17 @@
     "aria-atomic": 1,
     "aria-selected": 8,
     "aria-haspopup": 1,
-    "aria-hidden": 7,
+    "aria-hidden": 8,
+    "aria-pressed": 9,
     "aria-describedby": 3,
     "aria-keyshortcuts": 3,
-    "aria-pressed": 2,
     "aria-current": 2,
     "aria-level": 4
   },
   "coverageNeutral": {
     "prefers-reduced-motion": 2,
-    "tabindex": 43,
-    "role": 27
+    "tabindex": 42,
+    "role": 31
   },
   "scatter": {
     "preview-3d/adapters/mount-preview-core.ts": 2,
@@ -35,6 +35,7 @@
     "utils/dom/trap-focus-across-shadow.ts": 1,
     "views/app-content/settings/keymap.ts": 1,
     "views/app-preview/zoom.ts": 1,
+    "views/app-sidebar/sync-flow.ts": 1,
     "views/context-menu/index.ts": 1
   }
 }

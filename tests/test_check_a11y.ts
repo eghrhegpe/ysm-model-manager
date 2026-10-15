@@ -52,10 +52,15 @@ function runA11y(args) {
     // 成功（rc=0）：stdout 必须是无前缀纯 JSON——只取 stdout，绝不拼 stderr，
     // 否则守卫明细（往 stderr 打）会污染 JSON.parse（D10 复现的
     // "Unexpected non-whitespace character after JSON" 真源）。
-    return { rc: 0, out };
+    return { rc: 0, out, err: "" };
   } catch (e) {
-    // 失败（rc≠0）：stdout 可能为空，诊断信息在 stderr——合并用于报错展示
-    return { rc: e.status ?? 1, out: (e.stdout || "") + (e.stderr || "") };
+    // 失败（rc≠0）：**stdout 仍是纯 JSON**——脚本在 --json 下先无条件打印报告
+    // （check-a11y.ts main 的 parsed.json 分支），守卫明细才走 stderr。
+    // 故此处同样不得拼接：把两者分开返回，`out` 供 JSON.parse、`err` 仅供
+    // 断言消息展示。此前拼接导致「守卫一旦失败，所有 --json 用例一起炸在
+    // Unexpected non-whitespace」——真缺陷被降级成 3 条同款 JSON 解析假象，
+    // 掩盖了真正该报的那一条（2026-10-15 修复）。
+    return { rc: e.status ?? 1, out: e.stdout || "", err: e.stderr || "" };
   }
 }
 
@@ -223,7 +228,7 @@ check("基线比较内核：coverage 缺口 / scatter 回归 / 收紧判定", ()
 /* ---------- 2. 真仓 CLI ---------- */
 
 check("--json 输出合法 JSON 且 _summary 契约齐全，当前树基线内 rc=0", () => {
-  const { rc, out } = runA11y(["--json"]);
+  const { rc, out, err } = runA11y(["--json"]);
   const data = JSON.parse(out);
   assert.ok(data._summary, "缺 _summary");
   for (const k of [
@@ -238,7 +243,8 @@ check("--json 输出合法 JSON 且 _summary 契约齐全，当前树基线内 r
   }
   assert.ok(Array.isArray(data.coverage_deficits), "coverage_deficits 应为数组");
   assert.ok(Array.isArray(data.scatter_regressions), "scatter_regressions 应为数组");
-  assert.equal(rc, 0, `预期 rc=0，实际 ${rc}: ${out.slice(0, 400)}`);
+  // 失败消息走 stderr（stdout 在 --json 下恒为纯 JSON，见 runA11y 注）
+  assert.equal(rc, 0, `预期 rc=0，实际 ${rc}: ${err || out}`.slice(0, 600));
   assert.equal(data._summary.deficits, 0, "coverage 不得有缺口");
   assert.equal(data._summary.regressions, 0, "scatter 不得有回归");
 });

@@ -21,7 +21,8 @@ interface FilterStateShell {
 }
 
 /** 搜索框输入的筛选防抖窗口（ms）。逐键全量扫描卡片在百人站点上是可见卡顿；关键词**持久化仍即时**
- *  （切页/重进不丢），只有「可见性重算」延后到停手后一次。 */
+ *  （切页/重进不丢），只有「可见性重算」延后到停手后一次。
+ *  导出供回归锁共用同一数值（非 test-only 导出：生产消费即本文件的 `eeBindCreatorFilter`）。 */
 export const SEARCH_FILTER_DEBOUNCE_MS = 120;
 
 // ===== 编辑态 dirty 守卫 =====
@@ -140,7 +141,10 @@ function eeApplyFilters(
         t("content.clearFilter") +
         "</button>";
       const grid = searchResults.querySelector("#cr-creator-grid");
-      (grid || searchResults).appendChild(emptyEl);
+      // 挂到网格**之后**（`role=list` 内部不得塞非 listitem 子节点——2026-10-15 复核 P2；
+      // 旧代码 `(grid || searchResults).appendChild(...)` 把空态塞进了 list 内部，与此处注释不符）
+      if (grid) grid.after(emptyEl);
+      else searchResults.appendChild(emptyEl);
       // 清除按钮走事件委托已在 eeBindCreatorFilter 里绑定（点击即复位筛选）
     }
   } else if (emptyEl) {

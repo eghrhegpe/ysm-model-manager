@@ -75,6 +75,7 @@ vi.mock("@/backend/app.ts", () => ({ getApp }));
 vi.mock("@/utils/debug/dev-mode.ts", () => ({ isDevMode }));
 
 import { bindBrowseEvents } from "./events.ts";
+import { creatorStarBtnHtml } from "./render.ts";
 import type { SiteViewState } from "./types.ts";
 
 /** bindBrowseEvents 的追踪版：cleanup 入桶，afterEach 统一调用（模拟产品路径的配对语义） */
@@ -103,8 +104,8 @@ function makeState(overrides: Record<string, unknown> = {}): {
           <div class="cr-card-name-row">
             <span class="cr-card-name">A</span>
             <span class="cr-card-local-count cr-card-local-jump" data-local-creator="A" title="查看本地模型">${UI_ICONS.folder}3</span>
-            <span class="cr-star-btn" data-star="A">${UI_ICONS.star}</span>
-            <span class="cr-card-search" data-search-creator="A" title="搜索更多模型">${UI_ICONS.search}</span>
+            ${creatorStarBtnHtml("A", false, esc)}
+            <button type="button" class="cr-card-search" data-search-creator="A" title="搜索更多模型">${UI_ICONS.search}</button>
           </div>
         </div>
         <div class="cr-card-desc">好模型</div>
@@ -203,9 +204,9 @@ describe("bindBrowseEvents — 基础绑定", () => {
     state.authorCountMap = { A: 5, B: 10, C: 1 };
     searchResults.innerHTML =
       '<div id="cr-creator-grid" class="cr-creator-grid">' +
-      '<div class="gh-card" data-name="A" tabindex="0"><span class="cr-star-btn" data-star="A"></span></div>' +
-      '<div class="gh-card" data-name="B" tabindex="0"><span class="cr-star-btn" data-star="B"></span></div>' +
-      '<div class="gh-card" data-name="C" tabindex="0"><span class="cr-star-btn" data-star="C"></span></div>' +
+      `<div class="gh-card" data-name="A" tabindex="0">${creatorStarBtnHtml("A", true, esc)}</div>` +
+      `<div class="gh-card" data-name="B" tabindex="0">${creatorStarBtnHtml("B", false, esc)}</div>` +
+      `<div class="gh-card" data-name="C" tabindex="0">${creatorStarBtnHtml("C", false, esc)}</div>` +
       "</div>";
     // 收藏名单状态机：A 初始已收藏，本次点击取消（toggleFav 返回 false 并移除 A）
     let favList = ["A"];
@@ -426,6 +427,9 @@ describe("bindBrowseEvents — 详情浮层", () => {
       (c as HTMLElement).dataset.name,
     );
     expect(order.indexOf("B")).toBeLessThan(order.indexOf("A"));
+    // 2026-10-15 复核 P1 回归锁：浮层点星必须把**卡片那颗星**的 aria-pressed 一并改写——
+    // 原实现只回写卡片 SVG 的 innerHTML，导致「视觉实心 + 读屏播报未收藏」直到下次整树重渲。
+    expect(starB.getAttribute("aria-pressed")).toBe("true");
   });
 
   it("点击创作者卡片 → 浮层含名称/收藏/本地模型/操作按钮", () => {

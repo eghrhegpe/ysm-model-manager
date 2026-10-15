@@ -146,10 +146,14 @@ export const contentCreatorCSS: string = `
 }
 /* P0 a11y（2026-10-15）：星标 / 联网搜索 / 本地徽章由 <span> 升格为 <button>——
    先在此抹掉 UA 按钮默认面（背景/边框/内边距/字体/前景色），再接各自语义类。
-   ⚠️ 本组必须排在 .cr-card-local-count 之前：徽章的 border/padding/color 靠后者
+   line-height:inherit 不可省：UA 对 input/textarea/select/button 强置 line-height:normal，
+   不重置则三个按钮行盒从宿主 :host 的 1.4 缩到 ~1.15（图标触达区变小）；
+   appearance:none 防 WebView2 原生按钮面（背景/边框已显式覆盖，此为双保险）。
+   ⚠️ 本组必须排在 .cr-card-local-count 之前：徽章的 border/padding/color/line-height 靠后者
    同特异性覆盖回来（顺序颠倒会把徽章外观清零）。 */
 .cr-star-btn, .cr-card-search, .cr-card-local-jump {
-  background:transparent;border:none;padding:0;font-family:inherit;color:inherit;
+  background:transparent;border:none;padding:0;font-family:inherit;color:inherit;line-height:inherit;
+  appearance:none;-webkit-appearance:none;
 }
 .cr-card-local-count {
   font-size:var(--fs-micro);color:var(--muted);flex-shrink:0;

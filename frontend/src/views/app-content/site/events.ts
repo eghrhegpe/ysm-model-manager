@@ -120,17 +120,13 @@ function cmCrBindOverlayEvents(
   overlayStar?.addEventListener("click", (ev) => {
     ev.stopPropagation();
     const now = toggleFav(cr.name);
-    // 星标切 SVG 双态（ADR-238）：用闭包按钮引用改写——点进 SVG 内部时 ev.target 是
-    // SVGElement，旧 `instanceof HTMLElement` 守卫会漏更新图标。icon 先取到局部变量再赋
-    // innerHTML（RHS 为预构建 SVG 常量，命中 R8 豁免「预构建 HTML 变量」）
-    const starHtml = now ? UI_ICONS.starFilled : UI_ICONS.star;
-    if (overlayStar) overlayStar.innerHTML = starHtml;
-    // 同卡片路径：浮层星标也须同步 aria-pressed（2026-10-15 a11y）
-    overlayStar?.setAttribute("aria-pressed", String(now));
+    // 星标切 SVG 双态（ADR-238）：浮层与卡片两颗星都走 applyStarState 单点——闭包按钮引用改写，
+    // 点进 SVG 内部时 ev.target 是 SVGElement，旧 `instanceof HTMLElement` 守卫会漏更新图标。
+    if (overlayStar) applyStarState(overlayStar, now);
     const cardStar = searchResults.querySelector(
       `.cr-star-btn[data-star="${CSS.escape(cr.name)}"]`,
     );
-    if (cardStar) cardStar.innerHTML = starHtml;
+    if (cardStar instanceof HTMLElement) applyStarState(cardStar, now);
     // 收藏序就地重排（锐评高危修复，2026-10-14）。病：本handler 只改两处星标图标、
     // **不调 cmCrReorderCard**，而卡片星标路径（cmBbBindStarBtns）调了——同仓两条收藏
     // 路径行为不对称。用户点开详情浮层 → 浮层内点星标 → toast 说成功 → 关浮层，
@@ -278,6 +274,21 @@ function cmBbBindModeToggle(
   });
 }
 
+/**
+ * 星标视觉双态**单点**：SVG 与 `aria-pressed` 同写。
+ *
+ * 2026-10-15（复核 P1）：四条路径都经此处——① 卡片星标 `cmBbBindStarBtns`；
+ * ② 浮层星标 `cmCrBindOverlayEvents`；③ 浮层→卡片回写（同一 handler 里改卡片那颗星）；
+ * ④ 跨标签同步 `cmSeSyncFavButtons`。**只换 innerHTML 不写 aria-pressed** 会让读屏播报
+ * 陈旧收藏态（视觉实心 + 读屏「未收藏」），与「收藏序三条路径同口径」是同一类不对称缺陷。
+ */
+function applyStarState(el: HTMLElement, faved: boolean): void {
+  // 预构建 SVG 常量先取到局部变量（R8 豁免：RHS=裸变量）
+  const starHtml = faved ? UI_ICONS.starFilled : UI_ICONS.star;
+  el.innerHTML = starHtml;
+  el.setAttribute("aria-pressed", String(faved));
+}
+
 function cmBbBindStarBtns(
   searchResults: HTMLElement,
   authorCountMap: Record<string, number>,
@@ -288,11 +299,7 @@ function cmBbBindStarBtns(
       e.stopPropagation();
       const name = btn.dataset.star || "";
       const now = toggleFav(name);
-      // 预构建 SVG 常量先取到局部变量（R8 豁免：RHS=裸变量，无三元/拼接）
-      const starHtml = now ? UI_ICONS.starFilled : UI_ICONS.star;
-      btn.innerHTML = starHtml;
-      // 2026-10-15 a11y：aria-pressed 与视觉双态同步——只换 SVG 会让读屏播报陈旧收藏态
-      btn.setAttribute("aria-pressed", String(now));
+      applyStarState(btn, now);
       const card = btn.closest(".gh-card");
       const grid = card?.closest(".cr-creator-grid");
       if (card instanceof HTMLElement && grid instanceof HTMLElement) {
@@ -485,11 +492,9 @@ function cmSeSyncFavButtons(
   // 「渲染排序与就地重排同口径」不变量。
   const moved = new Set<HTMLElement>();
   qsa<HTMLElement>(searchResults, ".cr-star-btn").forEach((btn) => {
-    // 预构建 SVG 常量先取到局部变量（R8 豁免：RHS=裸变量）
+    // 跨标签同步同样走 applyStarState 单点（视觉与 a11y 状态一并更正）
     const isFav = favs.includes(btn.dataset.star || "");
-    const starHtml = isFav ? UI_ICONS.starFilled : UI_ICONS.star;
-    btn.innerHTML = starHtml;
-    btn.setAttribute("aria-pressed", String(isFav)); // 跨标签同步同样要正 a11y 状态
+    applyStarState(btn, isFav);
     const card = btn.closest(".gh-card");
     if (card instanceof HTMLElement) moved.add(card);
   });

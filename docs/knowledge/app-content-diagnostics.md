@@ -135,6 +135,7 @@ perf:
 invariant_anchors:
   - frontend/src/views/app-content/diagnostics/dedup.ts|createDedupSession
 status: active
+last_verified: 2026-10-15
 ---
 
 # 诊断页 diagnostics

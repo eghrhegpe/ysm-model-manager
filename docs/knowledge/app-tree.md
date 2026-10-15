@@ -46,7 +46,6 @@ auto_fields:
     - getVsMode
     - getVsRows
     - headerHTML
-    - invalidateBuildCache
     - isTreeMoveDrag
     - listFileRowHTML
     - listFolderRowHTML

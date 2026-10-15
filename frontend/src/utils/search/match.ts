@@ -1,5 +1,5 @@
 // ===== 搜索关键词匹配单口径（ADR-343-d1 C1：与 Go go/pinyin|MatchKeyword 同判据）=====
-// 金样例 tests/fixtures/search-golden.json 双读对账（本文件对应
+// 金样例 tests/fixtures/parity/search-golden.json 双读对账（本文件对应
 // frontend/src/utils/search/match.test.ts 的 golden 用例；Go 侧
 // go/pinyin/pinyin_test.go|TestMatchKeyword_Golden 读同一 fixture）。
 //

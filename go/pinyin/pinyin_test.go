@@ -54,7 +54,7 @@ func TestMatchKeyword_RelPathOnlyNoAbsolutePath(t *testing.T) {
 }
 
 // TestMatchKeyword_Golden 金样例双读对账（Go 面）：
-// tests/fixtures/search-golden.json 与 TS（utils/search/match.test.ts）共读同一判据，
+// tests/fixtures/parity/search-golden.json 与 TS（utils/search/match.test.ts）共读同一判据，
 // 跨语言漂移在此拦下（genindex 双工范式：靠测试对账而非共享代码）
 type goldenCase struct {
 	Name    string `json:"name"`
@@ -64,7 +64,7 @@ type goldenCase struct {
 }
 
 func TestMatchKeyword_Golden(t *testing.T) {
-	data, err := os.ReadFile("../../tests/fixtures/search-golden.json")
+	data, err := os.ReadFile("../../tests/fixtures/parity/search-golden.json")
 	testutil.NoError(t, err, "金样例读取")
 	var doc struct {
 		Cases []goldenCase `json:"cases"`

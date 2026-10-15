@@ -1,6 +1,6 @@
 // ===== SearchModels 关键词拼音面回归锁（ADR-343-d1 C1）=====
 // 金样例对账在 go/pinyin|TestMatchKeyword_Golden 与 TS match.test.ts（同读
-// tests/fixtures/search-golden.json）；本锁守 SearchModels 调用面的接线：
+// tests/fixtures/parity/search-golden.json）；本锁守 SearchModels 调用面的接线：
 // 拼音面命中经 go/pinyin.MatchKeyword 单点（绝对路径匹配废止，相对路径口径）
 package app
 

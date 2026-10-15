@@ -1,10 +1,10 @@
 // ===== 搜索关键词匹配单口径测试（ADR-343-d1 C1）=====
-// 金样例 tests/fixtures/search-golden.json 双读对账（TS 面）——Go 面
+// 金样例 tests/fixtures/parity/search-golden.json 双读对账（TS 面）——Go 面
 // go/pinyin/pinyin_test.go|TestMatchKeyword_Golden 读同一 fixture，跨语言判据漂移在此拦下。
 import { describe, it, expect } from "vitest";
 import { keywordMatches, isLatins } from "./match.ts";
 import { PINYIN_BY_CODE } from "./pinyin-table.ts";
-import golden from "../../../../tests/fixtures/search-golden.json" with { type: "json" };
+import golden from "../../../../tests/fixtures/parity/search-golden.json" with { type: "json" };
 
 type GoldenCase = { name: string; relPath: string; keyword: string; hit: boolean };
 

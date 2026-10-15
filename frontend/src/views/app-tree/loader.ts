@@ -67,14 +67,16 @@ export async function loadEntries(
   subdir?: string,
 ): Promise<{ filesRoot: string; entries: TreeEntry[] }> {
   try {
-    const { GetRepoRoot, ScanModelEntriesFiltered } = await backendGetApp();
+    const { GetRepoRoot, ScanModelEntriesForBrowse } = await backendGetApp();
     // 扁平化架构：subdir 作为实际类型 ID 覆盖 rtype
     const targetType = subdir || rtype;
     const filesRoot = await GetRepoRoot(targetType || "");
     if (!filesRoot) return { filesRoot: "", entries: [] };
 
     const label = RESOURCE_TYPE_LABELS[targetType] || targetType;
-    const raw = await ScanModelEntriesFiltered(filesRoot, targetType, "", label);
+    // 止血 2026-10-15 P0-1：树加载走浏览投影 binding（无 SHA256）——树/预览从不消费
+    // Hash，哈希税归同步路径（ScanModelEntries*）；万级库冷加载读盘量降一个量级。
+    const raw = await ScanModelEntriesForBrowse(filesRoot, targetType, "", label);
     if (!raw?.length) return { filesRoot, entries: [] };
 
     // 禁用态由 Go 扫描结果直接下发（e.Banned，ADR-038 D3.7 判定归 Go）——

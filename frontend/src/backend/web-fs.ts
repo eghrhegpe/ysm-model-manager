@@ -178,6 +178,16 @@ export async function collectAllWebEntries(): Promise<ModelEntry[]> {
 // 收敛自 browser-adapter.ts webImpls 的文件系统类条目（扫描/读写/搜索/删除/重命名/
 // 子目录/清缓存/FSA 授权）；SelectLocalRepo/GetFsaAuthState 为网页版专属扩展
 // （Go AppBindings 无此函数，Phase 3 能力探测不会误报）。
+// rtype 扩展名白名单过滤（Go ScanModelEntriesFiltered / ForBrowse 语义同源；
+// web 条目无哈希，两入口共用本实现）：getExts(rtype) 空 → 不过滤（退化口径）
+async function scanWebModelsFiltered(dir: string, rtype: string) {
+  const entries = await scanWebModels(dir);
+  const exts = getExts(rtype);
+  if (exts.length === 0) return entries;
+  const extSet = new Set(exts);
+  return entries.filter((e) => extSet.has(e.Ext)).map((e) => ({ ...e, type: rtype }));
+}
+
 export const webFsBindings = {
   ScanModelEntries: (dir: string) => scanWebModels(dir),
   // 真实列表入口（loader/import-queue/resource-manager 等 6 处均调 WithLabel 版本）
@@ -188,18 +198,16 @@ export const webFsBindings = {
   // rtype 空/未知（getExts 返回空）→ 退化不过滤（对齐 Go：白名单为空时不过滤）。
   // 已知差异（契约测试锁定）：Go 对 .zip/.7z 容器打开内容指纹核验（containerCache，
   // 内容非本 rtype 则剔除）；web 暂不验真，仅按扩展名白名单保留容器条目。
-  ScanModelEntriesFiltered: async (
-    dir: string,
-    rtype: string,
-    _subtype: string,
-    _label: string,
-  ) => {
-    const entries = await scanWebModels(dir);
-    const exts = getExts(rtype);
-    if (exts.length === 0) return entries;
-    const extSet = new Set(exts);
-    return entries.filter((e) => extSet.has(e.Ext)).map((e) => ({ ...e, type: rtype }));
-  },
+  ScanModelEntriesFiltered: (dir: string, rtype: string, _subtype: string, _label: string) =>
+    scanWebModelsFiltered(dir, rtype),
+  // 浏览投影 binding（止血 2026-10-15 P0-1）：Go 侧 = 同款过滤 + 无 SHA256 快路径；
+  // web 条目本就无哈希（B1 契约锁 e.Hash === ""），故与 Filtered 同实现——
+  // 差异只在 Go 侧的哈希税，web 侧无税可免。
+  ScanModelEntriesForBrowse: (dir: string, rtype: string, _subtype: string, _label: string) =>
+    scanWebModelsFiltered(dir, rtype),
+  // 定向缓存失效（止血 2026-10-15 A2）：Go 侧 InvalidateScanPath(dir)；
+  // web 无进程内扫描缓存（每次现扫 IDB），no-op resolve 对齐 ClearScanCache。
+  InvalidateScanPath: (_dir: string) => Promise.resolve(),
   ReadFileBytes: (path: string) => readWebFile(path),
   // MMD/Scene 3D 批量读取（原缺失被 mmd-data-port catch 成空对象 → 贴图静默丢失）
   ReadFileBytesBatch: async (paths: string[] | null) => {

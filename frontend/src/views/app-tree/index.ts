@@ -401,13 +401,17 @@ export class AppTree extends WebComponentBase {
     }
   }
 
-  /** 挂载期间 root/subdir 切换后的补载：清扫描缓存 → 重载最新值 → 守卫渲染；失败节流 toast + 兜底渲染 */
+  /** 挂载期间 root/subdir 切换后的补载：重载最新值 → 守卫渲染；失败节流 toast + 兜底渲染 */
   private async _reloadAfterMountSwitch(): Promise<void> {
     const gen2 = this._guard.next();
     this._hydrateDirOpen();
     try {
-      const App = await backendGetApp();
-      if (App.ClearScanCache) await App.ClearScanCache(); // root 切换清扫描缓存
+      // 止血 2026-10-15 A2：切类型不再全局 ClearScanCache（原实现在此核平全仓所有
+      // 类型缓存 + 容器/几何缓存，每次切类型=全库重新冷扫+重哈希）——扫描缓存本就
+      // per-dir + 30s TTL，新类型根若缓存新鲜直接命中；外部文件变更由 watcher 清缓存
+      // （go/watcher clearCacheFn 全局口径不变），手动刷新走 tree:reload（仍全局清）。
+      // 已知边界：watcher 只监听 ysm 根，非 ysm 类型的外部文件变更最长 30s（TTL）
+      // 后才被感知——可接受（有界），换取切类型从秒级回百毫秒级。
       await this._load();
       if (!this._guard.stale(gen2)) this._renderTree();
     } catch (e) {
@@ -467,15 +471,18 @@ export class AppTree extends WebComponentBase {
 
   private async _attrChangeReloadAsync(gen: number): Promise<void> {
     // ⚠️ 水化必须在**任何 await 之前**（子代理复核 2026-10-15）：rootAttr 在属性回调里已
-    // 同步落成新 rtype，而本方法要先走 `ClearScanCache` + `_load`（大仓库扫盘可达秒级）——
+    // 同步落成新 rtype，而本方法要先走 `_load`（大仓库扫盘可达秒级）——
     // 窗口内 DOM 仍是旧类型的可点行，用户点任一文件夹 → `toggleDir` 以
     // `writeScopedDirOpen(新 rtype, 旧 dirOpen)` 落盘污染；若水化押后，随后的
     // `readScopedDirOpen(新 rtype)` 会把这份污染**读回来当作本类型状态**，瞬时污染升级为持久
     // 状态。另两条入口（connectedCallback / _reloadAfterMountSwitch）本就是「先水化后 await」。
     this._hydrateDirOpen();
     try {
-      const App = await backendGetApp();
-      if (App.ClearScanCache) await App.ClearScanCache();
+      // 止血 2026-10-15 A2：切类型不再全局 ClearScanCache（原实现在此处核平全仓所有
+      // 类型缓存——切一次类型=新类型整库重新冷扫+重哈希，万级库秒级卡顿）：
+      // 扫描缓存 per-dir + 30s TTL 已覆盖新鲜度；外部文件变更走 watcher 全局清缓存
+      // （go/watcher clearCacheFn 口径不变）+ A3 repo:fs-changed 自动重载；手动刷新
+      // 仍走 tree:reload 全局清。已知边界见 _reloadAfterMountSwitch 注释。
       await this._load();
       if (this._guard.stale(gen)) return;
       // 切资源类型清选中态（锐评 2026-10-13 P1-1）：选中键是**上一类型的磁盘路径**，
@@ -503,10 +510,10 @@ export class AppTree extends WebComponentBase {
       fn?.();
     });
     // 代际失效（2026-10 锐评修复）：卸载只解订阅/定时器/监听，**不作废在途代数**——
-    // `_reloadAfterMountSwitch`（`await ClearScanCache()` + `await _load()`，都是慢 IPC）
-    // 或 `_load()` 的续体若在卸载后落地，`stale(gen)` 仍为 false（无人推进 gen），
-    // 会执行 `_renderTree()` 给**已卸载**的 shadow root 重渲染整棵树。同型先例：
-    // app-sidebar 同类漏接（`_guard.invalidate()`）；本调用是守卫生效的唯一前提。
+    // `_reloadAfterMountSwitch`（`await _load()`，慢 IPC；止血 2026-10-15 A2 起不再前置
+    // 全局 ClearScanCache）或 `_load()` 的续体若在卸载后落地，`stale(gen)` 仍为 false
+    // （无人推进 gen），会执行 `_renderTree()` 给**已卸载**的 shadow root 重渲染整棵树。
+    // 同型先例：app-sidebar 同类漏接（`_guard.invalidate()`）；本调用是守卫生效的唯一前提。
     this._guard.invalidate();
     if (this._searchTimer) {
       clearTimeout(this._searchTimer);

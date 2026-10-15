@@ -64,6 +64,9 @@
   "repo:focus-search": [
     "frontend/src/views/app-nav/index.ts"
   ],
+  "repo:fs-changed": [
+    "frontend/src/features/repo/repo-fs-events.ts"
+  ],
   "repo:rtype-changed": [
     "frontend/src/views/app-nav/index.ts"
   ],

@@ -23,6 +23,7 @@ const {
   ScanModelEntriesMock,
   RenameFileMock,
   ClearScanCacheMock,
+  InvalidateScanPathMock,
   modalPromptMock,
   modalConfirmMock,
   showBatchRenameDialogMock,
@@ -40,6 +41,7 @@ const {
   ScanModelEntriesMock: vi.fn(),
   RenameFileMock: vi.fn(),
   ClearScanCacheMock: vi.fn(),
+  InvalidateScanPathMock: vi.fn(),
   modalPromptMock: vi.fn(),
   modalConfirmMock: vi.fn(),
   showBatchRenameDialogMock: vi.fn(),
@@ -62,6 +64,7 @@ vi.mock("@/backend/app.ts", () => ({
     ScanModelEntriesFiltered: ScanModelEntriesMock,
     RenameFile: RenameFileMock,
     ClearScanCache: ClearScanCacheMock,
+    InvalidateScanPath: InvalidateScanPathMock,
     GetRepoRoot: vi.fn().mockResolvedValue("/repo"),
   }),
 }));
@@ -194,6 +197,7 @@ beforeEach(() => {
   ScanModelEntriesMock.mockResolvedValue([]);
   RenameFileMock.mockResolvedValue(undefined);
   ClearScanCacheMock.mockResolvedValue(undefined);
+  InvalidateScanPathMock.mockResolvedValue(undefined);
   modalPromptMock.mockResolvedValue("");
   modalConfirmMock.mockResolvedValue(false);
   showBatchRenameDialogMock.mockResolvedValue(undefined);
@@ -682,5 +686,57 @@ describe("bindBusEvents — 卡片密度变更", () => {
     bus.emit("ui:card-density", { density: "normal" });
 
     expect(vm._renderTree).toHaveBeenCalled();
+  });
+});
+
+// ===== repo:fs-changed（止血 2026-10-15 A3：watcher 直通 UI）=====
+describe("bindBusEvents — 文件系统变更自动重载", () => {
+  it("repo:fs-changed → 定向失效当前树根 + _load + 渲染", async () => {
+    const vm = makeVM();
+    vm.setFilesRoot("/repo/ysm");
+    await bind(vm);
+
+    bus.emit("repo:fs-changed");
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(InvalidateScanPathMock).toHaveBeenCalledWith("/repo/ysm");
+    expect(vm._load).toHaveBeenCalledTimes(1);
+    expect(vm._renderTree).toHaveBeenCalledTimes(1);
+    // 定向失效链不触发全局 ClearScanCache（A2 语义：FS 变更不核平他类型缓存）
+    expect(ClearScanCacheMock).not.toHaveBeenCalled();
+  });
+
+  it("树根未配置（filesRoot 空）→ 跳过失效 binding，仍重载", async () => {
+    const vm = makeVM(); // filesRoot = ""
+    await bind(vm);
+
+    bus.emit("repo:fs-changed");
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(InvalidateScanPathMock).not.toHaveBeenCalled();
+    expect(vm._load).toHaveBeenCalledTimes(1);
+  });
+
+  it("代际守卫：_load 在途期间类型切换推进代数 → 迟到的 FS 重载不渲染（防幽灵写入）", async () => {
+    const vm = makeVM();
+    vm.setFilesRoot("/repo/ysm");
+    let resolveLoad: (() => void) | undefined;
+    vm._load.mockImplementation(
+      () =>
+        new Promise<void>((r) => {
+          resolveLoad = r;
+        }),
+    );
+    await bind(vm);
+
+    bus.emit("repo:fs-changed");
+    // 等处理器走到 _load 挂起态（backendGetApp / InvalidateScanPath 的 microtask 链）
+    await new Promise((r) => setTimeout(r, 0));
+    expect(resolveLoad, "_load 应已进入挂起态").toBeTypeOf("function");
+    vm._guard.next(); // 模拟切类型链推进代数（FS 重载的在途 _load 变 stale）
+    resolveLoad!();
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(vm._renderTree).not.toHaveBeenCalled();
   });
 });

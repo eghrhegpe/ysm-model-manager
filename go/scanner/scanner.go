@@ -230,13 +230,17 @@ func notifyCacheInvalidated() {
 	}
 }
 
-// InvalidateCache 清空全部扫描缓存（下载/导入/同步后调用）
+// InvalidateCache 清空全部扫描缓存（下载/导入/同步后调用）。
+// 浏览投影缓存（browseCache，止血 2026-10-15 P0-1）随全量缓存同步全清——
+// 无哈希条目 TTL 共享同一时钟，留旧条目等于给同步留脏读（派生闸 tests/
+// 的失效配对口径：写入口必须成对失效两侧缓存）。
 func InvalidateCache() {
 	cacheGen.Add(1)
 	scanCache.Range(func(key, _ interface{}) bool {
 		scanCache.Delete(key)
 		return true
 	})
+	InvalidateBrowseCache()
 	notifyCacheInvalidated()
 }
 
@@ -244,6 +248,18 @@ func InvalidateCache() {
 func invalidateKeyVersion(key string) {
 	v, _ := keyVersions.LoadOrStore(key, &atomic.Uint64{})
 	v.(*atomic.Uint64).Add(1)
+}
+
+// isInvalidationRelated 判定缓存 key 与失效目录的互前缀关系（自身/严格子孙/严格祖先）——
+// InvalidatePath 与 InvalidateBrowsePath 双缓存删除共用的单点判据（防口径再漂移）。
+// ⚠️ 兄弟目录**不**失效：原实现按「ancestors 全体的后代」删除（kstr 落在 key 任一
+// 祖先子树内即删），InvalidatePath(base/ysm) 会把 base/mmd-shader 等同盘符缓存
+// 全体核平——与注释「删所有互前缀 key（key 与 kstr 互前缀）」的意图漂移
+// （2026-10-15 止血修复；TestInvalidatePath_UnrelatedKeyUntouched 对该缺陷失明——
+// 兄弟目录被误删后重扫仍同条目数，断言不判别命中/重扫）。
+func isInvalidationRelated(key, kstr string) bool {
+	sep := string(filepath.Separator)
+	return kstr == key || strings.HasPrefix(kstr, key+sep) || strings.HasPrefix(key, kstr+sep)
 }
 
 // InvalidatePath 删除指定目录的扫描缓存（启用/禁用 .ban 后调用）
@@ -285,16 +301,16 @@ func InvalidatePath(dir string) {
 		}
 		return true
 	})
-	// 遍历 scanCache 删除相关条目（自身 + 子孙 + 祖先）
+	// 遍历 scanCache 删除相关条目（自身 + 子孙 + 祖先，兄弟目录不失效；
+	// 判据单点 isInvalidationRelated，与 browseCache 删除同源）
 	scanCache.Range(func(k, _ interface{}) bool {
 		kstr := k.(string)
-		for _, anc := range ancestors {
-			if kstr == anc || strings.HasPrefix(anc, kstr+sep) || strings.HasPrefix(kstr, anc+sep) {
-				scanCache.Delete(kstr)
-				return true
-			}
+		if isInvalidationRelated(key, kstr) {
+			scanCache.Delete(kstr)
 		}
 		return true
 	})
+	// 浏览投影缓存同步失效（同判据，见 scanner_browse.go InvalidateBrowsePath）
+	InvalidateBrowsePath(dir)
 	notifyCacheInvalidated()
 }

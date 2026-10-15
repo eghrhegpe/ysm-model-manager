@@ -258,6 +258,9 @@ status: active
 
 - `ScanModelEntries(dir) → types.ModelEntry[]` — 扫描目录生成模型条目列表（主列表数据源）
 - `ScanModelEntriesWithLabel(dir, label) → types.ModelEntry[]` — 按标签过滤扫描模型条目
+- `ScanModelEntriesFiltered(dir, rtype, subtype, label) → types.ModelEntry[]` — 按 rtype（+subtype）扩展名白名单过滤 + 容器指纹核验 + Banned 下发（含 SHA256，同步消费口径）
+- `ScanModelEntriesForBrowse(dir, rtype, subtype, label) → types.ModelEntry[]` — 仓库树专用浏览投影（止血 2026-10-15 P0-1）：与 Filtered 同过滤语义（app 层共享 `finalizeScanEntries` 单点），差异 = 扫描走无 SHA256 快路径（树/预览不消费 Hash，冷扫省全库哈希税；缓存隔离见 go/scanner 卡「浏览投影」）
+- `InvalidateScanPath(dir) → void` — 按目录定向失效扫描缓存（止血 2026-10-15 A2：切类型/FS 变更场景替代全局 `ClearScanCache`；委托 `scanner.InvalidatePath`，全量 + 浏览双缓存配对失效；web 端 no-op）
 - `ListFileNames(dir) → string[]` — 列出目录内文件名
 - `ListAllFilePaths(dir) → string[]` — 递归列出目录下所有文件完整路径（不限扩展名）
 - `CheckFileExists(path) → boolean` — 检查文件是否存在

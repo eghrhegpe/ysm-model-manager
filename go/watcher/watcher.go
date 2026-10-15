@@ -31,15 +31,17 @@ type Watcher struct {
 	mcRoot       string
 	scanFn       ScanFunc
 	clearCacheFn func() // 扫描缓存失效回调（可选）
-	mu           sync.Mutex
-	debounce     *time.Timer
-	done         chan struct{}
-	ready        chan struct{} // Start 完成 WalkDir + go loop 后关闭
-	running      bool
-	syncRunning  bool           // 同步执行中标志（防并发重入）
-	syncPending  bool           // 执行期间积累的新事件，完成后需再跑一轮
-	wg           sync.WaitGroup // 等待 in-flight 同步完成（Stop 阻塞）
-	loopDone     chan struct{}  // loop 退出信号（Stop 等待后再返回，保证重启无竞态）
+	onChangeFn   func() // UI 变更通知回调（可选，止血 2026-10-15 A3：syncAll 执行段前触发，
+	// 前端经 Wails 事件 repo:fs-changed 自动刷新仓库树；mu 保护读写，见 SetOnChange）
+	mu          sync.Mutex
+	debounce    *time.Timer
+	done        chan struct{}
+	ready       chan struct{} // Start 完成 WalkDir + go loop 后关闭
+	running     bool
+	syncRunning bool           // 同步执行中标志（防并发重入）
+	syncPending bool           // 执行期间积累的新事件，完成后需再跑一轮
+	wg          sync.WaitGroup // 等待 in-flight 同步完成（Stop 阻塞）
+	loopDone    chan struct{}  // loop 退出信号（Stop 等待后再返回，保证重启无竞态）
 }
 
 // New 创建文件监听器
@@ -57,6 +59,17 @@ func New(filesRoot, mcRoot string, scanFn ScanFunc, clearCacheFn ...func()) *Wat
 		ready:        make(chan struct{}),
 		loopDone:     make(chan struct{}),
 	}
+}
+
+// SetOnChange 注入 UI 变更通知回调（可选，nil = 不通知）。
+// 调用时序：须在 Start() 之前完成注入（goroutine 生成同步点，与 clearCacheFn
+// 的变参注入同范式；restartWatcher 重建实例后重新注入）。Wails 宿主由 app 层
+// 注入 Event.Emit("repo:fs-changed") 包装（a.app 为 nil 的 CLI/测试路径静默丢弃，
+// 见 internal/app emitRepoFsChanged）。
+func (w *Watcher) SetOnChange(fn func()) {
+	w.mu.Lock()
+	w.onChangeFn = fn
+	w.mu.Unlock()
 }
 
 // Start 开始监听
@@ -344,6 +357,18 @@ func (w *Watcher) syncAll() {
 			log.Printf("[watcher] syncAll panic: %v", r)
 		}
 	}()
+
+	// UI 变更通知（止血 2026-10-15 A3）：放实例短路判断**之前**——UI 刷新语义独立于
+	// 同步（零整合包时用户拖入模型，树同样要更新）；clearCacheFn 仍留实例判断之后
+	// （无实例时不动缓存的既有口径不变）。pending 续跑会再进一次本段再触发一次，
+	// 由前端 800ms 防抖合并（与 debounceDelay 同源口径）。mu 保护下快照防 SetOnChange
+	// 并发写（-race 安全）。
+	w.mu.Lock()
+	onChange := w.onChangeFn
+	w.mu.Unlock()
+	if onChange != nil {
+		onChange()
+	}
 
 	instances := mdsync.ListVersions(w.mcRoot)
 	if len(instances) == 0 {

@@ -262,6 +262,24 @@ func (a *App) scanModelEntries(dir string) []types.ModelEntry {
 // 供 ScanModelEntries 决定是否记录扫描日志（命中缓存不记，避免刷屏）。
 func (a *App) scanModelEntriesWithHit(dir string) ([]types.ModelEntry, bool) {
 	entries, hit := scanner.ScanEntriesWithHit(strings.TrimSpace(dir))
+	a.enrichScanEntries(entries)
+	return entries, hit
+}
+
+// scanModelEntriesBrowseWithHit 浏览投影扫描（止血 2026-10-15 P0-1，无 SHA256）：
+// 与 scanModelEntriesWithHit 唯一差异 = 走 scanner.ScanEntriesBrowseWithHit——
+// 树（app-tree loader / 预览候选）从不消费 Hash，冷扫不必替同步付「全库逐文件读
+// 全量字节」的哈希税（缓存隔离语义见 go/scanner/scanner_browse.go）。
+func (a *App) scanModelEntriesBrowseWithHit(dir string) ([]types.ModelEntry, bool) {
+	entries, hit := scanner.ScanEntriesBrowseWithHit(strings.TrimSpace(dir))
+	a.enrichScanEntries(entries)
+	return entries, hit
+}
+
+// enrichScanEntries 扫描结果富化单点：HasTags（标签存储读缓存批量填充）+
+// Type（ADR-343 刀 1 全量派生，单一事实源 = registry + 内容指纹，判定归 Go、
+// 前端只读不判）。全量 / 浏览投影两条路径共用，口径同源。
+func (a *App) enrichScanEntries(entries []types.ModelEntry) {
 	// 批量填充 HasTags（利用标签存储的读缓存，不重复读磁盘）
 	// 统一走 getTagsStore() 入口——原裸读 a.tagsStore 与 sync.Once 内写入构成数据竞争
 	if ts := a.getTagsStore(); ts != nil {
@@ -271,10 +289,9 @@ func (a *App) scanModelEntriesWithHit(dir string) ([]types.ModelEntry, bool) {
 			}
 		}
 	}
-	// 全量扫描派生 Type（ADR-343 刀 1）：单一事实源 = registry + 内容指纹（判定归 Go，
-	// 前端只读不判）——裸扩展名/位置/嵌套走纯路径判定，容器走指纹缓存避免逐扫重开归档
+	// 容器扩展名（.zip/.7z）的类型归属不可靠扩展名判定，经 containerCache 指纹缓存
+	// （modtime/size 变即重核验，避免逐扫重开归档）
 	a.fillEntryTypes(entries)
-	return entries, hit
 }
 
 // fillEntryTypes 为全量扫描条目填充 ModelEntry.Type（ADR-343 刀 1）。
@@ -358,6 +375,29 @@ func (a *App) ScanModelEntriesFiltered(dir string, rtype string, subtype string,
 		return nil
 	}
 	entries, hit := a.scanModelEntriesWithHit(dir)
+	return a.finalizeScanEntries(entries, hit, dir, rtype, subtype, label)
+}
+
+// ScanModelEntriesForBrowse 仓库树专用浏览 binding（止血 2026-10-15 P0-1）：
+// 过滤语义与 ScanModelEntriesFiltered 完全一致（共享 finalizeScanEntries——
+// rtype 白名单 / 容器指纹 / Banned / oplog 同口径），唯一差异 = 扫描走浏览投影
+// （无 SHA256，见 go/scanner/scanner_browse.go 缓存隔离语义）：树与预览候选从不
+// 消费 Hash，大库冷加载不再付「全库逐文件读全量字节」的哈希税（Hash 只服务
+// 同步系统，同步链继续走 ScanModelEntries* 哈希入口）。
+// 消费方：app-tree/loader.ts（切 binding 唯一落点）。路径守卫与 Filtered 完全一致。
+func (a *App) ScanModelEntriesForBrowse(dir string, rtype string, subtype string, label string) []types.ModelEntry {
+	a.ensureContainerCache()
+	if !a.isPathInRootOrSelf(dir) {
+		return nil
+	}
+	entries, hit := a.scanModelEntriesBrowseWithHit(dir)
+	return a.finalizeScanEntries(entries, hit, dir, rtype, subtype, label)
+}
+
+// finalizeScanEntries 扫描结果终化单点（Filtered 与 ForBrowse 共用，防两条入口
+// 的过滤口径漂移——判据手抄复发红线）：rtype（+subtype）扩展名白名单 + 容器内容
+// 指纹核验 + Type 填充 + Banned 禁用态一次下发 + 操作日志（仅扫描真走盘时记）。
+func (a *App) finalizeScanEntries(entries []types.ModelEntry, hit bool, dir, rtype, subtype, label string) []types.ModelEntry {
 	// 按 rtype（+subtype）扩展名白名单过滤，并填充 Type 字段
 	if allowedExts := typereg.SupportedExtsForSubtype(rtype, subtype); len(allowedExts) > 0 {
 		extSet := make(map[string]bool, len(allowedExts))
@@ -406,6 +446,16 @@ func (a *App) ScanModelEntriesFiltered(dir string, rtype string, subtype string,
 		a.AddOpLog("scan", msg, dir, "", int64(len(entries)), types.StatusSuccess, "")
 	}
 	return entries
+}
+
+// InvalidateScanPath 按目录失效扫描缓存（止血 2026-10-15 A2：切资源类型后的
+// 定向失效出口，替代切类型链上的全局 ClearScanCache——其它类型 30s 新鲜缓存
+// 不再被核平；下载/导入后的全局清洗仍走 ClearScanCache，本出口是「只脏了一处」
+// 场景的轻量路）。委托 scanner.InvalidatePath（祖先/子孙互前缀同口径），
+// 全量缓存与浏览投影缓存双删（见 go/scanner/scanner.go InvalidatePath）。
+// 网页版无进程内扫描缓存，web-fs 侧 no-op resolve。
+func (a *App) InvalidateScanPath(dir string) {
+	scanner.InvalidatePath(strings.TrimSpace(dir))
 }
 
 // ClearScanCache 清除扫描缓存（下载/导入后调用）

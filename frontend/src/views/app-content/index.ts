@@ -20,6 +20,7 @@ import { injectFileDialogDeps } from "@/features/context-menu/context-menu-file-
 import { registerContextMenus } from "@/features/context-menu/context-menus.ts";
 import { registerInstanceOps } from "@/features/pack-ops/instance-ops.ts";
 import { registerAndroidEvents } from "@/features/platform/android-events.ts";
+import { registerRepoFsEvents } from "@/features/repo/repo-fs-events.ts";
 import { registerSync } from "@/features/sync/sync.ts";
 // 副作用导入：注册 <app-preview> 组件
 import "@/views/app-preview/index.ts";
@@ -99,6 +100,9 @@ class AppContent extends WebComponentBase {
     registerContextMenus(globalUnsubs);
     registerInstanceOps(globalUnsubs);
     registerAndroidEvents(globalUnsubs);
+    // 止血 2026-10-15 A3：仓库文件系统变更自动刷新（Go watcher → Wails 事件 →
+    // bus "repo:fs-changed"，app-tree 订阅重载；web 端 Events.On 为 no-op 恒静默）
+    globalUnsubs.push(registerRepoFsEvents());
     globalUnsubs.forEach((fn) => {
       this.subs.addGlobal(fn);
     });

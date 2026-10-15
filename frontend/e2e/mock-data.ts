@@ -118,6 +118,39 @@ export const MOCK_DATA = {
       HasTags: false,
     },
   ],
+  // 浏览投影 binding（止血 2026-10-15 P0-1）：数据镜像 ScanModelEntriesFiltered
+  // （树加载唯一消费方；改一处须同步另一处——契约测试防漂移）
+  ScanModelEntriesForBrowse: [
+    {
+      Name: "model-a.ysm",
+      Path: "/e2e/repo/model-a.ysm",
+      Size: 1024,
+      ModTime: 0,
+      Ext: ".ysm",
+      Hash: "",
+      HasTags: false,
+    },
+    {
+      Name: "model-b.ysm",
+      Path: "/e2e/repo/model-b.ysm",
+      Size: 2048,
+      ModTime: 0,
+      Ext: ".ysm",
+      Hash: "",
+      HasTags: false,
+    },
+    {
+      Name: "subdir-model.ysm",
+      Path: "/e2e/repo/subdir/subdir-model.ysm",
+      Size: 512,
+      ModTime: 0,
+      Ext: ".ysm",
+      Hash: "",
+      HasTags: false,
+    },
+  ],
+  // 定向缓存失效（止血 2026-10-15 A2）：e2e 未触达，undefined 最安全
+  InvalidateScanPath: undefined,
   ListVersionInstances: [
     { Name: "1.20.1-Fabric", VersionDir: "/e2e/mc/1.20.1-Fabric" },
     { Name: "1.21-NeoForge", VersionDir: "/e2e/mc/1.21-NeoForge" },

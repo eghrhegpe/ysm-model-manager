@@ -48,18 +48,20 @@ status: active
 
 - 监听文件新增/修改/删除
 - 去重事件（批量操作只触发一次）
-- 变更后自动同步启用/禁用状态到整合包 + 清扫描缓存（前端经缓存失效间接感知变化，不直接发 Wails 事件）
+- 变更后自动同步启用/禁用状态到整合包 + 清扫描缓存（前端经缓存失效间接感知）
+- **UI 变更通知（止血 2026-10-15 A3）**：`SetOnChange(fn)`（须在 Start 前注入，重启实例重注入）在 `syncAll` 执行段前触发——放实例短路判断**之前**（UI 刷新语义独立于同步：零整合包时用户拖入模型，树同样要更新）；pending 续跑再进执行段再触发一次，由前端二级 800ms 防抖合并（与 `debounceDelay` 同源口径）
 
 ## 对外 API / 入口
 
-- `New` — 创建 `Watcher`
+- `New` — 创建 `Watcher`（`clearCacheFn` 变参可选注入）
 - `Start` / `Stop` — 启动/停止文件监听（`loop` 事件循环：fsnotify 通道 `select` 驱动 + `debounceSync` 防抖合并；非文件系统轮询）
 - `IsRunning` — 当前是否运行中
-- `syncAll` — 全量同步入口（内部供 loop 调用）
+- `SetOnChange(fn)` — 注入 UI 变更通知回调（可选；调用时序 = Start 之前，`restartWatcher` 重建实例后重注入；`-race` 安全：读写均经 `w.mu` 保护）
+- `syncAll` — 全量同步入口（内部供 loop 调用；执行段前触发 onChange，实例短路之前）
 
 ## 与其他子系统关系
 
-- 被 `internal/app/app.go` 启动/停止（ServiceStartup / ServiceShutdown），`clearCacheFn` 注入 `App.ClearScanCache`；变更后自动同步整合包 `.ban` 状态（`go/sync` 的 `SyncToggleStatus`），前端刷新靠扫描缓存失效间接感知，不直接发 Wails 事件
+- 被 `internal/app/app.go` 启动/停止（ServiceStartup / ServiceShutdown），`clearCacheFn` 注入 `App.ClearScanCache`；`onChange` 注入 `App.emitRepoFsChanged`（Wails 事件 `repo:fs-changed`，nil 守卫对称 `emitDownloadProgress`）→ 前端 `features/repo/repo-fs-events.ts` app 级单例 + 二级 800ms 防抖 → bus `repo:fs-changed` → app-tree 定向失效当前树根（`InvalidateScanPath`）+ 重载——外部文件变更自动刷新，不再手动（止血 2026-10-15 A3）；`restartWatcher`（app_config.go）重建实例时两处装配同做
 - `go/fsutil/`: 文件系统工具
 
 ## 不变量

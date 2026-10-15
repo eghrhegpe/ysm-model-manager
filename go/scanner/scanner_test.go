@@ -118,7 +118,10 @@ func TestInvalidatePath_UnrelatedKeyUntouched(t *testing.T) {
 	}
 	InvalidatePath(dirA)
 	testutil.Equal(t, len(ScanEntries(dirA)), 2, "失效 dirA 后应重新扫到 2 个")
-	testutil.Equal(t, len(ScanEntries(dirB)), 1, "无关 dirB 缓存应保持 1 个")
+	// 兄弟目录缓存保持：命中（而非重扫后恰好同数——旧实现按「ancestors 全体后代」
+	// 删除会误核平 dirB，重扫仍 1 个造成假绿，2026-10-15 止血修复后加判别断言）
+	_, hit := ScanEntriesWithHit(dirB)
+	testutil.Equal(t, hit, true, "无关 dirB 缓存应保持命中（InvalidatePath 不得核平兄弟目录）")
 }
 
 func TestComputeFileHash(t *testing.T) {

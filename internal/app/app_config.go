@@ -260,6 +260,7 @@ func (a *App) restartWatcher(filesRoot, mcRoot string) error {
 	}
 	if filesRoot != "" && mcRoot != "" {
 		a.watcher = watcher.New(filesRoot, mcRoot, a.scanModelEntries, a.ClearScanCache)
+		a.watcher.SetOnChange(a.emitRepoFsChanged) // 与 ServiceStartup 同装配（重建实例须重注入）
 		if err := a.watcher.Start(); err != nil {
 			// Start 失败必须向上传播——原 println 静默 + SaveAppConfig
 			// 返回 nil，旧 watcher 已停而新 watcher 未起 → 自动同步静默永久丢失（假成功）

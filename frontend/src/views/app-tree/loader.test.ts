@@ -20,7 +20,7 @@ const { mocks } = vi.hoisted(() => {
     // appFn 实例。#10 清 hoisted 死 vi.fn() 后 Object.assign 扩展无 TS 类型——
     // typecheck 报 TS2339（code_review 54ef29d3 修复的后续 typecheck 验证发现）
     GetRepoRoot: undefined as unknown as MockFn,
-    ScanModelEntriesFiltered: undefined as unknown as MockFn,
+    ScanModelEntriesForBrowse: undefined as unknown as MockFn,
     IsFileBanned: undefined as unknown as MockFn,
   };
   return { mocks };
@@ -29,7 +29,7 @@ const { mocks } = vi.hoisted(() => {
 // 已被 Object.assign 覆盖成死代码，双源真相有漂移风险——仅保留非 app mock）
 Object.assign(mocks, {
   GetRepoRoot: appFn("GetRepoRoot"),
-  ScanModelEntriesFiltered: appFn("ScanModelEntriesFiltered"),
+  ScanModelEntriesForBrowse: appFn("ScanModelEntriesForBrowse"),
   IsFileBanned: appFn("IsFileBanned"),
 });
 
@@ -68,14 +68,14 @@ beforeEach(async () => {
   // 共享基线：GetRepoRoot 取 MOCK_DATA 值（"/e2e/repo"），与 e2e 一致
   mocks.GetRepoRoot.mockResolvedValue(MOCK_DATA.GetRepoRoot);
   mocks.IsFileBanned.mockResolvedValue(false);
-  mocks.ScanModelEntriesFiltered.mockResolvedValue([]);
+  mocks.ScanModelEntriesForBrowse.mockResolvedValue([]);
 });
 
 afterEach(() => {
   cleanups.splice(0).forEach((fn) => fn());
   // B 簇（code_review 54ef29d3 #3/#7）：isolate=false + shuffle 下 globalThis store
   // 跨文件存活（本文件还 resetModules + 内层 describe mockReset 共享 fn 留下
-  // undefined-success），GetRepoRoot/ScanModelEntriesFiltered 残留会给 recycle-bin/
+  // undefined-success），GetRepoRoot/ScanModelEntriesForBrowse 残留会给 recycle-bin/
   // sync 等后跑文件——清回 fail-closed 起点，对齐 mock-app.ts 头注释契约
   resetAppMock();
 });
@@ -92,7 +92,7 @@ describe("loadEntries", () => {
     const { loadEntries } = await import("./loader.ts");
     const r = await loadEntries("ysm");
     expect(r).toEqual({ filesRoot: "", entries: [] });
-    expect(mocks.ScanModelEntriesFiltered).not.toHaveBeenCalled();
+    expect(mocks.ScanModelEntriesForBrowse).not.toHaveBeenCalled();
   });
 
   it("扫描结果为空 → 空 entries", async () => {
@@ -104,7 +104,7 @@ describe("loadEntries", () => {
   it("禁用态由 Go 扫描结果下发（e.banned），前端不再逐文件 IsFileBanned（N+1 消除）", async () => {
     // Path 前缀与共享基线 GetRepoRoot（/e2e/repo）一致，动态拼接防再次硬编码漂移
     const repo = MOCK_DATA.GetRepoRoot;
-    mocks.ScanModelEntriesFiltered.mockResolvedValue([
+    mocks.ScanModelEntriesForBrowse.mockResolvedValue([
       { Name: "a.ysm", Path: `${repo}/sub/a.ysm`, Size: 10, ModTime: 1 },
       { Name: "b.ban", Path: `${repo}/sub/b.ban`, Size: 10, ModTime: 1, banned: true },
       { Name: "d.ysm", Path: `${repo}/sub/d.ysm`, Size: 10, ModTime: 1, banned: true },
@@ -112,7 +112,7 @@ describe("loadEntries", () => {
     const { loadEntries } = await import("./loader.ts");
     const r = await loadEntries("ysm");
 
-    // 3 条全部保留（后端 ScanModelEntriesFiltered 已过滤，前端不再过滤）
+    // 3 条全部保留（后端 ScanModelEntriesForBrowse 已过滤，前端不再过滤）
     expect(r.entries).toHaveLength(3);
     expect(r.entries[0]).toMatchObject({
       name: "a.ysm",
@@ -127,7 +127,7 @@ describe("loadEntries", () => {
 
   it("HasTags 由 Go 下发并透传到 TreeEntry（row-tpl tag-dot 消费，对接锐评①）", async () => {
     const repo = MOCK_DATA.GetRepoRoot;
-    mocks.ScanModelEntriesFiltered.mockResolvedValue([
+    mocks.ScanModelEntriesForBrowse.mockResolvedValue([
       { Name: "tagged.ysm", Path: `${repo}/tagged.ysm`, Size: 10, ModTime: 1, HasTags: true },
       { Name: "plain.ysm", Path: `${repo}/plain.ysm`, Size: 10, ModTime: 1 },
     ]);
@@ -141,7 +141,7 @@ describe("loadEntries", () => {
 
   it("仓库根路径带反斜杠时也能剥离前缀", async () => {
     mocks.GetRepoRoot.mockResolvedValue("C:\\repo");
-    mocks.ScanModelEntriesFiltered.mockResolvedValue([
+    mocks.ScanModelEntriesForBrowse.mockResolvedValue([
       { Name: "a.ysm", Path: "C:\\repo\\sub\\a.ysm", Size: 0, ModTime: 0 },
     ]);
     const { loadEntries } = await import("./loader.ts");
@@ -149,8 +149,8 @@ describe("loadEntries", () => {
     expect(r.entries[0].path).toBe("sub/a.ysm");
   });
 
-  it("ScanModelEntriesFiltered 抛错 → error toast + 空结果", async () => {
-    mocks.ScanModelEntriesFiltered.mockRejectedValue(new Error("boom"));
+  it("ScanModelEntriesForBrowse 抛错 → error toast + 空结果", async () => {
+    mocks.ScanModelEntriesForBrowse.mockRejectedValue(new Error("boom"));
     const toasts = spyToasts();
     const { loadEntries } = await import("./loader.ts");
     const r = await loadEntries("ysm");
@@ -171,7 +171,7 @@ describe("maybePromptAndroidStorage（loadEntries 失败触发）", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(realStartMs + fakeMs));
     // 显式制造 loadEntries 失败
-    mocks.ScanModelEntriesFiltered.mockRejectedValue(new Error("load-fail"));
+    mocks.ScanModelEntriesForBrowse.mockRejectedValue(new Error("load-fail"));
   });
   afterEach(() => {
     vi.useRealTimers();
@@ -223,18 +223,18 @@ describe("maybePromptAndroidStorage（loadEntries 失败触发）", () => {
 describe("扁平化 subdir 路由", () => {
   beforeEach(() => {
     mocks.GetRepoRoot.mockReset();
-    mocks.ScanModelEntriesFiltered.mockReset();
+    mocks.ScanModelEntriesForBrowse.mockReset();
   });
 
   it("subdir 作为类型 ID 直接查表 — GetRepoRoot(\"SceneModel\") 而非拼接路径", async () => {
     mocks.GetRepoRoot.mockResolvedValue("/repo/mmd/SceneModel");
-    mocks.ScanModelEntriesFiltered.mockResolvedValue([
+    mocks.ScanModelEntriesForBrowse.mockResolvedValue([
       { Name: "a.pmx", Path: "/repo/mmd/SceneModel/场景1/a.pmx", Size: 1, ModTime: 1 },
     ]);
     const { loadEntries } = await import("./loader.ts");
     const r = await loadEntries("EntityPlayer", "SceneModel");
     expect(mocks.GetRepoRoot).toHaveBeenCalledWith("SceneModel");
-    expect(mocks.ScanModelEntriesFiltered).toHaveBeenCalledWith(
+    expect(mocks.ScanModelEntriesForBrowse).toHaveBeenCalledWith(
       "/repo/mmd/SceneModel",
       "SceneModel",
       "",
@@ -245,11 +245,11 @@ describe("扁平化 subdir 路由", () => {
 
   it("无 subdir 时直接用 rtype 查表", async () => {
     mocks.GetRepoRoot.mockResolvedValue("/repo/ysm");
-    mocks.ScanModelEntriesFiltered.mockResolvedValue([]);
+    mocks.ScanModelEntriesForBrowse.mockResolvedValue([]);
     const { loadEntries } = await import("./loader.ts");
     const r = await loadEntries("ysm");
     expect(mocks.GetRepoRoot).toHaveBeenCalledWith("ysm");
-    expect(mocks.ScanModelEntriesFiltered).toHaveBeenCalledWith(
+    expect(mocks.ScanModelEntriesForBrowse).toHaveBeenCalledWith(
       "/repo/ysm",
       "ysm",
       "",

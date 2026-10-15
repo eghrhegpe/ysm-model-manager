@@ -267,12 +267,25 @@ func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 	if runtime.GOOS != "android" && ysmRoot != "" && cfg.McRoot != "" {
 		a.watcherMu.Lock()
 		a.watcher = watcher.New(ysmRoot, cfg.McRoot, a.scanModelEntries, a.ClearScanCache)
+		a.watcher.SetOnChange(a.emitRepoFsChanged) // 止血 2026-10-15 A3：FS 变更 → Wails 事件 → 前端树自动刷新
 		if err := a.watcher.Start(); err != nil {
 			log.Printf("[startup] 文件监听器启动失败: %v", err)
 		}
 		a.watcherMu.Unlock()
 	}
 	return nil
+}
+
+// emitRepoFsChanged 仓库文件系统变更 → Wails 事件（止血 2026-10-15 A3）：
+// watcher 的 onChange 回调（go/watcher syncAll 执行段前触发）经本方法转
+// Events("repo:fs-changed")；前端 app 级单例 EventsOn 注册一次，800ms 防抖后
+// bus.emit("repo:fs-changed") → app-tree 重载，终结「外部改文件需手动刷新」。
+// nil 守卫对称 emitDownloadProgress：a.app 为 nil（CLI/测试 &App{} 直构）时静默丢弃。
+func (a *App) emitRepoFsChanged() {
+	if a.app == nil {
+		return
+	}
+	a.app.Event.Emit("repo:fs-changed")
 }
 
 // isWindowOffscreen 判断恢复的窗口坐标是否落到屏幕工作区之外（双屏切换后残留）。

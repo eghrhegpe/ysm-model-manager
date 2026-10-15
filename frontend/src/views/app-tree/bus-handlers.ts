@@ -72,7 +72,39 @@ export function bindBusEvents(vm: AppTree): Array<() => void> {
     }),
   );
 
+  // A3（止血 2026-10-15）：Go watcher 文件系统变更 → 定向失效当前树根 + 重载
+  // （事件经 features/repo/repo-fs-events.ts 二级 800ms 防抖后到达，此处直接消费）
+  cleanups.push(
+    bus.on("repo:fs-changed", () => {
+      void atBeHandleRepoFsChanged(vm);
+    }),
+  );
+
   return cleanups;
+}
+
+// repo:fs-changed（A3）：外部文件变更自动刷新——终结「手动刷新时代」。
+// 不复用 reload()：那是用户意图链（全局 ClearScanCache + 清社区缓存）；FS 变更是
+// 后台事件，Go 侧有整合包时已在全局清缓存（watcher clearCacheFn），无整合包场景
+// 在此用 InvalidateScanPath 定向失效当前树根（不核平他类型缓存，止血 A2 语义），
+// 保证 _load 必读到新数据。失效失败不阻断重载（最坏退化为 30s 陈旧命中，
+// 与 A3 前行为一致，不引入新故障面）。
+async function atBeHandleRepoFsChanged(vm: AppTree): Promise<void> {
+  const gen = vm._guard.next();
+  try {
+    const filesRoot = vm.snapshot.filesRoot;
+    const App = await backendGetApp();
+    if (filesRoot && App.InvalidateScanPath) await App.InvalidateScanPath(filesRoot);
+  } catch (e) {
+    logWarn("app-tree", "repo:fs-changed 定向失效失败（不阻断重载）:", e);
+  }
+  try {
+    await vm._load();
+  } catch {
+    /* _load 内部已 catch 全部错误并降级空 entries + loadFailed 标志（同 reload 链口径） */
+  }
+  if (atBeStale(vm, gen)) return;
+  vm._renderTree();
 }
 
 /**

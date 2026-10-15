@@ -536,12 +536,16 @@ describe("app-tree index 入口生命周期（补位）", () => {
     expect(el.shadowRoot!.getElementById("tree")).not.toBeNull();
   });
 
-  it("root 属性变更（ready 后）→ 清扫描缓存 + 按新 root 重载渲染", async () => {
+  it("root 属性变更（ready 后）→ 按新 root 重载渲染（止血 A2：不再清全局缓存）", async () => {
     const el = await mountEl();
     (loader as ReturnType<typeof vi.fn>).mockClear();
     el.setAttribute("root", RESOURCE_TYPES.MMD);
-    await waitFor(() => (bindings.ClearScanCache as ReturnType<typeof vi.fn>).mock.calls.length === 1);
+    await waitFor(() => (loader as ReturnType<typeof vi.fn>).mock.calls.length >= 1);
     expect(loader).toHaveBeenCalledWith(RESOURCE_TYPES.MMD);
+    // 止血 2026-10-15 A2：切类型链不再全局 ClearScanCache（原实现每次切类型核平
+    // 全仓所有类型缓存 = 全库重新冷扫+重哈希的哈希税）；新鲜度由 per-dir 30s 缓存
+    // + watcher 清缓存 + tree:reload 全局清三口径覆盖
+    expect(bindings.ClearScanCache).not.toHaveBeenCalled();
     expect(el.entries.map((e) => e.name)).toEqual(["m1.mmd"]);
     await waitFor(() => queryAllByTestId(el.shadowRoot!, "tree-file").length === 1);
     expectSingleRow(el, "m1");
@@ -580,19 +584,21 @@ describe("app-tree index 入口生命周期（补位）", () => {
     expect(loader).toHaveBeenCalledTimes(2);
   });
 
-  it("root 变更为空字符串 → _rootAttr 置空并按空 rtype 重载", async () => {
+  it("root 变更为空字符串 → _rootAttr 置空并按空 rtype 重载（止血 A2：不清全局缓存）", async () => {
     const el = await mountEl();
     expect(el.rootAttr).toBe("");
     el.setAttribute("root", "");
-    await waitFor(() => (bindings.ClearScanCache as ReturnType<typeof vi.fn>).mock.calls.length === 1);
+    await waitFor(() => (loader as ReturnType<typeof vi.fn>).mock.calls.length >= 2);
     expect(el.rootAttr).toBe("");
     expect(loader).toHaveBeenLastCalledWith("");
+    expect(bindings.ClearScanCache).not.toHaveBeenCalled();
   });
 
   // 2026-10 锐评修复回归锁：`disconnectedCallback` 漏接 `_guard.invalidate()`——卸载发生在
-  // `_reloadAfterMountSwitch` 的 await 期间（ClearScanCache / _load 都是慢 IPC）时，续体会
-  // 通过代际校验（`stale(gen)` 恒 false：没人推进过 gen）并执行 `_renderTree()`，给**已卸载**
-  // 的 shadow root 重渲染整棵树（幽灵写入）。同型先例：app-sidebar 的同类漏接（已修）。
+  // `_reloadAfterMountSwitch` 的 await 期间（_load 慢 IPC；止血 2026-10-15 A2 起补载链
+  // 无 ClearScanCache 前置步）时，续体会通过代际校验（`stale(gen)` 恒 false：没人推进过
+  // gen）并执行 `_renderTree()`，给**已卸载**的 shadow root 重渲染整棵树（幽灵写入）。
+  // 同型先例：app-sidebar 的同类漏接（已修）。
   it("在途补载期间卸载 → 迟到结果不重渲染（代际已失效）", async () => {
     const el = await mountEl();
     const renderSpy = vi.spyOn(el, "_renderTree");
@@ -621,14 +627,9 @@ describe("app-tree index 入口生命周期（补位）", () => {
     expect(el.shadowRoot!.getElementById("tree")!.innerHTML).toContain("暂无模型文件");
   });
 
-  it("root 变更时 ClearScanCache 失败 → 错误日志且不加载", async () => {
-    const el = await mountEl();
-    stubConsoleError(); // 静音生产 logError("app-tree","root change Error")
-    (bindings.ClearScanCache as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("cache boom"));
-    el.setAttribute("root", RESOURCE_TYPES.MMD);
-    await sleep0();
-    expect(loader).toHaveBeenCalledTimes(1); // 未走到 _load
-  });
+  // 原「root 变更时 ClearScanCache 失败 → 错误日志且不加载」用例随止血 2026-10-15 A2
+  // 删除：切类型链已无全局 ClearScanCache 前置步，该故障面不复存在（全局清缓存失败
+  // 的语义归 tree:reload 链的 bus-handlers.reload catch，另有测试覆盖）。
 
   it("未连接 setAttribute → 单次加载最新 root（快照差量，不再冗余双加载）", async () => {
     const el = document.createElement("app-tree") as unknown as AppTree;
@@ -658,7 +659,8 @@ describe("app-tree index 入口生命周期（补位）", () => {
     d.resolve({ filesRoot: "/repo", entries: entriesByType[RESOURCE_TYPES.MMD] }); // 首代恢复 → gen 不匹配
     await waitFor(() => el.ready === true);
     expect(loader.mock.calls.map((c) => c[0])).toEqual([RESOURCE_TYPES.MMD, RESOURCE_TYPES.PACK]);
-    expect(bindings.ClearScanCache).toHaveBeenCalledTimes(1);
+    // 止血 2026-10-15 A2：挂载期切类型的补载链不再前置全局 ClearScanCache
+    expect(bindings.ClearScanCache).not.toHaveBeenCalled();
     await waitFor(() => queryAllByTestId(el.shadowRoot!, "tree-file").length === 1);
     expectSingleRow(el, "v1"); // 最终渲染最新 root（PACK/resourcepack）
   });
@@ -674,14 +676,16 @@ describe("app-tree index 入口生命周期（补位）", () => {
     el.setAttribute("root", RESOURCE_TYPES.MMD);
     document.body.appendChild(el);
     await sleep0(); // MMD 加载挂起
-    (bindings.ClearScanCache as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("cache boom"));
+    // 止血 2026-10-15 A2：补载链已无全局 ClearScanCache 前置步（原故障点删除）——
+    // 补载失败的口径改为「_load 链本身抛错」（spy 拒载一次）
+    const loadSpy = vi.spyOn(el, "_load").mockRejectedValueOnce(new Error("load boom"));
     el.setAttribute("root", RESOURCE_TYPES.PACK); // 在途切换 → 补载
     d.resolve({ filesRoot: "/repo", entries: entriesByType[RESOURCE_TYPES.MMD] });
     // 失败路径同步屏障：等到错误 toast 发出（logError 同链路已执行、告警已静音）
     await waitFor(() =>
       (emitSpy.mock.calls as Array<[string, unknown]>).some(([ev]) => ev === "toast:show"),
     );
-    expect(loader).toHaveBeenCalledTimes(1); // 补载被 ClearScanCache 失败中断，未再 _load
+    expect(loadSpy).toHaveBeenCalled(); // 补载确实进入 _load 链（失败在 _load 内）
     // 首代渲染已被 gen 作废（无错配帧），_entries 为首代数据 → 兜底渲染避免空白树
     await waitFor(() => queryAllByTestId(el.shadowRoot!, "tree-file").length === 1);
     expectSingleRow(el, "m1");

@@ -819,10 +819,37 @@ describe("ScanModelEntriesFiltered rtype 白名单过滤", () => {
   });
 });
 
+// ===== ScanModelEntriesForBrowse 浏览投影（止血 2026-10-15 P0-1）=====
+// web 条目本就无哈希（B1 契约 e.Hash === ""），Go 侧差异只在哈希税——
+// web 两入口同实现，契约锁 = 行为等价 + 条目恒无 Hash
+describe("ScanModelEntriesForBrowse 浏览投影", () => {
+  it("与 ScanModelEntriesFiltered 行为等价（同 rtype 白名单过滤 + type 填充）", async () => {
+    await seedGroup("ysm", "组X", { "main.ysm": enc.encode("x") });
+    const filtered = (await webFsBindings.ScanModelEntriesFiltered("/web/ysm/组X", "ysm", "", "ui")) as unknown[];
+    const browse = (await webFsBindings.ScanModelEntriesForBrowse("/web/ysm/组X", "ysm", "", "ui")) as unknown[];
+    expect(browse).toEqual(filtered);
+    // 异型 rtype 两入口同滤空
+    const dropF = await webFsBindings.ScanModelEntriesFiltered("/web/ysm/组X", "EntityPlayer", "", "ui");
+    const dropB = await webFsBindings.ScanModelEntriesForBrowse("/web/ysm/组X", "EntityPlayer", "", "ui");
+    expect(dropF).toHaveLength(0);
+    expect(dropB).toHaveLength(0);
+  });
+
+  it("浏览条目恒无 Hash（web 无哈希路径，契约锁防 web 侧未来误加哈希字段）", async () => {
+    await seedGroup("ysm", "组X", { "main.ysm": enc.encode("x") });
+    const browse = (await webFsBindings.ScanModelEntriesForBrowse("/web/ysm/组X", "ysm", "", "ui")) as Array<{ Hash?: string }>;
+    for (const e of browse) {
+      expect(e.Hash ?? "").toBe("");
+    }
+  });
+});
+
 describe("杂项装配", () => {
   it("ClearScanCache / InvalidateScanCache：网页版 no-op resolve", async () => {
     await expect(webFsBindings.ClearScanCache()).resolves.toBeUndefined();
     await expect(webFsBindings.InvalidateScanCache()).resolves.toBeUndefined();
+    // 止血 2026-10-15 A2：定向失效入口——web 无进程内扫描缓存，no-op 对齐
+    await expect(webFsBindings.InvalidateScanPath("/web/ysm")).resolves.toBeUndefined();
   });
 
   it("ScanModelEntries 三入口与 ReadFileBytes 等价转发", async () => {

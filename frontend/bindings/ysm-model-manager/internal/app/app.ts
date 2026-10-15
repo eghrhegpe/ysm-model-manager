@@ -695,6 +695,18 @@ export function InvalidateScanCache(): $CancellablePromise<void> {
     return $Call.ByID(2605564787);
 }
 
+/**
+ * InvalidateScanPath 按目录失效扫描缓存（止血 2026-10-15 A2：切资源类型后的
+ * 定向失效出口，替代切类型链上的全局 ClearScanCache——其它类型 30s 新鲜缓存
+ * 不再被核平；下载/导入后的全局清洗仍走 ClearScanCache，本出口是「只脏了一处」
+ * 场景的轻量路）。委托 scanner.InvalidatePath（祖先/子孙互前缀同口径），
+ * 全量缓存与浏览投影缓存双删（见 go/scanner/scanner.go InvalidatePath）。
+ * 网页版无进程内扫描缓存，web-fs 侧 no-op resolve。
+ */
+export function InvalidateScanPath(dir: string): $CancellablePromise<void> {
+    return $Call.ByID(1121763992, dir);
+}
+
 export function IsFileBanned(path: string): $CancellablePromise<boolean> {
     return $Call.ByID(3330292233, path);
 }
@@ -1123,8 +1135,8 @@ export function RestoreFromRecycle(src: string, filesRoot: string): $Cancellable
  *   - 「整合包目录 + 资源子目录」的布局知识单一事实源在 Go（`getSyncDirs`，与
  *     DetectConflicts / ResolveConflicts 同一解析路径）：前端复制一份就是第二份真相，
  *     迟早出现「检测说在 A 目录、定位跳到 B 目录」；
- *   - 越界守卫同样归 Go：复用 `paths.RelInside`（与 `ResolveConflict` 同款防线），
- *     防调用方递来的 relPath 穿越出整合包目录（前端参数属不可信输入）。
+ *   - 越界守卫同样归 Go：`conflictLocalPath` 复用 `paths.RelInside`（与 `ResolveConflict`
+ *     同款防线），防调用方递来的 relPath 穿越出整合包目录。
  * 
  * 前端据此只需递**它已经持有的身份**（rtype / instance / 相对路径），无需知道任何绝对路径；
  * 入口按 `can("RevealInExplorer")` 门控（web/Android 无此能力 → 不渲染按钮，不造幽灵入口）。
@@ -1238,6 +1250,19 @@ export function ScanModelEntries(dir: string): $CancellablePromise<types$0.Model
  */
 export function ScanModelEntriesFiltered(dir: string, rtype: string, subtype: string, label: string): $CancellablePromise<types$0.ModelEntry[] | null> {
     return $Call.ByID(1678370138, dir, rtype, subtype, label);
+}
+
+/**
+ * ScanModelEntriesForBrowse 仓库树专用浏览 binding（止血 2026-10-15 P0-1）：
+ * 过滤语义与 ScanModelEntriesFiltered 完全一致（共享 finalizeScanEntries——
+ * rtype 白名单 / 容器指纹 / Banned / oplog 同口径），唯一差异 = 扫描走浏览投影
+ * （无 SHA256，见 go/scanner/scanner_browse.go 缓存隔离语义）：树与预览候选从不
+ * 消费 Hash，大库冷加载不再付「全库逐文件读全量字节」的哈希税（Hash 只服务
+ * 同步系统，同步链继续走 ScanModelEntries* 哈希入口）。
+ * 消费方：app-tree/loader.ts（切 binding 唯一落点）。路径守卫与 Filtered 完全一致。
+ */
+export function ScanModelEntriesForBrowse(dir: string, rtype: string, subtype: string, label: string): $CancellablePromise<types$0.ModelEntry[] | null> {
+    return $Call.ByID(2925693518, dir, rtype, subtype, label);
 }
 
 /**

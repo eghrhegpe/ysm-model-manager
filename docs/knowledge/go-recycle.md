@@ -133,7 +133,10 @@ status: active
 - `dst` 每次重算后都要复查仍在 `.recycle` 目录内
 - `.recycle` 目录独立于主数据存储
 - **冲突后缀循环遇非 IsNotExist 错误必须返回**（P2 修复：Restore 的 `os.Stat(dst)` 返回权限类错误时原实现继续加后缀循环，错误持续则死循环——已对齐 moveEx 的 `else if err != nil { return err }` 处理）
-- **`Empty` 入口必须 `Lstat(recycleDir)` 检查 symlink**（R26 P2-1 修复）：`RemoveAll` 是破坏性最强的操作，若 `.recycle` 被替换为指向外部的 symlink，`os.RemoveAll` 会跟随 symlink 删除外部目录树。正常 `.recycle` 是 `MkdirAll` 创建的普通目录，命中 symlink 即说明被篡改，一律拒绝。不用 `IsInsideResolved`：`recycleDir` 尚不存在时 `EvalSymlinks` 失败保留原路径，Windows 8.3 短名与长名解析不一致会让 `IsInside` 误判越权（`TestEmpty_RecycleDirNotExist` 回归）。
+- **`Empty` 入口必须 `Lstat(recycleDir)` 检查 symlink**（R26 P2-1 修复）：`RemoveAll` 是破坏性最强的操作，若 `.recycle` 被替换为指向外部的 symlink，正常 `.recycle` 是 `MkdirAll` 创建的普通目录，命中 symlink 即说明被篡改，一律拒绝。不用 `IsInsideResolved`：`recycleDir` 尚不存在时 `EvalSymlinks` 失败保留原路径，Windows 8.3 短名与长名解析不一致会让 `IsInside` 误判越权（`TestEmpty_RecycleDirNotExist` 回归）。
+  - ⚠️ **正文断言纠正（2026-10-15 锐评，主模型亲验）**：本卡原称「`os.RemoveAll` 会跟随 symlink 删除外部目录树」——**该机制描述不成立**。实测（构造 `.recycle` → 指向外部含 sentinel 的目录 → 直接 `os.RemoveAll(该链接)`）：**不跟随**，只删链接本身、外部树逐文件完好。故本守卫的准确价值 = 对「结构异常」**响亮拒绝**（不静默把被篡改的链接归一成一个空目录），**而非**阻止一次必然的外部删除。守卫本身保留（便宜且语义更严），但**勿再以「不守卫就会删外部树」作为论证依据**。
+  - **存在性复核与 symlink 判定已合并为同一次 `Lstat`**（2026-10-15）：原实现先 `Lstat` 守卫、再用 `os.Stat`（**跟随**）复核存在性，两次系统调用之间留有换链窗口。合并后窗口归零；所有**非竞态**路径语义完全一致（含断链 symlink——旧代码第一道 `Lstat` 就已拒绝，**并非本刀新增行为**），故该差异**不可用单测判别**，不写自证式用例。
+  - 回归锁：`recycle_coverage_test.go|TestEmpty_SymlinkRejected`——除「返回 err」外**另断言外部数据逐文件存活 + 被篡改链接本身未被改动**（原用例只断言 err，真正的用户可见保证无人守）。
 - **`moveEx` 跨设备回退源删除失败时必须回滚删除已落地的副本**（R26 P2-2 修复）：旧实现 copy 成功后 `os.Remove(src)` 失败，错误文案说「副本在 dst，请手动清理」，但源文件也还在——误导，且后续重试会堆积更多副本。回滚成功→状态回到「源还在 + 副本已清理」用户可安全重试；回滚失败→错误同时披露源路径与副本路径让上层决策。
 - **`moveEx` rename 成功后必须对 dst 做 `IsInsideResolved(recycleDir, dst)` 事后校验**（R26 P2-3 修复）：防御文件系统 TOCTOU——rename 前父目录被换 symlink 可能让文件落到回收站之外。命中时尝试 `os.Rename` 回滚，回滚失败则报错让上层决策。
 - **文件系统终态必须有直观看盘的断言**（2026-10 补测，`recycle_fsstate_test.go`）：`List()` 回读条目名只反映 base name，此前无任何用例直接看盘上结构或内容字节。已钉：① 移入后**源不再存在**且 `.recycle` 内按 `rel` 逐层镜像出落点（`<recycleDir>/sub/nested/deep.ysm`），同 rel 再次移入冲突后缀落在**同层**且不覆盖原落点（不丢数据）；② `Move → Restore` **往返**后目录结构逐层还原、每个文件内容**逐字节一致**（含 NUL/高位字节与多字节文件名）、回收站侧不留副本；③ `RemoveRepoDuplicates` 在 `recycleRoot` 内时走**可恢复**路径——文件能在 `.recycle/<rel>` 按原内容找回，而非凭空消失。改 `moveEx`/`Restore`/`RemoveRepoDuplicates` 前先跑这三条。

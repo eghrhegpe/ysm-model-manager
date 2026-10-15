@@ -127,6 +127,14 @@ func (a *App) loadAppConfig() {
 		return
 	}
 	// 配置迁移逻辑简化：旧 repoRoot 字段已废弃，由 FilesRoot 统一承载
+	// ⚠️ 双读路径必须都跑 migrateLegacyConfigFields（锐评 2026-10-15 P2）：
+	// 本路径（启动期）此前漏掉了它，而 LoadAppConfig 惰性路径有。后果不是「多读了旧字段」
+	// ——是「旧字段值从未被搬进 CustomRoots，却被 clearDeprecatedFields 清零」：
+	// 存量升级用户的 ysmRoot=D:/ysm 经启动路径进 cache（CustomRoots=nil），
+	// 用户在设置页任意一次保存（哪怕只改主题）就会把它清零且不回填 → specificRoot("ysm")
+	// 返回空 → GetRepoRoot 静默回退 FilesRoot 派生路径，用户独立路径彻底丢失。
+	// ADR-296 D6 审查② 当时只对称化了 washLinkMode，字段迁移被漏。
+	migrateLegacyConfigFields(&cfg)
 	// 加载侧软校验：见 washLinkMode（ADR-296 D6）
 	washLinkMode(&cfg)
 	if cfg.LinkMode != "" {

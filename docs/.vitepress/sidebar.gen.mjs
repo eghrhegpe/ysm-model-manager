@@ -254,6 +254,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-350：app-tree状态骨架D1：重载入口收敛单函数+决策表、条目突变单一出口",
+        "link": "/adr/architecture/ADR-350-app-tree-d1"
+      },
+      {
         "text": "ADR-349：配置写入原子化：Go 侧 patch 绑定替代前端读-改-写",
         "link": "/adr/architecture/ADR-349-config-write-atomic-patch"
       },

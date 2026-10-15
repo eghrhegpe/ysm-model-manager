@@ -241,3 +241,23 @@ func TestSafeWalk_PassthroughNonNil(t *testing.T) {
 		t.Fatalf("期望访问 >=3 个条目，得到 %d", seen)
 	}
 }
+
+// TestHasRecycleSegment 逐段判定：.recycle 子树命中，文件名含 .recycle 的正常模型不误伤。
+// 2026-10-16 随 hasRecycleSegment 自 go/sync 收编 fsutil（ADR-351 D1）迁入。
+func TestHasRecycleSegment(t *testing.T) {
+	cases := []struct {
+		path string
+		want bool
+	}{
+		{`C:\mc\.minecraft\models\my.ysm`, false},
+		{`C:\mc\.minecraft\models\.recycle\my.ysm`, true},
+		{`C:\mc\.minecraft\.Recycle\sub\a.pmx`, true}, // 大小写不敏感 + 子树任意深度
+		{`C:\mc\.minecraft\models\my.recycle.backup.ysm`, false},
+		{`C:\mc\.minecraft\.recycle`, true},
+	}
+	for _, c := range cases {
+		if got := HasRecycleSegment(c.path); got != c.want {
+			t.Errorf("HasRecycleSegment(%q) = %v, want %v", c.path, got, c.want)
+		}
+	}
+}

@@ -167,12 +167,9 @@ func collectFolderFilesFromScan(folder, rtype string, entries []types.ModelEntry
 		if !strings.HasPrefix(p, prefix) {
 			continue
 		}
-		// 回收站目录内的文件跳过（与 Walk 的 IsRecycleDir SkipDir 对齐）
-		if fsutil.IsRecycleDir(filepath.Dir(p)) {
-			continue
-		}
-		// relink 备份尸体子树内的文件同样跳过（ADR-342，与 Walk 通道同口径）
-		if isRelinkBackupPath(p) {
+		// 统一剔除闸（ADR-351 D1，段级谓词——预收集清单按全路径过滤，任意深度命中；
+		// 旧实现的 IsRecycleDir(Dir(p)) 只查直接父级，漏 .recycle 深层嵌套文件）
+		if walkExcluded(p) {
 			continue
 		}
 		if !packs.IsTypeModelFile(p, rtype) {
@@ -215,13 +212,9 @@ func collectFolderFiles(folder, rtype string) map[string]string {
 		}
 		// 跳过目录
 		if info.IsDir() {
-			// 跳过回收站目录
-			if path != folder && fsutil.IsRecycleDir(path) {
-				return filepath.SkipDir
-			}
-			// 跳过 relink 备份尸体子树（ADR-342 防御纵深；谓词与三处 collect 同源）
-			if path != folder && isRelinkBackupPath(path) {
-				return filepath.SkipDir
+			// 统一剔除闸（ADR-351 D1）：回收站 + relink 备份尸体整棵跳过
+			if err := skipExcludedDir(folder, path); err != nil {
+				return err
 			}
 			return nil
 		}

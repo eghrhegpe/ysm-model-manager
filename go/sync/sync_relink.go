@@ -266,8 +266,9 @@ func collectInstanceOnlyFiles(instDir, repoDir string) []string {
 			return nil // 尽力而为：读不了的子树跳过（不可读条目不属于可保全范围）
 		}
 		if d.IsDir() {
-			if p != instDir && (fsutil.IsRecycleDir(p) || isRelinkBackupPath(p)) {
-				return filepath.SkipDir
+			// 统一剔除闸（ADR-351 D1）：回收站与备份尸体子树不是用户数据，不在保全范围
+			if err := skipExcludedDir(instDir, p); err != nil {
+				return err
 			}
 			return nil
 		}

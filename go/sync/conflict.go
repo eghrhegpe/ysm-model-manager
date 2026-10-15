@@ -286,6 +286,12 @@ func collectFileEntries(dir string) (map[string]fileEntryInfo, error) {
 			return nil
 		}
 		if info.IsDir() {
+			// 统一剔除闸（ADR-351 D1）：本通道曾完全缺失该过滤——回收站 / relink
+			// 备份尸体文件被照常哈希，两侧同名 .recycle 子路径可产出幻影冲突，
+			// 且大体积恢复点白白付整树 SHA256。与其余六通道同口径补齐。
+			if err := skipExcludedDir(dir, path); err != nil {
+				return err
+			}
 			return nil
 		}
 

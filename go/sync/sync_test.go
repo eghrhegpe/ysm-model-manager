@@ -553,25 +553,8 @@ func TestIsFileLocked(t *testing.T) {
 }
 
 // ===== DiffFolderContents =====
-
-// TestHasRecycleSegment 逐段判定：.recycle 子树跳过，文件名含 .recycle 的正常模型不误伤
-func TestHasRecycleSegment(t *testing.T) {
-	cases := []struct {
-		path string
-		want bool
-	}{
-		{`C:\mc\.minecraft\models\my.ysm`, false},
-		{`C:\mc\.minecraft\models\.recycle\my.ysm`, true},
-		{`C:\mc\.minecraft\.Recycle\sub\a.pmx`, true}, // 大小写不敏感 + 子树
-		{`C:\mc\.minecraft\models\my.recycle.backup.ysm`, false},
-		{`C:\mc\.minecraft\.recycle`, true},
-	}
-	for _, c := range cases {
-		if got := hasRecycleSegment(c.path); got != c.want {
-			t.Errorf("hasRecycleSegment(%q) = %v, want %v", c.path, got, c.want)
-		}
-	}
-}
+// TestHasRecycleSegment 已随 hasRecycleSegment 收编 fsutil.HasRecycleSegment 迁至
+// go/fsutil/walk_test.go（ADR-351 D1 谓词单点）。
 
 // TestDiffFolderContents_Basic 测试基本的文件夹内容级 diff
 func TestDiffFolderContents_Basic(t *testing.T) {

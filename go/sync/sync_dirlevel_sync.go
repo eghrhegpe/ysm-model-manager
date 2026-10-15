@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/packs"
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/types/registry"
@@ -254,13 +253,9 @@ func collectEntriesWalk(rootDir string, rtype string, hashByPath map[string]stri
 		if path == rootDir {
 			return nil
 		}
-		// 跳过回收站目录（与 scanner.ScanEntries 对齐）
-		if fsutil.IsRecycleDir(path) {
-			return filepath.SkipDir
-		}
-		// relink 备份尸体子树剔除（ADR-342）：恢复点不是模型，不得进同步 diff
-		if isRelinkBackupPath(path) {
-			return filepath.SkipDir
+		// 统一剔除闸（ADR-351 D1）：回收站 + relink 备份尸体整棵跳过
+		if err := skipExcludedDir(rootDir, path); err != nil {
+			return err
 		}
 		// 模型文件夹：在任意深度收集（不再限定一级子目录）
 		// 使用 memo 变体消除 patternFind 重复子树扫描（patternFind 已知残余 IO）

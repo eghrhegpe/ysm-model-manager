@@ -106,14 +106,30 @@ func CleanEmptyDirs(dir string, skipRecycle bool) int {
 
 // IsRecycleDir 判断路径是否指向 .recycle 回收站目录（大小写不敏感，ADR-044 策略 A 统一口径）——
 // dedup / scanner / sync 的回收站排除判定统一引用本函数，禁止各自内联 EqualFold 判定。
-// 例外：sync.go 的 SyncToggleStatus 对「路径任一段为 .recycle」跳过（覆盖 .recycle
-// 子树内已遍历文件），语义与基名精确匹配不同，属有意保留的兜底。
-// 原为整路径子串 Contains，会误伤文件名含 ".recycle" 的正常模型，已改为逐段判定
-// （sync.hasRecycleSegment）。
+// 基名级精确匹配：适用于「Walk 回调只见目录」的场景（目录命中即 SkipDir，更深的
+// 祖先段不可达）。对「按全路径过滤预收集文件清单」的场景（任意深度命中 .recycle
+// 子树内的文件）用段级变体 HasRecycleSegment。
+// 原为整路径子串 Contains，会误伤文件名含 ".recycle" 的正常模型，已改为逐段判定。
 func IsRecycleDir(path string) bool {
 	lower := strings.ToLower(path)
 	base := filepath.Base(lower)
 	return base == ".recycle"
+}
+
+// HasRecycleSegment 判断路径中是否存在任一名为 .recycle 的目录段（大小写不敏感，
+// EqualFold 口径与 IsRecycleDir / download.stripRecycleSegments 一致）。
+// 段级判定覆盖「按全路径过滤预收集文件清单」的消费点——任意深度命中 .recycle
+// 子树内的文件；同时不误伤文件名含 ".recycle" 的正常模型（如 my.recycle.backup.ysm：
+// 单段不含分隔符，精确段比较不命中）。
+// 原为 go/sync 包私有 hasRecycleSegment（ADR-351 D1 收编为公共单点：sync 的七个
+// Walk 收集器统一经 go/sync 的剔除闸消费，本函数是闸的谓词底座）。
+func HasRecycleSegment(p string) bool {
+	for _, seg := range strings.Split(p, string(filepath.Separator)) {
+		if strings.EqualFold(seg, ".recycle") {
+			return true
+		}
+	}
+	return false
 }
 
 // IsResourcePackFolder 检查目录是否为资源包文件夹（内含 pack.mcmeta）。

@@ -297,13 +297,15 @@ function emitWebSearchHit(
 export async function searchWebModels(
   filesRoot: string,
   keyword: string,
+  // `| undefined` 显式可选（exactOptionalPropertyTypes：调用点 web-fs.ts 经
+  // `filters?.minBones` 传显式 undefined；解构默认 0 已覆盖，语义不变——0 = 未设置）
   filters?: {
-    minBones?: number;
-    maxBones?: number;
-    minCubes?: number;
-    maxCubes?: number;
-    minTex?: number;
-    maxTex?: number;
+    minBones?: number | undefined;
+    maxBones?: number | undefined;
+    minCubes?: number | undefined;
+    maxCubes?: number | undefined;
+    minTex?: number | undefined;
+    maxTex?: number | undefined;
   },
 ): Promise<WebSearchResult[]> {
   const {

@@ -723,13 +723,13 @@ describe("SearchModels（关键词 + 数值范围）", () => {
   };
   it("关键词匹配 name OR path（大小写不敏感）；无数值条件快速路径", async () => {
     await seed();
-    const hit = await webFsBindings.SearchModels("/web/ysm", { keyword: "狐狸" });
+    const hit = await webFsBindings.SearchModels("/web/ysm", { keyword: "狐狸", minBones: 0, maxBones: 0, minCubes: 0, maxCubes: 0, minTex: 0, maxTex: 0 });
     expect((hit as { name: string }[]).map((r) => r.name)).toEqual(["a.ysm"]);
-    const byPath = await webFsBindings.SearchModels("/web/ysm", { keyword: "狼b" });
+    const byPath = await webFsBindings.SearchModels("/web/ysm", { keyword: "狼b", minBones: 0, maxBones: 0, minCubes: 0, maxCubes: 0, minTex: 0, maxTex: 0 });
     expect((byPath as { name: string }[]).map((r) => r.name)).toEqual(["b.ysm"]);
-    const all = await webFsBindings.SearchModels("/web/ysm", { keyword: "" });
+    const all = await webFsBindings.SearchModels("/web/ysm", { keyword: "", minBones: 0, maxBones: 0, minCubes: 0, maxCubes: 0, minTex: 0, maxTex: 0 });
     expect((all as { boneCount: number }[]).every((r) => r.boneCount === 0)).toBe(true);
-    const miss = await webFsBindings.SearchModels("/web/ysm", { keyword: "猫" });
+    const miss = await webFsBindings.SearchModels("/web/ysm", { keyword: "猫", minBones: 0, maxBones: 0, minCubes: 0, maxCubes: 0, minTex: 0, maxTex: 0 });
     expect(miss).toEqual([]);
   });
 

@@ -34,6 +34,7 @@ import { treeCSS } from "./app-tree-styles.ts";
 import { type AuthorInfo, loadAuthors } from "./authors.ts";
 import { bindBusEvents } from "./bus-handlers.ts";
 import { type SelectState, selectSingle } from "./data.ts";
+import { entryKey } from "./entry-key.ts";
 import { bindTreeEvents, updateSelectCount } from "./events.ts";
 import { resetFooterProgress, withFooterProgress } from "./footer-progress.ts";
 import { loadEntries, type TreeEntry } from "./loader.ts";
@@ -624,6 +625,31 @@ export class AppTree extends WebComponentBase {
       // 置位即整树重渲（dragging 类数据渲染），dragend/drop 清位恢复
       this._draggingKeys ?? undefined,
     );
+    // 搜索/筛选态选中态剪枝（2026-10-15 审核 P2）：selectState.keys 是**全量**集合，
+    // setSearch/setFilterPaths 只改可见行、不清选中 → 底部报「已选 N 个」而树里 0 行高亮，
+    // 键盘 Delete（_onKeyDelete 直取 keys 全量）+ 确认框文案就作用在**不可见**文件上
+    // （切 rtype 同族的「虚假危险确认」已在 _attrChangeReloadAsync 修掉，搜索路径漏修）。
+    // 只在 search/filterPaths 生效时剪：**折叠不剪**（与 Windows Explorer 同语义——收起
+    // 文件夹不清选中，重开仍能接着删；折叠只影响可见性，不影响作用域）。
+    const keys = this._state.selectState.keys;
+    if ((this._state.search || this._state.filterPaths) && keys.size) {
+      const visible = new Set(
+        getVsRows(this.treeRenderCtx, c as HTMLElement)
+          .filter((r) => r.type === "file")
+          .map((r) => r.key),
+      );
+      let pruned = false;
+      for (const k of keys) {
+        if (!visible.has(k)) {
+          keys.delete(k);
+          pruned = true;
+        }
+      }
+      if (this._state.selectState.lastKey && !keys.has(this._state.selectState.lastKey)) {
+        this._state.selectState.lastKey = null;
+      }
+      if (pruned) updateSelectCount(this._root, this._state.selectState);
+    }
     // 有选中项时不更新 stat（由 updateSelectCount 维护），避免动画覆盖
     if (!this._state.selectState.keys.size) {
       updateStat(this.treeRenderCtx, this._root.getElementById("ftr-stat"), filtered);
@@ -665,7 +691,7 @@ export class AppTree extends WebComponentBase {
         id: "tree:delete",
         combo: ["Delete", "Del"],
         when: yieldTo3D,
-        handler: (e) => void this._onKeyDelete(e, e.target as HTMLElement | null),
+        handler: (e) => void this._onKeyDelete(e, e.target),
       }),
       // 方向键为列表导航语义（B 级 bindListKeyboard 泛化候选，暂原样收编）；
       // 裸键匹配 = 无修饰键（原实现放行 Shift+方向键属漏查，此处按 ARIA 规范收紧）
@@ -693,13 +719,13 @@ export class AppTree extends WebComponentBase {
     }
   }
 
-  private async _onKeyDelete(e: KeyboardEvent, target: HTMLElement | null): Promise<boolean> {
-    if (
-      (e.key !== "Delete" && e.key !== "Del") ||
-      !target ||
-      target.tagName === "INPUT" ||
-      target.tagName === "TEXTAREA"
-    )
+  private async _onKeyDelete(e: KeyboardEvent, target: EventTarget | null): Promise<boolean> {
+    if ((e.key !== "Delete" && e.key !== "Del") || !target) return false;
+    // 输入区焦点让路：与 _onKeyArrowNav 同口径。原先只挡 INPUT/TEXTAREA，漏掉 SELECT
+    //（排序下拉）与 [contenteditable]——焦点落在下拉上按 Delete 会弹批量删除确认框
+    //（审核 P3）。happy-dom/部分 WebView 下 target 可能是 document（无 closest），
+    // 只对 Element 判定，非 Element 按「焦点不在输入区」处理。
+    if (target instanceof Element && target.closest("input,textarea,select,[contenteditable]"))
       return false;
     const paths = [...(this.selectState?.keys || [])];
     if (!paths.length) {
@@ -835,7 +861,10 @@ export class AppTree extends WebComponentBase {
         for (let m = 0; m < movePaths.length; m++) byOldPath.set(movePaths[m], m);
         for (let i = 0; i < this._state.entries.length; i++) {
           const e = this._state.entries[i];
-          const key = e.fullPath || e.path;
+          // ADR-222：行键空间单一事实源 = entryKey（fullPath 缺失回落 path）。
+          // 原先此处另写 `e.fullPath || e.path` 表达式，与契约同源但属重复派生点——
+          // 将来若键规则再演进（如加类型前缀）本处会静默漂移。
+          const key = entryKey(e);
           const idx = byOldPath.get(key);
           if (idx === undefined || r.rejected.some((x) => x.index === idx)) continue;
           this._state.entries[i] = computeMovedEntry(e, targetDir, filesRoot);
@@ -890,7 +919,9 @@ export class AppTree extends WebComponentBase {
           ),
       );
 
-      this._clearSelection();
+      // 全失败时不清选中：失败意味着路径都还在磁盘上，清空选中只会让用户失去重试起点
+      // （部分失败则清——成功项已从磁盘移除，残留选中指向已不存在的路径才是真危险）
+      if (r.fulfilled.length > 0) this._clearSelection();
       // P2 修复（审核，缓存一致性）：删除后先清扫描缓存再加载——原 _load() 命中
       // 30s scanCache（Go 侧 DeleteModelFile 无 InvalidateCache，watcher 清缓存异步），
       // 刚删除的文件会立即"复活"显示。与 bus-handlers.reload() 的 ClearScanCache 链对齐。
@@ -904,10 +935,12 @@ export class AppTree extends WebComponentBase {
       await this._load();
       if (this._guard.stale(gen)) return; // P2-1 root 切换/新加载已发起 → 丢弃过期渲染
       this._renderTree();
+      // 类型随结果走：全部失败却报「成功」是误导性反馈（审核 P2）；对齐 _executeTreeMove
+      // 与 toggleFolderBatch 的 fail>0 → warn 口径
       toast(
         `${t("tree.deleted", { ok: r.fulfilled.length, fail: r.rejected.length || 0 })}`,
         TOAST_MS.normal,
-        "success",
+        r.rejected.length > 0 ? "warn" : "success",
       );
     } catch (e) {
       // P2 修复：getApp/删除/刷新任一环节失败都要有出口，避免 unhandled rejection 静默

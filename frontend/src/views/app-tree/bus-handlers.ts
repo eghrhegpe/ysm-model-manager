@@ -17,6 +17,7 @@ import { RESOURCE_TYPE_LABELS, RESOURCE_TYPES } from "@/utils/resource/types.ts"
 import { backendGetApp } from "@/views/backend-deps.ts";
 import { withFooterProgress } from "./footer-progress.ts";
 import type { AppTree } from "./index.ts";
+import { invalidateBuildCache } from "./render.ts";
 import { batchRenameTpl } from "./tpl-batch-rename.ts";
 
 function atBeStale(vm: AppTree, gen: number): boolean {
@@ -232,10 +233,19 @@ async function atBeHandleDirRecycle(vm: AppTree, dir: string): Promise<void> {
       const p = files[x.index] || "";
       errors.push(`${p.split(/[/\\]/).pop()}: ${friendlyError(x.reason)}`);
     }
-    try {
-      await RemoveDir(absDir);
-    } catch (ex) {
-      dbg("tree-remove-dir-failed", { dir: absDir, error: String(ex) });
+    // P0 修复（审核 2026-10-15）：RemoveDir 必须 gate 在「全部回收成功」上。回收失败
+    // （回收站根不可判定／无写权限／磁盘满）时残留文件仍在目录内，无条件 os.RemoveAll
+    // 会把本该可恢复的文件变成**永久删除**（不进回收站），而 toast 仍报「已回收 N 个」
+    // 误导用户以为文件还在磁盘上可以重试。有残留 → 留壳等用户重试；全成功 → 清理空壳。
+    if (r.rejected.length === 0) {
+      try {
+        await RemoveDir(absDir);
+      } catch (ex) {
+        // 文件已入回收站，只剩空壳残留：树里多一个空文件夹是 cosmetic，但静默 dbg
+        // 会让用户以为回收彻底失败（实际可恢复）——升 warn toast。
+        toast(`${t("tree.dirRecycleShellFail")}（${friendlyError(ex)}）`, TOAST_MS.normal, "warn");
+        dbg("tree-remove-dir-failed", { dir: absDir, error: String(ex) });
+      }
     }
     vm.selectState.keys.clear();
     vm.selectState.lastKey = null;
@@ -358,7 +368,10 @@ async function runBatchToggle(
     const action = enable ? t("tree.enable") : t("tree.disable");
     // ① 乐观翻转：整库批量动辄数千项，等全部 IPC 落定才动 UI（旧行为）等于几十秒假死
     for (const e of targets) e.banned = !e.banned;
-    if (targets.length) vm._renderTree();
+    if (targets.length) {
+      invalidateBuildCache(vm.treeRenderCtx);
+      vm._renderTree();
+    }
     // ② 进度 + 回滚守卫代数（须在 await 前捕获：`stale(gen)` = `gen !== current`，await 后取恒 false）
     const rollbackGen = vm._guard.current;
     // 批处理收口（2026-10-13）：BATCH=8 手抄循环迁 batch-all-settled（2026-09 曾
@@ -385,6 +398,7 @@ async function runBatchToggle(
         const e = targets[x.index];
         if (e) e.banned = !e.banned;
       }
+      invalidateBuildCache(vm.treeRenderCtx);
     }
     if (r.fulfilled.length > 0) {
       await reload(vm);

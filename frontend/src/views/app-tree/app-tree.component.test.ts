@@ -114,6 +114,77 @@ describe("app-tree 生命周期配对", () => {
     expect(el.shadowRoot?.getElementById("tree")?.scrollTop).toBe(120);
     unmountElement(el);
   });
+
+  it("搜索态选中态剪枝：不可见选中项被剔除，底部计数回落（2026-10-15 审核 P2）", async () => {
+    // 病灶：selectState.keys 是全量集合，搜索只改可见行不清选中 → 底部报「已选 3 个」
+    // 而树里 0 行高亮，键盘 Delete 直取 keys 全量 → 确认框说 3 个、删的却是看不见的文件
+    loadSpy.mockResolvedValue({
+      filesRoot: "/repo",
+      entries: [0, 1, 2].map((i) => ({
+        name: `abc_model_${i}.ysm`,
+        path: `abc_model_${i}.ysm`,
+        fullPath: `/repo/abc_model_${i}.ysm`,
+        size: 1024,
+        modTime: 0,
+        banned: false,
+        type: "ysm",
+      })),
+    });
+    const el = mountCustomElement("app-tree") as unknown as AppTree;
+    await waitFor(() => el.shadowRoot?.getElementById("tree") !== null);
+    await sleep(120);
+
+    el.selectState.keys.add("/repo/abc_model_0.ysm");
+    el.selectState.keys.add("/repo/abc_model_1.ysm");
+    el.selectState.keys.add("/repo/abc_model_2.ysm");
+    el.selectState.lastKey = "/repo/abc_model_0.ysm";
+    el._renderTree();
+    expect(el.selectState.keys.size).toBe(3);
+
+    // 搜索词过滤掉全部 3 个 → 可见文件行为 0 → 选中集必须被剪空
+    const srch = el.shadowRoot?.getElementById("srch") as HTMLInputElement;
+    srch.value = "zzz-no-match";
+    srch.dispatchEvent(new Event("input", { bubbles: true }));
+    await sleep(300); // 150ms 防抖 + 重渲
+
+    expect(el.selectState.keys.size, "不可见选中项必须被剔除").toBe(0);
+    expect(el.selectState.lastKey, "lastKey 指向不可见项时必须置空").toBeNull();
+    const stat = el.shadowRoot?.getElementById("ftr-stat");
+    expect(stat?.getAttribute("data-count")).toBe("0");
+    expect(stat?.textContent ?? "", "底部不能继续报「已选 3 个」").not.toContain("已选");
+
+    // 清除搜索词 → 可见行回归，但被剪掉的选中不可复活（作用域已失效，静默复活才是陷阱）
+    srch.value = "abc";
+    srch.dispatchEvent(new Event("input", { bubbles: true }));
+    await sleep(300);
+    expect(el.selectState.keys.size).toBe(0);
+    unmountElement(el);
+  });
+
+  it("折叠不剪选中：折叠文件夹后其内选中项保留（重开仍可接着删）", async () => {
+    loadSpy.mockResolvedValue({
+      filesRoot: "/repo",
+      entries: [
+        { name: "abc_model_0.ysm", path: "abc_model_0.ysm", fullPath: "/repo/abc_model_0.ysm", size: 1, modTime: 0, banned: false, type: "ysm" },
+        { name: "b", path: "b/abc_model_1.ysm", fullPath: "/repo/b/abc_model_1.ysm", size: 1, modTime: 0, banned: false, type: "ysm" },
+      ],
+    });
+    const el = mountCustomElement("app-tree") as unknown as AppTree;
+    await waitFor(() => el.shadowRoot?.getElementById("tree") !== null);
+    await sleep(120);
+
+    // 展开 b/ 使子项可见，选中它
+    el.toggleDir("b");
+    el.selectState.keys.add("/repo/b/abc_model_1.ysm");
+    el._renderTree();
+    expect(el.selectState.keys.size).toBe(1);
+
+    // 折叠 b/（无搜索词）→ 子项从可见行消失，但选中**不被剪**
+    el.toggleDir("b");
+    el._renderTree();
+    expect(el.selectState.keys.size, "折叠不得剪选中").toBe(1);
+    unmountElement(el);
+  });
 });
 
 describe("updateStat 计数动画（2026-09 收债：先读后写 data-total）", () => {

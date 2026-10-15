@@ -10,12 +10,22 @@ auto_fields:
     - ComputeFileHash
     - EffectiveCacheTTL
     - GenerateRepoIndex
+    - HashIndex
+    - HashIndex.Lookup
+    - HashIndex.Prune
+    - HashIndex.Record
+    - HashIndex.Save
+    - HashIndexFor
+    - HashIndexPath
+    - HashIndexStatsSnapshot
     - InvalidateBrowseCache
     - InvalidateBrowsePath
     - InvalidateCache
     - InvalidatePath
     - ListModelAuthors
     - OnCacheInvalidated
+    - OpenHashIndex
+    - ResetHashIndexStats
     - ResetScanEngineStats
     - ScanBackend
     - ScanEngineStat

@@ -513,7 +513,7 @@ describe("app-tree index 入口生命周期（补位）", () => {
     expect(getToast()).toMatchObject({ type: "warn" });
   });
 
-  it("Delete 部分删除失败 → ok/fail 计数进 toast", async () => {
+  it("Delete 部分删除失败 → ok/fail 计数进 toast + 类型降级 warn", async () => {
     const el = await mountEl();
     el.selectState.keys.add("/repo/a.ysm");
     el.selectState.keys.add("/repo/b.ysm");
@@ -522,10 +522,25 @@ describe("app-tree index 入口生命周期（补位）", () => {
       .mockRejectedValueOnce(new Error("删除失败"));
     dispatchKey("Delete");
     await waitFor(() => toastCalls().some(([ev]) => ev === "toast:show"));
+    // 审核 P2（2026-10-15）：原先无条件 "success"——失败也报绿色成功，误导用户以为都删掉了
     expect(getToast()).toMatchObject({
       msg: t("tree.deleted", { ok: 1, fail: 1 }),
-      type: "success",
+      type: "warn",
     });
+  });
+
+  it("Delete 全部失败 → warn toast + 选中保留（可原地重试）", async () => {
+    const el = await mountEl();
+    el.selectState.keys.add("/repo/a.ysm");
+    el.selectState.keys.add("/repo/b.ysm");
+    (bindings.DeleteResourcePack as ReturnType<typeof vi.fn>).mockRejectedValue(
+      new Error("删除失败"),
+    );
+    dispatchKey("Delete");
+    await waitFor(() => toastCalls().some(([ev]) => ev === "toast:show"));
+    expect(getToast()).toMatchObject({ type: "warn" });
+    // 全失败 = 路径都在磁盘上，清空选中只会让用户失去重试起点
+    expect(el.selectState.keys.size, "全失败不得清选中").toBe(2);
   });
 
   it("modalConfirm 取消 → 不删除、选中保留", async () => {

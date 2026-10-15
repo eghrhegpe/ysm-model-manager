@@ -19,7 +19,7 @@ import { entryKey } from "./entry-key.ts";
 import { withFooterProgress } from "./footer-progress.ts";
 import type { AppTree } from "./index.ts";
 import type { TreeEntry } from "./loader.ts";
-import { getVsRows, type TreeRenderCtx } from "./render.ts";
+import { getVsRows, invalidateBuildCache, type TreeRenderCtx } from "./render.ts";
 
 // ===== 类型提级：AtTeCtx 收纳上下文 =====
 // 注：原 disposed 字段已删——ctx 为闭包局部变量，无处可置 true，5 处 `if (ctx.disposed)
@@ -106,6 +106,7 @@ function atTeBindSelCheckboxes(ctx: AtTeCtx, e: MouseEvent, target: HTMLElement)
       const entry = vm.entries.find((e) => entryKey(e) === fullPath);
       if (!entry) return false;
       entry.banned = !entry.banned;
+      invalidateBuildCache(vm.treeRenderCtx);
       return true;
     };
     if (flipLocal()) {
@@ -138,6 +139,7 @@ function atTeBindSelCheckboxes(ctx: AtTeCtx, e: MouseEvent, target: HTMLElement)
           const entry = vm.entries.find((e) => entryKey(e) === fullPath);
           if (entry) {
             entry.banned = !entry.banned;
+            invalidateBuildCache(vm.treeRenderCtx);
             vm._renderTree();
           }
         }
@@ -177,7 +179,11 @@ function atTeClickRowFolder(ctx: AtTeCtx, e: MouseEvent, fh: HTMLElement): boole
   e.stopPropagation();
   const dir = fh.dataset.dir;
   if (!dir) return true;
-  const isOpen = vm.snapshot.dirOpen[dir];
+  // ADR-334 第三读点：目录名恰为 `__proto__` 时裸 `dirOpen[dir]` 读到 Object.prototype
+  //（truthy）→ 判为已展开 → 点开不 emit model:select。对齐 index.toggleDir 与 render.flattenVisible。
+  const isOpen = Object.hasOwn(vm.snapshot.dirOpen, dir)
+    ? vm.snapshot.dirOpen[dir] === true
+    : false;
   vm.toggleDir(dir);
   vm._renderTree();
   if (!isOpen) {
@@ -497,6 +503,7 @@ async function toggleFolderBatch(fhEl: HTMLElement, vm: AppTree): Promise<void> 
     // ① 乐观翻转（单文件开关同款）：本地先翻 banned 位再重渲，IPC 在途即见结果。
     //    `.ck` 的 on/partial/空三态由 dirFlags 数据渲染派生，故重渲即得到正确视觉。
     for (const e of targetsToToggle) e.banned = !e.banned;
+    invalidateBuildCache(vm.treeRenderCtx);
     vm._renderTree();
     // ② 进度可见 + ③ 失败回滚 + 收尾（withFooterProgress 保证四条出口都清槽；
     //    回滚守卫代数必须在 **await 之前**捕获：`stale(gen)` 判据是 `gen !== current`，
@@ -527,10 +534,15 @@ async function toggleFolderBatch(fhEl: HTMLElement, vm: AppTree): Promise<void> 
     // 失败项本地回滚（代际守卫：期间切类型/重载 → 旧 entries 引用上的写是过期写，
     // 新树自会由新数据渲染自洽）。成功项不回滚：下面用 _load 取磁盘真值校正。
     if (fail > 0 && !vm._guard.stale(rollbackGen)) {
+      let dirty = false;
       for (const rej of r.rejected) {
         const e = targetsToToggle[rej.index];
-        if (e) e.banned = !e.banned;
+        if (e) {
+          e.banned = !e.banned;
+          dirty = true;
+        }
       }
+      if (dirty) invalidateBuildCache(vm.treeRenderCtx);
     }
     if (ok > 0) {
       // ⚠️ 不直接信本地翻转，reload 取真值防幽灵状态（单文件链同律）

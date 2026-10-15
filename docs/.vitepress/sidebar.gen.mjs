@@ -254,6 +254,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-348：两阶段扫描投影B1：持久哈希索引（size+mtime 双指纹免重读 SHA256）",
+        "link": "/adr/architecture/ADR-348-b1-size-mtime-sha256"
+      },
+      {
         "text": "ADR-347：go/sync 同步判定收敛单表（纯函数判定表 + 全信道测试矩阵）",
         "link": "/adr/architecture/ADR-347-sync-verdict-table"
       },
@@ -2608,6 +2612,10 @@ export const autoSidebar = [
           {
             "text": "README 登记处对账 check-readme-index.ts",
             "link": "/knowledge/scripts-readme-index"
+          },
+          {
+            "text": "设置持久化双轨与键台账",
+            "link": "/knowledge/settings-persistence"
           },
           {
             "text": "Vitest 环境切换规则",

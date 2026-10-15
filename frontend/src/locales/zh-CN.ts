@@ -1756,6 +1756,7 @@ export const zhCN = {
   "tree.dirRecycleConfirm": "确定将文件夹移入回收站？\n{dir}",
   "tree.dirRecycleOk": "移入回收站",
   "tree.recycledFailSuffix": "，失败 {fail} 个（{detail}）",
+  "tree.dirRecycleShellFail": "文件已入回收站，但空文件夹删除失败",
   "tree.webNoToggle": "网页版不支持启用/禁用模型",
   "tree.batchBusyWait": "⏳ 批量操作进行中，请稍候",
   "tree.toggleFail": "切换失败: {name}",

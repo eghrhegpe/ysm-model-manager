@@ -52,6 +52,12 @@ ${dropdownBaseCSS}
    加 dragging 类（renderTree draggingKeys 形参），dragend/drop 清——用户正拖着的
    行半透明，与「留在原地」的行明确区分；grid/list 两形态同规则 */
 .fl.dragging, .fl-list.dragging { opacity: .45; }
+/* 拖拽目标高亮（ADR-336 视觉三态之二）：命中文件夹行 = accent 左边框 + 底色加深；
+   无文件夹命中 = 根容器目标（inset 轮廓，不撑行高）。此前 drop-target 类**零 CSS 生产者**
+   ——拖源 .dragging 有样式、目标端零反馈，用户分不清「丢进子目录」还是「丢到仓库根」；
+   与 .list.droppable（外部文件导入，虚线 outline）区分开：树内移动用实线 inset */
+.fh.drop-target, .fh-list.drop-target { background: color-mix(in srgb, var(--accent) 16%, transparent); border-left-color: var(--accent); }
+.list.drop-target { background: color-mix(in srgb, var(--accent) 7%, transparent); box-shadow: inset 0 0 0 2px var(--accent); }
 /* 拖拽导入提示条（底部固定，始终可见） */
 .tree-drop-hint {
   display: none;
@@ -92,6 +98,7 @@ ${PULSE_DOT}
 .fl-list.flash { background: color-mix(in srgb, var(--status-success) 13%, transparent); }
 .fl.selected { background: color-mix(in srgb, var(--accent) 28%, transparent); border-left: 3px solid var(--accent); padding-left: 1px; }
 .fl.selected:hover { background: color-mix(in srgb, var(--accent) 38%, transparent); }
+.fl.ban { opacity: .55; }
 /* .fh.selected 已删除（2026-10-13）：文件夹不参与选中（无选中语义），folderRowHTML
    无 rowCls 形参，该规则历史零生产者；file 行选中态由 renderTree 按数据渲染产出 */
 /* 紧凑列表模式行高（受卡片密度驱动：--tree-row-list，与 render.ts rowHeightList 同源）——
@@ -126,6 +133,11 @@ ${PULSE_DOT}
 .fh .ck.partial { background: var(--sm-optional); }
 .fh .ck.partial::after { left: 7px; }
 .fl .nm { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family:var(--font-mono); }
+/* 行内重命名输入框（events.ts atTeStartRename 替换 .nm 原位）：必须继承 .nm 的 flex:1 与
+   mono 字体，否则退回浏览器默认 input 样式（白底黑字、默认内边距）撑破固定行高。
+   此前该类**零 CSS 生产者**（审核 P2）——双击重命名弹出与暗色主题冲突的原生控件。
+   同时覆盖 .fl/.fl-list 两形态（行高 28px/24px 各异，用 height:100% + border-box 自适应）。 */
+.rename-inp { flex: 1; min-width: 0; height: 100%; box-sizing: border-box; padding: 0 var(--sp-1); margin: 0; border: 1px solid var(--accent); border-radius: var(--radius-sm); background: var(--surf); color: var(--txt); font: inherit; font-family:var(--font-mono); outline: none; }
 /* .fl 与 .fh 同：.tag-author/.tag-work/.tag-date 外观与色标走共享 metaTagCSS（本串在下方插值），
    原 .nm-tag/.nm-bracket 别名选择器为死代码（renderDisplayName 只产出 .tag-*），2026-09 删除；
    scoped base 行同 .fh 侧冗余删除。 */

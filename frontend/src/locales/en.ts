@@ -1801,6 +1801,7 @@ export const en: Record<string, string> = {
   "tree.dirRecycleConfirm": "Move this folder to recycle bin?\n{dir}",
   "tree.dirRecycleOk": "Recycle",
   "tree.recycledFailSuffix": ", {fail} failed ({detail})",
+  "tree.dirRecycleShellFail": "Files recycled, but removing the empty folder failed",
   "tree.webNoToggle": "Enable/disable is not supported on web",
   "tree.batchBusyWait": "⏳ Batch operation in progress, please wait",
   "tree.toggleFail": "Toggle failed: {name}",

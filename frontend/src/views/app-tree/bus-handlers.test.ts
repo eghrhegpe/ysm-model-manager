@@ -519,6 +519,37 @@ describe("bindBusEvents — 文件夹操作", () => {
     await new Promise((r) => setTimeout(r, 0));
 
     expect(toasts.some((t) => t.msg.includes("已回收 1 个文件") && t.msg.includes("失败 1 个"))).toBe(true);
+    // P0 回归（审核 2026-10-15）：有失败文件残留时不能 RemoveDir——否则残留文件被
+    // os.RemoveAll 永久删除（不进回收站），而 toast 仍报「已回收 N 个」误导用户重试。
+    expect(RemoveDirMock).not.toHaveBeenCalled();
+  });
+
+  it("dir:recycle 全部失败 → 不调 RemoveDir（防永久删除）", async () => {
+    const vm = makeVM();
+    await bind(vm);
+    modalConfirmMock.mockResolvedValue(true);
+    MoveToRecycleMock.mockRejectedValue(new Error("recycle root unavailable"));
+
+    bus.emit("dir:recycle", { dir: "旧目录" });
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(MoveToRecycleMock).toHaveBeenCalledTimes(2);
+    // 核心断言：失败不得升级为永久删除
+    expect(RemoveDirMock).not.toHaveBeenCalled();
+    expect(toasts.some((t) => t.msg.includes("已回收 0 个文件"))).toBe(true);
+  });
+
+  it("dir:recycle RemoveDir 失败 → warn toast（回收成功但空壳残留）", async () => {
+    const vm = makeVM();
+    await bind(vm);
+    modalConfirmMock.mockResolvedValue(true);
+    RemoveDirMock.mockRejectedValue(new Error("permission denied"));
+
+    bus.emit("dir:recycle", { dir: "旧目录" });
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(RemoveDirMock).toHaveBeenCalledTimes(1);
+    expect(toasts.some((t) => t.type === "warn" && t.msg.includes("失败"))).toBe(true);
   });
 
   // 2026-10-15：整目录入回收站是最长的破坏性链，补可见进度——

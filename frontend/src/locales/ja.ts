@@ -1799,6 +1799,7 @@ export const ja: Record<string, string> = {
   "tree.dirRecycleConfirm": "このフォルダをゴミ箱に移動しますか？\n{dir}",
   "tree.dirRecycleOk": "ゴミ箱へ",
   "tree.recycledFailSuffix": "、{fail} 件失敗（{detail}）",
+  "tree.dirRecycleShellFail": "ファイルはゴミ箱へ移動しましたが、空フォルダの削除に失敗しました",
   "tree.webNoToggle": "ウェブ版では有効化/無効化はサポートされていません",
   "tree.batchBusyWait": "⏳ バッチ処理中です。お待ちください",
   "tree.toggleFail": "切替に失敗: {name}",

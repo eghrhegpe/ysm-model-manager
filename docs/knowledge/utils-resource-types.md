@@ -172,6 +172,11 @@ status: active
 - **`extBelongsTo` 返回顺序为前端表插入序**（P4 观察：Go `ExtBelongsTo` 为注册表序，跨语言数组序不一致——当前前端无生产消费者，若未来 FE↔Go 精确对比需定义排序契约）
 - 一致性由 vitest 守护：`types.test.ts`（RESOURCE_TYPES/LABELS 与 JSON 对账、`AMBIGUOUS_EXTS` 派生一致、`resolveTypeSafe` 单归属/歧义/大小写、`VOXEL_RPC_BY_EXT` 全覆盖）+ `extensions.test.ts`（双向对账 JSON→前端 + 前端→JSON）+ `consistency.test.ts`（`types.ts`↔`extensions.ts` id 集合/扩展名全等）+ Go `registry_test.go`
 
+
+## 裁定记录
+
+- `2026-10-15`：类型显示名权威源 = locale（rtypeLabelOf 出口；Go 载荷 rtype_label 降为未登记 token 的兜底）；六类型定名源头对齐：EntityPlayer=角色模型、CustomAnim=自定义动作、StageAnim=场景动作、DefaultAnim=默认动作、mmd-shader=MMD 光影、fbx=FBX 模型/动画——注册表 name 与 zh 键值逐字相等，由 types.test.ts 归零闸守｜同屏两名（下拉 locale 名 / 结果表 Go 名）与 en/ja 中文裸奔同源于「双权威」；六处逐词漂移又让这些类型的中文显示名在 P0 归一后意外变更，需一次终审结清并锁死｜回退 = `frontend/src/utils/resource/types.ts|rtypeLabelOf`
+
 ## 相关
 
 - [resource_registry](./resource-registry.md) — `resource_types.json` 单一事实源 + Go 端加载

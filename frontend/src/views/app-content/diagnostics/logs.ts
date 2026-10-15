@@ -287,31 +287,40 @@ function dgLsRenderDiagGroups(
  * 无 Status 概念；现捕获层已从 Message 推断 Level，chips 遂有真实语义可比。
  * 命中域含 Tag：`[watcher]` 这类前缀成为独立可搜维度（Message 里也含，但字段化后语义明确）。
  */
-function dgLsFilterRuntimeLogs(logs: RuntimeLog[], root: ShadowRoot, cap: number): RuntimeLog[] {
+/** 读当前选中的级别 chip（未选中 → "all"） */
+function dgLsReadActiveFilter(root: ShadowRoot): string {
   const activeBtn = root.querySelector(".diag-log-fbtn.active");
-  const filter = activeBtn ? (activeBtn as HTMLElement).dataset.status : "all";
+  return activeBtn ? ((activeBtn as HTMLElement).dataset.status ?? "all") : "all";
+}
+
+/**
+ * 级别过滤。⚠️ chip 的 data-status 沿用操作日志的 Status 词汇（success/failed/warn/skipped），
+ * 而运行时日志是 Level 词汇（info/error/warn/debug）——两者**不同族**，须显式映射：
+ * success↔info、failed↔error、skipped↔debug、warn 是级别阈值（含更严重者）。
+ * LogLevel 是 string enum：比较前 String() 归一（成员值 = 字面量，行为不变）。
+ */
+function dgLsMatchesLevelFilter(l: RuntimeLog, filter: string): boolean {
+  if (filter === "all") return true;
+  const lv = String(l.Level || "info");
+  if (filter === "warn") return lv === "warn" || lv === "error" || lv === "fatal";
+  const want = filter === "failed" ? "error" : filter === "success" ? "info" : "debug";
+  return lv === want;
+}
+
+/** 搜索过滤：Message + Tag 拼接后不区分大小写匹配（Tag 字段化让 `[watcher]` 前缀成独立维度） */
+function dgLsMatchesSearch(l: RuntimeLog, search: string): boolean {
+  if (!search) return true;
+  const hay = `${l.Message ?? ""}\n${l.Tag ?? ""}`.toLowerCase();
+  return hay.includes(search);
+}
+
+function dgLsFilterRuntimeLogs(logs: RuntimeLog[], root: ShadowRoot, cap: number): RuntimeLog[] {
+  const filter = dgLsReadActiveFilter(root);
   const search = dgLsReadSearch(root);
   return logs
     .slice(-cap)
     .reverse()
-    .filter((l) => {
-      // 「全部」放行一切。⚠️ chip 的 data-status 沿用操作日志的 Status 词汇（success/failed/
-      // warn/skipped），而运行时日志是 Level 词汇（info/error/warn/debug）——两者**不同族**，
-      // 须显式映射：success↔info、failed↔error、skipped↔debug、warn 是级别阈值（含更严重者）。
-      // LogLevel 是 string enum：比较前 String() 归一（成员值 = 字面量，行为不变）。
-      if (filter !== "all") {
-        const lv = String(l.Level || "info");
-        if (filter === "warn") {
-          if (lv !== "warn" && lv !== "error" && lv !== "fatal") return false;
-        } else {
-          const want = filter === "failed" ? "error" : filter === "success" ? "info" : "debug";
-          if (lv !== want) return false;
-        }
-      }
-      if (!search) return true;
-      const hay = `${l.Message ?? ""}\n${l.Tag ?? ""}`.toLowerCase();
-      return hay.includes(search);
-    });
+    .filter((l) => dgLsMatchesLevelFilter(l, filter) && dgLsMatchesSearch(l, search));
 }
 
 /** 运行时日志状态图标：按推断 Level 映射（与操作日志 dgLsMakeStatusLabel 同口径；无 Level 时 note 兜底） */

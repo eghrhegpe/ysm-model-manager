@@ -105,11 +105,11 @@ status: active
 
 `fsutil.IsCrossDeviceErr` 按平台隔离：`go/fsutil/crossdevice_other.go` 判 `syscall.EXDEV`；`crossdevice_windows.go` 额外判 `ERROR_NOT_SAME_DEVICE(17)`（Windows 跨卷错误码与 POSIX EXDEV 不同，必须分平台）。统一收敛自 recycle 与 installer（installer 的 errnoIs 跨设备分支已复用该原语）。
 
-**`Restore` 同构拆分**（同一套注入点，跨设备分支对称）：`resolveRestoreDest`（守卫+落点+冲突后缀）/ `restoreSymlinkEntry`（历史符号链接条目专路：读链接目标 → 原位置重建 → 删回收站侧旧链接，重建失败回滚回收站侧链接，回滚失败在错误里披露「回收站条目已丢失」）/ `copyBackThenRemove`（复制回原位 + 半截清理 + 删源失败回滚）；`Restore` 只做编排。守卫顺序同样是「越权/根级 → `Rel` → `Join` → `IsInside` → `MkdirAll 父目录` → 冲突后缀」。
+**`Restore` 同构拆分**（同一套注入点，跨设备分支对称）：`resolveRestoreDest`（守卫+落点+冲突后缀）/ `restoreSymlinkEntry`（历史符号链接条目专路：读链接目标 → **先在原位置重建链接** → 成功后删回收站侧旧链接。⚠️ 顺序不可倒置（2026-10-15 锐评修正）：先删后建时若建链失败、而回滚重建复又失败，回收站条目**永久丢失**（用户看到「恢复失败」且回收站里也没有了）——先建后删让建链失败时 `src` 分毫未动、可直接重试；删旧链接失败则回滚落点，恢复「条目只在回收站」的可重试态。建链走注入点 `symlinkForRestore`，注入恒失败实现即可把该不变量钉进单测）/ `copyBackThenRemove`（复制回原位 + 半截清理 + 删源失败回滚）；`Restore` 只做编排。守卫顺序同样是「越权/根级 → `Rel` → `Join` → `IsInside` → `MkdirAll 父目录` → 冲突后缀」。
 
 ## 对外 API / 入口
 
-- `New(root) *TrashManager` / `RecycleDir()` — 管理器构造；`renameForMove`/`copyDirForMove` 为**结构体字段形式的测试注入点**（模拟 EXDEV 与复制中途失败），生产恒为 `os.Rename`/`copyDirRecursive`，包内无可变全局
+- `New(root) *TrashManager` / `RecycleDir()` — 管理器构造；`renameForMove`/`copyDirForMove`/`symlinkForRestore` 为**结构体字段形式的测试注入点**（模拟 EXDEV、复制中途失败与符号链接建链失败），生产恒为 `os.Rename`/`copyDirRecursive`/`os.Symlink`，包内无可变全局
 - `Move` / `MoveEx` — 移入回收站（`MoveEx` 返回 `MoveResult{Action, Reason}`，Action ∈ `recycled`/`deleted_link`/`error`；陷阱 #8：符号链接/硬链接直接删）
 - `List` — 列出回收站条目（ADR-038 D3.4：含 `ysm.json` 的目录合并为单一条目并 `SkipDir`，`Size` 用 `dirSize` 递归求和；其余按 `.ban` 或受支持扩展名过滤）
 - `Restore` — 恢复到原位（目标冲突自动加 `(1)` 后缀；先 `os.Rename`，失败则目录 `copyDirRecursive`、文件 `copyFile` 后删源，复制失败清理半截目标）

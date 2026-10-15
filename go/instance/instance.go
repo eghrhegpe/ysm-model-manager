@@ -315,7 +315,8 @@ func processOneResourceType(
 	//     恒无哈希 → Size 兜底），同大小异内容的 pack.zip 恒判 Synced——而同目录对的
 	//     internal/app|App.SyncResources（CLI instances list / 推送清单）早已注入
 	//     a.scanModelEntries 走哈希判定（D2′-a），两路对同一事实答案相反。scanFn 旁挂后
-	//     contentDiffers 走哈希腿，异内容 → Missing+Diverged，resolveItemMeta 按清单标行。
+	//     ContentVerdict（verdict.go 判定表，ADR-347）走哈希腿，异内容 → Missing+Diverged，
+	//     resolveItemMeta 按清单标行。
 	var result types.ResourceSyncResult
 	if isDirLevel {
 		result = ysmsync.SyncResourcesDirLevelScan(globalDir, instDir, rt.ID, scanner.ScanEntriesWithHit)

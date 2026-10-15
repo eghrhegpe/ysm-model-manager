@@ -346,8 +346,8 @@ func (e AppError) Error() string {
 
 // ResourceSyncResult 资源同步结果
 //
-// Diverged 是 Missing 的**子集**，不是第四桶（ADR-340-d2）：两侧同名同键、`contentDiffers`
-// 为真的条目路径。这一维原本在归并时被丢掉——「内容已变化（待推送更新）」与「仅全局有」
+// Diverged 是 Missing 的**子集**，不是第四桶（ADR-340-d2）：两侧同名同键、
+// `ContentVerdict`（verdict.go 判定表，ADR-347；原 contentDiffers）为真的条目路径。这一维原本在归并时被丢掉——「内容已变化（待推送更新）」与「仅全局有」
 // 同归 Missing（sync_diff.go 注释自陈），于是消费端无法回答「这次推送会覆盖几个实例侧
 // 已修改的副本」：批量推送静默覆盖用户的实例侧改动，一句不提。
 //

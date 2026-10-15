@@ -267,7 +267,7 @@ func TestDiffFolderContentsScan_HashDetectsDivergence(t *testing.T) {
 	}
 }
 
-// TestResourceDiff_DirFoldComparison 锁定 D2′-b 判据（contentDiffers 的 IsDir 分支）：
+// TestResourceDiff_DirFoldComparison 锁定 D2′-b 判据（ContentVerdict 的 IsDir 分支，verdict.go）：
 //   - 两侧目录条目均带折叠指纹 → 比指纹（异→Missing，消除「目录恒 Synced」盲区②）；
 //   - 指纹同 → Synced；
 //   - 任一侧指纹空（未折叠/旧数据）→ 回退恒 Synced（现状不回归）。

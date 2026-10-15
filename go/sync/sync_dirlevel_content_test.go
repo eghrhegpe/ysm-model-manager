@@ -128,7 +128,7 @@ func TestSyncResourcesDirLevel_DisabledAncestorSameUnit(t *testing.T) {
 
 // TestDirLevelResult_OversizeSameSize_Missing 锁 P0-2 诚实化在 dirLevel 的移植（D1 的第三条腿）：
 // 两侧同尺寸但都因超 MaxImportSize 被刻意跳过哈希时，Size 相等**不能**作为内容一致的证据
-// → 保守判 Missing（与文件级 contentDiffers 同判据）；未超限的同尺寸无哈希仍回退 Size 判 Synced。
+// → 保守判 Missing（与文件级 ContentVerdict 同判据）；未超限的同尺寸无哈希仍回退 Size 判 Synced。
 func TestDirLevelResult_OversizeSameSize_Missing(t *testing.T) {
 	oversize := int64(registry.MaxImportSize) + 1
 	globalUnits := map[string]dirLevelUnit{

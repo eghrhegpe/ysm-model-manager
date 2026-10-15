@@ -28,6 +28,11 @@ type FileDiffEntry struct {
 // 收集方式（Walk 走盘 / scanner 反推）由调用方决定，本函数只做差异聚合，
 // 故 DiffFolderContents 与 DiffFolderContentsScan 共用、零行为漂移（ADR-140 L3）。
 //
+// 内容判定委托判定表单点 verdict.go|ContentVerdict（ADR-347）：哈希优先、Size 兜底，
+// 与 ResourceDiff 同口径（本函数原有一份 contentStatus 内联实现，与 contentDiffers 同义
+// 两份散落——P3 收敛为单点，消除「加信道要人肉核对每份实现」的假绿温床）。
+// 信道元数据边界：夹内文件信道不设 Oversize 标记（collectFolderFiles 不置位）、
+// 无 FoldDigest（仅文件条目）→ 判定表如实降级到 hash/size 腿，行为不回归。
 // globalHash/instanceHash 为 relKey→摘要（可 nil）：两侧均命中哈希时比哈希，
 // 异哈希 → Diverged（消除「改内容不改大小」假绿，D2′-c 盲区③）；
 // 任一侧缺哈希（Walk 侧无摘要）→ 回退比 Size，Size 异亦 → Diverged；
@@ -35,15 +40,13 @@ type FileDiffEntry struct {
 // 收紧了大小口径，但 DiffFolderContents（无 scanFn 公共入口）两侧均走 Walk，
 // Size 相等即 Synced，行为等价无回归。
 func diffFolderContentsCore(globalFiles, instanceFiles map[string]string, globalHash, instanceHash map[string]string) []FileDiffEntry {
-	// contentStatus 判定两侧均存在的同名文件：哈希优先、Size 兜底。
+	// contentStatus 判定两侧均存在的同名文件：委托判定表单点（信道降级见函数头注释）
 	contentStatus := func(relKey, gPath, iPath string) types.SyncStatus {
-		if gh, ih := globalHash[relKey], instanceHash[relKey]; gh != "" && ih != "" {
-			if gh != ih {
-				return types.SyncStatusDiverged
-			}
-			return types.SyncStatusSynced
-		}
-		if gSize, iSize := fsutil.FileSize(gPath), fsutil.FileSize(iPath); gSize != iSize {
+		differs, _ := ContentVerdict(
+			DiffEntry{Path: gPath, Size: fsutil.FileSize(gPath), Hash: globalHash[relKey]},
+			DiffEntry{Path: iPath, Size: fsutil.FileSize(iPath), Hash: instanceHash[relKey]},
+		)
+		if differs {
 			return types.SyncStatusDiverged
 		}
 		return types.SyncStatusSynced

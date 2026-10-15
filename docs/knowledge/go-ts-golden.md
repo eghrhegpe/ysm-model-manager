@@ -76,6 +76,7 @@ auto_fields:
     - RESOURCE_TYPE_LABELS
     - RESOURCE_TYPES
     - rtypeGroupLabelOf
+    - rtypeLabelKeyOf
     - rtypeLabelOf
     - ShouldHashExt
     - StorageSubDir

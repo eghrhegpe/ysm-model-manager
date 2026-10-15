@@ -284,7 +284,7 @@
 | 用户意图 | 首选卡 | 红线警告 | 主 ADR(如有) |
 |----------|--------|----------|----------|
 | 仓库审计、健康分 | [扫描核心 go/scanner](./go-scanner.md) | - | - |
-| 冲突处理 conflict.go | [整合包同步 go/sync](./go-sync.md) | - | ADR-064, ADR-296, ADR-340, ADR-342, ADR-344, ADR-345 |
+| 冲突处理 conflict.go | [整合包同步 go/sync](./go-sync.md) | - | ADR-064, ADR-296, ADR-340, ADR-342, ADR-344, ADR-345, ADR-347 |
 | 待推送 / 可拉取 / 已禁用 / 实例资源 | [整合包同步页 app-sync-manager](./app-sync-manager.md) | - | - |
 | 多线程统计角标、网页版导入 | [工具栏搜索编排 toolbar-search](./toolbar-search.md) | - | - |
 | 骨骼数怎么来的 | [MMD 几何统计解析](./go-geometry-mmd-stats.md) | .vrm/.zip 在 MMD 族下无统计链路（CanParse 只认 .pmx/.pmd） | - |
@@ -312,7 +312,7 @@
 | 诊断页、仓库体检、冲突 / 去重 | [诊断页 diagnostics](./app-content-diagnostics.md) | 去重 / 体检必须经 diagnostics 页发起，禁止在其他页直接调 doDedup | - |
 | 整合包分类、路由、location 路由 | [分类路由与回归护栏](./classify-routing.md) | 资源整合包分类必须走 go/packs/classify.go 的 ClassifyResource，前端禁止手写分类逻辑 | ADR-093 |
 | 整合包实例、版本实例、VersionInstance | [整合包实例 go/instance](./go-instance.md) | 整合包实例同步必须走 go/instance 的 ysmsync.SyncResources，禁止在 app 层手写同步逻辑 | - |
-| 整合包同步、推送 / 拉取 | [整合包同步 go/sync](./go-sync.md) | 整合包同步必须走 go/sync 的 diff+hash 双阶段，禁止在 app 层手写同步逻辑 | ADR-064, ADR-296, ADR-340, ADR-342, ADR-344, ADR-345 |
+| 整合包同步、推送 / 拉取 | [整合包同步 go/sync](./go-sync.md) | 整合包同步必须走 go/sync 的 diff+hash 双阶段，禁止在 app 层手写同步逻辑 | ADR-064, ADR-296, ADR-340, ADR-342, ADR-344, ADR-345, ADR-347 |
 | 整合包同步页、推送 / 拉取资源 | [整合包同步页 app-sync-manager](./app-sync-manager.md) | app-sync-manager 的同步状态渲染必须经 _gen 单点生成，禁止各列各自查询状态 | - |
 | 重链接 RelinkDir 整夹替换 | [重链接 go/sync RelinkDir（ADR-342 四件套）](./go-sync-relink.md) | - | - |
 | 资历最深、老模型、仓库评分 | [资历最深模型 oldest-models](./oldest-models.md) | 资历排行必须经 oldest-models.ts 统一计算，禁止各页面各自实现评分逻辑 | - |
@@ -345,7 +345,7 @@
 | SearchModels 数值筛选 | [Web Worker 模型统计层 model-stats](./model-stats.md) | - | ADR-218, ADR-219 |
 | SearchModels、adv-filter、网页版降级 | [搜索筛选编排 search](./search.md) | - | - |
 | sync 扫盘缓存 hashed 维度 | [同步缓存失效配对契约（go/sync × go/instance × 写面派生闸）](./go-sync-cache-pairing.md) | - | ADR-269 |
-| sync_diff / sync_hash / sync_push / sync_relink | [整合包同步 go/sync](./go-sync.md) | - | ADR-064, ADR-296, ADR-340, ADR-342, ADR-344, ADR-345 |
+| sync_diff / sync_hash / sync_push / sync_relink | [整合包同步 go/sync](./go-sync.md) | - | ADR-064, ADR-296, ADR-340, ADR-342, ADR-344, ADR-345, ADR-347 |
 | SyncResources / SyncResourcesWithConfig 资源级 diff | [资源/文件夹级同步 diff（go/sync 拆分）](./go-sync-resource-diff.md) | 同步判定必须经 go/sync 的 diff+hash 双阶段，app 层禁手写同步逻辑 | - |
 | SyncResourcesDirLevel / DirLevelScan 文件夹级同步 | [资源/文件夹级同步 diff（go/sync 拆分）](./go-sync-resource-diff.md) | - | - |
 | SyncToggleStatus 启禁同步 | [启禁状态同步 go/sync SyncToggleStatus（ADR-345 载体识别）](./go-sync-toggle.md) | 启禁状态同步必须走 go/sync SyncToggleStatus，app 层禁止手写 rename 循环 | - |

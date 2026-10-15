@@ -19,7 +19,8 @@ import (
 type ScanEntriesFn func(dir string) ([]types.ModelEntry, bool)
 
 // dirLevelUnit 文件夹级同步单元（一侧）：身份 key → 单元。
-// 携带内容字段是为了复用 ResourceDiff/contentDiffers 做内容级判定（ADR-344 D1）——
+// 携带内容字段是为了复用 ResourceDiff/ContentVerdict（verdict.go 判定表，ADR-347）
+// 做内容级判定（ADR-344 D1）——
 // 原实现把单元表做成 map[string]string 只比 key 存在性，仓库侧改过内容的平铺模型文件
 // （身份键相同）恒判 Synced，面板「已同步」不可信、行内无推送按钮（推了等于没推）。
 // 字段导出仅为满足 go-cmp（sync_dirlevel_scan_test.go 以 cmp.Equal 锁两信道等价）。
@@ -33,9 +34,9 @@ type dirLevelUnit struct {
 	Hash string
 	// Oversize 该文件因超 MaxImportSize（>500MB）被**刻意跳过哈希**（bug-chronicle #36）。
 	// 与「空 Hash 但设计上不哈希」区分开：超限文件的**同尺寸不足以证明内容一致**
-	// （改内容可保持同尺寸），故 contentDiffers 对其不回退 Size 谎报 Synced，而保守判
-	// 「可能不同」（P0-2 诚实化）。与文件级信道 DiffEntry.Oversize 同口径同判据——
-	// 不移植这条腿，ADR-344 宣称的「同一契约」就只搬了 Hash/Size 两条。
+	// （改内容可保持同尺寸），故 ContentVerdict（oversize 信道）对其不回退 Size 谎报
+	// Synced，而保守判「可能不同」（P0-2 诚实化）。与文件级信道 DiffEntry.Oversize 同口径
+	// 同判据——不移植这条腿，ADR-344 宣称的「同一契约」就只搬了 Hash/Size 两条。
 	Oversize bool
 }
 
@@ -144,9 +145,10 @@ func syncResourcesDirLevel(globalDir, instanceDir, rtype string, scanFn ScanEntr
 	return result
 }
 
-// dirLevelResult 归并两侧单元表出同步结果：内容级判定**复用 ResourceDiff**
-// （ADR-064 单点对比：哈希优先、无哈希回退 Size），不再手写「键存在即 Synced」（ADR-344 D1）。
-// 目录单元两侧均无折叠指纹（scan 信道产不出，见 ADR-344 D2）→ contentDiffers 判 Synced，
+// dirLevelResult 归并两侧单元表出同步结果：内容级判定**复用 ResourceDiff/ContentVerdict**
+// （ADR-064 单点对比 + ADR-347 判定表：哈希优先、无哈希回退 Size），不再手写「键存在即
+// Synced」（ADR-344 D1）。
+// 目录单元两侧均无折叠指纹（scan 信道产不出，见 ADR-344 D2）→ 判定表 none 信道判 Synced，
 // 即目录单元仍是存在性语义，其内容分叉由展开层（DiffFolderContentsScan → 子文件
 // missing/diverged → 容器聚合）承担。
 func dirLevelResult(globalUnits, instanceUnits map[string]dirLevelUnit) types.ResourceSyncResult {

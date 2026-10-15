@@ -62,6 +62,7 @@ auto_fields:
     - resourceTypesById
     - ResourceTypeVariant
     - rtypeGroupLabelOf
+    - rtypeLabelKeyOf
     - rtypeLabelOf
     - shortLabelOf
     - typeIconOf

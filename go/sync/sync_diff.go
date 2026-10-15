@@ -5,6 +5,8 @@
 // 本文件是唯一实现）——靠手工对齐口径漂移，近三轮连环 bug（深度守卫 /
 // pack.mcmeta 门控 / FindInstDir 兜底）均为其代价。
 // 现收敛为本文件单点实现，调用方只负责收集条目。
+// 内容判定单点 = verdict.go|ContentVerdict（ADR-347：旧 contentDiffers 与本文件同源
+// 收敛，夹内逐文件判定 diffFolderContentsCore 亦委托同一单点）。
 package sync
 
 import (
@@ -24,14 +26,14 @@ type DiffEntry struct {
 	Hash string
 	// Oversize 该文件因超 MaxImportSize（>500MB）被**刻意跳过哈希**（bug-chronicle #36）。
 	// 与 Hash 空但「设计上不哈希/无 scanFn」区分开：超限文件的同尺寸**不能**作为内容一致
-	// 的证据（改内容可保持同尺寸），故 contentDiffers 对其不再回退 Size 判 Synced，而是
+	// 的证据（改内容可保持同尺寸），故 ContentVerdict 对其不再回退 Size 判 Synced，而是
 	// 保守判「可能不同」（P0-2 诚实化，消灭 >500MB 静默假绿）。collect 按 info.Size() 设位。
 	Oversize bool
 	// FoldDigest 目录条目的「结构折叠指纹」（D2′-b / ADR-269，闭盲区②）：
 	// collect 在 Walk 内对该 pack 文件夹下的全部子文件（含被 IsResourceAllowed 过滤、
 	// 不成独立条目的 .png/.mcmeta 等）以「相对路径 + 大小」做顺序无关的 FNV 累积，
 	// 形如 "hex(sum):count"。纹理/子文件的增删、改名、改大小都会翻转指纹 →
-	// contentDiffers 判 Missing。零新 I/O（复用 Walk 已得 os.FileInfo）、不依赖哈希
+	// ContentVerdict 判 Missing。零新 I/O（复用 Walk 已得 os.FileInfo）、不依赖哈希
 	// （scanFn=nil 的 UI 路径亦生效）。诚实局限：仅改字节不改大小（同尺寸重编码纹理）
 	// 不在指纹内——逐文件哈希属热路径现算，触 hashlock 红线，故 D2′-b 不覆盖。
 	// 空=文件条目 / 未折叠目录（回退恒 Synced，不回归）。
@@ -45,6 +47,9 @@ type DiffEntry struct {
 //   - 仅全局有 → Missing
 //   - 仅实例有 → Extra
 //
+// 内容判定统一走 verdict.go|ContentVerdict 单点（ADR-347：信道强度显式、全信道矩阵
+// verdict_matrix_test.go 锁语义）；本函数只负责四桶归并（键存在性 + 排序确定性）。
+//
 // Diverged（ADR-340-d2）与 Missing 是**子集关系**而非互斥桶：前两者（两侧均有、内容不同）
 // 同时进 Missing（保持既有归属，旧消费者零影响）与 Diverged（补回「待推送更新」这一维）。
 // 消费端据此分辨「新建」与「覆盖实例侧已修改副本」——后者是用户侧不可逆的损失，
@@ -55,7 +60,7 @@ func ResourceDiff(global, instance map[string]DiffEntry) types.ResourceSyncResul
 	result := types.ResourceSyncResult{}
 	for key, g := range global {
 		if i, exists := instance[key]; exists {
-			if contentDiffers(g, i) {
+			if differs, _ := ContentVerdict(g, i); differs {
 				result.Diverged = append(result.Diverged, g.Path)
 				result.Missing = append(result.Missing, g.Path)
 			} else {
@@ -75,29 +80,4 @@ func ResourceDiff(global, instance map[string]DiffEntry) types.ResourceSyncResul
 	sort.Strings(result.Extra)
 	sort.Strings(result.Diverged)
 	return result
-}
-
-// contentDiffers 判定两侧同名条目内容是否不同（D2′-a/b / ADR-269）：
-//   - 目录条目：两侧均带折叠指纹（D2′-b）→ 比指纹（异即不同，闭盲区②）；
-//     任一侧指纹空（未折叠）→ 视为相同（回退恒 Synced，不回归旧态）；
-//   - 文件两侧均算出哈希 → 比哈希（异哈希即不同，即便 Size 相同——消除「改内容不改大小」的假绿）；
-//   - 否则回退比 Size（空哈希：>500MB 大 zip / 非 hashable / 无 scanFn 旧调用 → 现状语义不回归）。
-func contentDiffers(g, i DiffEntry) bool {
-	if g.IsDir || i.IsDir {
-		if g.FoldDigest != "" && i.FoldDigest != "" {
-			return g.FoldDigest != i.FoldDigest
-		}
-		return false
-	}
-	if g.Hash != "" && i.Hash != "" {
-		return g.Hash != i.Hash
-	}
-	// P0-2（诚实化）：任一侧因超限（>MaxImportSize）被跳过哈希 → 同尺寸不足以验证内容
-	// （改内容可保持同尺寸），不再回退 Size 谎报 Synced，保守判「可能不同」（待推送）。
-	// 仅对 collect 明确标记 Oversize 的条目生效；非 hashable / 无 scanFn 的空哈希维持
-	// 下方 Size 兜底（其语义本就按大小判，非静默假绿）。
-	if g.Oversize || i.Oversize {
-		return true
-	}
-	return g.Size != i.Size
 }

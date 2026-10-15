@@ -62,24 +62,82 @@ interface BeatState {
   currentEnergy: number;
 }
 
+/** 检测器运行参数（createBeatDetector 内 opts 已归一） */
+interface BeatConfig {
+  threshold: number;
+  minIntervalMs: number;
+  historySize: number;
+  quantizeTolerance: number;
+  quantizeEnabled: boolean;
+  initialBpm: number;
+}
+
+/** 滑动窗口更新：压入当前能量，返回窗口均值 */
+function pushBeatEnergy(state: BeatState, normalized: number, historySize: number): number {
+  state.energyHistory.push(normalized);
+  state.energySum += normalized;
+  if (state.energyHistory.length > historySize) {
+    // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
+    state.energySum -= state.energyHistory.shift()!;
+  }
+  return state.energySum / state.energyHistory.length;
+}
+
+/** 触发节拍：记时 + 算 BPM（量化可选）+ 触发回调（回调抛错不阻断检测） */
+function triggerBeat(
+  state: BeatState,
+  now: number,
+  callbacks: Array<() => void>,
+  cfg: BeatConfig,
+): void {
+  state.isBeat = true;
+  state.lastBeatTime = now;
+  state.beatTimes.push(now);
+  // 保留最近 16 次节拍用于 BPM 计算
+  if (state.beatTimes.length > 16) state.beatTimes.shift();
+  // 计算 BPM
+  if (state.beatTimes.length >= 2) {
+    const intervals: number[] = [];
+    for (let i = 1; i < state.beatTimes.length; i++) {
+      intervals.push(state.beatTimes[i] - state.beatTimes[i - 1]);
+    }
+    const avgIntervalMs = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+    const rawBpm = avgIntervalMs > 0 ? 60000 / avgIntervalMs : cfg.initialBpm;
+    // BPM 量化
+    state.bpm = cfg.quantizeEnabled
+      ? quantizeBpm(rawBpm, cfg.quantizeTolerance, cfg.initialBpm)
+      : rawBpm;
+  }
+  // 触发回调
+  for (const cb of callbacks) {
+    try {
+      cb();
+    } catch {
+      /* 回调抛错不阻断检测 */
+    }
+  }
+}
+
 /**
  * 构建节拍 detector。
  * 每次 build 调用一次。
  */
 export function createBeatDetector(opts: BeatDetectorOptions = {}) {
-  const threshold = opts.threshold ?? 1.3;
-  const minIntervalMs = opts.minIntervalMs ?? 250;
-  const historySize = opts.historySize ?? 43;
-  const quantizeTolerance = opts.quantizeTolerance ?? 5;
-  const quantizeEnabled = opts.quantizeEnabled ?? true;
-  const initialBpm = opts.initialBpm ?? 120;
+  const cfg: BeatConfig = {
+    threshold: opts.threshold ?? 1.3,
+    minIntervalMs: opts.minIntervalMs ?? 250,
+    historySize: opts.historySize ?? 43,
+    quantizeTolerance: opts.quantizeTolerance ?? 5,
+    quantizeEnabled: opts.quantizeEnabled ?? true,
+    initialBpm: opts.initialBpm ?? 120,
+  };
 
   const state: BeatState = {
     energyHistory: [],
     energySum: 0,
     lastBeatTime: performance.now(),
     beatTimes: [],
-    bpm: initialBpm,
+    bpm: cfg.initialBpm,
     phase: 0,
     isBeat: false,
     currentEnergy: 0,
@@ -112,52 +170,16 @@ export function createBeatDetector(opts: BeatDetectorOptions = {}) {
     const normalized = clamp01(energy);
     state.currentEnergy = normalized;
 
-    // 滑动窗口更新
-    state.energyHistory.push(normalized);
-    state.energySum += normalized;
-    if (state.energyHistory.length > historySize) {
-      // biome-ignore lint/style/noNonNullAssertion: 确定性断言(构建期不变量/窄化逃生)
-      state.energySum -= state.energyHistory.shift()!;
-    }
-
-    // 滑动均值
-    const avg = state.energySum / state.energyHistory.length;
+    // 滑动窗口更新 + 均值
+    const avg = pushBeatEnergy(state, normalized, cfg.historySize);
 
     // 节拍检测：能量 > 均值 × threshold 且距上次节拍 > minInterval
     const now = performance.now();
     const timeSinceLastBeat = now - state.lastBeatTime;
-    const isEnergyPeak = avg > 0 && normalized > avg * threshold;
+    const isEnergyPeak = avg > 0 && normalized > avg * cfg.threshold;
 
-    if (isEnergyPeak && timeSinceLastBeat >= minIntervalMs) {
-      // 触发节拍
-      state.isBeat = true;
-      state.lastBeatTime = now;
-      state.beatTimes.push(now);
-      // 保留最近 16 次节拍用于 BPM 计算
-      if (state.beatTimes.length > 16) state.beatTimes.shift();
-      // 计算 BPM
-      if (state.beatTimes.length >= 2) {
-        const intervals: number[] = [];
-        for (let i = 1; i < state.beatTimes.length; i++) {
-          intervals.push(state.beatTimes[i] - state.beatTimes[i - 1]);
-        }
-        const avgIntervalMs = intervals.reduce((a, b) => a + b, 0) / intervals.length;
-        const rawBpm = avgIntervalMs > 0 ? 60000 / avgIntervalMs : initialBpm;
-        // BPM 量化
-        if (quantizeEnabled) {
-          state.bpm = quantizeBpm(rawBpm, quantizeTolerance, initialBpm);
-        } else {
-          state.bpm = rawBpm;
-        }
-      }
-      // 触发回调
-      for (const cb of onBeatCallbacks) {
-        try {
-          cb();
-        } catch {
-          /* 回调抛错不阻断检测 */
-        }
-      }
+    if (isEnergyPeak && timeSinceLastBeat >= cfg.minIntervalMs) {
+      triggerBeat(state, now, onBeatCallbacks, cfg);
     } else {
       state.isBeat = false;
     }
@@ -174,7 +196,7 @@ export function createBeatDetector(opts: BeatDetectorOptions = {}) {
     state.energySum = 0;
     state.lastBeatTime = performance.now();
     state.beatTimes = [];
-    state.bpm = initialBpm;
+    state.bpm = cfg.initialBpm;
     state.phase = 0;
     state.isBeat = false;
     state.currentEnergy = 0;

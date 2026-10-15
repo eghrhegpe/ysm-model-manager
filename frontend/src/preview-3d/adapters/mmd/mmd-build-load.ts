@@ -128,6 +128,54 @@ export async function Stage1Input(c: Stage1Ctx): Promise<void> {
  *
  * @returns texBatch（路径→base64|null）+ texHashBatch（路径→hash，仅 ① 提供）
  */
+/** ① 带 meta（hash）的批量读取——可选能力，未实现则跳过 */
+async function readBatchWithMeta(
+  port: Stage1bCtx["effectivePort"],
+  texFiles: string[],
+  texBatch: Record<string, string | null>,
+  texHashBatch: Record<string, string>,
+): Promise<void> {
+  if (!port.readFileBytesBatchWithMeta) return;
+  const metaBatch = await port.readFileBytesBatchWithMeta(texFiles);
+  if (!metaBatch) return;
+  for (const p of texFiles) {
+    const entry = metaBatch[p];
+    if (!entry) continue;
+    texBatch[p] = entry.data;
+    if (entry.hash) texHashBatch[p] = entry.hash;
+  }
+}
+
+/** ② 无 hash 的批量补齐（仅对 ① 未覆盖的条目） */
+async function readBatchRest(
+  port: Stage1bCtx["effectivePort"],
+  texFiles: string[],
+  texBatch: Record<string, string | null>,
+): Promise<void> {
+  if (Object.keys(texBatch).length >= texFiles.length) return;
+  const rest = await port.readFileBytesBatch(texFiles);
+  for (const p of texFiles) {
+    if (!(p in texBatch) && rest[p] !== undefined) texBatch[p] = rest[p];
+  }
+}
+
+/** ③ 批量通道整体不可用（RPC 失败等）→ 并发分片逐个读，单条失败不阻塞 */
+async function readBatchFallbackConcurrent(
+  c: Stage1bCtx,
+  texFiles: string[],
+  texBatch: Record<string, string | null>,
+): Promise<void> {
+  void mmdDiag(c.effectivePort, "batch-read", c.dirPath, "warn", "批量读取失败，降级并发分片读取");
+  const fallbackResults = await concurrentMap(texFiles, async (p) => {
+    try {
+      return [p, await c.effectivePort.readFileBytes(p)] as const;
+    } catch {
+      return [p, null] as const;
+    }
+  });
+  for (const [p, v] of fallbackResults) texBatch[p] = v;
+}
+
 async function readTextureBytesWithFallback(
   c: Stage1bCtx,
   texFiles: string[],
@@ -138,37 +186,13 @@ async function readTextureBytesWithFallback(
 
   const port = c.effectivePort;
   try {
-    // ① 带 meta（hash）的批量读取——可选能力，未实现则跳过
-    if (port.readFileBytesBatchWithMeta) {
-      const metaBatch = await port.readFileBytesBatchWithMeta(texFiles);
-      if (metaBatch) {
-        for (const p of texFiles) {
-          const entry = metaBatch[p];
-          if (!entry) continue;
-          texBatch[p] = entry.data;
-          if (entry.hash) texHashBatch[p] = entry.hash;
-        }
-      }
-    }
-    // ② 无 hash 的批量补齐（仅对 ① 未覆盖的条目）
-    if (Object.keys(texBatch).length < texFiles.length) {
-      const rest = await port.readFileBytesBatch(texFiles);
-      for (const p of texFiles) {
-        if (!(p in texBatch) && rest[p] !== undefined) texBatch[p] = rest[p];
-      }
-    }
+    // ① 带 meta（hash）的批量读取 + ② 无 hash 补齐——同处一个 try（① 不抛错）
+    await readBatchWithMeta(port, texFiles, texBatch, texHashBatch);
+    await readBatchRest(port, texFiles, texBatch);
     return { texBatch, texHashBatch };
   } catch {
-    // ③ 批量通道整体不可用（RPC 失败等）→ 并发分片逐个读，单条失败不阻塞
-    void mmdDiag(port, "batch-read", c.dirPath, "warn", "批量读取失败，降级并发分片读取");
-    const fallbackResults = await concurrentMap(texFiles, async (p) => {
-      try {
-        return [p, await port.readFileBytes(p)] as const;
-      } catch {
-        return [p, null] as const;
-      }
-    });
-    for (const [p, v] of fallbackResults) texBatch[p] = v;
+    // ③ 批量通道整体不可用 → 并发分片兜底
+    await readBatchFallbackConcurrent(c, texFiles, texBatch);
     return { texBatch, texHashBatch };
   }
 }

@@ -281,6 +281,33 @@ if (jsResult.missing) {
   });
 }
 
+// ADR-001 §2 硬契约：bindings 必须以 `-ts` 生成（产出 .ts）；漏 `-ts` 会产出 .js，
+// 且 -clean 会清掉 git 跟踪的 .ts（2026-08-05 曾致 17 个 .ts 被换为 .js）。
+// 上游防线只拦「app.ts 没了」的形态；这里对产物目录做 fail-closed 断言：
+// 目录里不允许出现任何 .js/.mjs/.cjs——即便 app.ts 仍在（-clean=false 漏 -ts 的形态）也拦。
+const BINDINGS_JS_SUFFIXES = [".js", ".mjs", ".cjs"];
+const BINDINGS_ROOT = path.join(ROOT, "frontend/bindings");
+function findJsBindings() {
+  /** 产物目录内全部 JS 后缀文件（.ts/.d.ts 合法，不列入）。目录不存在视为空。 */
+  if (!fs.existsSync(BINDINGS_ROOT)) return [];
+  const found: string[] = [];
+  const walk = (dir: string) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (BINDINGS_JS_SUFFIXES.some((s) => entry.name.endsWith(s))) found.push(full);
+    }
+  };
+  walk(BINDINGS_ROOT);
+  return found.sort();
+}
+for (const p of findJsBindings()) {
+  issues.push({
+    type: "fatal",
+    message: `绑定产物混入 JS 后缀: ${path.relative(ROOT, p)}。bindings 只许 .ts/.d.ts；无 -ts 的 wails3 generate bindings 会产出 .js 并可能清掉跟踪的 .ts（ADR-001 §2 红线）。立即重跑 npm run generate:bindings 恢复。`,
+  });
+}
+
 // Go 有但 JS 没有，或 Go/JS 粗略 arity 不一致（签名漂移），或 arity 一致但参数类型漂移
 for (const [name, f] of Object.entries(goExports).sort(([a], [b]) => a.localeCompare(b))) {
   if (SERVER_INJECTED.has(name)) continue;

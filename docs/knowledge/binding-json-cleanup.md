@@ -79,6 +79,7 @@ use_when:
 pitfalls:
   - "新增 Wails 绑定禁止返回 string 承载 JSON——必须走 (T, error) struct 返回"
   - "generate:bindings -ts 必须带 -ts 后缀，漏带会产出 .js bindings"
+  - "bindings 目录出现 .js/.mjs/.cjs = 违规（binding-check 硬断言，契约测试 test_binding_check_shape 钉死）；app.ts 仍在也拦"
   - "豁免档前端必须收敛到单一类型化解析器，禁止散落 JSON.parse"
   - "binding-check 静态规则锁定 STRING_RETURN_ALLOWLIST"
   - "ReadPackEntry 已统一为 []byte，前端 base64 decode 收敛到单一工具函数"

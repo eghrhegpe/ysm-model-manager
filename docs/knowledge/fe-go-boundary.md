@@ -81,6 +81,7 @@ invariant_anchors:
 
 - 跨类型切换走 `switchExternal`（同源替换走 `switchTo`）；前端实现在 `frontend/src/preview-3d/menu/shell/switch.ts`。
 - 数据经 Wails 桥（`window.go`）消费；绑定统一 `cd frontend && npm run generate:bindings`（script 已内置 `-ts`；在根目录裸跑会 Missing script，无 `-ts` 会产出 `.js` 并清掉 git 跟踪的 `.ts`，回归红线）。
+- **产物形态硬断言**：`binding-check` 额外扫描 `frontend/bindings/` 全目录，出现任何 `.js`/`.mjs`/`.cjs` 即 `fatal` 非零退出（`.ts`/`.d.ts` 合法）。这堵住「`-clean=false` 漏 `-ts` → `app.ts` 仍在但旁边多了 `.js`」的形态——上游防线只看 `app.ts` 是否存在，看不见这个。行为钉死在 `tests/test_binding_check_shape.ts`。
 
 ## 相关
 

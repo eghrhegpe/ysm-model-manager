@@ -17,6 +17,7 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - AppConfig
+    - AppConfigPatch
     - AppError
     - AppError.Error
     - AppError.Unwrap

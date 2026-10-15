@@ -111,14 +111,14 @@ auto_fields:
     - App.RestartApplication
     - App.RevealInExplorer
     - App.SaveAppConfig
+    - App.SaveAppConfigPatch
     - App.SaveScreenshotFile
     - App.SaveThresholds
     - App.SaveWindowPosition
     - App.SaveWorkshopCreators
     - App.SaveWorkshopCreatorsBySite
     - App.SaveWorkshopPresetsBySite
-    - App.SaveWorkshopSites
-    - symbols_total: 121
+    - symbols_total: 122
 quick_groups:
   - 后端桥接与数据存储
 quick_intents:

@@ -11,6 +11,7 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - AppConfig
+    - AppConfigPatch
     - DedupConfig
     - DISK_KEY_PREFIX
     - diskFieldName

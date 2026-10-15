@@ -51,6 +51,7 @@ auto_fields:
     - App.RestartApplication
     - App.RevealInExplorer
     - App.SaveAppConfig
+    - App.SaveAppConfigPatch
     - App.SaveThresholds
     - App.SaveWindowPosition
     - App.ScanLocalAuthors

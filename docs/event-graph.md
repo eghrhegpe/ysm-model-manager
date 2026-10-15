@@ -84,12 +84,12 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| writeAppConfig | `frontend/src/views/config-write.ts` | 103 |
+| writeAppConfig | `frontend/src/views/config-write.ts` | 72 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| bindMcPathLabel | `frontend/src/views/app-sidebar/events.ts` | 364 |
+| bindMcPathLabel | `frontend/src/views/app-sidebar/events.ts` | 366 |
 
 ### `ctx:show`
 
@@ -236,7 +236,7 @@
 | cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 243 |
 | anActivateNavPage | `frontend/src/views/app-nav/index.ts` | 53 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 237 |
-| bindMcPathLabel | `frontend/src/views/app-sidebar/events.ts` | 361 |
+| bindMcPathLabel | `frontend/src/views/app-sidebar/events.ts` | 363 |
 | atTlBindRepoSwitch | `frontend/src/views/app-tree/toolbar-events.ts` | 88 |
 
 **订阅方（on）：**
@@ -342,8 +342,8 @@
 | runSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 398 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 230 |
 | relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 247 |
-| bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 97 |
-| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 339 |
+| bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 85 |
+| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 327 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 73 |
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 137 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 581 |

@@ -790,6 +790,55 @@ test.describe("诊断页 · 性能面板真实载荷渲染（ADR-262 D5）", () 
     for (const hint of SINGLE_BENCH_SAVED.hints) expect(got.text).not.toContain(hint);
   });
 
+  test("单模型结果：下钻按钮就位（连接键=relPath）+ 点击后跨到 trace 陈述缺席 + 趋势按类型口径", async ({
+    page,
+  }) => {
+    // 隔离：趋势基线读 perf-history，先清空才能断言「本类型 1 条历史 → 不足提示」
+    await page.evaluate(() => localStorage.clear());
+    await installCliMock(page, { "single-bench": { data: SINGLE_BENCH_SAVED } });
+    await setShadowValue(page, "diag-perf-model", "./ysm/player.ysm");
+    await clickBySelector(page, '[data-testid="diag-perf-run"]');
+    await waitForCount(page, ".perf-bar-row", SINGLE_BENCH_SAVED.stages.length);
+
+    // ① 下钻按钮挂在结果区头，连接键 = 载荷 relPath + rtype（单测锁匹配逻辑，e2e 锁真实渲染）
+    const drill = await page.evaluate(() => {
+      const root = document.querySelector("app-content")?.shadowRoot;
+      const btn = root?.querySelector('[data-testid="diag-drill-trace"]') as HTMLElement | null;
+      return {
+        present: !!btn,
+        path: btn?.dataset.drillPath ?? "",
+        format: btn?.dataset.drillFormat ?? "",
+      };
+    });
+    expect(drill.present).toBe(true);
+    expect(drill.path).toBe(SINGLE_BENCH_SAVED.identity.relPath);
+    expect(drill.format).toBe(SINGLE_BENCH_SAVED.identity.rtype);
+
+    // ② 趋势按类型口径：本类型仅 1 条历史 → 说「不足 2 条」，不画图（不混入其他类型装成有数据）
+    const trend = await page.evaluate(() => {
+      const root = document.querySelector("app-content")?.shadowRoot;
+      return root?.querySelector('[data-testid="diag-perf-single"] .perf-trend')?.textContent ?? "";
+    });
+    expect(trend).toContain("Fewer than 2 records");
+    expect(trend).not.toContain("Current baseline");
+
+    // ③ 点击下钻 → 跨到 logs/trace 面板；CLI 基准不写 trace（store 默认空）→ 缺席事实说清
+    await clickBySelector(page, '[data-testid="diag-drill-trace"]');
+    await expect
+      .poll(
+        () =>
+          page.evaluate(() => {
+            const root = document.querySelector("app-content")?.shadowRoot;
+            return root?.querySelector('[data-testid="diag-drill-miss"]')?.textContent ?? "";
+          }),
+        {
+          timeout: 5000,
+          message: "点击下钻后未出现缺席提示行——CLI 基准不写 trace，缺席事实必须说清而非静默空态",
+        },
+      )
+      .toContain(SINGLE_BENCH_SAVED.identity.relPath);
+  });
+
   test("单模型 pill：退化判决在真实浏览器里渲染红条与逐阶段明细", async ({ page }) => {
     // 合成退化样本：结构取自真实载荷，数字为构造的「超阈值退化」（真实夹具太小，落在噪声下限内）
     const regressed = {

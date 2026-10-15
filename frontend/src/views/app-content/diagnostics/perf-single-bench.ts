@@ -461,7 +461,7 @@ function singleBenchRenderBars(payload: SingleBenchPayload, esc: EscFn): string 
   // 下钻目标 = 同一模型在**前端 3D 预览**的实测 trace（两面板是两次独立观测，不做假对应）。
   // 只有单模型身份才有可用的连接键（relPath + rtype）；矩阵/目标集聚合态无可下钻的单一模型。
   const drillBtn = id?.relPath
-    ? `<div class="perf-drill-bar"><button type="button" class="btn-base perf-drill-btn" data-drill-trace data-drill-path="${esc(
+    ? `<div class="perf-drill-bar"><button type="button" class="btn-base perf-drill-btn" data-testid="diag-drill-trace" data-drill-trace data-drill-path="${esc(
         id.relPath,
       )}" data-drill-format="${esc(id.rtype)}" title="${esc(t("diagnostics.perfDrillTraceHint"))}">${UI_ICONS.performance} ${esc(
         t("diagnostics.perfDrillTrace"),

@@ -66,6 +66,8 @@ export const VIEW_TESTIDS: readonly string[] = [
   // 2026-10-15 锐评 P1：阶段→加载剖析下钻的「未命中缺席提示行」——
   // 下钻到 trace 但 store 里没有该模型记录时插入，e2e 按它断言「缺席事实被说清」而非静默空态。
   "diag-drill-miss",
+  // 2026-10-15 锐评 P1：下钻按钮本身（单模型结果区头）——e2e 用 testid 定位点击，比类名稳。
+  "diag-drill-trace",
   // ADR-262 D5：并发基准入口（并发度 / 取样上限 / 运行）——目标集与排序共用上方那一套（ADR-278 §2.2）
   "diag-perf-conc-workers",
   // ADR-278 §2.2：单模型 / 并发**共用**同一套目标集 / 排序控件（即上方登记的 #diag-perf-rtype /

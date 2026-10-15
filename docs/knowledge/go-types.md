@@ -54,6 +54,7 @@ auto_fields:
     - FindInstDir
     - ImportFileItem
     - ImportLog
+    - ImportSettingsResult
     - InstanceStatus
     - IsRenderableTextureExt
     - IsTextureExt
@@ -88,6 +89,7 @@ auto_fields:
     - SchemaVersion
     - SearchFilters
     - SearchResult
+    - SettingsExport
     - ShaderpackLang
     - StatusFailed
     - StatusSkipped

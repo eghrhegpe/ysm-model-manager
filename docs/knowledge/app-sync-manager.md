@@ -55,6 +55,7 @@ quick_intents:
   - 同步状态、app-sync-manager
 quick_risk_lines:
   - app-sync-manager 的同步状态渲染必须经 _gen 单点生成，禁止各列各自查询状态
+  - events.ts 数据钩子只认 data-* 契约字段，禁止按内联样式子串取名（样式迁移即断链）
 pitfalls:
   - 各列各自查询同步状态 → 状态不一致、并发冲突；必须经 _gen 单点生成
   - 同步操作未进队列 → 并发 push/pull 冲突；必须经 sync-manager 排队
@@ -124,6 +125,7 @@ status: active
 - **列表渲染窗口化三条不可回退（2026-10，治「上百个 MMD 模型显示诡异」）**：① **行必须等高**——`tpl.ts` 以 `height:calc(var(--fs-sm)*1.4+9px)` 定高（行不等高则窗口范围算不准），TS 侧首帧实测取整（用户 `--fs-scale` 可调，常量会漂）；② **行不得挂入场动画**——窗口化随滚动反复注入节点，`animation-fill-mode: both` 会持续重播成滚动闪烁（ADR-015 §2.4 约束 3 及该 ADR「已知例外」，模型树当年同因禁用子行淡入）；③ **`render` 不得重建 `.sm-list` 骨架**——重建即丢滚动位置（用户停在中段时列表弹回顶部）。效果：DOM 行数由视口决定、与条目数解耦，`paddingTop/Bottom` 撑出滚动总高保证末行可达。**空态清理单源（2026-10 收口）**：`renderList` 空态分支清 padding 后调用 `cleanupSyncVirtualScroll`，不得再内联复刻其订阅/ResizeObserver/rAF 拆解（两份口径各自演化会漏摘）
 - **a11y 属性模板生成原则（2026 复测补缺）**：本组件 a11y 属性只经 `tpl.ts` 模板产出，renderer/events 层禁止手搓 aria/逐元素打属性；键盘语义唯一出口 = `events.ts|bindDelegatedEvents` 的 keydown 单委托（新增可交互元素先扩模板）
 - **可达性由 nav 门控保证，勿为本面板另加 `can()` 冗余防御（2026-10 查证）**：面板唯一挂载入口 = `app-content/init-pages.ts|mountSyncManager`（`package:selected` → `#ins-content`），而 `package:selected` 只能由侧栏卡片点击产生、侧栏只存在于 instances 页；instances 页在非桌面端被 `app-nav/nav-items.ts|navItems` 的 `isViewer = !can("ListVersionInstances")` **整页隐藏**（Android 上 `ListVersionInstances` ∈ `ANDROID_UNAVAILABLE`，web 上不在 browserAdapter；`app-nav/index.test.ts` 有回归锁）。且面板自身的 `GetInstanceSyncStatus`/`GetSyncScanDirs` **均不在 Android 黑名单**——即使误入面板调用也能跑通，不存在「直撞未桥接」风险。**改 nav 门控或给面板加新入口时，须连带确认新平台下本面板绑定可达**；给面板再叠一层 `can()` 是同一道门的第二把锁，不加
+- **数据钩子只认 `data-*` 属性，禁止按样式实现细节取名（2026-10 锐评收口）**：`events.ts|handleItemButton` 原以 `span[style*='flex:1']` 内联样式子串兜底取名——与 `sm-css.ts` 样式表迁移正面相撞（样式迁走即静默断链），且 `tpl.ts|itemHTML`/`syncDirRowHTML` 行上恒有 `data-name` 使其恒为死分支；现只读 `dataset.name`。新增事件数据依赖一律走 `data-*` 契约字段，选择器不得引用 style/class 的视觉实现（重构样式会改事件语义）
 
 ## 已知限制 / 待治理（2026-08-24 审计）
 

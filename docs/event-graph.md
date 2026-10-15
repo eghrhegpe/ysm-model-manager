@@ -355,7 +355,7 @@
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 130 |
 | atTeBindRenameInput | `frontend/src/views/app-tree/events.ts` | 422 |
 | toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 562 |
-| _executeTreeMove | `frontend/src/views/app-tree/index.ts` | 880 |
+| _executeTreeMove | `frontend/src/views/app-tree/index.ts` | 889 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -371,7 +371,7 @@
 | runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 415 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 129 |
 | toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 557 |
-| _executeTreeMove | `frontend/src/views/app-tree/index.ts` | 879 |
+| _executeTreeMove | `frontend/src/views/app-tree/index.ts` | 888 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |

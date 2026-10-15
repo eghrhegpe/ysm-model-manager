@@ -285,7 +285,7 @@
 |----------|--------|----------|----------|
 | 仓库审计、健康分 | [扫描核心 go/scanner](./go-scanner.md) | - | - |
 | 冲突处理 conflict.go | [整合包同步 go/sync](./go-sync.md) | - | ADR-064, ADR-296, ADR-340, ADR-342, ADR-344, ADR-345, ADR-347 |
-| 待推送 / 可拉取 / 已禁用 / 实例资源 | [整合包同步页 app-sync-manager](./app-sync-manager.md) | - | - |
+| 待推送 / 可拉取 / 已禁用 / 实例资源 | [整合包同步页 app-sync-manager](./app-sync-manager.md) | events.ts 数据钩子只认 data-* 契约字段，禁止按内联样式子串取名（样式迁移即断链） | - |
 | 多线程统计角标、网页版导入 | [工具栏搜索编排 toolbar-search](./toolbar-search.md) | - | - |
 | 骨骼数怎么来的 | [MMD 几何统计解析](./go-geometry-mmd-stats.md) | .vrm/.zip 在 MMD 族下无统计链路（CanParse 只认 .pmx/.pmd） | - |
 | 关键词搜索、数值范围搜索 | [CLI 搜索命令 search](./go-cli-search.md) | - | - |

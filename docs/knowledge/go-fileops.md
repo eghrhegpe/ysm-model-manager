@@ -7,6 +7,7 @@ source_files:
   - go/fileops/
 auto_fields:
   symbols_with_lines:
+    - CheckNoSymlinkInPath
     - CopyModelFile
     - CreateDir
     - DeleteModelFile

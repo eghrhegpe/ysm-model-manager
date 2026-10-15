@@ -34,6 +34,7 @@ auto_fields:
     - DISK_KEY_PREFIX
     - diskFieldName
     - findSettingsKey
+    - ImportSettingsResult
     - LocalAuthor
     - migratingSettingsKeys
     - nonMigratingSettingsKeys
@@ -44,6 +45,7 @@ auto_fields:
     - SchemaVersion
     - SETTINGS_KEYS
     - SettingsAuthority
+    - SettingsExport
     - SettingsKeyEntry
     - SettingsTier
     - ShaderpackLang

@@ -35,8 +35,11 @@ function handleItemButton(e: Event, btn: Element, cbRef: SyncCbRef): void {
   if (!row) return;
   const el = row as HTMLElement;
   const path = el.dataset.path || "";
-  const name =
-    el.dataset.name || el.querySelector("span[style*='flex:1']")?.textContent?.trim() || "";
+  // 数据钩子只认 data-name（itemHTML/syncDirRowHTML 两模板行上恒有）：原第二兜底
+  // `querySelector("span[style*='flex:1']")` 按内联样式子串取名——与 sm-css.ts
+  // 「样式归样式表」迁移正面相撞（样式迁走即静默断链），且 data-name 在场使其
+  // 恒为死分支（2026-10 锐评视图层高危项，删除）
+  const name = el.dataset.name || "";
   const action = (btn as HTMLElement).dataset.action;
   if (action === "push") {
     // ADR-310 安全闸（2026-10）：diverged 行推送 = 不可逆覆盖整合包侧修改，

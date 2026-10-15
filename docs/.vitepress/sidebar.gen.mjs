@@ -254,6 +254,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-351：整合包同步域锐评收口：收集层收口与判定单点化",
+        "link": "/adr/architecture/ADR-351-sync-domain-review-consolidation"
+      },
+      {
         "text": "ADR-350：app-tree状态骨架D1：重载入口收敛单函数+决策表、条目突变单一出口",
         "link": "/adr/architecture/ADR-350-app-tree-d1"
       },
@@ -1656,6 +1660,10 @@ export const autoSidebar = [
     "link": "/adr/",
     "collapsed": true,
     "items": [
+      {
+        "text": "ADR-344-d1：设置导出/导入（桌面端 v1）——双轨收拢成单个 JSON，换机不再手抄偏好",
+        "link": "/adr/decisions/ADR-344-d1-settings-export-import"
+      },
       {
         "text": "ADR-343-d1：搜索语义收敛C1：关键词匹配单口径（名/相对路径/拼音三路）+ 拼音表单源派生",
         "link": "/adr/decisions/ADR-343-d1-c1"

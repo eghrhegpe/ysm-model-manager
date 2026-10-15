@@ -12,6 +12,11 @@ import { APP_ERROR_PATH_RE } from "@/utils/base/pure/apperror-text.ts";
 // error.unknown 兜底（friendlyError 的 !err/空值路径），无需在此映射。
 // 旁路已收窄（切片 B-1 / ADR-331 §2.1）：未映射 Code 含中文不再原样透传，统一走 fallback 前缀。
 // 值收窄为 LocaleKey：映射表的 key 必须是语言包合法 key（字面量拼错编译期报错）。
+// ⚠️ Code 命中映射即 return t(key)——AppError.Reason/Suggestion 被丢弃，分类文案是
+// 用户看到的全部（friendlyError :63）。因此**指引本身承载分类语义的错误**（如需用户
+// 「升级后重试」）必须建专用 Code + 专用 locale key，不许复用泛化 Code（对抗审计
+// 2026-10-16 P1：SETTINGS_TOO_NEW 复用 UNSUPPORTED_FORMAT 曾把「请升级程序后导入」
+// 吞成「不支持的格式或操作」）。
 const CODE_KEYS: Record<string, LocaleKey> = {
   FILE_EXISTS: "error.alreadyExists",
   ALREADY_EXISTS: "error.alreadyExists",
@@ -27,6 +32,7 @@ const CODE_KEYS: Record<string, LocaleKey> = {
   WRITE_FAILED: "error.writeFailed",
   IO_ERROR: "error.ioError",
   LINK_FAILED: "error.linkFailed",
+  SETTINGS_TOO_NEW: "error.settingsTooNew",
 };
 
 /**

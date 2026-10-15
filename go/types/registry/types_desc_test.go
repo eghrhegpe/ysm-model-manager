@@ -103,7 +103,7 @@ func TestSetRegistryPath(t *testing.T) {
 	if registryPath != "/tmp/test-path.json" {
 		t.Errorf("registryPath = %q, 期望 /tmp/test-path.json", registryPath)
 	}
-	if registry != nil {
+	if registry.Load() != nil {
 		t.Error("SetRegistryPath 后 registry 应为 nil")
 	}
 	// 恢复（避免影响其他测试）

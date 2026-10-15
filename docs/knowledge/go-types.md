@@ -46,6 +46,7 @@ auto_fields:
     - ErrMcRootNotSet
     - ErrMkdirFailed
     - ErrorCode
+    - ErrSettingsTooNew
     - ErrUnknown
     - ErrUnsupportedFmt
     - ErrUnsupportedType
@@ -54,6 +55,7 @@ auto_fields:
     - FindInstDir
     - ImportFileItem
     - ImportLog
+    - ImportSettingsResult
     - InstanceStatus
     - IsRenderableTextureExt
     - IsTextureExt
@@ -85,8 +87,10 @@ auto_fields:
     - ResourceSyncItem
     - ResourceSyncResult
     - RuntimeLog
+    - SchemaVersion
     - SearchFilters
     - SearchResult
+    - SettingsExport
     - ShaderpackLang
     - StatusFailed
     - StatusSkipped

@@ -15,6 +15,7 @@ import (
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/installer"
 	"ysm-model-manager/go/packs"
+	"ysm-model-manager/go/scanner"
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/types/registry"
 )
@@ -60,7 +61,7 @@ func RelinkDir(customDir, filesRoot, rtype, linkMode string, scanFn func(string)
 	// 死锁回归）。
 	installer.InstallLocker.Lock()
 	defer installer.InstallLocker.Unlock()
-	defer InvalidateSyncScanCaches() // 重链接会改实例目录，清同步扫盘缓存防陈旧
+	defer scanner.InvalidateCache() // 重链接会改实例目录：走 scanner 单漏斗清扫描缓存，级联清 instance 同步结果（锐评 P0-① 失效不对称）
 
 	// sink 是透传给 helper 的 Logger 包装：既转发到底层 logger（导入日志面板），又归集
 	// 首个失败原因供 res.FirstError 点名。**不改任何 helper 签名**——它接收 Logger 参数，
@@ -266,8 +267,9 @@ func collectInstanceOnlyFiles(instDir, repoDir string) []string {
 			return nil // 尽力而为：读不了的子树跳过（不可读条目不属于可保全范围）
 		}
 		if d.IsDir() {
-			if p != instDir && (fsutil.IsRecycleDir(p) || isRelinkBackupPath(p)) {
-				return filepath.SkipDir
+			// 统一剔除闸（ADR-351 D1）：回收站与备份尸体子树不是用户数据，不在保全范围
+			if err := skipExcludedDir(instDir, p); err != nil {
+				return err
 			}
 			return nil
 		}

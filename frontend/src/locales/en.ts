@@ -119,7 +119,7 @@ export const en: Record<string, string> = {
   // ── Context Menu ──
   "menu.openFolder": "Open Folder",
   "menu.copyModelList": "Copy {type} List",
-  "menu.clearPack": "Clear {type} from This Pack",
+  "menu.clearPack": "Clear {type} Repo Copies from This Pack",
   "menu.batchSelected": "{count} files selected",
   "menu.batchRename": "Batch Rename…",
   "menu.moveTo": "Move to…",
@@ -179,6 +179,40 @@ export const en: Record<string, string> = {
   "settings.webRepo.desc":
     "Web mode has no local filesystem. Authorize a local folder and its .ysm models are imported into the built-in model library (IndexedDB) as the file source.",
   "settings.webRepo.authorize": "Authorize local repo folder",
+  // settings backup & migration (ADR-344-d1)
+  "settings.backup.title": "Settings Backup & Migration",
+  "settings.backup.desc":
+    "Export both the disk config and browser preferences into a single JSON file; import it on a new machine to restore settings without redoing dozens of preferences.",
+  "settings.backup.exportBtn": "Export settings",
+  "settings.backup.importBtn": "Import settings",
+  "settings.backup.exportedTo": "Exported to: {path}",
+  "settings.backup.exportDone": "Settings exported",
+  "settings.backup.copyPath": "Copy path",
+  "settings.backup.copied": "Path copied",
+  "settings.backup.copyFailed": "Copy failed; please copy the path above manually",
+  "settings.backup.importPickerTitle": "Choose a settings export file",
+  "settings.backup.importedTo":
+    "Imported {n} browser preferences; the previous config was backed up to: {backup}",
+  "settings.backup.importDone":
+    "Import finished: applied {n} browser preferences. If imported paths are invalid on this machine, set the directories again on the Environment page.",
+  "settings.backup.importConfirmTitle": "Import settings?",
+  "settings.backup.importConfirmMessage":
+    "Importing overwrites the current settings entirely: disk config such as file storage root and game root is replaced by the imported values, and {n} browser preferences will be applied.\nThe current config is backed up automatically before import; you can restore it from the backup directory if needed.",
+  "settings.backup.importConfirmOk": "Import",
+  "settings.backup.importPathMissing":
+    "Imported paths do not exist on this machine: {paths}. Please reset the directories on the Environment page.",
+  "settings.backup.gotoEnv": "Go to Environment",
+  "settings.backup.restoreBtn": "Restore last backup",
+  "settings.backup.openDirBtn": "Open backup folder",
+  "settings.backup.restoreConfirmTitle": "Restore pre-import backup?",
+  "settings.backup.restoreConfirmMessage":
+    "This restores the configuration recorded in {path}, overwriting the current disk settings entirely (theme, file storage root, game root); disk-side changes apply right after restore.\nBrowser preferences (language, UI options, etc.) live on a separate track and are NOT rolled back by this restore.",
+  "settings.backup.restoreConfirmOk": "Restore",
+  "settings.backup.restoreDone": "Restored to pre-import backup",
+  "settings.backup.noBackup": "No pre-import backup yet — run an import first",
+  "settings.backup.dirUnavailable":
+    "App data directory is unavailable — cannot open the backup folder",
+  "settings.backup.openedDir": "Backup folder opened",
   // settings page action toasts (app-content/settings)
   "settings.mirror.switched": "Download source switched to {name}",
   "settings.mirror.nameDirect": "Direct",
@@ -337,6 +371,8 @@ export const en: Record<string, string> = {
   "launcher.picker.ysm": "YSM",
   "launcher.picker.pending": "pending",
   "launcher.picker.useAsYsmRoot": "Use YSM custom directory as default download path",
+  "launcher.picker.useAsYsmRootHint":
+    "Changes the YSM repository root — the entire repository view updates",
 
   // ── Repository (content tab) ──
   "repo.tab.tree": "File Tree",
@@ -366,6 +402,7 @@ export const en: Record<string, string> = {
   // ── Modpack Instances ──
   "instances.tab.versions": "Version List",
   "instances.emptyHint": "Click a modpack on the left to view models",
+  "instances.viewerDesktopOnlyNotice": "Modpack management is available in the desktop app only",
 
   // ── Diagnostics Page ──
   // ADR-300 §2.4: top-level tabs as nouns (tabLog was borrowing "Operation Log" — same name as its sub-pill)
@@ -860,7 +897,10 @@ export const en: Record<string, string> = {
   "sidebar.pullDoneAll":
     "Pull complete, {n} files (copied into the repo; now independent from the instances)",
   "sidebar.pullDone": "Pull complete: {pulled} files, {failed} failed",
-  "sidebar.pullTimedOutStopped": "{n} pack(s) timed out; remaining pulls stopped",
+  // P0 fix (2026-10-16 review): timedOut now counts type-level timeouts, not packs
+  "sidebar.pullTimedOutStopped": "{n} pull(s) timed out; remaining pulls stopped",
+  // P0 fix: name the packs abandoned by the early stop
+  "sidebar.pullAbortedPacks": "These {n} packs were not pulled: {names}",
   "sidebar.pullFirstError": "First failure: {msg}",
   "sidebar.syncBusy": "A sync is still running; this {verb} was ignored — please retry shortly",
   "sidebar.pullNothing": "📭 Nothing to pull (no extra resources in instances)",
@@ -868,11 +908,18 @@ export const en: Record<string, string> = {
   "sidebar.packSkipped": "{n} type batches skipped (another sync is in progress elsewhere)",
   "sidebar.packBlocked": "{n} type batches did not complete",
   "sidebar.packTimedOutStopped": "{n} type batches timed out; remaining batches stopped",
+  // P0 fix (2026-10-16 review): name the abandoned type batches after an early-stop timeout
+  "sidebar.pushAbortedTypes": "These {n} type batches were not pushed: {names}",
   "sidebar.pushInstallFail": "{fail} files failed to install ({ok} succeeded)",
   "sidebar.pushPackFailDetail": "Failures concentrated in {n} pack(s): {names}",
   // ADR-340-d2: pushing still overwrites (policy unchanged) but overwriting instance-side
   // edits must be reported honestly — previously the whole event was hidden behind "push done".
   "sidebar.pushOverwrote": "Overwrote {n} instance-side modification(s) ({names})",
+  // P1-2: batch push pre-check — overwriting instance-side edits is irreversible,
+  // so the ADR-310 row-level confirm gate must cover the batch path too.
+  "sidebar.pushOverwriteConfirmTitle": "Push will overwrite instance-side changes",
+  "sidebar.pushOverwriteConfirmMsg":
+    "This push covers {n} file/folder(s) you edited in the modpack. The repo version will overwrite them and this cannot be undone. Continue?",
   // P1-3: push/pull loop progress (shown on the button; large batches no longer wait on a bare spinner)
   "sidebar.pushProgress": "Pushing {i}/{n}…",
   "sidebar.pullProgress": "Pulling {i}/{n}…",
@@ -919,6 +966,7 @@ export const en: Record<string, string> = {
   "syncManager.push": "Push",
   "syncManager.pull": "Pull",
   "syncManager.pullHere": "Pull Here",
+  "syncManager.syncStatus": "Sync Status",
   "syncManager.status.all": "All",
   "syncManager.status.synced": "Synced",
   "syncManager.status.missing": "To Push",
@@ -999,7 +1047,6 @@ export const en: Record<string, string> = {
   // sync handlers (core/handlers/sync.ts)
   "sync.configureResourceTypeDir": "Configure the resource-type directory first",
   "sync.configureDir": "Configure directories first",
-  "sync.noPacks": "No modpacks found",
   "sync.missingRtype": "Missing resource type parameter",
   "sync.cacheInvalidateFailed":
     "Scan cache refresh failed, new models may appear with delay: {msg}",
@@ -1179,6 +1226,8 @@ export const en: Record<string, string> = {
   "error.writeFailed": "Write failed",
   "error.ioError": "I/O error",
   "error.linkFailed": "Link failed",
+  "error.settingsTooNew":
+    "Settings file is newer than this program; please upgrade before importing",
   "settings.path.selectDir": "Select Directory",
   "settings.path.updated": "Path updated",
   "settings.path.set": "Path set",
@@ -1212,7 +1261,6 @@ export const en: Record<string, string> = {
   "tree.recycled": "Recycled {count} files",
   "tree.dirEmpty": "Folder is empty",
   "tree.batchRenameDone": "Batch rename complete: {ok} succeeded, {fail} failed",
-  "tree.reloadFailed": "Reload failed",
   "tree.success": "Success",
   "tree.failed": "Failed",
   "tree.allToggle": "All {action}",

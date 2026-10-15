@@ -121,7 +121,7 @@ export const ja: Record<string, string> = {
   // ── Context Menu ──
   "menu.openFolder": "フォルダを開く",
   "menu.copyModelList": "{type}リストをコピー",
-  "menu.clearPack": "このパックの{type}をクリア",
+  "menu.clearPack": "このパックの{type}をクリア（リポジトリコピー）",
   "menu.batchSelected": "{count} 個のファイルを選択中",
   "menu.batchRename": "一括リネーム…",
   "menu.moveTo": "移動先…",
@@ -181,6 +181,40 @@ export const ja: Record<string, string> = {
   "settings.webRepo.desc":
     "ウェブ版にはローカルファイルシステムがありません。ローカルフォルダを認可すると、配下の .ysm モデルが内蔵モデルライブラリ（IndexedDB）に取り込まれファイルソースとなります。",
   "settings.webRepo.authorize": "ローカルリポジトリフォルダを認可",
+  // 設定のバックアップと移行（ADR-344-d1）
+  "settings.backup.title": "設定のバックアップと移行",
+  "settings.backup.desc":
+    "ディスク設定とブラウザ設定を1つのJSONファイルに書き出します。新しいPCでインポートすれば、文字サイズやキーバインドなどの数十項目を手動で設定し直す必要がありません。",
+  "settings.backup.exportBtn": "設定を書き出す",
+  "settings.backup.importBtn": "設定を読み込む",
+  "settings.backup.exportedTo": "書き出し先：{path}",
+  "settings.backup.exportDone": "設定を書き出しました",
+  "settings.backup.copyPath": "パスをコピー",
+  "settings.backup.copied": "パスをコピーしました",
+  "settings.backup.copyFailed": "コピーできませんでした。上記パスを手動でコピーしてください",
+  "settings.backup.importPickerTitle": "設定ファイルを選択",
+  "settings.backup.importedTo":
+    "{n} 項目のブラウザ設定を読み込みました。読み込み前の設定は {backup} にバックアップされています",
+  "settings.backup.importDone":
+    "設定の読み込みが完了し、{n} 項目のブラウザ設定を適用しました。読み込んだパスがこのマシンで無効な場合は「環境」ページでディレクトリを再設定してください",
+  "settings.backup.importConfirmTitle": "設定を読み込みますか？",
+  "settings.backup.importConfirmMessage":
+    "読み込みは現在の設定を完全に上書きします：ファイル保存先・ゲームルートなどのディスク設定が読み込みファイルの値に置き換わり、{n} 項目のブラウザ設定が適用されます。\n読み込み前に現在の設定が自動バックアップされ、必要に応じてバックアップディレクトリから復元できます。",
+  "settings.backup.importConfirmOk": "読み込み",
+  "settings.backup.importPathMissing":
+    "読み込み先のパスはこのPCに存在しません：{paths}。「環境」ページでディレクトリを設定し直してください。",
+  "settings.backup.gotoEnv": "環境ページへ",
+  "settings.backup.restoreBtn": "最新のバックアップを復元",
+  "settings.backup.openDirBtn": "バックアップフォルダを開く",
+  "settings.backup.restoreConfirmTitle": "読み込み前のバックアップを復元しますか？",
+  "settings.backup.restoreConfirmMessage":
+    "{path} に記録された設定に戻り、現在のディスク設定（テーマ・ファイル保存先・ゲームルートなど）を完全に上書きします。ディスク側は復元直後に反映されます。\n言語や画面オプションなどブラウザ側の設定は別トラックであり、今回の復元では巻き戻されません。",
+  "settings.backup.restoreConfirmOk": "復元",
+  "settings.backup.restoreDone": "読み込み前のバックアップに復元しました",
+  "settings.backup.noBackup": "読み込み前のバックアップがありません。先に設定を読み込んでください",
+  "settings.backup.dirUnavailable":
+    "アプリのデータディレクトリを利用できないため、バックアップフォルダを開けません",
+  "settings.backup.openedDir": "バックアップフォルダを開きました",
   // 設定ページ動作トースト（app-content/settings）
   "settings.mirror.switched": "ダウンロード元を {name} に切り替えました",
   "settings.mirror.nameDirect": "直結",
@@ -339,6 +373,8 @@ export const ja: Record<string, string> = {
   "launcher.picker.ysm": "YSM",
   "launcher.picker.pending": "未作成",
   "launcher.picker.useAsYsmRoot": "YSM カスタムディレクトリを既定のダウンロード先にする",
+  "launcher.picker.useAsYsmRootHint":
+    "YSMリポジトリのルートが変更され、リポジトリ全体のビューが更新されます",
 
   // ── Repository (content tab) ──
   "repo.tab.tree": "ファイルツリー",
@@ -368,6 +404,7 @@ export const ja: Record<string, string> = {
   // ── Modpack Instances ──
   "instances.tab.versions": "バージョン一覧",
   "instances.emptyHint": "左の統合パックをクリックしてモデルを表示",
+  "instances.viewerDesktopOnlyNotice": "統合パック管理はデスクトップ版でのみ利用できます",
 
   // ── Diagnostics Page ──
   // ADR-300 §2.4：トップレベルタブは名詞化（tabLog は子ピルと同名の「操作ログ」を使っていた）
@@ -857,7 +894,10 @@ export const ja: Record<string, string> = {
   "sidebar.pullDoneAll":
     "プル完了、合計 {n} ファイル（仓库にコピー済み；以降は統合パッケージと独立）",
   "sidebar.pullDone": "プル完了: {pulled} ファイル、{failed} 失敗",
-  "sidebar.pullTimedOutStopped": "{n} 件のパックでタイムアウトしたため、以降のプルを中止しました",
+  // P0 修正（2026-10-16 レビュー）：timedOut は種類単位のタイムアウト数に変更（パック単位ではない）
+  "sidebar.pullTimedOutStopped": "{n} 件のプルでタイムアウトしたため、以降のプルを中止しました",
+  // P0 修正：早期停止で放棄されたパックを名指し
+  "sidebar.pullAbortedPacks": "次の {n} 個のパックは未プル：{names}",
   "sidebar.pullFirstError": "最初の失敗理由: {msg}",
   "sidebar.syncBusy":
     "前回の同期がまだ実行中です。今回の{verb}は無視されました。しばらくしてから再試行してください",
@@ -866,11 +906,18 @@ export const ja: Record<string, string> = {
   "sidebar.packSkipped": "{n} 種類のバッチがスキップ（他場所で同期進行中）",
   "sidebar.packBlocked": "{n} 種類のバッチが未完了",
   "sidebar.packTimedOutStopped": "{n} 種類のバッチがタイムアウト、後続バッチを停止しました",
+  // P0 修正（2026-10-16 レビュー）：早期停止時に放棄された種類のバッチを名指し
+  "sidebar.pushAbortedTypes": "次の {n} 種類のバッチは未プッシュ：{names}",
   "sidebar.pushInstallFail": "{fail} 個のファイルのインストールに失敗（{ok} 個成功）",
   "sidebar.pushPackFailDetail": "失敗は {n} 個のパックに集中：{names}",
   // ADR-340-d2：プッシュは従来どおり上書き（ポリシー不変）だが、インスタンス側の変更を
   // 上書きした事実は正直に知らせる——従来は「プッシュ完了」の一言に隠れていた
   "sidebar.pushOverwrote": "インスタンス側の変更 {n} 件を上書きしました（{names}）",
+  // P1-2: 一括プッシュ事前確認 — インスタンス側の変更の上書きは不可逆のため、
+  // 行レベルの ADR-310 確認ゲートを一括パスにも適用する。
+  "sidebar.pushOverwriteConfirmTitle": "プッシュはインスタンス側の変更を上書きします",
+  "sidebar.pushOverwriteConfirmMsg":
+    "今回のプッシュには整合包 side で編集した {n} ファイル/フォルダが含まれます。リポジトリ版で上書きされ、元に戻せません。続行しますか？",
   // P1-3：プッシュ/プルループ進捗（ボタン内表示；大量処理がスピンナー待ちだけにならない）
   "sidebar.pushProgress": "プッシュ中 {i}/{n}…",
   "sidebar.pullProgress": "プル中 {i}/{n}…",
@@ -917,6 +964,7 @@ export const ja: Record<string, string> = {
   "syncManager.push": "プッシュ",
   "syncManager.pull": "プル",
   "syncManager.pullHere": "このリポジトリにプル",
+  "syncManager.syncStatus": "同期状態",
   "syncManager.status.all": "すべて",
   "syncManager.status.synced": "同期済み",
   "syncManager.status.missing": "プッシュ待ち",
@@ -997,7 +1045,6 @@ export const ja: Record<string, string> = {
   // sync ハンドラ（core/handlers/sync.ts）
   "sync.configureResourceTypeDir": "リソースタイプのディレクトリを先に設定してください",
   "sync.configureDir": "ディレクトリを先に設定してください",
-  "sync.noPacks": "統合パックが見つかりません",
   "sync.missingRtype": "リソースタイプのパラメータがありません",
   "sync.cacheInvalidateFailed":
     "スキャンキャッシュの更新に失敗しました。新規モデルが表示されるまで遅延する場合があります：{msg}",
@@ -1179,6 +1226,8 @@ export const ja: Record<string, string> = {
   "error.writeFailed": "書き込みに失敗しました",
   "error.ioError": "I/O エラー",
   "error.linkFailed": "リンクに失敗しました",
+  "error.settingsTooNew":
+    "設定ファイルが本プログラムより新です。アップグレード後にインポートしてください",
   "settings.path.selectDir": "ディレクトリを選択",
   "settings.path.updated": "パスを更新しました",
   "settings.path.set": "パスを設定しました",
@@ -1212,7 +1261,6 @@ export const ja: Record<string, string> = {
   "tree.recycled": "{count} 個のファイルをゴミ箱に移動しました",
   "tree.dirEmpty": "フォルダが空です",
   "tree.batchRenameDone": "一括リネーム完了：{ok} 件成功、{fail} 件失敗",
-  "tree.reloadFailed": "再読み込みに失敗しました",
   "tree.success": "成功",
   "tree.failed": "失敗",
   "tree.allToggle": "すべて{action}",

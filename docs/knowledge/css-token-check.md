@@ -10,6 +10,8 @@ source_files:
   - scripts/_lib/css-layer-utils.ts
 auto_fields:
   symbols_with_lines:
+    - DEAD_CSS_CORPUS_EXTS
+    - DEAD_CSS_CORPUS_SKIP
     - DeadCssFinding
     - dynamicClassHint
     - expandStyleInterpolations

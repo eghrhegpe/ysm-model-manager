@@ -128,7 +128,7 @@ export const zhCN = {
   // ── 右键菜单 ──
   "menu.openFolder": "打开文件夹",
   "menu.copyModelList": "复制{type}清单",
-  "menu.clearPack": "清空此整合包的{type}",
+  "menu.clearPack": "清空此整合包的{type}（仓库副本）",
   "menu.batchSelected": "已选中 {count} 个文件",
   "menu.batchRename": "批量重命名…",
   "menu.moveTo": "移动到…",
@@ -185,6 +185,38 @@ export const zhCN = {
   "settings.webRepo.desc":
     "网页版无本地文件系统，授权一个本地目录后，其下 .ysm 模型会导入到内置模型库（IndexedDB）作为文件来源。",
   "settings.webRepo.authorize": "授权本地仓库目录",
+  // 设置备份与迁移（ADR-344-d1）
+  "settings.backup.title": "设置备份与迁移",
+  "settings.backup.desc":
+    "一键把「磁盘配置 + 浏览器偏好」导出为单个 JSON 文件；在新电脑导入即可恢复，不用手重设字号/键位/3D 偏好等几十项。",
+  "settings.backup.exportBtn": "导出设置",
+  "settings.backup.importBtn": "导入设置",
+  "settings.backup.exportedTo": "已导出到：{path}",
+  "settings.backup.exportDone": "设置已导出",
+  "settings.backup.copyPath": "复制路径",
+  "settings.backup.copied": "路径已复制",
+  "settings.backup.copyFailed": "复制失败，请手动复制上方路径",
+  "settings.backup.importPickerTitle": "选择设置导出文件",
+  "settings.backup.importedTo": "已导入 {n} 项浏览器偏好；导入前的配置已备份到：{backup}",
+  "settings.backup.importDone":
+    "设置导入完成，已应用 {n} 项浏览器偏好；若导入的路径在本机无效，请在「环境」页重新设置目录",
+  "settings.backup.importConfirmTitle": "导入设置？",
+  "settings.backup.importConfirmMessage":
+    "导入将整份覆盖当前设置：文件存储路径、游戏根目录等磁盘配置会被导入文件的值替换，并将应用 {n} 项浏览器偏好。\n导入前会自动备份当前配置，导入后如不满意可在备份目录找回。",
+  "settings.backup.importConfirmOk": "确认导入",
+  "settings.backup.importPathMissing":
+    "导入的路径在本机不存在：{paths}。请在「环境」页重新设置目录。",
+  "settings.backup.gotoEnv": "去环境页",
+  "settings.backup.restoreBtn": "恢复最近备份",
+  "settings.backup.openDirBtn": "打开备份目录",
+  "settings.backup.restoreConfirmTitle": "恢复导入前备份？",
+  "settings.backup.restoreConfirmMessage":
+    "将恢复到 {path} 记录的配置，整份覆盖当前磁盘设置（主题、文件存储路径、游戏根目录），磁盘侧恢复后立即生效。\n浏览器偏好（语言、界面选项等）不属磁盘轨，不会被本次恢复回退。",
+  "settings.backup.restoreConfirmOk": "确认恢复",
+  "settings.backup.restoreDone": "已恢复到导入前备份",
+  "settings.backup.noBackup": "暂无导入前备份，请先执行一次导入设置",
+  "settings.backup.dirUnavailable": "应用数据目录不可用，无法打开备份目录",
+  "settings.backup.openedDir": "已打开备份目录",
   // 设置页动作 toast（app-content/settings）
   "settings.mirror.switched": "下载源已切换为 {name}",
   "settings.mirror.nameDirect": "直连",
@@ -335,6 +367,7 @@ export const zhCN = {
   "launcher.picker.ysm": "YSM",
   "launcher.picker.pending": "待创建",
   "launcher.picker.useAsYsmRoot": "将 YSM 自定义目录设为默认下载路径",
+  "launcher.picker.useAsYsmRootHint": "将改变 YSM 仓库根位置，仓库视角整体更新",
 
   // ── 模型仓库（content tab 栏） ──
   "repo.tab.tree": "文件树",
@@ -363,6 +396,7 @@ export const zhCN = {
   // ── 整合包实例 ──
   "instances.tab.versions": "版本列表",
   "instances.emptyHint": "点击左侧整合包查看模型",
+  "instances.viewerDesktopOnlyNotice": "整合包管理仅桌面版可用",
 
   // ── 诊断页 ──
   // ADR-300 §2.4：顶层 tab 名词化——tabLog 是容器名（原借「操作日志」与子 pill 父子同名）；
@@ -831,7 +865,11 @@ export const zhCN = {
   "sidebar.pushFailed": "推送失败: {msg}",
   "sidebar.pullDoneAll": "拉取完成，共 {n} 个文件（已复制到仓库，此后与整合包各自独立）",
   "sidebar.pullDone": "拉取完成: {pulled} 个文件, {failed} 个失败",
-  "sidebar.pullTimedOutStopped": "{n} 个整合包拉取超时，已停止后续拉取",
+  // P0 修复（2026-10-16 锐评）：timedOut 改计**类型级**超时数（不再是整合包数）——同包其余
+  // 类型结果照常归并，故措辞由「个整合包」改为「项」
+  "sidebar.pullTimedOutStopped": "{n} 项拉取超时，已停止后续拉取",
+  // P0 修复：早停后点名被放弃的整合包
+  "sidebar.pullAbortedPacks": "以下 {n} 个整合包未拉取：{names}",
   "sidebar.pullFirstError": "首个失败原因: {msg}",
   "sidebar.syncBusy": "上一次同步尚未结束，已忽略本次{verb}，请稍候再试",
   "sidebar.pullNothing": "📭 没有可拉取的文件（实例中无多余资源）",
@@ -846,6 +884,9 @@ export const zhCN = {
   // ADR-340：超时计数语义 = 早停（binding 挂起是唯一超时成因，首个超时即终止类型循环，
   // 剩余批次不再续发——原总线实现续发只会撞 handler 持锁 busy 假跳过连锁）
   "sidebar.packTimedOutStopped": "{n} 个类型批次超时，已停止后续批次",
+  // P0 修复（2026-10-16 锐评）：超时早停后点名**被放弃的类型批次**——只报「1 个批次超时」
+  // 用户不知道是哪几类没做；names 为超时那一类及其后未跑的类型名（、分隔）
+  "sidebar.pushAbortedTypes": "以下 {n} 个类型批次未推送：{names}",
   // 锐评 P1-1 止血：done 回执带 handler 文件级计数，部分安装失败进汇总 toast
   "sidebar.pushInstallFail": "{fail} 个文件安装失败（成功 {ok}）",
   // 锐评 P1-3 收口：包级归因——「失败 3」之外必须能指名道姓是哪个包（{names} 形如「狐妖(3)、MMD(1)」）
@@ -853,6 +894,9 @@ export const zhCN = {
   // ADR-340-d2：推送**照旧覆盖**（策略未变），但覆盖了实例侧手改必须如实点名——
   // 原实现把这件事整个隐去，用户只能看到一句「推送完成」。{names} 形如「狐妖.pmx、MMD 等」
   "sidebar.pushOverwrote": "覆盖了 {n} 处实例侧已修改内容（{names}）",
+  "sidebar.pushOverwriteConfirmTitle": "推送将覆盖实例侧修改",
+  "sidebar.pushOverwriteConfirmMsg":
+    "本次推送范围（{n} 处文件/目录）在整合包侧有你自己改过的副本，推送会以仓库版本覆盖它们，且不可恢复。确定继续吗？",
   // P1-3：推送/拉取循环进度（按钮内显示，大批量不再只干等 spinner）
   "sidebar.pushProgress": "推送中 {i}/{n} 类…",
   "sidebar.pullProgress": "拉取中 {i}/{n} 包…",
@@ -901,6 +945,7 @@ export const zhCN = {
   "syncManager.push": "推送",
   "syncManager.pull": "拉取",
   "syncManager.pullHere": "拉取到此仓库",
+  "syncManager.syncStatus": "同步状态",
   "syncManager.status.all": "全部",
   "syncManager.status.synced": "已同步",
   "syncManager.status.missing": "待推送",
@@ -980,7 +1025,6 @@ export const zhCN = {
   // sync 处理器（core/handlers/sync.ts）
   "sync.configureResourceTypeDir": "请先配置该资源类型目录",
   "sync.configureDir": "请先配置目录",
-  "sync.noPacks": "没有找到整合包",
   "sync.missingRtype": "缺少资源类型参数",
   "sync.cacheInvalidateFailed": "扫描缓存刷新失败，新模型可能延迟出现：{msg}",
   "sync.downloadDone": "📥 {name}: 导入 {ok} 成功, {fail} 失败",
@@ -1151,6 +1195,7 @@ export const zhCN = {
   "error.writeFailed": "写入失败",
   "error.ioError": "读写错误",
   "error.linkFailed": "链接失败",
+  "error.settingsTooNew": "设置文件版本高于当前程序，请升级程序后导入",
   "settings.path.selectDir": "选择目录",
   "settings.path.updated": "路径已更新",
   "settings.path.set": "路径已设置",
@@ -1181,7 +1226,6 @@ export const zhCN = {
   "tree.recycled": "已回收 {count} 个文件",
   "tree.dirEmpty": "文件夹为空",
   "tree.batchRenameDone": "批量重命名完成：{ok} 成功，失败 {fail}",
-  "tree.reloadFailed": "重新加载失败",
   "tree.success": "成功",
   "tree.failed": "失败",
   "tree.allToggle": "全部{action}",

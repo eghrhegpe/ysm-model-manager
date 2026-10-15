@@ -96,6 +96,9 @@ export interface BusEvents {
   "tree:reload": void;
   // biome-ignore lint/suspicious/noConfusingVoidType: 事件表 void 表「无 payload」,bus 契约测试依赖该语义;undefined 触发 missing_payload,2026-09 裁决保留
   "community:clear-cache": void; // features → views 解耦（download-queue 触发社区缓存失效；2026-09 由 clearCache 归一 kebab-case）
+  // 设置导入完成（ADR-344-d1）：settings 面板 emit，app-content 清缓存重建当前页
+  // biome-ignore lint/suspicious/noConfusingVoidType: 事件表 void 表「无 payload」,bus 契约测试依赖该语义;undefined 触发 missing_payload,2026-09 裁决保留
+  "settings:imported": void;
   "tree:set-search": string; // tree 搜索关键字（app-tree 实证：srch.value = name）
   "avatar:refresh": { author: string; dataUri: string };
   // 模型 / 选择
@@ -174,6 +177,7 @@ const VOID_EVENTS = [
   "community:clear-cache",
   "repo:focus-search",
   "repo:fs-changed",
+  "settings:imported",
 ] as const satisfies readonly VoidEventName[];
 
 const isVoidEvent = (event: BusEventName): boolean =>

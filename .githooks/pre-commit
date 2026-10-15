@@ -175,11 +175,37 @@ echo ""
 echo "[pre-commit] 智能 stage 测试文件..."
 node scripts/_lib/commit-blocks/smart-stage.ts 2>/dev/null || true
 
+# ── 秒级提示段变更域裁剪（2026-10-17 门禁性能实测，ADR-206 按域裁剪补最后一侧）──
+# 立因：本钩子是全仓唯一不按域裁剪的门禁层——css-layer-check（实测 3.5s 全树扫）/
+# i18n 两段 / path-hygiene 无差别每次提交全跑，纯 Go / 纯文档提交被强收约 5s 前端税
+# 且一条都判不到。判据单一事实源 = _lib/commit-blocks/staged-domains.ts
+# （复用 domain-classify 的 classify）；输出三行 0/1，行序 = css-layer/i18n/path-hygiene。
+# ⚠️ 三大 exit-1 硬阻断段（Android / biome 行级 / 设计令牌行级）刻意**不在裁剪清单**：
+#   它们是防 --no-verify 单点绕过的最后防线，且实测各 <1s——裁剪零收益、放行有实害。
+# fail-open（锐评 P1-1：形状校验 + 白名单跳过双保险）：SD_RAW 必须是**恰好三行、每行
+#   0/1**——行数不对 / 混入脏行（node 警告、未来调试 console.log）都使行位错位，白名单
+#   口径单独防不住「脏行挤占正确位」；故先整体验形，不合规则置全 1（宁可多跑不误杀），
+#   段门控再取 != "0"（即便验形被绕过，脏值也默认跑）。逃生阀 YSM_PRECOMMIT_FULL=1 全跑。
+# 快照口径 = 本计算时刻的索引；后段（gofmt/biome 修复 add）与并行会话在快照后 add 的文件
+#   不在射程——提示段可接受（pre-push 兜底），**硬阻断段严禁接 SD_***（锐评 P2-6 钉此红线）。
+# 被裁段的检查本身在 pre-push 全量清单仍无条件兜底——本裁剪只省时间，不放行。
+SD_RAW="$(git diff --cached --name-only 2>/dev/null | node scripts/_lib/commit-blocks/staged-domains.ts 2>/dev/null)" || SD_RAW=""
+SD_N=$(printf '%s\n' "$SD_RAW" | awk 'NF>0{c++} END{print c+0}')
+SD_BAD=$(printf '%s\n' "$SD_RAW" | awk 'NF==0{next} $1!="0"&&$1!="1"{c++} END{print c+0}')
+if [ "$SD_N" != "3" ] || [ "$SD_BAD" != "0" ]; then
+  echo "[pre-commit] ⚠️  staged-domains 输出不合形状（行数=$SD_N 脏行=$SD_BAD）——本提交按全跑处理（fail-open）" >&2
+  SD_RAW="$(printf '1\n1\n1')"
+fi
+SD_CSS=$(printf '%s\n' "$SD_RAW" | sed -n '1p')
+SD_I18N=$(printf '%s\n' "$SD_RAW" | sed -n '2p')
+SD_PATH=$(printf '%s\n' "$SD_RAW" | sed -n '3p')
+
 # ── Shadow DOM 样式越界检查（非阻断提示；阻断由 pre-push 门禁兜底）──
 # 2026-08-24 复盘（21c01725 / 9942ada3）：components.css 全局 <link> 定义的类与 @keyframes
 # 不穿透 Shadow DOM 边界，shadow 内引用静默失效。pre-commit 仅秒级提示，给 AI/人工即时反馈；
 # 真正阻断在 pre-push（--strict）。逃生阀：YSM_SKIP_CSS_LAYER=1。
-if [ "${YSM_SKIP_CSS_LAYER:-0}" != "1" ]; then
+# 域裁剪：扫描面全在 frontend/，无前端 staged 文件即跳过（SD_CSS；锐评 P1-1 白名单口径：仅显式 0 才跳）。
+if [ "${YSM_SKIP_CSS_LAYER:-0}" != "1" ] && [ "$SD_CSS" != "0" ]; then
   echo ""
   echo "[pre-commit] Shadow 样式越界检查..."
   node scripts/css-layer-check.ts 2>&1 || echo "⚠️  css-layer-check 执行失败（不阻断）"
@@ -190,7 +216,8 @@ fi
 # 不阻断 commit——误判/漏报由 tests/test_i18n_key_naming.ts 在 pre-push 守护
 # （契约测试断言 validateKey 对 40 合规 + 3 违规用例的行为不回归）。
 # 逃生阀：YSM_SKIP_I18N_KEY=1。
-if [ "${YSM_SKIP_I18N_KEY:-0}" != "1" ]; then
+# 域裁剪：locale 键与 t() 判定面全在 frontend/（SD_I18N，本开关同时管 key-naming 与 check 两段；仅显式 0 才跳）。
+if [ "${YSM_SKIP_I18N_KEY:-0}" != "1" ] && [ "$SD_I18N" != "0" ]; then
   echo ""
   echo "[pre-commit] i18n 新增键三段式检查（ADR-124）..."
   node scripts/i18n-key-naming.ts 2>&1 || echo "⚠️  i18n-key-naming 发现违规或执行失败"
@@ -201,7 +228,8 @@ fi
 # pre-push --strict（gate-config.ts），开发期 drift 无即时反馈；此处 warning 模式（干净
 # 恒 exit 0，非阻断）把发现提前到 commit 当下。阻断仍由 pre-push --strict 兜底。
 # 逃生阀：YSM_SKIP_I18N_CHECK=1。
-if [ "${YSM_SKIP_I18N_CHECK:-0}" != "1" ]; then
+# 域裁剪：同上（与 key-naming 共用 SD_I18N 开关；仅显式 0 才跳）。
+if [ "${YSM_SKIP_I18N_CHECK:-0}" != "1" ] && [ "$SD_I18N" != "0" ]; then
   echo ""
   echo "[pre-commit] 语言包跨语言一致性检查（i18n-check, ADR-045）..."
   node scripts/i18n-check.ts 2>&1 || echo "⚠️  i18n-check 发现漂移或执行失败"
@@ -212,7 +240,9 @@ fi
 # R6 拒绝「测试 import index 桶拉起一整个模块」。阻断由 pre-push 的 --strict 兜底，
 # 此处把发现提前到 commit 当下（与 css-layer / i18n 同级，WARN 观察期不 exit 1）。
 # 逃生阀：YSM_SKIP_PATH_HYGIENE=1
-if [ "${YSM_SKIP_PATH_HYGIENE:-0}" != "1" ]; then
+# 域裁剪：扫描域恒为 walk(frontend/src)（锐评 P2-4 核实后收窄——R6 判的也是 src 内
+# *.test.ts，非根 tests/ 目录；tests/scripts 变更点亮后判定必空，纯多跑）。仅显式 0 才跳。
+if [ "${YSM_SKIP_PATH_HYGIENE:-0}" != "1" ] && [ "$SD_PATH" != "0" ]; then
   echo ""
   echo "[pre-commit] 路径卫生检查（R5 同目录别名 / R6 测试神桶）..."
   node scripts/check-path-hygiene.ts 2>&1 || echo "⚠️  path-hygiene 发现 R5/R6 提示（观察期不阻断）或脚本异常"

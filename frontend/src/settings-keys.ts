@@ -11,8 +11,9 @@
 //
 // 本文件是**纯数据叶**：零 import、零运行时行为，声明 + 导出查询函数。之所以放 src 根
 // （而非某视图目录）：台账跨越 views / preview-3d / backend / core / utils 五层，
-// 放任何一层都会让其余层反向依赖那一层。消费面：备份迁移文档（人工维护的叙事）、
-// 设置页「导出设置」类需求（未来）、本次契约测试。
+// 放任何一层都会让其余层反向依赖那一层。消费面：① 设置导出/导入（ADR-344-d1，采集与
+// 回写白名单 = `exportableSettingsKeys()`，判定的唯一栖身处）；② 备份迁移文档的用户
+// 叙事（`migratingSettingsKeys` / `unbackupableSettingsKeys`）；③ 契约测试对账。
 //
 // ⚠️ 台账**不参与运行时读写**——不要为了「走台账」把 40 余处 safeGet 改成查表：
 // 那会把一张纯数据表变成热路径依赖网，且键的真实权威仍是各模块的读侧口径
@@ -69,6 +70,31 @@ export interface SettingsKeyEntry {
   readonly goField?: string;
   /** 键的持有模块（`file.ts` 形态，具体文件不写——文件会搬家，模块名不会） */
   readonly owner: string;
+  /**
+   * 键族通配（仅一个尾部/中部 `*`）：`key` 仍是登记名（占位符，如 `ysm-scene-cap-*`），
+   * 真实键由持有模块动态拼接。声明本字段 = 声明「这个键是键族，不是单键」——
+   * 消费方（备份采集/回写、对账）必须按 `keyPattern` 匹配真键，不得把占位符当真键读。
+   * 不声明（缺省）则 `key` 就是真键。契约测试不校验本字段（它不改变键集合的归属），
+   * 靠知识卡提示 + 备份采集测试兜底。
+   */
+  readonly keyPattern?: string;
+  /**
+   * 是否随「设置 → 备份与迁移」导出/导入带走。
+   *
+   * 缺省（`undefined`）= 跟随 `exportableSettingsKeys()` 的默认判据
+   * （`tier: local-storage` 且 `authority: browser-authority`）。显式 `false` = 明确剔除。
+   *
+   * 判据只有 `tier` + `authority` 两维，装不下 ADR-344-d1 决策②要排除的两类：
+   * - **派生缓存**（`ysmAlphaInfo` / `scan-authors` / `ListModelAuthors` / `community-merge`）
+   *   换机重扫即重建，随导出带走只会把旧机缓存回灌新机、覆盖刚重算的结果；
+   * - **网页模式专用键**（`ysm:config` / `web:workshop-*` / `web:github-repos`）
+   *   桌面端根本不消费，导入了也是写进桌面端 localStorage 的影配置。
+   *
+   * 这两类 `authority` 都填 `browser-authority`（语义上确实是浏览器权威），单靠
+   * `authority` 排不掉，必须补本维显式登记。契约测试 D 组断言：
+   * 「note 明写『派生缓存』的键不得 exportable」，防新派生缓存漏标。
+   */
+  readonly exportable?: boolean;
   /** 迁移/备份语义的必要说明（用户可见后果，非实现细节） */
   readonly note?: string;
 }
@@ -89,6 +115,16 @@ export function diskFieldName(key: string): string {
  */
 export const SETTINGS_KEYS: readonly SettingsKeyEntry[] = [
   // ─── Go 磁盘轨（ysm_config.json，随标准迁移流程保住）───────────────────
+  {
+    key: "disk:schemaVersion",
+    setting: "配置文件 schema 版本（迁移门控）",
+    tier: "go-disk",
+    authority: "disk-authority",
+    migrates: true,
+    goField: "SchemaVersion",
+    owner: "internal/app/app_config.go",
+    note: "结构性迁移（旧独立路径 → CustomRoots）按本字段门控：文件版本 < 当前版本才迁移并盖版本章，≥ 则跳过（幂等）。取代旧「字段空不空」的启发式判据——历史多次迁移 bug（白名单漏字段/启动路径漏跑迁移）同根于此。版本章只能由 applyConfigMigrations 在迁移完成后盖，写盘不越权盖章",
+  },
   {
     key: "disk:filesRoot",
     setting: "文件存储根目录",
@@ -550,7 +586,38 @@ export const SETTINGS_KEYS: readonly SettingsKeyEntry[] = [
     authority: "browser-authority",
     migrates: false,
     owner: "preview-3d/caps/scene-capability.ts",
-    note: "键族：localStorage 实际键为 STORAGE_PREFIX + capId（ysm-scene-cap- 前缀接 capId），JSON 序列化；另有动态成员键 ysm-scene-cap-「cap」-「field」 形态",
+    keyPattern: "ysm-scene-cap-*",
+    note: "键族：localStorage 实际键为 STORAGE_PREFIX + capId（ysm-scene-cap- 前缀接 capId），JSON 序列化；另有动态成员键 ysm-scene-cap-「cap」-「field」 形态。备份采集/回写必须按 keyPattern 展开真键——把占位符当键读恒 null，等于这些场景设置永远不迁移",
+  },
+  {
+    key: "ysm-tabs-last-*",
+    setting: "各页签组上次激活页签（按页签组前缀分域）",
+    tier: "local-storage",
+    authority: "browser-authority",
+    migrates: false,
+    owner: "views/app-content/tabs-runtime.ts",
+    keyPattern: "ysm-tabs-last-*",
+    note: "键族：实际键为 ysm-tabs-last- + 页签组 prefix（tabs-runtime.ts 模板字面量拼接）；tpl.ts|readLastTab 读取。2026-10-16 拼接键新口径抓出的漏网家族——函数签名实参是反引号模板，旧正则只认双引号首参故隐身",
+  },
+  {
+    key: "sb_selectedName_*",
+    setting: "侧栏各类型上次选中的包名（按 rtype 分域）",
+    tier: "local-storage",
+    authority: "browser-authority",
+    migrates: false,
+    owner: "views/app-sidebar/events.ts",
+    keyPattern: "sb_selectedName_*",
+    note: "键族：实际键为 sb_selectedName_ + rtype（模板字面量拼接），点击包与 restore 同桶读写。2026-10-16 拼接键新口径抓出的漏网家族",
+  },
+  {
+    key: "ysm:model-visible:*",
+    setting: "3D 场景逐模型可见性开关",
+    tier: "local-storage",
+    authority: "browser-authority",
+    migrates: false,
+    owner: "preview-3d/infra/scene-registry.ts",
+    keyPattern: "ysm:model-visible:*",
+    note: "键族：实际键为 MODEL_VISIBLE_PREFIX（ysm:model-visible:）+ 模型 path，scene-registry.ts visKey 拼接；隐藏某模型是用户可感知偏好，漏登即换机静默丢（2026-10-16 拼接键新口径抓出的漏网家族）",
   },
   {
     key: "vmd.positionScale",
@@ -567,6 +634,7 @@ export const SETTINGS_KEYS: readonly SettingsKeyEntry[] = [
     authority: "browser-authority",
     migrates: false,
     owner: "preview-3d/texture/texture-alpha.ts",
+    exportable: false,
     note: "派生缓存（非用户直接设置），但重启重算成本高故持久化",
   },
 
@@ -679,7 +747,8 @@ export const SETTINGS_KEYS: readonly SettingsKeyEntry[] = [
     authority: "browser-authority",
     migrates: false,
     owner: "views/app-content/site/workshop-data.ts",
-    note: "实际键带站点 id 后缀（ysm-ws-active-tag-「siteId」），禁止再裸打无后缀键",
+    keyPattern: "ysm-ws-active-tag*",
+    note: "键族：实际键为 workshop-data.ts scopedFilterKey 拼出的「ysm-ws-active-tag:」+ 站点id（冒号分隔，空站点回退无后缀裸键），**不是短横线**——登记名无后缀，直接读写会套错站。备份按 keyPattern 展开真键",
   },
   {
     key: "ysm-ws-search-kw",
@@ -688,7 +757,8 @@ export const SETTINGS_KEYS: readonly SettingsKeyEntry[] = [
     authority: "browser-authority",
     migrates: false,
     owner: "views/app-content/site/workshop-data.ts",
-    note: "实际键带站点 id 后缀",
+    keyPattern: "ysm-ws-search-kw*",
+    note: "键族：scopedFilterKey 拼「ysm-ws-search-kw:」+ 站点id；备份按 keyPattern 展开真键",
   },
   {
     key: "ysm-ws-last-tab",
@@ -697,7 +767,8 @@ export const SETTINGS_KEYS: readonly SettingsKeyEntry[] = [
     authority: "browser-authority",
     migrates: false,
     owner: "views/app-content/site/workshop-data.ts",
-    note: "实际键带站点 id 后缀",
+    keyPattern: "ysm-ws-last-tab*",
+    note: "键族：scopedFilterKey 拼「ysm-ws-last-tab:」+ 站点id；备份按 keyPattern 展开真键",
   },
   {
     key: "diag.perf.density",
@@ -714,6 +785,8 @@ export const SETTINGS_KEYS: readonly SettingsKeyEntry[] = [
     authority: "browser-authority",
     migrates: false,
     owner: "views/app-content/diagnostics/perf-trend.ts",
+    // 用户积累的趋势历史，不是纯派生缓存（换机后基线不同，重算需重新采样），随导出带走。
+    exportable: true,
     note: "攒够 ≥2 条才画趋势线；测试需先 localStorage.clear() 隔离",
   },
   {
@@ -723,6 +796,7 @@ export const SETTINGS_KEYS: readonly SettingsKeyEntry[] = [
     authority: "browser-authority",
     migrates: false,
     owner: "features/community/community-data.ts",
+    exportable: false,
     note: "派生缓存（扫仓产出），换机重扫即重建",
   },
   {
@@ -732,6 +806,7 @@ export const SETTINGS_KEYS: readonly SettingsKeyEntry[] = [
     authority: "browser-authority",
     migrates: false,
     owner: "features/community/community-data.ts",
+    exportable: false,
     note: "派生缓存；键名沿用历史命名（含无分隔符驼峰），不重命名以免老用户缓存失效",
   },
   {
@@ -741,6 +816,7 @@ export const SETTINGS_KEYS: readonly SettingsKeyEntry[] = [
     authority: "browser-authority",
     migrates: false,
     owner: "features/community/community-data.ts",
+    exportable: false,
     note: "派生缓存（bundled JSON + 本地覆盖的合并结果）",
   },
   {
@@ -760,6 +836,7 @@ export const SETTINGS_KEYS: readonly SettingsKeyEntry[] = [
     authority: "browser-authority",
     migrates: false,
     owner: "backend/web-store.ts",
+    exportable: false,
     note: "网页模式的「磁盘轨」替身：没有 Go 进程时 SaveAppConfig 写这里。桌面端不读此键",
   },
   {
@@ -769,6 +846,7 @@ export const SETTINGS_KEYS: readonly SettingsKeyEntry[] = [
     authority: "browser-authority",
     migrates: false,
     owner: "backend/web-community.ts",
+    exportable: false,
     note: "bundled JSON + localStorage 覆盖层；仅网页模式",
   },
   {
@@ -778,6 +856,7 @@ export const SETTINGS_KEYS: readonly SettingsKeyEntry[] = [
     authority: "browser-authority",
     migrates: false,
     owner: "backend/web-community.ts",
+    exportable: false,
     note: "bundled JSON + localStorage 覆盖层；仅网页模式",
   },
   {
@@ -787,6 +866,7 @@ export const SETTINGS_KEYS: readonly SettingsKeyEntry[] = [
     authority: "browser-authority",
     migrates: false,
     owner: "backend/web-community.ts",
+    exportable: false,
     note: "bundled JSON + localStorage 覆盖层；仅网页模式",
   },
 
@@ -907,7 +987,43 @@ export function migratingSettingsKeys(): readonly SettingsKeyEntry[] {
 /**
  * 标准迁移流程**带不走**的键（换机/重装即丢的那一档）。
  * 备份文档的「换机后需要重设什么」一节即由此派生——文档与台账同源，不再两处维护。
+ *
+ * ⚠️ 语义边界（ADR-344-d1 之后）：本函数回答的是「复制 `ysm_config.json` 带不走哪些」，
+ * 不再等于「换机会丢哪些」——其中 `exportableSettingsKeys()` 那一档可由设置页
+ * 导出/导入整体带走。想知道「导出会带走什么」用后者，不要混用两个口径。
  */
 export function nonMigratingSettingsKeys(): readonly SettingsKeyEntry[] {
   return SETTINGS_KEYS.filter((e) => !e.migrates);
+}
+
+/**
+ * 随「设置 → 备份与迁移」导出/导入带走的键（ADR-344-d1 采集/回写白名单的单一事实源）。
+ *
+ * 判据 = `tier: local-storage` 且 `authority: browser-authority` **且 `exportable !== false`**：
+ * - `go-disk` 不在此列——它随 appConfig 走，磁盘侧由 Go 收拢；
+ * - `session` / `non-persistent`（缓存、哨兵、派生值）不备份——重启即重算，无用户意图可丢；
+ * - `dual-write`（如 theme 的 localStorage 镜像）不备份——事实源在磁盘，备份镜像反而制造两处不一致；
+ * - `exportable: false`（派生缓存、网页模式专用键）不备份——见 `SettingsKeyEntry.exportable`：
+ *   `authority` 排不掉这两类，必须靠第三维显式登记。
+ *
+ * 与 `nonMigratingSettingsKeys()` 的关系：本集合是它的**子集**。差集（网页模式专用键、
+ * IDB 轨、派生缓存、哨兵）才是「换机真正要重设/重算」的那一档。消费方（采集与回写）
+ * 必须共用本函数——两处各写一遍手抄判定必漂移。
+ * 注：带 `keyPattern` 的登记名是占位符，展开真键的责任在消费方（见 SettingsKeyEntry.keyPattern）。
+ */
+export function exportableSettingsKeys(): readonly SettingsKeyEntry[] {
+  return SETTINGS_KEYS.filter(
+    (e) =>
+      e.tier === "local-storage" && e.authority === "browser-authority" && e.exportable !== false,
+  );
+}
+
+/**
+ * 换机既不带走、也不随导出带走的键（真正「要重设或重算」的那一档）。
+ * 备份文档的用户叙事应由此派生——`nonMigratingSettingsKeys()` 会把可导出的偏好也算成
+ * 「带不走」，那是 ADR-344 上线前的旧世界观，照它写文档会劝用户重设字号。
+ */
+export function unbackupableSettingsKeys(): readonly SettingsKeyEntry[] {
+  const exportable = new Set(exportableSettingsKeys().map((e) => e.key));
+  return SETTINGS_KEYS.filter((e) => !e.migrates && !exportable.has(e.key));
 }

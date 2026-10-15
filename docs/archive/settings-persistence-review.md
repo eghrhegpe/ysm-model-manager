@@ -1,0 +1,243 @@
+# 设置持久化功能锐评（2026-10-17）
+
+> ⚠️ 哈希注记（2026-10-24）：文中 commit 号为历史密度压缩前的细粒度提交哈希，对应改动已并入当日批量压缩提交（映射见各合并提交消息体）；原历史完整备份于本地分支 backup/pre-squash-20261024。
+
+- **评审对象**：YSM 模型管理器「设置持久化」功能族——三轨台账（`frontend/src/settings-keys.ts`）、磁盘写入唯一出口（`views/config-write.ts|writeAppConfig`）、导出/导入（ADR-344-d1，`internal/app/app_settings_export.go` + `frontend/src/views/app-content/settings/settings-backup.ts`）、契约测试（`tests/test_settings_key_ledger.ts`）。
+- **评审基线**：`0f8fc1817`（HEAD，2026-10-17）。上一轮锐评（2026-10-15/16）的 P0/P1 已基本落地（双门控专用 Code、导入顺序翻转、假备份拒止、尺寸闸、`LocalStorageKeyCount` 删除），本轮是对**当前树**的再评审。
+- **实证方法**：全文读源码 + 跑 `tests/test_settings_key_ledger.ts`（✅ 全绿：go-disk 33 字段 + localStorage/IDB 64 键，扫 649 个生产文件）+ 核对启动链与事件订阅面。
+- **结论**：**无 P0。P1 四条、P2 六条、P3 三条**。设计骨架（台账单一事实源 + 双向对账 + 导入顺序铁律）是全仓罕见的扎实样本，但**「白名单判据维度不足」「导入 UI 缺确认与后续引导」「dual-write 镜像导入后分叉」三条 P1 是真实缺陷**，会让 ADR 承诺的用户体验打折扣。
+
+---
+
+## 一、做得好的（先立靶）
+
+1. **台账单一事实源 + 双向对账**（`settings-keys.ts` + `tests/test_settings_key_ledger.ts`）：断言 A（防死键）/ B（防漏登，主价值）/ C（Go 字段 ⊆ 台账）/ D（自洽）/ E（台账 disk: ⊆ Go 字段，防幽灵）五向闭合，是仓库里「文档-代码不腐」的范式。键族用 `keyPattern` 展开真键、禁按前缀猜名，把「拼接键隐身」盲区收进网里（抓出 `sb_selectedName_*` / `ysm-tabs-last-*` / `ysm:model-visible:*` 三族）。
+2. **导入顺序铁律**（磁盘先落盘、浏览器后回写）及配套的「删掉 30 行从未被测试的补偿事务」——不是简化，是消掉不可判定的启发式。`settings-backup.test.ts:288-302` 锁「磁盘侧失败时浏览器**完全不写**」，比旧「写后再回滚」严格得多。
+3. **双版本门控挂专用 Code**（`ErrSettingsTooNew`）：承认 `friendlyError` 命中 Code 即丢弃 Reason/Suggestion 的机制，把「请升级程序后导入」交给 i18n 分类文案承载——正确认清了错误通道的取舍。
+4. **导出侧尺寸闸与导入侧对称**，且拒止从 `log.Printf` 升为「当场拒绝」——备份动作的失败必须可见，这是对的。
+5. 前端测试把 `esc()`、参数直传（非 stringify）、失败零副作用、取消零副作用都锁进了 `initSettingsBackup` 编排链路，覆盖相当完整。
+
+---
+
+## 二、P1（高——建议下一轮修）
+
+### P1-① 导入**没有二次确认**，注释与实现自相矛盾
+
+**锚点**：`internal/app/app_settings_export.go:123-124`（`ReadSettingsExport` 注释：「前端先调本绑定拿到内容做**导入前确认**（含「导入后将应用 N 项浏览器偏好」计数）」）；`frontend/src/views/app-content/settings/settings-backup.ts:163-171`（点导入 → `SelectImportFile` → `ReadSettingsExport` → **立即** `ImportSettingsFromFile`，无任何确认弹窗）。
+
+**问题**：`ReadSettingsExport` 的存在理由是「导入前确认」，但 UI 流程是选完文件**直接整份覆盖**。而导入是**破坏性**动作——ADR-344-d1:19 明确「以导入配置为基」整份覆盖磁盘 `AppConfig`，且会重启 watcher、改写 `FilesRoot`/`McRoot`。误选文件 / 误点即覆盖当前全部设置。虽然有 `.bak-*` 可回滚，但 UI 既不预告「即将覆盖 N 项设置、磁盘路径将被改写」，也不告知「已生成备份、位于哪里、如何恢复」。读取到的 `exp.AppConfig` 完全没被展示（只用了 `localStorage` 计数），`ReadSettingsExport` 的「预览」价值浪费了一半。
+
+**影响**：迁移动作对用户是一次「无提示的破坏」。这是 ADR 自己声明的能力未落地，不是额外需求。
+
+**建议**：`ReadSettingsExport` 之后加确认对话框，展示三件事——①「将覆盖磁盘配置（含文件存储路径 / 游戏根目录，可能需要重新确认）」；②「将应用 N 项浏览器偏好」（用现有 `applied`/`importedKeysFrom` 口径）；③「导入前已自动备份到 {backupPath}，导入后如不满意可用它恢复」。确认后才调 `ImportSettingsFromFile`。
+
+**处置**：✅ 已处置（2026-10-17）——`settings-backup.ts` 在 `ReadSettingsExport` 后、`ImportSettingsFromFile` 前插入 `modalConfirm`（`titleIcon: "warning"`、`danger: true`、`okText` 自定义），message 预告「整份覆盖当前设置（文件存储路径 / 游戏根目录等磁盘配置被替换）+ 将应用 N 项浏览器偏好（`importedKeysFrom(exp.localStorage).length`）+ 导入前已自动备份、可在备份目录找回」，取消则磁盘/浏览器都零副作用。新增三语言 i18n 键（`settings.backup.importConfirmTitle` / `importConfirmMessage` / `importConfirmOk`，zh-CN / en / ja）。测试补两条：①确认（断言 `danger` 样式 + `modalConfirm` 调用先于 `ImportSettingsFromFile`）；②取消（`ImportSettingsFromFile`/`safeSet`/`emit` 都不动）。
+
+### P1-② 导入后 `dual-write` 镜像键（theme/themeAuto）与磁盘**必然分叉**，且无任何同步
+
+**锚点**：`frontend/src/settings-keys.ts:985-989`（`exportableSettingsKeys` 判据 `tier=local-storage && authority=browser-authority`，注释「`dual-write` 不备份——事实源在磁盘，备份镜像反而制造两处不一致」）；`frontend/src/theme-core.ts:104-120`（`initTheme` 磁盘分支：`cfg.theme || safeGet("theme")` → `safeSet("theme", theme)` 回写镜像——**只在启动时执行一次**）；`frontend/src/bus.ts` + `git grep settings:imported`（`settings-backup.ts:180` 只 `bus.emit("settings:imported")`，订阅方仅 `app-content/index.ts:96` 重建面板）。
+
+**问题**：`theme`/`theme-auto` 是 `dual-write`（磁盘权威 + localStorage 镜像），因 `authority` 不是 `browser-authority` 被白名单排除 → **导入不会回写这两个镜像键**。但导入会**改写磁盘** `theme`/`themeAuto`（导出源值）。于是导入后到下次重启之间：磁盘 `theme=导出源值`、localStorage `theme=本机旧值`，而 `theme-core` **不订阅 `config:changed` 也不订阅 `settings:imported`**（grep 零命中），面板重建也不会重跑 `initTheme`。用户看到「导入成功」，但主题仍是旧值，UI 与真相分叉直到重启。
+
+**影响**：白名单排除 `dual-write` 的理由是「避免备份镜像」，但导入场景里磁盘**确实变了**而镜像没跟着变，结果恰好制造了它想避免的那种「两处不一致」。排除逻辑在「采集」场景成立，在「导入」场景不成立。
+
+**建议**：导入成功后补一次「镜像回同步」——让 `theme-core` 订阅 `settings:imported`（或由 `settings-backup.ts` 显式调 `syncThemeMirror()`）：读磁盘 `cfg.theme||cfg.themeAuto`，`safeSet` 回写两个镜像键。这与 `initTheme` 同口径，不是新逻辑。
+
+**✅ 已处置（2026-10-17）**：在 `app-content/index.ts` 的 `settings:imported` 订阅里补 `void initTheme()`（重建面板同处）。`initTheme` 本身即以磁盘为权威重算并 `safeSet` 回写 `theme`/`theme-auto` 两个镜像键（`theme-core.ts:100-129`），**未新增独立 `syncThemeMirror` 函数**——复用启动链同一口径，避免「两处镜像回写逻辑」漂移。
+**📌 处置依据**：未采纳「让 `theme-core` 订阅 bus」——`theme-core.ts:1-6` 是神桶拆分后的纯逻辑层（零顶层副作用），bus 广播属启动装配、由 `app-modules.ts` 承接；让纯逻辑层订阅 bus 会重新引入「import 即副作用」的测试困境。同步挂在事件消费方 `app-content/index.ts`，符合既有分层。`initTheme` 内部 catch 一切、`void` fire-and-forget 不阻塞面板重建。
+
+### P1-③ 假备份拒止判据**误伤正常用户**——「无路径设置」≠「配置损坏」
+
+**锚点**：`internal/app/app_settings_export.go:86-95`（`cfg.FilesRoot=="" && len(cfg.CustomRoots)==0` 且 `os.Stat(configPath())` 存在 → 拒绝导出）；`internal/app/app.go:331-340`（`resolveStartupConfigBootstrap`：`configFileMissing` 或 `McRoot==""` 且自动探测到 Minecraft 目录时 `needsWrite=true`）、`app.go:235-246`（启动链据此 `saveConfig`）。
+
+**问题**：拒止意图是「拦配置损坏后的零值缓存」，但判据是「路径字段为空」。而启动链会在**配置文件缺失时重建**，并在 `McRoot==""` 时**自动探测 Minecraft 目录落盘**。装过 Minecraft 的用户（绝大多数）首启动即自动生成配置文件（`McRoot` 非空），若此时尚未在「设置 → 环境」设文件存储根目录（`FilesRoot` 空、`CustomRoots` 空），导出被**直接拒绝**——哪怕他只是想把字号/主题/键位导走。`configPath()` 存在**不**蕴含「损坏」。
+
+**影响**：真实路径存在（新装机、未设仓库路径即导出浏览器偏好）；同时判据不可靠——「文件存在 + 无路径」对正常用户是常态而非异常形态。
+
+**建议**：拒止判据改挂在**配置可解析性**上（如 `LoadAppConfig` 解析失败、`SchemaVersion` 异常、或明确加一个 `configCorrupt` 标记），不要用「路径字段空」代理。至少把判据收窄为「配置文件存在且 `loadAppConfig` 走的是损坏回退分支」。
+
+**✅ 已处置（2026-10-17）**：判据收窄为「配置文件存在且**无法解析**」。`ExportSettingsJSON` 里 `os.Stat(configPath())` 存在时用 `readJSONFile` 重新解析磁盘配置，解析失败（`json.Unmarshal` 报错）才拒止；JSON 合法（哪怕路径全空）即放行——反映的是用户真实状态，不是损坏。未新增 `configCorrupt` 标记字段（改动面更大、且 `LoadAppConfig` 的 `configLoaded=false` 重试语义不应被破坏）。测试同步：`TestExportSettingsJSON_RejectsCorruptConfig` 保留（写损坏 JSON，仍拒止）+ 新增 `TestExportSettingsJSON_AllowsExistingConfigWithoutPaths`（写合法 `{}`，放行——锁住 P1③ 的误伤路径）。
+
+### P1-④ 白名单判据只有二维（tier + authority），装不下 ADR 明确要求排除的类别
+
+**锚点**：`frontend/src/settings-keys.ts:985-989`；`docs/adr/decisions/ADR-344-d1-settings-export-import.md:17`（决策②「**剔除**缓存/会话/调试/哨兵/派生键（社区合并、扫描作者缓存、诊断历史、`_debug`/`__waterSchemaVersion`、网页专用 IDB 日志与 `fsaRootHandle`）」）；台账内 `scan-authors`（`settings-keys.ts:773` note「派生缓存（扫仓产出），换机重扫即重建」）、`ListModelAuthors`（:782 note 派生缓存）、`community-merge`（:791 note 派生缓存）、`ysmAlphaInfo`（:614 note「派生缓存…重启重算成本高故持久化」）、`perf-history`（:764 note 趋势历史）、`ysm:config`（:810 note「桌面端不读此键」）、`web:workshop-creators`/`web:workshop-sites`/`web:github-repos`（:819-843，网页模式专用）——**这些键的 `authority` 全填的是 `browser-authority`，因此全部落入 `exportableSettingsKeys()` 白名单**。
+
+**问题**：ADR 决策②要求剔除「派生缓存」「网页专用」键，但白名单判据只有 `tier` + `authority` 两维，台账靠「把派生缓存标成 `non-persistent`」来排除——而上面这批却被标成 `browser-authority`（因为它们在语义上确实是「浏览器权威」）。结果有两个真实危害：
+
+- **污染**：桌面端导出文件会带上 `ysm:config`（网页版整份配置替身，可能不小）与 4 个 `web:*` 覆盖表，虚增文件体积、逼近尺寸闸。
+- **陈旧数据回灌**：导入时这些键被写回新机 localStorage，**覆盖新机刚重算的缓存**。比如导入旧机 `scan-authors`/`ListModelAuthors`（作者索引，扫仓产出）后，作者列表显示旧机数据直到下次重扫；`community-merge` 同理。
+
+**影响**：这是**判据维度不足**的系统性问题，不是个别登记错误——`exportableSettingsKeys` 无法表达「仅网页模式」「派生可重算」两个 ADR 明确要排除的维度。
+
+**建议**：白名单判据补第三维。最小改法：新增一个 `exportable?: boolean`（默认跟随现状）或 `persistenceKind: "user-preference" | "derived-cache" | "web-only"` 字段，`exportableSettingsKeys()` 只收 `user-preference`；把上表这批键按真实性质归类。契约测试 D 组补一条「`exportable` 与 `authority`/note 自洽」的断言（如派生缓存不得 `exportable`）。
+
+**✅ 已处置（2026-10-17，commit `4a9340068`）**：采纳最小改法 `exportable?: boolean`（缺省跟随二维判据）。`exportableSettingsKeys()` 判据补 `e.exportable !== false`。显式 `exportable: false` 的键：派生缓存 4 个（`ysmAlphaInfo` / `scan-authors` / `ListModelAuthors` / `community-merge`）+ 网页模式专用 4 个（`ysm:config` / `web:workshop-creators` / `web:workshop-sites` / `web:github-repos`）。契约测试新增断言 D5：note 命中 `/派生缓存|仅网页模式|桌面端不读此键/` 的 localStorage 键必须 `exportable === false`（防新派生缓存/网页专用键漏标）。
+**📌 处置偏差（与报告建议不同，说明理由）**：`perf-history` **未**标 `exportable: false`，反而显式 `exportable: true`。报告将其列为污染项，但复核后认定它是**用户积累的趋势历史**（攒够 ≥2 条才画趋势线，换机后重算需重新采样，非纯派生缓存）——剔除它会让换机丢用户可见历史，违背「用户会心疼丢的东西」这一台账主语。ADR 决策②的「诊断历史」按「纯派生、可重算」理解，`perf-history` 不在其列。台账 note 已补该归类说明，与 D5 断言不冲突（其 note 不命中 hint）。
+
+---
+
+## 三、P2（中——可排期）
+
+### P2-① 导出侧尺寸闸在 marshal **之后**，防不住 marshal 阶段开销
+
+**锚点**：`internal/app/app_settings_export.go:105`（`json.MarshalIndent`）→ `:112`（`len(data) > settingsExportMaxBytes` 才检查）。对比导入侧 `:129-135`（先 `os.Stat` 看大小**再** `ReadFile`）。
+
+**问题**：尺寸闸位置不对称。localStorage map 很大时，`MarshalIndent` 已经把整份数据塞进内存、花完 CPU 才算到超限。低危（map 来自本机前端、非外部输入），但闸门的「防资源浪费」语义被架空一半。
+
+**建议**：采集侧先估大小（如 `collectExportableLocalStorage` 后按键值总长粗算）早退，或导出一开始就带上限断言。
+
+**✅ 已处置（2026-10-17，commit `3acb3c747`）**：`internal/app/app_settings_export.go|ExportSettingsJSON` 在 `json.MarshalIndent` **之前**插入粗估早退——新增 `estimateLocalStorageSize(localStorage)`（每项 `len(k)+len(v)+24`，24 覆盖引号/冒号/逗号/缩进/转义固定开销）+ 常量 `settingsExportReserveBytes = 2 MiB`（给 `AppConfig` 结构 + JSON 转义/缩进膨胀留余量，粗估阈值 = `settingsExportMaxBytes - settingsExportReserveBytes`）。明显超限直接拒（`AppError` 挂「设置数据过大…无法导出」+ 清理缓存建议），**不再等整份 marshal 完才发现**；marshal 后的精查**保留**作最终裁决（粗估是近似，真值可能略高，精查兜底）。正常使用下设置键只有几十项、值几十字符，粗估早退永远不会误拒。测试 `TestExportSettingsJSON_RejectsOversizedLocalStorage` 补「超限导出不落盘任何文件」断言（原用例只断错误存在，现锁副作用）。
+
+### P2-② `ReadSettingsExport` 与 `ImportSettingsFromFile` 双重读取 + 轻微 TOCTOU
+
+**锚点**：`settings-backup.ts:163`（前端 `ReadSettingsExport` 取 `exp` 计数）→ `:167`（`ImportSettingsFromFile`，Go 内部 `app_settings_export.go:180` 再次 `ReadSettingsExport`）。
+
+**问题**：同一文件读两遍。计数用第一次读的 `exp.localStorage`，实际写盘走第二次读的文件——两遍之间文件若被替换，计数与实际写入不符（本机场景低危）。且是纯冗余设计。
+
+**建议**：让 `ImportSettingsFromFile` 返回实际应用的浏览器键集合（或让前端只依赖 `res`），避免二次读。
+
+**✅ 已处置（2026-10-17，commit `4df3e4d9a`）**：新增绑定 `ImportSettingsData(exp types.SettingsExport)`，与 `ImportSettingsFromFile` 共用 `importResolved` 落盘主体。前端 `ReadSettingsExport` 预览后把**同一个** `exp` 传给 `ImportSettingsData`，不再对同一文件读两遍——计数与实际写入必然一致。`importResolved` 补 `exp.Format` 数据入口防线（未走 `ReadSettingsExport` 校验的伪造/错误数据被拒止，不会以零值 `AppConfig` 覆盖当前配置）。`ImportSettingsFromFile` 保留为按路径入口（向后兼容）。配套：`settings-backup.ts` 解构改 `ImportSettingsData`；`e2e/mock-data.ts` 补 `ImportSettingsData: undefined`（bindings 契约，`MockKey` 须覆盖新绑定）；测试 Go 侧新增 `TestImportSettingsData_RoundTripAndBackup` / `TestImportSettingsData_RejectsBadFormat`，前端既有「磁盘失败不写浏览器」「取消零副作用」用例照旧锁（mock 名同步改）。
+
+### P2-③ 导出固定路径**静默覆盖**上一次导出
+
+**锚点**：`app_settings_export.go:39`（`settingsExportFilename = "ysm-settings-export.json"` 固定）、`:117-120`（`WriteFileAtomic` 直接覆盖）。
+
+**问题**：第二次导出覆盖第一次，旧文件无版本号、无提示。用户若已把旧文件拷走则无碍，但「导出」动作通常意味着「保留一份」，静默覆盖违背直觉，且覆盖后无法找回。
+
+**建议**：文件名带时间戳（如 `ysm-settings-export-20261017-1530.json`），或覆盖前确认；至少 toast 提示「已覆盖上次导出的文件」。
+
+**✅ 已处置（2026-10-17，commit `771e34597`，采纳「时间戳」方案）**：导出文件名改为带时间戳 `ysm-settings-export-YYYYMMDD-HHMMSS.mmm.json`（`settingsExportNameFmt` + `settingsExportTimeFmt`），每次导出都是独立快照、不再静默覆盖——比「覆盖前确认」更贴合「导出=保留一份快照」的直觉。配套 `settingsExportKeep = 10` + `pruneOldExportFiles()`（Glob `ysm-settings-export-*.json`，时间戳前缀字典序 LRU 删最旧，保留 10 份；清理失败仅 `log.Printf`——多留一份比删错更安全，与 `pruneOldConfigBackups` 同模式）。UI 显示/复制的就是当次导出路径（时间戳名），语义更清楚。测试：新增 `TestPruneOldExportFiles_KeepsRecentExports`（造 15 个假导出 → 裁剪到 10、最旧被删）；原 `path != settingsExportPath()` 断言改为 `assertExportPathInConfigDir` helper（时间戳名不能精确相等，改断言目录 + 文件名前缀）。
+
+### P2-④ 备份文件**有产出、无 UI 消费入口**
+
+**锚点**：`app_settings_export.go:43-45`（`settingsBackupKeep = 10`，LRU 裁剪）、`:241-252`（`pruneOldConfigBackups`）；`settings-backup.ts:176`（UI 仅 `setStatus(t("settings.backup.importedTo", { n, backup: esc(backupPath) }))` 一行文字）。
+
+**问题**：ADR-344-d1:19 承诺「后悔可还原备份文件」，但还原路径全在 UI 外——用户只能自己打开文件管理器找到 `.bak-*` 替换 `ysm_config.json`。设置页无「浏览备份 / 恢复此备份 / 删除旧备份」入口，且 `.bak-*` 会累积到 10 份用户不知情。
+
+**建议**：状态行把 `backup` 变成可点按钮（「打开备份位置」），或加一个「恢复上次导入前备份」按钮（读最新 `.bak-*` → `ImportSettingsFromFile` 同链路）。
+
+**✅ 已处置（2026-10-17，commit `a81367611`）**：Go 新增两个绑定——`ListSettingsBackups() ([]string, error)`（Glob `configPath()+".bak-*"`，时间戳倒序**最新在前**；无备份返回空切片而非 nil，Wails 绑定 nil 切片会序列化成 null 让前端多判一道）+ `RestoreSettingsBackup(path string) error`（`readJSONFile` → 版本门控迁移/洗脏 → `configWriteMu` 内 `saveConfig` + `applyPostSaveSideEffects`，与 `importResolved` 同口径、同一条真相源，不另造写路径）。**恢复前不再额外备份当前配置**：否则每次恢复都生成新的 `.bak-*`，而「恢复最近备份」取的就是最新一份 → 会形成「恢复 → 生成新备份 → 下次恢复拿到这份新备份」的死循环。前端设置页加「恢复最近备份」+「打开备份目录」按钮（`tpl-settings-backup.ts`）；`settings-backup.ts` 加 click 绑定：`ListSettingsBackups` → 空则 toast「暂无导入前备份」→ `modalConfirm`（danger，预告覆盖范围）→ `RestoreSettingsBackup(backups[0])` → toast + `bus.emit("settings:imported")`；「打开备份目录」用 `OpenFolder(dirOf(backups[0]))`（新增内联 `dirOf()` 跨平台切分隔符，生产侧无 node `path`）。i18n 8 键 × 3 语言；`mock-data.ts` 补两个绑定（bindings 契约，`MockKey` 须覆盖新绑定否则 typecheck 报 `__mockBindingContract`）。测试：Go `TestListSettingsBackups_RoundTrip`（无备份返回空 + 最新在前）/ `TestRestoreSettingsBackup_RestoresToBackupValue`（恢复到备份值 Theme/FilesRoot + 备份文件不存在报错）；前端 4 用例（恢复确认→调用 + emit、取消→不调不 emit、无备份→toast 且不调、打开目录→`OpenFolder(目录)`）。bindings 188 Methods。
+
+### P2-⑤ 导入成功后**未做「环境」侧引导**，ADR 承诺的「UI 提示确认路径」未落地
+
+**锚点**：`docs/adr/decisions/ADR-344-d1-settings-export-import.md:19`（「路径字段**原样导入**（换机后旧盘符失效由 UI 提示「确认文件存储路径与游戏根目录」）」）；`settings-backup.ts:176-180`（导入成功仅 `setStatus` + `toast` + `bus.emit("settings:imported")`，无任何路径确认提示或跳转）。
+
+**问题**：导入后 `FilesRoot`/`McRoot` 指向旧机路径，应用无法扫描，静默表现为「仓库空」「导入失败」。UI 侧「由 UI 提示」这一承诺完全未落地。
+
+**建议**：`settings:imported` 后检测 `cfg.FilesRoot`/`cfg.McRoot` 是否本机存在，不存在则 toast + 跳转「设置 → 环境」卡片，或加警示条「导入的文件存储路径在当前机器不存在，请重新设置」。
+
+**处置**：📌 **部分不成立**（2026-10-17 复核）——`settings.backup.importDone` 文案已含「若导入的路径在本机无效，请在「环境」页重新设置目录」（zh-CN / en / ja 三语言），**文案侧提示已存在**，锐评「完全未落地」不准确。但**自动检测**路径有效性 + 跳转/警示条仍未实现——保留为后续增强（需 Go 侧路径存在性绑定，与 P2-④「恢复备份」同属导入后 UX 收尾，一并排期）。
+
+**✅ 增强已落地（2026-10-17，commit `eb935a7c8`）**：Go 新增绑定 `DirectoryExists(path string) bool`（`os.Stat` + `IsDir`；空路径返回 false；纯只读零副作用——不能复用 `OpenFolder`，它会真的打开资源管理器）。导入成功后 `settings-backup.ts` 调 `missingDirsOf(exp.appConfig, DirectoryExists)` 检测 `filesRoot`/`mcRoot`/`customRoots` 中在本机不存在的路径（空路径跳过，`customRoots` 是 `{类型->路径}` map、值可能 undefined 一并过滤；目录存在性只能问 Go，回归红线：前端不扫盘），存在缺失则状态行追加缺失警告（`var(--err)` 配色）+「去环境页」按钮（点击 `.stg-tab[data-tab="env"]`）。测试：Go `TestDirectoryExists`（存在目录 true / 不存在 false / 空路径 false / 普通文件 false）；前端两用例（缺失 → 状态行警告 + 按钮，点击切到 env tab；全部存在 → 无按钮）。
+
+### P2-⑥ `if (!exp) return` 是死代码
+
+**锚点**：`settings-backup.ts:164`（`if (!exp) return; // 防御：read 成功但回空（Go 侧不应发生）`）；`go/types/config.go:70`（`SettingsExport` 是 **struct**，非指针），Wails 绑定成功时恒为对象。
+
+**问题**：`!exp` 对对象恒 `false`，分支不可达。注释称「Go 侧不应发生」恰恰说明它不该写。会误导后续维护者以为空返回是可能态。
+
+**建议**：删除，或改为判关键字段（如 `exp.format` 非空）。
+
+**处置**：✅ 已处置（2026-10-17，随 P1-① 一并）——防御判空改为 `if (!exp?.format) return`（保留防御语义、分支可达）；测试里 `ReadSettingsExport` mock 补 `format: "ysm-settings-export"`，并加注释说明为什么不能写 `!exp`。
+
+---
+
+## 四、P3（低——记录）
+
+- **P3-① 导出文件无内容指纹**：无 SHA256/hash，导入侧无法检测文件被截断（除 JSON 解析失败外）。低危。
+- **P3-② 前缀通配 `matchesPattern` 会误匹配未来同前缀键**（`settings-backup.ts:43-51`）：如 `ysm-ws-active-tag*` 会匹配未来新增的 `ysm-ws-active-tag-other`。低危。
+- **P3-③ 台账 `owner` 命名跨语言不一致**：localStorage 键写 `views/app-content/settings/ui-prefs.ts`（含目录），磁盘轨写 `internal/app/app_config.go`（含包路径），个别写裸 `theme-core.ts`——`owner` 注释说「文件会搬家，模块名不会」，但实际填的是路径形态。低危，影响人工回溯。
+
+---
+
+## 五、总体评价与处置建议
+
+**评分**：骨架 9/10，执行 7/10。台账 + 契约测试 + 导入顺序铁律是仓库级范本；失分集中在**白名单判据维度不足**（P1-④）和**导入 UX 半成品**（P1-①、P1-②、P2-④、P2-⑤）——ADR 把「换机从手抄偏好变一键迁移」说清楚了，但「一键迁移之后呢」这条链（确认 → 镜像同步 → 路径引导 → 可回滚）没接完。
+
+**建议处置顺序**：
+
+1. **P1-④**（白名单补第三维 + 台账归类 + 契约 D 组补断言）——根因，其余三条都受它影响。
+2. **P1-①**（导入确认对话框）+ **P1-②**（镜像同步）+ **P2-⑤**（路径引导）——同属导入 UX，一次改。
+3. **P1-③**（拒止判据改挂可解析性）——单独，判据收窄。
+4. P2 六条按排期，P3 记录即可。
+
+**处置记录**：本报告条目请按项目惯例在修复后补 `docs(锐评)` 提交逐条记录（接受 / 不采纳理由）；不采纳的条目写明实证复核结论。
+
+---
+
+## 六、第二轮锐评（2026-10-18，基线 `6179495cb`）
+
+第一轮 P1–P3 全数处置落地且实测复核有效（`go test ./internal/app -run 'Export|ImportSettings|Backup|Restore|DirectoryExists|SettingsKey'` 绿；`node tests/test_settings_key_ledger.ts` 全过——go-disk 33 字段 + localStorage/IDB 64 键、扫 649 文件；vitest `settings-backup.test.ts` 24/24）。本轮只评**处置引入的新代码面**与第一轮未覆盖的残留面。
+
+### P1-⑤ `ImportSettingsData` 写盘主入口丢双版本闸
+
+**锚点**：`internal/app/app_settings_export.go:247-249`（ImportSettingsData → importResolved）、`:253-265`（importResolved 自称「数据入口防线」却只校验 `exp.Format`）；对照 `:201-222`（ExportVersion/SchemaVersion 双闸 + 危害自述全文挂在 ReadSettingsExport 一侧）。
+
+**问题**：双版本闸留在「预览读」出口，没跟到「写盘」入口——防线落在了旧路标上。UI 链路安全（前端必先 Read 再传同一 exp），但绑定契约层面 `ImportSettingsData` 可被 JS 直接喂伪造/陈旧 exp 落盘：`applyConfigMigrations` 只向上迁低版本、不拒绝高版本，`saveConfig` 会把高版本程序导出的 `SchemaVersion` 焊死成本程序的版本章——`:202-203` 自述的「高版本章焊死」危害恰好发生在无闸分支上。P2② 消双读重构把写主入口移过来的那一刻，闸没随行，是这次修复唯一真正的失手。
+
+**建议**：两道版本闸移进 `importResolved`（Format 闸之后）；`ReadSettingsExport` 侧保留（预览早退 UX 更好），两道闸抽同源函数两点调用。补 Go 测试：`ImportSettingsData` 直喂高 ExportVersion / 高 SchemaVersion 的 exp → 拒且报 `ErrSettingsTooNew`。
+
+**处置**：✅ 已处置（2026-10-18，commit `5757734c4`）——双闸抽成同源函数 `checkExportVersions`，`ReadSettingsExport`（预览早退，UX 侧）与 `importResolved`（写路径唯一入口，防线本体）两点同挂；函数注释记入教训「门控跟着写路径唯一出口走，不跟着调用链的便利侧留念」。测试：`TestImportSettingsData_RejectsTooNewVersions`（高格式版本/高 schema 直喂 → 拒 `ErrSettingsTooNew` 且配置零改动；等值版本与遗留 ExportVersion=0 放行面回归——先写红测复现「无闸直落盘」再修绿）。放行语义与 ReadSettingsExport 侧既有门控测试（`TestReadSettingsExport_RejectsHigherSchemaVersion`）同源同断言。
+
+### P2-⑦ 恢复入口不设防：`RestoreSettingsBackup` 不校验路径归属，`ListSettingsBackups` 缺空目录守卫
+
+**锚点**：`app_settings_export.go:361-364`（任意 path 直进 `readJSONFile` 后整份覆盖配置）；`:341`（`filepath.Glob(configPath() + ".bak-*")` 无 `configDir()==""` 守卫）；对照 `:67-76`（`settingsExportPath` 对同一危害有显式守卫且注释自证道理）与 `:183`（威胁模型自述「本绑定可被 JS 传任意路径触发」）。
+
+**问题**：① 恢复是有侧效的写盘，却不校验 path 确属备份集合——JS 可传任意 JSON 路径覆盖 `ysm_config.json`，绕开导出格式与版本闸（备份文件名恒为 `ysm_config.json.bak-*`，判据现成）；② `configDir()==""` 时 `configPath()` 为空串，Glob 模式退化为 `.bak-*`，匹配到 CWD 的外来文件——`:67-69` 已在导出侧认过的坑，列表侧没堵，同文件不对称。
+
+**建议**：`RestoreSettingsBackup` 开头校验 `filepath.Dir(path) == configDir()` 且文件名匹配 `.bak-` 模式（或反查 `ListSettingsBackups` 集合）；`ListSettingsBackups` 加同款空目录守卫（返回空列表）。Go 测试：备份目录外路径 / 非 .bak 文件名 → 拒。
+
+**处置**：✅ 已处置（2026-10-18，commit `99e13b895`）——`RestoreSettingsBackup` 入口守卫：目录归属（`filepath.Dir(Clean(path))==configDir()`）+ 文件名 `ysm_config.json.bak-` 前缀 + `configDir()` 非空，三者任一不满足即 `AppError{ErrInvalidParam, 恢复备份}`；`ListSettingsBackups` 在 `configPath()==""` 时早退空列表。测试 `TestRestoreSettingsBackup_RejectsForeignPaths`：正例对照（`backups[0]` 恢复成功、回到导入前值——防闸过紧杀 UI 合法链路）+ 四种负面（异目录 / 目录内非 `.bak` 名 / 相对路径 / 裸目录）各断言 `ErrInvalidParam`（证明确被闸拒、非 ENOENT 凑数）且配置零改动；`TestListSettingsBackups_ResultsInsideConfigDir` 锁列表侧不变量「每项绝对且归属目录内」。注：「平台数据根缺失」态测试不可达（`configDirOverride` 注入空串会落穿回真实平台目录），空目录守卫分支以 `settingsExportPath` 先例同族担保，不可测原因已写进测试注释。
+
+### P2-⑧ P1②「主题镜像重算」修复本身没有回归锁
+
+**锚点**：`frontend/src/views/app-content/index.ts:97-107`（`settings:imported` 订阅内 `void initTheme()`）；app-content 目录**无** `index*.test.ts`（glob 零文件）；`settings-backup.test.ts:307/:398` 只钉 emit 不钉消费方；知识卡 `docs/knowledge/settings-persistence.md` 不变量 8 要求该调用。
+
+**问题**：修复落地了，但不变量只活在知识卡文字里——日后重构挪掉/拆掉这个订阅，全仓没有一盏红灯。theme 是 dual-write 唯一族（`settings-keys.ts:167-186` disk:theme/themeAuto + `:442-459` 镜像），重算一旦丢，换机导入后磁盘 theme 与 localStorage 镜像静默分叉，等于 P1② 复发且无人为它负责。改代码不补执法，债只是换了张借条。
+
+**建议**：补一条测试：emit `settings:imported` → spy 断言 `initTheme` 被调（组件级或最小 bus 级皆可）。
+
+**处置**：✅ 已处置（2026-10-18，commit `a4dd554dd`）——选了**源码级回归锁**而非组件级 vitest：app-content 无既有测试基设（渲染组件要拖全栈 mock），且本风险面是「重构拆链」而非「行为漂移」，源码锁最便宜、指向最准。`tests/test_settings_imported_theme_lock.ts` 三面锁：A `settings-backup.ts` 存在 `emit("settings:imported")`（实测 ×2，导入/恢复两路）；B `app-content/index.ts` 订阅回调 800 字符窗口内命中 `initTheme()` 调用；C `initTheme` import 在位（防 B 命中注释孤例）。由 `scripts/contract-tests.ts` 全量枚举自动入 CI，零登记；行为面仍由 `settings-backup.test.ts` 的 emit 断言承担，本锁补结构面。失败信息自带出口指引（确属重构搬迁→迁链后同步更新本锁）。
+
+### P2-⑨ 恢复语义双轨不对称，且确认文案不实
+
+**锚点**：`settings-backup.ts:186-190`（导入 = 磁盘 + 浏览器偏好双轨）；i18n `restoreConfirmMessage`（`frontend/public/locales/zh-CN.json:180` + `src/locales/{zh-CN,en,ja}.ts` 三语言）称「恢复后主题、语言与仓库路径会立即更新」；`language` 台账（`settings-keys.ts:430-441`）是 localStorage/browser-authority 轨，`go/types/config.go` grep `Language` 零命中。
+
+**问题**：① 导入写双轨、恢复只回滚磁盘轨——「先导入再恢复」后浏览器偏好停在导入机的值，文案未披露；② 文案承诺语言会随恢复更新，但语言根本不在磁盘轨上，恢复永远不动它；换机导入带来的新语言，恢复撤销不了。
+
+**建议**：`restoreConfirmMessage` 改为「恢复磁盘配置（主题、仓库路径等）；浏览器偏好（语言、界面选项）不回滚」，三语言同步；是否升级恢复为双轨（恢复前记录 localStorage）另拍。
+
+**处置**：✅ 文案已改实（2026-10-18，commit `0cf2ffc35`）——三语言同步：「整份覆盖当前**磁盘**设置（主题、文件存储路径、游戏根目录），磁盘侧恢复后立即生效；浏览器偏好（语言、界面选项等）不属磁盘轨，不会被本次恢复回退」，`{path}` 参数保留。口径诚实性两头都站得住：主题确实即时生效（restore→emit `settings:imported`→`initTheme` 重算，链条现由 `a4dd554dd` 源码锁看管），语言确实永不被动（browser-authority 轨）。生成物 `frontend/public/locales/*.json` 由 pre-commit GEN_CMDS 同步刷新（随 `99e13b895` 先入库，内容即新文案）。「恢复升级为双轨」保留为产品决策未拍。
+
+### P3-④⑤⑥（记录→处置/撤销）
+
+- **P3-④ 双重转义**：`settings-backup.ts:245` 传 `t(..., { path: esc(target) })`，而 `utils/dom/modal-confirm.ts:47` 内部已 `esc(message)`——含 `&` 的路径显示为 `&amp;`。删外层 esc。→ **✅ 已处置**（见下 P3 处置回填）。
+- **P3-⑤ 确认文案 `\n` 不换行**：`.dlg-msg` 全仓无 CSS（grep 仅 ts 模板行命中），HTML 把换行折叠成空格，两句预告挤一行。→ **⚠️ 误诊撤销（2026-10-18 处置时复核）**：`frontend/css/dialogs.css:32-39` 的 `.dlg-msg` 一直有 `white-space: pre-wrap`（换行本就保留），`frontend/index.html:24` 已挂该样式表。病根在取证：CSS 存在性 grep 只扫了 `frontend/src/`，漏了仓根的 `frontend/css/` 目录。教训：**前端样式断言必须双目录（src/ + css/）grep**，「全仓无」这种全称否定尤其要报出扫描面。
+- **P3-⑥ 注释不实 + 按钮可用性自缚**：`settings-backup.ts:260` 称「本机没有取配置目录的绑定」——`GetConfigPath` 存在（`app_config.go:71-73`；`e2e/mock-data.ts:334` 绑定契约在册）。「打开备份目录」现无备份即 toast 报错，其实配置目录恒存在（含导出快照）；改用 `GetConfigPath` 可去掉 `dirOf` 字符串 hack 与「必须有 .bak」的依赖，按钮无备份时也能开快照目录。→ **✅ 已处置**（`dirOf` 保留——浏览器侧拿 Go 磁盘路径仍须自己切，被砍掉的是「必须有备份」依赖，见处置回填）。
+
+### 观察（非缺陷，宜补文档）
+
+浏览器轨导入 = **merge**（`settings-backup.ts:110-121` 只写导出文件里出现的键，不删本机同轨残留），磁盘轨 = 整份覆盖。两轨混合语义是设计选择，但「未导出键的旧值静默存活」未写进知识卡/ADR，用户猜不到——建议知识卡不变量 8 补一句口径。
+
+### 记录（接受不修）
+
+- 断言 D5 判据 `NON_EXPORTABLE_HINT=/派生缓存|仅网页模式|桌面端不读此键/`（`tests/test_settings_key_ledger.ts:258`）是 note 短语启发式，未来派生缓存键措辞不含即漏网——代码注释已自认限制。
+- 粗估闸的 6–8MiB 带可误拒（`estimateLocalStorageSize` > 6MiB 拒、真值或 < 8MiB）——`app_settings_export.go:57-60/:380-393` 注释自认 trade-off；设置到 MiB 级本就超出设计包络。
+
+### 第二轮总评
+
+第一轮六条 P1/P2 全落地、条条带测试锁与三语言文案，处置质量在平均线以上。本轮暴露两个反复出现的形状，比单条缺陷更值钱：
+
+1. **防线跟着入口搬家，不跟着旧路标留念**（P1-⑤）：重构开新主入口时，闸必须随「写路径唯一出口」迁移，而不是留在调用链的便利侧。
+2. **改行为不改执法**（P2-⑧）：知识卡不变量没有测试钉，就只是借条。
+
+**评分**：骨架 9/10 ｜ 第一轮处置执行 8/10 ｜ 处置新面的安全对称 6/10。建议：P1-⑤ 当天修（半天工作量）；P2-⑦⑧⑨ 随下一个 settings 提交一并收；P3 记录排期。
+
+**处置进度（2026-10-18 回填）**：P1-⑤ `5757734c4` ✅；P2-⑦ `99e13b895` ✅；P2-⑧ `a4dd554dd` ✅；P2-⑨ `0cf2ffc35` ✅（文案面，双轨升级未拍）；P3-④⑥ `41affb985` ✅；P3-⑤ ⚠️ 误诊撤销（`.dlg-msg` 在 `frontend/css/dialogs.css:32-39` 早有 `white-space: pre-wrap`，取证 grep 只扫 `frontend/src/` 漏了 `frontend/css/`——全称否定断言必须报扫描面）。本轮三条形状教训已进知识卡：不变量 13（门控随写路径唯一出口）、不变量 14（侧效入口自证输入归属）、样式断言双目录（src/ + css/）。
+
+**治理尾注**：两轮条目已全部处置/撤销——按 `docs/knowledge/AGENTS.md`「docs 根报告当日归档、快照不过夜」，本文件已整本迁 `docs/archive/`，`docs/knowledge/settings-persistence.md` 留一行时点基准指针。
+
+---
+
+*评审人：AI 代理（鲸鱼架构师 deepseek）｜评审日期：2026-10-17｜基线 commit：`0f8fc1817`*
+*第二轮：2026-10-18｜基线 commit：`6179495cb`（第一轮处置后 HEAD）*

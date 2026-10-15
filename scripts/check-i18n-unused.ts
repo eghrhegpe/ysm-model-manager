@@ -40,12 +40,12 @@
 import fs from "node:fs";
 import path from "node:path";
 import {
+  applyDynamicCoverage,
   classifyKeyUsage,
   constructedKeyPrefixes,
   countDynamicKeySites,
   extractDottedTokens,
   groupByPrefix,
-  isKeyDynamicallyCovered,
   parseLocaleKeys,
 } from "./_lib/i18n-unused.ts";
 import { parseArgs } from "./_lib/parse-args.ts";
@@ -149,11 +149,7 @@ let rows = classifyKeyUsage(keys, prodLits, allLits);
 // 保守方向不变（只可能把「误判死」的活键拉回，不新增死键误判）。
 const prodPrefixes = constructedKeyPrefixes(prodCorpus);
 const allPrefixes = constructedKeyPrefixes(allCorpus);
-rows = rows.map((r) => {
-  if (r.usage === "dead" && isKeyDynamicallyCovered(r.key, prodPrefixes)) return { key: r.key, usage: "used" as const };
-  if (r.usage === "dead" && isKeyDynamicallyCovered(r.key, allPrefixes)) return { key: r.key, usage: "test-only" as const };
-  return r;
-});
+rows = applyDynamicCoverage(rows, prodPrefixes, allPrefixes);
 const dyn = countDynamicKeySites(allCorpus);
 
 const dead = rows.filter((r) => r.usage === "dead").map((r) => r.key);

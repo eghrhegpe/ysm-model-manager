@@ -302,7 +302,17 @@ func (a *App) SetResourceRoot(rtype, path string) error {
 		cfg.CustomRoots = make(map[string]string)
 	}
 	cfg.CustomRoots[rtype] = path
-	return a.saveConfig(cfg)
+	if err := a.saveConfig(cfg); err != nil {
+		return err
+	}
+	// ADR-352 ② 重注册面：CustomRoots 变更不重启 watcher（既有面——新自定义目录
+	// 不在 watcher 监听集内），但浏览索引根清单 = allAllowedRoots() 须重算——新自定义
+	// 根入库、旧自定义根出集（出集表实例自动删除，不留孤儿表）。watched 位全量
+	// 复位：新根未随 watcher 重配，保守回落 scanTTL() 兜底，外部变更探测零回归。
+	// SaveAppConfig 路径（FilesRoot/McRoot 变更）经 applyPostSaveSideEffects →
+	// rebuildWatcherAndDirs → restartWatcher 单漏斗，不在此重复。
+	scanner.SetIndexRoots(a.allAllowedRoots())
+	return nil
 }
 
 // ResetResourceRoot 恢复指定资源类型的路径为默认（清空自定义值）
@@ -312,6 +322,11 @@ func (a *App) ResetResourceRoot(rtype string) error {
 
 // saveConfig 写入配置到文件
 func (a *App) saveConfig(cfg types.AppConfig) error {
+	// ⚠️ 不在本处盖 schema 版本章：版本是「迁移已执行」的提交标记，只能由
+	// applyConfigMigrations 在真正跑完迁移后写入。若在写盘时无脑盖章，
+	// 一份**未迁移**的配置（如程序化构造的 AppConfig，未经 LoadAppConfig）会被
+	// 盖上「已迁移」的假章，下次读取跳过迁移 → 复现 8c858c54a 的静默数据丢失。
+	// 正确的流转：遗留文件(无版本) → 读取时迁移 + 盖章 → 下次保存写出带版本章的文件。
 	// roots（FilesRoot/CustomRoots 等）可能变更：失效 isPathInRootOrSelf 的
 	// root 解析缓存，防止扫描守卫用过期的根真实路径做 symlink 复核
 	// （组件化 ADR-134 同构，见 app_resolved_root_cache.go）

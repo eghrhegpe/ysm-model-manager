@@ -232,8 +232,7 @@ func (a *App) buildInstanceStatusCounts(rtype, repoDir string, instances []types
 
 func (a *App) SyncModelToggleStatus(instanceCustomDir, filesRoot string) (int, int, error) {
 	n1, n2, err := ysmsync.SyncToggleStatus(instanceCustomDir, filesRoot, a.ScanModelEntries)
-	// 启禁同步会改实例侧文件名，但当前不走 scanner 失效；这里显式清同步结果缓存，
-	// 否则新增的 30s 同步结果缓存会让整合包页继续展示旧启禁状态。
+	// 启禁同步会改实例侧文件名；sync 内部已走 scanner.InvalidateCache 级联清两侧（2026-10-16 锐评 P0-①），此处配对失效降为防御纵深。
 	instance.InvalidateSyncItemsCache()
 	ysmsync.InvalidateSyncScanCaches()
 	return n1, n2, err
@@ -424,7 +423,9 @@ func (a *App) PushResourceToInstance(rtype, instanceName string) (int, error) {
 		return 0, err
 	}
 	n, opErr := ysmsync.PushResources(rtype, globalDir, targetDir, a.getLinkMode(), a.logger.Add)
-	// 推送会改实例目录；该入口当前不走 scanner.InvalidateCache，显式清同步结果缓存。
+	// 推送会改实例目录；sync 内部已走 scanner.InvalidateCache 级联清两侧（2026-10-16 锐评
+	// P0-①），此处配对失效降为防御纵深——派生闸 tests/test_sync_write_cache_pairing.ts
+	// 强制保留，缺半边即红。
 	instance.InvalidateSyncItemsCache()
 	ysmsync.InvalidateSyncScanCaches()
 	return n, opErr
@@ -449,7 +450,8 @@ func (a *App) PullResourceFromInstance(rtype, instanceName string) (types.PullSy
 		return empty, err
 	}
 	res := ysmsync.PullResources(rtype, globalDir, targetDir, a.logger.Add)
-	// 拉取会改全局仓库目录；该入口当前不走 scanner.InvalidateCache，显式清同步结果缓存。
+	// 拉取会改全局仓库目录；sync 内部已走 scanner.InvalidateCache 级联清两侧（2026-10-16
+	// 锐评 P0-①），此处配对失效降为防御纵深——派生闸强制保留。
 	instance.InvalidateSyncItemsCache()
 	ysmsync.InvalidateSyncScanCaches()
 	return res, nil
@@ -488,7 +490,7 @@ func (a *App) PullSingleResourceFromInstance(rtype, srcPath, instanceName string
 		return err
 	}
 	opErr := ysmsync.PullSingleResource(globalDir, targetDir, srcPath)
-	// 拉取单条会改全局仓库；显式清同步结果缓存（保持单文件操作后立即刷新）。
+	// 拉取单条会改全局仓库；sync 内部已走 scanner.InvalidateCache 级联清两侧，此处配对失效降为防御纵深（保持单文件操作后立即刷新）。
 	instance.InvalidateSyncItemsCache()
 	ysmsync.InvalidateSyncScanCaches()
 	return opErr
@@ -509,7 +511,7 @@ func (a *App) PushSingleResourceToInstance(rtype, instanceName, filePath string)
 		return err
 	}
 	opErr := ysmsync.PushSingleResource(filePath, customDir, globalDir, a.getLinkMode(), rtype)
-	// 推送单条会改实例目录；显式清同步结果缓存（保持单文件操作后立即刷新）。
+	// 推送单条会改实例目录；sync 内部已走 scanner.InvalidateCache 级联清两侧，此处配对失效降为防御纵深（保持单文件操作后立即刷新）。
 	instance.InvalidateSyncItemsCache()
 	ysmsync.InvalidateSyncScanCaches()
 	return opErr
@@ -591,13 +593,15 @@ func (a *App) GetSyncScanDirs(rtype, instanceName string) (types.SyncScanDirs, e
 // resourceTypesForSync 按 rtype 过滤同步类型清单：rtype 非空只保留该类型，
 // 避免 BuildSyncItems 扫不存在的其他类型目录；rtype 为空透传全集。
 // 未知 rtype 返回空切片（消费端按类型过滤后本就是空列表，等价且省全盘扫描）。
-// 只构造局部切片副本、绝不就地截断入参——LoadRegistry 返回进程级缓存单例，
-// 就地 `[:0]` 截断会把共享注册表永久裁剪为 ≤1 类型，后续所有 LoadRegistry 消费方
-// （LoadResourceTypes/GetAllRepoRoots/EnsureStorageDirs…）只见残缺清单
-// （code_review 67929360 P2：子代理核出共享单例被就地截断的既有隐患）。
+// **总是返回副本、绝不返回入参本身**——LoadRegistry 返回进程级缓存单例，入参
+// `all` 极可能是 `reg.ResourceTypes`（共享注册表）。若 rtype 为空时直接返回 `all`，
+// 消费方就地 `[:0]` 截断或 `append` 复用底层数组会把共享注册表永久裁剪/污染为 ≤1
+// 类型，后续所有 LoadRegistry 消费方（LoadResourceTypes/GetAllRepoRoots/
+// EnsureStorageDirs…）只见残缺清单（code_review 67929360 P2：子代理核出共享单例被
+// 就地截断的既有隐患）。锐评 P2-6：把「消费方责任」前移到本函数，调用点零风险。
 func resourceTypesForSync(all []registry.ResourceType, rtype string) []registry.ResourceType {
 	if rtype == "" {
-		return all
+		return append([]registry.ResourceType(nil), all...)
 	}
 	filtered := make([]registry.ResourceType, 0, 1)
 	for _, rt := range all {

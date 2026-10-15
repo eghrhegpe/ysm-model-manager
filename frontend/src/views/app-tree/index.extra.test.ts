@@ -563,6 +563,32 @@ describe("app-tree index 入口生命周期（补位）", () => {
     expect(getToast()).toMatchObject({ type: "warn" });
   });
 
+  // 2026-10-16 锐评 P1-B：_executeTreeMove 原只查 `_moveLock`，而起拖端 _treeMovePayload 查
+  // `_repoOpBusy()`（三锁）——两次判定口径不一致。drop 可晚于起拖数秒，期间批量删除/启停链
+  // 可能已起：只查 move 锁会与之并发（fileops.opMu 串行化后一方拿到旧路径）→ 部分失败 + 困惑
+  // toast。现 drop 入口对齐起拖口径：先 `_repoOpBusy()` 拒绝 + toast，再 tryStart 取锁。
+  it("tree move drop 时任一仓库互斥锁在途 → 拒绝并 toast「操作进行中」，不调用 MoveModelFile", async () => {
+    const el = await mountEl();
+    const probe = el as unknown as {
+      _executeTreeMove(paths: string[], targetDir: string): Promise<void>;
+      _deleteLock: { tryStart(): boolean; finish(): void };
+    };
+    el.selectState.keys.add("/repo/a.ysm");
+    el.selectState.lastKey = "/repo/a.ysm";
+    (bindings.MoveModelFile as ReturnType<typeof vi.fn>).mockClear();
+    expect(probe._deleteLock.tryStart()).toBe(true); // 模拟删除链在途
+
+    await probe._executeTreeMove(["/repo/a.ysm"], "sub");
+
+    expect(bindings.MoveModelFile, "busy 时 drop 不得发起移动").not.toHaveBeenCalled();
+    expect(getToast()).toMatchObject({ msg: t("ctx.busyWait"), type: "info" });
+    probe._deleteLock.finish();
+
+    // 释放后正常走通（防「锁释放了却永久禁移」的反向回归）
+    await probe._executeTreeMove(["/repo/a.ysm"], "sub");
+    expect(bindings.MoveModelFile).toHaveBeenCalled();
+  });
+
   it("modalConfirm 取消 → 不删除、选中保留", async () => {
     const el = await mountEl();
     el.selectState.keys.add("/repo/a.ysm");

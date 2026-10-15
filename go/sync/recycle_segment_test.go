@@ -1,7 +1,8 @@
 // ===== SyncToggleStatus .recycle 跳过 / isFileLocked errno33 补测 =====
 // R18 审核修复链（71a13752）：SyncToggleStatus 回收站判定收敛为逐段 EqualFold
-// （hasRecycleSegment 单测已在 sync_test.go 覆盖，此处补 walk 内调用行与
-// isFileLocked 新增 ERROR_LOCK_VIOLATION(33) 分支）——变更行此前零覆盖。
+// （谓词单测已随 hasRecycleSegment 收编 fsutil 迁至 go/fsutil/walk_test.go，
+// 此处补 walk 内调用行与 isFileLocked 新增 ERROR_LOCK_VIOLATION(33) 分支）——
+// 变更行此前零覆盖。2026-10-16 起回收站跳过统一走 sync_walk.go 剔除闸（ADR-351 D1）。
 package sync
 
 import (

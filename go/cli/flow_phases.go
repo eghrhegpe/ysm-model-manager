@@ -124,7 +124,9 @@ func formatTypeDist(byType map[string]int) string {
 func runPhaseModelScan(a AppService, filesRoot string) guiFlowResult {
 	start := time.Now()
 
-	entries := a.ScanModelEntries(filesRoot)
+	// 本阶段模拟 GUI 树加载——锐评 2026-10-16 起与生产同 seam（浏览投影，无 SHA256）：
+	// GUI 树经 ScanModelEntriesForBrowse 加载，模拟阶段走哈希入口测出的耗时 ≠ GUI 真实耗时。
+	entries := a.ScanModelEntriesForBrowse(filesRoot, "", "", "")
 	elapsed := time.Since(start)
 
 	if len(entries) == 0 {

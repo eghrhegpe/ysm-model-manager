@@ -130,7 +130,7 @@ func RelInside(baseDir, path string) (string, error) {
 // 语义对齐 installer.validateInstallPaths 的「EvalSymlinks 两侧 → 再 IsInside」模式：
 // 先词法快速失败（空/NUL/越权直接返回，零 I/O），词法通过的才解析真实路径二次复核；
 // EvalSymlinks 失败（路径不存在/断链）时保留原路径不放宽不放窄——不存在的路径
-// 无越权读取面，且未创建写入目标的中段 symlink 由 fileops.checkNoSymlinkInPath /
+// 无越权读取面，且未创建写入目标的中段 symlink 由 fileops.CheckNoSymlinkInPath /
 // installer.checkDstSymlinkSegments 逐段 Lstat 覆盖，不在此重复。
 func IsInsideResolved(baseDir, path string) error {
 	if err := IsInside(baseDir, path); err != nil {

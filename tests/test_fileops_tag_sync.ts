@@ -38,6 +38,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 // go/fileops 导出面中的只读/纯计算/不产条目类（与 scan 契约测试同口径，两侧一致防漂移）。
 const READONLY = new Set([
+  "CheckNoSymlinkInPath", // 只读守卫：逐组件 Lstat 查 symlink，不落盘（与 scan 契约测试同口径）
   "CreateDir", // 建空目录：不产模型条目、不改扫描结果语义；新建也无既有标签键可迁移
   "ExtractPreviewTexture", // 只读提取
   "FindPreviewImage", // 只读查找

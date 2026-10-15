@@ -10,7 +10,7 @@
 import type { GateCtx } from "../gate-ctx.ts";
 import { GATE_TIMEOUT_MS } from "../gate-ctx.ts";
 import { resolveBaseRev } from "../gate-resolve.ts";
-import { run as procRun, type ProcResult } from "../proc.ts";
+import { type ProcResult, run as procRun } from "../proc.ts";
 import { ROOT } from "../scan-files.ts";
 
 /**
@@ -218,10 +218,24 @@ export async function runGoDomain(ctx: GateCtx): Promise<void> {
         });
       } else {
         // 数组形式执行（防 shell 解析 baseRev）；字符串仅供 label 展示
-        const glLabel = `golangci-lint run --new-from-rev=${baseRev} ./...`;
-        const gl = procRun("golangci-lint", ["run", `--new-from-rev=${baseRev}`, "./..."], {
-          cwd: ROOT,
-        });
+        const glLabel = `golangci-lint run --new-from-rev=${baseRev} ./go/... ./internal/...`;
+        // ⚡ 2026-10-17 门禁性能实测：本段实测 15–21s（近期 push 报告里的最大单项），此前用同步
+        // procRun 阻塞 event loop——与 go test 段同病灶（文件头 yieldThenRun 注释，
+        // code_review P2），但漏了同款处理：Go∥前端 Promise.all 并行时，这 20s 里
+        // 前端域的 shAsync 一步不能推进。改 yieldThenRun：无 shell 拼接哲学不变，
+        // 段前让出 event loop（冷启动/缓存判定段仍同步——毫秒级，不值得异步化）。
+        //
+        // ⚡ 2026-10-17 范围收窄：./... → ./go/... ./internal/...（实测 10.5s → 4.0s，-62%）。
+        // ./... 额外扫 6 个包（root main.go / cmd/* / build/android/scripts/deps / tests），
+        // 这些入口/脚本/测试包 lint 价值低且 go vet 已覆盖。./internal/... 含 app + testutil。
+        const gl = await yieldThenRun(
+          "golangci-lint",
+          ["run", `--new-from-rev=${baseRev}`, "./go/...", "./internal/..."],
+          // 锐评 P1-2：显式 GATE_TIMEOUT_MS（300s）。procRun 默认 30s 对实测 15–21s 的
+          // 暖缓存值只留 9s 余量，冷缓存（工具升级/大 diff）破 30s → execFileSync 被杀
+          // → 门禁假红；与同函数 go test 段的超时口径对齐（那两段均显式传 300s）。
+          { cwd: ROOT, timeout: GATE_TIMEOUT_MS },
+        );
         // 非 push 模式（doctor --all/--docs）= 首次真正挂载增量 lint：按仓内
         // 「先观察一轮再议升级 hard」惯例走 debt（同 check-type-safety 升硬口径）；
         // push 侧保持既有 hard 不变。条件展开而非传 undefined

@@ -257,6 +257,17 @@ export function DetectResourceType(path: string): $CancellablePromise<string> {
 }
 
 /**
+ * ========== 目录存在性 ==========
+ * DirectoryExists 判断目录是否存在（锐评 2026-10-17 P2⑤）：导入设置会整份覆盖
+ * FilesRoot / McRoot / CustomRoots，旧机的路径大概率在本机不存在；前端据此检测哪些路径
+ * 已失效，提示用户去「环境」页重设。目录存在性只能问 Go（回归红线：前端不扫磁盘）。
+ * 纯只读、零副作用——不能复用 OpenFolder（它会真的打开资源管理器）。
+ */
+export function DirectoryExists(path: string): $CancellablePromise<boolean> {
+    return $Call.ByID(2508287974, path);
+}
+
+/**
  * DoUpdate 下载并应用更新。成功时返回 "success"（正常返回）或 os.Exit(0)
  * （helper 已在侧等待替换 exe，主进程必须退出）。
  * ErrExitRequested 路径仍会 os.Exit：helper 替换 exe 需要主进程先退出，
@@ -326,6 +337,20 @@ export function ExecuteCLI(command: string, args: { [_ in string]?: any } | null
  */
 export function ExportModelStructureJSON(modelPath: string): $CancellablePromise<string> {
     return $Call.ByID(2285469521, modelPath);
+}
+
+/**
+ * ExportSettingsJSON 导出全部设置为单个 JSON 文件（ADR-344-d1）。
+ * 
+ * localStorage：前端按设置键台账采集的偏好类键值（键→值的 map，由 Wails 绑定直接
+ * 从 JS 对象解组，不再经「JS 先 stringify → Go 再 Unmarshal」的双重编码绕弯）。
+ * Go 侧不解释具体键语义——键的集合与归属由 `tests/test_settings_key_ledger.ts`
+ * 对账的台账守护，本函数只做「收拢 + 落盘」。
+ * 
+ * 返回导出文件完整路径（供 UI 显示与复制）。
+ */
+export function ExportSettingsJSON(localStorage: { [_ in string]?: string } | null): $CancellablePromise<string> {
+    return $Call.ByID(1837639450, localStorage);
 }
 
 export function ExportWorkshopCreatorsJSONFile(): $CancellablePromise<string> {
@@ -670,6 +695,30 @@ export function ImportModelFolderTo(folderName: string, subpath: string, rtype: 
 }
 
 /**
+ * ImportSettingsData 从已解析的导出数据导入设置——前端导入链路的主入口（锐评 P2②）。
+ * 前端应先 ReadSettingsExport 拿到 exp 做「导入前确认」（预告覆盖范围/应用条数），确认后
+ * 把**同一个** exp 原样传入：此前前端对同一文件读两遍（ReadSettingsExport 预览 +
+ * ImportSettingsFromFile 内部再读一遍），两遍之间文件若被替换，确认时的计数与实际写入
+ * 就不一致（轻微 TOCTOU）。改成一份 exp 贯穿预览与落盘，计数与写入必然一致。
+ */
+export function ImportSettingsData(exp: types$0.SettingsExport): $CancellablePromise<types$0.ImportSettingsResult> {
+    return $Call.ByID(1289842619, exp);
+}
+
+/**
+ * ImportSettingsFromFile 导入设置导出文件（ADR-344-d1）。
+ * 
+ * 流程：锁内重读当前配置 → 备份当前 ysm_config.json → 以导入配置为基 → 版本门控迁移 +
+ * 洗脏 linkMode + 废弃字段清零 → saveConfig → 复用 applyPostSaveSideEffects（SyncLinkMode +
+ * 根路径变更时重启 watcher）。localStorage 的写入由前端完成（浏览器侧键值，Go 无能力写）。
+ * 
+ * 返回结果含备份文件路径（导入失败/后悔可回滚）与将应用的浏览器偏好条数。
+ */
+export function ImportSettingsFromFile(path: string): $CancellablePromise<types$0.ImportSettingsResult> {
+    return $Call.ByID(3507488769, path);
+}
+
+/**
  * ========== 安装 ==========
  */
 export function InstallModelFile(src: string, mcRoot: string): $CancellablePromise<string> {
@@ -771,6 +820,15 @@ export function ListPackModelsDetail(path: string): $CancellablePromise<types$0.
  */
 export function ListRecycleBin(recyclePath: string): $CancellablePromise<types$0.ModelEntry[] | null> {
     return $Call.ByID(3420025601, recyclePath);
+}
+
+/**
+ * ListSettingsBackups 列出导入前自动备份（.bak-*）路径，最新的在前（锐评 P2④）。
+ * 返回最多 settingsBackupKeep 条；无备份返回空切片（make 的零值切片，JSON 序列化为 []，
+ * 而非 nil——Wails 绑定 nil 切片会序列化成 null，前端要多判一道）。
+ */
+export function ListSettingsBackups(): $CancellablePromise<string[] | null> {
+    return $Call.ByID(813678773);
 }
 
 export function ListVersionInstances(mcRoot: string): $CancellablePromise<types$0.VersionInstance[] | null> {
@@ -1041,6 +1099,14 @@ export function ReadSchematic(path: string): $CancellablePromise<{ [_ in string]
 }
 
 /**
+ * ReadSettingsExport 只读解析 + 校验设置导出文件（无任何副作用）。
+ * 前端先调本绑定拿到内容做导入前确认（含「导入后将应用 N 项浏览器偏好」计数）。
+ */
+export function ReadSettingsExport(path: string): $CancellablePromise<types$0.SettingsExport> {
+    return $Call.ByID(258164060, path);
+}
+
+/**
  * ReadShaderpackLang 读取光影包 lang/en_US.lang 提取显示名
  */
 export function ReadShaderpackLang(path: string): $CancellablePromise<types$0.ShaderpackLang> {
@@ -1124,6 +1190,20 @@ export function RestartApplication(): $CancellablePromise<void> {
  */
 export function RestoreFromRecycle(src: string, filesRoot: string): $CancellablePromise<void> {
     return $Call.ByID(983517996, src, filesRoot);
+}
+
+/**
+ * RestoreSettingsBackup 把指定的导入前备份（.bak-*，路径来自 ListSettingsBackups）恢复为当前配置。
+ * 破坏性：整份覆盖当前 AppConfig（锐评 P2④——此前备份只产出、UI 无消费入口，
+ * 「后悔可还原备份」的承诺全落在文件管理器之外）。
+ * 
+ * 恢复视同一次「读盘」：走同一套版本门控 + 值软校验 + 洗脏 + 侧效（与导入 importResolved 同口径），
+ * 保证与 SaveAppConfig 同一条真相源，不另造写路径。
+ * 恢复前**不再**额外备份当前配置：否则每次恢复都生成新的 .bak-*，而「恢复最近备份」取的就是
+ * 最新一份——会造成「恢复 → 生成新备份 → 下次恢复拿到这份新备份」的死循环。
+ */
+export function RestoreSettingsBackup(path: string): $CancellablePromise<void> {
+    return $Call.ByID(606419108, path);
 }
 
 /**

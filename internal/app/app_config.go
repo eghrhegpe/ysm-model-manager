@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"ysm-model-manager/go/fsutil"
+	"ysm-model-manager/go/scanner"
 	"ysm-model-manager/go/sync"
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/types/registry"
@@ -134,7 +135,8 @@ func (a *App) loadAppConfig() {
 	// 用户在设置页任意一次保存（哪怕只改主题）就会把它清零且不回填 → specificRoot("ysm")
 	// 返回空 → GetRepoRoot 静默回退 FilesRoot 派生路径，用户独立路径彻底丢失。
 	// ADR-296 D6 审查② 当时只对称化了 washLinkMode，字段迁移被漏。
-	migrateLegacyConfigFields(&cfg)
+	// 现统一走版本门控的 applyConfigMigrations（两路对称，见该函数注释）。
+	applyConfigMigrations(&cfg)
 	// 加载侧软校验：见 washLinkMode（ADR-296 D6）
 	washLinkMode(&cfg)
 	if cfg.LinkMode != "" {
@@ -157,6 +159,46 @@ func washLinkMode(cfg *types.AppConfig) {
 		log.Printf("[config] 链接模式非法: %q ——洗为默认（copy），磁盘保留原值", cfg.LinkMode)
 		cfg.LinkMode = ""
 	}
+}
+
+// applyConfigMigrations 对读出的配置执行**版本门控**的结构性迁移。
+// loadAppConfig 与 LoadAppConfig 惰性路径**必须共用本函数**——两路都直填 configCache，
+// 任一路漏跑即复现 8c858c54a 的病灶（旧字段未被搬进 CustomRoots 却被 clearDeprecatedFields 清零，
+// 用户存量独立路径在下次任意保存时静默丢失）。
+//
+// 门控规则（取代旧的"每次读盘都跑 migrateLegacyConfigFields"）：
+//   - SchemaVersion < types.SchemaVersion（含 0/缺失的遗留文件）→ 跑字段迁移 + 盖当前版本章。
+//   - SchemaVersion >= types.SchemaVersion → 结构已迁移，不再重跑启发式。旧实现每次读盘都
+//     重跑，等价于"永远假设文件是旧的"，版本号一旦存在就失去意义。
+//
+// 与 washLinkMode 的分工：washLinkMode 是**值软校验**（幂等，每读必跑，非法 linkMode 进内存即脏）；
+// 本函数是**结构迁移**（一次，盖章后不再重复）。二者不可合并——值校验必须每读跑，
+// 结构迁移必须只跑一次。
+func applyConfigMigrations(cfg *types.AppConfig) {
+	if cfg.SchemaVersion < types.SchemaVersion {
+		migrateLegacyConfigFields(cfg)
+		cfg.SchemaVersion = types.SchemaVersion
+	}
+}
+
+// applyPostSaveSideEffects 配置**落盘成功后**的副作用（SaveAppConfig / SaveAppConfigPatch /
+// ImportSettingsFromFile 三处共用）。抽成一处的原因：这三段尾部代码曾是逐份手抄的
+// 「SyncLinkMode + 根路径变更时 rebuildWatcherAndDirs」，而每加一个写入口就多一份副本、
+// 漏一份就复现「设置页已显示新模式、实际链接仍按旧模式直到重启」的陷阱。
+//
+// 调用方必须在 configWriteMu 锁内、且已 saveConfig 成功后调用（副作用不可逆）。
+func (a *App) applyPostSaveSideEffects(oldCfg types.AppConfig, cfg *types.AppConfig) error {
+	// 保存成功后同步内存 LinkMode（与 SetLinkMode 同模式）——
+	// 原实现写盘后 installer 安装仍用旧链接模式直到重启（GetLinkMode 读 a.LinkMode）
+	a.install.SyncLinkMode(cfg.LinkMode)
+	// FilesRoot/McRoot 变化后重启 watcher：
+	// - 原 restartWatcher 是无调用点死代码，保存后 watcher 仍监听旧目录
+	// - 仅当实际变化才重启（防 theme-only/link-mode-only 保存触发全仓 WalkDir）
+	// - Start 失败返回 error（原 println 静默会导致 watcher 永久丢失）
+	if cfg.FilesRoot != oldCfg.FilesRoot || cfg.McRoot != oldCfg.McRoot {
+		return a.rebuildWatcherAndDirs(cfg)
+	}
+	return nil
 }
 
 func (a *App) SaveAppConfig(filesRoot, rpRoot, mcRoot, linkMode, theme, themeAuto string) error {
@@ -204,19 +246,9 @@ func (a *App) SaveAppConfig(filesRoot, rpRoot, mcRoot, linkMode, theme, themeAut
 	if err := a.saveConfig(cfg); err != nil {
 		return err
 	}
-	// 保存成功后同步内存 LinkMode（与 SetLinkMode 同模式）——
-	// 原实现写盘后 installer 安装仍用旧链接模式直到重启（GetLinkMode 读 a.LinkMode）
-	a.install.SyncLinkMode(cfg.LinkMode)
-	// FilesRoot/McRoot 变化后重启 watcher：
-	// - 原 restartWatcher 是无调用点死代码，保存后 watcher 仍监听旧目录
-	// - 仅当实际变化才重启（防 theme-only/link-mode-only 保存触发全仓 WalkDir）
-	// - Start 失败返回 error（原 println 静默会导致 watcher 永久丢失）
-	if cfg.FilesRoot != oldCfg.FilesRoot || cfg.McRoot != oldCfg.McRoot {
-		if err := a.rebuildWatcherAndDirs(&cfg); err != nil {
-			return err
-		}
-	}
-	return nil
+	// 落盘后的副作用（SyncLinkMode + 根路径变更时重启 watcher）收拢到
+	// applyPostSaveSideEffects，避免每新增一个写入口就手抄一份（ADR-344-d1）
+	return a.applyPostSaveSideEffects(oldCfg, &cfg)
 }
 
 // SaveAppConfigPatch 部分更新应用配置（锐评 2026-10-15 P1 ③）——**前端唯一推荐入口**。
@@ -276,16 +308,7 @@ func (a *App) SaveAppConfigPatch(patch types.AppConfigPatch) error {
 	if err := a.saveConfig(cfg); err != nil {
 		return err
 	}
-	// 链接模式落盘后同步 installer 内存态（否则设置页已显示新模式，实际链接仍按旧模式，
-	// 要到重启才生效——与 SaveAppConfig 同款陷阱）
-	a.install.SyncLinkMode(cfg.LinkMode)
-	// 根路径变化后重启 watcher（仅实际变化才重启，防 theme-only 保存触发全仓 WalkDir）
-	if cfg.FilesRoot != oldCfg.FilesRoot || cfg.McRoot != oldCfg.McRoot {
-		if err := a.rebuildWatcherAndDirs(&cfg); err != nil {
-			return err
-		}
-	}
-	return nil
+	return a.applyPostSaveSideEffects(oldCfg, &cfg)
 }
 
 func (a *App) SetDownloadMirror(mirror string) error {
@@ -338,11 +361,18 @@ func (a *App) restartWatcher(filesRoot, mcRoot string) error {
 	if filesRoot != "" && mcRoot != "" {
 		a.watcher = watcher.New(filesRoot, mcRoot, a.scanModelEntries, a.ClearScanCache)
 		a.watcher.SetOnChange(a.emitRepoFsChanged) // 与 ServiceStartup 同装配（重建实例须重注入）
+		// ADR-352 ②：根变更后的重注册面——rebuildWatcherAndDirs 是 saveConfig 的单漏斗
+		// （SaveAppConfig 路径亦经此），此处重注册 + 重标 watcher 活跃根；出集表实例
+		// 由 SetIndexRoots 自动删除（旧根的持久表随根切换退役，不留孤儿表）。
+		scanner.SetIndexRoots(a.allAllowedRoots())
 		if err := a.watcher.Start(); err != nil {
 			// Start 失败必须向上传播——原 println 静默 + SaveAppConfig
 			// 返回 nil，旧 watcher 已停而新 watcher 未起 → 自动同步静默永久丢失（假成功）
 			return fmt.Errorf("重启文件监听失败: %w", err)
 		}
+		// 同 ServiceStartup 口径：watcher 起得来才标「主动去信任」根（长信任窗），
+		// 起不来该根回落 scanTTL() 兜底（注册已在上面完成，持久化面不受影响）。
+		scanner.MarkIndexRootWatched([]string{filesRoot})
 	}
 	return nil
 }
@@ -401,7 +431,8 @@ func (a *App) LoadAppConfig() types.AppConfig {
 		return a.configCache
 	}
 	// ADR-095: 将废弃的独立配置字段（YsmRoot/MmdRoot 等）迁移到 CustomRoots map
-	migrateLegacyConfigFields(&a.configCache)
+	// 版本门控：与 loadAppConfig 共用 applyConfigMigrations（两路对称，8c858c54a 病灶）
+	applyConfigMigrations(&a.configCache)
 	// 惰性路径与 loadAppConfig 同洗脏值（ADR-296 D6 审查 ②：启动 IO 失败后首次调用
 	// 走本路径直填 configCache，不洗则脏 linkMode 从旁路漏进前端下拉——两路对称）
 	washLinkMode(&a.configCache)

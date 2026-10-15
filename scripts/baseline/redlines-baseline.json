@@ -1,13 +1,15 @@
 {
-  "generated": "2026-10-15T09:35:29.229Z",
-  "count": 87,
+  "generated": "2026-10-16T04:09:59.301Z",
+  "count": 89,
   "violations": [
+    "internal/app/app_settings_export.go:W7:if err := os.Remove(old); err != nil && !os.IsNotExist(err) {:1",
     "internal/app/resource_bindings.go:W7:if err := os.RemoveAll(realClean); err != nil {:1",
     "./go/sync/sync.go:R2:_ = filepath.WalkDir(repoRoot, func(p string, d os.DirEntry, err error) error {:1",
     "./go/sync/sync.go:R2:active := filepath.Join(repoRoot, filepath.FromSlash(rel)):1",
     "./go/sync/sync.go:R2:func dirToggleDecision(repoRoot, rel string) (banned bool, matched bool) {:1",
     "./go/sync/sync.go:R2:func hasDisabledDirCarrier(repoRoot string) bool {:1",
     "./go/sync/sync.go:R2:if err != nil || !d.IsDir() || p == repoRoot {:1",
+    "./go/sync/sync.go:R2:if err := skipExcludedDir(repoRoot, p); err != nil {:1",
     "./go/sync/sync.go:R2:if repoRoot == \"\" || rel == \"\" {:1",
     "./go/sync/sync.go:R2:repoName, repoHash map[string]bool, precomputedHashes map[string]string, repoRoot string) []toggleRenameOp {:1",
     "./go/sync/sync.go:R2:shouldBeBanned, matched = dirToggleDecision(repoRoot, rel):1",

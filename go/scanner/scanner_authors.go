@@ -1,6 +1,6 @@
 // scanner_authors.go：作者提取与聚合（原 scanner.go 拆分，2026-10 文件行数治理）。
-// stripDisableSuffix / extractAuthor / ListModelAuthors / ScanLocalAuthors / mergeOrAppendCreator——
-// 从 Lite 扫描结果中提取作者名，聚合成 WorkshopCreator 列表。
+// stripDisableSuffix / ExtractAuthor / ListModelAuthors / ScanLocalAuthors / mergeOrAppendCreator——
+// 从扫描结果中提取作者名，聚合成列表。
 package scanner
 
 import (
@@ -15,8 +15,13 @@ func stripDisableSuffix(name string) string {
 	return registry.StripDisableSuffix(name)
 }
 
-// extractAuthor 从文件名提取 [作者] 前缀（无前缀或格式非法返回空串）
-func extractAuthor(name string) string {
+// ExtractAuthor 从文件名提取 `[作者]` 前缀（无前缀或格式非法返回空串）。
+// 全仓唯一 `[作者]` 解析出口（2026-10-16 锐评修复）：原 internal/app/app_avatar.go
+// 手抄了一份「stripDisableSuffix + HasPrefix("[") + Index("]")」且多做了 TrimSpace——
+// 两套判据分裂的真实病灶：含空格的作者名（`[ 张三 ]model.ysm`）在作者列表侧是
+// " 张三 "、头像 map 侧是 "张三"，前端按名查头像恒 miss（头像永不显示）。
+// 现统一为 TrimSpace 口径，app 层消费本出口，禁止再手抄解析。
+func ExtractAuthor(name string) string {
 	name = stripDisableSuffix(name)
 	if !strings.HasPrefix(name, "[") {
 		return ""
@@ -25,11 +30,7 @@ func extractAuthor(name string) string {
 	if idx <= 0 {
 		return ""
 	}
-	author := name[1:idx]
-	if author == "" {
-		return ""
-	}
-	return author
+	return strings.TrimSpace(name[1:idx])
 }
 
 // ListModelAuthors 从扫描条目提取 [作者] 前缀统计（按出现次数降序）
@@ -40,7 +41,7 @@ func ListModelAuthors(entries []types.ModelEntry) []types.AuthorInfo {
 	}
 	authors := map[string]*authorData{}
 	for _, e := range entries {
-		if author := extractAuthor(e.Name); author != "" {
+		if author := ExtractAuthor(e.Name); author != "" {
 			if _, ok := authors[author]; !ok {
 				authors[author] = &authorData{SampleFile: e.Path}
 			}
@@ -86,7 +87,7 @@ func ScanLocalAuthors(roots map[string]string) []types.LocalAuthor {
 		// 轻量遍历：作者提取只看文件名，跳过 Info+哈希（大库冷扫主瓶颈，见 ScanEntriesLite）
 		entries := ScanEntriesLite(root)
 		for _, e := range entries {
-			author := extractAuthor(e.Name)
+			author := ExtractAuthor(e.Name)
 			if author == "" {
 				continue
 			}

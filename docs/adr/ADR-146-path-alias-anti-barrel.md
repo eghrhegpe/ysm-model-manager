@@ -57,7 +57,7 @@ ADR-138 把 `features/preview-3d` 上提为 `src/preview-3d` 时，代价是**�
 | 别名 | 目标 | 说明 |
 |------|------|------|
 | `@/preview-3d/*` `@/views/*` `@/utils/*` `@/backend/*` `@/core/*` `@/ui/*` `@/features/*` `@/workers/*` `@/services/*` `@/wasm/*` `@/test-utils/*` `@/web-spike/*` `@/locales/*` `@/parsers/*` | `src/<同名目录>/*` | 手写源码顶层目录，逐一显式登记（2026-09-07 补 `locales`/`parsers`） |
-| `@/bus` / `@/theme-core` | `src/bus.ts` / `src/theme-core.ts` | **文件级别名**：src 根上的叶子文件，目录别名映射不了，单条显式登记（vite `FILE_ALIASES` + tsconfig 单条 `paths`，一致性校验覆盖） |
+| `@/bus` / `@/theme-core` / `@/app-modules` / `@/settings-keys` | `src/bus.ts` / `src/theme-core.ts` / `src/app-modules.ts` / `src/settings-keys.ts` | **文件级别名**：src 根上的叶子文件，目录别名映射不了，单条显式登记（vite `FILE_ALIASES` + tsconfig 单条 `paths`，一致性校验覆盖） |
 | `#root/*` | 仓库根 `../*` | **过渡措施，只减不增**。消灭 `../../../../resource_types.json` 类跨仓根引用，仅存量可切换（见下方约束） |
 | ~~`@/*`~~ | — | **禁止**。不得配置通配到 `src` 任意深度的 catch-all |
 

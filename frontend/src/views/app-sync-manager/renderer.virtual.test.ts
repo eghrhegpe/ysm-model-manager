@@ -10,6 +10,7 @@
 //   ④ 骨架幂等 → 二次渲染复用同一 .sm-list，滚动位置不弹回顶部；
 //   ⑤ 零高度（jsdom / 首帧未布局）→ 全量渲染降级，不因窗口化而空白。
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { bus } from "@/bus";
 import { mountCustomElement, unmountElement } from "@/test-utils/render.ts";
 import { waitFor } from "@/test-utils/wait.ts";
 import type { SyncItem } from "./tpl.ts";
@@ -39,16 +40,6 @@ vi.mock("@/backend/app.ts", () => ({
 
 import "./index.ts"; // 触发 customElements.define("app-sync-manager")
 
-/** 测试用组件私有面（驱动渲染状态；与既有 index.test.ts 同款断言姿势） */
-interface SyncSelfProbe extends HTMLElement {
-  _selectedType: string;
-  _statusFilter: string;
-  _typeConfig: Array<{ id: string }>;
-  _allItems: SyncItem[];
-  _dirOpen: Record<string, boolean>;
-  _doRender: () => void;
-}
-
 /** 造 n 个顶层扁平文件条目——每条恰好一行，便于精确数行 */
 function makeItems(n: number): SyncItem[] {
   return Array.from({ length: n }, (_, i) => ({
@@ -62,28 +53,34 @@ function makeItems(n: number): SyncItem[] {
   }));
 }
 
+/**
+ * 挂载组件并注入 n 条数据（走生产数据路径，不碰组件私有状态）。
+ * `repo_rtype` 决定 `_selectedType`；条目经 `GetInstanceSyncStatus` 的
+ * `mockResolvedValueOnce` 一次性注入，避免污染后续用例。
+ */
+async function mountWith(n: number): Promise<HTMLElement> {
+  localStorage.setItem("repo_rtype", "ysm");
+  mocks.GetInstanceSyncStatus.mockResolvedValueOnce(makeItems(n) as never);
+  const el = mountCustomElement<HTMLElement>("app-sync-manager");
+  el.setAttribute("instance", "test");
+  // 等 _init（loadData → render）落定：状态页签由 render 注入，出现即 _init 完成
+  await waitFor(() => el.querySelector(".sm-status-tab") !== null, 5000);
+  await waitFor(() => el.querySelector(".sm-item") !== null, 5000);
+  return el;
+}
+
+/** 公开重渲染入口：状态页签点击与内部 `doRender` 同一条渲染+绑定路径。 */
+function clickStatusTab(el: HTMLElement, status: string): void {
+  const tab = el.querySelector(`.sm-status-tab[data-status="${status}"]`) as HTMLElement | null;
+  if (!tab) throw new Error(`缺 .sm-status-tab[data-status="${status}"]`);
+  tab.click();
+}
+
 /** 等待 n 个 rAF 轮次（installScrollSync 的滚动回调经 rAF 合并） */
 async function nextFrames(n: number): Promise<void> {
   for (let i = 0; i < n; i++) {
     await new Promise<void>((r) => requestAnimationFrame(() => r()));
   }
-}
-
-/** 挂载组件并注入 n 条数据，返回可直接驱动的实例 */
-async function mountWith(n: number): Promise<SyncSelfProbe> {
-  const el = mountCustomElement<SyncSelfProbe>("app-sync-manager");
-  el.setAttribute("instance", "test");
-  // 等 _init（loadData → render）落定：状态页签由 render 注入，出现即 _init 完成
-  // （否则在途 loadData 会在下方注入私有状态后把 _allItems 覆盖回 mock 空数组）
-  await waitFor(() => el.querySelector(".sm-status-tab") !== null, 5000);
-  el._selectedType = "ysm";
-  el._statusFilter = "all";
-  el._typeConfig = [{ id: "ysm" }];
-  el._dirOpen = {};
-  el._allItems = makeItems(n);
-  el._doRender();
-  await waitFor(() => el.querySelector(".sm-item") !== null, 5000);
-  return el;
 }
 
 function listOf(el: HTMLElement): HTMLElement {
@@ -123,9 +120,9 @@ describe("app-sync-manager — 行级虚拟滚动", () => {
     expect(count200).toBeLessThan(60);
 
     // 条目数 ×10：DOM 常驻行数不变（这正是「上百个模型就诡异」的根治点）
-    el._allItems = makeItems(2000);
-    el._doRender();
-    await waitFor(() => el.querySelectorAll(".sm-item").length > 0);
+    mocks.GetInstanceSyncStatus.mockResolvedValueOnce(makeItems(2000) as never);
+    bus.emit("stats:refresh");
+    await waitFor(() => el.querySelectorAll(".sm-item").length > 0, 5000);
     const count2000 = el.querySelectorAll(".sm-item").length;
     expect(count2000).toBe(count200);
 
@@ -159,8 +156,8 @@ describe("app-sync-manager — 行级虚拟滚动", () => {
     const el = await mountWith(200);
     const listEl = listOf(el);
 
-    // 目录行点击 / 状态筛选切换都走 _doRender → render 同一路径
-    el._doRender();
+    // 目录行点击 / 状态筛选切换都走 doRender → render 同一路径
+    clickStatusTab(el, "missing");
 
     // 同一元素（原实现每次 render 都 self.innerHTML = containerHTML()，元素被替换 →
     // 新元素 scrollTop 归零，用户停在中段时列表「弹回顶部」）
@@ -220,17 +217,17 @@ describe("app-sync-manager — 行级虚拟滚动", () => {
 
     // 隐藏容器内（clientHeight 恒 0）连续多次重渲染——若不去重，每次 render 都排一个
     // 新 rAF 全量渲染；去重后新增调度数与渲染次数解耦
-    el._doRender();
+    clickStatusTab(el, "all");
     await nextFrames(2);
-    el._doRender();
+    clickStatusTab(el, "all");
     await nextFrames(2);
     const afterTwoRenders = rafSpy.mock.calls.length;
     expect(afterTwoRenders).toBeGreaterThan(baseline);
 
     // 同一时刻最多一个待执行句柄：渲染后又立刻渲染（rAF 未执行间隙），不叠加
-    el._doRender();
-    el._doRender();
-    el._doRender();
+    clickStatusTab(el, "all");
+    clickStatusTab(el, "all");
+    clickStatusTab(el, "all");
     const pendingBurst = rafSpy.mock.calls.length - afterTwoRenders;
     expect(pendingBurst).toBeLessThanOrEqual(1);
     unmountElement(el);

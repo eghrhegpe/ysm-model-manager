@@ -61,7 +61,7 @@ status: active
 
 ## 与其他子系统关系
 
-- 被 `internal/app/app.go` 启动/停止（ServiceStartup / ServiceShutdown），`clearCacheFn` 注入 `App.ClearScanCache`；`onChange` 注入 `App.emitRepoFsChanged`（Wails 事件 `repo:fs-changed`，nil 守卫对称 `emitDownloadProgress`）→ 前端 `features/repo/repo-fs-events.ts` app 级单例 + 二级 800ms 防抖 → bus `repo:fs-changed` → app-tree 定向失效当前树根（`InvalidateScanPath`）+ 重载——外部文件变更自动刷新，不再手动（止血 2026-10-15 A3）；`restartWatcher`（app_config.go）重建实例时两处装配同做
+- 被 `internal/app/app.go` 启动/停止（ServiceStartup / ServiceShutdown），`clearCacheFn` 注入 `App.ClearScanCache`；`onChange` 注入 `App.emitRepoFsChanged`（Wails 事件 `repo:fs-changed`，nil 守卫对称 `emitDownloadProgress`）→ 前端 `features/repo/repo-fs-events.ts` app 级单例 + 二级 800ms 防抖 → bus `repo:fs-changed` → app-tree 定向失效当前树根（`InvalidateScanPath`）+ 重载——外部文件变更自动刷新，不再手动（止血 2026-10-15 A3）；`restartWatcher`（app_config.go）重建实例时两处装配同做。**ADR-352 索引配对（锐评 2026-10-16）**：`emitRepoFsChanged` 在 nil 守卫外追加 `a.InvalidateScanPath(a.ysmRoot())`（每 800ms 防抖批次一次，纯内存）——`syncAll` 的 `clearCacheFn` 仅在 instances 非空时执行，instances 空的外部变更若无此定向去信任，持久浏览索引的信任窗（watched 根 15min）内无人重走；取 `a.ysmRoot()`（= `GetRepoRoot("ysm")`，watcher 实际监视根）而非形参 `filesRoot`——CustomRoots 覆写时 `config.Get().FilesRoot` 与被监视根无互前缀关系，按 FilesRoot 失效会漏掉索引去信任。watcher 装配成功处（ServiceStartup / restartWatcher）同时 `scanner.SetIndexRoots(a.allAllowedRoots())` 注册 + `MarkIndexRootWatched(ysm 根)`（Start 失败不标→该根回落 `scanTTL()` cap）
 - `go/fsutil/`: 文件系统工具
 
 ## 不变量

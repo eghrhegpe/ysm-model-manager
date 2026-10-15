@@ -163,6 +163,7 @@
 | 摸排 | [emoji/UI_ICONS 摸排方法论](./survey-emoji-icons.md) | - | - |
 | 批量重命名、查找替换、正则替换 | [批量重命名 batch-rename](./dialog-batch-rename.md) | batch-rename 弹窗单例槽位经 registerDlg 保证（状态在 DgBrShell 实例），重复打开先 close() 结算上一个 Promise | - |
 | 批量重命名实现 / 标签编辑器定位 / 高级筛选弹窗 | [业务对话框 features/dialogs(批量重命名/标签编辑/高级筛选)](./features-dialogs.md) | features/dialogs 是业务 UI,勿被调回 utils/dom(分类事故复发) | - |
+| 评估"UI 挤在 TS 里"是负债还是合理取舍 | [UI 格式分工与外迁触发线](./ui-format-partition.md) | - | - |
 | 通用红线 | [业务对话框 features/dialogs(批量重命名/标签编辑/高级筛选)](./features-dialogs.md) | dialogs 各文件内部引用深度以 features/dialogs 为基准,vi.mock 路径须同步 | - |
 | 通用红线 | [业务对话框 features/dialogs(批量重命名/标签编辑/高级筛选)](./features-dialogs.md) | modal-core.ts VIEW_TESTIDS 增删 data-testid 须同步本数组(ADR-133 阶段 B 契约测试静态聚合) | - |
 | 通用红线 | [业务对话框 features/dialogs(批量重命名/标签编辑/高级筛选)](./features-dialogs.md) | rename.ts 路径变更时需同步 vi.mock 字符串路径(ADR-170 实测教训:非 import 语句正则扫不到) | - |
@@ -285,7 +286,7 @@
 |----------|--------|----------|----------|
 | 仓库审计、健康分 | [扫描核心 go/scanner](./go-scanner.md) | - | - |
 | 冲突处理 conflict.go | [整合包同步 go/sync](./go-sync.md) | - | ADR-064, ADR-296, ADR-340, ADR-342, ADR-344, ADR-345, ADR-347 |
-| 待推送 / 可拉取 / 已禁用 / 实例资源 | [整合包同步页 app-sync-manager](./app-sync-manager.md) | - | - |
+| 待推送 / 可拉取 / 已禁用 / 实例资源 | [整合包同步页 app-sync-manager](./app-sync-manager.md) | events.ts 数据钩子只认 data-* 契约字段，禁止按内联样式子串取名（样式迁移即断链） | - |
 | 多线程统计角标、网页版导入 | [工具栏搜索编排 toolbar-search](./toolbar-search.md) | - | - |
 | 骨骼数怎么来的 | [MMD 几何统计解析](./go-geometry-mmd-stats.md) | .vrm/.zip 在 MMD 族下无统计链路（CanParse 只认 .pmx/.pmd） | - |
 | 关键词搜索、数值范围搜索 | [CLI 搜索命令 search](./go-cli-search.md) | - | - |
@@ -529,7 +530,9 @@
 |----------|--------|----------|----------|
 | 测试污染 reset 钩子怎么处理 | [模块级全局状态治理](./module-global-state.md) | 判断标准：reset 钩子依赖（有 → 收敛有测试收益）vs resetModules 重载（无 → 收敛仅为组织价值） | - |
 | 磁盘级筛选与高级搜索归 Go（SearchModels），前端不扫磁盘 | [前端只读不判边界与豁免](./fe-go-boundary.md) | - | - |
+| 搞清为什么"没格式分工"其实分了（角色 vs 后缀） | [UI 格式分工与外迁触发线](./ui-format-partition.md) | 外迁方向只加**局部能力**（lit-html / Vite ?raw），不换根框架；主战场 Three.js/VRM/MMD 走 Canvas/WebGL，DOM 层收益极低 | - |
 | 判断「全仓干净」用 grep 实证，不引用历史注脚作证据 | [代际守卫唯一出口 createLoadGuard](./load-guard.md) | - | - |
+| 判断是否该换 React/Vue/Svelte 或引入 tsx | [UI 格式分工与外迁触发线](./ui-format-partition.md) | HTML/CSS/SVG 全在 TS 里≠「没格式分工」；角色已按 tpl.ts / *-css.ts / ui-icons.ts / resource_types.json 分层，触发线未写死是缺口，不是"没分工" | - |
 | 前端有没有黑话 / 命名烂在哪 | [前端命名章程（黑话治理）](./frontend-naming.md) | 禁止新增不可读私有缩写前缀（≤3 字母非领域词）；禁止单字母命名业务量（循环下标 i/j 除外） | - |
 | 全局 Map / 模块级 let 何时收敛成对象 | [模块级全局状态治理](./module-global-state.md) | 模块级状态收敛 = 状态收进闭包/类对象 + 导出函数签名不变；不改消费方 | - |
 | 输入端（磁盘 → 列表）归 Go，展示端（列表 → 视图）豁免 | [前端只读不判边界与豁免](./fe-go-boundary.md) | 前端扫磁盘 / 重算归属语义 = 违反回归红线 | - |
@@ -556,6 +559,7 @@
 | "给 exported 函数消参数陷阱但不扭曲 API" | [三档阈值扫描器（复杂度/参数/类型安全）](./check-threshold-scanners.md) | - | - |
 | 该子域是否仅依赖注入回调与 DTO 即可运转？是 → 可切（纯域） | [install 域切分经验：切纯域不硬切复合域（耦合度门槛判断）](./install-domain-split.md) | import 域依赖 LoadAppConfig/GetRepoRoot/ScanModelEntries/ClearScanCache/ListVersionInstances 等 10+ 跨域方法 | - |
 | 该子域是否直读 App 的共享基础设施字段？是 → 不切（复合域） | [install 域切分经验：切纯域不硬切复合域（耦合度门槛判断）](./install-domain-split.md) | importModelFolderAs 宿主在 app_files.go（files 域），被 files 域绑定与 install 组合链三方共用 | - |
+| 判断某个 tpl.ts / *-css.ts / ui-icons.ts 该不该外迁 | [UI 格式分工与外迁触发线](./ui-format-partition.md) | 阈值要锚在**当前实测最大值**上（app-content/tpl.ts 已 561、ui-icons.ts 已 125 图标）；空口"超过 100 就迁"在存量就超线的代码上毫无意义 | - |
 
 ## 🎯 门禁与脚本
 
@@ -954,7 +958,7 @@
 | 作者提取依赖模型文件中的 metadata.authors 字段——缺失则作者为空 | - | - |
 | 单文件 >500MB 跳过哈希计算——同步对空哈希跳过匹配 | - | - |
 | Go 单引擎扫描口径须自洽——Rust 后端已删除（2026-10-06），不再有跨引擎对照 | - | - |
-| go/sync 写操作只清 sync 一侧不够——instance 结果缓存一侧 go/sync 不能清（go/instance 导入 go/sync，反向即成环），必须归 app 层写入口配对 | - | - |
+| go/sync 写操作自 2026-10-16（锐评 P0-①）改走 scanner 单漏斗 `defer scanner.InvalidateCache()`，经 `scanner.OnCacheInvalidated` 级联同时清 instance 一侧（不必再反向 import go/instance 即不成环）；app 层配对仍**强制保留**作防御纵深——本卡 pitfalls 与 tests/test_sync_write_cache_pairing.ts 的派生闸都按口径 | `必须保留` | - |
 | 人工枚举写清单 fail-open（清单漏列即隐身）——勿退回旧版；候选写面只从三包导出面自动派生 | - | - |
 | 缓存返回值是共享对象，消费方禁止写（loadSyncScanCache 契约）——向返回 map 写虚拟条目会跨调用串数据 | - | - |
 | 整夹替换成功后直接 RemoveAll 备份 | - | 实例侧自制贴图/独有子目录不可逆消失且日志为空、计数报全成功（2026-10-14 探针实证 count=1 err=nil logs=[]） |
@@ -1193,9 +1197,16 @@
 | 已删脚本名仍在区块之外被引用 | `已删除` | ghostReferences 报幽灵引用（event-audit 曾残留于检查类定义与一致性校验表） |
 | 前端本地重算筛选逻辑 | - | 与后端 SearchModels 能力脱节、结果不一致；必须交后端执行 |
 | adv-filter 条件未走三路交集（关键词 + 数值 + 标签）→ 结果不精确；必须经 advFilterIntersectPaths | - | - |
-| 只备份 ysm_config.json 带不走 localStorage 轨的几十项设置——官方迁移叙事曾长期漏掉这一档 | - | - |
+| 只备份 ysm_config.json 带不走 localStorage 轨的几十项设置——官方迁移叙事曾长期漏掉这一档（ 有文档无实现，2026-10-16 起由 ADR-344-d1 导出/导入收拢） | `b1116645c` | - |
+| 设置导出/导入的采集与回写**必须走台账查询口 **（判定 = tier=local-storage && authority=browser-authority **且 `exportable !== false`**，只写在台账一处），禁手写第二份键名清单、也禁在消费方复写判定——手抄必漂移，新键漏登记即漏备份。第三维 `exportable: false`（锐评 2026-10-17 P1④）用于剔除 ADR-344-d1 决策②要求排除的两类键——**派生缓存**（`ysmAlphaInfo` / `scan-authors` / `ListModelAuthors` / `community-merge`，换机重扫即重建，导出会把旧机缓存回灌新机、覆盖刚重算的索引）与**网页模式专用键**（`ysm:config` / `web:workshop-*` / `web:github-repos`，桌面端根本不消费，导入了也是影配置）。这两类 `authority` 语义上确实是 `browser-authority`，单靠二维判据排不掉，必须显式登记 | `exportableSettingsKeys()` | - |
+| 台账  键族（3D 场景能力 `ysm-scene-cap-*`、工坊按站筛选态 `ysm-ws-*`）登记的是占位符，真实键由持有模块拼接——采集/回写必须展开真键，且候选键只能取自实际键（`safeKeys()` / 导出文件），禁按前缀猜键名 | `keyPattern` | - |
+| 拼接键族的前缀必须以  常量形态声明；藏在函数体内裸拼 `` `ysm:x${p}` `` 会让契约测试的键扫描失明（实测三族因此漏登），新键族落地先收常量再登记 | `*_PREFIX` | - |
+| 台账字段 `migrates` 只回答，**不回答「换机丢不丢」**——ADR-344 后后者要并看导出面；给用户列「要重设什么」用 `unbackupableSettingsKeys()`，用 `nonMigratingSettingsKeys()` 会劝人重设早已能带走的字号 | `复制 ysm_config.json 带不带得走` | - |
+| 导入顺序铁律：**磁盘先落盘、浏览器后回写**（锐评 2026-10-16 修正，推翻早前的设计）。理由：磁盘是真相源且可回滚（`.bak-*`），浏览器 localStorage 无备份；且 Go 写盘成功但 watcher 重启失败也会报错（`applyPostSaveSideEffects`），旧「先写浏览器、报错回滚」会把磁盘（新）/浏览器（旧）**反向分叉**——比「磁盘新/浏览器旧」更糟。顺序翻过来后失败面收窄为「磁盘新/浏览器旧」，并删掉「导入前拍照 + 失败回滚」这套从未被测试的补偿事务（删的是不可判定的启发式，不是功能）。提示条数用前端台账过滤后的 `applied`（Go 的 `len(localStorage)` 未过滤、会虚高）。导入前 **`modalConfirm` 二次确认**：导入是整份覆盖磁盘配置（含 `FilesRoot`/`McRoot`、重启 watcher），`ReadSettingsExport` 校验通过后、`ImportSettingsData` 之前必须先过危险样式确认框（文案预告「将覆盖磁盘配置 + 将应用 N 项浏览器偏好 + 导入前已自动备份」），用户取消则磁盘/浏览器都零副作用（锐评 2026-10-17 P1①）。导入入口改 `ImportSettingsData(exp)`（P2②，见下）；防御判空用 `!exp?.format` 而非 `!exp`（P2⑥：`SettingsExport` 是 struct 非指针，`!exp` 对对象恒 false 是死代码）。 | `失败回滚` | - |
+| 锐评 P2②（2026-10-17）：前端主入口改 ——`ReadSettingsExport` 预览后把**同一个** `exp` 传给落盘，不再让 Go 对同一文件读两遍（旧 `ImportSettingsFromFile(path)` 内部会再读一次；两遍之间文件若被替换，确认时的计数与实际写入就不一致）。`ImportSettingsFromFile` 保留为按路径入口（向后兼容）；`ImportSettingsData` 内部以 `exp.Format` 做数据入口防线——未走 `ReadSettingsExport` 的伪造/错误数据会被拒止，不会以零值 `AppConfig` 覆盖当前配置。契约测试：`TestImportSettingsData_RoundTripAndBackup` / `TestImportSettingsData_RejectsBadFormat` | `ImportSettingsData` | - |
+| 磁盘侧防护：`ReadSettingsExport` 有大小上限（8 MiB）与**双版本门控**（文件格式 `ExportVersion` + 配置 schema `AppConfig.SchemaVersion`，两套独立编号，少一道旧程序会按旧结构静默错读新版导出）；导入前备份最多保留 10 份（`.bak-时间戳`，毫秒精度）；配置文件存在却**无法解析**（JSON 损坏）时导出**直接拒绝**（假备份比没备份更糟）；JSON 合法但路径为空**放行**——锐评 2026-10-17 P1③ 收窄判据：原判据会误伤装过 Minecraft 但未设仓库路径的用户（启动链 `resolveStartupConfigBootstrap` 会自动探测 Minecraft 目录落盘，其配置文件是存在且合法的） | `路径空即拒` | - |
 | theme / themeAuto 跨双轨同名，台账用 disk: 前缀分列；无前缀即撞名，撞名会逼两轨塞进一行 | - | - |
-| 新增 localStorage 键必须同步登记 settings-keys.ts，漏登记则契约测试转红 | - | - |
+| 新增 localStorage 键必须同步登记 settings-keys.ts，漏登记则契约测试转红；拼接键族须把前缀收敛为  常量（函数体内裸拼接对账失明，实测漏登过三族） | `*_PREFIX` | - |
 | 网页模式的是 localStorage 的 ysm:config 键，别把它当桌面磁盘轨 | `磁盘替身` | - |
 | disk-authority 与 browser-authority 混用会产生双权威：读写两侧口径必须一致 | - | - |
 | 主题图标/文案表必须保持 Record<ThemeCard, …> 形态——theme-core 加主题漏键即编译期报错，勿回退 Record<string, …> + 运行时 ?? 兜底 | - | - |

@@ -27,6 +27,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 // go/fileops 导出面中的只读/纯计算/不产条目类——**漏列一个被调用的非写函数即红**，
 // 漏列一个写函数则它会要求失效归宿（两个方向都 fail-closed）。
 const FILEOPS_READONLY = new Set([
+  "CheckNoSymlinkInPath", // 只读守卫：逐组件 Lstat 查 symlink，不落盘（2026-10-16 锐评补）
   "CreateDir", // 建空目录：不产模型条目、不改扫描结果语义
   "ExtractPreviewTexture", // 只读提取
   "FindPreviewImage", // 只读查找

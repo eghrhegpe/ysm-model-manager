@@ -21,12 +21,8 @@ import type { SidebarInstance } from "./data.ts";
 import { bindCardEvents, bindFooter, bindMcPathLabel } from "./events.ts";
 import { loadInstances } from "./loader.ts";
 import { renderLoadError, renderVersionCards } from "./render.ts";
-import {
-  bindSelectAll,
-  bindSyncSelected,
-  pruneCheckedSets,
-  restoreCheckboxes,
-} from "./sync-flow.ts";
+import { bindSelectAll, pruneCheckedSets, restoreCheckboxes } from "./sidebar-select.ts";
+import { bindSyncSelected } from "./sync-flow.ts";
 import { footerHTML, headerHTML, listContainerHTML, syncResultPanelHTML } from "./tpl.ts";
 
 // ---------- AppSidebar 类 ----------
@@ -56,6 +52,10 @@ class AppSidebar extends WebComponentBase {
   private readonly _guard = createLoadGuard();
   /** 在途期间来了新请求 → 标记待补跑（完成后用最新 rtype 再跑一次，尾随合并） */
   private _reloadPending = false;
+  /** P0 修复（2026-10-16 锐评）：待补跑时**记住是否带 force**。原实现单飞命中后丢弃 force
+   *  参数、补跑走 `_reload()`（不带 force），若变异（stats:refresh）请求恰被单飞拦下，
+   *  补跑会并入在途的读请求、拉到变异前旧列表——loader 的 force 身份守卫被调用方绕开。 */
+  private _reloadPendingForce = false;
   /** 持久化勾选状态（跨重新渲染保持），按 rtype 隔离避免类型切换串扰；实例属性，生命周期随组件 */
   private _checkedSets = new Map<string, Set<string>>();
   /** 去重状态机：仅选中项实际变化时才 emit package:selected */
@@ -252,6 +252,8 @@ class AppSidebar extends WebComponentBase {
       // 丢弃语义会导致 rtype 快速切换时 _instances 与 _rtype 错配：
       // 记下补跑请求，当前完成后用最新 rtype 再跑一次
       this._reloadPending = true;
+      // P0 修复（2026-10-16 锐评）：force 随补跑一起记忆（OR 累积，任一请求要求 force 即保持）
+      this._reloadPendingForce = this._reloadPendingForce || force;
       return;
     }
     this._reloadInFlight = true;
@@ -296,7 +298,9 @@ class AppSidebar extends WebComponentBase {
     }
     if (this._reloadPending) {
       this._reloadPending = false;
-      void this._reload();
+      const nextForce = this._reloadPendingForce;
+      this._reloadPendingForce = false;
+      void this._reload(nextForce);
     }
   }
 
@@ -323,6 +327,8 @@ class AppSidebar extends WebComponentBase {
       this._debounceTimer = null;
     }
     this._reloadPending = false;
+    // P0 修复（2026-10-16 锐评）：待补跑的 force 标记随卸载复位，防重挂载沿用旧 force
+    this._reloadPendingForce = false;
     // P2 复核修复：组件真正卸载时复位去重标记（同组件 reload 不复位、去重跨 reload 生效）
     this.resetSelectedEmit();
     // 清理 DOM 事件监听

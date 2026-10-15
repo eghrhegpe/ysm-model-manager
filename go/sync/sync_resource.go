@@ -73,18 +73,10 @@ type walkEntryState struct {
 	partialFail      bool // 部分子树失败：残缺 entries 不入缓存
 }
 
-// handleDir 处理 Walk 遇到的目录：跳过回收站；资源包文件夹自身成条目但不递归。
+// handleDir 处理 Walk 遇到的目录：资源包文件夹自身成条目但不递归。
+// 回收站 / relink 备份尸体剔除已上移 walkFn 的统一闸（ADR-351 D1），本方法只管
+// 资源包夹的条目化——过滤知识单点住 sync_walk.go，勿再在此手抄谓词。
 func (s *walkEntryState) handleDir(path string) error {
-	// 跳过回收站目录（与 scanner.ScanEntries 对齐）：回收站内模型不是仓库活跃模型
-	if path != s.rootDir && fsutil.IsRecycleDir(path) {
-		return filepath.SkipDir
-	}
-	// relink 备份尸体同理剔除（ADR-342 / isRelinkBackupPath）：失败 relink 留下的
-	// `<夹名>.relink-bak-<ts>` 恢复点若不跳过，会被判「实例独有（可拉取）」，
-	// 一键拉取就把整个恢复点复制进仓库（垃圾入库 + 恢复点被当模型）
-	if path != s.rootDir && isRelinkBackupPath(path) {
-		return filepath.SkipDir
-	}
 	// 资源包文件夹：扫描其本身但不递归（仅资源包类型收集）
 	if path != s.rootDir && s.isPackFolderType && fsutil.IsResourcePackFolder(path) {
 		if key := relKey(s.rootDir, path); key != "" {
@@ -96,7 +88,8 @@ func (s *walkEntryState) handleDir(path string) error {
 	return nil
 }
 
-// walkFn 是 filepath.Walk 的回调：目录走 handleDir，文件先累积折叠指纹再按允许清单收条目。
+// walkFn 是 filepath.Walk 的回调：目录先过统一剔除闸再走 handleDir，文件先累积
+// 折叠指纹再按允许清单收条目。
 func (s *walkEntryState) walkFn(path string, info os.FileInfo, err error) error {
 	if err != nil {
 		log.Printf("[sync] Walk 错误 %s: %v", path, err)
@@ -108,6 +101,11 @@ func (s *walkEntryState) walkFn(path string, info os.FileInfo, err error) error 
 		return nil
 	}
 	if info.IsDir() {
+		// 统一剔除闸（ADR-351 D1）：回收站 + relink 备份尸体整棵跳过（回收站内模型
+		// 不是仓库活跃模型；备份尸体否则会被判「实例独有」招致一键拉取垃圾入库）
+		if err := skipExcludedDir(s.rootDir, path); err != nil {
+			return err
+		}
 		return s.handleDir(path)
 	}
 	// 折叠指纹累积（D2′-b）：须在 IsResourceAllowed 过滤之前，
@@ -162,6 +160,8 @@ func collectResourceEntries(rootDir, rtypeID string, isPackFolderType bool, scan
 	if cached, ok := loadSyncScanCache[map[string]DiffEntry](&syncResourcesScanCache, cacheKey); ok {
 		return cached
 	}
+	// 代际守卫基准：load-miss 后立即捕获，Walk 结束 store 前比对（锐评 P1-4）。
+	epoch := syncCacheEpochOf()
 	st := &walkEntryState{
 		rootDir:          rootDir,
 		isPackFolderType: isPackFolderType,
@@ -187,7 +187,7 @@ func collectResourceEntries(rootDir, rtypeID string, isPackFolderType bool, scan
 	// 完整 Walk 才入缓存：rootFailed 已短路，partialFail 时残缺 entries 不入缓存，
 	// 避免后续 30s 内调用方拿到不完整结果
 	if !st.rootFailed && !st.partialFail {
-		storeSyncScanCache(&syncResourcesScanCache, cacheKey, st.entries)
+		storeSyncScanCache(&syncResourcesScanCache, cacheKey, st.entries, epoch)
 	}
 	return st.entries
 }
@@ -295,18 +295,8 @@ func GetLinkType(path string) types.LinkType {
 	return types.LinkCopy
 }
 
-// hasRecycleSegment 判断路径中是否存在任一名为 .recycle 的目录段（大小写不敏感，
-// 对齐 fsutil.IsRecycleDir / download.stripRecycleSegments 的 EqualFold 口径）。
-// 覆盖 .recycle 子树内已遍历文件的跳过语义（walk 会进入子树列出其下文件），
-// 同时不误伤文件名含 ".recycle" 的正常模型（如 my.recycle.backup.ysm）。
-func hasRecycleSegment(p string) bool {
-	for _, seg := range strings.Split(p, string(filepath.Separator)) {
-		if strings.EqualFold(seg, ".recycle") {
-			return true
-		}
-	}
-	return false
-}
+// hasRecycleSegment 已收编 fsutil.HasRecycleSegment（ADR-351 D1 谓词单点），
+// 本包消费统一走 sync_walk.go 的剔除闸。
 
 // SyncToggleStatus 阶段 4 遇 Windows 共享锁瞬时争用时的重试窗口。
 // 50ms 足够容忍杀毒/索引器等瞬时句柄占用，又远低于一次同步的提交粒度，

@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/paths"
@@ -137,11 +136,14 @@ func (tm *TrashManager) resolveTrashDest(rootDir, src string) (string, error) {
 	}
 	dst := filepath.Join(tm.recycleDir, rel)
 	// dst 由 tm.recycleDir + rel 构造，安全检查
-	cleanRecycle := filepath.Clean(tm.recycleDir)
 	insideRecycle := func(candidate string) error {
-		cd := filepath.Clean(candidate)
-		if !strings.HasPrefix(cd, cleanRecycle+string(filepath.Separator)) && cd != cleanRecycle {
-			return fmt.Errorf("路径越权: %s 不在回收站目录下", candidate)
+		// 2026-10-16 锐评 P5：原手写 `strings.HasPrefix(cd, cleanRecycle+sep)` 是**大小写敏感**的
+		// 词法判定，与下方 verifyRenamedInside 用的 paths.IsInsideResolved（safe.go 大小写不敏感前缀
+		// 复核）口径分裂——Windows 下 recycleDir 与候选路径大小写形态不同即误判越权。
+		// 统一到 paths.IsInside（词法 + 大小写不敏感），与 post-rename 复核同源；错误仍 %w 包装
+		// 保留 ErrPathEscalation 分类（errors.Is 可归类），外层消息保持不变。
+		if err := paths.IsInside(tm.recycleDir, candidate); err != nil {
+			return fmt.Errorf("路径越权: %s 不在回收站目录下: %w", candidate, err)
 		}
 		return nil
 	}

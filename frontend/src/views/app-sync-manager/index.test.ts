@@ -5,7 +5,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { waitFor, sleep } from "@/test-utils/wait.ts";
 import { mountCustomElement, unmountElement } from "@/test-utils/render.ts";
 import { bus } from "@/bus";
-import type { SyncItem } from "./tpl.ts";
 
 // UI_ICONS 断言片段：浏览器 innerHTML 归一自关闭标签（`<polyline …/>` → `<polyline …></polyline>`），
 // 整串 toContain 匹配不到，统一用「class + 开标签」稳定前缀片段做断言。
@@ -56,6 +55,29 @@ async function flushAsyncTurns(): Promise<void> {
   }
 }
 
+/** 以真实数据源装载面板（锐评可测性收口：替代直接写组件私有状态）。
+ *  写权威类型键 `repo_rtype`（与 app-nav 同源）+ 让 `GetInstanceSyncStatus` 返回给定条目，
+ *  再挂载组件——`_selectedType`/`_allItems`/`_filteredItems`/`_typeConfig` 全由生产路径派生，
+ *  测试不再触碰私有字段。用 `mockResolvedValueOnce` 而非默认值，避免污染后续用例。
+ *  条目按后端 `ResourceSyncItem` 形状传入（`unknown[]` 由 mock 承担类型放宽）。 */
+async function mountWithItems(type: string, items: unknown[]): Promise<HTMLElement> {
+  localStorage.setItem("repo_rtype", type);
+  mocks.GetInstanceSyncStatus.mockResolvedValueOnce(items as never);
+  const el = document.createElement("app-sync-manager");
+  el.setAttribute("instance", "test");
+  document.body.appendChild(el);
+  await waitFor(() => el.querySelector(".sm-status-tab") !== null, 5000);
+  return el;
+}
+
+/** 点状态标签切换筛选（公开交互路径；替代直接写 `_statusFilter`）。 */
+function clickStatusTab(el: HTMLElement, status: string): void {
+  const tab = Array.from(el.querySelectorAll(".sm-status-tab")).find(
+    (t) => (t as HTMLElement).dataset.status === status,
+  ) as HTMLElement;
+  tab.click();
+}
+
 describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
   beforeEach(() => {
     document.body.innerHTML = "";
@@ -63,6 +85,8 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
     // "ysm_syncLastType"（LAST_TYPE_KEY，index.ts:39），清理无效导致测试隔离
     // 完全依赖文件内执行顺序
     localStorage.removeItem("ysm_syncLastType");
+    // 权威类型键（app-nav 同源）：mountWithItems 会写入，此处保证用例间隔离
+    localStorage.removeItem("repo_rtype");
   });
 
   afterEach(() => {
@@ -203,25 +227,9 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
   });
 
   it("EntityPlayer 走 sync tree：subdir 作为顶层文件夹（SceneModel/CustomAnim 平行可见）", async () => {
-    const el = document.createElement("app-sync-manager");
-    el.setAttribute("instance", "test");
-    document.body.appendChild(el);
-    await waitFor(() => el.querySelector(".sm-status-tab") !== null, 5000);
-
-    // 驱动私有状态：EntityPlayer 条目含 subdir
-    const self = el as unknown as {
-      _selectedType: string;
-      _allItems: SyncItem[];
-      _filteredItems: SyncItem[];
-      _typeConfig: Array<{ id: string }>;
-      _dirOpen: Record<string, boolean>;
-      _doRender: () => void;
-    };
-    self._selectedType = "EntityPlayer";
-    self._typeConfig = [{ id: "EntityPlayer" }];
-    // code review P1：更新为新 renderer 的 isDir 契约（旧 subdir 分组语义已移除——
+    // code review P1：新 renderer 的 isDir 契约（旧 subdir 分组语义已移除——
     // 文件夹行 = isDir:true + children 数组，展开渲染 children）
-    self._allItems = [
+    const el = await mountWithItems("EntityPlayer", [
       { path: "SceneModel", name: "SceneModel", status: "synced", type: "EntityPlayer", icon: "🎭", size: 10, isDir: true, children: [
         { path: "SceneModel/舞台.pmx", name: "舞台", status: "synced", type: "EntityPlayer", icon: "🎭", size: 10, isDir: false },
       ] },
@@ -229,14 +237,10 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
       { path: "CustomAnim", name: "CustomAnim", status: "synced", type: "EntityPlayer", icon: "🎭", size: 30, isDir: true, children: [
         { path: "CustomAnim/动作.pmx", name: "动作", status: "synced", type: "EntityPlayer", icon: "🎭", size: 30, isDir: false },
       ] },
-    ];
-    self._filteredItems = self._allItems;
-    self._dirOpen = {};
-    mocks.ScanModelEntriesWithLabel.mockResolvedValue([]);
+    ]);
 
-    self._doRender();
     // 正等结果：顶层文件夹行渲染（SceneModel / CustomAnim / 角色A）
-    await waitFor(() => el.querySelectorAll(".sm-dir").length > 0);
+    await waitFor(() => el.querySelectorAll(".sm-dir").length === 3, 5000);
     // 顶层文件夹：SceneModel、CustomAnim、角色A（根下无 subdir 的条目也成文件夹）
     let dirs = el.querySelectorAll(".sm-dir");
     expect(dirs.length).toBe(3);
@@ -256,9 +260,6 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
     // 展开后 SceneModel 的 children 行（舞台）以 .sm-file 渲染，data-path 为完整路径
     const filesAfter = Array.from(el.querySelectorAll(".sm-file")).map((f) => (f as HTMLElement).dataset.path || "");
     expect(filesAfter).toEqual(expect.arrayContaining(["SceneModel/舞台.pmx"]));
-    // 恢复全局状态
-    bus.emit("repo:rtype-changed", "ysm");
-    await flushAsyncTurns(); // 排空：重载落定，模块级状态稳定
     unmountElement(el);
   });
 
@@ -396,40 +397,17 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
   });
 
   it("dirLevelSync 类型（blueprint）→ 文件夹行 + 展开扫出子文件（missing 条目也可展开）", async () => {
-    const el = document.createElement("app-sync-manager");
-    el.setAttribute("instance", "test");
-    document.body.appendChild(el);
-    await waitFor(() => el.querySelector(".sm-status-tab") !== null, 5000);
-
-    // 直接驱动组件私有状态（绕过 mock 链的多重 getApp 调用，避免 mockResolvedValue 被 afterEach 还原污染）
-    const self = el as unknown as {
-      _selectedType: string;
-      _allItems: SyncItem[];
-      _filteredItems: SyncItem[];
-      _typeConfig: Array<{ id: string; name: string; icon: string }>;
-      _dirOpen: Record<string, boolean>;
-      _doRender: () => void;
-    };
-    self._selectedType = "blueprint";
-    self._typeConfig = [{ id: "blueprint", name: "蓝图", icon: "⚙️" }];
     // 真实场景：蓝图在仓库、整合包缺失 → missing；path 为仓库绝对路径
     // code review P1：新 renderer 的 isDir 契约——children 直接携带（不再依赖
     // ScanModelEntriesWithLabel 仓库扫描——新 renderer 无 scan 路径）
-    self._allItems = [
+    const el = await mountWithItems("blueprint", [
       { path: "D:/YSM管理器测试文件夹/minecraft-mod/blueprint/hello_new_generation_core", name: "hello_new_generation_core", status: "missing", type: "blueprint", icon: "⚙️", size: 4096, isDir: true, children: [
         { path: "D:/YSM管理器测试文件夹/minecraft-mod/blueprint/hello_new_generation_core/建筑.nbt", name: "建筑.nbt", status: "missing", type: "blueprint", icon: "⚙️", size: 2048, isDir: false },
         { path: "D:/YSM管理器测试文件夹/minecraft-mod/blueprint/hello_new_generation_core/建筑.schematic", name: "建筑.schematic", status: "missing", type: "blueprint", icon: "⚙️", size: 1024, isDir: false },
       ] },
-    ];
-    self._filteredItems = self._allItems;
-    self._dirOpen = {};
-
-    // code review P1：新 renderer 无 ScanModelEntriesWithLabel 路径——children 已内联
-    void mocks.ScanModelEntriesWithLabel;
-
-    self._doRender();
+    ]);
     // 正等结果：文件夹行渲染（未展开，无子文件）
-    await waitFor(() => el.querySelectorAll(".sm-dir").length === 1);
+    await waitFor(() => el.querySelectorAll(".sm-dir").length === 1, 5000);
     // 未展开：只有文件夹行
     let dirs = el.querySelectorAll(".sm-dir");
     expect(dirs.length).toBe(1);
@@ -456,34 +434,15 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
   });
 
   it("diverged 条目 → missing tab 显示 + 计数 + 文件夹行推送按钮 + 展开 children（code review P3）", async () => {
-    const el = document.createElement("app-sync-manager");
-    el.setAttribute("instance", "test");
-    document.body.appendChild(el);
-    await waitFor(() => el.querySelector(".sm-status-tab") !== null, 5000);
-
-    const self = el as unknown as {
-      _selectedType: string;
-      _allItems: SyncItem[];
-      _filteredItems: SyncItem[];
-      _typeConfig: Array<{ id: string }>;
-      _dirOpen: Record<string, boolean>;
-      _statusFilter: string;
-      _doRender: () => void;
-    };
-    self._selectedType = "EntityPlayer";
-    self._typeConfig = [{ id: "EntityPlayer" }];
-    self._allItems = [
+    const el = await mountWithItems("EntityPlayer", [
       { path: "模型A", name: "模型A", status: "diverged", type: "EntityPlayer", icon: "🗂️", size: 10, isDir: true, children: [
         { path: "模型A/a.pmx", name: "a.pmx", status: "missing", type: "EntityPlayer", icon: "🎭", size: 10, isDir: false },
       ] },
-    ];
-    self._filteredItems = self._allItems;
-    self._statusFilter = "missing"; // diverged 折叠进 missing tab（store.applyFilter 契约）
-    self._dirOpen = {};
-
-    self._doRender();
+    ]);
+    // diverged 折叠进 missing tab（store.applyFilter 契约）：走公开交互切筛选
+    clickStatusTab(el, "missing");
     // 正等结果：diverged 文件夹行渲染（含推送按钮）
-    await waitFor(() => el.querySelectorAll(".sm-dir").length === 1);
+    await waitFor(() => el.querySelectorAll(".sm-dir").length === 1, 5000);
     // missing 筛选下 diverged 文件夹行可见（含推送按钮——继承可操作属性）
     expect(el.querySelectorAll(".sm-dir").length).toBe(1);
     expect(el.querySelector('[data-testid="sm-push"]')).toBeTruthy();
@@ -499,66 +458,34 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
     // 契约：dirOpen 手动折叠优先（点过即尊重）；forceOpen 只对「未点过」目录生效。
     // 原 `dirOpen[path] || forceOpen` 让显式折叠（false）被 forceOpen（true）覆盖——
     // 折叠无效、下次渲染被强开。改为 `??` 后必须保持折叠。
-    const el = document.createElement("app-sync-manager");
-    el.setAttribute("instance", "test");
-    document.body.appendChild(el);
-    await waitFor(() => el.querySelector(".sm-status-tab") !== null, 5000);
-
-    const self = el as unknown as {
-      _selectedType: string;
-      _allItems: SyncItem[];
-      _filteredItems: SyncItem[];
-      _typeConfig: Array<{ id: string }>;
-      _dirOpen: Record<string, boolean>;
-      _statusFilter: string;
-      _forceOpenPaths: Set<string>;
-      _doRender: () => void;
-    };
-    self._selectedType = "EntityPlayer";
-    self._typeConfig = [{ id: "EntityPlayer" }];
-    self._allItems = [
+    const el = await mountWithItems("EntityPlayer", [
       { path: "模型A", name: "模型A", status: "diverged", type: "EntityPlayer", icon: "🗂️", size: 10, isDir: true, children: [
         { path: "模型A/a.pmx", name: "a.pmx", status: "missing", type: "EntityPlayer", icon: "🎭", size: 10, isDir: false },
       ] },
-    ];
-    self._filteredItems = self._allItems;
-    self._statusFilter = "missing";
-    // 用户显式折叠该目录（点过）——即使它命中 forceOpenPaths 也必须保持折叠
-    self._dirOpen = { "模型A": false };
-    self._forceOpenPaths = new Set(["模型A"]);
-
-    self._doRender();
-    // 正等结果：显式折叠目录行渲染（子文件不渲染）
-    await waitFor(() => el.querySelectorAll(".sm-dir").length === 1);
+    ]);
+    // status 筛选命中子项 → 该目录被 forceOpen 强开（子文件先可见）
+    clickStatusTab(el, "missing");
+    await waitFor(() => el.querySelectorAll(".sm-file").length === 1, 5000);
+    // 用户点两下：第一次写入显式 true（与强开态一致），第二次写入显式 false（折叠）
+    const dirRow = (): HTMLElement => el.querySelector(".sm-dir") as HTMLElement;
+    dirRow().click();
+    dirRow().click();
+    // 正等结果：显式折叠优先于 forceOpen（子文件归零）
+    await waitFor(() => el.querySelectorAll(".sm-file").length === 0, 5000);
     // 显式折叠优先：目录行可见但子文件不渲染
     expect(el.querySelectorAll(".sm-dir").length).toBe(1);
     expect(el.querySelectorAll(".sm-file").length).toBe(0);
     // 再点一次展开仍可用（点击语义不被 forceOpen 吞掉）
-    (el.querySelector(".sm-dir") as HTMLElement).click();
+    dirRow().click();
     // 正等结果：点击展开后 children 渲染 1 行
-    await waitFor(() => el.querySelectorAll(".sm-file").length === 1);
+    await waitFor(() => el.querySelectorAll(".sm-file").length === 1, 5000);
     expect(el.querySelectorAll(".sm-file").length).toBe(1);
     unmountElement(el);
   });
 
   it("多层嵌套目录 → 递归渲染可展开 sm-dir（镜像磁盘层级）", async () => {
-    const el = document.createElement("app-sync-manager");
-    el.setAttribute("instance", "test");
-    document.body.appendChild(el);
-    await waitFor(() => el.querySelector(".sm-status-tab") !== null, 5000);
-
-    const self = el as unknown as {
-      _selectedType: string;
-      _allItems: SyncItem[];
-      _filteredItems: SyncItem[];
-      _typeConfig: Array<{ id: string; name?: string; icon?: string }>;
-      _dirOpen: Record<string, boolean>;
-      _doRender: () => void;
-    };
-    self._selectedType = "ysm";
-    self._typeConfig = [{ id: "ysm", name: "YSM", icon: "💎" }];
     // 三层容器：vendor → authors → character（模型文件夹叶子，含文件级 children）
-    self._allItems = [{
+    const el = await mountWithItems("ysm", [{
       path: "/repo/ysm/vendor", name: "vendor", status: "diverged", type: "ysm", icon: "🗂️", size: 0, isDir: true,
       children: [{
         path: "/repo/ysm/vendor/authors", name: "authors", status: "diverged", type: "ysm", icon: "🗂️", size: 0, isDir: true,
@@ -567,13 +494,9 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
           children: [{ path: "/repo/ysm/vendor/authors/character/model.ysm", name: "model.ysm", status: "missing", type: "ysm", icon: "💎", size: 4096, isDir: false }],
         }],
       }],
-    }];
-    self._filteredItems = self._allItems;
-    self._dirOpen = {};
-
-    self._doRender();
+    }]);
     // 正等结果：折叠态渲染（仅顶层 vendor 一个 sm-dir）
-    await waitFor(() => el.querySelectorAll(".sm-dir").length === 1);
+    await waitFor(() => el.querySelectorAll(".sm-dir").length === 1, 5000);
     // 折叠：仅顶层 vendor 一个 sm-dir，无子项渲染
     expect(el.querySelectorAll(".sm-dir").length).toBe(1);
     expect(el.querySelectorAll(".sm-file").length).toBe(0);
@@ -602,37 +525,17 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
   });
 
   it("容器 synced + 子项 disabled → disabled tab 显示该子行及其父链（点1 递归筛选）", async () => {
-    const el = document.createElement("app-sync-manager");
-    el.setAttribute("instance", "test");
-    document.body.appendChild(el);
-    await waitFor(() => el.querySelector(".sm-status-tab") !== null, 5000);
-
-    const self = el as unknown as {
-      _selectedType: string;
-      _allItems: SyncItem[];
-      _filteredItems: SyncItem[];
-      _typeConfig: Array<{ id: string }>;
-      _dirOpen: Record<string, boolean>;
-      _statusFilter: string;
-      _doRender: () => void;
-    };
-    self._selectedType = "resourcepack";
-    self._typeConfig = [{ id: "resourcepack" }];
     // 容器 synced，内部 disabled 子文件——旧 applyFilter 顶层过滤会整体丢弃容器
-    self._allItems = [{
+    const el = await mountWithItems("resourcepack", [{
       path: "packs", name: "packs", status: "synced", type: "resourcepack", icon: "📁", size: 0, isDir: true,
       children: [
         { path: "packs/a.zip", name: "a.zip", status: "disabled", type: "resourcepack", icon: "📦", size: 10, isDir: false },
         { path: "packs/b.zip", name: "b.zip", status: "synced", type: "resourcepack", icon: "📦", size: 10, isDir: false },
       ],
-    }];
-    self._filteredItems = self._allItems;
-    self._statusFilter = "disabled";
-    self._dirOpen = {};
-
-    self._doRender();
+    }]);
+    clickStatusTab(el, "disabled");
     // 正等结果：父链容器行渲染
-    await waitFor(() => el.querySelectorAll(".sm-dir").length === 1);
+    await waitFor(() => el.querySelectorAll(".sm-dir").length === 1, 5000);
     // 父链保留（容器行）+ disabled 子文件在 disabled tab 可见
     expect(el.querySelectorAll(".sm-dir").length).toBe(1);
     expect(el.querySelector('.sm-file[data-path="packs/a.zip"]')).toBeTruthy();
@@ -642,38 +545,17 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
   });
 
   it("递归计数：子项计入 status 徽标（synced 容器 + 1 disabled 子 → disabled 徽标=1）点2", async () => {
-    const el = document.createElement("app-sync-manager");
-    el.setAttribute("instance", "test");
-    document.body.appendChild(el);
-    await waitFor(() => el.querySelector(".sm-status-tab") !== null, 5000);
-
-    const self = el as unknown as {
-      _selectedType: string;
-      _allItems: SyncItem[];
-      _filteredItems: SyncItem[];
-      _typeConfig: Array<{ id: string }>;
-      _dirOpen: Record<string, boolean>;
-      _statusFilter: string;
-      _doRender: () => void;
-    };
-    self._selectedType = "resourcepack";
-    self._typeConfig = [{ id: "resourcepack" }];
-    self._allItems = [{
+    const el = await mountWithItems("resourcepack", [{
       path: "packs", name: "packs", status: "synced", type: "resourcepack", icon: "📁", size: 0, isDir: true,
       children: [
         { path: "packs/a.zip", name: "a.zip", status: "disabled", type: "resourcepack", icon: "📦", size: 10, isDir: false },
       ],
-    }];
-    self._filteredItems = self._allItems;
-    self._statusFilter = "all";
-    self._dirOpen = {};
-
-    self._doRender();
+    }]);
     // 正等结果：disabled 徽标渲染并递归计入（含 "1"）
     await waitFor(() => {
       const t = el.querySelector('.sm-status-tab[data-status="disabled"]');
       return t !== null && t.textContent!.includes("1");
-    });
+    }, 5000);
     // disabled 徽标应显示 1（子项递归计入），非 0/2
     const disabledTab = el.querySelector('.sm-status-tab[data-status="disabled"]');
     expect(disabledTab).toBeTruthy();
@@ -683,24 +565,8 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
   });
 
   it("折叠目录下的命中子项 → 筛选时强制展开可见（点1 展开语义）", async () => {
-    const el = document.createElement("app-sync-manager");
-    el.setAttribute("instance", "test");
-    document.body.appendChild(el);
-    await waitFor(() => el.querySelector(".sm-status-tab") !== null, 5000);
-
-    const self = el as unknown as {
-      _selectedType: string;
-      _allItems: SyncItem[];
-      _filteredItems: SyncItem[];
-      _typeConfig: Array<{ id: string }>;
-      _dirOpen: Record<string, boolean>;
-      _statusFilter: string;
-      _doRender: () => void;
-    };
-    self._selectedType = "ysm";
-    self._typeConfig = [{ id: "ysm" }];
     // 三层嵌套，最深层 leaf 是 disabled——旧逻辑需逐层手动展开才可见
-    self._allItems = [{
+    const el = await mountWithItems("ysm", [{
       path: "vendor", name: "vendor", status: "synced", type: "ysm", icon: "🗂️", size: 0, isDir: true,
       children: [{
         path: "vendor/authors", name: "authors", status: "synced", type: "ysm", icon: "🗂️", size: 0, isDir: true,
@@ -709,14 +575,11 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
           children: [{ path: "vendor/authors/character/model.ysm", name: "model.ysm", status: "disabled", type: "ysm", icon: "💎", size: 5, isDir: false }],
         }],
       }],
-    }];
-    self._filteredItems = self._allItems;
-    self._statusFilter = "disabled";
-    self._dirOpen = {}; // 全部折叠
-
-    self._doRender();
+    }]);
+    // 全部折叠状态下切到 disabled tab（无手动展开）
+    clickStatusTab(el, "disabled");
     // 正等结果：命中子项经 forceOpen 强制展开可见
-    await waitFor(() => el.querySelector('[data-path="vendor/authors/character/model.ysm"]') !== null);
+    await waitFor(() => el.querySelector('[data-path="vendor/authors/character/model.ysm"]') !== null, 5000);
     // 无手动展开，但命中子项经 forceOpen 强制展开可见
     expect(el.querySelector('[data-path="vendor/authors/character/model.ysm"]')).toBeTruthy();
     // 非命中 synced 中间目录不强制展开其内部（此处仅验证命中路径即可见）
@@ -724,37 +587,17 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
   });
 
   it("自身命中的目录、子项全不命中 → 展开后不露未命中子行（不变量，边角对称）", async () => {
-    const el = document.createElement("app-sync-manager");
-    el.setAttribute("instance", "test");
-    document.body.appendChild(el);
-    await waitFor(() => el.querySelector(".sm-status-tab") !== null, 5000);
-
-    const self = el as unknown as {
-      _selectedType: string;
-      _allItems: SyncItem[];
-      _filteredItems: SyncItem[];
-      _typeConfig: Array<{ id: string }>;
-      _dirOpen: Record<string, boolean>;
-      _statusFilter: string;
-      _doRender: () => void;
-    };
-    self._selectedType = "ysm";
-    self._typeConfig = [{ id: "ysm" }];
     // 容器自身 missing（命中 missing tab），但子文件全是 synced——旧逻辑返回原 item
     // 会带出全部 synced 子行；修后 children 清空，展开无未命中行
-    self._allItems = [{
+    const el = await mountWithItems("ysm", [{
       path: "folder", name: "folder", status: "missing", type: "ysm", icon: "🗂️", size: 0, isDir: true,
       children: [
         { path: "folder/a.ysm", name: "a.ysm", status: "synced", type: "ysm", icon: "💎", size: 10, isDir: false },
       ],
-    }];
-    self._filteredItems = self._allItems;
-    self._statusFilter = "missing";
-    self._dirOpen = {};
-
-    self._doRender();
+    }]);
+    clickStatusTab(el, "missing");
     // 正等结果：目录自身命中 → 保留行
-    await waitFor(() => el.querySelectorAll(".sm-dir").length === 1);
+    await waitFor(() => el.querySelectorAll(".sm-dir").length === 1, 5000);
     // 目录自身命中 → 保留行
     expect(el.querySelectorAll(".sm-dir").length).toBe(1);
     // 展开后不得出现 synced 子行（不变量：列表全为筛选态）
@@ -763,34 +606,17 @@ describe("app-sync-manager（testid 钩子 + 同步交互）", () => {
   });
 
   it("并发 _doRender → 事件委托只绑一次：点目录行一次只翻转一次（双绑竞态回归）", async () => {
-    const el = document.createElement("app-sync-manager");
-    el.setAttribute("instance", "test");
-    document.body.appendChild(el);
-    await waitFor(() => el.querySelector(".sm-status-tab") !== null, 5000);
-
-    const self = el as unknown as {
-      _selectedType: string;
-      _allItems: SyncItem[];
-      _filteredItems: SyncItem[];
-      _typeConfig: Array<{ id: string }>;
-      _dirOpen: Record<string, boolean>;
-      _doRender: () => void;
-    };
-    self._selectedType = "ysm";
-    self._typeConfig = [{ id: "ysm" }];
-    self._allItems = [
+    const el = await mountWithItems("ysm", [
       { path: "模型A", name: "模型A", status: "synced", type: "ysm", icon: "📁", size: 0, isDir: true, children: [
         { path: "模型A/a.ysm", name: "a.ysm", status: "synced", type: "ysm", icon: "💎", size: 10, isDir: false },
       ] },
-    ];
-    self._filteredItems = self._allItems;
-    self._dirOpen = {};
-
-    // 模拟并发：连续两次 _doRender（原 bindEvents 每次 render 后全量重绑 → 双绑）
-    self._doRender();
-    self._doRender();
+    ]);
+    // 模拟并发：连续两次走公开重渲染入口（状态标签切换），原 bindEvents 每次 render 后
+    // 全量重绑 → 双绑
+    clickStatusTab(el, "missing");
+    clickStatusTab(el, "all");
     // 正等结果：两次渲染落定（初始折叠，目录行存在）
-    await waitFor(() => el.querySelector(".sm-dir") !== null);
+    await waitFor(() => el.querySelector(".sm-dir") !== null, 5000);
 
     const dir = el.querySelector(".sm-dir") as HTMLElement;
     expect(dir).toBeTruthy();

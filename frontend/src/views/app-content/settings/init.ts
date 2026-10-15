@@ -20,6 +20,7 @@ import { backendGetApp } from "@/views/backend-deps.ts";
 import { initDefaultPagePrefs } from "./default-page.ts";
 import { initKeymap } from "./keymap.ts";
 import { bindPathClick, initAdvancedGrid, initMcDetect, saveCfg } from "./path-cards.ts";
+import { initSettingsBackup } from "./settings-backup.ts";
 import {
   LINK_MODE_DEFAULT,
   LINK_MODES,
@@ -530,6 +531,7 @@ export async function initSettings(root: ShadowRoot): Promise<void> {
 
   initUiPrefs(root);
   initWorkerPrefs(root);
+  initSettingsBackup(root);
   initDefaultPagePrefs(root);
   initKeymap(root);
 

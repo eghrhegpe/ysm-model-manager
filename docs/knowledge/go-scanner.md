@@ -7,8 +7,10 @@ source_files:
   - go/scanner/
 auto_fields:
   symbols_with_lines:
+    - CommitWalk
     - ComputeFileHash
     - EffectiveCacheTTL
+    - ExtractAuthor
     - GenerateRepoIndex
     - HashIndex
     - HashIndex.Lookup
@@ -22,11 +24,16 @@ auto_fields:
     - InvalidateBrowsePath
     - InvalidateCache
     - InvalidatePath
+    - IsIndexRoot
     - ListModelAuthors
+    - MarkIndexRootWatched
+    - MarkWalkStart
     - OnCacheInvalidated
     - OpenHashIndex
+    - OpenScanIndex
     - ResetHashIndexStats
     - ResetScanEngineStats
+    - ResetScanIndexStats
     - ScanBackend
     - ScanEngineStat
     - ScanEngineStats
@@ -40,8 +47,14 @@ auto_fields:
     - ScanEntriesLiteCtx
     - ScanEntriesWithHit
     - ScanEntriesWithHitCtx
+    - ScanIndexFor
+    - ScanIndexPath
+    - ScanIndexStatsSnapshot
     - ScanLocalAuthors
+    - Serve
     - SetErrorSink
+    - SetIndexRoots
+    - SetIndexTrustCapForTest
 use_when:
   - 扫描
   - 文件树
@@ -93,8 +106,9 @@ status: active
 - 30s 扫描缓存（**非永久**）+ 路径级失效：`scanCache` 为 `sync.Map`（`string → scanCacheEntry{entries []ModelEntry, expiresAt time.Time}`），记录扫描条目与过期时刻；TTL 默认 30s（可由 `AppConfig.ScanCacheTTLMs` 覆盖，仍是短 TTL），且**纯进程内存——App 重启即全失，不存在「确定仓库永久缓存」**。`keyVersions` 为另一份 `sync.Map`（`string → *atomic.Uint64`），用 `(*atomic.Uint64).Add(1)` 原子递增 per-key 版本戳，防并发 `InvalidatePath` 竞态——P1 修复；单全局 `cacheGen atomic.Uint64` 仅作全量失效的代际短路标记
 - SHA256 哈希（同步系统文件匹配用；B1 起经持久哈希索引快路径，见下）
 - **持久哈希索引（ADR-348 B1 两阶段扫描投影·身份投影，`hashindex.go`）**：全量扫描哈希段（`hashEntriesParallel` 带 `rootDir` 参）先查 `<root>/.ysm-hash-index.json`（`path → {size, mtime, hash}`，`fsutil.WriteFileAtomic` 原子写、损坏自愈重写）——`(Size, ModTime)` 双指纹命中 → 存哈希免读盘（`hashIndexHits`），未命中真算 SHA256 并回写（`hashComputations`）；收尾按本次路径集 `Prune`（move/delete 自愈）+ dirty 门控 `Save`（稳态近零写）。开关 = `AppConfig.HashIndexDisabled`（`config.Get()` 活读，同 `ScanCacheTTLMs` 先例；**不落配置 JSON 面**——非用户可配开关，零值缺省启用，`SaveAppConfig` 以旧为基自动保全）。对手面：外部保 size+mtime 改内容 → 陈旧哈希滞留至指纹变化（geoCache 同类边界，已裁定接受）。回归锁 `scanner_hashindex_test.go`（三段故事 + 禁用态全真算）+ `hashindex_test.go`（指纹/剪枝/坏表/dirty 门控）；观测 `HashIndexStatsSnapshot`（benchmark/CLI「免哈希率」）
-- **浏览投影（止血 2026-10-15 P0-1，`scanner_browse.go`）**：`ScanEntriesBrowse*` 与 `ScanEntries` 同一套过滤口径，但**不计算 SHA256**（Hash 恒空）——哈希只被同步系统的文件内容匹配消费，仓库树（app-tree loader、预览候选）从不读 Hash，原「每次冷加载全库逐文件读全量字节」是纯税。独立 `browseCache`（同 30s TTL、共享 `cacheGen`/`keyVersions` 代际守卫）+ 独立 `inFlightBrowse` 航班表——**无哈希条目不得进 `scanCache`**（同步系统把「哈希为空」当静默跳过匹配），反向在途合并（浏览 owner 的航班被全量 waiter 取走写回 scanCache）不被代际守卫拦截，故浏览器隔离。`InvalidateCache`/`InvalidatePath` 双缓存同时失效（配对闸口径）。app 层 seam = `internal/app/app_scan.go|ScanModelEntriesForBrowse`（薄壳 + 与 Filtered 共享 `finalizeScanEntries` 过滤单点）
-- 作者提取（`[作者]` 前缀统计）、本地作者扫描、`index.json` 生成
+- **浏览投影（止血 2026-10-15 P0-1，`scanner_browse.go`）**：`ScanEntriesBrowse*` 与 `ScanEntries` 同一套过滤口径，但**不计算 SHA256**（Hash 恒空）——哈希只被同步系统的文件内容匹配消费，仓库树（app-tree loader、预览候选）从不读 Hash，原「每次冷加载全库逐文件读全量字节」是纯税。独立 `browseCache`（同 30s TTL、共享 `cacheGen`/`keyVersions` 代际守卫）+ 独立 `inFlightBrowse` 航班表——**无哈希条目不得进 `scanCache`**（同步系统把「哈希为空」当静默跳过匹配），反向在途合并（浏览 owner 的航班被全量 waiter 取走写回 scanCache）不被代际守卫拦截，故浏览器隔离。`InvalidateCache`/`InvalidatePath` 双缓存同时失效（配对闸口径）。app 层 seam = `internal/app/app_scan.go|ScanModelEntriesForBrowse`（薄壳 + 与 Filtered 共享 `finalizeScanEntries` 过滤单点）。**消费方清单（锐评 2026-10-16 扩面）**：仓库树 loader、预览候选、批量重命名对话框之外，`SearchModels`（`app_scan.go`，搜索只消费 Name/Path/几何/hasError——`SearchResult` 无 Hash 字段）与头像链 `BatchExtractCreatorAvatars`/`DebugExtractCreatorAvatar`（`app_avatar.go`）、CLI `scan`/`verify` 与 flow 扫描相位均已切无哈希入口（冷路径免全库 SHA256 税）。真实哈希消费者（watcher 同步链、benchmark B1 被测对象、runList 输出契约）保留带哈希入口。回归锁 = `tests/test_hash_entry_consumers.ts`（派生 fail-closed 闸：带哈希 seam 的每个调用/旁挂位点归 ① 消费 `.Hash` ② seam 定义 ③ LEDGER 精确豁免 三归宿，新位点必归类，豁免条目僵尸反查自动核对命中数）
+- **持久浏览索引（ADR-352 两阶段投影·浏览段，`scanindex.go`，锐评 2026-10-16 处方 ① 立项）**：每注册根一份 `<root>/.ysm-scan-index.json`（`path → {name, size, mtime:UnixMilli}`，表结构先例同 B1 哈希索引但**不计算哈希**；`name` 固化 walk 期算得的显示名——ysm.json 组「父目录名」口径记录期固化、serve 时零重推；Ext serve 重建 = 先剥禁用后缀再小写扩展名，`SubDir` 恒空、`Hash` 恒空，`HasTags`/`Type`/`Banned` 归 app 层 `finalizeScanEntries` 统一填充——索引不越层）。**快路径**：browse 缓存 miss 后、单飞 owner 分支内查本根表——`trusted && cacheGen==快照 && keyVersions[root]==快照 && 窗内` 按表重建免 walk（O(1)），waiter 经既有航班取同一结果，结果经 `tryStoreBrowseCache` 版本守卫回存刷 TTL。**信任快照 walk 启动前捕获、收尾复核任一推进则放弃 upsert+prune+Save**（镜像 `tryStoreBrowseCache` 守卫）；**条目级错误计数门控**（`processScanDirEntry` 新增 `errCount *atomic.Int64` 入参：非根 ReadDir err + `d.Info()` 吞错各计 1，>0 跳过固化——全量/作者提取路径传 nil 行为不变）；根级 walk 失败不清 trusted（末次良好表服务至 cap，静默降级面已裁定）。**信任态不跨重启采信**（N1：load 时 trusted 强制 false，本进程首次零错误 walk 重锚——防新进程活体代际 0 撞旧进程持久化 (0,0)+trusted 免 walk serve 陈旧表）。**cap 按根分档**：watcher 装配标记的根（`MarkIndexRootWatched`，仅 Start 成功时标）15min；未装配根（类型存储根/自定义根/Android/watcher 故障）回落 `scanTTL()`——与今日 TTL 周期同频零回归，防 30s→15min 探测恶化。根注册 `SetIndexRoots(a.allAllowedRoots())` 全量重建 + 出集表 Range+Delete，重注册面 = ServiceStartup / restartWatcher / `SetResourceRoot` / `ResetResourceRoot`（CustomRoots 两处写入口经 saveConfig 单漏斗；CustomRoots 变更不重启 watcher 属继承既有面）；注册键过 `normalizeScanKey` 与快路径键字节级一致；**子目录浏览不查表**（键须精确等于注册根）。`InvalidateCache`/`InvalidatePath` 复用既有失效面自动去信任（零新增失效 API）。**watcher 配对补丁**：`internal/app/app.go|emitRepoFsChanged` 追加 `a.InvalidateScanPath(a.ysmRoot())`（置于 nil 守卫外、取 YSM 根而非形参 filesRoot——CustomRoots 覆写时二者无互前缀关系）——堵「instances 空时 syncAll early-return 不清缓存、索引信任窗内外部变更无人去信任」盲点。回归锁 `scanindex_test.go` 5 例（快路径/信任不跨重启/cap 分档/提交门控/剪枝自愈含幽灵条目残面）；观测 `ScanIndexStatsSnapshot`（benchmark 稳态免走率，同 `HashIndexStatsSnapshot` 范式）；本刀边界 = 不做跨类型全局检索/watcher 事件级增量 upsert/索引 GC 上限（照 B1 遗留清单）
+- 作者提取（`[作者]` 前缀统计，判定单点 `ExtractAuthor`——锐评 2026-10-16 起 app 层不再手抄）、本地作者扫描、`index.json` 生成
 
 ## 白名单口径（ADR-038 D2）
 

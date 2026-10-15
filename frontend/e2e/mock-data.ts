@@ -216,6 +216,8 @@ export const MOCK_DATA = {
   ImportFolderAndPushToInstance: undefined,
   DeleteResourcePack: undefined,
   OpenFolder: undefined,
+  // 目录存在性只读查询（锐评 2026-10-17 P2⑤：导入后前端据此检测旧机路径在本机是否有效）
+  DirectoryExists: undefined,
   ReadShaderpackLang: JSON.stringify({ name: "光影包测试", entries: {} }),
   PushSingleResourceToInstance: undefined,
   PullSingleResourceFromInstance: undefined,
@@ -313,6 +315,15 @@ export const MOCK_DATA = {
   ExportModelStructureJSON: undefined,
   ExportWorkshopCreatorsJSONFile: undefined,
   ExportWorkshopSitesJSONFile: undefined,
+  // 设置备份与迁移（ADR-344-d1）：e2e 未触达，补 undefined 最安全（导出返回空路径、导入空结果，走异常态）
+  // ImportSettingsData 是前端导入主入口（锐评 P2②：ReadSettingsExport 预览后用同一个 exp 落盘，不再二次读盘）
+  ExportSettingsJSON: undefined,
+  ReadSettingsExport: undefined,
+  ImportSettingsData: undefined,
+  // 导入前备份的消费入口（锐评 P2④）：此前 .bak-* 只产出、UI 无浏览/恢复，mock 也须登记
+  ListSettingsBackups: undefined,
+  RestoreSettingsBackup: undefined,
+  ImportSettingsFromFile: undefined,
   ExtractPreviewTexture: undefined,
   ExtractYSMHeader: undefined,
   ExtractYSMHeaderFromBase64: undefined,

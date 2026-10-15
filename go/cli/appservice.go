@@ -16,6 +16,10 @@ import (
 type AppService interface {
 	// ── 模型扫描 / 搜索 / 分析 ──
 	ScanModelEntries(dir string) []types.ModelEntry
+	// ScanModelEntriesForBrowse 浏览投影（无 SHA256，锐评 2026-10-16）：不消费
+	// ModelEntry.Hash 的只读命令（scan models / verify / flow ②）必须走此入口，
+	// 冷扫不替同步付全库哈希税；rtype/subtype 传空 = 不过滤。
+	ScanModelEntriesForBrowse(dir string, rtype string, subtype string, label string) []types.ModelEntry
 	SearchModels(filesRoot string, filters types.SearchFilters) []types.SearchResult
 	ListModelAuthors() []types.AuthorInfo
 	ScanLocalAuthors(rtype string) []types.LocalAuthor

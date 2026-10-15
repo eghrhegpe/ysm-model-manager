@@ -323,7 +323,7 @@ export async function searchWebModels(
   const entries = await scanWebModels(`${WEB_ROOT}/${type}`);
   // 单口径（ADR-343-d1 C1）：与桌面 app_scan.go SearchModels / go/pinyin.MatchKeyword
   // 同判据——name / 仓库根相对路径子串面 + 纯拉丁关键词的全拼/首字母拼音面
-  // （pinyin-table.ts 由 Go 侧生成，跨语言同表；金样例 tests/fixtures/search-golden.json 对账）
+  // （pinyin-table.ts 由 Go 侧生成，跨语言同表；金样例 tests/fixtures/parity/search-golden.json 对账）
   const scanRoot = `${WEB_ROOT}/${type}`;
   const matched = entries.filter((e) => {
     const rel = e.Path.startsWith(`${scanRoot}/`) ? e.Path.slice(scanRoot.length + 1) : e.Name; // 根下文件（TrimPrefix 不生效兜底，与 Go 面同形）

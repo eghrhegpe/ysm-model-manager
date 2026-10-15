@@ -3,19 +3,23 @@
 // （keep-ancestors + forceOpen）与数据加载降级路径在此直测。
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@/views/backend-deps.ts", () => ({ backendGetApp: vi.fn() }));
+// P1-3（2026-10-16 锐评）：mock 目标统一到 seam 唯一出口 @/backend/app.ts，
+// 与同目录 index/events/renderer 测试同口径；弃用 @/views/backend-deps.ts 旁路
+// （ADR-224：vi.mock 路径失效会静默无告警，而 backend-deps.ts 是纯转发 seam，
+// 一旦加入 deps? 注入签名，这条 mock 会静默失效）。
+vi.mock("@/backend/app.ts", () => ({ getApp: vi.fn() }));
 vi.mock("@/bus", () => ({ bus: { emit: vi.fn() } }));
 
 import { bus } from "@/bus";
 import { allResourceTypes } from "@/utils/resource/schema.ts";
-import { backendGetApp } from "@/views/backend-deps.ts";
+import { getApp } from "@/backend/app.ts";
 import { createLoadGuard } from "@/utils/async/load-guard.ts";
 import type { SyncManagerSelf } from "./self-type.ts";
 import type { SyncItem } from "./tpl.ts";
 import { applyFilter, loadData, loadTypeConfig, tabStatus } from "./store.ts";
 
 const busEmit = vi.mocked(bus.emit);
-const getAppMock = vi.mocked(backendGetApp);
+const getAppMock = vi.mocked(getApp);
 
 function makeSelf(over: Partial<SyncManagerSelf> = {}): SyncManagerSelf {
   return {

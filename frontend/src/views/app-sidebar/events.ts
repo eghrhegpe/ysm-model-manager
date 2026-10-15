@@ -34,6 +34,9 @@ interface CardBindState {
   click: ((e: MouseEvent) => void) | null;
   ctx: ((e: MouseEvent) => void) | null;
   instances: SidebarInstance[];
+  /** 涟漪复位计时器句柄（锐评 FE P2-3）：原先 `setTimeout(...,500)` 裸调不持句柄，
+   *  组件卸载后仍会执行。挂在 per-root 的绑定态上，随 cleanup 清理。 */
+  rippleTimer: ReturnType<typeof setTimeout> | null;
 }
 const bindStates = new WeakMap<ShadowRoot, CardBindState>();
 
@@ -85,7 +88,12 @@ function bindCardClickHandler(
     hdr.style.setProperty("--ripple-x", `${((e.clientX - rect.left) / rect.width) * 100}%`);
     hdr.style.setProperty("--ripple-y", `${((e.clientY - rect.top) / rect.height) * 100}%`);
     hdr.classList.add("active", "ripple");
-    setTimeout(() => hdr.classList.remove("ripple"), 500);
+    // 涟漪复位计时器持句柄（锐评 FE P2-3）：同一次绑定内重入先清旧句柄，卸载由 cleanup 统一 clear。
+    if (st.rippleTimer) clearTimeout(st.rippleTimer);
+    st.rippleTimer = setTimeout(() => {
+      hdr.classList.remove("ripple");
+      st.rippleTimer = null;
+    }, 500);
     // 发送选中事件
     const idx = parseInt(card.dataset.idx || "", 10);
     const pkg = st.instances[idx];
@@ -181,12 +189,20 @@ export function bindCardEvents(
 
   let state = bindStates.get(root);
   if (!state) {
-    state = { list, click: null, ctx: null, instances };
+    state = { list, click: null, ctx: null, instances, rippleTimer: null };
     bindStates.set(root, state);
   }
   // 每次调用都先刷新实例数据（list 复用早退时旧闭包也能读到最新实例数据）
   state.instances = instances;
   const st = state;
+
+  /** 清掉在途涟漪复位计时器（锐评 FE P2-3：计时器须持句柄并 clear）。 */
+  const clearRippleTimer = (): void => {
+    if (st.rippleTimer) {
+      clearTimeout(st.rippleTimer);
+      st.rippleTimer = null;
+    }
+  };
 
   // 如果监听的 list 元素没变，复用旧 handler 引用避免重复绑定。
   // 可达性契约（2026-09 锐评收口：原「unreachable」注释纠偏）——
@@ -204,6 +220,7 @@ export function bindCardEvents(
   if (st.list !== list && st.click && st.ctx) {
     st.list.removeEventListener("click", st.click);
     st.list.removeEventListener("contextmenu", st.ctx);
+    clearRippleTimer();
   }
 
   const clickHandler = bindCardClickHandler(root, st, host);
@@ -222,6 +239,7 @@ export function bindCardEvents(
   return () => {
     list.removeEventListener("click", clickHandler);
     list.removeEventListener("contextmenu", contextHandler);
+    clearRippleTimer();
     const cur = bindStates.get(root);
     if (cur && cur.list === list) bindStates.delete(root);
   };

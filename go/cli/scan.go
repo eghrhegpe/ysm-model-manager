@@ -61,7 +61,9 @@ func runScanModels(ctx *CmdContext) error {
 		return newParamErrf("scan models: --dir 参数不能为空")
 	}
 
-	entries := ctx.App.ScanModelEntries(*dir)
+	// 锐评 2026-10-16：本命令只展示 Name/Size，从不消费 Hash——走浏览投影（无
+	// SHA256），大库冷扫不替同步付全库逐文件读盘哈希税（同 GUI 树 P0-1 止血口径）。
+	entries := ctx.App.ScanModelEntriesForBrowse(*dir, "", "", "")
 	if len(entries) == 0 {
 		fmt.Println("📭 未扫描到模型条目")
 		return nil

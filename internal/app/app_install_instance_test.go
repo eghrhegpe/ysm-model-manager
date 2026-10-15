@@ -38,9 +38,14 @@ func TestResourceTypesForSync(t *testing.T) {
 	}
 	origLen := len(all)
 
-	// rtype 空 → 原样透传（全集语义，前端「全部类型」场景）
-	if got := resourceTypesForSync(all, ""); len(got) != origLen {
-		t.Errorf("rtype 空应透传全集 %d 项, got %d", origLen, len(got))
+	// rtype 空 → 返回全集副本（语义与「透传全集」等价，但**不共享底层数组**——
+	// 锐评 P2-6：返回入参本身会让消费方就地 `[:0]` 截断时永久残害共享注册表单例）
+	gotAll := resourceTypesForSync(all, "")
+	if len(gotAll) != origLen {
+		t.Errorf("rtype 空应返回全集 %d 项, got %d", origLen, len(gotAll))
+	}
+	if len(gotAll) > 0 && &gotAll[0] == &all[0] {
+		t.Errorf("rtype 空必须返回副本（消费方可能就地截断入参）, 与入参共享底层数组 %p==%p", &gotAll[0], &all[0])
 	}
 	// 命中 → 只保留该类型
 	got := resourceTypesForSync(all, "EntityPlayer")

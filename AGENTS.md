@@ -27,6 +27,7 @@
 1. **前端只读不判**——类型判定 / 筛选 / 去重 / 聚合归 Go 侧 + `resource_types.json`；前端不扫磁盘、不重算归属语义（→ 知识卡 `fe-go-boundary.md`）。
 2. **import 只从具体文件进**——非精确同目录一律 `@/<顶层目录>/具体文件`，禁止 `@/dir` 裸目录聚口；features 生产文件不直引 `backend/app.ts`、不写 HTML 字面量，一律走 `*-deps.ts` seam（→ 知识卡 `fe-layering-seams.md`）。
 3. **绑定只走一条命令**——`cd frontend && npm run generate:bindings`（已内置 `-ts`）；根目录裸跑报 Missing script，漏 `-ts` 会产出 `.js` 并清掉 git 跟踪的 `.ts`（→ 知识卡 `fe-go-boundary.md`）。
+4. **提交密度公约**——一个工作单元一个提交（fix+test+docs 回填合体，生成物搭 pre-commit 便车），不逐条目碎提交；处置引用以条目号为主、commit 号为辅；已推送历史不重写（→ ADR-338-d3、知识卡 `commit-granularity.md`）。
 
 **查与救**：查业务知识先 `docs/knowledge/routes-quick.md`；查陌生函数 / 走错路径 →「场景路由（快速对号入座）」；改崩了先 `git diff HEAD <file>` 自查，处置步骤见「损害控制」表。
 

@@ -348,6 +348,19 @@ func (a *App) RevealInExplorer(path string) error {
 	return cmd.Start()
 }
 
+// ========== 目录存在性 ==========
+// DirectoryExists 判断目录是否存在（锐评 2026-10-17 P2⑤）：导入设置会整份覆盖
+// FilesRoot / McRoot / CustomRoots，旧机的路径大概率在本机不存在；前端据此检测哪些路径
+// 已失效，提示用户去「环境」页重设。目录存在性只能问 Go（回归红线：前端不扫磁盘）。
+// 纯只读、零副作用——不能复用 OpenFolder（它会真的打开资源管理器）。
+func (a *App) DirectoryExists(path string) bool {
+	if path == "" {
+		return false
+	}
+	info, err := os.Stat(path)
+	return err == nil && info.IsDir()
+}
+
 // ========== 打开文件夹 ==========
 // OpenFolder 在宿主文件管理器中打开目录（explorer/open/xdg-open 平台分支）。
 // 与 RevealInExplorer 同源坑：explorer 是 GUI 程序，CREATE_NO_WINDOW 干扰单实例 DDE 转发。

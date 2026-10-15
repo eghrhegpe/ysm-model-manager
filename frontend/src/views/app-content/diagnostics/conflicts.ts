@@ -3,6 +3,7 @@
 // 只读无后续动作、扫描成本全页最重），本文件只剩同步冲突一条链。
 
 import { can } from "@/backend/capabilities.ts";
+import { bus } from "@/bus";
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import { stagger } from "@/utils/animation/stagger.ts";
 import { createBusyLock } from "@/utils/base/primitives/lock.ts";
@@ -90,11 +91,11 @@ export async function initSyncConflictPanel(
   bar: HTMLElement | null,
   list: HTMLElement | null,
   esc: EscFn,
-): Promise<void> {
+): Promise<() => void> {
   const rtypeSel = bar?.querySelector<HTMLSelectElement>("#sync-rtype");
   const insSel = bar?.querySelector<HTMLSelectElement>("#sync-instance");
   const scanBtn = bar?.querySelector<HTMLButtonElement>("#diag-scan-sync-conflict") ?? null;
-  if (!list || !rtypeSel || !insSel || !scanBtn) return;
+  if (!list || !rtypeSel || !insSel || !scanBtn) return () => {};
 
   rtypeSel.innerHTML = optionRows(
     // 顺序 = JSON 声明序，逐字保持旧面板口径；**label 走 i18n 单点出口**（知识卡 P1-3）：
@@ -105,6 +106,15 @@ export async function initSyncConflictPanel(
   );
 
   const state = { rtype: rtypeSel.value, instance: "" };
+  // P0-2②：同步面板切换整合包后，诊断页冲突扫描栏自动对齐当前选中 rtype+instance（锐评 P0-2）
+  const unsubRtypeChanged = bus.on("package:selected", (pkg) => {
+    if (!pkg?.rtype) return;
+    state.rtype = pkg.rtype;
+    state.instance = pkg.name || "";
+    // 类型选择器自动选中新值（不触发 change 事件，避免重复填充下拉）
+    rtypeSel.value = pkg.rtype;
+    insSel.value = pkg.name || "";
+  });
   rtypeSel.addEventListener("change", () => {
     state.rtype = rtypeSel.value;
   });
@@ -121,14 +131,15 @@ export async function initSyncConflictPanel(
     if (errorHtml) {
       list.innerHTML = errorHtml;
       dgCfSetScanEnabled(scanBtn, false);
-      return;
+      // 不可用态也必须交还退订（单出口）——裸 return 会让 package:selected 订阅泄漏
+      return unsubRtypeChanged;
     }
     if (!availableInstances.length) {
       list.innerHTML = msgRowHTML("error", t("diagnostics.noInstances"), undefined, {
         icon: UI_ICONS.warning,
       });
       dgCfSetScanEnabled(scanBtn, false);
-      return;
+      return unsubRtypeChanged;
     }
     insSel.innerHTML = optionRows(
       availableInstances.map((n) => ({ value: n, label: n })),
@@ -142,6 +153,7 @@ export async function initSyncConflictPanel(
     list.innerHTML = msgRowHTML("error", friendlyError(err, t("diagnostics.scanFailed")), esc);
     dgCfSetScanEnabled(scanBtn, false);
   }
+  return unsubRtypeChanged;
 }
 
 /**

@@ -72,9 +72,9 @@ status: active
 ## 不变量
 
 - 所有用户输入的路径必须经过此包校验
-- **实际依赖范围**：`go/installer`、`go/recycle` 与 `internal/app/resource_bindings.go` 三处引用本包（grep 核实，知识卡旧文「仅两处」已过时——审计补守卫后 resource_bindings 也 import 了 `paths.IsInside`）；`internal/app` 的 `isPathInRoot`、`go/fileops.CopyModelFile`、`go/download.ResolveSavePath`、`go/importer.sanitizePath` 均各自实现守卫（语义近似但未收敛），「单一咽喉」是理想而非现状——新增文件操作时优先复用本包
+- **实际依赖范围**：`go/installer`、`go/recycle` 与 `internal/app/resource_bindings.go` 三处引用本包（grep 核实，知识卡旧文「仅两处」已过时——审计补守卫后 resource_bindings 也 import 了 `paths.IsInside`）；`internal/app` 的 `isPathInRoot`、`go/download.ResolveSavePath`、`go/importer.sanitizePath` 仍各自实现守卫（语义近似但未收敛），「单一咽喉」是理想而非现状——新增文件操作时优先复用本包。**2026-10-16 锐评 P6 收口**：`go/fileops` 的 Move/Copy/Delete 原本**不 import 本包**，各自手写 `filepath.Rel + ".." 前缀` 做仓库包含判定（Windows 下 `filepath.Rel` 逐字节比对大小写敏感，大小写形态不同即误判越权）；现统一走私有 `fileops.inRepo` → `paths.IsInside`（大小写不敏感，`go/paths|safe.go`），并保留 `EvalSymlinks` 后的 `CheckNoSymlinkInPath(absRoot, rel)` 二次复核
 - `IsInside` **不解析符号链接**（safe.go 注释声明）：baseDir/path 含指向外部目录的符号链接时可能误判安全，调用方需自行 `filepath.EvalSymlinks`——go/installer 已落地该模式（installer.go `evalSymlinksOrKeep`/`checkDstSymlinkSegments`，Install/InstallDir 在守卫前解析真实路径）
-- `IsInsideResolved`（BUG-1 修复）是「`EvalSymlinks` 两侧 → 再 `IsInside`」的规范入口：词法快速失败零 I/O，词法通过才解析真实路径二次复核；`EvalSymlinks` 失败保留原路径不放宽不放窄。仅覆盖**已存在路径**的 symlink 逃逸——**未创建写入目标**的中段 symlink 由 `fileops.checkNoSymlinkInPath` / `installer.checkDstSymlinkSegments` 逐段 Lstat 另判。已迁调用点：`recycle.Delete/moveEx/Restore`、`recycle_clean.ClearInstanceResources`、`resource_bindings.ToggleResourcePack`、`app_files.toggleRootFor`；其余守卫（isPathInRoot 等）仍未解析，属待收敛
+- `IsInsideResolved`（BUG-1 修复）是「`EvalSymlinks` 两侧 → 再 `IsInside`」的规范入口：词法快速失败零 I/O，词法通过才解析真实路径二次复核；`EvalSymlinks` 失败保留原路径不放宽不放窄。仅覆盖**已存在路径**的 symlink 逃逸——**未创建写入目标**的中段 symlink 由 `fileops.CheckNoSymlinkInPath` / `installer.checkDstSymlinkSegments` 逐段 Lstat 另判（`CheckNoSymlinkInPath` 2026-10-16 由未导出同名函数导出，供 `internal/app` 的 `importModelFileWithSubpath` 复用——该路径原只做词法 `HasTraversal`，MkdirAll 会穿透中段 symlink 建到仓库外、WriteFileAtomic 遂写出仓库）。已迁调用点：`recycle.Delete/moveEx/Restore`、`recycle_clean.ClearInstanceResources`、`resource_bindings.ToggleResourcePack`、`app_files.toggleRootFor`；其余守卫（isPathInRoot 等）仍未解析，属待收敛
 - `ContainsMinecraftMarker` 覆盖**首段/单段/中间段/后缀**四种形态（P3 修复：原只查中间段与后缀，`minecraft/mods` 相对路径首段漏检）
 
 ## 相关

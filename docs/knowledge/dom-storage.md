@@ -10,6 +10,7 @@ auto_fields:
     - isStorageAccessible
     - safeGet
     - safeGetJSON
+    - safeKeys
     - safeRemove
     - safeSet
 tests: []

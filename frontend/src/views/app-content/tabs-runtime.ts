@@ -188,6 +188,26 @@ export function bindTabRuntime(
       nav.forEach((btn) => {
         preparePanelSemantics(root, prefix, panelId, btn);
       });
+      // 锐评 P1-A（2026-10-16）：`onActivate` 只由点击/键盘（tabs-a11y activate）触发，
+      // attach 时**不**触发。语言热切换/重启后 renderTabs 用 initialActiveId 恢复的激活
+      // tab 若是非首 tab（回收站/去重/资历），面板由 preparePanelSemantics 显示、按钮带
+      // `.active`，但懒初始化链从未启动 → 内容区空白且不报错。此处补一次首屏懒初始化：
+      // 真值源仍是 renderTabs 预置的 `.active`（与 pickInitialTab 同口径），
+      // runTabInitOnce 由 inited 幂等，故每次 attach 都调也安全。
+      const activeBtn = nav.find((b) => b.classList.contains("active"));
+      const activeTab = activeBtn?.dataset.tab ?? "";
+      if (activeTab && activeTab !== boundIds[0]) {
+        lazyInitIfNeeded({
+          host,
+          root,
+          panelId,
+          tabInit,
+          inited,
+          showFns,
+          tab: activeTab,
+          ids: boundIds,
+        });
+      }
     },
     // 激活副作用：翻面板 display/hidden + 首次切到非默认 tab 时懒初始化（原 activate 的 ②③）。
     // 按钮 active 类 / aria-selected / roving tabindex 的互斥迁移已由原语在 activate 前统一处理。

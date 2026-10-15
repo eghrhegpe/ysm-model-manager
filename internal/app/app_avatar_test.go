@@ -46,3 +46,35 @@ func TestBatchExtractCreatorAvatars_CachedMime(t *testing.T) {
 		t.Fatalf("JPEG 头像应嗅探为 image/jpeg, 得到 %q", got)
 	}
 }
+
+// TestCreatorAuthorKeyTrimCohesion `[作者]` 解析单点判据锁（锐评 2026-10-16）：
+// 含空格作者名 "[ 张三 ]m.ysm"，作者列表侧（ListModelAuthors→scanner.ExtractAuthor）
+// 与头像 map 侧（BatchExtractCreatorAvatars）必须产出**同一个键** "张三"。
+// 病灶实证：原 app_avatar 手抄解析判据并自行 TrimSpace，而 scanner 侧不 trim——
+// 作者列表显示 " 张三 "、按名查头像 map 恒 miss（头像永不显示）。同一事实两份
+// 手抄必然漂移的反面教材，修复方式 = 两侧共用 scanner.ExtractAuthor 单点。
+func TestCreatorAuthorKeyTrimCohesion(t *testing.T) {
+	oldCacheDir := avatar.CacheDir
+	tmpCache := t.TempDir()
+	avatar.CacheDir = func() string { return tmpCache }
+	t.Cleanup(func() { avatar.CacheDir = oldCacheDir })
+
+	base := t.TempDir()
+	root := filepath.Join(base, registry.GroupStorageRoot("ysm"))
+	testutil.NoError(t, os.MkdirAll(root, 0o755))
+	testutil.NoError(t, os.WriteFile(filepath.Join(root, "[ 张三 ]m.ysm"), []byte("x"), 0o644))
+	// 头像按 trim 后名字预写入缓存（前端展示/查询都用该键）
+	avatar.SaveAvatarData("张三", []byte{0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10}, "image/jpeg")
+
+	a := scanApp(t, types.AppConfig{FilesRoot: base})
+
+	authors := a.ListModelAuthors()
+	if len(authors) != 1 || authors[0].Name != "张三" {
+		t.Fatalf("作者列表应唯一且键已 trim：got %+v", authors)
+	}
+	result, err := a.BatchExtractCreatorAvatars()
+	testutil.NoError(t, err)
+	if uri := result["张三"]; uri == "" {
+		t.Fatalf("头像 map 键须与作者列表同源（trim 后 \"张三\"），got %v", result)
+	}
+}

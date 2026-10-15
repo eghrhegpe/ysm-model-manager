@@ -43,7 +43,8 @@ func RegisterInvalidationHook() {
 }
 
 // InvalidateSyncItemsCache 清空全部整合包同步结果缓存。
-// 由 scanner 失效钩子自动调用；单文件 push/pull 等不走 scanner 失效的入口需显式调用。
+// 由 scanner 失效钩子（OnCacheInvalidated）自动调用。2026-10-16 锐评 P0-① 后 go/sync 写操作
+// 一律走 scanner.InvalidateCache 级联到此；app 层配对显式调用保留作防御纵深。
 func InvalidateSyncItemsCache() {
 	syncItemsCache.clear()
 }
@@ -104,6 +105,9 @@ func cloneSyncItems(items []types.ResourceSyncItem) []types.ResourceSyncItem {
 // globalPath 不存在时返回 nil（连夹都不存在自然无子项可预览）；子文件禁用
 // 检测同步口径（.disabled/.ban → ⛔）。返回列表子项 Status 继承 DiffFolderContentsScan
 // 结果——Synced/Missing/Optional 已在 diff 阶段按路径成对判定。
+// 混合夹直挂文件的重复表示由树化层 absorbSelfMarker 判重收口（ADR-351 D3 修订）——
+// 本函数同时服务叶子模型夹（直挂 = 全部内容）与容器 marker（直挂有平铺单元
+// 伴生）两种语境，语境判别在此不可得，勿在此过滤。
 func buildDirLevelChildren(globalPath, instPath, rtype, rIcon, groupGlobalDir string) []types.ResourceSyncItem {
 	if _, err := os.Stat(globalPath); err != nil {
 		return nil

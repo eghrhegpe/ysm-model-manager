@@ -27,13 +27,16 @@ func BuildSyncItems(ins *types.VersionInstance, rtypes []registry.ResourceType, 
 	// subtype 参数仅参与 buildSyncItemsKey 缓存区分——清单式扫路径限定目录的实际
 	// 分支由 processOneResourceType 内部 instDir=FindInstDir 决定（subtype 版本已
 	// 在调用方写入 ins.VersionDir 后缀，此处透明读取），保持现状口径不新增。
+	// 代际守卫基准：load-miss 后立即捕获，put 前比对（锐评 P1-4）——计算期间被
+	// InvalidateSyncItemsCache 清空则丢弃陈旧结果，防「刚失效又被旧结果重新 Store」。
+	epoch := syncItemsCache.epochOf()
 	var items []types.ResourceSyncItem
 	for _, rt := range rtypes {
 		items = append(items, processOneResourceType(rt, ins.VersionDir, filesRoots)...)
 	}
 
 	// 阶段 ③：写缓存（clone 一次防调用方改返回值污染缓存；读端也 clone 一次）
-	syncItemsCache.put(key, cloneSyncItems(items))
+	syncItemsCache.put(key, cloneSyncItems(items), epoch)
 	return items
 }
 
@@ -196,9 +199,13 @@ func treeChildren(node *nestTreeNode, baseRel, globalDir, instDir, rtype string)
 // 「同名目录嵌在自己里面」（如 `2.大学学姐 > 2.大学学姐`）；更糟的是该 marker 的 Path 与容器
 // Path 相同，而前端 dirOpen 以 data-path 为 key —— 点一次容器会连带展开这个影子行。
 //
-// 处置：marker 行不吐，把它的**直接子文件**（Name 不含 "/"）并入容器；子夹内的文件已由各子夹
-// 节点负责展示（marker 的 children 是 buildDirLevelChildren 的递归 RelPath 列表，含 "/" 的
-// 属于子夹），上提会同一批文件列两遍。
+// 处置：marker 行不吐；其**直接子文件**（Name 不含 "/"）按**判重并入**——同一物理文件
+// 在扫描层另有平铺单元表示（collectEntriesWalk 文件分支收集，树化后挂为容器下的
+// 文件叶），Path 相同则**不再并入**（单表示，ADR-351 D3 修订 2026-10-16：旧实现
+// 无条件并入，与平铺叶共存致面板双行、侧栏 dedupeSorted 压重兜底）；容器下无同
+// Path 平铺叶时仍并入（对侧 Extra 的实例侧 marker、旧数据形态——防漏报）。
+// 子夹内的文件已由各子夹节点负责展示（marker 的 children 是 buildDirLevelChildren
+// 的递归 RelPath 列表，含 "/" 的属于子夹），上提会同一批文件列两遍。
 //
 // 判定：marker 的 Path 是「两侧候选根之一 + 容器相对路径」——status 尚未聚合（吸收必须先于
 // 聚合，否则 marker 子文件状态不参与容器状态），故不能经 dirLevelContainerPath 反推，改为
@@ -222,14 +229,31 @@ func absorbSelfMarker(children []types.ResourceSyncItem, childRel, globalDir, in
 	if !has {
 		return children
 	}
+	// 判重索引：本容器全部非 marker 子项的 Path（含子夹行与其展开）。
+	// 平铺单元叶（扫描层收集、树化挂载）与 marker 直挂子项同 Path 时，
+	// 后者不再并入——同一物理文件单表示（ADR-351 D3）。
+	seenPath := make(map[string]struct{}, len(children))
+	for i := range children {
+		ch := children[i]
+		if (ch.Path == markerPath || ch.Path == instMarkerPath) && len(ch.Children) > 0 {
+			continue // marker 行自身不进判重索引
+		}
+		seenPath[ch.Path] = struct{}{}
+	}
 	merged := make([]types.ResourceSyncItem, 0, len(children))
 	for i := range children {
 		ch := children[i]
 		if (ch.Path == markerPath || ch.Path == instMarkerPath) && len(ch.Children) > 0 {
 			for j := range ch.Children {
-				if direct := ch.Children[j]; !strings.Contains(direct.Name, "/") {
-					merged = append(merged, direct)
+				direct := ch.Children[j]
+				// 含 "/" 属子夹（由子夹行展示）；同 Path 平铺叶已在场（单表示）——均不并入
+				if strings.Contains(direct.Name, "/") {
+					continue
 				}
+				if _, dup := seenPath[direct.Path]; dup {
+					continue
+				}
+				merged = append(merged, direct)
 			}
 			continue
 		}

@@ -14,6 +14,7 @@ import (
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/installer"
 	"ysm-model-manager/go/paths"
+	"ysm-model-manager/go/scanner"
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/types/registry"
 )
@@ -24,6 +25,23 @@ var ErrPartialSync = errors.New("partial sync: some files succeeded, some failed
 
 // Logger 导入日志回调（薄壳注入 App.logger.Add）
 type Logger func(name, src, dst string, size int64, status, msg string)
+
+// pushPullDiff 计算 push/pull 执行链的同步差集（锐评 2026-10-16 P0-② 落地）。
+//
+// 原执行链直调 SyncResources / SyncResourcesDirLevel（scanFn=nil）→ 条目恒无哈希 →
+// ContentVerdict（verdict.go）回退 Size：同尺寸异内容的文件被静默判 Synced 而不推送
+// （CLI `ysm instances push/pull` 即中招）。展示链（instance.go|BuildSyncItems）早已注入
+// scanner 哈希（ADR-344 D1 + 2026-10-15 锐评），两路对同一事实答案相反。
+//
+// 此处注入同款 scanner 缓存化扫描：30s TTL 命中零哈希、哈希在 scanner 侧并行预算内现算
+// （B1 哈希索引 size+mtime 指纹免读盘，ADR-348），与展示链同一成本模型；
+// 非 hashable 扩展名（ShouldHashExt 之外）仍回退 Size——与展示链一致，非新降级。
+func pushPullDiff(globalDir, targetDir, rtype string) types.ResourceSyncResult {
+	if registry.IsDirLevelSync(rtype) {
+		return SyncResourcesDirLevelScan(globalDir, targetDir, rtype, scanner.ScanEntriesWithHit)
+	}
+	return SyncResourcesWithConfig(globalDir, targetDir, nil, scanner.ScanEntries, rtype)
+}
 
 // PushResources 推送缺失资源到整合包（folder 级类型用 SyncResourcesDirLevel）
 //
@@ -38,7 +56,7 @@ func PushResources(rtype, globalDir, targetDir, linkMode string, logger Logger) 
 	// PullResources/RelinkDir 的整段持锁口径对齐。循环内改用 *Locked 变体防重入死锁。
 	installer.InstallLocker.Lock()
 	defer installer.InstallLocker.Unlock()
-	defer InvalidateSyncScanCaches() // 推送会改实例/全局目录，清同步扫盘缓存防陈旧
+	defer scanner.InvalidateCache() // 推送会改实例/全局目录：走 scanner 单漏斗清扫描缓存，级联清 instance 同步结果（锐评 P0-① 失效不对称）
 	count := 0
 	failed := 0
 
@@ -46,7 +64,7 @@ func PushResources(rtype, globalDir, targetDir, linkMode string, logger Logger) 
 	// 用文件夹级同步检测 missing，然后完整复制整个文件夹（含纹理等配套文件）
 	// 多层物理路径：行内计算 rel(globalDir, missing) 保留中间目录层级
 	if registry.IsDirLevelSync(rtype) {
-		dirResult := SyncResourcesDirLevel(globalDir, targetDir, rtype)
+		dirResult := pushPullDiff(globalDir, targetDir, rtype)
 		// 祖先单元（容器键）不整体安装：见 dropAncestorUnits 注释（ADR-344 D4）
 		for _, missing := range dropAncestorUnits(dirResult.Missing) {
 			fi, stErr := os.Stat(missing)
@@ -77,7 +95,7 @@ func PushResources(rtype, globalDir, targetDir, linkMode string, logger Logger) 
 	}
 
 	// 非文件夹级类型：文件级同步（整段已持 InstallLock，见函数头注释）
-	result := SyncResources(globalDir, targetDir, rtype)
+	result := pushPullDiff(globalDir, targetDir, rtype)
 	for _, src := range result.Missing {
 		if err := installer.InstallLocked(src, targetDir, globalDir, linkMode); err == nil {
 			count++
@@ -104,15 +122,10 @@ func PushResources(rtype, globalDir, targetDir, linkMode string, logger Logger) 
 func PullResources(rtype, globalDir, targetDir string, logger Logger) types.PullSyncResult {
 	installer.InstallLocker.Lock()
 	defer installer.InstallLocker.Unlock()
-	defer InvalidateSyncScanCaches() // 拉取会改全局仓库目录，清同步扫盘缓存防陈旧
+	defer scanner.InvalidateCache() // 拉取会改全局仓库目录：走 scanner 单漏斗清扫描缓存，级联清 instance 同步结果（锐评 P0-① 失效不对称）
 	// 找出 extra 的文件并复制到全局
-	// 对 YSM/MMD 使用文件夹级同步
-	var result types.ResourceSyncResult
-	if registry.IsDirLevelSync(rtype) {
-		result = SyncResourcesDirLevel(globalDir, targetDir, rtype)
-	} else {
-		result = SyncResources(globalDir, targetDir, rtype)
-	}
+	// 对 YSM/MMD 使用文件夹级同步（差集走 pushPullDiff：内容级哈希判定，P0-②）
+	result := pushPullDiff(globalDir, targetDir, rtype)
 	out := types.PullSyncResult{}
 	// 文件夹级类型的 Extra 同样剔除祖先容器键（与推送侧对称，ADR-344 D4）；
 	// 文件级类型不适用（其条目语义由 ResourceDiff 决定，不在此收敛）。
@@ -222,7 +235,7 @@ func logPullFailure(src, dst, msg string, logger Logger) {
 func PullSingleResource(globalDir, targetDir, srcPath string) error {
 	installer.InstallLocker.Lock()
 	defer installer.InstallLocker.Unlock()
-	defer InvalidateSyncScanCaches() // 拉取会改全局仓库目录，清同步扫盘缓存防陈旧
+	defer scanner.InvalidateCache() // 拉取会改全局仓库目录：走 scanner 单漏斗清扫描缓存，级联清 instance 同步结果（锐评 P0-① 失效不对称）
 	// 文件夹级拉取：整体复制文件夹到全局（保留相对 targetDir 的子类层级）。
 	// 越界（srcPath 不在 targetDir 内）直接报错——与文件分支 mapSrcToGlobal 严格口径
 	// 一致；旧行为退化为 basename 会把越界目录错误落到 globalDir 根（丢子类层级 + 同名覆盖）。
@@ -279,7 +292,7 @@ func PushSingleResource(filePath, customDir, globalDir, linkMode, rtype string) 
 	fi, stErr := os.Stat(filePath)
 	installer.InstallLocker.Lock()
 	defer installer.InstallLocker.Unlock()
-	defer InvalidateSyncScanCaches() // 推送会改实例目录，清同步扫盘缓存防陈旧
+	defer scanner.InvalidateCache() // 推送会改实例目录：走 scanner 单漏斗清扫描缓存，级联清 instance 同步结果（锐评 P0-① 失效不对称）
 	if stErr == nil && fi.IsDir() {
 		return installDirUnitLocked(filePath, customDir, globalDir, linkMode, rtype)
 	}
@@ -381,7 +394,7 @@ func dropAncestorUnits(list []string) []string {
 func SyncCustomToRepo(customDir, repoDir string, scanFn func(string) []types.ModelEntry, logger Logger) (int, error) {
 	installer.InstallLocker.Lock()
 	defer installer.InstallLocker.Unlock()
-	defer InvalidateSyncScanCaches() // 收编会改全局仓库目录，清同步扫盘缓存防陈旧
+	defer scanner.InvalidateCache() // 收编会改全局仓库目录：走 scanner 单漏斗清扫描缓存，级联清 instance 同步结果（锐评 P0-① 失效不对称）
 	customDir = strings.TrimSpace(customDir)
 	repoDir = strings.TrimSpace(repoDir)
 	if customDir == "" || repoDir == "" {

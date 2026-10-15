@@ -128,6 +128,42 @@ describe("bindTabRuntime：按钮 data-tab 即唯一真值（ADR-259 运行期�
     expect(alpha.hasAttribute("hidden")).toBe(true);
   });
 
+  // ===== 锐评 P1-A（2026-10-16）：首屏恢复激活的非首 tab 必须触发懒初始化 =====
+  // 原缺陷：`onActivate` 只由点击/键盘触发，attach 不触发——语言热切换/重启后
+  // renderTabs 用 initialActiveId 恢复的非首 tab（回收站/去重/资历）面板可见、按钮带 .active，
+  // 但懒初始化链从未启动，内容区空白且不报错。回归锁：首次绑定即调用 initFn。
+  it("初始激活项为恢复的非首 tab 时，attach 即触发其懒初始化（无点击）", async () => {
+    const { host, root } = makeHost();
+    root.innerHTML = `
+  <div class="repo-tabs">
+    <button class="repo-tab" data-tab="alpha">A</button>
+    <button class="repo-tab" data-tab="beta">B</button>
+    <button class="repo-tab active" data-tab="gamma">G</button>
+  </div>
+  <div class="tab-body" id="x-tab-alpha" style="display:none">AAA</div>
+  <div class="tab-body" id="x-tab-beta" style="display:none">BBB</div>
+  <div class="tab-body" id="x-tab-gamma">GGG</div>`;
+    const initGamma = vi.fn(async () => ({ cleanup: vi.fn(), onShow: vi.fn() }));
+    bindTabRuntime(host, ".repo-tab", "x", { gamma: initGamma });
+    await flushAsyncTurns();
+
+    expect(initGamma, "恢复激活的非首 tab 首屏必须被懒初始化（原空白且不报错）").toHaveBeenCalledTimes(1);
+  });
+
+  // 对照：初始激活为首 tab 时，懒初始化不提前触发（仍由点击驱动）——防本修复把
+  // 「点击即初始化」的口径改成「全部首屏初始化」（后者会取消非激活 tab 的按需加载收益）。
+  it("初始激活为首 tab 时，非首 tab 懒初始化仍延后到点击", async () => {
+    const { host, root } = makeHost();
+    root.innerHTML = SHELL;
+    const initBeta = vi.fn(async () => null);
+    bindTabRuntime(host, ".repo-tab", "x", { beta: initBeta });
+    await flushAsyncTurns();
+
+    expect(initBeta).not.toHaveBeenCalled();
+    await clickTab(root, "beta");
+    expect(initBeta).toHaveBeenCalledTimes(1);
+  });
+
   it("按钮缺 data-tab → 响亮告警（不静默留下不可切换的 tab）", () => {
     const { host, root } = makeHost();
     root.innerHTML = `

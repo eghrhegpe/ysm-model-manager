@@ -10,7 +10,7 @@ import { SM_STYLE } from "./sm-css.ts";
 
 // ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
 // 删除/新增对应 data-testid 须同步本数组；契约测试运行期静态聚合本数组为注册表。
-export const VIEW_TESTIDS: readonly string[] = ["sm-push", "sm-pull"];
+export const VIEW_TESTIDS: readonly string[] = ["sm-push", "sm-pull", "sm-pull-here"];
 
 /** 同步列表项（GetInstanceSyncStatus 返回 JSON 条目） */
 export interface SyncItem {
@@ -60,20 +60,21 @@ export const statusIconOf = (status: string): string => {
 };
 export const statusColorOf = (status: string): string => STATUS_COLOR[status] ?? "var(--muted)";
 
-/** 状态操作按钮（missing/diverged→push；optional→pull；legacy→pullHere；其余无） */
+/** 状态操作按钮（missing/diverged→push；optional→pull；legacy→pullHere；其余无）
+ * 视觉变体走 sm-css 类名（--accent/--optional/--muted），不再内联 border/color 静态字面量。 */
 export function actionBtnHTML(status: string): string {
   if (status === "missing" || status === "diverged") {
-    return `<button class="sm-item-btn" data-testid="sm-push" data-action="push" style="border:1px solid var(--accent);color:var(--accent)">${t(
+    return `<button class="sm-item-btn sm-item-btn--accent" data-testid="sm-push" data-action="push">${t(
       "syncManager.push",
     )}</button>`;
   }
   if (status === "optional") {
-    return `<button class="sm-item-btn" data-testid="sm-pull" data-action="pull" style="border:1px solid var(--sm-optional);color:var(--sm-optional)">${t(
+    return `<button class="sm-item-btn sm-item-btn--optional" data-testid="sm-pull" data-action="pull">${t(
       "syncManager.pull",
     )}</button>`;
   }
   if (status === "legacy") {
-    return `<button class="sm-item-btn" data-action="pull" style="border:1px solid var(--muted);color:var(--txt)">${t(
+    return `<button class="sm-item-btn sm-item-btn--muted" data-testid="sm-pull-here" data-action="pull" title="${esc(t("syncManager.status.legacy"))}">${t(
       "syncManager.pullHere",
     )}</button>`;
   }
@@ -107,15 +108,9 @@ export function syncDirRowHTML(
     `<button class="sm-dir-arrow" aria-expanded="${shouldOpen}" aria-label="${esc(
       syncItem.name,
     )}">${arrow}</button>` +
-    `<span aria-hidden="true" style="flex-shrink:0;font-size:var(--fs-base)">${
-      syncItem.icon || UI_ICONS.folder
-    }</span>` +
-    `<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt)">${renderFormattedText(
-      syncItem.name,
-    )}</span>` +
-    (sizeStr
-      ? `<span style="flex-shrink:0;color:var(--muted);font-size:var(--fs-xs)">${sizeStr}</span>`
-      : "") +
+    `<span class="sm-row-icon" aria-hidden="true">${syncItem.icon || UI_ICONS.folder}</span>` +
+    `<span class="sm-row-name">${renderFormattedText(syncItem.name)}</span>` +
+    (sizeStr ? `<span class="sm-row-size">${sizeStr}</span>` : "") +
     actionBtn +
     "</div>"
   );
@@ -128,15 +123,19 @@ export function syncDirRowHTML(
  */
 export function containerHTML(): string {
   return `<style>${SM_STYLE}</style>
-<div class="sm-wrap" style="display:flex;flex-direction:column;height:100%;overflow:hidden">
-<div class="sm-status-tabs" style="display:flex;align-items:center;gap:2px;padding:var(--btn-padding-tool-lg);flex-shrink:0;border-bottom:1px solid var(--bd);font-size:var(--fs-xs)">
+<div class="sm-wrap">
+<div class="sm-status-tabs">
 <span class="sm-cur-type-slot"></span>
 <div class="sm-status-radios" role="radiogroup" aria-label="${esc(
     t("syncManager.statusFiltersAria"),
   )}"></div>
+<!-- 同步状态按钮（锐评 P1-4）：全局对齐「全部整合包」的启用/禁用态（无 rtype=全部 dirLevelSync
+     类型），补齐 guide pack-sync.md 声称存在但面板缺失的手动对齐入口；点击发 sync:toggle:status，
+     消费者 features/sync registerSync 全局注册，完成后 stats:refresh 自动重渲染本面板 -->
+<button class="sm-sync-status-btn" data-action="sync-status" title="${esc(t("syncManager.syncStatus"))}">${UI_ICONS.refresh} ${esc(t("syncManager.syncStatus"))}</button>
 </div>
-<div class="sm-summary" style="display:flex;align-items:center;gap:8px;padding:var(--btn-padding-tool-lg);flex-shrink:0;border-bottom:1px solid var(--bd);font-size:var(--fs-xs)"></div>
-<div class="sm-list" style="flex:1;overflow-y:auto;padding:var(--pad-v-2)"></div>
+<div class="sm-summary"></div>
+<div class="sm-list"></div>
 </div>`;
 }
 
@@ -175,18 +174,12 @@ export function itemHTML(item: SyncItem, indent: number): string {
     )}" data-type="${esc(item.type)}" data-name="${esc(item.name)}" style="padding-left:${indent}px">` +
     // a11y（2026 复测补缺）：状态图标（SVG）与文件图标（emoji）均为装饰，aria-hidden 降噪——
     // 屏幕阅读器读「名称 + 大小」即可，行动语义由行内原生 button（push/pull）承担
-    `<span aria-hidden="true" style="flex-shrink:0;width:14px;text-align:center;color:${statusColor}"${
+    `<span class="sm-row-status" aria-hidden="true" style="color:${statusColor}"${
       item.status === "diverged" ? ` title="${esc(t("syncManager.divergedWarnTitle"))}"` : ""
     }>${statusIcon}</span>` +
-    `<span aria-hidden="true" style="flex-shrink:0;font-size:var(--fs-base)">${
-      item.icon || UI_ICONS.package
-    }</span>` +
-    `<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--txt)">${renderFormattedText(
-      item.name,
-    )}</span>` +
-    (sizeStr
-      ? `<span style="flex-shrink:0;color:var(--muted);font-size:var(--fs-xs)">${sizeStr}</span>`
-      : "") +
+    `<span class="sm-row-icon" aria-hidden="true">${item.icon || UI_ICONS.package}</span>` +
+    `<span class="sm-row-name">${renderFormattedText(item.name)}</span>` +
+    (sizeStr ? `<span class="sm-row-size">${sizeStr}</span>` : "") +
     actionBtn +
     "</div>"
   );

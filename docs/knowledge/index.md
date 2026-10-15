@@ -2,11 +2,11 @@
 
 # 知识卡索引
 
-> 总计: 206 张知识卡
+> 总计: 208 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
-## config（16 张）
+## config（17 张）
 
 *配置与注册表（resource_types、AppConfig）*
 
@@ -15,6 +15,7 @@
 | 🏗 auto-import-split | auto-import 拆分与缺失 import 检测 | architecture | — | 缺失 import, auto-import, 导出符号, tokenize, 词法, 缺失导入, goimports, 大脚本拆分 |
 | 🍃 check-threshold-scanners | 三档阈值扫描器（复杂度/参数/类型安全） | leaf | — | check-complexity, check-params, 认知复杂度, 参数陷阱, 阈值扫描器, gate debt 档, --files 传参 |
 | 🏗 ci-tuning | CI 调优与缓存决策 | architecture | — | 改 GitHub Actions workflow 前, 缓存不生效 / CI 时长反常, 某步为何钉在 Windows 或 Linux, lint 或覆盖率迁移评估, 判断某门禁该删还是该留（去重 vs 覆盖损失）, 想知道 CI 是门禁还是报告（本仓现状：无强制拦截） |
+| 🍃 commit-granularity | 提交密度公约——工作单元批量提交 | leaf | — | 要提交一批改动，纠结拆几个 commit 时, 锐评/处置回填要写 commit 号引用时, 发版前想压历史密度时 |
 | 🏗 commit-message-gate | 提交信息减负闸 | architecture | — | 提交信息超长或主体跑偏的规则不清楚, 想了解提交信息减负闸的判据和豁免条件, 需要在 message 里放验证报告/逃生记录/决策出处，但不知道用哪个 trailer 字段 |
 | 🍃 debt_ledger_refresh | 技术债账本刷新与盘点方法论 | leaf | — | 想知道仓里现在还能发现多少技术债, 刷新 / 收紧 7 本债务账本（redlines / deadcode / design-tokens / i18n-unused / doc-drift / jscpd-go / layering）到今日实数, 多 AI 并行会话期改动被 worktree reset 冲掉 |
 | 🍃 experience | 发版冒烟组——CI 同口径预演（ADR-318） | leaf | — | 发版前预演 CI（tag 推送前）, lockfile 与 package.json 是否同步存疑, Go 文件 import OS 专属包要确认 build 标签, 发版 CI 连红要本地快速定位口径差 |
@@ -34,6 +35,7 @@
 - **auto-import-split**（auto-import 拆分与缺失 import 检测）：`scripts/auto-import.ts` 检测 TS/JS 缺失 import（goimports 轻量版，正则级非 AST 级，ADR-014 伴生）。原为 802 行单文件，2026-08-31 按 **ADR-141 大脚本拆…
 - **check-threshold-scanners**（三档阈值扫描器（复杂度/参数/类型安全））：`check-complexity`（认知复杂度 + 最大嵌套）、`check-params`（长参数列表 / 布尔陷阱）、
 - **ci-tuning**（CI 调优与缓存决策）：`ci.yml`（main/PR）与 `release.yml`（tag）共享可复用 workflow `test.yml`（测试门禁），避免 main push
+- **commit-granularity**（提交密度公约——工作单元批量提交）：约束提交粒度与处置引用口径，治 AI 并行会话的提交密度虚高（对比基线：dsh 插件仓同期约 1/12 密度）。决策见 ADR-338-d3（提议中）；本卡承载操作口径与压缩方法论。
 - **commit-message-gate**（提交信息减负闸）：提交信息减负闸（ADR-338-d1）是仓内**首个校验提交信息本身**的自动化门禁。此前 42 个 `check-*.ts` 脚本 + pre-commit 三段硬阻断 + 四个 prepare-commit-msg 提示脚本，无一校验 …
 - **debt_ledger_refresh**（技术债账本刷新与盘点方法论）：技术债在本仓是**受控存量**：baseline 账本只减不增、门禁不阻断存量债、新增零容忍。因此「还能发现多少债」分三层答——**已记账存量**（7 本 baseline）、**裸露代码标记**（TODO/FIXME）、**账本外盲区**…
 - **experience**（发版冒烟组——CI 同口径预演（ADR-318））：v1.15.0 发版跑了五轮 CI 才成功，复盘结论：**不是测试太严，是本地验证口径与 CI 冻结口径不同构**。本卡记录冒烟组（`node scripts/release-smoke.ts`，≤3 分钟）的检查项与各自预演的 CI 步骤…
@@ -321,7 +323,7 @@
 - **volumetric-cone**（体积光锥 VolumetricCone（真锥体网格 + Fresnel））：聚光灯可见光柱的实现单文件（ADR-177 从 `LightCapability` 拆出的自包含单元：shader + 几何 + 材质 + 挂载状态机）。ADR-266（2026-09-18）把它从「两片交叉 `PlaneGeometry`…
 - **water**（水面能力 WaterCapability（Gerstner 波浪 + GPU 微细节法线））：水面是 env 面板一等公民（与 sky / ground 平级，ADR-196 → ADR-268 归属基础卡末位），分轴布局：
 
-## ui（39 张）
+## ui（40 张）
 
 *前端 UI 组件（tree、sidebar、preview、content）*
 
@@ -365,6 +367,7 @@
 | 🏗 testid-contract | testid 契约与 VIEW_TESTIDS 注册表 | architecture | — | 在 frontend/src 任何位置新增 data-testid / dataset.testid / buttonTestid / panelTestid, 修改某个视图的 VIEW_TESTIDS 数组, testid 契约测试报 ORPHAN 或 MISSING, 想给诊断页/仓库页/工坊等顶层 tab 补测试钩子 |
 | 🍃 toolbar-search | 工具栏搜索编排 toolbar-search | leaf | — | 搜索编排, 高级筛选, 关键词搜索, 数值范围搜索, 标签过滤, 多线程统计角标, 降级提示 |
 | 🏗 ui-components | UI 组件簇（原 ui 收容所，已归位） | architecture | — | UI 组件, 卡片组件, 加载动画, 滑块, 幻灯片菜单 |
+| 🍃 ui-format-partition | UI 格式分工与外迁触发线 | leaf | — | 换 React, 用 tsx, 为什么没 JSX, 格式分工, UI 外迁, svg 外迁, css 独立文件, shadow dom |
 | 🍃 ui-slide-menu | ADR 去桶化 slide-menu 外壳组件 | leaf | — | slide-menu, slide 菜单, 去桶化, 两级菜单, 轻量导航栈, createSlideMenu |
 
 ### 摘要
@@ -405,6 +408,7 @@
 - **testid-contract**（testid 契约与 VIEW_TESTIDS 注册表）：`tests/test_testid_contract.ts`（ADR-133 阶段 B）是前端测试钩子的红线门禁：所有 `data-testid`
 - **toolbar-search**（工具栏搜索编排 toolbar-search）：`toolbar-search.ts` 是 YSM 前端搜索/筛选/导入逻辑的编排核心（从 `toolbar-events.ts` 拆出，ADR-040 P1）。它管理从用户输入到搜索结果渲染的完整链路：弹窗交互 → 后端搜索 → 标签交集…
 - **ui-components**（UI 组件簇（原 ui 收容所，已归位））：原 `frontend/src/ui/`（自称 "ui-helpers 组件库"）是 MikuMikuAR 迁移物的收容所，2026-09-10 **随 ADR-220 整体解散**：组件按唯一消费方归位——3D 菜单子系统进 `front…
+- **ui-format-partition**（UI 格式分工与外迁触发线）：前端是**原生 TS (Web Components + Shadow DOM)**，无 React/Vue/Svelte、无 `.tsx/.jsx`、无 `.html`、无 `.css`、无 `.svg` 文件。HTML/CSS/SVG …
 - **ui-slide-menu**（ADR 去桶化 slide-menu 外壳组件）：`frontend/src/preview-3d/menu/shell/slide-menu.ts` 是 ADR 去桶化（ADR-075/076）配套新增的**通用 slide-menu 卡片外壳组件**，复刻 MikuMikuAR 的 s…
 
 ## utils（28 张）

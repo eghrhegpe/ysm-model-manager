@@ -157,7 +157,7 @@ status: active
 ## 核心职责
 
 - **三路交集语义**：`SearchModels`（关键词 + 6 数值范围一次性过滤；关键词 = 单口径 `go/pinyin.MatchKeyword`，ADR-343-d1 C1）+ `ListByTag`（标签路径集）+ 客户端 `Set` 交集 → `_filterPaths` 白名单 → `buildTree` 精确匹配
-- **两路搜索同判据（ADR-343-d1 C1 收敛）**：inline `#srch` debounce 150ms 走前端 `_search` 匹配（`utils/search/match.ts|keywordMatches` 单口径：name/相对路径子串面 + 纯拉丁关键词全拼/首字母拼音面）；高级筛选走 Go 后端（`go/pinyin.MatchKeyword`）+ 白名单——两条路**同判据**（拼音表 `utils/search/pinyin-table.ts` 由 Go 侧 CLI `pinyin-table` 命令经同一依赖 `github.com/mozillazg/go-pinyin` 派生，金样例 `tests/fixtures/search-golden.json` 双读对账），叠加生效
+- **两路搜索同判据（ADR-343-d1 C1 收敛）**：inline `#srch` debounce 150ms 走前端 `_search` 匹配（`utils/search/match.ts|keywordMatches` 单口径：name/相对路径子串面 + 纯拉丁关键词全拼/首字母拼音面）；高级筛选走 Go 后端（`go/pinyin.MatchKeyword`）+ 白名单——两条路**同判据**（拼音表 `utils/search/pinyin-table.ts` 由 Go 侧 CLI `pinyin-table` 命令经同一依赖 `github.com/mozillazg/go-pinyin` 派生，金样例 `tests/fixtures/parity/search-golden.json` 双读对账），叠加生效
 - **编排入口唯一**：`openAdvFilterDialog($, vm)`（`toolbar-search.ts`），12 段 `advFilter*` 私有子函数串成线性流水线
 
 ## 错误 / 降级分支（三路）
@@ -179,7 +179,7 @@ status: active
 
 | 绑定 | 文件 | 用途 |
 |------|------|------|
-| `SearchModels` | `app_scan.go` | 关键词（单口径 `go/pinyin.MatchKeyword`：name/相对路径 + 拼音面，ADR-343-d1）+ 6 数值范围一次性过滤 |
+| `SearchModels` | `app_scan.go` | 关键词（单口径 `go/pinyin.MatchKeyword`：name/相对路径 + 拼音面，ADR-343-d1）+ 6 数值范围一次性过滤；全库扫描走无哈希 `ScanModelEntriesForBrowse` 入口（锐评 2026-10-16 止血） |
 | `ListByTag` | `app_tags.go` | 按标签反查路径集 |
 | `AllTags` | `app_tags.go` | 全量标签候选 |
 
@@ -212,6 +212,8 @@ status: active
 **过渡态（A 案已落地）**：`resource_types.json` 的 `geometrySearchable` 声明（ysm / maid-model，全形态；EntityPlayer / SceneModel，统计级弱形态——ADR-346 起）驱动前端 adv-filter 数值区展示端门控——无几何管线类型禁用数值条件并提示，数值条件不再静默蒸发整类条目（能力面收口归 ADR-343，展示端门控见知识卡 dialog-adv-filter）。
 **8 参数收编 `SearchFilters`（ADR-343 刀 4 已落地，2026-10-14）**：`SearchModels(filesRoot, filters types.SearchFilters)`——Wails 绑定契约变更（`npm run generate:bindings` 重生成，生成 diff 面 3 文件：models.ts 新增 `SearchFilters` + app.ts 签名 + types index）。口径：数值字段 0 = 未设置（不限）、Keyword 空串 = 不限（与前端 `parseFilterNumber`、`modelMatchesFilters` 同源）；结构体可扩展 = 新过滤维度追加字段不再扩签名。执行修订：不带「目标 rtype 集合」字段（跨类型检索无消费方，带上即死参数——扩展位留给跨类型语义立项时追加）。同步面：CLI 3 处 + Go 测试 23 处 + 前端 4 套件（web-fs 适配层经 `satisfies Partial<GoBindingShape>` 编译期对账，测试位 44 处机械改写）；ADR-183（8 参数暂缓决策）标 ❌ 已取代。
 **MMD 统计级分流（ADR-346 刀 2 已落地，2026-10-14）**：EntityPlayer / SceneModel 经 `geometrySearchable: true`（弱形态）+ `statsParser: "mmd"` 声明进数值搜索路径——`analyzeEntryForSearch`（`app_model.go`）按 `registry.StatsParserFor(entry.Type)=="mmd"` + `mmd.CanParse(entry.Ext)`（.pmx/.pmd）双条件分流至 `AnalyzeMmdStats`（geoCache 与 Bedrock 同键复用），其余几何系走 `AnalyzeBedrockModel`。语义：MMD 出骨骼数 + 纹理尺寸，**CubeCount 恒 0 诚实值**——cube 数值条件天然筛除 MMD 条目（设计语义非 bug）；.vrm/.zip 在 MMD 族下无统计链路（诚实零值）。实现与踩坑细节见 [go-geometry-mmd-stats](./go-geometry-mmd-stats.md) 卡。
+**搜索入口免哈希税（锐评 2026-10-16 已落地）**：`SearchModels` 的全库扫描入口由 `ScanModelEntries` 切为 `ScanModelEntriesForBrowse`——搜索只消费 Name/Path/几何/hasError，`SearchResult` 无 Hash 字段，原冷路径全库逐文件 SHA256（+ B1 哈希索引维护）是纯税；几何分析成本不变（geoCache 口径与本次切口正交，B2 冷段降为无哈希浏览投影 + 直通/分析分流原成本）。回归锁 `app_hashless_seam_lock_test.go|TestSearchModels_ColdScanNoHashTax`（哈希索引统计零增量 + 根下无 `.ysm-hash-index.json` 双判据，无几何条目不缩水）+ `tests/test_hash_entry_consumers.ts` 派生闸（无 Hash 消费方走带哈希入口即红，seam 位点三归宿归类）。
+**持久浏览索引稳态免走（ADR-352，2026-10-16 已落地，锐评处方 ① 立项）**：`ScanModelEntriesForBrowse` 的 browse 缓存过期后，注册根不再重新付整棵 walk——`go/scanner/scanindex.go` 持久浏览索引（`<root>/.ysm-scan-index.json`，trusted + cacheGen/keyVersions 双代际快照守卫、walk 启动前捕获/收尾复核的提交门控、条目级错误计数固化门控、信任态不跨重启采信）；被 watcher 装配的 YSM 根信任窗 15min（`MarkIndexRootWatched`），未装配根回落 `scanTTL()`（零回归）。`SearchModels` 经 seam 自动继承稳态 O(1)；watcher 配对补丁（`emitRepoFsChanged` 追加 `InvalidateScanPath(ysm 根)`）堵住 instances 空时早退不清缓存的信任窗盲点。回归锁 `go/scanner/scanindex_test.go` 5 例（快路径/信任不跨重启/cap 分档/提交门控/剪枝自愈）；详见 [go-scanner](./go-scanner.md) 卡「持久浏览索引」段。
 
 ## 与其他子系统关系
 

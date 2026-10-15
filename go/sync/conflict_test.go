@@ -426,11 +426,13 @@ func TestSHA256File(t *testing.T) {
 	}
 }
 
-// injectHashFailure 注入哈希失败 seam（包级 hashFileForEntries），返回恢复函数。
-// 仅对路径含 "broken" 的文件注入失败，其余走真实 fsutil.SHA256File——
+// injectHashFailure 注入哈希失败 seam（包级 hashFileForEntries），经 t.Cleanup 自动恢复。
+// 仅对路径含 "broken.bin" 的文件注入失败，其余走真实 fsutil.SHA256File——
 // 供测试构造"单文件哈希失败但其余正常"的混合场景。
 // 注意：包级 seam 非并发安全，调用方测试不得 t.Parallel()。
-func injectHashFailure(t *testing.T) func() {
+// 锐评 P2-4：由返回恢复函数改为 t.Cleanup 注册——忘 defer 即把注入残留到后续测试，
+// t.Cleanup 从"约定"变成"保证"（测试及子测试结束必恢复）。
+func injectHashFailure(t *testing.T) {
 	t.Helper()
 	original := hashFileForEntries
 	hashFileForEntries = func(path string) (string, error) {
@@ -439,7 +441,45 @@ func injectHashFailure(t *testing.T) func() {
 		}
 		return fsutil.SHA256File(path)
 	}
-	return func() { hashFileForEntries = original }
+	t.Cleanup(func() { hashFileForEntries = original })
+}
+
+// injectFixedHash 注入「同哈希」给指定文件名——构造「同哈希异尺寸」的不可构造形态
+// （真实文件同 SHA256 必同内容必同尺寸），钉死 ADR-351 D2 退役的防御分支。
+// 同样走 t.Cleanup 自动恢复。
+func injectFixedHash(t *testing.T, filename, fixedHash string) {
+	t.Helper()
+	original := hashFileForEntries
+	hashFileForEntries = func(path string) (string, error) {
+		if strings.HasSuffix(path, filename) {
+			return fixedHash, nil
+		}
+		return fsutil.SHA256File(path)
+	}
+	t.Cleanup(func() { hashFileForEntries = original })
+}
+
+// TestDetectConflicts_SameHashDifferentSize_NoConflict（ADR-351 D2）：同哈希即同内容
+// ——旧三分支的「哈希一致但大小不同 → SizeMismatch」防御分支退役。该形态用真实
+// 文件不可构造（同 SHA256 必同尺寸）、从未被测试钉住，报冲突只会产出噪声条目
+// 供人工审查（SuggestedStrategy 恒 manual 类），2026-10-16 裁定删除。
+// 注意：非 t.Parallel（包级 seam 注入，与 injectHashFailure 同约束）。
+func TestDetectConflicts_SameHashDifferentSize_NoConflict(t *testing.T) {
+	localDir, remoteDir, cleanup := setupTestDirs(t)
+	defer cleanup()
+
+	// 两侧同文件名：内容不同（尺寸不同）但注入同一哈希
+	writeFile(t, localDir, "twin.bin", "short", time.Now())
+	writeFile(t, remoteDir, "twin.bin", "much longer content", time.Now())
+
+	injectFixedHash(t, "twin.bin", "SAME-HASH")
+
+	report, err := DetectConflicts(localDir, remoteDir, "test")
+	testutil.NoError(t, err)
+	if report.TotalConflicts != 0 {
+		t.Errorf("同哈希（同内容）不应报冲突，got %d: %+v（防御分支退役回归，ADR-351 D2）",
+			report.TotalConflicts, report.Conflicts)
+	}
 }
 
 // TestCollectFileEntries_HashFailureIsEntryLevel 验证 collectFileEntries 错误通道分离：
@@ -456,8 +496,7 @@ func TestCollectFileEntries_HashFailureIsEntryLevel(t *testing.T) {
 	writeFile(t, dir, "ok.txt", "ok", time.Now())
 	writeFile(t, dir, "broken.bin", "x", time.Now())
 
-	restore := injectHashFailure(t)
-	defer restore()
+	injectHashFailure(t)
 
 	entries, err := collectFileEntries(dir)
 	testutil.NoError(t, err, "哈希失败的条目不应导致 collectFileEntries 整体失败")
@@ -487,8 +526,7 @@ func TestDetectConflicts_HashFailedReportedNotAborted(t *testing.T) {
 	writeFile(t, localDir, "broken.bin", "A", time.Now())
 	writeFile(t, remoteDir, "broken.bin", "A", time.Now())
 
-	restore := injectHashFailure(t)
-	defer restore()
+	injectHashFailure(t)
 
 	report, err := DetectConflicts(localDir, remoteDir, "test")
 	testutil.NoError(t, err, "单文件哈希失败不应导致 DetectConflicts 整体失败")

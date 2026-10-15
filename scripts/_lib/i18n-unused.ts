@@ -164,6 +164,15 @@ export function constructedKeyPrefixes(corpus: string): Set<string> {
   for (const m of corpus.matchAll(/\bt\(\s*["']([a-zA-Z][a-zA-Z0-9_.]*\.)["']\s*\+/g)) {
     if (m[1]) out.add(m[1]);
   }
+  // 辅助函数构造形态（2026-10-24 pre-push 实测）：键模板不落在 t() 调用点内，而是
+  // helper 组装后传入翻译函数（rtypeLabelKeyOf: return `rtype.label.${camelToKey(rtype)}`
+  // → rtypeLabelOf 内 tOf(key)）。⚠️ 须 ≥2 段点分头：i18n 键族至少两段；单段头
+  // （`preview.${x}` / `diagnostics.${x}`，测试侧大量存在）多为非键构造，宽豁免会把
+  // 基线真死键误捞成 test-only（实证：基线 5 键曾因此被误捞）。保守方向不变：
+  // 只可能多豁免活键，不会把死键判活。
+  for (const m of corpus.matchAll(/`([a-zA-Z][a-zA-Z0-9_]*\.[a-zA-Z0-9_.]*)\.\$\{/g)) {
+    if (m[1]) out.add(m[1] + ".");
+  }
   return out;
 }
 
@@ -179,4 +188,28 @@ export function isKeyDynamicallyCovered(key: string, prefixes: ReadonlySet<strin
     if (key.startsWith(p)) return true;
   }
   return false;
+}
+
+/**
+ * 动态覆盖营救：把「构造式前缀覆盖」的键拉回正确分类。
+ *
+ * - 生产语料前缀覆盖 → used（rtype.label.* 经 rtypeLabelKeyOf 构造后由 tOf 消费，
+ *   字面量只出现在测试里也属生产在用——2026-10-24 pre-push 实测 2 键误判 test-only）；
+ * - 仅全仓语料前缀覆盖 → test-only（保守降档：可能只是测试侧构造，不动原 dead 语义）。
+ * 只 rescue 非 used 行，used 不动。
+ */
+export function applyDynamicCoverage(
+  rows: KeyUsageRow[],
+  prodPrefixes: ReadonlySet<string>,
+  allPrefixes: ReadonlySet<string>,
+): KeyUsageRow[] {
+  return rows.map((r) => {
+    if (r.usage !== "used" && isKeyDynamicallyCovered(r.key, prodPrefixes)) {
+      return { key: r.key, usage: "used" as const };
+    }
+    if (r.usage === "dead" && isKeyDynamicallyCovered(r.key, allPrefixes)) {
+      return { key: r.key, usage: "test-only" as const };
+    }
+    return r;
+  });
 }

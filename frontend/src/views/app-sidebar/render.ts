@@ -47,6 +47,8 @@ export function renderVersionCards(container: HTMLElement, instances: SidebarIns
       synced: ins.synced,
       missing: ins.missing,
       extra: ins.extra,
+      // 2026-10 锐评 P0-1：disabled 维度显形（SidebarInstance.disabled 由 loader 自 Go st.Disabled 长度映射）
+      disabled: ins.disabled,
       idx,
       hasMod: ins.hasMod,
       rtype: ins.rtype || currentRepoType(),

@@ -73,7 +73,7 @@ ADR-208 D2 拆分（≤400 行红线）：`batch-rename.ts` = 公共 API + 弹�
 - 派发 bus：`toast:show`（正则无效警告、无变更提示、onApply 失败告警）
 - 监听 bus：无
 - 依赖：`parseModelName`（utils/model-name/display.ts）、`registerDlg` / `closeDlg` / `trapFocus`（features/dialogs/modal-core.ts）；表单接线层另依赖 `applyReplaceToName` / `rebuildParsedName`（batch-rename-util.ts）；views 模板层依赖 `stagger`（utils/animation/stagger.ts）、`esc`（utils/html/html.ts）
-- 调用方：`app-tree/bus-handlers.ts` 的 `dir:batch-rename`（目录右键，先 `ScanModelEntries` 取条目）与 `batch:rename`（Ctrl/Shift 多选，由路径拼条目）；两者均注入 `views/app-tree/tpl-batch-rename.ts` 的 `batchRenameTpl`；onApply 均逐个 `RenameFile` 后 `reload` + `stats:refresh` 并汇总成功/失败
+- 调用方：`app-tree/bus-handlers.ts` 的 `dir:batch-rename`（目录右键，先 `ScanModelEntriesForBrowse` 取条目——止血 2026-10-15 P0-1 切换，seam 口径见 app-tree 卡「树加载 seam」）与 `batch:rename`（Ctrl/Shift 多选，由路径拼条目）；两者均注入 `views/app-tree/tpl-batch-rename.ts` 的 `batchRenameTpl`；onApply 均逐个 `RenameFile` 后 `reload` + `stats:refresh` 并汇总成功/失败
 
 ## 与其他子系统关系
 

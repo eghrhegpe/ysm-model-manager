@@ -378,12 +378,13 @@ describe("app-content 模板", () => {
     // 防回退：若有人把手填档位/裸 delayMs 塞回模板（绕过 stgUnits），序列漂移即红。
     const html = settingsHTML();
     // 期望序列（随声明顺序自动派生；DESKTOP 平台）：
-    //   env        ：路径卡组(0/60/120) → 存储卡(180) → 默认页(240)
+    //   env        ：路径卡组(0/60/120) → 存储卡(180) → 备份与迁移(240) → 默认页(300)
+    //                 （备份与迁移卡仅桌面端渲染，见 tpl-settings.ts|envUnits 的 ADR-344-d1 门控）
     //   appearance ：主题(0) → 自动(60) → 字体卡组(120/150/180) → 语言(240) → 动画(300)
     //   preview3d  ：相机(0) → 旋转(60) → 键位(120)（解析 details 折叠区被剔除）
     //   aboutUpdate：版本(0) → 介绍卡组(60/90) → 引导卡组(150/180)
     const expected: Record<string, number[]> = {
-      env: [0, 60, 120, 180, 240],
+      env: [0, 60, 120, 180, 240, 300],
       appearance: [0, 60, 120, 150, 180, 240, 300],
       preview3d: [0, 60, 120],
       aboutUpdate: [0, 60, 90, 150, 180],

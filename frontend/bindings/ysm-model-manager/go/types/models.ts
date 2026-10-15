@@ -10,6 +10,15 @@
  */
 export interface AppConfig {
     /**
+     * SchemaVersion 磁盘配置文件的迁移版本（缺失/0 = 无版本的遗留文件）。
+     * 结构性迁移（migrateLegacyConfigFields）按本字段门控：文件版本 < SchemaVersion
+     * 才跑迁移并盖当前版本章；≥ 当前版本不再重跑启发式——历史多次配置迁移 bug
+     * 同根于「无版本 + 字段空不空」的启发式判据（见 internal/app 的 applyConfigMigrations）。
+     * 字段放首位：版本是描述"这份文件怎么解释"的元数据，与业务字段分开读。
+     */
+    "schemaVersion"?: number;
+
+    /**
      * 统一文件存储根目录，各类型默认存 {filesRoot}/{subDir}/
      */
     "filesRoot": string;
@@ -311,6 +320,15 @@ export enum ErrorCode {
     ErrIO = "IO_ERROR",
     ErrLinkFailed = "LINK_FAILED",
     ErrUnknown = "UNKNOWN",
+
+    /**
+     * ErrSettingsTooNew 设置导出/配置来自更高版本程序（导出格式版本或配置 schema 超过
+     * 本程序支持面）。专用 Code 而非复用 UNSUPPORTED_FORMAT：friendlyError 命中 Code 映射
+     * 即丢弃 Reason/Suggestion 只显示分类文案（errors.ts `if (key) return t(key)`），
+     * 复用会把「请升级程序后导入」这一唯一行动指引吞成「不支持的格式」——升级指引必须是
+     * i18n 分类文案本身。锐评 2026-10-16（对抗审计 P1）。
+     */
+    ErrSettingsTooNew = "SETTINGS_TOO_NEW",
 };
 
 /**
@@ -400,6 +418,19 @@ export interface ImportLog {
      * debug/info/warn/error/fatal
      */
     "Level"?: LogLevel;
+}
+
+/**
+ * ImportSettingsResult 设置导入结果（前端据此提示后续动作）。
+ * 注意：曾有的 LocalStorageKeyCount 字段已删除（锐评 2026-10-16）——它是导出文件
+ * 原始条数未过滤值，而提示条数必须用前端台账过滤后的实际写入数，Go 侧没有台账键集合
+ * 算不出真值，留着一个虚高字段只会误导。
+ */
+export interface ImportSettingsResult {
+    /**
+     * 导入前对当前 ysm_config.json 的备份路径（空=无需备份）
+     */
+    "backupPath": string;
 }
 
 /**
@@ -850,6 +881,45 @@ export interface SearchResult {
      * 资源类型 ID（跨类型搜索时携带）
      */
     "type"?: string;
+}
+
+/**
+ * SettingsExport 设置导出文件（ADR-344-d1）。
+ * 
+ * 把双轨设置（Go 磁盘 AppConfig + 前端 localStorage 偏好）收拢成单个 JSON，
+ * 供换机迁移。字段带版本与标识以便导入时校验——历史教训是把 JSON 当配置解析
+ * 前不做格式校验，用户选错文件即静默产生一份"看起来正常的"空配置。
+ */
+export interface SettingsExport {
+    /**
+     * 恒为 "ysm-settings-export"（导入门控）
+     */
+    "format": string;
+
+    /**
+     * 导出格式版本（导入时拒绝更高版本）
+     */
+    "exportVersion": number;
+
+    /**
+     * 导出时间 RFC3339（展示用）
+     */
+    "exportedAt": string;
+
+    /**
+     * 导出时的程序版本（诊断用）
+     */
+    "appVersion": string;
+
+    /**
+     * Go 磁盘轨完整配置
+     */
+    "appConfig": AppConfig;
+
+    /**
+     * 浏览器本地存储偏好类键值（非缓存/会话/调试）
+     */
+    "localStorage": { [_ in string]?: string } | null;
 }
 
 /**

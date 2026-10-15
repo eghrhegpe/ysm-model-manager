@@ -28,7 +28,9 @@ import { bindTabRuntime } from "./tabs-runtime.ts";
  */
 export function initDiagnosticsPage(host: AppContentHost): void {
   bindTabRuntime(host, ".repo-tab", "diag");
-  initDiagnostics(host.state.root, escUnknown);
+  // 返回的清理入页面订阅桶：lang:changed 全量重建 / disconnectedCallback 时退订
+  // package:selected 订阅（漏接 = 每次切语言多一个写游离 DOM 的幽灵订阅，P0-2②）
+  host.subs.addPage(initDiagnostics(host.state.root, escUnknown));
 }
 
 /**

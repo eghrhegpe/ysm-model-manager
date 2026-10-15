@@ -169,12 +169,16 @@ export function repositoryHTML(): string {
 }
 
 export function instancesHTML(): string {
-  const { bar, panels } = renderTabs({
+  // ADR-300 §2.5：整合包页对齐「可见缺席」范式——tab 声明 desktopOnly + viewerNotice（锐评 P1-5）
+  const { bar, panels, notice } = renderTabs({
     prefix: "ins",
+    viewerMode: isViewerMode(),
     initialActiveId: lastTabOf("ins"),
+    viewerNotice: t("instances.viewerDesktopOnlyNotice"),
     tabs: [
       {
         id: "versions",
+        desktopOnly: true,
         label: `${UI_ICONS.game} ${t("instances.tab.versions")}`,
         body: `<div class="repo-layout">
 <app-sidebar class="ins-sidebar"></app-sidebar>
@@ -188,7 +192,7 @@ export function instancesHTML(): string {
       },
     ],
   });
-  return `<div class="repo-wrap">${bar}${panels}</div>`;
+  return `<div class="repo-wrap">${bar}${notice}${panels}</div>`;
 }
 // recycleHTML 已拆至 tpl-recycle.ts，消费者直接 import 叶文件（P1-6）
 

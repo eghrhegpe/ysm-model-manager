@@ -224,7 +224,7 @@ describe("菜单项点击行为", () => {
     });
 
     it("rtype 漂移 → 文案随类型词变化（同一菜单两次弹出仅此差异）", () => {
-      expect(labelsFor(RESOURCE_TYPES.BLUEPRINT)).toEqual(["复制蓝图清单", "清空此整合包的蓝图"]);
+      expect(labelsFor(RESOURCE_TYPES.BLUEPRINT)).toEqual(["复制蓝图清单", "清空此整合包的蓝图（仓库副本）"]);
       expect(labelsFor(RESOURCE_TYPES.SHADER)).not.toEqual(labelsFor(RESOURCE_TYPES.BLUEPRINT));
     });
 

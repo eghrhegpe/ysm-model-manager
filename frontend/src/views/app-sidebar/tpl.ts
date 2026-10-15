@@ -6,6 +6,7 @@ import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { shortLabelOf } from "@/utils/resource/short-label.ts";
 import {
   ALL_RESOURCE_TYPES,
+  GROUP_META,
   GROUP_OF,
   RESOURCE_TYPES,
   typeIconOf,
@@ -131,19 +132,38 @@ function typeMenuItemsHTML(): string {
     " " +
     esc(text) +
     "</div>";
+
+  // P2-3：按注册表 group 分组，组标题带 groupIcon + groupLabel（零新文案，复用注册表字段）。
+  // role=presentation 使读屏与键盘导航（dropdown.ts itemSelector）跳过分隔符。
+  const groupSep = (groupId: string): string => {
+    const meta = GROUP_META[groupId];
+    if (!meta) return "";
+    return `<div class="dd-group-sep" role="presentation">${meta.icon} ${esc(meta.name)}</div>`;
+  };
+
   let html = render(SYNC_TYPE_ALL, UI_ICONS.package, t("sidebar.allTypes"));
+  let lastGroup = "";
+  const emit = (id: string, icon: string, text: string): void => {
+    const group = GROUP_OF[id] || "";
+    if (group && group !== lastGroup) {
+      html += groupSep(group);
+      lastGroup = group;
+    }
+    html += render(id, icon, text);
+  };
+
   // 从 ALL_RESOURCE_TYPES（注册表单一事实来源）驱动生成：
   // 已配置类型按原顺序渲染，注册表新增类型无展示配置时兜底追加，避免菜单与注册表漂移
   const configured = new Set(SYNC_TYPE_MENU.map((m) => m.id));
   for (const m of SYNC_TYPE_MENU) {
     if (ALL_RESOURCE_TYPES.includes(m.id)) {
-      html += render(m.id, m.icon, m.labelKey ? t(m.labelKey) : (m.label ?? m.id));
+      emit(m.id, m.icon, m.labelKey ? t(m.labelKey) : (m.label ?? m.id));
     }
   }
   for (const id of ALL_RESOURCE_TYPES) {
     if (!configured.has(id)) {
       // 兜底项同样携带图标（typeIconOf）与可读短标签（shortLabelOf），不再裸显 id
-      html += render(id, typeIconOf(id), shortLabelOf(id));
+      emit(id, typeIconOf(id), shortLabelOf(id));
     }
   }
   return html;
@@ -277,6 +297,9 @@ export interface InstanceCardHeaderData {
   synced: number;
   missing: number;
   extra: number;
+  /** 已禁用（.ban）单元数。2026-10 锐评 P0-1：Go 侧 foldUnit 独立分桶（绝不进 synced），
+   *  侧栏此前弃用该维度——全禁用整合包漏显「完全同步 ✓」。灰标显形，零新增 i18n。 */
+  disabled?: number;
   idx?: number;
   hasMod?: boolean;
   rtype?: string;
@@ -288,10 +311,14 @@ export interface InstanceCardHeaderData {
  *  全由三计数 + hasMod 驱动；该参数只是调用方按 loader 派生字段顺位递进来的「陪跑」）。 */
 export function instanceCardHeaderHTML(d: InstanceCardHeaderData): string {
   const { name, synced, missing, extra } = d;
+  const disabled = d.disabled ?? 0;
   const idx = d.idx ?? -1;
   const hasMod = d.hasMod ?? true;
   const rtype = d.rtype ?? RESOURCE_TYPES.YSM;
-  const allZero = synced === 0 && missing === 0 && extra === 0;
+  // 2026-10 锐评 P2-5：原 allZero（含 synced===0）把「该类型下无任何资源」也标成「完全同步 ✓」——
+  // 空包不是「已同步」而是「无内容」。改为 synced>0 且无差异且无禁用（有内容且全部已同步）才显 ✓；
+  // 全零空包不再显任何状态徽章（诚实留白，优于误导性的 ✓）。
+  const fullySynced = synced > 0 && missing === 0 && extra === 0 && disabled === 0;
   // 徽章补 title 语义锚点（颜色码不自解释——绿/红/橙三色图例此前只存在于文档）：
   // 文案复用同步面板既有 key（已同步/待推送/可拉取），零新增 i18n；侧栏 extra 的
   // 用户操作即「拉取」，与面板 optional（可拉取）语义吻合。裸 `0` 改 success SVG + 完全同步
@@ -306,9 +333,14 @@ export function instanceCardHeaderHTML(d: InstanceCardHeaderData): string {
     (extra > 0
       ? `<span class="tag orange" data-role="extra-count" title="${t("syncManager.status.optional")}">${extra}</span> `
       : "") +
+    // 2026-10 锐评 P0-1：disabled 灰标显形（此前侧栏弃用该维度，全禁用包漏显「完全同步 ✓」）。
+    // 与 Go foldUnit 同源——禁用单元独立分桶、绝不计入 synced；title 复用面板既有 key，零新增 i18n。
+    (disabled > 0
+      ? `<span class="tag gray" data-role="disabled-count" title="${t("syncManager.status.disabled")}">${disabled}</span> `
+      : "") +
     (!hasMod
       ? `<span class="tag gray" data-role="no-mods">${t("sidebar.noMods", { type: noModLabelOf(rtype) })}</span>`
-      : allZero
+      : fullySynced
         ? `<span class="tag" data-role="all-synced" title="${t("sidebar.syncFully")}">${UI_ICONS.success}</span>`
         : "");
   return `<div class="instance-card-header">

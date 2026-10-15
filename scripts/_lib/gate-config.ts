@@ -327,11 +327,18 @@ export const FRONTEND_STATIC_TOOLS: GateTool[] = [
     blockPolicy: "debt",
     debt: debt("导出面宽于消费面（多为缺 export 关键字/re-export），需分档回收"),
   },
-  {
-    tool: "check-deadcode-baseline.ts",
-    blockPolicy: "debt",
-    debt: debt("knip/jscpd 棘轮账本；噪声已分离，回收需分「删关键字」与「真删码」"),
-  },
+  // deadcode-baseline 刻意**不在本清单**（2026-10-17 第四轮锐评，镜像上方 auto-import 先例）：
+  //   ① 成本：实测 3.4s，纯前端 push（20.8s）的第 2 贵项；非 scopedFiles——全仓键使用面
+  //      分析，单文件无法独立判定（见其注释），--files 裁剪救不了；
+  //   ② 判定力：blockPolicy=debt 不阻断，热路径付 3.4s 只买「早知道」；
+  //   ③ 远端覆盖如实口径（第五轮锐评 P2-1：不写「零损失」这种绝对话）：frontend 域
+  //      每次 push 必触发 CI 独立步骤（test.yml「死代码基线门禁」，按 ADR-244 显式带
+  //      changed-base 归属基线——判定质量高于本地无上下文那次，故 --static 经
+  //      CI_INDEPENDENT_TOOLS 剔除避免同 job 双跑假红）；doctor --all 亦在册。
+  //      **已知豁口**：纯 scripts 提交若改动 deadcode 判定面本身（_lib/deadcode-keys/
+  //      attrib、knip.json、baseline 账本），本地与 CI frontend-gates 均不跑该闸——
+  //      概率低、接受，由 doctor --all 发版前兜底；独立步骤存在性由
+  //      tests/test_gate_schedule.ts 第 9 组钉死，缺席三域表由 test_gate_config.ts 第 7 组钉死。
   { tool: "check-tpl-refs.ts", blockPolicy: "hard" },
   { tool: "check-dynamic-import.ts", blockPolicy: "hard" },
   // auto-import 刻意**不在**本清单（2026-10-09 静态工具段耗时债处置）——它留在

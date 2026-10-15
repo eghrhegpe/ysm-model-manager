@@ -15,7 +15,6 @@
 package instance
 
 import (
-	"os"
 	"sort"
 
 	ysmsync "ysm-model-manager/go/sync"
@@ -39,7 +38,8 @@ import (
 // types.InstanceStatus 注释：Missing 保持仓库侧文件级绝对路径（一键安装契约）。
 //
 // Overwrites（ADR-340-d2）与两路清单一并产出：`Missing ∪ MissingDirs` 中**会覆盖实例侧
-// 已修改副本**的那些推送目标（收录口径见 pushTargets 注释），供批量推送如实计数与点名。
+// 已修改副本**的那些推送目标（收录口径见 ysmsync.PushTargetsForUnit——三路推导已随
+// ADR-351 D4 下沉 go/sync，与推送路由同包），供批量推送如实计数与点名。
 //
 // CustomDir 与旧链 resolveInstanceScanDir 对齐：单类型调用时 = FindInstDir 解析出的
 // 实例子目录（面板链 processOneResourceType 用的同一个目录）；多类型时退回 ins.CustomDir。
@@ -65,19 +65,15 @@ func BuildInstanceStatusCounts(
 		for j := range items {
 			foldUnit(&st, items[j])
 		}
-		// map 迭代序在 sync 层不保证，排序保证列表每次刷新顺序稳定（前端 diff/展示友好）；
-		// 排序后压重：面板链「混合夹」会同时产出平铺文件叶与容器 marker 子项，
-		// 同一文件重复列示（见 go-instance 卡已知限制），导入一键安装清单会重复安装
+		// map 迭代序在 sync 层不保证，排序保证列表每次刷新顺序稳定（前端 diff/展示友好）。
+		// 去重已随 ADR-351 D3 单表示退役：混合夹 marker 与平铺单元的重复表示在树化层
+		// absorbSelfMarker 判重收口，清单天然无重复（回归锁 instance_tree_single_repr_test.go）；
+		// 若未来出现新的重复形态，宁可它在这里红灯暴露，也不要静默压重掩盖。
 		sort.Strings(st.Missing)
 		sort.Strings(st.MissingDirs)
 		sort.Strings(st.Overwrites)
 		sort.Strings(st.Extra)
 		sort.Strings(st.Disabled)
-		st.Missing = dedupeSorted(st.Missing)
-		st.MissingDirs = dedupeSorted(st.MissingDirs)
-		st.Overwrites = dedupeSorted(st.Overwrites)
-		st.Extra = dedupeSorted(st.Extra)
-		st.Disabled = dedupeSorted(st.Disabled)
 		// Status 取「红优先」——与 loader.ts 自派生口径一致（有待推送差异就不再是绿/橙）
 		switch {
 		case st.MissingCount > 0:
@@ -92,22 +88,8 @@ func BuildInstanceStatusCounts(
 	return results
 }
 
-// dedupeSorted 就地压缩已排序切片中的相邻重复项（调用方须先 sort）。
-// 必要性：面板链的「混合夹」既把平铺模型文件登记为独立叶子、又经 absorbSelfMarker
-// 并入容器子项，同一文件会出现两次（面板侧表现为同名两行）；侧栏若原样带进
-// 一键安装清单就会重复安装同一文件。此处只去重清单，不改单元计数。
-func dedupeSorted(in []string) []string {
-	if len(in) < 2 {
-		return in
-	}
-	out := in[:1]
-	for _, s := range in[1:] {
-		if s != out[len(out)-1] {
-			out = append(out, s)
-		}
-	}
-	return out
-}
+// dedupeSorted 已随 ADR-351 D3 单表示退役（2026-10-16）：重复表示在树化层
+// absorbSelfMarker 判重收口，侧栏清单天然无重复；静默压重会掩盖新的重复形态。
 
 // statusCustomDir 解析实例侧扫描目录（单类型走 FindInstDir，多类型退回 ins.CustomDir）
 func statusCustomDir(ins *types.VersionInstance, rtypes []registry.ResourceType) string {
@@ -128,7 +110,9 @@ func foldUnit(st *types.InstanceStatus, it types.ResourceSyncItem) {
 		st.Synced++
 	case types.SyncStatusMissing, types.SyncStatusDiverged:
 		st.MissingCount++
-		files, dirs, overwrites := pushTargets(it)
+		// 三路推导单点在 go/sync（ADR-351 D4 下沉）：与推送路由（PushSingleResource
+		// 目录分支 / 逐条 Install）同包，展开规则不再靠本层注释复述远方行为。
+		files, dirs, overwrites := ysmsync.PushTargetsForUnit(it)
 		st.Missing = append(st.Missing, files...)
 		st.MissingDirs = append(st.MissingDirs, dirs...)
 		st.Overwrites = append(st.Overwrites, overwrites...)
@@ -138,69 +122,4 @@ func foldUnit(st *types.InstanceStatus, it types.ResourceSyncItem) {
 		// 禁用是用户刻意为之，绝不进待推送清单（否则一键安装会覆盖 .ban 内容）
 		st.Disabled = append(st.Disabled, it.Path)
 	}
-}
-
-// pushTargets 把一个「待推送」单元展开为三路安装目标（ADR-310 §3 落地形态，
-// 第三路 overwrites 见 ADR-340-d2）：
-//
-//	files      —— 仓库侧**文件级**绝对路径，走逐条 Install（一键安装主路）；
-//	dirs       —— 仓库侧**目录单元**：夹内没有任何可逐文件安装的受支持文件时（如只含
-//	              pack.mcmeta 的资源包夹、内容全不被 IsTypeModelFile 命中的 maid-model 夹），
-//	              整夹交给 folder-aware 的 `PushSingleResourceToInstance`（面板行内推送同一条路）；
-//	overwrites —— 上述目标中**会覆盖实例侧已修改副本**的那部分（⊂ files ∪ dirs）。
-//
-// 两路必须分开：`Missing` 的消费端逐条 `Install`，目录路径在那里语义是错的——
-// `InstallResourceToInstance` 对 isDir 类型走 `InstallDir(filepath.Dir(src))`，传目录会把
-// 其**父目录**整棵装进实例（过度安装，实证 `resource_bindings.go` 的 `needsFolder` 分支）；
-// fileLevel 类型则落到 `installer.Install(dir)`，`isSupportedModelExt("")` 必判不支持。
-// 而 `PushSingleResource` 对目录走 `InstallDirLocked(该目录)`（sync_push.go 的 os.Stat 分支），
-// 装的正是这个夹——语义正确、无过度安装。
-//
-// 展开规则：
-//   - 有 children（dirLevel 模型夹 / 嵌套容器）：递归取 status ∈ {missing, diverged} 的子项；
-//   - 无 children 的文件单元：Path 本身（fileLevel missing，或 dirLevel 根下散文件）；
-//   - 无 children 且 Path 是目录：先 `DiffFolderContents`（实例侧空串）展开夹内文件；
-//     展开为空则整夹进 dirs（**不退化成把目录塞进 Missing**）；
-//   - disabled 子项被排除（同 foldUnit：禁用内容不推送）。
-//
-// overwrites 的收录口径（ADR-340-d2，宁少报不谎报）：
-//   - 叶子文件 status==diverged → 其路径（仅仓库有 → missing，是新建不是覆盖）；
-//   - 整夹推送（dirs 分支）且单元 status==diverged → 夹路径本身（整夹安装即覆盖该夹）；
-//   - 已知盲区：单元 status==diverged 却展开成内层文件时（fileLevel 资源包夹内直接放 zip），
-//     逐文件归因需要实例侧对应夹路径做**真实两侧** diff，而本函数拿不到该上下文（现传空串
-//     = 全部按 missing 展开），故不逐文件声称覆盖。解药是给本函数注入实例侧对应夹路径
-//     （那一改会同时改变安装目标清单，属行为变更，须单独拍板——记在 ADR-340-d2 遗留项）。
-func pushTargets(it types.ResourceSyncItem) (files, dirs, overwrites []string) {
-	if len(it.Children) > 0 {
-		for i := range it.Children {
-			ch := it.Children[i]
-			if ch.Status == types.SyncStatusMissing || ch.Status == types.SyncStatusDiverged {
-				f, d, o := pushTargets(ch)
-				files = append(files, f...)
-				dirs = append(dirs, d...)
-				overwrites = append(overwrites, o...)
-			}
-		}
-		return files, dirs, overwrites
-	}
-	if fi, err := os.Stat(it.Path); err == nil && fi.IsDir() {
-		// 实例侧传空串：该夹在实例侧不存在，全部文件按 missing 列出。
-		// 复用面板同一条 diff 实现（DiffFolderContents），不另写扩展名过滤口径。
-		for _, d := range ysmsync.DiffFolderContents(it.Path, "", it.Type) {
-			if d.Status == types.SyncStatusMissing || d.Status == types.SyncStatusDiverged {
-				files = append(files, d.AbsPath)
-			}
-		}
-		if len(files) == 0 {
-			dirs = append(dirs, it.Path)
-			if it.Status == types.SyncStatusDiverged {
-				overwrites = append(overwrites, it.Path)
-			}
-		}
-		return files, dirs, overwrites
-	}
-	if it.Status == types.SyncStatusDiverged {
-		overwrites = append(overwrites, it.Path)
-	}
-	return append(files, it.Path), nil, overwrites
 }

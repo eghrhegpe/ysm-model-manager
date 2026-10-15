@@ -239,6 +239,18 @@ export const autoSidebar = [
         "link": "/event-graph"
       },
       {
+        "text": "YSM 模型管理器 · 整合包同步前端设计锐评报告",
+        "link": "/integration-pack-fe-review"
+      },
+      {
+        "text": "YSM 模型管理器 · 整合包功能设计锐评报告",
+        "link": "/integration-pack-feature-design-review"
+      },
+      {
+        "text": "整合包（Minecraft 实例）同步 Go 后端 架构锐评",
+        "link": "/integration-pack-go-review"
+      },
+      {
         "text": "preview-3d 巡检追踪器（活指针卡）",
         "link": "/preview-3d-review-tracker"
       },
@@ -253,6 +265,14 @@ export const autoSidebar = [
     "link": "/adr/",
     "collapsed": true,
     "items": [
+      {
+        "text": "ADR-352：两阶段扫描投影二段：持久浏览索引（稳态重扫 O(1)）",
+        "link": "/adr/architecture/ADR-352-scan-index"
+      },
+      {
+        "text": "ADR-351：整合包同步域锐评收口：收集层收口与判定单点化",
+        "link": "/adr/architecture/ADR-351-sync-domain-review-consolidation"
+      },
       {
         "text": "ADR-350：app-tree状态骨架D1：重载入口收敛单函数+决策表、条目突变单一出口",
         "link": "/adr/architecture/ADR-350-app-tree-d1"
@@ -1657,6 +1677,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-344-d1：设置导出/导入（桌面端 v1）——双轨收拢成单个 JSON，换机不再手抄偏好",
+        "link": "/adr/decisions/ADR-344-d1-settings-export-import"
+      },
+      {
         "text": "ADR-343-d1：搜索语义收敛C1：关键词匹配单口径（名/相对路径/拼音三路）+ 拼音表单源派生",
         "link": "/adr/decisions/ADR-343-d1-c1"
       },
@@ -1671,6 +1695,10 @@ export const autoSidebar = [
       {
         "text": "ADR-340-d1：拉取结果结构化：部分失败不再是 error（绑定层不吞成功计数）",
         "link": "/adr/decisions/ADR-340-d1-error"
+      },
+      {
+        "text": "ADR-338-d3：提交密度公约——一个工作单元一个提交",
+        "link": "/adr/decisions/ADR-338-d3-commit-granularity"
       },
       {
         "text": "ADR-338-d2：broad_claim 巨兽卡符号封顶：auto_fields 死重止血与拆卡排期",
@@ -1758,7 +1786,12 @@ export const autoSidebar = [
     "text": "审计",
     "link": "/audit/",
     "collapsed": true,
-    "items": []
+    "items": [
+      {
+        "text": "门禁性能瓶颈评估报告",
+        "link": "/audit/gate-performance-assessment"
+      }
+    ]
   },
   {
     "text": "知识卡",
@@ -2278,6 +2311,10 @@ export const autoSidebar = [
             "link": "/knowledge/ui-components"
           },
           {
+            "text": "UI 格式分工与外迁触发线",
+            "link": "/knowledge/ui-format-partition"
+          },
+          {
             "text": "ADR 去桶化 slide-menu 外壳组件",
             "link": "/knowledge/ui-slide-menu"
           }
@@ -2576,6 +2613,10 @@ export const autoSidebar = [
           {
             "text": "CI 调优与缓存决策",
             "link": "/knowledge/ci-tuning"
+          },
+          {
+            "text": "提交密度公约——工作单元批量提交",
+            "link": "/knowledge/commit-granularity"
           },
           {
             "text": "提交信息减负闸",

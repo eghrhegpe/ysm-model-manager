@@ -228,7 +228,8 @@ func runVerify(ctx *CmdContext) error {
 		return err
 	}
 
-	entries := ctx.App.ScanModelEntries(ctx.FilesRoot)
+	// 锐评 2026-10-16：verify 只逐条 AnalyzeBedrockModel，不消费 Hash——走浏览投影。
+	entries := ctx.App.ScanModelEntriesForBrowse(ctx.FilesRoot, "", "", "")
 
 	fmt.Println("🔍 开始验证模型完整性...")
 	fmt.Println()

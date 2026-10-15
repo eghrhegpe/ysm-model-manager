@@ -20,6 +20,7 @@ import (
 
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/installer"
+	"ysm-model-manager/go/scanner"
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/types/registry"
 )
@@ -77,7 +78,7 @@ func SyncToggleStatus(instanceCustomDir, filesRoot string, scanFn ScanFunc) (int
 	// 持锁执行匹配 + rename（阶段 3+4 必须同段：计划与执行之间不得有并发改名）
 	installer.InstallLocker.Lock()
 	defer installer.InstallLocker.Unlock()
-	defer InvalidateSyncScanCaches() // 启禁会改实例目录名，清同步扫盘缓存防陈旧
+	defer scanner.InvalidateCache() // 启禁会改实例目录名：走 scanner 单漏斗清扫描缓存，级联清 instance 同步结果（锐评 P0-① 失效不对称）
 
 	ops := planToggleRenames(fileInfos, customDirClean, repoName, repoHash, precomputedHashes, filesRoot)
 	disableCount, enableCount, failures := applyToggleRenames(ops)
@@ -140,8 +141,9 @@ func hasDisabledDirCarrier(repoRoot string) bool {
 		if err != nil || !d.IsDir() || p == repoRoot {
 			return nil
 		}
-		if hasRecycleSegment(p) || isRelinkBackupPath(p) {
-			return filepath.SkipDir
+		// 统一剔除闸（ADR-351 D1）：回收站 + relink 备份尸体，谓词单点见 sync_walk.go
+		if err := skipExcludedDir(repoRoot, p); err != nil {
+			return err
 		}
 		if registry.IsDisableSuffix(d.Name()) {
 			found = true
@@ -166,22 +168,14 @@ func collectToggleFileInfos(instanceCustomDir string) []toggleFileInfo {
 			log.Printf("[sync] WalkDir 错误 %s: %v", p, err)
 			return nil
 		}
-		// 逐段判定（对齐 fsutil.IsRecycleDir/download.stripRecycleSegments 口径）：
-		if hasRecycleSegment(p) {
-			if d.IsDir() {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		// relink 备份尸体同样剔除（ADR-296 D3）：尸体哈希匹配仓库原件，
-		// 不跳则对备份目录内的模型做 .disabled 改名，污染恢复点
-		if isRelinkBackupPath(p) {
-			if d.IsDir() {
-				return filepath.SkipDir
-			}
-			return nil
-		}
 		if d.IsDir() {
+			// 统一剔除闸（ADR-351 D1）：回收站 + relink 备份尸体整棵跳过。
+			// 旧实现另对文件分支查谓词——目录处 SkipDir 后子树内文件不可达，
+			// 该层属死代码且致「x.relink-bak-1.ysm 类命名文件被 toggle 独家剔除」
+			// 的通道间口径漂移，随统一收敛移除（其余六通道本就只剔目录）。
+			if err := skipExcludedDir(instanceCustomDir, p); err != nil {
+				return err
+			}
 			if p == instanceCustomDir {
 				return nil // 根目录自身不是单元
 			}

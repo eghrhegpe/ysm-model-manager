@@ -76,6 +76,9 @@
   "repo:subdir-changed": [
     "frontend/src/views/app-nav/index.ts"
   ],
+  "settings:imported": [
+    "frontend/src/views/app-content/settings/settings-backup.ts"
+  ],
   "stats:refresh": [
     "frontend/src/features/community/download-queue-web.ts",
     "frontend/src/features/community/download-queue.ts",
@@ -90,13 +93,14 @@
     "frontend/src/views/app-content/settings/init.ts",
     "frontend/src/views/app-content/settings/path-cards.ts",
     "frontend/src/views/app-sidebar/launcher-detect.ts",
-    "frontend/src/views/app-sidebar/sync-flow.ts",
+    "frontend/src/views/app-sidebar/sidebar-pull.ts",
     "frontend/src/views/app-sync-manager/index.ts",
     "frontend/src/views/app-tree/bus-handlers.ts",
     "frontend/src/views/app-tree/events.ts",
     "frontend/src/views/app-tree/index.ts"
   ],
   "sync:toggle:status": [
+    "frontend/src/views/app-sync-manager/events.ts",
     "frontend/src/views/app-tree/bus-handlers.ts",
     "frontend/src/views/app-tree/events.ts",
     "frontend/src/views/app-tree/index.ts"
@@ -120,7 +124,7 @@
     "frontend/src/features/sync/sync.ts",
     "frontend/src/views/app-content/diagnostics/dedup.ts",
     "frontend/src/views/app-content/settings/init.ts",
-    "frontend/src/views/app-sidebar/sync-flow.ts"
+    "frontend/src/views/app-sidebar/sidebar-pull.ts"
   ],
   "tree:set-search": [
     "frontend/src/views/app-content/index.ts"

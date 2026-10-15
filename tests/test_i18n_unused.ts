@@ -6,6 +6,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  applyDynamicCoverage,
   classifyKeyUsage,
   constructedKeyPrefixes,
   countDynamicKeySites,
@@ -202,7 +203,53 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
   assert.ok(concatPrefixes.has("import."), "字符串拼接形态应抽出引号内前缀");
   // 无尾点 = 非键前缀，不抽（t("import") 是完整字面量键，不是构造式）
   assert.equal(constructedKeyPrefixes('t("import")').size, 0, "无尾点不应抽出前缀");
-  console.log("  ✓ constructedKeyPrefixes/isKeyDynamicallyCovered: 构造式前缀覆盖豁免语义");
+
+  // 辅助函数构造形态（2026-10-24 pre-push 实测）：键模板不落在 t() 调用点内，而是
+  // helper 组装后传入翻译函数（rtypeLabelKeyOf: return `rtype.label.${camelToKey(rtype)}`
+  // → rtypeLabelOf 内 tOf(key)）。同属构造式，静态前缀应同样抽出——否则 rtype.label.*
+  // 全族被误判 dead（18 键增量即此）。
+  // biome-ignore lint/suspicious/noTemplateCurlyInString: 被测对象就是构造式模板串，字面量写法刻意
+  const helperPrefixes = constructedKeyPrefixes("return `rtype.label.${camelToKey(rtype)}`;");
+  assert.ok(helperPrefixes.has("rtype.label."), "辅助函数内模板串构造应抽出前缀（helper 返回形态）");
+  assert.ok(isKeyDynamicallyCovered("rtype.label.sceneModel", helperPrefixes), "前缀下活键应豁免");
+  assert.ok(!isKeyDynamicallyCovered("sync.noPacks", helperPrefixes), "前缀外键不得豁免");
+  console.log("  ✓ helper 返回模板串形态: 前缀覆盖豁免");
+
+  // 单段头（`preview.${x}`）不得作为独立构造前缀——测试/脚本侧大量单段模板多为非键构造，
+  // 宽豁免会把基线真死键误捞成 test-only（2026-10-24 实证：基线 5 键曾因此被误捞）。
+  // biome-ignore lint/suspicious/noTemplateCurlyInString: 被测对象就是构造式模板串，字面量写法刻意
+  assert.equal(constructedKeyPrefixes("`preview.${x}`").size, 0, "独立模板单段头不得抽出前缀");
+  // biome-ignore lint/suspicious/noTemplateCurlyInString: 同上
+  assert.ok(
+    constructedKeyPrefixes("`preview.metric.${m}`").has("preview.metric."),
+    "独立模板两段头应抽出前缀",
+  );
+  console.log("  ✓ 独立模板段数下限: 单段不豁免、两段起豁免");
+}
+
+// ── 10. 动态覆盖营救（applyDynamicCoverage）────────────────
+{
+  // rtype.label.ysm 字面量只出现在测试里（→ test-only），但生产经 rtypeLabelKeyOf
+  // 动态构造消费——生产前缀覆盖应把它拉回 used，而非只救 dead 桶。
+  const prodPrefixes = constructedKeyPrefixes("return `rtype.label.${camelToKey(r)}`;");
+  // biome-ignore lint/suspicious/noTemplateCurlyInString: 被测对象就是构造式模板串
+  const rows = classifyKeyUsage(
+    ["rtype.label.ysm", "preview.close3d"],
+    new Set<string>(),
+    new Set<string>(["rtype.label.ysm"]),
+  );
+  const rescued = applyDynamicCoverage(rows, prodPrefixes, new Set<string>());
+  assert.equal(rescued[0]?.usage, "used", "test-only 键被生产构造前缀覆盖 → used");
+  assert.equal(rescued[1]?.usage, "dead", "未覆盖键保持 dead");
+  // 全仓侧覆盖只救 dead → test-only（原语义保持）
+  const allPrefixes = new Set<string>(["tree.family."]);
+  const deadRow = classifyKeyUsage(["tree.family.leaf"], new Set<string>(), new Set<string>());
+  assert.equal(
+    applyDynamicCoverage(deadRow, new Set<string>(), allPrefixes)[0]?.usage,
+    "test-only",
+    "仅全仓前缀覆盖 → test-only（保守降档）",
+  );
+  console.log("  ✓ applyDynamicCoverage: 生产覆盖→used / 全仓覆盖→test-only");
 }
 
 console.log("\n✅ test_i18n_unused.ts 全部通过");

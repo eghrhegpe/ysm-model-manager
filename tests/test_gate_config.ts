@@ -175,23 +175,42 @@ console.log(`  ✓ 阈值扫描器策略：${THRESHOLD_SCANNERS.length} 项均�
 // 并且必须校验「CI 兜底真实存在」——否则整条推理链的前提是假的（这正是 2026-10-08 版注释
 // 据「无独立步骤」误判「本地是唯一防线」的成因：没核 CI 到底跑没跑 --static）。
 {
-  const CI_ONLY_LOCAL_SKIP = ["auto-import.ts"];
+  // 缺席判据抽函数（第五轮锐评 P1-1）：只查 FRONTEND 一张表是**单侧盲区**——把工具挂进
+  // GO/DOC 域表同样绕开断言（且 deadcode 判定对象是 frontend 源码，挂进 Go push = 白付；
+  // 键使用面分析挂 docs 域 = 错位）。三张域表全查，第四个同构摘除出现时不再复制盲区。
+  const DOMAIN_TABLES: Array<[string, readonly { tool: string }[]]> = [
+    ["FRONTEND_STATIC_TOOLS", FRONTEND_STATIC_TOOLS],
+    ["GO_STATIC_TOOLS", GO_STATIC_TOOLS],
+    ["DOC_STATIC_TOOLS", DOC_STATIC_TOOLS],
+  ];
+  const assertNotInHotPath = (tool: string, why: string) => {
+    for (const [label, table] of DOMAIN_TABLES) {
+      assert.ok(
+        !table.some((e) => toolName(e) === tool),
+        `[gate-config] ${tool} 不得挂进 ${label}——${why}`,
+      );
+    }
+  };
+  const CI_ONLY_LOCAL_SKIP = ["auto-import.ts", "check-deadcode-baseline.ts"];
   for (const tool of CI_ONLY_LOCAL_SKIP) {
     assert.ok(
       allNames.has(tool),
       `[gate-config] ${tool} 必须在 ALL_STATIC_TOOLS（doctor --all + CI --static 的唯一兜底）`,
     );
-    assert.ok(
-      !FRONTEND_STATIC_TOOLS.some((e) => toolName(e) === tool),
-      `[gate-config] ${tool} 不得回到 FRONTEND_STATIC_TOOLS——本地热路径重复付费（CI --static 已同跑同源命令）`,
+    assertNotInHotPath(
+      tool,
+      "本地按域 push 热路径重复付费（远端兜底已在册，成本与判据见 gate-config.ts 该工具注释 + pre-push-gate.md 裁定记录）",
     );
-    const inAll = ALL_STATIC_TOOLS.find((e) => toolName(e) === tool) as
+  }
+  // auto-import 额外锁 --strict（CI 跑的就是这条命令，掉了就变提示级=不阻断）
+  {
+    const inAll = ALL_STATIC_TOOLS.find((e) => toolName(e) === "auto-import.ts") as
       | { args?: string[] }
       | undefined;
     assert.deepStrictEqual(
       inAll?.args,
       ["--strict"],
-      `[gate-config] ${tool} 在 ALL 里必须保持 --strict（CI 跑的就是这条命令，掉了就变提示级=不阻断）`,
+      "[gate-config] auto-import.ts 在 ALL 里必须保持 --strict",
     );
   }
   const ciYml = fs.readFileSync(path.join(ROOT, ".github", "workflows", "test.yml"), "utf8");
@@ -205,8 +224,13 @@ console.log(`  ✓ 阈值扫描器策略：${THRESHOLD_SCANNERS.length} 项均�
     /if \(\$LASTEXITCODE -ne 0\) \{ exit \$LASTEXITCODE \}/,
     "CI 静态治理步必须传播退出码——否则「远端兜底」是假兜底",
   );
+  // deadcode 的远端防线另一半：CI frontend job **独立步骤**真实存在（带 changed-base 归属
+  // 基线；--static 经 CI_INDEPENDENT_TOOLS 剔除避免同 job 双跑假红）——存在性由
+  // tests/test_gate_schedule.ts 第 9 组钉死，此处不重复。
+  // （测量数字刻意不写在这里：断言只验清单成员关系，成本依据见 gate-config.ts
+  //  该工具注释与 pre-push-gate.md 裁定记录——测试注释留判据不留会腐的测量值，第五轮锐评 P2-3）
   console.log(
-    `  ✓ CI 兜底项：${CI_ONLY_LOCAL_SKIP.join(", ")} 在 ALL（--strict）不在 FRONTEND，且 CI --static 步存在并传播退出码`,
+    `  ✓ CI 兜底项：${CI_ONLY_LOCAL_SKIP.join(", ")} 在 ALL、不在任何域表（三表遍历），且 CI --static 步存在并传播退出码`,
   );
 }
 

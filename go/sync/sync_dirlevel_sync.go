@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/packs"
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/types/registry"
@@ -101,6 +100,8 @@ func syncResourcesDirLevel(globalDir, instanceDir, rtype string, scanFn ScanEntr
 		if cached, cols, ok := loadDirLevelScanCache(rootDir, rtype, hashed); ok {
 			return cached, cols, false
 		}
+		// 代际守卫基准：load-miss 后立即捕获，下方 store 前比对（锐评 P1-4）。
+		epoch := syncCacheEpochOf()
 		var entries []types.ModelEntry
 		scanHit := false
 		if scanFn != nil {
@@ -116,7 +117,7 @@ func syncResourcesDirLevel(globalDir, instanceDir, rtype string, scanFn ScanEntr
 				// 否则会把「须走 Walk」误判为命中而永久跳过 Walk。
 				// hashed 用变量而非字面量 true：本分支今天只在 scanFn != nil 时可达（hashed 恒真），
 				// 但硬编码会让「读槽/写槽」在将来重构中悄悄分叉（复核 P3-6）。
-				storeSyncScanCache(&syncDirLevelScanCache, dirLevelCacheKey(rootDir, rtype, hashed), dirLevelCacheValue{Units: m, Collisions: collisions})
+				storeSyncScanCache(&syncDirLevelScanCache, dirLevelCacheKey(rootDir, rtype, hashed), dirLevelCacheValue{Units: m, Collisions: collisions}, epoch)
 				return m, collisions, true
 			}
 		}
@@ -254,13 +255,9 @@ func collectEntriesWalk(rootDir string, rtype string, hashByPath map[string]stri
 		if path == rootDir {
 			return nil
 		}
-		// 跳过回收站目录（与 scanner.ScanEntries 对齐）
-		if fsutil.IsRecycleDir(path) {
-			return filepath.SkipDir
-		}
-		// relink 备份尸体子树剔除（ADR-342）：恢复点不是模型，不得进同步 diff
-		if isRelinkBackupPath(path) {
-			return filepath.SkipDir
+		// 统一剔除闸（ADR-351 D1）：回收站 + relink 备份尸体整棵跳过
+		if err := skipExcludedDir(rootDir, path); err != nil {
+			return err
 		}
 		// 模型文件夹：在任意深度收集（不再限定一级子目录）
 		// 使用 memo 变体消除 patternFind 重复子树扫描（patternFind 已知残余 IO）
@@ -298,12 +295,14 @@ func collectEntriesWalkCached(rootDir, rtype string, hashed bool, hashByPath map
 	if cached, cols, ok := loadDirLevelScanCache(rootDir, rtype, hashed); ok {
 		return cached, cols
 	}
+	// 代际守卫基准（锐评 P1-4）：load-miss 后立即捕获，store 前比对。
+	epoch := syncCacheEpochOf()
 	entries, collisions, partialFail := collectEntriesWalk(rootDir, rtype, hashByPath)
 	// 完整 Walk 才入缓存（对齐 sync.go 的 rootFailed/partialFail 双守卫）：
 	// 根目录存在 ≠ 子树扫完整——原 os.Stat 守卫与完整性无关，子目录读失败时
 	// 残缺 entries 仍会被缓存 30s 当权威。partialFail 已覆盖 root 不存在（首回调即 err）。
 	if !partialFail {
-		storeSyncScanCache(&syncDirLevelScanCache, dirLevelCacheKey(rootDir, rtype, hashed), dirLevelCacheValue{Units: entries, Collisions: collisions})
+		storeSyncScanCache(&syncDirLevelScanCache, dirLevelCacheKey(rootDir, rtype, hashed), dirLevelCacheValue{Units: entries, Collisions: collisions}, epoch)
 	}
 	return entries, collisions
 }

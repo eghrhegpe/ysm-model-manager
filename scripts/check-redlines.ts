@@ -636,7 +636,7 @@ function runChecks() {
           hasContext(
             f,
             line,
-            /workshopSitesPath|creatorsPath|configPath\(\)|ledgerPath|removeLedger/,
+            /workshopSitesPath|creatorsPath|configPath\(\)|configDir\(\)|ledgerPath|removeLedger/,
             10,
             cache,
           )

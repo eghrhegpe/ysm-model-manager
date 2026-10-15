@@ -121,3 +121,38 @@ func TestToggleEnable(t *testing.T) {
 		}
 	})
 }
+
+// 目录存在性只读查询（锐评 2026-10-17 P2⑤）：导入会整份覆盖 FilesRoot/McRoot/CustomRoots，
+// 旧机的路径大概率在本机不存在；前端据此提示用户去「环境」页重设。纯只读、零副作用。
+func TestDirectoryExists(t *testing.T) {
+	a := newLinkModeApp()
+
+	t.Run("存在的目录返回 true", func(t *testing.T) {
+		dir := t.TempDir()
+		if !a.DirectoryExists(dir) {
+			t.Fatalf("已创建目录应返回 true: %s", dir)
+		}
+	})
+
+	t.Run("不存在的路径返回 false", func(t *testing.T) {
+		if a.DirectoryExists(filepath.Join(t.TempDir(), "nope")) {
+			t.Fatal("不存在的路径应返回 false")
+		}
+	})
+
+	t.Run("空路径返回 false", func(t *testing.T) {
+		if a.DirectoryExists("") {
+			t.Fatal("空路径应返回 false")
+		}
+	})
+
+	t.Run("普通文件返回 false（只认目录）", func(t *testing.T) {
+		f := filepath.Join(t.TempDir(), "f.txt")
+		if err := os.WriteFile(f, []byte("x"), 0o644); err != nil {
+			t.Fatalf("写临时文件: %v", err)
+		}
+		if a.DirectoryExists(f) {
+			t.Fatal("普通文件应返回 false（只认目录）")
+		}
+	})
+}

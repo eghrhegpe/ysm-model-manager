@@ -24,12 +24,19 @@ export function safeGet(key: string): string | null {
   }
 }
 
-/** 安全写：存储不可用时静默忽略持久化（不中断调用方） */
-export function safeSet(key: string, val: string): void {
+/**
+ * 安全写：存储不可用（隐私模式）或配额满（QuotaExceededError）时记 warn 并返回 false，
+ * 不中断调用方。返回值供「必须知道是否真落盘」的调用方计数——典型是设置导入回写
+ * （settings-backup.ts）：静默失败若不算数，提示「已应用 N 项」就虚高，用户在半推半就的
+ * 分叉状态前失去唯一线索。其余调用方（fire-and-forget 的 UI 偏好写）忽略它即可。
+ */
+export function safeSet(key: string, val: string): boolean {
   try {
     localStorage.setItem(key, val);
+    return true;
   } catch (err) {
     logWarn("storage", `safeSet(${key}) 失败`, err);
+    return false;
   }
 }
 
@@ -39,6 +46,17 @@ export function safeRemove(key: string): void {
     localStorage.removeItem(key);
   } catch (err) {
     logWarn("storage", `safeRemove(${key}) 失败`, err);
+  }
+}
+
+/** 安全枚举键：存储不可用时返回空数组。键族展开（keyPattern 通配匹配）只能靠扫描真键，
+ *  不能凭前缀猜——键名拼接规则若变，猜出来的集合立刻错。 */
+export function safeKeys(): string[] {
+  try {
+    return Object.keys(localStorage);
+  } catch (err) {
+    logWarn("storage", "safeKeys() 失败", err);
+    return [];
   }
 }
 

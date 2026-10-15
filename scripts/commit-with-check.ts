@@ -104,6 +104,64 @@ function git(args: string[]) {
   return r.ok ? r.out.trim() : "";
 }
 
+/** gen 产物目录（pre-commit 自动 stage，非人工改动，归属诊断里按噪音剔除） */
+const GEN_NOISE_DIRS = ["docs/", "frontend/public/", "completions/", "docs/.vitepress/"];
+
+/**
+ * 失败归属诊断（低风险：纯信息增益，不改阻断语义）。
+ *
+ * 立因：门禁失败时只输出「结论 FAIL + 违规名」，**不告诉你失败项是否源于本次变更域**。
+ * 实测：改 `scripts/*.ts` 触发全量契约测试（scripts→tests 域归全量），`test_testid_contract`
+ * 全库扫 data-testid 撞上并行会话在 diagnostics 视图引入的 ORPHAN——门禁把别人的债算到
+ * 本次提交头上，用户花几分钟才定位是并行污染（AGENTS.md 已知设计，故有 `git commit -- <file>`
+ * fallback）。本函数把「谜语人」变透明：
+ *   1. 失败 tail 中出现的变更域文件 = 本次引入的直接证据（启发式，可靠正、可能漏）。
+ *   2. 工作区非变更域改动 = 并行会话/存量债在场的直接证据（可靠）。
+ *   3. 两者皆无 → 提示疑为存量债（全库扫描类测试的既有失败）。
+ *
+ * ⚠️ 本函数**只打印诊断、不改变判定**；门禁 fail-closed 阻断语义不变。
+ */
+function diagnoseOwnership(
+  checkPaths: string[],
+  failed: Array<{ label: string; tail?: string | undefined; note?: string | undefined }>,
+): void {
+  const tailAll = failed.map((f) => `${f.tail || ""}\n${f.note || ""}`).join("\n");
+  const inScope = new Set(checkPaths.map((p) => p.replace(/\/$/, "")));
+  const touched = checkPaths.filter((p) => tailAll.includes(p));
+
+  const statusRaw = git(["status", "--short"]);
+  const outside: string[] = [];
+  for (const line of statusRaw.split("\n")) {
+    const m = line.match(/^(..)\s+(.+?)$/);
+    if (!m) continue;
+    const file = (m[2] ?? "").trim();
+    if (!file || inScope.has(file)) continue;
+    if (GEN_NOISE_DIRS.some((d) => file.startsWith(d))) continue;
+    outside.push(`${m[1]} ${file}`);
+  }
+
+  console.log("");
+  console.log("━━━ 失败归属诊断（信息增益，不改变判定）━━━");
+  if (touched.length > 0) {
+    console.log(`✅ 变更域内文件出现在失败详情中（本次引入嫌疑）:`);
+    for (const p of touched) console.log(`     · ${p}`);
+  } else {
+    console.log(`⚠️  变更域内文件（${checkPaths.length} 个）均未出现在失败详情中——失败可能与本次改动无关`);
+    for (const p of checkPaths) console.log(`     · ${p}`);
+  }
+  if (outside.length > 0) {
+    console.log(`⚠️  工作区存在 ${outside.length} 个非变更域改动（疑并行会话/存量债）:`);
+    for (const p of outside.slice(0, 12)) console.log(`     ${p}`);
+    if (outside.length > 12) console.log(`     … 其余 ${outside.length - 12} 个`);
+    console.log(
+      "    → 失败可能源于这些改动而非本次提交。AGENTS.md 允许 `git commit -- <本文件> --only` fallback（先 git status 确认只含自己的文件）。",
+    );
+  } else {
+    console.log("✅ 工作区无非变更域改动（非并行污染；失败若与变更域无关则疑为存量债）");
+  }
+  console.log("──────────────────────────────────────────");
+}
+
 // ── 1. 白名单路径：--files 直取；否则读主 index staged 清单（向后兼容旧用法）──
 // 提交/校验双作用域（code_review P2 修复，2026-09-02）：commitWithTempIndex 按 paths
 // 从工作区取内容入库，若把「未暂存 docs」也塞进提交白名单，无关的 WIP 改动会被静默
@@ -204,6 +262,12 @@ console.log("");
   console.log(`门禁耗时: ${(gateMs / 1000).toFixed(1)}s`);
 
   if (!check.ok) {
+    diagnoseOwnership(
+      checkPaths,
+      check.results
+        .filter((r) => !r.ok)
+        .map((r) => ({ label: r.label, tail: r.tail, note: r.note })),
+    );
     console.log("");
     console.log("结论: FAIL ❌ 轻量门禁未通过，未提交");
     process.exit(1);

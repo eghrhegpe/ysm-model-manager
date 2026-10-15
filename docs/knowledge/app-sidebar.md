@@ -40,6 +40,9 @@ auto_fields:
     - SidebarHost
     - SidebarInstance
     - SYNC_TYPE_ALL
+    - syncResultContentHTML
+    - SyncResultData
+    - syncResultPanelHTML
     - VIEW_TESTIDS
   tests:
     - frontend/src/features/community/data.test.ts

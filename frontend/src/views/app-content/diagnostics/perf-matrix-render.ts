@@ -373,8 +373,10 @@ export async function populatePerfTargetOptions(
     const icon = typeof ty.icon === "string" ? ty.icon : "";
     // 顺序 = 注册表按 id 字典序（localeCompare），逐字保持现状；label 带图标。
     // **显示名走 i18n 单点出口**（知识卡 P1-3：`ty.name` 派生自 resource_types.json 的中文
-    // name 字段，直取上屏 = en/ja 界面中文裸奔）；rtypeLabelOf 缺键自回落注册表名再回落 id，
-    // 与旧的 `ty.name ?? ty.id` 语义等价，故 zh-CN 下逐字不变。
+    // name 字段，直取上屏 = en/ja 界面中文裸奔）；rtypeLabelOf 缺键自回落注册表名再回落 id。
+    // ⚠️ 但二者**语义不等价**（locale 优先于 name）：本下拉当前 zh 显示与旧值一致，只是
+    // 按 cliAnalyzable 过滤后剩 ysm/maid-model 两家恰好同形——扩可分析类型即漂（见知识卡
+    // 「zh 键与注册表 name 存在 6/15 漂移」条），别把偶然当必然。
     typeRows.push({ value: String(ty.id), label: `${icon} ${rtypeLabelOf(String(ty.id))}`.trim() });
   }
   // 组 2：按模型类型（同类型内横向比）——必须在 typeRows 填满后拼，否则组空

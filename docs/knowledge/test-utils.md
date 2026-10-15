@@ -9,6 +9,7 @@ auto_fields:
   symbols_with_lines:
     - appFn
     - BlobUrlStubs
+    - CJK_HAN_RE
     - deriveTestIds
     - expectContainsAtLeast
     - expectNotContains
@@ -50,6 +51,9 @@ auto_fields:
     - stubConsoleWarn
     - stubFetch
     - stubLogWarn
+    - tOfChain
+    - TofChainMode
+    - TofChainOptions
     - unmountElement
     - waitFor
     - waitForElementToBeRemoved

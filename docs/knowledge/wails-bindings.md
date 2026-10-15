@@ -74,6 +74,7 @@ auto_fields:
     - App.ImportModelFolderTo
     - App.InstallResourceToInstance
     - App.InvalidateScanCache
+    - App.InvalidateScanPath
     - App.IsFileBanned
     - App.ListAllFilePaths
     - App.ListByTag
@@ -117,8 +118,7 @@ auto_fields:
     - App.SaveWorkshopCreatorsBySite
     - App.SaveWorkshopPresetsBySite
     - App.SaveWorkshopSites
-    - App.ScanLocalAuthors
-    - symbols_total: 119
+    - symbols_total: 121
 quick_groups:
   - 后端桥接与数据存储
 quick_intents:

@@ -180,6 +180,40 @@ describe("single-bench 面板", () => {
     expect(out.querySelector(".perf-bar-danger")).toBeTruthy();
   });
 
+  it("单模型结果渲染出下钻按钮（data-drill-path = relPath，作为连接键）", async () => {
+    executeCLI.mockResolvedValue({ status: "success", command: "single-bench", data: SINGLE_STRUCTURED });
+    const root = makeRoot();
+    initPerfPanel(root, esc);
+    (root.getElementById("diag-perf-model") as HTMLInputElement).value = "./ysm/player.ysm";
+    (root.getElementById("diag-perf-run") as HTMLElement).click();
+    await flushPromises();
+    const btn = (root.getElementById("diag-perf-single") as HTMLElement).querySelector<HTMLElement>(
+      "[data-drill-trace]",
+    );
+    expect(btn).not.toBeNull();
+    expect(btn?.dataset.drillPath).toBe("ysm/player.ysm");
+    expect(btn?.dataset.drillFormat).toBe("ysm");
+  });
+
+  it("点击下钻按钮 → 加载剖析区段出现缺席提示（store 无该模型记录，缺席事实说清）", async () => {
+    executeCLI.mockResolvedValue({ status: "success", command: "single-bench", data: SINGLE_STRUCTURED });
+    const root = makeRoot();
+    initPerfPanel(root, esc);
+    (root.getElementById("diag-perf-model") as HTMLInputElement).value = "./ysm/player.ysm";
+    (root.getElementById("diag-perf-run") as HTMLElement).click();
+    await flushPromises();
+    const btn = (root.getElementById("diag-perf-single") as HTMLElement).querySelector<HTMLElement>(
+      "[data-drill-trace]",
+    );
+    expect(btn).not.toBeNull();
+    btn!.click();
+    await flushPromises();
+    const trace = root.getElementById("diag-load-trace") as HTMLElement;
+    const miss = trace.querySelector("[data-testid='diag-drill-miss']");
+    expect(miss).not.toBeNull();
+    expect(miss?.textContent).toContain("ysm/player.ysm");
+  });
+
   it("命令失败时显示错误占位", async () => {
     executeCLI.mockResolvedValue({
       status: "error",

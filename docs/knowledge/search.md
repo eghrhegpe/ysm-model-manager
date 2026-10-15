@@ -34,6 +34,7 @@ auto_fields:
     - App.ExtractYsmSummary
     - App.GenerateRepoIndex
     - App.GetModel3DSpec
+    - App.InvalidateScanPath
     - App.ListAllFilePaths
     - App.ListFileNames
     - App.ListModelAuthors
@@ -45,6 +46,7 @@ auto_fields:
     - App.ScanLocalAuthors
     - App.ScanModelEntries
     - App.ScanModelEntriesFiltered
+    - App.ScanModelEntriesForBrowse
     - App.ScanModelEntriesWithLabel
     - App.SearchModels
     - AppliedAdvFilter

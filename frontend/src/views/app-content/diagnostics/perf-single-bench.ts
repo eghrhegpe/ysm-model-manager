@@ -454,6 +454,16 @@ function singleBenchRenderBars(payload: SingleBenchPayload, esc: EscFn): string 
   if (typeText) labelParts.push(typeText);
   if (id?.relPath) labelParts.push(id.relPath);
   const label = labelParts.map((s) => esc(s)).join(" · ");
+  // 阶段→加载剖析下钻（2026-10-15 锐评 P1 拍板）：CLI 基准的阶段只是触发上下文，
+  // 下钻目标 = 同一模型在**前端 3D 预览**的实测 trace（两面板是两次独立观测，不做假对应）。
+  // 只有单模型身份才有可用的连接键（relPath + rtype）；矩阵/目标集聚合态无可下钻的单一模型。
+  const drillBtn = id?.relPath
+    ? `<div class="perf-drill-bar"><button type="button" class="btn-base perf-drill-btn" data-drill-trace data-drill-path="${esc(
+        id.relPath,
+      )}" data-drill-format="${esc(id.rtype)}" title="${esc(t("diagnostics.perfDrillTraceHint"))}">${UI_ICONS.performance} ${esc(
+        t("diagnostics.perfDrillTrace"),
+      )}</button></div>`
+    : "";
   const totalLine = `<div class="perf-total">${UI_ICONS.clock} ${t("diagnostics.perfTotal")}: ${t(
     "diagnostics.perfTotalDetail",
     {
@@ -467,6 +477,7 @@ function singleBenchRenderBars(payload: SingleBenchPayload, esc: EscFn): string 
     : "";
   return (
     sectionHeader(UI_ICONS.performance, label, rawOutput) +
+    drillBtn +
     `<div class="perf-bars" style="padding:var(--sp-vh-perf);user-select:text;-webkit-user-select:text">${bars}</div>` +
     totalLine +
     bottleneckLine +

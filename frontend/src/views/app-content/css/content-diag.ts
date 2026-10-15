@@ -218,6 +218,13 @@ export const contentDiagCSS: string = `
 .perf-sb-diff { font-size:var(--fs-xs); color:var(--muted); word-break:break-all; padding-left:10px; }
 .perf-hist-card { border:1px solid var(--bd); border-radius:var(--radius-card); background:var(--surf); padding:var(--sp-vh-btn); margin:4px 0; animation: conflictRowIn .3s ease both; } /* 审计 P1-2：卡片圆角收口 --radius-card */
 
+/* ===== 锐评 P1 下钻（阶段→加载剖析）===== */
+.perf-drill-bar { display:flex;align-items:center;margin:6px 0; }
+.perf-drill-btn { display:inline-flex;align-items:center;gap:4px;font-size:var(--fs-xs);padding:var(--btn-padding-std);border:1px solid var(--bd);border-radius:var(--radius-md);background:transparent;color:var(--txt);cursor:pointer;font-family:inherit; }
+.perf-drill-btn:hover { color:var(--accent);border-color:var(--accent); }
+.perf-hist-card--focus { border-color:var(--accent);box-shadow:0 0 0 1px var(--accent); } /* 下钻命中记录描边 */
+.perf-drill-miss { border:1px dashed var(--bd);border-radius:var(--radius-card);background:color-mix(in srgb,var(--status-warning) 10%,transparent);padding:var(--sp-vh-btn);margin:4px 0;color:var(--txt);font-size:var(--fs-sm);line-height:1.5; } /* 下钻未命中：缺席事实当场说清 */
+
 /* ===== 加载剖析面板 ===== */
 .perf-trace-meta { font-size:var(--fs-xs);color:var(--muted);word-break:break-all; }
 .perf-gantt-wrap { padding:var(--sp-vh-perf); }

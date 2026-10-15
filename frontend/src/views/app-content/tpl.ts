@@ -63,6 +63,9 @@ export const VIEW_TESTIDS: readonly string[] = [
   // 2026-10-15 锐评改进 P0：基准三件套的密度开关（简版收起 / 进阶展开）——
   // e2e 与单测按此断言「收起时勾选归零、进阶态跨会话保留」；id 归 handler / CSS 锚点。
   "diag-perf-density",
+  // 2026-10-15 锐评 P1：阶段→加载剖析下钻的「未命中缺席提示行」——
+  // 下钻到 trace 但 store 里没有该模型记录时插入，e2e 按它断言「缺席事实被说清」而非静默空态。
+  "diag-drill-miss",
   // ADR-262 D5：并发基准入口（并发度 / 取样上限 / 运行）——目标集与排序共用上方那一套（ADR-278 §2.2）
   "diag-perf-conc-workers",
   // ADR-278 §2.2：单模型 / 并发**共用**同一套目标集 / 排序控件（即上方登记的 #diag-perf-rtype /

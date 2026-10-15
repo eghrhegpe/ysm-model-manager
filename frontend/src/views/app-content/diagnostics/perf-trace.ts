@@ -19,6 +19,15 @@ import { sectionHeader } from "./perf-common.ts";
 /** 面板一次最多展开几条记录（store 上限 50，其余只报数——避免 50 张甘特图糊满屏）。 */
 const TRACE_MAX_SHOWN = 5;
 
+/** 下钻聚焦目标：命中（path 置顶高亮）或未命中（miss 提示行），二选一。
+ *  定义在消费侧（perf-trace），生产侧（perf-drill）从本文件 import —— 保证依赖单向、无环。 */
+export interface TraceFocus {
+  /** 命中的 trace.path —— 该记录被置顶 + 描边高亮 */
+  path?: string;
+  /** 未命中时展示的目标 relPath —— trace 区段顶部插入提示行 */
+  miss?: string;
+}
+
 function formatTime(ms: number): string {
   if (ms >= 1000) return `${(ms / 1000).toFixed(2)}s`;
   if (ms >= 100) return `${ms.toFixed(0)}ms`;
@@ -31,7 +40,12 @@ function formatTime(ms: number): string {
  * 甘特图刻度由调用方传 `sharedMaxMs`：**所有卡片共用同一把尺**，条长才能横向对比；
  * 各自归一化会产生「快记录的小段看起来和慢记录的大段一样长」的错觉。
  */
-function renderTraceRecord(rec: LoadTrace, esc: EscFn, sharedMaxMs: number): string {
+function renderTraceRecord(
+  rec: LoadTrace,
+  esc: EscFn,
+  sharedMaxMs: number,
+  focused = false,
+): string {
   const stages = rec.stages ?? [];
   const totalMs = stages.reduce((s, st) => s + st.ms, 0);
 
@@ -114,7 +128,7 @@ function renderTraceRecord(rec: LoadTrace, esc: EscFn, sharedMaxMs: number): str
   const meta = `${esc(rec.path)} · ${formatClock(rec.ts)} · ${rec.format.toUpperCase()} · ${t("diagnostics.loadTraceStages", { n: stages.length })}`;
 
   return (
-    `<div class="perf-hist-card">` +
+    `<div class="perf-hist-card${focused ? " perf-hist-card--focus" : ""}">` +
     `<div class="perf-trace-meta">${meta}${coarse}</div>` +
     `<div class="perf-gantt-wrap" style="padding:var(--sp-vh-perf)">${ganttSvg}</div>` +
     `<div class="perf-total">${UI_ICONS.clock} ${t("diagnostics.perfTotal")}: ${formatTime(totalMs)}</div>` +
@@ -124,13 +138,30 @@ function renderTraceRecord(rec: LoadTrace, esc: EscFn, sharedMaxMs: number): str
   );
 }
 
-/** 渲染加载剖析区段（最近 TRACE_MAX_SHOWN 条，新的在前；其余只报数） */
-export function renderLoadTraceSection(root: ShadowRoot, esc: EscFn): void {
+/**
+ * 渲染加载剖析区段（最近 TRACE_MAX_SHOWN 条，新的在前；其余只报数）。
+ *
+ * `focus`（下钻聚焦）：命中 path 时该记录**置顶 + 描边高亮**（即使不在最近 N 条也要呈现——
+ * 下钻的语义是「定位到那条记录」，不能被展示上限截断吞掉）；未命中时顶部插入提示行，
+ * 把「该模型前端侧未实测」这个缺席事实当场说清（`single-bench` 跑 CLI 不写 trace store）。
+ */
+export function renderLoadTraceSection(root: ShadowRoot, esc: EscFn, focus?: TraceFocus): void {
   const container = root.getElementById("diag-load-trace");
   if (!container) return;
   const traces = getLoadTraces();
+  // 引用比较（store 的浅拷贝快照保留元素引用），不按字符串再归一化——那是匹配层的职责
+  const focusRec = focus?.path ? traces.find((tr) => tr.path === focus.path) : undefined;
+
+  const missLine =
+    focus?.miss && !focusRec
+      ? `<div class="perf-drill-miss" data-testid="diag-drill-miss">${UI_ICONS.warning} ${esc(
+          t("diagnostics.loadTraceDrillMiss", { path: focus.miss }),
+        )}</div>`
+      : "";
+
   if (!traces.length) {
     container.innerHTML =
+      missLine +
       `<div class="perf-no-data">${t("diagnostics.loadTraceNoData")}</div>` +
       `<div class="perf-no-hint">${t("diagnostics.loadTraceHint")}</div>`;
     return;
@@ -138,11 +169,15 @@ export function renderLoadTraceSection(root: ShadowRoot, esc: EscFn): void {
 
   // 新的在前（最近的加载 = 用户刚做的事），最多展开 TRACE_MAX_SHOWN 条
   const shown = traces.slice(-TRACE_MAX_SHOWN).reverse();
+  if (focusRec && !shown.includes(focusRec)) shown.unshift(focusRec);
   const hidden = traces.length - shown.length;
   // 跨记录共享刻度：本批所有阶段的最大值（对比的前提是同一把尺，见 renderTraceRecord）
   const sharedMaxMs = Math.max(...shown.flatMap((r) => (r.stages ?? []).map((s) => s.ms)), 1);
 
-  const blocks = shown.map((rec) => renderTraceRecord(rec, esc, sharedMaxMs)).join("");
+  const focusPath = focusRec?.path;
+  const blocks = shown
+    .map((rec) => renderTraceRecord(rec, esc, sharedMaxMs, rec.path === focusPath))
+    .join("");
   const hiddenHtml =
     hidden > 0
       ? `<div class="perf-tex-more">${t("diagnostics.loadTraceMoreRecords", { n: hidden })}</div>`
@@ -150,6 +185,7 @@ export function renderLoadTraceSection(root: ShadowRoot, esc: EscFn): void {
 
   container.innerHTML =
     sectionHeader(UI_ICONS.search, t("diagnostics.loadTraceTitle")) +
+    missLine +
     `<div class="perf-trace-meta" style="padding:var(--pad-nav) 2px 0">${t("diagnostics.loadTraceCount", { n: traces.length, max: 50 })}</div>` +
     blocks +
     hiddenHtml +

@@ -439,6 +439,9 @@ export const en: Record<string, string> = {
   "diagnostics.perfStageStats": "p95 {p95}ms (n={n})",
   "diagnostics.perfStageStatsHint":
     "median {median}ms / p95 {p95}ms; n = times this stage actually ran",
+  "diagnostics.perfDrillTrace": "View front-end load",
+  "diagnostics.perfDrillTraceHint":
+    "Jump to the front-end 3D load trace of the same model (CLI benchmark and front-end load are two separate measurements; no per-stage mapping)",
   // Baseline entry + verdict (ADR-262 D8): paths and criteria live in Go; the UI only phrases it
   // Parameter density (2026-10-15): the baseline trio is collapsed by default to ease the single-screen load
   "diagnostics.perfDensityMore": "Baseline options",
@@ -613,6 +616,8 @@ export const en: Record<string, string> = {
   "diagnostics.loadTraceCoarseHint":
     "this format records one combined stage only (adapter timer granularity differs)",
   "diagnostics.loadTraceGpuUncollected": "not collected",
+  "diagnostics.loadTraceDrillMiss":
+    "No front-end load record found for {path} — CLI benchmarks do not write to this panel. Open the model in the 3D preview first.",
   "diagnostics.metric.assetsBones": "Bone Count",
   "diagnostics.assetsCubes": "Cubes",
   "diagnostics.assetsMats": "Materials",

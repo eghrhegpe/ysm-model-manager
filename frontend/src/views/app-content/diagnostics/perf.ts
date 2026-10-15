@@ -15,6 +15,7 @@ import type { EscFn } from "@/utils/html/html.ts";
 import { bindPerfCopyHandlers, readActiveBenchMode } from "./perf-common.ts";
 import { concReadIds, runConcurrentBench } from "./perf-concurrent.ts";
 import { initPerfDensity } from "./perf-density.ts";
+import { bindPerfDrillHandler } from "./perf-drill.ts";
 import { PERF_TARGET_REPO, populatePerfTargetOptions } from "./perf-matrix-render.ts";
 import { runScanBench, scanBenchReadIds } from "./perf-scan-bench.ts";
 import { runSingleBench, singleBenchReadIds } from "./perf-single-bench.ts";
@@ -182,6 +183,8 @@ export function applyPerfModeUI(root: ShadowRoot): void {
 /** 初始化性能面板（基准三模式 / 加载剖析） */
 export function initPerfPanel(root: ShadowRoot, esc: EscFn): void {
   bindPerfCopyHandlers(root);
+  // 阶段→加载剖析下钻（锐评 P1）：结果容器委托，single-bench 重渲染后无需重绑
+  bindPerfDrillHandler(root, esc);
   // 参数密度（2026-10-15 锐评改进 P0）：先于 initPerfMode 装配。密度轴（.perf-density-off）
   // 与模式轴（.perf-mode-off）是两个独立 class，各自 toggle 各自、任一判隐即隐藏；
   // 本模块还负责「收起即归零基准勾选」——不可见的勾选不得参与下一次命令的参数组装。

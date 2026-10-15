@@ -34,6 +34,7 @@ auto_fields:
     - App.GetYSMRepoRoot
     - App.ImportModelFolder
     - App.ImportModelFolderTo
+    - App.InvalidateScanPath
     - App.IsFileBanned
     - App.ListAllFilePaths
     - App.ListFileNames
@@ -55,6 +56,7 @@ auto_fields:
     - App.ScanLocalAuthors
     - App.ScanModelEntries
     - App.ScanModelEntriesFiltered
+    - App.ScanModelEntriesForBrowse
     - App.ScanModelEntriesWithLabel
     - App.SearchModels
     - App.SelectDirectory

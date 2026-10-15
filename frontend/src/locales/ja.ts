@@ -438,6 +438,9 @@ export const ja: Record<string, string> = {
   "diagnostics.perfBottleneck": "最遅段階",
   // 段階の実行層とサンプル統計（ADR-262 D2）
   "diagnostics.perfStageRuntimeHint": "この段階の実行層（Go / Rust / WASM / JS / Three）",
+  "diagnostics.perfDrillTrace": "フロントエンドのロード実測を見る",
+  "diagnostics.perfDrillTraceHint":
+    "同じモデルのフロントエンド 3D ロード実測へ移動（CLI ベンチとフロントロードは別の観測で、段階ごとの対応付けはしない）",
   "diagnostics.perfStageStats": "p95 {p95}ms（n={n}）",
   "diagnostics.perfStageStatsHint": "中央値 {median}ms / p95 {p95}ms；n = この段階の実際の出現回数",
   // 基準の入口と判定（ADR-262 D8）：パスと判定基準は Go 側、UI は文言のみ
@@ -608,6 +611,8 @@ export const ja: Record<string, string> = {
   "diagnostics.loadTraceCoarseHint":
     "この形式は 1 段階の合計時間のみ記録します（adapter ごとに計測粒度が異なります）",
   "diagnostics.loadTraceGpuUncollected": "未取得",
+  "diagnostics.loadTraceDrillMiss":
+    "{path} のフロントエンドロード記録が見つかりません — CLI ベンチはこのパネルに書き込みません。3D プレビューでモデルを開いてから確認してください",
   "diagnostics.metric.assetsBones": "ボーン数",
   "diagnostics.assetsCubes": "キューブ",
   "diagnostics.assetsMats": "マテリアル",

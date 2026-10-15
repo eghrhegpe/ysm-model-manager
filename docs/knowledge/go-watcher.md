@@ -11,6 +11,7 @@ auto_fields:
     - ScanFunc
     - Watcher
     - Watcher.IsRunning
+    - Watcher.SetOnChange
     - Watcher.Start
     - Watcher.Stop
     - Watcher.WaitReady

@@ -430,6 +430,9 @@ export const zhCN = {
   "diagnostics.perfBottleneck": "最慢阶段",
   // 阶段运行归属与样本统计（ADR-262 D2）：没有归属就看不出这段跑在 Go / Rust / WASM / Three 上
   "diagnostics.perfStageRuntimeHint": "该阶段的运行归属（Go / Rust / WASM / JS / Three）",
+  "diagnostics.perfDrillTrace": "查看前端加载实测",
+  "diagnostics.perfDrillTraceHint":
+    "跳到同一模型的前端 3D 加载实测（CLI 基准与前端加载是两次独立观测，不逐阶段对应）",
   // 基准入口与判决（ADR-262 D8）：路径与判据全在 Go，前端只说人话
   // 参数密度（2026-10-15 锐评改进 P0）：基准三件套默认收起，降低 single 屏的认知负担
   "diagnostics.perfDensityMore": "基准对比选项",
@@ -591,6 +594,8 @@ export const zhCN = {
   "diagnostics.loadTraceStages": "{n} 段",
   "diagnostics.loadTraceCoarseHint": "该格式只记了 1 段合并耗时（各 adapter 计时粒度不同）",
   "diagnostics.loadTraceGpuUncollected": "未采集",
+  "diagnostics.loadTraceDrillMiss":
+    "未找到 {path} 的前端加载记录——CLI 基准不写入本面板，请到 3D 预览打开该模型后再看",
   "diagnostics.metric.assetsBones": "骨骼数",
   "diagnostics.assetsCubes": "立方体",
   "diagnostics.assetsMats": "材质",

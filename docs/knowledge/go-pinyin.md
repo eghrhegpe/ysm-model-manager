@@ -7,7 +7,7 @@ status: active
 source_files:
   - go/pinyin/
   - go/cli/pinyin_table.go
-  - tests/fixtures/search-golden.json
+  - tests/fixtures/parity/search-golden.json
 auto_fields:
   symbols_with_lines:
     - CharPinyin
@@ -62,7 +62,7 @@ pitfalls:
 ## 与其他子系统关系
 
 - `internal/app/app_scan.go` — SearchModels 关键词面（数值面不变，几何分析分流见 search / go-geometry-* 卡）
-- `frontend/src/utils/search/` — match.ts（同判据 TS 实现）+ pinyin-table.ts（生成物）；金样例 `tests/fixtures/search-golden.json` 双读对账（Go `TestMatchKeyword_Golden` + TS `match.test.ts`，「跨语言靠测试对账而非共享代码」范式，genindex 双工先例）
+- `frontend/src/utils/search/` — match.ts（同判据 TS 实现）+ pinyin-table.ts（生成物）；金样例 `tests/fixtures/parity/search-golden.json` 双读对账（Go `TestMatchKeyword_Golden` + TS `match.test.ts`，「跨语言靠测试对账而非共享代码」范式，genindex 双工先例）
 - 卡片：`search.md`（编排层）、`go-cli-search.md`（CLI 面）、`app-tree.md`（树内联面）、`web-fs-mutate-scan.md`（web 面）
 
 ## 不变量
@@ -76,5 +76,5 @@ pitfalls:
 ## 相关
 
 - `go/cli/pinyin_table.go` — CLI 生成命令
-- `tests/fixtures/search-golden.json` — 金样例（双面共读）
+- `tests/fixtures/parity/search-golden.json` — 金样例（双面共读）
 - `frontend/src/utils/search/match.ts` — TS 同判据实现

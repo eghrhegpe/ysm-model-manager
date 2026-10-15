@@ -570,6 +570,13 @@ const KNOWN_DEAD_CSS_EXEMPT = new Set<string>([
   "cr-tag-repo",
   "cr-tag-vup",
   "cr-tag-oc",
+  // sr-*：app-sidebar/tpl.ts|syncResultRow `class="sr-row sr-${kind}"` 动态拼接
+  // （kind ∈ ok/fail/overwrite/notice，行 187）。sr-fail/sr-notice/sr-overwrite 三态
+  // 全仓无字面量消费者（.sync-result 浮层运行时才拼出），故登记；
+  // sr-ok 走 .sr-row 默认色（无独立规则），不在登记面。
+  "sr-fail",
+  "sr-overwrite",
+  "sr-notice",
 ]);
 
 /** 承载 CSS 的源文件标记（比函数头注释里的发现规则宽一档：`[A-Za-z0-9_]*CSS` 收下

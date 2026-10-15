@@ -75,7 +75,7 @@ vi.mock("@/backend/app.ts", () => ({ getApp }));
 vi.mock("@/utils/debug/dev-mode.ts", () => ({ isDevMode }));
 
 import { bindBrowseEvents } from "./events.ts";
-import { creatorStarBtnHtml } from "./render.ts";
+import { creatorBandOf, creatorStarBtnHtml } from "./render.ts";
 import type { SiteViewState } from "./types.ts";
 
 /** bindBrowseEvents 的追踪版：cleanup 入桶，afterEach 统一调用（模拟产品路径的配对语义） */
@@ -192,6 +192,45 @@ describe("bindBrowseEvents — 基础绑定", () => {
     trackedBind(s2.state, () => {});
     (s2.searchResults.querySelector(".cr-preset-btn") as HTMLElement).click();
     expect(open2).toHaveBeenCalledWith("https://s");
+  });
+
+  it("收藏置顶重排后**色带重盖章**：颜色跟新位次走，不跟卡片身份走", () => {
+    // 2026-10-15 语义重做配套：色带 = 位置语义（展示序每 9 张换一色），
+    // 而收藏是**就地重排**（不整树重渲）——若重排后不重盖章，斑马纹会错位到下次重渲才自愈。
+    // 夹具要件：被判卡片必须**跨档**移动（位次 9 → 0 / 位次 8 → 9），否则换不换色看不出来。
+    const { state, searchResults } = makeState();
+    const names = Array.from({ length: 10 }, (_, i) => `c${i}`);
+    searchResults.innerHTML =
+      '<div id="cr-creator-grid" class="cr-creator-grid">' +
+      names
+        .map(
+          (n, i) =>
+            `<div class="gh-card" data-name="${n}" data-band="${creatorBandOf(i)}" tabindex="0">${creatorStarBtnHtml(n, false, esc)}</div>`,
+        )
+        .join("") +
+      "</div>";
+    state.creators = names.map((n) => ({ name: n, desc: "", type: "github" })) as never;
+    state.authorCountMap = Object.fromEntries(names.map((n) => [n, 1]));
+    let favList: string[] = [];
+    (loadFavs as ReturnType<typeof vi.fn>).mockImplementation(() => favList);
+    (isFaved as ReturnType<typeof vi.fn>).mockImplementation((n: string) => favList.includes(n));
+    (toggleFav as ReturnType<typeof vi.fn>).mockImplementation((n: string) => {
+      favList = [...favList, n];
+      return true;
+    });
+    trackedBind(state, () => {});
+
+    const grid = searchResults.querySelector("#cr-creator-grid") as HTMLElement;
+    // 点末位 c9（位次 9 = silver）的星 → 收藏置顶到位次 0
+    (searchResults.querySelector('.cr-star-btn[data-star="c9"]') as HTMLElement).click();
+
+    const cards = [...grid.querySelectorAll<HTMLElement>(".gh-card")];
+    expect(cards[0]?.dataset.name).toBe("c9");
+    expect(cards[0]?.dataset.band).toBe("gold"); // 新位次 0 → gold（原 silver）
+    expect(cards[9]?.dataset.name).toBe("c8");
+    expect(cards[9]?.dataset.band).toBe("silver"); // 新位次 9 → silver（原 gold）
+    // 全序列与渲染期同源（creatorBandOf）——「渲染 vs 就地重排两套口径」漂移即红
+    expect(cards.map((c) => c.dataset.band)).toEqual(names.map((_, i) => creatorBandOf(i)));
   });
 
   it("取消收藏 → 卡片回到产量序的正确位次，而非队尾（排序规则单源回归）", () => {

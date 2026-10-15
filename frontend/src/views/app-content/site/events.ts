@@ -13,6 +13,7 @@ import { backendGetApp } from "@/views/backend-deps.ts";
 // 视图片段单源（ADR-034-d1）：头像/星标/身份 tag/平台徽章与卡片共用同一份标记代码
 import {
   creatorAvatarHtml,
+  creatorBandOf,
   creatorPlatformBadgesHtml,
   creatorStarBtnHtml,
   creatorTagChipHtml,
@@ -137,6 +138,7 @@ function cmCrBindOverlayEvents(
     const grid = card?.closest(".cr-creator-grid");
     if (card instanceof HTMLElement && grid instanceof HTMLElement) {
       cmCrReorderCard(grid, card, authorCountMap);
+      applyBandSequence(grid); // 位置变了 → 色带跟着走（位置语义，见 applyBandSequence）
     }
     busRef.emit("toast:show", {
       msg: now ? t("content.favAdded") : t("content.favRemoved"),
@@ -275,6 +277,20 @@ function cmBbBindModeToggle(
 }
 
 /**
+ * 按当前 DOM 顺序重盖章色带（`data-band`）：色带是**位置**语义（展示序每 9 张换一色），
+ * 而收藏就地把卡片搬到新位次后，位置变了、颜色不跟着变的话斑马纹就错位——直到下次整树重渲才自愈。
+ *
+ * ⚠️ 与渲染期同源：色带值一律经 `render.ts|creatorBandOf`，**不得在此手写奇偶判断**
+ * （那正是「渲染排序 vs 就地重排两套口径」的历史病灶形态）。
+ * 只改属性不动节点顺序；O(n) 一次，仅收藏/跨标签同步路径调用。
+ */
+function applyBandSequence(grid: HTMLElement): void {
+  qsa<HTMLElement>(grid, ".gh-card").forEach((card, idx) => {
+    card.dataset.band = creatorBandOf(idx);
+  });
+}
+
+/**
  * 星标视觉双态**单点**：SVG 与 `aria-pressed` 同写。
  *
  * 2026-10-15（复核 P1）：四条路径都经此处——① 卡片星标 `cmBbBindStarBtns`；
@@ -304,6 +320,7 @@ function cmBbBindStarBtns(
       const grid = card?.closest(".cr-creator-grid");
       if (card instanceof HTMLElement && grid instanceof HTMLElement) {
         cmCrReorderCard(grid, card, authorCountMap);
+        applyBandSequence(grid); // 位置变了 → 色带跟着走
       }
       busRef.emit("toast:show", {
         msg: now ? t("content.favAddedName", { name }) : t("content.favRemovedName", { name }),
@@ -504,6 +521,8 @@ function cmSeSyncFavButtons(
     for (const card of moved) {
       cmCrReorderCard(grid, card, authorCountMap);
     }
+    // 全部搬完后再统一重盖章（放循环内会变成 O(n²)）
+    applyBandSequence(grid);
   }
 }
 

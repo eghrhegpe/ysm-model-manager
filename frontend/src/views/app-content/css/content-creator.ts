@@ -92,24 +92,29 @@ export const contentCreatorCSS: string = `
   pointer-events:none;
   transition:opacity var(--tr-normal), transform var(--tr-normal), max-height var(--tr-normal), min-height var(--tr-normal), padding var(--tr-normal), margin var(--tr-normal), border-width var(--tr-normal);
 }
-/* tier 色条（P2-1 锐评：原 2px/opacity:.6 承载「顶级创作者」强断言几乎不可见，
-   且 hover 才显形=需要猜；改 3px 常驻 opacity:1——荣誉信号常驻可见，删 hover 显形规则） */
-.cr-card-tier-bar {
+/* 位置色带条（2026-10-15 语义重做：原「荣誉分档条」→「位置地标条」）：
+   3px 常驻，颜色由 data-band（gold/silver 按展示序每 9 张交替）决定。
+   视觉与改造前**逐值相同**（3px / opacity:1 / 同一对色变量），变的只是语义与选择器名。
+   P2-1 锐评留痕：原 2px/opacity:.6 承载「顶级创作者」强断言几乎不可见，且 hover 才显形=需要猜。 */
+.cr-card-band-bar {
   position:absolute;top:0;left:0;right:0;height:3px;opacity:1;transition:opacity var(--tr-normal);
 }
-.cr-creator-card--grid[data-tier="gold"] .cr-card-tier-bar { background:var(--tier-gold); }
-.cr-creator-card--grid[data-tier="silver"] .cr-card-tier-bar { background:var(--tier-silver); }
-.cr-creator-card--grid[data-tier="gold"] .cr-avatar-ring {
-  background:conic-gradient(from 0deg,var(--tier-gold),transparent 60%,var(--tier-gold));
-  box-shadow:0 0 6px color-mix(in srgb,var(--tier-gold) 40%,transparent);
-}
-.cr-creator-card--grid[data-tier="silver"] .cr-avatar-ring {
-  background:conic-gradient(from 0deg,var(--tier-silver),transparent 60%,var(--tier-silver));
-  box-shadow:0 0 6px color-mix(in srgb,var(--tier-silver) 25%,transparent);
-}
-.cr-creator-card--grid:not([data-tier]) .cr-avatar-ring {
+.cr-creator-card--grid[data-band="gold"] .cr-card-band-bar { background:var(--band-gold); }
+.cr-creator-card--grid[data-band="silver"] .cr-card-band-bar { background:var(--band-silver); }
+/* 光环基类 = accent 默认。原来是 :not([data-tier]) 写法——色带改由构造保证必在
+   （CrCardCtx.band 是必填字段、creatorBandOf 恒返回两值之一），:not() 会留下一条
+   永不匹配的死规则（同 .cr-tag-game 的教训），故改写成基类默认 + 两条带色覆盖。 */
+.cr-creator-card--grid .cr-avatar-ring {
   background:conic-gradient(from 0deg,var(--accent),transparent 60%,var(--accent));
   box-shadow:none;
+}
+.cr-creator-card--grid[data-band="gold"] .cr-avatar-ring {
+  background:conic-gradient(from 0deg,var(--band-gold),transparent 60%,var(--band-gold));
+  box-shadow:0 0 6px color-mix(in srgb,var(--band-gold) 40%,transparent);
+}
+.cr-creator-card--grid[data-band="silver"] .cr-avatar-ring {
+  background:conic-gradient(from 0deg,var(--band-silver),transparent 60%,var(--band-silver));
+  box-shadow:0 0 6px color-mix(in srgb,var(--band-silver) 25%,transparent);
 }
 
 /* 头像（跨域复用：.cr-avatar 亦在 gh-card 中用到） */
@@ -180,7 +185,7 @@ export const contentCreatorCSS: string = `
 .cr-platform-badge { font-size:var(--fs-micro);padding:var(--pad-v-1) var(--sp-1);border-radius:var(--radius-xs);line-height:12px;display:inline-flex;align-items:center;gap:2px;background:var(--surf);color:var(--muted);border:1px solid var(--bd); }
 .cr-card-search { cursor:pointer;font-size:var(--fs-sm);transition:transform var(--tr-normal);flex-shrink:0; }
 .cr-card-search:hover { transform:scale(1.15); }
-.cr-star-btn { cursor:pointer;font-size:var(--fs-sm);color:var(--sm-optional);transition:transform var(--tr-normal);flex-shrink:0; } /* ADR-238：星标走 SVG 语义图标（currentColor），收藏金色沿用 --sm-optional；tier 荣誉色已独立为 --tier-gold/--tier-silver（P0-2） */
+.cr-star-btn { cursor:pointer;font-size:var(--fs-sm);color:var(--sm-optional);transition:transform var(--tr-normal);flex-shrink:0; } /* ADR-238：星标走 SVG 语义图标（currentColor），收藏金色沿用 --sm-optional；位置色带已独立为 --band-gold/--band-silver（P0-2） */
 .cr-star-btn:hover { transform:scale(1.15); }
 /* 卡内三个按钮的键盘焦点环（2026-10-15 a11y）：升格为 button 后必须给出可见焦点，
    否则 Tab 进来「看不见自己在哪」。视觉沿用卡片 focus-visible 的 accent 语言。 */
@@ -278,21 +283,8 @@ export const contentCreatorCSS: string = `
   margin:0 0 8px;
 }
 
-/* ===== tier 图例（P0-1/P2-1 锐评：gold/silver 语义不再哑默，有分档卡才渲染） ===== */
-.cr-tier-legend {
-  display:flex;align-items:center;gap:var(--sp-3);
-  padding:0 0 var(--sp-2);
-}
-.cr-tier-legend-item {
-  display:inline-flex;align-items:center;gap:var(--sp-1);
-  font-size:var(--fs-xs);color:var(--muted);
-}
-.cr-tier-swatch {
-  width:10px;height:10px;border-radius:var(--radius-xs);
-  flex-shrink:0;
-}
-.cr-tier-swatch--gold { background:var(--tier-gold); }
-.cr-tier-swatch--silver { background:var(--tier-silver); }
+/* 2026-10-15 语义重做：原 tier 图例（.cr-tier-legend / -legend-item / -swatch）已删——
+   色带是位置地标，不需要解释性图例；content.tierGold / tierSilver 三语键同批清理（死键不留）。 */
 .cr-drop-zone {
   display:flex;align-items:center;justify-content:center;gap:8px;
   padding:12px 16px;margin:4px 0 8px;

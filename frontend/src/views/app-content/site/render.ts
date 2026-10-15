@@ -112,8 +112,9 @@ export interface CrCardCtx {
   site: WorkshopSite;
   /** 展示位次（调用方按排序后展示序计）：stagger 入场延迟 = stagger(staggerIdx)，带 300ms 封顶 */
   staggerIdx: number;
-  /** 排名分档：经 computeCreatorTiers 预计算（一次 O(n log n)），替代卡内逐张全量排序 */
-  tier: "" | "gold" | "silver";
+  /** 位置色带（`creatorBandOf(staggerIdx)` 同源取值）：**位置地标，不是荣誉**——
+   *  与产量/名次无关，仅按展示序每 `CREATOR_BAND_SIZE` 张换一色。 */
+  band: CreatorBand;
 }
 
 /** buildSiteHtml 依赖的渲染上下文 */
@@ -145,7 +146,7 @@ export interface BuildSiteHtmlCtx {
 
 /** 创作者卡片工厂 */
 export function createCrCard(cr: LocalCreatorLike, ctx: CrCardCtx): string {
-  const { esc, isFaved, authorCountMap, avatarCache, site, staggerIdx, tier: tierRank } = ctx;
+  const { esc, isFaved, authorCountMap, avatarCache, site, staggerIdx, band } = ctx;
   const authorCount = authorCountMap[cr.name] || 0;
 
   // 头像 / 平台徽章 / 星标 / 身份 tag 全部走片段单源（ADR-034-d1），卡片只保留布局与差异变体
@@ -182,7 +183,8 @@ export function createCrCard(cr: LocalCreatorLike, ctx: CrCardCtx): string {
       )}">${UI_ICONS.search}</button>`
     : "";
 
-  const tierBar = tierRank ? `<div class="cr-card-tier-bar"></div>` : "";
+  // 位置色带条：每张卡都有（位置装饰，不再有「无牌」态）
+  const bandBar = `<div class="cr-card-band-bar"></div>`;
   const starBtn = creatorStarBtnHtml(cr.name, isFaved(cr.name), esc);
   const tagChip = creatorTagChipHtml(cr.role, esc);
   // data-tag 仍是原始 role id（过滤键 = 数据语义），与展示层的 class 白名单解耦
@@ -198,10 +200,10 @@ export function createCrCard(cr: LocalCreatorLike, ctx: CrCardCtx): string {
     // tabindex 保留（键盘导航的原语选择器 `.gh-card[tabindex]` 与 focus-visible 都依赖它）。
     `<div class="gh-card cr-creator-card cr-creator-card--grid" role="listitem" tabindex="0" style="animation-delay:${stagger(
       staggerIdx,
-    )}ms" data-name="${esc(cr.name)}" data-tag="${esc(tagRole)}"${
-      tierRank ? ` data-tier="${esc(tierRank)}"` : ""
-    } title="${esc(t("common.viewDetail", { name: cr.name }))}">` +
-    tierBar +
+    )}ms" data-name="${esc(cr.name)}" data-tag="${esc(tagRole)}" data-band="${esc(
+      band,
+    )}" title="${esc(t("common.viewDetail", { name: cr.name }))}">` +
+    bandBar +
     `<div class="cr-card-header"><div class="cr-avatar-container"><div class="cr-avatar-ring"></div>${avatarHtml}</div>` +
     `<div class="cr-card-name-row"><span class="cr-card-name">${esc(
       cr.name,
@@ -262,72 +264,29 @@ function sortCreatorsFavedFirst(
 }
 
 /**
- * 创作者排名分档（纯函数）：按「本地仓库模型数」降序分档——前 10% gold、前 25% silver，
- * 单次 O(n log n)，调用方预计算一次后按 name 取值（卡内逐张全量重排的旧写法已废止）。
+ * 位置色带（2026-10-15 语义重做，替代原「按产量百分位分档」）：
+ *  **色带 = 展示序上的位置地标，不是荣誉**——循环发生在 TS 侧，CSS 只看见 gold/silver 两值。
  *
- * 三条发牌纪律（缺一即退化成噪声分档）：
- * ① 无信号不发牌：榜首 count ≤ 0 时全体返回 ""；② 单人站点（n=1）不发牌——无比较对象；
- * ③ silver 底保：纯位次银档在 n=2~5 落空，故第 2 名兜底拿银。
- * 并列组同档（组内取最靠前位次）、组序裁断不腰斩；silver 位次恒 ≥ gold，不倒挂。
+ * 历史病灶（重做理由）：原 `computeCreatorTiers` 按 authorCountMap（本地已下载模型数）
+ * 取前 10% gold / 前 25% silver，需要三条发牌纪律 + 并列组裁断 + 银档底保共 60 行，
+ * 只为一条 3px 色条；且语义错位——「顶级创作者」实际度量的是**用户自己的下载习惯**，
+ * 新用户全站无牌（功能静默死亡）。现改为纯位置装饰：每 `CREATOR_BAND_SIZE` 张换一色，
+ * 交替即斑马纹，零信号依赖、零排序、O(1)。
  *
- * 完整推导与历史缺陷见知识卡 app-content-site.md §不变量「排名分档预计算」。
+ * ⚠️ 节奏参数只此一处：改 9→12 或改三色循环都只动本常量与 `creatorBandOf`，CSS 零改动
+ * （这也是「不把循环交给 CSS `:nth-child`」的理由：那要按组写 9 个选择器且无法单测）。
  */
-export function computeCreatorTiers(
-  creators: LocalCreatorLike[],
-  authorCountMap: Record<string, number>,
-): Record<string, "" | "gold" | "silver"> {
-  const out: Record<string, "" | "gold" | "silver"> = {};
-  const sorted = [...creators].sort(
-    (a, b) => (authorCountMap[b.name] || 0) - (authorCountMap[a.name] || 0),
-  );
-  const total = sorted.length;
-  if (total === 0) return out;
-  const countOf = (cr: LocalCreatorLike) => authorCountMap[cr.name] || 0;
-  // 纪律 ① 无信号 / 纪律 ② 单人站点 → 全员无牌（逐人建 key，缺席者同样归入「无牌」）
-  if (total < 2 || countOf(sorted[0]) <= 0) {
-    sorted.forEach((cr) => {
-      out[cr.name] = "";
-    });
-    return out;
-  }
+export const CREATOR_BAND_SIZE = 9;
 
-  // 每个并列组的起始位次（组内并列者共享该位次，见上方并列口径）
-  const groupStart: number[] = [];
-  sorted.forEach((cr, idx) => {
-    if (idx === 0 || countOf(cr) !== countOf(sorted[idx - 1])) {
-      groupStart.push(idx);
-    }
-  });
-  const tierOfRank = (rank: number): "" | "gold" | "silver" => {
-    const pct = rank / (total - 1);
-    return pct < 0.1 ? "gold" : pct < 0.25 ? "silver" : "";
-  };
-  // 组序裁断（组序 = 位次序，故天然递增）：gold = 榜首所在组；silver = 向后的 silver 组，
-  // 末尾按组裁断而非按位次切片——并列组绝不腰斩
-  let goldGroups = 0;
-  while (goldGroups < groupStart.length && tierOfRank(groupStart[goldGroups]) === "gold") {
-    goldGroups += 1;
-  }
-  let silverRanges: [number, number][] = [];
-  for (let g = goldGroups; g < groupStart.length; g += 1) {
-    if (tierOfRank(groupStart[g]) === "silver") silverRanges.push([groupStart[g], g]);
-  }
-  // 纪律 ③ 底保：纯位次银档落空（n=2..5 必现）→ 取排名第 2 的那位；若该位次在并列组内，
-  // 则该组整组 silver（组首 = 最靠前的第 2 名）
-  if (silverRanges.length === 0) {
-    const secondGroup = groupStart.findIndex((start) => start > 0);
-    silverRanges = [[Math.max(1, groupStart[Math.max(0, secondGroup)]), Math.max(0, secondGroup)]];
-  }
-  const silverFrom = silverRanges[0][0];
-  const silverTo = silverRanges[silverRanges.length - 1][1];
-  groupStart.forEach((start, g) => {
-    const tier = g < goldGroups ? "gold" : start >= silverFrom && g <= silverTo ? "silver" : "";
-    const end = groupStart[g + 1] ?? total;
-    for (let i = start; i < end; i += 1) {
-      out[sorted[i].name] = tier;
-    }
-  });
-  return out;
+/** 色带取值 = 视觉 token 名（`--band-gold`/`--band-silver`），不含任何强弱含义。 */
+export type CreatorBand = "gold" | "silver";
+
+/**
+ * 展示位次 → 色带：第 0 组 gold、第 1 组 silver、第 2 组 gold…（组号奇偶决定颜色）。
+ * 纯函数、O(1)；展示序变化（收藏置顶重排）后须重新盖章，见 `site/events.ts|applyBandSequence`。
+ */
+export function creatorBandOf(displayIndex: number): CreatorBand {
+  return Math.floor(Math.max(0, displayIndex) / CREATOR_BAND_SIZE) % 2 === 0 ? "gold" : "silver";
 }
 
 /**
@@ -365,30 +324,6 @@ function buildSiteTagFilterRow(ctx: BuildSiteHtmlCtx): string {
   );
 }
 
-/**
- * tier 图例行：gold/silver 只有 2px 色条与光环，无文字则用户无从得知分档依据，故补此图例。
- * 有任一分档卡才渲染（纯展示，不参与过滤）。
- * ⚠️ tiers 由调用方传入已算好的表：本函数只需「是否有分档卡」一个布尔——在此重算
- *   等于每轮渲染多跑一次 O(n log n) 排序。
- */
-function buildTierLegendRow(
-  creators: LocalCreatorLike[],
-  tiers: Record<string, "" | "gold" | "silver">,
-): string {
-  const hasTierCard = creators.some((cr) => tiers[cr.name]);
-  if (!hasTierCard) return "";
-  return (
-    `<div class="cr-tier-legend" data-testid="cr-tier-legend">` +
-    `<span class="cr-tier-legend-item"><span class="cr-tier-swatch cr-tier-swatch--gold"></span>${t(
-      "content.tierGold",
-    )}</span>` +
-    `<span class="cr-tier-legend-item"><span class="cr-tier-swatch cr-tier-swatch--silver"></span>${t(
-      "content.tierSilver",
-    )}</span>` +
-    `</div>`
-  );
-}
-
 /** 创作者浏览区：标题栏 + 收藏置顶 + 标签行 + grid / 空态。 */
 function buildSiteBrowseSection(ctx: BuildSiteHtmlCtx): string {
   const { esc, creators, authorCountMap } = ctx;
@@ -419,10 +354,8 @@ function buildSiteBrowseSection(ctx: BuildSiteHtmlCtx): string {
     // 返回新数组，不就地改 ctx.creators（原数组保持 allCreators 过滤序）
     const sortedCreators = sortCreatorsFavedFirst(creators, authorCountMap, ctx.favedNames);
     parts.push(buildSiteTagFilterRow(ctx));
-    // 卡片声明式生成（不留空 grid 给 events 填充）；分档预计算一次 O(n log n)
-    const tiers = computeCreatorTiers(creators, authorCountMap);
-    // 图例复用上面已算好的 tiers，不重复跑第二轮排序
-    parts.push(buildTierLegendRow(creators, tiers));
+    // 卡片声明式生成（不留空 grid 给 events 填充）；色带按**展示序**当场算：
+    // band = f(i)，无预计算表、无 O(n log n)、无信号依赖（2026-10-15 语义重做后无需图例）
     const cardsHtml = sortedCreators
       .map((cr, i) =>
         createCrCard(cr, {
@@ -432,7 +365,7 @@ function buildSiteBrowseSection(ctx: BuildSiteHtmlCtx): string {
           avatarCache: ctx.avatarCache,
           site: ctx.site,
           staggerIdx: i,
-          tier: tiers[cr.name] ?? "",
+          band: creatorBandOf(i),
         }),
       )
       .join("");

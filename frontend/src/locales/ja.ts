@@ -11,6 +11,7 @@ export const ja: Record<string, string> = {
   "nav.instances": "統合パック管理",
   "nav.label": "ナビゲーション",
   "nav.viewer": "3D プレビュー",
+  "nav.viewerOpenFail": "3D プレビューを開けませんでした",
   "nav.community": "クリエイター",
   "nav.workshop": "ワークショップ",
   // ADR-300 D4：競合処理は「監査」グループに統合され、「と競合」接尾辞は退役
@@ -733,8 +734,6 @@ export const ja: Record<string, string> = {
   "content.emptyCreators": "クリエイターがいません",
   "content.noMatchCreators": "条件に一致するクリエイターがいません",
   "content.clearFilter": "フィルターをクリア",
-  "content.tierGold": "ローカルモデル数 1位",
-  "content.tierSilver": "ローカルモデル数 2位",
   "content.browseLocalModels": "ローカルモデルを参照",
   "content.searchTerms": "🔍 検索語",
   "content.searchKeywordPlaceholder": "検索キーワード",
@@ -860,6 +859,10 @@ export const ja: Record<string, string> = {
   // P1-3：プッシュ/プルループ進捗（ボタン内表示；大量処理がスピンナー待ちだけにならない）
   "sidebar.pushProgress": "プッシュ中 {i}/{n}…",
   "sidebar.pullProgress": "プル中 {i}/{n}…",
+  // 2026-10-15 UX 補：同期変更明細フローティングパネル（トーストは件数のみ、パネルは個別表示）
+  "sidebar.syncResultTitle": "同期変更明細",
+  "sidebar.syncResultPush": "プッシュ完了: 成功 {ok}、失敗 {fail}",
+  "sidebar.syncResultPull": "プル完了: 成功 {ok}、失敗 {fail}",
 
   // ── Resource Manager ──
   "resource.loadFailed": "リソース読み込み失敗",

@@ -13,7 +13,7 @@ export const contentLayoutCSS: string = `
 /* ===== CSS 变量（标签/标记色/host 尺寸） ===== */
 /* 五身份标签色与 role 枚举一一对应（creator/official/vup/oc/repo，权威源见 site/render.ts 编辑下拉
    与 workshop-data.ts getCreatorIdentity）。语义取色：
-   official = 官方认证的金（呼应 tier 荣誉色 --tier-gold，比 --tag-amber 偏黄以与「健康/告警橙」区分）；
+   official = 官方认证的金（呼应位置色带金 --band-gold，比 --tag-amber 偏黄以与「健康/告警橙」区分）；
    creator  = 个人创作者的中性靛（vup 粉 / oc 紫之外的第三方身份色，取蓝紫低饱和中性调）；
    repo     = 仓库来源的青绿（工具/代码来源，与人的身份色系区隔）。
    三色分别避开既有 --tag-game 蓝 / --tag-vup 粉 / --tag-oc 紫 / --tag-amber 橙，不撞色。 */

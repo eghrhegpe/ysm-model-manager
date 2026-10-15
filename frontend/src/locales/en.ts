@@ -10,6 +10,7 @@ export const en: Record<string, string> = {
   "nav.instances": "Modpacks",
   "nav.label": "Navigation",
   "nav.viewer": "3D Viewer",
+  "nav.viewerOpenFail": "Failed to open the 3D viewer",
   "nav.community": "Creators Channel",
   "nav.workshop": "Workshop",
   "nav.diagnostics": "Diagnostics",
@@ -740,8 +741,6 @@ export const en: Record<string, string> = {
   "content.emptyCreators": "No creators yet",
   "content.noMatchCreators": "No creators match the filter",
   "content.clearFilter": "Clear Filter",
-  "content.tierGold": "Most local models",
-  "content.tierSilver": "2nd most local models",
   "content.browseLocalModels": "Browse Local Models",
   "content.searchTerms": "🔍 Search Terms",
   "content.searchKeywordPlaceholder": "Search keyword",
@@ -862,6 +861,10 @@ export const en: Record<string, string> = {
   // P1-3: push/pull loop progress (shown on the button; large batches no longer wait on a bare spinner)
   "sidebar.pushProgress": "Pushing {i}/{n}…",
   "sidebar.pullProgress": "Pulling {i}/{n}…",
+  // 2026-10-15 UX 补：sync change-detail floating panel (toast shows counts only; panel names each item)
+  "sidebar.syncResultTitle": "Sync change details",
+  "sidebar.syncResultPush": "Push complete: {ok} succeeded, {fail} failed",
+  "sidebar.syncResultPull": "Pull complete: {ok} succeeded, {fail} failed",
 
   // ── Resource Manager ──
   "resource.loadFailed": "Resource load failed",

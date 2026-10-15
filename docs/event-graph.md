@@ -333,7 +333,7 @@
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 311 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 73 |
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 137 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 551 |
+| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 547 |
 | _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 229 |
 | runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 94 |
 | atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 121 |
@@ -411,7 +411,7 @@
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 212 |
 | applyFsaState | `frontend/src/views/app-content/settings/init.ts` | 406 |
 | onWebRepoAuthClick | `frontend/src/views/app-content/settings/init.ts` | 434 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 552 |
+| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 548 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |

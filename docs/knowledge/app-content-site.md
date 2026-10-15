@@ -31,11 +31,13 @@ auto_fields:
     - CleanupFn
     - compareByAuthorCount
     - compareFavFirst
-    - computeCreatorTiers
     - CrCardCtx
     - createBrowseModeRef
     - createCrCard
+    - CREATOR_BAND_SIZE
     - creatorAvatarHtml
+    - CreatorBand
+    - creatorBandOf
     - CreatorIdentity
     - CreatorIdentityInput
     - creatorPlatformBadgesHtml
@@ -113,7 +115,7 @@ status: active
 ## 核心职责
 
 - `site-view.ts` — `renderSiteView`：组装 `SiteViewState` 后委托 `site/` 子模块渲染与绑定；行内编辑选择器排除预设卡片（`[data-idx][data-fld]:not([data-edit='preset'])`，防预设 label 输入污染创作者对象，P2 修复）；拖拽 drop 用 `realIdx` 在 `allCreators` 全量数组上重排（防站点子集覆盖清空其他站点，P2 修复）
-- `site/types.ts` / `site/render.ts` / `site/events.ts` / `site/edit.ts` / `site/drag.ts` — 状态类型 `SiteViewState` / `CleanupFn`、`createCrCard`（**声明式：返回 HTML 字符串，零 DOM**）+ `computeCreatorTiers`（排名分档一次性 O(n log n) 预计算，见不变量「排名分档预计算」条）+ `buildSiteHtml` 渲染、`bindBrowseEvents` 浏览交互、`bindEditEvents` 编辑模式（AbortController signal 贯穿 7 个 eeBind* 全部监听，cleanup 真实解绑幂等）、`bindDragEvents` 卡片拖拽排序；各 bind 均返回 `CleanupFn`
+- `site/types.ts` / `site/render.ts` / `site/events.ts` / `site/edit.ts` / `site/drag.ts` — 状态类型 `SiteViewState` / `CleanupFn`、`createCrCard`（**声明式：返回 HTML 字符串，零 DOM**）+ `creatorBandOf`（展示位次 → 位置色带，O(1)，见不变量「位置色带」条）+ `buildSiteHtml` 渲染、`bindBrowseEvents` 浏览交互、`bindEditEvents` 编辑模式（AbortController signal 贯穿 7 个 eeBind* 全部监听，cleanup 真实解绑幂等）、`bindDragEvents` 卡片拖拽排序；各 bind 均返回 `CleanupFn`
 - `workshop-data.ts` — 工坊纯数据工具：`getCreatorIdentity` / `getTagDisplayLabel`（tag 展示文案：已知身份走 i18n label，**未知 tag 原样返回**，不冒充别的身份）/ `getTagFromRole` / `parseDescTags`（**只认「标签式描述」**：顿号/全角逗号切分，段数 2..6 且每段 ≤8 字符才返回片段，否则返回 `[]` 由详情层回退全文；ASCII 逗号不参与切分，>6 段**不截断**而是整体回退全文）/ 收藏 `loadFavs` / `isFaved` / `toggleFav`（localStorage key 以单源常量定义导出：`FAV_CREATORS_KEY`）；4 个页面级持久键统一存于此模块作为单一事实源（`FAV_CREATORS_KEY`, `WS_ACTIVE_TAG_KEY`, `WS_SEARCH_KW_KEY`, `WS_LAST_TAB_KEY`）
 - `workshop-browse-mode.ts` — 浏览模式 ref：`BrowseModeRef{ v }` 单源（与 `wsEditModeRef:{v}` 同构），经 `ctx.browseMode` 贯穿到渲染高亮与 `openUrl`，`setBrowseMode` 只改 `.v` + localStorage → 一处 set、处处一致
 
@@ -140,7 +142,7 @@ status: active
 
 - **站点游标只经 `WorkshopPageState` 读写（ADR-263）**：`initWorkshopTabs(root, refs, page, registerDefaultSiteTimer)` / `bindSiteEvents(root, page, onSitesImported?)` 只收 `root: ShadowRoot` + 页作用域句柄，**不得**回到 `host.state.currentSite`（该字段已删除，写了也编译不过）——host 依赖已彻底摘除（连 `workshopTimer` 也经 `registerDefaultSiteTimer` 回调交回壳层，ADR-265，两模块不再持有任何 host 字段）。**`initWorkshopTabs` 返回 `reloadWorkshopTabs()` 重载入口**（拉数据→写 refs→重建 tab 栏→渲染当前站点，与 0ms 定时器初载同链路）；`bindSiteEvents` 的站点**导入成功（n>0）后经 `onSitesImported` 触发该重载**（init-workshop 组装注入）——旧 TODO「导入后重新加载创作者列表」清偿，桌面拖入 JSON（site/drag）走 Go 返回值刷 `allSites` 属另一条已通路径，勿混淆
 - **创作者卡片声明式通道**（2026-09 收口）：创作者卡片 HTML 由 `buildSiteHtml` 内经 `createCrCard` 直接产出并嵌入 `#cr-creator-grid`，`site/events.ts` **不再**查 grid 后 `appendChild`（原 `cmBbPopulateCreatorGrid` 已删）——grid 存亡与卡片内容同归 `buildSiteHtml`（编辑态不渲染网格的守卫随之归位）；头部头像加载失败一律走 `data-avatar-fallback` 属性 + `bindAvatarFallback` 单点实现（grid 卡片与详情浮层共用，仅 fallback class 不同）
-- **排名分档预计算 + 图标收编 + 入场封顶**（2026-09 锐评 P0 性能债）：`site/render.ts|computeCreatorTiers` 一次性 O(n log n) 算出全量分档（**三条发牌纪律**：① 全站产量为 0（`authorCountMap` 缺条目或榜首 count ≤ 0）时全员无牌——所有 key 相等时排序退化为保持原序，照 pct 位次发牌会让数组第一人白拿 gold；② 单人站点不发牌，无比较对象不称「顶级」；③ silver 底保，纯位次 pct<0.25 在 n=2~5 时命中空集，第 2 名兜底拿银。**并列口径 = 同 count 同档**：并列者无可区分名次依据，按数组下标区分等于用展示顺序冒充排名（同 ① 的噪声），故先取各并列组组内最靠前位次再定档、组序裁断不腰斩），`buildSiteBrowseSection` 预计算后按 `name` 取值传入 `createCrCard`，**替代原每张卡片内对全量列表重排的 O(n² log n) 写法**；卡片星标双态（收藏/未收藏）与编辑卡拖拽手柄改走 `utils/icon/ui-icons.ts|UI_ICONS` 语义 SVG（`star`/`starFilled` 实心经 `.ws-icon[fill]` 切换、`dragHandle` 六圆点 grip），**不再硬编码 `⭐`/`☆`/`⠿` 字符**；入场 `animation-delay` 取**展示位次** `stagger(staggerIdx)` 且带 **300ms 封顶**（旧实现按产量名次线性累加无封顶，收藏置顶卡反而入场乱序）。**图例** `site/render.ts|buildTierLegendRow` 仅在存在分档卡时渲染——gold/silver 只有 2px 色条 + 头像光环、无任何文字说明，缺图例时用户无从得知这两档凭什么区分（`content.tierGold`/`content.tierSilver` 文案即「本地模型数第一/第二」）；图例必须复用已算好的 tiers 表，**不得在其内部重算**（那是每轮渲染多跑一次 O(n log n)）
+- **位置色带 + 图标收编 + 入场封顶**（色带语义 2026-10-15 重做；图标/入场为 2026-09 锐评 P0 性能债）：色带 = **展示序上的位置地标，不是荣誉**——`site/render.ts|creatorBandOf` 按展示位次每 `CREATOR_BAND_SIZE`（9）张交替 gold/silver，O(1)、零信号依赖；**循环发生在 TS 侧，CSS 只看见两个值**（gold/silver 各一条规则 + 一条 accent 基类），故改节奏只动常量、CSS 零改动（刻意不用 CSS `:nth-child(9n+…)` 按组写选择器：那要 9 个一组的疯选择器且无法单测）。⚠️ **重做理由（历史病灶）**：原 `computeCreatorTiers` 按 `authorCountMap`（本地已下载模型数）取前 10% / 25%，约 60 行 + 三条发牌纪律（无信号不发牌 / 单人站点不发牌 / silver 底保）+ 并列组裁断 + 组序不腰斩，只为一条 3px 色条；且语义错位——「顶级创作者」实际度量的是**用户自己的下载习惯**，新用户全站无牌（功能静默死亡）。**旧纪律、旧图例（`site/render.ts|buildTierLegendRow`）、三语键 `content.tierGold` / `content.tierSilver` 已同批删除**（图例存在的唯一理由是解释荣誉；位置色带是地标，解释它反而是噪声）。⚠️ **色带必须跟随展示序**：收藏是就地重排（不整树重渲），故重排后须经 `site/events.ts|applyBandSequence` 按新 DOM 顺序重盖章 `data-band`——渲染期与就地路径**同源 `creatorBandOf`，不得在 events 里手写奇偶判断**（那正是「渲染排序 vs 就地重排两套口径」的历史病灶形态；跨标签同步路径在搬完后统一盖章一次，放循环内会变 O(n²)）。回归锁：`site/render.test.ts`「位置色带边界」+「色带跟随展示序（收藏置顶后按新位次着色）」+ `site/events.test.ts`「收藏置顶重排后色带重盖章」（**夹具要件：被判卡片必须跨档移动**，否则换不换色看不出差别）。入场 `animation-delay` 取**展示位次** `stagger(staggerIdx)` 且带 **300ms 封顶**（旧实现按产量名次线性累加无封顶，收藏置顶卡反而入场乱序）；卡片星标双态与编辑卡拖拽手柄走 `utils/icon/ui-icons.ts|UI_ICONS` 语义 SVG（`star`/`starFilled` 实心经 `.ws-icon[fill]` 切换、`dragHandle` 六圆点 grip），**不再硬编码 `⭐`/`☆`/`⠿` 字符**
 - **创作者数据面禁写界面文案**（2026-09 锐评 P0-2，**复核后治本**）：**`creators.json` 的 `name` / `desc`** 不得承载任何一种语言的字面文案（`SaveWorkshopCreatorsBySite` 会落盘）。⚠️ **规则边界**：Go 默认**站点元数据**（`internal/app/app_workshop.go` 的 `Label` / `Desc`，如「B站」）属**捆绑内容**，与创作者数据面不同性质、不受本规则约束（复核 N7：原措辞「不得承载任何一种语言的字面文案」过宽会误伤该处）。⚠️ **首次修复只改了前端、对生产数据无效**（复核 P1-1 实证）：本地作者 desc 的**源头**是 `go/scanner/scanner.go` 与 `frontend/src/backend/web-community.ts|scanWebLocalAuthors` 里硬编码的「来自本地仓库」，前端 `mergeLocalAuthorsInto` 的 `|| ""` 分支根本不可达。治本口径：**源头落空串**（Go/网页版两处同口径），`community-data.ts|mergeLocalAuthorsInto` 对该空值**恒等透传**（不是"兜底被触发"），「来自本地仓库」提示由展示层按 `_fromLocal` 标记**现取当前语言**（`site/render.ts|createCrCard` 卡片 + `site/events.ts|cmCrBuildDetailHtml` 浮层）；`site/edit.ts|eeBindCreatorsEdit` 的 `cr-add` 新增行落空 name/desc（编辑卡 placeholder 引导）+ 保存路径过滤空名条目。相关死键 `workshop.newCreatorName` / `newCreatorDesc` / `activeCreators` 已从三语包删除
 - **五身份标签色恰为五条，缺一条即裸文字**（2026-10-13 修）：`.cr-tag-<role>` 的 class 由 `site/render.ts|createCrCard` 拼成 `cr-tag-` + `site/workshop-data.ts|getTagFromRole`，故合法取值只有 role 枚举五种（`creator/official/vup/oc/repo`，权威源 = `site/render.ts|buildCreatorEditCard` 编辑下拉 + `site/workshop-data.ts|getCreatorIdentity`）。⚠️ **历史缺陷**：存量 CSS 曾配了 `.cr-tag-game` 而 `game` 不在 role 枚举内，同时 `official`/`creator`/`repo` **无任何配色规则**——最常见的「官方/普通创作者」渲染成裸文字且与 vup/oc 无视觉区分。现状：`css/content-creator.ts` 五条齐备、色值走 `:host` 变量（`--tag-official` 金 / `--tag-creator` 靛 / `--tag-repo` 青绿，bg alpha .13），回归锁在 `css/content-css.test.ts`。⚠️ **边界**：`--tag-game`/`--tag-game-bg` 变量**保留在 `:host`**（当前全仓零消费者，无害；清理前须确认是否有人打算复活 game 身份）。**新增 role 时须同补一条配色，否则该身份静默退化为裸文字**
 - **筛选行/卡片/浮层的 tag 展示走 `getTagDisplayLabel` 单源**（锐评 P0-4 + 复核 P1-3）：已知身份 → `getCreatorIdentity` 的 i18n label；**未知 tag 原样显示**（曾回退成「YSM 创作者」，导致按钮文案与 `data-tag` 过滤语义不符）。`data-tag` 与 `cr-tag-<role>` class 始终是原始 role id（**展示层 ≠ 数据语义**）。站点空态引导指向 `workshop.importSite`（导入）——历史 bug：上传图标配「导出站点」，恢复路径指反
@@ -172,6 +174,7 @@ status: active
 
 - `2026-10-13`：创作者卡片与详情浮层抽「片段级单源渲染器」（头像/星标/身份 tag/平台徽章）供两视图共用，不合并两视图｜两视图 DOM/a11y 语义不同（网格项 vs role=dialog），合并=布局耦合；片段单源止住「修一处漏一处」式口径漂移｜回退 = `site/events.ts|cmCrBuildDetailHtml`
 - `2026-10-15`：创作者卡内交互控件（星标/联网搜索/本地徽章）由裸 span 升格为真 `<button>` + aria-label + aria-pressed，网格/卡片补 role=list/listitem｜span 不进 Tab 序、无 role、无可达名，键盘与读屏用户此前无法直接收藏（唯一通路是开浮层再点星标）｜回退 = `frontend/src/views/app-content/site/render.ts|creatorStarBtnHtml`
+- `2026-10-15`：创作者色带语义重做：作废按产量百分位分档（含三条发牌纪律/并列裁断/silver 底保约 60 行），改为展示序每 9 张交替 gold/silver 的位置色带（creatorBandOf O(1)），同批删除图例 buildTierLegendRow 与三语死键 content.tierGold/tierSilver，标识 tier 全量更名 band（data-band / --band-gold / --band-silver / cr-card-band-bar）｜原分档把「用户自己的本地下载量」包装成「顶级创作者」荣誉，新用户全站无牌（功能静默死亡），且 60 行纪律复杂度只服务一条 3px 色条；位置色带零信号依赖、CSS 只需两值｜回退 = `frontend/src/views/app-content/site/render.ts|creatorBandOf`
 
 ## 相关
 

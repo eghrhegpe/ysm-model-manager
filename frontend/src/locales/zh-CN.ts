@@ -18,6 +18,7 @@ export const zhCN = {
   "nav.instances": "整合包管理",
   "nav.label": "导航栏",
   "nav.viewer": "3D 预览",
+  "nav.viewerOpenFail": "打开 3D 预览失败",
   "nav.community": "创作者频道",
   "nav.workshop": "创意工坊",
   // ADR-300 D4：冲突处置已被「体检」分组收编（S2 落地），“与冲突”后缀随之退役
@@ -716,8 +717,6 @@ export const zhCN = {
   "content.emptyCreators": "暂无创作者",
   "content.noMatchCreators": "没有符合条件的创作者",
   "content.clearFilter": "清除筛选",
-  "content.tierGold": "本地模型数第一",
-  "content.tierSilver": "本地模型数第二",
   "content.browseLocalModels": "浏览本地模型",
   "content.searchTerms": "🔍 搜索词",
   "content.searchKeywordPlaceholder": "搜索关键词",
@@ -843,6 +842,10 @@ export const zhCN = {
   // P1-3：推送/拉取循环进度（按钮内显示，大批量不再只干等 spinner）
   "sidebar.pushProgress": "推送中 {i}/{n} 类…",
   "sidebar.pullProgress": "拉取中 {i}/{n} 包…",
+  // 2026-10-15 UX 补：同步变更明细浮层（toast 只给计数，明细走浮层逐条点名）
+  "sidebar.syncResultTitle": "同步变更明细",
+  "sidebar.syncResultPush": "推送完成：成功 {ok}，失败 {fail}",
+  "sidebar.syncResultPull": "拉取完成：成功 {ok}，失败 {fail}",
 
   // ── 资源管理器 ──
   "resource.loadFailed": "资源加载失败",

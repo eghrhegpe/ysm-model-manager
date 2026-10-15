@@ -390,6 +390,14 @@ func (a *App) LoadAppConfig() types.AppConfig {
 		return a.configCache
 	}
 	if err := readJSONFile(configPath(), &a.configCache); err != nil {
+		// ⚠️ 惰性路径此前**静默** return（锐评 2026-10-15 P2）——configLoaded 保持 false
+		// 让下次调用重试（这是对的，app_config_loaded_test.go 锁住），但失败本身零日志，
+		// 与启动路径 loadAppConfig 的打日志口径不一致：JSON 损坏时用户在日志面板看不到任何
+		// 痕迹（尤其启动路径若也失败，诊断就是彻底盲区）。此处补上，且**仅跳过 NotExist**
+		//（文件缺失=首次启动，属正常；启动路径也是这个口径），避免持久缺失时每次调用刷屏。
+		if !os.IsNotExist(err) {
+			log.Printf("[LoadAppConfig] 读取配置失败: %v ——保留原文件供人工修复", err)
+		}
 		return a.configCache
 	}
 	// ADR-095: 将废弃的独立配置字段（YsmRoot/MmdRoot 等）迁移到 CustomRoots map

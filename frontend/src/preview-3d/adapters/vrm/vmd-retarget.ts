@@ -127,47 +127,33 @@ interface VmdIkTimeline {
  * @param clipDurationSeconds clip 时长（尾段补到该值；循环播放语义见上）
  * @returns 时间轴，或 null（无 IK 骨）
  */
-function extractVmdIkTimeline(
-  vmd: VmdObject,
-  ikBoneNames: readonly (string | null)[],
-  side: "left" | "right",
-  clipDurationSeconds: number,
-): VmdIkTimeline | null {
-  const targets = ikBoneNames.filter((n): n is string => n != null);
-  if (targets.length === 0) return null;
-  const frames = (
-    vmd as unknown as {
-      propertyKeyFrames?: readonly {
-        frameNumber: number;
-        ikStates: readonly (readonly [string, boolean])[];
-      }[];
-    }
-  ).propertyKeyFrames;
-  if (!frames || frames.length === 0) {
-    return { side, segments: [{ from: 0, to: Infinity, on: true }] };
-  }
-  // 性能护栏：密度超限 → 退化全程 on（极端 VMD 的抖动 ikStates 不值得每帧线性查）
-  if (frames.length > 512) {
-    return { side, segments: [{ from: 0, to: Infinity, on: true }] };
-  }
-  const targetSet = new Set(targets);
-  // 找该侧 IK 骨的首个 off keyframe（无 → 全程 on，最常见，零额外成本）
-  let hasOff = false;
+/** VMD 属性 keyframe 形态（vmd.propertyKeyFrames 元素；ikStates 为 [骨骼名, 开关] 列表） */
+interface VmdPropertyKeyFrame {
+  frameNumber: number;
+  ikStates: readonly (readonly [string, boolean])[];
+}
+
+/** 该侧 IK 骨的首个 off keyframe（无 → 全程 on，最常见，零额外成本） */
+function hasOffIkKeyframe(
+  frames: readonly VmdPropertyKeyFrame[],
+  targetSet: ReadonlySet<string>,
+): boolean {
   for (const f of frames) {
     for (const [name, enabled] of f.ikStates) {
-      if (targetSet.has(name) && !enabled) {
-        hasOff = true;
-        break;
-      }
+      if (targetSet.has(name) && !enabled) return true;
     }
-    if (hasOff) break;
   }
-  if (!hasOff) {
-    return { side, segments: [{ from: 0, to: Infinity, on: true }] };
-  }
-  // 有 off 段：逐 keyframe 生成区间（升序、无重叠）
+  return false;
+}
+
+/** 逐 keyframe 生成 on/off 区间（升序、无重叠），尾段补到 clip 时长（循环播放时保持末帧状态） */
+function buildIkSegments(
+  frames: readonly VmdPropertyKeyFrame[],
+  targetSet: ReadonlySet<string>,
+  clipDurationSeconds: number,
+): Array<{ from: number; to: number; on: boolean }> {
   const fps = 30; // MMD 标准帧率
-  const segments: { from: number; to: number; on: boolean }[] = [];
+  const segments: Array<{ from: number; to: number; on: boolean }> = [];
   let prevT = 0;
   let prevOn = true;
   for (const f of frames) {
@@ -184,13 +170,38 @@ function extractVmdIkTimeline(
     prevT = t;
     prevOn = on;
   }
-  // 尾段补到 clip 时长（循环播放时保持末帧状态）
   segments.push({
     from: prevT,
     to: clipDurationSeconds > prevT ? clipDurationSeconds : Infinity,
     on: prevOn,
   });
-  return { side, segments };
+  return segments;
+}
+
+/** 全程 on 时间轴（无 off 段 / 密度超限的退化态） */
+function fullIkTimeline(side: "left" | "right"): VmdIkTimeline {
+  return { side, segments: [{ from: 0, to: Infinity, on: true }] };
+}
+
+function extractVmdIkTimeline(
+  vmd: VmdObject,
+  ikBoneNames: readonly (string | null)[],
+  side: "left" | "right",
+  clipDurationSeconds: number,
+): VmdIkTimeline | null {
+  const targets = ikBoneNames.filter((n): n is string => n != null);
+  if (targets.length === 0) return null;
+  const frames = (
+    vmd as unknown as {
+      propertyKeyFrames?: readonly VmdPropertyKeyFrame[];
+    }
+  ).propertyKeyFrames;
+  if (!frames || frames.length === 0) return fullIkTimeline(side);
+  // 性能护栏：密度超限 → 退化全程 on（极端 VMD 的抖动 ikStates 不值得每帧线性查）
+  if (frames.length > 512) return fullIkTimeline(side);
+  const targetSet = new Set(targets);
+  if (!hasOffIkKeyframe(frames, targetSet)) return fullIkTimeline(side);
+  return { side, segments: buildIkSegments(frames, targetSet, clipDurationSeconds) };
 }
 
 /**

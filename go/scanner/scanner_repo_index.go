@@ -178,7 +178,10 @@ jobs:
               // 白名单单独判定）——若此处照常套用否定链，ext=".json" 与链上每一项都不等 →
               // 恒真 → 刚放行的 ysm.json 又被丢回门外（同一缺陷的第二道门，2026-10 锐评复盘）。
               if ext != ".json" && __EXT_CONDITION__ { return nil }
-              if strings.Contains(p, "/.github") { return nil }
+              // 注：此处原有文件级判定（path 含 "/.github" 即跳过），已于 2026-10-15 移除——
+              // 目录级 d.Name() == ".github" → filepath.SkipDir 已让该子树根本不被访问，文件级
+              // 那条是不可达死代码（同一口径留两处反而会在将来漂移）；".github" 排除的守护由
+              // workflow_test.go 的目录级整行判据承担。
               rel, _ := filepath.Rel(".", p)
               rel = filepath.ToSlash(rel)
               // 条目 name 口径与应用内 scanner_scan.go|processScanDirEntry → buildRepoIndexEntries

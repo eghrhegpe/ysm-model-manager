@@ -122,7 +122,7 @@ status: active
 - 扫描结果受 30s 缓存保护，直接改盘后需显式失效缓存
 - `.json` 只允许 `ysm.json` 与 Go importer / 前端 `isImportableFile` 三处口径一致（ADR-038 D2 纵深防御）
 - **目录级 `.ban` 整体跳过**（P2 修复：`fileops.ToggleModelEnable` 对文件夹模型整组禁用时把父目录改名 `modelA.ban`，ADR-038 D3.7——原实现只过滤文件级 `.ban`，目录级禁用模型会以活跃身份进入 sync 的 repoHash 被列为 Missing 或被 SyncToggleStatus 重新启用；源码按目录基名匹配 `strings.HasSuffix(strings.ToLower(d.Name()), ".ban")` 跳过）
-- **`.github` 目录跳过**：与 CI `genindex.go` 的 `strings.Contains(p, "/.github")` 口径对齐（ADR-011），避免生成仓库索引时把 GitHub Actions .workflow 误入 index
+- **`.github` 目录跳过（目录级单口径）**：Go 侧 `scanner_scan.go|processScanDirEntry` 按 `d.Name() == ".github"` → `SkipDir`；CI 内嵌脚本同用**目录级** `SkipDir`（2026-10-15 删除了原先的文件级「`path` 含 `/.github`」判定——目录级已让该子树根本不被访问，文件级那条是不可达死代码，同口径留两处反而会漂移；守护由 `workflow_test.go` 的目录级整行判据承担）。目的：避免 `.github` 内合法扩展名进入 index（ADR-011）。
 - **`.relink-bak-*` 备份尸体子树跳过（ADR-342 D6，2026-10-14）**：`processScanDirEntry` 的目录分支在 recycle 之后追加 `fsutil.IsRelinkBackupPath(p)` → `SkipDir`（`ScanEntries` 与 `ScanEntriesLite` 共用本函数，一处修两处生效）。背景：失败 relink 留下的 `<夹名>.relink-bak-<ts>` 内模型哈希恒等于仓库原件，原实现让其作为活跃条目进 `ModelEntry` → 仓库树/搜索/作者提取显示**幻影模型**；谓词原先只在 `go/sync` 包内，现已下沉 `go/fsutil` 单点。回归测试 `scanner_corpse_test.go`（走盘 + 轻量两路）
 - **R31 修复链（2026-08-31）**：
   - P2-1 WalkDir error 忽略：根 lstat 失败时 WalkDir 不调 callback 直接返回 error，旧实现忽略返回值导致 walkFailed 恒 false，空结果照常缓存 30s。修复：`if werr := WalkDir(...); werr != nil { walkFailed = true }`。

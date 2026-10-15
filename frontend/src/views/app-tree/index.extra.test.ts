@@ -265,6 +265,50 @@ describe("app-tree index 入口生命周期（补位）", () => {
     el2.remove();
   });
 
+  // 锐评 2026-10-15：`_treeMovePayload` 原只查 `_deleteLock`，而它的注释声称「导入链/批量链
+  // 在途」也拒绝——两条**最长**的批量链（文件夹批量启禁 `toggleFolderBatch`、整库启停
+  // `runBatchToggle`）走的是 `_toggleLock`，完全没查。并发后果：两条链的 IPC 打同一文件，
+  // `fileops.opMu` 串行化后总有一方拿到旧路径（另一方已改名加 `.disabled` / 已搬走）→
+  // 部分失败 + 困惑 toast。本组把「任一仓库互斥锁在途 → 不起拖」钉成不变量。
+  it("_treeMovePayload：空闲时锚行在选中集 → 全集载荷；不在选中集 → 仅该行", async () => {
+    const el = await mountEl();
+    const probe = el as unknown as {
+      _treeMovePayload(a: string): { paths: string[]; anchor: string } | null;
+    };
+    expect(probe._treeMovePayload("/repo/a.ysm")).toBeNull(); // 无选中 → 不起拖
+    el.selectState.keys.add("/repo/a.ysm");
+    el.selectState.keys.add("/repo/b.ysm");
+    expect(probe._treeMovePayload("/repo/a.ysm")).toEqual({
+      paths: ["/repo/a.ysm", "/repo/b.ysm"],
+      anchor: "/repo/a.ysm",
+    });
+    // 锚行不在选中集 → 只拖该行（不误拖整组）
+    expect(probe._treeMovePayload("/repo/c.ysm")).toEqual({
+      paths: ["/repo/c.ysm"],
+      anchor: "/repo/c.ysm",
+    });
+  });
+
+  it("_treeMovePayload：任一仓库互斥锁在途（删除/启停/移动）→ 一律不起拖，释放后恢复", async () => {
+    const el = await mountEl();
+    const probe = el as unknown as {
+      _treeMovePayload(a: string): unknown;
+      _deleteLock: { tryStart(): boolean; finish(): void };
+      _toggleLock: { tryStart(): boolean; finish(): void };
+      _moveLock: { tryStart(): boolean; finish(): void };
+    };
+    el.selectState.keys.add("/repo/a.ysm");
+    for (const key of ["_deleteLock", "_toggleLock", "_moveLock"] as const) {
+      const lock = probe[key];
+      expect(lock.tryStart()).toBe(true);
+      // 该锁在途 → 不起拖（_toggleLock 那条是本刀修的病：原实现查不到它）
+      expect(probe._treeMovePayload("/repo/a.ysm")).toBeNull();
+      lock.finish();
+      // 释放即恢复可拖（防「锁释放了却永久禁拖」的反向回归）
+      expect(probe._treeMovePayload("/repo/a.ysm")).not.toBeNull();
+    }
+  });
+
   it("Delete 网页版无删除能力 → toast，不删除", async () => {
     const el = await mountEl();
     canMock.mockReturnValue(false); // 模拟无删除能力

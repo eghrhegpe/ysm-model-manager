@@ -782,10 +782,28 @@ export class AppTree extends WebComponentBase {
     }
   }
 
+  /** 仓库长操作在途（任一互斥锁被占用）——单一判据，勿在各消费点分别查一把锁。
+   *  三把锁均 `createBusyLock()` 实例级 + try/finally 释放，故不泄漏。 */
+  private _repoOpBusy(): boolean {
+    return this._deleteLock.isBusy() || this._toggleLock.isBusy() || this._moveLock.isBusy();
+  }
+
   /** 树内拖拽移动载荷（ADR-336）：锚行在选中集内 → 多选全集，否则单行。
-   *  busy 拒绝（导入链/批量链在途）返回 null = move-dnd 不起拖。 */
+   *  busy 拒绝（批量链 / 移动链在途）返回 null = move-dnd 不起拖。
+   *
+   *  ⚠️ 2026-10-15 锐评修正：本注释原写「导入链/批量链在途」，但实现**只查了 `_deleteLock`**
+   *  （批量删除）——两条最长的批量链（文件夹批量启禁 `toggleFolderBatch`、整库启停
+   *  `runBatchToggle`）走的是 `_toggleLock`，完全没查。并发后果：两条链的 IPC 打同一文件，
+   *  `fileops.opMu` 串行化后总有一方拿到「旧路径」（另一方已改名加 `.disabled` / 已搬走）→
+   *  部分失败 + 困惑 toast。现收敛为 `_repoOpBusy()` 单点（三把锁同答，含防「移动途中再起拖」）。
+   *
+   *  已知边界（挂账，不在本刀范围）：① **导入链**的 busy 锁建在 `import-dnd.ts|bindTreeDnD`
+   *  的闭包内、对 app-tree **不可达**，要覆盖须改 `bindTreeDnD` 签名（共享/注入锁）；
+   *  ② **批量重命名**（`runBatchRename`）与**整目录回收**（`atBeHandleDirRecycle`）两条长链
+   *  **不持任何锁**，同类并发风险仍在。长治方向 = 让全部仓库长操作共用一个「在途」原语，
+   *  届时本判据改为问那一个原语。 */
   private _treeMovePayload(anchor: string): TreeMovePayload | null {
-    if (this._deleteLock.isBusy() || this._state.selectState.keys.size === 0) return null;
+    if (this._repoOpBusy() || this._state.selectState.keys.size === 0) return null;
     if (this._state.selectState.keys.has(anchor)) {
       const paths = [...this._state.selectState.keys];
       return { paths, anchor };

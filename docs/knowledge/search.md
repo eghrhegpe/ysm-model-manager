@@ -66,6 +66,7 @@ auto_fields:
     - getStatsPoolSize
     - getVsMode
     - getVsRows
+    - invalidateBuildCache
     - Load
     - modalAdvFilter
     - onStatsProgress

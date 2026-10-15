@@ -71,7 +71,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 117 |
-| reload | `frontend/src/views/app-tree/bus-handlers.ts` | 251 |
+| reload | `frontend/src/views/app-tree/bus-handlers.ts` | 275 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -217,7 +217,7 @@
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 386 |
 | atTeClickRowFolder | `frontend/src/views/app-tree/events.ts` | 170 |
 | atTeClickRowFile | `frontend/src/views/app-tree/events.ts` | 244 |
-| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 756 |
+| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 757 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -325,24 +325,24 @@
 | onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 203 |
 | registerInstanceOps | `frontend/src/features/pack-ops/instance-ops.ts` | 138 |
 | registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 55 |
-| runDownloadMissing | `frontend/src/features/sync/sync.ts` | 305 |
-| runSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 391 |
+| runDownloadMissing | `frontend/src/features/sync/sync.ts` | 312 |
+| runSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 398 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 211 |
 | relinkAllInstancesInner | `frontend/src/views/app-content/settings/init.ts` | 247 |
 | bindPathClick | `frontend/src/views/app-content/settings/path-cards.ts` | 93 |
-| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 311 |
+| initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 338 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 73 |
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 137 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 569 |
+| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 581 |
 | _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 229 |
-| runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 95 |
-| atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 122 |
-| atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 183 |
-| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 336 |
+| runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 107 |
+| atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 134 |
+| atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 207 |
+| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 360 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 115 |
 | atTeBindRenameInput | `frontend/src/views/app-tree/events.ts` | 389 |
-| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 522 |
-| _executeTreeMove | `frontend/src/views/app-tree/index.ts` | 822 |
+| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 523 |
+| _executeTreeMove | `frontend/src/views/app-tree/index.ts` | 823 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -355,15 +355,15 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 331 |
+| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 355 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 114 |
-| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 517 |
-| _executeTreeMove | `frontend/src/views/app-tree/index.ts` | 821 |
+| toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 518 |
+| _executeTreeMove | `frontend/src/views/app-tree/index.ts` | 822 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| registerSync | `frontend/src/features/sync/sync.ts` | 432 |
+| registerSync | `frontend/src/features/sync/sync.ts` | 439 |
 
 ### `toast:show`
 
@@ -408,12 +408,12 @@
 | setupRecycleActions | `frontend/src/features/maintenance/recycle-bin.ts` | 132 |
 | onRecycleEmptyClick | `frontend/src/features/maintenance/recycle-bin.ts` | 204 |
 | registerAndroidEvents | `frontend/src/features/platform/android-events.ts` | 54 |
-| downloadMissing | `frontend/src/features/sync/sync.ts` | 343 |
-| handleSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 420 |
+| downloadMissing | `frontend/src/features/sync/sync.ts` | 350 |
+| handleSyncToggleStatus | `frontend/src/features/sync/sync.ts` | 427 |
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 212 |
 | applyFsaState | `frontend/src/views/app-content/settings/init.ts` | 406 |
 | onWebRepoAuthClick | `frontend/src/views/app-content/settings/init.ts` | 434 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 570 |
+| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 582 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -430,7 +430,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-tree/index.ts` | 335 |
+| connectedCallback | `frontend/src/views/app-tree/index.ts` | 336 |
 
 ### `ui:card-density`
 

@@ -73,6 +73,7 @@ auto_fields:
     - PerfTargetChoice
     - PerfTargetEcho
     - perfTargetEchoHTML
+    - perfTypeDisplayName
     - PerfTypeSummary
     - populatePerfTargetOptions
     - readActiveBenchMode

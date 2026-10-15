@@ -730,7 +730,7 @@
   "rtype.label.stageAnim": "ステージモーション",
   "rtype.label.defaultAnim": "デフォルトモーション",
   "rtype.label.defaultMorph": "デフォルトモーフ",
-  "rtype.label.fbx": "FBXモデル",
+  "rtype.label.fbx": "FBX モデル/アニメーション",
   "rtype.label.mmdShader": "MMDシェーダー",
   "rtype.label.resourcepack": "リソースパック",
   "rtype.label.shaderpack": "シェーダーパック",

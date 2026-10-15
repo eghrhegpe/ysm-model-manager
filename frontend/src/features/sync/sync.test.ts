@@ -113,7 +113,7 @@ describe("downloadMissing — 导入缺失直调（ADR-340）", () => {
       fail: 0,
       skipped: false,
       errors: [],
-      packs: [{ name: "PackA", ok: 1, fail: 0, errors: [] }],
+      packs: [{ name: "PackA", ok: 1, fail: 0, errors: [], files: expect.any(Array) }],
       overwrites: [],
     });
     expect(reloadEvents.length).toBeGreaterThan(0);
@@ -148,7 +148,7 @@ describe("downloadMissing — 导入缺失直调（ADR-340）", () => {
       fail: 0,
       skipped: false,
       errors: [],
-      packs: [{ name: "PackA", ok: 1, fail: 0, errors: [] }],
+      packs: [{ name: "PackA", ok: 1, fail: 0, errors: [], files: expect.any(Array) }],
       overwrites: [],
     });
     expect(toasts.some((t) => t.msg.includes("PackA: 导入 1 成功"))).toBe(true);
@@ -216,7 +216,7 @@ describe("downloadMissing — 导入缺失直调（ADR-340）", () => {
       fail: 0,
       skipped: false,
       errors: [],
-      packs: [{ name: "PackA", ok: 1, fail: 0, errors: [] }],
+      packs: [{ name: "PackA", ok: 1, fail: 0, errors: [], files: expect.any(Array) }],
       overwrites: [],
     });
     expect(toasts.some((t) => t.msg.includes("全部导入完成: 1 成功"))).toBe(true);
@@ -327,7 +327,9 @@ describe("downloadMissing — 导入缺失直调（ADR-340）", () => {
       fail: 1,
       skipped: false,
       errors: expect.any(Array),
-      packs: [{ name: "PackA", ok: 2, fail: 1, errors: expect.any(Array) }],
+      packs: [
+        { name: "PackA", ok: 2, fail: 1, errors: expect.any(Array), files: expect.any(Array) },
+      ],
       overwrites: [],
     });
     // 锐评 UX 高项收口（2026-10-14）：失败明细必点名——原 `catch { totalFail++ }` 吞错误
@@ -388,7 +390,7 @@ describe("downloadMissing — 导入缺失直调（ADR-340）", () => {
       fail: 0,
       skipped: false,
       errors: [],
-      packs: [{ name: "PackA", ok: 1, fail: 0, errors: [] }],
+      packs: [{ name: "PackA", ok: 1, fail: 0, errors: [], files: expect.any(Array) }],
       overwrites: [],
     });
     expect(toasts.some((t) => t.msg.includes("导入"))).toBe(false);
@@ -416,16 +418,44 @@ describe("downloadMissing — 导入缺失直调（ADR-340）", () => {
         ok: 0,
         fail: 1,
         errors: [expect.stringContaining("PackA/")],
+        files: [], // 全部失败 = 零成功项
       },
       {
         name: "PackB",
         ok: 0,
         fail: 3, // 计数如实（3 条），缘由封顶 2 条
         errors: [expect.stringContaining("PackB/"), expect.stringContaining("PackB/")],
+        files: [],
       },
     ]);
     // 全局 errors 仍是原口径（封顶 3 条，向后兼容）
     expect(outcome.errors).toHaveLength(3);
+  });
+
+  // 2026-10-15 推送侧逐文件点名回归锁：PackOutcome.files 收集**安装成功**的项（文件 + 目录），
+  // 失败项不入列（浮层只展示真正落位的；来源 = 前端逐条绑定安装时的 srcPath/dirPath，无 Go 新增字段）。
+  it("PackOutcome.files 收集安装成功项（失败项不含，目录并入）", async () => {
+    const repo = MOCK_DATA.GetRepoRoot;
+    mocks.GetResourceInstanceStatus.mockResolvedValue([
+      {
+        Name: "PackA",
+        Missing: [`${repo}/a.ysm`, `${repo}/b.ysm`],
+        MissingDirs: [`${repo}/rpA`],
+      },
+    ]);
+    mocks.InstallModelTo.mockImplementation((srcPath: string) =>
+      srcPath.endsWith("b.ysm") ? Promise.reject(new Error("locked")) : Promise.resolve(),
+    );
+    mocks.PushSingleResourceToInstance.mockResolvedValue(undefined);
+    const { downloadMissing } = await import("./sync.ts");
+    spyEvents();
+
+    const outcome = await downloadMissing({ instanceName: "PackA", rtype: "ysm" });
+
+    expect(outcome.ok).toBe(2);
+    expect(outcome.fail).toBe(1);
+    expect(outcome.packs).toHaveLength(1);
+    expect(outcome.packs![0].files).toEqual([`${repo}/a.ysm`, `${repo}/rpA`]);
   });
 });
 

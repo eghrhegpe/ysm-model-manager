@@ -730,7 +730,7 @@
   "rtype.label.stageAnim": "Stage Animation",
   "rtype.label.defaultAnim": "Default Animation",
   "rtype.label.defaultMorph": "Default Morph",
-  "rtype.label.fbx": "FBX Model",
+  "rtype.label.fbx": "FBX Model/Animation",
   "rtype.label.mmdShader": "MMD Shader",
   "rtype.label.resourcepack": "Resource Pack",
   "rtype.label.shaderpack": "Shader Pack",

@@ -48,6 +48,11 @@ const MAX_NAMED_PACKS = 3;
  *  全列会把 toast 撑爆（批量推送可覆盖上百个目标）。 */
 const MAX_NAMED_OVERWRITES = 3;
 
+/** 浮层每包成功文件明细上限（2026-10-15 推送侧逐文件点名）：浮层可滚动，但单包全列
+ *  仍会让清单失控（大整合包一次装几百文件）——前 8 条足以定位，超出记「…另 N」。
+ *  与 tpl 侧全清单 100 条总闸（SYNC_RESULT_MAX_FILES）分层设防。 */
+const MAX_PANEL_PACK_FILES = 8;
+
 /** 路径末段（**只切显示名**，不参与任何归属/类型判定——前端只读不判的红线只管语义，
  *  不管这点字符串处理；跨盘符/正反斜杠都切）。 */
 function baseName(p: string): string {
@@ -235,6 +240,9 @@ function handleSyncMenuClick(
   }
 }
 
+/** 包级累计态（跨类型累加）+ 成功安装项清单（2026-10-15 浮层逐文件点名数据源） */
+type PackTotal = { ok: number; fail: number; files: string[] };
+
 /** 推送累计态：文件级计数 + 失败明细 + 包级归因 + 覆盖清单 + skipped 分流 */
 interface PushAccum {
   skipped: number;
@@ -243,7 +251,7 @@ interface PushAccum {
   installOk: number;
   installFail: number;
   errorDetails: string[];
-  packTotals: Map<string, { ok: number; fail: number }>;
+  packTotals: Map<string, PackTotal>;
   /** 本次推送**覆盖实例侧已修改副本**的目标路径（ADR-340-d2；Set 去重，
    *  跨类型/跨包同路径只算一次——覆盖是磁盘事实，不是批次事实） */
   overwrites: Set<string>;
@@ -257,9 +265,10 @@ function absorbOutcome(outcome: DownloadOutcome, accum: PushAccum): void {
     if (accum.errorDetails.length < MAX_TOTAL_ERRORS) accum.errorDetails.push(msg);
   }
   for (const p of outcome.packs ?? []) {
-    const cur = accum.packTotals.get(p.name) ?? { ok: 0, fail: 0 };
+    const cur = accum.packTotals.get(p.name) ?? { ok: 0, fail: 0, files: [] };
     cur.ok += p.ok;
     cur.fail += p.fail;
+    if (p.files) cur.files.push(...p.files);
     accum.packTotals.set(p.name, cur);
   }
   for (const p of outcome.overwrites ?? []) accum.overwrites.add(p);
@@ -273,19 +282,14 @@ function absorbOutcome(outcome: DownloadOutcome, accum: PushAccum): void {
 }
 
 /** 失败包点名（P1-3）：只点有失败的包，按失败数降序（多类型累积后差距可见） */
-function buildFailedPacks(
-  packTotals: Map<string, { ok: number; fail: number }>,
-): Array<[string, { ok: number; fail: number }]> {
+function buildFailedPacks(packTotals: Map<string, PackTotal>): Array<[string, PackTotal]> {
   return [...packTotals.entries()]
     .filter(([, v]) => v.fail > 0)
     .sort((a, b) => b[1].fail - a[1].fail);
 }
 
 /** 汇总文案分段：安装失败 / 失败包点名（超 MAX_NAMED_PACKS 截断）/ 覆盖点名 / 跳过阻塞超时 / 失败明细 */
-function buildPushParts(
-  accum: PushAccum,
-  failedPacks: Array<[string, { ok: number; fail: number }]>,
-): string[] {
+function buildPushParts(accum: PushAccum, failedPacks: Array<[string, PackTotal]>): string[] {
   const parts: string[] = [];
   if (accum.installFail > 0) {
     parts.push(t("sidebar.pushInstallFail", { fail: accum.installFail, ok: accum.installOk }));
@@ -390,9 +394,17 @@ async function runPush(
     );
     // 变更明细浮层：把被 toast 截断的明细（覆盖清单/失败包/错误缘由）逐条点名，
     // 用户推送后能看到「到底改了哪些实例的哪些副本」，而非只剩一句计数摘要。
-    const packOkLines = [...accum.packTotals.entries()]
-      .filter(([, v]) => v.ok > 0)
-      .map(([name, v]) => `${name}: +${v.ok}`);
+    // 逐文件点名：每包一行「包名: +N」汇总，下挂缩进文件行（每包上限 8 条防浮层无界膨胀，
+    // 超出记「…另 N」；tpl 侧另有全清单 100 条总闸兜底）
+    const packOkLines: string[] = [];
+    for (const [name, v] of accum.packTotals) {
+      if (v.ok === 0) continue;
+      packOkLines.push(`${name}: +${v.ok}`);
+      const shown = v.files.slice(0, MAX_PANEL_PACK_FILES);
+      for (const f of shown) packOkLines.push(`  ${baseName(f)}`);
+      if (v.files.length > shown.length)
+        packOkLines.push(`  …${t("import.moreSuffix")}（${v.files.length - shown.length}）`);
+    }
     const notices: string[] = [];
     if (accum.skipped > 0) notices.push(t("sidebar.packSkipped", { n: accum.skipped }));
     if (accum.blocked > 0) notices.push(t("sidebar.packBlocked", { n: accum.blocked }));

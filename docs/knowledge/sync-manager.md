@@ -274,6 +274,7 @@ sidebar 底部 push/pull 菜单（整包级，与 sync-manager 组件解耦）
 ## 裁定记录
 
 - `2026-10-14`：DownloadOutcome 扩展 packs?: PackOutcome[]（包级归因，成功路径恒有），文件级 ok/fail/errors 原口径不变｜锐评 P1-3：只报「失败 N 个文件」时用户无从知道是哪个包失败，包名归因须随计数一并上抛；纯加字段向后兼容｜回退 = `frontend/src/features/sync/sync.ts|DownloadOutcome`
+- `2026-10-15`：PackOutcome 扩展 files?: string[]（推送侧逐文件点名 = 每包**安装成功**的项清单：Missing 文件 srcPath + MissingDirs 目录 dirPath，来源是前端逐条绑定安装当次的条目路径，**零 Go 新增字段**——推送安装本就是前端循环直调，清单在调用点天然可得）；失败项不入列（浮层只展示真正落位的）。侧栏同步浮层（`app-sidebar`）据此每包一行「包名: +N」下挂缩进文件行（每包上限 8 条，超出记「…另 N」，tpl 侧全清单 100 条总闸兜底）。纯加字段向后兼容｜裁定 = `frontend/src/features/sync/sync.ts|PackOutcome` + `frontend/src/views/app-sidebar/sync-flow.ts|renderSyncResultPanel`
 
 ## 相关
 

@@ -29,6 +29,9 @@ export interface PackOutcome {
   fail: number;
   /** 本包失败明细（每包上限 MAX_PACK_ERRORS 条，friendlyError 归一，防多包批量无界增长） */
   errors: string[];
+  /** 本包**安装成功**的项（文件/目录）路径清单（2026-10-15 推送侧逐文件点名，
+   *  供侧栏浮层逐条展示；来源 = 前端逐条绑定安装时的 srcPath/dirPath，无新增 Go 字段） */
+  files?: string[];
 }
 
 /** downloadMissing 统一结果契约（ADR-340）：直调方据 skipped/skipReason 分类、
@@ -159,10 +162,12 @@ async function installInstanceMissing(
   };
   let packOk = 0;
   let packFail = 0;
+  const packFiles: string[] = [];
   for (const srcPath of st.Missing ?? []) {
     const r = await installMissingFile(srcPath, ins, rtype, app);
     if (r.ok) {
       packOk++;
+      packFiles.push(srcPath);
       if (overwriteSet.has(srcPath)) overwrites.push(srcPath);
     } else {
       packFail++;
@@ -173,6 +178,7 @@ async function installInstanceMissing(
     const r = await installMissingDir(dirPath, ins, rtype, app);
     if (r.ok) {
       packOk++;
+      packFiles.push(dirPath);
       if (overwriteSet.has(dirPath)) overwrites.push(dirPath);
     } else {
       packFail++;
@@ -185,6 +191,7 @@ async function installInstanceMissing(
       ok: packOk,
       fail: packFail,
       errors: allErrors.slice(0, MAX_PACK_ERRORS),
+      files: packFiles,
     },
     allErrors,
     overwrites,

@@ -125,6 +125,8 @@ function cmCrBindOverlayEvents(
     // innerHTML（RHS 为预构建 SVG 常量，命中 R8 豁免「预构建 HTML 变量」）
     const starHtml = now ? UI_ICONS.starFilled : UI_ICONS.star;
     if (overlayStar) overlayStar.innerHTML = starHtml;
+    // 同卡片路径：浮层星标也须同步 aria-pressed（2026-10-15 a11y）
+    overlayStar?.setAttribute("aria-pressed", String(now));
     const cardStar = searchResults.querySelector(
       `.cr-star-btn[data-star="${CSS.escape(cr.name)}"]`,
     );
@@ -289,6 +291,8 @@ function cmBbBindStarBtns(
       // 预构建 SVG 常量先取到局部变量（R8 豁免：RHS=裸变量，无三元/拼接）
       const starHtml = now ? UI_ICONS.starFilled : UI_ICONS.star;
       btn.innerHTML = starHtml;
+      // 2026-10-15 a11y：aria-pressed 与视觉双态同步——只换 SVG 会让读屏播报陈旧收藏态
+      btn.setAttribute("aria-pressed", String(now));
       const card = btn.closest(".gh-card");
       const grid = card?.closest(".cr-creator-grid");
       if (card instanceof HTMLElement && grid instanceof HTMLElement) {
@@ -482,8 +486,10 @@ function cmSeSyncFavButtons(
   const moved = new Set<HTMLElement>();
   qsa<HTMLElement>(searchResults, ".cr-star-btn").forEach((btn) => {
     // 预构建 SVG 常量先取到局部变量（R8 豁免：RHS=裸变量）
-    const starHtml = favs.includes(btn.dataset.star || "") ? UI_ICONS.starFilled : UI_ICONS.star;
+    const isFav = favs.includes(btn.dataset.star || "");
+    const starHtml = isFav ? UI_ICONS.starFilled : UI_ICONS.star;
     btn.innerHTML = starHtml;
+    btn.setAttribute("aria-pressed", String(isFav)); // 跨标签同步同样要正 a11y 状态
     const card = btn.closest(".gh-card");
     if (card instanceof HTMLElement) moved.add(card);
   });

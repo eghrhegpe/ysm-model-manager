@@ -144,6 +144,13 @@ export const contentCreatorCSS: string = `
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   flex:1;
 }
+/* P0 a11y（2026-10-15）：星标 / 联网搜索 / 本地徽章由 <span> 升格为 <button>——
+   先在此抹掉 UA 按钮默认面（背景/边框/内边距/字体/前景色），再接各自语义类。
+   ⚠️ 本组必须排在 .cr-card-local-count 之前：徽章的 border/padding/color 靠后者
+   同特异性覆盖回来（顺序颠倒会把徽章外观清零）。 */
+.cr-star-btn, .cr-card-search, .cr-card-local-jump {
+  background:transparent;border:none;padding:0;font-family:inherit;color:inherit;
+}
 .cr-card-local-count {
   font-size:var(--fs-micro);color:var(--muted);flex-shrink:0;
   border:1px solid var(--bd);border-radius:var(--radius-lg);
@@ -171,6 +178,11 @@ export const contentCreatorCSS: string = `
 .cr-card-search:hover { transform:scale(1.15); }
 .cr-star-btn { cursor:pointer;font-size:var(--fs-sm);color:var(--sm-optional);transition:transform var(--tr-normal);flex-shrink:0; } /* ADR-238：星标走 SVG 语义图标（currentColor），收藏金色沿用 --sm-optional；tier 荣誉色已独立为 --tier-gold/--tier-silver（P0-2） */
 .cr-star-btn:hover { transform:scale(1.15); }
+/* 卡内三个按钮的键盘焦点环（2026-10-15 a11y）：升格为 button 后必须给出可见焦点，
+   否则 Tab 进来「看不见自己在哪」。视觉沿用卡片 focus-visible 的 accent 语言。 */
+.cr-star-btn:focus-visible, .cr-card-search:focus-visible, .cr-card-local-jump:focus-visible {
+  outline:2px solid var(--accent);outline-offset:2px;
+}
 
 /* ===== 预设搜索 ===== */
 .cr-preset-area { display:flex;gap:6px;flex-wrap:wrap;padding:4px 0 12px; }

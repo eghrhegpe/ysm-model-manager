@@ -20,6 +20,10 @@ interface FilterStateShell {
   activeTag: string;
 }
 
+/** 搜索框输入的筛选防抖窗口（ms）。逐键全量扫描卡片在百人站点上是可见卡顿；关键词**持久化仍即时**
+ *  （切页/重进不丢），只有「可见性重算」延后到停手后一次。 */
+export const SEARCH_FILTER_DEBOUNCE_MS = 120;
+
 // ===== 编辑态 dirty 守卫 =====
 // 快照 = 本站创作者 + 预设搜索词的可编辑字段序列化；退出编辑前比较判定「未保存变更」。
 // 刻意只序列化**可编辑子集**（name/desc/type/role + preset label）：运行时附加字段
@@ -587,15 +591,30 @@ function eeBindCreatorFilter(state: SiteViewState, fs: FilterStateShell, sig: Ab
   const siteId = site?.id || "";
 
   const searchInput = searchResults.querySelector("#ws-cr-search") as HTMLInputElement | null;
+  // 防抖定时器归本接线函数私有：AbortSignal abort（组件卸载/重渲）与「清除筛选」都必须取消在途一次，
+  // 否则停手前切页会把一次 eeApplyFilters 打到已废弃的 DOM 上（2026-10-15）。
+  let searchTimer: number | undefined;
+  const cancelPendingFilter = (): void => {
+    if (searchTimer !== undefined) {
+      window.clearTimeout(searchTimer);
+      searchTimer = undefined;
+    }
+  };
   if (searchInput) {
     searchInput.addEventListener(
       "input",
       () => {
         saveSearchKw(siteId, searchInput.value);
-        eeApplyFilters(searchResults, searchInput, fs, creators);
+        cancelPendingFilter();
+        searchTimer = window.setTimeout(() => {
+          searchTimer = undefined;
+          if (sig.aborted) return;
+          eeApplyFilters(searchResults, searchInput, fs, creators);
+        }, SEARCH_FILTER_DEBOUNCE_MS);
       },
       { signal: sig },
     );
+    sig.addEventListener("abort", cancelPendingFilter);
   }
 
   // 零结果空态的「清除筛选」出口：复位关键词 + 标签 + 计数 + 移除空态。
@@ -605,6 +624,7 @@ function eeBindCreatorFilter(state: SiteViewState, fs: FilterStateShell, sig: Ab
     (e) => {
       const target = e.target as HTMLElement | null;
       if (!target?.closest("[data-clear-filter]")) return;
+      cancelPendingFilter(); // 在途防抖一次作废：本次已同步全量重算，避免延迟一拍再覆盖
       fs.activeTag = "";
       saveActiveTag(siteId, "");
       if (searchInput) {

@@ -247,6 +247,8 @@ describe("bindBrowseEvents — 基础绑定", () => {
     const starSvg = star.querySelector("svg");
     expect(starSvg).toBeTruthy();
     expect(starSvg?.hasAttribute("fill")).toBe(true);
+    // 2026-10-15 a11y：视觉双态之外 aria-pressed 必须同步（读屏播报的是它，不是 SVG）
+    expect(star.getAttribute("aria-pressed")).toBe("true");
     expect(busEmit).toHaveBeenCalledWith(
       "toast:show",
       expect.objectContaining({ msg: expect.stringContaining("已收藏") }),

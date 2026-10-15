@@ -34,6 +34,7 @@ auto_fields:
     - Model2DOptions
     - openFullPreview
     - renderModel2D
+    - SEARCH_FILTER_DEBOUNCE_MS
     - setActive3DClose
   tests:
     - frontend/src/views/app-preview/model2d/model2d.test.ts

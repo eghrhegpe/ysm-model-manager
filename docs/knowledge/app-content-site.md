@@ -66,6 +66,7 @@ auto_fields:
     - saveActiveTag
     - saveBrowseMode
     - saveSearchKw
+    - SEARCH_FILTER_DEBOUNCE_MS
     - SiteViewState
     - toggleFav
     - workshopTpl
@@ -163,11 +164,14 @@ status: active
 - **收藏后的卡片重排与渲染排序共用同一比较器**（2026-10-13 锐评修）：`site/events.ts|cmCrReorderCard`（收藏点击后就地重排）与 `site/render.ts|sortCreatorsFavedFirst`（渲染期排序）**同用 `workshop-data.ts|compareFavFirst`**，规则 = 收藏置顶 → 组内按本地模型产量降序。⚠️ **历史缺陷**：`cmBbBindStarBtns` 曾手写「收藏 → `insertBefore(firstChild)` / 取消收藏 → `appendChild` 队尾」，与排序规则**反向**——产量高的创作者取消收藏后被沉到队尾；且不触发重渲染，错乱持续到整树重建。两套口径必然漂移，故比较器提到 `workshop-data.ts` 作单源。实现要点：只搬运被点的那一张卡（其余节点不动）以保住滚动位置与展开态，**不整树重渲染**；用 `insertBefore(anchor)` 表达目标位次而非盲 `appendChild`
 - **头像调试探针只在 `isDevMode()` 下绑 click**（2026-10-13 锐评修）：`site/events.ts|cmBbBindDebugAvatar` 对 `[data-debug-avatar]` **恒绑** error→字母 fallback（功能性降级，破图不留），而 `DebugExtractCreatorAvatar` 探针**非开发态根本不绑**。⚠️ **历史缺陷三重错位**：该探针无条件绑在用户手势上，Go 侧 `internal/app/app_avatar.go|DebugExtractCreatorAvatar` 每次调用都对整库跑 `ScanModelEntries(ysmRoot())` 全量扫描，结果只写 `dbg()` 环形缓冲（生产无控制台，用户看不见任何反应），且 handler 的 `stopPropagation` 还吞掉本应打开详情浮层的卡片点击——**最贵的手势 + 零可见反馈 + 吃掉正常行为**。⚠️ 门必须用 `utils/debug/dev-mode.ts|isDevMode()`（默认关），**不可用 `debug.ts|isDebugEnabled()`**（默认开，门等于没关）。回归锁在 `site/events.test.ts`：生产态断言桥调用零次 + 浮层正常打开（夹具须挂真 shadow root——浮层写 `searchResults.getRootNode()`，留在 light DOM 时该值是 Document，happy-dom 的 `document.appendChild` 直接抛「Only one element on document allowed」，那是夹具结构错不是生产缺陷）
 - **平台徽章 = 站点图标 + 站点 id，卡片与浮层同口径**（2026-10-13 锐评修）：`site/render.ts|createCrCard` 与 `site/events.ts|cmCrBuildDetailHtml` 两处都产出 `.cr-platform-badge`，均走 `getSiteIcon(platform)` + 站点 id；图标尺寸规则挂在共享类 `.cr-platform-badge .ws-icon`（`css/content-creator.ts`），**不再限定 `.cr-detail-platforms` 作用域**。⚠️ **历史缺陷**：`docs/guide/creators.md` 明写卡片显示「收录的平台图标」、CSS 基类 `.cr-platform-badge` 也早就按 `inline-flex + gap:2px` 的图标+文字形状设计，但 `createCrCard` 只拼裸站点 id——图标只在浮层出现，文档与代码互相矛盾且 CSS 约束对卡片无效。⚠️ **口径边界**：徽章文字用站点 id 而**不用** `workshop_sites.json` 的 `label`——`label` 是中文优先的捆绑内容（"B站"/"爱发电"），拿去 en/ja 界面属新增中文硬编码（与「创作者数据面禁写界面文案」不同性质但同样影响多语观感）；站点名多语化是独立产品决策（10+ 站点 × 3 语言包），不得顺手夹带。视觉侧量化取证：图标 10×10、徽章高 18px、无横向溢出
+- **卡内交互控件必须是真 `<button>`（2026-10-15 a11y 升格）**：`site/render.ts|creatorStarBtnHtml` 与 `site/render.ts|createCrCard` 产出的星标 / 联网搜索 / 本地徽章一律 `<button type="button">`，图标按钮的可达名走 `aria-label`（`content.favToggleLabel` / `content.searchCreatorAria` / 复用 `content.localModelsCount`·`content.viewLocalModels`），星标另挂 `aria-pressed` 承载双态。⚠️ **历史缺陷**：三者原为裸 `<span>`——不进 Tab 序、无 role、无可达名，键盘/读屏用户唯一收藏通路是「开浮层 → 点浮层星标 → 关浮层」。⚠️ **配套两条**：① `css/content-creator.ts` 必须先抹掉 UA 按钮默认面（背景/边框/内边距/字体/前景色），且该重置组**必须排在 `.cr-card-local-count` 之前**——顺序颠倒会把徽章外观清零；② `aria-pressed` 有**三条切换路径**（卡片星标 `site/events.ts|cmBbBindStarBtns`、浮层星标 `site/events.ts|cmCrBindOverlayEvents`、跨标签同步 `site/events.ts|cmSeSyncFavButtons`），只换 SVG 会让读屏播报陈旧收藏态（与「收藏序三条路径同口径」同构，改星标渲染时须同步）。网格容器 `role=list` + 卡片 `role=listitem`（读屏可播报「列表，N 项」）；`#ws-cr-count` 的 `title` 由 `content.creatorCountTitle` 说明分母含义。回归锁：`site/render.test.ts` 的控件语义用例 + `site/events.test.ts` 星标点击断言 `aria-pressed`
+- **搜索框筛选防抖，关键词持久化不防抖**（2026-10-15）：`site/edit.ts|eeBindCreatorFilter` 的 `input` 监听里 `saveSearchKw` **即时**执行（切页/重进不丢词），`eeApplyFilters` 走 `site/edit.ts|SEARCH_FILTER_DEBOUNCE_MS`（120ms）防抖——逐键全量遍历 `.gh-card` 并切换类在百人站点上是可见卡顿（原实现已把命中判定优化成 O(n)，卡顿来自「每键一次全量 DOM 遍历」本身）。在途定时器收口于接线内的 `cancelPendingFilter`：`AbortSignal` abort（卸载/重渲）与「清除筛选」都必须作废它，防停手前切页把一次筛选打到废弃 DOM 上。⚠️ `activeTag` / `searchKw` 在 `site/render.ts|BuildSiteHtmlCtx` 里**只作回显与按钮高亮**、不参与可见性过滤（过滤全在 DOM 层），改它们不会少渲染任何一张卡（两字段注释已显式声明）。回归锁：`site/edit.test.ts` 的「停手一个防抖窗后生效」「连打多键合并为一次重算」「关键词即时落盘」三例
 
 
 ## 裁定记录
 
 - `2026-10-13`：创作者卡片与详情浮层抽「片段级单源渲染器」（头像/星标/身份 tag/平台徽章）供两视图共用，不合并两视图｜两视图 DOM/a11y 语义不同（网格项 vs role=dialog），合并=布局耦合；片段单源止住「修一处漏一处」式口径漂移｜回退 = `site/events.ts|cmCrBuildDetailHtml`
+- `2026-10-15`：创作者卡内交互控件（星标/联网搜索/本地徽章）由裸 span 升格为真 `<button>` + aria-label + aria-pressed，网格/卡片补 role=list/listitem｜span 不进 Tab 序、无 role、无可达名，键盘与读屏用户此前无法直接收藏（唯一通路是开浮层再点星标）｜回退 = `frontend/src/views/app-content/site/render.ts|creatorStarBtnHtml`
 
 ## 相关
 

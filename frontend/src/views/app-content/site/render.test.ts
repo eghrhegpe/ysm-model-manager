@@ -535,4 +535,44 @@ describe("createCrCard 创作者卡片工厂（声明式字符串）", () => {
     const at20 = parseCardHtml(createCrCard(cr, cardCtx({ staggerIdx: 20 })));
     expect(at20.getAttribute("style")).toContain("animation-delay:300ms");
   });
+
+  it("18. 卡内交互控件为真 <button>（Tab 可达 + 可达名 + aria-pressed），网格/卡片带列表语义", () => {
+    // 2026-10-15 a11y：三个卡内交互原为裸 <span>——不进 Tab 序、无 role、无可达名，
+    // 键盘/读屏用户唯一收藏通路是「开浮层 → 点浮层星标 → 关浮层」。此处锁死升格结果。
+    const cr = {
+      name: "张三",
+      desc: "",
+      type: "siteA",
+      _fromLocal: true,
+    } as LocalCreatorLike;
+    const card = parseCardHtml(
+      createCrCard(
+        cr,
+        cardCtx({ site: { searchUrl: "u" } as WorkshopSite, authorCountMap: { 张三: 3 } }),
+      ),
+    );
+    for (const sel of [".cr-star-btn", ".cr-card-search", ".cr-card-local-jump"]) {
+      const el = card.querySelector(sel) as HTMLElement | null;
+      expect(el, `${sel} 缺失`).toBeTruthy();
+      expect(el!.tagName, `${sel} 必须是 <button>（键盘可达）`).toBe("BUTTON");
+      expect(el!.getAttribute("type"), `${sel} 须 type=button（表单内不误提交）`).toBe("button");
+      expect(el!.getAttribute("aria-label")?.trim(), `${sel} 缺可达名`).toBeTruthy();
+    }
+    // 星标双态语义：aria-pressed 与 SVG 双态同源；可达名带创作者名（图标按钮无可见文本）
+    const star = card.querySelector(".cr-star-btn") as HTMLElement;
+    expect(star.getAttribute("aria-pressed")).toBe("false");
+    expect(star.getAttribute("aria-label")).toContain("张三");
+    const favCard = parseCardHtml(createCrCard(cr, cardCtx({ isFaved: () => true })));
+    expect(favCard.querySelector(".cr-star-btn")?.getAttribute("aria-pressed")).toBe("true");
+    // 列表语义：卡片 role=listitem + 网格 role=list/aria-label（读屏可播报「列表，N 项」）
+    expect(card.getAttribute("role")).toBe("listitem");
+    const root = renderHtml(makeCtx({ creators: [cr] }));
+    const grid = root.querySelector("#cr-creator-grid");
+    expect(grid?.getAttribute("role")).toBe("list");
+    expect(grid?.getAttribute("aria-label")).toBe(t("content.activeCreators"));
+    // 计数分母有出处：(n/n) 里的 n 是什么此前全靠猜
+    expect(root.querySelector("#ws-cr-count")?.getAttribute("title")).toBe(
+      t("content.creatorCountTitle", { n: 1 }),
+    );
+  });
 });

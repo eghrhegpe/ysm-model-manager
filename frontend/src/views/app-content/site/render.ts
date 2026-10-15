@@ -57,15 +57,21 @@ export function creatorPlatformBadgesHtml(
     .join("");
 }
 
-/** 收藏星标按钮（双态 SVG 随主题 currentColor；`data-star` 是事件委托键）。 */
+/**
+ * 收藏星标按钮（双态 SVG 随主题 currentColor；`data-star` 是事件委托键）。
+ *
+ * 2026-10-15 a11y：由 `<span>` 升格为 `<button type="button">`——span 不进 Tab 序、无 role、
+ * 无可达名，键盘/读屏用户此前**无法直接收藏**（唯一通路是开浮层→点浮层星标→关浮层）。
+ * `aria-pressed` 承载双态语义（三条切换路径须同步改写它，见 site/events.ts）。
+ */
 export function creatorStarBtnHtml(
   name: string,
   faved: boolean,
   esc: (s: unknown) => string,
 ): string {
-  return `<span class="cr-star-btn" data-star="${esc(name)}">${
-    faved ? UI_ICONS.starFilled : UI_ICONS.star
-  }</span>`;
+  return `<button type="button" class="cr-star-btn" data-star="${esc(name)}" aria-pressed="${faved}" aria-label="${esc(
+    t("content.favToggleLabel", { name }),
+  )}">${faved ? UI_ICONS.starFilled : UI_ICONS.star}</button>`;
 }
 
 /** 头像变体：卡片与浮层的 class / 降级属性不同（结构差异，非口径差异）。 */
@@ -122,9 +128,13 @@ export interface BuildSiteHtmlCtx {
   avatarCache: Record<string, string>;
   /** 创作者频道浏览模式 { v }，决定 pill 开关当前 active */
   browseMode: BrowseModeRef;
-  /** 分类标签过滤（localStorage 持久化），""=全部 */
+  /** 分类标签过滤（localStorage 持久化），""=全部。
+   *  ⚠️ 渲染期**只**用于「筛选按钮 active 高亮」，不参与可见性过滤——真正的隐显切换由
+   *  `site/edit.ts|eeApplyFilters` 在 DOM 层 toggle `.cr-card-hidden`（逐键不重渲整树）。
+   *  改这个值不会少渲染任何一张卡，勿当成过滤开关（2026-10-15 注释澄清）。 */
   activeTag: string;
-  /** 创作者搜索关键词（localStorage 持久化） */
+  /** 创作者搜索关键词（localStorage 持久化）。⚠️ 渲染期**只**回填搜索框 value，
+   *  真正的关键词过滤同样在 `site/edit.ts|eeApplyFilters`（DOM 层），见上条。 */
   searchKw: string;
   /** 查看器模式（网页版/Android ADR-049 能力门控）：隐藏桌面专属的创作者编辑入口（保存走未桥接 BySite 绑定） */
   viewerMode: boolean;
@@ -145,23 +155,31 @@ export function createCrCard(cr: LocalCreatorLike, ctx: CrCardCtx): string {
     withFallbackAttr: true,
   });
 
+  // 本地徽章/联网搜索同为卡内交互，2026-10-15 a11y 一并由 span 升格为真按钮
+  // （aria-label 兼可达名；纯展示态无 title/aria 差异时仍复用既有 i18n 文案）。
   const localBadge = cr._fromLocal
     ? authorCount > 0
-      ? `<span class="cr-card-local-count cr-card-local-jump" data-local-creator="${esc(
+      ? `<button type="button" class="cr-card-local-count cr-card-local-jump" data-local-creator="${esc(
           cr.name,
-        )}" title="${t("content.localModelsCount", { n: authorCount })}">${UI_ICONS.folder}${authorCount}</span>`
-      : `<span class="cr-card-local-count cr-card-local-jump" data-local-creator="${esc(
+        )}" title="${t("content.localModelsCount", { n: authorCount })}" aria-label="${esc(
+          t("content.localModelsCount", { n: authorCount }),
+        )}">${UI_ICONS.folder}${authorCount}</button>`
+      : `<button type="button" class="cr-card-local-count cr-card-local-jump" data-local-creator="${esc(
           cr.name,
-        )}" title="${t("content.viewLocalModels")}">${UI_ICONS.folder}</span>`
+        )}" title="${t("content.viewLocalModels")}" aria-label="${esc(
+          t("content.viewLocalModels"),
+        )}">${UI_ICONS.folder}</button>`
     : "";
 
   const platformBadges = creatorPlatformBadgesHtml(cr.type, esc);
 
   // 🔍 搜索快捷按钮（与星标对称）：有站点搜索能力才渲染，点击联网搜索创作者，免进详情
   const searchBtn = site.searchUrl
-    ? `<span class="cr-card-search" data-search-creator="${esc(
+    ? `<button type="button" class="cr-card-search" data-search-creator="${esc(
         cr.name,
-      )}" title="${t("content.searchMoreModels")}">${UI_ICONS.search}</span>`
+      )}" title="${t("content.searchMoreModels")}" aria-label="${esc(
+        t("content.searchCreatorAria", { name: cr.name }),
+      )}">${UI_ICONS.search}</button>`
     : "";
 
   const tierBar = tierRank ? `<div class="cr-card-tier-bar"></div>` : "";
@@ -176,7 +194,9 @@ export function createCrCard(cr: LocalCreatorLike, ctx: CrCardCtx): string {
   const descText = cr.desc || (cr._fromLocal ? t("community.fromLocal") : "");
 
   return (
-    `<div class="gh-card cr-creator-card cr-creator-card--grid" tabindex="0" style="animation-delay:${stagger(
+    // 2026-10-15 a11y：卡片成「列表项」——与网格的 role=list 配对，读屏可播报「列表，共 N 项」；
+    // tabindex 保留（键盘导航的原语选择器 `.gh-card[tabindex]` 与 focus-visible 都依赖它）。
+    `<div class="gh-card cr-creator-card cr-creator-card--grid" role="listitem" tabindex="0" style="animation-delay:${stagger(
       staggerIdx,
     )}ms" data-name="${esc(cr.name)}" data-tag="${esc(tagRole)}"${
       tierRank ? ` data-tier="${esc(tierRank)}"` : ""
@@ -377,9 +397,10 @@ function buildSiteBrowseSection(ctx: BuildSiteHtmlCtx): string {
   parts.push(
     `<div class="cr-section cr-section-wrap"><span class="cr-section-title-lg">${UI_ICONS.appearance} ${t(
       "content.activeCreators",
-    )}</span><span class="cr-section-sub" id="ws-cr-count">(${creators.length}/${
-      creators.length
-    })</span><input type="text" id="ws-cr-search" class="cr-search-input" placeholder="${t(
+    )}</span><span class="cr-section-sub" id="ws-cr-count" title="${esc(
+      // 计数分母 = 本站卡片总数（DOM 口径），此前无任何说明——(3/47) 里的 47 是什么全靠猜
+      t("content.creatorCountTitle", { n: creators.length }),
+    )}">(${creators.length}/${creators.length})</span><input type="text" id="ws-cr-search" class="cr-search-input" placeholder="${t(
       "content.searchCreatorPlaceholder",
     )}" value="${esc(
       ctx.searchKw,
@@ -415,7 +436,12 @@ function buildSiteBrowseSection(ctx: BuildSiteHtmlCtx): string {
         }),
       )
       .join("");
-    parts.push(`<div class="cr-creator-grid" id="cr-creator-grid">${cardsHtml}</div>`);
+    // role=list + aria-label：把「一堆卡片」声明成读屏可计数的列表（子项 role=listitem 见 createCrCard）
+    parts.push(
+      `<div class="cr-creator-grid" id="cr-creator-grid" role="list" aria-label="${esc(
+        t("content.activeCreators"),
+      )}">${cardsHtml}</div>`,
+    );
   } else {
     parts.push(
       `<div class="placeholder-box placeholder-box--roomy">${t("content.emptyCreators")}<br><br><button class="cr-local-btn" data-local-empty>${

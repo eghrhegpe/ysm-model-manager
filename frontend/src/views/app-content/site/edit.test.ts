@@ -26,7 +26,7 @@ vi.mock("@/utils/dom/modal-confirm.ts", () => ({
 
 vi.mock("@/core/i18n/t.ts", () => ({ t: (k: string) => k }));
 
-import { bindEditEvents } from "./edit.ts";
+import { bindEditEvents, SEARCH_FILTER_DEBOUNCE_MS } from "./edit.ts";
 import type { CleanupFn, LocalCreatorLike, SiteViewState } from "./types.ts";
 import type { WorkshopSite } from "@/utils/types-re-export.ts";
 
@@ -106,57 +106,104 @@ describe("eeApplyFilters 过滤逻辑", () => {
     expect(searchResults.querySelector("#ws-cr-count")?.textContent).toContain("2/2");
   });
 
-  it("2. 关键词过滤：命中 name/desc 的可见，其余隐藏，计数随动", () => {
-    const { state, searchResults } = makeState();
-    mountFilterDom(searchResults);
-    const cleanup = bindEditEvents(state, () => {});
-    const input = searchResults.querySelector("#ws-cr-search") as HTMLInputElement;
-    input.value = "lic"; // 命中 Alice 的 name
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-    const cards = searchResults.querySelectorAll(".gh-card[data-name]");
-    expect(cards[0].classList.contains("cr-card-hidden")).toBe(false); // Alice desc 命中
-    expect(cards[1].classList.contains("cr-card-hidden")).toBe(true); // Bob 未命中
-    expect(searchResults.querySelector("#ws-cr-count")?.textContent).toContain("1/2");
-    cleanup!();
+  it("2. 关键词过滤：停手一个防抖窗后命中 name/desc 的可见，其余隐藏，计数随动", () => {
+    vi.useFakeTimers();
+    try {
+      const { state, searchResults } = makeState();
+      mountFilterDom(searchResults);
+      const cleanup = bindEditEvents(state, () => {});
+      const input = searchResults.querySelector("#ws-cr-search") as HTMLInputElement;
+      input.value = "lic"; // 命中 Alice 的 name
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      const cards = searchResults.querySelectorAll(".gh-card[data-name]");
+      // 防抖窗内不重算：逐键全量扫描卡片是百人站点的可见卡顿源
+      expect(cards[1].classList.contains("cr-card-hidden")).toBe(false);
+      vi.advanceTimersByTime(SEARCH_FILTER_DEBOUNCE_MS);
+      expect(cards[0].classList.contains("cr-card-hidden")).toBe(false); // Alice desc 命中
+      expect(cards[1].classList.contains("cr-card-hidden")).toBe(true); // Bob 未命中
+      expect(searchResults.querySelector("#ws-cr-count")?.textContent).toContain("1/2");
+      cleanup!();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("2a. 连打多键合并为一次重算：终值生效、中途不逐个生效（防抖语义）", () => {
+    vi.useFakeTimers();
+    try {
+      const { state, searchResults, site } = makeState();
+      mountFilterDom(searchResults);
+      const cleanup = bindEditEvents(state, () => {});
+      const input = searchResults.querySelector("#ws-cr-search") as HTMLInputElement;
+      const cards = searchResults.querySelectorAll(".gh-card[data-name]");
+      // 第一键命中 Alice（name），第二键（终值）命中 Bob（数据层 desc=dom-text-mismatch）：
+      // 中间那次不得先落地（若第一键就落地，Alice 会先显后隐、网格闪跳）
+      input.value = "lic";
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      vi.advanceTimersByTime(SEARCH_FILTER_DEBOUNCE_MS / 2); // 未到窗，取消并重排
+      input.value = "mismatch";
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      expect(cards[0].classList.contains("cr-card-hidden")).toBe(false); // 中间态未生效
+      vi.advanceTimersByTime(SEARCH_FILTER_DEBOUNCE_MS);
+      expect(cards[0].classList.contains("cr-card-hidden")).toBe(true); // 终值 mismatch → 只剩 Bob
+      expect(cards[1].classList.contains("cr-card-hidden")).toBe(false);
+      // 关键词**即时**落盘（与可见性重算解耦）：切页/重进不丢词
+      expect(window.localStorage.getItem(`ysm-ws-search-kw:${site.id}`)).toBe("mismatch");
+      cleanup!();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("2b. 筛选零结果 → 空态容器出现 + 计数 (0/2)；清除按钮复位关键词与标签（P1-4 锐评）", () => {
-    const { state, searchResults } = makeState();
-    mountFilterDom(searchResults);
-    const cleanup = bindEditEvents(state, () => {});
-    const input = searchResults.querySelector("#ws-cr-search") as HTMLInputElement;
+    vi.useFakeTimers();
+    try {
+      const { state, searchResults } = makeState();
+      mountFilterDom(searchResults);
+      const cleanup = bindEditEvents(state, () => {});
+      const input = searchResults.querySelector("#ws-cr-search") as HTMLInputElement;
 
-    // 关键词打不到任何卡 → 零结果空态
-    input.value = "zzz-no-such";
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-    const empty = searchResults.querySelector("#cr-filter-empty");
-    expect(empty).toBeTruthy();
-    expect(empty?.querySelector("[data-clear-filter]")).toBeTruthy();
-    expect(searchResults.querySelector("#ws-cr-count")?.textContent).toContain("(0/2)");
+      // 关键词打不到任何卡 → 零结果空态
+      input.value = "zzz-no-such";
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      vi.advanceTimersByTime(SEARCH_FILTER_DEBOUNCE_MS);
+      const empty = searchResults.querySelector("#cr-filter-empty");
+      expect(empty).toBeTruthy();
+      expect(empty?.querySelector("[data-clear-filter]")).toBeTruthy();
+      expect(searchResults.querySelector("#ws-cr-count")?.textContent).toContain("(0/2)");
 
-    // 清除按钮 → 关键词复位 + 空态移除 + 计数回到全量
-    (empty!.querySelector("[data-clear-filter]") as HTMLElement).click();
-    expect(searchResults.querySelector("#cr-filter-empty")).toBeNull();
-    expect(input.value).toBe("");
-    expect(searchResults.querySelector("#ws-cr-count")?.textContent).toContain("(2/2)");
-    const cards = searchResults.querySelectorAll(".gh-card[data-name]");
-    expect(cards[0].classList.contains("cr-card-hidden")).toBe(false);
-    expect(cards[1].classList.contains("cr-card-hidden")).toBe(false);
-    cleanup!();
+      // 清除按钮 → 关键词复位 + 空态移除 + 计数回到全量
+      (empty!.querySelector("[data-clear-filter]") as HTMLElement).click();
+      expect(searchResults.querySelector("#cr-filter-empty")).toBeNull();
+      expect(input.value).toBe("");
+      expect(searchResults.querySelector("#ws-cr-count")?.textContent).toContain("(2/2)");
+      const cards = searchResults.querySelectorAll(".gh-card[data-name]");
+      expect(cards[0].classList.contains("cr-card-hidden")).toBe(false);
+      expect(cards[1].classList.contains("cr-card-hidden")).toBe(false);
+      cleanup!();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("2c. 数据层优先：DOM 文案与 creators 数据层不一致时按数据层命中（2026-09 锐评 P2 数据层化回归锁）", () => {
-    const { state, searchResults } = makeState();
-    mountFilterDom(searchResults);
-    const cleanup = bindEditEvents(state, () => {});
-    const input = searchResults.querySelector("#ws-cr-search") as HTMLInputElement;
-    // fixture：Bob 的 DOM 文案是 "main"，数据层 desc 是 "dom-text-mismatch"
-    input.value = "mismatch";
-    input.dispatchEvent(new Event("input", { bubbles: true }));
-    const cards = searchResults.querySelectorAll(".gh-card[data-name]");
-    expect(cards[0].classList.contains("cr-card-hidden")).toBe(true); // Alice 无 mismatch
-    expect(cards[1].classList.contains("cr-card-hidden")).toBe(false); // Bob 按数据层 desc 命中（DOM "main" 不含 mismatch）
-    cleanup!();
+    vi.useFakeTimers();
+    try {
+      const { state, searchResults } = makeState();
+      mountFilterDom(searchResults);
+      const cleanup = bindEditEvents(state, () => {});
+      const input = searchResults.querySelector("#ws-cr-search") as HTMLInputElement;
+      // fixture：Bob 的 DOM 文案是 "main"，数据层 desc 是 "dom-text-mismatch"
+      input.value = "mismatch";
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      vi.advanceTimersByTime(SEARCH_FILTER_DEBOUNCE_MS);
+      const cards = searchResults.querySelectorAll(".gh-card[data-name]");
+      expect(cards[0].classList.contains("cr-card-hidden")).toBe(true); // Alice 无 mismatch
+      expect(cards[1].classList.contains("cr-card-hidden")).toBe(false); // Bob 按数据层 desc 命中（DOM "main" 不含 mismatch）
+      cleanup!();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("3. 标签过滤：点 official → 仅 official 卡可见", () => {

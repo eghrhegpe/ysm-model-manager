@@ -50,10 +50,22 @@ func dirLevelCacheKey(rootDir, rtype string, hashed bool) syncDirectoryScanKey {
 	return syncDirectoryScanKey{kind: "dirlevel", root: rootDir, rtype: rtype, hashed: hashed}
 }
 
+// dirLevelCacheValue syncDirLevelScanCache 的缓存值型：单元表 + 同次计算产出的键碰撞清单。
+// 碰撞随值同存（2026-10-15 P0 面板接线）：否则缓存命中返回空 Warnings，「碰撞已记录」
+// 只在 30s TTL 窗口的首次走盘后短暂可见——诊断信道必须跨缓存命中稳定。
+type dirLevelCacheValue struct {
+	Units      map[string]dirLevelUnit
+	Collisions []string
+}
+
 // loadDirLevelScanCache 读文件夹级同步缓存（syncDirLevelScanCache）；命中返回 true。
 // 返回的 map 是缓存共享对象，消费方必须只读（见 sync_cache.go 契约）。
-func loadDirLevelScanCache(rootDir, rtype string, hashed bool) (map[string]dirLevelUnit, bool) {
-	return loadSyncScanCache[map[string]dirLevelUnit](&syncDirLevelScanCache, dirLevelCacheKey(rootDir, rtype, hashed))
+func loadDirLevelScanCache(rootDir, rtype string, hashed bool) (map[string]dirLevelUnit, []string, bool) {
+	v, ok := loadSyncScanCache[dirLevelCacheValue](&syncDirLevelScanCache, dirLevelCacheKey(rootDir, rtype, hashed))
+	if !ok {
+		return nil, nil, false
+	}
+	return v.Units, v.Collisions, true
 }
 
 // SyncResourcesDirLevel 文件夹级同步（默认 filepath.Walk，行为不变，供测试/旧调用方使用）。
@@ -82,11 +94,10 @@ func syncResourcesDirLevel(globalDir, instanceDir, rtype string, scanFn ScanEntr
 	// 回退 Walk 时把同一次 scanFn 结果的摘要旁挂进来——Walk 信道因此也有内容级判定，
 	// 两条信道判定强度一致（否则 hashed 键会把弱判定结果当强判定复用）。
 	// 返回值第二项 = 键碰撞警告（同键不同 Rel 的 last-write-wins 覆盖事件）；
-	// 缓存命中时为 nil——碰撞在首次计算（真实走盘）时已记录并落日志，TTL 窗口内
-	// 树未变，重发只会刷屏（诊断信道，非用户载荷——如需常驻可见再扩缓存值型）。
+	// 缓存命中时随缓存值返回（碰撞与单元表同存，诊断信道跨 30s TTL 稳定）。
 	collectEntries := func(rootDir string) (map[string]dirLevelUnit, []string) {
-		if cached, ok := loadDirLevelScanCache(rootDir, rtype, hashed); ok {
-			return cached, nil
+		if cached, cols, ok := loadDirLevelScanCache(rootDir, rtype, hashed); ok {
+			return cached, cols
 		}
 		var entries []types.ModelEntry
 		scanHit := false
@@ -103,7 +114,7 @@ func syncResourcesDirLevel(globalDir, instanceDir, rtype string, scanFn ScanEntr
 				// 否则会把「须走 Walk」误判为命中而永久跳过 Walk。
 				// hashed 用变量而非字面量 true：本分支今天只在 scanFn != nil 时可达（hashed 恒真），
 				// 但硬编码会让「读槽/写槽」在将来重构中悄悄分叉（复核 P3-6）。
-				storeSyncScanCache(&syncDirLevelScanCache, dirLevelCacheKey(rootDir, rtype, hashed), m)
+				storeSyncScanCache(&syncDirLevelScanCache, dirLevelCacheKey(rootDir, rtype, hashed), dirLevelCacheValue{Units: m, Collisions: collisions})
 				return m, collisions
 			}
 		}
@@ -276,15 +287,15 @@ func collectEntriesWalk(rootDir string, rtype string, hashByPath map[string]stri
 // hashed 与调用方（collectEntries 闭包）的缓存键口径一致：命中与写入必须同槽，
 // 否则强/弱判定结果会互相复用（见 dirLevelCacheKey）。
 func collectEntriesWalkCached(rootDir, rtype string, hashed bool, hashByPath map[string]string) (map[string]dirLevelUnit, []string) {
-	if cached, ok := loadDirLevelScanCache(rootDir, rtype, hashed); ok {
-		return cached, nil // 碰撞在首次走盘时已记录（见 collectEntries 闭包注释）
+	if cached, cols, ok := loadDirLevelScanCache(rootDir, rtype, hashed); ok {
+		return cached, cols
 	}
 	entries, collisions, partialFail := collectEntriesWalk(rootDir, rtype, hashByPath)
 	// 完整 Walk 才入缓存（对齐 sync.go 的 rootFailed/partialFail 双守卫）：
 	// 根目录存在 ≠ 子树扫完整——原 os.Stat 守卫与完整性无关，子目录读失败时
 	// 残缺 entries 仍会被缓存 30s 当权威。partialFail 已覆盖 root 不存在（首回调即 err）。
 	if !partialFail {
-		storeSyncScanCache(&syncDirLevelScanCache, dirLevelCacheKey(rootDir, rtype, hashed), entries)
+		storeSyncScanCache(&syncDirLevelScanCache, dirLevelCacheKey(rootDir, rtype, hashed), dirLevelCacheValue{Units: entries, Collisions: collisions})
 	}
 	return entries, collisions
 }

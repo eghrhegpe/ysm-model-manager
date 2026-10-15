@@ -124,6 +124,25 @@ func TestDirLevelResult_WarningsUntouched(t *testing.T) {
 	}
 }
 
+// TestSyncResultsDirLevelScan_CacheHitCarriesCollisions P0 面板接线（2026-10-15）：碰撞清单
+// 随缓存值型（dirLevelCacheValue）同存——缓存命中的 SyncResourcesDirLevelScan 同样返回
+// Warnings，诊断信道跨 30s TTL 稳定（旧实现在命中路径返回 nil，警告只在首次走盘后短暂可见）。
+func TestSyncResultsDirLevelScan_CacheHitCarriesCollisions(t *testing.T) {
+	global := t.TempDir()
+	writeCollisionPair(t, global)
+	instance := t.TempDir()
+	testutil.WriteTestFile(t, filepath.Join(instance, "model_a.pmx"), "x")
+
+	first := SyncResourcesDirLevelScan(global, instance, "EntityPlayer", scanner.ScanEntriesWithHit)
+	if len(first.Warnings) != 1 {
+		t.Fatalf("首次调用（新计算）期望 1 条 Warnings，实际 %d：%v", len(first.Warnings), first.Warnings)
+	}
+	second := SyncResourcesDirLevelScan(global, instance, "EntityPlayer", scanner.ScanEntriesWithHit)
+	if len(second.Warnings) != 1 {
+		t.Fatalf("缓存命中须同样返回碰撞清单（随缓存值同存），实际 %d：%v", len(second.Warnings), second.Warnings)
+	}
+}
+
 func anySuffix(list []string, suffix string) bool {
 	for _, s := range list {
 		if strings.HasSuffix(s, suffix) {

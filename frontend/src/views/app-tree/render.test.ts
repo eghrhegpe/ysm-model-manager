@@ -232,6 +232,78 @@ describe("flattenVisible", () => {
     expect(rows.some((r) => r.type === "file")).toBe(true);
   });
 
+  // 锐评 2026-10-15 P1-B：搜索态原先「所有目录行无条件入列」，于是
+  // ① 大仓库搜索被上百个空的作者文件夹淹掉；② 一个都没搜到时 rows 仍非空，
+  // renderTree 的 `!rows.length` 分支走不到 → guide/repository.md 承诺的
+  // 「无结果时显示未找到匹配的文件」在含子目录的仓库里等于失效。
+  it("搜索态剪枝：只保留含命中后代的目录行（空目录不占屏）", () => {
+    const root = buildTree(
+      [
+        entry("hit.ysm", "[作者A]/hit.ysm", 0, 0, "/repo/[作者A]/hit.ysm"),
+        entry("miss.ysm", "[作者B]/miss.ysm", 0, 0, "/repo/[作者B]/miss.ysm"),
+        entry("deep.ysm", "[作者B]/sub/deep.ysm", 0, 0, "/repo/[作者B]/sub/deep.ysm"),
+      ],
+      "name",
+      null,
+    );
+    const rows = flattenVisible(root, "", "hit", "name", {}, 0, "grid");
+    expect(rows.filter((r) => r.type === "folder").map((r) => r.key)).toEqual(["[作者A]"]);
+    expect(rows.filter((r) => r.type === "file").map((r) => r.key)).toEqual(["/repo/[作者A]/hit.ysm"]);
+  });
+
+  it("搜索态剪枝：命中深层文件 → 祖先目录链全部保留、无关兄弟目录剪掉", () => {
+    const root = buildTree(
+      [
+        entry("deep.ysm", "[作者B]/sub/deep.ysm", 0, 0, "/repo/[作者B]/sub/deep.ysm"),
+        entry("other.ysm", "[作者C]/other.ysm", 0, 0, "/repo/[作者C]/other.ysm"),
+      ],
+      "name",
+      null,
+    );
+    const rows = flattenVisible(root, "", "deep", "name", {}, 0, "grid");
+    expect(rows.filter((r) => r.type === "folder").map((r) => r.key)).toEqual([
+      "[作者B]",
+      "[作者B]/sub",
+    ]);
+  });
+
+  it("搜索一个都不命中 → rows 为空（空态分支可达：未找到匹配的文件）", () => {
+    const root = buildTree(
+      [entry("a.ysm", "[作者A]/a.ysm", 0, 0, "/repo/[作者A]/a.ysm")],
+      "name",
+      null,
+    );
+    expect(flattenVisible(root, "", "不存在的名字", "name", {}, 0, "grid")).toEqual([]);
+  });
+
+  it("搜索态目录行恒报已展开（aria-expanded 不得与可见子行相悖）", () => {
+    const root = buildTree(
+      [entry("hit.ysm", "[作者A]/hit.ysm", 0, 0, "/repo/[作者A]/hit.ysm")],
+      "name",
+      null,
+    );
+    // dirOpen 空（磁盘上该目录是收起的）——搜索态子行仍然可见，行态必须同步为已展开
+    const rows = flattenVisible(root, "", "hit", "name", {}, 0, "grid");
+    const folder = rows.find((r) => r.type === "folder");
+    expect(folder?.isOpen).toBe(true);
+    expect(folder?.html).toContain('aria-expanded="true"');
+  });
+
+  it("非搜索态不受剪枝影响（收起目录仍出行、行态仍读磁盘展开态）", () => {
+    const root = buildTree(
+      [
+        entry("a.ysm", "[作者A]/a.ysm", 0, 0, "/repo/[作者A]/a.ysm"),
+        entry("b.ysm", "[作者B]/b.ysm", 0, 0, "/repo/[作者B]/b.ysm"),
+      ],
+      "name",
+      null,
+    );
+    const rows = flattenVisible(root, "", "", "name", {}, 0, "grid");
+    // 两个目录都收起：目录行都在（原语义），文件行都不在
+    expect(rows.map((r) => r.type)).toEqual(["folder", "folder"]);
+    expect(rows.every((r) => r.isOpen === false)).toBe(true);
+  });
+
   it("文件行 key 用 fullPath（选中匹配依据）", () => {
     const root = buildTree(
       [entry("a.ysm", "folder/a.ysm", 0, 0, "/repo/folder/a.ysm")],

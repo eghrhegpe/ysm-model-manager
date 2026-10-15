@@ -377,12 +377,14 @@ function atTeBindRenameInput(ctx: AtTeCtx): () => void {
     backendGetApp()
       .then(({ RenameFile }) => RenameFile(path, newName))
       .then(async () => {
-        // P2 修复（审核）：内联重命名成功后清空选中态——对齐 bus-handlers 的
-        // dir:recycle / dir:batch-rename / batch:rename 三条链路。被重命名的文件若在
-        // 选中集内，旧路径残留会让底部「已选 N 个文件」滞留、右键 batch 菜单携带
-        // 已不存在的路径（误删风险）。
-        vm.selectState.keys.clear();
-        vm.selectState.lastKey = null;
+        // 只摘被改名的这一条（锐评 2026-10-15 P2）：原实现 keys.clear() 连坐清空全部选中项。
+        // 双击改名与选中集是两条正交路径（dblclick 分支不触碰 selectState，见 atTeBindRowDoubleClick），
+        // 故「选 5 个、改其中 1 个」不该把 5 个都丢掉——旧键已失效（磁盘上已不存在），
+        // 但其余选中项仍然有效，保留它们才与「移动/删除后清空」的语义区分开
+        // （那两条链是全体失效，这里只有一条失效）。
+        vm.selectState.keys.delete(path);
+        if (vm.selectState.lastKey === path) vm.selectState.lastKey = null;
+        updateSelectCount(vm._root, vm.selectState);
         bus.emit("stats:refresh");
         // 守卫（2026-09 收债）：改名 IPC 在途切类型时丢弃过期渲染，防旧类型
         // entries 覆盖新树（对齐删除链 stale 检查）

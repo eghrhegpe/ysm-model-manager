@@ -159,9 +159,13 @@ function anBindViewerFab(shadowRoot: ShadowRoot, viewerFabClick: () => Promise<v
   if (fab) {
     const handler = (): void => {
       void viewerFabClick().catch((e) => {
-        logError("app-nav", "打开 3D 失败", e);
+        // 锐评 2026-10-15 P2：原为硬编码中文（logError 与 toast 双份），en/ja 下 3D 打不开
+        // 时用户看到中文——本仓 i18n 硬红线；且第五闸 i18n-ui-check 只扫 value:/text:/tooltip:
+        // 与 throw/reject，toast() 载荷不在任何判据内（门禁盲区，修这处不等于堵了盲区）。
+        const msg = t("nav.viewerOpenFail");
+        logError("app-nav", msg, e);
         // ADR-267：error 图标由 type 驱动，msg 不带 ❌ 前缀
-        toast("打开 3D 失败", TOAST_MS.normal, "error");
+        toast(msg, TOAST_MS.normal, "error");
       });
     };
     fab.addEventListener("click", handler);

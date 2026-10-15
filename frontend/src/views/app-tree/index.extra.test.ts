@@ -325,6 +325,83 @@ describe("app-tree index 入口生命周期（补位）", () => {
     expect(el.selectState.lastKey).toBeNull();
   });
 
+  // 锐评 2026-10-15 P1-A：readScopedDirOpen 原先只在 connectedCallback 跑一次，而切类型走
+  // init-pages.mountTree 的 setAttribute 复用同一实例（不重连→不重读）→ 新树沿用上类型的
+  // 展开图；更糟的是写侧 writeScopedDirOpen(rtype, this._state.dirOpen) 写的是混装全量 map，
+  // 会把上类型目录整包写进新类型槽位——2026-09「按类型命名空间」收债从活切换路径复活。
+  it("切资源类型 → 展开态换新类型命名空间（不串上类型、写盘不污染）", async () => {
+    localStorage.setItem("dirOpenState", JSON.stringify({ ysm: { "[作者A]": true } }));
+    const el = await mountEl("ysm");
+    expect(el.dirOpen["[作者A]"]).toBe(true);
+    const callsBefore = (loader as ReturnType<typeof vi.fn>).mock.calls.length;
+
+    el.setAttribute("root", "resourcepack");
+    await waitFor(() => (loader as ReturnType<typeof vi.fn>).mock.calls.length > callsBefore);
+
+    // 内存态：新类型槽位为空 → 不得残留上类型目录
+    expect(el.dirOpen["[作者A]"]).toBeUndefined();
+    // 写侧：本类型落盘只含本类型目录，且旧类型存档原样保留
+    el.toggleDir("[资源包作者]");
+    const stored = JSON.parse(localStorage.getItem("dirOpenState") || "{}");
+    expect(stored.resourcepack?.["[资源包作者]"]).toBe(true);
+    expect(stored.resourcepack?.["[作者A]"]).toBeUndefined();
+    expect(stored.ysm?.["[作者A]"]).toBe(true);
+  });
+
+  // 复核 2026-10-15（P1-A 第二入口）：分离期切类型时 attributeChangedCallback 走
+  // `!isConnected` 分支只更新 rootAttr（不重读、不重载），切回页面靠重连恢复——旧实现此处
+  // 是 `Object.assign(dirOpen, readScopedDirOpen(root))` **合并**语义，会把上类型目录并进
+  // 新类型 map，随后任一次 toggleDir 就把混装态整包写进新类型槽位。
+  it("分离期间切 rtype → 重连按 rtype 重读展开态（合并语义会带旧类型目录）", async () => {
+    localStorage.setItem(
+      "dirOpenState",
+      JSON.stringify({ ysm: { "[作者A]": true }, resourcepack: { "[资源包作者]": true } }),
+    );
+    const el = await mountEl("ysm");
+    expect(el.dirOpen["[作者A]"]).toBe(true);
+
+    el.remove(); // 页面切走 → 面板分离（_ready 仍为 true）
+    el.setAttribute("root", "resourcepack"); // 分离期切类型：只更新 rootAttr
+    const callsBefore = (loader as ReturnType<typeof vi.fn>).mock.calls.length;
+    document.body.appendChild(el); // 切回页面 → 重连（isRemount 分支）
+    await waitFor(() => (loader as ReturnType<typeof vi.fn>).mock.calls.length > callsBefore);
+
+    expect(el.dirOpen["[作者A]"]).toBeUndefined();
+    expect(el.dirOpen["[资源包作者]"]).toBe(true);
+
+    // 写侧：混装态一旦落盘就污染新类型槽位——重连后的首次 toggleDir 不得捎带上类型目录
+    el.toggleDir("[新目录]");
+    const stored = JSON.parse(localStorage.getItem("dirOpenState") || "{}");
+    expect(stored.resourcepack?.["[作者A]"]).toBeUndefined();
+    expect(stored.ysm?.["[作者A]"]).toBe(true);
+  });
+
+  // 复核 2026-10-15（P1-A 时序竞态）：水化若押在 `await ClearScanCache/_load` **之后**，扫盘
+  // 在途窗口内 DOM 仍是旧类型可点行——用户点任一文件夹即以 `writeScopedDirOpen(新rtype, 旧dirOpen)`
+  // 落盘，把旧类型目录整包写进新类型槽位；更糟的是随后的水化 `readScopedDirOpen(新rtype)`
+  // 会把这份污染**读回来当作本类型状态**（瞬时污染升级为持久）。修法：水化置于方法首行。
+  it("切类型扫盘在途点旧树 → 旧类型目录不得被写进新类型槽位", async () => {
+    localStorage.setItem(
+      "dirOpenState",
+      JSON.stringify({ ysm: { "[作者A]": true, "[作者B]": true } }),
+    );
+    const el = await mountEl("ysm");
+    expect(el.dirOpen["[作者A]"]).toBe(true);
+    // 本轮 reload 卡在扫描 RPC（大仓库扫盘可达秒级）
+    const d = deferred<{ filesRoot: string; entries?: TreeEntry[] }>();
+    loaderImpl = () => d.promise;
+    const callsBefore = (loader as ReturnType<typeof vi.fn>).mock.calls.length;
+
+    el.setAttribute("root", "resourcepack");
+    await waitFor(() => (loader as ReturnType<typeof vi.fn>).mock.calls.length > callsBefore);
+    el.toggleDir("[作者A]"); // 扫盘在途点了旧树的行
+
+    const stored = JSON.parse(localStorage.getItem("dirOpenState") || "{}");
+    // 没被点过的旧类型目录绝不该跟着过去（水化押后时 [作者B] 会一并被写入）
+    expect(stored.resourcepack?.["[作者B]"]).toBeUndefined();
+    d.resolve({ filesRoot: "/repo", entries: [] });
+  });
+
   it("切资源类型后按 Delete → 无路径可删（不拿旧路径配新 rtype）", async () => {
     const el = await mountEl();
     el.selectState.keys.add("/repo/a.ysm");

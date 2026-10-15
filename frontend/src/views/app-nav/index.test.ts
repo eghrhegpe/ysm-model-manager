@@ -370,7 +370,9 @@ describe("app-nav 增量（键盘 / FAB / 版本失败 / 焦点重试 / logo）"
     expect(openModel3DFullscreen).toHaveBeenCalledWith("/m/a.pmx");
     expect(openEmpty3DFullscreen).not.toHaveBeenCalled();
     expect(errSpy).toHaveBeenCalled();
-    expect(toastSpy.mock.calls[0][0]).toMatchObject({ type: "error", msg: "打开 3D 失败" });
+    // 锐评 2026-10-15 P2：原断言写死中文，等于把硬编码钉成契约——改走 i18n 取值，
+    // 防「文案改了测试还绿」与「文案没走 t() 也绿」两头失灵
+    expect(toastSpy.mock.calls[0][0]).toMatchObject({ type: "error", msg: t("nav.viewerOpenFail") });
     offToast();
     errSpy.mockRestore();
     unmountElement(el);

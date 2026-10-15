@@ -467,7 +467,18 @@ export function flattenVisible(
     // `dirOpen[fullPath]` 会读到 Object.prototype（truthy）→ 该目录恒显示为已展开且点不开。
     const isOpen = Object.hasOwn(dirOpen, fullPath) ? dirOpen[fullPath] === true : false;
     const flags = dirFlags.get(node as TreeNode) ?? { hasEnabled: false, hasDisabled: false };
-    const row = folderTreeRow(name, fullPath, top.depth, isOpen, flags, mode, rows.length);
+    // 行态与下探判据同源（锐评 2026-10-15 P1-B）：搜索态子行确实照 `isOpen || isSearch`
+    // 全量下探，故行态也必须报「已展开」——原先报 isOpen（磁盘存档值），搜索态下会出现
+    // 「箭头收起 / aria-expanded=false，但子文件明明可见」的语义说谎，且点箭头视觉无变化。
+    const row = folderTreeRow(
+      name,
+      fullPath,
+      top.depth,
+      isSearch || isOpen,
+      flags,
+      mode,
+      rows.length,
+    );
     rows.push(row);
     if (isOpen || isSearch) {
       stack.push({
@@ -479,7 +490,35 @@ export function flattenVisible(
       });
     }
   }
-  return rows;
+  // 搜索态剪枝（锐评 2026-10-15 P1-B）：无命中后代的目录行是纯噪声——大仓库搜一个模型名，
+  // 上百个空的作者文件夹会先把结果淹掉；更硬的一条是「一个都没搜到」时目录行恒存在，
+  // `renderTree` 的 `!rows.length` 空态分支永远走不到，guide/repository.md 承诺的
+  // 「无结果时显示未找到匹配的文件」在有任何子目录的仓库里等于失效。
+  return isSearch ? pruneDirsWithoutMatch(rows) : rows;
+}
+
+/**
+ * 搜索态剪枝：剔除子树内不含任何命中文件的目录行。
+ *
+ * 树行是深度优先前序且每行携带 `depth`，子树即「其后连续的一段 depth 更大者」，
+ * 故只需维护一个「仍可能有后代」的目录栈：遇到文件行时栈内全部目录记保留，
+ * 处理完每行后把深度 ≥ 下一行深度的目录弹栈（它们对下一行已非祖先）。
+ * 单趟 O(n·层深)（典型层深 ≤ 5），不引入递归——与 flattenVisible 的显式栈口径一致
+ * （深链回归绊线：`render.test.ts` 10000 级深链 + 搜索不得栈溢出）。
+ */
+function pruneDirsWithoutMatch(rows: TreeRow[]): TreeRow[] {
+  const keep = new Set<number>();
+  const open: number[] = [];
+  for (let i = 0; i < rows.length; i++) {
+    if (rows[i].type === "folder") {
+      open.push(i);
+    } else {
+      for (const fi of open) keep.add(fi);
+    }
+    const nextDepth = i + 1 < rows.length ? rows[i + 1].depth : -1;
+    while (open.length && rows[open[open.length - 1]].depth >= nextDepth) open.pop();
+  }
+  return rows.filter((r, i) => r.type === "file" || keep.has(i));
 }
 
 // ——— 构建树（buildTree） ———

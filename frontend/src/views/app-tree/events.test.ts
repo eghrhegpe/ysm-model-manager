@@ -748,6 +748,36 @@ describe("dblclick 重命名", () => {
     expect(emitted("stats:refresh").length).toBe(1);
   });
 
+  // 锐评 2026-10-15 P2：原实现改名成功后 `keys.clear()` 连坐清空全部选中项。双击改名与
+  // 选中集是两条正交路径（dblclick 分支不触碰 selectState）——「选 3 个、改其中 1 个」
+  // 不该把 3 个都丢掉；失效键恰为被改的那一条。
+  it("改名成功 → 只摘被改的那一条，其余选中项保留（键失效面恰为 1）", async () => {
+    const h = makeHarness();
+    h.container.appendChild(fileRow("/repo/a.ysm", "a.ysm"));
+    setVsRows(
+      h.vm.treeRenderCtx,
+      h.container,
+      [{ key: "/repo/a.ysm", type: "file" }] as unknown as Parameters<typeof setVsRows>[2],
+    );
+    h.vm.selectState.keys.add("/repo/a.ysm");
+    h.vm.selectState.keys.add("/repo/b.ysm");
+    h.vm.selectState.keys.add("/repo/c.ysm");
+    h.vm.selectState.lastKey = "/repo/a.ysm";
+    bindTreeEvents(h.container, h.vm);
+    h.container
+      .querySelector(".nm")!
+      .dispatchEvent(new MouseEvent("dblclick", { bubbles: true }));
+    const inp = h.container.querySelector<HTMLInputElement>(".rename-inp")!;
+    inp.value = "新名字.ysm";
+    inp.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+    await flush();
+    expect(RenameFileMock).toHaveBeenCalledWith("/repo/a.ysm", "新名字.ysm");
+    expect([...h.vm.selectState.keys].sort()).toEqual(["/repo/b.ysm", "/repo/c.ysm"]);
+    expect(h.vm.selectState.lastKey).toBeNull();
+    // 底部计数数据通道同步（e2e 读数字而非文案，ADR-133）——原 clear() 路径无此断言
+    expect(h.stat.getAttribute("data-count")).toBe("2");
+  });
+
   it("focusout 空值 → 仅 renderTree 放弃重命名", async () => {
     const h = makeHarness();
     h.container.appendChild(fileRow("/repo/a.ysm", "a.ysm"));

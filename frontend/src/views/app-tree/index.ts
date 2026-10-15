@@ -146,6 +146,10 @@ export class AppTree extends WebComponentBase {
    *  只放行 microtask 末尾一次全价重扫，避免中间态（如 root 已新、subdir 尚旧）空转一整轮 */
   private _attrReloadQueued = false;
 
+  /** 最近一次 dirOpen 水化所依据的 rtype（null = 尚未水化）。水化必须「按 rtype 判定 + 赋值
+   *  替换」——三个入口（首挂载/重连、切类型重载链、挂载期补载链）共用 `_hydrateDirOpen`。 */
+  private _dirOpenRtype: string | null = null;
+
   /** 渲染上下文（实例级，含 WeakMap 缓存） */
   treeRenderCtx: TreeRenderCtx = createTreeRenderCtx();
 
@@ -268,7 +272,7 @@ export class AppTree extends WebComponentBase {
     // 重连判据（disconnected→connected 同实例：_ready 已置位）——恢复分离前视觉状态
     const isRemount = this._ready;
 
-    Object.assign(this._state.dirOpen, readScopedDirOpen(this._state.rootAttr));
+    this._hydrateDirOpen();
 
     // code_review 47e68917b #1（P2）：恢复 render-mode 持久化水化——TreeState 重构删了
     // `_renderMode = getRenderMode()` 实例字段后，TreeState.renderMode 硬编码默认
@@ -399,6 +403,7 @@ export class AppTree extends WebComponentBase {
   /** 挂载期间 root/subdir 切换后的补载：清扫描缓存 → 重载最新值 → 守卫渲染；失败节流 toast + 兜底渲染 */
   private async _reloadAfterMountSwitch(): Promise<void> {
     const gen2 = this._guard.next();
+    this._hydrateDirOpen();
     try {
       const App = await backendGetApp();
       if (App.ClearScanCache) await App.ClearScanCache(); // root 切换清扫描缓存
@@ -410,6 +415,31 @@ export class AppTree extends WebComponentBase {
       if (!this._guard.stale(gen2) && this._state.entries.length) this._renderTree();
       toastThrottled(e, t("tree.treeLoadFailed"));
     }
+  }
+
+  /**
+   * 水化当前 rtype 的目录展开态（锐评 2026-10-15 P1-A）。
+   *
+   * 病灶：`readScopedDirOpen` 原先只在 connectedCallback 跑一次，而切资源类型有三条**不重连**
+   * 的路径，任一条漏读都会让新树沿用上类型的展开图：
+   *   ① 切类型走 `init-pages.mountTree` 的 `setAttribute("root", …)`（实例复用，只触发
+   *      attributeChangedCallback → `_attrChangeReloadAsync`）；
+   *   ② 分离期切类型（`!isConnected` 分支只更新 rootAttr）→ 切回页面时重连，旧实现走
+   *      `Object.assign` **合并**语义，把上类型目录并进新类型 map；
+   *   ③ 首挂载 `await _load()`（慢扫描 RPC）期间切类型 → `_reloadAfterMountSwitch`。
+   * 污染面不止显示：`toggleDir` 的 `writeScopedDirOpen(rtype, this._state.dirOpen)` 写的是
+   * **全量 map**，混装态一旦落盘就把上类型目录写进新类型槽位——2026-09「按类型命名空间」
+   * 收债（dirOpenState 分 rtype）会从任一条活路径复活。故三个入口收敛到本方法。
+   *
+   * 判据用「上次水化的 rtype」而非无条件重读：同 rtype 重连时保留内存态（toggleDir 每次
+   * 即时落盘，二者等价，但省一次存储读且不打断「分离→重连保留展开态」的既有承诺）。
+   * **赋值替换**而非 Object.assign 合并——合并等于把旧类型残留留在新类型里，正是本缺陷本体。
+   */
+  private _hydrateDirOpen(): void {
+    const rtype = this._state.rootAttr;
+    if (this._dirOpenRtype === rtype) return;
+    this._dirOpenRtype = rtype;
+    this._state.dirOpen = readScopedDirOpen(rtype);
   }
 
   /** root/subdir 属性变更 → 重新加载并渲染（首次挂载由 connectedCallback 负责，避免重复加载） */
@@ -435,6 +465,13 @@ export class AppTree extends WebComponentBase {
   }
 
   private async _attrChangeReloadAsync(gen: number): Promise<void> {
+    // ⚠️ 水化必须在**任何 await 之前**（子代理复核 2026-10-15）：rootAttr 在属性回调里已
+    // 同步落成新 rtype，而本方法要先走 `ClearScanCache` + `_load`（大仓库扫盘可达秒级）——
+    // 窗口内 DOM 仍是旧类型的可点行，用户点任一文件夹 → `toggleDir` 以
+    // `writeScopedDirOpen(新 rtype, 旧 dirOpen)` 落盘污染；若水化押后，随后的
+    // `readScopedDirOpen(新 rtype)` 会把这份污染**读回来当作本类型状态**，瞬时污染升级为持久
+    // 状态。另两条入口（connectedCallback / _reloadAfterMountSwitch）本就是「先水化后 await」。
+    this._hydrateDirOpen();
     try {
       const App = await backendGetApp();
       if (App.ClearScanCache) await App.ClearScanCache();

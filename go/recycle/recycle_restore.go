@@ -41,9 +41,17 @@ func (tm *TrashManager) resolveRestoreDest(src string) (string, error) {
 
 // restoreSymlinkEntry 恢复符号链接条目本身（不跟随读取目标内容，与 moveEx 的 Lstat 语义对齐）。
 // moveEx 对符号链接直接删除不入回收站，但若回收站已有历史符号链接条目（手动放入/旧版本遗留），
-// Restore 需正确处理：读取链接目标 → 重建链接 → 删除回收站侧旧链接。
+// Restore 需正确处理：读取链接目标 → 在原位置重建链接 → 删除回收站侧旧链接。
 // 返回 handled=true 表示 src 是符号链接、本函数已接管，err 即终态（成功为 nil）。
-func restoreSymlinkEntry(src, dst string) (handled bool, err error) {
+//
+// ⚠️ 顺序必须是「先建 dst、再删 src」（2026-10-15 锐评修正）：原实现先 os.Remove(src)
+// 再 os.Symlink(target, dst)，若建链失败（父目录不存在/权限不足、Windows 未持
+// SeCreateSymbolicLinkPrivilege、落点已有同名文件），回收站侧旧链接**已被删除**，
+// 而回滚重建同样可能失败 → 条目永久丢失：用户看到「恢复失败」，回收站里也没有了。
+// 先建后删把窗口消掉——建链失败时 src 分毫未动，用户可直接重试。
+// 与 copyBackThenRemove 的「先复制后删源」同序（同一个守卫理由）；删 src 失败时
+// 回滚落点，恢复「条目只在回收站」的可重试态（对齐 rollbackAfterSourceRemoveFail 范式）。
+func (tm *TrashManager) restoreSymlinkEntry(src, dst string) (handled bool, err error) {
 	info, statErr := os.Lstat(src)
 	if statErr != nil || info.Mode()&os.ModeSymlink == 0 {
 		return false, nil
@@ -52,19 +60,18 @@ func restoreSymlinkEntry(src, dst string) (handled bool, err error) {
 	if readErr != nil {
 		return true, fmt.Errorf("读取符号链接目标失败 %s: %w", src, readErr)
 	}
-	// 删除回收站侧旧链接（unlink，不影响链接目标）
-	if removeErr := os.Remove(src); removeErr != nil {
-		return true, fmt.Errorf("删除回收站符号链接失败 %s: %w", src, removeErr)
+	// ① 先在原位置重建链接。失败时回收站侧旧链接分毫未动 → 条目仍在，可直接重试。
+	if linkErr := tm.symlinkForRestore(target, dst); linkErr != nil {
+		return true, fmt.Errorf("恢复符号链接失败（回收站条目未动，可重试）落点 %s: %w", dst, linkErr)
 	}
-	// 在原位置重建符号链接
-	if linkErr := os.Symlink(target, dst); linkErr != nil {
-		// 回滚：恢复回收站侧链接。回滚失败时 log 并在错误中追加信息，
-		// 让调用方知道回收站侧链接已永久丢失（旧实现 _ 静默吞掉）。
-		if rbErr := os.Symlink(target, src); rbErr != nil {
-			log.Printf("[recycle] 回收站侧链接回滚失败 %s: %v（回收站条目已丢失）", src, rbErr)
-			return true, fmt.Errorf("恢复符号链接失败 %s -> %s: %w; 回收站侧链接回滚失败: %v", dst, target, linkErr, rbErr)
+	// ② 再删除回收站侧旧链接（unlink，不影响链接目标）。
+	if removeErr := os.Remove(src); removeErr != nil {
+		// 落点已建、回收站侧残留 → 回滚落点，恢复「条目只在回收站」的可重试态。
+		if rbErr := os.Remove(dst); rbErr != nil {
+			log.Printf("[recycle] 恢复后清理落点失败 %s: %v（原位置已恢复，回收站残留同一条目）", dst, rbErr)
+			return true, fmt.Errorf("删除回收站符号链接失败 %s: %w; 落点 %s 清理失败: %v（原位置已恢复成功，回收站残留同一条目，可手动删除）", src, removeErr, dst, rbErr)
 		}
-		return true, fmt.Errorf("恢复符号链接失败 %s -> %s: %w（已回滚回收站侧链接）", dst, target, linkErr)
+		return true, fmt.Errorf("删除回收站符号链接失败 %s: %w（已回滚落点，条目仍在回收站，可重试）", src, removeErr)
 	}
 	return true, nil
 }
@@ -107,7 +114,7 @@ func (tm *TrashManager) Restore(src string) error {
 	// 符号链接处理：恢复链接本身而非跟随读取目标内容（与 moveEx 的 Lstat 语义对齐）。
 	// moveEx 对符号链接直接删除不入回收站，但若回收站已有历史符号链接条目（手动放入/旧版本遗留），
 	// Restore 需正确处理：读取链接目标 → 重建链接 → 删除回收站侧旧链接。
-	if handled, symlinkErr := restoreSymlinkEntry(src, dst); handled || symlinkErr != nil {
+	if handled, symlinkErr := tm.restoreSymlinkEntry(src, dst); handled || symlinkErr != nil {
 		return symlinkErr
 	}
 	// 优先瞬时移动（同分区原子操作）；跨设备时回退复制后删，语义不变

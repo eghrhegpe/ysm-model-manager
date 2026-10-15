@@ -9,6 +9,7 @@ package fileops
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"ysm-model-manager/go/internal/testutil"
 )
@@ -29,6 +30,52 @@ func TestToggleModelEnable_OutsideRoot(t *testing.T) {
 	}
 	if _, err := os.Stat(outside + ".ban"); err == nil {
 		t.Fatal("仓库外文件不得被改名成 .ban")
+	}
+}
+
+// 仓库内 symlink 段指向仓库外时，启禁必须拒绝——守卫是词法版时此处会把**仓库外**
+// 的真实文件改名加 .disabled（越权写）。
+//
+// 病灶（2026-10-15 锐评亲验）：checkToggleWithinRoot 原只用 filepath.Abs + Rel 做
+// 词法包含判定，`repo/escape/victim.ysm` 的 rel = `escape\victim.ysm` 合法即放行，
+// 而随后 applyDisableToggle 的 os.Rename 经 symlink 落到仓库外。
+// 同族链路（toggleRootFor / recycle.prepareMoveSource）早已用解析版判定，本处是最后一处。
+//
+// 对照断言（防断言空转）：同一输入经**词法** filepath.Rel 判定确实放行——若哪天
+// 有人把守卫退回词法版，本用例的对照段与主断言会一起揭示失败面。
+// Windows 无特权创建 symlink 时自动跳过（与 go/paths|TestIsInsideResolved_SymlinkEscape 同款）。
+func TestToggleModelEnable_SymlinkEscapeRejected(t *testing.T) {
+	repo := t.TempDir()
+	outsideDir := t.TempDir()
+	victim := filepath.Join(outsideDir, "victim.ysm")
+	if err := os.WriteFile(victim, []byte("x"), 0644); err != nil {
+		testutil.NoError(t, err)
+	}
+	escape := filepath.Join(repo, "escape")
+	if err := os.Symlink(outsideDir, escape); err != nil {
+		t.Skipf("os.Symlink 不可用（需权限/开发者模式）: %v", err)
+	}
+
+	escapedPath := filepath.Join(escape, "victim.ysm")
+	// 对照：词法判定确实放行（记录病灶形态，非断言目标态）
+	if rel, relErr := filepath.Rel(repo, escapedPath); relErr == nil {
+		if strings.HasPrefix(rel, "..") {
+			t.Fatalf("对照失效：词法 rel 不应越界，got %q", rel)
+		}
+	} else {
+		testutil.NoError(t, relErr)
+	}
+
+	// 主断言：解析版守卫必须拒绝
+	if _, err := ToggleModelEnable(repo, escapedPath); err == nil {
+		t.Fatal("仓库内 symlink 指向仓库外时必须拒绝（否则经链接改名仓库外文件）")
+	}
+	// 终态：仓库外文件分毫未动（无 .disabled 改名痕迹）
+	if _, err := os.Stat(victim); err != nil {
+		t.Fatalf("仓库外原文件不得被动: %v", err)
+	}
+	if _, err := os.Stat(victim + ".disabled"); err == nil {
+		t.Fatal("仓库外文件不得被改名成 .disabled（越权写）")
 	}
 }
 

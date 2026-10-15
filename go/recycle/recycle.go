@@ -29,15 +29,20 @@ type TrashManager struct {
 	renameForMove   func(src, dst string) error
 	copyDirForMove  func(src, dst string) error
 	copyFileForMove func(src, dst string) error
+	// 符号链接恢复的建链实现（测试注入点，生产恒为 os.Symlink）。立因：恢复符号链接条目时
+	// 「建链失败 → 回收站条目是否保住」是数据保全不变量，而 os.Symlink 的失败不可确定构造，
+	// 注入一个恒失败实现即可把该分支（含旧序的「条目永久丢失」窗口）钉进单测。
+	symlinkForRestore func(target, link string) error
 }
 
 // New 创建回收站管理器，root 是资源根目录，回收站为 root/.recycle
 func New(root string) *TrashManager {
 	return &TrashManager{
-		recycleDir:      filepath.Join(root, ".recycle"),
-		renameForMove:   os.Rename,
-		copyDirForMove:  copyDirRecursive,
-		copyFileForMove: fsutil.CopyFile,
+		recycleDir:        filepath.Join(root, ".recycle"),
+		renameForMove:     os.Rename,
+		copyDirForMove:    copyDirRecursive,
+		copyFileForMove:   fsutil.CopyFile,
+		symlinkForRestore: os.Symlink,
 	}
 }
 

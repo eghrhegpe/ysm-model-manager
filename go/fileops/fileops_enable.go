@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"ysm-model-manager/go/paths"
 	"ysm-model-manager/go/types/registry"
 )
 
@@ -69,8 +70,19 @@ func checkToggleWithinRoot(root, path string) error {
 	if strings.EqualFold(filepath.Clean(absPath), filepath.Clean(absRoot)) {
 		return fmt.Errorf("不能对资源根目录执行启用/禁用操作")
 	}
-	rel, err := filepath.Rel(absRoot, absPath)
-	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+	// ⚠️ 必须用**解析版**判定（paths.IsInsideResolved），不能只做词法 filepath.Rel：
+	// 仓库内指向仓库外的 symlink/junction 段会让词法 rel 合法（repo/escape/victim.ysm
+	// 的 rel = escape\victim.ysm），而随后的 os.Rename 经链接落到仓库外，把**外部文件**
+	// 改名加 .disabled —— 越权写。这正是 paths.safe.go|IsInsideResolved 头注所指的
+	// 「词法 IsInside 会误判安全」面。
+	// 同族链路早已用解析版（app_files.go|toggleRootFor 决定归属根、recycle.prepareMoveSource、
+	// recycle_restore.go 两处），本处是半收敛的最后一处；补齐后所有启禁入口（桌面 ToggleEnable
+	// / 网页 browser-adapter 走的 ToggleModelEnable / CLI runToggle）共用同一保证。
+	// 语义对齐 toggleRootFor：解析**完整路径**（含末段）——末段本身是指向仓库外的 symlink
+	// 时桌面入口本就拒绝，此处同答，不引入新的产品行为差异。
+	// IsInsideResolved 内部先走词法 IsInside（零 I/O 快速失败）再解析复核；其错误分类走
+	// ErrPathEscalation 哨兵，此处统一转成既有中文文案，保持调用方契约不变。
+	if err := paths.IsInsideResolved(absRoot, absPath); err != nil {
 		return fmt.Errorf("拒绝操作仓库外路径: %s", path)
 	}
 	return nil

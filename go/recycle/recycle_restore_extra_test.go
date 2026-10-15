@@ -216,3 +216,55 @@ func TestRestore_CrossDeviceFileCopyFails_CleansDst(t *testing.T) {
 		t.Fatal("复制失败后回收站条目应保留")
 	}
 }
+
+// 符号链接恢复：建链失败时回收站条目必须保住（锐评 2026-10-15 修正）。
+//
+// 病灶：原实现先 os.Remove(src) 再 os.Symlink(target, dst)，建链失败时靠
+// os.Symlink(target, src) 回滚；**两次建链都失败**则条目永久丢失——用户看到
+// 「恢复失败」，回收站里也没有了。现改为先建 dst、成功后才删 src，建链失败时
+// src 分毫未动。
+//
+// ⚠️ 判别力（防假绿灯）：注入「恒失败」的建链实现。单次失败在新旧两序下都会被
+// 回滚救回（旧序回滚重建 src 成功 → 条目仍在），只有恒失败才能把两种顺序区分开——
+// 旧序会把 src 删掉后两次建链皆败（本用例转红），新序第一次失败即返回（转绿）。
+func TestRestoreSymlinkEntry_LinkFailureKeepsRecycleEntry(t *testing.T) {
+	dir := t.TempDir()
+	tm := New(dir)
+	if err := os.MkdirAll(tm.RecycleDir(), 0755); err != nil {
+		testutil.NoError(t, err)
+	}
+	target := filepath.Join(dir, "target.ysm")
+	if err := os.WriteFile(target, []byte("x"), 0644); err != nil {
+		testutil.NoError(t, err)
+	}
+	src := filepath.Join(tm.RecycleDir(), "link.ysm")
+	if err := os.Symlink(target, src); err != nil {
+		t.Skipf("Symlink 不可用（需权限）: %v", err)
+	}
+	dst := filepath.Join(dir, "link.ysm")
+	// 恒失败：把「建链失败 + 回滚建链也失败」压成一次注入
+	tm.symlinkForRestore = func(_, _ string) error { return os.ErrPermission }
+
+	handled, err := tm.restoreSymlinkEntry(src, dst)
+	if !handled {
+		t.Fatal("符号链接条目应由 restoreSymlinkEntry 接管")
+	}
+	if err == nil {
+		t.Fatal("建链失败应报错（不得静默成功）")
+	}
+	// 核心断言：回收站条目分毫未动（旧序此处已被 os.Remove 删掉）
+	info, lerr := os.Lstat(src)
+	if lerr != nil {
+		t.Fatalf("建链失败后回收站条目必须保留（旧序的永久丢失窗口）: %v", lerr)
+	}
+	if info.Mode()&os.ModeSymlink == 0 {
+		t.Fatal("回收站条目应仍是符号链接")
+	}
+	if got, rerr := os.Readlink(src); rerr != nil || got != target {
+		t.Fatalf("回收站链接目标应不变 = %q, got %q (err %v)", target, got, rerr)
+	}
+	// 落点不得留下任何半成品
+	if _, serr := os.Lstat(dst); !os.IsNotExist(serr) {
+		t.Fatal("建链失败不应在落点留下任何东西")
+	}
+}

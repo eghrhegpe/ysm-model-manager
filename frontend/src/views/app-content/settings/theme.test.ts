@@ -212,3 +212,64 @@ describe("initThemeSection", () => {
     getCS.mockRestore();
   });
 });
+
+// ===== 自动模式落盘（2026-10-15 锐评 P0：theme 与 themeAuto 须同笔落盘）=====
+// 病根：initTheme 翻转为 disk 优先后，auto 分支若只把 themeAuto 落盘，disk 里的
+// theme 恒为旧手动定格值——重启时 initTheme 先应用陈旧值（并把 localStorage 的
+// "system" 覆盖掉），跟随系统模式永远回不来。回归锁：SaveAppConfig 的 theme/themeAuto
+// 实参（六位置 string，按 (filesRoot, rpRoot, mcRoot, linkMode, theme, themeAuto) 取）。
+function mockConfigSave(diskTheme = "warm", diskAuto = "off") {
+  const saveAppConfig = vi.fn();
+  const loadAppConfig = vi.fn().mockResolvedValue({ theme: diskTheme, themeAuto: diskAuto });
+  getApp.mockResolvedValue({ SaveAppConfig: saveAppConfig, LoadAppConfig: loadAppConfig });
+  return saveAppConfig;
+}
+
+describe("自动模式落盘（P0 disk 权威）", () => {
+  it("system 变更同笔落盘 theme=system + themeAuto=system（单次写，无重复）", async () => {
+    const saveAppConfig = mockConfigSave();
+    const { root, autoSelect } = makeRoot("cyber", "off");
+    initThemeSection(root);
+    autoSelect.value = "system";
+    autoSelect.dispatchEvent(new Event("change"));
+    await vi.waitFor(() => expect(saveAppConfig).toHaveBeenCalledTimes(1));
+    const [, , , , theme, themeAuto] = saveAppConfig.mock.calls[0];
+    expect(theme).toBe("system");
+    expect(themeAuto).toBe("system");
+  });
+
+  it("time 变更同笔落盘重算后的时段主题 + themeAuto=time（单次写）", async () => {
+    applyTimeTheme.mockReturnValue("warm");
+    const saveAppConfig = mockConfigSave("pro", "time");
+    const { root, autoSelect } = makeRoot("cyber", "off");
+    initThemeSection(root);
+    autoSelect.value = "time";
+    autoSelect.dispatchEvent(new Event("change"));
+    await vi.waitFor(() => expect(saveAppConfig).toHaveBeenCalledTimes(1));
+    const [, , , , theme, themeAuto] = saveAppConfig.mock.calls[0];
+    expect(theme).toBe("warm");
+    expect(themeAuto).toBe("time");
+  });
+
+  it("off 变更仅落 themeAuto=off；theme 保磁盘重读值不冲掉定格主题", async () => {
+    const saveAppConfig = mockConfigSave("sakura");
+    const { root, autoSelect } = makeRoot("cyber", "system");
+    initThemeSection(root);
+    autoSelect.value = "off";
+    autoSelect.dispatchEvent(new Event("change"));
+    await vi.waitFor(() => expect(saveAppConfig).toHaveBeenCalledTimes(1));
+    const [, , , , theme, themeAuto] = saveAppConfig.mock.calls[0];
+    expect(theme).toBe("sakura");
+    expect(themeAuto).toBe("off");
+  });
+
+  it("打开设置页不触发 auto 模式落盘（读路径写零，2026-10-15 写放大收口）", async () => {
+    const saveAppConfig = mockConfigSave("pro", "time");
+    const { root } = makeRoot("cyber", "time");
+    initThemeSection(root);
+    // 给 void fire-and-forget 的落盘链（await 两层）留足微任务窗口再断言缺席，
+    // 防「未落盘就断言」假绿
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(saveAppConfig).not.toHaveBeenCalled();
+  });
+});

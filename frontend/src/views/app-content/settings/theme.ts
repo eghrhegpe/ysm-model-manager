@@ -70,12 +70,19 @@ async function persistThemeSelection(themeName: string): Promise<void> {
   }
 }
 
-/** 自动主题模式落盘（theme-auto 变更同步 ysm_config.json，P4 口径） */
-async function persistAutoMode(mode: string): Promise<void> {
+/**
+ * 自动主题模式落盘（theme-auto 变更同步 ysm_config.json，P4 口径）。
+ * P0 修复（2026-10-15 锐评）：重算后的 theme 须与 mode 同笔显式落盘——旧版只传 themeAuto
+ * 并依赖 saveCfg「theme 缺省自 localStorage 兜底」，而 config-write P1 修复后缺省改走
+ * 磁盘重读、不再读 localStorage，兜底链被截断：disk 里的 theme 恒停留于旧手动定格值，
+ * 与 disk 优先的 initTheme 合谋成「跟随系统重启失效」。theme 传 undefined（off 分支）
+ * 则 patch 不含 theme → 保磁盘重读值，沿用当前定格主题（P4 口径不变）。
+ */
+async function persistAutoMode(mode: string, theme?: string): Promise<void> {
   try {
-    // theme 缺省由 saveCfg 自 localStorage 兜底：system/time 分支上面已 safeSet("theme", …)，
-    // off 分支沿用当前定格主题——与原先显式传入 `safeGet("theme") || THEME_DARK` 等价
-    await saveCfg({ themeAuto: mode });
+    // exactOptionalPropertyTypes：theme 缺席时 patch 不得含该键（显式 undefined 非法），
+    // 条件构造保证 off 分支 patch 只有 themeAuto → 磁盘重读值保定格主题
+    await saveCfg(theme !== undefined ? { theme, themeAuto: mode } : { themeAuto: mode });
   } catch (e) {
     logWarn("settings", "自动主题模式保存到配置失败", e);
   }
@@ -110,27 +117,31 @@ function initThemePicker(root: ShadowRoot, themePicker: ParentNode, savedTheme: 
   bindThemeCardClicks(root, themePicker);
 }
 
-/** 应用一次自动主题模式（system/time 分支写 theme 键 + 卡片取消选中；off 不动当前主题） */
-function applyAutoThemeMode(mode: string, themePicker: ParentNode | null): void {
+/**
+ * 应用一次自动主题模式（只管渲染，不落盘）：system/time 分支写 theme 键 + 卡片取消选中，
+ * off 不动当前主题；返回本次应用的定格主题（off 返回 null）。
+ * 落盘职责唯一在 change 处理器的 persistAutoMode（P0 修复 2026-10-15 收口）——原实现里
+ * system/time 分支与 change 处理器各调一次 persistAutoMode（双写），且本函数在 init 路径
+ * 被调用（打开设置页即触发落盘，读路径写盘）；现渲染与落盘分离，init 路径写零。
+ */
+function applyAutoThemeMode(mode: string, themePicker: ParentNode | null): string | null {
   if (mode === "system") {
     applyTheme("system");
     safeSet("theme", "system");
-    // 2026-10-15 锐评收口（与 initTheme 的「disk 权威」一致）：system/time 分支重算的主题
-    // 不只写 localStorage，也落盘 ysm_config.json——否则 disk 里的 theme 始终是用户上次
-    // 手动点卡片的旧值，而 localStorage 是每次启动 initTheme 重算的新值，两者长期分叉；
-    // 一旦 localStorage 被清，disk 陈旧值又会被当真值覆盖回去。off 分支不动主题、不落盘。
-    void persistAutoMode(mode);
     // 更新卡片选中态
     if (themePicker) syncThemeCards(themePicker, null);
-  } else if (mode === "time") {
+    return "system";
+  }
+  if (mode === "time") {
     // P2 修复：applyTimeTheme 返回实际主题（warm/cyber）并写入 theme 键——
     // 原实现写 "time" 非法值，重启后 initTheme 归一化为 system，按时间段模式被静默降级
     const themeName = applyTimeTheme();
     safeSet("theme", themeName);
-    void persistAutoMode(mode);
     if (themePicker) syncThemeCards(themePicker, null);
+    return themeName;
   }
   // "off" 时不改变当前主题，等用户手动点卡片
+  return null;
 }
 
 /** 自动切换下拉框段：初始化值 + change 绑定 + 按 savedAuto 应用初始主题 */
@@ -148,9 +159,14 @@ function initAutoThemeSelect(
   autoSelect.addEventListener("change", () => {
     const mode = autoSelect.value;
     safeSet("theme-auto", mode);
-    applyAutoThemeMode(mode, themePicker);
-    // P4 修复：自动模式变更同步 ysm_config.json（theme-auto 落盘）
-    void persistAutoMode(mode);
+    // P0 修复（2026-10-15 锐评）：重算主题与模式同笔落盘 ysm_config.json，与读侧
+    // disk 权威（initTheme `cfg.theme` 优先）对齐——原实现只落 themeAuto，theme 恒停留
+    // 旧手动定格值，「跟随系统」重启即失效（localStorage 的 "system" 又被 initTheme
+    // 用 disk 陈旧值覆盖回去）。system/time 分支 applyAutoThemeMode 返回应用的定格
+    // 主题，随 mode 一并落盘；off 返回 null → patch 不含 theme → 保磁盘重读值
+    // （P4 口径：off 沿用当前定格主题，零行为变化）。
+    const appliedTheme = applyAutoThemeMode(mode, themePicker);
+    void persistAutoMode(mode, appliedTheme ?? undefined);
   });
   // 初始化：如果 savedAuto 是 system/time，应用对应主题
   applyAutoThemeMode(savedAuto, themePicker);

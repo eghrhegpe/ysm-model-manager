@@ -50,7 +50,11 @@ export async function saveCfg(patch: {
   rpRoot?: string;
   mcRoot?: string;
   linkMode?: string;
-  /** 缺省取 localStorage 当前值（各写入方均先 safeSet 再 saveCfg，语义与显式传入等价） */
+  /**
+   * 未传 = 重读磁盘当前值（config-write.ts 的 disk 权威契约，锐评 2026-10-15 P1 起
+   * 不再读 localStorage 兜底）；theme/themeAuto 的写入方须显式传入本次要落盘的值
+   * （主题卡片 persistThemeSelection / 自动模式 theme.ts|persistAutoMode），勿依赖缺省。
+   */
   theme?: string;
   themeAuto?: string;
 }): Promise<void> {

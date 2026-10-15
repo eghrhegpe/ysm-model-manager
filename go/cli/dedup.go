@@ -216,6 +216,12 @@ func runDedupClean(ctx *CmdContext) error {
 	moved := 0
 	var failures []string
 	for _, f := range victims {
+		// 刻意直调 recycle.Move 而非 ctx.App.MoveToRecycle：后者按 App 的**配置根**做归属
+		// 判定（findRecycleRoot），而本命令的 root 来自 `--files-root`——CLI 指定自定义根时
+		// 走 App 侧会误判归属或直接报「找不到资源根」。安全性：victims 是去重败者（组内
+		// 第 2..n 个**文件**），不可能是资源根本身；且底层 `recycle.prepareMoveSource` 仍
+		// 挡 `src == 传入 root`。故 App 层「根级自卫（任一已知根）」在本入口无适用面。
+		// （2026-10-15 复核记录：确认此处为唯一绕过 MoveToRecycle 的调用方。）
 		if err := recycle.Move(f, root); err != nil {
 			failures = append(failures, fmt.Sprintf("%s: %v", f, err))
 			continue

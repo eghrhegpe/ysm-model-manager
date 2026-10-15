@@ -16,21 +16,20 @@ permalink: /adr/
 
 | 状态 | 数量 |
 |------|------|
-| [📝 提议中](#提议中) | 5 |
+| [📝 提议中](#提议中) | 4 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 1 |
 | [🔄 部分采纳](#部分采纳) | 14 |
-| [✅ 已采纳](#已采纳) | 339 |
+| [✅ 已采纳](#已采纳) | 340 |
 | [❌ 已取代](#已取代) | 9 |
 | [🧊 已废弃](#已废弃) | 0 |
 | [❓ 未归类](#未归类) | 0 |
 
 ## 按状态分组导航
 
-### 📝 提议中（5）
+### 📝 提议中（4）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
-| [ADR-331-d2](./decisions/ADR-331-d2-i18n-ui-check-toast-channel.md) | i18n-ui-check 补第四通道：toast 载荷 | 📝 提议中 |
 | [ADR-327](./architecture/ADR-327-hdr.md) | 自定义 HDR 路径持久化与重启恢复 | 📝 提议中 |
 | [ADR-325](./architecture/ADR-325-app-domain-sinking-over-multi-service.md) | App 瘦身走域下沉：拒绝 Wails 多 Service 外壳 | 📝 提议中 |
 | [ADR-321](./architecture/ADR-321-cap-persistence-restore-derivation.md) | cap 持久化读侧派生：restoreFields 还原表由 schema 键集统一驱动（跨 cap 一次拍全局） | 📝 提议中 |
@@ -61,7 +60,7 @@ permalink: /adr/
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 | [ADR-050](./ADR-050-plaza-browser-window.md) | 模型广场 · 浏览器窗口（Wails 第二窗口） | 🔄 部分采纳 |
 
-### ✅ 已采纳（339）
+### ✅ 已采纳（340）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
@@ -88,6 +87,7 @@ permalink: /adr/
 | [ADR-332](./architecture/ADR-332-diagnostics-ia-and-layout-consolidation.md) | 诊断页信息架构与版式收口：四项拍板决策 | ✅ 已采纳 |
 | [ADR-331](./architecture/ADR-331-3d-friendlyerror-code-keys.md) | 3D 错误消息国际化：friendlyError 旁路收窄与 CODE_KEYS 单源 | ✅ 已采纳 |
 | [ADR-331-d1](./decisions/ADR-331-d1-readfilebytes-error-readfilemeta-c.md) | ReadFileBytes 无 error 通道缺口：ReadFileMeta 结构化错误字段（切片 C） | ✅ 已采纳 |
+| [ADR-331-d2](./decisions/ADR-331-d2-i18n-ui-check-toast-channel.md) | i18n-ui-check 补第四通道：toast 载荷 | ✅ 已采纳 |
 | [ADR-330](./architecture/ADR-330-frustum-per-root-dirty.md) | frustum-cull 逐根矩阵置脏：perFrame 契约携带根身份，消除多模型同框全体 updateWorldMatrix | ✅ 已采纳 |
 | [ADR-329](./architecture/ADR-329-preview-cap-symmetry-leaf.md) | 3D 预览巨型 cap 对称叶化（sky/light/postprocessing 拆分） | ✅ 已采纳 |
 | [ADR-328](./architecture/ADR-328-cap-enabled-unification.md) | cap 能力总开关统一收编 envState 与 ground 终态 | ✅ 已采纳 |
@@ -779,7 +779,7 @@ permalink: /adr/
 | ADR-338-d1 | 提交信息减负：commit-msg 闸与 trailer 出口 | ✅ 已采纳 | 2026-10-13 |
 | ADR-338-d2 | broad_claim 巨兽卡符号封顶：auto_fields 死重止血与拆卡排期 | ✅ 已采纳 | 2026-10-14 |
 | ADR-331-d1 | ReadFileBytes 无 error 通道缺口：ReadFileMeta 结构化错误字段（切片 C） | ✅ 已采纳 | 2026-10-12 |
-| ADR-331-d2 | i18n-ui-check 补第四通道：toast 载荷 | 📝 提议中 | 2026-10-15 |
+| ADR-331-d2 | i18n-ui-check 补第四通道：toast 载荷 | ✅ 已采纳 | 2026-10-15 |
 | ADR-311-d1 | 测试纪律：禁 mock 被断言谓词（自证）+ 判别样本 + 变异探针 | ✅ 已采纳 | 2026-10-09 |
 | ADR-292-d1 | envSource 迁移判据① 供血线单源化（不再跨槽读 sky 存档键形） | ✅ 已采纳 | 2026-10-07 |
 | ADR-278-d1 | bench 控件消费派生化：read* 声明读集，PERF_UNREAD 登记表退役 | ✅ 已采纳 | 2026-10-13 |

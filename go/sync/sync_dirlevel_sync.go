@@ -129,7 +129,7 @@ func syncResourcesDirLevel(globalDir, instanceDir, rtype string, scanFn ScanEntr
 	instanceUnits, instanceCollisions, instanceFresh := collectEntries(instanceDir)
 	result := dirLevelResult(globalUnits, instanceUnits)
 	// 碰撞 fail-loud：汇入结果诊断信道（两种情况都挂）+ 日志留痕（仅新计算时打，缓存命中不重打）
-	//（同「Walk 错误」本地惯用法；CLI 侧 stderr 可见，GUI 侧日志面板可见）。
+	// （同「Walk 错误」本地惯用法；CLI 侧 stderr 可见，GUI 侧日志面板可见）。
 	if globalFresh {
 		for _, w := range globalCollisions {
 			log.Printf("[sync] 全局侧 %s", w)

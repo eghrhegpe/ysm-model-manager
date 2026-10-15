@@ -149,7 +149,7 @@ func TestRelinkDir_RestoreFailureRollsBackWholeDir(t *testing.T) {
 	}
 	res, err := RelinkDir(customDir, repoRoot, "ysm", "copy", scanFn, relinkLogger(logs))
 	// ADR-342 D7：整夹回滚后零成功 → 结构化结果 res.Failed=1 + FirstError 点名
-	//（原 ErrPartialSync 抬升会把失败计数挡在绑定层外，前端只能弹「已重新链接 0 个文件」成功）
+	// （原 ErrPartialSync 抬升会把失败计数挡在绑定层外，前端只能弹「已重新链接 0 个文件」成功）
 	testutil.NoError(t, err, "部分失败由结构化结果承载，不应是 error")
 	testutil.Equal(t, res.OK, 0, "回填失败应整夹回滚且不计成功（日志 %v）", *logs)
 	testutil.Equal(t, res.Failed, 1, "应记 1 个失败（日志 %v）", *logs)

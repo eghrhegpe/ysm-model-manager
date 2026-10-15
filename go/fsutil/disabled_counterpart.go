@@ -15,12 +15,6 @@ import (
 	"ysm-model-manager/go/types/registry"
 )
 
-// pathExists 存在性判定（文件或目录）。
-func pathExists(p string) bool {
-	_, err := os.Stat(p)
-	return err == nil
-}
-
 // dirExists 目录判定（文件不算：杂散同名文件不得当禁用载体）。
 func dirExists(p string) bool {
 	fi, err := os.Stat(p)

@@ -84,7 +84,9 @@ func keyCollisionWarnings(groups map[string]map[string]map[string]struct{}) []st
 			sort.Strings(exts)
 			// 点名首末扩展名还原文件名；middle 用「等 N 种」省略（防刷屏）
 			n := len(exts)
-			label := stem + exts[0]
+			// label 由下方两个分支无条件赋值——原实现在此先赋 stem+exts[0] 再被覆盖，
+			// 是纯死赋值（ineffassign 红），删掉即可，无行为差异。
+			var label string
 			if n == 2 {
 				label = stem + exts[0] + " 与 " + stem + exts[1]
 			} else {

@@ -60,7 +60,7 @@ func ParsePmxStats(path string) (MmdStats, error) {
 	if err != nil {
 		return MmdStats{}, err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	data, err := io.ReadAll(io.LimitReader(f, 16<<20))
 	if err != nil {
 		return MmdStats{}, err
@@ -193,7 +193,7 @@ func probePngSize(path string) (int, int, bool) {
 	if err != nil {
 		return 0, 0, false
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	hdr := make([]byte, 24)
 	if _, err := io.ReadFull(f, hdr); err != nil {
 		return 0, 0, false

@@ -26,8 +26,9 @@ func writePmxFixture(t *testing.T, dir, name string, bones int, texRelPath, texW
 			i)
 	}
 	var texSection string
-	switch {
-	case texRelPath != "":
+	// 原为单 case 的 `switch { case ...: }`——gocritic singleCaseSwitch 判红，
+	// 且 case 体无 fallthrough 语义，改 if 等价。
+	if texRelPath != "" {
 		if texWithSize != "" {
 			texSection = fmt.Sprintf(`<texture><name>t0</name><tex>%s</tex><texsize>%s</texsize></texture>`,
 				texRelPath, texWithSize)

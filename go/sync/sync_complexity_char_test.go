@@ -154,7 +154,7 @@ func TestChar_RelinkDir_FlatCopyFailureLogged(t *testing.T) {
 	sink := &charSink{}
 	res, err := RelinkDir(customDir, repoRoot, "ysm", "hardlink", scanFn, sink.logger())
 	// ADR-342 D7：零成功 + 有失败 → 结构化结果 res.Failed=1 + FirstError 点名，不再是 error
-	//（原 ErrPartialSync 抬升会把失败计数挡在绑定层外，前端只能弹「已重链 0 个」的成功文案）。
+	// （原 ErrPartialSync 抬升会把失败计数挡在绑定层外，前端只能弹「已重链 0 个」的成功文案）。
 	testutil.NoError(t, err, "部分失败由结构化结果承载，不应是 error")
 	if res.OK != 0 || res.Failed != 1 {
 		t.Errorf("res = %+v, want OK=0 Failed=1", res)

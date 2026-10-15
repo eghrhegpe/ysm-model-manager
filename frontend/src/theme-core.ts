@@ -101,7 +101,12 @@ export async function initTheme() {
   try {
     const { LoadAppConfig } = await getApp();
     const cfg = await LoadAppConfig();
-    const raw = safeGet("theme") || cfg.theme || THEME_DARK;
+    // 优先级（2026-10-15 锐评收口）：**磁盘配置（ysm_config.json）是主题权威**，localStorage
+    // 只作 Go 不可达时的启动兜底壳——与 config-write.ts 写入侧「磁盘是备份权威」同一断言。
+    // 原 `safeGet("theme") || cfg.theme` 把 localStorage 当事实源，与写入侧原则相反（双权威
+    // 病灶）：localStorage 被清（WebView2 重置/清站点数据）后，任何无关保存都会用陈旧 disk
+    // 值覆盖回退，且读取端永远不看 disk 新值。现翻转为 disk 优先，读写一致。
+    const raw = cfg.theme || safeGet("theme") || THEME_DARK;
     // P2 修复：持久层只回写合法值——原实现把 localStorage 非法值（如设置页误写的 "time"）
     // 原样写回，脏数据持续污染导致后续 matchMedia 跟随失效
     const theme = normalizeTheme(raw);
@@ -109,7 +114,8 @@ export async function initTheme() {
     applyTheme(theme);
     // P4 修复（2026-09，theme-auto 落盘同步）：localStorage 被清理后从 Go 配置兜底恢复
     // theme-auto——无此兜底时 time 自动模式重启后 applyThemeAuto 读不到值，定格上次主题
-    const rawAuto = safeGet("theme-auto") || cfg.themeAuto || "off";
+    // 同口径：cfg.themeAuto 优先于 localStorage 的 theme-auto（disk 权威一致）
+    const rawAuto = cfg.themeAuto || safeGet("theme-auto") || "off";
     const auto = normalizeThemeAuto(rawAuto);
     safeSet("theme-auto", auto);
   } catch {

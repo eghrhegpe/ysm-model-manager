@@ -156,10 +156,20 @@ describe("initTheme 隐私模式 + 白名单回写", () => {
     expect(localStorage.getItem("theme")).toBe("sakura");
   });
 
-  it("localStorage 非法值 → 归一化 system 后回写", async () => {
+  it("localStorage 非法值但 disk 有合法值 → 取 disk 合法值（disk 权威）", async () => {
     localStorage.setItem("theme", "time");
     LoadAppConfigMock.mockResolvedValue({ theme: "pro" });
     await initTheme();
+    expect(localStorage.getItem("theme")).toBe("pro");
+    expect(document.body.classList.contains("theme-pro")).toBe(true);
+  });
+
+  it("localStorage 非法 + disk 无值 → localStorage 非法值被归一为 system（不再当真值）", async () => {
+    localStorage.setItem("theme", "time");
+    LoadAppConfigMock.mockResolvedValue({ theme: "" });
+    await initTheme();
+    // 旧行为：safeGet("theme")||cfg.theme → 取非法 "time" 当真值；现 disk 优先且 localStorage
+    // 非法值不再被信任，normalizeTheme("time") 落系统白名单 → "system"（跟随 matchMedia 浅色=warm）
     expect(localStorage.getItem("theme")).toBe("system");
     expect(document.body.classList.contains("theme-warm")).toBe(true);
   });
@@ -197,11 +207,11 @@ describe("initTheme 隐私模式 + 白名单回写", () => {
     expect(localStorage.getItem("theme-auto")).toBe("system");
   });
 
-  it("localStorage 有 theme-auto 优先于 cfg.themeAuto（localStorage 是事实源）", async () => {
+  it("cfg.themeAuto 优先于 localStorage 的 theme-auto（disk 是事实源）", async () => {
     localStorage.setItem("theme-auto", "off");
     LoadAppConfigMock.mockResolvedValue({ theme: "cyber", themeAuto: "time" });
     await initTheme();
-    expect(localStorage.getItem("theme-auto")).toBe("off");
+    expect(localStorage.getItem("theme-auto")).toBe("time");
   });
 });
 

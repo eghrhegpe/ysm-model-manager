@@ -115,6 +115,11 @@ function applyAutoThemeMode(mode: string, themePicker: ParentNode | null): void 
   if (mode === "system") {
     applyTheme("system");
     safeSet("theme", "system");
+    // 2026-10-15 锐评收口（与 initTheme 的「disk 权威」一致）：system/time 分支重算的主题
+    // 不只写 localStorage，也落盘 ysm_config.json——否则 disk 里的 theme 始终是用户上次
+    // 手动点卡片的旧值，而 localStorage 是每次启动 initTheme 重算的新值，两者长期分叉；
+    // 一旦 localStorage 被清，disk 陈旧值又会被当真值覆盖回去。off 分支不动主题、不落盘。
+    void persistAutoMode(mode);
     // 更新卡片选中态
     if (themePicker) syncThemeCards(themePicker, null);
   } else if (mode === "time") {
@@ -122,6 +127,7 @@ function applyAutoThemeMode(mode: string, themePicker: ParentNode | null): void 
     // 原实现写 "time" 非法值，重启后 initTheme 归一化为 system，按时间段模式被静默降级
     const themeName = applyTimeTheme();
     safeSet("theme", themeName);
+    void persistAutoMode(mode);
     if (themePicker) syncThemeCards(themePicker, null);
   }
   // "off" 时不改变当前主题，等用户手动点卡片

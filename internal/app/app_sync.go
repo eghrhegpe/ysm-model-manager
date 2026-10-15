@@ -4,8 +4,11 @@ package app
 import (
 	"fmt"
 	"log"
+	"path/filepath"
+	"strings"
 
 	"ysm-model-manager/go/instance"
+	"ysm-model-manager/go/paths"
 	ysmsync "ysm-model-manager/go/sync"
 	"ysm-model-manager/go/types"
 )
@@ -37,6 +40,48 @@ func (a *App) getSyncDirs(rtype, instanceName string) (globalDir, targetDir stri
 		return "", "", fmt.Errorf("未找到整合包目录: %s", instanceName)
 	}
 	return globalDir, targetDir, nil
+}
+
+// conflictLocalPath 把冲突的相对路径解析为整合包内的绝对路径，并做越界守卫。
+//
+// 抽成纯函数（root + relPath → abs，不触达 App/配置/资源管理器）的唯一理由是**可单测**：
+// 越界判定是安全边界（relPath 现由前端递入，属不可信输入），而端到端调用会真的拉起
+// 资源管理器——测试不能靠启动 explorer.exe 来验证一条路径拼接。
+func conflictLocalPath(root, relPath string) (string, error) {
+	rel := strings.TrimSpace(relPath)
+	if rel == "" {
+		return "", fmt.Errorf("冲突路径为空")
+	}
+	abs := filepath.Join(root, filepath.FromSlash(rel))
+	if _, err := paths.RelInside(root, abs); err != nil {
+		return "", fmt.Errorf("冲突路径越界 %q: %w", rel, err)
+	}
+	return abs, nil
+}
+
+// RevealConflictFile 在资源管理器中定位某条冲突的**本地（整合包侧）文件**。
+//
+// 为什么路径解析必须归 Go，而不是让前端拼绝对路径（2026-10-14 拍板）：
+//   - `FileConflict.Path` 是相对路径，而 `RevealInExplorer` 要绝对路径——Windows 侧
+//     `explorer /select,` 按**进程 cwd** 解析，相对路径会指向别处或静默失败；
+//   - 「整合包目录 + 资源子目录」的布局知识单一事实源在 Go（`getSyncDirs`，与
+//     DetectConflicts / ResolveConflicts 同一解析路径）：前端复制一份就是第二份真相，
+//     迟早出现「检测说在 A 目录、定位跳到 B 目录」；
+//   - 越界守卫同样归 Go：`conflictLocalPath` 复用 `paths.RelInside`（与 `ResolveConflict`
+//     同款防线），防调用方递来的 relPath 穿越出整合包目录。
+//
+// 前端据此只需递**它已经持有的身份**（rtype / instance / 相对路径），无需知道任何绝对路径；
+// 入口按 `can("RevealInExplorer")` 门控（web/Android 无此能力 → 不渲染按钮，不造幽灵入口）。
+func (a *App) RevealConflictFile(rtype, instanceName, relPath string) error {
+	_, targetDir, err := a.getSyncDirs(rtype, instanceName)
+	if err != nil {
+		return err
+	}
+	abs, err := conflictLocalPath(targetDir, relPath)
+	if err != nil {
+		return err
+	}
+	return a.RevealInExplorer(abs)
 }
 
 // DetectConflicts 检测指定整合包与全局仓库之间的文件冲突

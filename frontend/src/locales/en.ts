@@ -1102,6 +1102,10 @@ export const en: Record<string, string> = {
   "diagnostics.selectResourceType": "Select Resource Type",
   "diagnostics.conflictTypeContent": "Content Modified",
   "diagnostics.conflictTypeBoth": "Added in Both",
+  "diagnostics.conflictCopyPath": "Copy conflict file path",
+  "diagnostics.conflictReveal": "Show in file manager",
+  "diagnostics.conflictCopied": "Conflict file path copied",
+  "diagnostics.conflictRevealFail": "Failed to locate file",
   "diagnostics.cancelScan": "Cancel scan",
   "diagnostics.scanCancelled": "Scan cancelled",
   // [ADR-305 D5 reserved key] reserved for ADR-300 S2 diagnostics group refactor, do not delete

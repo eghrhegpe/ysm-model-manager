@@ -222,7 +222,9 @@ export function DeleteFromRecycle(src: string): $CancellablePromise<void> {
  * 	isDir=false: src 为 ysm.json 时整组删除父目录，否则删除单文件（ysm 等）
  * 
  * 守卫根传类型特定仓库根：防根级 ysm.json 清空整个仓库；
- * 路径守卫拒绝 rel=="." 或 rel 含 ".." 前缀的越权路径。
+ * 路径守卫拒绝 rel=="." 或 rel==".."/"..<分隔符>" 的越权路径（精确段比较，"..foo" 合法目录放行）。
+ * 两个分支在「仓库根解析全空」时一律 fail-fast 拒绝——root 为空时下游守卫整体失效
+ * （fileops.DeleteModelFile 的守卫以 `root != ""` 为前提），不得进入任何删盘路径。
  */
 export function DeleteResourcePack(path: string, rtype: string): $CancellablePromise<void> {
     return $Call.ByID(395621705, path, rtype);
@@ -1110,6 +1112,25 @@ export function RestartApplication(): $CancellablePromise<void> {
  */
 export function RestoreFromRecycle(src: string, filesRoot: string): $CancellablePromise<void> {
     return $Call.ByID(983517996, src, filesRoot);
+}
+
+/**
+ * RevealConflictFile 在资源管理器中定位某条冲突的**本地（整合包侧）文件**。
+ * 
+ * 为什么路径解析必须归 Go，而不是让前端拼绝对路径（2026-10-14 拍板）：
+ *   - `FileConflict.Path` 是相对路径，而 `RevealInExplorer` 要绝对路径——Windows 侧
+ *     `explorer /select,` 按**进程 cwd** 解析，相对路径会指向别处或静默失败；
+ *   - 「整合包目录 + 资源子目录」的布局知识单一事实源在 Go（`getSyncDirs`，与
+ *     DetectConflicts / ResolveConflicts 同一解析路径）：前端复制一份就是第二份真相，
+ *     迟早出现「检测说在 A 目录、定位跳到 B 目录」；
+ *   - 越界守卫同样归 Go：复用 `paths.RelInside`（与 `ResolveConflict` 同款防线），
+ *     防调用方递来的 relPath 穿越出整合包目录（前端参数属不可信输入）。
+ * 
+ * 前端据此只需递**它已经持有的身份**（rtype / instance / 相对路径），无需知道任何绝对路径；
+ * 入口按 `can("RevealInExplorer")` 门控（web/Android 无此能力 → 不渲染按钮，不造幽灵入口）。
+ */
+export function RevealConflictFile(rtype: string, instanceName: string, relPath: string): $CancellablePromise<void> {
+    return $Call.ByID(3671149790, rtype, instanceName, relPath);
 }
 
 /**

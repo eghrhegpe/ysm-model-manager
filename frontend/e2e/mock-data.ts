@@ -348,6 +348,7 @@ export const MOCK_DATA = {
   ResetWorkshopConfigs: undefined,
   RestartApplication: undefined,
   RestoreFromRecycle: undefined,
+  RevealConflictFile: undefined,
   RevealInExplorer: undefined,
   SaveScreenshotFile: undefined,
   SaveThresholds: undefined,

@@ -1101,6 +1101,10 @@ export const ja: Record<string, string> = {
   "diagnostics.selectResourceType": "リソースタイプを選択",
   "diagnostics.conflictTypeContent": "内容変更競合",
   "diagnostics.conflictTypeBoth": "両方に追加競合",
+  "diagnostics.conflictCopyPath": "競合ファイルのパスをコピー",
+  "diagnostics.conflictReveal": "エクスプローラーで表示",
+  "diagnostics.conflictCopied": "競合ファイルのパスをコピーしました",
+  "diagnostics.conflictRevealFail": "ファイルの位置を特定できませんでした",
   "diagnostics.cancelScan": "スキャンを中止",
   "diagnostics.scanCancelled": "スキャンを中止しました",
   // [ADR-305 D5 reserved key] reserved for ADR-300 S2 diagnostics group refactor, do not delete

@@ -11,16 +11,22 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { waitFor } from "@/test-utils/index.ts";
 import { type DgCfScanTarget, initSyncConflictPanel, runSyncConflictScan } from "./conflicts.ts";
 
-const { busEmit, busOn, getApp, isWebPlatform } = vi.hoisted(() => ({
+const { busEmit, busOn, getApp, isWebPlatform, canBinding, copyWithToast } = vi.hoisted(() => ({
   busEmit: vi.fn(),
   busOn: vi.fn(() => () => {}),
   getApp: vi.fn(),
   isWebPlatform: vi.fn(() => false),
+  // 能力门控：冲突行「在资源管理器中显示」按钮按 can("RevealInExplorer") 渲染
+  canBinding: vi.fn(() => true),
+  // 复制回执单点：冲突行复制路径经 copyWithToast（自身诊断页测试已覆盖其诚实回执）
+  copyWithToast: vi.fn(async () => true),
 }));
 
 vi.mock("@/bus", () => ({ bus: { emit: busEmit, on: busOn } }));
 vi.mock("@/backend/app.ts", () => ({ getApp }));
 vi.mock("@/backend/platform-web.ts", () => ({ isWebPlatform }));
+vi.mock("@/backend/capabilities.ts", () => ({ can: canBinding }));
+vi.mock("./copy-toast.ts", () => ({ copyWithToast }));
 
 import { escUnknown as esc } from "@/utils/html/html.ts";
 
@@ -88,8 +94,45 @@ beforeEach(() => {
   vi.clearAllMocks();
   document.body.innerHTML = "";
   isWebPlatform.mockReturnValue(false);
+  // clearAllMocks 只清调用记录、不清实现——但显式复位返回值，防上一个用例的
+  // mockReturnValue 残留（本文件两条门控正反用例靠它区分）
+  canBinding.mockReturnValue(true);
+  copyWithToast.mockResolvedValue(true);
   mockApp();
 });
+
+/** 冲突行夹具（三条覆盖 content_modified / size_mismatch / 未知策略兜底） */
+function conflictRows() {
+  return [
+    {
+      path: "a/模型.ysm",
+      type: "content_modified",
+      localModTime: "1",
+      remoteModTime: "2",
+      localSize: 100,
+      remoteSize: 200,
+      suggestedStrategy: "force_remote",
+    },
+    {
+      path: "b/贴图.png",
+      type: "size_mismatch",
+      localModTime: "1",
+      remoteModTime: "2",
+      localSize: 1,
+      remoteSize: 2,
+      suggestedStrategy: "manual",
+    },
+    {
+      path: "c/未知.bin",
+      type: "size_mismatch",
+      localModTime: "1",
+      remoteModTime: "2",
+      localSize: 3,
+      remoteSize: 4,
+      suggestedStrategy: "unknown" as "unknown",
+    },
+  ];
+}
 
 describe("initSyncConflictPanel（常驻参数栏）", () => {
   it("填充下拉：Exists 过滤 + 默认选中首个可用实例 + 按钮可用 + 结果区不动", async () => {
@@ -436,5 +479,108 @@ describe("同步冲突解决（do-resolve-btn）", () => {
       vi.useRealTimers();
     }
     document.body.removeChild(list);
+  });
+});
+
+// ===== 冲突行快捷操作（2026-10-14 锐评 P1「可操作性」）=====
+// 病灶：冲突行只把相对路径当**纯文本**渲染——用户要么手抄路径去文件管理器，要么只能凭
+// 猜测决定 force_local / force_remote。补两个动作后，路径可复制、文件可定位。
+// ⚠️「定位」由 Go 解析绝对路径（`App.RevealConflictFile` 复用 getSyncDirs + paths.RelInside）：
+// 前端只递身份（rtype/instance/相对路径）——前端拼绝对路径既是第二份布局真相，也会在
+// web/Android 下产出无效入口。故本文件的断言只锁「递了什么身份」，不锁任何绝对路径。
+describe("冲突行快捷操作 — 复制路径 / 在资源管理器中定位", () => {
+  it("每行渲染两个动作钮，路径写入 data-*（复制钮恒有、定位钮走能力门控）", async () => {
+    mockApp({ DetectConflicts: vi.fn(() => ({ conflicts: conflictRows(), totalConflicts: 3 })) });
+    const list = document.createElement("div");
+    await runSyncConflictScan(list, esc, target());
+    await waitFor(() => expect(list.querySelector("[data-conflict-act]")).toBeTruthy());
+
+    // 3 行 × 2 钮
+    expect(list.querySelectorAll('[data-conflict-act="copy"]').length).toBe(3);
+    expect(list.querySelectorAll('[data-conflict-act="reveal"]').length).toBe(3);
+    // 路径经 esc 进属性（引号已转义，属性注入面与文本面同源）
+    const firstCopy = list.querySelector<HTMLElement>('[data-conflict-act="copy"]');
+    expect(firstCopy?.dataset.conflictPath).toBe("a/模型.ysm");
+    expect(firstCopy?.getAttribute("title")).toBe("复制冲突文件路径");
+  });
+
+  it("能力不可用（web/Android 无 RevealInExplorer）→ 只渲染复制钮，不造幽灵入口", async () => {
+    canBinding.mockReturnValue(false);
+    mockApp({ DetectConflicts: vi.fn(() => ({ conflicts: conflictRows(), totalConflicts: 3 })) });
+    const list = document.createElement("div");
+    await runSyncConflictScan(list, esc, target());
+    await waitFor(() => expect(list.querySelector("[data-conflict-act]")).toBeTruthy());
+
+    expect(list.querySelectorAll('[data-conflict-act="copy"]').length).toBe(3);
+    expect(list.querySelectorAll('[data-conflict-act="reveal"]').length).toBe(0);
+  });
+
+  it("点复制 → copyWithToast(相对路径, diagnostics.conflictCopied)", async () => {
+    mockApp({
+      DetectConflicts: vi.fn(() => ({
+        conflicts: [{ ...conflictRows()[0] }],
+        totalConflicts: 1,
+      })),
+    });
+    const list = document.createElement("div");
+    await runSyncConflictScan(list, esc, target());
+    await waitFor(() => expect(list.querySelector('[data-conflict-act="copy"]')).toBeTruthy());
+
+    list.querySelector<HTMLElement>('[data-conflict-act="copy"]')!.click();
+    await waitFor(() => expect(copyWithToast).toHaveBeenCalledTimes(1));
+    expect(copyWithToast).toHaveBeenCalledWith("a/模型.ysm", "diagnostics.conflictCopied");
+  });
+
+  it("点定位 → RevealConflictFile(rtype, instance, 相对路径)：绝对路径解析归 Go", async () => {
+    const revealFn = vi.fn(async () => {});
+    mockApp({
+      DetectConflicts: vi.fn(() => ({ conflicts: [{ ...conflictRows()[0] }], totalConflicts: 1 })),
+      RevealConflictFile: revealFn,
+    });
+    const list = document.createElement("div");
+    await runSyncConflictScan(list, esc, target());
+    await waitFor(() => expect(list.querySelector('[data-conflict-act="reveal"]')).toBeTruthy());
+
+    list.querySelector<HTMLElement>('[data-conflict-act="reveal"]')!.click();
+    await waitFor(() => expect(revealFn).toHaveBeenCalledTimes(1));
+    // 只递身份：前端不知道、也不该知道绝对路径
+    expect(revealFn).toHaveBeenCalledWith("ysm", "insA", "a/模型.ysm");
+  });
+
+  it("定位失败（如路径越界 / 文件已删）→ 追加 error 行，不静默吞", async () => {
+    mockApp({
+      DetectConflicts: vi.fn(() => ({ conflicts: [{ ...conflictRows()[0] }], totalConflicts: 1 })),
+      RevealConflictFile: vi.fn(async () => {
+        throw new Error("冲突路径越界 \"../x\": 路径逃出根目录");
+      }),
+    });
+    const list = document.createElement("div");
+    await runSyncConflictScan(list, esc, target());
+    await waitFor(() => expect(list.querySelector('[data-conflict-act="reveal"]')).toBeTruthy());
+
+    list.querySelector<HTMLElement>('[data-conflict-act="reveal"]')!.click();
+    await waitFor(() => expect(list.querySelector(".diag-msg-error")).toBeTruthy());
+    expect(list.textContent).toContain("定位文件失败");
+  });
+
+  it("路径为空（异常夹具）→ 不发请求（不拿空路径去打桥）", async () => {
+    const revealFn = vi.fn(async () => {});
+    const copyFn = copyWithToast;
+    mockApp({
+      DetectConflicts: vi.fn(() => ({
+        conflicts: [{ ...conflictRows()[0], path: "" }],
+        totalConflicts: 1,
+      })),
+      RevealConflictFile: revealFn,
+    });
+    const list = document.createElement("div");
+    await runSyncConflictScan(list, esc, target());
+    await waitFor(() => expect(list.querySelector('[data-conflict-act="reveal"]')).toBeTruthy());
+
+    list.querySelector<HTMLElement>('[data-conflict-act="reveal"]')!.click();
+    list.querySelector<HTMLElement>('[data-conflict-act="copy"]')!.click();
+    // 同步早退：两个动作都不触达桥/剪贴板
+    expect(revealFn).not.toHaveBeenCalled();
+    expect(copyFn).not.toHaveBeenCalled();
   });
 });

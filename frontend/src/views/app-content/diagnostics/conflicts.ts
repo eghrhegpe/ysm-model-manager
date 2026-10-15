@@ -2,6 +2,7 @@
 // 「冲突检测」（跨实例同名内容漂移）tab 已于 2026-09 下线（用户视角与同步冲突重叠、
 // 只读无后续动作、扫描成本全页最重），本文件只剩同步冲突一条链。
 
+import { can } from "@/backend/capabilities.ts";
 import { type LocaleKey, t } from "@/core/i18n/t.ts";
 import { stagger } from "@/utils/animation/stagger.ts";
 import { createBusyLock } from "@/utils/base/primitives/lock.ts";
@@ -11,6 +12,7 @@ import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { RESOURCE_TYPE_LABELS, rtypeLabelOf } from "@/utils/resource/types.ts";
 import type { FileConflict } from "@/utils/types-re-export.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
+import { copyWithToast } from "./copy-toast.ts";
 import { optionRows } from "./option-rows.ts";
 import { msgRowHTML } from "./status-row.ts";
 
@@ -210,6 +212,9 @@ function resolveStrategyLabel(value: string | undefined): string {
 }
 
 function dgCfBuildSyncConflictRows(conflicts: DgCfFileConflict[], esc: EscFn): string {
+  // 「在资源管理器中显示」入口按**能力门控**（web/Android 无 RevealInExplorer）：
+  // 不可用就不渲染按钮——不做点了没反应或必报错的幽灵入口（ADR-071 能力矩阵口径）。
+  const canReveal = can("RevealInExplorer");
   let html = "";
   conflicts.forEach((c, i) => {
     const conflictTypeLabel =
@@ -221,12 +226,56 @@ function dgCfBuildSyncConflictRows(conflicts: DgCfFileConflict[], esc: EscFn): s
     html += `<div class="conflict-row" style="animation-delay:${delay}ms">
 <span class="conflict-name">${esc(c.path)}</span>
 <span class="conflict-ver">${conflictTypeLabel}</span>
+<span class="conflict-actions">${
+      // copy 恒有（剪贴板在 web 亦可用）；reveal 走能力门控。图标钮 title 承载全文，
+      // 路径写 data-* 由绑定层读——esc 已转义引号，属性注入面与文本面同源。
+      `<button type="button" class="conflict-act" data-conflict-act="copy" data-conflict-path="${esc(c.path)}" title="${t("diagnostics.conflictCopyPath")}">${UI_ICONS.clipboard}</button>`
+    }${
+      canReveal
+        ? `<button type="button" class="conflict-act" data-conflict-act="reveal" data-conflict-path="${esc(c.path)}" title="${t("diagnostics.conflictReveal")}">${UI_ICONS.folder}</button>`
+        : ""
+    }</span>
 </div>`;
     html += `<div class="conflict-ins" style="animation-delay:${delay + 15}ms">
 &nbsp;&nbsp;${UI_ICONS.package} ${esc(String(c.localSize))} ↔ ${esc(String(c.remoteSize))} | ${UI_ICONS.hint} ${suggestedLabel}
 </div>`;
   });
   return html;
+}
+
+/**
+ * 冲突行动作绑定（复制路径 / 在资源管理器中定位）。
+ *
+ * 按行绑（每次渲染都是新节点）而非在 `list` 上做事件委托：`list` 是**常驻**容器，
+ * 委托监听会随每次扫描累积（N 次扫描 = N 份监听，同一次点击触发 N 遍）。
+ *
+ * ⚠️ reveal 只递身份（rtype/instance/相对路径），**绝对路径解析与越界守卫归 Go**
+ * （`App.RevealConflictFile` 复用 getSyncDirs + paths.RelInside）——前端拼路径既是第二份
+ * 布局真相，也会在 web/Android 下产出无效路径。
+ */
+function dgCfBindConflictRowActions(list: HTMLElement, esc: EscFn, target: DgCfScanTarget): void {
+  list.querySelectorAll<HTMLElement>("[data-conflict-act]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const path = btn.dataset.conflictPath || "";
+      if (!path) return;
+      if (btn.dataset.conflictAct === "copy") {
+        await copyWithToast(path, "diagnostics.conflictCopied");
+        return;
+      }
+      try {
+        const { RevealConflictFile } = await backendGetApp();
+        await RevealConflictFile(target.rtype, target.instance, path);
+      } catch (err) {
+        // 低优先③同口径：friendlyError 单源，esc 交 msgRowHTML 单点转义
+        list.insertAdjacentHTML(
+          "beforeend",
+          msgRowHTML("error", friendlyError(err, t("diagnostics.conflictRevealFail")), esc, {
+            icon: UI_ICONS.error,
+          }),
+        );
+      }
+    });
+  });
 }
 
 function dgCfBuildResolveSectionHtml(): string {
@@ -316,6 +365,7 @@ function renderSyncConflictsResult(
   const resolveHtml = dgCfBuildResolveSectionHtml();
   const html = header + rowsHtml + resolveHtml;
   list.innerHTML = html;
+  dgCfBindConflictRowActions(list, esc, target);
   list.querySelector("#do-resolve-btn")?.addEventListener("click", async () => {
     await dgCfExecuteResolve(list, esc, conflicts, target);
   });

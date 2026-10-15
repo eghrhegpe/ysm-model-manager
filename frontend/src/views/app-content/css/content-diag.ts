@@ -27,9 +27,15 @@ export const contentDiagCSS: string = `
 .log-row .log-copy:hover { color:var(--accent); }
 
 .conflict-row { padding:3px 16px; display:flex; justify-content:space-between; font-size:var(--fs-base); color:var(--txt); }
-.conflict-name { color:var(--status-error); }
+/* flex:1 + 省略号：路径是长串，动作钮必须稳定贴在右侧不随路径长度漂移 */
+.conflict-name { color:var(--status-error); flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .conflict-ver { color:var(--muted); }
 .conflict-ins { font-size:var(--fs-sm); color:var(--txt); }
+/* 冲突行快捷操作（2026-10-14）：复制路径恒有；在资源管理器中定位按 can() 门控渲染 */
+.conflict-actions { display:inline-flex; gap:4px; margin-left:var(--sp-2); }
+.conflict-act { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; padding:0; border:1px solid var(--bd); border-radius:var(--radius-sm); background:transparent; color:var(--muted); cursor:pointer; }
+.conflict-act:hover { color:var(--accent); border-color:var(--accent); }
+.conflict-act svg { width:14px; height:14px; }
 
 /* ===== 诊断页动画 ===== */
 @keyframes logRowIn { from { opacity:0; transform:translateX(-12px); } to { opacity:1; transform:translateX(0); } }

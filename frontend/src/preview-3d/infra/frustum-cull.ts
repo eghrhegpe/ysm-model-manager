@@ -88,27 +88,31 @@ export function getModelRootCount(): number {
  * visible=false 的对象会被 Three.js 跳过（不遍历子 mesh）。
  * 在 render loop 中每帧调用一次。
  */
-export function cullModelGroups(camera: THREE.Camera): void {
-  if (modelRoots.length === 0) return;
+/** 清理已从场景移除的引用（modelRoots 持有引用，不清理会累积） */
+function pruneDetachedRoots(): void {
   for (let i = modelRoots.length - 1; i >= 0; i--) {
     if (!modelRoots[i].parent) modelRoots.splice(i, 1);
   }
-  if (modelRoots.length === 0) return;
-  if (modelRoots.length === 1) {
-    const obj = modelRoots[0];
-    // 尊重用户隐藏：单根场景下本分支只做「空组压隐藏」这一件事，若该根已被
-    // 非本模块隐藏（用户面板隐藏），不得写 true 复活它。
-    if (!obj.visible && !_culled.has(obj)) return;
-    const v = Boolean((obj as THREE.Mesh).isMesh || obj.children.length > 0);
-    // 值未变不写（code review #9：每帧给 visible 赋同值触发无谓的脏检查）
-    if (obj.visible !== v) {
-      obj.visible = v;
-      // 抑制态归属：只有「我们写的隐藏」才登记，供 restore 精确还原
-      if (!v) _culled.add(obj);
-      else _culled.delete(obj);
-    }
-    return;
+}
+
+/** 单根场景：只做「空组压隐藏」这一件事，尊重用户隐藏 */
+function cullSingleRoot(): void {
+  const obj = modelRoots[0];
+  // 尊重用户隐藏：单根场景下本分支只做「空组压隐藏」这一件事，若该根已被
+  // 非本模块隐藏（用户面板隐藏），不得写 true 复活它。
+  if (!obj.visible && !_culled.has(obj)) return;
+  const v = Boolean((obj as THREE.Mesh).isMesh || obj.children.length > 0);
+  // 值未变不写（code review #9：每帧给 visible 赋同值触发无谓的脏检查）
+  if (obj.visible !== v) {
+    obj.visible = v;
+    // 抑制态归属：只有「我们写的隐藏」才登记，供 restore 精确还原
+    if (!v) _culled.add(obj);
+    else _culled.delete(obj);
   }
+}
+
+/** 多根场景：逐根视锥剔除（累加 visible 子树包围盒，尊重非本模块置的隐藏） */
+function cullMultiRoots(camera: THREE.Camera): void {
   _projScreenMatrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
   _frustum.setFromProjectionMatrix(_projScreenMatrix);
 
@@ -148,6 +152,17 @@ export function cullModelGroups(camera: THREE.Camera): void {
   // 下帧若无 ①注册/②perFrame 置脏，expandBoxVisible 可跳过强制更新
   _allDirty = false;
   _dirtyRoots.clear();
+}
+
+export function cullModelGroups(camera: THREE.Camera): void {
+  if (modelRoots.length === 0) return;
+  pruneDetachedRoots();
+  if (modelRoots.length === 0) return;
+  if (modelRoots.length === 1) {
+    cullSingleRoot();
+    return;
+  }
+  cullMultiRoots(camera);
 }
 
 /** 递归展开 bounding box，只计入 visible 子树（跳过隐藏的载具/投射物组件）。

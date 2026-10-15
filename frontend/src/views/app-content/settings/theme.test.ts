@@ -83,7 +83,10 @@ function makeRoot(savedTheme = "cyber", savedAuto = "off") {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  getApp.mockResolvedValue({ SaveAppConfig: vi.fn() });
+  // 绑 P1 ③ 后的写入端（SaveAppConfigPatch）。⚠️ 此前 mock 的是旧的 SaveAppConfig，
+  // 改写端后这些用例仍「绿」但落盘其实失败了（错误被 theme.ts 的 catch 记进 stderr
+  // ——假绿：断言只看 applyTheme，不断言保存）。绑定名对不上是静默失败，不是断言失败。
+  getApp.mockResolvedValue({ SaveAppConfigPatch: vi.fn().mockResolvedValue(undefined) });
 });
 
 describe("initThemeSection", () => {
@@ -216,13 +219,15 @@ describe("initThemeSection", () => {
 // ===== 自动模式落盘（2026-10-15 锐评 P0：theme 与 themeAuto 须同笔落盘）=====
 // 病根：initTheme 翻转为 disk 优先后，auto 分支若只把 themeAuto 落盘，disk 里的
 // theme 恒为旧手动定格值——重启时 initTheme 先应用陈旧值（并把 localStorage 的
-// "system" 覆盖掉），跟随系统模式永远回不来。回归锁：SaveAppConfig 的 theme/themeAuto
-// 实参（六位置 string，按 (filesRoot, rpRoot, mcRoot, linkMode, theme, themeAuto) 取）。
+// "system" 覆盖掉），跟随系统模式永远回不来。
+// 回归锁随 P1 ③ 改形：写入端从 `SaveAppConfig` 六个位置实参改为
+// `SaveAppConfigPatch({ theme, themeAuto })` patch 对象（P0 要锁的**语义**
+// ——同笔落盘、单次写、off 时不带 theme 键——不变，只是载体从位置实参换成 patch）。
 function mockConfigSave(diskTheme = "warm", diskAuto = "off") {
-  const saveAppConfig = vi.fn();
+  const saveAppConfigPatch = vi.fn();
   const loadAppConfig = vi.fn().mockResolvedValue({ theme: diskTheme, themeAuto: diskAuto });
-  getApp.mockResolvedValue({ SaveAppConfig: saveAppConfig, LoadAppConfig: loadAppConfig });
-  return saveAppConfig;
+  getApp.mockResolvedValue({ SaveAppConfigPatch: saveAppConfigPatch, LoadAppConfig: loadAppConfig });
+  return saveAppConfigPatch;
 }
 
 describe("自动模式落盘（P0 disk 权威）", () => {
@@ -233,9 +238,7 @@ describe("自动模式落盘（P0 disk 权威）", () => {
     autoSelect.value = "system";
     autoSelect.dispatchEvent(new Event("change"));
     await vi.waitFor(() => expect(saveAppConfig).toHaveBeenCalledTimes(1));
-    const [, , , , theme, themeAuto] = saveAppConfig.mock.calls[0];
-    expect(theme).toBe("system");
-    expect(themeAuto).toBe("system");
+    expect(saveAppConfig.mock.calls[0][0]).toEqual({ theme: "system", themeAuto: "system" });
   });
 
   it("time 变更同笔落盘重算后的时段主题 + themeAuto=time（单次写）", async () => {
@@ -246,21 +249,23 @@ describe("自动模式落盘（P0 disk 权威）", () => {
     autoSelect.value = "time";
     autoSelect.dispatchEvent(new Event("change"));
     await vi.waitFor(() => expect(saveAppConfig).toHaveBeenCalledTimes(1));
-    const [, , , , theme, themeAuto] = saveAppConfig.mock.calls[0];
-    expect(theme).toBe("warm");
-    expect(themeAuto).toBe("time");
+    expect(saveAppConfig.mock.calls[0][0]).toEqual({ theme: "warm", themeAuto: "time" });
   });
 
-  it("off 变更仅落 themeAuto=off；theme 保磁盘重读值不冲掉定格主题", async () => {
+  // off 模式：patch **不含 theme 键** → Go 侧取磁盘现值（="sakura"）不动，
+  // 即 P4「off 沿用定格主题」口径。⚠️ 与 P0 修复前的断言形态不同：旧断言看的是
+  // 位置实参里 theme 位被前端重读填成磁盘值；新语义下前端根本不提 theme，
+  // 「不冲掉磁盘定格值」由 Go 的 nil 契约保证（app_config_patch_test.go 对应锁）。
+  it("off 变更 patch 不含 theme 键（Go 取磁盘现值，不冲掉定格主题）", async () => {
     const saveAppConfig = mockConfigSave("sakura");
     const { root, autoSelect } = makeRoot("cyber", "system");
     initThemeSection(root);
     autoSelect.value = "off";
     autoSelect.dispatchEvent(new Event("change"));
     await vi.waitFor(() => expect(saveAppConfig).toHaveBeenCalledTimes(1));
-    const [, , , , theme, themeAuto] = saveAppConfig.mock.calls[0];
-    expect(theme).toBe("sakura");
-    expect(themeAuto).toBe("off");
+    const patch = saveAppConfig.mock.calls[0][0];
+    expect(patch).toEqual({ themeAuto: "off" });
+    expect("theme" in patch).toBe(false);
   });
 
   it("打开设置页不触发 auto 模式落盘（读路径写零，2026-10-15 写放大收口）", async () => {

@@ -15,7 +15,7 @@ import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import type { ResourceType } from "@/utils/resource/schema.ts";
 import { groupStorageRootOf } from "@/utils/resource/types.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
-import { writeAppConfig } from "@/views/config-write.ts";
+import { type AppConfigPatch, writeAppConfig } from "@/views/config-write.ts";
 import { stgCard } from "./stg-card.ts";
 import { cardRefreshers, getCfg, toastError, withBusy } from "./store.ts";
 
@@ -38,33 +38,21 @@ function renderDirLabel(dir: string): string {
 // 二次保存会把新值静默覆盖回退（如先改 mcRoot 再改 rpRoot，mcRoot 被旧值覆盖）。
 // 2026-10 锐评第八轮扩编：patch 面从「路径四字段」扩到全字段（+theme/themeAuto）——
 // 此前主题段（theme.ts ×2）与链接模式段（init.ts）绕开本函数各手抄一份
-// `SaveAppConfig(filesRoot, rpRoot, mcRoot, linkMode, theme, themeAuto)` 六位置实参，
-// 而 Go 端签名是六个同型 string：位置错了类型系统看不见（历史 P3「闭包旧值覆盖 linkMode」/
-// P4「theme-auto 漏落盘」都是这种手抄配方咬出来的）。
-// 2026-10 锐评第九轮（ADR-313）：实参点本身也上移 views/config-write.ts，成为
-// **跨视图**唯一出口（app-sidebar 两处同款手抄配方曾硬编码 "dark"/"copy" 字面量，
-// 其中 "dark" 不在 THEME_VALID 内、落盘后被 normalizeTheme 静默转成 system 的 bug）。
-// 本函数降为 settings 域包装：补上「保存成功后同步模块级 cfg 内存快照」这一步。
-export async function saveCfg(patch: {
-  filesRoot?: string;
-  rpRoot?: string;
-  mcRoot?: string;
-  linkMode?: string;
-  /**
-   * 未传 = 重读磁盘当前值（config-write.ts 的 disk 权威契约，锐评 2026-10-15 P1 起
-   * 不再读 localStorage 兜底）；theme/themeAuto 的写入方须显式传入本次要落盘的值
-   * （主题卡片 persistThemeSelection / 自动模式 theme.ts|persistAutoMode），勿依赖缺省。
-   */
-  theme?: string;
-  themeAuto?: string;
-}): Promise<void> {
+// `SaveAppConfig(...)` 六位置实参，Go 端签名是六个同型 string：位置错了类型系统
+// 看不见（历史 P3「闭包旧值覆盖 linkMode」/ P4「theme-auto 漏落盘」都是这种手抄
+// 配方咬出来的）。
+// ADR-313：实参点本身上移 views/config-write.ts，成为**跨视图**唯一出口。
+// P1 ③（本次）：实参点上移后又收成 Go 侧单次原子调用 SaveAppConfigPatch——本函数
+// 的「重读」职责已下沉到 Go 锁内（未 patch 字段由 Go 侧重读决定），此处只剩
+// 「保存成功后同步模块级 cfg 内存快照」。rpRoot 已从 patch 面移除（Go 侧该入参从不被
+// 读取，CustomRoots 才是资源类型路径的真载体；保留它只会诱导调用方写一个无效字段）。
+export async function saveCfg(patch: AppConfigPatch): Promise<void> {
   const resolved = await writeAppConfig(patch);
-  // 内存快照同步：只回写被 patch 的字段（未 patch 字段保持原值，与 resolved 的重读值
-  // 可能不同——调用方不应假定内存与磁盘全等，只有被 patch 的字段是权威的）
-  if (patch.filesRoot !== undefined) getCfg().filesRoot = resolved.filesRoot;
-  if (patch.rpRoot !== undefined) getCfg().resourcepackRoot = resolved.rpRoot;
-  if (patch.mcRoot !== undefined) getCfg().mcRoot = resolved.mcRoot;
-  if (patch.linkMode !== undefined) getCfg().linkMode = resolved.linkMode;
+  // 内存快照同步：只回写被 patch 的字段（未 patch 字段保持原值——Go 侧锁内重读的
+  // 磁盘现值未必等于模块级 cfg，调用方不应假定内存与磁盘全等）
+  if (resolved.filesRoot !== undefined) getCfg().filesRoot = resolved.filesRoot;
+  if (resolved.mcRoot !== undefined) getCfg().mcRoot = resolved.mcRoot;
+  if (resolved.linkMode !== undefined) getCfg().linkMode = resolved.linkMode;
 }
 
 // 工具：绑定路径卡片点击

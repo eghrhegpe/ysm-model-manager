@@ -5,6 +5,7 @@
 
 import { swallowError } from "@/utils/base/primitives/async.ts";
 import { safeGetJSON, safeSet } from "@/utils/base/primitives/storage.ts";
+import type { AppConfigPatch } from "../../bindings/ysm-model-manager/go/types/models.ts";
 import { idbDel, idbGet, idbGetAll, idbSet } from "./idb.ts";
 
 // --- 配置（localStorage，缺省返回 {} 让主应用可启动）---
@@ -376,6 +377,24 @@ export const webStoreBindings = {
       ...prev,
       updateCheckIntervalMs: checkIntervalMs,
       logMaxEntries: logMaxEntries,
+    });
+    return Promise.resolve();
+  },
+  // 原子 patch 的 web 实现（锐评 2026-10-15 P1 ③，与 Go SaveAppConfigPatch 对齐）：
+  // 「undefined/null = 未传，取现值」——这正是 Go 侧 *string 的 nil 契约，故可直接用
+  // `?? prev.x` 承接（SearchModels filters?.keyword 的同款范式）。
+  // ⚠️ 与上方 SaveAppConfig 的空串语义**有意不同**：patch 显式传空串 = 真的清空
+  // （`?? ` 只在 null/undefined 时回落），而位置实参版传空串 = 未传（orDefault 保留旧值）。
+  // 两套语义对应两套入口，改一个别动另一个。
+  SaveAppConfigPatch: (patch?: AppConfigPatch) => {
+    const prev = loadWebConfig();
+    saveWebConfig({
+      ...prev,
+      filesRoot: patch?.filesRoot ?? prev.filesRoot,
+      mcRoot: patch?.mcRoot ?? prev.mcRoot,
+      linkMode: patch?.linkMode ?? prev.linkMode,
+      theme: patch?.theme ?? prev.theme,
+      themeAuto: patch?.themeAuto ?? prev.themeAuto,
     });
     return Promise.resolve();
   },

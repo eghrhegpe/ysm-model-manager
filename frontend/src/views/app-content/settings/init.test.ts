@@ -1,7 +1,7 @@
 // ===== 设置页初始化测试 =====
 // 覆盖 initSettings：
 //  - 初始化：版本号填充 / 高级面板渲染 / 链接提示
-//  - 路径卡片点击 → SelectDirectory + SaveAppConfig + toast
+//  - 路径卡片点击 → SelectDirectory + SaveAppConfigPatch + toast
 //  - 游戏目录自动检测：单路径 / 无路径 / 多路径选择器（选择/取消）
 //  - 链接模式切换 → 确认框（取消静默回退）+ SetLinkMode + 自动 relink（逐实例进度）；
 //    relink 无 mcRoot warn / 有实例成功
@@ -10,6 +10,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { waitFor } from "@/test-utils/index.ts";
 import { initSettings } from "./init.ts";
 import { saveCfg } from "./path-cards.ts";
+import { getCfg } from "./store.ts";
 import { t } from "@/core/i18n/t.ts";
 import { resourceTypesById } from "@/utils/resource/schema.ts";
 // 降级路径预期告警静音：CurrentVersion 失败 / relink 失败 / 语言包加载跳过
@@ -178,7 +179,7 @@ function mockApp(overrides: Record<string, unknown> = {}) {
   };
   appObj = {
     LoadAppConfig: vi.fn(() => cfgObj),
-    SaveAppConfig: vi.fn(),
+    SaveAppConfigPatch: vi.fn(),
     SelectDirectory: vi.fn(() => "/pick"),
     GetMinecraftPaths: vi.fn(() => []),
     SetLinkMode: vi.fn(),
@@ -228,15 +229,15 @@ describe("initSettings — 初始化", () => {
     expect((root.getElementById("lm-hint-copy") as HTMLElement).style.display).toBe("block");
   });
 
-  it("路径卡片点击 → SelectDirectory + SaveAppConfig + toast", async () => {
+  it("路径卡片点击 → SelectDirectory + SaveAppConfigPatch + toast", async () => {
     const saveFn = vi.fn();
-    mockApp({ SaveAppConfig: saveFn });
+    mockApp({ SaveAppConfigPatch: saveFn });
     const { root } = makeRoot();
     await initSettings(root);
     (root.getElementById("set-mc-path") as HTMLElement).click();
     await waitFor(() => saveFn.mock.calls.length > 0);
-    // SaveAppConfig(filesRoot, rpRoot, mcRoot, linkMode, theme, themeAuto) —— 六位置实参
-    expect(saveFn.mock.calls[0]![2]).toBe("/pick");
+    // SaveAppConfigPatch({ mcRoot }) —— patch 语义（P1 ③ 后不再是六位置实参）
+    expect(saveFn.mock.calls[0]![0].mcRoot).toBe("/pick");
     expect(busEmit).toHaveBeenCalledWith(
       "toast:show",
       expect.objectContaining({ msg: expect.stringContaining("路径已更新") }),
@@ -247,12 +248,12 @@ describe("initSettings — 初始化", () => {
 describe("initSettings — 游戏目录检测", () => {
   it("单路径 → 直接设置 + toast", async () => {
     const saveFn = vi.fn();
-    mockApp({ GetMinecraftPaths: vi.fn(() => ["/mc"]), SaveAppConfig: saveFn });
+    mockApp({ GetMinecraftPaths: vi.fn(() => ["/mc"]), SaveAppConfigPatch: saveFn });
     const { root } = makeRoot();
     await initSettings(root);
     (root.getElementById("set-mc-detect") as HTMLElement).click();
     await waitFor(() => saveFn.mock.calls.length > 0);
-    expect(saveFn.mock.calls[0]![2]).toBe("/mc");
+    expect(saveFn.mock.calls[0]![0].mcRoot).toBe("/mc");
     expect(busEmit).toHaveBeenCalledWith(
       "toast:show",
       expect.objectContaining({ msg: expect.stringContaining("/mc") }),
@@ -274,7 +275,7 @@ describe("initSettings — 游戏目录检测", () => {
     const saveFn = vi.fn();
     mockApp({
       GetMinecraftPaths: vi.fn(() => ["/mc1", "/mc2"]),
-      SaveAppConfig: saveFn,
+      SaveAppConfigPatch: saveFn,
     });
     const { root } = makeRoot();
     await initSettings(root);
@@ -282,7 +283,7 @@ describe("initSettings — 游戏目录检测", () => {
     await waitFor(() => document.querySelector("[data-testid='pick-item']"));
     (document.querySelector("[data-testid='pick-item']") as HTMLElement).click();
     await waitFor(() => saveFn.mock.calls.length > 0);
-    expect(saveFn.mock.calls[0]![2]).toBe("/mc1");
+    expect(saveFn.mock.calls[0]![0].mcRoot).toBe("/mc1");
 
     // 取消
     saveFn.mockClear();
@@ -295,13 +296,13 @@ describe("initSettings — 游戏目录检测", () => {
 });
 
 describe("initSettings — 链接模式与重链接", () => {
-  it("链接模式 change → 确认框（含新值与实例数）→ SaveAppConfig + SetLinkMode + toast + 自动 relink", async () => {
+  it("链接模式 change → 确认框（含新值与实例数）→ SaveAppConfigPatch + SetLinkMode + toast + 自动 relink", async () => {
     const setLinkFn = vi.fn();
     const saveFn = vi.fn();
     const relinkFn = vi.fn(() => ({ ok: 3, failed: 0, firstError: "" }));
     mockApp({
       SetLinkMode: setLinkFn,
-      SaveAppConfig: saveFn,
+      SaveAppConfigPatch: saveFn,
       RelinkAllInstanceResources: relinkFn,
       LoadAppConfig: vi.fn(() => ({
         filesRoot: "/repo",
@@ -350,7 +351,7 @@ describe("initSettings — 链接模式与重链接", () => {
     const relinkFn = vi.fn(() => ({ ok: 3, failed: 0, firstError: "" }));
     mockApp({
       SetLinkMode: setLinkFn,
-      SaveAppConfig: saveFn,
+      SaveAppConfigPatch: saveFn,
       RelinkAllInstanceResources: relinkFn,
       LoadAppConfig: vi.fn(() => ({
         filesRoot: "/repo",
@@ -468,16 +469,16 @@ describe("initSettings — 高级面板/主题/镜像/发布页", () => {
     expect((root.getElementById("set-advanced-grid") as HTMLElement).textContent).toContain("模型");
   });
 
-  it("主题卡片点击 → 写 theme + SaveAppConfig 同步", async () => {
+  it("主题卡片点击 → 写 theme + SaveAppConfigPatch 同步", async () => {
     const saveFn = vi.fn();
-    mockApp({ SaveAppConfig: saveFn });
+    mockApp({ SaveAppConfigPatch: saveFn });
     const { root } = makeRoot();
     await initSettings(root);
     const card = root.querySelector('.theme-card[data-theme="dark"]') as HTMLElement;
     card.click();
     expect(localStorage.getItem("theme")).toBe("dark");
     await waitFor(() => saveFn.mock.calls.length > 0);
-    expect(saveFn.mock.calls[0]![4]).toBe("dark"); // 第 5 参是 theme
+    expect(saveFn.mock.calls[0]![0].theme).toBe("dark"); // patch 里的 theme 字段
   });
 
   it("镜像源 change → SetDownloadMirror + toast + hint 切换", async () => {
@@ -836,7 +837,7 @@ describe("initSettings — 错误路径与降级", () => {
   });
 
   it("路径保存失败 → 错误 toast（有出口）", async () => {
-    mockApp({ SaveAppConfig: vi.fn(() => Promise.reject(new Error("save boom"))) });
+    mockApp({ SaveAppConfigPatch: vi.fn(() => Promise.reject(new Error("save boom"))) });
     const { root } = makeRoot();
     await initSettings(root);
     (root.getElementById("set-mc-path") as HTMLElement).click();
@@ -1151,7 +1152,7 @@ describe("initSettings — relink 收尾分支（busy / 全跳过 / 外层失败
     const saveFn = vi.fn();
     mockApp({
       ListVersionInstances: vi.fn(() => new Promise(() => {})), // 永不 resolve → busy 锁卡住
-      SaveAppConfig: saveFn,
+      SaveAppConfigPatch: saveFn,
       LoadAppConfig: vi.fn(() => ({
         filesRoot: "/repo",
         resourcepackRoot: "",
@@ -1237,12 +1238,12 @@ describe("initSettings — 发布页失败 / 语言切换 / filesRoot 卡片 / �
 
   it("filesRoot 路径卡片 → SelectDirectory + saveCfg(filesRoot)", async () => {
     const saveFn = vi.fn();
-    mockApp({ SaveAppConfig: saveFn });
+    mockApp({ SaveAppConfigPatch: saveFn });
     const { root } = makeRoot();
     await initSettings(root);
     (root.getElementById("set-files-root") as HTMLElement).click();
     await waitFor(() => saveFn.mock.calls.length > 0);
-    expect(saveFn.mock.calls[0]![0]).toBe("/pick"); // 第 1 参 filesRoot
+    expect(saveFn.mock.calls[0]![0].filesRoot).toBe("/pick");
   });
 
   it("高级面板二次点击 → 收起（adv-closing → display none）", async () => {
@@ -1361,51 +1362,37 @@ describe("initSettings — 网页版 FSA 授权（stgBindWebFsa）", () => {
   });
 });
 
-describe("saveCfg — 设置域唯一配置出口（patch 语义，锐评第八轮）", () => {
-  it("未传字段取重读的最新配置，只覆盖 patch 字段（防旧值覆盖）", async () => {
+// saveCfg — 设置域包装：透传 patch + 同步模块级 cfg 内存快照。
+// 形态随 P1 ③ 改写：未传字段的「取重读值」已下沉到 Go 侧锁内（app_config_patch_test.go
+// 锁之），此处只验「薄包装」的两条职责，不复验 Go 侧语义（那是跨语言重复断言）。
+describe("saveCfg — 设置域包装（透传 patch + 同步内存快照）", () => {
+  it("patch 原样透传给 SaveAppConfigPatch（未传字段不补、不带）", async () => {
     const saveFn = vi.fn();
-    mockApp({
-      // 首次加载（initSettings）与保存前重读返回不同值：模拟「用户在其他入口改过字段」
-      LoadAppConfig: vi
-        .fn()
-        .mockResolvedValueOnce({
-          filesRoot: "/old",
-          resourcepackRoot: "/old-rp",
-          mcRoot: "/old-mc",
-          linkMode: "copy",
-        })
-        .mockResolvedValue({
-          filesRoot: "/latest",
-          resourcepackRoot: "/latest-rp",
-          mcRoot: "/latest-mc",
-          linkMode: "hardlink",
-        }),
-      SaveAppConfig: saveFn,
-    });
+    mockApp({ SaveAppConfigPatch: saveFn });
     const { root } = makeRoot();
     await initSettings(root);
     localStorage.setItem("theme", "ocean");
     await saveCfg({ mcRoot: "/new-mc" });
-    // filesRoot/rpRoot/linkMode 取重读值（非 initSettings 快照），仅 mcRoot 被 patch；
-    // theme 缺省亦取磁盘重读值（此处磁盘无 theme → 回落 THEME_DARK），
-    // localStorage 的 "ocean" 不参与决策——否则它会被无关保存写进磁盘备份
-    const { THEME_DARK } = await import("@/theme-core");
-    expect(saveFn).toHaveBeenCalledWith(
-      "/latest",
-      "/latest-rp",
-      "/new-mc",
-      "hardlink",
-      THEME_DARK,
-      "",
-    );
+    // 键集合 = patch 键集合：前端不补 filesRoot/rpRoot/linkMode/theme 任何一项
+    // （补了就是「前端以为的现值」= 可能是陈旧快照；localStorage 的 theme 同理不参与）
+    expect(saveFn).toHaveBeenCalledWith({ mcRoot: "/new-mc" });
   });
 
   it("theme / themeAuto 可经 patch 覆盖（主题段与链接模式段共用的出口字段）", async () => {
     const saveFn = vi.fn();
-    mockApp({ SaveAppConfig: saveFn });
+    mockApp({ SaveAppConfigPatch: saveFn });
     const { root } = makeRoot();
     await initSettings(root);
     await saveCfg({ theme: "warm", themeAuto: "off" });
-    expect(saveFn).toHaveBeenCalledWith("/repo", "", "", "copy", "warm", "off");
+    expect(saveFn).toHaveBeenCalledWith({ theme: "warm", themeAuto: "off" });
+  });
+
+  it("patch 后同步模块级 cfg 内存快照（仅被 patch 的字段）", async () => {
+    mockApp({ SaveAppConfigPatch: vi.fn() });
+    const { root } = makeRoot();
+    await initSettings(root);
+    await saveCfg({ mcRoot: "/new-mc" });
+    // getCfg() 是设置页的内存快照：被 patch 的字段须同步，否则 UI 显示与磁盘分叉
+    expect(getCfg().mcRoot).toBe("/new-mc");
   });
 });

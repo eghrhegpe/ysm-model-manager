@@ -187,6 +187,52 @@ describe("browserAdapter — Phase 2 配置（localStorage）", () => {
   it("无配置 LoadAppConfig → {}（主应用可启动）", async () => {
     expect(await browserAdapter.LoadAppConfig()).toEqual({});
   });
+
+  // ===== 原子 patch 的 web 实现（锐评 2026-10-15 P1 ③）=====
+  // 与 Go SaveAppConfigPatch 的 nil 契约一一对应：undefined/null = 未传取现值。
+  it("SaveAppConfigPatch → 只覆盖传入字段，其余保持现值", async () => {
+    await browserAdapter.SaveAppConfigPatch({
+      filesRoot: "/web",
+      linkMode: "copy",
+      theme: "cyber",
+      themeAuto: "off",
+    });
+    await browserAdapter.SaveAppConfigPatch({ mcRoot: "/mc" });
+    const cfg = (await browserAdapter.LoadAppConfig()) as unknown as Record<string, string>;
+    expect(cfg.mcRoot).toBe("/mc");
+    // 未传字段保留上次值（Go 侧锁内重读的等价物：web 单函数同步写，无 await 让出）
+    expect(cfg.filesRoot).toBe("/web");
+    expect(cfg.linkMode).toBe("copy");
+    expect(cfg.theme).toBe("cyber");
+    expect(cfg.themeAuto).toBe("off");
+  });
+
+  // ⚠️ 与位置实参版 SaveAppConfig 的空串语义**有意不同**：patch 传 "" = 真清空
+  // （`?? ` 只在 null/undefined 回落）。这条差异是 patch 入口的核心价值之一
+  // （Go 侧 *string 非 nil 即写入），两套语义改一个别动另一个。
+  it("SaveAppConfigPatch 显式空串 = 真清空（与位置实参版的「空串=未传」不同）", async () => {
+    await browserAdapter.SaveAppConfigPatch({ mcRoot: "/mc", theme: "warm" });
+    await browserAdapter.SaveAppConfigPatch({ mcRoot: "" });
+    const cfg = (await browserAdapter.LoadAppConfig()) as unknown as Record<string, string>;
+    expect(cfg.mcRoot).toBe("");
+    expect(cfg.theme).toBe("warm"); // 本次未传，保持
+  });
+
+  // null 与 undefined 同义（生成绑定把 Go nil 映射为两者皆可）——不得因 null 而崩或误写
+  it("null 视同 undefined（未传，取现值）", async () => {
+    await browserAdapter.SaveAppConfigPatch({ theme: "sakura" });
+    await browserAdapter.SaveAppConfigPatch({ theme: null });
+    const cfg = (await browserAdapter.LoadAppConfig()) as unknown as Record<string, string>;
+    expect(cfg.theme).toBe("sakura");
+  });
+
+  // 空补丁 = no-op，且不得清空其它键（customRoots 等由 SetResourceRoot 等写入）
+  it("空补丁是 no-op（不清空本函数不管理的键）", async () => {
+    await browserAdapter.SaveAppConfigPatch({ filesRoot: "/f" });
+    await browserAdapter.SaveAppConfigPatch({});
+    const cfg = (await browserAdapter.LoadAppConfig()) as unknown as Record<string, string>;
+    expect(cfg.filesRoot).toBe("/f");
+  });
 });
 
 describe("browserAdapter — Phase 2 3D 兜底守卫（ADR-049 P2-2 路径可达）", () => {

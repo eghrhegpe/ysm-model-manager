@@ -29,7 +29,7 @@ function mockApp(over: Record<string, MockFn> = {}) {
     }),
     DetectLauncherInstances: vi.fn().mockResolvedValue([]),
     SetResourceRoot: vi.fn().mockResolvedValue(undefined),
-    SaveAppConfig: vi.fn().mockResolvedValue(undefined),
+    SaveAppConfigPatch: vi.fn().mockResolvedValue(undefined),
     GetMinecraftPaths: vi.fn().mockResolvedValue([]),
     ...over,
   };
@@ -83,7 +83,7 @@ describe("runLauncherDetect", () => {
     try {
       await runLauncherDetect(createBusyLock());
       expect(app.DetectLauncherInstances).not.toHaveBeenCalled();
-      expect(app.SaveAppConfig).not.toHaveBeenCalled();
+      expect(app.SaveAppConfigPatch).not.toHaveBeenCalled();
       expect(toasts).toHaveLength(0);
     } finally {
       off();
@@ -97,7 +97,7 @@ describe("runLauncherDetect", () => {
     try {
       await runLauncherDetect(createBusyLock());
       expect(app.DetectLauncherInstances).toHaveBeenCalledWith("/picked");
-      expect(app.SaveAppConfig).not.toHaveBeenCalled();
+      expect(app.SaveAppConfigPatch).not.toHaveBeenCalled();
       expect(toasts).toEqual([
         { msg: t("launcher.detect.noInstances"), duration: TOAST_MS.normal, type: "warn" },
       ]);
@@ -115,7 +115,7 @@ describe("runLauncherDetect", () => {
     const { events: toasts, off } = watchBus("toast:show");
     try {
       await runLauncherDetect(createBusyLock());
-      expect(app.SaveAppConfig).not.toHaveBeenCalled();
+      expect(app.SaveAppConfigPatch).not.toHaveBeenCalled();
       expect(toasts).toHaveLength(1);
       expect(toasts[0].type).toBe("error");
       expect((toasts[0].msg || "").startsWith("❌")).toBe(false);
@@ -135,7 +135,7 @@ describe("runLauncherDetect", () => {
       const picker = await openPicker();
       (picker.querySelector("[data-testid='dlg-cancel']") as HTMLElement).click();
       await p;
-      expect(app.SaveAppConfig).not.toHaveBeenCalled();
+      expect(app.SaveAppConfigPatch).not.toHaveBeenCalled();
       expect(app.SetResourceRoot).not.toHaveBeenCalled();
       expect(toasts).toHaveLength(0);
       expect(document.querySelector("[data-testid='dlg-overlay']")).toBeNull();
@@ -162,12 +162,12 @@ describe("runLauncherDetect", () => {
       (picker.querySelector('[data-idx="0"]') as HTMLElement).click();
       await p;
 
-      // SaveAppConfig 六参（filesRoot/resourcepackRoot 原样回写，theme 缺省 THEME_DARK="cyber"，
-      // themeAuto 空串保留）——ADR-313：原硬编码 "dark" 不在 THEME_VALID 内，落盘后被
-      // normalizeTheme 静默转成 system（用户只改游戏目录、主题却被改成跟随系统）
-      expect(app.SaveAppConfig).toHaveBeenCalledTimes(1);
-      expect(app.SaveAppConfig).toHaveBeenCalledWith("/files", "/rp", "/mc/root", "copy", "cyber", "");
-      expect(app.SaveAppConfig.mock.calls[0]![4]).not.toBe("dark"); // 回归锁：非法主题字面量不得再出现
+      // 只 patch mcRoot 一个字段（P1 ③ 后形态）：其余字段由 Go 侧锁内重读保留。
+      // 回归锁（形态升级）：theme 键**压根不在 patch 里**——非法主题字面量从结构上无处可写。
+      // ADR-313 病根正是此处手抄六位置实参时硬编码了 "dark"（不在 THEME_VALID 内，
+      // 落盘后被 normalizeTheme 静默转成 system：用户只改游戏目录、主题却被改成跟随系统）。
+      expect(app.SaveAppConfigPatch).toHaveBeenCalledTimes(1);
+      expect(app.SaveAppConfigPatch).toHaveBeenCalledWith({ mcRoot: "/mc/root" });
       // 默认勾选「用作 YSM 根目录」→ SetResourceRoot
       expect(app.SetResourceRoot).toHaveBeenCalledTimes(1);
       expect(app.SetResourceRoot).toHaveBeenCalledWith("ysm", "/mc/custom");
@@ -193,8 +193,8 @@ describe("runLauncherDetect", () => {
     (picker.querySelector("[data-launcher-default]") as HTMLInputElement).checked = false;
     (picker.querySelector('[data-idx="0"]') as HTMLElement).click();
     await p;
-    expect(app.SaveAppConfig).toHaveBeenCalledTimes(1);
-    expect(app.SaveAppConfig).toHaveBeenCalledWith("/files", "/rp", "/mc/root", "copy", "cyber", "");
+    expect(app.SaveAppConfigPatch).toHaveBeenCalledTimes(1);
+    expect(app.SaveAppConfigPatch).toHaveBeenCalledWith({ mcRoot: "/mc/root" });
     expect(app.SetResourceRoot).not.toHaveBeenCalled();
   });
 
@@ -211,9 +211,9 @@ describe("runLauncherDetect", () => {
       (picker.querySelector('[data-idx="0"]') as HTMLElement).click();
       await p;
       // 第一次保存 mcRoot=/mc/root；失败后回滚 previousMcRoot=/old-mc
-      expect(app.SaveAppConfig).toHaveBeenCalledTimes(2);
-      expect(app.SaveAppConfig.mock.calls[0][2]).toBe("/mc/root");
-      expect(app.SaveAppConfig.mock.calls[1][2]).toBe("/old-mc");
+      expect(app.SaveAppConfigPatch).toHaveBeenCalledTimes(2);
+      expect(app.SaveAppConfigPatch.mock.calls[0][0].mcRoot).toBe("/mc/root");
+      expect(app.SaveAppConfigPatch.mock.calls[1][0].mcRoot).toBe("/old-mc");
       expect(toasts).toHaveLength(1);
       expect(toasts[0].type).toBe("error");
     } finally {
@@ -228,7 +228,7 @@ describe("runMcSearch", () => {
     const { events: toasts, off } = watchBus("toast:show");
     try {
       await runMcSearch(createBusyLock());
-      expect(app.SaveAppConfig).not.toHaveBeenCalled();
+      expect(app.SaveAppConfigPatch).not.toHaveBeenCalled();
       expect(toasts).toHaveLength(1);
       expect(toasts[0].type).toBe("warn");
     } finally {
@@ -244,7 +244,7 @@ describe("runMcSearch", () => {
     const { events: stats, off: offStats } = watchBus("stats:refresh");
     try {
       await runMcSearch(createBusyLock());
-      expect(app.SaveAppConfig).toHaveBeenCalledWith("/files", "/rp", "/auto/minecraft", "copy", "cyber", "");
+      expect(app.SaveAppConfigPatch).toHaveBeenCalledWith({ mcRoot: "/auto/minecraft" });
       expect(stats).toHaveLength(1);
       expect(toasts).toHaveLength(1);
       expect(toasts[0].type).toBe("success");

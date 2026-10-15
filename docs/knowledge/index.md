@@ -26,7 +26,7 @@
 | 🏗 scripts-jscpd-go | Go 端 jscpd 重复检测脚本 | architecture | — | jscpd, go 重复代码, 复制粘贴检测, duplicate, 重复对, 增量门禁, 新增重复, 独立 baseline |
 | 🏗 scripts-lib-adoption | _lib 共享层采用率闸门 | architecture | — | lib adoption, 采用率, 共享层, 有能力未用, 手搓, 重复实现检测, RULES 表, toPosix 收敛 |
 | 🏗 scripts-readme-index | README 登记处对账 check-readme-index.ts | architecture | single-thread | README, 脚本索引, 登记处, check-readme-index, 脚本漂移, 脚本对账, 重复登记, 幽灵引用 |
-| 🍃 settings-persistence | 设置持久化双轨与键台账 | leaf | — | 新增或修改任何会被用户感知的设置项（判断它落在哪一轨、是否随迁移保住）, 改配置写入/读取路径（writeAppConfig / SaveAppConfig / safeGet / safeSet）, 写或改备份、换机迁移相关的文档, 排查「设置重启后没保住」「换机后设置丢了」类问题, 怀疑某个键有双权威（磁盘 vs localStorage 口径不一致） |
+| 🍃 settings-persistence | 设置持久化双轨与键台账 | leaf | — | 新增或修改任何会被用户感知的设置项（判断它落在哪一轨、是否随迁移保住）, 改配置写入/读取路径（writeAppConfig / SaveAppConfigPatch / safeGet / safeSet）, 写或改备份、换机迁移相关的文档, 排查「设置重启后没保住」「换机后设置丢了」类问题, 怀疑某个键有双权威（磁盘 vs localStorage 口径不一致） |
 | 🏗 vitest-env-switch | Vitest 环境切换规则 | architecture | — | vitest, 测试环境, node 环境, happy-dom, 测试切换 |
 
 ### 摘要

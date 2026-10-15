@@ -1,11 +1,17 @@
-// ===== config-write（views 级配置写唯一实参点）单元测试 =====
-// 锁定 ADR-313 的四条语义：① patch 未传字段取**重读**的最新落盘值（防旧快照覆盖）；
-// ② theme/themeAuto 缺省同样取磁盘重读值（localStorage 缺席不得冲掉备份，锐评 2026-10-15 P1），
-//    磁盘亦无值时才回落 THEME_DARK（"dark" 非法值任何时候都不得被写入）；
-// ③ 重读失败不中断保存（退化为空串，Go 端 orDefault 保留旧值）；
-// ④ 六位置实参顺序与 Go 端签名一致（fieldsRoot, rpRoot, mcRoot, linkMode, theme, themeAuto）。
+// ===== config-write（views 级配置写唯一入口）单元测试 =====
+// P1 ③（锐评 2026-10-15）后本文件锁的是**新契约**：writeAppConfig 是薄透传，
+// 把 patch 原样交给 Go 侧 `SaveAppConfigPatch`，未传字段的「取当前落盘值」由 Go 在
+// configWriteMu 锁内重读决定（不再由前端预读拼接）。
+//
+// 为什么旧用例整批删除而非改写：旧断言锁的是「前端拼出完整六元组」这套实现细节
+// （theme 缺省回落 THEME_DARK / 重读失败兜底 / 六位置实参顺序）。这套逻辑连同它的
+// 病（前端 read-then-write 的 TOCTOU：两个 await 之间别的写入口改的字段会被整份
+// 回写冲掉）已随本次下沉到 Go 侧。保留旧断言等于锁死一个已被删除的行为。
+// 对应的 Go 侧回归在 internal/app/app_config_patch_test.go：
+//   TestSaveAppConfigPatch_PreservesUnspecifiedFields（未传字段保留，含 8 个运行阈值）
+//   TestSaveAppConfigPatch_EmptyPatchIsNoOp（空补丁不改任何字段）
+//   TestSaveAppConfigPatch_ConcurrentNoFieldLoss（跨入口并发无字段丢失，-race 验过）
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { THEME_DARK } from "@/theme-core";
 
 const { getAppMock } = vi.hoisted(() => ({ getAppMock: vi.fn() }));
 vi.mock("@/backend/app.ts", () => ({ getApp: getAppMock }));
@@ -15,6 +21,8 @@ import { writeAppConfig } from "./config-write.ts";
 
 function mockApp(over: Record<string, unknown> = {}) {
   const m = {
+    // LoadAppConfig 仍在 mock 里：断言「writeAppConfig **不再**调它」用得上
+    //（前端预读正是 P1 ③ 要消灭的 TOCTOU 来源）
     LoadAppConfig: vi.fn().mockResolvedValue({
       filesRoot: "/files",
       resourcepackRoot: "/rp",
@@ -23,7 +31,7 @@ function mockApp(over: Record<string, unknown> = {}) {
       theme: "cyber",
       themeAuto: "off",
     }),
-    SaveAppConfig: vi.fn().mockResolvedValue(undefined),
+    SaveAppConfigPatch: vi.fn().mockResolvedValue(undefined),
     ...over,
   };
   getAppMock.mockResolvedValue(m);
@@ -37,110 +45,82 @@ afterEach(() => {
   localStorage.clear();
 });
 
-describe("writeAppConfig — views 级唯一实参点", () => {
-  it("未传字段取重读的最新值，只覆盖 patch 字段（防旧快照覆盖）", async () => {
-    const app = mockApp({
-      LoadAppConfig: vi.fn().mockResolvedValue({
-        filesRoot: "/latest",
-        resourcepackRoot: "/latest-rp",
-        mcRoot: "/latest-mc",
-        linkMode: "hardlink",
-      }),
-    });
-    localStorage.setItem("theme", "ocean");
+describe("writeAppConfig — 薄透传给 Go 侧原子 patch", () => {
+  it("patch 原样传给 SaveAppConfigPatch（字段不增不减、不填默认值）", async () => {
+    const app = mockApp();
     await writeAppConfig({ mcRoot: "/new-mc" });
-    expect(app.SaveAppConfig).toHaveBeenCalledWith(
-      "/latest",
-      "/latest-rp",
-      "/new-mc",
-      "hardlink",
-      THEME_DARK, // localStorage 的 "ocean" 不再影响磁盘写入：磁盘无值故回落默认（见下方 describe）
-      "",
-    );
+    expect(app.SaveAppConfigPatch).toHaveBeenCalledWith({ mcRoot: "/new-mc" });
   });
 
-  it("theme/themeAuto 缺省：磁盘无值时 theme 回落 THEME_DARK（绝不写 \"dark\"）", async () => {
-    const app = mockApp({
-      LoadAppConfig: vi.fn().mockResolvedValue({
-        filesRoot: "/files",
-        resourcepackRoot: "/rp",
-        mcRoot: "/old-mc",
-        linkMode: "copy",
-      }), // 磁盘无 theme 字段
-    });
-    localStorage.setItem("theme", "ocean"); // 此刻 localStorage 有值但**不参与**决策
+  // P1 ③ 核心断言：前端不得再预读磁盘。前端读一次 + 写一次之间存在 TOCTOU 窗口，
+  // 期间别的写入口（SaveThresholds / SetDownloadMirror / 另一处 writeAppConfig）
+  // 改的字段会被本次整份回写冲掉——这正是本次下沉要消灭的病。
+  it("不调 LoadAppConfig（读盘必须发生在 Go 锁内，否则 TOCTOU 窗口重现）", async () => {
+    const app = mockApp();
+    await writeAppConfig({ theme: "warm" });
+    expect(app.LoadAppConfig).not.toHaveBeenCalled();
+  });
+
+  // 单次 IPC：旧实现是「读 + 写」两次调用，count=1 锁住 IPC 次数不反弹
+  it("单次绑定调用（读+写两步不再由前端编排）", async () => {
+    const app = mockApp();
+    await writeAppConfig({ filesRoot: "/f" });
+    expect(app.SaveAppConfigPatch).toHaveBeenCalledTimes(1);
+  });
+
+  // 未传字段**不得**由前端补默认值：补了就是「前端以为的现值」，可能是陈旧快照。
+  // 值域校验（THEME_VALID / LINK_MODE 合法值 / mcRoot 可达性）现由 Go 侧负责。
+  it("未传字段保持缺席（不补 THEME_DARK / 不补 \"copy\"）", async () => {
+    const app = mockApp();
     await writeAppConfig({ mcRoot: "/mc" });
-    const args = app.SaveAppConfig.mock.calls[0]!;
-    expect(args[4]).toBe(THEME_DARK);
-    expect(args[4]).not.toBe("dark"); // THEME_VALID 无 "dark"，写它会被 normalizeTheme 静默转成 system
-    expect(args[5]).toBe("");
+    const p = app.SaveAppConfigPatch.mock.calls[0]![0];
+    expect(p).toEqual({ mcRoot: "/mc" });
+    expect("theme" in p).toBe(false);
+    expect("linkMode" in p).toBe(false);
   });
 
-  it("linkMode 缺省回落 LINK_MODE_DEFAULT（不手抄 \"copy\" 字面量）", async () => {
-    const app = mockApp({
-      LoadAppConfig: vi.fn().mockResolvedValue({ filesRoot: "/f", resourcepackRoot: "/r" }),
-    });
-    await writeAppConfig({ mcRoot: "/mc" });
-    expect(app.SaveAppConfig).toHaveBeenCalledWith("/f", "/r", "/mc", "copy", THEME_DARK, "");
-  });
-
-  it("显式 patch 的 theme/themeAuto 优先于 localStorage", async () => {
+  // localStorage 不参与写入决策：磁盘是备份权威，读 localStorage 兜底曾把磁盘备份冲掉
+  it("localStorage 有 theme 时不参与 patch（磁盘是备份权威）", async () => {
     const app = mockApp();
     localStorage.setItem("theme", "ocean");
     localStorage.setItem("theme-auto", "time");
-    await writeAppConfig({ theme: "warm", themeAuto: "off" });
-    expect(app.SaveAppConfig).toHaveBeenCalledWith(
-      "/files",
-      "/rp",
-      "/old-mc",
-      "copy",
-      "warm",
-      "off",
-    );
-  });
-
-  it("重读失败 → 空串兜底（Go 端 orDefault 保留旧值），保存照常执行", async () => {
-    const app = mockApp({ LoadAppConfig: vi.fn().mockRejectedValue(new Error("cfg down")) });
     await writeAppConfig({ mcRoot: "/mc" });
-    expect(app.SaveAppConfig).toHaveBeenCalledWith("", "", "/mc", "copy", THEME_DARK, "");
+    const p = app.SaveAppConfigPatch.mock.calls[0]![0];
+    expect(p.theme).toBeUndefined();
+    expect(p.themeAuto).toBeUndefined();
   });
 
-  it("返回值 = 实际写入的六元组（便于调用方同步内存快照）", async () => {
-    // 默认 mock 的 LoadAppConfig 带 theme:"cyber"/themeAuto:"off" → 缺省字段取这两个磁盘值
+  // 显式空串 = 用户真的清空，**不是**「未传」（与 Go 侧 *string 的 nil 契约对应：
+  // undefined→nil=未传，""→非 nil=写入空串）。若前端把 "" 归一成 undefined，
+  // 「清空游戏目录」这类操作会静默失效。
+  it("显式空串透传为 \"\"（清空语义，不与 undefined 混同）", async () => {
+    const app = mockApp();
+    await writeAppConfig({ mcRoot: "" });
+    expect(app.SaveAppConfigPatch).toHaveBeenCalledWith({ mcRoot: "" });
+  });
+
+  it("返回值 = 本次 patch（供调用方同步内存快照）", async () => {
     mockApp();
     const resolved = await writeAppConfig({ filesRoot: "/new-files" });
-    expect(resolved).toEqual({
-      filesRoot: "/new-files",
-      rpRoot: "/rp",
-      mcRoot: "/old-mc",
-      linkMode: "copy",
-      theme: "cyber",
-      themeAuto: "off",
-    });
+    expect(resolved).toEqual({ filesRoot: "/new-files" });
   });
 
-  // 2026-10 架构补件：落盘成功后广播 config:changed（载荷 = 实际写入的六元组）——
-  // 配置读取方（app-sidebar 底部 MC 路径）据此零 IPC 即时刷新，不再靠每轮 reload 重拉。
-  it("落盘成功 → 广播 config:changed，载荷 = 实际写入六元组", async () => {
+  // 2026-10 架构补件：落盘成功后广播 config:changed——配置读取方（app-sidebar 底部
+  // MC 路径）据此零 IPC 即时刷新，不再靠每轮 reload 重拉。P1 ③ 起载荷 = 本次 patch
+  // （键可选），订阅方按「键缺失 = 未改」消费。
+  it("落盘成功 → 广播 config:changed，载荷 = 本次 patch", async () => {
     mockApp();
     const seen: unknown[] = [];
     const off = bus.on("config:changed", (p) => seen.push(p));
     const resolved = await writeAppConfig({ mcRoot: "/mc" });
     off();
     expect(seen).toEqual([resolved]);
-    expect(seen[0]).toEqual({
-      filesRoot: "/files",
-      rpRoot: "/rp",
-      mcRoot: "/mc",
-      linkMode: "copy",
-      theme: "cyber",
-      themeAuto: "off",
-    });
+    expect(seen[0]).toEqual({ mcRoot: "/mc" });
   });
 
   // 只在成功后发：失败时读取方保持旧显示值，比广播「半份配置」诚实
-  it("落盘失败 → 不广播（读取方保持旧值）", async () => {
-    mockApp({ SaveAppConfig: vi.fn().mockRejectedValue(new Error("save down")) });
+  it("落盘失败 → reject 且不广播（读取方保持旧值）", async () => {
+    mockApp({ SaveAppConfigPatch: vi.fn().mockRejectedValue(new Error("save down")) });
     let emitted = 0;
     const off = bus.on("config:changed", () => {
       emitted++;
@@ -150,76 +130,12 @@ describe("writeAppConfig — views 级唯一实参点", () => {
     expect(emitted).toBe(0);
   });
 
-  // P1 回归（锐评 2026-10-15）：theme/themeAuto 缺省必须取**磁盘重读值**。
-  // 原实现读 localStorage 兜底，localStorage 一旦为空（WebView2 profile 重置 / 清站点数据），
-  // 任何一次无关保存（如侧栏自动检测游戏目录后写 { mcRoot }）都会把磁盘上的主题备份
-  // 冲成 THEME_DARK —— 用户只改了路径，主题却被静默改成默认。
-  describe("theme/themeAuto 缺省取磁盘重读值（不读 localStorage）", () => {
-    it("localStorage 为空 + 磁盘有主题 → 保留磁盘主题，不被 THEME_DARK 冲掉", async () => {
-      const app = mockApp({
-        LoadAppConfig: vi.fn().mockResolvedValue({
-          filesRoot: "/f",
-          resourcepackRoot: "/r",
-          mcRoot: "/old",
-          linkMode: "copy",
-          theme: "ocean",
-          themeAuto: "time",
-        }),
-      });
-      localStorage.clear(); // 模拟 localStorage 被清空
-      await writeAppConfig({ mcRoot: "/new-mc" });
-      const args = app.SaveAppConfig.mock.calls[0]!;
-      expect(args[4]).toBe("ocean"); // 磁盘备份保住
-      expect(args[5]).toBe("time");
+  // Go 侧校验失败（mcRoot 不合法 / 写盘失败）必须让调用方看见——静默吞掉会让 UI 显示
+  // 「保存成功」而磁盘未变（SaveAppConfig 历史上就踩过：返回 nil 是假成功）
+  it("Go 侧校验错误原样抛出（不吞、不当成功）", async () => {
+    mockApp({
+      SaveAppConfigPatch: vi.fn().mockRejectedValue(new Error("游戏目录校验失败: 未检测到 .minecraft")),
     });
-
-    it("localStorage 与磁盘不一致 → 以磁盘为准（磁盘是备份权威）", async () => {
-      const app = mockApp({
-        LoadAppConfig: vi.fn().mockResolvedValue({
-          filesRoot: "/f",
-          resourcepackRoot: "/r",
-          mcRoot: "/old",
-          linkMode: "copy",
-          theme: "sakura",
-          themeAuto: "system",
-        }),
-      });
-      localStorage.setItem("theme", "mint");
-      localStorage.setItem("theme-auto", "off");
-      await writeAppConfig({ mcRoot: "/new-mc" });
-      const args = app.SaveAppConfig.mock.calls[0]!;
-      expect(args[4]).toBe("sakura");
-      expect(args[5]).toBe("system");
-    });
-
-    it("磁盘也无主题（首次运行）→ 回落 THEME_DARK", async () => {
-      const app = mockApp({
-        LoadAppConfig: vi.fn().mockResolvedValue({
-          filesRoot: "/f",
-          resourcepackRoot: "/r",
-          mcRoot: "",
-          linkMode: "copy",
-        }),
-      });
-      await writeAppConfig({ mcRoot: "/new-mc" });
-      expect(app.SaveAppConfig.mock.calls[0]![4]).toBe(THEME_DARK);
-    });
-
-    it("显式 patch theme/themeAuto 仍优先于磁盘重读值", async () => {
-      const app = mockApp({
-        LoadAppConfig: vi.fn().mockResolvedValue({
-          filesRoot: "/f",
-          resourcepackRoot: "/r",
-          mcRoot: "/old",
-          linkMode: "copy",
-          theme: "ocean",
-          themeAuto: "time",
-        }),
-      });
-      await writeAppConfig({ theme: "warm", themeAuto: "off" });
-      const args = app.SaveAppConfig.mock.calls[0]!;
-      expect(args[4]).toBe("warm");
-      expect(args[5]).toBe("off");
-    });
+    await expect(writeAppConfig({ mcRoot: "C:/nope" })).rejects.toThrow("游戏目录校验失败");
   });
 });

@@ -37,7 +37,7 @@ auto_fields:
 last_verified: 2026-10-15
 use_when:
   - 新增或修改任何会被用户感知的设置项（判断它落在哪一轨、是否随迁移保住）
-  - 改配置写入/读取路径（writeAppConfig / SaveAppConfig / safeGet / safeSet）
+  - 改配置写入/读取路径（writeAppConfig / SaveAppConfigPatch / safeGet / safeSet）
   - 写或改备份、换机迁移相关的文档
   - 排查「设置重启后没保住」「换机后设置丢了」类问题
   - 怀疑某个键有双权威（磁盘 vs localStorage 口径不一致）
@@ -91,7 +91,7 @@ quick_risk_lines:
 ## 对外 API / 入口
 
 - `SETTINGS_KEYS` / `findSettingsKey(key)` / `migratingSettingsKeys()` / `nonMigratingSettingsKeys()` — `frontend/src/settings-keys.ts`
-- 磁盘轨写入唯一实参点：`views/config-write.ts|writeAppConfig(patch)` → Go `SaveAppConfig`（跨视图唯一，见 ADR-313 与 `tests/test_config_write_single_exit.ts`）
+- 磁盘轨写入唯一入口：`views/config-write.ts|writeAppConfig(patch)` → Go `SaveAppConfigPatch`（原子 patch，ADR-349；实参点单点化始于 ADR-313），执法 `tests/test_config_write_single_exit.ts`
 - 主题读写两侧口径：`theme-core.ts|initTheme`（读）与 `views/config-write.ts|writeAppConfig`（写）——两侧都必须「磁盘优先」
 - 备份迁移用户叙事：`docs/guide/backup-migration.md`「哪些设置会跟着迁移」一节
 
@@ -108,7 +108,7 @@ quick_risk_lines:
 1. **新增 localStorage 键 = 写键 + 登记台账，两步走**。漏第二步 → `tests/test_settings_key_ledger.ts` 断言 B 转红。
 2. **`migrates` 恒等于「tier 是否为 go-disk」**。非磁盘轨写 `true` 即错误登记（断言 D）。
 3. **磁盘轨登记必须带 `disk:` 前缀**。theme/themeAuto 跨双轨同名物理键，无前缀即撞名，撞名会把两条轨塞进一行、一行只能声明一个 tier——镜像的归属被磁盘的归属吞掉（这正是要消灭的漂移）。
-4. **写侧与读侧对「谁是权威」口径一致**。历史病灶：`initTheme` 曾 localStorage 优先、`writeAppConfig` 曾 localStorage 兜底，两边反向 → 磁盘备份被 localStorage 冲掉。现在写入侧全字段以磁盘重读为缺省、读取侧 `cfg.theme || safeGet("theme")` 磁盘优先。
+4. **写侧与读侧对「谁是权威」口径一致**。历史病灶：`initTheme` 曾 localStorage 优先、`writeAppConfig` 曾 localStorage 兜底，两边反向 → 磁盘备份被 localStorage 冲掉。现在写入侧未传字段由 Go 锁内重读决定（P1 ③ 前是前端重读）、读取侧 `cfg.theme || safeGet("theme")` 磁盘优先。
 5. **台账不参与运行时读写**。它是让漂移暴露的声明，不是权威——不要为了「走台账」把 safeGet 改成查表。
 6. **网页版 `ysm:config`（localStorage）是磁盘轨的网页替身**，不是桌面磁盘轨；桌面端不消费它。
 
@@ -118,6 +118,6 @@ quick_risk_lines:
 - 对账守卫：`tests/test_settings_key_ledger.ts`
 - 磁盘轨字段：`go/types/config.go|AppConfig`
 - 用户迁移叙事：`docs/guide/backup-migration.md`
-- 写入唯一出口（ADR-313）：`views/config-write.ts|writeAppConfig`、执法 `tests/test_config_write_single_exit.ts`
+- 写入唯一出口（ADR-313 → ADR-349 原子化）：`views/config-write.ts|writeAppConfig` → Go `SaveAppConfigPatch`、执法 `tests/test_config_write_single_exit.ts`（已改锁新绑定）
 - 主题双写口径：知识卡 `theme`
 - localStorage 安全包装：知识卡 `dom-storage`

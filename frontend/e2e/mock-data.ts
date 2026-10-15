@@ -194,6 +194,9 @@ export const MOCK_DATA = {
   ToggleEnable: undefined,
   // 对齐 binding 契约 Promise<boolean>——原 undefined 类型错位（子代理审计 P2）
   SaveAppConfig: undefined,
+  // 原子 patch 入口（锐评 2026-10-15 P1 ③）：e2e 未直接触达，补键防绑定契约守卫报错
+  // （undefined 最安全）。若将来 e2e 要测设置保存，须实现真写入语义（内存对象合并）。
+  SaveAppConfigPatch: undefined,
   DetectResourceType: "ysm",
   DetectLauncherInstances: [],
   // ReadPackMeta 返回 JSON 字符串（对齐 Go binding 契约，代码侧 JSON.parse 消费）

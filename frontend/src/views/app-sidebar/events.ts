@@ -349,7 +349,9 @@ async function loadAndRenderMcPath(btn: HTMLElement): Promise<void> {
  * 2026-10 架构补件（原每轮 `_reload` 重拉一次 `LoadAppConfig`——未配置时还会连带扫盘）：
  * 配置读取改为事件驱动，收益两条——① 每轮 reload 省一次 IPC（导入/同步/删除每次都会触发）；
  * ② 设置页/启动器检测改完配置**立即**刷新侧栏显示，不再等下一次 reload。
- * 载荷自带六元组，订阅分支**零 IPC** 直接渲染。
+ * 载荷自带本次 patch 的生效字段，订阅分支**零 IPC** 直接渲染。
+ * ⚠️ P1 ③ 起载荷键可选（键缺失 = 本次未改该字段）：只在 mcRoot 确实被改时才重渲染，
+ * 否则一次 theme 保存会把侧栏 MC 路径抹成 undefined（改前载荷恒为完整六元组，无此坑）。
  * 订阅归调用方 `_unsubs` 桶（随 disconnectedCallback 退订）；`bindFooter` 只管统计、
  * 不再碰配置（该拆分同时消灭了「每次 reload 都重跑自动检测」的重复扫盘）。
  */
@@ -364,6 +366,8 @@ export function bindMcPathLabel(root: ShadowRoot): () => void {
   return bus.on("config:changed", (cfg) => {
     // 组件已卸载：订阅本该已被退订，此处守卫兜底（订阅桶清理与事件派发之间有窗口）
     if (!btn.isConnected) return;
+    // 键缺失 = 本次 patch 未含 mcRoot → 按钮显示不变（不得当空串渲染，路径会被抹掉）
+    if (cfg.mcRoot === undefined) return;
     renderMcPath(btn, cfg.mcRoot);
   });
 }

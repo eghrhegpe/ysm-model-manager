@@ -46,7 +46,7 @@ vi.mock("./tpl.ts", () => ({
 vi.mock("../../../bindings/ysm-model-manager/internal/app/app.js", () => ({
   LoadAppConfig: vi.fn().mockResolvedValue({ mcRoot: "/mc", filesRoot: "", resourcepackRoot: "", linkMode: "copy" }),
   GetMinecraftPaths: vi.fn().mockResolvedValue([]),
-  SaveAppConfig: vi.fn().mockResolvedValue(undefined),
+  SaveAppConfigPatch: vi.fn().mockResolvedValue(undefined),
 }));
 
 import { bindCardEvents, bindFooter, bindMcPathLabel, type SidebarHost } from "./events.ts";
@@ -435,7 +435,7 @@ describe("bindMcPathLabel（MC 路径按钮：首帧 + config:changed 事件驱�
     await waitFor(() =>
       expect((root.getElementById("btn-mc") as HTMLElement).textContent).toBe(" /detected"),
     );
-    expect(app.SaveAppConfig).toHaveBeenCalled();
+    expect(app.SaveAppConfigPatch).toHaveBeenCalled();
   });
 
   // 2026-10 架构补件的**核心收益**回归锁：配置变更后侧栏即时刷新，且**零额外 IPC**
@@ -498,7 +498,7 @@ describe("bindMcPathLabel（MC 路径按钮：首帧 + config:changed 事件驱�
     // 排空异步链（getApp → LoadAppConfig → GetMinecraftPaths 三段 await）
     await new Promise((r) => setTimeout(r, 0));
     await new Promise((r) => setTimeout(r, 0));
-    expect(app.SaveAppConfig).not.toHaveBeenCalled(); // 关键：卸载后不得落盘
+    expect(app.SaveAppConfigPatch).not.toHaveBeenCalled(); // 关键：卸载后不得落盘
     expect(btn.textContent).toBe(before); // 游离 DOM 也不再改写
   });
 
@@ -553,7 +553,7 @@ describe("bindMcPathLabel（MC 路径按钮：首帧 + config:changed 事件驱�
     const { root } = mountFooter();
     bindMcPathLabel(root);
     const btn = root.getElementById("btn-mc") as HTMLElement;
-    await waitFor(() => expect(app.SaveAppConfig).toHaveBeenCalled());
+    await waitFor(() => expect(app.SaveAppConfigPatch).toHaveBeenCalled());
     expect(btn.querySelector("b")).toBeNull(); // textContent 两态都含 /detected，元素查询才辨得出生成态
     // 新契约（shortenPath）：展示为末两段短形式（esc 后落位），完整路径由 title 承载
     expect(btn.textContent).toBe(" …/b>/detected");

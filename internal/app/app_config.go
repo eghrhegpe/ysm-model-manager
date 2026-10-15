@@ -211,6 +211,75 @@ func (a *App) SaveAppConfig(filesRoot, rpRoot, mcRoot, linkMode, theme, themeAut
 	return nil
 }
 
+// SaveAppConfigPatch 部分更新应用配置（锐评 2026-10-15 P1 ③）——**前端唯一推荐入口**。
+//
+// 与 SaveAppConfig 的分工：SaveAppConfig 保留给六个位置实参的旧调用形态（含 web 端
+// 适配器与既有测试），本绑定提供 patch 语义。两者共用同一把 configWriteMu，锁的范围
+// 都是「锁内重读 → 改 → 落盘」，故两者互相之间也不会丢字段。
+//
+// 为什么值得多一个绑定：writeAppConfig 原先在 JS 侧「先 await LoadAppConfig() 再
+// await SaveAppConfig(拼好的六元组)」——两个 await 之间让出事件循环，期间任何其它
+// 写入口（SaveThresholds / SetDownloadMirror / 另一处 writeAppConfig）改的字段都不在
+// 本次快照里，会被这次整份回写静默覆盖（用户改的设置重启后回到旧值，且无任何报错）。
+// 把整段搬进一次调用后，TOCTOU 窗口从「两次 IPC 之间的任意长事件循环」收窄为「不存在」。
+//
+// nil 字段 = 未传，取锁内重读的现值（见 types.AppConfigPatch 的 nil 契约）。
+// 校验语义与 SaveAppConfig 同口径：mcRoot 非空必过 ValidateMinecraftDir，
+// linkMode 走 SanitizeLinkMode 软校验（非法值回落旧值，不 reject 整个保存——
+// 「只想改主题、原样回写 linkMode」是多数调用方，别误伤）。
+func (a *App) SaveAppConfigPatch(patch types.AppConfigPatch) error {
+	a.configWriteMu.Lock()
+	defer a.configWriteMu.Unlock()
+
+	// 锁内重读：这是本绑定存在的全部理由——快照必须在锁内取，才可能与其它写串行
+	oldCfg := a.LoadAppConfig()
+	cfg := oldCfg
+
+	if patch.FilesRoot != nil {
+		cfg.FilesRoot = *patch.FilesRoot
+	}
+	if patch.McRoot != nil {
+		// 校验失败必须返回错误让 binding reject，且**不落盘**——原实现在此静默写入
+		// 未校验路径（配置损坏路径静默生效），见 SaveAppConfig 同处注释的踩坑史
+		if *patch.McRoot != "" {
+			v, errMsg := a.ValidateMinecraftDir(*patch.McRoot)
+			if errMsg != "" {
+				return fmt.Errorf("游戏目录校验失败: %s", errMsg)
+			}
+			cfg.McRoot = v
+		} else {
+			cfg.McRoot = ""
+		}
+	}
+	if patch.LinkMode != nil {
+		// SanitizeLinkMode 自兜底：空参→旧值、脏值→旧值（与 SaveAppConfig 同口径）
+		cfg.LinkMode = install.SanitizeLinkMode(*patch.LinkMode, oldCfg.LinkMode)
+	}
+	if patch.Theme != nil {
+		cfg.Theme = *patch.Theme
+	}
+	if patch.ThemeAuto != nil {
+		cfg.ThemeAuto = *patch.ThemeAuto
+	}
+	// 废弃字段清零：以旧为基会把 loadAppConfig 留下的 YsmRoot 等重新落盘，
+	// 破坏 migrateLegacyConfigFields 的「防双源写入」不变量（与 SaveAppConfig 同因）
+	clearDeprecatedFields(&cfg)
+
+	if err := a.saveConfig(cfg); err != nil {
+		return err
+	}
+	// 链接模式落盘后同步 installer 内存态（否则设置页已显示新模式，实际链接仍按旧模式，
+	// 要到重启才生效——与 SaveAppConfig 同款陷阱）
+	a.install.SyncLinkMode(cfg.LinkMode)
+	// 根路径变化后重启 watcher（仅实际变化才重启，防 theme-only 保存触发全仓 WalkDir）
+	if cfg.FilesRoot != oldCfg.FilesRoot || cfg.McRoot != oldCfg.McRoot {
+		if err := a.rebuildWatcherAndDirs(&cfg); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (a *App) SetDownloadMirror(mirror string) error {
 	// 读-改-写事务串行化（configWriteMu，锐评 2026-10-15 P2）：与 SaveAppConfig /
 	// SaveThresholds / SetResourceRoot 共享同一把锁，避免镜像源切换把并发写入的

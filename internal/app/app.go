@@ -74,11 +74,15 @@ type App struct {
 	// writeAppConfig 互不 await），同时侧栏自动检测完成写 mcRoot ——
 	// 后者用改 mcRoot 前的快照落盘，把前者的 theme/linkMode 冲回旧值。
 	//
-	// ADR-313 把「实参点单点」收在 JS 侧，但磁盘写入面是 5 宽的
-	// （SaveAppConfig / SetDownloadMirror / SaveThresholds / SetResourceRoot /
-	// ResetResourceRoot），且前端各调用点独立 void 不串行 —— 止血只能落在
-	// 这一层。**持锁范围 = 整个 Load→modify→save**，不是 saveConfig 本身
+	// ADR-313 把「实参点单点」收在 JS 侧，但磁盘写入面是多宽的
+	// （SaveAppConfig / SaveAppConfigPatch / SetDownloadMirror / SaveThresholds /
+	// SetResourceRoot / ResetResourceRoot），且前端各调用点独立 void 不串行 ——
+	// 止血只能落在这一层。**持锁范围 = 整个 Load→modify→save**，不是 saveConfig 本身
 	// （saveConfig 内已自取 configMu 写缓存，二者不构成嵌套反序）。
+	//
+	// 锁只能管「锁内」：SaveAppConfigPatch（锐评 2026-10-15 P1 ③）正是为此把前端
+	// 的「预读 + 写」两次 IPC 收进一次锁内调用——**新增任何写入面都必须持本锁，
+	// 且读盘必须发生在锁内**，否则又开一个 TOCTOU 窗口。
 	configWriteMu sync.Mutex
 	watcherMu     sync.Mutex
 	app           *application.App

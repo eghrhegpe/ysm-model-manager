@@ -113,6 +113,31 @@ export function normalizeFogRange(near: number, far: number): { near: number; fa
   return { near, far: Math.max(far, near + FOG_MIN_DEPTH) };
 }
 
+/** 单字段恢复分派：按类型走对应 restorer（number/boolean/string，string 优先 exact 再 oneOf） */
+function restoreFieldByType(v: unknown, restorer: FieldRestorer): boolean {
+  if (typeof v === "number") {
+    if (restorer.number) {
+      restorer.number(v);
+      return true;
+    }
+  } else if (typeof v === "boolean") {
+    if (restorer.boolean) {
+      restorer.boolean(v);
+      return true;
+    }
+  } else if (typeof v === "string") {
+    if (restorer.string) {
+      restorer.string(v);
+      return true;
+    }
+    if (restorer.oneOf?.values.includes(v)) {
+      restorer.oneOf.apply(v);
+      return true;
+    }
+  }
+  return false;
+}
+
 export function restoreFields(
   state: Record<string, unknown> | null,
   spec: Record<string, FieldRestorer>,
@@ -120,26 +145,7 @@ export function restoreFields(
   if (!state) return false;
   let applied = false;
   for (const [key, restorer] of Object.entries(spec)) {
-    const v = state[key];
-    if (typeof v === "number") {
-      if (restorer.number) {
-        restorer.number(v);
-        applied = true;
-      }
-    } else if (typeof v === "boolean") {
-      if (restorer.boolean) {
-        restorer.boolean(v);
-        applied = true;
-      }
-    } else if (typeof v === "string") {
-      if (restorer.string) {
-        restorer.string(v);
-        applied = true;
-      } else if (restorer.oneOf?.values.includes(v)) {
-        restorer.oneOf.apply(v);
-        applied = true;
-      }
-    }
+    if (restoreFieldByType(state[key], restorer)) applied = true;
   }
   return applied;
 }

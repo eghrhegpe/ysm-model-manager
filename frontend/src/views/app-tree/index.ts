@@ -35,7 +35,7 @@ import { type AuthorInfo, loadAuthors } from "./authors.ts";
 import { bindBusEvents } from "./bus-handlers.ts";
 import { type SelectState, selectSingle } from "./data.ts";
 import { bindTreeEvents, updateSelectCount } from "./events.ts";
-import { withFooterProgress } from "./footer-progress.ts";
+import { resetFooterProgress, withFooterProgress } from "./footer-progress.ts";
 import { loadEntries, type TreeEntry } from "./loader.ts";
 import {
   cleanupVirtualScroll,
@@ -523,6 +523,9 @@ export class AppTree extends WebComponentBase {
       // 清理虚拟滚动：scroll 监听 + ResizeObserver + 缓存引用
       cleanupVirtualScroll(this.treeRenderCtx, treeEl);
     }
+    // 进度槽复位（2026-10-15）：把「批次永不落定 → 计数滞留 → 此后所有批次无进度」的
+    // 泄漏收窄到本实例生命周期内（见 footer-progress.ts 的 activeBatches 注释）。
+    resetFooterProgress(this._root);
     // statAnim 在途 animateNumber 尾帧【计时器红线豁免锚】（子代理复核 P3 正名，勿误判漏清）：
     // ≤700ms 有界尾 + 落笔目标是随 ctx GC 的 detached footer（无害写）+ 重连后新一轮
     // updateStat 的 prev() 先行取消旧句柄——不在此登记逐元素 cancel（WeakMap 不可枚举）。

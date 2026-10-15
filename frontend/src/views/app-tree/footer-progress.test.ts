@@ -4,7 +4,7 @@
 // 断言策略：业务体在被测门（deferred）处分阶段挂起，逐段读「用户此刻看到什么」——
 // 比记录每次 setter 的写入序列更贴语义（写入顺序是实现细节，可见态才是契约）。
 import { describe, expect, it } from "vitest";
-import { setFooterProgress, withFooterProgress } from "./footer-progress.ts";
+import { resetFooterProgress, setFooterProgress, withFooterProgress } from "./footer-progress.ts";
 
 /** 进度槽替身：只暴露 hidden / textContent 两个被 setFooterProgress 触碰的字段 */
 function probe(): { root: { getElementById: (id: string) => unknown }; el: { hidden: boolean; textContent: string } } {
@@ -149,6 +149,30 @@ describe("withFooterProgress", () => {
 
     gA.open(); // A 最后结束：此时才清槽
     expect(await a).toBe("a");
+    expect(p.el).toEqual({ hidden: true, textContent: "" });
+  });
+
+  // 已知边界的自愈出口：批次永不落定（IPC 挂死）会让计数滞留 → 此后所有批次失去进度。
+  // 组件卸载时复位，把泄漏范围收窄到单个实例生命周期内。
+  it("resetFooterProgress → 计数归零且清槽（挂死批次不持续毒害后续批次）", async () => {
+    const p = probe();
+    const never = gate(); // 永不 open：模拟挂死的批次
+    void withFooterProgress(p.root as unknown as ShadowRoot, (d, t) => `X${d}/${t}`, 3, async (op) => {
+      op(1, 3);
+      await never.promise;
+    });
+    await Promise.resolve();
+    expect(p.el.hidden).toBe(false);
+
+    resetFooterProgress(p.root as unknown as ShadowRoot);
+    expect(p.el).toEqual({ hidden: true, textContent: "" });
+
+    // 复位后新批次照常显示并清槽（若不复位，计数滞留会让这次清槽不发生）
+    const r = await withFooterProgress(p.root as unknown as ShadowRoot, fmt, 2, async (op) => {
+      op(2, 2);
+      return "ok";
+    });
+    expect(r).toBe("ok");
     expect(p.el).toEqual({ hidden: true, textContent: "" });
   });
 });

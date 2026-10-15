@@ -30,6 +30,19 @@ export function setFooterProgress(root: ShadowRoot | null | undefined, text: str
 }
 
 /**
+ * 复位进度槽与活跃批次计数——组件卸载（`disconnectedCallback`）时调用。
+ *
+ * 这是「批次永不落定（IPC 挂死）→ 计数滞留 → 此后所有批次失去进度」这条已知边界的
+ * **唯一自愈出口**：把泄漏范围从「应用会话级」收窄到「单个组件实例生命周期内」。不设
+ * 超时 watchdog（见 `activeBatches` 注释）的理由不变；生产只有一个 `<app-tree>` 实例
+ * （app-content 复用同一元素），故全局计数在此复位不会踩到并发的另一实例。
+ */
+export function resetFooterProgress(root?: ShadowRoot | null): void {
+  activeBatches = 0;
+  setFooterProgress(root ?? null, null);
+}
+
+/**
  * 正在跑的长批量数（模块级单例 by-design）。进度槽是**单元素多写者**：`_deleteLock` 与
  * `_toggleLock` 是两把独立锁（删除与启停互不阻塞，ADR-341），故「整库启停」与「批量删除」
  * 可以同时在跑。若先结束的那个直接清槽，仍在跑的那个进度会在半途被抹掉——故清槽只在

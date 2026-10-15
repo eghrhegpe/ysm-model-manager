@@ -326,8 +326,22 @@ describe("app-tree index 入口生命周期（补位）", () => {
     expect(progress.textContent).toBe("");
   });
 
-  it("Delete 统一走 DeleteResourcePack 并传 rtype", async () => {
-    const el = await mountEl();
+  // 已知边界的自愈出口（2026-10-15）：批次永不落定（IPC 挂死）会让模块级计数滞留，
+  // 此后所有批次都不再清槽。卸载时复位 → 泄漏只活在单个实例生命周期内。
+  it("卸载 → 进度槽复位（挂死批次不跨实例残留）", async () => {
+    const el = await mountEl("ysm");
+    const progress = el.shadowRoot!.getElementById("ftr-progress") as HTMLElement;
+    // 模拟「挂死批次」留下的僵尸槽：直接写，不经 withFooterProgress（计数一并被毒化）
+    progress.textContent = "⏳ 僵尸 3/9";
+    progress.hidden = false;
+
+    el.remove(); // disconnectedCallback → resetFooterProgress
+
+    expect(progress.hidden).toBe(true);
+    expect(progress.textContent).toBe("");
+  });
+
+  it("Delete 统一走 DeleteResourcePack 并传 rtype", async () => {    const el = await mountEl();
     el.setAttribute("root", RESOURCE_TYPES.MMD);
     el.selectState.keys.add("/repo/a.ysm");
     dispatchKey("Delete");

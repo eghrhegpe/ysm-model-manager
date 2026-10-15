@@ -511,6 +511,8 @@ describe("bindBusEvents — 文件夹操作", () => {
     const vm = makeVM();
     await bind(vm);
     modalConfirmMock.mockResolvedValue(true);
+    vm.selectState.keys.add("/repo/旧目录/a.ysm");
+    vm.selectState.keys.add("/repo/旧目录/b.ysm");
     MoveToRecycleMock
       .mockResolvedValueOnce(undefined)
       .mockRejectedValueOnce(new Error("boom"));
@@ -522,12 +524,18 @@ describe("bindBusEvents — 文件夹操作", () => {
     // P0 回归（审核 2026-10-15）：有失败文件残留时不能 RemoveDir——否则残留文件被
     // os.RemoveAll 永久删除（不进回收站），而 toast 仍报「已回收 N 个」误导用户重试。
     expect(RemoveDirMock).not.toHaveBeenCalled();
+    // 部分失败仍清选中：已入回收站的文件路径不再存在，残留选中指向幽灵路径
+    expect(vm.selectState.keys.size).toBe(0);
+    expect(vm.selectState.lastKey).toBeNull();
   });
 
   it("dir:recycle 全部失败 → 不调 RemoveDir（防永久删除）", async () => {
     const vm = makeVM();
     await bind(vm);
     modalConfirmMock.mockResolvedValue(true);
+    vm.selectState.keys.add("/repo/旧目录/a.ysm");
+    vm.selectState.keys.add("/repo/旧目录/b.ysm");
+    vm.selectState.lastKey = "/repo/旧目录/a.ysm";
     MoveToRecycleMock.mockRejectedValue(new Error("recycle root unavailable"));
 
     bus.emit("dir:recycle", { dir: "旧目录" });
@@ -537,6 +545,10 @@ describe("bindBusEvents — 文件夹操作", () => {
     // 核心断言：失败不得升级为永久删除
     expect(RemoveDirMock).not.toHaveBeenCalled();
     expect(toasts.some((t) => t.msg.includes("已回收 0 个文件"))).toBe(true);
+    // 连坐守卫（2026-10-15 审核统一）：全失败 → 文件全还在磁盘上、路径仍有效，
+    // 清空只会让用户丢掉重试起点
+    expect(vm.selectState.keys.size, "全失败不得清选中").toBe(2);
+    expect(vm.selectState.lastKey, "全失败不得清 lastKey").toBe("/repo/旧目录/a.ysm");
   });
 
   it("dir:recycle RemoveDir 失败 → warn toast（回收成功但空壳残留）", async () => {
@@ -669,6 +681,36 @@ describe("bindBusEvents — 批量重命名", () => {
     await onRenames!([{ oldPath: "/repo/x/a.ysm", newName: "a2.ysm" }]);
     expect(vm.selectState.keys.size).toBe(0);
     expect(toasts.some((t) => t.msg.includes("批量重命名完成：1 成功"))).toBe(true);
+  });
+
+  // 连坐守卫（2026-10-15 审核统一）：全失败 → 磁盘上一个路径都没变 → 选中集仍全有效，
+  // 清空只会让用户丢掉重试起点。部分失败仍清（原路径已不存在）。
+  // 回归锁：原实现无条件 keys.clear()，全失败也清空。
+  it("batch:rename 全部失败 → 选中集保留（不丢重试起点）", async () => {
+    const vm = makeVM();
+    await bind(vm);
+    let onRenames: ((r: Array<{ oldPath: string; newName: string }>) => Promise<void>) | undefined;
+    showBatchRenameDialogMock.mockImplementation(
+      async (_dir: string, _entries: unknown, cb: (r: never) => Promise<void>) => {
+        onRenames = cb as unknown as (r: Array<{ oldPath: string; newName: string }>) => Promise<void>;
+      },
+    );
+    vm.selectState.keys.add("/repo/x/a.ysm");
+    vm.selectState.keys.add("/repo/x/b.ysm");
+    vm.selectState.lastKey = "/repo/x/a.ysm";
+
+    bus.emit("batch:rename", { paths: ["/repo/x/a.ysm", "/repo/x/b.ysm"] });
+    await new Promise((r) => setTimeout(r, 0));
+
+    RenameFileMock.mockRejectedValue(new Error("disk full"));
+    await onRenames!([
+      { oldPath: "/repo/x/a.ysm", newName: "a2.ysm" },
+      { oldPath: "/repo/x/b.ysm", newName: "b2.ysm" },
+    ]);
+
+    expect(vm.selectState.keys.size, "全失败不得清选中").toBe(2);
+    expect(vm.selectState.lastKey, "全失败不得清 lastKey").toBe("/repo/x/a.ysm");
+    expect(toasts.some((t) => t.type === "warn" && t.msg.includes("批量重命名完成：0 成功"))).toBe(true);
   });
 
   it("batch:rename 空 paths → 直接返回", async () => {

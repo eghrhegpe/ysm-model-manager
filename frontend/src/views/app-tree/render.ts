@@ -3,7 +3,7 @@ import { t } from "@/core/i18n/t.ts";
 import { animateNumber } from "@/utils/animation/animate.ts";
 import { safeGet, safeSet } from "@/utils/base/primitives/storage.ts";
 import { calcVisibleRange, installScrollSync } from "@/utils/dom/virtual-scroll.ts";
-import { formatBytes } from "@/utils/format/format.ts";
+import { fmtDate, formatBytes } from "@/utils/format/format.ts";
 import { hl } from "@/utils/html/html.ts";
 import { renderDisplayName } from "@/utils/model-name/display.ts";
 import { keywordMatches } from "@/utils/search/match.ts";
@@ -290,9 +290,14 @@ function fileRowFromEntry(
   // 视觉三态（ADR-336 §2.3）：selected（数据渲染唯一出口）+ dragging（拖源降透明，
   // 2026-10-13 补齐第三态）；rowCls 单点拼接，调用侧禁止 classList 手写（pitfalls #28）
   const rowCls = `${opts.selected ? " selected" : ""}${opts.dragging ? " dragging" : ""}`;
+  // 日期列：grid 模式（28px）开、list 模式（24px 紧凑行）刻意关。
+  // row-tpl.ts 的 dateStr 条件渲染 + .fl .dt 规则本就已接好，唯调用侧恒传 ""——
+  // 「按日期」排序在 UI 上因此无任何可见反馈（2026-10-15 审核项，用户拍板 grid 开）。
+  // list 模板签名无 dateStr 形参（头注明写「无 date」）且无 .fl-list .dt 规则，24px 行放不下。
+  // fmtDate 自带 NaN/0/Infinity/负值 → "" 守卫，无 modTime 时该行自动回落到无日期列。
   return mode === "list"
     ? listFileRowHTML(entry, nmHtml, "📄", "", indent, rowCls, depth + 1)
-    : fileRowHTML(entry, nmHtml, "📄", "", "", indent, rowCls, depth + 1);
+    : fileRowHTML(entry, nmHtml, "📄", fmtDate(entry.modTime), "", indent, rowCls, depth + 1);
 }
 
 /** 文件夹行包装：name + depth + isOpen + flags → 完整 folderRowHTML / listFolderRowHTML 调用 */

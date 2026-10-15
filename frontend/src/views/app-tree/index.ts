@@ -878,9 +878,10 @@ export class AppTree extends WebComponentBase {
       // ADR-339：带当前树类型发射，Go 侧按 dirLevelSync 过滤同步（非 dirLevelSync 自动 no-op）
       bus.emit("sync:toggle:status", { rtype: this._state.rootAttr || RESOURCE_TYPES.YSM });
       bus.emit("stats:refresh");
-      // 选中态清空：移动后旧路径失效（与 rename/recycle/切类型链同口径，防对已不存在路径批量误删）
-
-      this._clearSelection();
+      // 选中态清空：移动成功的旧路径失效（残留选中指向幽灵路径是批量误删的真危险）。
+      // 但全失败 → 一个文件都没移动 → 选中集仍全有效，清空只会让用户丢掉重试起点
+      // （与 _deleteSelected / runBatchRename / atBeHandleDirRecycle 同口径，2026-10-15 统一）。
+      if (r.fulfilled.length > 0) this._clearSelection();
       const ok = r.fulfilled.length;
       const fail = r.rejected.length;
       if (ok > 0 || fail > 0) {

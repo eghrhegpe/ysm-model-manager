@@ -905,3 +905,29 @@ describe("buildTree 键与 Object.prototype 同名（ADR-334）", () => {
     expect(rows).toHaveLength(1);
   });
 });
+
+describe("日期列（grid 开 / list 关，2026-10-15 审核拍板）", () => {
+  // 病灶：排序下拉有「按日期」但 render.ts 调用侧恒传 dateStr=""，row-tpl.ts 的
+  // dateStr 条件渲染 + .fl .dt CSS 规则都已接好 → 排序无任何可见反馈，.fl .dt 是死 CSS。
+  // 拍板：grid（28px）开、list（24px 紧凑行，模板签名无 dateStr 形参）刻意关。
+  it("grid 模式渲染 .dt 列", () => {
+    const root = buildTree([entry("a.ysm", "a.ysm", 1024, 1700000000000, "/repo/a.ysm")], "date", null);
+    const rows = flattenVisible(root, "", "", "date", {}, 0, "grid");
+    const html = rows[0]!.html;
+    expect(html).toContain('class="dt"');
+    // fmtDate 有效输出 → .dt 列内非空（不是空 span 占位）
+    expect(html).toMatch(/<span class="dt">[^<]+<\/span>/);
+  });
+
+  it("list 模式不渲染日期列（紧凑行放不下）", () => {
+    const root = buildTree([entry("a.ysm", "a.ysm", 1024, 1700000000000, "/repo/a.ysm")], "date", null);
+    const rows = flattenVisible(root, "", "", "date", {}, 0, "list");
+    expect(rows[0]!.html).not.toContain('class="dt"');
+  });
+
+  it("modTime 缺失/0 → fmtDate 空串 → 该行回落到无日期列（不因缺时间出现空 span）", () => {
+    const root = buildTree([entry("a.ysm", "a.ysm")], "name", null);
+    const rows = flattenVisible(root, "", "", "name", {}, 0, "grid");
+    expect(rows[0]!.html).not.toContain('class="dt"');
+  });
+});

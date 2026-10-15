@@ -82,7 +82,6 @@ ${PULSE_DOT}
    固定 height 取代原来的 padding 撑高，杜绝「CSS 实际高度 ≠ 虚拟滚动假定行高」错位 */
 .fh { display: flex; align-items: center; gap: 4px; height: var(--tree-row-grid, 28px); padding: 0 var(--sp-1); box-sizing: border-box; border-radius: 0; cursor: pointer; font-size: var(--fs-base); transition: background var(--tr-fast); border-left: 2px solid transparent; }
 .fh:hover { background: var(--hover); }
-.fh.has-items { border-left-color: color-mix(in srgb, var(--status-success) 40%, transparent); }
 .fh .ar { font-size: var(--fs-sm); color: var(--muted); width: 12px; flex-shrink: 0; text-align: center; transition: transform var(--tr-fast); }
 .fh .ar.open { transform: rotate(90deg); }
 .fh .nm { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--txt); }
@@ -140,8 +139,8 @@ ${PULSE_DOT}
 .rename-inp { flex: 1; min-width: 0; height: 100%; box-sizing: border-box; padding: 0 var(--sp-1); margin: 0; border: 1px solid var(--accent); border-radius: var(--radius-sm); background: var(--surf); color: var(--txt); font: inherit; font-family:var(--font-mono); outline: none; }
 /* .fl 与 .fh 同：.tag-author/.tag-work/.tag-date 外观与色标走共享 metaTagCSS（本串在下方插值），
    原 .nm-tag/.nm-bracket 别名选择器为死代码（renderDisplayName 只产出 .tag-*），2026-09 删除；
-   scoped base 行同 .fh 侧冗余删除。 */
-.fl .nm.ysm { color: var(--txt); }
+   scoped base 行同 .fh 侧冗余删除。
+    .fl .nm.ysm 同为零生产者（nmCls 形参两模板都有、fileRowFromEntry 恒传 ""），2026-10-15 删除。 */
 .fl .sz { font-size: var(--fs-xs); white-space: nowrap; flex-shrink: 0; font-family:var(--font-mono); text-shadow:0 1px 2px rgba(0,0,0,.12); }
 .fl .sz.sz-green { color: var(--size-ok,#a6e3a1); }
 .fl .sz.sz-red { color: var(--size-large,#f38ba8); }

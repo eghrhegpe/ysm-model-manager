@@ -48,6 +48,7 @@ const bindings = {
   ClearScanCache: vi.fn().mockResolvedValue(undefined),
   DeleteResourcePack: vi.fn().mockResolvedValue(undefined),
   GetRepoRoot: vi.fn().mockResolvedValue("/repo"),
+  MoveModelFile: vi.fn().mockResolvedValue(undefined),
   ScanModelEntriesWithLabel: vi.fn().mockResolvedValue([]),
   IsFileBanned: vi.fn().mockResolvedValue(false),
 };
@@ -541,6 +542,25 @@ describe("app-tree index 入口生命周期（补位）", () => {
     expect(getToast()).toMatchObject({ type: "warn" });
     // 全失败 = 路径都在磁盘上，清空选中只会让用户失去重试起点
     expect(el.selectState.keys.size, "全失败不得清选中").toBe(2);
+  });
+
+  // 连坐守卫统一（2026-10-15 审核）：_executeTreeMove 原无条件清选中——全失败时一个文件
+  // 都没移动、路径仍全有效，清空只会让用户丢掉重试起点。与 _deleteSelected 同口径。
+  it("tree move 全部失败 → 选中保留（可原地重试）", async () => {
+    const el = await mountEl();
+    const probe = el as unknown as {
+      _executeTreeMove(paths: string[], targetDir: string): Promise<void>;
+    };
+    el.selectState.keys.add("/repo/a.ysm");
+    el.selectState.keys.add("/repo/b.ysm");
+    el.selectState.lastKey = "/repo/a.ysm";
+    (bindings.MoveModelFile as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("disk full"));
+
+    await probe._executeTreeMove(["/repo/a.ysm", "/repo/b.ysm"], "sub");
+
+    expect(el.selectState.keys.size, "全失败不得清选中").toBe(2);
+    expect(el.selectState.lastKey, "全失败不得清 lastKey").toBe("/repo/a.ysm");
+    expect(getToast()).toMatchObject({ type: "warn" });
   });
 
   it("modalConfirm 取消 → 不删除、选中保留", async () => {

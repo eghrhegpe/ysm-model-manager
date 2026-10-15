@@ -134,8 +134,13 @@ async function runBatchRename(
         onProgress,
       ),
   );
-  vm.selectState.keys.clear();
-  vm.selectState.lastKey = null;
+  // 连坐守卫：全失败 → 磁盘上一个路径都没变 → 选中集仍全有效，清空只会让用户丢掉重试起点
+  // （与 _deleteSelected/_executeTreeMove 同口径，2026-10-15 审核统一）。部分失败仍清：
+  // 成功改名的旧路径已不存在，残留选中指向幽灵路径才是真危险。
+  if (r.fulfilled.length > 0) {
+    vm.selectState.keys.clear();
+    vm.selectState.lastKey = null;
+  }
   await reload(vm);
   bus.emit("stats:refresh");
   toast(
@@ -247,8 +252,12 @@ async function atBeHandleDirRecycle(vm: AppTree, dir: string): Promise<void> {
         dbg("tree-remove-dir-failed", { dir: absDir, error: String(ex) });
       }
     }
-    vm.selectState.keys.clear();
-    vm.selectState.lastKey = null;
+    // 连坐守卫：全回收失败 → 文件全还在磁盘上 → 选中集仍全有效，清空只丢重试起点。
+    // 部分失败仍清：已入回收站的文件路径不再存在。与 _deleteSelected 同口径。
+    if (r.fulfilled.length > 0) {
+      vm.selectState.keys.clear();
+      vm.selectState.lastKey = null;
+    }
     await reload(vm);
     bus.emit("stats:refresh");
     const suffix = errors.length

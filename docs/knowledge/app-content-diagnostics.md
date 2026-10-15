@@ -69,6 +69,7 @@ auto_fields:
     - PerfMatrixSpec
     - PerfOrder
     - perfScopeHint
+    - perfTableHead
     - PerfTargetChoice
     - PerfTargetEcho
     - perfTargetEchoHTML

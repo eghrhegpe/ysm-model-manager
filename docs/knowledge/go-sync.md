@@ -10,6 +10,7 @@ adr:
   - ADR-342
   - ADR-344
   - ADR-345
+  - ADR-347
 category: go
 source_files:
   - go/sync/sync.go
@@ -21,6 +22,7 @@ source_files:
   - go/sync/sync_relink.go
   - go/sync/conflict.go
   - go/sync/sync_cache.go
+  - go/sync/verdict.go
   - go/fsutil/hardlink_windows.go
   - go/fsutil/hardlink_other.go
 auto_fields:
@@ -29,6 +31,7 @@ auto_fields:
     - ConflictReport
     - ConflictSizeMismatch
     - ConflictType
+    - ContentVerdict
     - DetectConflicts
     - DiffEntry
     - ErrPartialSync
@@ -56,6 +59,11 @@ auto_fields:
     - ScanFunc
     - SyncCustomToRepo
     - SyncToggleStatus
+    - VerdictChannelFold
+    - VerdictChannelHash
+    - VerdictChannelNone
+    - VerdictChannelOversize
+    - VerdictChannelSize
 quick_groups:
   - 模型扫描与仓库管理
 quick_intents:
@@ -79,6 +87,7 @@ perf:
 invariant_anchors:
   - go/sync/sync.go|fsutil.IsRecycleDir
   - go/sync/sync_relink.go|installer.CopyFile
+  - go/sync/verdict.go|ContentVerdict
 status: active
 ---
 
@@ -100,13 +109,15 @@ status: active
 ## 对外 API / 入口
 
 - **实例状态对比（旧链）已退役（ADR-310，2026-09）**：`GetInstanceStatus` / `GetInstanceStatusWith` / `compareHashMode` / `compareRelKeyMode` / `buildRepoIndex` / `resolveInstanceScanDir` / `repoIndex` / `ListVersionsFunc` 全部删除——侧栏计数改走面板链薄入口 `go/instance.BuildInstanceStatusCounts`（折 `BuildSyncItems` 产物），`internal/app` 的 `GetInstanceStatus` / `GetResourceInstanceStatus` 绑定签名不变、内部换线。本包仍保留 `SyncResources` / `SyncResourcesDirLevel*` / `ResourceDiff`（面板链的地基）与 `ListVersions`（实例发现）。
+  > ⚠️ **同名歧义防坑**：本包 `sync_push.go` 内另有 `buildRepoIndex` / `copyCustomEntryToRepo` 两个顶层函数，是 `SyncCustomToRepo` 的**本地 helper（仍在用）**，与上述旧链同名函数**同名不同义**——勿因本行「已退役」误删活代码。grep 消费者：`SyncCustomToRepo`（sync_push.go:393-397）调用二者。
 - `SyncToggleStatus(instanceCustomDir, repoRoot string, scanFn ScanFunc) (int, int, error)` — 把仓库的启禁状态同步到实例（**文件级**：relKey 相对路径 → 哈希 → 纯文件名三级匹配——末级正常布局不可达，见「已知限制」条；重命名加/去 `.disabled`；**目录级**：见下条不变量），返回禁用数、启用数
 - `ListVersions(mcRoot string) []types.VersionInstance` — 枚举实例，三种布局：目录本身是 instances（子目录含 `.minecraft`/`minecraft`）、PrismLauncher `{mcRoot}/instances/{name}/.minecraft/`、标准 `{mcRoot}/versions/{name}/`
 - `HasDotMinecraftSubdirs(path string) bool` / `FindMinecraftDir(parentDir string) string` — 实例布局探测辅助
 - `SyncResources(globalDir, instanceDir string, rtype ...string) types.ResourceSyncResult` — **ADR-064 阶段二：全树递归 + 相对路径（relKey）对比**全局 ↔ 整合包资源；嵌套文件天然区分、无同名冲突，原「只扫顶层」深度守卫已取消。含 `pack.mcmeta` 的文件夹作为整体单元（仅资源包类型收集）；过滤/归一化统一走 `types.IsResourceAllowed` / `types.NormalizeResourceName`，归并走 `ResourceDiff`（sync_diff.go）。薄壳转发 `SyncResourcesWithConfig` 且 `scanFn=nil`（恒无哈希、回退 Size）
 - `SyncResourcesWithConfig(globalDir, instanceDir string, config *types.SyncConfig, scanFn ScanFunc, rtype ...string) types.ResourceSyncResult` — 带冲突策略 + **内容级哈希**的完整入口（D2′-a / ADR-269）。`scanFn` 提供 scanner 已缓存化的文件哈希，`collect` 以 `relKey(rootDir, e.Path)` 同源键旁挂到 `DiffEntry.Hash`，让 `ResourceDiff` 对**同大小异内容**的资源包文件判出 Missing（盲区1）。scanFn 命中 scanner 30s 缓存、哈希在其侧并行预算内——不在 sync 热路径 / `InstallLock` 下现算（不触 hashlock 红线）。传 nil（push/pull 及旧调用）→ 条目恒无哈希 → 行为与 Size-only 现状完全一致。生产入口 `internal/app.App.SyncResources` 注入 `a.scanModelEntries`
 - `SyncResourcesDirLevel(globalDir, instanceDir, rtype string)` / 优化版 `SyncResourcesDirLevelScan(globalDir, instanceDir, rtype string, scanFn ScanEntriesFn)` — 按文件夹名对比（YSM 的 ysm.json 文件夹 / MMD 的 .pmx/.pmd 文件夹 / 蓝图 .nbt 文件夹），同名时文件夹优先于平铺文件。`SyncResourcesDirLevel` 走 filepath.Walk（测试/旧调用方，行为不变）；`SyncResourcesDirLevelScan` 注入 scanner 已缓存扫描结果，命中时从 ModelEntry 列表反推同步条目（无嵌套模式类型 MMD/YSM 与原 Walk 精确等价；含嵌套模式 maid-model 回退 Walk），消除 8 个 MMD 子类型 ×(1+N 整合包) 对同一仓库树的重复 Walk。**单元带内容字段并复用 `ResourceDiff` 做内容级判定（ADR-344 D1）**：平铺文件单元两侧同格式时比哈希（scan 信道）/ Size（Walk 信道），仓库侧改过内容的平铺 `.ysm` 不再被判 Synced；目录单元仍为存在性语义（见不变量「dirLevel 单元判定分两层」）。**结果携 `Warnings` 诊断信道（2026-10-14 fail-loud 裁定，非四桶判定成员）**：dirLevel 键碰撞（同级同身份不同扩展名文件共存、last-write-wins 覆盖事件）经 `sync_dirlevel_sync.go|upsertDirLevelUnit` 逐条点名（被覆盖方 + 覆盖方），汇入 `ResourceSyncResult.Warnings` 并落日志；零碰撞恒空（`omitempty` 保持旧 JSON 载荷洁净）。**缓存命中同样返回**（2026-10-15 P0 面板接线：碰撞清单随 `dirLevelCacheValue` 与单元表同存，诊断信道跨 30s TTL 稳定；回归 `TestSyncResultsDirLevelScan_CacheHitCarriesCollisions`）；**日志只在首次新计算时打一次**（缓存命中不重打，防 TTL 窗口内反复刷新刷屏——`collectEntries` 返回 fresh 标志，仅 fresh 侧落日志，Warnings 两种情况都挂）。仓库级孪生/同键碰撞的常驻可见 = 体检页告警（`go/repoaudit` 键碰撞双检测器，2026-10-15 面板接线）
-- `ResourceDiff(global, instance map[string]DiffEntry) types.ResourceSyncResult` — **单点对比归并**（sync_diff.go，ADR-064 阶段一）：内容判定统一走 `contentDiffers`——两侧均带哈希则比哈希（哈希不同→Missing 待更新，捕获同大小异内容），任一侧无哈希则回退比大小（D2′-a / ADR-269）；同名内容一致 Synced / 仅单侧 Extra，结果排序确定性；**两侧同键而内容不同时同时进 `Missing` 与新增 `Diverged`**（ADR-340-d2：Diverged 是 Missing 的**子集**而非第四桶——把「待推送更新」与「仅全局有」被合并掉的那一维补回来，供面板分状态、侧栏如实报「覆盖了 N 处实例侧手改」）；`SyncResources` 消费，key 由调用方决定（统一为 `relKey` 相对路径）。注：`CompareGlobalInstanceHashes`（旧非 YSM 实例状态对比）已随死代码清理删除；实例状态对比的**侧栏消费端**（旧 `GetInstanceStatusWith` 哈希/relKey 双模集合运算）亦于 ADR-310 退役，统一折面板链产物（见上「实例状态对比（旧链）已退役」条）
+- `ResourceDiff(global, instance map[string]DiffEntry) types.ResourceSyncResult` — **单点对比归并**（sync_diff.go，ADR-064 阶段一）：内容判定统一走判定表 `verdict.go|ContentVerdict`（ADR-347）——两侧均带哈希则比哈希（哈希不同→Missing 待更新，捕获同大小异内容），任一侧无哈希则回退比大小（D2′-a / ADR-269）；同名内容一致 Synced / 仅单侧 Extra，结果排序确定性；**两侧同键而内容不同时同时进 `Missing` 与新增 `Diverged`**（ADR-340-d2：Diverged 是 Missing 的**子集**而非第四桶——把「待推送更新」与「仅全局有」被合并掉的那一维补回来，供面板分状态、侧栏如实报「覆盖了 N 处实例侧手改」）；`SyncResources` 消费，key 由调用方决定（统一为 `relKey` 相对路径）。注：`CompareGlobalInstanceHashes`（旧非 YSM 实例状态对比）已随死代码清理删除；实例状态对比的**侧栏消费端**（旧 `GetInstanceStatusWith` 哈希/relKey 双模集合运算）亦于 ADR-310 退役，统一折面板链产物（见上「实例状态对比（旧链）已退役」条）
+- `ContentVerdict(g, i DiffEntry) (differs bool, channel string)` — **内容判定单点（ADR-347 D1/D4，verdict.go）**：两侧同键条目内容是否不同 + 实际所用判定信道（`VerdictChannelFold/Hash/Oversize/Size/None` 五常量）。规则单源：目录比折叠指纹（双有）→ 双有哈希比哈希 → 任一侧 Oversize 保守判「可能不同」→ 回退比 Size；分支序 = 信道优先级（IsDir 先于 Oversize）。**全信道语义锁 = `verdict_matrix_test.go`**（A 文件级 9 行 / B 目录 4 行 / C dirLevel 4 行 / D 夹内逐文件 4 行，2026-10-15 先打旧实现钉基线、重构后复跑全绿）；**新增信道 = 加判定输入字段 + 信道常量 + 矩阵加一行**（签名层面挡静默退化）。旧两份同义实现（sync_diff.go|contentDiffers、diffFolderContentsCore 的 contentStatus 闭包）已删——「加信道要人肉核对每份实现」的假绿温床（ADR-344 D1 先例）结构性消除
 - `GetLinkType(path string) types.LinkType` — 判定 `symlink` / `hardlink` / `copy` / `unknown`
 - `PushResources(rtype, globalDir, targetDir, linkMode string, logger Logger) (int, error)` — 推送缺失资源；**`types.IsDirLevelSync(rtype)` 注册表驱动**（YSM/MMD 等 `dirLevelSync` 类型）走文件夹级（`SyncResourcesDirLevel` + `installer.InstallDir`），其余走文件级（`SyncResources` + `installer.Install`）；部分失败返回 `ErrPartialSync`（2026-09-05 锐评 P1 刀加 sentinel，调用方可 `errors.Is(err, ErrPartialSync)` 区分「前置不满足」vs「可重试部分失败」）。dirLevel 清单先过 `dropAncestorUnits`（ADR-344 D4）
 - `PullResources(rtype, globalDir, targetDir string, logger Logger) types.PullSyncResult` — 把实例侧 Extra 拉回仓库（纯复制，不建链接）；返回**结构化结果** `{OK, Failed, FirstError}`（ADR-340-d1：**不再用 `(int, error)`**——绑定层以 reject 交付 error 时会丢掉成功计数，侧栏曾因此谎报「拉取 0 个文件，N 个失败」）；无 error 返回值（本函数没有可前置失败的路径），dirLevel 类型先过 `dropAncestorUnits`（与推送侧对称）
@@ -136,7 +147,7 @@ status: active
 - **所有扫描路径都必须排除 `.recycle`**，与 `scanner.ScanEntries` 口径对齐，两条判据同族：**目录侧** `fsutil.IsRecycleDir` SkipDir（`SyncResources` collect 的 `handleDir`、`SyncResourcesDirLevel` 的 `collectEntries`、`collectFolderFiles`），**文件侧逐段** `sync_resource.go|hasRecycleSegment`（段名 `EqualFold(".recycle")`，覆盖 walk 进入子树后列出的文件、且不误伤文件名含该串的正常模型如 `my.recycle.backup.ysm`——`SyncToggleStatus` 的 `collectToggleFileInfos` 与 `hasDisabledDirCarrier` 用此；原 `strings.Contains(strings.ToLower(p), ".recycle")` 整串匹配已收敛为该逐段判据）——漏排会把回收站里的模型当成仓库活跃模型，同步管理器显示 missing 且可被推送回实例（回归 `TestSyncResources_IgnoresRecycleDir`、`TestHasRecycleSegment`、`TestSyncToggleStatus_RecycleSubtreeSkipped`）
 - 跳过回收站时带 `path != 根目录` 守卫：若用户把仓库根/实例根本身命名为 `.recycle` 则不跳过，否则整次扫描会直接空掉
 - 实例状态对比类入口现居 `go/instance.BuildInstanceStatusCounts`（面板链 fold），本包不再自带实例级集合运算；`.recycle` 的排除仍由注入的 scanFn（`scanner.ScanEntries*`）与被面板链复用的 `SyncResources*` 承担——换用不排 `.recycle` 的 scanFn 会重新引入误判
-- `SyncResources` 对比 key 为**相对路径**（`relKey`：小写 + 正斜杠 + 去 `.disabled`/`.ban`，ADR-064 阶段二）；同名文件**内容判定走哈希优先、Size 兜底**（D2′-a / ADR-269，归一在 `contentDiffers`，sync_diff.go）：两侧均带 scanner 哈希时比哈希——捕获「同大小但内容已变」的资源包文件（旧盲区1，纯 Size 会漏判 Synced），任一侧无哈希分两种——`DiffEntry.Oversize`（collect 按 `info.Size() > MaxImportSize` 置位，即 >500MB 被刻意跳过哈希）保守判「可能不同」→ Missing（P0-2 诚实化：同尺寸不足以证明内容一致，不再谎报 Synced）；其余空哈希（非 hashable 扩展 / `scanFn=nil` 的 push/pull/旧调用）仍回退比大小（复制会改 mtime 不可靠，故不用 mtime）。目录条目走**结构折叠指纹对比**（D2′-b / ADR-269，机制全文归 leaf 卡 [go-sync-resource-diff](./go-sync-resource-diff.md) 不变量「pack 目录折叠指纹」条）：两侧均带 `FoldDigest` 则比指纹、异指纹→Missing，任一侧无指纹（未折叠/旧数据）回退恒一致（不回归）。三个结果列表返回前均 `sort.Strings` 排序
+- `SyncResources` 对比 key 为**相对路径**（`relKey`：小写 + 正斜杠 + 去 `.disabled`/`.ban`，ADR-064 阶段二）；同名文件**内容判定走哈希优先、Size 兜底**（D2′-a / ADR-269，归一在判定表 `ContentVerdict`，verdict.go，ADR-347 单点）：两侧均带 scanner 哈希时比哈希——捕获「同大小但内容已变」的资源包文件（旧盲区1，纯 Size 会漏判 Synced），任一侧无哈希分两种——`DiffEntry.Oversize`（collect 按 `info.Size() > MaxImportSize` 置位，即 >500MB 被刻意跳过哈希）保守判「可能不同」→ Missing（P0-2 诚实化：同尺寸不足以证明内容一致，不再谎报 Synced）；其余空哈希（非 hashable 扩展 / `scanFn=nil` 的 push/pull/旧调用）仍回退比大小（复制会改 mtime 不可靠，故不用 mtime）。目录条目走**结构折叠指纹对比**（D2′-b / ADR-269，机制全文归 leaf 卡 [go-sync-resource-diff](./go-sync-resource-diff.md) 不变量「pack 目录折叠指纹」条）：两侧均带 `FoldDigest` 则比指纹、异指纹→Missing，任一侧无指纹（未折叠/旧数据）回退恒一致（不回归）。三个结果列表返回前均 `sort.Strings` 排序
 - 扩展名过滤统一走 `types.IsResourceAllowed`（`types.AllExts()` + `.json` 仅 `ysm.json`）与 `packs.IsTypeModelFile`（单类型扩展集 + `ysm.json`，ADR-144 下沉），原 `isSyncAllowed` / `isModelFile` / `instance.extMatch` 三处同义实现已收敛（ADR-064 阶段一）
 - **`SyncResourcesDirLevel` 容器 vs 叶子模型夹判定**（`collectEntries`，sync_dirlevel.go）：目录被 `isDirTypeModelFolder` 判真（直接含 .ysm/.ysm.json）后，若还直接含子模型文件夹（`containsModelSubfolder` 为真），则是「容器」而非「叶子模型夹」——**不下钻整体收编 SkipDir**，而继续下钻保留各子夹层级，由 `go/instance` 的 `nestDirLevelTree` 重建容器树。收发场景：`嵌套1/` 内含直接平铺 `动力臂.ysm` + `01_taisho_maid/` + `嵌套2/` 深层子夹，若被整体收编会把子夹层级吞掉，前端退化成摊平的 `01_taisho_maid/ysm.json` 文件行（违背仓库层级镜像）；只有「叶子模型夹」（含模型文件但无子模型夹）才 SkipDir 收编为单同步单元。**注意：容器下钻时还会把「自身」也登记成一条目录条目**（`entries[relKeyDirLevel(rootDir, path, true)] = path`，即**目录 marker**）——目的是与对侧（pre-fix 安装）同名叶子目录的键集一致，避免键集不相交产生幻影 Missing+Extra。这条 marker 落到展示层会渲染成「同名目录嵌在自己里面」（实测 `2.大学学姐 > 2.大学学姐`），须由 `go/instance` 的 `absorbSelfMarker` 按 Path 相等合并掉（见 [go-instance](./go-instance.md)）
 - **目录级启禁同步 ADR-345 D1–D4（载体识别）** → 深挖归 leaf 卡 [go-sync-toggle](./go-sync-toggle.md)（枢纽只留不变量摘要：真值取文件系统不取 scanner 索引——禁用夹被 scanner SkipDir，载体目录须作候选且 `DisabledTwinForms` 双形态**恰好一侧存在**才改名、并存真 no-op；实例侧 `DisabledAncestorPath` 祖先链载体基准 diff，`installDirUnitLocked` 目标链探测命中即拒绝；`relKeyDirLevel` 逐段剥禁用后缀）
@@ -173,6 +184,8 @@ status: active
 - `2026-10-14`：dirLevel 同键纯文件/文件碰撞（同级同身份不同扩展名共存）治理为 fail-loud：collect 层 upsertDirLevelUnit 记录 last-write-wins 覆盖事件（两侧 Rel 点名）→ syncResourcesDirLevel 汇入 ResourceSyncResult.Warnings（omitempty 诊断信道，不影响四桶判定）并分侧落日志；匹配语义（跨格式同身份归一）不动｜原实现在覆盖方静默消失——同步面板从此看不见被丢的物理模型；用户裁定方向为可见性而非改键语义（跨格式同身份是设计语义）｜回退 = `go/sync/sync_dirlevel_sync.go|upsertDirLevelUnit`
 - `2026-10-14`：**`SyncToggleStatus` 阶段 1 移出 `InstallLock`（锐评 ②，锁范围与 `RelinkDir` 对齐）**——`collectToggleRepoIndex` 原在临界区内做仓库全量扫描（scanFn 含 SHA256 哈希）+ 索引构建 + 禁用载体 Walk + 实例目录 Walk，四步全是纯读、持锁却不保护任何写操作；而 scanFn 在 scanner 缓存冷启动时整段走盘，watcher 触发的 syncAll 恰是冷启动路径（文件变更后 scanner 缓存刚失效，下一次 toggle 必冷扫）→ 持锁期间阻塞所有并发同步/安装/推送。现：阶段 1 与阶段 2（哈希）均锁外，仅阶段 3+4（计划 + rename 操作段）持锁，与 `RelinkDir` 既有范式对齐（其注释明写「持锁执行会阻塞所有其他同步/安装操作」）。TOCTOU 容忍：索引快照到执行之间目录可能被外部改动，但 `planToggleRenames` 执行前对目标 os.Stat 预检、`applyToggleRenames` 的 rename 失败即计入 failures 随 error 返回——不会静默搬错对象（相对 `RelinkDir` 的 dstSnapshots 身份复验粒度更弱，但 rename 本身原子，同风险模型已被同包接受）｜**不改签名、不改匹配语义、不改计数语义**，对外契约零变化，仅锁范围收窄｜回归锁 `go/sync/sync_toggle_lockscope_test.go|TestSyncToggleStatus_ScanNotHeldLock`（探针 `IsLocked()`；另设两道防空转/防退化断言：scanFn 未被调用即 fail、`LockTracker` 类型断言失败即 fail）｜回退 = `go/sync/sync.go|collectToggleRepoIndex`
 - `2026-10-14`：**basename 兜底误伤面被实证为不可达，裁定不改代码（锐评 ③）**——原观察项称「三级匹配最后一级是 basename，同名不同路径的不同模型会被互相匹配启禁状态，新仓库数据齐全时该兜底应可收紧」，实为静态阅读的推断而非实证。实证推翻：basename 兜底查 `repoName[纯文件名]`，而 `collectToggleRepoIndex` 只在仓库条目 `e.Path` 越出 filesRoot 前缀时才写纯文件名键——正常仓库布局下纯文件名键恒不存在，兜底恒 miss，误伤面不可达。且收紧的收益为负：该兜底是异构 scanFn 注入越界条目的**唯一**关联通道，砍掉即断该路径。原观察项还写错了匹配顺序（实为 relKey → hash → basename，非「哈希 → 相对路径 → 纯文件名」）｜**产出：实证锁 + 文档修正，零代码变更**——`go/sync/sync_toggle_basename_reach_test.go` 三例闭环（正常布局不命中 / 越界布局命中 / `repoName` 键形态直断言无纯文件名键），与既有 `TestChar_SyncToggleStatus_RepoOutsideFilesRoot_BaseNameFallback` 反向互证；两张知识卡的顺序描述与「观察项」一并修正｜教训：观察项若只凭代码推断而不实证，会把「条件不可达的兜底」误记为「待收紧的误伤面」，导致下一轮读者误判收益
+
+- `2026-10-15`：**锐评「整合包同步功能改进」四项中三项被代码实证证伪，裁定零代码变更（仅固化为本记录）**——对同步功能做改进锐评后逐项实证：①「同步缓存 key 不含 `hashed` 维度」已证伪——`sync_cache.go|syncDirectoryScanKey` 自 ADR-269/ADR-344 起已含 `hashed bool` 字段，`collectResourceEntries`（`sync_resource.go:160`）与 `dirLevelCacheKey`（`sync_dirlevel_sync.go:49`）均按 `scanFn != nil` 正确赋值，测试 `TestSyncResourcesWithConfig_HashDetectsContentChange` 锁死；②「中间状态 `_reload` 去重」已证伪——`app-sidebar/index.ts|_reload` 已有 300ms 防抖 + `_reloadInFlight` 单飞 + `_reloadPending` 尾随补跑 + 代际守卫 `_guard` + `app-sidebar.component.test.ts` 守护；③「repo audit 大小写孪生升阻塞级」裁定不改——`caseSiblingWarnings` 属只读分析层，升级阻塞级越界其职责，且 Windows 主战场物理无法创建孪生（零误报、覆盖面窄），维持诊断信道 Warnings + 另立 ADR 路径。④「同步面板变更明细」为真实 UX 空白但非缺陷，留作 UX 议题。教训：对高强度锐评修复后的成熟模块，先做代码实证再下「待改进」结论，避免把已落地的不变量误记为缺口（与 2026-10-14 basename 兜底同型）
 
 ## 深挖拆分索引（2026-10-14 P1a）
 

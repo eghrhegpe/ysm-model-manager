@@ -362,6 +362,8 @@ export const ja: Record<string, string> = {
   "oldest.statsFailed": "統計の読み込みに失敗しました",
   "dedup.sha256Hint": "SHA256 ハッシュでグループ化し、各グループから1つを残して残りをごみ箱へ移動",
   "dedup.startDedup": "重複削除を開始",
+  "dedup.idleScanHint":
+    "未スキャン：上の「重複削除を開始」を押すと、重複グループがここに表示されます",
 
   // ── Modpack Instances ──
   "instances.tab.versions": "バージョン一覧",
@@ -1064,6 +1066,11 @@ export const ja: Record<string, string> = {
   "diagnostics.keepAll": "すべて保持（削除しない）",
   "diagnostics.deleteUnselected": "選択されていない重複ファイルを削除",
   "diagnostics.dedupCancelled": "重複削除をキャンセルしました",
+  "diagnostics.dedupConfirmDelete": "{n} 件のファイルを削除しますか",
+  "diagnostics.dedupConfirmHint":
+    "もう一度クリックで削除実行（ごみ箱へ移動）。{s} 秒間操作がない場合は自動解除",
+  "diagnostics.dedupNothingToDelete":
+    "削除できるファイルがありません（各グループで保持を選択済み）",
   "diagnostics.dedupDone": "重複削除完了：{del} 個をごみ箱へ移動、{fail} 個失敗",
   "diagnostics.dedupFailed": "重複削除に失敗しました",
   "diagnostics.dedupStrategy": "重複検出戦略",

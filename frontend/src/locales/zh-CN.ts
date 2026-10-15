@@ -358,6 +358,7 @@ export const zhCN = {
   "oldest.statsFailed": "统计加载失败",
   "dedup.sha256Hint": "按 SHA256 哈希分组，每组只保留一个，其余移入回收站",
   "dedup.startDedup": "开始去重",
+  "dedup.idleScanHint": "尚未扫描：点上方「开始去重」后，重复分组结果会显示在这里",
 
   // ── 整合包实例 ──
   "instances.tab.versions": "版本列表",
@@ -1042,6 +1043,9 @@ export const zhCN = {
   "diagnostics.keepAll": "保留全部（不删除）",
   "diagnostics.deleteUnselected": "删除未选中的重复文件",
   "diagnostics.dedupCancelled": "已取消去重",
+  "diagnostics.dedupConfirmDelete": "确认删除 {n} 个文件",
+  "diagnostics.dedupConfirmHint": "再次点击执行删除（移入回收站）；{s} 秒内无操作自动解除",
+  "diagnostics.dedupNothingToDelete": "没有可删除的文件：各组都选择了保留",
   "diagnostics.dedupDone": "去重完成：移入回收站 {del} 个，失败 {fail} 个",
   "diagnostics.dedupFailed": "去重失败",
   "diagnostics.dedupStrategy": "去重策略",

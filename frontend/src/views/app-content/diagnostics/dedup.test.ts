@@ -4,7 +4,7 @@
 // 会话工厂特性：每测试新开会话，状态互不串扰。
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { waitFor } from "@/test-utils/index.ts";
-import { createDedupSession, dedupSelectedIndex } from "./dedup.ts";
+import { createDedupSession, DEDUP_CONFIRM_MS, dedupSelectedIndex } from "./dedup.ts";
 import { getDefaultKeepIdx } from "./dedup-policy.ts";
 
 const { busEmit, getApp } = vi.hoisted(() => ({
@@ -50,6 +50,18 @@ vi.mock("@/backend/app.ts", () => ({ getApp }));
 
 import { escUnknown as esc } from "@/utils/html/html.ts";
 
+/**
+ * 走完二次确认：首次点击武装、再次点击执行。
+ *
+ * 2026-10-14 起 exec 是**两段式**（锐评 P1「破坏性操作无二次确认」）——所有「点一下就该
+ * 删掉」的既有用例都必须经此辅助，否则断言的是旧契约。集中一处也避免各测试各写两遍 click。
+ */
+function confirmExec(list: HTMLElement): void {
+  const btn = list.querySelector<HTMLElement>("#diag-dedup-exec");
+  btn?.click(); // ① 武装
+  btn?.click(); // ② 执行
+}
+
 beforeEach(() => {
   vi.resetAllMocks();
   // 锐评 UX #4 收口：config 持久化到 localStorage——每测试需干净起点，否则前一测试
@@ -67,8 +79,8 @@ const groupJson = [
   },
 ];
 
-describe("createDedupSession — exec 重入守卫", () => {
-  it("exec 并发双击：busy 期间第二次早退，单组仅删一次", async () => {
+describe("createDedupSession — exec 二次确认 + 重入守卫", () => {
+  it("首次点击只武装不删；二次点击才执行；执行期间的点击被忽略", async () => {
     const resolvers: (() => void)[] = [];
     const moveFn = vi.fn(
       (_p: string) =>
@@ -87,19 +99,135 @@ describe("createDedupSession — exec 重入守卫", () => {
     await waitFor(() => list.querySelector("#diag-dedup-exec"));
     const execBtn = list.querySelector("#diag-dedup-exec") as HTMLElement;
 
-    // 首次点击挂起在 MoveToRecycle（execBusy 已置位）；第二次同步点击必命中守卫早退
+    // ① 首次点击：只武装，**不删任何文件**（旧实现此刻就开删——这条断言是那笔账的墓碑）
     execBtn.click();
-    execBtn.click();
+    expect(moveFn).not.toHaveBeenCalled();
+    expect(execBtn.dataset.armed).toBe("1");
+    // 武装文案报出真实将删数量（1 个 = 两组文件组默认 oldest 保留 A 删 B）
+    expect(execBtn.textContent).toContain("确认删除 1 个文件");
+    // 图标仍在（换文案只动标签槽，不整钮重写）
+    expect(execBtn.querySelector("svg")).toBeTruthy();
 
-    // 首次点击删了 1 个文件（B）；守卫生效时第二次不产生新删除
+    // ② 二次点击：执行（挂起在 MoveToRecycle）；③ 执行期间第三次点击被忽略（不重新武装）
+    execBtn.click();
+    execBtn.click();
     expect(moveFn).toHaveBeenCalledTimes(1);
     expect(moveFn).toHaveBeenCalledWith("/b/2.ysm");
+    // 执行前已解除武装：不残留「再点一下就删」的状态，文案回到初始值
+    expect(execBtn.dataset.armed).toBeUndefined();
+    expect(execBtn.textContent).toContain("删除未选中的重复文件");
 
     // 放行挂起点，让首次点击完成收尾
     resolvers.shift()?.();
     await waitFor(() => list.textContent!.includes("去重完成"));
     expect(busEmit).toHaveBeenCalledWith("stats:refresh");
     expect(busEmit).toHaveBeenCalledWith("tree:reload");
+  });
+
+  it("武装态超时自动解除：窗口过后再点只重新武装、不删除", async () => {
+    const moveFn = vi.fn(async () => {});
+    getApp.mockResolvedValue({
+      GetRepoRoot: vi.fn(() => "/repo"),
+      FindDuplicateFiles: vi.fn(() => groupJson),
+      MoveToRecycle: moveFn,
+    });
+    const dedup = createDedupSession();
+    const list = document.createElement("div");
+    // ⚠️ 必须入文档：武装定时器的回调带 `btn.isConnected` 守卫（分离即作废，防写游离节点），
+    // 游离夹具会让守卫拦下解除动作——测的就不是产品行为了（同 conflicts.test.ts 的 list 入文档惯例）。
+    document.body.appendChild(list);
+    // ⚠️ 假时钟必须在 start 之后再装：扫描链路依赖定时器/微任务，先装会让 start 永不落定
+    // （测试超时 → finally 不执行 → 假时钟泄漏，同文件后续用例连带全红，实测踩到）。
+    await dedup.start(list, esc, "ysm");
+    const execBtn = list.querySelector("#diag-dedup-exec") as HTMLElement;
+
+    vi.useFakeTimers();
+    try {
+      execBtn.click(); // 武装
+      expect(execBtn.dataset.armed).toBe("1");
+      await vi.advanceTimersByTimeAsync(DEDUP_CONFIRM_MS); // 窗口过期
+      expect(execBtn.dataset.armed).toBeUndefined();
+      expect(execBtn.textContent).toContain("删除未选中的重复文件");
+
+      execBtn.click(); // 超时后这一下只是重新武装
+      expect(moveFn).not.toHaveBeenCalled();
+      expect(execBtn.dataset.armed).toBe("1");
+    } finally {
+      vi.useRealTimers();
+      document.body.removeChild(list);
+    }
+  });
+
+  it("取消（清空结果区）后武装态随之消失，不残留可删入口", async () => {
+    const moveFn = vi.fn(async () => {});
+    getApp.mockResolvedValue({
+      GetRepoRoot: vi.fn(() => "/repo"),
+      FindDuplicateFiles: vi.fn(() => groupJson),
+      MoveToRecycle: moveFn,
+    });
+    const dedup = createDedupSession();
+    const list = document.createElement("div");
+    await dedup.start(list, esc, "ysm");
+    const execBtn = list.querySelector("#diag-dedup-exec") as HTMLElement;
+    execBtn.click(); // 武装
+    expect(execBtn.dataset.armed).toBe("1");
+
+    (list.querySelector("#diag-dedup-cancel") as HTMLElement).click(); // 取消 = 清空结果区
+    expect(list.querySelector("#diag-dedup-exec")).toBeNull();
+    expect(moveFn).not.toHaveBeenCalled();
+  });
+
+  it("全部组选保留全部 → 不武装、不删除，只回一行说明", async () => {
+    const moveFn = vi.fn(async () => {});
+    getApp.mockResolvedValue({
+      GetRepoRoot: vi.fn(() => "/repo"),
+      FindDuplicateFiles: vi.fn(() => groupJson),
+      MoveToRecycle: moveFn,
+    });
+    const dedup = createDedupSession();
+    const list = document.createElement("div");
+    await dedup.start(list, esc, "ysm");
+    const group = list.querySelector<HTMLElement>(".diag-dedup-group")!;
+    group.querySelector<HTMLInputElement>('input[type="radio"][value="-1"]')!.checked = true;
+
+    (list.querySelector("#diag-dedup-exec") as HTMLElement).click();
+    // 计划为空：不进入「确认删除 0 个文件」的荒谬态，也不删任何文件
+    const execBtn = list.querySelector("#diag-dedup-exec") as HTMLElement;
+    expect(execBtn.dataset.armed).toBeUndefined();
+    expect(moveFn).not.toHaveBeenCalled();
+    expect(list.textContent).toContain("没有可删除的文件");
+  });
+
+  it("预览计数与实际删除同源：报 2 个就真删这 2 个（防「说删 N 实际删 M」）", async () => {
+    const moveFn = vi.fn(async () => {});
+    const threeGroups = [1, 2, 3].map((i) => ({
+      files: [
+        { path: `/g${i}/keep.ysm`, name: "keep.ysm", size: 100, modTime: 1000 },
+        { path: `/g${i}/drop.ysm`, name: "drop.ysm", size: 200, modTime: 2000 },
+      ],
+    }));
+    getApp.mockResolvedValue({
+      GetRepoRoot: vi.fn(() => "/repo"),
+      FindDuplicateFiles: vi.fn(() => threeGroups),
+      MoveToRecycle: moveFn,
+    });
+    const dedup = createDedupSession();
+    const list = document.createElement("div");
+    await dedup.start(list, esc, "ysm");
+    // 组 2 改选 keep-all → 计划应剩 2 项
+    const groups = list.querySelectorAll<HTMLElement>(".diag-dedup-group");
+    groups[1]!.querySelector<HTMLInputElement>('input[type="radio"][value="-1"]')!.checked = true;
+
+    const execBtn = list.querySelector("#diag-dedup-exec") as HTMLElement;
+    execBtn.click(); // 武装
+    expect(execBtn.textContent).toContain("确认删除 2 个文件");
+
+    execBtn.click(); // 执行
+    await waitFor(() => list.textContent!.includes("去重完成"));
+    // 实际删除面 = 计划面（组 1/3 各一个；组 2 keep-all 未删）
+    // moveFn 是无参签名的 vi.fn，mock.calls 推断为空元组——经 unknown[][] 收窄取首参
+    const called = (moveFn.mock.calls as unknown as unknown[][]).map((c) => c[0]);
+    expect(called.sort()).toEqual(["/g1/drop.ysm", "/g3/drop.ysm"]);
   });
 });
 
@@ -330,7 +458,7 @@ describe("createDedupSession — exec 多组 DOM 读态（组级 :checked，非 
     )!;
     keepAll2.checked = true;
 
-    (list.querySelector("#diag-dedup-exec") as HTMLElement).click();
+    confirmExec(list);
     await waitFor(() => list.textContent!.includes("去重完成"));
     // 组 1 默认 oldest → 保留 1.ysm、删 2.ysm；组 2 keep-all → 3/4.ysm 均不删
     expect(moveFn).toHaveBeenCalledTimes(1);
@@ -359,7 +487,7 @@ describe("createDedupSession — exec 失败路径（错误样本封顶 + 条件
     const list = document.createElement("div");
     await dedup.start(list, esc, "ysm");
     await waitFor(() => list.querySelector("#diag-dedup-exec"));
-    (list.querySelector("#diag-dedup-exec") as HTMLElement).click();
+    confirmExec(list);
     await waitFor(() => list.textContent!.includes("去重完成"));
 
     // 失败不中断删除链：4 组各尝试 1 次
@@ -387,7 +515,7 @@ describe("createDedupSession — exec 失败路径（错误样本封顶 + 条件
     const list = document.createElement("div");
     await dedup.start(list, esc, "ysm");
     await waitFor(() => list.querySelector("#diag-dedup-exec"));
-    (list.querySelector("#diag-dedup-exec") as HTMLElement).click();
+    confirmExec(list);
     await waitFor(() => list.textContent!.includes("去重完成"));
 
     const text = (list.textContent ?? "").replace(/\s+/g, " ");
@@ -411,13 +539,13 @@ describe("createDedupSession — exec 失败路径（错误样本封顶 + 条件
     const list = document.createElement("div");
     await dedup.start(list, esc, "ysm");
     await waitFor(() => list.querySelector("#diag-dedup-exec"));
-    (list.querySelector("#diag-dedup-exec") as HTMLElement).click();
+    confirmExec(list);
     await waitFor(() => list.textContent!.includes("去重完成"));
     expect(moveFn).toHaveBeenCalledTimes(1);
     // 失败后 execBusy 已复位，可再次执行（同一 innerHTML 已被替换 → 重取按钮；此处直接复扫）
     await dedup.start(list, esc, "ysm");
     await waitFor(() => list.querySelector("#diag-dedup-exec"));
-    (list.querySelector("#diag-dedup-exec") as HTMLElement).click();
+    confirmExec(list);
     await waitFor(() => moveFn.mock.calls.length === 2);
   });
 });

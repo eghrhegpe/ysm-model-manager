@@ -360,6 +360,8 @@ export const en: Record<string, string> = {
   "oldest.statsFailed": "Stats failed to load",
   "dedup.sha256Hint": "Group by SHA256 hash; keep one per group and move the rest to Recycle Bin",
   "dedup.startDedup": "Start Dedup",
+  "dedup.idleScanHint":
+    "Not scanned yet — duplicate groups will appear here after you click “Start Dedup”",
 
   // ── Modpack Instances ──
   "instances.tab.versions": "Version List",
@@ -1066,6 +1068,10 @@ export const en: Record<string, string> = {
   "diagnostics.keepAll": "Keep All (don't delete)",
   "diagnostics.deleteUnselected": "Delete unselected duplicate files",
   "diagnostics.dedupCancelled": "Dedup cancelled",
+  "diagnostics.dedupConfirmDelete": "Confirm deleting {n} file(s)",
+  "diagnostics.dedupConfirmHint":
+    "Click again to delete (moved to recycle bin); auto-cancels after {s} seconds",
+  "diagnostics.dedupNothingToDelete": "Nothing to delete: every group keeps a file",
   "diagnostics.dedupDone": "Dedup complete: {del} moved to recycle bin, {fail} failed",
   "diagnostics.dedupFailed": "Dedup failed",
   "diagnostics.dedupStrategy": "Dedup Strategy",

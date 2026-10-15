@@ -29,7 +29,6 @@ import type {
   FindDuplicateFilesFn,
   GetRepoRootFn,
   MoveToRecycleFn,
-  ScanFile,
   ScanGroupResult,
 } from "./dedup-types.ts";
 import { DEDUP_DEFAULTS } from "./dedup-types.ts";
@@ -38,6 +37,11 @@ import { msgRowHTML, statRowHTML } from "./status-row.ts";
 /** 锐评 UX #4 收口：去重配置持久化 storage key（`ysm-*` 命名契约，与 WS_LAST_TAB_KEY 同范式）。
  *  值 = `DedupConfigShape` 的 JSON 字符串；隐私模式 safeSet/safeGetJSON 静默降级。 */
 export const DEDUP_CONFIG_KEY = "ysm-dedup-config";
+
+/** 二次确认武装态的存活窗口（毫秒）：窗口内无操作自动解除。
+ *  取值权衡：短到用户「切个 tab 回来」时武装态已失效（不至于一次误点即删），
+ *  长到来得及读完「确认删除 N 个文件」再决定。 */
+export const DEDUP_CONFIRM_MS = 8000;
 
 export type { DedupConfigShape } from "./dedup-types.ts";
 
@@ -64,24 +68,52 @@ export function dedupSelectedIndex(groupEl: HTMLElement | undefined): number {
 }
 
 /**
- * 单组删除：选中项保留，其余逐个 MoveToRecycle（失败不中断删除链，只计数）。
+ * 删除计划（**预览与实际删除的唯一来源**）：按渲染平铺序给出将要移入回收站的文件路径。
+ *
+ * 立因（2026-10-14 锐评 P1「破坏性操作无二次确认」）：武装态要向用户报「将删除 N 个」，
+ * 若该 N 与实际删除各算一套，就会出现「说删 3 个、实际删 5 个」——那比没有确认更坏
+ * （用户是**按这条错误信息**做的决定）。故计划只此一处，`runExecDelete` 与武装态计数同源消费。
+ *
+ * ⚠️ keep-all（`dedupSelectedIndex` 返回 -1，含缺失容器的防御分支）的组整组跳过、不进计划——
+ * 与旧逐组删除的保全口径逐字一致。
+ */
+export function dedupDeletionPlan(list: HTMLElement, allResults: ScanGroupResult[]): string[] {
+  // 组容器按渲染平铺序与 allResults 的 groups 一一对应（渲染 groupIndex 递增 = 同序）。
+  // 逐组在容器内查 :checked，替代按 name="dedup-keep-<gi>" 的全局拼串查询——
+  // 组间插入其它控件也不致错位，消除「渲染计数 gi / exec 计数 gi2」双轨对齐依赖。
+  const groupEls = Array.from(list.querySelectorAll<HTMLElement>(".diag-dedup-group"));
+  const paths: string[] = [];
+  let gi = 0;
+  for (const rtResult of allResults) {
+    for (const group of rtResult.groups) {
+      const files = group.files || [];
+      const selected = dedupSelectedIndex(groupEls[gi]);
+      gi++;
+      if (selected === -1) continue; // 该组 keep-all：整组跳过不删
+      files.forEach((f, fi) => {
+        if (fi !== selected) paths.push(f.path);
+      });
+    }
+  }
+  return paths;
+}
+
+/**
+ * 按计划逐个 MoveToRecycle（失败不中断删除链，只计数）。
  *
  * errors 为**跨组共享**数组——「失败缘由封顶 3 条」是全局口径（非每组 3 条），
  * 故由调用方传入而非本函数自建；封顶判定沿用 `errors.length < 3` 原口径。
  */
-async function dedupDeleteGroup(
-  files: ScanFile[],
-  selected: number,
+async function dedupDeletePaths(
+  paths: readonly string[],
   MoveToRecycle: MoveToRecycleFn,
   errors: string[],
 ): Promise<{ del: number; fail: number }> {
   let del = 0;
   let fail = 0;
-  if (selected === -1) return { del, fail }; // 该组 keep-all：整组跳过不删
-  for (let fi = 0; fi < files.length; fi++) {
-    if (fi === selected) continue;
+  for (const p of paths) {
     try {
-      await MoveToRecycle(files[fi].path);
+      await MoveToRecycle(p);
       del++;
     } catch (e) {
       fail++;
@@ -188,25 +220,12 @@ export function createDedupSession(): DedupSession {
       fail = 0;
     // 对接锐评⑦：失败不只报数量——保留前 3 条缘由（friendlyError 单源，esc 交渲染单点）
     const errors: string[] = [];
-    // 组容器按渲染平铺序与 allResults 的 groups 一一对应（渲染 groupIndex 递增 = 同序）。
-    // 逐组在容器内查 :checked，替代按 name="dedup-keep-<gi>" 的全局拼串查询——
-    // 组间插入其它控件也不致错位，消除「渲染计数 gi / exec 计数 gi2」双轨对齐依赖。
-    const groupEls = Array.from(list.querySelectorAll<HTMLElement>(".diag-dedup-group"));
-    let gi = 0;
+    // 删除计划走单点（与武装态预览同源）：见 dedupDeletionPlan 注释——预览与实际不得分叉。
+    const plan = dedupDeletionPlan(list, allResults);
     try {
-      for (const rtResult of allResults) {
-        for (const group of rtResult.groups) {
-          const r = await dedupDeleteGroup(
-            group.files || [],
-            dedupSelectedIndex(groupEls[gi]),
-            MoveToRecycle,
-            errors,
-          );
-          del += r.del;
-          fail += r.fail;
-          gi++;
-        }
-      }
+      const r = await dedupDeletePaths(plan, MoveToRecycle, errors);
+      del = r.del;
+      fail = r.fail;
       if (del > 0) {
         bus.emit("stats:refresh");
         bus.emit("tree:reload");
@@ -221,14 +240,73 @@ export function createDedupSession(): DedupSession {
     }
   }
 
-  // ⑤ exec 按钮绑定壳
+  /**
+   * ⑤ exec 按钮绑定：**二次武装确认**（2026-10-14 锐评 P1「破坏性操作无二次确认」）。
+   *
+   * 旧行为：单击即逐组移入回收站——一次误点可能删掉几十上百个文件（虽进回收站，但用户
+   * 事后要从一堆同名文件里挑回来，代价极高）。新行为：首次点击只**武装**（按钮文案换成
+   * 「确认删除 N 个文件」并标注已武装），再次点击才执行；`DEDUP_CONFIRM_MS` 内无操作自动
+   * 解除——武装态不会跨会话留驻（用户去干别的回来，按钮已不是「再点一下就删」的状态）。
+   *
+   * ⚠️ N 来自 `dedupDeletionPlan`（与真实删除同一份计划）；N=0（各组都选了保留全部）时
+   * **不武装**，只回一行说明——让人对着「确认删除 0 个文件」再点一次是荒谬的。
+   */
   function bindExecButton(
     list: HTMLElement,
     allResults: ScanGroupResult[],
     MoveToRecycle: MoveToRecycleFn,
     esc: EscFn,
   ): void {
-    list.querySelector("#diag-dedup-exec")?.addEventListener("click", async () => {
+    const btn = list.querySelector<HTMLButtonElement>("#diag-dedup-exec");
+    if (!btn) return;
+    const labelEl = btn.querySelector<HTMLElement>("[data-dedup-exec-label]");
+    let armed = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const paint = (text: string): void => {
+      // 只换标签槽文本：图标（SVG）与按钮节点保持不动——整钮重写会丢图标并让事件委托失效
+      if (labelEl) labelEl.textContent = text;
+    };
+    const disarm = (): void => {
+      armed = false;
+      if (timer !== undefined) clearTimeout(timer);
+      timer = undefined;
+      delete btn.dataset.armed;
+      btn.removeAttribute("aria-pressed");
+      btn.removeAttribute("title");
+      paint(t("diagnostics.deleteUnselected"));
+    };
+    const arm = (): void => {
+      const n = dedupDeletionPlan(list, allResults).length;
+      if (n === 0) {
+        // 无可删项：不武装，给一行凭据（否则用户会以为自己没点到）
+        list.insertAdjacentHTML(
+          "beforeend",
+          msgRowHTML("muted", t("diagnostics.dedupNothingToDelete"), esc),
+        );
+        return;
+      }
+      armed = true;
+      btn.dataset.armed = "1"; // 样式钩子（.diag-dedup-exec[data-armed]）+ 测试判据
+      btn.setAttribute("aria-pressed", "true");
+      btn.title = t("diagnostics.dedupConfirmHint", { s: String(DEDUP_CONFIRM_MS / 1000) });
+      paint(t("diagnostics.dedupConfirmDelete", { n }));
+      timer = setTimeout(() => {
+        // 迟到定时器可能落在已被结果替换（分离）的按钮上：分离即静默作废，不写游离节点
+        if (!btn.isConnected) return;
+        disarm();
+      }, DEDUP_CONFIRM_MS);
+    };
+
+    btn.addEventListener("click", async () => {
+      // 执行期间一律忽略（既不执行也不重新武装）：此刻按钮即将被结果行替换，
+      // 让它再进入武装态只会留下一个「点了没反应」的假入口。
+      if (state.execBusy) return;
+      if (!armed) {
+        arm();
+        return;
+      }
+      disarm(); // 先解除再执行：执行期间按钮被替换/重入都不该留着武装态
       await runExecDelete(list, allResults, MoveToRecycle, esc);
     });
   }

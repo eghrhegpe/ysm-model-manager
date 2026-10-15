@@ -276,6 +276,8 @@ export const contentDiagCSS: string = `
 .diag-dedup-keep-all-label { color:var(--muted); }
 .diag-dedup-actions { display:flex;gap:6px;padding:var(--sp-vh-pane);border-top:1px solid var(--bd); }
 .diag-dedup-exec { flex:1;padding:7px 16px;border-radius:var(--radius-md);border:none;background:var(--accent);color:var(--bg);cursor:pointer;font-size:var(--fs-sm);font-family:inherit; }
+/* 二次确认武装态（2026-10-14）：危险色 + 加粗，让「再点一下就真删」在视觉上无法忽略 */
+.diag-dedup-exec[data-armed="1"] { background:var(--status-error); font-weight:600; }
 .diag-dedup-cancel { padding:7px 16px;border-radius:var(--radius-md);border:1px solid var(--bd);background:transparent;color:var(--muted);cursor:pointer;font-size:var(--fs-sm);font-family:inherit; }
 
 /* ===== 诊断页配置面板（conflicts.ts / dedup.ts / health.ts 渲染） =====

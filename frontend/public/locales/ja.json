@@ -312,6 +312,7 @@
   "oldest.statsFailed": "統計の読み込みに失敗しました",
   "dedup.sha256Hint": "SHA256 ハッシュでグループ化し、各グループから1つを残して残りをごみ箱へ移動",
   "dedup.startDedup": "重複削除を開始",
+  "dedup.idleScanHint": "未スキャン：上の「重複削除を開始」を押すと、重複グループがここに表示されます",
   "instances.tab.versions": "バージョン一覧",
   "instances.emptyHint": "左の統合パックをクリックしてモデルを表示",
   "diagnostics.tabLog": "ログ",

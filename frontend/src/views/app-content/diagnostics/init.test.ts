@@ -715,8 +715,11 @@ describe("startDedup（会话工厂 createDedupSession）", () => {
       'input[name="dedup-keep-0"]:checked',
     ) as HTMLInputElement;
     expect(checked?.value).toBe("1");
-    // 删除未选中的
-    (list.querySelector("#diag-dedup-exec") as HTMLElement).click();
+    // 删除未选中的：exec 为**二次确认**入口（2026-10-14 起）——先武装、再执行
+    const execBtn = list.querySelector("#diag-dedup-exec") as HTMLElement;
+    execBtn.click();
+    expect(moveFn).not.toHaveBeenCalled(); // 首点不删（旧行为在此就删了）
+    execBtn.click();
     await waitFor(() => moveFn.mock.calls.length > 0);
     expect(moveFn).toHaveBeenCalledWith("/a/dup.ysm");
     expect(busEmit).toHaveBeenCalledWith("stats:refresh");

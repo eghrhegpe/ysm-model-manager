@@ -312,6 +312,7 @@
   "oldest.statsFailed": "统计加载失败",
   "dedup.sha256Hint": "按 SHA256 哈希分组，每组只保留一个，其余移入回收站",
   "dedup.startDedup": "开始去重",
+  "dedup.idleScanHint": "尚未扫描：点上方「开始去重」后，重复分组结果会显示在这里",
   "instances.tab.versions": "版本列表",
   "instances.emptyHint": "点击左侧整合包查看模型",
   "diagnostics.tabLog": "日志",

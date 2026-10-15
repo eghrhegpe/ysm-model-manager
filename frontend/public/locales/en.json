@@ -312,6 +312,7 @@
   "oldest.statsFailed": "Stats failed to load",
   "dedup.sha256Hint": "Group by SHA256 hash; keep one per group and move the rest to Recycle Bin",
   "dedup.startDedup": "Start Dedup",
+  "dedup.idleScanHint": "Not scanned yet — duplicate groups will appear here after you click “Start Dedup”",
   "instances.tab.versions": "Version List",
   "instances.emptyHint": "Click a modpack on the left to view models",
   "diagnostics.tabLog": "Logs",

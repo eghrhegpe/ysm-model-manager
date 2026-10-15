@@ -90,7 +90,7 @@ ${rtResult.icon} ${rtResult.label}
   }
 
   html += `<div class="diag-dedup-actions">
-<button id="diag-dedup-exec" class="diag-dedup-exec">${UI_ICONS.delete} ${t("diagnostics.deleteUnselected")}</button>
+<button id="diag-dedup-exec" class="diag-dedup-exec">${UI_ICONS.delete} <span data-dedup-exec-label>${t("diagnostics.deleteUnselected")}</span></button>
 <button id="diag-dedup-cancel" class="diag-dedup-cancel">${t("common.cancel")}</button>
 </div>`;
   return html;

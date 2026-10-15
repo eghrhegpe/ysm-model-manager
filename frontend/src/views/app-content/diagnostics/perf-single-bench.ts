@@ -442,7 +442,10 @@ function singleBenchRenderBars(payload: SingleBenchPayload, esc: EscFn): string 
 </div>`;
     })
     .join("");
-  savePerfRecord(stages.map((s) => ({ name: s.name, ms: s.ms })));
+  savePerfRecord(
+    stages.map((s) => ({ name: s.name, ms: s.ms })),
+    payload.identity?.rtype,
+  );
 
   const rawOutput = payload.output ?? JSON.stringify(payload, null, 2);
   // 身份优先（ADR-262 D2）：类型显示名 + 相对路径；format 仅作旧载荷回落。
@@ -483,7 +486,8 @@ function singleBenchRenderBars(payload: SingleBenchPayload, esc: EscFn): string 
     bottleneckLine +
     // 基准判决（ADR-262 D8）：放在瓶颈之后、趋势图之前——「与上次比好还是坏」是结果的一部分
     singleBenchRenderBaseline(payload.baseline, esc) +
-    renderPerfTrendSection(esc)
+    // 趋势基线口径 = 单模型结果的身份类型（按类型聚合，锐评 P2 拍板）；矩阵聚合态无可下钻的单一类型
+    renderPerfTrendSection(esc, payload.identity?.rtype)
   );
 }
 

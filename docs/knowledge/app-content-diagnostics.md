@@ -584,6 +584,14 @@ localPos: number[];
 - **并发基准复制按钮是死控件（P2-1，已修）**：`perf-concurrent.ts|concRender` 恒以非 undefined 的 rawText 走 `perf-common.ts|sectionHeader` ⇒ 结果区**永远渲染**「复制原文」按钮，而 `bindPerfCopyHandlers` 的委托名单只有 `diag-perf-single`/`diag-perf-scan-bench-out` 两容器——`diag-perf-conc-out` 从未进过名单（拆分初名单是 single+hist，hist 退役后位被 scan-bench-out 顶替，注释「三个结果容器」由此成漂移的自供状）。这正是 ADR-332 D4 刚判过的「看得见却不能用」。落地两半：① 名单补 `diag-perf-conc-out`；② conc rawText 从 `payload.output ?? ""` 改与 single/matrix/scan 同口径回落 `JSON.stringify(payload)`——sidecar 缺席时复制空串再弹「已复制」等于界面撒谎。**回归锁** = `perf-concurrent.test.ts`「并发结果区复制按钮」两例（修复前红：`writeText` 恒 0 次 = 变异实证）。纪律成文：**新增整块渲染的结果容器，必须同批进 bindPerfCopyHandlers 名单**。
 - **清空日志后通道健康红条陈述旧事实（P3-2，已修）**：`channel-health.ts` 的 memo 判据是「Go 锁存不回弹故只问一次」——但 `go/logs|Logger.Clear` 注释自陈 **Clear 是进程内唯一复位点**（仅落盘态复位）：用户点「清空日志」成功 = 通道已恢复，红条却把清空前快照陈述到重启，违背本条自身口径「只陈述一个可查询的事实」。落地：新增公开出口 `channel-health.ts|invalidateChannelHealthMemo`（`__resetChannelHealthForTest` 降为它的测试别名），`init.ts` 清空成功分支作废 memo ＋ 重渲。既有「锁存语义只问一次」用例不受影响（切子屏不触发复位路径，两者判据正交）。**回归锁** = `init.test.ts`「清空日志成功 → 健康位重取」（修复前红：health 恒 1 次超时）。
 - **趋势图阶段维取最近记录成文（P3-3，零行为改动）**：`perf-trend.ts` 折线维度 = `pts[最后一条].stages`——换模型链后更早记录不并线。语义可辩护（趋势 = 同类连续观测），原缺注释，已补判词成文防误判成丢数据 bug。
+- **性能趋势的多基线口径（锐评 P2 拍板，2026-10-15「按类型聚合」）**：`savePerfRecord` 原先**只存阶段耗时、不存身份**，趋势图把不同模型的观测混画在一起——历史点里其它模型的缺失阶段画成 0（假低谷），「这个类型比上次慢了没」无从回答；Go 侧 `perfBaseline` 只是**单次对比**，不是趋势。落地：
+  - **记录带身份**：`perf-trend.ts|savePerfRecord` 增可选第二参 `rtype`（registry 类型 id），`perf-single-bench.ts` 在单模型结果处传 `payload.identity?.rtype`。矩阵聚合态无可下钻的单一类型，故矩阵不写历史。`exactOptionalPropertyTypes` 下 `rtype` 为 undefined 时**不写该键**（条件展开），与旧格式记录同形、JSON 序列化一致。
+  - **渲染按口径过滤**：`perf-trend.ts|renderPerfTrendSection` 增可选 `rtype`，给定即只画该类型历史，区段头新增 `.perf-trend-baseline` 标注「当前基线：{类型显示名} · 本类型 {n} 条历史」，`title` 写清口径（按类型聚合、混合该类型不同体量模型、反映类型整体趋势）。
+  - **缺席不回落**：该类型历史不足 2 条 → 提示「该类型历史不足 2 条（现有 {n} 条）」，**不回落全库混合**——把其他类型混进来等于把「没数据」画成「有数据」，正是本模块反复清的缺席账。旧记录（无 `rtype`）**不猜进任何类型**（不能凭猜测归到 ysm/MMD），仍出现在无类型上下文的全库混合回落视图。
+  - 折线维度仍取**该基线集合**最近一次的阶段链（上一行 P3-3 判据在此保持——趋势 = 同类连续观测）。
+  - 测试：`perf-trend.test.ts` 5 条（按类型过滤不混线 / 不足 2 条明确提示不画图 / 旧记录不猜进类型 / 全库混合回落保持现状 / 基线标注写清类型与条数）+ `perf.test.ts` 现有趋势用例增强「当前基线」断言（证明写历史与读基线同链）。⚠️ 全库混合用例的断言曾**错**过一次：混画视图的折线维度 = 最近一次阶段链，故图例只含最后一条的阶段名（不是「所有阶段的并集」）——修法改断「折线点数 = 记录数」。
+  - **变异已验证 2 类**：去掉 `rtype` 过滤（恒全库）→ 2 红（不足 2 条 / 旧记录不猜进）；把「该类型不足」提示改回全库文案 → 恰 1 红（不足 2 条用例，其余 4 绿——单一变异只红对应用例为理想变异），全部还原。
+  - 符号：`perf-trend.ts|PerfRecord|savePerfRecord|renderPerfTrendSection`、`perf-single-bench.ts`（写历史/读基线传 `identity.rtype`）、i18n 三语 `diagnostics.perfTrendBaseline|perfTrendBaselineHint|perfTrendNoDataForType`、CSS `.perf-trend-baseline`。
 - **验证记录**：diagnostics 全套 15 files / 269 tests 绿；vite build ＋ typecheck ＋ check-biome 点名 7 文件全绿；两条新用例均先红（红点恰在病灶：writeText 0 次 / health 1 次超时）后绿。
 
 ## 相关

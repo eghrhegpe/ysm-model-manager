@@ -576,6 +576,11 @@ export const zhCN = {
     "参与排名的模型占用（目录式按目录内容合计、其余按文件大小）",
   "diagnostics.perfTrendTitle": "性能趋势（阶段耗时变化）",
   "diagnostics.perfTrendNoData": "暂无趋势数据——运行两次以上 single-bench 后展示折线图",
+  "diagnostics.perfTrendBaseline": "当前基线：{type} · 本类型 {n} 条历史",
+  "diagnostics.perfTrendBaselineHint":
+    "基线按类型聚合，混合该类型内不同体量的模型，反映类型整体趋势",
+  "diagnostics.perfTrendNoDataForType":
+    "该类型历史不足 2 条（现有 {n} 条），继续跑该类型基准后自动成线",
   "diagnostics.perfRunning": "运行中…",
   "diagnostics.perfIdle": "点上方按钮开始；结果将显示在此处",
   // 体检组（health / sync-conflict）空态：此前借用 perfIdle「点上方按钮开始」——文案碰巧能读，

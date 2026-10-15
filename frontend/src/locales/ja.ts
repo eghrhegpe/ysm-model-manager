@@ -592,6 +592,11 @@ export const ja: Record<string, string> = {
   "diagnostics.perfTrendTitle": "パフォーマンス傾向（段階ごとの所要時間）",
   "diagnostics.perfTrendNoData":
     "傾向データなし——single-bench を2回以上実行すると折れ線グラフを表示",
+  "diagnostics.perfTrendBaseline": "現在のベースライン：{type} · このタイプ {n} 件の履歴",
+  "diagnostics.perfTrendBaselineHint":
+    "ベースラインはリソースタイプ単位で集約し、そのタイプ内の異なるサイズのモデルを混ぜてタイプ全体の傾向を表します",
+  "diagnostics.perfTrendNoDataForType":
+    "このタイプの履歴が 2 件未満（現状 {n} 件）。このタイプのベンチをもう一度実行すると折れ線が表示されます",
   "diagnostics.perfRunning": "実行中…",
   "diagnostics.perfIdle": "上のボタンで開始；結果はここに表示されます",
   // 診断グループ（health / sync-conflict）の空状態：従来 perfIdle を流用していた

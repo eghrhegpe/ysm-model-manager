@@ -598,6 +598,11 @@ export const en: Record<string, string> = {
     "Footprint used for ranking (directory models summed over directory content, others by file size)",
   "diagnostics.perfTrendTitle": "Performance trend (stage time)",
   "diagnostics.perfTrendNoData": "No trend yet — run single-bench twice or more to show the chart",
+  "diagnostics.perfTrendBaseline": "Current baseline: {type} · {n} records of this type",
+  "diagnostics.perfTrendBaselineHint":
+    "Baseline is aggregated by resource type; it mixes models of different sizes within that type, so it reflects the type's overall trend",
+  "diagnostics.perfTrendNoDataForType":
+    "Fewer than 2 records for this type ({n} available) — run this type's benchmark again and the line will appear",
   "diagnostics.perfRunning": "Running…",
   "diagnostics.perfIdle": "Click the button above to start; results will appear here",
   // Audit group (health / sync-conflict) empty state: previously reused perfIdle.

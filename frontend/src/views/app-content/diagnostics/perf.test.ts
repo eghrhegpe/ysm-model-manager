@@ -271,6 +271,9 @@ describe("single-bench 面板", () => {
     // ≥2 条：渲染趋势 SVG 折线
     const out2 = root.getElementById("diag-perf-single") as HTMLElement;
     expect(out2.innerHTML).toContain('<svg width="560"');
+    // 基线口径（2026-10-15 拍板「按类型聚合」）：单模型结果的 rtype 已随记录写入历史，
+    // 并驱动趋势区段按该类型过滤 + 标注当前基线——证明「写历史」与「读基线」是同一条链
+    expect(out2.innerHTML).toContain("当前基线");
   });
 
   it("阶段状态/配色取自 Go status，不在前端自算阈值", async () => {

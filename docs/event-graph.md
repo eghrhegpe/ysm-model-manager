@@ -29,6 +29,7 @@
 | `nav:changed` | 7 | 2 | 0 | 0 | ✅ |
 | `package:selected` | 2 | 1 | 0 | 0 | ✅ |
 | `repo:focus-search` | 1 | 1 | 0 | 0 | ✅ |
+| `repo:fs-changed` | 1 | 1 | 0 | 0 | ✅ |
 | `repo:rtype-changed` | 1 | 5 | 0 | 0 | ✅ |
 | `repo:search-creator` | 2 | 1 | 0 | 0 | ✅ |
 | `repo:subdir-changed` | 1 | 1 | 0 | 0 | ✅ |
@@ -71,12 +72,12 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | cmDqCleanupProgressUI | `frontend/src/features/community/download-queue.ts` | 117 |
-| reload | `frontend/src/views/app-tree/bus-handlers.ts` | 279 |
+| reload | `frontend/src/views/app-tree/bus-handlers.ts` | 311 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 91 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 92 |
 
 ### `config:changed`
 
@@ -190,7 +191,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 83 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 84 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 227 |
 
 ### `menu:show`
@@ -217,7 +218,7 @@
 | showStagePreview | `frontend/src/views/app-preview/detail-3d.ts` | 386 |
 | atTeClickRowFolder | `frontend/src/views/app-tree/events.ts` | 170 |
 | atTeClickRowFile | `frontend/src/views/app-tree/events.ts` | 244 |
-| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 760 |
+| _onKeyArrowNav | `frontend/src/views/app-tree/index.ts` | 767 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -230,8 +231,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 71 |
-| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 193 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 72 |
+| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 197 |
 | cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 243 |
 | anActivateNavPage | `frontend/src/views/app-nav/index.ts` | 53 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 237 |
@@ -241,7 +242,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 58 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 59 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 207 |
 
 ### `package:selected`
@@ -268,6 +269,18 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 63 |
+
+### `repo:fs-changed`
+
+**发射方：**
+| 函数 | 文件 | 行 |
+|------|------|----|
+| registerRepoFsEvents | `frontend/src/features/repo/repo-fs-events.ts` | 38 |
+
+**订阅方（on）：**
+| 函数 | 文件 | 行 |
+|------|------|----|
+| bindBusEvents | `frontend/src/views/app-tree/bus-handlers.ts` | 78 |
 
 ### `repo:rtype-changed`
 
@@ -296,7 +309,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 69 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 70 |
 
 ### `repo:subdir-changed`
 
@@ -335,14 +348,14 @@
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 137 |
 | runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 581 |
 | _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 229 |
-| runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 107 |
-| atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 134 |
-| atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 211 |
-| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 364 |
+| runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 139 |
+| atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 166 |
+| atBeHandleDirRecycle | `frontend/src/views/app-tree/bus-handlers.ts` | 243 |
+| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 396 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 115 |
 | atTeBindRenameInput | `frontend/src/views/app-tree/events.ts` | 389 |
 | toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 523 |
-| _executeTreeMove | `frontend/src/views/app-tree/index.ts` | 826 |
+| _executeTreeMove | `frontend/src/views/app-tree/index.ts` | 833 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -355,10 +368,10 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 359 |
+| runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 391 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 114 |
 | toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 518 |
-| _executeTreeMove | `frontend/src/views/app-tree/index.ts` | 825 |
+| _executeTreeMove | `frontend/src/views/app-tree/index.ts` | 832 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -425,7 +438,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 77 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 78 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |

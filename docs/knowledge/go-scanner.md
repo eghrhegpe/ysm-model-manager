@@ -10,6 +10,8 @@ auto_fields:
     - ComputeFileHash
     - EffectiveCacheTTL
     - GenerateRepoIndex
+    - InvalidateBrowseCache
+    - InvalidateBrowsePath
     - InvalidateCache
     - InvalidatePath
     - ListModelAuthors
@@ -19,6 +21,10 @@ auto_fields:
     - ScanEngineStat
     - ScanEngineStats
     - ScanEntries
+    - ScanEntriesBrowse
+    - ScanEntriesBrowseCtx
+    - ScanEntriesBrowseWithHit
+    - ScanEntriesBrowseWithHitCtx
     - ScanEntriesCtx
     - ScanEntriesLite
     - ScanEntriesLiteCtx

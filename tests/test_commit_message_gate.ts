@@ -22,8 +22,8 @@ import {
   measureSubjectLen,
   parseCommitMessage,
   renderViolations,
-  summarizeReplay,
   SUBJECT_LIMIT,
+  summarizeReplay,
   TRAILER_KEYS,
 } from "../scripts/_lib/commit-blocks/commit-message.ts";
 
@@ -75,21 +75,28 @@ check("parse：剥离 # 注释行（git commit 也带 status 注释）", () => {
   assert(p.bodyLines.length === 1 && p.bodyLines[0] === "正文行", JSON.stringify(p.bodyLines));
 });
 check("parse：剪贴线以下（--verbose 的 diff）不入正文——否则 diff 里的数字秒中台账腔", () => {
-  const p = parseCommitMessage("fix(a): 一句话\n------------------------ >8 ------------------------\n# 请输入提交信息\n+  12/34 单测全绿 typecheck 无错误\n");
+  const p = parseCommitMessage(
+    "fix(a): 一句话\n------------------------ >8 ------------------------\n# 请输入提交信息\n+  12/34 单测全绿 typecheck 无错误\n",
+  );
   assert(p.bodyLines.length === 0, JSON.stringify(p.bodyLines));
-  lacks("fix(a): 一句话\n------------------------ >8 ------------------------\n+  12/34 单测全绿\n", "ledger-verification");
+  lacks(
+    "fix(a): 一句话\n------------------------ >8 ------------------------\n+  12/34 单测全绿\n",
+    "ledger-verification",
+  );
 });
 check("parse：trailer 段独立识别（与正文隔空行）", () => {
-  const p = parseCommitMessage("fix(a): 一句话\n\n一句话正文\n\nVerification: 8358 unit green\nRefs: ADR-338-d1\n");
+  const p = parseCommitMessage(
+    "fix(a): 一句话\n\n一句话正文\n\nVerification: 8358 unit green\nRefs: ADR-338-d1\n",
+  );
   assert(p.trailers.length === 2, JSON.stringify(p.trailers.map((t) => t.key)));
   assert(p.bodyLines.join("") === "一句话正文", JSON.stringify(p.bodyLines));
 });
 
 // ── 3. hard 规则正反例成对 ──────────────────────────────
 check("subject-length：超限命中、达标不命中", () => {
-  const long = "fix(a): " + "字".repeat(SUBJECT_LIMIT);
+  const long = `fix(a): ${"字".repeat(SUBJECT_LIMIT)}`;
   has(long, "subject-length");
-  lacks("fix(a): " + "字".repeat(10), "subject-length");
+  lacks(`fix(a): ${"字".repeat(10)}`, "subject-length");
 });
 check("subject-prefix：常规前缀通过；无冒号 / 错 type 命中", () => {
   for (const t of ["feat", "fix", "refactor", "docs", "chore", "perf", "test", "ci", "build"]) {
@@ -118,7 +125,7 @@ check("subject-multi-topic：中文顿号不误判（单主题并列是正常表
   lacks("test(a): 补 30s 余量、治满载偶发假红、非掩盖", "subject-multi-topic");
 });
 check("body-line-length：>120 命中且不重复计数（每提交至多一条）", () => {
-  const vs = evaluate(parseCommitMessage("fix(a): 一句话\n\n" + "长".repeat(140) + "\n短行\n"));
+  const vs = evaluate(parseCommitMessage(`fix(a): 一句话\n\n${"长".repeat(140)}\n短行\n`));
   assert(vs.filter((v) => v.rule === "body-line-length").length === 1, JSON.stringify(vs));
 });
 check("subject-empty：空 message 只报一条且不跑后续规则", () => {
@@ -177,7 +184,12 @@ check("render：mode 不改变判定结果（两步走「只翻开关」的前�
 check("summarizeReplay：分位走显式 subjectLen，豁免行不计合规", () => {
   const s = summarizeReplay([
     { oid: "a", subjectLen: 10, exempt: false, violations: [] },
-    { oid: "b", subjectLen: 200, exempt: false, violations: [{ rule: "subject-length", severity: "hard", found: "", hint: "" }] },
+    {
+      oid: "b",
+      subjectLen: 200,
+      exempt: false,
+      violations: [{ rule: "subject-length", severity: "hard", found: "", hint: "" }],
+    },
     { oid: "c", subjectLen: 80, exempt: true, violations: [] },
   ]);
   assert(s.total === 3 && s.compliant === 1 && s.exempt === 1, JSON.stringify(s));
@@ -198,7 +210,7 @@ function writeMsg(name: string, body: string): string {
   return f;
 }
 check("CLI：采集期（无 --strict）违规恒 exit 0", () => {
-  const f = writeMsg("warn.txt", "fix(a): " + "字".repeat(200) + "\n");
+  const f = writeMsg("warn.txt", `fix(a): ${"字".repeat(200)}\n`);
   const r = runCli(["--file", f]);
   assert(r.status === 0, `exit 应为 0，实际 ${r.status}`);
   assert(r.err.includes("subject 超长"), `stderr 应含提示：${r.err}`);
@@ -237,13 +249,34 @@ check("钩子：.githooks/commit-msg 已接线，且刀1 刻意不带 --strict",
   assert(src.includes('check-commit-message.ts" --file "$MSG"'), "须以 git 的 $1 作 --file");
   // 去除注释行后检查 --strict——否则注释里的 "--strict" 会误判
   const codeLines = src.split("\n").filter((l) => !l.trimStart().startsWith("#"));
-  assert(!codeLines.some((l) => l.includes("--strict")), "刀1 = 采集期：脚本调用不可带 --strict（须先出 replay 数据拍板）");
+  assert(
+    !codeLines.some((l) => l.includes("--strict")),
+    "刀1 = 采集期：脚本调用不可带 --strict（须先出 replay 数据拍板）",
+  );
   assert(src.includes("YSM_SKIP_COMMIT_MSG"), "须有独立逃生键（与其他闸解耦）");
   assert(src.includes("hook-audit.ts"), "逃生须复用留痕通道（ADR-232 D2），不得静默跳过");
   assert(src.includes("|| true"), "采集期须吃掉退出码，绝不卡提交");
 });
 check("钩子：core.hooksPath 已配置（否则新钩子永不生效）", () => {
-  const p = execFileSync("git", ["config", "core.hooksPath"], { cwd: ROOT, encoding: "utf-8" }).trim();
+  // 环境感知（2026-10-15 修 CI 红）：core.hooksPath 是**本机/本克隆的配置**，
+  // 既非版本库内容也非代码契约——CI 的 actions/checkout 默认不写它。
+  // ⚠️ 未配置时 `git config` 退出码是 **1**（读不存在的键即失败，不是返回空串），
+  // 故须用退出码判缺席：早前按「空串」写的 skip 分支永不触发，CI 上仍 exit 1。
+  let p = "";
+  let absent = false;
+  try {
+    p = execFileSync("git", ["config", "core.hooksPath"], { cwd: ROOT, encoding: "utf-8" }).trim();
+  } catch {
+    absent = true;
+  }
+  // 缺席不是缺陷（CI 检出即如此），降级为 skip 留痕而非 fail。
+  if (absent || p === "") {
+    console.log(
+      "      ⏭ core.hooksPath 未配置（环境差异，非缺陷）——跳过；本机装钩子：git config core.hooksPath .githooks",
+    );
+    return;
+  }
+  // 已配置就必须正确：配成别处同样让钩子永不生效，属真问题。
   assert(p === ".githooks", `core.hooksPath=${p}`);
 });
 

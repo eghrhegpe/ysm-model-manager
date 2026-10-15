@@ -250,6 +250,9 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "test_jscpd_pairs.ts": ["tests"],
   "test_knowledge_common.ts": ["tests"],
   "test_redlines_changed_files.ts": ["tests"],
+  // 基线键构造双向契约（2026-10-15 随「行号漂移误报」根治登记）：漂移不误报 / 真新增不漏放 /
+  // 同内容多重集不被去重吞掉——collectViolationKeys 是这两个方向唯一实现点
+  "test_redlines_baseline_keys.ts": ["tests"],
   // R15 纯核（redlineCodeGapHits）判别力对账：两侧解析（CODE_KEYS 映射集 / types.go
   // 常量表）任一退化即假绿——独立重导逐行等值锁死（2026-10-12 随 R15 立法登记）
   "test_redlines_code_gap.ts": ["tests"],
@@ -581,6 +584,7 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   "check-knowledge-claim-overlap.ts": ["scripts/check-knowledge-drift.ts"],
   "check-knowledge-source-containment.ts": ["scripts/check-knowledge-drift.ts"],
   "test_redlines_changed_files.ts": ["scripts/check-redlines.ts"],
+  "test_redlines_baseline_keys.ts": ["scripts/check-redlines.ts"],
   "test_redlines_code_gap.ts": ["scripts/check-redlines.ts"],
   "test_scripts_lib.ts": [
     "scripts/_lib/scan-files.ts",

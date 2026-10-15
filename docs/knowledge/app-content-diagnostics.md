@@ -11,9 +11,11 @@ auto_fields:
     - __resetChannelHealthForTest
     - applyPerfDensity
     - applyPerfModeUI
+    - benchTraceKey
     - bindCancelButton
     - bindKeepPolicyChange
     - bindPerfCopyHandlers
+    - bindPerfDrillHandler
     - bindPreviewClicks
     - bindPriorityPathInput
     - bindStrategyChange
@@ -36,6 +38,7 @@ auto_fields:
     - DedupSession
     - DgCfScanTarget
     - dgLsResetCapsMemo
+    - drillBenchToTrace
     - FindDuplicateFilesFn
     - formatSize
     - getDefaultKeepIdx
@@ -52,6 +55,7 @@ auto_fields:
     - invalidateChannelHealthMemo
     - loadDiagnosticsLogs
     - loadRuntimeLogs
+    - matchBenchTrace
     - MoveToRecycleFn
     - OP_META
     - OptionRow
@@ -111,6 +115,7 @@ auto_fields:
     - sectionHeader
     - singleBenchReadIds
     - singleBenchReadIterations
+    - TraceFocus
   tests:
     - frontend/src/views/app-content/diagnostics/conflicts.test.ts
     - frontend/src/views/app-content/diagnostics/health.test.ts

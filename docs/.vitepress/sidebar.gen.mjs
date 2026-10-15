@@ -254,6 +254,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-347：go/sync 同步判定收敛单表（纯函数判定表 + 全信道测试矩阵）",
+        "link": "/adr/architecture/ADR-347-sync-verdict-table"
+      },
+      {
         "text": "ADR-346：MMD 几何统计管线（数值搜索能力扩展）",
         "link": "/adr/architecture/ADR-346-mmd-geometry-stats-pipeline"
       },

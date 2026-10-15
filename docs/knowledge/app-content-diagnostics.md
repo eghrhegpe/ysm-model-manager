@@ -9,6 +9,7 @@ source_files:
 auto_fields:
   symbols_with_lines:
     - __resetChannelHealthForTest
+    - applyPerfDensity
     - applyPerfModeUI
     - bindCancelButton
     - bindKeepPolicyChange
@@ -43,6 +44,7 @@ auto_fields:
     - HealthReport
     - initDiagnostics
     - initHealthPanel
+    - initPerfDensity
     - initPerfPanel
     - initSyncConflictPanel
     - invalidateChannelHealthMemo
@@ -54,11 +56,13 @@ auto_fields:
     - optionRows
     - parseHealthReport
     - parsePerfTargetValue
+    - PERF_DENSITY_KEY
     - PERF_ORDER_PATH
     - PERF_ORDER_SIZE
     - PERF_RUN_BUTTON_MODE_KEYS
     - PERF_TARGET_ALL
     - PERF_TARGET_REPO
+    - PerfDensity
     - PerfIdentity
     - PerfMatrixModel
     - PerfMatrixPayload
@@ -71,6 +75,7 @@ auto_fields:
     - PerfTypeSummary
     - populatePerfTargetOptions
     - readActiveBenchMode
+    - readPerfDensity
     - readPerfOrder
     - renderChannelHealth
     - renderConfigHtml

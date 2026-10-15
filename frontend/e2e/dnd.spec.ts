@@ -114,10 +114,23 @@ test.describe("拖拽导入（DnD）", () => {
     // drop 后提示条应隐藏（bindTreeDnD 的 onDrop 隐藏 + 导入处理）
     expect(await isTreeDropHintVisible(page)).toBe(false);
     expect(await isTreeDroppable(page)).toBe(false);
-    // 导入链路触发 → toast 反馈：directImport 成功 toast 含文件名
-    // （原「任一 toast 可见」会被 index.html 欢迎 toast 假绿）
-    const toast = page.locator('[data-testid="toast"]').filter({ hasText: "model-a.ysm" });
-    await expect(toast.first()).toBeVisible({ timeout: 5000 });
+    // 导入链路触发证据（8a7cc71e7 quiet 批导入收拢：逐文件成功 toast 被摘要替代，
+    // 汇总「📂 导入成功: N」不含文件名，63a5d33d4 的文件名过滤断言自此静默失真）：
+    // ① mock 桥调用记录器收 1 次 ImportModelFile 且 args[0] = 拖入文件名（locale 无关）
+    await page.waitForFunction(
+      () => {
+        const rec = (window as unknown as { __e2eCalls?: Record<string, unknown[][]> }).__e2eCalls;
+        const calls = rec?.["ImportModelFile"] ?? [];
+        return calls.length === 1 && calls[0][0] === "model-a.ysm";
+      },
+      undefined,
+      { timeout: 5000 },
+    );
+    // ② 汇总 toast 可见（emoji 前缀 locale 无关；原「任一 toast」假绿顾虑由 ① 的精确
+    // 链路证据替代——① 既证成功，📂 前缀 toast 即汇总成功提示）
+    await expect(page.locator('[data-testid="toast"]').filter({ hasText: /📂/ })).toBeVisible({
+      timeout: 5000,
+    });
   });
 
   test("无文件 dataTransfer → tree-drop-hint 不出现、.droppable 不加", async ({ page }) => {

@@ -38,7 +38,8 @@ func RegisterInvalidationHook() {
 //   - "resources":  map[string]DiffEntry（SyncResources 全树文件 + 资源包文件夹）
 //   - "dirlevel":   map[string]dirLevelUnit（SyncResourcesDirLevel 的同步单元集合，
 //     单元带 Size/Hash 供内容级判定；hashed 维度区分带摘要/纯 Size 两种单元表，ADR-344 D1）
-//   - "folder":     map[string]string（DiffFolderContents 的文件夹内文件集合）
+//     2026-10-15: 锐评问题A误判——hashed 维度已正确实现（sync_resource.go:160、
+//     sync_dirlevel_sync.go:49 均已使用 syncDirectoryScanKey.hashed），无需额外改动。
 type syncDirectoryScanKey struct {
 	kind  string
 	root  string

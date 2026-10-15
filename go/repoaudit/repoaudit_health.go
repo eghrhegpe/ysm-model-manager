@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 
 	"ysm-model-manager/go/dedup"
@@ -54,6 +55,54 @@ func mapKeys(m map[string]struct{}) []string {
 		out = append(out, k)
 	}
 	return out
+}
+
+// keyCollisionWarnings dirLevel 身份键碰撞（P0）：同级同 stem 不同扩展名的多个模型
+// 文件（model_a.pmx + model_a.pmd）经 relKeyDirLevel 剥扩展名同键，同步时 last-write-wins
+// 覆盖一个、被覆盖方不进同步列表。groups = rtype → (父目录\x00小写stem) → 该组小写扩展
+// 名集合；**≥2 个不同扩展名**才告警（同扩展名的大小写变体是 P2 孪生的地盘，不在此重复）。
+// 告警按 (rtype, 组键) 确定性排序；组内扩展名排序后点名首末（stem+ext 还原文件名）。
+func keyCollisionWarnings(groups map[string]map[string]map[string]struct{}) []string {
+	rtys := make([]string, 0, len(groups))
+	for rt := range groups {
+		rtys = append(rtys, rt)
+	}
+	sort.Strings(rtys)
+	out := []string{}
+	for _, rt := range rtys {
+		perRt := groups[rt]
+		gks := make([]string, 0, len(perRt))
+		for gk, exts := range perRt {
+			if len(exts) >= 2 {
+				gks = append(gks, gk)
+			}
+		}
+		sort.Strings(gks)
+		for _, gk := range gks {
+			parent, stem, _ := strings.Cut(gk, "\x00")
+			exts := mapKeys(perRt[gk])
+			sort.Strings(exts)
+			// 点名首末扩展名还原文件名；middle 用「等 N 种」省略（防刷屏）
+			n := len(exts)
+			label := stem + exts[0]
+			if n == 2 {
+				label = stem + exts[0] + " 与 " + stem + exts[1]
+			} else {
+				label = stem + exts[0] + "、" + stem + exts[n-1] + " 等 " + strconv.Itoa(n) + " 种扩展"
+			}
+			out = append(out, fmt.Sprintf("dirLevel 键碰撞 [%s]：%s 下 %s 剥扩展名同键（%s），同步 last-write-wins 会覆盖其一、被覆盖方不进同步列表——建议改名区分",
+				rt, shortDirName(parent), label, stem))
+		}
+	}
+	return out
+}
+
+// shortDirName 告警里只展示父目录末段（防全路径刷屏）。
+func shortDirName(p string) string {
+	if i := strings.LastIndexAny(p, `/\`); i >= 0 {
+		return p[i+1:]
+	}
+	return p
 }
 
 func HealthReportFor(dirPath string) (HealthReport, error) {

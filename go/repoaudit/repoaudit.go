@@ -232,6 +232,12 @@ func AuditCtx(ctx context.Context, dirPath string) (DirAuditResult, error) { //n
 	// 同键错配面与同级大小写差异（Pack/ vs pack/）等价，按基名分组会漏前者。
 	// 根自身不参与（Rel = "." 无折叠对手）。
 	caseSib := map[string]map[string]struct{}{}
+	// dirLevel 身份键碰撞累积（P0，2026-10-14）：同级同 stem 不同扩展名（model_a.pmx +
+	// model_a.pmd）经 relKeyDirLevel 剥扩展名同键 → last-write-wins 丢一个。sync 键是
+	// per-rtype 键空间（跨 rtype 互不碰撞），故只记「判型确定 + dirLevelSync + 非容器扩展」
+	// 的文件（容器 .zip/.7z 的类型判定走 zipentry 内容指纹，剥扩展名不是其键，不纳入）：
+	// rtype → (父目录\x00小写stem) → 该组小写扩展名集合（≥2 个不同扩展名 = 碰撞组）。
+	keyColl := map[string]map[string]map[string]struct{}{}
 	noteCase := func(p string) {
 		rel, rerr := filepath.Rel(dirPath, p)
 		if rerr != nil || rel == "." {
@@ -336,6 +342,19 @@ func AuditCtx(ctx context.Context, dirPath string) (DirAuditResult, error) { //n
 				typeName = ClassifyWith(reg, ext)
 			}
 		}
+		// 大小写孪生 + dirLevel 身份键碰撞（P0）记账：同级同 stem 不同扩展名的两个
+		// 模型文件剥扩展名同键，last-write-wins 会丢一个（详见 noteCase 上方注释）
+		if typeName != "" && typeName != "container" && typeName != "other" &&
+			registry.IsDirLevelSync(typeName) && !registry.IsContainerExt(ext) {
+			gk := filepath.Dir(path) + "\x00" + strings.TrimSuffix(strings.ToLower(d.Name()), ext)
+			if keyColl[typeName] == nil {
+				keyColl[typeName] = map[string]map[string]struct{}{}
+			}
+			if keyColl[typeName][gk] == nil {
+				keyColl[typeName][gk] = map[string]struct{}{}
+			}
+			keyColl[typeName][gk][ext] = struct{}{}
+		}
 		resources[typeName]++
 		return nil
 	})
@@ -350,6 +369,9 @@ func AuditCtx(ctx context.Context, dirPath string) (DirAuditResult, error) { //n
 
 	// 大小写孪生路径告警（诊断信道，不影响评分——见 caseSiblingWarnings 注释）
 	result.Warnings = append(result.Warnings, caseSiblingWarnings(caseSib)...)
+	// dirLevel 身份键碰撞告警（P0，诊断信道）：同级同 stem 不同扩展名的模型文件
+	// 剥扩展名同键，同步 last-write-wins 覆盖其一（见 keyCollisionWarnings 注释）
+	result.Warnings = append(result.Warnings, keyCollisionWarnings(keyColl)...)
 
 	// 完整性百分比
 	if result.Completeness.Checked > 0 {

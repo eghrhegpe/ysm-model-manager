@@ -62,7 +62,9 @@ status: active
 
 ## 核心职责
 
-- `Audit(dirPath)` — 一次遍历完成：资源扫描 + 完整性检查（.json/.ysm 合法性验证）+ 缓存状态 + 健康分数 + 警告生成 + **大小写孪生路径告警**（2026-10-14 P2：walk 顺手累积**小写相对路径折叠面**（`caseSiblingWarnings` 纯函数出确定性告警进 `Warnings`——折叠面 = 整条相对路径小写，与 sync key 的折叠面同构，故**同级大小写差异与祖先目录大小写分叉**（`A/x` vs `a/x`，P2 同日扩面：旧 (父目录, 基名) 分组会漏后者）都被覆盖；sync 键小写归一视二者为同一身份，大小写敏感文件系统上操作各走各路可能错配。Windows/NTFS 物理无法创建孪生（第二次 Mkdir 命中同目录），故主战场零误报、只作诊断信道不扣分。回归 `repoaudit_casesib_test.go` 四段：纯函数语义 / 常规树零误报 / 单原路径静默 / 祖先分叉必报）
+- `Audit(dirPath)` — 一次遍历完成：资源扫描 + 完整性检查（.json/.ysm 合法性验证）+ 缓存状态 + 健康分数 + 警告生成 + **键碰撞双检测**（2026-10-14 P2/P0 面板接线，均进 `Warnings` 诊断信道不扣分）：
+  - **大小写孪生**：walk 顺手累积**小写相对路径折叠面**（与 sync key 同构，覆盖同级与祖先目录大小写分叉两形态），`caseSiblingWarnings` 出确定性告警。Windows/NTFS 物理无法创建孪生 → 主战场零误报。回归 `repoaudit_casesib_test.go`（纯函数 / 零误报 / 单原路径静默 / 祖先分叉必报）
+  - **dirLevel 身份键碰撞（P0）**：同级同 stem 不同扩展名的模型文件（`model_a.pmx`+`model_a.pmd`）经 relKeyDirLevel 剥扩展名同键、同步 last-write-wins 丢一个——**仓库属性，任意文件系统可造，故体检可见**。walk 顺记 rtype → (父目录\x00小写stem) → 扩展名集合（只记「判型确定 + dirLevelSync + 非容器扩展」：容器 .zip/.7z 类型判定走 zipentry 指纹、剥扩展名不是其键，不纳入；纯大小写变体组扩展名集合恒 1 → 归大小写孪生检测器，不重复告警），`keyCollisionWarnings` 对 ≥2 种扩展名的组出告警。回归 `repoaudit_keycoll_test.go`（纯函数 / e2e 真实夹具 / 零误报 / 跨 rtype 不互撞——键空间 per-rtype）
 - `HealthReportFor(dirPath)` — 完整体检：Audit + 去重（`dedup.FindDuplicateFiles`），返回 `HealthReport` 统一载荷
 - `Classify(ext)` — 扩展名→注册表资源类型 id 映射，注册表驱动（新增类型只改 `resource_types.json`）；内部经 `extClassifierCache`（`atomic.Value` + 注册表实例指针失效范式，与 `go/types/registry/extensions.go` 的 `extCache` 同款，`963d4d36` 由 `sync.Once` 替换），cache hit 零锁、O(1) 查表；大仓库 per-file 路径禁用本函数（线性放大）
 - `ClassifyWith(reg, ext)` — 使用调用方已 hoist 的注册表实例判型（`4277c151` 新增，签名同 `Classify` 但接受外层 reg）——`Audit` 大仓库调用点必须走此函数防 per-file `LoadRegistry` 线性放大（`Audit` 内部已改；CLI 命令/其他调用点若需批量分类，同样走此函数）

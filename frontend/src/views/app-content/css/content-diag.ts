@@ -293,5 +293,25 @@ export const contentDiagCSS: string = `
 .diag-dedup-config { padding:var(--sp-vh-pane); }
 .diag-warn { color:var(--status-warning); font-weight:600;justify-content:flex-start;gap:var(--sp-1); } /* 审计 P2-6：删 --status-warning 冗余回退（6 主题已定义）；justify-content/gap 同 .diag-msg——体检警告行是「图标+整句」，会被基类 space-between 撕到两端 */
 
+/* ===== 基准面板「简单 / 高级」密度开关（2026-10-15 锐评改进 P0） =====
+   立因（锐评诊断页信息可读性 3/5）：single 一屏同时摊开「目标集 × 排序 × 上限 × 迭代 × 基准三件套」，
+   主 CTA 之外全是同等视觉权重——新手第一次面对的是「参数矩阵」而不是「跑一次基准」。
+   口径三条（与本卡既有纪律逐条对齐，不是新发明）：
+    ① 显隐走 class、不走 innerHTML ——与 .perf-mode-off 同机制，故与被它管的行**互不冲突**
+      （两套 class 各表达一个维度：模式维度 / 密度维度；任一判隐即隐藏，两判据同时解除才显示）。
+    ② **不复制 DOM、不改既有控件 id**——原 #diag-perf-iter / -max / -baseline-* 恒为唯一实例，
+      singleBenchRead* 的读取路径与 perf.test.ts 的断言面一字不动。给同一语义配第二个框
+      （曾试的 -simple 克隆）= 重新制造 ADR-278 刚拆掉的「两份平行 DOM」病，禁止。
+    ③ 隐藏的控件不得继续生效——切简版时基准两勾选归零（见 perf-density.ts），
+      否则就是本卡 2026-10-12 条目立的同一判词：「看不见的参数还在筛/在改义」比「没反应」更坏。 */
+.diag-perf-density { margin-left:auto; display:inline-flex; align-items:center; gap:var(--sp-1); padding:var(--btn-padding-xs); border:1px solid var(--bd); border-radius:var(--radius-sm); background:transparent; color:var(--muted); cursor:pointer; font-size:var(--fs-sm); font-family:inherit; transition:var(--tr-fast); }
+.diag-perf-density:hover { background:var(--hover); color:var(--txt); }
+/* aria-pressed=true = 高级态已开：与 .diag-sub-tab.active 同档强调（描边 + accent 字 + 18% 底色），
+   让「我现在在什么模式」在不悬停、不读文案时也一眼可辨。 */
+.diag-perf-density[aria-pressed="true"] { border-color:var(--accent); color:var(--accent); background:color-mix(in srgb, var(--accent) 18%, transparent); }
+/* 密度维度显隐的唯一机制（同 .perf-mode-off 的分工口径）；
+   仅当本行/本组未在当前基准模式下隐藏时才实际可见。 */
+.perf-density-off { display: none; }
+
 /* P1 批次12:工坊行名称容器(community/render.ts nameWrap,gh-row 列1 内部 flex 容器) → 已归位 content-gh.ts */
 `;

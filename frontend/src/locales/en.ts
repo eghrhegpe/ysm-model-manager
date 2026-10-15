@@ -434,6 +434,11 @@ export const en: Record<string, string> = {
   "diagnostics.perfStageStatsHint":
     "median {median}ms / p95 {p95}ms; n = times this stage actually ran",
   // Baseline entry + verdict (ADR-262 D8): paths and criteria live in Go; the UI only phrases it
+  // Parameter density (2026-10-15): the baseline trio is collapsed by default to ease the single-screen load
+  "diagnostics.perfDensityMore": "Baseline options",
+  "diagnostics.perfDensityLess": "Hide baseline options",
+  "diagnostics.perfDensityHint":
+    "Expand to record a baseline or compare against the last one; while collapsed both switches are off and stay out of this run",
   "diagnostics.perfBaselineSave": "Record baseline",
   "diagnostics.perfBaselineCompare": "Compare baseline",
   "diagnostics.perfBaselineThreshold": "Regression threshold %",

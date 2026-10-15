@@ -14,6 +14,7 @@ import { toast } from "@/utils/dom/toast.ts";
 import type { EscFn } from "@/utils/html/html.ts";
 import { bindPerfCopyHandlers, readActiveBenchMode } from "./perf-common.ts";
 import { concReadIds, runConcurrentBench } from "./perf-concurrent.ts";
+import { initPerfDensity } from "./perf-density.ts";
 import { PERF_TARGET_REPO, populatePerfTargetOptions } from "./perf-matrix-render.ts";
 import { runScanBench, scanBenchReadIds } from "./perf-scan-bench.ts";
 import { runSingleBench, singleBenchReadIds } from "./perf-single-bench.ts";
@@ -181,6 +182,10 @@ export function applyPerfModeUI(root: ShadowRoot): void {
 /** 初始化性能面板（基准三模式 / 加载剖析） */
 export function initPerfPanel(root: ShadowRoot, esc: EscFn): void {
   bindPerfCopyHandlers(root);
+  // 参数密度（2026-10-15 锐评改进 P0）：先于 initPerfMode 装配。密度轴（.perf-density-off）
+  // 与模式轴（.perf-mode-off）是两个独立 class，各自 toggle 各自、任一判隐即隐藏；
+  // 本模块还负责「收起即归零基准勾选」——不可见的勾选不得参与下一次命令的参数组装。
+  initPerfDensity(root);
   // 预填「最近选中模型」（ADR-221 model-path-store）：消除小白手输绝对路径的劝退门槛——
   // 树里点过的模型直接进输入框，一键 Run。仅在框为空时填，不覆盖用户已输入/已回填的值；
   // 无选中（null）不动。路径为树 data-fullpath 的磁盘绝对路径，正是 Go single-bench 期望的 --model 口径。

@@ -426,6 +426,11 @@ export const zhCN = {
   // 阶段运行归属与样本统计（ADR-262 D2）：没有归属就看不出这段跑在 Go / Rust / WASM / Three 上
   "diagnostics.perfStageRuntimeHint": "该阶段的运行归属（Go / Rust / WASM / JS / Three）",
   // 基准入口与判决（ADR-262 D8）：路径与判据全在 Go，前端只说人话
+  // 参数密度（2026-10-15 锐评改进 P0）：基准三件套默认收起，降低 single 屏的认知负担
+  "diagnostics.perfDensityMore": "基准对比选项",
+  "diagnostics.perfDensityLess": "收起基准选项",
+  "diagnostics.perfDensityHint":
+    "展开后可记录基准或与上次基准对比；收起时这两个开关自动关闭，不参与本次基准",
   "diagnostics.perfBaselineSave": "记录基准",
   "diagnostics.perfBaselineCompare": "对比基准",
   "diagnostics.perfBaselineThreshold": "退化阈值 %",

@@ -130,6 +130,27 @@ async function clickBenchPill(page: Page, sub: "single" | "conc" | "scan"): Prom
   await clickBySelector(page, `[data-testid="diag-sub-bench-${sub}"]`);
 }
 
+/** 选择器版「真实可见」（尺寸 + 祖先 display 口径，同 panelMeasuredVisible 的判定，
+ *  供无 id 的锚点用；e2e 定位通道门禁：走 data-testid）。 */
+function selectorMeasuredVisible(page: Page, selector: string): Promise<boolean> {
+  return page.evaluate((sel: string) => {
+    const root = document.querySelector("app-content")?.shadowRoot;
+    const el = root?.querySelector(sel) as HTMLElement | null;
+    if (!el) return false;
+    const rect = el.getBoundingClientRect();
+    if (rect.width <= 0 || rect.height <= 0) return false;
+    for (let cur: HTMLElement | null = el; cur !== null; cur = cur.parentElement) {
+      if (getComputedStyle(cur).display === "none") return false;
+    }
+    return true;
+  }, selector);
+}
+
+/** 读密度态持久化值（简版 = 无值或 "simple"）。 */
+function readDensityStored(page: Page): Promise<string | null> {
+  return page.evaluate(() => localStorage.getItem("diag.perf.density"));
+}
+
 test.describe("诊断页", () => {
   test.beforeEach(async ({ page }) => {
     await gotoApp(page);
@@ -502,6 +523,62 @@ test.describe("诊断页", () => {
       return root?.querySelector('[data-testid="diag-log-list"]')?.textContent ?? "";
     });
     expect(listText).toContain("No logs yet");
+  });
+
+  // ===== 参数密度（2026-10-15 锐评改进 P0）：基准三件套默认收起 =====
+  // 判据全在 DOM 尺寸（display 口径对「祖先隐藏」失明，同 ADR-259 e2e 防线口径）。
+  // 界面 locale 被 playwright.config 钉 en-US，文案断言用英文包关键词。
+  test("基准三件套默认收起；展开后真实可见、再收起时勾选归零（不可见不生效）", async ({ page }) => {
+    await clickBySelector(page, '.repo-tab[data-tab="bench"]');
+    const group = '[data-testid="diag-perf-baseline-save"]';
+    // 默认简版：基准勾选存在但不可见（祖先 .perf-density-off）
+    expect(await selectorMeasuredVisible(page, group)).toBe(false);
+    expect(await readDensityStored(page)).not.toBe("advanced");
+    // 点开关 → 进阶：整组真实可见 + aria-pressed + 持久化
+    await clickBySelector(page, '[data-testid="diag-perf-density"]');
+    await expect.poll(() => selectorMeasuredVisible(page, group), { timeout: 5000 }).toBe(true);
+    expect(await readDensityStored(page)).toBe("advanced");
+    // 勾上「记录 + 对比」，再点开关收起 → 勾选必须归零（否则 single-bench 仍组装 --baseline）
+    await page.evaluate(() => {
+      const root = document.querySelector("app-content")?.shadowRoot;
+      for (const id of ["diag-perf-baseline-save", "diag-perf-baseline-compare"]) {
+        (root?.getElementById(id) as HTMLInputElement).checked = true;
+      }
+    });
+    await clickBySelector(page, '[data-testid="diag-perf-density"]');
+    await expect
+      .poll(
+        () =>
+          page.evaluate(() => {
+            const root = document.querySelector("app-content")?.shadowRoot;
+            const on = ["diag-perf-baseline-save", "diag-perf-baseline-compare"].map(
+              (id) => (root?.getElementById(id) as HTMLInputElement)?.checked,
+            );
+            return JSON.stringify(on);
+          }),
+        { timeout: 5000 },
+      )
+      .toBe("[false,false]");
+    expect(await selectorMeasuredVisible(page, group)).toBe(false);
+  });
+
+  test("进阶态跨页面重载保留（持久化 = safeSet 单点，非会话内存）", async ({ page }) => {
+    await clickBySelector(page, '.repo-tab[data-tab="bench"]');
+    await clickBySelector(page, '[data-testid="diag-perf-density"]');
+    expect(await readDensityStored(page)).toBe("advanced");
+    await page.reload();
+    await navItem(page, "diagnostics").click();
+    await page.waitForFunction(
+      (n: number) => {
+        const root = document.querySelector("app-content")?.shadowRoot;
+        return (root?.querySelectorAll(".repo-tab").length ?? 0) >= n;
+      },
+      DIAG_TAB_COUNT,
+      { timeout: 10000, polling: 200 },
+    );
+    await clickBySelector(page, '.repo-tab[data-tab="bench"]');
+    const group = '[data-testid="diag-perf-baseline-save"]';
+    await expect.poll(() => selectorMeasuredVisible(page, group), { timeout: 5000 }).toBe(true);
   });
 });
 

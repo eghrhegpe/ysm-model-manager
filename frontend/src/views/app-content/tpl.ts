@@ -60,6 +60,9 @@ export const VIEW_TESTIDS: readonly string[] = [
   "diag-perf-baseline-save",
   "diag-perf-baseline-compare",
   "diag-perf-baseline-th",
+  // 2026-10-15 锐评改进 P0：基准三件套的密度开关（简版收起 / 进阶展开）——
+  // e2e 与单测按此断言「收起时勾选归零、进阶态跨会话保留」；id 归 handler / CSS 锚点。
+  "diag-perf-density",
   // ADR-262 D5：并发基准入口（并发度 / 取样上限 / 运行）——目标集与排序共用上方那一套（ADR-278 §2.2）
   "diag-perf-conc-workers",
   // ADR-278 §2.2：单模型 / 并发**共用**同一套目标集 / 排序控件（即上方登记的 #diag-perf-rtype /
@@ -317,7 +320,15 @@ export function diagnosticsHTML(): string {
           <input id="diag-perf-model" type="text" data-testid="diag-perf-model" placeholder="${t("diagnostics.perfModelPlaceholder")}">
         </div>
       </div>
-      <div class="diag-param-group">   <!-- ADR-332 D3：参数组② = 基准三件套（记录 / 对比 / 阈值），与路径组形成可见边界 -->
+      <!-- 密度开关（2026-10-15 锐评改进 P0）：只切「基准三件套可见性」这一个维度——控件一份不复制、
+           既有 id 全部保留（singleBenchRead* 读路径与 perf.test 断言面一字不动）。
+           收起的只有基准组：迭代/上限有合理默认且属「跑一次」的必需单位语义，收起它们会让
+           读路径继续吃不可见的值（本卡 2026-10-12「看得见、点不动」同族的反向病），故不入进阶档。
+           文案与 aria-pressed 由 perf-density.ts 随态改写；切简版时基准两勾选归零（不可见不生效）。 -->
+      <div class="diag-bar-row" data-perf-mode="single">
+        <button class="diag-perf-density" id="diag-perf-density" data-testid="diag-perf-density" type="button" aria-pressed="false">${UI_ICONS.settings} <span data-perf-density-label>${t("diagnostics.perfDensityMore")}</span></button>
+      </div>
+      <div class="diag-param-group" data-perf-mode="single" data-perf-density="advanced">   <!-- ADR-332 D3：参数组② = 基准三件套（记录 / 对比 / 阈值），与路径组形成可见边界；归进阶档。双维度显隐：data-perf-mode 管「哪个基准模式」（conc/scan 整组退场，防空壳边框）、data-perf-density 管「参数密度」（简版收起），两 class 各自独立、任一判隐即隐藏 -->
         <div class="diag-bar-row" data-perf-mode="single">
           <label for="diag-perf-baseline-save">${t("diagnostics.perfBaselineSave")}</label>
           <input id="diag-perf-baseline-save" type="checkbox" data-testid="diag-perf-baseline-save">

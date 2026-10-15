@@ -435,6 +435,11 @@ export const ja: Record<string, string> = {
   "diagnostics.perfStageStats": "p95 {p95}ms（n={n}）",
   "diagnostics.perfStageStatsHint": "中央値 {median}ms / p95 {p95}ms；n = この段階の実際の出現回数",
   // 基準の入口と判定（ADR-262 D8）：パスと判定基準は Go 側、UI は文言のみ
+  // パラメータ密度（2026-10-15 改善 P0）：基準の三件套は既定で折りたたみ
+  "diagnostics.perfDensityMore": "基準オプション",
+  "diagnostics.perfDensityLess": "基準オプションを折りたたむ",
+  "diagnostics.perfDensityHint":
+    "展開すると基準の記録・比較が可能に。折りたたみ中は両スイッチが OFF になり、今回の実行に含まれません",
   "diagnostics.perfBaselineSave": "基準を記録",
   "diagnostics.perfBaselineCompare": "基準と比較",
   "diagnostics.perfBaselineThreshold": "退行しきい値 %",

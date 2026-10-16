@@ -260,14 +260,23 @@ func MoveModelFile(root, src, dstDir string) error {
 // 错误消息由调用方注入以保持既有断言（fileops_move_safety_test.go 断言原文）。
 // allowRoot=true 时 path==root 视为安全（Copy 源/目标=root、Move 目标=root 合法）；
 // false 时拒绝（Move 源=root、Delete 单文件=root 无意义）。
+// 复核收口（2026-10-16 子代理锐评）：allowRoot=false 分支原把 RelInside 的 err 吞掉
+// （`err == nil && rel == "."`），意外失败时条件为假 → 静默放行，与原实现
+// （filepath.Rel 失败即拒）语义不等价。RelInside 内部再跑一次 IsInside，同参数下
+// 几乎不会失败，故属低概率，但既是守卫就应 fail-closed：err 一律拒绝。
 func inRepo(root, path, msg string, allowRoot bool) error {
 	if err := paths.IsInside(root, path); err != nil {
 		return fmt.Errorf("%s: %s", msg, path)
 	}
-	if !allowRoot {
-		if rel, err := paths.RelInside(root, path); err == nil && rel == "." {
-			return fmt.Errorf("%s: %s", msg, path)
-		}
+	if allowRoot {
+		return nil
+	}
+	rel, err := paths.RelInside(root, path)
+	if err != nil {
+		return fmt.Errorf("%s: %s", msg, path)
+	}
+	if rel == "." {
+		return fmt.Errorf("%s: %s", msg, path)
 	}
 	return nil
 }

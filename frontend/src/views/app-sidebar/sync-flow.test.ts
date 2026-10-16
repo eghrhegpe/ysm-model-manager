@@ -4,7 +4,7 @@
 // 请求-响应匹配与错误传播，它们守护的是补丁本身。现留守：pruneCheckedSets。
 import { describe, it, expect } from "vitest";
 
-import { pruneCheckedSets } from "./sync-flow.ts";
+import { pruneCheckedSets } from "./sidebar-select.ts";
 import type { SidebarInstance } from "./data.ts";
 
 // P1 修复回归锁（2026-10 锐评）：勾选集合按 rtype 存实例名，实例被删除后名字

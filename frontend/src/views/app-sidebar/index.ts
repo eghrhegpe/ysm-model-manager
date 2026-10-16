@@ -21,12 +21,8 @@ import type { SidebarInstance } from "./data.ts";
 import { bindCardEvents, bindFooter, bindMcPathLabel } from "./events.ts";
 import { loadInstances } from "./loader.ts";
 import { renderLoadError, renderVersionCards } from "./render.ts";
-import {
-  bindSelectAll,
-  bindSyncSelected,
-  pruneCheckedSets,
-  restoreCheckboxes,
-} from "./sync-flow.ts";
+import { bindSelectAll, pruneCheckedSets, restoreCheckboxes } from "./sidebar-select.ts";
+import { bindSyncSelected } from "./sync-flow.ts";
 import { footerHTML, headerHTML, listContainerHTML, syncResultPanelHTML } from "./tpl.ts";
 
 // ---------- AppSidebar 类 ----------

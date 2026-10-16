@@ -94,6 +94,21 @@
 
 **建议方向**：拆三件——`sidebar-push.ts`（runPush + PushAccum + absorb）、`sidebar-pull.ts`（runPull）、`sidebar-select.ts`（勾选/全选/restore）。`sync-flow.ts` 保留为「编排入口 + 下拉控制器」。拆分后每文件 < 250 行，测试可按子系统单 mock。
 
+**处置结果（2026-10-16 已落地）**：按职责做**五向拆分**（比建议的「三件」多拆两件，因为结果浮层被 push/pull 共用、push/pull 又共用 `resetButton`，任一侧私藏都会引入不该有的反向依赖）：
+
+| 新文件 | 行数 | 职责 |
+|---|---|---|
+| `sidebar-select.ts` | 122 | 勾选集合读写 + 全选 + 幽灵名修剪 + 恢复 + `getSelected`/`instanceNameOf`（按 data-name 解析） |
+| `sidebar-push.ts` | 248 | 推送编排 + `PushAccum`/`absorbOutcome`/`buildFailedPacks`/`buildPushParts`/`showPushToast` + 推送侧常量（`MAX_TOTAL_ERRORS` 等）+ `baseName` |
+| `sidebar-pull.ts` | 165 | 拉取编排 + `PullCounters`/`PullPerType`/`accumulatePullResults`/`notifyPullOutcome` |
+| `sidebar-result-panel.ts` | 47 | 变更明细浮层（`escHandler` + `renderSyncResultPanel`/`closeSyncResultPanel`）——push/pull 共用，独立成文件避免任一侧依赖编排侧 |
+| `sidebar-shared.ts` | 19 | push/pull 共用原语（`SyncVerb` + `resetButton`） |
+| `sync-flow.ts`（收敛后） | 145 | 编排入口 + 下拉控制器（菜单命中 → 抢锁 → 分派 push/pull） |
+
+依赖方向无环：`sync-flow.ts → {select, push, pull, result-panel}`；`push/pull → {shared, result-panel}`；`result-panel → tpl`。原 706 行（锐评时 626 行）降到最大 248 行，`sync-flow.ts` 从「六职责杂糅」收敛到单一职责。`index.ts` 改为直接 `import { bindSelectAll, pruneCheckedSets, restoreCheckboxes } from "./sidebar-select.ts"`，`sync-flow.ts` 只导出 `bindSyncSelected`（不再做 barrel 再导出）。`sync-flow.test.ts` 的 `pruneCheckedSets` 直测改从 `sidebar-select.ts` 导入。
+
+验证：`npm run typecheck` 通过 + `check-bindings`「✅ 未发现绕过 bindings 的直接调用」；`vitest run` 全量 **540 文件 / 8643 测试全绿**（62s）；app-sidebar 9 文件 121 测试全绿。
+
 ### P1-3　`sync-deps.ts` / `pack-ops-deps.ts` 未实现 `deps?.fn` 注入 seam，测试完全依赖 `vi.mock` 模块层拦截
 **位置**：`features/sync/sync-deps.ts:10-11`、`features/pack-ops/pack-ops-deps.ts:8-9`、`features/dnd/dnd-deps.ts:9-10`、`views/backend-deps.ts:13-14`。
 

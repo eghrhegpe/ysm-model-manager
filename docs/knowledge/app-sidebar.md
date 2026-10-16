@@ -19,7 +19,6 @@ auto_fields:
     - bindCardEvents
     - bindFooter
     - bindMcPathLabel
-    - bindSelectAll
     - bindSyncSelected
     - EmitDedupe
     - emptyInstanceStateHTML
@@ -30,10 +29,8 @@ auto_fields:
     - listContainerHTML
     - loadErrorStateHTML
     - loadInstances
-    - pruneCheckedSets
     - renderLoadError
     - renderVersionCards
-    - restoreCheckboxes
     - runLauncherDetect
     - runMcSearch
     - sidebarCSS

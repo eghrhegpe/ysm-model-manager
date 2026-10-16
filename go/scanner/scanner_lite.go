@@ -39,7 +39,8 @@ func ScanEntriesLiteCtx(ctx context.Context, dir string) []types.ModelEntry {
 		if ctx.Err() != nil {
 			return fs.SkipAll
 		}
-		entry, walkRet, _ := processScanDirEntry(p, d, err, dir, false, false)
+		// nil = 不计条目级错误（ADR-352 ③）：作者提取共签路径不消费计数，行为不变
+		entry, walkRet, _ := processScanDirEntry(p, d, err, dir, false, false, nil)
 		if walkRet != nil {
 			return walkRet
 		}

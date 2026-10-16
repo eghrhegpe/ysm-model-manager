@@ -114,7 +114,7 @@ retry:
 		if ctx.Err() != nil {
 			return fs.SkipAll // ADR-197：取消即中止整个 walk
 		}
-		entry, walkRet, rootFailed := processScanDirEntry(p, d, err, dir, true, true)
+		entry, walkRet, rootFailed := processScanDirEntry(p, d, err, dir, true, true, nil)
 		if rootFailed {
 			walkFailed.Store(true)
 			return nil
@@ -206,12 +206,18 @@ func joinInFlightWaiter(dir string, fl *scanFlight) joinResult {
 // 纯目录枚举，Size/ModTime/Hash 恒零值。
 // deferHash=true（ScanEntries 走盘用）：哈希推迟到 walk 后由 hashEntriesParallel 并行
 // 回填，本函数只留 Size/ModTime；其余调用方传 false 保持内联。
-func processScanDirEntry(p string, d os.DirEntry, err error, dir string, wantMeta, deferHash bool) (entry *types.ModelEntry, walkRet error, rootFailed bool) {
+// errCount（ADR-352 ③）：条目级错误可观测出口——非根 ReadDir 回调 err 与 d.Info()
+// 失败各计 1（walkDirParallel 并行回调，须 atomic）。nil = 不计（全量扫描/作者提取
+// 共签路径行为不变）。
+func processScanDirEntry(p string, d os.DirEntry, err error, dir string, wantMeta, deferHash bool, errCount *atomic.Int64) (entry *types.ModelEntry, walkRet error, rootFailed bool) {
 	if err != nil {
 		// 统一走错误回调（GUI 下 stdout 不可见，薄壳注入后进环形日志面板 ADR-082）
 		emitScanError("[scanner] walk error: %s: %v", p, err)
 		if p == dir {
 			return nil, nil, true // 根目录本身打不开：整目录失败
+		}
+		if errCount != nil {
+			errCount.Add(1)
 		}
 		return nil, nil, false
 	}
@@ -267,7 +273,12 @@ func processScanDirEntry(p string, d os.DirEntry, err error, dir string, wantMet
 		if err != nil {
 			// d.Info 失败跳过该文件——原实现 log 后仍以 Size=0/ModTime=0 混入，造成
 			// 前端展示大小 0 的幽灵文件，同步哈希基于错误元数据；跳过比假条目更诚实。
+			// 同时计入条目级错误计数（ADR-352 ③/N2）：该文件未入本次路径集，
+			// 若继续 prune 会把索引表里的真实条目误删——>0 即走维护门放弃。
 			emitScanError("[scanner] 获取文件信息失败 %s: %v，跳过该文件", p, err)
+			if errCount != nil {
+				errCount.Add(1)
+			}
 			return nil, nil, false
 		}
 		e.Size = info.Size()

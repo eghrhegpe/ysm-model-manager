@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"ysm-model-manager/go/fsutil"
+	"ysm-model-manager/go/scanner"
 	"ysm-model-manager/go/sync"
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/types/registry"
@@ -360,11 +361,18 @@ func (a *App) restartWatcher(filesRoot, mcRoot string) error {
 	if filesRoot != "" && mcRoot != "" {
 		a.watcher = watcher.New(filesRoot, mcRoot, a.scanModelEntries, a.ClearScanCache)
 		a.watcher.SetOnChange(a.emitRepoFsChanged) // 与 ServiceStartup 同装配（重建实例须重注入）
+		// ADR-352 ②：根变更后的重注册面——rebuildWatcherAndDirs 是 saveConfig 的单漏斗
+		// （SaveAppConfig 路径亦经此），此处重注册 + 重标 watcher 活跃根；出集表实例
+		// 由 SetIndexRoots 自动删除（旧根的持久表随根切换退役，不留孤儿表）。
+		scanner.SetIndexRoots(a.allAllowedRoots())
 		if err := a.watcher.Start(); err != nil {
 			// Start 失败必须向上传播——原 println 静默 + SaveAppConfig
 			// 返回 nil，旧 watcher 已停而新 watcher 未起 → 自动同步静默永久丢失（假成功）
 			return fmt.Errorf("重启文件监听失败: %w", err)
 		}
+		// 同 ServiceStartup 口径：watcher 起得来才标「主动去信任」根（长信任窗），
+		// 起不来该根回落 scanTTL() 兜底（注册已在上面完成，持久化面不受影响）。
+		scanner.MarkIndexRootWatched([]string{filesRoot})
 	}
 	return nil
 }

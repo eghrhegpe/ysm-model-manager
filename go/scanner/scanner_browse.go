@@ -141,13 +141,33 @@ retry:
 	entries := []types.ModelEntry{}
 	var entriesMu sync.Mutex
 	var walkFailed atomic.Bool
+	// 条目级错误计数（ADR-352 ③）：非根 ReadDir 回调 err + d.Info() 失败。
+	// >0 = 本次路径集不完整——prune 会误删磁盘真实条目，索引维护门整体跳过。
+	var entryErrs atomic.Int64
+	// ADR-352 ④ 快路径（单飞 owner 分支内）：信任态（trusted + 双代数快照 + 15 分钟窗）
+	// 成立时免 walk，按持久索引表重建条目——waiter 经既有航班机制取 fl.entries
+	// （hit=true，不重复重建），结果经 tryStoreBrowseCache 版本守卫回存刷 TTL。
+	si := ScanIndexFor(dir)
+	if si != nil {
+		if served, ok := si.Serve(); ok {
+			fl.entries = served
+			tryStoreBrowseCache(dir, served, startTime, gen, keyVersion, false)
+			return served, true // 未走盘——缓存命中口径，oplog 免刷屏
+		}
+	}
+	// 索引维护快照须在 walk 启动前捕获（ADR-352 ③/S1-1）：walk 期间的代际推进
+	// 不得被收尾复核「追认」——混合结果不得固化入表。
+	if si != nil {
+		si.MarkWalkStart()
+		indexWalks.Add(1)
+	}
 	// wantMeta=true：树需要 Size/ModTime（size/date 排序）；deferHash=true：跳过
 	// walk 内联哈希，且本路径不跑 hashEntriesParallel——Hash 恒空即浏览投影契约。
 	if werr := walkDirParallel(dir, func(p string, d os.DirEntry, err error) error {
 		if ctx.Err() != nil {
 			return fs.SkipAll
 		}
-		entry, walkRet, rootFailed := processScanDirEntry(p, d, err, dir, true, true)
+		entry, walkRet, rootFailed := processScanDirEntry(p, d, err, dir, true, true, &entryErrs)
 		if rootFailed {
 			walkFailed.Store(true)
 			return nil
@@ -174,6 +194,12 @@ retry:
 		return entries, false
 	}
 	tryStoreBrowseCache(dir, stored, startTime, gen, keyVersion, walkFailed.Load())
+	// ADR-352 ③ 索引收尾：根级失败（walkFailed）不进入维护——末次良好表保留服务
+	// 至 15 分钟 cap（静默降级面，诊断经 scanErrorDedup/OpLog 可见）；ctx 取消
+	// 已在上方提前返回，此处结果必完整。
+	if si != nil && !walkFailed.Load() {
+		si.CommitWalk(stored, entryErrs.Load())
+	}
 	return entries, false
 }
 

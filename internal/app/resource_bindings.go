@@ -302,7 +302,17 @@ func (a *App) SetResourceRoot(rtype, path string) error {
 		cfg.CustomRoots = make(map[string]string)
 	}
 	cfg.CustomRoots[rtype] = path
-	return a.saveConfig(cfg)
+	if err := a.saveConfig(cfg); err != nil {
+		return err
+	}
+	// ADR-352 ② 重注册面：CustomRoots 变更不重启 watcher（既有面——新自定义目录
+	// 不在 watcher 监听集内），但浏览索引根清单 = allAllowedRoots() 须重算——新自定义
+	// 根入库、旧自定义根出集（出集表实例自动删除，不留孤儿表）。watched 位全量
+	// 复位：新根未随 watcher 重配，保守回落 scanTTL() 兜底，外部变更探测零回归。
+	// SaveAppConfig 路径（FilesRoot/McRoot 变更）经 applyPostSaveSideEffects →
+	// rebuildWatcherAndDirs → restartWatcher 单漏斗，不在此重复。
+	scanner.SetIndexRoots(a.allAllowedRoots())
+	return nil
 }
 
 // ResetResourceRoot 恢复指定资源类型的路径为默认（清空自定义值）

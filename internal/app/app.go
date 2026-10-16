@@ -276,8 +276,15 @@ func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 		a.watcherMu.Lock()
 		a.watcher = watcher.New(ysmRoot, cfg.McRoot, a.scanModelEntries, a.ClearScanCache)
 		a.watcher.SetOnChange(a.emitRepoFsChanged) // 止血 2026-10-15 A3：FS 变更 → Wails 事件 → 前端树自动刷新
+		// ADR-352 ②：浏览索引注册面 = 路径守卫根清单（allAllowedRoots 同源），
+		// 仅注册根落持久表；watcher 起得来才把 ysm 根标为「主动去信任」根（享 15min
+		// 长信任窗），Start 失败不标——该根回落 scanTTL() 兜底（外部变更探测不恶化）。
+		// 注册在 Start 前后都执行：索引表本身不依赖 watcher，起不来也有持久化面。
+		scanner.SetIndexRoots(a.allAllowedRoots())
 		if err := a.watcher.Start(); err != nil {
 			log.Printf("[startup] 文件监听器启动失败: %v", err)
+		} else {
+			scanner.MarkIndexRootWatched([]string{ysmRoot})
 		}
 		a.watcherMu.Unlock()
 	}
@@ -288,8 +295,17 @@ func (a *App) ServiceStartup(ctx context.Context, _ application.ServiceOptions) 
 // watcher 的 onChange 回调（go/watcher syncAll 执行段前触发）经本方法转
 // Events("repo:fs-changed")；前端 app 级单例 EventsOn 注册一次，800ms 防抖后
 // bus.emit("repo:fs-changed") → app-tree 重载，终结「外部改文件需手动刷新」。
-// nil 守卫对称 emitDownloadProgress：a.app 为 nil（CLI/测试 &App{} 直构）时静默丢弃。
+// nil 守卫对称 emitDownloadProgress：a.app 为 nil（CLI/测试 &App{} 直构）时静默丢弃事件。
 func (a *App) emitRepoFsChanged() {
+	// ADR-352 ⑥ 配对：watcher 的 onChange 段只刷 UI，clearCacheFn 在「instances 非空」
+	// 分支里才跑——外部变更 + 空实例时缓存不清、keyVersion 不推进，浏览索引信任态会
+	// 被永久挡住（免走服务陈旧表，直到 15min 窗过期）。每次 onChange 定向去信任仓库
+	// 根（进程内操作零 I/O；next browse 重走重锚）。nil 守卫之外——CLI/测试直构
+	// &App{} 时 InvalidateScanPath 是纯 scanner 包内缓存操作，照常安全；ysmRoot
+	// 未配置（""）时守卫短路。
+	if root := a.ysmRoot(); root != "" {
+		a.InvalidateScanPath(root)
+	}
 	if a.app == nil {
 		return
 	}

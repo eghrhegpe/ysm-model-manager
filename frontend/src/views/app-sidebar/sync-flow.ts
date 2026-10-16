@@ -687,6 +687,12 @@ export function bindSyncSelected(
   setDropdownCleanup(() => {
     disposePush();
     disposePull();
+    // P2 修复（2026-10-16 锐评）：结果浮层的 ESC 监听也须随组件卸载移除。
+    // 原 cleanup 只 dispose 下拉控制器，`escHandler`（模块级）只被
+    // `closeSyncResultPanel` 自己摘除——组件在结果面板打开时卸载，ESC 监听
+    // 永久挂 document。closeSyncResultPanel 幂等（内部 `if (escHandler)`），
+    // 已关面板时调用无害。
+    closeSyncResultPanel(root);
   });
   // 程序化收起统一走控制器句柄（closeAllMenus 见上方）：不再手改 display / aria-expanded
   const closeAllMenusBoth = (): void => closeAllMenus(disposePush.close, disposePull.close);

@@ -85,7 +85,7 @@ use_when:
 perf:
   - io-bound
 invariant_anchors:
-  - go/sync/sync.go|fsutil.IsRecycleDir
+  - go/sync/sync_walk.go|skipExcludedDir
   - go/sync/sync_relink.go|installer.CopyFile
   - go/sync/verdict.go|ContentVerdict
 status: active

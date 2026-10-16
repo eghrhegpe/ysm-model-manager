@@ -305,3 +305,31 @@ func TestPullResources_MMDFolderLevel(t *testing.T) {
 		func(name, src, dst string, size int64, status, msg string) {})
 	testutil.Equal(t, res.OK, 1, "应拉取 1 个 MMD 文件夹（首个失败: %s）", res.FirstError)
 }
+
+// TestPushResources_SameSizeDifferentContent 锁 P0-②（锐评 2026-10-16）：执行链必须走
+// 哈希判定，不得静默判 Synced。
+//
+// 原执行链直调 SyncResources（scanFn=nil → 恒无哈希 → ContentVerdict 回退 Size），
+// 同尺寸异内容的文件被判 Synced 而不推送——CLI `ysm instances push` 即中招；展示链
+// （instance.BuildSyncItems）早已注入 scanner 哈希（ADR-344 D1 + 2026-10-15 锐评），
+// 两路对同一事实答案相反。pushPullDiff 注入同款 scanner 缓存化扫描后，此处应为 Missing
+// 并真推送。同尺寸（4 字节）异内容：纯 Size 对比会误判 Synced。
+func TestPushResources_SameSizeDifferentContent(t *testing.T) {
+	t.Parallel()
+	globalDir, targetDir := setupSyncDirs(t)
+	instFile := filepath.Join(targetDir, "pack.zip")
+	if err := os.WriteFile(filepath.Join(globalDir, "pack.zip"), []byte("AAAA"), perm); err != nil {
+		testutil.NoError(t, err)
+	}
+	if err := os.WriteFile(instFile, []byte("BBBB"), perm); err != nil {
+		testutil.NoError(t, err)
+	}
+
+	count, err := PushResources("resourcepack", globalDir, targetDir, "copy",
+		func(name, src, dst string, size int64, status, msg string) {})
+	testutil.NoError(t, err, "异内容推送不应报错")
+	testutil.Equal(t, count, 1, "同尺寸异内容应经哈希判 Missing 并推送，got %d", count)
+	got, rerr := os.ReadFile(instFile)
+	testutil.NoError(t, rerr, "读取推送结果失败")
+	testutil.Equal(t, string(got), "AAAA", "推送后实例侧应为全局内容，got %q", got)
+}

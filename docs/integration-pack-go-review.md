@@ -17,6 +17,13 @@
 - **建议方向**：让 sync 内部变更改走 scanner 漏斗——`defer scanner.InvalidateCache()` 或 `scanner.InvalidatePath(...)`，instance 的 `InvalidateSyncItemsCache` 由钩子级联触发（现在 `scanner.InvalidateCache`/`InvalidatePath` 末尾已调 `notifyCacheInvalidated()`，`scanner.go:237-245`、`scanner.go:315`）。这样"改了 A 忘了清 B"从"30 个调用点的人肉义务"降为"一个钩子注册"，新增同步操作不再有配对负担。
 - **✅ 已修复（2026-10-16，commit `bbce4353a`）**：八处 `defer InvalidateSyncScanCaches()` 全部改 `defer scanner.InvalidateCache()`，经 `scanner.OnCacheInvalidated` 级联同时清 sync 扫盘 + instance 同步结果；app 层配对保留作防御纵深（`tests/test_sync_write_cache_pairing.ts` 强制保留）。相关失效入口注释（`app_install_instance.go` / `app_install_import.go` / `go/instance/instance.go` / `go/sync/sync_cache.go`）同步更新（`6fc3e892e`）。
 
+### P0-2　push/pull 执行链 scanFn=nil：同尺寸异内容被静默判 Synced 不推送，与展示链答案相反
+- **文件:行**：`go/sync/sync_push.go` `PushResources`（两分支）与 `PullResources` 直调 `SyncResources`/`SyncResourcesDirLevel`（scanFn=nil）→ 条目恒无哈希；判定单点 `go/sync/verdict.go:44-58` `ContentVerdict` 任一侧无哈希则回退 Size。
+- **问题**：同尺寸异内容的文件被判 Synced 而不推送。受影响的是**执行链**——CLI `ysm instances push/pull` 经 `internal/app/app_install_instance.go:425` `PushResourceToInstance` → `ysmsync.PushResources` 中招；而展示链 `go/instance/instance.go:326/328` 早已注入 `scanner.ScanEntriesWithHit`/`scanner.ScanEntries`（hashed），**两条路对同一事实给出相反答案**。GUI 推送碰巧正确（FE `features/sync|downloadMissing` 逐文件直推 `InstallResourceToInstance`），掩盖了缺口。
+- **根因**：哈希注入是**调用点义务**而非差集函数默认行为；展示链履行了、执行链没履行，且没有不变量闸钉住两者一致。
+- **建议方向**：把 scanner 哈希注入下沉到 push/pull 执行链自身（同一成本模型：30s TTL 命中零哈希，哈希在 scanner 侧并行预算内现算），让「两路对同一事实答案相反」无土壤。
+- **✅ 已修复（2026-10-16，commit 见 `git log --oneline --grep=pushPullDiff`）**：`sync_push.go` 新增包级 helper `pushPullDiff`，dirLevel 注 `scanner.ScanEntriesWithHit`、file-level 注 `scanner.ScanEntries`，`PushResources` 两分支与 `PullResources` 全部改走它。空哈希只剩「非 hashable 扩展」（`registry.ShouldHashExt` 之外）一类，非新降级。回归锁 `go/sync/sync_push_test.go|TestPushResources_SameSizeDifferentContent`（突变验证：退回 size-only → 计数 0，红灯）。pull 的 Extra 是键存在性，哈希对 pull 行为上无变化，但共用同一差集函数消分歧。
+
 ---
 
 ## P1（明显债务，值得近期修）

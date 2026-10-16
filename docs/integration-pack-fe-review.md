@@ -76,6 +76,15 @@
 
 **建议方向**：**让 `DownloadOutcome` 成为推送结果的唯一契约**，`PushAccum` 退化为纯 `DownloadOutcome` 的派生视图（或直接删除，`absorbOutcome` 内联）。包级/文件级归因、超时/跳过/错误全由 `DownloadOutcome` 提供，sidebar 只做 `t()` 文案映射。可顺带把 `MAX_PACK_ERRORS`/`MAX_TOTAL_ERRORS`/`MAX_NAMED_PACKS`/`MAX_NAMED_OVERWRITES`/`MAX_PANEL_PACK_FILES`（sync-flow.ts:42-54）与 sync.ts:79-81 的 `MAX_ERRORS`/`MAX_PACK_ERRORS` 统一收敛到一处常量。
 
+**处置结果（2026-10-16 复核，锐评行号基准已过时——以现行为准）**：**建议方向不采纳，原判定系误判**。证据如下：
+1. **`PushAccum` 含 `timedOut`/`abortedTypes` 两个编排层专属字段**，`DownloadOutcome` **不可能**承载：`downloadMissing` 契约是「恒 settle 不 reject」（sync.ts:328-329），超时是 `runPush` 里的 `withTimeout`（sync-flow.ts:405）在 **views 层**捕获的 `TimeoutError`，`downloadMissing` 本身从不抛它。把超时塞回 `DownloadOutcome` 会污染 features 层（features 不知晓调用方的超时编排）。
+2. **`absorbOutcome` 的每一行都是真跨批次归并，非纯透传**：`installOk/installFail` = 跨类型求和；`errorDetails` = 跨类型截断汇总（每批限 3 条，跨 15 类型再限 5 条，sync.ts:79 vs sync-flow.ts:43）；`packTotals` = 跨类型**合并同名包**（一个包会出现在多个类型的 `packs` 里，必须累加）；`overwrites` = 跨批次 Set 去重（磁盘事实不是批次事实，sync-flow.ts:272-274 注释写明）；`skipped`/`blocked` = 对 `skipped+skipReason` 的**语义再分流**（busy vs config/error）。这些都做不了「`PushAccum` 直接内联、sidebar 只做文案映射」——聚合逻辑必须有落点。
+3. **第三处 `app-sync-manager` 的 `_allItems`/`_scanDirs` 与推送结果无关**：它是 `store.ts:57/68` 经 `GetInstanceSyncStatus`/`GetSyncScanDirs` 拉回的**同步状态视图模型**（当前实例每个文件的 synced/missing/diverged + 扫描目录摘要），与「一次推送的成败计数」是完全不同的两类数据，**不可合并**。原判定把「状态视图」与「操作结果」并列为「三份真相」，是类别混淆。
+4. **历史 bug 已修，无现存活账**：`runPush` 现在 toast 用 `accum.installFail`、浮层用 `accum.installOk/installFail/errorDetails/packTotals/overwrites`，**全部读同一份 `accum`**，无双份记账分歧。
+5. **常量非重复**：`sync.ts` 的 `MAX_ERRORS=3`/`MAX_PACK_ERRORS=2` 是**单批**上限；`sync-flow.ts` 的 `MAX_TOTAL_ERRORS=5`/`MAX_NAMED_PACKS=3`/`MAX_NAMED_OVERWRITES=3`/`MAX_PANEL_PACK_FILES=8` 是**跨批**或**展示层**上限——分层设防，收敛成一处反而丢失语义（15 类型累积不可能用单批的 3 条截断）。
+
+**结论**：分层是**正确的**——features 管「操作契约」（`DownloadOutcome`），views 管「跨批归并 + 编排状态」（`PushAccum` 加 `timedOut`/`abortedTypes`）。原判定「`DownloadOutcome` 未成为唯一事实源」是把**归并器**误当**重复记账**。真正的可改进点是**把归并逻辑（`absorbOutcome`/`buildFailedPacks`/`buildPushParts`）从 626 行的 `sync-flow.ts` 抽成独立模块**以便单测——这归属 P1-2（sync-flow.ts 拆分），**不改变 `PushAccum` 的职责**。据此，「数据流 6/10」的扣分 4 分应重估：`stats:refresh` 广播重复刷新（P1-5）那一半仍成立，P1-1 这一半不成立。
+
 ### P1-2　`sync-flow.ts` 626 行承担 6 类职责，已到拆分阈值
 **位置**：`app-sidebar/sync-flow.ts`（全文 626 行）。拆解：`checkedSetFor`/`bindSelectAll`/`pruneCheckedSets`/`restoreCheckboxes`（勾选持久化，23-136）、`closeAllMenus`/`getSelected`/`resolveTypes`/`beginSync`/`resetButton`（菜单与锁，143-210）、`PushAccum` 系（247-340）、`runPush`（348-427）、`runPull`（529-589）、`renderSyncResultPanel`/`closeSyncResultPanel`（495-527，含模块级 `escHandler`）、`bindSyncSelected`（592-626）。
 

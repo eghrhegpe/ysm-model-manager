@@ -380,7 +380,7 @@ function sortedChildKeys(node: TreeNode, sort: string): string[] {
  * 文件行（搜索未命中 → null，即该行不产出）。
  * 判据（ADR-343-d1 C1 单口径）：`keywordMatches(entry.name, entry.path, 关键词)`——
  * name/相对路径子串面 + 纯拉丁关键词的全拼/首字母拼音面（与 Go go/pinyin|MatchKeyword
- * 同判据，金样例 tests/fixtures/search-golden.json 双读对账）。
+ * 同判据，金样例 tests/fixtures/parity/search-golden.json 双读对账）。
  * 原语义：`if (isSearch && !entry.path.toLowerCase().includes(searchLower)) continue;`
  *
  * key 走 entryKey（磁盘路径），非树内拼接路径——与 DOM data-fullpath /

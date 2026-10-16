@@ -624,6 +624,19 @@ describe("bindCardEvents — 点击早退分支（P1/P2 闭包内的守卫）", 
     expect(hdr.classList.contains("ripple")).toBe(false);
     expect(hdr.classList.contains("active")).toBe(true); // active 不随涟漪消失
   });
+
+  it("涟漪复位计时器持句柄：cleanup（卸载语义）后到点回调不再执行（锐评 FE P2-3）", async () => {
+    const { container, cleanup } = mount([instance("A1")]);
+    const hdr = container.querySelector(".instance-card-header") as HTMLElement;
+    hdr.click();
+    expect(hdr.classList.contains("ripple")).toBe(true);
+    // 卸载：在途的 500ms 复位计时器必须被 clear——原实现裸 setTimeout 不持句柄，
+    // 卸载后仍会执行并操作游离节点。
+    cleanup();
+    await new Promise((r) => setTimeout(r, 560));
+    // 计时器已被 clear → 复位回调从未执行 → ripple 停留在点击时的状态。
+    expect(hdr.classList.contains("ripple")).toBe(true);
+  });
 });
 
 describe("bindCardEvents — 右键菜单（ctx:show）", () => {

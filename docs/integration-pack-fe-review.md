@@ -200,6 +200,8 @@
 
 **建议方向**：保存 `hdr._rippleTimer` 或统一走 `utils/animation/` 原语；`disconnectedCallback` 清理。
 
+**处置结果（2026-10-16 已修）**：采纳「保存句柄 + 卸载清理」，但**不选** `hdr._rippleTimer` 挂 DOM 属性（游离节点上的私有属性无人回收，且需再查一次节点才清得到），改挂 **per-root 绑定态 `CardBindState`**（`events.ts` 的 `WeakMap<ShadowRoot, CardBindState>`）新增 `rippleTimer` 字段——该 state 本就跨重绑存活、随 cleanup `bindStates.delete(root)` 一起被回收，是既有的正确容器。点击时先 `clearTimeout(st.rippleTimer)` 再存新句柄（重入不堆积）；`bindCardEvents` 内新增局部 `clearRippleTimer()`，在**两处**调用：① list 被替换的旧监听解绑分支（原 `st.list.removeEventListener(...)` 之后）；② 返回的 cleanup（`disconnectedCallback` 经 `_cardCleanup` 已调用它，`index.ts:335-337`，故卸载路径自动覆盖）。回归锁 `events.test.ts`「涟漪复位计时器持句柄：cleanup（卸载语义）后到点回调不再执行（锐评 FE P2-3）」：点击后有 ripple → `cleanup()` → 等 560ms → **ripple 仍在**（计时器已被 clear，复位回调从未执行）；已做突变验证（删掉 cleanup 里的 `clearRippleTimer()` → 红灯）。原页面行为不变（未卸载时 500ms 后照常复位）。
+
 ### P2-4　`sync-flow.ts` 的 `MAX_*` 常量与 `sync.ts` 的 `MAX_ERRORS` 命名/数值两套
 **位置**：`sync-flow.ts:42-54` vs `sync.ts:79-81`。
 

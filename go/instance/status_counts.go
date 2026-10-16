@@ -65,19 +65,15 @@ func BuildInstanceStatusCounts(
 		for j := range items {
 			foldUnit(&st, items[j])
 		}
-		// map 迭代序在 sync 层不保证，排序保证列表每次刷新顺序稳定（前端 diff/展示友好）；
-		// 排序后压重：面板链「混合夹」会同时产出平铺文件叶与容器 marker 子项，
-		// 同一文件重复列示（见 go-instance 卡已知限制），导入一键安装清单会重复安装
+		// map 迭代序在 sync 层不保证，排序保证列表每次刷新顺序稳定（前端 diff/展示友好）。
+		// 去重已随 ADR-351 D3 单表示退役：混合夹 marker 与平铺单元的重复表示在树化层
+		// absorbSelfMarker 判重收口，清单天然无重复（回归锁 instance_tree_single_repr_test.go）；
+		// 若未来出现新的重复形态，宁可它在这里红灯暴露，也不要静默压重掩盖。
 		sort.Strings(st.Missing)
 		sort.Strings(st.MissingDirs)
 		sort.Strings(st.Overwrites)
 		sort.Strings(st.Extra)
 		sort.Strings(st.Disabled)
-		st.Missing = dedupeSorted(st.Missing)
-		st.MissingDirs = dedupeSorted(st.MissingDirs)
-		st.Overwrites = dedupeSorted(st.Overwrites)
-		st.Extra = dedupeSorted(st.Extra)
-		st.Disabled = dedupeSorted(st.Disabled)
 		// Status 取「红优先」——与 loader.ts 自派生口径一致（有待推送差异就不再是绿/橙）
 		switch {
 		case st.MissingCount > 0:
@@ -92,22 +88,8 @@ func BuildInstanceStatusCounts(
 	return results
 }
 
-// dedupeSorted 就地压缩已排序切片中的相邻重复项（调用方须先 sort）。
-// 必要性：面板链的「混合夹」既把平铺模型文件登记为独立叶子、又经 absorbSelfMarker
-// 并入容器子项，同一文件会出现两次（面板侧表现为同名两行）；侧栏若原样带进
-// 一键安装清单就会重复安装同一文件。此处只去重清单，不改单元计数。
-func dedupeSorted(in []string) []string {
-	if len(in) < 2 {
-		return in
-	}
-	out := in[:1]
-	for _, s := range in[1:] {
-		if s != out[len(out)-1] {
-			out = append(out, s)
-		}
-	}
-	return out
-}
+// dedupeSorted 已随 ADR-351 D3 单表示退役（2026-10-16）：重复表示在树化层
+// absorbSelfMarker 判重收口，侧栏清单天然无重复；静默压重会掩盖新的重复形态。
 
 // statusCustomDir 解析实例侧扫描目录（单类型走 FindInstDir，多类型退回 ins.CustomDir）
 func statusCustomDir(ins *types.VersionInstance, rtypes []registry.ResourceType) string {

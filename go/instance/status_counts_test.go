@@ -374,9 +374,10 @@ func TestBuildInstanceStatusCounts_OverwritesForDivergedPackFolder(t *testing.T)
 	assertOverwritesSubset(t, st)
 }
 
-// TestBuildInstanceStatusCounts_ListDeduped 混合夹（自身含平铺模型文件 + 子夹）在面板链里
-// 会把同一平铺文件重复列示两次（absorbSelfMarker 并入 + 独立叶子共存，见知识卡已知限制），
-// 清单必须去重——否则一键安装对同一文件装两遍、条数与实际待装数不符。
+// TestBuildInstanceStatusCounts_ListDeduped 侧栏清单天然无重复（ADR-351 D3 单表示，
+// 2026-10-16 翻转为硬断言）：混合夹（自身含平铺模型文件 + 子夹）历史上把同一平铺
+// 文件重复列示（absorbSelfMarker 无条件并入 + 独立平铺叶共存），靠 dedupeSorted
+// 压重兜底；单表示修复后重复即回归红灯——静默压重会掩盖新重复形态。
 func TestBuildInstanceStatusCounts_ListDeduped(t *testing.T) {
 	sub := registry.SubDirMap("EntityPlayer")
 	if sub == "" {
@@ -406,7 +407,7 @@ func TestBuildInstanceStatusCounts_ListDeduped(t *testing.T) {
 	seen := map[string]bool{}
 	for _, p := range st.Missing {
 		if seen[p] {
-			t.Fatalf("清单重复条目 %s（全清单 %v）——会导致重复安装", p, st.Missing)
+			t.Fatalf("清单重复条目 %s（全清单 %v）——会导致重复安装；单表示失效（ADR-351 D3）", p, st.Missing)
 		}
 		seen[p] = true
 	}
@@ -414,10 +415,10 @@ func TestBuildInstanceStatusCounts_ListDeduped(t *testing.T) {
 		t.Fatal("两个平铺/子夹文件都缺失，清单不应为空")
 	}
 	if !sort.StringsAreSorted(st.Missing) {
-		t.Fatalf("去重后仍须有序，实际 %v", st.Missing)
+		t.Fatalf("清单仍须有序，实际 %v", st.Missing)
 	}
-	// 钉住上游 quirk 的存在性证据（证明本测试非空转）：面板链顶层容器子项里
-	// flat.pmx 重复出现，侧栏清单去重后只剩一条
+	// 面板链单表示硬断言（旧版此处 Skip：形态变化时断言自然失效；单表示修复后
+	// 重复=回归，翻转为 fail）：flat.pmx 在顶层容器子项里恰出现 1 次
 	raw := BuildSyncItems(&ins, []registry.ResourceType{{ID: "EntityPlayer", Icon: "🧍"}},
 		map[string]string{"EntityPlayer": globalDir}, "")
 	flat := filepath.Join(globalDir, "A", "flat.pmx")
@@ -430,8 +431,8 @@ func TestBuildInstanceStatusCounts_ListDeduped(t *testing.T) {
 		}
 	}
 	t.Logf("面板链顶层单元 %d 个；flat.pmx 在子项出现 %d 次；侧栏清单 %v", len(raw), dup, st.Missing)
-	if dup < 2 {
-		t.Skipf("面板链本次未复现重复列示（dup=%d）——该回归防的是 absorbSelfMarker 混合夹形态，形态变化时此断言自然失效", dup)
+	if dup > 1 {
+		t.Fatalf("面板链子项重复列示 flat.pmx ×%d——单表示失效（ADR-351 D3，absorbSelfMarker 判重回归）", dup)
 	}
 }
 

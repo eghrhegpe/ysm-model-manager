@@ -18,8 +18,8 @@ permalink: /adr/
 |------|------|
 | [📝 提议中](#提议中) | 5 |
 | [⚠️ 已采纳但遗留未修复](#已采纳但遗留未修复) | 1 |
-| [🔄 部分采纳](#部分采纳) | 15 |
-| [✅ 已采纳](#已采纳) | 344 |
+| [🔄 部分采纳](#部分采纳) | 14 |
+| [✅ 已采纳](#已采纳) | 345 |
 | [❌ 已取代](#已取代) | 9 |
 | [🧊 已废弃](#已废弃) | 0 |
 | [❓ 未归类](#未归类) | 0 |
@@ -42,11 +42,10 @@ permalink: /adr/
 |-----|------|------|
 | [ADR-129](./ADR-129-preview-3d-domain-root.md) | 3D 预览领域根升格（utils/3d → features/preview-3d，修依赖倒置） | ⚠️ 已采纳（违规或未修复） |
 
-### 🔄 部分采纳（15）
+### 🔄 部分采纳（14）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
-| [ADR-351](./architecture/ADR-351-sync-domain-review-consolidation.md) | 整合包同步域锐评收口：收集层收口与判定单点化 | 🔄 部分采纳 |
 | [ADR-323](./architecture/ADR-323-pre-commit-commit-blocks.md) | pre-commit 钩子逻辑下沉 commit-blocks 与薄壳化 | 🔄 部分采纳 |
 | [ADR-285](./ADR-285-bench-usability-copy-diff-plan.md) | 跑基准可用性收口：动作与参数同序、文案去重、术语本地化 | 🔄 部分采纳 |
 | [ADR-251](./ADR-251-ground-material-family-completion.md) | 地面材质家族补全：噪声材质与非几何图案分工 | 🔄 部分采纳 |
@@ -62,10 +61,11 @@ permalink: /adr/
 | [ADR-122](./ADR-122-mdmmbuildctx-tier3-builder.md) | MdMmBuildCtx 三档重构与 tier3 Builder 化否决 | 🔄 部分采纳 |
 | [ADR-050](./ADR-050-plaza-browser-window.md) | 模型广场 · 浏览器窗口（Wails 第二窗口） | 🔄 部分采纳 |
 
-### ✅ 已采纳（344）
+### ✅ 已采纳（345）
 
 | ADR | 标题 | 状态 |
 |-----|------|------|
+| [ADR-351](./architecture/ADR-351-sync-domain-review-consolidation.md) | 整合包同步域锐评收口：收集层收口与判定单点化 | ✅ 已采纳 |
 | [ADR-350](./architecture/ADR-350-app-tree-d1.md) | app-tree状态骨架D1：重载入口收敛单函数+决策表、条目突变单一出口 | ✅ 已采纳 |
 | [ADR-348](./architecture/ADR-348-b1-size-mtime-sha256.md) | 两阶段扫描投影B1：持久哈希索引（size+mtime 双指纹免重读 SHA256） | ✅ 已采纳 |
 | [ADR-347](./architecture/ADR-347-sync-verdict-table.md) | go/sync 同步判定收敛单表（纯函数判定表 + 全信道测试矩阵） | ✅ 已采纳 |
@@ -429,7 +429,7 @@ permalink: /adr/
 
 | 编号 | 标题 | 状态 | 日期 |
 |------|------|------|------|
-| ADR-351 | 整合包同步域锐评收口：收集层收口与判定单点化 | 🔄 部分采纳 | 2026-10-16 |
+| ADR-351 | 整合包同步域锐评收口：收集层收口与判定单点化 | ✅ 已采纳 | 2026-10-16 |
 | ADR-350 | app-tree状态骨架D1：重载入口收敛单函数+决策表、条目突变单一出口 | ✅ 已采纳 | 2026-10-15 |
 | ADR-349 | 配置写入原子化：Go 侧 patch 绑定替代前端读-改-写 | 📝 提议中 | 2026-10-15 |
 | ADR-348 | 两阶段扫描投影B1：持久哈希索引（size+mtime 双指纹免重读 SHA256） | ✅ 已采纳 | 2026-10-15 |

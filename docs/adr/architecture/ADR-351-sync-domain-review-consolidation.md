@@ -1,6 +1,6 @@
 # ADR-351：整合包同步域锐评收口：收集层收口与判定单点化
 
-- **状态**：🔄 部分采纳（D1/D2/D4 已落地 2026-10-16：D1 统一剔除闸 + fail-closed 契约测试，D2 冲突通道并入判定表 + E 区矩阵，D4 pushTargets 三路推导下沉 go/sync；D3 待做。实施进度见知识卡 `go-sync` 裁定记录，本 ADR 不记进度）
+- **状态**：✅ 已采纳（四刀全部落地 2026-10-16：D1 统一剔除闸 + fail-closed 契约测试；D2 冲突通道并入判定表 + E 区矩阵；D3 混合夹单表示——**修订案**：扫描侧双登记各有承重不可合并（multilayer 钉死平铺单元进 Missing 是推送链承重、marker 承担跨侧键对齐），单表示落点改树化层 absorbSelfMarker 判重并入，dedupeSorted 退役；D4 PushTargetsForUnit 三路推导下沉。实施进度见知识卡 `go-sync` 裁定记录，本 ADR 不记进度）
 - **日期**：2026-10-16
 - **决策人**：Jieling（人类首席架构师）、AI 代理
 - **准入理由**：锐评实证六 Walk 收集器各自手搓回收站过滤且口径漂移（conflict 通道完全缺失）、verdict 单点化未覆盖冲突通道、扫描侧混合夹双登记由两层下游补偿——三类结构性病跨 go/sync+go/instance 两包，方向性且难逆转
@@ -28,7 +28,7 @@
 
 1. **D1 Walk 收集器统一框架**（治病灶 1）：go/sync 内建立单一收集框架——统一 SkipDir 谓词（合并 `hasRecycleSegment`/`fsutil.IsRecycleDir` 两套为 fsutil 单点）+ 注入式回调（文件级/目录级收集差异走参数不走复制）；六个现有收集器改为消费框架。验收不变量：**新增收集器生而带回收站过滤**——不再依赖作者记得抄那段 SkipDir。
 2. **D2 冲突通道并入判定表**（治病灶 2）：conflict.go 的三分支判定改经 verdict.go 判定表（或其自然延伸——冲突语义 = 判定信道的冲突特化视图），fileEntryInfo 等重叠结构体随迁移合一。验收不变量：新增判定信道时冲突通道自动跟进。
-3. **D3 扫描侧修混合夹单登记**（治病灶 3）：在 go/sync 扫描层让混合夹只登记一次（容器身份携带直挂子文件），下游 absorbSelfMarker 与 dedupeSorted 两层补偿整体退役。验收不变量：同一物理文件在 BuildSyncItems 产物中至多出现一次，无任何下游去重。
+3. **D3 扫描侧修混合夹单登记**（治病灶 3，**落地时修订为树化层单表示**）：原案「在 go/sync 扫描层让混合夹只登记一次」经可行性核证不可行——multilayer 回归锁钉死「容器内平铺文件必须进 Missing 作独立条目」（CLI `PushResources` 逐条推送承重），marker 承担跨侧键对齐（防幻影 Missing+Extra），双登记各有承重；病不在登记两次、在树化后同一文件两种表示共存。修订落地：`absorbSelfMarker` 直挂子文件判重并入（平铺叶已在场则不并入，无则并入防漏报），`dedupeSorted` 下游补偿整体退役。验收不变量不变：同一物理文件在 BuildSyncItems 产物中至多出现一次，无任何下游去重。
 4. **D4 pushTargets 下沉 + 命名收敛**（治次级问题）：安装目标三路推导（files/dirs/overwrites）下沉 go/sync 单点，go/instance 计数层只消费清单不重推导（注释复述降格为指针）；目录参数命名收敛为 `globalDir`/`instDir` 二元组口径；`subtype` 参数要么进行为要么从 BuildSyncItems 签名摘除（由调用方改写 VersionDir 的隐式约定显式化）。
 
 **明确不做**：

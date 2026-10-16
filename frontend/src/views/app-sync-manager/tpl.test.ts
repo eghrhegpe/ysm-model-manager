@@ -148,3 +148,67 @@ describe("a11y 模板标记", () => {
     expect(loadingHTML()).toContain('role="status"');
   });
 });
+
+// ── 静态内联 style 收编（锐评 FE P2-1）─────────────────────────────────────
+// 纪律：行内 style 只留 padding-left 缩进、状态色等**动态值**；静态字面量一律归 sm-css.ts。
+// 本组为「迁出未迁完」的回归锁——任何静态内联 style 回归即红灯。
+describe("静态内联 style 收编（P2-1）", () => {
+  it("actionBtnHTML: 三色变体走类名，零内联 style", () => {
+    expect(actionBtnHTML("missing")).toContain("sm-item-btn--accent");
+    expect(actionBtnHTML("optional")).toContain("sm-item-btn--optional");
+    expect(actionBtnHTML("legacy")).toContain("sm-item-btn--muted");
+    for (const s of ["missing", "diverged", "optional", "legacy"]) {
+      expect(actionBtnHTML(s)).not.toContain("style=");
+    }
+  });
+
+  const dirItem: SyncItem = {
+    path: "/d",
+    name: "Models",
+    status: "missing",
+    type: "ysm",
+    size: 12,
+    isDir: true,
+    children: [],
+  };
+
+  it("syncDirRowHTML: 仅剩动态缩进（padding-left），layout 走 .sm-row-* 类", () => {
+    const html = syncDirRowHTML("d", dirItem, true, 24, "/d");
+    expect(html).toContain('class="sm-row-icon"');
+    expect(html).toContain('class="sm-row-name"');
+    expect(html).toContain('class="sm-row-size"');
+    expect(html).toContain('style="padding-left:24px"');
+    // 静态字面量不得回归
+    expect(html).not.toContain("flex:");
+    expect(html).not.toContain("flex-shrink:");
+    expect(html).not.toContain("overflow:");
+    expect(html).not.toContain("font-size:");
+  });
+
+  it("itemHTML: 仅剩动态缩进 + 状态色，layout 走 .sm-row-* 类", () => {
+    const file: SyncItem = {
+      path: "/f.pmx",
+      name: "f.pmx",
+      status: "diverged",
+      type: "ysm",
+      icon: "💎",
+      size: 10,
+      isDir: false,
+    };
+    const html = itemHTML(file, 10);
+    expect(html).toContain('class="sm-row-status"');
+    expect(html).toContain('class="sm-row-icon"');
+    expect(html).toContain('class="sm-row-name"');
+    expect(html).toContain('class="sm-row-size"');
+    expect(html).toContain('style="padding-left:10px"');
+    expect(html).toContain("style=\"color:var(--");
+    expect(html).not.toContain("flex:");
+    expect(html).not.toContain("flex-shrink:");
+    expect(html).not.toContain("overflow:");
+    expect(html).not.toContain("font-size:");
+  });
+
+  it("containerHTML: 骨架布局零内联 style", () => {
+    expect(containerHTML()).not.toContain("style=");
+  });
+});

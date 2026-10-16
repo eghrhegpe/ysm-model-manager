@@ -7,6 +7,7 @@ source_files:
   - go/scanner/
 auto_fields:
   symbols_with_lines:
+    - CommitWalk
     - ComputeFileHash
     - EffectiveCacheTTL
     - ExtractAuthor
@@ -23,11 +24,16 @@ auto_fields:
     - InvalidateBrowsePath
     - InvalidateCache
     - InvalidatePath
+    - IsIndexRoot
     - ListModelAuthors
+    - MarkIndexRootWatched
+    - MarkWalkStart
     - OnCacheInvalidated
     - OpenHashIndex
+    - OpenScanIndex
     - ResetHashIndexStats
     - ResetScanEngineStats
+    - ResetScanIndexStats
     - ScanBackend
     - ScanEngineStat
     - ScanEngineStats
@@ -41,8 +47,14 @@ auto_fields:
     - ScanEntriesLiteCtx
     - ScanEntriesWithHit
     - ScanEntriesWithHitCtx
+    - ScanIndexFor
+    - ScanIndexPath
+    - ScanIndexStatsSnapshot
     - ScanLocalAuthors
+    - Serve
     - SetErrorSink
+    - SetIndexRoots
+    - SetIndexTrustCapForTest
 use_when:
   - 扫描
   - 文件树

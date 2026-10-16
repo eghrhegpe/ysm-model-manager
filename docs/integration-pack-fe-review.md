@@ -180,6 +180,8 @@
 
 **建议方向**：把 `actionBtnHTML` 三处色值迁到 `sm-css.ts`（`.sm-item-btn[data-action="push"]{border:1px solid var(--accent);color:var(--accent)}` 等），`containerHTML` 的布局迁到 `.sm-wrap`/`.sm-status-tabs`/`.sm-summary`/`.sm-list` 类里。`syncDirRowHTML` 的缩进 `padding-left:${indent}px` 是**真动态值**，保留合规。
 
+**处置结果（2026-10-16 已修）**：按建议方向落地，但**弃用建议里的 `[data-action=...]` 属性选择器、改用修饰类**——`legacy` 的 pullHere 按钮与 `optional` 的 pull 按钮**同为 `data-action="pull"`**（`tpl.ts|actionBtnHTML`），属性选择器会把两者染成同色，分辨不出「拉取」与「拉到这里」的语义差。改用 `.sm-item-btn--accent`（missing/diverged→push）/ `--optional`（optional→pull）/ `--muted`（legacy→pullHere）。实际收编范围**比建议更完整**：除 `actionBtnHTML` 三色与 `containerHTML` 整块布局外，还把 `syncDirRowHTML` **与 `itemHTML`** 逐值同款的行内布局（`flex-shrink/flex:1/overflow/text-overflow/white-space/color/font-size`）合并为通用 `.sm-row-status/.sm-row-icon/.sm-row-name/.sm-row-size`（`itemHTML` 原不在审查清单内但属同一违规类）。收编后 `tpl.ts` 仅剩两处**真动态**行内 style：`padding-left:${indent}px`（渲染层按树深算）×2 与 `color:${statusColor}`（按状态取色）。回归锁 `tpl.test.ts`「静态内联 style 收编（P2-1）」4 例（禁止 `flex:`/`flex-shrink:`/`overflow:`/`font-size:` 子串回归、`containerHTML` 零 `style=`），已做突变验证（把一处 span 改回内联 `style="flex:1"` → 红灯）。知识卡 `docs/knowledge/app-sync-manager.md` 的 `sm-css.ts`/`tpl.ts` 两条同步更新。
+
 ### P2-2　`renderSyncResultPanel` 的 `escHandler` 是模块级变量，跨组件实例共享
 **位置**：`app-sidebar/sync-flow.ts:495-527`。
 

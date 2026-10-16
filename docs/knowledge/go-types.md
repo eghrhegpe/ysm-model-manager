@@ -46,6 +46,7 @@ auto_fields:
     - ErrMcRootNotSet
     - ErrMkdirFailed
     - ErrorCode
+    - ErrSettingsTooNew
     - ErrUnknown
     - ErrUnsupportedFmt
     - ErrUnsupportedType

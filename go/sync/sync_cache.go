@@ -69,8 +69,8 @@ var (
 )
 
 // InvalidateSyncScanCaches 清空全部同步目录扫描结果缓存。
-// scanner.InvalidateCache/InvalidatePath 会自动调用；不走 scanner 失效的 push/pull/toggle
-// 等入口需显式调（见 internal/app 的 mutation 收口）。
+// scanner.InvalidateCache/InvalidatePath 会自动调用。2026-10-16 锐评 P0-① 后 go/sync 写操作
+// 一律 defer scanner.InvalidateCache() 经此清自身缓存；app 层配对显式调用保留作防御纵深。
 func InvalidateSyncScanCaches() {
 	syncResourcesScanCache.Range(func(k, _ interface{}) bool {
 		syncResourcesScanCache.Delete(k)

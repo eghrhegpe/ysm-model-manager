@@ -43,7 +43,8 @@ func RegisterInvalidationHook() {
 }
 
 // InvalidateSyncItemsCache 清空全部整合包同步结果缓存。
-// 由 scanner 失效钩子自动调用；单文件 push/pull 等不走 scanner 失效的入口需显式调用。
+// 由 scanner 失效钩子（OnCacheInvalidated）自动调用。2026-10-16 锐评 P0-① 后 go/sync 写操作
+// 一律走 scanner.InvalidateCache 级联到此；app 层配对显式调用保留作防御纵深。
 func InvalidateSyncItemsCache() {
 	syncItemsCache.clear()
 }

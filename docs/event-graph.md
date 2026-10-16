@@ -331,7 +331,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| initSettingsBackup | `frontend/src/views/app-content/settings/settings-backup.ts` | 199 |
+| initSettingsBackup | `frontend/src/views/app-content/settings/settings-backup.ts` | 200 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |

@@ -42,6 +42,17 @@ export function safeRemove(key: string): void {
   }
 }
 
+/** 安全枚举键：存储不可用时返回空数组。键族展开（keyPattern 通配匹配）只能靠扫描真键，
+ *  不能凭前缀猜——键名拼接规则若变，猜出来的集合立刻错。 */
+export function safeKeys(): string[] {
+  try {
+    return Object.keys(localStorage);
+  } catch (err) {
+    logWarn("storage", "safeKeys() 失败", err);
+    return [];
+  }
+}
+
 /** 安全读 JSON：解析失败（损坏/非法）时返回 fallback，不抛错中断启动链 */
 export function safeGetJSON<T>(key: string, fallback: T): T {
   const raw = safeGet(key);

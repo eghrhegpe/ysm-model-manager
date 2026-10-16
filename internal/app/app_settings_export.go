@@ -20,9 +20,12 @@ package app
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"time"
 
 	"ysm-model-manager/go/fsutil"
@@ -36,12 +39,26 @@ const (
 	settingsExportVersion   = 1
 	settingsExportFilename  = "ysm-settings-export.json"
 	settingsBackupSuffixFmt = ".bak-%s"
+	// 导入前备份最多保留的份数（LRU 按时间戳字典序，超过即删最旧）。
+	// 无上限的后果：反复导入让 .bak-* 无限堆积，用户还可能误把 .bak 当配置拷走。
+	settingsBackupKeep = 10
+	// 导出文件大小上限。ReadSettingsExport 直接 os.ReadFile 整份入内存，
+	// 无门槛会让用户误选或恶意塞入的超大文件把进程内存吃满。
+	settingsExportMaxBytes = 8 << 20 // 8 MiB
 )
 
 // settingsExportPath 导出文件的固定落点：应用数据目录（与 ysm_config.json 同域）。
 // 用户只拷这一个文件即可带走「磁盘 + 浏览器」两轨设置——这是本功能存在的全部意义。
+//
+// configDir() 为空（平台数据根注入缺失，见 app_config.go:60 的守卫注释）时返回 ""，
+// 由调用方拒绝——直接 filepath.Join("", name) 会让导出静默落到 CWD 相对路径，
+// UI 显示一条在本机根本不存在的路径，用户拷走后在别的机器导入必然失败。
 func settingsExportPath() string {
-	return filepath.Join(configDir(), settingsExportFilename)
+	dir := configDir()
+	if dir == "" {
+		return ""
+	}
+	return filepath.Join(dir, settingsExportFilename)
 }
 
 // ExportSettingsJSON 导出全部设置为单个 JSON 文件（ADR-344-d1）。
@@ -59,19 +76,33 @@ func (a *App) ExportSettingsJSON(localStorageJSON string) (string, error) {
 		}
 	}
 
+	path := settingsExportPath()
+	if path == "" {
+		return "", errors.New("应用数据目录不可用，无法导出设置")
+	}
+
+	cfg := a.LoadAppConfig()
+	// 配置文件损坏时 loadAppConfig 保留零值且不重试（见 app_config.go:122-127），
+	// 此时若照常导出，用户拿到的是「全零值配置」的假备份——到迁移那天才发现路径全丢。
+	// 仅在配置文件确实存在但无任何路径设置时告警（全新用户无 FilesRoot 属正常，不打扰）。
+	if cfg.FilesRoot == "" && len(cfg.CustomRoots) == 0 {
+		if _, err := os.Stat(configPath()); err == nil {
+			log.Printf("[settings-export] 配置文件存在但 FilesRoot/CustomRoots 均为空——导出可能遗漏路径设置，请先确认配置是否完好")
+		}
+	}
+
 	exp := types.SettingsExport{
 		Format:        settingsExportFormat,
 		ExportVersion: settingsExportVersion,
 		ExportedAt:    time.Now().Format(time.RFC3339),
 		AppVersion:    version.Version,
-		AppConfig:     a.LoadAppConfig(),
+		AppConfig:     cfg,
 		LocalStorage:  ls,
 	}
 	data, err := json.MarshalIndent(exp, "", "  ")
 	if err != nil {
 		return "", err
 	}
-	path := settingsExportPath()
 	// 原子写入（与 saveConfig / BackupWorkshopCreators 对齐）：直接 os.WriteFile 在磁盘满/中断时
 	// 留半截导出文件，用户拷走后导入必然失败
 	if err := fsutil.WriteFileAtomic(path, data); err != nil {
@@ -84,6 +115,15 @@ func (a *App) ExportSettingsJSON(localStorageJSON string) (string, error) {
 // 前端先调本绑定拿到内容做导入前确认（含「导入后将应用 N 项浏览器偏好」计数）。
 func (a *App) ReadSettingsExport(path string) (types.SettingsExport, error) {
 	var exp types.SettingsExport
+	// 先看大小再整读：os.ReadFile 会把文件整份压进内存 + 整份 json.Unmarshal，
+	// 无门槛时误选或恶意塞入的大文件会让进程内存暴涨（本绑定可被 JS 传任意路径触发）。
+	st, err := os.Stat(path)
+	if err != nil {
+		return exp, err
+	}
+	if st.Size() > settingsExportMaxBytes {
+		return exp, fmt.Errorf("导出文件过大(%d 字节，上限 %d MiB)", st.Size(), settingsExportMaxBytes>>20)
+	}
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return exp, err
@@ -140,12 +180,16 @@ func (a *App) ImportSettingsFromFile(path string) (types.ImportSettingsResult, e
 		return res, err
 	}
 
-	res.AppliedKeyCount = len(exp.LocalStorage)
+	// 导出文件原始 localStorage 条数（未过滤）；前端用自身台账过滤后的 applied 计数做提示
+	res.LocalStorageKeyCount = len(exp.LocalStorage)
 	return res, nil
 }
 
 // backupConfigFile 把当前 ysm_config.json 备份为时间戳后缀的 .bak 文件（原子写入）。
 // 文件不存在 = 全新用户无配置可备份，返回空串不算错误（同 BackupWorkshopCreators 口径）。
+//
+// 命名与保留：时间戳精确到毫秒，同秒连点不再互相覆盖；写完后按 settingsBackupKeep 裁剪，
+// 只留最近 N 份，避免反复导入让 .bak-* 无限堆积（用户还可能误把 .bak 当配置拷走）。
 func (a *App) backupConfigFile() (string, error) {
 	src := configPath()
 	data, err := os.ReadFile(src)
@@ -155,9 +199,26 @@ func (a *App) backupConfigFile() (string, error) {
 		}
 		return "", err
 	}
-	bak := src + fmt.Sprintf(settingsBackupSuffixFmt, time.Now().Format("20060102-150405"))
+	bak := src + fmt.Sprintf(settingsBackupSuffixFmt, time.Now().Format("20060102-150405.000"))
 	if err := fsutil.WriteFileAtomic(bak, data); err != nil {
 		return "", err
 	}
+	a.pruneOldConfigBackups(src)
 	return bak, nil
+}
+
+// pruneOldConfigBackups 删除 src 目录下最旧的 .bak 备份，只保留 settingsBackupKeep 份。
+// 清理失败仅记日志——备份文件多留一份比删错更安全，裁剪是尽力而为不是必需。
+func (a *App) pruneOldConfigBackups(src string) {
+	matches, err := filepath.Glob(src + ".bak-*")
+	if err != nil || len(matches) <= settingsBackupKeep {
+		return
+	}
+	// 时间戳前缀（YYYYMMDD-HHMMSS.mmm）字典序即时间序
+	sort.Strings(matches)
+	for _, old := range matches[:len(matches)-settingsBackupKeep] {
+		if err := os.Remove(old); err != nil && !os.IsNotExist(err) {
+			log.Printf("[settings-import] 清理旧备份失败 %s: %v", old, err)
+		}
+	}
 }

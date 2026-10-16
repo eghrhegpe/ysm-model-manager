@@ -69,6 +69,14 @@ export interface SettingsKeyEntry {
   readonly goField?: string;
   /** 键的持有模块（`file.ts` 形态，具体文件不写——文件会搬家，模块名不会） */
   readonly owner: string;
+  /**
+   * 键族通配（仅一个尾部/中部 `*`）：`key` 仍是登记名（占位符，如 `ysm-scene-cap-*`），
+   * 真实键由持有模块动态拼接。声明本字段 = 声明「这个键是键族，不是单键」——
+   * 消费方（备份采集/回写、对账）必须按 `keyPattern` 匹配真键，不得把占位符当真键读。
+   * 不声明（缺省）则 `key` 就是真键。契约测试不校验本字段（它不改变键集合的归属），
+   * 靠知识卡提示 + 备份采集测试兜底。
+   */
+  readonly keyPattern?: string;
   /** 迁移/备份语义的必要说明（用户可见后果，非实现细节） */
   readonly note?: string;
 }
@@ -560,7 +568,8 @@ export const SETTINGS_KEYS: readonly SettingsKeyEntry[] = [
     authority: "browser-authority",
     migrates: false,
     owner: "preview-3d/caps/scene-capability.ts",
-    note: "键族：localStorage 实际键为 STORAGE_PREFIX + capId（ysm-scene-cap- 前缀接 capId），JSON 序列化；另有动态成员键 ysm-scene-cap-「cap」-「field」 形态",
+    keyPattern: "ysm-scene-cap-*",
+    note: "键族：localStorage 实际键为 STORAGE_PREFIX + capId（ysm-scene-cap- 前缀接 capId），JSON 序列化；另有动态成员键 ysm-scene-cap-「cap」-「field」 形态。备份采集/回写必须按 keyPattern 展开真键——把占位符当键读恒 null，等于这些场景设置永远不迁移",
   },
   {
     key: "vmd.positionScale",
@@ -689,7 +698,8 @@ export const SETTINGS_KEYS: readonly SettingsKeyEntry[] = [
     authority: "browser-authority",
     migrates: false,
     owner: "views/app-content/site/workshop-data.ts",
-    note: "实际键带站点 id 后缀（ysm-ws-active-tag-「siteId」），禁止再裸打无后缀键",
+    keyPattern: "ysm-ws-active-tag*",
+    note: "键族：实际键为 workshop-data.ts scopedFilterKey 拼出的「ysm-ws-active-tag:」+ 站点id（冒号分隔，空站点回退无后缀裸键），**不是短横线**——登记名无后缀，直接读写会套错站。备份按 keyPattern 展开真键",
   },
   {
     key: "ysm-ws-search-kw",
@@ -698,7 +708,8 @@ export const SETTINGS_KEYS: readonly SettingsKeyEntry[] = [
     authority: "browser-authority",
     migrates: false,
     owner: "views/app-content/site/workshop-data.ts",
-    note: "实际键带站点 id 后缀",
+    keyPattern: "ysm-ws-search-kw*",
+    note: "键族：scopedFilterKey 拼「ysm-ws-search-kw:」+ 站点id；备份按 keyPattern 展开真键",
   },
   {
     key: "ysm-ws-last-tab",
@@ -707,7 +718,8 @@ export const SETTINGS_KEYS: readonly SettingsKeyEntry[] = [
     authority: "browser-authority",
     migrates: false,
     owner: "views/app-content/site/workshop-data.ts",
-    note: "实际键带站点 id 后缀",
+    keyPattern: "ysm-ws-last-tab*",
+    note: "键族：scopedFilterKey 拼「ysm-ws-last-tab:」+ 站点id；备份按 keyPattern 展开真键",
   },
   {
     key: "diag.perf.density",

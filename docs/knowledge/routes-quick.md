@@ -1195,6 +1195,9 @@
 | adv-filter 条件未走三路交集（关键词 + 数值 + 标签）→ 结果不精确；必须经 advFilterIntersectPaths | - | - |
 | 只备份 ysm_config.json 带不走 localStorage 轨的几十项设置——官方迁移叙事曾长期漏掉这一档（ 有文档无实现，2026-10-16 起由 ADR-344-d1 导出/导入收拢） | `b1116645c` | - |
 | 设置导出/导入的采集与回写**必须按台账白名单**（tier=local-storage && authority=browser-authority），禁手写第二份键名清单——手抄必漂移，新键漏登记即漏备份 | - | - |
+| 台账  键族（3D 场景能力 `ysm-scene-cap-*`、工坊按站筛选态 `ysm-ws-*`）登记的是占位符，真实键由持有模块拼接——采集/回写必须展开真键，且候选键只能取自实际键（`safeKeys()` / 导出文件），禁按前缀猜键名 | `keyPattern` | - |
+| 导入是两轨跨进程动作，磁盘侧失败时浏览器侧**必须回滚**（Go 只备份 ysm_config.json，不备份浏览器侧）；写入键与回滚键须共用同一份白名单判定，各写一遍必漂移 | `磁盘 + 浏览器` | - |
+| 磁盘侧防护： 有大小上限（8 MiB），导入前备份最多保留 10 份（`.bak-时间戳`，毫秒精度） | `ReadSettingsExport` | - |
 | theme / themeAuto 跨双轨同名，台账用 disk: 前缀分列；无前缀即撞名，撞名会逼两轨塞进一行 | - | - |
 | 新增 localStorage 键必须同步登记 settings-keys.ts，漏登记则契约测试转红 | - | - |
 | 网页模式的是 localStorage 的 ysm:config 键，别把它当桌面磁盘轨 | `磁盘替身` | - |

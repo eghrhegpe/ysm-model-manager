@@ -41,6 +41,7 @@ auto_fields:
     - DISK_KEY_PREFIX
     - diskFieldName
     - findSettingsKey
+    - importedKeysFrom
     - ImportSettingsResult
     - initSettingsBackup
     - LocalAuthor
@@ -73,6 +74,9 @@ use_when:
 pitfalls:
   - 只备份 ysm_config.json 带不走 localStorage 轨的几十项设置——官方迁移叙事曾长期漏掉这一档（`b1116645c` 有文档无实现，2026-10-16 起由 ADR-344-d1 导出/导入收拢）
   - 设置导出/导入的采集与回写**必须按台账白名单**（tier=local-storage && authority=browser-authority），禁手写第二份键名清单——手抄必漂移，新键漏登记即漏备份
+  - 台账 `keyPattern` 键族（3D 场景能力 `ysm-scene-cap-*`、工坊按站筛选态 `ysm-ws-*`）登记的是占位符，真实键由持有模块拼接——采集/回写必须展开真键，且候选键只能取自实际键（`safeKeys()` / 导出文件），禁按前缀猜键名
+  - 导入是「磁盘 + 浏览器」两轨跨进程动作，磁盘侧失败时浏览器侧**必须回滚**（Go 只备份 ysm_config.json，不备份浏览器侧）；写入键与回滚键须共用同一份白名单判定，各写一遍必漂移
+  - 磁盘侧防护：`ReadSettingsExport` 有大小上限（8 MiB），导入前备份最多保留 10 份（`.bak-时间戳`，毫秒精度）
   - theme / themeAuto 跨双轨同名，台账用 disk: 前缀分列；无前缀即撞名，撞名会逼两轨塞进一行
   - 新增 localStorage 键必须同步登记 settings-keys.ts，漏登记则契约测试转红
   - 网页模式的「磁盘替身」是 localStorage 的 ysm:config 键，别把它当桌面磁盘轨
@@ -143,7 +147,7 @@ quick_risk_lines:
 5. **台账不参与运行时读写**。它是让漂移暴露的声明，不是权威——不要为了「走台账」把 safeGet 改成查表。
 6. **网页版 `ysm:config`（localStorage）是磁盘轨的网页替身**，不是桌面磁盘轨；桌面端不消费它。
 7. **结构性迁移按 `AppConfig|SchemaVersion` 门控，且只有 `applyConfigMigrations` 有权盖章**。文件版本 < 当前版本才跑迁移（旧独立路径 → `CustomRoots`）并盖版本章；≥ 则跳过（幂等）。写盘路径（`saveConfig`）**不得**越权盖章——把「未迁移」的配置标成「已迁移」会令下次读取跳过迁移，复现「启动路径漏跑迁移」的静默数据丢失。此门控取代旧「字段空不空」的启发式判据：历史多次迁移 bug（`go/types` 新增字段被白名单漏拷贝、启动路径漏跑 `migrateLegacyConfigFields`）同根于此。
-8. **设置导出/导入的键面以台账为单一事实源**。采集取 `tier=local-storage && authority=browser-authority`（go-disk 随 appConfig 走、session/non-persistent 不备份、dual-write 镜像不备份——备份镜像反而制造两处不一致）；回写白名单 = 同一集合，导出文件里未登记的键一律忽略。导入后必须 emit `settings:imported` 重建面板（theme/语言/路径可能已变，只刷 store 会留下 UI 与真相分叉）。
+8. **设置导出/导入的键面以台账为单一事实源**。采集取 `tier=local-storage && authority=browser-authority`（go-disk 随 appConfig 走、session/non-persistent 不备份、dual-write 镜像不备份——备份镜像反而制造两处不一致）；回写白名单 = 同一集合，导出文件里未登记的键一律忽略。**台账里登记了 `keyPattern` 的键族（3D 场景能力 `ysm-scene-cap-*`、工坊按站筛选态 `ysm-ws-active-tag*` 等）必须按通配展开真键采集/回写**——`key` 只是占位符，`safeGet("ysm-scene-cap-*")` 恒 null，把占位符当真键读等于整族不迁移（正是本功能要根治的换机静默丢）。候选键只能来自 `safeKeys()`/导出文件的实际键，禁按前缀猜键名（拼接规则一变就错）。导入后必须 emit `settings:imported` 重建面板（theme/语言/路径可能已变，只刷 store 会留下 UI 与真相分叉）。
 
 ## 相关
 

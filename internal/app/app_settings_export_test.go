@@ -83,8 +83,10 @@ func TestImportSettingsFromFile_RoundTripAndBackup(t *testing.T) {
 
 	res, err := dst.ImportSettingsFromFile(srcPath)
 	testutil.NoError(t, err, "ImportSettingsFromFile")
-	if res.AppliedKeyCount != 2 {
-		t.Errorf("AppliedKeyCount=%d want 2", res.AppliedKeyCount)
+	// Go 侧只报「导出文件原始 localStorage 条数」；实际写入由前端按台账白名单过滤，
+	// 前端提示必须用过滤后的计数（见 frontend settings-backup.ts）
+	if res.LocalStorageKeyCount != 2 {
+		t.Errorf("LocalStorageKeyCount=%d want 2", res.LocalStorageKeyCount)
 	}
 	if res.BackupPath == "" {
 		t.Fatal("导入前必须备份当前配置（可回滚）")

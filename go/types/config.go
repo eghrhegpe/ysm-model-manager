@@ -78,8 +78,11 @@ type SettingsExport struct {
 
 // ImportSettingsResult 设置导入结果（前端据此提示后续动作）。
 type ImportSettingsResult struct {
-	BackupPath      string `json:"backupPath"`      // 导入前对当前 ysm_config.json 的备份路径（空=无需备份）
-	AppliedKeyCount int    `json:"appliedKeyCount"` // 将写入浏览器本地存储的偏好条数
+	BackupPath string `json:"backupPath"` // 导入前对当前 ysm_config.json 的备份路径（空=无需备份）
+	// 导出文件里 localStorage 的**原始条数**（未过滤）。浏览器偏好的实际写入由前端按
+	// 台账白名单（tier=local-storage && authority=browser-authority）过滤后完成，
+	// 前端提示「已应用 N 项」必须用过滤后的计数，不能用本字段——否则含未知键时虚高。
+	LocalStorageKeyCount int `json:"localStorageKeyCount"`
 }
 
 // AppConfigPatch 应用配置的**部分更新**载荷（锐评 2026-10-15 P1 ③）。

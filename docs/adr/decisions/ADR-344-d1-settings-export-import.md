@@ -14,7 +14,7 @@
 
 ① **导出格式**：单个 JSON 文件 `ysm-settings-export.json`，`{format, exportVersion, exportedAt, appVersion, appConfig, localStorage}`；`appConfig` 为完整 `types.AppConfig`，`localStorage` 为「偏好类」键值 map（**不含缓存/会话态/调试/派生数据**）。导出目标固定为应用数据目录，UI 显示完整路径 + 复制按钮——与 `ExportWorkshopCreatorsJSONFile` 一致，**不新增保存对话框绑定**。
 
-② **localStorage 采集口径以台账为单一事实源**：遍历 `nonMigratingSettingsKeys()`，收 `tier==="local-storage" && authority==="browser-authority"`，剔除缓存/会话/调试/哨兵/派生键（社区合并、扫描作者缓存、诊断历史、`_debug`/`__waterSchemaVersion`、网页专用 IDB 日志与 `fsaRootHandle`）。不在前端手写键清单——台账已由 `tests/test_settings_key_ledger.ts` 双向对账，再手抄一份必然漂移。
+② **localStorage 采集口径以台账为单一事实源**：遍历 `nonMigratingSettingsKeys()`，收 `tier==="local-storage" && authority==="browser-authority"`，剔除缓存/会话/调试/哨兵/派生键（社区合并、扫描作者缓存、诊断历史、`_debug`/`__waterSchemaVersion`、网页专用 IDB 日志与 `fsaRootHandle`）。不在前端手写键清单——台账已由 `tests/test_settings_key_ledger.ts` 双向对账，再手抄一份必然漂移。**台账登记了 `keyPattern` 的键族（3D 场景能力 `ysm-scene-cap-*`、工坊按站筛选态 `ysm-ws-active-tag*` 等）按通配在实际键上展开真键采集/回写**——`key` 只是占位符（`safeGet("ysm-scene-cap-*")` 恒 null），候选键只能取自 `safeKeys()`/导出文件的真实键，禁按前缀猜键名。
 
 ③ **导入走「备份 → 合并 → 落盘 → 侧效」同一把锁**：新增 `ReadSettingsExport(path)`（只读解析 + 校验）与 `ImportSettingsFromFile(path)`（先备份当前 `ysm_config.json` 为 `.bak`，再以导入配置为基、`applyConfigMigrations` 盖章、`washLinkMode` 洗脏，`configWriteMu` 锁内落盘）；把 `SaveAppConfig`/`SaveAppConfigPatch` 尾部的 `install.SyncLinkMode` + 根路径变更时 `rebuildWatcherAndDirs` 抽成共享 `applyPostSaveSideEffects(oldCfg, cfg)`，三处共用避免第三份手抄。路径字段**原样导入**（换机后旧盘符失效由 UI 提示「确认文件存储路径与游戏根目录」），不做 `mcRoot` 硬校验拦截——导入是迁移动作，不应因旧机路径在现机不存在而失败。
 

@@ -42,6 +42,7 @@
       "@/parsers/*": ["./src/parsers/*"],
       "@/bus": ["./src/bus.ts"],
       "@/app-modules": ["./src/app-modules.ts"],
+      "@/settings-keys": ["./src/settings-keys.ts"],
       "@/theme-core": ["./src/theme-core.ts"],
       "#root/*": ["../*"]
     }

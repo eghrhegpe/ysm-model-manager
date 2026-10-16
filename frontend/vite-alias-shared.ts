@@ -27,4 +27,5 @@ export const FILE_ALIASES = {
   bus: "bus.ts",
   "theme-core": "theme-core.ts",
   "app-modules": "app-modules.ts",
+  "settings-keys": "settings-keys.ts",
 };

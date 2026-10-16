@@ -10,6 +10,7 @@
 
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
+import { nonMigratingSettingsKeys, type SettingsKeyEntry } from "@/settings-keys";
 import {
   isStorageAccessible,
   safeGet,
@@ -20,7 +21,6 @@ import {
 import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
-import { nonMigratingSettingsKeys, type SettingsKeyEntry } from "../../../settings-keys.ts";
 import { toastError, withBusy } from "./store.ts";
 
 /**

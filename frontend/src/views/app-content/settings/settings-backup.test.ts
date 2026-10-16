@@ -7,7 +7,7 @@
 // 「localStorage 里的候选键」，锁「占位符必须展开成真键才能被采集/回写」——只锁登记名
 // 对账的契约测试（tests/test_settings_key_ledger.ts）不覆盖这条，见知识卡 settings-persistence.md。
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { nonMigratingSettingsKeys, type SettingsKeyEntry } from "../../../settings-keys.ts";
+import { nonMigratingSettingsKeys, type SettingsKeyEntry } from "@/settings-keys";
 
 const storageMock = vi.hoisted(() => ({
   isStorageAccessible: vi.fn((): boolean => true),

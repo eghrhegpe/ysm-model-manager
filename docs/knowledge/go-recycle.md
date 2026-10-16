@@ -98,7 +98,7 @@ status: active
 落盘顺序（拆前后一致）：
 
 1. `paths.IsInsideResolved(rootDir, src)` 越权校验（解析 symlink 防逃逸，BUG-1），并显式拒绝 `src == rootDir`（`IsInside` 对 `path==baseDir` 放行，不补这刀整树 rename 会把回收站搬进自己）→ `os.Lstat` 判链接类型（符号链接/硬链接直接 `os.Remove`）
-2. 按相对路径在 `.recycle` 下构造 `dst`，重名自动加 `(1)`/`(2)`…；初始 `dst` 与每个后缀候选都复查仍在 `.recycle` 内（防越权）；非 "不存在" 错误（权限等）直接返回，不静默跳过冲突检测。**`MkdirAll(dst 父目录)` 在冲突后缀消解之后**创建——它同时是 `RemoveRepoDuplicates` 「清理失败可归因」的确定性落点（落点目录被同名普通文件占用 → 必然 "not a directory"）
+2. 按相对路径在 `.recycle` 下构造 `dst`，重名自动加 `(1)`/`(2)`…；初始 `dst` 与每个后缀候选都复查仍在 `.recycle` 内（防越权）；非 "不存在" 错误（权限等）直接返回，不静默跳过冲突检测。**`MkdirAll(dst 父目录)` 在冲突后缀消解之后**创建——它同时是 `RemoveRepoDuplicates` 「清理失败可归因」的确定性落点（落点目录被同名普通文件占用 → 必然 "not a directory"）。⚠️ **该「复查」原用大小写敏感 `strings.HasPrefix(cd, cleanRecycle+sep)`（锐评 2026-10-16 P5 收口）**：与下方 `verifyRenamedInside` 用的 `paths.IsInsideResolved`（大小写不敏感）分裂——Windows 上 `.Recycle` 与 `.recycle` 大小写形态不同即误判「在回收站外」，`generateConflictFreeDest` 便反复加冲突后缀。现统一到 `paths.IsInside(tm.recycleDir, candidate)`（`go/paths|safe.go|IsInside` 大小写不敏感），错误仍保留 `ErrPathEscalation` 分类与原文案（`fileops_recycle_extra_test.go` 既有断言不破）。
 3. `tm.renameForMove(src, dst)` 成功即做 `IsInsideResolved` 事后校验（P2-3 TOCTOU 防御），通过才返回 `recycled`
 4. rename 失败时 **`fsutil.IsCrossDeviceErr(err)` 判定**：不是跨设备（权限/占用等）→ 直接返回错误，**不做复制**（避免大模型无谓全量复制，也避免「副本已入站、源未删」的重试堆积）
 5. 确为跨设备才回退：目录走 `tm.copyDirForMove`（`copyDirRecursive` 递归整棵树）、文件走 `copyFile`；复制失败清理半截 `dst`（`RemoveAll`/`Remove`，清理失败仅记日志）；复制成功后删源，删源失败调 `rollbackAfterSourceRemoveFail` 清理已落地副本、恢复「源还在 + 副本已清理」可安全重试状态

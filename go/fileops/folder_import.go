@@ -58,7 +58,7 @@ func WriteModelFolder(filesRoot, subpath, folderName string, files []types.Impor
 	// symlink 指向仓库外，os.Stat(dstRoot) 因外部目标不存在而放行，MkdirAll 穿透
 	// symlink 建到外部、WriteFileAtomic 遂写入仓库外（写入前逐组件 Lstat 校验）。
 	// folderName 已由调用方保证非 symlink（新目录），subpath 各段是唯一风险面
-	if err := checkNoSymlinkInPath(filesRoot, subpath); err != nil {
+	if err := CheckNoSymlinkInPath(filesRoot, subpath); err != nil {
 		return err
 	}
 	if len(files) == 0 {
@@ -146,11 +146,13 @@ func isSupportedEntryFile(rel string) bool {
 	return registry.IsSupportedExt(ext)
 }
 
-// checkNoSymlinkInPath 从 base 逐组件向下 Lstat 校验 subpath 各段，任何一段为符号链接
+// CheckNoSymlinkInPath 从 base 逐组件向下 Lstat 校验 subpath 各段，任何一段为符号链接
 // 即拒绝——P2 修复：repoRoot/sub 若为预置 symlink 指向仓库外，os.Stat
 // 对不存在的外部目标放行、MkdirAll 穿透 symlink 建到外部，WriteFileAtomic 遂写入
 // 仓库外。subpath 为空时直接放行（folderName 由调用方保证新目录，非 symlink）。
-func checkNoSymlinkInPath(base, subpath string) error {
+// 导出供 internal/app 的目录型子路径导入（app_install_import.go）复用——与 folder import
+// 同属「用户指定子路径 + 写文件」语义，2026-10-16 锐评 P1 收敛到同一判据防双抄复发。
+func CheckNoSymlinkInPath(base, subpath string) error {
 	subpath = strings.Trim(subpath, `\/`)
 	if subpath == "" {
 		return nil

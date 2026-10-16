@@ -253,6 +253,25 @@ func MoveModelFile(root, src, dstDir string) error {
 	return moveSrcToDst(src, dst, dstDir, created)
 }
 
+// inRepo 仓库包含判定单点（2026-10-16 锐评 P6 收口）：原 Move/Copy/Delete 各自手写
+// `filepath.Rel + ".." 前缀`，与 go/paths.IsInside 判据重复且细节漂移——Windows 下
+// filepath.Rel 的 base/targ 逐字节比对**大小写敏感**（不 EqualFold），root 与候选路径
+// 大小写形态不同即误判越权。统一到 paths.IsInside（safe.go:100-104 大小写不敏感前缀复核），
+// 错误消息由调用方注入以保持既有断言（fileops_move_safety_test.go 断言原文）。
+// allowRoot=true 时 path==root 视为安全（Copy 源/目标=root、Move 目标=root 合法）；
+// false 时拒绝（Move 源=root、Delete 单文件=root 无意义）。
+func inRepo(root, path, msg string, allowRoot bool) error {
+	if err := paths.IsInside(root, path); err != nil {
+		return fmt.Errorf("%s: %s", msg, path)
+	}
+	if !allowRoot {
+		if rel, err := paths.RelInside(root, path); err == nil && rel == "." {
+			return fmt.Errorf("%s: %s", msg, path)
+		}
+	}
+	return nil
+}
+
 // checkMoveWithinRoot 校验 src 与 dstDir 均落在 root 内（空 root 整条跳过），
 // 并拒绝 dstDir 中间组件为指向仓库外已存在目录的 symlink。
 // 守卫顺序即错误优先级：源越界 > 目标越界 > symlink 中间段。
@@ -264,25 +283,23 @@ func checkMoveWithinRoot(root, src, dstDir string) error {
 	if err != nil {
 		return err
 	}
-	absSrc, err := filepath.Abs(src)
-	if err != nil {
+	if err := inRepo(root, src, "源文件必须在仓库内", false); err != nil {
 		return err
 	}
-	relSrc, err := filepath.Rel(absRoot, absSrc)
-	if err != nil || relSrc == "." || relSrc == ".." || strings.HasPrefix(relSrc, ".."+string(filepath.Separator)) {
-		return fmt.Errorf("源文件必须在仓库内: %s", src)
+	if err := inRepo(root, dstDir, "目标目录必须在仓库内", true); err != nil {
+		return err
 	}
 	absDst, err := filepath.Abs(dstDir)
 	if err != nil {
 		return err
 	}
 	relDst, err := filepath.Rel(absRoot, absDst)
-	if err != nil || relDst == ".." || strings.HasPrefix(relDst, ".."+string(filepath.Separator)) {
-		return fmt.Errorf("目标目录必须在仓库内: %s", dstDir)
+	if err != nil {
+		return err
 	}
-	// 同 WriteModelFolder.checkNoSymlinkInPath 口径：dstDir 中间组件为指向仓库外
+	// 同 CheckNoSymlinkInPath 口径：dstDir 中间组件为指向仓库外
 	// 已存在目录的 symlink 时，MkdirAll 放行、rename/copy 穿透写出
-	return checkNoSymlinkInPath(absRoot, relDst)
+	return CheckNoSymlinkInPath(absRoot, relDst)
 }
 
 // shouldLiftYsmParent 判定 src（ysm.json，模型目录清单）是否提升为「移动整个模型目录」。
@@ -447,27 +464,25 @@ func CopyModelFile(root, src, dstDir string) error {
 		if err != nil {
 			return err
 		}
+		if err := inRepo(root, dstDir, "目标目录必须在仓库内", true); err != nil {
+			return err
+		}
 		absDst, err := filepath.Abs(dstDir)
 		if err != nil {
 			return err
 		}
 		rel, err := filepath.Rel(absRoot, absDst)
-		if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
-			return fmt.Errorf("目标目录必须在仓库内: %s", dstDir)
-		}
-		// 同 WriteModelFolder.checkNoSymlinkInPath 口径：dstDir 中间组件为指向仓库外
-		// 已存在目录的 symlink 时，MkdirAll 放行、rename/copy 穿透写出
-		if err := checkNoSymlinkInPath(absRoot, rel); err != nil {
-			return err
-		}
-		// src 也须落在仓库内——否则可把仓库外任意文件拷入仓库（读取越界）
-		absSrc, err := filepath.Abs(src)
 		if err != nil {
 			return err
 		}
-		relSrc, err := filepath.Rel(absRoot, absSrc)
-		if err != nil || relSrc == ".." || strings.HasPrefix(relSrc, ".."+string(filepath.Separator)) {
-			return fmt.Errorf("源文件必须在仓库内: %s", src)
+		// 同 CheckNoSymlinkInPath 口径：dstDir 中间组件为指向仓库外
+		// 已存在目录的 symlink 时，MkdirAll 放行、rename/copy 穿透写出
+		if err := CheckNoSymlinkInPath(absRoot, rel); err != nil {
+			return err
+		}
+		// src 也须落在仓库内——否则可把仓库外任意文件拷入仓库（读取越界）
+		if err := inRepo(root, src, "源文件必须在仓库内", true); err != nil {
+			return err
 		}
 	}
 	// ysm.json 提升：复制整个模型目录（ADR-038 D3）。判定走 ysmLiftForCopy
@@ -531,22 +546,12 @@ func DeleteModelFile(root, path string) error {
 		parent := filepath.Dir(path)
 		// 目录提升守卫：父目录必须严格深于仓库根（防根级 ysm.json 清空整个仓库）
 		if root != "" {
-			absRoot, err := filepath.Abs(root)
-			if err != nil {
+			// 2026-10-16 锐评 P6：仓库包含判定统一到 inRepo（见其注释）
+			if err := inRepo(root, parent, "拒绝删除仓库外路径", true); err != nil {
 				return err
 			}
-			absParent, err := filepath.Abs(parent)
-			if err != nil {
-				return err
-			}
-			rel, err := filepath.Rel(absRoot, absParent)
-			if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
-				// 仓库外路径（rel 无法判定或 .. 前缀）：显式拒绝，不静默降级——
-				// 否则只删 ysm.json 单文件会留下孤儿资源目录且前端误报「已删除」
-				return fmt.Errorf("拒绝删除仓库外路径: %s", path)
-			}
-			if rel == "." {
-				// 真正的根级 ysm.json（父目录 == 仓库根）：回退单文件删除（不整组提升，防误删仓库）
+			// 真正的根级 ysm.json（父目录 == 仓库根）：回退单文件删除（不整组提升，防误删仓库）
+			if rel, err := paths.RelInside(root, parent); err == nil && rel == "." {
 				return os.Remove(path)
 			}
 		}
@@ -554,18 +559,10 @@ func DeleteModelFile(root, path string) error {
 	}
 	// 非 ysm.json 分支补 root 包含守卫——原直接 os.Remove(path)，
 	// root 参数完全不参与校验，仓库外路径（如 /etc/foo）会被无条件删除（防纵深缺口）
+	// 2026-10-16 锐评 P6：仓库包含判定统一到 inRepo；单文件删除根本身无意义 → allowRoot=false
 	if root != "" {
-		absRoot, err := filepath.Abs(root)
-		if err != nil {
+		if err := inRepo(root, path, "拒绝删除仓库外路径", false); err != nil {
 			return err
-		}
-		absPath, err := filepath.Abs(path)
-		if err != nil {
-			return err
-		}
-		rel, err := filepath.Rel(absRoot, absPath)
-		if err != nil || rel == "." || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
-			return fmt.Errorf("拒绝删除仓库外路径: %s", path)
 		}
 	}
 	return os.Remove(path)

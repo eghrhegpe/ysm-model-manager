@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"ysm-model-manager/go/fileops"
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/importer"
 	"ysm-model-manager/go/installer"
@@ -195,6 +196,13 @@ func (a *App) importModelFileWithSubpath(fileName, subpath, base64Data string, o
 	}
 	if len(data) == 0 {
 		return types.AppError{Code: types.ErrFileEmpty, Operation: "导入模型", SourcePath: fileName, Reason: "文件内容为空", Suggestion: "请检查文件是否损坏"}
+	}
+	// symlink 中段守卫（2026-10-16 锐评 Go P1）：HasTraversal 只做词法 `..` 检查，
+	// repoRoot/sub 若为预置 symlink 指向仓库外，MkdirAll 会穿透建到外部、WriteFileAtomic
+	// 遂写出仓库。复用 fileops.CheckNoSymlinkInPath 与 folder import 同一判据（逐组件 Lstat），
+	// 防双抄复发；subpath 为空时放行（单文件写入 root 直下，无中间组件）。
+	if err := fileops.CheckNoSymlinkInPath(root, subpath); err != nil {
+		return types.AppError{Code: types.ErrInvalidPath, Operation: "导入模型", SourcePath: subpath, Reason: "子目录包含符号链接", Suggestion: "请选择非符号链接的真实目录"}
 	}
 	destPath := filepath.Join(root, subpath, fileName)
 	destDir := filepath.Dir(destPath)

@@ -838,8 +838,17 @@ export class AppTree extends WebComponentBase {
   }
 
   /** 树内拖拽移动执行链（ADR-336 §2.4）：批量 MoveModelFile + 乐观更新 + 代际守卫回滚。
-   *  与单文件开关乐观同款范式；失败项本地不翻 + toast 明细（同 dirRecycle 格式）。 */
+   *  与单文件开关乐观同款范式；失败项本地不翻 + toast 明细（同 dirRecycle 格式）。
+   *  busy 判据（2026-10-16 锐评 P1-B）：原只查 `_moveLock`，但起拖端（_treeMovePayload）
+   *  查的是 `_repoOpBusy()`（三锁）——两次判定口径不一致。drop 可晚于起拖数秒，期间
+   *  批量删除/启停链可能已起，drop 时只查 move 锁会与之并发（fileops.opMu 串行化后
+   *  一方拿到旧路径）。现 drop 入口对齐起拖口径：先 `_repoOpBusy()` 拒绝 + toast，
+   *  再 tryStart 取锁（_repoOpBusy 含 move 锁，故 tryStart 失败已被上一判据覆盖）。 */
   private async _executeTreeMove(paths: string[], targetDir: string): Promise<void> {
+    if (this._repoOpBusy()) {
+      toast(t("ctx.busyWait"), TOAST_MS.quick, "info");
+      return;
+    }
     if (!this._moveLock.tryStart()) return;
     const rollbackGen = this._guard.current;
     try {

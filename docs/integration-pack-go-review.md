@@ -15,6 +15,7 @@
 - **问题**：三方失效来源（scanner 钩子 / app 层显式成对调用 / sync 内部自清）里，**只有 sync 内部自清是不对称的**——它绕过了 scanner 漏斗，因此 sync 内任何新增/修改的变更点只要漏了 app 层那一对调用，整合包树就会停留在 30s TTL 内的陈旧数据（正是"内容变化漏报/树不刷新"那一族历史 bug 的土壤）。
 - **根因**：失效职责按**包边界**划分（sync 只管 sync 的缓存），而数据依赖是**跨包**的（sync 变更直接影响 instance 的派生结果）；又因为分层纪律 sync 不能 import instance（`go/sync` 生产代码零 import `go/instance`，已 grep 确认），所以"让 sync 顺带清 instance 缓存"这条最直接的路径被堵死，只能在 app 层用 30 个调用点人肉配对。
 - **建议方向**：让 sync 内部变更改走 scanner 漏斗——`defer scanner.InvalidateCache()` 或 `scanner.InvalidatePath(...)`，instance 的 `InvalidateSyncItemsCache` 由钩子级联触发（现在 `scanner.InvalidateCache`/`InvalidatePath` 末尾已调 `notifyCacheInvalidated()`，`scanner.go:237-245`、`scanner.go:315`）。这样"改了 A 忘了清 B"从"30 个调用点的人肉义务"降为"一个钩子注册"，新增同步操作不再有配对负担。
+- **✅ 已修复（2026-10-16，commit `bbce4353a`）**：八处 `defer InvalidateSyncScanCaches()` 全部改 `defer scanner.InvalidateCache()`，经 `scanner.OnCacheInvalidated` 级联同时清 sync 扫盘 + instance 同步结果；app 层配对保留作防御纵深（`tests/test_sync_write_cache_pairing.ts` 强制保留）。相关失效入口注释（`app_install_instance.go` / `app_install_import.go` / `go/instance/instance.go` / `go/sync/sync_cache.go`）同步更新（`6fc3e892e`）。
 
 ---
 

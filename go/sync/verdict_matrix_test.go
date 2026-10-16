@@ -4,12 +4,13 @@
 // 矩阵先打现行实现（全绿 = 今天语义的快照，含边缘行为），再作为判定表
 // （verdict.go）重构的语义锁：重构后矩阵复跑必须全绿（判定结果字节级不变）。
 //
-// 四个信道区段（对应 ADR-347 的判定片）：
+// 四个信道区段（对应 ADR-347 的判定片）+ 冲突视图区段（ADR-351 D2）：
 //   - A 文件级（ResourceDiff / contentDiffers，ADR-269 / 340-d2）：哈希双有 / 单侧 /
 //     Oversize / Size 兜底 / 单侧存在
 //   - B 目录单元（FoldDigest，ADR-344 D2）：双有指纹 / 异指纹 / 单侧空（存在性语义）
 //   - C dirLevel 单元表（dirLevelResult，ADR-344 D1 跨格式守卫）：同名夹 / 跨格式同键
 //   - D 夹内逐文件（diffFolderContentsCore，D2′-c）：哈希优先 / 单侧存在
+//   - E 冲突视图（conflictFromVerdict，ADR-351 D2）：判定表输出 × 哈希缺失 → 冲突类型
 //
 // 矩阵只钉判定结果（四桶 / Status）；P0 键碰撞 Warnings 信道由
 // sync_dirlevel_collision_test.go 专属守护，两测试各管一段。
@@ -187,6 +188,59 @@ func TestVerdictMatrix_FolderContents(t *testing.T) {
 				if byKey[k] != want {
 					t.Fatalf("%s：relKey %q got=%s want=%s（全表 %v）", c.name, k, byKey[k], want, byKey)
 				}
+			}
+		})
+	}
+}
+
+// ── E 区：冲突视图（conflictFromVerdict，ADR-351 D2）──────────────────────────
+// 判定表输出 × 哈希缺失 → 冲突类型的全映射。冲突通道不再自持平行判定（旧三分支
+// switch 与 ContentVerdict 同义异构，ADR-347 漏网），本区把映射逐行钉死。
+// E5 同时钉死「同哈希异尺寸 → SizeMismatch」防御分支的退役（哈希信道优先：同
+// SHA256 = 同内容；该形态真实文件不可构造，从未有测试钉住）。
+
+func TestVerdictMatrix_ConflictView(t *testing.T) {
+	cases := []struct {
+		name        string
+		differs     bool
+		channel     string
+		hashMissing bool
+		wantType    ConflictType
+		wantFailed  bool
+		wantDetect  bool
+	}{
+		{"E1 内容确证不同（hash 信道）→ ContentModified",
+			true, VerdictChannelHash, false, ConflictContentModified, false, true},
+		{"E2 大小不同 + 哈希缺（size 信道）→ SizeMismatch",
+			true, VerdictChannelSize, true, ConflictSizeMismatch, false, true},
+		{"E3 大小不同 + 双哈希（不可达形态，仅钉映射）→ SizeMismatch",
+			true, VerdictChannelSize, false, ConflictSizeMismatch, false, true},
+		{"E4 超限保守（oversize 信道，今日不可达：冲突收集全量哈希不设上限）→ SizeMismatch",
+			true, VerdictChannelOversize, false, ConflictSizeMismatch, false, true},
+		{"E5 同哈希（hash 信道，含旧「同哈希异尺寸」防御分支退役）→ 无冲突",
+			false, VerdictChannelHash, false, "", false, false},
+		{"E6 同尺寸 + 哈希失败（size 信道 + hashMissing）→ HashFailed + manual 语义",
+			false, VerdictChannelSize, true, ConflictContentModified, true, true},
+		{"E7 同尺寸 + 双哈希（size 信道不可达防御形态）→ 无冲突",
+			false, VerdictChannelSize, false, "", false, false},
+		{"E8 异折叠指纹（fold 信道，冲突收集不可达：纯文件级）→ 保守 SizeMismatch",
+			true, VerdictChannelFold, false, ConflictSizeMismatch, false, true},
+		{"E9 存在性语义（none 信道恒 differs=false）→ 无冲突",
+			false, VerdictChannelNone, false, "", false, false},
+		{"E10 未知未来信道 → 保守 SizeMismatch（宁可误报人工审，不可漏报静默覆盖）",
+			true, "future-channel-x", false, ConflictSizeMismatch, false, true},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			typ, hashFailed, detected := conflictFromVerdict(c.differs, c.channel, c.hashMissing)
+			if detected != c.wantDetect {
+				t.Fatalf("%s：detected got=%v want=%v", c.name, detected, c.wantDetect)
+			}
+			if typ != c.wantType {
+				t.Fatalf("%s：type got=%q want=%q", c.name, typ, c.wantType)
+			}
+			if hashFailed != c.wantFailed {
+				t.Fatalf("%s：hashFailed got=%v want=%v", c.name, hashFailed, c.wantFailed)
 			}
 		})
 	}

@@ -17,7 +17,9 @@ package sync
 
 // 判定信道名（诊断信道：本次判定实际走了哪条腿——ADR-347 D4 信道强度显式化）。
 // 未来「假绿收据」（体检页）按信道挂账；新增信道 = 加一个判定输入字段 + 一个常量 +
-// verdict_matrix_test.go 加一行矩阵（签名层面挡住静默退化）。
+// verdict_matrix_test.go 加一行矩阵（签名层面挡住静默退化）+ conflict.go|
+// conflictFromVerdict 映射同步（ADR-351 D2：冲突通道消费本判定表，未知信道保守
+// 按疑似冲突处理，但映射表须与信道集同步演进——E 区矩阵钉死该映射）。
 const (
 	VerdictChannelFold     = "fold"     // 目录折叠指纹对比（D2′-b；异指纹 = 夹内容变）
 	VerdictChannelHash     = "hash"     // 两侧 SHA256 对比（D2′-a；异哈希 = 同大小异内容）

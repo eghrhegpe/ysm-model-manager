@@ -442,6 +442,44 @@ func injectHashFailure(t *testing.T) func() {
 	return func() { hashFileForEntries = original }
 }
 
+// injectFixedHash 注入「同哈希」给指定文件名——构造「同哈希异尺寸」的不可构造形态
+// （真实文件同 SHA256 必同内容必同尺寸），钉死 ADR-351 D2 退役的防御分支。
+func injectFixedHash(t *testing.T, filename, fixedHash string) func() {
+	t.Helper()
+	original := hashFileForEntries
+	hashFileForEntries = func(path string) (string, error) {
+		if strings.HasSuffix(path, filename) {
+			return fixedHash, nil
+		}
+		return fsutil.SHA256File(path)
+	}
+	return func() { hashFileForEntries = original }
+}
+
+// TestDetectConflicts_SameHashDifferentSize_NoConflict（ADR-351 D2）：同哈希即同内容
+// ——旧三分支的「哈希一致但大小不同 → SizeMismatch」防御分支退役。该形态用真实
+// 文件不可构造（同 SHA256 必同尺寸）、从未被测试钉住，报冲突只会产出噪声条目
+// 供人工审查（SuggestedStrategy 恒 manual 类），2026-10-16 裁定删除。
+// 注意：非 t.Parallel（包级 seam 注入，与 injectHashFailure 同约束）。
+func TestDetectConflicts_SameHashDifferentSize_NoConflict(t *testing.T) {
+	localDir, remoteDir, cleanup := setupTestDirs(t)
+	defer cleanup()
+
+	// 两侧同文件名：内容不同（尺寸不同）但注入同一哈希
+	writeFile(t, localDir, "twin.bin", "short", time.Now())
+	writeFile(t, remoteDir, "twin.bin", "much longer content", time.Now())
+
+	restore := injectFixedHash(t, "twin.bin", "SAME-HASH")
+	defer restore()
+
+	report, err := DetectConflicts(localDir, remoteDir, "test")
+	testutil.NoError(t, err)
+	if report.TotalConflicts != 0 {
+		t.Errorf("同哈希（同内容）不应报冲突，got %d: %+v（防御分支退役回归，ADR-351 D2）",
+			report.TotalConflicts, report.Conflicts)
+	}
+}
+
 // TestCollectFileEntries_HashFailureIsEntryLevel 验证 collectFileEntries 错误通道分离：
 // 单文件哈希失败属条目级错误——条目保留 Hash=="" 照常返回，不得混入整体 error
 // 导致调用方整体失败。旧实现把 hashErr 写入 walkErr，DetectConflicts 消费后

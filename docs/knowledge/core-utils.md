@@ -43,6 +43,7 @@ auto_fields:
     - safeErrorMessage
     - safeGet
     - safeGetJSON
+    - safeKeys
     - safeRemove
     - safeSet
     - setLogSink

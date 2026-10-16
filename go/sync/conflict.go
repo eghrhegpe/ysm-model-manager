@@ -94,28 +94,23 @@ func DetectConflicts(localDir, remoteDir, rtype string) (*ConflictReport, error)
 			continue // 远端不存在，是本地独有文件，不算冲突
 		}
 
-		// 内容冲突判定：两端都存在且哈希不同
-		switch {
-		case localInfo.Hash != remoteInfo.Hash && localInfo.Hash != "" && remoteInfo.Hash != "":
-			conflict := newConflict(path, localInfo, remoteInfo,
-				ConflictContentModified, suggestStrategy(localInfo.ModTime, remoteInfo.ModTime), false)
-			conflicts = append(conflicts, conflict)
-		case localInfo.Size != remoteInfo.Size:
-			// 大小不匹配但哈希可能一致（极端情况），标记为 size_mismatch 供参考
-			// 注：哈希一致但大小不同在理论上不可能，此分支为防御性分支
-			conflict := newConflict(path, localInfo, remoteInfo,
-				ConflictSizeMismatch, suggestStrategy(localInfo.ModTime, remoteInfo.ModTime), false)
-			conflicts = append(conflicts, conflict)
-		case localInfo.Size == remoteInfo.Size && (localInfo.Hash == "" || remoteInfo.Hash == ""):
-			// 两端 size 相同但任一端 hash 失败：
-			// 旧实现在此情况静默跳过（hash 空时 L91 条件不满足），
-			// 导致哈希失败的真实冲突文件被漏报。
-			// 修复：标记 HashFailed=true + ResolveManual，让 ResolveConflictsLocked
-			// 检测到 HashFailed 时不覆盖 SuggestedStrategy，直接计入 manual。
-			conflict := newConflict(path, localInfo, remoteInfo,
-				ConflictContentModified, ResolveManual, true)
-			conflicts = append(conflicts, conflict)
+		// 判定单点（ADR-351 D2，2026-10-16）：「两侧内容是否不同」不再本函数自持
+		// 三分支平行实现，改经 verdict.go|ContentVerdict 判定表——新增判定信道
+		// （oversize / fold / 未来）自动流入本通道，不再依赖人肉同步（旧平行 switch
+		// 是 ADR-347 单点化时漏掉的最后一处）。冲突语义 = 判定信道的冲突特化视图
+		// （conflictFromVerdict 映射表，E 区矩阵锁语义）。
+		differs, channel := ContentVerdict(localInfo.verdictEntry(), remoteInfo.verdictEntry())
+		typ, hashFailed, detected := conflictFromVerdict(
+			differs, channel, localInfo.Hash == "" || remoteInfo.Hash == "")
+		if !detected {
+			continue
 		}
+		// HashFailed 不覆盖策略（ResolveManual 直达）；其余按修改时间建议
+		strategy := ResolveManual
+		if !hashFailed {
+			strategy = suggestStrategy(localInfo.ModTime, remoteInfo.ModTime)
+		}
+		conflicts = append(conflicts, newConflict(path, localInfo, remoteInfo, typ, strategy, hashFailed))
 	}
 
 	// 冲突列表按 Path 字典序排序——localFiles 为 map，迭代序由 Go 运行时随机化，
@@ -236,6 +231,41 @@ type fileEntryInfo struct {
 	Size    int64
 	ModTime time.Time
 	Hash    string
+}
+
+// verdictEntry 把冲突条目投影为判定表输入（ADR-351 D2）：ModTime 是策略元数据
+// （suggestStrategy 消费），不参与内容判定，留在本域不进 DiffEntry。
+func (f fileEntryInfo) verdictEntry() DiffEntry {
+	return DiffEntry{Path: f.Path, Size: f.Size, Hash: f.Hash}
+}
+
+// conflictFromVerdict 判定输出的冲突视图（ADR-351 D2）：把 ContentVerdict 的
+// (是否不同, 信道) 映射为冲突类型三元组，hashMissing = 任一侧哈希为空（冲突收集
+// 恒尝试哈希，空即失败——与 diff 信道「无哈希可用」的合法降级语义不同源）。
+//
+// 映射表（与 verdict_matrix_test.go E 区矩阵互锁，改动须同步）：
+//   - differs=true  + hash          → ContentModified（内容确证不同）
+//   - differs=true  + 其余信道      → SizeMismatch（疑似待核。size=大小异而哈希缺；
+//     oversize/fold/none/未知信道今日不可达——冲突收集是纯文件级全量哈希——属
+//     未来信道自动跟进位；未知信道保守按疑似处理：冲突宁可误报人工审，不可漏报
+//     致 ResolveConflicts 静默覆盖）
+//   - differs=false + hash          → 无冲突（同哈希 = 同内容。旧防御分支「同哈希
+//     异尺寸 → SizeMismatch」随哈希信道优先退役：同 SHA256 即同内容，且该形态
+//     用真实文件不可构造、从未被测试钉住——报冲突是噪声，2026-10-16 裁定）
+//   - differs=false + size + 哈希缺 → HashFailed + manual（同尺寸 + 哈希失败，
+//     无法判定 → 人工审查；ResolveConflictsLocked 见 HashFailed 不覆盖策略）
+//   - differs=false + 其余          → 无冲突（存在性语义 / 不可达防御）
+func conflictFromVerdict(differs bool, channel string, hashMissing bool) (typ ConflictType, hashFailed, detected bool) {
+	if !differs {
+		if channel == VerdictChannelSize && hashMissing {
+			return ConflictContentModified, true, true
+		}
+		return "", false, false
+	}
+	if channel == VerdictChannelHash {
+		return ConflictContentModified, false, true
+	}
+	return ConflictSizeMismatch, false, true
 }
 
 // newConflict 统一构造 FileConflict 字面量——DetectConflicts 的三个分支

@@ -367,6 +367,35 @@ describe("app-sidebar — 推送所选（ADR-340 直调）", () => {
     unmountElement(el);
   });
 
+  // 锐评 P0-1 回归锁（2026-10-16）：超时 `break` 之后的类型批次既未执行也未计入任何状态，
+  // 原实现只报「N 个类型批次超时」，用户不知道哪些类型根本没跑。修后必须点名 `types.slice(ti)`
+  // （超时那一类 + 其后未跑的），且文案与真实早停一致——首个类型超时后不再续发。
+  it("推送 binding 挂起 → 超时早停 + 点名被放弃的类型批次（锐评 P0-1）", async () => {
+    // 超时成因即 binding 永久挂起：打桩 withTimeout 抛 TimeoutError，避开 120s 真实等待。
+    const asyncMod = await import("@/utils/base/primitives/async.ts");
+    const withTimeoutMock = vi.mocked(asyncMod.withTimeout);
+    withTimeoutMock.mockRejectedValueOnce(new asyncMod.TimeoutError("推送 ysm", 120_000));
+
+    const el = await mountSidebar();
+    checkFirst(el);
+    const pushBtn = $<HTMLButtonElement>(el, ".sidebar-push-selected");
+
+    clickPushAll(el);
+    await waitFor(() => toasts.some((t) => t.type === "warn" && t.msg.includes("推送完成")));
+
+    const msg = toasts.find((t) => t.type === "warn" && t.msg.includes("推送完成"))?.msg ?? "";
+    // ① 早停是真实行为（不是文案问题）：首个类型超时后不再续发剩余类型
+    expect(downloadMissingMock).toHaveBeenCalledTimes(1);
+    // ② 计数如实
+    expect(msg).toContain("1 个类型批次超时，已停止后续批次");
+    // ③ 点名是本次修复的核心：被放弃的批次逐个列出（超时那一类 + 其后全部），而非只有一个数字
+    expect(msg).toContain(`以下 ${ALL_RESOURCE_TYPES.length} 个类型批次未推送`);
+    expect(msg).toContain(ALL_RESOURCE_TYPES.join("、"));
+    // ④ 锁已释放、按钮恢复可点（超时不得把 UI 留在 busy 态）
+    expect(pushBtn.disabled).toBe(false);
+    unmountElement(el);
+  });
+
   // 锐评 P1-3 回归锁：包级归因——「失败 N 个文件」之外必须点名是哪个整合包。
   // 多类型批次下同一包会被累加多次，断言「包名 + 括号内失败数」出现且计数正确。
   it("P1-3 包级归因 → 汇总 toast 点名失败整合包与失败数", async () => {
@@ -557,6 +586,33 @@ describe("app-sidebar — 拉取所选", () => {
     expect(toasts.some((t) => t.msg.includes("上一次同步尚未结束"))).toBe(false);
   });
 
+  // 锐评 P0-2 回归锁（2026-10-16）：超时下探到**类型级**——原实现 `withTimeout(allSettled)`
+  // 只要本包任一类型挂起，整包 allSettled 被 TimeoutError 打断，**同包内已 settle 的其余类型
+  // 结果全部丢弃**（锐评 P0「超时丢半结果」）。修后单个类型超时只放弃那一类，同包其余类型照常归并。
+  it("拉取：包内单类型超时不清空同包其余类型的结果（锐评 P0-2）", async () => {
+    const asyncMod = await import("@/utils/base/primitives/async.ts");
+    const withTimeoutMock = vi.mocked(asyncMod.withTimeout);
+    // 只让第一个类型超时，其余 14 个类型照常返回 ok:2
+    withTimeoutMock.mockRejectedValueOnce(new asyncMod.TimeoutError("拉取 insA/ysm", 120_000));
+    const { PullResourceFromInstance } = await import(
+      "../../../bindings/ysm-model-manager/internal/app/app.js"
+    );
+    (PullResourceFromInstance as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: 2, failed: 0 });
+
+    const el = await mountSidebar();
+    checkFirst(el);
+    clickPullAll(el);
+
+    await waitFor(() => toasts.some((t) => t.msg.includes("拉取完成")));
+    const msg = toasts.find((t) => t.msg.includes("拉取完成"))?.msg ?? "";
+    // 同包其余类型的结果必须保留（原实现会因一个类型挂起把整包计数清零）
+    expect(msg).toContain(`拉取完成: ${(ALL_RESOURCE_TYPES.length - 1) * 2} 个文件, 0 个失败`);
+    // 超时那一类如实计入「超时」而非「失败」
+    expect(msg).toContain("1 项拉取超时，已停止后续拉取");
+    expect(msg).not.toContain("拉取完成: 0 个文件");
+    unmountElement(el);
+  });
+
   it("busy 拒收必须可见（批D：原实现静默 return，点另一个按钮零反馈）", async () => {
     const { PullResourceFromInstance } = await import(
       "../../../bindings/ysm-model-manager/internal/app/app.js"
@@ -660,6 +716,36 @@ describe("app-sidebar — _reload 并发（pending 补跑防 rtype 错配）", (
     // 放行补跑 → 最终渲染新 rtype 的卡片
     resolvers.shift()!([makeInstances()[0]]);
     await waitFor(() => el.shadowRoot!.querySelector(".chk"));
+  });
+
+  // 锐评 P0-3 回归锁（2026-10-16）：`force` 必须与 pending 补跑一起被记住（OR 累积）。
+  // 原实现只记 `_reloadPending`、补跑走 `_reload()`（不带 force）——变异刷新（stats:refresh，
+  // force=true）撞上在途 reload 时会被静默降级，`loadInstances` 并入变异前发起的在途请求，
+  // 拿到旧实例列表（实例增删后侧栏不更新）。
+  it("force 补跑：变异刷新撞在途 reload → 补跑仍带 force（不被静默降级）", async () => {
+    const calls: Array<{ rtype: string; force: boolean }> = [];
+    let resolvers: Array<(v: SidebarInstance[]) => void> = [];
+    loadInstancesMock.mockImplementation((rtype: string, opts?: { force?: boolean }) => {
+      calls.push({ rtype, force: opts?.force === true });
+      return new Promise<SidebarInstance[]>((res) => resolvers.push(res));
+    });
+    const el = mountCustomElement("app-sidebar");
+    // 初始 reload（无 force）挂起
+    await waitFor(() => calls.length === 1);
+    expect(calls[0]).toEqual({ rtype: "ysm", force: false });
+    // 变异刷新落进在途窗口：stats:refresh → 300ms 防抖 → _reload(true)
+    bus.emit("stats:refresh");
+    await sleep(350);
+    // 不直接执行（防旧数据覆盖），仅记 pending + force
+    expect(calls.length).toBe(1);
+    // 放行首次 → 补跑必须带 force
+    resolvers.shift()!([makeInstances()[0]]);
+    await waitFor(() => calls.length === 2);
+    expect(calls[1]).toEqual({ rtype: "ysm", force: true });
+    // 放行补跑 → 正常渲染
+    resolvers.shift()!([makeInstances()[0]]);
+    await waitFor(() => el.shadowRoot!.querySelector(".chk"));
+    unmountElement(el);
   });
 });
 

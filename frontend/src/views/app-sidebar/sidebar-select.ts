@@ -31,11 +31,15 @@ export function getSelected(root: ShadowRoot, instances: SidebarInstance[]): str
   const sel: string[] = [];
   const live = new Set(instances.map((i) => i.name));
   root.querySelectorAll(".chk:checked").forEach((c) => {
-    const input = c as HTMLInputElement;
     const name = instanceNameOf(c);
     // 名字不在最新实例列表 → 卡片已失效（增删后未 reload），不静默推送，避免误装
     if (!name || !live.has(name)) {
-      logWarn("sync-flow", "getSelected: 勾选项未命中实例名，跳过", { idx: input.dataset.idx });
+      // 日志线索取卡片自身（`data-idx` 写在 `.instance-card` 上，不在 input 上）
+      const card = c.closest("[data-name]") as HTMLElement | null;
+      logWarn("sync-flow", "getSelected: 勾选项未命中实例名，跳过", {
+        name,
+        idx: card?.dataset.idx,
+      });
       return;
     }
     sel.push(name);

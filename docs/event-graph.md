@@ -4,11 +4,9 @@
 > 基于 `frontend/src/bus.ts` 的 `BusEvents` 接口校验所有调用方（含 html 内联、可选链调用）。
 > 合法发射者登记表闸（ADR-270-d3）：`docs/.bus-emitters.json` 之外新增发射文件 = 硬错误；表内未被命中条目 = 可收紧提示。
 
-## ⚠️ 异常摘要
+## ✅ 无异常
 
-### 发射者表外新增（硬错误——须改走收敛通道，或确认合法后 --update --force 登记）
-
-- `settings:imported` @ `frontend/src/views/app-content/settings/settings-backup.ts`
+所有调用均在 BusEvents 契约与合法发射者登记表内：无孤儿发射 / 鬼订阅 / 未声明事件 / 缺参 / 发射者表外新增。
 
 ## 事件总览
 

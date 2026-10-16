@@ -262,6 +262,10 @@ export const autoSidebar = [
     "collapsed": true,
     "items": [
       {
+        "text": "ADR-352：两阶段扫描投影二段：持久浏览索引（稳态重扫 O(1)）",
+        "link": "/adr/architecture/ADR-352-scan-index"
+      },
+      {
         "text": "ADR-351：整合包同步域锐评收口：收集层收口与判定单点化",
         "link": "/adr/architecture/ADR-351-sync-domain-review-consolidation"
       },

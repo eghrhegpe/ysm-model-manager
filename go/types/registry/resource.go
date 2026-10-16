@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 )
 
 // bundledRegistryJSON 是编译期内嵌的 resource_types.json（单一事实来源）。
@@ -158,8 +159,15 @@ func (rt *ResourceType) MatchZipEntry(name string) bool {
 }
 
 var (
-	registryMu   sync.Mutex
-	registry     *ResourceTypeRegistry
+	registryMu sync.Mutex
+	// registry 用 atomic.Pointer 而非裸指针 + registryMu：LoadRegistry 是 sync 热路径
+	// （IsSupportedExt / IsContainerExt / ShouldHashExt 在 WalkDir 里逐文件调用），
+	// 快路径必须无锁读。写路径（SetRegistryPath/SetBundledRegistryJSON）仍持 Mutex，
+	// 且 SetRegistryPath 显式 Store(nil) 让下次 LoadRegistry 快路径未命中后走慢路径重建——
+	// 语义与原「Mutex 内 registry=nil」完全等价，SetRegistryPath 可重置能力不变。
+	// atomic.Pointer.Store 具 release 语义、Load 具 acquire 语义：读者看到的是完整构造的
+	// 注册表（所有字段写入先于 Store），不会读到半初始化对象。
+	registry     atomic.Pointer[ResourceTypeRegistry]
 	registryPath = "resource_types.json" // 可被 tests 替换
 )
 
@@ -169,18 +177,23 @@ func SetRegistryPath(path string) {
 	registryMu.Lock()
 	defer registryMu.Unlock()
 	registryPath = path
-	registry = nil
+	registry.Store(nil)
 }
 
 // LoadRegistry 加载资源类型注册表（单一事实来源 = 编译期嵌入的 resource_types.json）。
 // 仅当 SetRegistryPath 显式指定外部绝对路径时才读取外部文件（测试/显式覆盖）；
 // 默认回退到编译时嵌入数据，不再扫描 exe 旁目录，杜绝旧快照遮蔽导致的漂移。
 // 加锁替代 sync.Once：避免 SetRegistryPath 重置 once 与 Do 之间的竞争。
+// 快路径无锁：首次加载后直接 atomic.Load 返回（热路径零 Mutex 开销，消锐评 P1-5
+// 「IsSupportedExt 每次调用都走 LoadRegistry 全局 Mutex」）。
 func LoadRegistry() *ResourceTypeRegistry {
+	if reg := registry.Load(); reg != nil {
+		return reg
+	}
 	registryMu.Lock()
 	defer registryMu.Unlock()
-	if registry != nil {
-		return registry
+	if reg := registry.Load(); reg != nil { // 双检：快路径 miss 后可能已被并发构建
+		return reg
 	}
 	data := loadRegistryBytes()
 	var reg ResourceTypeRegistry
@@ -197,8 +210,9 @@ func LoadRegistry() *ResourceTypeRegistry {
 		if err := json.Unmarshal(bundledRegistryJSON, &baseline); err != nil {
 			// 嵌入基线本身损坏（生成文件被破坏）时仍不 panic，但标记空表避免二次解析
 			log.Printf("[types] 嵌入基线解析也失败: %v", err)
-			registry = &ResourceTypeRegistry{}
-			return registry
+			empty := &ResourceTypeRegistry{}
+			registry.Store(empty)
+			return empty
 		}
 		reg = baseline
 	}
@@ -209,8 +223,9 @@ func LoadRegistry() *ResourceTypeRegistry {
 		log.Printf("[types] 外部注册表为空（%d 条目），回退嵌入基线", len(reg.ResourceTypes))
 		var baseline ResourceTypeRegistry
 		if err := json.Unmarshal(bundledRegistryJSON, &baseline); err != nil {
-			registry = &ResourceTypeRegistry{}
-			return registry
+			empty := &ResourceTypeRegistry{}
+			registry.Store(empty)
+			return empty
 		}
 		reg = baseline
 	}
@@ -250,8 +265,8 @@ func LoadRegistry() *ResourceTypeRegistry {
 	for _, v := range validateRegistrySchema(&reg) {
 		log.Printf("[types][WARN] %s", v)
 	}
-	registry = &reg
-	return registry
+	registry.Store(&reg)
+	return registry.Load()
 }
 
 // validateRegistrySchema 注册表 schema 守卫：

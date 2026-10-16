@@ -58,6 +58,7 @@
 - **问题**：这是 sync 的**热路径**——`IsResourceAllowed`（`extensions.go:249-256`）在 `sync.go` 的 `WalkDir` 里逐文件调用，千级文件扫描 = 千次全局 Mutex lock/unlock，多核下产生缓存行乒乓。虽然非竞争时 Mutex 很快，但"每文件一次全局锁"是明显的设计摩擦。
 - **根因**：`LoadRegistry` 用 Mutex 而非 `sync.Once` 是为了 `SetRegistryPath` 可重置；但只读查询路径（`IsSupportedExt`）也被迫每次都取锁。
 - **建议方向**：把 `registry` 指针用 `atomic.Pointer[ResourceTypeRegistry]` 缓存，`LoadRegistry` 只负责首次填充，`IsSupportedExt` 走无锁读；`SetRegistryPath` 仍可重置（写路径持 Mutex + Store 新指针）。
+- ✅ **已修**（本提交）：`resource.go` 的 `registry` 由 `*ResourceTypeRegistry`（裸指针 + Mutex）改为 `atomic.Pointer[ResourceTypeRegistry]`。`LoadRegistry` 首行快路径 `if reg := registry.Load(); reg != nil { return reg }` 无锁读，慢路径持 `registryMu` 双检后构建、`registry.Store(&reg)` 发布（Store 具 release、Load 具 acquire 语义，读者看到的是完整构造的注册表，不会读到半初始化对象）；`SetRegistryPath` 写路径仍持 Mutex 并 `registry.Store(nil)`，可重置语义不变。`IsSupportedExt`/`IsContainerExt`/`ShouldHashExt` 等所有 `LoadRegistry` 消费方在首次加载后全部走无锁读——千级文件扫描不再产生千次全局 Mutex lock/unlock。`types_desc_test.go` 的 `registry != nil` 断言同步改为 `registry.Load() != nil`。
 
 ### P1-6　`syncDirectoryScanKey.hashed` 的"folder 恒 false"零值陷阱
 - **文件:行**：`go/sync/sync_cache.go:43-53` 注释自述 `"folder" kind 恒 false 因字段默认零值`——`kind: "folder"` 的 key 永远落在 hashed=false 那一格，即使将来 folder 扫描支持哈希，也会与未哈希结果互相污染。

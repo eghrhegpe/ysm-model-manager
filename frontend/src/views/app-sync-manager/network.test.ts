@@ -2,7 +2,11 @@
 // 锐评 P2 补强：per-path 并发守卫 / 代际+连接守卫 / finally busy 派生 / 错误出口。
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@/views/backend-deps.ts", () => ({ backendGetApp: vi.fn() }));
+// P1-3（2026-10-16 锐评）：mock 目标统一到 seam 唯一出口 @/backend/app.ts，
+// 与同目录 index/events/renderer 测试同口径；弃用 @/views/backend-deps.ts 旁路
+// （ADR-224：vi.mock 路径失效会静默无告警，而 backend-deps.ts 是纯转发 seam，
+// 一旦加入 deps? 注入签名，这条 mock 会静默失效）。
+vi.mock("@/backend/app.ts", () => ({ getApp: vi.fn() }));
 vi.mock("@/bus", () => ({ bus: { emit: vi.fn() } }));
 // 批D：超时用例需把同步兜底超时打桩（否则要真等 120s）；其余用例透传真实实现，
 // TimeoutError 保持真实类（断言分支用 instanceof 判定）。
@@ -12,7 +16,7 @@ vi.mock("@/utils/async/sync-op-timeout.ts", async (importOriginal) => {
 });
 
 import { bus } from "@/bus";
-import { backendGetApp } from "@/views/backend-deps.ts";
+import { getApp } from "@/backend/app.ts";
 import { createLoadGuard } from "@/utils/async/load-guard.ts";
 import { withSyncOpTimeout } from "@/utils/async/sync-op-timeout.ts";
 import { TimeoutError } from "@/utils/base/primitives/async.ts";
@@ -20,7 +24,7 @@ import { performSingleOp } from "./network.ts";
 import type { SyncManagerSelf } from "./self-type.ts";
 
 const busEmit = vi.mocked(bus.emit);
-const getAppMock = vi.mocked(backendGetApp);
+const getAppMock = vi.mocked(getApp);
 
 function makeSelf(over: Partial<SyncManagerSelf> = {}): SyncManagerSelf {
   return {

@@ -102,6 +102,12 @@
 
 **建议方向**：① **统一**测试 mock 路径：全走 `vi.mock("@/backend/app.ts")`（seam 唯一出口），废弃 `../../../bindings/.../app.js` 与 `@/views/backend-deps.ts` 两处旁路；② 若坚持保留纯转发 seam，**至少**在 `vi.mock` 工厂里加一个 `if (typeof getApp !== "function") throw` 的 fail-loud 断言，把「路径失效静默通过」变成「测试启动即红」；③ 评估把 sync/pack-ops 的 tpl 相关（若有）迁到 `Deps` 注入形态（对齐 `recycle-bin.ts:69 PROD_DEPS` 先例）。
 
+**处置结果（2026-10-16 复核，锐评行号基准已过时——以现行为准）**：
+- **已修**：`app-sync-manager/network.test.ts` 与 `store.test.ts` 从 `vi.mock("@/views/backend-deps.ts")` 迁到 `vi.mock("@/backend/app.ts")`（seam 唯一出口），与同目录 `index/events/renderer` 8 个测试同口径，消除「同一模块内 mock 目标混用」。行为等价（`backend-deps.ts` 是纯转发，`store.ts:57/68`、`network.ts:47` 调 `backendGetApp()` → `getApp()` 被 mock 命中）。10 文件 111 测试全绿。
+- **复核纠偏**：原判定「`app-sidebar` 5 个测试 `vi.mock(bindings/app.js)` 绕过 seam」**不准确**。实测 grep：全仓 12 个文件 mock `bindings/.../app.js`，其中 `backend/app.test.ts` 属正当（测真实 `app.ts` 的依赖）；4 个**同时** mock 了 `@/backend/app.ts` 作为真正 seam 拦截（app-content.component、app-content.methods、app-preview.component、app-sidebar.loader），`bindings` mock 是**node/jsdom 环境阻断 `@wailsio/runtime` 加载链**的必要运行时护栏（`loader.test.ts:9-11` 注释写明），非绕过 seam。仅 `app-sidebar` 5 文件 + `app-tree` 2 文件**只** mock bindings 未 mock seam——但这是「在最深层 mock，seam 自然透传」的**有效替代方案**，非绕过；`bindings` 重新生成后导出变化会因解构 `undefined → "not a function"` **显式炸**，非静默通过。ADR-224 的「静默」风险实际收窄到「路径本身失效」这一窄场景（vitest 会 `Cannot find module` 显式报错）。**该部分原判定过重**。
+- **`deps?.fn` 注入形态维持不采纳**：文件头已记录「set/reset seam 曾复制 context-menu-deps 已删模式——全仓库零消费方，测试走 `vi.mock("@/backend/app.ts")` 模块层拦截；按同目录先例删除零测试的模块级可变全局，保留纯转发单出口」——为**合理有意简化**。仓内真正的 `Deps` 注入形态仅在 `recycle-bin.ts:69 PROD_DEPS`、`context-menu-file-handlers.ts:33 FAIL_LOUD_DEPS`、`oldest-models.ts:161 OldestDeps` 三处（tpl 注入形态），与 sync/pack-ops 的「纯转发 + vi.mock」是两条不同路线，无合并必要。
+- **ADR-224 fail-closed 已由 `test-utils/mock-app.ts` 兜底**（未配置方法调用即 throw、thenable 探针放行、`afterEach` 须 `resetAppMock()`，注释钉死 code_review 7be20003 隔离契约）。建议后续新测试优先采用该 helper。
+
 ### P1-4　`runPush`/`runPull` 大整合包下的串行性能瓶颈 + 无细粒度进度
 **位置**：`features/sync/sync.ts:149-199`（`installInstanceMissing`：逐 `Missing` + `MissingDirs` **for-await 串行**安装）+ `app-sidebar/sync-flow.ts:375-379`（逐类型**串行** `await downloadMissing`）+ `sync-flow.ts:553-557`（runPull 逐包串行、包内类型并发）。
 

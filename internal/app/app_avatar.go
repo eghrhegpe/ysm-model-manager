@@ -7,12 +7,11 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"ysm-model-manager/go/avatar"
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/packs"
-	"ysm-model-manager/go/types/registry"
+	"ysm-model-manager/go/scanner"
 )
 
 // CachedCreatorAvatar 检查缓存中是否有作者头像，返回 data URI
@@ -35,31 +34,27 @@ func (a *App) BatchExtractCreatorAvatars() (map[string]string, error) {
 		}
 	}
 
-	entries := a.ScanModelEntries(a.ysmRoot())
+	entries := a.ScanModelEntriesForBrowse(a.ysmRoot(), "", "", "")
 	seen := map[string]string{}
 	seenMod := map[string]int64{}
 	for _, e := range entries {
-		name := e.Name
-		if registry.IsDisableSuffix(name) {
-			name = registry.StripDisableSuffix(name)
+		// ADR-343/锐评 2026-10-16：浏览投影条目（有 Name/Path/ModTime、无 SHA256）——
+		// 本函数只消费名/路径/修改时间，从不读 Hash，冷扫不付全库哈希税。
+		// 作者解析走 scanner.ExtractAuthor 单点（原此处手抄判据且与列表侧 TrimSpace
+		// 口径分裂，含空格作者名头像按名查恒 miss）。
+		author := scanner.ExtractAuthor(e.Name)
+		if author == "" {
+			continue
 		}
-		if strings.HasPrefix(name, "[") {
-			if idx := strings.Index(name, "]"); idx > 0 {
-				author := strings.TrimSpace(name[1:idx])
-				if author == "" {
-					continue
-				}
-				// ADR-064 锚定：扩展名判定走注册表（原硬编码 .ysm/.zip/.7z/.json，
-				// 新增 YSM 承载格式或类型时头像提取失效）
-				if packs.IsTypeModelFile(e.Name, "ysm") {
-					// 同作者多个模型取 ModTime 最新者：
-					// 原「只看第一个」可能漏掉更新模型的头像；ModTime 相等时
-					// 先扫描到的胜出（保持扫描顺序确定性）
-					if cur, ok := seenMod[author]; !ok || e.ModTime > cur {
-						seenMod[author] = e.ModTime
-						seen[author] = e.Path
-					}
-				}
+		// ADR-064 锚定：扩展名判定走注册表（原硬编码 .ysm/.zip/.7z/.json，
+		// 新增 YSM 承载格式或类型时头像提取失效）
+		if packs.IsTypeModelFile(e.Name, "ysm") {
+			// 同作者多个模型取 ModTime 最新者：
+			// 原「只看第一个」可能漏掉更新模型的头像；ModTime 相等时
+			// 先扫描到的胜出（保持扫描顺序确定性）
+			if cur, ok := seenMod[author]; !ok || e.ModTime > cur {
+				seenMod[author] = e.ModTime
+				seen[author] = e.Path
 			}
 		}
 	}
@@ -93,24 +88,15 @@ func (a *App) DebugExtractCreatorAvatar(authorName string) map[string]string {
 		info["status"] = "no_repo_root"
 		return info
 	}
-	entries := a.ScanModelEntries(a.ysmRoot())
+	entries := a.ScanModelEntriesForBrowse(a.ysmRoot(), "", "", "")
 	var foundPath string
 	for _, e := range entries {
-		name := e.Name
-		if registry.IsDisableSuffix(name) {
-			name = registry.StripDisableSuffix(name)
-		}
-		if strings.HasPrefix(name, "[") {
-			if idx := strings.Index(name, "]"); idx > 0 {
-				author := strings.TrimSpace(name[1:idx])
-				if author == authorName {
-					// ADR-064 锚定：同上方头像提取，扩展名判定走注册表
-					if packs.IsTypeModelFile(e.Name, "ysm") {
-						foundPath = e.Path
-						info["found_path"] = foundPath
-						break
-					}
-				}
+		if scanner.ExtractAuthor(e.Name) == authorName {
+			// ADR-064 锚定：同上方头像提取，扩展名判定走注册表
+			if packs.IsTypeModelFile(e.Name, "ysm") {
+				foundPath = e.Path
+				info["found_path"] = foundPath
+				break
 			}
 		}
 	}

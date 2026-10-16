@@ -1194,12 +1194,14 @@
 | 前端本地重算筛选逻辑 | - | 与后端 SearchModels 能力脱节、结果不一致；必须交后端执行 |
 | adv-filter 条件未走三路交集（关键词 + 数值 + 标签）→ 结果不精确；必须经 advFilterIntersectPaths | - | - |
 | 只备份 ysm_config.json 带不走 localStorage 轨的几十项设置——官方迁移叙事曾长期漏掉这一档（ 有文档无实现，2026-10-16 起由 ADR-344-d1 导出/导入收拢） | `b1116645c` | - |
-| 设置导出/导入的采集与回写**必须按台账白名单**（tier=local-storage && authority=browser-authority），禁手写第二份键名清单——手抄必漂移，新键漏登记即漏备份 | - | - |
+| 设置导出/导入的采集与回写**必须走台账查询口 **（判定 = tier=local-storage && authority=browser-authority，只写在台账一处），禁手写第二份键名清单、也禁在消费方复写判定——手抄必漂移，新键漏登记即漏备份 | `exportableSettingsKeys()` | - |
 | 台账  键族（3D 场景能力 `ysm-scene-cap-*`、工坊按站筛选态 `ysm-ws-*`）登记的是占位符，真实键由持有模块拼接——采集/回写必须展开真键，且候选键只能取自实际键（`safeKeys()` / 导出文件），禁按前缀猜键名 | `keyPattern` | - |
+| 拼接键族的前缀必须以  常量形态声明；藏在函数体内裸拼 `` `ysm:x${p}` `` 会让契约测试的键扫描失明（实测三族因此漏登），新键族落地先收常量再登记 | `*_PREFIX` | - |
+| 台账字段 `migrates` 只回答，**不回答「换机丢不丢」**——ADR-344 后后者要并看导出面；给用户列「要重设什么」用 `unbackupableSettingsKeys()`，用 `nonMigratingSettingsKeys()` 会劝人重设早已能带走的字号 | `复制 ysm_config.json 带不带得走` | - |
 | 导入是两轨跨进程动作，磁盘侧失败时浏览器侧**必须回滚**（Go 只备份 ysm_config.json，不备份浏览器侧）；写入键与回滚键须共用同一份白名单判定，各写一遍必漂移 | `磁盘 + 浏览器` | - |
-| 磁盘侧防护： 有大小上限（8 MiB），导入前备份最多保留 10 份（`.bak-时间戳`，毫秒精度） | `ReadSettingsExport` | - |
+| 磁盘侧防护： 有大小上限（8 MiB）与**双版本门控**（文件格式 `ExportVersion` + 配置 schema `AppConfig.SchemaVersion`，两套独立编号，少一道旧程序会按旧结构静默错读新版导出）；导入前备份最多保留 10 份（`.bak-时间戳`，毫秒精度）；配置文件存在却无任何路径设置时导出**直接拒绝**（假备份比没备份更糟） | `ReadSettingsExport` | - |
 | theme / themeAuto 跨双轨同名，台账用 disk: 前缀分列；无前缀即撞名，撞名会逼两轨塞进一行 | - | - |
-| 新增 localStorage 键必须同步登记 settings-keys.ts，漏登记则契约测试转红 | - | - |
+| 新增 localStorage 键必须同步登记 settings-keys.ts，漏登记则契约测试转红；拼接键族须把前缀收敛为  常量（函数体内裸拼接对账失明，实测漏登过三族） | `*_PREFIX` | - |
 | 网页模式的是 localStorage 的 ysm:config 键，别把它当桌面磁盘轨 | `磁盘替身` | - |
 | disk-authority 与 browser-authority 混用会产生双权威：读写两侧口径必须一致 | - | - |
 | 主题图标/文案表必须保持 Record<ThemeCard, …> 形态——theme-core 加主题漏键即编译期报错，勿回退 Record<string, …> + 运行时 ?? 兜底 | - | - |

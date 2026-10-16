@@ -74,6 +74,7 @@ status: active
 ## 与其他子系统关系
 
 - 被 `internal/app/app_avatar.go` 调用（GetCachedAvatar / ExtractAuthorAvatar 等 binding）
+- 头像链条目源（`internal/app/app_avatar.go|BatchExtractCreatorAvatars` / `DebugExtractCreatorAvatar`）经 `scanner.ScanModelEntriesForBrowse` 取全库条目（无哈希浏览投影，锐评 2026-10-16——冷路径不再付全库 SHA256 税，原手抄 `[作者]` 解析双份带分裂 trim 判据已并入 `scanner.ExtractAuthor` 单点，TrimSpace 口径，消「作者列表侧键 " 张三 " vs 头像 map 侧键 "张三"」恒 miss；回归锁 `app_avatar_test.go|TestCreatorAuthorKeyTrimCohesion` + `app_hashless_seam_lock_test.go|TestBatchExtractCreatorAvatars_ColdScanNoHashTax`）
 - .ysm 分支的解码走 [`ysm.DecodeYSM`](./go-ysm-parser.md)（注入点 `go/ysm/decode_inject.go`，解码器由 `internal/app/wasm_decoder.go` 的 init 注入：ADR-317 WebView 桥优先 + ADR-316 wazero 内存直解兜底）；本包不再自带解码桥
 
 ## 不变量

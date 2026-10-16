@@ -22,7 +22,7 @@ import (
 )
 
 // flowFakeApp gui-flow 测试桩：嵌入 nil AppService，仅覆盖流程实际调用的方法
-// （LoadAppConfig / ScanModelEntries / AnalyzeBedrockModel，并计数后者）。
+// （LoadAppConfig / ScanModelEntriesForBrowse / AnalyzeBedrockModel，并计数后者）。
 type flowFakeApp struct {
 	AppService
 	analyzeCalls atomic.Int64
@@ -32,6 +32,12 @@ type flowFakeApp struct {
 func (f *flowFakeApp) LoadAppConfig() types.AppConfig { return types.AppConfig{} }
 
 func (f *flowFakeApp) ScanModelEntries(dir string) []types.ModelEntry { return f.entries }
+
+// ScanModelEntriesForBrowse：② 模型扫描阶段与 GUI 树同 seam（锐评 2026-10-16 切
+// 浏览投影免哈希税），本桩与 ScanModelEntries 同数据源，保证阶段条目不因换 seam 而变。
+func (f *flowFakeApp) ScanModelEntriesForBrowse(dir, rtype, subtype, label string) []types.ModelEntry {
+	return f.entries
+}
 
 func (f *flowFakeApp) AnalyzeBedrockModel(modelPath string) types.BedrockModel {
 	f.analyzeCalls.Add(1)

@@ -167,6 +167,27 @@ func TestListModelAuthors_BracketEdges(t *testing.T) {
 	}
 }
 
+// TestExtractAuthor `[作者]` 解析单点判据（锐评 2026-10-16 导出为唯一出口，
+// app_avatar 手抄副本已收编）：trim 口径 + 禁用后缀剥离 + 非法形态返回空串。
+func TestExtractAuthor(t *testing.T) {
+	t.Parallel()
+	cases := []struct{ name, want string }{
+		{"[作者A]模型.ysm", "作者A"},
+		{"[ 张三 ]模型.ysm", "张三"},          // trim 统一：内嵌空格两侧同键（原分裂致头像 miss）
+		{"[]模型.ysm", ""},                // 空作者
+		{"[ ]模型.ysm", ""},               // 纯空格 trim 后为空（旧判据返回 " "——幻影作者）
+		{"[无右括号.ysm", ""},               // 非法形态
+		{"普通模型.ysm", ""},                // 无前缀
+		{"[作者B]模型.ysm.ban", "作者B"},      // 禁用后缀先还原再解析
+		{"[ 李四 ]模型.zip.disabled", "李四"}, // .disabled 同口径
+	}
+	for _, c := range cases {
+		if got := ExtractAuthor(c.name); got != c.want {
+			t.Errorf("ExtractAuthor(%q) = %q, 期望 %q", c.name, got, c.want)
+		}
+	}
+}
+
 func TestScanLocalAuthors(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()

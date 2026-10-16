@@ -85,7 +85,11 @@ func (a *App) SearchModels(filesRoot string, filters types.SearchFilters) []type
 	minCubes, maxCubes := filters.MinCubes, filters.MaxCubes
 	minTex, maxTex := filters.MinTex, filters.MaxTex
 
-	entries := a.ScanModelEntries(filesRoot)
+	// 条目走浏览投影（锐评 2026-10-16 修复漏迁移）：SearchModels 全链路不消费
+	// ModelEntry.Hash——哈希只服务同步系统内容匹配，冷搜索不该替同步付「全库逐
+	// 文件读全量字节」的 SHA256 税（同 app-tree loader 的 P0-1 止血口径；守卫、
+	// enrich/Type 派生、oplog 与 ScanModelEntries 完全一致，finalizeScanEntries 单点）。
+	entries := a.ScanModelEntriesForBrowse(filesRoot, "", "", "")
 	if len(entries) == 0 {
 		return nil
 	}

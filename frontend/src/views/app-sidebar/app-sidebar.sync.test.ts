@@ -493,6 +493,33 @@ describe("app-sidebar — 拉取所选", () => {
     unmountElement(el);
   });
 
+  // 锐评 P2-2 回归锁（2026-10-16）：浮层的 ESC 监听挂在 document 上（浮层覆盖侧栏、焦点未必
+  // 在面板内），必须随组件卸载精确移除。原 `bindSyncSelected` 的 cleanup 只
+  // `disposePush()`/`disposePull()`，不带面板关闭 → 卸载后 `escHandler` 仍留在 document 上
+  // （每挂载/卸载一轮叠一个），且它捕获的是已分离的 root。
+  // 本文件所在的 app-sidebar 模块里，document 级 keydown 监听只有浮层这一处，故「卸载时
+  // 移除了一个 document keydown 监听」等价于「cleanup 走到了 closeSyncResultPanel」。
+  it("卸载时释放浮层的 document ESC 监听（锐评 P2-2）", async () => {
+    const { PullResourceFromInstance } = await import(
+      "../../../bindings/ysm-model-manager/internal/app/app.js"
+    );
+    (PullResourceFromInstance as ReturnType<typeof vi.fn>).mockResolvedValue({ ok: 1, failed: 0 });
+    const el = await mountSidebar();
+    checkFirst(el);
+    clickPullAll(el);
+    await waitFor(() => {
+      const p = el.shadowRoot!.getElementById("sync-result-panel");
+      return p !== null && !p.hidden;
+    });
+
+    // 面板开着就卸载：cleanup 必须释放那个 document keydown 监听
+    const removeSpy = vi.spyOn(document, "removeEventListener");
+    unmountElement(el);
+    const removedKeydown = removeSpy.mock.calls.some(([type]) => type === "keydown");
+    removeSpy.mockRestore();
+    expect(removedKeydown).toBe(true);
+  });
+
   it("拉取无多余文件 → info toast", async () => {
     const el = await mountSidebar();
     checkFirst(el);

@@ -131,12 +131,22 @@ grep 全 `go/sync`、`go/instance`、`go/packs` 生产代码：无 `=="ysm"`/`==
 
 | 状态 | 条目 | 备注 |
 |---|---|---|
-| **已修** | P0-1 `bbce4353a`、P0-2 `b09094e1c`、P1-4 `8f2a8b1a1`、P1-5 `bcc598130`、P2-6 `2d7b38f39` | 均带回归锁 |
+| **已修** | P0-1 `bbce4353a`、P0-2 `b09094e1c`、P1-4 `8f2a8b1a1`、P1-5 `bcc598130`、P2-6 `2d7b38f39` | 均带回归锁，见下表 |
 | **已随他项消解** | P2-7 | P0-1 落地后失效传播收敛到单漏斗，无独立动作 |
 | **半修** | P2-4 `12b6cd392` | 测试 seam 注入改 `t.Cleanup` 自动恢复；"禁 t.Parallel"因 Go 无公开检测 API 保留注释约定 |
 | **判定推翻（不删不改）** | P1-2 | `conflict.go` 是活代码（app 层 + 诊断页在用）；仅配置驱动的 `handleSyncConflicts` 分支未接线，保留 |
 | **接受现状** | P1-1（不拆包）、P1-3（`.pmx/.pmd` 暂留）、P1-6（零值陷阱为事实非隐患）、P1-7（注释铁律）、P2-1（粗粒度失效）、P2-2（`Mutex` 因 `get` 惰性删除不宜 `RWMutex`）、P2-5（schema 数据驱动正确） | 各条已记触发条件 |
 | **建议有害不采纳** | P2-3 | 降级路径有真实 bug，字符串解析仍是主路径 |
+
+**已修项的回归锁落点**（逐条核对过测试确实存在，非仅声明）：
+
+| 条目 | 回归锁 | 锁住什么 |
+|---|---|---|
+| P0-1 | `go/instance/instance_test.go` 的「`scanner.InvalidateCache` 必须连带清空 instance 同步结果缓存」（:939-954） | 失效钩子级联真的到达派生缓存，而非只在 scanner 内部清 |
+| P0-2 | `go/sync/sync_push_test.go\|TestPushResources_SameSizeDifferentContent`（:317） | 执行链走 `pushPullDiff` 注入哈希：同尺寸异内容必须判不同（退回 size-only → 计数 0 红灯） |
+| P1-4 | `go/sync/sync_cache_test.go\|TestSyncScanCache_StaleEpochRejected`（:25）、`go/instance/instance_test.go\|TestSyncItemsCache_StaleEpochRejected`（:919） | 计算期间缓存被失效（epoch 前进）→ 陈旧结果不得回写 |
+| P1-5 | `go/types/registry/loadregistry_concurrent_test.go`（`TestLoadRegistry_ConcurrentReadAndSetPath` 等 4 例，含 `-race`）、`go/types/registry/types_desc_test.go\|TestSetRegistryPath`（:96） | 无锁读路径并发安全；`SetRegistryPath` 后 `registry.Load() == nil` 可重置 |
+| P2-6 | `internal/app/app_install_instance_test.go\|TestResourceTypesForSync`（:33，`&gotAll[0] == &all[0]` 断言 :47） | rtype 空分支必须返回副本，不得与入参共享底层数组 |
 
 **复核口径**：P1-2 与 P2-2 的原判定在本轮被推翻/降级——前者把"活代码"判成死代码，后者把"有据的取舍"判成遗漏。两篇锐评的后续引用应以本总览为准。
 

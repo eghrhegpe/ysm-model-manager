@@ -203,7 +203,7 @@
 
 **建议方向**：① `bindSyncSelected` 的返回 cleanup 追加 `closeSyncResultPanel()`；② 或把 `escHandler` 收敛为 `utils/dom/` 原语（如 `bindEscapeToClose`），随组件生命周期注册/注销。
 
-**处置结果（2026-10-16 已修，commit `cff19665b`）**：按建议①落地。`bindSyncSelected` 的 cleanup（现 `frontend/src/views/app-sidebar/sync-flow.ts:131-134`，经 P1-2 五向拆分后位置与语义不变）追加 `closeSyncResultPanel(root)`——该函数**幂等**（`frontend/src/views/app-sidebar/sidebar-result-panel.ts:37-41` 内部 `if (escHandler)` 才 remove），已关面板时调用无害。审查的「**待验证**：`bindSyncSelected` 是否在返回的 cleanup 里带了面板关闭」已确证为**否**（原 cleanup 只 `disposePush()`/`disposePull()`），故本条是**真缺陷**而非误判。链路：`disconnectedCallback` → `_dropdownCleanup` → 该 cleanup（`index.ts:335-337`），卸载即摘掉 `document` 上的 ESC 监听，跨实例复用不再残留旧句柄。建议②（收敛为 `utils/dom/` 原语）未采纳：单点使用，抽原语无收益。
+**处置结果（2026-10-16 已修，commit `cff19665b`）**：按建议①落地。`bindSyncSelected` 的 cleanup（现 `frontend/src/views/app-sidebar/sync-flow.ts:131-134`，经 P1-2 五向拆分后位置与语义不变）追加 `closeSyncResultPanel(root)`——该函数**幂等**（`frontend/src/views/app-sidebar/sidebar-result-panel.ts:37-41` 内部 `if (escHandler)` 才 remove），已关面板时调用无害。审查的「**待验证**：`bindSyncSelected` 是否在返回的 cleanup 里带了面板关闭」已确证为**否**（原 cleanup 只 `disposePush()`/`disposePull()`），故本条是**真缺陷**而非误判。链路：`disconnectedCallback` → `_dropdownCleanup` → 该 cleanup（`index.ts:335-337`），卸载即摘掉 `document` 上的 ESC 监听，跨实例复用不再残留旧句柄。建议②（收敛为 `utils/dom/` 原语）未采纳：单点使用，抽原语无收益。回归锁：`frontend/src/views/app-sidebar/app-sidebar.sync.test.ts`「卸载时释放浮层的 document ESC 监听（锐评 P2-2）」——拉取打开浮层后 `unmountElement`，断言卸载过程调用了 `document.removeEventListener("keydown", …)`（app-sidebar 里 document 级 keydown 监听只有浮层这一处，故等价于 cleanup 走到了 `closeSyncResultPanel`）；已做突变验证（注释掉 cleanup 里的 `closeSyncResultPanel(root)` → 红灯 `expected false to be true`）。
 
 ### P2-3　`app-sidebar/events.ts:88` `setTimeout(500)` 涟漪复位未持有句柄
 **位置**：`app-sidebar/events.ts:88`。

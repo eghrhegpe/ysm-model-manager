@@ -249,7 +249,9 @@
 | **数据流** | **8/10** | bus 命名（`stats:refresh`/`repo:rtype-changed`/`repo:subdir-changed`/`package:selected`/`instance:export-list`/`instance:clear`）全局一致、ADR-340 去总线化（`sync:download:missing` 退役改直调）是亮点；~~扣分因三处同步状态真相分裂（P1-1）~~——P1-1 经复核为误判（三层各管操作契约/跨批归并/状态视图模型）。余下扣分：`stats:refresh` 广播重复刷新（P1-5，接受为广播型设计的固有代价） |
 | **渲染范式** | **9/10** | 虚拟滚动实现扎实（定高 + WeakMap 缓存 + 行高实测 + ResizeObserver + padding 撑高）；~~扣分因 tpl.ts 残留成片静态内联 style~~（P2-1 已全量收编进 `sm-css.ts`，仅剩 `padding-left:${indent}px` 与 `color:${statusColor}` 两处真动态值） |
 | **异步正确性** | **9/10** | `_guard`/`createLoadGuard` 代际 + per-path `_singleBusy` 防重入 + `withSyncOpTimeout` + `busyLock.tryStart` 原子抢锁 + `finally` 复位，骨架完整；~~扣分因 runPush/runPull 超时丢半结果（P0-1/P0-2）+ `_reload` 尾随补跑丢 force（P0-3）~~——三项均已修（`01391f525`，并加 P2-3 计时器持句柄 `ada475c51`）。余下扣分：P1-4 串行瓶颈属 ADR-056 全局锁架构（接受现状） |
-| **可测性** | **8/10** | 测试覆盖很密（每模块均有 .test.ts）；P1-3 复核后 mock 收敛——`*-deps.ts` seam 统一由 `vi.mock("@/backend/app.ts")` 拦截（`app-sync-manager/network.test.ts`/`store.test.ts` 已从 `@/views/backend-deps.ts` 迁入，`036592e87`），12 个 bindings mock 经核实是 node/jsdom 阻断 `@wailsio/runtime` 加载链的**必要护栏**（非绕过 seam），`test-utils/mock-app.ts` 提供 fail-closed 兜底。余下扣分：`index.test.ts:404` 直接驱动组件私有状态的耦合痕迹未处置 |
+| **可测性** | **9/10** | 测试覆盖很密（每模块均有 .test.ts）；P1-3 复核后 mock 收敛——`*-deps.ts` seam 统一由 `vi.mock("@/backend/app.ts")` 拦截（`app-sync-manager/network.test.ts`/`store.test.ts` 已从 `@/views/backend-deps.ts` 迁入，`036592e87`），12 个 bindings mock 经核实是 node/jsdom 阻断 `@wailsio/runtime` 加载链的**必要护栏**（非绕过 seam），`test-utils/mock-app.ts` 提供 fail-closed 兜底；~~扣分因 `index.test.ts:404` 直接驱动组件私有状态~~——已收口（见下）。余下扣分：`store.test.ts`/`events.test.ts`/`renderer.counts.test.ts` 仍以手造输入直测抽出的模块函数（属正当的模块级单测，非组件私有面耦合） |
+
+**「私有状态耦合」收口（2026-10-16）**：原扣分点 `frontend/src/views/app-sync-manager/index.test.ts:404` 的 `as unknown as { _selectedType; _allItems; _filteredItems; _typeConfig; _dirOpen; _doRender }` 注入**全部 10 处已删除**，改为走生产数据路径——新增 `mountWithItems(type, items)`（写 `localStorage.repo_rtype` 决定 `_selectedType` + `GetInstanceSyncStatus.mockResolvedValueOnce(items)`）与 `clickStatusTab(el, status)`（公开页签点击替代直接写 `_statusFilter`）；`beforeEach` 增清 `repo_rtype`。同款收口另覆盖 `frontend/src/views/app-sync-manager/renderer.virtual.test.ts`（原 `SyncSelfProbe` + `mountWith(n)` 注入五字段 + `_doRender()`，改为 `stats:refresh` 总线事件与页签点击）与 `frontend/src/views/app-sync-manager/a11y.dom.test.ts`（原读 `el._statusFilter` 13 处改为读公开 DOM 事实 `.sm-status-tab[aria-checked="true"]` 的 `data-status`，并删掉未使用的 `SyncSelfProbe` 声明与 `SyncItem` import）。三文件用例数不变（24/8/8）且全绿。
 
 ### 最该先做的 1-2 件事（2026-10-16 更新：两条均已完成）
 
@@ -264,6 +266,7 @@
 |---|---|---|
 | **已修** | P0-1 `01391f525`、P0-2 `01391f525`、P0-3 `01391f525`、P0-4 `01391f525`、P2-1 `8de271547`、P2-2 `cff19665b`、P2-3 `ada475c51` | 前三项即审查自陈的「会持续产生 bug 的结构性缺陷」 |
 | **已落地（拆分/收口）** | P1-2 `522d88bfa`（`sync-flow.ts` 五向拆分）、P1-3 `036592e87`（mock 统一到 seam 唯一出口）、P1-5 `3838b8065`（重复刷新——判定为广播型固有代价，附复核记录） | |
+| **评分项收口（非条目）** | 「可测性」扣分点 `index.test.ts:404` 私有状态注入——3 个测试文件的私有面耦合已清除（见上方「私有状态耦合收口」） | 可测性 8→9 |
 | **评定为误判/接受现状** | P1-1（三处状态分裂——三层各管一类数据，非分裂）、P1-4（串行瓶颈——ADR-056 全局锁架构，非缺陷）、P1-6（`rtypeLabelOf` 中文裸奔——本就走 `resource_types.json` + `t()`）、P2-4（两组 `MAX_*`——两层不同量纲） | 均附代码级证据 |
 
 **复核口径**：P1-1/P1-4/P1-6/P2-4 的原判定在本轮被推翻或降级（审查时未细读对应文件，已在各条目「处置结果」块补证）。两篇锐评的后续引用应以本总览为准。

@@ -12,7 +12,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mountCustomElement } from "@/test-utils/render.ts";
 import { waitFor } from "@/test-utils/wait.ts";
-import type { SyncItem } from "./tpl.ts";
 
 const { mocks } = vi.hoisted(() => {
   const mocks = {
@@ -39,14 +38,20 @@ vi.mock("@/backend/app.ts", () => ({
 
 import "./index.ts"; // 触发 customElements.define("app-sync-manager")
 
-interface SyncSelfProbe extends HTMLElement {
-  _statusFilter: string;
-  _typeConfig: Array<{ id: string }>;
-  _allItems: SyncItem[];
-}
-
 /** 状态页签 DOM 顺序（renderer.statusDefs 单一事实源）：all/synced/missing/disabled/optional/legacy */
 const STATUS_ORDER = ["all", "synced", "missing", "disabled", "optional", "legacy"];
+
+/**
+ * 当前激活的筛选状态（公开 DOM 事实：`aria-checked="true"` 的页签）。
+ * 替代读取组件私有 `_statusFilter`——断言的是用户可见的激活态，而非内部字段。
+ */
+function activeStatus(el: HTMLElement): string | null {
+  return (
+    el
+      .querySelector<HTMLElement>('.sm-status-tab[aria-checked="true"]')
+      ?.getAttribute("data-status") ?? null
+  );
+}
 
 function radioOf(el: HTMLElement, status: string): HTMLElement {
   const r = el.querySelector<HTMLElement>(`.sm-status-radios .sm-status-tab[data-status="${status}"]`);
@@ -54,8 +59,8 @@ function radioOf(el: HTMLElement, status: string): HTMLElement {
   return r!;
 }
 
-async function mount(): Promise<SyncSelfProbe> {
-  const el = mountCustomElement<SyncSelfProbe>("app-sync-manager");
+async function mount(): Promise<HTMLElement> {
+  const el = mountCustomElement<HTMLElement>("app-sync-manager");
   el.setAttribute("instance", "test");
   await waitFor(() => el.querySelector(".sm-status-tab") !== null, 5000);
   return el;
@@ -96,7 +101,7 @@ describe("状态筛选 radio group（模板产出属性 + 事件层键盘委托�
     const start = radioOf(el, "all");
     start.focus();
     pressKey(start, "ArrowRight");
-    expect(el._statusFilter).toBe("synced");
+    expect(activeStatus(el)).toBe("synced");
     const fresh = radioOf(el, "synced");
     expect(fresh.getAttribute("aria-checked")).toBe("true");
     expect(fresh.tabIndex).toBe(0);
@@ -110,30 +115,30 @@ describe("状态筛选 radio group（模板产出属性 + 事件层键盘委托�
     // ArrowLeft → disabled；ArrowUp（等价）→ missing
     radioOf(el, "optional").click();
     pressKey(radioOf(el, "optional"), "ArrowLeft");
-    expect(el._statusFilter).toBe("disabled");
+    expect(activeStatus(el)).toBe("disabled");
     pressKey(radioOf(el, "disabled"), "ArrowUp");
-    expect(el._statusFilter).toBe("missing");
+    expect(activeStatus(el)).toBe("missing");
     // 尾回绕：legacy ArrowRight → all
     radioOf(el, "legacy").click();
     pressKey(radioOf(el, "legacy"), "ArrowRight");
-    expect(el._statusFilter).toBe("all");
+    expect(activeStatus(el)).toBe("all");
   });
 
   it("Home/End：只移焦点不激活（radiogroup 规范）", async () => {
     const el = await mount();
     radioOf(el, "missing").click();
     pressKey(radioOf(el, "missing"), "Home");
-    expect(el._statusFilter, "Home 不改选中").toBe("missing");
+    expect(activeStatus(el), "Home 不改选中").toBe("missing");
     expect(radioOf(el, "all")).toBe(document.activeElement);
     pressKey(radioOf(el, "all"), "End");
-    expect(el._statusFilter, "End 不改选中").toBe("missing");
+    expect(activeStatus(el), "End 不改选中").toBe("missing");
     expect(radioOf(el, "legacy")).toBe(document.activeElement);
   });
 
   it("原生 click 激活（Enter/Space 在真浏览器经 button click 走点击委托②）", async () => {
     const el = await mount();
     radioOf(el, "disabled").click();
-    expect(el._statusFilter).toBe("disabled");
+    expect(activeStatus(el)).toBe("disabled");
     expect(radioOf(el, "disabled").getAttribute("aria-checked")).toBe("true");
   });
 
@@ -142,7 +147,7 @@ describe("状态筛选 radio group（模板产出属性 + 事件层键盘委托�
     const list = el.querySelector<HTMLElement>(".sm-list");
     expect(list).not.toBeNull();
     pressKey(list!, "ArrowRight");
-    expect(el._statusFilter).toBe("all");
+    expect(activeStatus(el)).toBe("all");
   });
 
   it("收敛 bind-roving（ADR-308 D2）：容器级 keydown 兜底——无焦点时以 stateIndex 为基准移动", async () => {
@@ -151,7 +156,7 @@ describe("状态筛选 radio group（模板产出属性 + 事件层键盘委托�
     group.dispatchEvent(
       new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true }),
     );
-    expect(el._statusFilter).toBe("synced");
+    expect(activeStatus(el)).toBe("synced");
     expect(radioOf(el, "synced"), "焦点应落在重渲染后的新 synced 节点").toBe(document.activeElement);
   });
 
@@ -162,7 +167,7 @@ describe("状态筛选 radio group（模板产出属性 + 事件层键盘委托�
     const evt = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
     missing.dispatchEvent(evt);
     expect(evt.defaultPrevented).toBe(true); // 原语消费 keydown（preventDefault）
-    expect(el._statusFilter).toBe("missing");
+    expect(activeStatus(el)).toBe("missing");
     expect(radioOf(el, "missing"), "焦点应落在重渲染后的新 missing 节点").toBe(document.activeElement);
   });
 });

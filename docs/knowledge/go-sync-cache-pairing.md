@@ -23,7 +23,7 @@ quick_intents:
 quick_risk_lines:
   - app 层每条写入口必须成对调 instance.InvalidateSyncItemsCache + ysmsync.InvalidateSyncScanCaches（或等价的 a.ClearScanCache 三层清）——新写点漏归类，tests/test_sync_write_cache_pairing.ts 派生闸当场红
 pitfalls:
-  - go/sync 写操作只清 sync 一侧不够——instance 结果缓存一侧 go/sync 不能清（go/instance 导入 go/sync，反向即成环），必须归 app 层写入口配对
+  - go/sync 写操作自 2026-10-16（锐评 P0-①）改走 scanner 单漏斗 `defer scanner.InvalidateCache()`，经 `scanner.OnCacheInvalidated` 级联同时清 instance 一侧（不必再反向 import go/instance 即不成环）；app 层配对仍**强制保留**作防御纵深——本卡 pitfalls 与 tests/test_sync_write_cache_pairing.ts 的派生闸都按「必须保留」口径
   - 人工枚举写清单 fail-open（清单漏列即隐身）——勿退回旧版；候选写面只从三包导出面自动派生
   - 缓存返回值是共享对象，消费方禁止写（loadSyncScanCache 契约）——向返回 map 写虚拟条目会跨调用串数据
 use_when:
@@ -42,7 +42,7 @@ perf:
 
 ## 概览
 
-整合包展示链叠了两层 30s TTL 派生缓存：**go/sync 扫盘结果缓存**（`sync_cache.go`，三类 kind）与 **go/instance 同步结果缓存**（`sync_items_cache.go`，`BuildSyncItems` 终态）。两层都靠「scanner 失效钩子自动联动 + 写入口显式清」双路保鲜，但**清理责任不对称**：sync 一侧由 go/sync 写操作内部 `defer InvalidateSyncScanCaches()` 自带；instance 一侧 **go/sync 不能清**（go/instance 导入 go/sync，反向即 import 成环），失效归 **internal/app 层每条写入口**成对调 `instance.InvalidateSyncItemsCache()` + `ysmsync.InvalidateSyncScanCaches()`（或等价的 `a.ClearScanCache()` 三层清）。包级总览见 [go-sync](./go-sync.md)，面板链消费见 [go-instance](./go-instance.md)。
+整合包展示链叠了两层 30s TTL 派生缓存：**go/sync 扫盘结果缓存**（`sync_cache.go`，三类 kind）与 **go/instance 同步结果缓存**（`sync_items_cache.go`，`BuildSyncItems` 终态）。两层都靠「scanner 失效钩子自动联动 + 写入口显式清」双路保鲜。**2026-10-16（锐评 P0-①）清理责任已归并到 scanner 单漏斗**：go/sync 全部写操作（`sync_push.go` / `sync.go` / `sync_relink.go` / `conflict.go` 八处）内部 `defer scanner.InvalidateCache()`——`scanner.InvalidateCache` 清扫描缓存后经 `scanner.OnCacheInvalidated` 级联调用 `InvalidateSyncScanCaches` + `instance.InvalidateSyncItemsCache`，两侧一次清齐，go/sync 不必反向 import go/instance（即成环）即可清 instance 一侧。**internal/app 层每条写入口仍保留**成对调 `instance.InvalidateSyncItemsCache()` + `ysmsync.InvalidateSyncScanCaches()`（或等价的 `a.ClearScanCache()` 三层清）作防御纵深——本闸强制保留。包级总览见 [go-sync](./go-sync.md)，面板链消费见 [go-instance](./go-instance.md)。
 
 ## 核心职责
 

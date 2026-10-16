@@ -14,6 +14,7 @@ import (
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/installer"
 	"ysm-model-manager/go/paths"
+	"ysm-model-manager/go/scanner"
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/types/registry"
 )
@@ -38,7 +39,7 @@ func PushResources(rtype, globalDir, targetDir, linkMode string, logger Logger) 
 	// PullResources/RelinkDir 的整段持锁口径对齐。循环内改用 *Locked 变体防重入死锁。
 	installer.InstallLocker.Lock()
 	defer installer.InstallLocker.Unlock()
-	defer InvalidateSyncScanCaches() // 推送会改实例/全局目录，清同步扫盘缓存防陈旧
+	defer scanner.InvalidateCache() // 推送会改实例/全局目录：走 scanner 单漏斗清扫描缓存，级联清 instance 同步结果（锐评 P0-① 失效不对称）
 	count := 0
 	failed := 0
 
@@ -104,7 +105,7 @@ func PushResources(rtype, globalDir, targetDir, linkMode string, logger Logger) 
 func PullResources(rtype, globalDir, targetDir string, logger Logger) types.PullSyncResult {
 	installer.InstallLocker.Lock()
 	defer installer.InstallLocker.Unlock()
-	defer InvalidateSyncScanCaches() // 拉取会改全局仓库目录，清同步扫盘缓存防陈旧
+	defer scanner.InvalidateCache() // 拉取会改全局仓库目录：走 scanner 单漏斗清扫描缓存，级联清 instance 同步结果（锐评 P0-① 失效不对称）
 	// 找出 extra 的文件并复制到全局
 	// 对 YSM/MMD 使用文件夹级同步
 	var result types.ResourceSyncResult
@@ -222,7 +223,7 @@ func logPullFailure(src, dst, msg string, logger Logger) {
 func PullSingleResource(globalDir, targetDir, srcPath string) error {
 	installer.InstallLocker.Lock()
 	defer installer.InstallLocker.Unlock()
-	defer InvalidateSyncScanCaches() // 拉取会改全局仓库目录，清同步扫盘缓存防陈旧
+	defer scanner.InvalidateCache() // 拉取会改全局仓库目录：走 scanner 单漏斗清扫描缓存，级联清 instance 同步结果（锐评 P0-① 失效不对称）
 	// 文件夹级拉取：整体复制文件夹到全局（保留相对 targetDir 的子类层级）。
 	// 越界（srcPath 不在 targetDir 内）直接报错——与文件分支 mapSrcToGlobal 严格口径
 	// 一致；旧行为退化为 basename 会把越界目录错误落到 globalDir 根（丢子类层级 + 同名覆盖）。
@@ -279,7 +280,7 @@ func PushSingleResource(filePath, customDir, globalDir, linkMode, rtype string) 
 	fi, stErr := os.Stat(filePath)
 	installer.InstallLocker.Lock()
 	defer installer.InstallLocker.Unlock()
-	defer InvalidateSyncScanCaches() // 推送会改实例目录，清同步扫盘缓存防陈旧
+	defer scanner.InvalidateCache() // 推送会改实例目录：走 scanner 单漏斗清扫描缓存，级联清 instance 同步结果（锐评 P0-① 失效不对称）
 	if stErr == nil && fi.IsDir() {
 		return installDirUnitLocked(filePath, customDir, globalDir, linkMode, rtype)
 	}
@@ -381,7 +382,7 @@ func dropAncestorUnits(list []string) []string {
 func SyncCustomToRepo(customDir, repoDir string, scanFn func(string) []types.ModelEntry, logger Logger) (int, error) {
 	installer.InstallLocker.Lock()
 	defer installer.InstallLocker.Unlock()
-	defer InvalidateSyncScanCaches() // 收编会改全局仓库目录，清同步扫盘缓存防陈旧
+	defer scanner.InvalidateCache() // 收编会改全局仓库目录：走 scanner 单漏斗清扫描缓存，级联清 instance 同步结果（锐评 P0-① 失效不对称）
 	customDir = strings.TrimSpace(customDir)
 	repoDir = strings.TrimSpace(repoDir)
 	if customDir == "" || repoDir == "" {

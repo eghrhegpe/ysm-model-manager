@@ -20,6 +20,7 @@ import (
 
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/installer"
+	"ysm-model-manager/go/scanner"
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/types/registry"
 )
@@ -77,7 +78,7 @@ func SyncToggleStatus(instanceCustomDir, filesRoot string, scanFn ScanFunc) (int
 	// 持锁执行匹配 + rename（阶段 3+4 必须同段：计划与执行之间不得有并发改名）
 	installer.InstallLocker.Lock()
 	defer installer.InstallLocker.Unlock()
-	defer InvalidateSyncScanCaches() // 启禁会改实例目录名，清同步扫盘缓存防陈旧
+	defer scanner.InvalidateCache() // 启禁会改实例目录名：走 scanner 单漏斗清扫描缓存，级联清 instance 同步结果（锐评 P0-① 失效不对称）
 
 	ops := planToggleRenames(fileInfos, customDirClean, repoName, repoHash, precomputedHashes, filesRoot)
 	disableCount, enableCount, failures := applyToggleRenames(ops)

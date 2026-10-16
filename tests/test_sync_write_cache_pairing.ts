@@ -3,11 +3,14 @@
  * 契约测试：整合包/落地写入口的双缓存配对守卫（派生 fail-closed 版，2026-10-10 翻转）。
  *
  * 背景：整合包页与同步 diff 各有一层 30s TTL 派生缓存（go/instance 同步结果 + go/sync 扫盘）。
- * go/sync 写操作内部 `defer InvalidateSyncScanCaches()` 自带 sync 一侧；但 instance 一侧
- * **go/sync 不能清**（go/instance 导入 go/sync，反向即成环），失效归 **internal/app 层每条写入口**
- * 成对调 instance.InvalidateSyncItemsCache() + ysmsync.InvalidateSyncScanCaches()（或等价的
- * a.ClearScanCache() 三层清）。审计抓到七条 ysmsync 入口独漏 ResolveConflicts、installer 落地族
- * 全漏（含活 bug ImportByType）——已全补。
+ * 2026-10-16 锐评 P0-① 后：go/sync 写操作内部已改走 scanner 单漏斗
+ * `defer scanner.InvalidateCache()`（sync_push.go/sync.go/sync_relink.go/conflict.go 八处），
+ * 经 scanner.OnCacheInvalidated 级联同时清 sync 扫盘 + instance 同步结果——两侧都不再依赖
+ * app 层配对兜底。app 层每条写入口仍**保留**成对调
+ * instance.InvalidateSyncItemsCache() + ysmsync.InvalidateSyncScanCaches()（或等价的
+ * a.ClearScanCache() 三层清）作防御纵深：本闸强制保留，缺半边 = 展示旧状态 ≤TTL。
+ * 历史：审计曾抓到七条 ysmsync 入口独漏 ResolveConflicts、installer 落地族
+ * 全漏（含活 bug ImportByType）——已全补；此后 sync 内部失效走漏斗、app 层配对留作纵深。
  *
  * 旧版（同日早先）用人工枚举 SYNC_WRITE_OPS/INSTALLER_WRITE_OPS 清单扫调用点——清单漏列一个
  * 写函数它根本不进扫描（fail-open）。本版由 scripts/_lib/write-surface-gate.ts 从

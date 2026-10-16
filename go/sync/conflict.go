@@ -11,6 +11,7 @@ import (
 	"ysm-model-manager/go/fsutil"
 	"ysm-model-manager/go/installer"
 	"ysm-model-manager/go/paths"
+	"ysm-model-manager/go/scanner"
 )
 
 // ConflictType 冲突类型
@@ -196,7 +197,7 @@ func ResolveConflicts(conflicts []FileConflict, defaultStrategy ResolutionStrate
 // 在调用点软断言：持锁走本函数；未持锁走自锁的 ResolveConflicts（2026-09-14 审核修复，
 // 消除旧 fail-soft 无锁执行的并发写目录竞态）。
 func ResolveConflictsLocked(conflicts []FileConflict, defaultStrategy ResolutionStrategy, localDir, remoteDir string) (resolved, failed, manual int) {
-	defer InvalidateSyncScanCaches() // 冲突解决会改实例/全局目录，清同步扫盘缓存防陈旧
+	defer scanner.InvalidateCache() // 冲突解决会改实例/全局目录：走 scanner 单漏斗清扫描缓存，级联清 instance 同步结果（锐评 P0-① 失效不对称）
 	for _, c := range conflicts {
 		// HashFailed 条目（hash 计算失败）不覆盖 SuggestedStrategy，
 		// 直接计入 manual。

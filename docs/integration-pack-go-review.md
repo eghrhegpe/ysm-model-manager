@@ -1,0 +1,119 @@
+# 整合包（Minecraft 实例）同步 Go 后端 架构锐评
+
+评审范围：`go/instance/`（4 文件）、`go/sync/`（15 文件）、`go/packs/`、`go/installer/`、`go/watcher/watcher.go`、`go/scanner/scanner.go`（缓存/失效/ScanFunc）、`internal/app/app_install_instance.go`、`go/types/registry/`（resource.go / findinst.go / extensions.go）。
+性质：纯设计审查，未改任何代码、未提交。
+
+总体判断：这套同步架构的**分层与失效收敛做得很扎实**（ADR-064/065/310/347/351/056 落地度高），没有发现当前生产路径上会立即炸的 P0 缺陷；但存在几处**结构性缺口会持续孕育 bug**（尤其是"改了 A 忘了清 B"与一套未接线的冲突子系统），值得近期处置。
+
+---
+
+## P0（结构性缺陷，会持续产生 bug）
+
+### P0-1　sync 包内部变更只清自身扫盘缓存，绕过 scanner 单漏斗 → instance 侧 `syncItemsCache` 不失效
+- **文件:行**：`go/sync/sync_push.go:41/107/225/282/384`、`go/sync/sync_relink.go:63`、`go/sync/conflict.go:199`、`go/sync/sync.go:80` —— 全部只 `defer InvalidateSyncScanCaches()`；而 `go/sync/sync_cache.go:74-87` 的实现只 `Range+Delete` 清空三个 sync 内 map，**不会触碰 instance 的 `syncItemsCache`**。
+- 对照：`go/instance/sync_items_cache.go` 的 `InvalidateSyncItemsCache()` 只在 `internal/app/app.go:220-221` 经 `scanner.OnCacheInvalidated` 注册，与 `ysmsync.RegisterInvalidationHook()` 一起挂在 scanner 上；app 层每个写入口还要**成对手动调两次**（`app_install_instance.go:237/238、309/310、322/323、428/429、453/454、492/493、513/514`、`app_install_import.go:98/99、107/108、334/335`、`app_sync.go:134/135`、`resource_bindings.go:534/535`）。
+- **问题**：三方失效来源（scanner 钩子 / app 层显式成对调用 / sync 内部自清）里，**只有 sync 内部自清是不对称的**——它绕过了 scanner 漏斗，因此 sync 内任何新增/修改的变更点只要漏了 app 层那一对调用，整合包树就会停留在 30s TTL 内的陈旧数据（正是"内容变化漏报/树不刷新"那一族历史 bug 的土壤）。
+- **根因**：失效职责按**包边界**划分（sync 只管 sync 的缓存），而数据依赖是**跨包**的（sync 变更直接影响 instance 的派生结果）；又因为分层纪律 sync 不能 import instance（`go/sync` 生产代码零 import `go/instance`，已 grep 确认），所以"让 sync 顺带清 instance 缓存"这条最直接的路径被堵死，只能在 app 层用 30 个调用点人肉配对。
+- **建议方向**：让 sync 内部变更改走 scanner 漏斗——`defer scanner.InvalidateCache()` 或 `scanner.InvalidatePath(...)`，instance 的 `InvalidateSyncItemsCache` 由钩子级联触发（现在 `scanner.InvalidateCache`/`InvalidatePath` 末尾已调 `notifyCacheInvalidated()`，`scanner.go:237-245`、`scanner.go:315`）。这样"改了 A 忘了清 B"从"30 个调用点的人肉义务"降为"一个钩子注册"，新增同步操作不再有配对负担。
+
+---
+
+## P1（明显债务，值得近期修）
+
+### P1-1　`go/sync` 单包 16 文件承担十种职责，已按文件拆但未拆包
+- **文件:行**：`go/sync/` 目录下 sync.go / sync_resource.go / sync_push.go / sync_diff.go / sync_dirlevel*.go / sync_discovery.go / sync_relink.go / sync_walk.go / sync_hash.go / sync_cache.go / sync_targets.go / conflict.go / verdict.go，覆盖 diff/push/pull/relink/toggle/dirlevel/discovery/cache/conflict/verdict。
+- **问题**：一个包内并存两个不同的一致性语义族（文件级 vs 目录级对比）、两套失效协议、一套独立冲突解决子系统，包内测试 ~30 个文件互相依赖共享的 `InstallLocker`/`hashFileForEntries`/`registerHookOnce` 等包级全局。
+- **根因**：AGENTS.md 明确"新文件放对应包，不按行数机械切包"，因此历史上靠文件拆分替代包拆分；但 `go/sync` 的 3000+ 行已经超过"一个包"的认知边界，包级全局（`sync_cache.go:60-69` 三个 sync.Map、`conflict.go:294` `hashFileForEntries`）把本可独立的子系统（冲突解决）焊死在同步包上。
+- **建议方向**：不必激进拆包，优先做两个子包：`sync/conflict`（DetectConflicts/Resolve*，见 P1-2）与 `sync/cache`（三层扫盘缓存 + 失效协议），其余留在 `sync`。这能立刻切断"冲突测试必须共享同步包的全局锁/全局 seam"的耦合。
+
+### P1-2　`conflict.go` 整套冲突子系统在生产调用图上不可达（死代码/未接线）
+- **文件:行**：`go/types/config.go:179` 定义 `SyncConfig.ConflictPolicy`；唯一入口 `go/sync/sync_resource.go:196` `if config == nil || config.ConflictPolicy == "" { return }`。grep 全部 `SyncResourcesWithConfig(` 调用点：`app_install_instance.go:406`、`go/instance/instance.go:327`、`go/sync/sync_resource.go:26` **全部传 `nil`**；只有 `go/sync/sync_lockassert_test.go:33/41` 传了非 nil config。
+- **问题**：386 行的 `conflict.go`（DetectConflicts / ResolveConflict(s) / conflictFromVerdict / collectFileEntries）在生产路径上一次都不执行，全靠一个从未被生产的配置字段守卫。这意味着：①冲突检测的用户价值为零却保留全部复杂度；②一旦未来某入口传了 config，`DetectConflicts` 的**全树 `filepath.Walk` + 逐文件 SHA256**（`conflict.go:305-361`，且**无任何缓存**）就会在 `installer.InstallLock` 临界区内跑——`sync_resource.go:206-233` 明确允许"已持锁时走 `ResolveConflictsLocked`"，注释自述 `PushResources/PullResources → SyncResources 在 InstallLock 临界区内运行`。
+- **根因**：子系统按"防御性能力"开发，但接入点（SyncConfig）没有生产者；同时它复用了全局单锁却把最重的 I/O（全树哈希）留在锁内，与 `SyncToggleStatus`/`RelinkDir` 已完成的"锁外哈希"（`sync.go:103-245`、`sync_relink.go:44-63`）口径不一致。
+- **建议方向**：二选一，别留中间态——要么把 config 从 UI/薄壳接通（`app_sync.go` 等），要么删除 `conflict.go` 与 `handleSyncConflicts` 整段；若保留，必须把 `collectFileEntries` 挪到锁外（对齐 SyncToggleStatus 阶段 1+2 锁外哈希），并让 `collectFileEntries` 复用 `sync_cache.go` 的 30s 扫盘缓存，否则大仓库全树哈希会卡死所有安装。
+
+### P1-3　硬编码 `.pmx` / `.pmd` 扩展名分支，ADR-065 唯一残留
+- **文件:行**：`go/sync/sync_push.go:288` `ext == ".pmx" || ext == ".pmd"`（文件级安装路由 → `installDirUnitLocked(parent)`）；紧邻的 L292 已是 `registry.IsYsmEntryJSON(base)`（注释 L262 说明原 `ext==".json"` 会误判 readme.json）。
+- **问题**：同一条路由分支里，一处已收敛到注册表、一处仍是字面量。`.pmx/.pmd` 属 `registry.IsDirLevelSync`/`ShouldHashExt` 同族语义，注册表有 `installExts` 字段却未在安装路由消费。
+- **根因**：ADR-065 收敛时改了 `.json` 这条，`.pmx/.pmd` 因"MMD 特例"被留在分支里，缺乏"同函数内相邻分支同源化"的审计点。
+- **建议方向**：把"该扩展名是否按父目录安装"下沉为注册表查询（如 `registry.IsDirEntryInstall(ext, rtype)`），消费 `installExts` 或新增布尔字段；`sync_push.go:288` 改调之。
+
+### P1-4　派生缓存复用了 scanner 的 TTL，却没复用它的 cacheGen 代际护栏
+- **文件:行**：`go/scanner/scanner.go:31` `cacheGen atomic.Uint64`（防在途扫描把旧结果 Store 进已失效缓存）；`go/sync/sync_cache.go:74-87` `InvalidateSyncScanCaches` 只清 map，无代际；`go/instance/sync_items_cache.go` `clear()` 同样无代际。
+- **问题**：`instance.BuildSyncItems`（`go/instance/instance_tree.go:15`）与 `instance.go:325/327` 的读取是**锁外**的（UI 树路径），可在一次 push 持锁失效期间并行读到失效前起算的旧条目，最坏到 30s TTL 才刷新。scanner 用 `cacheGen` 消除了同类问题，但这一护栏没下沉到三层派生缓存。
+- **根因**：派生缓存通过 `scanner.EffectiveCacheTTL()`（`scanner.go:185-187`）只继承了"刷新周期"这一半协议，没继承"失效代际"那一半。
+- **建议方向**：派生缓存 key 里带上 `scanner.EffectiveCacheGen()`，或在 `Invalidate*` 时递增共享 token，使"失效前在途的 Store"落地即被视为过期。
+
+### P1-5　`IsSupportedExt` 每次调用都走 `LoadRegistry()` 的全局 Mutex
+- **文件:行**：`go/types/registry/extensions.go:151-154` `IsSupportedExt` 每调必 `LoadRegistry()`；`LoadRegistry()` 在 `resource.go:179-181` 用 `registryMu.Lock()`（刻意弃 sync.Once 以避免 SetRegistryPath 竞态）。
+- **问题**：这是 sync 的**热路径**——`IsResourceAllowed`（`extensions.go:249-256`）在 `sync.go` 的 `WalkDir` 里逐文件调用，千级文件扫描 = 千次全局 Mutex lock/unlock，多核下产生缓存行乒乓。虽然非竞争时 Mutex 很快，但"每文件一次全局锁"是明显的设计摩擦。
+- **根因**：`LoadRegistry` 用 Mutex 而非 `sync.Once` 是为了 `SetRegistryPath` 可重置；但只读查询路径（`IsSupportedExt`）也被迫每次都取锁。
+- **建议方向**：把 `registry` 指针用 `atomic.Pointer[ResourceTypeRegistry]` 缓存，`LoadRegistry` 只负责首次填充，`IsSupportedExt` 走无锁读；`SetRegistryPath` 仍可重置（写路径持 Mutex + Store 新指针）。
+
+### P1-6　`syncDirectoryScanKey.hashed` 的"folder 恒 false"零值陷阱
+- **文件:行**：`go/sync/sync_cache.go:43-53` 注释自述 `"folder" kind 恒 false 因字段默认零值`——`kind: "folder"` 的 key 永远落在 hashed=false 那一格，即使将来 folder 扫描支持哈希，也会与未哈希结果互相污染。
+- **问题**：这不是 bug（当前 folder 扫描确实无哈希），但它是**埋点**——任何未来"给 folder 加哈希"的改动会静默复用错误缓存桶。`hashed` 作为区分维度本身是对的（注释 D2′-a 已说明其立因），错在把"某 kind 恒 false"当作约定记在注释里而非编码进 key 构造。
+- **建议方向**：把 `hashed` 从字段改为由 `kind` + 显式 bool 组合派生，或给 `syncDirectoryScanKey` 增加 `NewScanKey(kind, root, rtype, hashed)` 构造器，禁止零值直构。
+
+### P1-7　`loadSyncScanCache` 返回缓存内 map 的共享引用，正确性靠注释记忆
+- **文件:行**：`go/sync/sync_cache.go:10-13` 铁律注释"返回缓存内 map 共享引用，消费方只读，禁止写虚拟条目"。
+- **问题**：`collectResourceEntries`（`sync_resource.go:160-161`）把缓存的 map 直接返回给 `ResourceDiff`、`dirLevelResult` 等；这些调用方只读目前成立，但任何一处误写（例如未来某收集器想就地补 `FoldDigest`）会污染所有并发的 BuildSyncItems 读。`sync_resource.go:178-184` 现在是在**入缓存之前**回填 FoldDigest，说明开发者清楚风险，但该风险只靠注释约束。
+- **建议方向**：`storeSyncScanCache` 前返回**不可变视图**（如把 map 换成 `map` + 只读接口，或入缓存前 `clone`）；至少给 `loadSyncScanCache` 返回类型加"只读"命名约定并配一个契约测试断言消费方未写。
+
+---
+
+## P2（优化建议）
+
+- **P2-1　`InvalidatePath` 单文件变更全量清空三层派生缓存**：`go/scanner/scanner.go:315` 末尾 `notifyCacheInvalidated()`，任何单文件 toggle 都会把 sync 三个 scan cache + instance syncItemsCache 全部清掉，下次读取全部重扫。调用点 `app_files.go:417/438`（单文件 toggle）。方向：给派生缓存做**路径级**失效（sync/instance 缓存 key 若可映射到 root 前缀，则只清命中 root 的条目），当前"粗粒度正确、性能代价大"的设计可作为后续优化。
+- **P2-2　`syncItemsCache` 用 `sync.Mutex` 而非 `RWMutex`**：`go/instance/sync_items_cache.go` 读多写少，`get`/`put` 全走独占锁。方向：改 `sync.RWMutex`（`get` 读锁）。
+- **P2-3　`LockTracker.currentGoroutineID` 解析 `runtime.Stack`**：`go/installer/lock_tracker.go:59-91` 主路径靠 `runtime.Stack` 前缀 `"goroutine N [state]"` 提取 goroutine id，是公认的脆弱依赖（runtime 内部格式可变）；已有降级路径（栈帧 PC + 全局单调 token）。方向：直接采用降级路径为主，去掉字符串解析。
+- **P2-4　测试隔离靠约定**：`go/sync/conflict.go:294` 包级 `var hashFileForEntries = fsutil.SHA256File` 注释明示"非并发安全，测试注入时禁 t.Parallel"；`go/sync/sync_cache.go:23-25` `registerHookOnce` 由测试注入。依赖关系只能靠注释记忆（`sync_targets.go:1` 注释自述"正确性靠注释复述本包行为"）。方向：为这些 seam 引入显式的 `reset` helper + `t.Cleanup`，把"禁 t.Parallel"从约定变为 `testing.TB` 检查。
+- **P2-5　`FindInstDir` 兜底默认关闭，`ScanInstance` 字段仅 1 类型消费**：`go/types/registry/findinst.go:101-103` 门控仅 `blueprint` 开启；`ScanInstance`/`FallbackDir` 成为"为单一类型服务的配置"（`findinst.go:161-166`）。方向：若长期只有 blueprint 使用，考虑把该特殊逻辑下沉为 blueprint 类型专用查询，而非挂在通用 `ResourceType` 字段上。
+- **P2-6　`resourceTypesForSync` 切片副本的潜在陷阱**：`internal/app/app_install_instance.go:598-609` 已用注释警告"就地 `[:0]` 截断会把共享注册表单例永久裁剪"，说明该函数历史上出过这类坑。方向：把 `registry.AllTypes()` 改为总是返回副本，消除消费方责任。
+- **P2-7　30s TTL 三层同周期，UI 刷新延迟与操作延迟同源**：push/pull 后树更新依赖 app 层显式失效，漏一处即 30s 陈旧（与 P0-1 同源）。方向：P0-1 落地后本项自动消解。
+
+---
+
+## 按审查轴逐项评价
+
+**1. 分层与依赖方向 —— 干净**
+`go/instance` → `ysmsync "go/sync"` → `go/scanner`，单向；`go/sync` 生产代码零 import `go/instance`（已 grep，仅注释/测试提及）。失效钩子注册点唯一且显式：`internal/app/app.go:220-221`，不在包 `init`（`sync_cache.go:23-34`、`instance.go:34-49` 的 `registerHookOnce` 注释明确是从"隐式 init"改过来的）。无循环依赖、无隐式副作用。
+
+**2. 缓存设计 —— 收敛好，但代际护栏缺失**
+三层（scanner 30s → sync 三个 scan cache 30s → instance syncItemsCache 30s）的 TTL 同源 `scanner.EffectiveCacheTTL()`；失效已收敛为"scanner 单漏斗 + app 层显式成对失效"双保险，**没有**"改了 A 忘了清 B"的全局缺口。但 P0-1（sync 内部变更绕过漏斗）与 P1-4（cacheGen 未下沉）是两个结构性残余。
+
+**3. 锁设计 —— 上乘，但冲突路径是例外**
+`installer.InstallLock` 全局单锁被 sync/conflict/app/watcher 复用（`installer.go:23/30`，ADR-056/202）。`SyncToggleStatus`（`sync.go:59-89`：阶段 1+2 锁外扫描与哈希、阶段 3+4 持锁改名）与 `RelinkDir`（`sync_relink.go:44-63`）都完成了"重 I/O 锁外化"。`HasLock()` 用 owner-tracked goroutine id（`lock_tracker.go:131-134`）替代 TryLock 探测，消除了"他人持锁被误判为已持锁"的窗口。**唯一例外**是 P1-2 的冲突路径：`collectFileEntries` 的全树 SHA256 无缓存且在锁内可跑。
+
+**4. 一致性模型 —— ADR-064/065 收敛度高**
+对比判定已收敛到 `verdict.go:44-58` `ContentVerdict` 单点（ADR-347，替代原 `sync_diff.go|contentDiffers` 与 `sync_dirlevel_diff.go|contentStatus` 两份同义实现）；名称归一/允许集收敛到 `registry.NormalizeResourceName`/`IsResourceAllowed`（ADR-064）；推送目标三路推导收敛到 `sync_targets.go` `PushTargetsForUnit`（ADR-351 D4，从 `go/instance/status_counts.go` 下沉）。残留字面量仅 `sync_push.go:288` 的 `.pmx/.pmd`（P1-3）。`go/packs/classify.go` 的 `case "ysm"` 属分类职责本身，不计入违规。
+
+**5. 包边界 —— 未拆包（P1-1）**
+
+**6. 错误处理与路径安全 —— 系统性到位**
+AppError 体系 + `paths.RelInside` 双路防穿越（`sync_push.go:479-485`、`conflict.go:133-180`）；实例侧 `installDirUnitLocked` 的根级目录拒绝（`sync_push.go:315-340`，"整仓推送会污染整合包"）；`validateInstallPaths` 四道守卫含 EvalSymlinks 归一化防 8.3 短名（`installer.go:77-111`）；`isFileLocked` 按 GOOS 分支错误码 + `errors.Is` 链（`sync_resource.go:304-318`，Windows ERROR_SHARING_VIOLATION 32/33）。
+
+**7. 可测性 —— 中等**
+大量 `*Locked` 内部函数 + 包级全局锁 + 单例缓存；测试靠 `InstallLocker` stub 注入（ADR-202 刀3，测试 stub 无 `HasLock` 时 `assertInstallLockHeld` 放行，`sync_resource.go:270-276`）与 `hashFileForEntries` seam 隔离。但 seam 非并发安全（禁 t.Parallel）、依赖关系靠注释记忆（P2-4）。
+
+**8. rtype 注册表驱动 —— 基本成真**
+grep 全 `go/sync`、`go/instance`、`go/packs` 生产代码：无 `=="ysm"`/`=="mmd-skin"` 硬编码分支。sync/instance 全部走 `registry.IsDirLevelSync`/`NestedPatternsFor`/`IsDisableSuffix`/`IsYsmEntryJSON`/`IsResourceAllowed`/`packs.IsTypeModelFile`。唯一硬编码残留 P1-3。
+
+---
+
+## 整体设计评价
+
+| 维度 | 得分（/10） | 一句话 |
+|---|---|---|
+| 分层 | **9** | instance→sync→scanner 单向、无循环、钩子显式注册无 init 副作用 |
+| 缓存 | **7** | 单漏斗 + 成对失效是亮点；但 sync 内部变更绕过漏斗、cacheGen 未下沉、粗粒度全清 |
+| 锁 | **8** | 全局单锁 + 阶段化锁外哈希 + HasLock 精确判定属上乘；冲突路径锁内全树哈希是例外 |
+| 一致性 | **8** | ContentVerdict 单点 + 注册表驱动收敛度高；残留 .pmx/.pmd 与未接线的 conflict 拖分 |
+
+**最值得先动手的两件事：**
+1. **消除失效不对称（P0-1）**：把 sync 内部变更从 `InvalidateSyncScanCaches()` 改为走 `scanner.InvalidateCache/InvalidatePath` 漏斗，让 instance 的 `syncItemsCache` 经钩子级联失效——这是唯一能"一劳永逸关掉漏报族 bug"的结构改动。
+2. **处置 conflict 子系统（P1-2）**：要么从 UI/薄壳接通 config 让冲突检测真正生效，要么删除 `conflict.go`；若保留，务必把 `collectFileEntries` 挪到锁外并复用扫盘缓存，否则它一上线就会把全树 SHA256 塞进全局单锁。
+
+---
+
+*本报告所有判断均锚定具体文件:行号；`go/sync` 是否进一步拆子包、conflict 子系统的接入路径为设计取舍，未做运行验证。纯审查，未修改任何代码、未提交。*

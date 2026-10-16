@@ -239,6 +239,14 @@ export const autoSidebar = [
         "link": "/event-graph"
       },
       {
+        "text": "YSM 模型管理器 · 整合包同步前端设计锐评报告",
+        "link": "/integration-pack-fe-review"
+      },
+      {
+        "text": "整合包（Minecraft 实例）同步 Go 后端 架构锐评",
+        "link": "/integration-pack-go-review"
+      },
+      {
         "text": "preview-3d 巡检追踪器（活指针卡）",
         "link": "/preview-3d-review-tracker"
       },

@@ -873,7 +873,10 @@ export const ja: Record<string, string> = {
   "sidebar.pullDoneAll":
     "プル完了、合計 {n} ファイル（仓库にコピー済み；以降は統合パッケージと独立）",
   "sidebar.pullDone": "プル完了: {pulled} ファイル、{failed} 失敗",
-  "sidebar.pullTimedOutStopped": "{n} 件のパックでタイムアウトしたため、以降のプルを中止しました",
+  // P0 修正（2026-10-16 レビュー）：timedOut は種類単位のタイムアウト数に変更（パック単位ではない）
+  "sidebar.pullTimedOutStopped": "{n} 件のプルでタイムアウトしたため、以降のプルを中止しました",
+  // P0 修正：早期停止で放棄されたパックを名指し
+  "sidebar.pullAbortedPacks": "次の {n} 個のパックは未プル：{names}",
   "sidebar.pullFirstError": "最初の失敗理由: {msg}",
   "sidebar.syncBusy":
     "前回の同期がまだ実行中です。今回の{verb}は無視されました。しばらくしてから再試行してください",
@@ -882,6 +885,8 @@ export const ja: Record<string, string> = {
   "sidebar.packSkipped": "{n} 種類のバッチがスキップ（他場所で同期進行中）",
   "sidebar.packBlocked": "{n} 種類のバッチが未完了",
   "sidebar.packTimedOutStopped": "{n} 種類のバッチがタイムアウト、後続バッチを停止しました",
+  // P0 修正（2026-10-16 レビュー）：早期停止時に放棄された種類のバッチを名指し
+  "sidebar.pushAbortedTypes": "次の {n} 種類のバッチは未プッシュ：{names}",
   "sidebar.pushInstallFail": "{fail} 個のファイルのインストールに失敗（{ok} 個成功）",
   "sidebar.pushPackFailDetail": "失敗は {n} 個のパックに集中：{names}",
   // ADR-340-d2：プッシュは従来どおり上書き（ポリシー不変）だが、インスタンス側の変更を

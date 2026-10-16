@@ -8,6 +8,7 @@ import { type DownloadOutcome, downloadMissing } from "@/features/sync/sync.ts";
 import { SYNC_OP_TIMEOUT_MS } from "@/utils/async/sync-op-timeout.ts";
 import { TimeoutError, withTimeout } from "@/utils/base/primitives/async.ts";
 import type { BusyLock } from "@/utils/base/primitives/lock.ts";
+import { logWarn } from "@/utils/base/primitives/log.ts";
 import { initDropdown } from "@/utils/dom/dropdown.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { toast } from "@/utils/dom/toast.ts";
@@ -80,14 +81,15 @@ export function bindSelectAll(
     const checked = cb.checked;
     const instances = getInstances();
     const set = checkedSetFor(getRtype(), getCheckedSets);
+    const live = new Set(instances.map((i) => i.name));
     root.querySelectorAll(".chk").forEach((c) => {
       const input = c as HTMLInputElement;
       input.checked = checked;
-      const idx = parseInt(input.dataset.idx || "", 10);
-      if (!Number.isNaN(idx) && instances[idx]) {
-        if (checked) set.add(instances[idx].name);
-        else set.delete(instances[idx].name);
-      }
+      // P0 修复（2026-10-16 锐评）：按 data-name 解析，与 getSelected/restoreCheckboxes 同口径
+      const name = instanceNameOf(c);
+      if (!name || !live.has(name)) return;
+      if (checked) set.add(name);
+      else set.delete(name);
     });
   });
 }
@@ -121,17 +123,18 @@ export function restoreCheckboxes(
   getCheckedSets: () => Map<string, Set<string>>,
 ): void {
   const set = checkedSetFor(rtype, getCheckedSets);
-  // 恢复勾选状态（从实例属性 checkedSets 读取，支持跨重新挂载恢复）
+  // P0 修复（2026-10-16 锐评）：按 data-name 解析实例名（禁 data-idx 回查数组），
+  // change 监听用绑定时刻的名字字符串，与 getSelected/bindSelectAll 同口径
+  const live = new Set(instances.map((i) => i.name));
   root.querySelectorAll(".chk").forEach((c) => {
     const input = c as HTMLInputElement;
-    const idx = parseInt(input.dataset.idx || "", 10);
-    if (!Number.isNaN(idx) && instances[idx]) {
-      input.checked = set.has(instances[idx].name);
-      input.addEventListener("change", () => {
-        if (input.checked) set.add(instances[idx].name);
-        else set.delete(instances[idx].name);
-      });
-    }
+    const name = instanceNameOf(c);
+    if (!name || !live.has(name)) return;
+    input.checked = set.has(name);
+    input.addEventListener("change", () => {
+      if (input.checked) set.add(name);
+      else set.delete(name);
+    });
   });
 }
 
@@ -146,12 +149,26 @@ function closeAllMenus(pushClose: () => void, pullClose: () => void): void {
 }
 
 // ---------- getSelected ----------
+/** P0 修复（2026-10-16 锐评）：从勾选框解析实例名——**一律按 data-name 从 DOM 读**，
+ *  禁用 data-idx 回查实例数组。stats:refresh 重渲染后 data-idx 会与 `_instances` 快照错位
+ *  （实例增删后未 reload 的窗口），下标会把 B 包文件推到 A 包；与 `render.ts:38` 的
+ *  `card.dataset.name`、`pack-dnd.ts` 按 data-name 解析（历史「拖拽指向错误包」修复）同口径。 */
+function instanceNameOf(cb: Element): string | null {
+  return cb.closest("[data-name]")?.getAttribute("data-name") ?? null;
+}
+
 function getSelected(root: ShadowRoot, instances: SidebarInstance[]): string[] {
   const sel: string[] = [];
+  const live = new Set(instances.map((i) => i.name));
   root.querySelectorAll(".chk:checked").forEach((c) => {
     const input = c as HTMLInputElement;
-    const idx = parseInt(input.dataset.idx || "", 10);
-    if (!Number.isNaN(idx) && instances[idx]) sel.push(instances[idx].name);
+    const name = instanceNameOf(c);
+    // 名字不在最新实例列表 → 卡片已失效（增删后未 reload），不静默推送，避免误装
+    if (!name || !live.has(name)) {
+      logWarn("sync-flow", "getSelected: 勾选项未命中实例名，跳过", { idx: input.dataset.idx });
+      return;
+    }
+    sel.push(name);
   });
   return sel;
 }
@@ -255,6 +272,10 @@ interface PushAccum {
   /** 本次推送**覆盖实例侧已修改副本**的目标路径（ADR-340-d2；Set 去重，
    *  跨类型/跨包同路径只算一次——覆盖是磁盘事实，不是批次事实） */
   overwrites: Set<string>;
+  /** P0 修复（2026-10-16 锐评）：超时早停时**被放弃的类型批次名单**（超时那一类 + 其后未跑的类型）。
+   *  原实现只 `timedOut++`，用户只看到「1 个类型批次超时」，不知道是哪几类被丢——
+   *  点名让推送结果如实反映「哪些类型没做」。 */
+  abortedTypes: string[];
 }
 
 /** 单类型批次结果归并：文件级计数 + 失败明细（限 MAX_TOTAL_ERRORS）+ 包级累加 + 覆盖清单 + skipped 归因分流 */
@@ -314,6 +335,14 @@ function buildPushParts(accum: PushAccum, failedPacks: Array<[string, PackTotal]
   if (accum.skipped > 0) parts.push(t("sidebar.packSkipped", { n: accum.skipped }));
   if (accum.blocked > 0) parts.push(t("sidebar.packBlocked", { n: accum.blocked }));
   if (accum.timedOut > 0) parts.push(t("sidebar.packTimedOutStopped", { n: accum.timedOut }));
+  // P0 修复（2026-10-16 锐评）：点名被超时放弃的类型批次（不只报个数）
+  if (accum.abortedTypes.length > 0)
+    parts.push(
+      t("sidebar.pushAbortedTypes", {
+        n: accum.abortedTypes.length,
+        names: accum.abortedTypes.join("、"),
+      }),
+    );
   // 失败明细点名（锐评 UX 高项收口）：光有「失败 3」用户无从下手，附前若干条缘由
   if (accum.errorDetails.length > 0) parts.push(accum.errorDetails.join("；"));
   return parts;
@@ -361,6 +390,7 @@ async function runPush(
     errorDetails: [],
     packTotals: new Map(),
     overwrites: new Set(),
+    abortedTypes: [],
   };
   try {
     for (let ti = 0; ti < types.length; ti++) {
@@ -381,6 +411,9 @@ async function runPush(
       } catch (e) {
         if (e instanceof TimeoutError) {
           accum.timedOut++;
+          // P0 修复（2026-10-16 锐评）：记录被放弃的类型批次（超时这一类 + 其后未跑的），
+          // 收尾点名——原实现只计超时数，用户不知道哪些类型没做。
+          accum.abortedTypes = types.slice(ti);
           break; // 早停：真实计数保留，未跑类型既非成功也非跳过
         }
         // downloadMissing 恒 settle 不 reject；走到这里 = 调用编排自身异常
@@ -409,6 +442,14 @@ async function runPush(
     if (accum.skipped > 0) notices.push(t("sidebar.packSkipped", { n: accum.skipped }));
     if (accum.blocked > 0) notices.push(t("sidebar.packBlocked", { n: accum.blocked }));
     if (accum.timedOut > 0) notices.push(t("sidebar.packTimedOutStopped", { n: accum.timedOut }));
+    // P0 修复（2026-10-16 锐评）：面板点名被超时放弃的类型批次
+    if (accum.abortedTypes.length > 0)
+      notices.push(
+        t("sidebar.pushAbortedTypes", {
+          n: accum.abortedTypes.length,
+          names: accum.abortedTypes.join("、"),
+        }),
+      );
     renderSyncResultPanel(root, {
       verb: "push",
       okCount: accum.installOk,
@@ -440,29 +481,41 @@ interface PullCounters {
   firstError: string;
   /** 成功拉取的文件/目录相对路径清单（逐实例逐类型聚合，供浮层点名） */
   files: string[];
+  /** P0 修复（2026-10-16 锐评）：超时早停时**被放弃的整合包**（超时那一包 + 其后未跑的包）。
+   *  原实现只 `timedOut++`，用户不知道哪些包没拉。 */
+  abortedPacks: string[];
 }
 
+/** 单类型拉取结果（P0 修复：类型级超时独立标记，与失败区分——超时不入 failed、不计文件） */
+type PullPerType =
+  | {
+      kind: "done";
+      value: { ok: number; failed: number; firstError?: string | null; files?: string[] | null };
+    }
+  | { kind: "timeout" };
+
 /** 汇总一批整合包的结果（批D P1-5：绑定改结构化 `PullSyncResult`——条目级失败不再走 reject，
- *  成功计数不会在途中丢失；reject 只剩前置不满足，如实按「一个类型批次失败」计入） */
+ *  成功计数不会在途中丢失；reject 只剩前置不满足，如实按「一个类型批次失败」计入）。
+ *  P0 修复：超时是 `kind:"timeout"` 独立分支——不入 failed、不误计文件、只增 timedOut。 */
 function accumulatePullResults(
-  results: PromiseSettledResult<{
-    ok: number;
-    failed: number;
-    firstError?: string | null;
-    files?: string[] | null;
-  }>[],
+  results: PromiseSettledResult<PullPerType>[],
   counters: PullCounters,
 ): void {
   for (const r of results) {
-    if (r.status === "fulfilled") {
-      counters.totalPulled += r.value.ok;
-      counters.failed += r.value.failed;
-      if (r.value.files) counters.files.push(...r.value.files);
-      if (r.value.firstError && !counters.firstError) counters.firstError = r.value.firstError;
-    } else {
+    if (r.status === "rejected") {
       counters.failed++;
       if (!counters.firstError) counters.firstError = friendlyError(r.reason);
+      continue;
     }
+    if (r.value.kind === "timeout") {
+      counters.timedOut++;
+      continue;
+    }
+    const v = r.value.value;
+    counters.totalPulled += v.ok;
+    counters.failed += v.failed;
+    if (v.files) counters.files.push(...v.files);
+    if (v.firstError && !counters.firstError) counters.firstError = v.firstError;
   }
 }
 
@@ -539,6 +592,7 @@ async function runPull(
     timedOut: 0,
     firstError: "",
     files: [],
+    abortedPacks: [],
   };
   try {
     const { PullResourceFromInstance } = await backendGetApp();
@@ -549,19 +603,31 @@ async function runPull(
         i: ii + 1,
         n: selected.length,
       })}`;
-      try {
-        const results = await withTimeout(
-          Promise.allSettled(types.map((rt) => PullResourceFromInstance(rt, insName))),
-          SYNC_OP_TIMEOUT_MS,
-          `拉取 ${insName}`,
-        );
-        accumulatePullResults(results, counters);
-      } catch (e) {
-        if (e instanceof TimeoutError) {
-          counters.timedOut++;
-          break; // 早停：真实计数保留，未跑整合包既非成功也非失败
-        }
-        throw e;
+      // P0 修复（2026-10-16 锐评）：超时下探到**类型级**。原实现 `withTimeout(allSettled)` 只要
+      // 本包任一类型挂起，整包 allSettled 被 TimeoutError 打断，**同包内已 settle 的其余类型
+      // 结果全部丢弃**（锐评 P0「超时丢半结果」）。现每类型独立 withTimeout：单个类型挂起
+      // 只放弃那一类，同包其余类型结果照常归并；再按「本包出现超时」早停后续包
+      //（保留 ADR-340 早停防级联——续发会让后续包再等一整轮超时）。
+      const perType: PromiseSettledResult<PullPerType>[] = await Promise.allSettled(
+        types.map((rt) =>
+          withTimeout(
+            PullResourceFromInstance(rt, insName),
+            SYNC_OP_TIMEOUT_MS,
+            `拉取 ${insName}/${rt}`,
+          )
+            .then((value): PullPerType => ({ kind: "done", value }))
+            .catch((e): PullPerType => {
+              if (e instanceof TimeoutError) return { kind: "timeout" };
+              throw e;
+            }),
+        ),
+      );
+      const before = counters.timedOut;
+      accumulatePullResults(perType, counters);
+      if (counters.timedOut > before) {
+        // 早停：真实计数保留，未跑整合包既非成功也非失败；点名被放弃的包
+        counters.abortedPacks = selected.slice(ii);
+        break;
       }
     }
     notifyPullOutcome(counters);
@@ -569,6 +635,14 @@ async function runPull(
     const notices: string[] = [];
     if (counters.timedOut > 0)
       notices.push(t("sidebar.pullTimedOutStopped", { n: counters.timedOut }));
+    // P0 修复（2026-10-16 锐评）：面板点名被超时早停放弃的整合包
+    if (counters.abortedPacks.length > 0)
+      notices.push(
+        t("sidebar.pullAbortedPacks", {
+          n: counters.abortedPacks.length,
+          names: counters.abortedPacks.join("、"),
+        }),
+      );
     renderSyncResultPanel(root, {
       verb: "pull",
       okCount: counters.totalPulled,

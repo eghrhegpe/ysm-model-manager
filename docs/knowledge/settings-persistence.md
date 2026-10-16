@@ -40,6 +40,7 @@ auto_fields:
     - DedupConfig
     - DISK_KEY_PREFIX
     - diskFieldName
+    - exportableSettingsKeys
     - findSettingsKey
     - importedKeysFrom
     - ImportSettingsResult
@@ -61,6 +62,7 @@ auto_fields:
     - SyncConfig
     - SyncResolveResult
     - SyncScanDirs
+    - unbackupableSettingsKeys
     - WorkshopCreator
     - WorkshopPresetSearch
     - WorkshopSite

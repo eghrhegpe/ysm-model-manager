@@ -9,6 +9,7 @@ auto_fields:
   symbols_with_lines:
     - ComputeFileHash
     - EffectiveCacheTTL
+    - ExtractAuthor
     - GenerateRepoIndex
     - HashIndex
     - HashIndex.Lookup

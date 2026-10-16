@@ -298,7 +298,7 @@
 | useCurrentResourceType | `frontend/src/features/repo/repo-rtype.ts` | 21 |
 | initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 129 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 229 |
-| connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 121 |
+| connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 125 |
 | _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 301 |
 
 ### `repo:search-creator`
@@ -331,7 +331,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| initSettingsBackup | `frontend/src/views/app-content/settings/settings-backup.ts` | 200 |
+| initSettingsBackup | `frontend/src/views/app-content/settings/settings-backup.ts` | 196 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
@@ -361,7 +361,7 @@
 | initMcDetect | `frontend/src/views/app-content/settings/path-cards.ts` | 327 |
 | runMcSearch | `frontend/src/views/app-sidebar/launcher-detect.ts` | 73 |
 | runLauncherDetect | `frontend/src/views/app-sidebar/launcher-detect.ts` | 137 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 581 |
+| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 655 |
 | _bindDelegate | `frontend/src/views/app-sync-manager/index.ts` | 229 |
 | runBatchRename | `frontend/src/views/app-tree/bus-handlers.ts` | 145 |
 | atBeHandleDirRename | `frontend/src/views/app-tree/bus-handlers.ts` | 172 |
@@ -375,7 +375,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 112 |
+| connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 116 |
 | _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 282 |
 
 ### `sync:toggle:status`
@@ -441,7 +441,7 @@
 | runExecDelete | `frontend/src/views/app-content/diagnostics/dedup.ts` | 231 |
 | applyFsaState | `frontend/src/views/app-content/settings/init.ts` | 407 |
 | onWebRepoAuthClick | `frontend/src/views/app-content/settings/init.ts` | 435 |
-| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 582 |
+| runPull | `frontend/src/views/app-sidebar/sync-flow.ts` | 656 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |

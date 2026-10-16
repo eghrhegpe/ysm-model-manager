@@ -876,7 +876,10 @@ export const en: Record<string, string> = {
   "sidebar.pullDoneAll":
     "Pull complete, {n} files (copied into the repo; now independent from the instances)",
   "sidebar.pullDone": "Pull complete: {pulled} files, {failed} failed",
-  "sidebar.pullTimedOutStopped": "{n} pack(s) timed out; remaining pulls stopped",
+  // P0 fix (2026-10-16 review): timedOut now counts type-level timeouts, not packs
+  "sidebar.pullTimedOutStopped": "{n} pull(s) timed out; remaining pulls stopped",
+  // P0 fix: name the packs abandoned by the early stop
+  "sidebar.pullAbortedPacks": "These {n} packs were not pulled: {names}",
   "sidebar.pullFirstError": "First failure: {msg}",
   "sidebar.syncBusy": "A sync is still running; this {verb} was ignored — please retry shortly",
   "sidebar.pullNothing": "📭 Nothing to pull (no extra resources in instances)",
@@ -884,6 +887,8 @@ export const en: Record<string, string> = {
   "sidebar.packSkipped": "{n} type batches skipped (another sync is in progress elsewhere)",
   "sidebar.packBlocked": "{n} type batches did not complete",
   "sidebar.packTimedOutStopped": "{n} type batches timed out; remaining batches stopped",
+  // P0 fix (2026-10-16 review): name the abandoned type batches after an early-stop timeout
+  "sidebar.pushAbortedTypes": "These {n} type batches were not pushed: {names}",
   "sidebar.pushInstallFail": "{fail} files failed to install ({ok} succeeded)",
   "sidebar.pushPackFailDetail": "Failures concentrated in {n} pack(s): {names}",
   // ADR-340-d2: pushing still overwrites (policy unchanged) but overwriting instance-side

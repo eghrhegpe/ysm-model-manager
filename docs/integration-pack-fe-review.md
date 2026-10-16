@@ -1,0 +1,215 @@
+# YSM 模型管理器 · 整合包同步前端设计锐评报告
+
+> 审查身份：资深前端架构评审（原生 TS + Web Components + Shadow DOM，无框架）
+> 审查范围：`frontend/src/views/app-sync-manager/*`、`frontend/src/features/sync/*`、`frontend/src/features/pack-ops/*`、`frontend/src/views/app-sidebar/*`、`frontend/src/features/dnd/pack-dnd.ts`
+> 红线对照：前端只读不判 / import 禁裸目录聚口 / features 不直引 `backend/app.ts` 不写 HTML 字面量 / `src/core` 三约束 / `*-deps.ts` seam
+> 行号基准：以 `git` 工作区现行为准（index.ts 373 / renderer.ts 472 / events.ts 216 / network.ts 93 / store.ts 162 / state.ts 33 / tpl.ts 225 / sm-css.ts 89 / self-type.ts 63；sync.ts 440 / sync-deps.ts 12；instance-ops.ts 148 / pack-ops-deps.ts 11；app-sidebar index.ts 365 / events.ts 391 / sync-flow.ts 626 / tpl.ts 318 / loader.ts 159 / render.ts 74 / data.ts 26；pack-dnd.ts 319）。任务描述里的「index 344 / sync-flow 588 / renderer 439」是历史快照。
+> 说明：本报告为纯审查，未修改任何代码、未提交。
+
+---
+
+## 0. 红线合规快检（grep 证据）
+
+| 红线 | 核查方法 | 结论 |
+|---|---|---|
+| features 不直引 `backend/app.ts` | grep `from "@/backend/app.ts"`（features 下） | 合规：features 生产文件一律走 `@/features/sync/sync-deps.ts` / `@/features/pack-ops/pack-ops-deps.ts` / `@/features/dnd/dnd-deps.ts` |
+| views 不直引 `backend/app.ts` | grep 同上（views 下） | 合规：views 走 `@/views/backend-deps.ts`（ADR-190 D2 延伸至 views 的唯一出口） |
+| features 不写 HTML 字面量 | grep `innerHTML\|outerHTML\|insertAdjacentHTML`（features 下，98 处命中） | **部分违规，但不在本次范围内**：命中集中在 `features/dialogs/*`（batch-rename.ts:133、rename.ts:38-86、adv-filter.ts:187、tag-editor.ts:45/56/103）、`features/community/*`（render.ts:103/162/183、download-queue.ts:95-233、repo-events-bindings.ts:42/174/178）、`features/maintenance/*`（recycle-bin.ts:238-400、oldest-models.ts:49-199、version-updater.ts:130-256）。本次审查的 `features/sync/sync.ts`、`features/pack-ops/instance-ops.ts`、`features/dnd/pack-dnd.ts` **零 innerHTML**（grep 未命中），HTML 全部归 views 层 `tpl.ts`——本子集合规 |
+| seam 是否 `deps?.fn \|\| backendGetApp` 注入形态 | 通读 9 个 `*-deps.ts` | **未执行**：`sync-deps.ts`、`pack-ops-deps.ts` 等 9 个目录级 seam 均为**纯转发单出口**（`return getApp()`），**没有** `deps?.fn` 可选参、**没有** `set/reset` seam。文件头注释已明确记录：曾复制 `context-menu-deps` 的 set/reset 模式，因全仓库零消费方而删除，测试走 `vi.mock("@/backend/app.ts")` 模块层拦截。**真正的 `deps?` 注入形态在本仓仅存在于 `features/maintenance/recycle-bin.ts:69 PROD_DEPS`、`features/context-menu/context-menu-file-handlers.ts:33 FAIL_LOUD_DEPS`、`features/maintenance/oldest-models.ts:161 OldestDeps`** 三处（均为 tpl 注入形态），与 sync/pack-ops 走的「纯转发 + vi.mock」是两条不同路线。**结论：任务描述中的 `deps?.fn || backendGetApp` 形态在 sync/pack-ops seam 上不成立，属「注释已承认的有意简化」，但严格按红线字面是未达标的——见 P1-3** |
+| 禁裸目录聚口 `@/dir` | 通读 20 个目标文件 import 头 | 合规：全部走 `@/具体文件` 或精确同目录 `./`（R5），无 `@/features/sync` 这类裸聚口 |
+
+---
+
+## 1. P0 — 结构性缺陷 / 会持续产生 bug
+
+### P0-1　`runPush` 超时 `break` 后剩余类型静默丢弃，进度口径失真
+**位置**：`app-sidebar/sync-flow.ts:348-427`（runPush 主体），关键在 `375-379`（`withTimeout(downloadMissing(...), SYNC_OP_TIMEOUT_MS, '推送 ${rt}')` + `TimeoutError → timedOut++ && break`）。
+
+**问题**：按类型 `for (ti...)` 串行推送，任一类型超时即 `break`，**尚未开始（或已开始未 settle）的后续类型既不执行也不计入任何状态**——`PushAccum` 只有 `timedOut++` 一个累计，无法区分「类型 A 超时」与「类型 B/C/D 因 A 超时被顺延而从未尝试」。最终 `showPushToast` 只报「跳过 N + 超时 M」，**不点名是哪个类型/哪个包超时、也不提示哪些类型根本没跑**。已知历史问题「runPush 曾报纯成功文案隐藏失败（已加包级归因）」只修了**文件级→包级**归因，**类型级 break 的静默丢弃仍存在**——用户看到「推送完成」但某类型 0 个文件入实例。
+
+**根因**：`downloadMissing` 是**全有或全无的批量操作**，`runPush` 只能整体 `await`，超时分支没有「部分完成」的回读契约（`DownloadOutcome` 无 `abortedAtType` / `remainingTypes` 字段）；且 `break` 直接退出 `for`，后续类型的错误分支（`absorbOutcome`）不会执行。
+
+**建议方向**：① `DownloadOutcome` 增加可选 `aborted?: boolean` 与 `skippedTypes?: string[]`（由 sync.ts 在 break 前回填）；② `runPush` 超时后把**剩余类型列表**记入 `PushAccum.notices`，`showPushToast`/结果面板点名「类型 X 因超时未推送」；③ 不要用 `break`，改为 `continue` + `markSkipped(rt)`，保证每次 push 都能给出「本次实际尝试的类型 / 被顺延的类型」的完整清单。
+
+### P0-2　`runPull` 单包级 `Promise.allSettled` + `withTimeout`：超时后该包内部分类型静默丢结果
+**位置**：`app-sidebar/sync-flow.ts:529-589`（runPull 主体），关键在 `553-557`（`withTimeout(Promise.allSettled(types.map(rt => PullResourceFromInstance(rt, insName))), SYNC_OP_TIMEOUT_MS, '拉取 ${insName}')`）。
+
+**问题**：`runPull` 按整合包串行、包内类型并发。任一**类型**超时会让 `Promise.allSettled` 里**该类型**的 promise 一直挂到 timeout 才 reject，而 `withTimeout` 是包级包装——超时后**该包内其余类型已经 settle 的结果被整包丢弃**，`accumulatePullResults` 只看到 `timedOut++`，**没有包内「成功类型 / 未完成类型」的分流**。大整合包场景（几百文件、Go 侧 `PullResourceFromInstance` 串行写盘）单包 30s 超时容易误伤，用户会看到「拉取超时」但不知道到底拉了多少。
+
+**根因**：`withTimeout` 的粒度是**包**，而并发单元是**类型**；`allSettled` 的结果在超时路径没有被消费，属于「粒度错配 + 结果丢半」。
+
+**建议方向**：① 把 `withTimeout` 下沉到**每个 type**（`Promise.all(types.map(rt => withTimeout(PullResourceFromInstance(rt, insName), SYNC_OP_TIMEOUT_MS, '拉取 ${rt}'))).then(results => ...)`），用 `allSettled` 收集每 type 的成功/超时/失败三元组；② `accumulatePullResults` 接受 per-type 明细而非包级整体；③ 明确「超时只算超时的 type，其余 type 结果照实计入」的口径。
+
+### P0-3　`_reload` 单飞 + `_reloadPending` 尾随补跑：**pending 补跑未区分 force**，变异后刷新可能被并入旧在途请求
+**位置**：`app-sidebar/index.ts:250-301`（`_reload(force)`）。
+
+**问题**：单飞锁命中时只设 `_reloadPending = true` 就 return，**丢弃了 `force` 参数**；`finally` 后补跑走 `void this._reload()`（**不带 force**，:299）。而 `loadInstances` 的契约（loader.ts:37-39 注释）明确：**force 是「跳过在途去重」的钥匙**，变异后（sync 拉取/导入/启停）必须 force 绕过在途合并，否则会拿到变异前发起的旧在途请求的陈旧列表。场景：用户在 `runPull` 完成瞬间又触发 `_reload(true)`，此时恰有非 force 的在途读请求，`_reload(true)` 被单飞拦下 → pending → 补跑时用非 force 重新请求 → **并入那个陈旧的在途请求，拉到变异前的旧列表**。这是 loader 2026-10 刚修好的「force 身份守卫」被调用方重新绕开。
+
+**根因**：单飞锁与 force 语义耦合在同一个 `_reloadInFlight` 布尔里，`_reloadPending` 只记「要再跑」，没记「要不要 force」。
+
+**建议方向**：把 `_reloadPending` 改为 `_reloadPendingForce: boolean`（或小结构 `{force: boolean}`），`:254` 处 `this._reloadPendingForce = this._reloadPendingForce || force`；`:299` 处 `void this._reload(this._reloadPendingForce)`。一行改，风险低。
+
+### P0-4　`bindPackCardDnD` / 侧栏勾选**仍存在按 `data-idx` 下标取包的残留路径**，与「按名称解析」的 P1 修复并存不一致
+**位置**：`app-sidebar/sync-flow.ts:149-157`（`getSelected()`：`.chk:checked` + `data-idx` 下标）；对照 `app-sidebar/render.ts:34`（`card.dataset.idx = String(idx)` 仍在写）+ `:38`（`card.dataset.name = ins.name` 也已写，但 `getSelected` 未用）。
+
+**问题**：已知历史问题「整合包卡片拖拽曾用下标静默指向错误包」已修（`pack-dnd.ts:293-302` 改为按 `data-name` 解析 + 找不到报错），`bindCardClickHandler`/`bindCardContextHandler` 也已改为读 `st.instances[idx]` 后由实例引用取 `pkg.name`（events.ts:90-91、136-137）——但 **`getSelected()` 仍完全按 `data-idx` 下标**从 `_instances` 里取 `SidebarInstance` 传给 `downloadMissing({instanceNames: selected})`。侧栏 `stats:refresh` 重渲染后 `data-idx` 与 `_instances` 数组的对应关系**可能错位**（增删实例后未 `_reload` 的窗口期），此时推送/拉取会**把 B 包的文件推到 A 包**。
+
+**根因**：`getSelected` 是同步函数，`_instances` 是 `_reload` 后一次性快照；卡片 DOM 的 `data-idx` 与快照数组在重渲染后**没有**做一致性校验（不像 `pack-dnd` 有 `card.dataset.name` + `getInstances().find` 的双保险）。
+
+**建议方向**：`getSelected()` 里改用 `checkbox.closest('.instance-card')?.dataset.name` 取 `name`，再用 `name` 在 `_instances` 里 `find`；找不到就 `toast(t("inst.packNotFound"))` 显式报错，**不静默丢弃**。与 `pack-dnd.ts:298`、`events.ts` 的 P1 修复保持同一口径。同时建议在 `render.ts:34` 逐步废弃 `data-idx`（`data-idx` 仍被 `restoreSelectedCard`/roving 消费，需同步迁移，属**待验证**改造量）。
+
+---
+
+## 2. P1 — 明显技术债
+
+### P1-1　同步状态分裂：`app-sidebar`、`features/sync`、`app-sync-manager` 各自维护一份「同步进度」真相
+**位置**：`app-sidebar/sync-flow.ts:247-258`（`PushAccum`）、`features/sync/sync.ts:40-53`（`DownloadOutcome`）、`app-sync-manager/index.ts:154-177` + `store.ts:54-100`（`_allItems` / `_scanDirs`）。
+
+**问题**：一次「推送」至少在三处独立记账：
+1. `features/sync/sync.ts` 自己累计 `ok/fail/skipped/errors/packs/overwrites`（`DownloadOutcome`）；
+2. `app-sidebar/sync-flow.ts` 再包一层 `PushAccum`（`skipped/blocked/timedOut/installOk/installFail/errorDetails/packTotals/overwrites`），`absorbOutcome:261-282` 手工做一次映射；
+3. `app-sync-manager` 的 `_singleBusy`、`_allItems`、`_scanDirs` 又是另一份（`performSingleOp` 单文件级）。
+
+三份状态各自独立演进（包级归因、类型级超时、单文件 busy 互不相同），**没有单一 source of truth**。`DownloadOutcome` 已经是 features 层较好的结构化契约，但 sidebar 层又叠了一层聚合，**未来任何字段新增都要在两处同步**——历史 bug「runPush 曾报纯成功文案隐藏失败」正是这种双份记账的产物（sync.ts 报的是 `errors`，sidebar 报的是 `installFail`，两者曾经不同步）。
+
+**根因**：分层边界清晰（features 管「操作」、views 管「展示」），但 **`DownloadOutcome` 未成为唯一事实源**，sidebar 的 `PushAccum` 是历史遗留的「展示侧聚合层」，职责与 features 层重叠。
+
+**建议方向**：**让 `DownloadOutcome` 成为推送结果的唯一契约**，`PushAccum` 退化为纯 `DownloadOutcome` 的派生视图（或直接删除，`absorbOutcome` 内联）。包级/文件级归因、超时/跳过/错误全由 `DownloadOutcome` 提供，sidebar 只做 `t()` 文案映射。可顺带把 `MAX_PACK_ERRORS`/`MAX_TOTAL_ERRORS`/`MAX_NAMED_PACKS`/`MAX_NAMED_OVERWRITES`/`MAX_PANEL_PACK_FILES`（sync-flow.ts:42-54）与 sync.ts:79-81 的 `MAX_ERRORS`/`MAX_PACK_ERRORS` 统一收敛到一处常量。
+
+### P1-2　`sync-flow.ts` 626 行承担 6 类职责，已到拆分阈值
+**位置**：`app-sidebar/sync-flow.ts`（全文 626 行）。拆解：`checkedSetFor`/`bindSelectAll`/`pruneCheckedSets`/`restoreCheckboxes`（勾选持久化，23-136）、`closeAllMenus`/`getSelected`/`resolveTypes`/`beginSync`/`resetButton`（菜单与锁，143-210）、`PushAccum` 系（247-340）、`runPush`（348-427）、`runPull`（529-589）、`renderSyncResultPanel`/`closeSyncResultPanel`（495-527，含模块级 `escHandler`）、`bindSyncSelected`（592-626）。
+
+**问题**：一个文件里同时有「勾选状态持久化」「下拉控制器」「推送编排」「拉取编排」「结果浮层 esc 处理」「按钮 loading 状态」——测试要 mock 六个不同子系统（`app-sidebar.sync.test.ts` 里 `vi.mock` 了 loader / sync / async / bus / app.js 五处）。`module` 级变量 `escHandler`（挂 `document` 的 keydown）也在这 626 行里，跨渲染生命周期存活，见 P2-2。
+
+**根因**：功能按「都是整合包同步」归到一文件，未按「职责」二次分割。与 `app-sync-manager` 六文件（index/events/state/store/renderer/tpl/network/self-type/css）形成鲜明反差——sync-flow 是**反向示范**。
+
+**建议方向**：拆三件——`sidebar-push.ts`（runPush + PushAccum + absorb）、`sidebar-pull.ts`（runPull）、`sidebar-select.ts`（勾选/全选/restore）。`sync-flow.ts` 保留为「编排入口 + 下拉控制器」。拆分后每文件 < 250 行，测试可按子系统单 mock。
+
+### P1-3　`sync-deps.ts` / `pack-ops-deps.ts` 未实现 `deps?.fn` 注入 seam，测试完全依赖 `vi.mock` 模块层拦截
+**位置**：`features/sync/sync-deps.ts:10-11`、`features/pack-ops/pack-ops-deps.ts:8-9`、`features/dnd/dnd-deps.ts:9-10`、`views/backend-deps.ts:13-14`。
+
+**问题**：四个 seam 都是 `export function xxxGetApp(): ReturnType<typeof getApp> { return getApp(); }`——**纯转发**。红线要求的 `deps?.fn || backendGetApp` 注入形态（或 ADR-190 D2 的 set/reset）在此**未实现**。测试只能 `vi.mock("@/backend/app.ts")` 或 `vi.mock("@/views/backend-deps.ts")` 做模块层拦截。文件头注释已诚实承认（`sync-deps.ts` 头：「set/reset seam 曾复制 context-menu-deps 已删模式——全仓库零消费方，测试走 vi.mock("@/backend/app.ts") 模块层拦截；按同目录先例删除零测试的模块级可变全局，保留纯转发单出口」）。**这本身是合理决策**（避免零消费的可变全局），但与红线字面有偏差，且 ADR-224「vi.mock 路径失效会静默无告警」的风险敞口完全暴露在测试上。
+
+**影响面（grep 证据）**：`views/app-sidebar` 下 `vi.mock` 命中 5 个测试文件，**mock 目标不统一**：
+- `app-sidebar.component.test.ts:7` / `app-sidebar.sync.test.ts:10` / `app-sidebar.unmount.test.ts:23` / `app-sidebar.keyboard.test.ts:22` / `events.test.ts:46` → `vi.mock("../../../bindings/ysm-model-manager/internal/app/app.js", ...)`
+- `launcher-detect.test.ts:13` → `vi.mock("@/backend/app.ts")`、`loader.test.ts:22` → 同款
+
+`views/app-sync-manager` 下 6 个测试文件，**同样两种混用**：
+- `network.test.ts:5` / `store.test.ts:6` → `vi.mock("@/views/backend-deps.ts")`
+- `index.test.ts:34` / `a11y.dom.test.ts:31` / `index.branches.test.ts:28` / `renderer.virtual.test.ts:31` → `vi.mock("@/backend/app.ts")`
+
+**问题**：① 同一模块内 mock 策略不统一，维护成本高；② 两套 mock 都能工作是因为 `backend-deps.ts` 是纯转发，一旦 seam 加上 `deps?` 或改签名，**`vi.mock("@/views/backend-deps.ts")` 那批测试会静默失效**（ADR-224 警告）而不报错；③ `app-sidebar` 走 `../../../bindings/.../app.js` 这条路径是**绕过 seam** 的 mock（直接 mock 生成物），若 `bindings` 重新生成后 `app.js` 导出变化，测试会因路径失效而静默通过（mock 工厂返回 `{}`，调用方解构 `undefined` 才炸）。
+
+**建议方向**：① **统一**测试 mock 路径：全走 `vi.mock("@/backend/app.ts")`（seam 唯一出口），废弃 `../../../bindings/.../app.js` 与 `@/views/backend-deps.ts` 两处旁路；② 若坚持保留纯转发 seam，**至少**在 `vi.mock` 工厂里加一个 `if (typeof getApp !== "function") throw` 的 fail-loud 断言，把「路径失效静默通过」变成「测试启动即红」；③ 评估把 sync/pack-ops 的 tpl 相关（若有）迁到 `Deps` 注入形态（对齐 `recycle-bin.ts:69 PROD_DEPS` 先例）。
+
+### P1-4　`runPush`/`runPull` 大整合包下的串行性能瓶颈 + 无细粒度进度
+**位置**：`features/sync/sync.ts:149-199`（`installInstanceMissing`：逐 `Missing` + `MissingDirs` **for-await 串行**安装）+ `app-sidebar/sync-flow.ts:375-379`（逐类型**串行** `await downloadMissing`）+ `sync-flow.ts:553-557`（runPull 逐包串行、包内类型并发）。
+
+**问题**：一次 push 的时间复杂度是 **O(类型数 × 整合包数 × 该包缺失文件数)** 的串行链。MMD 用户常见 30+ 整合包、单包上百文件时，push 动辄数分钟。`withTimeout(SYNC_OP_TIMEOUT_MS)` 在慢盘/大文件下**很容易误触发超时**（见 P0-1/P0-2），用户看到「超时」但安装仍在继续。进度反馈只有「类型 i/n」级别（按钮 loading + toast），**单包内没有「已安装 x/y」的增量**。
+
+**根因**：① features 层 `for-await` 串行是**防御性**设计（避免同时写盘），但 Go 侧 `InstallLock` 已做串行化（`network.ts` 注释 30-33 提到 Go 侧 `InstallLock` 竞争），前端再串行是**双重串行**——是否可改为「每类型最多 N 并发」需 Go 侧契约确认（**待验证**）；② 进度回调未透出，`runPush` 无 `onProgress(typeIdx, packName, done, total)` 挂钩。
+
+**建议方向**：① 先做**契约对齐**：确认 Go 侧 `InstallResourceToInstance`/`PushSingleResourceToInstance` 是否允许并发调用（若允许，前端可改 `Promise.all` 分片 4-8 并发）；② 给 `downloadMissing` 加可选 `onProgress` 回调，`runPush` 透传到按钮 loading 文本「推送中：类型 2/6 · 包 'MMD 主包' · 12/87」；③ 明确 `SYNC_OP_TIMEOUT_MS` 是否应随 `Missing` 文件数动态放大（**待验证**：需看常量定义）。
+
+### P1-5　`stats:refresh` 事件链的重复刷新：一次变异触发 2+ 组件同时重载
+**位置**：`features/sync/sync.ts:314`（`bus.emit("stats:refresh")`）、`:340`（同函数内又 `bus.emit("tree:reload")`）、`features/pack-ops/instance-ops.ts:138`（清空后 emit）、`app-sidebar/index.ts:112-116`（`stats:refresh` → 300ms 防抖 → `_reload(true)`）、`app-sync-manager/index.ts:283-290`（`stats:refresh` → `loadData` 全量重拉）。
+
+**问题**：一次 push/pull/清空操作会同时触发 sidebar 与 sync-manager 各自 reload，各自重新走 `backendGetApp()` → `GetResourceInstanceStatus` / `GetInstanceSyncStatus`——两个组件**并发拉同一份数据**。虽然 loader 有 `_inflight` 在途合并、scanner 有 singleflight，但**只有 sidebar 走 `loadInstances` 的合并**；`app-sync-manager` 的 `_subscribeBus` 直接 `loadData`（`GetInstanceSyncStatus`），**没有合并层**。且 `sync.ts:340` 在 `downloadMissing` 内部 emit `tree:reload` + 外层又 emit `stats:refresh`——`tree:reload` 会让 app-tree 也刷一次。
+
+**根因**：`stats:refresh` 是**广播型**事件，所有订阅者各自独立重拉，事件总线没有「已刷新」的去重语义。
+
+**建议方向**：① 在 `app-sync-manager` 加与 sidebar 同款的 `_inflight` 合并（或复用 `utils/async/singleflight`）；② 评估把 `stats:refresh` 语义收敛为「变异已发生，请在**下一帧**重拉」，配合 300ms 防抖已足够；③ `sync.ts:340` 的 `tree:reload` 若与 `stats:refresh` 重复触发同一次 tree 刷新，可择一（**待验证**：需看 tree 对 `tree:reload` 的处理）。
+
+### P1-6　i18n 类型标签口径已拍板但仍有残留中文裸奔风险
+**位置**：`features/pack-ops/instance-ops.ts:123`（`const typeLabel = rtypeLabelOf(rtype)`，弹窗 `inst.clearMessage` 用）+ 注释 120-122 记录「2026-10-15 拍板『权威源 = locale』」。对照 `tpl.ts` 侧栏卡片 `noModLabelOf`（`shortLabelOf`）。
+
+**问题**：`instance-ops.ts` 的 `clearMessage` 弹窗已改走 `rtypeLabelOf`，**但 `rtypeLabelOf`/`shortLabelOf` 本身是否支持 en/ja 完整本地化？** 从 `utils/resource/types.ts` 的实现看（**待验证**，本次未细读），`shortLabelOf` 很可能是 **id→中文硬映射**。若如此，en/ja 用户看到「清空此整合包的 模型」中文混排，与「权威源 = locale」相悖。`instance-ops.ts` 注释只记录了口径，未验证下游函数实现。
+
+**grep 证据（i18n 参数一致性）**：`inst.clearMessage` 在 `locales/{zh-CN,en,ja}.ts` 三处均有定义且参数 `{name, n, type}` **一致**（zh-CN.ts:1016 / en.ts:1037 / ja.ts:1035，另 public/locales/*.json:858 同步）。`inst.exportListCopied` 同样三语一致（`{n}`）。**参数化无缺失**，风险仅在于 `rtypeLabelOf` 返回值本身的本地化程度。
+
+**建议方向**：① 读 `utils/resource/types.ts` 的 `rtypeLabelOf`/`shortLabelOf`，若为中文硬编码则补 en/ja 映射；② 弹窗与右键菜单的 `type` 文案应共用同一 `labelOf` 函数（当前两套叫法已收敛，需确认 `rtypeLabelOf` 与 `shortLabelOf` 输出一致）。
+
+---
+
+## 3. P2 — 优化建议
+
+### P2-1　`tpl.ts` 仍残留成片静态内联 `style=`，与「样式归样式表」注释相悖
+**位置**：`app-sync-manager/tpl.ts:66,71,76`（`actionBtnHTML` 三处 `style="border:1px solid var(--accent);color:var(--accent)"`）、`:103`（`syncDirRowHTML` 缩进）、`:110-118`（四段内联 `flex-shrink/font-size/flex:1/overflow/color`）、`:131-139`（`containerHTML` 整块布局 `display:flex/flex-direction/height/overflow/padding/border-bottom/font-size`）。
+
+**问题**：`sm-css.ts` 头注释（`:37-38`「a11y……样式归样式表，行内 style 只留缩进等动态值」、`:43`「筛选栏重构……原同样是行内 style=」、`:56-58`「setRowButtonsBusy 与 renderer.restoreBusyState 各自内联写 style.opacity/cursor 两处重复——样式归样式表」）声称**行内 style 只剩动态值**，但实测 `actionBtnHTML`/`containerHTML` 的 style **全部是静态字面量**（颜色、flex、border 均非动态），只是搬到了 `tpl.ts` 里。这属于**迁出未迁完**：`sm-css.ts` 收编了按钮 busy、status-tab、dir-arrow、path-cell、no-instance、loading 等，但**漏了 action 按钮三色、containerHTML 布局、syncDirRowHTML 的 flex 项**。静态内联样式与主题变量脱钩风险低（都用 `var(--*)`），但与仓库「样式归样式表」的治理纪律不一致，且 `.sm-item-btn` 已有基类样式可挂色。
+
+**根因**：2026-10 的样式迁移是分批次做的（sm-css.ts 头注释记录每批的收编路径），action 按钮/容器布局属于最后一批未清。
+
+**建议方向**：把 `actionBtnHTML` 三处色值迁到 `sm-css.ts`（`.sm-item-btn[data-action="push"]{border:1px solid var(--accent);color:var(--accent)}` 等），`containerHTML` 的布局迁到 `.sm-wrap`/`.sm-status-tabs`/`.sm-summary`/`.sm-list` 类里。`syncDirRowHTML` 的缩进 `padding-left:${indent}px` 是**真动态值**，保留合规。
+
+### P2-2　`renderSyncResultPanel` 的 `escHandler` 是模块级变量，跨组件实例共享
+**位置**：`app-sidebar/sync-flow.ts:495-527`。
+
+**问题**：`escHandler` 在模块级声明，`renderSyncResultPanel` 挂 `document.keydown`，`closeSyncResultPanel` 精确移除。若组件**卸载时未关闭面板**（`disconnectedCallback` 未调用 `closeSyncResultPanel`），`escHandler` 永久挂在 `document` 上——`index.ts:303-352` 的 `disconnectedCallback` 清理清单（`_unsubs`/`_syncLock`/`_guard`/`_debounceTimer`/`_cardCleanup`/`_errorCleanup`/`_packDndCleanup`/`_dropdownCleanup`/`_roving`）**没有 `closeSyncResultPanel`**。单实例场景泄漏无感，多实例（未来复用）会串扰。**待验证**：`bindSyncSelected`（sync-flow.ts:592-626）是否在返回的 cleanup 里带了面板关闭。
+
+**根因**：面板 esc 处理没纳入组件的生命周期清理契约（对齐 ADR 的「connected/disconnected 成对」）。
+
+**建议方向**：① `bindSyncSelected` 的返回 cleanup 追加 `closeSyncResultPanel()`；② 或把 `escHandler` 收敛为 `utils/dom/` 原语（如 `bindEscapeToClose`），随组件生命周期注册/注销。
+
+### P2-3　`app-sidebar/events.ts:88` `setTimeout(500)` 涟漪复位未持有句柄
+**位置**：`app-sidebar/events.ts:88`。
+
+**问题**：`setTimeout(() => hdr.classList.remove("ripple"), 500)` **未保存 timer 句柄**，组件卸载后该 timer 仍会执行并操作已游离的 `hdr`（`hdr` 是从 `card.querySelector` 取的当前节点，节点游离后 `classList.remove` 无害，但**不符合**「计时器须 clear」的仓库纪律）。同类模式在 `app-sync-manager` 已收敛（`renderer.ts` 的 `pendingRaf` 入 state 去重）。
+
+**根因**：涟漪是纯视觉、无害副作用，历史上未纳入计时器治理。
+
+**建议方向**：保存 `hdr._rippleTimer` 或统一走 `utils/animation/` 原语；`disconnectedCallback` 清理。
+
+### P2-4　`sync-flow.ts` 的 `MAX_*` 常量与 `sync.ts` 的 `MAX_ERRORS` 命名/数值两套
+**位置**：`sync-flow.ts:42-54` vs `sync.ts:79-81`。
+
+**问题**：`sync.ts` 有 `MAX_ERRORS=3`、`MAX_PACK_ERRORS=2`，`sync-flow.ts` 有 `MAX_TOTAL_ERRORS=5`、`MAX_NAMED_PACKS=3`、`MAX_NAMED_OVERWRITES=3`、`MAX_PANEL_PACK_FILES=8`——**同一推送链路两处截断常量**，语义有重叠（`MAX_PACK_ERRORS` vs `MAX_NAMED_PACKS`）。改一处忘另一处会造成「包级归因被截断」与「结果面板截断」口径不一致。
+
+**根因**：分层边界各自定义，未抽公共常量。
+
+**建议方向**：把两组的截断常量**统一**到一个地方（建议 `features/sync/sync.ts` 导出 `SYNC_LIMITS`，sidebar 引用），或至少加注释交叉引用。
+
+---
+
+## 4. 已知历史问题核实结论（是否仍在）
+
+| 历史问题 | 现状 |
+|---|---|
+| `app-sync-manager _init` 无防重入、快速切换 instance 多异步并发、后完成者覆盖先完成者 | **已修**：`index.ts:154` `const gen = this._guard.next()`（ADR-230 唯一出口）+ `:166-172` 的 `stale \|\| !isConnected` 早退 + `:290` stale 判。**但** `_init` 本身**未**用 `busy` 锁防重入——`attributeChangedCallback:99-109` 每次 instance 变更都会 `void this._init()`，若两次变更间隔极短，两个 `_init` 并发，靠 `_guard` 的 `stale` 兜底丢弃过期结果，**行为正确**但**浪费一次 `loadData` IPC**。可接受，无需改。 |
+| 原 renderer 全量递归拼串后一次 innerHTML 注入 MMD 上百卡顿 | **已修**：`renderer.ts:245-472` 完整虚拟滚动（定高行 + 窗口化 + padding 撑高 + ResizeObserver + 首帧实测行高），`flattenRows:342-363` 只生成可见窗口行。 |
+| 整合包卡片拖拽曾用下标静默指向错误包 | **已修**：`pack-dnd.ts:293-302` 按 `data-name` 解析 + 找不到 `toast(t("inst.packNotFound"))`。**但**侧栏勾选 `getSelected`（sync-flow.ts:149-157）**仍按 `data-idx`**——见 P0-4。 |
+| `runPush` 曾报纯成功文案隐藏失败 | **部分修**：文件级→包级归因已加（`PackOutcome`），`showPushToast:323-340` 三分反馈（异常→warn/normal / 仅覆盖→warn/verbose / 全成→success）。**但**类型级超时 `break` 后剩余类型静默丢弃仍在——见 P0-1。 |
+| 点击整合包时多组件并发触发 reload 导致重复 IPC/扫描重叠 | **部分修**：sidebar `loadInstances` 有 `_inflight` 在途合并（loader.ts:31） + `scanner` singleflight。**但** `app-sync-manager` 的 `stats:refresh` 订阅直接 `loadData`（`GetInstanceSyncStatus`），**无合并层**，仍会与 sidebar 并发拉同一份数据——见 P1-5。 |
+
+---
+
+## 5. 整体设计评价
+
+| 维度 | 得分 | 一句话理由 |
+|---|---|---|
+| **组件划分** | **8/10** | `app-sync-manager` 六文件 + `self-type.ts` 编译期对齐 + 事件委托单点构造，是仓内范式范本；扣 2 分因 `sync-flow.ts` 626 行六职责混杂（P1-2） |
+| **数据流** | **6/10** | bus 命名（`stats:refresh`/`repo:rtype-changed`/`repo:subdir-changed`/`package:selected`/`instance:export-list`/`instance:clear`）全局一致、ADR-340 去总线化（`sync:download:missing` 退役改直调）是亮点；扣 4 分因三处同步状态真相分裂（P1-1）+ `stats:refresh` 广播重复刷新（P1-5） |
+| **渲染范式** | **8/10** | 虚拟滚动实现扎实（定高 + WeakMap 缓存 + 行高实测 + ResizeObserver + padding 撑高）；扣 2 分因 tpl.ts 残留成片静态内联 style 与「样式归样式表」注释相悖（P2-1） |
+| **异步正确性** | **7/10** | `_guard`/`createLoadGuard` 代际 + per-path `_singleBusy` 防重入 + `withSyncOpTimeout` + `busyLock.tryStart` 原子抢锁 + `finally` 复位，骨架完整；扣 3 分因 runPush/runPull 超时 `break`/`allSettled` 丢半结果（P0-1/P0-2）+ `_reload` 尾随补跑丢 force（P0-3） |
+| **可测性** | **6/10** | 测试覆盖很密（每模块均有 .test.ts），但 mock 策略**三套混用**（`vi.mock("@/backend/app.ts")` / `vi.mock("@/views/backend-deps.ts")` / `vi.mock("../../../bindings/.../app.js")`），且 seam 是纯转发——ADR-224「vi.mock 路径失效静默无告警」的风险敞口完全暴露（P1-3）；`index.test.ts:404` 还出现「直接驱动组件私有状态绕过 mock 链」的耦合痕迹 |
+
+### 最该先做的 1-2 件事
+
+1. **修 P0-1/P0-2 的「超时后静默丢结果」**——这俩是**会持续产生 bug** 的结构性缺陷：`DownloadOutcome` 增加 `aborted/skippedTypes` 字段 + `runPush`/`runPull` 超时后点名剩余类型，**不静默**。改动集中在 `sync-flow.ts` 与 `sync.ts` 两个文件，风险可控，收益是**消除一类「推送显示完成实则漏装」的用户误导**。
+2. **修 P0-3 的 `_reload` 尾随补跑丢 force**——一行改（`:254` 与 `:299`），直接堵住「变异后拉到陈旧列表」的回归口。同时把 P1-3 的测试 mock 统一到 `vi.mock("@/backend/app.ts")`（废弃旁路），降低 ADR-224 静默失效风险。
+
+---
+
+## 附：grep 结论汇总
+
+| 搜索内容 | 范围 | 命中 |
+|---|---|---|
+| `vi.mock\|backendGetApp\|mockResolvedValue` | `src/views/app-sync-manager` | 68 处（6 个测试文件） |
+| 同上 | `src/views/app-sidebar` | 40 处（6 个测试文件） |
+| `innerHTML\|outerHTML\|insertAdjacentHTML\|document.write` | `src/features` | 98 处（其中 `features/sync` 0 处、`features/pack-ops` 0 处、`features/dnd/pack-dnd.ts` 0 处；集中命中 `features/dialogs`/`features/community`/`features/maintenance`） |
+| `from "@/backend/app.ts"` | `src/features` | 仅出现在 `*-deps.ts`（9 个目录级 seam），生产业务文件 0 命中 |
+| `deps?\.\|Deps = {\|Deps: Deps` | `src/features` | 9 处：`recycle-bin.ts:69`、`context-menu-file-handlers.ts:33`、`oldest-models.ts:161` 等（真注入 seam）；`*-deps.ts` 内 0 命中（均纯转发） |
+| `inst\.clearMessage\|inst\.exportListCopied` | `src/locales/*` + `src/public/locales/*` | zh-CN/en/ja 三语参数一致（`{name,n,type}` / `{n}`），无缺失 |
+| `attachShadow\|shadowRoot\|WebComponentBase` | `src/utils/dom/web-component-base.ts` | 2 处（`:6-7`），确认 `WebComponentBase` 实为 `HTMLElement`，无 Shadow DOM |
+
+> 本报告所有行号以审查时工作区实际文件内容为准；标注「待验证」的项（`SYNC_OP_TIMEOUT_MS` 常量值、`rtypeLabelOf`/`shortLabelOf` 是否支持 en/ja、`bindSyncSelected` cleanup 是否含面板关闭、`data-idx` 全量迁移改造量）因未细读对应文件，未给出确定结论。

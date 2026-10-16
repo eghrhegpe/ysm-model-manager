@@ -846,7 +846,11 @@ export const zhCN = {
   "sidebar.pushFailed": "推送失败: {msg}",
   "sidebar.pullDoneAll": "拉取完成，共 {n} 个文件（已复制到仓库，此后与整合包各自独立）",
   "sidebar.pullDone": "拉取完成: {pulled} 个文件, {failed} 个失败",
-  "sidebar.pullTimedOutStopped": "{n} 个整合包拉取超时，已停止后续拉取",
+  // P0 修复（2026-10-16 锐评）：timedOut 改计**类型级**超时数（不再是整合包数）——同包其余
+  // 类型结果照常归并，故措辞由「个整合包」改为「项」
+  "sidebar.pullTimedOutStopped": "{n} 项拉取超时，已停止后续拉取",
+  // P0 修复：早停后点名被放弃的整合包
+  "sidebar.pullAbortedPacks": "以下 {n} 个整合包未拉取：{names}",
   "sidebar.pullFirstError": "首个失败原因: {msg}",
   "sidebar.syncBusy": "上一次同步尚未结束，已忽略本次{verb}，请稍候再试",
   "sidebar.pullNothing": "📭 没有可拉取的文件（实例中无多余资源）",
@@ -861,6 +865,9 @@ export const zhCN = {
   // ADR-340：超时计数语义 = 早停（binding 挂起是唯一超时成因，首个超时即终止类型循环，
   // 剩余批次不再续发——原总线实现续发只会撞 handler 持锁 busy 假跳过连锁）
   "sidebar.packTimedOutStopped": "{n} 个类型批次超时，已停止后续批次",
+  // P0 修复（2026-10-16 锐评）：超时早停后点名**被放弃的类型批次**——只报「1 个批次超时」
+  // 用户不知道是哪几类没做；names 为超时那一类及其后未跑的类型名（、分隔）
+  "sidebar.pushAbortedTypes": "以下 {n} 个类型批次未推送：{names}",
   // 锐评 P1-1 止血：done 回执带 handler 文件级计数，部分安装失败进汇总 toast
   "sidebar.pushInstallFail": "{fail} 个文件安装失败（成功 {ok}）",
   // 锐评 P1-3 收口：包级归因——「失败 3」之外必须能指名道姓是哪个包（{names} 形如「狐妖(3)、MMD(1)」）

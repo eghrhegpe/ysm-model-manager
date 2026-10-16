@@ -421,9 +421,11 @@ export interface ImportSettingsResult {
     "backupPath": string;
 
     /**
-     * 将写入浏览器本地存储的偏好条数
+     * 导出文件里 localStorage 的**原始条数**（未过滤）。浏览器偏好的实际写入由前端按
+     * 台账白名单（tier=local-storage && authority=browser-authority）过滤后完成，
+     * 前端提示「已应用 N 项」必须用过滤后的计数，不能用本字段——否则含未知键时虚高。
      */
-    "appliedKeyCount": number;
+    "localStorageKeyCount": number;
 }
 
 /**

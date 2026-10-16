@@ -8,6 +8,7 @@ package app
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -96,6 +97,23 @@ func TestReadSettingsExport_RejectsHigherSchemaVersion(t *testing.T) {
 		testutil.NoError(t, os.WriteFile(f, []byte(body), 0o644), "写放行样本")
 		if _, err := (&App{}).ReadSettingsExport(f); err != nil {
 			t.Errorf("样本 %d 应放行: %v", i, err)
+		}
+	}
+
+	// 双门控共用 SETTINGS_TOO_NEW 专用 Code（对抗审计 2026-10-16 P1）：friendlyError
+	// 命中 Code 映射即丢弃 Reason/Suggestion，「升级后重试」指引必须由 Code 的 i18n
+	// 分类文案承载——复用泛化 Code（UNSUPPORTED_FORMAT）会把它吞成「不支持的格式」。
+	// 断言两道闸（ExportVersion / SchemaVersion）都挂对 Code。
+	for _, body := range []string{
+		`{"format":"ysm-settings-export","exportVersion":99}`,
+		`{"format":"ysm-settings-export","exportVersion":1,"appConfig":{"schemaVersion":99999}}`,
+	} {
+		f := filepath.Join(dir, "gate-code.json")
+		testutil.NoError(t, os.WriteFile(f, []byte(body), 0o644), "写门控样本")
+		_, err := (&App{}).ReadSettingsExport(f)
+		var ae types.AppError
+		if !errors.As(err, &ae) || ae.Code != types.ErrSettingsTooNew {
+			t.Errorf("门控样本应返回 AppError{Code:SETTINGS_TOO_NEW}，got %v", err)
 		}
 	}
 }

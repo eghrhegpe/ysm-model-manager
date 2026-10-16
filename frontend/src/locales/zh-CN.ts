@@ -1173,6 +1173,7 @@ export const zhCN = {
   "error.writeFailed": "写入失败",
   "error.ioError": "读写错误",
   "error.linkFailed": "链接失败",
+  "error.settingsTooNew": "设置文件版本高于当前程序，请升级程序后导入",
   "settings.path.selectDir": "选择目录",
   "settings.path.updated": "路径已更新",
   "settings.path.set": "路径已设置",

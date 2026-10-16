@@ -1200,6 +1200,8 @@ export const en: Record<string, string> = {
   "error.writeFailed": "Write failed",
   "error.ioError": "I/O error",
   "error.linkFailed": "Link failed",
+  "error.settingsTooNew":
+    "Settings file is newer than this program; please upgrade before importing",
   "settings.path.selectDir": "Select Directory",
   "settings.path.updated": "Path updated",
   "settings.path.set": "Path set",

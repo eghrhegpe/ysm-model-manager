@@ -143,20 +143,23 @@ func (a *App) ReadSettingsExport(path string) (types.SettingsExport, error) {
 	if exp.Format != settingsExportFormat {
 		return exp, fmt.Errorf("不是有效的设置导出文件（format=%q）", exp.Format)
 	}
+	// 双版本门控对称（锐评 2026-10-16 + 对抗审计 P1 修正）：ExportVersion 门控文件格式、
+	// SchemaVersion 门控配置 schema——两套独立编号各有一道闸。高 schema/高格式版本来自
+	// 更高版本程序，本程序按旧结构直读会静默错读、再落盘把高版本章焊死。
+	// 两道闸共用 ErrSettingsTooNew 专用 Code：friendlyError 命中 Code 映射即丢弃
+	// Reason/Suggestion（errors.ts `if (key) return t(key)`），「请升级程序后导入」的
+	// 指引必须由 i18n 分类文案本身承载——复用 UNSUPPORTED_FORMAT 会把它吞成「不支持的格式」。
 	if exp.ExportVersion > settingsExportVersion {
-		return exp, fmt.Errorf("导出文件版本(%d)高于当前程序支持的版本(%d)，请升级程序后导入", exp.ExportVersion, settingsExportVersion)
+		return exp, types.AppError{
+			Code:       types.ErrSettingsTooNew,
+			Operation:  "导入设置",
+			Reason:     fmt.Sprintf("导出文件版本(%d)高于当前程序支持的版本(%d)", exp.ExportVersion, settingsExportVersion),
+			Suggestion: "请升级程序后导入",
+		}
 	}
-	// 配置 schema 与文件格式是两套独立版本：ExportVersion 门控过 ≠ AppConfig 可安全解释。
-	// 高 schema 配置来自更高版本程序（其结构迁移规则本程序不存在），按旧结构直读会静默
-	// 错读、再落盘还会把高版本章焊死——与 ExportVersion 对称补上这道闸（锐评 2026-10-16）。
-	// 配置 schema 与文件格式是两套独立版本：ExportVersion 门控文件格式，不门控裹在
-	// 里面的 AppConfig.SchemaVersion。高 schema 配置（新版程序改结构后导出、旧版导入）
-	// 会被 applyConfigMigrations 按 `>= 当前版本` 跳过迁移，旧程序按旧结构静默错读、
-	// 再落盘把高版本章焊死——与 ExportVersion 对称补上这道闸（锐评 2026-10-16）。
-	// R13：AppError 化（Code 走已映射的 UNSUPPORTED_FORMAT，friendlyError 有 i18n 归宿）。
 	if exp.AppConfig.SchemaVersion > types.SchemaVersion {
 		return exp, types.AppError{
-			Code:       types.ErrUnsupportedFmt,
+			Code:       types.ErrSettingsTooNew,
 			Operation:  "导入设置",
 			Reason:     fmt.Sprintf("导出文件的配置版本(%d)高于当前程序支持的版本(%d)", exp.AppConfig.SchemaVersion, types.SchemaVersion),
 			Suggestion: "请升级程序后导入",

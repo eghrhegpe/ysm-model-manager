@@ -219,6 +219,12 @@ const (
 	ErrIO              ErrorCode = "IO_ERROR"
 	ErrLinkFailed      ErrorCode = "LINK_FAILED"
 	ErrUnknown         ErrorCode = "UNKNOWN"
+	// ErrSettingsTooNew 设置导出/配置来自更高版本程序（导出格式版本或配置 schema 超过
+	// 本程序支持面）。专用 Code 而非复用 UNSUPPORTED_FORMAT：friendlyError 命中 Code 映射
+	// 即丢弃 Reason/Suggestion 只显示分类文案（errors.ts `if (key) return t(key)`），
+	// 复用会把「请升级程序后导入」这一唯一行动指引吞成「不支持的格式」——升级指引必须是
+	// i18n 分类文案本身。锐评 2026-10-16（对抗审计 P1）。
+	ErrSettingsTooNew ErrorCode = "SETTINGS_TOO_NEW"
 )
 
 // ErrMcRootNotSet 哨兵错误：游戏根目录未配置（替代裸字符串 "请先设置游戏根目录"）。

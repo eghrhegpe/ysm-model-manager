@@ -1200,6 +1200,8 @@ export const ja: Record<string, string> = {
   "error.writeFailed": "書き込みに失敗しました",
   "error.ioError": "I/O エラー",
   "error.linkFailed": "リンクに失敗しました",
+  "error.settingsTooNew":
+    "設定ファイルが本プログラムより新です。アップグレード後にインポートしてください",
   "settings.path.selectDir": "ディレクトリを選択",
   "settings.path.updated": "パスを更新しました",
   "settings.path.set": "パスを設定しました",

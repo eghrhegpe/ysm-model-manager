@@ -58,6 +58,7 @@ const STRING_RETURN_ALLOWLIST = new Set([
   // ---- 真字符串：路径/配置 ----
   "GetYSMRepoRoot",
   "GetConfigPath",
+  "ExportSettingsJSON", // 返回导出文件的绝对路径（ADR-344-d1；UI 显示+复制），真字符串
   "GetDefaultRepoRoot",
   "FindPreviewImage",
   "ExtractPreviewTexture",

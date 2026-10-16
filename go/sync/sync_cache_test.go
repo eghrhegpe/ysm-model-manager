@@ -14,11 +14,36 @@ func TestSyncScanCache_LoadStore(t *testing.T) {
 	var cache sync.Map
 	root := filepath.Join(t.TempDir(), "scan")
 	key := syncDirectoryScanKey{kind: "folder", root: root, rtype: "ysm"}
-	storeSyncScanCache(&cache, key, map[string]string{"a": filepath.Join(root, "a")})
+	storeSyncScanCache(&cache, key, map[string]string{"a": filepath.Join(root, "a")}, syncCacheEpochOf())
 
 	got, ok := loadSyncScanCache[map[string]string](&cache, key)
 	if !ok || got["a"] != filepath.Join(root, "a") {
 		t.Fatalf("缓存应命中并返回值，got=%v ok=%v", got, ok)
+	}
+}
+
+func TestSyncScanCache_StaleEpochRejected(t *testing.T) {
+	// 锁 P1-4 代际守卫：计算期间缓存被失效（epoch 前进）后，陈旧 store 必须被丢弃——
+	// 否则「刚失效又被旧结果重新 Store」会让失效白做，最坏 30s 读到旧数据。
+	var cache sync.Map
+	root := filepath.Join(t.TempDir(), "scan")
+	key := syncDirectoryScanKey{kind: "folder", root: root, rtype: "ysm"}
+
+	// 模拟：load-miss 捕获 epoch=E → 计算期间 InvalidateSyncScanCaches 前进到 E+1 → store(E)
+	staleEpoch := syncCacheEpochOf()
+	InvalidateSyncScanCaches()
+	storeSyncScanCache(&cache, key, map[string]string{"a": filepath.Join(root, "a")}, staleEpoch)
+
+	if _, ok := loadSyncScanCache[map[string]string](&cache, key); ok {
+		t.Fatal("陈旧代际的 store 应被丢弃，缓存不得命中")
+	}
+
+	// 对照：失效后重新捕获 epoch 再 store → 应命中
+	freshEpoch := syncCacheEpochOf()
+	storeSyncScanCache(&cache, key, map[string]string{"a": filepath.Join(root, "a")}, freshEpoch)
+	got, ok := loadSyncScanCache[map[string]string](&cache, key)
+	if !ok || got["a"] != filepath.Join(root, "a") {
+		t.Fatalf("新鲜代际的 store 应命中，got=%v ok=%v", got, ok)
 	}
 }
 

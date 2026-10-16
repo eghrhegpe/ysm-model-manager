@@ -27,13 +27,16 @@ func BuildSyncItems(ins *types.VersionInstance, rtypes []registry.ResourceType, 
 	// subtype 参数仅参与 buildSyncItemsKey 缓存区分——清单式扫路径限定目录的实际
 	// 分支由 processOneResourceType 内部 instDir=FindInstDir 决定（subtype 版本已
 	// 在调用方写入 ins.VersionDir 后缀，此处透明读取），保持现状口径不新增。
+	// 代际守卫基准：load-miss 后立即捕获，put 前比对（锐评 P1-4）——计算期间被
+	// InvalidateSyncItemsCache 清空则丢弃陈旧结果，防「刚失效又被旧结果重新 Store」。
+	epoch := syncItemsCache.epochOf()
 	var items []types.ResourceSyncItem
 	for _, rt := range rtypes {
 		items = append(items, processOneResourceType(rt, ins.VersionDir, filesRoots)...)
 	}
 
 	// 阶段 ③：写缓存（clone 一次防调用方改返回值污染缓存；读端也 clone 一次）
-	syncItemsCache.put(key, cloneSyncItems(items))
+	syncItemsCache.put(key, cloneSyncItems(items), epoch)
 	return items
 }
 

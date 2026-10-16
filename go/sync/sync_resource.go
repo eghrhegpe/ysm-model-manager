@@ -160,6 +160,8 @@ func collectResourceEntries(rootDir, rtypeID string, isPackFolderType bool, scan
 	if cached, ok := loadSyncScanCache[map[string]DiffEntry](&syncResourcesScanCache, cacheKey); ok {
 		return cached
 	}
+	// 代际守卫基准：load-miss 后立即捕获，Walk 结束 store 前比对（锐评 P1-4）。
+	epoch := syncCacheEpochOf()
 	st := &walkEntryState{
 		rootDir:          rootDir,
 		isPackFolderType: isPackFolderType,
@@ -185,7 +187,7 @@ func collectResourceEntries(rootDir, rtypeID string, isPackFolderType bool, scan
 	// 完整 Walk 才入缓存：rootFailed 已短路，partialFail 时残缺 entries 不入缓存，
 	// 避免后续 30s 内调用方拿到不完整结果
 	if !st.rootFailed && !st.partialFail {
-		storeSyncScanCache(&syncResourcesScanCache, cacheKey, st.entries)
+		storeSyncScanCache(&syncResourcesScanCache, cacheKey, st.entries, epoch)
 	}
 	return st.entries
 }

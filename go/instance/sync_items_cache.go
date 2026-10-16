@@ -2,6 +2,7 @@ package instance
 
 import (
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"ysm-model-manager/go/scanner"
@@ -28,11 +29,18 @@ type syncItemsCacheEntry struct {
 type syncCache struct {
 	mu    sync.Mutex
 	items map[string]*syncItemsCacheEntry
+	// epoch 缓存代际：clear（scanner 失效钩子级联）递增。BuildSyncItems 在 load-miss 后
+	// 立即捕获，put 前比对——计算期间缓存被失效则丢弃陈旧结果，防「刚失效又被旧结果
+	// 重新 Store」导致失效白做（2026-10-16 锐评 P1-4，对齐 scanner.cacheGen 同款竞态护栏）。
+	epoch atomic.Uint64
 }
 
 func newSyncCache() *syncCache {
 	return &syncCache{items: make(map[string]*syncItemsCacheEntry)}
 }
+
+// epochOf 返回当前代际（load-miss 后立即捕获，作本次计算的 put 前比对基准）。
+func (c *syncCache) epochOf() uint64 { return c.epoch.Load() }
 
 // get 命中未过期返回条目克隆；命中已过期惰性删除并返回未命中（调用方重算）。
 // 读写同一把锁：BuildSyncItems 单次调用只触及一次缓存，无并发热点，从简。
@@ -50,14 +58,19 @@ func (c *syncCache) get(key string) ([]types.ResourceSyncItem, bool) {
 	return nil, false
 }
 
-// put 写入缓存（items 由调用方传入克隆件，组件不再复制——调用点已就近 clone）
-func (c *syncCache) put(key string, items []types.ResourceSyncItem) {
-	c.putAt(key, items, time.Now().Add(scanner.EffectiveCacheTTL()))
+// put 写入缓存（items 由调用方传入克隆件，组件不再复制——调用点已就近 clone）。
+// epoch 为 load-miss 时捕获的代际：若期间 clear 已推进代际则丢弃陈旧结果（锐评 P1-4）。
+func (c *syncCache) put(key string, items []types.ResourceSyncItem, epoch uint64) {
+	c.putAt(key, items, time.Now().Add(scanner.EffectiveCacheTTL()), epoch)
 }
 
 // putAt 写入并显式指定过期时刻（生产走 put；测试用它构造长寿命哨兵条目）
-func (c *syncCache) putAt(key string, items []types.ResourceSyncItem, expiresAt time.Time) {
+func (c *syncCache) putAt(key string, items []types.ResourceSyncItem, expiresAt time.Time, epoch uint64) {
 	c.mu.Lock()
+	if c.epoch.Load() != epoch {
+		c.mu.Unlock()
+		return
+	}
 	c.items[key] = &syncItemsCacheEntry{
 		items:     items,
 		expiresAt: expiresAt,
@@ -80,9 +93,11 @@ func (c *syncCache) peek(key string) bool {
 	return true
 }
 
-// clear 清空全部条目（scanner 失效钩子与显式失效入口共用）
+// clear 清空全部条目（scanner 失效钩子与显式失效入口共用）。
+// 同步推进 epoch：让正在计算的陈旧 put 在写入前被拒绝（对齐 scanner.cacheGen）。
 func (c *syncCache) clear() {
 	c.mu.Lock()
 	c.items = make(map[string]*syncItemsCacheEntry)
 	c.mu.Unlock()
+	c.epoch.Add(1)
 }

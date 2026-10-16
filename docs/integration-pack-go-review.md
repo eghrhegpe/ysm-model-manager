@@ -51,6 +51,7 @@
 - **问题**：`instance.BuildSyncItems`（`go/instance/instance_tree.go:15`）与 `instance.go:325/327` 的读取是**锁外**的（UI 树路径），可在一次 push 持锁失效期间并行读到失效前起算的旧条目，最坏到 30s TTL 才刷新。scanner 用 `cacheGen` 消除了同类问题，但这一护栏没下沉到三层派生缓存。
 - **根因**：派生缓存通过 `scanner.EffectiveCacheTTL()`（`scanner.go:185-187`）只继承了"刷新周期"这一半协议，没继承"失效代际"那一半。
 - **建议方向**：派生缓存 key 里带上 `scanner.EffectiveCacheGen()`，或在 `Invalidate*` 时递增共享 token，使"失效前在途的 Store"落地即被视为过期。
+- ✅ **已修**（本提交）：派生缓存各自持代际 token——`go/sync/sync_cache.go` 增 `var syncCacheEpoch atomic.Uint64`，`InvalidateSyncScanCaches()` 首行递增，`storeSyncScanCache[T](…, epoch)` 写前比对；三个 collect 入口（`collectResourceEntries` / `collectEntries` 闭包 / `collectEntriesWalkCached` / `collectFolderFiles`）在 load-miss 后立即捕获、store 前比对。`go/instance/sync_items_cache.go` 的 `syncCache` 结构体加 `epoch atomic.Uint64`，`clear()` 末尾递增，`put/putAt` 写前比对；`BuildSyncItems` load-miss 后捕获。因 `InvalidateCache` 与 `InvalidatePath` 都经 `notifyCacheInvalidated()` 级联清全部派生缓存，单一 token 即可覆盖两类失效。回归锁：`TestSyncScanCache_StaleEpochRejected` / `TestSyncItemsCache_StaleEpochRejected`（突变禁用守卫→红，恢复→绿）。
 
 ### P1-5　`IsSupportedExt` 每次调用都走 `LoadRegistry()` 的全局 Mutex
 - **文件:行**：`go/types/registry/extensions.go:151-154` `IsSupportedExt` 每调必 `LoadRegistry()`；`LoadRegistry()` 在 `resource.go:179-181` 用 `registryMu.Lock()`（刻意弃 sync.Once 以避免 SetRegistryPath 竞态）。

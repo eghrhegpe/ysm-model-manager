@@ -202,6 +202,8 @@ func collectFolderFiles(folder, rtype string) map[string]string {
 	if cached, ok := loadSyncScanCache[map[string]string](&syncFolderScanCache, cacheKey); ok {
 		return cached
 	}
+	// 代际守卫基准（锐评 P1-4）：load-miss 后立即捕获，Walk 结束 store 前比对。
+	epoch := syncCacheEpochOf()
 	// 回调恒返回 nil（含 folder 不存在首回调 err→partialFail），外层返回恒 nil，
 	// 按最佳努力忽略，与其余 Walk 收口口径一致
 	_ = filepath.Walk(folder, func(path string, info os.FileInfo, err error) error {
@@ -232,7 +234,7 @@ func collectFolderFiles(folder, rtype string) map[string]string {
 	// 完整 Walk 才入缓存（对齐 sync.go 双守卫）：子树读失败时残缺结果不入缓存当权威。
 	// partialFail 已覆盖 folder 不存在（首回调即 err），原 os.Stat 守卫与完整性无关。
 	if !partialFail {
-		storeSyncScanCache(&syncFolderScanCache, cacheKey, entries)
+		storeSyncScanCache(&syncFolderScanCache, cacheKey, entries, epoch)
 	}
 	return entries
 }

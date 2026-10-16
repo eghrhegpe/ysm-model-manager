@@ -48,6 +48,7 @@ perf:
 
 - `go/sync/sync_cache.go` — sync 扫盘缓存三类 kind：`resources`（`map[string]DiffEntry`）/ `dirlevel`（`map[string]dirLevelUnit`）/ `folder`（`map[string]string`），共用泛型模板 `loadSyncScanCache` / `storeSyncScanCache`；`InvalidateSyncScanCaches` 全量清空，经 `RegisterInvalidationHook` 挂 `scanner.OnCacheInvalidated` 自动联动
 - `go/instance/sync_items_cache.go` — instance 结果缓存：类型化组件 `syncCache`（2026-09-14 锐评刀①从裸 `sync.Map` 收编），key = `buildSyncItemsKey` 的 xxhash 十六进制摘要（读 `ins.Name/VersionDir/subtype/filesRoots/rtypes`），`get` 命中返克隆件、惰性删过期条目
+- **代际护栏（2026-10-16，锐评 P1-4）**：`storeSyncScanCache` 与 `syncCache.put/putAt` 都带 `epoch uint64` 参数——`InvalidateSyncScanCaches` / `syncCache.clear` 分别递增 `syncCacheEpoch` / `syncCache.epoch`，各 collect 入口在 load-miss 后立即捕获、写前比对；计算期间缓存被失效则丢弃陈旧结果，防「刚失效又被旧结果重新 Store」最坏 30s 读到旧数据（对齐 `scanner.cacheGen`）。因 `scanner.InvalidateCache` 与 `InvalidatePath` 都经 `notifyCacheInvalidated` 级联清全部派生缓存，单一 token 即可覆盖两类失效。回归锁：`TestSyncScanCache_StaleEpochRejected` / `TestSyncItemsCache_StaleEpochRejected`
 - `tests/test_sync_write_cache_pairing.ts` + `scripts/_lib/write-surface-gate.ts` — 结构守卫：候选写面**从 go/sync + go/installer + go/importer 三包导出面自动派生**，app 层每个 `pkg.X(` 调用点三选一归宿，漏归类当场红
 
 ## 不变量（配对契约）

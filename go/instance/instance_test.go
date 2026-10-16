@@ -892,7 +892,7 @@ func TestBuildSyncItems_ResultCacheHitReturnsCloneAndInvalidateClears(t *testing
 	syncItemsCache.putAt(key, []types.ResourceSyncItem{{
 		Path: "/sentinel", Name: "sentinel",
 		Status: types.SyncStatusSynced, Type: "ysm",
-	}}, time.Now().Add(time.Hour))
+	}}, time.Now().Add(time.Hour), syncItemsCache.epochOf())
 
 	got := BuildSyncItems(ins, rtypes, roots, "")
 	if len(got) != 1 || got[0].Name != "sentinel" {
@@ -913,6 +913,28 @@ func TestBuildSyncItems_ResultCacheHitReturnsCloneAndInvalidateClears(t *testing
 	}
 }
 
+// TestSyncItemsCache_StaleEpochRejected 锁 P1-4 代际守卫：计算期间缓存被 clear（epoch 前进）
+// 后，陈旧 put 必须被丢弃——否则「刚失效又被旧结果重新 Store」会让失效白做，最坏 30s 读到
+// 陈旧同步结果。对齐 scanner.cacheGen / keyVersions 已解决的同类竞态。
+func TestSyncItemsCache_StaleEpochRejected(t *testing.T) {
+	key := "stale-epoch-key"
+	staleEpoch := syncItemsCache.epochOf()
+	InvalidateSyncItemsCache()
+	syncItemsCache.putAt(key, []types.ResourceSyncItem{{Path: "/stale", Name: "stale"}},
+		time.Now().Add(time.Hour), staleEpoch)
+	if syncItemsCache.peek(key) {
+		t.Fatal("陈旧代际的 put 应被丢弃，缓存不得命中")
+	}
+
+	// 对照：失效后重新捕获 epoch 再 put → 应命中
+	freshEpoch := syncItemsCache.epochOf()
+	syncItemsCache.putAt(key, []types.ResourceSyncItem{{Path: "/fresh", Name: "fresh"}},
+		time.Now().Add(time.Hour), freshEpoch)
+	if !syncItemsCache.peek(key) {
+		t.Fatal("新鲜代际的 put 应命中")
+	}
+}
+
 // TestBuildSyncItems_ScannerInvalidateClearsResultCache 锁定 scanner 失效钩子：
 // scanner.InvalidateCache 必须连带清空 instance 的同步结果缓存。
 func TestBuildSyncItems_ScannerInvalidateClearsResultCache(t *testing.T) {
@@ -925,7 +947,7 @@ func TestBuildSyncItems_ScannerInvalidateClearsResultCache(t *testing.T) {
 	syncItemsCache.putAt(key, []types.ResourceSyncItem{{
 		Path: "/sentinel", Name: "sentinel",
 		Status: types.SyncStatusSynced, Type: "ysm",
-	}}, time.Now().Add(time.Hour))
+	}}, time.Now().Add(time.Hour), syncItemsCache.epochOf())
 
 	scanner.InvalidateCache()
 	if syncItemsCache.peek(key) {

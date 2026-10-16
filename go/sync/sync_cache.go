@@ -15,6 +15,7 @@ package sync
 
 import (
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"ysm-model-manager/go/scanner"
@@ -68,10 +69,18 @@ var (
 	syncFolderScanCache    sync.Map // syncDirectoryScanKey -> *syncDirectoryScanEntry (map[string]string)
 )
 
+// syncCacheEpoch 同步缓存代际：InvalidateSyncScanCaches（scanner 失效钩子级联）递增。
+// collect 类计算（全树 Walk + 旁挂哈希）可耗时数秒，load-miss 后立即捕获 epoch，Store 前
+// 比对：计算期间缓存被失效则丢弃本次结果，防止「刚失效又被旧结果重新 Store」导致失效
+// 白做（2026-10-16 锐评 P1-4，对齐 scanner.cacheGen / keyVersions 已解决的同类竞态）。
+// atomic：Wails 绑定线程与 watcher/后台任务并发读写。
+var syncCacheEpoch atomic.Uint64
+
 // InvalidateSyncScanCaches 清空全部同步目录扫描结果缓存。
 // scanner.InvalidateCache/InvalidatePath 会自动调用。2026-10-16 锐评 P0-① 后 go/sync 写操作
 // 一律 defer scanner.InvalidateCache() 经此清自身缓存；app 层配对显式调用保留作防御纵深。
 func InvalidateSyncScanCaches() {
+	syncCacheEpoch.Add(1)
 	syncResourcesScanCache.Range(func(k, _ interface{}) bool {
 		syncResourcesScanCache.Delete(k)
 		return true
@@ -108,7 +117,16 @@ func loadSyncScanCache[T any](cache *sync.Map, key any) (T, bool) {
 	return zero, false
 }
 
-func storeSyncScanCache[T any](cache *sync.Map, key any, value T) {
+// syncCacheEpochOf 返回当前代际——必须在 load-miss 之后、开始耗时计算之前捕获，
+// 作为本次计算 store 前的比对基准（捕获晚于计算开始会失去竞态保护意义）。
+func syncCacheEpochOf() uint64 { return syncCacheEpoch.Load() }
+
+func storeSyncScanCache[T any](cache *sync.Map, key any, value T, epoch uint64) {
+	// 代际守卫：计算期间缓存被失效（syncCacheEpoch 已前进）则丢弃陈旧结果。
+	// 丢的不是缓存、是本次计算——下次 load-miss 会重算，代价等同多一次失败写入。
+	if syncCacheEpoch.Load() != epoch {
+		return
+	}
 	cache.Store(key, &syncDirectoryScanEntry{
 		value: value,
 		// 写缓存时刻取当前生效 TTL（scanner 单一事实源，随 AppConfig.ScanCacheTTLMs 变化）

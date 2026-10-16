@@ -304,7 +304,7 @@
 | useCurrentResourceType | `frontend/src/features/repo/repo-rtype.ts` | 21 |
 | initRepositoryPage | `frontend/src/views/app-content/init-pages.ts` | 129 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 229 |
-| connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 125 |
+| connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 121 |
 | _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 301 |
 
 ### `repo:search-creator`
@@ -381,7 +381,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 116 |
+| connectedCallback | `frontend/src/views/app-sidebar/index.ts` | 112 |
 | _subscribeBus | `frontend/src/views/app-sync-manager/index.ts` | 282 |
 
 ### `sync:toggle:status`

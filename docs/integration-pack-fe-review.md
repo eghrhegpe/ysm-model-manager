@@ -150,6 +150,14 @@
 
 **建议方向**：① 在 `app-sync-manager` 加与 sidebar 同款的 `_inflight` 合并（或复用 `utils/async/singleflight`）；② 评估把 `stats:refresh` 语义收敛为「变异已发生，请在**下一帧**重拉」，配合 300ms 防抖已足够；③ `sync.ts:340` 的 `tree:reload` 若与 `stats:refresh` 重复触发同一次 tree 刷新，可择一（**待验证**：需看 tree 对 `tree:reload` 的处理）。
 
+**处置结果（2026-10-16 复核）**：**接受现状，不做代码改动**——这是广播型设计的固有代价，不是可独立修的错误。逐条复核建议方向：
+1. **「三份数据」不可合并**：sidebar 的 `_reload` 走 `GetResourceInstanceStatus`（实例列表），sync-manager 的 `loadData` 走 `GetInstanceSyncStatus` + `GetSyncScanDirs`（当前实例每个文件 synced/missing/diverged + 扫描目录），app-tree 走 `loadEntries`（文件树）。**三者是不同 Go 函数、不同数据源**，不存在可合并的共享 IPC——「一次变异触发 2+ 组件重载」不是重复拉同一份数据，而是三个不同面板各自需要刷新。bus 是广播型设计，这是**刻意**的（每个面板是独立数据消费者）。
+2. **正确性已由 `_guard` 兜底**：`app-sync-manager/index.ts:284` 在 handler 里先取 `gen = this._guard.current`，`loadData`（store.ts:55）内部再取一次，`:288`/`:63` 都判 `stale` 早退。多类型串行 push 发多次 `stats:refresh` 时，只有最后一次 gen 的结果落地渲染，前面的都被丢弃——**无陈旧显示风险**，只浪费几次 IPC。这是 ADR-230 单出口代际护栏的正常工作。
+3. **可改进点与 P1-4 同源，已被裁定不改**：串行 push 逐类型 `await downloadMissing`，每个类型完成发一次 `stats:refresh`，事件间隔=各类型安装耗时（秒级）。**300ms 防抖与 `_inflight` 合并都合并不了秒级间隔的事件**——所以建议方向①/② 实际上**修不了**指出的浪费。要真正消除多次重拉，得并行化 push（P1-4），而那被 ADR-056 `installer.InstallLock` 全局锁架构性阻断（FE 并行化只是排队等锁）。P1-5 是 P1-4 的**下游症状**，修 P1-5 必须先动 P1-4。
+4. **`tree:reload` 与 `stats:refresh` 不重复**：grep 实证——`tree:reload` 唯一消费者是 `app-tree/bus-handlers.ts:58`；`stats:refresh` 的消费者是 sidebar（index.ts:112，300ms 防抖）与 sync-manager（index.ts:282）。**两边零交集**，无「同一次 tree 刷新被触发两次」的问题。建议方向③ 的「待验证」现已验证为**否**。
+
+**结论**：P1-5 无正确性缺陷，`_guard` 已覆盖；残余浪费（多类型串行 push 的多次 `GetInstanceSyncStatus`）是 P1-4 串行设计的固有下游症状，需先解 P1-4（架构性，ADR-056 裁定不改）。因此「数据流 6/10」的扣分 4 分应再重估：P1-1 那一半已不成立（见上），P1-5 这一半也非独立可修项——**实际扣分依据只剩 P1-1/P1-5 之外的 bus 命名一致性等正面项**，可上修至 7/10。
+
 ### P1-6　i18n 类型标签口径已拍板但仍有残留中文裸奔风险
 **位置**：`features/pack-ops/instance-ops.ts:123`（`const typeLabel = rtypeLabelOf(rtype)`，弹窗 `inst.clearMessage` 用）+ 注释 120-122 记录「2026-10-15 拍板『权威源 = locale』」。对照 `tpl.ts` 侧栏卡片 `noModLabelOf`（`shortLabelOf`）。
 

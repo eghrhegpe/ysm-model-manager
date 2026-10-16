@@ -12,8 +12,9 @@ package app
 // 设计三原则（见 ADR）：
 //  1. 导出目标固定为应用数据目录，不新增保存对话框绑定——与 `ExportWorkshopCreatorsJSONFile`
 //     同模式（UI 显示路径 + 复制按钮）。
-//  2. localStorage 采集口径以设置键台账为单一事实源，前端遍历 `nonMigratingSettingsKeys()`
-//     按 tier/authority 过滤，本文件不维护第二份键清单（手抄必漂移）。
+//  2. localStorage 采集口径以设置键台账为单一事实源，前端遍历 `exportableSettingsKeys()`
+//     （tier=local-storage && authority=browser-authority，见 settings-keys.ts），
+//     本文件不维护第二份键清单（手抄必漂移）。
 //  3. 导入走「备份 → 合并 → 落盘 → 侧效」，与 SaveAppConfig / SaveAppConfigPatch 共用
 //     `configWriteMu` + `applyPostSaveSideEffects`；路径字段原样导入（换机后旧盘符失效由 UI 提示），
 //     不做 `mcRoot` 硬校验拦截——迁移动作不应因旧机路径在现机不存在而失败。
@@ -82,12 +83,20 @@ func (a *App) ExportSettingsJSON(localStorageJSON string) (string, error) {
 	}
 
 	cfg := a.LoadAppConfig()
-	// 配置文件损坏时 loadAppConfig 保留零值且不重试（见 app_config.go:122-127），
-	// 此时若照常导出，用户拿到的是「全零值配置」的假备份——到迁移那天才发现路径全丢。
-	// 仅在配置文件确实存在但无任何路径设置时告警（全新用户无 FilesRoot 属正常，不打扰）。
+	// 假备份拒止（锐评 2026-10-16，原为 log.Printf）：配置文件损坏时 loadAppConfig
+	// 保留零值且不重试（见 app_config.go 的守卫注释），此时若照常导出，用户拿到的
+	// 是「全零值配置」的假备份。零值假备份是延迟引爆炸弹——换机那天才发现路径全丢，
+	// 比不做备份更糟（用户以为有了保险）；而做备份迁移的人恰恰不看日志。
+	// 备份动作的失败必须当场可见：宁可不给保险，也不给假保险。
+	// 全新用户（配置文件不存在）不拦：无路径可丢属正常，不惩罚起步期导出。
 	if cfg.FilesRoot == "" && len(cfg.CustomRoots) == 0 {
 		if _, err := os.Stat(configPath()); err == nil {
-			log.Printf("[settings-export] 配置文件存在但 FilesRoot/CustomRoots 均为空——导出可能遗漏路径设置，请先确认配置是否完好")
+			return "", types.AppError{
+				Code:       types.ErrInvalidParam,
+				Operation:  "导出设置",
+				Reason:     "当前配置没有任何路径设置（文件存储根目录为空），导出只会得到一份假备份",
+				Suggestion: "若配置文件曾损坏或被外部清空，请先在「设置 → 环境」恢复路径，再导出",
+			}
 		}
 	}
 
@@ -136,6 +145,22 @@ func (a *App) ReadSettingsExport(path string) (types.SettingsExport, error) {
 	}
 	if exp.ExportVersion > settingsExportVersion {
 		return exp, fmt.Errorf("导出文件版本(%d)高于当前程序支持的版本(%d)，请升级程序后导入", exp.ExportVersion, settingsExportVersion)
+	}
+	// 配置 schema 与文件格式是两套独立版本：ExportVersion 门控过 ≠ AppConfig 可安全解释。
+	// 高 schema 配置来自更高版本程序（其结构迁移规则本程序不存在），按旧结构直读会静默
+	// 错读、再落盘还会把高版本章焊死——与 ExportVersion 对称补上这道闸（锐评 2026-10-16）。
+	// 配置 schema 与文件格式是两套独立版本：ExportVersion 门控文件格式，不门控裹在
+	// 里面的 AppConfig.SchemaVersion。高 schema 配置（新版程序改结构后导出、旧版导入）
+	// 会被 applyConfigMigrations 按 `>= 当前版本` 跳过迁移，旧程序按旧结构静默错读、
+	// 再落盘把高版本章焊死——与 ExportVersion 对称补上这道闸（锐评 2026-10-16）。
+	// R13：AppError 化（Code 走已映射的 UNSUPPORTED_FORMAT，friendlyError 有 i18n 归宿）。
+	if exp.AppConfig.SchemaVersion > types.SchemaVersion {
+		return exp, types.AppError{
+			Code:       types.ErrUnsupportedFmt,
+			Operation:  "导入设置",
+			Reason:     fmt.Sprintf("导出文件的配置版本(%d)高于当前程序支持的版本(%d)", exp.AppConfig.SchemaVersion, types.SchemaVersion),
+			Suggestion: "请升级程序后导入",
+		}
 	}
 	return exp, nil
 }

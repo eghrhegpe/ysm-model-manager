@@ -18,9 +18,14 @@ interface MenuItemsSink {
   setAdapterItems(items: PreviewMenuNode[]): void;
 }
 
+/** visible 持久化键前缀（台账登记名 ysm:model-visible:*）。拼接键必须以 * 常量形态声明，
+ *  契约测试的 `_PREFIX` 口径才扫得到（tests/test_settings_key_ledger.ts）；藏在函数体内
+ *  拼接会让台账对账失明、换机静默丢（2026-10-16 拼接键口径收编）。 */
+const MODEL_VISIBLE_PREFIX = "ysm:model-visible:";
+
 /** visible 持久化键（按模型 path；隐私模式下 safe* 静默降级，不影响会话内行为） */
 function visKey(path: string): string {
-  return `ysm:model-visible:${path}`;
+  return MODEL_VISIBLE_PREFIX + path;
 }
 
 /** 恢复某 path 的持久化可见性（缺省 true = 显示） */

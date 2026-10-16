@@ -7,12 +7,12 @@
 // 「localStorage 里的候选键」，锁「占位符必须展开成真键才能被采集/回写」——只锁登记名
 // 对账的契约测试（tests/test_settings_key_ledger.ts）不覆盖这条，见知识卡 settings-persistence.md。
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { nonMigratingSettingsKeys, type SettingsKeyEntry } from "@/settings-keys";
+import { exportableSettingsKeys, type SettingsKeyEntry } from "@/settings-keys";
 
 const storageMock = vi.hoisted(() => ({
   isStorageAccessible: vi.fn((): boolean => true),
   safeGet: vi.fn((_key: string): string | null => null),
-  safeSet: vi.fn(() => {}),
+  safeSet: vi.fn((_key: string, _val: string): boolean => true),
   safeRemove: vi.fn(() => {}),
   safeKeys: vi.fn((): string[] => []),
 }));
@@ -26,13 +26,8 @@ import {
 } from "./settings-backup.ts";
 
 /** 台账中「随导出带走」且无 keyPattern 的键（登记名即真实键） */
-const exactExportableKeys = nonMigratingSettingsKeys()
-  .filter(
-    (e) =>
-      e.tier === "local-storage" &&
-      e.authority === "browser-authority" &&
-      !e.keyPattern,
-  )
+const exactExportableKeys = exportableSettingsKeys()
+  .filter((e) => !e.keyPattern)
   .map((e) => e.key);
 
 /** 键族展开的物理键示例：台账登记的占位符对应这些真实键（见各 note，工坊键用冒号分隔） */
@@ -67,8 +62,7 @@ function physicalKeys(entry: SettingsKeyEntry, candidates: string[]): string[] {
 /** 按台账 + 给定候选集推出的「应采集物理键」集合（测试基线） */
 function expectedPhysical(candidates: string[]): string[] {
   const out: string[] = [];
-  for (const entry of nonMigratingSettingsKeys()) {
-    if (entry.tier !== "local-storage" || entry.authority !== "browser-authority") continue;
+  for (const entry of exportableSettingsKeys()) {
     out.push(...physicalKeys(entry, candidates));
   }
   return [...new Set(out)].sort();
@@ -80,6 +74,7 @@ beforeEach(() => {
   storageMock.isStorageAccessible.mockReturnValue(true);
   storageMock.safeGet.mockReturnValue(null);
   storageMock.safeSet.mockReset();
+  storageMock.safeSet.mockReturnValue(true); // 默认落盘成功（不依赖 mockReset 的实现恢复语义）
   storageMock.safeRemove.mockReset();
   storageMock.safeKeys.mockReturnValue([...DEFAULT_CANDIDATES]);
 });
@@ -176,6 +171,15 @@ describe("applyImportedLocalStorage 回写面", () => {
     });
     expect(applied).toBe(0);
     expect(storageMock.safeSet).not.toHaveBeenCalled();
+  });
+
+  it("safeSet 落盘失败（隐私模式竞态/配额满）不计入 applied——「已应用 N 项」不得虚高", () => {
+    const k = exactExportableKeys[0];
+    const k2 = exactExportableKeys[1];
+    storageMock.safeSet.mockImplementation((key: string): boolean => key !== k2);
+    const applied = applyImportedLocalStorage({ [k]: "v1", [k2]: "v2" });
+    expect(applied).toBe(1);
+    expect(storageMock.safeSet).toHaveBeenCalledTimes(2);
   });
 
   it("存储不可用时一律不写并返回 0", () => {

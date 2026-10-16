@@ -71,20 +71,26 @@ function stripComments(src) {
 // 口径：safeGet/safeSet/safeGetJSON/safeRemove 的首参字面量 + localStorage.* 的字面量
 // + `const XXX_KEY = "字面量"` 形式的键常量。键常量是最常见的持有形态（很多键只在
 // 常量声明处出现一次，真正的 safeGet(someKey) 调用处是标识符不是字面量）。
+// 模板字面量（反引号）形态（锐评 2026-10-16）：安全闸首参写成 `前缀${动态}` 的拼接键，
+// 以「静态前缀 + *」通配形态参与对账——此口径立闸实测抓出三处漏登家族
+// （sb_selectedName_* / ysm-tabs-last-* / ysm:model-visible:*），其中模型可见性是
+// 用户可感知偏好，漏登即换机静默丢——本条口径把「拼接键天然隐身」的盲区收进网里。
+// 函数体内拼键（visKey 形态）不强行扩口径（误报面 = 全部 backtick HTML 模板），
+// 改键持有者收敛为 * 常量形态接既有口径（见 scene-registry.ts MODEL_VISIBLE_PREFIX）。
 function collectLocalStorageKeys(files) {
   const found = new Map(); // key -> 首个出现的文件
   for (const abs of files) {
     const text = stripComments(fs.readFileSync(abs, "utf8"));
     const r = rel(abs);
     for (const m of text.matchAll(
-      /\b(?:safeGet|safeSet|safeGetJSON|safeRemove)\(\s*"([^"]+)"/g,
+      /\b(?:safeGet|safeSet|safeGetJSON|safeRemove|localStorage\.(?:getItem|setItem|removeItem))\(\s*(?:"([^"]+)"|`([^`]*)`)/g,
     )) {
-      if (!found.has(m[1])) found.set(m[1], r);
-    }
-    for (const m of text.matchAll(
-      /\blocalStorage\.(?:getItem|setItem|removeItem)\(\s*"([^"]+)"/g,
-    )) {
-      if (!found.has(m[1])) found.set(m[1], r);
+      const raw = m[1] ?? m[2];
+      // 模板字面量：取首个 ${ 之前的静态段作前缀，登记 <前缀>* 通配
+      const dollar = raw.indexOf("${");
+      const k = dollar === -1 ? raw : `${raw.slice(0, dollar)}*`;
+      if (!k) continue;
+      if (!found.has(k)) found.set(k, r);
     }
     for (const m of text.matchAll(
       /\b[A-Z][A-Z0-9_]*(?:_KEY|_PREFIX)\s*(?::\s*string\s*)?=\s*"([^"]+)"/g,
@@ -128,7 +134,7 @@ function collectGoConfigFields() {
   // 取结构体大括号内的内容（字段声明都带 `json:"..."` tag）
   const body = text.slice(start, text.indexOf("\n}", start));
   const fields = new Map(); // jsonName -> goField
-  for (const m of body.matchAll(/^\t(\w+)\s+[\w\[\]map*.]+\s+`json:"([^",]+)/gm)) {
+  for (const m of body.matchAll(/^\t(\w+)\s+[\w[\]map*.]+\s+`json:"([^",]+)/gm)) {
     fields.set(m[2], m[1]);
   }
   return fields;
@@ -156,9 +162,10 @@ function readLedger() {
   }
   // 废弃字段以元组 + .map 批量登记（`["disk:ysmRoot", "YsmRoot", "…"]`），
   // 上一条逐字面量口径抓不到它们——它们也是磁盘轨登记，必须计入。
+  // 只收 json 名（元组第一项去前缀）：Go 字段名（第二项）不是 json 契约的一部分，
+  // 收进 diskFields 会让断言 E 把它当成幽灵字段误报（json tag 才是磁盘轨对账唯一口径）。
   for (const m of text.matchAll(/\[\s*"(disk:[^"]+)"\s*,\s*"([^"]+)"/g)) {
     diskFields.add(m[1].slice(diskPrefix.length));
-    diskFields.add(m[2]);
   }
   return { localKeys, diskFields };
 }
@@ -194,7 +201,9 @@ assert.deepStrictEqual(
   [],
   `台账存在非法 tier 值（合法：${VALID_TIERS.join(" / ")}）`,
 );
-const badAuthority = [...localKeys.values()].filter((v) => !VALID_AUTHORITIES.includes(v.authority));
+const badAuthority = [...localKeys.values()].filter(
+  (v) => !VALID_AUTHORITIES.includes(v.authority),
+);
 assert.deepStrictEqual(
   badAuthority.map((v) => v.authority),
   [],
@@ -230,7 +239,11 @@ assert.deepStrictEqual(
 // 前缀通配（台账以 `ysm-scene-cap-*` 登记）与源码里的具体键（`ysm-scene-cap-fog` 等）
 // 是「一族」关系：源码某键被登记，当且仅当存在同前缀的通配登记或精确登记。
 const unregistered = [...srcKeys.entries()]
-  .filter(([k]) => !localKeys.has(k) && ![...localKeys.keys()].some((lk) => lk.endsWith("*") && k.startsWith(lk.slice(0, -1))))
+  .filter(
+    ([k]) =>
+      !localKeys.has(k) &&
+      ![...localKeys.keys()].some((lk) => lk.endsWith("*") && k.startsWith(lk.slice(0, -1))),
+  )
   .map(([k, f]) => `${k}（${f}）`);
 assert.deepStrictEqual(
   unregistered,
@@ -270,6 +283,18 @@ assert.deepStrictEqual(
   [],
   `Go AppConfig 的这些 json 字段未被台账登记（tier:"go-disk"）：\n  ${unregisteredGo.join("\n  ")}\n` +
     `磁盘轨字段漏登记 = 备份文档与台账都会漏掉这项设置。`,
+);
+
+// ─── 断言 E（磁盘轨反向对账，锐评 2026-10-16）：台账 disk: 条目必须仍是 Go 现存 json 字段 ───
+// 断言 C 是「Go 字段 ⊆ 台账」；本断言补另一向「台账 disk: ⊆ Go 字段」，二者合起来
+// 才是双向对账——此前磁盘轨只有单向，台账挂着已删除字段的登记（幽灵条目）不会红：
+// 备份文档照旧宣传一项不存在的设置，且旧导出文件导入时该字段被解析静默丢弃，无人报信。
+const phantomDiskEntries = [...diskFields].filter((f) => !goFields.has(f));
+assert.deepStrictEqual(
+  phantomDiskEntries,
+  [],
+  `台账登记了这些 disk: 键但 Go AppConfig 已无对应 json 字段（幽灵条目）：\n  ${phantomDiskEntries.join("\n  ")}\n` +
+    `字段删除须同步删除台账登记（与 localStorage 轨的断言 A 同理——死键/幽灵都会误导备份叙事）。`,
 );
 
 console.log(

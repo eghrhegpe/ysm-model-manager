@@ -75,12 +75,14 @@ use_when:
   - 怀疑某个键有双权威（磁盘 vs localStorage 口径不一致）
 pitfalls:
   - 只备份 ysm_config.json 带不走 localStorage 轨的几十项设置——官方迁移叙事曾长期漏掉这一档（`b1116645c` 有文档无实现，2026-10-16 起由 ADR-344-d1 导出/导入收拢）
-  - 设置导出/导入的采集与回写**必须按台账白名单**（tier=local-storage && authority=browser-authority），禁手写第二份键名清单——手抄必漂移，新键漏登记即漏备份
+  - 设置导出/导入的采集与回写**必须走台账查询口 `exportableSettingsKeys()`**（判定 = tier=local-storage && authority=browser-authority，只写在台账一处），禁手写第二份键名清单、也禁在消费方复写判定——手抄必漂移，新键漏登记即漏备份
   - 台账 `keyPattern` 键族（3D 场景能力 `ysm-scene-cap-*`、工坊按站筛选态 `ysm-ws-*`）登记的是占位符，真实键由持有模块拼接——采集/回写必须展开真键，且候选键只能取自实际键（`safeKeys()` / 导出文件），禁按前缀猜键名
+  - 拼接键族的前缀必须以 `*_PREFIX` 常量形态声明；藏在函数体内裸拼 `` `ysm:x${p}` `` 会让契约测试的键扫描失明（实测三族因此漏登），新键族落地先收常量再登记
+  - 台账字段 `migrates` 只回答「复制 ysm_config.json 带不带得走」，**不回答「换机丢不丢」**——ADR-344 后后者要并看导出面；给用户列「要重设什么」用 `unbackupableSettingsKeys()`，用 `nonMigratingSettingsKeys()` 会劝人重设早已能带走的字号
   - 导入是「磁盘 + 浏览器」两轨跨进程动作，磁盘侧失败时浏览器侧**必须回滚**（Go 只备份 ysm_config.json，不备份浏览器侧）；写入键与回滚键须共用同一份白名单判定，各写一遍必漂移
-  - 磁盘侧防护：`ReadSettingsExport` 有大小上限（8 MiB），导入前备份最多保留 10 份（`.bak-时间戳`，毫秒精度）
+  - 磁盘侧防护：`ReadSettingsExport` 有大小上限（8 MiB）与**双版本门控**（文件格式 `ExportVersion` + 配置 schema `AppConfig.SchemaVersion`，两套独立编号，少一道旧程序会按旧结构静默错读新版导出）；导入前备份最多保留 10 份（`.bak-时间戳`，毫秒精度）；配置文件存在却无任何路径设置时导出**直接拒绝**（假备份比没备份更糟）
   - theme / themeAuto 跨双轨同名，台账用 disk: 前缀分列；无前缀即撞名，撞名会逼两轨塞进一行
-  - 新增 localStorage 键必须同步登记 settings-keys.ts，漏登记则契约测试转红
+  - 新增 localStorage 键必须同步登记 settings-keys.ts，漏登记则契约测试转红；拼接键族须把前缀收敛为 `*_PREFIX` 常量（函数体内裸拼接对账失明，实测漏登过三族）
   - 网页模式的「磁盘替身」是 localStorage 的 ysm:config 键，别把它当桌面磁盘轨
   - disk-authority 与 browser-authority 混用会产生双权威：读写两侧口径必须一致
 quick_groups:
@@ -115,28 +117,30 @@ quick_risk_lines:
 ## 核心职责
 
 `frontend/src/settings-keys.ts`（纯数据叶，零 import）：
-- `SETTINGS_KEYS` — 键全集，每条声明 `key` / `setting`（用户视角名称）/ `tier`（存储轨）/ `authority`（权威方）/ `migrates`（是否随标准迁移）/ `owner`（持有模块）/ `goField`（磁盘轨跨语言回溯）/ `note`
-- `findSettingsKey` / `migratingSettingsKeys` / `nonMigratingSettingsKeys` — 查询口；备份文档的「哪些跟得走 / 哪些要重设」由后两者派生
+- `SETTINGS_KEYS` — 键全集，每条声明 `key` / `setting`（用户视角名称）/ `tier`（存储轨）/ `authority`（权威方）/ `migrates`（是否随复制配置文件迁移）/ `owner`（持有模块）/ `goField`（磁盘轨跨语言回溯）/ `note`
+- `findSettingsKey` / `migratingSettingsKeys` / `nonMigratingSettingsKeys` — 迁移面查询口；**`migrates` 只回答「复制 ysm_config.json 带不走带得走」**，不回答「换机会不会丢」——ADR-344-d1 后后者还要看导出面
+- `exportableSettingsKeys` — 导出/导入**采集与回写的白名单单一事实源**（`tier=local-storage && authority=browser-authority` 的判定只写在这一处，`settings-backup.ts` 消费它，禁在消费方复写判定——两处各写一遍必漂移）；`unbackupableSettingsKeys` — 既不跟复制走也不随导出走的「真正要重设/重算」档，用户叙事应由此派生（拿 `nonMigratingSettingsKeys` 写文档会劝用户重设早已能带走的字号）
 
-`tests/test_settings_key_ledger.ts`（契约测试）五组断言：
+`tests/test_settings_key_ledger.ts`（契约测试）分组断言：
 - A 台账里的 localStorage 键必须真在源码中被使用（防死键/笔误；键族 `ysm-scene-cap-*` 走前缀通配豁免）
-- B **源码里每个 localStorage 键都必须登记**（主价值：新键漏登记即红）
+- B **源码里每个 localStorage 键都必须登记**（主价值：新键漏登记即红）。口径含双引号首参、模板字面量首参（`` `前缀${…}` `` 按「静态段+*」入网）、`*_KEY`/`*_PREFIX` 常量、`storageKey:`/`key:` 规格成员；**函数体内拼接**（`function k(p){return \`…${p}\`}`）扫描不可见——拼接键持有者必须把前缀收敛为 `*_PREFIX` 常量再拼（立闸实测抓出三族漏登，其中模型可见性是用户可感知偏好）
 - C Go `AppConfig` 每个 json 字段都必须登记（磁盘轨漏登记即红）
+- E 磁盘轨**反向**对账：台账 `disk:` 条目必须是 Go 现存 json 字段（C 只有「Go ⊆ 台账」单向，字段删除后的幽灵登记要 E 才红）
 - D 台账自洽：键名不重复、tier/authority 值合法、`migrates` 与 tier 一致
 
 ## 对外 API / 入口
 
-- `SETTINGS_KEYS` / `findSettingsKey(key)` / `migratingSettingsKeys()` / `nonMigratingSettingsKeys()` — `frontend/src/settings-keys.ts`
+- `SETTINGS_KEYS` / `findSettingsKey(key)` / `migratingSettingsKeys()` / `nonMigratingSettingsKeys()` / `exportableSettingsKeys()` / `unbackupableSettingsKeys()` — `frontend/src/settings-keys.ts`
 - 磁盘轨写入唯一入口：`views/config-write.ts|writeAppConfig(patch)` → Go `SaveAppConfigPatch`（原子 patch，ADR-349；实参点单点化始于 ADR-313），执法 `tests/test_config_write_single_exit.ts`
 - 主题读写两侧口径：`theme-core.ts|initTheme`（读）与 `views/config-write.ts|writeAppConfig`（写）——两侧都必须「磁盘优先」
 - 备份迁移用户叙事：`docs/guide/backup-migration.md`「哪些设置会跟着迁移」一节
-- 设置导出/导入（ADR-344-d1，桌面端）：前端 `views/app-content/settings/settings-backup.ts`（采集/回写浏览器偏好，白名单以台账为准）→ Go `internal/app/app_settings_export.go|ExportSettingsJSON` / `ReadSettingsExport` / `ImportSettingsFromFile`（磁盘合并、版本门控迁移、导入前备份 `ysm_config.json.bak-时间戳`，导入后前端 emit `settings:imported` 触发面板全量重建）
+- 设置导出/导入（ADR-344-d1，桌面端）：前端 `views/app-content/settings/settings-backup.ts`（采集/回写浏览器偏好，白名单 = 台账 `exportableSettingsKeys()`）→ Go `internal/app/app_settings_export.go|ExportSettingsJSON` / `ReadSettingsExport` / `ImportSettingsFromFile`。Go 侧三道闸：①`ReadSettingsExport` 大小上限 8 MiB + format 门控 + **双版本门控**（`ExportVersion` 门控文件格式、`AppConfig.SchemaVersion` 门控配置 schema——两套独立编号，缺后者旧程序会按旧结构静默错读新版导出）；②`ExportSettingsJSON` 假备份**拒止**（配置文件存在却无任何路径设置 = 损坏后零值缓存形态，直接拒绝导出而非只记日志——做备份的人不看日志，假保险比没保险更糟）；③`ImportSettingsFromFile` 导入前备份 `ysm_config.json.bak-时间戳`（最多 10 份）。回写计数只算 `safeSet` 真正落盘的键（隐私竞态/配额满不计入「已应用 N 项」）。导入后前端 emit `settings:imported` 触发面板全量重建
 
 ## 与其他子系统关系
 
-- `go/types/config.go|AppConfig` — 磁盘轨字段定义（台账断言 C 的对账对象）
+- `go/types/config.go|AppConfig` — 磁盘轨字段定义（台账断言 C 的正向对账对象、断言 E 的反向对账对象）
 - `internal/app/app_config.go|SaveAppConfig` / `LoadAppConfig` — 磁盘轨读写（含 `configWriteMu` 串行化与 `orDefault` 以旧为基语义）
-- `utils/base/primitives/storage.ts|safeGet/safeSet` — localStorage 轨唯一合规入口（隐私模式红线，禁裸调）
+- `utils/base/primitives/storage.ts|safeGet/safeSet` — localStorage 轨唯一合规入口（隐私模式红线，禁裸调）；`safeSet` 返回落盘成败（false = 隐私竞态/配额满，已记 warn），对分叉敏感的调用方（导入回写计数）须消费返回值，fire-and-forget 的 UI 偏好写忽略即可
 - `theme-core.ts` — 双写轨（theme/themeAuto）读侧；`views/app-content/settings/theme.ts` 写侧
 - `docs/guide/backup-migration.md` — 面向用户的迁移叙事，与台账同源
 
@@ -149,7 +153,9 @@ quick_risk_lines:
 5. **台账不参与运行时读写**。它是让漂移暴露的声明，不是权威——不要为了「走台账」把 safeGet 改成查表。
 6. **网页版 `ysm:config`（localStorage）是磁盘轨的网页替身**，不是桌面磁盘轨；桌面端不消费它。
 7. **结构性迁移按 `AppConfig|SchemaVersion` 门控，且只有 `applyConfigMigrations` 有权盖章**。文件版本 < 当前版本才跑迁移（旧独立路径 → `CustomRoots`）并盖版本章；≥ 则跳过（幂等）。写盘路径（`saveConfig`）**不得**越权盖章——把「未迁移」的配置标成「已迁移」会令下次读取跳过迁移，复现「启动路径漏跑迁移」的静默数据丢失。此门控取代旧「字段空不空」的启发式判据：历史多次迁移 bug（`go/types` 新增字段被白名单漏拷贝、启动路径漏跑 `migrateLegacyConfigFields`）同根于此。
-8. **设置导出/导入的键面以台账为单一事实源**。采集取 `tier=local-storage && authority=browser-authority`（go-disk 随 appConfig 走、session/non-persistent 不备份、dual-write 镜像不备份——备份镜像反而制造两处不一致）；回写白名单 = 同一集合，导出文件里未登记的键一律忽略。**台账里登记了 `keyPattern` 的键族（3D 场景能力 `ysm-scene-cap-*`、工坊按站筛选态 `ysm-ws-active-tag*` 等）必须按通配展开真键采集/回写**——`key` 只是占位符，`safeGet("ysm-scene-cap-*")` 恒 null，把占位符当真键读等于整族不迁移（正是本功能要根治的换机静默丢）。候选键只能来自 `safeKeys()`/导出文件的实际键，禁按前缀猜键名（拼接规则一变就错）。导入后必须 emit `settings:imported` 重建面板（theme/语言/路径可能已变，只刷 store 会留下 UI 与真相分叉）。
+8. **设置导出/导入的键面以台账为单一事实源**。采集/回写白名单 = `exportableSettingsKeys()`（go-disk 随 appConfig 走、session/non-persistent 不备份、dual-write 镜像不备份——备份镜像反而制造两处不一致），消费方不得复写判定。导出文件里未登记的键一律忽略。**台账里登记了 `keyPattern` 的键族（3D 场景能力 `ysm-scene-cap-*`、工坊按站筛选态 `ysm-ws-active-tag*` 等）必须按通配展开真键采集/回写**——`key` 只是占位符，`safeGet("ysm-scene-cap-*")` 恒 null，把占位符当真键读等于整族不迁移（正是本功能要根治的换机静默丢）。候选键只能来自 `safeKeys()`/导出文件的实际键，禁按前缀猜键名（拼接规则一变就错）。导入后必须 emit `settings:imported` 重建面板（theme/语言/路径可能已变，只刷 store 会留下 UI 与真相分叉）。
+9. **拼接键的可见性纪律**：动态键族的**前缀必须以 `*_PREFIX` 常量形态声明**（契约测试的 `_PREFIX`/模板首参口径只扫得到这两种形态）。藏在函数体内的模板拼接（`` return `ysm:x:${p}` ``）对账失明——新写拼接键先落常量、再登记台账 `keyPattern`，否则断言 B 扫不到、导出静默漏一族。
+10. **`migrates` 只表「随复制配置文件走」，不表「换机丢不丢」**。ADR-344-d1 后两个口径分离：可导出键 `migrates:false` 但换机带得走。用户叙事（「要重设什么」）派生自 `unbackupableSettingsKeys()`，不是 `nonMigratingSettingsKeys()`。
 
 ## 相关
 

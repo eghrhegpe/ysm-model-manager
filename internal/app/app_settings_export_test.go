@@ -72,6 +72,61 @@ func TestReadSettingsExport_RejectsForeignJSON(t *testing.T) {
 	}
 }
 
+// 跨版本配置 schema 门控（锐评 2026-10-16）：ExportVersion 门控的是**文件格式**，
+// 不门控裹在里面的 AppConfig.SchemaVersion。**高 schema** 的配置（新版程序 bump
+// schema 并改结构后导出、用户在旧版导入）会被 applyConfigMigrations 按 `>= 当前版本`
+// 跳过迁移，旧程序按旧结构读新数据静默错读，再落盘把高版本章焊死——与导出文件
+// 版本门控对称的最后一道闸。
+func TestReadSettingsExport_RejectsHigherSchemaVersion(t *testing.T) {
+	dir := t.TempDir()
+	higher := filepath.Join(dir, "future-schema.json")
+	testutil.NoError(t, os.WriteFile(higher, []byte(
+		`{"format":"ysm-settings-export","exportVersion":1,"appConfig":{"schemaVersion":99999}}`,
+	), 0o644), "写高 schema 导出")
+	if _, err := (&App{}).ReadSettingsExport(higher); err == nil {
+		t.Fatal("高于当前程序 schema 的配置不得导入（旧程序按旧结构读新数据 = 静默错读）")
+	}
+
+	// 等值 / 遗留 0 都必须放行（放行面回归：遗留文件由 applyConfigMigrations 正常迁移）
+	for i, body := range []string{
+		`{"format":"ysm-settings-export","exportVersion":1,"appConfig":{}}`,
+		`{"format":"ysm-settings-export","exportVersion":1,"appConfig":{"schemaVersion":1}}`,
+	} {
+		f := filepath.Join(dir, "ok.json")
+		testutil.NoError(t, os.WriteFile(f, []byte(body), 0o644), "写放行样本")
+		if _, err := (&App{}).ReadSettingsExport(f); err != nil {
+			t.Errorf("样本 %d 应放行: %v", i, err)
+		}
+	}
+}
+
+// 假备份拒止（锐评 2026-10-16）：配置文件存在却无任何路径设置 = loadAppConfig 在
+// JSON 损坏时保留零值不重试的形态。此前只 log.Printf，而做备份迁移的用户恰恰不看日志：
+// 零值假备份是延迟引爆炸弹——换机那天才发现路径全丢，比不做备份更糟（以为有了保险）。
+// 从静音升为拒绝导出：备份动作失败必须当场可见，宁可不给保险也不给假保险。
+func TestExportSettingsJSON_RejectsCorruptConfig(t *testing.T) {
+	// 配置文件存在但内容损坏（loadAppConfig 解析失败 → 零值缓存）
+	setConfigDirForTest(t, t.TempDir())
+	testutil.NoError(t, os.WriteFile(configPath(), []byte(`{not valid json[`), 0o644), "写损坏配置")
+	a := newLinkModeApp()
+
+	if _, err := a.ExportSettingsJSON(`{"ui-font-size":"14"}`); err == nil {
+		t.Fatal("配置文件存在但无任何路径设置时不得导出假备份（须当场报错，不能只落日志）")
+	}
+}
+
+func TestExportSettingsJSON_AllowsNewUserWithoutPaths(t *testing.T) {
+	// 放行面回归：全新用户（配置文件不存在、尚未设置路径）导出不受限——
+	// 拒止只针对「文件存在但零值」的损坏形态，不惩罚正常的首启动用户
+	setConfigDirForTest(t, t.TempDir())
+	a := newLinkModeApp()
+	path, err := a.ExportSettingsJSON(`{}`)
+	testutil.NoError(t, err, "全新用户导出应放行")
+	if path != settingsExportPath() {
+		t.Errorf("导出路径=%q want=%q", path, settingsExportPath())
+	}
+}
+
 func TestImportSettingsFromFile_RoundTripAndBackup(t *testing.T) {
 	const root = "C:/repo"
 	src := exportTestApp(t, types.AppConfig{FilesRoot: root, Theme: "dark", Mirror: "jsdelivr"})

@@ -1,6 +1,7 @@
 // ===== 设置导出/导入 逻辑层（ADR-344-d1）=====
-// 前端只负责「采集 / 回写浏览器偏好」；磁盘轨（appConfig）的合并、版本门控迁移与导入前备份
-// 由 Go 侧 `ImportSettingsFromFile` 在 configWriteMu 内完成。
+// 前端只负责「采集 / 回写浏览器偏好」；磁盘轨（appConfig）由 Go 侧 `ImportSettingsFromFile`
+// 在 configWriteMu 内**整份覆盖**（非逐字段合并：以导出配置为基，走同一套版本门控迁移 + 洗脏），
+// 落盘前先备份当前 ysm_config.json，后悔可还原备份文件。
 //
 // 单一事实源：`frontend/src/settings-keys.ts` 台账。绝不手写第二份键名清单——手抄必漂移，
 // 新键漏登记即漏备份（契约测试只锁「键集合与归属」，不锁读写语义，见 tests/test_settings_key_ledger.ts）。
@@ -10,7 +11,7 @@
 
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
-import { nonMigratingSettingsKeys, type SettingsKeyEntry } from "@/settings-keys";
+import { exportableSettingsKeys, type SettingsKeyEntry } from "@/settings-keys";
 import {
   isStorageAccessible,
   safeGet,
@@ -24,15 +25,11 @@ import { backendGetApp } from "@/views/backend-deps.ts";
 import { toastError, withBusy } from "./store.ts";
 
 /**
- * 该台账键是否随导出带走：
- * - `go-disk` 不在列——随 appConfig 走，Go 侧已收拢；
- * - `session` / `non-persistent`（缓存、哨兵、运行期派生）不备份——重启即重算，无用户意图可丢；
- * - `dual-write`（如 theme 的 localStorage 镜像）不在列——其事实源在磁盘 appConfig 里，
- *   镜像属缓存，备份它反而制造「两处不一致」的副本。
+ * 该台账键是否随导出带走：判定已收进台账查询口 `exportableSettingsKeys()`
+ * （tier=local-storage && authority=browser-authority，见 settings-keys.ts 该函数注释——
+ * 排除 go-disk 随 appConfig 走、session/non-persistent 无用户意图、dual-write 镜像备份
+ * 反而制造两处不一致）。此处不再复写一遍判定：两处各写一遍必漂移。
  */
-function isExportable(entry: SettingsKeyEntry): boolean {
-  return entry.tier === "local-storage" && entry.authority === "browser-authority";
-}
 
 /** 一个通配串（`*` 代表任意子串，至多一个）是否匹配某个候选键 */
 function matchesPattern(pattern: string, key: string): boolean {
@@ -62,8 +59,7 @@ export function collectExportableLocalStorage(): Record<string, string> {
   const out: Record<string, string> = {};
   if (!isStorageAccessible()) return out;
   const allKeys = safeKeys();
-  for (const entry of nonMigratingSettingsKeys()) {
-    if (!isExportable(entry)) continue;
+  for (const entry of exportableSettingsKeys()) {
     for (const key of entryKeysFromCandidates(entry, allKeys)) {
       const v = safeGet(key);
       if (v === null) continue;
@@ -84,8 +80,7 @@ export function importedKeysFrom(
   if (!map) return [];
   const candidates = Object.keys(map);
   const out: string[] = [];
-  for (const entry of nonMigratingSettingsKeys()) {
-    if (!isExportable(entry)) continue;
+  for (const entry of exportableSettingsKeys()) {
     for (const key of entryKeysFromCandidates(entry, candidates)) {
       if (typeof map[key] === "string") out.push(key);
     }
@@ -104,8 +99,9 @@ export function applyImportedLocalStorage(
   if (!map || !isStorageAccessible()) return 0;
   let applied = 0;
   for (const key of importedKeysFrom(map)) {
-    safeSet(key, map[key] as string);
-    applied += 1;
+    // 只认真正落盘的：safeSet 在隐私模式/配额满时返回 false（仍记 warn），
+    // 计入总数会让「已应用 N 项」虚高——分叉状态下唯一的用户线索就废了
+    if (safeSet(key, map[key] as string)) applied += 1;
   }
   return applied;
 }

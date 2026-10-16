@@ -593,13 +593,15 @@ func (a *App) GetSyncScanDirs(rtype, instanceName string) (types.SyncScanDirs, e
 // resourceTypesForSync 按 rtype 过滤同步类型清单：rtype 非空只保留该类型，
 // 避免 BuildSyncItems 扫不存在的其他类型目录；rtype 为空透传全集。
 // 未知 rtype 返回空切片（消费端按类型过滤后本就是空列表，等价且省全盘扫描）。
-// 只构造局部切片副本、绝不就地截断入参——LoadRegistry 返回进程级缓存单例，
-// 就地 `[:0]` 截断会把共享注册表永久裁剪为 ≤1 类型，后续所有 LoadRegistry 消费方
-// （LoadResourceTypes/GetAllRepoRoots/EnsureStorageDirs…）只见残缺清单
-// （code_review 67929360 P2：子代理核出共享单例被就地截断的既有隐患）。
+// **总是返回副本、绝不返回入参本身**——LoadRegistry 返回进程级缓存单例，入参
+// `all` 极可能是 `reg.ResourceTypes`（共享注册表）。若 rtype 为空时直接返回 `all`，
+// 消费方就地 `[:0]` 截断或 `append` 复用底层数组会把共享注册表永久裁剪/污染为 ≤1
+// 类型，后续所有 LoadRegistry 消费方（LoadResourceTypes/GetAllRepoRoots/
+// EnsureStorageDirs…）只见残缺清单（code_review 67929360 P2：子代理核出共享单例被
+// 就地截断的既有隐患）。锐评 P2-6：把「消费方责任」前移到本函数，调用点零风险。
 func resourceTypesForSync(all []registry.ResourceType, rtype string) []registry.ResourceType {
 	if rtype == "" {
-		return all
+		return append([]registry.ResourceType(nil), all...)
 	}
 	filtered := make([]registry.ResourceType, 0, 1)
 	for _, rt := range all {

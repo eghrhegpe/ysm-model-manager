@@ -81,6 +81,7 @@
 - **P2-4　测试隔离靠约定**：`go/sync/conflict.go:294` 包级 `var hashFileForEntries = fsutil.SHA256File` 注释明示"非并发安全，测试注入时禁 t.Parallel"；`go/sync/sync_cache.go:23-25` `registerHookOnce` 由测试注入。依赖关系只能靠注释记忆（`sync_targets.go:1` 注释自述"正确性靠注释复述本包行为"）。方向：为这些 seam 引入显式的 `reset` helper + `t.Cleanup`，把"禁 t.Parallel"从约定变为 `testing.TB` 检查。
 - **P2-5　`FindInstDir` 兜底默认关闭，`ScanInstance` 字段仅 1 类型消费**：`go/types/registry/findinst.go:101-103` 门控仅 `blueprint` 开启；`ScanInstance`/`FallbackDir` 成为"为单一类型服务的配置"（`findinst.go:161-166`）。方向：若长期只有 blueprint 使用，考虑把该特殊逻辑下沉为 blueprint 类型专用查询，而非挂在通用 `ResourceType` 字段上。
 - **P2-6　`resourceTypesForSync` 切片副本的潜在陷阱**：`internal/app/app_install_instance.go:598-609` 已用注释警告"就地 `[:0]` 截断会把共享注册表单例永久裁剪"，说明该函数历史上出过这类坑。方向：把 `registry.AllTypes()` 改为总是返回副本，消除消费方责任。
+  - **处置结果（2026-10-16 已修）**：方向名有误——`registry.AllTypes()` **不存在**（grep 全 go 源码无此函数），但"总是返回副本"的精神有效且廉价，按精神落到了 `resourceTypesForSync` 上：rtype=="" 分支由 `return all`（直接返回入参，极可能是 `reg.ResourceTypes` 共享单例）改为 `return append([]registry.ResourceType(nil), all...)`。当前两个消费方（`buildInstanceStatusCounts` 与 `GetInstanceSyncStatus`）对返回值**仅只读**（grep 实证 `go/instance` 的 `sort.Strings` 只作用于输出 string 切片 st.Missing/Extra 等，不作用于 `filtered []registry.ResourceType`），故原代码**无现存活 bug**，本改动是把"消费方不得就地截断"的隐性责任前移到本函数，调用点零风险。测试补强：`app_install_instance_test.go|TestResourceTypesForSync` 新增 `&gotAll[0] == &all[0]` 断言（返回值与入参共享底层数组即 fail）。语义不变（副本内容与全集相同），回归锁有效。
 - **P2-7　30s TTL 三层同周期，UI 刷新延迟与操作延迟同源**：push/pull 后树更新依赖 app 层显式失效，漏一处即 30s 陈旧（与 P0-1 同源）。方向：P0-1 落地后本项自动消解。
 
 ---

@@ -201,6 +201,9 @@ export const ja: Record<string, string> = {
   "settings.backup.importConfirmMessage":
     "読み込みは現在の設定を完全に上書きします：ファイル保存先・ゲームルートなどのディスク設定が読み込みファイルの値に置き換わり、{n} 項目のブラウザ設定が適用されます。\n読み込み前に現在の設定が自動バックアップされ、必要に応じてバックアップディレクトリから復元できます。",
   "settings.backup.importConfirmOk": "読み込み",
+  "settings.backup.importPathMissing":
+    "読み込み先のパスはこのPCに存在しません：{paths}。「環境」ページでディレクトリを設定し直してください。",
+  "settings.backup.gotoEnv": "環境ページへ",
   "settings.backup.restoreBtn": "最新のバックアップを復元",
   "settings.backup.openDirBtn": "バックアップフォルダを開く",
   "settings.backup.restoreConfirmTitle": "読み込み前のバックアップを復元しますか？",
@@ -368,6 +371,8 @@ export const ja: Record<string, string> = {
   "launcher.picker.ysm": "YSM",
   "launcher.picker.pending": "未作成",
   "launcher.picker.useAsYsmRoot": "YSM カスタムディレクトリを既定のダウンロード先にする",
+  "launcher.picker.useAsYsmRootHint":
+    "YSMリポジトリのルートが変更され、リポジトリ全体のビューが更新されます",
 
   // ── Repository (content tab) ──
   "repo.tab.tree": "ファイルツリー",
@@ -397,6 +402,7 @@ export const ja: Record<string, string> = {
   // ── Modpack Instances ──
   "instances.tab.versions": "バージョン一覧",
   "instances.emptyHint": "左の統合パックをクリックしてモデルを表示",
+  "instances.viewerDesktopOnlyNotice": "統合パック管理はデスクトップ版でのみ利用できます",
 
   // ── Diagnostics Page ──
   // ADR-300 §2.4：トップレベルタブは名詞化（tabLog は子ピルと同名の「操作ログ」を使っていた）

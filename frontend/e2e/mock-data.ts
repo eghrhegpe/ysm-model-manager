@@ -216,6 +216,8 @@ export const MOCK_DATA = {
   ImportFolderAndPushToInstance: undefined,
   DeleteResourcePack: undefined,
   OpenFolder: undefined,
+  // 目录存在性只读查询（锐评 2026-10-17 P2⑤：导入后前端据此检测旧机路径在本机是否有效）
+  DirectoryExists: undefined,
   ReadShaderpackLang: JSON.stringify({ name: "光影包测试", entries: {} }),
   PushSingleResourceToInstance: undefined,
   PullSingleResourceFromInstance: undefined,

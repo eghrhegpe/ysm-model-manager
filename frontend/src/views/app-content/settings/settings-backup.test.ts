@@ -30,6 +30,9 @@ const appMocks = vi.hoisted(() => ({
   ListSettingsBackups: vi.fn(),
   RestoreSettingsBackup: vi.fn(),
   OpenFolder: vi.fn(),
+  // 目录存在性只读查询（锐评 P2⑤ 增强）：导入覆盖的 FilesRoot/McRoot/CustomRoots 来自旧机，
+  // 前端据此检测哪些路径在本机无效并提示去「环境」页重设
+  DirectoryExists: vi.fn(),
 }));
 const busMock = vi.hoisted(() => ({ emit: vi.fn(), on: vi.fn() }));
 const toastMock = vi.hoisted(() => ({ toast: vi.fn(), toastError: vi.fn() }));
@@ -255,6 +258,8 @@ describe("initSettingsBackup 编排链路", () => {
     modalConfirmMock.modalConfirm.mockReset();
     // 默认确认：既有导入用例锁的是顺序与失败面，不锁确认弹窗本身（确认/取消走下面专用用例）
     modalConfirmMock.modalConfirm.mockResolvedValue(true);
+    // 默认磁盘路径全部存在：既有导入用例锁的是顺序与失败面，不锁 P2⑤ 的缺失路径检测
+    appMocks.DirectoryExists.mockResolvedValue(true);
     document.body.innerHTML = "";
   });
 
@@ -424,5 +429,52 @@ describe("initSettingsBackup 编排链路", () => {
 
     await vi.waitFor(() => expect(appMocks.OpenFolder).toHaveBeenCalledTimes(1));
     expect(appMocks.OpenFolder).toHaveBeenCalledWith("C:\\ysm");
+  });
+
+  it("导入的路径在本机不存在：状态行给缺失警告与「去环境页」按钮，点击切到 env tab（P2⑤ 增强）", async () => {
+    appMocks.SelectImportFile.mockResolvedValue("C:/ysm/ysm-settings-export.json");
+    appMocks.ReadSettingsExport.mockResolvedValue({
+      format: EXP_FORMAT,
+      localStorage: { "ui-font-size": "14" },
+      appConfig: { filesRoot: "C:/old-root", mcRoot: "C:/old-mc", customRoots: null },
+    });
+    appMocks.ImportSettingsData.mockResolvedValue(IMPORT_RES);
+    appMocks.DirectoryExists.mockResolvedValue(false);
+    // 造一个「环境」tab 按钮（mountBackupRoot 只挂备份卡，无 tab 栏），验证跳转是 click 驱动
+    const root = mountBackupRoot();
+    const envTab = document.createElement("button");
+    envTab.className = "stg-tab";
+    envTab.setAttribute("data-tab", "env");
+    const clicked = vi.fn();
+    envTab.addEventListener("click", clicked);
+    root.appendChild(envTab);
+    initSettingsBackup(root);
+    root.getElementById("set-backup-import")!.click();
+
+    await vi.waitFor(() => expect(appMocks.DirectoryExists).toHaveBeenCalledTimes(2));
+    const status = root.getElementById("set-backup-status")!;
+    expect(status.textContent).toContain("C:/old-root");
+    const gotoBtn = status.querySelector("#set-backup-open-env") as HTMLButtonElement | null;
+    expect(gotoBtn).not.toBeNull();
+    gotoBtn!.click();
+    expect(clicked).toHaveBeenCalledTimes(1);
+  });
+
+  it("导入的路径在本机全部存在：状态行不出现缺失警告按钮（P2⑤ 增强）", async () => {
+    appMocks.SelectImportFile.mockResolvedValue("C:/ysm/ysm-settings-export.json");
+    appMocks.ReadSettingsExport.mockResolvedValue({
+      format: EXP_FORMAT,
+      localStorage: { "ui-font-size": "14" },
+      appConfig: { filesRoot: "C:/ok", mcRoot: "", customRoots: null },
+    });
+    appMocks.ImportSettingsData.mockResolvedValue(IMPORT_RES);
+    const root = mountBackupRoot();
+    initSettingsBackup(root);
+    root.getElementById("set-backup-import")!.click();
+
+    await vi.waitFor(() => expect(storageMock.safeSet).toHaveBeenCalled());
+    expect(
+      root.getElementById("set-backup-status")!.querySelector("#set-backup-open-env"),
+    ).toBeNull();
   });
 });

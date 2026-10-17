@@ -19,6 +19,7 @@
 // 病根：`b1116645c` 只写了备份迁移文档、代码从未实现导出/导入；用户按文档复制
 // `ysm_config.json` 后，字号/键位/3D 偏好/收藏创作者几十项留在旧机浏览器存储里，全程零提示。
 
+import type { SettingsExport } from "@/bindings/ysm-model-manager/go/types/models.ts";
 import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { exportableSettingsKeys, type SettingsKeyEntry } from "@/settings-keys";
@@ -159,7 +160,8 @@ export function initSettingsBackup(root: ShadowRoot): void {
   importBtn?.addEventListener("click", () => {
     void withBusy(async () => {
       try {
-        const { SelectImportFile, ReadSettingsExport, ImportSettingsData } = await backendGetApp();
+        const { SelectImportFile, ReadSettingsExport, ImportSettingsData, DirectoryExists } =
+          await backendGetApp();
         const path = await SelectImportFile(".json", t("settings.backup.importPickerTitle"));
         if (!path) return; // 用户取消
         const exp = await ReadSettingsExport(path); // 先只读校验（格式/版本），失败即抛、零副作用
@@ -190,7 +192,28 @@ export function initSettingsBackup(root: ShadowRoot): void {
         // 导出文件里本机不认识的键会被忽略，Go 的计数会虚高、误导「已生效 N 项」
         const n = applied;
         // backupPath 为磁盘路径，须走 esc()（同导出路径，理由见上）
-        setStatus(t("settings.backup.importedTo", { n, backup: esc(backupPath) }));
+        const base = t("settings.backup.importedTo", { n, backup: esc(backupPath) });
+        // 锐评 2026-10-17 P2⑤ 增强：导入会**整份覆盖**磁盘路径配置（FilesRoot/McRoot/CustomRoots），
+        // 旧机的路径大概率在本机不存在。导入文案原本只提示「若路径无效请在环境页重设」，
+        // 这里把提示升级为可执行的检测（目录存在性只能问 Go，回归红线：前端不扫盘）+ 一键跳转环境页。
+        const missing = await missingDirsOf(exp.appConfig, DirectoryExists);
+        setStatus(
+          missing.length === 0
+            ? base
+            : `<p>${base}</p><p style="color:var(--err);margin-top:4px">${t(
+                "settings.backup.importPathMissing",
+                { paths: esc(missing.join(", ")) },
+              )}</p><button type="button" class="btn-base sm" id="set-backup-open-env" style="font-size:var(--fs-sm);padding:var(--btn-padding-filter-lg);margin-top:6px">${esc(
+                t("settings.backup.gotoEnv"),
+              )}</button>`,
+        );
+        if (missing.length > 0) {
+          (
+            root.getElementById("set-backup-open-env") as HTMLButtonElement | null
+          )?.addEventListener("click", () => {
+            (root.querySelector('.stg-tab[data-tab="env"]') as HTMLElement | null)?.click();
+          });
+        }
         toast(t("settings.backup.importDone", { n }), TOAST_MS.long, "success");
         // 全量重建当前面板（清缓存 + 重渲染，同 lang:changed 机制）：主题/语言/路径可能已变，
         // 只刷 store 会留下 UI 与真相分叉
@@ -259,4 +282,21 @@ export function initSettingsBackup(root: ShadowRoot): void {
 function dirOf(p: string): string {
   const i = Math.max(p.lastIndexOf("/"), p.lastIndexOf("\\"));
   return i <= 0 ? "." : p.slice(0, i);
+}
+
+/** 收集导入配置里在本机**不存在**的目录路径（锐评 2026-10-17 P2⑤）。
+ *  目录存在性只能问 Go（回归红线：前端不扫磁盘、不重算归属语义）；空路径跳过（未设置不算缺失）。
+ *  `customRoots` 是 `{资源类型 -> 路径}` map，值可能为 undefined，一并过滤。 */
+async function missingDirsOf(
+  cfg: SettingsExport["appConfig"],
+  exists: (path: string) => Promise<boolean>,
+): Promise<string[]> {
+  const candidates = [cfg?.filesRoot, cfg?.mcRoot, ...Object.values(cfg?.customRoots ?? {})].filter(
+    (p): p is string => typeof p === "string" && p.trim() !== "",
+  );
+  const missing: string[] = [];
+  for (const p of candidates) {
+    if (!(await exists(p))) missing.push(p);
+  }
+  return missing;
 }

@@ -257,6 +257,17 @@ export function DetectResourceType(path: string): $CancellablePromise<string> {
 }
 
 /**
+ * ========== 目录存在性 ==========
+ * DirectoryExists 判断目录是否存在（锐评 2026-10-17 P2⑤）：导入设置会整份覆盖
+ * FilesRoot / McRoot / CustomRoots，旧机的路径大概率在本机不存在；前端据此检测哪些路径
+ * 已失效，提示用户去「环境」页重设。目录存在性只能问 Go（回归红线：前端不扫磁盘）。
+ * 纯只读、零副作用——不能复用 OpenFolder（它会真的打开资源管理器）。
+ */
+export function DirectoryExists(path: string): $CancellablePromise<boolean> {
+    return $Call.ByID(2508287974, path);
+}
+
+/**
  * DoUpdate 下载并应用更新。成功时返回 "success"（正常返回）或 os.Exit(0)
  * （helper 已在侧等待替换 exe，主进程必须退出）。
  * ErrExitRequested 路径仍会 os.Exit：helper 替换 exe 需要主进程先退出，

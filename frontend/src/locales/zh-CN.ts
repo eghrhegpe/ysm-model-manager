@@ -204,6 +204,9 @@ export const zhCN = {
   "settings.backup.importConfirmMessage":
     "导入将整份覆盖当前设置：文件存储路径、游戏根目录等磁盘配置会被导入文件的值替换，并将应用 {n} 项浏览器偏好。\n导入前会自动备份当前配置，导入后如不满意可在备份目录找回。",
   "settings.backup.importConfirmOk": "确认导入",
+  "settings.backup.importPathMissing":
+    "导入的路径在本机不存在：{paths}。请在「环境」页重新设置目录。",
+  "settings.backup.gotoEnv": "去环境页",
   "settings.backup.restoreBtn": "恢复最近备份",
   "settings.backup.openDirBtn": "打开备份目录",
   "settings.backup.restoreConfirmTitle": "恢复导入前备份？",
@@ -363,6 +366,7 @@ export const zhCN = {
   "launcher.picker.ysm": "YSM",
   "launcher.picker.pending": "待创建",
   "launcher.picker.useAsYsmRoot": "将 YSM 自定义目录设为默认下载路径",
+  "launcher.picker.useAsYsmRootHint": "将改变 YSM 仓库根位置，仓库视角整体更新",
 
   // ── 模型仓库（content tab 栏） ──
   "repo.tab.tree": "文件树",
@@ -391,6 +395,7 @@ export const zhCN = {
   // ── 整合包实例 ──
   "instances.tab.versions": "版本列表",
   "instances.emptyHint": "点击左侧整合包查看模型",
+  "instances.viewerDesktopOnlyNotice": "整合包管理仅桌面版可用",
 
   // ── 诊断页 ──
   // ADR-300 §2.4：顶层 tab 名词化——tabLog 是容器名（原借「操作日志」与子 pill 父子同名）；

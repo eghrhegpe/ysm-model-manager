@@ -323,6 +323,7 @@ node scripts/pre-push-gate.ts --files "<file1>\n<file2>..." [--dry-run]  # 文�
 
 - `2026-10-17`：golangci-lint 段改经 yieldThenRun 执行；gate-report 落盘后顺带回收超额旧报告（GATE_REPORT_KEEP=40）｜golangci 实测 15–21s 同步阻塞 event loop，Go∥前端 Promise.all 里饿死前端域（与 go test 段同病灶、此前漏同款处理）；.git/ 报告曾无回收实测堆积 1282 份/169.6MB｜回退 = `scripts/_lib/gate-blocks/go-domain.ts|runGoDomain`
 - `2026-10-17`：golangci 段显式传 GATE_TIMEOUT_MS（300s）；报告回收改严格时间戳形态 + 单文件删除失败计数可见｜atomcode 锐评 P1-2（procRun 默认 30s 对 15–21s 实测值仅 9s 余量，冷缓存破 30s 即假红）与 P2-5（宽松正则容漂移名参与排序可能删新留旧；回收全静默重演「无人察觉才堆积」盲区）｜回退 = `scripts/_lib/gate-report.ts|selectStaleGateReports`
+- `2026-10-17`：check-deadcode-baseline 摘出 FRONTEND_STATIC_TOOLS（push/commit-with-check 热路径），保留 ALL_STATIC_TOOLS｜第四轮锐评实测：该项 3.4s 是纯前端 push 第 2 贵（占 20.8s 的 16%）、blockPolicy=debt 不阻断、非 scopedFiles 裁剪不了（全仓键使用面）；远端双兜底 = doctor --all 在册 + CI frontend job 独立步骤带 changed-base 归属基线（--static 经 CI_INDEPENDENT_TOOLS 剔除防同 job 双跑假红，既有机制）；纯前端 push 实测 20.81s → 16.25s（−22%）｜回退 = `scripts/_lib/gate-config.ts|FRONTEND_STATIC_TOOLS`（护栏 tests/test_gate_config.ts 第 7 组 + test_gate_schedule.ts 第 8/9 组）
 
 ## 相关
 

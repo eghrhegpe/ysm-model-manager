@@ -205,6 +205,20 @@ console.log(`  ✓ 阈值扫描器策略：${THRESHOLD_SCANNERS.length} 项均�
     /if \(\$LASTEXITCODE -ne 0\) \{ exit \$LASTEXITCODE \}/,
     "CI 静态治理步必须传播退出码——否则「远端兜底」是假兜底",
   );
+  // deadcode-baseline（2026-10-17 第四轮锐评，镜像 auto-import 先例摘出 push 热路径）：
+  // 实测 3.4s、blockPolicy=debt（不阻断）、非 scopedFiles（全仓键使用面无法按文件裁剪）；
+  // 远端防线双保险——ALL 在册（doctor --all 全量体检）+ CI frontend job **独立步骤**带
+  // changed-base 归属基线（判定质量高于本地无上下文跑；--static 由 CI_INDEPENDENT_TOOLS
+  // 剔除避免同 job 双跑假红，其真实存在由 tests/test_gate_schedule.ts 第 9 组钉死）。
+  // 本断言防「顺手加回 FRONTEND」：加回 = 全队每次前端 push 白付 3.4s 买一个不阻断的早知道。
+  assert.ok(
+    allNames.has("check-deadcode-baseline.ts"),
+    "[gate-config] check-deadcode-baseline 必须在 ALL_STATIC_TOOLS（doctor --all 兜底），从 ALL 摘除 = 真关闸",
+  );
+  assert.ok(
+    !FRONTEND_STATIC_TOOLS.some((e) => toolName(e) === "check-deadcode-baseline.ts"),
+    "[gate-config] check-deadcode-baseline 不得挂回 FRONTEND_STATIC_TOOLS——本地 push 热路径重复付费 3.4s（CI 独立步骤 + doctor --all 已兜底）",
+  );
   console.log(
     `  ✓ CI 兜底项：${CI_ONLY_LOCAL_SKIP.join(", ")} 在 ALL（--strict）不在 FRONTEND，且 CI --static 步存在并传播退出码`,
   );

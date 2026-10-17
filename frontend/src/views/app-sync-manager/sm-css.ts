@@ -72,6 +72,11 @@ export const SM_STYLE: string = `
 .sm-tab{transition:var(--tr-fast)}
 .sm-status-tab{padding:var(--btn-padding-filter);border-radius:var(--radius-sm);border:1px solid transparent;background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;font-size:var(--fs-filter);white-space:nowrap;transition:background var(--tr-fast),color var(--tr-fast),border-color var(--tr-fast)}
 .sm-status-tab.active{border-color:var(--accent);background:color-mix(in srgb, var(--accent) 18%, transparent);color:var(--accent)}
+/* 同步状态按钮（锐评 P1-4）：全局对齐「全部整合包」启用/禁用态的次级动作——muted 边 + 正文色
+   （同 pullHere 弱化语义，区别 sm-item-btn push/pull 的行级主操作）；.sm-status-tabs 里 radios
+   flex:1 将其推至工具栏右缘。hover 转 accent 给「可点」强反馈 */
+.sm-sync-status-btn{display:inline-flex;align-items:center;gap:4px;padding:var(--btn-padding-filter);border-radius:var(--radius-sm);border:1px solid var(--muted);background:transparent;color:var(--muted);cursor:pointer;flex-shrink:0;font-family:inherit;font-size:var(--fs-filter);white-space:nowrap;transition:background var(--tr-fast),border-color var(--tr-fast),color var(--tr-fast)}
+.sm-sync-status-btn:hover{background:var(--hover);border-color:var(--accent);color:var(--accent)}
 .sm-dir-arrow{flex-shrink:0;width:14px;text-align:center;cursor:pointer;color:var(--muted);background:transparent;border:0;padding:0;font:inherit;line-height:1}
 .sm-cur-type-slot{display:contents}
 .sm-status-radios{display:flex;gap:var(--sp-1);flex:1;min-width:0}

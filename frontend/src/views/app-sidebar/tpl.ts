@@ -277,6 +277,9 @@ export interface InstanceCardHeaderData {
   synced: number;
   missing: number;
   extra: number;
+  /** 已禁用（.ban）单元数。2026-10 锐评 P0-1：Go 侧 foldUnit 独立分桶（绝不进 synced），
+   *  侧栏此前弃用该维度——全禁用整合包漏显「完全同步 ✓」。灰标显形，零新增 i18n。 */
+  disabled?: number;
   idx?: number;
   hasMod?: boolean;
   rtype?: string;
@@ -288,6 +291,7 @@ export interface InstanceCardHeaderData {
  *  全由三计数 + hasMod 驱动；该参数只是调用方按 loader 派生字段顺位递进来的「陪跑」）。 */
 export function instanceCardHeaderHTML(d: InstanceCardHeaderData): string {
   const { name, synced, missing, extra } = d;
+  const disabled = d.disabled ?? 0;
   const idx = d.idx ?? -1;
   const hasMod = d.hasMod ?? true;
   const rtype = d.rtype ?? RESOURCE_TYPES.YSM;
@@ -306,9 +310,14 @@ export function instanceCardHeaderHTML(d: InstanceCardHeaderData): string {
     (extra > 0
       ? `<span class="tag orange" data-role="extra-count" title="${t("syncManager.status.optional")}">${extra}</span> `
       : "") +
+    // 2026-10 锐评 P0-1：disabled 灰标显形（此前侧栏弃用该维度，全禁用包漏显「完全同步 ✓」）。
+    // 与 Go foldUnit 同源——禁用单元独立分桶、绝不计入 synced；title 复用面板既有 key，零新增 i18n。
+    (disabled > 0
+      ? `<span class="tag gray" data-role="disabled-count" title="${t("syncManager.status.disabled")}">${disabled}</span> `
+      : "") +
     (!hasMod
       ? `<span class="tag gray" data-role="no-mods">${t("sidebar.noMods", { type: noModLabelOf(rtype) })}</span>`
-      : allZero
+      : allZero && disabled === 0
         ? `<span class="tag" data-role="all-synced" title="${t("sidebar.syncFully")}">${UI_ICONS.success}</span>`
         : "");
   return `<div class="instance-card-header">

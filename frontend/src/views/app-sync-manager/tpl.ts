@@ -129,6 +129,10 @@ export function containerHTML(): string {
 <div class="sm-status-radios" role="radiogroup" aria-label="${esc(
     t("syncManager.statusFiltersAria"),
   )}"></div>
+<!-- 同步状态按钮（锐评 P1-4）：全局对齐「全部整合包」的启用/禁用态（无 rtype=全部 dirLevelSync
+     类型），补齐 guide pack-sync.md 声称存在但面板缺失的手动对齐入口；点击发 sync:toggle:status，
+     消费者 features/sync registerSync 全局注册，完成后 stats:refresh 自动重渲染本面板 -->
+<button class="sm-sync-status-btn" data-action="sync-status" title="${esc(t("syncManager.syncStatus"))}">${UI_ICONS.refresh} ${esc(t("syncManager.syncStatus"))}</button>
 </div>
 <div class="sm-summary"></div>
 <div class="sm-list"></div>

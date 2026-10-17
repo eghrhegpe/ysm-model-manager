@@ -49,7 +49,7 @@ describe("renderVersionCards", () => {
   it("非空实例 → 生成 instance-card 卡片，传递全部字段与 idx", () => {
     const container = document.createElement("div");
     renderVersionCards(container, [
-      instance({ name: "P1", synced: 3, missing: 2, extra: 1, status: "missing", hasMod: false, rtype: "pack" }),
+      instance({ name: "P1", synced: 3, missing: 2, extra: 1, disabled: 2, status: "missing", hasMod: false, rtype: "pack" }),
       instance({ name: "P2" }),
     ]);
 
@@ -70,6 +70,7 @@ describe("renderVersionCards", () => {
       synced: 3,
       missing: 2,
       extra: 1,
+      disabled: 2,
       idx: 0,
       hasMod: false,
       rtype: "pack",
@@ -79,6 +80,7 @@ describe("renderVersionCards", () => {
       synced: 2,
       missing: 1,
       extra: 0,
+      disabled: 0,
       idx: 1,
       hasMod: true,
       rtype: "ysm",
@@ -156,6 +158,24 @@ describe("instanceCardHeaderHTML 徽章 chips（真实实现）", () => {
     expect(html).toContain('<span class="tag" data-role="all-synced" title="完全同步">');
     expect(html).toContain('<svg class="ws-icon"'); // emoji 字形被设计令牌闸拦，走 SVG 体系
     expect(html).not.toContain(">0</span>");
+  });
+
+  // 2026-10 锐评 P0-1：disabled 维度显形（全禁用包此前漏显「完全同步 ✓」）
+  it("disabled>0 → 灰「已禁用 N」标签（title 复用面板既有 key，零新增 i18n）", () => {
+    const html = instanceCardHeaderHTML({ name: "P", synced: 0, missing: 0, extra: 0, disabled: 4 });
+    expect(html).toContain('<span class="tag gray" data-role="disabled-count" title="已禁用">4</span>');
+  });
+
+  it("disabled>0 && 全零 → 不显 all-synced ✓（全禁用包不得误标「完全同步」）", () => {
+    const html = instanceCardHeaderHTML({ name: "P", synced: 0, missing: 0, extra: 0, disabled: 3 });
+    expect(html).not.toContain('data-role="all-synced"');
+    expect(html).not.toContain("完全同步");
+  });
+
+  it("synced>0 && disabled>0 → 绿「已同步」与灰「已禁用」并存（有启用亦有禁用）", () => {
+    const html = instanceCardHeaderHTML({ name: "P", synced: 2, missing: 0, extra: 0, disabled: 1 });
+    expect(html).toContain('<span class="tag green" data-role="synced-count" title="已同步">2</span>');
+    expect(html).toContain('<span class="tag gray" data-role="disabled-count" title="已禁用">1</span>');
   });
 
   it("状态计数以 data-role 落 DOM，且 📦 收口为可定位的 .pkg-icon / .instance-card-pkg-count", () => {

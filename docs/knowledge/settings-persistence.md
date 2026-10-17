@@ -23,9 +23,11 @@ auto_fields:
     - App.GetWindowPosition
     - App.ImportSettingsData
     - App.ImportSettingsFromFile
+    - App.ListSettingsBackups
     - App.LoadAppConfig
     - App.ReadSettingsExport
     - App.RestartApplication
+    - App.RestoreSettingsBackup
     - App.SaveAppConfig
     - App.SaveAppConfigPatch
     - App.SaveThresholds

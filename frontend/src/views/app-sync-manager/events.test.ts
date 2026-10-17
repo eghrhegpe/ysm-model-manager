@@ -13,11 +13,15 @@ const mocks = vi.hoisted(() => {
     dispose,
     bindRoving: vi.fn((_spec: Record<string, unknown>) => ({ dispose })),
     modalConfirm: vi.fn().mockResolvedValue(true),
+    busEmit: vi.fn(),
   };
 });
 
 vi.mock("@/utils/dom/bind-roving.ts", () => ({ bindRoving: mocks.bindRoving }));
 vi.mock("@/utils/dom/modal-confirm.ts", () => ({ modalConfirm: mocks.modalConfirm }));
+// 锐评 P1-4：events.ts 现发全局 sync:toggle:status（消费者 features/sync 注册），
+// 单测隔离 bus，断言按钮点击的发射契约（事件名 + 空 payload=全类型）
+vi.mock("@/bus", () => ({ bus: { emit: mocks.busEmit } }));
 
 import { bindDelegatedEvents, type EventSelf } from "./events.ts";
 
@@ -288,6 +292,32 @@ describe("bindDelegatedEvents — 命中优先级与消费语义", () => {
     expect(() => self.dispatchEvent(ev)).not.toThrow();
     expect(cb.doRender).not.toHaveBeenCalled();
     unsub();
+  });
+});
+
+describe("bindDelegatedEvents — ④ 同步状态按钮（锐评 P1-4 全局对齐入口）", () => {
+  const SYNC_BTN =
+    '<div class="sm-status-tabs"><button class="sm-sync-status-btn" data-action="sync-status">S</button></div>';
+
+  it("点击 → 发 sync:toggle:status（空 payload=全类型）且被消费（无 doRender/doPerformOp 副作用）", () => {
+    const { self, host } = makeSelf(SYNC_BTN);
+    const cb = makeCb();
+    bindDelegatedEvents(self, cb);
+    (host.querySelector(".sm-sync-status-btn") as HTMLElement).click();
+    expect(mocks.busEmit).toHaveBeenCalledWith("sync:toggle:status", {});
+    expect(cb.doRender).not.toHaveBeenCalled(); // 不落到 ③ dir 行 / ② 标签分支
+    expect(cb.doPerformOp).not.toHaveBeenCalled();
+  });
+
+  it("stopPropagation 与 handleItemButton 同款（document 级 closeAll/context-menu 不触发）", () => {
+    const { self, host } = makeSelf(SYNC_BTN);
+    const cb = makeCb();
+    bindDelegatedEvents(self, cb);
+    const docSpy = vi.fn();
+    document.addEventListener("click", docSpy);
+    (host.querySelector(".sm-sync-status-btn") as HTMLElement).click();
+    document.removeEventListener("click", docSpy);
+    expect(docSpy).not.toHaveBeenCalled(); // 按钮处截断冒泡
   });
 });
 

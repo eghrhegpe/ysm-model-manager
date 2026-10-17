@@ -114,6 +114,12 @@ describe("a11y 模板标记", () => {
     expect(html).toMatch(/class="sm-status-radios"[^>]*aria-label="[^"]+"/);
   });
 
+  it("containerHTML: 筛选栏含同步状态按钮（锐评 P1-4 面板入口，data-action=sync-status）", () => {
+    const html = containerHTML();
+    expect(html).toContain('class="sm-sync-status-btn"');
+    expect(html).toContain('data-action="sync-status"');
+  });
+
   it("syncDirRowHTML: 箭头为原生 button（aria-expanded + 名称标签），目录图标装饰 aria-hidden", () => {
     const item: SyncItem = {
       path: "/d",

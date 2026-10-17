@@ -6,6 +6,7 @@
 // 依赖 DAG：index → events → network（单行按钮触发 push/pull）
 // events ←→ network 无循环：events 通过回调调用 network
 
+import { bus } from "@/bus";
 import { t } from "@/core/i18n/t.ts";
 import { bindRoving } from "@/utils/dom/bind-roving.ts";
 import { modalConfirm } from "@/utils/dom/modal-confirm.ts";
@@ -78,6 +79,14 @@ function toggleDirRow(self: EventSelf, dir: Element, cbRef: SyncCbRef): void {
   cbRef.cb.doRender();
 }
 
+/** ④ 同步状态按钮：全局对齐「全部整合包」启用/禁用态（锐评 P1-4 面板入口）。 */
+function handleSyncStatusButton(e: Event): void {
+  e.stopPropagation();
+  // 空 payload=无 rtype=全部 dirLevelSync 类型（ADR-339 SyncModelToggleStatusForType("")）；
+  // 消费者 features/sync registerSync 全局注册（忙锁 / toast / stats:refresh 重渲染 / tree:reload）
+  bus.emit("sync:toggle:status", {});
+}
+
 /**
  * click 委托总入口。绑定对象是组件根（light DOM），closest 动态查找。
  * 命中优先级：按钮 > 状态标签 > dir 行——按钮位于 .sm-dir 行内时命中即消费，
@@ -101,6 +110,17 @@ function onSyncClick(self: EventSelf, e: Event): void {
   if (tab) {
     self._statusFilter = (tab as HTMLElement).dataset.status || "all";
     cbRef.cb.doRender();
+    return;
+  }
+
+  // ④ 同步状态按钮（锐评 P1-4 补 guide 声称存在但面板缺失的全局手动对齐入口）：
+  // 对齐「全部整合包」的启用/禁用态——空 payload=无 rtype=全部 dirLevelSync 类型（ADR-339）。
+  // 发全局 bus 事件 sync:toggle:status（消费者 features/sync registerSync 全局注册，负责 busy
+  // 锁 / toast 反馈 / stats:refresh 重渲染本面板）；stopPropagation 恢复 handleItemButton 同款
+  // document 级监听截断契约（app-sidebar closeAll / context-menu hide 不因点按钮误触发）。
+  const syncBtn = target.closest(".sm-sync-status-btn");
+  if (syncBtn) {
+    handleSyncStatusButton(e);
     return;
   }
 

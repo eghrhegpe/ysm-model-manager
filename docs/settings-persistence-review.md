@@ -175,7 +175,7 @@
 
 **建议**：两道版本闸移进 `importResolved`（Format 闸之后）；`ReadSettingsExport` 侧保留（预览早退 UX 更好），两道闸抽同源函数两点调用。补 Go 测试：`ImportSettingsData` 直喂高 ExportVersion / 高 SchemaVersion 的 exp → 拒且报 `ErrSettingsTooNew`。
 
-**处置**：⬜ 待处置
+**处置**：✅ 已处置（2026-10-18，commit `5757734c4`）——双闸抽成同源函数 `checkExportVersions`，`ReadSettingsExport`（预览早退，UX 侧）与 `importResolved`（写路径唯一入口，防线本体）两点同挂；函数注释记入教训「门控跟着写路径唯一出口走，不跟着调用链的便利侧留念」。测试：`TestImportSettingsData_RejectsTooNewVersions`（高格式版本/高 schema 直喂 → 拒 `ErrSettingsTooNew` 且配置零改动；等值版本与遗留 ExportVersion=0 放行面回归——先写红测复现「无闸直落盘」再修绿）。放行语义与 ReadSettingsExport 侧既有门控测试（`TestReadSettingsExport_RejectsHigherSchemaVersion`）同源同断言。
 
 ### P2-⑦ 恢复入口不设防：`RestoreSettingsBackup` 不校验路径归属，`ListSettingsBackups` 缺空目录守卫
 

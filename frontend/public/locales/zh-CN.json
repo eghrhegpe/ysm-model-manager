@@ -177,7 +177,7 @@
   "settings.backup.restoreBtn": "恢复最近备份",
   "settings.backup.openDirBtn": "打开备份目录",
   "settings.backup.restoreConfirmTitle": "恢复导入前备份？",
-  "settings.backup.restoreConfirmMessage": "将恢复到 {path} 记录的配置，并整份覆盖当前设置（含文件存储路径、游戏根目录）。\n恢复后主题、语言与仓库路径会立即更新。",
+  "settings.backup.restoreConfirmMessage": "将恢复到 {path} 记录的配置，整份覆盖当前磁盘设置（主题、文件存储路径、游戏根目录），磁盘侧恢复后立即生效。\n浏览器偏好（语言、界面选项等）不属磁盘轨，不会被本次恢复回退。",
   "settings.backup.restoreConfirmOk": "确认恢复",
   "settings.backup.restoreDone": "已恢复到导入前备份",
   "settings.backup.noBackup": "暂无导入前备份，请先执行一次导入设置",

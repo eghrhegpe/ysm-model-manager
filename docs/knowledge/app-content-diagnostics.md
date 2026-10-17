@@ -37,6 +37,7 @@ auto_fields:
     - dedupSelectedIndex
     - DedupSession
     - DgCfScanTarget
+    - dgInInitScanPanels
     - dgLsResetCapsMemo
     - drillBenchToTrace
     - FindDuplicateFilesFn

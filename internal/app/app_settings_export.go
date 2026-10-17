@@ -27,6 +27,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 
 	"ysm-model-manager/go/fsutil"
@@ -358,6 +359,12 @@ func (a *App) pruneOldConfigBackups(src string) {
 // 返回最多 settingsBackupKeep 条；无备份返回空切片（make 的零值切片，JSON 序列化为 []，
 // 而非 nil——Wails 绑定 nil 切片会序列化成 null，前端要多判一道）。
 func (a *App) ListSettingsBackups() ([]string, error) {
+	// 平台数据根缺失时 configPath() 为 ""，Glob(".bak-*") 会匹配到 CWD 的外来文件——
+	// settingsExportPath 在导出侧认过的同款危害（见其 :67-69 守卫注释），列表侧同样堵上
+	// （第二轮锐评 P2⑦）。
+	if configPath() == "" {
+		return make([]string, 0), nil
+	}
 	matches, err := filepath.Glob(configPath() + ".bak-*")
 	if err != nil {
 		return nil, err
@@ -379,6 +386,23 @@ func (a *App) ListSettingsBackups() ([]string, error) {
 // 恢复前**不再**额外备份当前配置：否则每次恢复都生成新的 .bak-*，而「恢复最近备份」取的就是
 // 最新一份——会造成「恢复 → 生成新备份 → 下次恢复拿到这份新备份」的死循环。
 func (a *App) RestoreSettingsBackup(path string) error {
+	// 恢复入口自己站岗（第二轮锐评 P2⑦）：本绑定可被 JS 直传任意路径触发
+	//（与 ReadSettingsExport 注释同一威胁模型），修复前任意 JSON 可整份覆盖配置。
+	// 路径必须属于本机备份集合：目录恰为 configDir() 且文件名以「配置文件名.bak-」开头
+	//（backupConfigFile 只产此形态，ListSettingsBackups 是 UI 路径的唯一来源）。
+	// configDir() 为空一并拒——相对路径 Clean 后 Dir="."，不能让它凑巧匹配。
+	dir := configDir()
+	base := filepath.Base(path)
+	if dir == "" ||
+		filepath.Dir(filepath.Clean(path)) != dir ||
+		!strings.HasPrefix(base, filepath.Base(configPath())+".bak-") {
+		return types.AppError{
+			Code:       types.ErrInvalidParam,
+			Operation:  "恢复备份",
+			Reason:     fmt.Sprintf("不是有效的备份文件路径（%q）——须为本机配置目录下的 ysm_config.json.bak-* 文件", path),
+			Suggestion: "请通过「恢复最近备份」按钮选择最新备份",
+		}
+	}
 	var cfg types.AppConfig
 	if err := readJSONFile(path, &cfg); err != nil {
 		return fmt.Errorf("备份文件解析失败: %w", err)

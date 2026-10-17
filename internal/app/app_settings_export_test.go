@@ -416,3 +416,86 @@ func TestRestoreSettingsBackup_RestoresToBackupValue(t *testing.T) {
 		t.Error("备份文件不存在应报错")
 	}
 }
+
+// TestRestoreSettingsBackup_RejectsForeignPaths 二轮锐评 P2⑦：恢复是有副作用的写，
+// 入口曾接受任意路径——JS 可传指向任意 JSON 的路径整份覆盖配置（ReadSettingsExport
+// 注释自述威胁模型的具象）。判据两条：目录归属 configDir() + 文件名「ysm_config.json.bak-」
+// 前缀。断言错误码为 ErrInvalidParam（证明确实被闸拒、而非碰巧 ENOENT）；正例对照
+// 防闸过紧杀掉 UI 自己的恢复链路。
+func TestRestoreSettingsBackup_RejectsForeignPaths(t *testing.T) {
+	dst := exportTestApp(t, types.AppConfig{FilesRoot: "C:/repo", Theme: "dark"})
+	if _, err := dst.ImportSettingsData(types.SettingsExport{
+		Format: settingsExportFormat, ExportVersion: settingsExportVersion,
+		AppConfig: types.AppConfig{FilesRoot: "C:/repo", Theme: "light"},
+	}); err != nil {
+		t.Fatalf("场景构造导入失败: %v", err)
+	}
+	backups, err := dst.ListSettingsBackups()
+	testutil.NoError(t, err, "ListSettingsBackups")
+	if len(backups) == 0 {
+		t.Fatal("场景构造失败：无备份")
+	}
+	// 正例：集合内路径恢复放行，且恢复的确实是导入前（dark）那份
+	if err := dst.RestoreSettingsBackup(backups[0]); err != nil {
+		t.Fatalf("合法备份被拒（闸过紧）: %v", err)
+	}
+	if got := dst.LoadAppConfig().Theme; got != "dark" {
+		t.Errorf("恢复后 theme = %q, want dark", got)
+	}
+
+	evilJSON := []byte(`{"theme":"mint","filesRoot":"D:/evil"}`)
+	elseDir := t.TempDir()
+	foreign := filepath.Join(elseDir, "ysm_config.json.bak-20200101-000000.000")
+	if err := os.WriteFile(foreign, evilJSON, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	notBak := filepath.Join(configDir(), "evil.json")
+	if err := os.WriteFile(notBak, evilJSON, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	rel := "ysm_config.json.bak-x"
+	if err := os.WriteFile(rel, evilJSON, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Remove(rel) })
+
+	for _, bad := range []string{foreign, notBak, rel, elseDir} {
+		err := dst.RestoreSettingsBackup(bad)
+		if err == nil {
+			t.Errorf("集合外路径 %q 被放行", bad)
+			continue
+		}
+		var ae types.AppError
+		if !errors.As(err, &ae) || ae.Code != types.ErrInvalidParam || ae.Operation != "恢复备份" {
+			t.Errorf("路径 %q 错误 = %+v, want AppError{ErrInvalidParam, 恢复备份}", bad, err)
+		}
+		if got := dst.LoadAppConfig(); got.Theme != "dark" || got.FilesRoot != "C:/repo" {
+			t.Fatalf("被拒路径 %q 竟改动了配置: %+v", bad, got)
+		}
+	}
+}
+
+// TestListSettingsBackups_ResultsInsideConfigDir 二轮锐评 P2⑦（列表侧不变量）：
+// 列表返回值是恢复入口的路径唯一来源，每一项必须绝对且归属配置目录。
+// 注：configDirOverride 注入空串会落穿回真实平台目录（configDir() 守卫语义），
+// 「平台数据根缺失」态在测试里不可达；ListSettingsBackups 的 configPath()=="" 早退
+// 分支以代码审读 + settingsExportPath 先例同族担保。
+func TestListSettingsBackups_ResultsInsideConfigDir(t *testing.T) {
+	dst := exportTestApp(t, types.AppConfig{FilesRoot: "C:/repo", Theme: "dark"})
+	if _, err := dst.ImportSettingsData(types.SettingsExport{
+		Format: settingsExportFormat, ExportVersion: settingsExportVersion,
+		AppConfig: types.AppConfig{FilesRoot: "C:/repo", Theme: "light"},
+	}); err != nil {
+		t.Fatalf("场景构造导入失败: %v", err)
+	}
+	backups, err := dst.ListSettingsBackups()
+	testutil.NoError(t, err, "ListSettingsBackups")
+	if len(backups) == 0 {
+		t.Fatal("场景构造失败：无备份")
+	}
+	for _, p := range backups {
+		if !filepath.IsAbs(p) || filepath.Dir(p) != configDir() {
+			t.Errorf("备份列表混入归属外路径: %q (configDir=%q)", p, configDir())
+		}
+	}
+}

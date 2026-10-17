@@ -119,7 +119,7 @@ export const en: Record<string, string> = {
   // ── Context Menu ──
   "menu.openFolder": "Open Folder",
   "menu.copyModelList": "Copy {type} List",
-  "menu.clearPack": "Clear {type} from This Pack",
+  "menu.clearPack": "Clear {type} Repo Copies from This Pack",
   "menu.batchSelected": "{count} files selected",
   "menu.batchRename": "Batch Rename…",
   "menu.moveTo": "Move to…",

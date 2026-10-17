@@ -41,6 +41,7 @@ auto_fields:
     - App.DefaultWorkshopSites
     - App.DeleteResourcePack
     - App.DetectResourceType
+    - App.DirectoryExists
     - App.DoUpdate
     - App.DownloadFromGitHub
     - App.EnqueueDownloads
@@ -117,8 +118,7 @@ auto_fields:
     - App.SaveWindowPosition
     - App.SaveWorkshopCreators
     - App.SaveWorkshopCreatorsBySite
-    - App.SaveWorkshopPresetsBySite
-    - symbols_total: 122
+    - symbols_total: 123
 quick_groups:
   - 后端桥接与数据存储
 quick_intents:

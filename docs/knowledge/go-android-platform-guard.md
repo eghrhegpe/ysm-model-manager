@@ -20,6 +20,7 @@ auto_fields:
     - App.CopyModelFile
     - App.CreateDir
     - App.CurrentVersion
+    - App.DirectoryExists
     - App.DoUpdate
     - App.ExportModelStructureJSON
     - App.ExtractPreviewTexture

@@ -148,13 +148,17 @@ CI 的 --static 模式**不含 GO_STATIC_TOOLS**（schedule.ts 明确排除）�
 - 支持 `--files` 模式，仅扫描暂存的 CSS 文件
 - 或缓存上次结果 + 文件 hash 比对
 
-### 3.5 🟢 P2：check-redlines --files — 2.19s
+### 3.5 🟢 P2：check-redlines --files — 2.7s（已实证非扫描瓶颈，不做 scoped 优化）
 
-**根因**：扫描前端源码树检查红线违规。已支持 `--files` 但仍较慢。
+**根因（实证，2026-10-17 复核）**：脚本始终对全树跑 25 个 `rgTracked` 调用，`--files` 仅用于基线比对过滤（`inChanged`），不裁剪实际扫描。但实测证明**这不是可优化的扫描瓶颈**：
 
-**优化方案**：
-- 检查是否在 `--files` 模式下仍扫描全树（可能是实现 bug）
-- 或接受 2.19s（在可接受范围内）
+- 端到端对比：无 `--files` 全树 = **2658ms**；传 2 个小文件 scoped = **2742ms**（scoped 反而更慢，负收益）。
+- 单规则基准：full-tree 137ms vs scoped-3文件 33ms，但 25 规则合计的成本主因是 **rg 进程 spawn 开销**（25 次 × ~31ms ≈ 780ms）+ 固定后处理（baseline 键计算 `collectViolationKeys`、逐文件 `inBlockComment`/`hasContext` 读取），**与树大小无关**。
+- 关键约束：ripgrep **对显式传入的文件参数忽略 `-g` glob**（实测 `rg pattern file.ts -g "*.css"` 仍扫 file.ts），故真·scoped 必须在 JS 层按每个规则的 glob 过滤 changedSet 后再传文件——既增加复杂度，又**不减少 spawn 次数**（仍是 25 次 rg），故零收益。
+
+**结论**：`check-redlines` 成本由 **spawn 次数 + 固定后处理** 主导，scope 收窄无法触及；且改动需把 `args.files` 注入 25 个 `rgTracked` 调用路径、回归风险高（基线键稳定性依赖全扫）。**不实施 scoped 扫描**（早前 m00558 假设被本次实测推翻）。唯一潜在杠杆是「合并 25 次 spawn 为更少 rg 调用（多 `-e` 模式）」，但需重构全部规则的后处理管道，风险/收益不划算（2.7s 非 P0/P1，已交付的 Go 推送优化已从 111s→29s）。
+
+**可接受性**：2.7s 仅当变更文件内出现真·新增红线才阻断；存量债务不阻断。留在原地。
 
 ## 4. 架构优势（已做对的）
 
@@ -255,7 +259,7 @@ CI 的 --static 模式**不含 GO_STATIC_TOOLS**（schedule.ts 明确排除）�
 
 ### 后续可选优化（未实施）
 
-6. **check-redlines --files 模式核验** — 已实测确认：无论传什么 `--files`，脚本始终扫全树（--files 仅过滤基线比对）。这是每 commit 必经的阻断成本（commit-check.ts:83），体量 2.4s，但改真·scoped 需把 args.files 注入多个 rgTracked 调用、回归风险高，暂不做。
+6. **check-redlines scoped 扫描（不实施）** — 已实测：全树扫描 2658ms vs 传 2 小文件 scoped 2742ms（负收益）。成本由 rg 25 次 spawn（~780ms）+ 固定后处理主导，非树大小；且 rg 对显式文件参数忽略 `-g` glob，真 scoped 须 JS 层按规则 glob 过滤 changedSet 再传文件，既增复杂度又不减 spawn 数。早前「scoped 可提速」假设被推翻，留在原地（§3.5）。
 7. **jscpd-go 在无 Go 变更时跳过** — plan.go=false 时跳过（GO_STATIC_TOOLS 已受 plan.go 守卫，无 Go 变更不跑）。
 
 ## 7. 结论
@@ -269,4 +273,4 @@ CI 的 --static 模式**不含 GO_STATIC_TOOLS**（schedule.ts 明确排除）�
 
 合计将 Go 变更推送从 ~111s 降至 ~29s（-74%），与前端变更推送持平，消除了 Go 变更的惩罚性等待；pre-commit 最慢提示项 css-layer-check 同步收窄。
 
-其余瓶颈（deadcode-baseline 3.55s、check-redlines 2.4s）均在可接受范围内，且 deadcode-baseline 已通过 CI_INDEPENDENT_TOOLS 机制移交 CI 独立步骤。
+其余瓶颈（deadcode-baseline 3.55s、check-redlines 2.7s）均在可接受范围内：deadcode-baseline 已通过 CI_INDEPENDENT_TOOLS 机制移交 CI 独立步骤；check-redlines 经实测证明成本由 rg spawn 次数 + 固定后处理主导（非扫描大小），scoped 收窄为负收益且回归风险高，已明确不实施（见 §3.5）。

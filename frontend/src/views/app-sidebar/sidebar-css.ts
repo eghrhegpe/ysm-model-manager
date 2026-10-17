@@ -105,6 +105,8 @@ ${dropdownBaseCSS}
 /* sidebar 下拉局部差异（宽度/换行/字号/项间距），覆盖共享默认值——勿回内联 */
 .dd-wrap .dd-menu { min-width:160px; white-space:nowrap; font-size:var(--fs-xs); }
 .dd-wrap .dd-item { padding:var(--sp-vh-cell); }
+/* P2-3：菜单按注册表 group 分组，分隔符非交互（role=presentation，dropdown itemSelector 不匹配） */
+.dd-wrap .dd-group-sep { padding:var(--sp-vh-cell); font-size:var(--fs-xs); color:var(--muted); font-weight:600; border-top:1px solid var(--bd); user-select:none; }
 /* 键盘可达（ADR-308 D2）：shadow 内剩余 focusable（.chk 复选框等）统一 :focus-visible 描边；
    卡片级描边见上方 .instance-card:focus-visible（单独落规则，非表单控件） */
 ${focusVisibleCSS}

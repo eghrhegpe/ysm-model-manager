@@ -99,7 +99,7 @@ function showLauncherInstancePicker(
         (it.exists ? "" : ` · ${t("launcher.picker.pending")}`),
       hintColor: it.exists ? "var(--status-success,#a6e3a1)" : "",
     })),
-    footerHTML: `<label style="display:flex;align-items:center;gap:7px;margin-top:10px;font-size:var(--fs-sm)"><input data-launcher-default name="useAsYsmRoot" type="checkbox" checked> ${esc(t("launcher.picker.useAsYsmRoot"))}</label>`,
+    footerHTML: `<label style="display:flex;align-items:center;gap:7px;margin-top:10px;font-size:var(--fs-sm)"><input data-launcher-default name="useAsYsmRoot" type="checkbox" checked> ${esc(t("launcher.picker.useAsYsmRoot"))}</label><div style="margin-top:4px;margin-left:24px;font-size:var(--fs-xs);color:var(--muted)">${esc(t("launcher.picker.useAsYsmRootHint"))}</div>`,
   }).then((res): LauncherSelection | null => {
     if (!res) return null;
     const inst = instances[res.index];

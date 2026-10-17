@@ -6,6 +6,7 @@ import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
 import { shortLabelOf } from "@/utils/resource/short-label.ts";
 import {
   ALL_RESOURCE_TYPES,
+  GROUP_META,
   GROUP_OF,
   RESOURCE_TYPES,
   typeIconOf,
@@ -131,19 +132,38 @@ function typeMenuItemsHTML(): string {
     " " +
     esc(text) +
     "</div>";
+
+  // P2-3：按注册表 group 分组，组标题带 groupIcon + groupLabel（零新文案，复用注册表字段）。
+  // role=presentation 使读屏与键盘导航（dropdown.ts itemSelector）跳过分隔符。
+  const groupSep = (groupId: string): string => {
+    const meta = GROUP_META[groupId];
+    if (!meta) return "";
+    return `<div class="dd-group-sep" role="presentation">${meta.icon} ${esc(meta.name)}</div>`;
+  };
+
   let html = render(SYNC_TYPE_ALL, UI_ICONS.package, t("sidebar.allTypes"));
+  let lastGroup = "";
+  const emit = (id: string, icon: string, text: string): void => {
+    const group = GROUP_OF[id] || "";
+    if (group && group !== lastGroup) {
+      html += groupSep(group);
+      lastGroup = group;
+    }
+    html += render(id, icon, text);
+  };
+
   // 从 ALL_RESOURCE_TYPES（注册表单一事实来源）驱动生成：
   // 已配置类型按原顺序渲染，注册表新增类型无展示配置时兜底追加，避免菜单与注册表漂移
   const configured = new Set(SYNC_TYPE_MENU.map((m) => m.id));
   for (const m of SYNC_TYPE_MENU) {
     if (ALL_RESOURCE_TYPES.includes(m.id)) {
-      html += render(m.id, m.icon, m.labelKey ? t(m.labelKey) : (m.label ?? m.id));
+      emit(m.id, m.icon, m.labelKey ? t(m.labelKey) : (m.label ?? m.id));
     }
   }
   for (const id of ALL_RESOURCE_TYPES) {
     if (!configured.has(id)) {
       // 兜底项同样携带图标（typeIconOf）与可读短标签（shortLabelOf），不再裸显 id
-      html += render(id, typeIconOf(id), shortLabelOf(id));
+      emit(id, typeIconOf(id), shortLabelOf(id));
     }
   }
   return html;

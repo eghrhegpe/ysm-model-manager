@@ -10,7 +10,7 @@ import { SM_STYLE } from "./sm-css.ts";
 
 // ADR-133 阶段 B：本视图稳定 testid 声明（G-1 钩子单一事实源）。
 // 删除/新增对应 data-testid 须同步本数组；契约测试运行期静态聚合本数组为注册表。
-export const VIEW_TESTIDS: readonly string[] = ["sm-push", "sm-pull"];
+export const VIEW_TESTIDS: readonly string[] = ["sm-push", "sm-pull", "sm-pull-here"];
 
 /** 同步列表项（GetInstanceSyncStatus 返回 JSON 条目） */
 export interface SyncItem {
@@ -74,7 +74,7 @@ export function actionBtnHTML(status: string): string {
     )}</button>`;
   }
   if (status === "legacy") {
-    return `<button class="sm-item-btn sm-item-btn--muted" data-action="pull">${t(
+    return `<button class="sm-item-btn sm-item-btn--muted" data-testid="sm-pull-here" data-action="pull" title="${esc(t("syncManager.status.legacy"))}">${t(
       "syncManager.pullHere",
     )}</button>`;
   }

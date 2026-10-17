@@ -78,10 +78,11 @@ describe("actionBtnHTML", () => {
     expect(html).toContain('data-action="pull"');
   });
 
-  it("legacy 渲染 pullHere 按钮（无 testid，弱化样式，字号回落类默认）", () => {
+  it("legacy 渲染 pullHere 按钮（testid=sm-pull-here，弱化样式，title 区分 optional 行）", () => {
     const html = actionBtnHTML("legacy");
-    expect(html).not.toContain("data-testid");
+    expect(html).toContain('data-testid="sm-pull-here"');
     expect(html).toContain('data-action="pull"');
+    expect(html).toContain('title="'); // 有 title 与 optional 行区分（锐评 P2-4）
     expect(html).toMatch(/>[^<]+<\/button>$/);
     expect(html).not.toContain("font-size:"); // 无内联字号覆盖，回落 .sm-item-btn 类默认 --fs-btn-secondary
   });

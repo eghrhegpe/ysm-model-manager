@@ -207,11 +207,11 @@
 
 **处置**：✅ 文案已改实（2026-10-18，commit `0cf2ffc35`）——三语言同步：「整份覆盖当前**磁盘**设置（主题、文件存储路径、游戏根目录），磁盘侧恢复后立即生效；浏览器偏好（语言、界面选项等）不属磁盘轨，不会被本次恢复回退」，`{path}` 参数保留。口径诚实性两头都站得住：主题确实即时生效（restore→emit `settings:imported`→`initTheme` 重算，链条现由 `a4dd554dd` 源码锁看管），语言确实永不被动（browser-authority 轨）。生成物 `frontend/public/locales/*.json` 由 pre-commit GEN_CMDS 同步刷新（随 `99e13b895` 先入库，内容即新文案）。「恢复升级为双轨」保留为产品决策未拍。
 
-### P3-④⑤⑥（记录）
+### P3-④⑤⑥（记录→处置/撤销）
 
-- **P3-④ 双重转义**：`settings-backup.ts:245` 传 `t(..., { path: esc(target) })`，而 `utils/dom/modal-confirm.ts:47` 内部已 `esc(message)`——含 `&` 的路径显示为 `&amp;`。删外层 esc。
-- **P3-⑤ 确认文案 `\n` 不换行**：`.dlg-msg` 全仓无 CSS（grep 仅 ts 模板行命中），HTML 把换行折叠成空格，两句预告挤一行。`.dlg-msg` 补 `white-space: pre-line`（modal 层统一受益）。
-- **P3-⑥ 注释不实 + 按钮可用性自缚**：`settings-backup.ts:260` 称「本机没有取配置目录的绑定」——`GetConfigPath` 存在（`app_config.go:71-73`；`e2e/mock-data.ts:334` 绑定契约在册）。「打开备份目录」现无备份即 toast 报错，其实配置目录恒存在（含导出快照）；改用 `GetConfigPath` 可去掉 `dirOf` 字符串 hack 与「必须有 .bak」的依赖，按钮无备份时也能开快照目录。
+- **P3-④ 双重转义**：`settings-backup.ts:245` 传 `t(..., { path: esc(target) })`，而 `utils/dom/modal-confirm.ts:47` 内部已 `esc(message)`——含 `&` 的路径显示为 `&amp;`。删外层 esc。→ **✅ 已处置**（见下 P3 处置回填）。
+- **P3-⑤ 确认文案 `\n` 不换行**：`.dlg-msg` 全仓无 CSS（grep 仅 ts 模板行命中），HTML 把换行折叠成空格，两句预告挤一行。→ **⚠️ 误诊撤销（2026-10-18 处置时复核）**：`frontend/css/dialogs.css:32-39` 的 `.dlg-msg` 一直有 `white-space: pre-wrap`（换行本就保留），`frontend/index.html:24` 已挂该样式表。病根在取证：CSS 存在性 grep 只扫了 `frontend/src/`，漏了仓根的 `frontend/css/` 目录。教训：**前端样式断言必须双目录（src/ + css/）grep**，「全仓无」这种全称否定尤其要报出扫描面。
+- **P3-⑥ 注释不实 + 按钮可用性自缚**：`settings-backup.ts:260` 称「本机没有取配置目录的绑定」——`GetConfigPath` 存在（`app_config.go:71-73`；`e2e/mock-data.ts:334` 绑定契约在册）。「打开备份目录」现无备份即 toast 报错，其实配置目录恒存在（含导出快照）；改用 `GetConfigPath` 可去掉 `dirOf` 字符串 hack 与「必须有 .bak」的依赖，按钮无备份时也能开快照目录。→ **✅ 已处置**（`dirOf` 保留——浏览器侧拿 Go 磁盘路径仍须自己切，被砍掉的是「必须有备份」依赖，见处置回填）。
 
 ### 观察（非缺陷，宜补文档）
 
@@ -231,9 +231,9 @@
 
 **评分**：骨架 9/10 ｜ 第一轮处置执行 8/10 ｜ 处置新面的安全对称 6/10。建议：P1-⑤ 当天修（半天工作量）；P2-⑦⑧⑨ 随下一个 settings 提交一并收；P3 记录排期。
 
-**处置进度（2026-10-18 回填）**：P1-⑤ `5757734c4` ✅；P2-⑦ `99e13b895` ✅；P2-⑧ `a4dd554dd` ✅；P2-⑨ `0cf2ffc35` ✅（文案面，双轨升级未拍）；P3-④⑤⑥ 记录待排。本轮两条形状教训已进知识卡：不变量 13（门控随写路径唯一出口）、不变量 14（侧效入口自证输入归属）。
+**处置进度（2026-10-18 回填）**：P1-⑤ `5757734c4` ✅；P2-⑦ `99e13b895` ✅；P2-⑧ `a4dd554dd` ✅；P2-⑨ `0cf2ffc35` ✅（文案面，双轨升级未拍）；P3-④⑥ `41affb985` ✅；P3-⑤ ⚠️ 误诊撤销（`.dlg-msg` 在 `frontend/css/dialogs.css:32-39` 早有 `white-space: pre-wrap`，取证 grep 只扫 `frontend/src/` 漏了 `frontend/css/`——全称否定断言必须报扫描面）。本轮三条形状教训已进知识卡：不变量 13（门控随写路径唯一出口）、不变量 14（侧效入口自证输入归属）、样式断言双目录（src/ + css/）。
 
-**治理尾注**：第一轮条目已全部处置——按 `docs/knowledge/AGENTS.md`「docs 根报告当日归档、快照不过夜」，本轮条目处置完毕后整本迁 `docs/archive/`，`settings-persistence.md` 知识卡留一行时点基准指针即可。
+**治理尾注**：两轮条目已全部处置/撤销——按 `docs/knowledge/AGENTS.md`「docs 根报告当日归档、快照不过夜」，本文件已整本迁 `docs/archive/`，`docs/knowledge/settings-persistence.md` 留一行时点基准指针。
 
 ---
 

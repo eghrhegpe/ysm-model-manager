@@ -153,10 +153,19 @@ describe("instanceCardHeaderHTML 徽章 chips（真实实现）", () => {
     expect(html).toContain('<span class="tag gray" data-role="no-mods">无VRM</span>');
   });
 
-  it("hasMod && 全零 → 显 success SVG 标签（带 data-role + 完全同步 title，不再裸显 0）", () => {
-    const html = instanceCardHeaderHTML({ name: "P", synced: 0, missing: 0, extra: 0 });
+  it("有内容且全同步（synced>0 无差异无禁用）→ 显 success SVG「完全同步」", () => {
+    const html = instanceCardHeaderHTML({ name: "P", synced: 3, missing: 0, extra: 0 });
     expect(html).toContain('<span class="tag" data-role="all-synced" title="完全同步">');
     expect(html).toContain('<svg class="ws-icon"'); // emoji 字形被设计令牌闸拦，走 SVG 体系
+    expect(html).toContain('<span class="tag green" data-role="synced-count" title="已同步">3</span>');
+  });
+
+  // 2026-10 锐评 P2-5：全零空包不是「已同步」而是「无内容」——不得显 ✓（原逻辑 allZero 含
+  // synced===0，把「该类型下无任何资源」误标成「完全同步」）。诚实留白优于误导性 ✓。
+  it("P2-5：全零空包（synced=0）→ 不显 all-synced ✓（「无内容」≠「完全同步」）", () => {
+    const html = instanceCardHeaderHTML({ name: "P", synced: 0, missing: 0, extra: 0 });
+    expect(html).not.toContain('data-role="all-synced"');
+    expect(html).not.toContain("完全同步");
     expect(html).not.toContain(">0</span>");
   });
 

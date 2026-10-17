@@ -295,7 +295,10 @@ export function instanceCardHeaderHTML(d: InstanceCardHeaderData): string {
   const idx = d.idx ?? -1;
   const hasMod = d.hasMod ?? true;
   const rtype = d.rtype ?? RESOURCE_TYPES.YSM;
-  const allZero = synced === 0 && missing === 0 && extra === 0;
+  // 2026-10 锐评 P2-5：原 allZero（含 synced===0）把「该类型下无任何资源」也标成「完全同步 ✓」——
+  // 空包不是「已同步」而是「无内容」。改为 synced>0 且无差异且无禁用（有内容且全部已同步）才显 ✓；
+  // 全零空包不再显任何状态徽章（诚实留白，优于误导性的 ✓）。
+  const fullySynced = synced > 0 && missing === 0 && extra === 0 && disabled === 0;
   // 徽章补 title 语义锚点（颜色码不自解释——绿/红/橙三色图例此前只存在于文档）：
   // 文案复用同步面板既有 key（已同步/待推送/可拉取），零新增 i18n；侧栏 extra 的
   // 用户操作即「拉取」，与面板 optional（可拉取）语义吻合。裸 `0` 改 success SVG + 完全同步
@@ -317,7 +320,7 @@ export function instanceCardHeaderHTML(d: InstanceCardHeaderData): string {
       : "") +
     (!hasMod
       ? `<span class="tag gray" data-role="no-mods">${t("sidebar.noMods", { type: noModLabelOf(rtype) })}</span>`
-      : allZero && disabled === 0
+      : fullySynced
         ? `<span class="tag" data-role="all-synced" title="${t("sidebar.syncFully")}">${UI_ICONS.success}</span>`
         : "");
   return `<div class="instance-card-header">

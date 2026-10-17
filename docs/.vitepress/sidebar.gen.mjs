@@ -1786,7 +1786,12 @@ export const autoSidebar = [
     "text": "审计",
     "link": "/audit/",
     "collapsed": true,
-    "items": []
+    "items": [
+      {
+        "text": "门禁性能瓶颈评估报告",
+        "link": "/audit/gate-performance-assessment"
+      }
+    ]
   },
   {
     "text": "知识卡",

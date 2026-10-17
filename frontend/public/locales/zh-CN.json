@@ -750,6 +750,8 @@
   "sidebar.pushInstallFail": "{fail} 个文件安装失败（成功 {ok}）",
   "sidebar.pushPackFailDetail": "失败集中在 {n} 个整合包：{names}",
   "sidebar.pushOverwrote": "覆盖了 {n} 处实例侧已修改内容（{names}）",
+  "sidebar.pushOverwriteConfirmTitle": "推送将覆盖实例侧修改",
+  "sidebar.pushOverwriteConfirmMsg": "本次推送范围（{n} 处文件/目录）在整合包侧有你自己改过的副本，推送会以仓库版本覆盖它们，且不可恢复。确定继续吗？",
   "sidebar.pushProgress": "推送中 {i}/{n} 类…",
   "sidebar.pullProgress": "拉取中 {i}/{n} 包…",
   "sidebar.syncResultTitle": "同步变更明细",

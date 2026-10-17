@@ -163,4 +163,77 @@
 
 ---
 
+## 五、第二轮锐评（2026-10-18，基线 `6179495cb`）
+
+第一轮 P1–P3 全数处置落地且实测复核有效（`go test ./internal/app -run 'Export|ImportSettings|Backup|Restore|DirectoryExists|SettingsKey'` 绿；`node tests/test_settings_key_ledger.ts` 全过——go-disk 33 字段 + localStorage/IDB 64 键、扫 649 文件；vitest `settings-backup.test.ts` 24/24）。本轮只评**处置引入的新代码面**与第一轮未覆盖的残留面。
+
+### P1-⑤ `ImportSettingsData` 写盘主入口丢双版本闸
+
+**锚点**：`internal/app/app_settings_export.go:247-249`（ImportSettingsData → importResolved）、`:253-265`（importResolved 自称「数据入口防线」却只校验 `exp.Format`）；对照 `:201-222`（ExportVersion/SchemaVersion 双闸 + 危害自述全文挂在 ReadSettingsExport 一侧）。
+
+**问题**：双版本闸留在「预览读」出口，没跟到「写盘」入口——防线落在了旧路标上。UI 链路安全（前端必先 Read 再传同一 exp），但绑定契约层面 `ImportSettingsData` 可被 JS 直接喂伪造/陈旧 exp 落盘：`applyConfigMigrations` 只向上迁低版本、不拒绝高版本，`saveConfig` 会把高版本程序导出的 `SchemaVersion` 焊死成本程序的版本章——`:202-203` 自述的「高版本章焊死」危害恰好发生在无闸分支上。P2② 消双读重构把写主入口移过来的那一刻，闸没随行，是这次修复唯一真正的失手。
+
+**建议**：两道版本闸移进 `importResolved`（Format 闸之后）；`ReadSettingsExport` 侧保留（预览早退 UX 更好），两道闸抽同源函数两点调用。补 Go 测试：`ImportSettingsData` 直喂高 ExportVersion / 高 SchemaVersion 的 exp → 拒且报 `ErrSettingsTooNew`。
+
+**处置**：⬜ 待处置
+
+### P2-⑦ 恢复入口不设防：`RestoreSettingsBackup` 不校验路径归属，`ListSettingsBackups` 缺空目录守卫
+
+**锚点**：`app_settings_export.go:361-364`（任意 path 直进 `readJSONFile` 后整份覆盖配置）；`:341`（`filepath.Glob(configPath() + ".bak-*")` 无 `configDir()==""` 守卫）；对照 `:67-76`（`settingsExportPath` 对同一危害有显式守卫且注释自证道理）与 `:183`（威胁模型自述「本绑定可被 JS 传任意路径触发」）。
+
+**问题**：① 恢复是有侧效的写盘，却不校验 path 确属备份集合——JS 可传任意 JSON 路径覆盖 `ysm_config.json`，绕开导出格式与版本闸（备份文件名恒为 `ysm_config.json.bak-*`，判据现成）；② `configDir()==""` 时 `configPath()` 为空串，Glob 模式退化为 `.bak-*`，匹配到 CWD 的外来文件——`:67-69` 已在导出侧认过的坑，列表侧没堵，同文件不对称。
+
+**建议**：`RestoreSettingsBackup` 开头校验 `filepath.Dir(path) == configDir()` 且文件名匹配 `.bak-` 模式（或反查 `ListSettingsBackups` 集合）；`ListSettingsBackups` 加同款空目录守卫（返回空列表）。Go 测试：备份目录外路径 / 非 .bak 文件名 → 拒。
+
+**处置**：⬜ 待处置
+
+### P2-⑧ P1②「主题镜像重算」修复本身没有回归锁
+
+**锚点**：`frontend/src/views/app-content/index.ts:97-107`（`settings:imported` 订阅内 `void initTheme()`）；app-content 目录**无** `index*.test.ts`（glob 零文件）；`settings-backup.test.ts:307/:398` 只钉 emit 不钉消费方；知识卡 `docs/knowledge/settings-persistence.md` 不变量 8 要求该调用。
+
+**问题**：修复落地了，但不变量只活在知识卡文字里——日后重构挪掉/拆掉这个订阅，全仓没有一盏红灯。theme 是 dual-write 唯一族（`settings-keys.ts:167-186` disk:theme/themeAuto + `:442-459` 镜像），重算一旦丢，换机导入后磁盘 theme 与 localStorage 镜像静默分叉，等于 P1② 复发且无人为它负责。改代码不补执法，债只是换了张借条。
+
+**建议**：补一条测试：emit `settings:imported` → spy 断言 `initTheme` 被调（组件级或最小 bus 级皆可）。
+
+**处置**：⬜ 待处置
+
+### P2-⑨ 恢复语义双轨不对称，且确认文案不实
+
+**锚点**：`settings-backup.ts:186-190`（导入 = 磁盘 + 浏览器偏好双轨）；i18n `restoreConfirmMessage`（`frontend/public/locales/zh-CN.json:180` + `src/locales/{zh-CN,en,ja}.ts` 三语言）称「恢复后主题、语言与仓库路径会立即更新」；`language` 台账（`settings-keys.ts:430-441`）是 localStorage/browser-authority 轨，`go/types/config.go` grep `Language` 零命中。
+
+**问题**：① 导入写双轨、恢复只回滚磁盘轨——「先导入再恢复」后浏览器偏好停在导入机的值，文案未披露；② 文案承诺语言会随恢复更新，但语言根本不在磁盘轨上，恢复永远不动它；换机导入带来的新语言，恢复撤销不了。
+
+**建议**：`restoreConfirmMessage` 改为「恢复磁盘配置（主题、仓库路径等）；浏览器偏好（语言、界面选项）不回滚」，三语言同步；是否升级恢复为双轨（恢复前记录 localStorage）另拍。
+
+**处置**：⬜ 待处置
+
+### P3-④⑤⑥（记录）
+
+- **P3-④ 双重转义**：`settings-backup.ts:245` 传 `t(..., { path: esc(target) })`，而 `utils/dom/modal-confirm.ts:47` 内部已 `esc(message)`——含 `&` 的路径显示为 `&amp;`。删外层 esc。
+- **P3-⑤ 确认文案 `\n` 不换行**：`.dlg-msg` 全仓无 CSS（grep 仅 ts 模板行命中），HTML 把换行折叠成空格，两句预告挤一行。`.dlg-msg` 补 `white-space: pre-line`（modal 层统一受益）。
+- **P3-⑥ 注释不实 + 按钮可用性自缚**：`settings-backup.ts:260` 称「本机没有取配置目录的绑定」——`GetConfigPath` 存在（`app_config.go:71-73`；`e2e/mock-data.ts:334` 绑定契约在册）。「打开备份目录」现无备份即 toast 报错，其实配置目录恒存在（含导出快照）；改用 `GetConfigPath` 可去掉 `dirOf` 字符串 hack 与「必须有 .bak」的依赖，按钮无备份时也能开快照目录。
+
+### 观察（非缺陷，宜补文档）
+
+浏览器轨导入 = **merge**（`settings-backup.ts:110-121` 只写导出文件里出现的键，不删本机同轨残留），磁盘轨 = 整份覆盖。两轨混合语义是设计选择，但「未导出键的旧值静默存活」未写进知识卡/ADR，用户猜不到——建议知识卡不变量 8 补一句口径。
+
+### 记录（接受不修）
+
+- 断言 D5 判据 `NON_EXPORTABLE_HINT=/派生缓存|仅网页模式|桌面端不读此键/`（`tests/test_settings_key_ledger.ts:258`）是 note 短语启发式，未来派生缓存键措辞不含即漏网——代码注释已自认限制。
+- 粗估闸的 6–8MiB 带可误拒（`estimateLocalStorageSize` > 6MiB 拒、真值或 < 8MiB）——`app_settings_export.go:57-60/:380-393` 注释自认 trade-off；设置到 MiB 级本就超出设计包络。
+
+### 第二轮总评
+
+第一轮六条 P1/P2 全落地、条条带测试锁与三语言文案，处置质量在平均线以上。本轮暴露两个反复出现的形状，比单条缺陷更值钱：
+
+1. **防线跟着入口搬家，不跟着旧路标留念**（P1-⑤）：重构开新主入口时，闸必须随「写路径唯一出口」迁移，而不是留在调用链的便利侧。
+2. **改行为不改执法**（P2-⑧）：知识卡不变量没有测试钉，就只是借条。
+
+**评分**：骨架 9/10 ｜ 第一轮处置执行 8/10 ｜ 处置新面的安全对称 6/10。建议：P1-⑤ 当天修（半天工作量）；P2-⑦⑧⑨ 随下一个 settings 提交一并收；P3 记录排期。
+
+**治理尾注**：第一轮条目已全部处置——按 `docs/knowledge/AGENTS.md`「docs 根报告当日归档、快照不过夜」，本轮条目处置完毕后整本迁 `docs/archive/`，`settings-persistence.md` 知识卡留一行时点基准指针即可。
+
+---
+
 *评审人：AI 代理（鲸鱼架构师 deepseek）｜评审日期：2026-10-17｜基线 commit：`0f8fc1817`*
+*第二轮：2026-10-18｜基线 commit：`6179495cb`（第一轮处置后 HEAD）*

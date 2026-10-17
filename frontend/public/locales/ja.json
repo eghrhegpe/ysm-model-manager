@@ -750,6 +750,8 @@
   "sidebar.pushInstallFail": "{fail} 個のファイルのインストールに失敗（{ok} 個成功）",
   "sidebar.pushPackFailDetail": "失敗は {n} 個のパックに集中：{names}",
   "sidebar.pushOverwrote": "インスタンス側の変更 {n} 件を上書きしました（{names}）",
+  "sidebar.pushOverwriteConfirmTitle": "プッシュはインスタンス側の変更を上書きします",
+  "sidebar.pushOverwriteConfirmMsg": "今回のプッシュには整合包 side で編集した {n} ファイル/フォルダが含まれます。リポジトリ版で上書きされ、元に戻せません。続行しますか？",
   "sidebar.pushProgress": "プッシュ中 {i}/{n}…",
   "sidebar.pullProgress": "プル中 {i}/{n}…",
   "sidebar.syncResultTitle": "同期変更明細",

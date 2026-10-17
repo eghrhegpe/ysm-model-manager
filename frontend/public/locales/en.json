@@ -750,6 +750,8 @@
   "sidebar.pushInstallFail": "{fail} files failed to install ({ok} succeeded)",
   "sidebar.pushPackFailDetail": "Failures concentrated in {n} pack(s): {names}",
   "sidebar.pushOverwrote": "Overwrote {n} instance-side modification(s) ({names})",
+  "sidebar.pushOverwriteConfirmTitle": "Push will overwrite instance-side changes",
+  "sidebar.pushOverwriteConfirmMsg": "This push covers {n} file/folder(s) you edited in the modpack. The repo version will overwrite them and this cannot be undone. Continue?",
   "sidebar.pushProgress": "Pushing {i}/{n}…",
   "sidebar.pullProgress": "Pulling {i}/{n}…",
   "sidebar.syncResultTitle": "Sync change details",

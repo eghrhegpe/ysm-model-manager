@@ -212,6 +212,8 @@ export const ja: Record<string, string> = {
   "settings.backup.restoreConfirmOk": "復元",
   "settings.backup.restoreDone": "読み込み前のバックアップに復元しました",
   "settings.backup.noBackup": "読み込み前のバックアップがありません。先に設定を読み込んでください",
+  "settings.backup.dirUnavailable":
+    "アプリのデータディレクトリを利用できないため、バックアップフォルダを開けません",
   "settings.backup.openedDir": "バックアップフォルダを開きました",
   // 設定ページ動作トースト（app-content/settings）
   "settings.mirror.switched": "ダウンロード元を {name} に切り替えました",

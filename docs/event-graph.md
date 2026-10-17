@@ -340,7 +340,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | initSettingsBackup | `frontend/src/views/app-content/settings/settings-backup.ts` | 220 |
-| initSettingsBackup | `frontend/src/views/app-content/settings/settings-backup.ts` | 252 |
+| initSettingsBackup | `frontend/src/views/app-content/settings/settings-backup.ts` | 256 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |

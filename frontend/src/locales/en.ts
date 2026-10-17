@@ -210,6 +210,8 @@ export const en: Record<string, string> = {
   "settings.backup.restoreConfirmOk": "Restore",
   "settings.backup.restoreDone": "Restored to pre-import backup",
   "settings.backup.noBackup": "No pre-import backup yet — run an import first",
+  "settings.backup.dirUnavailable":
+    "App data directory is unavailable — cannot open the backup folder",
   "settings.backup.openedDir": "Backup folder opened",
   // settings page action toasts (app-content/settings)
   "settings.mirror.switched": "Download source switched to {name}",

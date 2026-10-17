@@ -242,7 +242,11 @@ export function initSettingsBackup(root: ShadowRoot): void {
           title: t("settings.backup.restoreConfirmTitle"),
           titleIcon: "warning",
           danger: true,
-          message: t("settings.backup.restoreConfirmMessage", { path: esc(target) }),
+          message: t("settings.backup.restoreConfirmMessage", {
+            // 原始路径直插：modal-confirm.ts:47 对整个 message 做 esc()，外层再 esc 是双重
+            // 转义——含 & 的路径显示成 &amp;（锐评 P3④）。
+            path: target,
+          }),
           okText: t("settings.backup.restoreConfirmOk"),
         });
         if (!ok) return;
@@ -256,19 +260,22 @@ export function initSettingsBackup(root: ShadowRoot): void {
     });
   });
 
-  // 打开备份目录（锐评 P2④）：让用户能在文件管理器里看到 .bak-* / ysm_config.json。
-  // 目录从最新备份路径推导（本机没有「取配置目录」的绑定）；无备份时提示而非静默。
+  // 打开备份目录（锐评 P2④，P3⑥ 修口）：让用户在文件管理器里看到 .bak-* / ysm_config.json。
+  // 旧注释称「本机没有取配置目录的绑定」不实——GetConfigPath 一直存在（app_config.go:71），
+  // 据此取目录后，**无备份也能打开**（配置目录恒在，导出快照与 .bak-* 都落这里）；
+  // dirOf 保留——浏览器侧拿 Go 磁盘路径只能自己切（无 node path），砍掉的是「必须有备份」的自缚。
   const openBtn = root.getElementById("set-backup-open") as HTMLButtonElement | null;
   openBtn?.addEventListener("click", () => {
     void withBusy(async () => {
       try {
-        const { ListSettingsBackups, OpenFolder } = await backendGetApp();
-        const backups = (await ListSettingsBackups()) ?? [];
-        if (backups.length === 0) {
-          toast(t("settings.backup.noBackup"), TOAST_MS.normal, "error");
+        const { GetConfigPath, OpenFolder } = await backendGetApp();
+        const cfgPath = (await GetConfigPath()) ?? "";
+        if (!cfgPath) {
+          // 平台数据根缺失（configDir fail-fast 形态，见 app_config.go:51-57）：无从打开
+          toast(t("settings.backup.dirUnavailable"), TOAST_MS.normal, "error");
           return;
         }
-        await OpenFolder(dirOf(backups[0]));
+        await OpenFolder(dirOf(cfgPath));
         toast(t("settings.backup.openedDir"), TOAST_MS.normal, "success");
       } catch (e) {
         toastError(e);

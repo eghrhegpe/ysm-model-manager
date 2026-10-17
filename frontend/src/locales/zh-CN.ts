@@ -215,6 +215,7 @@ export const zhCN = {
   "settings.backup.restoreConfirmOk": "确认恢复",
   "settings.backup.restoreDone": "已恢复到导入前备份",
   "settings.backup.noBackup": "暂无导入前备份，请先执行一次导入设置",
+  "settings.backup.dirUnavailable": "应用数据目录不可用，无法打开备份目录",
   "settings.backup.openedDir": "已打开备份目录",
   // 设置页动作 toast（app-content/settings）
   "settings.mirror.switched": "下载源已切换为 {name}",

@@ -30,6 +30,8 @@ const appMocks = vi.hoisted(() => ({
   ListSettingsBackups: vi.fn(),
   RestoreSettingsBackup: vi.fn(),
   OpenFolder: vi.fn(),
+  // 配置目录来源（锐评 P3⑥）：「打开备份目录」按钮由 GetConfigPath 推导目录，不再依赖备份存在
+  GetConfigPath: vi.fn(),
   // 目录存在性只读查询（锐评 P2⑤ 增强）：导入覆盖的 FilesRoot/McRoot/CustomRoots 来自旧机，
   // 前端据此检测哪些路径在本机无效并提示去「环境」页重设
   DirectoryExists: vi.fn(),
@@ -421,14 +423,39 @@ describe("initSettingsBackup 编排链路", () => {
     expect(modalConfirmMock.modalConfirm).not.toHaveBeenCalled();
   });
 
-  it("打开备份目录：调 OpenFolder(最新备份所在目录)（P2-④）", async () => {
-    appMocks.ListSettingsBackups.mockResolvedValue(BACKUPS);
+  it("打开备份目录：调 OpenFolder(配置目录)，无备份也能打开（P3⑥ 修口）", async () => {
+    appMocks.GetConfigPath.mockResolvedValue("C:\\ysm\\ysm_config.json");
+    appMocks.ListSettingsBackups.mockResolvedValue([]); // 无备份——按钮不再自缚
     const root = mountBackupRoot();
     initSettingsBackup(root);
     root.getElementById("set-backup-open")!.click();
 
     await vi.waitFor(() => expect(appMocks.OpenFolder).toHaveBeenCalledTimes(1));
     expect(appMocks.OpenFolder).toHaveBeenCalledWith("C:\\ysm");
+    expect(toastMock.toastError).not.toHaveBeenCalled();
+  });
+
+  it("平台数据根缺失（GetConfigPath 空）：提示不可用、不调 OpenFolder（P3⑥ 边界）", async () => {
+    appMocks.GetConfigPath.mockResolvedValue("");
+    const root = mountBackupRoot();
+    initSettingsBackup(root);
+    root.getElementById("set-backup-open")!.click();
+
+    await vi.waitFor(() => expect(toastMock.toast).toHaveBeenCalledTimes(1));
+    expect(appMocks.OpenFolder).not.toHaveBeenCalled();
+  });
+
+  it("恢复确认文案中的路径不被双重转义（P3④）", async () => {
+    appMocks.ListSettingsBackups.mockResolvedValue(["C:\\a&b\\ysm_config.json.bak-20260102-000000.000"]);
+    const root = mountBackupRoot();
+    initSettingsBackup(root);
+    root.getElementById("set-backup-restore")!.click();
+
+    await vi.waitFor(() => expect(modalConfirmMock.modalConfirm).toHaveBeenCalledTimes(1));
+    const arg = modalConfirmMock.modalConfirm.mock.calls[0][0] as { message: string };
+    // modal-confirm 内部统一 esc()，调用方给原始值——& 在 message 里必须是裸的
+    expect(arg.message).toContain("C:\\a&b\\");
+    expect(arg.message).not.toContain("&amp;");
   });
 
   it("导入的路径在本机不存在：状态行给缺失警告与「去环境页」按钮，点击切到 env tab（P2⑤ 增强）", async () => {

@@ -36,20 +36,28 @@ import (
 
 // 导出文件标识与版本（写入文件头，导入时校验，防把无关 JSON 当设置备份解析）。
 const (
-	settingsExportFormat    = "ysm-settings-export"
-	settingsExportVersion   = 1
-	settingsExportFilename  = "ysm-settings-export.json"
+	settingsExportFormat  = "ysm-settings-export"
+	settingsExportVersion = 1
+	// 导出文件名带时间戳（锐评 P2③）：旧实现固定为 ysm-settings-export.json 直接覆盖，
+	// 用户第二次导出会静默丢上一次的文件——「导出」动作意味着保留一份快照，覆盖违背直觉。
+	settingsExportNameFmt   = "ysm-settings-export-%s.json"
+	settingsExportTimeFmt   = "20060102-150405.000"
 	settingsBackupSuffixFmt = ".bak-%s"
 	// 导入前备份最多保留的份数（LRU 按时间戳字典序，超过即删最旧）。
 	// 无上限的后果：反复导入让 .bak-* 无限堆积，用户还可能误把 .bak 当配置拷走。
 	settingsBackupKeep = 10
+	// 导出文件最多保留的份数（同 settingsBackupKeep 的 LRU 理由）：带时间戳后每次导出都是
+	// 新文件，无上限会让导出目录无限堆积（每个文件数百 KB）。10 份足够回溯，且远超用户
+	// 实际会留意的最近一次。
+	settingsExportKeep = 10
 	// 导出文件大小上限。ReadSettingsExport 直接 os.ReadFile 整份入内存，
 	// 无门槛会让用户误选或恶意塞入的超大文件把进程内存吃满。
 	settingsExportMaxBytes = 8 << 20 // 8 MiB
 )
 
-// settingsExportPath 导出文件的固定落点：应用数据目录（与 ysm_config.json 同域）。
-// 用户只拷这一个文件即可带走「磁盘 + 浏览器」两轨设置——这是本功能存在的全部意义。
+// settingsExportPath 导出文件落点：应用数据目录（与 ysm_config.json 同域），文件名带时间戳。
+// 用户拷这一个文件即可带走「磁盘 + 浏览器」两轨设置——这是本功能存在的全部意义。
+// 时间戳让每次导出成为独立快照，UI 显示的路径对应当前这次导出（锐评 P2③）。
 //
 // configDir() 为空（平台数据根注入缺失，见 app_config.go:60 的守卫注释）时返回 ""，
 // 由调用方拒绝——直接 filepath.Join("", name) 会让导出静默落到 CWD 相对路径，
@@ -59,7 +67,7 @@ func settingsExportPath() string {
 	if dir == "" {
 		return ""
 	}
-	return filepath.Join(dir, settingsExportFilename)
+	return filepath.Join(dir, fmt.Sprintf(settingsExportNameFmt, time.Now().Format(settingsExportTimeFmt)))
 }
 
 // ExportSettingsJSON 导出全部设置为单个 JSON 文件（ADR-344-d1）。
@@ -122,7 +130,29 @@ func (a *App) ExportSettingsJSON(localStorage map[string]string) (string, error)
 	if err := fsutil.WriteFileAtomic(path, data); err != nil {
 		return "", err
 	}
+	// 份数上限（锐评 P2③）：时间戳文件名让每次导出都是新文件，旧文件按时间戳 LRU 裁剪。
+	// 清理失败仅记日志（多留一份比删错更安全，尽力而为，不影响本次导出成功）。
+	a.pruneOldExportFiles()
 	return path, nil
+}
+
+// pruneOldExportFiles 按时间戳 LRU 裁剪导出文件，保留最近 settingsExportKeep 份。
+// 与 pruneOldConfigBackups 同模式：文件名时间戳前缀 YYYYMMDD-HHMMSS.mmm 字典序即时间序。
+func (a *App) pruneOldExportFiles() {
+	dir := configDir()
+	if dir == "" {
+		return
+	}
+	matches, err := filepath.Glob(filepath.Join(dir, "ysm-settings-export-*.json"))
+	if err != nil || len(matches) <= settingsExportKeep {
+		return
+	}
+	sort.Strings(matches)
+	for _, p := range matches[:len(matches)-settingsExportKeep] {
+		if err := os.Remove(p); err != nil && !os.IsNotExist(err) {
+			log.Printf("[settings] 清理旧导出文件失败: %s (%v)", p, err)
+		}
+	}
 }
 
 // ReadSettingsExport 只读解析 + 校验设置导出文件（无任何副作用）。

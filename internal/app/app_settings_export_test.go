@@ -9,8 +9,10 @@ package app
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 
@@ -32,6 +34,19 @@ func exportTestApp(t *testing.T, cfg types.AppConfig) *App {
 	return a
 }
 
+// assertExportPathInConfigDir 断言导出路径落在应用数据目录且文件名带时间戳前缀。
+// 不能精确等于 settingsExportPath()（锐评 P2③：文件名带时间戳，两次调用毫秒可能不同）。
+func assertExportPathInConfigDir(t *testing.T, path string) {
+	t.Helper()
+	if filepath.Dir(path) != configDir() {
+		t.Errorf("导出目录=%q want=%q", filepath.Dir(path), configDir())
+	}
+	base := filepath.Base(path)
+	if !strings.HasPrefix(base, "ysm-settings-export-") || !strings.HasSuffix(base, ".json") {
+		t.Errorf("导出文件名应带时间戳前缀: got=%q", base)
+	}
+}
+
 func TestExportSettingsJSON_WritesExportFileAtAppDataDir(t *testing.T) {
 	a := exportTestApp(t, types.AppConfig{FilesRoot: "C:/repo", Theme: "dark"})
 
@@ -40,9 +55,7 @@ func TestExportSettingsJSON_WritesExportFileAtAppDataDir(t *testing.T) {
 		"ui-card-density": "compact",
 	})
 	testutil.NoError(t, err, "ExportSettingsJSON")
-	if path != settingsExportPath() {
-		t.Errorf("导出路径应固定在应用数据目录: got=%q want=%q", path, settingsExportPath())
-	}
+	assertExportPathInConfigDir(t, path)
 	data, err := os.ReadFile(path)
 	testutil.NoError(t, err, "ReadFile 导出文件")
 	var exp types.SettingsExport
@@ -169,9 +182,7 @@ func TestExportSettingsJSON_AllowsNewUserWithoutPaths(t *testing.T) {
 	a := newLinkModeApp()
 	path, err := a.ExportSettingsJSON(map[string]string{})
 	testutil.NoError(t, err, "全新用户导出应放行")
-	if path != settingsExportPath() {
-		t.Errorf("导出路径=%q want=%q", path, settingsExportPath())
-	}
+	assertExportPathInConfigDir(t, path)
 }
 
 func TestImportSettingsFromFile_RoundTripAndBackup(t *testing.T) {
@@ -213,6 +224,28 @@ func TestImportSettingsFromFile_RoundTripAndBackup(t *testing.T) {
 // ImportSettingsData（锐评 P2②）：前端 ReadSettingsExport 预览后把**同一个** exp 传入落盘，
 // 不再对同一文件读两遍（消除计数与实际写入可能不符的 TOCTOU）。测试直接用构造的
 // SettingsExport，验证备份 + 配置覆盖。
+// pruneOldExportFiles（锐评 P2③）：导出文件名带时间戳后每次导出都是新文件，须 LRU 裁剪
+// 到 settingsExportKeep 份，否则导出目录无限堆积。
+func TestPruneOldExportFiles_KeepsRecentExports(t *testing.T) {
+	a := exportTestApp(t, types.AppConfig{FilesRoot: "C:/repo", Theme: "dark"})
+	dir := configDir()
+	for i := 0; i < settingsExportKeep+5; i++ {
+		name := fmt.Sprintf("ysm-settings-export-20260101-0000%02d.000.json", i)
+		testutil.NoError(t, os.WriteFile(filepath.Join(dir, name), []byte("{}"), 0o644), "写假导出文件")
+	}
+	a.pruneOldExportFiles()
+	matches, err := filepath.Glob(filepath.Join(dir, "ysm-settings-export-*.json"))
+	testutil.NoError(t, err, "Glob 导出文件")
+	sort.Strings(matches) // 与 prune 内部同序，matches[0] 即最旧一份
+	if len(matches) != settingsExportKeep {
+		t.Errorf("应裁剪到 %d 份，got %d", settingsExportKeep, len(matches))
+	}
+	// 最旧的一份（时间戳前缀字典序最小，编号 00..）必须被删
+	if !strings.HasSuffix(matches[0], "00005.000.json") {
+		t.Errorf("应保留时间戳较新的导出，got oldest=%q", matches[0])
+	}
+}
+
 func TestImportSettingsData_RoundTripAndBackup(t *testing.T) {
 	const root = "C:/repo"
 	dst := exportTestApp(t, types.AppConfig{FilesRoot: root, Theme: "light", Mirror: "ghproxy"})

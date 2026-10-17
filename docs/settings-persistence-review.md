@@ -92,7 +92,7 @@
 
 **建议**：让 `ImportSettingsFromFile` 返回实际应用的浏览器键集合（或让前端只依赖 `res`），避免二次读。
 
-**✅ 已处置（2026-10-17）**：新增绑定 `ImportSettingsData(exp types.SettingsExport)`，与 `ImportSettingsFromFile` 共用 `importResolved` 落盘主体。前端 `ReadSettingsExport` 预览后把**同一个** `exp` 传给 `ImportSettingsData`，不再对同一文件读两遍——计数与实际写入必然一致。`importResolved` 补 `exp.Format` 数据入口防线（未走 `ReadSettingsExport` 校验的伪造/错误数据被拒止，不会以零值 `AppConfig` 覆盖当前配置）。`ImportSettingsFromFile` 保留为按路径入口（向后兼容）。配套：`settings-backup.ts` 解构改 `ImportSettingsData`；`e2e/mock-data.ts` 补 `ImportSettingsData: undefined`（bindings 契约，`MockKey` 须覆盖新绑定）；测试 Go 侧新增 `TestImportSettingsData_RoundTripAndBackup` / `TestImportSettingsData_RejectsBadFormat`，前端既有「磁盘失败不写浏览器」「取消零副作用」用例照旧锁（mock 名同步改）。
+**✅ 已处置（2026-10-17，commit `4df3e4d9a`）**：新增绑定 `ImportSettingsData(exp types.SettingsExport)`，与 `ImportSettingsFromFile` 共用 `importResolved` 落盘主体。前端 `ReadSettingsExport` 预览后把**同一个** `exp` 传给 `ImportSettingsData`，不再对同一文件读两遍——计数与实际写入必然一致。`importResolved` 补 `exp.Format` 数据入口防线（未走 `ReadSettingsExport` 校验的伪造/错误数据被拒止，不会以零值 `AppConfig` 覆盖当前配置）。`ImportSettingsFromFile` 保留为按路径入口（向后兼容）。配套：`settings-backup.ts` 解构改 `ImportSettingsData`；`e2e/mock-data.ts` 补 `ImportSettingsData: undefined`（bindings 契约，`MockKey` 须覆盖新绑定）；测试 Go 侧新增 `TestImportSettingsData_RoundTripAndBackup` / `TestImportSettingsData_RejectsBadFormat`，前端既有「磁盘失败不写浏览器」「取消零副作用」用例照旧锁（mock 名同步改）。
 
 ### P2-③ 导出固定路径**静默覆盖**上一次导出
 
@@ -101,6 +101,8 @@
 **问题**：第二次导出覆盖第一次，旧文件无版本号、无提示。用户若已把旧文件拷走则无碍，但「导出」动作通常意味着「保留一份」，静默覆盖违背直觉，且覆盖后无法找回。
 
 **建议**：文件名带时间戳（如 `ysm-settings-export-20261017-1530.json`），或覆盖前确认；至少 toast 提示「已覆盖上次导出的文件」。
+
+**✅ 已处置（2026-10-17，采纳「时间戳」方案）**：导出文件名改为带时间戳 `ysm-settings-export-YYYYMMDD-HHMMSS.mmm.json`（`settingsExportNameFmt` + `settingsExportTimeFmt`），每次导出都是独立快照、不再静默覆盖——比「覆盖前确认」更贴合「导出=保留一份快照」的直觉。配套 `settingsExportKeep = 10` + `pruneOldExportFiles()`（Glob `ysm-settings-export-*.json`，时间戳前缀字典序 LRU 删最旧，保留 10 份；清理失败仅 `log.Printf`——多留一份比删错更安全，与 `pruneOldConfigBackups` 同模式）。UI 显示/复制的就是当次导出路径（时间戳名），语义更清楚。测试：新增 `TestPruneOldExportFiles_KeepsRecentExports`（造 15 个假导出 → 裁剪到 10、最旧被删）；原 `path != settingsExportPath()` 断言改为 `assertExportPathInConfigDir` helper（时间戳名不能精确相等，改断言目录 + 文件名前缀）。
 
 ### P2-④ 备份文件**有产出、无 UI 消费入口**
 

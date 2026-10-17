@@ -126,7 +126,7 @@
 
 **处置**：📌 **部分不成立**（2026-10-17 复核）——`settings.backup.importDone` 文案已含「若导入的路径在本机无效，请在「环境」页重新设置目录」（zh-CN / en / ja 三语言），**文案侧提示已存在**，锐评「完全未落地」不准确。但**自动检测**路径有效性 + 跳转/警示条仍未实现——保留为后续增强（需 Go 侧路径存在性绑定，与 P2-④「恢复备份」同属导入后 UX 收尾，一并排期）。
 
-**✅ 增强已落地（2026-10-17）**：Go 新增绑定 `DirectoryExists(path string) bool`（`os.Stat` + `IsDir`；空路径返回 false；纯只读零副作用——不能复用 `OpenFolder`，它会真的打开资源管理器）。导入成功后 `settings-backup.ts` 调 `missingDirsOf(exp.appConfig, DirectoryExists)` 检测 `filesRoot`/`mcRoot`/`customRoots` 中在本机不存在的路径（空路径跳过，`customRoots` 是 `{类型->路径}` map、值可能 undefined 一并过滤；目录存在性只能问 Go，回归红线：前端不扫盘），存在缺失则状态行追加缺失警告（`var(--err)` 配色）+「去环境页」按钮（点击 `.stg-tab[data-tab="env"]`）。测试：Go `TestDirectoryExists`（存在目录 true / 不存在 false / 空路径 false / 普通文件 false）；前端两用例（缺失 → 状态行警告 + 按钮，点击切到 env tab；全部存在 → 无按钮）。
+**✅ 增强已落地（2026-10-17，commit `eb935a7c8`）**：Go 新增绑定 `DirectoryExists(path string) bool`（`os.Stat` + `IsDir`；空路径返回 false；纯只读零副作用——不能复用 `OpenFolder`，它会真的打开资源管理器）。导入成功后 `settings-backup.ts` 调 `missingDirsOf(exp.appConfig, DirectoryExists)` 检测 `filesRoot`/`mcRoot`/`customRoots` 中在本机不存在的路径（空路径跳过，`customRoots` 是 `{类型->路径}` map、值可能 undefined 一并过滤；目录存在性只能问 Go，回归红线：前端不扫盘），存在缺失则状态行追加缺失警告（`var(--err)` 配色）+「去环境页」按钮（点击 `.stg-tab[data-tab="env"]`）。测试：Go `TestDirectoryExists`（存在目录 true / 不存在 false / 空路径 false / 普通文件 false）；前端两用例（缺失 → 状态行警告 + 按钮，点击切到 env tab；全部存在 → 无按钮）。
 
 ### P2-⑥ `if (!exp) return` 是死代码
 

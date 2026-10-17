@@ -148,17 +148,30 @@ function readLedger() {
   assert.ok(fs.existsSync(LEDGER_FILE), `台账文件不存在：${rel(LEDGER_FILE)}`);
   const text = fs.readFileSync(LEDGER_FILE, "utf8");
   const diskPrefix = "disk:";
-  const localKeys = new Map(); // localStorage key -> {tier, authority, migrates}
+  const localKeys = new Map(); // localStorage key -> {tier, authority, migrates, exportable, note}
   const diskFields = new Set(); // goField 值
-  for (const m of text.matchAll(
-    /key:\s*"([^"]+)"[\s\S]{0,400}?tier:\s*"([^"]+)"[\s\S]{0,400}?authority:\s*"([^"]+)"[\s\S]{0,400}?migrates:\s*(true|false)/g,
-  )) {
-    const isDisk = m[1].startsWith(diskPrefix);
+  // 按 entry 块整体切分（锐评 2026-10-17：需抓 `exportable` 与 `note`，原区间正则
+  // `[\s\S]{0,400}` 只锁 tier/authority/migrates 三字段，装不下第三维与 note 说明）。
+  // 结束锚 `\n  \},?`：entry 收尾是 `  },\n`（最后一条无逗号），排除元组批量登记
+  // （那批是 `["disk:x", "YsmRoot", …]` 数组形态，不含 `key:` 字面量，不进本循环）。
+  for (const blk of text.matchAll(/key:\s*"([^"]+)"[\s\S]*?\n {2}\},?\n/g)) {
+    const body = blk[0];
+    const isDisk = blk[1].startsWith(diskPrefix);
+    const field = (re) => body.match(re)?.[1];
     if (isDisk) {
-      diskFields.add(m[1].slice(diskPrefix.length));
+      diskFields.add(blk[1].slice(diskPrefix.length));
       continue;
     }
-    localKeys.set(m[1], { tier: m[2], authority: m[3], migrates: m[4] === "true" });
+    localKeys.set(blk[1], {
+      tier: field(/tier:\s*"([^"]+)"/),
+      authority: field(/authority:\s*"([^"]+)"/),
+      migrates: body.match(/migrates:\s*(true|false)/)?.[1] === "true",
+      exportable: (() => {
+        const m = body.match(/exportable:\s*(true|false)/);
+        return m ? m[1] === "true" : undefined;
+      })(),
+      note: field(/note:\s*"([^"]+)"/),
+    });
   }
   // 废弃字段以元组 + .map 批量登记（`["disk:ysmRoot", "YsmRoot", "…"]`），
   // 上一条逐字面量口径抓不到它们——它们也是磁盘轨登记，必须计入。
@@ -233,6 +246,24 @@ assert.deepStrictEqual(
   strayDiskTier,
   [],
   `磁盘轨登记必须用 disk: 前缀的 key（此处这些键无前缀却声明 tier:"go-disk"）：\n  ${strayDiskTier.join("\n  ")}`,
+);
+
+// ─── 断言 D5（锐评 2026-10-17 P1④）：ADR-344-d1 决策②要求剔除的键必须显式 exportable:false ───
+// `exportableSettingsKeys()` 的判据只有 tier+authority 两维，装不下「派生缓存」和
+// 「网页模式专用键」——它们的 authority 语义上确实是 browser-authority，单靠 authority
+// 排不掉。台账靠第三维 `exportable:false` 显式登记；漏标的后果：导出文件把旧机派生缓存
+// 回灌新机、覆盖刚重算的索引，或把桌面端根本不消费的网页版配置写进桌面端 localStorage
+// （影配置 + 虚增尺寸闸压力）。
+// 判据：note 明写「派生缓存 / 仅网页模式 / 桌面端不读此键」的 localStorage 键必须显式 false。
+const NON_EXPORTABLE_HINT = /派生缓存|仅网页模式|桌面端不读此键/;
+const nonExplicitlyExcluded = [...localKeys.entries()]
+  .filter(([, v]) => v.note && NON_EXPORTABLE_HINT.test(v.note) && v.exportable !== false)
+  .map(([k, v]) => `${k}(note="${v.note}")`);
+assert.deepStrictEqual(
+  nonExplicitlyExcluded,
+  [],
+  `以下键是派生缓存或网页模式专用键（ADR-344-d1 决策②要求从导出中剔除），` +
+    `必须登记 exportable:false（缺省会跟随判据被导出）：\n  ${nonExplicitlyExcluded.join("\n  ")}`,
 );
 
 // ─── 断言 B（主价值）：前端真实使用的 localStorage 键必须都被台账登记 ───

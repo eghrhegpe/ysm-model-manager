@@ -1194,7 +1194,7 @@
 | 前端本地重算筛选逻辑 | - | 与后端 SearchModels 能力脱节、结果不一致；必须交后端执行 |
 | adv-filter 条件未走三路交集（关键词 + 数值 + 标签）→ 结果不精确；必须经 advFilterIntersectPaths | - | - |
 | 只备份 ysm_config.json 带不走 localStorage 轨的几十项设置——官方迁移叙事曾长期漏掉这一档（ 有文档无实现，2026-10-16 起由 ADR-344-d1 导出/导入收拢） | `b1116645c` | - |
-| 设置导出/导入的采集与回写**必须走台账查询口 **（判定 = tier=local-storage && authority=browser-authority，只写在台账一处），禁手写第二份键名清单、也禁在消费方复写判定——手抄必漂移，新键漏登记即漏备份 | `exportableSettingsKeys()` | - |
+| 设置导出/导入的采集与回写**必须走台账查询口 **（判定 = tier=local-storage && authority=browser-authority **且 `exportable !== false`**，只写在台账一处），禁手写第二份键名清单、也禁在消费方复写判定——手抄必漂移，新键漏登记即漏备份。第三维 `exportable: false`（锐评 2026-10-17 P1④）用于剔除 ADR-344-d1 决策②要求排除的两类键——**派生缓存**（`ysmAlphaInfo` / `scan-authors` / `ListModelAuthors` / `community-merge`，换机重扫即重建，导出会把旧机缓存回灌新机、覆盖刚重算的索引）与**网页模式专用键**（`ysm:config` / `web:workshop-*` / `web:github-repos`，桌面端根本不消费，导入了也是影配置）。这两类 `authority` 语义上确实是 `browser-authority`，单靠二维判据排不掉，必须显式登记 | `exportableSettingsKeys()` | - |
 | 台账  键族（3D 场景能力 `ysm-scene-cap-*`、工坊按站筛选态 `ysm-ws-*`）登记的是占位符，真实键由持有模块拼接——采集/回写必须展开真键，且候选键只能取自实际键（`safeKeys()` / 导出文件），禁按前缀猜键名 | `keyPattern` | - |
 | 拼接键族的前缀必须以  常量形态声明；藏在函数体内裸拼 `` `ysm:x${p}` `` 会让契约测试的键扫描失明（实测三族因此漏登），新键族落地先收常量再登记 | `*_PREFIX` | - |
 | 台账字段 `migrates` 只回答，**不回答「换机丢不丢」**——ADR-344 后后者要并看导出面；给用户列「要重设什么」用 `unbackupableSettingsKeys()`，用 `nonMigratingSettingsKeys()` 会劝人重设早已能带走的字号 | `复制 ysm_config.json 带不带得走` | - |

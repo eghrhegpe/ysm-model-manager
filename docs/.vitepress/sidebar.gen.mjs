@@ -257,6 +257,10 @@ export const autoSidebar = [
       {
         "text": "3D 预览菜单系统全景图",
         "link": "/preview-menu-overview"
+      },
+      {
+        "text": "设置持久化功能锐评（2026-10-17）",
+        "link": "/settings-persistence-review"
       }
     ]
   },

@@ -78,6 +78,23 @@ export interface SettingsKeyEntry {
    * 靠知识卡提示 + 备份采集测试兜底。
    */
   readonly keyPattern?: string;
+  /**
+   * 是否随「设置 → 备份与迁移」导出/导入带走。
+   *
+   * 缺省（`undefined`）= 跟随 `exportableSettingsKeys()` 的默认判据
+   * （`tier: local-storage` 且 `authority: browser-authority`）。显式 `false` = 明确剔除。
+   *
+   * 判据只有 `tier` + `authority` 两维，装不下 ADR-344-d1 决策②要排除的两类：
+   * - **派生缓存**（`ysmAlphaInfo` / `scan-authors` / `ListModelAuthors` / `community-merge`）
+   *   换机重扫即重建，随导出带走只会把旧机缓存回灌新机、覆盖刚重算的结果；
+   * - **网页模式专用键**（`ysm:config` / `web:workshop-*` / `web:github-repos`）
+   *   桌面端根本不消费，导入了也是写进桌面端 localStorage 的影配置。
+   *
+   * 这两类 `authority` 都填 `browser-authority`（语义上确实是浏览器权威），单靠
+   * `authority` 排不掉，必须补本维显式登记。契约测试 D 组断言：
+   * 「note 明写『派生缓存』的键不得 exportable」，防新派生缓存漏标。
+   */
+  readonly exportable?: boolean;
   /** 迁移/备份语义的必要说明（用户可见后果，非实现细节） */
   readonly note?: string;
 }
@@ -617,6 +634,7 @@ export const SETTINGS_KEYS: readonly SettingsKeyEntry[] = [
     authority: "browser-authority",
     migrates: false,
     owner: "preview-3d/texture/texture-alpha.ts",
+    exportable: false,
     note: "派生缓存（非用户直接设置），但重启重算成本高故持久化",
   },
 
@@ -767,6 +785,8 @@ export const SETTINGS_KEYS: readonly SettingsKeyEntry[] = [
     authority: "browser-authority",
     migrates: false,
     owner: "views/app-content/diagnostics/perf-trend.ts",
+    // 用户积累的趋势历史，不是纯派生缓存（换机后基线不同，重算需重新采样），随导出带走。
+    exportable: true,
     note: "攒够 ≥2 条才画趋势线；测试需先 localStorage.clear() 隔离",
   },
   {
@@ -776,6 +796,7 @@ export const SETTINGS_KEYS: readonly SettingsKeyEntry[] = [
     authority: "browser-authority",
     migrates: false,
     owner: "features/community/community-data.ts",
+    exportable: false,
     note: "派生缓存（扫仓产出），换机重扫即重建",
   },
   {
@@ -785,6 +806,7 @@ export const SETTINGS_KEYS: readonly SettingsKeyEntry[] = [
     authority: "browser-authority",
     migrates: false,
     owner: "features/community/community-data.ts",
+    exportable: false,
     note: "派生缓存；键名沿用历史命名（含无分隔符驼峰），不重命名以免老用户缓存失效",
   },
   {
@@ -794,6 +816,7 @@ export const SETTINGS_KEYS: readonly SettingsKeyEntry[] = [
     authority: "browser-authority",
     migrates: false,
     owner: "features/community/community-data.ts",
+    exportable: false,
     note: "派生缓存（bundled JSON + 本地覆盖的合并结果）",
   },
   {
@@ -813,6 +836,7 @@ export const SETTINGS_KEYS: readonly SettingsKeyEntry[] = [
     authority: "browser-authority",
     migrates: false,
     owner: "backend/web-store.ts",
+    exportable: false,
     note: "网页模式的「磁盘轨」替身：没有 Go 进程时 SaveAppConfig 写这里。桌面端不读此键",
   },
   {
@@ -822,6 +846,7 @@ export const SETTINGS_KEYS: readonly SettingsKeyEntry[] = [
     authority: "browser-authority",
     migrates: false,
     owner: "backend/web-community.ts",
+    exportable: false,
     note: "bundled JSON + localStorage 覆盖层；仅网页模式",
   },
   {
@@ -831,6 +856,7 @@ export const SETTINGS_KEYS: readonly SettingsKeyEntry[] = [
     authority: "browser-authority",
     migrates: false,
     owner: "backend/web-community.ts",
+    exportable: false,
     note: "bundled JSON + localStorage 覆盖层；仅网页模式",
   },
   {
@@ -840,6 +866,7 @@ export const SETTINGS_KEYS: readonly SettingsKeyEntry[] = [
     authority: "browser-authority",
     migrates: false,
     owner: "backend/web-community.ts",
+    exportable: false,
     note: "bundled JSON + localStorage 覆盖层；仅网页模式",
   },
 
@@ -972,10 +999,12 @@ export function nonMigratingSettingsKeys(): readonly SettingsKeyEntry[] {
 /**
  * 随「设置 → 备份与迁移」导出/导入带走的键（ADR-344-d1 采集/回写白名单的单一事实源）。
  *
- * 判据 = `tier: local-storage` 且 `authority: browser-authority`：
+ * 判据 = `tier: local-storage` 且 `authority: browser-authority` **且 `exportable !== false`**：
  * - `go-disk` 不在此列——它随 appConfig 走，磁盘侧由 Go 收拢；
  * - `session` / `non-persistent`（缓存、哨兵、派生值）不备份——重启即重算，无用户意图可丢；
- * - `dual-write`（如 theme 的 localStorage 镜像）不备份——事实源在磁盘，备份镜像反而制造两处不一致。
+ * - `dual-write`（如 theme 的 localStorage 镜像）不备份——事实源在磁盘，备份镜像反而制造两处不一致；
+ * - `exportable: false`（派生缓存、网页模式专用键）不备份——见 `SettingsKeyEntry.exportable`：
+ *   `authority` 排不掉这两类，必须靠第三维显式登记。
  *
  * 与 `nonMigratingSettingsKeys()` 的关系：本集合是它的**子集**。差集（网页模式专用键、
  * IDB 轨、派生缓存、哨兵）才是「换机真正要重设/重算」的那一档。消费方（采集与回写）
@@ -984,7 +1013,8 @@ export function nonMigratingSettingsKeys(): readonly SettingsKeyEntry[] {
  */
 export function exportableSettingsKeys(): readonly SettingsKeyEntry[] {
   return SETTINGS_KEYS.filter(
-    (e) => e.tier === "local-storage" && e.authority === "browser-authority",
+    (e) =>
+      e.tier === "local-storage" && e.authority === "browser-authority" && e.exportable !== false,
   );
 }
 

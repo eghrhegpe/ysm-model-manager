@@ -769,6 +769,7 @@
   "syncManager.push": "Push",
   "syncManager.pull": "Pull",
   "syncManager.pullHere": "Pull Here",
+  "syncManager.syncStatus": "Sync Status",
   "syncManager.status.all": "All",
   "syncManager.status.synced": "Synced",
   "syncManager.status.missing": "To Push",

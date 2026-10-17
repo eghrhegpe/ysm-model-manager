@@ -769,6 +769,7 @@
   "syncManager.push": "推送",
   "syncManager.pull": "拉取",
   "syncManager.pullHere": "拉取到此仓库",
+  "syncManager.syncStatus": "同步状态",
   "syncManager.status.all": "全部",
   "syncManager.status.synced": "已同步",
   "syncManager.status.missing": "待推送",

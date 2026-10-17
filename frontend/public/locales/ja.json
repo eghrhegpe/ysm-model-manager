@@ -769,6 +769,7 @@
   "syncManager.push": "プッシュ",
   "syncManager.pull": "プル",
   "syncManager.pullHere": "このリポジトリにプル",
+  "syncManager.syncStatus": "同期状態",
   "syncManager.status.all": "すべて",
   "syncManager.status.synced": "同期済み",
   "syncManager.status.missing": "プッシュ待ち",

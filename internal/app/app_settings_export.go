@@ -186,6 +186,33 @@ func (a *App) ImportSettingsFromFile(path string) (types.ImportSettingsResult, e
 	if err != nil {
 		return res, err
 	}
+	return a.importResolved(exp)
+}
+
+// ImportSettingsData 从已解析的导出数据导入设置——前端导入链路的主入口（锐评 P2②）。
+// 前端应先 ReadSettingsExport 拿到 exp 做「导入前确认」（预告覆盖范围/应用条数），确认后
+// 把**同一个** exp 原样传入：此前前端对同一文件读两遍（ReadSettingsExport 预览 +
+// ImportSettingsFromFile 内部再读一遍），两遍之间文件若被替换，确认时的计数与实际写入
+// 就不一致（轻微 TOCTOU）。改成一份 exp 贯穿预览与落盘，计数与写入必然一致。
+func (a *App) ImportSettingsData(exp types.SettingsExport) (types.ImportSettingsResult, error) {
+	return a.importResolved(exp)
+}
+
+// importResolved 是导入的落盘主体（锁内重读当前配置 → 备份 → 以导入配置为基 → 版本门控迁移 +
+// 洗脏 linkMode + 废弃字段清零 → saveConfig → applyPostSaveSideEffects）。localStorage 由前端写。
+func (a *App) importResolved(exp types.SettingsExport) (types.ImportSettingsResult, error) {
+	var res types.ImportSettingsResult
+
+	// 数据入口防线（锐评 P2②）：ImportSettingsData 直接收 exp，须自行校验 format——
+	// 否则未走 ReadSettingsExport 的伪造/错误数据会以零值 AppConfig 覆盖当前配置
+	if exp.Format != settingsExportFormat {
+		return res, types.AppError{
+			Code:       types.ErrInvalidParam,
+			Operation:  "导入设置",
+			Reason:     fmt.Sprintf("不是有效的设置导出数据（format=%q）", exp.Format),
+			Suggestion: "请通过「设置 → 备份与迁移」选择有效的设置导出文件",
+		}
+	}
 
 	a.configWriteMu.Lock()
 	defer a.configWriteMu.Unlock()

@@ -92,6 +92,8 @@
 
 **建议**：让 `ImportSettingsFromFile` 返回实际应用的浏览器键集合（或让前端只依赖 `res`），避免二次读。
 
+**✅ 已处置（2026-10-17）**：新增绑定 `ImportSettingsData(exp types.SettingsExport)`，与 `ImportSettingsFromFile` 共用 `importResolved` 落盘主体。前端 `ReadSettingsExport` 预览后把**同一个** `exp` 传给 `ImportSettingsData`，不再对同一文件读两遍——计数与实际写入必然一致。`importResolved` 补 `exp.Format` 数据入口防线（未走 `ReadSettingsExport` 校验的伪造/错误数据被拒止，不会以零值 `AppConfig` 覆盖当前配置）。`ImportSettingsFromFile` 保留为按路径入口（向后兼容）。配套：`settings-backup.ts` 解构改 `ImportSettingsData`；`e2e/mock-data.ts` 补 `ImportSettingsData: undefined`（bindings 契约，`MockKey` 须覆盖新绑定）；测试 Go 侧新增 `TestImportSettingsData_RoundTripAndBackup` / `TestImportSettingsData_RejectsBadFormat`，前端既有「磁盘失败不写浏览器」「取消零副作用」用例照旧锁（mock 名同步改）。
+
 ### P2-③ 导出固定路径**静默覆盖**上一次导出
 
 **锚点**：`app_settings_export.go:39`（`settingsExportFilename = "ysm-settings-export.json"` 固定）、`:117-120`（`WriteFileAtomic` 直接覆盖）。

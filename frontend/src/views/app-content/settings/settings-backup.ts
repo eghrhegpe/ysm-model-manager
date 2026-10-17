@@ -1,6 +1,8 @@
 // ===== 设置导出/导入 逻辑层（ADR-344-d1）=====
-// 前端只负责「采集 / 回写浏览器偏好」；磁盘轨（appConfig）由 Go 侧 `ImportSettingsFromFile`
-// 在 configWriteMu 内**整份覆盖**（非逐字段合并：以导出配置为基，走同一套版本门控迁移 + 洗脏），
+// 前端只负责「采集 / 回写浏览器偏好」；磁盘轨（appConfig）由 Go 侧 `ImportSettingsData`
+// 落盘（锐评 P2②：前端先 ReadSettingsExport 预览、确认后把**同一个** exp 传入，不再让 Go
+// 对同一文件读两遍——计数与实际写入必然一致）。它在 configWriteMu 内**整份覆盖**
+// （非逐字段合并：以导出配置为基，走同一套版本门控迁移 + 洗脏），
 // 落盘前先备份当前 ysm_config.json，后悔可还原备份文件。
 //
 // 导入顺序铁律：**磁盘先落盘、浏览器后回写**（锐评 2026-10-16 修正）。理由：
@@ -157,8 +159,7 @@ export function initSettingsBackup(root: ShadowRoot): void {
   importBtn?.addEventListener("click", () => {
     void withBusy(async () => {
       try {
-        const { SelectImportFile, ReadSettingsExport, ImportSettingsFromFile } =
-          await backendGetApp();
+        const { SelectImportFile, ReadSettingsExport, ImportSettingsData } = await backendGetApp();
         const path = await SelectImportFile(".json", t("settings.backup.importPickerTitle"));
         if (!path) return; // 用户取消
         const exp = await ReadSettingsExport(path); // 先只读校验（格式/版本），失败即抛、零副作用
@@ -177,7 +178,10 @@ export function initSettingsBackup(root: ShadowRoot): void {
         if (!ok) return; // 用户取消，零副作用（磁盘与浏览器都未动）
         // ① 磁盘轨先落盘（含备份 + 版本门控迁移 + 洗脏 + 侧效），失败即抛、零副作用——
         //    此时浏览器偏好尚未动，不产生任何分叉，也无需回滚
-        const res = await ImportSettingsFromFile(path);
+        // 用**同一个** exp 落盘（锐评 P2②）：不再让 Go 对同一文件读两遍——ReadSettingsExport
+        // 预览与旧 ImportSettingsFromFile 内部读取之间文件若被替换，确认时的计数与实际
+        // 写入就不一致（轻微 TOCTOU）。ImportSettingsData 内部只认 exp.Format 做数据入口防线。
+        const res = await ImportSettingsData(exp);
         // ② 磁盘已生效，再回写浏览器偏好（Go 无能力写浏览器侧键值）。
         //    磁盘是真相源且可回滚（.bak-*），浏览器侧失败最多「磁盘新/浏览器旧」，可接受。
         const backupPath = res?.backupPath ?? "";

@@ -210,6 +210,47 @@ func TestImportSettingsFromFile_RoundTripAndBackup(t *testing.T) {
 	}
 }
 
+// ImportSettingsData（锐评 P2②）：前端 ReadSettingsExport 预览后把**同一个** exp 传入落盘，
+// 不再对同一文件读两遍（消除计数与实际写入可能不符的 TOCTOU）。测试直接用构造的
+// SettingsExport，验证备份 + 配置覆盖。
+func TestImportSettingsData_RoundTripAndBackup(t *testing.T) {
+	const root = "C:/repo"
+	dst := exportTestApp(t, types.AppConfig{FilesRoot: root, Theme: "light", Mirror: "ghproxy"})
+	exp := types.SettingsExport{
+		Format:        settingsExportFormat,
+		ExportVersion: settingsExportVersion,
+		AppConfig:     types.AppConfig{FilesRoot: root, Theme: "dark", Mirror: "jsdelivr"},
+		LocalStorage:  map[string]string{"ui-font-size": "16"},
+	}
+
+	res, err := dst.ImportSettingsData(exp)
+	testutil.NoError(t, err, "ImportSettingsData")
+	if res.BackupPath == "" {
+		t.Fatal("导入前必须备份当前配置（可回滚）")
+	}
+	if _, err := os.Stat(res.BackupPath); err != nil {
+		t.Fatalf("备份文件应存在: %s (%v)", res.BackupPath, err)
+	}
+	onDisk := dst.LoadAppConfig()
+	if onDisk.Theme != "dark" || onDisk.Mirror != "jsdelivr" {
+		t.Errorf("导入后配置未覆盖: theme=%q mirror=%q", onDisk.Theme, onDisk.Mirror)
+	}
+}
+
+// ImportSettingsData 数据入口防线（锐评 P2②）：exp 未走 ReadSettingsExport 校验（format 不符）
+// 必须拒止，否则调用方传错/伪造数据会以零值 AppConfig 覆盖当前配置。
+func TestImportSettingsData_RejectsBadFormat(t *testing.T) {
+	dst := exportTestApp(t, types.AppConfig{FilesRoot: "C:/repo", Theme: "dark"})
+	_, err := dst.ImportSettingsData(types.SettingsExport{Format: "whatever", AppConfig: types.AppConfig{}})
+	if err == nil {
+		t.Fatal("format 不符的导出数据应被拒止")
+	}
+	onDisk := dst.LoadAppConfig()
+	if onDisk.Theme != "dark" {
+		t.Errorf("拒止后不应改动配置，got theme=%q", onDisk.Theme)
+	}
+}
+
 func TestImportSettingsFromFile_MigratesLegacyRootFields(t *testing.T) {
 	const root = "C:/repo"
 	src := exportTestApp(t, types.AppConfig{FilesRoot: root})

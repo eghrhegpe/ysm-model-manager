@@ -684,6 +684,17 @@ export function ImportModelFolderTo(folderName: string, subpath: string, rtype: 
 }
 
 /**
+ * ImportSettingsData 从已解析的导出数据导入设置——前端导入链路的主入口（锐评 P2②）。
+ * 前端应先 ReadSettingsExport 拿到 exp 做「导入前确认」（预告覆盖范围/应用条数），确认后
+ * 把**同一个** exp 原样传入：此前前端对同一文件读两遍（ReadSettingsExport 预览 +
+ * ImportSettingsFromFile 内部再读一遍），两遍之间文件若被替换，确认时的计数与实际写入
+ * 就不一致（轻微 TOCTOU）。改成一份 exp 贯穿预览与落盘，计数与写入必然一致。
+ */
+export function ImportSettingsData(exp: types$0.SettingsExport): $CancellablePromise<types$0.ImportSettingsResult> {
+    return $Call.ByID(1289842619, exp);
+}
+
+/**
  * ImportSettingsFromFile 导入设置导出文件（ADR-344-d1）。
  * 
  * 流程：锁内重读当前配置 → 备份当前 ysm_config.json → 以导入配置为基 → 版本门控迁移 +

@@ -25,7 +25,7 @@ const appMocks = vi.hoisted(() => ({
   ExportSettingsJSON: vi.fn(),
   SelectImportFile: vi.fn(),
   ReadSettingsExport: vi.fn(),
-  ImportSettingsFromFile: vi.fn(),
+  ImportSettingsData: vi.fn(),
 }));
 const busMock = vi.hoisted(() => ({ emit: vi.fn(), on: vi.fn() }));
 const toastMock = vi.hoisted(() => ({ toast: vi.fn(), toastError: vi.fn() }));
@@ -216,7 +216,9 @@ describe("applyImportedLocalStorage 回写面", () => {
 // 会把磁盘（新）与浏览器（旧）反向分叉。顺序翻过来之后不再需要「导入前拍照 + 失败回滚」，
 // 失败面收窄为「磁盘新 / 浏览器旧」。下面锁三条不变量：
 //   ① 导出把偏好 map 直传绑定（不是 JSON.stringify 双重编码）；状态行路径走 esc()；
-//   ② 导入顺序 = ReadSettingsExport → ImportSettingsFromFile（磁盘）→ safeSet（浏览器）；
+//   ② 导入顺序 = ReadSettingsExport（预览）→ 确认 → ImportSettingsData（磁盘）→ safeSet（浏览器）。
+//      锐评 P2②：改用**同一个** exp 贯穿预览与落盘，不再让 Go 对同一文件读两遍（旧
+//      ImportSettingsFromFile 内部会再读一次），确认时的计数与实际写入必然一致；
 //   ③ 磁盘侧失败时浏览器偏好**完全不写**（旧行为是写后再回滚，新行为是根本不写）。
 function mountBackupRoot(): ShadowRoot {
   const host = document.createElement("div");
@@ -272,20 +274,20 @@ describe("initSettingsBackup 编排链路", () => {
     expect(status.querySelector("#set-backup-copy")).not.toBeNull();
   });
 
-  it("导入顺序：读校验 → 磁盘落盘 → 浏览器回写（safeSet 晚于 ImportSettingsFromFile）", async () => {
+  it("导入顺序：读校验 → 磁盘落盘 → 浏览器回写（safeSet 晚于 ImportSettingsData）", async () => {
     appMocks.SelectImportFile.mockResolvedValue("C:/ysm/ysm-settings-export.json");
     appMocks.ReadSettingsExport.mockResolvedValue({
       format: EXP_FORMAT,
       localStorage: { "ui-font-size": "14" },
     });
-    appMocks.ImportSettingsFromFile.mockResolvedValue(IMPORT_RES);
+    appMocks.ImportSettingsData.mockResolvedValue(IMPORT_RES);
     const root = mountBackupRoot();
     initSettingsBackup(root);
     root.getElementById("set-backup-import")!.click();
 
     await vi.waitFor(() => expect(storageMock.safeSet).toHaveBeenCalled());
     const readOrder = appMocks.ReadSettingsExport.mock.invocationCallOrder[0];
-    const importOrder = appMocks.ImportSettingsFromFile.mock.invocationCallOrder[0];
+    const importOrder = appMocks.ImportSettingsData.mock.invocationCallOrder[0];
     const writeOrder = storageMock.safeSet.mock.invocationCallOrder[0];
     expect(readOrder).toBeLessThan(importOrder);
     expect(importOrder).toBeLessThan(writeOrder);
@@ -300,7 +302,7 @@ describe("initSettingsBackup 编排链路", () => {
       format: EXP_FORMAT,
       localStorage: { "ui-font-size": "14" },
     });
-    appMocks.ImportSettingsFromFile.mockRejectedValue(new Error("磁盘写入失败"));
+    appMocks.ImportSettingsData.mockRejectedValue(new Error("磁盘写入失败"));
     const root = mountBackupRoot();
     initSettingsBackup(root);
     root.getElementById("set-backup-import")!.click();
@@ -330,7 +332,7 @@ describe("initSettingsBackup 编排链路", () => {
       format: EXP_FORMAT,
       localStorage: { "ui-font-size": "14", "ui-card-density": "compact" },
     });
-    appMocks.ImportSettingsFromFile.mockResolvedValue(IMPORT_RES);
+    appMocks.ImportSettingsData.mockResolvedValue(IMPORT_RES);
     const root = mountBackupRoot();
     initSettingsBackup(root);
     root.getElementById("set-backup-import")!.click();
@@ -347,7 +349,7 @@ describe("initSettingsBackup 编排链路", () => {
     expect(arg.okText).toBeTruthy();
     // 确认在先、磁盘落盘在后（未确认绝不动磁盘）
     expect(modalConfirmMock.modalConfirm.mock.invocationCallOrder[0]).toBeLessThan(
-      appMocks.ImportSettingsFromFile.mock.invocationCallOrder[0],
+      appMocks.ImportSettingsData.mock.invocationCallOrder[0],
     );
     expect(storageMock.safeSet).toHaveBeenCalledTimes(2); // 待应用的两个键都回写
   });
@@ -362,7 +364,7 @@ describe("initSettingsBackup 编排链路", () => {
     root.getElementById("set-backup-import")!.click();
 
     await vi.waitFor(() => expect(modalConfirmMock.modalConfirm).toHaveBeenCalledTimes(1));
-    expect(appMocks.ImportSettingsFromFile).not.toHaveBeenCalled();
+    expect(appMocks.ImportSettingsData).not.toHaveBeenCalled();
     expect(storageMock.safeSet).not.toHaveBeenCalled();
     expect(busMock.emit).not.toHaveBeenCalled();
     expect(toastMock.toastError).not.toHaveBeenCalled();

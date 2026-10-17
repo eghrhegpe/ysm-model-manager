@@ -102,7 +102,7 @@
 
 **建议**：文件名带时间戳（如 `ysm-settings-export-20261017-1530.json`），或覆盖前确认；至少 toast 提示「已覆盖上次导出的文件」。
 
-**✅ 已处置（2026-10-17，采纳「时间戳」方案）**：导出文件名改为带时间戳 `ysm-settings-export-YYYYMMDD-HHMMSS.mmm.json`（`settingsExportNameFmt` + `settingsExportTimeFmt`），每次导出都是独立快照、不再静默覆盖——比「覆盖前确认」更贴合「导出=保留一份快照」的直觉。配套 `settingsExportKeep = 10` + `pruneOldExportFiles()`（Glob `ysm-settings-export-*.json`，时间戳前缀字典序 LRU 删最旧，保留 10 份；清理失败仅 `log.Printf`——多留一份比删错更安全，与 `pruneOldConfigBackups` 同模式）。UI 显示/复制的就是当次导出路径（时间戳名），语义更清楚。测试：新增 `TestPruneOldExportFiles_KeepsRecentExports`（造 15 个假导出 → 裁剪到 10、最旧被删）；原 `path != settingsExportPath()` 断言改为 `assertExportPathInConfigDir` helper（时间戳名不能精确相等，改断言目录 + 文件名前缀）。
+**✅ 已处置（2026-10-17，commit `771e34597`，采纳「时间戳」方案）**：导出文件名改为带时间戳 `ysm-settings-export-YYYYMMDD-HHMMSS.mmm.json`（`settingsExportNameFmt` + `settingsExportTimeFmt`），每次导出都是独立快照、不再静默覆盖——比「覆盖前确认」更贴合「导出=保留一份快照」的直觉。配套 `settingsExportKeep = 10` + `pruneOldExportFiles()`（Glob `ysm-settings-export-*.json`，时间戳前缀字典序 LRU 删最旧，保留 10 份；清理失败仅 `log.Printf`——多留一份比删错更安全，与 `pruneOldConfigBackups` 同模式）。UI 显示/复制的就是当次导出路径（时间戳名），语义更清楚。测试：新增 `TestPruneOldExportFiles_KeepsRecentExports`（造 15 个假导出 → 裁剪到 10、最旧被删）；原 `path != settingsExportPath()` 断言改为 `assertExportPathInConfigDir` helper（时间戳名不能精确相等，改断言目录 + 文件名前缀）。
 
 ### P2-④ 备份文件**有产出、无 UI 消费入口**
 
@@ -111,6 +111,8 @@
 **问题**：ADR-344-d1:19 承诺「后悔可还原备份文件」，但还原路径全在 UI 外——用户只能自己打开文件管理器找到 `.bak-*` 替换 `ysm_config.json`。设置页无「浏览备份 / 恢复此备份 / 删除旧备份」入口，且 `.bak-*` 会累积到 10 份用户不知情。
 
 **建议**：状态行把 `backup` 变成可点按钮（「打开备份位置」），或加一个「恢复上次导入前备份」按钮（读最新 `.bak-*` → `ImportSettingsFromFile` 同链路）。
+
+**✅ 已处置（2026-10-17）**：Go 新增两个绑定——`ListSettingsBackups() ([]string, error)`（Glob `configPath()+".bak-*"`，时间戳倒序**最新在前**；无备份返回空切片而非 nil，Wails 绑定 nil 切片会序列化成 null 让前端多判一道）+ `RestoreSettingsBackup(path string) error`（`readJSONFile` → 版本门控迁移/洗脏 → `configWriteMu` 内 `saveConfig` + `applyPostSaveSideEffects`，与 `importResolved` 同口径、同一条真相源，不另造写路径）。**恢复前不再额外备份当前配置**：否则每次恢复都生成新的 `.bak-*`，而「恢复最近备份」取的就是最新一份 → 会形成「恢复 → 生成新备份 → 下次恢复拿到这份新备份」的死循环。前端设置页加「恢复最近备份」+「打开备份目录」按钮（`tpl-settings-backup.ts`）；`settings-backup.ts` 加 click 绑定：`ListSettingsBackups` → 空则 toast「暂无导入前备份」→ `modalConfirm`（danger，预告覆盖范围）→ `RestoreSettingsBackup(backups[0])` → toast + `bus.emit("settings:imported")`；「打开备份目录」用 `OpenFolder(dirOf(backups[0]))`（新增内联 `dirOf()` 跨平台切分隔符，生产侧无 node `path`）。i18n 8 键 × 3 语言；`mock-data.ts` 补两个绑定（bindings 契约，`MockKey` 须覆盖新绑定否则 typecheck 报 `__mockBindingContract`）。测试：Go `TestListSettingsBackups_RoundTrip`（无备份返回空 + 最新在前）/ `TestRestoreSettingsBackup_RestoresToBackupValue`（恢复到备份值 Theme/FilesRoot + 备份文件不存在报错）；前端 4 用例（恢复确认→调用 + emit、取消→不调不 emit、无备份→toast 且不调、打开目录→`OpenFolder(目录)`）。bindings 188 Methods。
 
 ### P2-⑤ 导入成功后**未做「环境」侧引导**，ADR 承诺的「UI 提示确认路径」未落地
 

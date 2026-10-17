@@ -811,6 +811,15 @@ export function ListRecycleBin(recyclePath: string): $CancellablePromise<types$0
     return $Call.ByID(3420025601, recyclePath);
 }
 
+/**
+ * ListSettingsBackups 列出导入前自动备份（.bak-*）路径，最新的在前（锐评 P2④）。
+ * 返回最多 settingsBackupKeep 条；无备份返回空切片（make 的零值切片，JSON 序列化为 []，
+ * 而非 nil——Wails 绑定 nil 切片会序列化成 null，前端要多判一道）。
+ */
+export function ListSettingsBackups(): $CancellablePromise<string[] | null> {
+    return $Call.ByID(813678773);
+}
+
 export function ListVersionInstances(mcRoot: string): $CancellablePromise<types$0.VersionInstance[] | null> {
     return $Call.ByID(2348617735, mcRoot);
 }
@@ -1170,6 +1179,20 @@ export function RestartApplication(): $CancellablePromise<void> {
  */
 export function RestoreFromRecycle(src: string, filesRoot: string): $CancellablePromise<void> {
     return $Call.ByID(983517996, src, filesRoot);
+}
+
+/**
+ * RestoreSettingsBackup 把指定的导入前备份（.bak-*，路径来自 ListSettingsBackups）恢复为当前配置。
+ * 破坏性：整份覆盖当前 AppConfig（锐评 P2④——此前备份只产出、UI 无消费入口，
+ * 「后悔可还原备份」的承诺全落在文件管理器之外）。
+ * 
+ * 恢复视同一次「读盘」：走同一套版本门控 + 值软校验 + 洗脏 + 侧效（与导入 importResolved 同口径），
+ * 保证与 SaveAppConfig 同一条真相源，不另造写路径。
+ * 恢复前**不再**额外备份当前配置：否则每次恢复都生成新的 .bak-*，而「恢复最近备份」取的就是
+ * 最新一份——会造成「恢复 → 生成新备份 → 下次恢复拿到这份新备份」的死循环。
+ */
+export function RestoreSettingsBackup(path: string): $CancellablePromise<void> {
+    return $Call.ByID(606419108, path);
 }
 
 /**

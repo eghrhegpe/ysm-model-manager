@@ -42,7 +42,7 @@
 | `repo:rtype-changed` | 1 | 5 | 0 | 0 | ✅ |
 | `repo:search-creator` | 2 | 1 | 0 | 0 | ✅ |
 | `repo:subdir-changed` | 1 | 1 | 0 | 0 | ✅ |
-| `settings:imported` | 1 | 1 | 0 | 0 | ✅ |
+| `settings:imported` | 2 | 1 | 0 | 0 | ✅ |
 | `stats:refresh` | 28 | 2 | 0 | 0 | ✅ |
 | `sync:toggle:status` | 5 | 1 | 0 | 0 | ✅ |
 | `toast:show` | 17 | 2 | 0 | 0 | ✅ |
@@ -339,6 +339,7 @@
 | 函数 | 文件 | 行 |
 |------|------|----|
 | initSettingsBackup | `frontend/src/views/app-content/settings/settings-backup.ts` | 197 |
+| initSettingsBackup | `frontend/src/views/app-content/settings/settings-backup.ts` | 229 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |

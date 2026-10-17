@@ -16,6 +16,8 @@ export function renderStgBackupSection(startMs: number): string {
      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
        <button type="button" class="btn-base sm" id="set-backup-export" style="font-size:var(--fs-sm);padding:var(--btn-padding-filter-lg)">${UI_ICONS.download} ${t("settings.backup.exportBtn")}</button>
        <button type="button" class="btn-base sm" id="set-backup-import" style="font-size:var(--fs-sm);padding:var(--btn-padding-filter-lg)">${UI_ICONS.upload} ${t("settings.backup.importBtn")}</button>
+       <button type="button" class="btn-base sm" id="set-backup-restore" style="font-size:var(--fs-sm);padding:var(--btn-padding-filter-lg)">${UI_ICONS.undo} ${t("settings.backup.restoreBtn")}</button>
+       <button type="button" class="btn-base sm" id="set-backup-open" style="font-size:var(--fs-sm);padding:var(--btn-padding-filter-lg)">${UI_ICONS.folder} ${t("settings.backup.openDirBtn")}</button>
      </div>
      <div id="set-backup-status" style="font-size:var(--fs-xs);color:var(--muted);margin-top:8px;line-height:1.5"></div>`,
     {

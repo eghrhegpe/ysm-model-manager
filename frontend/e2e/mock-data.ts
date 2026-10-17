@@ -318,6 +318,9 @@ export const MOCK_DATA = {
   ExportSettingsJSON: undefined,
   ReadSettingsExport: undefined,
   ImportSettingsData: undefined,
+  // 导入前备份的消费入口（锐评 P2④）：此前 .bak-* 只产出、UI 无浏览/恢复，mock 也须登记
+  ListSettingsBackups: undefined,
+  RestoreSettingsBackup: undefined,
   ImportSettingsFromFile: undefined,
   ExtractPreviewTexture: undefined,
   ExtractYSMHeader: undefined,

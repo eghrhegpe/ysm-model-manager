@@ -201,6 +201,15 @@ export const ja: Record<string, string> = {
   "settings.backup.importConfirmMessage":
     "読み込みは現在の設定を完全に上書きします：ファイル保存先・ゲームルートなどのディスク設定が読み込みファイルの値に置き換わり、{n} 項目のブラウザ設定が適用されます。\n読み込み前に現在の設定が自動バックアップされ、必要に応じてバックアップディレクトリから復元できます。",
   "settings.backup.importConfirmOk": "読み込み",
+  "settings.backup.restoreBtn": "最新のバックアップを復元",
+  "settings.backup.openDirBtn": "バックアップフォルダを開く",
+  "settings.backup.restoreConfirmTitle": "読み込み前のバックアップを復元しますか？",
+  "settings.backup.restoreConfirmMessage":
+    "{path} に記録された設定に戻り、現在の設定（ファイル保存先・ゲームルートなど）を完全に上書きします。\n復元後、テーマ・言語・リポジトリパスが即時更新されます。",
+  "settings.backup.restoreConfirmOk": "復元",
+  "settings.backup.restoreDone": "読み込み前のバックアップに復元しました",
+  "settings.backup.noBackup": "読み込み前のバックアップがありません。先に設定を読み込んでください",
+  "settings.backup.openedDir": "バックアップフォルダを開きました",
   // 設定ページ動作トースト（app-content/settings）
   "settings.mirror.switched": "ダウンロード元を {name} に切り替えました",
   "settings.mirror.nameDirect": "直結",

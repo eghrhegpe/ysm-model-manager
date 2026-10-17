@@ -313,3 +313,46 @@ func (a *App) pruneOldConfigBackups(src string) {
 		}
 	}
 }
+
+// ListSettingsBackups 列出导入前自动备份（.bak-*）路径，最新的在前（锐评 P2④）。
+// 返回最多 settingsBackupKeep 条；无备份返回空切片（make 的零值切片，JSON 序列化为 []，
+// 而非 nil——Wails 绑定 nil 切片会序列化成 null，前端要多判一道）。
+func (a *App) ListSettingsBackups() ([]string, error) {
+	matches, err := filepath.Glob(configPath() + ".bak-*")
+	if err != nil {
+		return nil, err
+	}
+	sort.Strings(matches) // 时间戳前缀字典序即时间序（升序）
+	out := make([]string, 0, len(matches))
+	for i := len(matches) - 1; i >= 0; i-- {
+		out = append(out, matches[i])
+	}
+	return out, nil
+}
+
+// RestoreSettingsBackup 把指定的导入前备份（.bak-*，路径来自 ListSettingsBackups）恢复为当前配置。
+// 破坏性：整份覆盖当前 AppConfig（锐评 P2④——此前备份只产出、UI 无消费入口，
+// 「后悔可还原备份」的承诺全落在文件管理器之外）。
+//
+// 恢复视同一次「读盘」：走同一套版本门控 + 值软校验 + 洗脏 + 侧效（与导入 importResolved 同口径），
+// 保证与 SaveAppConfig 同一条真相源，不另造写路径。
+// 恢复前**不再**额外备份当前配置：否则每次恢复都生成新的 .bak-*，而「恢复最近备份」取的就是
+// 最新一份——会造成「恢复 → 生成新备份 → 下次恢复拿到这份新备份」的死循环。
+func (a *App) RestoreSettingsBackup(path string) error {
+	var cfg types.AppConfig
+	if err := readJSONFile(path, &cfg); err != nil {
+		return fmt.Errorf("备份文件解析失败: %w", err)
+	}
+	a.configWriteMu.Lock()
+	defer a.configWriteMu.Unlock()
+
+	applyConfigMigrations(&cfg)
+	washLinkMode(&cfg)
+	clearDeprecatedFields(&cfg)
+
+	oldCfg := a.LoadAppConfig()
+	if err := a.saveConfig(cfg); err != nil {
+		return err
+	}
+	return a.applyPostSaveSideEffects(oldCfg, &cfg)
+}

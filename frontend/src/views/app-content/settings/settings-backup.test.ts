@@ -26,6 +26,10 @@ const appMocks = vi.hoisted(() => ({
   SelectImportFile: vi.fn(),
   ReadSettingsExport: vi.fn(),
   ImportSettingsData: vi.fn(),
+  // 导入前备份的消费入口（锐评 P2④）：.bak-* 此前只产出、UI 无浏览/恢复
+  ListSettingsBackups: vi.fn(),
+  RestoreSettingsBackup: vi.fn(),
+  OpenFolder: vi.fn(),
 }));
 const busMock = vi.hoisted(() => ({ emit: vi.fn(), on: vi.fn() }));
 const toastMock = vi.hoisted(() => ({ toast: vi.fn(), toastError: vi.fn() }));
@@ -228,6 +232,8 @@ function mountBackupRoot(): ShadowRoot {
     <div id="set-backup-status"></div>
     <button id="set-backup-export"></button>
     <button id="set-backup-import"></button>
+    <button id="set-backup-restore"></button>
+    <button id="set-backup-open"></button>
   `;
   return root;
 }
@@ -368,5 +374,55 @@ describe("initSettingsBackup 编排链路", () => {
     expect(storageMock.safeSet).not.toHaveBeenCalled();
     expect(busMock.emit).not.toHaveBeenCalled();
     expect(toastMock.toastError).not.toHaveBeenCalled();
+  });
+
+  // —— 导入前备份的消费入口（锐评 P2④）：.bak-* 此前只产出、UI 无浏览/恢复 ——
+  const BACKUPS = [
+    "C:\\ysm\\ysm_config.json.bak-20260102-000000.000",
+    "C:\\ysm\\ysm_config.json.bak-20260101-000000.000",
+  ];
+
+  it("恢复最近备份：确认后调 RestoreSettingsBackup(最新备份) 并 emit settings:imported（P2-④）", async () => {
+    appMocks.ListSettingsBackups.mockResolvedValue(BACKUPS);
+    const root = mountBackupRoot();
+    initSettingsBackup(root);
+    root.getElementById("set-backup-restore")!.click();
+
+    await vi.waitFor(() => expect(appMocks.RestoreSettingsBackup).toHaveBeenCalledTimes(1));
+    expect(appMocks.RestoreSettingsBackup).toHaveBeenCalledWith(BACKUPS[0]);
+    expect(busMock.emit).toHaveBeenCalledWith("settings:imported");
+  });
+
+  it("用户取消恢复确认：不调 RestoreSettingsBackup、不 emit（P2-④）", async () => {
+    appMocks.ListSettingsBackups.mockResolvedValue(BACKUPS);
+    modalConfirmMock.modalConfirm.mockResolvedValue(false);
+    const root = mountBackupRoot();
+    initSettingsBackup(root);
+    root.getElementById("set-backup-restore")!.click();
+
+    await vi.waitFor(() => expect(modalConfirmMock.modalConfirm).toHaveBeenCalledTimes(1));
+    expect(appMocks.RestoreSettingsBackup).not.toHaveBeenCalled();
+    expect(busMock.emit).not.toHaveBeenCalled();
+  });
+
+  it("无备份：提示 toast 且不调 RestoreSettingsBackup、不弹确认（P2-④）", async () => {
+    appMocks.ListSettingsBackups.mockResolvedValue([]);
+    const root = mountBackupRoot();
+    initSettingsBackup(root);
+    root.getElementById("set-backup-restore")!.click();
+
+    await vi.waitFor(() => expect(toastMock.toast).toHaveBeenCalledTimes(1));
+    expect(appMocks.RestoreSettingsBackup).not.toHaveBeenCalled();
+    expect(modalConfirmMock.modalConfirm).not.toHaveBeenCalled();
+  });
+
+  it("打开备份目录：调 OpenFolder(最新备份所在目录)（P2-④）", async () => {
+    appMocks.ListSettingsBackups.mockResolvedValue(BACKUPS);
+    const root = mountBackupRoot();
+    initSettingsBackup(root);
+    root.getElementById("set-backup-open")!.click();
+
+    await vi.waitFor(() => expect(appMocks.OpenFolder).toHaveBeenCalledTimes(1));
+    expect(appMocks.OpenFolder).toHaveBeenCalledWith("C:\\ysm");
   });
 });

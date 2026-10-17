@@ -204,6 +204,15 @@ export const zhCN = {
   "settings.backup.importConfirmMessage":
     "导入将整份覆盖当前设置：文件存储路径、游戏根目录等磁盘配置会被导入文件的值替换，并将应用 {n} 项浏览器偏好。\n导入前会自动备份当前配置，导入后如不满意可在备份目录找回。",
   "settings.backup.importConfirmOk": "确认导入",
+  "settings.backup.restoreBtn": "恢复最近备份",
+  "settings.backup.openDirBtn": "打开备份目录",
+  "settings.backup.restoreConfirmTitle": "恢复导入前备份？",
+  "settings.backup.restoreConfirmMessage":
+    "将恢复到 {path} 记录的配置，并整份覆盖当前设置（含文件存储路径、游戏根目录）。\n恢复后主题、语言与仓库路径会立即更新。",
+  "settings.backup.restoreConfirmOk": "确认恢复",
+  "settings.backup.restoreDone": "已恢复到导入前备份",
+  "settings.backup.noBackup": "暂无导入前备份，请先执行一次导入设置",
+  "settings.backup.openedDir": "已打开备份目录",
   // 设置页动作 toast（app-content/settings）
   "settings.mirror.switched": "下载源已切换为 {name}",
   "settings.mirror.nameDirect": "直连",

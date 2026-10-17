@@ -314,3 +314,55 @@ func TestImportSettingsFromFile_MigratesLegacyRootFields(t *testing.T) {
 		t.Errorf("迁移后应盖版本章: %d", got.SchemaVersion)
 	}
 }
+
+// ListSettingsBackups（锐评 P2④）：列出导入前备份，最新在前；无备份返回空切片（非 nil）。
+func TestListSettingsBackups_RoundTrip(t *testing.T) {
+	a := exportTestApp(t, types.AppConfig{FilesRoot: "C:/repo", Theme: "dark"})
+
+	backups, err := a.ListSettingsBackups()
+	testutil.NoError(t, err, "无备份时应返回空列表")
+	if len(backups) != 0 {
+		t.Fatalf("无备份时 got %d 条，want 0", len(backups))
+	}
+
+	for _, stamp := range []string{"20260101-000000.000", "20260102-000000.000"} {
+		bak := configPath() + ".bak-" + stamp
+		testutil.NoError(t, os.WriteFile(bak, []byte("{}"), 0o644), "写假备份 "+stamp)
+	}
+	backups, err = a.ListSettingsBackups()
+	testutil.NoError(t, err, "ListSettingsBackups")
+	if len(backups) != 2 {
+		t.Fatalf("got %d 条备份，want 2", len(backups))
+	}
+	if filepath.Base(backups[0]) != "ysm_config.json.bak-20260102-000000.000" {
+		t.Errorf("最新备份应在前，got %q", filepath.Base(backups[0]))
+	}
+}
+
+// RestoreSettingsBackup（锐评 P2④）：恢复到指定备份的配置，走同一套写入口与侧效。
+func TestRestoreSettingsBackup_RestoresToBackupValue(t *testing.T) {
+	a := exportTestApp(t, types.AppConfig{FilesRoot: "C:/repo", Theme: "dark"})
+	bak, err := a.backupConfigFile()
+	testutil.NoError(t, err, "backupConfigFile")
+	if bak == "" {
+		t.Fatal("应有备份路径")
+	}
+	// 改动配置，再恢复
+	if err := a.saveConfig(types.AppConfig{FilesRoot: "C:/repo2", Theme: "light"}); err != nil {
+		t.Fatalf("saveConfig: %v", err)
+	}
+	if a.LoadAppConfig().Theme != "light" {
+		t.Fatalf("前置：改后主题应为 light, got %q", a.LoadAppConfig().Theme)
+	}
+	testutil.NoError(t, a.RestoreSettingsBackup(bak), "RestoreSettingsBackup")
+	if got := a.LoadAppConfig().Theme; got != "dark" {
+		t.Errorf("恢复后主题应为 dark（备份值），got %q", got)
+	}
+	if got := a.LoadAppConfig().FilesRoot; got != "C:/repo" {
+		t.Errorf("恢复后 FilesRoot 应为 C:/repo（备份值），got %q", got)
+	}
+	// 备份文件不存在 → 报错
+	if err := a.RestoreSettingsBackup(filepath.Join(configDir(), "ysm_config.json.bak-99999999-000000.000")); err == nil {
+		t.Error("备份文件不存在应报错")
+	}
+}

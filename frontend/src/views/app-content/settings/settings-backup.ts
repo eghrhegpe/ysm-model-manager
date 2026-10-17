@@ -200,4 +200,63 @@ export function initSettingsBackup(root: ShadowRoot): void {
       }
     });
   });
+
+  // 「恢复最近备份」（锐评 P2④）：导入前自动备份的 .bak-* 此前只产出、UI 无消费入口，
+  // 「导入前自动备份、后悔可还原」的承诺全落在文件管理器之外（用户得自己翻 .bak-* 改名）。
+  // 恢复也是**整份覆盖**磁盘配置且会重启 watcher → 同样二次确认。
+  const restoreBtn = root.getElementById("set-backup-restore") as HTMLButtonElement | null;
+  restoreBtn?.addEventListener("click", () => {
+    void withBusy(async () => {
+      try {
+        const { ListSettingsBackups, RestoreSettingsBackup } = await backendGetApp();
+        const backups = (await ListSettingsBackups()) ?? [];
+        if (backups.length === 0) {
+          toast(t("settings.backup.noBackup"), TOAST_MS.normal, "error");
+          return;
+        }
+        const target = backups[0]; // 列表最新在前，恢复最近一次导入前的状态
+        const ok = await modalConfirm({
+          title: t("settings.backup.restoreConfirmTitle"),
+          titleIcon: "warning",
+          danger: true,
+          message: t("settings.backup.restoreConfirmMessage", { path: esc(target) }),
+          okText: t("settings.backup.restoreConfirmOk"),
+        });
+        if (!ok) return;
+        await RestoreSettingsBackup(target);
+        toast(t("settings.backup.restoreDone"), TOAST_MS.long, "success");
+        // 恢复改写磁盘主题/语言/路径 → 全量重建面板（index.ts 的 settings:imported 订阅里会重算主题镜像）
+        bus.emit("settings:imported");
+      } catch (e) {
+        toastError(e);
+      }
+    });
+  });
+
+  // 打开备份目录（锐评 P2④）：让用户能在文件管理器里看到 .bak-* / ysm_config.json。
+  // 目录从最新备份路径推导（本机没有「取配置目录」的绑定）；无备份时提示而非静默。
+  const openBtn = root.getElementById("set-backup-open") as HTMLButtonElement | null;
+  openBtn?.addEventListener("click", () => {
+    void withBusy(async () => {
+      try {
+        const { ListSettingsBackups, OpenFolder } = await backendGetApp();
+        const backups = (await ListSettingsBackups()) ?? [];
+        if (backups.length === 0) {
+          toast(t("settings.backup.noBackup"), TOAST_MS.normal, "error");
+          return;
+        }
+        await OpenFolder(dirOf(backups[0]));
+        toast(t("settings.backup.openedDir"), TOAST_MS.normal, "success");
+      } catch (e) {
+        toastError(e);
+      }
+    });
+  });
+}
+
+/** 取路径的目录部分（跨平台：兼容 Windows `\` 与 POSIX `/`，取最后一个分隔符之前的部分）。
+ *  生产侧无 node `path`，浏览器里拿 Go 磁盘路径只能自己切。 */
+function dirOf(p: string): string {
+  const i = Math.max(p.lastIndexOf("/"), p.lastIndexOf("\\"));
+  return i <= 0 ? "." : p.slice(0, i);
 }

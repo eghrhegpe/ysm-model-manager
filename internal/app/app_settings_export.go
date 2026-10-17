@@ -175,6 +175,38 @@ func (a *App) pruneOldExportFiles() {
 	}
 }
 
+// checkExportVersions 双版本门控（锐评 2026-10-16 + 对抗审计 P1 修正；第二轮锐评 P1⑤ 收拢为同源函数）。
+// ExportVersion 门控文件格式、SchemaVersion 门控配置 schema——两套独立编号各有一道闸。
+// 高 schema/高格式版本来自更高版本程序，本程序按旧结构直读会静默错读、再落盘把高版本章焊死。
+// 两道闸共用 ErrSettingsTooNew 专用 Code：friendlyError 命中 Code 映射即丢弃
+// Reason/Suggestion（errors.ts `if (key) return t(key)`），「请升级程序后导入」的
+// 指引必须由 i18n 分类文案本身承载——复用 UNSUPPORTED_FORMAT 会把它吞成「不支持的格式」。
+//
+// 挂载点两处、缺一不可（P1⑤ 的教训）：
+//   - ReadSettingsExport：预览读出口，导入确认前早退，UX 更好；
+//   - importResolved：写路径唯一入口。此前闸只挂前者，P2② 把落盘主入口搬进
+//     ImportSettingsData 后闸没跟着搬——绑定契约层可被 JS 直喂高版本 exp 焊死配置章。
+//     门控跟着「写路径唯一出口」走，不跟着调用链的便利侧留念。
+func checkExportVersions(exp types.SettingsExport) error {
+	if exp.ExportVersion > settingsExportVersion {
+		return types.AppError{
+			Code:       types.ErrSettingsTooNew,
+			Operation:  "导入设置",
+			Reason:     fmt.Sprintf("导出文件版本(%d)高于当前程序支持的版本(%d)", exp.ExportVersion, settingsExportVersion),
+			Suggestion: "请升级程序后导入",
+		}
+	}
+	if exp.AppConfig.SchemaVersion > types.SchemaVersion {
+		return types.AppError{
+			Code:       types.ErrSettingsTooNew,
+			Operation:  "导入设置",
+			Reason:     fmt.Sprintf("导出文件的配置版本(%d)高于当前程序支持的版本(%d)", exp.AppConfig.SchemaVersion, types.SchemaVersion),
+			Suggestion: "请升级程序后导入",
+		}
+	}
+	return nil
+}
+
 // ReadSettingsExport 只读解析 + 校验设置导出文件（无任何副作用）。
 // 前端先调本绑定拿到内容做导入前确认（含「导入后将应用 N 项浏览器偏好」计数）。
 func (a *App) ReadSettingsExport(path string) (types.SettingsExport, error) {
@@ -198,27 +230,9 @@ func (a *App) ReadSettingsExport(path string) (types.SettingsExport, error) {
 	if exp.Format != settingsExportFormat {
 		return exp, fmt.Errorf("不是有效的设置导出文件（format=%q）", exp.Format)
 	}
-	// 双版本门控对称（锐评 2026-10-16 + 对抗审计 P1 修正）：ExportVersion 门控文件格式、
-	// SchemaVersion 门控配置 schema——两套独立编号各有一道闸。高 schema/高格式版本来自
-	// 更高版本程序，本程序按旧结构直读会静默错读、再落盘把高版本章焊死。
-	// 两道闸共用 ErrSettingsTooNew 专用 Code：friendlyError 命中 Code 映射即丢弃
-	// Reason/Suggestion（errors.ts `if (key) return t(key)`），「请升级程序后导入」的
-	// 指引必须由 i18n 分类文案本身承载——复用 UNSUPPORTED_FORMAT 会把它吞成「不支持的格式」。
-	if exp.ExportVersion > settingsExportVersion {
-		return exp, types.AppError{
-			Code:       types.ErrSettingsTooNew,
-			Operation:  "导入设置",
-			Reason:     fmt.Sprintf("导出文件版本(%d)高于当前程序支持的版本(%d)", exp.ExportVersion, settingsExportVersion),
-			Suggestion: "请升级程序后导入",
-		}
-	}
-	if exp.AppConfig.SchemaVersion > types.SchemaVersion {
-		return exp, types.AppError{
-			Code:       types.ErrSettingsTooNew,
-			Operation:  "导入设置",
-			Reason:     fmt.Sprintf("导出文件的配置版本(%d)高于当前程序支持的版本(%d)", exp.AppConfig.SchemaVersion, types.SchemaVersion),
-			Suggestion: "请升级程序后导入",
-		}
+	// 双版本门控（见 checkExportVersions 注释）：本侧早退只为 UX，写侧防线在 importResolved
+	if err := checkExportVersions(exp); err != nil {
+		return exp, err
 	}
 	return exp, nil
 }
@@ -262,6 +276,12 @@ func (a *App) importResolved(exp types.SettingsExport) (types.ImportSettingsResu
 			Reason:     fmt.Sprintf("不是有效的设置导出数据（format=%q）", exp.Format),
 			Suggestion: "请通过「设置 → 备份与迁移」选择有效的设置导出文件",
 		}
+	}
+	// 双版本闸必须挂在写路径唯一入口上（第二轮锐评 P1⑤）：本函数是 ImportSettingsData
+	// 与 ImportSettingsFromFile 共用的落盘主体，闸若只留在 ReadSettingsExport（预览读出口），
+	// 直喂 exp 的调用就绕开了「高版本章焊死」防线。见 checkExportVersions 注释。
+	if err := checkExportVersions(exp); err != nil {
+		return res, err
 	}
 
 	a.configWriteMu.Lock()

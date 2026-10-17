@@ -293,6 +293,47 @@ func TestImportSettingsData_RejectsBadFormat(t *testing.T) {
 	}
 }
 
+// 第二轮锐评 P1⑤（2026-10-18）：双版本闸（ExportVersion/SchemaVersion）此前只挂在
+// ReadSettingsExport（预览读出口），P2② 把写盘主入口搬进 ImportSettingsData 后闸没跟着搬——
+// 代码里自述的「高版本程序导出、本程序直读会静默错读、落盘把高版本章焊死」危害恰好发生在
+// 无闸分支。教训：门控跟着「写路径唯一出口」走，不跟着调用链的便利侧留念。
+func TestImportSettingsData_RejectsTooNewVersions(t *testing.T) {
+	dst := exportTestApp(t, types.AppConfig{FilesRoot: "C:/repo", Theme: "dark"})
+
+	for name, exp := range map[string]types.SettingsExport{
+		"高格式版本":    {Format: settingsExportFormat, ExportVersion: settingsExportVersion + 1, AppConfig: types.AppConfig{Theme: "mint"}},
+		"高 schema": {Format: settingsExportFormat, ExportVersion: settingsExportVersion, AppConfig: types.AppConfig{SchemaVersion: types.SchemaVersion + 1, Theme: "mint"}},
+	} {
+		_, err := dst.ImportSettingsData(exp)
+		var ae types.AppError
+		if !errors.As(err, &ae) || ae.Code != types.ErrSettingsTooNew {
+			t.Errorf("%s：应拒为 AppError{Code:SETTINGS_TOO_NEW}，got %v", name, err)
+			continue
+		}
+		if got := dst.LoadAppConfig().Theme; got != "dark" {
+			t.Errorf("%s：拒止后不得改动配置，got theme=%q", name, got)
+		}
+	}
+
+	// 放行面回归：等值版本照常落盘 + 备份（防闸搬过去误杀正常导入；遗留 0 值由
+	// applyConfigMigrations 正常迁移，同样必须放行）
+	res, err := dst.ImportSettingsData(types.SettingsExport{
+		Format:        settingsExportFormat,
+		ExportVersion: settingsExportVersion,
+		AppConfig:     types.AppConfig{FilesRoot: "C:/repo", Theme: "light"},
+	})
+	testutil.NoError(t, err, "等值版本应放行")
+	if res.BackupPath == "" || dst.LoadAppConfig().Theme != "light" {
+		t.Errorf("闸迁移不得改变正常导入行为: backup=%q theme=%q", res.BackupPath, dst.LoadAppConfig().Theme)
+	}
+	if _, err := dst.ImportSettingsData(types.SettingsExport{
+		Format:    settingsExportFormat,
+		AppConfig: types.AppConfig{FilesRoot: "C:/repo", Theme: "dark"},
+	}); err != nil {
+		t.Errorf("ExportVersion 缺省 0 的遗留文件应放行: %v", err)
+	}
+}
+
 func TestImportSettingsFromFile_MigratesLegacyRootFields(t *testing.T) {
 	const root = "C:/repo"
 	src := exportTestApp(t, types.AppConfig{FilesRoot: root})

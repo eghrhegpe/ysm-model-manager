@@ -195,6 +195,10 @@ export const en: Record<string, string> = {
     "Imported {n} browser preferences; the previous config was backed up to: {backup}",
   "settings.backup.importDone":
     "Import finished: applied {n} browser preferences. If imported paths are invalid on this machine, set the directories again on the Environment page.",
+  "settings.backup.importConfirmTitle": "Import settings?",
+  "settings.backup.importConfirmMessage":
+    "Importing overwrites the current settings entirely: disk config such as file storage root and game root is replaced by the imported values, and {n} browser preferences will be applied.\nThe current config is backed up automatically before import; you can restore it from the backup directory if needed.",
+  "settings.backup.importConfirmOk": "Import",
   // settings page action toasts (app-content/settings)
   "settings.mirror.switched": "Download source switched to {name}",
   "settings.mirror.nameDirect": "Direct",
@@ -940,6 +944,7 @@ export const en: Record<string, string> = {
   "syncManager.push": "Push",
   "syncManager.pull": "Pull",
   "syncManager.pullHere": "Pull Here",
+  "syncManager.syncStatus": "Sync Status",
   "syncManager.status.all": "All",
   "syncManager.status.synced": "Synced",
   "syncManager.status.missing": "To Push",

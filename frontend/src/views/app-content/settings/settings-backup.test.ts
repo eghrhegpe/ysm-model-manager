@@ -29,12 +29,14 @@ const appMocks = vi.hoisted(() => ({
 }));
 const busMock = vi.hoisted(() => ({ emit: vi.fn(), on: vi.fn() }));
 const toastMock = vi.hoisted(() => ({ toast: vi.fn(), toastError: vi.fn() }));
+const modalConfirmMock = vi.hoisted(() => ({ modalConfirm: vi.fn() }));
 
 vi.mock("@/views/backend-deps.ts", () => ({
   backendGetApp: vi.fn(async () => appMocks),
 }));
 vi.mock("@/bus", () => ({ bus: busMock }));
 vi.mock("@/utils/dom/toast.ts", () => ({ toast: toastMock.toast, toastError: toastMock.toastError }));
+vi.mock("@/utils/dom/modal-confirm.ts", () => modalConfirmMock);
 
 import {
   collectExportableLocalStorage,
@@ -233,12 +235,18 @@ describe("initSettingsBackup 编排链路", () => {
   const IMPORT_RES = {
     backupPath: "C:\\ysm\\ysm_config.json.bak-20260101-000000.000",
   };
+  // ReadSettingsExport 返回真实 SettingsExport（struct，非指针），format 必填；
+  // 前端防御判 `!exp?.format` 而非 `!exp`（P2-⑥：`!exp` 对对象恒 false，死代码）
+  const EXP_FORMAT = "ysm-settings-export";
 
   beforeEach(() => {
     for (const fn of Object.values(appMocks)) fn.mockReset();
     busMock.emit.mockReset();
     toastMock.toast.mockReset();
     toastMock.toastError.mockReset();
+    modalConfirmMock.modalConfirm.mockReset();
+    // 默认确认：既有导入用例锁的是顺序与失败面，不锁确认弹窗本身（确认/取消走下面专用用例）
+    modalConfirmMock.modalConfirm.mockResolvedValue(true);
     document.body.innerHTML = "";
   });
 
@@ -267,6 +275,7 @@ describe("initSettingsBackup 编排链路", () => {
   it("导入顺序：读校验 → 磁盘落盘 → 浏览器回写（safeSet 晚于 ImportSettingsFromFile）", async () => {
     appMocks.SelectImportFile.mockResolvedValue("C:/ysm/ysm-settings-export.json");
     appMocks.ReadSettingsExport.mockResolvedValue({
+      format: EXP_FORMAT,
       localStorage: { "ui-font-size": "14" },
     });
     appMocks.ImportSettingsFromFile.mockResolvedValue(IMPORT_RES);
@@ -288,6 +297,7 @@ describe("initSettingsBackup 编排链路", () => {
   it("磁盘侧失败：浏览器偏好完全不写、不 emit（旧行为是写后再回滚）", async () => {
     appMocks.SelectImportFile.mockResolvedValue("C:/ysm/ysm-settings-export.json");
     appMocks.ReadSettingsExport.mockResolvedValue({
+      format: EXP_FORMAT,
       localStorage: { "ui-font-size": "14" },
     });
     appMocks.ImportSettingsFromFile.mockRejectedValue(new Error("磁盘写入失败"));
@@ -309,6 +319,50 @@ describe("initSettingsBackup 编排链路", () => {
 
     await vi.waitFor(() => expect(appMocks.SelectImportFile).toHaveBeenCalledTimes(1));
     expect(appMocks.ReadSettingsExport).not.toHaveBeenCalled();
+    expect(storageMock.safeSet).not.toHaveBeenCalled();
+    expect(busMock.emit).not.toHaveBeenCalled();
+    expect(toastMock.toastError).not.toHaveBeenCalled();
+  });
+
+  it("导入前弹确认（danger），确认后才走磁盘导入与浏览器回写（P1-①）", async () => {
+    appMocks.SelectImportFile.mockResolvedValue("C:/ysm/ysm-settings-export.json");
+    appMocks.ReadSettingsExport.mockResolvedValue({
+      format: EXP_FORMAT,
+      localStorage: { "ui-font-size": "14", "ui-card-density": "compact" },
+    });
+    appMocks.ImportSettingsFromFile.mockResolvedValue(IMPORT_RES);
+    const root = mountBackupRoot();
+    initSettingsBackup(root);
+    root.getElementById("set-backup-import")!.click();
+
+    await vi.waitFor(() => expect(modalConfirmMock.modalConfirm).toHaveBeenCalledTimes(1));
+    const arg = modalConfirmMock.modalConfirm.mock.calls[0][0] as {
+      title: string;
+      okText: string;
+      danger: boolean;
+    };
+    // 破坏性整份覆盖 → 危险样式 + 自定义标题/按钮（ReadSettingsExport 的 Go 侧注释本就约定「前端先确认」）
+    expect(arg.danger).toBe(true);
+    expect(arg.title).toBeTruthy();
+    expect(arg.okText).toBeTruthy();
+    // 确认在先、磁盘落盘在后（未确认绝不动磁盘）
+    expect(modalConfirmMock.modalConfirm.mock.invocationCallOrder[0]).toBeLessThan(
+      appMocks.ImportSettingsFromFile.mock.invocationCallOrder[0],
+    );
+    expect(storageMock.safeSet).toHaveBeenCalledTimes(2); // 待应用的两个键都回写
+  });
+
+  it("用户取消导入确认：磁盘与浏览器都不动、不 emit（P1-①）", async () => {
+    appMocks.SelectImportFile.mockResolvedValue("C:/ysm/ysm-settings-export.json");
+    appMocks.ReadSettingsExport.mockResolvedValue({
+      format: EXP_FORMAT, localStorage: { "ui-font-size": "14" } });
+    modalConfirmMock.modalConfirm.mockResolvedValue(false);
+    const root = mountBackupRoot();
+    initSettingsBackup(root);
+    root.getElementById("set-backup-import")!.click();
+
+    await vi.waitFor(() => expect(modalConfirmMock.modalConfirm).toHaveBeenCalledTimes(1));
+    expect(appMocks.ImportSettingsFromFile).not.toHaveBeenCalled();
     expect(storageMock.safeSet).not.toHaveBeenCalled();
     expect(busMock.emit).not.toHaveBeenCalled();
     expect(toastMock.toastError).not.toHaveBeenCalled();

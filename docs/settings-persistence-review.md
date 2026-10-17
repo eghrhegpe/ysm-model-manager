@@ -29,6 +29,8 @@
 
 **建议**：`ReadSettingsExport` 之后加确认对话框，展示三件事——①「将覆盖磁盘配置（含文件存储路径 / 游戏根目录，可能需要重新确认）」；②「将应用 N 项浏览器偏好」（用现有 `applied`/`importedKeysFrom` 口径）；③「导入前已自动备份到 {backupPath}，导入后如不满意可用它恢复」。确认后才调 `ImportSettingsFromFile`。
 
+**处置**：✅ 已处置（2026-10-17）——`settings-backup.ts` 在 `ReadSettingsExport` 后、`ImportSettingsFromFile` 前插入 `modalConfirm`（`titleIcon: "warning"`、`danger: true`、`okText` 自定义），message 预告「整份覆盖当前设置（文件存储路径 / 游戏根目录等磁盘配置被替换）+ 将应用 N 项浏览器偏好（`importedKeysFrom(exp.localStorage).length`）+ 导入前已自动备份、可在备份目录找回」，取消则磁盘/浏览器都零副作用。新增三语言 i18n 键（`settings.backup.importConfirmTitle` / `importConfirmMessage` / `importConfirmOk`，zh-CN / en / ja）。测试补两条：①确认（断言 `danger` 样式 + `modalConfirm` 调用先于 `ImportSettingsFromFile`）；②取消（`ImportSettingsFromFile`/`safeSet`/`emit` 都不动）。
+
 ### P1-② 导入后 `dual-write` 镜像键（theme/themeAuto）与磁盘**必然分叉**，且无任何同步
 
 **锚点**：`frontend/src/settings-keys.ts:985-989`（`exportableSettingsKeys` 判据 `tier=local-storage && authority=browser-authority`，注释「`dual-write` 不备份——事实源在磁盘，备份镜像反而制造两处不一致」）；`frontend/src/theme-core.ts:104-120`（`initTheme` 磁盘分支：`cfg.theme || safeGet("theme")` → `safeSet("theme", theme)` 回写镜像——**只在启动时执行一次**）；`frontend/src/bus.ts` + `git grep settings:imported`（`settings-backup.ts:180` 只 `bus.emit("settings:imported")`，订阅方仅 `app-content/index.ts:96` 重建面板）。
@@ -112,6 +114,8 @@
 
 **建议**：`settings:imported` 后检测 `cfg.FilesRoot`/`cfg.McRoot` 是否本机存在，不存在则 toast + 跳转「设置 → 环境」卡片，或加警示条「导入的文件存储路径在当前机器不存在，请重新设置」。
 
+**处置**：📌 **部分不成立**（2026-10-17 复核）——`settings.backup.importDone` 文案已含「若导入的路径在本机无效，请在「环境」页重新设置目录」（zh-CN / en / ja 三语言），**文案侧提示已存在**，锐评「完全未落地」不准确。但**自动检测**路径有效性 + 跳转/警示条仍未实现——保留为后续增强（需 Go 侧路径存在性绑定，与 P2-④「恢复备份」同属导入后 UX 收尾，一并排期）。
+
 ### P2-⑥ `if (!exp) return` 是死代码
 
 **锚点**：`settings-backup.ts:164`（`if (!exp) return; // 防御：read 成功但回空（Go 侧不应发生）`）；`go/types/config.go:70`（`SettingsExport` 是 **struct**，非指针），Wails 绑定成功时恒为对象。
@@ -119,6 +123,8 @@
 **问题**：`!exp` 对对象恒 `false`，分支不可达。注释称「Go 侧不应发生」恰恰说明它不该写。会误导后续维护者以为空返回是可能态。
 
 **建议**：删除，或改为判关键字段（如 `exp.format` 非空）。
+
+**处置**：✅ 已处置（2026-10-17，随 P1-① 一并）——防御判空改为 `if (!exp?.format) return`（保留防御语义、分支可达）；测试里 `ReadSettingsExport` mock 补 `format: "ysm-settings-export"`，并加注释说明为什么不能写 `!exp`。
 
 ---
 

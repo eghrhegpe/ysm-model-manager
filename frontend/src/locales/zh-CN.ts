@@ -200,6 +200,10 @@ export const zhCN = {
   "settings.backup.importedTo": "已导入 {n} 项浏览器偏好；导入前的配置已备份到：{backup}",
   "settings.backup.importDone":
     "设置导入完成，已应用 {n} 项浏览器偏好；若导入的路径在本机无效，请在「环境」页重新设置目录",
+  "settings.backup.importConfirmTitle": "导入设置？",
+  "settings.backup.importConfirmMessage":
+    "导入将整份覆盖当前设置：文件存储路径、游戏根目录等磁盘配置会被导入文件的值替换，并将应用 {n} 项浏览器偏好。\n导入前会自动备份当前配置，导入后如不满意可在备份目录找回。",
+  "settings.backup.importConfirmOk": "确认导入",
   // 设置页动作 toast（app-content/settings）
   "settings.mirror.switched": "下载源已切换为 {name}",
   "settings.mirror.nameDirect": "直连",
@@ -923,6 +927,7 @@ export const zhCN = {
   "syncManager.push": "推送",
   "syncManager.pull": "拉取",
   "syncManager.pullHere": "拉取到此仓库",
+  "syncManager.syncStatus": "同步状态",
   "syncManager.status.all": "全部",
   "syncManager.status.synced": "已同步",
   "syncManager.status.missing": "待推送",

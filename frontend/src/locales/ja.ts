@@ -197,6 +197,10 @@ export const ja: Record<string, string> = {
     "{n} 項目のブラウザ設定を読み込みました。読み込み前の設定は {backup} にバックアップされています",
   "settings.backup.importDone":
     "設定の読み込みが完了し、{n} 項目のブラウザ設定を適用しました。読み込んだパスがこのマシンで無効な場合は「環境」ページでディレクトリを再設定してください",
+  "settings.backup.importConfirmTitle": "設定を読み込みますか？",
+  "settings.backup.importConfirmMessage":
+    "読み込みは現在の設定を完全に上書きします：ファイル保存先・ゲームルートなどのディスク設定が読み込みファイルの値に置き換わり、{n} 項目のブラウザ設定が適用されます。\n読み込み前に現在の設定が自動バックアップされ、必要に応じてバックアップディレクトリから復元できます。",
+  "settings.backup.importConfirmOk": "読み込み",
   // 設定ページ動作トースト（app-content/settings）
   "settings.mirror.switched": "ダウンロード元を {name} に切り替えました",
   "settings.mirror.nameDirect": "直結",
@@ -938,6 +942,7 @@ export const ja: Record<string, string> = {
   "syncManager.push": "プッシュ",
   "syncManager.pull": "プル",
   "syncManager.pullHere": "このリポジトリにプル",
+  "syncManager.syncStatus": "同期状態",
   "syncManager.status.all": "すべて",
   "syncManager.status.synced": "同期済み",
   "syncManager.status.missing": "プッシュ待ち",

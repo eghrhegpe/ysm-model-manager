@@ -26,6 +26,7 @@ import {
   safeKeys,
   safeSet,
 } from "@/utils/base/primitives/storage.ts";
+import { modalConfirm } from "@/utils/dom/modal-confirm.ts";
 import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { esc } from "@/utils/html/html.ts";
@@ -161,7 +162,19 @@ export function initSettingsBackup(root: ShadowRoot): void {
         const path = await SelectImportFile(".json", t("settings.backup.importPickerTitle"));
         if (!path) return; // 用户取消
         const exp = await ReadSettingsExport(path); // 先只读校验（格式/版本），失败即抛、零副作用
-        if (!exp) return; // 防御：read 成功但回空（Go 侧不应发生）
+        if (!exp?.format) return; // 防御：read 成功但结构不完整（Go 侧不应发生）
+        // 导入是**整份覆盖**磁盘配置（ADR-344-d1「以导入配置为基」）且会重启 watcher、
+        // 改写 FilesRoot/McRoot——破坏性动作必须二次确认，否则误选/误点即覆盖当前全部设置。
+        // ReadSettingsExport 的 Go 侧注释本就约定「前端先做导入前确认」，此前只用了它的计数。
+        const willApply = importedKeysFrom(exp.localStorage).length;
+        const ok = await modalConfirm({
+          title: t("settings.backup.importConfirmTitle"),
+          titleIcon: "warning",
+          danger: true,
+          message: t("settings.backup.importConfirmMessage", { n: willApply }),
+          okText: t("settings.backup.importConfirmOk"),
+        });
+        if (!ok) return; // 用户取消，零副作用（磁盘与浏览器都未动）
         // ① 磁盘轨先落盘（含备份 + 版本门控迁移 + 洗脏 + 侧效），失败即抛、零副作用——
         //    此时浏览器偏好尚未动，不产生任何分叉，也无需回滚
         const res = await ImportSettingsFromFile(path);

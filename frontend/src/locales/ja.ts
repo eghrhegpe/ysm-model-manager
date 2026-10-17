@@ -208,7 +208,7 @@ export const ja: Record<string, string> = {
   "settings.backup.openDirBtn": "バックアップフォルダを開く",
   "settings.backup.restoreConfirmTitle": "読み込み前のバックアップを復元しますか？",
   "settings.backup.restoreConfirmMessage":
-    "{path} に記録された設定に戻り、現在の設定（ファイル保存先・ゲームルートなど）を完全に上書きします。\n復元後、テーマ・言語・リポジトリパスが即時更新されます。",
+    "{path} に記録された設定に戻り、現在のディスク設定（テーマ・ファイル保存先・ゲームルートなど）を完全に上書きします。ディスク側は復元直後に反映されます。\n言語や画面オプションなどブラウザ側の設定は別トラックであり、今回の復元では巻き戻されません。",
   "settings.backup.restoreConfirmOk": "復元",
   "settings.backup.restoreDone": "読み込み前のバックアップに復元しました",
   "settings.backup.noBackup": "読み込み前のバックアップがありません。先に設定を読み込んでください",

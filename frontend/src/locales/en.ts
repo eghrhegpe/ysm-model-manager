@@ -206,7 +206,7 @@ export const en: Record<string, string> = {
   "settings.backup.openDirBtn": "Open backup folder",
   "settings.backup.restoreConfirmTitle": "Restore pre-import backup?",
   "settings.backup.restoreConfirmMessage":
-    "This restores the configuration recorded in {path} and overwrites the current settings entirely (file storage root, game root).\nTheme, language and repo paths update immediately after restore.",
+    "This restores the configuration recorded in {path}, overwriting the current disk settings entirely (theme, file storage root, game root); disk-side changes apply right after restore.\nBrowser preferences (language, UI options, etc.) live on a separate track and are NOT rolled back by this restore.",
   "settings.backup.restoreConfirmOk": "Restore",
   "settings.backup.restoreDone": "Restored to pre-import backup",
   "settings.backup.noBackup": "No pre-import backup yet — run an import first",

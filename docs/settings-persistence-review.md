@@ -163,7 +163,7 @@
 
 ---
 
-## 五、第二轮锐评（2026-10-18，基线 `6179495cb`）
+## 六、第二轮锐评（2026-10-18，基线 `6179495cb`）
 
 第一轮 P1–P3 全数处置落地且实测复核有效（`go test ./internal/app -run 'Export|ImportSettings|Backup|Restore|DirectoryExists|SettingsKey'` 绿；`node tests/test_settings_key_ledger.ts` 全过——go-disk 33 字段 + localStorage/IDB 64 键、扫 649 文件；vitest `settings-backup.test.ts` 24/24）。本轮只评**处置引入的新代码面**与第一轮未覆盖的残留面。
 

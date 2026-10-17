@@ -36,7 +36,7 @@
 | `menu:show` | 1 | 1 | 0 | 0 | ✅ |
 | `model:select` | 8 | 2 | 0 | 0 | ✅ |
 | `nav:changed` | 7 | 2 | 0 | 0 | ✅ |
-| `package:selected` | 2 | 1 | 0 | 0 | ✅ |
+| `package:selected` | 2 | 2 | 0 | 0 | ✅ |
 | `repo:focus-search` | 1 | 1 | 0 | 0 | ✅ |
 | `repo:fs-changed` | 1 | 1 | 0 | 0 | ✅ |
 | `repo:rtype-changed` | 1 | 5 | 0 | 0 | ✅ |
@@ -266,6 +266,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
+| initSyncConflictPanel | `frontend/src/views/app-content/diagnostics/conflicts.ts` | 109 |
 | initInstancesPage | `frontend/src/views/app-content/init-pages.ts` | 72 |
 
 ### `repo:focus-search`

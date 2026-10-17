@@ -220,6 +220,7 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   "test_commit_version_defense.ts": ["scripts/_lib/commit-blocks/version-defense.ts"],
   "test_commit_smart_stage.ts": ["scripts/_lib/commit-blocks/smart-stage.ts"],
   "test_commit_clean_staged_filter.ts": ["scripts/_lib/commit-blocks/clean-staged-filter.ts"],
+  "test_commit_staged_domains.ts": ["scripts/_lib/commit-blocks/staged-domains.ts", ".githooks/pre-commit", "scripts/_lib/domain-classify.ts"],
   "test_adr_tiering.ts": ["scripts/_lib/adr-files.ts", "scripts/_lib/frontmatter.ts", "scripts/new-adr.ts", "scripts/adr-check.ts", "scripts/check-adr-health.ts", "scripts/check-doc-drift.ts", "scripts/gen-adr-supersede.ts", "scripts/gen-docs-index.ts", "scripts/gen-vitepress-sidebar.ts"],
   "test_check_boolean_smart.ts": ["scripts/check-boolean-naming.ts"],
   // §6 断言锚点已随 ADR-206 阶段 1 迁到 gate-ctx.ts（record 真身），故列入目标。

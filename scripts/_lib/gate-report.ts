@@ -14,7 +14,8 @@
  *     让 AI 在 25 行尾部内一次拿到「归属 / 错误 / 复现 / 深挖入口」四要素
  *     （2026-09 数据透明化：多条错误全列出前 4，超出的指向完整报告路径）；
  *   - writeGateReport(results, mode)：完整运行过程落盘 .git/gate-report-<ts>.json
- *     （结构化，无行数限制），stderr 只给路径指针。
+ *     （结构化，无行数限制），stderr 只给路径指针；写后顺带回收超额旧报告
+ *     （保留窗口 GATE_REPORT_KEEP，2026-10-17 实测曾堆积 1282 份 / 169.6 MB 无回收）。
  *
  * 依赖：零依赖（node:fs / node:path / _lib/scan-files.ts 的 ROOT）。
  *
@@ -44,7 +45,7 @@ function fullJsonErrors(out: string): string[] | null {
     // 优先 known 键序：errors → warns_list → 其它非空字符串数组
     for (const key of ["errors", "warns_list"]) {
       for (const obj of candidates) {
-        const v = (obj as any)[key];
+        const v = (obj as Record<string, unknown>)[key];
         if (Array.isArray(v) && v.length && !seen.has(v)) {
           seen.add(v);
           arrs.push(v as string[]);
@@ -77,7 +78,7 @@ function fullJsonErrors(out: string): string[] | null {
 export function firstErrors(out: string, n: number): string[] {
   if (!out || n <= 0) return [];
   const json = fullJsonErrors(out);
-  if (json !== null && json.length) return json.slice(0, n);
+  if (json?.length) return json.slice(0, n);
   // 非 JSON（null）或 JSON 但无可提取数组（[]）→ 回退原始输出末 n 行
   return out.trim().split("\n").filter(Boolean).slice(-n);
 }
@@ -180,6 +181,43 @@ export function reportPathFor(ts: string): string {
 }
 
 /**
+ * 报告保留窗口（2026-10-17 门禁性能实测）：每次 gate 运行落一份全量 JSON，
+ * 此前**从无回收**——实测本机 .git/ 堆积 1282 份 / 169.6 MB，每台开发机随时间
+ * 无界增长（且这份堆积反过来拖慢「读近期报告做归因」的诊断路径）。
+ * 留 40 份的依据：单次全量 ~72–152 行结果 ≈ 100–300 KB，40 份 ≤ 12 MB，
+ * 覆盖约一周的高频调试窗口（当日 docs/push 各模式混跑约 10–20 次），
+ * 再早的历史属考古材料——该进报告归档讨论，不该默认驻留每台开发机。
+ */
+export const GATE_REPORT_KEEP = 40;
+
+/**
+ * 纯判据：给定同目录的 gate-report 文件名列表（含本次新写的），返回应删除者。
+ * 文件名内嵌 ISO 时间戳 → 字典序即时间序；非 gate-report-*.json 形态一律不碰
+ * （fail-safe：目录里混着什么都不删什么）。保持入参不排序、输出按「最旧在前」。
+ */
+export function selectStaleGateReports(
+  names: readonly string[],
+  keep = GATE_REPORT_KEEP,
+): string[] {
+  const isReport = /^gate-report-.+\.json$/;
+  const reports = names.filter((n) => isReport.test(n)).sort();
+  if (reports.length <= keep) return [];
+  return reports.slice(0, reports.length - keep);
+}
+
+/** 就地回收（写报告后顺带调用；任何异常静默——回收不该阻断门禁）。 */
+function pruneGateReports(dir: string): void {
+  try {
+    const names = fs.readdirSync(dir).filter((n) => n.startsWith("gate-report-"));
+    for (const stale of selectStaleGateReports(names)) {
+      fs.rmSync(path.join(dir, stale), { force: true });
+    }
+  } catch {
+    /* 目录不可读/删除失败：报告照写，回收下次再来 */
+  }
+}
+
+/**
  * 完整运行过程落盘（结构化 JSON，无行数限制）。
  * @param results 全部检查结果（含 OK）
  * @param meta    模式/结论/退出码等元信息
@@ -204,6 +242,7 @@ export function writeGateReport(
     };
     fs.mkdirSync(path.dirname(p), { recursive: true });
     fs.writeFileSync(p, JSON.stringify(payload, null, 2), "utf-8");
+    pruneGateReports(path.dirname(p));
     return p;
   } catch {
     return null; // 报告写入失败不阻断门禁

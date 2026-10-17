@@ -9,6 +9,7 @@
 ### 发射者表外新增（硬错误——须改走收敛通道，或确认合法后 --update --force 登记）
 
 - `stats:refresh` @ `frontend/src/views/app-sidebar/sidebar-pull.ts`
+- `sync:toggle:status` @ `frontend/src/views/app-sync-manager/events.ts`
 - `tree:reload` @ `frontend/src/views/app-sidebar/sidebar-pull.ts`
 
 ### 登记表可收紧（发射已收敛，`--update` 自动收表销账）
@@ -43,7 +44,7 @@
 | `repo:subdir-changed` | 1 | 1 | 0 | 0 | ✅ |
 | `settings:imported` | 1 | 1 | 0 | 0 | ✅ |
 | `stats:refresh` | 28 | 2 | 0 | 0 | ✅ |
-| `sync:toggle:status` | 4 | 1 | 0 | 0 | ✅ |
+| `sync:toggle:status` | 5 | 1 | 0 | 0 | ✅ |
 | `toast:show` | 17 | 2 | 0 | 0 | ✅ |
 | `tree:reload` | 15 | 1 | 0 | 0 | ✅ |
 | `tree:set-search` | 1 | 1 | 0 | 0 | ✅ |
@@ -86,7 +87,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 92 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 93 |
 
 ### `config:changed`
 
@@ -200,7 +201,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 84 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 85 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 227 |
 
 ### `menu:show`
@@ -240,8 +241,8 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 72 |
-| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 206 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 73 |
+| _pageInitFailed | `frontend/src/views/app-content/index.ts` | 213 |
 | cmBbBindEmptyLocalBtn | `frontend/src/views/app-content/site/events.ts` | 243 |
 | anActivateNavPage | `frontend/src/views/app-nav/index.ts` | 53 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 237 |
@@ -251,7 +252,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 59 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 60 |
 | connectedCallback | `frontend/src/views/app-nav/index.ts` | 207 |
 
 ### `package:selected`
@@ -318,7 +319,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 70 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 71 |
 
 ### `repo:subdir-changed`
 
@@ -342,7 +343,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 96 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 97 |
 
 ### `stats:refresh`
 
@@ -389,6 +390,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
+| handleSyncStatusButton | `frontend/src/views/app-sync-manager/events.ts` | 87 |
 | runBatchToggle | `frontend/src/views/app-tree/bus-handlers.ts` | 415 |
 | atTeBindSelCheckboxes | `frontend/src/views/app-tree/events.ts` | 129 |
 | toggleFolderBatch | `frontend/src/views/app-tree/events.ts` | 557 |
@@ -459,7 +461,7 @@
 **发射方：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| connectedCallback | `frontend/src/views/app-content/index.ts` | 78 |
+| connectedCallback | `frontend/src/views/app-content/index.ts` | 79 |
 
 **订阅方（on）：**
 | 函数 | 文件 | 行 |

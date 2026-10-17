@@ -20,7 +20,12 @@
  * 运行：node tests/test_gate_report.ts
  */
 import assert from "node:assert";
-import { firstErrors, formatFailSummary } from "../scripts/_lib/gate-report.ts";
+import {
+  firstErrors,
+  formatFailSummary,
+  GATE_REPORT_KEEP,
+  selectStaleGateReports,
+} from "../scripts/_lib/gate-report.ts";
 import { check, finish } from "./_lib.mts";
 
 // ── firstErrors ──
@@ -164,6 +169,37 @@ check("formatFailSummary：首错过长 → 截断 ~120 字符加省略号", () 
   const s = formatFailSummary(item, 16, 20, true);
   assert.ok(s.length < 400, `整行不应过长，实际 ${s.length}`);
   assert.ok(s.includes("…"), "应截断");
+});
+
+// ── selectStaleGateReports（报告回收纯判据，2026-10-17 实测 .git/ 堆积 169.6MB）──
+check("selectStaleGateReports：100 份留 40 → 删最旧 60（时间戳字典序 = 时间序）", () => {
+  const names = Array.from(
+    { length: 100 },
+    (_, i) =>
+      `gate-report-2026-10-01T00-${String(Math.floor(i / 60)).padStart(2, "0")}-${String(i % 60).padStart(2, "0")}-000Z.json`,
+  );
+  const stale = selectStaleGateReports(names);
+  assert.equal(stale.length, 60, `应删 60，实际 ${stale.length}`);
+  assert.equal(stale[0], names[0], "应从最旧开始删");
+  assert.ok(!stale.includes(names[60]), "保留窗内（第 61 旧起）不得出现在删除清单");
+});
+check("selectStaleGateReports：≤ keep 份 → 空删（新仓首次运行不误删历史）", () => {
+  assert.deepEqual(selectStaleGateReports([]), []);
+  const few = ["gate-report-a.json", "gate-report-b.json"];
+  assert.deepEqual(selectStaleGateReports(few), [], "不足保留窗一律不删");
+  assert.deepEqual(selectStaleGateReports(few, 2), [], "恰好等于 keep 也不删");
+});
+check("selectStaleGateReports：非 gate-report-*.json 形态一律不碰（fail-safe）", () => {
+  const mixed = ["gate-audit.log", "gate-report-x.json", "HEAD", "notes.txt", "gate-report-y.json"];
+  assert.deepEqual(selectStaleGateReports(mixed, 1), ["gate-report-x.json"]);
+  assert.deepEqual(
+    selectStaleGateReports(mixed, 0),
+    ["gate-report-x.json", "gate-report-y.json"],
+    "keep=0 删光报告，仍不碰杂项",
+  );
+});
+check("GATE_REPORT_KEEP 量级合理（回收存在意义 = 有界堆积，非零窗删光）", () => {
+  assert.ok(GATE_REPORT_KEEP >= 10, `保留窗过小：${GATE_REPORT_KEEP}`);
 });
 
 finish("契约测试全过");

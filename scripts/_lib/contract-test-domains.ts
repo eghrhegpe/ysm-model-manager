@@ -51,11 +51,13 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   "test_commit_version_defense.ts": ["tests"], // ADR-323 阶段 1：pre-commit 版本防御块下沉
   "test_commit_smart_stage.ts": ["tests"], // ADR-323 阶段 2：pre-commit 智能 stage 块下沉
   "test_commit_clean_staged_filter.ts": ["tests"], // ADR-323 阶段 3：未暂存编辑守卫（gofmt/biome 共用）
+  "test_commit_staged_domains.ts": ["tests"], // 2026-10-17 pre-commit 变更域裁剪（段序/判据/fail-open/钩子对账）
   // —— data ——
   "test_creators_schema.ts": ["data"],
   "test_resource_schema.ts": ["data"],
   "test_workshop_schema.ts": ["data"],
   // —— go ——
+  "test_hash_entry_consumers.ts": ["go"], // 带哈希 seam 调用点分类闸——SCAN_DIRS = internal/app + go/cli（2026-10-16 锐评立项；当日提交漏登记，2026-10-17 补齐）
   "test_cli_completion_parity.ts": ["go"],
   "test_cli_doc_parity.ts": ["go", "docs"],
   "test_config_defaults.ts": ["go"],

@@ -10,7 +10,7 @@
 import type { GateCtx } from "../gate-ctx.ts";
 import { GATE_TIMEOUT_MS } from "../gate-ctx.ts";
 import { resolveBaseRev } from "../gate-resolve.ts";
-import { run as procRun, type ProcResult } from "../proc.ts";
+import { type ProcResult, run as procRun } from "../proc.ts";
 import { ROOT } from "../scan-files.ts";
 
 /**
@@ -219,9 +219,16 @@ export async function runGoDomain(ctx: GateCtx): Promise<void> {
       } else {
         // 数组形式执行（防 shell 解析 baseRev）；字符串仅供 label 展示
         const glLabel = `golangci-lint run --new-from-rev=${baseRev} ./...`;
-        const gl = procRun("golangci-lint", ["run", `--new-from-rev=${baseRev}`, "./..."], {
-          cwd: ROOT,
-        });
+        // ⚡ 2026-10-17 门禁性能实测：本段实测 15–21s（近期 push 报告里的最大单项），此前用同步
+        // procRun 阻塞 event loop——与 go test 段同病灶（文件头 yieldThenRun 注释，
+        // code_review P2），但漏了同款处理：Go∥前端 Promise.all 并行时，这 20s 里
+        // 前端域的 shAsync 一步不能推进。改 yieldThenRun：无 shell 拼接哲学不变，
+        // 段前让出 event loop（冷启动/缓存判定段仍同步——毫秒级，不值得异步化）。
+        const gl = await yieldThenRun(
+          "golangci-lint",
+          ["run", `--new-from-rev=${baseRev}`, "./..."],
+          { cwd: ROOT },
+        );
         // 非 push 模式（doctor --all/--docs）= 首次真正挂载增量 lint：按仓内
         // 「先观察一轮再议升级 hard」惯例走 debt（同 check-type-safety 升硬口径）；
         // push 侧保持既有 hard 不变。条件展开而非传 undefined

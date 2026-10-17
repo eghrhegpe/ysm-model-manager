@@ -911,6 +911,11 @@ export const ja: Record<string, string> = {
   // ADR-340-d2：プッシュは従来どおり上書き（ポリシー不変）だが、インスタンス側の変更を
   // 上書きした事実は正直に知らせる——従来は「プッシュ完了」の一言に隠れていた
   "sidebar.pushOverwrote": "インスタンス側の変更 {n} 件を上書きしました（{names}）",
+  // P1-2: 一括プッシュ事前確認 — インスタンス側の変更の上書きは不可逆のため、
+  // 行レベルの ADR-310 確認ゲートを一括パスにも適用する。
+  "sidebar.pushOverwriteConfirmTitle": "プッシュはインスタンス側の変更を上書きします",
+  "sidebar.pushOverwriteConfirmMsg":
+    "今回のプッシュには整合包 side で編集した {n} ファイル/フォルダが含まれます。リポジトリ版で上書きされ、元に戻せません。続行しますか？",
   // P1-3：プッシュ/プルループ進捗（ボタン内表示；大量処理がスピンナー待ちだけにならない）
   "sidebar.pushProgress": "プッシュ中 {i}/{n}…",
   "sidebar.pullProgress": "プル中 {i}/{n}…",

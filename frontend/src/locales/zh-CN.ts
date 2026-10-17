@@ -893,6 +893,9 @@ export const zhCN = {
   // ADR-340-d2：推送**照旧覆盖**（策略未变），但覆盖了实例侧手改必须如实点名——
   // 原实现把这件事整个隐去，用户只能看到一句「推送完成」。{names} 形如「狐妖.pmx、MMD 等」
   "sidebar.pushOverwrote": "覆盖了 {n} 处实例侧已修改内容（{names}）",
+  "sidebar.pushOverwriteConfirmTitle": "推送将覆盖实例侧修改",
+  "sidebar.pushOverwriteConfirmMsg":
+    "本次推送范围（{n} 处文件/目录）在整合包侧有你自己改过的副本，推送会以仓库版本覆盖它们，且不可恢复。确定继续吗？",
   // P1-3：推送/拉取循环进度（按钮内显示，大批量不再只干等 spinner）
   "sidebar.pushProgress": "推送中 {i}/{n} 类…",
   "sidebar.pullProgress": "拉取中 {i}/{n} 包…",

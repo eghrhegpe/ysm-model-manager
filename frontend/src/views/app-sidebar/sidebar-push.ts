@@ -8,10 +8,13 @@ import { type DownloadOutcome, downloadMissing } from "@/features/sync/sync.ts";
 import { SYNC_OP_TIMEOUT_MS } from "@/utils/async/sync-op-timeout.ts";
 import { TimeoutError, withTimeout } from "@/utils/base/primitives/async.ts";
 import type { BusyLock } from "@/utils/base/primitives/lock.ts";
+import { dbg } from "@/utils/debug/debug.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
+import { modalConfirm } from "@/utils/dom/modal-confirm.ts";
 import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
 import { UI_ICONS } from "@/utils/icon/ui-icons.ts";
+import { backendGetApp } from "@/views/backend-deps.ts";
 import { renderSyncResultPanel } from "./sidebar-result-panel.ts";
 import { resetButton } from "./sidebar-shared.ts";
 
@@ -87,6 +90,34 @@ function buildFailedPacks(packTotals: Map<string, PackTotal>): Array<[string, Pa
   return [...packTotals.entries()]
     .filter(([, v]) => v.fail > 0)
     .sort((a, b) => b[1].fail - a[1].fail);
+}
+
+/** 锐评 P1-2：批量推送的**事前覆盖预算**——行级 diverged 推送有 ADR-310 确认闸，批量路径
+ *  此前绕闸直接覆盖（不可逆、事前零感知）。本函数复用 Go 面板链（`Overwrites ⊂ Missing ∪
+ *  MissingDirs`，与 features/sync 消费同一入口，30s 缓存让预扫描不产生二次真扫盘）统计
+ *  selected × types 命中覆盖的目标数；预扫描失败**不阻断**（返回 0，照旧走完安装链，
+ *  事后浮层仍如实点名）——确认闸是加护，不是新故障面。 */
+async function overwriteBudget(selected: string[], types: string[]): Promise<number> {
+  try {
+    const { LoadAppConfig, GetRepoRoot, GetResourceInstanceStatus } = await backendGetApp();
+    const cfg = await LoadAppConfig();
+    const mcRoot = cfg.mcRoot || "";
+    if (!mcRoot) return 0;
+    const nameSet = new Set(selected);
+    let total = 0;
+    for (const rt of types) {
+      const filesRoot = await GetRepoRoot(rt);
+      if (!filesRoot) continue; // 该类型未配根 → downloadMissing 内会 toast，本闸不重复教育
+      const statuses = await GetResourceInstanceStatus(rt, mcRoot, filesRoot);
+      for (const st of statuses || []) {
+        if (nameSet.has(st.Name)) total += st.Overwrites?.length || 0;
+      }
+    }
+    return total;
+  } catch (e) {
+    dbg("sidebar-push", "覆盖预算预扫描失败（不阻断，事后仍点名）:", e);
+    return 0;
+  }
 }
 
 /** 汇总文案分段：安装失败 / 失败包点名（超 MAX_NAMED_PACKS 截断）/ 覆盖点名 / 跳过阻塞超时 / 失败明细 */
@@ -173,6 +204,21 @@ export async function runPush(
     abortedTypes: [],
   };
   try {
+    // 锐评 P1-2 事前确认闸：批量推送可能覆盖实例侧手改（不可逆）——行级 diverged 有
+    // ADR-310 确认闸，批量此前绕闸。先花一次（多为缓存命中的）扫描统计覆盖数，>0 弹确认。
+    // ⚠️ 拒绝走本 catch 静默返回：安装从未发起，无状态变更，不发 stats:refresh/tree:reload。
+    const overCount = await overwriteBudget(selected, types);
+    if (overCount > 0) {
+      const ok = await modalConfirm({
+        title: t("sidebar.pushOverwriteConfirmTitle"),
+        titleIcon: "warning",
+        message: t("sidebar.pushOverwriteConfirmMsg", { n: overCount }),
+        okText: t("sidebar.verbPush"),
+        okIcon: "upload",
+        danger: true,
+      });
+      if (!ok) return;
+    }
     for (let ti = 0; ti < types.length; ti++) {
       const rt = types[ti];
       // P1-3：按类型显示进度（大批量推送不再只干等一个 spinner；按钮 disabled 态保持）

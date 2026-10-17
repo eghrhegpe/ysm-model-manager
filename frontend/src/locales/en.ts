@@ -913,6 +913,11 @@ export const en: Record<string, string> = {
   // ADR-340-d2: pushing still overwrites (policy unchanged) but overwriting instance-side
   // edits must be reported honestly — previously the whole event was hidden behind "push done".
   "sidebar.pushOverwrote": "Overwrote {n} instance-side modification(s) ({names})",
+  // P1-2: batch push pre-check — overwriting instance-side edits is irreversible,
+  // so the ADR-310 row-level confirm gate must cover the batch path too.
+  "sidebar.pushOverwriteConfirmTitle": "Push will overwrite instance-side changes",
+  "sidebar.pushOverwriteConfirmMsg":
+    "This push covers {n} file/folder(s) you edited in the modpack. The repo version will overwrite them and this cannot be undone. Continue?",
   // P1-3: push/pull loop progress (shown on the button; large batches no longer wait on a bare spinner)
   "sidebar.pushProgress": "Pushing {i}/{n}…",
   "sidebar.pullProgress": "Pulling {i}/{n}…",

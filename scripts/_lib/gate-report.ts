@@ -192,28 +192,44 @@ export const GATE_REPORT_KEEP = 40;
 
 /**
  * 纯判据：给定同目录的 gate-report 文件名列表（含本次新写的），返回应删除者。
- * 文件名内嵌 ISO 时间戳 → 字典序即时间序；非 gate-report-*.json 形态一律不碰
- * （fail-safe：目录里混着什么都不删什么）。保持入参不排序、输出按「最旧在前」。
+ * 文件名内嵌 ISO 时间戳 → 字典序即时间序。**严格形态正则**（锐评 P2-5）：只认
+ * `gate-report-<YYYY-MM-DD>T<HH-mm-ss-mmm>Z.json`（writeGateReport 唯一产出形态，
+ * 冒号/点已转 `-`、固定宽度 UTC）——格式漂移（精度/时区变化）的形态一律不参与
+ * 排序删除，防「字典序 ≠ 时间序」时删新留旧。非报告名一律不碰（fail-safe）。
+ * 保持入参不排序、输出按「最旧在前」。
  */
 export function selectStaleGateReports(
   names: readonly string[],
   keep = GATE_REPORT_KEEP,
 ): string[] {
-  const isReport = /^gate-report-.+\.json$/;
+  const isReport = /^gate-report-\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}-\d{3}Z\.json$/;
   const reports = names.filter((n) => isReport.test(n)).sort();
   if (reports.length <= keep) return [];
   return reports.slice(0, reports.length - keep);
 }
 
-/** 就地回收（写报告后顺带调用；任何异常静默——回收不该阻断门禁）。 */
+/**
+ * 就地回收（写报告后顺带调用）。失败**不阻断门禁但必须可见**（锐评 P2-5）：
+ * 169MB 堆积正因「无人察觉」才长到今天，回收再静默失败就是重演同款盲区。
+ * 并发安全：双 gate 同时 prune 时 rmSync 吞 ENOENT（对方已删）——force 语义即容忍，
+ * 真失败（权限/占用）计数上报。
+ */
 function pruneGateReports(dir: string): void {
   try {
     const names = fs.readdirSync(dir).filter((n) => n.startsWith("gate-report-"));
+    let failed = 0;
     for (const stale of selectStaleGateReports(names)) {
-      fs.rmSync(path.join(dir, stale), { force: true });
+      try {
+        fs.rmSync(path.join(dir, stale), { force: true });
+      } catch {
+        failed++; // 单文件失败（权限/占用）不影响其余
+      }
     }
-  } catch {
-    /* 目录不可读/删除失败：报告照写，回收下次再来 */
+    if (failed > 0) {
+      console.error(`[gate-report] 报告回收：${failed} 份删除失败（不阻断门禁；下次运行重试）`);
+    }
+  } catch (e) {
+    console.error(`[gate-report] 报告回收目录不可读（不阻断门禁）: ${(e as Error).message}`);
   }
 }
 

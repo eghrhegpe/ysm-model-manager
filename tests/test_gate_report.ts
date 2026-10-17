@@ -172,12 +172,11 @@ check("formatFailSummary：首错过长 → 截断 ~120 字符加省略号", () 
 });
 
 // ── selectStaleGateReports（报告回收纯判据，2026-10-17 实测 .git/ 堆积 169.6MB）──
+/** writeGateReport 真实产出形态（ISO 的 : 与 . 转 -，固定宽度 UTC + 毫秒）。 */
+const RPT = (i: number) =>
+  `gate-report-2026-10-01T00-${String(Math.floor(i / 60)).padStart(2, "0")}-${String(i % 60).padStart(2, "0")}-000Z.json`;
 check("selectStaleGateReports：100 份留 40 → 删最旧 60（时间戳字典序 = 时间序）", () => {
-  const names = Array.from(
-    { length: 100 },
-    (_, i) =>
-      `gate-report-2026-10-01T00-${String(Math.floor(i / 60)).padStart(2, "0")}-${String(i % 60).padStart(2, "0")}-000Z.json`,
-  );
+  const names = Array.from({ length: 100 }, (_, i) => RPT(i));
   const stale = selectStaleGateReports(names);
   assert.equal(stale.length, 60, `应删 60，实际 ${stale.length}`);
   assert.equal(stale[0], names[0], "应从最旧开始删");
@@ -185,17 +184,24 @@ check("selectStaleGateReports：100 份留 40 → 删最旧 60（时间戳字典
 });
 check("selectStaleGateReports：≤ keep 份 → 空删（新仓首次运行不误删历史）", () => {
   assert.deepEqual(selectStaleGateReports([]), []);
-  const few = ["gate-report-a.json", "gate-report-b.json"];
-  assert.deepEqual(selectStaleGateReports(few), [], "不足保留窗一律不删");
-  assert.deepEqual(selectStaleGateReports(few, 2), [], "恰好等于 keep 也不删");
+  assert.deepEqual(selectStaleGateReports([RPT(1), RPT(2)]), [], "不足保留窗一律不删");
+  assert.deepEqual(selectStaleGateReports([RPT(1), RPT(2)], 2), [], "恰好等于 keep 也不删");
 });
-check("selectStaleGateReports：非 gate-report-*.json 形态一律不碰（fail-safe）", () => {
-  const mixed = ["gate-audit.log", "gate-report-x.json", "HEAD", "notes.txt", "gate-report-y.json"];
-  assert.deepEqual(selectStaleGateReports(mixed, 1), ["gate-report-x.json"]);
+check("selectStaleGateReports：严格形态（锐评 P2-5）——格式漂移名不参与排序删除", () => {
+  // 字典序 = 时间序的前提是固定宽度 UTC 严格形态；缺毫秒 / 带时区偏移 / 杂项文件
+  // 一律不碰——宁可不回收（有界性由后续对账处理）也不冒「删新留旧」的方向性风险。
+  const drift = [
+    "gate-report-2026-10-02T00-00-00Z.json", // 缺毫秒段
+    "gate-report-2026-09-30T00-00-00-000+08-00.json", // 带时区偏移
+    "gate-audit.log",
+    "notes.txt",
+  ];
+  assert.deepEqual(selectStaleGateReports(drift, 0), [], "漂移形态 keep=0 也不删");
+  const mixed = [...Array.from({ length: 41 }, (_, i) => RPT(i)), ...drift];
   assert.deepEqual(
-    selectStaleGateReports(mixed, 0),
-    ["gate-report-x.json", "gate-report-y.json"],
-    "keep=0 删光报告，仍不碰杂项",
+    selectStaleGateReports(mixed),
+    [RPT(0)],
+    "只删严格形态中最旧 1 份，漂移名与杂项全部幸存",
   );
 });
 check("GATE_REPORT_KEEP 量级合理（回收存在意义 = 有界堆积，非零窗删光）", () => {

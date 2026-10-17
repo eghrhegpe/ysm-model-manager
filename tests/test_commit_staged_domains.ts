@@ -83,11 +83,19 @@ check("纯文档变更：三段全关（css 段曾被 3.5s 全树扫强收的场
     JSON.stringify(v),
   );
 });
-check("path-hygiene 亦因 tests/scripts 域而开（R6 判测试 import）", () => {
-  const v = segmentsForFiles(["scripts/foo.ts"]);
-  assert(v["path-hygiene"] === 1, JSON.stringify(v));
-  assert(v["css-layer"] === 0 && v["i18n"] === 0, JSON.stringify(v));
-});
+check(
+  "path-hygiene 扫描域恒为 frontend/src（锐评 P2-4 收窄后：scripts/tests 变更不再点亮）",
+  () => {
+    // 判据收窄的正当性 = 脚本现实：walk(SRC_ROOT)，R6 判的也是 src 内 *.test.ts——
+    // 根 tests/ 与 scripts/ 的变更点亮该段后判定必空，属纯多跑。收窄不引入漏判。
+    const v = segmentsForFiles(["scripts/foo.ts"]);
+    assert(v["path-hygiene"] === 0, `scripts 变更不应点亮 path-hygiene：${JSON.stringify(v)}`);
+    const v2 = segmentsForFiles(["tests/x.ts"]);
+    assert(v2["path-hygiene"] === 0, JSON.stringify(v2));
+    const v3 = segmentsForFiles(["frontend/src/foo.test.ts"]);
+    assert(v3["path-hygiene"] === 1, `src 内测试文件必须点亮（R6 射程）：${JSON.stringify(v3)}`);
+  },
+);
 check("data / other 域不触发任何前端段", () => {
   const v = segmentsForFiles(["resource_types.json", "Makefile"]);
   assert(
@@ -133,30 +141,103 @@ check("逃生阀 YSM_PRECOMMIT_FULL=1 → 无视裁剪全 1", () => {
 });
 
 // ── 7. 钩子接线对账 ────────────────────────────────────
-check("钩子以行位消费本模块输出，被裁段的检查命令逐字仍在（裁条件不裁检查）", () => {
+/**
+ * 从 lines[i]（cmd 所在行）向上找最近的非注释 `if` 头，再向下收集该 if 块的**全部代码行**
+ * （至首个 `^fi` 行止；注释行剔除）。返回 null = 找不到块头（调用方按缺失处理）。
+ * 为什么不是固定字节窗口（锐评 P2-3）：注释变长即漂出窗口——假绿的经典形态。
+ * ⚠️ 非注释 if 头必须 ≤8 行内可及：仓内守卫惯例是「注释紧贴 if」，注释墙后的块头
+ *   说明 cmd 不在任何 if 块里，本身即异常，测试红比静默放行好。
+ */
+function ifBlockAround(lines: string[], cmd: string): string[] | null {
+  // 首个**非注释**含 cmd 行（cmd 串可能先出现在文档注释里——那不算执行点）
+  const i = lines.findIndex((l) => !/^\s*#/.test(l) && l.includes(cmd));
+  if (i < 0) return null;
+  let head = -1;
+  for (let j = i; j >= Math.max(0, i - 8); j--) {
+    const l = lines[j]!;
+    if (/^\s*#/.test(l)) continue; // 注释不参与块头判定（cmd 常紧贴 if 同一行）
+    if (/^\s*if\s/.test(l)) {
+      head = j;
+      break;
+    }
+  }
+  if (head < 0) return null;
+  const block: string[] = [];
+  for (let j = head; j < lines.length; j++) {
+    const l = lines[j]!;
+    if (/^\s*fi\b/.test(l)) break;
+    if (/^\s*#/.test(l)) continue;
+    block.push(l);
+  }
+  return block;
+}
+
+check("被裁段确实被 SD_* 门控（锐评 P2-3 反向锁定：删门控即测试红）", () => {
   const hook = fs.readFileSync(path.join(ROOT, ".githooks", "pre-commit"), "utf-8");
-  assert(hook.includes(MOD), "钩子未接线 staged-domains.ts");
-  for (const cmd of [
-    "node scripts/css-layer-check.ts",
-    "node scripts/i18n-key-naming.ts",
-    "node scripts/i18n-check.ts",
-    "node scripts/check-path-hygiene.ts",
-  ]) {
-    assert(hook.includes(cmd), `钩子里检查命令消失（应为条件包裹而非删除）：${cmd}`);
+  const lines = hook.split(/\r?\n/);
+  for (const [cmd, sd] of [
+    ["node scripts/css-layer-check.ts", "SD_CSS"],
+    ["node scripts/i18n-key-naming.ts", "SD_I18N"],
+    ["node scripts/i18n-check.ts", "SD_I18N"],
+    ["node scripts/check-path-hygiene.ts", "SD_PATH"],
+  ] as const) {
+    const blk = ifBlockAround(lines, cmd);
+    assert(blk !== null, `钩子里找不到 ${cmd} 的 if 块（门控结构被拆？）`);
+    const head = blk![0]!;
+    assert(head.includes(sd), `${cmd} 的 if 头未含 ${sd}——门控被删，裁剪失效：${head}`);
   }
 });
-check("三大硬阻断段不受 SD_* 门控（防裁掉 --no-verify 最后防线）", () => {
+
+check("钩子门控为白名单口径 + 形状校验双保险（锐评 P1-1）", () => {
   const hook = fs.readFileSync(path.join(ROOT, ".githooks", "pre-commit"), "utf-8");
+  for (const sd of ["SD_CSS", "SD_I18N", "SD_PATH"]) {
+    assert(
+      hook.includes(`"$${sd}" != "0"`),
+      `门控应为 != "0" 白名单口径（脏值默认跑），找不到：${sd}`,
+    );
+    assert(!hook.includes(`"$${sd}" = "1"`), `残留 "= 1" 判定（脏输出会静默跳段）：${sd}`);
+  }
+  // 形状校验：恰好三行且每行 0/1，否则置全 1——防「脏行挤占正确位」使白名单失效
+  assert(
+    /SD_N=.*awk/.test(hook) && /SD_BAD=.*awk/.test(hook),
+    "缺少 awk 形状校验（行数/脏行计数）",
+  );
+  assert(hook.includes("SD_RAW=\"$(printf '1\\n1\\n1')\""), "验形失败分支应显式置全 1");
+});
+
+check("三大硬阻断段守卫链不受 SD_* 引用（突变 A 实证版）", () => {
+  const hook = fs.readFileSync(path.join(ROOT, ".githooks", "pre-commit"), "utf-8");
+  const lines = hook.split(/\r?\n/);
   for (const [name, cmd] of [
     ["android", "node scripts/check-android-unavailable.ts --lite"],
     ["biome-lines", "node scripts/check-biome-lines.ts"],
     ["design-tokens", "node scripts/check-design-tokens.ts --staged --added-lines"],
   ] as const) {
-    // 硬闸的 `if ! <cmd>` 守卫行同段内不得同时出现 SD_（门控即违规）
-    const idx = hook.indexOf(cmd);
-    assert(idx >= 0, `硬阻断段缺失：${name} ${cmd}`);
-    const guard = hook.slice(Math.max(0, idx - 400), idx);
-    assert(!guard.includes("SD_"), `硬阻断段 ${name} 被 SD_* 门控——防线被裁，红线`);
+    // 判据 = 自 cmd 执行行**向上回溯守卫链**（连续 if 行，容忍 if 与 cmd 同步行间嵌套，
+    // 遇 fi/赋值/空行即停）。为什么不是 if 块向下（突变 A 实证）：硬闸是「外层守卫 if +
+    // 内层 if ! cmd」嵌套，回溯停在内层就漏掉外层被接 SD_ 的形态；向上收全链才封死。
+    // （段窗按空行分隔也试过——会连坐无关的留痕 if 块产生假阳性，弃用。）
+    const i = lines.findIndex((l) => !/^\s*#/.test(l) && l.includes(cmd));
+    assert(i >= 0, `硬阻断段执行行缺失：${name} ${cmd}`);
+    const chain: string[] = [];
+    let j = i;
+    // if ! cmd 同步行直接算链头；否则 cmd 在块体里，从上一行开始收 if 行
+    if (!/^\s*if\s/.test(lines[i]!)) j = i - 1;
+    for (; j >= 0; j--) {
+      const l = lines[j]!;
+      if (/^\s*if\s/.test(l)) {
+        chain.push(l);
+        continue;
+      }
+      // 链中断条件：非注释、非 if 的任意行（fi / 赋值 / 空行 / echo）
+      if (!/^\s*#/.test(l)) break;
+    }
+    assert(chain.length >= 1, `${name} 找不到守卫 if 链——阻断结构被拆？cmd 行：${lines[i]}`);
+    const bad = chain.filter((l) => l.includes("SD_"));
+    assert(
+      bad.length === 0,
+      `硬阻断段 ${name} 守卫链含 SD_*（防线被裁，红线）：\n${bad.join("\n")}`,
+    );
   }
 });
 

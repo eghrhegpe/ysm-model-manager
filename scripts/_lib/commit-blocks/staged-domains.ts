@@ -17,11 +17,14 @@
  *     本裁剪只省时间、不放行——被跳过的段在 pre-push 全量清单里仍无条件兜底。
  *   - 逃生阀 `YSM_PRECOMMIT_FULL=1`：无视裁剪全跑（排查「疑似裁剪漏报」时用）。
  *
- * 段判据（与脚本自身扫描面对齐，逐条可单测）：
- *   css-layer    扫 frontend/src/views + frontend/css → 判据 = frontend 域
- *   i18n         查 frontend locale 键与 t() 调用 → 判据 = frontend 域
- *                （新增键三段式 i18n-key-naming 同判据；钩子里两段共用一个开关）
- *   path-hygiene R5/R6 判 frontend/tests 的 import 路径 → 判据 = frontend ∪ tests 域
+ * 段判据（与各段脚本自身扫描面对齐——2026-10-17 atomcode 锐评后逐脚本 walk 核实；
+ *   判据 = 「点亮该段的最小充分域集合」，方向安全 = 漏判侧绝不允许，过宽侧只多跑）：
+ *   css-layer    扫 frontend/src/views + preview-3d + frontend/css → 判据 = frontend 域
+ *   i18n         扫 frontend/src/locales 与 src/core/i18n/locales（key-naming 取
+ *                git diff -- frontend/src/locales）→ 判据 = frontend 域（两段共用一开关）
+ *   path-hygiene 扫描域恒为 walk(frontend/src)（R6 判的也是 src 内 *.test.ts，非根
+ *                tests/ 目录）→ 判据 = frontend 域（锐评 P2-4：原附 tests 域系口径先行，
+ *                tests/scripts 变更点亮后判定必空——纯多跑，已收窄）
  *
  * ⚠️ 只裁「非阻断秒级提示段」——三大 exit-1 硬阻断段（Android 黑名单 / biome 行级闸 /
  *   设计令牌行级闸）**永不进本清单**：它们的职责是防 `git commit --no-verify` 单点绕过，
@@ -48,7 +51,7 @@ import { toPosix } from "../to-posix.ts";
 const SEGMENT_DOMAINS: ReadonlyArray<readonly [string, ReadonlySet<string>]> = [
   ["css-layer", new Set(["frontend"])],
   ["i18n", new Set(["frontend"])],
-  ["path-hygiene", new Set(["frontend", "tests"])],
+  ["path-hygiene", new Set(["frontend"])],
 ];
 
 /**

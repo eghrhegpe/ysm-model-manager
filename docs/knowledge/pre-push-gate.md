@@ -40,6 +40,7 @@ auto_fields:
     - flattenGateTools
     - formatFailSummary
     - FRONTEND_STATIC_TOOLS
+    - GATE_REPORT_KEEP
     - GATE_TIMEOUT_MS
     - gateBlockComposition
     - GateBlockComposition
@@ -68,6 +69,7 @@ auto_fields:
     - runScopedDocDrift
     - runTools
     - SCRIPTS_TYPECHECK
+    - selectStaleGateReports
     - STATIC_TOOLS_BUDGET_FULL_MS
     - STATIC_TOOLS_BUDGET_MS
     - StaticBudgetTier
@@ -315,6 +317,12 @@ node scripts/pre-push-gate.ts --files "<file1>\n<file2>..." [--dry-run]  # 文�
 - **域级 vitest 的失败可能是负载瞬态，不是本次回归**（2026-10-07 实证）：前端域与 Go 域经 Promise.all 并行，`go test -race` 满载时 vitest 用例会被 CPU 饿死击穿 5s `testTimeout`。判别法 = **单跑该文件**：单跑绿而门禁红即负载瞬态（`pre-push-gate` 知识卡同款现象亦见于 `go/cli` 基准测试）。处置 = 复跑转绿即放行；**若复跑仍红则是真回归**，别用「flaky」搪塞。排查时勿只看门禁 tail：vitest 输出末尾的 happy-dom 性能提示会挤掉真失败名，须抓 `×`/`✗`/`FAIL` 行或直接 `--reporter=json` 看 `numFailedTests`。
 - **基线自动收编必须随提交入库，否则 CI 结构性红**（2026-09-17 根因）：脚本设计「新增 ∩ 责任集为空 → 自动收编进基线 + INFO 留痕」，但**只在非 `--json` 模式写盘**；CI 传 `--json`（无写盘）+ 用**已提交的**基线比对 ⇒ 未提交的收编等于没发生。本次 71 笔一次推送时踩中：本地 `pre-push-gate --all` 把 14 条新增收编进 `scripts/baseline/deadcode-baseline.json`（工作区已改），未提交 → CI 见 14 条「新增」→ 红。**处置：提交该基线文件**（时间戳 + 过期项清理 + 新增项一并入库）。
 - **`*-3d.ts` 的 `createXxx3D` / `YsmOpenOptions` 属 knip 假阳性，勿删导出**（2026-09-17 复核）：`frontend/src/views/app-preview/preview-library.ts` 明文规定「自身**不**反向 import 任何 createXxx3D 包装器，跨类型跳转靠**注册表反向注入**」——各包装器在模块加载时 `registerReRoute(id, opener)`（如 `frontend/src/views/app-preview/fbx-3d.ts`），故这些导出**按设计就没有跨模块 import**，且测试要 `import { createYsm3D }` 触发注册。判据：**「导出未被其他模块 import」≠「死代码」**，反向注入/自注册架构下必须靠基线放行；删掉会同时打断路由与测试。
+
+
+## 裁定记录
+
+- `2026-10-17`：golangci-lint 段改经 yieldThenRun 执行；gate-report 落盘后顺带回收超额旧报告（GATE_REPORT_KEEP=40）｜golangci 实测 15–21s 同步阻塞 event loop，Go∥前端 Promise.all 里饿死前端域（与 go test 段同病灶、此前漏同款处理）；.git/ 报告曾无回收实测堆积 1282 份/169.6MB｜回退 = `scripts/_lib/gate-blocks/go-domain.ts|runGoDomain`
+- `2026-10-17`：golangci 段显式传 GATE_TIMEOUT_MS（300s）；报告回收改严格时间戳形态 + 单文件删除失败计数可见｜atomcode 锐评 P1-2（procRun 默认 30s 对 15–21s 实测值仅 9s 余量，冷缓存破 30s 即假红）与 P2-5（宽松正则容漂移名参与排序可能删新留旧；回收全静默重演「无人察觉才堆积」盲区）｜回退 = `scripts/_lib/gate-report.ts|selectStaleGateReports`
 
 ## 相关
 

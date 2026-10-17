@@ -227,7 +227,10 @@ export async function runGoDomain(ctx: GateCtx): Promise<void> {
         const gl = await yieldThenRun(
           "golangci-lint",
           ["run", `--new-from-rev=${baseRev}`, "./..."],
-          { cwd: ROOT },
+          // 锐评 P1-2：显式 GATE_TIMEOUT_MS（300s）。procRun 默认 30s 对实测 15–21s 的
+          // 暖缓存值只留 9s 余量，冷缓存（工具升级/大 diff）破 30s → execFileSync 被杀
+          // → 门禁假红；与同函数 go test 段的超时口径对齐（那两段均显式传 300s）。
+          { cwd: ROOT, timeout: GATE_TIMEOUT_MS },
         );
         // 非 push 模式（doctor --all/--docs）= 首次真正挂载增量 lint：按仓内
         // 「先观察一轮再议升级 hard」惯例走 debt（同 check-type-safety 升硬口径）；

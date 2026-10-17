@@ -185,7 +185,7 @@
 
 **建议**：`RestoreSettingsBackup` 开头校验 `filepath.Dir(path) == configDir()` 且文件名匹配 `.bak-` 模式（或反查 `ListSettingsBackups` 集合）；`ListSettingsBackups` 加同款空目录守卫（返回空列表）。Go 测试：备份目录外路径 / 非 .bak 文件名 → 拒。
 
-**处置**：⬜ 待处置
+**处置**：✅ 已处置（2026-10-18，commit `99e13b895`）——`RestoreSettingsBackup` 入口守卫：目录归属（`filepath.Dir(Clean(path))==configDir()`）+ 文件名 `ysm_config.json.bak-` 前缀 + `configDir()` 非空，三者任一不满足即 `AppError{ErrInvalidParam, 恢复备份}`；`ListSettingsBackups` 在 `configPath()==""` 时早退空列表。测试 `TestRestoreSettingsBackup_RejectsForeignPaths`：正例对照（`backups[0]` 恢复成功、回到导入前值——防闸过紧杀 UI 合法链路）+ 四种负面（异目录 / 目录内非 `.bak` 名 / 相对路径 / 裸目录）各断言 `ErrInvalidParam`（证明确被闸拒、非 ENOENT 凑数）且配置零改动；`TestListSettingsBackups_ResultsInsideConfigDir` 锁列表侧不变量「每项绝对且归属目录内」。注：「平台数据根缺失」态测试不可达（`configDirOverride` 注入空串会落穿回真实平台目录），空目录守卫分支以 `settingsExportPath` 先例同族担保，不可测原因已写进测试注释。
 
 ### P2-⑧ P1②「主题镜像重算」修复本身没有回归锁
 
@@ -195,7 +195,7 @@
 
 **建议**：补一条测试：emit `settings:imported` → spy 断言 `initTheme` 被调（组件级或最小 bus 级皆可）。
 
-**处置**：⬜ 待处置
+**处置**：✅ 已处置（2026-10-18，commit `a4dd554dd`）——选了**源码级回归锁**而非组件级 vitest：app-content 无既有测试基设（渲染组件要拖全栈 mock），且本风险面是「重构拆链」而非「行为漂移」，源码锁最便宜、指向最准。`tests/test_settings_imported_theme_lock.ts` 三面锁：A `settings-backup.ts` 存在 `emit("settings:imported")`（实测 ×2，导入/恢复两路）；B `app-content/index.ts` 订阅回调 800 字符窗口内命中 `initTheme()` 调用；C `initTheme` import 在位（防 B 命中注释孤例）。由 `scripts/contract-tests.ts` 全量枚举自动入 CI，零登记；行为面仍由 `settings-backup.test.ts` 的 emit 断言承担，本锁补结构面。失败信息自带出口指引（确属重构搬迁→迁链后同步更新本锁）。
 
 ### P2-⑨ 恢复语义双轨不对称，且确认文案不实
 
@@ -205,7 +205,7 @@
 
 **建议**：`restoreConfirmMessage` 改为「恢复磁盘配置（主题、仓库路径等）；浏览器偏好（语言、界面选项）不回滚」，三语言同步；是否升级恢复为双轨（恢复前记录 localStorage）另拍。
 
-**处置**：⬜ 待处置
+**处置**：✅ 文案已改实（2026-10-18，commit `0cf2ffc35`）——三语言同步：「整份覆盖当前**磁盘**设置（主题、文件存储路径、游戏根目录），磁盘侧恢复后立即生效；浏览器偏好（语言、界面选项等）不属磁盘轨，不会被本次恢复回退」，`{path}` 参数保留。口径诚实性两头都站得住：主题确实即时生效（restore→emit `settings:imported`→`initTheme` 重算，链条现由 `a4dd554dd` 源码锁看管），语言确实永不被动（browser-authority 轨）。生成物 `frontend/public/locales/*.json` 由 pre-commit GEN_CMDS 同步刷新（随 `99e13b895` 先入库，内容即新文案）。「恢复升级为双轨」保留为产品决策未拍。
 
 ### P3-④⑤⑥（记录）
 
@@ -230,6 +230,8 @@
 2. **改行为不改执法**（P2-⑧）：知识卡不变量没有测试钉，就只是借条。
 
 **评分**：骨架 9/10 ｜ 第一轮处置执行 8/10 ｜ 处置新面的安全对称 6/10。建议：P1-⑤ 当天修（半天工作量）；P2-⑦⑧⑨ 随下一个 settings 提交一并收；P3 记录排期。
+
+**处置进度（2026-10-18 回填）**：P1-⑤ `5757734c4` ✅；P2-⑦ `99e13b895` ✅；P2-⑧ `a4dd554dd` ✅；P2-⑨ `0cf2ffc35` ✅（文案面，双轨升级未拍）；P3-④⑤⑥ 记录待排。本轮两条形状教训已进知识卡：不变量 13（门控随写路径唯一出口）、不变量 14（侧效入口自证输入归属）。
 
 **治理尾注**：第一轮条目已全部处置——按 `docs/knowledge/AGENTS.md`「docs 根报告当日归档、快照不过夜」，本轮条目处置完毕后整本迁 `docs/archive/`，`settings-persistence.md` 知识卡留一行时点基准指针即可。
 

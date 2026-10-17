@@ -266,7 +266,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| initSyncConflictPanel | `frontend/src/views/app-content/diagnostics/conflicts.ts` | 110 |
+| initSyncConflictPanel | `frontend/src/views/app-content/diagnostics/conflicts.ts` | 111 |
 | initInstancesPage | `frontend/src/views/app-content/init-pages.ts` | 72 |
 
 ### `repo:focus-search`

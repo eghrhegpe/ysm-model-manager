@@ -84,7 +84,7 @@
 
 **建议**：采集侧先估大小（如 `collectExportableLocalStorage` 后按键值总长粗算）早退，或导出一开始就带上限断言。
 
-**✅ 已处置（2026-10-17）**：`internal/app/app_settings_export.go|ExportSettingsJSON` 在 `json.MarshalIndent` **之前**插入粗估早退——新增 `estimateLocalStorageSize(localStorage)`（每项 `len(k)+len(v)+24`，24 覆盖引号/冒号/逗号/缩进/转义固定开销）+ 常量 `settingsExportReserveBytes = 2 MiB`（给 `AppConfig` 结构 + JSON 转义/缩进膨胀留余量，粗估阈值 = `settingsExportMaxBytes - settingsExportReserveBytes`）。明显超限直接拒（`AppError` 挂「设置数据过大…无法导出」+ 清理缓存建议），**不再等整份 marshal 完才发现**；marshal 后的精查**保留**作最终裁决（粗估是近似，真值可能略高，精查兜底）。正常使用下设置键只有几十项、值几十字符，粗估早退永远不会误拒。测试 `TestExportSettingsJSON_RejectsOversizedLocalStorage` 补「超限导出不落盘任何文件」断言（原用例只断错误存在，现锁副作用）。
+**✅ 已处置（2026-10-17，commit `3acb3c747`）**：`internal/app/app_settings_export.go|ExportSettingsJSON` 在 `json.MarshalIndent` **之前**插入粗估早退——新增 `estimateLocalStorageSize(localStorage)`（每项 `len(k)+len(v)+24`，24 覆盖引号/冒号/逗号/缩进/转义固定开销）+ 常量 `settingsExportReserveBytes = 2 MiB`（给 `AppConfig` 结构 + JSON 转义/缩进膨胀留余量，粗估阈值 = `settingsExportMaxBytes - settingsExportReserveBytes`）。明显超限直接拒（`AppError` 挂「设置数据过大…无法导出」+ 清理缓存建议），**不再等整份 marshal 完才发现**；marshal 后的精查**保留**作最终裁决（粗估是近似，真值可能略高，精查兜底）。正常使用下设置键只有几十项、值几十字符，粗估早退永远不会误拒。测试 `TestExportSettingsJSON_RejectsOversizedLocalStorage` 补「超限导出不落盘任何文件」断言（原用例只断错误存在，现锁副作用）。
 
 ### P2-② `ReadSettingsExport` 与 `ImportSettingsFromFile` 双重读取 + 轻微 TOCTOU
 

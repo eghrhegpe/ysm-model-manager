@@ -243,6 +243,10 @@ export const autoSidebar = [
         "link": "/integration-pack-fe-review"
       },
       {
+        "text": "YSM 模型管理器 · 整合包功能设计锐评报告",
+        "link": "/integration-pack-feature-design-review"
+      },
+      {
         "text": "整合包（Minecraft 实例）同步 Go 后端 架构锐评",
         "link": "/integration-pack-go-review"
       },

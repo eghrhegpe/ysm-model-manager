@@ -3,6 +3,14 @@
 // 在 configWriteMu 内**整份覆盖**（非逐字段合并：以导出配置为基，走同一套版本门控迁移 + 洗脏），
 // 落盘前先备份当前 ysm_config.json，后悔可还原备份文件。
 //
+// 导入顺序铁律：**磁盘先落盘、浏览器后回写**（锐评 2026-10-16 修正）。理由：
+//  1. 磁盘是真相源——`ysm_config.json` + 它的 .bak-* 备份都可回滚，浏览器 localStorage 无备份；
+//  2. `ImportSettingsFromFile` 报错 ≠ 磁盘未改（写盘成功但 watcher 重启失败同样会报错，
+//     见 Go 侧 `applyPostSaveSideEffects`）。若先写浏览器、再写磁盘，报错时回滚浏览器会把
+//     磁盘（新）与浏览器（旧）**反向分叉**——比「磁盘新/浏览器旧」更糟。
+//  3. 顺序反过来之后，失败面是「磁盘新 / 浏览器旧」（可接受），且不再需要「导入前拍照 +
+//     失败回滚」这套 30 行从未被测试的补偿事务——删掉的是不可判定的启发式，不是功能。
+//
 // 单一事实源：`frontend/src/settings-keys.ts` 台账。绝不手写第二份键名清单——手抄必漂移，
 // 新键漏登记即漏备份（契约测试只锁「键集合与归属」，不锁读写语义，见 tests/test_settings_key_ledger.ts）。
 //
@@ -16,11 +24,11 @@ import {
   isStorageAccessible,
   safeGet,
   safeKeys,
-  safeRemove,
   safeSet,
 } from "@/utils/base/primitives/storage.ts";
 import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
+import { esc } from "@/utils/html/html.ts";
 import { backendGetApp } from "@/views/backend-deps.ts";
 import { toastError, withBusy } from "./store.ts";
 
@@ -71,7 +79,7 @@ export function collectExportableLocalStorage(): Record<string, string> {
 
 /**
  * 导入文件的浏览器偏好里、会被本机应用写入的键集合（按台账白名单 + keyPattern 展开过滤）。
- * 与 `applyImportedLocalStorage` 共用同一份判定，保证「写入键」与「回滚键」口径一致——
+ * 与 `applyImportedLocalStorage` 共用同一份判定，保证「提示条数」与「实际写入」口径一致——
  * 两处各写一遍手抄判定，将来必漂移。
  */
 export function importedKeysFrom(
@@ -92,6 +100,8 @@ export function importedKeysFrom(
  * 把导入文件的浏览器偏好写回 localStorage。
  * 写入白名单 = 台账中可导出键的集合——导出文件里未知的键（未来版本新增、或被人手工塞进
  * JSON 的键）一律忽略，这是「导入只应用本机认识的东西」的底线。返回实际写入条数。
+ *
+ * 只在本函数成功调用（磁盘侧导入已完成）后才执行——见文件头「导入顺序铁律」。
  */
 export function applyImportedLocalStorage(
   map: Record<string, string | undefined> | null | undefined,
@@ -104,27 +114,6 @@ export function applyImportedLocalStorage(
     if (safeSet(key, map[key] as string)) applied += 1;
   }
   return applied;
-}
-
-/**
- * 导入前给浏览器偏好拍照（只拍会被导入覆盖的可导出键）。
- * 导入是「磁盘 + 浏览器」两轨的跨进程动作：磁盘侧写盘/备份/侧效任一失败都会抛错，
- * 而 Go 侧只备份 ysm_config.json，**浏览器侧没有备份**——若不回滚，失败的导入会让
- * 用户浏览器偏好被覆盖且无法撤销（比「两轨不一致」更糟：磁盘仍是旧值、浏览器已是新值）。
- */
-function snapshotExportableLocalStorage(): Record<string, string> {
-  return collectExportableLocalStorage();
-}
-
-/** 磁盘侧导入失败时把浏览器偏好还原到导入前（导入前不存在的键删除，存在的键原值写回）。
- *  `touched` = 本次即将写入的键（`importedKeysFrom` 的产物），只回滚这些，不动其它键。 */
-function restoreExportableLocalStorage(snapshot: Record<string, string>, touched: string[]): void {
-  if (!isStorageAccessible()) return;
-  for (const key of touched) {
-    const v = snapshot[key];
-    if (typeof v === "string") safeSet(key, v);
-    else safeRemove(key);
-  }
 }
 
 /** 绑定设置页「备份与迁移」卡片（导出 / 导入按钮 + 状态行）。
@@ -140,10 +129,14 @@ export function initSettingsBackup(root: ShadowRoot): void {
     void withBusy(async () => {
       try {
         const { ExportSettingsJSON } = await backendGetApp();
-        const path = await ExportSettingsJSON(JSON.stringify(collectExportableLocalStorage()));
-        // 状态行显示路径 + 复制按钮（复制属浏览器能力，Go 侧无绑定可依）
+        // 偏好 map 直接过绑定，不再 JSON.stringify：Go 侧签名已收 map，
+        // stringify 是纯双重编码绕弯（前端编码 → Go 解码），多一道出错面无收益
+        const path = await ExportSettingsJSON(collectExportableLocalStorage());
+        // 状态行显示路径 + 复制按钮（复制属浏览器能力，Go 侧无绑定可依）。
+        // path 来自 Go `configDir()`（磁盘路径），非可信常量，必须走 esc()——
+        // 状态行是 innerHTML，裸插字符串即注入点
         setStatus(
-          `<span style="word-break:break-all">${t("settings.backup.exportedTo", { path })}</span>
+          `<span style="word-break:break-all">${t("settings.backup.exportedTo", { path: esc(path) })}</span>
  <button type="button" class="btn-base sm" id="set-backup-copy" style="margin-top:6px;font-size:var(--fs-tiny);padding:var(--btn-padding-tool-lg)">${t("settings.backup.copyPath")}</button>`,
         );
         root.getElementById("set-backup-copy")?.addEventListener("click", () => {
@@ -169,27 +162,18 @@ export function initSettingsBackup(root: ShadowRoot): void {
         if (!path) return; // 用户取消
         const exp = await ReadSettingsExport(path); // 先只读校验（格式/版本），失败即抛、零副作用
         if (!exp) return; // 防御：read 成功但回空（Go 侧不应发生）
-        // 浏览器偏好先写 localStorage（Go 无能力写浏览器侧键值），故先拍照、
-        // 磁盘侧导入失败即回滚——否则「磁盘未变、偏好已被覆盖」且无撤销入口。
-        // 注意极少数情况（写盘成功但 watcher 重启失败，见 Go 侧 applyPostSaveSideEffects）
-        // Go 会报错而磁盘已改，此时回滚会反向分叉；但该分支远少于写盘失败，且磁盘仍是真相源。
-        const before = snapshotExportableLocalStorage();
-        // 先在导出文件的「白名单命中键」上拍照回滚集——与 apply 共用 importedKeysFrom，
-        // 保证「写入键」与「回滚键」口径一致（两处各写一遍手抄判定必漂移）
-        const touched = importedKeysFrom(exp.localStorage);
+        // ① 磁盘轨先落盘（含备份 + 版本门控迁移 + 洗脏 + 侧效），失败即抛、零副作用——
+        //    此时浏览器偏好尚未动，不产生任何分叉，也无需回滚
+        const res = await ImportSettingsFromFile(path);
+        // ② 磁盘已生效，再回写浏览器偏好（Go 无能力写浏览器侧键值）。
+        //    磁盘是真相源且可回滚（.bak-*），浏览器侧失败最多「磁盘新/浏览器旧」，可接受。
+        const backupPath = res?.backupPath ?? "";
         const applied = applyImportedLocalStorage(exp.localStorage);
-        let backupPath = "";
-        try {
-          const res = await ImportSettingsFromFile(path);
-          backupPath = res?.backupPath ?? "";
-        } catch (e) {
-          restoreExportableLocalStorage(before, touched);
-          throw e;
-        }
         // 计数用前端台账白名单过滤后的 applied，不用 Go 侧 len(导出文件.localStorage)：
         // 导出文件里本机不认识的键会被忽略，Go 的计数会虚高、误导「已生效 N 项」
         const n = applied;
-        setStatus(t("settings.backup.importedTo", { n, backup: backupPath }));
+        // backupPath 为磁盘路径，须走 esc()（同导出路径，理由见上）
+        setStatus(t("settings.backup.importedTo", { n, backup: esc(backupPath) }));
         toast(t("settings.backup.importDone", { n }), TOAST_MS.long, "success");
         // 全量重建当前面板（清缓存 + 重渲染，同 lang:changed 机制）：主题/语言/路径可能已变，
         // 只刷 store 会留下 UI 与真相分叉

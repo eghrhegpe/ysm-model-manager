@@ -331,14 +331,15 @@ export function ExportModelStructureJSON(modelPath: string): $CancellablePromise
 /**
  * ExportSettingsJSON 导出全部设置为单个 JSON 文件（ADR-344-d1）。
  * 
- * localStorageJSON：前端按设置键台账采集的偏好类键值（JSON object 序列化串）。
+ * localStorage：前端按设置键台账采集的偏好类键值（键→值的 map，由 Wails 绑定直接
+ * 从 JS 对象解组，不再经「JS 先 stringify → Go 再 Unmarshal」的双重编码绕弯）。
  * Go 侧不解释具体键语义——键的集合与归属由 `tests/test_settings_key_ledger.ts`
  * 对账的台账守护，本函数只做「收拢 + 落盘」。
  * 
  * 返回导出文件完整路径（供 UI 显示与复制）。
  */
-export function ExportSettingsJSON(localStorageJSON: string): $CancellablePromise<string> {
-    return $Call.ByID(1837639450, localStorageJSON);
+export function ExportSettingsJSON(localStorage: { [_ in string]?: string } | null): $CancellablePromise<string> {
+    return $Call.ByID(1837639450, localStorage);
 }
 
 export function ExportWorkshopCreatorsJSONFile(): $CancellablePromise<string> {

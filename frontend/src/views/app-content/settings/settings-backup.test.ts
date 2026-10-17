@@ -19,10 +19,28 @@ const storageMock = vi.hoisted(() => ({
 
 vi.mock("@/utils/base/primitives/storage.ts", () => storageMock);
 
+// —— 编排链路夹具（锐评 2026-10-16 补：原测试只钉纯函数，initSettingsBackup 整条导入/导出
+// 编排零覆盖，回滚分支与顺序契约无人看管）——
+const appMocks = vi.hoisted(() => ({
+  ExportSettingsJSON: vi.fn(),
+  SelectImportFile: vi.fn(),
+  ReadSettingsExport: vi.fn(),
+  ImportSettingsFromFile: vi.fn(),
+}));
+const busMock = vi.hoisted(() => ({ emit: vi.fn(), on: vi.fn() }));
+const toastMock = vi.hoisted(() => ({ toast: vi.fn(), toastError: vi.fn() }));
+
+vi.mock("@/views/backend-deps.ts", () => ({
+  backendGetApp: vi.fn(async () => appMocks),
+}));
+vi.mock("@/bus", () => ({ bus: busMock }));
+vi.mock("@/utils/dom/toast.ts", () => ({ toast: toastMock.toast, toastError: toastMock.toastError }));
+
 import {
   collectExportableLocalStorage,
   applyImportedLocalStorage,
   importedKeysFrom,
+  initSettingsBackup,
 } from "./settings-backup.ts";
 
 /** 台账中「随导出带走」且无 keyPattern 的键（登记名即真实键） */
@@ -187,5 +205,112 @@ describe("applyImportedLocalStorage 回写面", () => {
     const k = exactExportableKeys[0];
     expect(applyImportedLocalStorage({ [k]: "v" })).toBe(0);
     expect(storageMock.safeSet).not.toHaveBeenCalled();
+  });
+});
+
+// —— 编排链路（导入顺序 + 删除回滚）——
+// 锐评 2026-10-16 定序：**磁盘先落盘、浏览器后回写**。原因：磁盘是真相源且可回滚（.bak-*），
+// 浏览器侧无备份；且 Go 写盘成功但 watcher 重启失败时也会报错，旧「先写浏览器、报错回滚」
+// 会把磁盘（新）与浏览器（旧）反向分叉。顺序翻过来之后不再需要「导入前拍照 + 失败回滚」，
+// 失败面收窄为「磁盘新 / 浏览器旧」。下面锁三条不变量：
+//   ① 导出把偏好 map 直传绑定（不是 JSON.stringify 双重编码）；状态行路径走 esc()；
+//   ② 导入顺序 = ReadSettingsExport → ImportSettingsFromFile（磁盘）→ safeSet（浏览器）；
+//   ③ 磁盘侧失败时浏览器偏好**完全不写**（旧行为是写后再回滚，新行为是根本不写）。
+function mountBackupRoot(): ShadowRoot {
+  const host = document.createElement("div");
+  document.body.appendChild(host);
+  const root = host.attachShadow({ mode: "open" });
+  root.innerHTML = `
+    <div id="set-backup-status"></div>
+    <button id="set-backup-export"></button>
+    <button id="set-backup-import"></button>
+  `;
+  return root;
+}
+
+describe("initSettingsBackup 编排链路", () => {
+  const EXPORT_PATH = 'C:\\ysm\\backup"<script>x</script>.json';
+  const IMPORT_RES = {
+    backupPath: "C:\\ysm\\ysm_config.json.bak-20260101-000000.000",
+  };
+
+  beforeEach(() => {
+    for (const fn of Object.values(appMocks)) fn.mockReset();
+    busMock.emit.mockReset();
+    toastMock.toast.mockReset();
+    toastMock.toastError.mockReset();
+    document.body.innerHTML = "";
+  });
+
+  it("导出把偏好 map 直传绑定（非 JSON.stringify），状态行路径走 esc()", async () => {
+    appMocks.ExportSettingsJSON.mockResolvedValue(EXPORT_PATH);
+    const root = mountBackupRoot();
+    initSettingsBackup(root);
+    root.getElementById("set-backup-export")!.click();
+
+    await vi.waitFor(() => expect(appMocks.ExportSettingsJSON).toHaveBeenCalledTimes(1));
+    // 契约：参数是对象（Go 签名已收 map），不是 stringify 后的 JSON 串
+    const arg = appMocks.ExportSettingsJSON.mock.calls[0][0] as unknown;
+    expect(typeof arg).toBe("object");
+    expect(arg).not.toBeInstanceOf(String);
+    // 契约：磁盘路径经 esc() 转义后才进 innerHTML（路径来自 Go，非可信常量）。
+    // 断言安全属性而非实体名：innerHTML 回读时会把 `&quot;` 反序列化成 `"`（文本节点不需转义
+    // 双引号），但 `<` `>` 必须保持 `&lt;` `&gt;`——关键是不可出现真实 `<script>` 元素
+    const status = root.getElementById("set-backup-status")!;
+    expect(status.querySelector("script")).toBeNull();
+    expect(status.innerHTML).not.toContain("<script>");
+    expect(status.textContent).toContain(EXPORT_PATH);
+    // 复制按钮在状态行渲染后被挂上监听
+    expect(status.querySelector("#set-backup-copy")).not.toBeNull();
+  });
+
+  it("导入顺序：读校验 → 磁盘落盘 → 浏览器回写（safeSet 晚于 ImportSettingsFromFile）", async () => {
+    appMocks.SelectImportFile.mockResolvedValue("C:/ysm/ysm-settings-export.json");
+    appMocks.ReadSettingsExport.mockResolvedValue({
+      localStorage: { "ui-font-size": "14" },
+    });
+    appMocks.ImportSettingsFromFile.mockResolvedValue(IMPORT_RES);
+    const root = mountBackupRoot();
+    initSettingsBackup(root);
+    root.getElementById("set-backup-import")!.click();
+
+    await vi.waitFor(() => expect(storageMock.safeSet).toHaveBeenCalled());
+    const readOrder = appMocks.ReadSettingsExport.mock.invocationCallOrder[0];
+    const importOrder = appMocks.ImportSettingsFromFile.mock.invocationCallOrder[0];
+    const writeOrder = storageMock.safeSet.mock.invocationCallOrder[0];
+    expect(readOrder).toBeLessThan(importOrder);
+    expect(importOrder).toBeLessThan(writeOrder);
+    // 提示条数用前端台账过滤后的 applied（Go 的 len(localStorage) 未过滤、会虚高）
+    expect(storageMock.safeSet).toHaveBeenCalledWith("ui-font-size", "14");
+    expect(busMock.emit).toHaveBeenCalledWith("settings:imported");
+  });
+
+  it("磁盘侧失败：浏览器偏好完全不写、不 emit（旧行为是写后再回滚）", async () => {
+    appMocks.SelectImportFile.mockResolvedValue("C:/ysm/ysm-settings-export.json");
+    appMocks.ReadSettingsExport.mockResolvedValue({
+      localStorage: { "ui-font-size": "14" },
+    });
+    appMocks.ImportSettingsFromFile.mockRejectedValue(new Error("磁盘写入失败"));
+    const root = mountBackupRoot();
+    initSettingsBackup(root);
+    root.getElementById("set-backup-import")!.click();
+
+    await vi.waitFor(() => expect(toastMock.toastError).toHaveBeenCalled());
+    expect(storageMock.safeSet).not.toHaveBeenCalled();
+    expect(storageMock.safeRemove).not.toHaveBeenCalled();
+    expect(busMock.emit).not.toHaveBeenCalled();
+  });
+
+  it("用户取消文件选择：不读盘、不写盘、不 emit、不报错", async () => {
+    appMocks.SelectImportFile.mockResolvedValue("");
+    const root = mountBackupRoot();
+    initSettingsBackup(root);
+    root.getElementById("set-backup-import")!.click();
+
+    await vi.waitFor(() => expect(appMocks.SelectImportFile).toHaveBeenCalledTimes(1));
+    expect(appMocks.ReadSettingsExport).not.toHaveBeenCalled();
+    expect(storageMock.safeSet).not.toHaveBeenCalled();
+    expect(busMock.emit).not.toHaveBeenCalled();
+    expect(toastMock.toastError).not.toHaveBeenCalled();
   });
 });

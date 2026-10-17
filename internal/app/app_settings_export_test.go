@@ -34,7 +34,10 @@ func exportTestApp(t *testing.T, cfg types.AppConfig) *App {
 func TestExportSettingsJSON_WritesExportFileAtAppDataDir(t *testing.T) {
 	a := exportTestApp(t, types.AppConfig{FilesRoot: "C:/repo", Theme: "dark"})
 
-	path, err := a.ExportSettingsJSON(`{"ui-font-size":"14","ui-card-density":"compact"}`)
+	path, err := a.ExportSettingsJSON(map[string]string{
+		"ui-font-size":    "14",
+		"ui-card-density": "compact",
+	})
 	testutil.NoError(t, err, "ExportSettingsJSON")
 	if path != settingsExportPath() {
 		t.Errorf("导出路径应固定在应用数据目录: got=%q want=%q", path, settingsExportPath())
@@ -128,7 +131,7 @@ func TestExportSettingsJSON_RejectsCorruptConfig(t *testing.T) {
 	testutil.NoError(t, os.WriteFile(configPath(), []byte(`{not valid json[`), 0o644), "写损坏配置")
 	a := newLinkModeApp()
 
-	if _, err := a.ExportSettingsJSON(`{"ui-font-size":"14"}`); err == nil {
+	if _, err := a.ExportSettingsJSON(map[string]string{"ui-font-size": "14"}); err == nil {
 		t.Fatal("配置文件存在但无任何路径设置时不得导出假备份（须当场报错，不能只落日志）")
 	}
 }
@@ -138,7 +141,7 @@ func TestExportSettingsJSON_AllowsNewUserWithoutPaths(t *testing.T) {
 	// 拒止只针对「文件存在但零值」的损坏形态，不惩罚正常的首启动用户
 	setConfigDirForTest(t, t.TempDir())
 	a := newLinkModeApp()
-	path, err := a.ExportSettingsJSON(`{}`)
+	path, err := a.ExportSettingsJSON(map[string]string{})
 	testutil.NoError(t, err, "全新用户导出应放行")
 	if path != settingsExportPath() {
 		t.Errorf("导出路径=%q want=%q", path, settingsExportPath())
@@ -148,7 +151,10 @@ func TestExportSettingsJSON_AllowsNewUserWithoutPaths(t *testing.T) {
 func TestImportSettingsFromFile_RoundTripAndBackup(t *testing.T) {
 	const root = "C:/repo"
 	src := exportTestApp(t, types.AppConfig{FilesRoot: root, Theme: "dark", Mirror: "jsdelivr"})
-	srcPath, err := src.ExportSettingsJSON(`{"ui-font-size":"16","td-cam-speed":"2.4"}`)
+	srcPath, err := src.ExportSettingsJSON(map[string]string{
+		"ui-font-size": "16",
+		"td-cam-speed": "2.4",
+	})
 	testutil.NoError(t, err, "ExportSettingsJSON")
 
 	// 目标机已有其它配置（FilesRoot 相同 → 不触发 watcher 重建，隔离本测试关注面）
@@ -186,7 +192,7 @@ func TestImportSettingsFromFile_MigratesLegacyRootFields(t *testing.T) {
 	const root = "C:/repo"
 	src := exportTestApp(t, types.AppConfig{FilesRoot: root})
 	// 导出的 JSON 手工改成旧字段形态（YsmRoot 存在、schemaVersion 缺失）
-	srcPath, err := src.ExportSettingsJSON(`{}`)
+	srcPath, err := src.ExportSettingsJSON(map[string]string{})
 	testutil.NoError(t, err, "ExportSettingsJSON")
 	var exp types.SettingsExport
 	data, err := os.ReadFile(srcPath)

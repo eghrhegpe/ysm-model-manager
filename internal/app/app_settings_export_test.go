@@ -74,13 +74,22 @@ func TestExportSettingsJSON_WritesExportFileAtAppDataDir(t *testing.T) {
 	}
 }
 
-// 导出侧尺寸闸（锐评 2026-10-16）：与 ReadSettingsExport 的导入闸对称。
+// 导出侧尺寸闸（锐评 2026-10-16；2026-10-17 补 P2① 前置粗估）：与 ReadSettingsExport 的导入闸对称。
 // 无门槛时前端被塞进畸形的 localStorage 会写出一个导入侧必然拒收的大文件，用户白拷一份失败备份。
+// 2026-10-17 起闸门**前置为 marshal 前的粗估早退**（estimateLocalStorageSize + settingsExportReserveBytes 余量）：
+// 原闸在 json.MarshalIndent 之后才判超限，畸形输入已整份 marshal 完、内存与 CPU 白付（「防资源浪费」语义被架空一半）。
+// 粗估早退先拒明显超限，marshal 后的精查保留作最终裁决；两条路径都不许落盘导出文件。
 func TestExportSettingsJSON_RejectsOversizedLocalStorage(t *testing.T) {
 	a := exportTestApp(t, types.AppConfig{FilesRoot: "C:/repo"})
 	big := strings.Repeat("x", settingsExportMaxBytes+1)
 	if _, err := a.ExportSettingsJSON(map[string]string{"k": big}); err == nil {
 		t.Fatal("超过上限的 localStorage 不得导出（导入侧必然拒收，白拷失败备份）")
+	}
+
+	matches, err := filepath.Glob(filepath.Join(configDir(), "ysm-settings-export-*.json"))
+	testutil.NoError(t, err, "glob 导出文件")
+	if len(matches) != 0 {
+		t.Errorf("超限导出不得落盘任何文件: got %d", len(matches))
 	}
 }
 

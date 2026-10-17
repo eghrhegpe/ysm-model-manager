@@ -84,6 +84,8 @@
 
 **建议**：采集侧先估大小（如 `collectExportableLocalStorage` 后按键值总长粗算）早退，或导出一开始就带上限断言。
 
+**✅ 已处置（2026-10-17）**：`internal/app/app_settings_export.go|ExportSettingsJSON` 在 `json.MarshalIndent` **之前**插入粗估早退——新增 `estimateLocalStorageSize(localStorage)`（每项 `len(k)+len(v)+24`，24 覆盖引号/冒号/逗号/缩进/转义固定开销）+ 常量 `settingsExportReserveBytes = 2 MiB`（给 `AppConfig` 结构 + JSON 转义/缩进膨胀留余量，粗估阈值 = `settingsExportMaxBytes - settingsExportReserveBytes`）。明显超限直接拒（`AppError` 挂「设置数据过大…无法导出」+ 清理缓存建议），**不再等整份 marshal 完才发现**；marshal 后的精查**保留**作最终裁决（粗估是近似，真值可能略高，精查兜底）。正常使用下设置键只有几十项、值几十字符，粗估早退永远不会误拒。测试 `TestExportSettingsJSON_RejectsOversizedLocalStorage` 补「超限导出不落盘任何文件」断言（原用例只断错误存在，现锁副作用）。
+
 ### P2-② `ReadSettingsExport` 与 `ImportSettingsFromFile` 双重读取 + 轻微 TOCTOU
 
 **锚点**：`settings-backup.ts:163`（前端 `ReadSettingsExport` 取 `exp` 计数）→ `:167`（`ImportSettingsFromFile`，Go 内部 `app_settings_export.go:180` 再次 `ReadSettingsExport`）。
@@ -112,7 +114,7 @@
 
 **建议**：状态行把 `backup` 变成可点按钮（「打开备份位置」），或加一个「恢复上次导入前备份」按钮（读最新 `.bak-*` → `ImportSettingsFromFile` 同链路）。
 
-**✅ 已处置（2026-10-17）**：Go 新增两个绑定——`ListSettingsBackups() ([]string, error)`（Glob `configPath()+".bak-*"`，时间戳倒序**最新在前**；无备份返回空切片而非 nil，Wails 绑定 nil 切片会序列化成 null 让前端多判一道）+ `RestoreSettingsBackup(path string) error`（`readJSONFile` → 版本门控迁移/洗脏 → `configWriteMu` 内 `saveConfig` + `applyPostSaveSideEffects`，与 `importResolved` 同口径、同一条真相源，不另造写路径）。**恢复前不再额外备份当前配置**：否则每次恢复都生成新的 `.bak-*`，而「恢复最近备份」取的就是最新一份 → 会形成「恢复 → 生成新备份 → 下次恢复拿到这份新备份」的死循环。前端设置页加「恢复最近备份」+「打开备份目录」按钮（`tpl-settings-backup.ts`）；`settings-backup.ts` 加 click 绑定：`ListSettingsBackups` → 空则 toast「暂无导入前备份」→ `modalConfirm`（danger，预告覆盖范围）→ `RestoreSettingsBackup(backups[0])` → toast + `bus.emit("settings:imported")`；「打开备份目录」用 `OpenFolder(dirOf(backups[0]))`（新增内联 `dirOf()` 跨平台切分隔符，生产侧无 node `path`）。i18n 8 键 × 3 语言；`mock-data.ts` 补两个绑定（bindings 契约，`MockKey` 须覆盖新绑定否则 typecheck 报 `__mockBindingContract`）。测试：Go `TestListSettingsBackups_RoundTrip`（无备份返回空 + 最新在前）/ `TestRestoreSettingsBackup_RestoresToBackupValue`（恢复到备份值 Theme/FilesRoot + 备份文件不存在报错）；前端 4 用例（恢复确认→调用 + emit、取消→不调不 emit、无备份→toast 且不调、打开目录→`OpenFolder(目录)`）。bindings 188 Methods。
+**✅ 已处置（2026-10-17，commit `a81367611`）**：Go 新增两个绑定——`ListSettingsBackups() ([]string, error)`（Glob `configPath()+".bak-*"`，时间戳倒序**最新在前**；无备份返回空切片而非 nil，Wails 绑定 nil 切片会序列化成 null 让前端多判一道）+ `RestoreSettingsBackup(path string) error`（`readJSONFile` → 版本门控迁移/洗脏 → `configWriteMu` 内 `saveConfig` + `applyPostSaveSideEffects`，与 `importResolved` 同口径、同一条真相源，不另造写路径）。**恢复前不再额外备份当前配置**：否则每次恢复都生成新的 `.bak-*`，而「恢复最近备份」取的就是最新一份 → 会形成「恢复 → 生成新备份 → 下次恢复拿到这份新备份」的死循环。前端设置页加「恢复最近备份」+「打开备份目录」按钮（`tpl-settings-backup.ts`）；`settings-backup.ts` 加 click 绑定：`ListSettingsBackups` → 空则 toast「暂无导入前备份」→ `modalConfirm`（danger，预告覆盖范围）→ `RestoreSettingsBackup(backups[0])` → toast + `bus.emit("settings:imported")`；「打开备份目录」用 `OpenFolder(dirOf(backups[0]))`（新增内联 `dirOf()` 跨平台切分隔符，生产侧无 node `path`）。i18n 8 键 × 3 语言；`mock-data.ts` 补两个绑定（bindings 契约，`MockKey` 须覆盖新绑定否则 typecheck 报 `__mockBindingContract`）。测试：Go `TestListSettingsBackups_RoundTrip`（无备份返回空 + 最新在前）/ `TestRestoreSettingsBackup_RestoresToBackupValue`（恢复到备份值 Theme/FilesRoot + 备份文件不存在报错）；前端 4 用例（恢复确认→调用 + emit、取消→不调不 emit、无备份→toast 且不调、打开目录→`OpenFolder(目录)`）。bindings 188 Methods。
 
 ### P2-⑤ 导入成功后**未做「环境」侧引导**，ADR 承诺的「UI 提示确认路径」未落地
 

@@ -53,6 +53,11 @@ const (
 	// 导出文件大小上限。ReadSettingsExport 直接 os.ReadFile 整份入内存，
 	// 无门槛会让用户误选或恶意塞入的超大文件把进程内存吃满。
 	settingsExportMaxBytes = 8 << 20 // 8 MiB
+
+	// 给 AppConfig 结构 + JSON 转义/缩进膨胀留的余量：粗估早退只看 localStorage 部分，
+	// 真值 = localStorage + cfg + 结构开销，粗估阈值必须低于 settingsExportMaxBytes 才安全
+	// （锐评 P2①）。
+	settingsExportReserveBytes = 2 << 20 // 2 MiB
 )
 
 // settingsExportPath 导出文件落点：应用数据目录（与 ysm_config.json 同域），文件名带时间戳。
@@ -104,6 +109,21 @@ func (a *App) ExportSettingsJSON(localStorage map[string]string) (string, error)
 				Reason:     "当前配置文件已损坏（无法解析），导出只会得到一份假备份",
 				Suggestion: "请先在「设置 → 环境」恢复文件存储路径（重建配置），再导出",
 			}
+		}
+	}
+
+	// 导出侧尺寸闸**前置粗估**（锐评 P2①）：原闸在 json.MarshalIndent 之后才判超限，
+	// 意味着畸形的 localStorage（或未来某键值爆炸）已经整份 marshal 完、内存与 CPU 都白付了
+	// ——闸门「防资源浪费」的语义被架空一半。这里在 marshal 前按键值长度粗估，
+	// 明显超限（扣除 cfg 与结构开销的余量后仍超）直接拒绝，省下 marshal 开销；
+	// 下方 marshal 后的精查**保留**作最终裁决（粗估是近似，真值可能略高，精查兜底）。
+	// 正常使用下设置键只有几十项、值几十字符，粗估早退永远不会误拒。
+	if estimateLocalStorageSize(localStorage) > settingsExportMaxBytes-settingsExportReserveBytes {
+		return "", types.AppError{
+			Code:       types.ErrInvalidParam,
+			Operation:  "导出设置",
+			Reason:     fmt.Sprintf("设置数据过大（浏览器偏好约 %d 字节，超出导出上限 %d MiB），无法导出", estimateLocalStorageSize(localStorage), settingsExportMaxBytes>>20),
+			Suggestion: "请清理设置中保存的临时/缓存数据后重试",
 		}
 	}
 
@@ -355,4 +375,19 @@ func (a *App) RestoreSettingsBackup(path string) error {
 		return err
 	}
 	return a.applyPostSaveSideEffects(oldCfg, &cfg)
+}
+
+// estimateLocalStorageSize 粗估浏览器偏好序列化后的体积（下界）：每项按
+// `"key": "value"` 计长度 + 引号/冒号/逗号/缩进/转义余量（每项 24 字节覆盖这些固定开销）。
+// AppConfig 结构与 JSON 转义膨胀由 settingsExportReserveBytes 兜底。
+// 只用于 marshal 前的快速早退，不做精确预算——精查交给 marshal 后的长度判断。
+func estimateLocalStorageSize(m map[string]string) int {
+	if m == nil {
+		return 0
+	}
+	n := 0
+	for k, v := range m {
+		n += len(k) + len(v) + 24
+	}
+	return n
 }

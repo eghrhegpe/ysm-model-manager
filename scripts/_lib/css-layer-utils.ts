@@ -238,6 +238,35 @@ export function findStrayCommentClose(src: string): number {
 }
 
 /**
+ * 消费者语料扩展名 + 跳过目录（2026-10-17 门禁性能收窄）。
+ *
+ * 死 CSS 反向闸（检查 7）的消费者语料只取**可能真实消费前端类名**的文件。`.go` / `.json`
+ * 被刻意排除——Go 后端与数据 JSON 不产生 DOM 类名引用，2026-10-17 实测这俩扩展名占 dead-CSS
+ * 语料 82MB 的 66%（.json 44MB + .go 10MB），每轮全量重读拖慢 4.35s 的 pre-commit 提示段。
+ * 剔除后检测语义不变（前端类名不会藏在 Go/JSON 里被「消费」），css-layer-check 4.35s → ~0.9s。
+ * 这两个常量被 test_css_layer_check.ts 钉死，防止性能收窄意外复辟回全量语料。
+ */
+export const DEAD_CSS_CORPUS_EXTS = [".ts", ".tsx", ".js", ".mjs", ".cjs", ".html", ".vue"];
+export const DEAD_CSS_CORPUS_SKIP = new Set([
+  "node_modules",
+  "dist",
+  "dist-web",
+  "dist-verify",
+  "coverage",
+  "release",
+  "build",
+  "target",
+  "test-results",
+  "e2e-report",
+  "docs",
+  "scripts",
+  "upstream",
+  ".cache",
+  ".dsh",
+  ".vitepress",
+]);
+
+/**
  * 跨层存在性判定（css-layer-check 检查 6 的纯函数抽出）。
  *
  * 检查 3 的判定域是「本域命名空间」，故命名空间在本域不存在的类（错名 / 从未实现）结构上落在

@@ -28,6 +28,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { dropdownBaseCSS, noAnimationsCSS } from "../frontend/src/utils/dom/css.ts";
 import {
+  DEAD_CSS_CORPUS_EXTS,
+  DEAD_CSS_CORPUS_SKIP,
   expandStyleInterpolations,
   extractSelectorClasses,
   findDeadCssClasses,
@@ -276,3 +278,23 @@ console.log("  ✓ 检查 6 判定：跨层存在性（任何 CSS 层都无定�
 }
 
 console.log("\nOK: css-layer-check 契约（插值展开 + 检查 5/6/7 判定，回归锁 11 条）");
+
+// ── 12. 死 CSS 语料收窄回归锁（2026-10-17 门禁性能优化）──
+// 背景：css-layer-check 是 pre-commit 提示段最慢项（实测 4.35s），瓶颈在 dead-CSS 消费者语料
+// 每轮全量重读 82MB / 4542 文件；其中 .json 44MB + .go 10MB = 66% 绝不可能消费前端类名
+// （Go 后端 + 数据 JSON 不产生 DOM 类名引用）。剔除后检测语义不变（前端类名不会藏在 Go/JSON 里被
+// 「消费」），工具耗时降至 ~0.9s。此锁防性能收窄被「看似无关」的改动意外复辟回全量语料。
+// ① 语料扩展名不得含后端/数据扩展名（.go / .json）——它们不产生 DOM 类名消费者
+assert.ok(
+  !DEAD_CSS_CORPUS_EXTS.includes(".go") && !DEAD_CSS_CORPUS_EXTS.includes(".json"),
+  "死 CSS 语料不得含 .go/.json（门禁性能收窄，二者非类名消费者）",
+);
+// ② 语料扩展名必须仍是能承载类名的代码/模板面（TS/HTML/模板）
+for (const ext of [".ts", ".tsx", ".js", ".html", ".vue"]) {
+  assert.ok(DEAD_CSS_CORPUS_EXTS.includes(ext), `死 CSS 语料须保留 ${ext}（前端类名消费者）`);
+}
+// ③ 跳过目录集须含 docs/scripts/upstream（非类名消费者的假存活源）
+for (const dir of ["docs", "scripts", "upstream", "node_modules", "dist"]) {
+  assert.ok(DEAD_CSS_CORPUS_SKIP.has(dir), `死 CSS 语料须跳过 ${dir}`);
+}
+console.log("  ✓ 死 CSS 语料收窄锁（排除 .go/.json，保留前端类名载体，跳过假存活源）");

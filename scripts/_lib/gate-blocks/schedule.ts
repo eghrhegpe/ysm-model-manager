@@ -70,7 +70,7 @@ export async function runContractTestsBlock(
   if (!opts.allMode && !opts.staticMode && !localContractEnabled) {
     ctx.record("contract tests（本地跳过，交 CI contracts job 全量）", true, {
       time: 0,
-      note: `本地 push 不重复跑 ${contractFiles!.length} 项：CI test.yml:98 已全量跑同一脚本（127 项）。设 YSM_LOCAL_CONTRACT_TESTS=1 可本地强制跑。`,
+      note: `本地 push 不重复跑 ${contractFiles?.length ?? 0} 项：CI test.yml:98 已全量跑同一脚本（127 项）。设 YSM_LOCAL_CONTRACT_TESTS=1 可本地强制跑。`,
     });
     return;
   }
@@ -140,7 +140,25 @@ export function runStaticToolsDispatch(
   }
   if (!opts.allMode && !opts.docsMode && !opts.staticMode) {
     if (ctx.plan.frontend) runTools(ctx, FRONTEND_STATIC_TOOLS);
-    if (ctx.plan.go) runTools(ctx, GO_STATIC_TOOLS);
+    if (ctx.plan.go) {
+      // ⚡ 2026-10-17 门禁性能优化：check-go-diff-coverage 实测 81.5s（GO_STATIC_TOOLS
+      // 瓶颈，全 GO_STATIC_TOOLS 84.7s 中 96% 来自它），每次 Go 变更推送独占 1.5 分钟。
+      // CI test.yml:545-556 已有独立步骤（含真实基线 ref + go test cover 产物），
+      // 本地重复付费只买「早知道」——与 go test -race / 契约测试同口径，交 CI 兜底。
+      // 逃生阀：YSM_FAST_PUSH=0 恢复本地跑（发版前自检 / 怀疑覆盖率回归时开）。
+      const fastPush = process.env.YSM_FAST_PUSH !== "0";
+      if (fastPush) {
+        const filtered = GO_STATIC_TOOLS.filter((t) => t.tool !== "check-go-diff-coverage.ts");
+        runTools(ctx, filtered);
+        ctx.record("check-go-diff-coverage（本地跳过，交 CI 独立步骤）", true, {
+          time: 0,
+          note: "跳过（本地轻量模式：交 CI test.yml:545 独立步骤；YSM_FAST_PUSH=0 可本地跑）",
+          blockPolicy: "debt",
+        });
+      } else {
+        runTools(ctx, GO_STATIC_TOOLS);
+      }
+    }
     if (ctx.plan.docs || ctx.plan.adr) {
       // 文件驱动模式：doc-drift / knowledge-drift 按 --files 裁剪（与 check-redlines 同款），
       // 避免并行会话留在 docs/knowledge/ 的未跟踪草稿卡（如 commit-with-check.md）阻断本次 commit。

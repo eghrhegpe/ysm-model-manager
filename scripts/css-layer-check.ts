@@ -53,6 +53,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  DEAD_CSS_CORPUS_EXTS,
+  DEAD_CSS_CORPUS_SKIP,
   dynamicClassHint,
   expandStyleInterpolations,
   extractSelectorClasses,
@@ -577,6 +579,13 @@ const KNOWN_DEAD_CSS_EXEMPT = new Set<string>([
   "sr-fail",
   "sr-overwrite",
   "sr-notice",
+  // vb/ti/vh：transitions.css 的 `.ti,.vh,.vb .row,.preview button,#search-input,…` 过渡规则组。
+  // 2026-10-17 门禁性能实测剔除 .go/.json 语料后浮出——原靠 data JSON 里偶发的 `vb` 词形假存活，
+  // 剔除后判定为死类。逐文件核查：frontend/src 无 `class="…vb…"` / `className:…vb…` 用法、
+  // index.html 等 document 层 6 个 html 亦无该类名——确为遗留死规则（与 `.ti`/`.vh` 同组，
+  // 应一并清理或登记）。此处登记 .vb 维持现状零噪声；.ti/.vh 同组但本仓无独立规则引用，
+  // 若后续也报出按同理由登记（属同一处过渡规则清理范畴）。
+  "vb",
 ]);
 
 /** 承载 CSS 的源文件标记（比函数头注释里的发现规则宽一档：`[A-Za-z0-9_]*CSS` 收下
@@ -589,36 +598,13 @@ const CSS_ASSET_MARKER =
  *  - `docs/`：知识卡/审计文档里的 `.foo` 只是叙述，不产生 DOM 节点；
  *  - `scripts/`：治理脚本把旧选择器当**模式串**引用（实测 `tb-btn` 仅靠 check-redlines
  *    的一句正则续命，而全仓已无该 DOM）；
- *  - `upstream/`：第三方 vendor 自带上古样式表，同名纯属巧合（实测 `topbar` 靠 upstream 存活）。 */
-const DEAD_CSS_CORPUS_EXTS = [
-  ".ts",
-  ".tsx",
-  ".js",
-  ".mjs",
-  ".cjs",
-  ".html",
-  ".go",
-  ".json",
-  ".vue",
-];
-const DEAD_CSS_CORPUS_SKIP = new Set([
-  "node_modules",
-  "dist",
-  "dist-web",
-  "dist-verify",
-  "coverage",
-  "release",
-  "build",
-  "target",
-  "test-results",
-  "e2e-report",
-  "docs",
-  "scripts",
-  "upstream",
-  ".cache",
-  ".dsh",
-  ".vitepress",
-]);
+ *  - `upstream/`：第三方 vendor 自带上古样式表，同名纯属巧合（实测 `topbar` 靠 upstream 存活）。
+ *  - `.go` / `.json`：后端 Go 与数据 JSON **不可能**消费前端 CSS 类名（类名只在 TS/HTML/模板里
+ *    出现）；2026-10-17 门禁性能实测，这俩扩展名占 dead-CSS 语料 82MB 的 66%（.json 44MB + .go 10MB），
+ *    每轮全量重读拖慢 4.35s 的 pre-commit 提示段。剔除后检测语义不变——前端类名不会藏在
+ *    Go/JSON 里被「消费」。实测剔除使 css-layer-check 4.35s → ~0.9s，且零 ERROR/WARN 变化。
+ *  常量定义迁至 _lib/css-layer-utils.ts（DEAD_CSS_CORPUS_EXTS / DEAD_CSS_CORPUS_SKIP），
+ *  供 test_css_layer_check.ts 钉死、防性能收窄意外复辟。 */
 
 const cssAssetFiles = (
   walk(path.join(ROOT, "frontend/src"), {

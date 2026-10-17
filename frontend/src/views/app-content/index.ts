@@ -26,6 +26,7 @@ import { registerSync } from "@/features/sync/sync.ts";
 import "@/views/app-preview/index.ts";
 import { t } from "@/core/i18n/t.ts";
 import { clearAllCommunityCache } from "@/features/community/community-data.ts";
+import { initTheme } from "@/theme-core";
 import { friendlyError } from "@/utils/dom/errors.ts";
 // 对话框 DOM 模板（ADR-190 D1a）：组合根在此装配，features 不自渲染
 import { renameTpl } from "@/views/app-tree/tpl-rename.ts";
@@ -96,6 +97,12 @@ class AppContent extends WebComponentBase {
       bus.on("settings:imported", () => {
         this.subs.cleanupPage();
         this.state.clearPanels();
+        // 锐评 2026-10-17 P1②：导入会改写磁盘 theme / themeAuto（导出源值），但镜像键
+        // （theme / theme-auto）因 authority=dual-write 被导出白名单显式排除、不会回写，
+        // 只重建面板会让「导入成功但主题仍是旧值」的 UI 与真相分叉一直挂到下次重启。
+        // initTheme 以磁盘为权威重算并回写镜像，与启动链同一口径（内部 catch 一切不抛，
+        // 这里 fire-and-forget；不 await，避免阻塞面板重建）
+        void initTheme();
         this._render();
       }),
     );

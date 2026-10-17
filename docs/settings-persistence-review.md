@@ -39,6 +39,9 @@
 
 **建议**：导入成功后补一次「镜像回同步」——让 `theme-core` 订阅 `settings:imported`（或由 `settings-backup.ts` 显式调 `syncThemeMirror()`）：读磁盘 `cfg.theme||cfg.themeAuto`，`safeSet` 回写两个镜像键。这与 `initTheme` 同口径，不是新逻辑。
 
+**✅ 已处置（2026-10-17）**：在 `app-content/index.ts` 的 `settings:imported` 订阅里补 `void initTheme()`（重建面板同处）。`initTheme` 本身即以磁盘为权威重算并 `safeSet` 回写 `theme`/`theme-auto` 两个镜像键（`theme-core.ts:100-129`），**未新增独立 `syncThemeMirror` 函数**——复用启动链同一口径，避免「两处镜像回写逻辑」漂移。
+**📌 处置依据**：未采纳「让 `theme-core` 订阅 bus」——`theme-core.ts:1-6` 是神桶拆分后的纯逻辑层（零顶层副作用），bus 广播属启动装配、由 `app-modules.ts` 承接；让纯逻辑层订阅 bus 会重新引入「import 即副作用」的测试困境。同步挂在事件消费方 `app-content/index.ts`，符合既有分层。`initTheme` 内部 catch 一切、`void` fire-and-forget 不阻塞面板重建。
+
 ### P1-③ 假备份拒止判据**误伤正常用户**——「无路径设置」≠「配置损坏」
 
 **锚点**：`internal/app/app_settings_export.go:86-95`（`cfg.FilesRoot=="" && len(cfg.CustomRoots)==0` 且 `os.Stat(configPath())` 存在 → 拒绝导出）；`internal/app/app.go:331-340`（`resolveStartupConfigBootstrap`：`configFileMissing` 或 `McRoot==""` 且自动探测到 Minecraft 目录时 `needsWrite=true`）、`app.go:235-246`（启动链据此 `saveConfig`）。
@@ -61,6 +64,9 @@
 **影响**：这是**判据维度不足**的系统性问题，不是个别登记错误——`exportableSettingsKeys` 无法表达「仅网页模式」「派生可重算」两个 ADR 明确要排除的维度。
 
 **建议**：白名单判据补第三维。最小改法：新增一个 `exportable?: boolean`（默认跟随现状）或 `persistenceKind: "user-preference" | "derived-cache" | "web-only"` 字段，`exportableSettingsKeys()` 只收 `user-preference`；把上表这批键按真实性质归类。契约测试 D 组补一条「`exportable` 与 `authority`/note 自洽」的断言（如派生缓存不得 `exportable`）。
+
+**✅ 已处置（2026-10-17，commit `4a9340068`）**：采纳最小改法 `exportable?: boolean`（缺省跟随二维判据）。`exportableSettingsKeys()` 判据补 `e.exportable !== false`。显式 `exportable: false` 的键：派生缓存 4 个（`ysmAlphaInfo` / `scan-authors` / `ListModelAuthors` / `community-merge`）+ 网页模式专用 4 个（`ysm:config` / `web:workshop-creators` / `web:workshop-sites` / `web:github-repos`）。契约测试新增断言 D5：note 命中 `/派生缓存|仅网页模式|桌面端不读此键/` 的 localStorage 键必须 `exportable === false`（防新派生缓存/网页专用键漏标）。
+**📌 处置偏差（与报告建议不同，说明理由）**：`perf-history` **未**标 `exportable: false`，反而显式 `exportable: true`。报告将其列为污染项，但复核后认定它是**用户积累的趋势历史**（攒够 ≥2 条才画趋势线，换机后重算需重新采样，非纯派生缓存）——剔除它会让换机丢用户可见历史，违背「用户会心疼丢的东西」这一台账主语。ADR 决策②的「诊断历史」按「纯派生、可重算」理解，`perf-history` 不在其列。台账 note 已补该归类说明，与 D5 断言不冲突（其 note 不命中 hint）。
 
 ---
 

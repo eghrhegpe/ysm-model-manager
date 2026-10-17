@@ -134,7 +134,7 @@ quick_risk_lines:
 - 磁盘轨写入唯一入口：`views/config-write.ts|writeAppConfig(patch)` → Go `SaveAppConfigPatch`（原子 patch，ADR-349；实参点单点化始于 ADR-313），执法 `tests/test_config_write_single_exit.ts`
 - 主题读写两侧口径：`theme-core.ts|initTheme`（读）与 `views/config-write.ts|writeAppConfig`（写）——两侧都必须「磁盘优先」
 - 备份迁移用户叙事：`docs/guide/backup-migration.md`「哪些设置会跟着迁移」一节
-- 设置导出/导入（ADR-344-d1，桌面端）：前端 `views/app-content/settings/settings-backup.ts`（采集/回写浏览器偏好，白名单 = 台账 `exportableSettingsKeys()`）→ Go `internal/app/app_settings_export.go|ExportSettingsJSON` / `ReadSettingsExport` / `ImportSettingsFromFile`。Go 侧三道闸：①`ReadSettingsExport` 大小上限 8 MiB + format 门控 + **双版本门控**（`ExportVersion` 门控文件格式、`AppConfig.SchemaVersion` 门控配置 schema——两套独立编号，缺后者旧程序会按旧结构静默错读新版导出）；②`ExportSettingsJSON` 假备份**拒止**（配置文件存在却无任何路径设置 = 损坏后零值缓存形态，直接拒绝导出而非只记日志——做备份的人不看日志，假保险比没保险更糟）；③`ImportSettingsFromFile` 导入前备份 `ysm_config.json.bak-时间戳`（最多 10 份）。回写计数只算 `safeSet` 真正落盘的键（隐私竞态/配额满不计入「已应用 N 项」）。导入后前端 emit `settings:imported` 触发面板全量重建
+- 设置导出/导入（ADR-344-d1，桌面端）：前端 `views/app-content/settings/settings-backup.ts`（采集/回写浏览器偏好，白名单 = 台账 `exportableSettingsKeys()`）→ Go `internal/app/app_settings_export.go|ExportSettingsJSON` / `ReadSettingsExport` / `ImportSettingsFromFile`。Go 侧三道闸：①`ReadSettingsExport` 大小上限 8 MiB + format 门控 + **双版本门控**（`ExportVersion` 门控文件格式、`AppConfig.SchemaVersion` 门控配置 schema——两套独立编号，缺后者旧程序会按旧结构静默错读新版导出）；②`ExportSettingsJSON` 假备份**拒止**（配置文件存在却无任何路径设置 = 损坏后零值缓存形态，直接拒绝导出而非只记日志——做备份的人不看日志，假保险比没保险更糟）+ **导出侧同尺寸上限**（与导入闸对称，无门槛时会写出导入侧必然拒收的大文件、用户白拷一份失败备份）；③`ImportSettingsFromFile` 导入前备份 `ysm_config.json.bak-时间戳`（最多 10 份）。**导入顺序铁律见上方风险表**（磁盘先落盘、浏览器后回写，删掉了未测试的失败回滚）。回写计数只算 `safeSet` 真正落盘的键（隐私竞态/配额满不计入「已应用 N 项」）——提示条数归前端 `applied`，Go 的 `ImportSettingsResult` **已删除 `LocalStorageKeyCount`**（原始条数未过滤、只会虚高且无消费者）。导入后前端 emit `settings:imported` 触发面板全量重建
 
 ## 与其他子系统关系
 
@@ -156,6 +156,8 @@ quick_risk_lines:
 8. **设置导出/导入的键面以台账为单一事实源**。采集/回写白名单 = `exportableSettingsKeys()`（go-disk 随 appConfig 走、session/non-persistent 不备份、dual-write 镜像不备份——备份镜像反而制造两处不一致），消费方不得复写判定。导出文件里未登记的键一律忽略。**台账里登记了 `keyPattern` 的键族（3D 场景能力 `ysm-scene-cap-*`、工坊按站筛选态 `ysm-ws-active-tag*` 等）必须按通配展开真键采集/回写**——`key` 只是占位符，`safeGet("ysm-scene-cap-*")` 恒 null，把占位符当真键读等于整族不迁移（正是本功能要根治的换机静默丢）。候选键只能来自 `safeKeys()`/导出文件的实际键，禁按前缀猜键名（拼接规则一变就错）。导入后必须 emit `settings:imported` 重建面板（theme/语言/路径可能已变，只刷 store 会留下 UI 与真相分叉）。
 9. **拼接键的可见性纪律**：动态键族的**前缀必须以 `*_PREFIX` 常量形态声明**（契约测试的 `_PREFIX`/模板首参口径只扫得到这两种形态）。藏在函数体内的模板拼接（`` return `ysm:x:${p}` ``）对账失明——新写拼接键先落常量、再登记台账 `keyPattern`，否则断言 B 扫不到、导出静默漏一族。
 10. **`migrates` 只表「随复制配置文件走」，不表「换机丢不丢」**。ADR-344-d1 后两个口径分离：可导出键 `migrates:false` 但换机带得走。用户叙事（「要重设什么」）派生自 `unbackupableSettingsKeys()`，不是 `nonMigratingSettingsKeys()`。
+11. **设置导出的尺寸闸与导入闸对称**。`ExportSettingsJSON` 与 `ReadSettingsExport` 共用 `settingsExportMaxBytes`（8 MiB）——导出侧若无门槛，前端被塞进畸形的 localStorage 会写出一个导入侧必然拒收的文件，用户白拷一份注定失败的备份。
+12. **「已应用 N 项」的条数只能由前端算**。前端按台账白名单过滤后数 `safeSet` 真落盘的键（`applied`）；Go 侧没有台账键集合、只有导出文件原始条数，任何 Go 侧计数（曾有的 `LocalStorageKeyCount`）都只会虚高、误导。**计数不跨端共享，需要时从前端取，不要在 Go 侧另造一个**。
 
 ## 相关
 

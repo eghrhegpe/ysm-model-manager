@@ -106,6 +106,12 @@ func (a *App) ExportSettingsJSON(localStorage map[string]string) (string, error)
 	if err != nil {
 		return "", err
 	}
+	// 与 ReadSettingsExport 的导入闸对称（锐评 2026-10-16）：导出侧同样设尺寸上限。
+	// 无门槛时前端被塞进畸形的 localStorage（或未来某键值爆炸）会写出一个导入侧
+	// 必然拒收的大文件，用户白拷一份注定失败的备份。
+	if len(data) > settingsExportMaxBytes {
+		return "", fmt.Errorf("设置数据过大(%d 字节，上限 %d MiB)，无法导出", len(data), settingsExportMaxBytes>>20)
+	}
 	// 原子写入（与 saveConfig / BackupWorkshopCreators 对齐）：直接 os.WriteFile 在磁盘满/中断时
 	// 留半截导出文件，用户拷走后导入必然失败
 	if err := fsutil.WriteFileAtomic(path, data); err != nil {
@@ -202,8 +208,9 @@ func (a *App) ImportSettingsFromFile(path string) (types.ImportSettingsResult, e
 		return res, err
 	}
 
-	// 导出文件原始 localStorage 条数（未过滤）；前端用自身台账过滤后的 applied 计数做提示
-	res.LocalStorageKeyCount = len(exp.LocalStorage)
+	// LocalStorageKeyCount 已删除（锐评 2026-10-16）：它是「导出文件原始条数」未过滤值，
+	// 而前端提示用自身台账过滤后的 applied 计数——原始条数只会虚高、语义误导，
+	// 且该字段没有任何消费者。条数归属前端（Go 侧没有前端台账的键集合，算不出真值）。
 	return res, nil
 }
 

@@ -11,6 +11,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"ysm-model-manager/go/types"
@@ -57,6 +58,16 @@ func TestExportSettingsJSON_WritesExportFileAtAppDataDir(t *testing.T) {
 	}
 	if exp.LocalStorage["ui-font-size"] != "14" || exp.LocalStorage["ui-card-density"] != "compact" {
 		t.Errorf("导出 localStorage 未携带浏览器偏好: %#v", exp.LocalStorage)
+	}
+}
+
+// 导出侧尺寸闸（锐评 2026-10-16）：与 ReadSettingsExport 的导入闸对称。
+// 无门槛时前端被塞进畸形的 localStorage 会写出一个导入侧必然拒收的大文件，用户白拷一份失败备份。
+func TestExportSettingsJSON_RejectsOversizedLocalStorage(t *testing.T) {
+	a := exportTestApp(t, types.AppConfig{FilesRoot: "C:/repo"})
+	big := strings.Repeat("x", settingsExportMaxBytes+1)
+	if _, err := a.ExportSettingsJSON(map[string]string{"k": big}); err == nil {
+		t.Fatal("超过上限的 localStorage 不得导出（导入侧必然拒收，白拷失败备份）")
 	}
 }
 
@@ -162,11 +173,7 @@ func TestImportSettingsFromFile_RoundTripAndBackup(t *testing.T) {
 
 	res, err := dst.ImportSettingsFromFile(srcPath)
 	testutil.NoError(t, err, "ImportSettingsFromFile")
-	// Go 侧只报「导出文件原始 localStorage 条数」；实际写入由前端按台账白名单过滤，
-	// 前端提示必须用过滤后的计数（见 frontend settings-backup.ts）
-	if res.LocalStorageKeyCount != 2 {
-		t.Errorf("LocalStorageKeyCount=%d want 2", res.LocalStorageKeyCount)
-	}
+	// 提示条数归属前端：Go 侧无前端台账键集合，LocalStorageKeyCount 已删除
 	if res.BackupPath == "" {
 		t.Fatal("导入前必须备份当前配置（可回滚）")
 	}

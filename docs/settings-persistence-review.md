@@ -54,6 +54,8 @@
 
 **建议**：拒止判据改挂在**配置可解析性**上（如 `LoadAppConfig` 解析失败、`SchemaVersion` 异常、或明确加一个 `configCorrupt` 标记），不要用「路径字段空」代理。至少把判据收窄为「配置文件存在且 `loadAppConfig` 走的是损坏回退分支」。
 
+**✅ 已处置（2026-10-17）**：判据收窄为「配置文件存在且**无法解析**」。`ExportSettingsJSON` 里 `os.Stat(configPath())` 存在时用 `readJSONFile` 重新解析磁盘配置，解析失败（`json.Unmarshal` 报错）才拒止；JSON 合法（哪怕路径全空）即放行——反映的是用户真实状态，不是损坏。未新增 `configCorrupt` 标记字段（改动面更大、且 `LoadAppConfig` 的 `configLoaded=false` 重试语义不应被破坏）。测试同步：`TestExportSettingsJSON_RejectsCorruptConfig` 保留（写损坏 JSON，仍拒止）+ 新增 `TestExportSettingsJSON_AllowsExistingConfigWithoutPaths`（写合法 `{}`，放行——锁住 P1③ 的误伤路径）。
+
 ### P1-④ 白名单判据只有二维（tier + authority），装不下 ADR 明确要求排除的类别
 
 **锚点**：`frontend/src/settings-keys.ts:985-989`；`docs/adr/decisions/ADR-344-d1-settings-export-import.md:17`（决策②「**剔除**缓存/会话/调试/哨兵/派生键（社区合并、扫描作者缓存、诊断历史、`_debug`/`__waterSchemaVersion`、网页专用 IDB 日志与 `fsaRootHandle`）」）；台账内 `scan-authors`（`settings-keys.ts:773` note「派生缓存（扫仓产出），换机重扫即重建」）、`ListModelAuthors`（:782 note 派生缓存）、`community-merge`（:791 note 派生缓存）、`ysmAlphaInfo`（:614 note「派生缓存…重启重算成本高故持久化」）、`perf-history`（:764 note 趋势历史）、`ysm:config`（:810 note「桌面端不读此键」）、`web:workshop-creators`/`web:workshop-sites`/`web:github-repos`（:819-843，网页模式专用）——**这些键的 `authority` 全填的是 `browser-authority`，因此全部落入 `exportableSettingsKeys()` 白名单**。

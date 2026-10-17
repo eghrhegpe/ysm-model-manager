@@ -77,19 +77,24 @@ func (a *App) ExportSettingsJSON(localStorage map[string]string) (string, error)
 	}
 
 	cfg := a.LoadAppConfig()
-	// 假备份拒止（锐评 2026-10-16，原为 log.Printf）：配置文件损坏时 loadAppConfig
-	// 保留零值且不重试（见 app_config.go 的守卫注释），此时若照常导出，用户拿到的
-	// 是「全零值配置」的假备份。零值假备份是延迟引爆炸弹——换机那天才发现路径全丢，
-	// 比不做备份更糟（用户以为有了保险）；而做备份迁移的人恰恰不看日志。
-	// 备份动作的失败必须当场可见：宁可不给保险，也不给假保险。
+	// 假备份拒止（锐评 2026-10-16 引入，2026-10-17 收窄判据）：本意是拦「配置文件损坏 →
+	// loadAppConfig 保留零值且不重试（见 app_config.go 守卫注释）→ 照常导出全零值假备份」——
+	// 零值假备份是延迟引爆炸弹，换机那天才发现路径全丢，比不做备份更糟（用户以为有了保险），
+	// 而做备份迁移的人恰恰不看日志。备份动作的失败必须当场可见。
+	// 原判据（FilesRoot 空 && CustomRoots 空）**误伤正常用户**：启动链 resolveStartupConfigBootstrap
+	// 会在首次启动自动探测 Minecraft 目录落盘（McRoot 非空），装过 Minecraft 但尚未设文件存储
+	// 根目录的用户配置文件是**存在且合法**的，却被当成「损坏形态」拒绝导出（锐评 P1③）。
+	// 收窄为「配置文件存在但**无法解析**」= 真正的损坏；JSON 合法（哪怕路径为空）即放行，
+	// 因为那反映的是用户真实状态，不是损坏。
 	// 全新用户（配置文件不存在）不拦：无路径可丢属正常，不惩罚起步期导出。
-	if cfg.FilesRoot == "" && len(cfg.CustomRoots) == 0 {
-		if _, err := os.Stat(configPath()); err == nil {
+	if _, err := os.Stat(configPath()); err == nil {
+		var diskCfg types.AppConfig
+		if err := readJSONFile(configPath(), &diskCfg); err != nil {
 			return "", types.AppError{
 				Code:       types.ErrInvalidParam,
 				Operation:  "导出设置",
-				Reason:     "当前配置没有任何路径设置（文件存储根目录为空），导出只会得到一份假备份",
-				Suggestion: "若配置文件曾损坏或被外部清空，请先在「设置 → 环境」恢复路径，再导出",
+				Reason:     "当前配置文件已损坏（无法解析），导出只会得到一份假备份",
+				Suggestion: "请先在「设置 → 环境」恢复文件存储路径（重建配置），再导出",
 			}
 		}
 	}

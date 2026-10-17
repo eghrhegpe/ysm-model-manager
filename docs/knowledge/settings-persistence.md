@@ -80,7 +80,7 @@ pitfalls:
   - 拼接键族的前缀必须以 `*_PREFIX` 常量形态声明；藏在函数体内裸拼 `` `ysm:x${p}` `` 会让契约测试的键扫描失明（实测三族因此漏登），新键族落地先收常量再登记
   - 台账字段 `migrates` 只回答「复制 ysm_config.json 带不带得走」，**不回答「换机丢不丢」**——ADR-344 后后者要并看导出面；给用户列「要重设什么」用 `unbackupableSettingsKeys()`，用 `nonMigratingSettingsKeys()` 会劝人重设早已能带走的字号
   - 导入顺序铁律：**磁盘先落盘、浏览器后回写**（锐评 2026-10-16 修正，推翻早前的「失败回滚」设计）。理由：磁盘是真相源且可回滚（`.bak-*`），浏览器 localStorage 无备份；且 Go 写盘成功但 watcher 重启失败也会报错（`applyPostSaveSideEffects`），旧「先写浏览器、报错回滚」会把磁盘（新）/浏览器（旧）**反向分叉**——比「磁盘新/浏览器旧」更糟。顺序翻过来后失败面收窄为「磁盘新/浏览器旧」，并删掉「导入前拍照 + 失败回滚」这套从未被测试的补偿事务（删的是不可判定的启发式，不是功能）。提示条数用前端台账过滤后的 `applied`（Go 的 `len(localStorage)` 未过滤、会虚高）。导入前 **`modalConfirm` 二次确认**：导入是整份覆盖磁盘配置（含 `FilesRoot`/`McRoot`、重启 watcher），`ReadSettingsExport` 校验通过后、`ImportSettingsFromFile` 之前必须先过危险样式确认框（文案预告「将覆盖磁盘配置 + 将应用 N 项浏览器偏好 + 导入前已自动备份」），用户取消则磁盘/浏览器都零副作用（锐评 2026-10-17 P1①）。顺带修 P2⑥：防御判空用 `!exp?.format` 而非 `!exp`——`SettingsExport` 是 struct 非指针，`!exp` 对对象恒 false 是死代码
-  - 磁盘侧防护：`ReadSettingsExport` 有大小上限（8 MiB）与**双版本门控**（文件格式 `ExportVersion` + 配置 schema `AppConfig.SchemaVersion`，两套独立编号，少一道旧程序会按旧结构静默错读新版导出）；导入前备份最多保留 10 份（`.bak-时间戳`，毫秒精度）；配置文件存在却无任何路径设置时导出**直接拒绝**（假备份比没备份更糟）
+  - 磁盘侧防护：`ReadSettingsExport` 有大小上限（8 MiB）与**双版本门控**（文件格式 `ExportVersion` + 配置 schema `AppConfig.SchemaVersion`，两套独立编号，少一道旧程序会按旧结构静默错读新版导出）；导入前备份最多保留 10 份（`.bak-时间戳`，毫秒精度）；配置文件存在却**无法解析**（JSON 损坏）时导出**直接拒绝**（假备份比没备份更糟）；JSON 合法但路径为空**放行**——锐评 2026-10-17 P1③ 收窄判据：原判据「路径空即拒」会误伤装过 Minecraft 但未设仓库路径的用户（启动链 `resolveStartupConfigBootstrap` 会自动探测 Minecraft 目录落盘，其配置文件是存在且合法的）
   - theme / themeAuto 跨双轨同名，台账用 disk: 前缀分列；无前缀即撞名，撞名会逼两轨塞进一行
   - 新增 localStorage 键必须同步登记 settings-keys.ts，漏登记则契约测试转红；拼接键族须把前缀收敛为 `*_PREFIX` 常量（函数体内裸拼接对账失明，实测漏登过三族）
   - 网页模式的「磁盘替身」是 localStorage 的 ysm:config 键，别把它当桌面磁盘轨

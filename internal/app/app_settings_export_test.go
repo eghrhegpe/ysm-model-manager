@@ -132,18 +132,33 @@ func TestReadSettingsExport_RejectsHigherSchemaVersion(t *testing.T) {
 	}
 }
 
-// 假备份拒止（锐评 2026-10-16）：配置文件存在却无任何路径设置 = loadAppConfig 在
-// JSON 损坏时保留零值不重试的形态。此前只 log.Printf，而做备份迁移的用户恰恰不看日志：
-// 零值假备份是延迟引爆炸弹——换机那天才发现路径全丢，比不做备份更糟（以为有了保险）。
-// 从静音升为拒绝导出：备份动作失败必须当场可见，宁可不给保险也不给假保险。
+// 假备份拒止（锐评 2026-10-16 引入，2026-10-17 收窄判据）：配置文件存在却**无法解析** =
+// loadAppConfig 在 JSON 损坏时保留零值不重试的形态。此前只 log.Printf，而做备份迁移的
+// 用户恰恰不看日志：零值假备份是延迟引爆炸弹——换机那天才发现路径全丢，比不做备份更糟
+// （以为有了保险）。从静音升为拒绝导出：备份动作失败必须当场可见，宁可不给保险也不给假保险。
+// 判据收窄见下方 AllowsExistingConfigWithoutPaths（路径空 ≠ 损坏，原判据误伤正常用户）。
 func TestExportSettingsJSON_RejectsCorruptConfig(t *testing.T) {
-	// 配置文件存在但内容损坏（loadAppConfig 解析失败 → 零值缓存）
+	// 配置文件存在但内容损坏（无法解析 → loadAppConfig 走零值缓存）
 	setConfigDirForTest(t, t.TempDir())
 	testutil.NoError(t, os.WriteFile(configPath(), []byte(`{not valid json[`), 0o644), "写损坏配置")
 	a := newLinkModeApp()
 
 	if _, err := a.ExportSettingsJSON(map[string]string{"ui-font-size": "14"}); err == nil {
-		t.Fatal("配置文件存在但无任何路径设置时不得导出假备份（须当场报错，不能只落日志）")
+		t.Fatal("配置文件损坏（无法解析）时不得导出假备份（须当场报错，不能只落日志）")
+	}
+}
+
+// 放行面回归（锐评 2026-10-17 P1③）：配置文件**存在且 JSON 合法**但无任何路径设置时
+// 必须放行——启动链 resolveStartupConfigBootstrap 会在首启动自动探测 Minecraft 目录落盘，
+// 装过 Minecraft 但尚未设文件存储根目录的用户配置文件是存在且合法的；原判据（路径空）
+// 把它们误判为「损坏形态」拒绝导出，是真实的误伤路径。
+func TestExportSettingsJSON_AllowsExistingConfigWithoutPaths(t *testing.T) {
+	setConfigDirForTest(t, t.TempDir())
+	testutil.NoError(t, os.WriteFile(configPath(), []byte(`{}`), 0o644), "写合法空配置")
+	a := newLinkModeApp()
+
+	if _, err := a.ExportSettingsJSON(map[string]string{"ui-font-size": "14"}); err != nil {
+		t.Fatalf("配置文件存在但 JSON 合法（路径空）时应放行，got %v", err)
 	}
 }
 

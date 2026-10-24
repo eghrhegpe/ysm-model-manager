@@ -37,23 +37,17 @@ func TestMergeBehavior_CubeTexDimsFromOwnFileMaxTexSize(t *testing.T) {
 	})
 	geo, _, _, _ := parseModelFromEntries(entries, "zip")
 	testutil.NotNil(t, geo, "模型不应为 nil")
-	// geo 级尺寸取最大
-	if geo.TexWidth != 128 || geo.TexHeight != 64 {
-		t.Fatalf("geo TexWidth/Height = %d×%d, 期望 128×64（取最大）", geo.TexWidth, geo.TexHeight)
-	}
-	// cube 级尺寸保留各自源文件口径
-	if len(geo.Bones) != 2 {
-		t.Fatalf("BoneCount = %d, 期望 2", len(geo.Bones))
-	}
+	// geo 级尺寸取最大（原复合条件拆序贯）
+	testutil.Equal(t, geo.TexWidth, 128, "geo TexWidth = %d, 期望 128（取最大）", geo.TexWidth)
+	testutil.Equal(t, geo.TexHeight, 64, "geo TexHeight = %d, 期望 64（取最大）", geo.TexHeight)
+	// cube 级尺寸保留各自源文件口径（守卫下方 Bones 遍历）
+	testutil.Equal(t, len(geo.Bones), 2, "BoneCount = %d, 期望 2", len(geo.Bones))
 	want := map[string][2]int{"boneA": {64, 32}, "boneB": {128, 64}}
 	for _, b := range geo.Bones {
 		dim, ok := want[b.Name]
-		if !ok {
-			t.Fatalf("出现未预料的骨骼 %q", b.Name)
-		}
-		if len(b.Cubes) != 1 {
-			t.Fatalf("骨骼 %s cubes = %d, 期望 1", b.Name, len(b.Cubes))
-		}
+		testutil.Equal(t, ok, true, "出现未预料的骨骼 %q", b.Name)
+		// 守卫下方 b.Cubes[0] 索引
+		testutil.Equal(t, len(b.Cubes), 1, "骨骼 %s cubes = %d, 期望 1", b.Name, len(b.Cubes))
 		c := b.Cubes[0]
 		if c.CubeTexW != dim[0] || c.CubeTexH != dim[1] {
 			t.Errorf("骨骼 %s cube CubeTexW/H = %d×%d, 期望 %d×%d（依源文件）",
@@ -75,12 +69,8 @@ func TestMergeBehavior_L1SubModelTexSlotClampedToPngs(t *testing.T) {
 	pngsCount := 1
 	geo, pngs, _, _ := parseModelFromEntries(entries, "zip")
 	testutil.NotNil(t, geo, "模型不应为 nil")
-	if len(pngs) != pngsCount {
-		t.Fatalf("pngs = %d, 期望 %d", len(pngs), pngsCount)
-	}
-	if len(geo.SubModels) != 3 {
-		t.Fatalf("SubModels = %d, 期望 3（L1 兜底派生自 3 个 geo 文件）", len(geo.SubModels))
-	}
+	testutil.Equal(t, len(pngs), pngsCount, "pngs = %d, 期望 %d", len(pngs), pngsCount)
+	testutil.Equal(t, len(geo.SubModels), 3, "SubModels = %d, 期望 3（L1 兜底派生自 3 个 geo 文件）", len(geo.SubModels))
 	for i, sm := range geo.SubModels {
 		if sm.TexSlot != 0 {
 			t.Errorf("SubModels[%d].TexSlot = %d, 期望 0（3 geo 1 png，全部钳到 len(pngs)-1）",

@@ -29,9 +29,7 @@ func TestFindDuplicateFiles_WithDupes(t *testing.T) {
 
 	groups, err := FindDuplicateFiles(dir, true)
 	testutil.NoError(t, err)
-	if len(groups) != 1 {
-		t.Fatalf("期望 1 组重复，得到 %d 组", len(groups))
-	}
+	testutil.Equal(t, len(groups), 1, "期望 1 组重复，得到 %d 组", len(groups))
 	if len(groups[0].Files) != 2 {
 		t.Errorf("期望组内有 2 个文件，得到 %d 个", len(groups[0].Files))
 	}
@@ -46,9 +44,7 @@ func TestFindDuplicateFiles_MultipleGroups(t *testing.T) {
 
 	groups, err := FindDuplicateFiles(dir, true)
 	testutil.NoError(t, err)
-	if len(groups) != 2 {
-		t.Fatalf("期望 2 组重复，得到 %d 组", len(groups))
-	}
+	testutil.Equal(t, len(groups), 2, "期望 2 组重复，得到 %d 组", len(groups))
 }
 
 func TestFindDuplicateFiles_SkipRecycle(t *testing.T) {
@@ -107,9 +103,7 @@ func TestFindDuplicateFiles_SortedOutput(t *testing.T) {
 
 	groups, err := FindDuplicateFiles(dir, true)
 	testutil.NoError(t, err)
-	if len(groups) != 1 {
-		t.Fatalf("期望 1 组重复，得到 %d 组", len(groups))
-	}
+	testutil.Equal(t, len(groups), 1, "期望 1 组重复，得到 %d 组", len(groups))
 	// 验证按路径排序
 	paths := make([]string, len(groups[0].Files))
 	for i, f := range groups[0].Files {

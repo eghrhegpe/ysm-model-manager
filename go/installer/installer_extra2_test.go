@@ -29,9 +29,8 @@ func mcCustomDir(t *testing.T) string {
 // ====== InstallToGlobal ======
 
 func TestInstallToGlobal_EmptySrc(t *testing.T) {
-	if _, err := InstallToGlobal("", t.TempDir()); err == nil {
-		t.Fatal("空源路径应返回错误")
-	}
+	_, err := InstallToGlobal("", t.TempDir())
+	testutil.NotNil(t, err, "空源路径应返回错误")
 }
 
 func TestInstallToGlobal_EmptyMcRoot(t *testing.T) {
@@ -40,9 +39,8 @@ func TestInstallToGlobal_EmptyMcRoot(t *testing.T) {
 	if err := os.WriteFile(src, []byte("data"), 0644); err != nil {
 		testutil.NoError(t, err)
 	}
-	if _, err := InstallToGlobal(src, ""); err == nil {
-		t.Fatal("空 mcRoot 应返回错误")
-	}
+	_, err := InstallToGlobal(src, "")
+	testutil.NotNil(t, err, "空 mcRoot 应返回错误")
 }
 
 func TestInstallToGlobal_NonMinecraftPath(t *testing.T) {
@@ -51,9 +49,8 @@ func TestInstallToGlobal_NonMinecraftPath(t *testing.T) {
 	if err := os.WriteFile(src, []byte("data"), 0644); err != nil {
 		testutil.NoError(t, err)
 	}
-	if _, err := InstallToGlobal(src, dir); err == nil {
-		t.Fatal("mcRoot 不含 .minecraft marker 应返回错误")
-	}
+	_, err := InstallToGlobal(src, dir)
+	testutil.NotNil(t, err, "mcRoot 不含 .minecraft marker 应返回错误")
 }
 
 func TestInstallToGlobal_MkdirFail(t *testing.T) {
@@ -71,9 +68,7 @@ func TestInstallToGlobal_MkdirFail(t *testing.T) {
 	}
 	_, err := InstallToGlobal(src, mcRoot) // config 是文件 → MkdirAll 失败
 	var ae types.AppError
-	if !errors.As(err, &ae) || ae.Code != "IO_ERROR" {
-		t.Fatalf("应返回 IO_ERROR, got %v", err)
-	}
+	testutil.Equal(t, errors.As(err, &ae) && ae.Code == "IO_ERROR", true, "应返回 IO_ERROR, got %v", err)
 }
 
 func TestInstallToGlobal_Success(t *testing.T) {
@@ -109,9 +104,7 @@ func TestInstallDir_NonMinecraftDst(t *testing.T) {
 	}
 	err := InstallDir(srcDir, t.TempDir(), repo, "copy", "")
 	var ae types.AppError
-	if !errors.As(err, &ae) || ae.Code != "INVALID_PATH" {
-		t.Fatalf("dstDir 不在 .minecraft 内应返回 INVALID_PATH, got %v", err)
-	}
+	testutil.Equal(t, errors.As(err, &ae) && ae.Code == "INVALID_PATH", true, "dstDir 不在 .minecraft 内应返回 INVALID_PATH, got %v", err)
 }
 
 func TestInstallDir_SrcOutsideRepo(t *testing.T) {
@@ -119,9 +112,7 @@ func TestInstallDir_SrcOutsideRepo(t *testing.T) {
 	srcDir := t.TempDir() // 仓库外
 	err := InstallDir(srcDir, custom, repo, "copy", "")
 	var ae types.AppError
-	if !errors.As(err, &ae) || ae.Code != "INVALID_PATH" {
-		t.Fatalf("srcDir 在仓库外应返回 INVALID_PATH, got %v", err)
-	}
+	testutil.Equal(t, errors.As(err, &ae) && ae.Code == "INVALID_PATH", true, "srcDir 在仓库外应返回 INVALID_PATH, got %v", err)
 }
 
 // ====== installDirRecursive 错误分支 ======
@@ -134,9 +125,7 @@ func TestInstallDirRecursive_MkdirFail(t *testing.T) {
 	}
 	err := installDirRecursive(t.TempDir(), filepath.Join(blocker, "sub"), "copy", "", "", nil)
 	var ae types.AppError
-	if !errors.As(err, &ae) || ae.Code != "IO_ERROR" {
-		t.Fatalf("MkdirAll 失败应返回 IO_ERROR, got %v", err)
-	}
+	testutil.Equal(t, errors.As(err, &ae) && ae.Code == "IO_ERROR", true, "MkdirAll 失败应返回 IO_ERROR, got %v", err)
 }
 
 func TestInstallDirRecursive_OutsideMinecraft(t *testing.T) {
@@ -144,9 +133,7 @@ func TestInstallDirRecursive_OutsideMinecraft(t *testing.T) {
 	finalDst := filepath.Join(t.TempDir(), "plain")
 	err := installDirRecursive(srcDir, finalDst, "copy", "", "", nil)
 	var ae types.AppError
-	if !errors.As(err, &ae) || ae.Code != "INVALID_PATH" {
-		t.Fatalf("finalDst 不在 .minecraft 内应返回 INVALID_PATH, got %v", err)
-	}
+	testutil.Equal(t, errors.As(err, &ae) && ae.Code == "INVALID_PATH", true, "finalDst 不在 .minecraft 内应返回 INVALID_PATH, got %v", err)
 }
 
 func TestInstallDirRecursive_ReadDirFail(t *testing.T) {
@@ -173,19 +160,11 @@ func TestInstallDirRecursive_NestedSubdir(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	finalDst := filepath.Join(mcCustomDir(t), "model")
-	if err := installDirRecursive(srcDir, finalDst, "copy", "EntityPlayer", "", nil); err != nil {
-		t.Fatalf("installDirRecursive = %v", err)
-	}
-	if _, err := os.Stat(filepath.Join(finalDst, "root.pmx")); err != nil {
-		t.Fatal("根文件应被安装")
-	}
-	if _, err := os.Stat(filepath.Join(finalDst, "tex", "tex.png")); err != nil {
-		t.Fatal("嵌套子目录文件应被安装")
-	}
+	testutil.NoError(t, installDirRecursive(srcDir, finalDst, "copy", "EntityPlayer", "", nil), "installDirRecursive 应成功")
+	testutil.FileExists(t, filepath.Join(finalDst, "root.pmx"), "根文件应被安装")
+	testutil.FileExists(t, filepath.Join(finalDst, "tex", "tex.png"), "嵌套子目录文件应被安装")
 	// EntityPlayer 无 installExts，所有非可执行文件均放行（含 .txt）
-	if _, err := os.Stat(filepath.Join(finalDst, "ignore.txt")); err != nil {
-		t.Fatalf("EntityPlayer 无 installExts 限制，.txt 也应放行: %v", err)
-	}
+	testutil.FileExists(t, filepath.Join(finalDst, "ignore.txt"), "EntityPlayer 无 installExts 限制，.txt 也应放行")
 }
 
 // TestInstallDirRecursive_PartialFailure 子目录 MkdirAll 失败应返回 fatal（非 partial）。
@@ -217,9 +196,7 @@ func TestInstallDirRecursive_PartialFailure(t *testing.T) {
 	err := installDirRecursive(srcDir, finalDst, "copy", "", "", nil)
 	testutil.NotNil(t, err, "应返回错误, got nil")
 	// MkdirAll 失败是 fatal，不应包含「部分失败」（partial 语义）
-	if strings.Contains(err.Error(), "部分失败") {
-		t.Fatalf("MkdirAll 失败应返回 fatal 而非 partial, got %v", err)
-	}
+	testutil.Equal(t, strings.Contains(err.Error(), "部分失败"), false, "MkdirAll 失败应返回 fatal 而非 partial, got %v", err)
 }
 
 // TestInstallDirRecursive_SymlinkEscape 指向仓库外的 symlink 条目应被跳过（不落地）
@@ -238,13 +215,10 @@ func TestInstallDirRecursive_SymlinkEscape(t *testing.T) {
 	if err := os.Symlink(realFile, link); err != nil {
 		t.Skipf("平台不支持符号链接: %v", err)
 	}
-	if err := InstallDir(srcDir, custom, repo, "copy", ""); err != nil {
-		t.Fatalf("InstallDir = %v", err)
-	}
+	testutil.NoError(t, InstallDir(srcDir, custom, repo, "copy", ""), "InstallDir 应成功")
 	dstFile := filepath.Join(custom, "linked_model", "escaped.ysm")
-	if _, err := os.Lstat(dstFile); !os.IsNotExist(err) {
-		t.Fatalf("越权 symlink 条目应被跳过, dst=%s err=%v", dstFile, err)
-	}
+	_, statErr := os.Lstat(dstFile)
+	testutil.Equal(t, os.IsNotExist(statErr), true, "越权 symlink 条目应被跳过, dst=%s err=%v", dstFile, statErr)
 }
 
 // TestCheckDstSymlinkSegments_OutsideSymlink 目标父链含指向 .minecraft 外的 symlink 段应拒绝
@@ -261,9 +235,7 @@ func TestCheckDstSymlinkSegments_OutsideSymlink(t *testing.T) {
 	}
 	err := checkDstSymlinkSegments(filepath.Join(link, "sub", "model"))
 	var ae types.AppError
-	if !errors.As(err, &ae) || ae.Code != "INVALID_PATH" {
-		t.Fatalf("父链 symlink 指向 .minecraft 外应返回 INVALID_PATH, got %v", err)
-	}
+	testutil.Equal(t, errors.As(err, &ae) && ae.Code == "INVALID_PATH", true, "父链 symlink 指向 .minecraft 外应返回 INVALID_PATH, got %v", err)
 }
 
 // TestCheckDstSymlinkSegments_MaxDepth 验证超过 256 层时返回错误而非无限循环
@@ -282,9 +254,7 @@ func TestCheckDstSymlinkSegments_MaxDepth(t *testing.T) {
 
 	err := checkDstSymlinkSegments(deepPath)
 	var ae types.AppError
-	if !errors.As(err, &ae) || ae.Code != "INVALID_PATH" {
-		t.Fatalf("超过 256 层应返回 INVALID_PATH, got %v", err)
-	}
+	testutil.Equal(t, errors.As(err, &ae) && ae.Code == "INVALID_PATH", true, "超过 256 层应返回 INVALID_PATH, got %v", err)
 }
 
 // ====== Install（src 在仓库子目录 → 相对路径保持）======
@@ -299,22 +269,16 @@ func TestInstall_SubdirRelPath(t *testing.T) {
 	if err := os.WriteFile(src, []byte("data"), 0644); err != nil {
 		testutil.NoError(t, err)
 	}
-	if err := Install(src, custom, repo, "copy"); err != nil {
-		t.Fatalf("Install = %v", err)
-	}
+	testutil.NoError(t, Install(src, custom, repo, "copy"), "Install 应成功")
 	dst := filepath.Join(custom, "subdir", "model.ysm")
-	if _, err := os.Stat(dst); err != nil {
-		t.Fatalf("子目录相对路径应保持, dst=%s err=%v", dst, err)
-	}
+	testutil.FileExists(t, dst, "子目录相对路径应保持, dst=%s", dst)
 }
 
 func TestInstall_CustomDirNotMinecraft(t *testing.T) {
 	repo, _, _, src := setupTestDirs(t)
 	err := Install(src, t.TempDir(), repo, "copy")
 	var ae types.AppError
-	if !errors.As(err, &ae) || ae.Code != "INVALID_PATH" {
-		t.Fatalf("customDir 不在 .minecraft 内应返回 INVALID_PATH, got %v", err)
-	}
+	testutil.Equal(t, errors.As(err, &ae) && ae.Code == "INVALID_PATH", true, "customDir 不在 .minecraft 内应返回 INVALID_PATH, got %v", err)
 }
 
 // ====== CopyFileLocked 失败分支 ======
@@ -329,9 +293,8 @@ func TestCopyFileLocked_MkdirAllFail(t *testing.T) {
 	if err := os.WriteFile(src, []byte("x"), 0644); err != nil {
 		testutil.NoError(t, err)
 	}
-	if _, err := CopyFileLocked(src, filepath.Join(blocker, "sub")); err == nil {
-		t.Fatal("MkdirAll 失败应返回错误")
-	}
+	_, err := CopyFileLocked(src, filepath.Join(blocker, "sub"))
+	testutil.NotNil(t, err, "MkdirAll 失败应返回错误")
 }
 
 // TestCopyFileLocked_RenameFail 目标被非空目录占位时原子替换失败应返回 IO_ERROR
@@ -354,9 +317,7 @@ func TestCopyFileLocked_RenameFail(t *testing.T) {
 	}
 	_, err := CopyFileLocked(src, dstDir) // rename tmp → 非空目录必败
 	var ae types.AppError
-	if !errors.As(err, &ae) || ae.Code != "IO_ERROR" {
-		t.Fatalf("替换失败应返回 IO_ERROR, got %v", err)
-	}
+	testutil.Equal(t, errors.As(err, &ae) && ae.Code == "IO_ERROR", true, "替换失败应返回 IO_ERROR, got %v", err)
 }
 
 // ====== LinkOrCopyLocked 失败分支 ======
@@ -366,9 +327,7 @@ func TestLinkOrCopyLocked_LinkErr(t *testing.T) {
 	srcDir := t.TempDir() // 目录作源，硬链接必败
 	err := LinkOrCopyLocked(srcDir, filepath.Join(t.TempDir(), "dst"))
 	var ae types.AppError
-	if !errors.As(err, &ae) || ae.Code != "LINK_FAILED" {
-		t.Fatalf("目录源硬链接应返回 LINK_FAILED, got %v", err)
-	}
+	testutil.Equal(t, errors.As(err, &ae) && ae.Code == "LINK_FAILED", true, "目录源硬链接应返回 LINK_FAILED, got %v", err)
 }
 
 // ====== SymlinkOrCopyLocked 失败分支 ======
@@ -383,17 +342,13 @@ func TestSymlinkOrCopyLocked_MkdirAllFail(t *testing.T) {
 	if err := os.WriteFile(src, []byte("x"), 0644); err != nil {
 		testutil.NoError(t, err)
 	}
-	if err := SymlinkOrCopyLocked(src, filepath.Join(blocker, "sub")); err == nil {
-		t.Fatal("MkdirAll 失败应返回错误")
-	}
+	testutil.NotNil(t, SymlinkOrCopyLocked(src, filepath.Join(blocker, "sub")), "MkdirAll 失败应返回错误")
 }
 
 func TestSymlinkOrCopyLocked_SrcMissing(t *testing.T) {
 	err := SymlinkOrCopyLocked(filepath.Join(t.TempDir(), "missing.ysm"), t.TempDir())
 	var ae types.AppError
-	if !errors.As(err, &ae) || ae.Code != "IO_ERROR" {
-		t.Fatalf("源不存在应返回 IO_ERROR, got %v", err)
-	}
+	testutil.Equal(t, errors.As(err, &ae) && ae.Code == "IO_ERROR", true, "源不存在应返回 IO_ERROR, got %v", err)
 	if !strings.Contains(err.Error(), "源文件不存在") {
 		t.Errorf("应提示源文件不存在, got %v", err)
 	}
@@ -426,9 +381,7 @@ func TestSymlinkOrCopyLocked_RenameFail(t *testing.T) {
 	}
 	err := SymlinkOrCopyLocked(src, dstDir) // rename tmp → 非空目录必败
 	var ae types.AppError
-	if !errors.As(err, &ae) || ae.Code != "IO_ERROR" {
-		t.Fatalf("替换失败应返回 IO_ERROR, got %v", err)
-	}
+	testutil.Equal(t, errors.As(err, &ae) && ae.Code == "IO_ERROR", true, "替换失败应返回 IO_ERROR, got %v", err)
 }
 
 // ====== symlinkErr 分类 ======
@@ -529,9 +482,7 @@ func TestInstallToGlobal_UnsupportedExt_ValidMcRoot(t *testing.T) {
 	}
 	_, err := InstallToGlobal(badFile, mcRoot)
 	var ae types.AppError
-	if !errors.As(err, &ae) || ae.Code != "UNSUPPORTED_FORMAT" {
-		t.Fatalf("不支持的文件类型应返回 UNSUPPORTED_FORMAT, got %v", err)
-	}
+	testutil.Equal(t, errors.As(err, &ae) && ae.Code == "UNSUPPORTED_FORMAT", true, "不支持的文件类型应返回 UNSUPPORTED_FORMAT, got %v", err)
 }
 
 // ====== InstallLocked symlink 守卫分支（本环境 os.Symlink 可用；不可用时跳过）======
@@ -554,9 +505,7 @@ func TestInstall_CustomDirSymlinkOutside(t *testing.T) {
 	}
 	err := Install(src, custom, repo, "copy")
 	var ae types.AppError
-	if !errors.As(err, &ae) || ae.Code != "INVALID_PATH" {
-		t.Fatalf("customDir 真实路径不含 .minecraft 应返回 INVALID_PATH, got %v", err)
-	}
+	testutil.Equal(t, errors.As(err, &ae) && ae.Code == "INVALID_PATH", true, "customDir 真实路径不含 .minecraft 应返回 INVALID_PATH, got %v", err)
 }
 
 func TestInstall_SrcSymlinkOutside(t *testing.T) {
@@ -573,9 +522,7 @@ func TestInstall_SrcSymlinkOutside(t *testing.T) {
 	src := filepath.Join(link, "model.ysm")
 	err := Install(src, custom, repo, "copy")
 	var ae types.AppError
-	if !errors.As(err, &ae) || ae.Code != "INVALID_PATH" {
-		t.Fatalf("src 真实路径不在仓库内应返回 INVALID_PATH, got %v", err)
-	}
+	testutil.Equal(t, errors.As(err, &ae) && ae.Code == "INVALID_PATH", true, "src 真实路径不在仓库内应返回 INVALID_PATH, got %v", err)
 }
 
 // ====== InstallDirLocked 守卫与回滚分支 ======
@@ -592,9 +539,7 @@ func TestInstallDir_FinalDstInsideSrc(t *testing.T) {
 	}
 	err := InstallDir(srcDir, repo, repo, "copy", "")
 	var ae types.AppError
-	if !errors.As(err, &ae) || ae.Code != "INVALID_PATH" {
-		t.Fatalf("finalDst 在 srcDir 内应返回 INVALID_PATH, got %v", err)
-	}
+	testutil.Equal(t, errors.As(err, &ae) && ae.Code == "INVALID_PATH", true, "finalDst 在 srcDir 内应返回 INVALID_PATH, got %v", err)
 }
 
 // TestInstallDir_ExistingFinalDst 重装场景 finalDst 已存在 → 成功路径不误删旧目录
@@ -614,12 +559,8 @@ func TestInstallDir_ExistingFinalDst(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(finalDst, "keep.txt"), []byte("keep"), 0644); err != nil {
 		testutil.NoError(t, err)
 	}
-	if err := InstallDir(srcDir, custom, repo, "copy", ""); err != nil {
-		t.Fatalf("InstallDir = %v", err)
-	}
-	if _, err := os.Stat(filepath.Join(finalDst, "keep.txt")); err != nil {
-		t.Fatalf("既有目录内容不应被删除: %v", err)
-	}
+	testutil.NoError(t, InstallDir(srcDir, custom, repo, "copy", ""), "InstallDir 应成功")
+	testutil.FileExists(t, filepath.Join(finalDst, "keep.txt"), "既有目录内容不应被删除")
 }
 
 // TestInstallDir_RollbackRemoveFail 安装失败且回滚删除也失败（路径含 NUL 无效字符）→ 复合错误
@@ -636,9 +577,7 @@ func TestInstallDir_RollbackRemoveFail(t *testing.T) {
 	dstDir := filepath.Join(custom, "x\x00y")
 	err := InstallDir(srcDir, dstDir, repo, "copy", "")
 	testutil.NotNil(t, err, "无效目标路径应安装失败")
-	if !strings.Contains(err.Error(), "回滚失败") {
-		t.Fatalf("回滚失败应返回复合错误, got %v", err)
-	}
+	testutil.Equal(t, strings.Contains(err.Error(), "回滚失败"), true, "回滚失败应返回复合错误, got %v", err)
 }
 
 // ====== installDirRecursive 剩余分支 ======
@@ -661,9 +600,7 @@ func TestInstallDirRecursive_SymlinkSegmentReject(t *testing.T) {
 	}
 	err := installDirRecursive(srcDir, filepath.Join(link, "sub", "model"), "copy", "", "", nil)
 	var ae types.AppError
-	if !errors.As(err, &ae) || ae.Code != "INVALID_PATH" {
-		t.Fatalf("父链越界 symlink 应返回 INVALID_PATH, got %v", err)
-	}
+	testutil.Equal(t, errors.As(err, &ae) && ae.Code == "INVALID_PATH", true, "父链越界 symlink 应返回 INVALID_PATH, got %v", err)
 }
 
 // TestInstallDirRecursive_EntryFailures 条目落地失败（目标被非空目录占位）→ errs 累积返回部分失败
@@ -692,16 +629,12 @@ func TestInstallDirRecursive_EntryFailures(t *testing.T) {
 	t.Run("copy 条目失败", func(t *testing.T) {
 		srcDir, finalDst := setup(t)
 		err := installDirRecursive(srcDir, finalDst, "copy", "", "", nil)
-		if err == nil || !strings.Contains(err.Error(), "部分失败") {
-			t.Fatalf("应返回部分失败, got %v", err)
-		}
+		testutil.ErrorContains(t, err, "部分失败", "应返回部分失败")
 	})
 	t.Run("hardlink 条目失败", func(t *testing.T) {
 		srcDir, finalDst := setup(t)
 		err := installDirRecursive(srcDir, finalDst, "hardlink", "", "", nil)
-		if err == nil || !strings.Contains(err.Error(), "部分失败") {
-			t.Fatalf("应返回部分失败, got %v", err)
-		}
+		testutil.ErrorContains(t, err, "部分失败", "应返回部分失败")
 	})
 	t.Run("symlink 条目失败", func(t *testing.T) {
 		srcDir, finalDst := setup(t)
@@ -711,9 +644,7 @@ func TestInstallDirRecursive_EntryFailures(t *testing.T) {
 		}
 		os.Remove(probe)
 		err := installDirRecursive(srcDir, finalDst, "symlink", "", "", nil)
-		if err == nil || !strings.Contains(err.Error(), "部分失败") {
-			t.Fatalf("应返回部分失败, got %v", err)
-		}
+		testutil.ErrorContains(t, err, "部分失败", "应返回部分失败")
 	})
 }
 
@@ -729,9 +660,7 @@ func TestLinkOrCopyLocked_MkdirAllFail(t *testing.T) {
 	if err := os.WriteFile(src, []byte("x"), 0644); err != nil {
 		testutil.NoError(t, err)
 	}
-	if err := LinkOrCopyLocked(src, filepath.Join(blocker, "sub")); err == nil {
-		t.Fatal("MkdirAll 失败应返回错误")
-	}
+	testutil.NotNil(t, LinkOrCopyLocked(src, filepath.Join(blocker, "sub")), "MkdirAll 失败应返回错误")
 }
 
 // TestLinkOrCopyLocked_RenameFail 目标被非空目录占位时硬链接原子替换失败
@@ -754,9 +683,7 @@ func TestLinkOrCopyLocked_RenameFail(t *testing.T) {
 	}
 	err := LinkOrCopyLocked(src, dstDir) // os.Link 成功 → Rename(tmp, 非空目录) 必败
 	var ae types.AppError
-	if !errors.As(err, &ae) || ae.Code != "IO_ERROR" {
-		t.Fatalf("替换失败应返回 IO_ERROR, got %v", err)
-	}
+	testutil.Equal(t, errors.As(err, &ae) && ae.Code == "IO_ERROR", true, "替换失败应返回 IO_ERROR, got %v", err)
 }
 
 // ====== SymlinkOrCopyLocked 剩余分支 ======
@@ -775,9 +702,7 @@ func TestSymlinkOrCopyLocked_Idempotent(t *testing.T) {
 	if err := os.Symlink(src, filepath.Join(dstDir, "model.ysm")); err != nil {
 		t.Skipf("平台不支持符号链接: %v", err)
 	}
-	if err := SymlinkOrCopyLocked(src, dstDir); err != nil {
-		t.Fatalf("幂等重装应成功: %v", err)
-	}
+	testutil.NoError(t, SymlinkOrCopyLocked(src, dstDir), "幂等重装应成功")
 }
 
 // TestSymlinkOrCopyLocked_SymlinkErr tmp 路径被非空目录占位 → os.Symlink 失败 → LINK_FAILED
@@ -800,9 +725,7 @@ func TestSymlinkOrCopyLocked_SymlinkErr(t *testing.T) {
 	}
 	err := SymlinkOrCopyLocked(src, dstDir) // os.Remove 忽略失败 → os.Symlink 撞上目录必败
 	var ae types.AppError
-	if !errors.As(err, &ae) || ae.Code != "LINK_FAILED" {
-		t.Fatalf("symlink 创建失败应返回 LINK_FAILED, got %v", err)
-	}
+	testutil.Equal(t, errors.As(err, &ae) && ae.Code == "LINK_FAILED", true, "symlink 创建失败应返回 LINK_FAILED, got %v", err)
 }
 
 // ====== CopyFileLocked 剩余分支 ======
@@ -815,12 +738,8 @@ func TestSymlinkOrCopyLocked_SymlinkErr(t *testing.T) {
 func TestCopyFileLocked_SrcMissingStepErr(t *testing.T) {
 	_, err := CopyFileLocked(filepath.Join(t.TempDir(), "nope.ysm"), t.TempDir())
 	var ae types.AppError
-	if !errors.As(err, &ae) || ae.Code != "IO_ERROR" {
-		t.Fatalf("源缺失应返回 IO_ERROR, got %v", err)
-	}
-	if ae.Reason != "无法读取源文件" {
-		t.Fatalf("源缺失 Reason 应为「无法读取源文件」, got %q", ae.Reason)
-	}
+	testutil.Equal(t, errors.As(err, &ae) && ae.Code == "IO_ERROR", true, "源缺失应返回 IO_ERROR, got %v", err)
+	testutil.Equal(t, ae.Reason, "无法读取源文件", "源缺失 Reason 不符, got %q", ae.Reason)
 }
 
 // ====== sameSource 剩余分支 ======
@@ -833,9 +752,8 @@ func TestSameSource_SrcMissing(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	same, err := sameSource(src, dst, false)
-	if err == nil || same {
-		t.Fatalf("源缺失应报错且不同源: same=%v err=%v", same, err)
-	}
+	testutil.NotNil(t, err, "源缺失应报错: err=%v", err)
+	testutil.Equal(t, same, false, "源缺失应不同源: same=%v", same)
 }
 
 // TestSameSource_DanglingSymlink 目标为断链 symlink → Lstat 成功但 Stat 失败
@@ -850,9 +768,8 @@ func TestSameSource_DanglingSymlink(t *testing.T) {
 		t.Skipf("平台不支持符号链接: %v", err)
 	}
 	same, err := sameSource(src, dst, true)
-	if err == nil || same {
-		t.Fatalf("断链 symlink 目标应报错且不同源: same=%v err=%v", same, err)
-	}
+	testutil.NotNil(t, err, "断链 symlink 目标应报错: err=%v", err)
+	testutil.Equal(t, same, false, "断链 symlink 目标应不同源: same=%v", same)
 }
 
 // TestInstallDir_ReadDirFailRollback srcDir 是文件 → ReadDir 失败，本次新建的 finalDst 应被成功回滚
@@ -865,9 +782,8 @@ func TestInstallDir_ReadDirFailRollback(t *testing.T) {
 	err := InstallDir(srcFile, custom, repo, "copy", "")
 	testutil.NotNil(t, err, "srcDir 是文件时安装应报错")
 	finalDst := filepath.Join(custom, "notdir.ysm")
-	if _, statErr := os.Stat(finalDst); !os.IsNotExist(statErr) {
-		t.Fatalf("新建 finalDst 应被回滚删除: %v", statErr)
-	}
+	_, statErr := os.Stat(finalDst)
+	testutil.Equal(t, os.IsNotExist(statErr), true, "新建 finalDst 应被回滚删除: %v", statErr)
 }
 
 func TestCleanAbs_Normal(t *testing.T) {
@@ -895,16 +811,12 @@ func TestCopyFileLocked_ReadDirAsSourceFails(t *testing.T) {
 	dstDir := filepath.Join(dir, "dst")
 	_, err := CopyFileLocked(srcDir, dstDir)
 	var ae types.AppError
-	if !errors.As(err, &ae) || ae.Code != "IO_ERROR" {
-		t.Fatalf("目录作源复制应返回 IO_ERROR, got %v", err)
-	}
+	testutil.Equal(t, errors.As(err, &ae) && ae.Code == "IO_ERROR", true, "目录作源复制应返回 IO_ERROR, got %v", err)
 	base := filepath.Base(srcDir)
-	if _, statErr := os.Stat(filepath.Join(dstDir, base)); !os.IsNotExist(statErr) {
-		t.Fatalf("失败后目标不应存在: %v", statErr)
-	}
-	if _, statErr := os.Stat(filepath.Join(dstDir, base+".copy-tmp")); !os.IsNotExist(statErr) {
-		t.Fatalf("失败后临时文件不应残留: %v", statErr)
-	}
+	_, statErr := os.Stat(filepath.Join(dstDir, base))
+	testutil.Equal(t, os.IsNotExist(statErr), true, "失败后目标不应存在: %v", statErr)
+	_, statErr = os.Stat(filepath.Join(dstDir, base+".copy-tmp"))
+	testutil.Equal(t, os.IsNotExist(statErr), true, "失败后临时文件不应残留: %v", statErr)
 }
 
 // ====== mapStepToAppError 差异化文案映射表（ADR-044 策略 A：机制归 fsutil、文案归 installer）======
@@ -956,9 +868,9 @@ func TestMapStepToAppError(t *testing.T) {
 // TestMapStepToAppError_Unknown 未知步骤兜底为 IO_ERROR + 非空默认文案（防遗漏后静默空 Reason）
 func TestMapStepToAppError_Unknown(t *testing.T) {
 	ae := mapStepToAppError("unknown_step", "/s", "/d", errors.New("x"))
-	if ae.Code != "IO_ERROR" || ae.Reason == "" || ae.Suggestion == "" {
-		t.Fatalf("未知步骤应兜底为 IO_ERROR+默认文案, got %+v", ae)
-	}
+	testutil.Equal(t, ae.Code, "IO_ERROR", "未知步骤应兜底为 IO_ERROR, got %+v", ae)
+	testutil.Equal(t, ae.Reason == "", false, "未知步骤应兜底非空 Reason, got %+v", ae)
+	testutil.Equal(t, ae.Suggestion == "", false, "未知步骤应兜底非空 Suggestion, got %+v", ae)
 }
 
 // 真实 os.Link/os.Symlink 返回 *LinkError→*PathError→syscall.Errno 链，
@@ -1009,13 +921,9 @@ func TestInstallDir_DenyExecutablesWithEmptyRtype(t *testing.T) {
 			testutil.NoError(t, err)
 		}
 	}
-	if err := InstallDir(srcDir, custom, repo, "copy", ""); err != nil {
-		t.Fatalf("InstallDir(rtype='') = %v", err)
-	}
+	testutil.NoError(t, InstallDir(srcDir, custom, repo, "copy", ""), `InstallDir(rtype='') 应成功`)
 	finalDst := filepath.Join(custom, filepath.Base(srcDir))
-	if _, err := os.Stat(filepath.Join(finalDst, "model.ysm")); err != nil {
-		t.Fatal("正常模型文件应被安装")
-	}
+	testutil.FileExists(t, filepath.Join(finalDst, "model.ysm"), "正常模型文件应被安装")
 	for _, name := range denied {
 		if _, err := os.Stat(filepath.Join(finalDst, name)); err == nil {
 			t.Errorf("rtype=\"\" 时 %s 应被 deny-list 拒绝（BUG-3）", name)
@@ -1052,9 +960,7 @@ func TestInstallDir_DeadRecursionGuard_CaseSensitiveFS(t *testing.T) {
 	}
 	err := InstallDir(srcDir, dstDir, repo, "copy", "")
 	testutil.NoError(t, err, "大小写敏感 FS 上不同大小写目录应可安装（非死递归）, got")
-	if _, statErr := os.Stat(filepath.Join(dstDir, "SRC", "model.ysm")); statErr != nil {
-		t.Fatalf("目标应被安装: %v", statErr)
-	}
+	testutil.FileExists(t, filepath.Join(dstDir, "SRC", "model.ysm"), "目标应被安装")
 }
 
 // ====== sameDir 单元测试 ======

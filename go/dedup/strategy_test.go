@@ -71,9 +71,7 @@ func TestNewHashAlgorithm_FrontendTokens(t *testing.T) {
 	}
 	// 前端默认值必须命中**显式 case**：DeepHash.Name()=="deep_hash" 且 default 分支
 	// 改语义时不受影响——用一个故意非 deep_hash 的未知 token 确认 default 独立兜底。
-	if (&DeepHash{}).Name() != "deep_hash" {
-		t.Fatalf("DeepHash.Name() 契约漂移：前端默认值 token 依赖此返回值")
-	}
+	testutil.Equal(t, (&DeepHash{}).Name(), "deep_hash", "DeepHash.Name() 契约漂移：前端默认值 token 依赖此返回值")
 }
 
 func TestDeepHash_ComputeHash(t *testing.T) {
@@ -155,9 +153,7 @@ func TestNameSizeHash_ComputeHash(t *testing.T) {
 	// 验证哈希包含文件名和大小
 	// NameSizeHash uses fmt.Sprintf("%s_%d", name, info.Size())
 	expectedHash := "test.txt_" + itoa(int64(len(content)))
-	if hash != expectedHash {
-		t.Fatalf("NameSizeHash 期望 %s, 实际 %s", expectedHash, hash)
-	}
+	testutil.Equal(t, hash, expectedHash, "NameSizeHash 期望 %s, 实际 %s", expectedHash, hash)
 }
 
 // itoa 辅助函数：int64 转字符串
@@ -262,9 +258,7 @@ func TestFindDuplicateFiles_NameSizeStrategy(t *testing.T) {
 	groups, err := FindDuplicateFiles(dir, false, cfg)
 	testutil.NoError(t, err)
 	// NameSizeHash 基于文件名+大小，不同文件名不会被判定为重复
-	if len(groups) != 0 {
-		t.Fatalf("NameSizeHash: 不同文件名+相同大小期望 0 组重复，实际 %d 组（内容相同不影响 name_size 策略）", len(groups))
-	}
+	testutil.Equal(t, len(groups), 0, "NameSizeHash: 不同文件名+相同大小期望 0 组重复，实际 %d 组（内容相同不影响 name_size 策略）", len(groups))
 
 	// 相同文件名 + 相同大小 → 应判定为重复
 	dir2, _ := os.MkdirTemp("", "dedup-namesize-test2-*")
@@ -278,9 +272,7 @@ func TestFindDuplicateFiles_NameSizeStrategy(t *testing.T) {
 	groups2, err := FindDuplicateFiles(dir2, false, cfg)
 	testutil.NoError(t, err)
 	// NameSizeHash: x.txt_test content vs y.txt_test content → 不同 hash（文件名不同）
-	if len(groups2) != 0 {
-		t.Fatalf("NameSizeHash: 不同文件名相同内容期望 0 组，实际 %d 组（name_size 基于文件名+大小，不同名应不同 hash）", len(groups2))
-	}
+	testutil.Equal(t, len(groups2), 0, "NameSizeHash: 不同文件名相同内容期望 0 组，实际 %d 组（name_size 基于文件名+大小，不同名应不同 hash）", len(groups2))
 }
 
 func TestCountDuplicates_WithConfig(t *testing.T) {

@@ -91,17 +91,15 @@ func TestProgressWriter_KnownLength_1PercentSteps(t *testing.T) {
 	// 每次写 10 字节（1%），100 次写满 1000 字节
 	for i := 0; i < 100; i++ {
 		n, err := w.Write(bytes.Repeat([]byte("x"), 10))
-		if err != nil || n != 10 {
-			t.Fatalf("Write 失败: n=%d err=%v", n, err)
-		}
+		// OR 型复合条件拆序贯：err 与返回长度分别断言（原 if err!=nil || n!=10）
+		testutil.NoError(t, err, "Write 失败: n=%d", n)
+		testutil.Equal(t, n, 10, "Write 失败: n=%d", n)
 	}
 
 	// 验证回调单调递增且 total 恒定
 	var prev int64
 	for i, c := range calls {
-		if c.done < prev {
-			t.Fatalf("回调 %d 回退: done=%d < prev=%d", i, c.done, prev)
-		}
+		testutil.Equal(t, c.done < prev, false, "回调 %d 回退: done=%d < prev=%d", i, c.done, prev)
 		prev = c.done
 		if c.total != total {
 			t.Errorf("回调 %d total=%d，期望 %d", i, c.total, total)
@@ -125,9 +123,9 @@ func TestProgressWriter_UnknownLength_512KBThrottle(t *testing.T) {
 	// 写 3 个 chunk → 应触发 3 次回调（每次满 512KB）
 	for i := 0; i < 3; i++ {
 		n, err := w.Write(chunk)
-		if err != nil || n != len(chunk) {
-			t.Fatalf("Write chunk %d 失败: n=%d err=%v", i, n, err)
-		}
+		// OR 型复合条件拆序贯：err 与返回长度分别断言（原 if err!=nil || n!=len(chunk)）
+		testutil.NoError(t, err, "Write chunk %d 失败: n=%d", i, n)
+		testutil.Equal(t, n, len(chunk), "Write chunk %d 失败: n=%d", i, n)
 	}
 
 	if len(calls) != 3 {
@@ -154,13 +152,12 @@ func TestProgressWriter_ShortBody_TailFlush(t *testing.T) {
 
 	// 一次写完短包
 	n, err := w.Write(make([]byte, 200<<10))
-	if err != nil || n != 200<<10 {
-		t.Fatalf("Write 失败: n=%d err=%v", n, err)
-	}
+	// OR 型复合条件拆序贯：err 与返回长度分别断言（原 if err!=nil || n!=200<<10）
+	testutil.NoError(t, err, "Write 失败: n=%d", n)
+	testutil.Equal(t, n, 200<<10, "Write 失败: n=%d", n)
 
-	if len(calls) == 0 {
-		t.Fatal("短包应通过尾块补发至少一次回调")
-	}
+	// 护栏：回调至少一次（原 if len==0 → t.Fatal）
+	testutil.Equal(t, len(calls) == 0, false, "短包应通过尾块补发至少一次回调")
 	last := calls[len(calls)-1]
 	if last.done != total {
 		t.Errorf("最终回调 done=%d，期望 %d", last.done, total)

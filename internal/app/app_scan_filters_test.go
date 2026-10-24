@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/internal/testutil"
 )
 
 // TestModelMatchesFilters 表驱动覆盖 modelMatchesFilters（SearchModels 的过滤核心，
@@ -65,9 +66,7 @@ func TestAllScanRoots(t *testing.T) {
 	}
 	roots := allScanRoots(cfg)
 	// 8 固定根 + 2 有效 CustomRoots = 10；空串 CustomRoot 必须被丢弃。
-	if len(roots) != 10 {
-		t.Fatalf("期望 10 个根, got %d: %v", len(roots), roots)
-	}
+	testutil.Equal(t, len(roots), 10, "期望 10 个根, got %v", roots)
 	want := map[string]bool{
 		"/files": true, "/mc": true, "/rp": true, "/sp": true, "/sch": true,
 		"/lit": true, "/mmd": true, "/vrc": true, "/custom1": true, "/custom2": true,

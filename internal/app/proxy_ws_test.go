@@ -107,21 +107,16 @@ func TestProxyWebSocketBidirectional(t *testing.T) {
 			header = append(header, one[0])
 		}
 	}
-	if !strings.Contains(string(header), "101") {
-		t.Fatalf("期望 101 响应, got %q", string(header))
-	}
+	testutil.Equal(t, strings.Contains(string(header), "101"), true, "期望 101 响应, got %q", string(header))
 
 	// 上行：客户端 → 上游（经代理转发，上游回显）
 	if _, err := clientConn.Write([]byte("hello-ws")); err != nil {
 		testutil.NoError(t, err)
 	}
 	echo := make([]byte, len("hello-ws"))
-	if _, err := io.ReadFull(clientConn, echo); err != nil {
-		t.Fatalf("读回显失败（上行/下行任一方向未穿透）: %v", err)
-	}
-	if string(echo) != "hello-ws" {
-		t.Fatalf("回显内容不符: %q", string(echo))
-	}
+	_, err = io.ReadFull(clientConn, echo)
+	testutil.NoError(t, err, "读回显失败（上行/下行任一方向未穿透）")
+	testutil.Equal(t, string(echo), "hello-ws", "回显内容不符")
 
 	// 下行收尾：客户端断开 → 代理两个方向都应结束（goroutine 泄漏即挂测试 deadline）
 	if err := clientConn.Close(); err != nil {
@@ -131,6 +126,6 @@ func TestProxyWebSocketBidirectional(t *testing.T) {
 	case err := <-handlerErr:
 		testutil.NoError(t, err, "proxyWebSocket 返回错误")
 	case <-time.After(5 * time.Second):
-		t.Fatal("proxyWebSocket 未在双向结束后返回（存在方向未等待/连接未关闭）")
+		testutil.Equal(t, true, false, "proxyWebSocket 未在双向结束后返回（存在方向未等待/连接未关闭）")
 	}
 }

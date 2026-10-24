@@ -37,7 +37,8 @@ func waitForInflight(t *testing.T, want int) {
 		}
 		time.Sleep(2 * time.Millisecond)
 	}
-	t.Fatalf("等待在途航班数 >= %d 超时（当前 %d）", want, inflightLen())
+	// 护栏（到达即失败）：Equal 恒失败即 Goexit，与原 t.Fatalf 终止语义等价
+	testutil.Equal(t, false, true, "等待在途航班数 >= %d 超时（当前 %d）", want, inflightLen())
 }
 
 func TestScanEntriesWithHit_ConcurrentSameDir_SingleWalk(t *testing.T) {
@@ -90,16 +91,10 @@ func TestScanEntriesWithHit_ConcurrentSameDir_SingleWalk(t *testing.T) {
 	close(release)
 	wg.Wait()
 
-	if got := walkCount.Load(); got != 1 {
-		t.Fatalf("并发同目录扫描应只走盘 1 次，实际 %d 次", got)
-	}
-	if got := flightJoins.Load(); got != n-1 {
-		t.Fatalf("除 owner 外 %d 个调用方应全部并入在途航班，实际 %d", n-1, got)
-	}
+	testutil.Equal(t, walkCount.Load(), int64(1), "并发同目录扫描应只走盘 1 次，实际 %d", walkCount.Load())
+	testutil.Equal(t, flightJoins.Load(), int64(n-1), "除 owner 外 %d 个调用方应全部并入在途航班，实际 %d", n-1, flightJoins.Load())
 	for i := 0; i < n; i++ {
-		if counts[i] != 1 {
-			t.Fatalf("调用方 %d 应拿到 1 个条目，实际 %d", i, counts[i])
-		}
+		testutil.Equal(t, counts[i], 1, "调用方 %d 应拿到 1 个条目，实际 %d", i, counts[i])
 	}
 	// 恰有 1 个调用方 hit=false（owner，薄壳据此只记 1 条扫描日志）；
 	// 等待方与缓存命中者均 hit=true（不重复记日志）
@@ -109,13 +104,9 @@ func TestScanEntriesWithHit_ConcurrentSameDir_SingleWalk(t *testing.T) {
 			falses++
 		}
 	}
-	if falses != 1 {
-		t.Fatalf("应恰好 1 个调用方 hit=false（唯一真扫），实际 %d", falses)
-	}
+	testutil.Equal(t, falses, 1, "应恰好 1 个调用方 hit=false（唯一真扫），实际 %d", falses)
 	// 航班须已清理（不泄漏）
-	if inflightLen() != 0 {
-		t.Fatalf("扫描结束后在途航班应清空，剩余 %d", inflightLen())
-	}
+	testutil.Equal(t, inflightLen(), 0, "扫描结束后在途航班应清空，剩余 %d", inflightLen())
 }
 
 func TestScanEntriesWithHit_DifferentDirs_EachWalked(t *testing.T) {
@@ -129,16 +120,11 @@ func TestScanEntriesWithHit_DifferentDirs_EachWalked(t *testing.T) {
 
 	ScanEntriesWithHit(dirA)
 	ScanEntriesWithHit(dirB)
-	if got := walkCount.Load(); got != 2 {
-		t.Fatalf("不同目录各走盘 1 次，应 2 次，实际 %d", got)
-	}
+	testutil.Equal(t, walkCount.Load(), int64(2), "不同目录各走盘 1 次，应 2 次，实际 %d", walkCount.Load())
 	// 缓存内二次扫描不新增 walk
-	if _, hit := ScanEntriesWithHit(dirA); !hit {
-		t.Fatal("30s 内二次扫描应命中缓存")
-	}
-	if got := walkCount.Load(); got != 2 {
-		t.Fatalf("缓存命中不应新增 walk，实际 %d", got)
-	}
+	_, hit := ScanEntriesWithHit(dirA)
+	testutil.Equal(t, hit, true, "30s 内二次扫描应命中缓存")
+	testutil.Equal(t, walkCount.Load(), int64(2), "缓存命中不应新增 walk，实际 %d", walkCount.Load())
 }
 
 func TestScanEntriesWithHit_WaitersGetClone(t *testing.T) {
@@ -178,13 +164,11 @@ func TestScanEntriesWithHit_WaitersGetClone(t *testing.T) {
 	wg.Wait()
 
 	// 等待方拿到的是克隆——改等待方切片不得污染 owner/缓存后备
-	if len(waiterEntries) != 1 || len(ownerEntries) != 1 {
-		t.Fatalf("双方各应 1 条目: owner=%d waiter=%d", len(ownerEntries), len(waiterEntries))
-	}
+	// OR 型复合条件拆序贯（len 守卫在前，防下方 [0] 越界——Equal 失败即 Goexit，守卫语义等价）
+	testutil.Equal(t, len(waiterEntries), 1, "双方各应 1 条目: owner=%d waiter=%d", len(ownerEntries), len(waiterEntries))
+	testutil.Equal(t, len(ownerEntries), 1, "双方各应 1 条目: owner=%d waiter=%d", len(ownerEntries), len(waiterEntries))
 	waiterEntries[0].Name = "HACKED"
-	if ownerEntries[0].Name == "HACKED" {
-		t.Fatal("等待方切片与 owner 共享底层数组——必须克隆")
-	}
+	testutil.Equal(t, ownerEntries[0].Name == "HACKED", false, "等待方切片与 owner 共享底层数组——必须克隆")
 }
 
 func TestScanEntriesWithHit_WaiterInvalidatedDuringFlight_Rescans(t *testing.T) {
@@ -237,30 +221,22 @@ func TestScanEntriesWithHit_WaiterInvalidatedDuringFlight_Rescans(t *testing.T) 
 		}
 		time.Sleep(2 * time.Millisecond)
 	}
-	if flightJoins.Load() < 1 {
-		t.Fatal("等待方未并入航班（flightJoins 仍为 0）")
-	}
+	testutil.Equal(t, flightJoins.Load() >= 1, true, "等待方未并入航班（flightJoins 仍为 0）")
 	// 航班在途期间缓存被失效（模拟 import/enable/disable 完成时 InvalidatePath）
 	InvalidateCache()
 	close(release)
 	wg.Wait()
 
 	// 等待方不得吞下失效前的旧结果：应 retry 重扫（walkCount=2：owner 1 次 + 等待方重扫 1 次）
-	if got := walkCount.Load(); got != 2 {
-		t.Fatalf("失效后等待方应重扫，期望 walk=2，实际 %d", got)
-	}
-	if len(ownerEntries) != 1 || len(waiterEntries) != 1 {
-		t.Fatalf("双方各应 1 条目: owner=%d waiter=%d", len(ownerEntries), len(waiterEntries))
-	}
+	testutil.Equal(t, walkCount.Load(), int64(2), "失效后等待方应重扫，期望 walk=2，实际 %d", walkCount.Load())
+	// OR 型复合条件拆序贯（len 守卫在前，防下方 [0] 越界——Equal 失败即 Goexit，守卫语义等价）
+	testutil.Equal(t, len(ownerEntries), 1, "双方各应 1 条目: owner=%d waiter=%d", len(ownerEntries), len(waiterEntries))
+	testutil.Equal(t, len(waiterEntries), 1, "双方各应 1 条目: owner=%d waiter=%d", len(ownerEntries), len(waiterEntries))
 	// 重扫的等待方 hit=false（真扫，不记「缓存命中」日志）；owner 也 hit=false
 	for i, h := range hits {
-		if h {
-			t.Fatalf("调用方 %d 应 hit=false（真扫），实际 true", i)
-		}
+		testutil.Equal(t, h, false, "调用方 %d 应 hit=false（真扫），实际 true", i)
 	}
-	if inflightLen() != 0 {
-		t.Fatalf("扫描结束后在途航班应清空，剩余 %d", inflightLen())
-	}
+	testutil.Equal(t, inflightLen(), 0, "扫描结束后在途航班应清空，剩余 %d", inflightLen())
 }
 
 // InvalidatePath 在途窗口（复核 P2-3 补锁，与上方 InvalidateCache 版 Rescans 对仗）：

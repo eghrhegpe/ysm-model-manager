@@ -20,18 +20,15 @@ func TestHideWindow_NonWindows_IsNoop(t *testing.T) {
 	out, err := cmd.CombinedOutput()
 	testutil.NoError(t, err, "执行 echo 失败")
 	got := string(out)
-	if got != "ok\n" {
-		t.Fatalf("输出 %q，期望 %q", got, "ok\n")
-	}
+	testutil.Equal(t, got, "ok\n", "输出 %q，期望 %q", got, "ok\n")
 }
 
 // TestHideWindow_NilCmdNoPanic 验证 nil cmd 输入跨平台安全（no-op，不 panic）：
 // 原 Windows 平台会解引用 nil panic，已加 nil guard（hidewindow_windows.go 头注释），两平台语义对齐。
 func TestHideWindow_NilCmdNoPanic(t *testing.T) {
 	defer func() {
-		if r := recover(); r != nil {
-			t.Fatalf("HideWindow(nil) 不应 panic（nil guard 失效）: %v", r)
-		}
+		// recover() 非 nil 即 panic 发生——Nil 断言直接覆盖原 recover!=nil → Fatal 分支
+		testutil.Nil(t, recover(), "HideWindow(nil) 不应 panic（nil guard 失效）")
 	}()
 	var cmd *exec.Cmd
 	HideWindow(cmd)

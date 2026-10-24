@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/internal/testutil"
 )
 
 // writeMaidModelFixture 造一个可被几何管线解析的女仆包 zip：
@@ -38,21 +39,15 @@ func writeMaidModelFixture(t *testing.T, dir, name string) string {
 func TestSearchModels_NoNumeric_IncludesUnparseable(t *testing.T) {
 	base := t.TempDir()
 	ysmRoot := filepath.Join(base, "ysm", "models")
-	if err := os.MkdirAll(ysmRoot, 0o755); err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, os.MkdirAll(ysmRoot, 0o755))
 	neutral := filepath.Join(base, "misc")
-	if err := os.MkdirAll(neutral, 0o755); err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, os.MkdirAll(neutral, 0o755))
 	writeYsmModelFixture(t, ysmRoot, "hero", 5)
 	writeTestZip(t, neutral, "mystery.zip", map[string]string{"readme.txt": "no geometry here"})
 
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
 	results := a.SearchModels(base, types.SearchFilters{})
-	if len(results) != 2 {
-		t.Fatalf("无数值条件应返回全部 2 条（zip 不蒸发），got %d", len(results))
-	}
+	testutil.Equal(t, len(results), 2, "无数值条件应返回全部 2 条（zip 不蒸发）")
 	byName := make(map[string]types.SearchResult, len(results))
 	for _, r := range results {
 		byName[r.Name] = r
@@ -77,13 +72,9 @@ func TestSearchModels_NoNumeric_IncludesUnparseable(t *testing.T) {
 func TestSearchModels_Numeric_ExcludesNonGeometryType(t *testing.T) {
 	base := t.TempDir()
 	ysmRoot := filepath.Join(base, "ysm", "models")
-	if err := os.MkdirAll(ysmRoot, 0o755); err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, os.MkdirAll(ysmRoot, 0o755))
 	neutral := filepath.Join(base, "misc")
-	if err := os.MkdirAll(neutral, 0o755); err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, os.MkdirAll(neutral, 0o755))
 	writeYsmModelFixture(t, ysmRoot, "hero", 5)
 	// 女仆包 zip：Type 派生为 maid-model（geometrySearchable）→ 数值搜索应命中（B 案端到端）
 	writeMaidModelFixture(t, neutral, "maid_reimu")
@@ -103,9 +94,7 @@ func TestSearchModels_Numeric_ExcludesNonGeometryType(t *testing.T) {
 			t.Errorf("未知内容 zip（Type=container）不得进数值搜索，结果含 %v", names)
 		}
 	}
-	if len(results) != 2 {
-		t.Fatalf("数值搜索应命中 2 条（ysm + maid），got %v（%v）", len(results), names)
-	}
+	testutil.Equal(t, len(results), 2, "数值搜索应命中 2 条（ysm + maid）: %v", names)
 	if !maideHit {
 		t.Errorf("maid-model zip 应可被数值搜索命中（几何管线解析 L0 清单），结果 %v", names)
 	}
@@ -139,9 +128,7 @@ func writePmxStatsFixture(t *testing.T, dir, name string, bones int) string {
 		`<texture><name>t0</name><texsize>64,64</texsize></texture>` +
 		`</model>`
 	p := filepath.Join(dir, name+".pmx")
-	if err := os.WriteFile(p, []byte(doc), 0o644); err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, os.WriteFile(p, []byte(doc), 0o644))
 	return p
 }
 
@@ -165,13 +152,9 @@ func itoaPmx(n int) string {
 func TestSearchModels_MmdStatsNumeric(t *testing.T) {
 	base := t.TempDir()
 	epDir := filepath.Join(base, "mmd", "PMX")
-	if err := os.MkdirAll(epDir, 0o755); err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, os.MkdirAll(epDir, 0o755))
 	ysmRoot := filepath.Join(base, "ysm", "models")
-	if err := os.MkdirAll(ysmRoot, 0o755); err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, os.MkdirAll(ysmRoot, 0o755))
 	writePmxStatsFixture(t, epDir, "miku", 4)
 	writeYsmModelFixture(t, ysmRoot, "hero", 5)
 
@@ -179,9 +162,7 @@ func TestSearchModels_MmdStatsNumeric(t *testing.T) {
 
 	// 无数值条件：直通（MMD 零值几何，不解析不蒸发）
 	results := a.SearchModels(base, types.SearchFilters{})
-	if len(results) != 2 {
-		t.Fatalf("无过滤应返回 2 条，got %d", len(results))
-	}
+	testutil.Equal(t, len(results), 2, "无过滤应返回 2 条")
 	for _, r := range results {
 		if r.Name == "miku.pmx" && (r.BoneCount != 0 || r.Type != "EntityPlayer") {
 			t.Errorf("直通路径 MMD 条目应零值 + Type=EntityPlayer，got %+v", r)
@@ -190,25 +171,20 @@ func TestSearchModels_MmdStatsNumeric(t *testing.T) {
 
 	// minBones=2：MMD 统计级解析命中（bone=4 ≥ 2）+ ysm 命中（bone=5）
 	results = a.SearchModels(base, types.SearchFilters{MinBones: 2})
-	if len(results) != 2 {
-		t.Fatalf("minBones=2 应命中 2 条（mmd 4 骨 + ysm 5 骨），got %+v", results)
-	}
+	testutil.Equal(t, len(results), 2, "minBones=2 应命中 2 条（mmd 4 骨 + ysm 5 骨）: %+v", results)
 	var miku *types.SearchResult
 	for i := range results {
 		if results[i].Name == "miku.pmx" {
 			miku = &results[i]
 		}
 	}
-	if miku == nil {
-		t.Fatalf("minBones=2 结果缺 miku（MMD 统计级解析未生效），got %+v", results)
-	}
+	testutil.NotNil(t, miku, "minBones=2 结果缺 miku（MMD 统计级解析未生效）: %+v", results)
 	if miku.BoneCount != 4 || miku.TexWidth != 64 || miku.CubeCount != 0 {
 		t.Errorf("MMD 统计结果 = %+v，期望 bone=4 tex=64 cube=0（cube 诚实零值）", miku)
 	}
 
 	// minCubes=1：MMD cube=0 被筛（诚实排除），ysm（cube=5）留
 	results = a.SearchModels(base, types.SearchFilters{MinCubes: 1})
-	if len(results) != 1 || results[0].Name != "hero" {
-		t.Fatalf("minCubes=1 应只留 ysm（MMD cube 零值诚实排除），got %+v", results)
-	}
+	testutil.Equal(t, len(results), 1, "minCubes=1 应只留 ysm（MMD cube 零值诚实排除）: %+v", results) // 前置守卫：仅 1 条才取 results[0]
+	testutil.Equal(t, results[0].Name, "hero", "minCubes=1 应只留 ysm（MMD cube 零值诚实排除）")
 }

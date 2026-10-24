@@ -35,9 +35,7 @@ func TestGeoCache_HitReusesResult(t *testing.T) {
 	got1 := c.Get(p, compute)
 	got2 := c.Get(p, compute)
 
-	if calls != 1 {
-		t.Fatalf("缓存命中应只 compute 1 次，实际 %d", calls)
-	}
+	testutil.Equal(t, calls, 1, "缓存命中应只 compute 1 次")
 	if got1.BoneCount != 5 || got2.BoneCount != 5 {
 		t.Errorf("命中应返回缓存值，got1=%d got2=%d", got1.BoneCount, got2.BoneCount)
 	}
@@ -62,9 +60,7 @@ func TestGeoCache_ModTimeChangeInvalidates(t *testing.T) {
 
 	calls := 0
 	got := c.Get(p, func() types.BedrockModel { calls++; return fakeModel(9) })
-	if calls != 1 {
-		t.Fatalf("mtime 变化应重新 compute，实际 calls=%d", calls)
-	}
+	testutil.Equal(t, calls, 1, "mtime 变化应重新 compute")
 	if got.BoneCount != 9 {
 		t.Errorf("失效后应返回新值 9，got %d", got.BoneCount)
 	}
@@ -86,9 +82,7 @@ func TestGeoCache_SizeChangeInvalidates(t *testing.T) {
 
 	calls := 0
 	c.Get(p, func() types.BedrockModel { calls++; return fakeModel(7) })
-	if calls != 1 {
-		t.Fatalf("size 变化应重新 compute，实际 calls=%d", calls)
-	}
+	testutil.Equal(t, calls, 1, "size 变化应重新 compute")
 }
 
 // TestGeoCache_UnstatableNotCached: 不可 stat（不存在）不缓存、每次 compute
@@ -98,9 +92,7 @@ func TestGeoCache_UnstatableNotCached(t *testing.T) {
 	calls := 0
 	c.Get(p, func() types.BedrockModel { calls++; return fakeModel(0) })
 	c.Get(p, func() types.BedrockModel { calls++; return fakeModel(0) })
-	if calls != 2 {
-		t.Fatalf("不可 stat 文件每次都应 compute，实际 calls=%d", calls)
-	}
+	testutil.Equal(t, calls, 2, "不可 stat 文件每次都应 compute")
 	if _, ok := c.Load(p); ok {
 		t.Errorf("不可 stat 文件不应写入缓存")
 	}
@@ -150,31 +142,21 @@ func TestGeoCache_ClearInvalidatesAll(t *testing.T) {
 	}
 	calls := 0
 	c.Get(p, func() types.BedrockModel { calls++; return fakeModel(3) })
-	if calls != 1 {
-		t.Fatalf("Clear 后应重新 compute，实际 calls=%d", calls)
-	}
+	testutil.Equal(t, calls, 1, "Clear 后应重新 compute")
 }
 
 // TestEnsureGeoCache_NewAppInjects: NewApp 已注入 geoCache（非 nil）
 func TestEnsureGeoCache_NewAppInjects(t *testing.T) {
 	a := NewApp()
-	if a.geoCache == nil {
-		t.Fatal("NewApp 应注入 geoCache")
-	}
-	if got := a.ensureGeoCache(); got == nil {
-		t.Fatal("ensureGeoCache 不应返回 nil")
-	}
+	testutil.NotNil(t, a.geoCache, "NewApp 应注入 geoCache")
+	testutil.NotNil(t, a.ensureGeoCache(), "ensureGeoCache 不应返回 nil")
 }
 
 // TestEnsureGeoCache_RepoAppLazyInit: repoApp（不经 NewApp）兜底惰性初始化
 func TestEnsureGeoCache_RepoAppLazyInit(t *testing.T) {
 	a := repoApp(t, types.AppConfig{FilesRoot: t.TempDir()})
-	if a.geoCache != nil {
-		t.Fatal("repoApp 初始 geoCache 应为 nil")
-	}
-	if got := a.ensureGeoCache(); got == nil {
-		t.Fatal("ensureGeoCache 兜底应惰性初始化")
-	}
+	testutil.Nil(t, a.geoCache, "repoApp 初始 geoCache 应为 nil")
+	testutil.NotNil(t, a.ensureGeoCache(), "ensureGeoCache 兜底应惰性初始化")
 }
 
 // ===== 字节预算封顶（2026-10-14 锐评 P2：原实现无界 map，base64 纹理驻留无上限）=====
@@ -183,9 +165,7 @@ func TestEnsureGeoCache_RepoAppLazyInit(t *testing.T) {
 func geoTestFile(t *testing.T, d, name string) string {
 	t.Helper()
 	p := filepath.Join(d, name)
-	if err := os.WriteFile(p, []byte("geo"), 0o644); err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, os.WriteFile(p, []byte("geo"), 0o644))
 	return p
 }
 
@@ -206,9 +186,8 @@ func TestGeoCache_BudgetEvictsFIFO(t *testing.T) {
 
 	c.Get(pa, func() types.BedrockModel { return texturedModel(1, strings.Repeat("a", 50)) })
 	c.Get(pb, func() types.BedrockModel { return texturedModel(2, strings.Repeat("b", 50)) })
-	if _, ok := c.Load(pa); !ok {
-		t.Fatalf("预算内（50+50=100）不应逐出")
-	}
+	_, ok := c.Load(pa)
+	testutil.Equal(t, ok, true, "预算内（50+50=100）不应逐出")
 	c.Get(pc, func() types.BedrockModel { return texturedModel(3, strings.Repeat("c", 50)) })
 
 	if _, ok := c.Load(pa); ok {
@@ -248,19 +227,13 @@ func TestGeoCache_OverwriteRebooksCost(t *testing.T) {
 	c := newGeoCacheWithMax(100)
 	d := t.TempDir()
 	p := filepath.Join(d, "m.ysm")
-	if err := os.WriteFile(p, []byte("v1"), 0o644); err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, os.WriteFile(p, []byte("v1"), 0o644))
 	c.Get(p, func() types.BedrockModel { return texturedModel(1, strings.Repeat("a", 50)) })
 
 	// 文件内容变（size 变 → 指纹失效）→ 重算出 80 字节纹理：成本账应为 80 而非 50+80
-	if err := os.WriteFile(p, []byte("v2-longer"), 0o644); err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, os.WriteFile(p, []byte("v2-longer"), 0o644))
 	c.Get(p, func() types.BedrockModel { return texturedModel(2, strings.Repeat("a", 80)) })
-	if c.totalBytes != 80 {
-		t.Fatalf("覆盖后成本账应为 80（先扣旧 50 再账新 80），实际 %d", c.totalBytes)
-	}
+	testutil.Equal(t, c.totalBytes, 80, "覆盖后成本账应为 80（先扣旧 50 再账新 80）")
 
 	// 再来一条 50 字节 → 总 130 > 100 → 逐出 m（槽 0，按当前值 80 扣账）
 	q := geoTestFile(t, d, "q.ysm")

@@ -119,9 +119,7 @@ func TestEvaluateBaseline_Verdicts(t *testing.T) {
 	for _, s := range diff.Stages {
 		got[s.Name] = s
 	}
-	if len(got) != len(stages) {
-		t.Fatalf("逐阶段明细应覆盖全部阶段（含新增），got %d want %d", len(got), len(stages))
-	}
+	testutil.Equal(t, len(got), len(stages), "逐阶段明细应覆盖全部阶段（含新增）")
 	cases := []struct {
 		name    string
 		verdict string
@@ -202,9 +200,9 @@ func TestBuildBaselineJSON_VerdictAndSavePath(t *testing.T) {
 		if err == nil {
 			t.Error("退化应返回错误（D8 失败优先：CI 靠退出码判定）")
 		}
-		if block == nil || block.Diff == nil {
-			t.Fatalf("退化也必须有载荷（规律六：错误分支要带结构化数据）, got %+v", block)
-		}
+		// NotNil 序贯守卫：block 非 nil 后才解引用 block.Diff（失败即 Goexit）
+		testutil.NotNil(t, block, "退化也必须有载荷（规律六：错误分支要带结构化数据）")
+		testutil.NotNil(t, block.Diff, "退化也必须有载荷（规律六：错误分支要带结构化数据）")
 		if block.Diff.Verdict != baselineVerdictRegressed || block.Diff.Degraded != 1 {
 			t.Errorf("应为 1 个阶段退化, got verdict=%q degraded=%d", block.Diff.Verdict, block.Diff.Degraded)
 		}
@@ -245,7 +243,7 @@ func TestRunSingleBenchJSON_BaselinePurityAndAttach(t *testing.T) {
 	basePath := filepath.Join(root, "base.json")
 
 	if err := runSingleBenchJSON(&CmdContext{App: &benchFakeApp{}, FilesRoot: root}, modelPath, 1, "", basePath, 50); err != nil {
-		t.Fatalf("保存基准应成功: %v", err)
+		testutil.NoError(t, err, "保存基准应成功")
 	}
 
 	ctx := &CmdContext{App: &benchFakeApp{}, FilesRoot: root}
@@ -271,12 +269,10 @@ func TestRunSingleBenchJSON_BaselinePurityAndAttach(t *testing.T) {
 
 	// ② 判决装配进载荷
 	payload, ok := ctx.result.(*singleBenchJSON)
-	if !ok {
-		t.Fatalf("SetResult 应为 *singleBenchJSON, got %T", ctx.result)
-	}
-	if payload.Baseline == nil || payload.Baseline.Diff == nil {
-		t.Fatalf("载荷应带 baseline.diff（GUI 据此说「哪个阶段退化了」）, got %+v", payload.Baseline)
-	}
+	testutil.Equal(t, ok, true, "SetResult 应为 *singleBenchJSON, got %T", ctx.result)
+	// NotNil 序贯守卫：Baseline 非 nil 后才解引用 .Diff（失败即 Goexit）
+	testutil.NotNil(t, payload.Baseline, "载荷应带 baseline.diff（GUI 据此说「哪个阶段退化了」）")
+	testutil.NotNil(t, payload.Baseline.Diff, "载荷应带 baseline.diff（GUI 据此说「哪个阶段退化了」）")
 	if payload.Baseline.Diff.Verdict == "" {
 		t.Error("判决不得为空")
 	}
@@ -303,7 +299,7 @@ func TestRunSingleBenchJSON_BaselineBlockOnlyWhenUsed(t *testing.T) {
 	ctx := &CmdContext{App: &benchFakeApp{}, FilesRoot: root}
 	out := captureOutput(t, func() {
 		if err := runSingleBenchJSON(ctx, modelPath, 1, "", "", 50); err != nil {
-			t.Fatalf("无基准参数应成功: %v", err)
+			testutil.NoError(t, err, "无基准参数应成功")
 		}
 	})
 	if strings.Contains(out, `"baseline"`) {
@@ -327,7 +323,7 @@ func TestRunSingleBenchJSON_SaveBaselineSlot(t *testing.T) {
 	ctx := &CmdContext{App: &benchFakeApp{}, FilesRoot: root}
 	_ = captureOutput(t, func() {
 		if err := runSingleBenchJSON(ctx, modelPath, 1, "", baselineSlotSentinel, 50); err != nil {
-			t.Fatalf("保存到标准基准槽应成功: %v", err)
+			testutil.NoError(t, err, "保存到标准基准槽应成功")
 		}
 	})
 
@@ -384,9 +380,7 @@ func TestBuildBaselineJSON_SaveSurvivesCompareFailure(t *testing.T) {
 
 	block, err := buildBaselineJSON(missing, savePath, 50, stages)
 	testutil.NotNil(t, err, "对比失败必须回传错误，否则 CI 会把「没比成」当成功")
-	if _, statErr := os.Stat(savePath); statErr != nil {
-		t.Fatalf("对比失败不得吞掉记录动作，基准文件应已写出: %v", statErr)
-	}
+	testutil.FileExists(t, savePath, "对比失败不得吞掉记录动作，基准文件应已写出")
 	testutil.NotNil(t, block, "载荷仍应交出（规律六）：本次记录的去向就在里面")
 	if block.SavedTo != savePath {
 		t.Errorf("载荷应回显本次记录的去向 %q, got %q", savePath, block.SavedTo)
@@ -409,9 +403,7 @@ func TestApplyBenchBaseline_SaveSurvivesCompareFailure(t *testing.T) {
 
 	err := applyBenchBaseline(missing, savePath, 50, stages)
 	testutil.NotNil(t, err, "对比失败必须回传错误")
-	if _, statErr := os.Stat(savePath); statErr != nil {
-		t.Fatalf("text 路径同样不得吞掉记录动作: %v", statErr)
-	}
+	testutil.FileExists(t, savePath, "text 路径同样不得吞掉记录动作")
 	if !strings.Contains(err.Error(), "已记录") {
 		t.Errorf("错误应说明本次已记录新基准, got %v", err)
 	}
@@ -451,9 +443,8 @@ func TestBuildBaselineJSON_UnavailableCarriesToken(t *testing.T) {
 			testutil.NoError(t, err)
 		}
 		block, err := buildBaselineJSON(broken, "", 50, stages)
-		if err == nil || block == nil {
-			t.Fatalf("损坏基准应回传错误且带载荷, got block=%+v err=%v", block, err)
-		}
+		testutil.NotNil(t, err, "损坏基准应回传错误且带载荷")
+		testutil.NotNil(t, block, "损坏基准应回传错误且带载荷")
 		if block.Error != baselineErrInvalid {
 			t.Errorf("应给 token %q, got %q", baselineErrInvalid, block.Error)
 		}
@@ -462,9 +453,8 @@ func TestBuildBaselineJSON_UnavailableCarriesToken(t *testing.T) {
 	t.Run("路径是目录/读不了 → unreadable", func(t *testing.T) {
 		// 目录不是合法基准文件，读它必然失败且**不是** IsNotExist
 		block, err := buildBaselineJSON(root, "", 50, stages)
-		if err == nil || block == nil {
-			t.Fatalf("不可读应回传错误且带载荷, got block=%+v err=%v", block, err)
-		}
+		testutil.NotNil(t, err, "不可读应回传错误且带载荷")
+		testutil.NotNil(t, block, "不可读应回传错误且带载荷")
 		if block.Error != baselineErrUnreadable {
 			t.Errorf("应给 token %q, got %q", baselineErrUnreadable, block.Error)
 		}
@@ -477,9 +467,8 @@ func TestBuildBaselineJSON_UnavailableCarriesToken(t *testing.T) {
 		t.Cleanup(func() { defaultBaselinePath = prev })
 
 		block, err := buildBaselineJSON(baselineSlotSentinel, "", 50, stages)
-		if err == nil || block == nil {
-			t.Fatalf("槽位不可用应回传错误且带载荷, got block=%+v err=%v", block, err)
-		}
+		testutil.NotNil(t, err, "槽位不可用应回传错误且带载荷")
+		testutil.NotNil(t, block, "槽位不可用应回传错误且带载荷")
 		if block.Error != baselineErrSlotUnavailable {
 			t.Errorf("应给 token %q, got %q", baselineErrSlotUnavailable, block.Error)
 		}

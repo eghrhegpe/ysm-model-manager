@@ -19,9 +19,8 @@ func TestGetPackInfo_InvalidJSON(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	info := GetPackInfo("", dir)
-	if info.Name != "" || info.Description != "" {
-		t.Fatalf("非法 JSON 应返回空 PackInfo: %+v", info)
-	}
+	testutil.Equal(t, info.Name, "", "非法 JSON 应返回空 PackInfo: %+v", info)
+	testutil.Equal(t, info.Description, "", "非法 JSON 应返回空 PackInfo: %+v", info)
 }
 
 // lang 覆盖 name/description（lang 与原始值均非空）+ ysm-pack.png 读取
@@ -39,12 +38,9 @@ func TestGetPackInfo_LangOverrideAndImage(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	info := GetPackInfo("", dir)
-	if info.Name != "LangName" || info.Description != "LangDesc" {
-		t.Fatalf("lang 应覆盖 name/description: %+v", info)
-	}
-	if !strings.HasPrefix(info.ImageBase64, "data:image/png;base64,") {
-		t.Fatalf("应读取 ysm-pack.png 生成 data URI: %q", info.ImageBase64)
-	}
+	testutil.Equal(t, info.Name, "LangName", "lang 应覆盖 name/description: %+v", info)
+	testutil.Equal(t, info.Description, "LangDesc", "lang 应覆盖 name/description: %+v", info)
+	testutil.Equal(t, strings.HasPrefix(info.ImageBase64, "data:image/png;base64,"), true, "应读取 ysm-pack.png 生成 data URI: %q", info.ImageBase64)
 }
 
 // lang 条目 name 为空时不覆盖原始 name；description 非空时覆盖
@@ -56,18 +52,13 @@ func TestGetPackInfo_LangEmptyNameNoOverride(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	info := GetPackInfo("", dir)
-	if info.Name != "原始名" {
-		t.Fatalf("空 lang name 不应覆盖原始名: %+v", info)
-	}
-	if info.Description != "EN only" {
-		t.Fatalf("非空 lang description 应覆盖: %+v", info)
-	}
+	testutil.Equal(t, info.Name, "原始名", "空 lang name 不应覆盖原始名: %+v", info)
+	testutil.Equal(t, info.Description, "EN only", "非空 lang description 应覆盖: %+v", info)
 }
 
 // Abs 解析失败（NUL 字符）→ 返回空 PackInfo，不 panic
 func TestGetPackInfo_AbsError(t *testing.T) {
 	info := GetPackInfo("", "a\x00b")
-	if info.Name != "" || info.Description != "" {
-		t.Fatalf("Abs 失败应返回空 PackInfo: %+v", info)
-	}
+	testutil.Equal(t, info.Name, "", "Abs 失败应返回空 PackInfo: %+v", info)
+	testutil.Equal(t, info.Description, "", "Abs 失败应返回空 PackInfo: %+v", info)
 }

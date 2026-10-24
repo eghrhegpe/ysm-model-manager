@@ -22,9 +22,7 @@ func TestComputeHash_Valid(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	h := computeHash(path)
-	if h == "" {
-		t.Fatal("hash should not be empty")
-	}
+	testutil.Equal(t, h == "", false, "hash should not be empty")
 	if len(h) != 64 {
 		t.Errorf("SHA256 hex should be 64 chars, got %d", len(h))
 	}
@@ -44,9 +42,7 @@ func TestComputeHash_EmptyFile(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	h := computeHash(path)
-	if h == "" {
-		t.Fatal("empty file should still produce a hash")
-	}
+	testutil.Equal(t, h == "", false, "empty file should still produce a hash")
 }
 
 // ====== isSyncAllowed ======

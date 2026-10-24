@@ -58,9 +58,7 @@ func TestCheckWithClient_NoPlatformAssetWithSums(t *testing.T) {
 
 	info, err := CheckWithClient(server.Client(), server.URL, "1.0.0")
 	testutil.NoError(t, err, "CheckWithClient() =")
-	if info.Available {
-		t.Fatal("无本平台安装包不应 available")
-	}
+	testutil.Equal(t, info.Available, false, "无本平台安装包不应 available")
 	if info.Latest != "v2.0.0" {
 		t.Errorf("Latest = %q, 期望 v2.0.0", info.Latest)
 	}
@@ -84,9 +82,7 @@ func TestDownloadOnce_RejectsHTMLContentTypeWithValidHash(t *testing.T) {
 	defer server.Close()
 
 	path, err := downloadOnce(server.URL+"/pkg.exe", sha256Hex(body), nil)
-	if err == nil {
-		t.Fatalf("HTML 错误页不得当更新包写入（返回路径 %q）", path)
-	}
+	testutil.NotNil(t, err, "HTML 错误页不得当更新包写入（返回路径 %q）", path)
 	if path != "" {
 		t.Errorf("失败时不应返回路径, got %q", path)
 	}
@@ -113,9 +109,7 @@ func TestDownloadOnce_RejectsContentRangeWithValidHash(t *testing.T) {
 	defer server.Close()
 
 	path, err := downloadOnce(server.URL+"/pkg.exe", sha256Hex(body), nil)
-	if err == nil {
-		t.Fatalf("200+Content-Range 截断包不得被接受（返回路径 %q）", path)
-	}
+	testutil.NotNil(t, err, "200+Content-Range 截断包不得被接受（返回路径 %q）", path)
 	if errors.Is(err, ErrHashMismatch) {
 		t.Errorf("应因部分响应拒绝、而非走到哈希校验: %v", err)
 	}
@@ -136,9 +130,8 @@ func TestDownloadOnce_HappyPathWritesVerifiedFile(t *testing.T) {
 
 	path, err := downloadOnce(server.URL+"/pkg.exe", strings.ToUpper(sha256Hex(body)), nil)
 	testutil.NoError(t, err, "校验通过应返回临时文件路径")
-	if path == "" {
-		t.Fatal("成功时应返回落盘路径")
-	}
+	// 护栏：路径不得为空（原 if =="" → t.Fatal）
+	testutil.Equal(t, path == "", false, "成功时应返回落盘路径")
 	t.Cleanup(func() { _ = os.Remove(path) })
 
 	got, rerr := os.ReadFile(path)
@@ -205,9 +198,8 @@ func TestDownloadOnce_ProgressCallbacks(t *testing.T) {
 		testutil.NoError(t, err, "downloadOnce")
 		t.Cleanup(func() { _ = os.Remove(path) })
 
-		if len(seen) == 0 {
-			t.Fatal("已知长度下载应至少回调一次进度")
-		}
+		// 护栏：回调至少一次（原 if len==0 → t.Fatal）
+		testutil.Equal(t, len(seen) == 0, false, "已知长度下载应至少回调一次进度")
 		last := seen[len(seen)-1]
 		if last.done != int64(len(body)) || last.total != int64(len(body)) {
 			t.Errorf("最后一次进度 = (%d, %d), 期望 (%d, %d)", last.done, last.total, len(body), len(body))
@@ -235,9 +227,8 @@ func TestDownloadOnce_ProgressCallbacks(t *testing.T) {
 		testutil.NoError(t, err, "downloadOnce")
 		t.Cleanup(func() { _ = os.Remove(path) })
 
-		if len(seen) == 0 {
-			t.Fatal("分块传输应收口补发一次进度（尾块 < 512KB 节流阈值）")
-		}
+		// 护栏：回调至少一次（原 if len==0 → t.Fatal）
+		testutil.Equal(t, len(seen) == 0, false, "分块传输应收口补发一次进度（尾块 < 512KB 节流阈值）")
 		last := seen[len(seen)-1]
 		if last.done != int64(len(body)) || last.total != 0 {
 			t.Errorf("尾块补发 = (%d, %d), 期望 (%d, 0)", last.done, last.total, len(body))

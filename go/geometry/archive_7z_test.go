@@ -21,9 +21,7 @@ import (
 func load7zFixture(t *testing.T, name string) []byte {
 	t.Helper()
 	data, err := os.ReadFile(filepath.Join("testdata", name))
-	if err != nil {
-		t.Fatalf("读取 7z 夹具 %s 失败: %v", name, err)
-	}
+	testutil.NoError(t, err, "读取 7z 夹具 %s 失败", name)
 	return data
 }
 
@@ -50,9 +48,8 @@ func TestParseFrom7z_Full(t *testing.T) {
 		}
 	}
 	// 纹理：tex_a/tex_b 按声明序 + arrow 未声明落尾；avatar/ 下 PNG 被排除
-	if len(pngs) != 3 {
-		t.Fatalf("pngs = %d, 期望 3（avatar/ 排除、动画非图）", len(pngs))
-	}
+	// 守卫下方 TextureNames[i] 循环索引
+	testutil.Equal(t, len(pngs), 3, "pngs = %d, 期望 3（avatar/ 排除、动画非图）", len(pngs))
 	wantNames := []string{"tex_a", "tex_b", "arrow"}
 	for i, want := range wantNames {
 		if model.TextureNames[i] != want {
@@ -130,9 +127,7 @@ func TestExtractFirstPNGFrom7z_Valid(t *testing.T) {
 	// 有效 7z → 提取到第一张 PNG（夹具含 3 张合法 PNG + avatar/ 下 1 张）
 	data := load7zFixture(t, "7z_full.7z")
 	got := ExtractFirstPNGFrom7z(data, int64(len(data)))
-	if len(got) == 0 {
-		t.Fatal("应提取到 PNG 数据, 得到空")
-	}
+	testutil.Equal(t, len(got) == 0, false, "应提取到 PNG 数据, 得到空")
 	if !strings.HasPrefix(string(got), "\x89PNG") {
 		t.Errorf("提取数据应含 PNG 魔数, got %q", got[:8])
 	}
@@ -143,12 +138,9 @@ func TestParseComponentsFrom7z_Full(t *testing.T) {
 	data := load7zFixture(t, "7z_full.7z")
 	comps, texNames, err := ParseComponentsFrom7z(data, int64(len(data)))
 	testutil.NoError(t, err, "ParseComponentsFrom7z 失败")
-	if len(comps) != 3 {
-		t.Fatalf("组件数 = %d, 期望 3（main/arm/arrow，broken 解析失败跳过）", len(comps))
-	}
-	if len(texNames) != 3 {
-		t.Fatalf("texNames = %d, 期望 3", len(texNames))
-	}
+	// 守卫下方 comps[0..2] 与 texNames[i] 索引
+	testutil.Equal(t, len(comps), 3, "组件数 = %d, 期望 3（main/arm/arrow，broken 解析失败跳过）", len(comps))
+	testutil.Equal(t, len(texNames), 3, "texNames = %d, 期望 3", len(texNames))
 	// main 优先：组件 0 为 head（main），组件 1 为 arm
 	if got := comps[0].Bones[0].Name; got != "head" {
 		t.Errorf("组件 0 应为 main(head), 得到 %s", got)
@@ -186,9 +178,8 @@ func TestParseComponentsFrom7z_MapModel(t *testing.T) {
 	data := load7zFixture(t, "7z_map.7z")
 	comps, texNames, err := ParseComponentsFrom7z(data, int64(len(data)))
 	testutil.NoError(t, err, "ParseComponentsFrom7z 失败")
-	if len(comps) != 1 {
-		t.Fatalf("组件数 = %d, 期望 1（missing.geo.json 未存在于归档中）", len(comps))
-	}
+	// 守卫下方 comps[0] 索引
+	testutil.Equal(t, len(comps), 1, "组件数 = %d, 期望 1（missing.geo.json 未存在于归档中）", len(comps))
 	if len(texNames) != 1 || texNames[0] != "tex1" {
 		t.Errorf("texNames = %v, 期望 [tex1]", texNames)
 	}
@@ -209,9 +200,8 @@ func TestParseFrom7z_ModelObjects(t *testing.T) {
 		t.Errorf("BoneCount = %d, 期望 2（main+extra）", model.BoneCount)
 	}
 	// 纹理：sub/tex1.png（字符串 "/"）+ tex2.png（对象 "\\"）→ 按声明序
-	if len(pngs) != 2 {
-		t.Fatalf("pngs = %d, 期望 2", len(pngs))
-	}
+	// 守卫下方 TextureNames[i] 循环索引
+	testutil.Equal(t, len(pngs), 2, "pngs = %d, 期望 2", len(pngs))
 	wantNames := []string{"tex1", "tex2"}
 	for i, want := range wantNames {
 		if model.TextureNames[i] != want {
@@ -263,9 +253,8 @@ func TestParseComponentsFrom7z_ModelObjects(t *testing.T) {
 	data := load7zFixture(t, "7z_obj.7z")
 	comps, texNames, err := ParseComponentsFrom7z(data, int64(len(data)))
 	testutil.NoError(t, err, "ParseComponentsFrom7z 失败")
-	if len(comps) != 2 {
-		t.Fatalf("组件数 = %d, 期望 2（main+extra；third 未存在于归档中）", len(comps))
-	}
+	// 守卫下方 comps[0]/[1] 与 texNames[i] 索引
+	testutil.Equal(t, len(comps), 2, "组件数 = %d, 期望 2（main+extra；third 未存在于归档中）", len(comps))
 	wantNames := []string{"tex1", "tex2"}
 	for i, want := range wantNames {
 		if texNames[i] != want {
@@ -284,7 +273,5 @@ func TestParseComponentsFrom7z_ModelObjects(t *testing.T) {
 func TestExtractFirstPNGFrom7z_NoPng(t *testing.T) {
 	// 有效 7z 但无 PNG（7z_invalid 夹具：仅 ysm.json + main.geo.json）→ nil
 	data := load7zFixture(t, "7z_invalid.7z")
-	if got := ExtractFirstPNGFrom7z(data, int64(len(data))); got != nil {
-		t.Fatalf("无 PNG 的 7z 应返回 nil, got %q", string(got))
-	}
+	testutil.Nil(t, ExtractFirstPNGFrom7z(data, int64(len(data))), "无 PNG 的 7z 应返回 nil")
 }

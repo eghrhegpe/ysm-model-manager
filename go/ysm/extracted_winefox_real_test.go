@@ -4,6 +4,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // TestFindComponentsInExtractedYSM_WineFoxReal 用 tests/fixtures/ysm/01_taisho_maid
@@ -13,9 +15,8 @@ func TestFindComponentsInExtractedYSM_WineFoxReal(t *testing.T) {
 	ysmPath := filepath.Join("..", "..", "tests", "fixtures", "ysm", "01_taisho_maid", "ysm.json")
 	comps, texNames := FindComponentsInExtractedYSM(ysmPath)
 
-	if len(comps) != 7 {
-		t.Fatalf("组件数 = %d, 期望 7", len(comps))
-	}
+	// 守卫下方 comps 遍历
+	testutil.Equal(t, len(comps), 7, "组件数 = %d, 期望 7", len(comps))
 
 	// 声明组件：main→skin(声明序0)，arm 与 main 共用 skin（ModernYSM 权威，texNames 置空）
 	wantDecl := map[string]bool{"main": true, "arm": true}

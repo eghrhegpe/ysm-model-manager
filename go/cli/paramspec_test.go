@@ -1,6 +1,10 @@
 package cli
 
-import "testing"
+import (
+	"testing"
+
+	"ysm-model-manager/go/internal/testutil"
+)
 
 // TestParamSpecRegistration ADR-173 A1/A4：已登记规格的命令须能被 GetAllowedCommandSpecs
 // 完整导出，且声明序 = flag 定义序（search 以 keyword 为首、analyze 仅 model 单参等）。
@@ -11,7 +15,7 @@ func TestParamSpecRegistration(t *testing.T) {
 	t.Run("search 全量参数且序正确", func(t *testing.T) {
 		spec, ok := specs["search"]
 		if !ok {
-			t.Fatal("search 未登记 ParamSpec")
+			testutil.Equal(t, ok, true, "search 未登记 ParamSpec")
 		}
 		wantKeys := []string{"keyword", "min-bones", "max-bones", "min-cubes", "max-cubes", "min-tex", "max-tex", "format"}
 		assertSpecKeys(t, spec, wantKeys)
@@ -20,18 +24,16 @@ func TestParamSpecRegistration(t *testing.T) {
 	t.Run("analyze 单必填参数 model", func(t *testing.T) {
 		spec, ok := specs["analyze"]
 		if !ok {
-			t.Fatal("analyze 未登记 ParamSpec")
+			testutil.Equal(t, ok, true, "analyze 未登记 ParamSpec")
 		}
 		assertSpecKeys(t, spec, []string{"model"})
-		if len(spec) != 1 {
-			t.Fatalf("analyze 应只有 1 个参数, 实际 %d", len(spec))
-		}
+		testutil.Equal(t, len(spec), 1, "analyze 应只有 1 个参数, 实际 %d", len(spec))
 	})
 
 	t.Run("list limit/format", func(t *testing.T) {
 		spec, ok := specs["list"]
 		if !ok {
-			t.Fatal("list 未登记 ParamSpec")
+			testutil.Equal(t, ok, true, "list 未登记 ParamSpec")
 		}
 		assertSpecKeys(t, spec, []string{"limit", "format"})
 	})
@@ -39,7 +41,7 @@ func TestParamSpecRegistration(t *testing.T) {
 	t.Run("single-bench 十参数（ADR-262 D3 修订：三旋钮正交面）", func(t *testing.T) {
 		spec, ok := specs["single-bench"]
 		if !ok {
-			t.Fatal("single-bench 未登记 ParamSpec")
+			testutil.Equal(t, ok, true, "single-bench 未登记 ParamSpec")
 		}
 		// 声明序 = flag 定义序（iterations → registerPerfTargetFlags 的 target/order/rtype/model/max-models
 		// → 基准三参 → format）。三旋钮的 string/number 决定桥的序列化形态，错一个 GUI 就发不出参数。
@@ -60,7 +62,7 @@ func TestParamSpecRegistration(t *testing.T) {
 	t.Run("concurrent-bench 与 single-bench 同面（同名同义，默认值不同）", func(t *testing.T) {
 		spec, ok := specs["concurrent-bench"]
 		if !ok {
-			t.Fatal("concurrent-bench 未登记 ParamSpec")
+			testutil.Equal(t, ok, true, "concurrent-bench 未登记 ParamSpec")
 		}
 		assertSpecKeys(t, spec, []string{"workers", "target", "order", "rtype", "model", "max-models", "format"})
 	})
@@ -68,7 +70,7 @@ func TestParamSpecRegistration(t *testing.T) {
 	t.Run("gui-flow model/verbose", func(t *testing.T) {
 		spec, ok := specs["gui-flow"]
 		if !ok {
-			t.Fatal("gui-flow 未登记 ParamSpec")
+			testutil.Equal(t, ok, true, "gui-flow 未登记 ParamSpec")
 		}
 		assertSpecKeys(t, spec, []string{"model", "verbose"})
 		if spec[1].Type != ParamBool {
@@ -104,9 +106,7 @@ func getAllowedSpecMap() map[string][]ParamSpec {
 
 func assertSpecKeys(t *testing.T, spec []ParamSpec, wantKeys []string) {
 	t.Helper()
-	if len(spec) != len(wantKeys) {
-		t.Fatalf("参数数不匹配: 期望 %d %v, 实际 %d %v", len(wantKeys), wantKeys, len(spec), spec)
-	}
+	testutil.Equal(t, len(spec), len(wantKeys), "参数数不匹配: 期望 %v, 实际 %v", wantKeys, spec)
 	for i, want := range wantKeys {
 		if spec[i].Key != want {
 			t.Errorf("声明序 [%d] 期望 %q, 实际 %q（声明序须与 flag 定义序一致）", i, want, spec[i].Key)

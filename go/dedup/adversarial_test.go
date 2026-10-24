@@ -1,7 +1,6 @@
 package dedup
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -51,10 +50,8 @@ func TestAdversarial_SymlinkSubdirEscape(t *testing.T) {
 		for _, f := range g.Files {
 			cleanResult := filepath.Clean(f.Path)
 			cleanTarget := filepath.Clean(secretFile)
-			if cleanResult == cleanTarget {
-				t.Fatalf("BUG-1 CONFIRMED: symlinked subdirectory was followed. "+
-					"File at %s was hashed despite being outside scan root.", secretFile)
-			}
+			testutil.Equal(t, cleanResult == cleanTarget, false,
+				"BUG-1 CONFIRMED: symlinked subdirectory was followed. File at %s was hashed despite being outside scan root.", secretFile)
 		}
 	}
 }
@@ -67,9 +64,7 @@ func TestAdversarial_RelativePathTraversal(t *testing.T) {
 	// 相对路径 ".." 指向父目录——这是真实安全隐患；
 	// 守卫必须显式返回 ErrRelativePath（errors.Is 可分类，禁文本匹配）。
 	_, err := FindDuplicateFiles("..", false)
-	if !errors.Is(err, ErrRelativePath) {
-		t.Fatalf("BUG-2: FindDuplicateFiles(\"..\") 应返回 ErrRelativePath（相对路径穿越未防护），got: %v", err)
-	}
+	testutil.ErrorIs(t, err, ErrRelativePath, "BUG-2: FindDuplicateFiles(\"..\") 应返回 ErrRelativePath（相对路径穿越未防护）")
 }
 
 // Bug 3 (MEDIUM): NUL byte injection in the path argument.
@@ -84,9 +79,8 @@ func TestAdversarial_NULByteInPath(t *testing.T) {
 	// Inject NUL byte after the valid prefix
 	badPath := validDir + "\x00" + "dir"
 
-	if _, err := FindDuplicateFiles(badPath, false); err == nil {
-		t.Fatalf("BUG-3: NUL 字节路径未被拒绝——调用方可扫描非预期路径（路径混淆）")
-	}
+	_, nulErr := FindDuplicateFiles(badPath, false)
+	testutil.NotNil(t, nulErr, "BUG-3: NUL 字节路径未被拒绝——调用方可扫描非预期路径（路径混淆）")
 }
 
 // Bug 5 (INFO): Massive directory hashing performance.
@@ -140,18 +134,15 @@ func TestAdversarial_EmptyFileSkip(t *testing.T) {
 	// is NOT referenced anywhere in the results
 	for _, g := range groups {
 		for _, f := range g.Files {
-			if filepath.Clean(f.Path) == filepath.Clean(emptyFile) {
-				t.Fatalf("BUG-6 CONFIRMED: empty file %s appeared in results — "+
-					"empty files must be skipped", emptyFile)
-			}
+			testutil.Equal(t, filepath.Clean(f.Path) == filepath.Clean(emptyFile), false,
+				"BUG-6 CONFIRMED: empty file %s appeared in results — empty files must be skipped", emptyFile)
 		}
 	}
 
 	// Also verify with CountDuplicates
 	groupsCount, extraCount, err := CountDuplicates(dir, false)
 	testutil.NoError(t, err, "unexpected error from CountDuplicates")
-	if groupsCount != 0 || extraCount != 0 {
-		t.Fatalf("expected 0 groups, 0 extra from single non-empty file, got %d groups, %d extra",
-			groupsCount, extraCount)
-	}
+	// OR 型复合条件拆序贯
+	testutil.Equal(t, groupsCount, 0, "expected 0 groups, 0 extra from single non-empty file, got %d groups, %d extra", groupsCount, extraCount)
+	testutil.Equal(t, extraCount, 0, "expected 0 groups, 0 extra from single non-empty file, got %d groups, %d extra", groupsCount, extraCount)
 }

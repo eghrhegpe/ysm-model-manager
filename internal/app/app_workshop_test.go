@@ -27,9 +27,7 @@ func TestReadJSONFile_BOMTrim(t *testing.T) {
 			testutil.NoError(t, err)
 		}
 		var v map[string]int
-		if err := readJSONFile(p, &v); err != nil {
-			t.Fatalf("带 BOM JSON 解析失败: %v", err)
-		}
+		testutil.NoError(t, readJSONFile(p, &v), "带 BOM JSON 解析失败")
 	})
 
 	t.Run("无 BOM 正常解析", func(t *testing.T) {
@@ -38,9 +36,7 @@ func TestReadJSONFile_BOMTrim(t *testing.T) {
 			testutil.NoError(t, err)
 		}
 		var v map[string]int
-		if err := readJSONFile(p, &v); err != nil {
-			t.Fatalf("普通 JSON 解析失败: %v", err)
-		}
+		testutil.NoError(t, readJSONFile(p, &v), "普通 JSON 解析失败")
 		if v["a"] != 1 {
 			t.Errorf("解析值错误, got %v", v)
 		}
@@ -67,9 +63,7 @@ func TestReadJSONFile_BOMTrim(t *testing.T) {
 
 func TestDefaultWorkshopSites_Contract(t *testing.T) {
 	sites := defaultWorkshopSites()
-	if len(sites) < 2 {
-		t.Fatalf("默认站点应 >=2, got %d", len(sites))
-	}
+	testutil.Equal(t, len(sites) >= 2, true, "默认站点应 >=2, got %d", len(sites))
 
 	// 契约：每个站点 id/url/searchUrl 非空、group 合法、SearchURL 含 {{q}} 占位符
 	seen := map[string]bool{}
@@ -128,16 +122,14 @@ func TestWorkshopConfigWriteToConfigDir(t *testing.T) {
 	defer func() { pathMgr = orig }()
 
 	sites := []types.WorkshopSite{{ID: "bilibili", Label: "B站", URL: "https://bilibili.com/"}}
-	if err := (&App{}).SaveWorkshopSites(sites); err != nil {
-		t.Fatalf("SaveWorkshopSites 失败: %v", err)
-	}
+	testutil.NoError(t, (&App{}).SaveWorkshopSites(sites), "SaveWorkshopSites 失败")
 	p := filepath.Join(dir, "YSM-Model-Manager", "workshop_sites.json")
 	data, err := os.ReadFile(p)
 	testutil.NoError(t, err, "应写入 configDir, got")
 	var got []types.WorkshopSite
-	if err := json.Unmarshal(data, &got); err != nil || len(got) != 1 || got[0].ID != "bilibili" {
-		t.Fatalf("写入内容异常: %v / %+v", err, got)
-	}
+	testutil.NoError(t, json.Unmarshal(data, &got), "写入内容异常")
+	testutil.Equal(t, len(got), 1, "写入内容异常: %+v", got)
+	testutil.Equal(t, got[0].ID, "bilibili", "写入内容异常: %+v", got)
 	// 不应写入 exe 旁
 	exe, _ := os.Executable()
 	if _, err := os.Stat(filepath.Join(filepath.Dir(exe), "workshop_sites.json")); !os.IsNotExist(err) {
@@ -163,12 +155,9 @@ func TestWorkshopConfigMigrateFromExe(t *testing.T) {
 
 	list := (&App{}).LoadWorkshopCreators()
 	newPath := filepath.Join(dir, "YSM-Model-Manager", "creators.json")
-	if _, err := os.Stat(newPath); err != nil {
-		t.Fatalf("应迁移到 configDir, got %v", err)
-	}
-	if len(list) != 1 || list[0].Name != "legacy-author" {
-		t.Fatalf("应读到迁移后的数据, got %+v", list)
-	}
+	testutil.FileExists(t, newPath, "应迁移到 configDir, got %v")
+	testutil.Equal(t, len(list), 1, "应读到迁移后的数据, got %+v", list)
+	testutil.Equal(t, list[0].Name, "legacy-author", "应读到迁移后的数据, got %+v", list)
 	if _, err := os.Stat(oldPath); !os.IsNotExist(err) {
 		t.Error("旧 exe 旁文件应被清理")
 	}
@@ -207,13 +196,9 @@ func TestMergeWorkshopCreatorsFromJSON_FreshUser(t *testing.T) {
 	testutil.NoError(t, err)
 	added, updated, err := a.MergeWorkshopCreatorsFromJSON(string(data))
 	testutil.NoError(t, err, "全新用户首次 Merge 不应失败（P2-1），got")
-	if added+updated != 100 {
-		t.Fatalf("100 条导入应全部计入 added/updated, got added=%d updated=%d", added, updated)
-	}
+	testutil.Equal(t, added+updated, 100, "100 条导入应全部计入 added/updated, got added=%d updated=%d", added, updated)
 	// 合并后已落盘（可读回）
-	if got := len(a.LoadWorkshopCreators()); got < 100 {
-		t.Fatalf("合并后应可读回 >=100 条, got %d", got)
-	}
+	testutil.Equal(t, len(a.LoadWorkshopCreators()) >= 100, true, "合并后应可读回 >=100 条")
 }
 
 // Type 分号分隔精确段匹配（R22 审核 P3-1）：siteID="a" 不得误删 Type="ba" /
@@ -286,9 +271,7 @@ func TestSaveWorkshopCreatorsBySite_DetachedNames(t *testing.T) {
 		byName[c.Name] = c
 	}
 	got, ok := byName["跨站"]
-	if !ok {
-		t.Fatal("跨站条目应保留（仍属 b 站）")
-	}
+	testutil.Equal(t, ok, true, "跨站条目应保留（仍属 b 站）")
 	if got.Type != "b" {
 		t.Errorf("跨站条目 Type 应去掉本站段 → %q, got %q", "b", got.Type)
 	}
@@ -331,9 +314,7 @@ func TestSaveWorkshopCreatorsBySite_DetachedWinsOverUpsert(t *testing.T) {
 			hits = append(hits, c)
 		}
 	}
-	if len(hits) != 1 {
-		t.Fatalf("同名同现不得产生重复条目, got %d 条", len(hits))
-	}
+	testutil.Equal(t, len(hits), 1, "同名同现不得产生重复条目, got %d 条", len(hits))
 	if hits[0].Type != "b" {
 		t.Errorf("同名同现应以解除为准（Type 去掉本站段）→ %q, got %q", "b", hits[0].Type)
 	}
@@ -382,22 +363,17 @@ func TestMergeCommunityCreatorsFromJSON_SegmentMerge(t *testing.T) {
 	testutil.NoError(t, err)
 	added, updated, err := a.MergeCommunityCreatorsFromJSON(string(data))
 	testutil.NoError(t, err, "社区合并不应失败, got")
-	if added != 1 || updated != 2 {
-		t.Fatalf("期望 added=1 updated=2, got added=%d updated=%d", added, updated)
-	}
+	testutil.Equal(t, added, 1, "期望 added=1 updated=2, got added=%d updated=%d", added, updated)
+	testutil.Equal(t, updated, 2, "期望 added=1 updated=2, got added=%d updated=%d", added, updated)
 	got := a.LoadWorkshopCreators()
 	byName := map[string]types.WorkshopCreator{}
 	for _, c := range got {
 		byName[c.Name] = c
 	}
-	if len(got) != 4 {
-		t.Fatalf("合并后应有 4 条（A/A2/B/C 无重复）, got %d", len(got))
-	}
+	testutil.Equal(t, len(got), 4, "合并后应有 4 条（A/A2/B/C 无重复）, got %d", len(got))
 	// A：type 段并入 afdian（覆盖会丢本地段，此处验证并入不丢）
 	aCreator, ok := byName["A"]
-	if !ok {
-		t.Fatal("A 应保留")
-	}
+	testutil.Equal(t, ok, true, "A 应保留")
 	if aCreator.Type != "bilibili;afdian" && aCreator.Type != "afdian;bilibili" {
 		t.Errorf("A.type 应含 bilibili+afdian 两段且不重复, got %q", aCreator.Type)
 	}
@@ -440,12 +416,9 @@ func TestMergeCommunityCreatorsFromJSON_Idempotent(t *testing.T) {
 	// 第二次并入同样社区：A 段已含、B 已存在 → 零变更
 	added, updated, err := a.MergeCommunityCreatorsFromJSON(string(data))
 	testutil.NoError(t, err)
-	if added != 0 || updated != 0 {
-		t.Fatalf("幂等并入应 added=0 updated=0, got added=%d updated=%d", added, updated)
-	}
-	if got := len(a.LoadWorkshopCreators()); got != 2 {
-		t.Fatalf("幂等并入后仍应 2 条, got %d", got)
-	}
+	testutil.Equal(t, added, 0, "幂等并入应 added=0 updated=0, got added=%d updated=%d", added, updated)
+	testutil.Equal(t, updated, 0, "幂等并入应 added=0 updated=0, got added=%d updated=%d", added, updated)
+	testutil.Equal(t, len(a.LoadWorkshopCreators()), 2, "幂等并入后仍应 2 条")
 }
 
 // 净化：name 为空/非法的社区条目被过滤；全非法 → 报错不落盘。
@@ -465,9 +438,8 @@ func TestMergeCommunityCreatorsFromJSON_EmptyInput(t *testing.T) {
 		t.Error("非法 JSON 应报错")
 	}
 	// 混合：1 条合法 + 1 条非法 → 合法者并入
-	if _, _, err := a.MergeCommunityCreatorsFromJSON(`[{"name":"","type":"x"},{"name":"OK","type":"bilibili"}]`); err != nil {
-		t.Fatalf("含合法条目的混合输入不应失败, got %v", err)
-	}
+	_, _, err := a.MergeCommunityCreatorsFromJSON(`[{"name":"","type":"x"},{"name":"OK","type":"bilibili"}]`)
+	testutil.NoError(t, err, "含合法条目的混合输入不应失败")
 	got := a.LoadWorkshopCreators()
 	if len(got) != 1 || got[0].Name != "OK" {
 		t.Errorf("仅合法条目应并入, got %+v", got)
@@ -485,12 +457,9 @@ func TestMergeCommunityCreatorsFromJSON_FreshUser(t *testing.T) {
 	data, _ := json.Marshal(community)
 	added, updated, err := a.MergeCommunityCreatorsFromJSON(string(data))
 	testutil.NoError(t, err, "全新用户社区合并不应失败, got")
-	if added != 2 || updated != 0 {
-		t.Fatalf("期望 added=2 updated=0, got added=%d updated=%d", added, updated)
-	}
-	if got := len(a.LoadWorkshopCreators()); got != 2 {
-		t.Fatalf("全新用户并入后应 2 条, got %d", got)
-	}
+	testutil.Equal(t, added, 2, "期望 added=2 updated=0, got added=%d updated=%d", added, updated)
+	testutil.Equal(t, updated, 0, "期望 added=2 updated=0, got added=%d updated=%d", added, updated)
+	testutil.Equal(t, len(a.LoadWorkshopCreators()), 2, "全新用户并入后应 2 条")
 }
 
 // 全新用户拖拽导入站点 JSON：全部新增（added=N），落盘可读回。
@@ -510,27 +479,20 @@ func TestMergeWorkshopSitesFromJSON_FreshUser(t *testing.T) {
 	// 基准 = bundled 默认站（bilibili/afdian/github）：导入的两个默认站 id 命中
 	// 同值/同 id → updated（DeepEqual 判定变更），github 保留——默认站不被抹掉
 	// （code_review 31d30fb7 #1：空基准会让首次部分导入静默删除未出现的默认站）
-	if added != 0 || updated != 2 {
-		t.Fatalf("期望 added=0 updated=2（命中默认站）, got added=%d updated=%d", added, updated)
-	}
+	testutil.Equal(t, added, 0, "期望 added=0 updated=2（命中默认站）, got added=%d updated=%d", added, updated)
+	testutil.Equal(t, updated, 2, "期望 added=0 updated=2（命中默认站）, got added=%d updated=%d", added, updated)
 	// 落盘验证：读回 workshop_sites.json（无独立 LoadWorkshopSites，直接读文件）
 	p := workshopSitesPath()
 	var got []types.WorkshopSite
-	if err := readJSONFile(p, &got); err != nil {
-		t.Fatalf("合并后读回失败: %v", err)
-	}
-	if len(got) != 3 {
-		t.Fatalf("落盘应 3 条（默认站全保留）, got %d", len(got))
-	}
+	testutil.NoError(t, readJSONFile(p, &got), "合并后读回失败")
+	testutil.Equal(t, len(got), 3, "落盘应 3 条（默认站全保留）, got %d", len(got))
 	githubFound := false
 	for _, s := range got {
 		if s.ID == "github" {
 			githubFound = true
 		}
 	}
-	if !githubFound {
-		t.Fatal("默认站 github 应保留（未被部分导入抹掉）")
-	}
+	testutil.Equal(t, githubFound, true, "默认站 github 应保留（未被部分导入抹掉）")
 }
 
 // TestMergeWorkshopSitesFromJSON_FreshUser_CustomSite 全新用户导入不含默认站的自定义站：
@@ -547,17 +509,12 @@ func TestMergeWorkshopSitesFromJSON_FreshUser_CustomSite(t *testing.T) {
 	data, _ := json.Marshal(imported)
 	added, updated, err := a.MergeWorkshopSitesFromJSON(string(data))
 	testutil.NoError(t, err, "Merge 不应失败, got")
-	if added != 1 || updated != 0 {
-		t.Fatalf("期望 added=1 updated=0, got added=%d updated=%d", added, updated)
-	}
+	testutil.Equal(t, added, 1, "期望 added=1 updated=0, got added=%d updated=%d", added, updated)
+	testutil.Equal(t, updated, 0, "期望 added=1 updated=0, got added=%d updated=%d", added, updated)
 	p := workshopSitesPath()
 	var got []types.WorkshopSite
-	if err := readJSONFile(p, &got); err != nil {
-		t.Fatalf("合并后读回失败: %v", err)
-	}
-	if len(got) != 4 {
-		t.Fatalf("落盘应 4 条（3 默认 + 1 自定义）, got %d", len(got))
-	}
+	testutil.NoError(t, readJSONFile(p, &got), "合并后读回失败")
+	testutil.Equal(t, len(got), 4, "落盘应 4 条（3 默认 + 1 自定义）, got %d", len(got))
 }
 
 // TestMergeWorkshopSitesFromJSON_SingleSiteRejected 单站拖入（合并结果 1 条 < 2 合法域）
@@ -576,17 +533,13 @@ func TestMergeWorkshopSitesFromJSON_SingleSiteRejected(t *testing.T) {
 	// 再拖入同 id 新值：合并后仍 1 条 → 越界拒绝，文件不得被写坏
 	incoming := []types.WorkshopSite{{ID: "solo", Label: "独站改", URL: "https://solo2.test"}}
 	data, _ := json.Marshal(incoming)
-	if _, _, err := a.MergeWorkshopSitesFromJSON(string(data)); err == nil {
-		t.Fatal("单站合并结果应被拒绝（<2 合法域下限）")
-	}
+	_, _, err := a.MergeWorkshopSitesFromJSON(string(data))
+	testutil.NotNil(t, err, "单站合并结果应被拒绝（<2 合法域下限）")
 	// 文件不应被覆盖成非法态之外的意外内容（此处保持原 seed）
 	var got []types.WorkshopSite
-	if err := readJSONFile(workshopSitesPath(), &got); err != nil {
-		t.Fatalf("读回失败: %v", err)
-	}
-	if len(got) != 1 || got[0].Label != "独站" {
-		t.Fatalf("拒绝后文件应保持原状, got %+v", got)
-	}
+	testutil.NoError(t, readJSONFile(workshopSitesPath(), &got), "读回失败")
+	testutil.Equal(t, len(got), 1, "拒绝后文件应保持原状, got %+v", got)
+	testutil.Equal(t, got[0].Label, "独站", "拒绝后文件应保持原状, got %+v", got)
 }
 
 // TestMergeWorkshopSitesFromJSON_OverLimitRejected 超 100 站拖入（合并结果 > 100）
@@ -610,17 +563,12 @@ func TestMergeWorkshopSitesFromJSON_OverLimitRejected(t *testing.T) {
 		{ID: "extra-2", Label: "x2", URL: "https://x2.test"},
 	}
 	data, _ := json.Marshal(incoming)
-	if _, _, err := a.MergeWorkshopSitesFromJSON(string(data)); err == nil {
-		t.Fatal("101 站合并结果应被拒绝（>100 上限）")
-	}
+	_, _, err := a.MergeWorkshopSitesFromJSON(string(data))
+	testutil.NotNil(t, err, "101 站合并结果应被拒绝（>100 上限）")
 	// 文件保持 99 站原状
 	var got []types.WorkshopSite
-	if err := readJSONFile(workshopSitesPath(), &got); err != nil {
-		t.Fatalf("读回失败: %v", err)
-	}
-	if len(got) != 99 {
-		t.Fatalf("拒绝后文件应保持 99 条, got %d", len(got))
-	}
+	testutil.NoError(t, readJSONFile(workshopSitesPath(), &got), "读回失败")
+	testutil.Equal(t, len(got), 99, "拒绝后文件应保持 99 条, got %d", len(got))
 }
 
 // TestMergeWorkshopSitesFromJSON_IdempotentNoWrite 幂等短路：同内容重复拖入
@@ -638,20 +586,14 @@ func TestMergeWorkshopSitesFromJSON_IdempotentNoWrite(t *testing.T) {
 	// 首次拖入扩展：s2 追加 → added=1 写盘
 	incoming := []types.WorkshopSite{{ID: "s2", Label: "站点2", URL: "https://s2.test"}}
 	data, _ := json.Marshal(incoming)
-	if _, _, err := a.MergeWorkshopSitesFromJSON(string(data)); err != nil {
-		t.Fatalf("首次合并不应失败: %v", err)
-	}
+	_, _, err := a.MergeWorkshopSitesFromJSON(string(data))
+	testutil.NoError(t, err, "首次合并不应失败")
 	// 幂等重拖同一内容：s1 已存在同值、无新增 → changed=false → 不写盘不报错
-	if _, _, err := a.MergeWorkshopSitesFromJSON(string(data)); err != nil {
-		t.Fatalf("幂等重拖不应失败: %v", err)
-	}
+	_, _, err = a.MergeWorkshopSitesFromJSON(string(data))
+	testutil.NoError(t, err, "幂等重拖不应失败")
 	var got []types.WorkshopSite
-	if err := readJSONFile(workshopSitesPath(), &got); err != nil {
-		t.Fatalf("读回失败: %v", err)
-	}
-	if len(got) != 2 {
-		t.Fatalf("幂等重拖后文件应保持 2 条, got %d", len(got))
-	}
+	testutil.NoError(t, readJSONFile(workshopSitesPath(), &got), "读回失败")
+	testutil.Equal(t, len(got), 2, "幂等重拖后文件应保持 2 条, got %d", len(got))
 }
 
 // 已存在站点时导入：同 id 整条覆盖（updated），新 id 追加（added）。
@@ -672,30 +614,22 @@ func TestMergeWorkshopSitesFromJSON_OverwriteAndAdd(t *testing.T) {
 	data, _ := json.Marshal(incoming)
 	added, updated, err := a.MergeWorkshopSitesFromJSON(string(data))
 	testutil.NoError(t, err, "Merge 不应失败, got")
-	if added != 1 || updated != 1 {
-		t.Fatalf("期望 added=1 updated=1, got added=%d updated=%d", added, updated)
-	}
+	testutil.Equal(t, added, 1, "期望 added=1 updated=1, got added=%d updated=%d", added, updated)
+	testutil.Equal(t, updated, 1, "期望 added=1 updated=1, got added=%d updated=%d", added, updated)
 	p := workshopSitesPath()
 	var got []types.WorkshopSite
-	if err := readJSONFile(p, &got); err != nil {
-		t.Fatalf("读回失败: %v", err)
-	}
-	if len(got) != 2 {
-		t.Fatalf("落盘应 2 条, got %d", len(got))
-	}
+	testutil.NoError(t, readJSONFile(p, &got), "读回失败")
+	testutil.Equal(t, len(got), 2, "落盘应 2 条, got %d", len(got))
 	// 覆盖生效：s1 是导入的新值（非旧 seed）
 	found := false
 	for _, s := range got {
 		if s.ID == "s1" {
 			found = true
-			if s.Label != "新名" || s.URL != "https://new.test" {
-				t.Fatalf("s1 应被导入值覆盖, got %+v", s)
-			}
+			testutil.Equal(t, s.Label, "新名", "s1 应被导入值覆盖, got %+v", s)
+			testutil.Equal(t, s.URL, "https://new.test", "s1 应被导入值覆盖, got %+v", s)
 		}
 	}
-	if !found {
-		t.Fatal("落盘缺 s1")
-	}
+	testutil.Equal(t, found, true, "落盘缺 s1")
 }
 
 // 非法输入报错：非 JSON / 全空 id（净化后 0 条）。
@@ -760,19 +694,13 @@ func TestMergeCommunitySitesFromJSON_AddOnly(t *testing.T) {
 	data, _ := json.Marshal(community)
 	added, err := a.MergeCommunitySitesFromJSON(string(data))
 	testutil.NoError(t, err, "社区合并不应失败, got")
-	if added != 2 {
-		t.Fatalf("期望 added=2（s2/s3），s1 命中跳过, got %d", added)
-	}
+	testutil.Equal(t, added, 2, "期望 added=2（s2/s3），s1 命中跳过, got %d", added)
 	// 落盘验证：s1 保留用户自定义值（未被社区覆盖）
 	p := workshopSitesPath()
 	var got []types.WorkshopSite
-	if err := readJSONFile(p, &got); err != nil {
-		t.Fatalf("读回失败: %v", err)
-	}
+	testutil.NoError(t, readJSONFile(p, &got), "读回失败")
 	for _, s := range got {
-		if s.ID == "s1" && s.Label != "用户自定义" {
-			t.Fatalf("s1 不应被社区覆盖, got %+v", s)
-		}
+		testutil.Equal(t, s.ID == "s1" && s.Label != "用户自定义", false, "s1 不应被社区覆盖, got %+v", s)
 	}
 }
 
@@ -790,9 +718,7 @@ func TestMergeCommunitySitesFromJSON_Idempotent(t *testing.T) {
 	data, _ := json.Marshal(community)
 	added, err := a.MergeCommunitySitesFromJSON(string(data))
 	testutil.NoError(t, err, "幂等合并不应失败, got")
-	if added != 0 {
-		t.Fatalf("全同应 added=0（幂等短路）, got %d", added)
-	}
+	testutil.Equal(t, added, 0, "全同应 added=0（幂等短路）, got %d", added)
 }
 
 // 非法输入报错：非 JSON / 全空 id。

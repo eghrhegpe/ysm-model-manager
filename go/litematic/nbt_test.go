@@ -4,6 +4,8 @@ package litematic
 import (
 	"bytes"
 	"testing"
+
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // buildNestedNBT 构造 N 层嵌套 compound 的 NBT 字节流（每层空名 compound）。
@@ -30,27 +32,17 @@ func TestProbeNbtDepth_Shallow(t *testing.T) {
 	// 浅嵌套（合法 litematic < 10）应返回小深度且 ok=true
 	data := buildNestedNBT(3)
 	d, ok := probeNbtDepth(data)
-	if !ok {
-		t.Fatalf("浅嵌套应 ok=true")
-	}
-	if d > maxNbtDepth {
-		t.Fatalf("浅嵌套深度 = %d, 不应超过 %d", d, maxNbtDepth)
-	}
-	if d < 1 {
-		t.Fatalf("浅嵌套深度 = %d, 应 ≥ 1", d)
-	}
+	testutil.Equal(t, ok, true, "浅嵌套应 ok=true")
+	testutil.Equal(t, d > maxNbtDepth, false, "浅嵌套深度 = %d, 不应超过 %d", d, maxNbtDepth)
+	testutil.Equal(t, d >= 1, true, "浅嵌套深度 = %d, 应 ≥ 1", d)
 }
 
 func TestProbeNbtDepth_Deep(t *testing.T) {
 	// 深嵌套（> maxNbtDepth）应触发上限（ok=true 但深度超限）
 	data := buildNestedNBT(maxNbtDepth + 10)
 	d, ok := probeNbtDepth(data)
-	if !ok {
-		t.Fatalf("深嵌套应 ok=true（超深走哨兵返回）")
-	}
-	if d <= maxNbtDepth {
-		t.Fatalf("深嵌套深度 = %d, 应超过上限 %d", d, maxNbtDepth)
-	}
+	testutil.Equal(t, ok, true, "深嵌套应 ok=true（超深走哨兵返回）")
+	testutil.Equal(t, d <= maxNbtDepth, false, "深嵌套深度 = %d, 应超过上限 %d", d, maxNbtDepth)
 }
 
 func TestProbeNbtDepth_TruncatedRejected(t *testing.T) {
@@ -59,21 +51,16 @@ func TestProbeNbtDepth_TruncatedRejected(t *testing.T) {
 	data := buildNestedNBT(3)
 	// 截断：去掉末尾 end 标记，probe 读到不完整结构 → 畸形
 	truncated := data[:len(data)-1]
-	if _, ok := probeNbtDepth(truncated); ok {
-		t.Fatalf("截断 NBT 应 ok=false")
-	}
+	_, ok := probeNbtDepth(truncated)
+	testutil.Equal(t, ok, false, "截断 NBT 应 ok=false")
 }
 
 func TestReadRootCompound_DeepNestedRejected(t *testing.T) {
 	// readRootCompound 对深嵌套应返回 error 而非 panic/栈溢出（P1 防护）
 	data := buildNestedNBT(maxNbtDepth + 10)
 	root, err := readRootCompound(bytes.NewReader(data))
-	if err == nil {
-		t.Fatalf("深嵌套应被拒绝, got root=%v", root)
-	}
-	if root != nil {
-		t.Fatalf("错误时应返回 nil root, got %v", root)
-	}
+	testutil.NotNil(t, err, "深嵌套应被拒绝, got root=%v", root)
+	testutil.Nil(t, root, "错误时应返回 nil root, got %v", root)
 }
 
 // ====== getLong ======
@@ -265,9 +252,7 @@ func TestBitsPerEntry(t *testing.T) {
 func TestResolveBlockName_Known(t *testing.T) {
 	// stone (ID 1:0)
 	name := ResolveBlockName(1, 0)
-	if name == "" {
-		t.Fatal("stone (1:0) 应解析到非空名称")
-	}
+	testutil.Equal(t, name == "", false, "stone (1:0) 应解析到非空名称")
 	if name != "minecraft:stone" {
 		t.Logf("stone (1:0) 解析为 %q", name)
 	}
@@ -361,9 +346,7 @@ func TestFilterSurfaceOnly_AllExposed(t *testing.T) {
 		"stone": {{0, 0, 0}},
 	}
 	result := filterSurfaceOnly(groups)
-	if len(result) != 1 {
-		t.Fatalf("期望 1 组, 得到 %d", len(result))
-	}
+	testutil.Equal(t, len(result), 1, "期望 1 组, 得到 %d", len(result))
 	if len(result["stone"]) != 1 {
 		t.Errorf("孤立方块应保留, 得到 %d 个", len(result["stone"]))
 	}
@@ -378,9 +361,7 @@ func TestFilterSurfaceOnly_InteriorRemoved(t *testing.T) {
 		},
 	}
 	result := filterSurfaceOnly(groups)
-	if len(result) != 1 {
-		t.Fatalf("期望 1 组, 得到 %d", len(result))
-	}
+	testutil.Equal(t, len(result), 1, "期望 1 组, 得到 %d", len(result))
 	// 2x2x2 的 8 个方块全部暴露（没有内部方块）
 	if len(result["stone"]) != 8 {
 		t.Errorf("2x2x2 全部暴露, 期望 8, 得到 %d", len(result["stone"]))
@@ -429,9 +410,8 @@ func TestProbeNbtDepth_ChargeRejectsListHugeCount(t *testing.T) {
 	buf.Write([]byte{0x7F, 0xFF, 0xFF, 0xFF})
 	buf.WriteByte(0x00) // 根 end
 
-	if _, ok := probeNbtDepth(buf.Bytes()); ok {
-		t.Fatalf("超大 list 元素声明应被 charge 预算拒绝")
-	}
+	_, ok := probeNbtDepth(buf.Bytes())
+	testutil.Equal(t, ok, false, "超大 list 元素声明应被 charge 预算拒绝")
 }
 
 func TestProbeNbtDepth_ChargeRejectsStringHugeLength(t *testing.T) {
@@ -445,9 +425,8 @@ func TestProbeNbtDepth_ChargeRejectsStringHugeLength(t *testing.T) {
 	buf.Write([]byte{0xFF, 0xFF}) // 长度 65535
 	buf.WriteByte(0x00)           // 根 end
 
-	if _, ok := probeNbtDepth(buf.Bytes()); ok {
-		t.Fatalf("超大 string 长度声明应被 charge 预算拒绝")
-	}
+	_, ok := probeNbtDepth(buf.Bytes())
+	testutil.Equal(t, ok, false, "超大 string 长度声明应被 charge 预算拒绝")
 }
 
 func TestProbeNbtDepth_ChargeRejectsListCountOverflow(t *testing.T) {
@@ -465,9 +444,8 @@ func TestProbeNbtDepth_ChargeRejectsListCountOverflow(t *testing.T) {
 	buf.Write([]byte{0x08, 0x00, 0x00, 0x00})
 	buf.WriteByte(0x00) // 根 end
 
-	if _, ok := probeNbtDepth(buf.Bytes()); ok {
-		t.Fatalf("2^27 * 16 溢出型 list 应被 charge 拒绝")
-	}
+	_, ok := probeNbtDepth(buf.Bytes())
+	testutil.Equal(t, ok, false, "2^27 * 16 溢出型 list 应被 charge 拒绝")
 }
 
 func TestProbeNbtDepth_ChargeRejectsNegativeCount(t *testing.T) {
@@ -481,9 +459,8 @@ func TestProbeNbtDepth_ChargeRejectsNegativeCount(t *testing.T) {
 	buf.Write([]byte{0xFF, 0xFF, 0xFF, 0xFF}) // -1
 	buf.WriteByte(0x00)
 
-	if _, ok := probeNbtDepth(buf.Bytes()); ok {
-		t.Fatalf("负数 list 元素数应被拒绝")
-	}
+	_, ok := probeNbtDepth(buf.Bytes())
+	testutil.Equal(t, ok, false, "负数 list 元素数应被拒绝")
 }
 
 func TestFilterSurfaceOnly_AllInterior(t *testing.T) {

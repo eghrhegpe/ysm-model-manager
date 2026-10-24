@@ -30,9 +30,8 @@ func TestL0_TexSlot_SharedTexture(t *testing.T) {
 	})
 	model, pngs, _ := ParseFromZip(data, int64(len(data)))
 	testutil.NotNil(t, model, "模型不应为 nil")
-	if len(model.SubModels) != 3 {
-		t.Fatalf("SubModels = %d, 期望 3", len(model.SubModels))
-	}
+	// 守卫下方 SubModels 遍历
+	testutil.Equal(t, len(model.SubModels), 3, "SubModels = %d, 期望 3", len(model.SubModels))
 	// texSlot 应等于对应纹理在 l0Pngs 中的排序位置
 	wantSlots := map[string]int{"reimu": 0, "marisa": 1, "flandre": 2}
 	for _, sm := range model.SubModels {
@@ -69,9 +68,7 @@ func TestL0_TexSlot_ModelIdInfer(t *testing.T) {
 	})
 	model, _, _ := ParseFromZip(data, int64(len(data)))
 	testutil.NotNil(t, model, "模型不应为 nil")
-	if len(model.SubModels) != 2 {
-		t.Fatalf("SubModels = %d, 期望 2", len(model.SubModels))
-	}
+	testutil.Equal(t, len(model.SubModels), 2, "SubModels = %d, 期望 2", len(model.SubModels))
 	// model_id 推断时 texture 也靠候选路径字典，两个角色各有一套独立纹理
 	// hero → textures/entity/hero.png → pngs[0], heroine → textures/entity/heroine.png → pngs[1]
 	wantSlots := map[string]int{"勇者": 0, "女主角": 1}
@@ -104,9 +101,7 @@ func TestL0_TexSlot_MissingTexture_NoPanic(t *testing.T) {
 	})
 	model, _, _ := ParseFromZip(data, int64(len(data)))
 	testutil.NotNil(t, model, "模型不应为 nil")
-	if len(model.SubModels) != 2 {
-		t.Fatalf("SubModels = %d, 期望 2", len(model.SubModels))
-	}
+	testutil.Equal(t, len(model.SubModels), 2, "SubModels = %d, 期望 2", len(model.SubModels))
 	// a 没有 texture 声明 → texNameByItem 无 a 的 key → TexSlot 用默认值 0
 	// b 有 texture 声明 → TexSlot = orderMap["b"] = 0（仅 1 张 png）
 	for _, sm := range model.SubModels {
@@ -145,13 +140,10 @@ func TestL0_TexSlot_MixedCaseEntries(t *testing.T) {
 	})
 	model, pngs, _ := ParseFromZip(data, int64(len(data)))
 	testutil.NotNil(t, model, "模型不应为 nil")
-	if len(model.SubModels) != 2 {
-		t.Fatalf("SubModels = %d, 期望 2", len(model.SubModels))
-	}
+	// 守卫下方 SubModels 遍历
+	testutil.Equal(t, len(model.SubModels), 2, "SubModels = %d, 期望 2", len(model.SubModels))
 	// 纹理不得静默丢失（resolveL0Texture 候选分支大小写断裂 → entryByPath miss）
-	if len(pngs) != 2 {
-		t.Fatalf("pngs = %d, 期望 2（大小写混合条目纹理不得丢失）", len(pngs))
-	}
+	testutil.Equal(t, len(pngs), 2, "pngs = %d, 期望 2（大小写混合条目纹理不得丢失）", len(pngs))
 	// texSlot 必须正确绑定（l0ModelOrder 小写 vs geoFiles.name 原始大小写断裂 → 全 0）
 	wantSlots := map[string]int{"勇者": 0, "女主角": 1}
 	for _, sm := range model.SubModels {
@@ -166,15 +158,13 @@ func TestL0_TexSlot_MixedCaseEntries(t *testing.T) {
 	}
 	// cube 级 TexSlot 断言：geoName ToLower / texIdxMap 重绑（archive.go 918-925）的真实守护点。
 	// geoFiles 按 modelOrder 排序后 hero 在前、heroine 在后（各 1 骨骼 1 方块）。
-	if len(model.Bones) != 2 {
-		t.Fatalf("Bones = %d, 期望 2（hero + heroine）", len(model.Bones))
-	}
+	// 守卫下方 Bones[bi] 索引
+	testutil.Equal(t, len(model.Bones), 2, "Bones = %d, 期望 2（hero + heroine）", len(model.Bones))
 	wantCubeSlots := []int{0, 1} // hero → 0, heroine → 1（texOrder 位置）
 	for bi, want := range wantCubeSlots {
 		cubes := model.Bones[bi].Cubes
-		if len(cubes) == 0 {
-			t.Fatalf("Bones[%d] 无 cube", bi)
-		}
+		// 守卫下方 cubes[0] 索引
+		testutil.Equal(t, len(cubes) == 0, false, "Bones[%d] 无 cube", bi)
 		if cubes[0].TexSlot != want {
 			t.Errorf("Bones[%d].Cubes[0].TexSlot = %d, 期望 %d（texIdxMap 重绑失效）", bi, cubes[0].TexSlot, want)
 		}

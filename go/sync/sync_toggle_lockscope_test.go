@@ -49,10 +49,9 @@ func TestSyncToggleStatus_ScanNotHeldLock(t *testing.T) {
 		// 若将来换成其他锁实现，类型断言失败会让本测试静默空转、锁范围回归无人发现。
 		// fail-fast 显式失败，杜绝「探针退化为恒真 pass」的假绿（同 TestRelinkDir_ScanNotHeldLock）。
 		lt, ok := installer.InstallLocker.(*installer.LockTracker)
-		if !ok {
-			t.Fatalf("InstallLocker 具体类型非 *installer.LockTracker（实际 %T），锁范围探针失效——请更新本测试的断言策略",
-				installer.InstallLocker)
-		}
+		// 守卫下方 lt.IsLocked()（Equal 失败即 Goexit，nil lt 不会被解引用）
+		testutil.Equal(t, ok, true, "InstallLocker 具体类型非 *installer.LockTracker（实际 %T），锁范围探针失效——请更新本测试的断言策略",
+			installer.InstallLocker)
 		if lt.IsLocked() {
 			scanLocked = true // 锁被持有 → 扫描在锁内 ✗（回归）
 		}
@@ -68,10 +67,6 @@ func TestSyncToggleStatus_ScanNotHeldLock(t *testing.T) {
 	testutil.NoError(t, err, "同步不应报错")
 	testutil.Equal(t, disable, 1, "禁用方向应改名 1 个")
 	testutil.Equal(t, enable, 0, "无启用方向")
-	if scanCalls == 0 {
-		t.Fatal("scanFn 未被调用——探针未生效，测试空转")
-	}
-	if scanLocked {
-		t.Fatal("SyncToggleStatus 阶段 1 扫描在 InstallLock 内执行（阻塞并发同步/安装/推送）")
-	}
+	testutil.Equal(t, scanCalls == 0, false, "scanFn 未被调用——探针未生效，测试空转")
+	testutil.Equal(t, scanLocked, false, "SyncToggleStatus 阶段 1 扫描在 InstallLock 内执行（阻塞并发同步/安装/推送）")
 }

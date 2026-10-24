@@ -39,13 +39,9 @@ func TestReadOutBuf_ErrorPaths(t *testing.T) {
 	alloc := func(buf []byte) uint32 {
 		t.Helper()
 		r, err := mallocFn.Call(ctx, uint64(len(buf)))
-		if err != nil {
-			t.Fatalf("malloc %d bytes: %v", len(buf), err)
-		}
+		testutil.NoError(t, err, "malloc %d bytes", len(buf))
 		ptr := uint32(r[0])
-		if !mem.Write(ptr, buf) {
-			t.Fatalf("写入 %d bytes 到 mem[%d] 失败", len(buf), ptr)
-		}
+		testutil.Equal(t, mem.Write(ptr, buf), true, "写入 %d bytes 到 mem[%d] 失败", len(buf), ptr)
 		return ptr
 	}
 
@@ -71,9 +67,10 @@ func TestReadOutBuf_ErrorPaths(t *testing.T) {
 	ptr := alloc(happy)
 	files, err := readOutBuf(ctx, mem, freeFn, ptr)
 	testutil.NoError(t, err, "happy path 不应报错")
-	if len(files) != 1 || files[0].Path != "a" || string(files[0].Data) != "bc" {
-		t.Fatalf("happy path 解析异常: %+v（期望 1 个文件 Path=a Data=bc）", files)
-	}
+	// OR 型拆序贯：len 前置守卫防 files[0] 越界（Equal 失败即弃权）
+	testutil.Equal(t, len(files), 1, "happy path 解析异常: %+v（期望 1 个文件 Path=a Data=bc）", files)
+	testutil.Equal(t, files[0].Path, "a", "happy path 解析异常: %+v", files)
+	testutil.Equal(t, string(files[0].Data), "bc", "happy path 解析异常: %+v", files)
 }
 
 // TestDecodeWith_NilExports 补测 decodeWith 的「wasm 导出缺失」分支——用一个不含
@@ -91,9 +88,8 @@ func TestDecodeWith_NilExports(t *testing.T) {
 	defer rt.Close(ctx)
 	cm, err := rt.CompileModule(ctx, empty)
 	testutil.NoError(t, err, "编译空 wasm")
-	if _, err := decodeWith(ctx, rt, cm, []byte("hello")); err == nil {
-		t.Fatal("导出缺失的 module 应返回 error")
-	}
+	_, err = decodeWith(ctx, rt, cm, []byte("hello"))
+	testutil.NotNil(t, err, "导出缺失的 module 应返回 error")
 }
 
 // TestDecodeWith_InstErr 补测 decodeWith 的「module 实例化失败」分支——用带导出但
@@ -105,7 +101,6 @@ func TestDecodeWith_MalformedTrap(t *testing.T) {
 	}
 	ctx := context.Background()
 	// 直接调 decodeWith 复用生产路径（等同 Decode 内部），畸形数据 → decode trap
-	if _, err := decodeWith(ctx, runtime, compiled, []byte{0xDE, 0xAD, 0xBE, 0xEF}); err == nil {
-		t.Fatal("畸形输入 decodeWith 应返回 error（parser abort → trap）")
-	}
+	_, err := decodeWith(ctx, runtime, compiled, []byte{0xDE, 0xAD, 0xBE, 0xEF})
+	testutil.NotNil(t, err, "畸形输入 decodeWith 应返回 error（parser abort → trap）")
 }

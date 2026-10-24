@@ -93,18 +93,15 @@ func TestMergeCommunityCreatorsFromJSON_MojibakeRepair(t *testing.T) {
 	testutil.NoError(t, err)
 	added, updated, err := a.MergeCommunityCreatorsFromJSON(string(data))
 	testutil.NoError(t, err, "合并不应失败, got")
-	if added != 1 || updated != 1 {
-		t.Fatalf("期望 added=1 updated=1（乱码还原后与本地同名合并）, got added=%d updated=%d", added, updated)
-	}
+	testutil.Equal(t, added, 1, "期望 added=1（乱码还原后与本地同名合并）")
+	testutil.Equal(t, updated, 1, "期望 updated=1（乱码还原后与本地同名合并）")
 
 	got := a.LoadWorkshopCreators()
 	byName := map[string]types.WorkshopCreator{}
 	for _, c := range got {
 		byName[c.Name] = c
 	}
-	if len(got) != 2 {
-		t.Fatalf("合并后应 2 条（无乱码重复）, got %d: %+v", len(got), got)
-	}
+	testutil.Equal(t, len(got), 2, "合并后应 2 条（无乱码重复）: %+v", got)
 	// 乱码名不得出现在落盘数据里
 	for _, c := range got {
 		if c.Name != repairMojibake(c.Name) {
@@ -113,17 +110,13 @@ func TestMergeCommunityCreatorsFromJSON_MojibakeRepair(t *testing.T) {
 	}
 	// 雾雨波波沙：type 段并入 afdian，desc/role 保留本地值
 	wu := byName["雾雨波波沙"]
-	if wu.Name == "" {
-		t.Fatal("应存在干净名「雾雨波波沙」")
-	}
+	testutil.Equal(t, wu.Name == "", false, "应存在干净名「雾雨波波沙」")
 	if !inTypeSegments(wu.Type, "afdian") || !inTypeSegments(wu.Type, "bilibili") {
 		t.Errorf("雾雨波波沙.type 应含 bilibili+afdian, got %q", wu.Type)
 	}
 	// 爱吃园田海味：新增且 desc 已还原为干净文本
 	ai := byName["爱吃园田海味"]
-	if ai.Name == "" {
-		t.Fatal("应存在还原后的新条目「爱吃园田海味」")
-	}
+	testutil.Equal(t, ai.Name == "", false, "应存在还原后的新条目「爱吃园田海味」")
 	if ai.Desc != "东方project、LoveLive 开源分享" {
 		t.Errorf("desc 应被还原为干净文本, got %q", ai.Desc)
 	}

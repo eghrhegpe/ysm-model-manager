@@ -20,9 +20,7 @@ func assertNoCopyTmp(t *testing.T, dir string) {
 	entries, err := os.ReadDir(dir)
 	testutil.NoError(t, err)
 	for _, e := range entries {
-		if strings.HasPrefix(e.Name(), ".copy-") {
-			t.Fatalf("失败后应有 .copy-* 临时文件残留: %s", e.Name())
-		}
+		testutil.Equal(t, strings.HasPrefix(e.Name(), ".copy-"), false, "失败后应有 .copy-* 临时文件残留: %s", e.Name())
 	}
 }
 
@@ -44,9 +42,8 @@ func TestCopyFile_SymlinkSrcRejected(t *testing.T) {
 	if err := os.Symlink(target, link); err != nil {
 		t.Skipf("os.Symlink 不可用（需权限）: %v", err)
 	}
-	if err := copyFile(link, filepath.Join(dir, "dst.txt")); err == nil {
-		t.Fatal("符号链接源应被拒绝")
-	}
+	err := copyFile(link, filepath.Join(dir, "dst.txt"))
+	testutil.NotNil(t, err, "符号链接源应被拒绝")
 }
 
 // copyFile 目标父路径组件为文件：MkdirAll 失败应报错
@@ -60,9 +57,8 @@ func TestCopyFile_MkdirAllError(t *testing.T) {
 	if err := os.WriteFile(blocker, []byte("x"), 0644); err != nil {
 		testutil.NoError(t, err)
 	}
-	if err := copyFile(src, filepath.Join(blocker, "sub", "dst.txt")); err == nil {
-		t.Fatal("目标父路径组件为文件时应报错")
-	}
+	err := copyFile(src, filepath.Join(blocker, "sub", "dst.txt"))
+	testutil.NotNil(t, err, "目标父路径组件为文件时应报错")
 }
 
 // copyFile 源为目录：io.Copy 读目录句柄失败应报错，且无 tmp 残留
@@ -72,9 +68,8 @@ func TestCopyFile_SrcIsDir(t *testing.T) {
 	if err := os.MkdirAll(sub, 0755); err != nil {
 		testutil.NoError(t, err)
 	}
-	if err := copyFile(sub, filepath.Join(dir, "dst.txt")); err == nil {
-		t.Fatal("源为目录时应报错（io.Copy 失败）")
-	}
+	err := copyFile(sub, filepath.Join(dir, "dst.txt"))
+	testutil.NotNil(t, err, "源为目录时应报错（io.Copy 失败）")
 	assertNoCopyTmp(t, dir)
 }
 
@@ -89,14 +84,13 @@ func TestCopyFile_RenameOverExistingDir(t *testing.T) {
 	if err := os.MkdirAll(dst, 0755); err != nil {
 		testutil.NoError(t, err)
 	}
-	if err := copyFile(src, dst); err == nil {
-		t.Fatal("目标为已存在目录时应报错（rename 失败）")
-	}
+	err := copyFile(src, dst)
+	testutil.NotNil(t, err, "目标为已存在目录时应报错（rename 失败）")
 	assertNoCopyTmp(t, dir)
 	// 目标目录应原样保留
-	if fi, err := os.Stat(dst); err != nil || !fi.IsDir() {
-		t.Fatalf("目标目录应保留: %v", err)
-	}
+	fi, err := os.Stat(dst)
+	testutil.NoError(t, err, "目标目录应保留")
+	testutil.Equal(t, fi.IsDir(), true, "目标目录应保留")
 }
 
 // copyDirRecursive 目标目录内已有同名文件：内层报「目标已存在」→ 整树回滚
@@ -117,13 +111,10 @@ func TestCopyDirRecursive_TargetExistsRollsBack(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dst, "a.ysm"), []byte("OLD"), 0644); err != nil {
 		testutil.NoError(t, err)
 	}
-	if err := copyDirRecursive(src, dst); err == nil {
-		t.Fatal("目标已存在应报错")
-	}
+	err := copyDirRecursive(src, dst)
+	testutil.NotNil(t, err, "目标已存在应报错")
 	// 失败后整树回滚：dst 应被完全删除（防半棵树残留卡死重试）
-	if _, err := os.Stat(dst); !os.IsNotExist(err) {
-		t.Fatalf("复制失败后 dst 应被整树回滚: %v", err)
-	}
+	testutil.FileNotExists(t, dst, "复制失败后 dst 应被整树回滚")
 }
 
 // copyDirRecursive 树内含符号链接：显式拒绝 + 整树回滚
@@ -141,12 +132,9 @@ func TestCopyDirRecursive_SymlinkRejected(t *testing.T) {
 		t.Skipf("os.Symlink 不可用（需权限）: %v", err)
 	}
 	dst := filepath.Join(dir, "dst")
-	if err := copyDirRecursive(src, dst); err == nil {
-		t.Fatal("树内含符号链接应拒绝")
-	}
-	if _, err := os.Stat(dst); !os.IsNotExist(err) {
-		t.Fatalf("拒绝后 dst 应被整树回滚: %v", err)
-	}
+	err := copyDirRecursive(src, dst)
+	testutil.NotNil(t, err, "树内含符号链接应拒绝")
+	testutil.FileNotExists(t, dst, "拒绝后 dst 应被整树回滚")
 }
 
 // CopyModelFile 不再把兄弟 `<src>.disabled` 当作禁用标记（.disabled 是文件名重命名约定，
@@ -167,13 +155,9 @@ func TestCopyModelFile_IgnoresBanSibling(t *testing.T) {
 	}
 	dstDir := filepath.Join(dir, "sub")
 	if err := CopyModelFile(dir, src, dstDir); err != nil {
-		t.Fatalf("兄弟 .disabled 不应影响复制: %v", err)
+		testutil.NoError(t, err, "兄弟 .disabled 不应影响复制")
 	}
 	// dst 存在；兄弟 .disabled 未被复制
-	if _, err := os.Stat(filepath.Join(dstDir, "m.ysm")); err != nil {
-		t.Fatalf("dst 缺失: %v", err)
-	}
-	if _, err := os.Stat(filepath.Join(dstDir, "m.ysm.disabled")); !os.IsNotExist(err) {
-		t.Fatalf("兄弟 .disabled 不应被复制: %v", err)
-	}
+	testutil.FileExists(t, filepath.Join(dstDir, "m.ysm"), "dst 缺失")
+	testutil.FileNotExists(t, filepath.Join(dstDir, "m.ysm.disabled"), "兄弟 .disabled 不应被复制")
 }

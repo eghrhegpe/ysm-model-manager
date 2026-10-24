@@ -66,9 +66,8 @@ func TestRegistryType_ExtensionsDeepCopy(t *testing.T) {
 
 	rt := RegistryType("ysm")
 	testutil.NotNil(t, rt, "RegistryType('ysm') = nil")
-	if len(rt.Extensions) < 1 {
-		t.Fatal("ysm 应有扩展名")
-	}
+	// NotNil 失败即 Goexit，守卫语义等价：下方 rt.Extensions 解引用仅在其通过后执行
+	testutil.Equal(t, len(rt.Extensions) >= 1, true, "ysm 应有扩展名")
 	// 篡改返回值切片元素
 	rt.Extensions[0] = ".hacked"
 

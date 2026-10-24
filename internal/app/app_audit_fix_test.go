@@ -5,7 +5,6 @@
 package app
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -24,18 +23,14 @@ import (
 func TestExtractYSMHeaderFromBase64_Oversized(t *testing.T) {
 	a := &App{}
 	big := strings.Repeat("a", registry.MaxReadLimit*2) // 解码后 > MaxReadLimit，预检必拒
-	if got := a.ExtractYSMHeaderFromBase64(big); got != (ysm.YSMHeader{}) {
-		t.Fatal("超大输入应返回零值 header")
-	}
+	testutil.Equal(t, a.ExtractYSMHeaderFromBase64(big), ysm.YSMHeader{}, "超大输入应返回零值 header")
 }
 
 // TestSaveScreenshotFile_Oversized：截图绑定同样受预大小守卫。
 func TestSaveScreenshotFile_Oversized(t *testing.T) {
 	a := &App{}
 	big := strings.Repeat("a", registry.MaxReadLimit*2)
-	if err := a.SaveScreenshotFile("shot.png", big); !errors.Is(err, fsutil.ErrB64TooLarge) {
-		t.Fatalf("超大输入应返回 ErrB64TooLarge, got %v", err)
-	}
+	testutil.ErrorIs(t, a.SaveScreenshotFile("shot.png", big), fsutil.ErrB64TooLarge, "超大输入应返回 ErrB64TooLarge")
 }
 
 // TestIsPathInRootOrSelf_SymlinkEscape：根内 symlink 指向外部文件时，
@@ -83,24 +78,16 @@ func TestResolvedRootCache(t *testing.T) {
 
 	// Windows Temp 目录可能经 8.3 短名/symlink，基准取 ResolveOrKeep 本身
 	wantRoot := paths.ResolveOrKeep(root)
-	if got := a.resolvedRoot(root); got != wantRoot {
-		t.Fatalf("已解析根应与 ResolveOrKeep 一致, got %q want %q", got, wantRoot)
-	}
-	if _, ok := a.ensureResolvedRootCache().Load(root); !ok {
-		t.Fatal("resolvedRoot 结果应写入缓存")
-	}
+	testutil.Equal(t, a.resolvedRoot(root), wantRoot, "已解析根应与 ResolveOrKeep 一致")
+	_, ok := a.ensureResolvedRootCache().Load(root)
+	testutil.Equal(t, ok, true, "resolvedRoot 结果应写入缓存")
 	// 直接改缓存值模拟陈旧条目，saveConfig 后应被清空
 	a.ensureResolvedRootCache().Store(root, filepath.Join(base, "stale"))
-	if err := a.saveConfig(a.LoadAppConfig()); err != nil {
-		t.Fatalf("saveConfig: %v", err)
-	}
-	if _, ok := a.ensureResolvedRootCache().Load(root); ok {
-		t.Fatal("saveConfig 后 root 解析缓存应已失效")
-	}
+	testutil.NoError(t, a.saveConfig(a.LoadAppConfig()), "saveConfig")
+	_, ok = a.ensureResolvedRootCache().Load(root)
+	testutil.Equal(t, ok, false, "saveConfig 后 root 解析缓存应已失效")
 	// 失效后重新解析，恢复正确值
-	if got := a.resolvedRoot(root); got != wantRoot {
-		t.Fatalf("失效后应重新解析, got %q", got)
-	}
+	testutil.Equal(t, a.resolvedRoot(root), wantRoot, "失效后应重新解析")
 	// 守卫功能不回归：根外仍拒绝（root 也经同一解析口径，避免 8.3 短名误判）
 	if a.isPathInRootOrSelf(filepath.Join(paths.ResolveOrKeep(base), "outside", "m.ysm")) {
 		t.Error("根外路径不应通过 isPathInRootOrSelf")

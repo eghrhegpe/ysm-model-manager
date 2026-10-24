@@ -3,7 +3,6 @@ package importer
 
 import (
 	"encoding/base64"
-	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -21,16 +20,11 @@ func TestImportFromBase64_Success(t *testing.T) {
 	b64 := base64.StdEncoding.EncodeToString([]byte("modeldata"))
 	dest, _, err := ImportFromBase64("m.ysm", b64, ImportOptions{}, func(rtype string) string { return root },
 		func(name, src, dst string, size int64, status, msg string) {})
-	if err != nil {
-		t.Fatalf("导入失败: %v", err)
-	}
-	if dest != filepath.Join(root, "m.ysm") {
-		t.Fatalf("destPath = %q, 期望 %q", dest, filepath.Join(root, "m.ysm"))
-	}
+	testutil.NoError(t, err, "导入失败")
+	testutil.Equal(t, dest, filepath.Join(root, "m.ysm"), "destPath")
 	data, err := os.ReadFile(filepath.Join(root, "m.ysm"))
-	if err != nil || string(data) != "modeldata" {
-		t.Fatalf("文件写入错误: %v %q", err, string(data))
-	}
+	testutil.NoError(t, err, "文件写入错误")
+	testutil.Equal(t, string(data), "modeldata", "文件写入错误")
 }
 
 func TestImportFromBase64_FileExists(t *testing.T) {
@@ -43,31 +37,23 @@ func TestImportFromBase64_FileExists(t *testing.T) {
 	b64 := base64.StdEncoding.EncodeToString([]byte("new"))
 	_, _, err := ImportFromBase64("m.ysm", b64, ImportOptions{}, func(rtype string) string { return root },
 		func(name, src, dst string, size int64, status, msg string) {})
-	if err == nil {
-		t.Fatal("文件已存在应报错")
-	}
+	testutil.NotNil(t, err, "文件已存在应报错")
 	// 覆盖模式成功
 	_, _, err = ImportFromBase64("m.ysm", b64, ImportOptions{Overwrite: true}, func(rtype string) string { return root },
 		func(name, src, dst string, size int64, status, msg string) {})
-	if err != nil {
-		t.Fatalf("覆盖导入失败: %v", err)
-	}
+	testutil.NoError(t, err, "覆盖导入失败")
 	data, _ := os.ReadFile(filepath.Join(root, "m.ysm"))
-	if string(data) != "new" {
-		t.Fatalf("覆盖后内容错误: %q", string(data))
-	}
+	testutil.Equal(t, string(data), "new", "覆盖后内容错误")
 }
 
 func TestImportFromBase64_Invalid(t *testing.T) {
 	b64 := base64.StdEncoding.EncodeToString([]byte("x"))
-	if _, _, err := ImportFromBase64("../evil.ysm", b64, ImportOptions{}, func(rtype string) string { return "/tmp" },
-		func(name, src, dst string, size int64, status, msg string) {}); err == nil {
-		t.Fatal("路径穿越文件名应报错")
-	}
-	if _, _, err := ImportFromBase64("bad.xyz", b64, ImportOptions{}, func(rtype string) string { return "/tmp" },
-		func(name, src, dst string, size int64, status, msg string) {}); err == nil {
-		t.Fatal("不支持扩展名应报错")
-	}
+	_, _, err := ImportFromBase64("../evil.ysm", b64, ImportOptions{}, func(rtype string) string { return "/tmp" },
+		func(name, src, dst string, size int64, status, msg string) {})
+	testutil.NotNil(t, err, "路径穿越文件名应报错")
+	_, _, err = ImportFromBase64("bad.xyz", b64, ImportOptions{}, func(rtype string) string { return "/tmp" },
+		func(name, src, dst string, size int64, status, msg string) {})
+	testutil.NotNil(t, err, "不支持扩展名应报错")
 }
 
 func TestImportFromBase64_JsonWhitelist(t *testing.T) {
@@ -81,42 +67,33 @@ func TestImportFromBase64_JsonWhitelist(t *testing.T) {
 	b64 := base64.StdEncoding.EncodeToString([]byte("{}"))
 
 	// ysm.json 入口清单放行
-	if _, _, err := ImportFromBase64("ysm.json", b64, ImportOptions{}, rootFn, logFn); err != nil {
-		t.Fatalf("ysm.json 应放行: %v", err)
-	}
+	_, _, err := ImportFromBase64("ysm.json", b64, ImportOptions{}, rootFn, logFn)
+	testutil.NoError(t, err, "ysm.json 应放行")
 	// 大写 YSM.JSON 放行
-	if _, _, err := ImportFromBase64("YSM.JSON", b64, ImportOptions{Overwrite: true}, rootFn, logFn); err != nil {
-		t.Fatalf("YSM.JSON 应放行: %v", err)
-	}
+	_, _, err = ImportFromBase64("YSM.JSON", b64, ImportOptions{Overwrite: true}, rootFn, logFn)
+	testutil.NoError(t, err, "YSM.JSON 应放行")
 	// 包内 geometry / animation / 语言 json 一律拒绝
 	for _, name := range []string{"main.json", "arm.json", "slashblade.animation.json", "zh_cn.json", "en_us.json"} {
-		if _, _, err := ImportFromBase64(name, b64, ImportOptions{}, rootFn, logFn); err == nil {
-			t.Fatalf("%s 应被 ysm.json 白名单拒绝", name)
-		}
+		_, _, werr := ImportFromBase64(name, b64, ImportOptions{}, rootFn, logFn)
+		testutil.NotNil(t, werr, "%s 应被 ysm.json 白名单拒绝", name)
 	}
 }
 
 func TestDetectContainerType(t *testing.T) {
 	// 标准 ZIP fixture（buildZipStd 见 importer_reverse_test.go：zip.NewWriter 写
 	// 完整 central directory——DetectContainerType 已收敛 zip.NewReader，锐评 #16）
-	if got := DetectContainerType(buildZipStd(zipEntry{"pack.mcmeta", nil})); got != "resourcepack" {
-		t.Fatalf("pack.mcmeta 应识别为 resourcepack: %s", got)
-	}
-	if got := DetectContainerType(buildZipStd(zipEntry{"shaders/foo.fsh", nil})); got != "shaderpack" {
-		t.Fatalf("shaders/ 应识别为 shaderpack: %s", got)
-	}
-	if got := DetectContainerType(buildZipStd(zipEntry{"models/thing/body.json", nil})); got != "ysm" {
-		t.Fatalf("models/ 应识别为 ysm: %s", got)
-	}
-	if got := DetectContainerType(buildZipStd(zipEntry{"assets/my_pack/maid_model.json", nil})); got != "maid-model" {
-		t.Fatalf("assets/.../maid_model.json 应识别为 maid-model: %s", got)
-	}
-	if got := DetectContainerType(buildZipStd(zipEntry{"assets/my_pack/chair_model.json", nil})); got != "maid-model" {
-		t.Fatalf("assets/.../chair_model.json 应识别为 maid-model: %s", got)
-	}
-	if got := DetectContainerType([]byte("notzip")); got != "" {
-		t.Fatalf("非 ZIP 应返回空（识别不出就是识别不出）: %q", got)
-	}
+	got := DetectContainerType(buildZipStd(zipEntry{"pack.mcmeta", nil}))
+	testutil.Equal(t, got, "resourcepack", "pack.mcmeta 应识别为 resourcepack")
+	got = DetectContainerType(buildZipStd(zipEntry{"shaders/foo.fsh", nil}))
+	testutil.Equal(t, got, "shaderpack", "shaders/ 应识别为 shaderpack")
+	got = DetectContainerType(buildZipStd(zipEntry{"models/thing/body.json", nil}))
+	testutil.Equal(t, got, "ysm", "models/ 应识别为 ysm")
+	got = DetectContainerType(buildZipStd(zipEntry{"assets/my_pack/maid_model.json", nil}))
+	testutil.Equal(t, got, "maid-model", "assets/.../maid_model.json 应识别为 maid-model")
+	got = DetectContainerType(buildZipStd(zipEntry{"assets/my_pack/chair_model.json", nil}))
+	testutil.Equal(t, got, "maid-model", "assets/.../chair_model.json 应识别为 maid-model")
+	got = DetectContainerType([]byte("notzip"))
+	testutil.Equal(t, got, "", "非 ZIP 应返回空（识别不出就是识别不出）")
 }
 
 // 失败清理分支——WriteFileAtomic 任一失败不得留 .import-*.tmp 残渣、
@@ -140,20 +117,12 @@ func TestImportFromBase64_WriteFailureCleanup(t *testing.T) {
 	_, _, err := ImportFromBase64("blocker.ysm", b64, ImportOptions{Overwrite: true}, rootFn, logFn)
 	testutil.NotNil(t, err, "目标为目录时导入应失败")
 	// 结构化错误码：落地阶段失败 → WRITE_FAILED
-	var ae types.AppError
-	if !errors.As(err, &ae) {
-		t.Fatalf("错误应为 AppError，实际: %v", err)
-	}
-	if ae.Code != "WRITE_FAILED" {
-		t.Fatalf("错误码 = %q, 期望 WRITE_FAILED", ae.Code)
-	}
+	testutil.Equal(t, appErrCode(t, err), types.ErrorCode("WRITE_FAILED"), "错误码")
 	// 目标目录下不应有 .atomic-*.tmp 残渣（WriteFileAtomic 清理验证）
 	matches, _ := filepath.Glob(filepath.Join(root, ".atomic-*.tmp"))
-	if len(matches) != 0 {
-		t.Fatalf("失败后不应有 .atomic-*.tmp 残留: %v", matches)
-	}
+	testutil.Equal(t, len(matches), 0, "失败后不应有 .atomic-*.tmp 残留: %v", matches)
 	// 原目标未被破坏：阻塞目录仍在
-	if info, err := os.Stat(blocker); err != nil || !info.IsDir() {
-		t.Fatalf("阻塞目录应原样保留: %v", err)
-	}
+	info, err := os.Stat(blocker)
+	testutil.NoError(t, err, "阻塞目录应原样保留")
+	testutil.Equal(t, info.IsDir(), true, "阻塞目录应原样保留")
 }

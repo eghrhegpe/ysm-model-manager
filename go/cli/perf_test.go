@@ -26,9 +26,8 @@ func TestParseOptimizationEntries_ParsesTableAndTrimsCommitBackticks(t *testing.
 	}
 	entries := parseOptimizationEntries(lines)
 	// 空行终止当前表格；但后续再次出现表头行会重新开启解析（实现语义：表头为锚）
-	if len(entries) != 3 {
-		t.Fatalf("应解析 3 条记录（第二段表头重新开启）, got %d", len(entries))
-	}
+	testutil.Equal(t, len(entries), 3, "应解析 3 条记录（第二段表头重新开启）, got %d", len(entries))
+	// len 已由上一断言守卫（失败即 Goexit），entries[i] 才安全
 	if entries[0].commit != "abc1234" {
 		t.Errorf("commit 反引号应被清理, got %q", entries[0].commit)
 	}
@@ -135,9 +134,8 @@ func TestResolveTargetModel_ScansFirst(t *testing.T) {
 
 func TestResolveTargetModel_EmptyRootErrors(t *testing.T) {
 	t.Parallel()
-	if _, err := resolveTargetModel(&flowFakeApp{}, "", ""); err == nil {
-		t.Fatal("空 filesRoot 且无 --model 应报错")
-	}
+	_, err := resolveTargetModel(&flowFakeApp{}, "", "")
+	testutil.NotNil(t, err, "空 filesRoot 且无 --model 应报错")
 }
 
 func TestGetModelSize(t *testing.T) {
@@ -210,9 +208,8 @@ func TestBuildPerfRecommendations(t *testing.T) {
 		{Name: "① 快得忽略", Ms: 5}, // <=10ms 应跳过
 	}
 	recs := buildPerfRecommendations("YSM", stages)
-	if len(recs) == 0 {
-		t.Fatal("文件读取 200ms 应产出建议")
-	}
+	testutil.Equal(t, len(recs) == 0, false, "文件读取 200ms 应产出建议")
+	// len 已由上一断言守卫（失败即 Goexit），recs[0] 才安全
 	if recs[0].Priority != "high" || recs[0].Area != "文件读取" {
 		t.Errorf("首条应为文件读取 high 建议: %+v", recs[0])
 	}

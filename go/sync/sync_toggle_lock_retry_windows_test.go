@@ -60,10 +60,8 @@ func TestSyncToggleStatus_LockedFileSkippedSilently(t *testing.T) {
 
 	disableCount, enableCount, err := SyncToggleStatus(customDir, filesRoot, scanFn)
 	testutil.NoError(t, err, "锁定文件应静默跳过而非报错，got")
-	if enableCount != 0 || disableCount != 0 {
-		t.Fatalf("锁定期间不应有任何改名生效，got disable=%d enable=%d", disableCount, enableCount)
-	}
-	if _, serr := os.Stat(disabled); serr != nil {
-		t.Fatalf("源文件应保持原位: %v", serr)
-	}
+	// 原复合条件拆序贯
+	testutil.Equal(t, enableCount, 0, "锁定期间不应有任何改名生效，got disable=%d enable=%d", disableCount, enableCount)
+	testutil.Equal(t, disableCount, 0, "锁定期间不应有任何改名生效，got disable=%d enable=%d", disableCount, enableCount)
+	testutil.FileExists(t, disabled, "源文件应保持原位")
 }

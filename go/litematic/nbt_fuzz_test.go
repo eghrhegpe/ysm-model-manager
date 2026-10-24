@@ -16,6 +16,8 @@ import (
 	"bytes"
 	"compress/gzip"
 	"testing"
+
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // fuzzGz 把原始 NBT 字节压成容器条目形态（gzip 压缩），复用同包 nbt* 构造 helper。
@@ -23,11 +25,16 @@ func fuzzGz(t testing.TB, root []byte) []byte {
 	t.Helper()
 	var buf bytes.Buffer
 	gz := gzip.NewWriter(&buf)
+	// testing.TB 接不了 testutil 的 *testing.T 签名且不能改 testutil：
+	// Errorf+return 等价改写（fuzzGz 仅种子构造期调用，内存 buffer 失败概率极低，
+	// 失败时记录后返回半截种子，由后续断言层兜底报错）
 	if _, err := gz.Write(root); err != nil {
-		t.Fatal(err)
+		t.Errorf("gzip 写入失败: %v", err)
+		return buf.Bytes()
 	}
 	if err := gz.Close(); err != nil {
-		t.Fatal(err)
+		t.Errorf("gzip 关闭失败: %v", err)
+		return buf.Bytes()
 	}
 	return buf.Bytes()
 }
@@ -70,8 +77,7 @@ func FuzzProbeNbtDepth(f *testing.F) {
 	f.Fuzz(func(t *testing.T, data []byte) {
 		depth, _ := probeNbtDepth(data)
 		// 不变式：maxDepth 初值 0 且只递增，必非负（负值即实现缺陷）
-		if depth < 0 {
-			t.Fatalf("probeNbtDepth 返回负深度: %d", depth)
-		}
+		// fuzz 体内 *testing.T 可接 testutil，正常映射
+		testutil.Equal(t, depth < 0, false, "probeNbtDepth 返回负深度: %d", depth)
 	})
 }

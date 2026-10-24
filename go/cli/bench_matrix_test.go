@@ -27,11 +27,11 @@ func writeDirFormYsm(t *testing.T, root, name string) string {
 	t.Helper()
 	dir := filepath.Join(root, name)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("建目录失败: %v", err)
+		testutil.NoError(t, err, "建目录失败")
 	}
 	entry := filepath.Join(dir, "ysm.json")
 	if err := os.WriteFile(entry, []byte(`{"files":{}}`), 0o644); err != nil {
-		t.Fatalf("写 ysm.json 失败: %v", err)
+		testutil.NoError(t, err, "写 ysm.json 失败")
 	}
 	return entry
 }
@@ -53,17 +53,13 @@ func TestScanBenchTargets_DeterministicAndTyped(t *testing.T) {
 	}
 
 	all := scanBenchTargets(root, "", 10)
-	if len(all) != 3 {
-		t.Fatalf("默认目标集应只含 CLI 可分析类型（3 个 ysm），got %d: %v", len(all), all)
-	}
+	testutil.Equal(t, len(all), 3, "默认目标集应只含 CLI 可分析类型（3 个 ysm）, got %v", all)
 	if filepath.Base(filepath.Dir(all[0])) != "a_model" {
 		t.Errorf("目标集应按路径字典序确定性排序, got %v", all)
 	}
 
 	limited := scanBenchTargets(root, "ysm", 2)
-	if len(limited) != 2 {
-		t.Fatalf("maxModels=2 应取前 2 个, got %d", len(limited))
-	}
+	testutil.Equal(t, len(limited), 2, "maxModels=2 应取前 2 个, got %d", len(limited))
 	if limited[0] != all[0] || limited[1] != all[1] {
 		t.Errorf("截断应作用于排序后的前缀: %v vs %v", limited, all)
 	}
@@ -97,7 +93,7 @@ func TestSingleBench_MatrixByRtype_YsmFixtures(t *testing.T) {
 	testutil.NoError(t, err, "矩阵模式报错")
 	var m singleBenchMatrixJSON
 	if err := json.Unmarshal([]byte(out), &m); err != nil {
-		t.Fatalf("矩阵载荷不是 JSON: %v\n%s", err, out)
+		testutil.NoError(t, err, "矩阵载荷不是 JSON:\n%s", out)
 	}
 	if m.Spec.Rtype != "ysm" || !m.Spec.CliAnalyzable {
 		t.Errorf("spec 应回显 ysm 且 cli_analyzable=true: %+v", m.Spec)
@@ -108,9 +104,9 @@ func TestSingleBench_MatrixByRtype_YsmFixtures(t *testing.T) {
 	if m.Spec.MaxModels != 2 || m.Spec.Iterations != 1 {
 		t.Errorf("spec 应回显实验规格: %+v", m.Spec)
 	}
-	if len(m.Models) != 2 || m.Spec.Analyzed != 2 || m.Spec.Unsupported != 0 {
-		t.Fatalf("应采集 2 个模型: models=%d spec=%+v", len(m.Models), m.Spec)
-	}
+	testutil.Equal(t, len(m.Models), 2, "应采集 2 个模型: spec=%+v", m.Spec)
+	testutil.Equal(t, m.Spec.Analyzed, 2, "应采集 2 个模型: spec=%+v", m.Spec)
+	testutil.Equal(t, m.Spec.Unsupported, 0, "应采集 2 个模型: spec=%+v", m.Spec)
 	for _, p := range m.Models {
 		if p.Identity.Rtype != "ysm" || p.Identity.Form != "dir" {
 			t.Errorf("身份块应为 ysm/dir: %+v", p.Identity)
@@ -141,7 +137,7 @@ func TestSingleBench_Matrix_UnsupportedTypeNotFaked(t *testing.T) {
 	testutil.NoError(t, err, "矩阵模式报错")
 	var m singleBenchMatrixJSON
 	if err := json.Unmarshal([]byte(out), &m); err != nil {
-		t.Fatalf("矩阵载荷不是 JSON: %v\n%s", err, out)
+		testutil.NoError(t, err, "矩阵载荷不是 JSON:\n%s", out)
 	}
 	if m.Spec.Target != perfTargetRtype || m.Spec.Rtype != "EntityPlayer" {
 		t.Errorf("spec 应回显 target=rtype 与目标类型: %+v", m.Spec)
@@ -149,9 +145,7 @@ func TestSingleBench_Matrix_UnsupportedTypeNotFaked(t *testing.T) {
 	if m.Spec.CliAnalyzable || m.Spec.Unsupported != 1 || m.Spec.Analyzed != 0 {
 		t.Errorf("CLI 无解析器的类型应标 unsupported 且不采集: %+v", m.Spec)
 	}
-	if len(m.Models) != 1 {
-		t.Fatalf("应出 1 条身份记录（不静默丢弃）: %d", len(m.Models))
-	}
+	testutil.Equal(t, len(m.Models), 1, "应出 1 条身份记录（不静默丢弃）: %d", len(m.Models))
 	got := m.Models[0]
 	if got.Identity.Rtype != "EntityPlayer" || got.Identity.RtypeSource != "location" {
 		t.Errorf("MMD 容器应按目录归属判 EntityPlayer: %+v", got.Identity)
@@ -228,7 +222,7 @@ func TestSingleBench_TargetAll_Fixtures(t *testing.T) {
 	testutil.NoError(t, err, "--target all 报错")
 	var m singleBenchMatrixJSON
 	if err := json.Unmarshal([]byte(out), &m); err != nil {
-		t.Fatalf("矩阵载荷不是 JSON: %v\n%s", err, out)
+		testutil.NoError(t, err, "矩阵载荷不是 JSON:\n%s", out)
 	}
 	if m.Spec.Target != perfTargetAll || m.Spec.Rtype != "" {
 		t.Errorf("--target all 应回显 target=all 且不填单类型 rtype: %+v", m.Spec)
@@ -237,9 +231,7 @@ func TestSingleBench_TargetAll_Fixtures(t *testing.T) {
 	if m.Spec.Order != perfOrderPath || m.Spec.SizeSource != "" {
 		t.Errorf("path 序不应回显 size_source: %+v", m.Spec)
 	}
-	if len(m.Spec.Types) != 1 {
-		t.Fatalf("fixtures 只有 ysm 类型, types 应为 1 项: %+v", m.Spec.Types)
-	}
+	testutil.Equal(t, len(m.Spec.Types), 1, "fixtures 只有 ysm 类型, types 应为 1 项: %+v", m.Spec.Types)
 	sum := m.Spec.Types[0]
 	if sum.Rtype != "ysm" || !sum.CliAnalyzable || sum.RtypeLabel != "YSM 模型" {
 		t.Errorf("类型汇总应取自清单 + registry: %+v", sum)
@@ -289,7 +281,7 @@ func TestPerfTypeSummary_StagesDeclared(t *testing.T) {
 	testutil.NoError(t, err, "--target all 报错")
 	var m singleBenchMatrixJSON
 	if err := json.Unmarshal([]byte(out), &m); err != nil {
-		t.Fatalf("矩阵载荷不是 JSON: %v\n%s", err, out)
+		testutil.NoError(t, err, "矩阵载荷不是 JSON:\n%s", out)
 	}
 
 	byType := map[string]perfTypeSummary{}
@@ -299,9 +291,7 @@ func TestPerfTypeSummary_StagesDeclared(t *testing.T) {
 
 	// ysm：已声明（manifest 里声明 7 段）
 	ysmSum, ok := byType["ysm"]
-	if !ok {
-		t.Fatalf("types 缺 ysm: %+v", m.Spec.Types)
-	}
+	testutil.Equal(t, ok, true, "types 缺 ysm: %+v", m.Spec.Types)
 	if !ysmSum.StagesDeclared {
 		t.Errorf("ysm 已声明阶段链，StagesDeclared 必须为 true: %+v", ysmSum)
 	}
@@ -323,9 +313,7 @@ func TestPerfTypeSummary_StagesDeclared(t *testing.T) {
 			t.Errorf("未声明类型不应有期望段数: %+v", s)
 		}
 	}
-	if !foundUndeclared {
-		t.Fatalf("夹具未产出未声明类型行，本测试失去判别面: %+v", m.Spec.Types)
-	}
+	testutil.Equal(t, foundUndeclared, true, "夹具未产出未声明类型行，本测试失去判别面: %+v", m.Spec.Types)
 
 	// 显式断言 JSON 字段名与**两种取值都出现**（前端按名消费，改名即静默失真；
 	// 只断言 true 会漏掉「全都发 true」的退化——那等于回到用 0 反推）

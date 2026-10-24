@@ -31,15 +31,10 @@ func TestMoveEx_RenameNonCrossDeviceError(t *testing.T) {
 	tm := newTMWithRenameErr(t, dir, os.ErrPermission)
 
 	res := tm.MoveEx(src)
-	if res.Action != "error" {
-		t.Fatalf("非跨设备 rename 失败应报 error, 得到 %s/%s", res.Action, res.Reason)
-	}
-	if _, err := os.Stat(src); err != nil {
-		t.Fatalf("源文件应保留: %v", err)
-	}
-	if entries := tm.List(); len(entries) != 0 {
-		t.Fatalf("回收站不应有新条目: %v", entries)
-	}
+	testutil.Equal(t, res.Action, "error", "非跨设备 rename 失败应报 error, 得到 %s/%s", res.Action, res.Reason)
+	testutil.FileExists(t, src, "源文件应保留")
+	entries := tm.List()
+	testutil.Equal(t, len(entries), 0, "回收站不应有新条目: %v", entries)
 }
 
 // 跨设备复制回退「成功路径」已收敛至 recycle_coverage_test.go：
@@ -68,18 +63,13 @@ func TestMoveEx_CrossDeviceCopyFails_CleansDst(t *testing.T) {
 	}
 
 	res := tm.MoveEx(modDir)
-	if res.Action != "error" {
-		t.Fatalf("复制失败应报 error, 得到 %s/%s", res.Action, res.Reason)
-	}
+	testutil.Equal(t, res.Action, "error", "复制失败应报 error, 得到 %s/%s", res.Action, res.Reason)
 	// 半截副本应被清理（含 partial.ysm 与其父目录）
 	recycleDir := filepath.Join(dir, ".recycle")
-	if _, err := os.Stat(filepath.Join(recycleDir, "mod")); !os.IsNotExist(err) {
-		t.Fatal("半截副本目录应被清理")
-	}
+	_, statErr := os.Stat(filepath.Join(recycleDir, "mod"))
+	testutil.Equal(t, os.IsNotExist(statErr), true, "半截副本目录应被清理")
 	// 源目录应完好
-	if _, err := os.Stat(filepath.Join(modDir, "ysm.json")); err != nil {
-		t.Fatalf("源目录应完好: %v", err)
-	}
+	testutil.FileExists(t, filepath.Join(modDir, "ysm.json"), "源目录应完好")
 }
 
 // moveEx 文件跨设备回退时复制中途失败：半截文件应被清理，源文件保留
@@ -96,16 +86,11 @@ func TestMoveEx_CrossDeviceFileCopyFails_CleansDst(t *testing.T) {
 	}
 
 	res := tm.MoveEx(src)
-	if res.Action != "error" {
-		t.Fatalf("复制失败应报 error, 得到 %s/%s", res.Action, res.Reason)
-	}
+	testutil.Equal(t, res.Action, "error", "复制失败应报 error, 得到 %s/%s", res.Action, res.Reason)
 	// 半截副本应被清理
 	recycleDir := filepath.Join(dir, ".recycle")
-	if _, err := os.Stat(filepath.Join(recycleDir, "single.ysm")); !os.IsNotExist(err) {
-		t.Fatal("半截副本文件应被清理")
-	}
+	_, statErr := os.Stat(filepath.Join(recycleDir, "single.ysm"))
+	testutil.Equal(t, os.IsNotExist(statErr), true, "半截副本文件应被清理")
 	// 源文件应完好
-	if _, err := os.Stat(src); err != nil {
-		t.Fatalf("源文件应完好: %v", err)
-	}
+	testutil.FileExists(t, src, "源文件应完好")
 }

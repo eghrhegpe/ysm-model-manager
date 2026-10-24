@@ -94,10 +94,9 @@ export const ALL_STATIC_TOOLS: GateTool[] = [
   { tool: "check-adr-health.ts", blockPolicy: "hard" },
   { tool: "check-resource-manifest.ts", blockPolicy: "hard" },
   {
-    // 双挂第二重（仓内「只减不增型闸一律双挂」不变量）：commit-msg 钩子可被
-    // `git commit --no-verify` 一条命令整钩绕过（零痕迹），此处按**推送集**复验兜住。
-    // 采集期 debt：违规只记不拦——ADR-338-d1 D3「warn 采集 → replay 校准 → hard」，
-    // 转 hard 时只把本条 blockPolicy 改 "hard" 并给钩子加 --strict，规则一行不动。
+    // 双挂第二重（「只减不增型闸一律双挂」）：commit-msg 钩子可被 `git commit --no-verify`
+    // 整钩绕过（零痕迹），此处按**推送集**复验兜住。采集期 debt 只记不拦——ADR-338-d1 D3
+    // 「warn 采集 → replay 校准 → hard」；转 hard 时只改 blockPolicy 并给钩子加 --strict。
     tool: "check-commit-message.ts",
     args: ["--range", "auto"],
     blockPolicy: "debt",
@@ -162,35 +161,30 @@ export const ALL_STATIC_TOOLS: GateTool[] = [
   },
   { tool: "check-workflow-refs.ts", blockPolicy: "hard" },
   { tool: "check-readme-index.ts", blockPolicy: "hard" },
-  // docs markdown 裸标签（2026-09-19 接线）：VitePress 用 Vue 编译器解析 md，
-  // 行内代码之外的裸 `<tag>` 会让整站构建抛「Element is missing end tag」——
-  // Pages 曾因此静默连挂 6 次（go-scanner 知识卡漏反引号），而断链检查 / 测试 / CI 全绿。
-  // hard 的依据：判定经 VitePress 真实 markdown-it 逐例实测 + 真实构建探针裁决
-  // （见脚本头「实证依据」），全 docs 语料 0 命中 → 无存量债冒充，属确定性规则
-  // 而非启发式（同 check-workflow-refs 的引用守规定位）。配套 tests/test_check_doc_markup.ts。
+  // docs markdown 裸标签（2026-09-19 接线）：VitePress 用 Vue 编译器解析 md，行内代码之外的
+  // 裸 `<tag>` 会让整站构建抛「Element is missing end tag」——Pages 曾因此静默连挂 6 次（漏反引号）
+  // 而断链检查/测试/CI 全绿。hard 依据：markdown-it 逐例实测 + 构建探针裁决（见脚本头「实证依据」），
+  // 全 docs 语料 0 命中 → 无存量债冒充，确定性规则（同 check-workflow-refs 定位）；配套 tests/test_check_doc_markup.ts。
   { tool: "check-doc-markup.ts", blockPolicy: "hard" },
   { tool: "i18n-check.ts", args: ["--strict"], blockPolicy: "hard" },
   { tool: "i18n-ui-check.ts", blockPolicy: "hard" },
-  // i18n 模块级冻结 t()（2026-10-13 第五闸）：顶层 const 初始化区内求值的 t() 把译文焊死
-  // 在首查语言包上，lang:changed 不重建模块——既有 i18n 闸查「有没有包 t()」，全对
-  // 「包得太早」失明。hard 依据：确定性状态机（遮罩+深度跟踪），接闸日存量 15 处全清
-  // （无存量债冒充）；配套 tests/test_i18n_frozen_t_check.ts（纯核直测判别力 + 真仓恒绿反照）。
+  // i18n 模块级冻结 t()（2026-10-13 第五闸）：顶层 const 初始化区内求值的 t() 把译文焊死在首查
+  // 语言包上，lang:changed 不重建模块——既有 i18n 闸查「有没有包 t()」，全对「包得太早」失明。
+  // hard 依据：确定性状态机（遮罩+深度跟踪），接闸日存量 15 处全清（无债冒充）；配套 tests/test_i18n_frozen_t_check.ts。
   { tool: "i18n-frozen-t-check.ts", args: ["--strict"], blockPolicy: "hard" },
   { tool: "css-layer-check.ts", args: ["--strict"], blockPolicy: "hard" },
   // a11y 覆盖基线守卫（ADR-308 D3，2026-09-26 接线）：coverage 计数下限（aria-* 按属性名 /
-  // role / tabindex / prefers-reduced-motion，只增不减）+ document 级 keydown 散点上限
-  // （只减不增，key-router.ts 唯一合法出口豁免）。hard 依据：确定性正则 + baseline 即存量
-  // 本身，不存在「存量债冒充」；配套 tests/test_check_a11y.ts（纯核直测防空转假绿）。
+  // role / tabindex / prefers-reduced-motion，只增不减）+ document 级 keydown 散点上限（只减不增，
+  // key-router.ts 唯一合法出口豁免）。hard 依据：确定性正则 + baseline 即存量本身，无「债冒充」；配套 tests/test_check_a11y.ts。
   { tool: "check-a11y.ts", blockPolicy: "hard" },
   {
     tool: "check-toast-duration.ts",
     blockPolicy: "debt",
     debt: debt("提示时长口径存量违规，量小但分散"),
   },
-  // 设计令牌守规（2026-09 接线）：与 css-layer-check 互补——后者管「样式定义在哪一层生效」，
-  // 本闸管「样式值是否走了令牌」。全量模式不传 --files（无 diff 上下文）→ 走 `--baseline`：
-  // 这里是**账本漂移报告**（全库 vs scripts/baseline/design-tokens-baseline.json），
-  // 不再参与提交 / 推送判定（判定已改真行级，见 FRONTEND_STATIC_TOOLS 的 ADR-256 注释）。
+  // 设计令牌守规（2026-09 接线）：与 css-layer-check 互补——后者管「样式定义在哪一层生效」，本闸管「样式值是否走了令牌」。
+  // 全量模式不传 --files（无 diff 上下文）→ 走 `--baseline`：这里是**账本漂移报告**（全库 vs
+  // scripts/baseline/design-tokens-baseline.json），不再参与提交/推送判定（判定已改真行级，见 FRONTEND_STATIC_TOOLS 的 ADR-256 注释）。
   {
     tool: "check-design-tokens.ts",
     args: ["--baseline"],
@@ -381,6 +375,16 @@ export const FRONTEND_STATIC_TOOLS: GateTool[] = [
     blockPolicy: "debt",
     debt: debt("提示时长口径存量违规，量小但分散"),
   },
+  // e2e 反模式静态门禁（2026-10-25 锐评落地；规则全文见 docs/knowledge/e2e-visual-feedback.md）：
+  // 扫 frontend/e2e + frontend/e2e-web 的 *.spec.ts 三类反模式——R1 固定 sleep 等就绪
+  //（waitForTimeout）/ R2 软断言假绿（toBeGreaterThan(0) 等）/ R3 防假绿守卫
+  // screenshotWithBaseline 在 spec 树内零调用（死代码）。blockPolicy: debt 观察期非阻断
+  //（--strict 命中 high 才 exit 1，未来可升 hard）。不置 scopedFiles：全仓套件级分析（28 spec）。
+  {
+    tool: "check-e2e-hygiene.ts",
+    blockPolicy: "debt",
+    debt: debt("e2e 反模式存量（R1 固定 sleep / R2 软断言假绿 / R3 守卫废置），观察一轮后升 hard", REVIEW_BY_OBSERVE),
+  },
   { tool: "check-biome.ts", args: ["--strict"], blockPolicy: "hard" },
   { tool: "check-file-lines.ts", blockPolicy: "hard" },
   // 设计令牌守规（2026-09 接线，2026-09-16 改判真行级 ADR-256）：此前**只挂 pre-commit**，
@@ -489,8 +493,7 @@ export const ALL_GATE_TOOL_LISTS: readonly (readonly GateTool[])[] = [
   DOC_EXTRA_SCRIPTS,
   FRONTEND_STATIC_TOOLS,
   GO_STATIC_TOOLS,
-  // scripts/ TS 域 typecheck（单条闸、无独立清单，同样是一条「清单条目」——
-  // 计入阻断构成，否则「44 条 hard+debt」与实况差一，又是口径不一）。
+  // scripts/ TS 域 typecheck（单条闸、无独立清单，同样是一条「清单条目」——计入阻断构成，否则「44 条 hard+debt」与实况差一）。
   [SCRIPTS_TYPECHECK],
 ];
 

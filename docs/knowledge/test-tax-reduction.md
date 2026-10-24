@@ -99,6 +99,15 @@ quick_intents:
   成对 stub URL.createObjectURL / revokeObjectURL（happy-dom 无真实 blob），afterEach 的 `vi.restoreAllMocks()` 统一还原。
 - 手术产物提交：`0a460fd9`（合体）、`eda4a07c`（mmd 夹具）、`53f89414`（fbx 复用）。
 
+
+## e2e 墙钟税:为运行时环境殉葬（2026-10-25 锐评实证）
+
+三刀方法论管的是**单测**里的 mock 复印机 / 双胞胎税。e2e 域另有一类**结构性税**——不是 mock 重复，而是「为运行时环境殉葬」：
+
+- 真实墙钟 5–7min 的主税 = Chromium 启动 + SwiftShader 软渲染 WebGL 初始化 + 串行测试逻辑，**与 vite dev server 启动无关**（实测冷启动仅 1.5–2.8s，`playwright.config.ts` 的 `timeout:120000` 只是安全天花板从未触达）。
+- 「薄化 vite 配置 / 清空 postprocessing addon 省税」被实测证伪：TRIM（`optimizeDeps.include:[]`）反而比 FULL 慢 1s（缓存命中被清空）；mock 桥纯 DOM 不反射 three，那 5 个 `three/examples/jsm/postprocessing` 对它是死重但只省百毫秒级零头。
+- **结论**：此类税只能靠**测试分层**（纯 DOM spec 离开 WebGL runner）/ **并行化**根治，非配置调参可解。已落地的零风险减负是**断言资产**而非配置：`frontend/e2e/visual-baseline.ts`（截图字节级基线防假绿）+ `coverage-breadth.spec.ts` 双层防腐闸（条目数>0 + 触及独立源文件数≥30）。详见 `e2e-visual-feedback.md`。
+
 ## 与其他子系统关系
 
 - 依赖 vitest 的 `vi.spyOn` / `vi.restoreAllMocks` 生命周期（工厂不接管 restore）。

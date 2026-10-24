@@ -25,12 +25,8 @@ func loadZipentryParityFixture(t *testing.T) *zipentryParityFixture {
 	raw, err := os.ReadFile(filepath.Join(root, "tests", "parity", "go-ts-zipentry.json"))
 	testutil.NoError(t, err, "读取 parity fixture")
 	var f zipentryParityFixture
-	if err := json.Unmarshal(raw, &f); err != nil {
-		t.Fatalf("解析 parity fixture: %v", err)
-	}
-	if len(f.Pairs) == 0 {
-		t.Fatal("parity fixture 为空（防空转守卫）")
-	}
+	testutil.NoError(t, json.Unmarshal(raw, &f), "解析 parity fixture")
+	testutil.Equal(t, len(f.Pairs) != 0, true, "parity fixture 为空（防空转守卫）")
 	return &f
 }
 

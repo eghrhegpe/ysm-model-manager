@@ -85,11 +85,10 @@ func TestFilterAnalyzable_FiltersTargets(t *testing.T) {
 	ts := []perfTarget{mk("a.vrm"), mk("b.ysm"), mk("c.gltf"), mk("d.ysm")}
 	got := pathsOf(filterAnalyzable(ts))
 	want := []string{ts[1].Path, ts[3].Path}
-	if len(got) != len(want) {
-		t.Fatalf("应只留 CLI 可分析条目 %v, got %v", want, got)
-	}
+	testutil.Equal(t, len(got), len(want), "应只留 CLI 可分析条目 %v, got %v", want, got)
 	// 保持扫描序（调用方决定排序/截断，本函数不做隐式重排）
 	for i := range want {
+		// len 已由上一断言守卫（失败即 Goexit），got[i] 才安全
 		if got[i] != want[i] {
 			t.Errorf("第 %d 项应为 %q, got %q（应保持扫描序）", i, want[i], got[i])
 		}

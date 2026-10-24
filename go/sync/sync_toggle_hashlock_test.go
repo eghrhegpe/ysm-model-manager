@@ -101,10 +101,12 @@ func TestSyncToggleStatus_LockReleasedDuringHash(t *testing.T) {
 		close(done)
 	}()
 
+	timedOut := false
 	select {
 	case <-done:
 		// 锁获取成功，验证通过
 	case <-time.After(500 * time.Millisecond):
-		t.Fatal("锁未在预期时间内释放")
+		timedOut = true
 	}
+	testutil.Equal(t, timedOut, false, "锁未在预期时间内释放")
 }

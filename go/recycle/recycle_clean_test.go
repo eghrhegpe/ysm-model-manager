@@ -31,23 +31,16 @@ func TestRemoveRepoDuplicates_RemovesRepoFilesOnly(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(dir, "user.ysm"), []byte("x"), 0644)
 
 	count := RemoveRepoDuplicates(dir, repoRoot, recycleRoot, nil)
-	if count != 1 {
-		t.Fatalf("应清理 1 个，实际 %d", count)
-	}
-	if _, err := os.Stat(filepath.Join(dir, "m.ysm")); err == nil {
-		t.Fatal("m.ysm 应被清理")
-	}
-	if _, err := os.Stat(filepath.Join(dir, "user.ysm")); err != nil {
-		t.Fatalf("user.ysm 应保留: %v", err)
-	}
+	testutil.Equal(t, count, 1, "应清理 1 个，实际 %d", count)
+	testutil.FileNotExists(t, filepath.Join(dir, "m.ysm"), "m.ysm 应被清理")
+	testutil.FileExists(t, filepath.Join(dir, "user.ysm"), "user.ysm 应保留")
 }
 
 func TestRemoveRepoDuplicates_NoRepoRoot(t *testing.T) {
 	dir := t.TempDir()
 	_ = os.WriteFile(filepath.Join(dir, "m.ysm"), []byte("x"), 0644)
-	if count := RemoveRepoDuplicates(dir, "", "", nil); count != 0 {
-		t.Fatalf("无仓库根应返回 0，实际 %d", count)
-	}
+	count := RemoveRepoDuplicates(dir, "", "", nil)
+	testutil.Equal(t, count, 0, "无仓库根应返回 0，实际 %d", count)
 }
 
 // TestRemoveRepoDuplicates_SameNameDiffContent_Kept 锁定内容校验契约：
@@ -67,12 +60,8 @@ func TestRemoveRepoDuplicates_SameNameDiffContent_Kept(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(dir, "m.ysm"), []byte("user-custom"), 0644)
 
 	count := RemoveRepoDuplicates(dir, repoRoot, "", nil)
-	if count != 0 {
-		t.Fatalf("同名不同内容不应清理，实际清理 %d 个", count)
-	}
-	if _, err := os.Stat(filepath.Join(dir, "m.ysm")); err != nil {
-		t.Fatalf("用户自装 m.ysm 应保留: %v", err)
-	}
+	testutil.Equal(t, count, 0, "同名不同内容不应清理，实际清理 %d 个", count)
+	testutil.FileExists(t, filepath.Join(dir, "m.ysm"), "用户自装 m.ysm 应保留")
 }
 
 func TestDeduplicateEntries(t *testing.T) {
@@ -97,14 +86,10 @@ func TestDeduplicateEntries(t *testing.T) {
 		{Name: "c.ysm", Path: filepath.Join(recycleRoot, "c.ysm"), Hash: "def"},
 	}
 	removed, kept := DeduplicateEntries(entries, recycleRoot, nil)
-	if removed != 1 || kept != 1 {
-		t.Fatalf("应 removed=1 kept=1，实际 %d/%d", removed, kept)
-	}
+	// OR 型复合条件拆序贯
+	testutil.Equal(t, removed, 1, "应 removed=1，实际 %d", removed)
+	testutil.Equal(t, kept, 1, "应 kept=1，实际 %d", kept)
 	// a.ysm 保留（组内第一个），b.ysm 移入回收站
-	if _, err := os.Stat(a); err != nil {
-		t.Fatalf("a.ysm 应保留: %v", err)
-	}
-	if _, err := os.Stat(b); err == nil {
-		t.Fatal("b.ysm 应移入回收站")
-	}
+	testutil.FileExists(t, a, "a.ysm 应保留")
+	testutil.FileNotExists(t, b, "b.ysm 应移入回收站")
 }

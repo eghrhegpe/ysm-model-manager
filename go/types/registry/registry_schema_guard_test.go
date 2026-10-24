@@ -18,7 +18,7 @@ func guardViolations(t *testing.T, payload string) []string {
 	t.Helper()
 	var reg ResourceTypeRegistry
 	if err := json.Unmarshal([]byte(payload), &reg); err != nil {
-		t.Fatalf("payload 解析失败: %v", err)
+		testutil.NoError(t, err, "payload 解析失败")
 	}
 	return validateRegistrySchema(&reg)
 }
@@ -85,9 +85,7 @@ func TestSchemaGuard_AllGuards_ExactStringsAndOrder(t *testing.T) {
 		},
 		{`类型 scanless scanInstance=true 必须声明 fallbackDir（限定兜底目录名），否则兜底会越界扫兄弟目录`},
 	}
-	if len(violations) != len(allowed) {
-		t.Fatalf("违规条数 = %d，期望 %d\n实际逐条: %q", len(violations), len(allowed), violations)
-	}
+	testutil.Equal(t, len(violations), len(allowed), "违规条数 = %d，期望 %d\n实际逐条: %q", len(violations), len(allowed), violations)
 	for i, wantSet := range allowed {
 		matched := false
 		for _, want := range wantSet {
@@ -113,9 +111,9 @@ func TestSchemaGuard_DuplicateStorageSubDir_Warns(t *testing.T) {
 		]
 	}`
 	violations := guardViolations(t, payload)
-	if !hasViolation(violations, "dup") || !hasViolation(violations, "存储路径冲突") {
-		t.Fatalf("期望 storageSubDir 重复违规，实际: %v", violations)
-	}
+	// OR 型复合条件拆序贯
+	testutil.Equal(t, hasViolation(violations, "dup"), true, "期望 storageSubDir 重复违规（含 dup），实际: %v", violations)
+	testutil.Equal(t, hasViolation(violations, "存储路径冲突"), true, "期望 storageSubDir 重复违规（含 存储路径冲突），实际: %v", violations)
 }
 
 func TestSchemaGuard_UniqueStorageSubDir_NoWarn(t *testing.T) {
@@ -126,9 +124,7 @@ func TestSchemaGuard_UniqueStorageSubDir_NoWarn(t *testing.T) {
 		]
 	}`
 	violations := guardViolations(t, payload)
-	if hasViolation(violations, "存储路径冲突") {
-		t.Fatalf("唯一 storageSubDir 不应触发冲突违规，实际: %v", violations)
-	}
+	testutil.Equal(t, hasViolation(violations, "存储路径冲突"), false, "唯一 storageSubDir 不应触发冲突违规，实际: %v", violations)
 }
 
 // ===== 守卫 2：configField 组内唯一（同组共享合法，跨组声明违规）=====
@@ -141,9 +137,9 @@ func TestSchemaGuard_DuplicateConfigFieldCrossGroup_Warns(t *testing.T) {
 		]
 	}`
 	violations := guardViolations(t, payload)
-	if !hasViolation(violations, "SharedRoot") || !hasViolation(violations, "配置槽归属歧义") {
-		t.Fatalf("期望跨组 configField 重复违规，实际: %v", violations)
-	}
+	// OR 型复合条件拆序贯
+	testutil.Equal(t, hasViolation(violations, "SharedRoot"), true, "期望跨组 configField 重复违规（含 SharedRoot），实际: %v", violations)
+	testutil.Equal(t, hasViolation(violations, "配置槽归属歧义"), true, "期望跨组 configField 重复违规（含 配置槽归属歧义），实际: %v", violations)
 }
 
 func TestSchemaGuard_SameGroupSharedConfigField_NoWarn(t *testing.T) {
@@ -157,9 +153,7 @@ func TestSchemaGuard_SameGroupSharedConfigField_NoWarn(t *testing.T) {
 		]
 	}`
 	violations := guardViolations(t, payload)
-	if hasViolation(violations, "MmdRoot") {
-		t.Fatalf("同组共享 configField 不应触发违规，实际: %v", violations)
-	}
+	testutil.Equal(t, hasViolation(violations, "MmdRoot"), false, "同组共享 configField 不应触发违规，实际: %v", violations)
 }
 
 // ===== 合法注册表通过（零违规）=====
@@ -172,9 +166,7 @@ func TestSchemaGuard_CleanRegistry_NoWarn(t *testing.T) {
 		]
 	}`
 	violations := guardViolations(t, payload)
-	if len(violations) != 0 {
-		t.Fatalf("合法注册表不应触发任何违规，实际: %v", violations)
-	}
+	testutil.Equal(t, len(violations), 0, "合法注册表不应触发任何违规，实际: %v", violations)
 }
 
 // ===== 守卫 3：configFallback 引用完整性 =====
@@ -187,9 +179,7 @@ func TestSchemaGuard_ConfigFallbackResolves_NoWarn(t *testing.T) {
 		]
 	}`
 	violations := guardViolations(t, payload)
-	if hasViolation(violations, "孤儿回退") {
-		t.Fatalf("configFallback 指向存在字段不应触发孤儿回退违规，实际: %v", violations)
-	}
+	testutil.Equal(t, hasViolation(violations, "孤儿回退"), false, "configFallback 指向存在字段不应触发孤儿回退违规，实际: %v", violations)
 }
 
 func TestSchemaGuard_ConfigFallbackOrphan_Warns(t *testing.T) {
@@ -199,9 +189,9 @@ func TestSchemaGuard_ConfigFallbackOrphan_Warns(t *testing.T) {
 		]
 	}`
 	violations := guardViolations(t, payload)
-	if !hasViolation(violations, "GhostRoot") || !hasViolation(violations, "孤儿回退") {
-		t.Fatalf("期望 configFallback 孤儿回退违规，实际: %v", violations)
-	}
+	// OR 型复合条件拆序贯
+	testutil.Equal(t, hasViolation(violations, "GhostRoot"), true, "期望 configFallback 孤儿回退违规（含 GhostRoot），实际: %v", violations)
+	testutil.Equal(t, hasViolation(violations, "孤儿回退"), true, "期望 configFallback 孤儿回退违规（含 孤儿回退），实际: %v", violations)
 }
 
 // ===== 集成：LoadRegistry 完整链路——守卫只告警不阻断、不改数据 =====
@@ -221,9 +211,7 @@ func TestSchemaGuard_LoadRegistryIntegration(t *testing.T) {
 	defer SetRegistryPath("")
 
 	reg := LoadRegistry()
-	if got := len(reg.ResourceTypes); got != 2 {
-		t.Fatalf("ResourceTypes 长度 = %d，期望 2", got)
-	}
+	testutil.Equal(t, len(reg.ResourceTypes), 2, "ResourceTypes 长度 = %d，期望 2", len(reg.ResourceTypes))
 	rt := RegistryType("type-x")
 	testutil.NotNil(t, rt, "RegistryType('type-x') 应为非 nil")
 	if rt.StorageSubDir != "evil" {
@@ -264,9 +252,9 @@ func TestSchemaGuard_NakedSharedExt_Warns(t *testing.T) {
 		]
 	}`
 	violations := guardViolations(t, payload)
-	if !hasViolation(violations, "naked") || !hasViolation(violations, "last-wins 回归源") {
-		t.Fatalf("期望裸共享扩展名违规，实际: %v", violations)
-	}
+	// OR 型复合条件拆序贯
+	testutil.Equal(t, hasViolation(violations, "naked"), true, "期望裸共享扩展名违规（含 naked），实际: %v", violations)
+	testutil.Equal(t, hasViolation(violations, "last-wins 回归源"), true, "期望裸共享扩展名违规（含 last-wins 回归源），实际: %v", violations)
 }
 
 func TestSchemaGuard_NakedUniqueExt_NoWarn(t *testing.T) {
@@ -276,9 +264,7 @@ func TestSchemaGuard_NakedUniqueExt_NoWarn(t *testing.T) {
 		]
 	}`
 	violations := guardViolations(t, payload)
-	if hasViolation(violations, "last-wins 回归源") {
-		t.Fatalf("单一声明者裸扩展名不应触发违规，实际: %v", violations)
-	}
+	testutil.Equal(t, hasViolation(violations, "last-wins 回归源"), false, "单一声明者裸扩展名不应触发违规，实际: %v", violations)
 }
 
 func TestSchemaGuard_AnchoredSharedExt_NoWarn(t *testing.T) {
@@ -289,9 +275,7 @@ func TestSchemaGuard_AnchoredSharedExt_NoWarn(t *testing.T) {
 		]
 	}`
 	violations := guardViolations(t, payload)
-	if hasViolation(violations, "last-wins 回归源") {
-		t.Fatalf("有锚点的共享扩展名不应触发裸扩展名违规，实际: %v", violations)
-	}
+	testutil.Equal(t, hasViolation(violations, "last-wins 回归源"), false, "有锚点的共享扩展名不应触发裸扩展名违规，实际: %v", violations)
 }
 
 // ===== 守卫 5：共享 .zip 锚点碰撞需显式 priority =====
@@ -304,9 +288,9 @@ func TestSchemaGuard_SharedZipAnchorNeedsPriority_Warns(t *testing.T) {
 		]
 	}`
 	violations := guardViolations(t, payload)
-	if !hasViolation(violations, "bp") || !hasViolation(violations, "必须显式 priority") {
-		t.Fatalf("期望共享 .zip 锚点缺 priority 违规，实际: %v", violations)
-	}
+	// OR 型复合条件拆序贯
+	testutil.Equal(t, hasViolation(violations, "bp"), true, "期望共享 .zip 锚点缺 priority 违规（含 bp），实际: %v", violations)
+	testutil.Equal(t, hasViolation(violations, "必须显式 priority"), true, "期望共享 .zip 锚点缺 priority 违规（含 必须显式 priority），实际: %v", violations)
 }
 
 func TestSchemaGuard_SharedZipAnchorWithPriority_NoWarn(t *testing.T) {
@@ -317,9 +301,7 @@ func TestSchemaGuard_SharedZipAnchorWithPriority_NoWarn(t *testing.T) {
 		]
 	}`
 	violations := guardViolations(t, payload)
-	if hasViolation(violations, "必须显式 priority") {
-		t.Fatalf("共享 .zip 锚点已显式 priority 不应触发违规，实际: %v", violations)
-	}
+	testutil.Equal(t, hasViolation(violations, "必须显式 priority"), false, "共享 .zip 锚点已显式 priority 不应触发违规，实际: %v", violations)
 }
 
 func TestSchemaGuard_UniqueZipAnchor_NoWarn(t *testing.T) {
@@ -329,9 +311,7 @@ func TestSchemaGuard_UniqueZipAnchor_NoWarn(t *testing.T) {
 		]
 	}`
 	violations := guardViolations(t, payload)
-	if hasViolation(violations, "必须显式 priority") {
-		t.Fatalf("独占锚点的 .zip 类型不应触发违规，实际: %v", violations)
-	}
+	testutil.Equal(t, hasViolation(violations, "必须显式 priority"), false, "独占锚点的 .zip 类型不应触发违规，实际: %v", violations)
 }
 
 // ===== 守卫 6：scanInstance=true 必须声明 fallbackDir =====
@@ -343,9 +323,7 @@ func TestSchemaGuard_ScanInstanceRequiresFallbackDir_Warns(t *testing.T) {
 		]
 	}`
 	violations := guardViolations(t, payload)
-	if !hasViolation(violations, "scanInstance=true 必须声明 fallbackDir") {
-		t.Fatalf("期望 scanInstance=true 且缺 fallbackDir 触发违规，实际: %v", violations)
-	}
+	testutil.Equal(t, hasViolation(violations, "scanInstance=true 必须声明 fallbackDir"), true, "期望 scanInstance=true 且缺 fallbackDir 触发违规，实际: %v", violations)
 }
 
 func TestSchemaGuard_ScanInstanceWithFallbackDir_NoWarn(t *testing.T) {
@@ -355,7 +333,5 @@ func TestSchemaGuard_ScanInstanceWithFallbackDir_NoWarn(t *testing.T) {
 		]
 	}`
 	violations := guardViolations(t, payload)
-	if hasViolation(violations, "必须声明 fallbackDir") {
-		t.Fatalf("scanInstance=true 且 fallbackDir 非空不应触发违规，实际: %v", violations)
-	}
+	testutil.Equal(t, hasViolation(violations, "必须声明 fallbackDir"), false, "scanInstance=true 且 fallbackDir 非空不应触发违规，实际: %v", violations)
 }

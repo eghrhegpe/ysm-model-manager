@@ -26,9 +26,7 @@ func TestRelinkDir_NilScanFn_ReturnsError(t *testing.T) {
 
 	res, err := RelinkDir(customDir, repoRoot, "ysm", "copy", nil,
 		func(name, src, dst string, size int64, status, msg string) {})
-	if err == nil {
-		t.Fatal("nil scanFn 应返回错误，实际 nil")
-	}
+	testutil.NotNil(t, err, "nil scanFn 应返回错误，实际 nil")
 	if res.OK != 0 {
 		t.Logf("nil scanFn 计数应 = 0，实际 %d", res.OK)
 	}
@@ -120,9 +118,7 @@ func TestSyncCustomToRepo_PathTraversal_Rejected(t *testing.T) {
 	_ = os.MkdirAll(customDir, 0755)
 	_ = os.MkdirAll(repoDir, 0755)
 	_ = os.RemoveAll(leakDir)
-	if _, err := os.Stat(leakDir); err == nil {
-		t.Fatal("leakDir 应起初不存在")
-	}
+	testutil.FileNotExists(t, leakDir, "leakDir 应起初不存在")
 
 	fakePath := filepath.Join(leakDir, "m.ysm")
 	scanFn := func(dir string) []types.ModelEntry {
@@ -138,9 +134,7 @@ func TestSyncCustomToRepo_PathTraversal_Rejected(t *testing.T) {
 	}
 
 	// 红线：leakDir 绝不应被创建。
-	if _, err := os.Stat(leakDir); err == nil {
-		t.Fatal("leakDir 不应被创建——路径穿越副作用仍存在")
-	}
+	testutil.FileNotExists(t, leakDir, "leakDir 不应被创建——路径穿越副作用仍存在")
 }
 
 // =====================================================================
@@ -172,22 +166,12 @@ func TestRelinkDir_DuplicateHash_FirstWins(t *testing.T) {
 	}
 	res, err := RelinkDir(customDir, repoRoot, "resourcepack", "copy", scanFn,
 		func(name, src, dst string, size int64, status, msg string) {})
-	if err != nil {
-		t.Fatalf("RelinkDir 失败: %v", err)
-	}
-	if res.OK != 1 {
-		t.Fatalf("应重链接 1 个，实际 %d", res.OK)
-	}
+	testutil.NoError(t, err, "RelinkDir 失败")
+	testutil.Equal(t, res.OK, 1, "应重链接 1 个")
 	data, err := os.ReadFile(filepath.Join(customDir, "v1", "m.ysm"))
-	if err != nil {
-		t.Fatalf("实例文件应存在: %v", err)
-	}
-	if string(data) != "v1" {
-		t.Fatalf("同 hash 时应取第一个仓库条目 v1，实际内容 %q", string(data))
-	}
-	if _, err := os.Stat(filepath.Join(customDir, "v2")); !os.IsNotExist(err) {
-		t.Fatalf("不应使用 last-wins 的 v2 路径，实际状态: %v", err)
-	}
+	testutil.NoError(t, err, "实例文件应存在")
+	testutil.Equal(t, string(data), "v1", "同 hash 时应取第一个仓库条目 v1")
+	testutil.FileNotExists(t, filepath.Join(customDir, "v2"), "不应使用 last-wins 的 v2 路径")
 }
 
 // RelinkDir 目录级分支同样应取第一个仓库条目。
@@ -213,22 +197,12 @@ func TestRelinkDir_DuplicateHash_DirLevel_FirstWins(t *testing.T) {
 	}
 	res, err := RelinkDir(customDir, repoRoot, "ysm", "copy", scanFn,
 		func(name, src, dst string, size int64, status, msg string) {})
-	if err != nil {
-		t.Fatalf("RelinkDir 失败: %v", err)
-	}
-	if res.OK != 1 {
-		t.Fatalf("应重链接 1 个，实际 %d", res.OK)
-	}
+	testutil.NoError(t, err, "RelinkDir 失败")
+	testutil.Equal(t, res.OK, 1, "应重链接 1 个")
 	data, err := os.ReadFile(filepath.Join(customDir, "v1-pack", "ysm.json"))
-	if err != nil {
-		t.Fatalf("目录级替换后应使用第一个仓库条目 v1-pack: %v", err)
-	}
-	if string(data) != "v1" {
-		t.Fatalf("v1-pack 内容应来自第一个仓库条目，实际 %q", string(data))
-	}
-	if _, err := os.Stat(filepath.Join(customDir, "v2-pack")); !os.IsNotExist(err) {
-		t.Fatalf("不应使用 last-wins 的 v2-pack，实际状态: %v", err)
-	}
+	testutil.NoError(t, err, "目录级替换后应使用第一个仓库条目 v1-pack")
+	testutil.Equal(t, string(data), "v1", "v1-pack 内容应来自第一个仓库条目")
+	testutil.FileNotExists(t, filepath.Join(customDir, "v2-pack"), "不应使用 last-wins 的 v2-pack")
 }
 
 // 仓库侧 .ban 只是禁用标记，即使排在扫描顺序最前也不能被当作重链接源。
@@ -255,22 +229,12 @@ func TestRelinkDir_RepoBan_NotUsedAsSource(t *testing.T) {
 	}
 	res, err := RelinkDir(customDir, repoRoot, "resourcepack", "copy", scanFn,
 		func(name, src, dst string, size int64, status, msg string) {})
-	if err != nil {
-		t.Fatalf("RelinkDir 失败: %v", err)
-	}
-	if res.OK != 1 {
-		t.Fatalf("应跳过仓库 .ban 并重链接 1 个，实际 %d", res.OK)
-	}
+	testutil.NoError(t, err, "RelinkDir 失败")
+	testutil.Equal(t, res.OK, 1, "应跳过仓库 .ban 并重链接 1 个")
 	data, err := os.ReadFile(filepath.Join(customDir, "v1", "m.ysm"))
-	if err != nil {
-		t.Fatalf("实例文件应存在: %v", err)
-	}
-	if string(data) != "v1" {
-		t.Fatalf("仓库 .ban 不应作为源，应使用第一个活跃条目 v1，实际内容 %q", string(data))
-	}
-	if _, err := os.Stat(filepath.Join(customDir, "ban-src")); !os.IsNotExist(err) {
-		t.Fatalf("仓库 .ban 不应被安装到实例目录，实际状态: %v", err)
-	}
+	testutil.NoError(t, err, "实例文件应存在")
+	testutil.Equal(t, string(data), "v1", "仓库 .ban 不应作为源，应使用第一个活跃条目 v1")
+	testutil.FileNotExists(t, filepath.Join(customDir, "ban-src"), "仓库 .ban 不应被安装到实例目录")
 }
 
 // =====================================================================
@@ -297,9 +261,7 @@ func TestRelinkDir_FileLevel_Idempotent(t *testing.T) {
 		t.Logf("提示：两次 RelinkDir 计数不同 c1=%d c2=%d", r1.OK, r2.OK)
 	}
 	data, _ := os.ReadFile(filepath.Join(customDir, "m.ysm"))
-	if string(data) != "same" {
-		t.Fatalf("重复调用后内容应不变，实际 %q", string(data))
-	}
+	testutil.Equal(t, string(data), "same", "重复调用后内容应不变")
 }
 
 func TestPushResources_Idempotent_NoOp(t *testing.T) {
@@ -404,9 +366,7 @@ func TestPullSingleResource_Dir_SiblingOutside(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(srcDir, "ysm.json"), []byte("{}"), 0644)
 	err := PullSingleResource(globalDir, targetDir, srcDir)
 	testutil.NoError(t, err, "PullSingleResource 目录失败")
-	if _, err := os.Stat(filepath.Join(globalDir, "pack", "ysm.json")); err != nil {
-		t.Fatalf("目录应被复制: %v", err)
-	}
+	testutil.FileExists(t, filepath.Join(globalDir, "pack", "ysm.json"), "目录应被复制")
 }
 
 // TestPullSingleResource_DirOutside_Rejected 审核意见 1 回归：越界目录
@@ -424,9 +384,7 @@ func TestPullSingleResource_DirOutside_Rejected(t *testing.T) {
 
 	err := PullSingleResource(globalDir, targetDir, outside)
 	testutil.NotNil(t, err, "越界目录应报错，实际 nil")
-	if _, err := os.Stat(filepath.Join(globalDir, "outside-pack")); err == nil {
-		t.Fatal("越界目录不应退化为 basename 落到 globalDir 根")
-	}
+	testutil.FileNotExists(t, filepath.Join(globalDir, "outside-pack"), "越界目录不应退化为 basename 落到 globalDir 根")
 }
 
 // =====================================================================
@@ -491,9 +449,7 @@ func TestRelinkDir_CustomDirNonExistent(t *testing.T) {
 		}()
 		_, _ = RelinkDir(customDir, repoRoot, "resourcepack", "copy", scanFn, nilLogger)
 	}()
-	if panicked {
-		t.Fatal("customDir 不存在不应 panic")
-	}
+	testutil.Equal(t, panicked, false, "customDir 不存在不应 panic")
 }
 
 // =====================================================================
@@ -501,9 +457,8 @@ func TestRelinkDir_CustomDirNonExistent(t *testing.T) {
 // =====================================================================
 
 func TestSyncCustomToRepo_WhitespaceOnly(t *testing.T) {
-	if _, err := SyncCustomToRepo("   ", "  ", nil, nil); err == nil {
-		t.Fatal("纯空格参数应报错")
-	}
+	_, err := SyncCustomToRepo("   ", "  ", nil, nil)
+	testutil.NotNil(t, err, "纯空格参数应报错")
 }
 
 // =====================================================================
@@ -549,9 +504,7 @@ func TestPullResources_NilLogger_NoPanicOnFailure(t *testing.T) {
 		}()
 		_ = PullResources("resourcepack", globalDir, targetDir, nil)
 	}()
-	if panicked {
-		t.Fatal("nil logger + 拉取失败不应 panic")
-	}
+	testutil.Equal(t, panicked, false, "nil logger + 拉取失败不应 panic")
 }
 
 // =====================================================================
@@ -570,12 +523,8 @@ func TestPushSingleResource_Dir(t *testing.T) {
 	_ = os.MkdirAll(srcDir, 0755)
 	_ = os.WriteFile(filepath.Join(srcDir, "ysm.json"), []byte("{}"), 0644)
 
-	if err := PushSingleResource(srcDir, customDir, globalDir, "copy", "ysm"); err != nil {
-		t.Fatalf("推送目录失败: %v", err)
-	}
-	if _, err := os.Stat(filepath.Join(customDir, "myPack", "ysm.json")); err != nil {
-		t.Fatalf("目标文件夹应存在: %v", err)
-	}
+	testutil.NoError(t, PushSingleResource(srcDir, customDir, globalDir, "copy", "ysm"), "推送目录失败")
+	testutil.FileExists(t, filepath.Join(customDir, "myPack", "ysm.json"), "目标文件夹应存在")
 }
 
 // TestPushSingleResource_JsonExt .json 扩展名走 InstallDir（filePath.Dir 作源目录）
@@ -590,12 +539,8 @@ func TestPushSingleResource_JsonExt(t *testing.T) {
 	srcFile := filepath.Join(srcDir, "ysm.json")
 	_ = os.WriteFile(srcFile, []byte("{}"), 0644)
 
-	if err := PushSingleResource(srcFile, customDir, globalDir, "copy", "ysm"); err != nil {
-		t.Fatalf("推送 .json 失败: %v", err)
-	}
-	if _, err := os.Stat(filepath.Join(customDir, "jsonPack", "ysm.json")); err != nil {
-		t.Fatalf("目标应存在: %v", err)
-	}
+	testutil.NoError(t, PushSingleResource(srcFile, customDir, globalDir, "copy", "ysm"), "推送 .json 失败")
+	testutil.FileExists(t, filepath.Join(customDir, "jsonPack", "ysm.json"), "目标应存在")
 }
 
 // =====================================================================
@@ -617,12 +562,8 @@ func TestSyncToggleStatus_NilScanFn(t *testing.T) {
 		}()
 		disable, enable, err = SyncToggleStatus(customDir, repoDir, nil)
 	}()
-	if panicked {
-		t.Fatal("nil scanFn 不应 panic，应返回错误")
-	}
-	if err == nil {
-		t.Fatal("nil scanFn 应返回错误")
-	}
+	testutil.Equal(t, panicked, false, "nil scanFn 不应 panic，应返回错误")
+	testutil.NotNil(t, err, "nil scanFn 应返回错误")
 	if disable != 0 || enable != 0 {
 		t.Errorf("nil scanFn 计数应 = 0，实际 disable=%d enable=%d", disable, enable)
 	}
@@ -721,14 +662,10 @@ func TestCopyDirRecursive_SymlinkOverwritesExisting(t *testing.T) {
 	_ = os.MkdirAll(dst, 0755)
 	// 目标位置已有普通文件 → 复制链接应替换它（源码 Remove + Symlink）
 	_ = os.WriteFile(filepath.Join(dst, "link"), []byte("placeholder"), 0644)
-	if err := copyDirRecursive(src, dst); err != nil {
-		t.Fatalf("复制失败: %v", err)
-	}
+	testutil.NoError(t, copyDirRecursive(src, dst), "复制失败")
 	info, err := os.Lstat(filepath.Join(dst, "link"))
 	testutil.NoError(t, err, "链接应存在")
-	if info.Mode()&os.ModeSymlink == 0 {
-		t.Fatalf("应为符号链接，实际 %v", info.Mode())
-	}
+	testutil.Equal(t, info.Mode()&os.ModeSymlink == 0, false, "应为符号链接，实际 %v", info.Mode())
 }
 
 // =====================================================================
@@ -753,10 +690,6 @@ func TestSyncCustomToRepo_NilScanFn(t *testing.T) {
 		}()
 		_, err = SyncCustomToRepo(customDir, repoDir, nil, nil)
 	}()
-	if panicked {
-		t.Fatal("nil scanFn 不应 panic，应返回错误")
-	}
-	if err == nil {
-		t.Fatal("nil scanFn 应返回错误")
-	}
+	testutil.Equal(t, panicked, false, "nil scanFn 不应 panic，应返回错误")
+	testutil.NotNil(t, err, "nil scanFn 应返回错误")
 }

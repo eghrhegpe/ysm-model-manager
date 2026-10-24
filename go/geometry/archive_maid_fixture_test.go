@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // TestParseFromZip_RealMaidFixture：真实 TLM 女仆包（L0 清单 + 多命名空间）几何解析实证。
@@ -22,9 +24,7 @@ func TestParseFromZip_RealMaidFixture(t *testing.T) {
 		t.Skipf("读取夹具失败: %v", err)
 	}
 	model, _, _ := ParseFromZip(data, int64(len(data)))
-	if model == nil {
-		t.Fatal("真实 TLM 女仆包应可解析出几何（L0 清单管线），实际返回 nil")
-	}
+	testutil.NotNil(t, model, "真实 TLM 女仆包应可解析出几何（L0 清单管线），实际返回 nil")
 	// 实证数据（2026-10-14 CLI 全链路：search --min-bones 1 → 12903 bones / 13710 cubes）：
 	// 断言只钉「非空几何」契约，不钉具体数值（样本可换版本）
 	if model.BoneCount == 0 {

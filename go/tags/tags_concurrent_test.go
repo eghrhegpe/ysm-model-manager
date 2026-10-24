@@ -45,9 +45,8 @@ func TestStore_ConcurrentReadWrite_NoRace(t *testing.T) {
 	all, err := store.AllTags()
 	testutil.NoError(t, err, "AllTags =")
 	for _, tag := range all {
-		if tag == "" {
-			t.Fatal("AllTags 不应含空标签")
-		}
+		// 护栏：任一空标签即失败（原 if tag=="" → t.Fatal）
+		testutil.Equal(t, tag == "", false, "AllTags 不应含空标签")
 	}
 }
 
@@ -60,21 +59,16 @@ func TestStore_Commit_NoChangeSkipsPersist(t *testing.T) {
 	store := NewStore(filepath.Join(base, "deep", "nested"))
 
 	// 先写入一个标签，使后续 RemoveTag 一个不存在的标签走「无变化」分支
-	if err := store.SetTags("m.ysm", []string{"keep"}); err != nil {
-		t.Fatalf("SetTags = %v", err)
-	}
+	testutil.NoError(t, store.SetTags("m.ysm", []string{"keep"}), "SetTags =")
 	// 记录首次落盘后的 mtime
 	info1, err := os.Stat(store.path)
 	testutil.NoError(t, err, "stat =")
 	// 移除一个不存在的标签 → changed=false → 不应触发落盘（mtime 不变）
-	if err := store.RemoveTag("m.ysm", "nonexistent"); err != nil {
-		t.Fatalf("RemoveTag(无变化) = %v", err)
-	}
+	testutil.NoError(t, store.RemoveTag("m.ysm", "nonexistent"), "RemoveTag(无变化) =")
 	info2, err := os.Stat(store.path)
 	testutil.NoError(t, err, "stat2 =")
-	if !info1.ModTime().Equal(info2.ModTime()) {
-		t.Fatalf("无变化操作不应重写文件：mtime %v → %v", info1.ModTime(), info2.ModTime())
-	}
+	// time.Time 含 unexported 字段，go-cmp 直接比较会 panic——走 .Equal() 布尔化
+	testutil.Equal(t, info1.ModTime().Equal(info2.ModTime()), true, "无变化操作不应重写文件：mtime %v → %v", info1.ModTime(), info2.ModTime())
 }
 
 // TestStore_LoadDoubleCheck_ConcurrentFirstLoad 并发首次加载双检：
@@ -83,9 +77,7 @@ func TestStore_LoadDoubleCheck_ConcurrentFirstLoad(t *testing.T) {
 	dir := t.TempDir()
 	// 预置一个已有文件，验证并发 load 都能读到同一份数据
 	store := NewStore(dir)
-	if err := store.SetTags("pre.ysm", []string{"x"}); err != nil {
-		t.Fatalf("SetTags = %v", err)
-	}
+	testutil.NoError(t, store.SetTags("pre.ysm", []string{"x"}), "SetTags =")
 
 	fresh := NewStore(dir) // 全新实例：data == nil，并发首次加载
 	const n = 16
@@ -100,12 +92,11 @@ func TestStore_LoadDoubleCheck_ConcurrentFirstLoad(t *testing.T) {
 	}
 	wg.Wait()
 	for i, err := range errs {
-		if err != nil {
-			t.Fatalf("并发首次 GetTags[%d] = %v", i, err)
-		}
+		testutil.NoError(t, err, "并发首次 GetTags[%d] =", i)
 	}
 	tags, err := fresh.GetTags("pre.ysm")
-	if err != nil || len(tags) != 1 || tags[0] != "x" {
-		t.Fatalf("并发加载后数据不一致: tags=%v err=%v", tags, err)
-	}
+	// OR 型复合条件拆序贯：len 前置守卫防 tags[0] 越界（原 if err!=nil || len!=1 || tags[0]!="x"）
+	testutil.NoError(t, err, "并发加载后数据不一致: err=%v", err)
+	testutil.Equal(t, len(tags), 1, "并发加载后数据不一致: tags=%v", tags)
+	testutil.Equal(t, tags[0], "x", "并发加载后数据不一致: tags=%v", tags)
 }

@@ -23,9 +23,7 @@ func TestWriteFileAtomic_NULByteInDest(t *testing.T) {
 	// 攻击意图：将写入目标截断到其他目录（如 dest.ysm\x00.exe → dest.ysm）
 	destPath := filepath.Join(tmpDir, "safe.ysm") + "\x00" + "..\\evil.exe"
 	err := WriteFileAtomic(destPath, []byte("malicious"))
-	if err == nil {
-		t.Fatalf("BUG(NUL-1): WriteFileAtomic 接受含 NUL 的路径, dest=%q", destPath)
-	}
+	testutil.NotNil(t, err, "BUG(NUL-1): WriteFileAtomic 接受含 NUL 的路径, dest=%q", destPath)
 	// 拒绝即守卫生效（显式 ErrTempCreateFailed 或 OS 层拒绝皆可）
 	if errors.Is(err, ErrTempCreateFailed) {
 		t.Logf("守卫: NUL 字节路径被显式拒绝(ErrTempCreateFailed): %v", err)

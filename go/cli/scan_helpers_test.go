@@ -28,9 +28,7 @@ func TestScanCacheVerify(t *testing.T) {
 
 	infos, walkErrs, err := scanCacheVerify(root)
 	testutil.NoError(t, err, "scanCacheVerify error")
-	if len(walkErrs) != 0 {
-		t.Fatalf("unexpected walkErrors: %v", walkErrs)
-	}
+	testutil.Equal(t, len(walkErrs), 0, "unexpected walkErrors: %v", walkErrs)
 
 	byName := make(map[string]cacheVerifyTexInfo)
 	for _, ti := range infos {
@@ -38,9 +36,7 @@ func TestScanCacheVerify(t *testing.T) {
 	}
 
 	// 非贴图扩展名应被忽略：仅 3 个贴图
-	if len(infos) != 3 {
-		t.Fatalf("期望 3 个贴图, 实际 %d: %v", len(infos), infos)
-	}
+	testutil.Equal(t, len(infos), 3, "期望 3 个贴图: %v", infos)
 	for _, name := range []string{"a.png", "b.jpg", "c.tga"} {
 		ti, ok := byName[name]
 		if !ok {
@@ -63,7 +59,7 @@ func TestScanCacheVerify(t *testing.T) {
 	h, err := texture_cache.TextureHash(aPath)
 	testutil.NoError(t, err, "TextureHash")
 	if err := texture_cache.WriteCached(h, []byte("ktx2-payload")); err != nil {
-		t.Fatalf("WriteCached: %v", err)
+		testutil.NoError(t, err, "WriteCached")
 	}
 	infos2, _, _ := scanCacheVerify(root)
 	for _, ti := range infos2 {

@@ -87,9 +87,8 @@ func TestMetadata_Parsed(t *testing.T) {
 	if m.License == nil || m.License.Type != "CC BY-NC-SA 4.0" {
 		t.Errorf("License = %+v, 期望 type=CC BY-NC-SA 4.0", m.License)
 	}
-	if len(m.Authors) != 1 {
-		t.Fatalf("Authors = %d 条, 期望 1", len(m.Authors))
-	}
+	// 守卫下方 m.Authors[0] 索引
+	testutil.Equal(t, len(m.Authors), 1, "Authors = %d 条, 期望 1", len(m.Authors))
 	a := m.Authors[0]
 	if a.Name != "完美冻结" || a.Role != "模型原作" {
 		t.Errorf("Author = %+v, 期望 完美冻结/模型原作", a)

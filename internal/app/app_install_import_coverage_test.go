@@ -24,16 +24,11 @@ func buildZipB64T(t *testing.T, entries map[string]string) string {
 	w := zip.NewWriter(&buf)
 	for name, content := range entries {
 		fw, err := w.Create(name)
-		if err != nil {
-			t.Fatalf("Create %s: %v", name, err)
-		}
-		if _, err := fw.Write([]byte(content)); err != nil {
-			t.Fatalf("Write %s: %v", name, err)
-		}
+		testutil.NoError(t, err, "Create %s", name)
+		_, err = fw.Write([]byte(content))
+		testutil.NoError(t, err, "Write %s", name)
 	}
-	if err := w.Close(); err != nil {
-		t.Fatalf("Close: %v", err)
-	}
+	testutil.NoError(t, w.Close(), "Close")
 	return base64.StdEncoding.EncodeToString(buf.Bytes())
 }
 
@@ -79,9 +74,7 @@ func TestSaveCachedTexture(t *testing.T) {
 
 	a, _ := guardedApp(t)
 	// hash 须为合法 SHA256 hex（绑定层 key 守卫）；本用例只测 DecodeBase64Limited 口径
-	if err := a.SaveCachedTexture(strings.Repeat("a", 64), base64.StdEncoding.EncodeToString([]byte("ktx2-data"))); err != nil {
-		t.Fatalf("合法 base64 应写入成功: %v", err)
-	}
+	testutil.NoError(t, a.SaveCachedTexture(strings.Repeat("a", 64), base64.StdEncoding.EncodeToString([]byte("ktx2-data"))), "合法 base64 应写入成功")
 	if err := a.SaveCachedTexture(strings.Repeat("b", 64), "not-base64!!"); err == nil {
 		t.Error("非法 base64 应报错")
 	}
@@ -116,9 +109,7 @@ func TestInstallModelFile_SrcGuard(t *testing.T) {
 	if dst == "" {
 		t.Error("应返回落地文件路径")
 	}
-	if _, err := os.Stat(dst); err != nil {
-		t.Fatalf("落地文件不存在: %v", err)
-	}
+	testutil.FileExists(t, dst, "落地文件不存在")
 }
 
 // TestInstallModelFile_SrcInCustomRoot 覆盖 ensureSrcInRepo 的多根遍历：
@@ -143,17 +134,14 @@ func TestInstallModelFile_SrcInCustomRoot(t *testing.T) {
 	}
 	dst, err := a.InstallModelFile(inCustom, mcRoot)
 	testutil.NoError(t, err, "CustomRoots 根内 src 应安装成功")
-	if _, err := os.Stat(dst); err != nil {
-		t.Fatalf("落地文件不存在: %v", err)
-	}
+	testutil.FileExists(t, dst, "落地文件不存在")
 
 	inFiles := filepath.Join(base, "skip.ysm")
 	if err := os.WriteFile(inFiles, []byte("x"), 0o644); err != nil {
 		testutil.NoError(t, err)
 	}
-	if _, err := a.InstallModelFile(inFiles, mcRoot); err != nil {
-		t.Fatalf("FilesRoot 内 src 不应被空 CustomRoots 值干扰: %v", err)
-	}
+	_, err = a.InstallModelFile(inFiles, mcRoot)
+	testutil.NoError(t, err, "FilesRoot 内 src 不应被空 CustomRoots 值干扰")
 }
 
 // TestInstallModelFile_SymlinkEscapeRejected 覆盖 ensureSrcInRepo 的 EvalSymlinks

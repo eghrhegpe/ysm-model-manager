@@ -21,6 +21,9 @@ import (
 
 // fuzzMakeZip 构造内存 zip；非 UTF-8 名（GBK 中文/Shift-JIS）以原始字节写入，
 // 用于覆盖 normalizeEntryName 的救援路径。
+// 注：入参是 testing.TB（种子期传 *testing.F），接不了 testutil.NoError 的
+// *testing.T 签名——错误分支用 Errorf + return 保「失败不静默」（zip.Writer
+// 对合法条目名实际不会出错），而非裸 Fatal。
 func fuzzMakeZip(t testing.TB, entries map[string]string) []byte {
 	t.Helper()
 	var buf bytes.Buffer
@@ -28,14 +31,17 @@ func fuzzMakeZip(t testing.TB, entries map[string]string) []byte {
 	for name, content := range entries {
 		f, err := w.Create(name)
 		if err != nil {
-			t.Fatal(err)
+			t.Errorf("fuzzMakeZip: Create %q: %v", name, err)
+			return nil
 		}
 		if _, err := f.Write([]byte(content)); err != nil {
-			t.Fatal(err)
+			t.Errorf("fuzzMakeZip: Write %q: %v", name, err)
+			return nil
 		}
 	}
 	if err := w.Close(); err != nil {
-		t.Fatal(err)
+		t.Errorf("fuzzMakeZip: Close: %v", err)
+		return nil
 	}
 	return buf.Bytes()
 }

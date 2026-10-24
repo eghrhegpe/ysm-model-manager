@@ -18,9 +18,7 @@ func TestPackageLevelMoveEx(t *testing.T) {
 	// 使用 TrashManager 方法（包级 MoveEx 已删除，R26 P4-1）
 	tm := New(dir)
 	res := tm.MoveEx(src)
-	if res.Action != "recycled" {
-		t.Fatalf("MoveEx action = %s, 期望 recycled", res.Action)
-	}
+	testutil.Equal(t, res.Action, "recycled", "MoveEx action = %s, 期望 recycled", res.Action)
 	if _, err := os.Stat(src); !os.IsNotExist(err) {
 		t.Error("源文件应已被删除")
 	}
@@ -37,9 +35,7 @@ func TestPackageLevelMove(t *testing.T) {
 	}
 	tm := New(dir)
 	entries := tm.List()
-	if len(entries) != 1 {
-		t.Fatalf("包级 Move 后回收站应有 1 条, 得到 %d", len(entries))
-	}
+	testutil.Equal(t, len(entries), 1, "包级 Move 后回收站应有 1 条, 得到 %d", len(entries))
 	if entries[0].Name != "test.ysm" {
 		t.Errorf("Name = %q, 期望 test.ysm", entries[0].Name)
 	}
@@ -58,9 +54,7 @@ func TestCopyFile_Success(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	dst := filepath.Join(dir, "sub", "dst.ysm")
-	if err := fsutil.CopyFile(src, dst); err != nil {
-		t.Fatalf("copyFile 失败: %v", err)
-	}
+	testutil.NoError(t, fsutil.CopyFile(src, dst), "copyFile 失败")
 	readBack, err := os.ReadFile(dst)
 	testutil.NoError(t, err)
 	if string(readBack) != string(content) {
@@ -81,10 +75,6 @@ func TestCopyFile_DstDirCreate(t *testing.T) {
 	}
 	// 目标目录不存在，应自动创建
 	dst := filepath.Join(dir, "a", "b", "dst.ysm")
-	if err := fsutil.CopyFile(src, dst); err != nil {
-		t.Fatalf("copyFile 自动创建目录失败: %v", err)
-	}
-	if _, err := os.Stat(dst); err != nil {
-		t.Fatal("目标文件应存在")
-	}
+	testutil.NoError(t, fsutil.CopyFile(src, dst), "copyFile 自动创建目录失败")
+	testutil.FileExists(t, dst, "目标文件应存在")
 }

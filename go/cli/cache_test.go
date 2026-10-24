@@ -63,7 +63,7 @@ func TestWriteCacheProbe_DistinctPaths(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		p, err := writeCacheProbe([]byte("p"))
 		if err != nil {
-			t.Fatalf("writeCacheProbe #%d: %v", i, err)
+			testutil.NoError(t, err, "writeCacheProbe #%d", i)
 		}
 		defer os.Remove(p)
 		if seen[p] {

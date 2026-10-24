@@ -30,9 +30,7 @@ func TestExecuteCLI_CommandNotAllowed(t *testing.T) {
 	result := a.ExecuteCLI("unknown-command", nil)
 
 	var resp map[string]interface{}
-	if err := json.Unmarshal([]byte(result), &resp); err != nil {
-		t.Fatalf("JSON 解析失败: %v", err)
-	}
+	testutil.NoError(t, json.Unmarshal([]byte(result), &resp), "JSON 解析失败")
 
 	if resp["status"] != "not_supported" {
 		t.Errorf("期望 status=not_supported, 实际=%v", resp["status"])
@@ -51,9 +49,7 @@ func TestExecuteCLI_CommandAllowed(t *testing.T) {
 	result := a.ExecuteCLI("config-show", map[string]interface{}{})
 
 	var resp map[string]interface{}
-	if err := json.Unmarshal([]byte(result), &resp); err != nil {
-		t.Fatalf("JSON 解析失败: %v", err)
-	}
+	testutil.NoError(t, json.Unmarshal([]byte(result), &resp), "JSON 解析失败")
 
 	// 应该有 status 字段
 	if _, ok := resp["status"]; !ok {
@@ -97,9 +93,7 @@ func TestExecuteCLI_ArgsBuilding(t *testing.T) {
 	})
 
 	var resp map[string]interface{}
-	if err := json.Unmarshal([]byte(result), &resp); err != nil {
-		t.Fatalf("JSON 解析失败: %v", err)
-	}
+	testutil.NoError(t, json.Unmarshal([]byte(result), &resp), "JSON 解析失败")
 
 	// 验证响应结构
 	if _, ok := resp["timing"]; !ok {
@@ -117,9 +111,7 @@ func TestGetAllowedCLICommands(t *testing.T) {
 	result := a.GetAllowedCLICommands()
 
 	var commands []string
-	if err := json.Unmarshal([]byte(result), &commands); err != nil {
-		t.Fatalf("JSON 解析失败: %v", err)
-	}
+	testutil.NoError(t, json.Unmarshal([]byte(result), &commands), "JSON 解析失败")
 
 	expectedCount := len(cliBridgeTestCommands)
 	if len(commands) != expectedCount {
@@ -149,9 +141,7 @@ func TestMakeJsonResponse(t *testing.T) {
 		testutil.NoError(t, err, "makeJsonResponse 返回错误")
 
 		var resp map[string]interface{}
-		if err := json.Unmarshal([]byte(result), &resp); err != nil {
-			t.Fatalf("JSON 解析失败: %v", err)
-		}
+		testutil.NoError(t, json.Unmarshal([]byte(result), &resp), "JSON 解析失败")
 
 		if resp["status"] != "success" {
 			t.Errorf("期望 status=success, 实际=%v", resp["status"])
@@ -172,9 +162,7 @@ func TestMakeJsonResponse(t *testing.T) {
 		testutil.NoError(t, err, "makeJsonResponse 返回错误")
 
 		var resp map[string]interface{}
-		if err := json.Unmarshal([]byte(result), &resp); err != nil {
-			t.Fatalf("JSON 解析失败: %v", err)
-		}
+		testutil.NoError(t, json.Unmarshal([]byte(result), &resp), "JSON 解析失败")
 
 		if resp["status"] != "error" {
 			t.Errorf("期望 status=error, 实际=%v", resp["status"])
@@ -194,19 +182,13 @@ func TestMakeJsonResponse(t *testing.T) {
 		testutil.NoError(t, err, "makeJsonResponse 返回错误")
 
 		var resp map[string]interface{}
-		if err := json.Unmarshal([]byte(result), &resp); err != nil {
-			t.Fatalf("JSON 解析失败: %v", err)
-		}
+		testutil.NoError(t, json.Unmarshal([]byte(result), &resp), "JSON 解析失败")
 
 		timing, ok := resp["timing"].(map[string]interface{})
-		if !ok {
-			t.Fatal("timing 字段格式错误")
-		}
+		testutil.Equal(t, ok, true, "timing 字段格式错误")
 
 		totalMs, ok := timing["total_ms"].(float64)
-		if !ok {
-			t.Fatal("timing.total_ms 字段类型错误")
-		}
+		testutil.Equal(t, ok, true, "timing.total_ms 字段类型错误")
 		if totalMs != 123.456 {
 			t.Errorf("期望 total_ms=123.456, 实际=%v", totalMs)
 		}
@@ -217,19 +199,13 @@ func TestMakeJsonResponse(t *testing.T) {
 		testutil.NoError(t, err, "makeJsonResponse 返回错误")
 
 		var resp map[string]interface{}
-		if err := json.Unmarshal([]byte(result), &resp); err != nil {
-			t.Fatalf("JSON 解析失败: %v", err)
-		}
+		testutil.NoError(t, json.Unmarshal([]byte(result), &resp), "JSON 解析失败")
 
 		meta, ok := resp["meta"].(map[string]interface{})
-		if !ok {
-			t.Fatal("meta 字段格式错误")
-		}
+		testutil.Equal(t, ok, true, "meta 字段格式错误")
 
 		platform, ok := meta["platform"].(string)
-		if !ok {
-			t.Fatal("meta.platform 字段类型错误")
-		}
+		testutil.Equal(t, ok, true, "meta.platform 字段类型错误")
 		if platform == "" {
 			t.Error("meta.platform 不应为空")
 		}
@@ -309,9 +285,7 @@ func TestBuildCLIArgs_UnknownKeyWarned(t *testing.T) {
 		"keyword": "steve",
 		"typo":    "oops",
 	}, searchSpec)
-	if len(warns) != 1 {
-		t.Fatalf("期望 1 条未知键告警, 实际 %d: %v", len(warns), warns)
-	}
+	testutil.Equal(t, len(warns), 1, "期望 1 条未知键告警: %v", warns)
 	want := []string{"--keyword", "steve", "--typo", "oops"}
 	assertStringSlicesEqual(t, got, want)
 }
@@ -321,9 +295,7 @@ func TestBuildCLIArgs_TypeMismatchWarned(t *testing.T) {
 	got, warns := buildCLIArgs("search", nil, map[string]interface{}{
 		"keyword": float64(42), // 期望 string
 	}, searchSpec)
-	if len(warns) != 1 {
-		t.Fatalf("期望 1 条类型告警, 实际 %d: %v", len(warns), warns)
-	}
+	testutil.Equal(t, len(warns), 1, "期望 1 条类型告警: %v", warns)
 	if len(got) != 0 {
 		t.Errorf("类型不符参数应跳过, 实际输出 %v", got)
 	}
@@ -352,9 +324,7 @@ func TestBuildCLIArgs_UnsupportedTypeWarned(t *testing.T) {
 	got, warns := buildCLIArgs("cmd", nil, map[string]interface{}{
 		"list": []string{"a"},
 	}, nil)
-	if len(warns) != 1 {
-		t.Fatalf("期望 1 条类型告警, 实际 %d: %v", len(warns), warns)
-	}
+	testutil.Equal(t, len(warns), 1, "期望 1 条类型告警: %v", warns)
 	if len(got) != 0 {
 		t.Errorf("不支持类型应跳过, 实际输出 %v", got)
 	}
@@ -375,14 +345,7 @@ func TestBuildCLIArgs_FilesRootExcluded(t *testing.T) {
 
 func assertStringSlicesEqual(t *testing.T, got, want []string) {
 	t.Helper()
-	if len(got) != len(want) {
-		t.Fatalf("长度不匹配:\n  got:  %v\n  want: %v", got, want)
-	}
-	for i := range want {
-		if got[i] != want[i] {
-			t.Fatalf("元素 [%d] 不匹配:\n  got:  %v\n  want: %v", i, got, want)
-		}
-	}
+	testutil.Equal(t, got, want, "字符串切片不匹配")
 }
 
 // TestExecuteCLI_WithSpecsInjected 模拟 main.go 双注入（名单 + ADR-173 规格）：
@@ -404,9 +367,7 @@ func TestExecuteCLI_WithSpecsInjected(t *testing.T) {
 	} {
 		result := a.ExecuteCLI(tc.cmd, tc.args)
 		var resp map[string]interface{}
-		if err := json.Unmarshal([]byte(result), &resp); err != nil {
-			t.Fatalf("命令 %s JSON 解析失败: %v", tc.cmd, err)
-		}
+		testutil.NoError(t, json.Unmarshal([]byte(result), &resp), "命令 %s JSON 解析失败", tc.cmd)
 		if resp["status"] == "not_supported" {
 			t.Errorf("命令 %s 不应 not_supported", tc.cmd)
 		}
@@ -420,9 +381,7 @@ func TestAllowedCommandsCount(t *testing.T) {
 	result := a.GetAllowedCLICommands()
 
 	var commands []string
-	if err := json.Unmarshal([]byte(result), &commands); err != nil {
-		t.Fatalf("JSON 解析失败: %v", err)
-	}
+	testutil.NoError(t, json.Unmarshal([]byte(result), &commands), "JSON 解析失败")
 
 	expectedCommands := cliBridgeTestCommands
 

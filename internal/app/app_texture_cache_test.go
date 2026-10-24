@@ -31,16 +31,11 @@ func TestHasCachedTextures_CachedHitAndMiss(t *testing.T) {
 
 	app := &App{}
 	result := app.HasCachedTextures([]string{hitHash, "nope"})
-	if !result[hitHash] {
-		t.Fatalf("已缓存 hash %q 应返回 true，得到 %v", hitHash, result[hitHash])
-	}
-	if result["nope"] {
-		t.Fatal("未命中 hash 应返回 false")
-	}
+	testutil.Equal(t, result[hitHash], true, "已缓存 hash %q 应返回 true", hitHash)
+	testutil.Equal(t, result["nope"], false, "未命中 hash 应返回 false")
 	// 两个 hash 都必须出现在结果里（map 完整，不静默丢 key）
-	if _, ok := result["nope"]; !ok {
-		t.Fatal("未命中 hash 也应写入 key=false（map 必须包含所有查询的 hash）")
-	}
+	_, ok := result["nope"]
+	testutil.Equal(t, ok, true, "未命中 hash 也应写入 key=false（map 必须包含所有查询的 hash）")
 }
 
 // TestHasCachedTextures_CheckErrorWritesFalse
@@ -60,12 +55,9 @@ func TestHasCachedTextures_CheckErrorWritesFalse(t *testing.T) {
 	app := &App{}
 	result := app.HasCachedTextures([]string{"h\x00ash"})
 	// 关键断言：err 分支也必须写入该 key（值 false = 视为未命中，前端安全回退）
-	if _, ok := result["h\x00ash"]; !ok {
-		t.Fatal("检查出错时该 hash 必须写入 key=false（修复前静默缺失，错误被吞）")
-	}
-	if result["h\x00ash"] {
-		t.Fatal("检查出错时该 hash 应返回 false，不得误报命中")
-	}
+	_, ok := result["h\x00ash"]
+	testutil.Equal(t, ok, true, "检查出错时该 hash 必须写入 key=false（修复前静默缺失，错误被吞）")
+	testutil.Equal(t, result["h\x00ash"], false, "检查出错时该 hash 应返回 false，不得误报命中")
 }
 
 // 审计第三轮 D6：SaveCachedTexture 是写绑定，hash 为前端可控输入。
@@ -85,9 +77,7 @@ func TestSaveCachedTexture_TraversalHashRejected(t *testing.T) {
 
 	for _, evil := range []string{"..\\..\\evil", "../../evil", "C:/Users/x/evil"} {
 		err := app.SaveCachedTexture(evil, data)
-		if err == nil {
-			t.Fatalf("SaveCachedTexture(%q) 应拒绝非法缓存 key", evil)
-		}
+		testutil.NotNil(t, err, "SaveCachedTexture(%q) 应拒绝非法缓存 key", evil)
 		var ae types.AppError
 		if !errors.As(err, &ae) || ae.Code != types.ErrInvalidPath {
 			t.Errorf("SaveCachedTexture(%q) 应返回 AppError{INVALID_PATH}，实得 %T: %v", evil, err, err)
@@ -106,21 +96,19 @@ func TestGetCachedTextureByHash_InvalidKey(t *testing.T) {
 	app := &App{}
 	_, err := app.GetCachedTextureByHash("../../etc/passwd")
 	var ae types.AppError
-	if !errors.As(err, &ae) || ae.Code != types.ErrInvalidPath {
-		t.Fatalf("非法 key 应返回 AppError{INVALID_PATH}，实得 %T: %v", err, err)
-	}
+	// 拆序贯：先验 errors.As 成立，再比错误码（前失败即 Goexit，短路语义一致）
+	testutil.Equal(t, errors.As(err, &ae), true, "非法 key 应返回 AppError，实得 %T: %v", err, err)
+	testutil.Equal(t, ae.Code, types.ErrInvalidPath, "非法 key 应返回 AppError{INVALID_PATH}，实得 %T: %v", err, err)
 }
 
 func TestHasCachedTexture_InvalidKey(t *testing.T) {
 	app := &App{}
 	ok, err := app.HasCachedTexture("..\\..\\sneaky")
-	if ok {
-		t.Fatal("非法 key 不得误报命中")
-	}
+	testutil.Equal(t, ok, false, "非法 key 不得误报命中")
 	var ae types.AppError
-	if !errors.As(err, &ae) || ae.Code != types.ErrInvalidPath {
-		t.Fatalf("非法 key 应返回 AppError{INVALID_PATH}，实得 %T: %v", err, err)
-	}
+	// 拆序贯：先验 errors.As 成立，再比错误码（前失败即 Goexit，短路语义一致）
+	testutil.Equal(t, errors.As(err, &ae), true, "非法 key 应返回 AppError，实得 %T: %v", err, err)
+	testutil.Equal(t, ae.Code, types.ErrInvalidPath, "非法 key 应返回 AppError{INVALID_PATH}，实得 %T: %v", err, err)
 }
 
 // 批量版沿用既有契约：非法 key 写 key=false + 留日志，不整批失败。
@@ -132,10 +120,7 @@ func TestHasCachedTextures_InvalidKeyWritesFalse(t *testing.T) {
 	app := &App{}
 	bad := "..\\..\\bulk"
 	result := app.HasCachedTextures([]string{bad, "nope"})
-	if result[bad] {
-		t.Fatal("非法 key 不得误报命中")
-	}
-	if _, present := result[bad]; !present {
-		t.Fatal("非法 key 也必须写入 key=false（不得静默缺失）")
-	}
+	testutil.Equal(t, result[bad], false, "非法 key 不得误报命中")
+	_, present := result[bad]
+	testutil.Equal(t, present, true, "非法 key 也必须写入 key=false（不得静默缺失）")
 }

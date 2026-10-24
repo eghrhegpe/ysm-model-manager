@@ -33,14 +33,10 @@ func TestCollectEntriesFromScanEqualsWalk(t *testing.T) {
 	rtype := "EntityPlayer" // 无嵌套模式，走 scan 反推路径
 
 	walkMap, _, _ := collectEntriesWalk(root, rtype, nil)
-	if len(walkMap) == 0 {
-		t.Fatalf("walkMap 为空：测试树未产生任何模型条目，请检查 rtype=%s 的扩展名配置", rtype)
-	}
+	testutil.Equal(t, len(walkMap) == 0, false, "walkMap 为空：测试树未产生任何模型条目，请检查 rtype=%s 的扩展名配置", rtype)
 	scanEntries, _ := scanner.ScanEntriesWithHit(root)
 	scanMap, _ := collectEntriesFromScan(scanEntries, root, rtype)
-	if scanMap == nil {
-		t.Fatalf("collectEntriesFromScan 返回 nil（rtype=%s 不应回退 Walk）", rtype)
-	}
+	testutil.NotNil(t, scanMap, "collectEntriesFromScan 返回 nil（rtype=%s 不应回退 Walk）", rtype)
 	// Hash 是 scan 信道的旁挂增强（Walk 信道此处未注入摘要 → ResourceDiff 回退 Size，
 	// 同 DiffEntry.Hash 契约 / ADR-344 D1），不参与「反推与 Walk 等价」判定；
 	// 其余字段（key / Path / Rel / IsDir / Size）必须逐字段一致——反推漂移就出在这里。
@@ -95,17 +91,15 @@ func TestCollectFolderFilesFromScanEqualsWalk(t *testing.T) {
 	rtype := "EntityPlayer" // 无嵌套模式，走 scan 反推路径
 
 	walkMap := collectFolderFiles(container, rtype)
-	if len(walkMap) == 0 {
-		t.Fatalf("collectFolderFiles(container) 为空：测试树未产生模型条目，rtype=%s", rtype)
-	}
+	testutil.Equal(t, len(walkMap) == 0, false, "collectFolderFiles(container) 为空：测试树未产生模型条目，rtype=%s", rtype)
 
 	// 组根全量条目（模拟刷新暖好的缓存）：首次调用走盘 hit=false，
 	// 二次调用命中 30s 缓存 hit=true——与生产「刷新后查看同步」场景一致
 	_, _ = scanner.ScanEntriesWithHit(root) // 暖缓存
 	allEntries, hit := scanner.ScanEntriesWithHit(root)
-	if !hit || len(allEntries) == 0 {
-		t.Fatalf("scanner 未返回组根条目（hit=%v, len=%d），反推路径无法验证", hit, len(allEntries))
-	}
+	// 原复合条件拆序贯
+	testutil.Equal(t, hit, true, "scanner 未返回组根条目（hit=%v, len=%d），反推路径无法验证", hit, len(allEntries))
+	testutil.Equal(t, len(allEntries) == 0, false, "scanner 未返回组根条目（hit=%v, len=%d），反推路径无法验证", hit, len(allEntries))
 	scanMap, _ := collectFolderFilesFromScan(container, rtype, allEntries)
 	if !cmp.Equal(walkMap, scanMap) {
 		t.Errorf("collectFolderFilesFromScan 与 Walk 结果不一致\nWalk: %v\nScan: %v", walkMap, scanMap)

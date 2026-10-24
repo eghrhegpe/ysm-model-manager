@@ -19,9 +19,7 @@ import (
 func TestNestDirLevelTree_Empty(t *testing.T) {
 	base := t.TempDir()
 	out := nestDirLevelTree(nil, filepath.Join(base, "g"), filepath.Join(base, "i"), "ysm")
-	if len(out) != 0 {
-		t.Fatalf("空输入应返回空, got %d", len(out))
-	}
+	testutil.Equal(t, len(out), 0, "空输入应返回空, got %d", len(out))
 }
 
 func TestNestDirLevelTree_FlatRootLeaf(t *testing.T) {
@@ -29,9 +27,10 @@ func TestNestDirLevelTree_FlatRootLeaf(t *testing.T) {
 	globalDir := filepath.Join(base, "global")
 	leaf := types.ResourceSyncItem{Path: filepath.Join(globalDir, "m.ysm"), Name: "m.ysm", Status: types.SyncStatusSynced, Type: "ysm"}
 	out := nestDirLevelTree([]types.ResourceSyncItem{leaf}, globalDir, filepath.Join(base, "inst"), "ysm")
-	if len(out) != 1 || out[0].Name != "m.ysm" || out[0].IsDir {
-		t.Fatalf("根下叶子应原样返回: %+v", out)
-	}
+	testutil.Equal(t, len(out), 1, "根下叶子应原样返回: %+v", out)
+	// 序贯拆分：前一 Equal 失败即 Goexit，下一行的 [0] 索引才安全
+	testutil.Equal(t, out[0].Name, "m.ysm", "根下叶子应原样返回")
+	testutil.Equal(t, out[0].IsDir, false, "根下叶子应原样返回")
 }
 
 func TestNestDirLevelTree_NestedContainer(t *testing.T) {
@@ -47,20 +46,16 @@ func TestNestDirLevelTree_NestedContainer(t *testing.T) {
 		{Path: filepath.Join(a, "c.ysm"), Name: "c.ysm", Status: types.SyncStatusMissing, Type: "ysm"},
 	}
 	out := nestDirLevelTree(flat, globalDir, instDir, "ysm")
-	if len(out) != 1 {
-		t.Fatalf("应有一个容器, got %d: %+v", len(out), out)
-	}
+	testutil.Equal(t, len(out), 1, "应有一个容器, got %d: %+v", len(out), out)
+	// 序贯拆分：前一 Equal 失败即 Goexit，下一行的 [0] 索引才安全
 	cont := out[0]
-	if !cont.IsDir || cont.Name != "a" || cont.Status != types.SyncStatusDiverged {
-		t.Fatalf("容器 a 应 isDir 且 diverged: %+v", cont)
-	}
-	if len(cont.Children) != 2 {
-		t.Fatalf("容器 a 应有 2 个子项, got %d", len(cont.Children))
-	}
+	testutil.Equal(t, cont.IsDir, true, "容器 a 应 isDir 且 diverged: %+v", cont)
+	testutil.Equal(t, cont.Name, "a", "容器 a 应 isDir 且 diverged")
+	testutil.Equal(t, cont.Status, types.SyncStatusDiverged, "容器 a 应 isDir 且 diverged")
+	testutil.Equal(t, len(cont.Children), 2, "容器 a 应有 2 个子项, got %d", len(cont.Children))
 	// 子项按名排序：b.ysm, c.ysm
-	if cont.Children[0].Name != "b.ysm" || cont.Children[1].Name != "c.ysm" {
-		t.Fatalf("子项顺序: %q, %q", cont.Children[0].Name, cont.Children[1].Name)
-	}
+	testutil.Equal(t, cont.Children[0].Name, "b.ysm", "子项顺序")
+	testutil.Equal(t, cont.Children[1].Name, "c.ysm", "子项顺序")
 }
 
 func TestNestDirLevelTree_PathUnattributableFallsBackFlat(t *testing.T) {
@@ -71,9 +66,10 @@ func TestNestDirLevelTree_PathUnattributableFallsBackFlat(t *testing.T) {
 	outside := filepath.Join(base, "outside", "x.ysm")
 	leaf := types.ResourceSyncItem{Path: outside, Name: "x.ysm", Status: types.SyncStatusOptional, Type: "ysm"}
 	out := nestDirLevelTree([]types.ResourceSyncItem{leaf}, globalDir, instDir, "ysm")
-	if len(out) != 1 || out[0].Path != outside || out[0].IsDir {
-		t.Fatalf("不可归属路径应平铺顶层: %+v", out)
-	}
+	testutil.Equal(t, len(out), 1, "不可归属路径应平铺顶层: %+v", out)
+	// 序贯拆分：前一 Equal 失败即 Goexit，下一行的 [0] 索引才安全
+	testutil.Equal(t, out[0].Path, outside, "不可归属路径应平铺顶层")
+	testutil.Equal(t, out[0].IsDir, false, "不可归属路径应平铺顶层")
 }
 
 func TestNestDirLevelTree_SameSegmentLeafAndContainer(t *testing.T) {
@@ -92,9 +88,10 @@ func TestNestDirLevelTree_SameSegmentLeafAndContainer(t *testing.T) {
 		{Path: instDir + string(filepath.Separator) + "a", Name: "a", Status: types.SyncStatusOptional, Type: "ysm"},
 	}
 	out := nestDirLevelTree(flat, globalDir, instDir, "ysm")
-	if len(out) != 1 || !out[0].IsDir || out[0].Name != "a" {
-		t.Fatalf("应保留容器 a: %+v", out)
-	}
+	testutil.Equal(t, len(out), 1, "应保留容器 a: %+v", out)
+	// 序贯拆分：前一 Equal 失败即 Goexit，下一行的 [0] 索引才安全
+	testutil.Equal(t, out[0].IsDir, true, "应保留容器 a")
+	testutil.Equal(t, out[0].Name, "a", "应保留容器 a")
 	// __self 防御：同段名既是叶子（实例侧 Extra 的 instDir/a）又是中间容器（全局侧 a/b.ysm）。
 	// 叶子被收进容器的 __self 内部槽位，展示时仍以其原名 "a" 出现（内部 map 键 __self 不外显）。
 	// 本例容器含 missing 子项 → 聚合 diverged → 容器 Path 取全局根（globalDir/a），与实例叶子的
@@ -114,9 +111,9 @@ func TestNestDirLevelTree_SameSegmentLeafAndContainer(t *testing.T) {
 			foundC = true
 		}
 	}
-	if !foundLeafA || !foundB || !foundC {
-		t.Fatalf("容器 a 应含叶子 a(实例侧) 与 b.ysm/c.ysm, got %+v", out[0].Children)
-	}
+	testutil.Equal(t, foundLeafA, true, "容器 a 应含叶子 a(实例侧) 与 b.ysm/c.ysm, got %+v", out[0].Children)
+	testutil.Equal(t, foundB, true, "容器 a 应含叶子 a(实例侧) 与 b.ysm/c.ysm, got %+v", out[0].Children)
+	testutil.Equal(t, foundC, true, "容器 a 应含叶子 a(实例侧) 与 b.ysm/c.ysm, got %+v", out[0].Children)
 }
 
 func TestFileSize_ExistingAndMissing(t *testing.T) {
@@ -126,21 +123,15 @@ func TestFileSize_ExistingAndMissing(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	// fileSize 已收敛至 fsutil.FileSize（锐评 #17）
-	if got := fsutil.FileSize(p); got != 1024 {
-		t.Fatalf("fsutil.FileSize = %d, want 1024", got)
-	}
-	if got := fsutil.FileSize(filepath.Join(dir, "nope.bin")); got != 0 {
-		t.Fatalf("缺失文件 fsutil.FileSize 应为 0, got %d", got)
-	}
+	testutil.Equal(t, fsutil.FileSize(p), int64(1024), "fsutil.FileSize = %d, want 1024", fsutil.FileSize(p))
+	testutil.Equal(t, fsutil.FileSize(filepath.Join(dir, "nope.bin")), int64(0), "缺失文件 fsutil.FileSize 应为 0")
 }
 
 func TestBuildDirLevelChildren_MissingGlobalDir(t *testing.T) {
 	base := t.TempDir()
 	// 全局夹不存在 → 返回 nil（无子项可预览）
 	out := buildDirLevelChildren(filepath.Join(base, "no-such"), filepath.Join(base, "inst"), "ysm", "📦", filepath.Join(base, "no-such"))
-	if out != nil {
-		t.Fatalf("全局夹缺失应返回 nil, got %d", len(out))
-	}
+	testutil.Nil(t, out, "全局夹缺失应返回 nil")
 }
 
 // 同路径目录 marker（混合夹：既含平铺模型文件、又含子模型夹）必须并入容器，
@@ -170,35 +161,29 @@ func TestNestDirLevelTree_SamePathSelfMarkerMerged(t *testing.T) {
 		{Path: sub, Name: "sub", Status: types.SyncStatusSynced, Type: "ysm", IsDir: true},
 	}
 	out := nestDirLevelTree(flat, globalDir, instDir, "ysm")
-	if len(out) != 1 || !out[0].IsDir || out[0].Name != "a" {
-		t.Fatalf("应只剩一个容器 a: %+v", out)
-	}
+	testutil.Equal(t, len(out), 1, "应只剩一个容器 a: %+v", out)
+	// 序贯拆分：前一 Equal 失败即 Goexit，下一行的 [0] 索引才安全
+	testutil.Equal(t, out[0].IsDir, true, "应只剩一个容器 a")
+	testutil.Equal(t, out[0].Name, "a", "应只剩一个容器 a")
 	names := make([]string, 0, len(out[0].Children))
 	for _, c := range out[0].Children {
 		names = append(names, c.Name)
 	}
 	want := map[string]bool{"loose.ysm": false, "sub": false}
 	for _, n := range names {
-		if n == "a" {
-			t.Fatalf("容器 a 不应含自身 marker 的影子行「a」: %v", names)
-		}
-		if n == "sub/in.ysm" {
-			t.Fatalf("子夹内文件应由子夹节点展示，不应上提到容器: %v", names)
-		}
+		// 护栏：循环内裸 Fatal 改布尔化，失败即 Goexit 与原 t.Fatalf 等价
+		testutil.Equal(t, n == "a", false, "容器 a 不应含自身 marker 的影子行「a」: %v", names)
+		testutil.Equal(t, n == "sub/in.ysm", false, "子夹内文件应由子夹节点展示，不应上提到容器: %v", names)
 		if _, ok := want[n]; ok {
 			want[n] = true
 		}
 	}
 	for n, hit := range want {
-		if !hit {
-			t.Fatalf("容器 a 应含 %q, got %v", n, names)
-		}
+		testutil.Equal(t, hit, true, "容器 a 应含 %q, got %v", n, names)
 	}
 	// marker 行被吸收后，容器不得再含 Path 等于自身的子项（前端 dirOpen key 冲突的根因）
 	for _, c := range out[0].Children {
-		if c.Path == out[0].Path {
-			t.Fatalf("容器子项 Path 不得等于容器 Path: %+v", c)
-		}
+		testutil.Equal(t, c.Path == out[0].Path, false, "容器子项 Path 不得等于容器 Path: %+v", c)
 	}
 }
 
@@ -236,16 +221,12 @@ func TestNestDirLevelTree_SelfKeyNoCollisionWithRealDir_LeafOverContainer(t *tes
 	walk = func(items []types.ResourceSyncItem) {
 		for _, it := range items {
 			seen[it.Name] = true
-			if strings.ContainsRune(it.Name, 0) {
-				t.Fatalf("防御键外显为段名（键不外显契约被破坏）: %+v", it)
-			}
+			testutil.Equal(t, strings.ContainsRune(it.Name, 0), false, "防御键外显为段名（键不外显契约被破坏）: %+v", it)
 			walk(it.Children)
 		}
 	}
 	walk(out)
-	if !seen["keep.ysm"] {
-		t.Fatalf("真实嵌套 __self 子夹的子树被防御键覆盖丢失（ADR-333 回归）: %v", seen)
-	}
+	testutil.Equal(t, seen["keep.ysm"], true, "真实嵌套 __self 子夹的子树被防御键覆盖丢失（ADR-333 回归）: %v", seen)
 	// 实例侧叶子 __self 同样不得丢（防御目的是保它，不是替真实目录挡路）
 	leafKept := false
 	var findLeaf func(items []types.ResourceSyncItem)
@@ -258,9 +239,7 @@ func TestNestDirLevelTree_SelfKeyNoCollisionWithRealDir_LeafOverContainer(t *tes
 		}
 	}
 	findLeaf(out)
-	if !leafKept {
-		t.Fatalf("实例侧叶子 __self 应保留: %v", seen)
-	}
+	testutil.Equal(t, leafKept, true, "实例侧叶子 __self 应保留: %v", seen)
 }
 
 // 分支 A（`nxt.leaf != nil` 防御）经实证确认在旧键下本就安全，故本例是「行为不变」的记录锁
@@ -288,9 +267,7 @@ func TestNestDirLevelTree_SelfKeyBranchA_UnaffectedByKeyChange(t *testing.T) {
 	var walk func(items []types.ResourceSyncItem)
 	walk = func(items []types.ResourceSyncItem) {
 		for _, it := range items {
-			if strings.ContainsRune(it.Name, 0) {
-				t.Fatalf("防御键外显为段名（键不外显契约被破坏）: %+v", it)
-			}
+			testutil.Equal(t, strings.ContainsRune(it.Name, 0), false, "防御键外显为段名（键不外显契约被破坏）: %+v", it)
 			if !it.IsDir && it.Path == real {
 				leafKept = true
 			}
@@ -301,21 +278,15 @@ func TestNestDirLevelTree_SelfKeyBranchA_UnaffectedByKeyChange(t *testing.T) {
 		}
 	}
 	walk(out)
-	if !leafKept {
-		t.Fatalf("分支 A 防御后叶子 __self 丢失: %+v", out)
-	}
-	if !drilled {
-		t.Fatalf("下钻出的 x.ysm 应可见: %+v", out)
-	}
+	testutil.Equal(t, leafKept, true, "分支 A 防御后叶子 __self 丢失: %+v", out)
+	testutil.Equal(t, drilled, true, "下钻出的 x.ysm 应可见: %+v", out)
 }
 
 // 契约级断言：selfLeafKey 取 NUL 前缀——NUL 被 OS 禁止出现在路径/目录名中，
 // 故与任何真实段名碰撞在数学上不成立。此例防「有人图省事改回段名字面量」。
 func TestSelfLeafKey_UsesNulPrefix(t *testing.T) {
-	if len(selfLeafKey) == 0 || selfLeafKey[0] != 0 {
-		t.Fatalf("selfLeafKey 必须以 NUL 前缀（真实段名数学上不可能等于它）: %q", selfLeafKey)
-	}
-	if strings.ContainsRune(selfLeafKey, filepath.Separator) {
-		t.Fatalf("selfLeafKey 不得含路径分隔符（会被误判为多段路径）: %q", selfLeafKey)
-	}
+	// 序贯拆分：len==0 时下标 [0] 越界，前置 Equal 失败即 Goexit，后方索引才安全
+	testutil.Equal(t, len(selfLeafKey) > 0, true, "selfLeafKey 必须以 NUL 前缀（真实段名数学上不可能等于它）: %q", selfLeafKey)
+	testutil.Equal(t, selfLeafKey[0], byte(0), "selfLeafKey 必须以 NUL 前缀（真实段名数学上不可能等于它）: %q", selfLeafKey)
+	testutil.Equal(t, strings.ContainsRune(selfLeafKey, filepath.Separator), false, "selfLeafKey 不得含路径分隔符（会被误判为多段路径）: %q", selfLeafKey)
 }

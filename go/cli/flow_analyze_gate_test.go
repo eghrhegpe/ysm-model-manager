@@ -38,9 +38,7 @@ func (f *emptyAnalyzeApp) AnalyzeBedrockModel(string) types.BedrockModel {
 func flowStageNames(t *testing.T, ctx *CmdContext) map[string]guiFlowStageItem {
 	t.Helper()
 	structured, ok := ctx.result.(*guiFlowStructured)
-	if !ok {
-		t.Fatalf("SetResult 应为 *guiFlowStructured, got %T", ctx.result)
-	}
+	testutil.Equal(t, ok, true, "SetResult 应为 *guiFlowStructured, got %T", ctx.result)
 	out := map[string]guiFlowStageItem{}
 	for _, s := range structured.Stages {
 		out[s.Name] = s
@@ -143,9 +141,7 @@ func TestGUIFlow_UnanalyzableOnlyRepoExplainsWhy(t *testing.T) {
 
 	byName := flowStageNames(t, ctx)
 	s, ok := byName["③ 模型分析"]
-	if !ok {
-		t.Fatal("③ 阶段必须存在——它是唯一能解释「为什么没跑」的地方")
-	}
+	testutil.Equal(t, ok, true, "③ 阶段必须存在——它是唯一能解释「为什么没跑」的地方")
 	if s.Status != "✅" {
 		t.Errorf("能力边界应标 ✅/ℹ️ 而非 ❌（与 --model 指定不可分析类型的分支同口径）: %+v", s)
 	}
@@ -180,9 +176,7 @@ func TestGUIFlow_NoModelsAtAllKeepsOriginalWording(t *testing.T) {
 	captureOutput(t, func() { _ = runGUIFlow(ctx) })
 
 	s, ok := flowStageNames(t, ctx)["③ 模型分析"]
-	if !ok {
-		t.Fatal("③ 阶段必须存在")
-	}
+	testutil.Equal(t, ok, true, "③ 阶段必须存在")
 	if s.Status != "❌" {
 		t.Errorf("仓库真的没有模型时应标 ❌（这是真失败，不是能力边界）: %+v", s)
 	}

@@ -77,9 +77,8 @@ func TestSyncToggleStatus_SameNameDifferentPaths_NoCrossContamination(t *testing
 	// basename（repoName 无纯文件名键）也必 miss → 零动作
 	testutil.Equal(t, disable, 0, "basename 兜底不应在正常布局下命中禁用")
 	testutil.Equal(t, enable, 0, "不应启用")
-	if _, err := os.Stat(filepath.Join(customDir, "foo.ysm.disabled")); err == nil {
-		t.Fatal("实例 foo.ysm 被误禁——basename 兜底在正常布局下不应命中")
-	}
+	_, statErr := os.Stat(filepath.Join(customDir, "foo.ysm.disabled"))
+	testutil.Equal(t, statErr == nil, false, "实例 foo.ysm 被误禁——basename 兜底在正常布局下不应命中")
 }
 
 // TestSyncToggleStatus_BasenameFallbackRequiresOutsidePath 从反面验证可达条件：
@@ -132,9 +131,7 @@ func TestCollectToggleRepoIndex_BaseNameKeyOnlyForOutsidePath(t *testing.T) {
 
 	testutil.Equal(t, len(repoName), 2, "正常布局应只有两条相对路径键")
 	_, hasBasename := repoName["foo.ysm"]
-	if hasBasename {
-		t.Fatal("正常布局下 repoName 不应含纯文件名键 foo.ysm——basename 兜底会因此恒命中")
-	}
+	testutil.Equal(t, hasBasename, false, "正常布局下 repoName 不应含纯文件名键 foo.ysm——basename 兜底会因此恒命中")
 	for k := range repoName {
 		if !strings.Contains(k, string(filepath.Separator)) && !strings.Contains(k, "/") {
 			t.Errorf("repoName 出现非路径键 %q，basename 兜底可达条件不成立", k)

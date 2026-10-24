@@ -170,9 +170,7 @@ func TestCorruptFileRecovers(t *testing.T) {
 		t.Errorf("corrupt backup missing: %v", err)
 	}
 	// 写路径可恢复：SetTags 后能读回
-	if err := s.SetTags("/m", []string{"new"}); err != nil {
-		t.Fatalf("SetTags after corrupt failed: %v", err)
-	}
+	testutil.NoError(t, s.SetTags("/m", []string{"new"}), "SetTags after corrupt failed")
 	tags, _ = s.GetTags("/m")
 	if len(tags) != 1 || tags[0] != "new" {
 		t.Errorf("tags not recovered after SetTags: %v", tags)
@@ -184,9 +182,7 @@ func TestSetTagsWhitespaceOnlyDeletes(t *testing.T) {
 	dir := t.TempDir()
 	s := NewStore(dir)
 	s.SetTags("/m", []string{"a", "b"})
-	if err := s.SetTags("/m", []string{"  ", " "}); err != nil {
-		t.Fatalf("SetTags whitespace-only failed: %v", err)
-	}
+	testutil.NoError(t, s.SetTags("/m", []string{"  ", " "}), "SetTags whitespace-only failed")
 	tags, _ := s.GetTags("/m")
 	if len(tags) != 0 {
 		t.Errorf("whitespace-only SetTags should delete entry, got %v", tags)
@@ -198,15 +194,11 @@ func TestAddTagKeepsSorted(t *testing.T) {
 	dir := t.TempDir()
 	s := NewStore(dir)
 	s.SetTags("/m", []string{"zeta", "alpha"})
-	if err := s.AddTag("/m", "middle"); err != nil {
-		t.Fatalf("AddTag failed: %v", err)
-	}
+	testutil.NoError(t, s.AddTag("/m", "middle"), "AddTag failed")
 	tags, _ := s.GetTags("/m")
 	want := []string{"alpha", "middle", "zeta"}
 	for i := range want {
-		if tags[i] != want[i] {
-			t.Fatalf("tags not sorted after AddTag: %v (want %v)", tags, want)
-		}
+		testutil.Equal(t, tags[i], want[i], "tags not sorted after AddTag: %v (want %v)", tags, want)
 	}
 }
 

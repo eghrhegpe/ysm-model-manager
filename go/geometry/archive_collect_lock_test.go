@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/container"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // collectEntryStub 手写 container.Entry 桩：条目序 / 名 / 内容 / Open 错误全由测试决定。
@@ -208,12 +209,8 @@ func TestCollectMergedFiles_MaterializeCapStopsWholeLoop(t *testing.T) {
 			func(i int) string { return "m" + string(rune('a'+i%26)) + strconv.Itoa(i) + ".geo.json" },
 			"G", collectEntryStub{name: "tail.png", data: "TAIL"})
 		geoFiles, _, pngs, _ := collectMergedFiles(entries, "")
-		if len(geoFiles) != maxMaterializeEntries {
-			t.Fatalf("geoFiles = %d, 期望恰好 %d（第 %d 条触发封顶）", len(geoFiles), maxMaterializeEntries, maxMaterializeEntries)
-		}
-		if len(pngs) != 0 {
-			t.Fatalf("pngs = %d, 期望 0（封顶后整体停止，尾部纹理不得再收）", len(pngs))
-		}
+		testutil.Equal(t, len(geoFiles), maxMaterializeEntries, "geoFiles = %d, 期望恰好 %d（第 %d 条触发封顶）", len(geoFiles), maxMaterializeEntries, maxMaterializeEntries)
+		testutil.Equal(t, len(pngs), 0, "pngs = %d, 期望 0（封顶后整体停止，尾部纹理不得再收）", len(pngs))
 	})
 
 	t.Run("动画通道封顶", func(t *testing.T) {
@@ -221,12 +218,8 @@ func TestCollectMergedFiles_MaterializeCapStopsWholeLoop(t *testing.T) {
 			func(i int) string { return "a" + strconv.Itoa(i) + ".animation.json" },
 			"AAAA", collectEntryStub{name: "tail.png", data: "TAIL"})
 		_, animJSONs, pngs, _ := collectMergedFiles(entries, "")
-		if len(animJSONs) != maxMaterializeEntries {
-			t.Fatalf("animJSONs = %d, 期望恰好 %d", len(animJSONs), maxMaterializeEntries)
-		}
-		if len(pngs) != 0 {
-			t.Fatalf("pngs = %d, 期望 0（封顶后整体停止）", len(pngs))
-		}
+		testutil.Equal(t, len(animJSONs), maxMaterializeEntries, "animJSONs = %d, 期望恰好 %d", len(animJSONs), maxMaterializeEntries)
+		testutil.Equal(t, len(pngs), 0, "pngs = %d, 期望 0（封顶后整体停止）", len(pngs))
 	})
 
 	t.Run("纹理通道封顶", func(t *testing.T) {
@@ -234,11 +227,9 @@ func TestCollectMergedFiles_MaterializeCapStopsWholeLoop(t *testing.T) {
 			func(i int) string { return "t" + strconv.Itoa(i) + ".png" },
 			"P", collectEntryStub{name: "tail.geo.json", data: "TAIL"})
 		geoFiles, _, pngs, pngNames := collectMergedFiles(entries, "")
-		if len(pngs) != maxMaterializeEntries || len(pngNames) != maxMaterializeEntries {
-			t.Fatalf("pngs = %d / pngNames = %d, 期望均恰好 %d（两切片同步）", len(pngs), len(pngNames), maxMaterializeEntries)
-		}
-		if len(geoFiles) != 0 {
-			t.Fatalf("geoFiles = %d, 期望 0（封顶后整体停止）", len(geoFiles))
-		}
+		// 原复合条件拆序贯（两切片同步封顶）
+		testutil.Equal(t, len(pngs), maxMaterializeEntries, "pngs = %d, 期望均恰好 %d（两切片同步）", len(pngs), maxMaterializeEntries)
+		testutil.Equal(t, len(pngNames), maxMaterializeEntries, "pngNames = %d, 期望均恰好 %d（两切片同步）", len(pngNames), maxMaterializeEntries)
+		testutil.Equal(t, len(geoFiles), 0, "geoFiles = %d, 期望 0（封顶后整体停止）", len(geoFiles))
 	})
 }

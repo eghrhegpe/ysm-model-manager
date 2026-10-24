@@ -7,6 +7,7 @@ status: active
 source_files:
   - frontend/e2e/browser-path.ts
   - frontend/e2e-web/web-ready.ts
+  - frontend/e2e/visual-baseline.ts
 auto_fields:
   symbols_with_lines:
     - browsersRoot
@@ -18,8 +19,10 @@ auto_fields:
     - OVERLAY_READY_TIMEOUT
     - pinnedChromiumOrThrow
     - registryFacts
+    - screenshotWithBaseline
     - shellExeRels
     - treeRootFound
+    - VisualBaselineOpts
     - waitForAppReady
     - waitForOverlayReady
     - waitForRenderFrames
@@ -135,6 +138,8 @@ npx playwright test --config playwright.web.config.ts menu-3d-session
 - 每步**硬断言**（`expect(x).toBe(1)` 而非 `toBeGreaterThan(0)`）
 - **下钻必须验内容变化**：`expect(after).not.toBe(before)`，而非「点开了」
 - **截图比对哈希**：两次截图字节相同 = 流程没生效
+- **截图字节级基线比对（自动抓假绿）**：见 `frontend/e2e/visual-baseline.ts|screenshotWithBaseline`——Node Buffer 字节级比对 `_baselines/*.baseline.png`（PNG 无损，字节相同=画面相同），把「两张截图 SHA256 相同却报 passed」的假绿事故从**事后复盘**变成**每次运行自动抓**；`menu-visual.spec.ts` 的 4 处 `shot()` 可平移成带断言落点。**基线须 git 跟踪**，与 `.gitignore` 排除的 `_shots/` 取证产物分轨。
+- **执法闸（2026-10-25 锐评 e2e 体系落地）**：`scripts/check-e2e-hygiene.ts` 静态扫描 `frontend/e2e`+`frontend/e2e-web` 的 `*.spec.ts`，把上方三条教条变可观测闸门——R1 固定 sleep 等就绪（`waitForTimeout`，≥1000ms 标 high）/ R2 软断言假绿（`.toBeGreaterThan(0)`/`.toBeGreaterThanOrEqual(1)`，排除 `.not` 负向安全）/ R3 `screenshotWithBaseline` 零调用死代码。当前 `debt` 观察期非阻断（`--strict` 命中 high 才 exit 1）；实测量级：spec 树内 `screenshotWithBaseline` 零调用（守卫=死代码），`waitForTimeout` 45 处、`toBeGreaterThan(0)` 软断言散布——印证 critique #1「教条零闸守」。
 - **丢弃「注释里自认无效」的测试**：明知读不回像素还留着 = 另一个假绿灯
 
 ### 3. readPixels 需自建 renderer
@@ -149,7 +154,9 @@ npx playwright test --config playwright.web.config.ts menu-3d-session
 
 ## 不变量
 
-- **截图不进版本库**：`_shots/`（含 `e2e/`、`e2e-web/`、`artifacts/**/_shots/`）是 e2e/探针每次运行重写的本地取证产物，已被 `.gitignore` 排除；复查证据用读图工具看本地图或附在 PR/Issue，**勿 `git add`**。Agent 看不到浏览器窗口，唯一通路＝脚本截图存 png → 读图工具回看（`artifacts/e2e-probe.mjs` 一次性探针）。
+- **截图取证产物 `_shots/` 不进版本库**：（`e2e/`、`e2e-web/`、`artifacts/**/_shots/`）每次运行重写，已被 `.gitignore` 排除，勿 `git add`。
+- **但 `_baselines/*.baseline.png` 须 git 跟踪**：这是 `visual-baseline.ts|screenshotWithBaseline` 的回归锚点（字节级比对），与 `_shots/` 分轨——前者是断言资产，后者是一次性取证。
+- Agent 看不到浏览器窗口，唯一通路＝脚本截图存 png → 读图工具回看（`artifacts/e2e-probe.mjs` 一次性探针）。
 - **单变量对照**：定位视觉异常时每次只动一个开关
 - **硬断言优先**：`toBe(1)` > `toBeGreaterThan(0)` > `if (n > 0)`
 - **临时 spec 用完即删**，不留在 `e2e-web/`
@@ -159,6 +166,17 @@ npx playwright test --config playwright.web.config.ts menu-3d-session
   - **治本（唯一有效）**：在 `frontend/vite.config.js` 的 `optimizeDeps.include` 里**显式列出该 id**，启动即预打包 ⇒ 无运行时发现、无 reload、无 `/@id/` 短暂 502 窗口。两条 id 都要列，勿「去重」合并——合并会让其中一条掉回运行时发现路径。
   - **已证伪的错解（勿重蹈）**：在测试侧「先暖 import 吸收 reload」。实测每个 `/@id/` URL 都触发**自己那次**专属 reload，`import` 必然被它掐死，**重试无解**（重试只是再撞一次）；连续扰动还会让 dev server 在 re-optimize 期间对该 URL 返 **502 Bad Gateway**，比原症状更糟。调大 `waitForTimeout` 同样无效（等待窗口盖不住「一次请求触发一次 reload」的循环）。
 - **启动就绪必须靠轮询，禁固定 `waitForTimeout` 等正向结果**（2026-10-07 根因修，E2E-Web CI 恒红）：`e2e-web/` 多个 spec 曾用「`page.goto("/")` → `waitForTimeout(2000~2500)` → 立刻派发组件级 DnD / 起 3D」，那是**墙钟等待**，只对「本机冷启动 < 2s」成立；CI runner（ubuntu + SwiftShader 软渲染）启动链 + WASM 初始化远慢于此 ⇒ `tree-root` 还没建出来就动手，报 `app-tree tree-root 未就绪`；`menu-3d-session` 首个用例又缺 `test.slow()`，直接撞 20s 默认超时。判据见知识卡 `test-utils.md`「禁止用固定 sleep 等待正向结果——真 flaky」。**共享件 `e2e-web/web-ready.ts`**：`waitForAppReady`（轮询双层 shadow 下的 `tree-root`，**外加 800ms 无导航静默窗**）/ `waitForOverlayReady` / `waitForRenderFrames`（观察 rAF 帧计数增量而非等毫秒）/ `clearIdbBestEffort`。两个易错点：① **应用启动链自发一次同 URL 导航**，`tree-root` 可能在那次导航**之前**就存在——只等它会立刻返回、随后 `evaluate` 撞导航抛 `Execution context was destroyed`（旧 `networkidle+2s` 侥幸盖住了这个窗口）；② 探针容错**只吞**「导航销毁上下文」一类，其余 evaluate 错误必须原样抛，否则就绪等待会退化成「恒 false 直到超时」，把真故障伪装成慢启动（假绿前身）。
+
+
+## e2e 墙钟税与冷启动误判（2026-10-25 锐评实证）
+
+锐评 e2e 体系时念叨的「vite 冷启动税 120s / 薄化配置降本」被实测**证伪**，记录以免重蹈：
+
+- **vite e2e dev server 冷启动实测 1.5–2.8s**（删 `.vite` 缓存仍 1505ms）。`playwright.config.ts` 的 `timeout:120000` 只是**安全天花板从未触达**——「冷启动税 120s」是误读。真实墙钟 5–7min 的主税 = **Chromium 启动 + SwiftShader 软渲染 WebGL 初始化 + 串行测试逻辑**，与 vite 启动无关。
+- **「清空 postprocessing addon 省税」反证**：`optimizeDeps.include: []`（TRIM）实测 **2856ms 比 FULL 1816ms 更慢**——11 个 addon 是 esbuild 预构建**缓存命中**，清空反而逼 esbuild 现打包。
+- **「纯 DOM mock 桥用整座 vite 杀鸡用牛刀」部分成立但降本≈0**：`app-content/index.ts` 副作用静态 `import @/views/app-preview/index.ts` → preview-3d 内 217 处静态 `from "three"`、`caps/postprocessing-composer.ts` 静态引 6 个 `three/addons/postprocessing`、另 5 个 `three/examples/jsm/postprocessing` 仅 e2e-web 经 `/@id/` 反射用；mock 桥纯 DOM 不反射 three，那 5 个对 mock 桥是死重——但 three 整图仍被静态拉入，**只省零头，差异在百毫秒级，远小于环境税**。
+- **结论**：薄化 vite 配置降本≈0 甚至负，**不落地**。最大墙钟税是「为运行时环境殉葬」的架构事实，只能靠**测试分层**（纯 DOM spec 彻底离开 WebGL runner）或**并行化**根治，非配置调参可解。下一步独立 spike：纯 DOM spec 能否脱离 Chromium+SwiftShader（happy-dom 修 COI/COOP 后能否承载 fixture）。
+- **学费（工具坑）**：`process.execPath` 在本 harness 是 **Electron host**（DeepSeek Harness.exe）非 node，spawn 它实际起 Electron 致「disk_cache 拒绝访问」假失败；须用 `C:\\Program Files\\nodejs\\node.exe` + pnpm store 内 `vite.js` 绝对路径才算到真计时。否则会误判 FULL/TRIM 都 TIMEOUT（工具路径错，非 vite 真失败）。
 
 ## 相关
 

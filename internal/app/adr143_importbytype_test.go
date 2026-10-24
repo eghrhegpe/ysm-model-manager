@@ -19,12 +19,8 @@ import (
 func TestImportByType_Contract_SuccessReturnsNil(t *testing.T) {
 	a, _, _ := packApp(t)
 	src := filepath.Join(t.TempDir(), "mod.ysm")
-	if err := os.WriteFile(src, []byte("{}"), 0o644); err != nil {
-		testutil.NoError(t, err)
-	}
-	if got := a.ImportByType("resourcepack", src); got != nil {
-		t.Fatalf("ImportByType 成功应返回 nil，got=%v", got)
-	}
+	testutil.NoError(t, os.WriteFile(src, []byte("{}"), 0o644))
+	testutil.Nil(t, a.ImportByType("resourcepack", src), "ImportByType 成功应返回 nil")
 }
 
 // TestImportByType_Contract_FailureIsTypedError 失败路径返回 typed error，
@@ -35,15 +31,11 @@ func TestImportByType_Contract_FailureIsTypedError(t *testing.T) {
 	err := a.ImportByType("nonexistent-type", "/x/a.ysm")
 	testutil.NotNil(t, err, "未知类型应返回非 nil error")
 	// 人类可读文案
-	if err.Error() == "" {
-		t.Fatal("error 应有可读文案")
-	}
+	testutil.Equal(t, err.Error() == "", false, "error 应有可读文案")
 
 	err = a.ImportByType("resourcepack", "")
 	testutil.NotNil(t, err, "空源路径应返回非 nil error")
-	if err.Error() == "" {
-		t.Fatal("error 应有可读文案")
-	}
+	testutil.Equal(t, err.Error() == "", false, "error 应有可读文案")
 }
 
 // TestImportByType_PreservesStructure 证明 error 化后结构化信息可穿透。
@@ -58,25 +50,17 @@ func TestImportByType_PreservesStructure(t *testing.T) {
 	}.WithCause(fs.ErrExist)
 
 	// 2) 直接透传时：errors.Is 可穿透，Code 字段保留
-	if !errors.Is(appErr, fs.ErrExist) {
-		t.Fatal("direct passthrough: AppError 经 Unwrap 可被 errors.Is 穿透")
-	}
-	if appErr.Code != types.ErrFileExists {
-		t.Fatal("direct passthrough: 结构化 Code 应保留")
-	}
+	testutil.ErrorIs(t, appErr, fs.ErrExist, "direct passthrough: AppError 经 Unwrap 可被 errors.Is 穿透")
+	testutil.Equal(t, appErr.Code != types.ErrFileExists, false, "direct passthrough: 结构化 Code 应保留")
 
 	// 3) 前端消费 err.Error() 得人类文案
 	humanMsg := appErr.Error()
-	if humanMsg == "" {
-		t.Fatal("Error() 应返回非空文案供前端展示")
-	}
+	testutil.Equal(t, humanMsg == "", false, "Error() 应返回非空文案供前端展示")
 
 	// 4) 对比：若压成 string 再重构，errors.Is 穿透链断裂
 	boundaryStr := appErr.Error()
 	reconstructed := errors.New(boundaryStr)
-	if errors.Is(reconstructed, fs.ErrExist) {
-		t.Fatal("压串重构后 errors.Is 仍能穿透——说明原始 Error() 实现已包含 cause 信息，但不应依赖此行为")
-	}
+	testutil.Equal(t, errors.Is(reconstructed, fs.ErrExist), false, "压串重构后 errors.Is 仍能穿透——说明原始 Error() 实现已包含 cause 信息，但不应依赖此行为")
 
 	t.Logf("error 化后：前端读 err.Error()=%q，后端可 errors.Is 分类，结构增益真实", humanMsg)
 }

@@ -49,9 +49,8 @@ func TestBuildGuiFlowStructured_FromResults(t *testing.T) {
 			Description: "❌ 分析失败: x.ysm"},
 	}
 	g := buildGuiFlowStructured(results, 2317300*time.Microsecond)
-	if len(g.Stages) != 2 {
-		t.Fatalf("应有 2 个阶段, got %d", len(g.Stages))
-	}
+	testutil.Equal(t, len(g.Stages), 2, "应有 2 个阶段, got %d", len(g.Stages))
+	// len 已由上一断言守卫（失败即 Goexit），g.Stages[i] 才安全
 	if !g.Failed {
 		t.Error("存在失败阶段，Failed 应为 true")
 	}

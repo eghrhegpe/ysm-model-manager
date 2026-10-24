@@ -32,9 +32,7 @@ func loadTestdataZip(t *testing.T) []byte {
 			continue
 		}
 		data, err := os.ReadFile(filepath.Join(dir, e.Name()))
-		if err != nil {
-			t.Fatalf("读取 %s 失败: %v", e.Name(), err)
-		}
+		testutil.NoError(t, err, "读取 %s 失败", e.Name())
 		w, err := zw.Create(e.Name())
 		testutil.NoError(t, err)
 		if _, err := w.Write(data); err != nil {
@@ -57,9 +55,8 @@ func TestComponentsFromRealSample(t *testing.T) {
 	data := loadTestdataZip(t)
 	comps, texNames, err := ParseComponentsFromZip(data, int64(len(data)))
 	testutil.NoError(t, err, "ParseComponentsFromZip 失败")
-	if len(comps) != 2 {
-		t.Fatalf("期望 2 组件（main+arm）, 得到 %d", len(comps))
-	}
+	// 守卫下方 texNames[0]/[1] 索引
+	testutil.Equal(t, len(comps), 2, "期望 2 组件（main+arm）, 得到 %d", len(comps))
 	// arm texNames 置空（与 main 共用全局 texArr[0] 皮肤）
 	if texNames[0] != "01tex" || texNames[1] != "" {
 		t.Errorf("texNames = %v, 期望 [01tex ]（arm 与 main 共用皮肤，texNames 置空）", texNames)
@@ -109,12 +106,9 @@ func TestTextureNamesFromRealSample(t *testing.T) {
 	data := loadTestdataZip(t)
 	model, pngs, _ := ParseFromZip(data, int64(len(data)))
 	testutil.NotNil(t, model, "模型应为非 nil")
-	if len(pngs) != 2 {
-		t.Fatalf("pngs = %d, 期望 2（真实样本 2 张纹理）", len(pngs))
-	}
-	if len(model.TextureNames) != len(pngs) {
-		t.Fatalf("TextureNames = %d, 期望与 pngs 同长 %d", len(model.TextureNames), len(pngs))
-	}
+	// 守卫下方 TextureNames[0]/[1] 索引
+	testutil.Equal(t, len(pngs), 2, "pngs = %d, 期望 2（真实样本 2 张纹理）", len(pngs))
+	testutil.Equal(t, len(model.TextureNames), len(pngs), "TextureNames = %d, 期望与 pngs 同长 %d", len(model.TextureNames), len(pngs))
 	// 去扩展名 + 按 ysm texture 声明序（01tex 在前, 02tex 在后）
 	if model.TextureNames[0] != "01tex" || model.TextureNames[1] != "02tex" {
 		t.Errorf("TextureNames = %v, 期望 [01tex 02tex]（真实模型命名）", model.TextureNames)

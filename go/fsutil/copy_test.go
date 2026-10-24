@@ -20,34 +20,21 @@ func TestStepError_WrapAndUnwrap(t *testing.T) {
 	inner := errors.New("读取失败")
 	err := stepErr(StepStat, inner)
 	// Error() 透传内层文本，既有 caller 的 err.Error() 断言零影响
-	if err.Error() != "读取失败" {
-		t.Fatalf("Error() 应透传内层，got %q", err.Error())
-	}
-	if !errors.Is(err, inner) {
-		t.Fatal("errors.Is 应穿透 StepError 命中内层")
-	}
+	testutil.Equal(t, err.Error(), "读取失败", "Error() 应透传内层")
+	testutil.ErrorIs(t, err, inner, "errors.Is 应穿透 StepError 命中内层")
 	// Unwrap 返回内层
-	if w := err.(*StepError).Unwrap(); w != inner {
-		t.Fatalf("Unwrap 应返回内层")
-	}
+	w := err.(*StepError).Unwrap()
+	testutil.Equal(t, w == inner, true, "Unwrap 应返回内层")
 }
 
 func TestStepError_StepVisibleViaAs(t *testing.T) {
 	err := stepErr(StepRename, os.ErrPermission)
 	var se *StepError
-	if !errors.As(err, &se) {
-		t.Fatal("errors.As 应取到 StepError")
-	}
-	if se.Step != StepRename {
-		t.Fatalf("Step 应为 %q，got %q", StepRename, se.Step)
-	}
-	if se.Err != os.ErrPermission {
-		t.Fatalf("Err 应为 os.ErrPermission")
-	}
+	testutil.Equal(t, errors.As(err, &se), true, "errors.As 应取到 StepError")
+	testutil.Equal(t, se.Step, StepRename, "Step")
+	testutil.Equal(t, se.Err == os.ErrPermission, true, "Err 应为 os.ErrPermission")
 	// 内层 fs.ErrNotExist 语义经链条保留（WINDOWS/各平台通用）
-	if !errors.Is(err, os.ErrPermission) {
-		t.Fatal("errors.Is(os.ErrPermission) 应命中")
-	}
+	testutil.ErrorIs(t, err, os.ErrPermission, "errors.Is(os.ErrPermission) 应命中")
 }
 
 func TestCopyFile_AllStepsWrapStepError(t *testing.T) {
@@ -55,39 +42,28 @@ func TestCopyFile_AllStepsWrapStepError(t *testing.T) {
 	dir := t.TempDir()
 	err := CopyFile(dir, filepath.Join(t.TempDir(), "x"))
 	var se *StepError
-	if !errors.As(err, &se) || se.Step != StepStat {
-		t.Fatalf("目录源应映射 StepStat, got %v", err)
-	}
+	// && 短路保证 As 失败（se 为 nil）时不解引用 se.Step
+	testutil.Equal(t, errors.As(err, &se) && se.Step == StepStat, true, "目录源应映射 StepStat, got %v", err)
 	// 源不存在 → StepStat（stat 失败）且透传 fs.ErrNotExist
 	err = CopyFile(filepath.Join(t.TempDir(), "nope.ysm"), filepath.Join(t.TempDir(), "x"))
-	if !errors.As(err, &se) || se.Step != StepStat {
-		t.Fatalf("源缺失应映射 StepStat, got %v", err)
-	}
+	testutil.Equal(t, errors.As(err, &se) && se.Step == StepStat, true, "源缺失应映射 StepStat, got %v", err)
 	_ = fmt.Sprint(err) // 确保步进打印不 panic
-	if !errors.Is(err, fs.ErrNotExist) {
-		t.Fatal("源缺失应可 errors.Is(fs.ErrNotExist)")
-	}
+	testutil.ErrorIs(t, err, fs.ErrNotExist, "源缺失应可 errors.Is(fs.ErrNotExist)")
 }
 
 func TestCopyFile_Success(t *testing.T) {
 	dir := t.TempDir()
 	src := filepath.Join(dir, "src.txt")
 	dst := filepath.Join(dir, "sub", "dst.txt")
-	if err := os.WriteFile(src, []byte("hello world"), 0644); err != nil {
-		testutil.NoError(t, err)
-	}
-	if err := CopyFile(src, dst); err != nil {
-		t.Fatalf("CopyFile 失败: %v", err)
-	}
+	testutil.NoError(t, os.WriteFile(src, []byte("hello world"), 0644))
+	testutil.NoError(t, CopyFile(src, dst), "CopyFile 失败")
 	data, err := os.ReadFile(dst)
-	if err != nil || string(data) != "hello world" {
-		t.Fatalf("内容不符: %q %v", string(data), err)
-	}
+	testutil.NoError(t, err, "读取复制结果失败")
+	testutil.Equal(t, string(data), "hello world", "内容不符")
 	// 父目录自动创建
 	fi, err := os.Stat(filepath.Join(dir, "sub"))
-	if err != nil || !fi.IsDir() {
-		t.Fatal("父目录未创建")
-	}
+	testutil.NoError(t, err, "父目录未创建")
+	testutil.Equal(t, fi.IsDir(), true, "父目录未创建")
 	// 权限：Windows 映射 0666，其他平台 0644
 	want := os.FileMode(0644)
 	if runtime.GOOS == "windows" {
@@ -100,9 +76,7 @@ func TestCopyFile_Success(t *testing.T) {
 	}
 	// 成功路径不得残留 .copy-*.tmp
 	matches, _ := filepath.Glob(filepath.Join(dir, "sub", ".copy-*.tmp"))
-	if len(matches) != 0 {
-		t.Fatalf("成功路径不应残留临时文件: %v", matches)
-	}
+	testutil.Equal(t, len(matches), 0, "成功路径不应残留临时文件: %v", matches)
 }
 
 func TestCopyFile_SrcNotFound(t *testing.T) {
@@ -115,40 +89,28 @@ func TestCopyFile_DstDirIsFile(t *testing.T) {
 	dir := t.TempDir()
 	src := filepath.Join(dir, "src.txt")
 	blocker := filepath.Join(dir, "blocker")
-	if err := os.WriteFile(src, []byte("x"), 0644); err != nil {
-		testutil.NoError(t, err)
-	}
-	if err := os.WriteFile(blocker, []byte("block"), 0644); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.WriteFile(src, []byte("x"), 0644))
+	testutil.NoError(t, os.WriteFile(blocker, []byte("block"), 0644))
 	err := CopyFile(src, filepath.Join(blocker, "dst.txt"))
 	testutil.NotNil(t, err, "目标父目录为文件时应报错")
 }
 
 func TestCopyDirRecursive_Success(t *testing.T) {
 	src := t.TempDir()
-	if err := os.WriteFile(filepath.Join(src, "a.txt"), []byte("AAA"), 0644); err != nil {
-		testutil.NoError(t, err)
-	}
-	if err := os.MkdirAll(filepath.Join(src, "sub"), 0755); err != nil {
-		testutil.NoError(t, err)
-	}
-	if err := os.WriteFile(filepath.Join(src, "sub", "b.txt"), []byte("BBB"), 0644); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.WriteFile(filepath.Join(src, "a.txt"), []byte("AAA"), 0644))
+	testutil.NoError(t, os.MkdirAll(filepath.Join(src, "sub"), 0755))
+	testutil.NoError(t, os.WriteFile(filepath.Join(src, "sub", "b.txt"), []byte("BBB"), 0644))
 
 	dst := filepath.Join(t.TempDir(), "dst")
 	err := CopyDirRecursive(src, dst, CopyDirOptions{Overwrite: true, Rollback: true})
 	testutil.NoError(t, err, "CopyDirRecursive 失败")
 	// 验证文件
 	data, err := os.ReadFile(filepath.Join(dst, "a.txt"))
-	if err != nil || string(data) != "AAA" {
-		t.Fatalf("a.txt 内容不符: %q", string(data))
-	}
+	testutil.NoError(t, err, "a.txt 读取失败")
+	testutil.Equal(t, string(data), "AAA", "a.txt 内容不符")
 	data, err = os.ReadFile(filepath.Join(dst, "sub", "b.txt"))
-	if err != nil || string(data) != "BBB" {
-		t.Fatalf("sub/b.txt 内容不符: %q", string(data))
-	}
+	testutil.NoError(t, err, "sub/b.txt 读取失败")
+	testutil.Equal(t, string(data), "BBB", "sub/b.txt 内容不符")
 }
 
 func TestCopyDirRecursive_RejectSymlink(t *testing.T) {
@@ -156,12 +118,8 @@ func TestCopyDirRecursive_RejectSymlink(t *testing.T) {
 		t.Skip("Windows 下创建 symlink 需要管理员权限")
 	}
 	src := t.TempDir()
-	if err := os.WriteFile(filepath.Join(src, "target.txt"), []byte("target"), 0644); err != nil {
-		testutil.NoError(t, err)
-	}
-	if err := os.Symlink("target.txt", filepath.Join(src, "link.txt")); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.WriteFile(filepath.Join(src, "target.txt"), []byte("target"), 0644))
+	testutil.NoError(t, os.Symlink("target.txt", filepath.Join(src, "link.txt")))
 
 	dst := filepath.Join(t.TempDir(), "dst")
 	err := CopyDirRecursive(src, dst, CopyDirOptions{RejectSymlink: true, Overwrite: true})
@@ -176,12 +134,8 @@ func TestCopyDirRecursive_CopySymlink(t *testing.T) {
 		t.Skip("Windows 下创建 symlink 需要管理员权限")
 	}
 	src := t.TempDir()
-	if err := os.WriteFile(filepath.Join(src, "target.txt"), []byte("target"), 0644); err != nil {
-		testutil.NoError(t, err)
-	}
-	if err := os.Symlink("target.txt", filepath.Join(src, "link.txt")); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.WriteFile(filepath.Join(src, "target.txt"), []byte("target"), 0644))
+	testutil.NoError(t, os.Symlink("target.txt", filepath.Join(src, "link.txt")))
 
 	dst := filepath.Join(t.TempDir(), "dst")
 	err := CopyDirRecursive(src, dst, CopyDirOptions{RejectSymlink: false, Overwrite: true})
@@ -196,17 +150,11 @@ func TestCopyDirRecursive_CopySymlink(t *testing.T) {
 
 func TestCopyDirRecursive_OverwriteFalse(t *testing.T) {
 	src := t.TempDir()
-	if err := os.WriteFile(filepath.Join(src, "a.txt"), []byte("AAA"), 0644); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.WriteFile(filepath.Join(src, "a.txt"), []byte("AAA"), 0644))
 
 	dst := filepath.Join(t.TempDir(), "dst")
-	if err := os.MkdirAll(dst, 0755); err != nil {
-		testutil.NoError(t, err)
-	}
-	if err := os.WriteFile(filepath.Join(dst, "a.txt"), []byte("OLD"), 0644); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.MkdirAll(dst, 0755))
+	testutil.NoError(t, os.WriteFile(filepath.Join(dst, "a.txt"), []byte("OLD"), 0644))
 
 	err := CopyDirRecursive(src, dst, CopyDirOptions{Overwrite: false, Rollback: false})
 	testutil.NotNil(t, err, "Overwrite=false 且目标存在时应报错")
@@ -217,18 +165,12 @@ func TestCopyDirRecursive_OverwriteFalse(t *testing.T) {
 
 func TestCopyDirRecursive_RollbackOnFailure(t *testing.T) {
 	src := t.TempDir()
-	if err := os.WriteFile(filepath.Join(src, "a.txt"), []byte("AAA"), 0644); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.WriteFile(filepath.Join(src, "a.txt"), []byte("AAA"), 0644))
 
 	// 用 Overwrite=false + 预置目标文件来制造失败
 	dst := filepath.Join(t.TempDir(), "dst")
-	if err := os.MkdirAll(dst, 0755); err != nil {
-		testutil.NoError(t, err)
-	}
-	if err := os.WriteFile(filepath.Join(dst, "a.txt"), []byte("OLD"), 0644); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.MkdirAll(dst, 0755))
+	testutil.NoError(t, os.WriteFile(filepath.Join(dst, "a.txt"), []byte("OLD"), 0644))
 
 	err := CopyDirRecursive(src, dst, CopyDirOptions{Overwrite: false, Rollback: true})
 	testutil.NotNil(t, err, "应报错")
@@ -241,73 +183,50 @@ func TestCopyDirRecursive_RollbackOnFailure(t *testing.T) {
 
 func TestCopyDirRecursive_AtomicRename_DstMissing(t *testing.T) {
 	src := t.TempDir()
-	if err := os.WriteFile(filepath.Join(src, "a.txt"), []byte("AAA"), 0644); err != nil {
-		testutil.NoError(t, err)
-	}
-	if err := os.MkdirAll(filepath.Join(src, "sub"), 0755); err != nil {
-		testutil.NoError(t, err)
-	}
-	if err := os.WriteFile(filepath.Join(src, "sub", "b.txt"), []byte("BBB"), 0644); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.WriteFile(filepath.Join(src, "a.txt"), []byte("AAA"), 0644))
+	testutil.NoError(t, os.MkdirAll(filepath.Join(src, "sub"), 0755))
+	testutil.NoError(t, os.WriteFile(filepath.Join(src, "sub", "b.txt"), []byte("BBB"), 0644))
 
 	dst := filepath.Join(t.TempDir(), "dst")
 	err := CopyDirRecursive(src, dst, CopyDirOptions{AtomicRename: true, Overwrite: true})
 	testutil.NoError(t, err, "AtomicRename 目标不存在失败")
 	// 验证内容
 	data, err := os.ReadFile(filepath.Join(dst, "a.txt"))
-	if err != nil || string(data) != "AAA" {
-		t.Fatalf("a.txt 内容不符: %q", string(data))
-	}
+	testutil.NoError(t, err, "a.txt 读取失败")
+	testutil.Equal(t, string(data), "AAA", "a.txt 内容不符")
 	data, err = os.ReadFile(filepath.Join(dst, "sub", "b.txt"))
-	if err != nil || string(data) != "BBB" {
-		t.Fatalf("sub/b.txt 内容不符: %q", string(data))
-	}
+	testutil.NoError(t, err, "sub/b.txt 读取失败")
+	testutil.Equal(t, string(data), "BBB", "sub/b.txt 内容不符")
 	// 不得残留临时目录
 	matches, _ := filepath.Glob(filepath.Join(src, ".tmp_copy_*"))
-	if len(matches) != 0 {
-		t.Fatalf("成功路径不应残留临时目录: %v", matches)
-	}
+	testutil.Equal(t, len(matches), 0, "成功路径不应残留临时目录: %v", matches)
 }
 
 func TestCopyDirRecursive_AtomicRename_OverwriteExisting(t *testing.T) {
 	src := t.TempDir()
-	if err := os.WriteFile(filepath.Join(src, "a.txt"), []byte("NEW"), 0644); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.WriteFile(filepath.Join(src, "a.txt"), []byte("NEW"), 0644))
 
 	dst := filepath.Join(t.TempDir(), "target")
 	// 预置旧目录
-	if err := os.MkdirAll(dst, 0755); err != nil {
-		testutil.NoError(t, err)
-	}
-	if err := os.WriteFile(filepath.Join(dst, "old.txt"), []byte("OLD"), 0644); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.MkdirAll(dst, 0755))
+	testutil.NoError(t, os.WriteFile(filepath.Join(dst, "old.txt"), []byte("OLD"), 0644))
 
 	err := CopyDirRecursive(src, dst, CopyDirOptions{AtomicRename: true, Overwrite: true})
 	testutil.NoError(t, err, "AtomicRename 覆盖已有目录失败")
 	// 新文件存在
 	data, err := os.ReadFile(filepath.Join(dst, "a.txt"))
-	if err != nil || string(data) != "NEW" {
-		t.Fatalf("新文件缺失: %v %q", err, string(data))
-	}
+	testutil.NoError(t, err, "新文件缺失")
+	testutil.Equal(t, string(data), "NEW", "新文件缺失")
 	// 旧文件应被整体替换
-	if _, err := os.Stat(filepath.Join(dst, "old.txt")); err == nil {
-		t.Fatal("旧文件应被整体替换")
-	}
+	testutil.FileNotExists(t, filepath.Join(dst, "old.txt"), "旧文件应被整体替换")
 	// 备份目录应被清理
 	matches, _ := filepath.Glob(filepath.Join(filepath.Dir(dst), "target.bak-*"))
-	if len(matches) != 0 {
-		t.Fatalf("备份目录应被清理，实际残留 %d 个", len(matches))
-	}
+	testutil.Equal(t, len(matches), 0, "备份目录应被清理，实际残留 %d 个", len(matches))
 }
 
 func TestCopyDirRecursive_AtomicRename_AncestorGuard(t *testing.T) {
 	src := t.TempDir()
-	if err := os.WriteFile(filepath.Join(src, "a.txt"), []byte("x"), 0644); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.WriteFile(filepath.Join(src, "a.txt"), []byte("x"), 0644))
 
 	// dst 是 src 的后代 → 拒绝
 	dst := filepath.Join(src, "sub", "out")
@@ -328,9 +247,7 @@ func TestCopyDirRecursive_AtomicRename_AncestorGuard(t *testing.T) {
 func TestCopyDirRecursive_AtomicRename_SrcIsFile(t *testing.T) {
 	dir := t.TempDir()
 	src := filepath.Join(dir, "afile")
-	if err := os.WriteFile(src, []byte("x"), 0644); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.WriteFile(src, []byte("x"), 0644))
 	dst := filepath.Join(dir, "out")
 	err := CopyDirRecursive(src, dst, CopyDirOptions{AtomicRename: true, Overwrite: true})
 	testutil.NotNil(t, err, "源是文件时应报错")
@@ -382,35 +299,24 @@ func TestRecoverAtomicRename_Recovery(t *testing.T) {
 
 	// 模拟崩溃状态：dst 缺失，backup 残留
 	backup := filepath.Join(dir, "mydir.bak-1234567890")
-	if err := os.MkdirAll(filepath.Join(backup, "sub"), 0755); err != nil {
-		testutil.NoError(t, err)
-	}
-	if err := os.WriteFile(filepath.Join(backup, "a.txt"), []byte("recovered"), 0644); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.MkdirAll(filepath.Join(backup, "sub"), 0755))
+	testutil.NoError(t, os.WriteFile(filepath.Join(backup, "a.txt"), []byte("recovered"), 0644))
 
 	// 确认 dst 不存在
 	dst := filepath.Join(dir, "mydir")
-	if _, err := os.Stat(dst); err == nil {
-		t.Fatal("测试前提：dst 不应存在")
-	}
+	testutil.FileNotExists(t, dst, "测试前提：dst 不应存在")
 
 	// 执行恢复
 	recovered, err := RecoverAtomicRename(dir)
 	testutil.NoError(t, err, "RecoverAtomicRename 失败")
-	if recovered != 1 {
-		t.Fatalf("应恢复 1 个 backup，实际 %d", recovered)
-	}
+	testutil.Equal(t, recovered, 1, "应恢复 1 个 backup")
 
 	// 验证恢复结果
 	data, err := os.ReadFile(filepath.Join(dst, "a.txt"))
-	if err != nil || string(data) != "recovered" {
-		t.Fatalf("恢复后内容不符: %q %v", string(data), err)
-	}
+	testutil.NoError(t, err, "恢复后读取失败")
+	testutil.Equal(t, string(data), "recovered", "恢复后内容不符")
 	// backup 应被删除
-	if _, err := os.Stat(backup); err == nil {
-		t.Fatal("恢复后 backup 应被删除")
-	}
+	testutil.FileNotExists(t, backup, "恢复后 backup 应被删除")
 }
 
 // TestRecoverAtomicRename_AlreadyRecovered 验证原始目录已存在时跳过
@@ -419,24 +325,16 @@ func TestRecoverAtomicRename_AlreadyRecovered(t *testing.T) {
 
 	// 原始目录已存在
 	dst := filepath.Join(dir, "mydir")
-	if err := os.MkdirAll(dst, 0755); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.MkdirAll(dst, 0755))
 	// backup 也存在（残留）
 	backup := filepath.Join(dir, "mydir.bak-1234567890")
-	if err := os.MkdirAll(backup, 0755); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.MkdirAll(backup, 0755))
 
 	recovered, err := RecoverAtomicRename(dir)
 	testutil.NoError(t, err, "RecoverAtomicRename 失败")
-	if recovered != 0 {
-		t.Fatalf("原始目录已存在时应跳过，实际恢复 %d", recovered)
-	}
+	testutil.Equal(t, recovered, 0, "原始目录已存在时应跳过，实际恢复 %d", recovered)
 	// backup 应保留（未被错误恢复）
-	if _, err := os.Stat(backup); err != nil {
-		t.Fatal("原始目录已存在时 backup 应保留")
-	}
+	testutil.FileExists(t, backup, "原始目录已存在时 backup 应保留")
 }
 
 // TestRecoverAtomicRename_MultipleBackups 验证多个 backup 时取最新
@@ -446,30 +344,19 @@ func TestRecoverAtomicRename_MultipleBackups(t *testing.T) {
 	// 两个 backup，时间戳不同
 	backup1 := filepath.Join(dir, "mydir.bak-100")
 	backup2 := filepath.Join(dir, "mydir.bak-200")
-	if err := os.MkdirAll(backup1, 0755); err != nil {
-		testutil.NoError(t, err)
-	}
-	if err := os.MkdirAll(backup2, 0755); err != nil {
-		testutil.NoError(t, err)
-	}
-	if err := os.WriteFile(filepath.Join(backup1, "old.txt"), []byte("old"), 0644); err != nil {
-		testutil.NoError(t, err)
-	}
-	if err := os.WriteFile(filepath.Join(backup2, "new.txt"), []byte("new"), 0644); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.MkdirAll(backup1, 0755))
+	testutil.NoError(t, os.MkdirAll(backup2, 0755))
+	testutil.NoError(t, os.WriteFile(filepath.Join(backup1, "old.txt"), []byte("old"), 0644))
+	testutil.NoError(t, os.WriteFile(filepath.Join(backup2, "new.txt"), []byte("new"), 0644))
 
 	recovered, err := RecoverAtomicRename(dir)
 	testutil.NoError(t, err, "RecoverAtomicRename 失败")
-	if recovered != 1 {
-		t.Fatalf("应恢复 1 个 backup，实际 %d", recovered)
-	}
+	testutil.Equal(t, recovered, 1, "应恢复 1 个 backup")
 
 	// 应恢复最新的 backup2
 	data, err := os.ReadFile(filepath.Join(dir, "mydir", "new.txt"))
-	if err != nil || string(data) != "new" {
-		t.Fatalf("应恢复最新 backup，实际内容: %q %v", string(data), err)
-	}
+	testutil.NoError(t, err, "恢复后读取失败")
+	testutil.Equal(t, string(data), "new", "应恢复最新 backup")
 }
 
 // TestRecoverAtomicRename_EmptyDir 验证空目录不报错
@@ -477,18 +364,14 @@ func TestRecoverAtomicRename_EmptyDir(t *testing.T) {
 	dir := t.TempDir()
 	recovered, err := RecoverAtomicRename(dir)
 	testutil.NoError(t, err, "空目录不应报错")
-	if recovered != 0 {
-		t.Fatalf("空目录应恢复 0，实际 %d", recovered)
-	}
+	testutil.Equal(t, recovered, 0, "空目录应恢复 0")
 }
 
 // TestRecoverAtomicRename_NonExistentDir 验证目录不存在时返回 0
 func TestRecoverAtomicRename_NonExistentDir(t *testing.T) {
 	recovered, err := RecoverAtomicRename(filepath.Join(t.TempDir(), "nope"))
 	testutil.NoError(t, err, "目录不存在不应报错")
-	if recovered != 0 {
-		t.Fatalf("目录不存在应恢复 0，实际 %d", recovered)
-	}
+	testutil.Equal(t, recovered, 0, "目录不存在应恢复 0")
 }
 
 // TestRecoverAtomicRename_IgnoresRelinkBakFamily（ADR-296 对抗审查③）：
@@ -501,17 +384,11 @@ func TestRecoverAtomicRename_IgnoresRelinkBakFamily(t *testing.T) {
 	dir := t.TempDir()
 	// 一个 relink 备份尸体 + 其 dst 原样存在（模拟 relink 崩溃后现场）
 	relinkBak := filepath.Join(dir, "model.relink-bak-1700000000")
-	if err := os.MkdirAll(relinkBak, 0o755); err != nil {
-		testutil.NoError(t, err)
-	}
-	if err := os.WriteFile(filepath.Join(relinkBak, "ysm.json"), []byte("bak"), 0o644); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.MkdirAll(relinkBak, 0o755))
+	testutil.NoError(t, os.WriteFile(filepath.Join(relinkBak, "ysm.json"), []byte("bak"), 0o644))
 	recovered, err := RecoverAtomicRename(dir)
 	testutil.NoError(t, err, "不应报错")
-	if recovered != 0 {
-		t.Fatalf(".relink-bak-* 不得被 .bak-* 自愈认领，实际恢复 %d", recovered)
-	}
+	testutil.Equal(t, recovered, 0, ".relink-bak-* 不得被 .bak-* 自愈认领，实际恢复 %d", recovered)
 	// 尸体目录原样在位，未被 rename 成 model.relink-bak
 	if _, err := os.Stat(relinkBak); err != nil {
 		t.Errorf("relink 备份应原样保留: %v", err)

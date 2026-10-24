@@ -19,9 +19,8 @@ func TestRestore_OutOfRecycleDir(t *testing.T) {
 	dir := t.TempDir()
 	tm := New(dir)
 	outside := filepath.Join(t.TempDir(), "x.ysm")
-	if err := tm.Restore(outside); err == nil {
-		t.Fatal("回收站外路径恢复应被拒绝")
-	}
+	err := tm.Restore(outside)
+	testutil.NotNil(t, err, "回收站外路径恢复应被拒绝")
 }
 
 // Restore 根级守卫：src == 回收站目录自身应被拒绝（IsInside 相等放行 → 走显式 Clean 相等拒绝）
@@ -30,16 +29,11 @@ func TestRestore_RecycleRootRejected(t *testing.T) {
 	tm := New(dir)
 	// 先移入一个文件确保 .recycle 目录已存在
 	src := testutil.CreateTestFile(t, dir, "test.ysm", "x")
-	if err := tm.Move(src); err != nil {
-		testutil.NoError(t, err)
-	}
-	if err := tm.Restore(tm.RecycleDir()); err == nil {
-		t.Fatal("恢复回收站根目录应被拒绝")
-	}
+	testutil.NoError(t, tm.Move(src))
+	err := tm.Restore(tm.RecycleDir())
+	testutil.NotNil(t, err, "恢复回收站根目录应被拒绝")
 	// 回收站内容不应受影响
-	if len(tm.List()) != 1 {
-		t.Fatal("回收站内容不应受影响")
-	}
+	testutil.Equal(t, len(tm.List()), 1, "回收站内容不应受影响")
 }
 
 // Restore 源缺失：os.Rename 返回 ENOENT（非跨设备错误）→ 直接返回，不静默成功
@@ -49,9 +43,7 @@ func TestRestore_SourceMissing(t *testing.T) {
 	err := tm.Restore(filepath.Join(tm.RecycleDir(), "missing.ysm"))
 	testutil.NotNil(t, err, "源不存在恢复应报错")
 	// 目标位置不应有残留
-	if _, statErr := os.Stat(filepath.Join(dir, "missing.ysm")); !os.IsNotExist(statErr) {
-		t.Fatalf("目标位置不应有残留文件: %v", statErr)
-	}
+	testutil.FileNotExists(t, filepath.Join(dir, "missing.ysm"), "目标位置不应有残留文件")
 }
 
 // ===== Restore 跨设备（EXDEV）回退分支单测 =====
@@ -72,28 +64,18 @@ func TestRestore_CrossDeviceFileFallback(t *testing.T) {
 	dir := t.TempDir()
 	tm := New(dir)
 	src := testutil.CreateTestFile(t, dir, "keep.ysm", "exdev content")
-	if err := tm.Move(src); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, tm.Move(src))
 	entries := tm.List()
-	if len(entries) != 1 {
-		t.Fatalf("前置条件失败：回收站应有 1 个文件, 得到 %d", len(entries))
-	}
+	testutil.Equal(t, len(entries), 1, "前置条件失败：回收站应有 1 个文件, 得到 %d", len(entries))
 
 	rtm := newTMWithExDEV(t, dir)
-	if err := rtm.Restore(entries[0].Path); err != nil {
-		t.Fatalf("跨设备文件恢复应成功: %v", err)
-	}
+	testutil.NoError(t, rtm.Restore(entries[0].Path), "跨设备文件恢复应成功")
 	// 目标文件已还原且内容完整
 	got, err := os.ReadFile(src)
 	testutil.NoError(t, err, "恢复后源位置文件应存在")
-	if string(got) != "exdev content" {
-		t.Fatalf("内容不一致: 期望 %q, 得到 %q", "exdev content", string(got))
-	}
+	testutil.Equal(t, string(got), "exdev content", "内容不一致")
 	// 回收站条目应已删除
-	if len(tm.List()) != 0 {
-		t.Fatal("恢复后回收站应为空")
-	}
+	testutil.Equal(t, len(tm.List()), 0, "恢复后回收站应为空")
 }
 
 // Restore 文件夹型模型（整组合并条目）跨设备回退：整树复制 + 删除回收站条目
@@ -101,41 +83,21 @@ func TestRestore_CrossDeviceDirFallback(t *testing.T) {
 	dir := t.TempDir()
 	tm := New(dir)
 	modelDir := filepath.Join(dir, "模型A")
-	if err := os.MkdirAll(filepath.Join(modelDir, "textures"), 0755); err != nil {
-		testutil.NoError(t, err)
-	}
-	if err := os.WriteFile(filepath.Join(modelDir, "ysm.json"), []byte(`{"spec":1}`), 0644); err != nil {
-		testutil.NoError(t, err)
-	}
-	if err := os.WriteFile(filepath.Join(modelDir, "model.pmx"), []byte("x"), 0644); err != nil {
-		testutil.NoError(t, err)
-	}
-	if err := os.WriteFile(filepath.Join(modelDir, "textures", "skin.png"), []byte("PNG"), 0644); err != nil {
-		testutil.NoError(t, err)
-	}
-	if err := tm.Move(modelDir); err != nil {
-		t.Fatalf("整组移入回收站失败: %v", err)
-	}
+	testutil.NoError(t, os.MkdirAll(filepath.Join(modelDir, "textures"), 0755))
+	testutil.NoError(t, os.WriteFile(filepath.Join(modelDir, "ysm.json"), []byte(`{"spec":1}`), 0644))
+	testutil.NoError(t, os.WriteFile(filepath.Join(modelDir, "model.pmx"), []byte("x"), 0644))
+	testutil.NoError(t, os.WriteFile(filepath.Join(modelDir, "textures", "skin.png"), []byte("PNG"), 0644))
+	testutil.NoError(t, tm.Move(modelDir), "整组移入回收站失败")
 	entries := tm.List()
-	if len(entries) != 1 {
-		t.Fatalf("前置条件失败：回收站应有 1 个整组条目, 得到 %d", len(entries))
-	}
+	testutil.Equal(t, len(entries), 1, "前置条件失败：回收站应有 1 个整组条目, 得到 %d", len(entries))
 
 	rtm := newTMWithExDEV(t, dir)
-	if err := rtm.Restore(entries[0].Path); err != nil {
-		t.Fatalf("跨设备整组恢复应成功: %v", err)
-	}
+	testutil.NoError(t, rtm.Restore(entries[0].Path), "跨设备整组恢复应成功")
 	// 整树应还原
-	if _, err := os.Stat(filepath.Join(dir, "模型A", "ysm.json")); err != nil {
-		t.Fatalf("整组还原后 ysm.json 应存在: %v", err)
-	}
-	if _, err := os.Stat(filepath.Join(dir, "模型A", "textures", "skin.png")); err != nil {
-		t.Fatalf("整组还原后 textures/skin.png 应存在: %v", err)
-	}
+	testutil.FileExists(t, filepath.Join(dir, "模型A", "ysm.json"), "整组还原后 ysm.json 应存在")
+	testutil.FileExists(t, filepath.Join(dir, "模型A", "textures", "skin.png"), "整组还原后 textures/skin.png 应存在")
 	// 回收站条目应已删除
-	if len(tm.List()) != 0 {
-		t.Fatal("恢复后回收站应为空")
-	}
+	testutil.Equal(t, len(tm.List()), 0, "恢复后回收站应为空")
 }
 
 // Restore 跨设备目录复制中途失败：半截副本应被清理，回收站条目保留
@@ -143,19 +105,11 @@ func TestRestore_CrossDeviceDirCopyFails_CleansDst(t *testing.T) {
 	dir := t.TempDir()
 	tm := New(dir)
 	modelDir := filepath.Join(dir, "模型B")
-	if err := os.MkdirAll(modelDir, 0755); err != nil {
-		testutil.NoError(t, err)
-	}
-	if err := os.WriteFile(filepath.Join(modelDir, "ysm.json"), []byte(`{"spec":1}`), 0644); err != nil {
-		testutil.NoError(t, err)
-	}
-	if err := tm.Move(modelDir); err != nil {
-		t.Fatalf("整组移入回收站失败: %v", err)
-	}
+	testutil.NoError(t, os.MkdirAll(modelDir, 0755))
+	testutil.NoError(t, os.WriteFile(filepath.Join(modelDir, "ysm.json"), []byte(`{"spec":1}`), 0644))
+	testutil.NoError(t, tm.Move(modelDir), "整组移入回收站失败")
 	entries := tm.List()
-	if len(entries) != 1 {
-		t.Fatalf("前置条件失败：回收站应有 1 个整组条目, 得到 %d", len(entries))
-	}
+	testutil.Equal(t, len(entries), 1, "前置条件失败：回收站应有 1 个整组条目, 得到 %d", len(entries))
 
 	rtm := newTMWithExDEV(t, dir)
 	// 模拟复制中途失败：先写入半截文件再报错，验证 dst 整棵被清理
@@ -169,17 +123,12 @@ func TestRestore_CrossDeviceDirCopyFails_CleansDst(t *testing.T) {
 		return os.ErrPermission
 	}
 
-	if err := rtm.Restore(entries[0].Path); err == nil {
-		t.Fatal("复制失败恢复应报错")
-	}
+	err := rtm.Restore(entries[0].Path)
+	testutil.NotNil(t, err, "复制失败恢复应报错")
 	// 半截副本应被清理
-	if _, err := os.Stat(filepath.Join(dir, "模型B")); !os.IsNotExist(err) {
-		t.Fatal("半截恢复目录应被清理")
-	}
+	testutil.FileNotExists(t, filepath.Join(dir, "模型B"), "半截恢复目录应被清理")
 	// 回收站条目应保留（源未删除）
-	if len(tm.List()) != 1 {
-		t.Fatal("复制失败后回收站条目应保留")
-	}
+	testutil.Equal(t, len(tm.List()), 1, "复制失败后回收站条目应保留")
 }
 
 // Restore 跨设备文件复制中途失败：半截文件应被清理，回收站条目保留
@@ -187,13 +136,9 @@ func TestRestore_CrossDeviceFileCopyFails_CleansDst(t *testing.T) {
 	dir := t.TempDir()
 	tm := New(dir)
 	src := testutil.CreateTestFile(t, dir, "keep.ysm", "exdev content")
-	if err := tm.Move(src); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, tm.Move(src))
 	entries := tm.List()
-	if len(entries) != 1 {
-		t.Fatalf("前置条件失败：回收站应有 1 个文件, 得到 %d", len(entries))
-	}
+	testutil.Equal(t, len(entries), 1, "前置条件失败：回收站应有 1 个文件, 得到 %d", len(entries))
 
 	rtm := newTMWithExDEV(t, dir)
 	// 模拟复制中途失败：先写入半截文件再报错，验证半截恢复文件被清理
@@ -204,17 +149,12 @@ func TestRestore_CrossDeviceFileCopyFails_CleansDst(t *testing.T) {
 		return os.ErrPermission
 	}
 
-	if err := rtm.Restore(entries[0].Path); err == nil {
-		t.Fatal("复制失败恢复应报错")
-	}
+	err := rtm.Restore(entries[0].Path)
+	testutil.NotNil(t, err, "复制失败恢复应报错")
 	// 半截恢复文件应被清理
-	if _, err := os.Stat(src); !os.IsNotExist(err) {
-		t.Fatal("半截恢复文件应被清理")
-	}
+	testutil.FileNotExists(t, src, "半截恢复文件应被清理")
 	// 回收站条目应保留
-	if len(tm.List()) != 1 {
-		t.Fatal("复制失败后回收站条目应保留")
-	}
+	testutil.Equal(t, len(tm.List()), 1, "复制失败后回收站条目应保留")
 }
 
 // 符号链接恢复：建链失败时回收站条目必须保住（锐评 2026-10-15 修正）。
@@ -230,13 +170,9 @@ func TestRestore_CrossDeviceFileCopyFails_CleansDst(t *testing.T) {
 func TestRestoreSymlinkEntry_LinkFailureKeepsRecycleEntry(t *testing.T) {
 	dir := t.TempDir()
 	tm := New(dir)
-	if err := os.MkdirAll(tm.RecycleDir(), 0755); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.MkdirAll(tm.RecycleDir(), 0755))
 	target := filepath.Join(dir, "target.ysm")
-	if err := os.WriteFile(target, []byte("x"), 0644); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.WriteFile(target, []byte("x"), 0644))
 	src := filepath.Join(tm.RecycleDir(), "link.ysm")
 	if err := os.Symlink(target, src); err != nil {
 		t.Skipf("Symlink 不可用（需权限）: %v", err)
@@ -246,25 +182,15 @@ func TestRestoreSymlinkEntry_LinkFailureKeepsRecycleEntry(t *testing.T) {
 	tm.symlinkForRestore = func(_, _ string) error { return os.ErrPermission }
 
 	handled, err := tm.restoreSymlinkEntry(src, dst)
-	if !handled {
-		t.Fatal("符号链接条目应由 restoreSymlinkEntry 接管")
-	}
-	if err == nil {
-		t.Fatal("建链失败应报错（不得静默成功）")
-	}
+	testutil.Equal(t, handled, true, "符号链接条目应由 restoreSymlinkEntry 接管")
+	testutil.NotNil(t, err, "建链失败应报错（不得静默成功）")
 	// 核心断言：回收站条目分毫未动（旧序此处已被 os.Remove 删掉）
 	info, lerr := os.Lstat(src)
-	if lerr != nil {
-		t.Fatalf("建链失败后回收站条目必须保留（旧序的永久丢失窗口）: %v", lerr)
-	}
-	if info.Mode()&os.ModeSymlink == 0 {
-		t.Fatal("回收站条目应仍是符号链接")
-	}
-	if got, rerr := os.Readlink(src); rerr != nil || got != target {
-		t.Fatalf("回收站链接目标应不变 = %q, got %q (err %v)", target, got, rerr)
-	}
+	testutil.NoError(t, lerr, "建链失败后回收站条目必须保留（旧序的永久丢失窗口）")
+	testutil.Equal(t, info.Mode()&os.ModeSymlink == 0, false, "回收站条目应仍是符号链接")
+	got, rerr := os.Readlink(src)
+	testutil.NoError(t, rerr, "回收站链接目标读取失败")
+	testutil.Equal(t, got, target, "回收站链接目标应不变")
 	// 落点不得留下任何半成品
-	if _, serr := os.Lstat(dst); !os.IsNotExist(serr) {
-		t.Fatal("建链失败不应在落点留下任何东西")
-	}
+	testutil.FileNotExists(t, dst, "建链失败不应在落点留下任何东西")
 }

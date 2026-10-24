@@ -27,13 +27,9 @@ func TestMoveEx_WindowsCrossVolumeErrno(t *testing.T) {
 	tm := newTMWithRenameErr(t, dir, syscall.Errno(17)) // ERROR_NOT_SAME_DEVICE
 
 	res := tm.MoveEx(modDir)
-	if res.Action != "recycled" {
-		t.Fatalf("Errno(17) 应触发跨设备回退 recycled, 得到 %s/%s", res.Action, res.Reason)
-	}
-	if _, err := os.Stat(modDir); !os.IsNotExist(err) {
-		t.Fatal("源目录应已被删除")
-	}
-	if entries := tm.List(); len(entries) != 1 {
-		t.Fatalf("回收站应有 1 个整组条目, 得到 %d", len(entries))
-	}
+	testutil.Equal(t, res.Action, "recycled", "Errno(17) 应触发跨设备回退 recycled, 得到 %s/%s", res.Action, res.Reason)
+	_, statErr := os.Stat(modDir)
+	testutil.Equal(t, os.IsNotExist(statErr), true, "源目录应已被删除")
+	entries := tm.List()
+	testutil.Equal(t, len(entries), 1, "回收站应有 1 个整组条目, 得到 %d", len(entries))
 }

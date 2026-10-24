@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/internal/testutil"
 )
 
 // 回调注入（ADR-002 P1 打破循环）后 DownloadQueue 可脱离 App 独立测试
@@ -31,9 +32,7 @@ func TestDownloadQueue_Sequential(t *testing.T) {
 
 	q.process() // 同步阻塞：处理完队列后返回
 
-	if len(downloaded) != 2 || downloaded[0] != "https://a.example/x.ysm" || downloaded[1] != "https://b.example/y.ysm" {
-		t.Fatalf("顺序下载: got %v, 期望 [a, b]", downloaded)
-	}
+	testutil.Equal(t, downloaded, []string{"https://a.example/x.ysm", "https://b.example/y.ysm"}, "顺序下载")
 	// 事件序列：file-start → file-done → ... → done
 	joined := strings.Join(emitted, ",")
 	for _, want := range []string{"queue:file-start", "queue:file-done", "queue:status", "queue:status"} {
@@ -66,9 +65,7 @@ func TestDownloadQueue_ErrorDoesNotStopQueue(t *testing.T) {
 
 	q.process()
 
-	if len(downloaded) != 2 {
-		t.Fatalf("失败任务不应中断队列: got %v", downloaded)
-	}
+	testutil.Equal(t, len(downloaded), 2, "失败任务不应中断队列: %v", downloaded)
 	if q.running {
 		t.Error("process 结束后 running 应复位")
 	}
@@ -98,11 +95,9 @@ func TestDownloadQueue_CancelSkipsDoneEvent(t *testing.T) {
 		func(op, modelName, sourcePath, targetDir string, fileSize int64, status, errMsg string) {},
 	)
 	// 走真实路径：入队（常驻 worker 开始消费）→ 任务在途时取消。
-	if err := q.Enqueue([]types.DownloadTask{
+	testutil.NoError(t, q.Enqueue([]types.DownloadTask{
 		{URL: "https://slow.example/x.ysm", SaveDir: t.TempDir(), Name: "slow.ysm"},
-	}); err != nil {
-		t.Fatalf("Enqueue = %v", err)
-	}
+	}), "Enqueue")
 	<-started // 确保任务已在途（downloadFn 已进入并阻塞在 ctx.Done）
 	q.Cancel()
 
@@ -114,7 +109,7 @@ func TestDownloadQueue_CancelSkipsDoneEvent(t *testing.T) {
 			break
 		}
 		if time.Now().After(deadline) {
-			t.Fatalf("取消后队列未静止: %+v", st)
+			testutil.Equal(t, st.Running || st.Remaining != 0, false, "取消后队列未静止: %+v", st)
 		}
 		time.Sleep(time.Millisecond)
 	}
@@ -195,7 +190,7 @@ func TestDownloadQueue_ParentCancelStopsQueue(t *testing.T) {
 	select {
 	case <-done:
 	case <-time.After(5 * time.Second):
-		t.Fatal("parent ctx 取消后 process 未退出（队列 ctx 未派生自 parent）")
+		testutil.Equal(t, true, false, "parent ctx 取消后 process 未退出（队列 ctx 未派生自 parent）")
 	}
 	if q.running {
 		t.Error("parent 取消后 running 应复位（代际一致路径）")
@@ -275,9 +270,7 @@ func TestConsume_StaleWorkerDoesNotDrainNewBatch(t *testing.T) {
 	batch := []types.DownloadTask{
 		{URL: "https://a.example/new.ysm", SaveDir: t.TempDir(), Name: "new.ysm"},
 	}
-	if err := q.Enqueue(batch); err != nil {
-		t.Fatalf("取消后入队新批次失败: %v", err)
-	}
+	testutil.NoError(t, q.Enqueue(batch), "取消后入队新批次失败")
 	deadline := time.Now().Add(5 * time.Second)
 	for {
 		mu.Lock()
@@ -287,7 +280,7 @@ func TestConsume_StaleWorkerDoesNotDrainNewBatch(t *testing.T) {
 			break
 		}
 		if time.Now().After(deadline) {
-			t.Fatalf("新批次未被消费（got=%d）或重复消费", got)
+			testutil.Equal(t, got != 1, false, "新批次未被消费（got=%d）或重复消费", got)
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
@@ -324,14 +317,12 @@ func TestEnqueue_AfterParentCancel_Rejected(t *testing.T) {
 	select {
 	case <-q.stopped:
 	case <-time.After(5 * time.Second):
-		t.Fatal("parent 取消后 worker 未退出")
+		testutil.Equal(t, true, false, "parent 取消后 worker 未退出")
 	}
 	err := q.Enqueue([]types.DownloadTask{
 		{URL: "https://a.example/x.ysm", SaveDir: t.TempDir(), Name: "x.ysm"},
 	})
-	if err == nil {
-		t.Fatal("parent 取消后 Enqueue 应拒绝新任务")
-	}
+	testutil.NotNil(t, err, "parent 取消后 Enqueue 应拒绝新任务")
 	st := q.Status()
 	if st.Running {
 		t.Error("拒绝入队后 running 不得置位")
@@ -375,13 +366,9 @@ func TestEnqueue_CancelReenqueue_NoDuplicateDone(t *testing.T) {
 		func(op, modelName, sourcePath, targetDir string, fileSize int64, status, errMsg string) {},
 	)
 	for i := 0; i < rounds; i++ {
-		if err := q.Enqueue([]types.DownloadTask{{Name: "a", URL: "https://slow.example/a", SaveDir: "/"}}); err != nil {
-			t.Fatalf("round %d 入队失败: %v", i, err)
-		}
+		testutil.NoError(t, q.Enqueue([]types.DownloadTask{{Name: "a", URL: "https://slow.example/a", SaveDir: "/"}}), "round %d 入队失败", i)
 		q.Cancel()
-		if err := q.Enqueue([]types.DownloadTask{{Name: "b", URL: "https://b", SaveDir: "/"}}); err != nil {
-			t.Fatalf("round %d 取消后入队失败: %v", i, err)
-		}
+		testutil.NoError(t, q.Enqueue([]types.DownloadTask{{Name: "b", URL: "https://b", SaveDir: "/"}}), "round %d 取消后入队失败", i)
 		// 等本轮静止，避免轮次交叠
 		deadline := time.Now().Add(2 * time.Second)
 		for {
@@ -390,7 +377,7 @@ func TestEnqueue_CancelReenqueue_NoDuplicateDone(t *testing.T) {
 				break
 			}
 			if time.Now().After(deadline) {
-				t.Fatalf("round %d 队列未静止: %+v", i, st)
+				testutil.Equal(t, st.Running || st.Remaining != 0, false, "round %d 队列未静止: %+v", i, st)
 			}
 			time.Sleep(time.Millisecond)
 		}

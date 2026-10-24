@@ -61,9 +61,7 @@ func TestScanEntries_DirBanSkipped(t *testing.T) {
 	}
 	entries := ScanEntries(dir)
 	testutil.Equal(t, len(entries), 1, "应只扫到 normal.ysm")
-	if entries[0].Name != "normal.ysm" {
-		t.Fatalf("应只扫到 normal.ysm（.ban 目录跳过）, got %+v", entries)
-	}
+	testutil.Equal(t, entries[0].Name, "normal.ysm", "应只扫到 normal.ysm（.ban 目录跳过）, got %+v", entries)
 }
 
 func TestScanEntries_CacheGenInvalidateDuringScan(t *testing.T) {
@@ -80,19 +78,16 @@ func TestScanEntries_ExpiredCacheLazyEviction(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "a.ysm"), []byte("x"), perm); err != nil {
 		testutil.NoError(t, err)
 	}
-	if _, hit := ScanEntriesWithHit(dir); hit {
-		t.Fatal("首次扫描不应命中缓存")
-	}
-	if _, hit := ScanEntriesWithHit(dir); !hit {
-		t.Fatal("30s 内二次扫描应命中缓存")
-	}
-	if v, ok := scanCache.Load(dir); ok {
-		e := v.(scanCacheEntry)
-		e.expiresAt = time.Now().Add(-time.Second)
-		scanCache.Store(dir, e)
-	} else {
-		t.Fatal("扫描后缓存应有条目")
-	}
+	_, hit := ScanEntriesWithHit(dir)
+	testutil.Equal(t, hit, false, "首次扫描不应命中缓存")
+	_, hit2 := ScanEntriesWithHit(dir)
+	testutil.Equal(t, hit2, true, "30s 内二次扫描应命中缓存")
+	v, ok := scanCache.Load(dir)
+	// ok 守卫在前——Equal 失败即 Goexit，下方 v.(scanCacheEntry) 断言仅在其通过后执行
+	testutil.Equal(t, ok, true, "扫描后缓存应有条目")
+	e := v.(scanCacheEntry)
+	e.expiresAt = time.Now().Add(-time.Second)
+	scanCache.Store(dir, e)
 	if err := os.WriteFile(filepath.Join(dir, "b.ysm"), []byte("x"), perm); err != nil {
 		testutil.NoError(t, err)
 	}

@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // fixtureYsmPath 返回目录式 fixture 的 ysm.json 路径（相对 go/ysm 包目录）
@@ -26,9 +28,7 @@ func fixtureYsmPath(t *testing.T, name string) string {
 func TestFindComponentsInExtractedYSM_DirFixture_ShenFengling(t *testing.T) {
 	ysmPath := fixtureYsmPath(t, "shen-fengling")
 	comps, texNames := FindComponentsInExtractedYSM(ysmPath)
-	if len(comps) == 0 {
-		t.Fatal("目录式 fixture 应解析出组件（非空）")
-	}
+	testutil.Equal(t, len(comps) == 0, false, "目录式 fixture 应解析出组件（非空）")
 	// main 优先（R1 契约：main.json 必须占组件 0，否则 texSlot 错位）
 	if len(comps) > 0 && comps[0].SourceName != "main" {
 		t.Errorf("组件 0 应为 main, got %q", comps[0].SourceName)
@@ -113,8 +113,6 @@ func TestFindComponentsInExtractedYSM_WineFoxAll(t *testing.T) {
 		}
 		checked++
 	}
-	if checked == 0 {
-		t.Fatal("未检查到任何 wine-fox 子目录（路径错误？）")
-	}
+	testutil.Equal(t, checked == 0, false, "未检查到任何 wine-fox 子目录（路径错误？）")
 	t.Logf("已回归 wine-fox %d 个子目录模型", checked)
 }

@@ -37,17 +37,13 @@ func TestRelInside(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			rel, err := RelInside(c.base, c.path)
 			if c.wantErr {
-				if err == nil {
-					t.Fatalf("RelInside(%q, %q) = (%q, nil)，期望报错", c.base, c.path, rel)
-				}
+				testutil.NotNil(t, err, "RelInside(%q, %q) = (%q, nil)，期望报错", c.base, c.path, rel)
 				if c.errIs != nil && !errors.Is(err, c.errIs) {
 					t.Errorf("错误应可 errors.Is 到 %v，实际 %v", c.errIs, err)
 				}
 				return
 			}
-			if err != nil {
-				t.Fatalf("RelInside(%q, %q) 不应报错: %v", c.base, c.path, err)
-			}
+			testutil.NoError(t, err, "RelInside(%q, %q) 不应报错", c.base, c.path)
 			if rel != c.wantRel {
 				t.Errorf("RelInside(%q, %q) = %q, want %q", c.base, c.path, rel, c.wantRel)
 			}

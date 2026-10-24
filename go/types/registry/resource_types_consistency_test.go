@@ -30,26 +30,20 @@ func TestResourceTypesEmbedJSONConsistency(t *testing.T) {
 
 	// 直接解码根文件 → 结构体（与 LoadRegistry 同构，避免 map/struct 字段不对称）
 	var fileReg registry.ResourceTypeRegistry
-	if err := json.Unmarshal(raw, &fileReg); err != nil {
-		t.Fatalf("parse resource_types.json: %v", err)
-	}
-	if len(fileReg.ResourceTypes) == 0 {
-		t.Fatalf("root resource_types.json decoded to 0 types (unexpected)")
-	}
+	testutil.NoError(t, json.Unmarshal(raw, &fileReg), "parse resource_types.json")
+	testutil.Equal(t, len(fileReg.ResourceTypes) != 0, true, "root resource_types.json decoded to 0 types (unexpected)")
 
 	// 强制 LoadRegistry 重读根文件（清空包级缓存、指向根路径），走应用真实加载路径
 	registry.SetRegistryPath(jsonPath)
 	defer registry.SetRegistryPath("")
 	reg := registry.LoadRegistry()
-	if len(reg.ResourceTypes) == 0 {
-		t.Fatalf("LoadRegistry() returned 0 types (fallback baseline empty?)")
-	}
+	testutil.Equal(t, len(reg.ResourceTypes) != 0, true, "LoadRegistry() returned 0 types (fallback baseline empty?)")
 
 	// 按 id 建索引比对（忽略顺序，去重不改变语义）
 	byIDFile := make(map[string]registry.ResourceType, len(fileReg.ResourceTypes))
 	for _, rt := range fileReg.ResourceTypes {
 		if _, dup := byIDFile[rt.ID]; dup {
-			t.Fatalf("root resource_types.json 含重复 id %q（数据缺陷，需先修源）", rt.ID)
+			testutil.Equal(t, false, true, "root resource_types.json 含重复 id %q（数据缺陷，需先修源）", rt.ID)
 		}
 		byIDFile[rt.ID] = rt
 	}

@@ -19,7 +19,7 @@ import (
 func TestDedup_NoSubcommand_PrintsUsage(t *testing.T) {
 	out := captureOutput(t, func() {
 		if err := runDedup(&CmdContext{App: &app.App{}, Args: nil}); err != nil {
-			t.Fatalf("runDedup 无子命令应成功, got %v", err)
+			testutil.NoError(t, err, "runDedup 无子命令应成功")
 		}
 	})
 	if !strings.Contains(out, "dedup") || !strings.Contains(out, "子命令") {
@@ -47,7 +47,7 @@ func TestDedupScan_EmptyDir(t *testing.T) {
 	dir := t.TempDir()
 	out := captureOutput(t, func() {
 		if err := runDedupScan(&CmdContext{App: &app.App{}, FilesRoot: dir, Args: nil}); err != nil {
-			t.Fatalf("scan 空目录应成功, got %v", err)
+			testutil.NoError(t, err, "scan 空目录应成功")
 		}
 	})
 	if !strings.Contains(out, "未发现重复") {
@@ -63,7 +63,7 @@ func TestDedupScan_Duplicates(t *testing.T) {
 
 	out := captureOutput(t, func() {
 		if err := runDedupScan(&CmdContext{App: &app.App{}, FilesRoot: dir, Args: []string{"--dir", dir}}); err != nil {
-			t.Fatalf("scan 应成功, got %v", err)
+			testutil.NoError(t, err, "scan 应成功")
 		}
 	})
 	if !strings.Contains(out, "重复组: 1") {
@@ -83,7 +83,7 @@ func TestDedupCount_EmptyDir(t *testing.T) {
 	dir := t.TempDir()
 	out := captureOutput(t, func() {
 		if err := runDedupCount(&CmdContext{App: &app.App{}, FilesRoot: dir, Args: []string{"--dir", dir}}); err != nil {
-			t.Fatalf("count 应成功, got %v", err)
+			testutil.NoError(t, err, "count 应成功")
 		}
 	})
 	if !strings.Contains(out, "重复组 0") || !strings.Contains(out, "多余文件 0") {
@@ -99,7 +99,7 @@ func TestDedupCount_Duplicates(t *testing.T) {
 
 	out := captureOutput(t, func() {
 		if err := runDedupCount(&CmdContext{App: &app.App{}, FilesRoot: dir, Args: []string{"--dir", dir}}); err != nil {
-			t.Fatalf("count 应成功, got %v", err)
+			testutil.NoError(t, err, "count 应成功")
 		}
 	})
 	if !strings.Contains(out, "重复组 1") || !strings.Contains(out, "多余文件 1") {
@@ -126,7 +126,7 @@ func TestDedupClean_DryRun_KeepsFiles(t *testing.T) {
 
 	out := captureOutput(t, func() {
 		if err := runDedupClean(&CmdContext{App: &app.App{}, FilesRoot: dir, Args: nil}); err != nil {
-			t.Fatalf("clean dry-run 应成功, got %v", err)
+			testutil.NoError(t, err, "clean dry-run 应成功")
 		}
 	})
 	if !strings.Contains(out, "dry-run") || !strings.Contains(out, "将移入回收站") {
@@ -151,7 +151,7 @@ func TestDedupClean_Yes_MovesToRecycle(t *testing.T) {
 
 	out := captureOutput(t, func() {
 		if err := runDedupClean(&CmdContext{App: &app.App{}, FilesRoot: dir, Args: []string{"--yes"}}); err != nil {
-			t.Fatalf("clean --yes 应成功, got %v", err)
+			testutil.NoError(t, err, "clean --yes 应成功")
 		}
 	})
 	if !strings.Contains(out, "已移入回收站: 1") {
@@ -191,7 +191,7 @@ func TestDedupScan_OutputWritesFileWithoutExpansion(t *testing.T) {
 
 	out := captureOutput(t, func() {
 		if err := runDedupScan(&CmdContext{App: &app.App{}, FilesRoot: dir, Args: []string{"--dir", dir, "--output", outFile}}); err != nil {
-			t.Fatalf("scan --output 应成功, got %v", err)
+			testutil.NoError(t, err, "scan --output 应成功")
 		}
 	})
 	if !strings.Contains(out, "已保存到") {

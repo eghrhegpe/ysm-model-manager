@@ -107,9 +107,8 @@ func summarizeStats(t *testing.T, v interface{}) (int, map[string]int) {
 	nameSet := map[string]int{}
 	// 反射遍历切片元素的结构体 Name/Count 字段
 	elem := reflect.ValueOf(v)
-	if elem.Kind() != reflect.Slice {
-		t.Fatalf("paletteStats 非切片: %T", v)
-	}
+	// Equal 失败即 Goexit，守卫语义等价：下方 elem.Len() 索引遍历仅在其通过后执行
+	testutil.Equal(t, elem.Kind() != reflect.Slice, false, "paletteStats 非切片: %T", v)
 	for i := 0; i < elem.Len(); i++ {
 		item := elem.Index(i)
 		name := item.FieldByName("Name").String()

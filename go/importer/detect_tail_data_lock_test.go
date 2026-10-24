@@ -11,6 +11,8 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"testing"
+
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // zipTail 手工 zip 尾部构造器。mutateEOCD/mutateCD 在偏移定稿前改写字节，
@@ -73,12 +75,8 @@ func TestDetectContainerTypeFromBase64Tail_DecisionData(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			id, ok := DetectContainerTypeFromBase64Tail(tc.tail.b64())
-			if !ok {
-				t.Fatalf("应给出确定答案 ok=true（ok=false 是「交全量兜底」的另一语义）")
-			}
-			if id != tc.want {
-				t.Fatalf("类型判定 = %q, 期望 %q", id, tc.want)
-			}
+			testutil.Equal(t, ok, true, "应给出确定答案 ok=true（ok=false 是「交全量兜底」的另一语义）")
+			testutil.Equal(t, id, tc.want, "类型判定")
 		})
 	}
 }
@@ -122,9 +120,8 @@ func TestDetectContainerTypeFromBase64Tail_DegradeMatrix(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			if id, ok := DetectContainerTypeFromBase64Tail(tc.b64); ok {
-				t.Fatalf("应降级 ok=false 交全量兜底, got (%q, true)", id)
-			}
+			id, ok := DetectContainerTypeFromBase64Tail(tc.b64)
+			testutil.Equal(t, ok, false, "应降级 ok=false 交全量兜底, got (%q, true)", id)
 		})
 	}
 }

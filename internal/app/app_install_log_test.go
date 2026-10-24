@@ -5,6 +5,7 @@ import (
 
 	"ysm-model-manager/go/logs"
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/internal/testutil"
 )
 
 // TestGetLogCaps 锐评⑤：诊断页检索窗口单源——两类 cap 均为正值，
@@ -14,12 +15,8 @@ func TestGetLogCaps(t *testing.T) {
 	a := resourceApp(t, types.AppConfig{FilesRoot: t.TempDir()})
 	a.runtimeLogs = logs.NewRuntimeBuffer(logs.DefaultRuntimeCap) // resourceApp 只装 logger，runtimeLogs 需显式构造
 	caps := a.GetLogCaps()
-	if caps.Op <= 0 {
-		t.Fatalf("Op cap = %d, 期望正值（logMaxEntries 默认或配置值）", caps.Op)
-	}
-	if caps.Runtime != logs.DefaultRuntimeCap {
-		t.Fatalf("Runtime cap = %d, 期望 %d（app.go 构造口径）", caps.Runtime, logs.DefaultRuntimeCap)
-	}
+	testutil.Equal(t, caps.Op <= 0, false, "Op cap = %d, 期望正值（logMaxEntries 默认或配置值）", caps.Op)
+	testutil.Equal(t, caps.Runtime, logs.DefaultRuntimeCap, "Runtime cap（app.go 构造口径）")
 }
 
 // TestGetLogChannelHealth ADR-322 D1：绑定只透传 logger 健康锁存位，自身不做裁决
@@ -28,14 +25,11 @@ func TestGetLogCaps(t *testing.T) {
 // ② 换成内存态 logger（NewLogger("")）立刻报不健康 + 机器码。
 func TestGetLogChannelHealth(t *testing.T) {
 	a := resourceApp(t, types.AppConfig{FilesRoot: t.TempDir()})
-	if h := a.GetLogChannelHealth(); !h.PersistOK {
-		t.Fatalf("落盘态 logger 应报健康, got %+v", h)
-	}
-	a.logger = logs.NewLogger("")
 	h := a.GetLogChannelHealth()
-	if h.PersistOK {
-		t.Fatal("内存态 logger 应报不健康（元失败必须可观测）")
-	}
+	testutil.Equal(t, h.PersistOK, true, "落盘态 logger 应报健康, got %+v", h)
+	a.logger = logs.NewLogger("")
+	h = a.GetLogChannelHealth()
+	testutil.Equal(t, h.PersistOK, false, "内存态 logger 应报不健康（元失败必须可观测）")
 	if h.Reason != types.ChannelReasonMemoryState {
 		t.Errorf("Reason = %q, 期望 %q", h.Reason, types.ChannelReasonMemoryState)
 	}

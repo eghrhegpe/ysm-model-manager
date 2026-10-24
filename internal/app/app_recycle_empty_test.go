@@ -31,7 +31,5 @@ func TestMoveToRecycle_EmptyRootGuard(t *testing.T) {
 	// 修复前：MoveToRecycle 会用空 root 调用 recycle.Move
 	// 修复后：MoveToRecycle 应在 root == "" 时直接返回错误
 	err := a.MoveToRecycle(src)
-	if err == nil {
-		t.Fatal("MoveToRecycle 对 root==\"\" 的文件应返回错误（防止 recycle.Move(\"\", src) 静默执行）")
-	}
+	testutil.NotNil(t, err, "MoveToRecycle 对 root==\"\" 的文件应返回错误（防止 recycle.Move(\"\", src) 静默执行）")
 }

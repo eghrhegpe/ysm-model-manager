@@ -72,7 +72,7 @@ func TestRunConcurrentBenchJSON_ShapeAndPurity(t *testing.T) {
 	// ① stdout 纯度：可被 json.Unmarshal 直接吃掉（带任何人类文案都会失败）
 	var out concurrentBenchJSON
 	if err := json.Unmarshal([]byte(console), &out); err != nil {
-		t.Fatalf("stdout 必须是纯 JSON（不可混入人类文案）: %v\n输出: %s", err, console)
+		testutil.NoError(t, err, "stdout 必须是纯 JSON（不可混入人类文案）:\n输出: %s", console)
 	}
 	// ⚠️ 不把 💡/📈 一律列为禁词：`hints[]` 是**结构化字段**，其值本就是中文散文（含 emoji）。
 	// 纯度契约是「stdout 可被 json.Unmarshal 吃掉」（上面已证），这里只查报告**标题**级标记。
@@ -104,9 +104,8 @@ func TestRunConcurrentBenchJSON_ShapeAndPurity(t *testing.T) {
 	if out.Serial.TotalMs <= 0 {
 		t.Errorf("串行耗时应为实测正值, got %v", out.Serial.TotalMs)
 	}
-	if out.ModelCount != 3 || len(out.Models) != 3 {
-		t.Fatalf("应报告 3 个参与模型, got count=%d models=%d", out.ModelCount, len(out.Models))
-	}
+	testutil.Equal(t, out.ModelCount, 3, "应报告 3 个参与模型, models=%d", len(out.Models))
+	testutil.Equal(t, len(out.Models), 3, "应报告 3 个参与模型, count=%d", out.ModelCount)
 	for _, m := range out.Models {
 		if m.RelPath == "" || filepath.IsAbs(m.RelPath) {
 			t.Errorf("模型身份块应给相对路径（跨机器可比）, got %q", m.RelPath)
@@ -117,9 +116,7 @@ func TestRunConcurrentBenchJSON_ShapeAndPurity(t *testing.T) {
 	}
 
 	// ④ 档位：不重复、不越界，且判决 token 落在 Go 单点的四种取值内
-	if len(out.Parallel) != 2 {
-		t.Fatalf("--workers 4 应有 2 个档位（2 与 4，去重后）, got %d: %+v", len(out.Parallel), out.Parallel)
-	}
+	testutil.Equal(t, len(out.Parallel), 2, "--workers 4 应有 2 个档位（2 与 4，去重后）: %+v", out.Parallel)
 	seen := map[int]bool{}
 	for _, p := range out.Parallel {
 		if seen[p.Workers] {
@@ -141,9 +138,9 @@ func TestRunConcurrentBenchJSON_ShapeAndPurity(t *testing.T) {
 
 	// ⑤ 双出口（ADR-200 D5）：桥的 data 承载对象本体
 	payload, ok := ctx.result.(*concurrentBenchJSON)
-	if !ok || payload == nil {
-		t.Fatalf("应通过 SetResult 交出 *concurrentBenchJSON, got %T", ctx.result)
-	}
+	// Equal 序贯守卫：ok 成立后 payload 才非 nil（失败即 Goexit）
+	testutil.Equal(t, ok, true, "应通过 SetResult 交出 *concurrentBenchJSON, got %T", ctx.result)
+	testutil.NotNil(t, payload, "应通过 SetResult 交出 *concurrentBenchJSON, got %T", ctx.result)
 	if payload.ModelCount != 3 {
 		t.Errorf("桥侧载荷与 stdout 应为同一份数据, got %d", payload.ModelCount)
 	}
@@ -165,9 +162,8 @@ func TestRunConcurrentBenchJSON_FileReadAbsentWhenNoCandidate(t *testing.T) {
 	// 有候选文件 → file_read 块存在且是实测正值
 	out := collectConcurrentBenchJSON(&benchScanFakeApp{paths: []string{model}}, []string{model},
 		perfTargetSpec{Target: perfTargetRepo, Order: perfOrderPath, MaxModels: 5}, 4, root)
-	if out.FileRead == nil {
-		t.Fatal(".ysm 是合格候选文件，file_read 应存在")
-	}
+	// NotNil 序贯守卫：FileRead 非 nil 后才解引用 .FileCount（失败即 Goexit）
+	testutil.NotNil(t, out.FileRead, ".ysm 是合格候选文件，file_read 应存在")
 	if out.FileRead.FileCount != benchFileLimit {
 		t.Errorf("候选数应为 %d（benchFileLimit 封顶）, got %d", benchFileLimit, out.FileRead.FileCount)
 	}

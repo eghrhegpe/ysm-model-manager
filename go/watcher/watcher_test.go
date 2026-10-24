@@ -50,16 +50,10 @@ func TestStartStop(t *testing.T) {
 	}
 
 	w := New(repoDir, mcDir, mockScanFunc)
-	if err := w.Start(); err != nil {
-		t.Fatalf("Start() = %v", err)
-	}
-	if !w.IsRunning() {
-		t.Fatal("IsRunning() = false after Start")
-	}
+	testutil.NoError(t, w.Start(), "Start() =")
+	testutil.Equal(t, w.IsRunning(), true, "IsRunning() = false after Start")
 	w.Stop()
-	if w.IsRunning() {
-		t.Fatal("IsRunning() = true after Stop")
-	}
+	testutil.Equal(t, w.IsRunning(), false, "IsRunning() = true after Stop")
 }
 
 func TestStartTwice(t *testing.T) {
@@ -70,12 +64,8 @@ func TestStartTwice(t *testing.T) {
 	}
 
 	w := New(repoDir, mcDir, mockScanFunc)
-	if err := w.Start(); err != nil {
-		t.Fatalf("Start() = %v", err)
-	}
-	if err := w.Start(); err != nil {
-		t.Fatalf("Start() again = %v, want nil", err)
-	}
+	testutil.NoError(t, w.Start(), "Start() =")
+	testutil.NoError(t, w.Start(), "Start() again, want nil")
 	w.Stop()
 }
 
@@ -92,21 +82,15 @@ func TestStopWithoutStart(t *testing.T) {
 
 func TestIsRunning(t *testing.T) {
 	w := New(t.TempDir(), t.TempDir(), mockScanFunc)
-	if w.IsRunning() {
-		t.Fatal("IsRunning() = true before Start")
-	}
+	testutil.Equal(t, w.IsRunning(), false, "IsRunning() = true before Start")
 }
 
 func TestStartInvalidPath(t *testing.T) {
 	// 生产语义：Start 对不存在的 repoRoot 不报错（WalkDir 失败仅 log 后返回 nil），
 	// 验证「无效路径不崩溃、watcher 正常进入运行态」（原测试 if err==nil 恒过是空断言）
 	w := New("/nonexistent/path", "", mockScanFunc)
-	if err := w.Start(); err != nil {
-		t.Fatalf("Start(/nonexistent/path) should tolerate invalid path: %v", err)
-	}
-	if !w.IsRunning() {
-		t.Fatal("IsRunning() = false after Start, watcher not in running state")
-	}
+	testutil.NoError(t, w.Start(), "Start(/nonexistent/path) should tolerate invalid path")
+	testutil.Equal(t, w.IsRunning(), true, "IsRunning() = false after Start, watcher not in running state")
 	w.Stop()
 }
 
@@ -121,9 +105,7 @@ func TestFileEventTriggersSync(t *testing.T) {
 	}
 
 	w := New(repoDir, mcDir, scanFn)
-	if err := w.Start(); err != nil {
-		t.Fatalf("Start() = %v", err)
-	}
+	testutil.NoError(t, w.Start(), "Start() =")
 	defer w.Stop()
 	w.WaitReady()
 
@@ -153,9 +135,7 @@ func TestRenameEventTriggersSync(t *testing.T) {
 	}
 
 	w := New(repoDir, mcDir, scanFn)
-	if err := w.Start(); err != nil {
-		t.Fatalf("Start() = %v", err)
-	}
+	testutil.NoError(t, w.Start(), "Start() =")
 	defer w.Stop()
 	w.WaitReady()
 
@@ -178,9 +158,7 @@ func TestDebounceMergesRapidEvents(t *testing.T) {
 	}
 
 	w := New(repoDir, mcDir, scanFn)
-	if err := w.Start(); err != nil {
-		t.Fatalf("Start() = %v", err)
-	}
+	testutil.NoError(t, w.Start(), "Start() =")
 	defer w.Stop()
 	w.WaitReady()
 
@@ -218,13 +196,9 @@ func TestStartStopRestart(t *testing.T) {
 	}
 
 	w := New(repoDir, mcDir, scanFn)
-	if err := w.Start(); err != nil {
-		t.Fatalf("Start() #1 = %v", err)
-	}
+	testutil.NoError(t, w.Start(), "Start() #1 =")
 	w.Stop()
-	if err := w.Start(); err != nil {
-		t.Fatalf("Start() #2 = %v", err)
-	}
+	testutil.NoError(t, w.Start(), "Start() #2 =")
 	defer w.Stop()
 	w.WaitReady()
 	testFile := filepath.Join(repoDir, "restart.ysm")
@@ -287,9 +261,8 @@ func TestSyncAllSerialized(t *testing.T) {
 	}
 	wg.Wait()
 
-	if n := maxConcurrent.Load(); n > 1 {
-		t.Fatalf("syncAll max concurrency = %d, expected serial execution", n)
-	}
+	n := maxConcurrent.Load()
+	testutil.Equal(t, n > 1, false, "syncAll max concurrency = %d, expected serial execution", n)
 }
 
 // TestCreateSubdirTriggersSync 回归（锐评 #5）：Start 后新建子目录，fsnotify 非递归
@@ -305,9 +278,7 @@ func TestCreateSubdirTriggersSync(t *testing.T) {
 	}
 
 	w := New(repoDir, mcDir, scanFn)
-	if err := w.Start(); err != nil {
-		t.Fatalf("Start() = %v", err)
-	}
+	testutil.NoError(t, w.Start(), "Start() =")
 	defer w.Stop()
 	w.WaitReady()
 
@@ -355,7 +326,6 @@ func TestStopWaitsForSync(t *testing.T) {
 
 	start := time.Now()
 	w.Stop()
-	if elapsed := time.Since(start); elapsed < 200*time.Millisecond {
-		t.Fatalf("Stop did not wait for in-flight sync (elapsed %v)", elapsed)
-	}
+	elapsed := time.Since(start)
+	testutil.Equal(t, elapsed < 200*time.Millisecond, false, "Stop did not wait for in-flight sync (elapsed %v)", elapsed)
 }

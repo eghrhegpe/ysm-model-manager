@@ -66,9 +66,8 @@ func TestDetectConflicts_ContentConflict(t *testing.T) {
 
 	report, err := DetectConflicts(localDir, remoteDir, "test")
 	testutil.NoError(t, err)
-	if report.TotalConflicts != 1 {
-		t.Fatalf("期望 1 个冲突，实际 %d", report.TotalConflicts)
-	}
+	// 守卫下方 Conflicts[0] 索引
+	testutil.Equal(t, report.TotalConflicts, 1, "期望 1 个冲突，实际 %d", report.TotalConflicts)
 	if report.Conflicts[0].Type != ConflictContentModified {
 		t.Errorf("期望 content_modified 类型，实际 %s", report.Conflicts[0].Type)
 	}
@@ -110,9 +109,7 @@ func TestDetectConflicts_MultipleConflicts(t *testing.T) {
 
 	report, err := DetectConflicts(localDir, remoteDir, "test")
 	testutil.NoError(t, err)
-	if report.TotalConflicts != 2 {
-		t.Fatalf("期望 2 个冲突，实际 %d", report.TotalConflicts)
-	}
+	testutil.Equal(t, report.TotalConflicts, 2, "期望 2 个冲突，实际 %d", report.TotalConflicts)
 }
 
 // TestDetectConflicts_SortedByPath 钉住冲突列表输出确定性：
@@ -133,15 +130,11 @@ func TestDetectConflicts_SortedByPath(t *testing.T) {
 
 	report, err := DetectConflicts(localDir, remoteDir, "test")
 	testutil.NoError(t, err)
-	if report.TotalConflicts != 3 {
-		t.Fatalf("期望 3 个冲突，实际 %d", report.TotalConflicts)
-	}
+	// 守卫下方 Conflicts[i] 循环索引（want 3 元素）
+	testutil.Equal(t, report.TotalConflicts, 3, "期望 3 个冲突，实际 %d", report.TotalConflicts)
 	want := []string{"a.txt", "m.txt", "z.txt"}
 	for i, w := range want {
-		if report.Conflicts[i].Path != w {
-			t.Fatalf("冲突列表未按 Path 排序：第 %d 个期望 %s，实际 %s（全量 %v）",
-				i, w, report.Conflicts[i].Path, conflictPaths(report.Conflicts))
-		}
+		testutil.Equal(t, report.Conflicts[i].Path, w, "冲突列表未按 Path 排序（全量 %v）", conflictPaths(report.Conflicts))
 	}
 }
 
@@ -500,12 +493,13 @@ func TestCollectFileEntries_HashFailureIsEntryLevel(t *testing.T) {
 
 	entries, err := collectFileEntries(dir)
 	testutil.NoError(t, err, "哈希失败的条目不应导致 collectFileEntries 整体失败")
-	if e, ok := entries["broken.bin"]; !ok || e.Hash != "" {
-		t.Fatalf("哈希失败的条目应保留且 Hash 为空，实际 ok=%v entry=%+v", ok, e)
-	}
-	if e, ok := entries["ok.txt"]; !ok || e.Hash == "" {
-		t.Fatalf("正常文件哈希不应为空，实际 ok=%v entry=%+v", ok, e)
-	}
+	// 原复合条件拆序贯（map miss 时 e 为零值，读 Hash 安全）
+	e, ok := entries["broken.bin"]
+	testutil.Equal(t, ok, true, "哈希失败的条目应保留，实际 entries=%v", entries)
+	testutil.Equal(t, e.Hash, "", "哈希失败的条目 Hash 应为空，实际 %+v", e)
+	e2, ok2 := entries["ok.txt"]
+	testutil.Equal(t, ok2, true, "正常文件应保留，实际 entries=%v", entries)
+	testutil.Equal(t, e2.Hash == "", false, "正常文件哈希不应为空，实际 %+v", e2)
 }
 
 // TestDetectConflicts_HashFailedReportedNotAborted 验证 HashFailed 分支可达且不整体报错：
@@ -540,18 +534,12 @@ func TestDetectConflicts_HashFailedReportedNotAborted(t *testing.T) {
 			hashFailed = &report.Conflicts[i]
 		}
 	}
-	if contentConflict == nil {
-		t.Fatalf("正常冲突文件应照常报告，实际 %+v", report.Conflicts)
-	}
-	if contentConflict.Type != ConflictContentModified {
-		t.Fatalf("conflict.txt 应为内容冲突，实际 %s", contentConflict.Type)
-	}
-	if hashFailed == nil {
-		t.Fatalf("哈希失败条目应被报告为 HashFailed，实际 %+v", report.Conflicts)
-	}
-	if !hashFailed.HashFailed || hashFailed.SuggestedStrategy != ResolveManual {
-		t.Fatalf("broken.bin 应标记 HashFailed+ResolveManual，实际 %+v", hashFailed)
-	}
+	// 原复合条件拆序贯（NotNil 先行保证下方字段访问安全）
+	testutil.NotNil(t, contentConflict, "正常冲突文件应照常报告，实际 %+v", report.Conflicts)
+	testutil.Equal(t, contentConflict.Type, ConflictContentModified, "conflict.txt 应为内容冲突，实际 %s", contentConflict.Type)
+	testutil.NotNil(t, hashFailed, "哈希失败条目应被报告为 HashFailed，实际 %+v", report.Conflicts)
+	testutil.Equal(t, hashFailed.HashFailed, true, "broken.bin 应标记 HashFailed，实际 %+v", hashFailed)
+	testutil.Equal(t, hashFailed.SuggestedStrategy, ResolveManual, "broken.bin 应建议 ResolveManual，实际 %+v", hashFailed)
 }
 
 // TestResolveConflict_PathTraversal_Rejected 钉住路径穿越守卫（2026-09-05 三路锐评
@@ -587,9 +575,7 @@ func TestResolveConflict_PathTraversal_Rejected(t *testing.T) {
 
 	// 哨兵文件必须原样保留（守卫在文件操作前拦截）
 	sentry, err := os.ReadFile(sentryPath)
-	if err != nil {
-		t.Fatalf("哨兵文件不应被触碰（读取失败: %v）", err)
-	}
+	testutil.NoError(t, err, "哨兵文件不应被触碰（读取失败）")
 	if string(sentry) != "must survive" {
 		t.Errorf("哨兵文件内容被改动: %q", string(sentry))
 	}
@@ -610,9 +596,7 @@ func TestResolveConflict_PathTraversal_SafeSubpath(t *testing.T) {
 		Type: ConflictContentModified,
 	}
 
-	if err := ResolveConflict(conflict, ResolveForceRemote, localDir, remoteDir); err != nil {
-		t.Fatalf("合法相对子路径不应被守卫拦截: %v", err)
-	}
+	testutil.NoError(t, ResolveConflict(conflict, ResolveForceRemote, localDir, remoteDir), "合法相对子路径不应被守卫拦截")
 	content, err := os.ReadFile(filepath.Join(localDir, "nested", "test.txt"))
 	testutil.NoError(t, err)
 	if string(content) != "remote content" {

@@ -22,14 +22,10 @@ func TestResolveComponentTexName_PrefixFallback_Deterministic(t *testing.T) {
 	seen := map[string]bool{}
 	for i := 0; i < 50; i++ {
 		got := resolveComponentTexName("asuma_toki", "models/entity/asuma_toki.json", nil, pngNameMap, false)
-		if got == "" {
-			t.Fatalf("第 %d 次迭代前缀兜底未命中", i)
-		}
+		testutil.Equal(t, got == "", false, "第 %d 次迭代前缀兜底未命中", i)
 		seen[got] = true
 	}
-	if len(seen) != 1 {
-		t.Fatalf("前缀兜底多命中不确定: 50 次迭代出现 %v", seen)
-	}
+	testutil.Equal(t, len(seen), 1, "前缀兜底多命中不确定: 50 次迭代出现 %v", seen)
 	if got := resolveComponentTexName("asuma_toki", "", nil, pngNameMap, false); got != "asuma_toki_1" {
 		t.Errorf("应取字典序最小 asuma_toki_1, 实际 %q", got)
 	}
@@ -49,9 +45,9 @@ func TestDetectMaidNs_MatchesLongestManifestHeuristic(t *testing.T) {
 	entries := r.Entries()
 
 	wantMerged, manifest := collectMaidManifest(entries, "")
-	if wantMerged != "main/ns_b/" || len(manifest) != 3 {
-		t.Fatalf("前置失效: collectMaidManifest = %q, %d 条", wantMerged, len(manifest))
-	}
+	// 原复合条件拆序贯（失败条件为 OR，序贯等价）
+	testutil.Equal(t, wantMerged, "main/ns_b/", "前置失效: collectMaidManifest = %q, %d 条", wantMerged, len(manifest))
+	testutil.Equal(t, len(manifest), 3, "前置失效: collectMaidManifest = %q, %d 条", wantMerged, len(manifest))
 	if got := detectMaidNs(entries); got != wantMerged {
 		t.Errorf("detectMaidNs = %q, 应与 collectMaidManifest 同口径 %q（最长清单即主包）", got, wantMerged)
 	}

@@ -52,12 +52,9 @@ func TestIsResourceAllowed_JsonCase(t *testing.T) {
 func TestFindInstDir_StandardDir(t *testing.T) {
 	versionDir := t.TempDir()
 	standard := filepath.Join(versionDir, "resourcepacks")
-	if err := os.MkdirAll(standard, 0755); err != nil {
-		testutil.NoError(t, err)
-	}
-	if got := FindInstDir(versionDir, "resourcepacks", "resourcepack"); got != standard {
-		t.Fatalf("标准目录应直接返回: %s vs %s", got, standard)
-	}
+	testutil.NoError(t, os.MkdirAll(standard, 0755))
+	got := FindInstDir(versionDir, "resourcepacks", "resourcepack")
+	testutil.Equal(t, got, standard, "标准目录应直接返回")
 }
 
 // TestShouldHashExt_PinnedList 钉住 ShouldHashExt 的哈希扩展名清单：
@@ -86,9 +83,7 @@ func TestShouldHashExt_PinnedList(t *testing.T) {
 func TestFindInstDir_NoMatch(t *testing.T) {
 	versionDir := t.TempDir()
 	got := FindInstDir(versionDir, "resourcepacks", "resourcepack")
-	if got != filepath.Join(versionDir, "resourcepacks") {
-		t.Fatalf("无匹配应返回标准路径: %s", got)
-	}
+	testutil.Equal(t, got, filepath.Join(versionDir, "resourcepacks"), "无匹配应返回标准路径: %s", got)
 }
 
 // TestFindInstDir_StandardEmptyFallback P5 修复：标准目录存在但为空/无该类型文件时，
@@ -97,33 +92,23 @@ func TestFindInstDir_NoMatch(t *testing.T) {
 func TestFindInstDir_StandardEmptyFallback(t *testing.T) {
 	versionDir := t.TempDir()
 	// 标准 schematics 目录存在但为空
-	if err := os.MkdirAll(filepath.Join(versionDir, "schematics"), 0755); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.MkdirAll(filepath.Join(versionDir, "schematics"), 0755))
 	// Sable-Schematics 目录含嵌套 .nbt（Sable 模组实际存放蓝图的位置）
 	sable := filepath.Join(versionDir, "Sable-Schematics", "hello_new_generation_core")
-	if err := os.MkdirAll(sable, 0755); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.MkdirAll(sable, 0755))
 	_ = os.WriteFile(filepath.Join(sable, "c1.nbt"), []byte("nbt"), 0644)
 	got := FindInstDir(versionDir, "schematics", "blueprint")
-	if got != filepath.Join(versionDir, "Sable-Schematics") {
-		t.Fatalf("标准目录空时应兜底到 Sable-Schematics: %s", got)
-	}
+	testutil.Equal(t, got, filepath.Join(versionDir, "Sable-Schematics"), "标准目录空时应兜底到 Sable-Schematics: %s", got)
 }
 
 // TestFindInstDir_StandardNonEmptyStays 标准目录包含该类型文件 → 仍返回标准目录（标准优先，行为不变）
 func TestFindInstDir_StandardNonEmptyStays(t *testing.T) {
 	versionDir := t.TempDir()
 	std := filepath.Join(versionDir, "schematics")
-	if err := os.MkdirAll(std, 0755); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.MkdirAll(std, 0755))
 	_ = os.WriteFile(filepath.Join(std, "top.nbt"), []byte("nbt"), 0644)
 	got := FindInstDir(versionDir, "schematics", "blueprint")
-	if got != std {
-		t.Fatalf("标准目录含 .nbt 应返回标准目录: %s vs %s", got, std)
-	}
+	testutil.Equal(t, got, std, "标准目录含 .nbt 应返回标准目录")
 }
 
 // ====== IsYsmEntryJSON（ADR-038 D2 白名单）======
@@ -164,18 +149,14 @@ func TestFormatRange_UnmarshalJSON(t *testing.T) {
 	}
 	for _, c := range cases {
 		var fr FormatRange
-		if err := json.Unmarshal([]byte(c.in), &fr); err != nil {
-			t.Fatalf("解析 %s 失败: %v", c.in, err)
-		}
-		if fr.Min != c.min || fr.Max != c.max {
-			t.Fatalf("解析 %s 得 %d/%d，期望 %d/%d", c.in, fr.Min, fr.Max, c.min, c.max)
-		}
+		testutil.NoError(t, json.Unmarshal([]byte(c.in), &fr), "解析 %s 失败", c.in)
+		testutil.Equal(t, fr.Min, c.min, "解析 %s 得 Min=%d，期望 %d", c.in, fr.Min, c.min)
+		testutil.Equal(t, fr.Max, c.max, "解析 %s 得 Max=%d，期望 %d", c.in, fr.Max, c.max)
 	}
 	// 无效格式 → 报错
 	var fr FormatRange
-	if err := json.Unmarshal([]byte(`"invalid"`), &fr); err == nil {
-		t.Fatal("无效格式应报错")
-	}
+	err := json.Unmarshal([]byte(`"invalid"`), &fr)
+	testutil.NotNil(t, err, "无效格式应报错")
 }
 
 // ====== FormatRange 未覆盖分支 ======
@@ -183,17 +164,14 @@ func TestFormatRange_UnmarshalJSON(t *testing.T) {
 // TestFormatRange_EmptyArray 空数组长度不足应报错（len 0 走 else 分支）
 func TestFormatRange_EmptyArray(t *testing.T) {
 	var fr FormatRange
-	if err := json.Unmarshal([]byte(`[]`), &fr); err == nil {
-		t.Fatal("空数组应报错，实际 nil")
-	}
+	err := json.Unmarshal([]byte(`[]`), &fr)
+	testutil.NotNil(t, err, "空数组应报错，实际 nil")
 }
 
 // TestFormatRange_Null null 走单 int 分支成功（置零值），返回 0/0——钉住现有行为
 func TestFormatRange_Null(t *testing.T) {
 	var fr FormatRange
-	if err := json.Unmarshal([]byte(`null`), &fr); err != nil {
-		t.Fatalf("null 不应报错: %v", err)
-	}
+	testutil.NoError(t, json.Unmarshal([]byte(`null`), &fr), "null 不应报错")
 	if fr.Min != 0 || fr.Max != 0 {
 		t.Errorf("null 解析为 %d/%d, 期望 0/0", fr.Min, fr.Max)
 	}
@@ -202,9 +180,7 @@ func TestFormatRange_Null(t *testing.T) {
 // TestFormatRange_ObjectMissingFields 对象缺 min_inclusive/max_inclusive 字段 → 零值 0/0
 func TestFormatRange_ObjectMissingFields(t *testing.T) {
 	var fr FormatRange
-	if err := json.Unmarshal([]byte(`{}`), &fr); err != nil {
-		t.Fatalf("{} 不应报错: %v", err)
-	}
+	testutil.NoError(t, json.Unmarshal([]byte(`{}`), &fr), "{} 不应报错")
 	if fr.Min != 0 || fr.Max != 0 {
 		t.Errorf("{} 解析为 %d/%d, 期望 0/0", fr.Min, fr.Max)
 	}
@@ -239,22 +215,16 @@ func TestDescString_ArrayEmptyComponents(t *testing.T) {
 func TestFindInstDir_StandardIsFile(t *testing.T) {
 	versionDir := t.TempDir()
 	standard := filepath.Join(versionDir, "resourcepacks")
-	if err := os.WriteFile(standard, []byte("x"), 0644); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.WriteFile(standard, []byte("x"), 0644))
 	got := FindInstDir(versionDir, "resourcepacks", "resourcepack")
-	if got != standard {
-		t.Fatalf("标准路径为文件时应兜底后返回标准路径: %s vs %s", got, standard)
-	}
+	testutil.Equal(t, got, standard, "标准路径为文件时应兜底后返回标准路径")
 }
 
 // TestFindInstDir_UnknownType 未知类型无扩展名信息 → 直接返回标准路径
 func TestFindInstDir_UnknownType(t *testing.T) {
 	versionDir := t.TempDir()
 	got := FindInstDir(versionDir, "resourcepacks", "nonexistent-type")
-	if got != filepath.Join(versionDir, "resourcepacks") {
-		t.Fatalf("未知类型应返回标准路径: %s", got)
-	}
+	testutil.Equal(t, got, filepath.Join(versionDir, "resourcepacks"), "未知类型应返回标准路径: %s", got)
 }
 
 // ====== FindInstDir .json 弱证据收紧（ADR-095）======
@@ -270,14 +240,10 @@ func TestFindInstDir_UnknownType(t *testing.T) {
 func TestFindInstDir_YsmJsonFlagHit(t *testing.T) {
 	versionDir := t.TempDir()
 	custom := filepath.Join(versionDir, "config", "yes_steve_model", "custom")
-	if err := os.MkdirAll(filepath.Join(custom, "models"), 0o755); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.MkdirAll(filepath.Join(custom, "models"), 0o755))
 	_ = os.WriteFile(filepath.Join(custom, "ysm.json"), []byte("{}"), 0o644)
 	got := FindInstDir(versionDir, "config/yes_steve_model/custom", "ysm")
-	if got != custom {
-		t.Fatalf("ysm.json 标志应命中 standard: %s vs %s", got, custom)
-	}
+	testutil.Equal(t, got, custom, "ysm.json 标志应命中 standard")
 }
 
 // TestFindInstDir_YsmConfigRootJsonOnly config 树根目录只含普通 .json 配置
@@ -286,15 +252,11 @@ func TestFindInstDir_YsmConfigRootJsonOnly(t *testing.T) {
 	versionDir := t.TempDir()
 	// config/yes_steve_model 下只有选项配置文件，standard（custom）不存在
 	ysmCfg := filepath.Join(versionDir, "config", "yes_steve_model")
-	if err := os.MkdirAll(ysmCfg, 0o755); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.MkdirAll(ysmCfg, 0o755))
 	_ = os.WriteFile(filepath.Join(ysmCfg, "options.json"), []byte("{}"), 0o644)
 	standard := filepath.Join(versionDir, "config", "yes_steve_model", "custom")
 	got := FindInstDir(versionDir, "config/yes_steve_model/custom", "ysm")
-	if got != standard {
-		t.Fatalf("json 弱证据不应命中 config 树，应返回 standard: %s vs %s", got, standard)
-	}
+	testutil.Equal(t, got, standard, "json 弱证据不应命中 config 树，应返回 standard")
 }
 
 // ====== FindInstDir 容器扩展名弱证据收紧（ADR-104 续：.zip/.7z 剔除）======
@@ -306,15 +268,11 @@ func TestFindInstDir_BlueprintZipOnlyNotHit(t *testing.T) {
 	versionDir := t.TempDir()
 	// 含 .zip 的非标准目录（模拟整合包根下散落的 zip 安装包）
 	zipDir := filepath.Join(versionDir, "loose-zips")
-	if err := os.MkdirAll(zipDir, 0o755); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.MkdirAll(zipDir, 0o755))
 	_ = os.WriteFile(filepath.Join(zipDir, "modpack.zip"), []byte("zip"), 0o644)
 	standard := filepath.Join(versionDir, "schematics")
 	got := FindInstDir(versionDir, "schematics", "blueprint")
-	if got != standard {
-		t.Fatalf("蓝图 .zip 弱证据不应命中 loose-zips，应返回 standard: %s vs %s", got, standard)
-	}
+	testutil.Equal(t, got, standard, "蓝图 .zip 弱证据不应命中 loose-zips，应返回 standard")
 }
 
 // TestFindInstDir_BlueprintZipPlusNbtHit 蓝图目录同时含 .zip 与 .nbt 仍命中
@@ -322,30 +280,22 @@ func TestFindInstDir_BlueprintZipOnlyNotHit(t *testing.T) {
 func TestFindInstDir_BlueprintZipPlusNbtHit(t *testing.T) {
 	versionDir := t.TempDir()
 	sable := filepath.Join(versionDir, "Sable-Schematics", "hello_new_generation_core")
-	if err := os.MkdirAll(sable, 0o755); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.MkdirAll(sable, 0o755))
 	_ = os.WriteFile(filepath.Join(sable, "c1.nbt"), []byte("nbt"), 0o644)
 	_ = os.WriteFile(filepath.Join(sable, "pack.zip"), []byte("zip"), 0o644)
 	got := FindInstDir(versionDir, "schematics", "blueprint")
-	if got != filepath.Join(versionDir, "Sable-Schematics") {
-		t.Fatalf("含 .nbt 的蓝图目录应兜底命中: %s", got)
-	}
+	testutil.Equal(t, got, filepath.Join(versionDir, "Sable-Schematics"), "含 .nbt 的蓝图目录应兜底命中: %s", got)
 }
 
 // TestFindInstDir_LitematicZipOnlyNotHit 投影（litematic）同理：仅 .zip 不命中
 func TestFindInstDir_LitematicZipOnlyNotHit(t *testing.T) {
 	versionDir := t.TempDir()
 	zipDir := filepath.Join(versionDir, "loose-zips")
-	if err := os.MkdirAll(zipDir, 0o755); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.MkdirAll(zipDir, 0o755))
 	_ = os.WriteFile(filepath.Join(zipDir, "backup.zip"), []byte("zip"), 0o644)
 	standard := filepath.Join(versionDir, "schematics")
 	got := FindInstDir(versionDir, "schematics", "litematic")
-	if got != standard {
-		t.Fatalf("litematic .zip 弱证据不应命中，应返回 standard: %s vs %s", got, standard)
-	}
+	testutil.Equal(t, got, standard, "litematic .zip 弱证据不应命中，应返回 standard")
 }
 
 // TestFindInstDir_ResourcepackStandardEmptyNoFallback 标准 resourcepacks 目录存在但空
@@ -356,20 +306,14 @@ func TestFindInstDir_LitematicZipOnlyNotHit(t *testing.T) {
 func TestFindInstDir_ResourcepackStandardEmptyNoFallback(t *testing.T) {
 	versionDir := t.TempDir()
 	// 标准 resourcepacks 存在但为空
-	if err := os.MkdirAll(filepath.Join(versionDir, "resourcepacks"), 0o755); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.MkdirAll(filepath.Join(versionDir, "resourcepacks"), 0o755))
 	// 其他目录含 .zip（如 mods 里的压缩包/缓存）——修复前兜底会误命中这里
 	other := filepath.Join(versionDir, "downloads")
-	if err := os.MkdirAll(other, 0o755); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.MkdirAll(other, 0o755))
 	_ = os.WriteFile(filepath.Join(other, "mod-pack.zip"), []byte("zip"), 0o644)
 	got := FindInstDir(versionDir, "resourcepacks", "resourcepack")
 	want := filepath.Join(versionDir, "resourcepacks")
-	if got != want {
-		t.Fatalf("标准 resourcepacks 存在时应返回标准目录（不兜底误命中）: %s vs %s", got, want)
-	}
+	testutil.Equal(t, got, want, "标准 resourcepacks 存在时应返回标准目录（不兜底误命中）")
 }
 
 // ====== 2026-08-23 收敛：不为文件操作设置兜底目录 ======
@@ -386,20 +330,14 @@ func TestFindInstDir_ResourcepackStandardEmptyNoFallback(t *testing.T) {
 func TestFindInstDir_MmdSubtype_NoFalseConfigHit(t *testing.T) {
 	versionDir := t.TempDir()
 	// 3d-skin 根存在但无 SceneModel 子目录（玩家没放场景模型）
-	if err := os.MkdirAll(filepath.Join(versionDir, "3d-skin"), 0o755); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.MkdirAll(filepath.Join(versionDir, "3d-skin"), 0o755))
 	// config 树里混放 .pmx（MMD 模型被塞进 ysm custom 目录）——旧实现会误命中这里
 	cfgCustom := filepath.Join(versionDir, "config", "yes_steve_model", "custom")
-	if err := os.MkdirAll(cfgCustom, 0o755); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.MkdirAll(cfgCustom, 0o755))
 	_ = os.WriteFile(filepath.Join(cfgCustom, "some_model.pmx"), []byte("x"), 0o644)
 	want := filepath.Join(versionDir, "3d-skin", "SceneModel")
 	got := FindInstDir(versionDir, "3d-skin/SceneModel", "SceneModel")
-	if got != want {
-		t.Fatalf("MMD 子类型不得兜底误命中 config 树: got=%s, 期望标准路径 %s", got, want)
-	}
+	testutil.Equal(t, got, want, "MMD 子类型不得兜底误命中 config 树")
 }
 
 // TestFindInstDir_Ysm_NoFallback ysm 标准目录（config/yes_steve_model/custom）不存在时，
@@ -408,15 +346,11 @@ func TestFindInstDir_Ysm_NoFallback(t *testing.T) {
 	versionDir := t.TempDir()
 	// 非标准位置含 .ysm（旧兜底会扫到这里）
 	modelDir := filepath.Join(versionDir, "modelpacks")
-	if err := os.MkdirAll(modelDir, 0o755); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.MkdirAll(modelDir, 0o755))
 	_ = os.WriteFile(filepath.Join(modelDir, "hero.ysm"), []byte("ysm"), 0o644)
 	want := filepath.Join(versionDir, "config", "yes_steve_model", "custom")
 	got := FindInstDir(versionDir, "config/yes_steve_model/custom", "ysm")
-	if got != want {
-		t.Fatalf("ysm 不得兜底到非标准目录: got=%s, 期望标准路径 %s", got, want)
-	}
+	testutil.Equal(t, got, want, "ysm 不得兜底到非标准目录")
 }
 
 // TestIsTypeModelFile_ZipEntry_*（writeZip + 5 个 zipentry 内含校验测试）已随
@@ -426,19 +360,13 @@ func TestFindInstDir_Ysm_NoFallback(t *testing.T) {
 // 标准 schematics 为空时仍兜底到 Sable-Schematics/（保留 ADR-104 前真实模组布局兼容）。
 func TestFindInstDir_Blueprint_FallbackKept(t *testing.T) {
 	versionDir := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(versionDir, "schematics"), 0o755); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.MkdirAll(filepath.Join(versionDir, "schematics"), 0o755))
 	sable := filepath.Join(versionDir, "Sable-Schematics", "hello_new_generation_core")
-	if err := os.MkdirAll(sable, 0o755); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.MkdirAll(sable, 0o755))
 	_ = os.WriteFile(filepath.Join(sable, "c1.nbt"), []byte("nbt"), 0o644)
 	want := filepath.Join(versionDir, "Sable-Schematics")
 	got := FindInstDir(versionDir, "schematics", "blueprint")
-	if got != want {
-		t.Fatalf("blueprint 应保留兜底到 Sable-Schematics: got=%s, 期望 %s", got, want)
-	}
+	testutil.Equal(t, got, want, "blueprint 应保留兜底到 Sable-Schematics")
 }
 
 // TestFindInstDir_Resourcepack_NoFallback 纯容器类型 resourcepack scanInstance=false：
@@ -447,52 +375,36 @@ func TestFindInstDir_Blueprint_FallbackKept(t *testing.T) {
 func TestFindInstDir_Resourcepack_NoFallback(t *testing.T) {
 	versionDir := t.TempDir()
 	other := filepath.Join(versionDir, "custompacks")
-	if err := os.MkdirAll(other, 0o755); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.MkdirAll(other, 0o755))
 	_ = os.WriteFile(filepath.Join(other, "pack.zip"), []byte("zip"), 0o644)
 	want := filepath.Join(versionDir, "resourcepacks")
 	got := FindInstDir(versionDir, "resourcepacks", "resourcepack")
-	if got != want {
-		t.Fatalf("resourcepack 不得兜底，应返回标准路径: got=%s, 期望 %s", got, want)
-	}
+	testutil.Equal(t, got, want, "resourcepack 不得兜底，应返回标准路径")
 }
 
 // TestFindInstDir_Blueprint_UnrelatedNbtSiblingNotHit 收紧用例：标准 schematics 存在但空，
 // 兄弟目录 unrelated-structures 含 .nbt 时不得被兜底命中——避免其他资源的 nbt 混入蓝图同步。
 func TestFindInstDir_Blueprint_UnrelatedNbtSiblingNotHit(t *testing.T) {
 	versionDir := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(versionDir, "schematics"), 0o755); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.MkdirAll(filepath.Join(versionDir, "schematics"), 0o755))
 	unrelated := filepath.Join(versionDir, "unrelated-structures")
-	if err := os.MkdirAll(unrelated, 0o755); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.MkdirAll(unrelated, 0o755))
 	_ = os.WriteFile(filepath.Join(unrelated, "structure.nbt"), []byte("nbt"), 0o644)
 	want := filepath.Join(versionDir, "schematics")
 	got := FindInstDir(versionDir, "schematics", "blueprint")
-	if got != want {
-		t.Fatalf("blueprint 不得兜底到无关 nbt 目录: got=%s, 期望标准 %s", got, want)
-	}
+	testutil.Equal(t, got, want, "blueprint 不得兜底到无关 nbt 目录")
 }
 
 // TestFindInstDir_Blueprint_SableSchematicsCaseInsensitive 兜底白名单大小写不敏感。
 func TestFindInstDir_Blueprint_SableSchematicsCaseInsensitive(t *testing.T) {
 	versionDir := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(versionDir, "schematics"), 0o755); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.MkdirAll(filepath.Join(versionDir, "schematics"), 0o755))
 	sable := filepath.Join(versionDir, "sable-schematics", "core")
-	if err := os.MkdirAll(sable, 0o755); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.MkdirAll(sable, 0o755))
 	_ = os.WriteFile(filepath.Join(sable, "c1.nbt"), []byte("nbt"), 0o644)
 	want := filepath.Join(versionDir, "sable-schematics")
 	got := FindInstDir(versionDir, "schematics", "blueprint")
-	if got != want {
-		t.Fatalf("Sable-Schematics 大小写变体应兜底命中: got=%s, 期望 %s", got, want)
-	}
+	testutil.Equal(t, got, want, "Sable-Schematics 大小写变体应兜底命中")
 }
 
 // ====== 兜底扫描内部路径（拆解前的现状钉桩）======
@@ -502,9 +414,8 @@ func TestFindInstDir_Blueprint_SableSchematicsCaseInsensitive(t *testing.T) {
 func TestFindInstDir_VersionDirMissing_ReadDirError(t *testing.T) {
 	missing := filepath.Join(t.TempDir(), "no-such-version-dir")
 	want := filepath.Join(missing, "schematics")
-	if got := FindInstDir(missing, "schematics", "blueprint"); got != want {
-		t.Fatalf("versionDir 不存在应返回标准路径: got=%s, 期望 %s", got, want)
-	}
+	got := FindInstDir(missing, "schematics", "blueprint")
+	testutil.Equal(t, got, want, "versionDir 不存在应返回标准路径")
 }
 
 // TestFindInstDir_FallbackSkipsNonDirEntries versionDir 一级条目含普通文件时，
@@ -513,19 +424,13 @@ func TestFindInstDir_VersionDirMissing_ReadDirError(t *testing.T) {
 // （os.ReadDir 按名排序），确保非目录分支先行触发。
 func TestFindInstDir_FallbackSkipsNonDirEntries(t *testing.T) {
 	versionDir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(versionDir, "0-stray.txt"), []byte("x"), 0o644); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.WriteFile(filepath.Join(versionDir, "0-stray.txt"), []byte("x"), 0o644))
 	sable := filepath.Join(versionDir, "Sable-Schematics", "core")
-	if err := os.MkdirAll(sable, 0o755); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.MkdirAll(sable, 0o755))
 	_ = os.WriteFile(filepath.Join(sable, "c1.nbt"), []byte("nbt"), 0o644)
 	want := filepath.Join(versionDir, "Sable-Schematics")
 	got := FindInstDir(versionDir, "schematics", "blueprint")
-	if got != want {
-		t.Fatalf("兜底应跳过非目录条目并命中 Sable-Schematics: got=%s, 期望 %s", got, want)
-	}
+	testutil.Equal(t, got, want, "兜底应跳过非目录条目并命中 Sable-Schematics")
 }
 
 // TestFindInstDir_FallbackNoDirFilterSkipsStandard fallbackDir 为空 ⇒ 兜底不限定目录名
@@ -541,16 +446,11 @@ func TestFindInstDir_FallbackNoDirFilterSkipsStandard(t *testing.T) {
 
 	versionDir := t.TempDir()
 	// 标准目录（空）名排序在前 ⇒ 先被遍历到，命中「跳过标准目录」分支
-	if err := os.MkdirAll(filepath.Join(versionDir, "a-standard"), 0o755); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.MkdirAll(filepath.Join(versionDir, "a-standard"), 0o755))
 	other := filepath.Join(versionDir, "zz-other")
-	if err := os.MkdirAll(other, 0o755); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.MkdirAll(other, 0o755))
 	_ = os.WriteFile(filepath.Join(other, "s.nbt"), []byte("nbt"), 0o644)
 
-	if got := FindInstDir(versionDir, "a-standard", "synthscan"); got != other {
-		t.Fatalf("fallbackDir 为空应不限定目录名、跳过标准目录并命中兄弟目录: got=%s, 期望 %s", got, other)
-	}
+	got := FindInstDir(versionDir, "a-standard", "synthscan")
+	testutil.Equal(t, got, other, "fallbackDir 为空应不限定目录名、跳过标准目录并命中兄弟目录")
 }

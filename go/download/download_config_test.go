@@ -95,9 +95,9 @@ func TestFromGitHubAPIWithChecksum_OK(t *testing.T) {
 	err := d.FromGitHubAPIWithChecksum(context.Background(), server.URL, savePath, nil, expectedHash)
 	testutil.NoError(t, err, "FromGitHubAPIWithChecksum 失败")
 	data, err := os.ReadFile(savePath)
-	if err != nil || string(data) != "checksum me" {
-		t.Fatalf("内容不符: %q %v", string(data), err)
-	}
+	// OR 型复合条件拆序贯：err 与内容分别断言（原 if err!=nil || 内容不符）
+	testutil.NoError(t, err, "内容不符: %q %v", string(data), err)
+	testutil.Equal(t, string(data), "checksum me", "内容不符: %q %v", string(data), err)
 }
 
 func TestFromGitHubAPIWithChecksum_Mismatch(t *testing.T) {

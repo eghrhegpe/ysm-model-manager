@@ -61,13 +61,9 @@ func TestWalkDirParallel_MatchesWalkDir(t *testing.T) {
 	testutil.NoError(t, err, "walkDirParallel 返回错误")
 	sort.Strings(par)
 
-	if len(seq) != len(par) {
-		t.Fatalf("条目数不一致: WalkDir=%d walkDirParallel=%d", len(seq), len(par))
-	}
+	testutil.Equal(t, len(par), len(seq), "条目数不一致: WalkDir=%d walkDirParallel=%d", len(seq), len(par))
 	for i := range seq {
-		if seq[i] != par[i] {
-			t.Fatalf("第 %d 条不一致:\n  WalkDir:        %s\n  walkDirParallel: %s", i, seq[i], par[i])
-		}
+		testutil.Equal(t, par[i], seq[i], "第 %d 条不一致:\n  WalkDir:        %s\n  walkDirParallel: %s", i, seq[i], par[i])
 	}
 }
 
@@ -134,12 +130,10 @@ func TestWalkDirParallel_SkipAll(t *testing.T) {
 		}
 		return nil
 	})
-	if err != fs.SkipAll {
-		t.Fatalf("预期返回 fs.SkipAll，实际: %v", err)
-	}
-	if count.Load() < 5 {
-		t.Fatalf("预期至少访问 5 个文件，实际: %d", count.Load())
-	}
+	// error 接口走 ErrorIs（errors.Is 判等）：go-cmp 对含 unexported 字段的
+	// sentinel error（errors.New）反射比较会 panic；同一实例 Is 恒真，语义与原 `err != fs.SkipAll` 等价
+	testutil.ErrorIs(t, err, fs.SkipAll, "预期返回 fs.SkipAll，实际: %v", err)
+	testutil.Equal(t, count.Load() >= 5, true, "预期至少访问 5 个文件，实际: %d", count.Load())
 	// 中止后不应访问全部 50 个文件
 	if count.Load() > 20 {
 		t.Errorf("SkipAll 后不应继续遍历大部分文件，实际访问: %d", count.Load())
@@ -158,9 +152,7 @@ func TestWalkDirParallel_RootNotExist(t *testing.T) {
 		return nil
 	})
 	testutil.NoError(t, err, "根不存在时 walkDirParallel 应返回 nil（回调已处理错误），实际")
-	if called != 1 {
-		t.Fatalf("预期仅回调一次（带 err），实际: %d", called)
-	}
+	testutil.Equal(t, called, 1, "预期仅回调一次（带 err），实际: %d", called)
 }
 
 // TestWalkDirParallel_ContextCancel 验证 ctx 取消时中止遍历（ADR-197）。
@@ -193,9 +185,8 @@ func TestWalkDirParallel_ContextCancel(t *testing.T) {
 		visited.Add(1)
 		return nil
 	})
-	if err != fs.SkipAll {
-		t.Fatalf("ctx 取消后预期返回 fs.SkipAll，实际: %v", err)
-	}
+	// error 接口走 ErrorIs（同上：避免 go-cmp 反射 panic；同一实例 Is 恒真）
+	testutil.ErrorIs(t, err, fs.SkipAll, "ctx 取消后预期返回 fs.SkipAll，实际: %v", err)
 	if visited.Load() >= 3200 {
 		t.Errorf("ctx 取消后不应访问全部文件，实际: %d", visited.Load())
 	}

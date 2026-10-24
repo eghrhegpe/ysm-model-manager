@@ -40,12 +40,8 @@ func TestReadLimitedEntry_Normal(t *testing.T) {
 	data := []byte("hello world, this is a short payload")
 	rc := &noopCloser{Reader: bytes.NewReader(data)}
 	got := ReadLimitedEntry(rc, 100)
-	if !rc.closed {
-		t.Fatal("ReadLimitedEntry 未调用 rc.Close()")
-	}
-	if string(got) != string(data) {
-		t.Fatalf("内容不符：期望 %q，实际 %q", string(data), string(got))
-	}
+	testutil.Equal(t, rc.closed, true, "ReadLimitedEntry 未调用 rc.Close()")
+	testutil.Equal(t, string(got), string(data), "内容不符：期望 %q，实际 %q", string(data), string(got))
 }
 
 // TestReadLimitedEntry_ExactlyAtLimit：内容恰好等于 limit，应在边界上放行。
@@ -56,9 +52,7 @@ func TestReadLimitedEntry_ExactlyAtLimit(t *testing.T) {
 	}
 	rc := &noopCloser{Reader: bytes.NewReader(data)}
 	got := ReadLimitedEntry(rc, 50)
-	if string(got) != string(data) {
-		t.Fatalf("边界内容不符：长度期望 %d，实际 %d", len(data), len(got))
-	}
+	testutil.Equal(t, string(got), string(data), "边界内容不符：长度期望 %d，实际 %d", len(data), len(got))
 }
 
 // TestReadLimitedEntry_OverLimit：内容超过 limit，截断保护应生效并返回 nil。
@@ -69,9 +63,7 @@ func TestReadLimitedEntry_OverLimit(t *testing.T) {
 	}
 	rc := &noopCloser{Reader: bytes.NewReader(data)}
 	got := ReadLimitedEntry(rc, 50)
-	if got != nil {
-		t.Fatalf("内容超限时应返回 nil，实际得到 %d 字节", len(got))
-	}
+	testutil.Nil(t, got, "内容超限时应返回 nil，实际得到 %d 字节", len(got))
 }
 
 // TestReadLimitedEntry_LimitZero：limit<=0 时统一返回 nil，跳过该条目。
@@ -79,9 +71,7 @@ func TestReadLimitedEntry_LimitZero(t *testing.T) {
 	data := []byte("whatever")
 	rc := &noopCloser{Reader: bytes.NewReader(data)}
 	got := ReadLimitedEntry(rc, 0)
-	if got != nil {
-		t.Fatalf("limit=0 应返回 nil，实际 %q", string(got))
-	}
+	testutil.Nil(t, got, "limit=0 应返回 nil，实际 %q", string(got))
 }
 
 // TestReadLimitedEntry_LimitNegative：负 limit 同样返回 nil。
@@ -89,9 +79,7 @@ func TestReadLimitedEntry_LimitNegative(t *testing.T) {
 	data := []byte("whatever")
 	rc := &noopCloser{Reader: bytes.NewReader(data)}
 	got := ReadLimitedEntry(rc, -1)
-	if got != nil {
-		t.Fatalf("limit<0 应返回 nil，实际 %q", string(got))
-	}
+	testutil.Nil(t, got, "limit<0 应返回 nil，实际 %q", string(got))
 }
 
 // TestReadLimitedEntry_EmptyContent：limit>0 时空内容返回空切片（非 nil），视为有效。
@@ -99,9 +87,7 @@ func TestReadLimitedEntry_EmptyContent(t *testing.T) {
 	rc := &noopCloser{Reader: bytes.NewReader(nil)}
 	got := ReadLimitedEntry(rc, 100)
 	testutil.NotNil(t, got, "limit>0 时空内容应返回空切片，而非 nil")
-	if len(got) != 0 {
-		t.Fatalf("空内容长度应为 0，实际 %d", len(got))
-	}
+	testutil.Equal(t, len(got), 0, "空内容长度应为 0，实际 %d", len(got))
 }
 
 // TestReadLimitedEntry_ReadError：读取报错时返回 nil（调用方跳过该条目）。
@@ -109,9 +95,7 @@ func TestReadLimitedEntry_ReadError(t *testing.T) {
 	wantErr := errors.New("读取失败")
 	rc := &noopCloser{Reader: &errorReader{err: wantErr}}
 	got := ReadLimitedEntry(rc, 100)
-	if got != nil {
-		t.Fatalf("读取报错应返回 nil，实际 %q", string(got))
-	}
+	testutil.Nil(t, got, "读取报错应返回 nil，实际 %q", string(got))
 }
 
 // TestReadLimitedEntry_MaxInt64：limit==MaxInt64 时 limit+1 溢出为负，统一返回 nil 防误判。
@@ -119,9 +103,7 @@ func TestReadLimitedEntry_MaxInt64(t *testing.T) {
 	data := []byte("overflow check")
 	rc := &noopCloser{Reader: bytes.NewReader(data)}
 	got := ReadLimitedEntry(rc, math.MaxInt64)
-	if got != nil {
-		t.Fatalf("limit=MaxInt64 应返回 nil（防溢出），实际 %q", string(got))
-	}
+	testutil.Nil(t, got, "limit=MaxInt64 应返回 nil（防溢出），实际 %q", string(got))
 }
 
 // TestReadLimitedEntry_DeferClose：验证 rc.Close 必被调用，即使读取中途出错。
@@ -130,9 +112,7 @@ func TestReadLimitedEntry_DeferClose(t *testing.T) {
 	partial := &partialReader{data: []byte("abc"), after: 2}
 	rc := &noopCloser{Reader: partial}
 	got := ReadLimitedEntry(rc, 10)
-	if !rc.closed {
-		t.Fatal("ReadLimitedEntry 应在 defer 中调用 rc.Close()")
-	}
+	testutil.Equal(t, rc.closed, true, "ReadLimitedEntry 应在 defer 中调用 rc.Close()")
 	_ = got // 不关心返回值，只验证关闭行为
 }
 

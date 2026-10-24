@@ -18,13 +18,11 @@ func TestDetectPCLIsolatedInstance(t *testing.T) {
 
 	got, err := Detect(root)
 	testutil.NoError(t, err)
-	if len(got) != 1 {
-		t.Fatalf("instances = %d, want 1: %#v", len(got), got)
-	}
+	// OR 型复合断言拆序贯：逐字段 Equal，失败报告首个失配字段（Equal 失败即弃权）
+	testutil.Equal(t, len(got), 1, "instances = %d, want 1: %#v", len(got), got)
 	inst := got[0]
-	if inst.Launcher != "PCL" || inst.GameVersion != "1.20.1" {
-		t.Fatalf("unexpected identity: %#v", inst)
-	}
+	testutil.Equal(t, inst.Launcher, "PCL", "unexpected identity: %#v", inst)
+	testutil.Equal(t, inst.GameVersion, "1.20.1", "unexpected identity: %#v", inst)
 	if inst.GameDir != versionDir {
 		t.Errorf("GameDir = %q, want %q", inst.GameDir, versionDir)
 	}
@@ -43,9 +41,9 @@ func TestDetectPCLSharedInstance(t *testing.T) {
 
 	got, err := Detect(root)
 	testutil.NoError(t, err)
-	if len(got) != 1 || got[0].Launcher != "PCL" {
-		t.Fatalf("unexpected result: %#v", got)
-	}
+	// OR 型拆序贯：len 前置守卫防 got[0] 越界（Equal 失败即弃权）
+	testutil.Equal(t, len(got), 1, "unexpected result: %#v", got)
+	testutil.Equal(t, got[0].Launcher, "PCL", "unexpected result: %#v", got)
 	if got[0].GameDir != gameRoot {
 		t.Errorf("GameDir = %q, want shared root %q", got[0].GameDir, gameRoot)
 	}
@@ -56,9 +54,7 @@ func TestDetectRejectsPlainMinecraftDirectory(t *testing.T) {
 	testutil.WriteTestFile(t, filepath.Join(root, ".minecraft", "versions", "1.20.1", "1.20.1.json"), `{"id":"1.20.1"}`)
 	got, err := Detect(root)
 	testutil.NoError(t, err)
-	if len(got) != 0 {
-		t.Fatalf("plain Minecraft directory must not be reported as HMCL/PCL: %#v", got)
-	}
+	testutil.Equal(t, len(got), 0, "plain Minecraft directory must not be reported as HMCL/PCL: %#v", got)
 }
 
 func TestDetectHMCLConfiguredDirectoryAndRunningDirectory(t *testing.T) {
@@ -74,13 +70,12 @@ func TestDetectHMCLConfiguredDirectoryAndRunningDirectory(t *testing.T) {
 
 	got, err := Detect(launcherRoot)
 	testutil.NoError(t, err)
-	if len(got) != 1 {
-		t.Fatalf("instances = %d, want 1: %#v", len(got), got)
-	}
+	testutil.Equal(t, len(got), 1, "instances = %d, want 1: %#v", len(got), got)
 	inst := got[0]
-	if inst.Launcher != "HMCL" || inst.GameVersion != "1.21.1" || inst.GameDir != runDir {
-		t.Fatalf("unexpected result: %#v", inst)
-	}
+	// OR 型复合断言拆序贯：逐字段 Equal，失败报告首个失配字段（Equal 失败即弃权）
+	testutil.Equal(t, inst.Launcher, "HMCL", "unexpected result: %#v", inst)
+	testutil.Equal(t, inst.GameVersion, "1.21.1", "unexpected result: %#v", inst)
+	testutil.Equal(t, inst.GameDir, runDir, "unexpected result: %#v", inst)
 }
 
 func TestDetectHMCLModpackUsesVersionDirectory(t *testing.T) {
@@ -93,17 +88,16 @@ func TestDetectHMCLModpackUsesVersionDirectory(t *testing.T) {
 
 	got, err := Detect(root)
 	testutil.NoError(t, err)
-	if len(got) != 1 || got[0].GameDir != versionDir {
-		t.Fatalf("unexpected result: %#v", got)
-	}
+	// OR 型拆序贯：len 前置守卫防 got[0] 越界（Equal 失败即弃权）
+	testutil.Equal(t, len(got), 1, "unexpected result: %#v", got)
+	testutil.Equal(t, got[0].GameDir, versionDir, "unexpected result: %#v", got)
 }
 
 func TestDetectRejectsFile(t *testing.T) {
 	file := filepath.Join(t.TempDir(), "PCL.exe")
 	testutil.WriteTestFile(t, file, "")
-	if _, err := Detect(file); err == nil {
-		t.Fatal("Detect(file) should fail")
-	}
+	_, err := Detect(file)
+	testutil.NotNil(t, err, "Detect(file) should fail")
 }
 
 func quoteJSON(s string) string {

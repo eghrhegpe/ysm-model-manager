@@ -41,9 +41,7 @@ func TestCheck_FindsNewer_Critical(t *testing.T) {
 	// Check 内部用默认 client + 默认 repo URL；这里用 CheckWithClient 测同等逻辑
 	info, err := CheckWithClient(server.Client(), server.URL, "1.0.0")
 	testutil.NoError(t, err, "CheckWithClient() =")
-	if !info.Available {
-		t.Fatal("应检测到新版本")
-	}
+	testutil.Equal(t, info.Available, true, "应检测到新版本")
 	if info.Latest != "v1.2.0" {
 		t.Errorf("Latest = %q, 期望 v1.2.0", info.Latest)
 	}
@@ -60,9 +58,7 @@ func TestCheck_NoNewer_Critical(t *testing.T) {
 
 	info, err := CheckWithClient(server.Client(), server.URL, "1.0.0")
 	testutil.NoError(t, err, "CheckWithClient() =")
-	if info.Available {
-		t.Fatal("无新版本时不应 available")
-	}
+	testutil.Equal(t, info.Available, false, "无新版本时不应 available")
 }
 
 func TestCheck_EmptyReleases(t *testing.T) {
@@ -74,9 +70,7 @@ func TestCheck_EmptyReleases(t *testing.T) {
 
 	info, err := CheckWithClient(server.Client(), server.URL, "1.0.0")
 	testutil.NoError(t, err, "CheckWithClient() =")
-	if info.Available {
-		t.Fatal("空 release 列表不应 available")
-	}
+	testutil.Equal(t, info.Available, false, "空 release 列表不应 available")
 }
 
 func TestCheck_BadJSON(t *testing.T) {
@@ -135,13 +129,11 @@ func TestCopyFile_Success(t *testing.T) {
 	if err := os.WriteFile(src, []byte("copy me"), 0644); err != nil {
 		testutil.NoError(t, err)
 	}
-	if err := fsutil.CopyFile(src, dst); err != nil {
-		t.Fatalf("copyFile 失败: %v", err)
-	}
+	testutil.NoError(t, fsutil.CopyFile(src, dst), "copyFile 失败")
 	data, err := os.ReadFile(dst)
-	if err != nil || string(data) != "copy me" {
-		t.Fatalf("内容不符: %q %v", string(data), err)
-	}
+	// OR 型复合条件拆序贯：err 与内容分别断言（原 if err!=nil || 内容不符）
+	testutil.NoError(t, err, "内容不符: %q %v", string(data), err)
+	testutil.Equal(t, string(data), "copy me", "内容不符: %q %v", string(data), err)
 }
 
 func TestCopyFile_SrcNotFound(t *testing.T) {
@@ -157,13 +149,11 @@ func TestCopyFile_EmptyFile(t *testing.T) {
 	if err := os.WriteFile(src, []byte{}, 0644); err != nil {
 		testutil.NoError(t, err)
 	}
-	if err := fsutil.CopyFile(src, dst); err != nil {
-		t.Fatalf("copyFile 空文件失败: %v", err)
-	}
+	testutil.NoError(t, fsutil.CopyFile(src, dst), "copyFile 空文件失败")
 	data, err := os.ReadFile(dst)
-	if err != nil || len(data) != 0 {
-		t.Fatalf("空文件复制后应仍为空: len=%d", len(data))
-	}
+	// OR 型复合条件拆序贯：err 与长度分别断言（原 if err!=nil || len!=0）
+	testutil.NoError(t, err, "空文件复制后应仍为空: len=%d", len(data))
+	testutil.Equal(t, len(data), 0, "空文件复制后应仍为空: len=%d", len(data))
 }
 
 func TestCopyFile_LargeFile(t *testing.T) {
@@ -177,18 +167,13 @@ func TestCopyFile_LargeFile(t *testing.T) {
 	if err := os.WriteFile(src, content, 0644); err != nil {
 		testutil.NoError(t, err)
 	}
-	if err := fsutil.CopyFile(src, dst); err != nil {
-		t.Fatalf("copyFile 大文件失败: %v", err)
-	}
+	testutil.NoError(t, fsutil.CopyFile(src, dst), "copyFile 大文件失败")
 	data, err := os.ReadFile(dst)
-	if err != nil || len(data) != len(content) {
-		t.Fatalf("大文件复制长度不符: got=%d want=%d", len(data), len(content))
-	}
+	// OR 型复合条件拆序贯：err 与长度分别断言（原 if err!=nil || len 不符）
+	testutil.NoError(t, err, "大文件复制长度不符: got=%d want=%d", len(data), len(content))
+	testutil.Equal(t, len(data), len(content), "大文件复制长度不符: got=%d want=%d", len(data), len(content))
 	for i := range content {
-		if data[i] != content[i] {
-			t.Fatalf("大文件复制内容不符 at %d", i)
-			break
-		}
+		testutil.Equal(t, data[i], content[i], "大文件复制内容不符 at %d", i)
 	}
 }
 

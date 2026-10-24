@@ -22,12 +22,8 @@ func TestBuildSyncItems_Basic(t *testing.T) {
 	base := t.TempDir()
 	globalDir := filepath.Join(base, "global")
 	instDir := filepath.Join(filepath.Join(base, "inst"), sub)
-	if err := os.MkdirAll(globalDir, 0755); err != nil {
-		testutil.NoError(t, err)
-	}
-	if err := os.MkdirAll(instDir, 0755); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.MkdirAll(globalDir, 0755))
+	testutil.NoError(t, os.MkdirAll(instDir, 0755))
 	// Synced: 两处一致
 	_ = os.WriteFile(filepath.Join(globalDir, "m.ysm"), []byte("x"), 0644)
 	_ = os.WriteFile(filepath.Join(instDir, "m.ysm"), []byte("x"), 0644)
@@ -38,35 +34,31 @@ func TestBuildSyncItems_Basic(t *testing.T) {
 
 	ins := &types.VersionInstance{Name: "t", VersionDir: filepath.Join(base, "inst")}
 	items := BuildSyncItems(ins, []registry.ResourceType{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": globalDir}, "")
-	if len(items) == 0 {
-		t.Fatal("应产出同步状态项")
-	}
+	testutil.Equal(t, len(items) == 0, false, "应产出同步状态项")
 
 	byName := map[string]types.ResourceSyncItem{}
 	for _, it := range items {
 		byName[it.Name] = it
 	}
-	if it, ok := byName["m.ysm"]; !ok || it.Status != types.SyncStatusSynced {
-		t.Fatalf("m.ysm 应 Synced: %+v", it)
-	}
-	if it, ok := byName["missing.ysm"]; !ok || it.Status != types.SyncStatusMissing {
-		t.Fatalf("missing.ysm 应 Missing: %+v", it)
-	}
-	if it, ok := byName["extra.ysm"]; !ok || it.Status != types.SyncStatusOptional {
-		t.Fatalf("extra.ysm 应 Optional: %+v", it)
-	}
+	it, ok := byName["m.ysm"]
+	testutil.Equal(t, ok, true, "m.ysm 应产出条目")
+	testutil.Equal(t, it.Status, types.SyncStatusSynced, "m.ysm 应 Synced，实际 %+v", it)
+	it, ok = byName["missing.ysm"]
+	testutil.Equal(t, ok, true, "missing.ysm 应产出条目")
+	testutil.Equal(t, it.Status, types.SyncStatusMissing, "missing.ysm 应 Missing，实际 %+v", it)
+	it, ok = byName["extra.ysm"]
+	testutil.Equal(t, ok, true, "extra.ysm 应产出条目")
+	testutil.Equal(t, it.Status, types.SyncStatusOptional, "extra.ysm 应 Optional，实际 %+v", it)
 }
 
 func TestBuildSyncItems_EmptyInputs(t *testing.T) {
 	// 无资源类型 → 空
 	ins := &types.VersionInstance{Name: "t", VersionDir: t.TempDir()}
-	if items := BuildSyncItems(ins, nil, map[string]string{}, ""); len(items) != 0 {
-		t.Fatalf("无资源类型应返回空，实际 %d", len(items))
-	}
+	items := BuildSyncItems(ins, nil, map[string]string{}, "")
+	testutil.Equal(t, len(items), 0, "无资源类型应返回空")
 	// 资源类型 root 为空 → 跳过该类型
-	if items := BuildSyncItems(ins, []registry.ResourceType{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": ""}, ""); len(items) != 0 {
-		t.Fatalf("root 为空应跳过，实际 %d", len(items))
-	}
+	items = BuildSyncItems(ins, []registry.ResourceType{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": ""}, "")
+	testutil.Equal(t, len(items), 0, "root 为空应跳过")
 }
 
 // ====== fsutil.IsResourcePackFolder（已收敛至 fsutil 包测试，见 walk_test.go） ======
@@ -78,24 +70,14 @@ func TestBuildSyncItems_SyncedPackFolderExactlyOnce(t *testing.T) {
 	base := t.TempDir()
 	globalDir := filepath.Join(base, "global")
 	instDir := filepath.Join(base, "inst")
-	if err := os.MkdirAll(globalDir, 0755); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.MkdirAll(globalDir, 0755))
 	// 实例侧与全局侧都有同一资源包文件夹（含 pack.mcmeta）→ SyncResources 判 Synced
 	instPack := filepath.Join(instDir, "PackA")
 	globalPack := filepath.Join(globalDir, "PackA")
-	if err := os.MkdirAll(instPack, 0755); err != nil {
-		testutil.NoError(t, err)
-	}
-	if err := os.MkdirAll(globalPack, 0755); err != nil {
-		testutil.NoError(t, err)
-	}
-	if err := os.WriteFile(filepath.Join(instPack, "pack.mcmeta"), []byte("{}"), 0644); err != nil {
-		testutil.NoError(t, err)
-	}
-	if err := os.WriteFile(filepath.Join(globalPack, "pack.mcmeta"), []byte("{}"), 0644); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.MkdirAll(instPack, 0755))
+	testutil.NoError(t, os.MkdirAll(globalPack, 0755))
+	testutil.NoError(t, os.WriteFile(filepath.Join(instPack, "pack.mcmeta"), []byte("{}"), 0644))
+	testutil.NoError(t, os.WriteFile(filepath.Join(globalPack, "pack.mcmeta"), []byte("{}"), 0644))
 	ins := &types.VersionInstance{VersionDir: base}
 	items := BuildSyncItems(ins, []registry.ResourceType{{ID: "resourcepack", Icon: "🎨"}}, map[string]string{"resourcepack": globalDir}, "")
 	count := 0
@@ -104,9 +86,7 @@ func TestBuildSyncItems_SyncedPackFolderExactlyOnce(t *testing.T) {
 			count++
 		}
 	}
-	if count != 1 {
-		t.Fatalf("synced 资源包文件夹应恰好 1 条，实际 %d（%d 总数）", count, len(items))
-	}
+	testutil.Equal(t, count, 1, "synced 资源包文件夹应恰好 1 条（%d 总数）", len(items))
 }
 
 // TestBuildSyncItems_InstExtraFile resourcepack 类型下实例标准目录（resourcepacks）
@@ -117,26 +97,16 @@ func TestBuildSyncItems_InstExtraFile(t *testing.T) {
 	base := t.TempDir()
 	globalDir := filepath.Join(base, "global")
 	instDir := filepath.Join(base, "resourcepacks")
-	if err := os.MkdirAll(globalDir, 0755); err != nil {
-		testutil.NoError(t, err)
-	}
-	if err := os.MkdirAll(instDir, 0755); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.MkdirAll(globalDir, 0755))
+	testutil.NoError(t, os.MkdirAll(instDir, 0755))
 	// 实例标准目录（versionDir/resourcepacks）独有 .zip（资源包合法扩展名）→ Optional
-	if err := os.WriteFile(filepath.Join(instDir, "pack-user.zip"), []byte("zip"), 0644); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.WriteFile(filepath.Join(instDir, "pack-user.zip"), []byte("zip"), 0644))
 	// 实例标准目录独有 .txt（非资源包扩展名）→ extMatch 过滤，不应添加
-	if err := os.WriteFile(filepath.Join(instDir, "notes.txt"), []byte("x"), 0644); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.WriteFile(filepath.Join(instDir, "notes.txt"), []byte("x"), 0644))
 	ins := &types.VersionInstance{VersionDir: base}
 	items := BuildSyncItems(ins, []registry.ResourceType{{ID: "resourcepack", Icon: "🎨"}}, map[string]string{"resourcepack": globalDir}, "")
 	// 应恰好 1 条：pack-user.zip（optional），notes.txt 被过滤
-	if len(items) != 1 {
-		t.Fatalf("实例标准目录应产出 1 条（pack-user.zip），实际 %d 条: %+v", len(items), items)
-	}
+	testutil.Equal(t, len(items), 1, "实例标准目录应产出 1 条（pack-user.zip），实际: %+v", items)
 	if items[0].Name != "pack-user.zip" {
 		t.Errorf("条目应为 pack-user.zip, got %q", items[0].Name)
 	}
@@ -147,17 +117,15 @@ func TestBuildSyncItems_InstExtraFile(t *testing.T) {
 
 // TestBuildSyncItems_NilInstance 导出入口 nil 守卫（L27-29）——nil 不应 panic
 func TestBuildSyncItems_NilInstance(t *testing.T) {
-	if items := BuildSyncItems(nil, []registry.ResourceType{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": "/x"}, ""); items != nil {
-		t.Fatalf("nil instance 应返回 nil，实际 %v", items)
-	}
+	items := BuildSyncItems(nil, []registry.ResourceType{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": "/x"}, "")
+	testutil.Nil(t, items, "nil instance 应返回 nil")
 }
 
 // TestBuildSyncItems_UnknownTypeSkip SubDirMap 返回空 → 该类型直接跳过（L63-65）
 func TestBuildSyncItems_UnknownTypeSkip(t *testing.T) {
 	ins := &types.VersionInstance{Name: "t", VersionDir: t.TempDir()}
-	if items := BuildSyncItems(ins, []registry.ResourceType{{ID: "no-such-type", Icon: "x"}}, map[string]string{"no-such-type": "/x"}, ""); len(items) != 0 {
-		t.Fatalf("未知类型无 InstanceDir 应跳过，实际 %d 条", len(items))
-	}
+	items := BuildSyncItems(ins, []registry.ResourceType{{ID: "no-such-type", Icon: "x"}}, map[string]string{"no-such-type": "/x"}, "")
+	testutil.Equal(t, len(items), 0, "未知类型无 InstanceDir 应跳过")
 }
 
 // TestBuildSyncItems_IndependentTypes 壳-叶架构移除后，EntityPlayer/CustomAnim 等
@@ -249,12 +217,8 @@ func TestBuildSyncItems_DisabledThreeBranches(t *testing.T) {
 	base := t.TempDir()
 	globalDir := filepath.Join(base, "global")
 	instDir := filepath.Join(filepath.Join(base, "inst"), sub)
-	if err := os.MkdirAll(globalDir, 0755); err != nil {
-		testutil.NoError(t, err)
-	}
-	if err := os.MkdirAll(instDir, 0755); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.MkdirAll(globalDir, 0755))
+	testutil.NoError(t, os.MkdirAll(instDir, 0755))
 	// Synced + disabled：两处一致
 	_ = os.WriteFile(filepath.Join(globalDir, "synced.ysm.disabled"), []byte("x"), 0644)
 	_ = os.WriteFile(filepath.Join(instDir, "synced.ysm.disabled"), []byte("x"), 0644)
@@ -274,9 +238,7 @@ func TestBuildSyncItems_DisabledThreeBranches(t *testing.T) {
 	}
 	for _, name := range []string{"synced.ysm.disabled", "missing.ysm.ban", "extra.ysm.ban"} {
 		it, ok := byName[name]
-		if !ok {
-			t.Fatalf("%s 应产出条目（三分支 disabled 口径一致），实际缺失", name)
-		}
+		testutil.Equal(t, ok, true, "%s 应产出条目（三分支 disabled 口径一致），实际缺失", name)
 		if it.Status != types.SyncStatusDisabled {
 			t.Errorf("%s 应 Disabled，实际 %q", name, it.Status)
 		}
@@ -284,9 +246,9 @@ func TestBuildSyncItems_DisabledThreeBranches(t *testing.T) {
 			t.Errorf("%s 应 ⛔ 图标，实际 %q", name, it.Icon)
 		}
 	}
-	if it, ok := byName["active.ysm"]; !ok || it.Status != types.SyncStatusSynced {
-		t.Fatalf("active.ysm 应 Synced: %+v", it)
-	}
+	it, ok := byName["active.ysm"]
+	testutil.Equal(t, ok, true, "active.ysm 应产出条目")
+	testutil.Equal(t, it.Status, types.SyncStatusSynced, "active.ysm 应 Synced，实际 %+v", it)
 }
 
 // TestBuildSyncItems_ExtraHardLinkLegacy Extra 硬链接（nlink>1）→ SyncStatusLegacy（L121-124 分支）
@@ -298,16 +260,10 @@ func TestBuildSyncItems_ExtraHardLinkLegacy(t *testing.T) {
 	base := t.TempDir()
 	globalDir := filepath.Join(base, "global")
 	instDir := filepath.Join(filepath.Join(base, "inst"), sub)
-	if err := os.MkdirAll(globalDir, 0755); err != nil {
-		testutil.NoError(t, err)
-	}
-	if err := os.MkdirAll(instDir, 0755); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.MkdirAll(globalDir, 0755))
+	testutil.NoError(t, os.MkdirAll(instDir, 0755))
 	legacy := filepath.Join(instDir, "legacy.ysm")
-	if err := os.WriteFile(legacy, []byte("x"), 0644); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.WriteFile(legacy, []byte("x"), 0644))
 	// 建立真实硬链接使 nlink=2（跨平台 os.Link，Windows NTFS 亦支持）
 	if err := os.Link(legacy, filepath.Join(instDir, "legacy2.ysm")); err != nil {
 		t.Skipf("无法创建硬链接（文件系统不支持）: %v", err)
@@ -320,9 +276,7 @@ func TestBuildSyncItems_ExtraHardLinkLegacy(t *testing.T) {
 			found++
 		}
 	}
-	if found != 1 {
-		t.Fatalf("硬链接 Extra 文件应恰好 1 条 Legacy，实际 %d（全部: %+v）", found, items)
-	}
+	testutil.Equal(t, found, 1, "硬链接 Extra 文件应恰好 1 条 Legacy（全部: %+v）", items)
 }
 
 // TestBuildSyncItems_YsmJSONEntryOnly ysm 的 .json 仅放行 ysm.json：
@@ -335,12 +289,8 @@ func TestBuildSyncItems_YsmJSONEntryOnly(t *testing.T) {
 	base := t.TempDir()
 	globalDir := filepath.Join(base, "global")
 	instDir := filepath.Join(filepath.Join(base, "inst"), sub)
-	if err := os.MkdirAll(globalDir, 0755); err != nil {
-		testutil.NoError(t, err)
-	}
-	if err := os.MkdirAll(instDir, 0755); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.MkdirAll(globalDir, 0755))
+	testutil.NoError(t, os.MkdirAll(instDir, 0755))
 	// ysm.json：全局有、实例缺 → Missing 展示
 	_ = os.WriteFile(filepath.Join(globalDir, "ysm.json"), []byte("{}"), 0644)
 	// anim.json：全局有、实例缺 → 不应展示（非 ysm.json 的 .json 不单独展示）
@@ -352,12 +302,11 @@ func TestBuildSyncItems_YsmJSONEntryOnly(t *testing.T) {
 	for _, it := range items {
 		byName[it.Name] = it
 	}
-	if it, ok := byName["ysm.json"]; !ok || it.Status != types.SyncStatusMissing {
-		t.Fatalf("ysm.json 应 Missing 展示: %+v", it)
-	}
-	if _, ok := byName["anim.json"]; ok {
-		t.Fatalf("anim.json 不应单独展示（仅 ysm.json 放行）: %+v", byName["anim.json"])
-	}
+	it, ok := byName["ysm.json"]
+	testutil.Equal(t, ok, true, "ysm.json 应产出条目")
+	testutil.Equal(t, it.Status, types.SyncStatusMissing, "ysm.json 应 Missing 展示，实际 %+v", it)
+	_, animShown := byName["anim.json"]
+	testutil.Equal(t, animShown, false, "anim.json 不应单独展示（仅 ysm.json 放行）: %+v", byName["anim.json"])
 }
 
 // TestBuildSyncItems_SyncedFileNoDup 同名文件两侧一致 → Synced 恰好 1 条：
@@ -367,12 +316,8 @@ func TestBuildSyncItems_SyncedFileNoDup(t *testing.T) {
 	base := t.TempDir()
 	globalDir := filepath.Join(base, "global")
 	instDir := filepath.Join(base, "resourcepacks")
-	if err := os.MkdirAll(globalDir, 0755); err != nil {
-		testutil.NoError(t, err)
-	}
-	if err := os.MkdirAll(instDir, 0755); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.MkdirAll(globalDir, 0755))
+	testutil.NoError(t, os.MkdirAll(instDir, 0755))
 	_ = os.WriteFile(filepath.Join(globalDir, "pack.zip"), []byte("zip"), 0644)
 	_ = os.WriteFile(filepath.Join(instDir, "pack.zip"), []byte("zip"), 0644)
 	ins := &types.VersionInstance{VersionDir: base}
@@ -386,9 +331,7 @@ func TestBuildSyncItems_SyncedFileNoDup(t *testing.T) {
 			}
 		}
 	}
-	if count != 1 {
-		t.Fatalf("pack.zip 应恰好 1 条，实际 %d 条: %+v", count, items)
-	}
+	testutil.Equal(t, count, 1, "pack.zip 应恰好 1 条，实际 %d 条: %+v", count, items)
 }
 
 // TestBuildSyncItems_DirLevelChildren 验证 dirLevelSync 类型的 Synced 文件夹
@@ -440,9 +383,7 @@ func TestBuildSyncItems_DirLevelChildren(t *testing.T) {
 	}
 
 	// 验证 children 不为空
-	if len(packItem.Children) == 0 {
-		t.Fatal("packA 的 children 应为空（包含子文件差异）")
-	}
+	testutil.Equal(t, len(packItem.Children) == 0, false, "packA 的 children 应为空（包含子文件差异）")
 
 	t.Logf("packA children 数量: %d", len(packItem.Children))
 	for _, child := range packItem.Children {
@@ -505,23 +446,15 @@ func TestBuildSyncItems_DirEntrySizeIsContentTotal(t *testing.T) {
 		byName[it.Name] = it
 	}
 	pack, ok := byName["packA"]
-	if !ok {
-		t.Fatalf("未找到 packA: %+v", items)
-	}
-	if !pack.IsDir {
-		t.Fatalf("packA 应为目录条目: %+v", pack)
-	}
-	if pack.Size != 600 {
-		t.Fatalf("packA 的 Size 应为子项内容总量 600（目录项元数据大小多为 0/4096），实际 %d", pack.Size)
-	}
+	testutil.Equal(t, ok, true, "未找到 packA: %+v", items)
+	testutil.Equal(t, pack.IsDir, true, "packA 应为目录条目: %+v", pack)
+	testutil.Equal(t, pack.Size, 600, "packA 的 Size 应为子项内容总量 600（目录项元数据大小多为 0/4096）")
 	// 子文件仍是各自字节数——字段语义按 IsDir 区分：文件=自身大小，目录=子树总量
 	for _, ch := range pack.Children {
 		if ch.IsDir {
 			continue
 		}
-		if ch.Size != 100 && ch.Size != 200 && ch.Size != 300 {
-			t.Fatalf("子文件 %s 的 Size 应为自身字节数，实际 %d", ch.Name, ch.Size)
-		}
+		testutil.Equal(t, ch.Size == 100 || ch.Size == 200 || ch.Size == 300, true, "子文件 %s 的 Size 应为自身字节数，实际 %d", ch.Name, ch.Size)
 	}
 }
 
@@ -540,12 +473,8 @@ func TestBuildSyncItems_DirEntrySizeFallsBackWhenNoChildren(t *testing.T) {
 
 	// packExtra 只存在于实例侧（Extra 条目，global 侧无镜像 → children 为 nil）
 	instPack := filepath.Join(instDir, "packExtra")
-	if err := os.MkdirAll(instPack, 0755); err != nil {
-		testutil.NoError(t, err)
-	}
-	if err := os.WriteFile(filepath.Join(instPack, "x.ysm"), make([]byte, 111), 0644); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.MkdirAll(instPack, 0755))
+	testutil.NoError(t, os.WriteFile(filepath.Join(instPack, "x.ysm"), make([]byte, 111), 0644))
 
 	ins := &types.VersionInstance{Name: "t", VersionDir: filepath.Join(base, "inst")}
 	items := BuildSyncItems(ins, []registry.ResourceType{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": globalDir}, "")
@@ -556,16 +485,10 @@ func TestBuildSyncItems_DirEntrySizeFallsBackWhenNoChildren(t *testing.T) {
 			continue
 		}
 		found = true
-		if !it.IsDir {
-			t.Fatalf("packExtra 应为目录条目: %+v", it)
-		}
-		if it.Size != 111 {
-			t.Fatalf("packExtra 的 Size 应回退为实例侧内容总量 111，实际 %d", it.Size)
-		}
+		testutil.Equal(t, it.IsDir, true, "packExtra 应为目录条目: %+v", it)
+		testutil.Equal(t, it.Size, 111, "packExtra 的 Size 应回退为实例侧内容总量 111")
 	}
-	if !found {
-		t.Fatalf("未找到 packExtra: %+v", items)
-	}
+	testutil.Equal(t, found, true, "未找到 packExtra: %+v", items)
 }
 
 // TestBuildSyncItems_DirLevelMissingHoldsStatus：Missing 文件夹保持 missing 状态（整体缺失，
@@ -660,9 +583,7 @@ func TestBuildSyncItems_MissingDirRepoPreview(t *testing.T) {
 		t.Errorf("缺失真模型夹图标应为 📁，实际 %q", packItem.Icon)
 	}
 	// children 从仓库侧列出内部模型文件（可预览待推内容）
-	if len(packItem.Children) == 0 {
-		t.Fatal("缺失模型夹应展示仓库侧 children（预览待推清单）")
-	}
+	testutil.Equal(t, len(packItem.Children) == 0, false, "缺失模型夹应展示仓库侧 children（预览待推清单）")
 	childByName := map[string]types.SyncStatus{}
 	for _, c := range packItem.Children {
 		childByName[c.Name] = c.Status
@@ -703,9 +624,7 @@ func TestBuildSyncItems_NestedContainerDir(t *testing.T) {
 	items := BuildSyncItems(ins, []registry.ResourceType{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": globalDir}, "")
 
 	// 顶层应只出现父夹容器（2 个子夹被收入其中，不再平铺在根）
-	if len(items) != 1 {
-		t.Fatalf("应只返回 1 个顶层容器（父夹），实际 %d 条: %+v", len(items), items)
-	}
+	testutil.Equal(t, len(items), 1, "应只返回 1 个顶层容器（父夹），实际: %+v", items)
 	parentItem := items[0]
 	if parentItem.Name != "[YSM模型]官方开源wine_fox_json" {
 		t.Errorf("顶层应为父夹容器，got %q", parentItem.Name)
@@ -718,9 +637,7 @@ func TestBuildSyncItems_NestedContainerDir(t *testing.T) {
 		t.Errorf("父夹容器应聚合为 diverged/missing（子夹缺失），got %q", parentItem.Status)
 	}
 	// children 应为两个子模型夹，不再平铺在根
-	if len(parentItem.Children) != 2 {
-		t.Fatalf("父夹容器应有 2 个 children（子模型夹），实际 %d", len(parentItem.Children))
-	}
+	testutil.Equal(t, len(parentItem.Children), 2, "父夹容器应有 2 个 children（子模型夹）")
 	childNames := map[string]bool{}
 	for _, c := range parentItem.Children {
 		childNames[c.Name] = true
@@ -849,20 +766,14 @@ func TestBuildSyncItems_NestedContainer_DeepHierarchy(t *testing.T) {
 	items := BuildSyncItems(ins, []registry.ResourceType{{ID: "ysm", Icon: "📦"}}, map[string]string{"ysm": globalDir}, "")
 
 	// 顶层：vendor（容器），其下 authors → character（模型文件夹叶子），逐步下钻
-	if len(items) != 1 {
-		t.Fatalf("顶层应为 vendor 容器，实际 %d 条", len(items))
-	}
+	testutil.Equal(t, len(items), 1, "顶层应为 vendor 容器")
 	vendor := items[0]
-	if vendor.Name != "vendor" || !vendor.IsDir {
-		t.Fatalf("vendor 应为容器，got %+v", vendor)
-	}
-	if len(vendor.Children) != 1 {
-		t.Fatalf("vendor.children 应为 authors，实际 %d", len(vendor.Children))
-	}
+	testutil.Equal(t, vendor.Name, "vendor", "vendor 应为容器，got %+v", vendor)
+	testutil.Equal(t, vendor.IsDir, true, "vendor 应为容器，got %+v", vendor)
+	testutil.Equal(t, len(vendor.Children), 1, "vendor.children 应为 authors")
 	authors := vendor.Children[0]
-	if authors.Name != "authors" || !authors.IsDir {
-		t.Fatalf("authors 应为容器，got %+v", authors)
-	}
+	testutil.Equal(t, authors.Name, "authors", "authors 应为容器，got %+v", authors)
+	testutil.Equal(t, authors.IsDir, true, "authors 应为容器，got %+v", authors)
 	// 容器必须带 Type（前端 applyFilter 按 type 过滤，缺 Type 会整体丢弃整棵子树）
 	if vendor.Type != "ysm" {
 		t.Errorf("vendor 容器 Type 应为 ysm，实际 %q", vendor.Type)
@@ -870,13 +781,10 @@ func TestBuildSyncItems_NestedContainer_DeepHierarchy(t *testing.T) {
 	if authors.Type != "ysm" {
 		t.Errorf("authors 容器 Type 应为 ysm，实际 %q", authors.Type)
 	}
-	if len(authors.Children) != 1 {
-		t.Fatalf("authors.children 应为 character，实际 %d", len(authors.Children))
-	}
+	testutil.Equal(t, len(authors.Children), 1, "authors.children 应为 character")
 	char := authors.Children[0]
-	if char.Name != "character" || !char.IsDir {
-		t.Fatalf("character 应为模型文件夹叶子，got %+v", char)
-	}
+	testutil.Equal(t, char.Name, "character", "character 应为模型文件夹叶子，got %+v", char)
+	testutil.Equal(t, char.IsDir, true, "character 应为模型文件夹叶子，got %+v", char)
 	if char.Status != types.SyncStatusMissing {
 		t.Errorf("character 应为 missing（实例空），got %q", char.Status)
 	}
@@ -895,22 +803,19 @@ func TestBuildSyncItems_ResultCacheHitReturnsCloneAndInvalidateClears(t *testing
 	}}, time.Now().Add(time.Hour), syncItemsCache.epochOf())
 
 	got := BuildSyncItems(ins, rtypes, roots, "")
-	if len(got) != 1 || got[0].Name != "sentinel" {
-		t.Fatalf("应命中同步结果缓存返回 sentinel，实际 %+v", got)
-	}
+	// 序贯拆分：前一 Equal 失败即 Goexit，下一行的 [0] 索引才安全
+	testutil.Equal(t, len(got), 1, "应命中同步结果缓存返回 sentinel，实际 %+v", got)
+	testutil.Equal(t, got[0].Name, "sentinel", "应命中同步结果缓存返回 sentinel")
 	got[0].Name = "mutated"
-	if again := BuildSyncItems(ins, rtypes, roots, ""); again[0].Name != "sentinel" {
-		t.Fatalf("缓存返回必须克隆，不能因调用方修改而污染：%+v", again)
-	}
+	again := BuildSyncItems(ins, rtypes, roots, "")
+	// && 短路保证 len(again)==0 时不求值 again[0]，无条件求值安全
+	testutil.Equal(t, len(again) > 0 && again[0].Name == "sentinel", true, "缓存返回必须克隆，不能因调用方修改而污染：%+v", again)
 
 	InvalidateSyncItemsCache()
-	if syncItemsCache.peek(key) {
-		t.Fatal("InvalidateSyncItemsCache 后缓存应被清空")
-	}
+	testutil.Equal(t, syncItemsCache.peek(key), false, "InvalidateSyncItemsCache 后缓存应被清空")
 	after := BuildSyncItems(ins, rtypes, roots, "")
-	if len(after) > 0 && after[0].Name == "sentinel" {
-		t.Fatalf("失效后不应再返回 sentinel，实际 %+v", after)
-	}
+	// && 短路保证 len(after)==0 时不求值 after[0]，无条件求值安全
+	testutil.Equal(t, len(after) > 0 && after[0].Name == "sentinel", false, "失效后不应再返回 sentinel，实际 %+v", after)
 }
 
 // TestSyncItemsCache_StaleEpochRejected 锁 P1-4 代际守卫：计算期间缓存被 clear（epoch 前进）
@@ -946,7 +851,5 @@ func TestBuildSyncItems_ScannerInvalidateClearsResultCache(t *testing.T) {
 	}}, time.Now().Add(time.Hour), syncItemsCache.epochOf())
 
 	scanner.InvalidateCache()
-	if syncItemsCache.peek(key) {
-		t.Fatal("scanner.InvalidateCache 应触发 instance 失效钩子清空同步结果缓存")
-	}
+	testutil.Equal(t, syncItemsCache.peek(key), false, "scanner.InvalidateCache 应触发 instance 失效钩子清空同步结果缓存")
 }

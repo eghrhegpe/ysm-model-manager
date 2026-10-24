@@ -50,13 +50,9 @@ func TestInstall_Copy(t *testing.T) {
 
 	// 验证文件已复制到 custom 目录
 	dst := filepath.Join(custom, filepath.Base(src))
-	if _, err := os.Stat(dst); os.IsNotExist(err) {
-		t.Fatal("目标文件未创建")
-	}
+	testutil.FileExists(t, dst, "目标文件未创建")
 	data, _ := os.ReadFile(dst)
-	if string(data) != "test model data" {
-		t.Fatalf("内容 = %q, 期望 'test model data'", string(data))
-	}
+	testutil.Equal(t, string(data), "test model data", "内容不符: got %q", string(data))
 }
 
 func TestInstall_Hardlink(t *testing.T) {
@@ -70,9 +66,7 @@ func TestInstall_Hardlink(t *testing.T) {
 	testutil.NoError(t, err)
 	di, err := os.Stat(dst)
 	testutil.Nil(t, err, "硬链接目标未创建")
-	if !os.SameFile(si, di) {
-		t.Fatal("目标不是指向源文件的硬链接")
-	}
+	testutil.Equal(t, os.SameFile(si, di), true, "目标不是指向源文件的硬链接")
 }
 
 // TestInstall_NonYSMFile_PerTypeRepoRoot 回归测试：修复 InstallModelTo 仓库根写死 a.ysmRoot()
@@ -100,19 +94,13 @@ func TestInstall_NonYSMFile_PerTypeRepoRoot(t *testing.T) {
 
 			// 关键断言：用该类型仓库根作为 filesRoot 安装，应通过 IsInside 守卫（不再报 ErrInvalidPath）
 			// 并成功建立硬链接（验证硬链接分支被命中）
-			if err := Install(src, customDir, repoRoot, "hardlink"); err != nil {
-				t.Fatalf("Install(%s, hardlink) = %v", ext, err)
-			}
+			testutil.NoError(t, Install(src, customDir, repoRoot, "hardlink"), "Install(%s, hardlink)", ext)
 			dst := filepath.Join(customDir, filepath.Base(src))
 			si, err := os.Stat(src)
 			testutil.NoError(t, err)
 			di, err := os.Stat(dst)
-			if err != nil {
-				t.Fatalf("%s 硬链接目标未创建", ext)
-			}
-			if !os.SameFile(si, di) {
-				t.Fatalf("%s 目标不是指向源文件的硬链接（硬链接分支未命中）", ext)
-			}
+			testutil.NoError(t, err, "%s 硬链接目标未创建", ext)
+			testutil.Equal(t, os.SameFile(si, di), true, "%s 目标不是指向源文件的硬链接（硬链接分支未命中）", ext)
 		})
 	}
 }
@@ -128,15 +116,11 @@ func TestInstall_Symlink(t *testing.T) {
 	dst := filepath.Join(custom, filepath.Base(src))
 	li, err := os.Lstat(dst)
 	testutil.Nil(t, err, "符号链接目标未创建")
-	if li.Mode()&os.ModeSymlink == 0 {
-		t.Fatal("目标不是符号链接")
-	}
+	testutil.Equal(t, li.Mode()&os.ModeSymlink == 0, false, "目标不是符号链接")
 	// 符号链接应解析到源文件
 	si, _ := os.Stat(src)
 	di, _ := os.Stat(dst)
-	if !os.SameFile(si, di) {
-		t.Fatal("符号链接未指向源文件")
-	}
+	testutil.Equal(t, os.SameFile(si, di), true, "符号链接未指向源文件")
 }
 
 func TestInstall_Overwrite(t *testing.T) {
@@ -149,25 +133,17 @@ func TestInstall_Overwrite(t *testing.T) {
 	dst := filepath.Join(custom, filepath.Base(src))
 	si, _ := os.Stat(src)
 	di, _ := os.Stat(dst)
-	if os.SameFile(si, di) {
-		t.Fatal("前置条件错误：copy 模式不应与源同 inode")
-	}
+	testutil.Equal(t, os.SameFile(si, di), false, "前置条件错误：copy 模式不应与源同 inode")
 	// 更新仓库源内容（模拟下载新版本）
 	if err := os.WriteFile(src, []byte("new version data"), 0644); err != nil {
 		testutil.NoError(t, err)
 	}
 	// 再以 hardlink 模式安装：旧副本应被原子替换为指向新源的硬链接
-	if err := Install(src, custom, repo, "hardlink"); err != nil {
-		t.Fatalf("Install(overwrite) = %v", err)
-	}
+	testutil.NoError(t, Install(src, custom, repo, "hardlink"), "Install(overwrite)")
 	di2, _ := os.Stat(dst)
-	if !os.SameFile(si, di2) {
-		t.Fatal("旧副本未被替换为硬链接")
-	}
+	testutil.Equal(t, os.SameFile(si, di2), true, "旧副本未被替换为硬链接")
 	data, _ := os.ReadFile(dst)
-	if string(data) != "new version data" {
-		t.Fatalf("内容 = %q, 期望新版本", string(data))
-	}
+	testutil.Equal(t, string(data), "new version data", "内容不符: got %q", string(data))
 }
 
 func TestInstall_ReinstallIdempotent(t *testing.T) {
@@ -177,15 +153,11 @@ func TestInstall_ReinstallIdempotent(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	// 重复安装同源硬链接应幂等且不报错
-	if err := Install(src, custom, repo, "hardlink"); err != nil {
-		t.Fatalf("重复安装应幂等: %v", err)
-	}
+	testutil.NoError(t, Install(src, custom, repo, "hardlink"), "重复安装应幂等")
 	dst := filepath.Join(custom, filepath.Base(src))
 	si, _ := os.Stat(src)
 	di, _ := os.Stat(dst)
-	if !os.SameFile(si, di) {
-		t.Fatal("重复安装后目标不再是硬链接")
-	}
+	testutil.Equal(t, os.SameFile(si, di), true, "重复安装后目标不再是硬链接")
 }
 
 func TestInstallDir_Hardlink(t *testing.T) {
@@ -198,18 +170,14 @@ func TestInstallDir_Hardlink(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(srcDir, "model.pmx"), []byte("pmx"), 0644); err != nil {
 		testutil.NoError(t, err)
 	}
-	if err := InstallDir(srcDir, custom, repo, "hardlink", "EntityPlayer"); err != nil {
-		t.Fatalf("InstallDir(hardlink) = %v", err)
-	}
+	testutil.NoError(t, InstallDir(srcDir, custom, repo, "hardlink", "EntityPlayer"), "InstallDir(hardlink)")
 	srcFile := filepath.Join(srcDir, "model.pmx")
 	dstFile := filepath.Join(custom, filepath.Base(srcDir), "model.pmx")
 	si, err := os.Stat(srcFile)
 	testutil.NoError(t, err)
 	di, err := os.Stat(dstFile)
 	testutil.Nil(t, err, "目录硬链接目标未创建")
-	if !os.SameFile(si, di) {
-		t.Fatal("目录安装的 pmx 不是硬链接")
-	}
+	testutil.Equal(t, os.SameFile(si, di), true, "目录安装的 pmx 不是硬链接")
 }
 
 func TestInstallDir_TypeFilter(t *testing.T) {
@@ -225,15 +193,9 @@ func TestInstallDir_TypeFilter(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(srcDir, "notes.txt"), []byte("no"), 0644); err != nil {
 		testutil.NoError(t, err)
 	}
-	if err := InstallDir(srcDir, custom, repo, "copy", "ysm"); err != nil {
-		t.Fatalf("InstallDir(ysm) = %v", err)
-	}
-	if _, err := os.Stat(filepath.Join(custom, filepath.Base(srcDir), "model.json")); err != nil {
-		t.Fatal("json 应被安装")
-	}
-	if _, err := os.Stat(filepath.Join(custom, filepath.Base(srcDir), "notes.txt")); err == nil {
-		t.Fatal("txt 应被类型过滤排除")
-	}
+	testutil.NoError(t, InstallDir(srcDir, custom, repo, "copy", "ysm"), "InstallDir(ysm)")
+	testutil.FileExists(t, filepath.Join(custom, filepath.Base(srcDir), "model.json"), "json 应被安装")
+	testutil.FileNotExists(t, filepath.Join(custom, filepath.Base(srcDir), "notes.txt"), "txt 应被类型过滤排除")
 }
 
 // TestInstallDir_MMDVmdWhiteList：EntityPlayer 作为独立顶级类型，无 installExts 白名单——
@@ -261,9 +223,7 @@ func TestInstallDir_MMDVmdWhiteList(t *testing.T) {
 			testutil.NoError(t, err)
 		}
 	}
-	if err := InstallDir(srcDir, custom, repo, "copy", "EntityPlayer"); err != nil {
-		t.Fatalf("InstallDir(EntityPlayer) = %v", err)
-	}
+	testutil.NoError(t, InstallDir(srcDir, custom, repo, "copy", "EntityPlayer"), "InstallDir(EntityPlayer)")
 	base := filepath.Join(custom, filepath.Base(srcDir))
 	// EntityPlayer 无 installExts 配置（新架构各 MMD 类型独立），所有非可执行文件均放行
 	for _, want := range []string{"model.pmx", "anims/walk.vmd", "anims/idle.vmd", "happy.vpd", "animations.json", "model.png", "notes.txt"} {
@@ -286,9 +246,8 @@ func TestInstallToGlobal_UnsupportedExt(t *testing.T) {
 	if err := os.WriteFile(badFile, []byte("data"), 0644); err != nil {
 		testutil.NoError(t, err)
 	}
-	if _, err := InstallToGlobal(badFile, mcRoot); err == nil {
-		t.Fatal("不支持的文件类型应返回错误")
-	}
+	_, err := InstallToGlobal(badFile, mcRoot)
+	testutil.NotNil(t, err, "不支持的文件类型应返回错误")
 }
 
 // TestLinkErr_Errno 跨设备/权限 errno 应分类为可操作提示（按运行平台选错误码）
@@ -392,13 +351,9 @@ func TestInstallDir_Copy(t *testing.T) {
 	// 验证目录已复制（InstallDir 在 dstDir 下创建 basename 目录）
 	baseName := filepath.Base(srcDir)
 	dstModel := filepath.Join(dstDir, baseName, "model.pmx")
-	if _, err := os.Stat(dstModel); os.IsNotExist(err) {
-		t.Fatal("目标 pmx 文件未创建")
-	}
+	testutil.FileExists(t, dstModel, "目标 pmx 文件未创建")
 	dstTex := filepath.Join(dstDir, baseName, "tex.png")
-	if _, err := os.Stat(dstTex); os.IsNotExist(err) {
-		t.Fatal("目标 png 文件未创建")
-	}
+	testutil.FileExists(t, dstTex, "目标 png 文件未创建")
 }
 
 func TestInstallDir_EmptySrc(t *testing.T) {
@@ -451,9 +406,8 @@ func TestCopyFile_SrcMissing(t *testing.T) {
 
 	// 失败路径不得在目标目录残留半截文件
 	dst := filepath.Join(custom, filepath.Base(missing))
-	if _, statErr := os.Stat(dst); !os.IsNotExist(statErr) {
-		t.Fatalf("失败后目标文件不应存在: %v", statErr)
-	}
+	_, statErr := os.Stat(dst)
+	testutil.Equal(t, os.IsNotExist(statErr), true, "失败后目标文件不应存在: %v", statErr)
 }
 
 func TestInstall_CopySrcMissing(t *testing.T) {
@@ -464,9 +418,8 @@ func TestInstall_CopySrcMissing(t *testing.T) {
 	testutil.NotNil(t, err, "源文件不存在应返回错误")
 
 	dst := filepath.Join(custom, filepath.Base(missing))
-	if _, statErr := os.Stat(dst); !os.IsNotExist(statErr) {
-		t.Fatalf("安装失败后目标文件不应残留: %v", statErr)
-	}
+	_, statErr := os.Stat(dst)
+	testutil.Equal(t, os.IsNotExist(statErr), true, "安装失败后目标文件不应残留: %v", statErr)
 }
 
 // TestInstallDir_SrcEqualsDst 死递归守卫：srcDir==dstDir 时必须拒绝
@@ -514,9 +467,7 @@ func TestInstall_EvalSymlinksGuard_CustomDirSymlink(t *testing.T) {
 
 	err := Install(src, custom, repo, "copy")
 	var ae types.AppError
-	if !errors.As(err, &ae) || ae.Code != "INVALID_PATH" {
-		t.Fatalf("customDir 含指向 .minecraft 外 symlink 段应返回 INVALID_PATH, got %v", err)
-	}
+	testutil.Equal(t, errors.As(err, &ae) && ae.Code == "INVALID_PATH", true, "customDir 含指向 .minecraft 外 symlink 段应返回 INVALID_PATH, got %v", err)
 }
 
 // Install 的 src 含指向仓库外的 symlink 段时：
@@ -541,9 +492,7 @@ func TestInstall_EvalSymlinksGuard_SrcSymlink(t *testing.T) {
 
 	err := Install(src, custom, repo, "copy")
 	var ae types.AppError
-	if !errors.As(err, &ae) || ae.Code != "INVALID_PATH" {
-		t.Fatalf("src 含指向仓库外 symlink 段应返回 INVALID_PATH, got %v", err)
-	}
+	testutil.Equal(t, errors.As(err, &ae) && ae.Code == "INVALID_PATH", true, "src 含指向仓库外 symlink 段应返回 INVALID_PATH, got %v", err)
 }
 
 // ====== InstallDir dstExisted 失败回滚（P2 补测）======
@@ -577,13 +526,10 @@ func TestInstallDir_DstExistedRollback(t *testing.T) {
 	}
 
 	// 场景 A：finalDst 本次新建 → 失败后应被回滚删除
-	if err := InstallDir(srcDir, custom, repo, "copy", "EntityPlayer"); err == nil {
-		t.Fatal("srcDir 含不可读条目时安装应报错")
-	}
+	testutil.NotNil(t, InstallDir(srcDir, custom, repo, "copy", "EntityPlayer"), "srcDir 含不可读条目时安装应报错")
 	finalDst := filepath.Join(custom, "bad_model")
-	if _, err := os.Stat(finalDst); !os.IsNotExist(err) {
-		t.Fatalf("新建 finalDst 应被回滚删除: %v", err)
-	}
+	_, statErr := os.Stat(finalDst)
+	testutil.Equal(t, os.IsNotExist(statErr), true, "新建 finalDst 应被回滚删除: %v", statErr)
 
 	// 场景 B：finalDst 已存在（用户既有数据）→ 失败后不得被删除
 	if err := os.MkdirAll(finalDst, 0755); err != nil {
@@ -593,12 +539,8 @@ func TestInstallDir_DstExistedRollback(t *testing.T) {
 	if err := os.WriteFile(marker, []byte("keep"), 0644); err != nil {
 		testutil.NoError(t, err)
 	}
-	if err := InstallDir(srcDir, custom, repo, "copy", "EntityPlayer"); err == nil {
-		t.Fatal("srcDir 含不可读条目时安装应报错")
-	}
-	if _, err := os.Stat(marker); err != nil {
-		t.Fatalf("已存在 finalDst 不应被回滚删除: %v", err)
-	}
+	testutil.NotNil(t, InstallDir(srcDir, custom, repo, "copy", "EntityPlayer"), "srcDir 含不可读条目时安装应报错")
+	testutil.FileExists(t, marker, "已存在 finalDst 不应被回滚删除")
 }
 
 // TestInstallDirRel_PlacesUnderRelPath: InstallDirRel 应将目录按 relSlash 指定的相对路径落位，
@@ -626,13 +568,9 @@ func TestInstallDirRel_PlacesUnderRelPath(t *testing.T) {
 	testutil.NoError(t, err, "InstallDirRel() =")
 
 	dstPmx := filepath.Join(custom, "东方", "角色A", "model", "char.pmx")
-	if _, err := os.Stat(dstPmx); os.IsNotExist(err) {
-		t.Fatal("多层路径下的 char.pmx 未找到")
-	}
+	testutil.FileExists(t, dstPmx, "多层路径下的 char.pmx 未找到")
 	dstPng := filepath.Join(custom, "东方", "角色A", "model", "tex", "toon.png")
-	if _, err := os.Stat(dstPng); os.IsNotExist(err) {
-		t.Fatal("多层路径下的 tex/toon.png 未找到")
-	}
+	testutil.FileExists(t, dstPng, "多层路径下的 tex/toon.png 未找到")
 }
 
 // TestInstallDirRel_EmptyRelFallsBack: relSlash 为空时应回退到 InstallDir 原语义（basename 落位）
@@ -652,9 +590,7 @@ func TestInstallDirRel_EmptyRelFallsBack(t *testing.T) {
 
 	// rel 为空 → finalDst=custom/mydir （与 InstallDir 原语义一致）
 	dst := filepath.Join(custom, "mydir", "file.pmx")
-	if _, err := os.Stat(dst); os.IsNotExist(err) {
-		t.Fatal("空 rel 应回退到 basename 语义")
-	}
+	testutil.FileExists(t, dst, "空 rel 应回退到 basename 语义")
 }
 
 // TestInstallDirRel_RejectsEscape: relSlash 含 ".." 或绝对路径时应返回错误

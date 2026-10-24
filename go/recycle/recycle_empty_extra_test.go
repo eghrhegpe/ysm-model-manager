@@ -6,7 +6,6 @@ package recycle
 
 import (
 	"os"
-	"strings"
 	"testing"
 	"ysm-model-manager/go/internal/testutil"
 )
@@ -16,9 +15,7 @@ func TestEmpty_RecycleDirUnset(t *testing.T) {
 	tm := &TrashManager{}
 	count, err := tm.Empty()
 	testutil.NoError(t, err, "recycleDir 未设置应返回 nil 错误")
-	if count != 0 {
-		t.Fatalf("应返回 0，得到 %d", count)
-	}
+	testutil.Equal(t, count, 0, "应返回 0，得到 %d", count)
 }
 
 // Empty 在回收站目录不存在时应返回 (0, nil)
@@ -27,9 +24,7 @@ func TestEmpty_RecycleDirNotExist(t *testing.T) {
 	tm := New(dir)
 	count, err := tm.Empty()
 	testutil.NoError(t, err, "回收站不存在应返回 nil 错误")
-	if count != 0 {
-		t.Fatalf("应返回 0，得到 %d", count)
-	}
+	testutil.Equal(t, count, 0, "应返回 0，得到 %d", count)
 }
 
 // Empty 在 .recycle 是指向外部的 symlink 时应拒绝（R26 P2-1 守卫）
@@ -46,11 +41,7 @@ func TestEmpty_RecycleDirIsSymlinkRejected(t *testing.T) {
 	tm := New(dir)
 	_, err := tm.Empty()
 	testutil.NotNil(t, err, ".recycle 是 symlink 时应拒绝, 得到 nil 错误")
-	if !strings.Contains(err.Error(), "符号链接") {
-		t.Fatalf("错误应提及符号链接, 得到: %v", err)
-	}
+	testutil.ErrorContains(t, err, "符号链接", "错误应提及符号链接")
 	// 确认 external 目录未被删除（RemoveAll 未执行）
-	if _, statErr := os.Stat(external); statErr != nil {
-		t.Fatalf("外部目录不应被删除: %v", statErr)
-	}
+	testutil.FileExists(t, external, "外部目录不应被删除")
 }

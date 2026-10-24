@@ -5,7 +5,6 @@ import (
 	"compress/gzip"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"sync"
 	"testing"
 	"time"
@@ -33,9 +32,7 @@ func makePayload(t *testing.T, files []ysm.DecodedFile) string {
 func waitForReady(t *testing.T, b *Bridge) {
 	t.Helper()
 	b.MarkReady()
-	if !b.Ready() {
-		t.Fatal("MarkReady 后 Ready 应为 true")
-	}
+	testutil.Equal(t, b.Ready(), true, "MarkReady 后 Ready 应为 true")
 }
 
 // 请求-回传全链路：emit 触发 → Resolve 回传 → Decode 拿到文件
@@ -63,21 +60,17 @@ func TestDecode_RoundTrip(t *testing.T) {
 	files, err := b.Decode([]byte("ysm-bytes"), 5*time.Second)
 	<-done
 	testutil.NoError(t, err, "Decode")
-	if len(files) != 1 || string(files[0].Data) != `{"a":1}` {
-		t.Fatalf("files = %+v", files)
-	}
-	if string(gotData) != "ysm-bytes" {
-		t.Fatalf("emit 携带的数据不匹配: %q", gotData)
-	}
+	// OR 型拆序贯：len 前置守卫防 files[0] 越界（Equal 失败即弃权）
+	testutil.Equal(t, len(files), 1, "files = %+v", files)
+	testutil.Equal(t, string(files[0].Data), `{"a":1}`, "files = %+v", files)
+	testutil.Equal(t, string(gotData), "ysm-bytes", "emit 携带的数据不匹配: %q", gotData)
 }
 
 // 未就绪（前端 listener 未挂/非 Android）→ 快速失败，调用方回退 wazero
 func TestDecode_NotReady(t *testing.T) {
 	b := New(func(string, int64, []byte) {})
 	_, err := b.Decode([]byte("x"), time.Second)
-	if !errors.Is(err, ErrNotReady) {
-		t.Fatalf("err = %v, want ErrNotReady", err)
-	}
+	testutil.ErrorIs(t, err, ErrNotReady, "err = %v, want ErrNotReady", err)
 }
 
 // 超时 → 报错且 pending 清理（后续同 id Resolve 不串扰）
@@ -85,13 +78,10 @@ func TestDecode_Timeout(t *testing.T) {
 	b := New(func(string, int64, []byte) {})
 	waitForReady(t, b)
 	_, err := b.Decode([]byte("x"), 30*time.Millisecond)
-	if !errors.Is(err, ErrTimeout) {
-		t.Fatalf("err = %v, want ErrTimeout", err)
-	}
+	testutil.ErrorIs(t, err, ErrTimeout, "err = %v, want ErrTimeout", err)
 	// 超时后 Resolve 迟到结果应报未知 id，不 panic
-	if err := b.Resolve(999, makePayload(t, nil), ""); err == nil {
-		t.Fatal("未知 id Resolve 应报错")
-	}
+	resolveErr := b.Resolve(999, makePayload(t, nil), "")
+	testutil.NotNil(t, resolveErr, "未知 id Resolve 应报错")
 }
 
 // 前端报错语义：errMsg 非空 → Decode 返回该错误
@@ -105,9 +95,9 @@ func TestDecode_FrontendError(t *testing.T) {
 		}
 	}()
 	_, err := b.Decode([]byte("x"), 5*time.Second)
-	if err == nil || err.Error() != "wasm boom" {
-		t.Fatalf("err = %v, want 前端错误原样透传", err)
-	}
+	// OR 型拆序贯：NotNil 前置守卫防 err.Error() 空指针解引用（Equal 失败即弃权）
+	testutil.NotNil(t, err, "err = %v, want 前端错误原样透传", err)
+	testutil.Equal(t, err.Error(), "wasm boom", "err = %v, want 前端错误原样透传", err)
 }
 
 // 并发请求互不串扰（每请求独立 id + channel）。

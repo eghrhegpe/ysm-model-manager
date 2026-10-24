@@ -12,13 +12,11 @@ import (
 func TestRuntimeBuffer_WriteAndGetAll(t *testing.T) {
 	b := NewRuntimeBuffer(200)
 	n, err := b.Write([]byte("hello\n"))
-	if err != nil || n != 6 {
-		t.Fatalf("Write 应返回 len(p)/nil，实际 %d/%v", n, err)
-	}
+	// OR 型复合条件拆序贯：err 与返回长度分别断言（原 if err!=nil || n!=6）
+	testutil.NoError(t, err, "Write 应返回 len(p)/nil, 实际 n=%d", n)
+	testutil.Equal(t, n, 6, "Write 应返回 len(p)/nil, 实际 n=%d", n)
 	all := b.GetAll()
-	if len(all) != 1 {
-		t.Fatalf("应 1 条，实际 %d", len(all))
-	}
+	testutil.Equal(t, len(all), 1, "应 1 条，实际 %d", len(all))
 	if all[0].Message != "hello\n" {
 		t.Errorf("消息保留原始换行: %q", all[0].Message)
 	}
@@ -36,27 +34,19 @@ func TestRuntimeBuffer_RingOverflow(t *testing.T) {
 		}
 	}
 	all := b.GetAll()
-	if len(all) != 3 {
-		t.Fatalf("超容量应保留 3 条，实际 %d", len(all))
-	}
+	testutil.Equal(t, len(all), 3, "超容量应保留 3 条，实际 %d", len(all))
 	// 丢弃最旧：应保留后 3 条（P3 清理：去掉未使用的循环索引）
 	for _, lg := range all {
-		if lg.Message != "msg" {
-			t.Fatalf("消息被篡改: %q", lg.Message)
-		}
+		testutil.Equal(t, lg.Message, "msg", "消息被篡改: %q", lg.Message)
 	}
 }
 
 func TestRuntimeBuffer_CapacityFallback(t *testing.T) {
 	// cap<=0 回退 200
 	b := NewRuntimeBuffer(0)
-	if b.cap != 200 {
-		t.Fatalf("cap<=0 应回退 200，实际 %d", b.cap)
-	}
+	testutil.Equal(t, b.cap, 200, "cap<=0 应回退 200，实际 %d", b.cap)
 	b2 := NewRuntimeBuffer(-5)
-	if b2.cap != 200 {
-		t.Fatalf("负 cap 应回退 200，实际 %d", b2.cap)
-	}
+	testutil.Equal(t, b2.cap, 200, "负 cap 应回退 200，实际 %d", b2.cap)
 }
 
 func TestRuntimeBuffer_GetAllIsCopy(t *testing.T) {
@@ -79,9 +69,7 @@ func TestRuntimeBuffer_Clear(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	b.Clear()
-	if all := b.GetAll(); len(all) != 0 {
-		t.Fatalf("Clear 后应为空，实际 %d 条", len(all))
-	}
+	testutil.Equal(t, len(b.GetAll()), 0, "Clear 后应为空，实际 %d 条", len(b.GetAll()))
 }
 
 // ===== ADR-289：tag 提取与级别推断 =====
@@ -161,10 +149,6 @@ func TestRuntimeBuffer_LevelPriority(t *testing.T) {
 // TestRuntimeBuffer_CapAccessor 锐评⑤：Cap() 访问器供 GetLogCaps 绑定消费——
 // 显式容量原样返回，默认回退容量（<=0 → DefaultRuntimeCap）同样可观测。
 func TestRuntimeBuffer_CapAccessor(t *testing.T) {
-	if got := NewRuntimeBuffer(42).Cap(); got != 42 {
-		t.Fatalf("显式容量 Cap() = %d, 期望 42", got)
-	}
-	if got := NewRuntimeBuffer(0).Cap(); got != DefaultRuntimeCap {
-		t.Fatalf("回退容量 Cap() = %d, 期望 %d", got, DefaultRuntimeCap)
-	}
+	testutil.Equal(t, NewRuntimeBuffer(42).Cap(), 42, "显式容量 Cap() = %d, 期望 42", NewRuntimeBuffer(42).Cap())
+	testutil.Equal(t, NewRuntimeBuffer(0).Cap(), DefaultRuntimeCap, "回退容量 Cap() = %d, 期望 %d", NewRuntimeBuffer(0).Cap(), DefaultRuntimeCap)
 }

@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types/registry"
 )
 
@@ -162,9 +163,8 @@ func TestSyncResourcesDirLevelNested(t *testing.T) {
 func TestNestedPatternsConfig(t *testing.T) {
 	t.Run("maid_model_patterns", func(t *testing.T) {
 		patterns := registry.NestedPatternsFor("maid-model")
-		if len(patterns) == 0 {
-			t.Fatal("maid-model 应有嵌套模式配置")
-		}
+		// 守卫下方 patterns[0] 索引
+		testutil.Equal(t, len(patterns) == 0, false, "maid-model 应有嵌套模式配置")
 
 		// 验证第一个模式的配置
 		pattern := patterns[0]
@@ -247,9 +247,7 @@ func TestPushWithNestedPaths(t *testing.T) {
 			t.Logf("push log: %s | %s", name, msg)
 		})
 
-	if err != nil {
-		t.Fatalf("推送失败: %v", err)
-	}
+	testutil.NoError(t, err, "推送失败")
 	if count != 1 {
 		t.Errorf("预期推送 1 个模型，实际推送 %d 个", count)
 	}

@@ -61,9 +61,7 @@ func TestParseUV_BoxUV(t *testing.T) {
 	var faces [6][8]float64
 	c := types.Cube2D{UV: [2]float64{0, 0}}
 	ok := parseUV(c, &faces, 8, 8, 8, 64, 64)
-	if !ok {
-		t.Fatal("box UV 应返回 true")
-	}
+	testutil.Equal(t, ok, true, "box UV 应返回 true")
 	// east face: u0 = 0/64, v0 = (0+8)/64 = 0.125
 	if faces[0][0] != 0 || faces[0][1] != 0.125 {
 		t.Errorf("east face u0,v0 = %f,%f, 期望 0,0.125", faces[0][0], faces[0][1])
@@ -74,9 +72,7 @@ func TestParseUV_FaceUV(t *testing.T) {
 	var faces [6][8]float64
 	c := types.Cube2D{FaceUV: `{"east":{"uv":[0,0],"uv_size":[8,8]}}`}
 	ok := parseUV(c, &faces, 8, 8, 8, 64, 64)
-	if !ok {
-		t.Fatal("FaceUV 应返回 true")
-	}
+	testutil.Equal(t, ok, true, "FaceUV 应返回 true")
 	if faces[0][0] != 0 || faces[0][1] != 0 {
 		t.Errorf("east face u0,v0 = %f,%f, 期望 0,0", faces[0][0], faces[0][1])
 	}
@@ -100,9 +96,7 @@ func TestExpandBoxUV_NonNegative(t *testing.T) {
 	// 并未测 texW==0 除零路径；改名反映实际断言（非负有限值）
 	var faces [6][8]float64
 	ok := expandBoxUV([2]float64{0, 0}, 8, 8, 8, 1, 1, &faces)
-	if !ok {
-		t.Fatal("expandBoxUV 应返回 true")
-	}
+	testutil.Equal(t, ok, true, "expandBoxUV 应返回 true")
 	// 所有值应为非负有限数
 	for fi, face := range faces {
 		for _, v := range face {
@@ -126,9 +120,8 @@ func TestExpandBoxUV_ZeroTexGuard(t *testing.T) {
 	// faces 不得被写入 NaN
 	for _, face := range faces {
 		for _, v := range face {
-			if math.IsNaN(v) {
-				t.Fatal("拒绝路径不得写入 NaN UV")
-			}
+			// 护栏：任一 NaN 即失败（原 if IsNaN → t.Fatal）
+			testutil.Equal(t, math.IsNaN(v), false, "拒绝路径不得写入 NaN UV")
 		}
 	}
 }
@@ -154,9 +147,7 @@ func TestExpandBoxUV_ZeroTexGuard(t *testing.T) {
 func TestExpandBoxUV_QuadVertexOrder(t *testing.T) {
 	var faces [6][8]float64
 	ok := expandBoxUV([2]float64{0, 0}, 8, 8, 8, 64, 64, &faces)
-	if !ok {
-		t.Fatal("expandBoxUV 应返回 true")
-	}
+	testutil.Equal(t, ok, true, "expandBoxUV 应返回 true")
 	// East 面四角显式断言
 	east := faces[0]
 	want := [8]float64{0, 0.125, 0.125, 0.125, 0, 0.25, 0.125, 0.25}
@@ -214,9 +205,7 @@ func TestParseFaceUV_AllFaces(t *testing.T) {
 	uvStr := `{"east":{"uv":[0,0],"uv_size":[8,8]},"west":{"uv":[8,0],"uv_size":[8,8]},"up":{"uv":[16,0],"uv_size":[8,8]},"down":{"uv":[24,0],"uv_size":[8,8]},"south":{"uv":[32,0],"uv_size":[8,8]},"north":{"uv":[40,0],"uv_size":[8,8]}}`
 	var faces [6][8]float64
 	ok := parseFaceUV(uvStr, &faces, 64, 64)
-	if !ok {
-		t.Fatal("parseFaceUV 应返回 true")
-	}
+	testutil.Equal(t, ok, true, "parseFaceUV 应返回 true")
 	// east face: u0 = 0/64 = 0, v0 = 0/64 = 0, u1 = 8/64 = 0.125, v1 = 8/64 = 0.125
 	// faces[fi] = [8]float64{u0, v0, u1, v0, u0, v1, u1, v1}
 	// index 0=u0, 1=v0, 2=u1, 3=v0(dup), 4=u0(dup), 5=v1, 6=u1(dup), 7=v1(dup)
@@ -238,9 +227,7 @@ func TestParseFaceUV_PartialFaces(t *testing.T) {
 	uvStr := `{"east":{"uv":[0,0],"uv_size":[8,8]}}`
 	var faces [6][8]float64
 	ok := parseFaceUV(uvStr, &faces, 64, 64)
-	if !ok {
-		t.Fatal("parseFaceUV 应返回 true")
-	}
+	testutil.Equal(t, ok, true, "parseFaceUV 应返回 true")
 	// east face 应解析到 u0=0/64=0, v0=0/64=0
 	if faces[0][0] != 0 || faces[0][1] != 0 {
 		t.Errorf("east face u0,v0 = %v,%v, 期望 0,0", faces[0][0], faces[0][1])
@@ -457,12 +444,11 @@ func TestBuildCubeMeshData_Mirror(t *testing.T) {
 	md := buildCubeMeshData(c, vec3{0, 0, 0}, 64, 64, "bone1", 0)
 	testutil.NotNil(t, md, "有效 cube 应返回非 nil")
 	eastU0, eastU2, westU0, westU2 := md.Uvs[0], md.Uvs[2], md.Uvs[8], md.Uvs[10]
-	if eastU0 == eastU2 || westU0 == westU2 {
-		t.Fatal("非 mirror 的 east/west 自身 u应对不同（测试前提不成立）")
-	}
-	if eastU0 != 0 || westU0 != 0.25 {
-		t.Fatalf("非 mirror 基线偏移: east u0=%v（期望0）west u0=%v（期望.25）", eastU0, westU0)
-	}
+	// OR 型复合条件拆序贯：两个前提分别断言（原 if == || == / if != || !=）
+	testutil.Equal(t, eastU0 == eastU2, false, "非 mirror 的 east/west 自身 u应对不同（测试前提不成立）")
+	testutil.Equal(t, westU0 == westU2, false, "非 mirror 的 east/west 自身 u应对不同（测试前提不成立）")
+	testutil.Equal(t, eastU0 != 0, false, "非 mirror 基线偏移: east u0=%v（期望0）west u0=%v（期望.25）", eastU0, westU0)
+	testutil.Equal(t, westU0 != 0.25, false, "非 mirror 基线偏移: east u0=%v（期望0）west u0=%v（期望.25）", eastU0, westU0)
 	c.Mirror = true
 	mdMirror := buildCubeMeshData(c, vec3{0, 0, 0}, 64, 64, "bone1", 0)
 	// mirror east = 非mirror west 翻转（u0↔u2）；mirror west = 非mirror east 翻转

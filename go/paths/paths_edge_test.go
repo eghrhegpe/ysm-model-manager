@@ -31,9 +31,7 @@ func TestIsInsideResolved_SymlinkEscape(t *testing.T) {
 	}
 
 	symlinkPath := filepath.Join(baseDir, "symlink")
-	if err := os.Symlink(outsideDir, symlinkPath); err != nil {
-		t.Fatalf("创建 symlink 失败: %v", err)
-	}
+	testutil.NoError(t, os.Symlink(outsideDir, symlinkPath), "创建 symlink 失败")
 
 	escapedPath := filepath.Join(baseDir, "symlink", "target.ysm")
 	// 纯词法 IsInside 放行（不解析 symlink，文档行为）
@@ -41,11 +39,9 @@ func TestIsInsideResolved_SymlinkEscape(t *testing.T) {
 		t.Logf("INFO(BUG-1): 词法 IsInside 放行 symlink 逃逸（纯词法语义，符合预期）")
 	}
 	// 修复点：IsInsideResolved 必须拦截
-	if err := IsInsideResolved(baseDir, escapedPath); err == nil {
-		t.Fatal("BUG-1: IsInsideResolved 未拦截 symlink 逃逸")
-	} else if !errors.Is(err, ErrNotInside) {
-		t.Fatalf("BUG-1: 应分类 ErrNotInside, got %v", err)
-	}
+	err := IsInsideResolved(baseDir, escapedPath)
+	testutil.NotNil(t, err, "BUG-1: IsInsideResolved 未拦截 symlink 逃逸")
+	testutil.ErrorIs(t, err, ErrNotInside, "BUG-1: 应分类 ErrNotInside")
 }
 
 // ---------- Bug 2: Empty path silently passes when CWD == baseDir (MEDIUM) ----------
@@ -59,16 +55,14 @@ func TestIsInside_EmptyPathCWDMatch(t *testing.T) {
 	if err == nil {
 		t.Cleanup(func() { _ = os.Chdir(origWD) })
 	}
-	if err := os.Chdir(baseDir); err != nil {
-		t.Fatalf("os.Chdir(%q) 失败: %v", baseDir, err)
-	}
+	testutil.NoError(t, os.Chdir(baseDir), "os.Chdir(%q) 失败", baseDir)
 
 	err = IsInside(baseDir, "")
 	testutil.NotNil(t, err, "FIXED(BUG-2): 空路径应被拒绝")
 	if errors.Is(err, ErrEmptyPath) {
 		t.Logf("FIXED(BUG-2): 空路径已拒绝（ErrEmptyPath）, err=%v", err)
 	} else {
-		t.Fatalf("FIXED(BUG-2): 期望分类 ErrEmptyPath, 实际 err=%v", err)
+		testutil.ErrorIs(t, err, ErrEmptyPath, "FIXED(BUG-2): 期望分类 ErrEmptyPath, 实际 err=%v", err)
 	}
 }
 
@@ -110,17 +104,13 @@ func TestContainsMinecraftMarker_UnicodeHomoglyph(t *testing.T) {
 
 	// Cyrillic 小写 і (U+0456) 替换 ASCII 'i'，视觉一致
 	cyrillicPath := filepath.Join("C:", "Users", "x", ".m\u0456necraft", "mods", "file.ysm")
-	if got := ContainsMinecraftMarker(cyrillicPath); got {
-		t.Fatal("BUG-4: Unicode 同形字符绕过——ContainsMinecraftMarker 匹配了含 Cyrillic і 的路径")
-	}
+	testutil.Equal(t, ContainsMinecraftMarker(cyrillicPath), false, "BUG-4: Unicode 同形字符绕过——ContainsMinecraftMarker 匹配了含 Cyrillic і 的路径")
 	t.Logf("INFO(BUG-4): 严格 ASCII 匹配未绕过 (%s)——但同形目录名是已知攻击面", cyrillicPath)
 
 	// 另一种形式：Cyrillic п (U+043F) 替代 ASCII 'p'，在 "minecraft" 段中替换 'p'
 	// 构造 ".mіnecraft" (U+0456) 已测；这里测 "mіnecraft" (无点，PrismLauncher 风格)
 	prismCyrillic := filepath.Join("C:", "Users", "x", "m\u0456necraft", "mods", "file.ysm")
-	if got := ContainsMinecraftMarker(prismCyrillic); got {
-		t.Fatal("BUG-4(b): 无点同形路径绕过")
-	}
+	testutil.Equal(t, ContainsMinecraftMarker(prismCyrillic), false, "BUG-4(b): 无点同形路径绕过")
 	t.Logf("INFO(BUG-4b): 无点同形路径未绕过 (%s)", prismCyrillic)
 }
 
@@ -136,9 +126,7 @@ func TestIsInside_NULByte(t *testing.T) {
 
 	if runtime.GOOS == "linux" {
 		err := IsInside(baseDir, nulPath)
-		if err == nil {
-			t.Fatalf("BUG-5: Linux 上 NUL 字节路径被接受——filepath.Abs 截断后 IsInside 无法察觉原始逃逸")
-		}
+		testutil.NotNil(t, err, "BUG-5: Linux 上 NUL 字节路径被接受——filepath.Abs 截断后 IsInside 无法察觉原始逃逸")
 		if errors.Is(err, ErrNULByte) {
 			t.Logf("FIXED(BUG-5, Linux): NUL 字节已拒绝（ErrNULByte）, err=%v", err)
 		} else {
@@ -165,15 +153,11 @@ func TestIsInside_DotDotInFilenames(t *testing.T) {
 
 	// 合法：..foo 开头文件名
 	validFile := filepath.Join(baseDir, "..foo", "model.ysm")
-	if err := IsInside(baseDir, validFile); err != nil {
-		t.Fatalf("BUG-6: '..foo' 合法文件名被误判为逃逸, err=%v", err)
-	}
+	testutil.NoError(t, IsInside(baseDir, validFile), "BUG-6: '..foo' 合法文件名被误判为逃逸")
 
 	// 合法：..bar.baz 文件名
 	validFile2 := filepath.Join(baseDir, "..bar.baz")
-	if err := IsInside(baseDir, validFile2); err != nil {
-		t.Fatalf("BUG-6: '..bar.baz' 合法文件名被误判为逃逸, err=%v", err)
-	}
+	testutil.NoError(t, IsInside(baseDir, validFile2), "BUG-6: '..bar.baz' 合法文件名被误判为逃逸")
 
 	// 合法：.. 作为唯一文件名（不加分隔符，即 baseDir 下名为 ".." 的目录）
 	// filepath.Join 会将 ".." 归一化为上级目录，这里用手动拼接
@@ -187,9 +171,7 @@ func TestIsInside_DotDotInFilenames(t *testing.T) {
 
 	// 真逃逸：.. + 分隔符 必须拒绝
 	escapedFile := filepath.Join(baseDir, "..", "evil.ysm")
-	if err := IsInside(baseDir, escapedFile); err == nil {
-		t.Fatal("BUG-6: 真 '..' 逃逸未拒绝")
-	}
+	testutil.NotNil(t, IsInside(baseDir, escapedFile), "BUG-6: 真 '..' 逃逸未拒绝")
 
 	t.Log("FIXED/INFO(BUG-6): '..foo' 等合法名放行，真 '..' 逃逸拒绝")
 }

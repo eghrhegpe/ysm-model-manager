@@ -109,9 +109,7 @@ func TestListContainerEntries(t *testing.T) {
 	got, err := a.ListContainerEntries(p, ".nbt,.litematic,.schematic")
 	testutil.NoError(t, err, "ListContainerEntries 返回 error")
 	want := []string{"builds/house.nbt", "builds/tower.litematic", "maps/area.schematic"}
-	if len(got) != len(want) {
-		t.Fatalf("期望 %d 条，实际 %d: %v", len(want), len(got), got)
-	}
+	testutil.Equal(t, len(got), len(want), "期望 %d 条，实际 %v", len(want), got) // 前置守卫：等长才逐位比对
 	for i := range want {
 		if got[i] != want[i] {
 			t.Errorf("got[%d] = %q，期望 %q", i, got[i], want[i])

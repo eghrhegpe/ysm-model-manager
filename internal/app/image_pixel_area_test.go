@@ -2,6 +2,8 @@ package app
 
 import (
 	"testing"
+
+	"ysm-model-manager/internal/testutil"
 )
 
 // ===== imagePixelArea（纹理尺寸序的核心度量）=====
@@ -55,42 +57,30 @@ func TestImagePixelArea_NonImage(t *testing.T) {
 		{"JPEG无SOF段", append(append([]byte{}, jpegSOI...), jpegSegment(0xE0, []byte("JFIF\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"))...)},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := imagePixelArea(tc.data); got != 0 {
-				t.Fatalf("无法解析应返回 0, got %d", got)
-			}
+			testutil.Equal(t, imagePixelArea(tc.data), 0, "无法解析应返回 0")
 		})
 	}
 }
 
 func TestImagePixelArea_PNG(t *testing.T) {
 	// 面积 = w*h 且为 big-endian：512×512 主贴图 vs 64×64 装饰
-	if got := imagePixelArea(pngHeader(512, 512)); got != 512*512 {
-		t.Fatalf("512x512 = %d, want %d", got, 512*512)
-	}
-	if got := imagePixelArea(pngHeader(1, 1)); got != 1 {
-		t.Fatalf("1x1 = %d, want 1", got)
-	}
+	testutil.Equal(t, imagePixelArea(pngHeader(512, 512)), 512*512, "512x512")
+	testutil.Equal(t, imagePixelArea(pngHeader(1, 1)), 1, "1x1")
 	// 宽高不对称：验证字段未串位（w 在 offset 16，h 在 offset 20）
-	if got := imagePixelArea(pngHeader(300, 7)); got != 300*7 {
-		t.Fatalf("300x7 = %d, want %d（宽高字段串位？）", got, 300*7)
-	}
+	testutil.Equal(t, imagePixelArea(pngHeader(300, 7)), 300*7, "300x7（宽高字段串位？）")
 }
 
 func TestImagePixelArea_JPEG(t *testing.T) {
 	t.Run("SOF0基础", func(t *testing.T) {
 		data := append(append([]byte{}, jpegSOI...), jpegSegment(0xC0, sofPayload(512, 256))...)
-		if got := imagePixelArea(data); got != 512*256 {
-			t.Fatalf("SOF0 = %d, want %d", got, 512*256)
-		}
+		testutil.Equal(t, imagePixelArea(data), 512*256, "SOF0")
 	})
 
 	t.Run("跨过APP0段后命中SOF2(渐进式)", func(t *testing.T) {
 		data := append([]byte{}, jpegSOI...)
 		data = append(data, jpegSegment(0xE0, []byte("JFIF\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"))...)
 		data = append(data, jpegSegment(0xC2, sofPayload(64, 32))...)
-		if got := imagePixelArea(data); got != 64*32 {
-			t.Fatalf("SOF2 = %d, want %d", got, 64*32)
-		}
+		testutil.Equal(t, imagePixelArea(data), 64*32, "SOF2")
 	})
 
 	t.Run("跳过无尺寸的DHT段不误判为SOF", func(t *testing.T) {
@@ -98,9 +88,7 @@ func TestImagePixelArea_JPEG(t *testing.T) {
 		data := append([]byte{}, jpegSOI...)
 		data = append(data, jpegSegment(0xC4, []byte{0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09})...)
 		data = append(data, jpegSegment(0xC0, sofPayload(100, 200))...)
-		if got := imagePixelArea(data); got != 100*200 {
-			t.Fatalf("DHT 后 SOF = %d, want %d（DHT/DAC/JPG 排除失效）", got, 100*200)
-		}
+		testutil.Equal(t, imagePixelArea(data), 100*200, "DHT 后 SOF（DHT/DAC/JPG 排除失效）")
 	})
 
 	t.Run("跳过RSTn标记", func(t *testing.T) {
@@ -108,26 +96,20 @@ func TestImagePixelArea_JPEG(t *testing.T) {
 		data = append(data, 0xFF, 0xD0) // RST0：无长度字段，只前进 2 字节
 		data = append(data, 0xFF, 0xD1)
 		data = append(data, jpegSegment(0xC0, sofPayload(8, 16))...)
-		if got := imagePixelArea(data); got != 8*16 {
-			t.Fatalf("RST 后 SOF = %d, want %d", got, 8*16)
-		}
+		testutil.Equal(t, imagePixelArea(data), 8*16, "RST 后 SOF")
 	})
 
 	t.Run("填充字节非FF时逐字节前进", func(t *testing.T) {
 		// APP0(长度4) 走完后 i=8 落在填充字节 0x41/0x42 上：扫描须逐字节 i++ 直到下一个 0xFF
 		data := []byte{0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x04, 0x00, 0x00, 0x41, 0x42}
 		data = append(data, jpegSegment(0xC0, sofPayload(20, 10))...)
-		if got := imagePixelArea(data); got != 20*10 {
-			t.Fatalf("填充后 SOF = %d, want %d", got, 20*10)
-		}
+		testutil.Equal(t, imagePixelArea(data), 20*10, "填充后 SOF")
 	})
 
 	t.Run("数据不足以容纳SOF段返回0", func(t *testing.T) {
 		// 循环守卫 i+9 <= len(data) 必须先成立才会读到 SOF，截断流在守卫处即停
 		short := []byte{0xFF, 0xD8, 0xFF, 0xC0, 0x00, 0x11, 0x08}
-		if got := imagePixelArea(short); got != 0 {
-			t.Fatalf("截断数据应返回 0, got %d", got)
-		}
+		testutil.Equal(t, imagePixelArea(short), 0, "截断数据应返回 0")
 	})
 }
 
@@ -185,26 +167,16 @@ func TestOrderTexBySize_Priority(t *testing.T) {
 	wantNames := []string{"main", "wide", "arrow", "tieA", "tieB", "broken"}
 	wantData := []string{"d:main", "d:wide", "d:arrow", "d:tieA", "d:tieB", "d:broken"}
 
-	if len(gotNames) != len(wantNames) {
-		t.Fatalf("排序长度不匹配: got %v, want %v", gotNames, wantNames)
-	}
-	for i := range wantNames {
-		if gotNames[i] != wantNames[i] {
-			t.Fatalf("纹理序优先级错（第 %d 位）:\n  got:  %v\n  want: %v", i, gotNames, wantNames)
-		}
-		if gotData[i] != wantData[i] {
-			t.Fatalf("names/datas 错位（第 %d 位）:\n  got:  %v\n  want: %v", i, gotData, wantData)
-		}
-	}
+	testutil.Equal(t, gotNames, wantNames, "纹理序优先级错")
+	testutil.Equal(t, gotData, wantData, "names/datas 错位")
 }
 
 // TestOrderTexBySize_SingleAndEmpty 边界：0/1 项直接原样返回，不进排序
 func TestOrderTexBySize_SingleAndEmpty(t *testing.T) {
-	if n, d := orderTexBySize(nil, nil, nil); len(n) != 0 || len(d) != 0 {
-		t.Fatalf("空输入应原样返回，got %v %v", n, d)
-	}
-	n, d := orderTexBySize([]string{"only"}, []string{"d:only"}, []ysmTexItem{{name: "only", raw: pngHeader(8, 8)}})
-	if len(n) != 1 || n[0] != "only" || d[0] != "d:only" {
-		t.Fatalf("单项应原样返回，got %v %v", n, d)
-	}
+	n, d := orderTexBySize(nil, nil, nil)
+	testutil.Equal(t, len(n), 0, "空输入应原样返回")
+	testutil.Equal(t, len(d), 0, "空输入应原样返回")
+	n, d = orderTexBySize([]string{"only"}, []string{"d:only"}, []ysmTexItem{{name: "only", raw: pngHeader(8, 8)}})
+	testutil.Equal(t, n, []string{"only"}, "单项应原样返回")
+	testutil.Equal(t, d, []string{"d:only"}, "单项应原样返回")
 }

@@ -33,9 +33,8 @@ func TestSingleModelBench_SerializedPayloadMeasured(t *testing.T) {
 			break
 		}
 	}
-	if serial == nil {
-		t.Fatalf("缺少 ⑥ 序列化模拟 阶段: %+v", stages)
-	}
+	// NotNil 序贯守卫：serial 非 nil 后才解引用 serial.Bytes（失败即 Goexit）
+	testutil.NotNil(t, serial, "缺少 ⑥ 序列化模拟 阶段: %+v", stages)
 
 	// benchFakeApp.AnalyzeBedrockModel 返回固定模型 → 期望字节数可精确复算
 	// （与替身逐字对齐：Bones 物化是替身的契约，见 bench_concurrent_test.go 该桩注释）

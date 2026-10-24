@@ -48,29 +48,27 @@ func TestSyncAllPanicResetsPending(t *testing.T) {
 
 	// 第一轮执行中再触发一次 → 应仅置 syncPending=true，不并发重入
 	w.syncAll()
-	if !w.syncRunning {
-		t.Fatal("syncRunning should be true during first round execution")
-	}
-	if !w.syncPending {
-		t.Fatal("re-entry should set syncPending=true")
-	}
+	testutil.Equal(t, w.syncRunning, true, "syncRunning should be true during first round execution")
+	testutil.Equal(t, w.syncPending, true, "re-entry should set syncPending=true")
 
 	close(release) // 放行第一轮 → panic → recover → 应复位状态并续跑一轮（再次 panic，同样兜底）
+	// select 超时分支改标志位：不直接 Fatal，收尾统一断言（超时即失败）
+	timedOut := false
 	select {
 	case <-done:
 	case <-time.After(5 * time.Second):
-		t.Fatal("first syncAll did not return (panic recovery path stuck?)")
+		timedOut = true
 	}
+	testutil.Equal(t, timedOut, false, "first syncAll did not return (panic recovery path stuck?)")
 
 	// 状态必须归零：panic 恢复不得残留 syncRunning / syncPending
 	w.mu.Lock()
 	running, pending := w.syncRunning, w.syncPending
 	w.mu.Unlock()
-	if running || pending {
-		t.Fatalf("state not reset after panic recovery: syncRunning=%v syncPending=%v", running, pending)
-	}
+	// OR 型复合条件拆序贯：panic 恢复后两个状态标志都必须归零（原 if running||pending）
+	testutil.Equal(t, running, false, "state not reset after panic recovery: syncRunning=%v", running)
+	testutil.Equal(t, pending, false, "state not reset after panic recovery: syncPending=%v", pending)
 	// 续跑语义：pending 在 panic 前已置位 → 恢复后应串行续跑（scanFn 第二次进入）
-	if got := calls.Load(); got < 2 {
-		t.Fatalf("after panic recovery should continue on pending, scanFn called %d times", got)
-	}
+	got := calls.Load()
+	testutil.Equal(t, got < 2, false, "after panic recovery should continue on pending, scanFn called %d times", got)
 }

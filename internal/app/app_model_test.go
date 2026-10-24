@@ -16,14 +16,15 @@ import (
 func TestBuild3DSpecFromGeometryJSON(t *testing.T) {
 	a := &App{}
 	// 空输入 → error（got 为 nil）
-	if got, err := a.Build3DSpecFromGeometryJSON(""); err == nil || got != nil {
-		t.Fatalf("空输入应返回 error 且 got=nil，got %v err %v", got, err)
-	}
+	got, err := a.Build3DSpecFromGeometryJSON("")
+	testutil.NotNil(t, err, "空输入应返回 error")
+	testutil.Nil(t, got, "空输入应返回 nil spec")
 	// 非法 JSON → ParseBedrockGeometry 返回 nil → 空 spec（无 models）。
 	// 旧契约返回 "{}"（不可用信号）；新契约下仍无 models，但非 error。
-	if got, err := a.Build3DSpecFromGeometryJSON("not json"); got == nil || len(got.Models) != 0 {
-		t.Fatalf("非法 JSON 应返回空 spec，got %v err %v", got, err)
-	}
+	// 原断言仅以 got 判 pass/fail（err 只进失败消息）——err 置 _，不新增 err 契约。
+	got, _ = a.Build3DSpecFromGeometryJSON("not json")
+	testutil.NotNil(t, got, "非法 JSON 应返回非 nil spec") // 前置守卫：got 非 nil 才解引用 .Models
+	testutil.Equal(t, len(got.Models), 0, "非法 JSON 应返回空 spec（无 models）")
 
 	const geo = `{
   "format_version": "1.12.0",
@@ -32,15 +33,11 @@ func TestBuild3DSpecFromGeometryJSON(t *testing.T) {
     "bones": [{ "name": "bone1", "pivot": [0, 0, 0], "cubes": [{ "origin": [-4, 0, -4], "size": [8, 8, 8] }] }]
   }]
 }`
-	got, err := a.Build3DSpecFromGeometryJSON(geo)
+	got, err = a.Build3DSpecFromGeometryJSON(geo)
 	testutil.NoError(t, err, "合法 geometry 不应报错")
 	testutil.NotNil(t, got, "合法 geometry 应构建出 spec，got nil")
-	if len(got.Models) == 0 {
-		t.Fatalf("spec.models 为空")
-	}
-	if len(got.Models[0].MeshGroups) == 0 {
-		t.Fatalf("spec.models[0].MeshGroups 为空（cube 未生成顶点）")
-	}
+	testutil.Equal(t, len(got.Models) == 0, false, "spec.models 为空")
+	testutil.Equal(t, len(got.Models[0].MeshGroups) == 0, false, "spec.models[0].MeshGroups 为空（cube 未生成顶点）")
 }
 
 // TestReadFileBytes_MultiRootGuard：路径守卫须放行兄弟类型根（VrcRoot 等），
@@ -62,9 +59,7 @@ func TestReadFileBytes_MultiRootGuard(t *testing.T) {
 	a := repoApp(t, cfg)
 
 	// 1. 兄弟类型根（VrcRoot）内文件可读（修复目标）
-	if got := a.ReadFileBytes(vrmPath); string(got) != "vrm-bytes" {
-		t.Fatalf("VrcRoot 内文件应可读，got %q", got)
-	}
+	testutil.Equal(t, string(a.ReadFileBytes(vrmPath)), "vrm-bytes", "VrcRoot 内文件应可读")
 	// 2. ysm 根内文件仍可读（回归：既有行为不破坏）
 	ysmRoot := filepath.Join(cfg.FilesRoot, registry.GroupStorageRoot("ysm"))
 	if err := os.MkdirAll(ysmRoot, 0o755); err != nil {
@@ -74,18 +69,12 @@ func TestReadFileBytes_MultiRootGuard(t *testing.T) {
 	if err := os.WriteFile(ysmPath, content, 0o644); err != nil {
 		testutil.NoError(t, err)
 	}
-	if got := a.ReadFileBytes(ysmPath); string(got) != "vrm-bytes" {
-		t.Fatalf("ysm 根内文件应可读，got %q", got)
-	}
+	testutil.Equal(t, string(a.ReadFileBytes(ysmPath)), "vrm-bytes", "ysm 根内文件应可读")
 	// 3. 根外路径仍拒绝（守卫未放松）
 	outside := filepath.Join(base, "..", "outside.ysm")
-	if got := a.ReadFileBytes(outside); got != nil {
-		t.Fatalf("根外路径应拒绝（nil），got %q", got)
-	}
+	testutil.Nil(t, a.ReadFileBytes(outside), "根外路径应拒绝（nil）")
 	// 4. 不存在的文件返回 nil（不抛错，与既有契约一致）
-	if got := a.ReadFileBytes(filepath.Join(vrcRoot, "missing.vrm")); got != nil {
-		t.Fatalf("不存在文件应返回 nil，got %q", got)
-	}
+	testutil.Nil(t, a.ReadFileBytes(filepath.Join(vrcRoot, "missing.vrm")), "不存在文件应返回 nil")
 }
 
 // ===== ReadFileBytesBatch 并发优化测试 =====
@@ -107,9 +96,7 @@ func TestReadFileBytesBatch_SmallBatchSequential(t *testing.T) {
 	}
 	a := repoApp(t, types.AppConfig{FilesRoot: base})
 	result := a.ReadFileBytesBatch(paths)
-	if len(result) != 4 {
-		t.Fatalf("期望 4 个文件，got %d", len(result))
-	}
+	testutil.Equal(t, len(result), 4, "期望 4 个文件")
 	for _, p := range paths {
 		if result[p] == nil {
 			t.Errorf("文件 %s 应存在于结果中", p)
@@ -135,9 +122,7 @@ func TestReadFileBytesBatch_LargeBatchConcurrent(t *testing.T) {
 	}
 	a := repoApp(t, types.AppConfig{FilesRoot: base})
 	result := a.ReadFileBytesBatch(paths)
-	if len(result) != n {
-		t.Fatalf("期望 %d 个文件，got %d", n, len(result))
-	}
+	testutil.Equal(t, len(result), n, "期望 %d 个文件", n)
 	for _, p := range paths {
 		if result[p] == nil {
 			t.Errorf("文件 %s 应存在于结果中", p)
@@ -169,9 +154,7 @@ func TestReadFileBytesBatch_PathGuardConcurrent(t *testing.T) {
 	a := repoApp(t, types.AppConfig{FilesRoot: base})
 	result := a.ReadFileBytesBatch(paths)
 	// 仅合法路径应出现在结果中
-	if len(result) != 10 {
-		t.Fatalf("期望 10 个合法文件，got %d", len(result))
-	}
+	testutil.Equal(t, len(result), 10, "期望 10 个合法文件")
 	for _, p := range validPaths {
 		if result[p] == nil {
 			t.Errorf("合法文件 %s 应存在", p)
@@ -183,9 +166,7 @@ func TestReadFileBytesBatch_PathGuardConcurrent(t *testing.T) {
 func TestReadFileBytesBatch_EmptyInput(t *testing.T) {
 	a := repoApp(t, types.AppConfig{FilesRoot: t.TempDir()})
 	result := a.ReadFileBytesBatch(nil)
-	if len(result) != 0 {
-		t.Fatalf("空输入应返回空 map，got %d", len(result))
-	}
+	testutil.Equal(t, len(result), 0, "空输入应返回空 map")
 }
 
 // TestReadFileBytesBatch_ConcurrentPartialFail: 并发路径下部分文件不存在不影响其他
@@ -207,9 +188,7 @@ func TestReadFileBytesBatch_ConcurrentPartialFail(t *testing.T) {
 	}
 	a := repoApp(t, types.AppConfig{FilesRoot: base})
 	result := a.ReadFileBytesBatch(paths)
-	if len(result) != 10 {
-		t.Fatalf("期望 10 个存在的文件，got %d", len(result))
-	}
+	testutil.Equal(t, len(result), 10, "期望 10 个存在的文件")
 }
 
 // TestReadFileBytesBatch_Boundary4Sequential: 恰好 4 个文件 → 走顺序路径
@@ -225,9 +204,7 @@ func TestReadFileBytesBatch_Boundary4Sequential(t *testing.T) {
 	}
 	a := repoApp(t, types.AppConfig{FilesRoot: base})
 	result := a.ReadFileBytesBatch(paths)
-	if len(result) != 4 {
-		t.Fatalf("4 文件应全读，got %d", len(result))
-	}
+	testutil.Equal(t, len(result), 4, "4 文件应全读")
 	// 验证返回内容正确性
 	for i, p := range paths {
 		expected := fmt.Sprintf("content_%d", i)
@@ -250,9 +227,7 @@ func TestReadFileBytesBatch_Boundary5Concurrent(t *testing.T) {
 	}
 	a := repoApp(t, types.AppConfig{FilesRoot: base})
 	result := a.ReadFileBytesBatch(paths)
-	if len(result) != 5 {
-		t.Fatalf("5 文件应全读，got %d", len(result))
-	}
+	testutil.Equal(t, len(result), 5, "5 文件应全读")
 	for i, p := range paths {
 		expected := fmt.Sprintf("content_%d", i)
 		if string(result[p]) != expected {
@@ -277,9 +252,7 @@ func TestReadFileBytesBatch_SequentialPartialFail(t *testing.T) {
 
 	a := repoApp(t, types.AppConfig{FilesRoot: base})
 	result := a.ReadFileBytesBatch(paths)
-	if len(result) != 3 {
-		t.Fatalf("期望 3 个存在的文件，got %d", len(result))
-	}
+	testutil.Equal(t, len(result), 3, "期望 3 个存在的文件")
 	// 验证存在的文件内容正确
 	for i := range 3 {
 		p := paths[i]
@@ -367,9 +340,7 @@ func TestReadFileBytesBatchWithMeta_SymlinkEscapeRejected(t *testing.T) {
 	}
 	// symlink 指向根外：不得读出任何字节——条目保留但 Data=nil、ErrorCode 标越权
 	entry, exists := result[linkPath]
-	if !exists {
-		t.Fatalf("越权条目必须保留在 result（结构化错误通道，ADR-331-d1），got 缺席")
-	}
+	testutil.Equal(t, exists, true, "越权条目必须保留在 result（结构化错误通道，ADR-331-d1）") // 前置守卫：存在才比对 Data
 	if len(entry.Data) != 0 {
 		t.Error("根内 symlink 指向根外文件不得被读取（越权读防御回归）")
 	}
@@ -405,9 +376,7 @@ func TestReadFileBytesBatchWithMeta_StructuredErrorFields(t *testing.T) {
 	result := a.ReadFileBytesBatchWithMeta([]string{valid, outside, missing})
 	for _, p := range []string{valid, outside, missing} {
 		e, ok := result[p]
-		if !ok {
-			t.Fatalf("条目 %s 必须保留在 result（ADR-331-d1）, got 缺席", p)
-		}
+		testutil.Equal(t, ok, true, "条目 %s 必须保留在 result（ADR-331-d1）", p) // 前置守卫：存在才比对字段
 		if e.ErrorCode == "" && len(e.Data) == 0 {
 			t.Errorf("条目 %s 成功但无数据", p)
 		}

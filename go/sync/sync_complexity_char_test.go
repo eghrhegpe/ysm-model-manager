@@ -67,13 +67,11 @@ func writeCharFile(t *testing.T, path, content string) {
 	}
 }
 
-// readCharFile 读回文件内容并断言等于 want（零 I/O 意外时直接 Fatal）。
+// readCharFile 读回文件内容并断言等于 want（零 I/O 意外时直接失败）。
 func readCharFile(t *testing.T, path, want string) {
 	t.Helper()
 	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("读取 %s 失败: %v", filepath.Base(path), err)
-	}
+	testutil.NoError(t, err, "读取 %s 失败", filepath.Base(path))
 	if string(data) != want {
 		t.Errorf("%s 内容被改动: got %q want %q", filepath.Base(path), data, want)
 	}

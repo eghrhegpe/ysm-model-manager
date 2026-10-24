@@ -21,12 +21,8 @@ const perm = 0o644
 
 func TestRenameFile_IllegalChars(t *testing.T) {
 	t.Parallel()
-	if err := RenameFile("/x", "bad:name"); err == nil {
-		t.Fatal("非法字符应报错")
-	}
-	if err := RenameFile("", "name"); err == nil {
-		t.Fatal("空路径应报错")
-	}
+	testutil.NotNil(t, RenameFile("/x", "bad:name"), "非法字符应报错")
+	testutil.NotNil(t, RenameFile("", "name"), "空路径应报错")
 }
 
 func TestRenameFile_Ok(t *testing.T) {
@@ -51,13 +47,10 @@ func TestRenameFile_TargetExists(t *testing.T) {
 	if err := os.WriteFile(b, []byte("y"), perm); err != nil {
 		testutil.NoError(t, err)
 	}
-	if err := RenameFile(a, "b.ysm"); err == nil {
-		t.Fatal("目标已存在应报错")
-	}
+	testutil.NotNil(t, RenameFile(a, "b.ysm"), "目标已存在应报错")
 	testutil.FileExists(t, a, "原文件应保留")
-	if data, _ := os.ReadFile(b); string(data) != "y" {
-		t.Fatalf("目标文件不应被覆盖: %q", data)
-	}
+	data, _ := os.ReadFile(b)
+	testutil.Equal(t, string(data), "y", "目标文件不应被覆盖")
 }
 
 func TestRenameFile_BlockYsmJson(t *testing.T) {
@@ -65,9 +58,7 @@ func TestRenameFile_BlockYsmJson(t *testing.T) {
 	dir := t.TempDir()
 	modelDir := makeYsmModelDir(dir, "模型E")
 	ysmPath := filepath.Join(modelDir, "ysm.json")
-	if err := RenameFile(ysmPath, "renamed.json"); err == nil {
-		t.Fatal("ysm.json 单文件重命名应被拒绝")
-	}
+	testutil.NotNil(t, RenameFile(ysmPath, "renamed.json"), "ysm.json 单文件重命名应被拒绝")
 	// 普通文件重命名不受影响
 	testutil.NoError(t, RenameFile(filepath.Join(modelDir, "main.json"), "new-main.json"))
 }
@@ -79,12 +70,8 @@ func TestCreateDir_Validation(t *testing.T) {
 	root := t.TempDir()
 	testutil.NoError(t, CreateDir(root, "ok"))
 	testutil.FileExists(t, filepath.Join(root, "ok"))
-	if err := CreateDir(root, "../escape"); err == nil {
-		t.Fatal("路径穿越应被拦截")
-	}
-	if err := CreateDir(root, "  "); err == nil {
-		t.Fatal("空目录名应报错")
-	}
+	testutil.NotNil(t, CreateDir(root, "../escape"), "路径穿越应被拦截")
+	testutil.NotNil(t, CreateDir(root, "  "), "空目录名应报错")
 }
 
 // ====== MoveModelFile ======
@@ -99,14 +86,10 @@ func TestMoveModelFile(t *testing.T) {
 	dst := filepath.Join(dir, "sub")
 	testutil.NoError(t, MoveModelFile(dir, src, dst))
 	testutil.FileExists(t, filepath.Join(dst, "a.ysm"))
-	if err := MoveModelFile(dir, "", dst); err == nil {
-		t.Fatal("空源应报错")
-	}
+	testutil.NotNil(t, MoveModelFile(dir, "", dst), "空源应报错")
 	// root 守卫：源在仓库外应拒绝
 	outside := t.TempDir()
-	if err := MoveModelFile(dir, outside+"/x.ysm", dst); err == nil {
-		t.Fatal("仓库外源应被拒绝")
-	}
+	testutil.NotNil(t, MoveModelFile(dir, outside+"/x.ysm", dst), "仓库外源应被拒绝")
 }
 
 func TestMoveModelFile_YsmJsonLiftsParentDir(t *testing.T) {
@@ -160,9 +143,7 @@ func TestMoveModelFile_TargetExists(t *testing.T) {
 	if err := os.WriteFile(src2, []byte("y"), perm); err != nil {
 		testutil.NoError(t, err)
 	}
-	if err := MoveModelFile(base, src2, dstDir); err == nil {
-		t.Fatal("目标已存在应报错")
-	}
+	testutil.NotNil(t, MoveModelFile(base, src2, dstDir), "目标已存在应报错")
 	testutil.FileExists(t, filepath.Join(dstDir, "a.ysm"), "首次移动目标应保留")
 }
 
@@ -171,9 +152,7 @@ func TestMoveModelFile_YsmJsonLiftSelfNestingRejected(t *testing.T) {
 	base := t.TempDir()
 	modelDir := makeYsmModelDir(base, "模型A")
 	dstDir := filepath.Join(modelDir, "sub")
-	if err := MoveModelFile(base, filepath.Join(modelDir, "ysm.json"), dstDir); err == nil {
-		t.Fatal("ysm.json 提升后 dstDir 位于模型目录内部应被拒绝")
-	}
+	testutil.NotNil(t, MoveModelFile(base, filepath.Join(modelDir, "ysm.json"), dstDir), "ysm.json 提升后 dstDir 位于模型目录内部应被拒绝")
 	testutil.FileNotExists(t, dstDir, "被拒移动不得留空 junk 目录")
 	testutil.FileExists(t, filepath.Join(modelDir, "ysm.json"))
 }
@@ -183,9 +162,7 @@ func TestMoveModelFile_SelfNestingRejected(t *testing.T) {
 	base := t.TempDir()
 	modelDir := makeYsmModelDir(base, "模型A")
 	dstDir := filepath.Join(modelDir, "inner", "deeper")
-	if err := MoveModelFile(base, modelDir, dstDir); err == nil {
-		t.Fatal("dstDir 位于 src 子树内应被拒绝")
-	}
+	testutil.NotNil(t, MoveModelFile(base, modelDir, dstDir), "dstDir 位于 src 子树内应被拒绝")
 	testutil.FileNotExists(t, dstDir)
 }
 
@@ -221,12 +198,8 @@ func TestMoveCopyModelFile_SymlinkMiddleSegmentRejected(t *testing.T) {
 	if err := os.Symlink(outside, symDir); err != nil {
 		testutil.NoError(t, err)
 	}
-	if err := MoveModelFile(repo, src, filepath.Join(symDir, "sub")); err == nil {
-		t.Fatal("MoveModelFile 应拦截指向仓库外的 symlink 中间段")
-	}
-	if err := CopyModelFile(repo, src, filepath.Join(symDir, "sub")); err == nil {
-		t.Fatal("CopyModelFile 应拦截指向仓库外的 symlink 中间段")
-	}
+	testutil.NotNil(t, MoveModelFile(repo, src, filepath.Join(symDir, "sub")), "MoveModelFile 应拦截指向仓库外的 symlink 中间段")
+	testutil.NotNil(t, CopyModelFile(repo, src, filepath.Join(symDir, "sub")), "CopyModelFile 应拦截指向仓库外的 symlink 中间段")
 	testutil.FileNotExists(t, filepath.Join(outside, "sub", "m.ysm"))
 }
 
@@ -240,16 +213,12 @@ func TestCopyModelFile_PathSafety(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	// 目录外 → 拦截
-	if err := CopyModelFile(root, src, t.TempDir()); err == nil {
-		t.Fatal("目录外目标应被拒绝")
-	}
+	testutil.NotNil(t, CopyModelFile(root, src, t.TempDir()), "目录外目标应被拒绝")
 	// 目录内 → 成功
 	dst := filepath.Join(root, "sub")
 	testutil.NoError(t, CopyModelFile(root, src, dst))
 	// 防覆盖
-	if err := CopyModelFile(root, src, dst); err == nil {
-		t.Fatal("目标已存在应报错")
-	}
+	testutil.NotNil(t, CopyModelFile(root, src, dst), "目标已存在应报错")
 	// root 为空跳过校验
 	testutil.NoError(t, CopyModelFile("", src, t.TempDir()))
 }
@@ -285,9 +254,7 @@ func TestCopyModelFile_DirRecursiveCopiesBan(t *testing.T) {
 
 	testutil.NoError(t, CopyModelFile(base, modelDir, dstRepo))
 	testutil.FileExists(t, filepath.Join(dstRepo, "模型D", "ysm.json.ban"))
-	if err := CopyModelFile(base, modelDir, dstRepo); err == nil {
-		t.Fatal("重复复制到已存在目标应报错")
-	}
+	testutil.NotNil(t, CopyModelFile(base, modelDir, dstRepo), "重复复制到已存在目标应报错")
 }
 
 func TestCopyModelFile_SelfNestingRejected(t *testing.T) {
@@ -295,9 +262,7 @@ func TestCopyModelFile_SelfNestingRejected(t *testing.T) {
 	base := t.TempDir()
 	modelDir := makeYsmModelDir(base, "模型A")
 	dstDir := filepath.Join(modelDir, "inner")
-	if err := CopyModelFile(base, modelDir, dstDir); err == nil {
-		t.Fatal("dstDir 位于 src 子树内应被拒绝")
-	}
+	testutil.NotNil(t, CopyModelFile(base, modelDir, dstDir), "dstDir 位于 src 子树内应被拒绝")
 	testutil.FileNotExists(t, dstDir)
 }
 
@@ -313,9 +278,7 @@ func TestWriteModelFolder_SymlinkParentRejected(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	files := []types.ImportFileItem{{RelPath: "ysm.json", Base64: b64(`{}`)}}
-	if err := WriteModelFolder(repo, "", "symdir", files); err == nil {
-		t.Fatal("父目录为 symlink 应拒绝写入")
-	}
+	testutil.NotNil(t, WriteModelFolder(repo, "", "symdir", files), "父目录为 symlink 应拒绝写入")
 }
 
 func TestWriteModelFolder_SymlinkFileRejected(t *testing.T) {
@@ -338,9 +301,7 @@ func TestWriteModelFolder_SymlinkFileRejected(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	files := []types.ImportFileItem{{RelPath: "ysm.json", Base64: b64(`{"spec":1}`)}}
-	if err := WriteModelFolder(repo, "", "模型A", files); err == nil {
-		t.Fatal("目标文件为 symlink 应拒绝")
-	}
+	testutil.NotNil(t, WriteModelFolder(repo, "", "模型A", files), "目标文件为 symlink 应拒绝")
 }
 
 // ====== ToggleModelEnable ======
@@ -354,17 +315,13 @@ func TestToggleModelEnable(t *testing.T) {
 	}
 	// 禁用
 	enabled, err := ToggleModelEnable(dir, path)
-	if err != nil || enabled {
-		t.Fatalf("禁用应返回 enabled=false: %v", err)
-	}
-	if !IsFileBanned(path + ".disabled") {
-		t.Fatal(".disabled 应被识别")
-	}
+	testutil.NoError(t, err, "禁用应返回 enabled=false")
+	testutil.Equal(t, enabled, false, "禁用应返回 enabled=false")
+	testutil.Equal(t, IsFileBanned(path+".disabled"), true, ".disabled 应被识别")
 	// 启用
 	enabled, err = ToggleModelEnable(dir, path+".disabled")
-	if err != nil || !enabled {
-		t.Fatalf("启用应返回 enabled=true: %v", err)
-	}
+	testutil.NoError(t, err, "启用应返回 enabled=true")
+	testutil.Equal(t, enabled, true, "启用应返回 enabled=true")
 	testutil.FileExists(t, path)
 }
 
@@ -386,9 +343,7 @@ func TestToggleModelEnable_RootRejectedCaseInsensitive(t *testing.T) {
 		testutil.NotNil(t, err, "Windows 大小写不同的根应拒绝")
 	} else {
 		_, err := ToggleModelEnable(dir, mixed)
-		if err != nil && IsFileBanned(dir+".ban") {
-			t.Fatal("POSIX 上根目录不得被改名")
-		}
+		testutil.Equal(t, err != nil && IsFileBanned(dir+".ban"), false, "POSIX 上根目录不得被改名")
 	}
 }
 
@@ -399,19 +354,15 @@ func TestToggleModelEnable_YsmJsonDisablesParentDir(t *testing.T) {
 	ysmPath := filepath.Join(modelDir, "ysm.json")
 
 	enabled, err := ToggleModelEnable(base, ysmPath)
-	if err != nil || enabled {
-		t.Fatalf("禁用应返回 enabled=false: %v", err)
-	}
+	testutil.NoError(t, err, "禁用应返回 enabled=false")
+	testutil.Equal(t, enabled, false, "禁用应返回 enabled=false")
 	bannedDir := modelDir + ".disabled"
 	testutil.FileExists(t, bannedDir)
-	if !IsFileBanned(filepath.Join(bannedDir, "ysm.json")) {
-		t.Fatal("目录级 .disabled 下的 ysm.json 应识别为禁用")
-	}
+	testutil.Equal(t, IsFileBanned(filepath.Join(bannedDir, "ysm.json")), true, "目录级 .disabled 下的 ysm.json 应识别为禁用")
 	// 启用还原
 	enabled, err = ToggleModelEnable(base, filepath.Join(bannedDir, "ysm.json"))
-	if err != nil || !enabled {
-		t.Fatalf("启用应返回 enabled=true: %v", err)
-	}
+	testutil.NoError(t, err, "启用应返回 enabled=true")
+	testutil.Equal(t, enabled, true, "启用应返回 enabled=true")
 	testutil.FileExists(t, modelDir)
 }
 
@@ -425,9 +376,8 @@ func TestToggleModelEnable_RootLevelYsmJsonFallsBack(t *testing.T) {
 	modelDir := makeYsmModelDir(base, "模型A")
 
 	enabled, err := ToggleModelEnable(base, rootYsm)
-	if err != nil || enabled {
-		t.Fatalf("禁用应返回 enabled=false: %v", err)
-	}
+	testutil.NoError(t, err, "禁用应返回 enabled=false")
+	testutil.Equal(t, enabled, false, "禁用应返回 enabled=false")
 	testutil.FileExists(t, rootYsm+".disabled")
 	testutil.FileNotExists(t, base+".disabled")
 	testutil.FileExists(t, modelDir)
@@ -446,13 +396,10 @@ func TestToggleModelEnable_MixedDirEnableSymmetry(t *testing.T) {
 	testutil.NoError(t, err)
 	bannedDir := modelDir + ".disabled"
 	bannedLoose := filepath.Join(bannedDir, "loose.ysm")
-	if !IsFileBanned(bannedLoose) {
-		t.Fatal("目录级 .disabled 下的松散 .ysm 应识别为禁用")
-	}
+	testutil.Equal(t, IsFileBanned(bannedLoose), true, "目录级 .disabled 下的松散 .ysm 应识别为禁用")
 	enabled, err := ToggleModelEnable(base, bannedLoose)
-	if err != nil || !enabled {
-		t.Fatalf("启用应返回 enabled=true: %v", err)
-	}
+	testutil.NoError(t, err, "启用应返回 enabled=true")
+	testutil.Equal(t, enabled, true, "启用应返回 enabled=true")
 	testutil.FileExists(t, modelDir)
 	testutil.FileExists(t, looseYsm, "松散 .ysm 不应被重命名")
 }
@@ -466,13 +413,10 @@ func TestToggleModelEnable_UpperBanSuffix(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	bannedYsm := filepath.Join(bannedDir, "ysm.json")
-	if !IsFileBanned(bannedYsm) {
-		t.Fatal("父目录级 .BAN 应识别为禁用")
-	}
+	testutil.Equal(t, IsFileBanned(bannedYsm), true, "父目录级 .BAN 应识别为禁用")
 	enabled, err := ToggleModelEnable(base, bannedYsm)
-	if err != nil || !enabled {
-		t.Fatalf("启用应返回 enabled=true: %v", err)
-	}
+	testutil.NoError(t, err, "启用应返回 enabled=true")
+	testutil.Equal(t, enabled, true, "启用应返回 enabled=true")
 	testutil.FileExists(t, modelDir)
 }
 
@@ -524,15 +468,14 @@ func TestIsFileBanned_DirBan(t *testing.T) {
 func TestGetPackInfo(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
-	if info := GetPackInfo("", dir); info.Name != "" {
-		t.Fatalf("无 pack.json 应返回空: %+v", info)
-	}
+	info := GetPackInfo("", dir)
+	testutil.Equal(t, info.Name, "", "无 pack.json 应返回空: %+v", info)
 	content := `{"name":"测试包","description":"描述"}`
 	jsonPath := filepath.Join(dir, "ysm-pack.json")
 	if err := os.WriteFile(jsonPath, []byte(content), perm); err != nil {
 		testutil.NoError(t, err)
 	}
-	info := GetPackInfo("", dir)
+	info = GetPackInfo("", dir)
 	testutil.Equal(t, info.Name, "测试包")
 	testutil.Equal(t, info.Description, "描述")
 	// BOM 前缀剥离
@@ -553,17 +496,13 @@ func TestFindPreviewImage(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	model := filepath.Join(dir, "m.ysm")
-	if got := FindPreviewImage(model); got != "" {
-		t.Fatalf("无预览图应返回空: %q", got)
-	}
+	testutil.Equal(t, FindPreviewImage(model), "", "无预览图应返回空")
 	pngPath := filepath.Join(dir, "m.png")
 	if err := os.WriteFile(pngPath, []byte("PNGDATA"), perm); err != nil {
 		testutil.NoError(t, err)
 	}
 	got := FindPreviewImage(model)
-	if !strings.HasPrefix(got, "data:image/png;base64,") {
-		t.Fatalf("应返回 data URI: %q", got)
-	}
+	testutil.Equal(t, strings.HasPrefix(got, "data:image/png;base64,"), true, "应返回 data URI: %q", got)
 }
 
 func TestFindPreviewImage_JpgMime(t *testing.T) {
@@ -574,9 +513,7 @@ func TestFindPreviewImage_JpgMime(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	got := FindPreviewImage(model)
-	if !strings.HasPrefix(got, "data:image/jpeg;base64,") {
-		t.Fatalf(".jpg 应返回 image/jpeg data URI: %q", got)
-	}
+	testutil.Equal(t, strings.HasPrefix(got, "data:image/jpeg;base64,"), true, ".jpg 应返回 image/jpeg data URI: %q", got)
 }
 
 func TestFindPreviewImage_FallbackCandidates(t *testing.T) {
@@ -592,9 +529,7 @@ func TestFindPreviewImage_FallbackCandidates(t *testing.T) {
 			testutil.NoError(t, err)
 		}
 		got := FindPreviewImage(model)
-		if !strings.HasPrefix(got, "data:image/png;base64,") {
-			t.Fatalf("候选 %s 应命中: %q", c, got)
-		}
+		testutil.Equal(t, strings.HasPrefix(got, "data:image/png;base64,"), true, "候选 %s 应命中: %q", c, got)
 	}
 }
 
@@ -615,19 +550,13 @@ func TestRenameDir_Ok(t *testing.T) {
 func TestRenameDir_EmptyArgs(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
-	if err := RenameDir("", "new"); err == nil {
-		t.Fatal("空 oldPath 应报错")
-	}
-	if err := RenameDir(dir, ""); err == nil {
-		t.Fatal("空 newName 应报错")
-	}
+	testutil.NotNil(t, RenameDir("", "new"), "空 oldPath 应报错")
+	testutil.NotNil(t, RenameDir(dir, ""), "空 newName 应报错")
 }
 
 func TestRenameDir_NonExistent(t *testing.T) {
 	t.Parallel()
-	if err := RenameDir("/nonexistent/path", "new"); err == nil {
-		t.Fatal("不存在的目录应报错")
-	}
+	testutil.NotNil(t, RenameDir("/nonexistent/path", "new"), "不存在的目录应报错")
 }
 
 func TestRenameDir_TargetExists(t *testing.T) {
@@ -641,9 +570,7 @@ func TestRenameDir_TargetExists(t *testing.T) {
 	if err := os.MkdirAll(existing, 0755); err != nil {
 		testutil.NoError(t, err)
 	}
-	if err := RenameDir(old, "new"); err == nil {
-		t.Fatal("目标已存在应报错")
-	}
+	testutil.NotNil(t, RenameDir(old, "new"), "目标已存在应报错")
 	testutil.FileExists(t, old)
 }
 
@@ -837,12 +764,8 @@ func TestWriteModelFolder_MissingSupported(t *testing.T) {
 		{RelPath: "main.json", Base64: b64(`{}`)},
 		{RelPath: "zh_cn.json", Base64: b64(`{}`)},
 	}
-	if err := WriteModelFolder(repo, "", "模型B", files); err == nil {
-		t.Fatal("无支持文件应拒绝")
-	}
-	if err := WriteModelFolder(repo, "", "模型B2", nil); err == nil {
-		t.Fatal("空文件列表应拒绝")
-	}
+	testutil.NotNil(t, WriteModelFolder(repo, "", "模型B", files), "无支持文件应拒绝")
+	testutil.NotNil(t, WriteModelFolder(repo, "", "模型B2", nil), "空文件列表应拒绝")
 }
 
 func TestWriteModelFolder_PlainFolderWithYsm(t *testing.T) {
@@ -882,19 +805,13 @@ func TestWriteModelFolder_ExistsAndTraversal(t *testing.T) {
 	repo := t.TempDir()
 	files := []types.ImportFileItem{{RelPath: "ysm.json", Base64: b64(`{}`)}}
 	testutil.NoError(t, WriteModelFolder(repo, "", "模型C", files))
-	if err := WriteModelFolder(repo, "", "模型C", files); err == nil {
-		t.Fatal("目标已存在应报错")
-	}
+	testutil.NotNil(t, WriteModelFolder(repo, "", "模型C", files), "目标已存在应报错")
 	evil := []types.ImportFileItem{
 		{RelPath: "ysm.json", Base64: b64(`{}`)},
 		{RelPath: "../evil.json", Base64: b64(`{}`)},
 	}
-	if err := WriteModelFolder(repo, "", "模型D", evil); err == nil {
-		t.Fatal("路径穿越应拒绝")
-	}
-	if err := WriteModelFolder(repo, "", "a/b", files); err == nil {
-		t.Fatal("非法文件夹名应拒绝")
-	}
+	testutil.NotNil(t, WriteModelFolder(repo, "", "模型D", evil), "路径穿越应拒绝")
+	testutil.NotNil(t, WriteModelFolder(repo, "", "a/b", files), "非法文件夹名应拒绝")
 }
 
 // ====== DeleteModelFile ======
@@ -922,9 +839,7 @@ func TestDeleteModelFile_SingleFile(t *testing.T) {
 
 func TestDeleteModelFile_EmptyArgs(t *testing.T) {
 	t.Parallel()
-	if err := DeleteModelFile("", ""); err == nil {
-		t.Fatal("空参数应报错")
-	}
+	testutil.NotNil(t, DeleteModelFile("", ""), "空参数应报错")
 }
 
 func TestDeleteModelFile_RootLevelYsmJsonFallsBack(t *testing.T) {
@@ -949,9 +864,7 @@ func TestDeleteModelFile_OutOfRootRejected(t *testing.T) {
 	if err := os.WriteFile(ysmPath, []byte(`{"spec":1}`), perm); err != nil {
 		testutil.NoError(t, err)
 	}
-	if err := DeleteModelFile(base, ysmPath); err == nil {
-		t.Fatal("仓库外 ysm.json 删除应被拒绝")
-	}
+	testutil.NotNil(t, DeleteModelFile(base, ysmPath), "仓库外 ysm.json 删除应被拒绝")
 	testutil.FileExists(t, ysmPath)
 }
 
@@ -962,9 +875,7 @@ func TestCopyModelFile_SourceNotFound(t *testing.T) {
 	root := t.TempDir()
 	src := filepath.Join(root, "no-such-file.ysm")
 	dst := filepath.Join(root, "sub")
-	if err := CopyModelFile(root, src, dst); err == nil {
-		t.Fatal("源文件不存在应报错")
-	}
+	testutil.NotNil(t, CopyModelFile(root, src, dst), "源文件不存在应报错")
 }
 
 func TestCopyModelFile_SourceIsDir(t *testing.T) {
@@ -988,9 +899,7 @@ func TestCopyModelFile_TargetExists(t *testing.T) {
 	}
 	dstDir := filepath.Join(root, "sub")
 	testutil.NoError(t, CopyModelFile(root, src, dstDir))
-	if err := CopyModelFile(root, src, dstDir); err == nil {
-		t.Fatal("目标已存在应报错")
-	}
+	testutil.NotNil(t, CopyModelFile(root, src, dstDir), "目标已存在应报错")
 }
 
 func TestCopyModelFile_DstDirCreated(t *testing.T) {

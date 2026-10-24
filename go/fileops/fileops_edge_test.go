@@ -26,9 +26,7 @@ func TestRemoveDir_RelativeTraversal(t *testing.T) {
 
 	err := RemoveDir("..")
 	// 相对路径穿越无论由 RemoveDir 自身校验还是 OS 层拒绝，都必须失败
-	if err == nil {
-		t.Fatalf("BUG(INFO-TRAVERSAL): RemoveDir(\"..\") 未报错——父目录可能已被删除")
-	}
+	testutil.NotNil(t, err, "BUG(INFO-TRAVERSAL): RemoveDir(\"..\") 未报错——父目录可能已被删除")
 	t.Logf("守卫: RemoveDir(\"..\") 被拒绝: %v", err)
 }
 
@@ -48,9 +46,7 @@ func TestRemoveDir_NULByte(t *testing.T) {
 
 	// NUL 字节注入——OS 层会拒绝，但 RemoveDir 自身无显式校验
 	err := RemoveDir(tmpDir + "\x00" + "..\\evil")
-	if err == nil {
-		t.Fatalf("BUG(INFO-NUL): RemoveDir NUL 字节未报错（可能静默截断到其他目录）")
-	}
+	testutil.NotNil(t, err, "BUG(INFO-NUL): RemoveDir NUL 字节未报错（可能静默截断到其他目录）")
 	t.Logf("守卫: RemoveDir NUL 字节路径被拒绝: %v", err)
 }
 
@@ -82,12 +78,10 @@ func TestFindPreviewImage_EmptyPath(t *testing.T) {
 // 恒传仓库根（a.ysmRoot() 非空），空 root 是畸形输入——按防御纵深显式拒绝，
 // 杜绝退化到相对当前工作目录创建（原行为会污染 CWD）。
 func TestCreateDir_EmptyRoot(t *testing.T) {
-	if err := CreateDir("", "subdir"); err == nil {
-		t.Fatal("CreateDir 空 root 应被拒绝（禁止退化到 CWD 创建）")
-	}
-	if err := CreateDir("   ", "subdir"); err == nil {
-		t.Fatal("空白 root 应被拒绝")
-	}
+	err := CreateDir("", "subdir")
+	testutil.NotNil(t, err, "CreateDir 空 root 应被拒绝（禁止退化到 CWD 创建）")
+	err = CreateDir("   ", "subdir")
+	testutil.NotNil(t, err, "空白 root 应被拒绝")
 }
 
 // =====================================================================
@@ -128,8 +122,6 @@ func TestExtractPreviewTexture_NULByte(t *testing.T) {
 	tmpDir := t.TempDir()
 	badPath := filepath.Join(tmpDir, "file.ysm") + "\x00" + ".zip"
 	result := ExtractPreviewTexture(badPath)
-	if result != "" {
-		t.Fatalf("BUG(INFO-NUL-TEX): ExtractPreviewTexture 接受 NUL 字节路径, result=%q", result)
-	}
+	testutil.Equal(t, result, "", "BUG(INFO-NUL-TEX): ExtractPreviewTexture 接受 NUL 字节路径, result=%q", result)
 	t.Log("守卫: ExtractPreviewTexture NUL 路径返回空")
 }

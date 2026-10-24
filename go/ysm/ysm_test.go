@@ -20,29 +20,21 @@ version="1.0"
 func TestIsYSMJar(t *testing.T) {
 	// 含 mods.toml 且 modId=yes_steve_model → true
 	jar := testutil.WriteZipFile(t, "mod.jar", map[string]string{"META-INF/mods.toml": ysmModToml})
-	if !IsYSMJar(jar) {
-		t.Fatal("含 yes_steve_model 的 jar 应识别为 YSM")
-	}
+	testutil.Equal(t, IsYSMJar(jar), true, "含 yes_steve_model 的 jar 应识别为 YSM")
 	// neoforge.mods.toml 同样支持
 	jarNeo := testutil.WriteZipFile(t, "mod.jar", map[string]string{"META-INF/neoforge.mods.toml": ysmModToml})
-	if !IsYSMJar(jarNeo) {
-		t.Fatal("neoforge.mods.toml 应识别")
-	}
+	testutil.Equal(t, IsYSMJar(jarNeo), true, "neoforge.mods.toml 应识别")
 	// 非 YSM mod
 	jar2 := testutil.WriteZipFile(t, "mod.jar", map[string]string{"META-INF/mods.toml": `[[mods]]
 modId="other_mod"
 `})
-	if IsYSMJar(jar2) {
-		t.Fatal("非 YSM jar 不应识别")
-	}
+	testutil.Equal(t, IsYSMJar(jar2), false, "非 YSM jar 不应识别")
 	// 非 zip 文件 → false
 	bad := filepath.Join(t.TempDir(), "bad.jar")
 	if err := os.WriteFile(bad, []byte("notzip"), 0644); err != nil {
 		testutil.NoError(t, err)
 	}
-	if IsYSMJar(bad) {
-		t.Fatal("非 zip 不应识别")
-	}
+	testutil.Equal(t, IsYSMJar(bad), false, "非 zip 不应识别")
 }
 
 // ADR-033 截断探测边界回归——mods.toml 超过 1MB 应跳过（IsYSMJar false）
@@ -50,9 +42,7 @@ func TestIsYSMJar_ModsTomlOverLimit(t *testing.T) {
 	// 1MB+1 触发 ysm.go 的 limit+1 探测
 	huge := strings.Repeat("x", (1<<20)+1)
 	jar := testutil.WriteZipFile(t, "mod.jar", map[string]string{"META-INF/mods.toml": huge})
-	if IsYSMJar(jar) {
-		t.Fatal("mods.toml 超过 1MB 应跳过（截断检测），实际误判为 YSM")
-	}
+	testutil.Equal(t, IsYSMJar(jar), false, "mods.toml 超过 1MB 应跳过（截断检测），实际误判为 YSM")
 }
 
 // 覆盖 ysm.go:60-66 的空格分隔变体 `key = "value"`（默认测试只覆盖 `key="value"`）
@@ -62,17 +52,13 @@ func TestIsYSMJar_SpaceVariants(t *testing.T) {
 modId = "yes_steve_model"
 displayName = "Yes Steve Model"
 `})
-	if !IsYSMJar(jar) {
-		t.Fatal("空格分隔 key/value 的 mods.toml 也应识别为 YSM")
-	}
+	testutil.Equal(t, IsYSMJar(jar), true, "空格分隔 key/value 的 mods.toml 也应识别为 YSM")
 	// 仅 modId 匹配、displayName 缺失 → 不应识别（两字段都需命中）
 	jar2 := testutil.WriteZipFile(t, "mod.jar", map[string]string{"META-INF/mods.toml": `[[mods]]
 modId="yes_steve_model"
 displayName="Other Name"
 `})
-	if IsYSMJar(jar2) {
-		t.Fatal("displayName 不匹配不应识别")
-	}
+	testutil.Equal(t, IsYSMJar(jar2), false, "displayName 不匹配不应识别")
 	// 多 [[mods]] 块：第二块才命中 → 应识别
 	jar3 := testutil.WriteZipFile(t, "mod.jar", map[string]string{"META-INF/mods.toml": `[[mods]]
 modId="other_mod"
@@ -81,34 +67,24 @@ displayName="Other"
 modId="yes_steve_model"
 displayName="Yes Steve Model"
 `})
-	if !IsYSMJar(jar3) {
-		t.Fatal("第二 [[mods]] 块命中应识别")
-	}
+	testutil.Equal(t, IsYSMJar(jar3), true, "第二 [[mods]] 块命中应识别")
 }
 
 func TestHasModInDir(t *testing.T) {
 	// 未知 rtype → 默认 true（非模型类）
-	if !HasModInDir(t.TempDir(), "resourcepack") {
-		t.Fatal("未知类型应默认 true")
-	}
+	testutil.Equal(t, HasModInDir(t.TempDir(), "resourcepack"), true, "未知类型应默认 true")
 	// 已知 rtype 但目录不存在 → false
-	if HasModInDir(filepath.Join(t.TempDir(), "nope"), "ysm") {
-		t.Fatal("目录不存在应 false")
-	}
+	testutil.Equal(t, HasModInDir(filepath.Join(t.TempDir(), "nope"), "ysm"), false, "目录不存在应 false")
 	// EntityPlayer：文件名匹配即可
 	modsDir := t.TempDir()
 	_ = os.WriteFile(filepath.Join(modsDir, "mmdskin-2.0.jar"), []byte("x"), 0644)
-	if !HasModInDir(modsDir, "EntityPlayer") {
-		t.Fatal("EntityPlayer 文件名匹配应 true")
-	}
+	testutil.Equal(t, HasModInDir(modsDir, "EntityPlayer"), true, "EntityPlayer 文件名匹配应 true")
 	// ysm：需打开 ZIP 确认
 	jar := testutil.WriteZipFile(t, "mod.jar", map[string]string{"META-INF/mods.toml": ysmModToml})
 	if err := os.Rename(jar, filepath.Join(modsDir, "ysm-1.0.jar")); err != nil {
 		testutil.NoError(t, err)
 	}
-	if !HasModInDir(modsDir, "ysm") {
-		t.Fatal("ysm jar 应 true")
-	}
+	testutil.Equal(t, HasModInDir(modsDir, "ysm"), true, "ysm jar 应 true")
 }
 
 // MMD 组所有子类型（场景模型/动画/表情/舞台/着色器）与 PMX 模型共用 MMD Skin
@@ -139,9 +115,7 @@ func TestHasModInDir_MMDSubtypes(t *testing.T) {
 	// vrm 在 ModKeywords 中有独立 "mmdskin" 关键词，含 mmdskin jar 应识别为 true
 	vrcDir := t.TempDir()
 	_ = os.WriteFile(filepath.Join(vrcDir, "mmdskin-1.0.jar"), []byte("x"), 0644)
-	if !HasModInDir(vrcDir, "vrm") {
-		t.Fatal("vrm 含 mmdskin 关键词应识别为 true")
-	}
+	testutil.Equal(t, HasModInDir(vrcDir, "vrm"), true, "vrm 含 mmdskin 关键词应识别为 true")
 }
 
 // ====== AnalyzeYSMModel ======
@@ -331,14 +305,10 @@ version="1.0.0"
 
 func TestIsModJar_TLM(t *testing.T) {
 	jar := testutil.WriteZipFile(t, "mod.jar", map[string]string{"META-INF/mods.toml": tlmModToml})
-	if !IsModJar(jar, "touhou_little_maid", "Touhou Little Maid") {
-		t.Fatal("含 touhou_little_maid 的 jar 应识别为车万女仆")
-	}
+	testutil.Equal(t, IsModJar(jar, "touhou_little_maid", "Touhou Little Maid"), true, "含 touhou_little_maid 的 jar 应识别为车万女仆")
 	// 非车万女仆 mod → false
 	jar2 := testutil.WriteZipFile(t, "mod.jar", map[string]string{"META-INF/mods.toml": ysmModToml})
-	if IsModJar(jar2, "touhou_little_maid", "Touhou Little Maid") {
-		t.Fatal("非车万女仆 jar 不应识别")
-	}
+	testutil.Equal(t, IsModJar(jar2, "touhou_little_maid", "Touhou Little Maid"), false, "非车万女仆 jar 不应识别")
 }
 
 func TestHasModInDir_MaidModel(t *testing.T) {
@@ -346,15 +316,11 @@ func TestHasModInDir_MaidModel(t *testing.T) {
 	// 文件名不含 touhou 但内容匹配 → 应识别（不靠文件名）
 	jar := testutil.WriteZipFile(t, "random-name.jar", map[string]string{"META-INF/mods.toml": tlmModToml})
 	_ = os.Rename(jar, filepath.Join(modsDir, "random-name.jar"))
-	if !HasModInDir(modsDir, "maid-model") {
-		t.Fatal("内容匹配 touhou_little_maid 应识别（不靠文件名）")
-	}
+	testutil.Equal(t, HasModInDir(modsDir, "maid-model"), true, "内容匹配 touhou_little_maid 应识别（不靠文件名）")
 	// 清空 mods 目录 → false
 	if err := os.RemoveAll(modsDir); err != nil {
 		testutil.NoError(t, err)
 	}
 	empty := t.TempDir()
-	if HasModInDir(empty, "maid-model") {
-		t.Fatal("无 mod 时 maid-model 应返回 false")
-	}
+	testutil.Equal(t, HasModInDir(empty, "maid-model"), false, "无 mod 时 maid-model 应返回 false")
 }

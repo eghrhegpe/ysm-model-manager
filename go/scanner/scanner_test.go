@@ -33,12 +33,9 @@ func TestScanEntries_FilterAndHash(t *testing.T) {
 	entries := ScanEntries(dir)
 	testutil.Equal(t, len(entries), 3, "应扫描到 3 个（a.ysm / c.ysm.ban / ysm.json）")
 	for _, e := range entries {
-		if e.Name == "a.ysm" && e.Hash == "" {
-			t.Fatal("a.ysm 应计算 SHA256 哈希")
-		}
-		if e.Name == "c.ysm.ban" && e.Ext != ".ysm" {
-			t.Fatalf(".ban 应恢复原扩展名: %s", e.Ext)
-		}
+		// AND 型复合失败条件：不可拆序贯，保留单一复合布尔断言
+		testutil.Equal(t, e.Name == "a.ysm" && e.Hash == "", false, "a.ysm 应计算 SHA256 哈希")
+		testutil.Equal(t, e.Name == "c.ysm.ban" && e.Ext != ".ysm", false, ".ban 应恢复原扩展名: %s", e.Ext)
 	}
 }
 
@@ -147,9 +144,9 @@ func TestListModelAuthors(t *testing.T) {
 	}
 	authors := ListModelAuthors(entries)
 	testutil.Equal(t, len(authors), 2, "应 2 个作者")
-	if authors[0].Name != "作者A" || authors[0].Count != 3 {
-		t.Fatalf("作者A 应 count=3（含 .ban），实际 %+v", authors[0])
-	}
+	// OR 型复合条件拆序贯（len 守卫在前——Equal 失败即 Goexit，[0] 解引用仅在其通过后执行）
+	testutil.Equal(t, authors[0].Name, "作者A", "作者A 应 count=3（含 .ban），实际 %+v", authors[0])
+	testutil.Equal(t, authors[0].Count, 3, "作者A 应 count=3（含 .ban），实际 %+v", authors[0])
 	testutil.Equal(t, authors[1].Count, 1, "作者B 应 count=1")
 }
 
@@ -162,9 +159,9 @@ func TestListModelAuthors_BracketEdges(t *testing.T) {
 	}
 	authors := ListModelAuthors(entries)
 	testutil.Equal(t, len(authors), 1, "应只统计到 [正常]")
-	if authors[0].Name != "正常" || authors[0].Count != 1 {
-		t.Fatalf("作者解析失败: %+v", authors[0])
-	}
+	// OR 型复合条件拆序贯（len 守卫在前——Equal 失败即 Goexit，[0] 解引用仅在其通过后执行）
+	testutil.Equal(t, authors[0].Name, "正常", "作者解析失败: %+v", authors[0])
+	testutil.Equal(t, authors[0].Count, 1, "作者解析失败: %+v", authors[0])
 }
 
 // TestExtractAuthor `[作者]` 解析单点判据（锐评 2026-10-16 导出为唯一出口，
@@ -194,9 +191,9 @@ func TestScanLocalAuthors(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(dir, "[作者C]模型.ysm"), []byte("x"), perm)
 	creators := ScanLocalAuthors(map[string]string{"ysm": dir, "EntityPlayer": ""})
 	testutil.Equal(t, len(creators), 1, "应 1 个创作者")
-	if creators[0].Name != "作者C" || strings.Join(creators[0].RTypes, ",") != "ysm" {
-		t.Fatalf("作者解析失败: %+v", creators[0])
-	}
+	// OR 型复合条件拆序贯（len 守卫在前——Equal 失败即 Goexit，[0] 解引用仅在其通过后执行）
+	testutil.Equal(t, creators[0].Name, "作者C", "作者解析失败: %+v", creators[0])
+	testutil.Equal(t, strings.Join(creators[0].RTypes, ","), "ysm", "作者解析失败: %+v", creators[0])
 }
 
 func TestGenerateRepoIndex(t *testing.T) {
@@ -209,12 +206,8 @@ func TestGenerateRepoIndex(t *testing.T) {
 	data, err := os.ReadFile(indexPath)
 	testutil.NoError(t, err)
 	s := string(data)
-	if !strings.Contains(s, `"name": "a.ysm"`) {
-		t.Fatalf("index.json 应含 a.ysm: %s", s)
-	}
-	if strings.Contains(s, "b.txt") {
-		t.Fatal("index.json 不应含 b.txt")
-	}
+	testutil.Equal(t, strings.Contains(s, `"name": "a.ysm"`), true, "index.json 应含 a.ysm: %s", s)
+	testutil.Equal(t, strings.Contains(s, "b.txt"), false, "index.json 不应含 b.txt")
 	testutil.FileExists(t, filepath.Join(dir, ".github", "workflows", "generate-index.yml"), "workflow 应生成")
 }
 
@@ -241,9 +234,7 @@ func TestEmitScanError_DedupWindow(t *testing.T) {
 	emitScanError("[scanner] walk error: %s: %v", "/y", "perm")
 
 	testutil.Equal(t, len(calls), 2, "窗口内同错误应去重（共 2 条）")
-	if calls[0] == calls[1] {
-		t.Fatalf("不同目录错误不应去重，实际两条相同: %v", calls)
-	}
+	testutil.Equal(t, calls[0] == calls[1], false, "不同目录错误不应去重，实际两条相同: %v", calls)
 }
 
 func TestEmitScanError_ExpiredWindow(t *testing.T) {

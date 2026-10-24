@@ -18,9 +18,7 @@ import (
 // TestLogger_NewLogger_EmptyConfigDir configDir=="" 应返回内存态 logger（save no-op）
 func TestLogger_NewLogger_EmptyConfigDir(t *testing.T) {
 	l := NewLogger("")
-	if l == nil {
-		t.Fatal("NewLogger(\"\") 应返回非 nil")
-	}
+	testutil.NotNil(t, l, `NewLogger("") 应返回非 nil`)
 	if l.path != "" {
 		t.Errorf("内存态 logger 的 path 应为空, got %q", l.path)
 	}
@@ -53,14 +51,10 @@ func TestLogger_NewLogger_MkdirFail(t *testing.T) {
 func TestLogger_Load_ReadErrorBackup(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "logs.json")
-	if err := os.MkdirAll(path, 0755); err != nil { // 目录占位 → ReadFile 报非 NotExist 错误
-		t.Fatal(err)
-	}
+	testutil.NoError(t, os.MkdirAll(path, 0755)) // 目录占位 → ReadFile 报非 NotExist 错误
 	l := &Logger{path: path}
 	l.load()
-	if _, err := os.Stat(path + corruptSuffix); err != nil {
-		t.Fatalf("读失败后应备份为 .corrupt: %v", err)
-	}
+	testutil.FileExists(t, path+corruptSuffix, "读失败后应备份为 .corrupt")
 	if got := l.GetAll(); len(got) != 0 {
 		t.Errorf("读失败后日志应为空, got %d", len(got))
 	}
@@ -85,9 +79,7 @@ func TestLogger_Load_ReadErrorBackupRenameFail(t *testing.T) {
 	if got := l.GetAll(); len(got) != 0 {
 		t.Errorf("读失败后日志应为空, got %d", len(got))
 	}
-	if _, err := os.Stat(corrupt); err != nil {
-		t.Fatalf("占用中的 .corrupt 不应被破坏: %v", err)
-	}
+	testutil.FileExists(t, corrupt, "占用中的 .corrupt 不应被破坏")
 }
 
 // TestLogger_Load_CorruptJSONBackupRenameFail 损坏 JSON 备份失败（目标占用）仅记录不崩溃
@@ -109,9 +101,7 @@ func TestLogger_Load_CorruptJSONBackupRenameFail(t *testing.T) {
 	if got := l.GetAll(); len(got) != 0 {
 		t.Errorf("损坏 JSON 加载后应为空, got %d", len(got))
 	}
-	if _, err := os.Stat(corrupt); err != nil {
-		t.Fatalf("占用中的 .corrupt 不应被破坏: %v", err)
-	}
+	testutil.FileExists(t, corrupt, "占用中的 .corrupt 不应被破坏")
 }
 
 // TestLogger_Load_JSONNull 合法 JSON 但为 null 时 logs 保持 nil → 应归一为空切片
@@ -123,9 +113,7 @@ func TestLogger_Load_JSONNull(t *testing.T) {
 	}
 	l := &Logger{path: path}
 	l.load()
-	if l.logs == nil {
-		t.Fatal("null JSON 加载后 logs 不应为 nil")
-	}
+	testutil.NotNil(t, l.logs, "null JSON 加载后 logs 不应为 nil")
 	if got := l.GetAll(); len(got) != 0 {
 		t.Errorf("null JSON 应加载为空, got %d", len(got))
 	}
@@ -164,9 +152,9 @@ func TestLogger_Load_MemoryLogger(t *testing.T) {
 		t.Errorf("内存态 load 后应为空, got %d", len(got))
 	}
 	(&Logger{}).load() // 裸结构体 load 同样 no-op
-	if _, err := os.Stat(corruptSuffix); !os.IsNotExist(err) {
-		t.Fatalf("内存态 load 不应落盘 .corrupt: %v", err)
-	}
+	_, statErr := os.Stat(corruptSuffix)
+	// IsNotExist 口径（第六波惯例）：文件不存在即通过
+	testutil.Equal(t, os.IsNotExist(statErr), true, "内存态 load 不应落盘 .corrupt: %v", statErr)
 }
 
 // ====== cleanupStaleCorrupt ======
@@ -183,9 +171,8 @@ func TestLogger_CleanupStaleCorrupt(t *testing.T) {
 
 	t.Run("不存在时跳过", func(t *testing.T) {
 		l.cleanupStaleCorrupt()
-		if _, err := os.Stat(corrupt); !os.IsNotExist(err) {
-			t.Fatalf("不应创建 .corrupt: %v", err)
-		}
+		_, statErr := os.Stat(corrupt)
+		testutil.Equal(t, os.IsNotExist(statErr), true, "不应创建 .corrupt: %v", statErr)
 	})
 
 	t.Run("过新的不删", func(t *testing.T) {
@@ -197,9 +184,7 @@ func TestLogger_CleanupStaleCorrupt(t *testing.T) {
 			testutil.NoError(t, err)
 		}
 		l.cleanupStaleCorrupt()
-		if _, err := os.Stat(corrupt); err != nil {
-			t.Fatalf("保留期内 .corrupt 不应被删除: %v", err)
-		}
+		testutil.FileExists(t, corrupt, "保留期内 .corrupt 不应被删除")
 		os.Remove(corrupt)
 	})
 
@@ -212,9 +197,8 @@ func TestLogger_CleanupStaleCorrupt(t *testing.T) {
 			testutil.NoError(t, err)
 		}
 		l.cleanupStaleCorrupt()
-		if _, err := os.Stat(corrupt); !os.IsNotExist(err) {
-			t.Fatalf("超过保留期的 .corrupt 应被删除: %v", err)
-		}
+		_, statErr := os.Stat(corrupt)
+		testutil.Equal(t, os.IsNotExist(statErr), true, "超过保留期的 .corrupt 应被删除: %v", statErr)
 	})
 
 	t.Run("删除失败仅记录", func(t *testing.T) {
@@ -229,9 +213,7 @@ func TestLogger_CleanupStaleCorrupt(t *testing.T) {
 			testutil.NoError(t, err)
 		}
 		l.cleanupStaleCorrupt() // 非空目录 os.Remove 失败 → 仅记录
-		if _, err := os.Stat(corrupt); err != nil {
-			t.Fatalf("删除失败时 .corrupt 应保留: %v", err)
-		}
+		testutil.FileExists(t, corrupt, "删除失败时 .corrupt 应保留")
 	})
 }
 
@@ -262,9 +244,7 @@ func TestLogger_Save_MkdirFail(t *testing.T) {
 func TestLogger_Save_WriteFileAtomicFail(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "logs.json")
-	if err := os.MkdirAll(path, 0755); err != nil { // 目录占位 → WriteFileAtomic 最终 rename 失败
-		t.Fatal(err)
-	}
+	testutil.NoError(t, os.MkdirAll(path, 0755)) // 目录占位 → WriteFileAtomic 最终 rename 失败
 	l := &Logger{path: path, logs: []types.ImportLog{{ModelName: "m"}}}
 	l.save() // 仅日志，不 panic
 	// 失败清理不变量：无临时文件残渣
@@ -287,9 +267,7 @@ func TestLogger_AddOp_Truncate(t *testing.T) {
 	long := strings.Repeat("界", 2000) // 2000 runes > maxFieldLen
 	l.AddOp("import", long, long, long, 0, "ok", long)
 	got := l.GetAll()
-	if len(got) != 1 {
-		t.Fatalf("应 1 条, got %d", len(got))
-	}
+	testutil.Equal(t, len(got), 1, "应 1 条, got %d", len(got))
 	for name, f := range map[string]string{
 		"ModelName": got[0].ModelName, "SourcePath": got[0].SourcePath,
 		"TargetDir": got[0].TargetDir, "ErrorMsg": got[0].ErrorMsg,
@@ -315,9 +293,7 @@ func TestLogger_AddOp_FieldLenExactBoundary(t *testing.T) {
 	exact := strings.Repeat("界", maxFieldLen) // 恰为上限
 	l.AddOp("import", exact, "s", "d", 0, "ok", "")
 	got := l.GetAll()
-	if len(got) != 1 {
-		t.Fatalf("应 1 条, got %d", len(got))
-	}
+	testutil.Equal(t, len(got), 1, "应 1 条, got %d", len(got))
 	if n := len([]rune(got[0].ModelName)); n != maxFieldLen {
 		t.Errorf("恰为 maxFieldLen 的字段不应截断, got %d rune", n)
 	}
@@ -354,9 +330,7 @@ func TestRuntimeBuffer_WriteRealloc(t *testing.T) {
 			testutil.NoError(t, err)
 		}
 	}
-	if got := len(b.GetAll()); got != 3 {
-		t.Fatalf("应保留 3 条, got %d", got)
-	}
+	testutil.Equal(t, len(b.GetAll()), 3, "应保留 3 条, got %d", len(b.GetAll()))
 	if got := cap(b.logs); got != 3 {
 		t.Errorf("重分配后 cap 应为 3, got %d", got)
 	}

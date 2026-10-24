@@ -32,21 +32,16 @@ func TestKeyCollisionWarnings_Pure(t *testing.T) {
 		},
 	}
 	got := keyCollisionWarnings(groups)
-	if len(got) != 2 {
-		t.Fatalf("期望 2 条告警（EntityPlayer/model_a + ysm/b），实际 %d：%v", len(got), got)
-	}
+	testutil.Equal(t, len(got), 2, "期望 2 条告警（EntityPlayer/model_a + ysm/b），实际 %d：%v", len(got), got)
 	// 确定性排序：rtype 升序（EntityPlayer < ysm）
-	if !strings.Contains(got[0], "model_a.pmx") || !strings.Contains(got[0], "model_a.pmd") {
-		t.Fatalf("第 1 条应为 EntityPlayer 组且点名两个文件名：%v", got)
-	}
-	if !strings.Contains(got[1], "b.ysm") || !strings.Contains(got[1], "b.7z") {
-		t.Fatalf("第 2 条应为 ysm 组且点名首末（.ysm/.7z，.json 省略）：%v", got)
-	}
+	// OR 拆序贯：len==2 已由上一 Equal 保证（失败即 Goexit），[0]/[1] 索引安全
+	testutil.Equal(t, strings.Contains(got[0], "model_a.pmx"), true, "第 1 条应为 EntityPlayer 组且点名两个文件名：%v", got)
+	testutil.Equal(t, strings.Contains(got[0], "model_a.pmd"), true, "第 1 条应为 EntityPlayer 组且点名两个文件名：%v", got)
+	testutil.Equal(t, strings.Contains(got[1], "b.ysm"), true, "第 2 条应为 ysm 组且点名首末（.ysm/.7z，.json 省略）：%v", got)
+	testutil.Equal(t, strings.Contains(got[1], "b.7z"), true, "第 2 条应为 ysm 组且点名首末（.ysm/.7z，.json 省略）：%v", got)
 	// 单扩展名组不得出现
 	for _, w := range got {
-		if strings.Contains(w, "solo") {
-			t.Fatalf("单扩展名组误报：%v", got)
-		}
+		testutil.Equal(t, strings.Contains(w, "solo"), false, "单扩展名组误报：%v", got)
 	}
 }
 
@@ -60,18 +55,14 @@ func TestAudit_KeyCollisionDetected(t *testing.T) {
 	testutil.WriteTestFile(t, filepath.Join(root, "PMX", "model_a.pmd"), "x")
 
 	res, err := AuditCtx(context.Background(), root)
-	if err != nil {
-		t.Fatalf("Audit 失败: %v", err)
-	}
+	testutil.NoError(t, err, "Audit 失败")
 	hit := 0
 	for _, w := range res.Warnings {
 		if strings.Contains(w, "model_a.pmx") && strings.Contains(w, "model_a.pmd") {
 			hit++
 		}
 	}
-	if hit != 1 {
-		t.Fatalf("期望恰好 1 条 dirLevel 键碰撞告警点名双文件，实际 %d：%v", hit, res.Warnings)
-	}
+	testutil.Equal(t, hit, 1, "期望恰好 1 条 dirLevel 键碰撞告警点名双文件，实际 %d：%v", hit, res.Warnings)
 }
 
 // ③ 单文件 / 单扩展名树零误报（P0 检测器不得把常规树当碰撞）。
@@ -81,13 +72,9 @@ func TestAudit_KeyCollisionNoFalsePositive(t *testing.T) {
 	testutil.WriteTestFile(t, filepath.Join(root, "PMX", "solo.pmx"), "x")
 
 	res, err := AuditCtx(context.Background(), root)
-	if err != nil {
-		t.Fatalf("Audit 失败: %v", err)
-	}
+	testutil.NoError(t, err, "Audit 失败")
 	for _, w := range res.Warnings {
-		if strings.Contains(w, "dirLevel 键碰撞") {
-			t.Fatalf("单扩展名树误报键碰撞告警：%v", res.Warnings)
-		}
+		testutil.Equal(t, strings.Contains(w, "dirLevel 键碰撞"), false, "单扩展名树误报键碰撞告警：%v", res.Warnings)
 	}
 }
 
@@ -100,13 +87,9 @@ func TestAudit_KeyCollisionAcrossTypesNoWarn(t *testing.T) {
 	testutil.WriteTestFile(t, filepath.Join(root, "ysm", "duo.ysm"), "x")
 
 	res, err := AuditCtx(context.Background(), root)
-	if err != nil {
-		t.Fatalf("Audit 失败: %v", err)
-	}
+	testutil.NoError(t, err, "Audit 失败")
 	for _, w := range res.Warnings {
-		if strings.Contains(w, "duo") {
-			t.Fatalf("跨 rtype 同 stem 误报（键空间互不相交）：%v", res.Warnings)
-		}
+		testutil.Equal(t, strings.Contains(w, "duo"), false, "跨 rtype 同 stem 误报（键空间互不相交）：%v", res.Warnings)
 	}
 }
 

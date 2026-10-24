@@ -23,9 +23,8 @@ func TestSanitizePath_NULByte(t *testing.T) {
 		return
 	}
 	// 未拒绝必须是干净路径——NUL 截断后的 ".." 逃逸片段不得残留
-	if strings.Contains(cleaned, "..") || strings.Contains(cleaned, "\\") {
-		t.Fatalf("BUG(NUL-1): sanitizePath 接受 NUL 截断后的逃逸片段, cleaned=%q", cleaned)
-	}
+	testutil.Equal(t, strings.Contains(cleaned, "..") || strings.Contains(cleaned, "\\"), false,
+		"BUG(NUL-1): sanitizePath 接受 NUL 截断后的逃逸片段, cleaned=%q", cleaned)
 	t.Logf("守卫: sanitizePath 返回已清理路径 %q", cleaned)
 }
 
@@ -65,9 +64,7 @@ func TestSimpleCopyImporter_RelativeSrc(t *testing.T) {
 	importer := NewSimpleCopy("ysm")
 	err := importer.Import(src, dstDir)
 	testutil.NoError(t, err, "SimpleCopyImporter 相对路径导入失败")
-	if _, statErr := os.Stat(dstDir); statErr != nil {
-		t.Fatalf("目标目录未创建: %v", statErr)
-	}
+	testutil.FileExists(t, dstDir, "目标目录未创建")
 	t.Log("守卫: 相对路径导入成功")
 }
 
@@ -96,9 +93,9 @@ func TestSimpleCopyImporter_SameDirSelfCopy(t *testing.T) {
 	err := importer.Import(src, tmpDir)
 	testutil.NoError(t, err, "SimpleCopyImporter 同目录自拷贝失败")
 	// 同目录复制不得破坏源文件
-	if data, rErr := os.ReadFile(src); rErr != nil || string(data) != "test" {
-		t.Fatalf("源文件被破坏: %v %q", rErr, string(data))
-	}
+	data, rErr := os.ReadFile(src)
+	testutil.NoError(t, rErr, "源文件被破坏")
+	testutil.Equal(t, string(data), "test", "源文件被破坏")
 	t.Log("守卫: 同目录自拷贝成功且源文件完好")
 }
 
@@ -129,9 +126,7 @@ func TestDirectoryCopyImporter_FileInsideDir(t *testing.T) {
 	// srcPath 为 modelDir/data.json——应取父目录 modelDir 作为导入源
 	err := importer.Import(filepath.Join(modelDir, "data.json"), dstDir)
 	testutil.NoError(t, err, "DirectoryCopyImporter 从子文件取父目录导入失败")
-	if _, statErr := os.Stat(dstDir); statErr != nil {
-		t.Fatalf("目标目录未创建: %v", statErr)
-	}
+	testutil.FileExists(t, dstDir, "目标目录未创建")
 	t.Log("守卫: 从子文件取父目录导入成功")
 }
 
@@ -154,9 +149,9 @@ func TestDirectoryCopyImporter_Import_SrcEqualsDst(t *testing.T) {
 	err := importer.Import(modelDir, tmpDir)
 	testutil.NotNil(t, err, "DirectoryCopyImporter 应拒绝 src==dst（源与目标相同）")
 	// 源模型文件夹不得被破坏/替换
-	if data, err := os.ReadFile(filepath.Join(modelDir, "model.pmx")); err != nil || string(data) != "pmx" {
-		t.Fatalf("源模型目录不应被破坏: %v %q", err, string(data))
-	}
+	data, err := os.ReadFile(filepath.Join(modelDir, "model.pmx"))
+	testutil.NoError(t, err, "源模型目录不应被破坏")
+	testutil.Equal(t, string(data), "pmx", "源模型目录不应被破坏")
 
 }
 
@@ -176,9 +171,9 @@ func TestDirectoryCopyImporter_Import_DstInsideSrc(t *testing.T) {
 	dstDir := filepath.Join(modelDir, "imports")
 	err := importer.Import(modelDir, dstDir)
 	testutil.NotNil(t, err, "DirectoryCopyImporter 应拒绝目标位于源文件夹内")
-	if data, err := os.ReadFile(filepath.Join(modelDir, "model.pmx")); err != nil || string(data) != "pmx" {
-		t.Fatalf("源模型目录不应被破坏: %v %q", err, string(data))
-	}
+	data, err := os.ReadFile(filepath.Join(modelDir, "model.pmx"))
+	testutil.NoError(t, err, "源模型目录不应被破坏")
+	testutil.Equal(t, string(data), "pmx", "源模型目录不应被破坏")
 }
 
 // ---------- 11. copyDir 直调 src==dst 守卫 ----------
@@ -187,10 +182,9 @@ func TestCopyDir_SrcEqualsDst(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(src, "a.txt"), []byte("aaa"), 0644); err != nil {
 		testutil.NoError(t, err)
 	}
-	if err := copyDir(src, src); err == nil {
-		t.Fatal("copyDir(src, src) 应拒绝")
-	}
-	if data, err := os.ReadFile(filepath.Join(src, "a.txt")); err != nil || string(data) != "aaa" {
-		t.Fatalf("源目录不应被替换/破坏: %v %q", err, string(data))
-	}
+	err := copyDir(src, src)
+	testutil.NotNil(t, err, "copyDir(src, src) 应拒绝")
+	data, err := os.ReadFile(filepath.Join(src, "a.txt"))
+	testutil.NoError(t, err, "源目录不应被替换/破坏")
+	testutil.Equal(t, string(data), "aaa", "源目录不应被替换/破坏")
 }

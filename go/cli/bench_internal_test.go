@@ -90,9 +90,9 @@ func TestSingleBenchJSON_JSONShape(t *testing.T) {
 	ctx.SetResult(s)
 	data := buildJsonData(ctx, "raw-json-text", "/models")
 	got, ok := data.(*singleBenchJSON)
-	if !ok {
-		t.Fatalf("data 应为 *singleBenchJSON, got %T", data)
-	}
+	// Equal 序贯守卫：ok 成立后 got 才非 nil（失败即 Goexit）
+	testutil.Equal(t, ok, true, "data 应为 *singleBenchJSON, got %T", data)
+	testutil.NotNil(t, got, "data 应为 *singleBenchJSON, got %T", data)
 	if got.Output != "raw-json-text" || got.FilesRoot != "/models" {
 		t.Errorf("sidecar 未注入: output=%q filesRoot=%q", got.Output, got.FilesRoot)
 	}

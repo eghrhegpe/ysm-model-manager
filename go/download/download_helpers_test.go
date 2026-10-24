@@ -10,7 +10,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
-	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -25,17 +24,14 @@ func TestPrepareAtomicWrite_Success(t *testing.T) {
 	savePath := filepath.Join(dir, "out.bin")
 	af, cleanup, err := prepareAtomicWrite(savePath)
 	testutil.NoError(t, err, "prepareAtomicWrite")
-	if af.savePath != savePath {
-		t.Fatalf("savePath = %q, want %q", af.savePath, savePath)
-	}
-	if _, err := os.Stat(af.tmpName); err != nil {
-		t.Fatalf("临时文件应存在: %v", err)
-	}
+	testutil.Equal(t, af.savePath, savePath, "savePath = %q, want %q", af.savePath, savePath)
+	_, statErr := os.Stat(af.tmpName)
+	testutil.NoError(t, statErr, "临时文件应存在")
 	// 未 commit 时 cleanup 应删掉临时文件
 	cleanup()
-	if _, err := os.Stat(af.tmpName); !os.IsNotExist(err) {
-		t.Fatalf("cleanup 后临时文件应已删除, err=%v", err)
-	}
+	_, statErr = os.Stat(af.tmpName)
+	// IsNotExist 口径：文件已删（第六波惯例，比 FileNotExists 更保真）
+	testutil.Equal(t, os.IsNotExist(statErr), true, "cleanup 后临时文件应已删除, err=%v", statErr)
 	// 幂等：二次 cleanup 不 panic 也不报错（文件已删，Remove 失败仅留痕）
 	cleanup()
 }
@@ -44,9 +40,7 @@ func TestPrepareAtomicWrite_CreateTempFail(t *testing.T) {
 	// 不存在的目录 → CreateTemp 必然失败
 	_, _, err := prepareAtomicWrite(filepath.Join(t.TempDir(), "no-such-dir", "out.bin"))
 	testutil.NotNil(t, err, "期望 CreateTemp 失败返回 error")
-	if !strings.Contains(err.Error(), "创建临时文件失败") {
-		t.Fatalf("错误应包装原因, got %v", err)
-	}
+	testutil.ErrorContains(t, err, "创建临时文件失败", "错误应包装原因, got %v", err)
 }
 
 func TestCommitAtomicWrite_SuccessAndProgress(t *testing.T) {
@@ -65,20 +59,15 @@ func TestCommitAtomicWrite_SuccessAndProgress(t *testing.T) {
 		cbTotal = total
 	})
 	testutil.NoError(t, err, "commitAtomicWrite")
-	if !af.committed {
-		t.Fatal("提交后 committed 应为 true")
-	}
+	testutil.Equal(t, af.committed, true, "提交后 committed 应为 true")
 	data, _ := os.ReadFile(savePath)
-	if string(data) != "hello" {
-		t.Fatalf("落盘内容 = %q, want %q", string(data), "hello")
-	}
-	if cbDownloaded != 5 || cbTotal != 5 {
-		t.Fatalf("进度回调 = (%d,%d), want (5,5)", cbDownloaded, cbTotal)
-	}
+	testutil.Equal(t, string(data), "hello", "落盘内容 = %q, want %q", string(data), "hello")
+	// OR 型复合条件拆序贯：两个回调值分别断言（原 if !=5 || !=5）
+	testutil.Equal(t, cbDownloaded, int64(5), "进度回调 = (%d,%d), want (5,5)", cbDownloaded, cbTotal)
+	testutil.Equal(t, cbTotal, int64(5), "进度回调 = (%d,%d), want (5,5)", cbDownloaded, cbTotal)
 	// 提交后临时文件名已重命名消失
-	if _, err := os.Stat(af.tmpName); !os.IsNotExist(err) {
-		t.Fatalf("提交后临时文件应消失, err=%v", err)
-	}
+	_, statErr := os.Stat(af.tmpName)
+	testutil.Equal(t, os.IsNotExist(statErr), true, "提交后临时文件应消失, err=%v", statErr)
 }
 
 func TestVerifyDownloadedFile_Truncation(t *testing.T) {
@@ -86,14 +75,10 @@ func TestVerifyDownloadedFile_Truncation(t *testing.T) {
 
 	// 实际字节数 < 声明 → 截断
 	_, err := verifyDownloadedFile(f, 5, 3, true, nil)
-	if !errors.Is(err, ErrTruncated) {
-		t.Fatalf("期望 ErrTruncated, got %v", err)
-	}
+	testutil.ErrorIs(t, err, ErrTruncated, "期望 ErrTruncated")
 	// 实际字节数 > 声明 → 同样视为异常
 	_, err = verifyDownloadedFile(f, 3, 5, true, nil)
-	if !errors.Is(err, ErrTruncated) {
-		t.Fatalf("期望超量时 ErrTruncated, got %v", err)
-	}
+	testutil.ErrorIs(t, err, ErrTruncated, "期望超量时 ErrTruncated")
 }
 
 func TestVerifyDownloadedFile_Checksum(t *testing.T) {
@@ -103,14 +88,10 @@ func TestVerifyDownloadedFile_Checksum(t *testing.T) {
 	// 匹配 → 通过，返回 usedTotal=total
 	used, err := verifyDownloadedFile(f, 5, 5, true, sum)
 	testutil.NoError(t, err, "校验和匹配不应报错")
-	if used != 5 {
-		t.Fatalf("usedTotal = %d, want 5", used)
-	}
+	testutil.Equal(t, used, int64(5), "usedTotal = %d, want 5", used)
 	// 不匹配 → ErrChecksumMismatch
 	_, err = verifyDownloadedFile(f, 5, 5, true, []byte("wrong"))
-	if !errors.Is(err, ErrChecksumMismatch) {
-		t.Fatalf("期望 ErrChecksumMismatch, got %v", err)
-	}
+	testutil.ErrorIs(t, err, ErrChecksumMismatch, "期望 ErrChecksumMismatch")
 }
 
 func TestVerifyDownloadedFile_UnknownTotal(t *testing.T) {
@@ -119,9 +100,7 @@ func TestVerifyDownloadedFile_UnknownTotal(t *testing.T) {
 	// total<=0 时返回 downloaded 而非 total
 	used, err := verifyDownloadedFile(f, -1, 5, false, nil)
 	testutil.NoError(t, err, "未知 total 不应报错")
-	if used != 5 {
-		t.Fatalf("usedTotal = %d, want 5", used)
-	}
+	testutil.Equal(t, used, int64(5), "usedTotal = %d, want 5", used)
 }
 
 // tempFileWithContent 创建临时文件并写入内容，测试结束后关闭+删除（Windows 需先关句柄）。
@@ -146,21 +125,16 @@ func TestCopyResponseBodyWithProgress(t *testing.T) {
 	var buf bytes.Buffer
 	n, err := copyResponseBodyWithProgress(context.Background(), strings.NewReader("hello world"), &buf, 11, nil)
 	testutil.NoError(t, err, "copyResponseBodyWithProgress")
-	if n != 11 {
-		t.Fatalf("downloaded = %d, want 11", n)
-	}
-	if buf.String() != "hello world" {
-		t.Fatalf("内容 = %q", buf.String())
-	}
+	testutil.Equal(t, n, int64(11), "downloaded = %d, want 11", n)
+	testutil.Equal(t, buf.String(), "hello world", "内容 = %q", buf.String())
 }
 
 func TestCopyResponseBodyWithProgress_Cancel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // 立即取消
 	_, err := copyResponseBodyWithProgress(ctx, strings.NewReader("x"), io.Discard, 1, nil)
-	if err == nil || !strings.Contains(err.Error(), "取消") {
-		t.Fatalf("期望取消错误, got %v", err)
-	}
+	// OR 型复合条件（err==nil 或不含「取消」）由 ErrorContains 一并覆盖：nil 时同样失败
+	testutil.ErrorContains(t, err, "取消", "期望取消错误, got %v", err)
 }
 
 // sha256Sum 计算字符串的 SHA256（与 verifyDownloadedFile 同一哈希口径）。

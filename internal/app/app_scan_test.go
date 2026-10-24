@@ -81,18 +81,15 @@ func TestListFileNames_Guard(t *testing.T) {
 
 	t.Run("根内子目录递归列名", func(t *testing.T) {
 		got := a.ListFileNames(filepath.Join(root, "sub"))
-		if len(got) != 1 || got[0] != "b.ysm" {
-			t.Fatalf("ListFileNames(sub) 应列出 b.ysm, got %v", got)
-		}
+		testutil.Equal(t, len(got), 1, "ListFileNames(sub) 应列出 b.ysm, got %v", got)
+		testutil.Equal(t, got[0], "b.ysm", "ListFileNames(sub) 应列出 b.ysm, got %v", got)
 	})
 
 	t.Run("仓库根本身只读放行（整仓扫描语义，与 ReadFileBytes 同口径）", func(t *testing.T) {
 		// 2026-08-16 修复：ListFileNames 改 isPathInRootOrSelf——只读遍历放行根本身安全，
 		// 旧 isPathInRoot 对 rel==. 拒绝（防整删语义属写操作 RemoveDir/RenameDir 职责）
 		got := a.ListFileNames(root)
-		if len(got) != 2 {
-			t.Fatalf("ListFileNames(根) 应列出全部文件（a.ysm+b.ysm）, got %v", got)
-		}
+		testutil.Equal(t, len(got), 2, "ListFileNames(根) 应列出全部文件（a.ysm+b.ysm）, got %v", got)
 	})
 
 	t.Run("根外拒绝返回 nil", func(t *testing.T) {
@@ -163,14 +160,10 @@ func TestScanModelEntries_CacheHit(t *testing.T) {
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
 
 	first := a.ScanModelEntries(root)
-	if len(first) != 1 {
-		t.Fatalf("首次扫描应发现 1 个文件, got %d", len(first))
-	}
+	testutil.Equal(t, len(first), 1, "首次扫描应发现 1 个文件, got %d", len(first))
 	// 30s 内二次扫描命中缓存，结果一致
 	second := a.ScanModelEntries(root)
-	if len(second) != 1 {
-		t.Fatalf("缓存命中扫描应仍返回 1 个文件, got %d", len(second))
-	}
+	testutil.Equal(t, len(second), 1, "缓存命中扫描应仍返回 1 个文件, got %d", len(second))
 }
 
 func TestScanModelEntries_SiblingTypeRootAllowed(t *testing.T) {
@@ -188,9 +181,7 @@ func TestScanModelEntries_SiblingTypeRootAllowed(t *testing.T) {
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
 
 	entries := a.ScanModelEntries(rpRoot)
-	if len(entries) != 1 {
-		t.Fatalf("兄弟类型根（resourcepack）应可扫描 1 个文件, got %d", len(entries))
-	}
+	testutil.Equal(t, len(entries), 1, "兄弟类型根（resourcepack）应可扫描 1 个文件, got %d", len(entries))
 	// 越权路径仍拒绝
 	if got := a.ScanModelEntries(filepath.Join(base, "..", "outside")); got != nil {
 		t.Errorf("根外路径应返回 nil, got %v", got)
@@ -209,9 +200,7 @@ func TestScanModelEntriesWithLabel_Guard(t *testing.T) {
 	}
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
 
-	if got := a.ScanModelEntriesWithLabel(root, "模型"); len(got) != 1 {
-		t.Fatalf("根内扫描应返回 1 个文件, got %d", len(got))
-	}
+	testutil.Equal(t, len(a.ScanModelEntriesWithLabel(root, "模型")), 1, "根内扫描应返回 1 个文件")
 	if got := a.ScanModelEntriesWithLabel(filepath.Join(base, "..", "outside"), "模型"); got != nil {
 		t.Errorf("根外路径应返回 nil, got %v", got)
 	}
@@ -266,9 +255,7 @@ func TestListModelAuthors_PrefixExtraction(t *testing.T) {
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
 
 	got := a.ListModelAuthors()
-	if len(got) != 2 {
-		t.Fatalf("应提取 2 个作者, got %v", got)
-	}
+	testutil.Equal(t, len(got), 2, "应提取 2 个作者, got %v", got)
 	for _, author := range got {
 		if author.Name == "作者A" && author.Count != 2 {
 			t.Errorf("作者A 应计数 2, got %d", author.Count)
@@ -528,9 +515,7 @@ func TestResolveInstDirTarget_MmdSubtype_3dSkinPrefix(t *testing.T) {
 	}
 	for id, wantDir := range mustHaveSubdir {
 		rt := registry.RegistryType(id)
-		if rt == nil {
-			t.Fatalf("注册表缺失 %s 条目（测试前提被破坏）", id)
-		}
+		testutil.NotNil(t, rt, "注册表缺失 %s 条目（测试前提被破坏）", id)
 		if rt.InstanceDir != wantDir {
 			t.Errorf("%s instanceDir = %q, 期望 %q（游戏实际生成 3d-skin/%s 子目录）", id, rt.InstanceDir, wantDir, id)
 		}
@@ -634,9 +619,7 @@ func TestSearchModels_SequentialPath(t *testing.T) {
 
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
 	results := a.SearchModels(base, types.SearchFilters{MinBones: 1})
-	if len(results) < 2 {
-		t.Fatalf("至少应有 2 个结果，got %d", len(results))
-	}
+	testutil.Equal(t, len(results) >= 2, true, "至少应有 2 个结果，got %d", len(results))
 	for _, r := range results {
 		if r.BoneCount == 0 {
 			t.Errorf("结果 %s 应有非零骨骼数", r.Name)
@@ -656,9 +639,7 @@ func TestSearchModels_ConcurrentPath(t *testing.T) {
 
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
 	results := a.SearchModels(base, types.SearchFilters{})
-	if len(results) != n {
-		t.Fatalf("期望 %d 个结果，got %d", n, len(results))
-	}
+	testutil.Equal(t, len(results), n, "期望 %d 个结果，got %d", n, len(results))
 }
 
 // TestSearchModels_KeywordFilter: 关键词预过滤有效
@@ -674,15 +655,11 @@ func TestSearchModels_KeywordFilter(t *testing.T) {
 
 	// 搜索 "warrior" → 只匹配 warrior
 	results := a.SearchModels(base, types.SearchFilters{Keyword: "warrior"})
-	if len(results) != 1 {
-		t.Fatalf("搜索 warrior 期望 1 个结果，got %d", len(results))
-	}
+	testutil.Equal(t, len(results), 1, "搜索 warrior 期望 1 个结果，got %d", len(results))
 
 	// 搜索不存在的关键词 → 空结果
 	results = a.SearchModels(base, types.SearchFilters{Keyword: "nonexistent"})
-	if len(results) != 0 {
-		t.Fatalf("搜索 nonexistent 期望 0 个结果，got %d", len(results))
-	}
+	testutil.Equal(t, len(results), 0, "搜索 nonexistent 期望 0 个结果，got %d", len(results))
 }
 
 // TestSearchModels_BoneFilter: 骨骼数过滤有效
@@ -697,15 +674,11 @@ func TestSearchModels_BoneFilter(t *testing.T) {
 
 	// 最少骨骼 5 → 只匹配 high
 	results := a.SearchModels(base, types.SearchFilters{MinBones: 5})
-	if len(results) != 1 {
-		t.Fatalf("期望 1 个结果，got %d", len(results))
-	}
+	testutil.Equal(t, len(results), 1, "期望 1 个结果，got %d", len(results))
 
 	// 最多骨骼 3 → 只匹配 low
 	results = a.SearchModels(base, types.SearchFilters{MaxBones: 3})
-	if len(results) != 1 {
-		t.Fatalf("期望 1 个结果，got %d", len(results))
-	}
+	testutil.Equal(t, len(results), 1, "期望 1 个结果，got %d", len(results))
 }
 
 // TestSearchModels_ConcurrentConsistency: 数值条件 + 候选 > 2 走并发分析路径
@@ -722,9 +695,7 @@ func TestSearchModels_ConcurrentConsistency(t *testing.T) {
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
 
 	results := a.SearchModels(base, types.SearchFilters{MinBones: 1})
-	if len(results) != n {
-		t.Fatalf("期望 %d 个结果，got %d", n, len(results))
-	}
+	testutil.Equal(t, len(results), n, "期望 %d 个结果，got %d", n, len(results))
 
 	for _, r := range results {
 		if r.BoneCount == 0 {
@@ -738,9 +709,7 @@ func TestSearchModels_EmptyRepo(t *testing.T) {
 	base := t.TempDir()
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
 	results := a.SearchModels(base, types.SearchFilters{})
-	if results != nil {
-		t.Fatalf("空仓库应返回 nil, got %v", results)
-	}
+	testutil.Nil(t, results, "空仓库应返回 nil, got %v", results)
 }
 
 // TestSearchModels_Boundary2Sequential: 恰好 2 个候选 → 走顺序路径
@@ -753,9 +722,7 @@ func TestSearchModels_Boundary2Sequential(t *testing.T) {
 
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
 	results := a.SearchModels(base, types.SearchFilters{})
-	if len(results) != 2 {
-		t.Fatalf("恰好 2 个模型应走顺序路径，got %d", len(results))
-	}
+	testutil.Equal(t, len(results), 2, "恰好 2 个模型应走顺序路径，got %d", len(results))
 }
 
 // TestSearchModels_Boundary3Concurrent: 恰好 3 个候选 → 走并发路径
@@ -769,9 +736,7 @@ func TestSearchModels_Boundary3Concurrent(t *testing.T) {
 
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
 	results := a.SearchModels(base, types.SearchFilters{})
-	if len(results) != 3 {
-		t.Fatalf("恰好 3 个模型应走并发路径，got %d", len(results))
-	}
+	testutil.Equal(t, len(results), 3, "恰好 3 个模型应走并发路径，got %d", len(results))
 }
 
 // TestSearchModels_CombinedFilter: 关键词+骨骼数+纹理组合过滤
@@ -788,24 +753,18 @@ func TestSearchModels_CombinedFilter(t *testing.T) {
 
 	// 组合：关键词 "warrior" + 最少骨骼 5 → 只匹配 warrior_heavy
 	results := a.SearchModels(base, types.SearchFilters{Keyword: "warrior", MinBones: 5})
-	if len(results) != 1 {
-		t.Fatalf("warrior+骨骼>=5 应只匹配 1 个，got %d", len(results))
-	}
+	testutil.Equal(t, len(results), 1, "warrior+骨骼>=5 应只匹配 1 个，got %d", len(results))
 	if !strings.Contains(results[0].Path, "warrior_heavy") {
 		t.Errorf("期望 warrior_heavy, got path %s", results[0].Path)
 	}
 
 	// 组合：关键词 "warrior" + 最多骨骼 5 → 只匹配 warrior_light
 	results = a.SearchModels(base, types.SearchFilters{Keyword: "warrior", MaxBones: 5})
-	if len(results) != 1 {
-		t.Fatalf("warrior+骨骼<=5 应只匹配 1 个，got %d", len(results))
-	}
+	testutil.Equal(t, len(results), 1, "warrior+骨骼<=5 应只匹配 1 个，got %d", len(results))
 
 	// 搜索 "mage" → 只匹配 mage_heavy
 	results = a.SearchModels(base, types.SearchFilters{Keyword: "mage"})
-	if len(results) != 1 {
-		t.Fatalf("搜索 mage 应只匹配 1 个，got %d", len(results))
-	}
+	testutil.Equal(t, len(results), 1, "搜索 mage 应只匹配 1 个，got %d", len(results))
 	if !strings.Contains(results[0].Path, "mage_heavy") {
 		t.Errorf("期望 mage_heavy, got path %s", results[0].Path)
 	}
@@ -823,9 +782,7 @@ func TestSearchModels_ResultOrder(t *testing.T) {
 
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
 	results := a.SearchModels(base, types.SearchFilters{})
-	if len(results) != len(names) {
-		t.Fatalf("期望 %d 个结果，got %d", len(names), len(results))
-	}
+	testutil.Equal(t, len(results), len(names), "期望 %d 个结果，got %d", len(names), len(results))
 
 	// 验证所有模型都被找到（通过 Path 包含目录名）
 	for _, name := range names {
@@ -883,14 +840,10 @@ func TestSearchModels_DeterministicOrder_SameName(t *testing.T) {
 			first = got
 			continue
 		}
-		if len(got) != len(first) {
-			t.Fatalf("run %d: 结果数 %d 与首次 %d 不一致", i, len(got), len(first))
-		}
+		testutil.Equal(t, len(got), len(first), "run %d: 结果数不一致（首次 %d）", i, len(first))
 		for j := range got {
-			if got[j].Name != first[j].Name || got[j].Path != first[j].Path {
-				t.Fatalf("run %d: 结果顺序漂移\n首次: %+v\n本次: %+v",
-					i, first, got)
-			}
+			testutil.Equal(t, got[j].Name, first[j].Name, "run %d: 结果顺序漂移", i)
+			testutil.Equal(t, got[j].Path, first[j].Path, "run %d: 结果顺序漂移", i)
 		}
 	}
 
@@ -901,12 +854,9 @@ func TestSearchModels_DeterministicOrder_SameName(t *testing.T) {
 			mymodelPaths = append(mymodelPaths, r.Path)
 		}
 	}
-	if len(mymodelPaths) != 2 {
-		t.Fatalf("期望 2 条同名 mymodel，got %d", len(mymodelPaths))
-	}
-	if !strings.Contains(mymodelPaths[0], "aaa_pack") || !strings.Contains(mymodelPaths[1], "bbb_pack") {
-		t.Fatalf("同名模型未按声明序排列: %v", mymodelPaths)
-	}
+	testutil.Equal(t, len(mymodelPaths), 2, "期望 2 条同名 mymodel，got %d", len(mymodelPaths))
+	testutil.Equal(t, strings.Contains(mymodelPaths[0], "aaa_pack"), true, "同名模型未按声明序排列: %v", mymodelPaths)
+	testutil.Equal(t, strings.Contains(mymodelPaths[1], "bbb_pack"), true, "同名模型未按声明序排列: %v", mymodelPaths)
 }
 
 // TestSearchModels_ZeroBoneFilter: 零骨骼模型的双语义（ADR-343 刀 2）
@@ -929,9 +879,7 @@ func TestSearchModels_ZeroBoneFilter(t *testing.T) {
 
 	// 无数值条件：直通路径两个模型都返回（空几何零值，不蒸发）
 	results := a.SearchModels(base, types.SearchFilters{})
-	if len(results) != 2 {
-		t.Fatalf("无数值条件应返回全部 2 条（空几何不蒸发），got %d", len(results))
-	}
+	testutil.Equal(t, len(results), 2, "无数值条件应返回全部 2 条（空几何不蒸发），got %d", len(results))
 	for _, r := range results {
 		if strings.Contains(r.Path, "empty_model") && r.BoneCount != 0 {
 			t.Errorf("空几何模型 BoneCount 应为 0（零值直通），got %d", r.BoneCount)
@@ -940,9 +888,7 @@ func TestSearchModels_ZeroBoneFilter(t *testing.T) {
 
 	// 数值条件：空骨骼模型不满足 minBones=1，仍被过滤
 	results = a.SearchModels(base, types.SearchFilters{MinBones: 1})
-	if len(results) != 1 {
-		t.Fatalf("minBones=1 应过滤空骨骼模型，仅 1 个有效结果，got %d", len(results))
-	}
+	testutil.Equal(t, len(results), 1, "minBones=1 应过滤空骨骼模型，仅 1 个有效结果，got %d", len(results))
 	if !strings.Contains(results[0].Path, "valid_model") {
 		t.Errorf("唯一有效结果应为 valid_model, got path %s", results[0].Path)
 	}
@@ -964,9 +910,7 @@ func TestSearchModels_GeoCacheHit(t *testing.T) {
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
 
 	first := a.SearchModels(base, types.SearchFilters{MinBones: 1})
-	if len(first) != 3 {
-		t.Fatalf("期望 3 个结果，got %d", len(first))
-	}
+	testutil.Equal(t, len(first), 3, "期望 3 个结果，got %d", len(first))
 	// 首次搜索后：每个被分析的模型路径应已写入几何缓存
 	for _, r := range first {
 		if _, ok := a.geoCache.Load(r.Path); !ok {
@@ -976,9 +920,8 @@ func TestSearchModels_GeoCacheHit(t *testing.T) {
 
 	// 二次搜索（仅换关键词，几何不变）：结果一致性 + 仍命中缓存
 	second := a.SearchModels(base, types.SearchFilters{Keyword: "war", MinBones: 1})
-	if len(second) != 1 || second[0].Name != "warrior" {
-		t.Fatalf("二次关键词搜索应只命中 warrior，got %+v", second)
-	}
+	testutil.Equal(t, len(second), 1, "二次关键词搜索应只命中 warrior，got %+v", second)
+	testutil.Equal(t, second[0].Name, "warrior", "二次关键词搜索应只命中 warrior，got %+v", second)
 	if second[0].BoneCount != 5 {
 		t.Errorf("命中缓存的几何结果 BoneCount 应=5，got %d", second[0].BoneCount)
 	}
@@ -1001,14 +944,11 @@ func TestClearScanCache_InvalidatesGeoCache(t *testing.T) {
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
 	// 刀 2：几何缓存写入只发生在数值条件路径（分析器运行），故挂 minBones=1
 	results := a.SearchModels(base, types.SearchFilters{MinBones: 1})
-	if len(results) != 1 {
-		t.Fatalf("搜索应产出 1 结果，got %d", len(results))
-	}
+	testutil.Equal(t, len(results), 1, "搜索应产出 1 结果，got %d", len(results))
 	// 结果 Path 即 geoCache 键（AnalyzeBedrockModel 入参 stripped path）
 	key := results[0].Path
-	if _, ok := a.geoCache.Load(key); !ok {
-		t.Fatal("搜索后几何缓存应命中")
-	}
+	_, ok := a.geoCache.Load(key)
+	testutil.Equal(t, ok, true, "搜索后几何缓存应命中")
 
 	a.ClearScanCache()
 	if _, ok := a.geoCache.Load(key); ok {
@@ -1073,9 +1013,7 @@ func TestScanModelEntriesFiltered_ContainerFingerprint(t *testing.T) {
 	got := a.ScanModelEntriesFiltered(dir, "EntityPlayer", "", "角色模型")
 
 	// 期望仅 vrm_real.zip + scene.vrm 两条；rp_pack.zip / notes.zip 因内部非 EntityPlayer 被丢弃
-	if len(got) != 2 {
-		t.Fatalf("EntityPlayer tab 应仅收 2 条（内部 vrm 的 zip + 非容器 .vrm），实际 %d 条: %+v", len(got), got)
-	}
+	testutil.Equal(t, len(got), 2, "EntityPlayer tab 应仅收 2 条（内部 vrm 的 zip + 非容器 .vrm），实际 %d 条: %+v", len(got), got)
 	names := make(map[string]bool)
 	for _, e := range got {
 		names[filepath.Base(e.Path)] = true
@@ -1105,9 +1043,7 @@ func TestScanModelEntriesFiltered_ContainerMatchesOwnType(t *testing.T) {
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
 	got := a.ScanModelEntriesFiltered(dir, "resourcepack", "", "资源包")
 
-	if len(got) != 1 {
-		t.Fatalf("resourcepack tab 应仅收 1 条（rp_pack.zip），实际 %d 条: %+v", len(got), got)
-	}
+	testutil.Equal(t, len(got), 1, "resourcepack tab 应仅收 1 条（rp_pack.zip），实际 %d 条: %+v", len(got), got)
 	if filepath.Base(got[0].Path) != "rp_pack.zip" {
 		t.Errorf("resourcepack tab 应收 rp_pack.zip, 实际 %s", got[0].Path)
 	}
@@ -1131,9 +1067,7 @@ func TestScanModelEntriesFiltered_DisabledRetained(t *testing.T) {
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
 	got := a.ScanModelEntriesFiltered(dir, "resourcepack", "", "资源包")
 
-	if len(got) != 2 {
-		t.Fatalf("resourcepack tab 应收 2 条（active.zip + disabled.zip.disabled），实际 %d 条: %+v", len(got), got)
-	}
+	testutil.Equal(t, len(got), 2, "resourcepack tab 应收 2 条（active.zip + disabled.zip.disabled），实际 %d 条: %+v", len(got), got)
 	names := make(map[string]bool)
 	for _, e := range got {
 		names[filepath.Base(e.Path)] = true
@@ -1170,9 +1104,7 @@ func TestScanModelEntriesFiltered_BannedFieldFilled(t *testing.T) {
 	got := a.ScanModelEntriesFiltered(dir, "ysm", "", "YSM模型")
 	// 注：目录级 .disabled 整组在扫描阶段即被 scanner 排除，不进入结果——
 	// Banned 字段覆盖的是「进入结果但带禁用后缀」的文件级判定。
-	if len(got) != 2 {
-		t.Fatalf("应收 2 条（目录级禁用组已在扫描阶段排除），实际 %d 条: %+v", len(got), got)
-	}
+	testutil.Equal(t, len(got), 2, "应收 2 条（目录级禁用组已在扫描阶段排除），实际 %d 条: %+v", len(got), got)
 	for _, e := range got {
 		name := filepath.Base(e.Path)
 		want := name != "ok.ysm"
@@ -1198,15 +1130,12 @@ func TestScanModelEntriesFiltered_DisabledContainerNoCrossTabLeak(t *testing.T) 
 
 	// 自身类型 tab：应保留（指纹 resourcepack == rtype）
 	own := a.ScanModelEntriesFiltered(dir, "resourcepack", "", "资源包")
-	if len(own) != 1 || filepath.Base(own[0].Path) != "disabled.zip.disabled" {
-		t.Fatalf("resourcepack tab 应收禁用容器 disabled.zip.disabled，实际 %+v", own)
-	}
+	testutil.Equal(t, len(own), 1, "resourcepack tab 应收禁用容器 disabled.zip.disabled，实际 %+v", own)
+	testutil.Equal(t, filepath.Base(own[0].Path), "disabled.zip.disabled", "resourcepack tab 应收禁用容器 disabled.zip.disabled，实际 %+v", own)
 
 	// 无关类型 tab：应丢弃（指纹 resourcepack != EntityPlayer）
 	other := a.ScanModelEntriesFiltered(dir, "EntityPlayer", "", "角色模型")
-	if len(other) != 0 {
-		t.Fatalf("EntityPlayer tab 不应泄漏禁用容器，实际 %+v", other)
-	}
+	testutil.Equal(t, len(other), 0, "EntityPlayer tab 不应泄漏禁用容器，实际 %+v", other)
 }
 
 // ===== runConcurrentAnalyze（searchModelsConcurrent / SearchAllModels Phase 2 收敛 helper）=====
@@ -1217,9 +1146,7 @@ func TestRunConcurrentAnalyze_Basic(t *testing.T) {
 	got := runConcurrentAnalyze(context.Background(), 4, func(i int) *types.SearchResult {
 		return &types.SearchResult{Name: fmt.Sprintf("m%d", i), Path: fmt.Sprintf("/p/%d", i)}
 	})
-	if len(got) != 4 {
-		t.Fatalf("期望 4 个结果, got %d", len(got))
-	}
+	testutil.Equal(t, len(got), 4, "期望 4 个结果, got %d", len(got))
 	for i, r := range got {
 		if want := fmt.Sprintf("m%d", i); r.Name != want {
 			t.Errorf("index %d: Name = %s, 期望 %s", i, r.Name, want)
@@ -1235,21 +1162,17 @@ func TestRunConcurrentAnalyze_FilterSkip(t *testing.T) {
 		}
 		return &types.SearchResult{Name: fmt.Sprintf("m%d", i), Path: "/p"}
 	})
-	if len(got) != 3 {
-		t.Fatalf("期望跳过 2 项后剩 3 项, got %d", len(got))
-	}
+	testutil.Equal(t, len(got), 3, "期望跳过 2 项后剩 3 项, got %d", len(got))
 }
 
 func TestRunConcurrentAnalyze_AllFilteredEmpty(t *testing.T) {
-	if got := runConcurrentAnalyze(context.Background(), 3, func(i int) *types.SearchResult { return nil }); len(got) != 0 {
-		t.Fatalf("全过滤应返回空, got %d", len(got))
-	}
+	got := runConcurrentAnalyze(context.Background(), 3, func(i int) *types.SearchResult { return nil })
+	testutil.Equal(t, len(got), 0, "全过滤应返回空, got %d", len(got))
 }
 
 func TestRunConcurrentAnalyze_ZeroCount(t *testing.T) {
-	if got := runConcurrentAnalyze(context.Background(), 0, func(i int) *types.SearchResult { return &types.SearchResult{} }); len(got) != 0 {
-		t.Fatalf("count=0 应返回空, got %d", len(got))
-	}
+	got := runConcurrentAnalyze(context.Background(), 0, func(i int) *types.SearchResult { return &types.SearchResult{} })
+	testutil.Equal(t, len(got), 0, "count=0 应返回空, got %d", len(got))
 }
 
 func TestRunConcurrentAnalyze_SameNameIndexTieBreak(t *testing.T) {
@@ -1260,9 +1183,7 @@ func TestRunConcurrentAnalyze_SameNameIndexTieBreak(t *testing.T) {
 	})
 	// 期望 Name 主键升序，同名按 index 兜底：a/p1, a/p3, b/p2, z/p0
 	wantPaths := []string{"/p/1", "/p/3", "/p/2", "/p/0"}
-	if len(got) != len(wantPaths) {
-		t.Fatalf("期望 %d 项, got %d", len(wantPaths), len(got))
-	}
+	testutil.Equal(t, len(got), len(wantPaths), "期望 %d 项, got %d", len(wantPaths), len(got))
 	for i, w := range wantPaths {
 		if got[i].Path != w {
 			t.Errorf("index %d: Path = %s, 期望 %s", i, got[i].Path, w)

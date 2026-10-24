@@ -16,9 +16,7 @@ func TestLogger_AddAndGetAll(t *testing.T) {
 	l := &Logger{path: filepath.Join(dir, "test-logs.json")}
 	l.Add("模型A", "/src/a.ysm", "/dst", 1024, types.StatusSuccess, "")
 	logs := l.GetAll()
-	if len(logs) != 1 {
-		t.Fatalf("期望 1 条日志, 得到 %d", len(logs))
-	}
+	testutil.Equal(t, len(logs), 1, "期望 1 条日志, 得到 %d", len(logs))
 	if logs[0].ModelName != "模型A" {
 		t.Errorf("ModelName = %q, 期望 模型A", logs[0].ModelName)
 	}
@@ -38,9 +36,7 @@ func TestLogger_AddOp(t *testing.T) {
 	l := &Logger{path: filepath.Join(dir, "test-logs.json")}
 	l.AddOp("delete", "模型B", "/src/b.ysm", "/dst", 2048, types.StatusSuccess, "")
 	logs := l.GetAll()
-	if len(logs) != 1 {
-		t.Fatalf("期望 1 条日志, 得到 %d", len(logs))
-	}
+	testutil.Equal(t, len(logs), 1, "期望 1 条日志, 得到 %d", len(logs))
 	if logs[0].Operation != "delete" {
 		t.Errorf("Operation = %q, 期望 delete", logs[0].Operation)
 	}
@@ -58,9 +54,7 @@ func TestLogger_AddErr_AppError(t *testing.T) {
 	}
 	l.AddErr("模型C", "/src/a.ysm", "/dst", 10, types.StatusFailed, err)
 	logs := l.GetAll()
-	if len(logs) != 1 {
-		t.Fatalf("期望 1 条日志, 得到 %d", len(logs))
-	}
+	testutil.Equal(t, len(logs), 1, "期望 1 条日志, 得到 %d", len(logs))
 	e := logs[0]
 	if e.Code != types.ErrFileExists {
 		t.Errorf("Code = %q, 期望 %q", e.Code, types.ErrFileExists)
@@ -151,9 +145,7 @@ func TestLogger_SaveAndLoad(t *testing.T) {
 	l2 := &Logger{path: path}
 	l2.load()
 	logs := l2.GetAll()
-	if len(logs) != 1 {
-		t.Fatalf("重新加载后期望 1 条日志, 得到 %d", len(logs))
-	}
+	testutil.Equal(t, len(logs), 1, "重新加载后期望 1 条日志, 得到 %d", len(logs))
 	if logs[0].ModelName != "模型A" {
 		t.Errorf("ModelName = %q, 期望 模型A", logs[0].ModelName)
 	}
@@ -171,29 +163,23 @@ func TestLogger_DebouncedSave(t *testing.T) {
 		l.Add("模型", "/src", "/dst", 0, "成功", "")
 	}
 	// 未 Flush 前磁盘不应有文件（防抖窗口内合并中）
-	if _, err := os.Stat(path); err == nil {
-		t.Fatal("防抖窗口内不应已落盘（批量写入应合并为一次 save）")
-	}
+	_, statErr := os.Stat(path)
+	// stat 失败（含 NotExist）即未落盘，语义与原 if err==nil → Fatal 一致
+	testutil.NotNil(t, statErr, "防抖窗口内不应已落盘（批量写入应合并为一次 save）")
 	// Flush 强制落盘后应完整可读
 	l.Flush()
 	l2 := &Logger{path: path}
 	l2.load()
-	if got := len(l2.GetAll()); got != 50 {
-		t.Fatalf("Flush 后应 50 条, 得到 %d", got)
-	}
+	testutil.Equal(t, len(l2.GetAll()), 50, "Flush 后应 50 条, 得到 %d", len(l2.GetAll()))
 }
 
 // 内存态（path==""）addOp 不启动定时器、不落盘（save no-op 语义保持）
 func TestLogger_DebounceMemoryMode(t *testing.T) {
 	l := &Logger{} // path 为空 → 内存态
 	l.Add("模型", "/src", "/dst", 0, "成功", "")
-	if l.saveTimer != nil {
-		t.Fatal("内存态不应启动防抖定时器")
-	}
+	testutil.Nil(t, l.saveTimer, "内存态不应启动防抖定时器")
 	l.Flush() // 不 panic
-	if got := len(l.GetAll()); got != 1 {
-		t.Fatalf("内存态应保留 1 条, 得到 %d", got)
-	}
+	testutil.Equal(t, len(l.GetAll()), 1, "内存态应保留 1 条, 得到 %d", len(l.GetAll()))
 }
 
 func TestLogger_LoadFromInvalidFile(t *testing.T) {
@@ -252,7 +238,6 @@ func TestLogger_NewLogger(t *testing.T) {
 // GetLogCaps 绑定据此单源化诊断页检索窗口——契约只锁「正值」，具体数值随配置走。
 func TestLogger_Cap(t *testing.T) {
 	l := NewLogger(t.TempDir())
-	if got := l.Cap(); got <= 0 {
-		t.Fatalf("Cap() = %d, 期望正值（logMaxEntries 默认或配置值）", got)
-	}
+	got := l.Cap()
+	testutil.Equal(t, got <= 0, false, "Cap() = %d, 期望正值（logMaxEntries 默认或配置值）", got)
 }

@@ -53,14 +53,14 @@ func TestRunScanBench_JSONPayloadShapeAndHonesty(t *testing.T) {
 	testutil.NoError(t, err, "scan-bench 报错")
 	var payload scanBenchJSON
 	if err := json.Unmarshal([]byte(out), &payload); err != nil {
-		t.Fatalf("stdout 不是纯 JSON: %v\n%s", err, out)
+		testutil.NoError(t, err, "stdout 不是纯 JSON:\n%s", out)
 	}
 	if payload.Spec.BuildBackend != scanner.ScanBackend {
 		t.Errorf("spec 应回显构建期后端: got %q want %q", payload.Spec.BuildBackend, scanner.ScanBackend)
 	}
-	if len(payload.Engines) != 1 || payload.Engines[0].Engine != "go" {
-		t.Fatalf("载荷应只含 go 一项: %+v", payload.Engines)
-	}
+	testutil.Equal(t, len(payload.Engines), 1, "载荷应只含 go 一项: %+v", payload.Engines)
+	// len 已由上一断言守卫（失败即 Goexit），payload.Engines[0] 才安全
+	testutil.Equal(t, payload.Engines[0].Engine, "go", "载荷应只含 go 一项: %+v", payload.Engines)
 	goEngine := payload.Engines[0]
 	if !goEngine.Used || len(goEngine.RunsMs) != 2 || goEngine.Entries == 0 {
 		t.Errorf("Go 侧应有 2 次样本与条目数: %+v", goEngine)
@@ -78,9 +78,8 @@ func TestRunScanBench_CacheHitIsNotAMeasurement(t *testing.T) {
 	root := filepath.Join("..", "..", "tests", "fixtures", "ysm")
 	scanner.InvalidateCache()
 	_ = scanner.ScanEntries(root) // 预热缓存
-	if obj := measureEngineWithoutInvalidate(root); len(obj.RunsMs) != 0 || obj.Skipped == 0 {
-		t.Fatalf("缓存命中应记为 skipped 而非样本: %+v", obj)
-	}
+	obj := measureEngineWithoutInvalidate(root)
+	testutil.Equal(t, len(obj.RunsMs) != 0 || obj.Skipped == 0, false, "缓存命中应记为 skipped 而非样本: %+v", obj)
 	if obj := measureEngineWithoutInvalidate(root); obj.Reason != scanBenchReasonCacheHit {
 		t.Errorf("缓存命中应给出 cache_hit token: %+v", obj)
 	}

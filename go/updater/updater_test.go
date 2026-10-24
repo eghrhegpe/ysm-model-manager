@@ -114,9 +114,7 @@ func TestSplitVer(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(fmt.Sprintf("input=%q", tt.input), func(t *testing.T) {
 			result := splitVer(tt.input)
-			if len(result) != len(tt.expected) {
-				t.Fatalf("splitVer(%q) 长度 = %d, 期望 %d", tt.input, len(result), len(tt.expected))
-			}
+			testutil.Equal(t, len(result), len(tt.expected), "splitVer(%q) 长度 = %d, 期望 %d", tt.input, len(result), len(tt.expected))
 			for i := range result {
 				if result[i] != tt.expected[i] {
 					t.Errorf("splitVer(%q)[%d] = %d, 期望 %d", tt.input, i, result[i], tt.expected[i])
@@ -234,9 +232,8 @@ func TestDownloadWithProgress_KnownLength(t *testing.T) {
 	testutil.NoError(t, err, "DownloadWithProgress() =")
 	defer os.Remove(path)
 
-	if len(calls) == 0 {
-		t.Fatal("进度回调未被调用")
-	}
+	// 护栏：进度回调至少一次（原 if len==0 → t.Fatal）
+	testutil.Equal(t, len(calls) == 0, false, "进度回调未被调用")
 	// 最终回调必须覆盖 100%（done==total==len(body)）
 	last := calls[len(calls)-1]
 	if last.done != int64(len(body)) || last.total != int64(len(body)) {
@@ -245,9 +242,8 @@ func TestDownloadWithProgress_KnownLength(t *testing.T) {
 	// 回调单调递增且 total 恒定
 	var prev int64
 	for i, c := range calls {
-		if c.done < prev {
-			t.Fatalf("回调 %d 回退: done=%d < prev=%d", i, c.done, prev)
-		}
+		// 护栏：任一回退即失败（原 if done<prev → t.Fatal）
+		testutil.Equal(t, c.done < prev, false, "回调 %d 回退: done=%d < prev=%d", i, c.done, prev)
 		prev = c.done
 		if c.total != int64(len(body)) {
 			t.Errorf("回调 %d total=%d，期望 %d", i, c.total, len(body))
@@ -272,9 +268,8 @@ func TestDownloadWithProgress_UnknownLength(t *testing.T) {
 	testutil.NoError(t, err, "DownloadWithProgress() =")
 	defer os.Remove(path)
 
-	if len(calls) == 0 {
-		t.Fatal("分块传输下进度回调未被调用")
-	}
+	// 护栏：进度回调至少一次（原 if len==0 → t.Fatal）
+	testutil.Equal(t, len(calls) == 0, false, "分块传输下进度回调未被调用")
 	// 尾块补发（P3 修复）：最终回调必须覆盖完整字节数（600KB，非 512KB 整数倍）
 	last := calls[len(calls)-1]
 	if last.done != int64(len(body)) {
@@ -308,9 +303,8 @@ func TestDownloadWithProgress_ChunkedShortBody(t *testing.T) {
 	testutil.NoError(t, err, "DownloadWithProgress() =")
 	defer os.Remove(path)
 
-	if len(calls) == 0 {
-		t.Fatal("短包也应收到至少一次进度回调（尾块补发）")
-	}
+	// 护栏：进度回调至少一次（原 if len==0 → t.Fatal）
+	testutil.Equal(t, len(calls) == 0, false, "短包也应收到至少一次进度回调（尾块补发）")
 	last := calls[len(calls)-1]
 	if last.done != int64(len(body)) {
 		t.Errorf("最终回调 done=%d，期望 %d", last.done, len(body))
@@ -351,9 +345,8 @@ func TestDownload_RejectsOversized(t *testing.T) {
 	// 是含冒号的非法文件名，os.Create 在 Content-Length 预检前失败 → 超限分支在
 	// 主平台从未真正执行（测试通过但测的是别的错误）。
 	// hash 传非空：R30 P2-3 前置空 hash 拒绝在 CL 预检之前，传 "x" 保住 CL 预检分支
-	if _, err := Download(server.URL+"/pkg.zip", "x"); err == nil {
-		t.Fatal("Content-Length 超限应返回错误")
-	}
+	_, err := Download(server.URL+"/pkg.zip", "x")
+	testutil.NotNil(t, err, "Content-Length 超限应返回错误")
 }
 
 func TestDownload_HTTPError(t *testing.T) {
@@ -473,9 +466,7 @@ func TestCheck_FindsNewer(t *testing.T) {
 
 	info, err := CheckWithClient(server.Client(), server.URL, "1.0.0")
 	testutil.NoError(t, err, "CheckWithClient() =")
-	if !info.Available {
-		t.Fatal("应检测到新版本")
-	}
+	testutil.Equal(t, info.Available, true, "应检测到新版本")
 	if info.Latest != "v1.2.0" {
 		t.Errorf("Latest = %q, 期望 v1.2.0", info.Latest)
 	}
@@ -498,9 +489,7 @@ func TestCheck_NoNewer(t *testing.T) {
 
 	info, err := CheckWithClient(server.Client(), server.URL, "1.0.0")
 	testutil.NoError(t, err, "CheckWithClient() =")
-	if info.Available {
-		t.Fatal("无新版本时不应 available")
-	}
+	testutil.Equal(t, info.Available, false, "无新版本时不应 available")
 }
 
 func TestCheck_SkipsPrerelease(t *testing.T) {
@@ -515,9 +504,7 @@ func TestCheck_SkipsPrerelease(t *testing.T) {
 
 	info, err := CheckWithClient(server.Client(), server.URL, "1.0.0")
 	testutil.NoError(t, err, "CheckWithClient() =")
-	if info.Available {
-		t.Fatal("prerelease/draft 不应触发更新")
-	}
+	testutil.Equal(t, info.Available, false, "prerelease/draft 不应触发更新")
 }
 
 func TestCheck_APIError(t *testing.T) {

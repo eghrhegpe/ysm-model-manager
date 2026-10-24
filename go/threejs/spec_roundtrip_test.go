@@ -26,12 +26,10 @@ func TestModel3DSpecRoundTripKeepsInjectedFields(t *testing.T) {
 	if err := json.Unmarshal(injected, &spec); err != nil {
 		testutil.NoError(t, err)
 	}
-	if len(spec.TexArrOrder) != 5 || spec.TexArrOrder[4] != "foxcar" {
-		t.Fatalf("texArrOrder 往返丢失/错序: %#v", spec.TexArrOrder)
-	}
-	if len(spec.ComponentTextures["foxcar"]) != 1 {
-		t.Fatalf("componentTextures 往返丢失: %#v", spec.ComponentTextures)
-	}
+	// OR 型复合条件拆序贯：len 前置守卫防 TexArrOrder[4] 越界（原 if len!=5 || [4]!="foxcar"）
+	testutil.Equal(t, len(spec.TexArrOrder), 5, "texArrOrder 往返丢失/错序: %#v", spec.TexArrOrder)
+	testutil.Equal(t, spec.TexArrOrder[4], "foxcar", "texArrOrder 往返丢失/错序: %#v", spec.TexArrOrder)
+	testutil.Equal(t, len(spec.ComponentTextures["foxcar"]), 1, "componentTextures 往返丢失: %#v", spec.ComponentTextures)
 
 	// 再序列化（Wails 桥出参）字段仍须在场
 	out, err := json.Marshal(spec)
@@ -40,10 +38,8 @@ func TestModel3DSpecRoundTripKeepsInjectedFields(t *testing.T) {
 	if err := json.Unmarshal(out, &back); err != nil {
 		testutil.NoError(t, err)
 	}
-	if _, ok := back["texArrOrder"]; !ok {
-		t.Fatal("再序列化后 texArrOrder 缺失")
-	}
-	if _, ok := back["componentTextures"]; !ok {
-		t.Fatal("再序列化后 componentTextures 缺失")
-	}
+	_, ok := back["texArrOrder"]
+	testutil.Equal(t, ok, true, "再序列化后 texArrOrder 缺失")
+	_, ok = back["componentTextures"]
+	testutil.Equal(t, ok, true, "再序列化后 componentTextures 缺失")
 }

@@ -97,23 +97,20 @@ func TestMakeZipRaw_Sanity(t *testing.T) {
 	raw := makeZipRaw(t, []rawZipEntry{{name: "a.txt", method: 0, data: "hello"}})
 	r, err := zip.NewReader(bytes.NewReader(raw), int64(len(raw)))
 	testutil.NoError(t, err, "自检失败: makeZipRaw 产物无法解析")
-	if len(r.File) != 1 || r.File[0].Name != "a.txt" {
-		t.Fatalf("自检失败: 条目异常 %+v", r.File)
-	}
+	// 序贯拆分：前一 Equal 失败即 Goexit，下一行的 [0] 索引才安全
+	testutil.Equal(t, len(r.File), 1, "自检失败: 条目异常 %+v", r.File)
+	testutil.Equal(t, r.File[0].Name, "a.txt", "自检失败: 条目异常")
 	rc, err := r.File[0].Open()
 	testutil.NoError(t, err, "自检失败: Open 报错")
 	buf := new(bytes.Buffer)
 	_, _ = buf.ReadFrom(rc)
-	if buf.String() != "hello" {
-		t.Fatalf("自检失败: 内容 = %q", buf.String())
-	}
+	testutil.Equal(t, buf.String(), "hello", "自检失败: 内容不符")
 	// method=99 条目：Open 应报错（ErrAlgorithm）
 	raw2 := makeZipRaw(t, []rawZipEntry{{name: "bad.dat", method: 99, data: "x"}})
 	r2, err := zip.NewReader(bytes.NewReader(raw2), int64(len(raw2)))
 	testutil.NoError(t, err, "自检失败: method=99 目录解析应成功")
-	if _, err := r2.File[0].Open(); err == nil {
-		t.Fatalf("自检失败: method=99 条目 Open 应报错")
-	}
+	_, openErr := r2.File[0].Open()
+	testutil.NotNil(t, openErr, "自检失败: method=99 条目 Open 应报错")
 }
 
 // zipRawValid 最小完整归档：ysm.json(数组声明) + model.geo.json + tex1.png
@@ -147,9 +144,7 @@ func TestParseFromZip_GeoOpenError(t *testing.T) {
 	entries[1].method = 99
 	data := makeZipRaw(t, entries)
 	model, _, _ := ParseFromZip(data, int64(len(data)))
-	if model != nil {
-		t.Fatalf("唯一几何条目 Open 失败时模型应为 nil, got %+v", model)
-	}
+	testutil.Nil(t, model, "唯一几何条目 Open 失败时模型应为 nil")
 }
 
 func TestParseFromZip_PngOpenError(t *testing.T) {
@@ -174,17 +169,15 @@ func TestParseFromZip_AnimOpenError(t *testing.T) {
 		{name: "tex1.png", method: 0, data: "PNG-DATA"},
 	})
 	model, _, _ := ParseFromZip(data, int64(len(data)))
-	if model == nil || model.BoneCount != 1 {
-		t.Fatalf("动画条目 Open 失败不应影响模型解析, model=%v", model)
-	}
+	// 序贯拆分：NotNil 失败即 Goexit，下一行 model.BoneCount 才安全
+	testutil.NotNil(t, model, "动画条目 Open 失败不应影响模型解析（模型为 nil）")
+	testutil.Equal(t, model.BoneCount, 1, "动画条目 Open 失败不应影响模型解析")
 }
 
 func TestExtractFirstPNGFromZip_OpenError(t *testing.T) {
 	// 唯一 PNG 条目 Open 失败 → nil（不崩溃）
 	data := makeZipRaw(t, []rawZipEntry{{name: "tex1.png", method: 99, data: "x"}})
-	if got := ExtractFirstPNGFromZip(data, int64(len(data))); got != nil {
-		t.Fatalf("PNG Open 失败应返回 nil, got %q", got)
-	}
+	testutil.Nil(t, ExtractFirstPNGFromZip(data, int64(len(data))), "PNG Open 失败应返回 nil")
 }
 
 func TestParseComponentsFromZip_YsmOpenError(t *testing.T) {
@@ -194,9 +187,7 @@ func TestParseComponentsFromZip_YsmOpenError(t *testing.T) {
 	data := makeZipRaw(t, entries)
 	comps, texNames, err := ParseComponentsFromZip(data, int64(len(data)))
 	testutil.NoError(t, err, "应无错误")
-	if len(comps) != 1 {
-		t.Fatalf("组件数 = %d, 期望 1（几何回退）", len(comps))
-	}
+	testutil.Equal(t, len(comps), 1, "组件数 = %d, 期望 1（几何回退）", len(comps))
 	if len(texNames) != 1 || texNames[0] != "model" {
 		t.Errorf("texNames = %v, 期望 [model]（未声明组件用 basename）", texNames)
 	}
@@ -248,9 +239,7 @@ func TestParseFromZip_BackslashEntryNames(t *testing.T) {
 	model, pngs, _ := ParseFromZip(data, int64(len(data)))
 	testutil.NotNil(t, model, "模型应为非 nil")
 	// 声明序 a 在前 → 合并结果 first(head) 应排在 second 前（排序查询键归一化）
-	if len(model.Bones) != 2 {
-		t.Fatalf("BoneCount = %d, 期望 2", len(model.Bones))
-	}
+	testutil.Equal(t, len(model.Bones), 2, "BoneCount = %d, 期望 2", len(model.Bones))
 	if model.Bones[0].Name != "head" {
 		t.Errorf("Bones[0] = %q, 期望 head（声明序 a/first 在前）", model.Bones[0].Name)
 	}
@@ -288,9 +277,7 @@ func TestParseFromZip_UndeclaredGeoAndPng(t *testing.T) {
 	model, pngs, _ := ParseFromZip(data, int64(len(data)))
 	testutil.NotNil(t, model, "模型应为非 nil")
 	// 声明项 declared 排前，未声明项按稳定序落尾（map 写入序随机 → 只校验集合）
-	if len(model.Bones) != 3 {
-		t.Fatalf("BoneCount = %d, 期望 3（declared/main/extra 合并）", len(model.Bones))
-	}
+	testutil.Equal(t, len(model.Bones), 3, "BoneCount = %d, 期望 3（declared/main/extra 合并）", len(model.Bones))
 	if model.Bones[0].Name != "declared" {
 		t.Errorf("Bones[0] = %q, 期望 declared（声明项优先）", model.Bones[0].Name)
 	}
@@ -303,9 +290,7 @@ func TestParseFromZip_UndeclaredGeoAndPng(t *testing.T) {
 		t.Errorf("TexWidth = %d, 期望 128（多模型合并取最大）", model.TexWidth)
 	}
 	// 纹理：声明 tex1 在前，未声明 extra 落尾；TextureNames 与 pngs 同序
-	if len(pngs) != 2 {
-		t.Fatalf("pngs = %d, 期望 2", len(pngs))
-	}
+	testutil.Equal(t, len(pngs), 2, "pngs = %d, 期望 2", len(pngs))
 	if len(model.TextureNames) != 2 || model.TextureNames[0] != "tex1" || model.TextureNames[1] != "extra" {
 		t.Errorf("TextureNames = %v, 期望 [tex1 extra]", model.TextureNames)
 	}
@@ -323,9 +308,7 @@ func TestParseFromZip_TextureMixedSeparators(t *testing.T) {
 	})
 	model, pngs, _ := ParseFromZip(data, int64(len(data)))
 	testutil.NotNil(t, model, "模型应为非 nil")
-	if len(pngs) != 3 {
-		t.Fatalf("pngs = %d, 期望 3", len(pngs))
-	}
+	testutil.Equal(t, len(pngs), 3, "pngs = %d, 期望 3", len(pngs))
 	want := []string{"tex1", "tex2", "extra"}
 	for i, w := range want {
 		if model.TextureNames[i] != w {
@@ -343,9 +326,9 @@ func TestParseFromZip_ModelArrayNameOnly(t *testing.T) {
 		"tex1.png":       "PNG-DATA",
 	})
 	model, _, _ := ParseFromZip(data, int64(len(data)))
-	if model == nil || model.BoneCount != 1 {
-		t.Fatalf("模型解析异常: %v", model)
-	}
+	// 序贯拆分：NotNil 失败即 Goexit，下一行 model.BoneCount 才安全
+	testutil.NotNil(t, model, "模型解析异常（模型为 nil）")
+	testutil.Equal(t, model.BoneCount, 1, "模型解析异常: %+v", model)
 	if model.TextureNames[0] != "tex1" {
 		t.Errorf("TextureNames = %v, 期望 [tex1]", model.TextureNames)
 	}
@@ -389,9 +372,7 @@ func TestParseComponentsFromZip_BackslashEntryNames(t *testing.T) {
 	})
 	comps, _, err := ParseComponentsFromZip(data, int64(len(data)))
 	testutil.NoError(t, err, "ParseComponentsFromZip 失败")
-	if len(comps) != 2 {
-		t.Fatalf("组件数 = %d, 期望 2", len(comps))
-	}
+	testutil.Equal(t, len(comps), 2, "组件数 = %d, 期望 2", len(comps))
 	if comps[0].Bones[0].Name != "head" {
 		t.Errorf("组件 0 = %q, 期望 head（声明序 a 在前）", comps[0].Bones[0].Name)
 	}
@@ -407,9 +388,7 @@ func TestParseComponentsFromZip_ModelMapBadValue(t *testing.T) {
 	})
 	comps, texNames, err := ParseComponentsFromZip(data, int64(len(data)))
 	testutil.NoError(t, err, "ParseComponentsFromZip 失败")
-	if len(comps) != 1 {
-		t.Fatalf("组件数 = %d, 期望 1", len(comps))
-	}
+	testutil.Equal(t, len(comps), 1, "组件数 = %d, 期望 1", len(comps))
 	// ADR-114 perComponent：未声明组件 cube.TexSlot=0（用自己的第 0 张）
 	if slot := comps[0].Bones[0].Cubes[0].TexSlot; slot != 0 {
 		t.Errorf("texSlot = %d, 期望 0（perComponent）", slot)
@@ -430,9 +409,7 @@ func TestParseComponentsFromZip_NoDeclarations(t *testing.T) {
 	})
 	comps, texNames, err := ParseComponentsFromZip(data, int64(len(data)))
 	testutil.NoError(t, err, "ParseComponentsFromZip 失败")
-	if len(comps) != 3 {
-		t.Fatalf("组件数 = %d, 期望 3", len(comps))
-	}
+	testutil.Equal(t, len(comps), 3, "组件数 = %d, 期望 3", len(comps))
 	// main 优先 + 字典序
 	if comps[0].Bones[0].Name != "head" {
 		t.Errorf("组件 0 = %q, 期望 head（main 优先）", comps[0].Bones[0].Name)
@@ -459,9 +436,7 @@ func TestParseComponentsFromZip_TextureObjects(t *testing.T) {
 	})
 	comps, texNames, err := ParseComponentsFromZip(data, int64(len(data)))
 	testutil.NoError(t, err, "ParseComponentsFromZip 失败")
-	if len(comps) != 1 {
-		t.Fatalf("组件数 = %d, 期望 1", len(comps))
-	}
+	testutil.Equal(t, len(comps), 1, "组件数 = %d, 期望 1", len(comps))
 	if len(texNames) != 1 || texNames[0] != "tex1" {
 		t.Errorf("texNames = %v, 期望 [tex1]（uv 对象 basename 去扩展名）", texNames)
 	}
@@ -480,9 +455,7 @@ func TestParseComponentsFromZip_ModelObjectsNameOnly(t *testing.T) {
 	})
 	comps, texNames, err := ParseComponentsFromZip(data, int64(len(data)))
 	testutil.NoError(t, err, "ParseComponentsFromZip 失败")
-	if len(comps) != 1 {
-		t.Fatalf("组件数 = %d, 期望 1", len(comps))
-	}
+	testutil.Equal(t, len(comps), 1, "组件数 = %d, 期望 1", len(comps))
 	if slot := comps[0].Bones[0].Cubes[0].TexSlot; slot != 0 {
 		t.Errorf("texSlot = %d, 期望 0（name 回退声明命中）", slot)
 	}
@@ -500,12 +473,8 @@ func TestParseComponentsFromZip_TextureEmptyUV(t *testing.T) {
 	})
 	comps, texNames, err := ParseComponentsFromZip(data, int64(len(data)))
 	testutil.NoError(t, err, "ParseComponentsFromZip 失败")
-	if len(comps) != 1 {
-		t.Fatalf("组件数 = %d, 期望 1", len(comps))
-	}
-	if len(texNames) != 1 {
-		t.Fatalf("texNames = %d, 期望 1", len(texNames))
-	}
+	testutil.Equal(t, len(comps), 1, "组件数 = %d, 期望 1", len(comps))
+	testutil.Equal(t, len(texNames), 1, "texNames = %d, 期望 1", len(texNames))
 }
 
 // ====== collectArchiveFiles 与 ParseFromZip 剩余错误/边界分支 ======
@@ -519,9 +488,7 @@ func TestParseComponentsFromZip_InvalidYsmJSON(t *testing.T) {
 	})
 	comps, texNames, err := ParseComponentsFromZip(data, int64(len(data)))
 	testutil.NoError(t, err, "应无错误")
-	if len(comps) != 1 {
-		t.Fatalf("组件数 = %d, 期望 1（几何回退）", len(comps))
-	}
+	testutil.Equal(t, len(comps), 1, "组件数 = %d, 期望 1（几何回退）", len(comps))
 	if len(texNames) != 1 || texNames[0] != "model" {
 		t.Errorf("texNames = %v, 期望 [model]", texNames)
 	}
@@ -537,9 +504,7 @@ func TestParseComponentsFromZip_ModelAsString(t *testing.T) {
 	})
 	comps, texNames, err := ParseComponentsFromZip(data, int64(len(data)))
 	testutil.NoError(t, err, "ParseComponentsFromZip 失败")
-	if len(comps) != 1 {
-		t.Fatalf("组件数 = %d, 期望 1", len(comps))
-	}
+	testutil.Equal(t, len(comps), 1, "组件数 = %d, 期望 1", len(comps))
 	if slot := comps[0].Bones[0].Cubes[0].TexSlot; slot != 0 {
 		t.Errorf("texSlot = %d, 期望 0（字符串声明命中）", slot)
 	}
@@ -558,9 +523,7 @@ func TestParseComponentsFromZip_TextureBackslashUV(t *testing.T) {
 	})
 	comps, texNames, err := ParseComponentsFromZip(data, int64(len(data)))
 	testutil.NoError(t, err, "ParseComponentsFromZip 失败")
-	if len(comps) != 1 {
-		t.Fatalf("组件数 = %d, 期望 1", len(comps))
-	}
+	testutil.Equal(t, len(comps), 1, "组件数 = %d, 期望 1", len(comps))
 	if len(texNames) != 1 || texNames[0] != "tex1" {
 		t.Errorf("texNames = %v, 期望 [tex1]（反斜杠路径剥离）", texNames)
 	}
@@ -578,9 +541,9 @@ func TestParseComponentsFromZip_EntryOpenErrors(t *testing.T) {
 	})
 	comps, texNames, err := ParseComponentsFromZip(data, int64(len(data)))
 	testutil.NoError(t, err, "应无错误")
-	if len(comps) != 1 || comps[0].Bones[0].Name != "head" {
-		t.Fatalf("组件 = %+v, 期望仅 model(head) 成功解析", comps)
-	}
+	// 序贯拆分：前一 Equal 失败即 Goexit，下一行的 comps[0] 索引才安全
+	testutil.Equal(t, len(comps), 1, "组件 = %+v, 期望仅 model(head) 成功解析", comps)
+	testutil.Equal(t, comps[0].Bones[0].Name, "head", "组件 = %+v, 期望仅 model(head) 成功解析", comps)
 	if len(texNames) != 1 {
 		t.Errorf("texNames = %v, 期望 1 个", texNames)
 	}
@@ -609,9 +572,7 @@ func TestParseFromZip_PngSubdirAndBackslashNames(t *testing.T) {
 	})
 	model, pngs, _ := ParseFromZip(data, int64(len(data)))
 	testutil.NotNil(t, model, "模型应为非 nil")
-	if len(pngs) != 2 {
-		t.Fatalf("pngs = %d, 期望 2", len(pngs))
-	}
+	testutil.Equal(t, len(pngs), 2, "pngs = %d, 期望 2", len(pngs))
 	if len(model.TextureNames) != 2 || model.TextureNames[0] != "tex1" || model.TextureNames[1] != "tex2" {
 		t.Errorf("TextureNames = %v, 期望 [tex1 tex2]", model.TextureNames)
 	}
@@ -628,9 +589,9 @@ func TestParseFromZip_InvalidGeoSkipped(t *testing.T) {
 		"tex1.png":        "PNG-DATA",
 	})
 	model, _, _ := ParseFromZip(data, int64(len(data)))
-	if model == nil || model.BoneCount != 1 {
-		t.Fatalf("非法几何应被跳过、有效几何应合并, model=%v", model)
-	}
+	// 序贯拆分：NotNil 失败即 Goexit，下一行 model.BoneCount 才安全
+	testutil.NotNil(t, model, "非法几何应被跳过、有效几何应合并（模型为 nil）")
+	testutil.Equal(t, model.BoneCount, 1, "非法几何应被跳过、有效几何应合并")
 	// 全部几何非法 → 模型 nil（无崩溃）
 	allBad := testutil.MakeZipBytes(t, map[string]string{
 		"ysm.json":        ysm,
@@ -638,9 +599,7 @@ func TestParseFromZip_InvalidGeoSkipped(t *testing.T) {
 		"broken.geo.json": "{not json",
 	})
 	model2, _, _ := ParseFromZip(allBad, int64(len(allBad)))
-	if model2 != nil {
-		t.Fatalf("全部几何非法时模型应为 nil, got %+v", model2)
-	}
+	testutil.Nil(t, model2, "全部几何非法时模型应为 nil")
 }
 
 // TestBuildComponents_ModelTexNameMap 验证：共享纹理的多个组件（foxcar/mule）
@@ -693,9 +652,7 @@ func TestBuildComponents_ModelTexNameMap(t *testing.T) {
 	})
 	comps, texNames, err := ParseComponentsFromZip(data, int64(len(data)))
 	testutil.NoError(t, err, "ParseComponentsFromZip 失败")
-	if len(comps) != 5 {
-		t.Fatalf("组件数 = %d, 期望 5（main/arm/foxcar/minecart/boat）", len(comps))
-	}
+	testutil.Equal(t, len(comps), 5, "组件数 = %d, 期望 5（main/arm/foxcar/minecart/boat）", len(comps))
 	// main 优先
 	if comps[0].SourceName != "main" {
 		t.Errorf("组件 0 SourceName = %q, 期望 main", comps[0].SourceName)
@@ -756,12 +713,10 @@ func TestTextureCategories_CaseInsensitiveReorder(t *testing.T) {
 	})
 	model, _, _ := ParseFromZip(data, int64(len(data)))
 	testutil.NotNil(t, model, "模型不应为 nil")
-	if len(model.TextureNames) != 1 || model.TextureNames[0] != "Skin" {
-		t.Fatalf("TextureNames = %v, 期望 [Skin]", model.TextureNames)
-	}
-	if len(model.TextureCategories) != 1 {
-		t.Fatalf("TextureCategories 长度 = %d, 期望 1（大写纹理名分类不得丢失）", len(model.TextureCategories))
-	}
+	// 序贯拆分：前一 Equal 失败即 Goexit，下一行的 [0] 索引才安全
+	testutil.Equal(t, len(model.TextureNames), 1, "TextureNames = %v, 期望 [Skin]", model.TextureNames)
+	testutil.Equal(t, model.TextureNames[0], "Skin", "TextureNames = %v, 期望 [Skin]", model.TextureNames)
+	testutil.Equal(t, len(model.TextureCategories), 1, "TextureCategories 长度 = %d, 期望 1（大写纹理名分类不得丢失）", len(model.TextureCategories))
 	if model.TextureCategories[0] != "player" {
 		t.Errorf("TextureCategories[0] = %q, 期望 player", model.TextureCategories[0])
 	}
@@ -790,12 +745,8 @@ func TestTextureCategories_L0Rebuild(t *testing.T) {
 	model, _, _ := ParseFromZip(data, int64(len(data)))
 	testutil.NotNil(t, model, "L0 清单合法时模型不应为 nil")
 	// L0 生效：texOrder 被 maid_model.json 清单覆盖为 2 项，texCategories 应同步重建为 2 项全 player
-	if len(model.TextureNames) != 2 {
-		t.Fatalf("TextureNames 长度 = %d, 期望 2（L0 清单 2 张纹理）", len(model.TextureNames))
-	}
-	if len(model.TextureCategories) != 2 {
-		t.Fatalf("TextureCategories 长度 = %d, 期望 2（L0 覆盖后须同步重建）", len(model.TextureCategories))
-	}
+	testutil.Equal(t, len(model.TextureNames), 2, "TextureNames 长度 = %d, 期望 2（L0 清单 2 张纹理）", len(model.TextureNames))
+	testutil.Equal(t, len(model.TextureCategories), 2, "TextureCategories 长度 = %d, 期望 2（L0 覆盖后须同步重建）", len(model.TextureCategories))
 	for i, cat := range model.TextureCategories {
 		if cat != "player" {
 			t.Errorf("TextureCategories[%d] = %q, 期望 player（L0 清单纹理全为主模型皮肤）", i, cat)

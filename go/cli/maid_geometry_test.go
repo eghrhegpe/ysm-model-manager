@@ -49,7 +49,7 @@ type maidZipEntry struct {
 func writeZip(t *testing.T, path string, entries []maidZipEntry) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		t.Fatalf("建目录失败: %v", err)
+		testutil.NoError(t, err, "建目录失败")
 	}
 	f, err := os.Create(path)
 	testutil.NoError(t, err, "建 zip 失败")
@@ -58,14 +58,14 @@ func writeZip(t *testing.T, path string, entries []maidZipEntry) {
 	for _, e := range entries {
 		ww, err := w.Create(e.name)
 		if err != nil {
-			t.Fatalf("写 zip 条目 %s 失败: %v", e.name, err)
+			testutil.NoError(t, err, "写 zip 条目 %s 失败", e.name)
 		}
 		if _, err := ww.Write([]byte(e.body)); err != nil {
-			t.Fatalf("写 zip 条目 %s 失败: %v", e.name, err)
+			testutil.NoError(t, err, "写 zip 条目 %s 失败", e.name)
 		}
 	}
 	if err := w.Close(); err != nil {
-		t.Fatalf("收尾 zip 失败: %v", err)
+		testutil.NoError(t, err, "收尾 zip 失败")
 	}
 }
 
@@ -119,7 +119,7 @@ func TestSingleBench_MatrixByRtype_MaidModelCollected(t *testing.T) {
 	testutil.NoError(t, err, "矩阵模式报错")
 	var m singleBenchMatrixJSON
 	if err := json.Unmarshal([]byte(out), &m); err != nil {
-		t.Fatalf("矩阵载荷不是 JSON: %v\n%s", err, out)
+		testutil.NoError(t, err, "矩阵载荷不是 JSON:\n%s", out)
 	}
 	if m.Spec.Rtype != "maid-model" || !m.Spec.CliAnalyzable {
 		t.Errorf("spec 应回显 maid-model 且 cli_analyzable=true: %+v", m.Spec)
@@ -127,9 +127,7 @@ func TestSingleBench_MatrixByRtype_MaidModelCollected(t *testing.T) {
 	if m.Spec.Unsupported != 0 || m.Spec.Analyzed != 1 {
 		t.Errorf("女仆包应被真采集（unsupported=0 / analyzed=1）: %+v", m.Spec)
 	}
-	if len(m.Models) != 1 {
-		t.Fatalf("应出 1 条采集记录: %d", len(m.Models))
-	}
+	testutil.Equal(t, len(m.Models), 1, "应出 1 条采集记录: %d", len(m.Models))
 	if got := m.Models[0].Identity.Rtype; got != "maid-model" {
 		t.Errorf("身份块 rtype 应为 maid-model: %+v", m.Models[0].Identity)
 	}
@@ -158,7 +156,7 @@ func TestGUIFlow_PromotionSkipsCandidateWithoutGeometry(t *testing.T) {
 	packHash, hashErr := texture_cache.TextureHash(pack)
 	testutil.NoError(t, hashErr, "真包纹理哈希失败")
 	if writeErr := texture_cache.WriteCached(packHash, []byte("ktx2-payload")); writeErr != nil {
-		t.Fatalf("写缓存失败: %v", writeErr)
+		testutil.NoError(t, writeErr, "写缓存失败")
 	}
 	ctx := &CmdContext{App: maidFlowApp(t, root), FilesRoot: root, Args: []string{"--verbose"}}
 
@@ -166,19 +164,14 @@ func TestGUIFlow_PromotionSkipsCandidateWithoutGeometry(t *testing.T) {
 
 	byName := flowStageNames(t, ctx)
 	// 前提（防夹具失真）：② 提升的首个候选确实是那个音效包，否则本用例没测到顺延。
-	if scan, ok := byName["② 模型扫描"]; !ok {
-		t.Fatalf("② 阶段必须存在: %+v", byName)
-	} else if !strings.Contains(strings.Join(scan.Desc, "\n"), filepath.Base(sound)) {
-		t.Fatalf("夹具前提不成立：② 提升的首个候选应是音效包 %q: %+v", filepath.Base(sound), scan.Desc)
-	}
+	scan, ok := byName["② 模型扫描"]
+	testutil.Equal(t, ok, true, "② 阶段必须存在: %+v", byName)
+	testutil.Equal(t, strings.Contains(strings.Join(scan.Desc, "\n"), filepath.Base(sound)), true,
+		"夹具前提不成立：② 提升的首个候选应是音效包 %q: %+v", filepath.Base(sound), scan.Desc)
 
 	three, ok := byName["③ 模型分析"]
-	if !ok {
-		t.Fatal("③ 阶段必须存在")
-	}
-	if three.Status != "✅" {
-		t.Fatalf("顺延后 ③ 应成功（首个候选无几何，第二个才是真模型）: %+v\n输出:\n%s", three, out)
-	}
+	testutil.Equal(t, ok, true, "③ 阶段必须存在")
+	testutil.Equal(t, three.Status, "✅", "顺延后 ③ 应成功（首个候选无几何，第二个才是真模型）: %+v\n输出:\n%s", three, out)
 	joined := strings.Join(three.Desc, "\n")
 	if !strings.Contains(joined, "骨骼: 1") {
 		t.Errorf("③ 报告的应是**第二个**模型（真有骨骼），而不是空包: %s", joined)
@@ -198,9 +191,9 @@ func TestGUIFlow_PromotionSkipsCandidateWithoutGeometry(t *testing.T) {
 		}
 	}
 	// ④ 的具体判据：真包的哈希已入缓存 → 必须报「缓存命中」；若 ④ 仍拿首个候选算哈希，这里会红。
-	if four, ok := byName["④ 纹理缓存"]; !ok {
-		t.Fatalf("④ 阶段必须存在: %+v", byName)
-	} else if !strings.Contains(strings.Join(four.Desc, "\n"), "缓存命中") {
+	four, ok := byName["④ 纹理缓存"]
+	testutil.Equal(t, ok, true, "④ 阶段必须存在: %+v", byName)
+	if !strings.Contains(strings.Join(four.Desc, "\n"), "缓存命中") {
 		t.Errorf("④ 应算的是真包的哈希（缓存已预置，应命中）——顺延后 targetModel 必须一起更新: %+v", four.Desc)
 	}
 }
@@ -218,12 +211,8 @@ func TestGUIFlow_AllCandidatesWithoutGeometryStaysDataFailure(t *testing.T) {
 
 	byName := flowStageNames(t, ctx)
 	three, ok := byName["③ 模型分析"]
-	if !ok {
-		t.Fatal("③ 阶段必须存在")
-	}
-	if three.Status != "❌" {
-		t.Fatalf("所有候选都解析不出几何时应如实标失败: %+v\n输出:\n%s", three, out)
-	}
+	testutil.Equal(t, ok, true, "③ 阶段必须存在")
+	testutil.Equal(t, three.Status, "❌", "所有候选都解析不出几何时应如实标失败: %+v\n输出:\n%s", three, out)
 	joined := strings.Join(three.Desc, "\n")
 	if !strings.Contains(joined, "分析失败") {
 		t.Errorf("单候选时保留原文案「分析失败」（与今天一致）: %s", joined)
@@ -257,12 +246,8 @@ func TestGUIFlow_ExplicitModelNoFallback(t *testing.T) {
 
 	byName := flowStageNames(t, ctx)
 	three, ok := byName["③ 模型分析"]
-	if !ok {
-		t.Fatal("③ 阶段必须存在")
-	}
-	if three.Status != "❌" {
-		t.Fatalf("--model 点名了空包 → ③ 应如实失败，不得顺延: %+v\n输出:\n%s", three, out)
-	}
+	testutil.Equal(t, ok, true, "③ 阶段必须存在")
+	testutil.Equal(t, three.Status, "❌", "--model 点名了空包 → ③ 应如实失败，不得顺延: %+v\n输出:\n%s", three, out)
 	joined := strings.Join(three.Desc, "\n")
 	if !strings.Contains(joined, sound) {
 		t.Errorf("③ 应点名用户显式指定的文件: %s", joined)

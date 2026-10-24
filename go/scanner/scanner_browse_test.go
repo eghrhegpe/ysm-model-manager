@@ -48,9 +48,8 @@ func TestScanEntriesBrowse_ParityNoHash(t *testing.T) {
 	}
 	for _, e := range browse {
 		fe, ok := fullByPath[e.Path]
-		if !ok {
-			t.Fatalf("浏览条目 %s 不在全量扫描结果内（过滤口径漂移）", e.Path)
-		}
+		// Equal 失败即 Goexit，守卫语义等价：下方 fe 字段比较仅在其通过后执行
+		testutil.Equal(t, ok, true, "浏览条目 %s 不在全量扫描结果内（过滤口径漂移）", e.Path)
 		if e.Name != fe.Name || e.Size != fe.Size || e.ModTime != fe.ModTime || e.Ext != fe.Ext {
 			t.Errorf("浏览条目 %s 与全量扫描字段口径分歧: %+v vs %+v", e.Path, e, fe)
 		}

@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/internal/testutil"
 )
 
 // writeTestZip 造一个内容受控的 zip（条目名 → 内容），返回路径
@@ -18,33 +19,24 @@ func writeTestZip(t *testing.T, dir, name string, entries map[string]string) str
 	t.Helper()
 	p := filepath.Join(dir, name)
 	f, err := os.Create(p)
-	if err != nil {
-		t.Fatalf("create %s: %v", name, err)
-	}
+	testutil.NoError(t, err, "create %s", name)
 	defer f.Close()
 	zw := zip.NewWriter(f)
 	// map 迭代序随机——条目序对分类无影响（分类按内容匹配，不按序），不排序直接写
 	for n, c := range entries {
 		w, err := zw.Create(n)
-		if err != nil {
-			t.Fatalf("zip create %s: %v", n, err)
-		}
-		if _, err := w.Write([]byte(c)); err != nil {
-			t.Fatalf("zip write %s: %v", n, err)
-		}
+		testutil.NoError(t, err, "zip create %s", n)
+		_, err = w.Write([]byte(c))
+		testutil.NoError(t, err, "zip write %s", n)
 	}
-	if err := zw.Close(); err != nil {
-		t.Fatalf("zip close %s: %v", name, err)
-	}
+	testutil.NoError(t, zw.Close(), "zip close %s", name)
 	return p
 }
 
 func writeTextFile(t *testing.T, dir, name, content string) string {
 	t.Helper()
 	p := filepath.Join(dir, name)
-	if err := os.WriteFile(p, []byte(content), 0o644); err != nil {
-		t.Fatalf("write %s: %v", name, err)
-	}
+	testutil.NoError(t, os.WriteFile(p, []byte(content), 0o644), "write %s", name)
 	return p
 }
 
@@ -56,13 +48,9 @@ func writeTextFile(t *testing.T, dir, name, content string) string {
 func TestScanModelEntries_FillsType(t *testing.T) {
 	base := t.TempDir()
 	neutral := filepath.Join(base, "misc")
-	if err := os.MkdirAll(neutral, 0o755); err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, os.MkdirAll(neutral, 0o755))
 	epDir := filepath.Join(base, "3d-skin", "EntityPlayer")
-	if err := os.MkdirAll(epDir, 0o755); err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, os.MkdirAll(epDir, 0o755))
 
 	writeTextFile(t, neutral, "m.ysm", "data")
 	writeTextFile(t, neutral, "blueprint.nbt", "data")
@@ -75,9 +63,7 @@ func TestScanModelEntries_FillsType(t *testing.T) {
 
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
 	entries := a.ScanModelEntries(base)
-	if len(entries) == 0 {
-		t.Fatal("扫描应返回条目")
-	}
+	testutil.Equal(t, len(entries) == 0, false, "扫描应返回条目")
 	byName := make(map[string]string, len(entries))
 	for _, e := range entries {
 		byName[filepath.Base(e.Path)] = e.Type
@@ -105,16 +91,12 @@ func TestScanModelEntries_FillsType(t *testing.T) {
 func TestScanModelEntriesFiltered_TypeUnchangedByFill(t *testing.T) {
 	base := t.TempDir()
 	neutral := filepath.Join(base, "misc")
-	if err := os.MkdirAll(neutral, 0o755); err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, os.MkdirAll(neutral, 0o755))
 	writeTextFile(t, neutral, "m.ysm", "data")
 
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
 	entries := a.ScanModelEntriesFiltered(base, "ysm", "", "标签")
-	if len(entries) != 1 {
-		t.Fatalf("Filtered(ysm) 应回 1 条，实际 %d", len(entries))
-	}
+	testutil.Equal(t, len(entries), 1, "Filtered(ysm) 应回 1 条")
 	if entries[0].Type != "ysm" {
 		t.Errorf("Filtered 路径 Type 应为 rtype（ysm），实际 %q", entries[0].Type)
 	}

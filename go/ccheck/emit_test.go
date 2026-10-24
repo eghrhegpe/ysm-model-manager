@@ -6,6 +6,8 @@ import (
 	"go/token"
 	"reflect"
 	"testing"
+
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // 发射器（emitFromNode 家族）语义锚点。
@@ -20,9 +22,7 @@ func eventsFromSrc(t *testing.T, src string) []Event {
 	t.Helper()
 	fset := token.NewFileSet()
 	f, err := parser.ParseFile(fset, "fixture.go", "package p\n"+src, parser.ParseComments)
-	if err != nil {
-		t.Fatalf("解析失败: %v\n源码:\n%s", err, src)
-	}
+	testutil.NoError(t, err, "解析失败\n源码:\n%s", src)
 	for _, decl := range f.Decls {
 		fd, ok := decl.(*ast.FuncDecl)
 		if !ok {
@@ -30,7 +30,8 @@ func eventsFromSrc(t *testing.T, src string) []Event {
 		}
 		return FnBodyToEvents(fd)
 	}
-	t.Fatal("未找到函数声明")
+	// 纯串护栏改布尔化：恒失败 → Goexit，与原 t.Fatal 等价
+	testutil.Equal(t, false, true, "未找到函数声明")
 	return nil
 }
 
@@ -43,18 +44,15 @@ func closeEv() Event { return Event{K: "nestClose"} }
 func TestEmitFlatIf(t *testing.T) {
 	got := eventsFromSrc(t, "func f() {\n\tif x > 0 {\n\t\t_ = 1\n\t}\n}")
 	want := []Event{ev("nest", "if"), closeEv()}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("平坦 if:\n got %+v\nwant %+v", got, want)
-	}
+	// DeepEqual 布尔化：保真原判据（nil vs 空切片差异不走 go-cmp）
+	testutil.Equal(t, reflect.DeepEqual(got, want), true, "平坦 if:\n got %+v\nwant %+v", got, want)
 }
 
 func TestEmitIfElseEmitsFlatElse(t *testing.T) {
 	// else 是即时型 flat（不增层），须发在 nestClose 之前——顺序即契约。
 	got := eventsFromSrc(t, "func f() {\n\tif x > 0 {\n\t\t_ = 1\n\t} else {\n\t\t_ = 2\n\t}\n}")
 	want := []Event{ev("nest", "if"), ev("flat", "else"), closeEv()}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("if-else:\n got %+v\nwant %+v", got, want)
-	}
+	testutil.Equal(t, reflect.DeepEqual(got, want), true, "if-else:\n got %+v\nwant %+v", got, want)
 }
 
 func TestEmitNestedIfDepth(t *testing.T) {
@@ -62,9 +60,7 @@ func TestEmitNestedIfDepth(t *testing.T) {
 	want := []Event{
 		ev("nest", "if"), ev("nest", "if"), closeEv(), closeEv(),
 	}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("双嵌套 if:\n got %+v\nwant %+v", got, want)
-	}
+	testutil.Equal(t, reflect.DeepEqual(got, want), true, "双嵌套 if:\n got %+v\nwant %+v", got, want)
 }
 
 func TestEmitLoopFamiliesAllMapToLoop(t *testing.T) {
@@ -74,9 +70,7 @@ func TestEmitLoopFamiliesAllMapToLoop(t *testing.T) {
 	} {
 		got := eventsFromSrc(t, tc.src)
 		want := []Event{ev("nest", "loop"), closeEv()}
-		if !reflect.DeepEqual(got, want) {
-			t.Fatalf("%s:\n got %+v\nwant %+v", tc.name, got, want)
-		}
+		testutil.Equal(t, reflect.DeepEqual(got, want), true, "%s:\n got %+v\nwant %+v", tc.name, got, want)
 	}
 }
 
@@ -89,13 +83,11 @@ func TestEmitSwitchFamiliesAllMapToSwitch(t *testing.T) {
 	} {
 		got := eventsFromSrc(t, tc.src)
 		// switch/select/type-switch 体是 BlockStmt/CaseClause：case 发 flat，外壳发 nest+nestClose。
-		if len(got) == 0 || got[0] != ev("nest", "switch") {
-			t.Fatalf("%s: 首事件应为 nest/switch，得 %+v", tc.name, got)
-		}
+		// OR 拆序贯：len==0 时 [0] 越界，前置 Equal 失败即 Goexit，后方索引才安全
+		testutil.Equal(t, len(got) > 0, true, "%s: 首事件应为 nest/switch，得 %+v", tc.name, got)
+		testutil.Equal(t, got[0], ev("nest", "switch"), "%s: 首事件应为 nest/switch，得 %+v", tc.name, got)
 		last := got[len(got)-1]
-		if last != closeEv() {
-			t.Fatalf("%s: 末事件应为 nestClose，得 %+v", tc.name, got)
-		}
+		testutil.Equal(t, last, closeEv(), "%s: 末事件应为 nestClose，得 %+v", tc.name, got)
 	}
 }
 
@@ -107,9 +99,7 @@ func TestEmitCaseClauseIsFlat(t *testing.T) {
 			sawFlatCase = true
 		}
 	}
-	if !sawFlatCase {
-		t.Fatalf("case 分支应发 flat/case，得 %+v", got)
-	}
+	testutil.Equal(t, sawFlatCase, true, "case 分支应发 flat/case，得 %+v", got)
 }
 
 func TestEmitLogicOperatorsEmitFlatLogic(t *testing.T) {
@@ -120,18 +110,14 @@ func TestEmitLogicOperatorsEmitFlatLogic(t *testing.T) {
 			count++
 		}
 	}
-	if count != 1 {
-		t.Fatalf("单处 && 应恰发 1 个 flat/logic，得 %d 个：%+v", count, got)
-	}
+	testutil.Equal(t, count, 1, "单处 && 应恰发 1 个 flat/logic，得 %d 个：%+v", count, got)
 }
 
 func TestEmitLogicInReturnExpr(t *testing.T) {
 	// return 是容器型（不产事件），须下钻 Results 才能暴露 && —— 容器透传的关键回归点。
 	got := eventsFromSrc(t, "func f() bool {\n\treturn a || b\n}")
 	want := []Event{ev("flat", "logic")}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("return 内 || 透传:\n got %+v\nwant %+v", got, want)
-	}
+	testutil.Equal(t, reflect.DeepEqual(got, want), true, "return 内 || 透传:\n got %+v\nwant %+v", got, want)
 }
 
 func TestEmitLogicInContainers(t *testing.T) {
@@ -150,9 +136,7 @@ func TestEmitLogicInContainers(t *testing.T) {
 		{"labeled", "func f() {\nL:\n\tfor {\n\t\tbreak L\n\t}\n}", []Event{ev("nest", "loop"), closeEv()}},
 	} {
 		got := eventsFromSrc(t, tc.src)
-		if !reflect.DeepEqual(got, tc.want) {
-			t.Fatalf("%s:\n got %+v\nwant %+v", tc.name, got, tc.want)
-		}
+		testutil.Equal(t, reflect.DeepEqual(got, tc.want), true, "%s:\n got %+v\nwant %+v", tc.name, got, tc.want)
 	}
 }
 
@@ -166,10 +150,8 @@ func TestEmitLogicInContainers(t *testing.T) {
 // 若将来要求严格对齐，须给 Go 侧补 CallExpr 分支并同步 TS 侧泛遍历语义——属独立议题。
 func TestEmitCallArgsNotTraversed(t *testing.T) {
 	got := eventsFromSrc(t, "func f() {\n\tgo g(a || b)\n}")
-	if len(got) != 0 {
-		t.Fatalf("调用实参内逻辑运算符当前不遍历（已知不对称），得 %+v；"+
-			"若此断言失败说明发射器已扩展，请同步 TS 侧并更新本测试与文档", got)
-	}
+	testutil.Equal(t, len(got), 0, "调用实参内逻辑运算符当前不遍历（已知不对称），得 %+v；"+
+		"若此断言失败说明发射器已扩展，请同步 TS 侧并更新本测试与文档", got)
 }
 
 // TestEmitSingleFieldVariants 覆盖单字段透传的全部形态（Go/Defer/Labeled）。
@@ -181,9 +163,7 @@ func TestEmitSingleFieldVariants(t *testing.T) {
 		{"defer", "func f() {\n\tdefer g()\n}"},
 	} {
 		got := eventsFromSrc(t, tc.src)
-		if len(got) != 0 {
-			t.Fatalf("%s 无逻辑运算符应无事件，得 %+v", tc.name, got)
-		}
+		testutil.Equal(t, len(got), 0, "%s 无逻辑运算符应无事件，得 %+v", tc.name, got)
 	}
 }
 
@@ -200,16 +180,10 @@ func TestEmitGuardDepthLimit(t *testing.T) {
 	src += "}\n"
 	got := eventsFromSrc(t, src)
 	// 每层最多 nest + nestClose = 2 事件；guard 上限 200 时应显著少于 2*300。
-	if len(got) >= 2*300 {
-		t.Fatalf("guard 未生效：300 层嵌套产出 %d 个事件（上限应 <600）", len(got))
-	}
-	if len(got) == 0 {
-		t.Fatal("guard 过于激进：零事件")
-	}
+	testutil.Equal(t, len(got) >= 2*300, false, "guard 未生效：300 层嵌套产出 %d 个事件（上限应 <600）", len(got))
+	testutil.Equal(t, len(got) > 0, true, "guard 过于激进：零事件")
 }
 
 func TestFnBodyToEventsNilSafety(t *testing.T) {
-	if got := FnBodyToEvents(nil); got != nil {
-		t.Fatalf("nil 函数应返回 nil，得 %+v", got)
-	}
+	testutil.Nil(t, FnBodyToEvents(nil), "nil 函数应返回 nil")
 }

@@ -10,15 +10,15 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // noAtomicResidue 断言目录无 .atomic-*.tmp 残渣（WriteFileAtomic 统一前缀）。
 func noAtomicResidue(t *testing.T, dir string) {
 	t.Helper()
 	matches, _ := filepath.Glob(filepath.Join(dir, ".atomic-*.tmp"))
-	if len(matches) != 0 {
-		t.Fatalf("失败后不应残留临时文件: %v", matches)
-	}
+	testutil.Equal(t, len(matches), 0, "失败后不应残留临时文件: %v", matches)
 }
 
 func TestWriteFileAtomic_WriteFail(t *testing.T) {
@@ -34,12 +34,10 @@ func TestWriteFileAtomic_WriteFail(t *testing.T) {
 
 	dst := filepath.Join(dir, "data.json")
 	err := WriteFileAtomic(dst, []byte("x"))
-	if err == nil || !errors.Is(err, ErrWriteFailed) {
-		t.Fatalf("应报 ErrWriteFailed，实际 %v", err)
-	}
-	if _, statErr := os.Stat(dst); !os.IsNotExist(statErr) {
-		t.Fatalf("写入失败后目标文件不应存在（半截数据装盘）")
-	}
+	// 原 `err == nil || !errors.Is(err, ErrWriteFailed)` 失败条件与 ErrorIs 完全等价
+	testutil.ErrorIs(t, err, ErrWriteFailed, "应报 ErrWriteFailed")
+	_, statErr := os.Stat(dst)
+	testutil.Equal(t, os.IsNotExist(statErr), true, "写入失败后目标文件不应存在（半截数据装盘）")
 	noAtomicResidue(t, dir)
 }
 
@@ -50,9 +48,7 @@ func TestWriteFileAtomic_SyncFail(t *testing.T) {
 	t.Cleanup(func() { syncFile = orig })
 
 	err := WriteFileAtomic(filepath.Join(dir, "data.json"), []byte("x"))
-	if err == nil || !errors.Is(err, ErrSyncFailed) {
-		t.Fatalf("应报 ErrSyncFailed，实际 %v", err)
-	}
+	testutil.ErrorIs(t, err, ErrSyncFailed, "应报 ErrSyncFailed")
 	noAtomicResidue(t, dir)
 }
 
@@ -67,9 +63,7 @@ func TestWriteFileAtomic_CloseFail(t *testing.T) {
 	t.Cleanup(func() { closeFile = orig })
 
 	err := WriteFileAtomic(filepath.Join(dir, "data.json"), []byte("x"))
-	if err == nil || !errors.Is(err, ErrCloseFailed) {
-		t.Fatalf("应报 ErrCloseFailed，实际 %v", err)
-	}
+	testutil.ErrorIs(t, err, ErrCloseFailed, "应报 ErrCloseFailed")
 	noAtomicResidue(t, dir)
 }
 
@@ -82,9 +76,7 @@ func TestWriteFileAtomic_ChmodFail(t *testing.T) {
 	t.Cleanup(func() { chmodFile = orig })
 
 	err := WriteFileAtomic(filepath.Join(dir, "data.json"), []byte("x"))
-	if err == nil || !errors.Is(err, ErrChmodFailed) {
-		t.Fatalf("应报 ErrChmodFailed，实际 %v", err)
-	}
+	testutil.ErrorIs(t, err, ErrChmodFailed, "应报 ErrChmodFailed")
 	noAtomicResidue(t, dir)
 }
 
@@ -98,12 +90,9 @@ func TestWriteFileAtomic_RenameFail(t *testing.T) {
 
 	dst := filepath.Join(dir, "data.json")
 	err := WriteFileAtomic(dst, []byte("x"))
-	if err == nil || !errors.Is(err, ErrRenameFailed) {
-		t.Fatalf("应报 ErrRenameFailed，实际 %v", err)
-	}
-	if _, statErr := os.Stat(dst); !os.IsNotExist(statErr) {
-		t.Fatalf("落地失败后目标文件不应存在")
-	}
+	testutil.ErrorIs(t, err, ErrRenameFailed, "应报 ErrRenameFailed")
+	_, statErr := os.Stat(dst)
+	testutil.Equal(t, os.IsNotExist(statErr), true, "落地失败后目标文件不应存在")
 	noAtomicResidue(t, dir)
 }
 
@@ -112,11 +101,9 @@ func TestWriteFileAtomic_RenameFail(t *testing.T) {
 func TestWriteFileAtomic_InjectRestore(t *testing.T) {
 	dir := t.TempDir()
 	dst := filepath.Join(dir, "data.json")
-	if err := WriteFileAtomic(dst, []byte("ok")); err != nil {
-		t.Fatalf("注入恢复后正常写入失败: %v", err)
-	}
+	testutil.NoError(t, WriteFileAtomic(dst, []byte("ok")), "注入恢复后正常写入失败")
 	data, err := os.ReadFile(dst)
-	if err != nil || string(data) != "ok" {
-		t.Fatalf("内容不符: %q %v", string(data), err)
-	}
+	// OR 型复合条件拆序贯
+	testutil.NoError(t, err, "内容不符")
+	testutil.Equal(t, string(data), "ok", "内容不符: %q", string(data))
 }

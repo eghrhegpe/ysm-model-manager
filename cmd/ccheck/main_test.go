@@ -13,6 +13,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"ysm-model-manager/internal/testutil"
 )
 
 // 建一个含真实函数（if/for 嵌套）的临时 Go 文件，供 ScanDir 扫出结果。
@@ -33,9 +35,7 @@ func nested(x int) int {
 }
 `
 	path := filepath.Join(dir, "fixture.go")
-	if err := os.WriteFile(path, []byte(src), 0o600); err != nil {
-		t.Fatalf("write fixture: %v", err)
-	}
+	testutil.NoError(t, os.WriteFile(path, []byte(src), 0o600), "write fixture")
 	return dir
 }
 
@@ -44,9 +44,7 @@ func TestRunTextMode(t *testing.T) {
 	var out, errBuf bytes.Buffer
 	// threshold=1：fixture 的 simple（认知 0）/nested（认知 3）都达到，扫出 2 个
 	code := run([]string{"--dir", dir, "--threshold", "0"}, &out, &errBuf)
-	if code != exitOK {
-		t.Fatalf("exit = %d, want %d; stderr=%s", code, exitOK, errBuf.String())
-	}
+	testutil.Equal(t, code, exitOK, "exit code 不符; stderr=%s", errBuf.String())
 	if !strings.Contains(out.String(), "认知复杂度扫描") {
 		t.Errorf("text output missing header: %s", out.String())
 	}
@@ -59,9 +57,7 @@ func TestRunJSONMode(t *testing.T) {
 	dir := writeFixture(t)
 	var out, errBuf bytes.Buffer
 	code := run([]string{"--dir", dir, "--threshold", "0", "--json", "--top", "5"}, &out, &errBuf)
-	if code != exitOK {
-		t.Fatalf("exit = %d, want %d; stderr=%s", code, exitOK, errBuf.String())
-	}
+	testutil.Equal(t, code, exitOK, "exit code 不符; stderr=%s", errBuf.String())
 	var payload struct {
 		Dir       string `json:"dir"`
 		Threshold int    `json:"threshold"`
@@ -72,9 +68,7 @@ func TestRunJSONMode(t *testing.T) {
 			Cognitive int    `json:"cognitive"`
 		} `json:"top"`
 	}
-	if err := json.Unmarshal(out.Bytes(), &payload); err != nil {
-		t.Fatalf("json unmarshal: %v; raw=%s", err, out.String())
-	}
+	testutil.NoError(t, json.Unmarshal(out.Bytes(), &payload), "json unmarshal; raw=%s", out.String())
 	if payload.Funcs != 2 || payload.Active != 2 {
 		t.Errorf("funcs=%d active=%d, want 2/2; top=%v", payload.Funcs, payload.Active, payload.Top)
 	}
@@ -92,9 +86,7 @@ func TestRunThresholdFilters(t *testing.T) {
 	var out, errBuf bytes.Buffer
 	// threshold 极高 → 无函数达标 → Active=0，文本模式输出「无函数达到阈值」
 	code := run([]string{"--dir", dir, "--threshold", "9999"}, &out, &errBuf)
-	if code != exitOK {
-		t.Fatalf("exit = %d, want %d; stderr=%s", code, exitOK, errBuf.String())
-	}
+	testutil.Equal(t, code, exitOK, "exit code 不符; stderr=%s", errBuf.String())
 	if !strings.Contains(out.String(), "无函数达到阈值") {
 		t.Errorf("text output missing empty marker: %s", out.String())
 	}
@@ -105,16 +97,12 @@ func TestRunTopNegativeClamps(t *testing.T) {
 	var out, errBuf bytes.Buffer
 	// --top -1：夹到 0，JSON top 为空数组而非 panic（threshold=1 让 fixture 两个函数都入 active）
 	code := run([]string{"--dir", dir, "--threshold", "0", "--json", "--top", "-1"}, &out, &errBuf)
-	if code != exitOK {
-		t.Fatalf("exit = %d, want %d; stderr=%s", code, exitOK, errBuf.String())
-	}
+	testutil.Equal(t, code, exitOK, "exit code 不符; stderr=%s", errBuf.String())
 	var payload struct {
 		Active int               `json:"active"`
 		Top    []json.RawMessage `json:"top"`
 	}
-	if err := json.Unmarshal(out.Bytes(), &payload); err != nil {
-		t.Fatalf("json unmarshal: %v; raw=%s", err, out.String())
-	}
+	testutil.NoError(t, json.Unmarshal(out.Bytes(), &payload), "json unmarshal; raw=%s", out.String())
 	if payload.Active != 2 {
 		t.Errorf("active = %d, want 2", payload.Active)
 	}
@@ -126,9 +114,7 @@ func TestRunTopNegativeClamps(t *testing.T) {
 func TestRunMissingDir(t *testing.T) {
 	var out, errBuf bytes.Buffer
 	code := run([]string{"--dir", filepath.Join(t.TempDir(), "nonexistent")}, &out, &errBuf)
-	if code != exitFail {
-		t.Fatalf("exit = %d, want %d", code, exitFail)
-	}
+	testutil.Equal(t, code, exitFail, "exit code 不符")
 	if !strings.Contains(errBuf.String(), "目录不存在") {
 		t.Errorf("stderr missing dir-not-found: %s", errBuf.String())
 	}
@@ -137,9 +123,7 @@ func TestRunMissingDir(t *testing.T) {
 func TestRunInvalidFlag(t *testing.T) {
 	var out, errBuf bytes.Buffer
 	code := run([]string{"--unknown-flag"}, &out, &errBuf)
-	if code != exitFail {
-		t.Fatalf("exit = %d, want %d", code, exitFail)
-	}
+	testutil.Equal(t, code, exitFail, "exit code 不符")
 }
 
 func TestRunHelpFlag(t *testing.T) {
@@ -148,9 +132,7 @@ func TestRunHelpFlag(t *testing.T) {
 	// 故此处只硬断言退出码语义，不断言输出内容流。
 	var out, errBuf bytes.Buffer
 	code := run([]string{"--help"}, &out, &errBuf)
-	if code != exitOK {
-		t.Fatalf("exit = %d, want %d", code, exitOK)
-	}
+	testutil.Equal(t, code, exitOK, "exit code 不符")
 }
 
 func TestRunIncludeTestsFlag(t *testing.T) {
@@ -160,9 +142,7 @@ func TestRunIncludeTestsFlag(t *testing.T) {
 
 	var out, errBuf bytes.Buffer
 	code := run([]string{"--dir", dir, "--json"}, &out, &errBuf)
-	if code != exitOK {
-		t.Fatalf("exit = %d, want %d; stderr=%s", code, exitOK, errBuf.String())
-	}
+	testutil.Equal(t, code, exitOK, "exit code 不符; stderr=%s", errBuf.String())
 	var payload struct {
 		Funcs int `json:"funcs"`
 	}
@@ -173,9 +153,7 @@ func TestRunIncludeTestsFlag(t *testing.T) {
 
 	var out2, errBuf2 bytes.Buffer
 	code = run([]string{"--dir", dir, "--tests", "--json"}, &out2, &errBuf2)
-	if code != exitOK {
-		t.Fatalf("exit = %d, want %d; stderr=%s", code, exitOK, errBuf2.String())
-	}
+	testutil.Equal(t, code, exitOK, "exit code 不符; stderr=%s", errBuf2.String())
 	var payload2 struct {
 		Funcs int `json:"funcs"`
 	}

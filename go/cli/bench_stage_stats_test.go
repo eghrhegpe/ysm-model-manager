@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/scanner"
 	"ysm-model-manager/go/types"
 )
@@ -56,9 +57,7 @@ func TestCollectStageStats_NearestRank(t *testing.T) {
 			t.Parallel()
 			got := collectStageStats(stageSamples("① 文件读取", tc.durs...))
 			st, ok := got["① 文件读取"]
-			if !ok {
-				t.Fatalf("缺少阶段统计: %+v", got)
-			}
+			testutil.Equal(t, ok, true, "缺少阶段统计: %+v", got)
 			if st.N != tc.wantN {
 				t.Errorf("n = %d, 期望 %d", st.N, tc.wantN)
 			}
@@ -107,9 +106,8 @@ func TestAvgBenchStages_CarriesRuntime(t *testing.T) {
 		{{Name: "② 模型扫描", Duration: 2 * time.Millisecond}}, // 次轮未填（首轮非空优先）
 	}
 	avg := avgBenchStages(all)
-	if len(avg) != 1 {
-		t.Fatalf("应有 1 个阶段, got %d", len(avg))
-	}
+	testutil.Equal(t, len(avg), 1, "应有 1 个阶段, got %d", len(avg))
+	// len 已由上一断言守卫（失败即 Goexit），avg[0] 才安全
 	if avg[0].Runtime != "rust" {
 		t.Errorf("runtime 应在聚合中保留（首个非空优先）, got %q", avg[0].Runtime)
 	}
@@ -125,15 +123,12 @@ func TestStagesToJSON_CarriesStatsAndRuntime(t *testing.T) {
 	}
 	avg := avgBenchStages(all)
 	stages, bottleneck := stagesToJSON(avg, all)
-	if len(stages) != 1 {
-		t.Fatalf("应有 1 个阶段, got %d", len(stages))
-	}
+	testutil.Equal(t, len(stages), 1, "应有 1 个阶段, got %d", len(stages))
+	// len 已由上一断言守卫（失败即 Goexit），stages[0] 才安全
 	if stages[0].Runtime != "go" {
 		t.Errorf("runtime 应为 go, got %q", stages[0].Runtime)
 	}
-	if stages[0].Stats == nil {
-		t.Fatalf("stats 不得缺省: %+v", stages[0])
-	}
+	testutil.NotNil(t, stages[0].Stats, "stats 不得缺省: %+v", stages[0])
 	if stages[0].Stats.N != 3 || stages[0].Stats.Median != 20 || stages[0].Stats.P95 != 30 {
 		t.Errorf("stats 应为 n=3/median=20/p95=30, got %+v", *stages[0].Stats)
 	}
@@ -155,13 +150,11 @@ func TestRunSingleModelBench_RuntimeAttribution(t *testing.T) {
 	dir := t.TempDir()
 	modelPath := filepath.Join(dir, "m.ysm")
 	if err := os.WriteFile(modelPath, []byte("fake-ysm"), 0o644); err != nil {
-		t.Fatalf("写模型文件失败: %v", err)
+		testutil.NoError(t, err, "写模型文件失败")
 	}
 	fake := &flowFakeApp{entries: []types.ModelEntry{{Path: modelPath, Name: "m", Ext: ".ysm"}}}
 	stages := runSingleModelBench(fake, modelPath, dir)
-	if len(stages) == 0 {
-		t.Fatal("应产出阶段")
-	}
+	testutil.Equal(t, len(stages) == 0, false, "应产出阶段")
 	for _, s := range stages {
 		if s.Runtime != "go" {
 			t.Errorf("single-bench 阶段 %q 归属应为 go, got %q", s.Name, s.Runtime)
@@ -174,9 +167,7 @@ func TestRunSingleModelBench_RuntimeAttribution(t *testing.T) {
 func TestGUIFlow_RuntimeAttribution(t *testing.T) {
 	ctx, _ := runGUIFlowForTest(t)
 	structured, ok := ctx.result.(*guiFlowStructured)
-	if !ok {
-		t.Fatalf("SetResult 应为 *guiFlowStructured, got %T", ctx.result)
-	}
+	testutil.Equal(t, ok, true, "SetResult 应为 *guiFlowStructured, got %T", ctx.result)
 
 	byName := map[string]guiFlowStageItem{}
 	for _, s := range structured.Stages {

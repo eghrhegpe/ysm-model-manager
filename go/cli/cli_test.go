@@ -57,9 +57,7 @@ func captureOutput(t *testing.T, fn func()) string {
 	}()
 
 	fn()
-	if err := w.Close(); err != nil {
-		t.Fatalf("关闭写端: %v", err)
-	}
+	testutil.NoError(t, w.Close(), "关闭写端")
 	<-readerDone
 	return out.String()
 }
@@ -81,9 +79,8 @@ func withStdin(t *testing.T, input string) {
 	r, w, err := os.Pipe()
 	testutil.NoError(t, err, "os.Pipe")
 	os.Stdin = r
-	if _, err := w.WriteString(input); err != nil {
-		t.Fatalf("写入 stdin: %v", err)
-	}
+	_, err = w.WriteString(input)
+	testutil.NoError(t, err, "写入 stdin")
 	w.Close()
 	t.Cleanup(func() { os.Stdin = old })
 }
@@ -187,9 +184,7 @@ func TestRunCLI_MissingFilesRoot_ReturnsError(t *testing.T) {
 func TestCacheStatus_EmptyCache(t *testing.T) {
 	withTempCache(t)
 	out := captureOutput(t, func() {
-		if err := runCacheStatus(&CmdContext{App: &app.App{}, Args: nil}); err != nil {
-			t.Fatalf("runCacheStatus 应成功, got %v", err)
-		}
+		testutil.NoError(t, runCacheStatus(&CmdContext{App: &app.App{}, Args: nil}), "runCacheStatus 应成功")
 	})
 	if !strings.Contains(out, "缓存为空") {
 		t.Errorf("空缓存应输出「缓存为空」, got: %s", out)
@@ -203,9 +198,7 @@ func TestCacheStatus_CountsKtx2Only(t *testing.T) {
 	testutil.WriteTestFileBytes(t, filepath.Join(dir, "notes.txt"), []byte("ignore-me")) // 非 ktx2 应忽略
 
 	out := captureOutput(t, func() {
-		if err := runCacheStatus(&CmdContext{App: &app.App{}, Args: nil}); err != nil {
-			t.Fatalf("runCacheStatus 应成功, got %v", err)
-		}
+		testutil.NoError(t, runCacheStatus(&CmdContext{App: &app.App{}, Args: nil}), "runCacheStatus 应成功")
 	})
 	if !strings.Contains(out, "文件数量: 2") {
 		t.Errorf("应统计 2 个 ktx2 文件, got: %s", out)
@@ -220,9 +213,7 @@ func TestCacheStatus_CountsKtx2Only(t *testing.T) {
 func TestCacheClear_EmptyCache(t *testing.T) {
 	withTempCache(t)
 	out := captureOutput(t, func() {
-		if err := runCacheClear(&CmdContext{App: &app.App{}, Args: []string{"--yes"}}); err != nil {
-			t.Fatalf("runCacheClear 应成功, got %v", err)
-		}
+		testutil.NoError(t, runCacheClear(&CmdContext{App: &app.App{}, Args: []string{"--yes"}}), "runCacheClear 应成功")
 	})
 	if !strings.Contains(out, "缓存已经是空的") {
 		t.Errorf("空缓存应提示「缓存已经是空的」, got: %s", out)
@@ -235,9 +226,7 @@ func TestCacheClear_YesDeletesFiles(t *testing.T) {
 		testutil.WriteTestFileBytes(t, filepath.Join(dir, h+".ktx2"), []byte("x"))
 	}
 	out := captureOutput(t, func() {
-		if err := runCacheClear(&CmdContext{App: &app.App{}, Args: []string{"--yes"}}); err != nil {
-			t.Fatalf("runCacheClear 应成功, got %v", err)
-		}
+		testutil.NoError(t, runCacheClear(&CmdContext{App: &app.App{}, Args: []string{"--yes"}}), "runCacheClear 应成功")
 	})
 	if !strings.Contains(out, "已清空 3 个缓存文件") {
 		t.Errorf("应提示清空数量, got: %s", out)
@@ -252,9 +241,7 @@ func TestCacheClear_CancelKeepsFiles(t *testing.T) {
 	testutil.WriteTestFileBytes(t, filepath.Join(dir, "keep.ktx2"), []byte("x"))
 	withStdin(t, "n\n") // 确认时输入非 y → 取消
 	out := captureOutput(t, func() {
-		if err := runCacheClear(&CmdContext{App: &app.App{}, Args: nil}); err != nil {
-			t.Fatalf("runCacheClear 应成功, got %v", err)
-		}
+		testutil.NoError(t, runCacheClear(&CmdContext{App: &app.App{}, Args: nil}), "runCacheClear 应成功")
 	})
 	if !strings.Contains(out, "已取消") {
 		t.Errorf("取消路径应提示「已取消」, got: %s", out)
@@ -277,9 +264,7 @@ func TestCacheVerify_NoTextures(t *testing.T) {
 	withTempCache(t)
 	dir := t.TempDir()
 	out := captureOutput(t, func() {
-		if err := runCacheVerify(&CmdContext{App: &app.App{}, Args: []string{"--dir", dir}}); err != nil {
-			t.Fatalf("runCacheVerify 应成功, got %v", err)
-		}
+		testutil.NoError(t, runCacheVerify(&CmdContext{App: &app.App{}, Args: []string{"--dir", dir}}), "runCacheVerify 应成功")
 	})
 	if !strings.Contains(out, "没有找到贴图文件") {
 		t.Errorf("空目录应提示「没有找到贴图文件」, got: %s", out)
@@ -291,9 +276,7 @@ func TestCacheVerify_ReportsMiss(t *testing.T) {
 	dir := t.TempDir()
 	testutil.WriteTestFileBytes(t, filepath.Join(dir, "tex.png"), bytes.Repeat([]byte{0x89, 0x50, 0x4E, 0x47}, 8))
 	out := captureOutput(t, func() {
-		if err := runCacheVerify(&CmdContext{App: &app.App{}, Args: []string{"--dir", dir}}); err != nil {
-			t.Fatalf("runCacheVerify 应成功, got %v", err)
-		}
+		testutil.NoError(t, runCacheVerify(&CmdContext{App: &app.App{}, Args: []string{"--dir", dir}}), "runCacheVerify 应成功")
 	})
 	if !strings.Contains(out, "未命中: 1 个") {
 		t.Errorf("应报告 1 个未命中, got: %s", out)
@@ -308,9 +291,7 @@ func TestCacheVerify_ReportsMiss(t *testing.T) {
 func TestCacheDiag_ReportsSuccess(t *testing.T) {
 	withTempCache(t)
 	out := captureOutput(t, func() {
-		if err := runCacheDiag(&CmdContext{App: &app.App{}, Args: nil}); err != nil {
-			t.Fatalf("runCacheDiag 应成功, got %v", err)
-		}
+		testutil.NoError(t, runCacheDiag(&CmdContext{App: &app.App{}, Args: nil}), "runCacheDiag 应成功")
 	})
 	for _, marker := range []string{"缓存流程诊断", "哈希计算成功", "缓存写入成功", "数据完整性验证通过"} {
 		if !strings.Contains(out, marker) {
@@ -340,9 +321,7 @@ func TestAnalyze_RequiresModel(t *testing.T) {
 func TestConfigShow_PrintsRootAndCache(t *testing.T) {
 	withTempCache(t)
 	out := captureOutput(t, func() {
-		if err := runConfigShow(&CmdContext{App: &app.App{}, Args: nil}); err != nil {
-			t.Fatalf("runConfigShow 应成功, got %v", err)
-		}
+		testutil.NoError(t, runConfigShow(&CmdContext{App: &app.App{}, Args: nil}), "runConfigShow 应成功")
 	})
 	// config-show 会只读加载磁盘真实配置（configPath 不可注入），
 	// 故只断言任何配置下都稳定的输出片段，不绑定具体机器状态
@@ -469,9 +448,7 @@ func TestPrintCLIHelp_CommandsSorted(t *testing.T) {
 	}
 
 	// 至少有一个分类被解析到
-	if len(seenCats) == 0 {
-		t.Fatal("help 输出未解析到任何分类标题")
-	}
+	testutil.Equal(t, len(seenCats) == 0, false, "help 输出未解析到任何分类标题")
 }
 
 // ---- helpers ----
@@ -479,9 +456,7 @@ func TestPrintCLIHelp_CommandsSorted(t *testing.T) {
 func listDirNames(t *testing.T, dir string) []string {
 	t.Helper()
 	entries, err := os.ReadDir(dir)
-	if err != nil {
-		t.Fatalf("读取目录 %s: %v", dir, err)
-	}
+	testutil.NoError(t, err, "读取目录 %s", dir)
 	names := make([]string, 0, len(entries))
 	for _, e := range entries {
 		names = append(names, e.Name())
@@ -504,9 +479,7 @@ func TestFileBench_SingleFile(t *testing.T) {
 	testutil.WriteTestFileBytes(t, filePath, bytes.Repeat([]byte("x"), 2*1024*1024)) // 2MB
 
 	out := captureOutput(t, func() {
-		if err := runFileBench(&CmdContext{App: &app.App{}, Args: []string{"--file", filePath}}); err != nil {
-			t.Fatalf("runFileBench 应成功, got %v", err)
-		}
+		testutil.NoError(t, runFileBench(&CmdContext{App: &app.App{}, Args: []string{"--file", filePath}}), "runFileBench 应成功")
 	})
 	if !strings.Contains(out, "文件读取性能测试") {
 		t.Errorf("输出应包含标题, got: %s", out)
@@ -520,9 +493,7 @@ func TestFileBench_DirWithLargeFiles(t *testing.T) {
 	}
 
 	out := captureOutput(t, func() {
-		if err := runFileBench(&CmdContext{App: &app.App{}, Args: []string{"--dir", dir, "--iterations", "1"}}); err != nil {
-			t.Fatalf("runFileBench 应成功, got %v", err)
-		}
+		testutil.NoError(t, runFileBench(&CmdContext{App: &app.App{}, Args: []string{"--dir", dir, "--iterations", "1"}}), "runFileBench 应成功")
 	})
 	if !strings.Contains(out, "文件读取性能测试") {
 		t.Errorf("输出应包含标题, got: %s", out)
@@ -539,9 +510,7 @@ func TestScanDir_RequiresDir(t *testing.T) {
 func TestScanDir_EmptyDir(t *testing.T) {
 	dir := t.TempDir()
 	out := captureOutput(t, func() {
-		if err := runScanDir(&CmdContext{App: &app.App{}, Args: []string{"--dir", dir}}); err != nil {
-			t.Fatalf("runScanDir 应成功, got %v", err)
-		}
+		testutil.NoError(t, runScanDir(&CmdContext{App: &app.App{}, Args: []string{"--dir", dir}}), "runScanDir 应成功")
 	})
 	if !strings.Contains(out, "目录统计") {
 		t.Errorf("输出应包含目录统计, got: %s", out)
@@ -558,9 +527,7 @@ func TestScanDir_WithFiles(t *testing.T) {
 	testutil.WriteTestFileBytes(t, filepath.Join(dir, "model.pmx"), bytes.Repeat([]byte("x"), 15*1024*1024)) // 15MB
 
 	out := captureOutput(t, func() {
-		if err := runScanDir(&CmdContext{App: &app.App{}, Args: []string{"--dir", dir}}); err != nil {
-			t.Fatalf("runScanDir 应成功, got %v", err)
-		}
+		testutil.NoError(t, runScanDir(&CmdContext{App: &app.App{}, Args: []string{"--dir", dir}}), "runScanDir 应成功")
 	})
 	if !strings.Contains(out, "目录统计") {
 		t.Errorf("输出应包含目录统计, got: %s", out)
@@ -580,9 +547,7 @@ func TestAnalyzeMMD_RequiresDir(t *testing.T) {
 func TestAnalyzeMMD_EmptyDir(t *testing.T) {
 	dir := t.TempDir()
 	out := captureOutput(t, func() {
-		if err := runAnalyzeMMD(&CmdContext{App: &app.App{}, Args: []string{"--dir", dir}}); err != nil {
-			t.Fatalf("runAnalyzeMMD 应成功, got %v", err)
-		}
+		testutil.NoError(t, runAnalyzeMMD(&CmdContext{App: &app.App{}, Args: []string{"--dir", dir}}), "runAnalyzeMMD 应成功")
 	})
 	if !strings.Contains(out, "MMD 模型资产分析") {
 		t.Errorf("输出应包含标题, got: %s", out)
@@ -601,9 +566,7 @@ func TestAnalyzeMMD_WithModels(t *testing.T) {
 	testutil.WriteTestFileBytes(t, filepath.Join(dir, "tex1.png"), bytes.Repeat([]byte{0x89, 0x50, 0x4E, 0x47}, 8))
 
 	out := captureOutput(t, func() {
-		if err := runAnalyzeMMD(&CmdContext{App: &app.App{}, Args: []string{"--dir", dir}}); err != nil {
-			t.Fatalf("runAnalyzeMMD 应成功, got %v", err)
-		}
+		testutil.NoError(t, runAnalyzeMMD(&CmdContext{App: &app.App{}, Args: []string{"--dir", dir}}), "runAnalyzeMMD 应成功")
 	})
 	if !strings.Contains(out, "PMX/PMD 模型:  1 个") {
 		t.Errorf("应显示 1 个 PMX 模型, got: %s", out)
@@ -1302,9 +1265,7 @@ func TestParseCommandArgs_LeadingFilesRoot(t *testing.T) {
 		t.Error("不应启用 jsonMode")
 	}
 	expected := []string{"search", "--keyword", "x"}
-	if len(cmdArgs) != len(expected) {
-		t.Fatalf("cmdArgs 长度应为 %d, got: %d (%v)", len(expected), len(cmdArgs), cmdArgs)
-	}
+	testutil.Equal(t, len(cmdArgs), len(expected), "cmdArgs 长度不符: %v", cmdArgs)
 	for i, v := range expected {
 		if cmdArgs[i] != v {
 			t.Errorf("cmdArgs[%d] 应为 %s, got: %s", i, v, cmdArgs[i])
@@ -1367,9 +1328,7 @@ func TestParseCommandArgs_JsonMode(t *testing.T) {
 		t.Error("应启用 jsonMode")
 	}
 	expected := []string{"search", "--keyword", "x"}
-	if len(cmdArgs) != len(expected) {
-		t.Fatalf("cmdArgs 长度应为 %d, got: %d (%v)", len(expected), len(cmdArgs), cmdArgs)
-	}
+	testutil.Equal(t, len(cmdArgs), len(expected), "cmdArgs 长度不符: %v", cmdArgs)
 }
 
 func TestParseCommandArgs_JsonModeWithoutFilesRoot(t *testing.T) {
@@ -1422,9 +1381,7 @@ func TestAvgBenchStages(t *testing.T) {
 		},
 	}
 	avg := avgBenchStages(all)
-	if len(avg) != 2 {
-		t.Fatalf("avg 应含 2 阶段, got %d", len(avg))
-	}
+	testutil.Equal(t, len(avg), 2, "avg 应含 2 阶段")
 	if avg[0].Duration != 15*time.Millisecond {
 		t.Errorf("① 平均应为 15ms, got %v", avg[0].Duration)
 	}
@@ -1449,9 +1406,7 @@ func TestAvgBenchStages_NamePairingRaggedIterations(t *testing.T) {
 		},
 	}
 	avg := avgBenchStages(all) // 不得 panic
-	if len(avg) != 2 {
-		t.Fatalf("应含 2 阶段, got %d", len(avg))
-	}
+	testutil.Equal(t, len(avg), 2, "应含 2 阶段")
 	if avg[0].Name != "① 文件读取" || avg[0].Duration != 20*time.Millisecond {
 		t.Errorf("① 应仅按名配对均值 20ms, got %s %v", avg[0].Name, avg[0].Duration)
 	}
@@ -1560,24 +1515,16 @@ func TestCompareSingleBenchBaseline(t *testing.T) {
 		{Name: "② JSON 解析", Duration: 100 * time.Millisecond},
 	}
 	// 无退化 → 通过
-	if err := compareSingleBenchBaseline(baseFile, stages, 50); err != nil {
-		t.Fatalf("无退化应通过, got %v", err)
-	}
+	testutil.NoError(t, compareSingleBenchBaseline(baseFile, stages, 50), "无退化应通过")
 	// ② 退化到 200ms（2x > 1.5x 阈值）→ 应报错
 	stages[1].Duration = 200 * time.Millisecond
-	if err := compareSingleBenchBaseline(baseFile, stages, 50); err == nil {
-		t.Fatal("退化超阈值应报错")
-	}
+	testutil.NotNil(t, compareSingleBenchBaseline(baseFile, stages, 50), "退化超阈值应报错")
 	// 基准文件缺失 → 应报错
-	if err := compareSingleBenchBaseline(filepath.Join(dir, "nope.json"), stages, 50); err == nil {
-		t.Fatal("缺失基准文件应报错")
-	}
+	testutil.NotNil(t, compareSingleBenchBaseline(filepath.Join(dir, "nope.json"), stages, 50), "缺失基准文件应报错")
 	// 基准格式非法 → 应报错
 	bad := filepath.Join(dir, "bad.json")
 	os.WriteFile(bad, []byte("not json"), 0o644)
-	if err := compareSingleBenchBaseline(bad, stages, 50); err == nil {
-		t.Fatal("格式非法基准应报错")
-	}
+	testutil.NotNil(t, compareSingleBenchBaseline(bad, stages, 50), "格式非法基准应报错")
 }
 
 // TestCompareSingleBenchBaseline_NoiseFloor 回归：近零耗时阶段不应因计时噪声误报退化。
@@ -1610,18 +1557,14 @@ func TestSaveBenchBaseline_RoundTrip(t *testing.T) {
 	dir := t.TempDir()
 	p := filepath.Join(dir, "b.json")
 	stages := []singleBenchStage{{Name: "① 文件读取", Duration: 10 * time.Millisecond}}
-	if err := saveBenchBaseline(p, stages); err != nil {
-		t.Fatalf("保存失败: %v", err)
-	}
+	testutil.NoError(t, saveBenchBaseline(p, stages), "保存失败")
 	data, err := os.ReadFile(p)
 	testutil.NoError(t, err)
 	var got []benchStageMs
-	if err := json.Unmarshal(data, &got); err != nil {
-		t.Fatalf("roundtrip 解析失败: %v", err)
-	}
-	if len(got) != 1 || got[0].Name != "① 文件读取" || got[0].Ms != 10 {
-		t.Fatalf("roundtrip 内容不符: %+v", got)
-	}
+	testutil.NoError(t, json.Unmarshal(data, &got), "roundtrip 解析失败")
+	testutil.Equal(t, len(got), 1, "roundtrip 内容不符: %+v", got)
+	testutil.Equal(t, got[0].Name, "① 文件读取", "roundtrip 内容不符")
+	testutil.Equal(t, got[0].Ms, 10, "roundtrip 内容不符")
 }
 
 // TestFindOptimizationLog_LocatesRealDoc 锁 findOptimizationLog 对真实仓库布局的解析：
@@ -1671,9 +1614,7 @@ name: 优化记录
 
 func TestParseOptimizationEntries(t *testing.T) {
 	entries := parseOptimizationEntries(strings.Split(perfLogSample, "\n"))
-	if len(entries) != 2 {
-		t.Fatalf("期望解析 2 条记录, got %d", len(entries))
-	}
+	testutil.Equal(t, len(entries), 2, "期望解析 2 条记录")
 	first := entries[0]
 	if first.date != "2026-08-19" || first.area != "KTX2 缓存" || first.commit != "fd068ac" {
 		t.Errorf("首条解析不符: %+v", first)
@@ -1696,30 +1637,26 @@ func TestParseOptimizationEntries(t *testing.T) {
 
 func TestSplitTableRow(t *testing.T) {
 	cols := splitTableRow(" | a | b | c | ")
-	if len(cols) != 3 || cols[0] != "a" || cols[2] != "c" {
-		t.Fatalf("splitTableRow 结果不符: %#v", cols)
-	}
+	testutil.Equal(t, len(cols), 3, "splitTableRow 结果不符: %#v", cols)
+	testutil.Equal(t, cols[0], "a", "splitTableRow 结果不符")
+	testutil.Equal(t, cols[2], "c", "splitTableRow 结果不符")
 }
 
 func TestPerfLogSections(t *testing.T) {
 	lines := strings.Split(perfLogSample, "\n")
 	bottlenecks := extractBulletSection(lines, "当前瓶颈")
-	if len(bottlenecks) != 2 || !strings.Contains(bottlenecks[0], "纹理编码") {
-		t.Fatalf("当前瓶颈提取不符: %#v", bottlenecks)
-	}
+	testutil.Equal(t, len(bottlenecks), 2, "当前瓶颈提取不符: %#v", bottlenecks)
+	testutil.Equal(t, strings.Contains(bottlenecks[0], "纹理编码"), true, "当前瓶颈提取不符: %q", bottlenecks[0])
 	metrics := extractTableSection(lines, "关键指标")
-	if len(metrics) != 1 || !strings.Contains(metrics[0], "GPU 内存") {
-		t.Fatalf("关键指标提取不符: %#v", metrics)
-	}
+	testutil.Equal(t, len(metrics), 1, "关键指标提取不符: %#v", metrics)
+	testutil.Equal(t, strings.Contains(metrics[0], "GPU 内存"), true, "关键指标提取不符: %q", metrics[0])
 }
 
 // ---- tags 薄壳 ----
 
 func TestTags_NoSubcommand_PrintsUsage(t *testing.T) {
 	out := captureOutput(t, func() {
-		if err := runTags(&CmdContext{App: &app.App{}, Args: nil}); err != nil {
-			t.Fatalf("runTags 应成功, got %v", err)
-		}
+		testutil.NoError(t, runTags(&CmdContext{App: &app.App{}, Args: nil}), "runTags 应成功")
 	})
 	if !strings.Contains(out, "tags") || !strings.Contains(out, "子命令") {
 		t.Errorf("无子命令应打印用法, got: %s", out)
@@ -1765,9 +1702,7 @@ func TestTagsBy_RequiresTag(t *testing.T) {
 
 func TestRecycle_NoSubcommand_PrintsUsage(t *testing.T) {
 	out := captureOutput(t, func() {
-		if err := runRecycle(&CmdContext{App: &app.App{}, Args: nil}); err != nil {
-			t.Fatalf("runRecycle 应成功, got %v", err)
-		}
+		testutil.NoError(t, runRecycle(&CmdContext{App: &app.App{}, Args: nil}), "runRecycle 应成功")
 	})
 	if !strings.Contains(out, "recycle") || !strings.Contains(out, "子命令") {
 		t.Errorf("无子命令应打印用法, got: %s", out)
@@ -1827,9 +1762,7 @@ func TestLinkMode_InvalidMode_Errors(t *testing.T) {
 
 func TestLinkMode_NoMode_PrintsCurrent(t *testing.T) {
 	out := captureOutput(t, func() {
-		if err := runLinkMode(&CmdContext{App: &app.App{}, Args: nil}); err != nil {
-			t.Fatalf("runLinkMode 应成功, got %v", err)
-		}
+		testutil.NoError(t, runLinkMode(&CmdContext{App: &app.App{}, Args: nil}), "runLinkMode 应成功")
 	})
 	if !strings.Contains(out, "链接模式") {
 		t.Errorf("应打印当前链接模式, got: %s", out)
@@ -1840,9 +1773,7 @@ func TestLinkMode_NoMode_PrintsCurrent(t *testing.T) {
 
 func TestInstance_NoSubcommand_PrintsUsage(t *testing.T) {
 	out := captureOutput(t, func() {
-		if err := runInstance(&CmdContext{App: &app.App{}, Args: nil}); err != nil {
-			t.Fatalf("runInstance 应成功, got %v", err)
-		}
+		testutil.NoError(t, runInstance(&CmdContext{App: &app.App{}, Args: nil}), "runInstance 应成功")
 	})
 	if !strings.Contains(out, "instance") || !strings.Contains(out, "子命令") {
 		t.Errorf("无子命令应打印用法, got: %s", out)
@@ -1881,9 +1812,7 @@ func TestInstancePull_RequiresInstance(t *testing.T) {
 
 func TestCreator_NoSubcommand_PrintsUsage(t *testing.T) {
 	out := captureOutput(t, func() {
-		if err := runCreator(&CmdContext{App: &app.App{}, Args: nil}); err != nil {
-			t.Fatalf("runCreator 应成功, got %v", err)
-		}
+		testutil.NoError(t, runCreator(&CmdContext{App: &app.App{}, Args: nil}), "runCreator 应成功")
 	})
 	if !strings.Contains(out, "creator") || !strings.Contains(out, "子命令") {
 		t.Errorf("无子命令应打印用法, got: %s", out)
@@ -1901,9 +1830,7 @@ func TestCreator_UnknownSubcommand_Errors(t *testing.T) {
 
 func TestWorkshop_NoSubcommand_PrintsUsage(t *testing.T) {
 	out := captureOutput(t, func() {
-		if err := runWorkshop(&CmdContext{App: &app.App{}, Args: nil}); err != nil {
-			t.Fatalf("runWorkshop 应成功, got %v", err)
-		}
+		testutil.NoError(t, runWorkshop(&CmdContext{App: &app.App{}, Args: nil}), "runWorkshop 应成功")
 	})
 	if !strings.Contains(out, "workshop") || !strings.Contains(out, "子命令") {
 		t.Errorf("无子命令应打印用法, got: %s", out)
@@ -1972,9 +1899,7 @@ func TestToggle_RequiresPath(t *testing.T) {
 
 func TestDownload_NoSubcommand_PrintsUsage(t *testing.T) {
 	out := captureOutput(t, func() {
-		if err := runDownload(&CmdContext{App: &app.App{}, Args: nil}); err != nil {
-			t.Fatalf("runDownload 应成功, got %v", err)
-		}
+		testutil.NoError(t, runDownload(&CmdContext{App: &app.App{}, Args: nil}), "runDownload 应成功")
 	})
 	if !strings.Contains(out, "download") || !strings.Contains(out, "子命令") {
 		t.Errorf("无子命令应打印用法, got: %s", out)
@@ -2055,9 +1980,7 @@ func TestDownloadGitHub_RequiresSaveDir(t *testing.T) {
 
 func TestAvatar_NoSubcommand_PrintsUsage(t *testing.T) {
 	out := captureOutput(t, func() {
-		if err := runAvatar(&CmdContext{App: &app.App{}, Args: nil}); err != nil {
-			t.Fatalf("runAvatar 应成功, got %v", err)
-		}
+		testutil.NoError(t, runAvatar(&CmdContext{App: &app.App{}, Args: nil}), "runAvatar 应成功")
 	})
 	if !strings.Contains(out, "avatar") || !strings.Contains(out, "子命令") {
 		t.Errorf("无子命令应打印用法, got: %s", out)
@@ -2089,9 +2012,7 @@ func TestAvatarCache_RequiresModel(t *testing.T) {
 
 func TestScan_NoSubcommand_PrintsUsage(t *testing.T) {
 	out := captureOutput(t, func() {
-		if err := runScan(&CmdContext{App: &app.App{}, Args: nil}); err != nil {
-			t.Fatalf("runScan 应成功, got %v", err)
-		}
+		testutil.NoError(t, runScan(&CmdContext{App: &app.App{}, Args: nil}), "runScan 应成功")
 	})
 	if !strings.Contains(out, "scan") || !strings.Contains(out, "子命令") {
 		t.Errorf("无子命令应打印用法, got: %s", out)
@@ -2117,9 +2038,7 @@ func TestScanModels_EmptyDir_Errors(t *testing.T) {
 
 func TestConfig_NoSubcommand_PrintsUsage(t *testing.T) {
 	out := captureOutput(t, func() {
-		if err := runConfig(&CmdContext{App: &app.App{}, Args: nil}); err != nil {
-			t.Fatalf("runConfig 应成功, got %v", err)
-		}
+		testutil.NoError(t, runConfig(&CmdContext{App: &app.App{}, Args: nil}), "runConfig 应成功")
 	})
 	if !strings.Contains(out, "config") || !strings.Contains(out, "子命令") {
 		t.Errorf("无子命令应打印用法, got: %s", out)
@@ -2173,12 +2092,8 @@ func TestResourceTypes_JSON(t *testing.T) {
 		}
 	})
 	var entries []registry.ResourceType
-	if err := json.Unmarshal([]byte(out), &entries); err != nil {
-		t.Fatalf("json 输出应可反序列化: %v\n输出: %s", err, out)
-	}
-	if len(entries) == 0 {
-		t.Fatal("json 输出不应为空")
-	}
+	testutil.NoError(t, json.Unmarshal([]byte(out), &entries), "json 输出应可反序列化\n输出: %s", out)
+	testutil.Equal(t, len(entries) == 0, false, "json 输出不应为空")
 	for _, rt := range entries {
 		if rt.ID == "" {
 			t.Errorf("存在空 ID 条目: %+v", rt)
@@ -2197,9 +2112,7 @@ func TestResourceTypes_TypeFilter(t *testing.T) {
 		t.Errorf("过滤后应含 ysm, got: %q", out)
 	}
 	// 未知类型 → 参数错误
-	if err := runResourceTypes(&CmdContext{App: &app.App{}, Args: []string{"--type", "nope"}}); err == nil {
-		t.Fatal("未知类型应报参数错误")
-	}
+	testutil.NotNil(t, runResourceTypes(&CmdContext{App: &app.App{}, Args: []string{"--type", "nope"}}), "未知类型应报参数错误")
 }
 
 // ===== RunCLIInProcess 进程内直调（ADR-199）=====
@@ -2208,31 +2121,20 @@ func TestResourceTypes_TypeFilter(t *testing.T) {
 func TestRunCLIInProcess_ReturnsJSON(t *testing.T) {
 	dir := t.TempDir()
 	out, err := RunCLIInProcess(&app.App{}, context.Background(), []string{"--files-root", dir, "cache-status", "--json"})
-	if out == "" {
-		t.Fatalf("RunCLIInProcess 应返回非空 JSON 字符串，got empty (err=%v)", err)
-	}
+	testutil.Equal(t, out == "", false, "RunCLIInProcess 应返回非空 JSON 字符串，got empty (err=%v)", err)
 	var resp map[string]interface{}
-	if jErr := json.Unmarshal([]byte(out), &resp); jErr != nil {
-		t.Fatalf("RunCLIInProcess 返回非合法 JSON: %v\nraw=%s", jErr, out)
-	}
-	if _, ok := resp["status"]; !ok {
-		t.Fatalf("RunCLIInProcess 返回 JSON 缺少 status 字段: %s", out)
-	}
+	testutil.NoError(t, json.Unmarshal([]byte(out), &resp), "RunCLIInProcess 返回非合法 JSON\nraw=%s", out)
+	_, ok := resp["status"]
+	testutil.Equal(t, ok, true, "RunCLIInProcess 返回 JSON 缺少 status 字段: %s", out)
 }
 
 // TestRunCLIInProcess_MissingFilesRoot_ErrorJSON 验证缺 files-root 时仍返回合规错误 JSON（非 panic/空串）
 func TestRunCLIInProcess_MissingFilesRoot_ErrorJSON(t *testing.T) {
 	out, _ := RunCLIInProcess(&app.App{}, context.Background(), []string{"search", "--keyword", "x", "--json"})
-	if out == "" {
-		t.Fatal("缺 files-root 应返回错误 JSON，got empty")
-	}
+	testutil.Equal(t, out == "", false, "缺 files-root 应返回错误 JSON，got empty")
 	var resp map[string]interface{}
-	if jErr := json.Unmarshal([]byte(out), &resp); jErr != nil {
-		t.Fatalf("错误路径返回非合法 JSON: %v\nraw=%s", jErr, out)
-	}
-	if resp["status"] != "error" {
-		t.Fatalf("缺 files-root 期望 status=error，got %v", resp["status"])
-	}
+	testutil.NoError(t, json.Unmarshal([]byte(out), &resp), "错误路径返回非合法 JSON\nraw=%s", out)
+	testutil.Equal(t, resp["status"], any("error"), "缺 files-root 期望 status=error")
 }
 
 // TestCmdNameFromArgs code_review 58232c2d5 #6/#7/#8 回归锚：超时/取消/panic 错误 JSON
@@ -2271,15 +2173,10 @@ func TestRunCLIInProcess_StdoutSerialize(t *testing.T) {
 	}
 	for range 2 {
 		out := <-results
-		if out == "" {
-			t.Fatal("并发 RunCLIInProcess 应返回非空 JSON，got empty")
-		}
+		testutil.Equal(t, out == "", false, "并发 RunCLIInProcess 应返回非空 JSON，got empty")
 		var resp map[string]interface{}
-		if jErr := json.Unmarshal([]byte(out), &resp); jErr != nil {
-			t.Fatalf("并发返回非合法 JSON: %v\nraw=%s", jErr, out)
-		}
-		if _, ok := resp["status"]; !ok {
-			t.Fatalf("并发返回 JSON 缺 status 字段: %s", out)
-		}
+		testutil.NoError(t, json.Unmarshal([]byte(out), &resp), "并发返回非合法 JSON\nraw=%s", out)
+		_, ok := resp["status"]
+		testutil.Equal(t, ok, true, "并发返回 JSON 缺 status 字段: %s", out)
 	}
 }

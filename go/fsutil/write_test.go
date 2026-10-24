@@ -14,13 +14,11 @@ import (
 func TestWriteFileAtomic_Success(t *testing.T) {
 	dir := t.TempDir()
 	dst := filepath.Join(dir, "data.json")
-	if err := WriteFileAtomic(dst, []byte(`{"ok":true}`)); err != nil {
-		t.Fatalf("WriteFileAtomic 失败: %v", err)
-	}
+	testutil.NoError(t, WriteFileAtomic(dst, []byte(`{"ok":true}`)), "WriteFileAtomic 失败")
 	data, err := os.ReadFile(dst)
-	if err != nil || string(data) != `{"ok":true}` {
-		t.Fatalf("内容不符: %q %v", string(data), err)
-	}
+	// OR 型复合条件拆序贯
+	testutil.NoError(t, err, "内容不符")
+	testutil.Equal(t, string(data), `{"ok":true}`, "内容不符: %q", string(data))
 	fi, err := os.Stat(dst)
 	testutil.NoError(t, err)
 	// 平台感知：Windows 的 os.Chmod(0644) 只映射只读位、实际权限为 0666——
@@ -34,9 +32,7 @@ func TestWriteFileAtomic_Success(t *testing.T) {
 	}
 	// 成功路径不得残留 .atomic-*.tmp
 	matches, _ := filepath.Glob(filepath.Join(dir, ".atomic-*.tmp"))
-	if len(matches) != 0 {
-		t.Fatalf("成功路径不应残留临时文件: %v", matches)
-	}
+	testutil.Equal(t, len(matches), 0, "成功路径不应残留临时文件: %v", matches)
 }
 
 func TestWriteFileAtomic_TempCreateFailureCleansUp(t *testing.T) {
@@ -52,7 +48,5 @@ func TestWriteFileAtomic_TempCreateFailureCleansUp(t *testing.T) {
 		t.Errorf("CreateTemp 阶段失败应携带 ErrTempCreateFailed，实际 %v", err)
 	}
 	matches, _ := filepath.Glob(filepath.Join(base, ".atomic-*.tmp"))
-	if len(matches) != 0 {
-		t.Fatalf("失败后不应残留临时文件: %v", matches)
-	}
+	testutil.Equal(t, len(matches), 0, "失败后不应残留临时文件: %v", matches)
 }

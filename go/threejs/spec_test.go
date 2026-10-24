@@ -15,9 +15,7 @@ import (
 func TestBuildEmptyModel(t *testing.T) {
 	out, err := Build(types.BedrockModel{})
 	testutil.NoError(t, err, "Build error")
-	if out != "{}" {
-		t.Fatalf("empty model: got %q, want {}", out)
-	}
+	testutil.Equal(t, out, "{}", "empty model")
 }
 
 func TestBuildSingleCube(t *testing.T) {
@@ -37,14 +35,10 @@ func TestBuildSingleCube(t *testing.T) {
 	}
 	out, err := Build(model)
 	testutil.NoError(t, err, "Build error")
-	if !strings.Contains(out, `"name":"b1"`) {
-		t.Fatalf("bone b1 missing in: %s", out)
-	}
+	testutil.Equal(t, strings.Contains(out, `"name":"b1"`), true, "bone b1 missing in: %s", out)
 	// mesh localPosition — cp[0] 已 X 翻号（= -Pivot[0]），localPos[0] = bonePivot.x + cp[0]
 	// = 0 + (-4) = -4（对齐 Blockbench mesh.position = cube.origin - parent.origin）
-	if !strings.Contains(out, `"localPosition":[-4,4,4]`) {
-		t.Fatalf("mesh localPosition mismatch: %s", out)
-	}
+	testutil.Equal(t, strings.Contains(out, `"localPosition":[-4,4,4]`), true, "mesh localPosition mismatch: %s", out)
 }
 
 // 反推审核 P1-1：inflate 运算溢出（origin=1e308 + inflate=-1e308 → 2e308 溢出为 +Inf）
@@ -67,9 +61,7 @@ func TestBuildCubeMeshData_InflateOverflow(t *testing.T) {
 	}
 	out, err := Build(model)
 	testutil.NoError(t, err, "Build error")
-	if strings.Contains(out, "Infinity") || strings.Contains(out, "NaN") {
-		t.Fatalf("inflate 运算溢出应被拦截，不得产出 Inf/NaN: %s", out)
-	}
+	testutil.Equal(t, strings.Contains(out, "Infinity") || strings.Contains(out, "NaN"), false, "inflate 运算溢出应被拦截，不得产出 Inf/NaN: %s", out)
 }
 
 // code_review 复核 P2：无 inflate 的 origin+size 派生溢出（1e308+1e308 → 2e308 → +Inf）
@@ -92,9 +84,7 @@ func TestBuildCubeMeshData_OriginPlusSizeOverflow(t *testing.T) {
 	}
 	out, err := Build(model)
 	testutil.NoError(t, err, "Build error")
-	if strings.Contains(out, "Infinity") || strings.Contains(out, "NaN") {
-		t.Fatalf("origin+size 派生溢出应被拦截，不得产出 Inf/NaN: %s", out)
-	}
+	testutil.Equal(t, strings.Contains(out, "Infinity") || strings.Contains(out, "NaN"), false, "origin+size 派生溢出应被拦截，不得产出 Inf/NaN: %s", out)
 }
 
 // bug-chronicle #14：同名骨骼第二次出现且带 parent → 覆盖 pivot/parent 层级
@@ -120,35 +110,25 @@ func TestBuildDuplicateBoneMerge(t *testing.T) {
 	out, err := Build(model)
 	testutil.NoError(t, err, "Build error")
 	var spec Model3DSpec
-	if err := json.Unmarshal([]byte(out), &spec); err != nil {
-		t.Fatalf("unmarshal: %v\n%s", err, out)
-	}
+	testutil.NoError(t, json.Unmarshal([]byte(out), &spec), "unmarshal: %s", out)
 	// b1 只保留一条，且被有 parent 的版本覆盖
 	count := 0
 	for _, b := range spec.Models[0].Bones {
 		if b.Name == "b1" {
 			count++
-			if b.ParentID == nil || *b.ParentID != "p1" {
-				t.Fatalf("b1 parentId = %v, want p1 (有 parent 的同名骨骼应覆盖)", b.ParentID)
-			}
+			// 序贯拆分：NotNil 失败即 Goexit，下一行 *b.ParentID 解引用才安全
+			testutil.NotNil(t, b.ParentID, "b1 parentId = %v, want p1 (有 parent 的同名骨骼应覆盖)", b.ParentID)
+			testutil.Equal(t, *b.ParentID, "p1", "b1 parentId = %v, want p1 (有 parent 的同名骨骼应覆盖)", b.ParentID)
 			// localPosition = X 翻转对齐 C# → p1.pivot - b1.pivot = [0,0,0] - [10,0,0]
-			if b.LocalPosition != [3]float64{-10, 0, 0} {
-				t.Fatalf("b1 localPosition = %v, want [10 0 0]", b.LocalPosition)
-			}
+			testutil.Equal(t, b.LocalPosition, [3]float64{-10, 0, 0}, "b1 localPosition")
 		}
 	}
-	if count != 1 {
-		t.Fatalf("b1 应有 1 条记录，got %d", count)
-	}
+	testutil.Equal(t, count, 1, "b1 应有 1 条记录，got %d", count)
 	// overwrite 语义：带 parent 的版本整体替换（含 cube），只保留新 cube
-	if len(spec.Models[0].MeshGroups) != 1 {
-		t.Fatalf("meshes = %d, want 1（overwrite 整体替换旧 cube）", len(spec.Models[0].MeshGroups))
-	}
+	testutil.Equal(t, len(spec.Models[0].MeshGroups), 1, "meshes = %d, want 1（overwrite 整体替换旧 cube）", len(spec.Models[0].MeshGroups))
 	m := spec.Models[0].MeshGroups[0]
 	// 保留的是 cubeB（X 翻转对齐 C# → bonePivot [10,0,0] - pivot [11,0,0] = [-1,0,0]）
-	if m.LocalPosition != [3]float64{-1, 0, 0} {
-		t.Fatalf("mesh localPosition = %v, want [-1 0 0]（cubeB 替换 cubeA）", m.LocalPosition)
-	}
+	testutil.Equal(t, m.LocalPosition, [3]float64{-1, 0, 0}, "mesh localPosition（cubeB 替换 cubeA）")
 }
 
 // mergeCubes 直接测：不重叠的 cube 追加，重叠的（origin/size/rotation 全等）替换
@@ -158,20 +138,14 @@ func TestMergeCubes(t *testing.T) {
 
 	// 不重叠 → 追加
 	merged := mergeCubes([]types.Cube2D{cubeA}, []types.Cube2D{cubeB})
-	if len(merged) != 2 {
-		t.Fatalf("非重叠合并 = %d, want 2", len(merged))
-	}
+	testutil.Equal(t, len(merged), 2, "非重叠合并 = %d, want 2", len(merged))
 
 	// 重叠（同 origin/size/rotation，不同 pivot/uv）→ 替换
 	cubeA2 := cubeA
 	cubeA2.UV = [2]float64{4, 4}
 	merged2 := mergeCubes([]types.Cube2D{cubeA}, []types.Cube2D{cubeA2})
-	if len(merged2) != 1 {
-		t.Fatalf("重叠合并 = %d, want 1（替换）", len(merged2))
-	}
-	if merged2[0].UV != [2]float64{4, 4} {
-		t.Fatalf("重叠替换后 UV = %v, want [4 4]", merged2[0].UV)
-	}
+	testutil.Equal(t, len(merged2), 1, "重叠合并 = %d, want 1（替换）", len(merged2))
+	testutil.Equal(t, merged2[0].UV, [2]float64{4, 4}, "重叠替换后 UV")
 }
 
 // ---- eulerToQuaternion 符号口径 ----
@@ -180,9 +154,7 @@ func TestEulerToQuaternionIdentity(t *testing.T) {
 	q := eulerToQuaternion(0, 0, 0)
 	want := [4]float64{0, 0, 0, 1}
 	for i := range q {
-		if math.Abs(q[i]-want[i]) > 1e-9 {
-			t.Fatalf("identity: got %v, want %v", q, want)
-		}
+		testutil.Equal(t, math.Abs(q[i]-want[i]) > 1e-9, false, "identity: got %v, want %v", q, want)
 	}
 }
 
@@ -190,15 +162,9 @@ func TestEulerToQuaternionIdentity(t *testing.T) {
 // （若未来与 ysmview 比对发现符号差异，改这里即显形）
 func TestEulerToQuaternion90X(t *testing.T) {
 	q := eulerToQuaternion(-90, 0, 0)
-	if math.Abs(q[0]-(-0.70710678)) > 1e-4 {
-		t.Fatalf("90X qx = %v, want ≈ -0.7071", q[0])
-	}
-	if math.Abs(q[3]-0.70710678) > 1e-4 {
-		t.Fatalf("90X qw = %v, want ≈ 0.7071", q[3])
-	}
-	if math.Abs(q[1]) > 1e-9 || math.Abs(q[2]) > 1e-9 {
-		t.Fatalf("90X y/z 应为 0，got %v", q)
-	}
+	testutil.Equal(t, math.Abs(q[0]-(-0.70710678)) > 1e-4, false, "90X qx = %v, want ≈ -0.7071", q[0])
+	testutil.Equal(t, math.Abs(q[3]-0.70710678) > 1e-4, false, "90X qw = %v, want ≈ 0.7071", q[3])
+	testutil.Equal(t, math.Abs(q[1]) > 1e-9 || math.Abs(q[2]) > 1e-9, false, "90X y/z 应为 0，got %v", q)
 }
 
 // cubeIdx ≥ 10 时 meshID 用十进制（回归：string(rune('0'+idx)) 会变成 ':' 等非数字）
@@ -224,24 +190,18 @@ func TestMeshIDMultiCube(t *testing.T) {
 	out, err := Build(model)
 	testutil.NoError(t, err, "Build error")
 	var spec Model3DSpec
-	if err := json.Unmarshal([]byte(out), &spec); err != nil {
-		t.Fatalf("unmarshal: %v", err)
-	}
-	if len(spec.Models) == 0 || len(spec.Models[0].MeshGroups) != 12 {
-		t.Fatalf("meshes = %d, want 12", len(spec.Models[0].MeshGroups))
-	}
+	testutil.NoError(t, json.Unmarshal([]byte(out), &spec), "unmarshal")
+	// 序贯拆分：前一 Equal 失败即 Goexit，下一行的 spec.Models[0] 索引才安全
+	testutil.Equal(t, len(spec.Models) == 0, false, "spec.Models 为空，期望 1 个模型")
+	testutil.Equal(t, len(spec.Models[0].MeshGroups), 12, "meshes = %d, want 12", len(spec.Models[0].MeshGroups))
 	found := false
 	for _, m := range spec.Models[0].MeshGroups {
 		if m.ID == "b1_10" {
 			found = true
 		}
-		if strings.ContainsAny(m.ID, ":") {
-			t.Fatalf("meshID 含异常字符: %s", m.ID)
-		}
+		testutil.Equal(t, strings.ContainsAny(m.ID, ":"), false, "meshID 含异常字符: %s", m.ID)
 	}
-	if !found {
-		t.Fatal("mesh id b1_10 缺失（cubeIdx 10 的十进制 ID）")
-	}
+	testutil.Equal(t, found, true, "mesh id b1_10 缺失（cubeIdx 10 的十进制 ID）")
 }
 
 // ---- ADR-042 §2.1 对齐锁定（2026-08-09 审计）----
@@ -261,16 +221,12 @@ func TestBuildBoneLocalPosition_XFlip(t *testing.T) {
 	out, err := Build(model)
 	testutil.NoError(t, err, "Build error")
 	var spec Model3DSpec
-	if err := json.Unmarshal([]byte(out), &spec); err != nil {
-		t.Fatalf("unmarshal: %v", err)
-	}
-	if len(spec.Models) == 0 || len(spec.Models[0].Bones) != 1 {
-		t.Fatalf("bones = %d, want 1", len(spec.Models[0].Bones))
-	}
+	testutil.NoError(t, json.Unmarshal([]byte(out), &spec), "unmarshal")
+	// 序贯拆分：前一 Equal 失败即 Goexit，下一行的 spec.Models[0] 索引才安全
+	testutil.Equal(t, len(spec.Models) == 0, false, "spec.Models 为空，期望 1 个模型")
+	testutil.Equal(t, len(spec.Models[0].Bones), 1, "bones = %d, want 1", len(spec.Models[0].Bones))
 	lp := spec.Models[0].Bones[0].LocalPosition
-	if lp != [3]float64{-5, 2, -3} {
-		t.Fatalf("bone localPosition = %v, want [-5 2 -3]（X 翻转对齐）", lp)
-	}
+	testutil.Equal(t, lp, [3]float64{-5, 2, -3}, "bone localPosition（X 翻转对齐）")
 }
 
 // 旋转序锁定：eulerToQuaternion 现行口径 = Rz*Ry*Rx（ZYX intrinsic，spec.go:361，
@@ -282,19 +238,15 @@ func TestEulerToQuaternion_OrderLock_ZYX(t *testing.T) {
 	q := eulerToQuaternion(-30, -45, 60)
 	// 独立参考：q = qz ⊗ qy ⊗ qx（ZYX intrinsic）
 	qRef := zyxQuat(-30, -45, 60)
-	if diff := quatDiff(q, qRef); diff > 1e-6 {
-		t.Fatalf("eulerToQuaternion = %v, want ZYX 参考 %v, diff=%v（旋转序漂移？）", q, qRef, diff)
-	}
+	diff := quatDiff(q, qRef)
+	testutil.Equal(t, diff > 1e-6, false, "eulerToQuaternion = %v, want ZYX 参考 %v, diff=%v（旋转序漂移？）", q, qRef, diff)
 	// 负向锁定：与旧 Rx*Ry*Rz 序（q = qx ⊗ qy ⊗ qz）数值必须不同，防止回退旧序
 	qOld := xyzQuat(-30, -45, 60)
-	if diff := quatDiff(q, qOld); diff < 1e-3 {
-		t.Fatalf("ZYX 与旧 Rx*Ry*Rz 序四元数不应相同, diff=%v（顺序差异被抹平？）", diff)
-	}
+	diffOld := quatDiff(q, qOld)
+	testutil.Equal(t, diffOld < 1e-3, false, "ZYX 与旧 Rx*Ry*Rz 序四元数不应相同, diff=%v（顺序差异被抹平？）", diffOld)
 	// 纯 X 轴仍应等于 TestEulerToQuaternion90X 口径
 	q90 := eulerToQuaternion(-90, 0, 0)
-	if math.Abs(q90[0]-(-0.70710678)) > 1e-4 {
-		t.Fatalf("90X qx = %v, want ≈ -0.7071", q90[0])
-	}
+	testutil.Equal(t, math.Abs(q90[0]-(-0.70710678)) > 1e-4, false, "90X qx = %v, want ≈ -0.7071", q90[0])
 }
 
 // zyxQuat 独立参考：ZYX intrinsic 序四元数 q = qz ⊗ qy ⊗ qx（与 eulerToQuaternion 展开等价但独立推导）。

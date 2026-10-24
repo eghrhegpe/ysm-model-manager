@@ -50,13 +50,9 @@ func TestIsNoiseEvent(t *testing.T) {
 func TestNewWithClearCacheFn(t *testing.T) {
 	cleared := false
 	w := New(t.TempDir(), t.TempDir(), mockScanFunc, func() { cleared = true })
-	if w.clearCacheFn == nil {
-		t.Fatal("clearCacheFn not saved")
-	}
+	testutil.NotNil(t, w.clearCacheFn, "clearCacheFn not saved")
 	w.clearCacheFn()
-	if !cleared {
-		t.Fatal("clearCacheFn not called")
-	}
+	testutil.Equal(t, cleared, true, "clearCacheFn not called")
 }
 
 // —— syncAll 直接调用（同步执行，无需真实事件等待） ——
@@ -67,9 +63,7 @@ func TestSyncAllNotRunning(t *testing.T) {
 	scanFn := func(string) []types.ModelEntry { calls.Add(1); return nil }
 	w := New(t.TempDir(), setupMinecraftRoot(t), scanFn)
 	w.syncAll()
-	if calls.Load() != 0 {
-		t.Fatalf("syncAll should not trigger scan when not running (called %d times)", calls.Load())
-	}
+	testutil.Equal(t, calls.Load(), int32(0), "syncAll should not trigger scan when not running (called %d times)", calls.Load())
 }
 
 // TestSyncAllEmptyInstances 无整合包（versions/ 缺失）时返回，不触发扫描
@@ -79,12 +73,8 @@ func TestSyncAllEmptyInstances(t *testing.T) {
 	w := New(t.TempDir(), t.TempDir(), scanFn) // mcRoot 无 versions/ → 0 实例
 	w.running = true
 	w.syncAll()
-	if calls.Load() != 0 {
-		t.Fatalf("syncAll should not trigger scan without instances (called %d times)", calls.Load())
-	}
-	if w.syncRunning {
-		t.Fatal("syncRunning still true after syncAll returned")
-	}
+	testutil.Equal(t, calls.Load(), int32(0), "syncAll should not trigger scan without instances (called %d times)", calls.Load())
+	testutil.Equal(t, w.syncRunning, false, "syncRunning still true after syncAll returned")
 }
 
 // TestSyncAllPanicRecovery scanFn panics, syncAll recovers, serial state not stuck
@@ -93,19 +83,14 @@ func TestSyncAllPanicRecovery(t *testing.T) {
 	w := New(t.TempDir(), setupMinecraftRoot(t), panicScan)
 	w.running = true
 	w.syncAll() // 不应 panic 传播
-	if w.syncRunning {
-		t.Fatal("syncRunning still true after panic recovery")
-	}
+	testutil.Equal(t, w.syncRunning, false, "syncRunning still true after panic recovery")
 	// 恢复后仍可继续正常同步
 	var calls atomic.Int32
 	w.scanFn = func(string) []types.ModelEntry { calls.Add(1); return nil }
 	w.syncAll()
-	if calls.Load() == 0 {
-		t.Fatal("syncAll cannot execute again after panic")
-	}
-	if w.syncRunning {
-		t.Fatal("syncRunning still true after second syncAll")
-	}
+	// 护栏：panic 恢复后须可再次执行（原 if calls==0 → t.Fatal）
+	testutil.Equal(t, calls.Load() == 0, false, "syncAll cannot execute again after panic")
+	testutil.Equal(t, w.syncRunning, false, "syncRunning still true after second syncAll")
 }
 
 // TestSyncAllSyncsInstances 完整同步路径：仓库 .ban 状态实际同步到整合包 custom 目录
@@ -147,9 +132,7 @@ func TestSyncAllSyncsInstances(t *testing.T) {
 	w.running = true
 	w.syncAll()
 
-	if cacheClears.Load() != 1 {
-		t.Fatalf("clearCacheFn should be called 1 time, got %d", cacheClears.Load())
-	}
+	testutil.Equal(t, cacheClears.Load(), int32(1), "clearCacheFn should be called 1 time, got %d", cacheClears.Load())
 	if _, err := os.Stat(filepath.Join(customDir, "foo.ysm.disabled")); err != nil {
 		t.Errorf("foo.ysm not disabled (expected foo.ysm.disabled): %v", err)
 	}
@@ -159,9 +142,7 @@ func TestSyncAllSyncsInstances(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(customDir, "bar.ysm")); err != nil {
 		t.Errorf("bar.ysm should not be changed: %v", err)
 	}
-	if w.syncRunning {
-		t.Fatal("syncRunning still true after syncAll returned")
-	}
+	testutil.Equal(t, w.syncRunning, false, "syncRunning still true after syncAll returned")
 }
 
 // TestSyncAllSyncError SyncToggleStatus error (repo scan empty) logs and continues
@@ -186,12 +167,8 @@ func TestSyncAllSyncError(t *testing.T) {
 	w := New(repoDir, mcDir, scanFn)
 	w.running = true
 	w.syncAll() // 不应 panic 传播
-	if calls.Load() != 2 {
-		t.Fatalf("scanFn should be called 2 times (short-circuit + SyncToggleStatus), got %d", calls.Load())
-	}
-	if w.syncRunning {
-		t.Fatal("syncRunning still true after syncAll returned")
-	}
+	testutil.Equal(t, calls.Load(), int32(2), "scanFn should be called 2 times (short-circuit + SyncToggleStatus), got %d", calls.Load())
+	testutil.Equal(t, w.syncRunning, false, "syncRunning still true after syncAll returned")
 }
 
 // TestDebounceSyncAfterStopDoesNotArm Stop 后 loop 消费残余事件时不再武装计时器
@@ -206,29 +183,21 @@ func TestDebounceSyncAfterStopDoesNotArm(t *testing.T) {
 	w.mu.Lock()
 	armed := w.debounce != nil
 	w.mu.Unlock()
-	if armed {
-		t.Fatal("debounceSync still armed timer after Stop (missing running guard)")
-	}
+	testutil.Equal(t, armed, false, "debounceSync still armed timer after Stop (missing running guard)")
 	time.Sleep(debounceDelay + 100*time.Millisecond)
-	if calls.Load() != 0 {
-		t.Fatalf("no sync should trigger after Stop, scanFn called %d times", calls.Load())
-	}
+	testutil.Equal(t, calls.Load(), int32(0), "no sync should trigger after Stop, scanFn called %d times", calls.Load())
 }
 
 // TestStopClearsDebounceTimer Stop 必须清掉已武装的防抖计时器引用，
 // 避免「Stop→立即 Start」后旧代计时器在新代存活期间 firing
 func TestStopClearsDebounceTimer(t *testing.T) {
 	w := New(t.TempDir(), setupMinecraftRoot(t), mockScanFunc)
-	if err := w.Start(); err != nil {
-		t.Fatalf("Start() = %v", err)
-	}
+	testutil.NoError(t, w.Start(), "Start() =")
 	w.debounceSync() // 直接武装计时器（running=true）
 	w.mu.Lock()
 	armed := w.debounce != nil
 	w.mu.Unlock()
-	if !armed {
-		t.Fatal("precondition failed: debounceSync did not arm timer")
-	}
+	testutil.Equal(t, armed, true, "precondition failed: debounceSync did not arm timer")
 	w.Stop()
 	w.mu.Lock()
 	left := w.debounce
@@ -247,12 +216,8 @@ func TestSyncAllEmptyRepoShortCircuit(t *testing.T) {
 	w := New(t.TempDir(), setupMinecraftRoot(t), scanFn) // 仓库为空 + 有 1 个实例
 	w.running = true
 	w.syncAll()
-	if calls.Load() != 1 {
-		t.Fatalf("empty repo short-circuit should call scanFn 1 time, got %d", calls.Load())
-	}
-	if w.syncRunning {
-		t.Fatal("syncRunning still true after syncAll returned")
-	}
+	testutil.Equal(t, calls.Load(), int32(1), "empty repo short-circuit should call scanFn 1 time, got %d", calls.Load())
+	testutil.Equal(t, w.syncRunning, false, "syncRunning still true after syncAll returned")
 }
 
 // TestSyncAllNoClearCacheWithoutInstances 无整合包（versions/ 缺失）时不应清空缓存
@@ -262,9 +227,7 @@ func TestSyncAllNoClearCacheWithoutInstances(t *testing.T) {
 	w := New(t.TempDir(), t.TempDir(), mockScanFunc, func() { cacheClears.Add(1) })
 	w.running = true
 	w.syncAll()
-	if cacheClears.Load() != 0 {
-		t.Fatalf("clearCacheFn should not be called without instances, got %d times", cacheClears.Load())
-	}
+	testutil.Equal(t, cacheClears.Load(), int32(0), "clearCacheFn should not be called without instances, got %d times", cacheClears.Load())
 }
 
 // —— loop 直接注入（真实 fsnotify.Watcher 提供 channel，避免长等待） ——
@@ -323,16 +286,14 @@ func TestLoopNoiseEventFiltered(t *testing.T) {
 		if armed {
 			break
 		}
-		if time.Now().After(deadline) {
-			t.Fatal("debounce timer not ready within timeout")
-		}
+		// 护栏：轮询超时即失败（原 if After(deadline) → t.Fatal）
+		testutil.Equal(t, time.Now().After(deadline), false, "debounce timer not ready within timeout")
 		time.Sleep(20 * time.Millisecond)
 	}
 	// 防抖窗口走完后只应有真实事件触发的 1 次同步——噪声事件若漏过滤会多于 1 次
 	time.Sleep(debounceDelay + 300*time.Millisecond)
-	if n := calls.Load(); n != 1 {
-		t.Fatalf("noise events not filtered: %d sync calls (expected only 1 from real event)", n)
-	}
+	n := calls.Load()
+	testutil.Equal(t, n, int32(1), "noise events not filtered: %d sync calls (expected only 1 from real event)", n)
 	fw.Close()
 	<-w.loopDone
 }

@@ -5,7 +5,11 @@
 // （语义锁，重构前后复跑对比）。两文件各管一段，同 ADR-347 D3 矩阵纪律。
 package sync
 
-import "testing"
+import (
+	"testing"
+
+	"ysm-model-manager/go/internal/testutil"
+)
 
 func TestContentVerdictChannels(t *testing.T) {
 	cases := []struct {
@@ -32,9 +36,9 @@ func TestContentVerdictChannels(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			d, ch := ContentVerdict(c.g, c.i)
-			if d != c.wantD || ch != c.wantCH {
-				t.Fatalf("ContentVerdict(%+v, %+v) = (%v, %q)，want (%v, %q)", c.g, c.i, d, ch, c.wantD, c.wantCH)
-			}
+			// 原复合条件拆序贯
+			testutil.Equal(t, d, c.wantD, "ContentVerdict(%+v, %+v) differs", c.g, c.i)
+			testutil.Equal(t, ch, c.wantCH, "ContentVerdict(%+v, %+v) channel", c.g, c.i)
 		})
 	}
 }
@@ -44,7 +48,7 @@ func TestContentVerdictChannels(t *testing.T) {
 func TestContentVerdict_BranchOrder_DirBeforeOversize(t *testing.T) {
 	g, i := DiffEntry{IsDir: true, Oversize: true, FoldDigest: ""}, DiffEntry{IsDir: true}
 	d, ch := ContentVerdict(g, i)
-	if d || ch != VerdictChannelNone {
-		t.Fatalf("目录 + Oversize 误走 oversize 腿：got (%v, %q)，want (false, %q)", d, ch, VerdictChannelNone)
-	}
+	// 原复合条件拆序贯
+	testutil.Equal(t, d, false, "目录 + Oversize 误走 oversize 腿：got (%v, %q)，want (false, %q)", d, ch, VerdictChannelNone)
+	testutil.Equal(t, ch, VerdictChannelNone, "目录 + Oversize 误走 oversize 腿：got (%v, %q)，want (false, %q)", d, ch, VerdictChannelNone)
 }

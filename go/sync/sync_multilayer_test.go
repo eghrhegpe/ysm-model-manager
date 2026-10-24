@@ -86,9 +86,7 @@ func TestSyncResourcesDirLevel_MultiLayerFlatFiles(t *testing.T) {
 	if len(result.Extra) != 0 {
 		t.Errorf("应无 Extra 条目，got %v", result.Extra)
 	}
-	if len(result.Synced) != 2 {
-		t.Fatalf("应有 2 个 Synced 条目，got %d: %v", len(result.Synced), result.Synced)
-	}
+	testutil.Equal(t, len(result.Synced), 2, "应有 2 个 Synced 条目，got %d: %v", len(result.Synced), result.Synced)
 
 	// 验证 Synced 路径包含完整层级
 	hasVendor1 := false
@@ -128,12 +126,8 @@ func TestSyncResourcesDirLevel_MultiLayerNoCollision(t *testing.T) {
 
 	// vendorB/model 应归入 Missing（实例没有）
 	// vendorA/model 应归入 Synced（两边都有）
-	if len(result.Missing) != 1 {
-		t.Fatalf("应有 1 个 Missing（vendorB/model），got %d: %v", len(result.Missing), result.Missing)
-	}
-	if len(result.Synced) != 1 {
-		t.Fatalf("应有 1 个 Synced（vendorA/model），got %d: %v", len(result.Synced), result.Synced)
-	}
+	testutil.Equal(t, len(result.Missing), 1, "应有 1 个 Missing（vendorB/model），got %d: %v", len(result.Missing), result.Missing)
+	testutil.Equal(t, len(result.Synced), 1, "应有 1 个 Synced（vendorA/model），got %d: %v", len(result.Synced), result.Synced)
 
 	// 验证 Missing 是 vendorB 的
 	missingPath := result.Missing[0]
@@ -160,12 +154,8 @@ func TestSyncResourcesDirLevel_MultiLayerModelFolders(t *testing.T) {
 	result := SyncResourcesDirLevel(globalDir, instDir, "ysm")
 
 	// helmet 缺失，sword 同步
-	if len(result.Missing) != 1 {
-		t.Fatalf("应有 1 个 Missing（helmet），got %d: %v", len(result.Missing), result.Missing)
-	}
-	if len(result.Synced) != 1 {
-		t.Fatalf("应有 1 个 Synced（sword），got %d: %v", len(result.Synced), result.Synced)
-	}
+	testutil.Equal(t, len(result.Missing), 1, "应有 1 个 Missing（helmet），got %d: %v", len(result.Missing), result.Missing)
+	testutil.Equal(t, len(result.Synced), 1, "应有 1 个 Synced（sword），got %d: %v", len(result.Synced), result.Synced)
 
 	// 验证路径包含完整层级
 	missingPath := result.Missing[0]
@@ -193,9 +183,7 @@ func TestSyncResourcesDirLevel_MixedDepth(t *testing.T) {
 	if len(result.Synced) != 1 {
 		t.Errorf("应有 1 个 Synced（root_model），got %d: %v", len(result.Synced), result.Synced)
 	}
-	if len(result.Missing) != 1 {
-		t.Fatalf("应有 1 个 Missing（subdir/nested_model），got %d: %v", len(result.Missing), result.Missing)
-	}
+	testutil.Equal(t, len(result.Missing), 1, "应有 1 个 Missing（subdir/nested_model），got %d: %v", len(result.Missing), result.Missing)
 	missingPath := result.Missing[0]
 	if !strings.Contains(missingPath, "subdir") {
 		t.Errorf("Missing 应包含 subdir 层级，got %s", missingPath)
@@ -214,9 +202,7 @@ func TestSyncResourcesDirLevel_ExtraAtNestedDepth(t *testing.T) {
 
 	result := SyncResourcesDirLevel(globalDir, instDir, "ysm")
 
-	if len(result.Extra) != 2 {
-		t.Fatalf("应有 2 个 Extra，got %d: %v", len(result.Extra), result.Extra)
-	}
+	testutil.Equal(t, len(result.Extra), 2, "应有 2 个 Extra，got %d: %v", len(result.Extra), result.Extra)
 
 	// 验证 Extra 路径包含完整层级
 	hasNested := false
@@ -258,12 +244,8 @@ func TestPushResources_MultiLayerZipPreservesHierarchy(t *testing.T) {
 		func(name, src, dst string, size int64, status, msg string) {
 			logs = append(logs, name+":"+status)
 		})
-	if err != nil {
-		t.Fatalf("PushResources 失败: %v", err)
-	}
-	if count != 2 {
-		t.Fatalf("应推送 2 个条目，实际 %d", count)
-	}
+	testutil.NoError(t, err, "PushResources 失败")
+	testutil.Equal(t, count, 2, "应推送 2 个条目，实际 %d", count)
 
 	// 验证目标目录保留了完整层级
 	cirnoPath := filepath.Join(targetDir, "thpatch", "cirno", "assets", "mypack", "maid_model.json")
@@ -291,9 +273,7 @@ func TestPushResources_MultiLayerYsmFilePreservesHierarchy(t *testing.T) {
 
 	count, err := PushResources("ysm", globalDir, targetDir, "copy", nil)
 	testutil.NoError(t, err, "PushResources 失败")
-	if count != 2 {
-		t.Fatalf("应推送 2 个条目，实际 %d", count)
-	}
+	testutil.Equal(t, count, 2, "应推送 2 个条目，实际 %d", count)
 
 	// 验证目标目录保留了完整层级
 	char1Path := filepath.Join(targetDir, "vendor", "char1", "model.ysm")
@@ -319,9 +299,7 @@ func TestPushResources_MultiLayerModelFolderPreservesHierarchy(t *testing.T) {
 
 	count, err := PushResources("ysm", globalDir, targetDir, "copy", nil)
 	testutil.NoError(t, err, "PushResources 失败")
-	if count != 1 {
-		t.Fatalf("应推送 1 个文件夹，实际 %d", count)
-	}
+	testutil.Equal(t, count, 1, "应推送 1 个文件夹，实际 %d", count)
 
 	// 验证目标目录保留了完整层级
 	swordPath := filepath.Join(targetDir, "rpg", "weapons", "sword", "ysm.json")
@@ -351,9 +329,7 @@ func TestPushResources_PartialPush(t *testing.T) {
 
 	count, err := PushResources("ysm", globalDir, targetDir, "copy", nil)
 	testutil.NoError(t, err, "PushResources 失败")
-	if count != 2 {
-		t.Fatalf("应推送 2 个 missing 条目，实际 %d", count)
-	}
+	testutil.Equal(t, count, 2, "应推送 2 个 missing 条目，实际 %d", count)
 
 	// vendorA/char2 和 vendorB/char3 应被推送
 	if _, err := os.Stat(filepath.Join(targetDir, "vendorA", "char2", "model.ysm")); err != nil {
@@ -379,9 +355,7 @@ func TestPullResources_MultiLayerPreservesHierarchy(t *testing.T) {
 	os.WriteFile(filepath.Join(targetDir, "community", "author1", "model.ysm"), []byte("extra"), 0644)
 
 	res := PullResources("ysm", globalDir, targetDir, nil)
-	if res.OK != 1 {
-		t.Fatalf("应拉取 1 个条目，实际 %d（首个失败: %s）", res.OK, res.FirstError)
-	}
+	testutil.Equal(t, res.OK, 1, "应拉取 1 个条目，实际 %d（首个失败: %s）", res.OK, res.FirstError)
 
 	// 验证拉取到 globalDir 的完整层级
 	pulledPath := filepath.Join(globalDir, "community", "author1", "model.ysm")
@@ -403,9 +377,7 @@ func TestPullResources_MultiLayerMixed(t *testing.T) {
 	os.WriteFile(filepath.Join(targetDir, "nested", "deep", "deep_extra.ysm"), []byte("deep"), 0644)
 
 	res := PullResources("ysm", globalDir, targetDir, nil)
-	if res.OK != 2 {
-		t.Fatalf("应拉取 2 个条目，实际 %d（首个失败: %s）", res.OK, res.FirstError)
-	}
+	testutil.Equal(t, res.OK, 2, "应拉取 2 个条目，实际 %d（首个失败: %s）", res.OK, res.FirstError)
 
 	// 验证根层和嵌套层都正确拉取
 	if _, err := os.Stat(filepath.Join(globalDir, "root_extra.ysm")); err != nil {
@@ -436,23 +408,17 @@ func TestPushPull_MultiLayerRoundTrip(t *testing.T) {
 	// Push
 	count, err := PushResources("ysm", globalDir, targetDir, "copy", nil)
 	testutil.NoError(t, err, "Push 失败")
-	if count != 1 {
-		t.Fatalf("Push 应推送 1 个，实际 %d", count)
-	}
+	testutil.Equal(t, count, 1, "Push 应推送 1 个，实际 %d", count)
 
 	// 验证推送后层级正确
-	if _, err := os.Stat(filepath.Join(targetDir, "vendor", "character", "model.ysm")); err != nil {
-		t.Fatalf("Push 后文件未落位到正确层级: %v", err)
-	}
+	testutil.FileExists(t, filepath.Join(targetDir, "vendor", "character", "model.ysm"), "Push 后文件未落位到正确层级")
 
 	// 从仓库删除该文件（模拟拉取场景）
 	os.RemoveAll(filepath.Join(globalDir, "vendor"))
 
 	// Pull 回来
 	res := PullResources("ysm", globalDir, targetDir, nil)
-	if res.OK != 1 {
-		t.Fatalf("Pull 应拉取 1 个，实际 %d（首个失败: %s）", res.OK, res.FirstError)
-	}
+	testutil.Equal(t, res.OK, 1, "Pull 应拉取 1 个，实际 %d（首个失败: %s）", res.OK, res.FirstError)
 
 	// 验证拉取后层级不变
 	if _, err := os.Stat(filepath.Join(globalDir, "vendor", "character", "model.ysm")); err != nil {
@@ -477,16 +443,13 @@ func TestSyncResourcesDirLevel_RootLevelItemsStillWork(t *testing.T) {
 	result := SyncResourcesDirLevel(globalDir, instDir, "ysm")
 
 	// FlatB.ysm → Missing
-	if len(result.Missing) != 1 {
-		t.Fatalf("应有 1 个 Missing（FlatB），got %d: %v", len(result.Missing), result.Missing)
-	}
+	// 序贯拆分：前一 Equal 失败即 Goexit，下一行的 [0] 索引才安全
+	testutil.Equal(t, len(result.Missing), 1, "应有 1 个 Missing（FlatB），got %d: %v", len(result.Missing), result.Missing)
 	if !strings.HasSuffix(result.Missing[0], "FlatB.ysm") {
 		t.Errorf("Missing 应为 FlatB.ysm，got %s", result.Missing[0])
 	}
 	// ModelA → Synced
-	if len(result.Synced) != 1 {
-		t.Fatalf("应有 1 个 Synced（ModelA），got %d: %v", len(result.Synced), result.Synced)
-	}
+	testutil.Equal(t, len(result.Synced), 1, "应有 1 个 Synced（ModelA），got %d: %v", len(result.Synced), result.Synced)
 }
 
 func TestSyncResourcesDirLevel_EmptyDirSkipped(t *testing.T) {
@@ -521,9 +484,7 @@ func TestSyncResourcesDirLevel_RelPathKeys_NoCollision(t *testing.T) {
 
 	result := SyncResourcesDirLevel(globalDir, instDir, "ysm")
 
-	if len(result.Missing) != 2 {
-		t.Fatalf("应有 2 个 Missing（cat1/pack + cat2/pack），got %d: %v", len(result.Missing), result.Missing)
-	}
+	testutil.Equal(t, len(result.Missing), 2, "应有 2 个 Missing（cat1/pack + cat2/pack），got %d: %v", len(result.Missing), result.Missing)
 	if len(result.Synced) != 0 {
 		t.Errorf("应有 0 个 Synced，got %d", len(result.Synced))
 	}
@@ -546,9 +507,7 @@ func TestSyncResourcesDirLevel_NestedMirror_Synced(t *testing.T) {
 
 	result := SyncResourcesDirLevel(globalDir, instDir, "EntityPlayer")
 
-	if len(result.Synced) != 2 {
-		t.Fatalf("应有 2 个 Synced，got %d: %v", len(result.Synced), result.Synced)
-	}
+	testutil.Equal(t, len(result.Synced), 2, "应有 2 个 Synced，got %d: %v", len(result.Synced), result.Synced)
 	if len(result.Missing) != 0 {
 		t.Errorf("应有 0 个 Missing，got %d", len(result.Missing))
 	}
@@ -579,32 +538,24 @@ func TestPushResources_DirLevel_PreservesHierarchy(t *testing.T) {
 
 	count, err := PushResources("EntityPlayer", globalDir, targetDir, "copy", nil)
 	testutil.NoError(t, err, "PushResources 失败")
-	if count != 1 {
-		t.Fatalf("应推送 1 个文件夹，实际 %d", count)
-	}
+	testutil.Equal(t, count, 1, "应推送 1 个文件夹，实际 %d", count)
 
 	// 验证层级保留：targetDir/东方/角色A/char.pmx 存在（非 targetDir/char.pmx 扁平）
 	expectedPmx := filepath.Join(targetDir, "东方", "角色A", "char.pmx")
 	data, err := os.ReadFile(expectedPmx)
-	if err != nil {
-		t.Fatalf("多层路径推送失败：%v", err)
-	}
+	testutil.NoError(t, err, "多层路径推送失败")
 	if string(data) != "pmx-model" {
 		t.Errorf("内容不正确: %s", data)
 	}
 
 	// 验证嵌套子目录也被保留
 	expectedPng := filepath.Join(targetDir, "东方", "角色A", "tex", "toon.png")
-	if _, err := os.Stat(expectedPng); os.IsNotExist(err) {
-		t.Fatalf("嵌套子目录 tex/toon.png 未保留在多层路径下")
-	}
+	testutil.FileExists(t, expectedPng, "嵌套子目录 tex/toon.png 未保留在多层路径下")
 
 	// 二次推送应为 0（幂等验证——relKey 匹配已存在）
 	count2, err2 := PushResources("EntityPlayer", globalDir, targetDir, "copy", nil)
 	testutil.NoError(t, err2, "二次推送失败")
-	if count2 != 0 {
-		t.Fatalf("二次推送应为 0（已同步），实际 %d", count2)
-	}
+	testutil.Equal(t, count2, 0, "二次推送应为 0（已同步），实际 %d", count2)
 }
 
 // TestPushResources_FolderLevelMMD_Compatibility: 验证原有 FolderLevelMMD 行为不受影响
@@ -621,16 +572,12 @@ func TestPushResources_FolderLevelMMD_Compatibility(t *testing.T) {
 
 	count, err := PushResources("EntityPlayer", globalDir, targetDir, "copy", nil)
 	testutil.NoError(t, err, "Push MMD 失败")
-	if count != 1 {
-		t.Fatalf("应推送 1 个 MMD 文件夹，实际 %d", count)
-	}
+	testutil.Equal(t, count, 1, "应推送 1 个 MMD 文件夹，实际 %d", count)
 
 	// 根层级：rel="mmdmodel" → InstallDirRel(targetDir, "mmdmodel") = targetDir/mmdmodel
 	// 等价于旧 InstallDir 行为
 	dst := filepath.Join(targetDir, "mmdmodel", "char.pmx")
-	if _, err := os.Stat(dst); os.IsNotExist(err) {
-		t.Fatalf("根层级模型文件夹应按原语义落位: %v", err)
-	}
+	testutil.FileExists(t, dst, "根层级模型文件夹应按原语义落位")
 }
 
 // TestSyncResourcesDirLevel_FlatFileNotAbove_SubfolderKept 验证「容器目录混入直接平铺模型文件」

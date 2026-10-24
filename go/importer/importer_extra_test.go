@@ -26,9 +26,7 @@ func TestCopyDir_Basic(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 
-	if err := copyDir(src, dst); err != nil {
-		t.Fatalf("copyDir 失败: %v", err)
-	}
+	testutil.NoError(t, copyDir(src, dst), "copyDir 失败")
 
 	// 验证文件已复制
 	data, err := os.ReadFile(filepath.Join(dst, "a.txt"))
@@ -55,9 +53,7 @@ func TestCopyDir_OverwriteExisting(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 
-	if err := copyDir(src, dst); err != nil {
-		t.Fatalf("copyDir 覆盖失败: %v", err)
-	}
+	testutil.NoError(t, copyDir(src, dst), "copyDir 覆盖失败")
 	data, err := os.ReadFile(filepath.Join(dst, "new.txt"))
 	testutil.NoError(t, err)
 	if string(data) != "new" {
@@ -73,9 +69,7 @@ func TestCopyDir_SrcMissing(t *testing.T) {
 func TestCopyDir_EmptyDir(t *testing.T) {
 	src := t.TempDir()
 	dst := filepath.Join(t.TempDir(), "empty")
-	if err := copyDir(src, dst); err != nil {
-		t.Fatalf("空目录复制失败: %v", err)
-	}
+	testutil.NoError(t, copyDir(src, dst), "空目录复制失败")
 	if _, err := os.Stat(dst); os.IsNotExist(err) {
 		t.Error("目标目录应存在")
 	}

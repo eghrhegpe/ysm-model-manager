@@ -42,9 +42,7 @@ func TestBatchExtractCreatorAvatars_CachedMime(t *testing.T) {
 	result, err := a.BatchExtractCreatorAvatars()
 	testutil.NoError(t, err)
 	got := result["testuser"]
-	if !strings.HasPrefix(got, "data:image/jpeg;base64,") {
-		t.Fatalf("JPEG 头像应嗅探为 image/jpeg, 得到 %q", got)
-	}
+	testutil.Equal(t, strings.HasPrefix(got, "data:image/jpeg;base64,"), true, "JPEG 头像应嗅探为 image/jpeg, 得到 %q", got)
 }
 
 // TestCreatorAuthorKeyTrimCohesion `[作者]` 解析单点判据锁（锐评 2026-10-16）：

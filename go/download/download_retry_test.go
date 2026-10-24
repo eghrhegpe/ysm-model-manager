@@ -45,12 +45,9 @@ func TestRetry_Transient503_Succeeds(t *testing.T) {
 	defer ts.Close()
 
 	dl := NewWithClient(ts.Client()).WithRetry(3, 5*time.Millisecond)
-	if err := dl.File(context.Background(), ts.URL, filepath.Join(t.TempDir(), "f.txt"), nil); err != nil {
-		t.Fatalf("503 后重试应成功，got %v", err)
-	}
-	if got := atomic.LoadInt32(&calls); got != 2 {
-		t.Fatalf("应请求 2 次（1 失败 + 1 成功），got %d", got)
-	}
+	testutil.NoError(t, dl.File(context.Background(), ts.URL, filepath.Join(t.TempDir(), "f.txt"), nil), "503 后重试应成功")
+	got := atomic.LoadInt32(&calls)
+	testutil.Equal(t, got, int32(2), "应请求 2 次（1 失败 + 1 成功），got %d", got)
 }
 
 func TestRetry_Exhausted_ReturnsLastError(t *testing.T) {
@@ -65,12 +62,11 @@ func TestRetry_Exhausted_ReturnsLastError(t *testing.T) {
 	err := dl.File(context.Background(), ts.URL, filepath.Join(t.TempDir(), "f.txt"), nil)
 	testutil.NotNil(t, err, "应返回错误")
 	var httpErr *HTTPStatusError
-	if !errors.As(err, &httpErr) || httpErr.Code != http.StatusBadGateway {
-		t.Fatalf("重试耗尽应返回末次错误（HTTP 502）且分类不变，got %T: %v", err, err)
-	}
-	if got := atomic.LoadInt32(&calls); got != 3 {
-		t.Fatalf("应请求 3 次（耗尽），got %d", got)
-	}
+	// OR 型复合条件拆序贯：As 前置守卫防 httpErr.Code 解引用（原 if !As || Code!=502）
+	testutil.Equal(t, errors.As(err, &httpErr), true, "重试耗尽应返回末次错误（HTTP 502）且分类不变，got %T: %v", err, err)
+	testutil.Equal(t, httpErr.Code, http.StatusBadGateway, "重试耗尽应返回末次错误（HTTP 502）且分类不变，got %v", err)
+	got := atomic.LoadInt32(&calls)
+	testutil.Equal(t, got, int32(3), "应请求 3 次（耗尽），got %d", got)
 }
 
 func TestRetry_NotTriggeredOn4xx(t *testing.T) {
@@ -84,12 +80,11 @@ func TestRetry_NotTriggeredOn4xx(t *testing.T) {
 	dl := NewWithClient(ts.Client()).WithRetry(3, time.Millisecond)
 	err := dl.File(context.Background(), ts.URL, filepath.Join(t.TempDir(), "f.txt"), nil)
 	var httpErr *HTTPStatusError
-	if !errors.As(err, &httpErr) || httpErr.Code != http.StatusNotFound {
-		t.Fatalf("4xx 不应重试，应原样返回 404，got %v", err)
-	}
-	if got := atomic.LoadInt32(&calls); got != 1 {
-		t.Fatalf("4xx 不应重试，应请求 1 次，got %d", got)
-	}
+	// OR 型复合条件拆序贯：As 前置守卫防 httpErr.Code 解引用（原 if !As || Code!=404）
+	testutil.Equal(t, errors.As(err, &httpErr), true, "4xx 不应重试，应原样返回 404，got %v", err)
+	testutil.Equal(t, httpErr.Code, http.StatusNotFound, "4xx 不应重试，应原样返回 404，got %v", err)
+	got := atomic.LoadInt32(&calls)
+	testutil.Equal(t, got, int32(1), "4xx 不应重试，应请求 1 次，got %d", got)
 }
 
 func TestRetry_NotTriggeredOnCancel(t *testing.T) {
@@ -104,12 +99,9 @@ func TestRetry_NotTriggeredOnCancel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // 预取消
 	err := dl.File(ctx, ts.URL, filepath.Join(t.TempDir(), "f.txt"), nil)
-	if !errors.Is(err, context.Canceled) {
-		t.Fatalf("应返回 context.Canceled，got %v", err)
-	}
-	if got := atomic.LoadInt32(&calls); got > 1 {
-		t.Fatalf("ctx 取消不应重试，请求次数应 ≤1，got %d", got)
-	}
+	testutil.ErrorIs(t, err, context.Canceled, "应返回 context.Canceled")
+	got := atomic.LoadInt32(&calls)
+	testutil.Equal(t, got > 1, false, "ctx 取消不应重试，请求次数应 ≤1，got %d", got)
 }
 
 func TestRetry_DefaultDisabled(t *testing.T) {
@@ -123,9 +115,8 @@ func TestRetry_DefaultDisabled(t *testing.T) {
 	dl := NewWithClient(ts.Client()) // 默认不重试（零值，行为零漂移）
 	err := dl.File(context.Background(), ts.URL, filepath.Join(t.TempDir(), "f.txt"), nil)
 	testutil.NotNil(t, err, "应返回错误")
-	if got := atomic.LoadInt32(&calls); got != 1 {
-		t.Fatalf("默认应不重试，应请求 1 次，got %d", got)
-	}
+	got := atomic.LoadInt32(&calls)
+	testutil.Equal(t, got, int32(1), "默认应不重试，应请求 1 次，got %d", got)
 }
 
 func TestRetry_NetworkError_RetriesThenSucceeds(t *testing.T) {
@@ -137,9 +128,7 @@ func TestRetry_NetworkError_RetriesThenSucceeds(t *testing.T) {
 	dl := NewWithClient(&http.Client{
 		Transport: &flakyTransport{rt: ts.Client().Transport, failures: 2},
 	}).WithRetry(3, time.Millisecond)
-	if err := dl.File(context.Background(), ts.URL, filepath.Join(t.TempDir(), "f.txt"), nil); err != nil {
-		t.Fatalf("网络错误重试后应成功，got %v", err)
-	}
+	testutil.NoError(t, dl.File(context.Background(), ts.URL, filepath.Join(t.TempDir(), "f.txt"), nil), "网络错误重试后应成功")
 }
 
 // truncatingTransport 前 N 次声明 Content-Length 但少写字节（clean EOF 截断），
@@ -172,7 +161,5 @@ func TestRetry_TruncationRetried(t *testing.T) {
 	dl := NewWithClient(&http.Client{
 		Transport: &truncatingTransport{rt: ts.Client().Transport, failures: 2},
 	}).WithRetry(3, time.Millisecond)
-	if err := dl.File(context.Background(), ts.URL, filepath.Join(t.TempDir(), "f.txt"), nil); err != nil {
-		t.Fatalf("截断错误重试后应成功，got %v", err)
-	}
+	testutil.NoError(t, dl.File(context.Background(), ts.URL, filepath.Join(t.TempDir(), "f.txt"), nil), "截断错误重试后应成功")
 }

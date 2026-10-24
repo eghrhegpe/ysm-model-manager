@@ -9,7 +9,6 @@ package instance
 import (
 	"os"
 	"path/filepath"
-	"reflect"
 	"sort"
 	"testing"
 
@@ -21,12 +20,8 @@ import (
 // writeFile 建目录 + 写文件（测试夹具，失败即 Fatal）
 func writeFile(t *testing.T, path, content string) {
 	t.Helper()
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
-		testutil.NoError(t, err)
-	}
-	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.MkdirAll(filepath.Dir(path), 0755))
+	testutil.NoError(t, os.WriteFile(path, []byte(content), 0644))
 }
 
 // TestBuildInstanceStatusCounts_DirLevelFoldAndLists dirLevel 类型（EntityPlayer，模型夹为单元）：
@@ -63,58 +58,37 @@ func TestBuildInstanceStatusCounts_DirLevelFoldAndLists(t *testing.T) {
 		[]registry.ResourceType{{ID: "EntityPlayer", Icon: "🧍"}},
 		map[string]string{"EntityPlayer": globalDir},
 	)
-	if len(got) != 1 {
-		t.Fatalf("应返回 1 个实例状态，实际 %d", len(got))
-	}
+	testutil.Equal(t, len(got), 1, "应返回 1 个实例状态")
 	st := got[0]
 
-	if st.Name != "t" {
-		t.Fatalf("Name 应为 t，实际 %q", st.Name)
-	}
-	if st.CustomDir != instDir {
-		t.Fatalf("CustomDir 应为 %q，实际 %q", instDir, st.CustomDir)
-	}
+	testutil.Equal(t, st.Name, "t", "Name")
+	testutil.Equal(t, st.CustomDir, instDir, "CustomDir")
 	// 单元计数：synced=m1（夹内 2 文件仍算 1 单元），missing=m2+分叉 m5（diverged 折叠进红）
-	if st.Synced != 1 {
-		t.Fatalf("Synced 应为 1（m1 模型夹 = 1 单元，非夹内 2 文件），实际 %d", st.Synced)
-	}
-	if st.MissingCount != 2 {
-		t.Fatalf("MissingCount 应为 2（m2 缺失 + m5 分叉折叠），实际 %d", st.MissingCount)
-	}
+	testutil.Equal(t, st.Synced, 1, "Synced 应为 1（m1 模型夹 = 1 单元，非夹内 2 文件）")
+	testutil.Equal(t, st.MissingCount, 2, "MissingCount 应为 2（m2 缺失 + m5 分叉折叠）")
 	// 单元路径清单：Optional/Legacy → Extra；Disabled → Disabled
-	if want := []string{filepath.Join(instDir, "m3")}; !reflect.DeepEqual(sortedCopy(st.Extra), want) {
-		t.Fatalf("Extra 单元路径应为 %v，实际 %v", want, st.Extra)
-	}
-	if want := []string{filepath.Join(instDir, "banned.pmx.ban")}; !reflect.DeepEqual(sortedCopy(st.Disabled), want) {
-		t.Fatalf("Disabled 应为 %v，实际 %v", want, st.Disabled)
-	}
+	want := []string{filepath.Join(instDir, "m3")}
+	testutil.Equal(t, sortedCopy(st.Extra), want, "Extra 单元路径")
+	want = []string{filepath.Join(instDir, "banned.pmx.ban")}
+	testutil.Equal(t, sortedCopy(st.Disabled), want, "Disabled")
 	// Missing 清单 = 仓库侧文件级绝对路径（缺夹展开成夹内文件，一键安装据此逐条 Install）
 	// 顺序无关断言：实现内部按路径排序，测试只比较集合
-	want := []string{
+	want = []string{
 		filepath.Join(globalDir, "m2", "model.pmx"),
 		filepath.Join(globalDir, "m2", "model2.pmd"),
 		filepath.Join(globalDir, "m5", "model.pmx"),
 	}
-	if !reflect.DeepEqual(sortedCopy(st.Missing), want) {
-		t.Fatalf("Missing 文件清单应为 %v，实际 %v", want, st.Missing)
-	}
+	testutil.Equal(t, sortedCopy(st.Missing), want, "Missing 文件清单")
 	// ADR-340-d2：两侧均有、内容不同的 m5/model.pmx 才是「推送即覆盖实例侧修改」；
 	// m2 的两条仅是「仓库有、实例没有」= 新建，绝不得混进 Overwrites（否则点名撒谎）。
-	if want := []string{filepath.Join(globalDir, "m5", "model.pmx")}; !reflect.DeepEqual(st.Overwrites, want) {
-		t.Fatalf("Overwrites 应恰为分叉文件 %v，实际 %v", want, st.Overwrites)
-	}
+	want = []string{filepath.Join(globalDir, "m5", "model.pmx")}
+	testutil.Equal(t, st.Overwrites, want, "Overwrites 应恰为分叉文件")
 	assertOverwritesSubset(t, st)
 	// 计数（单元）与清单（文件）粒度刻意不同：m2 一个单元 → 两条文件路径
-	if len(st.Missing) <= st.MissingCount {
-		t.Fatalf("整夹缺失应展开成多条文件路径（清单 %d > 计数 %d 才符合 §3 决策）", len(st.Missing), st.MissingCount)
-	}
-	if st.Status != "missing" {
-		t.Fatalf("Status 应为 missing（红优先），实际 %q", st.Status)
-	}
+	testutil.Equal(t, len(st.Missing) > st.MissingCount, true, "整夹缺失应展开成多条文件路径（清单 %d > 计数 %d 才符合 §3 决策）", len(st.Missing), st.MissingCount)
+	testutil.Equal(t, st.Status, "missing", "Status 应为 missing（红优先）")
 	// 死字段不再填充（前端零消费者，ADR-296 已记录）
-	if len(st.Files) != 0 {
-		t.Fatalf("Files 应为空（前端零消费者），实际 %d 条", len(st.Files))
-	}
+	testutil.Equal(t, len(st.Files), 0, "Files 应为空（前端零消费者）")
 }
 
 // TestBuildInstanceStatusCounts_FileLevel 文件级类型（fbx）：单元=文件，清单与计数同粒度。
@@ -142,23 +116,17 @@ func TestBuildInstanceStatusCounts_FileLevel(t *testing.T) {
 		[]registry.ResourceType{{ID: "fbx", Icon: "🦴"}},
 		map[string]string{"fbx": globalDir},
 	)
-	if len(got) != 1 {
-		t.Fatalf("应返回 1 个实例状态，实际 %d", len(got))
-	}
+	testutil.Equal(t, len(got), 1, "应返回 1 个实例状态")
 	st := got[0]
-	if st.Synced != 1 || st.MissingCount != 2 {
-		t.Fatalf("Synced/MissingCount 应为 1/2（b 缺失 + d 分叉折叠进红），实际 %d/%d", st.Synced, st.MissingCount)
-	}
-	if want := []string{filepath.Join(globalDir, "b.fbx"), filepath.Join(globalDir, "d.fbx")}; !reflect.DeepEqual(sortedCopy(st.Missing), want) {
-		t.Fatalf("Missing 应为 %v，实际 %v", want, st.Missing)
-	}
-	if want := []string{filepath.Join(instDir, "c.fbx")}; !reflect.DeepEqual(st.Extra, want) {
-		t.Fatalf("Extra 应为 %v，实际 %v", want, st.Extra)
-	}
+	testutil.Equal(t, st.Synced, 1, "Synced 应为 1")
+	testutil.Equal(t, st.MissingCount, 2, "MissingCount 应为 2（b 缺失 + d 分叉折叠进红）")
+	want := []string{filepath.Join(globalDir, "b.fbx"), filepath.Join(globalDir, "d.fbx")}
+	testutil.Equal(t, sortedCopy(st.Missing), want, "Missing")
+	want = []string{filepath.Join(instDir, "c.fbx")}
+	testutil.Equal(t, st.Extra, want, "Extra")
 	// ADR-340-d2：只有 d.fbx（两侧均有、内容不同）是覆盖；b.fbx 是新建
-	if want := []string{filepath.Join(globalDir, "d.fbx")}; !reflect.DeepEqual(st.Overwrites, want) {
-		t.Fatalf("Overwrites 应恰为分叉文件 %v，实际 %v", want, st.Overwrites)
-	}
+	want = []string{filepath.Join(globalDir, "d.fbx")}
+	testutil.Equal(t, st.Overwrites, want, "Overwrites 应恰为分叉文件")
 	assertOverwritesSubset(t, st)
 	// 面板侧同一维权：fileLevel 分叉行必须是 diverged（而非冒充 missing），
 	// 否则 ADR-310「分叉行推送先确认」的安全闸对文件级类型形同虚设。
@@ -168,31 +136,22 @@ func TestBuildInstanceStatusCounts_FileLevel(t *testing.T) {
 	for _, it := range items {
 		statusByName[it.Name] = it.Status
 	}
-	if statusByName["d.fbx"] != types.SyncStatusDiverged {
-		t.Fatalf("d.fbx 面板状态应为 diverged（分叉），实际 %q（全部 %+v）", statusByName["d.fbx"], statusByName)
-	}
-	if statusByName["b.fbx"] != types.SyncStatusMissing {
-		t.Fatalf("b.fbx 面板状态应为 missing（仅仓库有），实际 %q", statusByName["b.fbx"])
-	}
-	if st.Status != "missing" {
-		t.Fatalf("Status 应为 missing，实际 %q", st.Status)
-	}
+	testutil.Equal(t, statusByName["d.fbx"], types.SyncStatusDiverged, "d.fbx 面板状态应为 diverged（分叉）（全部 %+v）", statusByName)
+	testutil.Equal(t, statusByName["b.fbx"], types.SyncStatusMissing, "b.fbx 面板状态应为 missing（仅仓库有）")
+	testutil.Equal(t, st.Status, "missing", "Status")
 }
 
 // TestBuildInstanceStatusCounts_EmptyInputs 导出入口自守卫：无实例/无类型/根缺失都不 panic。
 func TestBuildInstanceStatusCounts_EmptyInputs(t *testing.T) {
-	if got := BuildInstanceStatusCounts(nil, nil, nil); len(got) != 0 {
-		t.Fatalf("无实例应返回空，实际 %d", len(got))
-	}
+	got := BuildInstanceStatusCounts(nil, nil, nil)
+	testutil.Equal(t, len(got), 0, "无实例应返回空")
 	ins := types.VersionInstance{Name: "t", VersionDir: t.TempDir()}
 	// 无资源类型 → 该实例零计数、complete（与面板链空输入口径一致）
-	got := BuildInstanceStatusCounts([]types.VersionInstance{ins}, nil, map[string]string{})
-	if len(got) != 1 {
-		t.Fatalf("应返回 1 个实例状态，实际 %d", len(got))
-	}
-	if got[0].Synced != 0 || got[0].MissingCount != 0 || got[0].Status != "complete" {
-		t.Fatalf("空类型应零计数 complete，实际 %+v", got[0])
-	}
+	got = BuildInstanceStatusCounts([]types.VersionInstance{ins}, nil, map[string]string{})
+	testutil.Equal(t, len(got), 1, "应返回 1 个实例状态")
+	testutil.Equal(t, got[0].Synced, 0, "空类型应零计数 Synced")
+	testutil.Equal(t, got[0].MissingCount, 0, "空类型应零计数 MissingCount")
+	testutil.Equal(t, got[0].Status, "complete", "空类型应 complete")
 }
 
 // TestBuildInstanceStatusCounts_RepoBannedUnitIsDisabled 迁移自旧链
@@ -219,22 +178,16 @@ func TestBuildInstanceStatusCounts_RepoBannedUnitIsDisabled(t *testing.T) {
 		map[string]string{"EntityPlayer": globalDir},
 	)
 	st := got[0]
-	if st.Synced != 1 {
-		t.Fatalf("Synced 应为 1（仅 m1），实际 %d（.ban 不得计入 synced）", st.Synced)
-	}
-	if st.MissingCount != 0 || len(st.Missing) != 0 {
-		t.Fatalf("禁用单元不得进待推送：MissingCount=%d Missing=%v", st.MissingCount, st.Missing)
-	}
-	if want := []string{filepath.Join(globalDir, "banned.pmx.ban")}; !reflect.DeepEqual(sortedCopy(st.Disabled), want) {
-		t.Fatalf("Disabled 应为 %v，实际 %v", want, st.Disabled)
-	}
-	if st.Status != "complete" {
-		t.Fatalf("仅剩禁用项应判 complete（禁用非待推送差异），实际 %q", st.Status)
-	}
+	testutil.Equal(t, st.Synced, 1, "Synced 应为 1（仅 m1；.ban 不得计入 synced）")
+	testutil.Equal(t, st.MissingCount, 0, "禁用单元不得进待推送：MissingCount")
+	testutil.Equal(t, len(st.Missing), 0, "禁用单元不得进待推送：Missing")
+	want := []string{filepath.Join(globalDir, "banned.pmx.ban")}
+	testutil.Equal(t, sortedCopy(st.Disabled), want, "Disabled")
+	testutil.Equal(t, st.Status, "complete", "仅剩禁用项应判 complete（禁用非待推送差异）")
 	// 清单确定性：map 迭代序不得泄漏到输出（迁移自旧链 Missing 排序断言）
-	if !sort.StringsAreSorted(st.Missing) || !sort.StringsAreSorted(st.Extra) || !sort.StringsAreSorted(st.Disabled) {
-		t.Fatalf("三份清单必须有序输出：Missing=%v Extra=%v Disabled=%v", st.Missing, st.Extra, st.Disabled)
-	}
+	testutil.Equal(t, sort.StringsAreSorted(st.Missing), true, "Missing 清单必须有序输出")
+	testutil.Equal(t, sort.StringsAreSorted(st.Extra), true, "Extra 清单必须有序输出")
+	testutil.Equal(t, sort.StringsAreSorted(st.Disabled), true, "Disabled 清单必须有序输出")
 }
 
 // TestBuildInstanceStatusCounts_MissingListIsFileLevelOnly 清单必须恒为仓库侧**文件级**
@@ -251,9 +204,9 @@ func TestBuildInstanceStatusCounts_MissingListIsFileLevelOnly(t *testing.T) {
 	assertNoDirEntries := func(t *testing.T, label string, paths []string) {
 		t.Helper()
 		for _, p := range paths {
-			if fi, err := os.Stat(p); err == nil && fi.IsDir() {
-				t.Fatalf("%s：清单不得含目录路径，实际含 %s", label, p)
-			}
+			fi, err := os.Stat(p)
+			// && 短路保证 err != nil 时不求值 fi.IsDir()，无条件求值安全
+			testutil.Equal(t, err == nil && fi.IsDir(), false, "%s：清单不得含目录路径，实际含 %s", label, p)
 		}
 	}
 
@@ -279,16 +232,14 @@ func TestBuildInstanceStatusCounts_MissingListIsFileLevelOnly(t *testing.T) {
 			[]registry.ResourceType{{ID: "maid-model", Icon: "🧹"}},
 			map[string]string{"maid-model": globalDir},
 		)[0]
-		if st.MissingCount == 0 {
-			t.Fatalf("该夹应被面板链判为待推送单元，实际 MissingCount=0（状态 %q）", st.Status)
-		}
+		testutil.Equal(t, st.MissingCount > 0, true, "该夹应被面板链判为待推送单元（实际状态 %q）", st.Status)
 		assertNoDirEntries(t, "D1", st.Missing)
 		// 夹内文件（pack.mcmeta / assets/**.json）均不被 maid-model 类型白名单命中 →
 		// 无逐文件安装目标，整夹进 MissingDirs（由 folder-aware 的 PushSingleResourceToInstance
 		// 安装该夹本身；绝不能塞 Missing——install 侧会把目录当文件并装其父目录）
-		if len(st.MissingDirs) != 1 || st.MissingDirs[0] != filepath.Join(globalDir, "vendor", "packA") {
-			t.Fatalf("整夹应进 MissingDirs（仓库侧目录单元），实际 %v", st.MissingDirs)
-		}
+		// 序贯拆分：前一 Equal 失败即 Goexit，下一行的 [0] 索引才安全
+		testutil.Equal(t, len(st.MissingDirs), 1, "整夹应进 MissingDirs（仓库侧目录单元），实际 %v", st.MissingDirs)
+		testutil.Equal(t, st.MissingDirs[0], filepath.Join(globalDir, "vendor", "packA"), "整夹应恰为 vendor/packA")
 	})
 
 	t.Run("D2 资源包夹无可推送文件", func(t *testing.T) {
@@ -311,19 +262,15 @@ func TestBuildInstanceStatusCounts_MissingListIsFileLevelOnly(t *testing.T) {
 			[]registry.ResourceType{{ID: "resourcepack", Icon: "🎨"}},
 			map[string]string{"resourcepack": globalDir},
 		)[0]
-		if st.MissingCount != 1 {
-			t.Fatalf("资源包夹缺失应计 1 个单元，实际 %d", st.MissingCount)
-		}
-		if st.Status != "missing" {
-			t.Fatalf("Status 应为 missing，实际 %q", st.Status)
-		}
+		testutil.Equal(t, st.MissingCount, 1, "资源包夹缺失应计 1 个单元")
+		testutil.Equal(t, st.Status, "missing", "Status")
 		assertNoDirEntries(t, "D2", st.Missing)
 		// pack.mcmeta 不是 resourcepack 的模型文件（白名单仅 .zip/.7z）、夹内无 zip →
 		// 整夹进 MissingDirs（one-click 经 PushSingleResourceToInstance 整夹安装，
 		// 不再出现「徽章有数、一键安装无动作」）
-		if len(st.MissingDirs) != 1 || st.MissingDirs[0] != filepath.Join(globalDir, "rpA") {
-			t.Fatalf("资源包夹应进 MissingDirs，实际 %v", st.MissingDirs)
-		}
+		// 序贯拆分：前一 Equal 失败即 Goexit，下一行的 [0] 索引才安全
+		testutil.Equal(t, len(st.MissingDirs), 1, "资源包夹应进 MissingDirs，实际 %v", st.MissingDirs)
+		testutil.Equal(t, st.MissingDirs[0], filepath.Join(globalDir, "rpA"), "资源包夹应恰为 rpA")
 	})
 }
 
@@ -356,21 +303,14 @@ func TestBuildInstanceStatusCounts_OverwritesForDivergedPackFolder(t *testing.T)
 		map[string]string{"resourcepack": globalDir},
 	)[0]
 
-	if st.MissingCount != 2 {
-		t.Fatalf("两个夹单元都应待推送，实际 MissingCount=%d", st.MissingCount)
-	}
+	testutil.Equal(t, st.MissingCount, 2, "两个夹单元都应待推送")
 	// 夹内无逐文件可装项（仅 pack.mcmeta/纹理）→ 一律整夹进 MissingDirs，不得塞 Missing
-	if len(st.Missing) != 0 {
-		t.Fatalf("两夹都应走整夹推送，Missing 应为空，实际 %v", st.Missing)
-	}
+	testutil.Equal(t, len(st.Missing), 0, "两夹都应走整夹推送，Missing 应为空")
 	wantDirs := []string{filepath.Join(globalDir, "packA"), filepath.Join(globalDir, "packB")}
-	if !reflect.DeepEqual(sortedCopy(st.MissingDirs), wantDirs) {
-		t.Fatalf("MissingDirs 应为 %v，实际 %v", wantDirs, st.MissingDirs)
-	}
+	testutil.Equal(t, sortedCopy(st.MissingDirs), wantDirs, "MissingDirs")
 	// 只有分叉的 packA 是覆盖（整夹安装会盖掉实例侧被改过的纹理）
-	if want := []string{filepath.Join(globalDir, "packA")}; !reflect.DeepEqual(st.Overwrites, want) {
-		t.Fatalf("Overwrites 应恰为分叉夹 %v，实际 %v", want, st.Overwrites)
-	}
+	want := []string{filepath.Join(globalDir, "packA")}
+	testutil.Equal(t, st.Overwrites, want, "Overwrites 应恰为分叉夹")
 	assertOverwritesSubset(t, st)
 }
 
@@ -401,17 +341,13 @@ func TestBuildInstanceStatusCounts_ListDeduped(t *testing.T) {
 		map[string]string{"EntityPlayer": globalDir},
 	)[0]
 
-	if st.MissingCount != 1 {
-		t.Fatalf("整夹缺失应计 1 个单元，实际 %d", st.MissingCount)
-	}
+	testutil.Equal(t, st.MissingCount, 1, "整夹缺失应计 1 个单元")
 	seen := map[string]bool{}
 	for _, p := range st.Missing {
 		testutil.Equal(t, seen[p], false, "清单重复条目 %s（全清单 %v）——会导致重复安装；单表示失效（ADR-351 D3）", p, st.Missing)
 		seen[p] = true
 	}
-	if len(st.Missing) == 0 {
-		t.Fatal("两个平铺/子夹文件都缺失，清单不应为空")
-	}
+	testutil.Equal(t, len(st.Missing) == 0, false, "两个平铺/子夹文件都缺失，清单不应为空")
 	testutil.Equal(t, sort.StringsAreSorted(st.Missing), true, "清单仍须有序，实际 %v", st.Missing)
 	// 面板链单表示硬断言（旧版此处 Skip：形态变化时断言自然失效；单表示修复后
 	// 重复=回归，翻转为 fail）：flat.pmx 在顶层容器子项里恰出现 1 次
@@ -450,9 +386,6 @@ func assertOverwritesSubset(t *testing.T, st types.InstanceStatus) {
 		targets[p] = true
 	}
 	for _, p := range st.Overwrites {
-		if !targets[p] {
-			t.Fatalf("Overwrites 必须是推送目标的子集，%q 不在 Missing∪MissingDirs 中（Missing=%v MissingDirs=%v）",
-				p, st.Missing, st.MissingDirs)
-		}
+		testutil.Equal(t, targets[p], true, "Overwrites 必须是推送目标的子集，%q 不在 Missing∪MissingDirs 中（Missing=%v MissingDirs=%v）", p, st.Missing, st.MissingDirs)
 	}
 }

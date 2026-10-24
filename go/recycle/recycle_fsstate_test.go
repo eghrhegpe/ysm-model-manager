@@ -30,37 +30,26 @@ func TestMove_PreservesRecycleTreeLayout(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 
-	if err := tm.Move(src); err != nil {
-		t.Fatalf("移入回收站失败: %v", err)
-	}
+	testutil.NoError(t, tm.Move(src), "移入回收站失败")
 	// 终态 1：源不再存在
-	if _, err := os.Lstat(src); !os.IsNotExist(err) {
-		t.Fatalf("移入后源应不再存在: %v", err)
-	}
+	_, statErr := os.Lstat(src)
+	testutil.Equal(t, os.IsNotExist(statErr), true, "移入后源应不再存在")
 	// 终态 2：.recycle/sub/nested/deep.ysm 逐层镜像，内容一致
 	landed := filepath.Join(tm.RecycleDir(), "sub", "nested", "deep.ysm")
 	got, err := os.ReadFile(landed)
-	if err != nil {
-		t.Fatalf("回收站内应按 rel 镜像出落点 %s: %v", landed, err)
-	}
-	if string(got) != "deep content" {
-		t.Fatalf("回收站内内容 = %q, 期望 deep content", string(got))
-	}
+	testutil.NoError(t, err, "回收站内应按 rel 镜像出落点 %s", landed)
+	testutil.Equal(t, string(got), "deep content", "回收站内内容 = %q, 期望 deep content", string(got))
 
 	// 终态 3：同 rel 再次移入 → 冲突后缀落在同层目录内
 	if err := os.WriteFile(src, []byte("second"), 0644); err != nil {
 		testutil.NoError(t, err)
 	}
-	if err := tm.Move(src); err != nil {
-		t.Fatalf("同名再次移入失败: %v", err)
-	}
-	if _, err := os.Stat(filepath.Join(tm.RecycleDir(), "sub", "nested", "deep(1).ysm")); err != nil {
-		t.Fatalf("重名落点应在同层生成 deep(1).ysm: %v", err)
-	}
-	// 原落点不应被覆盖（数据不得丢）
-	if got, err := os.ReadFile(landed); err != nil || string(got) != "deep content" {
-		t.Fatalf("原落点不应被覆盖: %q %v", string(got), err)
-	}
+	testutil.NoError(t, tm.Move(src), "同名再次移入失败")
+	testutil.FileExists(t, filepath.Join(tm.RecycleDir(), "sub", "nested", "deep(1).ysm"), "重名落点应在同层生成 deep(1).ysm")
+	// 原落点不应被覆盖（数据不得丢）——OR 型复合条件拆序贯
+	got2, err2 := os.ReadFile(landed)
+	testutil.NoError(t, err2, "原落点不应被覆盖")
+	testutil.Equal(t, string(got2), "deep content", "原落点不应被覆盖: %q", string(got2))
 }
 
 // TestRestore_RoundTrip_ByteIdentical 钉「恢复往返」终态：整棵目录树 Move → Restore 后
@@ -88,20 +77,13 @@ func TestRestore_RoundTrip_ByteIdentical(t *testing.T) {
 		}
 	}
 
-	if err := tm.Move(modelDir); err != nil {
-		t.Fatalf("整组移入回收站失败: %v", err)
-	}
-	if _, err := os.Lstat(modelDir); !os.IsNotExist(err) {
-		t.Fatalf("移入后源目录应不再存在: %v", err)
-	}
+	testutil.NoError(t, tm.Move(modelDir), "整组移入回收站失败")
+	_, statErr := os.Lstat(modelDir)
+	testutil.Equal(t, os.IsNotExist(statErr), true, "移入后源目录应不再存在")
 	entries := tm.List()
-	if len(entries) != 1 {
-		t.Fatalf("应有 1 个整组条目, 得到 %d", len(entries))
-	}
+	testutil.Equal(t, len(entries), 1, "应有 1 个整组条目, 得到 %d", len(entries))
 
-	if err := tm.Restore(entries[0].Path); err != nil {
-		t.Fatalf("整组恢复失败: %v", err)
-	}
+	testutil.NoError(t, tm.Restore(entries[0].Path), "整组恢复失败")
 	// 结构逐层还原 + 内容逐字节一致
 	for rel, want := range files {
 		full := filepath.Join(modelDir, filepath.FromSlash(rel))
@@ -165,18 +147,16 @@ func TestRemoveRepoDuplicates_Idempotent(t *testing.T) {
 	}
 
 	first := RemoveRepoDuplicates(dir, repoRoot, recycleRoot, nil)
-	if first != 1 {
-		t.Fatalf("第一轮应清理 1 个（dup.ysm）, 得到 %d", first)
-	}
-	if _, err := os.Stat(dup); !os.IsNotExist(err) {
-		t.Fatalf("dup.ysm 应被清理: %v", err)
-	}
-	if b, err := os.ReadFile(custom); err != nil || string(b) != "user-version" {
-		t.Fatalf("同名不同内容应原样保留: %q %v", string(b), err)
-	}
-	if b, err := os.ReadFile(only); err != nil || string(b) != "local" {
-		t.Fatalf("仓库没有的文件应原样保留: %q %v", string(b), err)
-	}
+	testutil.Equal(t, first, 1, "第一轮应清理 1 个（dup.ysm）, 得到 %d", first)
+	_, statErr := os.Stat(dup)
+	testutil.Equal(t, os.IsNotExist(statErr), true, "dup.ysm 应被清理")
+	// OR 型复合条件拆序贯
+	customB, customErr := os.ReadFile(custom)
+	testutil.NoError(t, customErr, "同名不同内容应原样保留")
+	testutil.Equal(t, string(customB), "user-version", "同名不同内容应原样保留: %q", string(customB))
+	onlyB, onlyErr := os.ReadFile(only)
+	testutil.NoError(t, onlyErr, "仓库没有的文件应原样保留")
+	testutil.Equal(t, string(onlyB), "local", "仓库没有的文件应原样保留: %q", string(onlyB))
 
 	snap1 := snapshot()
 	second := RemoveRepoDuplicates(dir, repoRoot, recycleRoot, nil)
@@ -184,9 +164,7 @@ func TestRemoveRepoDuplicates_Idempotent(t *testing.T) {
 		t.Errorf("第二轮应清理 0 个（幂等）, 得到 %d", second)
 	}
 	snap2 := snapshot()
-	if len(snap1) != len(snap2) {
-		t.Fatalf("第二轮后文件集合应不变: %d → %d 个", len(snap1), len(snap2))
-	}
+	testutil.Equal(t, len(snap2), len(snap1), "第二轮后文件集合应不变: %d → %d 个", len(snap1), len(snap2))
 	for k, v := range snap1 {
 		if snap2[k] != v {
 			t.Errorf("第二轮后 %s 内容应不变: %q → %q", k, v, snap2[k])
@@ -215,20 +193,14 @@ func TestRemoveRepoDuplicates_InRecycleRoot_MovesToTrash(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 
-	if n := RemoveRepoDuplicates(dir, repoRoot, recycleRoot, nil); n != 1 {
-		t.Fatalf("应清理 1 个, 得到 %d", n)
-	}
-	if _, err := os.Stat(src); !os.IsNotExist(err) {
-		t.Fatalf("清理后源应不再存在: %v", err)
-	}
+	n := RemoveRepoDuplicates(dir, repoRoot, recycleRoot, nil)
+	testutil.Equal(t, n, 1, "应清理 1 个, 得到 %d", n)
+	_, statErr := os.Stat(src)
+	testutil.Equal(t, os.IsNotExist(statErr), true, "清理后源应不再存在")
 	landed := filepath.Join(recycleRoot, ".recycle", "inst", "m.ysm")
 	got, err := os.ReadFile(landed)
-	if err != nil {
-		t.Fatalf("应在回收站按 rel 找回 %s: %v", landed, err)
-	}
-	if string(got) != "same-bytes" {
-		t.Fatalf("回收站内内容 = %q, 期望 same-bytes", string(got))
-	}
+	testutil.NoError(t, err, "应在回收站按 rel 找回 %s", landed)
+	testutil.Equal(t, string(got), "same-bytes", "回收站内内容 = %q, 期望 same-bytes", string(got))
 }
 
 // TestIsDedupableDir_RejectsFilesystemRoots 钉「永不整盘遍历/删除」守卫：

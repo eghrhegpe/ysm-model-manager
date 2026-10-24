@@ -54,9 +54,8 @@ func TestExtractYsmSummary_PlainJSONOverLimit(t *testing.T) {
 	if err := os.WriteFile(path, bytes.Repeat([]byte{' '}, (50<<20)+1), 0644); err != nil {
 		testutil.NoError(t, err)
 	}
-	if _, err := ExtractYsmSummary(path); err == nil {
-		t.Fatal("裸 ysm.json 超过 50MB 应拒绝解析，实际返回 nil 错误")
-	}
+	_, err := ExtractYsmSummary(path)
+	testutil.NotNil(t, err, "裸 ysm.json 超过 50MB 应拒绝解析，实际返回 nil 错误")
 }
 
 // ZIP 内 ysm.json 超过 50MB 应拒绝（limit+1 探测）
@@ -64,9 +63,8 @@ func TestExtractYsmSummary_ZipYsmJSONOverLimit(t *testing.T) {
 	// 构造大字符串触发 zip 分支 50MB 上限
 	big := bytes.Repeat([]byte{' '}, (50<<20)+1)
 	path := testutil.WriteZipFile(t, "model.ysm", map[string]string{"ysm.json": string(big)})
-	if _, err := ExtractYsmSummary(path); err == nil {
-		t.Fatal("zip 内 ysm.json 超过 50MB 应拒绝解析，实际返回 nil 错误")
-	}
+	_, err := ExtractYsmSummary(path)
+	testutil.NotNil(t, err, "zip 内 ysm.json 超过 50MB 应拒绝解析，实际返回 nil 错误")
 }
 
 func TestExtractYsmSummary_YSGP(t *testing.T) {
@@ -121,9 +119,7 @@ func TestExtractYsmSummary_PlainJSON(t *testing.T) {
 	}
 	// 动画分组 + 配置菜单：裸 ysm.json（解压目录）分支应与 .zip 分支一致
 	// （修复回归：原 .json 分支提前 return，不填充 AnimGroups/ConfigMenus）
-	if len(summary.AnimGroups) == 0 {
-		t.Fatalf("裸 ysm.json 应至少 1 个动画组, got %+v", summary.AnimGroups)
-	}
+	testutil.Equal(t, len(summary.AnimGroups) == 0, false, "裸 ysm.json 应至少 1 个动画组, got %+v", summary.AnimGroups)
 	foundClassified := false
 	for _, g := range summary.AnimGroups {
 		if g.Name == "坐姿组" && len(g.Items) == 2 {
@@ -155,9 +151,7 @@ func TestExtractYsmSummary_ZipWithYsmJSON(t *testing.T) {
 		t.Errorf("Name = %q, want 测试模型", summary.Name)
 	}
 	// 动画分类：walk/idle 归入坐姿组，loose 兜底不应有（walk/idle 已分类）
-	if len(summary.AnimGroups) == 0 {
-		t.Fatalf("应至少 1 个动画组, got %+v", summary.AnimGroups)
-	}
+	testutil.Equal(t, len(summary.AnimGroups) == 0, false, "应至少 1 个动画组, got %+v", summary.AnimGroups)
 	foundClassified := false
 	for _, g := range summary.AnimGroups {
 		if g.Name == "坐姿组" && len(g.Items) == 2 {
@@ -212,9 +206,8 @@ func TestExtractYsmSummary_PlainJSONInvalidContent(t *testing.T) {
 	if err := os.WriteFile(path, []byte("{not valid json"), 0644); err != nil {
 		testutil.NoError(t, err)
 	}
-	if _, err := ExtractYsmSummary(path); err == nil {
-		t.Fatal("非法 JSON 内容的裸 ysm.json 应返回错误，实际返回 nil 错误")
-	}
+	_, err := ExtractYsmSummary(path)
+	testutil.NotNil(t, err, "非法 JSON 内容的裸 ysm.json 应返回错误，实际返回 nil 错误")
 }
 
 // ZIP 内 ysm.json 内容为非法 JSON → 同样必须返回错误（summary.go L291-293）。
@@ -222,9 +215,8 @@ func TestExtractYsmSummary_ZipYsmJSONInvalidContent(t *testing.T) {
 	path := testutil.WriteZipFile(t, "model.ysm", map[string]string{
 		"ysm.json": "{not valid json",
 	})
-	if _, err := ExtractYsmSummary(path); err == nil {
-		t.Fatal("zip 内 ysm.json 非法 JSON 应返回错误，实际返回 nil 错误")
-	}
+	_, err := ExtractYsmSummary(path)
+	testutil.NotNil(t, err, "zip 内 ysm.json 非法 JSON 应返回错误，实际返回 nil 错误")
 }
 
 // ZIP 分支：properties 存在时从几何体文件提取纹理尺寸（summary.go L339-365）——

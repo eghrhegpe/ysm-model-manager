@@ -491,29 +491,19 @@ func TestStartStopProxy_Lifecycle(t *testing.T) {
 
 	proxyURL, err := a.startProxy(target)
 	testutil.NoError(t, err, "startProxy 失败")
-	if proxyURL == "" {
-		t.Fatal("startProxy 应返回非空 URL")
-	}
+	testutil.Equal(t, proxyURL == "", false, "startProxy 应返回非空 URL")
 
 	key := proxyServerKey{host: "example.com"}
 	a.proxyMu.Lock()
 	session, ok := a.proxySessions[key]
 	a.proxyMu.Unlock()
-	if !ok {
-		t.Fatal("proxySessions 应含该 host 条目")
-	}
-	if session.port <= 0 {
-		t.Fatalf("proxy port 应 > 0，实际 %d", session.port)
-	}
+	testutil.Equal(t, ok, true, "proxySessions 应含该 host 条目") // 前置守卫：存在才比对 port
+	testutil.Equal(t, session.port <= 0, false, "proxy port 应 > 0")
 
 	a.stopProxy(target)
 	a.proxyMu.Lock()
 	left := len(a.proxySessions)
 	a.proxyMu.Unlock()
-	if left != 0 {
-		t.Fatalf("stopProxy 后 proxySessions 应为空，实际 %d 条", left)
-	}
-	if port := a.getProxyPort(key); port != "0" {
-		t.Fatalf("stopProxy 后 getProxyPort 应返回 0，实际 %q", port)
-	}
+	testutil.Equal(t, left, 0, "stopProxy 后 proxySessions 应为空")
+	testutil.Equal(t, a.getProxyPort(key), "0", "stopProxy 后 getProxyPort 应返回 0")
 }

@@ -14,9 +14,7 @@ import (
 func TestExtractKeys_Object(t *testing.T) {
 	raw := json.RawMessage(`{"key1":1,"key2":2}`)
 	keys := extractKeys(raw)
-	if len(keys) != 2 {
-		t.Fatalf("期望 2 个 key, 得到 %d", len(keys))
-	}
+	testutil.Equal(t, len(keys), 2, "期望 2 个 key, 得到 %d", len(keys))
 	m := make(map[string]bool)
 	for _, k := range keys {
 		m[k] = true
@@ -30,9 +28,8 @@ func TestExtractKeys_Array(t *testing.T) {
 	// 数组形态：extractKeys 将下标映射为 "动画 N"（summary.go:584），用于 extra_animation_classify 分组名
 	raw := json.RawMessage(`[1,2,3]`)
 	keys := extractKeys(raw)
-	if len(keys) != 3 {
-		t.Fatalf("期望 3 个 key, 得到 %d", len(keys))
-	}
+	// 守卫下方 want[i] 循环索引
+	testutil.Equal(t, len(keys), 3, "期望 3 个 key, 得到 %d", len(keys))
 	want := []string{"动画 1", "动画 2", "动画 3"}
 	for i, k := range keys {
 		if k != want[i] {
@@ -62,9 +59,7 @@ func TestExtractKeys_InvalidJSON(t *testing.T) {
 func TestExtractDisplayValues_Valid(t *testing.T) {
 	raw := json.RawMessage(`{"a":"hello","b":"world","c":"#ref"}`)
 	vals := extractDisplayValues(raw)
-	if len(vals) != 2 {
-		t.Fatalf("期望 2 个值, 得到 %d: %v", len(vals), vals)
-	}
+	testutil.Equal(t, len(vals), 2, "期望 2 个值, 得到 %d: %v", len(vals), vals)
 	// map 顺序随机，用集合断言
 	m := make(map[string]bool)
 	for _, v := range vals {
@@ -112,9 +107,7 @@ func TestExtractDisplayValues_NonStringValues(t *testing.T) {
 func TestExtractKeySet_Valid(t *testing.T) {
 	raw := json.RawMessage(`{"a":1,"b":2,"c":3}`)
 	set := extractKeySet(raw)
-	if len(set) != 3 {
-		t.Fatalf("期望 3 个键, 得到 %d", len(set))
-	}
+	testutil.Equal(t, len(set), 3, "期望 3 个键, 得到 %d", len(set))
 	if !set["a"] || !set["b"] || !set["c"] {
 		t.Errorf("集应包含 a,b,c, 得到 %v", set)
 	}
@@ -141,9 +134,8 @@ func TestExtractKeySet_NotObject(t *testing.T) {
 func TestExtractControlTypes_Valid(t *testing.T) {
 	raw := json.RawMessage(`[{"type":"slider"},{"type":"toggle"},{}]`)
 	types := extractControlTypes(raw)
-	if len(types) != 3 {
-		t.Fatalf("期望 3 个类型, 得到 %d: %v", len(types), types)
-	}
+	// 守卫下方 types[0]/[1]/[2] 索引
+	testutil.Equal(t, len(types), 3, "期望 3 个类型, 得到 %d: %v", len(types), types)
 	if types[0] != "slider" || types[1] != "toggle" || types[2] != "unknown" {
 		t.Errorf("期望 [slider toggle unknown], 得到 %v", types)
 	}

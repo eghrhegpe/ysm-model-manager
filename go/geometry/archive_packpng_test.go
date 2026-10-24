@@ -31,9 +31,7 @@ func TestExtractFirstPNG_PackPngPreferred(t *testing.T) {
 	data := buf.Bytes()
 
 	got := ExtractFirstPNGFromZip(data, int64(len(data)))
-	if string(got) != "PACK_PNG" {
-		t.Fatalf("应优先选 pack.png, 得到 %q", string(got))
-	}
+	testutil.Equal(t, string(got), "PACK_PNG", "应优先选 pack.png, 得到 %q", string(got))
 }
 
 // TestExtractFirstPNG_CoverFallback 无 pack.png 时回退 cover.png/preview.png/thumbnail.png
@@ -48,9 +46,7 @@ func TestExtractFirstPNG_CoverFallback(t *testing.T) {
 		zw.Close()
 
 		got := ExtractFirstPNGFromZip(buf.Bytes(), int64(buf.Len()))
-		if string(got) != "COVER_"+name {
-			t.Fatalf("%s 应被优先选中, 得到 %q", name, string(got))
-		}
+		testutil.Equal(t, string(got), "COVER_"+name, "%s 应被优先选中, 得到 %q", name, string(got))
 	}
 }
 
@@ -68,7 +64,5 @@ func TestExtractFirstPNG_NoCoverStillFirst(t *testing.T) {
 	zw.Close()
 
 	got := ExtractFirstPNGFromZip(buf.Bytes(), int64(buf.Len()))
-	if string(got) != "ROLE_PNG" {
-		t.Fatalf("无封面候选应取第一张 PNG, 得到 %q", string(got))
-	}
+	testutil.Equal(t, string(got), "ROLE_PNG", "无封面候选应取第一张 PNG, 得到 %q", string(got))
 }

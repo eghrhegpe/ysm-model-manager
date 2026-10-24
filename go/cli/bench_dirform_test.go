@@ -18,6 +18,7 @@ import (
 	"testing"
 	"time"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/internal/app"
 )
 
@@ -26,7 +27,7 @@ func TestResolveBenchModelTarget(t *testing.T) {
 	dir := t.TempDir()
 	entry := filepath.Join(dir, "ysm.json")
 	if err := os.WriteFile(entry, []byte("{}"), 0o644); err != nil {
-		t.Fatalf("写夹具失败: %v", err)
+		testutil.NoError(t, err, "写夹具失败")
 	}
 
 	got, form, err := resolveBenchModelTarget(dir)
@@ -55,9 +56,8 @@ func TestStagesToJSON_FailedStageBeatsMsGrading(t *testing.T) {
 		{Name: "① 文件读取", Duration: 0, Notes: "❌ 失败: boom", Failed: true},
 	}
 	stages, _ := stagesToJSON(avg, nil)
-	if len(stages) != 1 {
-		t.Fatalf("应输出 1 条, got %d", len(stages))
-	}
+	testutil.Equal(t, len(stages), 1, "应输出 1 条, got %d", len(stages))
+	// len 已由上一断言守卫（失败即 Goexit），stages[0] 才安全
 	if stages[0].Status != "failed" {
 		t.Errorf("失败阶段不得因 0ms 被判 ok, got status=%q", stages[0].Status)
 	}
@@ -75,9 +75,8 @@ func TestAvgBenchStages_KeepsNotesBytesFailed(t *testing.T) {
 		{{Name: "① 清单读取", Duration: d(20), Bytes: 300, Notes: "✅ ok"}},
 	}
 	avg := avgBenchStages(all)
-	if len(avg) != 1 {
-		t.Fatalf("应按阶段名归并成 1 条, got %d", len(avg))
-	}
+	testutil.Equal(t, len(avg), 1, "应按阶段名归并成 1 条, got %d", len(avg))
+	// len 已由上一断言守卫（失败即 Goexit），avg[0] 才安全
 	got := avg[0]
 	if got.Duration != d(15) {
 		t.Errorf("耗时取平均: got %v want 15ms", got.Duration)
@@ -107,11 +106,11 @@ func TestSingleBench_DirFormFixture(t *testing.T) {
 			runErr = runSingleBenchJSON(ctx, target, 1, "", "", 50)
 		})
 		if runErr != nil {
-			t.Fatalf("target=%s: runSingleBenchJSON 报错: %v", target, runErr)
+			testutil.NoError(t, runErr, "target=%s: runSingleBenchJSON 报错", target)
 		}
 		var p singleBenchJSON
 		if err := json.Unmarshal([]byte(out), &p); err != nil {
-			t.Fatalf("载荷不是 JSON: %v\n%s", err, out)
+			testutil.NoError(t, err, "载荷不是 JSON:\n%s", out)
 		}
 		if p.Model != entry {
 			t.Errorf("target=%s: 应归一化为 <dir>/ysm.json, got %q", target, p.Model)

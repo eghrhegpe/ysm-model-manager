@@ -41,9 +41,7 @@ func TestOpenZipBytes_EntriesAndRead(t *testing.T) {
 	defer r.Close()
 
 	entries := r.Entries()
-	if len(entries) != 3 {
-		t.Fatalf("期望 3 条目, 实际 %d", len(entries))
-	}
+	testutil.Equal(t, len(entries), 3, "期望 3 条目, 实际 %d", len(entries))
 	// 名称与读取
 	found := map[string]bool{}
 	for _, e := range entries {
@@ -52,9 +50,7 @@ func TestOpenZipBytes_EntriesAndRead(t *testing.T) {
 			t.Errorf("测试 zip 无目录条目: %s", e.Name())
 		}
 		rc, err := e.Open()
-		if err != nil {
-			t.Fatalf("打开 %s: %v", e.Name(), err)
-		}
+		testutil.NoError(t, err, "打开 %s: %v", e.Name(), err)
 		buf := make([]byte, 32)
 		n, _ := rc.Read(buf)
 		rc.Close()
@@ -109,9 +105,7 @@ func TestOpen_DisableSuffixDispatch(t *testing.T) {
 			testutil.NoError(t, err)
 		}
 		r, err := Open(p)
-		if err != nil {
-			t.Fatalf("%s 应按 zip 容器打开: %v", name, err)
-		}
+		testutil.NoError(t, err, "%s 应按 zip 容器打开", name)
 		if n := len(r.Entries()); n != 1 {
 			t.Errorf("%s 条目数期望 1, 实际 %d", name, n)
 		}
@@ -173,9 +167,7 @@ func TestOpenZipPath_EntriesAndSize(t *testing.T) {
 	for _, e := range r.Entries() {
 		byName[e.Name()] = e
 	}
-	if len(byName) != 2 {
-		t.Fatalf("期望 2 条目, 实际 %d", len(byName))
-	}
+	testutil.Equal(t, len(byName), 2, "期望 2 条目, 实际 %d", len(byName))
 	// UncompressedSize64 应为条目未压缩大小（zip.File.UncompressedSize64 原值）
 	if got := byName["a.json"].UncompressedSize64(); got != 4 {
 		t.Errorf("a.json UncompressedSize64 = %d, 期望 4", got)
@@ -355,7 +347,7 @@ func TestFindEntry_SkipsDirEntry(t *testing.T) {
 	testutil.NoError(t, err)
 	defer r.Close()
 	e, ok := FindEntry(r, "inner.txt")
-	if !ok || e.IsDir() {
-		t.Fatalf("FindEntry 应返回非目录条目, ok=%v dir=%v", ok, e != nil && e.IsDir())
-	}
+	// OR 型拆序贯：ok 前置守卫防 e 为 nil 时调 IsDir 空指针（Equal 失败即弃权）
+	testutil.Equal(t, ok, true, "FindEntry 应返回非目录条目, ok=%v", ok)
+	testutil.Equal(t, e.IsDir(), false, "FindEntry 应返回非目录条目, dir=%v", e.IsDir())
 }

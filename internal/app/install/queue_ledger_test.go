@@ -20,9 +20,7 @@ func writeLedger(t *testing.T, path string, tasks []types.DownloadTask) {
 	t.Helper()
 	data, err := json.Marshal(ledgerState{SchemaVersion: ledgerSchemaVersion, Tasks: tasks})
 	testutil.NoError(t, err, "marshal 账本失败")
-	if err := os.WriteFile(path, data, 0o644); err != nil {
-		t.Fatalf("写账本失败: %v", err)
-	}
+	testutil.NoError(t, os.WriteFile(path, data, 0o644), "写账本失败")
 }
 
 func waitFor(t *testing.T, desc string, cond func() bool) {
@@ -34,7 +32,7 @@ func waitFor(t *testing.T, desc string, cond func() bool) {
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
-	t.Fatalf("超时未满足条件: %s", desc)
+	testutil.Equal(t, true, false, "超时未满足条件: %s", desc)
 }
 
 func fileGone(path string) bool {
@@ -71,9 +69,7 @@ func TestDownloadQueue_LedgerResumesPendingOnStartup(t *testing.T) {
 	mu.Lock()
 	got := append([]string(nil), urls...)
 	mu.Unlock()
-	if !contains(got, a.URL) || !contains(got, b.URL) {
-		t.Fatalf("续排任务不全: got %v, 期望含 %s 和 %s", got, a.URL, b.URL)
-	}
+	testutil.Equal(t, contains(got, a.URL) && contains(got, b.URL), true, "续排任务不全: got %v, 期望含 %s 和 %s", got, a.URL, b.URL)
 	waitFor(t, "排空后账本文件删除", func() bool { return fileGone(p) })
 }
 
@@ -118,9 +114,7 @@ func TestDownloadQueue_LedgerFiltersNonHttps(t *testing.T) {
 // 损坏/版本不符：安全降级为无账本，清理损坏文件，不 panic、不阻断启动。
 func TestDownloadQueue_LedgerCorruptIgnored(t *testing.T) {
 	p := filepath.Join(t.TempDir(), "download-queue.json")
-	if err := os.WriteFile(p, []byte("{ not valid json"), 0o644); err != nil {
-		t.Fatalf("写损坏文件失败: %v", err)
-	}
+	testutil.NoError(t, os.WriteFile(p, []byte("{ not valid json"), 0o644), "写损坏文件失败")
 	called := false
 	q := NewDownloadQueue(context.Background(),
 		func(ctx context.Context, url, saveDir string) (string, error) {

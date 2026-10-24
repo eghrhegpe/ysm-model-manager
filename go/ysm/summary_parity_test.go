@@ -44,12 +44,9 @@ func loadSummaryGolden(t *testing.T) *summaryGoldenFile {
 	data, err := os.ReadFile(summaryGoldenPath)
 	testutil.NoError(t, err, "读黄金语料失败")
 	var gf summaryGoldenFile
-	if err := json.Unmarshal(data, &gf); err != nil {
-		t.Fatalf("解析黄金语料失败: %v", err)
-	}
-	if len(gf.Cases) == 0 {
-		t.Fatal("黄金语料为空")
-	}
+	testutil.NoError(t, json.Unmarshal(data, &gf), "解析黄金语料失败")
+	// 守卫后续 Cases 遍历
+	testutil.Equal(t, len(gf.Cases) == 0, false, "黄金语料为空")
 	return &gf
 }
 
@@ -66,7 +63,8 @@ func buildSummaryFixture(t *testing.T, c summaryParityCase) string {
 		}
 		return path
 	default:
-		t.Fatalf("未知 kind: %q", c.Kind)
+		// 分支型 Fatalf 无法映射值断言，Errorf+return 等价（失败后返回空串，调用方随即 NoError 失败）
+		t.Errorf("未知 kind: %q", c.Kind)
 		return ""
 	}
 }
@@ -82,9 +80,7 @@ func runSummaryCase(t *testing.T, c summaryParityCase) (m map[string]any, isErrC
 		}
 		return nil, true
 	}
-	if err != nil {
-		t.Fatalf("[%s] 不应报错: %v", c.ID, err)
-	}
+	testutil.NoError(t, err, "[%s] 不应报错", c.ID)
 	out, mErr := json.Marshal(summary)
 	testutil.NoError(t, mErr)
 	var got map[string]any
@@ -119,9 +115,7 @@ func TestYsmSummaryParity(t *testing.T) {
 				return
 			}
 			var wantRaw map[string]any
-			if err := json.Unmarshal(c.Golden, &wantRaw); err != nil {
-				t.Fatalf("[%s] golden 解析失败: %v", c.ID, err)
-			}
+			testutil.NoError(t, json.Unmarshal(c.Golden, &wantRaw), "[%s] golden 解析失败", c.ID)
 			delete(wantRaw, "size")
 			gotJSON, _ := json.Marshal(got)
 			wantJSON, _ := json.Marshal(wantRaw)
@@ -133,9 +127,7 @@ func TestYsmSummaryParity(t *testing.T) {
 	if regen {
 		out, err := json.MarshalIndent(gf, "", "  ")
 		testutil.NoError(t, err)
-		if err := os.WriteFile(summaryGoldenPath, append(out, '\n'), 0644); err != nil {
-			t.Fatalf("写黄金语料失败: %v", err)
-		}
+		testutil.NoError(t, os.WriteFile(summaryGoldenPath, append(out, '\n'), 0644), "写黄金语料失败")
 		t.Logf("黄金语料已重写: %s", summaryGoldenPath)
 	}
 }

@@ -48,9 +48,7 @@ func validRegistryJSON(withConfigFallback bool) []byte {
 func writeValidRegistryFile(t *testing.T, dir string, filename string) string {
 	t.Helper()
 	p := filepath.Join(dir, filename)
-	if err := os.WriteFile(p, validRegistryJSON(true), 0644); err != nil {
-		t.Fatalf("写测试 JSON 失败: %v", err)
-	}
+	testutil.NoError(t, os.WriteFile(p, validRegistryJSON(true), 0644), "写测试 JSON 失败")
 	return p
 }
 
@@ -124,9 +122,9 @@ func TestLoadRegistry_PointerStabilityOnCacheHit(t *testing.T) {
 	// 通过 ResourceTypes 切片地址比较 (缓存命中时应完全相同)
 	slice1 := reg1.ResourceTypes
 	slice2 := reg2.ResourceTypes
-	if len(slice1) == 0 || len(slice2) == 0 {
-		t.Fatal("registry 为空，无法比较指针")
-	}
+	// OR 型复合条件拆序贯
+	testutil.Equal(t, len(slice1) != 0, true, "registry 为空，无法比较指针")
+	testutil.Equal(t, len(slice2) != 0, true, "registry 为空，无法比较指针")
 	// 借用 unsafe 通过 uintptr 比较指针值
 	// 改用字符串比较 ID 稳定性——指针值我们无法直接取, 但 slice 头部
 	// 通过 reflect 也可行。这里用最朴素的策略: 用 &reg1.ResourceTypes[0] vs &reg2.ResourceTypes[0]
@@ -291,16 +289,14 @@ func TestLoadRegistry_CacheSurvivesFileDelete(t *testing.T) {
 	defer SetRegistryPath("")
 
 	reg1 := LoadRegistry()
-	if reg1 == nil || len(reg1.ResourceTypes) == 0 {
-		t.Fatal("首次加载失败")
-	}
+	// OR 型复合条件拆序贯（Nil 守卫在前，len 解引用仅在其通过后执行——Equal 失败即 Goexit）
+	testutil.NotNil(t, reg1, "首次加载失败")
+	testutil.Equal(t, len(reg1.ResourceTypes) != 0, true, "首次加载失败")
 	firstCount := len(reg1.ResourceTypes)
 	firstID := reg1.ResourceTypes[0].ID
 
 	// 删除文件
-	if err := os.Remove(p); err != nil {
-		t.Fatalf("删除测试文件失败: %v", err)
-	}
+	testutil.NoError(t, os.Remove(p), "删除测试文件失败")
 
 	// 再次 LoadRegistry → 应返回缓存 (不变)
 	reg2 := LoadRegistry()

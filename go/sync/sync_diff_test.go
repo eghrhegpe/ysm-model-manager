@@ -3,7 +3,6 @@ package sync
 import (
 	"os"
 	"path/filepath"
-	"reflect"
 	"testing"
 
 	"ysm-model-manager/go/internal/testutil"
@@ -125,19 +124,11 @@ func TestResourceDiff_DivergedIsSubsetOfMissing(t *testing.T) {
 	}
 	r := ResourceDiff(global, instance)
 
-	if want := []string{"both-diff.ysm"}; !reflect.DeepEqual(r.Diverged, want) {
-		t.Fatalf("Diverged 应恰为两侧均有的内容分叉条目 %v（不得含单侧独有），实际 %v", want, r.Diverged)
-	}
-	if want := []string{"both-diff.ysm", "only-repo.ysm"}; !reflect.DeepEqual(r.Missing, want) {
-		t.Fatalf("Missing 仍是并集 %v（Diverged 为子集、归属不变），实际 %v", want, r.Missing)
-	}
-	if want := []string{"only-inst.ysm"}; !reflect.DeepEqual(r.Extra, want) {
-		t.Fatalf("Extra 应为 %v，实际 %v", want, r.Extra)
-	}
+	testutil.Equal(t, r.Diverged, []string{"both-diff.ysm"}, "Diverged 应恰为两侧均有的内容分叉条目（不得含单侧独有），实际 %v", r.Diverged)
+	testutil.Equal(t, r.Missing, []string{"both-diff.ysm", "only-repo.ysm"}, "Missing 仍是并集（Diverged 为子集、归属不变），实际 %v", r.Missing)
+	testutil.Equal(t, r.Extra, []string{"only-inst.ysm"}, "Extra 应为 [only-inst.ysm]，实际 %v", r.Extra)
 	for _, p := range r.Diverged {
-		if !containsPath(r.Missing, p) {
-			t.Fatalf("Diverged 必须是 Missing 的子集，%q 只在 Diverged 里（result=%+v）", p, r)
-		}
+		testutil.Equal(t, containsPath(r.Missing, p), true, "Diverged 必须是 Missing 的子集，%q 只在 Diverged 里（result=%+v）", p, r)
 	}
 }
 
@@ -166,9 +157,7 @@ func TestSyncResourcesWithConfig_HashDetectsContentChange(t *testing.T) {
 
 	// 注入 scanFn：两侧哈希异 → Missing
 	r := SyncResourcesWithConfig(global, inst, nil, scanFn, "resourcepack")
-	if !containsPath(r.Missing, wantPath) {
-		t.Fatalf("异内容同大小应经哈希判 Missing, got %+v", r)
-	}
+	testutil.Equal(t, containsPath(r.Missing, wantPath), true, "异内容同大小应经哈希判 Missing, got %+v", r)
 	if containsPath(r.Synced, wantPath) {
 		t.Errorf("不应误判 Synced, got %+v", r)
 	}
@@ -358,9 +347,7 @@ func TestSyncResourcesWithConfig_PackFoldDetectsContentChange(t *testing.T) {
 
 	// 异大小 → 折叠指纹不同 → Missing（scanFn=nil，证明不依赖哈希）
 	r := SyncResourcesWithConfig(global, inst, nil, nil, "resourcepack")
-	if !containsPath(r.Missing, wantDir) {
-		t.Fatalf("纹理异大小应经折叠指纹判 pack 目录 Missing, got %+v", r)
-	}
+	testutil.Equal(t, containsPath(r.Missing, wantDir), true, "纹理异大小应经折叠指纹判 pack 目录 Missing, got %+v", r)
 	if containsPath(r.Synced, wantDir) {
 		t.Errorf("不应误判 Synced, got %+v", r)
 	}

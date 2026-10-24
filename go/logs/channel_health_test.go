@@ -24,9 +24,7 @@ import (
 func TestLogger_Health_MemoryStateByConfigDirEmpty(t *testing.T) {
 	l := NewLogger("")
 	h := l.Health()
-	if h.PersistOK {
-		t.Fatal("内存态 logger 的 PersistOK 应为 false")
-	}
+	testutil.Equal(t, h.PersistOK, false, "内存态 logger 的 PersistOK 应为 false")
 	if h.Reason != types.ChannelReasonMemoryState {
 		t.Errorf("Reason = %q, 期望 %q", h.Reason, types.ChannelReasonMemoryState)
 	}
@@ -35,9 +33,7 @@ func TestLogger_Health_MemoryStateByConfigDirEmpty(t *testing.T) {
 // TestLogger_Health_HealthyAfterNewLogger 正常构造（可落盘目录）→ 健康
 func TestLogger_Health_HealthyAfterNewLogger(t *testing.T) {
 	h := NewLogger(t.TempDir()).Health()
-	if !h.PersistOK {
-		t.Fatalf("落盘态 logger 应健康, got %+v", h)
-	}
+	testutil.Equal(t, h.PersistOK, true, "落盘态 logger 应健康, got %+v", h)
 	if h.Reason != "" {
 		t.Errorf("健康时 Reason 应为空串, got %q", h.Reason)
 	}
@@ -53,17 +49,13 @@ func TestLogger_Health_SaveFailureLatches(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	l := NewLogger(dir) // NewLogger 自身 MkdirAll(dir) 成功（dir 存在），故初始健康
-	if !l.Health().PersistOK {
-		t.Fatal("NewLogger 成功构造时应健康")
-	}
+	testutil.Equal(t, l.Health().PersistOK, true, "NewLogger 成功构造时应健康")
 	// 改 path 到 blocker 之下 → save 时 MkdirAll(blocker) 因其是文件而失败
 	l.path = filepath.Join(blocker, "logs.json")
 	l.Add("m", "s", "d", 0, "ok", "")
 	l.Flush()
 	h := l.Health()
-	if h.PersistOK {
-		t.Fatal("落盘失败后 PersistOK 应翻转 false")
-	}
+	testutil.Equal(t, h.PersistOK, false, "落盘失败后 PersistOK 应翻转 false")
 	if h.Reason != types.ChannelReasonMkdirFailed {
 		t.Errorf("Reason = %q, 期望 %q", h.Reason, types.ChannelReasonMkdirFailed)
 	}
@@ -113,9 +105,7 @@ func TestTrimRing_PlainOnlyKeepsTail(t *testing.T) {
 	// trimRing 就地左移（复用 backing），故先记下原第 101 条的指纹再裁
 	want := ring[100].ModelName
 	got := trimRing(ring, 500, isUIOpLog)
-	if len(got) != 500 {
-		t.Fatalf("应裁到 500 条, got %d", len(got))
-	}
+	testutil.Equal(t, len(got), 500, "应裁到 500 条, got %d", len(got))
 	if got[0].ModelName != want {
 		t.Errorf("应保留最末 500 条: got[0].ModelName = %q, 期望 %q", got[0].ModelName, want)
 	}
@@ -141,9 +131,7 @@ func TestTrimRing_ProtectedSurvivesPlainStorm(t *testing.T) {
 			imp++
 		}
 	}
-	if len(got) != 500 {
-		t.Fatalf("总量应仍为 500, got %d", len(got))
-	}
+	testutil.Equal(t, len(got), 500, "总量应仍为 500, got %d", len(got))
 	if ui == 0 {
 		t.Error("界面日记分区被业务日志整类挤没了（受保护配额失效）")
 	}
@@ -163,9 +151,7 @@ func TestTrimRing_ProtectedTrimsWhenAloneOverQuota(t *testing.T) {
 		ring = append(ring, types.ImportLog{Operation: uiOp})
 	}
 	got := trimRing(ring, 500, isUIOpLog)
-	if len(got) != 500 {
-		t.Fatalf("应裁到 500 条, got %d", len(got))
-	}
+	testutil.Equal(t, len(got), 500, "应裁到 500 条, got %d", len(got))
 }
 
 // TestTrimRing_KeepsOldestProtectedWhenBothOverQuota 两类都超配额时的淘汰顺序：
@@ -208,9 +194,7 @@ func TestTrimRing_ZeroesTailSlot(t *testing.T) {
 	ring = append(ring, types.ImportLog{Operation: "import"})
 	ring = append(ring, types.ImportLog{Operation: "import"})
 	got := trimRing(ring, 2, isUIOpLog)
-	if len(got) != 2 {
-		t.Fatalf("应裁到 2 条, got %d", len(got))
-	}
+	testutil.Equal(t, len(got), 2, "应裁到 2 条, got %d", len(got))
 	// backing 数组容量仍是 4：读原始尾槽须已被清零
 	if back := ring[:cap(ring)][2]; back.ErrorMsg != "" {
 		t.Errorf("尾槽应清零, got %+v（仍持有已淘汰条目的引用）", back)
@@ -237,9 +221,7 @@ func TestRuntimeBuffer_MetaSurvivesStorm(t *testing.T) {
 			found = true
 		}
 	}
-	if len(all) != 20 {
-		t.Fatalf("应裁到 20 条, got %d", len(all))
-	}
+	testutil.Equal(t, len(all), 20, "应裁到 20 条, got %d", len(all))
 	if !found {
 		t.Error("[meta] 元失败条目被普通日志挤掉了（受保护分区失效）")
 	}
@@ -261,9 +243,7 @@ func TestRuntimeBuffer_MetaTagMustAnchorLineStart(t *testing.T) {
 		}
 	}
 	all := b.GetAll()
-	if len(all) != 20 {
-		t.Fatalf("应裁到 20 条, got %d", len(all))
-	}
+	testutil.Equal(t, len(all), 20, "应裁到 20 条, got %d", len(all))
 	for _, e := range all {
 		if strings.Contains(e.Message, "提到 [meta]") {
 			t.Errorf("中段 [meta] 不应被判为受保护条目, 但它留在了环里: Tag=%q", e.Tag)
@@ -279,12 +259,9 @@ func TestRuntimeBuffer_MetaLevelInferred(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	got := b.GetAll()
-	if len(got) != 1 {
-		t.Fatalf("应 1 条, got %d", len(got))
-	}
-	if got[0].Tag != metaTag {
-		t.Fatalf("Tag = %q, 期望 %q", got[0].Tag, metaTag)
-	}
+	testutil.Equal(t, len(got), 1, "应 1 条, got %d", len(got))
+	// len 前置守卫已由上一断言保证，got[0] 越界不可达
+	testutil.Equal(t, got[0].Tag, metaTag, "Tag = %q, 期望 %q", got[0].Tag, metaTag)
 	if got[0].Level != types.LevelError {
 		t.Errorf("Level = %q, 期望 error（关键词「失败」命中）", got[0].Level)
 	}

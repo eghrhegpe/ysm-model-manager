@@ -1,8 +1,9 @@
 package app
 
 import (
-	"reflect"
 	"testing"
+
+	"ysm-model-manager/internal/testutil"
 )
 
 // ===== buildCLIArgs / appendSpecKey：参数拼装逐项内容与顺序 =====
@@ -51,17 +52,11 @@ func TestAppendSpecKey_PerTypePerAllowEmpty(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var warns []string
 			got := appendSpecKey(nil, tc.spec, tc.val, &warns)
-			if len(got) != len(tc.wantArgs) {
-				t.Fatalf("args 长度: got %v, want %v", got, tc.wantArgs)
-			}
+			testutil.Equal(t, len(got), len(tc.wantArgs), "args 长度: got %v, want %v", got, tc.wantArgs) // 前置守卫：等长才逐位比对
 			for i := range tc.wantArgs {
-				if got[i] != tc.wantArgs[i] {
-					t.Fatalf("args[%d]: got %q, want %q（全量 got=%v）", i, got[i], tc.wantArgs[i], got)
-				}
+				testutil.Equal(t, got[i], tc.wantArgs[i], "args[%d]（全量 got=%v）", i, got)
 			}
-			if len(warns) != tc.wantWarns {
-				t.Fatalf("告警数: got %d %v, want %d", len(warns), warns, tc.wantWarns)
-			}
+			testutil.Equal(t, len(warns), tc.wantWarns, "告警数: got %v", warns)
 		})
 	}
 }
@@ -91,12 +86,8 @@ func TestBuildCLIArgs_SpecPathFullSequence(t *testing.T) {
 		"--false-ok=false",
 		"--typo", "oops",
 	}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("args 逐项不匹配:\n  got:  %#v\n  want: %#v", got, want)
-	}
-	if len(warns) != 2 {
-		t.Fatalf("期望 2 条告警（未知规格类型 + 未声明键），实际 %d: %v", len(warns), warns)
-	}
+	testutil.Equal(t, got, want, "args 逐项不匹配")
+	testutil.Equal(t, len(warns), 2, "期望 2 条告警（未知规格类型 + 未声明键）: %v", warns)
 }
 
 // TestBuildCLIArgs_UnregisteredValueNotProduced 未声明键即使值非空也按 legacy 追加；
@@ -108,12 +99,8 @@ func TestBuildCLIArgs_UnregisteredValueNotProduced(t *testing.T) {
 		{Key: "verbose", Type: "bool"},
 		{Key: "keyword", Type: "string"},
 	})
-	if len(got) != 0 {
-		t.Fatalf("空值键不应产出，got %v", got)
-	}
-	if len(warns) != 0 {
-		t.Fatalf("空值丢弃不应告警: %v", warns)
-	}
+	testutil.Equal(t, len(got), 0, "空值键不应产出, got %v", got)
+	testutil.Equal(t, len(warns), 0, "空值丢弃不应告警: %v", warns)
 }
 
 // TestBuildCLIArgs_PrefixPreserved base 前缀逐项原样保留在输出最前（files-root 由调用方先行处理）
@@ -122,7 +109,5 @@ func TestBuildCLIArgs_PrefixPreserved(t *testing.T) {
 	got, _ := buildCLIArgs("search", base, map[string]interface{}{"keyword": "x"},
 		[]ParamSpecDTO{{Key: "keyword", Type: "string"}})
 	want := []string{"--cli", "--files-root", "C:\\root", "--keyword", "x"}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("前缀/顺序不匹配:\n  got:  %#v\n  want: %#v", got, want)
-	}
+	testutil.Equal(t, got, want, "前缀/顺序不匹配")
 }

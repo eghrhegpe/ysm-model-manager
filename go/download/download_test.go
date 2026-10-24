@@ -43,9 +43,9 @@ func TestFileDownloadHTTPError(t *testing.T) {
 	dl := New()
 	err := dl.File(context.Background(), ts.URL, filepath.Join(t.TempDir(), "x.txt"), nil)
 	var httpErr *HTTPStatusError
-	if !errors.As(err, &httpErr) || httpErr.Code != http.StatusNotFound {
-		t.Fatalf("404 应返回可分类的 HTTPStatusError{Code:404}, got %v", err)
-	}
+	// OR 型复合条件拆序贯：As 前置守卫防 httpErr.Code 解引用（原 if !As || Code!=404）
+	testutil.Equal(t, errors.As(err, &httpErr), true, "404 应返回可分类的 HTTPStatusError{Code:404}, got %v", err)
+	testutil.Equal(t, httpErr.Code, http.StatusNotFound, "404 应返回可分类的 HTTPStatusError{Code:404}, got %v", err)
 }
 
 func TestFileDownloadEmptyBody(t *testing.T) {
@@ -74,9 +74,8 @@ func TestFileDownloadProgressOnlyAtEnd(t *testing.T) {
 	dl.File(context.Background(), ts.URL, filepath.Join(t.TempDir(), "p.txt"), func(downloaded, total int64) {
 		calls = append(calls, downloaded)
 	})
-	if len(calls) == 0 {
-		t.Fatal("expected at least 1 progress call")
-	}
+	// 护栏：至少 1 次进度回调（原 if len==0 → t.Fatal）
+	testutil.Equal(t, len(calls) == 0, false, "expected at least 1 progress call")
 	testutil.Equal(t, calls[len(calls)-1], int64(5))
 }
 
@@ -101,9 +100,10 @@ func TestResolveSavePath(t *testing.T) {
 		"https://raw.githubusercontent.com/user/repo/main/models/a.ysm",
 		"/tmp/out",
 	)
-	if savePath == "" || jsd == "" || api == "" {
-		t.Fatal("expected non-empty paths")
-	}
+	// OR 型复合条件拆序贯：三项分别断言非空（原 if =="" || =="" || ==""）
+	testutil.Equal(t, savePath == "", false, "expected non-empty paths")
+	testutil.Equal(t, jsd == "", false, "expected non-empty paths")
+	testutil.Equal(t, api == "", false, "expected non-empty paths")
 	testutil.Equal(t, jsd, "https://cdn.jsdelivr.net/gh/user/repo@main/models/a.ysm")
 	testutil.Equal(t, api, "https://api.github.com/repos/user/repo/contents/models/a.ysm")
 }
@@ -126,9 +126,8 @@ func TestResolveSavePathValidNested(t *testing.T) {
 		"https://raw.githubusercontent.com/user/repo/main/models/sub/a.ysm",
 		"/tmp/out",
 	)
-	if savePath == "" {
-		t.Fatal("expected non-empty savePath for valid nested URL")
-	}
+	// 护栏：合法嵌套 URL 不得判为拒绝（原 if =="" → t.Fatal）
+	testutil.Equal(t, savePath == "", false, "expected non-empty savePath for valid nested URL")
 }
 
 func TestDownloadCtxCancel(t *testing.T) {

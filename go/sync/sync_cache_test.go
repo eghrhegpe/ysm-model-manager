@@ -18,9 +18,9 @@ func TestSyncScanCache_LoadStore(t *testing.T) {
 	storeSyncScanCache(&cache, key, map[string]string{"a": filepath.Join(root, "a")}, syncCacheEpochOf())
 
 	got, ok := loadSyncScanCache[map[string]string](&cache, key)
-	if !ok || got["a"] != filepath.Join(root, "a") {
-		t.Fatalf("缓存应命中并返回值，got=%v ok=%v", got, ok)
-	}
+	// 原复合条件拆序贯（map miss 时 got 为 nil map，读 ["a"] 安全）
+	testutil.Equal(t, ok, true, "缓存应命中, ok=%v", ok)
+	testutil.Equal(t, got["a"], filepath.Join(root, "a"), "缓存应命中并返回值, got=%v", got)
 }
 
 func TestSyncScanCache_StaleEpochRejected(t *testing.T) {
@@ -59,9 +59,8 @@ func TestSyncScanCache_ScannerInvalidateClears(t *testing.T) {
 	})
 
 	scanner.InvalidateCache()
-	if _, ok := syncFolderScanCache.Load(key); ok {
-		t.Fatal("scanner.InvalidateCache 应触发 sync 失效钩子清空同步扫盘缓存")
-	}
+	_, ok := syncFolderScanCache.Load(key)
+	testutil.Equal(t, ok, false, "scanner.InvalidateCache 应触发 sync 失效钩子清空同步扫盘缓存")
 }
 
 func TestSyncResources_UsesSyncResourcesCacheAndInvalidate(t *testing.T) {
@@ -85,16 +84,12 @@ func TestSyncResources_UsesSyncResourcesCacheAndInvalidate(t *testing.T) {
 			break
 		}
 	}
-	if !found {
-		t.Fatalf("命中同步扫盘缓存时应从缓存反推 Missing sentinel，实际 %+v", result.Missing)
-	}
+	testutil.Equal(t, found, true, "命中同步扫盘缓存时应从缓存反推 Missing sentinel，实际 %+v", result.Missing)
 
 	InvalidateSyncScanCaches()
 	result = SyncResources(global, inst, rtype)
 	for _, p := range result.Missing {
-		if p == sentinelPath {
-			t.Fatal("失效后不应再返回缓存中的 sentinel")
-		}
+		testutil.Equal(t, p == sentinelPath, false, "失效后不应再返回缓存中的 sentinel")
 	}
 }
 
@@ -107,9 +102,8 @@ func TestCollectEntriesWalkCached_FailedWalkNotCached(t *testing.T) {
 	nonexistent := filepath.Join(t.TempDir(), "no-such-dir")
 	_, _ = collectEntriesWalkCached(nonexistent, "ysm", false, nil)
 	key := syncDirectoryScanKey{kind: "dirlevel", root: nonexistent, rtype: "ysm"}
-	if _, ok := syncDirLevelScanCache.Load(key); ok {
-		t.Fatal("Walk 失败的目录不应入缓存（残缺结果被当权威）")
-	}
+	_, ok := syncDirLevelScanCache.Load(key)
+	testutil.Equal(t, ok, false, "Walk 失败的目录不应入缓存（残缺结果被当权威）")
 }
 
 // TestCollectFolderFiles_FailedWalkNotCached 同款契约测试（collectFolderFiles 侧）。
@@ -117,7 +111,6 @@ func TestCollectFolderFiles_FailedWalkNotCached(t *testing.T) {
 	nonexistent := filepath.Join(t.TempDir(), "no-such-folder")
 	_ = collectFolderFiles(nonexistent, "ysm")
 	key := syncDirectoryScanKey{kind: "folder", root: nonexistent, rtype: "ysm"}
-	if _, ok := syncFolderScanCache.Load(key); ok {
-		t.Fatal("Walk 失败的目录不应入缓存（残缺结果被当权威）")
-	}
+	_, ok := syncFolderScanCache.Load(key)
+	testutil.Equal(t, ok, false, "Walk 失败的目录不应入缓存（残缺结果被当权威）")
 }

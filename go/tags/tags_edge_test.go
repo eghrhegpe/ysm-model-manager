@@ -25,10 +25,9 @@ func TestStore_SetTags_NULInPath(t *testing.T) {
 		store.mu.RLock()
 		_, exists := store.data[path]
 		store.mu.RUnlock()
-		if exists {
-			t.Fatalf("BUG(NUL-1): SetTags 接受含 NUL 的路径，tags 内存在该 key")
-		}
-		t.Fatalf("BUG(NUL-1): SetTags 未报错即接受含 NUL 的路径(path=%q)", path)
+		// 双分支均致命：先断 key 不存在（保真第一文案），再统一断言 SetTags 应报错
+		testutil.Equal(t, exists, false, "BUG(NUL-1): SetTags 接受含 NUL 的路径，tags 内存在该 key")
+		testutil.NotNil(t, err, "BUG(NUL-1): SetTags 未报错即接受含 NUL 的路径(path=%q)", path)
 	}
 	t.Logf("守卫: SetTags NUL 路径被拒绝: %v", err)
 }
@@ -38,16 +37,12 @@ func TestStore_AddTag_NULInPath(t *testing.T) {
 	tmpDir := t.TempDir()
 	store := NewStore(tmpDir)
 	path := filepath.Join(tmpDir, "safe.ysm") + "\x00" + "..\\evil.json"
-	if err := store.AddTag(path, "test"); err == nil {
-		t.Fatal("AddTag 应拒绝含 NUL 的 modelPath（与 SetTags 同一安全边界）")
-	}
+	testutil.NotNil(t, store.AddTag(path, "test"), "AddTag 应拒绝含 NUL 的 modelPath（与 SetTags 同一安全边界）")
 	// 拒绝后不写入内存数据，避免后续 save 落盘 NUL key
 	store.mu.RLock()
 	_, exists := store.data[path]
 	store.mu.RUnlock()
-	if exists {
-		t.Fatal("AddTag 含 NUL 路径不应写入存储")
-	}
+	testutil.Equal(t, exists, false, "AddTag 含 NUL 路径不应写入存储")
 }
 
 func TestStore_RemoveTag_NULInPath(t *testing.T) {
@@ -57,16 +52,14 @@ func TestStore_RemoveTag_NULInPath(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	path := filepath.Join(tmpDir, "safe.ysm") + "\x00" + "..\\evil.json"
-	if err := store.RemoveTag(path, "x"); err == nil {
-		t.Fatal("RemoveTag 应拒绝含 NUL 的 modelPath（与 SetTags 同一安全边界）")
-	}
+	testutil.NotNil(t, store.RemoveTag(path, "x"), "RemoveTag 应拒绝含 NUL 的 modelPath（与 SetTags 同一安全边界）")
 	// 拒绝后原数据不受影响
 	store.mu.RLock()
 	tags := store.data["/m"]
 	store.mu.RUnlock()
-	if len(tags) != 1 || tags[0] != "x" {
-		t.Fatalf("RemoveTag 拒绝 NUL 路径后原数据被破坏: %v", tags)
-	}
+	// OR 型复合条件拆序贯：len 前置守卫防 tags[0] 越界（原 if len!=1 || tags[0]!="x"）
+	testutil.Equal(t, len(tags), 1, "RemoveTag 拒绝 NUL 路径后原数据被破坏: %v", tags)
+	testutil.Equal(t, tags[0], "x", "RemoveTag 拒绝 NUL 路径后原数据被破坏: %v", tags)
 }
 
 // ---------- 2. NUL 字节在 tag 中 ----------
@@ -80,9 +73,8 @@ func TestStore_SetTags_NULInTag(t *testing.T) {
 	if err == nil {
 		// 接受路径 → 标签必须已被 trimTag 剔除 NUL
 		for _, tag := range tags {
-			if strings.Contains(tag, "\x00") {
-				t.Fatalf("BUG(INFO-NUL-TAG): tags 内存在含 NUL 的标签")
-			}
+			// 护栏：任一标签含 NUL 即失败（原 if Contains → t.Fatal）
+			testutil.Equal(t, strings.Contains(tag, "\x00"), false, "BUG(INFO-NUL-TAG): tags 内存在含 NUL 的标签")
 		}
 		t.Log("守卫: trimTag 已剔除 NUL 字节")
 	} else {
@@ -102,9 +94,8 @@ func TestStore_SetTags_NewlineInTag(t *testing.T) {
 	if err == nil {
 		// 接受路径 → 标签必须已被 trimTag 剔除换行
 		for _, tag := range tags {
-			if strings.Contains(tag, "\n") {
-				t.Fatalf("BUG(INFO-NEWLINE): tags 内存在含换行的标签")
-			}
+			// 护栏：任一标签含换行即失败（原 if Contains → t.Fatal）
+			testutil.Equal(t, strings.Contains(tag, "\n"), false, "BUG(INFO-NEWLINE): tags 内存在含换行的标签")
 		}
 		t.Log("守卫: trimTag 已剔除换行符")
 	} else {
@@ -124,9 +115,8 @@ func TestStore_SetTags_ExtremelyLongTag(t *testing.T) {
 	if err == nil {
 		// 接受路径 → 标签必须已被截断至 maxTagLen
 		for _, tag := range tags {
-			if len(tag) > maxTagLen {
-				t.Fatalf("BUG(INFO-LONG): 标签超长未截断, len=%d", len(tag))
-			}
+			// 护栏：任一标签超长即失败（原 if len> maxTagLen → t.Fatal）
+			testutil.Equal(t, len(tag) > maxTagLen, false, "BUG(INFO-LONG): 标签超长未截断, len=%d", len(tag))
 		}
 		if len(tags) > 0 {
 			t.Logf("守卫: 标签已截断至 %d 字符", len(tags[0]))
@@ -154,7 +144,8 @@ func TestStore_NULInConfigDir(t *testing.T) {
 		_ = store.persist([]byte("{}"))
 		if _, statErr := os.Stat("tags.json"); statErr == nil {
 			os.Remove("tags.json")
-			t.Fatalf("BUG(INFO-NUL-CFG): NUL configDir 导致 tags.json 写入当前目录")
+			// 该分支 statErr 恒为 nil，NotNil 必失败——保真原 t.Fatalf + 前置清理副作用
+			testutil.NotNil(t, statErr, "BUG(INFO-NUL-CFG): NUL configDir 导致 tags.json 写入当前目录")
 		}
 	}
 	t.Log("守卫: NUL configDir 未污染当前目录")

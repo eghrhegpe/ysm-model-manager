@@ -180,9 +180,7 @@ func TestAggregateBlockStatsFromPalette_Valid(t *testing.T) {
 	region := makeMockRegion(t, 3, 3, 3, []string{"air", "minecraft:stone"}, []int64{0x5555555555555555, 0})
 	regions := map[string]any{"Region": region}
 	stats := aggregateBlockStatsFromPalette(regions)
-	if len(stats) == 0 {
-		t.Fatal("期望非空统计")
-	}
+	testutil.Equal(t, len(stats) != 0, true, "期望非空统计")
 	found := false
 	for _, s := range stats {
 		if s.Count > 0 {
@@ -221,9 +219,7 @@ func TestConvertPreviewImage_Valid(t *testing.T) {
 		data[i*4+3] = 32  // B
 	}
 	result := convertPreviewImage(data)
-	if result == "" {
-		t.Fatal("期望非空 base64 data URI")
-	}
+	testutil.Equal(t, result == "", false, "期望非空 base64 data URI")
 	if len(result) < 30 {
 		t.Errorf("结果太短: %d", len(result))
 	}
@@ -496,9 +492,8 @@ func TestParseNbtStructure_BedrockSubLevels(t *testing.T) {
 	testutil.NotNil(t, result, "基岩版 sub_levels 结构应解析成功，得到 nil")
 	// 全局包围盒：min 取各子结构最小、max 取最大 → size = (max-min+1)
 	size, ok := result["size"].([]int)
-	if !ok {
-		t.Fatalf("size 缺失或类型错误: %v", result["size"])
-	}
+	// Equal 失败即 Goexit，守卫语义等价：下方 size 索引解引用仅在其通过后执行
+	testutil.Equal(t, ok, true, "size 缺失或类型错误: %v", result["size"])
 	wantSize := []int{5 - 0 + 1, 6 - 0 + 1, 7 - 0 + 1} // [6, 7, 8]
 	for i := range wantSize {
 		if size[i] != wantSize[i] {
@@ -509,13 +504,9 @@ func TestParseNbtStructure_BedrockSubLevels(t *testing.T) {
 		t.Errorf("blockCount = %v, 期望 6", result["blockCount"])
 	}
 	stats, ok := result["paletteStats"].([]registry.LitematicBlockStat)
-	if !ok {
-		t.Fatalf("paletteStats 缺失或类型错误: %v", result["paletteStats"])
-	}
+	testutil.Equal(t, ok, true, "paletteStats 缺失或类型错误: %v", result["paletteStats"])
 	// 期望按真实方块数降序：dirt×2, oak_log×2, stone×2（Count 相同按名）
-	if len(stats) != 3 {
-		t.Fatalf("paletteStats 长度 = %d, 期望 3（%v）", len(stats), stats)
-	}
+	testutil.Equal(t, len(stats), 3, "paletteStats 长度 = %d, 期望 3（%v）", len(stats), stats)
 	for _, s := range stats {
 		if s.Count != 2 {
 			t.Errorf("paletteStats 条目 %q Count = %d, 期望 2", s.Name, s.Count)
@@ -553,9 +544,7 @@ func TestParseNbtStructure_BedrockPaletteIdOutOfRange(t *testing.T) {
 	result := ParseNbtStructure(path)
 	testutil.NotNil(t, result, "越界 palette_id 不应使解析失败")
 	stats, ok := result["paletteStats"].([]registry.LitematicBlockStat)
-	if !ok {
-		t.Fatalf("paletteStats 缺失: %v", result)
-	}
+	testutil.Equal(t, ok, true, "paletteStats 缺失: %v", result)
 	if len(stats) != 1 || stats[0].Count != 1 {
 		t.Errorf("越界 palette_id 应跳过，仅统计合法引用: %v", stats)
 	}

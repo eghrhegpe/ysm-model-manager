@@ -26,9 +26,8 @@ func TestInvalidateKeyVersion(t *testing.T) {
 	invalidateKeyVersion(key)
 
 	v, ok := keyVersions.Load(key)
-	if !ok {
-		t.Fatal("失效后 key 应存在")
-	}
+	// Equal 失败即 Goexit，守卫语义等价：下方 v.(*atomic.Uint64) 断言仅在其通过后执行
+	testutil.Equal(t, ok, true, "失效后 key 应存在")
 	if got := v.(*atomic.Uint64).Load(); got != 2 {
 		t.Errorf("版本戳 = %d, 期望 2（两次递增）", got)
 	}
@@ -68,9 +67,9 @@ func TestScanEntries_GithubDirSkipped(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	entries := ScanEntries(dir)
-	if len(entries) != 1 || entries[0].Name != "normal.ysm" {
-		t.Fatalf("应只扫到 normal.ysm（.github 跳过）, got %+v", entries)
-	}
+	// OR 型复合条件拆序贯（len 守卫在前——Equal 失败即 Goexit，[0] 解引用仅在其通过后执行）
+	testutil.Equal(t, len(entries), 1, "应只扫到 normal.ysm（.github 跳过）, got %+v", entries)
+	testutil.Equal(t, entries[0].Name, "normal.ysm", "应只扫到 normal.ysm（.github 跳过）, got %+v", entries)
 }
 
 // TestScanEntries_DisabledRestored .disabled 后缀恢复原扩展名（与 .ban 同族）
@@ -83,9 +82,7 @@ func TestScanEntries_DisabledRestored(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	entries := ScanEntries(dir)
-	if len(entries) != 1 {
-		t.Fatalf("应只扫到 model.ysm.disabled（恢复 .ysm）, got %+v", entries)
-	}
+	testutil.Equal(t, len(entries), 1, "应只扫到 model.ysm.disabled（恢复 .ysm）, got %+v", entries)
 	if entries[0].Ext != ".ysm" {
 		t.Errorf("Ext = %q, 期望 .ysm（.disabled 恢复原扩展名）", entries[0].Ext)
 	}
@@ -124,9 +121,7 @@ func TestScanEntries_HashSkippedOversize(t *testing.T) {
 	f.Close()
 
 	entries := ScanEntries(dir)
-	if len(entries) != 1 {
-		t.Fatalf("超大文件仍应是条目, got %d", len(entries))
-	}
+	testutil.Equal(t, len(entries), 1, "超大文件仍应是条目, got %d", len(entries))
 	if entries[0].Hash != "" {
 		t.Errorf("超大文件哈希应为空（跳过）, got %q", entries[0].Hash)
 	}
@@ -188,13 +183,10 @@ func TestScanLocalAuthors_Branches(t *testing.T) {
 		"EntityPlayer": mmdDir,
 		"vrc":          "", // 空 root → 跳过
 	})
-	if len(creators) != 2 {
-		t.Fatalf("应 2 个创作者（作者E 合并类型 / 作者F）, got %d: %+v", len(creators), creators)
-	}
+	testutil.Equal(t, len(creators), 2, "应 2 个创作者（作者E 合并类型 / 作者F）, got %d: %+v", len(creators), creators)
 	e := findCreatorByName(creators, "作者E")
-	if e == nil {
-		t.Fatalf("缺少 作者E: %+v", creators)
-	}
+	// NotNil 失败即 Goexit，守卫语义等价：下方 e.RTypes/e.Desc 解引用仅在其通过后执行
+	testutil.NotNil(t, e, "缺少 作者E: %+v", creators)
 	// 跨类型合并：RTypes 须同时含 ysm 与 EntityPlayer（**顺序无关**的集合断言——
 	// 源码已按 rtype 字典序保证确定性输出，顺序变化不应破坏本用例）；并断言去重后恰 2 项
 	rtSet := map[string]bool{}
@@ -215,9 +207,7 @@ func TestScanLocalAuthors_Branches(t *testing.T) {
 		t.Errorf("作者E Desc = %q, 期望空串（文案归展示层按 _fromLocal 现取当前语言）", e.Desc)
 	}
 	fc := findCreatorByName(creators, "作者F")
-	if fc == nil {
-		t.Fatalf("缺少 作者F: %+v", creators)
-	}
+	testutil.NotNil(t, fc, "缺少 作者F: %+v", creators)
 	if len(fc.RTypes) != 1 || fc.RTypes[0] != "ysm" {
 		t.Errorf("作者F RTypes = %v, 期望 ['ysm']", fc.RTypes)
 	}

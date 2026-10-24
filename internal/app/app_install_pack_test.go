@@ -9,7 +9,6 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"ysm-model-manager/go/logs"
@@ -31,9 +30,7 @@ func packApp(t *testing.T) (*App, string, string) {
 	// mcRoot 命名 .minecraft：installer 的 ContainsMinecraftMarker 守卫要求路径含该段
 	mcRoot := filepath.Join(base, ".minecraft")
 	instVer := filepath.Join(mcRoot, "versions", "TestInst")
-	if err := os.MkdirAll(instVer, 0o755); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.MkdirAll(instVer, 0o755))
 	customDir := filepath.Join(instVer, registry.SubDirMap("ysm"))
 	a := repoApp(t, types.AppConfig{
 		FilesRoot:        base,
@@ -46,24 +43,18 @@ func packApp(t *testing.T) (*App, string, string) {
 	})
 	a.logger = logs.NewLogger(t.TempDir()) // repoApp 不带 logger，推送记账路径需要
 	ysmRoot := filepath.Join(base, registry.GroupStorageRoot("ysm"))
-	if err := os.MkdirAll(ysmRoot, 0o755); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.MkdirAll(ysmRoot, 0o755))
 	return a, ysmRoot, customDir
 }
 
 func assertFileExists(t *testing.T, path string) {
 	t.Helper()
-	if _, err := os.Stat(path); err != nil {
-		t.Fatalf("文件应存在: %s (%v)", path, err)
-	}
+	testutil.FileExists(t, path, "文件应存在: %s", path)
 }
 
 func assertFileAbsent(t *testing.T, path string) {
 	t.Helper()
-	if _, err := os.Stat(path); !os.IsNotExist(err) {
-		t.Fatalf("文件不应存在: %s", path)
-	}
+	testutil.FileNotExists(t, path, "文件不应存在: %s", path)
 }
 
 func TestImportFolderAndPushToInstance_CopyMode(t *testing.T) {
@@ -73,9 +64,7 @@ func TestImportFolderAndPushToInstance_CopyMode(t *testing.T) {
 		{RelPath: "tex/face.png", Base64: b64("png-bytes")},
 	}
 
-	if err := a.ImportFolderAndPushToInstance("狐狸", "", items, "TestInst"); err != nil {
-		t.Fatalf("导入+推送失败: %v", err)
-	}
+	testutil.NoError(t, a.ImportFolderAndPushToInstance("狐狸", "", items, "TestInst"), "导入+推送失败")
 
 	// 仓库落盘（内容推断 ysm 类型 → ysm 根）
 	assertFileExists(t, filepath.Join(ysmRoot, "狐狸", "ysm.json"))
@@ -86,24 +75,20 @@ func TestImportFolderAndPushToInstance_CopyMode(t *testing.T) {
 
 	// 内容一致（copy 语义）
 	got, err := os.ReadFile(filepath.Join(customDir, "狐狸", "ysm.json"))
-	if err != nil || string(got) != `{"formatVersion":"test"}` {
-		t.Fatalf("实例文件内容不一致: %s (%v)", got, err)
-	}
+	testutil.NoError(t, err, "实例文件读取失败") // 前置守卫：读失败即弃权，下一行才比对内容
+	testutil.Equal(t, string(got), `{"formatVersion":"test"}`, "实例文件内容不一致")
 }
 
 func TestImportFileAndPushToInstance_CopyMode(t *testing.T) {
 	a, ysmRoot, customDir := packApp(t)
 
-	if err := a.ImportFileAndPushToInstance("model.ysm", b64("ysm-data"), "TestInst"); err != nil {
-		t.Fatalf("导入+推送失败: %v", err)
-	}
+	testutil.NoError(t, a.ImportFileAndPushToInstance("model.ysm", b64("ysm-data"), "TestInst"), "导入+推送失败")
 
 	assertFileExists(t, filepath.Join(ysmRoot, "model.ysm"))
 	assertFileExists(t, filepath.Join(customDir, "model.ysm"))
 	got, err := os.ReadFile(filepath.Join(customDir, "model.ysm"))
-	if err != nil || string(got) != "ysm-data" {
-		t.Fatalf("实例文件内容不一致: %s (%v)", got, err)
-	}
+	testutil.NoError(t, err, "实例文件读取失败") // 前置守卫：读失败即弃权，下一行才比对内容
+	testutil.Equal(t, string(got), "ysm-data", "实例文件内容不一致")
 }
 
 func TestImportAndPush_UnknownInstance_NoImport(t *testing.T) {
@@ -112,15 +97,11 @@ func TestImportAndPush_UnknownInstance_NoImport(t *testing.T) {
 	err := a.ImportFolderAndPushToInstance("狐狸", "", []types.ImportFileItem{
 		{RelPath: "ysm.json", Base64: b64("{}")},
 	}, "NoSuchInst")
-	if err == nil || !strings.Contains(err.Error(), "未找到整合包") {
-		t.Fatalf("应报「未找到整合包」, got %v", err)
-	}
+	testutil.ErrorContains(t, err, "未找到整合包", "应报「未找到整合包」")
 	assertFileAbsent(t, filepath.Join(ysmRoot, "狐狸"))
 
 	err = a.ImportFileAndPushToInstance("m.ysm", b64("x"), "NoSuchInst")
-	if err == nil || !strings.Contains(err.Error(), "未找到整合包") {
-		t.Fatalf("应报「未找到整合包」, got %v", err)
-	}
+	testutil.ErrorContains(t, err, "未找到整合包", "应报「未找到整合包」")
 	assertFileAbsent(t, filepath.Join(ysmRoot, "m.ysm"))
 }
 
@@ -129,28 +110,20 @@ func TestImportAndPush_NoMcRoot_Rejected(t *testing.T) {
 	a := repoApp(t, types.AppConfig{FilesRoot: base})
 
 	err := a.ImportFileAndPushToInstance("m.ysm", b64("x"), "TestInst")
-	if err == nil || !errors.Is(err, types.ErrMcRootNotSet) {
-		t.Fatalf("应报 ErrMcRootNotSet, got %v", err)
-	}
+	testutil.ErrorIs(t, err, types.ErrMcRootNotSet, "应报 ErrMcRootNotSet")
 	assertFileAbsent(t, filepath.Join(base, registry.GroupStorageRoot("ysm"), "m.ysm"))
 }
 
 func TestImportAndPush_FileExists_NoOverwrite(t *testing.T) {
 	a, _, customDir := packApp(t)
-	if err := a.ImportFileAndPushToInstance("model.ysm", b64("first"), "TestInst"); err != nil {
-		t.Fatalf("首次导入+推送失败: %v", err)
-	}
+	testutil.NoError(t, a.ImportFileAndPushToInstance("model.ysm", b64("first"), "TestInst"), "首次导入+推送失败")
 
 	// 二次导入同名文件：FILE_EXISTS，不覆盖仓库与实例
-	if err := a.ImportFileAndPushToInstance("model.ysm", b64("second"), "TestInst"); err == nil {
-		t.Fatal("重复导入应报 FILE_EXISTS")
-	} else if !strings.Contains(err.Error(), "已存在") {
-		t.Fatalf("应报「文件已存在」, got %v", err)
-	}
+	err := a.ImportFileAndPushToInstance("model.ysm", b64("second"), "TestInst")
+	testutil.ErrorContains(t, err, "已存在", "重复导入应报 FILE_EXISTS，应报「文件已存在」")
 	got, err := os.ReadFile(filepath.Join(customDir, "model.ysm"))
-	if err != nil || string(got) != "first" {
-		t.Fatalf("实例文件不得被覆盖: %s (%v)", got, err)
-	}
+	testutil.NoError(t, err, "实例文件读取失败") // 前置守卫：读失败即弃权，下一行才比对内容
+	testutil.Equal(t, string(got), "first", "实例文件不得被覆盖")
 }
 
 func TestImportFileAndPushToInstance_BareYsmJsonRejected(t *testing.T) {
@@ -176,13 +149,11 @@ func TestImportFileAndPushToInstance_RootLevelModelRejected(t *testing.T) {
 	testutil.NoError(t, err, "GetRepoRoot(mmd) 失败")
 	for _, name := range []string{"char.pmx", "char.pmd"} {
 		err := a.ImportFileAndPushToInstance(name, b64("mmd-bytes"), "TestInst")
-		if err == nil {
-			t.Fatalf("根级单文件 %s 应被拒绝", name)
-		}
+		testutil.NotNil(t, err, "根级单文件 %s 应被拒绝", name)
 		var ae types.AppError
-		if !errors.As(err, &ae) || ae.Code != types.ErrUnsupportedType {
-			t.Fatalf("%s 应报 ErrUnsupportedType（入口前置检查），实际: %v", name, err)
-		}
+		// 拆序贯：先验 errors.As 成立，再比错误码（前失败即 Goexit，短路语义一致）
+		testutil.Equal(t, errors.As(err, &ae), true, "%s 应报 AppError（入口前置检查），实际: %v", name, err)
+		testutil.Equal(t, ae.Code, types.ErrUnsupportedType, "%s 应报 ErrUnsupportedType（入口前置检查），实际: %v", name, err)
 		assertFileAbsent(t, filepath.Join(mmdRoot, name))
 		assertFileAbsent(t, filepath.Join(customDir, name))
 	}
@@ -195,25 +166,21 @@ func TestPushRepoPathToInstance_RootLevelYsmJsonBackstop(t *testing.T) {
 	a, ysmRoot, _ := packApp(t)
 	err := a.pushRepoPathToInstance("ysm", "TestInst", filepath.Join(ysmRoot, "ysm.json"))
 	var ae types.AppError
-	if !errors.As(err, &ae) || ae.Code != types.ErrInvalidPath {
-		t.Fatalf("根级 ysm.json 兜底应拒绝 (ErrInvalidPath), got: %v", err)
-	}
+	// 拆序贯：先验 errors.As 成立，再比错误码（前失败即 Goexit，短路语义一致）
+	testutil.Equal(t, errors.As(err, &ae), true, "根级 ysm.json 兜底应报 AppError, got: %v", err)
+	testutil.Equal(t, ae.Code, types.ErrInvalidPath, "根级 ysm.json 兜底应拒绝 (ErrInvalidPath), got: %v", err)
 }
 
 func TestImportFolderAndPushToInstance_InvalidatesScanCache(t *testing.T) {
 	a, ysmRoot, _ := packApp(t)
 	// 暖缓存：二次扫描命中 30s scanCache
 	scanner.ScanEntriesWithHit(ysmRoot)
-	if _, hit := scanner.ScanEntriesWithHit(ysmRoot); !hit {
-		t.Fatal("暖缓存后二次扫描应命中")
-	}
+	_, hit := scanner.ScanEntriesWithHit(ysmRoot)
+	testutil.Equal(t, hit, true, "暖缓存后二次扫描应命中")
 
 	items := []types.ImportFileItem{{RelPath: "ysm.json", Base64: b64("{}")}}
-	if err := a.ImportFolderAndPushToInstance("狐狸", "", items, "TestInst"); err != nil {
-		t.Fatalf("导入+推送失败: %v", err)
-	}
+	testutil.NoError(t, a.ImportFolderAndPushToInstance("狐狸", "", items, "TestInst"), "导入+推送失败")
 
-	if _, hit := scanner.ScanEntriesWithHit(ysmRoot); hit {
-		t.Fatal("导入成功后扫描缓存应已失效")
-	}
+	_, hit = scanner.ScanEntriesWithHit(ysmRoot)
+	testutil.Equal(t, hit, false, "导入成功后扫描缓存应已失效")
 }

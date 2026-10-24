@@ -67,9 +67,7 @@ func TestParseYSMJSONAuthors(t *testing.T) {
 	}
 
 	authors := parseYSMJSONAuthors(files)
-	if len(authors) != 2 {
-		t.Fatalf("解析作者数=%d, 期望 2", len(authors))
-	}
+	testutil.Equal(t, len(authors), 2, "解析作者数=%d, 期望 2", len(authors))
 	if authors[0].Name != "Alice" || authors[0].Avatar != "avatar/alice.png" {
 		t.Errorf("authors[0]=%+v, 期望 Alice/avatar/alice.png", authors[0])
 	}
@@ -100,9 +98,8 @@ func TestParseMetadataAuthors(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			authors, err := parseMetadataAuthors([]byte(c.in))
-			if (err != nil) != c.wantErr {
-				t.Fatalf("parseMetadataAuthors err=%v, wantErr=%v", err, c.wantErr)
-			}
+			// XOR 复合布尔化：err 有无与 wantErr 须一致，保真原判据
+			testutil.Equal(t, (err != nil) != c.wantErr, false, "parseMetadataAuthors err=%v, wantErr=%v", err, c.wantErr)
 			if len(authors) != c.want {
 				t.Errorf("作者数=%d, 期望 %d (authors=%+v)", len(authors), c.want, authors)
 			}
@@ -110,9 +107,9 @@ func TestParseMetadataAuthors(t *testing.T) {
 	}
 	// 字段透传：authorEntry 的 Name/Role/Avatar 一一对应
 	authors, err := parseMetadataAuthors([]byte(`{"metadata":{"authors":[{"name":"Alice","role":"md","avatar":"avatar/a.png"}]}}`))
-	if err != nil || len(authors) != 1 {
-		t.Fatalf("正常解析失败: err=%v authors=%+v", err, authors)
-	}
+	// OR 拆序贯：err 与作者数分别断言（len==1 先保证，后方 [0] 索引才安全）
+	testutil.NoError(t, err, "正常解析失败: authors=%+v", authors)
+	testutil.Equal(t, len(authors), 1, "正常解析失败: err=%v authors=%+v", err, authors)
 	if authors[0] != (authorEntry{Name: "Alice", Role: "md", Avatar: "avatar/a.png"}) {
 		t.Errorf("authorEntry 字段透传错误: %+v", authors[0])
 	}
@@ -160,9 +157,7 @@ func TestMatchAvatarByAuthor(t *testing.T) {
 
 	// 命中：作者存在且头像文件存在 → 返回非空 data URI
 	got := matchAvatarByAuthor(files, authors, SafeName("Alice"))
-	if got == "" {
-		t.Fatal("匹配 Alice 期望非空结果")
-	}
+	testutil.Equal(t, got != "", true, "匹配 Alice 期望非空结果")
 	if !strings.HasPrefix(got, "data:") {
 		t.Errorf("返回值 %q 应为 data URI", got)
 	}
@@ -182,9 +177,8 @@ func TestExtractFallbackAvatarFromDir(t *testing.T) {
 		ysmFileFromStr("avatar/face.png", "\x89PNG..."),
 		ysmFileFromStr("model.pmx", "binary"),
 	}
-	if got := extractFallbackAvatarFromDir(files, "Alice"); got == "" {
-		t.Fatal("降级路径期望命中 avatar/face.png")
-	}
+	gotFallback := extractFallbackAvatarFromDir(files, "Alice")
+	testutil.Equal(t, gotFallback != "", true, "降级路径期望命中 avatar/face.png")
 
 	// 无 avatar/ 目录图片 → 返回空
 	noAvatar := []ysm.DecodedFile{ysmFileFromStr("model.pmx", "binary")}

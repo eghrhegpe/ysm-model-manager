@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"testing"
 	"ysm-model-manager/internal/testutil"
@@ -30,13 +29,9 @@ func TestOrderTexByYSM(t *testing.T) {
 
 	gotNames, gotData := orderTexByYSM(names, data, ysm)
 	wantNames := []string{"default", "arrow", "default2"} // default_texture 置首，其余按声明序
-	if !reflect.DeepEqual(gotNames, wantNames) {
-		t.Fatalf("orderTexByYSM names = %v, want %v", gotNames, wantNames)
-	}
+	testutil.Equal(t, gotNames, wantNames, "orderTexByYSM names")
 	wantData := []string{"data:default", "data:arrow", "data:default2"}
-	if !reflect.DeepEqual(gotData, wantData) {
-		t.Fatalf("orderTexByYSM data 与 names 不同步: %v, want %v", gotData, wantData)
-	}
+	testutil.Equal(t, gotData, wantData, "orderTexByYSM data 与 names 不同步")
 }
 
 // 无 ysm.json / 无声明序时保持原序（兼容无引导的模型）
@@ -44,13 +39,11 @@ func TestOrderTexByYSM_NoYSM(t *testing.T) {
 	names := []string{"arrow", "default"}
 	data := []string{"data:arrow", "data:default"}
 	gotNames, gotData := orderTexByYSM(names, data, nil)
-	if !reflect.DeepEqual(gotNames, names) || !reflect.DeepEqual(gotData, data) {
-		t.Fatalf("无 ysm.json 时应保持原序: %v / %v", gotNames, gotData)
-	}
+	testutil.Equal(t, gotNames, names, "无 ysm.json 时应保持原序 (names)")
+	testutil.Equal(t, gotData, data, "无 ysm.json 时应保持原序 (data)")
 	gotNames, gotData = orderTexByYSM(names, data, []byte(`{"files":{}}`))
-	if !reflect.DeepEqual(gotNames, names) || !reflect.DeepEqual(gotData, data) {
-		t.Fatalf("无 texture 声明时应保持原序: %v / %v", gotNames, gotData)
-	}
+	testutil.Equal(t, gotNames, names, "无 texture 声明时应保持原序 (names)")
+	testutil.Equal(t, gotData, data, "无 texture 声明时应保持原序 (data)")
 }
 
 // 未在声明序中的纹理（头像等）被排除（与前端 buildOrderedTexKeys 一致：只保留声明贴图）
@@ -64,9 +57,7 @@ func TestOrderTexByYSM_UnlistedTail(t *testing.T) {
 	data := []string{"d:a", "d:d", "d:v"}
 	gotNames, _ := orderTexByYSM(names, data, ysm)
 	wantNames := []string{"default"}
-	if !reflect.DeepEqual(gotNames, wantNames) {
-		t.Fatalf("orderTexByYSM = %v, want %v", gotNames, wantNames)
-	}
+	testutil.Equal(t, gotNames, wantNames, "orderTexByYSM")
 }
 
 // 加密模型等无 ysm.json 声明序时：按像素面积降序（主纹理最大置首，修复 arrow 首位贴错）
@@ -88,57 +79,38 @@ func TestOrderTexBySize(t *testing.T) {
 	datas := []string{"d:arrow", "d:texture"}
 	gotNames, gotData := orderTexBySize(names, datas, items)
 	wantNames := []string{"texture", "arrow"} // 512×512 主纹理置首
-	if !reflect.DeepEqual(gotNames, wantNames) {
-		t.Fatalf("orderTexBySize = %v, want %v", gotNames, wantNames)
-	}
-	if !reflect.DeepEqual(gotData, []string{"d:texture", "d:arrow"}) {
-		t.Fatalf("orderTexBySize data 不同步: %v", gotData)
-	}
+	testutil.Equal(t, gotNames, wantNames, "orderTexBySize")
+	testutil.Equal(t, gotData, []string{"d:texture", "d:arrow"}, "orderTexBySize data 不同步")
 	// 单纹理不动
 	gotNames, _ = orderTexBySize(names[:1], datas[:1], items[:1])
-	if gotNames[0] != "arrow" {
-		t.Fatalf("单纹理应保持原序: %v", gotNames)
-	}
+	testutil.Equal(t, gotNames, []string{"arrow"}, "单纹理应保持原序")
 }
 
 // imagePixelArea：PNG/JPEG 尺寸解析 + 无法解析返回 0
 func TestImagePixelArea(t *testing.T) {
-	if got := imagePixelArea([]byte{1, 2, 3}); got != 0 {
-		t.Fatalf("非图片应返回 0, got %d", got)
-	}
+	testutil.Equal(t, imagePixelArea([]byte{1, 2, 3}), 0, "非图片应返回 0")
 	// JPEG: FFD8 + APP0（长度 16 = 2 字节长度字段 + 14 字节 JFIF 数据）+ SOF0 段
 	jpg := []byte{0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 'J', 'F', 'I', 'F', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 		0xFF, 0xC0, 0x00, 0x11, 0x08, 0x02, 0x00, 0x01, 0x00}
 	// SOF0: 高 0x0200=512（offset i+5），宽 0x0100=256（offset i+7）
-	if got := imagePixelArea(jpg); got != 512*256 {
-		t.Fatalf("JPEG 尺寸解析 = %d, want %d", got, 512*256)
-	}
+	testutil.Equal(t, imagePixelArea(jpg), 512*256, "JPEG 尺寸解析")
 }
 
 // ===== wasm_decoder.go（ADR-316 wazero 内存直解）解码路径测试 =====
 
 // TestRunYSMDecode_NilInput 测试 nil 输入（wazero 路径：parser abort → error → nil）
 func TestRunYSMDecode_NilInput(t *testing.T) {
-	result := runYSMDecode(nil)
-	if result != nil {
-		t.Fatalf("nil 输入应返回 nil, got %v", result)
-	}
+	testutil.Nil(t, runYSMDecode(nil), "nil 输入应返回 nil")
 }
 
 // TestRunYSMDecode_EmptyInput 测试空输入
 func TestRunYSMDecode_EmptyInput(t *testing.T) {
-	result := runYSMDecode([]byte{})
-	if result != nil {
-		t.Fatalf("空输入应返回 nil, got %v", result)
-	}
+	testutil.Nil(t, runYSMDecode([]byte{}), "空输入应返回 nil")
 }
 
 // TestRunYSMDecode_InvalidYSM 测试无效 .ysm 数据
 func TestRunYSMDecode_InvalidYSM(t *testing.T) {
-	result := runYSMDecode([]byte("not a ysm file"))
-	if result != nil {
-		t.Fatalf("无效输入应返回 nil, got %v", result)
-	}
+	testutil.Nil(t, runYSMDecode([]byte("not a ysm file")), "无效输入应返回 nil")
 }
 
 // TestRunYSMDecode_RingLogWired 环形日志接线回归锁（ADR-316 D2：noeh abort
@@ -156,44 +128,32 @@ func TestRunYSMDecode_RingLogWired(t *testing.T) {
 	runYSMDecode([]byte("not a ysm file"))
 
 	out := captured.String()
-	if !strings.Contains(out, "[ysm-wasi]") {
-		t.Fatalf("解码失败未落 [ysm-wasi] 前缀日志（环形日志面板将无法按 tag 检索）: %q", out)
-	}
-	if !strings.Contains(out, "失败") {
-		t.Fatalf("日志缺「失败」标记（级别推断将降为 info 而非 error）: %q", out)
-	}
+	testutil.Equal(t, strings.Contains(out, "[ysm-wasi]"), true, "解码失败未落 [ysm-wasi] 前缀日志（环形日志面板将无法按 tag 检索）: %q", out)
+	testutil.Equal(t, strings.Contains(out, "失败"), true, "日志缺「失败」标记（级别推断将降为 info 而非 error）: %q", out)
 }
 
 // TestDecodeYSMViaWASI_NilInput 测试 nil 输入
 func TestDecodeYSMViaWASI_NilInput(t *testing.T) {
-	result := decodeYSMViaWASI(nil)
-	if result != nil {
-		t.Fatalf("nil 输入应返回 nil, got %v", result)
-	}
+	testutil.Nil(t, decodeYSMViaWASI(nil), "nil 输入应返回 nil")
 }
 
 // TestDecodeYSMViaWASI_EmptyInput 测试空输入
 func TestDecodeYSMViaWASI_EmptyInput(t *testing.T) {
-	result := decodeYSMViaWASI([]byte{})
-	if result != nil {
-		t.Fatalf("空输入应返回 nil, got %v", result)
-	}
+	testutil.Nil(t, decodeYSMViaWASI([]byte{}), "空输入应返回 nil")
 }
 
 // TestDecodeYSMComponentsViaWASI_NilInput 测试 nil 输入
 func TestDecodeYSMComponentsViaWASI_NilInput(t *testing.T) {
 	comps, names := decodeYSMComponentsViaWASI(nil)
-	if comps != nil || names != nil {
-		t.Fatalf("nil 输入应返回 (nil, nil), got (%v, %v)", comps, names)
-	}
+	testutil.Nil(t, comps, "nil 输入应返回 (nil, nil)")
+	testutil.Nil(t, names, "nil 输入应返回 (nil, nil)")
 }
 
 // TestDecodeYSMComponentsViaWASI_EmptyInput 测试空输入
 func TestDecodeYSMComponentsViaWASI_EmptyInput(t *testing.T) {
 	comps, names := decodeYSMComponentsViaWASI([]byte{})
-	if comps != nil || names != nil {
-		t.Fatalf("空输入应返回 (nil, nil), got (%v, %v)", comps, names)
-	}
+	testutil.Nil(t, comps, "空输入应返回 (nil, nil)")
+	testutil.Nil(t, names, "空输入应返回 (nil, nil)")
 }
 
 // TestDecodeYSMComponentsViaWASI_ValidYSM 构造最小合法 .ysm 验证多组件解码
@@ -242,9 +202,7 @@ func TestDecodeYSMComponentsViaWASI_ValidYSM(t *testing.T) {
 
 	// 解码成功时验证结构
 	if comps != nil {
-		if len(comps) < 1 {
-			t.Fatalf("期望至少 1 个组件, got %d", len(comps))
-		}
+		testutil.Equal(t, len(comps) >= 1, true, "期望至少 1 个组件")
 		// main.json 应被识别为主组件
 		foundMain := false
 		for _, c := range comps {

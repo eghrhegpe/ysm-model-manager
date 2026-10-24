@@ -193,12 +193,9 @@ func TestAssetPattern_WindowsFormat(t *testing.T) {
 	p := assetPattern()
 	// assetPattern 用 Sprintf 直接拼出具体 asset 名（无占位符），
 	// 应包含平台名与资产后缀（v1.13.0 起 Windows 为裸 exe）
-	if !strings.Contains(p, runtime.GOOS) {
-		t.Fatalf("assetPattern 应包含当前平台 %q, got %q", runtime.GOOS, p)
-	}
-	if !strings.HasSuffix(p, ".exe") && !strings.HasSuffix(p, ".tar.gz") {
-		t.Fatalf("assetPattern 应包含资产后缀, got %q", p)
-	}
+	testutil.Equal(t, strings.Contains(p, runtime.GOOS), true, "assetPattern 应包含当前平台 %q, got %q", runtime.GOOS, p)
+	// AND 全真才失败型：保留单一复合布尔断言（原 if !HasSuffix && !HasSuffix）
+	testutil.Equal(t, !strings.HasSuffix(p, ".exe") && !strings.HasSuffix(p, ".tar.gz"), false, "assetPattern 应包含资产后缀, got %q", p)
 	t.Logf("INFO(INFO-ASSET): assetPattern=%s", p)
 }
 
@@ -247,7 +244,8 @@ func TestDownloadOnce_TruncatedTransfer(t *testing.T) {
 		return
 	}
 	os.Remove(path)
-	t.Fatalf("BUG(INFO-TRUNC): downloadOnce 接受截断传输（Content-Length 100 实际 5 字节），损坏包被装盘")
+	// 该分支 err 恒为 nil，NotNil 必失败——保真原 t.Fatalf + 前置清理副作用
+	testutil.NotNil(t, err, "BUG(INFO-TRUNC): downloadOnce 接受截断传输（Content-Length 100 实际 5 字节），损坏包被装盘")
 }
 
 // ---------- 12. 超大 Content-Length ----------
@@ -278,9 +276,7 @@ func TestDownloadOnce_HashMismatch(t *testing.T) {
 
 	_, err := downloadOnce(server.URL, "nonexistenthash", nil)
 	testutil.NotNil(t, err, "SHA256 不匹配应被拒绝")
-	if !strings.Contains(err.Error(), "SHA256") {
-		t.Fatalf("SHA256 不匹配应返回 SHA256 错误, 实际: %v", err)
-	}
+	testutil.ErrorContains(t, err, "SHA256", "SHA256 不匹配应返回 SHA256 错误, 实际: %v", err)
 	t.Logf("FIXED(INFO-HASH): SHA256 不匹配被拒绝: %v", err)
 }
 
@@ -295,9 +291,7 @@ func TestDownloadOnce_InfiniteRedirect(t *testing.T) {
 
 	// Go http.Client 默认最多跟随 10 次重定向，第 10 次返回错误
 	_, err := downloadOnce(server.URL, "", nil)
-	if err == nil {
-		t.Fatalf("BUG(INFO-REDIR-LOOP): 无限重定向未被拒绝")
-	}
+	testutil.NotNil(t, err, "BUG(INFO-REDIR-LOOP): 无限重定向未被拒绝")
 	if errors.Is(err, http.ErrUseLastResponse) {
 		t.Logf("守卫: 无限重定向被 Go http 拒绝: %v", err)
 	} else {

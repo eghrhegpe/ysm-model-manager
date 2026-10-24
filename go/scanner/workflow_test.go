@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types/registry"
 )
 
@@ -85,7 +86,8 @@ func extractWorkflowGenIndex(t *testing.T, wf string) string {
 		}
 	}
 	if start < 0 {
-		t.Fatalf("workflow 内找不到 heredoc 起始行 %q", begin)
+		// 护栏（到达即失败）：Equal 恒失败即 Goexit，与原 t.Fatalf 终止语义等价
+		testutil.Equal(t, false, true, "workflow 内找不到 heredoc 起始行 %q", begin)
 	}
 	indent := ""
 	for _, l := range lines[start:] {
@@ -103,9 +105,8 @@ func extractWorkflowGenIndex(t *testing.T, wf string) string {
 		}
 		body = append(body, strings.TrimPrefix(l, indent))
 	}
-	if !closed {
-		t.Fatal("workflow 内 heredoc 未闭合（缺终止行）")
-	}
+	// 失败条件 = !closed：Equal 失败即 Goexit，与原 t.Fatal 终止语义等价
+	testutil.Equal(t, !closed, false, "workflow 内 heredoc 未闭合（缺终止行）")
 	return strings.Join(body, "\n")
 }
 
@@ -142,12 +143,8 @@ func TestGenerateIndexWorkflow_MatchesScanEntries(t *testing.T) {
 	}
 	for _, rel := range fixtureFiles {
 		p := filepath.Join(fixture, filepath.FromSlash(rel))
-		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
-			t.Fatalf("MkdirAll(%s): %v", p, err)
-		}
-		if err := os.WriteFile(p, []byte("{}"), 0o644); err != nil {
-			t.Fatalf("WriteFile(%s): %v", p, err)
-		}
+		testutil.NoError(t, os.MkdirAll(filepath.Dir(p), 0o755), "MkdirAll(%s)", p)
+		testutil.NoError(t, os.WriteFile(p, []byte("{}"), 0o644), "WriteFile(%s)", p)
 	}
 
 	// Go 侧基准（应用内 GenerateRepoIndex 的条目口径，不经磁盘 index.json）
@@ -167,34 +164,26 @@ func TestGenerateIndexWorkflow_MatchesScanEntries(t *testing.T) {
 		{Path: "GroupC/ysm.json.disabled", Name: "ysm.json.disabled"},
 		{Path: "ysm.json", Name: filepath.Base(fixture)},
 	} {
-		if !slices.Contains(want, must) {
-			t.Fatalf("Go 侧基准缺 %+v（夹具或 ScanEntries 口径异常）: %+v", must, want)
-		}
+		testutil.Equal(t, slices.Contains(want, must), true, "Go 侧基准缺 %+v（夹具或 ScanEntries 口径异常）: %+v", must, want)
 	}
 
 	// 真跑模板内嵌的 CI 脚本
 	genSrc := extractWorkflowGenIndex(t, buildGenerateIndexWorkflow())
 	genDir := t.TempDir()
 	genPath := filepath.Join(genDir, "genindex.go")
-	if err := os.WriteFile(genPath, []byte(genSrc), 0o644); err != nil {
-		t.Fatalf("写出抽取的 genindex.go: %v", err)
-	}
+	testutil.NoError(t, os.WriteFile(genPath, []byte(genSrc), 0o644), "写出抽取的 genindex.go")
 	cmd := exec.Command("go", "run", genPath)
 	cmd.Dir = fixture
-	if out, err := cmd.CombinedOutput(); err != nil {
-		t.Fatalf("模板内嵌 CI 脚本执行失败: %v\n%s", err, out)
-	}
+	// out 无条件求值安全（CombinedOutput 已执行完）：err 非 nil 时 NoError 消息附模板输出
+	out, err := cmd.CombinedOutput()
+	testutil.NoError(t, err, "模板内嵌 CI 脚本执行失败: %s", out)
 	raw, err := os.ReadFile(filepath.Join(fixture, "index.json"))
-	if err != nil {
-		t.Fatalf("CI 未产出 index.json: %v", err)
-	}
+	testutil.NoError(t, err, "CI 未产出 index.json")
 	var ci []struct {
 		Path string `json:"path"`
 		Name string `json:"name"`
 	}
-	if err := json.Unmarshal(raw, &ci); err != nil {
-		t.Fatalf("index.json 解析失败: %v", err)
-	}
+	testutil.NoError(t, json.Unmarshal(raw, &ci), "index.json 解析失败")
 	got := make([]item, 0, len(ci))
 	for _, e := range ci {
 		got = append(got, item{Path: e.Path, Name: e.Name})

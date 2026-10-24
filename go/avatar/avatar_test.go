@@ -28,9 +28,7 @@ func TestSafeName(t *testing.T) {
 
 func TestCacheDir(t *testing.T) {
 	dir := CacheDir()
-	if dir == "" {
-		t.Fatal("CacheDir() returned empty")
-	}
+	testutil.Equal(t, dir != "", true, "CacheDir() returned empty")
 }
 
 func TestReadCachedAvatarMissing(t *testing.T) {
@@ -40,9 +38,7 @@ func TestReadCachedAvatarMissing(t *testing.T) {
 
 	result, err := ReadCachedAvatar("nonexistent")
 	testutil.NoError(t, err, "expected no error, got")
-	if result != "" {
-		t.Fatalf("expected empty, got %q", result)
-	}
+	testutil.Equal(t, result, "", "expected empty, got %q", result)
 }
 
 func TestSaveAndReadCachedAvatar(t *testing.T) {
@@ -52,15 +48,11 @@ func TestSaveAndReadCachedAvatar(t *testing.T) {
 	defer func() { CacheDir = old }()
 
 	dataURI := SaveAvatarData("testuser", []byte("fake-png-data"), "image/png")
-	if dataURI == "" {
-		t.Fatal("SaveAvatarData returned empty")
-	}
+	testutil.Equal(t, dataURI != "", true, "SaveAvatarData returned empty")
 
 	result, err := ReadCachedAvatar("testuser")
 	testutil.NoError(t, err, "ReadCachedAvatar error")
-	if result == "" {
-		t.Fatal("ReadCachedAvatar returned empty after save")
-	}
+	testutil.Equal(t, result != "", true, "ReadCachedAvatar returned empty after save")
 }
 
 func TestReadFileFromContainer(t *testing.T) {
@@ -75,16 +67,12 @@ func TestReadFileFromContainer(t *testing.T) {
 	defer r.Close()
 	data := ReadFileFromContainer(r, "test.png")
 	testutil.NotNil(t, data, "ReadFileFromContainer returned nil")
-	if string(data) != "png-data" {
-		t.Fatalf("got %q, want %q", string(data), "png-data")
-	}
+	testutil.Equal(t, string(data), "png-data", "got %q, want %q", string(data), "png-data")
 }
 
 func TestExtractAvatarURIInvalidPath(t *testing.T) {
 	result := ExtractAvatarURI("/nonexistent/file.ysm", "test")
-	if result != "" {
-		t.Fatalf("expected empty, got %q", result)
-	}
+	testutil.Equal(t, result, "", "expected empty, got %q", result)
 }
 
 func TestCacheAvatarsFromJSON(t *testing.T) {
@@ -103,9 +91,7 @@ func TestCacheAvatarsFromJSON(t *testing.T) {
 	CacheAvatarsFromJSON(jsonPath)
 
 	cachedPath := filepath.Join(CacheDir(), "testuser.png")
-	if _, err := os.Stat(cachedPath); err != nil {
-		t.Fatalf("cached file not found: %v", err)
-	}
+	testutil.FileExists(t, cachedPath, "cached file not found")
 }
 
 // ====== ExtractAvatarURI ======
@@ -132,9 +118,7 @@ func TestExtractAvatarURI_FromZip(t *testing.T) {
 	}
 
 	result := ExtractAvatarURI(zipPath, "测试用户")
-	if result == "" {
-		t.Fatal("expected non-empty data URI")
-	}
+	testutil.Equal(t, result != "", true, "expected non-empty data URI")
 	if !strings.HasPrefix(result, "data:image/png;base64,") {
 		t.Errorf("expected PNG data URI, got %q", result)
 	}
@@ -163,9 +147,7 @@ func TestExtractAvatarURI_FromZipBareName(t *testing.T) {
 	}
 
 	result := ExtractAvatarURI(zipPath, "测试用户")
-	if result == "" {
-		t.Fatal("裸文件名 avatar 应仍能提取头像, 得到空")
-	}
+	testutil.Equal(t, result != "", true, "裸文件名 avatar 应仍能提取头像, 得到空")
 	if !strings.HasPrefix(result, "data:image/png;base64,") {
 		t.Errorf("expected PNG data URI, got %q", result)
 	}
@@ -193,9 +175,7 @@ func TestExtractAvatarURI_FromZipNoMatch(t *testing.T) {
 
 	// 请求不存在的用户 → authors 非空且用户不在列表 → 不降级（对齐 .ysm 分支）→ 空
 	result := ExtractAvatarURI(zipPath, "不存在用户")
-	if result != "" {
-		t.Fatalf("authors 非空请求不存在用户应返回空（对齐 .ysm 不降级）, 得到 %q", result)
-	}
+	testutil.Equal(t, result, "", "authors 非空请求不存在用户应返回空（对齐 .ysm 不降级）, 得到 %q", result)
 }
 
 func TestExtractAvatarURI_FromZipBadData(t *testing.T) {
@@ -227,9 +207,7 @@ func TestExtractAvatarURI_FromJSON(t *testing.T) {
 	}
 
 	result := ExtractAvatarURI(jsonPath, "张三")
-	if result == "" {
-		t.Fatal("expected non-empty data URI")
-	}
+	testutil.Equal(t, result != "", true, "expected non-empty data URI")
 	if !strings.HasPrefix(result, "data:image/png;base64,") {
 		t.Errorf("expected PNG data URI, got %q", result)
 	}

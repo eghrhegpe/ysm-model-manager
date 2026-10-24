@@ -26,16 +26,12 @@ func TestCaseSiblingWarnings_Pure(t *testing.T) {
 		"ysm/solo": {"ysm/solo": {}}, // 单原路径 → 不得告警
 	}
 	got := caseSiblingWarnings(groups)
-	if len(got) != 2 {
-		t.Fatalf("期望 2 条告警（pack 组 + anim 组），实际 %d：%v", len(got), got)
-	}
+	testutil.Equal(t, len(got), 2, "期望 2 条告警（pack 组 + anim 组），实际 %d：%v", len(got), got)
 	// 确定性排序：按折叠键（mmd/anim < mmd/pack）
-	if !strings.Contains(got[0], "mmd/anim") {
-		t.Fatalf("第 1 条应为 anim 组（折叠键序）：%v", got)
-	}
-	if !strings.Contains(got[1], "mmd/Pack") || !strings.Contains(got[1], "mmd/pack") {
-		t.Fatalf("第 2 条应为 pack 组且点名组内首末原路径：%v", got)
-	}
+	// 序贯拆分：前一 Equal 失败即 Goexit，[0]/[1] 索引才安全
+	testutil.Equal(t, strings.Contains(got[0], "mmd/anim"), true, "第 1 条应为 anim 组（折叠键序）：%v", got)
+	testutil.Equal(t, strings.Contains(got[1], "mmd/Pack"), true, "第 2 条应为 pack 组且点名组内首末原路径：%v", got)
+	testutil.Equal(t, strings.Contains(got[1], "mmd/pack"), true, "第 2 条应为 pack 组且点名组内首末原路径：%v", got)
 }
 
 // ② 常规仓库树（无孪生）：Audit 不得发大小写告警（Windows 主战场零误报锁）。
@@ -47,13 +43,9 @@ func TestAudit_CaseSiblingNoFalsePositive(t *testing.T) {
 	testutil.WriteTestFile(t, filepath.Join(root, "ysm", "model.ysm"), "x")
 
 	res, err := AuditCtx(context.Background(), root)
-	if err != nil {
-		t.Fatalf("Audit 失败: %v", err)
-	}
+	testutil.NoError(t, err, "Audit 失败")
 	for _, w := range res.Warnings {
-		if strings.Contains(w, "大小写孪生") {
-			t.Fatalf("常规树误报大小写孪生告警：%v", res.Warnings)
-		}
+		testutil.Equal(t, strings.Contains(w, "大小写孪生"), false, "常规树误报大小写孪生告警：%v", res.Warnings)
 	}
 }
 
@@ -62,9 +54,8 @@ func TestCaseSiblingWarnings_SingleNameSilent(t *testing.T) {
 	groups := map[string]map[string]struct{}{
 		"a": {"a": {}},
 	}
-	if got := caseSiblingWarnings(groups); len(got) != 0 {
-		t.Fatalf("单原路径组不得告警：%v", got)
-	}
+	got := caseSiblingWarnings(groups)
+	testutil.Equal(t, len(got), 0, "单原路径组不得告警：%v", got)
 }
 
 // ④ 祖先目录大小写分叉（2026-10-14 扩面）：A/x.ysm 与 a/x.ysm 小写相对路径同键，
@@ -74,12 +65,10 @@ func TestCaseSiblingWarnings_AncestorCaseSplit(t *testing.T) {
 		"a/x.ysm": {"A/x.ysm": {}, "a/x.ysm": {}},
 	}
 	got := caseSiblingWarnings(groups)
-	if len(got) != 1 {
-		t.Fatalf("祖先分叉须 1 条告警，实际 %d：%v", len(got), got)
-	}
-	if !strings.Contains(got[0], "A/x.ysm") || !strings.Contains(got[0], "a/x.ysm") {
-		t.Fatalf("告警须点名两侧原路径：%v", got)
-	}
+	testutil.Equal(t, len(got), 1, "祖先分叉须 1 条告警，实际 %d：%v", len(got), got)
+	// OR 拆序贯：len==1 已由上一 Equal 保证（失败即 Goexit），[0] 索引安全
+	testutil.Equal(t, strings.Contains(got[0], "A/x.ysm"), true, "告警须点名两侧原路径：%v", got)
+	testutil.Equal(t, strings.Contains(got[0], "a/x.ysm"), true, "告警须点名两侧原路径：%v", got)
 }
 
 func mkdirAll(t *testing.T, p string) {

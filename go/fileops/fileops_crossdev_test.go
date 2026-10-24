@@ -33,9 +33,8 @@ func TestMoveModelFile_CrossDeviceFallback(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 
-	if err := MoveModelFile(dir, src, dstDir); err != nil {
-		t.Fatalf("跨设备 fallback 失败: %v", err)
-	}
+	err := MoveModelFile(dir, src, dstDir)
+	testutil.NoError(t, err, "跨设备 fallback 失败")
 	// 目标存在且内容一致
 	dst := filepath.Join(dstDir, "m.ysm")
 	got, err := os.ReadFile(dst)
@@ -60,9 +59,8 @@ func TestMoveModelFile_CrossDeviceBannedKeepsSuffix(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 
-	if err := MoveModelFile(dir, src, dstDir); err != nil {
-		t.Fatalf("跨设备 fallback 失败: %v", err)
-	}
+	err := MoveModelFile(dir, src, dstDir)
+	testutil.NoError(t, err, "跨设备 fallback 失败")
 	dst := filepath.Join(dstDir, "m.ysm.disabled")
 	if _, err := os.Stat(dst); err != nil {
 		t.Errorf("禁用态后缀未保留（目标 m.ysm.disabled 缺失）: %v", err)
@@ -87,9 +85,8 @@ func TestMoveModelFile_CrossDeviceIgnoresUnrelatedBanSibling(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 
-	if err := MoveModelFile(dir, src, dstDirOf(t, dir)); err != nil {
-		t.Fatalf("跨设备 fallback 失败: %v", err)
-	}
+	err := MoveModelFile(dir, src, dstDirOf(t, dir))
+	testutil.NoError(t, err, "跨设备 fallback 失败")
 	// 兄弟 .disabled 未被删除（源侧保留）
 	if _, err := os.Stat(banSibling); err != nil {
 		t.Errorf("无关兄弟 .disabled 不应被删除: %v", err)
@@ -123,9 +120,8 @@ func TestMoveModelFile_CrossDeviceBannedDirKeepsSuffix(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	dstDir := filepath.Join(dir, "sub")
-	if err := MoveModelFile(dir, srcDir, dstDir); err != nil {
-		t.Fatalf("跨设备 fallback 失败: %v", err)
-	}
+	err := MoveModelFile(dir, srcDir, dstDir)
+	testutil.NoError(t, err, "跨设备 fallback 失败")
 	if _, err := os.Stat(filepath.Join(dstDir, "modelA.disabled", "m.ysm")); err != nil {
 		t.Errorf("整组禁用后缀未保留: %v", err)
 	}
@@ -147,9 +143,8 @@ func TestMoveModelFile_CrossDeviceDirNestedBanSurvives(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	dstDir := filepath.Join(dir, "sub")
-	if err := MoveModelFile(dir, srcDir, dstDir); err != nil {
-		t.Fatalf("跨设备 fallback 失败: %v", err)
-	}
+	err := MoveModelFile(dir, srcDir, dstDir)
+	testutil.NoError(t, err, "跨设备 fallback 失败")
 	if _, err := os.Stat(filepath.Join(dstDir, "modelA", "loose.ysm.disabled")); err != nil {
 		t.Errorf("嵌套 .disabled 未保留: %v", err)
 	}

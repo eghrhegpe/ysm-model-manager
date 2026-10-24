@@ -133,9 +133,7 @@ func TestSaveAppConfigPatch_LinkModeValidatedAndSynced(t *testing.T) {
 
 	// 合法值：落盘 + 同步 installer
 	ok := "hardlink"
-	if err := a.SaveAppConfigPatch(types.AppConfigPatch{LinkMode: &ok}); err != nil {
-		t.Fatalf("合法 linkMode patch 报错: %v", err)
-	}
+	testutil.NoError(t, a.SaveAppConfigPatch(types.AppConfigPatch{LinkMode: &ok}), "合法 linkMode patch 报错")
 	if got := a.LoadAppConfig().LinkMode; got != "hardlink" {
 		t.Errorf("合法 linkMode 未落盘: got %q want %q", got, "hardlink")
 	}

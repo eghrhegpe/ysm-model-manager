@@ -187,9 +187,7 @@ func TestScanFiles_Valid(t *testing.T) {
 	}
 
 	entries := ScanFiles(dir)
-	if len(entries) != 4 {
-		t.Fatalf("期望 4 个条目, 得到 %d: %v", len(entries), entries)
-	}
+	testutil.Equal(t, len(entries), 4, "期望 4 个条目, 得到 %d: %v", len(entries), entries)
 	extMap := make(map[string]bool)
 	for _, e := range entries {
 		extMap[filepath.Ext(e.Path)] = true
@@ -251,9 +249,8 @@ func TestScanModelTexSizes_WithEntries(t *testing.T) {
 		{Path: "/nonexistent/file.7z", Name: "missing.7z"},
 	}
 	results := ScanModelTexSizes(entries)
-	if len(results) != 3 {
-		t.Fatalf("期望 3 个结果, 得到 %d", len(results))
-	}
+	// 守卫下方 results[0]/[1] 索引
+	testutil.Equal(t, len(results), 3, "期望 3 个结果, 得到 %d", len(results))
 	// zip 文件应能提取纹理尺寸
 	if results[0].TexWidth != 64 || results[0].TexHeight != 32 {
 		t.Errorf("zip 期望 64x32, 得到 %dx%d", results[0].TexWidth, results[0].TexHeight)

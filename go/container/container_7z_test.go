@@ -30,9 +30,7 @@ func TestOpen7zPath_EntriesAndRead(t *testing.T) {
 	defer r.Close()
 
 	entries := r.Entries()
-	if len(entries) == 0 {
-		t.Fatal("7z 容器应含条目")
-	}
+	testutil.Equal(t, len(entries) > 0, true, "7z 容器应含条目")
 
 	// 验证 Entry 接口方法
 	found := map[string]bool{}
@@ -45,9 +43,7 @@ func TestOpen7zPath_EntriesAndRead(t *testing.T) {
 		// 非目录条目应可打开并读取
 		if !e.IsDir() {
 			rc, err := e.Open()
-			if err != nil {
-				t.Fatalf("打开条目 %s: %v", name, err)
-			}
+			testutil.NoError(t, err, "打开条目 %s: %v", name, err)
 			buf := make([]byte, 16)
 			n, _ := rc.Read(buf)
 			rc.Close()
@@ -95,9 +91,7 @@ func TestOpen7zBytes_Success(t *testing.T) {
 	defer r.Close()
 
 	entries := r.Entries()
-	if len(entries) == 0 {
-		t.Fatal("7z 容器应含条目")
-	}
+	testutil.Equal(t, len(entries) > 0, true, "7z 容器应含条目")
 
 	// 验证可读取内容
 	for _, e := range entries {
@@ -105,9 +99,7 @@ func TestOpen7zBytes_Success(t *testing.T) {
 			continue
 		}
 		rc, err := e.Open()
-		if err != nil {
-			t.Fatalf("打开 %s: %v", e.Name(), err)
-		}
+		testutil.NoError(t, err, "打开 %s: %v", e.Name(), err)
 		_, err = io.ReadAll(io.LimitReader(rc, 1024))
 		rc.Close()
 		if err != nil {

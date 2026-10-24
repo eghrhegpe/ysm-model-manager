@@ -50,9 +50,8 @@ func TestExtractPreviewTexture_JSONTexturesSkipsSubdirAndFallsBack(t *testing.T)
 	}
 
 	got := ExtractPreviewTexture(filepath.Join(dir, "model.json"))
-	if want := wantPNGDataURI([]byte(payload)); got != want {
-		t.Fatalf("应跳过子目录并回退同目录 PNG\n got=%q\nwant=%q", got, want)
-	}
+	want := wantPNGDataURI([]byte(payload))
+	testutil.Equal(t, got, want, "应跳过子目录并回退同目录 PNG")
 }
 
 // 首个 .png 候选为空文件时必须继续搜索后续候选。
@@ -75,9 +74,8 @@ func TestExtractPreviewTexture_JSONSkipsEmptyPNGAndContinues(t *testing.T) {
 	}
 
 	got := ExtractPreviewTexture(filepath.Join(dir, "model.json"))
-	if want := wantPNGDataURI([]byte(payload)); got != want {
-		t.Fatalf("空 PNG 候选必须跳过并继续搜索\n got=%q\nwant=%q", got, want)
-	}
+	want := wantPNGDataURI([]byte(payload))
+	testutil.Equal(t, got, want, "空 PNG 候选必须跳过并继续搜索")
 }
 
 // .ysm 注入解码器命中纹理 → 走通「提取成功」路径（原仅覆盖未注入的降级路径）。
@@ -95,9 +93,8 @@ func TestExtractPreviewTexture_YSMSuccessViaInjectedDecoder(t *testing.T) {
 	if err := os.WriteFile(path, []byte("YSGP\x00test"), 0644); err != nil {
 		testutil.NoError(t, err)
 	}
-	if got, want := ExtractPreviewTexture(path), wantPNGDataURI(png); got != want {
-		t.Fatalf(".ysm 解码命中纹理应产出 data URI\n got=%q\nwant=%q", got, want)
-	}
+	got, want := ExtractPreviewTexture(path), wantPNGDataURI(png)
+	testutil.Equal(t, got, want, ".ysm 解码命中纹理应产出 data URI")
 }
 
 // 大写禁用后缀：剥离仅用于**扩展名判定**，读取必须回原始磁盘路径。
@@ -120,15 +117,11 @@ func TestExtractPreviewTexture_UpperDisabledSuffixStillPreviews(t *testing.T) {
 
 	got := ExtractPreviewTexture(path)
 	// 原始路径仍指向同一文件（Windows 大小写不敏感；POSIX 上我们写的正是该名字）
-	if !strings.HasPrefix(got, "data:image/png;base64,") {
-		t.Fatalf("大写禁用后缀应仍可预览（剥离仅用于扩展名判定），got %q", got)
-	}
+	testutil.Equal(t, strings.HasPrefix(got, "data:image/png;base64,"), true, "大写禁用后缀应仍可预览（剥离仅用于扩展名判定），got %q", got)
 }
 
 // .7z 读取失败（文件不存在）→ data==nil 分支返回空。
 func TestExtractPreviewTexture_Missing7zReturnsEmpty(t *testing.T) {
 	got := ExtractPreviewTexture(filepath.Join(t.TempDir(), "absent.7z"))
-	if got != "" {
-		t.Fatalf("不存在的 .7z 应返回空，got %q", got)
-	}
+	testutil.Equal(t, got, "", "不存在的 .7z 应返回空，got %q", got)
 }

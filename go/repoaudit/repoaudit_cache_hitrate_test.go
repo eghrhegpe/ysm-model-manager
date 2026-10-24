@@ -41,12 +41,8 @@ func TestAudit_CacheHitRate_ContentHashBased(t *testing.T) {
 	// 按内容哈希真实写入缓存（模拟 KTX2 已压缩入库）
 	for _, p := range []string{cached1, cached2} {
 		hash, err := texture_cache.TextureHash(p)
-		if err != nil {
-			t.Fatalf("TextureHash(%s): %v", p, err)
-		}
-		if err := texture_cache.WriteCached(hash, []byte("fake-ktx2")); err != nil {
-			t.Fatalf("WriteCached(%s): %v", p, err)
-		}
+		testutil.NoError(t, err, "TextureHash(%s)", p)
+		testutil.NoError(t, texture_cache.WriteCached(hash, []byte("fake-ktx2")), "WriteCached(%s)", p)
 	}
 	_ = cacheDir
 
@@ -105,9 +101,7 @@ func TestAudit_CacheHitRate_GlobalCacheDoesNotInflate(t *testing.T) {
 
 	// 缓存目录里塞 50 个与本仓库无关的条目（模拟别的仓库/别的类型堆的 KTX2）
 	for i := range 50 {
-		if err := texture_cache.WriteCached(fmt.Sprintf("other-repo-hash-%02d", i), []byte("other-repo-ktx2")); err != nil {
-			t.Fatalf("WriteCached: %v", err)
-		}
+		testutil.NoError(t, texture_cache.WriteCached(fmt.Sprintf("other-repo-hash-%02d", i), []byte("other-repo-ktx2")), "WriteCached")
 	}
 	_ = cacheDir
 

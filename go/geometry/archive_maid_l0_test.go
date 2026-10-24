@@ -62,10 +62,8 @@ func TestMaidL0_ManifestPriority(t *testing.T) {
 	if len(pngs) != 2 {
 		t.Errorf("pngs = %d, 期望 2（L0 清单只列 2 张纹理）", len(pngs))
 	}
-	// 断言 3：SubModels 与 L0 清单同序同命名
-	if len(model.SubModels) != 2 {
-		t.Fatalf("SubModels = %d, 期望 2", len(model.SubModels))
-	}
+	// 断言 3：SubModels 与 L0 清单同序同命名（守卫下方 SubModels[0]/[1] 索引）
+	testutil.Equal(t, len(model.SubModels), 2, "SubModels = %d, 期望 2", len(model.SubModels))
 	if model.SubModels[0].Name != "reimu" {
 		t.Errorf("SubModels[0].Name = %q, 期望 reimu", model.SubModels[0].Name)
 	}
@@ -97,9 +95,7 @@ func TestMaidL0_MissingFallback_L1(t *testing.T) {
 		t.Errorf("L1 兜底 pngs = %d, 期望 2", len(pngs))
 	}
 	// L1：SubModels 从 geoFiles 派生（Name = 文件名去后缀）
-	if len(model.SubModels) != 2 {
-		t.Fatalf("L1 兜底 SubModels = %d, 期望 2", len(model.SubModels))
-	}
+	testutil.Equal(t, len(model.SubModels), 2, "L1 兜底 SubModels = %d, 期望 2", len(model.SubModels))
 }
 
 func TestMaidL0_EmptyModelArray_Fallback(t *testing.T) {
@@ -169,9 +165,8 @@ func TestMaidL0_ModelListKey(t *testing.T) {
 	if len(pngs) != 2 {
 		t.Errorf("pngs = %d, 期望 2", len(pngs))
 	}
-	if len(model.SubModels) != 2 {
-		t.Fatalf("SubModels = %d, 期望 2", len(model.SubModels))
-	}
+	// 守卫下方 SubModels[0]/[1] 索引
+	testutil.Equal(t, len(model.SubModels), 2, "SubModels = %d, 期望 2", len(model.SubModels))
 	if model.SubModels[0].Name != "阿露" || model.SubModels[1].Name != "佳代子" {
 		t.Errorf("SubModels = %+v，期望 [阿露 佳代子]", model.SubModels)
 	}
@@ -216,9 +211,8 @@ func TestMaidL0_MultiNs_PickLongestManifest(t *testing.T) {
 	if len(pngs) != 3 {
 		t.Errorf("pngs = %d, 期望 3", len(pngs))
 	}
-	if len(model.SubModels) != 3 {
-		t.Fatalf("SubModels = %d, 期望 3", len(model.SubModels))
-	}
+	// 守卫下方 SubModels[0] 索引
+	testutil.Equal(t, len(model.SubModels), 3, "SubModels = %d, 期望 3", len(model.SubModels))
 	if model.SubModels[0].Name != "灵梦" {
 		t.Errorf("SubModels[0].Name = %q，期望 灵梦", model.SubModels[0].Name)
 	}
@@ -254,9 +248,8 @@ func TestMaidL0_ModelIdPathInfer(t *testing.T) {
 	if len(pngs) != 2 {
 		t.Errorf("pngs = %d, 期望 2", len(pngs))
 	}
-	if len(model.SubModels) != 2 {
-		t.Fatalf("SubModels = %d, 期望 2", len(model.SubModels))
-	}
+	// 守卫下方 SubModels[0]/[1] 索引
+	testutil.Equal(t, len(model.SubModels), 2, "SubModels = %d, 期望 2", len(model.SubModels))
 	if model.SubModels[0].Name != "勇者" || model.SubModels[1].Name != "女主角" {
 		t.Errorf("SubModels = %+v", model.SubModels)
 	}
@@ -269,15 +262,12 @@ func TestParseFromZipEntry(t *testing.T) {
 	data := makeZipRaw(t, maidEntriesMixed())
 	full, _, _ := ParseFromZip(data, int64(len(data)))
 	testutil.NotNil(t, full, "合并解析应为非 nil")
-	if len(full.SubModels) != 2 {
-		t.Fatalf("SubModels = %d, 期望 2（L0）", len(full.SubModels))
-	}
+	testutil.Equal(t, len(full.SubModels), 2, "SubModels = %d, 期望 2（L0）", len(full.SubModels))
 
 	for i, sm := range full.SubModels {
 		g, pngs := ParseFromZipEntry(data, int64(len(data)), sm.SourcePath)
-		if g == nil {
-			t.Fatalf("sub[%d] name=%s sourcePath=%q 未命中 geo", i, sm.Name, sm.SourcePath)
-		}
+		// 守卫下方 g.BoneCount 索引
+		testutil.NotNil(t, g, "sub[%d] name=%s sourcePath=%q 未命中 geo", i, sm.Name, sm.SourcePath)
 		// 角色单抽：BoneCount 应 = 1（不是合并的 2）
 		if g.BoneCount != 1 {
 			t.Errorf("sub[%d] BoneCount = %d, 期望 1（单模型）", i, g.BoneCount)
@@ -328,9 +318,8 @@ func TestParseFromZipEntry_MatchDegradation(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			g, pngs := ParseFromZipEntry(data, int64(len(data)), c.subPath)
-			if g == nil {
-				t.Fatalf("case %q subPath=%q 未命中", c.name, c.subPath)
-			}
+			// 守卫下方 g.BoneCount 索引
+			testutil.NotNil(t, g, "case %q subPath=%q 未命中", c.name, c.subPath)
 			if g.BoneCount != 1 {
 				t.Errorf("case %q BoneCount = %d", c.name, g.BoneCount)
 			}
@@ -389,9 +378,9 @@ func TestMaidL0_BasenameFallback_NonTemplatePath(t *testing.T) {
 	if len(pngs) != 1 {
 		t.Errorf("pngs = %d, 期望 1（纹理也应走 basename 回扫命中）", len(pngs))
 	}
-	if len(model.SubModels) != 1 || model.SubModels[0].Name != "勇者" {
-		t.Fatalf("SubModels = %+v, 期望 [{Name:勇者}]", model.SubModels)
-	}
+	// 原复合条件拆序贯（len 守卫下方 SubModels[0] 索引）
+	testutil.Equal(t, len(model.SubModels), 1, "SubModels = %+v, 期望 1 个", model.SubModels)
+	testutil.Equal(t, model.SubModels[0].Name, "勇者", "SubModels = %+v, 期望 [{Name:勇者}]", model.SubModels)
 	// 回扫返回的是全量小写绝对路径（lazyBuildBasenameIdx 内 low 变量）
 	if model.SubModels[0].SourcePath != "assets/mypack/custom_models/hero.geo.json" {
 		t.Errorf("SourcePath = %q, 期望回扫命中的小写绝对路径", model.SubModels[0].SourcePath)
@@ -423,9 +412,9 @@ func TestMaidL0_ModelNsPrefixedExplicitPath(t *testing.T) {
 	if len(pngs) != 1 {
 		t.Errorf("pngs = %d, 期望 1", len(pngs))
 	}
-	if len(model.SubModels) != 1 || model.SubModels[0].Name != "drone" {
-		t.Fatalf("SubModels = %+v, 期望 [{Name:drone}]", model.SubModels)
-	}
+	// 原复合条件拆序贯（len 守卫下方 SubModels[0] 索引）
+	testutil.Equal(t, len(model.SubModels), 1, "SubModels = %+v, 期望 1 个", model.SubModels)
+	testutil.Equal(t, model.SubModels[0].Name, "drone", "SubModels = %+v, 期望 [{Name:drone}]", model.SubModels)
 	if model.SubModels[0].SourcePath != "assets/mypack/models/entity/drone.json" {
 		t.Errorf("SourcePath = %q, 期望剥前缀后的形式 A 路径", model.SubModels[0].SourcePath)
 	}
@@ -455,9 +444,9 @@ func TestMaidL0_ModelForeignNs_TreatedAsModelId(t *testing.T) {
 	if len(pngs) != 1 {
 		t.Errorf("pngs = %d, 期望 1", len(pngs))
 	}
-	if len(model.SubModels) != 1 || model.SubModels[0].Name != "foreign" {
-		t.Fatalf("SubModels = %+v, 期望 [{Name:foreign}]", model.SubModels)
-	}
+	// 原复合条件拆序贯（len 守卫下方 SubModels[0] 索引）
+	testutil.Equal(t, len(model.SubModels), 1, "SubModels = %+v, 期望 1 个", model.SubModels)
+	testutil.Equal(t, model.SubModels[0].Name, "foreign", "SubModels = %+v, 期望 [{Name:foreign}]", model.SubModels)
 	if model.SubModels[0].SourcePath != "assets/mypack/models/entity/hero.json" {
 		t.Errorf("SourcePath = %q, 期望候选字典命中的 hero.json", model.SubModels[0].SourcePath)
 	}

@@ -3,7 +3,6 @@ package packs
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -83,9 +82,7 @@ func TestReadPackMeta_DirWithThumb(t *testing.T) {
 
 	_, thumb, err := ReadPackMeta(dir)
 	testutil.NoError(t, err, "ReadPackMeta() =")
-	if thumb == "" {
-		t.Fatal("thumb = empty, want base64 data")
-	}
+	testutil.Equal(t, thumb == "", false, "thumb = empty, want base64 data")
 }
 
 func TestReadPackMeta_NotFound(t *testing.T) {
@@ -122,18 +119,14 @@ func TestReadPackMeta_ZipPackPngAtLimit(t *testing.T) {
 	path := writeZipPack(t, bytes.Repeat([]byte{1}, 10<<20))
 	_, thumb, err := ReadPackMeta(path)
 	testutil.NoError(t, err, "ReadPackMeta() =")
-	if thumb == "" {
-		t.Fatal("pack.png 恰好 10MB 应保留缩略图")
-	}
+	testutil.Equal(t, thumb == "", false, "pack.png 恰好 10MB 应保留缩略图")
 }
 
 func TestReadPackMeta_ZipPackPngOverLimit(t *testing.T) {
 	path := writeZipPack(t, bytes.Repeat([]byte{1}, (10<<20)+1))
 	_, thumb, err := ReadPackMeta(path)
 	testutil.NoError(t, err, "ReadPackMeta() =")
-	if thumb != "" {
-		t.Fatal("pack.png 超过 10MB 应置空缩略图（截断检测），实际返回了缩略图")
-	}
+	testutil.Equal(t, thumb, "", "pack.png 超过 10MB 应置空缩略图（截断检测），实际返回了缩略图")
 }
 
 func TestReadPackMeta_DirPackPngOverLimit(t *testing.T) {
@@ -148,9 +141,7 @@ func TestReadPackMeta_DirPackPngOverLimit(t *testing.T) {
 	}
 	_, thumb, err := ReadPackMeta(dir)
 	testutil.NoError(t, err, "ReadPackMeta(dir) =")
-	if thumb != "" {
-		t.Fatal("目录形态 pack.png 超过 10MB 应置空缩略图，实际返回了缩略图")
-	}
+	testutil.Equal(t, thumb, "", "目录形态 pack.png 超过 10MB 应置空缩略图，实际返回了缩略图")
 }
 
 func TestReadShaderpackLang_Dir(t *testing.T) {
@@ -166,9 +157,7 @@ func TestReadShaderpackLang_Dir(t *testing.T) {
 
 	resultStr := ReadShaderpackLang(dir)
 	var result map[string]interface{}
-	if err := json.Unmarshal([]byte(resultStr), &result); err != nil {
-		t.Fatalf("返回数据非 JSON: %v", err)
-	}
+	testutil.NoError(t, json.Unmarshal([]byte(resultStr), &result), "返回数据非 JSON")
 	if name, ok := result["name"].(string); !ok || name == "" {
 		t.Errorf("name = %q, 期望非空", name)
 	}
@@ -230,9 +219,7 @@ func TestReadShaderpackLang_DirOverLimit(t *testing.T) {
 	}
 	resultStr := ReadShaderpackLang(dir)
 	var result map[string]interface{}
-	if err := json.Unmarshal([]byte(resultStr), &result); err != nil {
-		t.Fatalf("返回数据非 JSON: %v", err)
-	}
+	testutil.NoError(t, json.Unmarshal([]byte(resultStr), &result), "返回数据非 JSON")
 	if name, _ := result["name"].(string); name != "" {
 		t.Errorf(">1MB dir lang 应置空 name，实际 %q", name)
 	}
@@ -255,9 +242,7 @@ func TestReadShaderpackLang_DirExactLimit(t *testing.T) {
 	}
 	resultStr := ReadShaderpackLang(dir)
 	var result map[string]interface{}
-	if err := json.Unmarshal([]byte(resultStr), &result); err != nil {
-		t.Fatalf("返回数据非 JSON: %v", err)
-	}
+	testutil.NoError(t, json.Unmarshal([]byte(resultStr), &result), "返回数据非 JSON")
 	if name, _ := result["name"].(string); name == "" {
 		t.Error("恰好 1MB dir lang 应解析出 name")
 	}
@@ -277,9 +262,7 @@ func TestReadShaderpackLang_ZipOverLimit(t *testing.T) {
 	}
 	resultStr := ReadShaderpackLang(zipPath)
 	var result map[string]interface{}
-	if err := json.Unmarshal([]byte(resultStr), &result); err != nil {
-		t.Fatalf("返回数据非 JSON: %v", err)
-	}
+	testutil.NoError(t, json.Unmarshal([]byte(resultStr), &result), "返回数据非 JSON")
 	if name, _ := result["name"].(string); name != "" {
 		t.Errorf(">1MB zip lang 应置空 name，实际 %q", name)
 	}
@@ -290,9 +273,7 @@ func TestReadShaderpackLang_ZipOverLimit(t *testing.T) {
 // 空目录 → ErrPackMetaNotFound（errors.Is 可判定，禁止调用方 strings.Contains 文本匹配）
 func TestReadPackMeta_NotFoundIsSentinel(t *testing.T) {
 	_, _, err := ReadPackMeta(t.TempDir())
-	if !errors.Is(err, ErrPackMetaNotFound) {
-		t.Fatalf("空目录错误 = %v, 期望 errors.Is(err, ErrPackMetaNotFound)", err)
-	}
+	testutil.ErrorIs(t, err, ErrPackMetaNotFound, "空目录错误, 期望 errors.Is(err, ErrPackMetaNotFound)")
 }
 
 // 目录 pack.mcmeta > 1MB → ErrPackMetaTooLarge
@@ -303,9 +284,7 @@ func TestReadPackMeta_DirMcmetaOverLimitIsSentinel(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	_, _, err := ReadPackMeta(dir)
-	if !errors.Is(err, ErrPackMetaTooLarge) {
-		t.Fatalf("超限错误 = %v, 期望 errors.Is(err, ErrPackMetaTooLarge)", err)
-	}
+	testutil.ErrorIs(t, err, ErrPackMetaTooLarge, "超限错误, 期望 errors.Is(err, ErrPackMetaTooLarge)")
 }
 
 // ZIP 内 pack.mcmeta > 1MB → ErrPackMetaTooLarge（与 dir 分支口径一致，
@@ -314,9 +293,7 @@ func TestReadPackMeta_ZipMcmetaOverLimit(t *testing.T) {
 	big := strings.Repeat("a", (1<<20)+1)
 	path := testutil.WriteZipFile(t, "pack.zip", map[string]string{"pack.mcmeta": big})
 	_, _, err := ReadPackMeta(path)
-	if !errors.Is(err, ErrPackMetaTooLarge) {
-		t.Fatalf("zip 超限 mcmeta 错误 = %v, 期望 errors.Is(err, ErrPackMetaTooLarge)", err)
-	}
+	testutil.ErrorIs(t, err, ErrPackMetaTooLarge, "zip 超限 mcmeta 错误, 期望 errors.Is(err, ErrPackMetaTooLarge)")
 }
 
 // 目录 pack.mcmeta 恰好 1MB 仍应解析成功
@@ -331,9 +308,8 @@ func TestReadPackMeta_DirMcmetaExactLimit(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "pack.mcmeta"), exact, 0644); err != nil {
 		testutil.NoError(t, err)
 	}
-	if _, _, err := ReadPackMeta(dir); err != nil {
-		t.Fatalf("恰好 1MB pack.mcmeta 应成功: %v", err)
-	}
+	_, _, err := ReadPackMeta(dir)
+	testutil.NoError(t, err, "恰好 1MB pack.mcmeta 应成功")
 }
 
 // UTF-8 BOM 前缀（PowerShell 写入）应被剥离后正常解析
@@ -369,32 +345,24 @@ func TestReadPackMeta_NotZipNoMcmeta(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	_, _, err := ReadPackMeta(path)
-	if !errors.Is(err, ErrPackMetaNotFound) {
-		t.Fatalf(".jar 文件错误 = %v, 期望 errors.Is(err, ErrPackMetaNotFound)", err)
-	}
+	testutil.ErrorIs(t, err, ErrPackMetaNotFound, ".jar 文件错误, 期望 errors.Is(err, ErrPackMetaNotFound)")
 }
 
 // 不存在的路径 → 错误经 %w 包裹，errors.Is(err, os.ErrNotExist) 成立
 func TestReadPackMeta_StatErrorWrapped(t *testing.T) {
 	_, _, err := ReadPackMeta(filepath.Join(t.TempDir(), "missing.zip"))
-	if !errors.Is(err, os.ErrNotExist) {
-		t.Fatalf("stat 错误应保留 %%w 链: %v", err)
-	}
+	testutil.ErrorIs(t, err, os.ErrNotExist, "stat 错误应保留 %w 链")
 }
 
 // ====== DetectResourceType 鲁棒性 ======
 
 func TestDetectResourceType_NilRegistry(t *testing.T) {
-	if got := DetectResourceType("/path/file.zip", nil); got != "" {
-		t.Fatalf("nil registry 应返回 '', 得到 %q", got)
-	}
+	testutil.Equal(t, DetectResourceType("/path/file.zip", nil), "", "nil registry 应返回 ''")
 }
 
 func TestDetectResourceType_EmptyRegistry(t *testing.T) {
 	reg := &registry.ResourceTypeRegistry{}
-	if got := DetectResourceType("/path/file.zip", reg); got != "" {
-		t.Fatalf("空 registry 应返回 '', 得到 %q", got)
-	}
+	testutil.Equal(t, DetectResourceType("/path/file.zip", reg), "", "空 registry 应返回 ''")
 }
 
 // 外部 registry 扩展名大写（.ZIP）不应导致检测静默失效（hasExt 大小写归一）
@@ -404,9 +372,7 @@ func TestDetectResourceType_UppercaseRegistryExt(t *testing.T) {
 			{ID: "resourcepack", Extensions: []string{".ZIP"}, Detector: "extension"},
 		},
 	}
-	if got := DetectResourceType("/path/pack.zip", reg); got != "resourcepack" {
-		t.Fatalf("registry 大写扩展名应匹配, 得到 %q", got)
-	}
+	testutil.Equal(t, DetectResourceType("/path/pack.zip", reg), "resourcepack", "registry 大写扩展名应匹配")
 }
 
 // detector 大写（YSM）不应导致内容型检测被跳过
@@ -416,9 +382,7 @@ func TestDetectResourceType_UppercaseDetector(t *testing.T) {
 			{ID: "ysm-model", Extensions: []string{".ysm"}, Detector: "YSM"},
 		},
 	}
-	if got := DetectResourceType("/path/model.ysm", reg); got != "ysm-model" {
-		t.Fatalf("大写 detector 应匹配, 得到 %q", got)
-	}
+	testutil.Equal(t, DetectResourceType("/path/model.ysm", reg), "ysm-model", "大写 detector 应匹配")
 }
 
 // ====== hasExt 大小写归一 ======
@@ -465,9 +429,7 @@ func TestDetectResourceType_YsmJsonFile(t *testing.T) {
 	if err := os.WriteFile(path, []byte(`{"spec":2}`), 0644); err != nil {
 		testutil.NoError(t, err)
 	}
-	if got := DetectResourceType(path, reg); got != "ysm-model" {
-		t.Fatalf("ysm.json 应分类为 ysm-model, 得到 %q", got)
-	}
+	testutil.Equal(t, DetectResourceType(path, reg), "ysm-model", "ysm.json 应分类为 ysm-model")
 }
 
 // ====== ReadShaderpackLang 未测分支 ======
@@ -479,9 +441,7 @@ func TestReadShaderpackLang_ZipLowercaseEnUs(t *testing.T) {
 	})
 	resultStr := ReadShaderpackLang(path)
 	var result map[string]interface{}
-	if err := json.Unmarshal([]byte(resultStr), &result); err != nil {
-		t.Fatalf("返回数据非 JSON: %v", err)
-	}
+	testutil.NoError(t, json.Unmarshal([]byte(resultStr), &result), "返回数据非 JSON")
 	if name, _ := result["name"].(string); name == "" {
 		t.Error("小写 en_us.lang 应提取到 name")
 	}
@@ -498,9 +458,7 @@ func TestReadShaderpackLang_ZipExactLimit(t *testing.T) {
 	path := testutil.WriteZipFile(t, "pack.zip", map[string]string{"lang/en_US.lang": string(exact)})
 	resultStr := ReadShaderpackLang(path)
 	var result map[string]interface{}
-	if err := json.Unmarshal([]byte(resultStr), &result); err != nil {
-		t.Fatalf("返回数据非 JSON: %v", err)
-	}
+	testutil.NoError(t, json.Unmarshal([]byte(resultStr), &result), "返回数据非 JSON")
 	if name, _ := result["name"].(string); name == "" {
 		t.Error("恰好 1MB zip lang 应解析出 name")
 	}
@@ -513,9 +471,7 @@ func TestReadShaderpackLang_ZipOnlyZhLang(t *testing.T) {
 	})
 	resultStr := ReadShaderpackLang(path)
 	var result map[string]interface{}
-	if err := json.Unmarshal([]byte(resultStr), &result); err != nil {
-		t.Fatalf("返回数据非 JSON: %v", err)
-	}
+	testutil.NoError(t, json.Unmarshal([]byte(resultStr), &result), "返回数据非 JSON")
 	if name, _ := result["name"].(string); name != "" {
 		t.Errorf("仅 zh_CN.lang 时 name 应为空, 得到 %q", name)
 	}

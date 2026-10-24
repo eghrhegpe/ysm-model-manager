@@ -67,9 +67,8 @@ func TestStagesToJSON_IdentifiesBottleneck(t *testing.T) {
 	if bottleneck != "② JSON 解析" {
 		t.Errorf("最慢阶段应识别为瓶颈, got %q", bottleneck)
 	}
-	if len(stages) != 3 {
-		t.Fatalf("应输出 3 条, got %d", len(stages))
-	}
+	testutil.Equal(t, len(stages), 3, "应输出 3 条, got %d", len(stages))
+	// len 已由上一断言守卫（失败即 Goexit），stages[1] 才安全
 	if !stages[1].Bottleneck {
 		t.Errorf("120ms 应标记 bottleneck: %+v", stages[1])
 	}
@@ -119,9 +118,8 @@ func TestGenerateHints(t *testing.T) {
 		{Name: "① 文件读取", Duration: 200 * time.Millisecond},
 		{Name: "⑤ 纹理数据准备", Duration: 50 * time.Millisecond},
 	})
-	if len(slow) != 2 {
-		t.Fatalf("慢阶段应各产出一条建议, got %d", len(slow))
-	}
+	testutil.Equal(t, len(slow), 2, "慢阶段应各产出一条建议, got %d", len(slow))
+	// len 已由上一断言守卫（失败即 Goexit），slow[0]/slow[1] 才安全
 	if !strings.Contains(slow[0], "磁盘") || !strings.Contains(slow[1], "KTX2") {
 		t.Errorf("建议内容不符: %+v", slow)
 	}
@@ -216,9 +214,9 @@ func TestRunSingleModelBench_StagesAndFailureBranch(t *testing.T) {
 	t.Parallel()
 	// 文件不存在 → 只返回 1 个失败阶段
 	missing := runSingleModelBench(&benchFakeApp{}, filepath.Join(t.TempDir(), "none.ysm"), "")
-	if len(missing) != 1 || !strings.Contains(missing[0].Notes, "失败") {
-		t.Fatalf("读取失败应只产出 1 个失败阶段: %+v", missing)
-	}
+	testutil.Equal(t, len(missing), 1, "读取失败应只产出 1 个失败阶段: %+v", missing)
+	// len 已由上一断言守卫（失败即 Goexit），missing[0] 才安全
+	testutil.Equal(t, strings.Contains(missing[0].Notes, "失败"), true, "读取失败应只产出 1 个失败阶段: %+v", missing)
 
 	// 真实文件 + fake 分析 → 全 7 阶段
 	root := t.TempDir()
@@ -227,11 +225,10 @@ func TestRunSingleModelBench_StagesAndFailureBranch(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	stages := runSingleModelBench(&benchFakeApp{}, modelPath, root)
-	if len(stages) != 7 {
-		t.Fatalf("应产出 7 个基准阶段, got %d: %+v", len(stages), stages)
-	}
+	testutil.Equal(t, len(stages), 7, "应产出 7 个基准阶段: %+v", stages)
 	wantNames := []string{"① 文件读取", "② JSON 解析", "③ 数据验证", "④ 几何数据准备", "⑤ 纹理数据准备", "⑥ 序列化模拟", "⑦ 缓存检查"}
 	for i, want := range wantNames {
+		// len(stages)==7 已由上一断言守卫（失败即 Goexit），stages[i] 才安全
 		if stages[i].Name != want {
 			t.Errorf("阶段[%d] = %q, want %q", i, stages[i].Name, want)
 		}
@@ -255,9 +252,7 @@ func TestRunSingleModelBench_ZeroDurationNoFakeThroughput(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	stages := runSingleModelBench(&benchFakeApp{}, modelPath, root)
-	if len(stages) == 0 {
-		t.Fatal("应产出阶段")
-	}
+	testutil.Equal(t, len(stages) == 0, false, "应产出阶段")
 	for _, s := range stages {
 		for _, bad := range []string{"Inf", "NaN"} {
 			if strings.Contains(s.Notes, bad) {
@@ -304,7 +299,7 @@ func TestRunPerfSnapshot_EndToEnd(t *testing.T) {
 	testutil.NoError(t, err, "perf-snapshot 端到端应成功")
 	// --model 显式路径也走通
 	if err := runPerfSnapshot(&CmdContext{App: &benchFakeApp{}, FilesRoot: root, Args: []string{"--model", modelPath}}); err != nil {
-		t.Fatalf("显式 --model 应成功: %v", err)
+		testutil.NoError(t, err, "显式 --model 应成功")
 	}
 	// 空 root 无模型 → 报错
 	if err := runPerfSnapshot(&CmdContext{App: &benchFakeApp{}, FilesRoot: t.TempDir()}); err == nil {
@@ -384,12 +379,11 @@ func TestRunSingleBenchJSON_SaveAndCompareRoundTrip(t *testing.T) {
 
 	// 保存基准
 	if err := runSingleBenchJSON(&CmdContext{App: &benchFakeApp{}, FilesRoot: root}, modelPath, 1, "", basePath, 50); err != nil {
-		t.Fatalf("保存基准应成功: %v", err)
+		testutil.NoError(t, err, "保存基准应成功")
 	}
 	raw, err := os.ReadFile(basePath)
-	if err != nil || !json.Valid(raw) {
-		t.Fatalf("基准文件应为合法 JSON: err=%v raw=%s", err, raw)
-	}
+	testutil.NoError(t, err, "基准文件应为合法 JSON")
+	testutil.Equal(t, json.Valid(raw), true, "基准文件应为合法 JSON: raw=%s", raw)
 
 	// 用刚保存的基准对比自身 → 这条通路不得报错（保存→读取→比对的接线）。
 	//
@@ -401,7 +395,7 @@ func TestRunSingleBenchJSON_SaveAndCompareRoundTrip(t *testing.T) {
 	// 门禁**效力**由下方两个确定性块锁定（0.001ms 基准必触发 / 亚毫秒 + 小幅增量不触发），
 	// 它们直接注入 stages，不依赖计时。
 	if err := runSingleBenchJSON(&CmdContext{App: &benchFakeApp{}, FilesRoot: root}, modelPath, 1, basePath, "", 100000); err != nil {
-		t.Fatalf("自对比不应触发退化门禁: %v", err)
+		testutil.NoError(t, err, "自对比不应触发退化门禁")
 	}
 
 	// 极短历史基准（各阶段 0.001ms）+ 确定性明显更慢的 now → 必然触发退化门禁。

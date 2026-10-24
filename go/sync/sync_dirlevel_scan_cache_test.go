@@ -47,15 +47,13 @@ func TestSyncDirLevelScan_HitReusesScanDerivation(t *testing.T) {
 	const rtype = "ysm"
 	first := SyncResourcesDirLevelScan(globalDir, instanceDir, rtype, scanFn)
 	// 首次：globalDir + instanceDir 各触发一次 scanFn（均为命中路径）
-	if first.Synced == nil && first.Missing == nil && first.Extra == nil {
-		t.Fatalf("首次同步应产出结果，got %+v", first)
-	}
+	// 注：原条件为「三者全 nil 才失败」（AND），不可拆序贯（会变成任一 nil 即失败），保留复合布尔
+	testutil.Equal(t, first.Synced == nil && first.Missing == nil && first.Extra == nil, false,
+		"首次同步应产出结果，got %+v", first)
 	firstCalls := calls
 
 	// 二次调用：同 (globalDir, instanceDir, rtype) 应全部命中 syncDirLevelScanCache，
 	// 不再对任何目录触发 scanFn。
 	_ = SyncResourcesDirLevelScan(globalDir, instanceDir, rtype, scanFn)
-	if calls != firstCalls {
-		t.Fatalf("二次同步应命中缓存、scanFn 调用不应增长：首次=%d 二次后=%d", firstCalls, calls)
-	}
+	testutil.Equal(t, calls, firstCalls, "二次同步应命中缓存、scanFn 调用不应增长：首次=%d 二次后=%d", firstCalls, calls)
 }

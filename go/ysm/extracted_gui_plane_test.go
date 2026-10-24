@@ -94,12 +94,9 @@ func TestFindComponentsInExtractedYSM_PlaneSharedSkinNoGui(t *testing.T) {
 		}{c.SourceName, c.ComponentTextures, slot}
 	}
 	testutil.NotNil(t, plane, "plane 组件缺失（vehicles 声明模型应被补扫收集）")
+	// 原复合条件拆序贯（守卫下方 tex[0] 索引）
 	tex, ok := plane.compTex["plane"]
-	if !ok {
-		t.Fatalf("plane 组件应获 ComponentTextures=skin（共享皮肤），实际 %v", plane.compTex)
-	}
-	if len(tex) != 1 || len(tex[0]) == 0 {
-		t.Fatalf("plane ComponentTextures 应有 1 张非空纹理，实际 %v", tex)
-	}
+	testutil.Equal(t, ok, true, "plane 组件应获 ComponentTextures=skin（共享皮肤），实际 %v", plane.compTex)
+	testutil.Equal(t, len(tex) != 1 || len(tex[0]) == 0, false, "plane ComponentTextures 应有 1 张非空纹理，实际 %v", tex)
 	t.Logf("✓ plane: ComponentTextures[plane] 命中 %d 张，TexSlot=%d", len(tex), plane.texSlot)
 }

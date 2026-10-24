@@ -25,9 +25,7 @@ func TestWineFoxBoatSpecTexIdx(t *testing.T) {
 			MeshGroups []struct{ TexIdx int } `json:"meshGroups"`
 		} `json:"models"`
 	}
-	if err := json.Unmarshal([]byte(spec), &doc); err != nil {
-		t.Fatalf("spec 解析失败: %v", err)
-	}
+	testutil.NoError(t, json.Unmarshal([]byte(spec), &doc), "spec 解析失败")
 
 	for i, mg := range doc.Models {
 		var firstTexIdx int
@@ -38,22 +36,25 @@ func TestWineFoxBoatSpecTexIdx(t *testing.T) {
 			i, mg.ID, mg.Name, len(mg.MeshGroups), firstTexIdx)
 	}
 
+	foundBoat := false
 	for i := range doc.Models {
-		if doc.Models[i].Name == "boat" {
-			for j, mesh := range doc.Models[i].MeshGroups {
-				if mesh.TexIdx != 0 {
-					t.Errorf("boat mesh[%d].texIdx = %d, 期望 0", j, mesh.TexIdx)
-				}
-			}
-			// 首项 texIdx 先守卫再读（code review：与上方 log 循环同款 len 检查，
-			// 空 meshGroups 时干净报错而非 index out of range panic 掩盖结果）
-			var firstTexIdx int
-			if len(doc.Models[i].MeshGroups) > 0 {
-				firstTexIdx = doc.Models[i].MeshGroups[0].TexIdx
-			}
-			t.Logf("✓ boat: %d 个 mesh，首项 texIdx=%d", len(doc.Models[i].MeshGroups), firstTexIdx)
-			return
+		if doc.Models[i].Name != "boat" {
+			continue
 		}
+		foundBoat = true
+		for j, mesh := range doc.Models[i].MeshGroups {
+			if mesh.TexIdx != 0 {
+				t.Errorf("boat mesh[%d].texIdx = %d, 期望 0", j, mesh.TexIdx)
+			}
+		}
+		// 首项 texIdx 先守卫再读（code review：与上方 log 循环同款 len 检查，
+		// 空 meshGroups 时干净报错而非 index out of range panic 掩盖结果）
+		var firstTexIdx int
+		if len(doc.Models[i].MeshGroups) > 0 {
+			firstTexIdx = doc.Models[i].MeshGroups[0].TexIdx
+		}
+		t.Logf("✓ boat: %d 个 mesh，首项 texIdx=%d", len(doc.Models[i].MeshGroups), firstTexIdx)
+		break // 原 return：只处理首个 boat group（语义保真）
 	}
-	t.Fatal("spec 中未找到 name=boat 的 model group")
+	testutil.Equal(t, foundBoat, true, "spec 中未找到 name=boat 的 model group")
 }

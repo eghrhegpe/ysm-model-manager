@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/types/registry"
+	"ysm-model-manager/internal/testutil"
 )
 
 // ADR-339：启禁同步目标 = 所有 dirLevelSync 类型（ysm/mmd 各子目录/maid/blueprint/litematic），
@@ -13,9 +14,7 @@ import (
 
 func TestToggleSyncTargets_All(t *testing.T) {
 	targets := toggleSyncTargets("")
-	if len(targets) == 0 {
-		t.Fatal(`toggleSyncTargets("") 应为非空（至少含 ysm）`)
-	}
+	testutil.Equal(t, len(targets) == 0, false, `toggleSyncTargets("") 应为非空（至少含 ysm）`)
 	byId := map[string]bool{}
 	for _, d := range targets {
 		byId[d.RType] = true

@@ -25,38 +25,29 @@ func TestExtractFirstPNGFromZip(t *testing.T) {
 		"tex/2.png":  "PNGDATA2",
 	})
 	got := ExtractFirstPNGFromZip(data, int64(len(data)))
-	if len(got) == 0 {
-		t.Fatalf("应提取到 PNG 数据, 得到空")
-	}
+	testutil.Equal(t, len(got) == 0, false, "应提取到 PNG 数据, 得到空")
 	// 无 PNG → nil
 	data2 := testutil.MakeZipBytes(t, map[string]string{"a.txt": "x"})
-	if got := ExtractFirstPNGFromZip(data2, int64(len(data2))); got != nil {
-		t.Fatalf("无 png 应 nil: %q", string(got))
-	}
+	testutil.Nil(t, ExtractFirstPNGFromZip(data2, int64(len(data2))), "无 png 应 nil")
 	// 坏 zip → nil
-	if got := ExtractFirstPNGFromZip([]byte("notzip"), 6); got != nil {
-		t.Fatalf("坏 zip 应 nil: %q", string(got))
-	}
+	testutil.Nil(t, ExtractFirstPNGFromZip([]byte("notzip"), 6), "坏 zip 应 nil")
 }
 
 func TestExtractFirstPNGFrom7z_BadData(t *testing.T) {
 	// 7z 样本构造需 sevenzip Writer，此处只覆盖错误路径
-	if got := ExtractFirstPNGFrom7z([]byte("not7z"), 5); got != nil {
-		t.Fatalf("坏 7z 应 nil: %q", string(got))
-	}
+	testutil.Nil(t, ExtractFirstPNGFrom7z([]byte("not7z"), 5), "坏 7z 应 nil")
 }
 
 func TestParseFromZip_Errors(t *testing.T) {
-	// 坏 zip → 全 nil
-	if model, pngs, names := ParseFromZip([]byte("notzip"), 6); model != nil || pngs != nil || names != nil {
-		t.Fatalf("坏 zip 应全 nil")
-	}
+	// 坏 zip → 全 nil（原复合条件拆序贯）
+	model, pngs, names := ParseFromZip([]byte("notzip"), 6)
+	testutil.Nil(t, model, "坏 zip 应全 nil")
+	testutil.Nil(t, pngs, "坏 zip 应全 nil")
+	testutil.Nil(t, names, "坏 zip 应全 nil")
 	// 有效 zip 但无 ysm.json → 模型为 nil（无解析失败崩溃）
 	empty := testutil.MakeZipBytes(t, map[string]string{"tex.png": "PNG"})
-	model, _, _ := ParseFromZip(empty, int64(len(empty)))
-	if model != nil {
-		t.Fatalf("无 ysm.json 应无模型")
-	}
+	m, _, _ := ParseFromZip(empty, int64(len(empty)))
+	testutil.Nil(t, m, "无 ysm.json 应无模型")
 }
 
 // ====== ParseFromZip 完整路径 ======
@@ -87,9 +78,8 @@ func TestParseFromZip_Valid(t *testing.T) {
 	if model.TexWidth != 64 || model.TexHeight != 32 {
 		t.Errorf("TexWidth/TexHeight = %d/%d, 期望 64/32", model.TexWidth, model.TexHeight)
 	}
-	if len(pngs) != 1 {
-		t.Fatalf("期望 1 个 PNG, 得到 %d", len(pngs))
-	}
+	// 守卫下方无索引依赖，纯计数断言
+	testutil.Equal(t, len(pngs), 1, "期望 1 个 PNG, 实际 %d", len(pngs))
 }
 
 func TestParseFromZip_ModelAsObjects(t *testing.T) {
@@ -252,10 +242,10 @@ func TestParseFromZip_AvatarDirFiltered(t *testing.T) {
 // ====== ParseFrom7z ======
 
 func TestParseFrom7z_BadData(t *testing.T) {
-	// 7z 构造需 sevenzip Writer，此覆盖错误路径
-	if model, pngs := ParseFrom7z([]byte("not7z"), 5); model != nil || pngs != nil {
-		t.Fatalf("坏 7z 应全 nil, 得到 model=%v pngs=%v", model, pngs)
-	}
+	// 7z 构造需 sevenzip Writer，此覆盖错误路径（原复合条件拆序贯）
+	m, pngs := ParseFrom7z([]byte("not7z"), 5)
+	testutil.Nil(t, m, "坏 7z 应全 nil")
+	testutil.Nil(t, pngs, "坏 7z 应全 nil")
 }
 
 // ====== ParseComponentsFromZip 多组件契约（code_review P3 补测）======
@@ -283,14 +273,11 @@ func TestParseFromZip_TextureNames(t *testing.T) {
 	})
 	model, pngs, _ := ParseFromZip(data, int64(len(data)))
 	testutil.NotNil(t, model, "模型应为非 nil")
-	if len(pngs) != 2 {
-		t.Fatalf("pngs = %d, 期望 2", len(pngs))
-	}
+	testutil.Equal(t, len(pngs), 2, "pngs = %d, 期望 2", len(pngs))
 	// Textures（base64）由 app 层 AnalyzeBedrockModel 填充；geometry 层契约是
 	// TextureNames 与 pngs 同序——这里验证名字数组与 pngs 长度一致且按声明序排序
-	if len(model.TextureNames) != len(pngs) {
-		t.Fatalf("TextureNames = %d, 期望与 pngs 同长 %d", len(model.TextureNames), len(pngs))
-	}
+	// 守卫下方 TextureNames[0]/[1] 索引
+	testutil.Equal(t, len(model.TextureNames), len(pngs), "TextureNames = %d, 期望与 pngs 同长 %d", len(model.TextureNames), len(pngs))
 	// 按 ysm texture 声明序排序后：tex_b 在前，tex_a 在后（与 pngs 同序）
 	if model.TextureNames[0] != "tex_b" || model.TextureNames[1] != "tex_a" {
 		t.Errorf("TextureNames = %v, 期望 [tex_b tex_a]（按 ysm texture 声明序）", model.TextureNames)
@@ -314,9 +301,8 @@ func TestParseComponentsFromZip_MainFirstAndTexSlot(t *testing.T) {
 	})
 	comps, _, err := ParseComponentsFromZip(data, int64(len(data)))
 	testutil.NoError(t, err, "ParseComponentsFromZip 失败")
-	if len(comps) != 2 {
-		t.Fatalf("期望 2 个组件, 得到 %d", len(comps))
-	}
+	// 守卫下方 comps[0]/[1] 索引
+	testutil.Equal(t, len(comps), 2, "期望 2 个组件, 实际 %d", len(comps))
 	if got := comps[0].Bones[0].Name; got != "head" {
 		t.Errorf("组件 0 应为 main(head), 得到 %s", got)
 	}
@@ -420,9 +406,8 @@ func TestParseComponentsFromZip_MainPriorityOverDeclOrder(t *testing.T) {
 	})
 	comps, _, err := ParseComponentsFromZip(data, int64(len(data)))
 	testutil.NoError(t, err, "ParseComponentsFromZip 失败")
-	if len(comps) != 2 {
-		t.Fatalf("期望 2 个组件, 得到 %d", len(comps))
-	}
+	// 守卫下方 comps[0]/[1] 索引
+	testutil.Equal(t, len(comps), 2, "期望 2 个组件, 实际 %d", len(comps))
 	if got := comps[0].Bones[0].Name; got != "head" {
 		t.Errorf("arm 声明在前时组件 0 仍应为 main(head), 得到 %s", got)
 	}
@@ -451,9 +436,8 @@ func TestParseComponentsFromZip_TexSlotClamp(t *testing.T) {
 	})
 	comps, _, err := ParseComponentsFromZip(data, int64(len(data)))
 	testutil.NoError(t, err, "ParseComponentsFromZip 失败")
-	if len(comps) != 2 {
-		t.Fatalf("期望 2 个组件, 得到 %d", len(comps))
-	}
+	// 守卫下方 comps 遍历（含 Bones/Cubes 索引）
+	testutil.Equal(t, len(comps), 2, "期望 2 个组件, 实际 %d", len(comps))
 	// 声明序越界钳制：main(j=0)→0(tex_a), arm(j=1>=1)→0(tex_a 共享)
 	for i, comp := range comps {
 		for _, b := range comp.Bones {

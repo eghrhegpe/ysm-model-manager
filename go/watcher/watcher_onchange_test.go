@@ -20,9 +20,7 @@ func TestOnChange_FiresOnFileChange(t *testing.T) {
 	var onChangeCount atomic.Int32
 	w := New(repoDir, t.TempDir(), mockScanFunc)
 	w.SetOnChange(func() { onChangeCount.Add(1) })
-	if err := w.Start(); err != nil {
-		t.Fatalf("Start() = %v", err)
-	}
+	testutil.NoError(t, w.Start(), "Start() =")
 	defer w.Stop()
 	w.WaitReady()
 
@@ -36,9 +34,7 @@ func TestOnChange_FiresOnFileChange(t *testing.T) {
 func TestOnChange_NilGuard(t *testing.T) {
 	repoDir := t.TempDir()
 	w := New(repoDir, t.TempDir(), mockScanFunc)
-	if err := w.Start(); err != nil {
-		t.Fatalf("Start() = %v", err)
-	}
+	testutil.NoError(t, w.Start(), "Start() =")
 	defer w.Stop()
 	w.WaitReady()
 
@@ -58,9 +54,7 @@ func TestOnChange_MergesRapidEvents(t *testing.T) {
 	var onChangeCount atomic.Int32
 	w := New(repoDir, t.TempDir(), mockScanFunc)
 	w.SetOnChange(func() { onChangeCount.Add(1) })
-	if err := w.Start(); err != nil {
-		t.Fatalf("Start() = %v", err)
-	}
+	testutil.NoError(t, w.Start(), "Start() =")
 	defer w.Stop()
 	w.WaitReady()
 

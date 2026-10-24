@@ -52,13 +52,10 @@ func TestFindComponentsInExtractedYSM(t *testing.T) {
 	}
 
 	comps, texNames := FindComponentsInExtractedYSM(filepath.Join(dir, "ysm.json"))
-	if len(comps) != 4 {
-		t.Fatalf("组件数 = %d, 期望 4（main/arm/arrow/boat 补扫）", len(comps))
-	}
+	// 守卫下方 comps[0] 索引
+	testutil.Equal(t, len(comps), 4, "组件数 = %d, 期望 4（main/arm/arrow/boat 补扫）", len(comps))
 	// main 优先（map 形声明：main 键排首位）
-	if comps[0].Bones[0].Name != "mainBone" {
-		t.Fatalf("组件 0 应为 main（实际骨骼 = %q）", comps[0].Bones[0].Name)
-	}
+	testutil.Equal(t, comps[0].Bones[0].Name, "mainBone", "组件 0 应为 main（实际骨骼 = %q）", comps[0].Bones[0].Name)
 	// TexSlot：main/arm 共享 skin（0），arrow/boat 按名段 1/2
 	wantSlots := []int{0, 0, 1, 2}
 	// arm 与 main 共用同一套 player.texture 皮肤（ModernYSM 权威）：
@@ -66,16 +63,10 @@ func TestFindComponentsInExtractedYSM(t *testing.T) {
 	wantTexNames := []string{"skin", "", "arrow", "boat"}
 	for i, c := range comps {
 		slot := c.Bones[0].Cubes[0].TexSlot
-		if slot != wantSlots[i] {
-			t.Fatalf("组件 %d texSlot = %d, 期望 %d", i, slot, wantSlots[i])
-		}
+		testutil.Equal(t, slot, wantSlots[i], "组件 %d texSlot", i)
 	}
-	if len(texNames) != len(wantTexNames) {
-		t.Fatalf("texNames = %v (len=%d), 期望 %v", texNames, len(texNames), wantTexNames)
-	}
+	testutil.Equal(t, len(texNames), len(wantTexNames), "texNames = %v (len=%d), 期望 %v", texNames, len(texNames), wantTexNames)
 	for i, want := range wantTexNames {
-		if texNames[i] != want {
-			t.Fatalf("texNames[%d] = %q, 期望 %q", i, texNames[i], want)
-		}
+		testutil.Equal(t, texNames[i], want, "texNames[%d] 应为 %q", i, want)
 	}
 }

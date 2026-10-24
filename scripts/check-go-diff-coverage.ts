@@ -380,7 +380,10 @@ function skipGoScanDir(name: string) {
     name === "artifacts" ||
     name === "scripts" ||
     name === "tests" ||
-    name === "e2e"
+    name === "e2e" ||
+    // gitignored 本地目录（tmp/ci-sim 是 CI 模拟仓副本，411 个测试文件会污染全库债
+    // 计数——2026-10-24 实证本地 5959 vs CI 3007）
+    name === "tmp"
   );
 }
 

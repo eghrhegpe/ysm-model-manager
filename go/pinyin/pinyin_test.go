@@ -83,13 +83,11 @@ func TestTable_SortedAndLower(t *testing.T) {
 	tab := Table()
 	testutil.Equal(t, len(tab) > 5000, true, "PinyinDict 派生表规模（数千汉字）")
 	for i := 1; i < len(tab); i++ {
-		if tab[i].Codepoint < tab[i-1].Codepoint {
-			t.Fatalf("Table 未按码点升序（生成物 diff 稳定性）：%d < %d", tab[i].Codepoint, tab[i-1].Codepoint)
-		}
+		testutil.Equal(t, tab[i].Codepoint >= tab[i-1].Codepoint, true,
+			"Table 未按码点升序（生成物 diff 稳定性）：%d < %d", tab[i].Codepoint, tab[i-1].Codepoint)
 	}
 	for _, e := range tab {
-		if strings.ToLower(e.Pinyin) != e.Pinyin {
-			t.Fatalf("Table 拼音必须小写：码点 %d = %q", e.Codepoint, e.Pinyin)
-		}
+		// 直接字符串 Equal：归一化后仍等于自身 = 已是小写
+		testutil.Equal(t, strings.ToLower(e.Pinyin), e.Pinyin, "Table 拼音必须小写：码点 %d = %q", e.Codepoint, e.Pinyin)
 	}
 }

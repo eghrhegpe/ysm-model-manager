@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/internal/testutil"
 )
 
 // TestSearchModels_KeywordPinyinFace：中文模型名经全拼/首字母命中，
@@ -25,29 +26,20 @@ func TestSearchModels_KeywordPinyinFace(t *testing.T) {
 
 	// 全拼子串「xiao」→ 小红书命中，warrior 不命中
 	results := a.SearchModels(base, types.SearchFilters{Keyword: "xiao"})
-	if len(results) != 1 {
-		t.Fatalf("搜索 xiao 期望 1 个结果（小红书），got %d", len(results))
-	}
-	if results[0].Name != "小红书" {
-		t.Fatalf("命中条目应为 小红书，got %s", results[0].Name)
-	}
+	testutil.Equal(t, len(results), 1, "搜索 xiao 期望 1 个结果（小红书）") // 前置守卫：仅 1 条才取 results[0]
+	testutil.Equal(t, results[0].Name, "小红书", "命中条目应为 小红书")
 
 	// 首字母「xhs」同样命中
 	results = a.SearchModels(base, types.SearchFilters{Keyword: "xhs"})
-	if len(results) != 1 || results[0].Name != "小红书" {
-		t.Fatalf("首字母 xhs 应命中 小红书.ysm，got %+v", results)
-	}
+	testutil.Equal(t, len(results), 1, "首字母 xhs 应命中 小红书.ysm: %+v", results) // 前置守卫：仅 1 条才取 results[0]
+	testutil.Equal(t, results[0].Name, "小红书", "首字母 xhs 应命中 小红书.ysm")
 
 	// 绝对路径面废止：仓库根前缀（base 的绝对路径片段）不得成为关键词命中面
 	probe := filepath.Base(filepath.Dir(base)) // temp 目录父级名（如 …/001）
 	results = a.SearchModels(base, types.SearchFilters{Keyword: probe})
-	if len(results) != 0 {
-		t.Fatalf("根前缀关键词 %q 不应命中（绝对路径面已废止），got %d", probe, len(results))
-	}
+	testutil.Equal(t, len(results), 0, "根前缀关键词 %q 不应命中（绝对路径面已废止）", probe)
 
 	// 相对路径目录段「ysm」命中（原绝对路径面可命中，相对路径面语义不变）
 	results = a.SearchModels(base, types.SearchFilters{Keyword: "ysm"})
-	if len(results) != 2 {
-		t.Fatalf("目录段关键词 ysm 应命中全部 2 条目，got %d", len(results))
-	}
+	testutil.Equal(t, len(results), 2, "目录段关键词 ysm 应命中全部 2 条目")
 }

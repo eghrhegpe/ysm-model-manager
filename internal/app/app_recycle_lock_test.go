@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"ysm-model-manager/go/installer"
+	"ysm-model-manager/internal/testutil"
 )
 
 // recordingLocker 记录 Lock/Unlock 调用与重入请求的 stub 锁（ADR-202 刀3）。
@@ -60,12 +61,8 @@ func TestRecycleBindings_NonReentrantUnderLock(t *testing.T) {
 	_ = a.MoveToRecycle(src)
 	stub.Unlock()
 
-	if stub.lockCalls == 0 {
-		t.Fatal("MoveToRecycle 未请求持锁（锁契约回归：绑定不再持 InstallLock）")
-	}
-	if !stub.reentrant {
-		t.Fatal("非重入契约失效：已持锁路径内调用未触发重入请求（R21 同型事故防护）")
-	}
+	testutil.Equal(t, stub.lockCalls == 0, false, "MoveToRecycle 未请求持锁（锁契约回归：绑定不再持 InstallLock）")
+	testutil.Equal(t, stub.reentrant, true, "非重入契约失效：已持锁路径内调用未触发重入请求（R21 同型事故防护）")
 }
 
 // TestRecycleBindings_ConcurrentLockedOps 并发冒烟（-race 下验证共享单锁互斥）：
@@ -92,6 +89,6 @@ func TestRecycleBindings_ConcurrentLockedOps(t *testing.T) {
 	select {
 	case <-done:
 	case <-time.After(10 * time.Second):
-		t.Fatal("并发持锁操作超时（疑似死锁：锁契约回归）")
+		testutil.Equal(t, true, false, "并发持锁操作超时（疑似死锁：锁契约回归）")
 	}
 }

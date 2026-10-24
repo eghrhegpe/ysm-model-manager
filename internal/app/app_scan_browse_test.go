@@ -37,9 +37,7 @@ func TestScanModelEntriesForBrowse_ParityWithFiltered(t *testing.T) {
 	full := a.ScanModelEntriesFiltered(root, "ysm", "", "YSM 模型")
 	browse := a.ScanModelEntriesForBrowse(root, "ysm", "", "YSM 模型")
 
-	if len(full) != len(browse) {
-		t.Fatalf("条目数应一致: full=%d browse=%d", len(full), len(browse))
-	}
+	testutil.Equal(t, len(browse), len(full), "条目数应一致: full=%d browse=%d", len(full), len(browse))
 	fullByPath := make(map[string]types.ModelEntry, len(full))
 	for _, e := range full {
 		fullByPath[e.Path] = e
@@ -49,9 +47,7 @@ func TestScanModelEntriesForBrowse_ParityWithFiltered(t *testing.T) {
 			t.Errorf("浏览条目 %s Hash 应恒空（哈希税只在同步路径），got %q", e.Path, e.Hash)
 		}
 		fe, ok := fullByPath[e.Path]
-		if !ok {
-			t.Fatalf("浏览条目 %s 不在全量结果内（过滤口径漂移）", e.Path)
-		}
+		testutil.Equal(t, ok, true, "浏览条目 %s 不在全量结果内（过滤口径漂移）", e.Path) // 前置守卫：存在才比对 fe
 		if e.Banned != fe.Banned || e.Size != fe.Size || e.Type != fe.Type {
 			t.Errorf("浏览条目 %s Banned/Size/Type 与全量口径分歧: %+v vs %+v", e.Path, e, fe)
 		}

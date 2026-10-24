@@ -7,7 +7,11 @@
 //   - 畸形输入不得返回「部分深度」（哨兵只留给超深合法结构）
 package litematic
 
-import "testing"
+import (
+	"testing"
+
+	"ysm-model-manager/go/internal/testutil"
+)
 
 // TestProbeNbtDepth_AllPayloadTypesDepth 锁定各 payload 类型的深度推进：
 // list 元素与 compound 子 payload 均为 depth+1（根 compound 的孙子层 = 2）。
@@ -27,9 +31,7 @@ func TestProbeNbtDepth_AllPayloadTypesDepth(t *testing.T) {
 		nbtLongArray("la", []int64{1, 2}),
 	)
 	d, ok := probeNbtDepth(data)
-	if !ok {
-		t.Fatal("合法复合 payload 应 ok=true")
-	}
+	testutil.Equal(t, ok, true, "合法复合 payload 应 ok=true")
 	// 根 compound(0) → 子 payload(1) → cmp 的子 / list 的元素(2)
 	if d != 2 {
 		t.Errorf("depth = %d, 期望 2（compound 孙层 / list 元素层）", d)
@@ -42,9 +44,7 @@ func TestProbeNbtDepth_MalformedReturnsZeroDepthNotPartial(t *testing.T) {
 	truncated := buildNestedNBT(2)
 	truncated = truncated[:len(truncated)-1] // 去掉最外层 end：中途截断
 	d, ok := probeNbtDepth(truncated)
-	if ok {
-		t.Fatal("截断输入应 ok=false")
-	}
+	testutil.Equal(t, ok, false, "截断输入应 ok=false")
 	if d != 0 {
 		t.Errorf("depth = %d, 期望 0（不得返回部分深度）", d)
 	}
@@ -88,9 +88,8 @@ func TestProbeNbtDepth_CompoundKeyNamesCharged(t *testing.T) {
 	for i := 0; i < 9000; i++ {
 		buf = append(buf, 0x01, 0xFF, 0xFF) // TAG_Byte + 声明 65535 字节键名
 	}
-	if _, ok := probeNbtDepth(buf); ok {
-		t.Fatal("海量长键名应被物化预算拒绝")
-	}
+	_, ok := probeNbtDepth(buf)
+	testutil.Equal(t, ok, false, "海量长键名应被物化预算拒绝")
 
 	// 对照：同结构但键名短小（100 键）→ 合法
 	shortKeys := []byte{0x0A, 0x00, 0x00}

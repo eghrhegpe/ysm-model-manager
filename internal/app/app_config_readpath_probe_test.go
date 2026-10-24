@@ -63,10 +63,9 @@ func TestLoadAppConfig_MigratesLegacyFieldsOnStartupPath(t *testing.T) {
 		LinkMode:  "copy",
 	})
 
-	cached := a.LoadAppConfig() // 启动已填好，这里只读内存副本
-	if cached.CustomRoots == nil || cached.CustomRoots["ysm"] == "" {
-		t.Fatalf("启动路径未迁移 legacy 字段：CustomRoots=%v（期望含 ysm→%q）", cached.CustomRoots, "C:/legacy/ysm")
-	}
+	cached := a.LoadAppConfig()                                                 // 启动已填好，这里只读内存副本
+	testutil.NotNil(t, cached.CustomRoots, "启动路径未迁移 legacy 字段：CustomRoots=nil") // 前置守卫：非 nil 才可索引
+	testutil.Equal(t, cached.CustomRoots["ysm"] == "", false, "启动路径未迁移 legacy 字段（期望含 ysm→C:/legacy/ysm）: CustomRoots=%v", cached.CustomRoots)
 	// MmdRoot 的迁移目标是多个资源类型 ID（EntityPlayer/SceneModel 等，见 migrateLegacyConfigFields
 	// 的 rt.ConfigField 遍历），不是一个「mmd」键——这里只锁「旧字段被清零」这一侧，
 	// 具体迁移到哪些键由 registry 决定，不在本用例断言范围。
@@ -91,9 +90,8 @@ func TestStartupPath_LegacyRootSurvivesFirstWrite(t *testing.T) {
 	testutil.NoError(t, a.SaveAppConfigPatch(types.AppConfigPatch{Theme: &theme}), "首次写盘（只改主题）")
 
 	after := a.LoadAppConfig()
-	if after.CustomRoots == nil || after.CustomRoots["ysm"] == "" {
-		t.Fatalf("用户的老 ysmRoot 经一次「只改主题」的保存后丢失：CustomRoots=%v", after.CustomRoots)
-	}
+	testutil.NotNil(t, after.CustomRoots, "用户的老 ysmRoot 经一次「只改主题」的保存后丢失：CustomRoots=nil") // 前置守卫：非 nil 才可索引
+	testutil.Equal(t, after.CustomRoots["ysm"] == "", false, "用户的老 ysmRoot 经一次「只改主题」的保存后丢失: CustomRoots=%v", after.CustomRoots)
 	if got := specificRoot(after, "ysm"); got == "" {
 		t.Errorf("specificRoot 取不到 legacy 路径（用户独立路径已失效，会静默回退 FilesRoot 派生路径）")
 	}
@@ -135,12 +133,8 @@ func TestBothReadPaths_SymmetricOnSameDisk(t *testing.T) {
 	lazyApp := newLinkModeApp()
 	lazyGot := lazyApp.LoadAppConfig()
 
-	if startupGot.CustomRoots == nil {
-		t.Fatalf("启动路径 CustomRoots 为 nil，无法比对")
-	}
-	if len(startupGot.CustomRoots) != len(lazyGot.CustomRoots) {
-		t.Fatalf("双路径 CustomRoots 不等：启动=%v 惰性=%v", startupGot.CustomRoots, lazyGot.CustomRoots)
-	}
+	testutil.NotNil(t, startupGot.CustomRoots, "启动路径 CustomRoots 为 nil，无法比对")
+	testutil.Equal(t, len(startupGot.CustomRoots), len(lazyGot.CustomRoots), "双路径 CustomRoots 不等：启动=%v 惰性=%v", startupGot.CustomRoots, lazyGot.CustomRoots)
 	for k, v := range lazyGot.CustomRoots {
 		if startupGot.CustomRoots[k] != v {
 			t.Errorf("双路径 CustomRoots[%q] 不等：启动=%q 惰性=%q", k, startupGot.CustomRoots[k], v)

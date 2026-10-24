@@ -186,9 +186,7 @@ func TestVerdictMatrix_FolderContents(t *testing.T) {
 				byKey[d.RelPath] = d.Status
 			}
 			for k, want := range c.want {
-				if byKey[k] != want {
-					t.Fatalf("%s：relKey %q got=%s want=%s（全表 %v）", c.name, k, byKey[k], want, byKey)
-				}
+				testutil.Equal(t, byKey[k], want, "%s：relKey %q（全表 %v）", c.name, k, byKey)
 			}
 		})
 	}
@@ -253,13 +251,10 @@ func assertMatrixResult(t *testing.T, name string, got, want types.ResourceSyncR
 	}
 	for label, p := range pairs {
 		g, w := p[0], p[1]
-		if len(g) != len(w) {
-			t.Fatalf("%s：%s 桶 got=%v want=%v", name, label, g, w)
-		}
+		// 守卫下方 g[i]/w[i] 索引
+		testutil.Equal(t, len(g), len(w), "%s：%s 桶 got=%v want=%v", name, label, g, w)
 		for i := range g {
-			if g[i] != w[i] {
-				t.Fatalf("%s：%s 桶 got=%v want=%v", name, label, g, w)
-			}
+			testutil.Equal(t, g[i], w[i], "%s：%s 桶 got=%v want=%v", name, label, g, w)
 		}
 	}
 }

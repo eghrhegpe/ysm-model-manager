@@ -64,13 +64,11 @@ func TestBuildGlowBone(t *testing.T) {
 			} `json:"bones"`
 		} `json:"models"`
 	}
-	if err := json.Unmarshal([]byte(spec), &parsed); err != nil {
-		t.Fatalf("解析 spec JSON: %v", err)
-	}
+	testutil.NoError(t, json.Unmarshal([]byte(spec), &parsed), "解析 spec JSON")
 
-	if len(parsed.Models) == 0 || len(parsed.Models[0].Bones) != 4 {
-		t.Fatalf("期望 4 个骨骼，得到 %+v", parsed)
-	}
+	// OR 型复合条件拆序贯：len 前置守卫防 parsed.Models[0] 越界（原 if ==0 || !=4）
+	testutil.Equal(t, len(parsed.Models) == 0, false, "期望 4 个骨骼，得到 %+v", parsed)
+	testutil.Equal(t, len(parsed.Models[0].Bones), 4, "期望 4 个骨骼，得到 %+v", parsed)
 
 	glowMap := map[string]bool{}
 	for _, b := range parsed.Models[0].Bones {
@@ -112,13 +110,11 @@ func TestBuildGlowBoneCaseInsensitive(t *testing.T) {
 			} `json:"bones"`
 		} `json:"models"`
 	}
-	if err := json.Unmarshal([]byte(spec), &parsed); err != nil {
-		t.Fatalf("解析 spec JSON: %v", err)
-	}
+	testutil.NoError(t, json.Unmarshal([]byte(spec), &parsed), "解析 spec JSON")
 
-	if len(parsed.Models) == 0 || len(parsed.Models[0].Bones) != 1 {
-		t.Fatalf("期望 1 个骨骼，得到 %+v", parsed)
-	}
+	// OR 型复合条件拆序贯：len 前置守卫防 parsed.Models[0] 越界（原 if ==0 || !=1）
+	testutil.Equal(t, len(parsed.Models) == 0, false, "期望 1 个骨骼，得到 %+v", parsed)
+	testutil.Equal(t, len(parsed.Models[0].Bones), 1, "期望 1 个骨骼，得到 %+v", parsed)
 	if !parsed.Models[0].Bones[0].Glow {
 		t.Error("ysmglowheadlight (小写) 应标记 Glow=true")
 	}
@@ -211,7 +207,6 @@ func TestGlowMeshUVMatchesGeometry(t *testing.T) {
 			}
 		}
 	}
-	if glowMeshes == 0 {
-		t.Fatal("fixture 中未找到 ysmGlow 发光 mesh，测试失去锁定意义")
-	}
+	// 护栏：至少存在一个发光 mesh（原 if ==0 → t.Fatal）
+	testutil.Equal(t, glowMeshes == 0, false, "fixture 中未找到 ysmGlow 发光 mesh，测试失去锁定意义")
 }

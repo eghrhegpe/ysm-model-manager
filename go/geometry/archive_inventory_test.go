@@ -40,9 +40,7 @@ func TestFileInventory_ComponentsPath(t *testing.T) {
 	})
 	models, _, err := ParseComponentsFromZip(data, int64(len(data)))
 	testutil.NoError(t, err, "ParseComponentsFromZip")
-	if len(models) < 2 {
-		t.Fatalf("期望至少 2 个组件, 实际 %d", len(models))
-	}
+	testutil.Equal(t, len(models) < 2, false, "期望至少 2 个组件, 实际 %d", len(models))
 	for _, m := range models {
 		if m.FileInventory == nil {
 			t.Errorf("组件 %s: 期望 FileInventory 非 nil", m.SourceName)

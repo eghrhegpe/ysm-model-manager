@@ -88,9 +88,7 @@ func TestCheckWithClient_NoPlatformAsset(t *testing.T) {
 
 	info, err := CheckWithClient(server.Client(), server.URL, "1.0.0")
 	testutil.NoError(t, err, "CheckWithClient() =")
-	if info.Available {
-		t.Fatal("无本平台安装包不应 available")
-	}
+	testutil.Equal(t, info.Available, false, "无本平台安装包不应 available")
 	if info.Latest != "v2.0.0" {
 		t.Errorf("Latest = %q, 期望 v2.0.0", info.Latest)
 	}
@@ -120,9 +118,7 @@ func TestCheckWithClient_HashFetchFails(t *testing.T) {
 
 	info, err := CheckWithClient(server.Client(), server.URL, "1.0.0")
 	testutil.NoError(t, err, "CheckWithClient() =")
-	if info.Available {
-		t.Fatal("hash 获取失败时应更新不可用（R30 P2-3 fail-closed）")
-	}
+	testutil.Equal(t, info.Available, false, "hash 获取失败时应更新不可用（R30 P2-3 fail-closed）")
 	if info.ExpectedHash != "" {
 		t.Errorf("hash 获取失败时 ExpectedHash 应为空, got %q", info.ExpectedHash)
 	}
@@ -151,9 +147,7 @@ func TestCheckWithClient_NoReleaseNotes(t *testing.T) {
 
 	info, err := CheckWithClient(server.Client(), server.URL, "1.0.0")
 	testutil.NoError(t, err, "CheckWithClient() =")
-	if !info.Available {
-		t.Fatal("应检测到新版本")
-	}
+	testutil.Equal(t, info.Available, true, "应检测到新版本")
 	if info.ReleaseNotes != "" {
 		t.Errorf("空 body 不应聚合日志, got %q", info.ReleaseNotes)
 	}

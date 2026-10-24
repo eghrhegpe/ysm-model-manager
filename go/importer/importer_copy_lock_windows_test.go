@@ -11,7 +11,6 @@ package importer
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"ysm-model-manager/go/internal/testutil"
@@ -28,15 +27,10 @@ func TestCopyDir_RecursionErrorLocked(t *testing.T) {
 	testutil.LockDirExclusive(t, filepath.Join(src, "d"))
 
 	dst := filepath.Join(base, "out")
-	if err := copyDir(src, dst); err == nil {
-		t.Fatal("枚举被锁子目录应失败")
-	}
-	if _, err := os.Stat(dst); !os.IsNotExist(err) {
-		t.Fatalf("失败时目标不应被创建: %v", err)
-	}
-	if n := globCount(t, base, ".tmp_import_*"); n != 0 {
-		t.Fatalf("失败后不应残留临时目录，实际 %d 个", n)
-	}
+	err := copyDir(src, dst)
+	testutil.NotNil(t, err, "枚举被锁子目录应失败")
+	testutil.FileNotExists(t, dst, "失败时目标不应被创建")
+	testutil.Equal(t, globCount(t, base, ".tmp_import_*"), 0, "失败后不应残留临时目录")
 }
 
 // TestCopyDir_BackupRenameErrorLocked 目标目录被锁 → 备份 rename 失败 → 目标原样保留、无残留
@@ -50,20 +44,14 @@ func TestCopyDir_BackupRenameErrorLocked(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(dst, "old.txt"), []byte("old"), 0644)
 	testutil.LockDirExclusive(t, dst)
 
-	if err := copyDir(src, dst); err == nil {
-		t.Fatal("备份 rename 被锁阻断应失败")
-	}
+	err := copyDir(src, dst)
+	testutil.NotNil(t, err, "备份 rename 被锁阻断应失败")
 	// 目标目录原样保留（未备份、未替换）
 	data, err := os.ReadFile(filepath.Join(dst, "old.txt"))
-	if err != nil || string(data) != "old" {
-		t.Fatalf("既有内容应保留: %v %v", err, string(data))
-	}
-	if n := globCount(t, base, ".tmp_import_*"); n != 0 {
-		t.Fatalf("失败后不应残留临时目录，实际 %d 个", n)
-	}
-	if n := globCount(t, base, "out.import-bak-*"); n != 0 {
-		t.Fatalf("失败后不应残留备份目录，实际 %d 个", n)
-	}
+	testutil.NoError(t, err, "既有内容应保留")
+	testutil.Equal(t, string(data), "old", "既有内容应保留")
+	testutil.Equal(t, globCount(t, base, ".tmp_import_*"), 0, "失败后不应残留临时目录")
+	testutil.Equal(t, globCount(t, base, "out.import-bak-*"), 0, "失败后不应残留备份目录")
 }
 
 // TestDirectoryCopyImport_CopyDirErrorLocked DirectoryCopyImporter.Import 内部
@@ -79,11 +67,6 @@ func TestDirectoryCopyImport_CopyDirErrorLocked(t *testing.T) {
 
 	dstDir := filepath.Join(base, "out")
 	err := NewDirectoryCopy("EntityPlayer").Import(modelDir, dstDir)
-	testutil.NotNil(t, err, "copyDir 失败应返回错误消息")
-	if !strings.Contains(err.Error(), "复制文件夹失败") {
-		t.Fatalf("错误消息 %q 应包含「复制文件夹失败」", err)
-	}
-	if n := globCount(t, dstDir, ".tmp_import_*"); n != 0 {
-		t.Fatalf("失败后不应残留临时目录，实际 %d 个", n)
-	}
+	testutil.ErrorContains(t, err, "复制文件夹失败", "copyDir 失败应返回错误消息")
+	testutil.Equal(t, globCount(t, dstDir, ".tmp_import_*"), 0, "失败后不应残留临时目录")
 }

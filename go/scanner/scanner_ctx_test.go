@@ -17,15 +17,13 @@ func TestScanEntriesLiteCtx_Cancelled(t *testing.T) {
 		}
 	}
 	// 未取消：应有结果
-	if got := ScanEntriesLiteCtx(context.Background(), dir); len(got) == 0 {
-		t.Fatalf("Background ctx 应正常扫描, got %d 条", len(got))
-	}
+	got := ScanEntriesLiteCtx(context.Background(), dir)
+	testutil.Equal(t, len(got) != 0, true, "Background ctx 应正常扫描, got %d 条", len(got))
 	// 预取消：中止 walk，无条目
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	if got := ScanEntriesLiteCtx(ctx, dir); len(got) != 0 {
-		t.Fatalf("预取消 ctx 应返回空, got %d 条", len(got))
-	}
+	gotCancelled := ScanEntriesLiteCtx(ctx, dir)
+	testutil.Equal(t, len(gotCancelled), 0, "预取消 ctx 应返回空, got %d 条", len(gotCancelled))
 }
 
 // TestScanEntriesWithHitCtx_CancelledNotCached：取消产生的部分结果不写入缓存——
@@ -37,11 +35,10 @@ func TestScanEntriesWithHitCtx_CancelledNotCached(t *testing.T) {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	if got, _ := ScanEntriesWithHitCtx(ctx, dir); len(got) != 0 {
-		t.Fatalf("预取消 ctx 应返回空, got %d 条", len(got))
-	}
+	gotCtx, _ := ScanEntriesWithHitCtx(ctx, dir)
+	testutil.Equal(t, len(gotCtx), 0, "预取消 ctx 应返回空, got %d 条", len(gotCtx))
 	got, hit := ScanEntriesWithHit(dir)
-	if hit || len(got) != 1 {
-		t.Fatalf("取消后重扫不应命中缓存: hit=%v len=%d", hit, len(got))
-	}
+	// OR 型复合条件拆序贯
+	testutil.Equal(t, hit, false, "取消后重扫不应命中缓存: hit=%v len=%d", hit, len(got))
+	testutil.Equal(t, len(got), 1, "取消后重扫不应命中缓存: hit=%v len=%d", hit, len(got))
 }

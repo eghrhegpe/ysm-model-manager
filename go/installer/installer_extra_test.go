@@ -17,13 +17,9 @@ func TestLinkOrCopy_Success(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	dstDir := filepath.Join(dir, "dst")
-	if err := linkOrCopy(src, dstDir); err != nil {
-		t.Fatalf("linkOrCopy failed: %v", err)
-	}
+	testutil.NoError(t, linkOrCopy(src, dstDir), "linkOrCopy failed")
 	dst := filepath.Join(dstDir, "source.ysm")
-	if _, err := os.Stat(dst); err != nil {
-		t.Fatalf("target file should exist: %v", err)
-	}
+	testutil.FileExists(t, dst, "target file should exist")
 }
 
 func TestLinkOrCopy_SrcMissing(t *testing.T) {
@@ -68,9 +64,7 @@ func TestCopyFileLocked_Success(t *testing.T) {
 	dstDir := filepath.Join(dir, "sub")
 	dst, err := CopyFileLocked(src, dstDir)
 	testutil.NoError(t, err, "CopyFileLocked failed")
-	if dst == "" {
-		t.Fatal("returned path should not be empty")
-	}
+	testutil.Equal(t, dst != "", true, "returned path should not be empty")
 	readBack, err := os.ReadFile(dst)
 	testutil.NoError(t, err)
 	if string(readBack) != string(content) {
@@ -113,14 +107,13 @@ func TestSameSource_LinkType(t *testing.T) {
 		}
 		defer os.Remove(dst)
 		same, err := sameSource(src, dst, false)
-		if err != nil || !same {
-			t.Fatalf("hardlink 目标应匹配 hardlink 模式: same=%v err=%v", same, err)
-		}
+		// OR 拆序贯：err 与 same 分别断言（err 非 nil 时 same 语义未定义，先 NoError 弃权）
+		testutil.NoError(t, err, "hardlink 目标应匹配 hardlink 模式: same=%v", same)
+		testutil.Equal(t, same, true, "hardlink 目标应匹配 hardlink 模式")
 		// 但 symlink 模式要求 symlink 目标 → hardlink 判不同源
 		sameSym, err := sameSource(src, dst, true)
-		if err != nil || sameSym {
-			t.Fatalf("hardlink 目标在 symlink 模式下应判不同源: same=%v err=%v", sameSym, err)
-		}
+		testutil.NoError(t, err, "hardlink 目标在 symlink 模式下应判不同源: same=%v", sameSym)
+		testutil.Equal(t, sameSym, false, "hardlink 目标在 symlink 模式下应判不同源")
 	})
 
 	t.Run("symlink 目标匹配 symlink 模式", func(t *testing.T) {
@@ -129,20 +122,19 @@ func TestSameSource_LinkType(t *testing.T) {
 		}
 		defer os.Remove(dst)
 		same, err := sameSource(src, dst, true)
-		if err != nil || !same {
-			t.Fatalf("symlink 目标应匹配 symlink 模式: same=%v err=%v", same, err)
-		}
+		// OR 拆序贯：err 与 same 分别断言
+		testutil.NoError(t, err, "symlink 目标应匹配 symlink 模式: same=%v", same)
+		testutil.Equal(t, same, true, "symlink 目标应匹配 symlink 模式")
 		// 但 hardlink 模式要求非 symlink 目标 → symlink 判不同源
 		sameLink, err := sameSource(src, dst, false)
-		if err != nil || sameLink {
-			t.Fatalf("symlink 目标在 hardlink 模式下应判不同源: same=%v err=%v", sameLink, err)
-		}
+		testutil.NoError(t, err, "symlink 目标在 hardlink 模式下应判不同源: same=%v", sameLink)
+		testutil.Equal(t, sameLink, false, "symlink 目标在 hardlink 模式下应判不同源")
 	})
 
 	t.Run("不存在目标判不同源", func(t *testing.T) {
 		same, err := sameSource(src, filepath.Join(dir, "missing.ysm"), false)
-		if err == nil || same {
-			t.Fatalf("不存在目标应报错且不同源: same=%v err=%v", same, err)
-		}
+		// OR 拆序贯：应报错且不同源
+		testutil.NotNil(t, err, "不存在目标应报错: same=%v", same)
+		testutil.Equal(t, same, false, "不存在目标应报错且不同源: err=%v", err)
 	})
 }

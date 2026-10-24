@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/installer"
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -46,15 +47,11 @@ func TestSyncResourcesWithConfig_ConflictPolicyRequiresLock(t *testing.T) {
 // 的 owner-tracked 精度：他人 goroutine 持锁时返回 false（消除 TryLock 误判窗口）。
 func TestAssertInstallLockHeld_OwnerPrecision(t *testing.T) {
 	// 锁空闲：HasLock = false → assertInstallLockHeld = false
-	if assertInstallLockHeld() {
-		t.Fatal("锁空闲时 assertInstallLockHeld 应返回 false")
-	}
+	testutil.Equal(t, assertInstallLockHeld(), false, "锁空闲时 assertInstallLockHeld 应返回 false")
 
 	// 持锁：HasLock = true → assertInstallLockHeld = true
 	installer.InstallLocker.Lock()
-	if !assertInstallLockHeld() {
-		t.Fatal("本 goroutine 持锁时 assertInstallLockHeld 应返回 true")
-	}
+	testutil.Equal(t, assertInstallLockHeld(), true, "本 goroutine 持锁时 assertInstallLockHeld 应返回 true")
 
 	// 他人 goroutine 持锁（自锁后 spawn 新 goroutine 探测）：
 	// 新 goroutine 的 HasLock = false（owner 不匹配）→ 精确识别非持有者
@@ -63,9 +60,7 @@ func TestAssertInstallLockHeld_OwnerPrecision(t *testing.T) {
 		ch <- assertInstallLockHeld()
 	}()
 	otherSawHeld := <-ch
-	if otherSawHeld {
-		t.Fatal("他人 goroutine 持锁时，本 goroutine 的 assertInstallLockHeld 应返回 false（精确 owner 检测）")
-	}
+	testutil.Equal(t, otherSawHeld, false, "他人 goroutine 持锁时，本 goroutine 的 assertInstallLockHeld 应返回 false（精确 owner 检测）")
 
 	installer.InstallLocker.Unlock()
 }

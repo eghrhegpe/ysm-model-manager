@@ -42,9 +42,7 @@ func TestDeleteResourcePack_EmptyRootFailFast_File(t *testing.T) {
 	testutil.NotNil(t, err, "未配置资源根时删除必须 fail-fast 报错")
 
 	var ae types.AppError
-	if !errors.As(err, &ae) {
-		t.Fatalf("应为结构化 AppError（前端 friendlyError 按 Code 映射 i18n），实得 %T: %v", err, err)
-	}
+	testutil.Equal(t, errors.As(err, &ae), true, "应为结构化 AppError（前端 friendlyError 按 Code 映射 i18n），实得 %T: %v", err, err)
 	if ae.Code != types.ErrInvalidPath {
 		t.Errorf("AppError.Code = %q, 期望 %q", ae.Code, types.ErrInvalidPath)
 	}
@@ -73,9 +71,7 @@ func TestDeleteResourcePack_EmptyRootFailFast_Dir(t *testing.T) {
 	testutil.NotNil(t, err, "未配置资源根时目录型删除必须 fail-fast 报错")
 
 	var ae types.AppError
-	if !errors.As(err, &ae) {
-		t.Fatalf("应为结构化 AppError，实得 %T: %v", err, err)
-	}
+	testutil.Equal(t, errors.As(err, &ae), true, "应为结构化 AppError，实得 %T: %v", err, err)
 	if ae.Code != types.ErrInvalidPath {
 		t.Errorf("AppError.Code = %q, 期望 %q", ae.Code, types.ErrInvalidPath)
 	}

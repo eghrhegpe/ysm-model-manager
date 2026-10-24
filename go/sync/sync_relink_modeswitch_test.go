@@ -39,9 +39,7 @@ func modeSwitchFixture(t *testing.T, content string) (repoRoot, customDir, repoF
 	}
 	customFile = filepath.Join(customDir, "m.ysm")
 	hash := computeHash(repoFile)
-	if hash == "" {
-		t.Fatal("computeHash 为空（fixture 失败）")
-	}
+	testutil.Equal(t, hash == "", false, "computeHash 为空（fixture 失败）")
 	scanFn = func(dir string) []types.ModelEntry {
 		if dir == repoRoot {
 			return []types.ModelEntry{{Name: "m.ysm", Path: repoFile, Hash: hash}}
@@ -59,9 +57,7 @@ func relinkQuiet(t *testing.T, customDir, repoRoot, linkMode string, scanFn func
 				t.Errorf("relink 失败: %s %s: %s", name, src, msg)
 			}
 		})
-	if err != nil {
-		t.Fatalf("RelinkDir(%s) 失败: %v", linkMode, err)
-	}
+	testutil.NoError(t, err, "RelinkDir(%s) 失败", linkMode)
 	return res.OK
 }
 
@@ -73,18 +69,14 @@ func TestRelinkDir_HardLinkToCopy_Decouples(t *testing.T) {
 		t.Skipf("平台不支持硬链接: %v", err)
 	}
 	si, _ := os.Stat(repoFile)
-	if ci, _ := os.Stat(customFile); !os.SameFile(si, ci) {
-		t.Fatal("fixture 失败：实例应先是指向仓库的硬链接")
-	}
+	ci, _ := os.Stat(customFile)
+	testutil.Equal(t, os.SameFile(si, ci), true, "fixture 失败：实例应先是指向仓库的硬链接")
 
-	if n := relinkQuiet(t, customDir, repoRoot, "copy", scanFn); n != 1 {
-		t.Fatalf("应重链接 1 个，实际 %d", n)
-	}
+	n := relinkQuiet(t, customDir, repoRoot, "copy", scanFn)
+	testutil.Equal(t, n, 1, "应重链接 1 个，实际 %d", n)
 	ci, err := os.Stat(customFile)
 	testutil.NoError(t, err, "实例文件应存在")
-	if os.SameFile(si, ci) {
-		t.Fatal("hardlink→copy 后仍共享 inode——切模式未解耦（真缺陷，按 ADR-296 D1 排查 linkMode 时序/scanner 缓存）")
-	}
+	testutil.Equal(t, os.SameFile(si, ci), false, "hardlink→copy 后仍共享 inode——切模式未解耦（真缺陷，按 ADR-296 D1 排查 linkMode 时序/scanner 缓存）")
 	if lt := GetLinkType(customFile); lt != types.LinkCopy {
 		t.Errorf("实例应为 LinkCopy，实际 %v", lt)
 	}
@@ -104,23 +96,17 @@ func TestRelinkDir_SymlinkToCopy_Decouples(t *testing.T) {
 	if err := os.Symlink(repoFile, customFile); err != nil {
 		t.Skipf("平台不支持符号链接（需特权/开发者模式）: %v", err)
 	}
-	if li, _ := os.Lstat(customFile); li.Mode()&os.ModeSymlink == 0 {
-		t.Fatal("fixture 失败：实例应先是指向仓库的符号链接")
-	}
+	li, _ := os.Lstat(customFile)
+	testutil.Equal(t, li.Mode()&os.ModeSymlink == 0, false, "fixture 失败：实例应先是指向仓库的符号链接")
 
-	if n := relinkQuiet(t, customDir, repoRoot, "copy", scanFn); n != 1 {
-		t.Fatalf("应重链接 1 个，实际 %d", n)
-	}
+	n := relinkQuiet(t, customDir, repoRoot, "copy", scanFn)
+	testutil.Equal(t, n, 1, "应重链接 1 个，实际 %d", n)
 	li, err := os.Lstat(customFile)
 	testutil.NoError(t, err, "实例文件应存在")
-	if li.Mode()&os.ModeSymlink != 0 {
-		t.Fatal("symlink→copy 后仍是符号链接——未解耦")
-	}
+	testutil.Equal(t, li.Mode()&os.ModeSymlink != 0, false, "symlink→copy 后仍是符号链接——未解耦")
 	si, _ := os.Stat(repoFile)
 	ci, _ := os.Stat(customFile)
-	if os.SameFile(si, ci) {
-		t.Fatal("解耦后不应仍与仓库共享 inode")
-	}
+	testutil.Equal(t, os.SameFile(si, ci), false, "解耦后不应仍与仓库共享 inode")
 	data, err := os.ReadFile(customFile)
 	if err != nil || string(data) != "same" {
 		t.Errorf("解耦后内容应保留，实际 %q err=%v", data, err)
@@ -137,17 +123,14 @@ func TestRelinkDir_CopyToHardLink_Links(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 
-	if n := relinkQuiet(t, customDir, repoRoot, "hardlink", scanFn); n != 1 {
-		t.Fatalf("应重链接 1 个，实际 %d", n)
-	}
+	n := relinkQuiet(t, customDir, repoRoot, "hardlink", scanFn)
+	testutil.Equal(t, n, 1, "应重链接 1 个，实际 %d", n)
 	if lt := GetLinkType(customFile); lt != types.LinkHard {
 		t.Errorf("copy→hardlink 后实例应为 LinkHard，实际 %v", lt)
 	}
 	si, _ := os.Stat(repoFile)
 	ci, _ := os.Stat(customFile)
-	if !os.SameFile(si, ci) {
-		t.Fatal("copy→hardlink 后应与仓库共享 inode")
-	}
+	testutil.Equal(t, os.SameFile(si, ci), true, "copy→hardlink 后应与仓库共享 inode")
 }
 
 // TestRelinkDir_DirLevelSnapshotMissingRefusesRename（ADR-296 D4 + 对抗审查①）：
@@ -238,9 +221,8 @@ func TestRelinkDir_DirLevelSnapshotReplacedRefusesRename(t *testing.T) {
 	}
 	// 文件占位物必须完好——复验在 rename **之前**，旧实现会把文件 rename 走变成备份目录
 	data, readErr := os.ReadFile(occupied)
-	if readErr != nil || string(data) != "x" {
-		t.Fatalf("占位文件应原样完好（未被动过）: err=%v data=%q", readErr, data)
-	}
+	testutil.NoError(t, readErr, "占位文件应原样完好（可读）")
+	testutil.Equal(t, string(data), "x", "占位文件应原样完好（未被动过）")
 }
 
 // 负向钉桩：Hash=="" 与 .ban 实例条目在**任何**模式下都不被动——
@@ -272,9 +254,7 @@ func TestRelinkDir_NoHashOrBanned_Untouched(t *testing.T) {
 					t.Errorf("mode=%s 不应有失败: %s %s: %s", mode, name, src, msg)
 				}
 			})
-		if err != nil {
-			t.Fatalf("mode=%s: %v", mode, err)
-		}
+		testutil.NoError(t, err, "mode=%s: RelinkDir 失败", mode)
 		if res.OK != 0 {
 			t.Errorf("mode=%s: 空哈希/禁用条目不应被重链，count=%d", mode, res.OK)
 		}

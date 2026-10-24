@@ -63,12 +63,9 @@ func TestBuildSyncItems_FileLevelSameSizeDiffContent_NotFakeSynced(t *testing.T)
 		map[string]string{"resourcepack": globalDir}, "")
 
 	it := findItem(items, "pack.zip")
-	if it == nil {
-		t.Fatalf("面板应列出 pack.zip，实际 %+v", items)
-	}
-	if it.Status == types.SyncStatusSynced {
-		t.Fatal("同大小异内容的 pack.zip 被判 Synced——fileLevel 内容级判定未生效（假绿，2026-10-15 锐评病灶）")
-	}
+	testutil.NotNil(t, it, "面板应列出 pack.zip，实际 %+v", items)
+	// 序贯拆分：前一 NotNil 失败即 Goexit，下一行的 it.Status 解引用才安全
+	testutil.Equal(t, it.Status == types.SyncStatusSynced, false, "同大小异内容的 pack.zip 被判 Synced——fileLevel 内容级判定未生效（假绿，2026-10-15 锐评病灶）")
 	if it.Status != types.SyncStatusDiverged {
 		t.Errorf("期望 Diverged（两侧均有、内容不同），实际 %q", it.Status)
 	}
@@ -95,9 +92,7 @@ func TestBuildSyncItems_FileLevelSameContent_StillSynced(t *testing.T) {
 		map[string]string{"resourcepack": globalDir}, "")
 
 	it := findItem(items, "pack.zip")
-	if it == nil {
-		t.Fatalf("面板应列出 pack.zip，实际 %+v", items)
-	}
+	testutil.NotNil(t, it, "面板应列出 pack.zip，实际 %+v", items)
 	if it.Status != types.SyncStatusSynced {
 		t.Errorf("同内容应 Synced（不得过度报警），实际 %q", it.Status)
 	}

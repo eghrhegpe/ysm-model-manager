@@ -20,15 +20,9 @@ func TestNewManager(t *testing.T) {
 	}
 	m := NewManager(queue, deps)
 	testutil.NotNil(t, m, "NewManager 应返回非 nil Manager")
-	if m.Queue == nil {
-		t.Fatal("Manager.Queue 应被设置")
-	}
-	if m.deps.LoadAppConfig == nil {
-		t.Fatal("Manager.deps.LoadAppConfig 应被设置")
-	}
-	if m.deps.SaveAppConfig == nil {
-		t.Fatal("Manager.deps.SaveAppConfig 应被设置")
-	}
+	testutil.NotNil(t, m.Queue, "Manager.Queue 应被设置")
+	testutil.NotNil(t, m.deps.LoadAppConfig, "Manager.deps.LoadAppConfig 应被设置")
+	testutil.NotNil(t, m.deps.SaveAppConfig, "Manager.deps.SaveAppConfig 应被设置")
 }
 
 // TestNewManager_NilQueue 测试 nil queue
@@ -39,9 +33,7 @@ func TestNewManager_NilQueue(t *testing.T) {
 	}
 	m := NewManager(nil, deps)
 	testutil.NotNil(t, m, "NewManager 应返回非 nil Manager")
-	if m.Queue != nil {
-		t.Fatal("Manager.Queue 应为 nil")
-	}
+	testutil.Nil(t, m.Queue, "Manager.Queue 应为 nil")
 }
 
 // TestSyncLinkMode 同步链接模式到内存快照
@@ -385,7 +377,7 @@ func TestCancel_ThenEnqueue(t *testing.T) {
 	select {
 	case <-bDownloaded:
 	case <-time.After(5 * time.Second):
-		t.Fatal("取消后入队的任务未被消费（队列静默停滞）")
+		testutil.Equal(t, true, false, "取消后入队的任务未被消费（队列静默停滞）")
 	}
 	// 队列最终静止：无残留任务且 running 复位
 	deadline := time.Now().Add(5 * time.Second)
@@ -395,7 +387,7 @@ func TestCancel_ThenEnqueue(t *testing.T) {
 			break
 		}
 		if time.Now().After(deadline) {
-			t.Fatalf("队列未静止: %+v", st)
+			testutil.Equal(t, st.Running || st.Remaining != 0, false, "队列未静止: %+v", st)
 		}
 		time.Sleep(2 * time.Millisecond)
 	}

@@ -11,9 +11,7 @@ import (
 
 func TestAllExts(t *testing.T) {
 	exts := AllExts()
-	if len(exts) == 0 {
-		t.Fatal("AllExts() = 空")
-	}
+	testutil.Equal(t, len(exts) != 0, true, "AllExts() = 空")
 	// .zip 应只出现一次（去重）
 	count := 0
 	for _, e := range exts {
@@ -104,9 +102,7 @@ func TestExtBelongsTo(t *testing.T) {
 func TestSupportedExtsForType(t *testing.T) {
 	// 已知类型
 	exts := SupportedExtsForType("ysm")
-	if len(exts) == 0 {
-		t.Fatal("SupportedExtsForType('ysm') = 空")
-	}
+	testutil.Equal(t, len(exts) != 0, true, "SupportedExtsForType('ysm') = 空")
 	if !slices.Contains(exts, ".ysm") {
 		t.Error("SupportedExtsForType('ysm') 缺少 .ysm")
 	}
@@ -485,9 +481,8 @@ func TestModRequirementInRegistry(t *testing.T) {
 	}
 	for _, a := range anchors {
 		rt := reg.FindByID(a.id)
-		if rt == nil {
-			t.Fatalf("类型 %q 不存在", a.id)
-		}
+		// NotNil 失败即 Goexit，守卫语义等价：下方 rt.Mod 解引用仅在其通过后执行
+		testutil.NotNil(t, rt, "类型 %q 不存在", a.id)
 		if rt.Mod == nil {
 			t.Errorf("类型 %q 缺少 mod 字段", a.id)
 			continue
@@ -512,19 +507,13 @@ func TestModRequirementInRegistry(t *testing.T) {
 func TestModKeywordsFor(t *testing.T) {
 	// ysm：自身声明
 	kws := ModKeywordsFor("ysm")
-	if len(kws) == 0 {
-		t.Fatal("ysm 应有 jarKeywords")
-	}
+	testutil.Equal(t, len(kws) != 0, true, "ysm 应有 jarKeywords")
 	// EntityPlayer：自身声明
 	kws = ModKeywordsFor("EntityPlayer")
-	if len(kws) == 0 {
-		t.Fatal("EntityPlayer 应有 jarKeywords")
-	}
+	testutil.Equal(t, len(kws) != 0, true, "EntityPlayer 应有 jarKeywords")
 	// SceneModel：自身无声明，回退到 mmd 组
 	kws = ModKeywordsFor("SceneModel")
-	if len(kws) == 0 {
-		t.Fatal("SceneModel 应回退到 mmd 组的 jarKeywords")
-	}
+	testutil.Equal(t, len(kws) != 0, true, "SceneModel 应回退到 mmd 组的 jarKeywords")
 	// resourcepack：无 mod 依赖，返回 nil
 	kws = ModKeywordsFor("resourcepack")
 	if kws != nil {

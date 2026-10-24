@@ -22,9 +22,10 @@ import (
 func TestRegistryTypeResolution_CaseVariantEquivalence(t *testing.T) {
 	base := RegistryType("ysm")
 	testutil.NotNil(t, base, "前置失败：注册表应含 id=ysm")
-	if got := resolveRegistryType("YSM"); got == nil {
-		t.Fatal(`resolveRegistryType("YSM") = nil，大小写变体应解析成功`)
-	} else if got.ID != base.ID {
+	// NotNil 失败即 Goexit，守卫语义等价：else 分支的 got.ID 解引用仅在其通过后执行
+	got := resolveRegistryType("YSM")
+	testutil.NotNil(t, got, `resolveRegistryType("YSM") = nil，大小写变体应解析成功`)
+	if got.ID != base.ID {
 		t.Errorf("大小写变体解析到不同类型: %q vs %q", got.ID, base.ID)
 	}
 	if a, b := SupportedExtsForType("YSM"), SupportedExtsForType("ysm"); len(a) != len(b) {

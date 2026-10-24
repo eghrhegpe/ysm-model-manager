@@ -22,13 +22,9 @@ func fixtureModels(t *testing.T, name string) []types.BedrockModel {
 	t.Helper()
 	p := filepath.Join("..", "..", "tests", "fixtures", "ysm", name, "main.json")
 	data, err := os.ReadFile(p)
-	if err != nil {
-		t.Fatalf("读取 fixture %s 失败: %v", p, err)
-	}
+	testutil.NoError(t, err, "读取 fixture %s 失败", p)
 	m := geometry.ParseBedrockGeometry(data)
-	if m == nil {
-		t.Fatalf("fixture %s 解析失败（ParseBedrockGeometry 返回 nil）", name)
-	}
+	testutil.NotNil(t, m, "fixture %s 解析失败（ParseBedrockGeometry 返回 nil）", name)
 	return []types.BedrockModel{*m}
 }
 
@@ -52,24 +48,19 @@ func TestBuildMulti_RealDecodedFixture_Lucia(t *testing.T) {
 	models := fixtureModels(t, "lucia")
 	out, err := BuildMulti(models, nil)
 	testutil.NoError(t, err, "BuildMulti(lucia 真实产物) 失败")
-	if out == "{}" {
-		t.Fatal("lucia 真实产物不应返回空 spec")
-	}
+	// 护栏：不得返回空 spec（原 if out=="{}" → t.Fatal）
+	testutil.Equal(t, out == "{}", false, "lucia 真实产物不应返回空 spec")
 	var raw interface{}
-	if err := json.Unmarshal([]byte(out), &raw); err != nil {
-		t.Fatalf("spec JSON 解析失败: %v", err)
-	}
+	testutil.NoError(t, json.Unmarshal([]byte(out), &raw), "spec JSON 解析失败")
 	var floats []float64
 	collectSpecFloats(raw, &floats)
 	for _, f := range floats {
-		if math.IsNaN(f) || math.IsInf(f, 0) {
-			t.Fatalf("spec 含 NaN/Inf 浮点值 %f（负 uv_size 路径产生非法 UV）", f)
-		}
+		// OR 型拆序贯：NaN / Inf 分别断言（原 if IsNaN || IsInf）
+		testutil.Equal(t, math.IsNaN(f), false, "spec 含 NaN/Inf 浮点值 %f（负 uv_size 路径产生非法 UV）", f)
+		testutil.Equal(t, math.IsInf(f, 0), false, "spec 含 NaN/Inf 浮点值 %f（负 uv_size 路径产生非法 UV）", f)
 	}
 	// mirror 单次应用：不 panic 且 UV 数量完整（每面 8 值）
-	if len(floats) < 16 {
-		t.Fatalf("spec UV 值过少（%d），mirror 面可能被丢弃", len(floats))
-	}
+	testutil.Equal(t, len(floats) < 16, false, "spec UV 值过少（%d），mirror 面可能被丢弃", len(floats))
 }
 
 func TestBuildMulti_RealDecodedFixture_All(t *testing.T) {
@@ -114,14 +105,13 @@ func TestBuildMulti_RealDecodedFixture_All(t *testing.T) {
 		var floats []float64
 		collectSpecFloats(raw, &floats)
 		for _, f := range floats {
-			if math.IsNaN(f) || math.IsInf(f, 0) {
-				t.Fatalf("fixture %s spec 含 NaN/Inf %f", e.Name(), f)
-			}
+			// OR 型拆序贯：NaN / Inf 分别断言（原 if IsNaN || IsInf）
+			testutil.Equal(t, math.IsNaN(f), false, "fixture %s spec 含 NaN/Inf %f", e.Name(), f)
+			testutil.Equal(t, math.IsInf(f, 0), false, "fixture %s spec 含 NaN/Inf %f", e.Name(), f)
 		}
 		checked++
 	}
-	if checked == 0 {
-		t.Fatal("未检查到任何 fixture（路径错误？）")
-	}
+	// 护栏：至少回归一个 fixture（原 if checked==0 → t.Fatal）
+	testutil.Equal(t, checked == 0, false, "未检查到任何 fixture（路径错误？）")
 	t.Logf("已回归 %d 个真实解码产物 fixture", checked)
 }

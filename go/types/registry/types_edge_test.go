@@ -4,6 +4,8 @@ package registry
 
 import (
 	"testing"
+
+	"ysm-model-manager/internal/testutil"
 )
 
 func TestIsDirLevelSync(t *testing.T) {
@@ -62,9 +64,7 @@ func TestIsScanInstance(t *testing.T) {
 func TestInstallExtsFor(t *testing.T) {
 	t.Parallel()
 	exts := InstallExtsFor("ysm")
-	if len(exts) != 5 {
-		t.Fatalf("InstallExtsFor('ysm') 长度 = %d, 期望 5", len(exts))
-	}
+	testutil.Equal(t, len(exts), 5, "InstallExtsFor('ysm') 长度 = %d, 期望 5", len(exts))
 	expectedYsm := map[string]bool{".ysm": false, ".json": false, ".png": false, ".jpg": false, ".jpeg": false}
 	for _, e := range exts {
 		expectedYsm[e] = true
@@ -76,9 +76,7 @@ func TestInstallExtsFor(t *testing.T) {
 	}
 
 	exts = InstallExtsFor("maid-model")
-	if len(exts) == 0 {
-		t.Fatal("InstallExtsFor('maid-model') = 空")
-	}
+	testutil.Equal(t, len(exts) != 0, true, "InstallExtsFor('maid-model') = 空")
 	foundPng := false
 	for _, e := range exts {
 		if e == ".png" {

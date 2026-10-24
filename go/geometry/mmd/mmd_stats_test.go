@@ -10,6 +10,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // ── 合成 fixtures ──
@@ -48,7 +50,7 @@ func writePmxFixture(t *testing.T, dir, name string, bones int, texRelPath, texW
 		`</model>`
 	p := filepath.Join(dir, name)
 	if err := os.WriteFile(p, []byte(doc), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	return p
 }
@@ -62,7 +64,7 @@ func writePngIhdr(t *testing.T, dir, name string, w, h uint32) string {
 	binary.BigEndian.PutUint32(b[20:], h)
 	p := filepath.Join(dir, name)
 	if err := os.WriteFile(p, b, 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	return p
 }
@@ -112,7 +114,7 @@ func writePmdFixture(t *testing.T, dir, name string, version byte, bones int) st
 	buf.WriteString("bone") // 1 骨占位（骨数据区统计器不读）
 	p := filepath.Join(dir, name)
 	if err := os.WriteFile(p, buf.Bytes(), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	return p
 }
@@ -125,9 +127,7 @@ func TestParsePmxStats(t *testing.T) {
 	// 无纹理引用：骨计数 + 纹理尺寸零值（诚实 0,0）
 	p1 := writePmxFixture(t, base, "none.pmx", 3, "", "")
 	s, err := ParsePmxStats(p1)
-	if err != nil {
-		t.Fatalf("ParsePmxStats: %v", err)
-	}
+	testutil.NoError(t, err, "ParsePmxStats")
 	if s.BoneCount != 3 || s.TexWidth != 0 || s.TexHeight != 0 {
 		t.Errorf("无纹理组 = %+v，期望 bone=3 tex=0x0", s)
 	}
@@ -135,23 +135,17 @@ func TestParsePmxStats(t *testing.T) {
 	// texsize 直读（不碰文件）
 	p2 := writePmxFixture(t, base, "sized.pmx", 5, "tex/t.png", "128,256")
 	s, err = ParsePmxStats(p2)
-	if err != nil {
-		t.Fatalf("ParsePmxStats: %v", err)
-	}
+	testutil.NoError(t, err, "ParsePmxStats")
 	if s.BoneCount != 5 || s.TexWidth != 128 || s.TexHeight != 256 {
 		t.Errorf("texsize 直读 = %+v，期望 bone=5 tex=128x256", s)
 	}
 
 	// 无 texsize + 引用同目录 PNG → IHDR 探测
-	if err := os.MkdirAll(filepath.Join(base, "tex"), 0o755); err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, os.MkdirAll(filepath.Join(base, "tex"), 0o755))
 	writePngIhdr(t, filepath.Join(base, "tex"), "probe.png", 64, 128)
 	p3 := writePmxFixture(t, base, "probe.pmx", 2, "tex/probe.png", "")
 	s, err = ParsePmxStats(p3)
-	if err != nil {
-		t.Fatalf("ParsePmxStats: %v", err)
-	}
+	testutil.NoError(t, err, "ParsePmxStats")
 	if s.BoneCount != 2 || s.TexWidth != 64 || s.TexHeight != 128 {
 		t.Errorf("IHDR 探测 = %+v，期望 bone=2 tex=64x128", s)
 	}
@@ -159,9 +153,7 @@ func TestParsePmxStats(t *testing.T) {
 	// 引用文件缺失 → 纹理尺寸诚实零值（不报错、不猜）
 	p4 := writePmxFixture(t, base, "missing.pmx", 1, "tex/gone.png", "")
 	s, err = ParsePmxStats(p4)
-	if err != nil {
-		t.Fatalf("ParsePmxStats: %v", err)
-	}
+	testutil.NoError(t, err, "ParsePmxStats")
 	if s.TexWidth != 0 || s.TexHeight != 0 {
 		t.Errorf("缺失纹理引用 = %+v，期望 tex 零值", s)
 	}
@@ -180,9 +172,7 @@ func TestParsePmdStats(t *testing.T) {
 	} {
 		p := writePmdFixture(t, base, tc.name+".pmd", tc.version, tc.bones)
 		s, err := ParsePmdStats(p)
-		if err != nil {
-			t.Fatalf("ParsePmdStats(%s): %v", tc.name, err)
-		}
+		testutil.NoError(t, err, "ParsePmdStats(%s)", tc.name)
 		if s.BoneCount != tc.bones {
 			t.Errorf("%s BoneCount = %d，期望 %d", tc.name, s.BoneCount, tc.bones)
 		}
@@ -197,7 +187,7 @@ func TestParsePmdStats_InvalidMagic(t *testing.T) {
 	base := t.TempDir()
 	p := filepath.Join(base, "bad.pmd")
 	if err := os.WriteFile(p, []byte("not a pmx file at all"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if _, err := ParsePmdStats(p); err == nil {
 		t.Error("非法魔数应报错（不猜）")
@@ -208,7 +198,7 @@ func TestParsePmxStats_InvalidXml(t *testing.T) {
 	base := t.TempDir()
 	p := filepath.Join(base, "bad.pmx")
 	if err := os.WriteFile(p, []byte("not xml"), 0o644); err != nil {
-		t.Fatal(err)
+		testutil.NoError(t, err)
 	}
 	if _, err := ParsePmxStats(p); err == nil {
 		t.Error("非 XML 内容应报错（不猜）")

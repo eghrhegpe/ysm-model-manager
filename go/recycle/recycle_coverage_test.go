@@ -43,16 +43,12 @@ func TestMove_CrossDevice_File(t *testing.T) {
 
 	src := testutil.CreateTestFile(t, dir, "cdn.ysm", "cross-device content")
 	res := tm.MoveEx(src)
-	if res.Action != "recycled" {
-		t.Fatalf("跨设备文件 move 应 recycled, got %s (%s)", res.Action, res.Reason)
-	}
+	testutil.Equal(t, res.Action, "recycled", "跨设备文件 move 应 recycled, got %s (%s)", res.Action, res.Reason)
 	if _, err := os.Stat(src); !os.IsNotExist(err) {
 		t.Error("跨设备 move 后源文件应已删除")
 	}
 	entries := tm.List()
-	if len(entries) != 1 {
-		t.Fatalf("回收站应有 1 条, 得到 %d", len(entries))
-	}
+	testutil.Equal(t, len(entries), 1, "回收站应有 1 条, 得到 %d", len(entries))
 	// 条目名保持源文件名（收敛自原 recycle_moveex_test.go 同名测试的增量断言）
 	if entries[0].Name != "cdn.ysm" {
 		t.Errorf("条目名 = %q, 期望 cdn.ysm", entries[0].Name)
@@ -75,23 +71,17 @@ func TestMove_CrossDevice_Dir(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	res := tm.MoveEx(modelDir)
-	if res.Action != "recycled" {
-		t.Fatalf("跨设备目录 move 应 recycled, got %s (%s)", res.Action, res.Reason)
-	}
+	testutil.Equal(t, res.Action, "recycled", "跨设备目录 move 应 recycled, got %s (%s)", res.Action, res.Reason)
 	if _, err := os.Stat(modelDir); !os.IsNotExist(err) {
 		t.Error("跨设备 move 后源目录应已删除")
 	}
 	entries := tm.List()
-	if len(entries) != 1 {
-		t.Fatalf("回收站应有 1 个整组条目, 得到 %d", len(entries))
-	}
+	testutil.Equal(t, len(entries), 1, "回收站应有 1 个整组条目, 得到 %d", len(entries))
 	if entries[0].Name != "model" {
 		t.Errorf("条目名 = %q, 期望 model", entries[0].Name)
 	}
 	// 目录内文件应完整复制（ADR-038 D3.4 整组保留）
-	if _, err := os.Stat(filepath.Join(entries[0].Path, "model.pmx")); err != nil {
-		t.Fatalf("目录内文件未复制: %v", err)
-	}
+	testutil.FileExists(t, filepath.Join(entries[0].Path, "model.pmx"), "目录内文件未复制")
 }
 
 // 跨设备文件 move 复制失败：copyFileForMove 报错 → 清理半截 + 返回错误，源保留（无残留副本）。
@@ -104,9 +94,7 @@ func TestMove_CrossDevice_CopyFail(t *testing.T) {
 
 	src := testutil.CreateTestFile(t, dir, "fail.ysm", "x")
 	res := tm.MoveEx(src)
-	if res.Action != "error" {
-		t.Fatalf("复制失败应返回 error, got %s", res.Action)
-	}
+	testutil.Equal(t, res.Action, "error", "复制失败应返回 error, got %s", res.Action)
 	if _, err := os.Stat(src); os.IsNotExist(err) {
 		t.Error("复制失败回滚后源文件应仍在（无残留副本）")
 	}
@@ -122,13 +110,9 @@ func TestRestore_CrossDevice_File(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	entries := tm.List()
-	if len(entries) != 1 {
-		t.Fatalf("回收站应有 1 条")
-	}
+	testutil.Equal(t, len(entries), 1, "回收站应有 1 条")
 	setupCrossDevice(tm)
-	if err := tm.Restore(entries[0].Path); err != nil {
-		t.Fatalf("跨设备 restore 失败: %v", err)
-	}
+	testutil.NoError(t, tm.Restore(entries[0].Path), "跨设备 restore 失败")
 	if _, err := os.Stat(src); os.IsNotExist(err) {
 		t.Error("跨设备 restore 后源应存在")
 	}
@@ -152,9 +136,7 @@ func TestRestore_SymlinkInside(t *testing.T) {
 	if err := os.Symlink(targetInside, recEntry); err != nil {
 		t.Skipf("Symlink 不可用（需权限）: %v", err)
 	}
-	if err := tm.Restore(recEntry); err != nil {
-		t.Fatalf("Restore 站内符号链接失败: %v", err)
-	}
+	testutil.NoError(t, tm.Restore(recEntry), "Restore 站内符号链接失败")
 	if _, err := os.Lstat(recEntry); !os.IsNotExist(err) {
 		t.Error("Restore 后回收站侧链接应已删除")
 	}
@@ -189,21 +171,14 @@ func TestEmpty_SymlinkRejected(t *testing.T) {
 	if err := os.Symlink(ext, tm.RecycleDir()); err != nil {
 		t.Skipf("Symlink 不可用: %v", err)
 	}
-	if _, err := tm.Empty(); err == nil {
-		t.Fatal("清空被 symlink 替换的回收站应拒绝")
-	}
+	_, emptyErr := tm.Empty()
+	testutil.NotNil(t, emptyErr, "清空被 symlink 替换的回收站应拒绝")
 	// ① 外部数据逐文件存活（用户可见保证）
-	if _, err := os.Stat(sentinel); err != nil {
-		t.Fatalf("拒绝清空后外部数据必须完好: %v", err)
-	}
+	testutil.FileExists(t, sentinel, "拒绝清空后外部数据必须完好")
 	// ② 被篡改的链接本身不得被动（拒绝发生在任何删除之前）
 	info, lerr := os.Lstat(tm.RecycleDir())
-	if lerr != nil {
-		t.Fatalf("被篡改的回收站链接不应被改动: %v", lerr)
-	}
-	if info.Mode()&os.ModeSymlink == 0 {
-		t.Fatal("拒绝后 .recycle 应仍是那个被篡改的 symlink（不得静默归一成空目录）")
-	}
+	testutil.NoError(t, lerr, "被篡改的回收站链接不应被改动")
+	testutil.Equal(t, info.Mode()&os.ModeSymlink != 0, true, "拒绝后 .recycle 应仍是那个被篡改的 symlink（不得静默归一成空目录）")
 }
 
 // 包级 Move 向后兼容函数：recycle.Move(src, filesRoot) → New(filesRoot).Move(src)。
@@ -211,15 +186,12 @@ func TestEmpty_SymlinkRejected(t *testing.T) {
 func TestMove_PackageFunc(t *testing.T) {
 	dir := t.TempDir()
 	src := testutil.CreateTestFile(t, dir, "pkg.ysm", "pkg move")
-	if err := Move(src, dir); err != nil {
-		t.Fatalf("recycle.Move 失败: %v", err)
-	}
+	testutil.NoError(t, Move(src, dir), "recycle.Move 失败")
 	if _, err := os.Stat(src); !os.IsNotExist(err) {
 		t.Error("recycle.Move 后源文件应已进入回收站")
 	}
-	if got := New(dir).List(); len(got) != 1 {
-		t.Fatalf("回收站应有 1 条, 得到 %d", len(got))
-	}
+	got := New(dir).List()
+	testutil.Equal(t, len(got), 1, "回收站应有 1 条, 得到 %d", len(got))
 }
 
 // 跨设备目录 move：源目录内文件持写锁 → os.RemoveAll(src) 删除失败 →
@@ -242,9 +214,7 @@ func TestMoveEx_CrossDevice_Dir_SourceRemoveLocked(t *testing.T) {
 	defer fh.Close()
 
 	res := tm.MoveEx(modelDir)
-	if res.Action != "error" {
-		t.Fatalf("源删除锁定应返回 error, got %s", res.Action)
-	}
+	testutil.Equal(t, res.Action, "error", "源删除锁定应返回 error, got %s", res.Action)
 	if _, e := os.Stat(modelDir); os.IsNotExist(e) {
 		t.Error("源删除失败后源目录应仍保留")
 	}

@@ -12,18 +12,15 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/internal/testutil"
 )
 
 // assertInvalidPath 断言守卫错误是结构化 AppError{Code: INVALID_PATH}
 func assertInvalidPath(t *testing.T, op string, err error) {
 	t.Helper()
-	if err == nil {
-		t.Fatalf("%s: 根外路径应被守卫拒绝返回 error", op)
-	}
+	testutil.NotNil(t, err, "%s: 根外路径应被守卫拒绝返回 error", op)
 	var ae types.AppError
-	if !errors.As(err, &ae) {
-		t.Fatalf("%s: 守卫错误应为 AppError（friendlyError 可映射 i18n），实得 %T: %v", op, err, err)
-	}
+	testutil.Equal(t, errors.As(err, &ae), true, "%s: 守卫错误应为 AppError（friendlyError 可映射 i18n），实得 %T: %v", op, err, err)
 	if ae.Code != types.ErrInvalidPath {
 		t.Errorf("%s: AppError.Code = %q，期望 %q", op, ae.Code, types.ErrInvalidPath)
 	}

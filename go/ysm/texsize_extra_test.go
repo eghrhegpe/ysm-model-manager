@@ -150,9 +150,7 @@ func TestReadTexFrom7z_OversizedEntry(t *testing.T) {
 	// 51MB 合法几何 JSON（空格填充）——若未触发上限会返回 999x888
 	hugeJSON := `{"minecraft:geometry":[{"description":{"texture_width":999,"texture_height":888}}]}`
 	pad := 51<<20 - len(hugeJSON)
-	if pad <= 0 {
-		t.Fatal("超大条目构造失败")
-	}
+	testutil.Equal(t, pad <= 0, false, "超大条目构造失败")
 	bigPath := filepath.Join(dir, "huge.json")
 	if err := os.WriteFile(bigPath, []byte(hugeJSON+strings.Repeat(" ", pad)), 0644); err != nil {
 		testutil.NoError(t, err)

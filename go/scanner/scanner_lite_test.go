@@ -38,15 +38,17 @@ func TestScanEntriesLite_FilteringParity(t *testing.T) {
 		byName[e.Name] = e
 	}
 	testutil.Equal(t, len(got), 3, "应 3 个条目")
-	if e, ok := byName["[作者C]模型.ysm"]; !ok || e.Hash != "" || e.Size != 0 {
-		t.Fatalf("活跃 ysm 应在列且无哈希无 Size: %+v", e)
-	}
-	if e, ok := byName["[作者C]禁用.ysm.ban"]; !ok || e.Ext != ".ysm" {
-		t.Fatalf("禁用文件应恢复扩展名 .ysm: %+v", e)
-	}
-	if e, ok := byName["[作者D]模型"]; !ok || e.Ext != ".json" {
-		t.Fatalf("ysm.json 条目 Name 应取目录基名: %+v", e)
-	}
+	e, ok := byName["[作者C]模型.ysm"]
+	// OR 型复合条件拆序贯（ok 守卫在前——Equal 失败即 Goexit，后续字段断言仅在其通过后执行）
+	testutil.Equal(t, ok, true, "活跃 ysm 应在列且无哈希无 Size: %+v", e)
+	testutil.Equal(t, e.Hash, "", "活跃 ysm 应无哈希: %+v", e)
+	testutil.Equal(t, e.Size, 0, "活跃 ysm 应无 Size: %+v", e)
+	e2, ok2 := byName["[作者C]禁用.ysm.ban"]
+	testutil.Equal(t, ok2, true, "禁用文件应在列: %+v", e2)
+	testutil.Equal(t, e2.Ext, ".ysm", "禁用文件应恢复扩展名 .ysm: %+v", e2)
+	e3, ok3 := byName["[作者D]模型"]
+	testutil.Equal(t, ok3, true, "ysm.json 条目应在列: %+v", e3)
+	testutil.Equal(t, e3.Ext, ".json", "ysm.json 条目 Name 应取目录基名: %+v", e3)
 }
 
 func TestScanEntriesLite_BypassesCacheBothWays(t *testing.T) {
@@ -54,24 +56,22 @@ func TestScanEntriesLite_BypassesCacheBothWays(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dirA, "[甲]a.ysm"), []byte("x"), 0o644); err != nil {
 		testutil.NoError(t, err)
 	}
-	if got := ScanEntries(dirA); len(got) != 1 {
-		t.Fatalf("前置全量扫描应 1 条，实际 %d", len(got))
-	}
+	got := ScanEntries(dirA)
+	testutil.Equal(t, len(got), 1, "前置全量扫描应 1 条，实际 %d", len(got))
 	if err := os.WriteFile(filepath.Join(dirA, "[乙]b.ysm"), []byte("x"), 0o644); err != nil {
 		testutil.NoError(t, err)
 	}
-	if cached, hit := ScanEntriesWithHit(dirA); !hit || len(cached) != 1 {
-		t.Fatalf("全量路径应命中缓存返回 1 条, hit=%v n=%d", hit, len(cached))
-	}
-	if lite := ScanEntriesLite(dirA); len(lite) != 2 {
-		t.Fatalf("轻量路径应绕过缓存见 2 条，实际 %d", len(lite))
-	}
+	cached, hit := ScanEntriesWithHit(dirA)
+	// OR 型复合条件拆序贯
+	testutil.Equal(t, hit, true, "全量路径应命中缓存返回 1 条, hit=%v n=%d", hit, len(cached))
+	testutil.Equal(t, len(cached), 1, "全量路径应命中缓存返回 1 条, hit=%v n=%d", hit, len(cached))
+	lite := ScanEntriesLite(dirA)
+	testutil.Equal(t, len(lite), 2, "轻量路径应绕过缓存见 2 条，实际 %d", len(lite))
 	dirB := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dirB, "[丙]c.ysm"), []byte("x"), 0o644); err != nil {
 		testutil.NoError(t, err)
 	}
 	_ = ScanEntriesLite(dirB)
-	if _, hit := ScanEntriesWithHit(dirB); hit {
-		t.Fatal("轻量扫描结果不得写入共享 scanCache（无哈希条目会污染同步系统）")
-	}
+	_, hitB := ScanEntriesWithHit(dirB)
+	testutil.Equal(t, hitB, false, "轻量扫描结果不得写入共享 scanCache（无哈希条目会污染同步系统）")
 }

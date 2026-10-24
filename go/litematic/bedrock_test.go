@@ -152,9 +152,8 @@ func TestParseBedrockStructure_BoundsAggregationSemantics(t *testing.T) {
 	result := parseBedrockStructure(map[string]any{}, []any{subNoBounds, subFirst, subPartial})
 	testutil.NotNil(t, result, "期望非 nil")
 	sz, ok := result["size"].([]int)
-	if !ok {
-		t.Fatalf("size 缺失或类型错误: %v", result["size"])
-	}
+	// Equal 失败即 Goexit，守卫语义等价：下方 sz 索引解引用仅在其通过后执行
+	testutil.Equal(t, ok, true, "size 缺失或类型错误: %v", result["size"])
 	// min_x: 9 不覆盖 5；max_x: 200 覆盖 100；y/z 保持 5..100
 	want := []int{200 - 5 + 1, 100 - 5 + 1, 100 - 5 + 1}
 	for i := range want {

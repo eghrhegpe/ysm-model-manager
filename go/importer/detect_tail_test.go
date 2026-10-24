@@ -20,15 +20,13 @@ func buildZipB64(t *testing.T, entries [][2]string) string {
 	for _, e := range entries {
 		name, content := e[0], e[1]
 		fw, err := w.Create(name)
-		if err != nil {
-			t.Fatalf("Create %s: %v", name, err)
-		}
+		testutil.NoError(t, err, "Create %s", name)
 		if _, err := fw.Write([]byte(content)); err != nil {
-			t.Fatalf("Write %s: %v", name, err)
+			testutil.NoError(t, err, "Write %s", name)
 		}
 	}
 	if err := w.Close(); err != nil {
-		t.Fatalf("Close: %v", err)
+		testutil.NoError(t, err, "Close")
 	}
 	return base64.StdEncoding.EncodeToString(buf.Bytes())
 }
@@ -91,9 +89,7 @@ func TestDetectContainerTypeFromBase64Tail_LargePaddingFile(t *testing.T) {
 	if err := w.Close(); err != nil {
 		testutil.NoError(t, err)
 	}
-	if buf.Len() < 50<<20 {
-		t.Fatalf("构造的 zip 应大于 50MB, got %d", buf.Len())
-	}
+	testutil.Equal(t, buf.Len() < 50<<20, false, "构造的 zip 应大于 50MB, got %d", buf.Len())
 	b64 := base64.StdEncoding.EncodeToString(buf.Bytes())
 	id, ok := DetectContainerTypeFromBase64Tail(b64)
 	if !ok || id == "" {

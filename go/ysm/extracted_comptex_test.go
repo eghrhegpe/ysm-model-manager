@@ -59,9 +59,8 @@ func TestFindComponentsInExtractedYSM_PerComponentTextures(t *testing.T) {
 	dir := setupExtractedDir(t)
 
 	comps, texNames := FindComponentsInExtractedYSM(filepath.Join(dir, "ysm.json"))
-	if len(comps) != 3 {
-		t.Fatalf("应解析出 3 个组件（main/arm/arrow），实际 %d", len(comps))
-	}
+	// 守卫下方 bySource/comps[arrowIdx] 索引
+	testutil.Equal(t, len(comps), 3, "应解析出 3 个组件（main/arm/arrow），实际 %d", len(comps))
 
 	bySource := map[string]int{}
 	for i, c := range comps {
@@ -69,13 +68,11 @@ func TestFindComponentsInExtractedYSM_PerComponentTextures(t *testing.T) {
 	}
 	// 未声明组件 arrow：按名命中 arrow.png → perComponent 纹理
 	arrowIdx, ok := bySource["arrow"]
-	if !ok {
-		t.Fatal("arrow 组件缺失（补扫应收集未声明组件）")
-	}
+	testutil.Equal(t, ok, true, "arrow 组件缺失（补扫应收集未声明组件）")
+	// 原复合条件拆序贯（守卫下方 arrowTex[0] 索引）
 	arrowTex, has := comps[arrowIdx].ComponentTextures["arrow"]
-	if !has || len(arrowTex) != 1 {
-		t.Fatalf("arrow 应有 perComponent 纹理 [1 张]，实际 %v", comps[arrowIdx].ComponentTextures)
-	}
+	testutil.Equal(t, has, true, "arrow 应有 perComponent 纹理，实际 %v", comps[arrowIdx].ComponentTextures)
+	testutil.Equal(t, len(arrowTex), 1, "arrow 应有 perComponent 纹理 [1 张]，实际 %v", comps[arrowIdx].ComponentTextures)
 	if !strings.HasPrefix(arrowTex[0], "data:image/png;base64,") {
 		t.Errorf("arrow 纹理应为 data URI，实际前缀 %.40q", arrowTex[0])
 	}
@@ -87,9 +84,7 @@ func TestFindComponentsInExtractedYSM_PerComponentTextures(t *testing.T) {
 	// 已声明组件：ComponentTextures 保持空（继续走全局 texArr[texSlot]，多皮肤切换可用）
 	for _, name := range []string{"main", "arm"} {
 		idx, ok := bySource[name]
-		if !ok {
-			t.Fatalf("%s 组件缺失", name)
-		}
+		testutil.Equal(t, ok, true, "%s 组件缺失", name)
 		if len(comps[idx].ComponentTextures) != 0 {
 			t.Errorf("%s 是已声明组件，不应填 ComponentTextures（保留全局纹理切换），实际 %v", name, comps[idx].ComponentTextures)
 		}
@@ -109,9 +104,7 @@ func TestFindComponentsInExtractedYSM_PerComponentNoTexture(t *testing.T) {
 	}
 
 	comps, texNames := FindComponentsInExtractedYSM(filepath.Join(dir, "ysm.json"))
-	if len(comps) != 3 {
-		t.Fatalf("应解析出 3 个组件，实际 %d", len(comps))
-	}
+	testutil.Equal(t, len(comps), 3, "应解析出 3 个组件，实际 %d", len(comps))
 	for i, c := range comps {
 		if c.SourceName != "arrow" {
 			continue

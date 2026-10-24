@@ -59,9 +59,7 @@ func TestReadShaderpackLangParts_ParseEdges(t *testing.T) {
 		"other.title":     "第三个显示名",
 		"bare":            "裸 key 不是显示名",
 	}
-	if len(entries) != len(want) {
-		t.Fatalf("entries 应恰好 %d 条（跳过的行一律不入表）, 得到 %d: %v", len(want), len(entries), entries)
-	}
+	testutil.Equal(t, len(entries), len(want), "entries 应恰好 %d 条（跳过的行一律不入表）: %v", len(want), entries)
 	for k, v := range want {
 		if entries[k] != v {
 			t.Errorf("entries[%q] = %q, 期望 %q", k, entries[k], v)

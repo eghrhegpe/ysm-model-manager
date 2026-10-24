@@ -42,12 +42,9 @@ func loadGolden(t *testing.T) []goldenCase {
 	data, err := os.ReadFile("testdata/classify-golden.json")
 	testutil.NoError(t, err, "读语料失败")
 	var cases []goldenCase
-	if err := json.Unmarshal(data, &cases); err != nil {
-		t.Fatalf("解析语料失败: %v", err)
-	}
-	if len(cases) == 0 {
-		t.Fatal("语料为空")
-	}
+	testutil.NoError(t, json.Unmarshal(data, &cases), "解析语料失败")
+	// 护栏：语料不得为空（原 if len==0 → t.Fatal）
+	testutil.Equal(t, len(cases) == 0, false, "语料为空")
 	return cases
 }
 
@@ -59,21 +56,16 @@ func buildCase(t *testing.T, dir string, c goldenCase) string {
 	if len(c.Entries) == 0 {
 		return full
 	}
-	if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
-		t.Fatalf("建目录失败: %v", err)
-	}
+	testutil.NoError(t, os.MkdirAll(filepath.Dir(full), 0o755), "建目录失败")
 	f, err := os.Create(full)
 	testutil.NoError(t, err, "建 zip 失败")
 	defer f.Close()
 	zw := zip.NewWriter(f)
 	for _, e := range c.Entries {
-		if _, err := zw.Create(e); err != nil {
-			t.Fatalf("写 entry %q 失败: %v", e, err)
-		}
+		_, err := zw.Create(e)
+		testutil.NoError(t, err, "写 entry %q 失败", e)
 	}
-	if err := zw.Close(); err != nil {
-		t.Fatalf("关闭 zip 失败: %v", err)
-	}
+	testutil.NoError(t, zw.Close(), "关闭 zip 失败")
 	return full
 }
 

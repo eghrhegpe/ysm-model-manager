@@ -5,6 +5,8 @@ package app
 
 import (
 	"testing"
+
+	"ysm-model-manager/internal/testutil"
 )
 
 // TestLoadAppConfig_ReadFailureDoesNotSetLoaded 验证：配置文件读取失败时，
@@ -23,7 +25,5 @@ func TestLoadAppConfig_ReadFailureDoesNotSetLoaded(t *testing.T) {
 	loaded := a.configLoaded
 	a.configMu.RUnlock()
 
-	if loaded {
-		t.Fatal("readJSONFile 失败时 configLoaded 不应被设为 true（旧 bug：配置永久丢失）")
-	}
+	testutil.Equal(t, loaded, false, "readJSONFile 失败时 configLoaded 不应被设为 true（旧 bug：配置永久丢失）")
 }

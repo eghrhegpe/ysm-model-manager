@@ -35,12 +35,8 @@ func setLimits(t *testing.T, maxBytes int64, maxAge, interval time.Duration) {
 func writeCacheFile(t *testing.T, dir, name string, data []byte, mod time.Time) string {
 	t.Helper()
 	path := filepath.Join(dir, name)
-	if err := os.WriteFile(path, data, 0644); err != nil {
-		testutil.NoError(t, err)
-	}
-	if err := os.Chtimes(path, mod, mod); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.WriteFile(path, data, 0644))
+	testutil.NoError(t, os.Chtimes(path, mod, mod))
 	return path
 }
 
@@ -49,9 +45,7 @@ func TestPrune_EmptyCacheDir(t *testing.T) {
 	setLimits(t, 1024, time.Hour, 0)
 	res, err := Prune()
 	testutil.NoError(t, err)
-	if res.RemovedCount != 0 {
-		t.Fatalf("空目录不应删除任何文件，got %d", res.RemovedCount)
-	}
+	testutil.Equal(t, res.RemovedCount, 0, "空目录不应删除任何文件")
 }
 
 func TestPrune_CacheDirUnavailable(t *testing.T) {
@@ -60,9 +54,7 @@ func TestPrune_CacheDirUnavailable(t *testing.T) {
 	CacheDir = func() string { return "" }
 	res, err := Prune()
 	testutil.NoError(t, err)
-	if res.RemovedCount != 0 {
-		t.Fatalf("缓存目录不可用时应 no-op，got %d", res.RemovedCount)
-	}
+	testutil.Equal(t, res.RemovedCount, 0, "缓存目录不可用时应 no-op")
 }
 
 func TestPrune_SkipsNonKtx2(t *testing.T) {
@@ -72,9 +64,7 @@ func TestPrune_SkipsNonKtx2(t *testing.T) {
 	writeCacheFile(t, dir, "notes.txt", []byte("x"), time.Now().Add(-100*time.Hour))
 	res, err := Prune()
 	testutil.NoError(t, err)
-	if res.RemovedCount != 0 {
-		t.Fatalf("非 .ktx2 不应参与淘汰，got %d", res.RemovedCount)
-	}
+	testutil.Equal(t, res.RemovedCount, 0, "非 .ktx2 不应参与淘汰")
 }
 
 func TestPrune_OverCapacity_DeletesOldest(t *testing.T) {
@@ -88,24 +78,12 @@ func TestPrune_OverCapacity_DeletesOldest(t *testing.T) {
 	setLimits(t, 400, 0, 0)
 	res, err := Prune()
 	testutil.NoError(t, err)
-	if res.RemovedCount != 2 {
-		t.Fatalf("应删 2 个最旧文件，got %d", res.RemovedCount)
-	}
-	if res.FreedBytes != 300 {
-		t.Fatalf("应释放 300B，got %d", res.FreedBytes)
-	}
-	if res.Remaining != 300 {
-		t.Fatalf("剩余应为 300B，got %d", res.Remaining)
-	}
-	if _, err := os.Stat(filepath.Join(dir, "aaa.ktx2")); !os.IsNotExist(err) {
-		t.Fatal("aaa 应被删（最旧）")
-	}
-	if _, err := os.Stat(filepath.Join(dir, "bbb.ktx2")); !os.IsNotExist(err) {
-		t.Fatal("bbb 应被删")
-	}
-	if _, err := os.Stat(filepath.Join(dir, "ccc.ktx2")); err != nil {
-		t.Fatal("ccc 应保留（最新）")
-	}
+	testutil.Equal(t, res.RemovedCount, 2, "应删 2 个最旧文件")
+	testutil.Equal(t, res.FreedBytes, 300, "应释放 300B")
+	testutil.Equal(t, res.Remaining, 300, "剩余应为 300B")
+	testutil.FileNotExists(t, filepath.Join(dir, "aaa.ktx2"), "aaa 应被删（最旧）")
+	testutil.FileNotExists(t, filepath.Join(dir, "bbb.ktx2"), "bbb 应被删")
+	testutil.FileExists(t, filepath.Join(dir, "ccc.ktx2"), "ccc 应保留（最新）")
 }
 
 func TestPrune_TTL_ExpiredRemoved_FreshKept(t *testing.T) {
@@ -115,15 +93,9 @@ func TestPrune_TTL_ExpiredRemoved_FreshKept(t *testing.T) {
 	writeCacheFile(t, dir, "new.ktx2", []byte("x"), time.Now())
 	res, err := Prune()
 	testutil.NoError(t, err)
-	if res.RemovedCount != 1 {
-		t.Fatalf("应只删超龄的 1 个，got %d", res.RemovedCount)
-	}
-	if _, err := os.Stat(filepath.Join(dir, "old.ktx2")); !os.IsNotExist(err) {
-		t.Fatal("old 应被删（超龄）")
-	}
-	if _, err := os.Stat(filepath.Join(dir, "new.ktx2")); err != nil {
-		t.Fatal("new 应保留（新鲜）")
-	}
+	testutil.Equal(t, res.RemovedCount, 1, "应只删超龄的 1 个")
+	testutil.FileNotExists(t, filepath.Join(dir, "old.ktx2"), "old 应被删（超龄）")
+	testutil.FileExists(t, filepath.Join(dir, "new.ktx2"), "new 应保留（新鲜）")
 }
 
 func TestPrune_CombinedTTLAndCapacity(t *testing.T) {
@@ -138,30 +110,20 @@ func TestPrune_CombinedTTLAndCapacity(t *testing.T) {
 	setLimits(t, 150, time.Hour, 0)
 	res, err := Prune()
 	testutil.NoError(t, err)
-	if res.RemovedCount != 3 {
-		t.Fatalf("应删 3 个（1 超龄 + 2 超容量），got %d", res.RemovedCount)
-	}
-	if res.Remaining != 100 {
-		t.Fatalf("剩余应为 100B，got %d", res.Remaining)
-	}
+	testutil.Equal(t, res.RemovedCount, 3, "应删 3 个（1 超龄 + 2 超容量）")
+	testutil.Equal(t, res.Remaining, 100, "剩余应为 100B")
 }
 
 func TestWriteCached_TriggersPrune(t *testing.T) {
 	setCacheDir(t)
 	setLimits(t, 250, 0, 0) // interval=0 → 每次写都触发；容量 250
 	for i := 0; i < 4; i++ {
-		if err := WriteCached(fmt.Sprintf("hash%d", i), make([]byte, 100)); err != nil {
-			testutil.NoError(t, err)
-		}
+		testutil.NoError(t, WriteCached(fmt.Sprintf("hash%d", i), make([]byte, 100)))
 	}
 	// 每次写后 prune 到 ≤250：写满 4 个（400B）后应只剩最新的 2 个（200B）
 	stats := GetCacheStats()
-	if stats.FileCount != 2 {
-		t.Fatalf("写路径自动淘汰后应剩 2 个，got %d", stats.FileCount)
-	}
-	if stats.TotalSize != 200 {
-		t.Fatalf("剩余应 200B，got %d", stats.TotalSize)
-	}
+	testutil.Equal(t, stats.FileCount, 2, "写路径自动淘汰后应剩 2 个")
+	testutil.Equal(t, stats.TotalSize, 200, "剩余应 200B")
 }
 
 // failRemove 注入删除失败桩（P2 记账失真回归）
@@ -180,16 +142,10 @@ func TestPrune_RemoveFailure_NoFalseAccounting(t *testing.T) {
 	failRemove(t) // 删除全部失败
 	res, err := Prune()
 	testutil.NoError(t, err)
-	if res.RemovedCount != 0 {
-		t.Fatalf("删除失败不应计数，got %d", res.RemovedCount)
-	}
-	if res.FreedBytes != 0 {
-		t.Fatalf("删除失败不应虚报释放字节，got %d", res.FreedBytes)
-	}
+	testutil.Equal(t, res.RemovedCount, 0, "删除失败不应计数")
+	testutil.Equal(t, res.FreedBytes, 0, "删除失败不应虚报释放字节")
 	// 删除失败不得低估 Remaining：总 160B 应如实保留
-	if res.Remaining != 160 {
-		t.Fatalf("删除失败后剩余应为 160B（不虚报），got %d", res.Remaining)
-	}
+	testutil.Equal(t, res.Remaining, 160, "删除失败后剩余应为 160B（不虚报）")
 	_ = dir
 }
 
@@ -200,16 +156,11 @@ func TestPrune_TTLRemoveFailure_KeepsExpired(t *testing.T) {
 	failRemove(t)
 	res, err := Prune()
 	testutil.NoError(t, err)
-	if res.RemovedCount != 0 || res.FreedBytes != 0 {
-		t.Fatalf("删除失败不应记账，got removed=%d freed=%d", res.RemovedCount, res.FreedBytes)
-	}
-	if _, err := os.Stat(filepath.Join(dir, "old.ktx2")); err != nil {
-		t.Fatal("删除失败的超龄文件应留在磁盘")
-	}
+	testutil.Equal(t, res.RemovedCount, 0, "删除失败不应计数 removed")
+	testutil.Equal(t, res.FreedBytes, 0, "删除失败不应虚报释放字节 freed")
+	testutil.FileExists(t, filepath.Join(dir, "old.ktx2"), "删除失败的超龄文件应留在磁盘")
 	// 超龄文件仍计入 Remaining（如实反映磁盘现状）
-	if res.Remaining != 1 {
-		t.Fatalf("剩余应含超龄未删文件（1B），got %d", res.Remaining)
-	}
+	testutil.Equal(t, res.Remaining, 1, "剩余应含超龄未删文件（1B）")
 }
 
 func TestPrune_OrphanTmp_ExpiredCleaned(t *testing.T) {
@@ -219,21 +170,13 @@ func TestPrune_OrphanTmp_ExpiredCleaned(t *testing.T) {
 	writeCacheFile(t, dir, "fresh.ktx2.tmp", []byte("x"), time.Now())
 	res, err := Prune()
 	testutil.NoError(t, err)
-	if res.RemovedCount != 1 {
-		t.Fatalf("应清 1 个超龄 .tmp 残留，got %d", res.RemovedCount)
-	}
-	if _, err := os.Stat(filepath.Join(dir, "old.ktx2.tmp")); !os.IsNotExist(err) {
-		t.Fatal("超龄 .tmp 残留应被清")
-	}
-	if _, err := os.Stat(filepath.Join(dir, "fresh.ktx2.tmp")); err != nil {
-		t.Fatal("新鲜 .tmp 应保留（可能仍在写入）")
-	}
+	testutil.Equal(t, res.RemovedCount, 1, "应清 1 个超龄 .tmp 残留")
+	testutil.FileNotExists(t, filepath.Join(dir, "old.ktx2.tmp"), "超龄 .tmp 残留应被清")
+	testutil.FileExists(t, filepath.Join(dir, "fresh.ktx2.tmp"), "新鲜 .tmp 应保留（可能仍在写入）")
 	// 口径钉死（P4 清偿 2026-10-12）：.tmp 不是缓存条目——KeptCount 与
 	// FreedBytes/Remaining/ListCacheFiles/GetCacheStats 同定义，只计 .ktx2。
 	// 本例零 .ktx2，删一个 .tmp 留一个 .tmp → 条目保留数恒 0。
-	if res.KeptCount != 0 {
-		t.Fatalf("KeptCount 不应计入 .tmp 残留（条目口径），got %d", res.KeptCount)
-	}
+	testutil.Equal(t, res.KeptCount, 0, "KeptCount 不应计入 .tmp 残留（条目口径）")
 }
 
 func TestPrune_TmpNotCountedInCapacity(t *testing.T) {
@@ -245,24 +188,14 @@ func TestPrune_TmpNotCountedInCapacity(t *testing.T) {
 	setLimits(t, 150, 0, 0) // 容量 150：ktx2 总 200 > 150 → 删最旧 a
 	res, err := Prune()
 	testutil.NoError(t, err)
-	if res.RemovedCount != 1 {
-		t.Fatalf("应只删 1 个 ktx2，got %d", res.RemovedCount)
-	}
-	if _, err := os.Stat(filepath.Join(dir, "a.ktx2")); !os.IsNotExist(err) {
-		t.Fatal("a 应被容量淘汰删除")
-	}
-	if _, err := os.Stat(filepath.Join(dir, "partial.ktx2.tmp")); err != nil {
-		t.Fatal("新鲜 .tmp 不应被容量淘汰删除")
-	}
+	testutil.Equal(t, res.RemovedCount, 1, "应只删 1 个 ktx2")
+	testutil.FileNotExists(t, filepath.Join(dir, "a.ktx2"), "a 应被容量淘汰删除")
+	testutil.FileExists(t, filepath.Join(dir, "partial.ktx2.tmp"), "新鲜 .tmp 不应被容量淘汰删除")
 	// Remaining 只计 .ktx2（100B），不含 tmp
-	if res.Remaining != 100 {
-		t.Fatalf("剩余应只计 ktx2=100B，got %d", res.Remaining)
-	}
+	testutil.Equal(t, res.Remaining, 100, "剩余应只计 ktx2=100B")
 	// 口径钉死（P4 清偿）：留 b.ktx2=1 条目；partial.ktx2.tmp 存留不计入 KeptCount
 	// （原实现 KeptCount = totalFiles(3) − RemovedCount(1) = 2 混入 .tmp，与上条自相矛盾）
-	if res.KeptCount != 1 {
-		t.Fatalf("KeptCount 应只计保留的 .ktx2 条目=1，got %d", res.KeptCount)
-	}
+	testutil.Equal(t, res.KeptCount, 1, "KeptCount 应只计保留的 .ktx2 条目=1")
 }
 
 // code_review 9e1a74a28 #4/#5（P3）：SetShutdownCtx/异步淘汰中止分支零测试——补取消
@@ -279,16 +212,12 @@ func TestWriteCached_ShutdownCtx_Cancelled_SkipsPrune(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // 已取消：分叉的淘汰应立即放弃
 	SetShutdownCtx(ctx)
-	if err := WriteCached("newhash", make([]byte, 50)); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, WriteCached("newhash", make([]byte, 50)))
 	deadline := time.Now().Add(2 * time.Second)
 	for pruneInFlight.Load() && time.Now().Before(deadline) {
 		time.Sleep(10 * time.Millisecond)
 	}
-	if _, err := os.Stat(filepath.Join(dir, "old.ktx2")); err != nil {
-		t.Fatalf("取消 ctx 后后台淘汰应放弃——旧文件不应被删: %v", err)
-	}
+	testutil.FileExists(t, filepath.Join(dir, "old.ktx2"), "取消 ctx 后后台淘汰应放弃——旧文件不应被删")
 }
 
 func TestWriteCached_ShutdownCtx_Live_Prunes(t *testing.T) {
@@ -300,14 +229,10 @@ func TestWriteCached_ShutdownCtx_Live_Prunes(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	SetShutdownCtx(ctx) // live ctx：淘汰正常执行
-	if err := WriteCached("newhash", make([]byte, 50)); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, WriteCached("newhash", make([]byte, 50)))
 	deadline := time.Now().Add(2 * time.Second)
 	for pruneInFlight.Load() && time.Now().Before(deadline) {
 		time.Sleep(10 * time.Millisecond)
 	}
-	if _, err := os.Stat(filepath.Join(dir, "old.ktx2")); err == nil {
-		t.Fatal("live ctx 下后台淘汰应执行——超限旧文件应被删")
-	}
+	testutil.FileNotExists(t, filepath.Join(dir, "old.ktx2"), "live ctx 下后台淘汰应执行——超限旧文件应被删")
 }

@@ -44,9 +44,7 @@ func TestListVersions_VanillaLayout(t *testing.T) {
 	os.MkdirAll(filepath.Join(versionsDir, "1.19.2"), 0755)
 
 	results := ListVersions(tmpDir)
-	if len(results) != 2 {
-		t.Fatalf("expected 2 instances, got %d", len(results))
-	}
+	testutil.Equal(t, len(results), 2, "expected 2 instances, got %d", len(results))
 
 	// 顺序无关：验证两个版本名都在结果中（结果顺序取决于 os.ReadDir 实现，
 	// 不做 results[0] 顺序依赖检查；下方循环已按名字逐项验证属性）
@@ -83,9 +81,7 @@ func TestListVersions_PrismLayout(t *testing.T) {
 	os.MkdirAll(filepath.Join(instancesDir, "OldPack", ".minecraft"), 0755)
 
 	results := ListVersions(tmpDir)
-	if len(results) != 2 {
-		t.Fatalf("expected 2 instances, got %d", len(results))
-	}
+	testutil.Equal(t, len(results), 2, "expected 2 instances, got %d", len(results))
 
 	for _, r := range results {
 		switch r.Name {
@@ -114,9 +110,7 @@ func TestListVersions_PrismLayout_DirectInstances(t *testing.T) {
 	os.MkdirAll(filepath.Join(tmpDir, "OldPack", ".minecraft"), 0755)
 
 	results := ListVersions(tmpDir)
-	if len(results) != 2 {
-		t.Fatalf("expected 2 instances (direct instances dir), got %d", len(results))
-	}
+	testutil.Equal(t, len(results), 2, "expected 2 instances (direct instances dir), got %d", len(results))
 
 	for _, r := range results {
 		switch r.Name {
@@ -578,9 +572,7 @@ func TestDiffFolderContents_Basic(t *testing.T) {
 	diffs := DiffFolderContents(globalFolder, instFolder, "ysm")
 
 	// 应返回 4 个条目：2 synced (a, b), 1 missing (c), 1 optional (d)
-	if len(diffs) != 4 {
-		t.Fatalf("预期 4 个差异条目，实际 %d: %v", len(diffs), diffs)
-	}
+	testutil.Equal(t, len(diffs), 4, "预期 4 个差异条目，实际 %d: %v", len(diffs), diffs)
 
 	// 检查各条目的状态
 	for _, d := range diffs {
@@ -661,9 +653,8 @@ func TestDiffFolderContents_NestedFiles(t *testing.T) {
 
 	diffs := DiffFolderContents(globalFolder, instFolder, "ysm")
 
-	if len(diffs) != 1 {
-		t.Fatalf("预期 1 个差异条目，实际 %d: %v", len(diffs), diffs)
-	}
+	// 守卫下方 diffs[0] 索引
+	testutil.Equal(t, len(diffs), 1, "预期 1 个差异条目，实际 %d: %v", len(diffs), diffs)
 
 	expectedRel := "subdir/nested_model.ysm"
 	if diffs[0].RelPath != expectedRel {
@@ -701,10 +692,8 @@ func TestDiffFolderContents_RecycleDir(t *testing.T) {
 
 	diffs := DiffFolderContents(globalFolder, instFolder, "ysm")
 
-	// 应只包含 active.ysm，不包含 .recycle/trashed.ysm
-	if len(diffs) != 1 {
-		t.Fatalf("应只有 1 条活跃模型差异，实际 %d: %v", len(diffs), diffs)
-	}
+	// 应只包含 active.ysm，不包含 .recycle/trashed.ysm（守卫下方 diffs[0] 索引）
+	testutil.Equal(t, len(diffs), 1, "应只有 1 条活跃模型差异，实际 %d: %v", len(diffs), diffs)
 	if diffs[0].RelPath != "active.ysm" {
 		t.Errorf("应只有 active.ysm，实际 %s", diffs[0].RelPath)
 	}

@@ -134,9 +134,8 @@ func TestParseMeta_Errors(t *testing.T) {
 	}
 
 	// 文件不存在
-	if _, err := ParseMeta(filepath.Join(t.TempDir(), "nope.litematic")); err == nil {
-		t.Fatal("不存在文件应报错")
-	}
+	_, err := ParseMeta(filepath.Join(t.TempDir(), "nope.litematic"))
+	testutil.NotNil(t, err, "不存在文件应报错")
 }
 
 // TestParseMeta_VersionField 验证 Version 字段被正确读取

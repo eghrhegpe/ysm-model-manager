@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/fsutil"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // ===== copyDir =====
@@ -24,9 +25,8 @@ func TestCopyDir_MkdirTempError(t *testing.T) {
 	_ = os.MkdirAll(src, 0755)
 	blocker := filepath.Join(base, "afile")
 	_ = os.WriteFile(blocker, []byte("x"), 0644)
-	if err := copyDir(src, filepath.Join(blocker, "sub", "out")); err == nil {
-		t.Fatal("dst 父级为文件时 MkdirTemp 应失败")
-	}
+	err := copyDir(src, filepath.Join(blocker, "sub", "out"))
+	testutil.NotNil(t, err, "dst 父级为文件时 MkdirTemp 应失败")
 }
 
 func TestCopyDir_CopyErrorKeepsDst(t *testing.T) {
@@ -37,15 +37,10 @@ func TestCopyDir_CopyErrorKeepsDst(t *testing.T) {
 	dst := filepath.Join(base, "out")
 	_ = os.MkdirAll(dst, 0755)
 	_ = os.WriteFile(filepath.Join(dst, "keep.txt"), []byte("keep"), 0644)
-	if err := copyDir(srcFile, dst); err == nil {
-		t.Fatal("源为文件时 copyDir 应失败")
-	}
-	if _, err := os.Stat(filepath.Join(dst, "keep.txt")); err != nil {
-		t.Fatalf("既有目标不应被影响: %v", err)
-	}
-	if n := globCount(t, base, ".tmp_import_*"); n != 0 {
-		t.Fatalf("失败后不应残留临时目录，实际 %d 个", n)
-	}
+	err := copyDir(srcFile, dst)
+	testutil.NotNil(t, err, "源为文件时 copyDir 应失败")
+	testutil.FileExists(t, filepath.Join(dst, "keep.txt"), "既有目标不应被影响")
+	testutil.Equal(t, globCount(t, base, ".tmp_import_*"), 0, "失败后不应残留临时目录")
 }
 
 // ===== copyFile =====
@@ -57,10 +52,7 @@ func TestCopyFile_IOCopyErrorCleanup(t *testing.T) {
 	srcDir := filepath.Join(base, "srcdir")
 	_ = os.MkdirAll(srcDir, 0755)
 	dst := filepath.Join(base, "out", "f.txt")
-	if err := fsutil.CopyFile(srcDir, dst); err == nil {
-		t.Fatal("复制目录句柄应报错")
-	}
-	if _, err := os.Stat(dst); !os.IsNotExist(err) {
-		t.Fatalf("失败后半截目标文件应被清理: %v", err)
-	}
+	err := fsutil.CopyFile(srcDir, dst)
+	testutil.NotNil(t, err, "复制目录句柄应报错")
+	testutil.FileNotExists(t, dst, "失败后半截目标文件应被清理")
 }

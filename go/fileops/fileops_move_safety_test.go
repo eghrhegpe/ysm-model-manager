@@ -34,9 +34,7 @@ func forceRenameError(t *testing.T, e error) {
 func sortedDirNames(t *testing.T, dir string) []string {
 	t.Helper()
 	entries, err := os.ReadDir(dir)
-	if err != nil {
-		t.Fatalf("读取目录 %s 失败: %v", dir, err)
-	}
+	testutil.NoError(t, err, "读取目录 %s 失败", dir)
 	names := make([]string, 0, len(entries))
 	for _, e := range entries {
 		names = append(names, e.Name())
@@ -67,23 +65,17 @@ func TestMoveModelFile_EndState_SourceGoneTargetByteIdentical(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 
-	if err := MoveModelFile(base, src, dstDir); err != nil {
-		t.Fatalf("移动应成功: %v", err)
-	}
+	testutil.NoError(t, MoveModelFile(base, src, dstDir), "移动应成功")
 	// 终态①：源必须消失——否则是「复制未删」的静默双份，用户以为搬走了实则两份
-	if _, err := os.Lstat(src); !os.IsNotExist(err) {
-		t.Fatalf("源应已消失，got err=%v", err)
-	}
+	_, lstatErr := os.Lstat(src)
+	testutil.Equal(t, os.IsNotExist(lstatErr), true, "源应已消失，got err=%v", lstatErr)
 	// 终态②：目标存在且逐字节一致（防半截文件/Windows 文本模式改写）
 	got, err := os.ReadFile(filepath.Join(dstDir, "m.ysm"))
 	testutil.NoError(t, err, "目标不可读")
-	if !bytes.Equal(got, content) {
-		t.Fatalf("目标内容不一致: got %q want %q", got, content)
-	}
+	testutil.Equal(t, bytes.Equal(got, content), true, "目标内容不一致: got %q want %q", got, content)
 	// 终态③：源目录不得留残渣
-	if names := sortedDirNames(t, srcDir); len(names) != 0 {
-		t.Fatalf("源目录应清空，残留 %v", names)
-	}
+	names := sortedDirNames(t, srcDir)
+	testutil.Equal(t, len(names), 0, "源目录应清空，残留 %v", names)
 }
 
 // 非 EXDEV rename 失败 + 目标目录由本次新建 → 回滚空目录，源完好。
@@ -99,17 +91,12 @@ func TestMoveModelFile_RenameFailRollsBackCreatedDstDir(t *testing.T) {
 	err := MoveModelFile(base, src, dstDir)
 	testutil.NotNil(t, err, "rename 失败应报错")
 	// 原始错误必须透传（不吞错、不换成笼统文案）
-	if !strings.Contains(err.Error(), "simulated rename failure") {
-		t.Fatalf("应透传原 rename 错误，got %v", err)
-	}
+	testutil.ErrorContains(t, err, "simulated rename failure", "应透传原 rename 错误")
 	// 失败不留半成品：本次新建的 dstDir 被回滚
-	if _, statErr := os.Lstat(dstDir); !os.IsNotExist(statErr) {
-		t.Fatalf("本次新建的 dstDir 应被回滚清理，got err=%v", statErr)
-	}
+	_, statErr := os.Lstat(dstDir)
+	testutil.Equal(t, os.IsNotExist(statErr), true, "本次新建的 dstDir 应被回滚清理，got err=%v", statErr)
 	// 数据安全：失败绝不能丢源
-	if _, statErr := os.Lstat(src); statErr != nil {
-		t.Fatalf("失败时源必须保留: %v", statErr)
-	}
+	testutil.FileExists(t, src, "失败时源必须保留")
 }
 
 // 非 EXDEV rename 失败 + 目标目录**预存在** → 预存在内容绝不被清理（P3-2 红线）。
@@ -129,16 +116,12 @@ func TestMoveModelFile_RenameFailKeepsPreexistingDstDir(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 
-	if err := MoveModelFile(base, src, dstDir); err == nil {
-		t.Fatal("rename 失败应报错")
-	}
+	testutil.NotNil(t, MoveModelFile(base, src, dstDir), "rename 失败应报错")
 	// P3-2 红线：预存在目标目录及其内容绝不被失败清理误删（静默数据破坏）
-	if got, err := os.ReadFile(sentinel); err != nil || string(got) != "precious" {
-		t.Fatalf("预存在 dstDir 内容被误删/损坏: got=%q err=%v", got, err)
-	}
-	if _, err := os.Stat(src); err != nil {
-		t.Fatalf("失败时源必须保留: %v", err)
-	}
+	got, err := os.ReadFile(sentinel)
+	testutil.NoError(t, err, "预存在 dstDir 内容被误删")
+	testutil.Equal(t, string(got), "precious", "预存在 dstDir 内容被误删/损坏: got=%q", got)
+	testutil.FileExists(t, src, "失败时源必须保留")
 }
 
 // 目标目录在仓库外 → 命中「目标目录必须在仓库内」，源不动、仓库外无落点。
@@ -159,16 +142,11 @@ func TestMoveModelFile_TargetOutsideRootRejected(t *testing.T) {
 
 	err := MoveModelFile(repo, src, outside)
 	testutil.NotNil(t, err, "目标目录在仓库外应被拒绝")
-	if !strings.Contains(err.Error(), "目标目录必须在仓库内") {
-		t.Fatalf("应命中目标越界守卫，got %v", err)
-	}
+	testutil.ErrorContains(t, err, "目标目录必须在仓库内", "应命中目标越界守卫")
 	// 终态：源未被移动、仓库外无落点、无残留目录
-	if _, serr := os.Stat(src); serr != nil {
-		t.Fatalf("源必须保留: %v", serr)
-	}
-	if _, serr := os.Lstat(filepath.Join(outside, "m.ysm")); !os.IsNotExist(serr) {
-		t.Fatalf("仓库外不得出现落点: %v", serr)
-	}
+	testutil.FileExists(t, src, "源必须保留")
+	_, serr := os.Lstat(filepath.Join(outside, "m.ysm"))
+	testutil.Equal(t, os.IsNotExist(serr), true, "仓库外不得出现落点: %v", serr)
 }
 
 // 路径 Abs 失败必须传播错误（fail-open 会让整条边界校验静默失效）。
@@ -185,21 +163,14 @@ func TestMoveModelFile_AbsErrorPropagated(t *testing.T) {
 	}
 
 	// ① Abs(root) 失败
-	if err := MoveModelFile(base+"\x00", src, dstDir); err == nil {
-		t.Fatal("root 路径异常必须传播错误（不得 fail-open 跳过守卫）")
-	}
+	testutil.NotNil(t, MoveModelFile(base+"\x00", src, dstDir), "root 路径异常必须传播错误（不得 fail-open 跳过守卫）")
 	// ② Abs(src) 失败
-	if err := MoveModelFile(base, src+"\x00", dstDir); err == nil {
-		t.Fatal("src 路径异常必须传播错误")
-	}
+	testutil.NotNil(t, MoveModelFile(base, src+"\x00", dstDir), "src 路径异常必须传播错误")
 	// ③ Abs(dstDir) 失败
-	if err := MoveModelFile(base, src, dstDir+"\x00"); err == nil {
-		t.Fatal("dstDir 路径异常必须传播错误")
-	}
+	testutil.NotNil(t, MoveModelFile(base, src, dstDir+"\x00"), "dstDir 路径异常必须传播错误")
 	// 终态：三次畸形输入都不得改动磁盘
-	if names := sortedDirNames(t, base); strings.Join(names, ",") != "m.ysm" {
-		t.Fatalf("畸形输入不得改动磁盘，目录内容 = %v", names)
-	}
+	names := sortedDirNames(t, base)
+	testutil.Equal(t, strings.Join(names, ","), "m.ysm", "畸形输入不得改动磁盘，目录内容 = %v", names)
 }
 
 // 跨设备回退：单文件复制失败（目标落点被抢占成目录，tmp→dst rename 必然失败）
@@ -223,20 +194,16 @@ func TestMoveModelFile_CrossDeviceFileCopyFailKeepsSource(t *testing.T) {
 	}
 	t.Cleanup(func() { renameForMove = orig })
 
-	if err := MoveModelFile(base, src, dstDir); err == nil {
-		t.Fatal("跨设备回退复制失败应报错")
-	}
+	testutil.NotNil(t, MoveModelFile(base, src, dstDir), "跨设备回退复制失败应报错")
 	// 数据安全铁律：复制失败绝不能删除源
-	if got, rerr := os.ReadFile(src); rerr != nil || string(got) != "payload" {
-		t.Fatalf("失败时源必须原样保留: got=%q err=%v", got, rerr)
-	}
+	got, rerr := os.ReadFile(src)
+	testutil.NoError(t, rerr, "失败时源必须原样保留")
+	testutil.Equal(t, string(got), "payload", "失败时源必须原样保留: got=%q", got)
 	// 不留半成品：目标落点无半截文件、无 .copy-*.tmp 残渣
 	entries, derr := os.ReadDir(dstDir)
 	testutil.NoError(t, derr, "dstDir 应存在")
 	for _, e := range entries {
-		if strings.HasPrefix(e.Name(), ".copy-") {
-			t.Fatalf("复制失败残留临时文件: %s", e.Name())
-		}
+		testutil.Equal(t, strings.HasPrefix(e.Name(), ".copy-"), false, "复制失败残留临时文件: %s", e.Name())
 	}
 }
 
@@ -263,13 +230,11 @@ func TestMoveModelFile_CrossDeviceDirCopyFailKeepsSource(t *testing.T) {
 	}
 	t.Cleanup(func() { renameForMove = orig })
 
-	if err := MoveModelFile(base, srcDir, dstDir); err == nil {
-		t.Fatal("跨设备目录复制失败应报错")
-	}
+	testutil.NotNil(t, MoveModelFile(base, srcDir, dstDir), "跨设备目录复制失败应报错")
 	// 源树必须原样保留（复制失败 = 未发生任何搬迁）
-	if got, rerr := os.ReadFile(filepath.Join(srcDir, "m.ysm")); rerr != nil || string(got) != "payload" {
-		t.Fatalf("失败时源树必须原样保留: got=%q err=%v", got, rerr)
-	}
+	got, rerr := os.ReadFile(filepath.Join(srcDir, "m.ysm"))
+	testutil.NoError(t, rerr, "失败时源树必须原样保留")
+	testutil.Equal(t, string(got), "payload", "失败时源树必须原样保留: got=%q", got)
 }
 
 // 跨设备回退：源在窗口内消失（os.Stat 失败）→ 透传 NotExist、不产出目标数据。
@@ -295,13 +260,10 @@ func TestMoveModelFile_CrossDeviceStatSourceFails(t *testing.T) {
 	err := MoveModelFile(base, src, dstDir)
 	testutil.NotNil(t, err, "源已消失时应报错")
 	// 透传 os.Stat 的原始错误（不包装），调用方可按 NotExist 分类
-	if !os.IsNotExist(err) {
-		t.Fatalf("应透传 NotExist，got %v", err)
-	}
+	testutil.Equal(t, os.IsNotExist(err), true, "应透传 NotExist，got %v", err)
 	// 不产出任何目标数据
-	if _, serr := os.Lstat(filepath.Join(dstDir, "m.ysm")); !os.IsNotExist(serr) {
-		t.Fatalf("不应产生目标文件: %v", serr)
-	}
+	_, serr := os.Lstat(filepath.Join(dstDir, "m.ysm"))
+	testutil.Equal(t, os.IsNotExist(serr), true, "不应产生目标文件: %v", serr)
 	if _, serr := os.Lstat(dstDir); serr != nil {
 		t.Logf("NOTE: dstDir 已被清理（行为较原实现有变）: %v", serr)
 	} else {

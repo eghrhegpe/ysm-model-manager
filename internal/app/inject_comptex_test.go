@@ -20,9 +20,7 @@ func TestBuildComponentTextureMap(t *testing.T) {
 		}},
 	}
 	got := buildComponentTextureMap(comps)
-	if len(got) != 1 {
-		t.Fatalf("应提取 1 个组件纹理，实际 %v", got)
-	}
+	testutil.Equal(t, len(got), 1, "应提取 1 个组件纹理，实际 %v", got)
 	if got["arrow"][0] != "data:image/png;base64,QUJD" {
 		t.Errorf("arrow 纹理内容不符: %v", got["arrow"])
 	}
@@ -63,12 +61,9 @@ func TestModel3DSpecTypedRoundTrip(t *testing.T) {
 	if err := json.Unmarshal(b, &back); err != nil {
 		testutil.NoError(t, err)
 	}
-	if len(back.TexArrOrder) != 5 || back.TexArrOrder[4] != "foxcar" {
-		t.Fatalf("texArrOrder 往返丢失/错序: %#v", back.TexArrOrder)
-	}
-	if len(back.ComponentTextures["foxcar"]) != 1 {
-		t.Fatalf("componentTextures 往返丢失: %#v", back.ComponentTextures)
-	}
+	testutil.Equal(t, len(back.TexArrOrder), 5, "texArrOrder 往返丢失/错序: %#v", back.TexArrOrder) // 前置守卫：长度为 5 才取 [4]
+	testutil.Equal(t, back.TexArrOrder[4], "foxcar", "texArrOrder 往返丢失/错序: %#v", back.TexArrOrder)
+	testutil.Equal(t, len(back.ComponentTextures["foxcar"]), 1, "componentTextures 往返丢失: %#v", back.ComponentTextures)
 
 	// 全空 spec：omitempty 不应序列化出空键（旧「不注入空对象」语义）
 	empty, _ := json.Marshal(threejs.Model3DSpec{})

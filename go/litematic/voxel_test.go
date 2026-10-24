@@ -176,9 +176,7 @@ func TestBuildVoxelData_Success(t *testing.T) {
 		t.Errorf("Size = %v, want [1 1 1]", result.Size)
 	}
 	// palette[1]=stone → 1 个颜色组，1 个方块
-	if len(result.Groups) != 1 {
-		t.Fatalf("Groups = %d, want 1（got %+v）", len(result.Groups), result.Groups)
-	}
+	testutil.Equal(t, len(result.Groups), 1, "Groups = %d, want 1（got %+v）", len(result.Groups), result.Groups)
 	if len(result.Groups[0].Positions) != 1 {
 		t.Errorf("Positions = %d, want 1", len(result.Groups[0].Positions))
 	}
@@ -241,9 +239,7 @@ func TestBuildVoxelData_MultiRegion(t *testing.T) {
 	path := writeGzNbt(t, root)
 	result, err := BuildVoxelData(path, 100)
 	testutil.NoError(t, err, "BuildVoxelData 失败")
-	if len(result.Groups) != 1 {
-		t.Fatalf("两 region 同一颜色应合并为 1 组, Groups = %+v", result.Groups)
-	}
+	testutil.Equal(t, len(result.Groups), 1, "两 region 同一颜色应合并为 1 组, Groups = %+v", result.Groups)
 	if len(result.Groups[0].Positions) != 2 {
 		t.Errorf("应有 2 个方块, 得到 %d: %+v", len(result.Groups[0].Positions), result.Groups[0].Positions)
 	}
@@ -273,17 +269,15 @@ func TestBuildVoxelData_NoRegions(t *testing.T) {
 
 func TestBuildVoxelData_InvalidFile(t *testing.T) {
 	// 文件不存在
-	if _, err := BuildVoxelData(filepath.Join(t.TempDir(), "nope.litematic"), 100); err == nil {
-		t.Fatal("不存在文件应报错")
-	}
+	_, err := BuildVoxelData(filepath.Join(t.TempDir(), "nope.litematic"), 100)
+	testutil.NotNil(t, err, "不存在文件应报错")
 	// 非 gzip 数据
 	bad := filepath.Join(t.TempDir(), "bad.litematic")
 	if err := os.WriteFile(bad, []byte("notgzip"), 0644); err != nil {
 		testutil.NoError(t, err)
 	}
-	if _, err := BuildVoxelData(bad, 100); err == nil {
-		t.Fatal("非 gzip 应报错")
-	}
+	_, err = BuildVoxelData(bad, 100)
+	testutil.NotNil(t, err, "非 gzip 应报错")
 }
 
 // ====== BuildNbtVoxelData（structure NBT 格式）=====
@@ -332,9 +326,9 @@ func TestBuildNbtVoxelData_State0NonAirPalette(t *testing.T) {
 	path := writeGzNbt(t, root)
 	result, err := BuildNbtVoxelData(path, 100)
 	testutil.NoError(t, err, "BuildNbtVoxelData 失败")
-	if len(result.Groups) != 1 || len(result.Groups[0].Positions) != 1 {
-		t.Fatalf("palette[0]=stone 且 state=0 应保留 1 组 1 方块, Groups = %+v", result.Groups)
-	}
+	// OR 型复合条件拆序贯（len 守卫在前——Equal 失败即 Goexit，[0] 解引用仅在其通过后执行）
+	testutil.Equal(t, len(result.Groups), 1, "palette[0]=stone 且 state=0 应保留 1 组 1 方块, Groups = %+v", result.Groups)
+	testutil.Equal(t, len(result.Groups[0].Positions), 1, "palette[0]=stone 且 state=0 应保留 1 组 1 方块, Groups = %+v", result.Groups)
 }
 
 func TestBuildNbtVoxelData_AirAtNonZeroIndex(t *testing.T) {
@@ -377,9 +371,8 @@ func TestBuildNbtVoxelData_NotStructure(t *testing.T) {
 	_, _ = gz.Write(root)
 	_ = gz.Close()
 	path := writeVoxelGz(t, buf.Bytes())
-	if _, err := BuildNbtVoxelData(path, 100); err == nil {
-		t.Fatal("缺 size/blocks/palette 应报错")
-	}
+	_, err := BuildNbtVoxelData(path, 100)
+	testutil.NotNil(t, err, "缺 size/blocks/palette 应报错")
 }
 
 func TestBuildNbtVoxelData_InvalidSize(t *testing.T) {
@@ -391,9 +384,8 @@ func TestBuildNbtVoxelData_InvalidSize(t *testing.T) {
 	_, _ = gz.Write(root)
 	_ = gz.Close()
 	path := writeVoxelGz(t, buf.Bytes())
-	if _, err := BuildNbtVoxelData(path, 100); err == nil {
-		t.Fatal("size 长度不为 3 应报错")
-	}
+	_, err := BuildNbtVoxelData(path, 100)
+	testutil.NotNil(t, err, "size 长度不为 3 应报错")
 }
 
 // ====== 基岩版 1.21+ structure（sub_levels 聚合，对齐 buildBedrockVoxelData）=====
@@ -488,9 +480,8 @@ func TestBuildNbtVoxelData_BedrockNoBounds(t *testing.T) {
 	_, _ = gz.Write(root)
 	_ = gz.Close()
 	path := writeVoxelGz(t, buf.Bytes())
-	if _, err := BuildNbtVoxelData(path, 100); err == nil {
-		t.Fatal("sub_levels 无有效包围盒应报错")
-	}
+	_, err := BuildNbtVoxelData(path, 100)
+	testutil.NotNil(t, err, "sub_levels 无有效包围盒应报错")
 }
 
 // ====== BuildSchematicVoxelData（schematic 格式，v1 Blocks / v2 BlockData 双路径）=====
@@ -537,9 +528,8 @@ func TestBuildSchematicVoxelData_NotSchematic(t *testing.T) {
 	_, _ = gz.Write(root)
 	_ = gz.Close()
 	path := writeVoxelGz(t, buf.Bytes())
-	if _, err := BuildSchematicVoxelData(path, 100); err == nil {
-		t.Fatal("缺 Width/Height/Length 应报错")
-	}
+	_, err := BuildSchematicVoxelData(path, 100)
+	testutil.NotNil(t, err, "缺 Width/Height/Length 应报错")
 }
 
 func TestBuildSchematicVoxelData_NoBlocks(t *testing.T) {
@@ -554,9 +544,8 @@ func TestBuildSchematicVoxelData_NoBlocks(t *testing.T) {
 	_, _ = gz.Write(root)
 	_ = gz.Close()
 	path := writeVoxelGz(t, buf.Bytes())
-	if _, err := BuildSchematicVoxelData(path, 100); err == nil {
-		t.Fatal("无 Blocks/BlockData 应报错")
-	}
+	_, err := BuildSchematicVoxelData(path, 100)
+	testutil.NotNil(t, err, "无 Blocks/BlockData 应报错")
 }
 
 // ===== ADR-132 遗留 1：root 输入源解耦（OpenGzRootFromBytes + Build*FromRoot）=====
@@ -572,14 +561,12 @@ func TestOpenGzRootFromBytes_Success(t *testing.T) {
 }
 
 func TestOpenGzRootFromBytes_BadGzip(t *testing.T) {
-	if _, err := OpenGzRootFromBytes([]byte("not gzip data")); err == nil {
-		t.Fatal("非 gzip 字节应报错")
-	}
+	_, err := OpenGzRootFromBytes([]byte("not gzip data"))
+	testutil.NotNil(t, err, "非 gzip 字节应报错")
 	// 截断 gzip（合法头 + 截断体）也应报错
 	_, good := makeVoxelGz(t, 1, 100)
-	if _, err := OpenGzRootFromBytes(good[:len(good)/2]); err == nil {
-		t.Fatal("截断 gzip 应报错")
-	}
+	_, err = OpenGzRootFromBytes(good[:len(good)/2])
+	testutil.NotNil(t, err, "截断 gzip 应报错")
 }
 
 func TestBuildVoxelDataFromRoot_MatchesPathEntry(t *testing.T) {
@@ -619,9 +606,7 @@ func TestBuildNbtVoxelDataFromRoot_MatchesPathEntry(t *testing.T) {
 	if len(viaPath.Groups) != len(viaRoot.Groups) {
 		t.Errorf("Groups 数不一致: path=%d root=%d", len(viaPath.Groups), len(viaRoot.Groups))
 	}
-	if len(viaPath.Groups) == 0 {
-		t.Fatal("structure NBT 应有 1 个方块组")
-	}
+	testutil.Equal(t, len(viaPath.Groups) != 0, true, "structure NBT 应有 1 个方块组")
 	if len(viaPath.Groups[0].Positions) != len(viaRoot.Groups[0].Positions) {
 		t.Errorf("Positions 数不一致: path=%d root=%d", len(viaPath.Groups[0].Positions), len(viaRoot.Groups[0].Positions))
 	}

@@ -17,17 +17,13 @@ import (
 func TestRestoreFromRecycle_NotExist(t *testing.T) {
 	a, ysmRoot, _ := packApp(t)
 	// 幽灵条目：各根回收站均不包含 → 循环全 miss → 兜底 Restore 也报错
-	if err := a.RestoreFromRecycle(filepath.Join(t.TempDir(), "ghost.ysm"), ysmRoot); err == nil {
-		t.Fatal("恢复不存在的条目应报错")
-	}
+	testutil.NotNil(t, a.RestoreFromRecycle(filepath.Join(t.TempDir(), "ghost.ysm"), ysmRoot), "恢复不存在的条目应报错")
 }
 
 func TestDeleteFromRecycle_NotExist(t *testing.T) {
 	a, _, _ := packApp(t)
 	// 幽灵条目：不在任何回收站内 → 各根 Delete 越权报错 → 兜底也报错
-	if err := a.DeleteFromRecycle(filepath.Join(t.TempDir(), "ghost.ysm")); err == nil {
-		t.Fatal("删除不存在的条目应报错")
-	}
+	testutil.NotNil(t, a.DeleteFromRecycle(filepath.Join(t.TempDir(), "ghost.ysm")), "删除不存在的条目应报错")
 }
 
 func TestEmptyRecycleBin_NoRecycleDir(t *testing.T) {
@@ -35,9 +31,7 @@ func TestEmptyRecycleBin_NoRecycleDir(t *testing.T) {
 	// 无 .recycle 目录：各根 recycle.Empty 返回 0 无错 → total=0 无错
 	n, err := a.EmptyRecycleBin()
 	testutil.NoError(t, err, "无回收站目录不应报错")
-	if n != 0 {
-		t.Fatalf("无回收站目录应返回 0, got %d", n)
-	}
+	testutil.Equal(t, n, 0, "无回收站目录应返回 0")
 }
 
 // MoveToRecycle 成功路径（R24 加锁行）：src 落在资源根内 → findRecycleRoot 命中 →
@@ -48,9 +42,7 @@ func TestMoveToRecycle_Success(t *testing.T) {
 	if err := os.WriteFile(src, []byte("data"), 0o644); err != nil {
 		testutil.NoError(t, err)
 	}
-	if err := a.MoveToRecycle(src); err != nil {
-		t.Fatalf("回收失败: %v", err)
-	}
+	testutil.NoError(t, a.MoveToRecycle(src), "回收失败")
 	if _, err := os.Stat(src); !os.IsNotExist(err) {
 		t.Error("回收后源文件应已进入回收站")
 	}
@@ -64,13 +56,9 @@ func TestListRecycleBin_IteratesRoots(t *testing.T) {
 	if err := os.WriteFile(src, []byte("data"), 0o644); err != nil {
 		testutil.NoError(t, err)
 	}
-	if err := a.MoveToRecycle(src); err != nil {
-		t.Fatalf("预置回收失败: %v", err)
-	}
+	testutil.NoError(t, a.MoveToRecycle(src), "预置回收失败")
 	entries := a.ListRecycleBin("")
-	if len(entries) != 1 {
-		t.Fatalf("ListRecycleBin 应列出 1 条, 得到 %d", len(entries))
-	}
+	testutil.Equal(t, len(entries), 1, "ListRecycleBin 应列出 1 条")
 }
 
 // ===== ListRecycleBin 的 recyclePath 作用域过滤 =====
@@ -86,14 +74,10 @@ func TestListRecycleBin_ScopeIncludesParentRelation(t *testing.T) {
 	if err := os.WriteFile(src, []byte("data"), 0o644); err != nil {
 		testutil.NoError(t, err)
 	}
-	if actionErr := a.MoveToRecycle(src); actionErr != nil {
-		t.Fatalf("预置回收失败: %v", actionErr)
-	}
+	testutil.NoError(t, a.MoveToRecycle(src), "预置回收失败")
 	// 传入 ysmRoot 的父目录：recyclePath 包含回收根 → 该根被保留（双向 IsInside）
 	parent := filepath.Dir(ysmRoot)
-	if got := len(a.ListRecycleBin(parent)); got != 1 {
-		t.Fatalf("传父目录应命中 1 条, 得到 %d", got)
-	}
+	testutil.Equal(t, len(a.ListRecycleBin(parent)), 1, "传父目录应命中 1 条")
 }
 
 func TestListRecycleBin_ScopedByRecyclePath(t *testing.T) {
@@ -102,17 +86,9 @@ func TestListRecycleBin_ScopedByRecyclePath(t *testing.T) {
 	if err := os.WriteFile(src, []byte("data"), 0o644); err != nil {
 		testutil.NoError(t, err)
 	}
-	if actionErr := a.MoveToRecycle(src); actionErr != nil {
-		t.Fatalf("预置回收失败: %v", actionErr)
-	}
+	testutil.NoError(t, a.MoveToRecycle(src), "预置回收失败")
 
-	if got := len(a.ListRecycleBin(ysmRoot)); got != 1 {
-		t.Fatalf("传所属根应列出 1 条, 得到 %d", got)
-	}
-	if got := len(a.ListRecycleBin("")); got != 1 {
-		t.Fatalf("传空串应退回全量 1 条, 得到 %d", got)
-	}
-	if got := len(a.ListRecycleBin(t.TempDir())); got != 0 {
-		t.Fatalf("传无关根目录应列出 0 条, 得到 %d", got)
-	}
+	testutil.Equal(t, len(a.ListRecycleBin(ysmRoot)), 1, "传所属根应列出 1 条")
+	testutil.Equal(t, len(a.ListRecycleBin("")), 1, "传空串应退回全量 1 条")
+	testutil.Equal(t, len(a.ListRecycleBin(t.TempDir())), 0, "传无关根目录应列出 0 条")
 }

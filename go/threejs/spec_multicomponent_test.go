@@ -38,9 +38,7 @@ func TestBuildMulti_TwoComponents(t *testing.T) {
 	if err := json.Unmarshal([]byte(out), &spec); err != nil {
 		testutil.NoError(t, err)
 	}
-	if len(spec.Models) != 2 {
-		t.Fatalf("models 数量 = %d, want 2", len(spec.Models))
-	}
+	testutil.Equal(t, len(spec.Models), 2, "models 数量 = %d, want 2", len(spec.Models))
 	if spec.Models[0].ID != "comp_0" || spec.Models[1].ID != "comp_1" {
 		t.Errorf("组件 ID 错误: %q %q", spec.Models[0].ID, spec.Models[1].ID)
 	}
@@ -118,9 +116,7 @@ func TestBuildMulti_texIdxBaseNil(t *testing.T) {
 	if err := json.Unmarshal([]byte(out), &spec); err != nil {
 		testutil.NoError(t, err)
 	}
-	if len(spec.Models) != 2 {
-		t.Fatalf("models 数量 = %d, want 2", len(spec.Models))
-	}
+	testutil.Equal(t, len(spec.Models), 2, "models 数量 = %d, want 2", len(spec.Models))
 	// nil 回退：textureId = tex_<组件索引 i>（与显式 [0,1] 结果一致）
 	if spec.Models[0].TextureID == nil || *spec.Models[0].TextureID != "tex_0" {
 		t.Errorf("comp_0 textureId = %v, want tex_0（nil 回退失败）", spec.Models[0].TextureID)

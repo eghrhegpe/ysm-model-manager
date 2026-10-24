@@ -61,12 +61,8 @@ func TestExtractTexSizeFromGeometryBytes_MalformedFloat(t *testing.T) {
 		}]
 	}`
 	w, h := extractTexSizeFromGeometryBytes([]byte(payload))
-	if w == 0 {
-		t.Fatalf("超大 texture_width 应被钳到 65536，实际 = %d", w)
-	}
-	if w > 65536 {
-		t.Fatalf("超大 texture_width 未被钳制，实际 = %d（源码 int() 未钳，存在溢出返回）", w)
-	}
+	testutil.Equal(t, w == 0, false, "超大 texture_width 应被钳到 65536，实际 = %d", w)
+	testutil.Equal(t, w > 65536, false, "超大 texture_width 未被钳制，实际 = %d（源码 int() 未钳，存在溢出返回）", w)
 	if h != 0 {
 		t.Errorf("负数 texture_height 应为 0，实际 = %d", h)
 	}
@@ -114,9 +110,8 @@ func TestFindComponentsEmptyUv(t *testing.T) {
 	os.WriteFile(filepath.Join(modelsDir, "main.json"), []byte(geoWithBone("mainBone")), 0o644)
 
 	comps, texNames := FindComponentsInExtractedYSM(filepath.Join(dir, "ysm.json"))
-	if len(comps) != 1 {
-		t.Fatalf("应为 1 个组件，实际 = %d", len(comps))
-	}
+	// 守卫下方 comps[0] 索引
+	testutil.Equal(t, len(comps), 1, "应为 1 个组件，实际 = %d", len(comps))
 	// 期望 texNames 只含合法的 "skin"，空 uv / 缺 uv 项被过滤
 	for i, tn := range texNames {
 		if tn == "" {
@@ -140,9 +135,8 @@ func TestFindComponentsNonStringModelValue(t *testing.T) {
 	os.WriteFile(filepath.Join(modelsDir, "main.json"), []byte(geoWithBone("mainBone")), 0o644)
 
 	comps, texNames := FindComponentsInExtractedYSM(filepath.Join(dir, "ysm.json"))
-	if len(comps) == 0 {
-		t.Fatalf("非字符串 value 排在 main 之前 → 组件完全丢失")
-	}
+	// 守卫下方 comps[0] 索引
+	testutil.Equal(t, len(comps) == 0, false, "非字符串 value 排在 main 之前 → 组件完全丢失")
 	// 修复后硬断言：texSlot 必须为 0（修复前 break 导致 declPos 缺 main 键 → 错为按名段下标 1）
 	if got := comps[0].Bones[0].Cubes[0].TexSlot; got != 0 {
 		t.Errorf("main texSlot = %d（期望 0）——坏值未跳过导致 declPos 缺 main 键；texNames=%v", got, texNames)
@@ -279,9 +273,8 @@ func TestExtractYsmSummary_MalformedConfigForms(t *testing.T) {
 	os.WriteFile(path, []byte(payload), 0o644)
 	sum, err := ExtractYsmSummary(path)
 	testutil.NoError(t, err, "畸形 config_forms 应容错")
-	if len(sum.ConfigMenus) != 1 {
-		t.Fatalf("应有 1 个 ConfigMenu，实际 = %d", len(sum.ConfigMenus))
-	}
+	// 守卫下方 ConfigMenus[0] 索引
+	testutil.Equal(t, len(sum.ConfigMenus), 1, "应有 1 个 ConfigMenu，实际 = %d", len(sum.ConfigMenus))
 	// 控件类型为 nil/空——extractControlTypes 遇到对象而非数组返回 nil，
 	// marshal 后 Controls 字段为 null
 	if len(sum.ConfigMenus[0].Controls) != 0 {
@@ -353,9 +346,7 @@ func TestDetectYSGPHeader_BinaryOnly(t *testing.T) {
 	path := filepath.Join(dir, "bin.ysm")
 	os.WriteFile(path, []byte("YSGP"), 0o644)
 	h := AnalyzeYSMHeader(path)
-	if !h.IsYSM {
-		t.Fatalf("YSGP 应被识别")
-	}
+	testutil.Equal(t, h.IsYSM, true, "YSGP 应被识别")
 	if h.Format != 2 {
 		t.Errorf("Format = %d, want 2", h.Format)
 	}
@@ -379,9 +370,7 @@ func TestAnalyzeYSMModel_MalformedFields(t *testing.T) {
 	}`
 	path := testutil.WriteZipFile(t, "mf.ysm", map[string]string{"model.json": modelJSON})
 	meta := AnalyzeYSMModel(path)
-	if meta.HasError {
-		t.Fatalf("畸形字段不应报错，实际 = %s", meta.ErrorMsg)
-	}
+	testutil.Equal(t, meta.HasError, false, "畸形字段不应报错，实际 = %s", meta.ErrorMsg)
 	if meta.Name != "mf" {
 		t.Errorf("Name = %q", meta.Name)
 	}
@@ -395,9 +384,7 @@ func TestAnalyzeYSMModel_MalformedFields(t *testing.T) {
 func TestAnalyzeYSMModel_EmptyZip(t *testing.T) {
 	path := testutil.WriteZipFile(t, "empty.ysm", map[string]string{"readme.txt": "hi"})
 	meta := AnalyzeYSMModel(path)
-	if !meta.HasError {
-		t.Fatalf("无 model.json 应返回错误")
-	}
+	testutil.Equal(t, meta.HasError, true, "无 model.json 应返回错误")
 }
 
 // ---------------------------------------------------------------------------
@@ -440,9 +427,9 @@ func TestExtractTexSize_OverflowCoords(t *testing.T) {
 	for _, dim := range []float64{mathMaxInt32, -mathMaxInt32, 1e100, -1e100} {
 		w, h := extractTexSizeFromGeometryBytes([]byte(
 			fmt.Sprintf(`{"minecraft:geometry":[{"description":{"texture_width":%.0f,"texture_height":%.0f}}]}`, dim, dim)))
-		if w < 0 || w > 65536 || h < 0 || h > 65536 {
-			t.Fatalf("dim=%.0f 结果越界: w=%d h=%d", dim, w, h)
-		}
+		// 原复合条件拆序贯
+		testutil.Equal(t, w < 0 || w > 65536, false, "dim=%.0f 结果越界: w=%d", dim, w)
+		testutil.Equal(t, h < 0 || h > 65536, false, "dim=%.0f 结果越界: h=%d", dim, h)
 	}
 }
 

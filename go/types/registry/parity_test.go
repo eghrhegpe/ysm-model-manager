@@ -25,16 +25,19 @@ func repoRootFromPkgDir(t *testing.T) string {
 	t.Helper()
 	dir, err := os.Getwd()
 	testutil.NoError(t, err, "Getwd")
+	found := ""
 	for d := dir; ; d = filepath.Dir(d) {
 		if _, err := os.Stat(filepath.Join(d, "tests", "parity", "go-rust-predicates.json")); err == nil {
-			return d
+			found = d
+			break
 		}
 		if filepath.Dir(d) == d {
 			break // 到 fs 根
 		}
 	}
-	t.Fatalf("未找到 tests/parity/go-rust-predicates.json（从 %q 向上）", dir)
-	return ""
+	// 守卫：Equal 失败即 Goexit，与原 t.Fatalf 终止语义等价
+	testutil.Equal(t, found != "", true, "未找到 tests/parity/go-rust-predicates.json（从 %q 向上）", dir)
+	return found
 }
 
 func loadParityFixture(t *testing.T) *parityFixture {
@@ -43,9 +46,7 @@ func loadParityFixture(t *testing.T) *parityFixture {
 	raw, err := os.ReadFile(filepath.Join(root, "tests", "parity", "go-rust-predicates.json"))
 	testutil.NoError(t, err, "读取 parity fixture")
 	var f parityFixture
-	if err := json.Unmarshal(raw, &f); err != nil {
-		t.Fatalf("解析 parity fixture: %v", err)
-	}
+	testutil.NoError(t, json.Unmarshal(raw, &f), "解析 parity fixture")
 	return &f
 }
 

@@ -402,7 +402,7 @@ func writeTempFile(t *testing.T, content string) string {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "test.ysm")
 	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
-		t.Fatalf("failed to write temp file: %v", err)
+		testutil.NoError(t, err, "failed to write temp file")
 	}
 	return path
 }

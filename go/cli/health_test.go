@@ -26,7 +26,7 @@ func TestHealthReport_EmptyDir(t *testing.T) {
 	dir := t.TempDir()
 	out := captureOutput(t, func() {
 		if err := runHealthReport(&CmdContext{App: &app.App{}, FilesRoot: dir, Args: nil}); err != nil {
-			t.Fatalf("空仓库应成功, got %v", err)
+			testutil.NoError(t, err, "空仓库应成功")
 		}
 	})
 	if !strings.Contains(out, "健康体检") {
@@ -48,12 +48,12 @@ func TestHealthReport_BadModelLowersScore(t *testing.T) {
 
 	badOut := captureOutput(t, func() {
 		if err := runHealthReport(&CmdContext{App: &app.App{}, FilesRoot: dir, Args: []string{"--dir", dir}}); err != nil {
-			t.Fatalf("坏模型体检应成功, got %v", err)
+			testutil.NoError(t, err, "坏模型体检应成功")
 		}
 	})
 	goodOut := captureOutput(t, func() {
 		if err := runHealthReport(&CmdContext{App: &app.App{}, FilesRoot: good, Args: []string{"--dir", good}}); err != nil {
-			t.Fatalf("好模型体检应成功, got %v", err)
+			testutil.NoError(t, err, "好模型体检应成功")
 		}
 	})
 	if strings.Contains(badOut, "无效 0") {
@@ -71,7 +71,7 @@ func TestHealthReport_ReportsDuplicates(t *testing.T) {
 
 	out := captureOutput(t, func() {
 		if err := runHealthReport(&CmdContext{App: &app.App{}, FilesRoot: dir, Args: []string{"--dir", dir}}); err != nil {
-			t.Fatalf("体检应成功, got %v", err)
+			testutil.NoError(t, err, "体检应成功")
 		}
 	})
 	if !strings.Contains(out, "组重复") || !strings.Contains(out, "多余 1 个文件") {
@@ -88,7 +88,7 @@ func TestHealthReport_OutputJSON(t *testing.T) {
 
 	out := captureOutput(t, func() {
 		if err := runHealthReport(&CmdContext{App: &app.App{}, FilesRoot: dir, Args: []string{"--dir", dir, "--output", outFile}}); err != nil {
-			t.Fatalf("--output 应成功, got %v", err)
+			testutil.NoError(t, err, "--output 应成功")
 		}
 	})
 	if !strings.Contains(out, "已保存到") {
@@ -102,7 +102,7 @@ func TestHealthReport_OutputJSON(t *testing.T) {
 	testutil.NoError(t, err, "读取 JSON 失败")
 	var hr healthReportJSON
 	if err := json.Unmarshal(data, &hr); err != nil {
-		t.Fatalf("JSON 解析失败: %v", err)
+		testutil.NoError(t, err, "JSON 解析失败")
 	}
 	if hr.Score <= 0 || hr.Score > 100 {
 		t.Errorf("分数应在 1-100, got %d", hr.Score)

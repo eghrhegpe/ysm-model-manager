@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/internal/testutil"
 )
 
 // TestAllowedRoots_SingleSource 钉住「启禁允许根」与「扫描/读写根」同源。
@@ -25,9 +26,7 @@ func TestAllowedRoots_SingleSource(t *testing.T) {
 	base := t.TempDir()
 	// 模拟 Android 默认根：一个**不在** FilesRoot/McRoot/CustomRoots 内的独立目录
 	platformDefault := filepath.Join(base, "android-default", "YSM-Model-Manager")
-	if err := os.MkdirAll(platformDefault, 0o755); err != nil {
-		t.Fatalf("mkdir: %v", err)
-	}
+	testutil.NoError(t, os.MkdirAll(platformDefault, 0o755), "mkdir")
 
 	orig := pathMgr
 	defer func() { pathMgr = orig }()
@@ -46,16 +45,10 @@ func TestAllowedRoots_SingleSource(t *testing.T) {
 	// 行为面等价——平台默认根下的文件，两守卫须给出相同判定。
 	// 用 GetRepoRoot 实际返回的根（而非默认根本身）构造路径。
 	ysmRoot, _ := a.GetRepoRoot("ysm")
-	if ysmRoot == "" {
-		t.Fatal("本用例前提：未配 FilesRoot 时应由 defaultRepoRoot 提供 ysm 根")
-	}
+	testutil.Equal(t, ysmRoot == "", false, "本用例前提：未配 FilesRoot 时应由 defaultRepoRoot 提供 ysm 根")
 	insideFile := filepath.Join(ysmRoot, "model.ysm")
-	if err := os.MkdirAll(ysmRoot, 0o755); err != nil {
-		t.Fatalf("mkdir: %v", err)
-	}
-	if err := os.WriteFile(insideFile, []byte("x"), 0o644); err != nil {
-		t.Fatalf("write: %v", err)
-	}
+	testutil.NoError(t, os.MkdirAll(ysmRoot, 0o755), "mkdir")
+	testutil.NoError(t, os.WriteFile(insideFile, []byte("x"), 0o644), "write")
 	readable := a.isPathInRootOrSelf(insideFile)
 	toggleable := a.toggleRootFor(insideFile) != ""
 	if readable != toggleable {
@@ -69,12 +62,8 @@ func TestAllowedRoots_SingleSource(t *testing.T) {
 func TestAllowedRoots_RejectOutsideAllRoots(t *testing.T) {
 	base := t.TempDir()
 	outside := filepath.Join(base, "outside", "evil.ysm")
-	if err := os.MkdirAll(filepath.Dir(outside), 0o755); err != nil {
-		t.Fatalf("mkdir: %v", err)
-	}
-	if err := os.WriteFile(outside, []byte("x"), 0o644); err != nil {
-		t.Fatalf("write: %v", err)
-	}
+	testutil.NoError(t, os.MkdirAll(filepath.Dir(outside), 0o755), "mkdir")
+	testutil.NoError(t, os.WriteFile(outside, []byte("x"), 0o644), "write")
 
 	orig := pathMgr
 	defer func() { pathMgr = orig }()
@@ -134,9 +123,7 @@ func TestAllowedRootsCache_InvalidateOnSessionOverride(t *testing.T) {
 	oldRoot := filepath.Join(base, "old")
 	newRoot := filepath.Join(base, "new")
 	for _, d := range []string{oldRoot, newRoot} {
-		if err := os.MkdirAll(d, 0o755); err != nil {
-			t.Fatalf("mkdir: %v", err)
-		}
+		testutil.NoError(t, os.MkdirAll(d, 0o755), "mkdir")
 	}
 
 	orig := pathMgr
@@ -146,12 +133,8 @@ func TestAllowedRootsCache_InvalidateOnSessionOverride(t *testing.T) {
 	a := repoApp(t, types.AppConfig{FilesRoot: oldRoot})
 
 	// 预热缓存（旧根可读、新根被拒）
-	if !a.isPathInRootOrSelf(filepath.Join(oldRoot, "m.ysm")) {
-		t.Fatal("前提失败：旧根内路径应放行")
-	}
-	if a.isPathInRootOrSelf(filepath.Join(newRoot, "m.ysm")) {
-		t.Fatal("前提失败：新根路径在覆写前应被拒")
-	}
+	testutil.Equal(t, a.isPathInRootOrSelf(filepath.Join(oldRoot, "m.ysm")), true, "前提失败：旧根内路径应放行")
+	testutil.Equal(t, a.isPathInRootOrSelf(filepath.Join(newRoot, "m.ysm")), false, "前提失败：新根路径在覆写前应被拒")
 
 	// session 覆写 → 缓存须失效，新根立即生效
 	a.SetSessionFilesRoot(newRoot)

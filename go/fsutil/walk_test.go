@@ -18,9 +18,7 @@ func TestWalkAllFiles(t *testing.T) {
 	testutil.CreateTestFile(t, dir, "sub/deep/c.txt", "c")
 
 	files := WalkAllFiles(dir, true)
-	if len(files) != 3 {
-		t.Fatalf("期望 3 个文件，得到 %d", len(files))
-	}
+	testutil.Equal(t, len(files), 3, "期望 3 个文件，得到 %d", len(files))
 }
 
 func TestWalkAllFiles_SkipRecycle(t *testing.T) {
@@ -29,27 +27,20 @@ func TestWalkAllFiles_SkipRecycle(t *testing.T) {
 	testutil.CreateTestFile(t, dir, ".recycle/gone.txt", "gone")
 
 	files := WalkAllFiles(dir, true)
-	if len(files) != 1 {
-		t.Fatalf("skipRecycle=true 时应只有 1 个文件，得到 %d: %v", len(files), files)
-	}
+	testutil.Equal(t, len(files), 1, "skipRecycle=true 时应只有 1 个文件，得到 %d: %v", len(files), files)
 
 	files2 := WalkAllFiles(dir, false)
-	if len(files2) != 2 {
-		t.Fatalf("skipRecycle=false 时应返回 2 个文件，得到 %d", len(files2))
-	}
+	testutil.Equal(t, len(files2), 2, "skipRecycle=false 时应返回 2 个文件，得到 %d", len(files2))
 }
 
 func TestWalkAllFiles_NonExistent(t *testing.T) {
 	files := WalkAllFiles(filepath.Join(t.TempDir(), "no_such"), true)
-	if len(files) != 0 {
-		t.Fatalf("不存在的目录应返回 0 个文件，得到 %d", len(files))
-	}
+	testutil.Equal(t, len(files), 0, "不存在的目录应返回 0 个文件，得到 %d", len(files))
 }
 
 func TestWalkAllFiles_EmptyDir(t *testing.T) {
-	if files := WalkAllFiles(t.TempDir(), true); len(files) != 0 {
-		t.Fatalf("空目录应返回 0 个文件，得到 %d", len(files))
-	}
+	files := WalkAllFiles(t.TempDir(), true)
+	testutil.Equal(t, len(files), 0, "空目录应返回 0 个文件，得到 %d", len(files))
 }
 
 func TestCountFiles(t *testing.T) {
@@ -82,9 +73,7 @@ func TestWalkAllDirs(t *testing.T) {
 
 	dirs := WalkAllDirs(dir, true)
 	// 应有 a/b/c, a/b, a
-	if len(dirs) != 3 {
-		t.Fatalf("期望 3 个子目录，得到 %d: %v", len(dirs), dirs)
-	}
+	testutil.Equal(t, len(dirs), 3, "期望 3 个子目录，得到 %d: %v", len(dirs), dirs)
 	// 后序：最深在前
 	expected := []string{"a/b/c", "a/b", "a"}
 	for i, d := range expected {
@@ -102,20 +91,14 @@ func TestWalkAllDirs_SkipRecycleToggle(t *testing.T) {
 	os.MkdirAll(filepath.Join(dir, "keep"), 0755)
 
 	dirs := WalkAllDirs(dir, true)
-	if len(dirs) != 2 { // a, keep —— .recycle 整棵子树被跳过
-		t.Fatalf("skipRecycle=true 期望 2 个子目录，得到 %d: %v", len(dirs), dirs)
-	}
+	testutil.Equal(t, len(dirs), 2, "skipRecycle=true 期望 2 个子目录，得到 %d: %v", len(dirs), dirs) // a, keep —— .recycle 整棵子树被跳过
 	for _, d := range dirs {
 		rel, _ := filepath.Rel(dir, d)
-		if strings.Contains(rel, ".recycle") {
-			t.Fatalf("skipRecycle=true 不应包含 .recycle 子树: %s", rel)
-		}
+		testutil.Equal(t, strings.Contains(rel, ".recycle"), false, "skipRecycle=true 不应包含 .recycle 子树: %s", rel)
 	}
 
 	dirs2 := WalkAllDirs(dir, false)
-	if len(dirs2) != 4 { // a/.recycle/inner, a/.recycle, a, keep
-		t.Fatalf("skipRecycle=false 期望 4 个子目录，得到 %d: %v", len(dirs2), dirs2)
-	}
+	testutil.Equal(t, len(dirs2), 4, "skipRecycle=false 期望 4 个子目录，得到 %d: %v", len(dirs2), dirs2) // a/.recycle/inner, a/.recycle, a, keep
 }
 
 func TestCleanEmptyDirs(t *testing.T) {
@@ -124,9 +107,7 @@ func TestCleanEmptyDirs(t *testing.T) {
 	os.MkdirAll(sub, 0755)
 
 	n := CleanEmptyDirs(dir, true)
-	if n != 3 {
-		t.Fatalf("期望删除 3 个空目录，得到 %d", n)
-	}
+	testutil.Equal(t, n, 3, "期望删除 3 个空目录，得到 %d", n)
 	// 检查已删除
 	if _, err := os.Stat(sub); !os.IsNotExist(err) {
 		t.Error("最深目录应已被删除")
@@ -139,9 +120,7 @@ func TestCleanEmptyDirs_NonEmpty(t *testing.T) {
 	testutil.CreateTestFile(t, dir, "a/b/keep.txt", "keep")
 
 	n := CleanEmptyDirs(dir, true)
-	if n != 0 {
-		t.Fatalf("非空目录不应被删除，得到 %d", n)
-	}
+	testutil.Equal(t, n, 0, "非空目录不应被删除，得到 %d", n)
 }
 
 // 空 .recycle 目录在 skipRecycle=true 时必须被保留（回收站目录不参与清理）。
@@ -150,19 +129,15 @@ func TestCleanEmptyDirs_KeepRecycle(t *testing.T) {
 	recycle := filepath.Join(dir, ".recycle")
 	os.MkdirAll(recycle, 0755)
 
-	if n := CleanEmptyDirs(dir, true); n != 0 {
-		t.Fatalf("skipRecycle=true 不应删除 .recycle，得到 %d", n)
-	}
-	if _, err := os.Stat(recycle); err != nil {
-		t.Fatalf(".recycle 应被保留: %v", err)
-	}
+	n := CleanEmptyDirs(dir, true)
+	testutil.Equal(t, n, 0, "skipRecycle=true 不应删除 .recycle，得到 %d", n)
+	testutil.FileExists(t, recycle, ".recycle 应被保留")
 }
 
 // 不存在的目录：幂等返回 0，不 panic（对齐 dedup 侧 CleanEmptyDirs 幂等语义）。
 func TestCleanEmptyDirs_NonExistent(t *testing.T) {
-	if n := CleanEmptyDirs(filepath.Join(t.TempDir(), "no_such"), true); n != 0 {
-		t.Fatalf("不存在的目录应返回 0，得到 %d", n)
-	}
+	n := CleanEmptyDirs(filepath.Join(t.TempDir(), "no_such"), true)
+	testutil.Equal(t, n, 0, "不存在的目录应返回 0，得到 %d", n)
 }
 
 // ====== IsResourcePackFolder（收敛自 sync/instance 两包各自重复的三件套） ======
@@ -219,9 +194,7 @@ func TestSafeWalk_LogsSkippedError(t *testing.T) {
 	// 若平台未生效（err 始终 nil），则无日志也属正确，跳过断言。
 	_, statErr := os.ReadDir(badDir)
 	if statErr != nil {
-		if !strings.Contains(buf.String(), "[fsutil] SafeWalk 跳过访问失败的条目") {
-			t.Fatalf("err 条目被静默跳过时 SafeWalk 必须补记日志，实际输出: %q", buf.String())
-		}
+		testutil.Equal(t, strings.Contains(buf.String(), "[fsutil] SafeWalk 跳过访问失败的条目"), true, "err 条目被静默跳过时 SafeWalk 必须补记日志，实际输出: %q", buf.String())
 	}
 }
 
@@ -237,9 +210,7 @@ func TestSafeWalk_PassthroughNonNil(t *testing.T) {
 		seen++
 		return nil
 	})
-	if seen < 3 { // root + a.txt + sub + b.txt
-		t.Fatalf("期望访问 >=3 个条目，得到 %d", seen)
-	}
+	testutil.Equal(t, seen >= 3, true, "期望访问 >=3 个条目，得到 %d", seen) // root + a.txt + sub + b.txt
 }
 
 // TestHasRecycleSegment 逐段判定：.recycle 子树命中，文件名含 .recycle 的正常模型不误伤。

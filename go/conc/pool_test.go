@@ -8,14 +8,14 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // TestParallel_Empty：空输入返回 nil。
 func TestParallel_Empty(t *testing.T) {
 	got := Parallel([]int{}, func(i int, _ int) (int, bool) { return i, true })
-	if got != nil {
-		t.Fatalf("空输入应返回 nil，got %#v", got)
-	}
+	testutil.Nil(t, got, "空输入应返回 nil, got %#v", got)
 }
 
 // TestParallel_OrderPreserved：结果顺序 = 输入顺序（与完成序无关）。
@@ -26,9 +26,7 @@ func TestParallel_OrderPreserved(t *testing.T) {
 		return v * 2, true
 	})
 	want := []int{20, 40, 60, 80, 100}
-	if len(got) != len(want) {
-		t.Fatalf("长度不符: got %d want %d", len(got), len(want))
-	}
+	testutil.Equal(t, len(got), len(want), "长度不符: got %d want %d", len(got), len(want))
 	for i := range want {
 		if got[i] != want[i] {
 			t.Errorf("index %d: got %d want %d", i, got[i], want[i])
@@ -44,9 +42,7 @@ func TestParallel_Skip(t *testing.T) {
 	})
 	// 只保留偶数 index：0,2,4 → 0,20,40
 	want := []int{0, 20, 40}
-	if len(got) != len(want) {
-		t.Fatalf("长度不符: got %d want %d (got %#v)", len(got), len(want), got)
-	}
+	testutil.Equal(t, len(got), len(want), "长度不符: got %d want %d (got %#v)", len(got), len(want), got)
 	for i := range want {
 		if got[i] != want[i] {
 			t.Errorf("index %d: got %d want %d", i, got[i], want[i])
@@ -57,9 +53,9 @@ func TestParallel_Skip(t *testing.T) {
 // TestParallel_AllSkipped：全部跳过返回空切片（非 nil，长度 0）。
 func TestParallel_AllSkipped(t *testing.T) {
 	got := Parallel([]int{1, 2, 3}, func(_ int, _ int) (int, bool) { return 0, false })
-	if got == nil || len(got) != 0 {
-		t.Fatalf("应返回空切片, got %#v", got)
-	}
+	// OR 拆序贯：应返回非 nil 空切片（nil 与非空任一即失败）
+	testutil.NotNil(t, got, "应返回空切片（非 nil）, got %#v", got)
+	testutil.Equal(t, len(got), 0, "应返回空切片, got %#v", got)
 }
 
 // TestParallel_InvokedOnce：每个元素恰好处理一次。
@@ -70,26 +66,25 @@ func TestParallel_InvokedOnce(t *testing.T) {
 		calls.Add(1)
 		return 1, true
 	})
-	if got := calls.Load(); got != n {
-		t.Fatalf("fn 调用次数 = %d, want %d", got, n)
-	}
+	testutil.Equal(t, calls.Load(), int32(n), "fn 调用次数 = %d, want %d", calls.Load(), n)
 }
 
 // TestParallel_Single：单元素可用（worker=1 时结果正确）。
 func TestParallel_Single(t *testing.T) {
 	got := Parallel([]int{42}, func(_ int, v int) (int, bool) { return v, true })
-	if len(got) != 1 || got[0] != 42 {
-		t.Fatalf("单元素结果错误: %#v", got)
-	}
+	testutil.Equal(t, len(got), 1, "单元素结果错误: %#v", got)
+	// 序贯拆分：前一 Equal 失败即 Goexit，下一行的 [0] 索引才安全
+	testutil.Equal(t, got[0], 42, "单元素结果错误: %#v", got)
 }
 
 // TestParallel_WorkerCapAtLen：n < minWorkers 时不启动多余 goroutine（资源收敛）。
 func TestParallel_WorkerCapAtLen(t *testing.T) {
 	// 2 个元素：workers 应被截断到 2，不 panic、结果正确
 	got := Parallel([]int{1, 2}, func(_ int, v int) (int, bool) { return v, true })
-	if len(got) != 2 || got[0] != 1 || got[1] != 2 {
-		t.Fatalf("结果错误: %#v", got)
-	}
+	testutil.Equal(t, len(got), 2, "结果错误: %#v", got)
+	// 序贯拆分：前一 Equal 失败即 Goexit，下一行的 [0] 索引才安全
+	testutil.Equal(t, got[0], 1, "结果错误: %#v", got)
+	testutil.Equal(t, got[1], 2, "结果错误: %#v", got)
 }
 
 // TestParallel_ConcurrentExecution：确认实际并行（而非串行执行）。
@@ -115,14 +110,10 @@ func TestParallel_ConcurrentExecution(t *testing.T) {
 		mu.Unlock()
 		return 1, true
 	})
-	if seen.Load() != 16 {
-		t.Fatalf("fn 调用次数 = %d, want 16", seen.Load())
-	}
+	testutil.Equal(t, seen.Load(), int32(16), "fn 调用次数 = %d, want 16", seen.Load())
 	mu.Lock()
 	defer mu.Unlock()
-	if maxActive < 2 {
-		t.Fatalf("未观察到并行执行: maxActive=%d", maxActive)
-	}
+	testutil.Equal(t, maxActive >= 2, true, "未观察到并行执行: maxActive=%d", maxActive)
 }
 
 // TestParallelCtx_CancelStopsDispatch：cancel 后停止派发新任务（ADR-197）。
@@ -144,9 +135,7 @@ func TestParallelCtx_CancelStopsDispatch(t *testing.T) {
 		}
 	})
 	// 取消后不应跑完全部 200 个
-	if s := started.Load(); s >= 200 {
-		t.Fatalf("取消后仍执行了全部任务: started=%d", s)
-	}
+	testutil.Equal(t, started.Load() >= 200, false, "取消后仍执行了全部任务: started=%d", started.Load())
 	_ = got
 }
 
@@ -159,12 +148,10 @@ func TestParallelCtx_ContextDoneBeforeStart(t *testing.T) {
 		started.Add(1)
 		return 1, true
 	})
-	if started.Load() != 0 {
-		t.Fatalf("预取消后仍执行了 %d 个任务", started.Load())
-	}
-	if got == nil || len(got) != 0 {
-		t.Fatalf("取消后应返回空结果, got %#v", got)
-	}
+	testutil.Equal(t, started.Load(), int32(0), "预取消后仍执行了 %d 个任务", started.Load())
+	// OR 拆序贯：应返回非 nil 空结果（nil 与非空任一即失败）
+	testutil.NotNil(t, got, "取消后应返回空结果（非 nil）, got %#v", got)
+	testutil.Equal(t, len(got), 0, "取消后应返回空结果, got %#v", got)
 }
 
 // TestParallelCtx_Delegate: Parallel 等价于 ParallelCtx(Background)。
@@ -172,9 +159,10 @@ func TestParallelCtx_Delegate(t *testing.T) {
 	got := ParallelCtx(context.Background(), []int{1, 2, 3}, func(_ context.Context, _ int, v int) (int, bool) {
 		return v * 2, true
 	})
-	if len(got) != 3 || got[0] != 2 || got[2] != 6 {
-		t.Fatalf("结果错误: %#v", got)
-	}
+	testutil.Equal(t, len(got), 3, "结果错误: %#v", got)
+	// 序贯拆分：前一 Equal 失败即 Goexit，下一行的 [0] 索引才安全
+	testutil.Equal(t, got[0], 2, "结果错误: %#v", got)
+	testutil.Equal(t, got[2], 6, "结果错误: %#v", got)
 }
 
 // ===== ParallelN：显式 worker 数变体 =====
@@ -189,9 +177,7 @@ func TestParallelN_OrderPreserved(t *testing.T) {
 		return v * 2, true
 	})
 	want := []int{20, 40, 60, 80, 100}
-	if len(got) != len(want) {
-		t.Fatalf("长度不符: got %d want %d", len(got), len(want))
-	}
+	testutil.Equal(t, len(got), len(want), "长度不符: got %d want %d", len(got), len(want))
 	for i := range want {
 		if got[i] != want[i] {
 			t.Errorf("index %d: got %d want %d", i, got[i], want[i])
@@ -230,9 +216,8 @@ func TestParallelN_WorkerClamp_Low(t *testing.T) {
 	got1, _ := measureMaxActive(5, 1, func(ctx context.Context, _ int) (int, bool) {
 		return 0, true
 	})
-	if !reflect.DeepEqual(got0, got1) {
-		t.Fatalf("workers=0 与 workers=1 结果应一致: %#v vs %#v", got0, got1)
-	}
+	// DeepEqual 布尔化：[]int 含 nil vs 空切片差异场景，保真原判据不走 go-cmp
+	testutil.Equal(t, reflect.DeepEqual(got0, got1), true, "workers=0 与 workers=1 结果应一致: %#v vs %#v", got0, got1)
 	if max0 != 1 {
 		t.Errorf("workers=0 应 clamp 到 1, 观测并发 %d", max0)
 	}
@@ -248,9 +233,8 @@ func TestParallelN_WorkerClamp_High(t *testing.T) {
 		time.Sleep(5 * time.Millisecond)
 		return i, true
 	})
-	if !reflect.DeepEqual(gotHi, gotCap) {
-		t.Fatalf("workers=1000 与 workers=3 结果应一致: %#v vs %#v", gotHi, gotCap)
-	}
+	// DeepEqual 布尔化：保真原判据不走 go-cmp
+	testutil.Equal(t, reflect.DeepEqual(gotHi, gotCap), true, "workers=1000 与 workers=3 结果应一致: %#v vs %#v", gotHi, gotCap)
 	if maxHi > 3 {
 		t.Errorf("并发不得超过 n=3, 观测 %d", maxHi)
 	}
@@ -270,9 +254,7 @@ func TestParallelN_Cancel(t *testing.T) {
 		}
 		return 1, true
 	})
-	if len(got) > n {
-		t.Fatalf("结果长度超过输入: %d > %d", len(got), n)
-	}
+	testutil.Equal(t, len(got) > n, false, "结果长度超过输入: %d > %d", len(got), n)
 	if s := started.Load(); int(s) >= n {
 		t.Errorf("取消后仍跑完全部任务: %d", s)
 	}
@@ -288,9 +270,7 @@ func TestParallelN_PanicIsolation(t *testing.T) {
 		return v * 10, true
 	})
 	want := []int{0, 10, 20, 40, 50, 60} // 跳过 v==3 的位
-	if len(got) != len(want) {
-		t.Fatalf("长度不符: got %#v want %#v", got, want)
-	}
+	testutil.Equal(t, len(got), len(want), "长度不符: got %#v want %#v", got, want)
 	for i := range want {
 		if got[i] != want[i] {
 			t.Errorf("index %d: got %d want %d", i, got[i], want[i])
@@ -311,7 +291,6 @@ func TestParallelN_EqualsParallelCtx(t *testing.T) {
 	}
 	a := ParallelCtx(context.Background(), items, fn)
 	b := ParallelN(context.Background(), runtime.NumCPU(), items, fn)
-	if !reflect.DeepEqual(a, b) {
-		t.Fatalf("ParallelN 与 ParallelCtx 输出不一致: %#v vs %#v", b, a)
-	}
+	// DeepEqual 布尔化：保真原判据不走 go-cmp
+	testutil.Equal(t, reflect.DeepEqual(a, b), true, "ParallelN 与 ParallelCtx 输出不一致: %#v vs %#v", b, a)
 }

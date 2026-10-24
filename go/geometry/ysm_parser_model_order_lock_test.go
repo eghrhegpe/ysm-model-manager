@@ -12,6 +12,8 @@ import (
 	"encoding/json"
 	"testing"
 	"time"
+
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // TestParseModelOrder_FourFormsDeclarationOrder 四形态声明序 + 返回序列本体。
@@ -40,9 +42,8 @@ func TestParseModelOrder_FourFormsDeclarationOrder(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			got := parseModelOrder(tc.raw)
-			if !equalStrings(got, tc.want) {
-				t.Fatalf("parseModelOrder(%q) = %v, 期望 %v", tc.raw, got, tc.want)
-			}
+			// 保留 equalStrings 谓词：其 nil vs 空切片同判口径与 go-cmp 不同，保真优先
+			testutil.Equal(t, equalStrings(got, tc.want), true, "parseModelOrder(%q) = %v, 期望 %v", tc.raw, got, tc.want)
 		})
 	}
 }
@@ -65,9 +66,8 @@ func TestParseModelOrder_ObjectNonStringValueKeepsLaterKeys(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			got := parseModelOrder(tc.raw)
-			if !equalStrings(got, tc.want) {
-				t.Fatalf("parseModelOrder(%q) = %v, 期望 %v（非字符串 value 必须跳过而非中断）", tc.raw, got, tc.want)
-			}
+			// 保留 equalStrings 谓词（口径同上）
+			testutil.Equal(t, equalStrings(got, tc.want), true, "parseModelOrder(%q) = %v, 期望 %v（非字符串 value 必须跳过而非中断）", tc.raw, got, tc.want)
 		})
 	}
 }
@@ -93,9 +93,7 @@ func TestParseModelOrderArrayItem_DirectContract(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := parseModelOrderArrayItem(json.RawMessage(tc.raw)); got != tc.want {
-				t.Fatalf("parseModelOrderArrayItem(%q) = %q, 期望 %q", tc.raw, got, tc.want)
-			}
+			testutil.Equal(t, parseModelOrderArrayItem(json.RawMessage(tc.raw)), tc.want, "parseModelOrderArrayItem(%q)", tc.raw)
 		})
 	}
 }
@@ -104,9 +102,8 @@ func TestParseModelOrderArrayItem_DirectContract(t *testing.T) {
 // 与 parseModelOrder 的分派（raw[0]=='{'）不同，helper 自身也要对任意串给出确定降级。
 func TestParseModelOrderMap_NonObjectInput(t *testing.T) {
 	for _, raw := range []string{"[1,2]", `"str"`, "123", ""} {
-		if got := parseModelOrderMap(raw); len(got) != 0 {
-			t.Fatalf("parseModelOrderMap(%q) = %v, 期望空", raw, got)
-		}
+		got := parseModelOrderMap(raw)
+		testutil.Equal(t, len(got), 0, "parseModelOrderMap(%q) = %v, 期望空", raw, got)
 	}
 }
 
@@ -126,12 +123,12 @@ func TestParseModelOrderMap_NonObjectInput(t *testing.T) {
 func TestParseModelOrder_MalformedObjectTerminates(t *testing.T) {
 	done := make(chan []string, 1)
 	go func() { done <- parseModelOrder(`{not json`) }()
+	timedOut := false
 	select {
 	case got := <-done:
-		if len(got) != 0 {
-			t.Fatalf("畸形对象应返回空序列, got %v", got)
-		}
+		testutil.Equal(t, len(got), 0, "畸形对象应返回空序列, got %v", got)
 	case <-time.After(5 * time.Second):
-		t.Fatal("parseModelOrder 对畸形对象输入未终止（dec.Token 出错后 continue 不推进游标 → 死循环）")
+		timedOut = true
 	}
+	testutil.Equal(t, timedOut, false, "parseModelOrder 对畸形对象输入未终止（dec.Token 出错后 continue 不推进游标 → 死循环）")
 }

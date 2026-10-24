@@ -17,9 +17,7 @@ func TestParseUV_FaceUVFailFallsBackToBoxUV(t *testing.T) {
 	var faces [6][8]float64
 	c := types.Cube2D{FaceUV: "{not valid json", UV: [2]float64{0, 0}}
 	ok := parseUV(c, &faces, 8, 8, 8, 64, 64)
-	if !ok {
-		t.Fatal("FaceUV 失败 + box UV 存在 → 应回退 expandBoxUV 并返回 true")
-	}
+	testutil.Equal(t, ok, true, "FaceUV 失败 + box UV 存在 → 应回退 expandBoxUV 并返回 true")
 	// east face: u0 = 0/64, v0 = (0+8)/64 = 0.125
 	if faces[0][0] != 0 || faces[0][1] != 0.125 {
 		t.Errorf("回退后 east face u0,v0 = %f,%f, 期望 0,0.125", faces[0][0], faces[0][1])
@@ -94,9 +92,7 @@ func TestParseUV_EmptyFaceObjectFallsBackToBoxUV(t *testing.T) {
 func TestParseFaceUV_QuadVertexOrder(t *testing.T) {
 	var faces [6][8]float64
 	uv := `{"east":{"uv":[0,8],"uv_size":[8,8]}}`
-	if !parseFaceUV(uv, &faces, 64, 64) {
-		t.Fatal("parseFaceUV 应返回 true")
-	}
+	testutil.Equal(t, parseFaceUV(uv, &faces, 64, 64), true, "parseFaceUV 应返回 true")
 	east := faces[0]
 	want := [8]float64{0, 0.125, 0.125, 0.125, 0, 0.25, 0.125, 0.25}
 	for i := 0; i < 8; i++ {
@@ -238,9 +234,8 @@ func assertFaceUV(t *testing.T, uvs []float64, face int, want [8]float64, label 
 	t.Helper()
 	base := face * 8
 	for i := 0; i < 8; i++ {
-		if math.Abs(uvs[base+i]-want[i]) > 1e-9 {
-			t.Fatalf("%s face uvs[%d] = %v, 期望 %v（完整面=%v）", label, i, uvs[base+i], want[i], uvs[base:base+8])
-		}
+		// 浮点容差比较布尔化，保持 1e-9 阈值口径（go-cmp 直接比 float 无容差）
+		testutil.Equal(t, math.Abs(uvs[base+i]-want[i]) > 1e-9, false, "%s face uvs[%d] = %v, 期望 %v（完整面=%v）", label, i, uvs[base+i], want[i], uvs[base:base+8])
 	}
 }
 
@@ -249,9 +244,7 @@ func TestParseUV_FaceUVNoFacesFallsBackToBoxUV(t *testing.T) {
 	var faces [6][8]float64
 	c := types.Cube2D{FaceUV: `{"unknown":{"uv":[0,0]}}`, UV: [2]float64{0, 0}}
 	ok := parseUV(c, &faces, 8, 8, 8, 64, 64)
-	if !ok {
-		t.Fatal("FaceUV 无可识别面 + box UV 存在 → 应回退 expandBoxUV 并返回 true")
-	}
+	testutil.Equal(t, ok, true, "FaceUV 无可识别面 + box UV 存在 → 应回退 expandBoxUV 并返回 true")
 	// east face（expandBoxUV 口径）: u0 = 0/64, v0 = (0+8)/64 = 0.125
 	if faces[0][0] != 0 || faces[0][1] != 0.125 {
 		t.Errorf("回退后 east face u0,v0 = %f,%f, 期望 0,0.125", faces[0][0], faces[0][1])
@@ -271,9 +264,9 @@ func TestBuildModelGroup_ZeroTexDimDefaults(t *testing.T) {
 	}
 	mg, err := buildModelGroup(model, "main", 0)
 	testutil.NoError(t, err)
-	if mg.TextureWidth != 64 || mg.TextureHeight != 64 {
-		t.Fatalf("TexWidth/Height 为 0 应默认 64, got %v x %v", mg.TextureWidth, mg.TextureHeight)
-	}
+	// OR 型复合条件拆序贯：两个默认值分别断言（原 if != 64 || != 64）
+	testutil.Equal(t, mg.TextureWidth, 64, "TexWidth/Height 为 0 应默认 64, got Width=%v", mg.TextureWidth)
+	testutil.Equal(t, mg.TextureHeight, 64, "TexWidth/Height 为 0 应默认 64, got Height=%v", mg.TextureHeight)
 }
 
 // 骨骼 parent 指向 model.Bones 中不存在的骨骼（纯 parent 引用）：
@@ -298,21 +291,15 @@ func TestBuildModelGroup_PureParentReference(t *testing.T) {
 		switch b.Name {
 		case "ghost":
 			foundGhost = true
-			if b.ParentID != nil {
-				t.Fatalf("纯 parent 引用骨骼应挂 root（无 parent）: %v", *b.ParentID)
-			}
+			// 惰性求值陷阱：*b.ParentID 仅非 nil 时可解引用——改用 Nil 断言（不碰解引用）
+			testutil.Nil(t, b.ParentID, "纯 parent 引用骨骼应挂 root（无 parent）")
 		case "b1":
-			if b.ParentID != nil {
-				t.Fatalf("断裂父子链应修复为挂 root: %v", *b.ParentID)
-			}
-			if b.LocalPosition != [3]float64{-5, 2, -3} {
-				t.Fatalf("b1 localPosition = %v, want [-5 2 -3]（父无 pivot 走世界坐标）", b.LocalPosition)
-			}
+			// 同上：Nil 断言替代 if != nil + 解引用
+			testutil.Nil(t, b.ParentID, "断裂父子链应修复为挂 root")
+			testutil.Equal(t, b.LocalPosition, [3]float64{-5, 2, -3}, "b1 localPosition = %v, want [-5 2 -3]（父无 pivot 走世界坐标）", b.LocalPosition)
 		}
 	}
-	if !foundGhost {
-		t.Fatal("ghost 骨骼应被补充进 bones 列表")
-	}
+	testutil.Equal(t, foundGhost, true, "ghost 骨骼应被补充进 bones 列表")
 }
 
 // 同名骨骼且不满足 overwrite（均无 parent）→ mergeCubes 合并 cube 列表
@@ -336,13 +323,9 @@ func TestBuildModelGroup_DuplicateNameMergeNoOverwrite(t *testing.T) {
 			boneCount++
 		}
 	}
-	if boneCount != 1 {
-		t.Fatalf("同名骨骼应合并为 1 条, got %d", boneCount)
-	}
+	testutil.Equal(t, boneCount, 1, "同名骨骼应合并为 1 条, got %d", boneCount)
 	// 两个 cube 空间不重叠 → mergeCubes 追加 → 2 个 mesh
-	if len(mg.MeshGroups) != 2 {
-		t.Fatalf("非重叠 cube 应合并为 2 个 mesh, got %d", len(mg.MeshGroups))
-	}
+	testutil.Equal(t, len(mg.MeshGroups), 2, "非重叠 cube 应合并为 2 个 mesh, got %d", len(mg.MeshGroups))
 }
 
 // RightArm/LeftArm 无 parent 且存在带 parent 的 Arm → 挂到 Arm 下面
@@ -366,9 +349,9 @@ func TestBuildModelGroup_ArmAttach(t *testing.T) {
 			parents[b.Name] = *b.ParentID
 		}
 	}
-	if parents["RightArm"] != "Arm" || parents["LeftArm"] != "Arm" {
-		t.Fatalf("RightArm/LeftArm 应挂到 Arm: parents = %v", parents)
-	}
+	// OR 型复合条件拆序贯：两个挂载目标分别断言（原 if != || !=）
+	testutil.Equal(t, parents["RightArm"], "Arm", "RightArm/LeftArm 应挂到 Arm: parents = %v", parents)
+	testutil.Equal(t, parents["LeftArm"], "Arm", "RightArm/LeftArm 应挂到 Arm: parents = %v", parents)
 }
 
 // ====== buildCubeMeshData 守卫分支 ======
@@ -376,9 +359,8 @@ func TestBuildModelGroup_ArmAttach(t *testing.T) {
 // 入口有限性守卫：输入含 NaN → 跳过该 cube（返回 nil，防 NaN 穿透 JSON）
 func TestBuildCubeMeshData_EntryNaNGuard(t *testing.T) {
 	c := types.Cube2D{Origin: [3]float64{math.NaN(), 0, 0}, Size: [3]float64{8, 8, 8}}
-	if md := buildCubeMeshData(c, vec3{}, 64, 64, "b1", 0); md != nil {
-		t.Fatal("NaN 输入应返回 nil")
-	}
+	md := buildCubeMeshData(c, vec3{}, 64, 64, "b1", 0)
+	testutil.Nil(t, md, "NaN 输入应返回 nil")
 }
 
 // 顶点相对 pivot 运算溢出（origin=-1e308, pivot=1e308 → lx=-2e308 为 -Inf）→ 跳过
@@ -389,9 +371,8 @@ func TestBuildCubeMeshData_VertexRelPivotOverflow(t *testing.T) {
 		Pivot:    [3]float64{1e308, 0, 0},
 		PivotSet: true,
 	}
-	if md := buildCubeMeshData(c, vec3{}, 64, 64, "b1", 0); md != nil {
-		t.Fatal("顶点相对 pivot 溢出应返回 nil")
-	}
+	md := buildCubeMeshData(c, vec3{}, 64, 64, "b1", 0)
+	testutil.Nil(t, md, "顶点相对 pivot 溢出应返回 nil")
 }
 
 // 零厚度面修正：巨大 origin + 微小 size 时 ox+sx 浮点舍入回退（tx==fx → hx2==0）
@@ -404,14 +385,11 @@ func TestBuildCubeMeshData_ZeroThicknessFloatRounding(t *testing.T) {
 	}
 	for i, c := range cubes {
 		md := buildCubeMeshData(c, vec3{}, 64, 64, "b1", i)
-		if md == nil {
-			t.Fatalf("cube %d 应保留（零厚度面被 thicknessEpsilon 修正）", i)
-		}
-		// 修正后顶点不得含 NaN/Inf
+		testutil.NotNil(t, md, "cube %d 应保留（零厚度面被 thicknessEpsilon 修正）", i)
+		// 修正后顶点不得含 NaN/Inf（OR 型拆序贯：两项分别断言）
 		for _, v := range md.Positions {
-			if math.IsNaN(v) || math.IsInf(v, 0) {
-				t.Fatalf("cube %d 顶点含非法值 %f", i, v)
-			}
+			testutil.Equal(t, math.IsNaN(v), false, "cube %d 顶点含非法值 NaN %f", i, v)
+			testutil.Equal(t, math.IsInf(v, 0), false, "cube %d 顶点含非法值 Inf %f", i, v)
 		}
 	}
 }
@@ -422,9 +400,7 @@ func TestBuildCubeMeshData_NoUVZeroFill(t *testing.T) {
 	md := buildCubeMeshData(c, vec3{}, 0, 64, "b1", 0) // texW=0
 	testutil.NotNil(t, md, "texW=0 时 cube 仍应构建（UV 降级全零）")
 	for _, u := range md.Uvs {
-		if u != 0 {
-			t.Fatalf("texW=0 时 UV 应全零填充, got %f", u)
-		}
+		testutil.Equal(t, u != 0, false, "texW=0 时 UV 应全零填充, got %f", u)
 	}
 }
 
@@ -438,9 +414,8 @@ func TestBuildCubeMeshData_LocalPosOverflow(t *testing.T) {
 	}
 	// resolveCubePivot X 翻号：cp[0] = -Pivot[0] = -(-1e308) = +1e308
 	// computeMeshLocalPos 用 bonePivot.x + cp[0] = 1e308 + 1e308 = 2e308 → 溢出
-	if md := buildCubeMeshData(c, vec3{1e308, 0, 0}, 64, 64, "b1", 0); md != nil {
-		t.Fatal("mesh localPos 溢出应返回 nil")
-	}
+	md := buildCubeMeshData(c, vec3{1e308, 0, 0}, 64, 64, "b1", 0)
+	testutil.Nil(t, md, "mesh localPos 溢出应返回 nil")
 }
 
 // ====== BuildMulti 空组件 ======
@@ -463,21 +438,14 @@ func TestBuildMulti_SkipEmptyComponent(t *testing.T) {
 	if err := json.Unmarshal([]byte(out), &spec); err != nil {
 		testutil.NoError(t, err)
 	}
-	if len(spec.Models) != 1 || spec.Models[0].ID != "comp_1" {
-		t.Fatalf("空组件应被跳过, models = %d (ID=%q)", len(spec.Models), func() string {
-			if len(spec.Models) > 0 {
-				return spec.Models[0].ID
-			}
-			return ""
-		}())
-	}
+	// OR 型复合条件拆序贯：len 前置守卫防 spec.Models[0] 越界（原 if len!=1 || ID!="comp_1"）
+	testutil.Equal(t, len(spec.Models), 1, "空组件应被跳过, models = %d", len(spec.Models))
+	testutil.Equal(t, spec.Models[0].ID, "comp_1", "空组件应被跳过, ID=%q", spec.Models[0].ID)
 }
 
 // 全部组件为空 → 空 spec
 func TestBuildMulti_AllEmpty(t *testing.T) {
 	out, err := BuildMulti([]types.BedrockModel{{}, {}}, nil)
 	testutil.NoError(t, err)
-	if out != "{}" {
-		t.Fatalf("全空组件应返回 {}, got %q", out)
-	}
+	testutil.Equal(t, out, "{}", "全空组件应返回 {}, got %q", out)
 }

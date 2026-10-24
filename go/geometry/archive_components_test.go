@@ -50,9 +50,8 @@ func TestParseComponentsFromZip(t *testing.T) {
 
 	comps, texNames, err := ParseComponentsFromZip(data, int64(len(data)))
 	testutil.NoError(t, err)
-	if len(comps) != 3 {
-		t.Fatalf("组件数 = %d, 期望 3（main/arm/arrow）", len(comps))
-	}
+	// 守卫下方 texNames[i] 循环与 comps[0] 索引
+	testutil.Equal(t, len(comps), 3, "组件数 = %d, 期望 3（main/arm/arrow）", len(comps))
 	// ADR-114 perComponent：texNames = 组件声明的纹理名（无声明用 basename）
 	// main→skin（声明 textures/skin.png）、arm→""（与 main 共用皮肤，texNames 置空）、arrow→arrow
 	wantNames := []string{"skin", "", "arrow"}
@@ -62,18 +61,14 @@ func TestParseComponentsFromZip(t *testing.T) {
 		}
 	}
 	// main 优先（组件 0）
-	if comps[0].BoneCount == 0 {
-		t.Fatal("组件 0 应为 main（非空）")
-	}
+	testutil.Equal(t, comps[0].BoneCount == 0, false, "组件 0 应为 main（非空）")
 	// ADR-114 perComponent：每组件 cube.TexSlot=0（用自己的第 0 张纹理）
 	for i, c := range comps {
 		slot := c.Bones[0].Cubes[0].TexSlot
-		if slot != 0 {
-			t.Fatalf("组件 %d texSlot = %d, 期望 0（perComponent）", i, slot)
-		}
-		if c.Bones[0].Cubes[0].CubeTexW != 64 || c.Bones[0].Cubes[0].CubeTexH != 32 {
-			t.Fatalf("组件 %d CubeTexW/H 未设置: %d/%d", i, c.Bones[0].Cubes[0].CubeTexW, c.Bones[0].Cubes[0].CubeTexH)
-		}
+		testutil.Equal(t, slot, 0, "组件 %d texSlot = %d, 期望 0（perComponent）", i, slot)
+		// 原复合条件拆序贯
+		testutil.Equal(t, c.Bones[0].Cubes[0].CubeTexW, 64, "组件 %d CubeTexW 未设置: %d/%d", i, c.Bones[0].Cubes[0].CubeTexW, c.Bones[0].Cubes[0].CubeTexH)
+		testutil.Equal(t, c.Bones[0].Cubes[0].CubeTexH, 32, "组件 %d CubeTexH 未设置: %d/%d", i, c.Bones[0].Cubes[0].CubeTexW, c.Bones[0].Cubes[0].CubeTexH)
 	}
 }
 

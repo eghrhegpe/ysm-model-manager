@@ -48,21 +48,14 @@ func TestFindDuplicateFiles_ParallelLarge(t *testing.T) {
 	dir := buildParallelFixture(t)
 	groups, err := FindDuplicateFiles(dir, true)
 	testutil.NoError(t, err)
-	if len(groups) != 3 {
-		t.Fatalf("期望 3 组重复，got %d", len(groups))
-	}
+	testutil.Equal(t, len(groups), 3, "期望 3 组重复，got %d", len(groups))
 	// 组顺序 = 首次出现序：A → B → C；组内按 Path 排序（确定性）
 	wantFirsts := []string{"dupA_1.txt", "dupB_1.txt", "dupC_1.txt"}
 	for i, g := range groups {
-		if len(g.Files) != 3 {
-			t.Fatalf("组 %d 应 3 副本，got %d", i, len(g.Files))
-		}
-		if got := filepath.Base(g.Files[0].Name); got != wantFirsts[i] {
-			t.Fatalf("组 %d 首文件应为 %s，got %s（组顺序=首次出现序被破坏）", i, wantFirsts[i], got)
-		}
-		if !sort.StringsAreSorted(pathsOf(g.Files)) {
-			t.Fatalf("组 %d 内路径未排序: %v", i, pathsOf(g.Files))
-		}
+		testutil.Equal(t, len(g.Files), 3, "组 %d 应 3 副本，got %d", i, len(g.Files))
+		got := filepath.Base(g.Files[0].Name)
+		testutil.Equal(t, got, wantFirsts[i], "组 %d 首文件应为 %s，got %s（组顺序=首次出现序被破坏）", i, wantFirsts[i], got)
+		testutil.Equal(t, sort.StringsAreSorted(pathsOf(g.Files)), true, "组 %d 内路径未排序: %v", i, pathsOf(g.Files))
 	}
 }
 
@@ -74,16 +67,12 @@ func TestCountDuplicates_ParallelConsistency(t *testing.T) {
 	testutil.NoError(t, err)
 	gCount, extra, err := CountDuplicates(dir, true)
 	testutil.NoError(t, err)
-	if gCount != len(groups) {
-		t.Fatalf("CountDuplicates 组数=%d 应等于 FindDuplicateFiles 组数=%d", gCount, len(groups))
-	}
+	testutil.Equal(t, gCount, len(groups), "CountDuplicates 组数=%d 应等于 FindDuplicateFiles 组数=%d", gCount, len(groups))
 	var wantExtra int
 	for _, g := range groups {
 		wantExtra += len(g.Files) - 1
 	}
-	if extra != wantExtra {
-		t.Fatalf("extra=%d 应等于 ∑(副本-1)=%d", extra, wantExtra)
-	}
+	testutil.Equal(t, extra, wantExtra, "extra=%d 应等于 ∑(副本-1)=%d", extra, wantExtra)
 }
 
 // P3 并行模式下部分文件读失败：该文件 log-and-skip（不进入任何组），
@@ -105,23 +94,17 @@ func TestFindDuplicateFiles_ReadFailureSkipped(t *testing.T) {
 
 	groups, err := FindDuplicateFiles(dir, true)
 	testutil.NoError(t, err)
-	if len(groups) != 1 {
-		t.Fatalf("期望 1 组（a/b 成组，c 读失败跳过），got %d", len(groups))
-	}
-	if len(groups[0].Files) != 2 {
-		t.Fatalf("组内应 2 副本（c 被跳过），got %d", len(groups[0].Files))
-	}
+	testutil.Equal(t, len(groups), 1, "期望 1 组（a/b 成组，c 读失败跳过），got %d", len(groups))
+	testutil.Equal(t, len(groups[0].Files), 2, "组内应 2 副本（c 被跳过），got %d", len(groups[0].Files))
 	for _, f := range groups[0].Files {
-		if strings.HasSuffix(f.Path, "c.txt") {
-			t.Fatal("读失败的文件不应出现在结果中")
-		}
+		testutil.Equal(t, strings.HasSuffix(f.Path, "c.txt"), false, "读失败的文件不应出现在结果中")
 	}
 	// 并行管道不留幽灵槽：CountDuplicates 同样跳过读失败文件
 	gCount, extra, err := CountDuplicates(dir, true)
 	testutil.NoError(t, err)
-	if gCount != 1 || extra != 1 {
-		t.Fatalf("CountDuplicates 应 1 组 1 多余（c 跳过），got groups=%d extra=%d", gCount, extra)
-	}
+	// OR 型复合条件拆序贯
+	testutil.Equal(t, gCount, 1, "CountDuplicates 应 1 组 1 多余（c 跳过），got groups=%d extra=%d", gCount, extra)
+	testutil.Equal(t, extra, 1, "CountDuplicates 应 1 组 1 多余（c 跳过），got groups=%d extra=%d", gCount, extra)
 }
 
 // size 预分组（零语义损失）：不同 size 的文件不可能同 hash，唯一 size 的文件必不成组，
@@ -146,24 +129,18 @@ func TestHashFilesParallel_UniqueSizeSkipsHash(t *testing.T) {
 
 	groups, err := FindDuplicateFiles(dir, true)
 	testutil.NoError(t, err)
-	if _, ok := called[filepath.Join(dir, "b.txt")]; ok {
-		t.Fatal("唯一尺寸文件不应被哈希（size 预分组）")
-	}
-	if _, ok := called[filepath.Join(dir, "a.txt")]; !ok {
-		t.Fatal("同尺寸文件 a 应被哈希（可能成组）")
-	}
-	if _, ok := called[filepath.Join(dir, "c.txt")]; !ok {
-		t.Fatal("同尺寸文件 c 应被哈希（可能成组）")
-	}
-	if len(groups) != 0 {
-		t.Fatalf("a/c 内容不同不应成组，got %d 组", len(groups))
-	}
+	_, bHashed := called[filepath.Join(dir, "b.txt")]
+	testutil.Equal(t, bHashed, false, "唯一尺寸文件不应被哈希（size 预分组）")
+	_, aHashed := called[filepath.Join(dir, "a.txt")]
+	testutil.Equal(t, aHashed, true, "同尺寸文件 a 应被哈希（可能成组）")
+	_, cHashed := called[filepath.Join(dir, "c.txt")]
+	testutil.Equal(t, cHashed, true, "同尺寸文件 c 应被哈希（可能成组）")
+	testutil.Equal(t, len(groups), 0, "a/c 内容不同不应成组，got %d 组", len(groups))
 	// CountDuplicates 同样跳过唯一尺寸（共享管道，P1 一致性）
 	_, _, err = CountDuplicates(dir, true)
 	testutil.NoError(t, err)
-	if _, ok := called[filepath.Join(dir, "b.txt")]; ok {
-		t.Fatal("CountDuplicates 也不应哈希唯一尺寸文件")
-	}
+	_, bHashed2 := called[filepath.Join(dir, "b.txt")]
+	testutil.Equal(t, bHashed2, false, "CountDuplicates 也不应哈希唯一尺寸文件")
 }
 
 // size 预分组不破坏成组：同尺寸同内容仍成组，唯一尺寸文件不影响（确定性）
@@ -178,15 +155,9 @@ func TestFindDuplicateFiles_SizeGrouping_Mixed(t *testing.T) {
 
 	groups, err := FindDuplicateFiles(dir, true)
 	testutil.NoError(t, err)
-	if len(groups) != 1 {
-		t.Fatalf("应 1 组重复，got %d", len(groups))
-	}
-	if len(groups[0].Files) != 3 {
-		t.Fatalf("组内应 3 副本，got %d", len(groups[0].Files))
-	}
-	if !sort.StringsAreSorted(pathsOf(groups[0].Files)) {
-		t.Fatalf("组内路径未排序: %v", pathsOf(groups[0].Files))
-	}
+	testutil.Equal(t, len(groups), 1, "应 1 组重复，got %d", len(groups))
+	testutil.Equal(t, len(groups[0].Files), 3, "组内应 3 副本，got %d", len(groups[0].Files))
+	testutil.Equal(t, sort.StringsAreSorted(pathsOf(groups[0].Files)), true, "组内路径未排序: %v", pathsOf(groups[0].Files))
 }
 
 // serialReference 测试内串行参照实现：与并行管道共享 collectFiles（串行收集），
@@ -234,31 +205,28 @@ func TestParallelEqualsSerial_Golden(t *testing.T) {
 	testutil.NoError(t, err)
 	serial := serialReference(t, dir)
 
-	if len(parallel) != len(serial) {
-		t.Fatalf("组数不一致：并行=%d 串行=%d", len(parallel), len(serial))
-	}
+	testutil.Equal(t, len(parallel), len(serial), "组数不一致：并行=%d 串行=%d", len(parallel), len(serial))
 	for i := range parallel {
 		p, s := parallel[i], serial[i]
-		if p.Hash != s.Hash || p.Size != s.Size {
-			t.Fatalf("组 %d 头元不一致：并行{hash=%s size=%d} 串行{hash=%s size=%d}", i, p.Hash, p.Size, s.Hash, s.Size)
-		}
-		if len(p.Files) != len(s.Files) {
-			t.Fatalf("组 %d 副本数不一致：并行=%d 串行=%d", i, len(p.Files), len(s.Files))
-		}
+		// OR 型复合条件拆序贯
+		testutil.Equal(t, p.Hash, s.Hash, "组 %d 头元不一致：并行{hash=%s size=%d} 串行{hash=%s size=%d}", i, p.Hash, p.Size, s.Hash, s.Size)
+		testutil.Equal(t, p.Size, s.Size, "组 %d 头元不一致：并行{hash=%s size=%d} 串行{hash=%s size=%d}", i, p.Hash, p.Size, s.Hash, s.Size)
+		testutil.Equal(t, len(p.Files), len(s.Files), "组 %d 副本数不一致：并行=%d 串行=%d", i, len(p.Files), len(s.Files))
 		for j := range p.Files {
 			pf, sf := p.Files[j], s.Files[j]
-			if pf.Path != sf.Path || pf.Size != sf.Size || pf.ModTime != sf.ModTime {
-				t.Fatalf("组 %d 文件 %d 不一致：并行{path=%s size=%d mod=%d} 串行{path=%s size=%d mod=%d}",
-					i, j, pf.Path, pf.Size, pf.ModTime, sf.Path, sf.Size, sf.ModTime)
-			}
+			// OR 型复合条件拆序贯
+			testutil.Equal(t, pf.Path, sf.Path, "组 %d 文件 %d 不一致：并行{path=%s size=%d mod=%d} 串行{path=%s size=%d mod=%d}",
+				i, j, pf.Path, pf.Size, pf.ModTime, sf.Path, sf.Size, sf.ModTime)
+			testutil.Equal(t, pf.Size, sf.Size, "组 %d 文件 %d 不一致：并行{path=%s size=%d mod=%d} 串行{path=%s size=%d mod=%d}",
+				i, j, pf.Path, pf.Size, pf.ModTime, sf.Path, sf.Size, sf.ModTime)
+			testutil.Equal(t, pf.ModTime, sf.ModTime, "组 %d 文件 %d 不一致：并行{path=%s size=%d mod=%d} 串行{path=%s size=%d mod=%d}",
+				i, j, pf.Path, pf.Size, pf.ModTime, sf.Path, sf.Size, sf.ModTime)
 		}
 	}
 	// 唯一尺寸文件不应出现在任何组（串并行都跳过哈希）
 	for _, g := range parallel {
 		for _, f := range g.Files {
-			if filepath.Base(f.Path) == "solo.txt" {
-				t.Fatal("唯一尺寸文件 solo.txt 不应出现在任何组")
-			}
+			testutil.Equal(t, filepath.Base(f.Path) == "solo.txt", false, "唯一尺寸文件 solo.txt 不应出现在任何组")
 		}
 	}
 }

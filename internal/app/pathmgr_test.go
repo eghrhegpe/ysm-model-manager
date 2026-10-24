@@ -78,15 +78,9 @@ func repoApp(t *testing.T, cfg types.AppConfig) *App {
 func TestSaveConfig_IsolatedFromUserConfig(t *testing.T) {
 	a := repoApp(t, types.AppConfig{FilesRoot: t.TempDir()})
 	dest := configPath()
-	if dest == "" {
-		t.Fatal("configPath 不应为空（configDirOverride 已生效）")
-	}
-	if err := a.saveConfig(a.LoadAppConfig()); err != nil {
-		t.Fatalf("saveConfig: %v", err)
-	}
-	if _, err := os.Stat(dest); err != nil {
-		t.Fatalf("配置应写入测试覆盖目录 %s: %v", dest, err)
-	}
+	testutil.Equal(t, dest == "", false, "configPath 不应为空（configDirOverride 已生效）")
+	testutil.NoError(t, a.saveConfig(a.LoadAppConfig()), "saveConfig")
+	testutil.FileExists(t, dest, "配置应写入测试覆盖目录 %s", dest)
 	if strings.Contains(filepath.Base(filepath.Dir(dest)), "Roaming") {
 		t.Errorf("配置落入真实用户目录: %s", dest)
 	}

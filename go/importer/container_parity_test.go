@@ -32,12 +32,8 @@ func loadContainerGolden(t *testing.T) *containerGoldenFile {
 	data, err := os.ReadFile(containerGoldenPath)
 	testutil.NoError(t, err, "读黄金语料失败")
 	var gf containerGoldenFile
-	if err := json.Unmarshal(data, &gf); err != nil {
-		t.Fatalf("解析黄金语料失败: %v", err)
-	}
-	if len(gf.Cases) == 0 {
-		t.Fatal("黄金语料为空")
-	}
+	testutil.NoError(t, json.Unmarshal(data, &gf), "解析黄金语料失败")
+	testutil.Equal(t, len(gf.Cases) == 0, false, "黄金语料为空")
 	return &gf
 }
 
@@ -73,9 +69,7 @@ func TestContainerFingerprintParity(t *testing.T) {
 				gf.Cases[i].Golden = &got
 				return
 			}
-			if c.Golden == nil {
-				t.Fatalf("[%s] golden 未生成（先跑 regen）", c.ID)
-			}
+			testutil.NotNil(t, c.Golden, "[%s] golden 未生成（先跑 regen）", c.ID)
 			if got != *c.Golden {
 				t.Errorf("[%s] 对账漂移：got = %q, want = %q", c.ID, got, *c.Golden)
 			}
@@ -85,7 +79,7 @@ func TestContainerFingerprintParity(t *testing.T) {
 		out, err := json.MarshalIndent(gf, "", "  ")
 		testutil.NoError(t, err)
 		if err := os.WriteFile(containerGoldenPath, append(out, '\n'), 0644); err != nil {
-			t.Fatalf("写黄金语料失败: %v", err)
+			testutil.NoError(t, err, "写黄金语料失败")
 		}
 		t.Logf("黄金语料已重写: %s", containerGoldenPath)
 	}

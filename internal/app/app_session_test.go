@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/internal/testutil"
 )
 
 // TestSetSessionFilesRoot CLI 会话级覆写（c3b011d8）：仅覆写内存 configCache，
@@ -19,9 +20,7 @@ func TestSetSessionFilesRoot(t *testing.T) {
 	a := repoApp(t, types.AppConfig{FilesRoot: "orig-root"})
 	dir := t.TempDir()
 	a.SetSessionFilesRoot(dir)
-	if got := a.LoadAppConfig().FilesRoot; got != dir {
-		t.Fatalf("会话覆写后 FilesRoot 应为 %q, got %q", dir, got)
-	}
+	testutil.Equal(t, a.LoadAppConfig().FilesRoot, dir, "会话覆写后 FilesRoot")
 }
 
 // TestServiceShutdown_PanicRecoverLogs 覆盖 ServiceShutdown 的 recover+log 路径
@@ -37,7 +36,5 @@ func TestServiceShutdown_PanicRecoverLogs(t *testing.T) {
 	a.proxyMu.Unlock()
 	a.currentPlazaTarget = "http://panic.example/"
 
-	if err := a.ServiceShutdown(); err != nil {
-		t.Fatalf("ServiceShutdown 应经 recover 正常返回 nil, got %v", err)
-	}
+	testutil.NoError(t, a.ServiceShutdown(), "ServiceShutdown 应经 recover 正常返回 nil")
 }

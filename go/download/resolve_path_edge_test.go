@@ -26,16 +26,10 @@ func strN(s string, n int) string {
 func TestResolveSavePath_QueryString(t *testing.T) {
 	url := "https://raw.githubusercontent.com/user/repo/main/file.ysm?token=abc123&x=1"
 	savePath, jsd, api := ResolveSavePath(url, t.TempDir())
-	if savePath == "" {
-		t.Fatal("expected non-empty savePath")
-	}
+	testutil.Equal(t, savePath == "", false, "expected non-empty savePath")
 	// FIXED(BUG-1): query string 必须被剥离
-	if strings.Contains(savePath, "?") {
-		t.Fatalf("query string 未被剥离，savePath 含 '?': %s", savePath)
-	}
-	if strings.Contains(jsd, "?") || strings.Contains(api, "?") {
-		t.Fatalf("jsdURL/apiURL 保留了 query 字符: %s / %s", jsd, api)
-	}
+	testutil.Equal(t, strings.Contains(savePath, "?"), false, "query string 未被剥离，savePath 含 '?': %s", savePath)
+	testutil.Equal(t, strings.Contains(jsd, "?") || strings.Contains(api, "?"), false, "jsdURL/apiURL 保留了 query 字符: %s / %s", jsd, api)
 	t.Logf("FIXED(BUG-1): query stripped OK: savePath=%q", savePath)
 }
 
@@ -43,13 +37,9 @@ func TestResolveSavePath_QueryString(t *testing.T) {
 func TestResolveSavePath_Fragment(t *testing.T) {
 	url := "https://raw.githubusercontent.com/user/repo/main/file.ysm#section-2"
 	savePath, _, _ := ResolveSavePath(url, t.TempDir())
-	if savePath == "" {
-		t.Fatal("expected non-empty savePath")
-	}
+	testutil.Equal(t, savePath == "", false, "expected non-empty savePath")
 	// FIXED(BUG-2): fragment '#' 必须被剥离
-	if strings.Contains(savePath, "#") {
-		t.Fatalf("fragment '#' 未被剥离，savePath 含 '#': %s", savePath)
-	}
+	testutil.Equal(t, strings.Contains(savePath, "#"), false, "fragment '#' 未被剥离，savePath 含 '#': %s", savePath)
 	t.Logf("FIXED(BUG-2): fragment stripped OK: savePath=%q", savePath)
 }
 
@@ -62,29 +52,17 @@ func TestResolveSavePath_Fragment(t *testing.T) {
 func TestResolveSavePath_DevBranch(t *testing.T) {
 	url := "https://raw.githubusercontent.com/user/repo/dev/a/b/file.ysm"
 	savePath, jsd, api := ResolveSavePath(url, t.TempDir())
-	if savePath == "" {
-		t.Fatal("expected non-empty savePath")
-	}
-	if !strings.HasSuffix(savePath, filepath.Join("a", "b", "file.ysm")) {
-		t.Fatalf("dev 分支应解析完整相对路径 a/b/file.ysm，实际 savePath: %s", savePath)
-	}
-	if jsd == "" || !strings.Contains(jsd, "@dev/") {
-		t.Fatalf("jsd 回退源应带 @dev 分支: %q", jsd)
-	}
-	if api == "" {
-		t.Fatal("api 回退源不应为空")
-	}
+	testutil.Equal(t, savePath == "", false, "expected non-empty savePath")
+	testutil.Equal(t, strings.HasSuffix(savePath, filepath.Join("a", "b", "file.ysm")), true, "dev 分支应解析完整相对路径 a/b/file.ysm，实际 savePath: %s", savePath)
+	testutil.Equal(t, jsd == "" || !strings.Contains(jsd, "@dev/"), false, "jsd 回退源应带 @dev 分支: %q", jsd)
+	testutil.Equal(t, api == "", false, "api 回退源不应为空")
 }
 
 func TestResolveSavePath_NoMainMaster(t *testing.T) {
 	url := "https://raw.githubusercontent.com/user/repo/release/1.0/file.ysm"
 	savePath, jsd, api := ResolveSavePath(url, t.TempDir())
-	if savePath == "" {
-		t.Fatal("expected non-empty savePath")
-	}
-	if !strings.HasSuffix(savePath, "file.ysm") && !strings.HasSuffix(savePath, "1.0/file.ysm") {
-		t.Fatalf("unexpected savePath: %s", savePath)
-	}
+	testutil.Equal(t, savePath == "", false, "expected non-empty savePath")
+	testutil.Equal(t, !strings.HasSuffix(savePath, "file.ysm") && !strings.HasSuffix(savePath, "1.0/file.ysm"), false, "unexpected savePath: %s", savePath)
 	// 无分支时，jsd/api 构造失败 —— 当前行为就是空
 	if jsd != "" || api != "" {
 		t.Log("INFO(3): 无分支 URL 意外得到 jsd/api URL，可能绕过默认分支策略", jsd, api)
@@ -97,12 +75,8 @@ func TestResolveSavePath_NoMainMaster(t *testing.T) {
 func TestResolveSavePath_NonGitHub(t *testing.T) {
 	url := "https://cdn.example.com/path/to/file.ysm"
 	savePath, jsd, api := ResolveSavePath(url, t.TempDir())
-	if savePath == "" {
-		t.Fatal("expected non-empty savePath")
-	}
-	if !strings.HasSuffix(savePath, "file.ysm") {
-		t.Fatalf("unexpected savePath: %s", savePath)
-	}
+	testutil.Equal(t, savePath == "", false, "expected non-empty savePath")
+	testutil.Equal(t, strings.HasSuffix(savePath, "file.ysm"), true, "unexpected savePath: %s", savePath)
 	if jsd != "" || api != "" {
 		t.Log("INFO(4): 非 GitHub 来源意外得到 jsd/api URL", jsd, api)
 	} else {
@@ -116,9 +90,7 @@ func TestResolveSavePath_PctEncodedTraversal(t *testing.T) {
 	// prefix 检查拦截越界——跨平台一致。
 	url := "https://raw.githubusercontent.com/user/repo/main/a/..%2f..%2fetc/passwd"
 	savePath, _, _ := ResolveSavePath(url, t.TempDir())
-	if savePath != "" {
-		t.Fatalf("FIXED(跨平台): %%2f 编码穿越应被拒绝，实际 savePath=%q", savePath)
-	}
+	testutil.Equal(t, savePath, "", "FIXED(跨平台): %%2f 编码穿越应被拒绝，实际 savePath=%q", savePath)
 	t.Log("FIXED(跨平台): 编码穿越被 neturl.Parse+prefix 检查拦截")
 }
 
@@ -130,9 +102,7 @@ func TestResolveSavePath_NUL(t *testing.T) {
 	// ResolveSavePath 主动剔除 NUL，跨平台一致拒绝。
 	url := "https://raw.githubusercontent.com/user/repo/main/file.ysm%00.exe"
 	savePath, _, _ := ResolveSavePath(url, t.TempDir())
-	if savePath != "" {
-		t.Fatalf("FIXED(BUG-6, 跨平台): NUL 字节 URL 应返回空，实际 savePath=%q", savePath)
-	}
+	testutil.Equal(t, savePath, "", "FIXED(BUG-6, 跨平台): NUL 字节 URL 应返回空，实际 savePath=%q", savePath)
 	t.Log("FIXED(BUG-6, 跨平台): NUL 注入被拒绝（跨平台一致行为）")
 }
 
@@ -141,9 +111,7 @@ func TestResolveSavePath_UnicodeLookalike(t *testing.T) {
 	// 使用 Cyrillic 小写 i (U+0456) —— 与 ASCII 'i' 视觉相同
 	url := "https://raw.githubusercontent.com/user/repo/main/f\u0456le.ysm"
 	savePath, _, _ := ResolveSavePath(url, t.TempDir())
-	if savePath == "" {
-		t.Fatal("expected non-empty savePath")
-	}
+	testutil.Equal(t, savePath == "", false, "expected non-empty savePath")
 	// [2026-10-12 订正 BUG-7 的表述] 原 t.Log 称「可能绕过前端/文件系统过滤」——**该表述不成立**：
 	// 同形字符位于**文件名主干**（`fіle`），而 `filepath.Ext()` 取的是末尾扩展名 `.ysm`
 	// （纯 ASCII），`registry.IsSupportedExt(".ysm")` 照常通过——**扩展名校验不受同形字符影响**。
@@ -157,26 +125,19 @@ func TestResolveSavePath_UnicodeLookalike(t *testing.T) {
 			break
 		}
 	}
-	if !hasNonASCII {
-		t.Fatal("同形字符应被保留（实现不剥离非 ASCII）——若失败说明下游新增了归一化，须同步本条与 BUG-7 表述")
-	}
+	testutil.Equal(t, hasNonASCII, true, "同形字符应被保留（实现不剥离非 ASCII）——若失败说明下游新增了归一化，须同步本条与 BUG-7 表述")
 	// 交叉验证：扩展名仍是 ASCII 的 .ysm，故 IsSupportedExt 判定不受影响（BUG-7 非校验缺陷的根据）
-	if ext := strings.ToLower(filepath.Ext(savePath)); ext != ".ysm" {
-		t.Fatalf("扩展名应为 ASCII %q，实际 %q —— 若扩展名被同形字符污染，BUG-7 才升级为校验缺陷", ".ysm", ext)
-	}
+	ext := strings.ToLower(filepath.Ext(savePath))
+	testutil.Equal(t, ext, ".ysm", "扩展名应为 ASCII .ysm —— 若扩展名被同形字符污染，BUG-7 才升级为校验缺陷, 实际 %q", ext)
 }
 
 // ---------- 8. URL 路径含 .git 目录 ----------
 func TestResolveSavePath_GitDotdir(t *testing.T) {
 	url := "https://raw.githubusercontent.com/user/repo/main/.git/config"
 	savePath, _, _ := ResolveSavePath(url, t.TempDir())
-	if savePath == "" {
-		t.Fatal("expected non-empty savePath for .git/config")
-	}
+	testutil.Equal(t, savePath == "", false, "expected non-empty savePath for .git/config")
 	// FIXED(BUG-8): .git/ 前缀必须被剔除，不能下载仓库配置
-	if strings.Contains(savePath, ".git") {
-		t.Fatalf("FIXED(BUG-8): .git/ 子路径未被 strip，保存路径含 .git: %s", savePath)
-	}
+	testutil.Equal(t, strings.Contains(savePath, ".git"), false, "FIXED(BUG-8): .git/ 子路径未被 strip，保存路径含 .git: %s", savePath)
 	t.Logf("FIXED(BUG-8): .git/ stripped OK: savePath=%q", savePath)
 }
 
@@ -209,9 +170,7 @@ func TestResolveSavePath_SuperLong(t *testing.T) {
 func TestResolveSavePath_MultipleSlashes(t *testing.T) {
 	url := "https://raw.githubusercontent.com/user/repo/main///a//b///file.ysm"
 	savePath, _, _ := ResolveSavePath(url, t.TempDir())
-	if savePath == "" {
-		t.Fatal("expected non-empty savePath")
-	}
+	testutil.Equal(t, savePath == "", false, "expected non-empty savePath")
 	// [2026-10-12 订正 BUG-11：**假待办**] 原断言 `strings.Contains(savePath, "//")` 是**永不成立**的
 	// 检查——`sanitizeRelPath` 首行就把 `/` 全量换成 `filepath.Separator`（Windows 下为 `\`），
 	// 故 savePath 在 Windows 上**永远不含** `//`，那行 `t.Log("TODO(BUG-11): 连续多斜杠未被归一化")`
@@ -219,14 +178,10 @@ func TestResolveSavePath_MultipleSlashes(t *testing.T) {
 	//
 	// 正解 = 按**本机分隔符**判连续分隔符，并对结果钉死归一化后的结构：
 	sep := string(filepath.Separator)
-	if strings.Contains(savePath, sep+sep) {
-		t.Fatalf("连续分隔符未被归一化: %q", savePath)
-	}
+	testutil.Equal(t, strings.Contains(savePath, sep+sep), false, "连续分隔符未被归一化: %q", savePath)
 	// 结果应是「saveDir 下的 a/b/file.ysm」（中间的空段被 filepath.Clean 吃掉）
 	wantSuffix := filepath.Join("a", "b", "file.ysm")
-	if !strings.HasSuffix(savePath, wantSuffix) {
-		t.Fatalf("多斜杠应归一化为 %q，实际 %q", wantSuffix, savePath)
-	}
+	testutil.Equal(t, strings.HasSuffix(savePath, wantSuffix), true, "多斜杠应归一化为 %q，实际 %q", wantSuffix, savePath)
 }
 
 // ---------- 12. saveDir 越界 ----------
@@ -236,12 +191,8 @@ func TestResolveSavePath_SaveDirOutside(t *testing.T) {
 	// 用正常 URL + 正常 saveDir 验证边界：saveDir 与 savePath 严格前缀匹配
 	url := "https://raw.githubusercontent.com/user/repo/main/a.ysm"
 	savePath, _, _ := ResolveSavePath(url, saveDir)
-	if savePath == "" {
-		t.Fatal("expected non-empty savePath")
-	}
-	if savePath == saveDir {
-		t.Fatal("savePath must not equal saveDir (only possible when relPath empty)")
-	}
+	testutil.Equal(t, savePath == "", false, "expected non-empty savePath")
+	testutil.Equal(t, savePath == saveDir, false, "savePath must not equal saveDir (only possible when relPath empty)")
 	t.Logf("INFO(12): prefix 检查允许 savePath 在 saveDir 内: %q", savePath)
 }
 
@@ -250,20 +201,12 @@ func TestResolveSavePath_MainInQuery(t *testing.T) {
 	// "/main/" 出现在 query string 而非 path —— 不应被当作分支标记
 	url := "https://raw.githubusercontent.com/user/repo/stable/file.ysm?/main/x"
 	savePath, jsd, api := ResolveSavePath(url, t.TempDir())
-	if savePath == "" {
-		t.Fatal("expected non-empty savePath")
-	}
+	testutil.Equal(t, savePath == "", false, "expected non-empty savePath")
 	// FIXED(BUG-13): query 中的 "/main/" 不能被误判为分支
-	if jsd != "" && strings.Contains(jsd, "@main/") {
-		t.Fatalf("FIXED(BUG-13): query 中的 '/main/' 被误当作分支，jsdURL 异常: %s", jsd)
-	}
-	if api != "" && strings.Contains(api, "main") {
-		t.Fatalf("FIXED(BUG-13): query 中的 '/main/' 被误当作分支，apiURL 异常: %s", api)
-	}
+	testutil.Equal(t, jsd != "" && strings.Contains(jsd, "@main/"), false, "FIXED(BUG-13): query 中的 '/main/' 被误当作分支，jsdURL 异常: %s", jsd)
+	testutil.Equal(t, api != "" && strings.Contains(api, "main"), false, "FIXED(BUG-13): query 中的 '/main/' 被误当作分支，apiURL 异常: %s", api)
 	// relPath 必须来自 URL path（file.ysm），不含 query
-	if strings.Contains(savePath, "/main/") || strings.Contains(savePath, "/main") {
-		t.Fatalf("relPath 含 query 片段: %s", savePath)
-	}
+	testutil.Equal(t, strings.Contains(savePath, "/main/") || strings.Contains(savePath, "/main"), false, "relPath 含 query 片段: %s", savePath)
 	t.Logf("FIXED(BUG-13): query 中 '/main/' 未误判分支: savePath=%q", savePath)
 }
 
@@ -280,18 +223,12 @@ func TestResolveSavePath_RecycleStrip(t *testing.T) {
 	}
 	for _, c := range cases {
 		savePath, _, _ := ResolveSavePath(c.url, t.TempDir())
-		if savePath == "" {
-			t.Fatalf("URL %q 应解析出非空 savePath", c.url)
-		}
+		testutil.Equal(t, savePath == "", false, "URL %q 应解析出非空 savePath", c.url)
 		// 下载文件不得落盘到 .recycle 子树（scanner/dedup/sync 视其为回收站，
 		// Empty() 会 RemoveAll 清除——#8 回收站误删同类风险）
-		if strings.EqualFold(filepath.Base(savePath), ".recycle") ||
-			strings.Contains(strings.ToLower(savePath), ".recycle") {
-			t.Fatalf("savePath 仍含 .recycle 段: %q (URL %q)", savePath, c.url)
-		}
-		if filepath.Base(savePath) != c.name {
-			t.Fatalf("savePath 基名 = %q, want %q (URL %q)", filepath.Base(savePath), c.name, c.url)
-		}
+		testutil.Equal(t, strings.EqualFold(filepath.Base(savePath), ".recycle") ||
+			strings.Contains(strings.ToLower(savePath), ".recycle"), false, "savePath 仍含 .recycle 段: %q (URL %q)", savePath, c.url)
+		testutil.Equal(t, filepath.Base(savePath), c.name, "savePath 基名不符 (URL %q)", c.url)
 	}
 }
 
@@ -300,9 +237,7 @@ func TestResolveSavePath_RecycleStrip(t *testing.T) {
 func TestResolveSavePath_RecycleOnlyPath_Rejected(t *testing.T) {
 	savePath, _, _ := ResolveSavePath(
 		"https://raw.githubusercontent.com/user/repo/main/.recycle", t.TempDir())
-	if savePath != "" {
-		t.Fatalf("纯 .recycle 路径应被拒绝，实际 savePath=%q", savePath)
-	}
+	testutil.Equal(t, savePath, "", "纯 .recycle 路径应被拒绝，实际 savePath=%q", savePath)
 }
 
 // ---------- 15. ResolveSavePath 错误分支 ----------
@@ -315,20 +250,18 @@ func TestResolveSavePath_SaveDirIsFile(t *testing.T) {
 	}
 	savePath, jsd, api := ResolveSavePath(
 		"https://raw.githubusercontent.com/user/repo/main/a.ysm", filePath)
-	if savePath != "" || jsd != "" || api != "" {
-		t.Fatalf("saveDir 是普通文件时应返回全空，实际 savePath=%q jsd=%q api=%q",
-			savePath, jsd, api)
-	}
+	testutil.Equal(t, savePath, "", "saveDir 是普通文件时应返回全空，实际 savePath=%q jsd=%q api=%q", savePath, jsd, api)
+	testutil.Equal(t, jsd, "", "saveDir 是普通文件时应返回全空，实际 savePath=%q jsd=%q api=%q", savePath, jsd, api)
+	testutil.Equal(t, api, "", "saveDir 是普通文件时应返回全空，实际 savePath=%q jsd=%q api=%q", savePath, jsd, api)
 }
 
 func TestResolveSavePath_InvalidURL(t *testing.T) {
 	// neturl.Parse 失败分支：非法 % 转义 → 返回全空
 	savePath, jsd, api := ResolveSavePath(
 		"https://raw.githubusercontent.com/%zz", t.TempDir())
-	if savePath != "" || jsd != "" || api != "" {
-		t.Fatalf("非法 URL 应返回全空，实际 savePath=%q jsd=%q api=%q",
-			savePath, jsd, api)
-	}
+	testutil.Equal(t, savePath, "", "非法 URL 应返回全空，实际 savePath=%q jsd=%q api=%q", savePath, jsd, api)
+	testutil.Equal(t, jsd, "", "非法 URL 应返回全空，实际 savePath=%q jsd=%q api=%q", savePath, jsd, api)
+	testutil.Equal(t, api, "", "非法 URL 应返回全空，实际 savePath=%q jsd=%q api=%q", savePath, jsd, api)
 }
 
 // ---------- 15b. 畸形 raw URL：结构化解析失败 → 无 jsd/api 回退源 ----------

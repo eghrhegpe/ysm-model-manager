@@ -66,10 +66,11 @@ func TestHTTP_206PartialContent_Rejected(t *testing.T) {
 	savePath := filepath.Join(t.TempDir(), "partial.txt")
 	err := dl.File(context.Background(), ts.URL, savePath, nil)
 	if err == nil {
-		if info, err2 := os.Stat(savePath); err2 == nil {
-			t.Fatalf("BUG-HTTP-1: 206 Partial Content 被当作成功，文件已写入 (%d bytes)，可能是不完整分片数据被当作完整文件装盘", info.Size())
+		if _, err2 := os.Stat(savePath); err2 == nil {
+			// 206 被当作成功（恒败断言：err 必须非 nil）
+			testutil.NotNil(t, err, "BUG-HTTP-1: 206 Partial Content 被当作成功，文件已写入，可能是不完整分片数据被当作完整文件装盘")
 		} else {
-			t.Fatalf("BUG-HTTP-1b: 206 返回 nil 但无文件写入，行为异常")
+			testutil.NotNil(t, err, "BUG-HTTP-1b: 206 返回 nil 但无文件写入，行为异常")
 		}
 	} else {
 		t.Logf("OK: 206 被正确拒绝: %v", err)
@@ -92,9 +93,7 @@ func TestHTTP_200WithContentRange_Rejected(t *testing.T) {
 	dl := New()
 	savePath := filepath.Join(t.TempDir(), "tricky.txt")
 	err := dl.File(context.Background(), ts.URL, savePath, nil)
-	if err == nil {
-		t.Fatalf("FIXED(BUG-HTTP-2): 200 + Content-Range 应被拒绝，实际无错误")
-	}
+	testutil.NotNil(t, err, "FIXED(BUG-HTTP-2): 200 + Content-Range 应被拒绝，实际无错误")
 	t.Logf("FIXED(BUG-HTTP-2): 200 + Content-Range 被拒绝: %v", err)
 }
 
@@ -124,9 +123,8 @@ func TestHTTP_Redirect_ChainExceedsLimit(t *testing.T) {
 
 	dl := New()
 	err := dl.File(context.Background(), servers[0].URL, filepath.Join(t.TempDir(), "chain.txt"), nil)
-	if err == nil {
-		t.Fatalf("BUG-HTTP-3: 12 跳重定向链未被拦截，存在 SSRF 风险")
-	} else {
+	testutil.NotNil(t, err, "BUG-HTTP-3: 12 跳重定向链未被拦截，存在 SSRF 风险")
+	if err != nil {
 		t.Logf("OK: 重定向链被拦截: %v", err)
 	}
 }
@@ -142,9 +140,8 @@ func TestHTTP_Redirect_ToFileScheme_Rejected(t *testing.T) {
 
 	dl := New()
 	err := dl.File(context.Background(), ts.URL, filepath.Join(t.TempDir(), "file.txt"), nil)
-	if err == nil {
-		t.Fatalf("BUG-HTTP-4a: 重定向到 file:// 未被拒绝，存在 SSRF/本地文件读取风险")
-	} else {
+	testutil.NotNil(t, err, "BUG-HTTP-4a: 重定向到 file:// 未被拒绝，存在 SSRF/本地文件读取风险")
+	if err != nil {
 		t.Logf("OK: file:// 重定向被拒绝: %v", err)
 	}
 }
@@ -160,9 +157,8 @@ func TestHTTP_Redirect_ToFtpScheme_Rejected(t *testing.T) {
 
 	dl := New()
 	err := dl.File(context.Background(), ts.URL, filepath.Join(t.TempDir(), "ftp.txt"), nil)
-	if err == nil {
-		t.Fatalf("BUG-HTTP-4b: 重定向到 ftp:// 未被拒绝，存在 SSRF 风险")
-	} else {
+	testutil.NotNil(t, err, "BUG-HTTP-4b: 重定向到 ftp:// 未被拒绝，存在 SSRF 风险")
+	if err != nil {
 		t.Logf("OK: ftp:// 重定向被拒绝: %v", err)
 	}
 }
@@ -186,9 +182,7 @@ func TestHTTP_ContentType_HTML_Rejected(t *testing.T) {
 	err := dl.File(context.Background(), ts.URL, savePath, nil)
 	if err == nil {
 		data, _ := os.ReadFile(savePath)
-		if strings.Contains(string(data), "404 Not Found") {
-			t.Fatalf("FIXED(BUG-HTTP-5): text/html 错误页被当作文件装盘，Content-Type 应被拒绝")
-		}
+		testutil.Equal(t, strings.Contains(string(data), "404 Not Found"), false, "FIXED(BUG-HTTP-5): text/html 错误页被当作文件装盘，Content-Type 应被拒绝")
 	}
 	t.Logf("FIXED(BUG-HTTP-5): text/html 被拒绝: %v", err)
 }
@@ -205,12 +199,7 @@ func TestHTTP_ContentLength_TruncationDetected(t *testing.T) {
 	defer cleanup()
 
 	dl := New()
-	err := dl.File(context.Background(), url, filepath.Join(t.TempDir(), "truncated.txt"), nil)
-	if err == nil {
-		t.Fatalf("BUG-HTTP-6a: Content-Length 截断未被检测到 — 服务端声明 1000 字节但只发送 7 字节，不完整文件被当作完整文件装盘")
-	} else {
-		t.Logf("OK: 截断被检测到: %v", err)
-	}
+	testutil.NotNil(t, dl.File(context.Background(), url, filepath.Join(t.TempDir(), "truncated.txt"), nil), "BUG-HTTP-6a: Content-Length 截断未被检测到 — 服务端声明 1000 字节但只发送 7 字节，不完整文件被当作完整文件装盘")
 }
 
 // TestHTTP_ContentLength_OverSent_TruncatedByProtocol
@@ -270,24 +259,17 @@ func TestHTTP_ProgressPanic_DuringLoop_TempFileCleaned(t *testing.T) {
 		})
 	}()
 
-	if !panicked {
-		t.Fatal("预期 onProgress 回调触发 panic")
-	}
+	testutil.Equal(t, panicked, true, "预期 onProgress 回调触发 panic")
 	t.Logf("panic 发生在 downloaded=%d 时", panicCall)
 
 	// 验证 savePath 未被写入
-	if _, err := os.Stat(savePath); !os.IsNotExist(err) {
-		t.Fatalf("BUG-HTTP-7a: onProgress 循环内 panic 后 savePath 文件仍存在 — defer 清理逻辑失效")
-	} else {
-		t.Log("OK: 循环内 panic 后 savePath 未被写入")
-	}
+	_, statErr := os.Stat(savePath)
+	testutil.Equal(t, os.IsNotExist(statErr), true, "BUG-HTTP-7a: onProgress 循环内 panic 后 savePath 文件仍存在 — defer 清理逻辑失效")
 
 	// 验证 .part 临时文件已清理
 	entries, _ := os.ReadDir(saveDir)
 	for _, e := range entries {
-		if strings.HasSuffix(e.Name(), ".part") {
-			t.Fatalf("BUG-HTTP-7b: 循环内 panic 后 .part 临时文件残留: %s", e.Name())
-		}
+		testutil.Equal(t, strings.HasSuffix(e.Name(), ".part"), false, "BUG-HTTP-7b: 循环内 panic 后 .part 临时文件残留: %s", e.Name())
 	}
 }
 
@@ -320,9 +302,7 @@ func TestHTTP_ProgressPanic_FinalCallback_FileSurvives(t *testing.T) {
 		})
 	}()
 
-	if !panicked {
-		t.Fatal("预期 onProgress 回调触发 panic")
-	}
+	testutil.Equal(t, panicked, true, "预期 onProgress 回调触发 panic")
 
 	// 由于 panic 发生在最终回调（ok=true 后），savePath 应已存在
 	if info, err := os.Stat(savePath); err == nil {
@@ -330,7 +310,7 @@ func TestHTTP_ProgressPanic_FinalCallback_FileSurvives(t *testing.T) {
 		if string(data) == "hello" {
 			t.Logf("OK(BUG-HTTP-7c): 最终 onProgress 回调 panic 后 savePath 仍存在（%d 字节，内容正确）。这是预期行为 — rename 已完成，panic 在 success path 中。若需防御，应在 rename 后 wrap onProgress 调用。", info.Size())
 		} else {
-			t.Fatalf("BUG-HTTP-7c: 最终回调 panic 后 savePath 内容异常: got %q, want %q", string(data), "hello")
+			testutil.Equal(t, string(data), "hello", "BUG-HTTP-7c: 最终回调 panic 后 savePath 内容异常: got %q", string(data))
 		}
 	}
 }
@@ -357,9 +337,7 @@ func TestHTTP_ChunkedEncoding_Success(t *testing.T) {
 	err := dl.File(context.Background(), ts.URL, savePath, nil)
 	testutil.NoError(t, err, "chunked encoding 下载失败")
 	data, _ := os.ReadFile(savePath)
-	if string(data) != "chunk1-chunk2-chunk3" {
-		t.Fatalf("内容不符: got %q, want %q", string(data), "chunk1-chunk2-chunk3")
-	}
+	testutil.Equal(t, string(data), "chunk1-chunk2-chunk3", "内容不符: got %q", string(data))
 	t.Log("OK: chunked encoding (无 Content-Length) 工作正常，total 回退为 downloaded 字节数")
 }
 
@@ -381,9 +359,7 @@ func TestHTTP_ZeroByteBody_WithContentLength0(t *testing.T) {
 	err := dl.File(context.Background(), ts.URL, savePath, nil)
 	testutil.NoError(t, err, "Content-Length: 0 下载失败")
 	data, _ := os.ReadFile(savePath)
-	if len(data) != 0 {
-		t.Fatalf("预期空文件，实际 %d 字节", len(data))
-	}
+	testutil.Equal(t, len(data), 0, "预期空文件，实际 %d 字节", len(data))
 	t.Log("OK: Content-Length: 0 正确写入空文件")
 }
 
@@ -423,15 +399,11 @@ func TestHTTP_ConcurrentSamePath_MutexSafety(t *testing.T) {
 
 	data, err := os.ReadFile(savePath)
 	testutil.NoError(t, err, "文件不存在")
-	if string(data) != "concurrent-mutex-test-content" {
-		t.Fatalf("内容不符: got %q", string(data))
-	}
+	testutil.Equal(t, string(data), "concurrent-mutex-test-content", "内容不符: got %q", string(data))
 
 	entries, _ := os.ReadDir(saveDir)
 	for _, e := range entries {
-		if strings.HasSuffix(e.Name(), ".part") {
-			t.Fatalf("BUG-HTTP-8: 并发下载后 .part 临时文件残留: %s", e.Name())
-		}
+		testutil.Equal(t, strings.HasSuffix(e.Name(), ".part"), false, "BUG-HTTP-8: 并发下载后 .part 临时文件残留: %s", e.Name())
 	}
 	t.Log("OK: fileLocks 互斥锁正常工作，并发同路径下载串行化，无临时文件残留")
 }
@@ -517,9 +489,7 @@ func TestHTTP_ErrorClassification_HTTPStatusError(t *testing.T) {
 	testutil.NotNil(t, err, "expected error for 404")
 
 	var httpErr *HTTPStatusError
-	if !errors.As(err, &httpErr) {
-		t.Fatalf("expected HTTPStatusError, got %T: %v", err, err)
-	}
+	testutil.Equal(t, errors.As(err, &httpErr), true, "expected HTTPStatusError, got %T: %v", err, err)
 	if httpErr.Code != http.StatusNotFound {
 		t.Errorf("HTTPStatusError.Code = %d, want %d", httpErr.Code, http.StatusNotFound)
 	}
@@ -533,9 +503,7 @@ func TestHTTP_ErrorClassification_UnsupportedScheme(t *testing.T) {
 	err := dl.File(context.Background(), "ftp://example.com/file",
 		filepath.Join(t.TempDir(), "ftp.txt"), nil)
 	testutil.NotNil(t, err, "expected error for ftp:// scheme")
-	if !errors.Is(err, ErrUnsupportedScheme) {
-		t.Fatalf("expected errors.Is(err, ErrUnsupportedScheme), got: %v", err)
-	}
+	testutil.ErrorIs(t, err, ErrUnsupportedScheme, "expected errors.Is(err, ErrUnsupportedScheme)")
 	t.Logf("OK: scheme 错误可通过 errors.Is(err, ErrUnsupportedScheme) 分类: %v", err)
 }
 
@@ -555,9 +523,7 @@ func TestHTTP_ErrorClassification_PartialResponse(t *testing.T) {
 	err := dl.File(context.Background(), ts.URL,
 		filepath.Join(t.TempDir(), "partial.txt"), nil)
 	testutil.NotNil(t, err, "expected error for 200 + Content-Range")
-	if !errors.Is(err, ErrPartialResponse) {
-		t.Fatalf("expected errors.Is(err, ErrPartialResponse), got: %v", err)
-	}
+	testutil.ErrorIs(t, err, ErrPartialResponse, "expected errors.Is(err, ErrPartialResponse)")
 	t.Logf("OK: partial 响应错误可通过 errors.Is(err, ErrPartialResponse) 分类: %v", err)
 }
 
@@ -574,9 +540,7 @@ func TestHTTP_ErrorClassification_NonBinaryContentType(t *testing.T) {
 	err := dl.File(context.Background(), ts.URL,
 		filepath.Join(t.TempDir(), "html.txt"), nil)
 	testutil.NotNil(t, err, "expected error for text/html Content-Type")
-	if !errors.Is(err, ErrNonBinaryContentType) {
-		t.Fatalf("expected errors.Is(err, ErrNonBinaryContentType), got: %v", err)
-	}
+	testutil.ErrorIs(t, err, ErrNonBinaryContentType, "expected errors.Is(err, ErrNonBinaryContentType)")
 	t.Logf("OK: 非二进制 Content-Type 错误可通过 errors.Is 分类: %v", err)
 }
 
@@ -634,14 +598,10 @@ func TestHTTP_ErrorClassification_NoTruncationOnFullDownload(t *testing.T) {
 	testutil.NoError(t, err, "正常下载不应报截断错误")
 
 	data, _ := os.ReadFile(savePath)
-	if len(data) != len(body) {
-		t.Fatalf("文件长度不符: got %d, want %d", len(data), len(body))
-	}
+	testutil.Equal(t, len(data), len(body), "文件长度不符: got %d, want %d", len(data), len(body))
 	// 验证内容完整性（非截断/非损坏）
 	for i, b := range data {
-		if b != byte(i%256) {
-			t.Fatalf("文件内容在偏移 %d 处损坏: got %d, want %d", i, b, byte(i%256))
-		}
+		testutil.Equal(t, b, byte(i%256), "文件内容在偏移 %d 处损坏: got %d", i, b)
 	}
 	t.Logf("OK: 完整下载 %d 字节，内容校验通过", len(data))
 }
@@ -695,9 +655,7 @@ func TestHTTP_ErrorClassification_RedirectChainTooLong(t *testing.T) {
 	err := dl.File(context.Background(), servers[0].URL,
 		filepath.Join(t.TempDir(), "chain.txt"), nil)
 	testutil.NotNil(t, err, "expected error for redirect chain exceeding limit")
-	if !errors.Is(err, ErrRedirectChainTooLong) {
-		t.Fatalf("expected errors.Is(err, ErrRedirectChainTooLong), got: %v", err)
-	}
+	testutil.ErrorIs(t, err, ErrRedirectChainTooLong, "expected errors.Is(err, ErrRedirectChainTooLong)")
 	t.Logf("OK: 重定向链超限错误可通过 errors.Is(err, ErrRedirectChainTooLong) 分类")
 }
 
@@ -714,9 +672,7 @@ func TestHTTP_ErrorClassification_RedirectToUnsafeScheme(t *testing.T) {
 	err := dl.File(context.Background(), ts.URL,
 		filepath.Join(t.TempDir(), "file.txt"), nil)
 	testutil.NotNil(t, err, "expected error for file:// redirect")
-	if !errors.Is(err, ErrRedirectToUnsafeScheme) {
-		t.Fatalf("expected errors.Is(err, ErrRedirectToUnsafeScheme), got: %v", err)
-	}
+	testutil.ErrorIs(t, err, ErrRedirectToUnsafeScheme, "expected errors.Is(err, ErrRedirectToUnsafeScheme)")
 	t.Logf("OK: file:// 重定向错误可通过 errors.Is(err, ErrRedirectToUnsafeScheme) 分类")
 }
 
@@ -729,9 +685,7 @@ func hasPartResidue(t *testing.T, dir string) []string {
 	t.Helper()
 	var residue []string
 	entries, err := os.ReadDir(dir)
-	if err != nil {
-		t.Fatalf("ReadDir(%s): %v", dir, err)
-	}
+	testutil.NoError(t, err, "ReadDir(%s)", dir)
 	for _, e := range entries {
 		if strings.Contains(e.Name(), ".part") {
 			residue = append(residue, e.Name())
@@ -760,14 +714,11 @@ func TestAudit_DownloadFail_PreservesOldFile_NoTempResidue(t *testing.T) {
 	// 旧文件必须原样保留
 	data, rErr := os.ReadFile(savePath)
 	testutil.NoError(t, rErr, "失败后旧文件丢失")
-	if string(data) != "OLD-VALUE" {
-		t.Fatalf("失败后旧文件被改写: got %q, want %q", string(data), "OLD-VALUE")
-	}
+	testutil.Equal(t, string(data), "OLD-VALUE", "失败后旧文件被改写: got %q", string(data))
 
 	// 无 .part 残留
-	if residue := hasPartResidue(t, saveDir); len(residue) > 0 {
-		t.Fatalf("失败后 .part 临时文件残留: %v", residue)
-	}
+	residue := hasPartResidue(t, saveDir)
+	testutil.Equal(t, len(residue), 0, "失败后 .part 临时文件残留: %v", residue)
 }
 
 // TestAudit_DownloadSuccess_AtomicallyReplacesOldFile
@@ -786,17 +737,12 @@ func TestAudit_DownloadSuccess_AtomicallyReplacesOldFile(t *testing.T) {
 	}
 
 	dl := New()
-	if err := dl.File(context.Background(), ts.URL, savePath, nil); err != nil {
-		t.Fatalf("下载失败: %v", err)
-	}
+	testutil.NoError(t, dl.File(context.Background(), ts.URL, savePath, nil), "下载失败")
 	data, err := os.ReadFile(savePath)
 	testutil.NoError(t, err)
-	if string(data) != "hello world" {
-		t.Fatalf("成功覆盖失败: got %q, want %q", string(data), "hello world")
-	}
-	if residue := hasPartResidue(t, saveDir); len(residue) > 0 {
-		t.Fatalf("成功下载后 .part 残留: %v", residue)
-	}
+	testutil.Equal(t, string(data), "hello world", "成功覆盖失败: got %q", string(data))
+	residue := hasPartResidue(t, saveDir)
+	testutil.Equal(t, len(residue), 0, "成功下载后 .part 残留: %v", residue)
 }
 
 // TestAudit_RenameFailure_SavePathIsDirectory
@@ -821,12 +767,9 @@ func TestAudit_RenameFailure_SavePathIsDirectory(t *testing.T) {
 	// 目录必须保留
 	info, sErr := os.Stat(savePath)
 	testutil.NoError(t, sErr, "失败后目录丢失")
-	if !info.IsDir() {
-		t.Fatalf("savePath 不再是目录: %v", info.Mode())
-	}
-	if residue := hasPartResidue(t, saveDir); len(residue) > 0 {
-		t.Fatalf("rename 失败后 .part 残留: %v", residue)
-	}
+	testutil.Equal(t, info.IsDir(), true, "savePath 不再是目录: %v", info.Mode())
+	residue := hasPartResidue(t, saveDir)
+	testutil.Equal(t, len(residue), 0, "rename 失败后 .part 残留: %v", residue)
 }
 
 // TestAudit_MkdirAllFailure_ParentIsFile
@@ -861,9 +804,7 @@ func TestAudit_NetworkError_RequestFailed(t *testing.T) {
 	err = dl.File(context.Background(), "http://"+addr+"/x",
 		filepath.Join(t.TempDir(), "net.txt"), nil)
 	testutil.NotNil(t, err, "连接被拒应返回错误")
-	if errors.Is(err, context.Canceled) {
-		t.Fatalf("网络错误被误判为 ctx 取消: %v", err)
-	}
+	testutil.Equal(t, errors.Is(err, context.Canceled), false, "网络错误被误判为 ctx 取消: %v", err)
 }
 
 // TestAudit_DownloadFailed_FileNeverCreated
@@ -877,15 +818,11 @@ func TestAudit_DownloadFailed_FileNeverCreated(t *testing.T) {
 	saveDir := t.TempDir()
 	savePath := filepath.Join(saveDir, "missing.ysm")
 	dl := New()
-	if err := dl.File(context.Background(), ts.URL, savePath, nil); err == nil {
-		t.Fatal("404 应返回错误")
-	}
-	if _, err := os.Stat(savePath); !os.IsNotExist(err) {
-		t.Fatalf("404 失败后 savePath 不应存在: %v", err)
-	}
-	if residue := hasPartResidue(t, saveDir); len(residue) > 0 {
-		t.Fatalf("404 失败后 .part 残留: %v", residue)
-	}
+	testutil.NotNil(t, dl.File(context.Background(), ts.URL, savePath, nil), "404 应返回错误")
+	_, statErr := os.Stat(savePath)
+	testutil.Equal(t, os.IsNotExist(statErr), true, "404 失败后 savePath 不应存在: %v", statErr)
+	residue := hasPartResidue(t, saveDir)
+	testutil.Equal(t, len(residue), 0, "404 失败后 .part 残留: %v", residue)
 }
 
 // ============================================================================
@@ -903,14 +840,10 @@ func TestHTTP_Checksum_Match(t *testing.T) {
 	h := sha256.Sum256(body)
 	dl := New()
 	savePath := filepath.Join(t.TempDir(), "ck-match.txt")
-	if err := dl.FileWithChecksum(context.Background(), ts.URL, savePath, nil, h[:]); err != nil {
-		t.Fatalf("checksum 匹配应下载成功: %v", err)
-	}
+	testutil.NoError(t, dl.FileWithChecksum(context.Background(), ts.URL, savePath, nil, h[:]), "checksum 匹配应下载成功")
 	data, err := os.ReadFile(savePath)
 	testutil.NoError(t, err, "下载文件缺失")
-	if string(data) != string(body) {
-		t.Fatalf("内容不符: got %q, want %q", string(data), string(body))
-	}
+	testutil.Equal(t, string(data), string(body), "内容不符: got %q", string(data))
 }
 
 // TestHTTP_Checksum_Mismatch 期望 SHA256 不匹配 → 返回 ErrChecksumMismatch，
@@ -927,13 +860,9 @@ func TestHTTP_Checksum_Mismatch(t *testing.T) {
 	savePath := filepath.Join(saveDir, "ck-mismatch.txt")
 	err := dl.FileWithChecksum(context.Background(), ts.URL, savePath, nil, make([]byte, 32))
 	testutil.NotNil(t, err, "checksum 不匹配应报错")
-	if !errors.Is(err, ErrChecksumMismatch) {
-		t.Fatalf("应为 ErrChecksumMismatch, got %T: %v", err, err)
-	}
-	if _, sErr := os.Stat(savePath); !os.IsNotExist(sErr) {
-		t.Fatalf("checksum 失败后 savePath 不应被装盘: %v", sErr)
-	}
-	if residue := hasPartResidue(t, saveDir); len(residue) > 0 {
-		t.Fatalf("checksum 失败后 .part 残留: %v", residue)
-	}
+	testutil.ErrorIs(t, err, ErrChecksumMismatch, "应为 ErrChecksumMismatch, got %T: %v", err, err)
+	_, sErr := os.Stat(savePath)
+	testutil.Equal(t, os.IsNotExist(sErr), true, "checksum 失败后 savePath 不应被装盘: %v", sErr)
+	residue := hasPartResidue(t, saveDir)
+	testutil.Equal(t, len(residue), 0, "checksum 失败后 .part 残留: %v", residue)
 }

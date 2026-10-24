@@ -121,9 +121,7 @@ func TestReadShaderpackLang_Zip(t *testing.T) {
 	})
 	resultStr := ReadShaderpackLang(path)
 	var result map[string]interface{}
-	if err := json.Unmarshal([]byte(resultStr), &result); err != nil {
-		t.Fatalf("返回数据非 JSON: %v", err)
-	}
+	testutil.NoError(t, json.Unmarshal([]byte(resultStr), &result), "返回数据非 JSON")
 	if name, ok := result["name"].(string); !ok || name == "" {
 		t.Errorf("name = %q, 期望非空", name)
 	}

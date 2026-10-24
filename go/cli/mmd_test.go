@@ -16,9 +16,7 @@ func TestScanMMDAssets_MissingRoot(t *testing.T) {
 	missing := filepath.Join(t.TempDir(), "no-such-dir")
 
 	scan, err := scanMMDAssets(missing)
-	if err == nil {
-		t.Fatalf("根目录不存在时应返回错误, got scan=%+v", scan)
-	}
+	testutil.NotNil(t, err, "根目录不存在时应返回错误, got scan=%+v", scan)
 	if scan != nil {
 		t.Errorf("出错时不应返回部分结果, got %+v", scan)
 	}

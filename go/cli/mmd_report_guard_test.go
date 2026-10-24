@@ -55,14 +55,14 @@ func writeSizedFile(t *testing.T, path string, size int64) {
 	t.Helper()
 	f, err := os.Create(path)
 	if err != nil {
-		t.Fatalf("创建 %s: %v", path, err)
+		testutil.NoError(t, err, "创建 %s", path)
 	}
 	if err := f.Truncate(size); err != nil {
 		_ = f.Close()
-		t.Fatalf("扩展 %s 到 %d 字节: %v", path, size, err)
+		testutil.NoError(t, err, "扩展 %s 到 %d 字节", path, size)
 	}
 	if err := f.Close(); err != nil {
-		t.Fatalf("关闭 %s: %v", path, err)
+		testutil.NoError(t, err, "关闭 %s", path)
 	}
 }
 
@@ -105,7 +105,7 @@ func scanDirFixture(t *testing.T) (dir, bigFile string, bigSize, totalSize int64
 	t.Helper()
 	dir = t.TempDir()
 	if err := os.Mkdir(filepath.Join(dir, "sub"), 0o755); err != nil {
-		t.Fatalf("创建子目录: %v", err)
+		testutil.NoError(t, err, "创建子目录")
 	}
 	testutil.WriteTestFileBytes(t, filepath.Join(dir, "a.txt"), bytes.Repeat([]byte("a"), 10))
 	testutil.WriteTestFileBytes(t, filepath.Join(dir, "b.txt"), bytes.Repeat([]byte("b"), 20))
@@ -134,7 +134,7 @@ func TestRunScanDir_JSONPayloadNumbers(t *testing.T) {
 	testutil.NoError(t, rerr, "读取 JSON 产物")
 	var res scanDirResult
 	if uerr := json.Unmarshal(raw, &res); uerr != nil {
-		t.Fatalf("JSON 载荷非法: %v\n%s", uerr, raw)
+		testutil.NoError(t, uerr, "JSON 载荷非法:\n%s", raw)
 	}
 
 	if res.Directory != dir {
@@ -172,9 +172,7 @@ func TestRunScanDir_JSONPayloadNumbers(t *testing.T) {
 		}
 	}
 
-	if len(res.Largest) != 1 {
-		t.Fatalf("Largest 条数 = %d, 期望 1: %+v", len(res.Largest), res.Largest)
-	}
+	testutil.Equal(t, len(res.Largest), 1, "Largest 条数期望 1: %+v", res.Largest)
 	if res.Largest[0].Path != bigFile || res.Largest[0].Size != bigSize {
 		t.Errorf("Largest[0] = %+v, 期望 {%s %d}", res.Largest[0], bigFile, bigSize)
 	}
@@ -216,9 +214,7 @@ func TestRunScanDir_TextReportNumbers(t *testing.T) {
 
 	// 扩展名分组：逐行复算「扩展名 数量 总大小」，并锁按大小降序
 	extSection := reportSection(out, "📋 按扩展名分组:", "⚠️  大文件列表")
-	if extSection == "" {
-		t.Fatalf("未定位到扩展名分组段:\n%s", out)
-	}
+	testutil.Equal(t, extSection == "", false, "未定位到扩展名分组段:\n%s", out)
 	rows := []struct {
 		ext   string
 		count int
@@ -296,9 +292,7 @@ func TestRunScanDir_DetailListsFirstTwenty(t *testing.T) {
 	})
 	testutil.NoError(t, err, "runScanDir")
 
-	if !strings.Contains(out, "📝 文件详情 (前 20 个):") {
-		t.Fatalf("--detail 未打印详情段:\n%s", out)
-	}
+	testutil.Equal(t, strings.Contains(out, "📝 文件详情 (前 20 个):"), true, "--detail 未打印详情段:\n%s", out)
 	if !strings.Contains(out, "   ... 还有 5 个文件") {
 		t.Errorf("应提示省略 5 个文件:\n%s", out)
 	}
@@ -371,15 +365,13 @@ func TestRunFileBench_JSONPayloadNumbers(t *testing.T) {
 	testutil.NoError(t, rerr, "读取基准 JSON")
 	var res fileBenchResult
 	if uerr := json.Unmarshal(raw, &res); uerr != nil {
-		t.Fatalf("基准 JSON 非法: %v\n%s", uerr, raw)
+		testutil.NoError(t, uerr, "基准 JSON 非法:\n%s", raw)
 	}
 
 	if _, perr := time.Parse(time.RFC3339, res.Timestamp); perr != nil {
 		t.Errorf("Timestamp 不是 RFC3339: %q (%v)", res.Timestamp, perr)
 	}
-	if len(res.Files) != 2 {
-		t.Fatalf("Files 条数 = %d, 期望 2: %+v", len(res.Files), res.Files)
-	}
+	testutil.Equal(t, len(res.Files), 2, "Files 条数期望 2: %+v", res.Files)
 	for _, f := range res.Files {
 		if f.Size != fileSize {
 			t.Errorf("%s Size = %d, 期望 %d", f.Path, f.Size, fileSize)
@@ -451,7 +443,7 @@ func writeBenchBaseline(t *testing.T) string {
 	testutil.NoError(t, merr, "构造基准 JSON")
 	path := filepath.Join(t.TempDir(), "baseline.json")
 	if werr := os.WriteFile(path, raw, 0o644); werr != nil {
-		t.Fatalf("写入基准 JSON: %v", werr)
+		testutil.NoError(t, werr, "写入基准 JSON")
 	}
 	return path
 }
@@ -492,7 +484,7 @@ func TestLoadAndCompareBenchmark_DeltaArithmetic(t *testing.T) {
 func TestLoadAndCompareBenchmark_EmptyShellBaseline(t *testing.T) {
 	baselinePath := filepath.Join(t.TempDir(), "empty.json")
 	if err := os.WriteFile(baselinePath, []byte(`{"timestamp":"2019-01-01T00:00:00Z","files":[]}`), 0o644); err != nil {
-		t.Fatalf("写入空壳基准: %v", err)
+		testutil.NoError(t, err, "写入空壳基准")
 	}
 
 	got := loadAndCompareBenchmark(baselinePath, fileBenchResult{})

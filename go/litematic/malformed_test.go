@@ -155,7 +155,9 @@ func TestBuildVoxelData_BlockStatesShort(t *testing.T) {
 	path := writeGzNbt(t, root)
 	result, err := BuildVoxelData(path, 1000)
 	if err == nil {
-		t.Fatalf("BlockStates 截断应返回错误，实际 nil（返回 %d 组）", len(result.Groups))
+		// 惰性求值陷阱：len(result.Groups) 仅在 err==nil（result 非 nil）分支内求值才安全，
+		// 不能作为 NotNil 的消息参数（无条件求值）——保留 if 守卫 + 恒失败护栏
+		testutil.Equal(t, false, true, "BlockStates 截断应返回错误，实际 nil（返回 %d 组）", len(result.Groups))
 	}
 	t.Logf("BlockStates 截断错误: %v", err)
 }
@@ -180,7 +182,9 @@ func TestBuildVoxelData_BlockStatesEmpty(t *testing.T) {
 	path := writeGzNbt(t, root)
 	result, err := BuildVoxelData(path, 100)
 	if err == nil {
-		t.Fatalf("非空尺寸缺 BlockStates 应返回错误，实际 nil（%d 组）", len(result.Groups))
+		// 惰性求值陷阱：len(result.Groups) 仅在 err==nil（result 非 nil）分支内求值才安全，
+		// 不能作为 NotNil 的消息参数（无条件求值）——保留 if 守卫 + 恒失败护栏
+		testutil.Equal(t, false, true, "非空尺寸缺 BlockStates 应返回错误，实际 nil（%d 组）", len(result.Groups))
 	}
 	t.Logf("缺 BlockStates 错误: %v", err)
 }
@@ -379,9 +383,7 @@ func TestBuildSchematicVoxelData_NegativeWidth(t *testing.T) {
 	)
 	path := writeGzNbt(t, root)
 	result, err := BuildSchematicVoxelData(path, 100)
-	if err == nil {
-		t.Fatalf("负维度应返回错误（溢出守卫）")
-	}
+	testutil.NotNil(t, err, "负维度应返回错误（溢出守卫）")
 	if result != nil {
 		t.Errorf("负维度应返回 nil result, 得到 %+v", result)
 	}
@@ -638,9 +640,8 @@ func TestParseMeta_TruncatedGzip(t *testing.T) {
 	truncated := buf.Bytes()[:len(buf.Bytes())/2]
 	path := filepath.Join(t.TempDir(), "trunc.litematic")
 	_ = os.WriteFile(path, truncated, 0644)
-	if _, err := ParseMeta(path); err == nil {
-		t.Fatal("截断文件应报错")
-	}
+	_, err := ParseMeta(path)
+	testutil.NotNil(t, err, "截断文件应报错")
 }
 
 func TestParseSchematicSummary_TruncatedGzip(t *testing.T) {

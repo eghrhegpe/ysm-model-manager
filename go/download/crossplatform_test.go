@@ -31,9 +31,7 @@ func TestCrossPlatform_NUL_StringLevelReject(t *testing.T) {
 	// 而是主动在解析层剔除攻击向量。
 	url := "https://raw.githubusercontent.com/user/repo/main/file.ysm%00.exe"
 	savePath, _, _ := ResolveSavePath(url, t.TempDir())
-	if savePath != "" {
-		t.Fatalf("NUL 字节 URL 应返回空（跨平台一致），实际 savePath=%q", savePath)
-	}
+	testutil.Equal(t, savePath, "", "NUL 字节 URL 应返回空（跨平台一致），实际 savePath=%q", savePath)
 }
 
 // =====================================================================
@@ -47,16 +45,11 @@ func TestCrossPlatform_SeparatorConsistency(t *testing.T) {
 		"https://raw.githubusercontent.com/user/repo/main/a/b/file.ysm",
 		t.TempDir(),
 	)
-	if savePath == "" {
-		t.Fatal("expected non-empty savePath")
-	}
-	// 验证输出路径符合当前平台约定
-	if runtime.GOOS == "windows" && filepath.Separator != '\\' {
-		t.Fatal("Windows: filepath.Separator 应为 '\\\\'")
-	}
-	if (runtime.GOOS == "linux" || runtime.GOOS == "darwin") && filepath.Separator != '/' {
-		t.Fatalf("Linux/macOS: filepath.Separator 应为 '/', 实际 %q", string(filepath.Separator))
-	}
+	// 护栏：savePath 不得为空（原 if =="" → t.Fatal）
+	testutil.Equal(t, savePath == "", false, "expected non-empty savePath")
+	// 验证输出路径符合当前平台约定（AND 全真才失败型：保留单一复合布尔断言）
+	testutil.Equal(t, runtime.GOOS == "windows" && filepath.Separator != '\\', false, "Windows: filepath.Separator 应为 '\\'")
+	testutil.Equal(t, (runtime.GOOS == "linux" || runtime.GOOS == "darwin") && filepath.Separator != '/', false, "Linux/macOS: filepath.Separator 应为 '/', 实际 %q", string(filepath.Separator))
 }
 
 // =====================================================================
@@ -79,8 +72,7 @@ func TestCrossPlatform_CaseSensitivity(t *testing.T) {
 	// 用不同大小写的路径做 ResolveSavePath 测试
 	url := "https://raw.githubusercontent.com/user/repo/main/UPPER/file.ysm"
 	savePath, _, _ := ResolveSavePath(url, t.TempDir())
-	if savePath == "" {
-		t.Fatal("expected non-empty savePath")
-	}
+	// 护栏：savePath 不得为空（原 if =="" → t.Fatal）
+	testutil.Equal(t, savePath == "", false, "expected non-empty savePath")
 	t.Logf("%s 大小写敏感路径 %q 成功解析（prefix 检查用字符串比较，与大小写无关）", runtime.GOOS, savePath)
 }

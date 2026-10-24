@@ -24,9 +24,7 @@ func writeRawConfig(t *testing.T, linkMode string) {
 	data, err := json.Marshal(types.AppConfig{LinkMode: linkMode})
 	testutil.NoError(t, err)
 	p := configPath()
-	if p == "" {
-		t.Fatal("configPath 为空（pathMgr 未注入？）")
-	}
+	testutil.Equal(t, p == "", false, "configPath 为空（pathMgr 未注入？）")
 	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
 		testutil.NoError(t, err)
 	}
@@ -136,9 +134,7 @@ func TestSaveAppConfig_WashesDirtyDiskLinkMode(t *testing.T) {
 			a.loadAppConfig() // 内存洗：configCache.LinkMode=""（磁盘仍 mirror）
 
 			// 模拟改主题保存：FilesRoot/McRoot 传空 → orDefault 保留旧值、不触发 watcher 重建
-			if err := a.SaveAppConfig("", "", "", tc.arg, "dark", ""); err != nil {
-				t.Fatalf("SaveAppConfig 失败: %v", err)
-			}
+			testutil.NoError(t, a.SaveAppConfig("", "", "", tc.arg, "dark", ""), "SaveAppConfig 失败")
 			data, err := os.ReadFile(configPath())
 			testutil.NoError(t, err)
 			var disk types.AppConfig

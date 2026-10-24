@@ -11,18 +11,15 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/internal/testutil"
 )
 
 // assertAppError 断言错误是结构化 AppError{期望 Code}，且 Operation 非空（供用户侧定位操作）
 func assertAppError(t *testing.T, op string, want types.ErrorCode, err error) {
 	t.Helper()
-	if err == nil {
-		t.Fatalf("%s: 应返回 error，实得 nil", op)
-	}
+	testutil.NotNil(t, err, "%s: 应返回 error，实得 nil", op)
 	var ae types.AppError
-	if !errors.As(err, &ae) {
-		t.Fatalf("%s: 错误应为 AppError（friendlyError 可映射 i18n），实得 %T: %v", op, err, err)
-	}
+	testutil.Equal(t, errors.As(err, &ae), true, "%s: 错误应为 AppError（friendlyError 可映射 i18n），实得 %T: %v", op, err, err)
 	if ae.Code != want {
 		t.Errorf("%s: AppError.Code = %q，期望 %q", op, ae.Code, want)
 	}
@@ -71,9 +68,7 @@ func TestD1SliceA_decodeModel3DSpecErr(t *testing.T) {
 	err := decodeModel3DSpecErr(cause)
 
 	var ae types.AppError
-	if !errors.As(err, &ae) {
-		t.Fatalf("decodeModel3DSpecErr 应为 AppError，实得 %T: %v", err, err)
-	}
+	testutil.Equal(t, errors.As(err, &ae), true, "decodeModel3DSpecErr 应为 AppError，实得 %T: %v", err, err)
 	if ae.Code != types.ErrDecodeFailed {
 		t.Errorf("AppError.Code = %q，期望 %q", ae.Code, types.ErrDecodeFailed)
 	}

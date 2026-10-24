@@ -48,9 +48,7 @@ func TestListPackModels(t *testing.T) {
 	p := makePackZip(t, packZipFiles)
 	got, err := a.ListPackModels(p)
 	testutil.NoError(t, err, "ListPackModels 返回 error")
-	if len(got) != 3 {
-		t.Fatalf("期望 3 个模型（block/stone + block/cube_all + item/stone），实际 %d: %v", len(got), got)
-	}
+	testutil.Equal(t, len(got), 3, "期望 3 个模型（block/stone + block/cube_all + item/stone）: %v", got) // 前置守卫：等长才逐位比对
 	// 升序
 	want := []string{
 		"assets/minecraft/models/block/cube_all.json",
@@ -77,9 +75,7 @@ func TestReadPackEntry(t *testing.T) {
 	p := makePackZip(t, packZipFiles)
 
 	got := a.ReadPackEntry(p, "assets/minecraft/models/block/stone.json")
-	if len(got) == 0 {
-		t.Fatal("stone.json 读取为空")
-	}
+	testutil.Equal(t, len(got) == 0, false, "stone.json 读取为空")
 	// 返回 []byte（Wails 转 base64 交给前端）；内容应含 cube_all parent 引用
 	if !strings.Contains(string(got), "cube_all") {
 		t.Errorf("内容应含 cube_all 引用，实际 %q", string(got))
@@ -119,12 +115,8 @@ func TestListPackModelsDetail(t *testing.T) {
 	testutil.NoError(t, err, "ListPackModelsDetail 返回 error")
 	testutil.NotNil(t, res, "ListPackModelsDetail 返回 nil")
 
-	if res.Total != 4 {
-		t.Fatalf("期望 4 个模型，实际 total=%d: %v", res.Total, res.Models)
-	}
-	if len(res.Models) != 4 {
-		t.Fatalf("期望 4 条 models，实际 %d: %v", len(res.Models), res.Models)
-	}
+	testutil.Equal(t, res.Total, 4, "期望 4 个模型: %v", res.Models)
+	testutil.Equal(t, len(res.Models), 4, "期望 4 条 models: %v", res.Models)
 	// 立方体数：block/stone 无 elements=0，door=1，wall=3，item/stone 0
 	cubesByPath := map[string]int{}
 	for _, m := range res.Models {
@@ -213,9 +205,7 @@ func TestListPackModelsDetail_InvalidEntriesExcluded(t *testing.T) {
 	p := makePackZip(t, files)
 	res, err := a.ListPackModelsDetail(p)
 	testutil.NoError(t, err, "ListPackModelsDetail 返回 error")
-	if res.Total != 1 {
-		t.Fatalf("期望仅 1 个 block 模型（custom/outside 不入列），实际 total=%d: %v", res.Total, res.Models)
-	}
+	testutil.Equal(t, res.Total, 1, "期望仅 1 个 block 模型（custom/outside 不入列）: %v", res.Models)
 	if len(res.Models) != 1 || res.Models[0].Path != "assets/minecraft/models/block/ok.json" {
 		t.Errorf("期望仅 ok.json，实际 %v", res.Models)
 	}

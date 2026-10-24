@@ -58,7 +58,6 @@ func TestResourceTypesForSync(t *testing.T) {
 	}
 	// 核心守护（code_review 67929360 P2）：入参切片永不被就地截断——
 	// LoadRegistry 返回进程级共享单例，截断会永久残害所有消费方。
-	if len(all) != origLen || all[0].ID != "ysm" {
-		t.Fatalf("入参切片被就地修改（len %d, [0]=%q），共享注册表单例守护破防", len(all), all[0].ID)
-	}
+	testutil.Equal(t, len(all), origLen, "入参切片被就地修改（截断），共享注册表单例守护破防") // 前置守卫：未截断才取 [0]
+	testutil.Equal(t, all[0].ID, "ysm", "入参切片被就地修改（[0] 被改写），共享注册表单例守护破防")
 }

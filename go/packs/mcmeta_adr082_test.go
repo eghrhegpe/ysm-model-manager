@@ -19,16 +19,12 @@ func TestDetectResourceType_NestedDirResourcepack(t *testing.T) {
 	zipPath := testutil.WriteZipFile(t, "mypack.zip", map[string]string{
 		"MyPack/pack.mcmeta": `{"pack":{"pack_format":15}}`,
 	})
-	if got := DetectResourceType(zipPath, reg); got != "resourcepack" {
-		t.Fatalf("套目录材质包应识别 resourcepack，实际 %q", got)
-	}
+	testutil.Equal(t, DetectResourceType(zipPath, reg), "resourcepack", "套目录材质包应识别 resourcepack")
 	// 更深层级也命中：a/b/pack.mcmeta
 	deepZip := testutil.WriteZipFile(t, "deep.zip", map[string]string{
 		"a/b/pack.mcmeta": `{"pack":{"pack_format":15}}`,
 	})
-	if got := DetectResourceType(deepZip, reg); got != "resourcepack" {
-		t.Fatalf("深层套目录材质包应识别 resourcepack，实际 %q", got)
-	}
+	testutil.Equal(t, DetectResourceType(deepZip, reg), "resourcepack", "深层套目录材质包应识别 resourcepack")
 }
 
 // 套目录光影包 zip（ADR-082 S1）：shaders/ prefix 指纹升级为任意层级
@@ -37,9 +33,7 @@ func TestDetectResourceType_NestedDirShaderpack(t *testing.T) {
 	zipPath := testutil.WriteZipFile(t, "shader.zip", map[string]string{
 		"MyShader/shaders/foo.fsh": "x",
 	})
-	if got := DetectResourceType(zipPath, reg); got != "shaderpack" {
-		t.Fatalf("套目录光影包应识别 shaderpack，实际 %q", got)
-	}
+	testutil.Equal(t, DetectResourceType(zipPath, reg), "shaderpack", "套目录光影包应识别 shaderpack")
 }
 
 // 套目录 ysm zip（ADR-082 S1）：models/ prefix 升级为任意层级
@@ -48,9 +42,7 @@ func TestDetectResourceType_NestedDirYsm(t *testing.T) {
 	zipPath := testutil.WriteZipFile(t, "model.zip", map[string]string{
 		"MyModel/models/thing/body.json": `{"format_version":"1.12.0"}`,
 	})
-	if got := DetectResourceType(zipPath, reg); got != "ysm" {
-		t.Fatalf("套目录 ysm 应识别 ysm，实际 %q", got)
-	}
+	testutil.Equal(t, DetectResourceType(zipPath, reg), "ysm", "套目录 ysm 应识别 ysm")
 }
 
 // .7z 材质包（ADR-082 S2/S3）：extensions 补 .7z 后走 container 指纹，不再被 ysm 兜底抢走。
@@ -58,9 +50,7 @@ func TestDetectResourceType_NestedDirYsm(t *testing.T) {
 func TestDetectResourceType_SevenZipResourcepack(t *testing.T) {
 	reg := registry.LoadRegistry()
 	sevenPath := filepath.Join("testdata", "pack.7z")
-	if got := DetectResourceType(sevenPath, reg); got != "resourcepack" {
-		t.Fatalf(".7z 材质包应识别 resourcepack，实际 %q", got)
-	}
+	testutil.Equal(t, DetectResourceType(sevenPath, reg), "resourcepack", ".7z 材质包应识别 resourcepack")
 }
 
 // 坏 .7z 兜底已移除（ADR-082 续）：识别不出就是识别不出——
@@ -72,7 +62,5 @@ func TestDetectResourceType_SevenZipNoFallback(t *testing.T) {
 	if err := os.WriteFile(sevenPath, []byte("not really 7z"), 0644); err != nil {
 		testutil.NoError(t, err)
 	}
-	if got := DetectResourceType(sevenPath, reg); got != "container" {
-		t.Fatalf("坏 .7z 应标 container（容器无指纹），实际 %q", got)
-	}
+	testutil.Equal(t, DetectResourceType(sevenPath, reg), "container", "坏 .7z 应标 container（容器无指纹）")
 }

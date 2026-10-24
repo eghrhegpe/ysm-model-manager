@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 	"testing"
 
 	"ysm-model-manager/go/types"
@@ -52,32 +51,21 @@ func migratedApp(t *testing.T, customRoots map[string]string) (*App, string) {
 func TestMoveToRecycle_RootRejected(t *testing.T) {
 	a, ysm := guardedApp(t)
 	err := a.MoveToRecycle(ysm)
-	testutil.NotNil(t, err, "MoveToRecycle(资源根) 应拒绝")
-	if !strings.Contains(err.Error(), "资源根目录整体移入回收站") {
-		t.Fatalf("应提示根级拒绝, got %v", err)
-	}
+	testutil.ErrorContains(t, err, "资源根目录整体移入回收站", "应提示根级拒绝")
 	// 根目录未被移走（.recycle 不应出现在根本身下）
-	if _, err := os.Stat(filepath.Join(ysm, ".recycle")); err == nil {
-		t.Fatal("根目录不得被移入回收站")
-	}
+	testutil.FileNotExists(t, filepath.Join(ysm, ".recycle"), "根目录不得被移入回收站")
 }
 
 func TestFindRecycleRoot_RootNotMatched(t *testing.T) {
 	a, ysm := guardedApp(t)
 	// src == root → 不判命中（返回 ""，调用方 fallback ysmRoot 后 Clean 相等拒绝）
-	if got := a.findRecycleRoot(ysm); got != "" {
-		t.Fatalf("src==root 不应判命中, got %q", got)
-	}
+	testutil.Equal(t, a.findRecycleRoot(ysm), "", "src==root 不应判命中")
 	// src 在根内合法子目录 → 命中
 	sub := filepath.Join(ysm, "..foo", "m.ysm") // ..foo 合法名（精确段比较不误拒）
-	if got := a.findRecycleRoot(sub); got != ysm {
-		t.Fatalf("..foo 子目录应命中根, got %q", got)
-	}
+	testutil.Equal(t, a.findRecycleRoot(sub), ysm, "..foo 子目录应命中根")
 	// 外部路径 → 不命中
 	outside := filepath.Join(filepath.Dir(ysm), "..", "outside", "x.ysm")
-	if got := a.findRecycleRoot(outside); got != "" {
-		t.Fatalf("外部路径不应命中, got %q", got)
-	}
+	testutil.Equal(t, a.findRecycleRoot(outside), "", "外部路径不应命中")
 }
 
 // TestFindRecycleRoot_CustomRootsIncluded 回归护栏（codereview 批次3 P2）：
@@ -91,9 +79,7 @@ func TestFindRecycleRoot_CustomRootsIncluded(t *testing.T) {
 	a, _ := migratedApp(t, map[string]string{"mmd": mmdCustom})
 
 	inCustom := filepath.Join(mmdCustom, "model", "char.pmx")
-	if got := a.findRecycleRoot(inCustom); got != mmdCustom {
-		t.Fatalf("CustomRoots 内的文件应命中自定义根, got %q want %q", got, mmdCustom)
-	}
+	testutil.Equal(t, a.findRecycleRoot(inCustom), mmdCustom, "CustomRoots 内的文件应命中自定义根")
 	// allRecycleRoots 同样须包含 CustomRoots 条目（ListRecycleBin/Restore 等依赖它）
 	cfg := a.LoadAppConfig()
 	roots := a.allRecycleRoots(cfg)
@@ -104,9 +90,7 @@ func TestFindRecycleRoot_CustomRootsIncluded(t *testing.T) {
 			break
 		}
 	}
-	if !found {
-		t.Fatalf("allRecycleRoots 应包含 CustomRoots 条目 %q, got %v", mmdCustom, roots)
-	}
+	testutil.Equal(t, found, true, "allRecycleRoots 应包含 CustomRoots 条目 %q, got %v", mmdCustom, roots)
 }
 
 // TestFindRecycleRoot_EmptyCustomRoots 验证空 CustomRoots 时行为正确
@@ -115,9 +99,8 @@ func TestFindRecycleRoot_EmptyCustomRoots(t *testing.T) {
 	// 无 CustomRoots，只应有默认 ysm 根
 	cfg := a.LoadAppConfig()
 	roots := a.allRecycleRoots(cfg)
-	if len(roots) != 1 || roots[0] != ysm {
-		t.Fatalf("空 CustomRoots 应只返回默认根 %q, got %v", ysm, roots)
-	}
+	testutil.Equal(t, len(roots), 1, "空 CustomRoots 应只返回默认根 %q, got %v", ysm, roots) // 前置守卫：数量为 1 才取 roots[0]
+	testutil.Equal(t, roots[0], ysm, "空 CustomRoots 应只返回默认根 %q", ysm)
 }
 
 // TestRecycleRoots_SameAsAllRecycleRoots（2026-10-15 锐评收敛）：
@@ -135,18 +118,9 @@ func TestRecycleRoots_SameAsAllRecycleRoots(t *testing.T) {
 	want := a.allRecycleRoots(a.LoadAppConfig())
 	sort.Strings(got)
 	sort.Strings(want)
-	if len(got) != len(want) {
-		t.Fatalf("两份根枚举集合不一致（分叉即绕过复发通道）: recycleRoots=%v allRecycleRoots=%v", got, want)
-	}
-	for i := range got {
-		if got[i] != want[i] {
-			t.Fatalf("两份根枚举集合不一致: recycleRoots=%v allRecycleRoots=%v", got, want)
-		}
-	}
+	testutil.Equal(t, got, want, "两份根枚举集合不一致（分叉即绕过复发通道）")
 	// 非空自检：枚举确实覆盖默认根 + 两个 CustomRoot，防「两边都空」的假绿
-	if len(got) != 3 {
-		t.Fatalf("根枚举应含默认根 + 2 个 CustomRoot（共 3）, got %v", got)
-	}
+	testutil.Equal(t, len(got), 3, "根枚举应含默认根 + 2 个 CustomRoot（共 3）")
 }
 
 // TestFindRecycleRoot_MostSpecificRootWins（2026-10-15 归属规则收敛）：
@@ -164,19 +138,13 @@ func TestFindRecycleRoot_MostSpecificRootWins(t *testing.T) {
 
 	src := filepath.Join(inner, "char.pmx")
 	for i := 0; i < 50; i++ {
-		if got := a.findRecycleRoot(src); got != inner {
-			t.Fatalf("第 %d 次：应稳定命中最深根 %q，实得 %q（「首个命中」实现随 map 遍历序漂移）", i, inner, got)
-		}
+		testutil.Equal(t, a.findRecycleRoot(src), inner, "第 %d 次：应稳定命中最深根（「首个命中」实现随 map 遍历序漂移）", i)
 	}
 	// 防「一律取最内层」的误读：外层根直属文件仍归外层根
-	if got := a.findRecycleRoot(filepath.Join(outer, "loose.pmx")); got != outer {
-		t.Fatalf("外层根直属文件应归外层根 %q，实得 %q", outer, got)
-	}
+	testutil.Equal(t, a.findRecycleRoot(filepath.Join(outer, "loose.pmx")), outer, "外层根直属文件应归外层根")
 	// 一概念一规则：同一路径在启禁链（toggleRootFor）与回收链（findRecycleRoot）必须同答，
 	// 否则又是「同概念两套口径」。两函数根集合不同，但**规则**必须一致。
-	if got, want := a.findRecycleRoot(src), a.toggleRootFor(src); got != want {
-		t.Fatalf("回收链归属 %q 与启禁链归属 %q 不一致（最具体根规则漂移）", got, want)
-	}
+	testutil.Equal(t, a.findRecycleRoot(src), a.toggleRootFor(src), "回收链归属与启禁链归属不一致（最具体根规则漂移）")
 }
 
 // TestMoveToRecycle_OuterCustomRootCannotAdoptInnerRoot 核心回归锁（2026-10-15 复核实测复现）：
@@ -204,15 +172,11 @@ func TestMoveToRecycle_OuterCustomRootCannotAdoptInnerRoot(t *testing.T) {
 
 	// 前置断言：夹具确实构成绕过条件（归属判定跳过内层根、选中外层根）。
 	// 少了这条，夹具没搭出场景时会「假绿」——守卫压根没被考验。
-	if got := a.findRecycleRoot(ysm); got != base {
-		t.Fatalf("夹具异常：findRecycleRoot(ysmRoot) 应返回外层根 %q 才构成绕过条件, got %q", base, got)
-	}
+	testutil.Equal(t, a.findRecycleRoot(ysm), base, "夹具异常：findRecycleRoot(ysmRoot) 应返回外层根 %q 才构成绕过条件", base)
 
 	err := a.MoveToRecycle(ysm)
 	testutil.NotNil(t, err, "外层 CustomRoot 不得让内层仓库根被整体移入回收站")
-	if !strings.Contains(err.Error(), "资源根目录整体移入回收站") {
-		t.Fatalf("应提示根级拒绝, got %v", err)
-	}
+	testutil.ErrorContains(t, err, "资源根目录整体移入回收站", "应提示根级拒绝")
 	// 内层根仍在原位、内容完整
 	testutil.FileExists(t, filepath.Join(ysm, "ysm.json"), "拒绝后 ysmRoot 入口文件必须仍在")
 	testutil.FileExists(t, payload, "拒绝后 ysmRoot 内文件必须仍在")

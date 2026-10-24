@@ -19,18 +19,12 @@ func TestDetectResourceType_McmetaDetector(t *testing.T) {
 	}
 	// 含 pack.mcmeta → 识别
 	zipPath := testutil.WriteZipFile(t, "pack.zip", map[string]string{"pack.mcmeta": `{"pack":{"pack_format":15}}`})
-	if got := DetectResourceType(zipPath, reg); got != "resourcepack" {
-		t.Fatalf("mcmeta detector 应识别 resourcepack: %s", got)
-	}
+	testutil.Equal(t, DetectResourceType(zipPath, reg), "resourcepack", "mcmeta detector 应识别 resourcepack")
 	// 无 pack.mcmeta → 标 container（容器无指纹）
 	zipPath2 := testutil.WriteZipFile(t, "pack.zip", map[string]string{"other.txt": "x"})
-	if got := DetectResourceType(zipPath2, reg); got != "container" {
-		t.Fatalf("无 mcmeta 应标 container: %s", got)
-	}
+	testutil.Equal(t, DetectResourceType(zipPath2, reg), "container", "无 mcmeta 应标 container")
 	// 扩展名不匹配 → 标 other（非容器无声明者）
-	if got := DetectResourceType(filepath.Join(t.TempDir(), "x.txt"), reg); got != "other" {
-		t.Fatalf("扩展名不匹配应标 other: %s", got)
-	}
+	testutil.Equal(t, DetectResourceType(filepath.Join(t.TempDir(), "x.txt"), reg), "other", "扩展名不匹配应标 other")
 }
 
 func TestDetectResourceType_ShaderDetector(t *testing.T) {
@@ -42,14 +36,10 @@ func TestDetectResourceType_ShaderDetector(t *testing.T) {
 	}
 	// 含 shaders/ 条目 → 识别
 	zipPath := testutil.WriteZipFile(t, "pack.zip", map[string]string{"shaders/foo.fsh": "x"})
-	if got := DetectResourceType(zipPath, reg); got != "shaderpack" {
-		t.Fatalf("shader detector 应识别 shaderpack: %s", got)
-	}
+	testutil.Equal(t, DetectResourceType(zipPath, reg), "shaderpack", "shader detector 应识别 shaderpack")
 	// 无 shaders → 标 container（容器无指纹）
 	zipPath2 := testutil.WriteZipFile(t, "pack.zip", map[string]string{"pack.mcmeta": "x"})
-	if got := DetectResourceType(zipPath2, reg); got != "container" {
-		t.Fatalf("无 shaders 应标 container: %s", got)
-	}
+	testutil.Equal(t, DetectResourceType(zipPath2, reg), "container", "无 shaders 应标 container")
 }
 
 // ===== zipentry detector 补测（ADR-067 S2：zip 化资源内容指纹识别）=====
@@ -127,22 +117,16 @@ func TestDetectResourceType_ZipEntry_Priority(t *testing.T) {
 		"ysm.json":  `{"format_version":"1.12.0"}`,
 		"model.pmx": "x",
 	})
-	if got := DetectResourceType(zipPath, reg); got != "EntityPlayer" {
-		t.Fatalf("同时含 ysm.json+model.pmx 应判 EntityPlayer（同 Priority 按 ID 字典序），实际 %q", got)
-	}
+	testutil.Equal(t, DetectResourceType(zipPath, reg), "EntityPlayer", "同时含 ysm.json+model.pmx 应判 EntityPlayer（同 Priority 按 ID 字典序）")
 }
 
 // 无匹配：空 zip / 无关条目 zip → 不识别（返回 ""）
 func TestDetectResourceType_ZipEntry_NoMatch(t *testing.T) {
 	reg := zipentryReg()
 	empty := testutil.WriteZipFile(t, "empty.zip", map[string]string{})
-	if got := DetectResourceType(empty, reg); got != "container" {
-		t.Fatalf("空 zip 应标 container（容器无指纹）: %q", got)
-	}
+	testutil.Equal(t, DetectResourceType(empty, reg), "container", "空 zip 应标 container（容器无指纹）")
 	noMatch := testutil.WriteZipFile(t, "pkg.zip", map[string]string{"readme.txt": "hello"})
-	if got := DetectResourceType(noMatch, reg); got != "container" {
-		t.Fatalf("无关条目 zip 应标 container: %q", got)
-	}
+	testutil.Equal(t, DetectResourceType(noMatch, reg), "container", "无关条目 zip 应标 container")
 }
 
 // .7z 内容指纹已接入（ADR-068 后 container.Open7zPath 可枚举 7z 条目）：坏/伪造 .7z
@@ -156,9 +140,7 @@ func TestDetectResourceType_ZipEntry_SevenZipNoFallback(t *testing.T) {
 	if err := os.WriteFile(sevenPath, []byte("not really 7z"), 0644); err != nil {
 		testutil.NoError(t, err)
 	}
-	if got := DetectResourceType(sevenPath, reg); got != "container" {
-		t.Fatalf("坏 .7z 应标 container（容器无指纹），实际 %q", got)
-	}
+	testutil.Equal(t, DetectResourceType(sevenPath, reg), "container", "坏 .7z 应标 container（容器无指纹）")
 }
 
 // ===== 路径消歧测试 =====

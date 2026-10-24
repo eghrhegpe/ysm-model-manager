@@ -32,28 +32,18 @@ func TestCopyDirRecursive_WithSymlink(t *testing.T) {
 	}
 
 	dst := filepath.Join(dir, "dst")
-	if err := copyDirRecursive(src, dst); err != nil {
-		t.Fatalf("复制失败: %v", err)
-	}
+	testutil.NoError(t, copyDirRecursive(src, dst), "复制失败")
 	// 普通文件与子目录应完整复制
-	if _, err := os.Stat(filepath.Join(dst, "a.ysm")); err != nil {
-		t.Fatalf("a.ysm 应复制: %v", err)
-	}
-	if _, err := os.Stat(filepath.Join(dst, "sub", "b.ysm")); err != nil {
-		t.Fatalf("sub/b.ysm 应复制: %v", err)
-	}
+	testutil.FileExists(t, filepath.Join(dst, "a.ysm"), "a.ysm 应复制")
+	testutil.FileExists(t, filepath.Join(dst, "sub", "b.ysm"), "sub/b.ysm 应复制")
 	// 符号链接应复制为链接本身（ModeSymlink），目标为原链接目标
 	dstLink := filepath.Join(dst, "link.ysm")
 	fi, err := os.Lstat(dstLink)
 	testutil.NoError(t, err, "link.ysm 应存在")
-	if fi.Mode()&os.ModeSymlink == 0 {
-		t.Fatal("link.ysm 应为符号链接（不跟随复制内容）")
-	}
+	testutil.Equal(t, fi.Mode()&os.ModeSymlink != 0, true, "link.ysm 应为符号链接（不跟随复制内容）")
 	got, err := os.Readlink(dstLink)
 	testutil.NoError(t, err)
-	if got != fileA {
-		t.Fatalf("链接目标 = %q, 期望 %q", got, fileA)
-	}
+	testutil.Equal(t, got, fileA, "链接目标 = %q, 期望 %q", got, fileA)
 }
 
 // 目标父路径组件为文件时 MkdirAll 失败应报错
@@ -70,7 +60,6 @@ func TestCopyDirRecursive_MkdirAllError(t *testing.T) {
 	if err := os.WriteFile(blocker, []byte("x"), 0644); err != nil {
 		testutil.NoError(t, err)
 	}
-	if err := copyDirRecursive(src, filepath.Join(blocker, "sub", "dst")); err == nil {
-		t.Fatal("目标父路径组件为文件时应报错")
-	}
+	err := copyDirRecursive(src, filepath.Join(blocker, "sub", "dst"))
+	testutil.NotNil(t, err, "目标父路径组件为文件时应报错")
 }

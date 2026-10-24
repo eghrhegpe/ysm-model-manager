@@ -28,21 +28,16 @@ func assertNoFsutilTmp(t *testing.T, dir string) {
 		testutil.NoError(t, err)
 	}
 	for _, e := range entries {
-		if strings.HasPrefix(e.Name(), ".copy-") {
-			t.Fatalf("失败后不应残留 .copy-* 临时文件: %s", e.Name())
-		}
+		testutil.Equal(t, strings.HasPrefix(e.Name(), ".copy-"), false, "失败后不应残留 .copy-* 临时文件: %s", e.Name())
 	}
 }
 
 func TestCopyFile_OpenSrcError(t *testing.T) {
 	base := t.TempDir()
 	dst := filepath.Join(base, "out", "f.txt")
-	if err := fsutil.CopyFile(filepath.Join(base, "nope.txt"), dst); err == nil {
-		t.Fatal("源不存在应报错")
-	}
-	if _, err := os.Stat(dst); !os.IsNotExist(err) {
-		t.Fatalf("打开源失败时不应创建目标: %v", err)
-	}
+	err := fsutil.CopyFile(filepath.Join(base, "nope.txt"), dst)
+	testutil.NotNil(t, err, "源不存在应报错")
+	testutil.FileNotExists(t, dst, "打开源失败时不应创建目标")
 }
 
 func TestCopyFile_MkdirAllError(t *testing.T) {
@@ -51,9 +46,8 @@ func TestCopyFile_MkdirAllError(t *testing.T) {
 	_ = os.WriteFile(blocker, []byte("x"), 0644)
 	src := filepath.Join(base, "src.txt")
 	_ = os.WriteFile(src, []byte("data"), 0644)
-	if err := fsutil.CopyFile(src, filepath.Join(blocker, "sub", "f.txt")); err == nil {
-		t.Fatal("目标父级为文件时应报错")
-	}
+	err := fsutil.CopyFile(src, filepath.Join(blocker, "sub", "f.txt"))
+	testutil.NotNil(t, err, "目标父级为文件时应报错")
 }
 
 func TestCopyFile_TmpNameRandomized(t *testing.T) {
@@ -63,21 +57,13 @@ func TestCopyFile_TmpNameRandomized(t *testing.T) {
 	src := filepath.Join(base, "src.txt")
 	_ = os.WriteFile(src, []byte("data"), 0644)
 	dst := filepath.Join(base, "out", "f.txt")
-	if err := os.MkdirAll(dst+".copy-tmp", 0755); err != nil {
-		testutil.NoError(t, err)
-	}
+	testutil.NoError(t, os.MkdirAll(dst+".copy-tmp", 0755))
 	_ = os.WriteFile(filepath.Join(dst+".copy-tmp", "guard"), []byte("g"), 0644)
-	if err := fsutil.CopyFile(src, dst); err != nil {
-		t.Fatalf("随机 tmp 名应规避占位冲突，实际报错: %v", err)
-	}
+	testutil.NoError(t, fsutil.CopyFile(src, dst), "随机 tmp 名应规避占位冲突")
 	data, _ := os.ReadFile(dst)
-	if string(data) != "data" {
-		t.Fatalf("目标内容 = %q", string(data))
-	}
+	testutil.Equal(t, string(data), "data", "目标内容不符")
 	// 占位目录应原样保留（未被误清）
-	if _, err := os.Stat(filepath.Join(dst+".copy-tmp", "guard")); err != nil {
-		t.Fatalf("占位目录不应被清理: %v", err)
-	}
+	testutil.FileExists(t, filepath.Join(dst+".copy-tmp", "guard"), "占位目录不应被清理")
 }
 
 func TestCopyFile_IOCopyError(t *testing.T) {
@@ -87,9 +73,8 @@ func TestCopyFile_IOCopyError(t *testing.T) {
 	srcDir := filepath.Join(base, "srcdir")
 	_ = os.MkdirAll(srcDir, 0755)
 	dst := filepath.Join(base, "out", "f.txt")
-	if err := fsutil.CopyFile(srcDir, dst); err == nil {
-		t.Fatal("复制目录句柄应报错")
-	}
+	err := fsutil.CopyFile(srcDir, dst)
+	testutil.NotNil(t, err, "复制目录句柄应报错")
 	assertNoFsutilTmp(t, filepath.Join(base, "out"))
 }
 
@@ -99,12 +84,9 @@ func TestCopyFile_RenameError(t *testing.T) {
 	src := filepath.Join(base, "src.txt")
 	_ = os.WriteFile(src, []byte("data"), 0644)
 	dst := filepath.Join(base, "out", "f.txt")
-	if err := os.MkdirAll(dst, 0755); err != nil { // dst 已存在为目录
-		t.Fatal(err)
-	}
-	if err := fsutil.CopyFile(src, dst); err == nil {
-		t.Fatal("目标为目录时应报错")
-	}
+	testutil.NoError(t, os.MkdirAll(dst, 0755)) // dst 已存在为目录
+	err := fsutil.CopyFile(src, dst)
+	testutil.NotNil(t, err, "目标为目录时应报错")
 	assertNoFsutilTmp(t, filepath.Join(base, "out"))
 }
 
@@ -118,13 +100,9 @@ func TestCopyDirRecursive_Basic(t *testing.T) {
 	_ = os.WriteFile(filepath.Join(src, "sub", "s.txt"), []byte("s"), 0644)
 	_ = os.WriteFile(filepath.Join(src, "sub", "deep", "d.txt"), []byte("d"), 0644)
 	dst := filepath.Join(base, "dst")
-	if err := copyDirRecursive(src, dst); err != nil {
-		t.Fatalf("copyDirRecursive 失败: %v", err)
-	}
+	testutil.NoError(t, copyDirRecursive(src, dst), "copyDirRecursive 失败")
 	for _, rel := range []string{"root.txt", filepath.Join("sub", "s.txt"), filepath.Join("sub", "deep", "d.txt")} {
-		if _, err := os.Stat(filepath.Join(dst, rel)); err != nil {
-			t.Fatalf("%s 应存在: %v", rel, err)
-		}
+		testutil.FileExists(t, filepath.Join(dst, rel), "%s 应存在", rel)
 	}
 }
 
@@ -137,16 +115,10 @@ func TestCopyDirRecursive_DstExisted(t *testing.T) {
 	dst := filepath.Join(base, "dst")
 	_ = os.MkdirAll(dst, 0755)
 	_ = os.WriteFile(filepath.Join(dst, "old.txt"), []byte("old"), 0644)
-	if err := copyDirRecursive(src, dst); err != nil {
-		t.Fatalf("dst 已存在时复制失败: %v", err)
-	}
+	testutil.NoError(t, copyDirRecursive(src, dst), "dst 已存在时复制失败")
 	data, _ := os.ReadFile(filepath.Join(dst, "a.txt"))
-	if string(data) != "new" {
-		t.Fatalf("新文件内容 = %q", string(data))
-	}
-	if _, err := os.Stat(filepath.Join(dst, "old.txt")); err != nil {
-		t.Fatalf("既有内容应保留: %v", err)
-	}
+	testutil.Equal(t, string(data), "new", "新文件内容不符")
+	testutil.FileExists(t, filepath.Join(dst, "old.txt"), "既有内容应保留")
 }
 
 func TestCopyDirRecursive_MkdirAllError(t *testing.T) {
@@ -155,9 +127,8 @@ func TestCopyDirRecursive_MkdirAllError(t *testing.T) {
 	_ = os.WriteFile(blocker, []byte("x"), 0644)
 	src := filepath.Join(base, "src")
 	_ = os.MkdirAll(src, 0755)
-	if err := copyDirRecursive(src, filepath.Join(blocker, "sub", "dst")); err == nil {
-		t.Fatal("dst 父级为文件时应报错")
-	}
+	err := copyDirRecursive(src, filepath.Join(blocker, "sub", "dst"))
+	testutil.NotNil(t, err, "dst 父级为文件时应报错")
 }
 
 // TestCopyDirRecursive_ErrorKeepsExistingDst 复制中途失败且 dst 已存在 → 不整树回滚，
@@ -171,12 +142,9 @@ func TestCopyDirRecursive_ErrorKeepsExistingDst(t *testing.T) {
 	// dst 已存在，且 x 位置被目录占位 → 文件复制在最终 Rename 处失败
 	_ = os.MkdirAll(filepath.Join(dst, "x"), 0755)
 	_ = os.WriteFile(filepath.Join(dst, "keep.txt"), []byte("keep"), 0644)
-	if err := copyDirRecursive(src, dst); err == nil {
-		t.Fatal("复制应失败（dst/x 被目录占位）")
-	}
-	if _, err := os.Stat(filepath.Join(dst, "keep.txt")); err != nil {
-		t.Fatalf("既有目录内容不应被回滚删除: %v", err)
-	}
+	err := copyDirRecursive(src, dst)
+	testutil.NotNil(t, err, "复制应失败（dst/x 被目录占位）")
+	testutil.FileExists(t, filepath.Join(dst, "keep.txt"), "既有目录内容不应被回滚删除")
 }
 
 // TestCopyDirRecursive_Symlink 符号链接：复制链接本身（保留语义），不跟随复制
@@ -193,22 +161,14 @@ func TestCopyDirRecursive_Symlink(t *testing.T) {
 		t.Skipf("环境不支持创建符号链接: %v", err)
 	}
 	dst := filepath.Join(base, "dst")
-	if err := copyDirRecursive(src, dst); err != nil {
-		t.Fatalf("复制失败: %v", err)
-	}
+	testutil.NoError(t, copyDirRecursive(src, dst), "复制失败")
 	for _, l := range []string{"file-link", "dir-link"} {
 		info, err := os.Lstat(filepath.Join(dst, l))
-		if err != nil {
-			t.Fatalf("%s 应被复制为链接: %v", l, err)
-		}
-		if info.Mode()&os.ModeSymlink == 0 {
-			t.Fatalf("%s 应为符号链接，实际 %v", l, info.Mode())
-		}
+		testutil.NoError(t, err, "%s 应被复制为链接", l)
+		testutil.Equal(t, info.Mode()&os.ModeSymlink == 0, false, "%s 应为符号链接，实际 %v", l, info.Mode())
 	}
 	// 链接指向的目标本身不因复制而缺失
-	if _, err := os.Stat(filepath.Join(dst, "sub", "real.txt")); err != nil {
-		t.Fatalf("普通内容应复制: %v", err)
-	}
+	testutil.FileExists(t, filepath.Join(dst, "sub", "real.txt"), "普通内容应复制")
 }
 
 // ===== PullResources 错误分支 =====
@@ -228,15 +188,11 @@ func TestPullResources_DirCopyFailure(t *testing.T) {
 	// 批D P1-5：失败改由结果字段承载（err 只表示前置不满足）
 	res := PullResources("ysm", globalDir, targetDir,
 		func(name, src, dst string, size int64, status, msg string) { logs = append(logs, status) })
-	if res.Failed == 0 {
-		t.Fatal("目录复制失败应计入 Failed")
-	}
-	if res.OK != 0 {
-		t.Fatalf("失败路径应计数 0，实际 %d", res.OK)
-	}
-	if len(logs) != 1 || logs[0] != "failed" {
-		t.Fatalf("应有 1 条 failed 日志: %v", logs)
-	}
+	testutil.Equal(t, res.Failed > 0, true, "目录复制失败应计入 Failed")
+	testutil.Equal(t, res.OK, 0, "失败路径应计数 0，实际 %d", res.OK)
+	// 序贯拆分：前一 Equal 失败即 Goexit，下一行的 logs[0] 索引才安全
+	testutil.Equal(t, len(logs), 1, "应有 1 条 failed 日志: %v", logs)
+	testutil.Equal(t, logs[0], "failed", "应有 1 条 failed 日志: %v", logs)
 }
 
 func TestPullResources_FileCopyFailure(t *testing.T) {
@@ -250,9 +206,7 @@ func TestPullResources_FileCopyFailure(t *testing.T) {
 
 	res := PullResources("ysm", globalDir, targetDir,
 		func(name, src, dst string, size int64, status, msg string) {})
-	if res.Failed == 0 {
-		t.Fatal("平铺文件复制失败应计入 Failed")
-	}
+	testutil.Equal(t, res.Failed > 0, true, "平铺文件复制失败应计入 Failed")
 }
 
 func TestPullResources_FileLevelMkdirFailure(t *testing.T) {
@@ -266,9 +220,7 @@ func TestPullResources_FileLevelMkdirFailure(t *testing.T) {
 
 	res := PullResources("resourcepack", globalDir, targetDir,
 		func(name, src, dst string, size int64, status, msg string) {})
-	if res.Failed == 0 {
-		t.Fatal("MkdirAll 失败应计入 Failed")
-	}
+	testutil.Equal(t, res.Failed > 0, true, "MkdirAll 失败应计入 Failed")
 }
 
 func TestPullResources_FileLevelCopyFailure(t *testing.T) {
@@ -283,9 +235,7 @@ func TestPullResources_FileLevelCopyFailure(t *testing.T) {
 
 	res := PullResources("resourcepack", globalDir, targetDir,
 		func(name, src, dst string, size int64, status, msg string) {})
-	if res.Failed == 0 {
-		t.Fatal("复制失败应计入 Failed")
-	}
+	testutil.Equal(t, res.Failed > 0, true, "复制失败应计入 Failed")
 }
 
 // TestMapSrcToGlobal_EscapeRejected 路径映射越界防护：src 不在 targetDir 下显式报错
@@ -294,7 +244,6 @@ func TestMapSrcToGlobal_EscapeRejected(t *testing.T) {
 	targetDir := filepath.Join(base, "inst")
 	globalDir := filepath.Join(base, "global")
 	src := filepath.Join(targetDir, "..", "leaked", "m.ysm")
-	if _, err := mapSrcToGlobal(src, targetDir, globalDir); err == nil {
-		t.Fatal("越界路径应报错")
-	}
+	_, err := mapSrcToGlobal(src, targetDir, globalDir)
+	testutil.NotNil(t, err, "越界路径应报错")
 }

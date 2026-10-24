@@ -23,20 +23,17 @@ func TestToJson_MarshalFallbackIsValidJSON(t *testing.T) {
 	resp := NewJsonSuccess("bench", map[string]float64{"ms": math.NaN()}, 1)
 	got := resp.ToJson()
 
-	if !strings.Contains(got, `"code":"marshal_error"`) {
-		t.Fatalf("应进入 marshal_error 兜底分支, got: %s", got)
-	}
+	testutil.Equal(t, strings.Contains(got, `"code":"marshal_error"`), true, "应进入 marshal_error 兜底分支, got: %s", got)
 	var out map[string]interface{}
 	if err := json.Unmarshal([]byte(got), &out); err != nil {
-		t.Fatalf("兜底输出不是合法 JSON: %v\ngot: %s", err, got)
+		testutil.NoError(t, err, "兜底输出不是合法 JSON:\ngot: %s", got)
 	}
 	if out["status"] != "error" {
 		t.Errorf("兜底 status 应为 error, got %v", out["status"])
 	}
 	errObj, ok := out["error"].(map[string]interface{})
-	if !ok {
-		t.Fatalf("兜底 error 字段缺失或类型异常: %v", out["error"])
-	}
+	// ok 已由上一断言守卫（失败即 Goexit），errObj 的消费才安全
+	testutil.Equal(t, ok, true, "兜底 error 字段缺失或类型异常: %v", out["error"])
 	if msg, _ := errObj["message"].(string); msg == "" {
 		t.Errorf("兜底 message 不应为空（会丢失 marshal 失败原因）")
 	}
@@ -97,7 +94,7 @@ func TestCliTiming_NoTruncationAnywhere(t *testing.T) {
 		}
 		src, err := os.ReadFile(f)
 		if err != nil {
-			t.Fatalf("读 %s 失败: %v", f, err)
+			testutil.NoError(t, err, "读 %s 失败", f)
 		}
 		checked++
 		for i, line := range strings.Split(string(src), "\n") {
@@ -111,9 +108,7 @@ func TestCliTiming_NoTruncationAnywhere(t *testing.T) {
 			}
 		}
 	}
-	if checked < 20 {
-		t.Fatalf("全包扫描疑似失效（只扫了 %d 个非测试文件），glob 路径对不对？", checked)
-	}
+	testutil.Equal(t, checked < 20, false, "全包扫描疑似失效（只扫了 %d 个非测试文件），glob 路径对不对？", checked)
 }
 
 // TestToJson_SuccessPathUnchanged：正常路径不受兜底改动影响。
@@ -122,7 +117,7 @@ func TestToJson_SuccessPathUnchanged(t *testing.T) {
 	got := resp.ToJson()
 	var out map[string]interface{}
 	if err := json.Unmarshal([]byte(got), &out); err != nil {
-		t.Fatalf("正常路径输出非法 JSON: %v", err)
+		testutil.NoError(t, err, "正常路径输出非法 JSON")
 	}
 	if out["status"] != "success" {
 		t.Errorf("status 应为 success, got %v", out["status"])
@@ -141,9 +136,7 @@ func TestNewJsonError_PassthroughAppErrorCode(t *testing.T) {
 		Suggestion: "请检查路径",
 	}
 	resp := NewJsonError("import", appErr, 5)
-	if resp.Error == nil {
-		t.Fatal("应产出 JsonError")
-	}
+	testutil.NotNil(t, resp.Error, "应产出 JsonError")
 	if resp.Error.Code != string(types.ErrInvalidPath) {
 		t.Errorf("AppError.Code 应原样透传, 期望 %q, 得到 %q", string(types.ErrInvalidPath), resp.Error.Code)
 	}
@@ -156,15 +149,15 @@ func TestNewJsonError_PassthroughAppErrorCode(t *testing.T) {
 // param_error（前端 cli-bridge 既有的断言契约不受影响），不因新增 AppError 分支而退化。
 func TestNewJsonError_LegacyErrParamUnchanged(t *testing.T) {
 	resp := NewJsonError("scan", newParamErrf("缺少 --dir 参数"), 3)
-	if resp.Error == nil || resp.Error.Code != "param_error" {
-		t.Fatalf("ErrParam 应保持 param_error, 得到 %+v", resp.Error)
-	}
+	// NotNil 序贯守卫：Error 非 nil 后才解引用 .Code（失败即 Goexit）
+	testutil.NotNil(t, resp.Error, "ErrParam 应保持 param_error")
+	testutil.Equal(t, resp.Error.Code, "param_error", "ErrParam 应保持 param_error, 得到 %+v", resp.Error)
 }
 
 // TestNewJsonError_LegacyErrRuntimeUnchanged：ErrRuntime → runtime_error 保持不变。
 func TestNewJsonError_LegacyErrRuntimeUnchanged(t *testing.T) {
 	resp := NewJsonError("model", newRuntimeErrf("模型解析失败"), 7)
-	if resp.Error == nil || resp.Error.Code != "runtime_error" {
-		t.Fatalf("ErrRuntime 应保持 runtime_error, 得到 %+v", resp.Error)
-	}
+	// NotNil 序贯守卫：Error 非 nil 后才解引用 .Code（失败即 Goexit）
+	testutil.NotNil(t, resp.Error, "ErrRuntime 应保持 runtime_error")
+	testutil.Equal(t, resp.Error.Code, "runtime_error", "ErrRuntime 应保持 runtime_error, 得到 %+v", resp.Error)
 }

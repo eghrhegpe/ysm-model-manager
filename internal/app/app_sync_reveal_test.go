@@ -4,6 +4,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"ysm-model-manager/internal/testutil"
 )
 
 // TestConflictLocalPath 冲突文件路径解析 + 越界守卫（2026-10-14）。
@@ -20,9 +22,7 @@ func TestConflictLocalPath(t *testing.T) {
 
 	t.Run("正常相对路径 → 拼到根内", func(t *testing.T) {
 		got, err := conflictLocalPath(root, "a/模型.ysm")
-		if err != nil {
-			t.Fatalf("合法路径不应报错: %v", err)
-		}
+		testutil.NoError(t, err, "合法路径不应报错")
 		want := filepath.Join(root, "a", "模型.ysm")
 		if got != want {
 			t.Errorf("解析结果 %q，期望 %q", got, want)
@@ -31,9 +31,7 @@ func TestConflictLocalPath(t *testing.T) {
 
 	t.Run("前后空白被裁剪（前端属性传递可能带空白）", func(t *testing.T) {
 		got, err := conflictLocalPath(root, "  a/b.png \t")
-		if err != nil {
-			t.Fatalf("裁剪后应合法: %v", err)
-		}
+		testutil.NoError(t, err, "裁剪后应合法")
 		if got != filepath.Join(root, "a", "b.png") {
 			t.Errorf("解析结果 %q 未按裁剪后的相对路径拼接", got)
 		}
@@ -67,9 +65,7 @@ func TestConflictLocalPath(t *testing.T) {
 		// 不会逃出根（安全），但也**不**等于调用方给的字面绝对路径——此断言钉住这一事实，
 		// 防有人「顺手」把 Join 改成直接返回入参（那才会真的逃逸）。
 		got, err := conflictLocalPath(root, "/etc/passwd")
-		if err != nil {
-			t.Fatalf("归一后应落在根内、不报错: %v", err)
-		}
+		testutil.NoError(t, err, "归一后应落在根内、不报错")
 		rel, relErr := filepath.Rel(root, got)
 		if relErr != nil || strings.HasPrefix(rel, "..") {
 			t.Errorf("绝对路径输入逃出了根: %q", got)

@@ -29,12 +29,9 @@ func TestCopyDirRecursive_RollbackOnPartialCopy(t *testing.T) {
 	testutil.LockDirExclusive(t, filepath.Join(src, "d"))
 
 	dst := filepath.Join(base, "dst")
-	if err := copyDirRecursive(src, dst); err == nil {
-		t.Fatal("枚举被锁子目录应失败")
-	}
-	if _, serr := os.Stat(dst); !os.IsNotExist(serr) {
-		t.Fatalf("新建目录整树回滚应删除 dst: %v", serr)
-	}
+	testutil.NotNil(t, copyDirRecursive(src, dst), "枚举被锁子目录应失败")
+	_, serr := os.Stat(dst)
+	testutil.Equal(t, os.IsNotExist(serr), true, "新建目录整树回滚应删除 dst: %v", serr)
 }
 
 // TestCopyDirRecursive_NoRollbackWhenDstExisted 复制中途失败且 dst 已存在
@@ -50,10 +47,6 @@ func TestCopyDirRecursive_NoRollbackWhenDstExisted(t *testing.T) {
 	dst := filepath.Join(base, "dst")
 	_ = os.MkdirAll(dst, 0755)
 	_ = os.WriteFile(filepath.Join(dst, "keep.txt"), []byte("keep"), 0644)
-	if err := copyDirRecursive(src, dst); err == nil {
-		t.Fatal("枚举被锁子目录应失败")
-	}
-	if _, err := os.Stat(filepath.Join(dst, "keep.txt")); err != nil {
-		t.Fatalf("既有目录不应被回滚清理: %v", err)
-	}
+	testutil.NotNil(t, copyDirRecursive(src, dst), "枚举被锁子目录应失败")
+	testutil.FileExists(t, filepath.Join(dst, "keep.txt"), "既有目录不应被回滚清理")
 }

@@ -50,7 +50,7 @@ func runGUIFlowForTest(t *testing.T) (*CmdContext, *flowFakeApp) {
 	dir := t.TempDir()
 	modelPath := filepath.Join(dir, "a.ysm")
 	if err := os.WriteFile(modelPath, []byte("fake-ysm-bytes-for-hash"), 0o644); err != nil {
-		t.Fatalf("写模型文件失败: %v", err)
+		testutil.NoError(t, err, "写模型文件失败")
 	}
 	fake := &flowFakeApp{entries: []types.ModelEntry{{Path: modelPath, Name: "a", Ext: ".ysm"}}}
 	ctx := &CmdContext{
@@ -70,9 +70,7 @@ func TestGUIFlow_AnalyzesModelExactlyOnce(t *testing.T) {
 		t.Errorf("同一模型每次运行只应分析一次（③ 分析后 ⑤⑥ 复用），实际 %d 次", got)
 	}
 	structured, ok := ctx.result.(*guiFlowStructured)
-	if !ok {
-		t.Fatalf("SetResult 应为 *guiFlowStructured, got %T", ctx.result)
-	}
+	testutil.Equal(t, ok, true, "SetResult 应为 *guiFlowStructured, got %T", ctx.result)
 	// ⑦ 阶段里 ⑥ 必须存在（--verbose 打开），且不能把重复分析耗时算进来
 	for _, s := range structured.Stages {
 		if s.Name == "⑥ 渲染预估" && s.Ms != 0 {
@@ -84,9 +82,7 @@ func TestGUIFlow_AnalyzesModelExactlyOnce(t *testing.T) {
 func TestGUIFlow_EstimatedStagesSeparatedFromMeasured(t *testing.T) {
 	ctx, _ := runGUIFlowForTest(t)
 	structured, ok := ctx.result.(*guiFlowStructured)
-	if !ok {
-		t.Fatalf("SetResult 应为 *guiFlowStructured, got %T", ctx.result)
-	}
+	testutil.Equal(t, ok, true, "SetResult 应为 *guiFlowStructured, got %T", ctx.result)
 
 	byName := map[string]guiFlowStageItem{}
 	for _, s := range structured.Stages {
@@ -94,9 +90,7 @@ func TestGUIFlow_EstimatedStagesSeparatedFromMeasured(t *testing.T) {
 	}
 
 	six, ok := byName["⑥ 渲染预估"]
-	if !ok {
-		t.Fatalf("--verbose 下应有 ⑥ 渲染预估: %+v", structured.Stages)
-	}
+	testutil.Equal(t, ok, true, "--verbose 下应有 ⑥ 渲染预估: %+v", structured.Stages)
 	if six.Kind != "estimated" {
 		t.Errorf("⑥ 无渲染管线，kind 应为 estimated, got %q", six.Kind)
 	}
@@ -108,9 +102,7 @@ func TestGUIFlow_EstimatedStagesSeparatedFromMeasured(t *testing.T) {
 	}
 
 	five, ok := byName["⑤ 数据准备"]
-	if !ok {
-		t.Fatalf("应有 ⑤ 数据准备: %+v", structured.Stages)
-	}
+	testutil.Equal(t, ok, true, "应有 ⑤ 数据准备: %+v", structured.Stages)
 	if five.Kind != "measured" {
 		t.Errorf("⑤ 的阶段耗时是实测的序列化工作，kind 应为 measured, got %q", five.Kind)
 	}
@@ -194,9 +186,7 @@ func TestScanRateSuffix(t *testing.T) {
 func TestGUIFlow_StructuredNoNonFinite(t *testing.T) {
 	ctx, _ := runGUIFlowForTest(t)
 	g, ok := ctx.result.(*guiFlowStructured)
-	if !ok {
-		t.Fatalf("gui-flow 应设置结构化载荷, got %T", ctx.result)
-	}
+	testutil.Equal(t, ok, true, "gui-flow 应设置结构化载荷, got %T", ctx.result)
 	for _, s := range g.Stages {
 		for _, line := range s.Desc {
 			for _, bad := range []string{"Inf", "NaN"} {

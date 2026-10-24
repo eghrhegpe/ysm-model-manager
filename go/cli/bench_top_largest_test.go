@@ -52,14 +52,10 @@ func TestScanTopLargestTargets_RanksByFootprintNotManifestSize(t *testing.T) {
 	smallDir := writeDirFormYsm(t, root, "a_small")
 
 	targets, found := repoPerfTargets(root, perfOrderSize, 3)
-	if len(targets) != 3 {
-		t.Fatalf("应取到 3 条, got %d: %+v", len(targets), targets)
-	}
+	testutil.Equal(t, len(targets), 3, "应取到 3 条: %+v", targets)
 	want := []string{packed, bigDir, smallDir}
 	for i, w := range want {
-		if targets[i].Path != w {
-			t.Fatalf("第 %d 名应为 %s（按占用降序）, got %s\n完整: %+v", i+1, w, targets[i].Path, targets)
-		}
+		testutil.Equal(t, targets[i].Path, w, "第 %d 名（按占用降序）\n完整: %+v", i+1, targets)
 	}
 	if targets[1].Footprint <= targets[2].Footprint {
 		t.Errorf("目录式模型占用必须含内部文件: z_big=%d a_small=%d", targets[1].Footprint, targets[2].Footprint)
@@ -77,14 +73,12 @@ func TestScanTopLargestTargets_TieBreakByPathAndCap(t *testing.T) {
 	aEntry := writeDirFormYsm(t, root, "a_model")
 
 	targets, _ := repoPerfTargets(root, perfOrderSize, 1)
-	if len(targets) != 1 || targets[0].Path != aEntry {
-		t.Fatalf("截断应保留路径较小者, got %+v", targets)
-	}
+	testutil.Equal(t, len(targets), 1, "截断应保留路径较小者, got %+v", targets)
+	// len 已由上一断言守卫（失败即 Goexit），targets[0] 才安全
+	testutil.Equal(t, targets[0].Path, aEntry, "截断应保留路径较小者, got %+v", targets)
 
 	targets2, _ := repoPerfTargets(root, perfOrderSize, 5)
-	if len(targets2) != 2 {
-		t.Fatalf("上限大于候选数时返回全部, got %d", len(targets2))
-	}
+	testutil.Equal(t, len(targets2), 2, "上限大于候选数时返回全部, got %d", len(targets2))
 	if targets2[0].Path != aEntry || targets2[1].Path != bEntry {
 		t.Errorf("同占用应按路径升序, got %s / %s", targets2[0].Path, targets2[1].Path)
 	}
@@ -107,9 +101,7 @@ func TestScanTopLargestTargets_IncludesNonAnalyzableTypes(t *testing.T) {
 	writeFileBytes(t, pmx, 90000)
 
 	targets, found := repoPerfTargets(root, perfOrderSize, 2)
-	if len(targets) != 2 {
-		t.Fatalf("应取 2 条, got %+v", targets)
-	}
+	testutil.Equal(t, len(targets), 2, "应取 2 条, got %+v", targets)
 	if targets[0].Path != pmx {
 		t.Errorf("最大者应是 90KB 的 PMX（不因 CLI 不可分析而被静默排除）, got %s", targets[0].Path)
 	}
@@ -132,7 +124,7 @@ func TestRunSingleBenchRepo_JSONShape(t *testing.T) {
 	testutil.NoError(t, err, "--target repo --order size --max-models 2 报错")
 	var m singleBenchMatrixJSON
 	if err := json.Unmarshal([]byte(out), &m); err != nil {
-		t.Fatalf("载荷不是纯 JSON: %v\n%s", err, out)
+		testutil.NoError(t, err, "载荷不是纯 JSON:\n%s", out)
 	}
 	// 三旋钮逐个回显（旧面只有一个 top_largest，且它同时身兼「排序」与「取几条」两义）
 	if m.Spec.Target != perfTargetRepo || m.Spec.Order != perfOrderSize || m.Spec.MaxModels != 2 {
@@ -144,9 +136,7 @@ func TestRunSingleBenchRepo_JSONShape(t *testing.T) {
 	if m.Spec.Rtype != "" {
 		t.Errorf("全库扁平不是按类型取样: rtype=%q", m.Spec.Rtype)
 	}
-	if len(m.Models) != 2 {
-		t.Fatalf("应采集 2 条, got %d", len(m.Models))
-	}
+	testutil.Equal(t, len(m.Models), 2, "应采集 2 条, got %d", len(m.Models))
 	for _, p := range m.Models {
 		if len(p.Stages) != 7 {
 			t.Errorf("目录式 ysm 应产出 7 阶段: %s → %d", p.Model, len(p.Stages))
@@ -190,9 +180,7 @@ func TestRunSingleBenchRepo_ModelOrderMatchesRanking(t *testing.T) {
 	if err := json.Unmarshal([]byte(out), &m); err != nil {
 		testutil.NoError(t, err)
 	}
-	if len(m.Models) != len(ranked) {
-		t.Fatalf("载荷条数应与排名一致: %d vs %d", len(m.Models), len(ranked))
-	}
+	testutil.Equal(t, len(m.Models), len(ranked), "载荷条数应与排名一致: %d vs %d", len(m.Models), len(ranked))
 	for i, p := range m.Models {
 		if p.Model != ranked[i].Path {
 			t.Errorf("models[%d] 应为排名第 %d 的 %s, got %s", i, i+1, ranked[i].Path, p.Model)
@@ -257,7 +245,7 @@ func TestSingleBench_TargetAll_SizeOrder_CapPerType(t *testing.T) {
 	testutil.NoError(t, err, "--target all --order size 报错")
 	var m singleBenchMatrixJSON
 	if err := json.Unmarshal([]byte(out), &m); err != nil {
-		t.Fatalf("载荷不是纯 JSON: %v\n%s", err, out)
+		testutil.NoError(t, err, "载荷不是纯 JSON:\n%s", out)
 	}
 	if m.Spec.Target != perfTargetAll || m.Spec.Order != perfOrderSize || m.Spec.MaxModels != 1 {
 		t.Errorf("spec 应回显三旋钮: %+v", m.Spec)
@@ -265,12 +253,8 @@ func TestSingleBench_TargetAll_SizeOrder_CapPerType(t *testing.T) {
 	if m.Spec.SizeSource != perfSizeSourceDirTotal {
 		t.Errorf("size 序应回显体量口径: %+v", m.Spec)
 	}
-	if len(m.Spec.Types) != 2 {
-		t.Fatalf("两个类型各应有一项汇总: %+v", m.Spec.Types)
-	}
-	if len(m.Models) != 2 {
-		t.Fatalf("all = 每类型各 1 条（不是全库扁平 1 条）, got %d: %+v", len(m.Models), m.Models)
-	}
+	testutil.Equal(t, len(m.Spec.Types), 2, "两个类型各应有一项汇总: %+v", m.Spec.Types)
+	testutil.Equal(t, len(m.Models), 2, "all = 每类型各 1 条（不是全库扁平 1 条）, got %+v", m.Models)
 	// 类型字典序：EntityPlayer 在前，ysm 在后
 	if got := m.Models[0].Model; got != pmx {
 		t.Errorf("EntityPlayer 组内唯一候选应是 90KB 的 PMX, got %s", got)

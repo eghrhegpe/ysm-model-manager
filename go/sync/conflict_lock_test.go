@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/installer"
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // 持锁调用 ResolveConflictsLocked：空冲突返回全 0。
@@ -16,9 +17,10 @@ func TestResolveConflictsLocked_HeldLock(t *testing.T) {
 	installer.InstallLocker.Lock()
 	defer installer.InstallLocker.Unlock()
 	resolved, failed, manual := ResolveConflictsLocked(nil, ResolveManual, "", "")
-	if resolved != 0 || failed != 0 || manual != 0 {
-		t.Fatalf("空冲突应全 0, got %d/%d/%d", resolved, failed, manual)
-	}
+	// 原三元复合条件拆序贯
+	testutil.Equal(t, resolved, 0, "空冲突应全 0, got %d/%d/%d", resolved, failed, manual)
+	testutil.Equal(t, failed, 0, "空冲突应全 0, got %d/%d/%d", resolved, failed, manual)
+	testutil.Equal(t, manual, 0, "空冲突应全 0, got %d/%d/%d", resolved, failed, manual)
 }
 
 // HashFailed 条目（哈希计算失败）不覆盖 SuggestedStrategy，直接计入 manual：
@@ -35,7 +37,8 @@ func TestResolveConflictsLocked_HashFailedCountsManual(t *testing.T) {
 		},
 	}
 	resolved, failed, manual := ResolveConflictsLocked(conflicts, ResolveForceRemote, t.TempDir(), t.TempDir())
-	if resolved != 0 || failed != 0 || manual != 1 {
-		t.Fatalf("HashFailed 条目应只计 manual=1, got %d/%d/%d", resolved, failed, manual)
-	}
+	// 原三元复合条件拆序贯
+	testutil.Equal(t, resolved, 0, "HashFailed 条目应只计 manual=1, got %d/%d/%d", resolved, failed, manual)
+	testutil.Equal(t, failed, 0, "HashFailed 条目应只计 manual=1, got %d/%d/%d", resolved, failed, manual)
+	testutil.Equal(t, manual, 1, "HashFailed 条目应只计 manual=1, got %d/%d/%d", resolved, failed, manual)
 }

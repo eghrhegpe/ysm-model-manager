@@ -44,13 +44,11 @@ func TestFindComponents_BackslashTexDecl(t *testing.T) {
 	}
 
 	comps, texNames := FindComponentsInExtractedYSM(filepath.Join(dir, "ysm.json"))
-	if len(comps) != 1 {
-		t.Fatalf("组件数 = %d, 期望 1", len(comps))
-	}
+	testutil.Equal(t, len(comps), 1, "组件数 = %d, 期望 1", len(comps))
 	// 反斜杠裸声明 → 声明纹理槽 0 → texNames[0] 应为去扩展名 basename "skin"
-	if len(texNames) != 1 || texNames[0] != "skin" {
-		t.Fatalf("texNames = %v, 期望 [skin]（反斜杠裸路径应切 basename）", texNames)
-	}
+	// 原复合条件拆序贯（len 守卫下方 texNames[0] 索引）
+	testutil.Equal(t, len(texNames), 1, "texNames = %v, 期望 [skin]", texNames)
+	testutil.Equal(t, texNames[0], "skin", "texNames = %v, 期望 [skin]（反斜杠裸路径应切 basename）", texNames)
 }
 
 // TestFindComponents_SubdirSameNameTex 未声明组件与纹理**子目录**同名文件应命中
@@ -83,9 +81,7 @@ func TestFindComponents_SubdirSameNameTex(t *testing.T) {
 
 	comps, _ := FindComponentsInExtractedYSM(filepath.Join(dir, "ysm.json"))
 	// main + arrow（补扫）
-	if len(comps) != 2 {
-		t.Fatalf("组件数 = %d, 期望 2", len(comps))
-	}
+	testutil.Equal(t, len(comps), 2, "组件数 = %d, 期望 2", len(comps))
 	var arrow *types.BedrockModel
 	for i := range comps {
 		if comps[i].SourceName == "arrow" {
@@ -94,9 +90,7 @@ func TestFindComponents_SubdirSameNameTex(t *testing.T) {
 		}
 	}
 	testutil.NotNil(t, arrow, "未找到补扫组件 arrow")
-	if len(arrow.ComponentTextures) == 0 {
-		t.Fatal("未声明组件应命中子目录同名纹理兜底（ComponentTextures 非空）")
-	}
+	testutil.Equal(t, len(arrow.ComponentTextures) == 0, false, "未声明组件应命中子目录同名纹理兜底（ComponentTextures 非空）, 实际 %v", arrow.ComponentTextures)
 }
 
 // TestFindComponents_TgaSameNameTex 未声明组件与 .tga 同名纹理**不**走 perComponent
@@ -127,9 +121,7 @@ func TestFindComponents_TgaSameNameTex(t *testing.T) {
 	}
 
 	comps, _ := FindComponentsInExtractedYSM(filepath.Join(dir, "ysm.json"))
-	if len(comps) != 2 {
-		t.Fatalf("组件数 = %d, 期望 2（main + boat 补扫）", len(comps))
-	}
+	testutil.Equal(t, len(comps), 2, "组件数 = %d, 期望 2（main + boat 补扫）", len(comps))
 	var boat *types.BedrockModel
 	for i := range comps {
 		if comps[i].SourceName == "boat" {
@@ -138,9 +130,7 @@ func TestFindComponents_TgaSameNameTex(t *testing.T) {
 		}
 	}
 	testutil.NotNil(t, boat, "未找到补扫组件 boat")
-	if len(boat.ComponentTextures) != 0 {
-		t.Fatalf(".tga 同名纹理不得产出 data URI（浏览器不可解码），实际 ComponentTextures = %v", boat.ComponentTextures)
-	}
+	testutil.Equal(t, len(boat.ComponentTextures), 0, ".tga 同名纹理不得产出 data URI（浏览器不可解码），实际 ComponentTextures = %v", boat.ComponentTextures)
 }
 
 // TestFindComponents_JpgSameNameTex 未声明组件与 .jpg 同名纹理应命中 perComponent 兜底，
@@ -170,9 +160,7 @@ func TestFindComponents_JpgSameNameTex(t *testing.T) {
 	}
 
 	comps, _ := FindComponentsInExtractedYSM(filepath.Join(dir, "ysm.json"))
-	if len(comps) != 2 {
-		t.Fatalf("组件数 = %d, 期望 2（main + boat 补扫）", len(comps))
-	}
+	testutil.Equal(t, len(comps), 2, "组件数 = %d, 期望 2（main + boat 补扫）", len(comps))
 	var boat *types.BedrockModel
 	for i := range comps {
 		if comps[i].SourceName == "boat" {
@@ -181,10 +169,10 @@ func TestFindComponents_JpgSameNameTex(t *testing.T) {
 		}
 	}
 	testutil.NotNil(t, boat, "未找到补扫组件 boat")
+	// 原复合条件拆序贯（守卫下方 ct[0] 索引）
 	ct, ok := boat.ComponentTextures["boat"]
-	if !ok || len(ct) != 1 {
-		t.Fatalf("未声明组件应命中 .jpg 同名纹理兜底，实际 ComponentTextures = %v", boat.ComponentTextures)
-	}
+	testutil.Equal(t, ok, true, "未声明组件应命中 .jpg 同名纹理兜底，实际 ComponentTextures = %v", boat.ComponentTextures)
+	testutil.Equal(t, len(ct), 1, "未声明组件应命中 .jpg 同名纹理兜底（1 张），实际 ComponentTextures = %v", boat.ComponentTextures)
 	if !strings.HasPrefix(ct[0], "data:image/jpeg;base64,") {
 		t.Errorf(".jpg 同名纹理 data URI 应为 image/jpeg，实际前缀 %.40q", ct[0])
 	}
@@ -225,9 +213,7 @@ func TestFindComponents_DeclaredOutOfRangeSameNameTex(t *testing.T) {
 	}
 
 	comps, _ := FindComponentsInExtractedYSM(filepath.Join(dir, "ysm.json"))
-	if len(comps) != 2 {
-		t.Fatalf("组件数 = %d, 期望 2（main + extra 声明）", len(comps))
-	}
+	testutil.Equal(t, len(comps), 2, "组件数 = %d, 期望 2（main + extra 声明）", len(comps))
 	var extra *types.BedrockModel
 	for i := range comps {
 		if comps[i].SourceName == "extra" {
@@ -237,15 +223,12 @@ func TestFindComponents_DeclaredOutOfRangeSameNameTex(t *testing.T) {
 	}
 	testutil.NotNil(t, extra, "未找到声明组件 extra")
 	// extra 已声明但超范围：应钳到最后一张声明纹理 skin（共享默认皮肤），
-	// 而非绑定自己的 extra.png 同名纹理
+	// 而非绑定自己的 extra.png 同名纹理。原复合条件拆序贯（守卫下方 ct[0] 索引）
 	ct, ok := extra.ComponentTextures["extra"]
-	if !ok || len(ct) != 1 {
-		t.Fatalf("超范围声明组件应命中共享默认纹理兜底，实际 ComponentTextures = %v", extra.ComponentTextures)
-	}
+	testutil.Equal(t, ok, true, "超范围声明组件应命中共享默认纹理兜底，实际 ComponentTextures = %v", extra.ComponentTextures)
+	testutil.Equal(t, len(ct), 1, "超范围声明组件应命中共享默认纹理兜底（1 张），实际 ComponentTextures = %v", extra.ComponentTextures)
 	uri := ct[0]
-	if !strings.HasPrefix(uri, "data:image/png;base64,") {
-		t.Fatalf("data URI 应为 PNG，实际前缀 %.40q", uri)
-	}
+	testutil.Equal(t, strings.HasPrefix(uri, "data:image/png;base64,"), true, "data URI 应为 PNG，实际前缀 %.40q", uri)
 	decoded, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(uri, "data:image/png;base64,"))
 	testutil.NoError(t, err, "data URI base64 解码失败")
 	if string(decoded) != string(skinBytes) {

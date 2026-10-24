@@ -19,6 +19,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"ysm-model-manager/internal/testutil"
 )
 
 // captureLog 把 log 输出重定向到 buf，返回恢复函数。
@@ -36,12 +38,8 @@ func TestLoadAppConfig_LogsCorruptJSON(t *testing.T) {
 	t.Cleanup(func() { pathMgr = orig })
 
 	// 落一份损坏的 JSON
-	if err := os.MkdirAll(filepath.Dir(configPath()), 0o755); err != nil {
-		t.Fatalf("mkdir: %v", err)
-	}
-	if err := os.WriteFile(configPath(), []byte("{ not valid json"), 0o644); err != nil {
-		t.Fatalf("write corrupt: %v", err)
-	}
+	testutil.NoError(t, os.MkdirAll(filepath.Dir(configPath()), 0o755), "mkdir")
+	testutil.NoError(t, os.WriteFile(configPath(), []byte("{ not valid json"), 0o644), "write corrupt")
 
 	var buf bytes.Buffer
 	restore := captureLog(t, &buf)

@@ -38,9 +38,8 @@ func repoRoot(t *testing.T) string {
 			return dir
 		}
 		parent := filepath.Dir(dir)
-		if parent == dir {
-			t.Fatal("未找到仓库根 go.mod")
-		}
+		// 纯串护栏改布尔化：到达根仍未命中 go.mod 即失败
+		testutil.Equal(t, parent == dir, false, "未找到仓库根 go.mod")
 		dir = parent
 	}
 }
@@ -49,12 +48,8 @@ func TestComplexityParityWithTS(t *testing.T) {
 	raw, err := os.ReadFile(filepath.Join(repoRoot(t), "tests", "parity", "go-ts-complexity.json"))
 	testutil.NoError(t, err, "读取契约向量失败")
 	var fx fixtureFile
-	if err := json.Unmarshal(raw, &fx); err != nil {
-		t.Fatalf("解析契约向量失败: %v", err)
-	}
-	if len(fx.Reduce) == 0 {
-		t.Fatal("契约向量为空（防空转守卫）")
-	}
+	testutil.NoError(t, json.Unmarshal(raw, &fx), "解析契约向量失败")
+	testutil.Equal(t, len(fx.Reduce) > 0, true, "契约向量为空（防空转守卫）")
 	for _, c := range fx.Reduce {
 		seq := make([]Event, 0, len(c.Seq))
 		for _, e := range c.Seq {
@@ -73,16 +68,17 @@ func TestComplexityParityWithTS(t *testing.T) {
 // 规约器语义锚点（不依赖向量文件的直觉用例）：确保 1+depth 规则不被向量回归。
 func TestCognitiveFromSeqBasics(t *testing.T) {
 	// 平坦 if → 1/1
-	if c, n := CognitiveFromSeq([]Event{{K: "nest", KindName: "if"}, {K: "nestClose"}}); c != 1 || n != 1 {
-		t.Fatalf("平坦 if: got %d/%d want 1/1", c, n)
-	}
+	c, n := CognitiveFromSeq([]Event{{K: "nest", KindName: "if"}, {K: "nestClose"}})
+	// OR 拆序贯：cognitive 与 nesting 分别断言
+	testutil.Equal(t, c, 1, "平坦 if: got %d/%d want 1/1", c, n)
+	testutil.Equal(t, n, 1, "平坦 if: got %d/%d want 1/1", c, n)
 	// 双嵌套 → 1+2=3/2
 	deep := []Event{{K: "nest", KindName: "loop"}, {K: "nest", KindName: "if"}, {K: "nestClose"}, {K: "nestClose"}}
-	if c, n := CognitiveFromSeq(deep); c != 3 || n != 2 {
-		t.Fatalf("双嵌套: got %d/%d want 3/2", c, n)
-	}
+	c, n = CognitiveFromSeq(deep)
+	testutil.Equal(t, c, 3, "双嵌套: got %d/%d want 3/2", c, n)
+	testutil.Equal(t, n, 2, "双嵌套: got %d/%d want 3/2", c, n)
 	// 空序列 → 0/0
-	if c, n := CognitiveFromSeq(nil); c != 0 || n != 0 {
-		t.Fatalf("空序列: got %d/%d want 0/0", c, n)
-	}
+	c, n = CognitiveFromSeq(nil)
+	testutil.Equal(t, c, 0, "空序列: got %d/%d want 0/0", c, n)
+	testutil.Equal(t, n, 0, "空序列: got %d/%d want 0/0", c, n)
 }

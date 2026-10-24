@@ -34,10 +34,10 @@ func TestFindGeometryInExtractedYSM_ExcludesArm(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 
-	model, err := FindGeometryInExtractedYSM(filepath.Join(dir, "ysm.json"))
-	if err != nil {
-		t.Fatalf("FindGeometryInExtractedYSM 失败: %v", err)
-	}
+	// 注：第二返回值是纹理数据（[][]byte）非 error；原 `if err != nil { t.Fatalf }`
+	// 变量名误导，实际语义 = 失败 iff 纹理非 nil——按原行为保真改写为 Nil 断言。
+	model, tex := FindGeometryInExtractedYSM(filepath.Join(dir, "ysm.json"))
+	testutil.Nil(t, tex, "FindGeometryInExtractedYSM 失败")
 	testutil.NotNil(t, model, "模型应为非 nil")
 	for _, b := range model.Bones {
 		if b.Name == "LeftArm" {
@@ -63,10 +63,9 @@ func TestFindGeometryInExtractedYSM_ArmMissing(t *testing.T) {
 	}
 	// arm.json 故意不创建
 
-	model, err := FindGeometryInExtractedYSM(filepath.Join(dir, "ysm.json"))
-	if err != nil {
-		t.Fatalf("FindGeometryInExtractedYSM 失败: %v", err)
-	}
+	// 同上：第二返回值是纹理数据非 error，按原 `err != nil` 行为保真改写为 Nil 断言。
+	model, tex := FindGeometryInExtractedYSM(filepath.Join(dir, "ysm.json"))
+	testutil.Nil(t, tex, "FindGeometryInExtractedYSM 失败")
 	testutil.NotNil(t, model, "模型应为非 nil（main.json 应正常加载）")
 	if len(model.Bones) != 1 || model.Bones[0].Name != "head" {
 		t.Errorf("应仅加载 main 骨骼，得到 %v", model.Bones)

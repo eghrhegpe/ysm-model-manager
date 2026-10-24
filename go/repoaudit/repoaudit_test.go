@@ -5,7 +5,6 @@ package repoaudit
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"ysm-model-manager/go/internal/testutil"
 
@@ -133,10 +132,13 @@ func TestAudit_RealFiles_ScoreExact(t *testing.T) {
 
 	res, err := Audit(dir)
 	testutil.NoError(t, err, "Audit 应成功, got")
-	if res.Completeness.Checked != 12 || res.Completeness.Valid != 10 || res.Completeness.Invalid != 2 {
-		t.Fatalf("完整性统计错位: checked=%d valid=%d invalid=%d",
-			res.Completeness.Checked, res.Completeness.Valid, res.Completeness.Invalid)
-	}
+	// OR 拆序贯：三个统计字段分别断言
+	testutil.Equal(t, res.Completeness.Checked, 12, "完整性统计错位: checked=%d valid=%d invalid=%d",
+		res.Completeness.Checked, res.Completeness.Valid, res.Completeness.Invalid)
+	testutil.Equal(t, res.Completeness.Valid, 10, "完整性统计错位: checked=%d valid=%d invalid=%d",
+		res.Completeness.Checked, res.Completeness.Valid, res.Completeness.Invalid)
+	testutil.Equal(t, res.Completeness.Invalid, 2, "完整性统计错位: checked=%d valid=%d invalid=%d",
+		res.Completeness.Checked, res.Completeness.Valid, res.Completeness.Invalid)
 
 	cacheDed := 0
 	if res.Cache.CacheFiles == 0 {
@@ -362,40 +364,24 @@ func TestClassifyWith_RebuildOnRegistrySwap(t *testing.T) {
 	registry.SetRegistryPath(reg1)
 	defer registry.SetRegistryPath("")
 	regA := registry.LoadRegistry()
-	if got := ClassifyWith(regA, ".aaa"); got != "alpha" {
-		t.Fatalf("reg1 下 ClassifyWith('.aaa') 应为 alpha, got %q", got)
-	}
-	if got := ClassifyWith(regA, ".bbb"); got != "other" {
-		t.Fatalf("reg1 下 ClassifyWith('.bbb') 应为 other, got %q", got)
-	}
+	testutil.Equal(t, ClassifyWith(regA, ".aaa"), "alpha", "reg1 下 ClassifyWith('.aaa') 应为 alpha")
+	testutil.Equal(t, ClassifyWith(regA, ".bbb"), "other", "reg1 下 ClassifyWith('.bbb') 应为 other")
 
 	// 切换注册表 → 缓存必须随新实例重建（新指针 → 缓存失效）
 	registry.SetRegistryPath(reg2)
 	regB := registry.LoadRegistry()
-	if got := ClassifyWith(regB, ".bbb"); got != "beta" {
-		t.Fatalf("切到 reg2 后 ClassifyWith('.bbb') 应为 beta（缓存需随实例重建）, got %q", got)
-	}
-	if got := ClassifyWith(regB, ".aaa"); got != "other" {
-		t.Fatalf("切到 reg2 后 ClassifyWith('.aaa') 应为 other, got %q", got)
-	}
+	testutil.Equal(t, ClassifyWith(regB, ".bbb"), "beta", "切到 reg2 后 ClassifyWith('.bbb') 应为 beta（缓存需随实例重建）")
+	testutil.Equal(t, ClassifyWith(regB, ".aaa"), "other", "切到 reg2 后 ClassifyWith('.aaa') 应为 other")
 
 	// 无参 Classify 入口（内部 LoadRegistry）与传 reg 变体口径一致
-	if got := Classify(".bbb"); got != "beta" {
-		t.Fatalf("切到 reg2 后 Classify('.bbb') 应为 beta, got %q", got)
-	}
+	testutil.Equal(t, Classify(".bbb"), "beta", "切到 reg2 后 Classify('.bbb') 应为 beta")
 
 	// 旧实例指针（regA）调用：全局缓存槽已被 regB 占用 → 以 regA 重建并服务
 	// regA 自有内容（.aaa→alpha，自洽）——缓存颠簸但不错判
-	if got := ClassifyWith(regA, ".aaa"); got != "alpha" {
-		t.Fatalf("旧实例 regA 判 '.aaa' 应以 regA 内容重建返回 alpha, got %q", got)
-	}
+	testutil.Equal(t, ClassifyWith(regA, ".aaa"), "alpha", "旧实例 regA 判 '.aaa' 应以 regA 内容重建返回 alpha")
 	// 颠簸后回切 regB 仍正确（每次构建以传入 reg 为准，不误服务对方 stale 映射）
-	if got := ClassifyWith(regB, ".bbb"); got != "beta" {
-		t.Fatalf("颠簸后 regB 判 '.bbb' 仍应 beta, got %q", got)
-	}
-	if got := ClassifyWith(regB, ".aaa"); got != "other" {
-		t.Fatalf("颠簸后 regB 判 '.aaa' 应 other（regB 未声明 .aaa）, got %q", got)
-	}
+	testutil.Equal(t, ClassifyWith(regB, ".bbb"), "beta", "颠簸后 regB 判 '.bbb' 仍应 beta")
+	testutil.Equal(t, ClassifyWith(regB, ".aaa"), "other", "颠簸后 regB 判 '.aaa' 应 other（regB 未声明 .aaa）")
 }
 
 // TestHealthReportForCtx_PreCancelled ADR-314：预取消 ctx 确定性验证——walk 首个
@@ -408,7 +394,5 @@ func TestHealthReportForCtx_PreCancelled(t *testing.T) {
 		testutil.NoError(t, err)
 	}
 	_, err := HealthReportForCtx(ctx, dir)
-	if !errors.Is(err, context.Canceled) {
-		t.Fatalf("预取消 ctx 应返回 context.Canceled 链, got %v", err)
-	}
+	testutil.ErrorIs(t, err, context.Canceled, "预取消 ctx 应返回 context.Canceled 链, got %v", err)
 }

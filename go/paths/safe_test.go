@@ -17,15 +17,11 @@ func TestIsInside(t *testing.T) {
 
 	t.Run("目录内文件 → nil", func(t *testing.T) {
 		inside := filepath.Join(base, "sub", "model.ysm")
-		if err := IsInside(base, inside); err != nil {
-			t.Fatalf("期望 nil, got %v", err)
-		}
+		testutil.NoError(t, IsInside(base, inside), "期望 nil")
 	})
 
 	t.Run("路径相等 → nil", func(t *testing.T) {
-		if err := IsInside(base, base); err != nil {
-			t.Fatalf("期望 nil, got %v", err)
-		}
+		testutil.NoError(t, IsInside(base, base), "期望 nil")
 	})
 
 	t.Run("目录外（.. 穿越）→ ErrPathEscalation", func(t *testing.T) {
@@ -33,16 +29,13 @@ func TestIsInside(t *testing.T) {
 		err := IsInside(base, outside)
 		testutil.NotNil(t, err, "期望错误, got nil")
 		var esc *ErrPathEscalation
-		if !errors.As(err, &esc) {
-			t.Fatalf("期望 ErrPathEscalation, got %T: %v", err, err)
-		}
+		// sentinel 指针类型走 errors.As 布尔化，避免 go-cmp 反射比较
+		testutil.Equal(t, errors.As(err, &esc), true, "期望 ErrPathEscalation, got %T: %v", err, err)
 	})
 
 	t.Run("同级不同目录 → 拒绝", func(t *testing.T) {
 		sibling := filepath.Join(filepath.Dir(base), "other", "x.ysm")
-		if err := IsInside(base, sibling); err == nil {
-			t.Fatal("期望错误, got nil")
-		}
+		testutil.NotNil(t, IsInside(base, sibling), "期望错误")
 	})
 
 	t.Run("大小写差异（Windows 放行 / POSIX 拒绝）", func(t *testing.T) {
@@ -51,16 +44,12 @@ func TestIsInside(t *testing.T) {
 		baseMixed := strings.ToUpper(base)
 		if runtime.GOOS == "windows" {
 			// Windows：filepath.Rel 大小写不敏感 → 放行
-			if err := IsInside(baseMixed, inside); err != nil {
-				t.Fatalf("期望 nil（大小写不敏感）, got %v", err)
-			}
+			testutil.NoError(t, IsInside(baseMixed, inside), "期望 nil（大小写不敏感）")
 		} else {
 			// POSIX：filepath.Rel 大小写敏感 → baseMixed 与 inside 首字节分歧，
 			// rel 为 ../../../tmp/... 逃逸 → 必须拒绝（P2 修复：原无条件断言 Windows
 			// 语义，Linux/macOS 上该用例必然 FAIL——实现正确、测试错误）
-			if err := IsInside(baseMixed, inside); err == nil {
-				t.Fatal("POSIX 大小写敏感：期望错误, got nil")
-			}
+			testutil.NotNil(t, IsInside(baseMixed, inside), "POSIX 大小写敏感：期望错误")
 		}
 	})
 }
@@ -93,21 +82,15 @@ func TestContainsMinecraftMarker(t *testing.T) {
 func TestIsInside_DotDotFooNoFalsePositive(t *testing.T) {
 	base := filepath.Join(t.TempDir(), "repo")
 	inside := filepath.Join(base, "my..file.ysm")
-	if err := IsInside(base, inside); err != nil {
-		t.Fatalf("..foo 合法名应放行, got %v", err)
-	}
+	testutil.NoError(t, IsInside(base, inside), "..foo 合法名应放行")
 	// 真逃逸：base/../evil 必须拒绝
 	outside := filepath.Join(base, "..", "evil.ysm")
-	if err := IsInside(base, outside); err == nil {
-		t.Fatal(".. 逃逸应拒绝, got nil")
-	}
+	testutil.NotNil(t, IsInside(base, outside), ".. 逃逸应拒绝")
 	// 深层逃逸：跨两层以上（rel = ../../evil.ysm）——注意 filepath.Join 会折叠中间段，
 	// 需用真实四层回溯才能产出 `../../` 前缀（code_review P3：原 `base/a/../..` 被折叠后
 	// 与浅层 `outside` 相同，未真正覆盖深层分支）
 	deep := filepath.Join(base, "a", "b", "c", "..", "..", "..", "..", "evil.ysm")
-	if err := IsInside(base, deep); err == nil {
-		t.Fatal("深层 .. 逃逸应拒绝, got nil")
-	}
+	testutil.NotNil(t, IsInside(base, deep), "深层 .. 逃逸应拒绝")
 }
 
 func TestErrPathEscalation_Error(t *testing.T) {
@@ -123,22 +106,17 @@ func TestErrPathEscalation_Error(t *testing.T) {
 func TestIsInside_EmptyBaseDir(t *testing.T) {
 	err := IsInside("", "model.ysm")
 	testutil.NotNil(t, err, "空基准目录应被拒绝, got nil")
-	if !errors.Is(err, ErrEmptyBase) {
-		t.Fatalf("期望分类 ErrEmptyBase, got %v", err)
-	}
+	testutil.ErrorIs(t, err, ErrEmptyBase, "期望分类 ErrEmptyBase")
 	var esc *ErrPathEscalation
-	if !errors.As(err, &esc) {
-		t.Fatalf("期望 errors.As 命中 ErrPathEscalation, got %T: %v", err, err)
-	}
+	// sentinel 指针类型走 errors.As 布尔化，避免 go-cmp 反射比较
+	testutil.Equal(t, errors.As(err, &esc), true, "期望 errors.As 命中 ErrPathEscalation, got %T: %v", err, err)
 }
 
 // 未覆盖分支补测：基准目录含 NUL 字节必须拒绝（ErrNULByte，与路径侧同哨兵）
 func TestIsInside_NULInBaseDir(t *testing.T) {
 	err := IsInside("repo\x00base", "model.ysm")
 	testutil.NotNil(t, err, "含 NUL 的基准目录应被拒绝, got nil")
-	if !errors.Is(err, ErrNULByte) {
-		t.Fatalf("期望分类 ErrNULByte, got %v", err)
-	}
+	testutil.ErrorIs(t, err, ErrNULByte, "期望分类 ErrNULByte")
 }
 
 // 各失败分支的 sentinel 分类正确性（errors.Is 程序化契约，不依赖文案）
@@ -146,29 +124,18 @@ func TestIsInside_SentinelClassification(t *testing.T) {
 	base := filepath.Join(t.TempDir(), "repo")
 
 	// 空路径 → ErrEmptyPath
-	if err := IsInside(base, ""); !errors.Is(err, ErrEmptyPath) {
-		t.Fatalf("空路径应分类 ErrEmptyPath, got %v", err)
-	}
+	testutil.ErrorIs(t, IsInside(base, ""), ErrEmptyPath, "空路径应分类 ErrEmptyPath")
 	// 路径含 NUL → ErrNULByte
-	if err := IsInside(base, filepath.Join(base, "a")+"\x00../../etc"); !errors.Is(err, ErrNULByte) {
-		t.Fatalf("NUL 路径应分类 ErrNULByte, got %v", err)
-	}
+	testutil.ErrorIs(t, IsInside(base, filepath.Join(base, "a")+"\x00../../etc"), ErrNULByte, "NUL 路径应分类 ErrNULByte")
 	// 目录外（.. 穿越）→ ErrNotInside
-	if err := IsInside(base, filepath.Join(base, "..", "evil.ysm")); !errors.Is(err, ErrNotInside) {
-		t.Fatalf("越权应分类 ErrNotInside, got %v", err)
-	}
+	testutil.ErrorIs(t, IsInside(base, filepath.Join(base, "..", "evil.ysm")), ErrNotInside, "越权应分类 ErrNotInside")
 	// 目录外（前缀相似兄弟目录 /repo2，防 /repo 误匹配）→ ErrNotInside
-	if err := IsInside(base, filepath.Join(filepath.Dir(base), "repo2", "x.ysm")); !errors.Is(err, ErrNotInside) {
-		t.Fatalf("兄弟目录应分类 ErrNotInside, got %v", err)
-	}
+	testutil.ErrorIs(t, IsInside(base, filepath.Join(filepath.Dir(base), "repo2", "x.ysm")), ErrNotInside, "兄弟目录应分类 ErrNotInside")
 	// 正常放行 → nil（且不被任何哨兵命中）
-	if err := IsInside(base, filepath.Join(base, "sub", "model.ysm")); err != nil {
-		t.Fatalf("目录内应放行, got %v", err)
-	}
-	// 目录内路径 errors.Is(ErrNotInside) 必须为 false（反向验证分类无误伤）
-	if err := IsInside(base, filepath.Join(base, "sub", "model.ysm")); errors.Is(err, ErrNotInside) {
-		t.Fatal("目录内路径不得命中 ErrNotInside")
-	}
+	testutil.NoError(t, IsInside(base, filepath.Join(base, "sub", "model.ysm")), "目录内应放行")
+	// 目录内路径 errors.Is(ErrNotInside) 必须为 false（反向验证分类无误伤）；
+	// err 为 nil 时 errors.Is 安全返回 false，不短路依赖
+	testutil.Equal(t, errors.Is(IsInside(base, filepath.Join(base, "sub", "model.ysm")), ErrNotInside), false, "目录内路径不得命中 ErrNotInside")
 }
 
 // Windows 专属：跨驱动器触发 filepath.Rel 错误分支 → ErrRelFailed，
@@ -180,14 +147,12 @@ func TestIsInside_RelFailureSentinel_Windows(t *testing.T) {
 	}
 	err := IsInside(`C:\repo`, `D:\evil\file.ysm`)
 	testutil.NotNil(t, err, "跨驱动器应被拒绝, got nil")
-	if !errors.Is(err, ErrRelFailed) {
-		t.Fatalf("期望分类 ErrRelFailed, got %v", err)
-	}
+	testutil.ErrorIs(t, err, ErrRelFailed, "期望分类 ErrRelFailed")
 	u1 := errors.Unwrap(err) // *fmt.wrapError（ErrRelFailed + 底层 Rel 错误）
-	u2 := errors.Unwrap(u1)  // 底层 Rel 错误
-	if u1 == nil || u2 == nil {
-		t.Fatalf("期望 Unwrap 链 [ErrPathEscalation → wrapError → Rel 错误], got %v", err)
-	}
+	u2 := errors.Unwrap(u1)  // 底层 Rel 错误（Unwrap(nil) 安全返回 nil）
+	// OR 型复合条件拆序贯：逐层非 nil（原 if u1==nil || u2==nil）
+	testutil.NotNil(t, u1, "期望 Unwrap 链 [ErrPathEscalation → wrapError → Rel 错误], got %v", err)
+	testutil.NotNil(t, u2, "期望 Unwrap 链第二层（Rel 错误）非 nil, got %v", err)
 }
 
 // IsInsideResolved：解析两侧 symlink 后再判定（BUG-1）。无 symlink 场景下结论
@@ -196,19 +161,9 @@ func TestIsInside_RelFailureSentinel_Windows(t *testing.T) {
 func TestIsInsideResolved_NoSymlinkSameAsIsInside(t *testing.T) {
 	base := filepath.Join(t.TempDir(), "repo")
 
-	if err := IsInsideResolved(base, filepath.Join(base, "sub", "model.ysm")); err != nil {
-		t.Fatalf("目录内应放行, got %v", err)
-	}
-	if err := IsInsideResolved(base, base); err != nil {
-		t.Fatalf("相等应放行, got %v", err)
-	}
-	if err := IsInsideResolved(base, filepath.Join(base, "..", "evil.ysm")); !errors.Is(err, ErrNotInside) {
-		t.Fatalf("词法逃逸应拒绝并分类 ErrNotInside, got %v", err)
-	}
-	if err := IsInsideResolved(base, ""); !errors.Is(err, ErrEmptyPath) {
-		t.Fatalf("空路径应分类 ErrEmptyPath, got %v", err)
-	}
-	if err := IsInsideResolved("", "model.ysm"); !errors.Is(err, ErrEmptyBase) {
-		t.Fatalf("空基准应分类 ErrEmptyBase, got %v", err)
-	}
+	testutil.NoError(t, IsInsideResolved(base, filepath.Join(base, "sub", "model.ysm")), "目录内应放行")
+	testutil.NoError(t, IsInsideResolved(base, base), "相等应放行")
+	testutil.ErrorIs(t, IsInsideResolved(base, filepath.Join(base, "..", "evil.ysm")), ErrNotInside, "词法逃逸应拒绝并分类 ErrNotInside")
+	testutil.ErrorIs(t, IsInsideResolved(base, ""), ErrEmptyPath, "空路径应分类 ErrEmptyPath")
+	testutil.ErrorIs(t, IsInsideResolved("", "model.ysm"), ErrEmptyBase, "空基准应分类 ErrEmptyBase")
 }

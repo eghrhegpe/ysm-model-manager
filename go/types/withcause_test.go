@@ -5,6 +5,8 @@ import (
 	"errors"
 	"strings"
 	"testing"
+
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // sentinel 用于 errors.Is 穿透测试
@@ -26,9 +28,7 @@ func TestWithCause_ErrorStringContainsBase(t *testing.T) {
 	cause := errors.New("disk full")
 	w := e.WithCause(cause)
 	msg := w.Error()
-	if msg == "" {
-		t.Fatal("Error() 返回空字符串")
-	}
+	testutil.Equal(t, msg == "", false, "Error() 返回空字符串")
 	// base 信息应保留
 	if !strings.Contains(msg, "操作失败") {
 		t.Errorf("Error() = %q, 应包含 Reason 字段", msg)
@@ -51,9 +51,7 @@ func TestWithCause_ErrorsIs(t *testing.T) {
 // TestWithCause_Immutable 值语义：WithCause 返回新实例，原实例 cause 不变
 func TestWithCause_Immutable(t *testing.T) {
 	e := AppError{Code: ErrorCode("E004"), Reason: "原错误"}
-	if errors.Unwrap(e) != nil {
-		t.Fatal("原 AppError.Unwrap() 不应已有 cause")
-	}
+	testutil.Nil(t, errors.Unwrap(e), "原 AppError.Unwrap() 不应已有 cause")
 	w := e.WithCause(errTestSentinel)
 	// e 未变
 	if errors.Unwrap(e) != nil {

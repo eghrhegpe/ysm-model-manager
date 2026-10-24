@@ -19,6 +19,9 @@ import (
 )
 
 // fuzzZipBytes 用给定条目名构造最小内存 zip（内容空，识别只看条目名）。
+// 注：入参是 testing.TB（种子期传 *testing.F），接不了 testutil.NoError 的
+// *testing.T 签名——错误分支用 Errorf + return 保「失败不静默」（zip.Writer
+// 对合法条目名实际不会出错），而非裸 Fatal。
 func fuzzZipBytes(t testing.TB, entries ...string) []byte {
 	t.Helper()
 	var buf bytes.Buffer
@@ -26,14 +29,17 @@ func fuzzZipBytes(t testing.TB, entries ...string) []byte {
 	for _, name := range entries {
 		f, err := w.Create(name)
 		if err != nil {
-			t.Fatal(err)
+			t.Errorf("fuzzZipBytes: Create %q: %v", name, err)
+			return nil
 		}
 		if _, err := f.Write(nil); err != nil {
-			t.Fatal(err)
+			t.Errorf("fuzzZipBytes: Write %q: %v", name, err)
+			return nil
 		}
 	}
 	if err := w.Close(); err != nil {
-		t.Fatal(err)
+		t.Errorf("fuzzZipBytes: Close: %v", err)
+		return nil
 	}
 	return buf.Bytes()
 }

@@ -8,37 +8,17 @@ import (
 )
 
 func TestRegistry(t *testing.T) {
-	if got := Get("resourcepack"); got == nil {
-		t.Fatal("Get('resourcepack') = nil, want handler")
-	}
-	if got := Get("EntityPlayer"); got == nil {
-		t.Fatal("Get('EntityPlayer') = nil, want handler")
-	}
-	if got := Get("shaderpack"); got == nil {
-		t.Fatal("Get('shaderpack') = nil, want handler")
-	}
-	if got := Get("blueprint"); got == nil {
-		t.Fatal("Get('blueprint') = nil, want handler")
-	}
-	if got := Get("SceneModel"); got == nil {
-		t.Fatal("Get('SceneModel') = nil, want handler")
-	}
-	if got := Get("ysm"); got == nil {
-		t.Fatal("Get('ysm') = nil, want handler")
-	}
-	if got := Get("litematic"); got == nil {
-		t.Fatal("Get('litematic') = nil, want handler")
-	}
-	if got := Get("fbx"); got == nil {
-		t.Fatal("Get('fbx') = nil, want handler（resource_types.json 已含 fbx 类型）")
-	}
+	testutil.NotNil(t, Get("resourcepack"), "Get('resourcepack') = nil, want handler")
+	testutil.NotNil(t, Get("EntityPlayer"), "Get('EntityPlayer') = nil, want handler")
+	testutil.NotNil(t, Get("shaderpack"), "Get('shaderpack') = nil, want handler")
+	testutil.NotNil(t, Get("blueprint"), "Get('blueprint') = nil, want handler")
+	testutil.NotNil(t, Get("SceneModel"), "Get('SceneModel') = nil, want handler")
+	testutil.NotNil(t, Get("ysm"), "Get('ysm') = nil, want handler")
+	testutil.NotNil(t, Get("litematic"), "Get('litematic') = nil, want handler")
+	testutil.NotNil(t, Get("fbx"), "Get('fbx') = nil, want handler（resource_types.json 已含 fbx 类型）")
 	// 防回归：vrm 独立类型已随 ADR-111 退役
-	if got := Get("vrm"); got != nil {
-		t.Fatalf("Get('vrm') = %v, want nil（已并入 EntityPlayer variants）", got)
-	}
-	if got := Get("nonexistent"); got != nil {
-		t.Fatalf("Get('nonexistent') = %v, want nil", got)
-	}
+	testutil.Nil(t, Get("vrm"), "Get('vrm') want nil（已并入 EntityPlayer variants）")
+	testutil.Nil(t, Get("nonexistent"), "Get('nonexistent') want nil")
 }
 
 func TestType(t *testing.T) {
@@ -54,9 +34,7 @@ func TestType(t *testing.T) {
 	}
 	for _, tc := range tests {
 		h := Get(tc.rtype)
-		if h == nil {
-			t.Fatalf("Get(%v) = nil", tc.rtype)
-		}
+		testutil.NotNil(t, h, "Get(%v) = nil", tc.rtype)
 		if got := h.Type(); got != tc.want {
 			t.Errorf("Type() = %v, want %v", got, tc.want)
 		}
@@ -102,19 +80,13 @@ func TestSimpleCopyImporter_Import(t *testing.T) {
 
 	imp := NewSimpleCopy("test")
 	err := imp.Import(srcFile, dstDir)
-	if err != nil {
-		t.Fatalf("Import() = %v, want empty", err)
-	}
+	testutil.NoError(t, err, "Import() want empty")
 
 	// 验证文件已复制
 	dstFile := filepath.Join(dstDir, "test.txt")
-	if _, err := os.Stat(dstFile); os.IsNotExist(err) {
-		t.Fatal("目标文件未创建")
-	}
+	testutil.FileExists(t, dstFile, "目标文件未创建")
 	data, _ := os.ReadFile(dstFile)
-	if string(data) != "hello" {
-		t.Fatalf("文件内容 = %v, want %v", string(data), "hello")
-	}
+	testutil.Equal(t, string(data), "hello", "文件内容")
 }
 
 func TestSimpleCopyImporter_Import_Dir(t *testing.T) {
@@ -133,19 +105,13 @@ func TestSimpleCopyImporter_Import_Dir(t *testing.T) {
 
 	imp := NewSimpleCopy("test")
 	err := imp.Import(srcDir, dstDir)
-	if err != nil {
-		t.Fatalf("Import(dir) = %v, want empty", err)
-	}
+	testutil.NoError(t, err, "Import(dir) want empty")
 
 	// 验证目录已复制
 	dstSub := filepath.Join(dstDir, filepath.Base(srcDir), "sub", "a.txt")
-	if _, err := os.Stat(dstSub); os.IsNotExist(err) {
-		t.Fatal("子目录文件未创建")
-	}
+	testutil.FileExists(t, dstSub, "子目录文件未创建")
 	dstB := filepath.Join(dstDir, filepath.Base(srcDir), "b.txt")
-	if _, err := os.Stat(dstB); os.IsNotExist(err) {
-		t.Fatal("根文件未创建")
-	}
+	testutil.FileExists(t, dstB, "根文件未创建")
 }
 
 func TestSimpleCopyImporter_Import_EmptyPath(t *testing.T) {
@@ -176,18 +142,12 @@ func TestDirectoryCopyImporter_Import(t *testing.T) {
 	imp := NewDirectoryCopy("EntityPlayer")
 	// 传入文件夹内任意文件
 	err := imp.Import(filepath.Join(modelDir, "model.pmx"), dstDir)
-	if err != nil {
-		t.Fatalf("Import(file) = %v, want empty", err)
-	}
+	testutil.NoError(t, err, "Import(file) want empty")
 	// 验证文件夹已复制
 	dstFile := filepath.Join(dstDir, folderName, "model.pmx")
-	if _, err := os.Stat(dstFile); os.IsNotExist(err) {
-		t.Fatal("目标文件未创建")
-	}
+	testutil.FileExists(t, dstFile, "目标文件未创建")
 	dstTex := filepath.Join(dstDir, folderName, "tex.png")
-	if _, err := os.Stat(dstTex); os.IsNotExist(err) {
-		t.Fatal("纹理文件未创建")
-	}
+	testutil.FileExists(t, dstTex, "纹理文件未创建")
 }
 
 func TestDirectoryCopyImporter_Import_Dir(t *testing.T) {
@@ -205,11 +165,7 @@ func TestDirectoryCopyImporter_Import_Dir(t *testing.T) {
 	imp := NewDirectoryCopy("vrm")
 	// 传入文件夹本体
 	err := imp.Import(modelDir, dstDir)
-	if err != nil {
-		t.Fatalf("Import(dir) = %v, want empty", err)
-	}
+	testutil.NoError(t, err, "Import(dir) want empty")
 	dstFile := filepath.Join(dstDir, folderName, "model.vrm")
-	if _, err := os.Stat(dstFile); os.IsNotExist(err) {
-		t.Fatal("目标文件未创建")
-	}
+	testutil.FileExists(t, dstFile, "目标文件未创建")
 }

@@ -9,8 +9,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
-
 	"ysm-model-manager/go/container"
 	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
@@ -68,12 +66,10 @@ func TestParseFromEntries_L0GeoFilesExcludesJunk(t *testing.T) {
 
 	geo, _, _, geoFiles := parseModelFromEntries(entries, "zip")
 	testutil.NotNil(t, geo, "模型不应为 nil")
-	if got, want := geoFileBases(geoFiles), []string{"reimu.geo.json", "marisa.geo.json"}; !cmp.Equal(got, want) {
-		t.Fatalf("geoFiles = %v, 期望 %v（L0 生效应排除清单外 junk 且按声明序）", got, want)
-	}
-	if got, want := subModelNames(geo.SubModels), []string{"reimu", "marisa"}; !cmp.Equal(got, want) {
-		t.Fatalf("SubModels = %v, 期望 %v", got, want)
-	}
+	got := geoFileBases(geoFiles)
+	testutil.Equal(t, got, []string{"reimu.geo.json", "marisa.geo.json"}, "geoFiles = %v（L0 生效应排除清单外 junk 且按声明序）", got)
+	gotNames := subModelNames(geo.SubModels)
+	testutil.Equal(t, gotNames, []string{"reimu", "marisa"}, "SubModels = %v", gotNames)
 }
 
 // TestParseFromEntries_L0EmptyHit_KeepL1GeoFiles：清单存在但声明条目路径全部未命中
@@ -99,17 +95,11 @@ func TestParseFromEntries_L0EmptyHit_KeepL1GeoFiles(t *testing.T) {
 	geo, _, _, geoFiles := parseModelFromEntries(entries, "zip")
 	testutil.NotNil(t, geo, "模型不应为 nil")
 	// geoFiles 回退：保留 L1 全量收集
-	if got := geoFileBases(geoFiles); !cmp.Equal(got, []string{"x.geo.json"}) {
-		t.Fatalf("geoFiles = %v, 期望 [x.geo.json]（L0 空命中回退保留 L1 收集）", got)
-	}
+	got := geoFileBases(geoFiles)
+	testutil.Equal(t, got, []string{"x.geo.json"}, "geoFiles = %v（L0 空命中回退保留 L1 收集）", got)
 	// SubModels 仍走 manifest 派生（不看命中），此为现状不对称行为
-	if len(geo.SubModels) != 1 {
-		t.Fatalf("SubModels = %d, 期望 1（manifest 派生，非 L1 兜底）", len(geo.SubModels))
-	}
-	if geo.SubModels[0].Name != "declared" {
-		t.Fatalf("SubModels[0].Name = %q, 期望 %q（manifest 派生不看命中）", geo.SubModels[0].Name, "declared")
-	}
-	if geo.SubModels[0].SourcePath != "" {
-		t.Fatalf("SubModels[0].SourcePath = %q, 期望空（模型未命中，resolvedPathByItem 无条目）", geo.SubModels[0].SourcePath)
-	}
+	// 守卫下方 SubModels[0] 索引
+	testutil.Equal(t, len(geo.SubModels), 1, "SubModels = %d, 期望 1（manifest 派生，非 L1 兜底）", len(geo.SubModels))
+	testutil.Equal(t, geo.SubModels[0].Name, "declared", "SubModels[0].Name = %q（manifest 派生不看命中）", geo.SubModels[0].Name)
+	testutil.Equal(t, geo.SubModels[0].SourcePath, "", "SubModels[0].SourcePath = %q（模型未命中，resolvedPathByItem 无条目）", geo.SubModels[0].SourcePath)
 }

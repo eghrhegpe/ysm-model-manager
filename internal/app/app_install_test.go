@@ -124,9 +124,7 @@ func TestFindRecycleRoot_MultiType(t *testing.T) {
 
 	t.Run("resourcepack 根内命中", func(t *testing.T) {
 		got := a.findRecycleRoot(filepath.Join(rp, "某包.zip"))
-		if got != rp {
-			t.Fatalf("resourcepack 子目录应命中, got %q", got)
-		}
+		testutil.Equal(t, got, rp, "resourcepack 子目录应命中")
 	})
 
 	t.Run("FilesRoot 默认命中", func(t *testing.T) {
@@ -136,8 +134,6 @@ func TestFindRecycleRoot_MultiType(t *testing.T) {
 			testutil.NoError(t, err)
 		}
 		got := a.findRecycleRoot(filepath.Join(ysm, "m.ysm"))
-		if got != ysm {
-			t.Fatalf("ysm 子目录应命中, got %q", got)
-		}
+		testutil.Equal(t, got, ysm, "ysm 子目录应命中")
 	})
 }

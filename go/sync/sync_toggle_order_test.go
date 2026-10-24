@@ -43,9 +43,7 @@ func TestSyncToggleStatus_RelKeyMiss_FallsBackToHash(t *testing.T) {
 	}
 
 	hash := computeHash(repoFile)
-	if hash == "" {
-		t.Fatal("测试前置失败：仓库文件 hash 为空")
-	}
+	testutil.Equal(t, hash == "", false, "测试前置失败：仓库文件 hash 为空")
 	scanFn := func(dir string) []types.ModelEntry {
 		return []types.ModelEntry{
 			{Name: "model.ysm.ban", Path: repoFile, Hash: hash},
@@ -89,9 +87,9 @@ func TestSyncToggleStatus_RelKeyWinsOverHash(t *testing.T) {
 	}
 
 	hash := computeHash(repoA)
-	if hash == "" || hash != computeHash(repoB) {
-		t.Fatal("测试前置失败：两仓库文件应同 hash")
-	}
+	// 原复合条件拆序贯（失败条件为 OR，序贯等价）
+	testutil.Equal(t, hash == "", false, "测试前置失败：两仓库文件应同 hash")
+	testutil.Equal(t, hash, computeHash(repoB), "测试前置失败：两仓库文件应同 hash")
 	// 条目顺序固定：model_a 先写 repoHash（false），model_b.ban 后写覆盖（true）
 	// ——原 hash 优先实现会读到 true → 误禁 model_a
 	scanFn := func(dir string) []types.ModelEntry {

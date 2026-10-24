@@ -77,9 +77,8 @@ func TestFindGeometryInExtractedYSM_ModelArrayAllLoaded(t *testing.T) {
 	})
 	model, _ := FindGeometryInExtractedYSM(ysmPath)
 	testutil.NotNil(t, model, "模型应为非 nil")
-	if len(model.Bones) != 2 {
-		t.Fatalf("应合并 2 根骨骼, 得到 %d", len(model.Bones))
-	}
+	// 守卫下方 Bones[0]/Bones[1] 索引（Equal 失败即 Goexit，短路语义保持）
+	testutil.Equal(t, len(model.Bones), 2, "应合并 2 根骨骼, 实际 %d", len(model.Bones))
 	// 纹理声明 2 项 → maxTexIdx=1：main TexSlot=0、extra TexSlot=1
 	if c := model.Bones[0].Cubes[0]; c.TexSlot != 0 {
 		t.Errorf("main cube TexSlot = %d, 期望 0", c.TexSlot)
@@ -96,9 +95,9 @@ func TestFindGeometryInExtractedYSM_ModelStringFormat(t *testing.T) {
 		"models/main.geo.json": geometryJSON("main"),
 	})
 	model, _ := FindGeometryInExtractedYSM(ysmPath)
-	if model == nil || len(model.Bones) != 1 {
-		t.Fatalf("字符串格式应加载 main, 得到 %v", model)
-	}
+	// 原条件 `model == nil || len != 1` 拆序贯（NotNil 先行保证下方索引安全）
+	testutil.NotNil(t, model, "字符串格式应加载 main, 实际 %v", model)
+	testutil.Equal(t, len(model.Bones), 1, "字符串格式应加载 main, 实际 %d 根骨骼", len(model.Bones))
 }
 
 func TestFindGeometryInExtractedYSM_TextureOrderFromYsm(t *testing.T) {
@@ -112,9 +111,8 @@ func TestFindGeometryInExtractedYSM_TextureOrderFromYsm(t *testing.T) {
 	})
 	model, texData := FindGeometryInExtractedYSM(ysmPath)
 	testutil.NotNil(t, model, "模型应为非 nil")
-	if len(texData) != 2 {
-		t.Fatalf("texData = %d, 期望 2", len(texData))
-	}
+	// 守卫下方 texData[0]/[1] 索引
+	testutil.Equal(t, len(texData), 2, "texData = %d, 期望 2", len(texData))
 	if string(texData[0]) != "PNGDATA-A" || string(texData[1]) != "JPEGDATA-B" {
 		t.Errorf("texData 应按声明序 [a.png, b.jpg]")
 	}
@@ -133,9 +131,9 @@ func TestFindGeometryInExtractedYSM_TextureTgaInTexturesDir(t *testing.T) {
 		"textures/tex_b.png":   "PNGDATA-B",
 	})
 	model, texData := FindGeometryInExtractedYSM(ysmPath)
-	if model == nil || len(texData) != 2 {
-		t.Fatalf("textures/ 下 png+tga 应读 2 张, 得到 %d", len(texData))
-	}
+	// 原条件拆序贯；len 守卫下方 texData[0]/[1] 索引
+	testutil.NotNil(t, model, "textures/ 下 png+tga 应解析出模型, 实际 %v", model)
+	testutil.Equal(t, len(texData), 2, "textures/ 下 png+tga 应读 2 张, 实际 %d", len(texData))
 	if string(texData[0]) != "PNGDATA-B" || string(texData[1]) != "TGADATA" {
 		t.Errorf("纹理应按声明序 [tex_b.png, tex_a.tga]")
 	}
@@ -155,9 +153,8 @@ func TestFindGeometryInExtractedYSM_TextureSameDir(t *testing.T) {
 	})
 	model, texData := FindGeometryInExtractedYSM(ysmPath)
 	testutil.NotNil(t, model, "模型应为非 nil")
-	if len(texData) != 2 {
-		t.Fatalf("同目录纹理应读 2 张（tga 不入同目录段）, 得到 %d", len(texData))
-	}
+	// 守卫下方 texData[0]/[1] 索引
+	testutil.Equal(t, len(texData), 2, "同目录纹理应读 2 张（tga 不入同目录段）, 实际 %d", len(texData))
 	if string(texData[0]) != "JPEGDATA-B" || string(texData[1]) != "PNGDATA-A" {
 		t.Errorf("纹理应按声明序 [tex_b.jpg, tex_a.png]")
 	}
@@ -169,9 +166,10 @@ func TestFindGeometryInExtractedYSM_GeometryInYsmJson(t *testing.T) {
 		"ysm.json": geometryJSON("embedded"),
 	})
 	model, _ := FindGeometryInExtractedYSM(ysmPath)
-	if model == nil || len(model.Bones) != 1 || model.Bones[0].Name != "embedded" {
-		t.Fatalf("应兜底解析 ysm.json 内嵌几何, 得到 %v", model)
-	}
+	// 原复合条件拆序贯（NotNil 先行保证 Bones[0] 索引安全）
+	testutil.NotNil(t, model, "应兜底解析 ysm.json 内嵌几何, 实际 %v", model)
+	testutil.Equal(t, len(model.Bones), 1, "应兜底解析 ysm.json 内嵌几何, 实际 %d 根", len(model.Bones))
+	testutil.Equal(t, model.Bones[0].Name, "embedded", "应兜底解析 ysm.json 内嵌几何")
 }
 
 func TestFindGeometryInExtractedYSM_MinecraftGeometryWrapper(t *testing.T) {
@@ -181,9 +179,10 @@ func TestFindGeometryInExtractedYSM_MinecraftGeometryWrapper(t *testing.T) {
 		"ysm.json": `{"minecraft":{"geometry":[` + elem + `]}}`,
 	})
 	model, _ := FindGeometryInExtractedYSM(ysmPath)
-	if model == nil || len(model.Bones) != 1 || model.Bones[0].Name != "wbone" {
-		t.Fatalf("minecraft.geometry 包裹兜底应解析出 wbone, 得到 %v", model)
-	}
+	// 原复合条件拆序贯
+	testutil.NotNil(t, model, "minecraft.geometry 包裹兜底应解析出模型, 实际 %v", model)
+	testutil.Equal(t, len(model.Bones), 1, "minecraft.geometry 包裹兜底应解析出 1 根骨骼, 实际 %d", len(model.Bones))
+	testutil.Equal(t, model.Bones[0].Name, "wbone", "minecraft.geometry 包裹兜底应解析出 wbone")
 }
 
 func TestFindGeometryInExtractedYSM_BareGeometryFallback(t *testing.T) {
@@ -192,9 +191,10 @@ func TestFindGeometryInExtractedYSM_BareGeometryFallback(t *testing.T) {
 		"ysm.json": `{"format_version":"1.16.0","description":{"identifier":"bare","texture_width":32,"texture_height":32},"bones":[{"name":"barebone","cubes":[]}]}`,
 	})
 	model, _ := FindGeometryInExtractedYSM(ysmPath)
-	if model == nil || len(model.Bones) != 1 || model.Bones[0].Name != "barebone" {
-		t.Fatalf("裸几何兜底应解析出 barebone, 得到 %v", model)
-	}
+	// 原复合条件拆序贯
+	testutil.NotNil(t, model, "裸几何兜底应解析出模型, 实际 %v", model)
+	testutil.Equal(t, len(model.Bones), 1, "裸几何兜底应解析出 1 根骨骼, 实际 %d", len(model.Bones))
+	testutil.Equal(t, model.Bones[0].Name, "barebone", "裸几何兜底应解析出 barebone")
 }
 
 func TestFindGeometryInExtractedYSM_WalkDirRecursive(t *testing.T) {
@@ -205,9 +205,10 @@ func TestFindGeometryInExtractedYSM_WalkDirRecursive(t *testing.T) {
 		"animations/idle.geo.json": geometryJSON("animBone"),
 	})
 	model, _ := FindGeometryInExtractedYSM(ysmPath)
-	if model == nil || len(model.Bones) != 1 || model.Bones[0].Name != "deep" {
-		t.Fatalf("WalkDir 应找到 sub/deep/model.geo.json 的 deep 骨骼, 得到 %v", model)
-	}
+	// 原复合条件拆序贯
+	testutil.NotNil(t, model, "WalkDir 应找到子目录几何, 实际 %v", model)
+	testutil.Equal(t, len(model.Bones), 1, "WalkDir 应找到 1 根骨骼, 实际 %d", len(model.Bones))
+	testutil.Equal(t, model.Bones[0].Name, "deep", "WalkDir 应找到 sub/deep/model.geo.json 的 deep 骨骼")
 }
 
 func TestFindGeometryInExtractedYSM_MissingModelFileFallback(t *testing.T) {
@@ -217,9 +218,10 @@ func TestFindGeometryInExtractedYSM_MissingModelFileFallback(t *testing.T) {
 		"main.geo.json": geometryJSON("main"),
 	})
 	model, _ := FindGeometryInExtractedYSM(ysmPath)
-	if model == nil || len(model.Bones) != 1 || model.Bones[0].Name != "main" {
-		t.Fatalf("缺失声明模型后应兜底找到 main, 得到 %v", model)
-	}
+	// 原复合条件拆序贯
+	testutil.NotNil(t, model, "缺失声明模型后应兜底找到模型, 实际 %v", model)
+	testutil.Equal(t, len(model.Bones), 1, "缺失声明模型后应兜底找到 1 根骨骼, 实际 %d", len(model.Bones))
+	testutil.Equal(t, model.Bones[0].Name, "main", "缺失声明模型后应兜底找到 main")
 }
 
 func TestFindGeometryInExtractedYSM_PathTraversalRejected(t *testing.T) {
@@ -258,9 +260,9 @@ func TestFindGeometryInExtractedYSM_InvalidYsmJsonWalkDir(t *testing.T) {
 		"main.geo.json": geometryJSON("main"),
 	})
 	model, _ := FindGeometryInExtractedYSM(ysmPath)
-	if model == nil || len(model.Bones) != 1 {
-		t.Fatalf("非法 ysm.json 应兜底找到 main, 得到 %v", model)
-	}
+	// 原复合条件拆序贯
+	testutil.NotNil(t, model, "非法 ysm.json 应兜底找到模型, 实际 %v", model)
+	testutil.Equal(t, len(model.Bones), 1, "非法 ysm.json 应兜底找到 1 根骨骼, 实际 %d", len(model.Bones))
 }
 
 func TestFindGeometryInExtractedYSM_ModelMapExtraKeyMergeAndClamp(t *testing.T) {
@@ -274,9 +276,8 @@ func TestFindGeometryInExtractedYSM_ModelMapExtraKeyMergeAndClamp(t *testing.T) 
 	})
 	model, _ := FindGeometryInExtractedYSM(ysmPath)
 	testutil.NotNil(t, model, "模型应为非 nil")
-	if len(model.Bones) != 2 {
-		t.Fatalf("应合并 main+extra 2 根骨骼（arm 排除）, 得到 %d", len(model.Bones))
-	}
+	// 守卫下方 Bones 遍历中 Cubes[0] 索引
+	testutil.Equal(t, len(model.Bones), 2, "应合并 main+extra 2 根骨骼（arm 排除）, 实际 %d", len(model.Bones))
 	// 纹理声明仅 1 项 → maxTexIdx=0：main 与 extra 的 TexSlot 均钳到 0
 	for _, b := range model.Bones {
 		if c := b.Cubes[0]; c.TexSlot != 0 {
@@ -296,9 +297,7 @@ func TestFindGeometryInExtractedYSM_PlayerKeySkipAndParseError(t *testing.T) {
 		"ysm.json": `{"files":{"player":42,"weapon":{"model":"models/w.geo.json"}}}`,
 	})
 	model, tex := FindGeometryInExtractedYSM(ysmPath)
-	if model != nil {
-		t.Fatalf("非几何 JSON 不应产出模型（修复后 nil）, 得到 %+v", model)
-	}
+	testutil.Nil(t, model, "非几何 JSON 不应产出模型（修复后 nil）, 实际 %+v", model)
 	if tex != nil {
 		t.Errorf("无纹理场景 texData 应为 nil, 得到 %v", tex)
 	}
@@ -312,9 +311,10 @@ func TestFindGeometryInExtractedYSM_ModelMapNonStringValue(t *testing.T) {
 		"models/main.geo.json": geometryJSON("main"),
 	})
 	model, _ := FindGeometryInExtractedYSM(ysmPath)
-	if model == nil || len(model.Bones) != 1 || model.Bones[0].Name != "main" {
-		t.Fatalf("非字符串 map value 跳过后应兜底找到 main, 得到 %v", model)
-	}
+	// 原复合条件拆序贯
+	testutil.NotNil(t, model, "非字符串 map value 跳过后应兜底找到模型, 实际 %v", model)
+	testutil.Equal(t, len(model.Bones), 1, "非字符串 map value 跳过后应兜底找到 1 根骨骼, 实际 %d", len(model.Bones))
+	testutil.Equal(t, model.Bones[0].Name, "main", "非字符串 map value 跳过后应兜底找到 main")
 }
 
 func TestFindGeometryInExtractedYSM_TextureBackslashAndPartialOrder(t *testing.T) {
@@ -330,15 +330,12 @@ func TestFindGeometryInExtractedYSM_TextureBackslashAndPartialOrder(t *testing.T
 	})
 	model, texData := FindGeometryInExtractedYSM(ysmPath)
 	testutil.NotNil(t, model, "模型应为非 nil")
-	if len(texData) != 4 {
-		t.Fatalf("应读 4 张纹理, 得到 %d", len(texData))
-	}
+	// 守卫下方 texData[i] 循环索引
+	testutil.Equal(t, len(texData), 4, "应读 4 张纹理, 实际 %d", len(texData))
 	// 声明序 [tex_a, tex_b, tex_c]，未声明 stray 落尾
 	want := []string{"PNGDATA-A", "PNGDATA-B", "PNGDATA-C", "PNGDATA-S"}
 	for i, w := range want {
-		if string(texData[i]) != w {
-			t.Fatalf("texData[%d] = %q, 期望 %q", i, texData[i], w)
-		}
+		testutil.Equal(t, string(texData[i]), w, "texData[%d] 应为 %q", i, w)
 	}
 	if len(model.TextureNames) != 4 || model.TextureNames[3] != "stray" {
 		t.Errorf("TextureNames = %v, 期望末尾为 stray", model.TextureNames)
@@ -354,9 +351,7 @@ func TestFindGeometryInExtractedYSM_WalkDirDepthLimit(t *testing.T) {
 	files[deep] = geometryJSON("deep")
 	ysmPath := writeExtractedFixture(t, files)
 	model, _ := FindGeometryInExtractedYSM(ysmPath)
-	if model != nil {
-		t.Fatalf("深度受限 + 非几何 ysm.json 应返回 nil, 得到 %+v", model)
-	}
+	testutil.Nil(t, model, "深度受限 + 非几何 ysm.json 应返回 nil, 实际 %+v", model)
 }
 
 // geometry.IsArmModelName 直测（2026-08-26 跨包收敛：本地副本删除，单一实现在
@@ -414,9 +409,8 @@ func TestFindComponentsInExtractedYSM_StringModelPlusModelsDir(t *testing.T) {
 		"textures/arm.png":   "ARMDATA",
 	})
 	comps, texNames := FindComponentsInExtractedYSM(ysmPath)
-	if len(comps) != 3 {
-		t.Fatalf("应解析 3 组件（main + 补扫 arm/arrow）, 得到 %d", len(comps))
-	}
+	// 守卫下方 comps[0]/[1]/[2] 索引
+	testutil.Equal(t, len(comps), 3, "应解析 3 组件（main + 补扫 arm/arrow）, 实际 %d", len(comps))
 	if comps[0].SourceName != "main" {
 		t.Errorf("组件 0 应为 main, got %q", comps[0].SourceName)
 	}
@@ -425,9 +419,7 @@ func TestFindComponentsInExtractedYSM_StringModelPlusModelsDir(t *testing.T) {
 	// arrow 未声明 → 按名段命中同名 png（textures/arrow.png）→ ADR-114 perComponent 接管。
 	wantNames := []string{"skin", "", ""}
 	for i, w := range wantNames {
-		if texNames[i] != w {
-			t.Fatalf("texNames[%d] = %q, 期望 %q", i, texNames[i], w)
-		}
+		testutil.Equal(t, texNames[i], w, "texNames[%d] 应为 %q", i, w)
 	}
 	// 组件 TexSlot：main=0（声明序贴 texArr）；arm=0（与 main 共用 texArr[0] 默认皮肤）；
 	// arrow perComponent 接管 → TexSlot=0（用自己的第 0 张，全局槽位不消费）
@@ -474,7 +466,8 @@ func TestResolveBedrockGeometryFallback_ProbeBudgetWithinLimit(t *testing.T) {
 	files["zz.geo.json"] = geometryJSON("hit")
 	dir := filepath.Dir(writeExtractedFixture(t, files))
 	m := resolveBedrockGeometryFallback(data, filepath.Join(dir, "ysm.json"), dir)
-	if m == nil || len(m.Bones) == 0 || m.Bones[0].Name != "hit" {
-		t.Fatalf("预算内应命中合法 geo, 得到 %v", m)
-	}
+	// 原复合条件拆序贯；骨骼数守卫下方 Bones[0] 索引
+	testutil.NotNil(t, m, "预算内应命中合法 geo, 实际 %v", m)
+	testutil.Equal(t, len(m.Bones) == 0, false, "预算内应命中合法 geo（骨骼数应 > 0）, 实际 %d", len(m.Bones))
+	testutil.Equal(t, m.Bones[0].Name, "hit", "预算内应命中合法 geo")
 }

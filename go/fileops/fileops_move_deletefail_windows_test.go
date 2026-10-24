@@ -15,7 +15,6 @@ package fileops
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"syscall"
 	"testing"
 	"ysm-model-manager/go/internal/testutil"
@@ -41,17 +40,13 @@ func TestMoveModelFile_CrossDeviceDeleteSourceFails_KeepsBothCopies(t *testing.T
 
 	moveErr := MoveModelFile(dir, src, dstDir)
 	testutil.NotNil(t, moveErr, "删除源失败必须报错（不得静默成功）")
-	if !strings.Contains(moveErr.Error(), "复制成功但删除源失败") {
-		t.Fatalf("应报「复制成功但删除源失败」，got %v", moveErr)
-	}
+	testutil.ErrorContains(t, moveErr, "复制成功但删除源失败", "应报「复制成功但删除源失败」")
 	// 数据安全铁律：复制已成功到达目标，绝不回滚——目标副本必须完好
 	got, rerr := os.ReadFile(filepath.Join(dstDir, "m.ysm"))
-	if rerr != nil || string(got) != "payload" {
-		t.Fatalf("目标副本必须完好保留: got=%q err=%v", got, rerr)
-	}
+	testutil.NoError(t, rerr, "目标副本必须完好保留")
+	testutil.Equal(t, string(got), "payload", "目标副本必须完好保留")
 	// 源删除失败 = 原文件仍在，内容必须未受损（两侧都有 > 两侧都无）
 	gotSrc, serr := os.ReadFile(src)
-	if serr != nil || string(gotSrc) != "payload" {
-		t.Fatalf("源必须原样保留: got=%q err=%v", gotSrc, serr)
-	}
+	testutil.NoError(t, serr, "源必须原样保留")
+	testutil.Equal(t, string(gotSrc), "payload", "源必须原样保留")
 }

@@ -29,16 +29,19 @@ func repoRootFromLitematicPkg(t *testing.T) string {
 	t.Helper()
 	dir, err := os.Getwd()
 	testutil.NoError(t, err, "Getwd")
+	found := ""
 	for d := dir; ; d = filepath.Dir(d) {
 		if _, err := os.Stat(filepath.Join(d, "frontend", "src", "parsers", "voxel-colors-data.json")); err == nil {
-			return d
+			found = d
+			break
 		}
 		if filepath.Dir(d) == d {
 			break
 		}
 	}
-	t.Fatalf("未找到 voxel-colors-data.json（从 %q 向上）", dir)
-	return ""
+	// 守卫：Equal 失败即 Goexit，与原 t.Fatalf 终止语义等价
+	testutil.Equal(t, found != "", true, "未找到 voxel-colors-data.json（从 %q 向上）", dir)
+	return found
 }
 
 func loadVoxelDataFixture(t *testing.T) *voxelDataFixture {
@@ -47,12 +50,10 @@ func loadVoxelDataFixture(t *testing.T) *voxelDataFixture {
 	raw, err := os.ReadFile(filepath.Join(root, "frontend", "src", "parsers", "voxel-colors-data.json"))
 	testutil.NoError(t, err, "读取 voxel-colors-data.json")
 	var f voxelDataFixture
-	if err := json.Unmarshal(raw, &f); err != nil {
-		t.Fatalf("解析 voxel-colors-data.json: %v", err)
-	}
-	if len(f.Color) == 0 || len(f.Variant) == 0 {
-		t.Fatal("voxel-colors-data.json 表为空（防空转守卫）")
-	}
+	testutil.NoError(t, json.Unmarshal(raw, &f), "解析 voxel-colors-data.json")
+	// OR 型复合条件拆序贯
+	testutil.Equal(t, len(f.Color) != 0, true, "voxel-colors-data.json 表为空（防空转守卫）")
+	testutil.Equal(t, len(f.Variant) != 0, true, "voxel-colors-data.json 表为空（防空转守卫）")
 	return &f
 }
 

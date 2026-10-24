@@ -151,9 +151,8 @@ func TestSyncCustomToRepo(t *testing.T) {
 
 func TestSyncCustomToRepo_Empty(t *testing.T) {
 	t.Parallel()
-	if _, err := SyncCustomToRepo("", "repo", nil, nil); err == nil {
-		t.Fatal("空参数应报错")
-	}
+	_, err := SyncCustomToRepo("", "repo", nil, nil)
+	testutil.NotNil(t, err, "空参数应报错")
 }
 
 // TestSyncCustomToRepo_HoldsInstallLock 钉住 SyncCustomToRepo 的锁口径：
@@ -204,9 +203,7 @@ func TestSyncCustomToRepo_HoldsInstallLock(t *testing.T) {
 	testutil.NoError(t, err, "SyncCustomToRepo 失败")
 	testutil.Equal(t, count, 1, "应复制 1 个（new.ysm）")
 	testutil.FileExists(t, filepath.Join(repoDir, "new.ysm"))
-	if lockViolated {
-		t.Fatal("SyncCustomToRepo 未整段持 InstallLock（scanFn 执行期间 IsLocked() 返回 false）")
-	}
+	testutil.Equal(t, lockViolated, false, "SyncCustomToRepo 未整段持 InstallLock（scanFn 执行期间 IsLocked() 返回 false）")
 }
 
 // ===== PushResources 文件夹级分支（YSM/MMD 类型走 SyncResourcesDirLevel）=====

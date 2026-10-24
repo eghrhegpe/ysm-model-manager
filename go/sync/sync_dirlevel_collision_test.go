@@ -34,27 +34,20 @@ func TestCollectEntriesWalk_KeyCollisionLoud(t *testing.T) {
 	writeCollisionPair(t, root)
 
 	units, collisions, _ := collectEntriesWalk(root, "EntityPlayer", nil)
-	if len(collisions) != 1 {
-		t.Fatalf("期望 1 条碰撞记录，实际 %d：%v", len(collisions), collisions)
-	}
+	// 守卫下方 collisions[0] 索引
+	testutil.Equal(t, len(collisions), 1, "期望 1 条碰撞记录，实际 %d：%v", len(collisions), collisions)
 	c := collisions[0]
-	if !strings.Contains(c, "model_a.pmd") || !strings.Contains(c, "model_a.pmx") {
-		t.Fatalf("碰撞记录须点名两侧物理文件，实际：%s", c)
-	}
+	testutil.Equal(t, strings.Contains(c, "model_a.pmd"), true, "碰撞记录须点名 .pmd 侧，实际：%s", c)
+	testutil.Equal(t, strings.Contains(c, "model_a.pmx"), true, "碰撞记录须点名 .pmx 侧，实际：%s", c)
 	u, ok := units["model_a"]
-	if !ok {
-		t.Fatal("键表缺 model_a（last-write-wins 语义被破坏？）")
-	}
-	if !strings.HasSuffix(u.Path, ".pmx") {
-		t.Fatalf("survivor 应为字典序更晚的 .pmx（行为不变），实际 %s", u.Path)
-	}
+	testutil.Equal(t, ok, true, "键表缺 model_a（last-write-wins 语义被破坏？）")
+	testutil.Equal(t, strings.HasSuffix(u.Path, ".pmx"), true, "survivor 应为字典序更晚的 .pmx（行为不变），实际 %s", u.Path)
 
 	// 负向对照：无碰撞树必须零记录（不得误报）
 	solo := t.TempDir()
 	testutil.WriteTestFile(t, filepath.Join(solo, "only.pmx"), "x")
-	if _, cols, _ := collectEntriesWalk(solo, "EntityPlayer", nil); len(cols) != 0 {
-		t.Fatalf("无碰撞树误报：%v", cols)
-	}
+	_, cols, _ := collectEntriesWalk(solo, "EntityPlayer", nil)
+	testutil.Equal(t, len(cols), 0, "无碰撞树误报：%v", cols)
 }
 
 // TestCollectEntriesFromScan_KeyCollisionLoud scan 信道：同 Walk 口径（两信道判定强度
@@ -64,16 +57,11 @@ func TestCollectEntriesFromScan_KeyCollisionLoud(t *testing.T) {
 	writeCollisionPair(t, root)
 
 	entries, _ := scanner.ScanEntriesWithHit(root)
-	if len(entries) != 2 {
-		t.Fatalf("期望 scanner 出 2 条（pmx+pmd），实际 %d", len(entries))
-	}
+	testutil.Equal(t, len(entries), 2, "期望 scanner 出 2 条（pmx+pmd），实际 %d", len(entries))
 	units, collisions := collectEntriesFromScan(entries, root, "EntityPlayer")
-	if len(collisions) != 1 {
-		t.Fatalf("期望 1 条碰撞记录，实际 %d：%v", len(collisions), collisions)
-	}
-	if _, ok := units["model_a"]; !ok {
-		t.Fatal("键表缺 model_a")
-	}
+	testutil.Equal(t, len(collisions), 1, "期望 1 条碰撞记录，实际 %d：%v", len(collisions), collisions)
+	_, ok := units["model_a"]
+	testutil.Equal(t, ok, true, "键表缺 model_a")
 }
 
 // TestSyncResultsDirLevel_KeyCollisionInWarnings 端到端：全局侧碰撞必须进
@@ -85,19 +73,13 @@ func TestSyncResultsDirLevel_KeyCollisionInWarnings(t *testing.T) {
 	testutil.WriteTestFile(t, filepath.Join(instance, "model_a.pmx"), "x") // 与 survivor 同格式同尺寸
 
 	res := SyncResourcesDirLevel(global, instance, "EntityPlayer")
-	if len(res.Warnings) != 1 {
-		t.Fatalf("期望 1 条 Warnings（全局侧碰撞），实际 %d：%v", len(res.Warnings), res.Warnings)
-	}
-	if !strings.Contains(res.Warnings[0], "model_a") {
-		t.Fatalf("Warnings 未点名碰撞键：%v", res.Warnings)
-	}
+	// 守卫下方 Warnings[0] 索引
+	testutil.Equal(t, len(res.Warnings), 1, "期望 1 条 Warnings（全局侧碰撞），实际 %d：%v", len(res.Warnings), res.Warnings)
+	testutil.Equal(t, strings.Contains(res.Warnings[0], "model_a"), true, "Warnings 未点名碰撞键：%v", res.Warnings)
 	// 四桶判定行为不变：survivor .pmx 与实例同格式同尺寸 → Synced，无 Missing/Extra
-	if len(res.Missing) != 0 || len(res.Extra) != 0 {
-		t.Fatalf("碰撞不得扰动四桶判定：Missing=%v Extra=%v", res.Missing, res.Extra)
-	}
-	if !anySuffix(res.Synced, "model_a.pmx") {
-		t.Fatalf("Synced 应含 model_a.pmx 绝对路径，实际 %v", res.Synced)
-	}
+	testutil.Equal(t, len(res.Missing), 0, "碰撞不得扰动四桶判定：Missing=%v", res.Missing)
+	testutil.Equal(t, len(res.Extra), 0, "碰撞不得扰动四桶判定：Extra=%v", res.Extra)
+	testutil.Equal(t, anySuffix(res.Synced, "model_a.pmx"), true, "Synced 应含 model_a.pmx 绝对路径，实际 %v", res.Synced)
 }
 
 // 零碰撞树的结果 Warnings 必须为空（omitempty 保持旧 JSON 载荷洁净）。
@@ -108,9 +90,7 @@ func TestSyncResultsDirLevel_NoCollisionNoWarning(t *testing.T) {
 	testutil.WriteTestFile(t, filepath.Join(instance, "solo.pmx"), "x")
 
 	res := SyncResourcesDirLevel(global, instance, "EntityPlayer")
-	if len(res.Warnings) != 0 {
-		t.Fatalf("零碰撞树不得产 Warnings：%v", res.Warnings)
-	}
+	testutil.Equal(t, len(res.Warnings), 0, "零碰撞树不得产 Warnings：%v", res.Warnings)
 }
 
 // dirLevelResult 自身不产 Warnings（碰撞记录归 collect 层，归并层只透传）。
@@ -119,9 +99,7 @@ func TestDirLevelResult_WarningsUntouched(t *testing.T) {
 		map[string]dirLevelUnit{"a": {Path: "g/a.pmx", Rel: "a.pmx"}},
 		map[string]dirLevelUnit{"a": {Path: "i/a.pmx", Rel: "a.pmx"}},
 	)
-	if len(res.Warnings) != 0 {
-		t.Fatalf("dirLevelResult 自身不得产 Warnings（碰撞在 collect 层记录）：%v", res.Warnings)
-	}
+	testutil.Equal(t, len(res.Warnings), 0, "dirLevelResult 自身不得产 Warnings（碰撞在 collect 层记录）：%v", res.Warnings)
 }
 
 // TestSyncResultsDirLevelScan_CacheHitCarriesCollisions P0 面板接线（2026-10-15）：碰撞清单
@@ -134,13 +112,9 @@ func TestSyncResultsDirLevelScan_CacheHitCarriesCollisions(t *testing.T) {
 	testutil.WriteTestFile(t, filepath.Join(instance, "model_a.pmx"), "x")
 
 	first := SyncResourcesDirLevelScan(global, instance, "EntityPlayer", scanner.ScanEntriesWithHit)
-	if len(first.Warnings) != 1 {
-		t.Fatalf("首次调用（新计算）期望 1 条 Warnings，实际 %d：%v", len(first.Warnings), first.Warnings)
-	}
+	testutil.Equal(t, len(first.Warnings), 1, "首次调用（新计算）期望 1 条 Warnings，实际 %d：%v", len(first.Warnings), first.Warnings)
 	second := SyncResourcesDirLevelScan(global, instance, "EntityPlayer", scanner.ScanEntriesWithHit)
-	if len(second.Warnings) != 1 {
-		t.Fatalf("缓存命中须同样返回碰撞清单（随缓存值同存），实际 %d：%v", len(second.Warnings), second.Warnings)
-	}
+	testutil.Equal(t, len(second.Warnings), 1, "缓存命中须同样返回碰撞清单（随缓存值同存），实际 %d：%v", len(second.Warnings), second.Warnings)
 }
 
 func anySuffix(list []string, suffix string) bool {

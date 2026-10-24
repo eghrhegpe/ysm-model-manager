@@ -17,9 +17,8 @@ func TestImportsClosedSet(t *testing.T) {
 		"env":                    4,  // Go 垫片：getdents64/getcwd/readlinkat + notify_memory_growth
 		"wasi_snapshot_preview1": 10, // wazero 内置
 	}
-	if len(got) == 0 {
-		t.Fatal("导入集为空（解析器失真或 wasm 损坏）")
-	}
+	// 布尔化保真：原 if len==0 → Fatal，此处反向断言非空（Equal 失败即弃权）
+	testutil.Equal(t, len(got) != 0, true, "导入集为空（解析器失真或 wasm 损坏）")
 	if len(got["env"]) != want["env"] {
 		t.Errorf("env 导入数漂移: got %v, 期望恰好 4 个", got["env"])
 	}
@@ -55,9 +54,10 @@ func parseWasmImports(t *testing.T, bin []byte) map[string][]string {
 		}
 	}
 	magic := make([]byte, 4)
-	if _, err := r.Read(magic); err != nil || string(magic) != "\x00asm" {
-		t.Fatalf("非 wasm 魔数: %q", magic)
-	}
+	_, err := r.Read(magic)
+	// OR 型拆序贯：NoError 前置守卫，读成功后再验魔数内容（Equal 失败即弃权）
+	testutil.NoError(t, err, "wasm 魔数读取失败")
+	testutil.Equal(t, string(magic), "\x00asm", "非 wasm 魔数: %q", magic)
 	_ = readByte() // 版本字节 1/4（wasm 版本固定 u32 LE，此处魔数已验，版本略过）
 	readByte()
 	readByte()
@@ -68,7 +68,7 @@ func parseWasmImports(t *testing.T, bin []byte) map[string][]string {
 		size := readU32()
 		body := make([]byte, size)
 		if _, err := r.Read(body); err != nil {
-			t.Fatalf("section 读取失败: %v", err)
+			testutil.NoError(t, err, "section 读取失败")
 		}
 		if secID != 2 { // 仅 import section（wasm 规范：1=type, 2=import）
 			continue
@@ -126,9 +126,8 @@ func parseWasmImports(t *testing.T, bin []byte) map[string][]string {
 // TestDecode_InputTooLarge 护栏：超限输入在进入 wasm 前拒绝
 func TestDecode_InputTooLarge(t *testing.T) {
 	big := make([]byte, maxInput+1)
-	if _, err := Decode(big); err == nil {
-		t.Fatal("超限输入应返回 error")
-	}
+	_, err := Decode(big)
+	testutil.NotNil(t, err, "超限输入应返回 error")
 }
 
 // TestDecode_Malformed 畸形输入：noeh 构建下 parser abort → wazero error，
@@ -159,9 +158,7 @@ func TestDecode_RealFixture(t *testing.T) {
 	testutil.NoError(t, err, "读取样本")
 	files, err := Decode(data)
 	testutil.NoError(t, err, "解码失败")
-	if len(files) == 0 {
-		t.Fatal("产物为空")
-	}
+	testutil.Equal(t, len(files) > 0, true, "产物为空")
 	t.Logf("解码 %d 个产物:", len(files))
 	var total int
 	for _, f := range files {

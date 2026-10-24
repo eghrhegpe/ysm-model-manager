@@ -51,9 +51,7 @@ func TestFindDuplicateFiles_Guard(t *testing.T) {
 	_, err = a.FindDuplicateFiles(context.Background(), outside, "")
 	testutil.NotNil(t, err, "根外路径应被守卫拒绝返回 error")
 	var appErr types.AppError
-	if !errors.As(err, &appErr) {
-		t.Fatalf("守卫错误应为 AppError, got %T: %v", err, err)
-	}
+	testutil.Equal(t, errors.As(err, &appErr), true, "守卫错误应为 AppError, got %T: %v", err, err)
 	if appErr.Code != types.ErrInvalidPath {
 		t.Errorf("AppError.Code = %q, 期望 %q", appErr.Code, types.ErrInvalidPath)
 	}
@@ -82,12 +80,8 @@ func TestFindDuplicateFiles_Basic(t *testing.T) {
 	groups, err := a.FindDuplicateFiles(context.Background(), root, "")
 	testutil.NoError(t, err, "FindDuplicateFiles 失败")
 
-	if len(groups) != 1 {
-		t.Fatalf("期望 1 个重复组, got %d: %+v", len(groups), groups)
-	}
-	if len(groups[0].Files) != 2 {
-		t.Fatalf("重复组应含 2 个文件, got %d", len(groups[0].Files))
-	}
+	testutil.Equal(t, len(groups), 1, "期望 1 个重复组: %+v", groups) // 前置守卫：有 1 组才取 groups[0]
+	testutil.Equal(t, len(groups[0].Files), 2, "重复组应含 2 个文件")
 }
 
 // TestFindDuplicateFiles_WithStrategy 测试策略 token 直传（typed 收口后不再是 JSON 文本协议）
@@ -109,9 +103,7 @@ func TestFindDuplicateFiles_WithStrategy(t *testing.T) {
 	// 期望 0 组即可判别策略 token 确实生效——deep_hash（默认档）对同内容文件会返回 1 组。
 	groups, err := a.FindDuplicateFiles(context.Background(), root, "name_size")
 	testutil.NoError(t, err, "FindDuplicateFiles 失败")
-	if len(groups) != 0 {
-		t.Fatalf("name_size 模式下文件名不同不应成组, got %d 组", len(groups))
-	}
+	testutil.Equal(t, len(groups), 0, "name_size 模式下文件名不同不应成组")
 }
 
 // TestFindDuplicateFiles_NoDupNilFree 测试「无重复 = 空数组而非 null」契约：
@@ -130,9 +122,7 @@ func TestFindDuplicateFiles_NoDupNilFree(t *testing.T) {
 	groups, err := a.FindDuplicateFiles(context.Background(), root, "deep_hash")
 	testutil.NoError(t, err, "FindDuplicateFiles 失败")
 	testutil.NotNil(t, groups, "无重复时应返回空切片（非 nil），否则前端 null 防御分支被误触发")
-	if len(groups) != 0 {
-		t.Fatalf("无重复时期望 0 组, got %d", len(groups))
-	}
+	testutil.Equal(t, len(groups), 0, "无重复时期望 0 组")
 }
 
 // TestInvalidateScanCache 测试清空扫描缓存
@@ -150,24 +140,18 @@ func TestInvalidateScanCache(t *testing.T) {
 
 	// 首次扫描
 	first := a.ScanModelEntries(root)
-	if len(first) != 1 {
-		t.Fatalf("首次扫描应发现 1 个文件")
-	}
+	testutil.Equal(t, len(first), 1, "首次扫描应发现 1 个文件")
 
 	// 二次扫描命中缓存
 	second := a.ScanModelEntries(root)
-	if len(second) != 1 {
-		t.Fatalf("缓存命中应仍返回 1 个文件")
-	}
+	testutil.Equal(t, len(second), 1, "缓存命中应仍返回 1 个文件")
 
 	// 清空缓存
 	a.InvalidateScanCache()
 
 	// 再次扫描不应命中缓存（内部逻辑同 ClearScanCache）
 	third := a.ScanModelEntries(root)
-	if len(third) != 1 {
-		t.Fatalf("清缓存后扫描应仍返回 1 个文件")
-	}
+	testutil.Equal(t, len(third), 1, "清缓存后扫描应仍返回 1 个文件")
 	// 无法直接断言缓存未命中（scanModelEntriesWithHit 未导出），但至少功能路径通
 }
 
@@ -395,9 +379,7 @@ func TestFindDuplicateFiles_Cancelled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	_, err := a.FindDuplicateFiles(ctx, root, "")
-	if !errors.Is(err, context.Canceled) {
-		t.Fatalf("预取消 ctx 应返回 context.Canceled 链, got %v", err)
-	}
+	testutil.ErrorIs(t, err, context.Canceled, "预取消 ctx 应返回 context.Canceled 链")
 }
 
 // TestRepoHealthAudit_Cancelled ADR-314：体检绑定同取消语义（walk 首检点即中止）。
@@ -415,7 +397,5 @@ func TestRepoHealthAudit_Cancelled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	_, err := a.RepoHealthAudit(ctx, root)
-	if !errors.Is(err, context.Canceled) {
-		t.Fatalf("预取消 ctx 应返回 context.Canceled 链, got %v", err)
-	}
+	testutil.ErrorIs(t, err, context.Canceled, "预取消 ctx 应返回 context.Canceled 链")
 }

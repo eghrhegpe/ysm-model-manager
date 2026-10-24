@@ -18,9 +18,8 @@ func TestExtractTextureViaYSM_NoDecoderInjected(t *testing.T) {
 	if err := os.WriteFile(path, []byte("YSGP\x00test"), 0644); err != nil {
 		testutil.NoError(t, err)
 	}
-	if _, err := extractTextureViaYSM(path); err == nil {
-		t.Fatal("未注入解码器应报错")
-	}
+	_, err := extractTextureViaYSM(path)
+	testutil.NotNil(t, err, "未注入解码器应报错")
 }
 
 func TestExtractTextureViaYSM_MockDecoderHitPNG(t *testing.T) {
@@ -58,15 +57,13 @@ func TestExtractTextureViaYSM_MockDecoderNoPNG(t *testing.T) {
 	if err := os.WriteFile(path, []byte("YSGP\x00test"), 0644); err != nil {
 		testutil.NoError(t, err)
 	}
-	if _, err := extractTextureViaYSM(path); err == nil {
-		t.Fatal("无纹理产物应报错")
-	}
+	_, err := extractTextureViaYSM(path)
+	testutil.NotNil(t, err, "无纹理产物应报错")
 }
 
 func TestExtractTextureViaYSM_MissingFile(t *testing.T) {
 	// 文件不存在 → 读取失败报错（无需解码器）
 	path := filepath.Join(t.TempDir(), "absent.ysm")
-	if _, err := extractTextureViaYSM(path); err == nil {
-		t.Fatal("文件不存在应报错")
-	}
+	_, err := extractTextureViaYSM(path)
+	testutil.NotNil(t, err, "文件不存在应报错")
 }

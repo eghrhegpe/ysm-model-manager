@@ -165,19 +165,26 @@ function dgInBindCopyRows(root: ShadowRoot): void {
  * 扫描仍显式点击触发（「进 tab 不跑进程」口径不变，ADR-278 §2.5）。
  * 栏与结果区是两段式——结果只写结果区，按钮不再住在结果容器内（旧形态的 dead-end 见 ADR-288 §1）。
  * sync-conflict 栏为异步：读配置 + 列实例（两次轻量 Go 读，与 log tab 进即 GetImportLogs 同级）；
- * 失败/不可用态由该函数内部落结果区 + 禁用按钮，故此处 void 调用。
+ * 失败/不可用态由该函数内部落结果区 + 禁用按钮，故此处 void 调用。返回订阅清理函数供父组件 unbind。
  */
-function dgInInitScanPanels(root: ShadowRoot, esc: EscFn): void {
-  void initSyncConflictPanel(
-    root.getElementById("diag-sync-bar"),
-    root.getElementById("diag-sync-conflict-list"),
-    esc,
-  );
+export function dgInInitScanPanels(root: ShadowRoot, esc: EscFn): () => void {
+  let unsubRtypeChanged = () => {};
+  try {
+    const unsub = initSyncConflictPanel(
+      root.getElementById("diag-sync-bar"),
+      root.getElementById("diag-sync-conflict-list"),
+      esc,
+    );
+    if (unsub) unsubRtypeChanged = unsub;
+  } catch (e) {
+    dbg("conflicts", "initSyncConflictPanel 异常（静默忽略）:", e);
+  }
   initHealthPanel(
     root.getElementById("diag-health-bar"),
     root.getElementById("diag-health-list"),
     esc,
   );
+  return unsubRtypeChanged;
 }
 
 function dgInBindLogFilter(root: ShadowRoot, esc: EscFn): void {

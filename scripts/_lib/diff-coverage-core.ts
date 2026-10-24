@@ -106,7 +106,15 @@ export function addLinesFromDiff(out: Set<number>, diff: string | null): void {
     }
     if (currentLine === 0) continue;
     if (line.startsWith("+")) {
-      out.add(currentLine);
+      // 注释行不产生覆盖义务（2026-10-24 CI 实证）：覆盖率按「变更行落进哪些语句块」
+      // 取相关块，纯注释 + 行（// /* *）会把所在函数体块拖成相关块——块内可执行语句
+      // 并未变更，却因整块未被测试而连坐判死（实证：app_install_import.go 的
+      // SyncCustomToRepo 注释改写把该函数拖进覆盖分母致 33.3%<60%）。与 Go 侧
+      // isRewriteLine 的注释豁免同源口径。
+      const t = line.slice(1).trim();
+      if (!t.startsWith("//") && !t.startsWith("/*") && !t.startsWith("*")) {
+        out.add(currentLine);
+      }
       currentLine++;
     } else if (line.startsWith(" ")) {
       // 上下文行（未变更），仍计入行号

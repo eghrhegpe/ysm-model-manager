@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 	"ysm-model-manager/go/types/registry"
 )
@@ -60,9 +61,7 @@ func TestBuildSyncItems_MixedFolderSingleAppearance(t *testing.T) {
 			topA++
 		}
 	}
-	if topA != 1 {
-		t.Fatalf("容器 A 应恰有 1 个顶层行，实际 %d（items=%+v）", topA, items)
-	}
+	testutil.Equal(t, topA, 1, "容器 A 应恰有 1 个顶层行，实际 %d（items=%+v）", topA, items)
 
 	// 容器 children：flat 恰 1 次、deep 经子夹行可达、无与容器同 Path 的影子行
 	var aRow *types.ResourceSyncItem
@@ -71,9 +70,7 @@ func TestBuildSyncItems_MixedFolderSingleAppearance(t *testing.T) {
 			aRow = &items[i]
 		}
 	}
-	if aRow == nil {
-		t.Fatal("未找到容器 A 行")
-	}
+	testutil.NotNil(t, aRow, "未找到容器 A 行")
 	flatCount, deepCount, shadowCount := 0, 0, 0
 	var walk func(nodes []types.ResourceSyncItem)
 	walk = func(nodes []types.ResourceSyncItem) {

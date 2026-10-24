@@ -47,6 +47,9 @@ test.describe("回收站", () => {
   });
 
   test("回收站条目级操作钩子存在（有条目时 per-item restore/delete）", async ({ page }) => {
+    // 死分支复活(e2e 审计 2026-10-24):原 mock ListRecycleBin=undefined → itemCount 恒 0,
+    // per-item 断言从未执行(条件跳过形态假绿灯)。现共享 mock 源已带 2 条数据
+    // (mock-data.ts),此用例改硬断言。
     await gotoApp(page);
     await navItem(page, "repository").click();
     await clickBySelector(page, '.repo-tab[data-tab="recycle"]');
@@ -59,14 +62,13 @@ test.describe("回收站", () => {
     const listCount = await countInShadow(page, '[data-testid="recy-list"]', 5000);
     expect(listCount).toBe(1);
 
+    // 注入 2 条 → 硬断言条目数与 per-item restore/delete 钩子一一对应（原 if 守卫
+    // 在 mock 空数据下是永不执行的死分支，假绿灯三重门之「条件跳过」形态）
     const itemCount = await countInShadow(page, '[data-testid="recy-item"]', 5000);
-    if (itemCount > 0) {
-      // 有条目：每条应带 restore/delete 操作钩子（稳定 testid，防重构漂移）
-      const restoreCount = await countInShadow(page, '[data-testid="recy-restore"]', 3000);
-      const delCount = await countInShadow(page, '[data-testid="recy-del"]', 3000);
-      expect(restoreCount).toBe(itemCount);
-      expect(delCount).toBe(itemCount);
-    }
-    // 空态（itemCount === 0）本就合法：列表容器存在即视为通过，不 skip 掩盖 mock 链路。
+    expect(itemCount).toBe(2);
+    const restoreCount = await countInShadow(page, '[data-testid="recy-restore"]', 3000);
+    const delCount = await countInShadow(page, '[data-testid="recy-del"]', 3000);
+    expect(restoreCount).toBe(itemCount);
+    expect(delCount).toBe(itemCount);
   });
 });

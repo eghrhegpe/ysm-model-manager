@@ -4,7 +4,7 @@
 // safeSet/safeRemove 静默不抛）、safeRemove 清零、互不污染。
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { stubLogWarn } from "@/test-utils/mock-log.ts";
-import { safeGet, safeSet, safeRemove, safeGetJSON, isStorageAccessible } from "./storage.ts";
+import { safeGet, safeSet, safeRemove, safeGetJSON, safeKeys, isStorageAccessible } from "./storage.ts";
 
 // storage.ts 命名导入 logWarn（spyOn 拦不到）：整模块 mock 后 stubLogWarn() 的 spy
 // 仍能断言（落在 mock 上），且「写日志（logWarn）」断言用例与降级用例都不再泄漏 stderr
@@ -42,6 +42,40 @@ function makeStorageThrow(): void {
   });
 }
 
+/**
+ * 可枚举键的 localStorage stub：Object.keys 只见存储键（真 DOM Storage 语义）。
+ * memStorage 的方法名是自有可枚举属性，直接喂 safeKeys() 会把 getItem/setItem
+ * 一并枚举出来——safeKeys 的「扫描真键」契约要求键枚举与存储内容一致。
+ */
+function makeEnumerableStorage(): Storage {
+  const store = new Map<string, string>();
+  const obj = {} as Storage;
+  const hidden = <F>(fn: F): PropertyDescriptor => ({
+    value: fn,
+    enumerable: false,
+    configurable: true,
+    writable: true,
+  });
+  Object.defineProperties(obj, {
+    getItem: hidden((k: string) => store.get(k) ?? null),
+    setItem: hidden((k: string, v: string) => {
+      store.set(k, v);
+      Object.defineProperty(obj, k, { value: v, enumerable: true, configurable: true, writable: true });
+    }),
+    removeItem: hidden((k: string) => {
+      store.delete(k);
+      delete (obj as Record<string, unknown>)[k];
+    }),
+    clear: hidden(() => {
+      store.clear();
+      for (const k of Object.keys(obj)) delete (obj as Record<string, unknown>)[k];
+    }),
+    key: hidden(() => null),
+    length: hidden(() => store.size),
+  });
+  return obj;
+}
+
 describe("storage 安全读写", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -71,6 +105,31 @@ describe("storage 安全读写", () => {
   it("safeSet 存储抛错 → 静默不抛（调用方不中断）", () => {
     makeStorageThrow();
     expect(() => safeSet("k2", "v2")).not.toThrow();
+  });
+
+  it("safeSet 返回布尔：成功 true / 失败 false（设置导入回写计数依据，静默失败不得虚报已应用数）", () => {
+    expect(safeSet("ret-k", "v")).toBe(true);
+    makeStorageThrow();
+    expect(safeSet("ret-k", "v")).toBe(false);
+  });
+
+  it("safeKeys 正常枚举真键（不含方法名），抛错 → 空数组", () => {
+    vi.stubGlobal("localStorage", makeEnumerableStorage());
+    safeSet("sk1", "1");
+    safeSet("sk2", "2");
+    expect(safeKeys()).toEqual(["sk1", "sk2"]);
+    safeRemove("sk1");
+    expect(safeKeys()).toEqual(["sk2"]);
+    // Object.keys 本身抛错（隐私模式真形态：ownKeys 被禁）——方法名可枚举的普通 stub
+    // 不会抛，须用 Proxy ownKeys 陷阱模拟
+    vi.stubGlobal(
+      "localStorage",
+      new Proxy(
+        {},
+        { ownKeys() { throw new Error("SecurityError: access is denied"); } },
+      ),
+    );
+    expect(safeKeys()).toEqual([]);
   });
 
   it("safeRemove 正常删除", () => {

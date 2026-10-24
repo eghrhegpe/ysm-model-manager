@@ -2251,6 +2251,10 @@ export const autoSidebar = [
             "link": "/knowledge/frontend-naming"
           },
           {
+            "text": "组件隔离渲染 harness 视觉验证层",
+            "link": "/knowledge/harness-isolated-render"
+          },
+          {
             "text": "icon-kit 多源图标（已并入 UI_ICONS）",
             "link": "/knowledge/icon-kit"
           },

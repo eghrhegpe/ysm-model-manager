@@ -137,7 +137,9 @@ check("isExemptLifecycle 命中窗口事件豁免名单", () => {
 });
 
 check("isExemptLifecycle 普通文件不豁免", () => {
-  assert.equal(isExemptLifecycle("internal/app/app.go"), false);
+  // app.go 已入生命周期豁免表（2026-10-24：ServiceStartup watcher 装配段 headless 不可达），
+  // 反例换 config.go（普通声明+逻辑文件，不在豁免表）
+  assert.equal(isExemptLifecycle("go/types/config.go"), false);
   assert.equal(isExemptLifecycle("go/scanner/scanner.go"), false);
 });
 
@@ -195,6 +197,14 @@ check("isRewriteLine 识别签名/引用/注释/断言行", () => {
   assert.equal(isRewriteLine("var _ cli.AppService = appStruct"), true);
   assert.equal(isRewriteLine("type DownloadTask struct {"), true);
   assert.equal(isRewriteLine("const MaxImportSize = 500"), true);
+  // 结构体字段 / 多行签名参数行（2026-10-24 补：纯声明文件死局，见 isRewriteLine 注释）
+  assert.equal(isRewriteLine('SchemaVersion int `json:"schemaVersion,omitempty"`'), true);
+  assert.equal(isRewriteLine("Format        string            `json:\"format\"`"), true);
+  assert.equal(isRewriteLine("LocalStorage  map[string]string"), true);
+  assert.equal(isRewriteLine("BackupPath string"), true);
+  assert.equal(isRewriteLine("\tsubpath string,"), true); // 多行签名参数（带尾逗号）
+  assert.equal(isRewriteLine('BackupPath string `json:"backupPath"` // 导入前备份路径（空=无需备份）'), true); // 尾注释含 = 不连坐
+  assert.equal(isRewriteLine("}"), true); // 收括号行：纯标点
 });
 
 check("isRewriteLine 逻辑行不豁免", () => {
@@ -213,6 +223,12 @@ check("isRewriteLine 逻辑行不豁免", () => {
     false,
   );
   assert.equal(isRewriteLine("var count = 0"), false); // 普通 var 是逻辑
+  // 字段形态伪装的逻辑行不得豁免（含 = ( { 语句特征）
+  assert.equal(isRewriteLine("root := filepath.Join(dir, name)"), false);
+  assert.equal(isRewriteLine("testutil.NoError(t, err)"), false);
+  assert.equal(isRewriteLine("entries := a.ScanModelEntriesForBrowse(a.ysmRoot())"), false);
+  assert.equal(isRewriteLine("return err"), false); // 语句关键字开头不得豁免
+  assert.equal(isRewriteLine("return nil, err"), false);
 });
 
 // ── 10. isRewriteOnlyDiff（纯重构变更判定）──

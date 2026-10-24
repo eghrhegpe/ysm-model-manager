@@ -16,6 +16,7 @@
     "test:audit": "vitest run --maxWorkers 8 --isolate=false --sequence.shuffle",
     "test:coverage": "vitest run --coverage --maxWorkers 8",
     "test:e2e": "playwright test",
+    "shot": "node harness/shot.mjs",
     "typecheck": "npm run check-bindings && tsc --noEmit",
     "test:e2e:web": "playwright test --config playwright.web.config.ts",
     "codemod": "node ../scripts/codemod.ts",

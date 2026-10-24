@@ -136,6 +136,10 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   // 键字面量 + go/types AppConfig 的 json 字段，与 settings-keys.ts 台账两向比对——
   // 新增设置键（前端新增键 / Go 新增配置字段）即须复核，漏登记转红
   "test_settings_key_ledger.ts": ["frontend", "go", "tests"],
+  // settings:imported 主题镜像因果链源码锁（二轮锐评 2026-10-17 P2⑧）：锁发射侧
+  // settings-backup.ts 的 emit 与消费侧 app-content 订阅回调内的 initTheme 重算——
+  // 前端设置导入/生命周期文件变更即须复核
+  "test_settings_imported_theme_lock.ts": ["frontend", "tests"],
   // 整合包同步写入口双缓存配对（锐评 2026-10-10）：扫 internal/app 生产文件的
   // ysmsync 写调用点，函数体须配对清 instance+sync 两派生缓存——go 侧同步入口变更即须复核
   "test_sync_write_cache_pairing.ts": ["go", "tests"],

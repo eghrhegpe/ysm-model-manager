@@ -179,3 +179,29 @@ func TestInstallModelFile_SymlinkEscapeRejected(t *testing.T) {
 		t.Error("仓库内指向仓库外的 symlink 应被拒绝")
 	}
 }
+
+// TestImportModelFileWithSubpath_SymlinkMidGuard 覆盖 2026-10-16 锐评 Go P1 的
+// symlink 中段守卫变更行：subpath 为空无中间组件 → 守卫放行并成功落盘；
+// subpath 中段是 symlink → CheckNoSymlinkInPath 逐组件 Lstat 拒绝（错误分支），
+// MkdirAll 不得穿透到仓库外。
+func TestImportModelFileWithSubpath_SymlinkMidGuard(t *testing.T) {
+	a, ysm := guardedApp(t)
+	b64 := base64.StdEncoding.EncodeToString([]byte("model-data"))
+
+	// 成功路径：subpath 为空 → 守卫放行 → 落盘 ysm 根直下
+	testutil.NoError(t, a.importModelFileWithSubpath("guard.ysm", "", b64, false))
+	testutil.FileExists(t, filepath.Join(ysm, "guard.ysm"))
+
+	// 错误分支：subpath 中段预置 symlink 指向仓库外 → 拒绝且不落盘
+	outside := t.TempDir()
+	if err := os.MkdirAll(outside, 0o755); err != nil {
+		testutil.NoError(t, err)
+	}
+	sub := filepath.Join(ysm, "sub")
+	if err := os.Symlink(outside, sub); err != nil {
+		t.Skipf("本机无 symlink 特权，错误分支由 CI 管理员环境覆盖: %v", err)
+	}
+	err := a.importModelFileWithSubpath("m.ysm", "sub", b64, false)
+	testutil.ErrorContains(t, err, "符号链接")
+	testutil.FileNotExists(t, filepath.Join(outside, "m.ysm"))
+}

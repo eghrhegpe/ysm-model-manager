@@ -24,7 +24,60 @@ export const MOCK_DATA = {
     mirror: "",
   },
   // 子代理审核 P2 补覆盖缺口：sync-manager 主数据源等此前缺失 → 降级/报错态假绿
-  GetInstanceSyncStatus: JSON.stringify([]),
+  // 2026-10-24 修正：原值 `JSON.stringify([])` 是**字符串**，与绑定契约
+  // `ResourceSyncItem[] | null` 不符——store.ts 直接 `(items || []).map(...)`，
+  // 字符串没有 .map → TypeError → 落进 catch → 恒显示「同步状态加载失败」。
+  // 契约守卫只比对键名不比对值类型，故这处漂移长期静默。现改为真数组（含目录行 +
+  // 多状态文件行），让同步页与 harness 截图都看到真实列表而非降级态。
+  GetInstanceSyncStatus: [
+    {
+      path: "/e2e/repo/1.20.1-Fabric",
+      name: "1.20.1-Fabric",
+      status: "synced",
+      type: "ysm",
+      icon: "",
+      size: 0,
+      isDir: true,
+      children: [
+        {
+          path: "/e2e/repo/1.20.1-Fabric/model-a.ysm",
+          name: "model-a.ysm",
+          status: "synced",
+          type: "ysm",
+          icon: "",
+          size: 1024,
+          isDir: false,
+        },
+        {
+          path: "/e2e/repo/1.20.1-Fabric/model-c.ysm",
+          name: "model-c.ysm",
+          status: "diverged",
+          type: "ysm",
+          icon: "",
+          size: 4096,
+          isDir: false,
+        },
+      ],
+    },
+    {
+      path: "/e2e/repo/model-b.ysm",
+      name: "model-b.ysm",
+      status: "missing",
+      type: "ysm",
+      icon: "",
+      size: 2048,
+      isDir: false,
+    },
+    {
+      path: "/e2e/repo/model-d.ysm",
+      name: "model-d.ysm",
+      status: "optional",
+      type: "ysm",
+      icon: "",
+      size: 512,
+      isDir: false,
+    },
+  ],
   CurrentVersion: "v1.0.0-e2e",
   OpenInBrowser: undefined,
   CheckFileExists: true,
@@ -355,7 +408,13 @@ export const MOCK_DATA = {
   ListFileNames: undefined,
   ListPackModels: undefined,
   ListPackModelsDetail: undefined,
-  ListRecycleBin: undefined,
+  // 有条目形态(2026-10-24 e2e 审计):原为 undefined,导致 recycle-bin.spec 的
+  // per-item 断言在 mock 下是永不执行的死分支(条件跳过假绿灯)——e2e 唯一消费方,
+  // vitest 侧无依赖,直接给数据激活。
+  ListRecycleBin: [
+    { Name: "model-a.ysm", Path: "/e2e/repo/model-a.ysm", Size: 1024 },
+    { Name: "model-b.ysm", Path: "/e2e/repo/model-b.ysm", Size: 2048 },
+  ],
   MergeCommunityCreatorsFromJSON: undefined,
   MergeCommunitySitesFromJSON: undefined,
   MergeWorkshopCreatorsFromJSON: undefined,

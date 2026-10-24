@@ -28,7 +28,6 @@ const CHROME = pinnedChromiumOrThrow({ preferFull: true });
 test.use({
   launchOptions: {
     executablePath: CHROME,
-    args: ["--enable-unsafe-swiftshader", "--use-angle=swiftshader"],
   },
 });
 

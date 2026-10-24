@@ -1,0 +1,31 @@
+<!doctype html>
+<!-- 组件隔离渲染 harness(视觉验证轻量层,与 e2e 分工见 docs/knowledge/harness-isolated-render.md)
+     用法: /harness/index.html?c=<组件名>  — 组件清单见 main.ts REGISTRY
+     截图: node harness/shot.mjs -->
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>component harness</title>
+    <link rel="stylesheet" href="/css/variables.css" />
+    <link rel="stylesheet" href="/css/components.css" />
+    <link rel="stylesheet" href="/css/dialogs.css" />
+    <link rel="stylesheet" href="/css/transitions.css" />
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: var(--bg);
+        color: var(--fg);
+        font-family: var(--font-ui);
+      }
+      #host {
+        padding: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="host"></div>
+    <script type="module" src="/harness/main.ts"></script>
+  </body>
+</html>

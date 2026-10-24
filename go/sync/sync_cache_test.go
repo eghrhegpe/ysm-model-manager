@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/scanner"
 )
 
@@ -34,17 +35,15 @@ func TestSyncScanCache_StaleEpochRejected(t *testing.T) {
 	InvalidateSyncScanCaches()
 	storeSyncScanCache(&cache, key, map[string]string{"a": filepath.Join(root, "a")}, staleEpoch)
 
-	if _, ok := loadSyncScanCache[map[string]string](&cache, key); ok {
-		t.Fatal("陈旧代际的 store 应被丢弃，缓存不得命中")
-	}
+	_, ok := loadSyncScanCache[map[string]string](&cache, key)
+	testutil.Equal(t, ok, false, "陈旧代际的 store 应被丢弃，缓存不得命中")
 
 	// 对照：失效后重新捕获 epoch 再 store → 应命中
 	freshEpoch := syncCacheEpochOf()
 	storeSyncScanCache(&cache, key, map[string]string{"a": filepath.Join(root, "a")}, freshEpoch)
 	got, ok := loadSyncScanCache[map[string]string](&cache, key)
-	if !ok || got["a"] != filepath.Join(root, "a") {
-		t.Fatalf("新鲜代际的 store 应命中，got=%v ok=%v", got, ok)
-	}
+	testutil.Equal(t, ok, true, "新鲜代际的 store 应命中")
+	testutil.Equal(t, got["a"], filepath.Join(root, "a"), "新鲜代际的 store 应命中")
 }
 
 func TestSyncScanCache_ScannerInvalidateClears(t *testing.T) {

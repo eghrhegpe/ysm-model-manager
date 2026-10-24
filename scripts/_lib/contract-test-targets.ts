@@ -69,6 +69,9 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   // 设置键台账对账：台账本体（不变量本体）+ Go 配置字段定义（磁盘轨对账对象）是
   // 判定集的锚；frontend/src 生产文件是扫描面（目录哨兵），任一新增键即命中
   "test_settings_key_ledger.ts": ["frontend/src/settings-keys.ts", "go/types/config.go", "frontend/src/"],
+  // settings:imported 主题镜像因果链：发射侧出口（emit 唯一点）+ 消费侧订阅文件
+  // （回调体内 initTheme 重算）是判定集的锚
+  "test_settings_imported_theme_lock.ts": ["frontend/src/views/app-content/settings/settings-backup.ts", "frontend/src/views/app-content/index.ts"],
   // 整合包同步写入口双缓存配对：internal/app 全部生产文件都是扫描对象（目录哨兵），
   // 写入口本体 app_sync.go / app_install_instance.go / app_install_import.go 变更必触发
   // 派生 fail-closed 闸：internal/app 生产文件全量在扫（目录哨兵）+ 被监视包导出面

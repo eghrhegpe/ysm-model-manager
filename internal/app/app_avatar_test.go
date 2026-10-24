@@ -69,12 +69,10 @@ func TestCreatorAuthorKeyTrimCohesion(t *testing.T) {
 	a := scanApp(t, types.AppConfig{FilesRoot: base})
 
 	authors := a.ListModelAuthors()
-	if len(authors) != 1 || authors[0].Name != "张三" {
-		t.Fatalf("作者列表应唯一且键已 trim：got %+v", authors)
-	}
+	testutil.Equal(t, len(authors), 1, "作者列表应唯一且键已 trim：got %+v", authors)
+	testutil.Equal(t, authors[0].Name, "张三", "作者列表应唯一且键已 trim：got %+v", authors)
 	result, err := a.BatchExtractCreatorAvatars()
 	testutil.NoError(t, err)
-	if uri := result["张三"]; uri == "" {
-		t.Fatalf("头像 map 键须与作者列表同源（trim 后 \"张三\"），got %v", result)
-	}
+	uri := result["张三"]
+	testutil.Equal(t, uri != "", true, "头像 map 键须与作者列表同源（trim 后 \"张三\"），got %v", result)
 }

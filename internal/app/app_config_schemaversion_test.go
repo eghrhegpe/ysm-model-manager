@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"ysm-model-manager/go/types"
+	"ysm-model-manager/internal/testutil"
 )
 
 // 本组测试锁「配置 schema 版本门控」（结合历史提交的锐评收口）。
@@ -71,9 +72,7 @@ func TestConfigSchemaVersion(t *testing.T) {
 		// 下次读取跳过迁移 → 复现 8c858c54a 的静默数据丢失。本用例锁死：
 		// 版本章只能由 applyConfigMigrations 在迁移完成后盖。
 		a := &App{}
-		if err := a.saveConfig(types.AppConfig{YsmRoot: `D:\ysm`, FilesRoot: t.TempDir()}); err != nil {
-			t.Fatalf("saveConfig: %v", err)
-		}
+		testutil.NoError(t, a.saveConfig(types.AppConfig{YsmRoot: `D:\ysm`, FilesRoot: t.TempDir()}), "saveConfig")
 		if got := onDiskField(t, "schemaVersion"); got != nil {
 			t.Errorf("未迁移的配置落盘不应带版本章，实为 %v", got)
 		}
@@ -90,9 +89,7 @@ func TestConfigSchemaVersion(t *testing.T) {
 		_ = a.LoadAppConfig() // 迁移 + 盖内存版本章
 		cfg := a.LoadAppConfig()
 		cfg.FilesRoot = t.TempDir()
-		if err := a.saveConfig(cfg); err != nil {
-			t.Fatalf("saveConfig: %v", err)
-		}
+		testutil.NoError(t, a.saveConfig(cfg), "saveConfig")
 		if got := onDiskField(t, "schemaVersion"); got != float64(types.SchemaVersion) {
 			t.Errorf("迁移后保存的磁盘文件应带 schemaVersion=%d，实为 %v", types.SchemaVersion, got)
 		}
@@ -103,13 +100,9 @@ func TestConfigSchemaVersion(t *testing.T) {
 func onDiskField(t *testing.T, key string) any {
 	t.Helper()
 	data, err := os.ReadFile(configPath())
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	var onDisk map[string]any
-	if err := json.Unmarshal(data, &onDisk); err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, json.Unmarshal(data, &onDisk))
 	return onDisk[key]
 }
 
@@ -118,17 +111,9 @@ func onDiskField(t *testing.T, key string) any {
 func writeRawConfigJSON(t *testing.T, obj map[string]any) {
 	t.Helper()
 	data, err := json.Marshal(obj)
-	if err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, err)
 	dest := configPath()
-	if dest == "" {
-		t.Fatal("configPath 不应为空（configDirOverride 已生效）")
-	}
-	if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(dest, data, 0o644); err != nil {
-		t.Fatal(err)
-	}
+	testutil.Equal(t, dest != "", true, "configPath 不应为空（configDirOverride 已生效）")
+	testutil.NoError(t, os.MkdirAll(filepath.Dir(dest), 0o755))
+	testutil.NoError(t, os.WriteFile(dest, data, 0o644))
 }

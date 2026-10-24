@@ -8,6 +8,7 @@ source_files:
   - frontend/src/utils/icon/ui-icons.ts
   - frontend/src/utils/icon/workshop-icons.ts
   - frontend/src/views/app-content/tpl.ts
+  - frontend/src/views/app-content/tpl-diagnostics.ts
   - frontend/src/views/app-sidebar/tpl.ts
   - frontend/src/views/app-preview/tpl-summary.ts
   - frontend/src/views/app-sidebar/sidebar-css.ts
@@ -69,7 +70,7 @@ quick_intents:
   - 评估"UI 挤在 TS 里"是负债还是合理取舍
 quick_risk_lines:
   - HTML/CSS/SVG 全在 TS 里≠「没格式分工」；角色已按 tpl.ts / *-css.ts / ui-icons.ts / resource_types.json 分层，触发线未写死是缺口，不是"没分工"
-  - 阈值要锚在**当前实测最大值**上（app-content/tpl.ts 已 561、ui-icons.ts 已 125 图标）；空口"超过 100 就迁"在存量就超线的代码上毫无意义
+  - 阈值要锚在**当前实测最大值**上（app-sidebar/tpl.ts 已 350、ui-icons.ts 已 125 图标）；空口"超过 100 就迁"在存量就超线的代码上毫无意义
   - 外迁方向只加**局部能力**（lit-html / Vite ?raw），不换根框架；主战场 Three.js/VRM/MMD 走 Canvas/WebGL，DOM 层收益极低
 ---
 
@@ -100,11 +101,20 @@ quick_risk_lines:
 
 判断该不该外迁时，**先对齐当前实测最大值**——阈值若低于当前最大值，说明存量已欠债，触发线是"新增即违规"，而非"新代码超线才迁"。
 
-- `views/` 共 9 个视图，非测试 `.ts` 最大 `app-content/` **80** 文件；其余视图 14–37 文件
-- `tpl*.ts` 行数 top：`app-content/tpl.ts` **561**、`app-sidebar/tpl.ts` **350**、`app-preview/tpl-summary.ts` **326**、`app-content/settings/tpl-settings-appearance.ts` **292**
-- `*-css.ts` 行数 top：`app-sidebar/sidebar-css.ts` **151**、`app-preview/css.ts` **111**、`app-sync-manager/sm-css.ts` **113**、`app-nav/nav-css.ts` **133**、`utils/dom/shadow-style.ts` **92**
-- `ui-icons.ts` **418** 行 / **125** 个 svg 图标（`workshop-icons.ts` 85 行，业务域图标独立）
-- 全仓 HTML 标签在 `.ts` 中约 **6441** 处
+> 下面每个数字都是**取样快照**（2026-10-24 复核）。数字随代码演化必腐，所以每条都带可复跑的口径；
+> 判断现状请重跑，不要把快照当当前值。
+
+- `views/` 非测试 `.ts` 最多 `app-content/` **81** 文件，其余视图 14–37 文件
+  （口径：`find frontend/src/views/<view> -name '*.ts' ! -name '*.test.ts' | wc -l`）
+- `tpl*.ts` 行数 top：`app-sidebar/tpl.ts` **350**、`app-preview/tpl-summary.ts` **326**、`app-content/tpl.ts` **311**、
+  `app-preview/tpl.ts` **310**、`app-content/settings/tpl-settings-appearance.ts` **292**
+  （`app-content/tpl.ts` 曾 561——越线后已按 C 组「拆子模板」拆出 `tpl-diagnostics.ts`，见下方裁定记录）
+- `*-css.ts` 行数 top：`utils/dom/css.ts` **166**、`app-sidebar/sidebar-css.ts` **151**、`app-nav/nav-css.ts` **133**、
+  `app-sync-manager/sm-css.ts` **113**、`app-preview/css.ts` **111**
+- `ui-icons.ts` **125** 个 svg 图标（`workshop-icons.ts` 是业务域图标，独立成集不混）
+  （口径：`grep -cE '^  [a-zA-Z][a-zA-Z0-9]*:' frontend/src/utils/icon/ui-icons.ts`）
+- 全仓 `.ts`（非测试）里的 HTML 开标签约 **3351** 处
+  （口径：`grep -roE '<[a-zA-Z][a-zA-Z0-9]*[ >]' frontend/src --include=*.ts | wc -l`，需自行排除测试文件）
 
 ## 不变量（触发线）
 
@@ -121,19 +131,25 @@ quick_risk_lines:
 
 | 观察对象 | 当前实测最大 | 触发线（超过即评估外迁） | 外迁目标 |
 |---|---|---|---|
-| 单 `tpl.ts` 行数 | `app-content/tpl.ts` 561 | > 400 | 拆子模板（`tpl-workshop.ts` 已有范式）或试点 `lit-html` |
-| 单 `*-css.ts` 行数 | `sidebar-css.ts` 151 | > 250 | 切真 `.css` + `?raw` 或 `?inline` 导入 |
+| 单 `tpl*.ts` 行数 | `app-sidebar/tpl.ts` 350 | > 400 | 先**拆子模板**（`tpl-diagnostics.ts` / `tpl-workshop.ts` 范式）；带循环渲染才试点 `lit-html` |
+| 单 `*-css.ts` 行数 | `utils/dom/css.ts` 166 | > 250 | 切真 `.css` + `?raw` 或 `?inline` 导入 |
 | `ui-icons.ts` 图标数 | 125 图标 | > 180 | 切真 `.svg` 文件 + `import x from "./x.svg?raw"` |
-| 新视图非测试 `.ts` 数 | `app-content/` 80 | > 120 | 按业务子域拆多视图（不是拆更多文件塞进单视图） |
+| 新视图非测试 `.ts` 数 | `app-content/` 81 | > 120 | 按业务子域拆多视图（不是拆更多文件塞进单视图） |
 
-**触发线的语义**：不是"超过就动手"，是"新增代码前必读此卡"。已有存量不追溯，但**新代码不得让指标继续扩大**（如：新增视图若单目录已到 80，先考虑拆而不是继续加文件）。
+**触发线只管体积，不管格式。** 越线第一动作永远是「在同一种格式内拆文件」（同族 `tpl-*.ts` 先例已有 5 个：
+`tpl-workshop` / `tpl-oldest` / `tpl-recycle` / `tpl-dedup` / `tpl-diagnostics`）；C 组那三条**换格式**的外迁，
+门槛比这张表高——`lit-html` 试点还要求「带循环渲染」，不是「行数越线」单条成立。把体积越线直接读成
+「该上模板引擎」是把两种病混为一谈。
+
+**触发线的语义**：不是"超过就动手"，是"新增代码前必读此卡"。已有存量不追溯，但**新代码不得让指标继续扩大**（如：新增视图若单目录已到 81，先考虑拆而不是继续加文件）。
 
 **C. 局部试点候选**（真需要时按此顺序，最温和在前）
 
 1. **CSS 外迁**：`*-css.ts` > 250 行时切 `.css` 文件（Vite `?raw` 导入或 `?inline`），保留 shadow DOM 隔离。
 2. **SVG 外迁**：`ui-icons.ts` > 180 图标时切 `.svg` 静态资产（Vite `?raw`），保留 `.ws-icon` 视觉约定。
-3. **模板局部试点**：单 `tpl.ts` > 400 行且带循环渲染时，试点 `lit-html`（信号级、不换根框架、不引 React/Vue）。
-4. **禁**：换 React/Vue/Svelte 等根框架。收益低（3D 主战场无关），迁移代价高（6441 处 HTML 字符串 + ADR-190/208 seam 治理要重设计）。
+3. **模板局部试点**：单 `tpl*.ts` 行数超 400 **且**带循环渲染时，试点 `lit-html`（信号级、不换根框架、不引 React/Vue）。
+   注意：**只超行数不构成试点理由**——先走第 0 步「拆子模板」，拆完仍超且循环密集才谈试点。
+4. **禁**：换 React/Vue/Svelte 等根框架。收益低（3D 主战场无关），迁移代价高（全仓数千处 HTML 字符串 + ADR-190/208 seam 治理要重设计）。
 
 ## 陷阱
 
@@ -149,6 +165,11 @@ quick_risk_lines:
 - **`app-tree` / `app-sidebar` / `app-preview` / `app-content`**：本卡观察的四个视图是当前分工范式的样本；拆视图/加图标/写模板前先对齐本卡阈值。
 - **ADR-133**（VIEW_TESTIDS）：HTML 字符串无类型检查的兜底机制；本卡的触发线**不改**此机制，仅补充"什么时候把字符串迁出去"。
 - **ADR-190/208**（禁 HTML 字面量 + seam）：与 A.4–A.6 一起构成"HTML 只在一处生长"的闭环。
+
+
+## 裁定记录
+
+- `2026-10-24`：app-content/tpl.ts 越 400 行线时只做同格式拆子模板（拆出 tpl-diagnostics.ts + lastTabOf 上提为 tabs-shell.ts|readLastTab），不触发 CSS/SVG/lit-html 外迁｜四项触发线里只有 tpl 行数越线，且是文件体积问题而非格式问题；换格式的门槛比体积表高，混读会把两种病当一种｜回退 = `frontend/src/views/app-content/tpl.ts|diagnosticsHTML`
 
 ## 相关
 

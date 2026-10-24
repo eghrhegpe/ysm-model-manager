@@ -427,7 +427,9 @@ describe("基准模式接线（ADR-278）", () => {
   // 控件集须全部落在夹具 makeRoot 里（夹具是真实面的**超集**即合格；真实面新增控件而夹具未跟上即红）。
   it("tpl.ts bench 真实控件集 ⊆ 夹具控件集（运行期对账的宇宙等于现实，防夹具漏控件致盲）", () => {
     // happy-dom 下 import.meta.url 是 http://，new URL 不可用；process.cwd() = frontend/
-    const src = readFileSync(resolve(process.cwd(), "src/views/app-content/tpl.ts"), "utf8");
+    // 2026-10：诊断页模板拆至 tpl-diagnostics.ts（体积收债）——bench/audit 两个锚点都在那半边，
+    // 仍读 tpl.ts 会切出空串、tplIds 变空集，下面的 mustSee 全红（不是假绿，是假红）。
+    const src = readFileSync(resolve(process.cwd(), "src/views/app-content/tpl-diagnostics.ts"), "utf8");
     const at = src.indexOf("body:", src.indexOf(`id: "bench",`));
     const e = src.indexOf(`id: "audit",`);
     expect(at, '找不到 bench tab body').toBeGreaterThan(-1);
@@ -481,7 +483,8 @@ describe("基准模式接线（ADR-278）", () => {
     //  - pill 无行引用（如加了 quad pill 却没有任何行挂 quad）→ 点子屏**全场无响应**，
     //    静默空转 pill（点了没反应，用户以为坏了）。
     // 控件级归宿归上一节大刀护栏管；本节的**行级对账**是它在 ADR-300 后的另一半。
-    const src = readFileSync(resolve(process.cwd(), "src/views/app-content/tpl.ts"), "utf8");
+    // 同上：bench 组在 tpl-diagnostics.ts（2026-10 拆出）
+    const src = readFileSync(resolve(process.cwd(), "src/views/app-content/tpl-diagnostics.ts"), "utf8");
     const at = src.indexOf("body:", src.indexOf(`id: "bench",`));
     const seg = src.slice(src.indexOf("`", at) + 1, src.indexOf(`id: "audit",`));
     // pill 值域 = bench 组 renderSubBar 声明的 id 集（renderSubBar 调用在 seg 内只此一处：

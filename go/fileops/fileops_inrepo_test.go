@@ -15,6 +15,8 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
+
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // inRepoRoot 造一个词法仓库根（不落地），root 与 child 均相对 t.TempDir()。
@@ -29,16 +31,12 @@ func TestInRepo_PathEqualsRoot(t *testing.T) {
 	msg := "源文件必须在仓库内"
 
 	// allowRoot=false：path==root 无意义，必须拒（Move 源=root、Delete 单文件=root）。
-	if err := inRepo(root, root, msg, false); err == nil {
-		t.Fatalf("allowRoot=false 时应拒绝 path==root, 得到 nil")
-	} else if err.Error() != msg+": "+root {
-		t.Fatalf("错误文案不符, got=%q want=%q", err.Error(), msg+": "+root)
-	}
+	err := inRepo(root, root, msg, false)
+	testutil.NotNil(t, err, "allowRoot=false 时应拒绝 path==root, 得到 nil")
+	testutil.Equal(t, err.Error(), msg+": "+root, "错误文案不符")
 
 	// allowRoot=true：path==root 合法（Copy 源/目标=root、Move 目标=root）。
-	if err := inRepo(root, root, msg, true); err != nil {
-		t.Fatalf("allowRoot=true 时应放行 path==root, 得到 %v", err)
-	}
+	testutil.NoError(t, inRepo(root, root, msg, true), "allowRoot=true 时应放行 path==root")
 }
 
 func TestInRepo_OutsideRootRejectsWithInjectedMsg(t *testing.T) {
@@ -48,12 +46,8 @@ func TestInRepo_OutsideRootRejectsWithInjectedMsg(t *testing.T) {
 
 	// 错误消息由调用方注入，断言原文（fileops_move_safety_test.go 同款）——防收敛后文案漂移。
 	err := inRepo(root, outside, msg, false)
-	if err == nil {
-		t.Fatalf("仓库外路径应被拒绝, 得到 nil")
-	}
-	if err.Error() != msg+": "+outside {
-		t.Fatalf("错误文案不符, got=%q want=%q", err.Error(), msg+": "+outside)
-	}
+	testutil.NotNil(t, err, "仓库外路径应被拒绝, 得到 nil")
+	testutil.Equal(t, err.Error(), msg+": "+outside, "错误文案不符")
 }
 
 // TestInRepo_EmptyRootEarlyReturnPreserved：root=="" 是**调用点**既有契约
@@ -62,9 +56,7 @@ func TestInRepo_OutsideRootRejectsWithInjectedMsg(t *testing.T) {
 // inRepo 自身不早退（IsInside 对空 root 报 ErrEmptyBase），故此处只验证调用点早退。
 func TestInRepo_EmptyRootEarlyReturnPreserved(t *testing.T) {
 	root := ""
-	if err := checkMoveWithinRoot(root, "a.ysm", "sub"); err != nil {
-		t.Fatalf(`root=="" 时 checkMoveWithinRoot 应早退放行, 得到 %v`, err)
-	}
+	testutil.NoError(t, checkMoveWithinRoot(root, "a.ysm", "sub"), `root=="" 时 checkMoveWithinRoot 应早退放行`)
 }
 
 func TestInRepo_ChildInsideRoot(t *testing.T) {
@@ -72,12 +64,8 @@ func TestInRepo_ChildInsideRoot(t *testing.T) {
 	child := filepath.Join(root, "sub", "a.ysm")
 
 	// allowRoot=false 仅拒绝 root 自身，root 内子路径必须放行。
-	if err := inRepo(root, child, "源文件必须在仓库内", false); err != nil {
-		t.Fatalf("仓库内子路径应放行, 得到 %v", err)
-	}
-	if err := inRepo(root, child, "源文件必须在仓库内", true); err != nil {
-		t.Fatalf("仓库内子路径应放行(allowRoot=true), 得到 %v", err)
-	}
+	testutil.NoError(t, inRepo(root, child, "源文件必须在仓库内", false), "仓库内子路径应放行")
+	testutil.NoError(t, inRepo(root, child, "源文件必须在仓库内", true), "仓库内子路径应放行(allowRoot=true)")
 }
 
 func TestInRepo_CaseInsensitiveOnWindows(t *testing.T) {
@@ -89,13 +77,9 @@ func TestInRepo_CaseInsensitiveOnWindows(t *testing.T) {
 	candidate := filepath.Join(rootLower, "sub", "a.ysm")
 
 	if runtime.GOOS == "windows" {
-		if err := inRepo(root, candidate, "源文件必须在仓库内", false); err != nil {
-			t.Fatalf("Windows 下大小写形态不同的仓库内路径应放行, 得到 %v", err)
-		}
+		testutil.NoError(t, inRepo(root, candidate, "源文件必须在仓库内", false), "Windows 下大小写形态不同的仓库内路径应放行")
 	} else {
-		if err := inRepo(root, candidate, "源文件必须在仓库内", false); err == nil {
-			t.Fatal("Linux 下大小写形态不同的路径应视为越权拒绝, 得到 nil")
-		}
+		testutil.NotNil(t, inRepo(root, candidate, "源文件必须在仓库内", false), "Linux 下大小写形态不同的路径应视为越权拒绝")
 	}
 }
 
@@ -104,12 +88,8 @@ func TestDeleteModelFile_EmptyRootEarlyReturnPreserved(t *testing.T) {
 	// 非 ysm 分支走 inRepo(root==""...) 也应早退放行。
 	dir := t.TempDir()
 	file := filepath.Join(dir, "x.ysm")
-	if err := os.WriteFile(file, []byte("data"), 0o644); err != nil {
-		t.Fatalf("写测试文件失败: %v", err)
-	}
+	testutil.NoError(t, os.WriteFile(file, []byte("data"), 0o644), "写测试文件失败")
 	// root=="" 时守卫 `if root != ""` 整体跳过（文件会被正常删除），此处仅验证
 	// 收敛到 inRepo 后不因 root 空而报错——若 inRepo 被误改成立即 fail 就暴露。
-	if err := DeleteModelFile("", file); err != nil {
-		t.Fatalf(`root=="" 时 DeleteModelFile 应早退不报错, 得到 %v`, err)
-	}
+	testutil.NoError(t, DeleteModelFile("", file), `root=="" 时 DeleteModelFile 应早退不报错`)
 }

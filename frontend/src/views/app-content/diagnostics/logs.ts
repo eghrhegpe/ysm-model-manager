@@ -62,7 +62,7 @@ export function dgLsResetCapsMemo(): void {
  * ⚠️ 表只存 LocaleKey、**不在此求值 t()**：模块构建期调 t() 会把译文焊死在首查语言包上
  * （initI18n 异步装载，顶层求值落 zh-CN；lang:changed 只重建 DOM 不重建模块）——
  * en/ja 下标签恒中文即此病。消费点（opMeta）现调，门禁 scripts/i18n-frozen-t-check.ts 锁死。
- * ⚠️ 导出即**操作类型唯一事实源**：`tpl.ts|diagnosticsHTML` 的下拉选项由本表键集派生
+ * ⚠️ 导出即**操作类型唯一事实源**：`tpl-diagnostics.ts|diagnosticsHTML` 的下拉选项由本表键集派生
  * （2026-10-13 收口——此前 tpl 硬编码八个 `<option>`，注释自称「与 OP_META 同源」实为手写
  * 镜像 + 靠人记得两处同步；tpl.test.ts 再写第三份值集）。新增操作类型只改本表。
  */

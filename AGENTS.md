@@ -16,7 +16,7 @@
 | Go | `go build ./...` |
 | 前端 | `cd frontend && npx vite build && npm run typecheck` |
 | 前端非测试文件 | `node scripts/check-biome.ts --files <改动文件...>` |
-| UI 视觉效果 | e2e 截图回看（非「人开浏览器看」）：一次性探针 `node artifacts/e2e-probe.mjs <url> <out.png>`，截图存 `_shots/` 用读图工具回看；方法 → 知识卡 `e2e-visual-feedback.md` |
+| UI 视觉效果 | 单组件秒级截图 `cd frontend && node harness/shot.mjs`（mock 桥隔离渲染，→ 知识卡 `harness-isolated-render.md`）；全 app/3D 走 e2e 截图回看（非「人开浏览器看」）：一次性探针 `node artifacts/e2e-probe.mjs <url> <out.png>`，截图存 `_shots/` 用读图工具回看；方法 → 知识卡 `e2e-visual-feedback.md` |
 | 只改文档 | `node scripts/doctor.ts --docs`（秒级） |
 | 发版前 | `node scripts/doctor.ts`（全量） |
 
@@ -116,7 +116,7 @@ git reset --soft HEAD~1             # 撤销最近提交，改动留在暂存区
 | CLI 命令参数 | `docs/cli-commands.md`（`gen-cli-doc.ts` 自动生成，单一事实源 = 源码注册） |
 | 缓存问题 | `texture_cache` 包 + `cache-status`/`cache-verify`；清理走 `cache-clear` |
 | 性能诊断 | `file-bench` / `analyze-mmd` / `scan-dir` |
-| 想看 UI 效果 / 视觉验证 | **e2e 截图回看，不是「开浏览器看」**——AI 看不到浏览器窗口，唯一通路 = 脚本截图存 png → 读图工具回看：一次性探针 `node artifacts/e2e-probe.mjs <url> <out.png>`；结构巡检（mock 桥，快）`npx playwright test --config playwright.config.ts menu-visual`；真 3D/WebGL（swiftshader 参数）`npx playwright test --config playwright.web.config.ts <spec>`；截图存 `e2e*/_shots/`；方法/坑 → 知识卡 `docs/knowledge/e2e-visual-feedback.md`（三层配置、单变量对照、假绿灯三重门） |
+| 想看 UI 效果 / 视觉验证 | **脚本截图回看，不是「开浏览器看」**——AI 看不到浏览器窗口，唯一通路 = 截图存 png → 读图工具回看。**按改动面选层**：单组件样式/布局 → harness 隔离渲染 `cd frontend && node harness/shot.mjs [组件名]`（秒级，→ `harness-isolated-render.md`）；全 app 结构 → mock 桥 `npx playwright test --config playwright.config.ts menu-visual`；真 3D/WebGL → swiftshader `npx playwright test --config playwright.web.config.ts <spec>`；一次性探针 `node artifacts/e2e-probe.mjs <url> <out.png>`；方法/坑 → `docs/knowledge/e2e-visual-feedback.md`（单变量对照、假绿灯三重门） |
 | 搜索模型/数值范围 | 关键词 + 标签 + 数值三路交集；见 `go-cli-search.md` / `toolbar-search.md` / `dialog-adv-filter.md` |
 | 发布 / 维护 | `docs/releases/` + `docs/VitePress-maintenance.md`（项目维护手册） |
 | Android | `docs/knowledge/android-dev.md`（操作手册类知识卡） |

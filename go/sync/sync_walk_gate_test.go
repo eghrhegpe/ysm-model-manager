@@ -18,6 +18,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"ysm-model-manager/go/internal/testutil"
 )
 
 // walkCallRe 匹配 Walk/WalkDir 调用（要求紧跟实参括号，注释里的裸提及不误报）。
@@ -43,9 +45,7 @@ type srcBlock struct {
 func loadPackageBlocks(t *testing.T) []srcBlock {
 	t.Helper()
 	entries, err := os.ReadDir(".")
-	if err != nil {
-		t.Fatalf("读包目录失败: %v", err)
-	}
+	testutil.NoError(t, err, "读包目录失败")
 	var blocks []srcBlock
 	for _, e := range entries {
 		name := e.Name()
@@ -53,9 +53,7 @@ func loadPackageBlocks(t *testing.T) []srcBlock {
 			continue
 		}
 		data, err := os.ReadFile(name)
-		if err != nil {
-			t.Fatalf("读 %s 失败: %v", name, err)
-		}
+		testutil.NoError(t, err, "读 %s 失败", name)
 		lines := strings.Split(string(data), "\n")
 		start := -1
 		flush := func(end int) {
@@ -137,10 +135,9 @@ func TestWalkCollectorsUseExclusionGate(t *testing.T) {
 		violations = append(violations, blockLabel(b))
 	}
 
-	if len(sites) < minWalkSites {
-		t.Fatalf("Walk 调用点仅 %d 处（< %d）——派生扫描疑似失效或收集器被合并，"+
+	testutil.Equal(t, len(sites) >= minWalkSites, true,
+		"Walk 调用点仅 %d 处（< %d）——派生扫描疑似失效或收集器被合并，"+
 			"请核对后同步 minWalkSites（ADR-351 D1 契约测试）", len(sites), minWalkSites)
-	}
 	if len(violations) > 0 {
 		t.Errorf("发现 %d 个未挂统一剔除闸的 Walk 收集器（ADR-351 D1）：\n  %s\n"+
 			"修复：回调的目录分支顶部调用 skipExcludedDir(root, path) 并 return err；"+

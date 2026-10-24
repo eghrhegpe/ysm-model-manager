@@ -14,9 +14,11 @@
 // 首个面板不写 `display`（回落 `.tab-body` 布局），其余 `display:none`——与 `bindTabs.activate`
 // 的 `style.display = "" / "none"` 翻转口径一致。
 //
-// 纯字符串（零依赖）：可 node 环境单测，也可被任意页面模板复用。
-// 键盘原语例外（ADR-308 D2）：bindSubBar 的键盘段依赖 bind-roving（DOM 原语层）。
+// 零应用层依赖：标记产出全为纯字符串（可 node 环境单测、被任意页面模板复用），
+// 仅两处例外——bindSubBar 的键盘段依赖 bind-roving（DOM 原语层，ADR-308 D2）；
+// readLastTab 依赖 storage 原语（读回上次激活 tab，与 renderTabs 的 initialActiveId 配对）。
 
+import { safeGet } from "@/utils/base/primitives/storage.ts";
 import { bindRoving } from "@/utils/dom/bind-roving.ts";
 
 /** 单个 tab 的声明：按钮文案 + 面板内容 + 该面板的差异项。
@@ -150,6 +152,20 @@ export function renderTabs<Id extends string = string>(spec: TabsShellSpec<Id>):
       : "";
 
   return { bar, panels, notice };
+}
+
+/**
+ * 读回上次激活的 tab id（与 renderTabs 的 `initialActiveId` 配对）。
+ *
+ * 写侧在 `tabs-runtime.ts` 的 `onActivate`（激活即 `safeSet`），键 `ysm-tabs-last-<prefix>`。
+ * 读侧收敛在这里：语言热切换会全量重建（clearPanels + _render），若无此恢复，
+ * 用户每次切语言都被弹回第一个 tab。与 site/workshop-tabs.ts 的 WS_LAST_TAB_KEY 同范式。
+ *
+ * 只读不判：值域校验归 renderTabs（找不到该 id 的 tab 时回落首项），此处不复制一份 tab 名单——
+ * 两份名单必然漂移。存储原语自带 try/catch（隐私模式下静默返回 null）。
+ */
+export function readLastTab(prefix: string): string | undefined {
+  return safeGet(`ysm-tabs-last-${prefix}`) ?? undefined;
 }
 
 // ===== 组内二级导航（ADR-300 §2.2：全页子切换只有一种 pill 语法）=====

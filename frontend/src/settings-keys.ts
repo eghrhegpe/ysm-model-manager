@@ -597,7 +597,7 @@ export const SETTINGS_KEYS: readonly SettingsKeyEntry[] = [
     migrates: false,
     owner: "views/app-content/tabs-runtime.ts",
     keyPattern: "ysm-tabs-last-*",
-    note: "键族：实际键为 ysm-tabs-last- + 页签组 prefix（tabs-runtime.ts 模板字面量拼接）；tpl.ts|readLastTab 读取。2026-10-16 拼接键新口径抓出的漏网家族——函数签名实参是反引号模板，旧正则只认双引号首参故隐身",
+    note: "键族：实际键为 ysm-tabs-last- + 页签组 prefix（tabs-runtime.ts 模板字面量拼接）；读取在 views/app-content/tabs-shell.ts 的 readLastTab（2026-10 从 tpl.ts 上提，与 renderTabs 的 initialActiveId 配对）。2026-10-16 拼接键新口径抓出的漏网家族——函数签名实参是反引号模板，旧正则只认双引号首参故隐身",
   },
   {
     key: "sb_selectedName_*",

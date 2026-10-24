@@ -20,6 +20,7 @@ package sync
 import (
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -233,15 +234,9 @@ func TestVerdictMatrix_ConflictView(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			typ, hashFailed, detected := conflictFromVerdict(c.differs, c.channel, c.hashMissing)
-			if detected != c.wantDetect {
-				t.Fatalf("%s：detected got=%v want=%v", c.name, detected, c.wantDetect)
-			}
-			if typ != c.wantType {
-				t.Fatalf("%s：type got=%q want=%q", c.name, typ, c.wantType)
-			}
-			if hashFailed != c.wantFailed {
-				t.Fatalf("%s：hashFailed got=%v want=%v", c.name, hashFailed, c.wantFailed)
-			}
+			testutil.Equal(t, detected, c.wantDetect, "%s：detected", c.name)
+			testutil.Equal(t, typ, c.wantType, "%s：type", c.name)
+			testutil.Equal(t, hashFailed, c.wantFailed, "%s：hashFailed", c.name)
 		})
 	}
 }

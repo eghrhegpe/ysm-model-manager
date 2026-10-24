@@ -922,17 +922,13 @@ func TestSyncItemsCache_StaleEpochRejected(t *testing.T) {
 	InvalidateSyncItemsCache()
 	syncItemsCache.putAt(key, []types.ResourceSyncItem{{Path: "/stale", Name: "stale"}},
 		time.Now().Add(time.Hour), staleEpoch)
-	if syncItemsCache.peek(key) {
-		t.Fatal("陈旧代际的 put 应被丢弃，缓存不得命中")
-	}
+	testutil.Equal(t, syncItemsCache.peek(key), false, "陈旧代际的 put 应被丢弃，缓存不得命中")
 
 	// 对照：失效后重新捕获 epoch 再 put → 应命中
 	freshEpoch := syncItemsCache.epochOf()
 	syncItemsCache.putAt(key, []types.ResourceSyncItem{{Path: "/fresh", Name: "fresh"}},
 		time.Now().Add(time.Hour), freshEpoch)
-	if !syncItemsCache.peek(key) {
-		t.Fatal("新鲜代际的 put 应命中")
-	}
+	testutil.Equal(t, syncItemsCache.peek(key), true, "新鲜代际的 put 应命中")
 }
 
 // TestBuildSyncItems_ScannerInvalidateClearsResultCache 锁定 scanner 失效钩子：

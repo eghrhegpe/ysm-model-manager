@@ -406,17 +406,13 @@ func TestBuildInstanceStatusCounts_ListDeduped(t *testing.T) {
 	}
 	seen := map[string]bool{}
 	for _, p := range st.Missing {
-		if seen[p] {
-			t.Fatalf("清单重复条目 %s（全清单 %v）——会导致重复安装；单表示失效（ADR-351 D3）", p, st.Missing)
-		}
+		testutil.Equal(t, seen[p], false, "清单重复条目 %s（全清单 %v）——会导致重复安装；单表示失效（ADR-351 D3）", p, st.Missing)
 		seen[p] = true
 	}
 	if len(st.Missing) == 0 {
 		t.Fatal("两个平铺/子夹文件都缺失，清单不应为空")
 	}
-	if !sort.StringsAreSorted(st.Missing) {
-		t.Fatalf("清单仍须有序，实际 %v", st.Missing)
-	}
+	testutil.Equal(t, sort.StringsAreSorted(st.Missing), true, "清单仍须有序，实际 %v", st.Missing)
 	// 面板链单表示硬断言（旧版此处 Skip：形态变化时断言自然失效；单表示修复后
 	// 重复=回归，翻转为 fail）：flat.pmx 在顶层容器子项里恰出现 1 次
 	raw := BuildSyncItems(&ins, []registry.ResourceType{{ID: "EntityPlayer", Icon: "🧍"}},
@@ -431,9 +427,7 @@ func TestBuildInstanceStatusCounts_ListDeduped(t *testing.T) {
 		}
 	}
 	t.Logf("面板链顶层单元 %d 个；flat.pmx 在子项出现 %d 次；侧栏清单 %v", len(raw), dup, st.Missing)
-	if dup > 1 {
-		t.Fatalf("面板链子项重复列示 flat.pmx ×%d——单表示失效（ADR-351 D3，absorbSelfMarker 判重回归）", dup)
-	}
+	testutil.Equal(t, dup > 1, false, "面板链子项重复列示 flat.pmx ×%d——单表示失效（ADR-351 D3，absorbSelfMarker 判重回归）", dup)
 }
 
 // sortedCopy 复制并排序，屏蔽实现内部排序策略差异

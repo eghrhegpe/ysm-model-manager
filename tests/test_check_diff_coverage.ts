@@ -64,6 +64,25 @@ check("addLinesFromDiff 多 hunk 各自独立起始", () => {
   );
 });
 
+check("addLinesFromDiff 注释 + 行不产生覆盖义务", () => {
+  // 2026-10-24 CI 实证：注释 + 行会把所在函数体块拖成相关块（块内可执行语句未变更
+  // 却连坐判死）。// / * 续行 / /* 三形态均跳过，行号仍递增。
+  const diff = [
+    "@@ -105,2 +105,5 @@",
+    " n, err := ysmsync.SyncCustomToRepo(a, b)",
+    "+// 收编会改全局仓库目录；sync 内部已走 scanner.InvalidateCache 级联清两侧。",
+    "+\t// 第二行注释",
+    "+ * 块注释续行",
+    "+instance.InvalidateSyncItemsCache()",
+    "+ysmsync.InvalidateSyncScanCaches()",
+  ].join("\n");
+  const out = new Set();
+  addLinesFromDiff(out, diff);
+  // 行号推演：@@ +105 → 105；" n, err..."( )→106；两条注释 + * 行(+)不 add 但递增到 109；
+  // "+instance..."→add(109)→110；"+ysmsync..."→add(110)→111
+  assert.deepEqual([...out].sort((a, b) => a - b), [109, 110]);
+});
+
 check("parseRenameStatus 解析 R 行，忽略 M/A/D", () => {
   const out = [
     "R098\tfrontend/src/views/app-content/site/edit.ts\tfrontend/src/views/app-content/site/editor.ts",

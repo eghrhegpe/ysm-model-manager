@@ -129,30 +129,20 @@ func TestDirectoryExists(t *testing.T) {
 
 	t.Run("存在的目录返回 true", func(t *testing.T) {
 		dir := t.TempDir()
-		if !a.DirectoryExists(dir) {
-			t.Fatalf("已创建目录应返回 true: %s", dir)
-		}
+		testutil.Equal(t, a.DirectoryExists(dir), true, "已创建目录应返回 true: %s", dir)
 	})
 
 	t.Run("不存在的路径返回 false", func(t *testing.T) {
-		if a.DirectoryExists(filepath.Join(t.TempDir(), "nope")) {
-			t.Fatal("不存在的路径应返回 false")
-		}
+		testutil.Equal(t, a.DirectoryExists(filepath.Join(t.TempDir(), "nope")), false, "不存在的路径应返回 false")
 	})
 
 	t.Run("空路径返回 false", func(t *testing.T) {
-		if a.DirectoryExists("") {
-			t.Fatal("空路径应返回 false")
-		}
+		testutil.Equal(t, a.DirectoryExists(""), false, "空路径应返回 false")
 	})
 
 	t.Run("普通文件返回 false（只认目录）", func(t *testing.T) {
 		f := filepath.Join(t.TempDir(), "f.txt")
-		if err := os.WriteFile(f, []byte("x"), 0o644); err != nil {
-			t.Fatalf("写临时文件: %v", err)
-		}
-		if a.DirectoryExists(f) {
-			t.Fatal("普通文件应返回 false（只认目录）")
-		}
+		testutil.NoError(t, os.WriteFile(f, []byte("x"), 0o644), "写临时文件")
+		testutil.Equal(t, a.DirectoryExists(f), false, "普通文件应返回 false（只认目录）")
 	})
 }

@@ -13,8 +13,11 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
+import type { Page } from "@playwright/test";
 import { expect, test } from "./fixture.ts";
 import { clickTreeFile, gotoApp, navItem, waitForTreeCount } from "./helpers.ts";
+
+type CoverageEntry = Awaited<ReturnType<Page["coverage"]["stopJSCoverage"]>>[number];
 
 const OUT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "e2e-coverage");
 const OUT_FILE = path.join(OUT_DIR, "coverage.json");
@@ -48,8 +51,25 @@ test.describe("E2E 覆盖广度采集（G-4）", () => {
 
     // 采集 V8 coverage（page.coverage 为 Chromium 专属，playwright.config 已固定 chromium）
     const coverage = await page.coverage.stopJSCoverage();
-    // 防假绿：采集到 0 条目即为失败，避免空报告静默通过
-    expect(coverage.length).toBeGreaterThan(0);
+
+    // 防假绿（双层）：
+    // ① 条目数 > 0（采集器根本没启动时 stopJSCoverage 返回 [] 不抛错，是个历史假绿源）
+    expect(coverage.length, "V8 coverage 采集到 0 条目——采集器未启动或页面未交互").toBeGreaterThan(
+      0,
+    );
+    // ② 触及的**独立源文件数** ≥ 基线（ADR-035 G-4 防腐：只验条目数不能防止
+    //    「跑过了但没走到新代码」的静默走偏——导航路径一旦跳过某页，产物仍非空却漏覆盖）。
+    //    基线取当前观察值留 20% 余量，低于则断言失败并提示「路径未走全」。
+    const touchedSrc = new Set(
+      coverage
+        .filter((e: CoverageEntry): boolean => typeof e.url === "string" && !!e.functions?.length)
+        .map((e: CoverageEntry): string => e.url),
+    ).size;
+    const MIN_TOUCHED_SRCS = 30; // 基线门槛：从首次观察值取 30 留余量（当前约 37）
+    expect(
+      touchedSrc,
+      `覆盖到的独立源文件仅 ${touchedSrc} 个，疑似交互路径未走全（G-4 防腐闸）`,
+    ).toBeGreaterThanOrEqual(MIN_TOUCHED_SRCS);
     if (!fs.existsSync(OUT_DIR)) fs.mkdirSync(OUT_DIR, { recursive: true });
     fs.writeFileSync(OUT_FILE, JSON.stringify(coverage, null, 2));
     console.log(

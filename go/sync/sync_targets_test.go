@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"ysm-model-manager/go/internal/testutil"
 	"ysm-model-manager/go/types"
 )
 
@@ -75,9 +76,7 @@ func TestPushTargetsForUnit_EmptyFolderToDirs(t *testing.T) {
 func TestPushTargetsForUnit_FolderWithFilesOnDisk(t *testing.T) {
 	dir := t.TempDir()
 	model := filepath.Join(dir, "m.ysm")
-	if err := os.WriteFile(model, []byte("m"), 0o644); err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, os.WriteFile(model, []byte("m"), 0o644))
 	files, ds, _ := PushTargetsForUnit(types.ResourceSyncItem{
 		Path: dir, Status: types.SyncStatusMissing, IsDir: true, Type: "ysm",
 	})

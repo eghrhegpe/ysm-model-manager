@@ -340,7 +340,11 @@ const matrixTs = readOrDie("frontend/src/views/app-content/diagnostics/perf-matr
 const matrixCode = stripComments(matrixTs);
 const targetsGo = readOrDie("go/cli/perf_targets.go");
 const targetSetGo = readOrDie("go/cli/perf_target_set.go");
-const perfTplTs = readOrDie("frontend/src/views/app-content/tpl.ts");
+// 诊断页模板 2026-10 拆至 tpl-diagnostics.ts（体积收债）；perf 控件与 diagnostics.* key 引用
+// 全在那半边，故拼接读取——只读 tpl.ts 会让下面的 value= 断言与 key 引用集体失配（假绿）。
+const perfTplTs =
+  readOrDie("frontend/src/views/app-content/tpl.ts") +
+  readOrDie("frontend/src/views/app-content/tpl-diagnostics.ts");
 must(
   targetsGo.includes('perfSizeSourceDirTotal = "dir_total"'),
   '体量口径 token 常量失守（go/cli/perf_targets.go 的 perfSizeSourceDirTotal 应为 "dir_total"）',

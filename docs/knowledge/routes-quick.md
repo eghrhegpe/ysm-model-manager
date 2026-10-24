@@ -559,7 +559,7 @@
 | "给 exported 函数消参数陷阱但不扭曲 API" | [三档阈值扫描器（复杂度/参数/类型安全）](./check-threshold-scanners.md) | - | - |
 | 该子域是否仅依赖注入回调与 DTO 即可运转？是 → 可切（纯域） | [install 域切分经验：切纯域不硬切复合域（耦合度门槛判断）](./install-domain-split.md) | import 域依赖 LoadAppConfig/GetRepoRoot/ScanModelEntries/ClearScanCache/ListVersionInstances 等 10+ 跨域方法 | - |
 | 该子域是否直读 App 的共享基础设施字段？是 → 不切（复合域） | [install 域切分经验：切纯域不硬切复合域（耦合度门槛判断）](./install-domain-split.md) | importModelFolderAs 宿主在 app_files.go（files 域），被 files 域绑定与 install 组合链三方共用 | - |
-| 判断某个 tpl.ts / *-css.ts / ui-icons.ts 该不该外迁 | [UI 格式分工与外迁触发线](./ui-format-partition.md) | 阈值要锚在**当前实测最大值**上（app-content/tpl.ts 已 561、ui-icons.ts 已 125 图标）；空口"超过 100 就迁"在存量就超线的代码上毫无意义 | - |
+| 判断某个 tpl.ts / *-css.ts / ui-icons.ts 该不该外迁 | [UI 格式分工与外迁触发线](./ui-format-partition.md) | 阈值要锚在**当前实测最大值**上（app-sidebar/tpl.ts 已 350、ui-icons.ts 已 125 图标）；空口"超过 100 就迁"在存量就超线的代码上毫无意义 | - |
 
 ## 🎯 门禁与脚本
 
@@ -632,6 +632,7 @@
 | 查拆轴/新增正交层的回归审核要点 | [AI 审查器偏差与查证方法论（10 轮实战沉淀）](./ai-review-pitfalls.md) | - | - |
 | 查审查器假阳性/假阴性模式 | [AI 审查器偏差与查证方法论（10 轮实战沉淀）](./ai-review-pitfalls.md) | 审查报告分级不等于实测结论——P1/P2 抽验后方可采信 | - |
 | 创建测试文件、构造内存 ZIP、跨包复用测试 helper | [测试辅助函数 go/internal/testutil](./go-testutil.md) | - | - |
+| 单组件截图、隔离渲染、秒级视觉回看 | [组件隔离渲染 harness 视觉验证层](./harness-isolated-render.md) | 组件清单单源在 main.ts REGISTRY（shot.mjs 从页面读取并静态校验完整性），新增组件只登记 REGISTRY 一处 | - |
 | 登记面：frontend/src 内 data-testid 字面量 × 各视图 VIEW_TESTIDS 数组 | [testid 契约与 VIEW_TESTIDS 注册表](./testid-contract.md) | - | - |
 | 等待 DOM 内容或 mock 调用出现 / 组件 init 链落定 | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) | 禁止用 waitFor 条件耦合组件内部实现细节 | - |
 | 给页面顶层 tab 按钮加测试钩子 | [testid 契约与 VIEW_TESTIDS 注册表](./testid-contract.md) | VIEW_TESTIDS 数组内注释出现 `]` | - |
@@ -1020,6 +1021,11 @@
 | 把当成「无重复」——**4D 只治接缝，不治重复**。平铺后「每两米出现同一明星特征」是「无缝但有规律重复」，须用 `anti-repeat.ts` 的 macro/dual/stochastic 治理 | `4D 环面无缝` | - |
 | anti-repeat 的输入 tile **必须本身无缝**（周期=S）；非无缝输入它不补接缝，只治重复。本项目的程序化材质（tiledFbm）与已平铺无缝的 PNG 满足 | - | - |
 | macro 的  必须退化为原平铺（factor=1 逐像素相等）——改 macro 时此回归用例（anti-repeat.test.ts）会锁死 | `macroStrength=0` | - |
+| 固定端口 + 复用旧 server = 对着旧代码假绿（现已 --port 0 从启动横幅解析真实 URL，读不到即抛错） | - | - |
+| 就绪判据若只看，只有一段 CSS 的空壳 / 空态 / 错误态全都能过（现改为每条目声明 probe） | `子元素非空` | - |
+| 空态不是渲染成功：probe 必须命中，命中空态容器不算（app-sidebar 曾查骨架屏按钮） | `有数据的行` | - |
+| e2e 的 MOCK_DATA 故意把部分 binding 留 undefined 以覆盖降级路径，截图看正常路径须在条目内 mock 覆写，勿改 MOCK_DATA 迁就截图 | - | - |
+| 嵌套组件（app-content | - | app-tree）的正文在各自 shadowRoot，probe 不穿透 shadow 边界就永远查不到 |
 | 参数值含 $&/$1 等特殊正则序列会错译 | - | t() 强制函数型替换 + 键正则转义双保险 |
 | LocaleHost 未注入（装配层漏 setLocaleHost）→ loadLocale 告警一次并跳过（fail-open 不挂启动链），host 就绪后可重试自愈 | - | - |
 | 并发 setLang 竞态：快请求后到覆盖旧写入 | - | _langReqGen 代际计数丢弃过期写入 |

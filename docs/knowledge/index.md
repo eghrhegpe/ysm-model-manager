@@ -2,7 +2,7 @@
 
 # 知识卡索引
 
-> 总计: 208 张知识卡
+> 总计: 209 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
@@ -323,7 +323,7 @@
 - **volumetric-cone**（体积光锥 VolumetricCone（真锥体网格 + Fresnel））：聚光灯可见光柱的实现单文件（ADR-177 从 `LightCapability` 拆出的自包含单元：shader + 几何 + 材质 + 挂载状态机）。ADR-266（2026-09-18）把它从「两片交叉 `PlaneGeometry`…
 - **water**（水面能力 WaterCapability（Gerstner 波浪 + GPU 微细节法线））：水面是 env 面板一等公民（与 sky / ground 平级，ADR-196 → ADR-268 归属基础卡末位），分轴布局：
 
-## ui（40 张）
+## ui（41 张）
 
 *前端 UI 组件（tree、sidebar、preview、content）*
 
@@ -352,6 +352,7 @@
 | 🏗 dom-fab | 3D 预览悬浮 FAB 控制层 | architecture | — | FAB, 悬浮按钮, FAB 3D 预览入口, overlay, ADR-057 |
 | 🏗 features-dialogs | 业务对话框 features/dialogs(批量重命名/标签编辑/高级筛选) | architecture | — | 批量重命名 / 标签编辑 / 高级筛选对话框, 找对话框入口符号 |
 | 🍃 frontend-naming | 前端命名章程（黑话治理） | leaf | — | 黑话, 命名, 缩写, 重命名, 可读性, 匈牙利前缀, 单字母变量, 动词名词化 |
+| 🍃 harness-isolated-render | 组件隔离渲染 harness 视觉验证层 | leaf | — | 想看单个 UI 组件长什么样（秒级截图回看，不起全 app）, 改样式/布局后快速视觉回归, e2e 全量太重、只要一张组件截图取证 |
 | 🍃 icon-kit | icon-kit 多源图标（已并入 UI_ICONS） | leaf | — | icon-kit, 多源图标, renderIcon, emoji 图标源, 图标字体 |
 | 🍃 menu-test-assertion | 菜单测试断言三分法 | leaf | — | 写 / 改 3D 菜单（cap/adapter/panel/state）测试，断言节点树结构, 菜单测试因加项、删项、重排而集体崩——判断该断言是否属于脆弱布局断言, 新增 cap/菜单节点后，测试该怎么写才不再随菜单变化而改, 看到 check-menu-test-layout 门禁红（新增布局快照断言超基线）, 评审菜单测试时，分不清「行为断言」与「布局快照」 |
 | 🍃 module-global-state | 模块级全局状态治理 | leaf | — | 模块级全局状态, 全局 Map 泛滥, reset 测试钩子, 单例收敛 |
@@ -394,6 +395,7 @@
 - **dom-fab**（3D 预览悬浮 FAB 控制层）：3D 预览悬浮控制层组件（ADR-057），替代 `skeleton.ts` 内联 `style.cssText` 控制栏，集中治理样式 + 双端响应式。FAB 挂载在 document.body（light DOM），样式通过 `ensu…
 - **features-dialogs**（业务对话框 features/dialogs(批量重命名/标签编辑/高级筛选)）：`frontend/src/features/dialogs/`：业务对话框目录，自 `utils/dom/dialogs/` 升格（ADR-170 第一段）。批量重命名、标签编辑器、高级筛选、通用 modal 底座在此归位——它们本是完整…
 - **frontend-naming**（前端命名章程（黑话治理））：2026-09 ADR-161「渲染会话词汇章程」实施时扩大扫描 `frontend/src` 404 个生产 TS 文件，发现命名黑话远超章程六类，按模式统计：
+- **harness-isolated-render**（组件隔离渲染 harness 视觉验证层）：`frontend/harness/` 四件套：单 Web Component 隔离挂载 + mock 桥 + 秒级截图 + 画面内容闸门。零新增依赖；mock 数据单一来源 = `e2e/mock-data.ts` 的 MOCK_DATA…
 - **menu-test-assertion**（菜单测试断言三分法）：菜单 UI 逻辑（cap 的 `getMenuNodes()` 树、adapter 产树、state 层控制项顺序）变化频繁，手写「布局快照」断言（有序 id 数组 `toEqual`、精确 `toHaveLength`、`nodes[i]…
 - **module-global-state**（模块级全局状态治理）：2026-09-04 锐评续刀 + ADR-178 期间对「模块级全局状态」的系统评估：modal 单例槽位试点收敛成功（`ModalSlotState`），locale/web-store 查证后**停止推广**（无净收益）。本卡沉淀判断…
 - **multi-model-select**（多模型选择菜单原语 multiModelSelectNode）：跨资源类型的「多模型选择」声明式 select 菜单原语（ADR-132）。收编了此前三套并存的

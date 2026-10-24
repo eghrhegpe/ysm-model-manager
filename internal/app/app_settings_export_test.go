@@ -82,9 +82,8 @@ func TestExportSettingsJSON_WritesExportFileAtAppDataDir(t *testing.T) {
 func TestExportSettingsJSON_RejectsOversizedLocalStorage(t *testing.T) {
 	a := exportTestApp(t, types.AppConfig{FilesRoot: "C:/repo"})
 	big := strings.Repeat("x", settingsExportMaxBytes+1)
-	if _, err := a.ExportSettingsJSON(map[string]string{"k": big}); err == nil {
-		t.Fatal("超过上限的 localStorage 不得导出（导入侧必然拒收，白拷失败备份）")
-	}
+	_, err := a.ExportSettingsJSON(map[string]string{"k": big})
+	testutil.NotNil(t, err, "超过上限的 localStorage 不得导出（导入侧必然拒收，白拷失败备份）")
 
 	matches, err := filepath.Glob(filepath.Join(configDir(), "ysm-settings-export-*.json"))
 	testutil.NoError(t, err, "glob 导出文件")
@@ -98,15 +97,13 @@ func TestReadSettingsExport_RejectsForeignJSON(t *testing.T) {
 	foreign := filepath.Join(t.TempDir(), "random.json")
 	testutil.NoError(t, os.WriteFile(foreign, []byte(`{"foo":1}`), 0o644), "写无关 JSON")
 
-	if _, err := a.ReadSettingsExport(foreign); err == nil {
-		t.Fatal("无关 JSON 不得被当作设置导出文件解析")
-	}
+	_, err := a.ReadSettingsExport(foreign)
+	testutil.NotNil(t, err, "无关 JSON 不得被当作设置导出文件解析")
 
 	higher := filepath.Join(t.TempDir(), "future.json")
 	testutil.NoError(t, os.WriteFile(higher, []byte(`{"format":"ysm-settings-export","exportVersion":99}`), 0o644), "写未来版本导出")
-	if _, err := a.ReadSettingsExport(higher); err == nil {
-		t.Fatal("高于当前版本的导出应被拒绝（提示升级程序）")
-	}
+	_, err = a.ReadSettingsExport(higher)
+	testutil.NotNil(t, err, "高于当前版本的导出应被拒绝（提示升级程序）")
 }
 
 // 跨版本配置 schema 门控（锐评 2026-10-16）：ExportVersion 门控的是**文件格式**，
@@ -120,9 +117,8 @@ func TestReadSettingsExport_RejectsHigherSchemaVersion(t *testing.T) {
 	testutil.NoError(t, os.WriteFile(higher, []byte(
 		`{"format":"ysm-settings-export","exportVersion":1,"appConfig":{"schemaVersion":99999}}`,
 	), 0o644), "写高 schema 导出")
-	if _, err := (&App{}).ReadSettingsExport(higher); err == nil {
-		t.Fatal("高于当前程序 schema 的配置不得导入（旧程序按旧结构读新数据 = 静默错读）")
-	}
+	_, err := (&App{}).ReadSettingsExport(higher)
+	testutil.NotNil(t, err, "高于当前程序 schema 的配置不得导入（旧程序按旧结构读新数据 = 静默错读）")
 
 	// 等值 / 遗留 0 都必须放行（放行面回归：遗留文件由 applyConfigMigrations 正常迁移）
 	for i, body := range []string{
@@ -165,9 +161,8 @@ func TestExportSettingsJSON_RejectsCorruptConfig(t *testing.T) {
 	testutil.NoError(t, os.WriteFile(configPath(), []byte(`{not valid json[`), 0o644), "写损坏配置")
 	a := newLinkModeApp()
 
-	if _, err := a.ExportSettingsJSON(map[string]string{"ui-font-size": "14"}); err == nil {
-		t.Fatal("配置文件损坏（无法解析）时不得导出假备份（须当场报错，不能只落日志）")
-	}
+	_, err := a.ExportSettingsJSON(map[string]string{"ui-font-size": "14"})
+	testutil.NotNil(t, err, "配置文件损坏（无法解析）时不得导出假备份（须当场报错，不能只落日志）")
 }
 
 // 放行面回归（锐评 2026-10-17 P1③）：配置文件**存在且 JSON 合法**但无任何路径设置时
@@ -179,9 +174,8 @@ func TestExportSettingsJSON_AllowsExistingConfigWithoutPaths(t *testing.T) {
 	testutil.NoError(t, os.WriteFile(configPath(), []byte(`{}`), 0o644), "写合法空配置")
 	a := newLinkModeApp()
 
-	if _, err := a.ExportSettingsJSON(map[string]string{"ui-font-size": "14"}); err != nil {
-		t.Fatalf("配置文件存在但 JSON 合法（路径空）时应放行，got %v", err)
-	}
+	_, err := a.ExportSettingsJSON(map[string]string{"ui-font-size": "14"})
+	testutil.NoError(t, err, "配置文件存在但 JSON 合法（路径空）时应放行")
 }
 
 func TestExportSettingsJSON_AllowsNewUserWithoutPaths(t *testing.T) {
@@ -209,12 +203,8 @@ func TestImportSettingsFromFile_RoundTripAndBackup(t *testing.T) {
 	res, err := dst.ImportSettingsFromFile(srcPath)
 	testutil.NoError(t, err, "ImportSettingsFromFile")
 	// 提示条数归属前端：Go 侧无前端台账键集合，LocalStorageKeyCount 已删除
-	if res.BackupPath == "" {
-		t.Fatal("导入前必须备份当前配置（可回滚）")
-	}
-	if _, err := os.Stat(res.BackupPath); err != nil {
-		t.Fatalf("备份文件应存在: %s (%v)", res.BackupPath, err)
-	}
+	testutil.Equal(t, res.BackupPath != "", true, "导入前必须备份当前配置（可回滚）")
+	testutil.FileExists(t, res.BackupPath, "备份文件应存在: %s", res.BackupPath)
 
 	onDisk := dst.LoadAppConfig()
 	if onDisk.Theme != "dark" || onDisk.Mirror != "jsdelivr" {
@@ -267,12 +257,8 @@ func TestImportSettingsData_RoundTripAndBackup(t *testing.T) {
 
 	res, err := dst.ImportSettingsData(exp)
 	testutil.NoError(t, err, "ImportSettingsData")
-	if res.BackupPath == "" {
-		t.Fatal("导入前必须备份当前配置（可回滚）")
-	}
-	if _, err := os.Stat(res.BackupPath); err != nil {
-		t.Fatalf("备份文件应存在: %s (%v)", res.BackupPath, err)
-	}
+	testutil.Equal(t, res.BackupPath != "", true, "导入前必须备份当前配置（可回滚）")
+	testutil.FileExists(t, res.BackupPath, "备份文件应存在: %s", res.BackupPath)
 	onDisk := dst.LoadAppConfig()
 	if onDisk.Theme != "dark" || onDisk.Mirror != "jsdelivr" {
 		t.Errorf("导入后配置未覆盖: theme=%q mirror=%q", onDisk.Theme, onDisk.Mirror)
@@ -284,9 +270,7 @@ func TestImportSettingsData_RoundTripAndBackup(t *testing.T) {
 func TestImportSettingsData_RejectsBadFormat(t *testing.T) {
 	dst := exportTestApp(t, types.AppConfig{FilesRoot: "C:/repo", Theme: "dark"})
 	_, err := dst.ImportSettingsData(types.SettingsExport{Format: "whatever", AppConfig: types.AppConfig{}})
-	if err == nil {
-		t.Fatal("format 不符的导出数据应被拒止")
-	}
+	testutil.NotNil(t, err, "format 不符的导出数据应被拒止")
 	onDisk := dst.LoadAppConfig()
 	if onDisk.Theme != "dark" {
 		t.Errorf("拒止后不应改动配置，got theme=%q", onDisk.Theme)
@@ -350,9 +334,8 @@ func TestImportSettingsFromFile_MigratesLegacyRootFields(t *testing.T) {
 	testutil.NoError(t, os.WriteFile(srcPath, legacy, 0o644), "改写为遗留形态")
 
 	dst := exportTestApp(t, types.AppConfig{FilesRoot: root})
-	if _, err := dst.ImportSettingsFromFile(srcPath); err != nil {
-		t.Fatalf("ImportSettingsFromFile: %v", err)
-	}
+	_, err = dst.ImportSettingsFromFile(srcPath)
+	testutil.NoError(t, err, "ImportSettingsFromFile")
 	got := dst.LoadAppConfig()
 	if got.CustomRoots["ysm"] != "D:/ysm" {
 		t.Errorf("遗留 YsmRoot 未迁入 CustomRoots[ysm]: %#v", got.CustomRoots)
@@ -371,9 +354,7 @@ func TestListSettingsBackups_RoundTrip(t *testing.T) {
 
 	backups, err := a.ListSettingsBackups()
 	testutil.NoError(t, err, "无备份时应返回空列表")
-	if len(backups) != 0 {
-		t.Fatalf("无备份时 got %d 条，want 0", len(backups))
-	}
+	testutil.Equal(t, len(backups), 0, "无备份时 got %d 条，want 0", len(backups))
 
 	for _, stamp := range []string{"20260101-000000.000", "20260102-000000.000"} {
 		bak := configPath() + ".bak-" + stamp
@@ -381,9 +362,7 @@ func TestListSettingsBackups_RoundTrip(t *testing.T) {
 	}
 	backups, err = a.ListSettingsBackups()
 	testutil.NoError(t, err, "ListSettingsBackups")
-	if len(backups) != 2 {
-		t.Fatalf("got %d 条备份，want 2", len(backups))
-	}
+	testutil.Equal(t, len(backups), 2, "got %d 条备份，want 2", len(backups))
 	if filepath.Base(backups[0]) != "ysm_config.json.bak-20260102-000000.000" {
 		t.Errorf("最新备份应在前，got %q", filepath.Base(backups[0]))
 	}
@@ -394,16 +373,10 @@ func TestRestoreSettingsBackup_RestoresToBackupValue(t *testing.T) {
 	a := exportTestApp(t, types.AppConfig{FilesRoot: "C:/repo", Theme: "dark"})
 	bak, err := a.backupConfigFile()
 	testutil.NoError(t, err, "backupConfigFile")
-	if bak == "" {
-		t.Fatal("应有备份路径")
-	}
+	testutil.Equal(t, bak != "", true, "应有备份路径")
 	// 改动配置，再恢复
-	if err := a.saveConfig(types.AppConfig{FilesRoot: "C:/repo2", Theme: "light"}); err != nil {
-		t.Fatalf("saveConfig: %v", err)
-	}
-	if a.LoadAppConfig().Theme != "light" {
-		t.Fatalf("前置：改后主题应为 light, got %q", a.LoadAppConfig().Theme)
-	}
+	testutil.NoError(t, a.saveConfig(types.AppConfig{FilesRoot: "C:/repo2", Theme: "light"}), "saveConfig")
+	testutil.Equal(t, a.LoadAppConfig().Theme, "light", "前置：改后主题应为 light")
 	testutil.NoError(t, a.RestoreSettingsBackup(bak), "RestoreSettingsBackup")
 	if got := a.LoadAppConfig().Theme; got != "dark" {
 		t.Errorf("恢复后主题应为 dark（备份值），got %q", got)
@@ -424,21 +397,16 @@ func TestRestoreSettingsBackup_RestoresToBackupValue(t *testing.T) {
 // 防闸过紧杀掉 UI 自己的恢复链路。
 func TestRestoreSettingsBackup_RejectsForeignPaths(t *testing.T) {
 	dst := exportTestApp(t, types.AppConfig{FilesRoot: "C:/repo", Theme: "dark"})
-	if _, err := dst.ImportSettingsData(types.SettingsExport{
+	_, err := dst.ImportSettingsData(types.SettingsExport{
 		Format: settingsExportFormat, ExportVersion: settingsExportVersion,
 		AppConfig: types.AppConfig{FilesRoot: "C:/repo", Theme: "light"},
-	}); err != nil {
-		t.Fatalf("场景构造导入失败: %v", err)
-	}
+	})
+	testutil.NoError(t, err, "场景构造导入失败")
 	backups, err := dst.ListSettingsBackups()
 	testutil.NoError(t, err, "ListSettingsBackups")
-	if len(backups) == 0 {
-		t.Fatal("场景构造失败：无备份")
-	}
+	testutil.Equal(t, len(backups) > 0, true, "场景构造失败：无备份")
 	// 正例：集合内路径恢复放行，且恢复的确实是导入前（dark）那份
-	if err := dst.RestoreSettingsBackup(backups[0]); err != nil {
-		t.Fatalf("合法备份被拒（闸过紧）: %v", err)
-	}
+	testutil.NoError(t, dst.RestoreSettingsBackup(backups[0]), "合法备份被拒（闸过紧）")
 	if got := dst.LoadAppConfig().Theme; got != "dark" {
 		t.Errorf("恢复后 theme = %q, want dark", got)
 	}
@@ -446,17 +414,11 @@ func TestRestoreSettingsBackup_RejectsForeignPaths(t *testing.T) {
 	evilJSON := []byte(`{"theme":"mint","filesRoot":"D:/evil"}`)
 	elseDir := t.TempDir()
 	foreign := filepath.Join(elseDir, "ysm_config.json.bak-20200101-000000.000")
-	if err := os.WriteFile(foreign, evilJSON, 0o644); err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, os.WriteFile(foreign, evilJSON, 0o644))
 	notBak := filepath.Join(configDir(), "evil.json")
-	if err := os.WriteFile(notBak, evilJSON, 0o644); err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, os.WriteFile(notBak, evilJSON, 0o644))
 	rel := "ysm_config.json.bak-x"
-	if err := os.WriteFile(rel, evilJSON, 0o644); err != nil {
-		t.Fatal(err)
-	}
+	testutil.NoError(t, os.WriteFile(rel, evilJSON, 0o644))
 	t.Cleanup(func() { _ = os.Remove(rel) })
 
 	for _, bad := range []string{foreign, notBak, rel, elseDir} {
@@ -469,9 +431,8 @@ func TestRestoreSettingsBackup_RejectsForeignPaths(t *testing.T) {
 		if !errors.As(err, &ae) || ae.Code != types.ErrInvalidParam || ae.Operation != "恢复备份" {
 			t.Errorf("路径 %q 错误 = %+v, want AppError{ErrInvalidParam, 恢复备份}", bad, err)
 		}
-		if got := dst.LoadAppConfig(); got.Theme != "dark" || got.FilesRoot != "C:/repo" {
-			t.Fatalf("被拒路径 %q 竟改动了配置: %+v", bad, got)
-		}
+		got := dst.LoadAppConfig()
+		testutil.Equal(t, got.Theme == "dark" && got.FilesRoot == "C:/repo", true, "被拒路径 %q 竟改动了配置: %+v", bad, got)
 	}
 }
 
@@ -482,17 +443,14 @@ func TestRestoreSettingsBackup_RejectsForeignPaths(t *testing.T) {
 // 分支以代码审读 + settingsExportPath 先例同族担保。
 func TestListSettingsBackups_ResultsInsideConfigDir(t *testing.T) {
 	dst := exportTestApp(t, types.AppConfig{FilesRoot: "C:/repo", Theme: "dark"})
-	if _, err := dst.ImportSettingsData(types.SettingsExport{
+	_, err := dst.ImportSettingsData(types.SettingsExport{
 		Format: settingsExportFormat, ExportVersion: settingsExportVersion,
 		AppConfig: types.AppConfig{FilesRoot: "C:/repo", Theme: "light"},
-	}); err != nil {
-		t.Fatalf("场景构造导入失败: %v", err)
-	}
+	})
+	testutil.NoError(t, err, "场景构造导入失败")
 	backups, err := dst.ListSettingsBackups()
 	testutil.NoError(t, err, "ListSettingsBackups")
-	if len(backups) == 0 {
-		t.Fatal("场景构造失败：无备份")
-	}
+	testutil.Equal(t, len(backups) > 0, true, "场景构造失败：无备份")
 	for _, p := range backups {
 		if !filepath.IsAbs(p) || filepath.Dir(p) != configDir() {
 			t.Errorf("备份列表混入归属外路径: %q (configDir=%q)", p, configDir())

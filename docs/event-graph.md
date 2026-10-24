@@ -4,18 +4,9 @@
 > 基于 `frontend/src/bus.ts` 的 `BusEvents` 接口校验所有调用方（含 html 内联、可选链调用）。
 > 合法发射者登记表闸（ADR-270-d3）：`docs/.bus-emitters.json` 之外新增发射文件 = 硬错误；表内未被命中条目 = 可收紧提示。
 
-## ⚠️ 异常摘要
+## ✅ 无异常
 
-### 发射者表外新增（硬错误——须改走收敛通道，或确认合法后 --update --force 登记）
-
-- `stats:refresh` @ `frontend/src/views/app-sidebar/sidebar-pull.ts`
-- `sync:toggle:status` @ `frontend/src/views/app-sync-manager/events.ts`
-- `tree:reload` @ `frontend/src/views/app-sidebar/sidebar-pull.ts`
-
-### 登记表可收紧（发射已收敛，`--update` 自动收表销账）
-
-- `stats:refresh` @ `frontend/src/views/app-sidebar/sync-flow.ts`
-- `tree:reload` @ `frontend/src/views/app-sidebar/sync-flow.ts`
+所有调用均在 BusEvents 契约与合法发射者登记表内：无孤儿发射 / 鬼订阅 / 未声明事件 / 缺参 / 发射者表外新增。
 
 ## 事件总览
 
@@ -266,7 +257,7 @@
 **订阅方（on）：**
 | 函数 | 文件 | 行 |
 |------|------|----|
-| initSyncConflictPanel | `frontend/src/views/app-content/diagnostics/conflicts.ts` | 111 |
+| initSyncConflictPanel | `frontend/src/views/app-content/diagnostics/conflicts.ts` | 110 |
 | initInstancesPage | `frontend/src/views/app-content/init-pages.ts` | 72 |
 
 ### `repo:focus-search`

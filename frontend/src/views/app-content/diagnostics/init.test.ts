@@ -14,7 +14,9 @@ import { diagnosticsHTML } from "@/views/app-content/tpl.ts";
 
 const { busEmit, busOn, getApp, can, isViewerMode } = vi.hoisted(() => ({
   busEmit: vi.fn(),
-  busOn: vi.fn(() => () => {}),
+  // 收事件名形参（真接口是 bus.on(event, fn)）：生命周期用例需按事件名区分退订对象，
+  // 零形参的 vi.fn 会把 mockImplementation 的实现判成类型错误。
+  busOn: vi.fn((_ev?: string) => () => {}),
   getApp: vi.fn(),
   // 收 binding 名单形参（真接口是 can(binding: string)）：单能力门控用例需要按名放行/拦截，
   // 而零形参的 vi.fn 会把 mockImplementation 的实现判成类型错误。
@@ -1236,5 +1238,24 @@ describe("initDiagnostics — trace 面板进入语义（2026-09）", () => {
     expect(
       (root.getElementById("diag-trace-refresh") as HTMLElement).style.display,
     ).not.toBe("none");
+  });
+});
+
+describe("initDiagnostics — 页面生命周期（bus 订阅回收，P0-2②）", () => {
+  it("返回清理函数：清理早于订阅落定（lang:changed 竞态）时晚到的订阅被立即退订，不跨代泄漏", async () => {
+    const unsubSpy = vi.fn();
+    const prevImpl = busOn.getMockImplementation();
+    busOn.mockImplementation((ev?: string) => (ev === "package:selected" ? unsubSpy : () => {}));
+    try {
+      const { root } = makeRoot();
+      const cleanup = initDiagnostics(root, esc);
+      expect(typeof cleanup).toBe("function");
+      cleanup(); // 页面重建先行：此刻 initSyncConflictPanel 仍是 pending Promise
+      await flushPromises();
+      await waitFor(() => expect(unsubSpy).toHaveBeenCalledTimes(1));
+    } finally {
+      // mockImplementation 不被 clearAllMocks 复位——显式还原，防泄漏进后续用例
+      busOn.mockImplementation(prevImpl ?? (() => () => {}));
+    }
   });
 });

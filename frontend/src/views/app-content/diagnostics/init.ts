@@ -4,6 +4,7 @@
 
 import { can } from "@/backend/capabilities.ts";
 import { t } from "@/core/i18n/t.ts";
+import { dbg } from "@/utils/debug/debug.ts";
 import { friendlyError } from "@/utils/dom/errors.ts";
 import { toast } from "@/utils/dom/toast.ts";
 import { TOAST_MS } from "@/utils/dom/toast-ms.ts";
@@ -165,26 +166,35 @@ function dgInBindCopyRows(root: ShadowRoot): void {
  * 扫描仍显式点击触发（「进 tab 不跑进程」口径不变，ADR-278 §2.5）。
  * 栏与结果区是两段式——结果只写结果区，按钮不再住在结果容器内（旧形态的 dead-end 见 ADR-288 §1）。
  * sync-conflict 栏为异步：读配置 + 列实例（两次轻量 Go 读，与 log tab 进即 GetImportLogs 同级）；
- * 失败/不可用态由该函数内部落结果区 + 禁用按钮，故此处 void 调用。返回订阅清理函数供父组件 unbind。
+ * 失败/不可用态由该函数内部落结果区 + 禁用按钮，故此处 void 调用。
+ * 返回订阅清理函数——调用方（initDiagnostics）经返回值交 host.subs 页面桶托管；
+ * async 落定晚于清理时由 disposed 守卫就地退订，防 lang:changed 全量重建后的跨代幽灵订阅。
  */
-export function dgInInitScanPanels(root: ShadowRoot, esc: EscFn): () => void {
-  let unsubRtypeChanged = () => {};
-  try {
-    const unsub = initSyncConflictPanel(
-      root.getElementById("diag-sync-bar"),
-      root.getElementById("diag-sync-conflict-list"),
-      esc,
-    );
-    if (unsub) unsubRtypeChanged = unsub;
-  } catch (e) {
-    dbg("conflicts", "initSyncConflictPanel 异常（静默忽略）:", e);
-  }
+function dgInInitScanPanels(root: ShadowRoot, esc: EscFn): () => void {
+  let unsubRtypeChanged: () => void = () => {};
+  let disposed = false;
+  void initSyncConflictPanel(
+    root.getElementById("diag-sync-bar"),
+    root.getElementById("diag-sync-conflict-list"),
+    esc,
+  )
+    .then((unsub) => {
+      if (disposed)
+        unsub(); // 页面清理已先行：晚到的退订立即自毁，不再入返回链
+      else unsubRtypeChanged = unsub;
+    })
+    .catch((e) => {
+      dbg("conflicts", "initSyncConflictPanel 异常（静默忽略）:", e);
+    });
   initHealthPanel(
     root.getElementById("diag-health-bar"),
     root.getElementById("diag-health-list"),
     esc,
   );
-  return unsubRtypeChanged;
+  return () => {
+    disposed = true;
+    unsubRtypeChanged();
+  };
 }
 
 function dgInBindLogFilter(root: ShadowRoot, esc: EscFn): void {
@@ -255,14 +265,16 @@ function dgInBindTraceTab(root: ShadowRoot, esc: EscFn): void {
  * 初始化诊断页所有功能
  * @param root - 组件 shadow root
  * @param esc - HTML 转义函数
+ * @returns 订阅清理函数——调用方（initDiagnosticsPage）注册进 host.subs 页面桶，
+ *          lang:changed 全量重建 / disconnectedCallback 时统一退订（漏接即跨代幽灵订阅）。
  */
 
-export function initDiagnostics(root: ShadowRoot, esc: EscFn): void {
+export function initDiagnostics(root: ShadowRoot, esc: EscFn): () => void {
   dgInBindRefreshClear(root, esc);
   dgInBindCopyPanel(root);
   dgInBindExportPanel(root);
   dgInBindCopyRows(root);
-  dgInInitScanPanels(root, esc);
+  const unsubScanPanels = dgInInitScanPanels(root, esc);
   initPerfPanel(root, esc);
   dgInBindTraceTab(root, esc);
   dgInBindSubBars(root, esc);
@@ -273,6 +285,7 @@ export function initDiagnostics(root: ShadowRoot, esc: EscFn): void {
   dgInBindLogFilter(root, esc);
   dgInBindLogOpFilter(root, esc);
   dgInBindLogSearch(root, esc);
+  return unsubScanPanels;
 }
 
 /** 👴 资历最深 + 📊 仓库评分 + 🎲 每日推荐 + 热力图（已迁移到 features/maintenance/oldest-models.ts） */

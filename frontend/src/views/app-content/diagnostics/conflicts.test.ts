@@ -159,6 +159,40 @@ describe("initSyncConflictPanel（常驻参数栏）", () => {
     expect(list.innerHTML).toContain("sentinel");
   });
 
+  it("package:selected → 栏自动对齐当前整合包 rtype+instance（P0-2②，切包不再用旧参数扫描）", async () => {
+    mockApp({
+      ListVersionInstances: vi.fn(() => [
+        { Name: "insA", Exists: true },
+        { Name: "insC", Exists: true },
+      ]),
+    });
+    const { bar, list } = makePanel();
+    await initSyncConflictPanel(bar, list, esc);
+
+    // bus 是 mock：从调用记录捕获订阅的 handler 手动派发（对齐真实 emit 时序）
+    const calls = busOn.mock.calls as unknown as unknown[][];
+    const sub = calls.find((c) => c[0] === "package:selected");
+    expect(sub).toBeTruthy();
+    (sub?.[1] as (pkg: { name: string; rtype: string }) => void)({
+      name: "insC",
+      rtype: "EntityPlayer",
+    });
+    expect((bar.querySelector("#sync-rtype") as HTMLSelectElement).value).toBe("EntityPlayer");
+    expect((bar.querySelector("#sync-instance") as HTMLSelectElement).value).toBe("insC");
+  });
+
+  it("返回退订函数：调用后触发 bus.on 的退订（生命周期可回收）", async () => {
+    mockApp();
+    const unsubSpy = vi.fn();
+    busOn.mockImplementationOnce(() => unsubSpy);
+    const { bar, list } = makePanel();
+    const cleanup = await initSyncConflictPanel(bar, list, esc);
+    expect(typeof cleanup).toBe("function");
+    expect(unsubSpy).not.toHaveBeenCalled();
+    cleanup();
+    expect(unsubSpy).toHaveBeenCalledTimes(1);
+  });
+
   it("无 mcRoot → 原因落结果区 + 扫描按钮禁用", async () => {
     mockApp({ LoadAppConfig: vi.fn(() => ({ mcRoot: "" })) });
     const { bar, list, scanBtn } = makePanel();

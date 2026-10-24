@@ -131,14 +131,15 @@ export async function initSyncConflictPanel(
     if (errorHtml) {
       list.innerHTML = errorHtml;
       dgCfSetScanEnabled(scanBtn, false);
-      return;
+      // 不可用态也必须交还退订（单出口）——裸 return 会让 package:selected 订阅泄漏
+      return unsubRtypeChanged;
     }
     if (!availableInstances.length) {
       list.innerHTML = msgRowHTML("error", t("diagnostics.noInstances"), undefined, {
         icon: UI_ICONS.warning,
       });
       dgCfSetScanEnabled(scanBtn, false);
-      return;
+      return unsubRtypeChanged;
     }
     insSel.innerHTML = optionRows(
       availableInstances.map((n) => ({ value: n, label: n })),

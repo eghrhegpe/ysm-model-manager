@@ -42,7 +42,8 @@ invariant_anchors:
 
 ## 核心职责
 
-- **扫描**：复用 `frontend/node_modules/jscpd/run-jscpd.js`，`--pattern ./go/**/*.go --format go --no-gitignore`，排除 `upstream/` vendor、`rust-core/target` 编译产物、前端 `.ts`。
+- **扫描**：复用 `frontend/node_modules/jscpd/run-jscpd.js`，`--pattern ./go/**/*.go --format go --no-gitignore --ignore "**/tmp/**"`，排除 `upstream/` vendor、`rust-core/target` 编译产物、前端 `.ts`、仓库内 `tmp/` 构建残留。
+  - ⚠️ **`--ignore "**/tmp/**"` 不可摘除**（2026-10-25 修幻影债）：jscpd 的 `--pattern` 是**非锚定/子串 glob**，`./go/**/*.go` 会同时命中 `tmp/ci-sim/go/**`（整仓自拷贝）。而本工具又传 `--no-gitignore`（本意「真 Go 债务不因 .gitignore 漏扫」），两者叠加 → 每个 `go/x.go` 与 `tmp/ci-sim/go/x.go` 构成一对假重复，实测 sources 1029（其中 501 来自 tmp/）、added 196 条里 **192 条是幻影**。加 ignore 后 sources 521、真债 4 条。回归锁：`tests/test_jscpd_go_smart.ts` 第 8 组。
 - **比对**：json reporter 产物（顶层 `duplicates[]`，每元素 `firstFile.name`/`secondFile.name`，Windows `\` 分隔）归一化为 `A#B` POSIX 文件对，与 baseline `clones[]` 集合差集。归一化/提取/漂移匹配共享层 = `scripts/_lib/jscpd-pairs.ts`（`pairsFrom`/`normPair`/`matchDrift`，行为由 `tests/test_jscpd_pairs.ts` 锁定，含 ADR-144 真实案例回归）。
 - **门禁**：新增对 → exit 1；无新增 → exit 0；无 baseline → exit 2。`--update` 将当前对冻结写 baseline。
 - **搬迁漂移提示（2026-09-01 ADR-144 复盘）**：文件搬迁/拆分会让重复对 key 变路径 → 增量门禁误报「新增」。失败输出对每个新增对用 `matchDrift`（added ↔ fixed 按 **basename 集**匹配）标注「疑似路径漂移(非新债)」+ 旧对来源：`exact`（basename 集相同，纯搬迁）/`partial`（部分交集，拆/并文件，附共享文件名）；未被漂移解释的消失旧对单列 `-` 列表供研判。**漂移是提示不是豁免**——仍计入 added/ok，放行由人确认后 `--update`。`_summary` 新增 `drifted` 计数。
@@ -62,14 +63,14 @@ node scripts/jscpd-go.ts --verbose  # 打印 jscpd statistics + 新增对行号/
 
 ## 与其他子系统关系
 
-- `scripts/pre-push-gate.ts`：`GO_STATIC_TOOLS` + `ALL_STATIC_TOOLS` 均登记 `jscpd-go.mjs`（单一实现源，`doctor --all` 与真实 `git push` 双路径生效）。
-- `scripts/baseline/jscpd-go-baseline.json`：Go 重复账本（生成物，首版 174 对），由手写 `--update` 维护，pre-commit 的 `GEN_CMDS` 不覆盖。
+- `scripts/_lib/gate-config.ts`：`GO_STATIC_TOOLS` + `ALL_STATIC_TOOLS` 均登记 `jscpd-go.ts`（单一实现源，`doctor --all` 与真实 `git push` 双路径生效）。
+- `scripts/baseline/jscpd-go-baseline.json`：Go 重复账本（生成物，首版 174 对；2026-10-25 修幻影后重锚 **179 对**），由手写 `--update` 维护，pre-commit 的 `GEN_CMDS` 不覆盖。
 - `scripts/baseline/deadcode-baseline.json`：**绝不写回**其 `jscpd` 段，前端 78 条基线零污染、零重洗。
 - `check-deadcode-baseline.mjs`：前端 jscpd 门禁，与本工具平行、互不相交。
 
 ## 不变量
 
-- **范围锁死**：只扫 `./go/**/*.go`，不碰 `upstream/`/`rust-core/`/`frontend/`——跨语言混 baseline 不可维护（否决方案③）。
+- **范围锁死**：只扫 `./go/**/*.go`，不碰 `upstream/`/`rust-core/`/`frontend/`/`tmp/`——跨语言混 baseline 不可维护（否决方案③）；`tmp/` 是构建残留，扫进去就是把自拷贝当债务（见「扫描」条）。
 - **增量不惩罚存量**：baseline 冻结现状，只拦新增；存量重复靠 `--update` 治理后收紧，不阻断推送。
 - **独立账本**：baseline 文件独立、格式仿前端但路径不回写前端；前端/Go/rust 三账本分离演进，rust 账本待 poc 出后单开（方案②思路）。
 - **脚本卫生合规**：纯 bool flag（`process.argv.includes('--flag')`），不消费 positional，属 `scripts-argv.md` 豁免（无需迁 `parse-args`）；文件头 JSDoc 满足 `check-script-hygiene` 5 字段（文件名+描述/依赖/用法/退出码/设计意图）。

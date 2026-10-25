@@ -288,11 +288,24 @@ func checkMoveWithinRoot(root, src, dstDir string) error {
 	if root == "" {
 		return nil
 	}
-	absRoot, err := filepath.Abs(root)
-	if err != nil {
+	if err := inRepo(root, src, "源文件必须在仓库内", false); err != nil {
 		return err
 	}
-	if err := inRepo(root, src, "源文件必须在仓库内", false); err != nil {
+	return checkDstWithinRoot(root, dstDir)
+}
+
+// checkDstWithinRoot 校验 dstDir 落在 root 内且中间组件不是指向仓库外的 symlink
+// （root 非空由调用方保证）。CopyModelFile / checkMoveWithinRoot 共用——
+// 此前两处各抄一份「absRoot → inRepo(dst) → absDst → Rel → CheckNoSymlinkInPath」，
+// 边界判定抄两份就是两套漏点。
+//
+// ⚠️ 本函数只负责**目标侧**：源侧校验（inRepo(root, src, ...)）由调用方按各自
+// 顺序插入——checkMoveWithinRoot 是「源越界 > 目标越界 > symlink」（见其注释的
+// 错误优先级），CopyModelFile 则是「目标 > symlink > 源」且源侧 allowRoot=true
+// （复制只读源，允许源为 root 自身）。两处顺序与实参差异是**刻意**的，不要合并。
+func checkDstWithinRoot(root, dstDir string) error {
+	absRoot, err := filepath.Abs(root)
+	if err != nil {
 		return err
 	}
 	if err := inRepo(root, dstDir, "目标目录必须在仓库内", true); err != nil {
@@ -469,24 +482,9 @@ func CopyModelFile(root, src, dstDir string) error {
 		log.Printf("[fileops] CopyModelFile: root 为空，跳过仓库边界校验")
 	}
 	if root != "" {
-		absRoot, err := filepath.Abs(root)
-		if err != nil {
-			return err
-		}
-		if err := inRepo(root, dstDir, "目标目录必须在仓库内", true); err != nil {
-			return err
-		}
-		absDst, err := filepath.Abs(dstDir)
-		if err != nil {
-			return err
-		}
-		rel, err := filepath.Rel(absRoot, absDst)
-		if err != nil {
-			return err
-		}
-		// 同 CheckNoSymlinkInPath 口径：dstDir 中间组件为指向仓库外
-		// 已存在目录的 symlink 时，MkdirAll 放行、rename/copy 穿透写出
-		if err := CheckNoSymlinkInPath(absRoot, rel); err != nil {
+		// 目标侧边界 + symlink 中间段：与 checkMoveWithinRoot 共用同一实现
+		// （顺序差异见 checkDstWithinRoot 注释——本处源侧校验在最后且 allowRoot=true）
+		if err := checkDstWithinRoot(root, dstDir); err != nil {
 			return err
 		}
 		// src 也须落在仓库内——否则可把仓库外任意文件拷入仓库（读取越界）

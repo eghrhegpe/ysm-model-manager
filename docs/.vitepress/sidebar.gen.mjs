@@ -2671,6 +2671,10 @@ export const autoSidebar = [
             "link": "/knowledge/settings-persistence"
           },
           {
+            "text": "前端 vitest 失败失语断言闸",
+            "link": "/knowledge/vitest-assert-quality"
+          },
+          {
             "text": "Vitest 环境切换规则",
             "link": "/knowledge/vitest-env-switch"
           }

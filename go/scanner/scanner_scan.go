@@ -110,25 +110,7 @@ retry:
 	var walkFailed atomic.Bool
 	// 接收遍历返回 error——根 lstat 失败时仅回调一次即返回，旧实现忽略该返回值
 	// 导致 walkFailed 恒 false，空结果照常缓存。
-	if werr := walkDirParallel(dir, func(p string, d os.DirEntry, err error) error {
-		if ctx.Err() != nil {
-			return fs.SkipAll // ADR-197：取消即中止整个 walk
-		}
-		entry, walkRet, rootFailed := processScanDirEntry(p, d, err, dir, true, true, nil)
-		if rootFailed {
-			walkFailed.Store(true)
-			return nil
-		}
-		if walkRet != nil {
-			return walkRet
-		}
-		if entry != nil {
-			entriesMu.Lock()
-			entries = append(entries, *entry)
-			entriesMu.Unlock()
-		}
-		return nil
-	}); werr != nil {
+	if werr := walkDirParallel(dir, collectScanDirEntry(ctx, dir, nil, &entriesMu, &entries, &walkFailed)); werr != nil {
 		walkFailed.Store(true)
 	}
 	// 并行遍历产出非确定顺序——按路径排序恢复 filepath.WalkDir 的字典序口径，
@@ -177,12 +159,27 @@ func lookupScanCache(dir string) ([]types.ModelEntry, bool) {
 //   - retry=true：waiter 等到但版本已变，调用方 goto retry 重来
 //   - hit 与 retry 皆 false：本调用成为 owner，需自己真扫并把结果写入 fl.entries
 func joinInFlightWaiter(dir string, fl *scanFlight) joinResult {
-	prev, loaded := inFlight.LoadOrStore(dir, fl)
+	return joinInFlightAt(&inFlight, dir, fl, true)
+}
+
+// joinInFlightAt 在途合并骨架（table = inFlight / inFlightBrowse）。
+//
+// 为什么抽出来：全量扫描与浏览投影的在途合并此前各抄一份同样的
+// 「LoadOrStore → 等 wg → 代际守卫比较 flight 启动时版本」骨架，差别只有
+// 航班表与一个诊断计数——而这段是并发正确性的核心（注释里「比较 flight 启动时
+// 版本而非 waiter 进入时」的坑），抄两份就等于两处都可能改错。
+//
+// countJoin=true 时累加 flightJoins：那是 scan-bench 的引擎归属诊断计数，
+// 浏览路径刻意不计（见 scanner_browse.go 文件头「诊断计数」）。
+func joinInFlightAt(table *sync.Map, dir string, fl *scanFlight, countJoin bool) joinResult {
+	prev, loaded := table.LoadOrStore(dir, fl)
 	if !loaded {
 		return joinResult{} // owner
 	}
 	other := prev.(*scanFlight)
-	flightJoins.Add(1)
+	if countJoin {
+		flightJoins.Add(1)
+	}
 	other.wg.Wait()
 	// 等待方失效守卫：比较 **flight 启动时** 版本（other.gen/other.keyVersion），
 	// 而非 waiter 自身进入时捕获的——waiter 在失效后加入时自身捕获已是最新，
@@ -209,6 +206,44 @@ func joinInFlightWaiter(dir string, fl *scanFlight) joinResult {
 // errCount（ADR-352 ③）：条目级错误可观测出口——非根 ReadDir 回调 err 与 d.Info()
 // 失败各计 1（walkDirParallel 并行回调，须 atomic）。nil = 不计（全量扫描/作者提取
 // 共签路径行为不变）。
+// collectScanDirEntry 构造 walkDirParallel 的收集回调——全量扫描与浏览投影共用。
+//
+// 为什么抽出来：两条路径的 walk 回调此前各抄一份同样的
+// 「ctx 取消即 SkipAll → processScanDirEntry → rootFailed/walkRet 分流 →
+// entry 追加加锁」骨架，抄两份时并发纪律（entries 只在 entriesMu 内追加、
+// walkFailed 只置不读）就得同步维护两遍，而这段是并行遍历的正确性核心。
+//
+// 差异只在两个入参：errCount（浏览路径要记条目级错误数给 ADR-352 ③ 索引维护
+// 门用，全量扫描传 nil）与收集容器（各自栈上的 entries / walkFailed）。
+func collectScanDirEntry(
+	ctx context.Context,
+	dir string,
+	errCount *atomic.Int64,
+	entriesMu *sync.Mutex,
+	entries *[]types.ModelEntry,
+	walkFailed *atomic.Bool,
+) func(p string, d os.DirEntry, err error) error {
+	return func(p string, d os.DirEntry, err error) error {
+		if ctx.Err() != nil {
+			return fs.SkipAll // ADR-197：取消即中止整个 walk
+		}
+		entry, walkRet, rootFailed := processScanDirEntry(p, d, err, dir, true, true, errCount)
+		if rootFailed {
+			walkFailed.Store(true)
+			return nil
+		}
+		if walkRet != nil {
+			return walkRet
+		}
+		if entry != nil {
+			entriesMu.Lock()
+			*entries = append(*entries, *entry)
+			entriesMu.Unlock()
+		}
+		return nil
+	}
+}
+
 func processScanDirEntry(p string, d os.DirEntry, err error, dir string, wantMeta, deferHash bool, errCount *atomic.Int64) (entry *types.ModelEntry, walkRet error, rootFailed bool) {
 	if err != nil {
 		// 统一走错误回调（GUI 下 stdout 不可见，薄壳注入后进环形日志面板 ADR-082）
@@ -301,6 +336,15 @@ func processScanDirEntry(p string, d os.DirEntry, err error, dir string, wantMet
 // walkFailed（整目录 walk 根级错误）不写缓存——失败结果带 30s TTL 缓存会
 // 让「目录不可读」持续显示为空（用户修好权限后 30s 内仍假空）。
 func tryStoreScanCache(dir string, stored []types.ModelEntry, startTime time.Time, gen, keyVersion uint64, walkFailed bool) {
+	storeCacheIfFresh(&scanCache, dir, stored, startTime, gen, keyVersion, walkFailed)
+}
+
+// storeCacheIfFresh 版本守卫写入骨架（cache = scanCache / browseCache）。
+//
+// 为什么抽出来：两条缓存路径的守卫语义必须逐字相同（walkFailed 不缓存 /
+// 在途被失效则丢弃 / TTL 起点是 walk 开始时刻），抄两份时任何一处走样都是
+// 「缓存里留着失效前的旧结果」这类难复现的静默失真。
+func storeCacheIfFresh(cache *sync.Map, dir string, stored []types.ModelEntry, startTime time.Time, gen, keyVersion uint64, walkFailed bool) {
 	if walkFailed {
 		return
 	}
@@ -308,7 +352,7 @@ func tryStoreScanCache(dir string, stored []types.ModelEntry, startTime time.Tim
 	if cacheGen.Load() != gen || kvNow.(*atomic.Uint64).Load() != keyVersion {
 		return // 版本已变（在途扫描期间被失效），丢弃旧结果
 	}
-	scanCache.Store(dir, scanCacheEntry{entries: stored, expiresAt: startTime.Add(scanTTL())})
+	cache.Store(dir, scanCacheEntry{entries: stored, expiresAt: startTime.Add(scanTTL())})
 }
 
 // ComputeFileHash 计算文件的 SHA256 哈希（用于同步系统文件匹配）

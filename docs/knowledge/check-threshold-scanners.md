@@ -130,7 +130,7 @@ node scripts/check-params.ts --files "$(tr '\n' ' ' < changed-files.txt)"
 
 - `_lib/changed-scope.ts`：`--files`/`--changed`/`--staged` 三入口的统一实现。
 - `_lib/gate-parse.ts`：`buildScanVerdict()` 产出 `_summary.ok/errors`，门禁据此判定。
-- `_lib/gate-config.ts`：`blockPolicy` 与 `scopedFiles` 的唯一定义点。
+- `_lib/gate-config.ts`（+ 拆分出的 `gate-config-docs/go/frontend.ts` 与 `gate-tool-types.ts`）：`blockPolicy` 与 `scopedFiles` 的唯一定义点。**对外仍是 `gate-config.ts` 单入口**——拆分只搬家不改 import 路径，消费方/契约测试无需跟着改。
 - `scripts/pre-push-gate.ts`：push 时按变更集裁剪调用。
 
 ## 不变量

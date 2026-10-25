@@ -22,10 +22,12 @@ auto_fields:
   symbols_with_lines:
     - ALL_GATE_TOOL_LISTS
     - ALL_STATIC_TOOLS
+    - BlockPolicy
     - buildScanVerdict
     - BYPASS_CHECKS
     - coverageTailLine
     - createGateCtx
+    - debt
     - DebtInventoryResult
     - debtNoteSuffix
     - DebtRecorder
@@ -66,6 +68,8 @@ auto_fields:
     - requireSummaryField
     - requireSummaryOk
     - resolveStaticBudget
+    - REVIEW_BY_LEDGER
+    - REVIEW_BY_OBSERVE
     - runScopedDocDrift
     - runTools
     - SCRIPTS_TYPECHECK
@@ -117,7 +121,7 @@ status: active
 ```
 git commit ─┬─ pre-commit（sh 薄壳，含逻辑）────── sec 级 gen + stage + 提示 + 硬阻断×3
             ├─ prepare-commit-msg ──────────────── 纯提示（知识漂移/覆盖率），恒 exit 0
-            ├─ commit-msg ─────────────────────── 提交信息减负闸（ADR-338-d1），刀1 采集期恒 exit 0
+            ├─ commit-msg ─────────────────────── 提交信息减负闸（ADR-338-d1），刀2 起阻断集(subject 空/缺前缀) → exit 1，其余提示
             └─ post-commit ───────────────────── 清「路径限定提交」的索引残留
 
 git push ──── pre-push（41行薄壳）→ pre-push-gate.ts（调度器）→ gate-blocks/×6 → gate-config.ts（清单）
@@ -144,9 +148,11 @@ CI ────────── test.yml 独立步骤：pre-push-gate --static
 - **只减不增型闸（biome 行级 / design-tokens / a11y / css-layer）**：按不变量须**双挂**——pre-commit 拦提交 + gate-config 清单拦推送/CI；只挂其一属单点防线。判定口径统一走真行级 `--added-lines`，不用行号入键。
 - **域级检查（go build/test、前端 build/vitest、契约测试）**：本地由 gate 域块承担；CI 由 test.yml 各步骤独立承担，**不经 gate 编排**。
 - **scripts typecheck（`tsc -p scripts/tsconfig.json`）**：脚本域自身的类型闸——`--all`/`--docs`/`--static` 恒跑；**push/--files 模式按变更域补跑**（2026-10-11 审计候选②：变更域含 scripts/ 或 tests/ 即 `plan.contractTests` 为真时补跑，成本实测 ~1s，纯前端/纯 Go 推送不背固定税）。此前只挂 all/docs/static，改 `scripts/_lib` 未类型化新代码本地可溜过（仅 CI --static 兜底）——现已由 `pre-push-gate.ts` 调用 `schedule.ts|runScriptsTypecheck` 的 `testsDomain` 开关补网。契约测试 `tests/test_gate_schedule.ts` 钉自守卫/三态 rc/缺失阻断/testsDomain 四态。
-- **静态治理工具（`check-*.ts` 全集；其中 `gate-config.ts` 精确 `tool:` 条目走门禁，其余走 pre-commit / commit-with-check / CI 旁路，刻意挂起者仅 `check-diff-coverage.ts` 一个）**：清单单一事实源 = `scripts/_lib/gate-config.ts`，分 ALL / DOC / FRONTEND / GO 四张（ALL 为全集、其余为域子集、有重叠）。统计口径：**只数 `tool: "X.ts"` 条目，注释里提名字不算**（2026-10-08 实测踩坑：子串匹配会把注释里的 `check-*.ts` 计入，虚高）；条数随时点演化，**禁止把某次计数写进文档正文**（旧口径「27/37 接入」「合计 40+ 项」与 2026-10-08 的 42/30/32 硬计数均已删，只留口径）。判定「真阻断」看该清单项 `blockPolicy`，FAIL 非空 ≠ 被拦。
+- **静态治理工具（`check-*.ts` 全集；其中 `gate-config.ts` 精确 `tool:` 条目走门禁，其余走 pre-commit / commit-with-check / CI 旁路，刻意挂起者仅 `check-diff-coverage.ts` 一个）**：清单单一事实源 = `scripts/_lib/gate-config.ts`（2026-10-25 拆为四文件：主文件留 `ALL_STATIC_TOOLS` + 汇总，其余按域分家到 `gate-config-docs.ts` / `gate-config-go.ts` / `gate-config-frontend.ts`，类型与 `debt()` 内核在 `gate-tool-types.ts`；消费方仍只 import `gate-config.ts`，路径不变）。分 ALL / DOC / DOC_EXTRA / FRONTEND / GO 五张（ALL 为全集、其余为域子集、有重叠）。统计口径：**只数 `tool: "X.ts"` 条目，注释里提名字不算**（2026-10-08 实测踩坑：子串匹配会把注释里的 `check-*.ts` 计入，虚高）；条数随时点演化，**禁止把某次计数写进文档正文**（旧口径「27/37 接入」「合计 40+ 项」与 2026-10-08 的 42/30/32 硬计数均已删，只留口径）。判定「真阻断」看该清单项 `blockPolicy`，FAIL 非空 ≠ 被拦。
   - 2026-10-11 锐评 P1-① 补挂 `check-scene-slot-writers`（ALL，hard）：`scene.environment`/`scene.background` 槽位写者白名单闸（ADR-292 D1「写者唯一」红线的机器锁，白名单 = env-ibl / sky 自持兜底 / shared-infra 初始化 / screenshot 保存还原 / 测试夹具，零存量债；扩白名单须先经锐评/ADR 拍板）。
+  - 2026-10-25 补网 `check-file-lines`（ALL，hard + tests 域按需补跑）：此前只挂 `FRONTEND_STATIC_TOOLS`，而 `scripts/_lib/*.ts` 被 `domain-classify.ts` 归入 tests 域 → 改 `_lib` 时 `plan.frontend=false`，本地 push **从不跑行数闸**（`doctor --all` 也不跑，只有 CI `--static` 兜底）。实测 `pre-push-gate.ts --files scripts/_lib/gate-config.ts` 补网前只有 2/2 项、补网后 3/3 且含 `check-file-lines --json`（单次 ~0.2s）。补法：① 条目进 `ALL_STATIC_TOOLS`（与既有的 FRONTEND 挂载并存，`test_gate_config` 的 assertNoDuplicate 只查表内重复）；② `gate-blocks/schedule.ts` 在 `plan.contractTests` 为真时从 ALL 取该条目补跑（单一事实源，勿另抄一份）。教训：**门禁「在某张表里」≠「在该变更域跑」**——表归属与域裁剪是两条独立的漏检通道。
   - 2026-10-11 巡检第 14 轮补挂 `check-stale-test-refs`（ALL，debt）：生产源码**注释点名**的测试引用（Go `TestXxx` 符号 / TS `x.test.ts` 文件名）必须真实存在于测试索引——「注释承诺 > 实现」漂移的镜像形态（注释谎称「守卫 = TestXxx」而该测试早已改名/消亡 = 假声明）。上线即清账 7 处（flow.go/findinst.go 假名 + menu 域根迁移旧名 ×2 + style `ui-` 前缀旧名 ×2 + fake-image 来历旧名），现 0 命中，debt 档纯防御防复发。判据只认注释行（代码行字符串字面量合法）；示例名（x/foo/fake-*）与数据值形态（引号紧邻/XML 串）启发式豁免；刻意虚构引用加行内 `claim-check:ignore: <理由>`（空理由不豁免）。契约测试 = `tests/test_check_stale_test_refs.ts`（合成索引直测纯函数 + 全仓自检 0 命中哨）。
+  - 2026-10-25 新增 `check-vitest-assert-quality`（FRONTEND，debt）：前端 vitest 断言的**失败输出诊断力**闸——接 Go 侧「裸断言红线清零」战役的口径核实（`scripts/baseline/go-bare-assert-baseline.json` count=0 之后，前端有无同类面）。唯一判据 `compound-no-message`：含**顶层** `&&`/`||` 且被布尔化 matcher（`.toBe(true|false)`/`.toBeTruthy()`/`.toBeFalsy()`，`.not.` 可选）收尾且**无第二实参消息**——失败只打印 `expected false to be true`、零 diff，与裸 `t.Fatal` 同等失语。**尺寸稀释刻意不立闸**（`expect(x.length).toBeGreaterThan(0)`，实测 111 处）：静态不可判真伪（「应当报错」的测试里它是正确断言），只做非阻断普查 `census.sizeDiluted`——判据不可静态判定的宁可不立闸，也不立靠人肉豁免维持的闸（本仓「软告警 15 条无人拆」教训）。接线**单通道**：只挂 `FRONTEND_STATIC_TOOLS`，**不在 `gate-blocks/frontend-domain.ts` 再挂一次**（两者在 push 时都跑，双挂=重复执行；`check-e2e-hygiene` 即此先例），故 `DOMAIN_BLOCK_CHECKS` 里也没有它。成本实测 ~110ms/538 文件。判据与准入声明 → 知识卡 `vitest-assert-quality.md`。
 - **存量债到期制（2026-10-09，ADR-256-d1）**：`blockPolicy: "debt"` **必须**带 `debt: { reason, reviewBy }`（类型层面强制，`tsc -p scripts/tsconfig.json` 编译期拦），reviewBy 视界 ≤180 天（契约测试拒「9999 续期」）。三个出口：① 每次运行的固定尾行报「阻断构成(N 项清单条目): hard X / debt Y … 最近复审 …」——「N 项已接入」不再被读成「N 道闸都在拦」；② debt 项 FAIL 时 note 追加「已逾期 N 天，须处置或续期」；③ **`doctor --all` 遇逾期债记一条 hard FAIL**（判据在 `_lib/gate-debt.ts|recordDebtInventory`，由 `tests/test_gate_debt.ts` 直测）。刻意不进 push 热路径：存量债与本次变更无关，拿它挡无关推送者 = 假红训练人忽略红灯。
   - 2026-10-08 门禁清单对账（锐评复核）处置：补挂 `check-comment-history` / `check-twin-siblings` / `check-unread-fields`（ALL，debt）+ `check-go-coverage-threshold`（GO，debt）；`check-diff-coverage` **刻意挂起**——依赖前端 coverage-final.json 与 diff 基线 ref，本地无覆盖率会 rc=2 恒红（假阻断），正确归宿是 CI vitest --coverage 之后。判定「真阻断」看该清单项 `blockPolicy`，FAIL 非空 ≠ 被拦。
 - **审计留痕**：逃生阀命中分两级——`YSM_SKIP_GATE=1` 与 `YSM_SKIP_*` 命中写 `.git/gate-audit.log`（SKIPPED/PUSH 行，可审计）；`git commit --no-verify` / `git push --no-verify` 整钩不跑，零痕迹，只能靠 CI 远端拦截与 `doctor --audit-check` 对账事后回溯。

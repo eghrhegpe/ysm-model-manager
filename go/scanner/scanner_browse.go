@@ -20,7 +20,6 @@ package scanner
 
 import (
 	"context"
-	"io/fs"
 	"os"
 	"sort"
 	"sync"
@@ -42,17 +41,8 @@ var inFlightBrowse sync.Map
 // 航班表换成 inFlightBrowse（失效守卫仍共享 cacheGen/keyVersions——同一目录
 // 的在途全量/浏览扫描必须看到同一版本戳）。
 func joinInFlightBrowseWaiter(dir string, fl *scanFlight) joinResult {
-	prev, loaded := inFlightBrowse.LoadOrStore(dir, fl)
-	if !loaded {
-		return joinResult{} // owner
-	}
-	other := prev.(*scanFlight)
-	other.wg.Wait()
-	kvNow, _ := keyVersions.LoadOrStore(dir, &atomic.Uint64{})
-	if cacheGen.Load() == other.gen && kvNow.(*atomic.Uint64).Load() == other.keyVersion {
-		return joinResult{entries: append([]types.ModelEntry{}, other.entries...), hit: true}
-	}
-	return joinResult{retry: true}
+	// countJoin=false：浏览路径不计 flightJoins（scan-bench 的引擎归属只测全量扫描）
+	return joinInFlightAt(&inFlightBrowse, dir, fl, false)
 }
 
 // lookupBrowseCache 查 browseCache，命中新鲜条目返回克隆（同 lookupScanCache 口径）。
@@ -72,14 +62,7 @@ func lookupBrowseCache(dir string) ([]types.ModelEntry, bool) {
 // tryStoreBrowseCache 版本守卫通过时写入 browseCache（同 tryStoreScanCache：
 // 在途被失效则丢弃；walkFailed 结果不缓存——「目录不可读」不享受 30s 假空）。
 func tryStoreBrowseCache(dir string, stored []types.ModelEntry, startTime time.Time, gen, keyVersion uint64, walkFailed bool) {
-	if walkFailed {
-		return
-	}
-	kvNow, _ := keyVersions.LoadOrStore(dir, &atomic.Uint64{})
-	if cacheGen.Load() != gen || kvNow.(*atomic.Uint64).Load() != keyVersion {
-		return
-	}
-	browseCache.Store(dir, scanCacheEntry{entries: stored, expiresAt: startTime.Add(scanTTL())})
+	storeCacheIfFresh(&browseCache, dir, stored, startTime, gen, keyVersion, walkFailed)
 }
 
 // ScanEntriesBrowse 仓库树浏览投影（无 SHA256）：同 ScanEntries 的过滤口径，
@@ -163,25 +146,7 @@ retry:
 	}
 	// wantMeta=true：树需要 Size/ModTime（size/date 排序）；deferHash=true：跳过
 	// walk 内联哈希，且本路径不跑 hashEntriesParallel——Hash 恒空即浏览投影契约。
-	if werr := walkDirParallel(dir, func(p string, d os.DirEntry, err error) error {
-		if ctx.Err() != nil {
-			return fs.SkipAll
-		}
-		entry, walkRet, rootFailed := processScanDirEntry(p, d, err, dir, true, true, &entryErrs)
-		if rootFailed {
-			walkFailed.Store(true)
-			return nil
-		}
-		if walkRet != nil {
-			return walkRet
-		}
-		if entry != nil {
-			entriesMu.Lock()
-			entries = append(entries, *entry)
-			entriesMu.Unlock()
-		}
-		return nil
-	}); werr != nil {
+	if werr := walkDirParallel(dir, collectScanDirEntry(ctx, dir, &entryErrs, &entriesMu, &entries, &walkFailed)); werr != nil {
 		walkFailed.Store(true)
 	}
 	// 并行遍历产出非确定顺序——按路径排序恢复 filepath.WalkDir 的字典序口径

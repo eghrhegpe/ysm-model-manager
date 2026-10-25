@@ -8,8 +8,12 @@
  *       ms >= 1000 -> high（硬闸候选）；ms < 1000 -> warn（如 menu-visual 的 250/200/350）。
  *   R2 软断言假绿：toBeGreaterThan(0) / toBeGreaterThanOrEqual(1) - 存在性被 >0 稀释，
  *       掩盖「数量/顺序错了却仍绿」的假绿（.not 负向安全，已排除）。
- *   R3 守卫废置：screenshotWithBaseline 全树引用数 <=1（仅自身定义）且存在 ad-hoc
- *       page.screenshot/shot() 调用 -> 字节级防假绿守卫成死代码（旗舰守卫废置）。
+ *   R3 守卫废置：screenshotWithBaseline 全树引用数 <=1（仅自身定义）即判定死代码待删；
+ *       而 ad-hoc page.screenshot/shot() 仍在用 -> 字节级防假绿「旗舰守卫」从没落地。
+ *       注意（2026-10 历史实证）：能力已 inline 迁为 sha256 两两互异闸（water-wave-evidence /
+ *       fog-horizon-evidence / menu-visual 直接 createHash('sha256') 两两互异）；2026-10-25
+ *       已删 visual-baseline.ts 死代码、menu-visual 的 shot() 接 sha256 互异闸。故 R3 现仅作
+ *       残留 ad-hoc 截图无闸的巡检（其余 spec 已迁），并随硬化战役收口消项。
  *
  * 行为：默认仅报告不阻断（退出码恒 0，输出 [WARN]），属 debt 观察期。
  *   --strict 时命中 high 级即 exit 1，供未来升 hard 闸。
@@ -51,7 +55,9 @@ const findings: Finding[] = [];
 
 // 全局计数（R3 用）
 let sbRefs = 0; // screenshotWithBaseline 引用数（含定义自身）
-let adhocShots = 0; // page.screenshot / shot() 直接调用数
+let adhocShots = 0; // page.screenshot / shot() 直接调用数（树级，供概要）
+const fileAdhoc = new Map<string, number>(); // 每 spec 的 ad-hoc 截图数
+const fileGated = new Set<string>(); // 已接 sha256 互异闸的 spec
 
 const lineOf = (src: string, idx: number): number =>
   src.slice(0, idx).split("\n").length;
@@ -96,28 +102,35 @@ for (const dir of E2E_DIRS) {
       });
     }
 
-    // ---- R3 计数（树级）----
+    // ---- R3 计数（树级 + 文件级）----
     const sbCount = (src.match(/screenshotWithBaseline/g) || []).length;
     sbRefs += sbCount;
     const adhoc =
       (src.match(/page[.]screenshot\(/g) || []).length +
       (src.match(/(?<![A-Za-z_])shot\(\s*["']/g) || []).length;
     adhocShots += adhoc;
+    // 本 spec 是否已接 sha256 两两互异闸（water-wave/fog 用 createHash('sha256')，
+    // menu-visual 用 assertShotsDistinct 包装 + createHash('sha256')）——接了即不算缺口。
+    const gated = /createHash\(\s*["']sha256["']\)|assertShotsDistinct/.test(src);
+    if (adhoc > 0) fileAdhoc.set(rel, (fileAdhoc.get(rel) || 0) + adhoc);
+    if (gated) fileGated.add(rel);
   }
 }
 
-// R3：守卫废置 - screenshotWithBaseline 在 spec 树内零调用（仅 visual-baseline.ts 自身定义，
-// 真正的字节级防假绿守卫），而 ad-hoc 截图（page.screenshot / shot()）回流 _shots/ 人肉回看。
-// 即「知识卡明令须用基线守卫抓假绿」这句话在 e2e 套件里从未落地 → 旗舰守卫=死代码。
-if (sbRefs <= 1 && adhocShots > 0) {
+// R3：残留 ad-hoc 截图无 sha256 互异闸的 spec 巡检。
+// screenshotWithBaseline 已删（2026-10-25）；字节级防假绿能力已 inline 迁为 sha256
+// 两两互异闸（water-wave-evidence / fog-horizon-evidence / menu-visual 已接）。
+// 本判据只点名「有 ad-hoc 截图却没接 sha256 互异闸」的 spec，随硬化战役收口消项。
+const ungated = [...fileAdhoc.entries()].filter(([f]) => !fileGated.has(f));
+for (const [f, c] of ungated) {
   findings.push({
     rule: "R3",
     severity: "warn",
-    file: "frontend/e2e (tree)",
+    file: f,
     detail:
-      "screenshotWithBaseline 在 spec 树内零调用（仅 visual-baseline.ts 定义，死代码）；ad-hoc 截图=" +
-      adhocShots +
-      " 落 _shots/ 人肉回看，字节级防假绿守卫废置（R3）",
+      "ad-hoc 截图=" + c + " 落 _shots/ 人肉回看，未接 sha256 两两互异闸（防假绿）；" +
+      "对齐 water-wave-evidence / fog-horizon-evidence / menu-visual 的 createHash('sha256') 互异闸范式" +
+      "（R3，随硬化战役收口）",
   });
 }
 

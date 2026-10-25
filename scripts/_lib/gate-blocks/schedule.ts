@@ -159,6 +159,18 @@ export function runStaticToolsDispatch(
         runTools(ctx, GO_STATIC_TOOLS);
       }
     }
+    if (ctx.plan.contractTests) {
+      // scripts/ 或 tests/ 变更域补跑行数红线闸（2026-10-25 补网）。
+      // 洞：check-file-lines 只挂 FRONTEND_STATIC_TOOLS，而 scripts/** 被 domain-classify
+      // 归为 tests 域（plan.frontend=false）→ 改 scripts/_lib 时本地 push 完全不跑它，
+      // 只有 CI --static 兜底。实证代价：gate-config.ts 撑到 509 行破 503 红线，
+      // 本地 `pre-push-gate --files <scripts/_lib 文件>` 仍报 PASS。
+      // 条目从 ALL_STATIC_TOOLS 取（单一事实源，不复制第二份定义）；成本实测 ~0.2s。
+      runTools(
+        ctx,
+        ALL_STATIC_TOOLS.filter((t) => t.tool === "check-file-lines.ts"),
+      );
+    }
     if (ctx.plan.docs || ctx.plan.adr) {
       // 文件驱动模式：doc-drift / knowledge-drift 按 --files 裁剪（与 check-redlines 同款），
       // 避免并行会话留在 docs/knowledge/ 的未跟踪草稿卡（如 commit-with-check.md）阻断本次 commit。

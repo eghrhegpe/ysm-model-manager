@@ -96,13 +96,16 @@ const EXPECTED_POLICY: Record<string, BlockPolicy> = {
   "check-circular.ts": "debt",
   "check-orphan-exports.ts": "debt",
   "check-deadcode-baseline.ts": "debt",
+  // jscpd-go：Go 重复对账本（基线 scripts/baseline/jscpd-go-baseline.json）。
+  // 2026-10-25 起 jscpd 调用带 --ignore "**/tmp/**"——此前 --pattern 的非锚定 glob 会把
+  // tmp/ci-sim 整仓自拷贝扫进来，虚增 192 条重复对（196 → 4）。
   "jscpd-go.ts": "debt",
   "check-proc-adoption.ts": "debt",
   "check-lib-adoption.ts": "debt",
   "check-toast-duration.ts": "debt",
-  // 设计令牌守规（2026-09 接线）：基线比对 + 增量模式，存量 128 条债在
-  // scripts/baseline/design-tokens-baseline.json 放行——属「代码质量建议」类，
-  // 与 check-complexity/check-params 同档（全库阈值 + 存量债），故记 debt。
+  // 设计令牌守规（2026-09 接线）：判定面在 FRONTEND 表的 `--added-lines`（ADR-256 D1 真行级）；
+  // ALL 表这条只做全库普查（2026-10-25 摘掉 --baseline，恒 exit 0，只报「存量 110 条 / 28 文件」）。
+  // 存量债规模随收债演化，此处刻意不写死条数（旧注释的「128 条」早已腐）。
   "check-design-tokens.ts": "debt",
   // i18n 未使用键（2026-09 接线）：同为基线比对 + 只拦新增；判定含启发式成分
   // （动态查表无法静态判定），故记 debt。
@@ -128,10 +131,11 @@ const EXPECTED_POLICY: Record<string, BlockPolicy> = {
   // 确定性规则（正则 + 索引比对）本可 hard，但上线策略与同族守卫一致：当前 0 命中
   // （已清账 7 处），debt 档纯防御——测试改名/删除后注释未跟即报告，不误伤推送热路径。
   "check-stale-test-refs.ts": "debt",
-  // check-commit-message（ADR-338-d1 刀1 采集期）：提交信息减负闸，replay 300
-  // 47% hard 命中、21% warn 命中待校准，记 debt 只记录不阻断——转 hard 后改 "hard"，
-  // 同时给 .githooks/commit-msg 加 --strict。
-  "check-commit-message.ts": "debt",
+  // check-commit-message（ADR-338-d1 刀2，2026-10-25 开闸）：提交信息减负闸。
+  // 已 debt → hard（钩子同步加 --strict）；但 hard 档**不全拒**——阻断集是
+  // `BLOCKING_RULES`（subject-empty / subject-prefix）白名单，其余 hard 规则只提示。
+  // 故它挂在 hard 却不会因 subject-length 误伤推送，这正是刀2 敢开闸的前提。
+  "check-commit-message.ts": "hard",
 
   // —— failClosed（仅 rg 等环境依赖工具；生成物漂移类恢复 hard——
   //    迁移时误降 failClosed 会让过期生成物静默过闸，code_review 03a6005ed 撤销）——

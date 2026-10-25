@@ -20,10 +20,12 @@ auto_fields:
   symbols_with_lines:
     - ALL_GATE_TOOL_LISTS
     - ALL_STATIC_TOOLS
+    - BlockPolicy
     - buildScanVerdict
     - BYPASS_CHECKS
     - coverageTailLine
     - createGateCtx
+    - debt
     - DebtInventoryResult
     - debtNoteSuffix
     - DebtRecorder
@@ -66,6 +68,8 @@ auto_fields:
     - requireSummaryField
     - requireSummaryOk
     - resolveStaticBudget
+    - REVIEW_BY_LEDGER
+    - REVIEW_BY_OBSERVE
     - runScopedDocDrift
     - runTools
     - SCRIPTS_TYPECHECK
@@ -103,7 +107,7 @@ pitfalls:
   - push 被拒直接 --no-verify → 绕过不留审计；应修 FAIL 项或 git pull 整合
   - 判定字段写错位置 → 门禁静默假绿：`parseToolOutput` 的 `parsed._summary || parsed` 使「`_summary` 存在但无 ok/errors」时短路，**永不回读顶层 `ok`**。三脚本曾把 ok 放顶层且 rc 恒 0（情报型）→ 门禁恒判通过；判定必须写进 `_summary`（`buildScanVerdict`）
   - 「门禁全绿」只证明清单内检查通过——42 个 check-*.ts 与清单项非一一对应（差额走 pre-commit / CI 旁路，或只挂前端域）。三档位扫描器（complexity / params / type-safety）2026-09-13 才接 FRONTEND_STATIC_TOOLS（debt + --files），`--all` / `--docs` 路径仍不跑；审核/锐评下结论必须附「跑了哪些 + N/42」覆盖率，不可外推为「仓库无风险」
-  - 「只挂 pre-commit 的闸 = 单点防线」`check-design-tokens` 曾长期只挂 pre-commit 硬阻断③，pre-push / CI 均无排查项——而 pre-commit 可被 `git commit --no-verify` 一条命令绕过（CI `--static` 模式的立项目的正是补这一层）。2026-09 补进 FRONTEND/ALL_STATIC_TOOLS（`--baseline` + debt + scopedFiles），与 `css-layer-check` 同等三重防护。2026-09-16 改口径（ADR-256）：FRONTEND 侧由 `--baseline` 换成 `--added-lines`（行级：只判本次推送引入的新增行，range 源 base..head，与 pre-commit 索引源共用 `_lib/diff-source.ts`）；ALL_STATIC_TOOLS 保留 `--baseline`，但那里已是**账本漂移报告**（全库 vs `baseline/design-tokens-baseline.json`），不再参与判定。**新增「只减不增」型闸一律双挂**（pre-commit 拦提交 + gate-config 拦推送/CI），勿只挂其一；但**判定口径别用行号入键**——实测 322/330 = 97.6% 的「新增」是位移幻影（可复算：`scripts/token-shift-audit.ts --window 120`；同上 ADR）
+  - 「只挂 pre-commit 的闸 = 单点防线」`check-design-tokens` 曾长期只挂 pre-commit 硬阻断③，pre-push / CI 均无排查项——而 pre-commit 可被 `git commit --no-verify` 一条命令绕过（CI `--static` 模式的立项目的正是补这一层）。2026-09 补进 FRONTEND/ALL_STATIC_TOOLS（`--baseline` + debt + scopedFiles），与 `css-layer-check` 同等三重防护。2026-09-16 改口径（ADR-256）：FRONTEND 侧由 `--baseline` 换成 `--added-lines`（行级：只判本次推送引入的新增行，range 源 base..head，与 pre-commit 索引源共用 `_lib/diff-source.ts`）；ALL_STATIC_TOOLS 那条 2026-10-25 起**摘掉全部参数**、恒 exit 0 只报「存量 N 条 / M 文件」（此前挂 `--baseline`，但账本键是 `file:line:kind`，行号一动就同时产生假新增+假消失——实测 added 60 / gone 62 而总量实为降 2，每次 --static 都红一条零行动价值的闸，等于训练人忽略门禁）。**新增「只减不增」型闸一律双挂**（pre-commit 拦提交 + gate-config 拦推送/CI），勿只挂其一；但**判定口径别用行号入键**——实测 322/330 = 97.6% 的「新增」是位移幻影（可复算：`scripts/token-shift-audit.ts --window 120`；同上 ADR）
   - record() 只把 blockPolicy 用于判定 blocked、不写进 results → gate-report.policyTag 读到 undefined，**所有 FAIL 的归属标签退化为「本次引入」**（debt 存量债冒充本次引入，AI 会去修不属于自己的问题）。2026-09-13 修复并加行为契约（test_gate_ctx.ts 第 5/9 组）
   - 「a11y 覆盖基线闸」`check-a11y.ts` 2026-09-26 接线（ADR-308 D3）：ALL + FRONTEND_STATIC_TOOLS 双挂 hard——coverage 计数**下限**（仅 aria-* 按属性名，只增不减；role/tabindex/prefers-reduced-motion 归 `coverageNeutral` 只记录不守基线——中性指标「越多≠越好」，删冗余即合理收敛不该被判退化，2026-10 D10 口径修订）+ scatter **上限**（document 级 keydown 散点文件→次数，只减不增，key-router.ts 唯一出口豁免）。与 layering 同范式但**方向相反**：layering 管违规清单（只减），本闸管覆盖计数（只增）——「下限守卫」型闸同样双挂；`--update` 收紧 / `--force` 放松留痕。hard 依据：确定性正则 + baseline 即存量本身，无存量债冒充；配套 tests/test_check_a11y.ts（纯核直测防空转假绿）。
   - 「增量裁剪边界」把「过滤后为空」当错误、把空 --files 静默当全库 → 前者让改一版文档/Go 就阻断推送，后者让存量债淹没本次变更；正确口径：scope 目录不存在或无可扫文件 = 用法错误 exit 1，过滤后 0 文件 = 合法 PASS，且 _summary.scopeFilter 须留痕以区分「全库干净」与「不在扫描范围」
@@ -352,4 +356,9 @@ node scripts/pre-push-gate.ts --files "<file1>\n<file2>..." [--dry-run]  # 文�
   两处调用点显式 `{ tier: "full" }`）；`YSM_GATE_BUDGET_MS` 仍是覆盖所有档位的逃生阀，
   非法值回落常量（防 `=abc` 让护栏变 NaN 恒不触发）。反向锚 =
   `tests/test_gate_static_tools.ts` 第 9 组（解析优先级 + 两处接线 + 域表不得误挂 full）。
+- **静态段耗时再砍一刀**（2026-10-25）：`auto-import` 默认跳过 `*.test./*.spec.`（538 个测试文件吃掉
+  tokenize 耗时的 75%；测试文件的缺失 import 是 TS 编译错误，`npm run typecheck` 与 CI 已兜住，
+  口径见 [auto-import-split](./auto-import-split.md)）→ `--strict` 实测 14.0s → 2.8s、静态段
+  35.2s → 21.6s，full 35s 预算从「压线 0.2s 假红」恢复到 13s 裕度。**慢项优先按「该不该扫」治理，
+  而不是调高预算**：调预算只是把假红的门槛挪走，扫不着的面还在付费。
 - `docs/cli-commands.md` — doctor 命令（gate/--all/--docs 入口）

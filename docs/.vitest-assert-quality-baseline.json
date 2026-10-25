@@ -1,0 +1,22 @@
+{
+  "_comment": "前端 vitest「失败失语」债务基线（key=文件，值=规则→命中数）。仅允许减少，不允许增加。更新: node scripts/check-vitest-assert-quality.ts --update（新增需 --force）",
+  "note": "存量 5 处复合布尔无消息断言（失败只报 expected false to be true、零 diff）。清完即 blockPolicy 由 debt 升 hard 作纯防回归锁；新增须 --force 并留痕",
+  "generatedAt": "2026-10-25",
+  "counts": {
+    "frontend/src/preview-3d/adapters/vrm/vmd-expression-map.test.ts": {
+      "compound-no-message": 1
+    },
+    "frontend/src/preview-3d/menu/engine/core.test.ts": {
+      "compound-no-message": 1
+    },
+    "frontend/src/preview-3d/state/perf-presets.test.ts": {
+      "compound-no-message": 1
+    },
+    "frontend/src/utils/animation/molang.test.ts": {
+      "compound-no-message": 1
+    },
+    "frontend/src/views/app-content/settings/init.test.ts": {
+      "compound-no-message": 1
+    }
+  }
+}

@@ -61,10 +61,10 @@ last_verified: 2026-10-09
 |---|---|---|---|
 | redlines-baseline.json | `check-redlines --json` | `--update-baseline` | 全 19 规则候选 ≠ 账本「债务型 6 规则」，口径别混 |
 | deadcode-baseline.json | `check-deadcode-baseline --json` | `--update-baseline` | **默认模式会「自动收编」写基线，只读必须 `--json`**；键派生单源 `scripts/_lib/deadcode-keys.ts`，噪声过滤 `frontend/knip.json` + jscpd `--ignore`（见 pitfalls） |
-| design-tokens-baseline.json | `check-design-tokens` | `--update-baseline` | ADR-256 后仅 doctor 报告 / 收债排期，不参与门禁判定 |
+| design-tokens-baseline.json | `check-design-tokens` | `--update-baseline` | ADR-256 后仅 doctor 报告 / 收债排期，不参与任何判定（ALL 那条已摘 `--baseline`、恒 exit 0 只报数字）；键含行号 ⇒ 跨提交比对天生有位移幻影，只当「总量对账」读。2026-10-25 收紧至 110 条 |
 | i18n-unused-baseline.json | `check-i18n-unused --json` | `--update-baseline` | dead + testOnly 合计 = 账本 count |
 | doc-drift-baseline.json | `check-doc-drift` | `--fix` | 架构树「未登记模块」；假象坑见不变量 |
-| jscpd-go-baseline.json | `jscpd-go --json` | `--update` | 看 `added`/`fixed`/`drifted`，`added=0` = 无新债 |
+| jscpd-go-baseline.json | `jscpd-go --json` | `--update` | 看 `added`/`fixed`/`drifted`，`added=0` = 无新债。2026-10-25 重锚 179 对：此前报的 196 条 added 里 192 条是 `tmp/ci-sim` 自拷贝幻影（jscpd `--pattern` 非锚定 glob），已用 `--ignore "**/tmp/**"` 修掉——**`--update` 前确认 ignore 在位**，否则幻影会被写回账本 |
 | docs/.layering-baseline.json | `check-layering` | `--update` | 前端分层反向边，只减不增 |
 
 **纪律**：刷新 = 只读报告（左列），收紧 / 冻结 = 右列。有**未治新债**时误用收紧会把债写进 baseline（AGENTS.md「--update 会冻结当前状态」），须先治理再冻结。

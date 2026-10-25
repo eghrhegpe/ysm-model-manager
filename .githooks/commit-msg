@@ -1,13 +1,16 @@
 #!/bin/sh
-# YMM commit-msg — 提交信息减负闸（ADR-338-d1 刀1：采集期）
+# YMM commit-msg — 提交信息减负闸（ADR-338-d1 刀2：阻断集开闸）
 #
 # 职责：把 ADR-338-d1 D2 的判据跑在待提交的 message 上。判定与渲染全在
 #   scripts/_lib/commit-blocks/commit-message.ts（纯函数，可单测），本壳只做接线。
 #   此前仓内 42 个 check-*.ts + pre-commit 三段硬阻断，无一校验提交信息本身。
 #
-# 刀1 恒不阻断（ADR-338-d1 D3「warn 采集 → replay 校准 → hard」第一步）：
+# 刀2（2026-10-25 开闸）：本文件唯一改动 = 加 --strict，规则一行不动。
+#   但「--strict」不等于「所有 hard 规则都拒」——阻断集是显式白名单
+#   `BLOCKING_RULES`（subject-empty / subject-prefix 两条），其余 hard 规则仍只提示。
+#   依据：replay 300 实测 prefix 命中 4 条**全是真阳性**（无前缀的「更新文档」），
+#   而 subject-length 占 35% 且多为单主题偏长——硬拒后者等于让闸「数长度」。
 #   提示信息走 stderr 直达终端（AI 必看通道，同 pre-commit 口径）。
-#   转 hard 时本文件唯一改动 = 加 --strict，规则一行不动（这是 D3 两步走的结构前提）。
 #
 # 安装：git config core.hooksPath .githooks（仓库已配置）
 # 逃生阀：YSM_SKIP_COMMIT_MSG=1 → 跳过判定，但复用 hook-audit.ts 写 SKIPPED_PRECOMMIT 留痕
@@ -40,6 +43,20 @@ if [ "${YSM_SKIP_COMMIT_MSG:-0}" = "1" ]; then
   exit 0
 fi
 
-# 采集期：吃掉退出码（脚本自身 fail-closed 的 2 也降级为提示，不卡提交）
-"$NODE" "$ROOT/scripts/check-commit-message.ts" --file "$MSG" || true
+# 退出码分流（刀2）：
+#   0 = 合规 → 放行
+#   1 = 命中阻断集（subject-empty / subject-prefix）→ 拒提交，作者当场加前缀即可
+#   2 = 判不了（message 文件读不到 / git 不可用）→ 降级为提示放行。
+#       fail-closed 的兜底在**推送侧**：gate-config 的 --range auto 条目 exit 2 会让
+#       pre-push-gate 记 FAIL（parseToolOutput 对 rc≠0 一律 not ok），远端零损失。
+#       钩子这层若也硬拦，等于把「环境坏了」变成「谁都提交不了且改不动」。
+rc=0
+"$NODE" "$ROOT/scripts/check-commit-message.ts" --file "$MSG" --strict || rc=$?
+if [ "$rc" = "1" ]; then
+  echo "[commit-msg] ❌ 已阻断（YSM_SKIP_COMMIT_MSG=1 可跳过并留痕）"
+  exit 1
+fi
+if [ "$rc" != "0" ]; then
+  echo "[commit-msg] ⚠️  判定不可用（rc=$rc），本次放行；推送时 --range 双挂会复验"
+fi
 exit 0

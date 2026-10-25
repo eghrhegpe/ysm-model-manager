@@ -30,6 +30,9 @@
  * 运行：node tests/test_jscpd_go_smart.ts
  */
 import assert from "node:assert";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   classifyDupes,
   filterTestDupes,
@@ -38,6 +41,8 @@ import {
   matchDrift,
   pairsFrom,
 } from "../scripts/_lib/jscpd-pairs.ts";
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 // ── 真实实现来自 _lib/jscpd-pairs.ts（isGoTestFile/filterTestDupes/classifyDupes） ──
 
@@ -232,6 +237,43 @@ assert.equal(realDebtOnly.length, 1, "最终只有 1 个真正技术债需要门
 
 console.log("  ✓ 集成链：pairsFrom → classifyDupes → filterTestDupes 正确");
 console.log("     （这个链就是 jscpd-go.ts 应该调用的序列）");
+
+// ── 8. 扫描域隔离：--ignore "**/tmp/**" 回归锁（2026-10-25） ──────────
+//
+// 事故：jscpd 的 --pattern 是**子串/非锚定 glob**，"./go/**/*.go" 会同时命中
+// tmp/ci-sim/go/**（整仓 52MB 自拷贝，.gitignore:37 已忽略）。而 runJscpd 又传了
+// --no-gitignore（本意是"不漏扫真 Go 债务"），两者叠加 → 每条 go/x.go 都与
+// tmp/ci-sim/go/x.go 构成一对"重复"，虚增 192 条 added（196 → 真债 4）。
+//
+// 这条锁死的是**扫描域**而非判定逻辑：判定层（filterTestDupes 等）再怎么正确，
+// 扫进了幻影文件也无从分辨。故断言 CLI 必须显式 --ignore tmp。
+const jscpdGoSrc = fs.readFileSync(path.join(ROOT, "scripts/jscpd-go.ts"), "utf8");
+assert.ok(
+  jscpdGoSrc.includes('"--no-gitignore"'),
+  "--no-gitignore 须保留：真 Go 债务不能因 .gitignore 漏扫",
+);
+assert.ok(
+  /"--ignore",\s*\n?\s*"\*\*\/tmp\/\*\*"/.test(jscpdGoSrc),
+  'runJscpd 必须显式 --ignore "**/tmp/**"（否则 tmp/ci-sim 自拷贝会虚增重复对）',
+);
+// --ignore 必须在 --no-gitignore 之后（同一条 argv 里，顺序即语义：先放开再排除）
+assert.ok(
+  jscpdGoSrc.indexOf('"--no-gitignore"') < jscpdGoSrc.indexOf('"**/tmp/**"'),
+  "--ignore 须排在 --no-gitignore 之后",
+);
+
+// baseline 里不得残留 tmp/ 幻影对（--update 时若忘了 ignore 就会写进来）
+const jscpdBaseline = JSON.parse(
+  fs.readFileSync(path.join(ROOT, "scripts", "baseline", "jscpd-go-baseline.json"), "utf8"),
+);
+const tmpPairs = (jscpdBaseline.clones || []).filter((p: string) => p.includes("/tmp/") || p.startsWith("tmp/"));
+assert.equal(tmpPairs.length, 0, `baseline 不得含 tmp/ 幻影对（实测 ${tmpPairs.length} 条）`);
+assert.ok(
+  (jscpdBaseline.clones || []).length > 0,
+  "baseline 不得为空（空基线 = 全量重复都算新增）",
+);
+
+console.log("  ✓ 扫描域隔离：--ignore **/tmp/** 在位，baseline 无 tmp/ 幻影");
 
 // ── 总结 ─────────────────────────────────────────
 

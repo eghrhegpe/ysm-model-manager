@@ -62,6 +62,15 @@ function runJscpd(tmpDir: string) {
       "--format",
       FORMAT,
       "--no-gitignore", // 全量 Go 债务,不因 .gitignore 漏扫
+      // 但**仓库内的自拷贝目录必须显式排除**（2026-10-25 修 196 条幻影）：
+      // jscpd 的 --pattern 是子串/非锚定 glob，"./go/**/*.go" 会同时命中
+      // tmp/ci-sim/go/**（整仓 52MB 自拷贝，.gitignore:37 已忽略）——实测
+      // sources 1029 中 501 个来自 tmp/，与 go/ 自身逐文件同构 → 每条都是
+      // "go/x.go#tmp/ci-sim/go/x.go" 的假重复对。--no-gitignore 是"不漏扫
+      // 真 Go 债务"的意思，不是"把构建残留当债务"；显式 ignore 二者兼得
+      // （实测 sources 1029→521，added 196→4）。
+      "--ignore",
+      "**/tmp/**",
       "--reporters",
       "json",
       "--output",

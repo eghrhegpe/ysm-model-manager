@@ -28,6 +28,7 @@
  *   node scripts/auto-import.ts                      # 检测全部 .ts
  *   node scripts/auto-import.ts frontend/src/core/handler-other.ts   # 单文件
  *   node scripts/auto-import.ts --include-js         # 连存量 .js 一起扫
+ *   node scripts/auto-import.ts --include-tests      # 连 *.test./*.spec. 一起扫（默认跳过，省 75% 耗时）
  *   node scripts/auto-import.ts --fix                # 自动写入缺失 import（歧义跳过）
  *   node scripts/auto-import.ts --watch              # 监听变化自动重扫
  *   node scripts/auto-import.ts --json               # JSON 输出（CI 用）
@@ -46,11 +47,19 @@ import { applyFixes, fmtJson, fmtText } from "./auto-import-fix.ts";
 const ARGS = process.argv.slice(2);
 if (ARGS.includes("--help") || ARGS.includes("-h")) {
   console.log(
-    "用法: node scripts/auto-import.ts [文件...] [--include-js|--strict|--fix|--json|--watch]",
+    "用法: node scripts/auto-import.ts [文件...] [--include-js|--include-tests|--strict|--fix|--json|--watch]\n" +
+      "  --include-tests  连 *.test./*.spec. 一起扫（默认跳过：tsc 已兜住测试文件的缺失 import）",
   );
   process.exit(0);
 }
-const KNOWN_FLAGS = new Set(["--include-js", "--strict", "--fix", "--json", "--watch"]);
+const KNOWN_FLAGS = new Set([
+  "--include-js",
+  "--include-tests",
+  "--strict",
+  "--fix",
+  "--json",
+  "--watch",
+]);
 const unknown = ARGS.filter((a) => a.startsWith("--") && !KNOWN_FLAGS.has(a));
 if (unknown.length) {
   console.error(`[FAIL] 未知参数: ${unknown.join(", ")}（--help 查看用法）`);
@@ -58,13 +67,21 @@ if (unknown.length) {
 }
 const WATCH = ARGS.includes("--watch");
 const INCLUDE_JS = ARGS.includes("--include-js");
+// 默认跳过 *.test./*.spec.（占 tokenize 耗时 75%，缺失 import 由 tsc 兜住）——
+// 口径与理由见 auto-import-detect.ts 的 TEST_FILE_RE 注释。
+const INCLUDE_TESTS = ARGS.includes("--include-tests");
 const STRICT = ARGS.includes("--strict");
 const FIX = ARGS.includes("--fix");
 const JSON_OUT = ARGS.includes("--json");
 const TARGETS = ARGS.filter((a) => !a.startsWith("--"));
 
 function main() {
-  const opts = { srcDir: SRC_DIR, targets: TARGETS, includeJs: INCLUDE_JS };
+  const opts = {
+    srcDir: SRC_DIR,
+    targets: TARGETS,
+    includeJs: INCLUDE_JS,
+    includeTests: INCLUDE_TESTS,
+  };
   const result = run(opts);
   if (FIX && result.totals.totalMissing > 0) {
     const { fixed, skipped } = applyFixes(result.suggestions);

@@ -1,6 +1,16 @@
 # `design-tokens.ts` 拆分图纸（1391 行 → 三文件）
 
-> 状态：**🧊 已归档（拆分未执行，2026-10-14）**
+> 状态：**✅ 已完成（2026-10-25，按八文件方案，非本图纸的三文件方案）**——拆分已落地：
+> `token-types.ts`(42) / `token-tables.ts`(225) / `token-suggest.ts`(191) / `token-transition.ts`(149) /
+> `token-glyph.ts`(52) / `token-style.ts`(316) / `token-fix.ts`(205) / `token-emoji.ts`(234)，
+> 入口 `design-tokens.ts` 1391→153 行（只留 re-export + `findViolationsOnLines` 组合器），
+> 八文件全部 <400，`LIB_GRANDFATHERED` 已清空。**本图纸下方「三、seam 方案」的结论
+> 「一轮拆不完、三文件仍超 400」已被证伪**：seam 地图本身是对的，但簇1 建议器内部还能再切
+> （值表 / 建议算法 / 过渡建议各归一家），故八文件而非三文件。
+>
+> 以下为归档原文（保留历史与依赖图价值，勿当现状）：
+>
+> 原状态：**🧊 已归档（拆分未执行，2026-10-14）**
 > 原因：P2 拆分在实施中两次失败（一次夹带行为改写、一次 PowerShell 写坏文件），
 > 评估后认定投入产出比不划算——一轮拆不完（1391→700 仍超 `_lib ≤400`），且
 > `design-tokens.ts` 已被 `check-file-lines` 祖父条款冻结（红线 1419），继续膨胀会被拦。

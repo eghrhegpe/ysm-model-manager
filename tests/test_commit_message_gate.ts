@@ -5,8 +5,8 @@
  * 覆盖三层（对齐 ADR-323「判定可单测是硬要求」）：
  *   1. 纯判定内核：每条规则的**正例 + 反例成对**（只写反例 = 规则永远命中也算绿）
  *   2. CLI 集成：真临时目录跑真实 node 进程，断言退出码三态（0 采集 / 1 strict 拒 / 2 fail-closed）
- *   3. 钩子静态接线：`.githooks/commit-msg` 含 --file 接线、**不含 --strict**
- *      （刀1 不阻断的物证——先例：tests/test_hooks_concurrency.ts 用 src.includes 断钩子）
+ *   3. 钩子静态接线：`.githooks/commit-msg` 含 --file 接线 + --strict（刀2 开闸物证）
+ *      与 rc 分流（1 拒 / 其他放行）——先例：tests/test_hooks_concurrency.ts 用 src.includes 断钩子
  *
  * ⚠️ 钩子接线为何走静态源码断言而非真仓跑钩子：临时 git 仓里 `core.hooksPath` 指到本仓
  *    .githooks 后，钩子内 `$ROOT/scripts/...` 解析到的是**临时仓**根，脚本不存在 →
@@ -18,6 +18,8 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  BLOCKING_RULES,
+  blocksCommit,
   evaluate,
   measureSubjectLen,
   parseCommitMessage,
@@ -128,6 +130,24 @@ check("body-line-length：>120 命中且不重复计数（每提交至多一条�
   const vs = evaluate(parseCommitMessage(`fix(a): 一句话\n\n${"长".repeat(140)}\n短行\n`));
   assert(vs.filter((v) => v.rule === "body-line-length").length === 1, JSON.stringify(vs));
 });
+check("阻断集：只有 BLOCKING_RULES 内的规则在 hard 档拒提交", () => {
+  // 刀2（2026-10-25）的结构前提：severity 是规则固有档位，阻断是显式白名单。
+  const noPrefix = evaluate(parseCommitMessage("更新文档\n"));
+  assert(noPrefix.some((v) => v.rule === "subject-prefix"), JSON.stringify(noPrefix));
+  assert(blocksCommit(noPrefix), "subject-prefix 须在阻断集内");
+  const tooLong = evaluate(parseCommitMessage(`fix(a): ${"字".repeat(100)}\n`));
+  assert(tooLong.some((v) => v.rule === "subject-length" && v.severity === "hard"), "超长仍是 hard 档");
+  assert(!blocksCommit(tooLong), "subject-length 不在阻断集（35% 命中且多为单主题偏长）");
+  const multi = evaluate(parseCommitMessage("fix(a): 甲 + 乙 + 丙\n"));
+  assert(!blocksCommit(multi), "subject-multi-topic 不在阻断集（启发式判据，先攒误报样本）");
+  assert(!blocksCommit([]), "零违规不得阻断");
+  for (const r of BLOCKING_RULES) {
+    assert(
+      ["subject-empty", "subject-prefix"].includes(r),
+      `阻断集扩员须有 replay 证据（新入 ${r}）——扩员判据见 commit-message.ts 注释`,
+    );
+  }
+});
 check("subject-empty：空 message 只报一条且不跑后续规则", () => {
   const vs = evaluate(parseCommitMessage("# 全是注释\n# 第二行\n"));
   assert(vs.length === 1 && vs[0]!.rule === "subject-empty", JSON.stringify(vs));
@@ -194,6 +214,9 @@ check("summarizeReplay：分位走显式 subjectLen，豁免行不计合规", ()
   ]);
   assert(s.total === 3 && s.compliant === 1 && s.exempt === 1, JSON.stringify(s));
   assert(s.hardHits === 1 && s.warnHits === 0, JSON.stringify(s));
+  // 刀2：hardHits 是固有档位命中，blockHits 才是真会拒的——本例只有 subject-length，
+  // 两者必须分列（合成一个数会让「转档杀伤」永远算成 35%）。
+  assert(s.blockHits === 0, `blockHits 应为 0（subject-length 不在阻断集），实际 ${s.blockHits}`);
   assert(s.byRule["subject-length"] === 1, JSON.stringify(s.byRule));
   assert(s.subjectLen.median === 80 && s.subjectLen.max === 200, JSON.stringify(s.subjectLen));
 });
@@ -215,9 +238,21 @@ check("CLI：采集期（无 --strict）违规恒 exit 0", () => {
   assert(r.status === 0, `exit 应为 0，实际 ${r.status}`);
   assert(r.err.includes("subject 超长"), `stderr 应含提示：${r.err}`);
 });
-check("CLI：--strict 下 hard 违规 exit 1，warn 违规仍 exit 0", () => {
-  const hard = writeMsg("hard.txt", "fix(a): " + "字".repeat(200) + "\n");
-  assert(runCli(["--file", hard, "--strict"]).status === 1, "hard 违规须被拒");
+check("CLI：--strict 下命中阻断集 exit 1（subject-prefix）", () => {
+  const bad = writeMsg("noprefix.txt", "更新文档\n");
+  const r = runCli(["--file", bad, "--strict"]);
+  assert(r.status === 1, `无前缀须被拒，实际 ${r.status}`);
+  assert(r.err.includes("hard·阻断"), `stderr 须标出阻断标记：${r.err}`);
+});
+check("CLI：--strict 下 hard 但非阻断集（subject-length）exit 0——刀2 不全拒", () => {
+  // 2026-10-25 刀2：subject-length 占 replay 命中 35% 且多为单主题偏长，
+  // 硬拒等于让闸「数长度」。故 --strict 只对 BLOCKING_RULES 生效。
+  const long = writeMsg("longonly.txt", "fix(a): " + "字".repeat(200) + "\n");
+  const r = runCli(["--file", long, "--strict"]);
+  assert(r.status === 0, `仅超长不得阻断，实际 ${r.status}\n${r.err}`);
+  assert(r.err.includes("不在刀2 阻断集内"), `须明示未阻断：${r.err.slice(-300)}`);
+});
+check("CLI：--strict 下 warn 违规仍 exit 0", () => {
   const soft = writeMsg("soft.txt", "fix(a): 一句话\n\n验证：100 单测全绿\n");
   assert(runCli(["--file", soft, "--strict"]).status === 0, "仅 warn 命中不得阻断");
 });
@@ -244,18 +279,32 @@ check("CLI：--replay 只读历史出分布表（不写库）", () => {
 });
 
 // ── 9. 钩子静态接线 ─────────────────────────────────────
-check("钩子：.githooks/commit-msg 已接线，且刀1 刻意不带 --strict", () => {
+check("钩子：.githooks/commit-msg 已接线 --file + --strict（刀2 开闸）", () => {
   const src = fs.readFileSync(path.join(ROOT, ".githooks", "commit-msg"), "utf-8");
   assert(src.includes('check-commit-message.ts" --file "$MSG"'), "须以 git 的 $1 作 --file");
-  // 去除注释行后检查 --strict——否则注释里的 "--strict" 会误判
+  // 注释行不算接线（否则注释里的 --strict 会假绿）
   const codeLines = src.split("\n").filter((l) => !l.trimStart().startsWith("#"));
   assert(
-    !codeLines.some((l) => l.includes("--strict")),
-    "刀1 = 采集期：脚本调用不可带 --strict（须先出 replay 数据拍板）",
+    codeLines.some((l) => l.includes("check-commit-message.ts") && l.includes("--strict")),
+    "刀2 = 阻断集开闸：脚本调用须带 --strict（否则 BLOCKING_RULES 永不生效）",
   );
   assert(src.includes("YSM_SKIP_COMMIT_MSG"), "须有独立逃生键（与其他闸解耦）");
   assert(src.includes("hook-audit.ts"), "逃生须复用留痕通道（ADR-232 D2），不得静默跳过");
-  assert(src.includes("|| true"), "采集期须吃掉退出码，绝不卡提交");
+});
+check("钩子：rc 分流——仅 1 拒提交，判不了（2/其他）放行并留话", () => {
+  const src = fs.readFileSync(path.join(ROOT, ".githooks", "commit-msg"), "utf-8");
+  const codeLines = src.split("\n").filter((l) => !l.trimStart().startsWith("#"));
+  // 刀2 的阻断面 = 退出码 1（命中 BLOCKING_RULES）。rc=2 是「判不了」，
+  // 钩子这层放行（否则环境坏 = 谁都提交不了且改不动），兜底在推送侧 --range 双挂。
+  assert(
+    codeLines.some((l) => /\[ "\$rc" = "1" \]/.test(l)),
+    "须按 rc=1 精确阻断（不得写成 rc != 0 一律拒）",
+  );
+  assert(
+    !codeLines.some((l) => /check-commit-message\.ts[^\n]*\|\|\s*true/.test(l)),
+    "刀2 不得再对调用整行 || true（那会把 rc=1 也吃掉，等于没开闸）",
+  );
+  assert(src.includes("exit 1"), "阻断路径须真 exit 1");
 });
 check("钩子：core.hooksPath 已配置（否则新钩子永不生效）", () => {
   // 环境感知（2026-10-15 修 CI 红）：core.hooksPath 是**本机/本克隆的配置**，

@@ -82,6 +82,9 @@ export const CONTRACT_TEST_DOMAINS: Record<string, Domain[]> = {
   // 2026-10-08 模块级单例卫生闸（check-singleton-hygiene）——扫描域为 frontend/src/preview-3d
   // 生产文件的顶层 let，结论建在前端 3D 域（frontend）；扫描核在 scripts 工具自身（tests 域）
   "test_check_singleton_hygiene.ts": ["frontend", "tests"],
+  // 前端 vitest「失败失语」闸（check-vitest-assert-quality，2026-10-25）——扫描域为
+  // frontend/src 全部 *.test.ts（结论建在前端测试写法上）；扫描核在 scripts 工具自身（tests 域）
+  "test_check_vitest_assert_quality.ts": ["frontend", "tests"],
   // 2026-10-08 Worker 生命周期闸（check-worker-lifecycle，锐评 G2）——扫描域为
   // frontend/src/preview-3d 生产文件的 `new Worker(` 站点，结论建在前端 3D 域（frontend）；
   // 扫描核与基线语义在 scripts/tests 工具侧（tests 域）

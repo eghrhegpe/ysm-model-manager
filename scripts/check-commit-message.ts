@@ -27,6 +27,8 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import {
+  BLOCKING_RULES,
+  blocksCommit,
   evaluate,
   measureSubjectLen,
   parseCommitMessage,
@@ -111,7 +113,7 @@ if (parsed.file) {
         _summary: {
           ok: vs.length === 0,
           mode,
-          blocking: mode === "hard" && vs.some((v) => v.severity === "hard"),
+          blocking: mode === "hard" && blocksCommit(vs),
           violations: vs.map((v) => v.rule),
           hard: vs.filter((v) => v.severity === "hard").length,
           warn: vs.filter((v) => v.severity === "warn").length,
@@ -121,7 +123,7 @@ if (parsed.file) {
   } else {
     for (const line of blockFor("(待提交 message)", vs)) console.error(line);
   }
-  const blocked = mode === "hard" && vs.some((v) => v.severity === "hard");
+  const blocked = mode === "hard" && blocksCommit(vs);
   process.exit(blocked ? 1 : 0);
 }
 
@@ -205,7 +207,7 @@ for (const chunk of out.split(REPLAY_SEP)) {
 const summary = summarizeReplay(rows);
 
 if (jsonOut) {
-  console.log(JSON.stringify({ _summary: { ok: summary.hardHits === 0, ...summary } }));
+  console.log(JSON.stringify({ _summary: { ok: summary.blockHits === 0, ...summary } }));
 } else if (blocks.length) {
   for (const line of blocks) console.error(line);
   if (isReplay) {
@@ -219,7 +221,10 @@ if (jsonOut) {
       `  subject 码点：中位 ${summary.subjectLen.median}  p90 ${summary.subjectLen.p90}  p95 ${summary.subjectLen.p95}  max ${summary.subjectLen.max}  均 ${summary.subjectLen.mean}`,
     );
     console.error(
-      `  转 hard 后会被拒：${summary.hardHits} 条（${pct(summary.hardHits)}）  仅 warn 命中：${summary.warnHits} 条（${pct(summary.warnHits)}）`,
+      `  结构 hard 命中：${summary.hardHits} 条（${pct(summary.hardHits)}）  仅 warn 命中：${summary.warnHits} 条（${pct(summary.warnHits)}）`,
+    );
+    console.error(
+      `  刀2 实际会拒（阻断集 = {${[...BLOCKING_RULES].join(", ")}}）：${summary.blockHits} 条（${pct(summary.blockHits)}）`,
     );
     const entries = Object.entries(summary.byRule).sort((a, b) => b[1] - a[1]);
     for (const [rule, n] of entries) {
@@ -231,4 +236,4 @@ if (jsonOut) {
   console.error("[commit-msg] 提交信息全部合规。");
 }
 
-process.exit(mode === "hard" && summary.hardHits > 0 ? 1 : 0);
+process.exit(mode === "hard" && summary.blockHits > 0 ? 1 : 0);

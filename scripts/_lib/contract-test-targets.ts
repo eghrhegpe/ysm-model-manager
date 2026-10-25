@@ -55,7 +55,7 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   "test_innerhtml_hygiene.ts": ["scripts/_lib/innerhtml-hygiene.ts", "tests/test_innerhtml_hygiene.ts"],
   "test_changed_scope.ts": ["scripts/_lib/changed-scope.ts"],
   "test_diff_source.ts": ["scripts/_lib/diff-source.ts", "scripts/_lib/git-hunks.ts"],
-  "test_token_shift_audit.ts": ["scripts/token-shift-audit.ts", "scripts/_lib/design-tokens.ts"],
+  "test_token_shift_audit.ts": ["scripts/token-shift-audit.ts", "scripts/_lib/design-tokens.ts", "scripts/_lib/token-types.ts", "scripts/_lib/token-tables.ts", "scripts/_lib/token-suggest.ts", "scripts/_lib/token-transition.ts", "scripts/_lib/token-glyph.ts", "scripts/_lib/token-style.ts", "scripts/_lib/token-fix.ts", "scripts/_lib/token-emoji.ts"],
   "test_gen_routes_quick_pitfall.ts": ["scripts/gen-routes-quick.ts"],
   "check-gen-routes-status.ts": ["scripts/gen-routes.ts", "scripts/_lib/knowledge-cards.ts"],
   "check-knowledge-frontmatter-line-refs.ts": ["scripts/check-knowledge-drift.ts"],
@@ -108,6 +108,8 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   "test_check_menu_test_layout.ts": ["scripts/check-menu-test-layout.ts", "docs/.menu-test-layout-baseline.json", "tests/test_check_menu_test_layout.ts"],
   // preview-3d 模块级单例卫生闸：扫生产文件顶层 let + 基线对账（只减不增）
   "test_check_singleton_hygiene.ts": ["scripts/check-singleton-hygiene.ts", "docs/.singleton-hygiene-baseline.json", "tests/test_check_singleton_hygiene.ts"],
+  // 前端 vitest「失败失语」闸：扫 frontend/src 全部 *.test.ts 的复合布尔无消息断言 + 基线对账（只减不增）
+  "test_check_vitest_assert_quality.ts": ["scripts/check-vitest-assert-quality.ts", "docs/.vitest-assert-quality-baseline.json", "tests/test_check_vitest_assert_quality.ts"],
   // 裸标签规则锁死：判定口径来自 VitePress 真实 markdown-it 逐例实测，改脚本即须复验
   "test_check_doc_markup.ts": ["scripts/check-doc-markup.ts"],
   "test_complexity_parity.ts": ["scripts/check-complexity.ts", "go/ccheck/", "tests/parity/"],
@@ -165,10 +167,19 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   "test_scripts_lib.ts": ["scripts/_lib/scan-files.ts", "scripts/_lib/to-posix.ts", "scripts/_lib/ripgrep.ts", "scripts/_lib/rg-line.ts"],
   // —— 混合域（docs+tests）及补全的纯 tests 域测试 ——
   "test_gate_iife_correctness.ts": ["scripts/pre-push-gate.ts"],
-  "test_gate_config.ts": ["scripts/_lib/gate-config.ts"],
+  // 2026-10-25 拆分：清单拆成四文件（gate-config.ts 留 ALL + 汇总，其余按域分家）。
+  // targets 必须覆盖全部四个文件——否则改 gate-config-frontend.ts 不触发本测试，
+  // 「清单单一事实源」的守卫就只守了四分之一。
+  "test_gate_config.ts": [
+    "scripts/_lib/gate-config.ts",
+    "scripts/_lib/gate-config-docs.ts",
+    "scripts/_lib/gate-config-go.ts",
+    "scripts/_lib/gate-config-frontend.ts",
+    "scripts/_lib/gate-tool-types.ts",
+  ],
   // 存量债到期制（ADR-256-d1）：判据内核在 gate-debt，元数据在 gate-config（类型强制
   // reason/reviewBy），可见性出口在 gate-coverage（尾行阻断构成）——三者任一处回退即红。
-  "test_gate_debt.ts": ["scripts/_lib/gate-debt.ts", "scripts/_lib/gate-config.ts", "scripts/_lib/gate-coverage.ts"],
+  "test_gate_debt.ts": ["scripts/_lib/gate-debt.ts", "scripts/_lib/gate-config.ts", "scripts/_lib/gate-config-frontend.ts", "scripts/_lib/gate-config-go.ts", "scripts/_lib/gate-config-docs.ts", "scripts/_lib/gate-tool-types.ts", "scripts/_lib/gate-coverage.ts"],
   // gate-ctx 是 record()/blocked/exec 助手的唯一实现；其归属标签断言同时消费
   // gate-report.formatFailSummary（record → results → 标签的端到端链路），故两者都列。
   "test_gate_ctx.ts": ["scripts/_lib/gate-ctx.ts", "scripts/_lib/gate-report.ts", "scripts/pre-push-gate.ts"],
@@ -214,7 +225,23 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   "test_i18n_unused.ts": ["scripts/_lib/i18n-unused.ts", "scripts/check-i18n-unused.ts", "frontend/src/locales/en.ts", "frontend/src/locales/zh-CN.ts", "frontend/src/locales/ja.ts"],
   // 判定层是纯函数模块，契约测试直接 import 它；令牌基准表与 variables.css 对账，
   // 故两者都列为敏感源（任一改动都应触发本测试）。
-  "test_design_tokens.ts": ["scripts/_lib/design-tokens.ts", "scripts/_lib/icon-map.ts", "scripts/check-design-tokens.ts", "frontend/css/variables.css", "docs/UI-Design.md"],
+  // 2026-10-25 拆分后：判定层已分散到 token-*.ts 八文件（design-tokens.ts 只做入口透出），
+  // 任一子模块改动都会改变判定行为，故全部列为敏感源（漏一个 = 改它不跑本测试）。
+  "test_design_tokens.ts": [
+    "scripts/_lib/design-tokens.ts",
+    "scripts/_lib/token-types.ts",
+    "scripts/_lib/token-tables.ts",
+    "scripts/_lib/token-suggest.ts",
+    "scripts/_lib/token-transition.ts",
+    "scripts/_lib/token-glyph.ts",
+    "scripts/_lib/token-style.ts",
+    "scripts/_lib/token-fix.ts",
+    "scripts/_lib/token-emoji.ts",
+    "scripts/_lib/icon-map.ts",
+    "scripts/check-design-tokens.ts",
+    "frontend/css/variables.css",
+    "docs/UI-Design.md",
+  ],
   // ADR-238：映射表（scripts）↔ 图标实现（frontend）对拍，两份都在敏感源。
   "test_ui_icons.ts": ["scripts/_lib/icon-map.ts", "frontend/src/utils/icon/ui-icons.ts", "docs/adr/ADR-238-ui.md"],
   "test_check_readme_index.ts": ["scripts/check-readme-index.ts"],
@@ -227,8 +254,14 @@ export const CONTRACT_TEST_TARGETS: Record<string, string[]> = {
   "test_adr_tiering.ts": ["scripts/_lib/adr-files.ts", "scripts/_lib/frontmatter.ts", "scripts/new-adr.ts", "scripts/adr-check.ts", "scripts/check-adr-health.ts", "scripts/check-doc-drift.ts", "scripts/gen-adr-supersede.ts", "scripts/gen-docs-index.ts", "scripts/gen-vitepress-sidebar.ts"],
   "test_check_boolean_smart.ts": ["scripts/check-boolean-naming.ts"],
   // §6 断言锚点已随 ADR-206 阶段 1 迁到 gate-ctx.ts（record 真身），故列入目标。
-  "test_gate_policy_baseline.ts": ["scripts/_lib/gate-config.ts", "scripts/_lib/gate-ctx.ts", "scripts/pre-push-gate.ts"],
-  "test_jscpd_go_smart.ts": ["scripts/_lib/jscpd-pairs.ts", "scripts/jscpd-go.ts"],
+  "test_gate_policy_baseline.ts": ["scripts/_lib/gate-config.ts", "scripts/_lib/gate-config-frontend.ts", "scripts/_lib/gate-config-go.ts", "scripts/_lib/gate-tool-types.ts", "scripts/_lib/gate-ctx.ts", "scripts/pre-push-gate.ts"],
+  // 含 baseline 账本：第 8 组断言「baseline 不得残留 tmp/ 幻影对」——--update 若漏了
+  // --ignore 就会把幻影写进账本，故改账本必须触发这条测试。
+  "test_jscpd_go_smart.ts": [
+    "scripts/_lib/jscpd-pairs.ts",
+    "scripts/jscpd-go.ts",
+    "scripts/baseline/jscpd-go-baseline.json",
+  ],
   "test_orphan_exports_smart.ts": ["scripts/check-orphan-exports.ts"],
   "test_scan_files_shared.ts": ["scripts/_lib/scan-files.ts"],
   "test_git_ref.ts": ["scripts/_lib/git-ref.ts"],

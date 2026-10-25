@@ -6,7 +6,8 @@ category: ui
 status: active
 source_files:
   - scripts/_lib/survey-emoji-icons.ts
-  - scripts/_lib/design-tokens.ts
+  - scripts/_lib/token-glyph.ts
+  - scripts/_lib/token-emoji.ts
   - scripts/_lib/icon-map.ts
 use_when:
   - emoji 残留摸排
@@ -16,55 +17,20 @@ use_when:
 auto_fields:
   symbols_with_lines:
     - allIconNames
-    - checkLayoutDocDrift
+    - clip
     - COMBINING_MARKS
-    - COMBO_EXPANSION
-    - COMBO_PADDING_TOKENS
-    - DesignViolation
-    - DesignViolationKind
-    - DocDrift
     - EMOJI_TO_ICON
     - findEmojiIconViolations
     - findLocaleEmojiPrefixViolations
-    - findStyleAttrViolations
     - findToastEmojiPrefixViolations
     - findToastEmojiPrefixWindowViolations
-    - findViolationsOnLines
-    - FixEdit
-    - fixLineTokens
     - GLYPH_CLUSTER
     - glyphOfIconName
     - GRAPHIC_EMOJI
-    - hasCustomEasing
     - hasGraphicEmoji
     - isCommentLine
-    - isNeutralColor
-    - isRealtimeFeedbackTransition
-    - nearestPadToken
-    - normalizeShadowValue
-    - PAD_TOKEN_VERTICAL
-    - parseTokenMap
-    - propDeclRe
-    - propValueRe
-    - REALTIME_FEEDBACK_MAX_SECS
-    - REALTIME_FEEDBACK_PROPS
-    - SHADOW_TOKEN_VALUES
-    - SP_FLOOR_PX
-    - SP_TOKEN_VERTICAL
-    - splitTopLevelCommas
     - STATUS_ICON_NAMES
     - suggestIconName
-    - suggestPaddingToken
-    - suggestShadowToken
-    - suggestToken
-    - suggestTransitionToken
-    - suggestTransitionTokenExact
-    - TOKEN_PX_BASELINE
-    - TokenPxMap
-    - TokenRawMap
-    - TR_EXEMPT_MARKER
-    - TRANSITION_TOKEN_DURATIONS
-    - TRANSITION_TOKEN_VALUES
 quick_groups:
   - UI 交互与弹窗
 quick_intents:
@@ -78,9 +44,9 @@ quick_risk_lines:
 pitfalls:
   - 零散 grep 每枚 emoji/每个 UI_ICONS 模式各发一次 → token 浪费（实测上一会话 28 分钟 / 5.6M tok 都在翻 emoji）：改用一次性脚本
   - "`check-design-tokens --kind emoji-icon` 只认「HTML 标签图标位 + 字面量 emoji」，扫不到运行时 toast 载荷 / locale 值前缀 emoji；要全量需用 survey 脚本或 findToastEmojiPrefixViolations / findLocaleEmojiPrefixViolations"
-  - emoji 字符集必须含 U+2190-21FF / U+2300-23FF（含 ⏳/← 等），否则单字形槽整类逃逸 —— survey 脚本已**复用 design-tokens.ts 导出的 GRAPHIC_EMOJI**，不自抄副本（单一事实源，门禁改字符集 survey 自动跟随）
+  - emoji 字符集必须含 U+2190-21FF / U+2300-23FF（含 ⏳/← 等），否则单字形槽整类逃逸 —— survey 脚本已**复用 token-glyph.ts 导出的 GRAPHIC_EMOJI**，不自抄副本（单一事实源，门禁改字符集 survey 自动跟随；2026-10-25 起判定层拆在 token-*.ts，入口 design-tokens.ts 仅 re-export）
 invariant_anchors:
-  - scripts/_lib/design-tokens.ts|GRAPHIC_EMOJI
+  - scripts/_lib/token-glyph.ts|GRAPHIC_EMOJI
   - scripts/_lib/icon-map.ts|EMOJI_TO_ICON
 ---
 
@@ -93,7 +59,7 @@ ADR-238 把 emoji 当 UI 图标迁移成 SVG（`UI_ICONS` + `.ws-icon`）。摸�
 ## 核心职责
 
 - 一次性产出 4 类报表：① emoji 字面量按文件/按字形分布；② HTML 图标位残留（ADR-238 未迁移点）；③ 映射表收录但零消费的「孤儿图标」；④ locale 文案值前缀型状态符号 emoji。
-- 静态分析**复用门禁** `scripts/_lib/design-tokens.ts` 的判定与字符集（`findEmojiIconViolations` / `findLocaleEmojiPrefixViolations` / `GRAPHIC_EMOJI`），与 `check-design-tokens` 完全同源，不自抄正则副本。
+- 静态分析**复用门禁**的判定与字符集（`GRAPHIC_EMOJI` 定义在 `scripts/_lib/token-glyph.ts`；`findEmojiIconViolations` / `findLocaleEmojiPrefixViolations` 在 `scripts/_lib/token-emoji.ts`；两者经入口 `scripts/_lib/design-tokens.ts` re-export），与 `check-design-tokens` 完全同源，不自抄正则副本。
 
 ## 对外 API / 入口
 

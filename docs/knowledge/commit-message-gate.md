@@ -10,6 +10,8 @@ source_files:
   - .githooks/commit-msg
 auto_fields:
   symbols_with_lines:
+    - BLOCKING_RULES
+    - blocksCommit
     - BODY_LINE_LIMIT
     - BODY_LINES_WARN
     - evaluate
@@ -37,9 +39,9 @@ use_when:
   - 想了解提交信息减负闸的判据和豁免条件
   - 需要在 message 里放验证报告/逃生记录/决策出处，但不知道用哪个 trailer 字段
 pitfalls:
-  - "刀1（采集期）恒不阻断，仅 stderr 提示。转 hard 需先跑 `--replay 300` 出硬数据，且连续 ≥15 次真实提交无误伤"
+  - "刀2（2026-10-25 起）**只阻断 BLOCKING_RULES 白名单内的两条**（subject-empty / subject-prefix），不是「severity=hard 即拒」——subject-length / subject-multi-topic / body-line-length 仍是 hard 档判定但**不拒提交**，只提示。看到 --strict 别以为全拒"
   - "存量（闸上线前 300 条窗口）约 47% 提交不符合结构判据——闸只判新提交，不追溯历史（重写历史 commit message 是 ADR-080 禁令）。闸上线后新提交合规率已升至 81%，两组数字的对照见正文「闸上线后的对照」节"
-  - "采集期 gate-config 条目 blockPolicy: 'debt'——不阻断但会在 CI/pre-push 留下记录。转档时只改两处：钩子加 --strict + gate-config 改 'hard'"
+  - "阻断与 severity 是两件事：severity 是规则的固有档位（决定它算 hard 还是 warn），阻断与否由 `blocksCommit()` + `BLOCKING_RULES` 决定。**禁止再写 `v.severity === \"hard\"` 当阻断条件**——那会让扩员/收窄绕开白名单"
 quick_groups:
   - 门禁与脚本
 quick_intents:
@@ -67,7 +69,7 @@ quick_risk_lines:
 
 | 层 | 判据 | 档位 |
 |----|------|------|
-| 结构 | subject 非空且 ≤72 码点；须 `<type>[(scope)][!]: ` 前缀；单主题（` + ` ≥2 **或编号项 ≥2** 判并联）；正文单行 ≤120 码点 | hard |
+| 结构 | subject 非空且 ≤72 码点；须 `<type>[(scope)][!]: ` 前缀；单主题（` + ` ≥2 **或编号项 ≥2** 判并联）；正文单行 ≤120 码点 | hard（其中 subject-empty / subject-prefix **阻断**，其余只提示） |
 | 台账 | 验证报告腔 / `YSM_SKIP_*` / "并行会话"入正文；body 行数 >20 | warn |
 | 豁免 | `Merge` / `Revert` / `fixup!` / `squash!` / `amend!` 直放且不触发任何判据 | — |
 
@@ -90,13 +92,15 @@ quick_risk_lines:
 | ledger-parallel | warn | 9 | 3% |
 | subject-prefix | hard | 5 | 2% |
 | ledger-skipvalve | warn | 4 | 1% |
-| **转 hard 后会被拒** | — | **170** | **57%** |
+| **结构 hard 合计** | — | **170** | **57%** |
 | **仅 warn 命中** | — | 65 | 22% |
 | **完全合规** | — | 107 | 36%（含豁免行） |
 
 subject 码点分位：中位 **70**、p90 **160**、p95 **381**、max **869**。
 
 结论：**阈值不打人，打的是形式**——中位 70 说明自然写作本就可达标，超限者全是台账堆叠。
+
+> 上表是**刀1 上线前的校准窗口**，保留作历史对照。2026-10-25 刀2 开闸时重跑同一口径（`--replay 300`，合规 162 条）得：subject-length 105(35%)、subject-multi-topic 28(9%)、ledger-verification 16(5%)、ledger-parallel 6(2%)、body-line-length 6(2%)、subject-prefix 4(1%)、body-length 3(1%)、ledger-skipvalve 1(0%)；结构 hard 合计 124 条(41%)。**刀2 阻断集只命中 4 条(1%)，且 4 条全为真阳性**（缺常规前缀）——这就是「阻断集取 subject-empty + subject-prefix、不取全部 hard」的数据依据。
 
 ## 闸上线后的对照（关键证据：闸在 warn 档已生效）
 
@@ -123,11 +127,27 @@ subject 码点分位：中位 **70**、p90 **160**、p95 **381**、max **869**�
 
 | 入口 | 命令参数 | 场景 | 退出码 |
 |------|---------|------|--------|
-| commit-msg 钩子 | `--file "$1"` | 每次 commit，刀1 不带 `--strict` 恒 0 | 0（采集期） |
-| pre-push 双挂 | `--range auto --strict` | gate-config 条目 `{ tool: "check-commit-message.ts", args: ["--range", "auto"] }`（刀1 debt，刀2 hard） | 0 合规 / 1 hard 违规被拒 / 2 不可用 |
+| commit-msg 钩子 | `--file "$1" --strict` | 每次 commit；**刀2 起阻断集内违规 → 拒提交**（rc=1），rc=2 判不了则放行交推送侧复验 | 0 放行 / 1 阻断 / 2 判定不可用（钩子内放行） |
+| pre-push 双挂 | `--range auto --strict` | gate-config 条目 `{ tool: "check-commit-message.ts", args: ["--range", "auto", "--strict"], blockPolicy: "hard" }` | 0 合规 / 1 阻断集违规 / 2 不可用 |
 | 历史校准 | `--replay <n> [--limit N]` | 只读分析分布（`--limit` 试不同 subject 上限），不写库 | 0 恒 |
 
 `--strict` 只开关是否**阻断**，不改变**判定结果**（`renderViolations(warn) !== renderViolations(hard)`，但 `evaluate(m, { mode: "warn" }) === evaluate(m, { mode: "hard" })`——这就是 ADR-338-d1 D3 两步走的结构前提：翻开关，不改规则）。
+
+### 阻断集（刀2 的核心机制）
+
+```ts
+export const BLOCKING_RULES: ReadonlySet<RuleId> = new Set<RuleId>(["subject-empty", "subject-prefix"]);
+export function blocksCommit(vs: readonly Violation[]): boolean {
+  return vs.some((v) => BLOCKING_RULES.has(v.rule));
+}
+```
+
+**为什么不是「severity === hard 即阻断」**：severity 是规则的固有属性（口径），阻断是运营策略（闸门）。两者绑死后，任何一次调档都会同时改动口径与闸门，且 `--replay` 的 `hardHits` 会失去「结构性违规存量」这个诊断含义。分开后 `ReplaySummary` 同时报 `hardHits`（结构违规总数）与 `blockHits`（刀2 实际会拒数），**差值就是「有结构问题但当前不拒」的存量**，是下次扩员的观察窗口。
+
+阻断集当前只有两条的实证理由：`subject-empty` 是硬性事实错误（没有 subject），`subject-prefix` 的修法是一行加 `fix: ` 前缀——**确定性、零歧义、可当场改**。而 `subject-length`（replay 300 命中 35%）多为「单主题只是偏长」，硬拒会让闸显得在数长度而非治台账。扩员必须先跑 `--replay` 并说明新增项为何同样确定性；`tests/test_commit_message_gate.ts` 有扩员守卫断言，只允许这两条在集合内。
+
+钩子层的 rc 分流是这一机制的落地形态：**rc=1（阻断集命中）→ exit 1 拒提交；rc=2（判不了）→ 放行**。理由：环境坏时若也拒，谁都提交不了且改不动仓（连修钩子本身都提交不了）；fail-closed 的兜底放在推送侧——`--range auto --strict` 会对整段未推送提交复验，钩子被 `--no-verify` 绕过也逃不掉。
+
 
 ## Trailer 白名单（ADR-338-d1 D5）
 
@@ -144,8 +164,8 @@ trailer 段以空行与正文分隔，每条一行。Git 原生支持这些字�
 
 1. **计量口径不可分岔**——全仓唯一 subject 长度走 `measureSubjectLen`（`Array.from(s).length`），不用 String.length（UTF-16 代理对、UTF-8 字节数各有坑且不反映"一句话的长度"）
 2. **判定与渲染永久分离**（ADR-323 判据①）——`evaluate()` 只返回 `Violation[]`，不涉及 stderr/stdout/exit code；`renderViolations()` 只消费 `Violation[]` 和 `mode`，不重算；此结构由 `test_commit_message_gate.ts` 的 `"render：mode 不改变判定结果"` 契约测试锁死
-3. **刀1 到刀2 的转档路径只改两处**：`.githooks/commit-msg` 加 `--strict`；`scripts/_lib/gate-config.ts` 对应 `blockPolicy: "debt" → "hard"`。`scripts/_lib/commit-blocks/commit-message.ts` 一行不动——规则是固定口径，是否阻断是开关
-4. **fail-closed**：`scripts/check-commit-message.ts` 在 message 文件读不到、git 不可用、range 不可解析时退出码 2（"不可用"≠"通过"），绝不冒充合规
+3. **阻断面由 `BLOCKING_RULES` 白名单决定，不由 severity 决定**（2026-10-25 刀2 起）：`.githooks/commit-msg` 带 `--strict`、`gate-config.ts` 条目 `blockPolicy: "hard"`，但**真正拒哪几条**只看 `BLOCKING_RULES`。调用方一律走 `blocksCommit(vs)`；禁止再写 `v.severity === "hard"` 当阻断条件（会让扩员/收窄绕开白名单，`test_commit_message_gate.ts` 有扩员守卫）
+4. **fail-closed 只对推送侧成立**：`scripts/check-commit-message.ts` 在 message 文件读不到、git 不可用、range 不可解析时退出码 2（"不可用"≠"通过"），绝不冒充合规。**钩子层对 rc=2 放行**（环境坏 = 谁都提交不了且连修钩子本身都提交不了），兜底靠推送侧 `--range auto --strict` 复验
 5. **双挂不可单点**：`.githooks/commit-msg` 钩子可被 `git commit --no-verify` 整钩绕过（零痕迹），必须同时挂入 `scripts/_lib/gate-config.ts` 的 `ALL_STATIC_TOOLS` 走 `--range auto` 在推送时复验。两条防线缺任何一条 = 单点 (仓内既有的"只减不增型闸一律双挂"不变量)
 6. **`--range auto` 自证可达**：浅克隆（`--depth=1` fetch）下 `HEAD~1` 不可解析 -> 退 `origin/main..HEAD` merge-base；仍然不可解析（单提交仓）-> 返回 `HEAD`（即自己）。**绝不**把不可解析的 range 丢给 `git log` 让 git 报错冒充违规 (浅克隆教训)
 
@@ -156,4 +176,4 @@ trailer 段以空行与正文分隔，每条一行。Git 原生支持这些字�
 - [ADR-323 钩子薄壳 + blocks 范式] — 本闸的纯判定层文件 `scripts/_lib/commit-blocks/commit-message.ts` 所在结构
 - [ADR-232 D2] — `YSM_SKIP_COMMIT_MSG` 命中后复用 `hook-audit.ts` 写 `SKIPPED_PRECOMMIT` 留痕
 - [ADR-151] — 并发隔离：并行会话期第一刀 hard 会把他人提交一起卡住，是刀1 不阻断的根由
-- `tests/test_commit_message_gate.ts` — 契约测试（27 条，涵盖纯判定、CLI 集成、钩子静态接线、门禁入册）
+- `tests/test_commit_message_gate.ts` — 契约测试（31 条，涵盖纯判定、CLI 集成、钩子静态接线与 rc 分流、阻断集扩员守卫、门禁入册）

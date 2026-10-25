@@ -13,6 +13,8 @@
 //   npx playwright test --config playwright.config.ts menu-visual
 //
 // 截图产出：`e2e/_shots/menu-*.png`（可提交，供人眼/模型复查）。
+
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { expect, type Page, test } from "@playwright/test";
@@ -31,10 +33,27 @@ function popup(page: Page) {
   return page.locator(".ysm-preview-menu");
 }
 
-/** 截图到 e2e/_shots（自动建目录）。 */
-async function shot(page: Page, name: string): Promise<void> {
+/** 截图到 e2e/_shots（自动建目录），返回落盘路径供 sha256 互异闸复用。 */
+async function shot(page: Page, name: string): Promise<string> {
   fs.mkdirSync(SHOT_DIR, { recursive: true });
-  await page.screenshot({ path: path.join(SHOT_DIR, `${name}.png`) });
+  const p = path.join(SHOT_DIR, `${name}.png`);
+  await page.screenshot({ path: p });
+  return p;
+}
+
+/**
+ * 反假绿灯：本轮所有截图 sha256 两两互异——任意两张相同 = 流程没动 = 假绿信号。
+ * 对齐 water-wave-evidence:178-183 / fog-horizon-evidence:210-214 的 inline sha256 互异闸范式。
+ */
+function assertShotsDistinct(paths: string[], where: string): void {
+  const seen = new Map<string, string>();
+  for (const p of paths) {
+    const h = createHash("sha256").update(fs.readFileSync(p)).digest("hex");
+    for (const [prev, prevPath] of seen) {
+      expect(h !== prev, `截图互异判据被破（${where} 假绿灯信号）：${prevPath} ≡ ${p}`).toBe(true);
+    }
+    seen.set(h, p);
+  }
 }
 
 /**
@@ -89,13 +108,14 @@ async function mountMenu(page: Page): Promise<void> {
 test.describe("预览 3D 菜单视觉巡检", () => {
   test("底栏挂载 + 各组面板渲染（每步硬断言 + 截图）", async ({ page }) => {
     await mountMenu(page);
+    const saved: string[] = [];
 
     // ① 底栏必须挂出来
     const dock = page.locator(".preview-dock-nav");
     await expect(dock, "dock 底栏应挂载").toBeVisible({ timeout: 8000 });
     const dockCount = await page.locator('[data-testid^="dock-"]').count();
     expect(dockCount, "dock 应至少有一个分组按钮").toBeGreaterThan(0);
-    await shot(page, "menu-01-dock");
+    saved.push(await shot(page, "menu-01-dock"));
 
     // ② 逐组开面板并断言「渲染出了内容或明确的空态」——两者必有其一，不接受「什么都没有」。
     //
@@ -126,7 +146,7 @@ test.describe("预览 3D 菜单视觉巡检", () => {
       const popupText = ((await popup(page).textContent()) ?? "").replace(/\s+/g, " ").trim();
       const hasContent = rows > 0 || popupText.length > 0;
       report.push(`${gid}: ${rows} 控件 / 文本 ${popupText.length} 字`);
-      await shot(page, `menu-02-${gid}`);
+      saved.push(await shot(page, `menu-02-${gid}`));
 
       expect(hasContent, `分组 ${gid} 面板既无控件也无文本——渲染失效`).toBe(true);
 
@@ -140,10 +160,13 @@ test.describe("预览 3D 菜单视觉巡检", () => {
     // ③ 至少有一组渲染出了实际控件（全为空态 = 菜单没真正工作）
     const best = report.filter((r) => /: [1-9]\d* 控件/.test(r));
     expect(best.length, `无任何分组渲染出控件：${report.join(" | ")}`).toBeGreaterThan(0);
+    // 反假绿灯：本轮截图须两两互异（任意两张相同 = 流程没动 = 假绿）
+    assertShotsDistinct(saved, "menu-visual 底栏+各组面板");
   });
 
   test("Scene 组逐项下钻到参数面板（L3 层内容 + 截图）", async ({ page }) => {
     await mountMenu(page);
+    const saved: string[] = [];
 
     // 展开 Scene 组根视图
     const sceneBtn = dockBtn(page, "scene");
@@ -194,12 +217,14 @@ test.describe("预览 3D 菜单视觉巡检", () => {
       const excerpt = afterText.slice(0, 48);
 
       report.push(`${id}: ${controls} 控件 / 「${excerpt}」/ 内容变化 ${beforeText !== afterText}`);
-      await shot(page, `menu-03-scene-${id}`);
+      saved.push(await shot(page, `menu-03-scene-${id}`));
 
       // 硬断言：进到 L3 必须与根视图不同（否则「点了没反应」= 假绿）
       expect(afterText !== beforeText, `点入 ${id} 后面板内容无变化——下钻未生效`).toBe(true);
     }
 
     test.info().annotations.push({ type: "Scene 下钻", description: report.join(" | ") });
+    // 反假绿灯：各下钻截图须两两互异（同一面板重复进 = 假绿）
+    assertShotsDistinct(saved, "menu-visual Scene 下钻");
   });
 });

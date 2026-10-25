@@ -9,7 +9,9 @@
  * 口径：
  *   全集   = scripts/check-*.ts（当前 32 个；动态枚举，新增脚本自动进入分母，
  *            防「写死 32 过期」——分母漂移本身就是需要被看见的信号）
- *   已覆盖 = gate-config 四张清单 + GO_STATIC_TOOLS + 域检查直连项（gate-blocks 内
+ *   已覆盖 = gate-config 五张清单（ALL / DOC / DOC_EXTRA / FRONTEND / GO，2026-10-25
+ *            拆成 gate-config.ts + gate-config-{docs,go,frontend}.ts 四文件后仍由
+ *            flattenGateTools 统一汇总）+ 域检查直连项（gate-blocks 内
  *            ctx.record 直接调用的 check-*，如 layering/redlines 等）
  *   未覆盖 = 全集 - 已覆盖（如 check-biome-lines / check-diff-coverage 等 pre-commit /
  *            doctor 旁路项），在尾行逐个点名

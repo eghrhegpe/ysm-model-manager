@@ -9,6 +9,7 @@
  *   4. extractImported：命名导入（含别名）/默认/命名空间
  *   5. checkFile：缺 import 的符号被检出、已 import/定义/全局/属性访问不误报
  *   6. run 全量扫描当前仓库：0 缺失（rc=0）——与拆分前 parity 基线一致
+ *   7. 测试文件剔除口径：默认跳过 *.test./*.spec.、--include-tests 纳回、显式 target 照查
  *
  * 零依赖（仅 node:fs / node:path / node:child_process + 拆分模块）。
  * 运行：node tests/test_auto_import.mjs
@@ -18,7 +19,7 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { checkFile } from "../scripts/auto-import-detect.ts";
+import { checkFile, collectFiles } from "../scripts/auto-import-detect.ts";
 import { tokenize } from "../scripts/auto-import-lexer.ts";
 import {
   extractDefined,
@@ -280,7 +281,34 @@ check("run 全量扫描当前仓库 0 缺失（与拆分前基线一致）", () 
   );
   const data = JSON.parse(out);
   assert.equal(data._summary.missing, 0, `预期 0 缺失，实际 ${data._summary.missing}`);
-  assert.ok(data._summary.scanned > 700, `预期扫描 >700 文件，实际 ${data._summary.scanned}`);
+  // 下界只锁「确实扫了大半个 frontend/src」这一不变量，不写死条数（文件数随代码演化）。
+  // 默认跳过 *.test./*.spec.（口径见 auto-import-detect.ts 的 TEST_FILE_RE 注释）。
+  assert.ok(data._summary.scanned > 500, `预期扫描 >500 个生产文件，实际 ${data._summary.scanned}`);
+});
+
+// ── 测试文件剔除口径（2026-10-25 静态工具段耗时债）─────
+
+check("collectFiles 默认剔除 *.test./*.spec.，includeTests 才纳回，显式 targets 不受影响", () => {
+  const def = collectFiles();
+  assert.ok(def.length > 0, "默认扫描不得为空");
+  const leaked = def.filter((f) => /\.(test|spec)\.[tj]sx?$/.test(f));
+  assert.equal(leaked.length, 0, `默认扫描不应含测试文件，实际 ${JSON.stringify(leaked.slice(0, 3))}`);
+
+  const withTests = collectFiles({ includeTests: true });
+  const testFiles = withTests.filter((f) => /\.(test|spec)\.[tj]sx?$/.test(f));
+  assert.ok(testFiles.length > 0, "includeTests 应纳回测试文件");
+  assert.equal(
+    withTests.length - testFiles.length,
+    def.length,
+    "includeTests 与非测试文件数应恰好相加（不多不少）",
+  );
+
+  const explicit = collectFiles({ targets: [testFiles[0]!] });
+  assert.deepEqual(
+    explicit.map((p) => path.resolve(p)),
+    [path.resolve(testFiles[0]!)],
+    "显式点名单个测试文件时必须照查（过滤只作用于目录扫）",
+  );
 });
 
 finish("契约测试全过");

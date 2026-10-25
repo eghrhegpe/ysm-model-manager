@@ -15,6 +15,12 @@
  * 是否据此阻断由调用方 `mode`（warn 采集 ｜ hard 阻断）决定——
  * ADR-338-d1 D3 两步走「只翻开关、不改规则」的结构前提。
  *
+ * ⚠️ 2026-10-25 刀2 首次开闸：`severity === "hard"` 与「hard 档下阻断」**不是**同一件事。
+ *   阻断集是显式白名单 `BLOCKING_RULES`（subject-empty / subject-prefix），判据见其注释。
+ *   固有档位仍是规则属性（hard 命中照样逐条展示、照样进 replay 统计），只是**不全拒**——
+ *   这是「两步走」的第二次切分：第一步翻 mode 开关，第二步挑哪些规则配得上开闸代价。
+ *   调用方一律走 `blocksCommit(vs)` 判阻断，**禁止**再写 `v.severity === "hard"` 当阻断条件。
+ *
  * 计量口径（写死在此，勿在别处复制）：
  *   subject 长度 = **码点数**（Array.from 计），CJK 一字一字符。
  *   不用 String.length（UTF-16 代理对会把 emoji 算 2）、不用字节数（UTF-8 中文算 3）。
@@ -48,6 +54,33 @@ export interface Violation {
   found: string;
   /** 修法提示（指向 trailer/拆分，不是复述规则）。 */
   hint: string;
+}
+
+/**
+ * 阻断集：hard 档下**真正**会拒提交的规则（2026-10-25 刀2 首次开闸）。
+ *
+ * 为什么不是「severity === hard 即阻断」——固有档位回答的是「这条规则治的是结构病还是形式病」，
+ * 阻断与否回答的是「误伤代价付不付得起」。两者在刀2 首次开闸时必须分开：
+ *   · subject-length 实测命中 35%（105/300），且其中大量是**单主题只是偏长**——
+ *     硬拒会让闸显得在「数长度」而不是「治台账」（本文件头与知识卡都论证过这一点）；
+ *   · subject-multi-topic 9%、body-line-length 2%：判据含启发式，先攒误报样本；
+ *   · subject-prefix 1%（4/300，且钩子上线后 276 笔里 4 笔**全是真阳性**：无前缀的
+ *     「更新文档」「裸断言红线清零（…）」），修法是一行加 `fix: `——确定性、零歧义、可当场改；
+ *   · subject-empty 0 命中，与 prefix 同属「message 根本没成形」，一并纳入。
+ * 新规则进本集合的前提：replay 命中里**误报为零**且修法确定性（不是「调阈值」能治的）。
+ */
+export const BLOCKING_RULES: ReadonlySet<RuleId> = new Set<RuleId>([
+  "subject-empty",
+  "subject-prefix",
+]);
+
+/**
+ * 这组违规在 hard 档下是否足以拒提交（纯判据，不含 mode——warn 档由调用方自行短路）。
+ * 命名带 Commit 后缀：CLI 的 range 分支里有个同名局部数组 `blocks`（渲染块），
+ * 同名会撞 `Identifier has already been declared`（实测 tsc TS2440 + 运行时 SyntaxError）。
+ */
+export function blocksCommit(vs: readonly Violation[]): boolean {
+  return vs.some((v) => BLOCKING_RULES.has(v.rule));
 }
 
 export interface Trailer {
@@ -457,8 +490,14 @@ export function renderViolations(vs: Violation[], mode: "warn" | "hard"): string
       : "⚠️  [commit-msg] 提交信息减负提示（采集期，不阻断）：";
   const lines = [head];
   for (const v of vs) {
-    lines.push(`  · [${v.severity}] ${RULE_LABEL[v.rule]}${v.found ? ` — ${v.found}` : ""}`);
+    // hard 档下只有 BLOCKING_RULES 里的规则真会拒——不标出来，作者会以为全部都要改
+    // （刀2 首次开闸时 subject-length 仍占 hard 命中的大头，那些只是提示）。
+    const tag = mode === "hard" && BLOCKING_RULES.has(v.rule) ? "hard·阻断" : v.severity;
+    lines.push(`  · [${tag}] ${RULE_LABEL[v.rule]}${v.found ? ` — ${v.found}` : ""}`);
     lines.push(`      ${v.hint}`);
+  }
+  if (mode === "hard" && !blocksCommit(vs)) {
+    lines.push("  （以上均不在刀2 阻断集内：本次不拒提交，仅提示）");
   }
   lines.push("  判据全文 → CONTRIBUTING.md §提交规范 / docs/knowledge/commit-message-gate.md");
   return lines;
@@ -472,8 +511,14 @@ export interface ReplaySummary {
   exempt: number;
   /** 每条规则的命中提交数。 */
   byRule: Record<string, number>;
-  /** 固有 hard 档命中的提交数（= 转 hard 后会被拒的数量）。 */
+  /** 固有 hard 档命中的提交数（规则固有档位，≠ 会被拒的数量）。 */
   hardHits: number;
+  /**
+   * 实际会被拒的提交数（= 命中 `BLOCKING_RULES` 任一条）。
+   * 与 `hardHits` 分列的理由：刀2 只开 prefix/empty 两条，两者差值就是
+   * 「结构性违规但当前不拒」的存量——转档决策看的是这个差值怎么变，不是 hardHits。
+   */
+  blockHits: number;
   /** warn 档命中的提交数。 */
   warnHits: number;
   /** subject 码点数分位（校准阈值的直接依据）。 */
@@ -488,6 +533,7 @@ export function summarizeReplay(rows: ReplayRow[]): ReplaySummary {
   const byRule: Record<string, number> = {};
   let compliant = 0;
   let hardHits = 0;
+  let blockHits = 0;
   let warnHits = 0;
   let exemptCount = 0;
   const lens: number[] = [];
@@ -495,6 +541,7 @@ export function summarizeReplay(rows: ReplayRow[]): ReplaySummary {
     if (r.exempt) exemptCount++;
     else if (r.violations.length === 0) compliant++;
     if (r.violations.some((v) => v.severity === "hard")) hardHits++;
+    if (blocksCommit(r.violations)) blockHits++;
     if (r.violations.some((v) => v.severity === "warn")) warnHits++;
     for (const v of r.violations) byRule[v.rule] = (byRule[v.rule] ?? 0) + 1;
     lens.push(r.subjectLen);
@@ -514,6 +561,7 @@ export function summarizeReplay(rows: ReplayRow[]): ReplaySummary {
     exempt: exemptCount,
     byRule,
     hardHits,
+    blockHits,
     warnHits,
     subjectLen: { median: at(0.5), p90: at(0.9), p95: at(0.95), max: at(1), mean },
   };

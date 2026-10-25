@@ -132,20 +132,12 @@ func SetIndexRoots(dirs []string) {
 	}
 	indexRootsMu.Unlock()
 	// 同步既有表实例的 registered/watched 位 + 删除出集表
-	indexTables.Range(func(k, v interface{}) bool {
-		key := k.(string)
-		indexRootsMu.RLock()
-		watched, ok := indexRoots[key]
-		indexRootsMu.RUnlock()
-		t := v.(*scanIndexTable)
-		t.mu.Lock()
+	forEachIndexTable(func(key string, t *scanIndexTable, watched, ok bool) {
 		t.registered = ok
 		t.watched = ok && watched
-		t.mu.Unlock()
 		if !ok {
 			indexTables.Delete(key)
 		}
-		return true
 	})
 }
 
@@ -164,6 +156,24 @@ func MarkIndexRootWatched(dirs []string) {
 		}
 	}
 	indexRootsMu.Unlock()
+	forEachIndexTable(func(_ string, t *scanIndexTable, watched, ok bool) {
+		t.watched = ok && watched
+	})
+}
+
+// forEachIndexTable 遍历全部索引表实例，对每项回调「当前注册集快照」：
+// key = 归一化目录；t = 表实例（回调期间已持 t.mu）；watched/ok = 该 key 在
+// indexRoots 里的 (watched 位, 是否在注册集)。
+//
+// 抽出的理由：SetIndexRoots / MarkIndexRootWatched 此前各抄一份同样的
+// 「key 断言 → indexRootsMu.RLock 读位 → t.mu.Lock → 置位 → Unlock」骨架，
+// 两处唯一的差别只在锁内做什么（前者还删出集表）——骨架抄两份，锁纪律就得
+// 同步维护两遍（jscpd 亦反复点名该对）。
+//
+// 锁顺序契约（不可调换）：先取 indexRootsMu 读快照并立即释放，再取 t.mu——
+// 若反过来（持 t.mu 时去取 indexRootsMu），与 IsIndexRoot 等只读路径无冲突，
+// 但与「先 indexRootsMu 后 t.mu」的其他路径构成反向序，存在死锁面。
+func forEachIndexTable(fn func(key string, t *scanIndexTable, watched, ok bool)) {
 	indexTables.Range(func(k, v interface{}) bool {
 		key := k.(string)
 		indexRootsMu.RLock()
@@ -171,7 +181,7 @@ func MarkIndexRootWatched(dirs []string) {
 		indexRootsMu.RUnlock()
 		t := v.(*scanIndexTable)
 		t.mu.Lock()
-		t.watched = ok && watched
+		fn(key, t, watched, ok)
 		t.mu.Unlock()
 		return true
 	})

@@ -2,11 +2,11 @@
 
 # 知识卡索引
 
-> 总计: 209 张知识卡
+> 总计: 210 张知识卡
 
 > 用途: AI 代理根据分类 + 关键词定位知识卡，摘要提供快速上下文。
 
-## config（17 张）
+## config（18 张）
 
 *配置与注册表（resource_types、AppConfig）*
 
@@ -28,6 +28,7 @@
 | 🏗 scripts-lib-adoption | _lib 共享层采用率闸门 | architecture | — | lib adoption, 采用率, 共享层, 有能力未用, 手搓, 重复实现检测, RULES 表, toPosix 收敛 |
 | 🏗 scripts-readme-index | README 登记处对账 check-readme-index.ts | architecture | single-thread | README, 脚本索引, 登记处, check-readme-index, 脚本漂移, 脚本对账, 重复登记, 幽灵引用 |
 | 🍃 settings-persistence | 设置持久化双轨与键台账 | leaf | — | 新增或修改任何会被用户感知的设置项（判断它落在哪一轨、是否随迁移保住）, 改配置写入/读取路径（writeAppConfig / SaveAppConfigPatch / safeGet / safeSet）, 写或改备份、换机迁移相关的文档, 排查「设置重启后没保住」「换机后设置丢了」类问题, 怀疑某个键有双权威（磁盘 vs localStorage 口径不一致） |
+| 🍃 vitest-assert-quality | 前端 vitest 失败失语断言闸 | leaf | — | 写/改前端 *.test.ts 的 expect 断言前，想知道哪种写法会被本闸拦下, check-vitest-assert-quality 门禁红了——某处复合布尔断言没带失败消息, 审核看到 `expect(a && b).toBe(true)` 想判「这断言坏了没」——先按本卡判是否失语, 想给某处复合布尔断言加豁免注 `// assert-quality-allow:` 但不确定理由怎么写, 想知道为什么 `expect(x.length).toBeGreaterThan(0)` 不被本闸管 |
 | 🏗 vitest-env-switch | Vitest 环境切换规则 | architecture | — | vitest, 测试环境, node 环境, happy-dom, 测试切换 |
 
 ### 摘要
@@ -47,6 +48,7 @@
 - **scripts-lib-adoption**（_lib 共享层采用率闸门）：`scripts/check-lib-adoption.ts` 把 `check-proc-adoption` 的成功经验（非直调占比 100% 全收敛）推广为**规则驱动的通用闸门**：RULES 表声明「某 `_lib` 模块 → 手搓…
 - **scripts-readme-index**（README 登记处对账 check-readme-index.ts）：`scripts/README.md` 自称「所有 Node 工具脚本的索引」「治理检查（check-* 系列；唯一登记处）」，但历史上没有任何机器对账——新增/改名脚本后忘记登记 README 不会被任何门禁拦下。2026-08-31 审…
 - **settings-persistence**（设置持久化双轨与键台账）：应用设置存在**两处**，这是绝大多数「设置保存/迁移」困惑的根源：
+- **vitest-assert-quality**（前端 vitest 失败失语断言闸）：`scripts/check-vitest-assert-quality.ts` 是**前端 vitest 断言的「失败输出诊断力」防回退闸**
 
 ## core（28 张）
 

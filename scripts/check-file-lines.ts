@@ -50,34 +50,6 @@ const RULES: { file: string; maxLines: number; adr: string; why: string }[] = [
     adr: "ADR-315 D2/D3",
     why: "1401 行巨型文件沿真缝拆三刀（动作 vrm-motion / 感知 vrm-perception / 菜单 vrm-menu）降至 767；红线锁死再膨胀，超限须沿真缝拆分或发新 ADR",
   },
-  {
-    // `_lib` 升硬红线时的**祖父条款**（2026-10-14）：升硬前实测 920 行，超 `_lib` glob 红线
-    // 400 逾 2 倍。此处按实测 +2% 冻结（防继续膨胀），待沿真缝拆分后下调红线并从
-    // LIB_GRANDFATHERED 除名——**存量冻结，不是永久许可**。
-    file: "scripts/_lib/contract-tests.ts",
-    maxLines: 939,
-    adr: "ADR-234 D3（_lib 硬红线祖父条款，2026-10-14）",
-    why: "契约测试执行器，实测 920 行超 _lib 红线 400；冻结于此防继续膨胀，拆分后下调红线并除名",
-  },
-  {
-    // 同上：`_lib` 硬红线的祖父条款。gate-config 是门禁清单单一事实源，条目随接入增长，
-    // 2026-10-14 实测 493 行。冻结待拆分（清单表 / 类型 / 域子集可沿缝分家）。
-    file: "scripts/_lib/gate-config.ts",
-    maxLines: 503,
-    adr: "ADR-234 D3（_lib 硬红线祖父条款，2026-10-14）",
-    why: "门禁清单表，实测 493 行超 _lib 红线 400；冻结于此防继续膨胀，拆分后下调红线并除名",
-  },
-  {
-    // 同上：`_lib` 最胖者（_lib 硬红线的最大受益目标）。2026-10-14 实测 1391 行。
-    // 该文件混着四簇关注点（令牌值表+建议器 / 实时反馈判据 / doc 漂移+style 扫描 /
-    // emoji-glyph 扫描），真缝存在但**簇间有交错依赖**（如 suggestTransitionToken 依赖
-    // 后段的 isRealtimeFeedbackTransition），拆分须逐段 verbatim 搬移 + 基线比对，
-    // 属独立一轮的活儿（勿在顺手改动里夹带）。此前一次尝试因夹带行为改写已回滚。
-    file: "scripts/_lib/design-tokens.ts",
-    maxLines: 1419,
-    adr: "ADR-234 D3（_lib 硬红线祖父条款，2026-10-14）",
-    why: "设计令牌判定层，实测 1391 行超 _lib 红线 400 逾 3 倍；冻结防继续膨胀，须专项一轮沿真缝拆（注意簇间交错依赖）",
-  },
 ];
 
 /**
@@ -89,17 +61,19 @@ const RULES: { file: string; maxLines: number; adr: string; why: string }[] = [
  * **不回溯追责**（一次性把 63 个文件全红只会逼出 `--no-verify`）。
  *
  * 为什么是 400：`_lib` 是共享层，超 400 即失去「薄」特性、难沿缝拆（原软告警口径）。
- * 为什么必须带祖父条款：直接硬断会把存量三巨头变成红灯，与「只减不增」原则冲突——
+ * 为什么曾需要祖父条款：直接硬断会把存量三巨头变成红灯，与「只减不增」原则冲突——
  * 存量冻结在新红线、新文件受限，才是不给肥胖发执照又不炸当场的正确口径。
  *
- * ⚠️ 退出条件：`LIB_GRANDFATHERED` 只减不增。拆分某文件至 ≤400 后，从集合删名
- * （并在 RULES 里删对应条目）——集合清空之日，本规则即为无豁免的纯 glob 红线。
+ * ⚠️ 现状（2026-10-25）：`LIB_GRANDFATHERED` **已清空**——最后一个存量超限者
+ * `scripts/_lib/design-tokens.ts`（1391 行）沿真缝拆为八文件（入口 + token-types /
+ * token-tables / token-suggest / token-transition / token-glyph / token-style / token-fix /
+ * token-emoji，逐段 verbatim 搬移、零行为改写，`check-design-tokens` 全量基线逐条相同），
+ * 入口降至 ~150 行。集合清空即达成本规则立项时写下的退出条件：**本规则现为无豁免的
+ * 纯 glob 红线**，`_lib` 下任何非测试 .ts 超 400 行即硬阻断。
+ * 若未来再出现确属存量的超限者，按同一流程登记（RULES 冻结条目 + 本集合加名）——
+ * 但「只减不增」不变：能拆就拆，冻结是临时止血不是执照。
  */
-const LIB_GRANDFATHERED: ReadonlySet<string> = new Set([
-  "scripts/_lib/contract-tests.ts",
-  "scripts/_lib/gate-config.ts",
-  "scripts/_lib/design-tokens.ts",
-]);
+const LIB_GRANDFATHERED: ReadonlySet<string> = new Set();
 /** `_lib` 共享层行数上限（glob 硬红线；祖父条款见上）。 */
 const LIB_MAX_LINES = 400;
 

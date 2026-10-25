@@ -83,7 +83,11 @@ quick_risk_lines:
 - **T3′ · `file-tree.spec.ts:51-53` 残留条件 skip**：`if (dirCount === 0) { test.skip(true, ...); return; }`，而同文件 `:55` 断言 mock 恒含 `subdir/subdir-model.ysm` → `dirCount===0` 意味着加载链回归，应硬红。全 27 个 e2e spec 仅此 1 处活 skip（其余 3 处命中是「已移除 skip」的说明性注释）。
 - **T5 · caps 族未纳入 `check-file-lines` 硬红线**（10-06 P1 遗留）：`sky-capability.ts` 1068 行已超 `mount-preview-core.ts` 的红线值 1045，仍只软告警。**✅ 已解决（2026-10-06 补登，本卡遗漏同步 → drift）**：`check-file-lines.ts` 的 `ADVISORY_RULES` 第三条（前端生产层 preview-3d/backend >900 行软告警）正是为消解「caps 900+ 脱管」而加；实测当前 caps 最大 **sky 967** 仍 < mount-preview-core 红线 **1045**（且 mount 本身已被拆到 814），caps 经 ADR-315 锐评持续瘦身，无超硬红线项。非真债，是台账未同步 10-06 补登。
 - **T5′ · `_lib` 共享层只有软告警、无硬红线**（2026-10-14 补网）：`ADVISORY_RULES` 的 `_lib ≤400` 是**软告警**，实测长期多条告警共存、无人拆——「情报驱动排期」被证明不驱动（同一阈值下的文件静静停着，没人动）。**✅ 已解决（2026-10-14）**：升为 **glob 硬红线 + 祖父条款**双段式——①`LIB_GRANDFATHERED` 冻结存量超限者（各自按实测 +2% 进 `RULES`，**只减不增**，拆到 ≤400 后除名）；②其余 `_lib` 文件超 400 即硬阻断。修法要旨：**不给肥胖发执照，又不炸当场**——一次性把 63 个文件全红只会逼出 `--no-verify`；存量冻结 + 新文件受限才是可执行口径。回归验证：420 行探针文件实测 exit 1（带修法指引），存量 63 文件零误红。同批清理：`_lib ≤400` 从 `ADVISORY_RULES` 移出（同一事实不留两个真相源）、排期指引与告警尾行里会腐的硬编码计数/文件名改口径（"超阈值幅度最大者，实况见 WARN 列表"）、`check-file-lines.md` 幽灵卡引用改指本文件规则表。
-  - ⚠️ **尚未做的**：`design-tokens.ts`（1391）/ `contract-tests.ts`（920）/ `gate-config.ts`（493）三个存量仅**冻结**未拆。`design-tokens.ts` 的拆分经一次失败尝试后确认**比骨架看起来难**——四簇关注点（令牌值表+建议器 / 实时反馈判据 / doc 漂移+style 扫描 / emoji-glyph 扫描）**存在交错依赖**（`suggestTransitionToken` 依赖后段的 `isRealtimeFeedbackTransition`），须逐段 verbatim 搬移 + 基线比对，属独立一轮（那次尝试因夹带行为改写而回滚，正是 ADR-315「搬迁不夹带」的教训）。
+  - ✅ **已全部拆完（2026-10-25），祖父集合清空**：三笔存量债务逐一清偿，`LIB_GRANDFATHERED` 现为 `new Set()`，`_lib ≤400` 成为**无豁免的纯 glob 硬红线**（立项时写的「集合清空之日才是纯红线」已兑现）。
+    - `contract-tests.ts`：2026-10-15 拆为 `contract-test-domains.ts` + `contract-test-targets.ts`（主文件 920→249，**已除名**；其 RULES 条目曾虚挂 690 行额度，2026-10-25 一并删除）。
+    - `gate-config.ts`：2026-10-25 拆为 `gate-tool-types.ts` + `gate-config-{docs,go,frontend}.ts` 四文件（主文件 509→246，**已除名**）。
+    - `design-tokens.ts`：2026-10-25 拆为八文件——`token-types.ts`(42) / `token-tables.ts`(225) / `token-suggest.ts`(191) / `token-transition.ts`(149) / `token-glyph.ts`(52) / `token-style.ts`(316) / `token-fix.ts`(205) / `token-emoji.ts`(234)，入口 1391→153 行只做 re-export + `findViolationsOnLines` 组合器（**已除名**）。**旧归档图纸（`docs/archive/design-tokens-split-blueprint.md`，2026-10-14）断言「一轮拆不完、只能三文件且仍超 400」已被推翻**：它认为 `suggestTransitionToken` 依赖 `isRealtimeFeedbackTransition` 造成交错，实测该依赖只存在于注释——`suggestTransitionToken` 实依赖 `TRANSITION_TOKEN_DURATIONS` + `TokenRawMap`，把它归入 `token-suggest.ts` 即断开唯一交错点，八文件全部 <400 一次拆到合规。
+    - 三刀均为逐段 verbatim 搬移、零行为改写（遵 ADR-315）。design-tokens 那刀尤其留了硬证据：`check-design-tokens --json` 全量前后 `_summary`（files 656 / filesWithViolations 28 / total 110 / errors 106 / warnings 4）与 violations 逐条完全相同。
 
 ### 🟢 低 / 已修确认
 - **T6 · 硬编码本机路径 4 处未修**：`frontend/e2e/perf-fixtures.ts:460,578,724,842`（`C:\Users\zhujieling11\...`）。⚠️ **JS 双反斜杠字面量陷阱**，`grep 'C:\Users'` 与 `git grep` 都漏，须匹配 `C:\\Users` 或读原文（本轮主模型连判两次「已修」，实为陷阱）。另 `scripts/android-build.ts:78-84` 的 `C:\Android\Sdk` **已改**为 `LOCALAPPDATA` 探测 + `ANDROID_HOME` 单一事实源 → 10-06 该项半修。
@@ -112,7 +116,7 @@ quick_risk_lines:
 | 文件行数红线 | 18 个超阈值（软告警） | **18 个一致** | ✅ |
 
 > ⚠️ 上表是 **2026-10-08 时点的历史快照，勿当现状**（元规则：卡正文数字是写下时的状态）。
-> 现状口径（2026-10-14 起）：`_lib` 已升**硬红线**（全局 ≤400 + 祖父条款，见 T5′），
+> 现状口径（2026-10-25 起）：`_lib` 是**无豁免的纯 glob 硬红线**（全局 ≤400，祖父集合已清空，见 T5′），
 > 软告警只剩「scripts 顶层 ≤700 / 前端生产层 ≤900」两族。**每次想知道实况，跑
 > `node scripts/check-file-lines.ts`**，不要去数卡里的数字——那正是会被腐坏的东西。
 

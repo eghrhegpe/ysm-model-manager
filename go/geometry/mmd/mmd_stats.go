@@ -99,13 +99,7 @@ func scanPmxStats(data []byte) (MmdStats, bool) {
 		out.BoneCount = atoiAfterEq(data[start+i : start+headEnd])
 	}
 	// texture 节区 texsize 直读（全组最大）
-	tex := bytes.Index(data, []byte("<texture>"))
-	for tex >= 0 {
-		texEnd := bytes.Index(data[tex:], []byte("</texture>"))
-		if texEnd < 0 {
-			break
-		}
-		section := data[tex : tex+texEnd]
+	forEachTextureSection(data, func(section []byte) {
 		if ts := bytes.Index(section, []byte("<texsize>")); ts >= 0 {
 			rest := section[ts+len("<texsize>"):]
 			// 值收束 = 下一标签的 '<'（'</texsize>' 的 '>' 是终止符自身，
@@ -116,14 +110,32 @@ func scanPmxStats(data []byte) (MmdStats, bool) {
 				}
 			}
 		}
-		// 多 texture 迭代：下一 <texture> 的绝对位（o 是相对 data[tex+texEnd:] 的偏移）
+	})
+	return out, true
+}
+
+// forEachTextureSection 遍历 PMX 全部 <texture> 节区（fn 收到段内切片，
+// 范围 = 开标签起点 .. 闭标签起点，不含 </texture>；偏移口径与旧内联循环逐字相同）。
+// 缺闭标签即止（不猜——半截节区无法判定边界）。
+//
+// 抽出的理由：scanPmxStats（读 <texsize>）与 scanPmxTexRefs（收集 <tex>）此前
+// 各抄一份「定位 + 多节区迭代」骨架，改口径必漏一处（jscpd 亦反复点名该对）。
+// 回调不改变复杂度：仍是单趟线性扫描，无额外分配。
+func forEachTextureSection(data []byte, fn func(section []byte)) {
+	tex := bytes.Index(data, []byte("<texture>"))
+	for tex >= 0 {
+		texEnd := bytes.Index(data[tex:], []byte("</texture>"))
+		if texEnd < 0 {
+			break
+		}
+		fn(data[tex : tex+texEnd])
+		// 多 texture 迭代：下一 <texture> 的绝对位（nxt 是相对 data[tex+texEnd:] 的偏移）
 		if nxt := bytes.Index(data[tex+texEnd:], []byte("<texture>")); nxt >= 0 {
 			tex = tex + texEnd + nxt
 		} else {
 			tex = -1
 		}
 	}
-	return out, true
 }
 
 // indexAttr 找 name="<value>" 属性值起点（value 首字符的段内偏移；-1 = 缺失）。
@@ -149,13 +161,7 @@ func atoiAfterEq(seg []byte) int {
 // scanPmxTexRefs 提取 texture 节区 <tex> 引用（纯字符串扫描，同 texture 节区定位口径）
 func scanPmxTexRefs(data []byte) []string {
 	var refs []string
-	tex := bytes.Index(data, []byte("<texture>"))
-	for tex >= 0 {
-		texEnd := bytes.Index(data[tex:], []byte("</texture>"))
-		if texEnd < 0 {
-			break
-		}
-		section := data[tex : tex+texEnd]
+	forEachTextureSection(data, func(section []byte) {
 		if tr := bytes.Index(section, []byte("<tex>")); tr >= 0 {
 			rest := section[tr+len("<tex>"):]
 			// 值收束 = 下一标签 '<'（同 texsize 口径；'>' 会误连进后续标签）
@@ -163,13 +169,7 @@ func scanPmxTexRefs(data []byte) []string {
 				refs = append(refs, string(rest[:e]))
 			}
 		}
-		// 同 scanPmxStats 的多 texture 迭代口径
-		if nxt := bytes.Index(data[tex+texEnd:], []byte("<texture>")); nxt >= 0 {
-			tex = tex + texEnd + nxt
-		} else {
-			tex = -1
-		}
-	}
+	})
 	return refs
 }
 

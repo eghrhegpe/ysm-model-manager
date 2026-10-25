@@ -47,6 +47,7 @@ pitfalls:
   - "source-graph 把 re-export 也算导出，不复用是有意设计"
   - "splitBlockEntries / splitTopLevelCommas 仅处理 import 块头部"
   - "属性访问 obj.prop 中的 prop 被排除，不会触发缺失建议"
+  - "*.test./*.spec. 默认不进扫描域（含符号表）；要连测试一起扫得显式 --include-tests"
 quick_intents:
   - "检测缺失 import（只读报告）"
   - "自动修复缺失 import（--fix 写回，幂等）"
@@ -74,6 +75,7 @@ invariant_anchors:
 - **检测层** `auto-import-detect.ts`：`checkFile(file, symbolMap, cache?)`（去重/属性访问/对象 key/类字段判定）+ `buildSymbolMap` + `collectFiles` + `run`。
 - **修复层** `auto-import-fix.ts`：`applyFixes`（幂等写回，歧义跳过/聚合/CRLF 保留）+ `fmtText`/`fmtJson`。
 - **入口** `auto-import.ts`：CLI 解析 + `main` + `--watch`。
+- **测试文件默认剔除（2026-10-25，静态工具段耗时债）**：`collectFiles`/`run` 默认跳过 `*.test./*.spec.`，`--include-tests` 才纳回；显式点名 targets 不受过滤影响。理由三条——①frontend/src 1181 个 .ts 里 538 个是测试文件，tokenize 耗时占全量 8.3s 的 6.2s（75%），是 35s 段预算的边界假红来源；②测试文件的缺失 import 是 TS 编译错误（`frontend/tsconfig.json` include 覆盖 src 全量，`npm run typecheck` 与 CI 都在跑），正则级提示器不必在编译器已埋伏处重复付费；③测试文件导出不该成为生产代码 import 目标（仓内实测 0 处）。实测 `--strict` 14.0s → 2.8s，静态工具段 35.2s → 21.6s。
 - **tokenize 单次缓存（2026-09-01，commit `fd3d0431`）**：`run()` 内 `buildSymbolMap` 与 `checkFile` 共享同一份 `Map<file, {stripped, tokens, text}>` 缓存——同一文件不再 readText+tokenize 两遍（全量 726 文件时检测总耗时近乎双倍）。`checkFile`/`buildSymbolMap` 第三个参数 `cache?` 跨调用复用；`run()` 显式传入，单文件模式符号表仍基于全量 walk 构建。
 
 ## 对外 API / 入口
@@ -81,7 +83,7 @@ invariant_anchors:
 ```bash
 node scripts/auto-import.ts                      # 检测全部 .ts
 node scripts/auto-import.ts <file.ts>            # 单文件
-node scripts/auto-import.ts --include-js|--fix|--watch|--json|--strict
+node scripts/auto-import.ts --include-js|--include-tests|--fix|--watch|--json|--strict
 ```
 
 ```js
@@ -93,7 +95,7 @@ import { applyFixes } from './auto-import-fix.ts';
 
 ## 与其他子系统关系
 
-- `scripts/pre-push-gate.ts`：ALL_STATIC_TOOLS 挂 `auto-import.mjs --strict`（有缺失建议阻断推送），doctor 全量模式并入。
+- `scripts/_lib/gate-config.ts` 的 ALL_STATIC_TOOLS 挂 `auto-import.ts --strict`（有缺失建议阻断推送，hard），doctor 全量模式并入。
 - `scripts/check-script-hygiene.ts`：五口径扫 scripts/（含 auto-import 系列，文件头/共享层内联/parse-args），拆分后各模块须过。
 - `scripts/check-readme-index.ts`：auto-import 系列须登记 scripts/README.md（ADR-141 拆分后新增 4 个模块已登记）。
 - `scripts/_lib/source-graph.ts`：`getExportedSymbols` 与 `extractExports` 疑似重复，**实证结论 = 不复用**——source-graph 把 re-export 符号也算本文件导出（726 文件中 15 个差异全为此形态），接入会破坏 --fix 候选指向。
@@ -105,11 +107,12 @@ import { applyFixes } from './auto-import-fix.ts';
 - **re-export 排除**：`export { X } from "./y"` 的 X 不算本文件导出（转发名不是本文件定义，候选应指向真正定义处）——这是不复用 source-graph 的核心理由。
 - **模板插值不分析**：`${foo}` 内符号不检测（已知局限，漏报可接受）。
 - **歧义不自动写**：`--fix` 对多候选符号跳过，不猜测来源。
+- **测试文件不进默认扫描域**：默认靶面 = 生产文件；测试文件的缺失 import 由 tsc 兜住（删测试文件里的导出候选只会少建议、不会多误报）。
 
 ## 相关
 
 - `scripts/auto-import.ts` + 4 个 `auto-import-*.ts`（本卡 source）
 - `docs/adr/ADR-141-large-script-split-baseline.md`（拆分基线）
 - `scripts/pre-push-gate.ts`（门禁挂载）
-- `tests/test_auto_import.ts`（13 项契约测试）
+- `tests/test_auto_import.ts`（契约测试：各层行为 + 全量 parity + 测试文件剔除口径）
 - `docs/knowledge/scripts-argv.md`（姊妹治理卡）

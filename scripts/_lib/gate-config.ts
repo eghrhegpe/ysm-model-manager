@@ -1,89 +1,47 @@
 /**
- * gate-config.ts — pre-push-gate 静态工具清单单一配置层。
+ * gate-config.ts — pre-push-gate 静态工具清单**单一配置层**（清单总表 + 展平序）。
  *
  * 设计意图：pre-push-gate.ts 职责是「按域调度检查」，但它长期内联了 4 个工具清单
- * （ALL_STATIC_TOOLS / DOC_STATIC_TOOLS / FRONTEND_STATIC_TOOLS / GO_STATIC_TOOLS，
- * 合计 40+ 项）。新增检查时同时改 gate 和清单的两处描述极易漂移（ADR-088 Take巧 #3 实证）。
+ * （ALL / DOC / FRONTEND / GO，合计 40+ 项）。新增检查时同时改 gate 和清单的两处描述
+ * 极易漂移（ADR-088 Take巧 #3 实证）。本模块把清单数据与 gate 调度逻辑解耦。
  *
- * 数量口径（2026-10-08 复核实测，勿再沿用旧快照）：ALL_STATIC_TOOLS 唯一条目 = 32 项，
- * DOC/FRONTEND/GO 是**域子集**（与 ALL 有重叠，非追加）；此前「合计 40+ 项」是把四张
- * 列表的重复条目相加，属虚高。统计 check-*.ts 接入数以 `node scripts/` 实际清单为准。
- * 本模块把清单数据与 gate 调度逻辑解耦：gate 读配置，清单单一维护点。
+ * 结构（2026-10-25 沿真缝拆分，ADR-234 D3 `_lib` 400 行硬红线）：
+ *   本文件       —— ALL_STATIC_TOOLS（全量兜底表）+ 五张清单的固定展开序 + flatten
+ *   ./gate-tool-types.ts    —— GateTool 判别联合 / GateToolBase / BlockPolicy / debt() 内核
+ *   ./gate-config-docs.ts   —— DOC_STATIC_TOOLS + DOC_EXTRA_SCRIPTS
+ *   ./gate-config-go.ts     —— GO_STATIC_TOOLS + SCRIPTS_TYPECHECK
+ *   ./gate-config-frontend.ts —— FRONTEND_STATIC_TOOLS（最大一簇，并行会话热点）
+ *
+ * 为什么 ALL 表留在本文件：它是**全量兜底**，也是「只减不增型闸一律双挂」的落点；
+ * 契约测试（tests/test_commit_message_gate.ts / test_orphan_exports_smart.ts）以
+ * 本文件全文子串断言某些闸必须入册——入册口径钉在这里比钉在域文件更难被搬空。
+ *
+ * 导出面**保持不变**：域清单经 re-export 从本文件透出，消费方（pre-push-gate /
+ * gate-coverage / debt-report / gate-blocks）import 路径零改动。
+ *
+ * 数量口径（勿沿用旧快照）：ALL_STATIC_TOOLS 唯一条目数与域子集大小每次以脚本实测为准；
+ * DOC/FRONTEND/GO 是**域子集**（与 ALL 有重叠，非追加），勿把四张表相加当总数。
  *
  * 结构（每项）：
- *   string  → 简单调用：node scripts/<name>.ts --json
  *   { tool, args?, autoFix? } → 带参数调用；autoFix=true 时 FAIL 自动跑写盘版刷新后重验
  *
  * 用法：
  *   import { ALL_STATIC_TOOLS, DOC_STATIC_TOOLS, FRONTEND_STATIC_TOOLS, GO_STATIC_TOOLS }
  *     from './_lib/gate-config.ts';
  *
- * 依赖：./gate-debt.ts（存量债元数据类型；零依赖纯函数模块）
+ * 依赖：./gate-tool-types.ts（类型 + debt 内核）/ 三个域清单模块
  */
-import type { GateDebt } from "./gate-debt.ts";
+import { debt, REVIEW_BY_OBSERVE, type GateTool } from "./gate-tool-types.ts";
+import { DOC_EXTRA_SCRIPTS, DOC_STATIC_TOOLS } from "./gate-config-docs.ts";
+import { GO_STATIC_TOOLS, SCRIPTS_TYPECHECK } from "./gate-config-go.ts";
+import { FRONTEND_STATIC_TOOLS } from "./gate-config-frontend.ts";
 
-/**
- * 存量债复审默认截止日（2026-10-09 到期制落地）。
- * `blockPolicy: "debt"` 的条目必须带 `debt: { reason, reviewBy }`；此处两档是排期默认值：
- *   - LEDGER：棘轮账本型（knip/jscpd/复杂度/令牌/死键）——量大、需排期回收；
- *   - OBSERVE：信号未验证的观察型（注释考古/孪生探针/时长口径）——一轮内应出结论。
- * 到期未处置 = `doctor --all` 红灯，逼一次显式决策（改硬 / 修 / 带理由续期），详见 gate-debt.ts。
- */
-const REVIEW_BY_LEDGER = "2026-11-08";
-const REVIEW_BY_OBSERVE = "2026-11-15";
-
-/** 声明一条存量债：reason 必填（禁无理由债务），reviewBy 缺省走账本档排期。 */
-const debt = (reason: string, reviewBy: string = REVIEW_BY_LEDGER): GateDebt => ({
-  reason,
-  reviewBy,
-});
-
-/**
- * 阻断策略：控制 record() 是否因 FAIL 置 blocked=true。
- *   hard        FAIL → 阻断（默认，隐式）
- *   debt        FAIL → 只记录，不阻断（债务类，推送后修）
- *   failClosed  FAIL → 只记录，不阻断；仅工具本身不可用（如 rg 缺失）才阻断——
- *               由调用方在 record() 之外单独判断，此处保留字段作语义标注。
- */
-type BlockPolicy = "hard" | "debt" | "failClosed";
-
-/**
- * 静态工具条目：**必须为 object，且 blockPolicy 必填**。
- * 2026-09-08（脚本体系锐评 R3）：此前允许 string 条目 + blockPolicy 可省略，导致
- * 隐式「string 永远 hard」的语义靠人记住（类型系统不保护）。现改为 full object +
- * 必填 blockPolicy：新增条目未声明阻断策略即编译报错，消灭隐式 hard 的歧义。
- * 2026-10-09（审核体系锐评 · 到期制）：`debt` 分支同样由类型强制附带债元数据
- * （reason + reviewBy）——「没拦也没撤、只记一笔」不再是一种可以无限沉默的状态。
- */
-export interface GateToolBase {
-  tool: string;
-  args?: string[];
-  autoFix?: boolean;
-  allowRc2?: boolean;
-  /**
-   * 声明本工具支持 `--files <换行分隔文件列表>` 增量裁剪（2026-09-13）。
-   *
-   * true 时 pre-push-gate 的 runTools 改用数组式 procRun 传 `--files`（本次变更文件集），
-   * 而非 shell 拼串的全库调用；`--all` / `--docs` 模式 files 为空 → 退回全库扫描。
-   *
-   * **仅当脚本自身接入了 `_lib/changed-scope.ts` 的 resolveChangedScope 才可置 true**：
-   * 否则 runTools 会把 --files 发给不识别的脚本（parseArgs 报未知参数 → exit 1 →
-   * 误阻断），或脚本忽略该参数静默全扫（存量债淹没）。该不变量由
-   * tests/test_gate_config.ts 的 scopedFiles 契约断言锁死。
-   */
-  scopedFiles?: boolean;
-}
-
-/**
- * 清单条目 = 判别联合（2026-10-09 到期制）：
- *   - hard / failClosed：FAIL 即阻断，无需债元数据；
- *   - debt：**必须**携带 `debt: { reason, reviewBy }`——类型系统强制每笔债写下
- *     「为什么是债」与「何时重新决策」，从源头消灭「无理由、无期限」的沉默债务。
- * 违反即 `tsc -p scripts/tsconfig.json` 编译报错（脚本域 typecheck 是门禁项）。
- */
-export type GateTool =
-  | (GateToolBase & { blockPolicy: Exclude<BlockPolicy, "debt"> })
-  | (GateToolBase & { blockPolicy: "debt"; debt: GateDebt });
+// 域清单与类型层原样透出：消费方 import 路径不变（拆分零行为变更的保证）。
+export type { BlockPolicy, GateTool, GateToolBase } from "./gate-tool-types.ts";
+export { debt, REVIEW_BY_LEDGER, REVIEW_BY_OBSERVE } from "./gate-tool-types.ts";
+export { DOC_EXTRA_SCRIPTS, DOC_STATIC_TOOLS } from "./gate-config-docs.ts";
+export { GO_STATIC_TOOLS, SCRIPTS_TYPECHECK } from "./gate-config-go.ts";
+export { FRONTEND_STATIC_TOOLS } from "./gate-config-frontend.ts";
 
 /**
  * 全量模式静态工具清单（doctor --all / pre-push-gate --all）。
@@ -93,17 +51,25 @@ export const ALL_STATIC_TOOLS: GateTool[] = [
   { tool: "check-doc-drift.ts", blockPolicy: "hard" },
   { tool: "check-adr-health.ts", blockPolicy: "hard" },
   { tool: "check-resource-manifest.ts", blockPolicy: "hard" },
+  // 行数红线闸（2026-10-25 补网）：此前**只**挂 FRONTEND_STATIC_TOOLS，于是两个洞——
+  //   ① `doctor --all`（发版前全量闸）从不跑它：ALL 表才是 --all 的执行面；
+  //   ② 改 scripts/_lib 的推送 plan.frontend=false → 本地 push 漏检，只剩 CI --static 兜底
+  //      （实证：gate-config.ts 509 行破 503 红线，本地 pre-push 仍报 PASS）。
+  // 补进 ALL 后 --all / --static 同跑；scripts 域的本地补跑见 gate-blocks/schedule.ts
+  // （plan.contractTests 分支，条目仍从本表取，不复制第二份定义）。
+  { tool: "check-file-lines.ts", blockPolicy: "hard" },
   {
     // 双挂第二重（「只减不增型闸一律双挂」）：commit-msg 钩子可被 `git commit --no-verify`
-    // 整钩绕过（零痕迹），此处按**推送集**复验兜住。采集期 debt 只记不拦——ADR-338-d1 D3
-    // 「warn 采集 → replay 校准 → hard」；转 hard 时只改 blockPolicy 并给钩子加 --strict。
+    // 整钩绕过（零痕迹），此处按**推送集**复验兜住。
+    //
+    // 2026-10-25 刀2 开闸（ADR-338-d1 D3 第二步）：blockPolicy debt → hard + args 加 --strict。
+    // 阻断面**不是**全部 hard 规则——`BLOCKING_RULES` 白名单只含 subject-empty / subject-prefix
+    // （依据：replay 300 里 prefix 命中 4 条全是真阳性、修法是一行加前缀；而 subject-length
+    // 占 35% 且多为单主题偏长，硬拒等于让闸「数长度」）。其余 hard 命中照旧只提示。
+    // 判定域 = merge-base(origin/main, HEAD)..HEAD（只查本次推送集，不追溯已推历史）。
     tool: "check-commit-message.ts",
-    args: ["--range", "auto"],
-    blockPolicy: "debt",
-    debt: debt(
-      "提交信息减负刀1 采集期：hard 命中 57%/warn 22%（replay 300 实测），待校准定档后转 hard",
-      REVIEW_BY_OBSERVE,
-    ),
+    args: ["--range", "auto", "--strict"],
+    blockPolicy: "hard",
   },
   {
     tool: "check-boolean-naming.ts",
@@ -183,13 +149,17 @@ export const ALL_STATIC_TOOLS: GateTool[] = [
     debt: debt("提示时长口径存量违规，量小但分散"),
   },
   // 设计令牌守规（2026-09 接线）：与 css-layer-check 互补——后者管「样式定义在哪一层生效」，本闸管「样式值是否走了令牌」。
-  // 全量模式不传 --files（无 diff 上下文）→ 走 `--baseline`：这里是**账本漂移报告**（全库 vs
-  // scripts/baseline/design-tokens-baseline.json），不再参与提交/推送判定（判定已改真行级，见 FRONTEND_STATIC_TOOLS 的 ADR-256 注释）。
+  // 判定面在 FRONTEND_STATIC_TOOLS 的 `--added-lines`（真行级，ADR-256 D1）。此处**只做全库普查**：
+  // 不传 --baseline、不传 --strict，恒 exit 0，只把「存量 N 条 / M 个文件」打进推送输出供收债排期。
+  //
+  // 为什么摘掉 --baseline（2026-10-25）：该模式的键是 `file:line:kind`，行号一动就同时产生
+  // 「假新增 + 假消失」（实测 added 60 / gone 62，而真实总量是 112→110 降了 2 条）——
+  // 每次 --static 都 FAIL 一条零行动价值的红，等于用噪声训练人忽略门禁。ADR-256 D1 早已
+  // 把 baseline 降级为账本，账本就不该站在阻断面；普查数字由本条的 stdout 与 debt-report 承担。
   {
     tool: "check-design-tokens.ts",
-    args: ["--baseline"],
     blockPolicy: "debt",
-    debt: debt("全库账本漂移报告：判定已改真行级，此处不参与提交/推送判定"),
+    debt: debt("全库存量普查（只报数字不判定）：110 条 CSS 令牌存量债，收债按 ADR-295 组合档节奏"),
   },
   // i18n 未使用键（2026-09）：全量模式亦挂——死键是全仓性质的，与扫描域裁剪无关。
   {
@@ -264,221 +234,6 @@ export const ALL_STATIC_TOOLS: GateTool[] = [
   // 新 cap/管线在白名单外写槽位即阻断，扩白名单须先经锐评/ADR 拍板（WHITELIST 段即拍板记录）。
   { tool: "check-scene-slot-writers.ts", blockPolicy: "hard" },
 ];
-
-/**
- * 文档模式静态工具清单（doctor --docs / pre-push-gate --docs）。
- * 仅含 docs/ 域相关项（link-checker / adr-check 由域检查覆盖，不在此处重复）。
- */
-export const DOC_STATIC_TOOLS: GateTool[] = [
-  { tool: "check-doc-drift.ts", blockPolicy: "hard" },
-  { tool: "check-adr-health.ts", blockPolicy: "hard" },
-  { tool: "check-resource-manifest.ts", blockPolicy: "hard" },
-  { tool: "event-graph.ts", args: ["--check"], autoFix: true, blockPolicy: "hard" },
-  { tool: "build-novel-index.ts", args: ["--check"], autoFix: true, blockPolicy: "hard" },
-  { tool: "gen-routes.ts", args: ["--check"], autoFix: true, blockPolicy: "hard" },
-  { tool: "gen-routes-quick.ts", args: ["--check"], autoFix: true, blockPolicy: "hard" },
-  { tool: "gen-cli-doc.ts", args: ["--check"], autoFix: true, blockPolicy: "hard" },
-  { tool: "gen-cli-completion.ts", args: ["--check"], autoFix: true, blockPolicy: "hard" },
-  { tool: "gen-knowledge-autogen.ts", args: ["--check"], autoFix: true, blockPolicy: "hard" },
-  { tool: "check-script-hygiene.ts", args: ["--strict"], blockPolicy: "hard" },
-  {
-    tool: "check-proc-adoption.ts",
-    blockPolicy: "debt",
-    debt: debt("进程调用收口未完成的存量站点"),
-  },
-  { tool: "check-workflow-refs.ts", blockPolicy: "hard" },
-  { tool: "check-readme-index.ts", blockPolicy: "hard" },
-  // docs markdown 裸标签：见 ALL_STATIC_TOOLS 同项注释（整站构建断裂前移为提交期判定）
-  { tool: "check-doc-markup.ts", blockPolicy: "hard" },
-];
-
-/**
- * 文档额外检查（--all / --docs 模式下与 DOC_STATIC_TOOLS 合并执行）。
- * 仅含未被域检查覆盖的 drift 守护项。
- */
-export const DOC_EXTRA_SCRIPTS: GateTool[] = [
-  { tool: "check-knowledge-drift.ts", blockPolicy: "hard" },
-  { tool: "check-adr-drift.ts", blockPolicy: "hard" },
-];
-
-/**
- * 前端域 push 模式补挂静态工具（plan.frontend=true 时追加）。
- * 与 ALL_STATIC_TOOLS 分工：后者全量扫描，此项增量门禁——只拦本次变更引入的新违规。
- */
-export const FRONTEND_STATIC_TOOLS: GateTool[] = [
-  {
-    tool: "check-circular.ts",
-    blockPolicy: "debt",
-    debt: debt("全库循环依赖存量；--files 裁剪后只对本次变更面判定"),
-  },
-  {
-    tool: "check-boolean-naming.ts",
-    blockPolicy: "debt",
-    debt: debt("命名启发式命中：值语义需人工判断，规则本身非确定性"),
-  },
-  {
-    tool: "check-orphan-exports.ts",
-    blockPolicy: "debt",
-    debt: debt("导出面宽于消费面（多为缺 export 关键字/re-export），需分档回收"),
-  },
-  // deadcode-baseline 刻意**不在本清单**（2026-10-17 第四轮锐评，镜像上方 auto-import 先例）：
-  //   ① 成本：实测 3.4s，纯前端 push（20.8s）的第 2 贵项；非 scopedFiles——全仓键使用面
-  //      分析，单文件无法独立判定（见其注释），--files 裁剪救不了；
-  //   ② 判定力：blockPolicy=debt 不阻断，热路径付 3.4s 只买「早知道」；
-  //   ③ 远端覆盖如实口径（第五轮锐评 P2-1：不写「零损失」这种绝对话）：frontend 域
-  //      每次 push 必触发 CI 独立步骤（test.yml「死代码基线门禁」，按 ADR-244 显式带
-  //      changed-base 归属基线——判定质量高于本地无上下文那次，故 --static 经
-  //      CI_INDEPENDENT_TOOLS 剔除避免同 job 双跑假红）；doctor --all 亦在册。
-  //      **已知豁口**：纯 scripts 提交若改动 deadcode 判定面本身（_lib/deadcode-keys/
-  //      attrib、knip.json、baseline 账本），本地与 CI frontend-gates 均不跑该闸——
-  //      概率低、接受，由 doctor --all 发版前兜底；独立步骤存在性由
-  //      tests/test_gate_schedule.ts 第 9 组钉死，缺席三域表由 test_gate_config.ts 第 7 组钉死。
-  { tool: "check-tpl-refs.ts", blockPolicy: "hard" },
-  { tool: "check-dynamic-import.ts", blockPolicy: "hard" },
-  // auto-import 刻意**不在**本清单（2026-10-09 静态工具段耗时债处置）——它留在
-  // ALL_STATIC_TOOLS，即：`doctor --all`（发版前全量）与 CI 的 `pre-push-gate --static`
-  // （test.yml「静态治理门禁」步，exit 码传播=阻断）都照跑同一条命令，**远端覆盖零损失**；
-  // 只是本地 push / commit-with-check 热路径不再重复付费。
-  // 判据（对齐 static-tools.ts 的摘除判据 ②「CI 有无兜底」）：
-  //   ① 成本固定且不可裁剪：实测全量 7.8s、单文件 8.1s——它是「先扫全树建导出表、再查目标文件」
-  //      的形态，`--files` 增量裁剪**救不了**（不是按目标文件付费）；
-  //   ② CI 已同跑同源命令（test.yml:411 `pre-push-gate --static` → 合并 ALL_STATIC_TOOLS），
-  //      本地那次只买「早知道」；
-  //   ③ 判定力与 tsc 高度重叠（「用了没导入」在严格 TS 下即 TS2304，本地 typecheck 与 CI
-  //      frontend job 都跑），本脚本自述为「正则级试水版、有已知误报面」。
-  // 反向锚：tests/test_gate_config.ts 同时钉死「ALL 必须在册」+「CI --static 步必须存在」，
-  // 防止有人摘掉本行后再顺手删了远端兜底（那就成了真关闸）。
-  { tool: "i18n-check.ts", args: ["--strict"], blockPolicy: "hard" },
-  { tool: "i18n-ui-check.ts", blockPolicy: "hard" },
-  // 冻结 t() 第五闸（立因与判据见 ALL_STATIC_TOOLS 同项注释）：判定虽只扫 frontend/src，
-  // 但**刻意不接 scopedFiles 增量裁剪**——复发面在全前端任意模块表，按变更文件裁剪会漏
-  // 「改 A 文件、把 B 文件的旧冻结点留在仓里」；全扫实测秒级，成本不构成理由。
-  { tool: "i18n-frozen-t-check.ts", args: ["--strict"], blockPolicy: "hard" },
-  // i18n 未使用键（2026-09 接线）：补四个既有 i18n 闸的公共盲区——它们查「该有的有没有」
-  // （缺失键 / 命名 / UI 硬编码中文 / 右键菜单键齐），**没有一个查「有的还有没有人要」**，
-  // 故死键只增不减（实测 182/1459 = 12%，多为迁移后遗留）。
-  // blockPolicy: debt —— 基线模式（存量冻结）；判定含启发式成分（动态查表无法静态判定），
-  // 按 gate-config 准入判据「不存在存量债冒充」才可 hard，故记 debt。
-  // 不置 scopedFiles：本闸是「全仓键使用面」分析，单文件无法独立判定（见脚本头注释）。
-  {
-    tool: "check-i18n-unused.ts",
-    args: ["--baseline"],
-    blockPolicy: "debt",
-    debt: debt("i18n 死键基线；含动态查表启发式成分，无法静态判定"),
-  },
-  { tool: "event-graph.ts", args: ["--strict"], blockPolicy: "hard" },
-  // a11y 基线守卫（ADR-308 D3）：见 ALL_STATIC_TOOLS 同项注释。无 scopedFiles——
-  // 基线是全仓计数守卫，单文件无法独立判定。
-  { tool: "check-a11y.ts", blockPolicy: "hard" },
-  {
-    tool: "check-toast-duration.ts",
-    blockPolicy: "debt",
-    debt: debt("提示时长口径存量违规，量小但分散"),
-  },
-  // e2e 反模式静态门禁（2026-10-25 锐评落地；规则全文见 docs/knowledge/e2e-visual-feedback.md）：
-  // 扫 frontend/e2e + frontend/e2e-web 的 *.spec.ts 三类反模式——R1 固定 sleep 等就绪
-  //（waitForTimeout）/ R2 软断言假绿（toBeGreaterThan(0) 等）/ R3 防假绿守卫
-  // screenshotWithBaseline 在 spec 树内零调用（死代码）。blockPolicy: debt 观察期非阻断
-  //（--strict 命中 high 才 exit 1，未来可升 hard）。不置 scopedFiles：全仓套件级分析（28 spec）。
-  {
-    tool: "check-e2e-hygiene.ts",
-    blockPolicy: "debt",
-    debt: debt("e2e 反模式存量（R1 固定 sleep / R2 软断言假绿 / R3 守卫废置），观察一轮后升 hard", REVIEW_BY_OBSERVE),
-  },
-  { tool: "check-biome.ts", args: ["--strict"], blockPolicy: "hard" },
-  { tool: "check-file-lines.ts", blockPolicy: "hard" },
-  // 设计令牌守规（2026-09 接线，2026-09-16 改判真行级 ADR-256）：此前**只挂 pre-commit**，
-  // pre-push / CI 均无——而 pre-commit 可被 `git commit --no-verify` 一条命令绕过
-  // （CI --static 模式的立项目的正是补这一层，见 pre-push-gate.ts 的 staticMode 注释）。
-  //
-  // args: --added-lines —— 判定域 = **本次推送引入的新增行**（range 源 base..head，
-  // base 取与默认分支的 merge-base；内容取 head blob），与 pre-commit 的索引源共用
-  // `_lib/diff-source.ts` + `_lib/git-hunks.ts` + `findViolationsOnLines`（单一事实源）。
-  // 为什么不再用 --baseline：键 file:line:kind 实测高噪声——116 提交窗里 added 330 中 322 条（97.6%）
-  // 是行位移幻影、真新增候选仅 8；阻断视角 24 次里 19 次行级命中为 0（ADR-256 §1/§4，
-  // 可复现 node scripts/token-shift-audit.ts --window 120）。
-  // 注：ALL_STATIC_TOOLS 保留 `--baseline`（--all 模式无 diff 上下文，那里是**账本漂移报告**）。
-  //
-  // blockPolicy: debt —— 行级判定已无「存量债冒充」问题（只判新增行），但先观察一轮
-  // push / CI 实况确认无假阻断，再议升 hard（ADR-256 D5）。
-  // scopedFiles: true —— 脚本已 import _lib/changed-scope.ts 并接 --files（准入条件满足），
-  // 由 tests/test_gate_config.ts 的 scopedFiles 契约断言兜底。
-  {
-    tool: "check-design-tokens.ts",
-    args: ["--added-lines"],
-    blockPolicy: "debt",
-    debt: debt(
-      "行级判定已消存量冒充，观察一轮 push/CI 实况再议升 hard（ADR-256 D5）",
-      REVIEW_BY_OBSERVE,
-    ),
-    scopedFiles: true,
-  },
-  // ── 三档位阈值扫描器（2026-09-13 接线）──
-  // 此前是「无守护债务」：仓库 32 个 check-*.ts 中这 3 个无任何自动化入口，只能手动跑
-  // （实证：views 域 10 个 🟥 复杂度档长期无人拦，见 pre-push-gate.md 门禁覆盖边界）。
-  //
-  // blockPolicy: debt —— 这三者是**全库阈值 + 增量裁剪**模式：--files 只把扫描范围收敛到
-  // 「本次变更文件」，但**被触碰的文件若本就超阈值仍会计入命中**（改一行注释也会红）。
-  // 对比 check-file-lines 可 hard：它是显式规则表（1 个受控文件），不存在存量债冒充。
-  // 故须待 baseline 比对落地（同 check-redlines --baseline 的「新增违规」口径）后才有资格升 hard。
-  // 其中 check-type-safety 生产域当前 errors=0（--strict 实测 exit 0），观察一轮后可单独升 hard。
-  //
-  // scopedFiles: true → runTools 传 --files。动机有两条，缺一不可：
-  //   1. 防淹没：全库跑 check-complexity 命中 301 条（27 个 🟥）、check-params 54 条，
-  //      未触碰文件的存量债会把每次推送刷成全红。
-  //   2. 控成本：check-params 全库墙钟 59.4s（getType() 逐参数触发类型检查），
-  //      --files 裁剪到本次变更后降至 7.9s 量级，是它可挂门禁的前提。
-  {
-    tool: "check-complexity.ts",
-    blockPolicy: "debt",
-    debt: debt("全库阈值+增量裁剪：被触碰的存量红档仍计命中，baseline 未落地前不得 hard"),
-    scopedFiles: true,
-  },
-  {
-    tool: "check-params.ts",
-    blockPolicy: "debt",
-    debt: debt("同上：全库阈值型，存量命中会淹没本次变更"),
-    scopedFiles: true,
-  },
-  {
-    tool: "check-type-safety.ts",
-    blockPolicy: "debt",
-    debt: debt("同上：生产域当前 errors=0，观察一轮后可单独升 hard"),
-    scopedFiles: true,
-  },
-];
-
-/**
- * Go 域 push 模式补挂静态工具（plan.go=true 时追加）。
- */
-export const GO_STATIC_TOOLS: GateTool[] = [
-  {
-    tool: "jscpd-go.ts",
-    blockPolicy: "debt",
-    debt: debt("Go 侧克隆基线；含有意保留的兼容入口，需逐对判断"),
-  },
-  { tool: "check-go-diff-coverage.ts", blockPolicy: "hard" },
-  // check-go-coverage-threshold：包级最低函数覆盖率（语句加权，2026-09 口径修正后）。
-  // 只读不写：本门禁不自动生成 .coverage/go-cover.out（pre-push 薄壳 / gate-blocks / CI 非门禁步
-  // 均不写此文件），需人工或 CI 先 `go test -coverprofile` 喂料；产物缺失/陈旧时脚本已优雅
-  // 降级（缺产物 WARN+exit1，陈旧产物打印醒目警告，见 P1-a 根治）。debt 接入 → 不阻断推送。
-  {
-    tool: "check-go-coverage-threshold.ts",
-    blockPolicy: "debt",
-    debt: debt("只读不写：产物需人工/CI 喂料，自动生成未接（降级路径已优雅）"),
-  },
-];
-
-/**
- * scripts/ TS 类型检查（--all 模式；.ts 文件随 _lib/ 迁移逐步出现，零 .ts 时 tsc
- * 返回 TS18003 退出码 2——此处容忍 rc=2 为"无输入"，避免早期误阻断）。
- */
-export const SCRIPTS_TYPECHECK: GateTool = {
-  tool: "tsc",
-  args: ["--noEmit", "-p", "scripts/tsconfig.json"],
-  allowRc2: true, // TS18003 无输入 = 尚未有 .ts，非错误
-  blockPolicy: "hard",
-};
 
 /**
  * 五张清单的固定展开序（**单一事实源**，2026-10-09）：

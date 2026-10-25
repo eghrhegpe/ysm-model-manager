@@ -631,15 +631,19 @@
 | 测试辅助函数、go/internal/testutil 包在哪 | [测试辅助函数 go/internal/testutil](./go-testutil.md) | 测试 helper 必须走 go/internal/testutil 跨包复用，禁止各包各自实现同名 helper | - |
 | 查拆轴/新增正交层的回归审核要点 | [AI 审查器偏差与查证方法论（10 轮实战沉淀）](./ai-review-pitfalls.md) | - | - |
 | 查审查器假阳性/假阴性模式 | [AI 审查器偏差与查证方法论（10 轮实战沉淀）](./ai-review-pitfalls.md) | 审查报告分级不等于实测结论——P1/P2 抽验后方可采信 | - |
+| 尺寸稀释断言为什么不立闸 | [前端 vitest 失败失语断言闸](./vitest-assert-quality.md) | - | - |
 | 创建测试文件、构造内存 ZIP、跨包复用测试 helper | [测试辅助函数 go/internal/testutil](./go-testutil.md) | - | - |
 | 单组件截图、隔离渲染、秒级视觉回看 | [组件隔离渲染 harness 视觉验证层](./harness-isolated-render.md) | 组件清单单源在 main.ts REGISTRY（shot.mjs 从页面读取并静态校验完整性），新增组件只登记 REGISTRY 一处 | - |
 | 登记面：frontend/src 内 data-testid 字面量 × 各视图 VIEW_TESTIDS 数组 | [testid 契约与 VIEW_TESTIDS 注册表](./testid-contract.md) | - | - |
 | 等待 DOM 内容或 mock 调用出现 / 组件 init 链落定 | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) | 禁止用 waitFor 条件耦合组件内部实现细节 | - |
+| 断言豁免注怎么写 | [前端 vitest 失败失语断言闸](./vitest-assert-quality.md) | - | - |
+| 复合布尔断言门禁红了怎么修 | [前端 vitest 失败失语断言闸](./vitest-assert-quality.md) | 只认顶层逻辑；嵌套 && / \|\| 与带消息一律放行；基线只减不增 | - |
 | 给页面顶层 tab 按钮加测试钩子 | [testid 契约与 VIEW_TESTIDS 注册表](./testid-contract.md) | VIEW_TESTIDS 数组内注释出现 `]` | - |
 | 给子 pill 行加稳定测试钩子（renderSubBar 已派生 data-testid） | [testid 契约与 VIEW_TESTIDS 注册表](./testid-contract.md) | 新增 testid 忘记登记 VIEW_TESTIDS | - |
 | 挂载/卸载自定义元素 | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) | - | - |
 | 派发 click / input / keydown / drag & drop 等模拟事件 | [测试工具 test-utils（G-1 抗脆弱测试基础设施）](./test-utils.md) | 禁止把负向定时器窗口断言换成短 sleep | - |
 | 评估子代理/审查报告可信度（分级不可采信） | [AI 审查器偏差与查证方法论（10 轮实战沉淀）](./ai-review-pitfalls.md) | 单一事实源矩阵被早退/局部 if 打破 = ADR-249 §2.4 红线 | - |
+| 前端测试断言哪种写法会失语 | [前端 vitest 失败失语断言闸](./vitest-assert-quality.md) | 复合布尔 + 无消息 = 失败只报 expected false to be true，零 diff | - |
 | 去哪里找真缺陷（高产出缺口类型 A/B/C） | [AI 审查器偏差与查证方法论（10 轮实战沉淀）](./ai-review-pitfalls.md) | - | - |
 | 确认 Go-TS 解析层是否漂移 → 跑 go test ./go/types ./go/litematic + vitest src/backend/*.parity.test.ts | [Go-TS 解析层 golden 对拍（ADR-154 双端互锁）](./go-ts-golden.md) | Go MatchZipEntry 与 TS matchZipEntryTS 的首命中序依赖 resource_types.json 顺序——重排类型定义即两端漂移 | - |
 | 审查 finding 的基线新鲜度核对（audit-freshness） | [AI 审查器偏差与查证方法论（10 轮实战沉淀）](./ai-review-pitfalls.md) | - | - |
@@ -754,9 +758,9 @@
 | 治理闸与功能测试同 job 且顺序在前 ⇒ 治理失败 skipped 掉 tsc/vitest，功能正确性在 CI 上永不被回答 | - | - |
 | 前端手写分类 | - | 与 Go classify 判定不一致、last-wins 裁决丢失；必须交 Go 分类 |
 | 新增资源类型未更新 priority | - | 冲突时优先级错乱；必须经 classify.go 的 priority 表 |
-| "刀1（采集期）恒不阻断，仅 stderr 提示。转 hard 需先跑  出硬数据，且连续 ≥15 次真实提交无误伤" | `--replay 300` | - |
+| "刀2（2026-10-25 起）**只阻断 BLOCKING_RULES 白名单内的两条**（subject-empty / subject-prefix），不是——subject-length / subject-multi-topic / body-line-length 仍是 hard 档判定但**不拒提交**，只提示。看到 --strict 别以为全拒" | `severity=hard 即拒` | - |
 | "存量（闸上线前 300 条窗口）约 47% 提交不符合结构判据——闸只判新提交，不追溯历史（重写历史 commit message 是 ADR-080 禁令）。闸上线后新提交合规率已升至 81%，两组数字的对照见正文节" | `闸上线后的对照` | - |
-| "采集期 gate-config 条目 blockPolicy: 'debt'——不阻断但会在 CI/pre-push 留下记录。转档时只改两处：钩子加 --strict + gate-config 改 'hard'" | - | - |
+| "阻断与 severity 是两件事：severity 是规则的固有档位（决定它算 hard 还是 warn），阻断与否由  + `BLOCKING_RULES` 决定。**禁止再写 `v.severity === \"hard\"` 当阻断条件**——那会让扩员/收窄绕开白名单" | `blocksCommit()` | - |
 | 各组件各自发下载请求 | - | 并发冲突、进度丢失；必须经 download-queue 排队 |
 | 镜像源未走 gh-links | - | 下载慢、镜像不可用；必须经 gh-links 的 CDN 分流 |
 | 远程 JSON（GitHub API base64 content）用裸  解码 | `JSON.parse(atob(...))` | atob 产 Latin-1，UTF-8 字节被逐字节当码位，非 ASCII 名落盘成双重编码乱码（2026-09-21 曾把 197 条乱码当新作者入库，按 name 去重失效）；须 base64ToBytes → TextDecoder(UTF-8) |
@@ -1105,7 +1109,7 @@
 | push 被拒直接 --no-verify | - | 绕过不留审计；应修 FAIL 项或 git pull 整合 |
 | 判定字段写错位置 | - | 门禁静默假绿：`parseToolOutput` 的 `parsed._summary \|\| parsed` 使「`_summary` 存在但无 ok/errors」时短路，**永不回读顶层 `ok`**。三脚本曾把 ok 放顶层且 rc 恒 0（情报型）→ 门禁恒判通过；判定必须写进 `_summary`（`buildScanVerdict`） |
 | 只证明清单内检查通过——42 个 check-*.ts 与清单项非一一对应（差额走 pre-commit / CI 旁路，或只挂前端域）。三档位扫描器（complexity / params / type-safety）2026-09-13 才接 FRONTEND_STATIC_TOOLS（debt + --files），`--all` / `--docs` 路径仍不跑；审核/锐评下结论必须附「跑了哪些 + N/42」覆盖率，不可外推为「仓库无风险」 | `门禁全绿` | - |
-| `check-design-tokens` 曾长期只挂 pre-commit 硬阻断③，pre-push / CI 均无排查项——而 pre-commit 可被 `git commit --no-verify` 一条命令绕过（CI `--static` 模式的立项目的正是补这一层）。2026-09 补进 FRONTEND/ALL_STATIC_TOOLS（`--baseline` + debt + scopedFiles），与 `css-layer-check` 同等三重防护。2026-09-16 改口径（ADR-256）：FRONTEND 侧由 `--baseline` 换成 `--added-lines`（行级：只判本次推送引入的新增行，range 源 base..head，与 pre-commit 索引源共用 `_lib/diff-source.ts`）；ALL_STATIC_TOOLS 保留 `--baseline`，但那里已是**账本漂移报告**（全库 vs `baseline/design-tokens-baseline.json`），不再参与判定。**新增「只减不增」型闸一律双挂**（pre-commit 拦提交 + gate-config 拦推送/CI），勿只挂其一；但**判定口径别用行号入键**——实测 322/330 = 97.6% 的「新增」是位移幻影（可复算：`scripts/token-shift-audit.ts --window 120`；同上 ADR） | `只挂 pre-commit 的闸 = 单点防线` | - |
+| `check-design-tokens` 曾长期只挂 pre-commit 硬阻断③，pre-push / CI 均无排查项——而 pre-commit 可被 `git commit --no-verify` 一条命令绕过（CI `--static` 模式的立项目的正是补这一层）。2026-09 补进 FRONTEND/ALL_STATIC_TOOLS（`--baseline` + debt + scopedFiles），与 `css-layer-check` 同等三重防护。2026-09-16 改口径（ADR-256）：FRONTEND 侧由 `--baseline` 换成 `--added-lines`（行级：只判本次推送引入的新增行，range 源 base..head，与 pre-commit 索引源共用 `_lib/diff-source.ts`）；ALL_STATIC_TOOLS 那条 2026-10-25 起**摘掉全部参数**、恒 exit 0 只报「存量 N 条 / M 文件」（此前挂 `--baseline`，但账本键是 `file:line:kind`，行号一动就同时产生假新增+假消失——实测 added 60 / gone 62 而总量实为降 2，每次 --static 都红一条零行动价值的闸，等于训练人忽略门禁）。**新增「只减不增」型闸一律双挂**（pre-commit 拦提交 + gate-config 拦推送/CI），勿只挂其一；但**判定口径别用行号入键**——实测 322/330 = 97.6% 的「新增」是位移幻影（可复算：`scripts/token-shift-audit.ts --window 120`；同上 ADR） | `只挂 pre-commit 的闸 = 单点防线` | - |
 | record() 只把 blockPolicy 用于判定 blocked、不写进 results | - | gate-report.policyTag 读到 undefined，**所有 FAIL 的归属标签退化为「本次引入」**（debt 存量债冒充本次引入，AI 会去修不属于自己的问题）。2026-09-13 修复并加行为契约（test_gate_ctx.ts 第 5/9 组） |
 | `check-a11y.ts` 2026-09-26 接线（ADR-308 D3）：ALL + FRONTEND_STATIC_TOOLS 双挂 hard——coverage 计数**下限**（仅 aria-* 按属性名，只增不减；role/tabindex/prefers-reduced-motion 归 `coverageNeutral` 只记录不守基线——中性指标「越多≠越好」，删冗余即合理收敛不该被判退化，2026-10 D10 口径修订）+ scatter **上限**（document 级 keydown 散点文件→次数，只减不增，key-router.ts 唯一出口豁免）。与 layering 同范式但**方向相反**：layering 管违规清单（只减），本闸管覆盖计数（只增）——「下限守卫」型闸同样双挂；`--update` 收紧 / `--force` 放松留痕。hard 依据：确定性正则 + baseline 即存量本身，无存量债冒充；配套 tests/test_check_a11y.ts（纯核直测防空转假绿）。 | `a11y 覆盖基线闸` | - |
 | 把「过滤后为空」当错误、把空 --files 静默当全库 | `增量裁剪边界` | 前者让改一版文档/Go 就阻断推送，后者让存量债淹没本次变更；正确口径：scope 目录不存在或无可扫文件 = 用法错误 exit 1，过滤后 0 文件 = 合法 PASS，且 _summary.scopeFilter 须留痕以区分「全库干净」与「不在扫描范围」 |
@@ -1228,7 +1232,7 @@
 | 拿本闸当的替代——它只管模块态卫生，不管 import 方向（那归 check-layering R7/R9/R10） | `无 Wails 可测` | - |
 | 零散 grep 每枚 emoji/每个 UI_ICONS 模式各发一次 | - | token 浪费（实测上一会话 28 分钟 / 5.6M tok 都在翻 emoji）：改用一次性脚本 |
 | "`check-design-tokens --kind emoji-icon` 只认，扫不到运行时 toast 载荷 / locale 值前缀 emoji；要全量需用 survey 脚本或 findToastEmojiPrefixViolations / findLocaleEmojiPrefixViolations" | `HTML 标签图标位 + 字面量 emoji` | - |
-| emoji 字符集必须含 U+2190-21FF / U+2300-23FF（含 ⏳/← 等），否则单字形槽整类逃逸 —— survey 脚本已**复用 design-tokens.ts 导出的 GRAPHIC_EMOJI**，不自抄副本（单一事实源，门禁改字符集 survey 自动跟随） | - | - |
+| emoji 字符集必须含 U+2190-21FF / U+2300-23FF（含 ⏳/← 等），否则单字形槽整类逃逸 —— survey 脚本已**复用 token-glyph.ts 导出的 GRAPHIC_EMOJI**，不自抄副本（单一事实源，门禁改字符集 survey 自动跟随；2026-10-25 起判定层拆在 token-*.ts，入口 design-tokens.ts 仅 re-export） | - | - |
 | app-sidebar 直接发 push/pull 请求 | - | 并发冲突 / 状态错乱；写链守卫 = features/sync BusyLock + performSingleOp per-path |
 | PullSingleResource 未完成前刷新侧边栏 | - | 半同步状态显示；必须等 store 状态收敛 |
 | mock 掉被断言行为的谓词 = 自证：断言的是替身不是真实现，测试无效 | - | - |
@@ -1290,6 +1294,13 @@
 | 只跑 biome/运行时冒烟就宣称改完——漏 scripts tsc 会放过 TS 类型漏洞 | - | - |
 | 高频轮询 GitHub API | - | 触发限流、浪费带宽；必须经 canCheck 节流 |
 | check 未 markChecked | - | 重启后重复检查；必须在检查完成后 markChecked 记录时间戳 |
+| 以为本闸管——只收一种：含**顶层** `&&`/`\|\|` 且被布尔化 matcher 收尾且**无第二实参消息**的 expect；其余一律不报 | `所有软断言` | - |
+| 把尺寸稀释（`expect(errors.length).toBeGreaterThan(0)`）也塞进基线——**刻意不立**：静态不可判真伪（的测试里它是正确断言），塞进去就是造一本没人会还的债账（本仓「软告警 15 条无人拆」老路） | `应当报错` | - |
+| 以为嵌套逻辑算复合—— 的短路是业务语义，括号深度 > 0 一律不算顶层 | `.some(x => x.a && x.b)` | - |
+| 给断言加个消息就以为万事大吉——消息只需**非空第二实参**即可缓解失语，不要求格式 | - | - |
+| 拿  硬扩基线——只减不增是契约；确属刻意的写行内 `// assert-quality-allow: <理由>`（空理由不豁免） | `--update --force` | - |
+| 把豁免注写远——识别窗口 = 该 expect 语句的起止行区间，跨语句不生效 | - | - |
+| 以为本闸覆盖 e2e——e2e 的同类判据在 check-e2e-hygiene 的 R2，是**另一把尺子**（那边扫 .spec.ts、只普查不阻断） | - | - |
 | DOM 测试切 node 环境 | - | window/document 报错；必须保持 happy-dom 或治理源码副作用 |
 | 用 vi.mock 硬扛源码副作用 | - | 治标不治本；必须先做惰性化守卫/神桶拆分 |
 | 重建 KeyframeTrack（而非原地改 track.name）会静默丢掉 MMD 逐轴贝塞尔插值——视觉卡点顿挫且不报错 | - | - |

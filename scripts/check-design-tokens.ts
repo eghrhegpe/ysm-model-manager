@@ -76,8 +76,10 @@
  *   钩子无需知道临时索引如何裁剪：git 已把 GIT_INDEX_FILE 交给钩子，`git diff --cached`
  *   天然只含本次提交文件；`--files` 路径走 range 源（pre-push / CI，base = merge-base）。
  *   第二重防线：`_lib/gate-config.ts` 的 FRONTEND_STATIC_TOOLS 同挂 `--added-lines`
- *   （堵住「`git commit --no-verify` 一条命令绕过」的单点）；ALL_STATIC_TOOLS 的 `--baseline`
- *   是**账本漂移报告**（全库 vs 账本），不再参与判定。
+ *   （堵住「`git commit --no-verify` 一条命令绕过」的单点）。ALL_STATIC_TOOLS 里的条目
+ *   **不带任何参数**（2026-10-25 摘掉 `--baseline`）：恒 exit 0，只把「存量 N 条 / M 文件」
+ *   打进推送输出——账本比对自带行位移幻影（实测 added 60 / gone 62，而总量实为降 2），
+ *   挂在阻断面只会训练人忽略门禁。
  *   账本：`--update-baseline` 只许全库刷新，债务只降不升（带任何裁剪会被 fail-closed 拒绝）。
  *
  * 设计意图：把「设计规范是否被执行」从人肉审查变成可度量、可增量收敛的机器信号。
@@ -153,8 +155,11 @@ const TOP_N = Number(args.top ?? 15) || 15;
  * 门禁只拦「新增」违规——与 check-redlines / check-deadcode-baseline 同构。
  *
  * 键格式 `file:line:kind`：行号入键意味着**改动行会移动行号 → 该条被当作新增**。
- * 这对本闸是**刻意**的：若某行因编辑而位移，说明该行被人碰过，正好借机要求顺带令牌化
- * （与 check-biome-lines 的「行级增量」同一哲学：只对自己动过的行负责）。
+ * 这正是 ADR-256 D1 把 baseline 从判定面摘下来的原因——116 提交窗实测 added 330 条里
+ * 322 条（97.6%）是行位移幻影。账本只做存量盘点，判定走 `--added-lines`（真行级）。
+ *
+ * 键格式保留 `file:line:kind`（不降级为 `file:kind`）：账本要能定位到行才能排期收债，
+ * 且 --baseline 已不参与判定，幻影只影响「本次盘点 vs 上次盘点」的对账阅读，不影响放行。
  */
 const BASELINE_FILE = path.join(ROOT, "scripts", "baseline", "design-tokens-baseline.json");
 

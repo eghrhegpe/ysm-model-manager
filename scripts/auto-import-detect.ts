@@ -168,18 +168,34 @@ export function buildSymbolMap(
   return map;
 }
 
+/**
+ * 默认跳过测试文件（.test./.spec.）的理由（2026-10-25 静态工具段耗时债处置）：
+ *   - 实测 frontend/src 1181 个 .ts 里 538 个是 *.test.ts，tokenize 耗时占全量 8.3s 的
+ *     6.2s（75%），而补齐口径后该段的 35s 预算只剩 0.2s 余量、在忙时必然边界假红；
+ *   - 测试文件的缺失 import 是 **TS 编译错误**（frontend/tsconfig.json include 覆盖
+ *     "src" 下全部 .ts（含测试），`npm run typecheck` 与 CI 都在跑），本工具是正则级提示器，不该
+ *     在编译器已埋伏的地方重复付费；
+ *   - 测试文件的导出也不该成为生产代码的 import 目标（仓内实测 0 处
+ *     `from "./x.test"`）——把它从符号表里摘掉只会减少瞎建议，不会新增误报。
+ * 需要连测试一起扫时显式传 includeTests（CLI: --include-tests），显式指定的 targets
+ * 不受此过滤影响（点名单文件就该查那个文件）。
+ */
+const TEST_FILE_RE = /\.(test|spec)\.[tj]sx?$/;
+
 /** 收集扫描目标文件（默认 .ts；--include-js 加 .js；也可显式指定路径）。
- * @param {{srcDir:string, targets:string[], includeJs:boolean}} opts
+ * @param {{srcDir:string, targets:string[], includeJs:boolean, includeTests:boolean}} opts
  * @returns {string[]} 绝对路径数组
  */
 export function collectFiles({
   srcDir = SRC_DIR,
   targets = [],
   includeJs = false,
+  includeTests = false,
 }: {
   srcDir?: string;
   targets?: string[];
   includeJs?: boolean;
+  includeTests?: boolean;
 } = {}) {
   const all = walk(srcDir);
   if (targets.length > 0) {
@@ -187,23 +203,30 @@ export function collectFiles({
       .map((t) => path.resolve(t))
       .filter((p) => fs.existsSync(p) && fs.statSync(p).isFile());
   }
-  return all.filter((p) => (includeJs ? true : (p as string).endsWith(".ts"))) as string[];
+  return all.filter(
+    (p) =>
+      (includeJs ? true : (p as string).endsWith(".ts")) &&
+      (includeTests || !TEST_FILE_RE.test(p as string)),
+  ) as string[];
 }
 
 /**
  * 跑一轮完整检测，返回 { files, suggestions, totals }。
- * @param {{srcDir:string, targets:string[], includeJs:boolean}} opts
+ * @param {{srcDir:string, targets:string[], includeJs:boolean, includeTests:boolean}} opts
  */
 export function run({
   srcDir = SRC_DIR,
   targets = [],
   includeJs = false,
+  includeTests = false,
 }: {
   srcDir?: string;
   targets?: string[];
   includeJs?: boolean;
+  includeTests?: boolean;
 } = {}) {
-  const all = walk(srcDir) as string[];
+  const walked = walk(srcDir) as string[];
+  const all = includeTests ? walked : walked.filter((p) => !TEST_FILE_RE.test(p));
   const files =
     targets.length > 0
       ? targets
@@ -216,7 +239,8 @@ export function run({
     string,
     { stripped: string; tokens: Array<{ name: string; start: number; line: number }>; text: string }
   >();
-  // 符号表始终基于全量 walk（单文件模式也要跨模块解析）
+  // 符号表基于（默认已剔除测试文件的）walk：单文件模式也要跨模块解析。
+  // 测试文件剔除口径见 collectFiles 上方 TEST_FILE_RE 的注释。
   const symbolMap = buildSymbolMap(all, cache);
   const suggestions: Array<{ file: string; missing: any[] }> = [];
   for (const f of files) {

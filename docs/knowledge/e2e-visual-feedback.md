@@ -7,7 +7,6 @@ status: active
 source_files:
   - frontend/e2e/browser-path.ts
   - frontend/e2e-web/web-ready.ts
-  - frontend/e2e/visual-baseline.ts
 auto_fields:
   symbols_with_lines:
     - browsersRoot
@@ -19,10 +18,8 @@ auto_fields:
     - OVERLAY_READY_TIMEOUT
     - pinnedChromiumOrThrow
     - registryFacts
-    - screenshotWithBaseline
     - shellExeRels
     - treeRootFound
-    - VisualBaselineOpts
     - waitForAppReady
     - waitForOverlayReady
     - waitForRenderFrames
@@ -138,8 +135,8 @@ npx playwright test --config playwright.web.config.ts menu-3d-session
 - 每步**硬断言**（`expect(x).toBe(1)` 而非 `toBeGreaterThan(0)`）
 - **下钻必须验内容变化**：`expect(after).not.toBe(before)`，而非「点开了」
 - **截图比对哈希**：两次截图字节相同 = 流程没生效
-- **截图字节级基线比对（自动抓假绿）**：见 `frontend/e2e/visual-baseline.ts|screenshotWithBaseline`——Node Buffer 字节级比对 `_baselines/*.baseline.png`（PNG 无损，字节相同=画面相同），把「两张截图 SHA256 相同却报 passed」的假绿事故从**事后复盘**变成**每次运行自动抓**；`menu-visual.spec.ts` 的 4 处 `shot()` 可平移成带断言落点。**基线须 git 跟踪**，与 `.gitignore` 排除的 `_shots/` 取证产物分轨。
-- **执法闸（2026-10-25 锐评 e2e 体系落地）**：`scripts/check-e2e-hygiene.ts` 静态扫描 `frontend/e2e`+`frontend/e2e-web` 的 `*.spec.ts`，把上方三条教条变可观测闸门——R1 固定 sleep 等就绪（`waitForTimeout`，≥1000ms 标 high）/ R2 软断言假绿（`.toBeGreaterThan(0)`/`.toBeGreaterThanOrEqual(1)`，排除 `.not` 负向安全）/ R3 `screenshotWithBaseline` 零调用死代码。当前 `debt` 观察期非阻断（`--strict` 命中 high 才 exit 1）；实测量级：spec 树内 `screenshotWithBaseline` 零调用（守卫=死代码），`waitForTimeout` 45 处、`toBeGreaterThan(0)` 软断言散布——印证 critique #1「教条零闸守」。
+- **截图互异闸（自动抓假绿）**：字节级基线守卫 `frontend/e2e/visual-baseline.ts|screenshotWithBaseline` 已删（2026-10-25，纯 DOM 断言资产却全树零调用=死代码）；能力**不废**，已 inline 迁为 `createHash('sha256')` **两两互异闸**——`water-wave-evidence:178-183` / `fog-horizon-evidence:210-214` / `menu-visual` 的 `assertShotsDistinct`。范式：每次截图收集落盘路径 → `createHash('sha256').update(fs.readFileSync(p)).digest('hex')` → 两两比对断言不等；任意两张哈希相同 = 流程没动 = 假绿。
+- **执法闸（2026-10-25 锐评 e2e 体系落地）**：`scripts/check-e2e-hygiene.ts` 静态扫描 `frontend/e2e`+`frontend/e2e-web` 的 `*.spec.ts`，把上方三条教条变可观测闸门——R1 固定 sleep 等就绪（`waitForTimeout`，≥1000ms 标 high）/ R2 软断言假绿（`.toBeGreaterThan(0)`/`.toBeGreaterThanOrEqual(1)`，排除 `.not` 负向安全）/ R3 残留「ad-hoc 截图未接 sha256 互异闸」的 spec（per-file 巡检）。当前 `debt` 观察期非阻断（`--strict` 命中 high 才 exit 1）；2026-10-25 已删 `visual-baseline.ts` 死代码、`menu-visual` 的 `shot()` 接 `assertShotsDistinct`，R3 现仅点名 `menu-3d-session`/`shadow-compare(-model)`/`web-ysm-3d` 等未迁 sha256 闸的 spec——印证 critique #1「教条零闸守」的收口进度。
 - **丢弃「注释里自认无效」的测试**：明知读不回像素还留着 = 另一个假绿灯
 
 ### 3. readPixels 需自建 renderer
@@ -155,7 +152,7 @@ npx playwright test --config playwright.web.config.ts menu-3d-session
 ## 不变量
 
 - **截图取证产物 `_shots/` 不进版本库**：（`e2e/`、`e2e-web/`、`artifacts/**/_shots/`）每次运行重写，已被 `.gitignore` 排除，勿 `git add`。
-- **但 `_baselines/*.baseline.png` 须 git 跟踪**：这是 `visual-baseline.ts|screenshotWithBaseline` 的回归锚点（字节级比对），与 `_shots/` 分轨——前者是断言资产，后者是一次性取证。
+- **`_baselines/*.baseline.png` 已废弃**：字节级基线守卫 `screenshotWithBaseline` 已删（2026-10-25）；防假绿现靠 `sha256` **两两互异闸**（同一 run 内互异，无需 git 跟踪基线）。`_shots/` 仍是不进库的一次性取证产物，与断言资产分轨。
 - Agent 看不到浏览器窗口，唯一通路＝脚本截图存 png → 读图工具回看（`artifacts/e2e-probe.mjs` 一次性探针）。
 - **单变量对照**：定位视觉异常时每次只动一个开关
 - **硬断言优先**：`toBe(1)` > `toBeGreaterThan(0)` > `if (n > 0)`
